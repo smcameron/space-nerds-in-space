@@ -11138,16 +11138,6 @@ static void do_demon_roll(struct snis_entity *o, int roll)
 			ROLL_INCREMENT, ROLL_INCREMENT_FINE);
 }
 
-static void do_gun_yaw(struct game_client *c, int yaw)
-{
-	/* FIXME combine this with do_yaw somehow */
-	struct snis_entity *ship = &go[c->ship_index];
-
-	do_generic_axis_rot(&ship->tsd.ship.gun_yaw_velocity, yaw,
-				MAX_GUN_YAW_VELOCITY, GUN_YAW_INCREMENT,
-				GUN_YAW_INCREMENT_FINE);
-}
-
 static void do_sci_yaw(struct game_client *c, int yaw)
 {
 	struct snis_entity *ship = &go[c->ship_index];
@@ -16541,11 +16531,6 @@ static void process_instructions_from_client(struct game_client *c)
 			break;
 		case OPCODE_ADJUST_CONTROL_INPUT:
 			rc = process_adjust_control_input(c);
-			if (rc)
-				goto protocol_error;
-			break;
-		case OPCODE_REQUEST_GUNYAW:
-			rc = process_request_yaw(c, do_gun_yaw);
 			if (rc)
 				goto protocol_error;
 			break;

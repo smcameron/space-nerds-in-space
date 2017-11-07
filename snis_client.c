@@ -90,6 +90,7 @@
 #include "bline.h"
 #include "shield_strength.h"
 #include "joystick.h"
+#include "joystick_config.h"
 #include "stacktrace.h"
 #include "snis_keyboard.h"
 #include "snis_preferences.h"
@@ -186,10 +187,12 @@ static int red_alert_mode = 0;
 static char *default_asset_dir = STRPREFIX(PREFIX) "/share/snis";
 static char *asset_dir;
 
-typedef void (*joystick_button_fn)(void *x);
-static char joystick_device[PATH_MAX+1];
-static int joystick_fd = -1;
-static int joystickx, joysticky;
+#define MAX_JOYSTICKS 10
+static char joystick_device[PATH_MAX+1][MAX_JOYSTICKS];
+static int joystick_fd[MAX_JOYSTICKS] = { -1 };
+static int njoysticks = 0;
+static struct joystick_descriptor *joysticks_found;
+static struct joystick_config *joystick_cfg = NULL;
 
 static int physical_io_socket = -1;
 static pthread_t physical_io_thread;
@@ -2823,12 +2826,6 @@ static void demon_dirkey(int h, int v, int r, int t)
 	}
 }
 
-
-static void request_weapons_yaw_packet(uint8_t yaw)
-{
-	queue_to_server(snis_opcode_pkt("bb", OPCODE_REQUEST_GUNYAW, yaw));
-}
-
 static void request_weapons_manual_yaw_packet(uint8_t yaw)
 {
 	queue_to_server(snis_opcode_pkt("bb", OPCODE_REQUEST_MANUAL_GUNYAW, yaw));
@@ -3128,15 +3125,25 @@ static void robot_left_button_pressed(void *x);
 static void robot_right_button_pressed(void *x);
 static void robot_auto_button_pressed(void *x);
 static void robot_manual_button_pressed(void *x);
-
 static void fire_phaser_button_pressed(__attribute__((unused)) void *notused);
-static void joystick_button_zero(__attribute__((unused)) void *x)
+static void fire_torpedo_button_pressed(__attribute__((unused)) void *notused);
+static void load_torpedo_button_pressed();
+
+static void do_joystick_torpedo(__attribute__((unused)) void *x)
+{
+	if (displaymode != DISPLAYMODE_WEAPONS)
+		return;
+	do_torpedo();
+	load_torpedo_button_pressed();
+}
+
+static void do_joystick_phaser(__attribute__((unused)) void *x)
 {
 	switch (displaymode) {
 	case DISPLAYMODE_WEAPONS:
 		fire_phaser_button_pressed(NULL);
 		break;
-	case DISPLAYMODE_DAMCON:
+	case DISPLAYMODE_DAMCON: /* TODO: break this out as separate joystick vector */
 		robot_gripper_button_pressed(NULL);
 		break;
 	default:
@@ -3144,145 +3151,136 @@ static void joystick_button_zero(__attribute__((unused)) void *x)
 	}	
 }
 
-static void fire_torpedo_button_pressed(__attribute__((unused)) void *notused);
-static void joystick_button_one(__attribute__((unused)) void *x)
+static void do_joystick_pitch(__attribute__((unused)) void *x, int value)
 {
-	switch (displaymode) {
-	case DISPLAYMODE_WEAPONS:
-		fire_torpedo_button_pressed(NULL);
-		break;
-	default:
-		break;
-	}	
-}
-
-static void load_torpedo_button_pressed();
-static void joystick_button_two(__attribute__((unused)) void *x)
-{
-	switch (displaymode) {
-	case DISPLAYMODE_WEAPONS:
-		load_torpedo_button_pressed();
-		break;
-	default:
-		break;
-	}	
-}
-
-static joystick_button_fn do_joystick_button[] = {
-		joystick_button_zero,
-		joystick_button_one,
-		joystick_button_two,
-		NULL,
-		NULL,
-		NULL,
-		NULL,
-		NULL,
-		NULL,
-		NULL,
-		NULL,
-};
-
-/* client joystick status */
-static struct wwvi_js_event jse = { { 0 } };
-
-static void deal_with_joystick()
-{
-
-#define FRAME_RATE_HZ 30 
-	static const int joystick_throttle = (int) ((FRAME_RATE_HZ / 15.0) + 0.5);
-	int i, rc;
-
-	if (joystick_fd < 0) /* no joystick */
-		return;
-
-#define XJOYSTICK_THRESHOLD 23000
 #define YJOYSTICK_THRESHOLD 23000
-#define XJOYSTICK_THRESHOLD_FINE 6000
 #define YJOYSTICK_THRESHOLD_FINE 6000
-
-	/* Read events even if we don't use them just to consume them. */
-	memset(&jse.button, 0, sizeof(jse.button));
-	rc = get_joystick_status(&jse);
-	if (rc != 0)
-		return;
-
-	/* If not on screen which uses joystick, ignore stick */
-	if (displaymode != DISPLAYMODE_DAMCON &&
-		displaymode != DISPLAYMODE_WEAPONS &&
-		displaymode != DISPLAYMODE_NAVIGATION)
-		return;
-
-	/* Check joystick buttons (need to throttle this?) */
-	for (i = 0; i < ARRAYSIZE(jse.button); i++) {
-		if (jse.button[i] == 1 && do_joystick_button[i])
-			do_joystick_button[i](NULL);
-	}
-
-	/* Throttle back the joystick axis input rate to avoid flooding network */
-	if (timer % joystick_throttle != 0)
-		return;
-
 	switch (displaymode) {
-	case DISPLAYMODE_DAMCON:
-		if (jse.stick_x < -XJOYSTICK_THRESHOLD)
-			robot_left_button_pressed(NULL);
-			break;
-		if (jse.stick_x > XJOYSTICK_THRESHOLD)
-			robot_right_button_pressed(NULL);
-			break;
-		if (jse.stick_y < -YJOYSTICK_THRESHOLD)
-			robot_forward_button_pressed(NULL);
-			break;
-		if (jse.stick_y > YJOYSTICK_THRESHOLD)
-			robot_backward_button_pressed(NULL);
-			break;
+	case DISPLAYMODE_NAVIGATION:
+		if (value < -YJOYSTICK_THRESHOLD)
+			request_navigation_pitch_packet(PITCH_BACK);
+		else if (value > YJOYSTICK_THRESHOLD)
+			request_navigation_pitch_packet(PITCH_FORWARD);
+		else if (value < -YJOYSTICK_THRESHOLD_FINE)
+			request_navigation_pitch_packet(PITCH_BACK + 2);
+		else if (value > YJOYSTICK_THRESHOLD_FINE)
+			request_navigation_pitch_packet(PITCH_FORWARD + 2);
 		break;
 	case DISPLAYMODE_WEAPONS:
-		if (jse.stick_x < -XJOYSTICK_THRESHOLD) {
-			request_weapons_yaw_packet(YAW_LEFT);
-			break;
-		}
-		if (jse.stick_x > XJOYSTICK_THRESHOLD) {
-			request_weapons_yaw_packet(YAW_RIGHT);
-			break;
-		}
-		if (jse.stick_x < -XJOYSTICK_THRESHOLD_FINE) {
-			request_weapons_yaw_packet(YAW_LEFT + 2);
-			break;
-		}
-		if (jse.stick_x > XJOYSTICK_THRESHOLD_FINE) {
-			request_weapons_yaw_packet(YAW_RIGHT + 2);
-			break;
-		}
+		if (value < -YJOYSTICK_THRESHOLD)
+			request_weapons_manual_pitch_packet(PITCH_BACK);
+		else if (value > YJOYSTICK_THRESHOLD)
+			request_weapons_manual_pitch_packet(PITCH_FORWARD);
+		else if (value < -YJOYSTICK_THRESHOLD_FINE)
+			request_weapons_manual_pitch_packet(PITCH_BACK + 2);
+		else if (value > YJOYSTICK_THRESHOLD_FINE)
+			request_weapons_manual_pitch_packet(PITCH_FORWARD + 2);
 		break;
+	case DISPLAYMODE_DAMCON: /* TODO: break these out as separate joystick vectors */
+		if (value < -YJOYSTICK_THRESHOLD)
+			robot_forward_button_pressed(NULL);
+		break;
+		if (value > YJOYSTICK_THRESHOLD)
+			robot_backward_button_pressed(NULL);
+		break;
+	default:
+		break;
+	}
+}
+
+static void do_joystick_yaw(__attribute__((unused)) void *x, int value)
+{
+#define XJOYSTICK_THRESHOLD 23000
+#define XJOYSTICK_THRESHOLD_FINE 6000
+	switch (displaymode) {
 	case DISPLAYMODE_NAVIGATION:
-		if (jse.stick_x < -XJOYSTICK_THRESHOLD)
+		if (value < -XJOYSTICK_THRESHOLD)
 			request_navigation_yaw_packet(YAW_LEFT);
-		else if (jse.stick_x > XJOYSTICK_THRESHOLD)
+		else if (value > XJOYSTICK_THRESHOLD)
 			request_navigation_yaw_packet(YAW_RIGHT);
-		else if (jse.stick_x < -XJOYSTICK_THRESHOLD_FINE)
+		else if (value < -XJOYSTICK_THRESHOLD_FINE)
 			request_navigation_yaw_packet(YAW_LEFT + 2);
-		else if (jse.stick_x > XJOYSTICK_THRESHOLD_FINE)
+		else if (value > XJOYSTICK_THRESHOLD_FINE)
 			request_navigation_yaw_packet(YAW_RIGHT + 2);
-		if (jse.stick2_y < -YJOYSTICK_THRESHOLD)
-			request_navigation_pitch_packet(PITCH_BACK);
-		else if (jse.stick2_y > YJOYSTICK_THRESHOLD)
-			request_navigation_pitch_packet(PITCH_FORWARD);
-		else if (jse.stick2_y < -YJOYSTICK_THRESHOLD_FINE)
-			request_navigation_pitch_packet(PITCH_BACK + 2);
-		else if (jse.stick2_y > YJOYSTICK_THRESHOLD_FINE)
-			request_navigation_pitch_packet(PITCH_FORWARD + 2);
-		if (jse.stick2_x < -XJOYSTICK_THRESHOLD)
+		break;
+	case DISPLAYMODE_WEAPONS:
+		if (value < -XJOYSTICK_THRESHOLD)
+			request_weapons_manual_yaw_packet(YAW_LEFT);
+		else if (value > XJOYSTICK_THRESHOLD)
+			request_weapons_manual_yaw_packet(YAW_RIGHT);
+		else if (value < -XJOYSTICK_THRESHOLD_FINE)
+			request_weapons_manual_yaw_packet(YAW_LEFT + 2);
+		else if (value > XJOYSTICK_THRESHOLD_FINE)
+			request_weapons_manual_yaw_packet(YAW_RIGHT + 2);
+		break;
+	default:
+		break;
+	}
+}
+
+static void do_joystick_roll(__attribute__((unused)) void *x, int value)
+{
+	switch (displaymode) {
+	case DISPLAYMODE_NAVIGATION:
+		if (value < -XJOYSTICK_THRESHOLD)
 			request_navigation_roll_packet(ROLL_RIGHT);
-		else if (jse.stick2_x > XJOYSTICK_THRESHOLD)
+		else if (value > XJOYSTICK_THRESHOLD)
 			request_navigation_roll_packet(ROLL_LEFT);
-		else if (jse.stick2_x < -XJOYSTICK_THRESHOLD_FINE)
+		else if (value < -XJOYSTICK_THRESHOLD_FINE)
 			request_navigation_roll_packet(ROLL_RIGHT + 2);
-		else if (jse.stick2_x > XJOYSTICK_THRESHOLD_FINE)
+		else if (value > XJOYSTICK_THRESHOLD_FINE)
 			request_navigation_roll_packet(ROLL_LEFT + 2);
 		break;
 	default:
 		break;
+	}
+}
+
+/* client joystick status */
+static struct js_state jss[MAX_JOYSTICKS] = { { { 0 } } };
+
+static void deal_with_joysticks()
+{
+
+#define FRAME_RATE_HZ 30 
+	static const int joystick_throttle = (int) ((FRAME_RATE_HZ / 15.0) + 0.5);
+	int i, j, rc;
+
+	if (!joystick_cfg)
+		return;
+
+	for (j = 0; j < njoysticks; j++) {
+		if (joystick_fd[j] < 0) /* no joystick */
+			continue;
+
+#define JOYSTICK_DEADZONE 6000
+
+		/* Read events even if we don't use them just to consume them. */
+		memset(&jss[j].button, 0, sizeof(jss[j].button));
+		rc = get_joystick_state(joystick_fd[j], &jss[j]);
+		if (rc != 0)
+			continue;
+
+		/* If not on screen which uses joystick, ignore stick */
+		if (displaymode != DISPLAYMODE_DAMCON &&
+			displaymode != DISPLAYMODE_WEAPONS &&
+			displaymode != DISPLAYMODE_NAVIGATION)
+			continue;
+
+		/* Fire off joystick button callbacks registered via set_joystick_button_fn() */
+		for (i = 0; i < ARRAYSIZE(jss[j].button); i++)
+			if (jss[j].button[i] == 1)
+				joystick_button(joystick_cfg, (void *) (intptr_t) displaymode, j, i);
+
+		/* Throttle back the joystick axis input rate to avoid flooding network */
+		if (timer % joystick_throttle != 0)
+			return;
+
+		/* Fire off joystick axis callbacks registered via set_joystick_axis_fn() */
+		for (i = 0; i < ARRAYSIZE(jss[j].axis); i++)
+			if (jss[j].axis[i] < -JOYSTICK_DEADZONE ||
+				jss[j].axis[i] > JOYSTICK_DEADZONE)
+				joystick_axis(joystick_cfg, (void *) (intptr_t) displaymode, j, i, jss[j].axis[i]);
 	}
 }
 
@@ -16213,7 +16211,7 @@ gint advance_game(gpointer data)
 			wwviaudio_add_sound(RED_ALERT_SOUND);
 	}
 
-	deal_with_joystick();
+	deal_with_joysticks();
 	deal_with_keyboard();
 	deal_with_physical_io_devices();
 
@@ -16887,7 +16885,7 @@ static void destroy(GtkWidget *widget, gpointer data)
 
 static void really_quit(void)
 {
-
+	int i;
 	float seconds;
 
 	/* prevent divide by zero */
@@ -16910,7 +16908,8 @@ static void really_quit(void)
 			(netstats.bytes_sent + netstats.bytes_recd) / netstats.elapsed_seconds);
         wwviaudio_cancel_all_sounds();
         wwviaudio_stop_portaudio();
-	close_joystick();
+	for (i = 0; i < njoysticks; i++)
+		close_joystick(joystick_fd[i]);
 	stop_text_to_speech_thread();
 	exit(1); /* probably bad form... oh well. */
 }
@@ -17522,35 +17521,48 @@ static void setup_natural_language_fifo(void)
 		fprintf(stderr, "Failed to create natural language fifo monitor thread.\n");
 }
 
-static void setup_joystick(GtkWidget *window)
+static void setup_joysticks(GtkWidget *window)
 {
-	strcpy(joystick_device, JOYSTICK_DEVNAME);
-	joystickx = 0;
-	joysticky = 0;
-	set_joystick_x_axis(joystickx);
-	set_joystick_x_axis(joysticky);
+	int rc, i;
+	char *joystick_name[MAX_JOYSTICKS];
+	char joystick_config_file[PATH_MAX];
 
-	joystick_fd = open_joystick(joystick_device, window->window);
-	if (joystick_fd < 0)
-                printf("No joystick...\n");
-        else {
-		/* pull all the events off the joystick */
-		memset(&jse.button, 0, sizeof(jse.button));
-		int rc = get_joystick_status(&jse);
-		if (rc != 0) {
-			printf("Joystick '%s' not sending events, ignoring...\n", joystick_device);
-			joystick_fd = -1;
-			return;
+	rc = discover_joysticks(&joysticks_found, &njoysticks);
+	if (rc)
+		return;
+
+	for (i = 0; i < njoysticks; i++) {
+		joystick_name[i] = strdup(joysticks_found[i].name);
+		snprintf(joystick_device[i], PATH_MAX, "/dev/input/by-id/%s", joysticks_found[i].name);
+		joystick_fd[i] = open_joystick(joystick_device[i], window->window);
+		if (joystick_fd[i] < 0) {
+			printf("Cannot open joystick %d (%s): %s. Ignoring.\n",
+				i, joystick_device[i], strerror(errno));
+		} else {
+			/* pull all the events off the joystick */
+			memset(&jss[i].button, 0, sizeof(jss[i].button));
+			memset(&jss[i].axis, 0, sizeof(jss[i].axis));
+			int rc = get_joystick_state(joystick_fd[i], &jss[i]);
+			if (rc != 0) {
+				printf("Joystick '%s' not sending events, ignoring...\n", joysticks_found[i].name);
+				close_joystick(joystick_fd[i]);
+				joystick_fd[i] = -1;
+				return;
+			}
 		}
-
-		if ( jse.stick_x <= -32767 || jse.stick_y <= -32767) {
-			printf("Joystick '%s' stuck at neg limits, ignoring...\n", joystick_device);
-			joystick_fd = -1;
-			return;
-		}
-
-                check_for_screensaver();
 	}
+	/* Set up joystick callbacks according to config file */
+	joystick_cfg = new_joystick_config();
+	set_joystick_axis_fn(joystick_cfg, "yaw", do_joystick_yaw);
+	set_joystick_axis_fn(joystick_cfg, "roll", do_joystick_roll);
+	set_joystick_axis_fn(joystick_cfg, "pitch", do_joystick_pitch);
+	set_joystick_button_fn(joystick_cfg, "phaser", do_joystick_phaser);
+	set_joystick_button_fn(joystick_cfg, "torpedo", do_joystick_torpedo);
+	sprintf(joystick_config_file, "%s/joystick_config.txt", asset_dir);
+	read_joystick_config(joystick_cfg, joystick_config_file, joystick_name, njoysticks);
+
+	if (njoysticks > 0)
+		check_for_screensaver();
 }
 
 static struct mesh *snis_read_model(char *directory, char *filename)
@@ -17924,6 +17936,7 @@ static struct option long_options[] = {
 	{ "version", no_argument, NULL, 'v' },
 	{ "weapons", no_argument, NULL, 'W' },
 	{ "solarsystem", required_argument, NULL, '*'},
+	{ "joystick", required_argument, NULL, 'j'},
 	{ 0, 0, 0, 0 },
 };
 
@@ -17936,7 +17949,7 @@ static void process_options(int argc, char *argv[])
 	y = -1;
 	while (1) {
 		int option_index;
-		c = getopt_long(argc, argv, "AaCEfLl:Nn:Mm:p:P:qr:Ss:vW*:", long_options, &option_index);
+		c = getopt_long(argc, argv, "AaCEfj:Ll:Nn:Mm:p:P:qr:Ss:vW*:", long_options, &option_index);
 		if (c == -1)
 			break;
 		switch (c) {
@@ -17986,6 +17999,12 @@ static void process_options(int argc, char *argv[])
 			shipname = optarg;
 			if (!shipname)
 				usage();
+			break;
+		case 'j':
+			if (njoysticks < MAX_JOYSTICKS) {
+				strcpy(joystick_device[njoysticks], optarg);
+				njoysticks++;
+			}
 			break;
 		case 'A':
 			role |= ROLE_ALL;
@@ -18147,6 +18166,7 @@ static void maybe_connect_to_lobby(void)
 int main(int argc, char *argv[])
 {
 	GtkWidget *vbox;
+	int i;
 
 	displaymode = DISPLAYMODE_NETWORK_SETUP;
 
@@ -18240,7 +18260,7 @@ int main(int argc, char *argv[])
 	init_comms_ui();
 	init_demon_ui();
 	init_net_setup_ui();
-	setup_joystick(window);
+	setup_joysticks(window);
 	setup_physical_io_socket();
 	setup_natural_language_fifo();
 	setup_text_to_speech_thread();
@@ -18256,6 +18276,7 @@ int main(int argc, char *argv[])
 	gtk_main ();
         wwviaudio_cancel_all_sounds();
         wwviaudio_stop_portaudio();
-	close_joystick();
+	for (i = 0; i < njoysticks; i++)
+		close_joystick(joystick_fd[i]);
 	return 0;
 }

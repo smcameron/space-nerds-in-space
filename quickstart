@@ -120,7 +120,8 @@ fi
 
 # start the game client and server in quickstart mode
 # ./snis_client $ASPECT_RATIO --fullscreen --solarsystem "$SNIS_SOLARSYSTEM" --quickstart --starship "$shipname" --pw "$password" $@
-./snis_client $ASPECT_RATIO_ARG --fullscreen --starship "$shipname" --pw "$password" $@
-
+./snis_client $ASPECT_RATIO_ARG --fullscreen --starship "$shipname" --pw "$password" \
+	-j '/dev/input/by-id/usb-Thrustmaster_T.16000M-joystick' \
+	-j '/dev/input/by-id/usb-Thrustmaster_TWCS_Throttle-joystick' $@
 exit $?
 

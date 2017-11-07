@@ -26,7 +26,8 @@
 #include <gdk/gdktypes.h>
 #endif
 
-#define JOYSTICK_DEVNAME "/dev/input/js0"
+#define MAX_JOYSTICK_BUTTONS 20
+#define MAX_JOYSTICK_AXES 20
 
 #define JS_EVENT_BUTTON         0x01    /* button pressed/released */
 #define JS_EVENT_AXIS           0x02    /* joystick moved */
@@ -40,23 +41,25 @@ struct js_event {
 	unsigned char number;   /* axis/button number */
 };
 
-struct wwvi_js_event {
-	int button[11];
-	int stick_x;
-	int stick_y;
-	int stick2_x;
-	int stick2_y;
+struct js_state {
+	int button[MAX_JOYSTICK_BUTTONS];
+	int axis[MAX_JOYSTICK_AXES];
 };
+
+struct joystick_descriptor {
+	char *name;
+	int file_descriptor;
+};
+
+int discover_joysticks(struct joystick_descriptor **joystick, int *njoysticks);
 
 #ifdef __WIN32__
 extern int open_joystick(char *joystick_device, GdkWindow *window);
 #else
 extern int open_joystick(char *joystick_device, void *window);
 #endif
-extern int read_joystick_event(struct js_event *jse);
-extern void set_joystick_y_axis(int axis);
-extern void set_joystick_x_axis(int axis);
-extern void close_joystick();
-extern int get_joystick_status(struct wwvi_js_event *wjse);
+extern int read_joystick_event(int fd, struct js_event *jse);
+extern void close_joystick(int fd);
+extern int get_joystick_state(int fd, struct js_state *state);
 
 #endif

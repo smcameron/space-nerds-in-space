@@ -25,7 +25,8 @@ CONFIGFILES=${CONFIGSRCDIR}/commodities.txt \
 	${CONFIGSRCDIR}/factions.txt \
 	${CONFIGSRCDIR}/ship_types.txt \
 	${CONFIGSRCDIR}/starbase_models.txt \
-	${CONFIGSRCDIR}/user_colors.cfg
+	${CONFIGSRCDIR}/user_colors.cfg \
+	${CONFIGSRCDIR}/joystick_config.txt
 SOLARSYSTEMSRCDIR=${CONFIGSRCDIR}/solarsystems
 SOLARSYSTEMDIR=${DATADIR}/solarsystems
 SOLARSYSTEMFILES=${SOLARSYSTEMSRCDIR}/default/assets.txt
@@ -382,9 +383,9 @@ COMMONCLIENTOBJS=${COMMONOBJS} ${OGGOBJ} ${SNDOBJS} snis_ui_element.o snis_font.
 	quat.o vec4.o thrust_attachment.o docking_port.o ui_colors.o snis_keyboard.o solarsystem_config.o \
 	pronunciation.o snis_preferences.o
 
-CLIENTOBJS=${COMMONCLIENTOBJS} shader.o graph_dev_opengl.o opengl_cap.o snis_graph.o snis_client.o
+CLIENTOBJS=${COMMONCLIENTOBJS} shader.o graph_dev_opengl.o opengl_cap.o snis_graph.o snis_client.o joystick_config.o
 
-LIMCLIENTOBJS=${COMMONCLIENTOBJS} graph_dev_gdk.o snis_limited_graph.o snis_limited_client.o
+LIMCLIENTOBJS=${COMMONCLIENTOBJS} graph_dev_gdk.o snis_limited_graph.o snis_limited_client.o joystick_config.o
 
 SDLCLIENTOBJS=shader.o graph_dev_opengl.o opengl_cap.o snis_graph.o mesh_viewer.o \
 				png_utils.o turret_aimer.o quat.o mathutils.o mesh.o mtwist.o \
@@ -601,6 +602,12 @@ liang-barsky.o:   liang-barsky.c Makefile
 	$(Q)$(COMPILE)
 
 joystick.o:   joystick.c Makefile
+	$(Q)$(COMPILE)
+
+joystick_test:	joystick.c joystick.h Makefile
+	gcc -g -DJOYSTICK_TEST -o joystick_test joystick.c
+
+joystick_config.o:	joystick_config.c joystick_config.h string-utils.h
 	$(Q)$(COMPILE)
 
 ogg_to_pcm.o:   ogg_to_pcm.c Makefile
@@ -930,7 +937,7 @@ ${SSGL}:
 mostly-clean:
 	rm -f ${SERVEROBJS} ${CLIENTOBJS} ${LIMCLIENTOBJS} ${SDLCLIENTOBJS} ${PROGS} ${SSGL} \
 	${BINPROGS} ${UTILPROGS} stl_parser snis_limited_graph.c snis_limited_client.c \
-	test-space-partition snis_test_audio.o snis_test_audio
+	test-space-partition snis_test_audio.o snis_test_audio joystick_test
 	( cd ssgl; ${MAKE} clean )
 
 test-marshal:	snis_marshal.c stacktrace.o Makefile

@@ -1,0 +1,22 @@
+#
+# Joystick config file for Space Nerds In Space
+# The code that reads this file is in joystick_config.c
+#
+# If you add any new joystick configs to this file, please
+# consider forwarding the new config to stephenmcameron@gmail.com
+#
+device:usb-©Microsoft_Corporation_Controller_05EB4AD-joystick
+ axis 3 roll
+ axis 4 pitch
+ axis 0 yaw
+ button 3 phaser
+ button 2 torpedo
+device:usb-Thrustmaster_TWCS_Throttle-joystick
+ axis 2 throttle
+ axis 5 yaw
+device:usb-Thrustmaster_T.16000M-joystick
+ axis 0 roll
+ axis 1 pitch
+ axis 2 yaw
+ button 0 phaser
+ button 1 torpedo

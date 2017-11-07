@@ -22,7 +22,7 @@
 #include "compat.h"
 #include "joystick.h"
 
-#ifdef __WIN32__
+#ifdef __WIN32__ /* Pretty sure all the windows code is broken now. */
 
 #define DIRECTINPUT_VERSION 0x0800
 #include <dinput.h>
@@ -137,16 +137,6 @@ int read_joystick_event(struct js_event *jse)
 	return 0;
 }
 
-void set_joystick_y_axis(int axis)
-{
-	/* fixme: add axis selection */
-}
-
-void set_joystick_x_axis(int axis)
-{
-	/* fixme: add axis selection */
-}
-
 void close_joystick()
 {
 	if(joystick) {
@@ -211,20 +201,14 @@ int get_joystick_status(struct wwvi_js_event *wjse)
 #include <fcntl.h>
 #include <unistd.h>
 #include <stdlib.h>
+#include <dirent.h>
+#include <limits.h>
 #include <string.h>
-
-static int joystick_fd = -1;
-
-/* These are sensible on Logitech Dual Action Rumble and xbox360 controller. */
-static int joystick_x_axis = 0;
-static int joystick_y_axis = 1;
-static int joystick2_x_axis = 3;
-static int joystick2_y_axis = 4;
+#include <errno.h>
 
 int open_joystick(char *joystick_device, __attribute__((unused)) void *window)
 {
-	if (joystick_device == NULL)
-		joystick_device = JOYSTICK_DEVNAME;
+	int joystick_fd;
 	joystick_fd = open(joystick_device, JOYSTICK_DEV_OPEN_FLAGS);
 	if (joystick_fd < 0)
 		return joystick_fd;
@@ -234,11 +218,11 @@ int open_joystick(char *joystick_device, __attribute__((unused)) void *window)
 	return joystick_fd;
 }
 
-int read_joystick_event(struct js_event *jse)
+int read_joystick_event(int fd, struct js_event *jse)
 {
 	int bytes;
 
-	bytes = read(joystick_fd, jse, sizeof(*jse)); 
+	bytes = read(fd, jse, sizeof(*jse));
 
 	if (bytes == -1)
 		return 0;
@@ -251,35 +235,29 @@ int read_joystick_event(struct js_event *jse)
 	return -1;
 }
 
-void close_joystick()
+void close_joystick(int fd)
 {
-	close(joystick_fd);
+	close(fd);
 }
 
-int get_joystick_status(struct wwvi_js_event *wjse)
+int get_joystick_state(int fd, struct js_state *state)
 {
 	int rc;
 	struct js_event jse;
-	if (joystick_fd < 0)
-		return -1;
 
-	/* memset(wjse, 0, sizeof(*wjse)); */
-	while ((rc = read_joystick_event(&jse) == 1)) {
+	if (fd < 0)
+		return -1;
+	while ((rc = read_joystick_event(fd, &jse) == 1)) {
 		jse.type &= ~JS_EVENT_INIT; /* ignore synthetic events */
 		if (jse.type == JS_EVENT_AXIS) {
-			if (jse.number == joystick_x_axis)
-				wjse->stick_x = jse.value;
-			if (jse.number == joystick_y_axis)
-				wjse->stick_y = jse.value;
-			if (jse.number == joystick2_x_axis)
-				wjse->stick2_x = jse.value;
-			if (jse.number == joystick2_y_axis)
-				wjse->stick2_y = jse.value;
+			if (jse.number >= 0 && jse.number < MAX_JOYSTICK_AXES)
+				state->axis[jse.number] = jse.value;
 		} else if (jse.type == JS_EVENT_BUTTON) {
-			if (jse.number < 11) {
+			if (jse.number >= 0 && jse.number < MAX_JOYSTICK_BUTTONS) {
 				switch (jse.value) {
 				case 0:
-				case 1: wjse->button[jse.number] = jse.value;
+				case 1:
+					state->button[jse.number] = jse.value;
 					break;
 				default:
 					break;
@@ -287,44 +265,107 @@ int get_joystick_status(struct wwvi_js_event *wjse)
 			}
 		}
 	}
-	/* printf("%d\n", wjse->stick1_y); */
 	return 0;
 }
 
-void set_joystick_y_axis(int axis)
+static int joystick_name_filter(const struct dirent *entry)
 {
-	joystick_y_axis = axis;
+	const char *must_match = "-joystick"; /* old interface */
+	const char *must_not_match = "-event-joystick"; /* new evdev interface */
+	const char *start1, *start2;
+
+	/* name too short to possibly be a joystick */
+	if (strlen(entry->d_name) < strlen(must_match))
+		return 0;
+
+	/* Check that name ends in "-joystick" */
+	start1 = entry->d_name + strlen(entry->d_name) - strlen(must_match);
+	if (strncmp(start1, must_match, strlen(must_match)) != 0)
+		return 0;
+
+	/* Check that name does not end in "-event--joystick" (skip evdev interface) */
+	if (strlen(entry->d_name) < strlen(must_not_match))
+		return 1;
+	start2 = entry->d_name + strlen(entry->d_name) - strlen(must_not_match);
+	if (strncmp(start2, must_not_match, strlen(must_match)) == 0)
+		return 0;
+
+	/* Name ends in "-joystick" and does not end in "-event-joystick", so
+	 * we think it is a device we want to talk to.
+	 */
+	return 1;
 }
 
-void set_joystick_x_axis(int axis)
+int discover_joysticks(struct joystick_descriptor **joystick, int *njoysticks)
 {
-	joystick_x_axis = axis;
+	struct dirent **namelist;
+	int i, rc;
+
+	/* Joysticks show up in /dev/input/by-id/usb-Thrustmaster_T.16000M-joystick -> ../js0
+	 * and also using new evdev interface as /dev/input/by-id/usb-Thrustmaster_T.16000M-event-joystick
+	 * I'm ignoring the evdev interface and just using the old interface. I notice that the
+	 * thrustmaster device seems to show up without any instance information in the name. I
+	 * wonder what will happen if you plug two of them in? What will udev do? I suppose I will cross
+	 * that bridge when/if I come to it.
+	 */
+	rc = scandir("/dev/input/by-id", &namelist, joystick_name_filter, alphasort);
+	if (rc < 0) {
+		fprintf(stderr, "scandir failed: %s\n", strerror(errno));
+		return rc;
+	}
+
+	*joystick = malloc(sizeof(**joystick) * rc);
+	memset(*joystick, 0, sizeof(**joystick) * rc);
+	for (i = 0; i < rc; i++) {
+		printf("%s\n", namelist[i]->d_name);
+		(*joystick)[i].name = namelist[i]->d_name;
+	}
+	free(namelist);
+	*njoysticks = rc;
+	return 0;
 }
 
 #endif /* __WIN32__ */
 
-#if 0
+#ifdef JOYSTICK_TEST
 /* a little test program */
 int main(int argc, char *argv[])
 {
-	int fd, rc;
+	int i, rc;
 	int done = 0;
-
 	struct js_event jse;
+	struct joystick_descriptor *joystick;
+	int njoysticks;
+	int *fd;
+	char filename[PATH_MAX];
 
-	fd = open_joystick();
-	if (fd < 0) {
-		printf("open failed.\n");
-		exit(1);
+	if (discover_joysticks(&joystick, &njoysticks) != 0) {
+		fprintf(stderr, "Failed to discover joysticks.\n");
+		return -1;
+	}
+
+	fd = malloc(sizeof(*fd) * njoysticks);
+	printf("Discovered %d joysticks\n", njoysticks);
+	for (i = 0; i < njoysticks; i++) {
+		printf("%3d: %s\n", i, joystick[i].name);
+		snprintf(filename, PATH_MAX, "%s/%s", "/dev/input/by-id",
+			joystick[i].name);
+		fd[i] = open_joystick(filename, NULL);
+		if (fd[i] < 0) {
+			fprintf(stderr, "Failed to open device %s: %s\n",
+				filename, strerror(errno));
+		}
 	}
 
 	while (!done) {
-		rc = read_joystick_event(&jse);
-		usleep(1000);
-		if (rc == 1) {
-			printf("Event: time %8u, value %8hd, type: %3u, axis/button: %u\n", 
-				jse.time, jse.value, jse.type, jse.number);
+		for (i = 0; i < njoysticks; i++) {
+			rc = read_joystick_event(fd[i], &jse);
+			if (rc == 1) {
+				printf("Device: %d, time %8u, value %8hd, type: %3u, axis/button: %u\n",
+					i, jse.time, jse.value, jse.type, jse.number);
+			}
 		}
+		usleep(1000);
 	}
 }
 #endif
