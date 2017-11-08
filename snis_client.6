@@ -1,4 +1,4 @@
-.TH SPACE-NERDS-IN-SPACE "6" "JUNE 2016" "snis_client" "Games"
+.TH SPACE-NERDS-IN-SPACE "6" "NOVEMBER 2017" "snis_client" "Games"
 .SH NAME
 snis_client \- Multi player cooperative star ship bridge simulator (client) 
 .SH SYNOPSIS
@@ -117,7 +117,52 @@ $SNIS_ASSET_DIR/models/*.stl, various 3D models used by the game.
 .PP
 $SNIS_ASSET_DIR/solarsystems/*/assets.txt, per-solarsystem art assets.
 .PP
-/dev/input/js0, the joystick device node.
+$SNIS_ASSET_DIR/joystick_config.txt, joystick configuration file. The format
+of this file is as follows.
+.PP
+A "device:" line begins the configuration for a new device (i.e. a particular kind of joystick).
+The device names on the "device:" lines are as the devices appear in /dev/input/by-id/*.
+.PP
+An "axis" line defines how an axis is to be interpreted for the current (last specified)
+device by mapping the axis to a "function" (defined below).
+.PP
+A "button" line defines how a button is to be interpreted for the current (last specified)
+device by mapping the button to a "function" (defined below).
+.PP
+A "function" is one of several predefined words: roll, pitch, yaw, phaser, torpedo.
+.PP
+.DI
+.nf
+#
+# Joystick config file for Space Nerds In Space
+# The code that reads this file is in joystick_config.c
+#
+# If you add any new joystick configs to this file, please
+# consider forwarding the new config to stephenmcameron@gmail.com
+#
+device:usb-©Microsoft_Corporation_Controller_05EB4AD-joystick
+ axis 3 roll
+ axis 4 pitch
+ axis 0 yaw
+ button 3 phaser
+ button 2 torpedo
+device:usb-Thrustmaster_TWCS_Throttle-joystick
+ axis 2 throttle
+ axis 5 yaw
+device:usb-Thrustmaster_T.16000M-joystick
+ axis 0 roll
+ axis 1 pitch
+ axis 2 yaw
+ button 0 phaser
+ button 1 torpedo
+.fi
+.DE
+.br
+.PP
+This is all still somewhat preliminary and the format of this file will
+likely change to include a "mode" for each axis and button line.
+.PP
+/dev/input/by-id/*, the joystick device nodes.
 .PP
 /dev/input/event5, the rumble effect device. 
 .PP
