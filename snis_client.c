@@ -848,6 +848,25 @@ static int add_generic_damcon_object(uint32_t id, uint32_t ship_id, double x, do
 	return i;
 }
 
+static struct navigation_ui {
+	struct slider *warp_slider;
+	struct slider *navzoom_slider;
+	struct slider *throttle_slider;
+	struct gauge *warp_gauge;
+	struct gauge *speedometer;
+	struct button *engage_warp_button;
+	struct button *docking_magnets_button;
+	struct button *standard_orbit_button;
+	struct button *reverse_button;
+	struct button *trident_button;
+	struct button *computer_button;
+	struct button *starmap_button;
+	int gauge_radius;
+	struct snis_text_input_box *computer_input;
+	char input[100];
+	int computer_active;
+} nav_ui;
+
 static struct damcon_ui {
 	struct label *robot_controls;
 	struct button *engineering_button;
@@ -3118,6 +3137,61 @@ static void fire_phaser_button_pressed(__attribute__((unused)) void *notused);
 static void fire_torpedo_button_pressed(__attribute__((unused)) void *notused);
 static void load_torpedo_button_pressed();
 
+static void do_joystick_engage_warp(__attribute__((unused)) void *notused)
+{
+	snis_button_trigger_button(nav_ui.engage_warp_button);
+}
+
+static void do_joystick_standard_orbit(__attribute__((unused)) void *notused)
+{
+	snis_button_trigger_button(nav_ui.standard_orbit_button);
+}
+
+static void do_joystick_docking_magnets(__attribute__((unused)) void *notused)
+{
+	snis_button_trigger_button(nav_ui.docking_magnets_button);
+}
+
+static void do_joystick_attitude_indicator(__attribute__((unused)) void *notused)
+{
+	snis_button_trigger_button(nav_ui.trident_button);
+}
+
+static void do_joystick_starmap(__attribute__((unused)) void *notused)
+{
+	snis_button_trigger_button(nav_ui.starmap_button);
+}
+
+static void do_joystick_reverse(__attribute__((unused)) void *notused)
+{
+	snis_button_trigger_button(nav_ui.reverse_button);
+}
+
+static void do_joystick_nudge_warp_up(__attribute__((unused)) void *notused)
+{
+	snis_slider_nudge(nav_ui.warp_slider, 0.05, 0);
+}
+
+static void do_joystick_nudge_warp_down(__attribute__((unused)) void *notused)
+{
+	snis_slider_nudge(nav_ui.warp_slider, -0.05, 0);
+}
+
+static void do_joystick_nav_nudge_zoom_down(__attribute__((unused)) void *notused)
+{
+	snis_slider_nudge(nav_ui.navzoom_slider, -0.05, 0);
+}
+
+static void do_joystick_nav_change_pov(__attribute__((unused)) void *notused)
+{
+	do_nav_camera_mode();
+}
+
+static void do_joystick_nav_nudge_zoom_up(__attribute__((unused)) void *notused)
+{
+	snis_slider_nudge(nav_ui.navzoom_slider, 0.05, 0);
+}
+
 static void do_joystick_torpedo(__attribute__((unused)) void *x)
 {
 	do_torpedo();
@@ -3155,25 +3229,6 @@ static void do_joystick_damcon_roll(__attribute__((unused)) void *x, int value)
 	else if (value > XJOYSTICK_THRESHOLD)
 		robot_right_button_pressed(NULL);
 }
-
-static struct navigation_ui {
-	struct slider *warp_slider;
-	struct slider *navzoom_slider;
-	struct slider *throttle_slider;
-	struct gauge *warp_gauge;
-	struct gauge *speedometer;
-	struct button *engage_warp_button;
-	struct button *docking_magnets_button;
-	struct button *standard_orbit_button;
-	struct button *reverse_button;
-	struct button *trident_button;
-	struct button *computer_button;
-	struct button *starmap_button;
-	int gauge_radius;
-	struct snis_text_input_box *computer_input;
-	char input[100];
-	int computer_active;
-} nav_ui;
 
 static void do_throttle(struct slider *s);
 static void do_joystick_throttle(__attribute__((unused)) void *x, int value)
@@ -17550,6 +17605,17 @@ static void setup_joysticks(GtkWidget *window)
 	set_joystick_axis_fn(joystick_cfg, "damcon-roll", do_joystick_damcon_roll);
 	set_joystick_axis_fn(joystick_cfg, "throttle", do_joystick_throttle);
 	set_joystick_button_fn(joystick_cfg, "damcon-gripper", robot_gripper_button_pressed);
+	set_joystick_button_fn(joystick_cfg, "nav-engage-warp", do_joystick_engage_warp);
+	set_joystick_button_fn(joystick_cfg, "nav-standard-orbit", do_joystick_standard_orbit);
+	set_joystick_button_fn(joystick_cfg, "nav-docking-magnets", do_joystick_docking_magnets);
+	set_joystick_button_fn(joystick_cfg, "nav-attitude-indicator-abs-rel", do_joystick_attitude_indicator);
+	set_joystick_button_fn(joystick_cfg, "nav-starmap", do_joystick_starmap);
+	set_joystick_button_fn(joystick_cfg, "nav-reverse", do_joystick_reverse);
+	set_joystick_button_fn(joystick_cfg, "nav-nudge-warp-up", do_joystick_nudge_warp_up);
+	set_joystick_button_fn(joystick_cfg, "nav-nudge-warp-down", do_joystick_nudge_warp_down);
+	set_joystick_button_fn(joystick_cfg, "nav-nudge-zoom-up", do_joystick_nav_nudge_zoom_up);
+	set_joystick_button_fn(joystick_cfg, "nav-nudge-zoom-down", do_joystick_nav_nudge_zoom_down);
+	set_joystick_button_fn(joystick_cfg, "nav-change-pov", do_joystick_nav_change_pov);
 	sprintf(joystick_config_file, "%s/joystick_config.txt", asset_dir);
 	read_joystick_config(joystick_cfg, joystick_config_file, joystick_name, njoysticks);
 

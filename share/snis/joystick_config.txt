@@ -64,9 +64,27 @@ device:usb-Thrustmaster_TWCS_Throttle-joystick
  # main screen
  mode 0 axis 2 throttle
  mode 0 axis 5 yaw
+ mode 0 button 0 nav-reverse
+ mode 0 button 1 nav-docking-magnets
+ mode 0 button 2 nav-starmap
+ mode 0 button 8 nav-nudge-warp-down
+ mode 0 button 6 nav-nudge-warp-up
+ mode 0 button 5 nav-engage-warp
+ mode 0 button 7 nav-standard-orbit
  # navigation
  mode 1 axis 2 throttle
  mode 1 axis 5 yaw
+ mode 1 button 0 nav-reverse
+ mode 1 button 1 nav-docking-magnets
+ mode 1 button 2 nav-starmap
+ mode 1 button 3 nav-nudge-zoom-down
+ mode 1 button 4 nav-nudge-zoom-up
+ mode 1 button 8 nav-nudge-warp-down
+ mode 1 button 6 nav-nudge-warp-up
+ mode 1 button 5 nav-engage-warp
+ mode 1 button 10 nav-attitude-indicator-abs-rel
+ mode 1 button 13 nav-change-pov
+ mode 1 button 7 nav-standard-orbit
  # weapons
  mode 2 axis 5 weapons-yaw
  # damage control
