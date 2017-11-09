@@ -275,6 +275,20 @@ void snis_slider_poke_input(struct slider *s, double input, int with_sound)
 	}
 }
 
+void snis_slider_nudge(struct slider *s, double fraction, int with_sound)
+{
+	s->input = s->input + fraction;
+	if (s->input < 0.0)
+		s->input = 0.0;
+	if (s->input > 1.0)
+		s->input = 1.0;
+	if (s->clicked) {
+		s->clicked(s);
+		if (slider_sound != -1 && with_sound)
+				wwviaudio_add_sound(slider_sound);
+	}
+}
+
 void snis_slider_set_color_scheme(struct slider *s, int reversed)
 {
 	s->colors_reversed = reversed;
