@@ -45,7 +45,8 @@ device:usb-Thrustmaster_TWCS_Throttle-joystick
  mode 1 axis 5 yaw
  # weapons
  mode 2 axis 5 weapons-yaw
- mode 2 axis 5 damcon-roll
+ # damage control
+ mode 7 axis 5 damcon-roll
 device:usb-Thrustmaster_T.16000M-joystick
  # main screen
  mode 0 axis 0 roll

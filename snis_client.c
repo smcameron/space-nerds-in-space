@@ -3156,6 +3156,37 @@ static void do_joystick_damcon_roll(__attribute__((unused)) void *x, int value)
 		robot_right_button_pressed(NULL);
 }
 
+static struct navigation_ui {
+	struct slider *warp_slider;
+	struct slider *navzoom_slider;
+	struct slider *throttle_slider;
+	struct gauge *warp_gauge;
+	struct gauge *speedometer;
+	struct button *engage_warp_button;
+	struct button *docking_magnets_button;
+	struct button *standard_orbit_button;
+	struct button *reverse_button;
+	struct button *trident_button;
+	struct button *computer_button;
+	struct button *starmap_button;
+	int gauge_radius;
+	struct snis_text_input_box *computer_input;
+	char input[100];
+	int computer_active;
+} nav_ui;
+
+static void do_throttle(struct slider *s);
+static void do_joystick_throttle(__attribute__((unused)) void *x, int value)
+{
+	double v = ((double) -value + 32767.0) / 65534.0;
+	double n = snis_slider_get_input(nav_ui.throttle_slider);
+	if (fabs(n - v) > 0.01) {
+		printf("throttle value is currently = %f, setting to %f\n", n, v);
+		snis_slider_set_input(nav_ui.throttle_slider, v);
+		do_throttle(nav_ui.throttle_slider);
+	}
+}
+
 static void do_joystick_weapons_pitch(__attribute__((unused)) void *x, int value)
 {
 	if (value < -YJOYSTICK_THRESHOLD)
@@ -3834,25 +3865,6 @@ static int process_update_coolant_data(void)
 }
 
 static void update_emf_detector(uint8_t emf_value);
-
-static struct navigation_ui {
-	struct slider *warp_slider;
-	struct slider *navzoom_slider;
-	struct slider *throttle_slider;
-	struct gauge *warp_gauge;
-	struct gauge *speedometer;
-	struct button *engage_warp_button;
-	struct button *docking_magnets_button;
-	struct button *standard_orbit_button;
-	struct button *reverse_button;
-	struct button *trident_button;
-	struct button *computer_button;
-	struct button *starmap_button;
-	int gauge_radius;
-	struct snis_text_input_box *computer_input;
-	char input[100];
-	int computer_active;
-} nav_ui;
 
 static inline int nav_ui_computer_active(void)
 {
@@ -17536,6 +17548,7 @@ static void setup_joysticks(GtkWidget *window)
 	set_joystick_axis_fn(joystick_cfg, "weapons-pitch", do_joystick_weapons_pitch);
 	set_joystick_axis_fn(joystick_cfg, "damcon-pitch", do_joystick_damcon_pitch);
 	set_joystick_axis_fn(joystick_cfg, "damcon-roll", do_joystick_damcon_roll);
+	set_joystick_axis_fn(joystick_cfg, "throttle", do_joystick_throttle);
 	set_joystick_button_fn(joystick_cfg, "damcon-gripper", robot_gripper_button_pressed);
 	sprintf(joystick_config_file, "%s/joystick_config.txt", asset_dir);
 	read_joystick_config(joystick_cfg, joystick_config_file, joystick_name, njoysticks);
