@@ -31,17 +31,23 @@
  * ----8<-----8<------
  * # Joystick config file
  * device:my_joystick
- *  axis 1 pitch
- *  axis 2 yaw
- *  axis 3 roll
- *  button 1 shoot
- *  button 2 thrust
+ *  mode 1 axis 1 secondary-pitch
+ *  mode 1 axis 2 secondary-yaw
+ *  mode 1 axis 3 secondary-roll
+ *  mode 0 axis 1 pitch
+ *  mode 0 axis 2 yaw
+ *  mode 0 axis 3 roll
+ *  mode 0 button 1 shoot
+ *  mode 0 button 2 thrust
  * device:my_other_joystick
- *  axis 1 yaw
- *  axis 2 pitch
- *  axis 3 roll
- *  button 0 shoot
- *  button 1 thrust
+ *  mode 0 axis 1 yaw
+ *  mode 0 axis 2 pitch
+ *  mode 0 axis 3 roll
+ *  mode 0 button 0 shoot
+ *  mode 0 button 1 thrust
+ *  mode 1 axis 1 secondary-pitch
+ *  mode 1 axis 2 secondary-yaw
+ *  mode 1 axis 3 secondary-roll
  * ----8<-----8<------
  *
  * The "my_joystick" and "my_other_joystick" must match entries in joysticks_found[]
@@ -51,6 +57,11 @@
  * The "yaw", "pitch", "roll", "shoot", "thrust", etc. must match the "function_name" parameters
  * passed  into set_joystick_axis_fn() and set_joystick_button_fn() functions. These are
  * made up by you to fit the purposes of your program.
+ *
+ * The mode numbers are a way to have the same button do different things in different
+ * situations. For example, maybe you have a "tank" and an "airplane" mode, and when
+ * in tank mode, tilting the joystick left or right yaws the tank, but in airplane
+ * mode it rolls the plane.
  *
  * The general sequence is:
  *
@@ -76,11 +87,13 @@
  * At this point, you can poll the joysticks hardware (however you do that)
  * to and call
  *
- * joystick_axis(cfg, NULL, device, axis, value);
- * joystick_button(cfg, NULL, device, button);
+ * joystick_axis(cfg, NULL, mode, device, axis, value);
+ * joystick_button(cfg, NULL, mode, device, button);
  *
  * The context parameter (NULL, above) may be used for whatever you want,
  * or not at all.
+ *
+ * The mode is a low numbered integer defined by you.
  *
  * The "device" is an integer indexing my_joysticks as it was passed to read_joystick_config().
  * The button and axis params are which button/axis was pressed/moved.
@@ -103,8 +116,8 @@ void set_joystick_axis_fn(struct joystick_config *cfg, char *function_name, joys
 void set_joystick_button_fn(struct joystick_config *cfg, char *function_name, joystick_button_fn button_fn);
 
 int read_joystick_config(struct joystick_config *cfg, char *filename, char *joysticks_found[], int njoysticks_found);
-void joystick_axis(struct joystick_config *cfg, void *context, int device, int axis, int value);
-void joystick_button(struct joystick_config *cfg, void *context, int device, int button);
+void joystick_axis(struct joystick_config *cfg, void *context, int mode, int device, int axis, int value);
+void joystick_button(struct joystick_config *cfg, void *context, int mode, int device, int button);
 void free_joystick_config(struct joystick_config *cfg);
 
 #endif

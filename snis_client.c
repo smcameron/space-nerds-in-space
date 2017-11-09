@@ -3079,8 +3079,6 @@ static void do_torpedo(void)
 {
 	struct snis_entity *o;
 
-	if (displaymode != DISPLAYMODE_WEAPONS)
-		return;
 	if (!(o = find_my_ship()))
 		return;
 	if (o->tsd.ship.torpedoes_loaded <= 0)
@@ -3104,21 +3102,12 @@ static void do_nav_camera_mode()
 		(unsigned char) (nav_camera_mode + 1) % 4));
 }
 
-static void robot_gripper_button_pressed(void *x);
 static void do_laser(void)
 {
-	switch (displaymode) {
-	case DISPLAYMODE_WEAPONS: 
-		queue_to_server(snis_opcode_pkt("b", OPCODE_REQUEST_MANUAL_LASER));
-		break;
-	case DISPLAYMODE_DAMCON:
-		robot_gripper_button_pressed(NULL);
-		break;
-	default:
-		break;
-	}
+	queue_to_server(snis_opcode_pkt("b", OPCODE_REQUEST_MANUAL_LASER));
 }
 
+static void robot_gripper_button_pressed(void *x);
 static void robot_backward_button_pressed(void *x);
 static void robot_forward_button_pressed(void *x);
 static void robot_left_button_pressed(void *x);
@@ -3131,109 +3120,90 @@ static void load_torpedo_button_pressed();
 
 static void do_joystick_torpedo(__attribute__((unused)) void *x)
 {
-	if (displaymode != DISPLAYMODE_WEAPONS)
-		return;
 	do_torpedo();
 	load_torpedo_button_pressed();
-}
-
-static void do_joystick_phaser(__attribute__((unused)) void *x)
-{
-	switch (displaymode) {
-	case DISPLAYMODE_WEAPONS:
-		fire_phaser_button_pressed(NULL);
-		break;
-	case DISPLAYMODE_DAMCON: /* TODO: break this out as separate joystick vector */
-		robot_gripper_button_pressed(NULL);
-		break;
-	default:
-		break;
-	}	
 }
 
 static void do_joystick_pitch(__attribute__((unused)) void *x, int value)
 {
 #define YJOYSTICK_THRESHOLD 23000
 #define YJOYSTICK_THRESHOLD_FINE 6000
-	switch (displaymode) {
-	case DISPLAYMODE_NAVIGATION:
-		if (value < -YJOYSTICK_THRESHOLD)
-			request_navigation_pitch_packet(PITCH_BACK);
-		else if (value > YJOYSTICK_THRESHOLD)
-			request_navigation_pitch_packet(PITCH_FORWARD);
-		else if (value < -YJOYSTICK_THRESHOLD_FINE)
-			request_navigation_pitch_packet(PITCH_BACK + 2);
-		else if (value > YJOYSTICK_THRESHOLD_FINE)
-			request_navigation_pitch_packet(PITCH_FORWARD + 2);
-		break;
-	case DISPLAYMODE_WEAPONS:
-		if (value < -YJOYSTICK_THRESHOLD)
-			request_weapons_manual_pitch_packet(PITCH_BACK);
-		else if (value > YJOYSTICK_THRESHOLD)
-			request_weapons_manual_pitch_packet(PITCH_FORWARD);
-		else if (value < -YJOYSTICK_THRESHOLD_FINE)
-			request_weapons_manual_pitch_packet(PITCH_BACK + 2);
-		else if (value > YJOYSTICK_THRESHOLD_FINE)
-			request_weapons_manual_pitch_packet(PITCH_FORWARD + 2);
-		break;
-	case DISPLAYMODE_DAMCON: /* TODO: break these out as separate joystick vectors */
-		if (value < -YJOYSTICK_THRESHOLD)
-			robot_forward_button_pressed(NULL);
-		break;
-		if (value > YJOYSTICK_THRESHOLD)
-			robot_backward_button_pressed(NULL);
-		break;
-	default:
-		break;
-	}
+	if (value < -YJOYSTICK_THRESHOLD)
+		request_navigation_pitch_packet(PITCH_BACK);
+	else if (value > YJOYSTICK_THRESHOLD)
+		request_navigation_pitch_packet(PITCH_FORWARD);
+	else if (value < -YJOYSTICK_THRESHOLD_FINE)
+		request_navigation_pitch_packet(PITCH_BACK + 2);
+	else if (value > YJOYSTICK_THRESHOLD_FINE)
+		request_navigation_pitch_packet(PITCH_FORWARD + 2);
 }
 
-static void do_joystick_yaw(__attribute__((unused)) void *x, int value)
+static void do_joystick_damcon_pitch(__attribute__((unused)) void *x, int value)
+{
+	if (value < -YJOYSTICK_THRESHOLD)
+		robot_forward_button_pressed(NULL);
+	else if (value > YJOYSTICK_THRESHOLD)
+		robot_backward_button_pressed(NULL);
+}
+
+static void do_joystick_damcon_roll(__attribute__((unused)) void *x, int value)
 {
 #define XJOYSTICK_THRESHOLD 23000
 #define XJOYSTICK_THRESHOLD_FINE 6000
-	switch (displaymode) {
-	case DISPLAYMODE_NAVIGATION:
-		if (value < -XJOYSTICK_THRESHOLD)
-			request_navigation_yaw_packet(YAW_LEFT);
-		else if (value > XJOYSTICK_THRESHOLD)
-			request_navigation_yaw_packet(YAW_RIGHT);
-		else if (value < -XJOYSTICK_THRESHOLD_FINE)
-			request_navigation_yaw_packet(YAW_LEFT + 2);
-		else if (value > XJOYSTICK_THRESHOLD_FINE)
-			request_navigation_yaw_packet(YAW_RIGHT + 2);
-		break;
-	case DISPLAYMODE_WEAPONS:
-		if (value < -XJOYSTICK_THRESHOLD)
-			request_weapons_manual_yaw_packet(YAW_LEFT);
-		else if (value > XJOYSTICK_THRESHOLD)
-			request_weapons_manual_yaw_packet(YAW_RIGHT);
-		else if (value < -XJOYSTICK_THRESHOLD_FINE)
-			request_weapons_manual_yaw_packet(YAW_LEFT + 2);
-		else if (value > XJOYSTICK_THRESHOLD_FINE)
-			request_weapons_manual_yaw_packet(YAW_RIGHT + 2);
-		break;
-	default:
-		break;
-	}
+	if (value < -XJOYSTICK_THRESHOLD)
+		robot_left_button_pressed(NULL);
+	else if (value > XJOYSTICK_THRESHOLD)
+		robot_right_button_pressed(NULL);
 }
+
+static void do_joystick_weapons_pitch(__attribute__((unused)) void *x, int value)
+{
+	if (value < -YJOYSTICK_THRESHOLD)
+		request_weapons_manual_pitch_packet(PITCH_BACK);
+	else if (value > YJOYSTICK_THRESHOLD)
+		request_weapons_manual_pitch_packet(PITCH_FORWARD);
+	else if (value < -YJOYSTICK_THRESHOLD_FINE)
+		request_weapons_manual_pitch_packet(PITCH_BACK + 2);
+	else if (value > YJOYSTICK_THRESHOLD_FINE)
+		request_weapons_manual_pitch_packet(PITCH_FORWARD + 2);
+}
+
+
+static void do_joystick_yaw(__attribute__((unused)) void *x, int value)
+{
+	if (value < -XJOYSTICK_THRESHOLD)
+		request_navigation_yaw_packet(YAW_LEFT);
+	else if (value > XJOYSTICK_THRESHOLD)
+		request_navigation_yaw_packet(YAW_RIGHT);
+	else if (value < -XJOYSTICK_THRESHOLD_FINE)
+		request_navigation_yaw_packet(YAW_LEFT + 2);
+	else if (value > XJOYSTICK_THRESHOLD_FINE)
+		request_navigation_yaw_packet(YAW_RIGHT + 2);
+}
+
+static void do_joystick_weapons_yaw(__attribute__((unused)) void *x, int value)
+{
+	if (value < -XJOYSTICK_THRESHOLD)
+		request_weapons_manual_yaw_packet(YAW_LEFT);
+	else if (value > XJOYSTICK_THRESHOLD)
+		request_weapons_manual_yaw_packet(YAW_RIGHT);
+	else if (value < -XJOYSTICK_THRESHOLD_FINE)
+		request_weapons_manual_yaw_packet(YAW_LEFT + 2);
+	else if (value > XJOYSTICK_THRESHOLD_FINE)
+		request_weapons_manual_yaw_packet(YAW_RIGHT + 2);
+}
+
 
 static void do_joystick_roll(__attribute__((unused)) void *x, int value)
 {
-	switch (displaymode) {
-	case DISPLAYMODE_NAVIGATION:
-		if (value < -XJOYSTICK_THRESHOLD)
-			request_navigation_roll_packet(ROLL_RIGHT);
-		else if (value > XJOYSTICK_THRESHOLD)
-			request_navigation_roll_packet(ROLL_LEFT);
-		else if (value < -XJOYSTICK_THRESHOLD_FINE)
-			request_navigation_roll_packet(ROLL_RIGHT + 2);
-		else if (value > XJOYSTICK_THRESHOLD_FINE)
-			request_navigation_roll_packet(ROLL_LEFT + 2);
-		break;
-	default:
-		break;
-	}
+	if (value < -XJOYSTICK_THRESHOLD)
+		request_navigation_roll_packet(ROLL_RIGHT);
+	else if (value > XJOYSTICK_THRESHOLD)
+		request_navigation_roll_packet(ROLL_LEFT);
+	else if (value < -XJOYSTICK_THRESHOLD_FINE)
+		request_navigation_roll_packet(ROLL_RIGHT + 2);
+	else if (value > XJOYSTICK_THRESHOLD_FINE)
+		request_navigation_roll_packet(ROLL_LEFT + 2);
 }
 
 /* client joystick status */
@@ -3264,13 +3234,14 @@ static void deal_with_joysticks()
 		/* If not on screen which uses joystick, ignore stick */
 		if (displaymode != DISPLAYMODE_DAMCON &&
 			displaymode != DISPLAYMODE_WEAPONS &&
-			displaymode != DISPLAYMODE_NAVIGATION)
+			displaymode != DISPLAYMODE_NAVIGATION &&
+			displaymode != DISPLAYMODE_MAINSCREEN)
 			continue;
 
 		/* Fire off joystick button callbacks registered via set_joystick_button_fn() */
 		for (i = 0; i < ARRAYSIZE(jss[j].button); i++)
 			if (jss[j].button[i] == 1)
-				joystick_button(joystick_cfg, (void *) (intptr_t) displaymode, j, i);
+				joystick_button(joystick_cfg, NULL, displaymode, j, i);
 
 		/* Throttle back the joystick axis input rate to avoid flooding network */
 		if (timer % joystick_throttle != 0)
@@ -3280,7 +3251,7 @@ static void deal_with_joysticks()
 		for (i = 0; i < ARRAYSIZE(jss[j].axis); i++)
 			if (jss[j].axis[i] < -JOYSTICK_DEADZONE ||
 				jss[j].axis[i] > JOYSTICK_DEADZONE)
-				joystick_axis(joystick_cfg, (void *) (intptr_t) displaymode, j, i, jss[j].axis[i]);
+				joystick_axis(joystick_cfg, NULL, displaymode, j, i, jss[j].axis[i]);
 	}
 }
 
@@ -3468,7 +3439,10 @@ static gint key_press_cb(GtkWidget* widget, GdkEventKey* event, gpointer data)
 				in_the_process_of_quitting = 0;
 			break;
 		}
-		do_laser();
+		if (displaymode == DISPLAYMODE_WEAPONS)
+			do_laser();
+		else if (displaymode == DISPLAYMODE_DAMCON)
+			robot_gripper_button_pressed(NULL);
 		break;
 	case key_camera_mode:
 		if (displaymode == DISPLAYMODE_MAINSCREEN)
@@ -17556,8 +17530,13 @@ static void setup_joysticks(GtkWidget *window)
 	set_joystick_axis_fn(joystick_cfg, "yaw", do_joystick_yaw);
 	set_joystick_axis_fn(joystick_cfg, "roll", do_joystick_roll);
 	set_joystick_axis_fn(joystick_cfg, "pitch", do_joystick_pitch);
-	set_joystick_button_fn(joystick_cfg, "phaser", do_joystick_phaser);
+	set_joystick_button_fn(joystick_cfg, "phaser", fire_phaser_button_pressed);
 	set_joystick_button_fn(joystick_cfg, "torpedo", do_joystick_torpedo);
+	set_joystick_axis_fn(joystick_cfg, "weapons-yaw", do_joystick_weapons_yaw);
+	set_joystick_axis_fn(joystick_cfg, "weapons-pitch", do_joystick_weapons_pitch);
+	set_joystick_axis_fn(joystick_cfg, "damcon-pitch", do_joystick_damcon_pitch);
+	set_joystick_axis_fn(joystick_cfg, "damcon-roll", do_joystick_damcon_roll);
+	set_joystick_button_fn(joystick_cfg, "damcon-gripper", robot_gripper_button_pressed);
 	sprintf(joystick_config_file, "%s/joystick_config.txt", asset_dir);
 	read_joystick_config(joystick_cfg, joystick_config_file, joystick_name, njoysticks);
 

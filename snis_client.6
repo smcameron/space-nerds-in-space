@@ -123,6 +123,9 @@ of this file is as follows.
 A "device:" line begins the configuration for a new device (i.e. a particular kind of joystick).
 The device names on the "device:" lines are as the devices appear in /dev/input/by-id/*.
 .PP
+A "mode" is a number that refers to a terminal (screen) in the game. The modes
+are described in comments in the joystick config file example below.
+.PP
 An "axis" line defines how an axis is to be interpreted for the current (last specified)
 device by mapping the axis to a "function" (defined below).
 .PP
@@ -140,27 +143,76 @@ A "function" is one of several predefined words: roll, pitch, yaw, phaser, torpe
 # If you add any new joystick configs to this file, please
 # consider forwarding the new config to stephenmcameron@gmail.com
 #
+# The modes are as follows:
+# (See DISPLAYMODE_* #defines in snis_packet.h)
+#
+# mode 0 - main screen
+# mode 1 - navigation
+# mode 2 - weapons
+# mode 3 - engineering
+# mode 4 - science
+# mode 5 - comms
+# mode 6 - demon screen
+# mode 7 - damage control
+#
 device:usb-©Microsoft_Corporation_Controller_05EB4AD-joystick
- axis 3 roll
- axis 4 pitch
- axis 0 yaw
- button 3 phaser
- button 2 torpedo
+ # main screen
+ mode 0 axis 3 roll
+ mode 0 axis 4 pitch
+ mode 0 axis 0 yaw
+ mode 0 button 3 phaser
+ mode 0 button 2 torpedo
+ mode 1 axis 3 roll
+ mode 1 axis 4 pitch
+ mode 1 axis 0 yaw
+ mode 2 axis 3 weapons-yaw
+ mode 2 axis 4 weapons-pitch
+ mode 2 axis 0 weapons-yaw
+ mode 7 axis 3 damcon-roll
+ mode 7 axis 4 damcon-pitch
+ mode 7 button 1 damcon-gripper
+ mode 7 button 0 damcon-gripper
+ mode 2 button 3 phaser
+ mode 2 button 2 torpedo
 device:usb-Thrustmaster_TWCS_Throttle-joystick
- axis 2 throttle
- axis 5 yaw
+ # main screen
+ mode 0 axis 2 throttle
+ mode 0 axis 5 yaw
+ # navigation
+ mode 1 axis 2 throttle
+ mode 1 axis 5 yaw
+ # weapons
+ mode 2 axis 5 weapons-yaw
+ mode 2 axis 5 damcon-roll
 device:usb-Thrustmaster_T.16000M-joystick
- axis 0 roll
- axis 1 pitch
- axis 2 yaw
- button 0 phaser
- button 1 torpedo
+ # main screen
+ mode 0 axis 0 roll
+ mode 0 axis 1 pitch
+ mode 0 axis 2 yaw
+ mode 0 button 0 phaser
+ mode 0 button 1 torpedo
+ # navigation
+ mode 1 axis 0 roll
+ mode 1 axis 1 pitch
+ mode 1 axis 2 yaw
+ # weapons
+ mode 2 axis 0 weapons-yaw # yaw, not roll, weapons doesn't have roll
+ mode 2 axis 1 weapons-pitch
+ mode 2 axis 2 weapons-yaw
+ mode 2 button 0 phaser
+ mode 2 button 1 torpedo
+ # damcon
+ mode 7 button 1 damcon-gripper
+ mode 7 button 0 damcon-gripper
+ mode 7 axis 0 damcon-roll
+ mode 7 axis 1 damcon-pitch
+ mode 7 axis 2 damcon-roll
 .fi
 .DE
 .br
 .PP
 This is all still somewhat preliminary and the format of this file will
-likely change to include a "mode" for each axis and button line.
+likely change.
 .PP
 /dev/input/by-id/*, the joystick device nodes.
 .PP

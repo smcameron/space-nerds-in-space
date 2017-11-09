@@ -31,6 +31,7 @@
 #define MAX_BUTTONS 30
 #define MAX_AXES 30
 #define MAX_FUNCTIONS 256
+#define MAX_MODES 20
 
 struct button_function_map_entry {
 	char *name;
@@ -45,8 +46,8 @@ struct axis_function_map_entry {
 struct joystick_config {
 	int njoysticks;
 	char *joystick_device[PATH_MAX];
-	joystick_button_fn button[MAX_DEVICES][MAX_BUTTONS];
-	joystick_axis_fn axis[MAX_DEVICES][MAX_AXES];
+	joystick_button_fn button[MAX_MODES][MAX_DEVICES][MAX_BUTTONS];
+	joystick_axis_fn axis[MAX_MODES][MAX_DEVICES][MAX_AXES];
 	struct button_function_map_entry button_fn_map[MAX_FUNCTIONS];
 	struct axis_function_map_entry axis_fn_map[MAX_FUNCTIONS];
 	int nbutton_fns;
@@ -109,7 +110,7 @@ static int parse_joystick_cfg_line(struct joystick_config *cfg, char *filename, 
 {
 	int rc;
 	char device[1000];
-	int axis, button;
+	int mode, axis, button;
 	char function[1000];
 	joystick_axis_fn jaf;
 	joystick_button_fn jbf;
@@ -129,9 +130,14 @@ static int parse_joystick_cfg_line(struct joystick_config *cfg, char *filename, 
 		*current_device = -1;
 		return 0;
 	}
-	rc = sscanf(line, " axis %d %s", &axis, function);
-	if (rc == 2) {
-		if (axis < 0 || axis > MAX_AXES) {
+	rc = sscanf(line, " mode %d axis %d %s", &mode, &axis, function);
+	if (rc == 3) {
+		if (mode < 0 || mode >= MAX_MODES) {
+			fprintf(stderr, "%s:%d Bad mode %d (must be between 0 and %d)\n",
+				filename, ln, mode, MAX_MODES - 1);
+			return 0; /* just keep going. */
+		}
+		if (axis < 0 || axis >= MAX_AXES) {
 			fprintf(stderr, "%s:%d Bad axis %d (must be between 0 and %d)\n",
 				filename, ln, axis, MAX_AXES - 1);
 			return 0; /* just keep going. */
@@ -143,11 +149,16 @@ static int parse_joystick_cfg_line(struct joystick_config *cfg, char *filename, 
 		}
 		if (*current_device == -1)
 			return 0; /* valid syntax, but not a device we care about */
-		cfg->axis[*current_device][axis] = jaf;
+		cfg->axis[mode][*current_device][axis] = jaf;
 		return 0;
 	}
-	rc = sscanf(line, " button %d %s", &button, function);
-	if (rc == 2) {
+	rc = sscanf(line, " mode %d button %d %s", &mode, &button, function);
+	if (rc == 3) {
+		if (mode < 0 || mode >= MAX_MODES) {
+			fprintf(stderr, "%s:%d Bad mode %d (must be between 0 and %d)\n",
+				filename, ln, mode, MAX_MODES - 1);
+			return 0; /* just keep going. */
+		}
 		if (button < 0 || button > MAX_BUTTONS) {
 			fprintf(stderr, "%s:%d Bad button %d (must be between 0 and %d)\n",
 				filename, ln, button, MAX_BUTTONS - 1);
@@ -160,7 +171,7 @@ static int parse_joystick_cfg_line(struct joystick_config *cfg, char *filename, 
 		}
 		if (*current_device == -1)
 			return 0; /* valid syntax, but not a device we care about */
-		cfg->button[*current_device][button] = jbf;
+		cfg->button[mode][*current_device][button] = jbf;
 		return 0;
 	}
 	fprintf(stderr, "%s:%d: Syntax error '%s'\n", filename, ln, line);
@@ -214,14 +225,26 @@ int read_joystick_config(struct joystick_config *cfg, char *filename, char *joys
 	return rc;
 }
 
-void joystick_button(struct joystick_config *cfg, void *context, int device, int button)
+void joystick_button(struct joystick_config *cfg, void *context, int mode, int device, int button)
 {
-	if (cfg->button[device][button])
-		cfg->button[device][button](context);
+	if (mode < 0 || mode >= MAX_MODES)
+		return;
+	if (device < 0 || device >= MAX_DEVICES)
+		return;
+	if (button < 0 || button >= MAX_BUTTONS)
+		return;
+	if (cfg->button[mode][device][button])
+		cfg->button[mode][device][button](context);
 }
 
-void joystick_axis(struct joystick_config *cfg, void *context, int device, int axis, int value)
+void joystick_axis(struct joystick_config *cfg, void *context, int mode, int device, int axis, int value)
 {
-	if (cfg->axis[device][axis])
-		cfg->axis[device][axis](context, value);
+	if (mode < 0 || mode >= MAX_MODES)
+		return;
+	if (device < 0 || device >= MAX_DEVICES)
+		return;
+	if (axis < 0 || axis >= MAX_AXES)
+		return;
+	if (cfg->axis[mode][device][axis])
+		cfg->axis[mode][device][axis](context, value);
 }
