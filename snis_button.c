@@ -149,12 +149,8 @@ void snis_button_draw(struct button *b)
 		b->button_press_feedback_counter--;
 }
 
-int snis_button_button_press(struct button *b, int x, int y)
+int snis_button_trigger_button(struct button *b)
 {
-	if (!snis_button_inside(b, x, y))
-		return 0;
-	if (!b->enabled)
-		return 0;
 	if (b->button_sound != -1)
 		wwviaudio_add_sound(b->button_sound);
 	if (b->bf)
@@ -163,6 +159,15 @@ int snis_button_button_press(struct button *b, int x, int y)
 		*b->checkbox_value = !*b->checkbox_value;
 	b->button_press_feedback_counter = 5;
 	return 1;
+}
+
+int snis_button_button_press(struct button *b, int x, int y)
+{
+	if (!snis_button_inside(b, x, y))
+		return 0;
+	if (!b->enabled)
+		return 0;
+	return snis_button_trigger_button(b);
 }
 
 void snis_button_set_color(struct button *b, int color)
