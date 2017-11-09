@@ -5,6 +5,16 @@
 # If you add any new joystick configs to this file, please
 # consider forwarding the new config to stephenmcameron@gmail.com
 #
+# the "device:" lines are followed by the name of the joystick
+# device as it appears in /dev/input/by-id.  (ls -l /dev/input/by-id).
+# Note, I am using the old style devices that link to /dev/js*, not
+# the new "evdev" devices. You can tell the old from the new as the
+# new device names end in "-event-joystick", while the old names just
+# end in "-joystick" (no "-event-").
+#
+# Following each "device:..." line, are the mappings from (mode, (button/axis)
+# tuples to game functions for that device.
+#
 # The modes are as follows:
 # (See DISPLAYMODE_* #defines in snis_packet.h)
 #
@@ -17,6 +27,15 @@
 # mode 6 - demon screen
 # mode 7 - damage control
 #
+# The game functions are as follows:
+#
+# roll, pitch, yaw, phaser, torpedo, weapons-yaw, weapons-pitch
+# damcon-roll, damcon-pitch, damcon-gripper, throttle
+#
+# That list will grow with time, but for now that's it.
+#
+
+# Microsoft Xbox 360 controller
 device:usb-©Microsoft_Corporation_Controller_05EB4AD-joystick
  # main screen
  mode 0 axis 3 roll
@@ -24,18 +43,23 @@ device:usb-©Microsoft_Corporation_Controller_05EB4AD-joystick
  mode 0 axis 0 yaw
  mode 0 button 3 phaser
  mode 0 button 2 torpedo
+ # navigation
  mode 1 axis 3 roll
  mode 1 axis 4 pitch
  mode 1 axis 0 yaw
+ # weapons
  mode 2 axis 3 weapons-yaw
  mode 2 axis 4 weapons-pitch
  mode 2 axis 0 weapons-yaw
+ mode 2 button 3 phaser
+ mode 2 button 2 torpedo
+ # damage control
  mode 7 axis 3 damcon-roll
  mode 7 axis 4 damcon-pitch
  mode 7 button 1 damcon-gripper
  mode 7 button 0 damcon-gripper
- mode 2 button 3 phaser
- mode 2 button 2 torpedo
+
+# Thrustmaster Throttle
 device:usb-Thrustmaster_TWCS_Throttle-joystick
  # main screen
  mode 0 axis 2 throttle
@@ -47,6 +71,8 @@ device:usb-Thrustmaster_TWCS_Throttle-joystick
  mode 2 axis 5 weapons-yaw
  # damage control
  mode 7 axis 5 damcon-roll
+
+# Thrustmaster Joystick
 device:usb-Thrustmaster_T.16000M-joystick
  # main screen
  mode 0 axis 0 roll
