@@ -69,7 +69,7 @@ players, and scenarios may be constructed with a Lua based scripting API.
 <li><a href="#demcontrols">Game Master Station (Demon Screen)</a>
 </ul>
 <li><a href="#multiplayerinstructions">How to run Space Nerds In Space in a multiplayer LAN setup</a>
-<li><a href="#troubleshooting">Troubleshooting</a>
+<li><a href="#troubleshooting">Troubleshooting (joysticks, audio, bridge verification, crashing)</a>
 <li><a href="#luascripting">Lua Scripting</a>
 <li><a href="#misctopics">Miscellaneous development topics</a>
 <li><a href="https://github.com/smcameron/space-nerds-in-space/blob/master/CONTRIBUTING.md">Contributing - How can I help with Space Nerds In Space Development?</a>
@@ -688,7 +688,7 @@ lies ahead.
 To deselect an object, click it again with the <b>RIGHT MOUSE BUTTON</b>.
 or use the <b>SELECT NONE</b> button on the left side of the screen.
 You can also <b>drag with the right mouse button</b> to select a rectangular
-area.  Objects in this rectangular area that were alread selected will be
+area.  Objects in this rectangular area that were already selected will be
 deselected, and those which were not previously selected will be selected.
 <li><b>Moving objects</b> is done by <b>dragging with the middle mouse button</b>.
 <li><b>Zooming</b> is done with the <b>Mouse Scroll Wheel</b>.
@@ -1126,11 +1126,138 @@ console (e.g. if you mean for this to be the NAVIGATION station, press F2).
 <h1><a name="troubleshooting">Troubleshooting</a></h1>
 <b>Contents:</b>
 <ol>
+<li><a href="#joystick">Using Joysticks and Controllers</a>
 <li><a href="#bridgeverification">Bridge Verification Failed</a>
 <li><a href="#audioproblems">Audio Problems</a>
 <li><a href="#crashing">The game is crashing!</a>
 </ol>
+<hr>
 <ol>
+<li><b><a name="joystick">Using Joysticks and Controllers</a></b>
+<p>There is a config file in share/snis/joystick_config.txt that can be used
+to configure the game to understand your usb controllers.
+<ul>
+<li><b>Step 1</b>: Figure out what your controllers are called. Look in /dev/input/by-id
+for names that end with "-joystick" and do not end with "-event-joystick". For example:
+<pre>
+	$ <hili>ls -l /dev/input/by-id</hili>
+	total 0
+	lrwxrwxrwx 1 root root 9 Nov  9 07:13 usb-0461_USB_Optical_Mouse-event-mouse -&gt; ../event8
+	lrwxrwxrwx 1 root root 9 Nov  9 07:13 usb-0461_USB_Optical_Mouse-mouse -&gt; ../mouse0
+	lrwxrwxrwx 1 root root 9 Nov  9 07:13 usb-0461_Wired_USB_Keyboard-event-if01 -&gt; ../event7
+	lrwxrwxrwx 1 root root 9 Nov  9 07:13 usb-0461_Wired_USB_Keyboard-event-kbd -&gt; ../event6
+	lrwxrwxrwx 1 root root 9 Nov 10 10:54 usb-Thrustmaster_T.16000M-event-joystick -&gt; ../event5
+	lrwxrwxrwx 1 root root 6 Nov 10 10:54 <hili>usb-Thrustmaster_T.16000M-joystick</hili> -&gt; ../js1
+	lrwxrwxrwx 1 root root 9 Nov 10 10:54 usb-Thrustmaster_TWCS_Throttle-event-joystick -&gt; ../event4
+	lrwxrwxrwx 1 root root 6 Nov 10 10:54 <hili>usb-Thrustmaster_TWCS_Throttle-joystick</hili> -&gt; ../js0
+</pre>
+In this case, we see we have two devices of interest, <hili>usb-Thrustmaster_T.16000M-joystick</hili>
+and <hili>usb-Thrustmaster_TWCS_Throttle-joystick</hili>.
+<br>
+<li><b>Step 2</b>: Figure out what the buttons and axes for your devices are. There is a test
+program included with Space Nerds In Space called "joystick_test". Run this program, and you should
+see something like:
+<pre>
+	capnkirk@enterpise $ ./joystick_test
+	usb-Thrustmaster_T.16000M-joystick
+	usb-Thrustmaster_TWCS_Throttle-joystick
+	Discovered 2 joysticks
+	  <hili>0: usb-Thrustmaster_T.16000M-joystick</hili>
+	  <hili>1: usb-Thrustmaster_TWCS_Throttle-joystick</hili>
+	Device: 0, time 99672500, value        0, type: 129, axis/button: 0
+	Device: 1, time 99672520, value   -32767, type: 130, axis/button: 6
+	Device: 0, time 99672520, value        0, type: 130, axis/button: 5
+	[... many lines omitted ...]
+	Device: 1, time 99672520, value   -32767, type: 130, axis/button: 7
+	Device: 1, time 99672524, value        0, type: 130, axis/button: 8
+	Device: 1, time 99672524, value        0, type: 130, axis/button: 9
+</pre>
+Here we see two devices, Device 0, and Device 1, corresponding to the usb-Thrustmaster_T.16000M-joystick
+and the usb-Thrustmaster_TWCS_Throttle-joystick. We can press the buttons on the devices and move the
+axes and this will cause more output to be printed. For example, moving the throttle controller:
+<pre>
+	Device: 1, time 99830028, value   -29041, type:   2, axis/button: 2
+	Device: 1, time 99830168, value   -28732, type:   2, axis/button: 2
+	Device: 1, time 99830196, value   -21727, type:   2, axis/button: 2
+	Device: 1, time 99830224, value   -18962, type:   2, axis/button: 2
+	<hili>Device: 1</hili>, time 99830308, value   -18918, type:   <hili>2</hili>, axis/button: <hili>2</hili>
+</pre>
+Here we see that the throttle axis is on device 1 (usb-Thrustmaster_TWCS_Throttle-joystick.) and
+on axis 2. Make a note of this.  Pressing one of the buttons on the joystick, we see:
+<pre>
+	<hili>Device: 0</hili>, time 99919292, value        1, type:   1, axis/<hili>button: 0</hili>
+	<hili>Device: 0</hili>, time 99919388, value        0, type:   1, axis/<hili>button: 0</hili>
+</pre>
+Here we see that this button is button 0 on the usb-Thrustmaster_T.16000M-joystick.
+Make a note of this. Continue to do this with each axis and button you are
+interested in, making a note of the button numbers and axis numbers.
+<br>
+<li><b>Step 3</b>: Modify share/snis/joystick_config.txt to add or modify the
+configuration for your devices. First check to see if there is already a
+configuration for your device.  Look for a line in the file that begins:
+<pre>
+	device:your-device-name
+</pre>
+If there is such a line, there is already a configuration for your device
+and you just need to modify it to suit your taste. If there is no such
+line, you need to add a new device configuration. Go to the bottom of the
+file and add
+<pre>
+	device:your-device-name
+</pre>
+where "your-device-name" is the name of your device. Note, this is actually
+a <a href="https://en.wikipedia.org/wiki/Regular_expression">regular expression</a>
+so if your device name contains a serial number it is possible to write a generic
+name that will ignore the serial number part, but for most devices, just using
+the device name as is will be fine.
+<p>Follow the other examples to add mappings from your device buttons and
+axes to game functions for each appropriate game mode. The game functions are:
+<ul>
+<li>damcon-gripper
+<li>damcon-pitch
+<li>damcon-roll
+<li>nav-attitude-indicator-abs-rel
+<li>nav-change-pov
+<li>nav-docking-magnets
+<li>nav-engage-warp
+<li>nav-nudge-warp-down
+<li>nav-nudge-warp-up
+<li>nav-nudge-zoom-down
+<li>nav-nudge-zoom-up
+<li>nav-reverse
+<li>nav-standard-orbit
+<li>nav-starmap
+<li>phaser
+<li>pitch
+<li>roll
+<li>throttle
+<li>torpedo
+<li>weapons-pitch
+<li>weapons-yaw
+<li>yaw
+</ul>
+The game modes are:
+<ul>
+<li>mode 0 - main screen
+<li>mode 1 - navigation
+<li>mode 2 - weapons
+<li>mode 3 - engineering
+<li>mode 4 - science
+<li>mode 5 - comms
+<li>mode 6 - demon screen
+<li>mode 7 - damage control
+</ul>
+So for example, if you have a "super-duper-brand-controller", and you want
+the Navigation screen to map axis 5 to yaw, axis 6 to pitch, and button 3
+engage warp, you would write:
+<pre>
+device:super-duper-brand-controller
+ mode 1 axis 5 yaw
+ mode 1 axis 6 pitch
+ mode 1 button 3 nav-engage-warp
+</pre>
+</ul>
+<hr>
 <li><b><a name="bridgeverification">I keep getting "BRIDGE VERIFICATION FAILED" -- what am I doing wrong?</a></b>
 <p>This means one of several things:
 <ol>
@@ -1167,7 +1294,6 @@ need to check the "JOIN SHIP" checkbox.
 <li>You have entered an incorrect ship password.
 </ul>
 </ul>
-</ol>
 <li><b>What is with this "JOIN SHIP" and "CREATE SHIP" checkbox crap?  Why is it so confusing?</b>
 <p>"CREATE SHIP" has to do with whether snis_multiverse knows about your shipname/password.
 The snis_multiverse process maintains a database of shipname/password hashes which is persistent
@@ -1214,6 +1340,8 @@ capnkirk@enterprise ~/github/space-nerds-in-space $ rm snisdb/e7d9/fa36/e7d9fa36
 </pre>
 </blockquote>
 <p>Now you should be able to create a new ship with the name "enterprise" in the usual way.
+</ol>
+<hr>
 <li><b><a name="audioproblems">Sound isn't working!  (Or sound isn't working quite as I expected)</a></b>
 <p>Audio on linux is complicated. In general, there are two main takes on how
 audio should work in linux, "the pulse way", and "the JACK way". The "JACK way"
@@ -1336,7 +1464,7 @@ portaudio thinks pulse is according to snis_test_audio output}  (You can install
 <cmd>pulse</cmd> and <cmd>pavucontrol</cmd> if they aren't installed and
 see if that helps.  The <cmd>pavucontrul</cmd> program should let you dynamically
 control to which device a running program's sound output is directed.
-
+<hr>
 <li><b><a name="crashing">The game is crashing!  What can I do?</a></b>
 <p>Suppose you see something like this ("Segmentation fault"):
 <pre>
