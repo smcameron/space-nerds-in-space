@@ -72,6 +72,7 @@ device:usb-Thrustmaster_TWCS_Throttle-joystick
  mode 0 button 6 nav-nudge-warp-up
  mode 0 button 5 nav-engage-warp
  mode 0 button 7 nav-standard-orbit
+ mode 0 axis 6 yaw # rudder pedals
  # navigation
  mode 1 axis 2 throttle
  mode 1 axis 5 yaw
@@ -86,6 +87,7 @@ device:usb-Thrustmaster_TWCS_Throttle-joystick
  mode 1 button 10 nav-attitude-indicator-abs-rel
  mode 1 button 13 nav-change-pov
  mode 1 button 7 nav-standard-orbit
+ mode 1 axis 6 yaw # rudder pedals
  # weapons
  mode 2 axis 5 weapons-yaw
  # damage control
