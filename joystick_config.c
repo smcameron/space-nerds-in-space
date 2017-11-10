@@ -174,6 +174,9 @@ static int parse_joystick_cfg_line(struct joystick_config *cfg, char *filename, 
 		cfg->button[mode][*current_device][button] = jbf;
 		return 0;
 	}
+	/* Do not report blank lines as syntax errors. */
+	if (strcmp(line, "") == 0 || strcmp(line, " ") == 0)
+		return 0;
 	fprintf(stderr, "%s:%d: Syntax error '%s'\n", filename, ln, line);
 	return 0; /* just keep going. */
 }
