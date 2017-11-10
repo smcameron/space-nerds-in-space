@@ -23,6 +23,8 @@
 #include <string.h>
 #include <limits.h>
 #include <errno.h>
+#include <sys/types.h>
+#include <regex.h>
 
 #include "joystick_config.h"
 #include "string-utils.h"
@@ -105,6 +107,23 @@ static void squash_comments(char *s)
 	}
 }
 
+static int regex_match(char *regex_pattern, char *text)
+{
+	int rc;
+	regmatch_t match;
+	regex_t re;
+
+	rc = regcomp(&re, regex_pattern, 0);
+	if (rc) {
+		fprintf(stderr, "Failed to compile regular expression '%s'\n", regex_pattern);
+		return 0;
+	}
+	rc = regexec(&re, text, 1, &match, 0);
+	if (rc == 0) /* match */
+		return 1;
+	return 0;
+}
+
 static int parse_joystick_cfg_line(struct joystick_config *cfg, char *filename, char *line, int ln,
 	char *joysticks_found[], int njoysticks_found, int *current_device)
 {
@@ -120,8 +139,7 @@ static int parse_joystick_cfg_line(struct joystick_config *cfg, char *filename, 
 		int i;
 
 		for (i = 0; i < njoysticks_found; i++) {
-			/* I wonder if I need a regexp here to handle variable parts of the names? */
-			if (strcmp(device, joysticks_found[i]) == 0) {
+			if (regex_match(device, joysticks_found[i])) {
 				*current_device = i;
 				return 0;
 			}

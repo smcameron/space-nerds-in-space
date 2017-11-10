@@ -5,8 +5,9 @@
 # If you add any new joystick configs to this file, please
 # consider forwarding the new config to stephenmcameron@gmail.com
 #
-# the "device:" lines are followed by the name of the joystick
-# device as it appears in /dev/input/by-id.  (ls -l /dev/input/by-id).
+# the "device:" lines are followed by a regular expression to match the
+# name of the joystick device as it appears in /dev/input/by-id.
+# (See the output of ls -l /dev/input/by-id).
 # Note, I am using the old style devices that link to /dev/js*, not
 # the new "evdev" devices. You can tell the old from the new as the
 # new device names end in "-event-joystick", while the old names just

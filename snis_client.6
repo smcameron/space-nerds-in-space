@@ -121,7 +121,8 @@ $SNIS_ASSET_DIR/joystick_config.txt, joystick configuration file. The format
 of this file is as follows.
 .PP
 A "device:" line begins the configuration for a new device (i.e. a particular kind of joystick).
-The device names on the "device:" lines are as the devices appear in /dev/input/by-id/*.
+The device names on the "device:" lines are regular expressions which should match
+the names of the devices as they appear in /dev/input/by-id/*.
 .PP
 A "mode" is a number that refers to a terminal (screen) in the game. The modes
 are described in comments in the joystick config file example below.
