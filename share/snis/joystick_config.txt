@@ -33,7 +33,11 @@
 # roll, pitch, yaw, phaser, torpedo, weapons-yaw, weapons-pitch
 # damcon-roll, damcon-pitch, damcon-gripper, throttle
 #
-# That list will grow with time, but for now that's it.
+# Here are examples of mapping a mode + button or mode + axis to a function:
+#
+#  mode 0 button 1 phaser		# map mode 0 button 1 to phaser function
+#  mode 1 axis 2 yaw			# map mode 1 axis 2 to yaw function
+#  mode 1 invert axis 3 roll 		# map mode 1 axis 3 to roll function and invert the axis
 #
 
 # Microsoft Xbox 360 controller
