@@ -104,6 +104,8 @@ struct keyname_value_entry keyname_value_map[] = {
 	{ "up", GDK_Up },
 	{ "down", GDK_Down },
 	{ "kp_home", GDK_KP_Home },
+	{ "kp_pgdn", GDK_KP_Page_Down },
+	{ "kp_pgup", GDK_KP_Page_Up },
 	{ "kp_down", GDK_KP_Down },
 	{ "kp_up", GDK_KP_Up },
 	{ "kp_left", GDK_KP_Left },
@@ -211,6 +213,12 @@ void init_keymap()
 	keymap[GDK_a] = keyleft;
 	keymap[GDK_s] = keydown;
 	keymap[GDK_d] = keyright;
+	ffkeymap[GDK_KP_Up & 0xff] = keyup;
+	ffkeymap[GDK_KP_Down & 0xff] = keydown;
+	ffkeymap[GDK_KP_Left & 0xff] = keyleft;
+	ffkeymap[GDK_KP_Right & 0xff] = keyright;
+	ffkeymap[GDK_KP_Home & 0xff] = keyrollleft;
+	ffkeymap[GDK_KP_Page_Up & 0xff] = keyrollright;
 
 	keymap[GDK_i] = key_invert_vertical;
 	ffkeymap[GDK_KEY_Pause & 0x00ff] = key_toggle_frame_stats;
