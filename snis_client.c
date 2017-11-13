@@ -10246,21 +10246,24 @@ static void draw_3d_nav_waypoints(struct snis_entity *player_ship, union vec3 *s
 static void draw_attitude_indicator_reticles(GtkWidget *w, GdkGC *gc, struct snis_entity *o,
 			union vec3 *ship_normal, float screen_radius)
 {
-	int i;
+	int i, m;
 	float angle;
 	union quat q1;
 	union vec3 v1, v2, v3, v4, v5, v6, v7, v8;
 	char buffer[10];
 	int draw_numbers;
-	union vec3 ship_direction;
+	union vec3 ship_direction; /* vector pointing in the direction the ship points */
 	float dot;
+	double display_heading, display_mark;
+
+	to_snis_heading_mark(&o->orientation, &display_heading, &display_mark);
 
 	ship_direction.v.x = 1.0;
 	ship_direction.v.y = 0.0;
 	ship_direction.v.z = 0.0;
 	quat_rot_vec_self(&ship_direction, &o->orientation);
 
-	v1.v.x = -1.0;
+	v1.v.x = -1.0; /* v1 to v2: Short z-axis-aligned line 1 unit down the X axis */
 	v1.v.y = 0.0;
 	v1.v.z = 0.03;
 	v2.v.x = -1.0;
@@ -10269,7 +10272,7 @@ static void draw_attitude_indicator_reticles(GtkWidget *w, GdkGC *gc, struct sni
 	vec3_mul_self(&v1, screen_radius);
 	vec3_mul_self(&v2, screen_radius);
 
-	v5.v.x = 0.03;
+	v5.v.x = 0.03; /* v5 to v6: Short x-axis-aligned line 1 unit down the Z axis */
 	v5.v.y = 0.0;
 	v5.v.z = 1.0;
 	v6.v.x = -0.03;
@@ -10278,7 +10281,7 @@ static void draw_attitude_indicator_reticles(GtkWidget *w, GdkGC *gc, struct sni
 	vec3_mul_self(&v5, screen_radius);
 	vec3_mul_self(&v6, screen_radius);
 
-	v7.v.x = 1.0;
+	v7.v.x = 1.0; /* v7 to v8: Short y-axis aligned line 1 unit down the X axis */
 	v7.v.y = 0.03;
 	v7.v.z = 0.0;
 	v8.v.x = 1.0;
@@ -10287,7 +10290,10 @@ static void draw_attitude_indicator_reticles(GtkWidget *w, GdkGC *gc, struct sni
 	vec3_mul_self(&v7, screen_radius);
 	vec3_mul_self(&v8, screen_radius);
 
-	for (i = 0; i < 360; i += 5) {
+	/* Start this loop at -5 instead of 0 to get one extra tick mark which we special case
+	 * for the Heading indicator on the heading ring.
+	 */
+	for (i = -5; i < 360; i += 5) {
 		if ((i % 15) == 0) {
 			sng_set_foreground(UI_COLOR(nav_gauge_needle));
 			if ((i % 90) == 0)
@@ -10313,38 +10319,62 @@ static void draw_attitude_indicator_reticles(GtkWidget *w, GdkGC *gc, struct sni
 		v4.v.z += o->z - ship_normal->v.z;
 
 		/* This is "mark" (or elevation) */
-		if (i >= 270)
-			sprintf(buffer, "%d", abs(i - 360));
-		else if (i >= 180)
-			sprintf(buffer, "%d", abs(i - 180));
-		else if (i >= 90)
-			sprintf(buffer, "%d", -abs(i - 180));
-		else
-			sprintf(buffer, "%d", -i);
-		snis_draw_3d_line(w, gc, instrumentecx,
+		m = 0;
+		if (i >= 270) {
+			m = abs(i - 360);
+			sprintf(buffer, "%d", m);
+		} else if (i >= 180) {
+			m = abs(i - 180);
+			sprintf(buffer, "%d", m);
+		} else if (i >= 90) {
+			m = -abs(i - 180);
+			sprintf(buffer, "%d", m);
+		} else if (i >= 0) {
+			m = -i;
+			sprintf(buffer, "%d", m);
+		} else {
+			sprintf(buffer, "%d", (int) (display_mark * 180.0 / M_PI));
+		}
+		if (fabsf((float) m - 180.0 * display_mark / M_PI) < 2.5) {
+			/* Change the color of tick mark if it is close enough to display_mark. */
+			sng_set_foreground(UI_COLOR(nav_heading_ring));
+		}
+		/* if i < 0, we don't try to draw the mark precisely the way we do for heading because:
+		 * 1. TBH it's a pain in the ass to do it because there isn't just 1, there are 4,
+		 *    so it isn't a very simple matter to do it,
+		 * 2. I did try it, but It gets too busy since there are 4 of them.
+		 * Instead, we just change the color of the nearest tick mark (above).
+		 */
+		if (i >= 0) { /* Skip special case when i == -5 */
+			snis_draw_3d_line(w, gc, instrumentecx,
+					v3.v.x, v3.v.y, v3.v.z, v4.v.x, v4.v.y, v4.v.z);
+			if (draw_numbers && dot >= 0)
+				snis_draw_3d_string(instrumentecx, buffer, NANO_FONT, v3.v.x, v3.v.y, v3.v.z);
+
+			quat_init_axis(&q1, 1, 0, 0, angle);
+			quat_rot_vec(&v3, &v5, &q1);
+			quat_rot_vec(&v4, &v6, &q1);
+
+			dot = vec3_dot(&v3, &ship_direction);
+
+			v3.v.x += o->x - ship_normal->v.x;
+			v3.v.y += o->y - ship_normal->v.y;
+			v3.v.z += o->z - ship_normal->v.z;
+			v4.v.x += o->x - ship_normal->v.x;
+			v4.v.y += o->y - ship_normal->v.y;
+			v4.v.z += o->z - ship_normal->v.z;
+
+			snis_draw_3d_line(w, gc, instrumentecx,
 				v3.v.x, v3.v.y, v3.v.z, v4.v.x, v4.v.y, v4.v.z);
-		if (draw_numbers && dot >= 0)
-			snis_draw_3d_string(instrumentecx, buffer, NANO_FONT, v3.v.x, v3.v.y, v3.v.z);
-
-		quat_init_axis(&q1, 1, 0, 0, angle);
-		quat_rot_vec(&v3, &v5, &q1);
-		quat_rot_vec(&v4, &v6, &q1);
-
-		dot = vec3_dot(&v3, &ship_direction);
-
-		v3.v.x += o->x - ship_normal->v.x;
-		v3.v.y += o->y - ship_normal->v.y;
-		v3.v.z += o->z - ship_normal->v.z;
-		v4.v.x += o->x - ship_normal->v.x;
-		v4.v.y += o->y - ship_normal->v.y;
-		v4.v.z += o->z - ship_normal->v.z;
-
-		snis_draw_3d_line(w, gc, instrumentecx,
-				v3.v.x, v3.v.y, v3.v.z, v4.v.x, v4.v.y, v4.v.z);
-		if (draw_numbers && dot > 0)
-			snis_draw_3d_string(instrumentecx, buffer, NANO_FONT, v3.v.x, v3.v.y, v3.v.z);
+			if (draw_numbers && dot > 0)
+				snis_draw_3d_string(instrumentecx, buffer, NANO_FONT, v3.v.x, v3.v.y, v3.v.z);
+		}
 
 		/* This one, rotating about y axis, is the "heading" */
+		if (i < 0) { /* Draw the ship's current heading */
+			angle = 0.5 * M_PI + 2.0 * M_PI - display_heading;
+			draw_numbers = 1;
+		}
 		quat_init_axis(&q1, 0, 1, 0, angle);
 		quat_rot_vec(&v3, &v7, &q1);
 		quat_rot_vec(&v4, &v8, &q1);
@@ -10359,7 +10389,10 @@ static void draw_attitude_indicator_reticles(GtkWidget *w, GdkGC *gc, struct sni
 		v4.v.z += o->z - ship_normal->v.z;
 
 		sng_set_foreground(UI_COLOR(nav_heading_ring));
-		sprintf(buffer, "%d", (360 + 90 - i) % 360);
+		if (i > 0)
+			sprintf(buffer, "%d", (360 + 90 - i) % 360);
+		else
+			sprintf(buffer, "%d", (int) (360 + 90 - 180.0 * angle / M_PI) % 360);
 		snis_draw_3d_line(w, gc, instrumentecx,
 				v3.v.x, v3.v.y, v3.v.z, v4.v.x, v4.v.y, v4.v.z);
 		if (draw_numbers && dot >= 0)
