@@ -10875,8 +10875,10 @@ static void show_navigation(GtkWidget *w)
 
 	double display_mark;
 	to_snis_heading_mark(&o->orientation, &display_heading, &display_mark);
-	sprintf(buf, "HEADING: %3.1lf MARK: %3.1lf", radians_to_degrees(display_heading), radians_to_degrees(display_mark));
-	sng_abs_xy_draw_string(buf, NANO_FONT, 200, 1.5 * LINEHEIGHT);
+	sprintf(buf, "HEADING: %3.1lf", radians_to_degrees(display_heading));
+	sng_abs_xy_draw_string(buf, NANO_FONT, txx(5), txy(190));
+	sprintf(buf, "MARK: %3.1lf", radians_to_degrees(display_mark));
+	sng_abs_xy_draw_string(buf, NANO_FONT, txx(5), txy(202));
 
 	sprintf(buf, o->tsd.ship.docking_magnets ? "DOCKING MAGNETS ENGAGED" : "DOCKING MAGNETS OFF");
 	sng_abs_xy_draw_string(buf, NANO_FONT, 200, 2.0 * LINEHEIGHT);
