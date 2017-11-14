@@ -76,6 +76,7 @@ struct ui_color_map {
 	struct ui_color_entry nav_gauge;
 	struct ui_color_entry nav_gauge_needle;
 	struct ui_color_entry nav_heading_ring;
+	struct ui_color_entry nav_mark_ring;
 	struct ui_color_entry nav_button;
 	struct ui_color_entry nav_reverse_button;
 	struct ui_color_entry nav_slider;
@@ -251,6 +252,7 @@ struct ui_color_map_accessor {
 	.u.map.nav_gauge		= { AMBER,		"nav-gauge" },
 	.u.map.nav_gauge_needle		= { RED,		"nav-gauge-needle" },
 	.u.map.nav_heading_ring		= { ORANGERED,		"nav-heading-ring" },
+	.u.map.nav_mark_ring		= { DARKRED,		"nav-mark-ring" },
 	.u.map.nav_button		= { AMBER,		"nav-button" },
 	.u.map.nav_reverse_button	= { RED,		"nav-reverse-button" },
 	.u.map.nav_slider		= { AMBER,		"nav-slider" },

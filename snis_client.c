@@ -10243,6 +10243,37 @@ static void draw_3d_nav_waypoints(struct snis_entity *player_ship, union vec3 *s
 	}
 }
 
+static void draw_attitude_indicator_mark_ring(struct snis_entity *player_ship,
+						float mark_angle, float max_radius)
+{
+	static struct mesh *mark_ring_mesh = 0;
+	struct entity *e;
+	union vec3 mark_ring_pos;
+	float radius;
+	union quat orientation;
+
+	mark_ring_pos.v.x = 0;
+	mark_ring_pos.v.y = sin(mark_angle) * max_radius;
+	mark_ring_pos.v.z = 0;
+	radius = max_radius * cos(mark_angle);
+	mark_ring_pos.v.x += player_ship->x;
+	mark_ring_pos.v.y += player_ship->y;
+	mark_ring_pos.v.z += player_ship->z;
+
+	quat_init_axis(&orientation, 1, 0, 0, 0);
+
+	if (!mark_ring_mesh) {
+		mark_ring_mesh = init_circle_mesh(0, 0, 1, 60, 2.0f * M_PI);
+		mark_ring_mesh->geometry_mode = MESH_GEOMETRY_LINES;
+	}
+	e = add_entity(instrumentecx, mark_ring_mesh, mark_ring_pos.v.x, mark_ring_pos.v.y, mark_ring_pos.v.z,
+				UI_COLOR(nav_mark_ring));
+	if (e) {
+		update_entity_scale(e, radius);
+		update_entity_orientation(e, &orientation);
+	}
+}
+
 static void draw_attitude_indicator_reticles(GtkWidget *w, GdkGC *gc, struct snis_entity *o,
 			union vec3 *ship_normal, float screen_radius)
 {
@@ -10289,6 +10320,8 @@ static void draw_attitude_indicator_reticles(GtkWidget *w, GdkGC *gc, struct sni
 	v8.v.z = 0.0;
 	vec3_mul_self(&v7, screen_radius);
 	vec3_mul_self(&v8, screen_radius);
+
+	draw_attitude_indicator_mark_ring(o, display_mark, screen_radius);
 
 	/* Start this loop at -5 instead of 0 to get one extra tick mark which we special case
 	 * for the Heading indicator on the heading ring.
