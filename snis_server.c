@@ -8437,6 +8437,9 @@ static int add_ship(int faction, int auto_respawn)
 		if (snis_randn(10000) < 2000)
 			break;
 	}
+	go[i].tsd.ship.dox = 0.0;
+	go[i].tsd.ship.doy = 0.0;
+	go[i].tsd.ship.doz = 0.0;
 	go[i].tsd.ship.home_planet = choose_ship_home_planet();
 	go[i].tsd.ship.auto_respawn = (uint8_t) auto_respawn;
 	quat_init_axis(&go[i].tsd.ship.computer_desired_orientation, 0, 1, 0, 0);
