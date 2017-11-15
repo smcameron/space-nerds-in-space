@@ -9556,11 +9556,13 @@ static void init_weapons_ui(void)
 	weapons.phaser_bank_gauge = gauge_init(phx, phy, r, 0.0, 100.0, -120.0 * M_PI / 180.0,
 			120.0 * 2.0 * M_PI / 180.0, UI_COLOR(weap_gauge_needle), UI_COLOR(weap_gauge),
 			10, "CHARGE", sample_phasercharge);
+	gauge_set_fonts(weapons.phaser_bank_gauge, PICO_FONT, PICO_FONT);
 	gauge_add_needle(weapons.phaser_bank_gauge, sample_phaser_power, UI_COLOR(weap_gauge_needle));
 	gauge_fill_background(weapons.phaser_bank_gauge, BLACK, 0.75);
 	weapons.phaser_wavelength = gauge_init(wlx, phy, r, 10.0, 60.0, -120.0 * M_PI / 180.0,
 			120.0 * 2.0 * M_PI / 180.0, UI_COLOR(weap_gauge_needle), UI_COLOR(weap_gauge),
 			10, "WAVE LEN", sample_phaser_wavelength);
+	gauge_set_fonts(weapons.phaser_wavelength, PICO_FONT, PICO_FONT);
 	gauge_fill_background(weapons.phaser_wavelength, BLACK, 0.75);
 	weapons.wavelen_slider = snis_slider_init(wlsx, wlsy, wlsw, wlsh, UI_COLOR(weap_slider), "",
 				"10", "60", 10, 60, sample_phaser_wavelength,
