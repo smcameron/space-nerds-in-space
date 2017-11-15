@@ -10461,6 +10461,7 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 	double screen_radius;
 	double visible_distance;
 	int science_style = RENDER_NORMAL;
+	float cam_pos_scale = 1.0;
 
 	if (!(o = find_my_ship()))
 		return;
@@ -10523,15 +10524,19 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 	switch (nav_camera_mode) {
 	case 0:
 		new_nav_camera_pos_factor = 1.0;
+		cam_pos_scale = 1.0;
 		break;
 	case 1:
 		new_nav_camera_pos_factor = 0.5;
+		cam_pos_scale = 0.75;
 		break;
 	case 2:
 		new_nav_camera_pos_factor = 0.25;
+		cam_pos_scale = 0.75 * 0.75;
 		break;
 	case 3:
 		new_nav_camera_pos_factor = 0.125;
+		cam_pos_scale = 0.75 * 0.75 * 0.75;
 		break;
 	default:
 		new_nav_camera_pos_factor = 1.0;
@@ -10662,7 +10667,7 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 	e = add_entity(instrumentecx, ship_mesh_map[o->tsd.ship.shiptype], o->x, o->y, o->z, UI_COLOR(nav_self));
 	if (e) {
 		set_render_style(e, science_style);
-		update_entity_scale(e, ship_scale);
+		update_entity_scale(e, ship_scale * cam_pos_scale);
 		update_entity_orientation(e, &o->orientation);
 	}
 
@@ -10692,8 +10697,13 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 
 		struct mesh *obj_entity_mesh = entity_get_mesh(go[i].entity);
 		float obj_radius = 0.0;
-		if (obj_entity_mesh)
-			obj_radius = obj_entity_mesh->radius * fabs(entity_get_scale(go[i].entity));
+		if (obj_entity_mesh) {
+			if (go[i].type == OBJTYPE_PLANET)
+				obj_radius = obj_entity_mesh->radius * fabs(entity_get_scale(go[i].entity));
+			else
+				obj_radius = cam_pos_scale * obj_entity_mesh->radius *
+						fabs(entity_get_scale(go[i].entity));
+		}
 
 		if (nav_entity_too_far_away(o->x, o->y, o->z, go[i].x, go[i].y, go[i].z,
 						obj_radius, display_radius))
@@ -10751,7 +10761,10 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 				}
 			}
 			if (contact) {
-				update_entity_scale(contact, entity_get_scale(go[i].entity));
+				if (go[i].type == OBJTYPE_PLANET)
+					update_entity_scale(contact, entity_get_scale(go[i].entity));
+				else
+					update_entity_scale(contact, cam_pos_scale * entity_get_scale(go[i].entity));
 				update_entity_orientation(contact, entity_get_orientation(go[i].entity));
 			}
 #if 0
@@ -10808,8 +10821,13 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 			}
 
 			/* update the scale based on current scale */
-			if (contact)
-				update_entity_scale(contact, entity_get_scale(contact) * contact_scale);
+			if (contact) {
+				if (go[i].type == OBJTYPE_PLANET)
+					update_entity_scale(contact, entity_get_scale(contact) * contact_scale);
+				else
+					update_entity_scale(contact, cam_pos_scale *
+								 entity_get_scale(contact) * contact_scale);
+			}
 
 			/* add line from center disk to contact in z axis */
 			if (draw_contact_offset_and_ring && contact) {
