@@ -15,6 +15,21 @@ endif
 INSTALL ?= install
 AWK ?= awk
 
+# Type "make O=0" to get a debug build (-g)
+# "make O=1" gets an optimized (-O3) build with no debug info, which is the default
+# optimize/debug (-O3, -g: default 1=yes/no, 2=no/yes)
+O ?= 1
+
+# Type "make P=1" to get a build with profiling information for use with
+# gprof. This is turned off by default
+# profile (default 0=no, 1=yes)
+P ?= 0
+
+# Type "make V=1" to get a verbose build with all commands printed
+# By default, this is turned off.
+# verbose (default 0=no, 1=yes)
+V ?= 0
+
 DESTDIR=.
 PREFIX?=.
 
