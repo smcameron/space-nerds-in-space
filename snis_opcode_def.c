@@ -37,7 +37,7 @@
 #define NSUBCODES 25
 #define NOPCODES (256 * NSUBCODES)
 
-static struct opcode_format_descriptor opcode_def[NOPCODES] = { 0 };
+static struct opcode_format_descriptor opcode_def[NOPCODES] = { { 0 } };
 
 static int init_opcode_subcode_def(uint8_t opcode, uint8_t subcode, char *format)
 {

@@ -362,7 +362,7 @@ static int nshiptypes;
 static struct starmap_entry {
 	char name[LOCATIONSIZE];
 	double x, y, z;
-} starmap[MAXSTARMAPENTRIES] = { 0 };
+} starmap[MAXSTARMAPENTRIES];
 static int nstarmap_entries = 0;
 static int starmap_dirty = 0;
 
@@ -421,7 +421,7 @@ static union vec3 rts_main_planet_pos[] = { /* Positions of main RTS planets */
 static struct rts_main_planet {
 	int index;   /* Index into go[] for corrsponding planet object */
 	uint16_t health;
-} rts_planet[ARRAYSIZE(rts_main_planet_pos)] = { 0 };
+} rts_planet[ARRAYSIZE(rts_main_planet_pos)];
 
 static struct rts_ai_state {
 	int active;

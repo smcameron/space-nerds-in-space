@@ -417,7 +417,7 @@ static struct starmap_entry {
 	char name[LOCATIONSIZE];
 	double x, y, z;
 	int time_before_expiration;
-} starmap[MAXSTARMAPENTRIES] =  { 0 };
+} starmap[MAXSTARMAPENTRIES];
 static int nstarmap_entries = 0;
 static int starmap_adjacency[MAXSTARMAPENTRIES][MAX_STARMAP_ADJACENCIES];
 
