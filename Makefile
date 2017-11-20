@@ -1118,7 +1118,7 @@ Makefile.depend :
 check-endianness:	check-endianness.c
 	gcc -o check-endianness check-endianness.c
 
-build_info.h: check-endianness
+build_info.h: check-endianness snis.h gather_build_info Makefile
 	./gather_build_info > build_info.h
 
 include Makefile.depend
