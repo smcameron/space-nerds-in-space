@@ -6779,7 +6779,10 @@ static void update_player_orientation(struct snis_entity *o)
 
 			/* Compute new orientation to point us at d */
 			/* Calculate new desired orientation of ship pointing towards destination */
-			right.v.x = 1.0;
+			if (o->tsd.ship.reverse)
+				right.v.x = -1.0; /* backwards */
+			else
+				right.v.x = 1.0;
 			right.v.y = 0.0;
 			right.v.z = 0.0;
 
