@@ -250,6 +250,7 @@ static int ecx_fake_stars_initialized = 0;
 static int nfake_stars = 0;
 static volatile int fake_stars_timer = 0;
 static volatile int credits_screen_active = 0;
+static int watermark_active = 0;
 
 static volatile int login_failed_timer = 0;
 static char login_failed_msg[100] = { 0 };
@@ -3633,6 +3634,10 @@ static gint key_press_cb(GtkWidget* widget, GdkEventKey* event, gpointer data)
 		if (control_key_pressed)
 			credits_screen_active = !credits_screen_active;
 		break;
+	case key_toggle_watermark:
+		if (control_key_pressed)
+			watermark_active = !watermark_active;
+		break;
 	default:
 		break;
 	}
@@ -6979,6 +6984,12 @@ static void show_textscreen(GtkWidget *w)
 	}
 }
 
+static void show_watermark(void)
+{
+	sng_set_foreground(YELLOW);
+	sng_abs_xy_draw_string(BUILD_INFO_STRING3, NANO_FONT, txx(25), txy(590));
+}
+
 static void show_common_screen(GtkWidget *w, char *title)
 {
 	int title_color;
@@ -7047,6 +7058,8 @@ static void show_common_screen(GtkWidget *w, char *title)
 	}
 	if (textscreen_timer > 0 || user_defined_menu_active)
 		show_textscreen(w);
+	if (watermark_active)
+		show_watermark();
 }
 
 #define ANGLE_OF_VIEW (45)
