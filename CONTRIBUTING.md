@@ -1,6 +1,15 @@
 How to Contribute
 =================
 
+How can I help?
+---------------
+
+1. Do you have an unused *working* laptop computer *newer than 2011* lying around that has reasonable graphics capabilities (integrated Intel is ok)?  Send it to me. I could use more laptops for testing purposes.
+
+2. Do you have some joystick or controller lying around? Create a joystick mapping entry for it and send this mapping to me (see https://smcameron.github.io/space-nerds-in-space/#troubleshooting) or just send me the joystick or controller.
+
+3. Do you know how to hack on C code? Will your employer let you contribute to open source projects? Maybe hacking on the Space Nerds In Space code is something you'd be interested in. 
+
 TODO: figure out how to help people know how to contribute
 
 Jump in and start hacking... But!  Try to keep your commits sane, and make them change only one logical thing at a time (this does not mean only change one file, it is more like, make it add only one feature).  Each commit should build and work.  I have found [stacked git](http://www.procode.org/stgit/) very helpful for making sane commits, but other people have managed to get more or less the same functionality using git stashes, I think.  But, if you make a mess of it, but the code is still working and
