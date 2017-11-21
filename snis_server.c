@@ -16707,7 +16707,7 @@ static void process_instructions_from_client(struct game_client *c)
 				goto protocol_error;
 			break;
 		case OPCODE_CYCLE_NAV_POINT_OF_VIEW:
-			rc = process_cycle_camera_point_of_view(c, opcode, ROLE_NAVIGATION, 4);
+			rc = process_cycle_camera_point_of_view(c, opcode, ROLE_NAVIGATION, 5);
 			if (rc)
 				goto protocol_error;
 			break;

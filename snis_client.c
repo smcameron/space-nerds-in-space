@@ -3119,7 +3119,7 @@ static void do_nav_camera_mode()
 	if (displaymode != DISPLAYMODE_NAVIGATION)
 		return;
 	queue_to_server(snis_opcode_pkt("bb", OPCODE_CYCLE_NAV_POINT_OF_VIEW,
-		(unsigned char) (nav_camera_mode + 1) % 4));
+		(unsigned char) (nav_camera_mode + 1) % 5));
 }
 
 static void do_laser(void)
@@ -4387,7 +4387,7 @@ static int process_cycle_camera_point_of_view(unsigned char *camera_mode)
 	if (rc != 0)
 		return rc;
 	pthread_mutex_lock(&universe_mutex);
-	*camera_mode = new_mode % 4;
+	*camera_mode = new_mode % 5;
 	pthread_mutex_unlock(&universe_mutex);
 	return 0;
 }
@@ -10054,6 +10054,9 @@ static void draw_3d_nav_starmap(GtkWidget *w, GdkGC *gc)
 	case 3:
 		new_nav_camera_pos_factor = 0.125;
 		break;
+	case 4:
+		new_nav_camera_pos_factor = 2.0;
+		break;
 	default:
 		new_nav_camera_pos_factor = 1.0;
 		break;
@@ -10550,6 +10553,10 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 	case 3:
 		new_nav_camera_pos_factor = 0.125;
 		cam_pos_scale = 0.75 * 0.75 * 0.75;
+		break;
+	case 4:
+		new_nav_camera_pos_factor = 2.0;
+		cam_pos_scale = 1.0;
 		break;
 	default:
 		new_nav_camera_pos_factor = 1.0;
