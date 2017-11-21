@@ -9713,12 +9713,12 @@ static void init_nav_ui(void)
 					NANO_FONT, docking_magnets_button_pressed, NULL);
 	snis_button_set_sound(nav_ui.docking_magnets_button, UISND5);
 	nav_ui.standard_orbit_button = snis_button_init(SCREEN_WIDTH - nav_ui.gauge_radius * 2 - 40,
-					nav_ui.gauge_radius * 2 + 180,
+					nav_ui.gauge_radius * 2 + 160,
 					-1, -1, "STANDARD ORBIT", button_color,
 					NANO_FONT, standard_orbit_button_pressed, NULL);
 	snis_button_set_sound(nav_ui.standard_orbit_button, UISND6);
 	nav_ui.starmap_button = snis_button_init(SCREEN_WIDTH - nav_ui.gauge_radius * 2 - 40,
-					nav_ui.gauge_radius * 2 + 240, -1, -1, "STAR MAP",
+					nav_ui.gauge_radius * 2 + 200, -1, -1, "STAR MAP",
 					button_color,
 					NANO_FONT, nav_starmap_button_pressed, NULL);
 	snis_button_set_sound(nav_ui.starmap_button, UISND7);
