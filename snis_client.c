@@ -10454,7 +10454,7 @@ static void draw_attitude_indicator_reticles(GtkWidget *w, GdkGC *gc, struct sni
 static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 {
 	static struct mesh *ring_mesh = 0;
-	static struct mesh *radar_ring_mesh[4] = {0, 0, 0, 0};
+	static struct mesh *radar_ring_mesh[8] = { 0 };
 	static struct mesh *heading_ind_line_mesh = 0;
 	static struct mesh *forward_line_mesh = 0;
 	static int current_zoom = 0;
@@ -10467,6 +10467,10 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 		radar_ring_mesh[1] = init_radar_circle_xz_plane_mesh(0, 0, 0.6, 18, 0.2);
 		radar_ring_mesh[2] = init_radar_circle_xz_plane_mesh(0, 0, 0.8, 18, 0.2);
 		radar_ring_mesh[3] = init_radar_circle_xz_plane_mesh(0, 0, 1.0, 36, 0.2);
+		radar_ring_mesh[4] = init_radar_circle_xz_plane_mesh(0, 0, 0.3, 36, 0.1);
+		radar_ring_mesh[5] = init_radar_circle_xz_plane_mesh(0, 0, 0.2, 18, 0.1);
+		radar_ring_mesh[6] = init_radar_circle_xz_plane_mesh(0, 0, 0.1, 18, 0.05);
+		radar_ring_mesh[7] = init_radar_circle_xz_plane_mesh(0, 0, 0.05, 0, 0.05);
 		heading_ind_line_mesh = init_line_mesh(0.7, 0, 0, 1, 0, 0);
 		forward_line_mesh = init_line_mesh(1, 0, 0, 0.5, 0, 0);
 	}
@@ -10478,6 +10482,7 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 	double visible_distance;
 	int science_style = RENDER_NORMAL;
 	float cam_pos_scale = 1.0;
+	int radar_ring_count = 4;
 
 	if (!(o = find_my_ship()))
 		return;
@@ -10541,25 +10546,31 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 	case 0:
 		new_nav_camera_pos_factor = 1.0;
 		cam_pos_scale = 1.0;
+		radar_ring_count = 4;
 		break;
 	case 1:
 		new_nav_camera_pos_factor = 0.5;
 		cam_pos_scale = 0.75;
+		radar_ring_count = 8;
 		break;
 	case 2:
 		new_nav_camera_pos_factor = 0.25;
 		cam_pos_scale = 0.75 * 0.75;
+		radar_ring_count = 8;
 		break;
 	case 3:
 		new_nav_camera_pos_factor = 0.125;
 		cam_pos_scale = 0.75 * 0.75 * 0.75;
+		radar_ring_count = 8;
 		break;
 	case 4:
 		new_nav_camera_pos_factor = 2.0;
 		cam_pos_scale = 1.0;
+		radar_ring_count = 4;
 		break;
 	default:
 		new_nav_camera_pos_factor = 1.0;
+		radar_ring_count = 4;
 		break;
 	}
 	float camera_pos_delta = 0.3 * (new_nav_camera_pos_factor - nav_camera_pos_factor);
@@ -10589,7 +10600,7 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 	int i;
 
 	draw_attitude_indicator_reticles(w, gc, o, &ship_normal, screen_radius);
-	for (i=0; i<4; ++i) {
+	for (i = 0; i < radar_ring_count; ++i) {
 		e = add_entity(instrumentecx, radar_ring_mesh[i], o->x - ship_normal.v.x, o->y - ship_normal.v.y,
 			o->z - ship_normal.v.z, UI_COLOR(nav_ring));
 		if (e) {
@@ -10598,7 +10609,7 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 		}
 	}
 
-	for (i=0; i<2; ++i) {
+	for (i = 0; i < 2; ++i) {
 		int color = (i == 0) ? UI_COLOR(nav_weapon_vector) : UI_COLOR(nav_science_vector);
 
 		union quat ind_orientation;
