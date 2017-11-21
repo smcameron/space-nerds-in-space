@@ -8,7 +8,9 @@ How can I help?
 
 2. Do you have some joystick or controller lying around? Create a joystick mapping entry for it and send this mapping to me (see https://smcameron.github.io/space-nerds-in-space/#troubleshooting) or just send me the joystick or controller.
 
-3. Do you know how to hack on C code? Will your employer let you contribute to open source projects? Maybe hacking on the Space Nerds In Space code is something you'd be interested in. 
+3. Nobody seems to know this game exists. Tell your friends about it.
+
+4. Do you know how to hack on C code? Will your employer let you contribute to open source projects? Maybe hacking on the Space Nerds In Space code is something you'd be interested in. 
 
 TODO: figure out how to help people know how to contribute
 
