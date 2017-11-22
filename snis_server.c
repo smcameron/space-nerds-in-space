@@ -7124,6 +7124,37 @@ static void maybe_do_player_warp(struct snis_entity *o)
 		o->vz = 0;
 	}
 }
+
+/* If the selected object is too far away and is not a planet, starbase, or waypoint,
+ * deselect it.
+ */
+static void check_science_selection(struct snis_entity *o)
+{
+	int bn = lookup_bridge_by_shipid(o->id);
+	uint32_t id;
+	int i;
+	float dist2, range2;
+
+	id = bridgelist[bn].science_selection;
+	if (id == (uint32_t) -1)
+		return; /* Nothing selected */
+	if (bridgelist[bn].selected_waypoint != -1)
+		return; /* Don't deselect waypoints */
+	i = lookup_by_id(id);
+	if (i < 0)
+		goto deselect;
+	if (!go[i].alive)
+		goto deselect;
+	dist2 = dist3dsqrd(o->x - go[i].x, o->y - go[i].y, o->z - go[i].z);
+	range2 = o->tsd.ship.scibeam_range * o->tsd.ship.scibeam_range;
+	if (dist2 <= range2)
+		return;
+	if ((go[i].type == OBJTYPE_PLANET || go[i].type == OBJTYPE_STARBASE) &&
+		dist2 <= range2 * 4.0)
+		return;
+deselect:
+	bridgelist[bn].science_selection = (uint32_t) -1;
+}
 		
 static void player_move(struct snis_entity *o)
 {
@@ -7305,6 +7336,7 @@ static void player_move(struct snis_entity *o)
 		o->tsd.ship.wallet += starbase_count * RTS_WALLET_REFRESH_PER_BASE_PER_TICK +
 					RTS_WALLET_REFRESH_MINIMUM;
 	}
+	check_science_selection(o);
 }
 
 static void demon_ship_move(struct snis_entity *o)
