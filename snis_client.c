@@ -10935,7 +10935,6 @@ static void show_navigation(GtkWidget *w)
 {
 	char buf[100];
 	struct snis_entity *o;
-	int sectorx, sectorz;
 	double display_heading;
 	static int current_zoom = 0;
 	union euler ypr;
@@ -10952,10 +10951,14 @@ static void show_navigation(GtkWidget *w)
 				UI_COLOR(nav_reverse_button) : UI_COLOR(nav_button));
 
 	current_zoom = newzoom(current_zoom, o->tsd.ship.navzoom);
-	sectorx = floor(10.0 * o->x / (double) XKNOWN_DIM);
-	sectorz = floor(10.0 * o->z / (double) ZKNOWN_DIM);
-	sprintf(buf, "SECTOR: %c%d (%5.2lf, %5.2lf, %5.2lf)", sectorz + 'A', sectorx, o->x, o->y, o->z);
-	sng_abs_xy_draw_string(buf, NANO_FONT, 200, LINEHEIGHT);
+	sprintf(buf, "POSITION:");
+	sng_abs_xy_draw_string(buf, NANO_FONT, txx(75), txy(15));
+	sprintf(buf, "(%5.2lf,", o->x);
+	sng_abs_xy_draw_string(buf, NANO_FONT, txx(120), txy(15));
+	sprintf(buf, "%5.2lf,", o->y);
+	sng_abs_xy_draw_string(buf, NANO_FONT, txx(175), txy(15));
+	sprintf(buf, "%5.2lf)", o->z);
+	sng_abs_xy_draw_string(buf, NANO_FONT, txx(230), txy(15));
 
 	double display_mark;
 	to_snis_heading_mark(&o->orientation, &display_heading, &display_mark);
@@ -10965,7 +10968,7 @@ static void show_navigation(GtkWidget *w)
 	sng_abs_xy_draw_string(buf, NANO_FONT, txx(5), txy(202));
 
 	sprintf(buf, o->tsd.ship.docking_magnets ? "DOCKING MAGNETS ENGAGED" : "DOCKING MAGNETS OFF");
-	sng_abs_xy_draw_string(buf, NANO_FONT, 200, 2.0 * LINEHEIGHT);
+	sng_abs_xy_draw_string(buf, NANO_FONT, txx(75), txy(25));
 
 	quat_to_euler(&ypr, &o->orientation);	
 	sng_set_foreground(UI_COLOR(nav_text));
