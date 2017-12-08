@@ -13639,7 +13639,7 @@ static double weapons_mousey_to_pitch(double y)
 {
 	double scaledy;
 
-	scaledy = (0.9 * real_screen_height - y) / (real_screen_height * 0.8);
+	scaledy = (real_screen_height - y) / (1.005 * real_screen_height);
 	if (scaledy > 1.0f)
 		scaledy = 1.0f;
 	else
