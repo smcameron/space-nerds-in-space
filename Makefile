@@ -1059,6 +1059,9 @@ install:	${PROGS} ${MODELS} ${AUDIOFILES} ${TEXTURES} \
 		${INSTALL} -m 644 ${MODELSRCDIR}/$$d/$$d.mtl ${MODELDIR}/$$d ; \
 		cp ${MODELSRCDIR}/$$d/$$d.obj ${MODELDIR}/$$d ; \
 		cp ${MODELSRCDIR}/$$d/$$d.png ${MODELDIR}/$$d ; \
+		if [ -f ${MODELSRCDIR}/$$d/$$d"lights.png" ] ; then \
+			cp ${MODELSRCDIR}/$$d/$$d"lights.png" ${MODELDIR}/$$d ; \
+		fi ; \
 	done
 	${INSTALL} -m 644 ${MODELSRCDIR}/dreadknight/dreadknight-exhaust-plumes.h ${MODELDIR}/dreadknight
 	${INSTALL} -m 644 ${MODELSRCDIR}/wombat/snis3006lights.png ${MODELDIR}/wombat
