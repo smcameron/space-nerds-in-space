@@ -144,7 +144,7 @@ void snis_protocol_debugging(int enable)
 	}
 }
 
-void snis_print_last_buffer(int socket)
+void snis_print_last_buffer(char *title, int socket)
 {
 	int i;
 
@@ -157,7 +157,8 @@ void snis_print_last_buffer(int socket)
 	if (socket >= MAX_DEBUGGABLE_SOCKETS)
 		return;
 
-	printf("Last buffer length read from socket %d was %d\n", socket, dbgbuf[socket]->len);
+	printf("%s: Last buffer length read from socket %d was %d\n%s: ", title, socket,
+			dbgbuf[socket]->len, title);
 	for (i = 0; i < dbgbuf[socket]->len; i++)
 		printf("%02x ", dbgbuf[socket]->buf[i]);
 	printf("\n");

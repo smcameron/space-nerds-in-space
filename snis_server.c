@@ -16799,7 +16799,7 @@ protocol_error:
 	snis_log(SNIS_ERROR, "Protocol error in process_instructions_from_client, opcode = %hu\n", opcode);
 	snis_log(SNIS_ERROR, "Last successful opcode was %d (0x%hx)\n", last_successful_opcode,
 			last_successful_opcode);
-	snis_print_last_buffer(c->socket);
+	snis_print_last_buffer("snis_server: ", c->socket);
 	shutdown(c->socket, SHUT_RDWR);
 	close(c->socket);
 	c->socket = -1;
@@ -22562,7 +22562,7 @@ protocol_error:
 	fprintf(stderr, "%s: protocol error in data from multiverse_server\n", logprefix());
 	fprintf(stderr, "%s: opcodes: current = %hhu, last = %hhu, previous = %hhu\n",
 			logprefix(), opcode, last_opcode, previous_opcode);
-	snis_print_last_buffer(msi->sock);
+	snis_print_last_buffer("snis_server: ", msi->sock);
 	shutdown(msi->sock, SHUT_RDWR);
 	close(msi->sock);
 	msi->sock = -1;
