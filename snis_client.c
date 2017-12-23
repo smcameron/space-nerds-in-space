@@ -9668,7 +9668,7 @@ static void nav_computer_button_pressed(__attribute__((unused)) void *s)
 
 static void init_nav_ui(void)
 {
-	int x;
+	int x, y;
 	const int gauge_color = UI_COLOR(nav_gauge);
 	const int needle_color = UI_COLOR(nav_gauge_needle);
 	const int button_color = UI_COLOR(nav_button);
@@ -9702,23 +9702,27 @@ static void init_nav_ui(void)
 				120.0 * 2.0 * M_PI / 180.0, needle_color, gauge_color,
 				10, "VEL", sample_ship_velocity);
 	gauge_set_fonts(nav_ui.speedometer, PICO_FONT, PICO_FONT);
+	y = 80;
 	nav_ui.engage_warp_button = snis_button_init(SCREEN_WIDTH - nav_ui.gauge_radius * 2 - 40,
-					nav_ui.gauge_radius * 2 + 80,
+					nav_ui.gauge_radius * 2 + y,
 					-1, -1, "ENGAGE WARP", button_color,
 					NANO_FONT, engage_warp_button_pressed, NULL);
 	snis_button_set_sound(nav_ui.engage_warp_button, UISND4);
+	y += 40;
 	nav_ui.docking_magnets_button = snis_button_init(SCREEN_WIDTH - nav_ui.gauge_radius * 2 - 40,
-					nav_ui.gauge_radius * 2 + 120,
+					nav_ui.gauge_radius * 2 + y,
 					-1, -1, "DOCKING MAGNETS", button_color,
 					NANO_FONT, docking_magnets_button_pressed, NULL);
 	snis_button_set_sound(nav_ui.docking_magnets_button, UISND5);
+	y += 40;
 	nav_ui.standard_orbit_button = snis_button_init(SCREEN_WIDTH - nav_ui.gauge_radius * 2 - 40,
-					nav_ui.gauge_radius * 2 + 160,
+					nav_ui.gauge_radius * 2 + y,
 					-1, -1, "STANDARD ORBIT", button_color,
 					NANO_FONT, standard_orbit_button_pressed, NULL);
 	snis_button_set_sound(nav_ui.standard_orbit_button, UISND6);
+	y += 40;
 	nav_ui.starmap_button = snis_button_init(SCREEN_WIDTH - nav_ui.gauge_radius * 2 - 40,
-					nav_ui.gauge_radius * 2 + 200, -1, -1, "STAR MAP",
+					nav_ui.gauge_radius * 2 + y, -1, -1, "STAR MAP",
 					button_color,
 					NANO_FONT, nav_starmap_button_pressed, NULL);
 	snis_button_set_sound(nav_ui.starmap_button, UISND7);
