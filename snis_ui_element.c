@@ -142,7 +142,7 @@ void ui_element_set_tooltip(struct ui_element *element, char *tooltip)
 	element->tooltip = strdup(tooltip);
 }
 
-static void ui_set_focus(struct ui_element_list *list, struct ui_element *e)
+void ui_set_focus(struct ui_element_list *list, struct ui_element *e, int has_focus)
 {
 	if (!e->set_focus)
 		return;
@@ -151,8 +151,8 @@ static void ui_set_focus(struct ui_element_list *list, struct ui_element *e)
 		if (!list->element->set_focus)
 			continue;
 		if (list->element == e) {
-			e->set_focus(e->element, 1);
-			e->has_focus = 1;
+			e->set_focus(e->element, has_focus);
+			e->has_focus = has_focus;
 		} else {
 			list->element->set_focus(list->element->element, 0);
 			list->element->has_focus = 0;
@@ -171,7 +171,7 @@ void ui_element_list_button_press(struct ui_element_list *list, int x, int y)
 		if (e->button_press && e->active_displaymode == *e->displaymode && !e->hidden) {
 			hit = e->button_press(e->element, x, y);
 			if (hit) {
-				ui_set_focus(list, e);
+				ui_set_focus(list, e, 1);
 				break;
 			}
 		}
