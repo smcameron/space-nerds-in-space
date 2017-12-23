@@ -143,6 +143,9 @@ struct keyname_value_entry keyname_value_map[] = {
 	{ "f10", GDK_F10 },
 	{ "f11", GDK_F11 },
 	{ "f12", GDK_F12 },
+	{ "tilde", GDK_KEY_asciitilde },
+	{ "quoteright", GDK_KEY_quoteright },
+	{ "quoteleft", GDK_KEY_quoteleft },
 };
 
 enum keyaction keymap[256];
@@ -232,7 +235,7 @@ void init_keymap()
 	keymap[GDK_slash] = keysciball_yawright;
 	keymap[GDK_l] = keysciball_pitchdown;
 	keymap[GDK_period] = keysciball_pitchup;
-	keymap[GDK_1] = key_camera_mode;
+	keymap[GDK_KEY_quoteleft] = key_camera_mode;
 
 	keymap[GDK_W] = keyviewmode;
 	keymap[GDK_KEY_plus] = keyzoom;
