@@ -253,3 +253,4 @@ void snis_text_input_box_set_contents(struct snis_text_input_box *t, char *conte
 int snis_text_input_box_get_x(struct snis_text_input_box *t) { return t->x; }
 int snis_text_input_box_get_y(struct snis_text_input_box *t) { return t->y; }
 
+char *snis_text_input_box_get_buffer(struct snis_text_input_box *t) { return t->buffer; }

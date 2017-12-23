@@ -32,6 +32,7 @@ GLOBAL void snis_text_input_box_set_dynamic_width(struct snis_text_input_box *t,
 GLOBAL void snis_text_input_box_set_contents(struct snis_text_input_box *t, char *contents);
 GLOBAL int snis_text_input_box_get_x(struct snis_text_input_box *t);
 GLOBAL int snis_text_input_box_get_y(struct snis_text_input_box *t);
-	
+GLOBAL char *snis_text_input_box_get_buffer(struct snis_text_input_box *t);
+
 #undef GLOBAL
 #endif
