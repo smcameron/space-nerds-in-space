@@ -2741,7 +2741,7 @@ struct mouse_button {
 
 static struct mouse {
 	int x, y;
-	struct mouse_button button1, button2, button3;
+	struct mouse_button button[3];
 } mouse;
 
 static void request_demon_rot_packet(uint32_t oid, uint8_t kind, uint8_t amount)
@@ -3372,35 +3372,22 @@ static void deal_with_physical_io_devices()
 static int mouse_button_held(int button);
 static void deal_with_mouse()
 {
+	int i;
 	/* The majority of mouse events are dealt with in main_da_button_press
 	 * and main_da_motion_notify. This uses the information collected in
 	 * said functions to provide greater functionality to the mouse keys
 	 */
 
-		struct timeval time_now;
-		gettimeofday(&time_now, NULL);
+	struct timeval time_now;
+	gettimeofday(&time_now, NULL);
 
-		if (mouse.button1.state == 1) {
-			if (timeval_difference(mouse.button1.time_pressed, time_now) > BUTTON_HOLD_INTERVAL)
-				mouse.button1.state = 2;
-		}
-		if (mouse.button2.state == 1) {
-			if (timeval_difference(mouse.button2.time_pressed, time_now) > BUTTON_HOLD_INTERVAL)
-				mouse.button2.state = 2;
-		}
-		if (mouse.button3.state == 1) {
-			if (timeval_difference(mouse.button3.time_pressed, time_now) > BUTTON_HOLD_INTERVAL)
-				mouse.button3.state = 2;
-		}
-
-		if (mouse.button1.state == 2)
-			mouse_button_held(1);
-
-		if (mouse.button2.state == 2)
-			mouse_button_held(2);
-
-		if (mouse.button3.state == 2)
-			mouse_button_held(3);
+	for (i = 0; i < 3; i++)
+		if (mouse.button[i].state == 1)
+			if (timeval_difference(mouse.button[i].time_pressed, time_now) > BUTTON_HOLD_INTERVAL)
+				mouse.button[i].state = 2;
+	for (i = 0; i < 3; i++)
+		if (mouse.button[i].state == 2)
+			mouse_button_held(i);
 }
 
 static void do_adjust_byte_value(uint8_t value,  uint8_t opcode);
@@ -11050,18 +11037,15 @@ static void show_mouse_debug()
 {
 	sng_set_foreground(UI_COLOR(quit_text));
 	char debug_buffer[100];
-	snprintf(debug_buffer, sizeof(debug_buffer), "Mouse 1 -- state: %d press x,y: %d,%d release x,y: %d,%d",
-		mouse.button1.state, (int) mouse.button1.press_x, (int) mouse.button1.press_y,
-		(int) mouse.button1.release_x, (int) mouse.button1.release_y);
-	sng_abs_xy_draw_string(debug_buffer, NANO_FONT, txx(10), txy(20));
-	snprintf(debug_buffer, sizeof(debug_buffer), "Mouse 2 -- state: %d press x,y: %d,%d release x,y: %d,%d",
-		mouse.button2.state, (int) mouse.button2.press_x, (int) mouse.button2.press_y,
-		(int) mouse.button2.release_x, (int) mouse.button2.release_y);
-	sng_abs_xy_draw_string(debug_buffer , NANO_FONT, txx(10), txy(30));
-	snprintf(debug_buffer, sizeof(debug_buffer), "Mouse 3 -- state: %d press x,y: %d,%d release x,y: %d,%d",
-		mouse.button3.state, (int) mouse.button3.press_x, (int) mouse.button3.press_y,
-		(int) mouse.button3.release_x, (int) mouse.button3.release_y);
-	sng_abs_xy_draw_string(debug_buffer, NANO_FONT, txx(10), txy(40));
+	int i;
+
+	for (i = 0; i < 3; i++) {
+		snprintf(debug_buffer, sizeof(debug_buffer),
+			"Mouse %d -- state: %d press x,y: %d,%d release x,y: %d,%d",
+			i, mouse.button[i].state, (int) mouse.button[i].press_x, (int) mouse.button[i].press_y,
+			(int) mouse.button[i].release_x, (int) mouse.button[i].release_y);
+		sng_abs_xy_draw_string(debug_buffer, NANO_FONT, txx(10), txy(20 + i * 10));
+	}
 	snprintf(debug_buffer, sizeof(debug_buffer), "Mouse x,y: %d,%d", mouse.x, mouse.y);
 	sng_abs_xy_draw_string(debug_buffer, NANO_FONT, txx(10), txy(50));
 }
@@ -12973,17 +12957,13 @@ static void science_button_held(int button, int x, int y)
 	int traffic_throttle = (int) ((FRAME_RATE_HZ / 15.0) + 0.5);
 
 	switch (button) {
-	case 1:
+	case 2:
 		if (sci_ui.details_mode == SCI_DETAILS_MODE_THREED) {
-			/* Throttle back the traffic to avoid flooding network*/
+			/* Throttle back the traffic to avoid flooding network */
 			if (timer % traffic_throttle != 0)
 				break;
 			science_mouse_rotate(x, y);
 		}
-		break;
-	case 2:
-		break;
-	case 3:
 		break;
 	default:
 		break;
@@ -17076,26 +17056,13 @@ static void load_textures(void)
 static int main_da_button_press(GtkWidget *w, GdkEventButton *event,
 	__attribute__((unused)) void *unused)
 {
-	switch (event->button) {
-	case 1:
-		mouse.button1.state = 1;
-		gettimeofday(&mouse.button1.time_pressed, NULL);
-		mouse.button1.press_x = event->x;
-		mouse.button1.press_y = event->y;
-		break;
-	case 2:
-		mouse.button2.state = 1;
-		gettimeofday(&mouse.button2.time_pressed, NULL);
-		mouse.button2.press_x = event->x;
-		mouse.button2.press_y = event->y;
-		break;
-	case 3:
-		mouse.button3.state = 1;
-		gettimeofday(&mouse.button3.time_pressed, NULL);
-		mouse.button3.press_x = event->x;
-		mouse.button3.press_y = event->y;
-		break;
-	}
+	if (event->button < 1 || event->button > 3)
+		return TRUE;
+
+	mouse.button[event->button - 1].state = 1;
+	gettimeofday(&mouse.button[event->button - 1].time_pressed, NULL);
+	mouse.button[event->button - 1].press_x = event->x;
+	mouse.button[event->button - 1].press_y = event->y;
 
 	switch (displaymode) {
 		case DISPLAYMODE_DEMON:
@@ -17111,23 +17078,12 @@ static int main_da_button_release(GtkWidget *w, GdkEventButton *event,
 	__attribute__((unused)) void *unused)
 		
 {
-	switch (event->button) {
-	case 1:
-		mouse.button1.state = -1;
-		mouse.button1.release_x = event->x;
-		mouse.button1.release_y = event->y;
-		break;
-	case 2:
-		mouse.button2.state = -1;
-		mouse.button2.release_x = event->x;
-		mouse.button2.release_y = event->y;
-		break;
-	case 3:
-		mouse.button3.state = -1;
-		mouse.button3.release_x = event->x;
-		mouse.button3.release_y = event->y;
-		break;
-	}
+	if (event->button < 1 || event->button > 3)
+		return TRUE;
+
+	mouse.button[event->button - 1].state = -1;
+	mouse.button[event->button - 1].release_x = event->x;
+	mouse.button[event->button - 1].release_y = event->y;
 
 	if (display_frame_stats) {
 		if (graph_dev_graph_dev_debug_menu_click(event->x, event->y))
@@ -17215,8 +17171,6 @@ static int main_da_motion_notify(GtkWidget *w, GdkEventMotion *event,
 	float pitch, yaw;
 	float smoothx, smoothy;
 	int sx, sy;
-
-	int traffic_throttle = (int) ((FRAME_RATE_HZ / 15.0) + 0.5);
 
 	global_mouse_x = event->x; /* still used for tooltips */
 	global_mouse_y = event->y;
