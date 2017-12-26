@@ -1,7 +1,7 @@
 #ifndef __SNIS_PACKET_H__
 #define __SNIS_PACKET_H__
 /*
-        Copyright (C) 2010 Stephen M. Cameron 
+        Copyright (C) 2010 Stephen M. Cameron
         Author: Stephen M. Cameron
 
         This file is part of Spacenerds In Space.
@@ -29,7 +29,7 @@
 #define OPCODE_UPDATE_LASER	102
 #define OPCODE_UPDATE_TORPEDO	103
 #define OPCODE_UPDATE_PLAYER	104
-#define OPCODE_ACK_PLAYER	105	
+#define OPCODE_ACK_PLAYER	105
 #define OPCODE_ID_CLIENT_SHIP	106
 #define OPCODE_UPDATE_ASTEROID	107
 #define OPCODE_REQUEST_YAW	108
@@ -102,7 +102,7 @@
 #define OPCODE_UPDATE_RESPAWN_TIME 141
 #define OPCODE_UPDATE_NETSTATS 142
 #define OPCODE_COMMS_TRANSMISSION 143
-#define OPCODE_WARP_LIMBO	144	
+#define OPCODE_WARP_LIMBO	144
 #define OPCODE_DEMON_COMMAND 145
 #define OPCODE_UPDATE_NEBULA		146
 #define OPCODE_DAMCON_OBJ_UPDATE	147
@@ -156,6 +156,7 @@
 #define OPCODE_REQUEST_SCIBALL_YAW	191
 #define OPCODE_REQUEST_SCIBALL_PITCH	192
 #define OPCODE_REQUEST_SCIBALL_ROLL	193
+#define OPCODE_REQUEST_SCIBALL_ROT 194
 #define OPCODE_REQUEST_MANUAL_GUNYAW	195
 #define OPCODE_REQUEST_MANUAL_GUNPITCH	196
 #define OPCODE_REQUEST_MANUAL_LASER	197
@@ -406,7 +407,7 @@ struct update_torpedo_packet {
 	uint32_t timestamp;
 	uint32_t ship_oid; /* ship torpedo came from */
 	uint32_t x, y, z;
-}; 
+};
 
 struct update_laser_packet {
 	uint8_t opcode;
@@ -415,7 +416,7 @@ struct update_laser_packet {
 	uint32_t ship_oid; /* ship laser came from */
 	uint32_t x, y, z;
 	uint16_t orientation[4]; /* encoded orientation quaternion */
-}; 
+};
 
 struct update_spacemonster_packet {
 	uint8_t opcode;
@@ -532,7 +533,7 @@ struct pos_torpedo_packet {
 	uint8_t opcode;
 	uint32_t id;
 	struct packed_double x, y;
-}; 
+};
 
 struct play_sound_packet {
 	uint8_t opcode;
@@ -612,7 +613,7 @@ struct demon_cmd_packet {
 	uint8_t opcode;
 	uint8_t demon_cmd;
 #define DEMON_CMD_ATTACK 1
-	uint32_t x, y;	
+	uint32_t x, y;
 	uint8_t nattackerids;
 	uint8_t nvictimids;
 	uint32_t id[1];
@@ -635,7 +636,7 @@ struct damcon_socket_update_packet {
 	uint32_t type;
 	uint32_t x, y, contents;
 	uint8_t system;
-	uint8_t part; 
+	uint8_t part;
 };
 
 struct damcon_part_update_packet {
@@ -646,7 +647,7 @@ struct damcon_part_update_packet {
 	uint32_t x, y;
 	uint32_t heading;
 	uint8_t system;
-	uint8_t part; 
+	uint8_t part;
 	uint8_t damage;
 };
 
@@ -676,4 +677,4 @@ struct opcode_format_descriptor {
 };
 
 #pragma pack()
-#endif	
+#endif
