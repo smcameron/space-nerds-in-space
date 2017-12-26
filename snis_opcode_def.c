@@ -200,6 +200,7 @@ int snis_opcode_def_init(void)
 	rc |= init_opcode_def(OPCODE_REQUEST_SCIBALL_YAW, "bb");
 	rc |= init_opcode_def(OPCODE_REQUEST_SCIBALL_PITCH, "bb");
 	rc |= init_opcode_def(OPCODE_REQUEST_SCIBALL_ROLL, "bb");
+	rc |= init_opcode_def(OPCODE_REQUEST_SCIBALL_ROT, "bb");
 	rc |= init_opcode_def(OPCODE_REQUEST_MANUAL_GUNYAW, "bb");
 	rc |= init_opcode_def(OPCODE_REQUEST_MANUAL_GUNPITCH, "bb");
 	rc |= init_opcode_def(OPCODE_REQUEST_MANUAL_LASER, "b");

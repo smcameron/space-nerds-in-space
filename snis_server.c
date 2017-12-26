@@ -6848,6 +6848,14 @@ static void update_player_sciball_orientation(struct snis_entity *o)
 			o->tsd.ship.sciball_rollvel);
 }
 
+static void set_player_sciball_orientation(struct snis_entity *o, float x, float y)
+{
+	quat_apply_relative_yaw_pitch_roll(&o->tsd.ship.sciball_orientation,
+			(double) x,
+			(double) y,
+			(double) 0);
+}
+
 static void update_player_weap_orientation(struct snis_entity *o)
 {
 	quat_apply_relative_yaw_pitch(&o->tsd.ship.weap_orientation,
@@ -11060,6 +11068,7 @@ static void do_robot_thrust(struct game_client *c, int thrust)
 }
 
 typedef void (*do_yaw_function)(struct game_client *c, int yaw);
+typedef void (*do_mouse_rot_function)(struct game_client *c, float x, float y);
 
 static void do_generic_axis_rot(double *axisvel, int amount, double max_amount,
 				double amount_inc, double amount_inc_fine)
@@ -11132,6 +11141,14 @@ static void do_sciball_roll(struct game_client *c, int roll)
 
 	do_generic_axis_rot(&ship->tsd.ship.sciball_rollvel, roll, max_roll_velocity,
 			ROLL_INCREMENT, ROLL_INCREMENT_FINE);
+}
+
+/* This is currently broken. It seems to hang the server.*/
+static void do_sciball_mouse_rot(struct game_client *c, float x, float y)
+{
+	struct snis_entity *ship = &go[c->ship_index];
+
+	set_player_sciball_orientation(ship, x, y);
 }
 
 static void do_manual_gunyaw(struct game_client *c, int yaw)
@@ -15993,6 +16010,23 @@ static int process_request_yaw(struct game_client *c, do_yaw_function yaw_func)
 	return 0;
 }
 
+static int process_request_rot(struct game_client *c, do_mouse_rot_function rot_func)
+{
+	unsigned char buffer[10];
+	float x, y;
+	int rc;
+
+	rc = read_and_unpack_buffer(c, buffer, "qq", &x, &y);
+	if (rc)
+		return rc;
+	/*debugging noises*/
+	struct snis_entity *ship = &go[c->ship_index];
+	snis_queue_add_sound(DOCKING_SOUND, ROLE_ALL, ship->id);
+
+	rot_func(c, x, y);
+	return 0;
+}
+
 static int process_demon_rot(struct game_client *c)
 {
 	unsigned char buffer[10];
@@ -16539,6 +16573,11 @@ static void process_instructions_from_client(struct game_client *c)
 			break;
 		case OPCODE_REQUEST_SCIBALL_ROLL:
 			rc = process_request_yaw(c, do_sciball_roll); /* process_request_yaw is correct */
+			if (rc)
+				goto protocol_error;
+			break;
+		case OPCODE_REQUEST_SCIBALL_ROT:
+			rc = process_request_rot(c, do_sciball_mouse_rot);
 			if (rc)
 				goto protocol_error;
 			break;

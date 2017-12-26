@@ -149,6 +149,7 @@ static inline int txy(int y) { return y * SCREEN_HEIGHT / 600; }
 
 #define VERTICAL_CONTROLS_INVERTED -1
 #define VERTICAL_CONTROLS_NORMAL 1
+#define BUTTON_HOLD_INTERVAL 100 /* ms */
 static int vertical_controls_inverted = VERTICAL_CONTROLS_NORMAL;
 static volatile int vertical_controls_timer = 0;
 static int display_frame_stats = 0;
@@ -2722,6 +2723,27 @@ static void navigation_dirkey(int h, int v, int r)
 	}
 }
 
+static double timeval_difference(struct timeval t1, struct timeval t2)
+{
+			double elapsed_time;
+	/* compute and return the elapsed time in millisec */
+	    elapsed_time = (t2.tv_sec - t1.tv_sec) * 1000.0;      /* sec to ms */
+	    elapsed_time += (t2.tv_usec - t1.tv_usec) / 1000.0;   /* us to ms */
+	    return elapsed_time;
+}
+
+struct mouse_button {
+	int state; /* Pressed: 1, Released: -1, no activity: 0 */
+	struct timeval time_pressed;
+	double press_x, press_y;
+	double release_x, release_y;
+};
+
+static struct mouse {
+	int x, y;
+	struct mouse_button button1, button2, button3;
+} mouse;
+
 static void request_demon_rot_packet(uint32_t oid, uint8_t kind, uint8_t amount)
 {
 	queue_to_server(snis_opcode_pkt("bbwb", OPCODE_DEMON_ROT, kind, oid, amount));
@@ -3345,6 +3367,40 @@ static void deal_with_joysticks()
 static void deal_with_physical_io_devices()
 {
 	/* FIXME: fill this in. */
+}
+
+static int mouse_button_held(int button);
+static void deal_with_mouse()
+{
+	/* The majority of mouse events are dealt with in main_da_button_press
+	 * and main_da_motion_notify. This uses the information collected in
+	 * said functions to provide greater functionality to the mouse keys
+	 */
+
+		struct timeval time_now;
+		gettimeofday(&time_now, NULL);
+
+		if (mouse.button1.state == 1) {
+			if (timeval_difference(mouse.button1.time_pressed, time_now) > BUTTON_HOLD_INTERVAL)
+				mouse.button1.state = 2;
+		}
+		if (mouse.button2.state == 1) {
+			if (timeval_difference(mouse.button2.time_pressed, time_now) > BUTTON_HOLD_INTERVAL)
+				mouse.button2.state = 2;
+		}
+		if (mouse.button3.state == 1) {
+			if (timeval_difference(mouse.button3.time_pressed, time_now) > BUTTON_HOLD_INTERVAL)
+				mouse.button3.state = 2;
+		}
+
+		if (mouse.button1.state == 2)
+			mouse_button_held(1);
+
+		if (mouse.button2.state == 2)
+			mouse_button_held(2);
+
+		if (mouse.button3.state == 2)
+			mouse_button_held(3);
 }
 
 static void do_adjust_byte_value(uint8_t value,  uint8_t opcode);
@@ -10990,6 +11046,26 @@ static void show_navigation(GtkWidget *w)
 	show_common_screen(w, "NAV");
 }
 
+static void show_mouse_debug()
+{
+	sng_set_foreground(UI_COLOR(quit_text));
+	char debug_buffer[100];
+	snprintf(debug_buffer, sizeof(debug_buffer), "Mouse 1 -- state: %d press x,y: %d,%d release x,y: %d,%d",
+		mouse.button1.state, (int) mouse.button1.press_x, (int) mouse.button1.press_y,
+		(int) mouse.button1.release_x, (int) mouse.button1.release_y);
+	sng_abs_xy_draw_string(debug_buffer, NANO_FONT, txx(10), txy(20));
+	snprintf(debug_buffer, sizeof(debug_buffer), "Mouse 2 -- state: %d press x,y: %d,%d release x,y: %d,%d",
+		mouse.button2.state, (int) mouse.button2.press_x, (int) mouse.button2.press_y,
+		(int) mouse.button2.release_x, (int) mouse.button2.release_y);
+	sng_abs_xy_draw_string(debug_buffer , NANO_FONT, txx(10), txy(30));
+	snprintf(debug_buffer, sizeof(debug_buffer), "Mouse 3 -- state: %d press x,y: %d,%d release x,y: %d,%d",
+		mouse.button3.state, (int) mouse.button3.press_x, (int) mouse.button3.press_y,
+		(int) mouse.button3.release_x, (int) mouse.button3.release_y);
+	sng_abs_xy_draw_string(debug_buffer, NANO_FONT, txx(10), txy(40));
+	snprintf(debug_buffer, sizeof(debug_buffer), "Mouse x,y: %d,%d", mouse.x, mouse.y);
+	sng_abs_xy_draw_string(debug_buffer, NANO_FONT, txx(10), txy(50));
+}
+
 static void main_engineering_button_pressed(void *x)
 {
 	displaymode = DISPLAYMODE_ENGINEERING;
@@ -12775,6 +12851,79 @@ static void update_emf_detector(uint8_t emf_value)
 
 static void science_mouse_rotate(int x, int y)
 {
+	double dist_from_center, dx, dy, scaled_dx, scaled_dy;
+	float dxi, dyi, angle, abs_angle, octant;
+
+	if (sci_ui.details_mode != SCI_DETAILS_MODE_THREED)
+		return;
+
+	/* get the distance the x and y coords are from the balls center */
+	dx = x - SCIENCE_SCOPE_CX;
+	dy = y - SCIENCE_SCOPE_CY;
+	/* Invert the values to make the action pulling the ball to you rather than pushing it away */
+	dx -= dx * 2;
+	dy -= dy * 2;
+
+	dist_from_center = sqrt(dx * dx + dy * dy);
+	if (dist_from_center < SCIENCE_SCOPE_R) {
+
+		/* Make sure we do nothing if the cursor is pretty much in the center */
+		if (dist_from_center > SCIENCE_SCOPE_R / 10) {
+
+			/* Scale the output to be min 0 max 1 */
+			scaled_dx = 1 * (dx / SCIENCE_SCOPE_R);
+			scaled_dy = 1 * (dy / SCIENCE_SCOPE_R);
+
+			/* Round the values to create numbers that support the sciball input convention */
+			/* 0 yaw left 1 yaw right */
+
+			dxi = (float) ceil(scaled_dx);
+			dyi = (float) ceil(scaled_dy);
+
+			/* Get the angle from the center to the mouse in radians */
+			angle = (float) atan2(scaled_dy, scaled_dx); /* pointing eastward */
+			abs_angle = fabsf(angle);
+			octant = PI / 8; /* calculate the value we use to create something similar to a */
+					 /* D-pad overlaying the ball.*/
+
+			/* Detect if the user should be expecting only a single input instead of both yaw and pitch */
+			if (abs_angle > 3 * octant && abs_angle < 5 * octant)
+				dxi = -1;
+
+			if (abs_angle < octant || abs_angle > 7 * octant)
+				dyi = -1;
+
+			/* Scale to use the sciball functions convention when lighter movements */
+			/* would be more fitting */
+
+			if (fabs(scaled_dx) < 0.33 && dxi >= 0)
+				dxi += 2; /* see YAW_INCREMENT and YAW_INCREMENT_FINE for this convention */
+
+			if (fabs(scaled_dy) < 0.33 && dyi >= 0)
+				dyi += 2;
+
+#if 0
+			sng_set_foreground(UI_COLOR(quit_text));
+			char debug_buffer[100];
+			snprintf(debug_buffer, sizeof(debug_buffer),
+				"scaled x,y: %f,%f or %d,%f - angle: %f - timer: %d", scaled_dx, scaled_dy,
+				(int) dxi, dyi, angle, timer);
+			sng_abs_xy_draw_string(debug_buffer , NANO_FONT, txx(10), txy(70));
+#endif
+
+			/*send the network requests to the server*/
+			if (dxi >= 0)
+				queue_to_server(snis_opcode_pkt("bb", OPCODE_REQUEST_SCIBALL_YAW, (int) dxi));
+
+			if (dyi >= 0)
+				queue_to_server(snis_opcode_pkt("bb", OPCODE_REQUEST_SCIBALL_PITCH, (int) dyi));
+		}
+	}
+	return;
+}
+
+static void science_mouse_click_rotate(int x, int y)
+{
 	double dist_from_center, dx, dy, yaw, pitch;
 	int8_t yawval, pitchval;
 	int i, yawcount, pitchcount;
@@ -12815,6 +12964,33 @@ static void science_mouse_rotate(int x, int y)
 }
 
 #define SCIDIST2 100
+
+static void science_button_held(int button, int x, int y)
+{
+	x = sng_pixelx_to_screenx(x);
+	y = sng_pixely_to_screeny(y);
+
+	int traffic_throttle = (int) ((FRAME_RATE_HZ / 15.0) + 0.5);
+
+	switch (button) {
+	case 1:
+		if (sci_ui.details_mode == SCI_DETAILS_MODE_THREED) {
+			/* Throttle back the traffic to avoid flooding network*/
+			if (timer % traffic_throttle != 0)
+				break;
+			science_mouse_rotate(x, y);
+		}
+		break;
+	case 2:
+		break;
+	case 3:
+		break;
+	default:
+		break;
+	}
+	return;
+}
+
 static void science_button_release(int button, int x, int y)
 {
 	int i;
@@ -12825,7 +13001,7 @@ static void science_button_release(int button, int x, int y)
 	x = sng_pixelx_to_screenx(x);
 	y = sng_pixely_to_screeny(y);
 	if (button == 3) {
-		science_mouse_rotate(x, y);
+		science_mouse_click_rotate(x, y);
 		return;
 	}
 
@@ -16197,6 +16373,8 @@ static int main_da_expose(GtkWidget *w, GdkEvent *event, gpointer p)
 	}
 #endif
 
+	/* show_mouse_debug(); */
+
 	if (warp_limbo_countdown) {
 		warp_limbo_countdown--;
 		if (in_the_process_of_quitting)
@@ -16380,6 +16558,7 @@ gint advance_game(gpointer data)
 
 	deal_with_joysticks();
 	deal_with_keyboard();
+	deal_with_mouse();
 	deal_with_physical_io_devices();
 
 	if (in_the_process_of_quitting) {
@@ -16897,6 +17076,27 @@ static void load_textures(void)
 static int main_da_button_press(GtkWidget *w, GdkEventButton *event,
 	__attribute__((unused)) void *unused)
 {
+	switch (event->button) {
+	case 1:
+		mouse.button1.state = 1;
+		gettimeofday(&mouse.button1.time_pressed, NULL);
+		mouse.button1.press_x = event->x;
+		mouse.button1.press_y = event->y;
+		break;
+	case 2:
+		mouse.button2.state = 1;
+		gettimeofday(&mouse.button2.time_pressed, NULL);
+		mouse.button2.press_x = event->x;
+		mouse.button2.press_y = event->y;
+		break;
+	case 3:
+		mouse.button3.state = 1;
+		gettimeofday(&mouse.button3.time_pressed, NULL);
+		mouse.button3.press_x = event->x;
+		mouse.button3.press_y = event->y;
+		break;
+	}
+
 	switch (displaymode) {
 		case DISPLAYMODE_DEMON:
 			demon_button_press(event->button, event->x, event->y);
@@ -16911,6 +17111,24 @@ static int main_da_button_release(GtkWidget *w, GdkEventButton *event,
 	__attribute__((unused)) void *unused)
 		
 {
+	switch (event->button) {
+	case 1:
+		mouse.button1.state = -1;
+		mouse.button1.release_x = event->x;
+		mouse.button1.release_y = event->y;
+		break;
+	case 2:
+		mouse.button2.state = -1;
+		mouse.button2.release_x = event->x;
+		mouse.button2.release_y = event->y;
+		break;
+	case 3:
+		mouse.button3.state = -1;
+		mouse.button3.release_x = event->x;
+		mouse.button3.release_y = event->y;
+		break;
+	}
+
 	if (display_frame_stats) {
 		if (graph_dev_graph_dev_debug_menu_click(event->x, event->y))
 			return TRUE;
@@ -16974,6 +17192,23 @@ static void smooth_mousexy(float x, float y, float *nx, float *ny)
 	*ny = smoothy;
 }
 
+static int mouse_button_held(int button)
+{
+	int sx, sy;
+
+	sx = (int) mouse.x;
+	sy = (int) mouse.y;
+
+	switch (displaymode) {
+	case DISPLAYMODE_SCIENCE:
+		science_button_held(button, sx, sy);
+		break;
+	default:
+		break;
+	}
+	return TRUE;
+}
+
 static int main_da_motion_notify(GtkWidget *w, GdkEventMotion *event,
 	__attribute__((unused)) void *unused)
 {
@@ -16981,8 +17216,13 @@ static int main_da_motion_notify(GtkWidget *w, GdkEventMotion *event,
 	float smoothx, smoothy;
 	int sx, sy;
 
-	global_mouse_x = event->x;
+	int traffic_throttle = (int) ((FRAME_RATE_HZ / 15.0) + 0.5);
+
+	global_mouse_x = event->x; /* still used for tooltips */
 	global_mouse_y = event->y;
+
+	mouse.x = event->x; /* new implementation */
+	mouse.y = event->y;
 
 	switch (displaymode) {
 	case DISPLAYMODE_DEMON:
