@@ -122,8 +122,8 @@
 #define PLANET_COLOR GREEN
 #define ASTEROID_COLOR AMBER
 #define WARP_CORE_COLOR YELLOW
-#define CARGO_CONTAINER_COLOR YELLOW 
-#define DERELICT_COLOR BLUE 
+#define CARGO_CONTAINER_COLOR YELLOW
+#define DERELICT_COLOR BLUE
 #define PARTICLE_COLOR YELLOW
 #define LASER_COLOR GREEN
 #define PLAYER_LASER_COLOR GREEN
@@ -149,6 +149,7 @@ static inline int txy(int y) { return y * SCREEN_HEIGHT / 600; }
 
 #define VERTICAL_CONTROLS_INVERTED -1
 #define VERTICAL_CONTROLS_NORMAL 1
+#define BUTTON_HOLD_INTERVAL 100 /* ms */
 static int vertical_controls_inverted = VERTICAL_CONTROLS_NORMAL;
 static volatile int vertical_controls_timer = 0;
 static int display_frame_stats = 0;
@@ -257,7 +258,7 @@ static char login_failed_msg[100] = { 0 };
 
 static volatile int displaymode = DISPLAYMODE_LOBBYSCREEN;
 static volatile int helpmode = 0;
-static volatile float weapons_camera_shake = 0.0f; 
+static volatile float weapons_camera_shake = 0.0f;
 static volatile float main_camera_shake = 0.0f;
 static unsigned char camera_mode;
 static unsigned char nav_camera_mode;
@@ -548,7 +549,7 @@ try_again:
 		if (errno)
 			sprintf(lobbyerror, "%s (%d)", strerror(errno), errno);
 		else
-			sprintf(lobbyerror, "%s (%d)", 
+			sprintf(lobbyerror, "%s (%d)",
 				gai_strerror(sock), sock);
 		printf("snis_client: lobby connection failed: %s\n", lobbyerror);
 		ssgl_sleep(5);
@@ -573,7 +574,7 @@ try_again:
 			printf("snis_client: ssgl_recv_game_server failed: %s\n", lobbyerror);
 			goto handle_error;
 		}
-	
+
 		/* copy the game server data to where the display thread will see it. */
 		if (game_server_count > 100)
 			game_server_count = 100;
@@ -650,7 +651,7 @@ static int add_generic_object(uint32_t id, uint32_t timestamp, double x, double 
 {
 	int i;
 
-	i = snis_object_pool_alloc_obj(pool); 	 
+	i = snis_object_pool_alloc_obj(pool);
 	if (i < 0) {
 		printf("snis_object_pool_alloc_obj failed\n");
 		return -1;
@@ -836,7 +837,7 @@ static int add_generic_damcon_object(uint32_t id, uint32_t ship_id, double x, do
 	int i;
 	struct snis_damcon_entity *o;
 
-	i = snis_object_pool_alloc_obj(damcon_pool); 	 
+	i = snis_object_pool_alloc_obj(damcon_pool);
 	if (i < 0) {
 		printf("snis_object_pool_alloc_obj failed in add_generic_damcon_object\n");
 		return -1;
@@ -1196,7 +1197,7 @@ static int update_ship_sdata(uint32_t id, uint8_t subclass, char *name,
 		go[i].sdata.science_data_known = 30 * 10; /* only remember for ten secs. */
 	else
 		go[i].sdata.science_data_known = 30 * 60; /* unless planet or starbase */
-		
+
 	return 0;
 }
 
@@ -1984,7 +1985,7 @@ static int update_nebula(uint32_t id, uint32_t timestamp, double x, double y, do
 		if (o->entity)
 			update_entity_scale(o->entity, r * 2.0);
 	}
-	go[i].tsd.nebula.r = r;	
+	go[i].tsd.nebula.r = r;
 	go[i].alive = 1;
 	go[i].move = nebula_move;
 	return 0;
@@ -2501,7 +2502,7 @@ static void add_spark(double x, double y, double z, double vx, double vy, double
 	orientation = random_orientation[i % NRANDOM_ORIENTATIONS];
 	if (e)
 		update_entity_orientation(e, &orientation);
-	
+
 	spark[i].type = OBJTYPE_SPARK;
 	spark[i].alive = time + snis_randn(time);
 	spark[i].move = spark_move;
@@ -2661,7 +2662,7 @@ static void scale_points(struct my_point_t *points, int npoints,
 			continue;
 		points[i].x = (int) (xscale * points[i].x);
 		points[i].y = (int) (yscale * points[i].y);
-	} 
+	}
 }
 
 static void wakeup_gameserver_writer(void);
@@ -2721,6 +2722,28 @@ static void navigation_dirkey(int h, int v, int r)
 		request_navigation_roll_packet(roll);
 	}
 }
+
+static double timeval_difference(struct timeval t1, struct timeval t2)
+{
+			double elapsed_time;
+	/* compute and return the elapsed time in millisec */
+	    elapsed_time = (t2.tv_sec - t1.tv_sec) * 1000.0;      /*sec to ms*/
+	    elapsed_time += (t2.tv_usec - t1.tv_usec) / 1000.0;   /*us to ms*/
+	    return elapsed_time;
+}
+
+struct mouse_button {
+	int state; /* Pressed: 1, Released: -1, no activity: 0 */
+	struct timeval time_pressed;
+	double press_x, press_y;
+	double release_x, release_y;
+};
+
+static struct mouse {
+	int x,y;
+	struct mouse_button button1, button2, button3;
+} mouse;
+
 
 static void request_demon_rot_packet(uint32_t oid, uint8_t kind, uint8_t amount)
 {
@@ -3040,13 +3063,13 @@ static void do_dirkey(int h, int v, int r, int t)
 		case DISPLAYMODE_NAVIGATION:
 			if (nav_ui_computer_active()) /* suppress keystrokes typed to computer */
 				break;
-			navigation_dirkey(h, v, r); 
+			navigation_dirkey(h, v, r);
 			break;
 		case DISPLAYMODE_WEAPONS:
-			weapons_dirkey(h, v); 
+			weapons_dirkey(h, v);
 			break;
 		case DISPLAYMODE_SCIENCE:
-			science_dirkey(h, -v); 
+			science_dirkey(h, -v);
 			break;
 		case DISPLAYMODE_DAMCON:
 			damcon_dirkey(h, v);
@@ -3299,7 +3322,7 @@ static struct js_state jss[MAX_JOYSTICKS] = { { { 0 } } };
 static void deal_with_joysticks()
 {
 
-#define FRAME_RATE_HZ 30 
+#define FRAME_RATE_HZ 30
 	static const int joystick_throttle = (int) ((FRAME_RATE_HZ / 15.0) + 0.5);
 	int i, j, rc;
 
@@ -3345,6 +3368,42 @@ static void deal_with_joysticks()
 static void deal_with_physical_io_devices()
 {
 	/* FIXME: fill this in. */
+}
+
+static int mouse_button_held(int button);
+static void deal_with_mouse()
+{
+	/*The majority of mouse events are dealt with in main_da_button_press
+		and main_da_motion_notify. This uses the information collected in
+		said functions to provide greater functionality to the mouse keys*/
+
+		struct timeval time_now;
+		gettimeofday(&time_now,NULL);
+
+		if(mouse.button1.state == 1)
+		{
+			if(timeval_difference( mouse.button1.time_pressed, time_now) > BUTTON_HOLD_INTERVAL)
+				mouse.button1.state = 2;
+		}
+		if(mouse.button2.state == 1)
+		{
+			if(timeval_difference( mouse.button2.time_pressed, time_now) > BUTTON_HOLD_INTERVAL)
+				mouse.button2.state = 2;
+		}
+		if(mouse.button3.state == 1)
+		{
+			if(timeval_difference( mouse.button3.time_pressed, time_now) > BUTTON_HOLD_INTERVAL)
+				mouse.button3.state = 2;
+		}
+
+		if(mouse.button1.state == 2)
+			mouse_button_held(1);
+
+		if(mouse.button2.state == 2)
+			mouse_button_held(2);
+
+		if(mouse.button3.state == 2)
+			mouse_button_held(3);
 }
 
 static void do_adjust_byte_value(uint8_t value,  uint8_t opcode);
@@ -3403,7 +3462,7 @@ static void deal_with_keyboard()
 	sbv = 0;
 	sbr = 0;
 
-	if (kbstate.pressed[keyleft])	
+	if (kbstate.pressed[keyleft])
 		h = -1;
 	if (kbstate.pressed[keyright])
 		h = 1;
@@ -3455,7 +3514,7 @@ static gint key_press_cb(GtkWidget* widget, GdkEventKey* event, gpointer data)
 	enum keyaction ka;
 
 	ui_element_list_keypress(uiobjs, event);
-        if ((event->keyval & 0xff00) == 0) 
+        if ((event->keyval & 0xff00) == 0)
                 ka = keymap[event->keyval];
         else
                 ka = ffkeymap[event->keyval & 0x00ff];
@@ -3504,7 +3563,7 @@ static gint key_press_cb(GtkWidget* widget, GdkEventKey* event, gpointer data)
 			}
 			return TRUE;
 		}
-	case keyquit:	
+	case keyquit:
 			if (helpmode) {
 				helpmode = 0;
 				break;
@@ -3840,7 +3899,7 @@ static void show_lobbyscreen(GtkWidget *w)
 		/* Draw server info */
 		sng_set_foreground(UI_COLOR(lobby_connecting));
 		for (i = 0; i < ngameservers; i++) {
-			unsigned char *x = (unsigned char *) 
+			unsigned char *x = (unsigned char *)
 				&lobby_game_server[i].ipaddr;
 			if (lobbylast1clickx > txx(30) && lobbylast1clickx < txx(700) &&
 				lobbylast1clicky > txy(100) + (-0.5 + i) * LINEHEIGHT &&
@@ -3858,7 +3917,7 @@ static void show_lobbyscreen(GtkWidget *w)
 			if (quickstartmode) {
 				lobby_selected_server = 0;
 			}
-			 
+
 			sprintf(msg, "%hu.%hu.%hu.%hu/%hu", x[0], x[1], x[2], x[3], lobby_game_server[i].port);
 			sng_abs_xy_draw_string(msg, NANO_FONT, txx(30), txy(100) + i * LINEHEIGHT);
 			sprintf(msg, "%s", lobby_game_server[i].game_instance);
@@ -3983,7 +4042,7 @@ static int process_update_ship_packet(uint8_t opcode)
 			&wallet);
 	tloaded = (tloading >> 4) & 0x0f;
 	tloading = tloading & 0x0f;
-	quat_to_euler(&ypr, &orientation);	
+	quat_to_euler(&ypr, &orientation);
 	pthread_mutex_lock(&universe_mutex);
 
 	/* Now update the ship... do it inline here instead of a function because
@@ -4090,9 +4149,9 @@ static int process_update_damcon_object(void)
 
 	rc = read_and_unpack_buffer(buffer, "wwwSSSRb",
 			&id, &ship_id, &type,
-			&x, (int32_t) DAMCONXDIM, 
-			&y, (int32_t) DAMCONYDIM, 
-			&velocity, (int32_t) DAMCONXDIM, 
+			&x, (int32_t) DAMCONXDIM,
+			&y, (int32_t) DAMCONYDIM,
+			&velocity, (int32_t) DAMCONXDIM,
 			&heading,
 			&autonomous_mode);
 	if (rc)
@@ -4113,8 +4172,8 @@ static int process_update_damcon_socket(void)
 
 	rc = read_and_unpack_buffer(buffer, "wwwSSwbb",
 		&id, &ship_id, &type,
-			&x, (int32_t) DAMCONXDIM, 
-			&y, (int32_t) DAMCONYDIM, 
+			&x, (int32_t) DAMCONXDIM,
+			&y, (int32_t) DAMCONYDIM,
 			&contents_id, &system, &part);
 	if (rc)
 		return rc;
@@ -4134,8 +4193,8 @@ static int process_update_damcon_part(void)
 
 	rc = read_and_unpack_buffer(buffer, "wwwSSRbbb",
 		&id, &ship_id, &type,
-			&x, (int32_t) DAMCONXDIM, 
-			&y, (int32_t) DAMCONYDIM, 
+			&x, (int32_t) DAMCONXDIM,
+			&y, (int32_t) DAMCONYDIM,
 			&heading,
 			&system, &part, &damage);
 	if (rc != 0)
@@ -4180,7 +4239,7 @@ static int process_update_econ_ship_packet(uint8_t opcode)
 
 	assert(sizeof(buffer) > sizeof(struct update_econ_ship_packet) - sizeof(uint8_t));
 	rc = read_and_unpack_buffer(buffer, "wwhSSSQwbbb", &id, &timestamp, &alive,
-				&dx, (int32_t) UNIVERSE_DIM, &dy, (int32_t) UNIVERSE_DIM, 
+				&dx, (int32_t) UNIVERSE_DIM, &dy, (int32_t) UNIVERSE_DIM,
 				&dz, (int32_t) UNIVERSE_DIM,
 				&orientation,
 				&victim_id, &shiptype, &faction, &rts_order);
@@ -4221,7 +4280,7 @@ done:
 				shiptype, ai, threat_level, npoints, patrol, faction, rts_order);
 	pthread_mutex_unlock(&universe_mutex);
 	return (rc < 0);
-} 
+}
 
 static int process_update_torpedo_packet(void)
 {
@@ -4240,7 +4299,7 @@ static int process_update_torpedo_packet(void)
 	rc = update_torpedo(id, timestamp, dx, dy, dz, ship_id);
 	pthread_mutex_unlock(&universe_mutex);
 	return (rc < 0);
-} 
+}
 
 static int process_warp_limbo_packet(void)
 {
@@ -4254,7 +4313,7 @@ static int process_warp_limbo_packet(void)
 	if (value >= 0 && value <= 40 * frame_rate_hz)
 		warp_limbo_countdown = value;
 	return 0;
-} 
+}
 
 static int process_initiate_warp_packet()
 {
@@ -4297,7 +4356,7 @@ static int process_update_laser_packet(void)
 	rc = update_laser(id, timestamp, power, dx, dy, dz, &orientation, ship_id);
 	pthread_mutex_unlock(&universe_mutex);
 	return (rc < 0);
-} 
+}
 
 static int process_update_spacemonster(void)
 {
@@ -4675,7 +4734,7 @@ static int process_collision_notification()
 
 	if ((timer - last_time) > (30 * 3))
 		wwviaudio_add_sound(SPACESHIP_CRASH);
-	last_time = timer; 
+	last_time = timer;
 	return 0;
 }
 
@@ -5678,7 +5737,7 @@ static int process_ship_damage_packet(int do_damage_limbo)
 	packed_buffer_init(&pb, buffer, sizeof(buffer));
 	id = packed_buffer_extract_u32(&pb);
 	i = lookup_object_by_id(id);
-	
+
 	if (i < 0)
 		return 0;
 	packed_buffer_extract_raw(&pb, (char *) &damage, sizeof(damage));
@@ -5804,7 +5863,7 @@ static int process_update_asteroid_packet(void)
 				carbon, nickeliron, silicates, preciousmetals);
 	pthread_mutex_unlock(&universe_mutex);
 	return (rc < 0);
-} 
+}
 
 static int process_update_warp_core_packet(void)
 {
@@ -5844,7 +5903,7 @@ static int process_update_cargo_container_packet(void)
 	rc = update_cargo_container(id, timestamp, dx, dy, dz);
 	pthread_mutex_unlock(&universe_mutex);
 	return (rc < 0);
-} 
+}
 
 static int process_update_derelict_packet(void)
 {
@@ -5865,7 +5924,7 @@ static int process_update_derelict_packet(void)
 	rc = update_derelict(id, timestamp, dx, dy, dz, shiptype, fuel, oxygen);
 	pthread_mutex_unlock(&universe_mutex);
 	return (rc < 0);
-} 
+}
 
 static int process_update_planet_packet(void)
 {
@@ -5905,7 +5964,7 @@ static int process_update_planet_packet(void)
 				time_left_to_build, build_unit_type);
 	pthread_mutex_unlock(&universe_mutex);
 	return (rc < 0);
-} 
+}
 
 static int process_update_wormhole_packet(void)
 {
@@ -5925,7 +5984,7 @@ static int process_update_wormhole_packet(void)
 	rc = update_wormhole(id, timestamp, dx, dy, dz);
 	pthread_mutex_unlock(&universe_mutex);
 	return (rc < 0);
-} 
+}
 
 static int process_update_starbase_packet(void)
 {
@@ -5956,7 +6015,7 @@ static int process_update_starbase_packet(void)
 				time_left_to_build, build_unit_type, starbase_number);
 	pthread_mutex_unlock(&universe_mutex);
 	return (rc < 0);
-} 
+}
 
 static int process_update_warpgate_packet(void)
 {
@@ -6005,7 +6064,7 @@ static int process_update_nebula_packet(void)
 				&uo, phase_angle, phase_speed);
 	pthread_mutex_unlock(&universe_mutex);
 	return (rc < 0);
-} 
+}
 
 static int process_update_laserbeam(void)
 {
@@ -6020,7 +6079,7 @@ static int process_update_laserbeam(void)
 	rc = update_laserbeam(id, timestamp, origin, target);
 	pthread_mutex_unlock(&universe_mutex);
 	return (rc < 0);
-} 
+}
 
 static int process_update_tractorbeam(void)
 {
@@ -6035,7 +6094,7 @@ static int process_update_tractorbeam(void)
 	rc = update_tractorbeam(id, timestamp, origin, target);
 	pthread_mutex_unlock(&universe_mutex);
 	return (rc < 0);
-} 
+}
 
 static int process_update_explosion_packet(void)
 {
@@ -6641,7 +6700,7 @@ static void *connect_to_gameserver_thread(__attribute__((unused)) void *arg)
 	struct addrinfo hints;
 #if 0
 	void *addr;
-	char *ipver; 
+	char *ipver;
 #endif
 	char portstr[50];
 	char hoststr[50];
@@ -6684,7 +6743,7 @@ static void *connect_to_gameserver_thread(__attribute__((unused)) void *arg)
 	if (i == NULL)
 		goto error;
 
-	gameserver_sock = socket(AF_INET, SOCK_STREAM, i->ai_protocol); 
+	gameserver_sock = socket(AF_INET, SOCK_STREAM, i->ai_protocol);
 	if (gameserver_sock < 0)
 		goto error;
 
@@ -7085,7 +7144,7 @@ static int newzoom(int current_zoom, int desired_zoom)
 			current_zoom -= delta;
 		else
 			current_zoom += delta;
-	} 
+	}
 	return current_zoom;
 }
 
@@ -7657,7 +7716,7 @@ static void show_mainscreen(GtkWidget *w)
 		show_gunsight(w);
 	draw_main_screen_text(w, gc);
 	pthread_mutex_unlock(&universe_mutex);
-	show_common_screen(w, "");	
+	show_common_screen(w, "");
 }
 
 /* position and dimensions of science scope */
@@ -7689,7 +7748,7 @@ static void snis_draw_science_guy(GtkWidget *w, GdkGC *gc, struct snis_entity *o
 	dr = (int) dist / (XKNOWN_DIM / divisor);
 	dr = dr * MAX_SCIENCE_SCREEN_RADIUS / range;
 	if (nebula_factor) {
-		dr = dr * 10; 
+		dr = dr * 10;
 		dr += 200;
 	}
 
@@ -7698,7 +7757,7 @@ static void snis_draw_science_guy(GtkWidget *w, GdkGC *gc, struct snis_entity *o
 		for (i = 0; i < 10; i++) {
 			da = snis_randn(360) * M_PI / 180.0;
 			tx = (int) ((double) x + sin(da) * (double) snis_randn(dr));
-			ty = (int) ((double) y + cos(da) * (double) snis_randn(dr)); 
+			ty = (int) ((double) y + cos(da) * (double) snis_randn(dr));
 
 			sng_draw_point(tx, ty);
 		}
@@ -7744,7 +7803,7 @@ static void snis_draw_science_guy(GtkWidget *w, GdkGC *gc, struct snis_entity *o
 
 	if (selected)
 		sng_draw_circle(0, x, y, 10);
-	
+
 	if (o->sdata.science_data_known) {
 		switch (o->type) {
 		case OBJTYPE_SHIP2:
@@ -7764,7 +7823,7 @@ static void snis_draw_science_guy(GtkWidget *w, GdkGC *gc, struct snis_entity *o
 		case OBJTYPE_SHIP1:
 			sng_set_foreground(UI_COLOR(sci_ball_ship));
 			sprintf(buffer, "%s %s\n", o->sdata.name,
-					ship_type[o->sdata.subclass].class); 
+					ship_type[o->sdata.subclass].class);
 			break;
 		case OBJTYPE_WARPGATE:
 			sng_set_foreground(UI_COLOR(sci_ball_warpgate));
@@ -7780,11 +7839,11 @@ static void snis_draw_science_guy(GtkWidget *w, GdkGC *gc, struct snis_entity *o
 			break;
 		case OBJTYPE_DERELICT:
 			sng_set_foreground(UI_COLOR(sci_ball_derelict));
-			sprintf(buffer, "%s %s\n", "D",  "???"); 
+			sprintf(buffer, "%s %s\n", "D",  "???");
 			break;
 		case OBJTYPE_PLANET:
 			sng_set_foreground(UI_COLOR(sci_ball_planet));
-			sprintf(buffer, "%s %s\n", "P",  o->sdata.name); 
+			sprintf(buffer, "%s %s\n", "P",  o->sdata.name);
 			break;
 		case OBJTYPE_TORPEDO:
 		case OBJTYPE_SPARK:
@@ -7795,7 +7854,7 @@ static void snis_draw_science_guy(GtkWidget *w, GdkGC *gc, struct snis_entity *o
 			break;
 		default:
 			sng_set_foreground(UI_COLOR(sci_ball_default_blip));
-			sprintf(buffer, "%s %s\n", "?", o->sdata.name); 
+			sprintf(buffer, "%s %s\n", "?", o->sdata.name);
 			break;
 		}
 		sng_abs_xy_draw_string(buffer, PICO_FONT, x + 8, y - 8);
@@ -7822,7 +7881,7 @@ static void snis_draw_3d_science_guy(GtkWidget *w, GdkGC *gc, struct snis_entity
 	dr = (int) dist / (XKNOWN_DIM / divisor);
 	dr = dr * MAX_SCIENCE_SCREEN_RADIUS / range;
 	if (nebula_factor) {
-		dr = dr * 10; 
+		dr = dr * 10;
 		dr += 200;
 	}
 	dr *= 100.0;
@@ -7839,8 +7898,8 @@ static void snis_draw_3d_science_guy(GtkWidget *w, GdkGC *gc, struct snis_entity
 			da = snis_randn(360) * M_PI / 180.0;
 			db = snis_randn(360) * M_PI / 180.0;
 			tx = o->x + sin(da) * (float) snis_randn(dr);
-			ty = o->y + cos(da) * (float) snis_randn(dr); 
-			tz = o->z + cos(db) * (float) snis_randn(dr); 
+			ty = o->y + cos(da) * (float) snis_randn(dr);
+			tz = o->z + cos(db) * (float) snis_randn(dr);
 			if (transform_point(sciballecx, tx, ty, tz, &sx, &sy))
 				continue;
 			r = hypot(sx - SCIENCE_SCOPE_CX, sy - SCIENCE_SCOPE_CY);
@@ -7894,7 +7953,7 @@ static void snis_draw_3d_science_guy(GtkWidget *w, GdkGC *gc, struct snis_entity
 		case OBJTYPE_SHIP1:
 			sng_set_foreground(UI_COLOR(sci_ball_ship));
 			sprintf(buffer, "%s %s\n", o->sdata.name,
-				ship_type[o->sdata.subclass].class); 
+				ship_type[o->sdata.subclass].class);
 			break;
 		case OBJTYPE_WARPGATE:
 			sng_set_foreground(UI_COLOR(sci_ball_warpgate));
@@ -7913,7 +7972,7 @@ static void snis_draw_3d_science_guy(GtkWidget *w, GdkGC *gc, struct snis_entity
 			break;
 		case OBJTYPE_PLANET:
 			sng_set_foreground(UI_COLOR(sci_ball_planet));
-			sprintf(buffer, "%s %s\n", "P",  o->sdata.name); 
+			sprintf(buffer, "%s %s\n", "P",  o->sdata.name);
 			break;
 		case OBJTYPE_TORPEDO:
 		case OBJTYPE_SPARK:
@@ -7924,7 +7983,7 @@ static void snis_draw_3d_science_guy(GtkWidget *w, GdkGC *gc, struct snis_entity
 			break;
 		default:
 			sng_set_foreground(UI_COLOR(sci_ball_default_blip));
-			sprintf(buffer, "%s %s\n", "?", o->sdata.name); 
+			sprintf(buffer, "%s %s\n", "?", o->sdata.name);
 			break;
 		}
 		sng_abs_xy_draw_string(buffer, PICO_FONT, *x + 8, *y - 8);
@@ -8961,7 +9020,7 @@ static void snis_draw_dotted_vline(GdkDrawable *drawable,
 	if (y2 > y1) {
 		for (i = y1; i <= y2; i += dots)
 			sng_draw_point(x1, i);
-	} else { 
+	} else {
 		for (i = y2; i <= y1; i += dots)
 			sng_draw_point(x1, i);
 	}
@@ -9038,7 +9097,7 @@ static void do_scizoom(struct slider *s)
 {
 	do_adjust_control_input(s, OPCODE_ADJUST_CONTROL_SCIZOOM);
 }
-	
+
 static void do_warpdrive(struct slider *s)
 {
 	do_adjust_control_input(s, OPCODE_ADJUST_CONTROL_WARPDRIVE);
@@ -9053,7 +9112,7 @@ static void do_maneuvering_pwr(struct slider *s)
 {
 	do_adjust_control_input(s, OPCODE_ADJUST_CONTROL_MANEUVERING_PWR);
 }
-	
+
 static void do_tractor_pwr(struct slider *s)
 {
 	do_adjust_control_input(s, OPCODE_ADJUST_CONTROL_TRACTOR_PWR);
@@ -9068,7 +9127,7 @@ static void do_shields_pwr(struct slider *s)
 {
 	do_adjust_control_input(s, OPCODE_ADJUST_CONTROL_SHIELDS_PWR);
 }
-	
+
 static void do_impulse_pwr(struct slider *s)
 {
 	do_adjust_control_input(s, OPCODE_ADJUST_CONTROL_IMPULSE_PWR);
@@ -9083,12 +9142,12 @@ static void do_sensors_pwr(struct slider *s)
 {
 	do_adjust_control_input(s, OPCODE_ADJUST_CONTROL_SENSORS_PWR);
 }
-	
+
 static void do_phaserbanks_pwr(struct slider *s)
 {
 	do_adjust_control_input(s, OPCODE_ADJUST_CONTROL_PHASERBANKS_PWR);
 }
-	
+
 static void do_comms_pwr(struct slider *s)
 {
 	do_adjust_control_input(s, OPCODE_ADJUST_CONTROL_COMMS_PWR);
@@ -9098,7 +9157,7 @@ static void do_maneuvering_coolant(struct slider *s)
 {
 	do_adjust_control_input(s, OPCODE_ADJUST_CONTROL_MANEUVERING_COOLANT);
 }
-	
+
 static void do_tractor_coolant(struct slider *s)
 {
 	do_adjust_control_input(s, OPCODE_ADJUST_CONTROL_TRACTOR_COOLANT);
@@ -9113,7 +9172,7 @@ static void do_shields_coolant(struct slider *s)
 {
 	do_adjust_control_input(s, OPCODE_ADJUST_CONTROL_SHIELDS_COOLANT);
 }
-	
+
 static void do_impulse_coolant(struct slider *s)
 {
 	do_adjust_control_input(s, OPCODE_ADJUST_CONTROL_IMPULSE_COOLANT);
@@ -9128,12 +9187,12 @@ static void do_sensors_coolant(struct slider *s)
 {
 	do_adjust_control_input(s, OPCODE_ADJUST_CONTROL_SENSORS_COOLANT);
 }
-	
+
 static void do_phaserbanks_coolant(struct slider *s)
 {
 	do_adjust_control_input(s, OPCODE_ADJUST_CONTROL_PHASERBANKS_COOLANT);
 }
-	
+
 static void do_comms_coolant(struct slider *s)
 {
 	do_adjust_control_input(s, OPCODE_ADJUST_CONTROL_COMMS_COOLANT);
@@ -9273,7 +9332,7 @@ static double sample_power_model_current(void)
 	total_current += o->tsd.ship.power_data.tractor.i;
 	total_current += o->tsd.ship.power_data.lifesupport.i;
 
-	return 100.0 * total_current / (255.0 * 3.5); 
+	return 100.0 * total_current / (255.0 * 3.5);
 }
 
 static double __attribute__((unused)) sample_coolant_model_current(void)
@@ -9294,7 +9353,7 @@ static double __attribute__((unused)) sample_coolant_model_current(void)
 	total_current += o->tsd.ship.coolant_data.tractor.i;
 	total_current += o->tsd.ship.coolant_data.lifesupport.i;
 
-	return 100.0 * total_current / (255.0 * 3.5); 
+	return 100.0 * total_current / (255.0 * 3.5);
 }
 
 #define DEFINE_CURRENT_SAMPLER(system, name) \
@@ -9358,7 +9417,7 @@ static double sample_generic_damage_data(int field_offset)
 
 	if (!(o = find_my_ship()))
 		return 0.0;
-	field = (uint8_t *) &o->tsd.ship.damage + field_offset; 
+	field = (uint8_t *) &o->tsd.ship.damage + field_offset;
 	return 100.0 * (255 - *field) / 255.0;
 }
 
@@ -9369,7 +9428,7 @@ static double sample_generic_temperature_data(int field_offset)
 
 	if (!(o = find_my_ship()))
 		return 0.0;
-	field = (uint8_t *) &o->tsd.ship.temperature_data + field_offset; 
+	field = (uint8_t *) &o->tsd.ship.temperature_data + field_offset;
 	return 100.0 * (*field) / 255.0;
 }
 
@@ -9451,7 +9510,7 @@ static void ui_add_slider(struct slider *s, int active_displaymode, char *toolti
 	uie = ui_element_init(s, ui_slider_draw, ui_slider_button_press, ui_slider_inside,
 						active_displaymode, &displaymode);
 	ui_element_set_tooltip(uie, tooltip);
-	ui_element_list_add_element(&uiobjs, uie); 
+	ui_element_list_add_element(&uiobjs, uie);
 }
 
 static void ui_add_button(struct button *b, int active_displaymode, char *tooltip)
@@ -9461,7 +9520,7 @@ static void ui_add_button(struct button *b, int active_displaymode, char *toolti
 	uie = ui_element_init(b, ui_button_draw, ui_button_button_press, ui_button_inside,
 						active_displaymode, &displaymode);
 	ui_element_set_tooltip(uie, tooltip);
-	ui_element_list_add_element(&uiobjs, uie); 
+	ui_element_list_add_element(&uiobjs, uie);
 }
 
 static void ui_add_strip_chart(struct strip_chart *sc, int active_displaymode)
@@ -9508,7 +9567,7 @@ static void ui_add_label(struct label *l, int active_displaymode)
 
 	uie = ui_element_init(l, ui_label_draw, NULL, NULL,
 						active_displaymode, &displaymode);
-	ui_element_list_add_element(&uiobjs, uie); 
+	ui_element_list_add_element(&uiobjs, uie);
 }
 
 static void ui_add_gauge(struct gauge *g, int active_displaymode)
@@ -9517,7 +9576,7 @@ static void ui_add_gauge(struct gauge *g, int active_displaymode)
 
 	uie = ui_element_init(g, ui_gauge_draw, NULL, NULL,
 						active_displaymode, &displaymode);
-	ui_element_list_add_element(&uiobjs, uie); 
+	ui_element_list_add_element(&uiobjs, uie);
 }
 
 static void ui_add_text_window(struct text_window *tw, int active_displaymode)
@@ -9526,7 +9585,7 @@ static void ui_add_text_window(struct text_window *tw, int active_displaymode)
 
 	uie = ui_element_init(tw, ui_text_window_draw, ui_text_window_button_press, NULL,
 						active_displaymode, &displaymode);
-	ui_element_list_add_element(&uiobjs, uie); 
+	ui_element_list_add_element(&uiobjs, uie);
 }
 
 static void ui_add_text_input_box(struct snis_text_input_box *t, int active_displaymode)
@@ -9537,7 +9596,7 @@ static void ui_add_text_input_box(struct snis_text_input_box *t, int active_disp
 						active_displaymode, &displaymode);
 	ui_element_set_focus_callback(uie, ui_text_input_box_set_focus);
 	ui_element_get_keystrokes(uie, ui_text_input_keypress, NULL);
-	ui_element_list_add_element(&uiobjs, uie); 
+	ui_element_list_add_element(&uiobjs, uie);
 }
 
 static void init_lobby_ui()
@@ -9562,7 +9621,7 @@ static void init_weapons_ui(void)
 	const int phy = 0.91666 * SCREEN_HEIGHT;
 	const int r = 0.075 * SCREEN_HEIGHT;
 	const int wlx = SCREEN_WIDTH - phx;
-	const int wlsx = 0.39375 * SCREEN_WIDTH; 
+	const int wlsx = 0.39375 * SCREEN_WIDTH;
 	const int wlsy = 0.98 * SCREEN_HEIGHT;
 	const int wlsw = 0.2125 * SCREEN_WIDTH;
 	const int wlsh = 0.025 * SCREEN_HEIGHT;
@@ -9675,7 +9734,7 @@ static void init_nav_ui(void)
 
 	x = 0;
 	nav_ui.gauge_radius = 100;
-	
+
 	nav_ui.warp_slider = snis_slider_init(SCREEN_WIDTH - 2 * nav_ui.gauge_radius - 40,
 				2 * nav_ui.gauge_radius + 10,
 				160, 15, UI_COLOR(nav_slider), "",
@@ -9991,17 +10050,18 @@ static void draw_orientation_trident(GtkWidget *w, GdkGC *gc, struct snis_entity
 
 #if 0
 #define NAV_SCOPE_X 20
-#define NAV_SCOPE_Y 70 
+#define NAV_SCOPE_Y 70
+
 #define NAV_SCOPE_W 500
 #define NAV_SCOPE_H NAV_SCOPE_W
 #define NAV_SCOPE_R (NAV_SCOPE_H / 2)
 #define NAV_SCOPE_CX (NAV_SCOPE_X + NAV_SCOPE_R)
 #define NAV_SCOPE_CY (NAV_SCOPE_Y + NAV_SCOPE_R)
 #endif
-#define NAV_DATA_X 530 
-#define NAV_DATA_Y 40 
+#define NAV_DATA_X 530
+#define NAV_DATA_Y 40
 #define NAV_DATA_W ((SCREEN_WIDTH - 5) - NAV_DATA_X)
-#define NAV_DATA_H 270 
+#define NAV_DATA_H 270
 
 static void draw_science_graph(GtkWidget *w, struct snis_entity *ship, struct snis_entity *o,
 		int x1, int y1, int x2, int y2);
@@ -10890,7 +10950,7 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 			continue;
 		o = entity_get_user_data(e);
 		if (!o)
-			continue; 
+			continue;
 
 		/* Check if it is a waypoint rather than an object.
 		 * This is a little gross, we do it by checking if the
@@ -10974,7 +11034,7 @@ static void show_navigation(GtkWidget *w)
 	sprintf(buf, o->tsd.ship.docking_magnets ? "DOCKING MAGNETS ENGAGED" : "DOCKING MAGNETS OFF");
 	sng_abs_xy_draw_string(buf, NANO_FONT, txx(75), txy(25));
 
-	quat_to_euler(&ypr, &o->orientation);	
+	quat_to_euler(&ypr, &o->orientation);
 	sng_set_foreground(UI_COLOR(nav_text));
 	draw_nav_idiot_lights(w, gc, o);
 	draw_orientation_trident(w, gc, o, 75, 200, 75);
@@ -10988,6 +11048,26 @@ static void show_navigation(GtkWidget *w)
 		break;
 	}
 	show_common_screen(w, "NAV");
+}
+
+static void show_mouse_debug()
+{
+	sng_set_foreground(UI_COLOR(quit_text));
+	char debug_buffer[100];
+	snprintf(debug_buffer, sizeof(debug_buffer), "Mouse 1 -- state: %d press x,y: %d,%d release x,y: %d,%d",
+		mouse.button1.state,(int) mouse.button1.press_x,(int) mouse.button1.press_y,
+		(int) mouse.button1.release_x,(int) mouse.button1.release_y);
+	sng_abs_xy_draw_string(debug_buffer , NANO_FONT, txx(10), txy(20));
+	snprintf(debug_buffer, sizeof(debug_buffer), "Mouse 2 -- state: %d press x,y: %d,%d release x,y: %d,%d",
+		mouse.button2.state,(int) mouse.button2.press_x,(int) mouse.button2.press_y,
+		(int) mouse.button2.release_x,(int) mouse.button2.release_y);
+	sng_abs_xy_draw_string(debug_buffer , NANO_FONT, txx(10), txy(30));
+	snprintf(debug_buffer, sizeof(debug_buffer), "Mouse 3 -- state: %d press x,y: %d,%d release x,y: %d,%d",
+		mouse.button3.state,(int) mouse.button3.press_x,(int) mouse.button3.press_y,
+		(int) mouse.button3.release_x,(int) mouse.button3.release_y);
+	sng_abs_xy_draw_string(debug_buffer , NANO_FONT, txx(10), txy(40));
+	snprintf(debug_buffer, sizeof(debug_buffer), "Mouse x,y: %d,%d", mouse.x,mouse.y);
+	sng_abs_xy_draw_string(debug_buffer , NANO_FONT, txx(10), txy(50));
 }
 
 static void main_engineering_button_pressed(void *x)
@@ -11380,7 +11460,7 @@ static void init_engineering_ui(void)
 				"TEMPERATURE", "0", "100", 0.0, 100.0,
 				sample_shield_temperature, NULL);
 	snis_slider_set_label_font(eu->shield_temperature, NANO_FONT);
-	snis_slider_set_color_scheme(eu->shield_temperature, 1);	
+	snis_slider_set_color_scheme(eu->shield_temperature, 1);
 	eu->phaser_banks_damage = snis_slider_init(s2x, y += yinc, sw, sh, color, "PHASER STATUS", "0", "100",
 				0.0, 100.0, sample_phaser_banks_damage, NULL);
 	snis_slider_set_label_font(eu->phaser_banks_damage, NANO_FONT);
@@ -11388,7 +11468,7 @@ static void init_engineering_ui(void)
 				"TEMPERATURE", "0", "100", 0.0, 100.0,
 				sample_phaser_banks_temperature, NULL);
 	snis_slider_set_label_font(eu->phaser_banks_temperature, NANO_FONT);
-	snis_slider_set_color_scheme(eu->phaser_banks_temperature, 1);	
+	snis_slider_set_color_scheme(eu->phaser_banks_temperature, 1);
 	eu->comms_damage = snis_slider_init(s2x, y += yinc, sw, sh, color, "COMMS STATUS", "0", "100",
 				0.0, 100.0, sample_comms_damage, NULL);
 	snis_slider_set_label_font(eu->comms_damage, NANO_FONT);
@@ -11396,7 +11476,7 @@ static void init_engineering_ui(void)
 				"TEMPERATURE", "0", "100", 0.0, 100.0,
 				sample_comms_temperature, NULL);
 	snis_slider_set_label_font(eu->comms_temperature, NANO_FONT);
-	snis_slider_set_color_scheme(eu->comms_temperature, 1);	
+	snis_slider_set_color_scheme(eu->comms_temperature, 1);
 	eu->sensors_damage = snis_slider_init(s2x, y += yinc, sw, sh, color, "SENSORS STATUS", "0", "100",
 				0.0, 100.0, sample_sensors_damage, NULL);
 	snis_slider_set_label_font(eu->sensors_damage, NANO_FONT);
@@ -11404,7 +11484,7 @@ static void init_engineering_ui(void)
 				"TEMPERATURE", "0", "100", 0.0, 100.0,
 				sample_sensors_temperature, NULL);
 	snis_slider_set_label_font(eu->sensors_temperature, NANO_FONT);
-	snis_slider_set_color_scheme(eu->sensors_temperature, 1);	
+	snis_slider_set_color_scheme(eu->sensors_temperature, 1);
 	eu->impulse_damage = snis_slider_init(s2x, y += yinc, sw, sh, color, "IMPULSE STATUS", "0", "100",
 				0.0, 100.0, sample_impulse_damage, NULL);
 	snis_slider_set_label_font(eu->impulse_damage, NANO_FONT);
@@ -11412,7 +11492,7 @@ static void init_engineering_ui(void)
 				"TEMPERATURE", "0", "100", 0.0, 100.0,
 				sample_impulse_temperature, NULL);
 	snis_slider_set_label_font(eu->impulse_temperature, NANO_FONT);
-	snis_slider_set_color_scheme(eu->impulse_temperature, 1);	
+	snis_slider_set_color_scheme(eu->impulse_temperature, 1);
 	eu->warp_damage = snis_slider_init(s2x, y += yinc, sw, sh, color, "WARP STATUS", "0", "100",
 				0.0, 100.0, sample_warp_damage, NULL);
 	snis_slider_set_label_font(eu->warp_damage, NANO_FONT);
@@ -11420,7 +11500,7 @@ static void init_engineering_ui(void)
 				"TEMPERATURE", "0", "100", 0.0, 100.0,
 				sample_warp_temperature, NULL);
 	snis_slider_set_label_font(eu->warp_temperature, NANO_FONT);
-	snis_slider_set_color_scheme(eu->warp_temperature, 1);	
+	snis_slider_set_color_scheme(eu->warp_temperature, 1);
 	eu->maneuvering_damage = snis_slider_init(s2x, y += yinc, sw, sh, color, "MANEUVERING STATUS", "0", "100",
 				0.0, 100.0, sample_maneuvering_damage, NULL);
 	snis_slider_set_label_font(eu->maneuvering_damage, NANO_FONT);
@@ -11428,7 +11508,7 @@ static void init_engineering_ui(void)
 				"TEMPERATURE", "0", "100", 0.0, 100.0,
 				sample_maneuvering_temperature, NULL);
 	snis_slider_set_label_font(eu->maneuvering_temperature, NANO_FONT);
-	snis_slider_set_color_scheme(eu->maneuvering_temperature, 1);	
+	snis_slider_set_color_scheme(eu->maneuvering_temperature, 1);
 	eu->tractor_damage = snis_slider_init(s2x, y += yinc, sw, sh, color, "TRACTOR STATUS", "0", "100",
 				0.0, 100.0, sample_tractor_damage, NULL);
 	snis_slider_set_label_font(eu->tractor_damage, NANO_FONT);
@@ -11436,7 +11516,7 @@ static void init_engineering_ui(void)
 				"TEMPERATURE", "0", "100", 0.0, 100.0,
 				sample_tractor_temperature, NULL);
 	snis_slider_set_label_font(eu->tractor_temperature, NANO_FONT);
-	snis_slider_set_color_scheme(eu->tractor_temperature, 1);	
+	snis_slider_set_color_scheme(eu->tractor_temperature, 1);
 	eu->lifesupport_damage = snis_slider_init(s2x, y += yinc, sw, sh, color, "LIFE SUPPORT STATUS", "0", "100",
 				0.0, 100.0, sample_lifesupport_damage, NULL);
 	snis_slider_set_label_font(eu->lifesupport_damage, NANO_FONT);
@@ -11751,7 +11831,7 @@ static void draw_damcon_system(GtkWidget *w, struct snis_damcon_entity *o)
 
 	if (!on_damcon_screen(o, &placeholder_system))
 		return;
-	
+
 	x = damconx_to_screenx(o->x);
 	y = damcony_to_screeny(o->y);
 	sng_set_foreground(UI_COLOR(damcon_system));
@@ -12043,7 +12123,7 @@ static void init_science_ui(void)
 	const int atsy = trby;
 	const int atsw = 75 * SCREEN_WIDTH / 800;
 	const int atsh = trbh;
-	
+
 
 	sci_ui.scizoom = snis_slider_init(szx, szy, szw, szh, UI_COLOR(sci_slider), "RANGE", "0", "100",
 				0.0, 100.0, sample_scizoom, do_scizoom);
@@ -12166,7 +12246,7 @@ static void comms_screen_red_alert_pressed(void *x)
 {
 	unsigned char new_alert_mode;
 
-	new_alert_mode = (red_alert_mode == 0);	
+	new_alert_mode = (red_alert_mode == 0);
 	queue_to_server(snis_opcode_pkt("bb", OPCODE_REQUEST_REDALERT, new_alert_mode));
 }
 
@@ -12174,7 +12254,7 @@ static void comms_main_screen_pressed(void *x)
 {
 	unsigned char new_comms_mode;
 
-	new_comms_mode = (main_screen_text.comms_on_mainscreen == 0);	
+	new_comms_mode = (main_screen_text.comms_on_mainscreen == 0);
 	queue_to_server(snis_opcode_pkt("bb", OPCODE_COMMS_MAINSCREEN, new_comms_mode));
 }
 
@@ -12775,6 +12855,74 @@ static void update_emf_detector(uint8_t emf_value)
 
 static void science_mouse_rotate(int x, int y)
 {
+	double dist_from_center, dx, dy, scaled_dx, scaled_dy;
+	float dxi,dyi,angle,abs_angle,octant;
+
+	if (sci_ui.details_mode != SCI_DETAILS_MODE_THREED)
+		return;
+
+	/* get the distance the x and y coords are from the balls center*/
+	dx = x - SCIENCE_SCOPE_CX;
+	dy = y - SCIENCE_SCOPE_CY;
+	/* invert the values to make the action pulling the ball to you rather than pushing it away*/
+	dx -= dx * 2;
+	dy -= dy * 2;
+
+	dist_from_center = sqrt(dx * dx + dy * dy);
+	if (dist_from_center < SCIENCE_SCOPE_R){
+
+		/* make sure we do nothing if the cursor is pretty much in the cente r*/
+		if(dist_from_center > SCIENCE_SCOPE_R / 10){
+
+			/* scale the output to be min 0 max 1*/
+			scaled_dx = 1 * (dx / SCIENCE_SCOPE_R);
+			scaled_dy = 1 * (dy / SCIENCE_SCOPE_R);
+
+			/* round the values to create numbers that support the sciball input convention 0 yaw left 1 yaw right*/
+			dxi = (float) ceil(scaled_dx);
+			dyi = (float) ceil(scaled_dy);
+
+			/* get the angle from the center to the mouse in radians */
+			angle = (float) atan2(scaled_dy,scaled_dx); /*pointing eastward*/
+			abs_angle = fabsf(angle);
+			octant = PI/8; /* calculate the value we use to create something similar to a D-pad overlaying the ball.*/
+
+			/* detect if the user should be expecting only a single input instead of both yaw and pitch */
+			if(abs_angle > 3 * octant && abs_angle < 5 * octant)
+				dxi = -1;
+
+			if(abs_angle < octant || abs_angle > 7 * octant)
+				dyi = -1;
+
+			/* scale to use the sciball functions convention when lighter movements would be more fitting*/
+			if(fabs(scaled_dx) < 0.33 && dxi >= 0)
+				dxi += 2; /* see YAW_INCREMENT and YAW_INCREMENT_FINE for this convention */
+
+			if(fabs(scaled_dy) < 0.33 && dyi >= 0)
+				dyi += 2;
+
+			/*
+			sng_set_foreground(UI_COLOR(quit_text));
+			char debug_buffer[100];
+			snprintf(debug_buffer, sizeof(debug_buffer),
+				"scaled x,y: %f,%f or %d,%f - angle: %f - timer: %d", scaled_dx, scaled_dy,
+				(int) dxi, dyi, angle, timer);
+			sng_abs_xy_draw_string(debug_buffer , NANO_FONT, txx(10), txy(70));
+			*/
+
+			/*send the network requests to the server*/
+			if(dxi >= 0)
+				queue_to_server(snis_opcode_pkt("bb", OPCODE_REQUEST_SCIBALL_YAW, (int) dxi));
+
+			if(dyi >= 0)
+				queue_to_server(snis_opcode_pkt("bb", OPCODE_REQUEST_SCIBALL_PITCH, (int) dyi));
+		}
+	}
+	return;
+}
+
+static void science_mouse_click_rotate(int x, int y)
+{
 	double dist_from_center, dx, dy, yaw, pitch;
 	int8_t yawval, pitchval;
 	int i, yawcount, pitchcount;
@@ -12815,6 +12963,34 @@ static void science_mouse_rotate(int x, int y)
 }
 
 #define SCIDIST2 100
+
+static void science_button_held(int button, int x, int y)
+{
+	x = sng_pixelx_to_screenx(x);
+	y = sng_pixely_to_screeny(y);
+
+	int traffic_throttle = (int) ((FRAME_RATE_HZ / 15.0) + 0.5);
+
+	switch(button) {
+		case 1:
+			if (sci_ui.details_mode == SCI_DETAILS_MODE_THREED){
+				/* Throttle back the traffic to avoid flooding network*/
+				if (timer % traffic_throttle != 0)
+					break;
+
+				science_mouse_rotate(x, y);
+			}
+			break;
+		case 2:
+			break;
+		case 3:
+			break;
+		default:
+			break;
+	}
+	return;
+}
+
 static void science_button_release(int button, int x, int y)
 {
 	int i;
@@ -12825,7 +13001,7 @@ static void science_button_release(int button, int x, int y)
 	x = sng_pixelx_to_screenx(x);
 	y = sng_pixely_to_screeny(y);
 	if (button == 3) {
-		science_mouse_rotate(x, y);
+		science_mouse_click_rotate(x, y);
 		return;
 	}
 
@@ -12835,7 +13011,7 @@ static void science_button_release(int button, int x, int y)
 	for (i = 0; i < nscience_guys; i++) {
 		xdist = (x - science_guy[i].sx);
 		ydist = (y - science_guy[i].sy);
-		dist2 = xdist * xdist + ydist * ydist; 
+		dist2 = xdist * xdist + ydist * ydist;
 		if (dist2 < SCIDIST2) {
 			if (dist2 < mindist || mindist == -1) {
 				if (science_guy[i].o) {
@@ -12887,13 +13063,13 @@ static void draw_science_graph(GtkWidget *w, struct snis_entity *ship, struct sn
 	snis_draw_dotted_hline(w->window, gc, x1, y1 + (y2 - y1) / 2, x2, 10);
 	snis_draw_dotted_hline(w->window, gc, x1, y1 + 3 * (y2 - y1) / 4, x2, 10);
 
-	x = x1 + (x2 - x1) / 4; 
+	x = x1 + (x2 - x1) / 4;
 	snis_draw_dotted_vline(w->window, gc, x, y1, y2, 10);
-	x += (x2 - x1) / 4; 
+	x += (x2 - x1) / 4;
 	snis_draw_dotted_vline(w->window, gc, x, y1, y2, 10);
-	x += (x2 - x1) / 4; 
+	x += (x2 - x1) / 4;
 	snis_draw_dotted_vline(w->window, gc, x, y1, y2, 10);
-	
+
 	if (o) {
 		if (o != ship) {
 			dist = hypot(o->x - go[my_ship_oid].x, o->y - go[my_ship_oid].y);
@@ -13039,13 +13215,13 @@ static void draw_science_data(GtkWidget *w, struct snis_entity *ship, struct sni
 			sprintf(buffer, "TYPE: %s", "EJECTED WARP CORE");
 			break;
 		default:
-			sprintf(buffer, "TYPE: %s", "UNKNOWN"); 
+			sprintf(buffer, "TYPE: %s", "UNKNOWN");
 			break;
 		}
 	} else if (waypoint_index != (uint32_t) -1) {
 		sprintf(buffer, "TYPE: WAYPOINT");
 	} else {
-		sprintf(buffer, "TYPE:"); 
+		sprintf(buffer, "TYPE:");
 	}
 	y += yinc;
 	sng_abs_xy_draw_string(buffer, TINY_FONT, x, y);
@@ -13413,7 +13589,7 @@ static void draw_science_details(GtkWidget *w, GdkGC *gc)
 		y += yinc;
 	}
 }
- 
+
 static void show_science(GtkWidget *w)
 {
 	struct snis_entity *o;
@@ -13634,7 +13810,7 @@ static double weapons_mousex_to_yaw(double x)
 	double angle;
 
 	scaledx = (0.9 * real_screen_width - x) / (real_screen_width * 0.8);
-	angle = scaledx * 2 * M_PI + M_PI; 
+	angle = scaledx * 2 * M_PI + M_PI;
 	normalize_angle(&angle);
 	return angle;
 }
@@ -13649,7 +13825,7 @@ static double weapons_mousey_to_pitch(double y)
 	else
 		if (scaledy < 0.0f)
 			scaledy = 0.0f;
-	return scaledy * M_PI / 2.0; 
+	return scaledy * M_PI / 2.0;
 }
 
 static int demon_id_selected(uint32_t id)
@@ -13858,7 +14034,7 @@ static void demon_button3_release(int button, gdouble x, gdouble y)
 	double ox, oy;
 	int sx1, sy1;
 
-	/* If the item creation buttons selected, create item... */ 
+	/* If the item creation buttons selected, create item... */
 	if (demon_ui.buttonmode > DEMON_BUTTON_NOMODE &&
 		demon_ui.buttonmode < DEMON_BUTTON_DELETE) {
 		demon_button_create_item(x, 0.0, y);
@@ -13884,13 +14060,13 @@ static void demon_button3_release(int button, gdouble x, gdouble y)
 		nselected = 0;
 		demon_select_and_act(sx1, sy1, x, y,
 			demon_id_selected,
-			demon_deselect, demon_select, &nselected); 
+			demon_deselect, demon_select, &nselected);
 	} else {
 		/* single selection... */
 		nselected = 0;
 		demon_select_and_act(x - 7, y - 7, x + 7, y + 7,
 			demon_id_selected,
-			demon_deselect, demon_select, &nselected); 
+			demon_deselect, demon_select, &nselected);
 		if (nselected == 0) {
 			demon_ui.selectedx = demon_mousex_to_ux(ox);
 			demon_ui.selectedz = demon_mousey_to_uz(oy);
@@ -13910,7 +14086,7 @@ static void demon_button2_release(int button, gdouble x, gdouble y)
 	dx = demon_mousex_to_ux(x) - demon_mousex_to_ux(demon_ui.move_from_x);
 	dy = 0.0;
 	dz = demon_mousey_to_uz(y) - demon_mousey_to_uz(demon_ui.move_from_y);
-	
+
 	pthread_mutex_lock(&universe_mutex);
 	for (i = 0; i < demon_ui.nselected; i++) {
 		int index = lookup_object_by_id(demon_ui.selected_id[i]);
@@ -14041,7 +14217,7 @@ static void debug_draw_object(GtkWidget *w, struct snis_entity *o,
 
 		if (o->tsd.ship.ai[0].u.attack.victim_id != -1) {
 			int vi = lookup_object_by_id(o->tsd.ship.ai[0].u.attack.victim_id);
-			if (vi >= 0) {	
+			if (vi >= 0) {
 				v = &go[vi];
 				vx = ux_to_usersx(v->x, ux1, ux2);
 				vy = uz_to_usersy(v->z, uy1, uy2);
@@ -14118,7 +14294,7 @@ static void debug_draw_object(GtkWidget *w, struct snis_entity *o,
 		sng_set_foreground(UI_COLOR(demon_starbase));
 		sng_draw_circle(0, x, y, 10 + (timer % 10));
 	}
-	
+
 done_drawing_item:
 
 	sng_set_foreground(UI_COLOR(demon_default));
@@ -14295,7 +14471,7 @@ static int construct_demon_command(char *input,
 				sprintf(errmsg, "missing argument to mark command");
 				goto error;
 			}
-			l = get_demon_location_var(s); 
+			l = get_demon_location_var(s);
 			if (l < 0) {
 				sprintf(errmsg, "out of location variables");
 				goto error;
@@ -14309,13 +14485,13 @@ static int construct_demon_command(char *input,
 				sprintf(errmsg, "missing argument to name command");
 				goto error;
 			}
-			g = get_demon_group_var(s); 
+			g = get_demon_group_var(s);
 			if (g < 0) {
 				sprintf(errmsg, "out of group variables");
 				goto error;
 			}
 			set_demon_group(g);
-			break; 
+			break;
 		case 2: /* attack */
 			s = strtok_r(NULL, DEMON_CMD_DELIM, &saveptr);
 			if (s == NULL) {
@@ -14359,28 +14535,28 @@ static int construct_demon_command(char *input,
 			printf("\nend of attack cmd\n");
 			packed_buffer_queue_add(&to_server_queue, pb, &to_server_queue_mutex);
 			wakeup_gameserver_writer();
-			break; 
+			break;
 		case 3: /* goto */
 			s = strtok_r(NULL, DEMON_CMD_DELIM, &saveptr);
 			if (s == NULL) {
 				sprintf(errmsg, "missing argument to goto command");
 				goto error;
 			}
-			break; 
+			break;
 		case 4: /* patrol */
 			s = strtok_r(NULL, DEMON_CMD_DELIM, &saveptr);
 			if (s == NULL) {
 				sprintf(errmsg, "missing argument to patrol command");
 				goto error;
 			}
-			break; 
+			break;
 		case 5: /* halt */
 			s = strtok_r(NULL, DEMON_CMD_DELIM, &saveptr);
 			if (s == NULL) {
 				sprintf(errmsg, "missing argument to halt command");
 				goto error;
 			}
-			break; 
+			break;
 		case 6: /* identify */
 			s = strtok_r(NULL, DEMON_CMD_DELIM, &saveptr);
 			if (s == NULL) {
@@ -14390,7 +14566,7 @@ static int construct_demon_command(char *input,
 			g = lookup_demon_group(s);
 			if (g < 0) {
 				l = lookup_demon_location(s);
-				if (l < 0) { 
+				if (l < 0) {
 					sprintf(errmsg, "No such group or location '%s'\n", s);
 					goto error;
 				}
@@ -14400,7 +14576,7 @@ static int construct_demon_command(char *input,
 			for (i = 0; i < demon_group[g].nids; i++)
 				demon_ui.selected_id[i] = demon_group[g].id[i];
 			demon_ui.nselected = demon_group[g].nids;
-			break; 
+			break;
 		case 7: /* say */
 			send_demon_comms_packet_to_server(saveptr);
 			break;
@@ -14412,7 +14588,7 @@ static int construct_demon_command(char *input,
 			break;
 		case 11: toggle_demon_safe_mode();
 			break;
-		case 12: demon_help_mode = 1; 
+		case 12: demon_help_mode = 1;
 			break;
 		case 13:
 			send_enscript_packet_to_server(saveptr);
@@ -14454,7 +14630,7 @@ static void clear_empty_demon_variables(void)
 			i++;
 		}
 	}
-} 
+}
 
 static void demon_exec_button_pressed(void *x)
 {
@@ -15000,11 +15176,11 @@ static void show_demon_2d(GtkWidget *w)
 	sng_set_foreground(UI_COLOR(demon_default));
 	if (netstats.elapsed_seconds == 0)
 		sprintf(buffer, "Waiting for data");
-	else 
+	else
 		sprintf(buffer,
 			"TX:%llu RX:%llu T=%lu SECS. BW=%llu B/S SHIPS:%u OBJS:%u %u/%u/%u/%u/%u",
 			(unsigned long long) netstats.bytes_sent,
-			(unsigned long long) netstats.bytes_recd, 
+			(unsigned long long) netstats.bytes_recd,
 			(unsigned long) netstats.elapsed_seconds,
 			(unsigned long long) (netstats.bytes_recd + netstats.bytes_sent) / netstats.elapsed_seconds,
 			netstats.nships, netstats.nobjects,
@@ -15689,7 +15865,7 @@ static void init_net_setup_ui(void)
 					net_setup_ui.lobbyname, 50, &timer,
 					lobby_hostname_entered, NULL);
 	y += yinc;
-	net_setup_ui.start_lobbyserver =	
+	net_setup_ui.start_lobbyserver =
 		snis_button_init(left, y, -1, -1, "START LOBBY SERVER",
 			active_button_color, TINY_FONT, start_lobbyserver_button_pressed, NULL);
 	y += yinc * 2;
@@ -15699,7 +15875,7 @@ static void init_net_setup_ui(void)
 					gameserver_hostname_entered, NULL);
 	snis_text_input_box_set_contents(net_setup_ui.solarsystemname, "DEFAULT2");
 	y += yinc;
-	net_setup_ui.start_gameserver = 
+	net_setup_ui.start_gameserver =
 		snis_button_init(left, y, -1, -1, "START GAME SERVER",
 			inactive_button_color,
 			TINY_FONT, start_gameserver_button_pressed, NULL);
@@ -15714,7 +15890,7 @@ static void init_net_setup_ui(void)
 					net_setup_ui.password, sizeof(net_setup_ui.password), &timer,
 					password_entered, NULL);
 	y += yinc;
-	net_setup_ui.connect_to_lobby = 
+	net_setup_ui.connect_to_lobby =
 		snis_button_init(left, y, -1, -1, "CONNECT TO LOBBY", inactive_button_color,
 			TINY_FONT, connect_to_lobby_button_pressed, NULL);
 	init_net_role_buttons(&net_setup_ui);
@@ -15742,7 +15918,7 @@ static void init_net_setup_ui(void)
 	ui_add_text_input_box(net_setup_ui.solarsystemname, DISPLAYMODE_NETWORK_SETUP);
 	ui_add_text_input_box(net_setup_ui.shipname_box, DISPLAYMODE_NETWORK_SETUP);
 	ui_add_text_input_box(net_setup_ui.password_box, DISPLAYMODE_NETWORK_SETUP);
-} 
+}
 
 static void show_network_setup(GtkWidget *w)
 {
@@ -16187,15 +16363,17 @@ static int main_da_expose(GtkWidget *w, GdkEvent *event, gpointer p)
 #endif
 
 	sng_set_foreground(WHITE);
-	
-#if 0	
+
+#if 0
 	for (i = 0; i <= highest_object_number;i++) {
 		if (!game_state.go[i].alive)
 			continue;
 		if (onscreen(&game_state.go[i]))
-			game_state.go[i].draw(&game_state.go[i], main_da); 
+			game_state.go[i].draw(&game_state.go[i], main_da);
 	}
 #endif
+
+	/* show_mouse_debug(); */
 
 	if (warp_limbo_countdown) {
 		warp_limbo_countdown--;
@@ -16340,11 +16518,11 @@ end_of_drawing:
 
 #ifndef WITHOUTOPENGL
 	/* swap buffer if we're using double-buffering */
-	if (gdk_gl_drawable_is_double_buffered(gl_drawable))     
-		gdk_gl_drawable_swap_buffers(gl_drawable); 
+	if (gdk_gl_drawable_is_double_buffered(gl_drawable))
+		gdk_gl_drawable_swap_buffers(gl_drawable);
 	else {
-		/* All programs should call glFlush whenever 
-		 * they count on having all of their previously 
+		/* All programs should call glFlush whenever
+		 * they count on having all of their previously
 		 * issued commands completed.
 		 */
 		glFlush();
@@ -16380,6 +16558,7 @@ gint advance_game(gpointer data)
 
 	deal_with_joysticks();
 	deal_with_keyboard();
+	deal_with_mouse();
 	deal_with_physical_io_devices();
 
 	if (in_the_process_of_quitting) {
@@ -16551,7 +16730,7 @@ static gint main_da_configure(GtkWidget *w, GdkEventConfigure *event)
 	/* the show generates a configure... chicken and egg.  And we can't */
 	/* proceed without gc != NULL...  but, it's ok, because 1st time thru */
 	/* we already sort of know the drawing area/window size. */
- 
+
 	if (gc == NULL)
 		return TRUE;
 
@@ -16560,10 +16739,10 @@ static gint main_da_configure(GtkWidget *w, GdkEventConfigure *event)
 	sng_set_screen_size(real_screen_width, real_screen_height);
 
 	gdk_gc_set_clip_origin(gc, 0, 0);
-	cliprect.x = 0;	
-	cliprect.y = 0;	
-	cliprect.width = real_screen_width;	
-	cliprect.height = real_screen_height;	
+	cliprect.x = 0;
+	cliprect.y = 0;
+	cliprect.width = real_screen_width;
+	cliprect.height = real_screen_height;
 	gdk_gc_set_clip_rectangle(gc, &cliprect);
 
 #ifndef WITHOUTOPENGL
@@ -16720,7 +16899,7 @@ static int load_static_textures(void)
 	}
 	/* Because of the way that planet rings are chosen based on object id
 	 * and because of the way planets are generated and object ids are handed
-	 * out we want to scramble the order of 
+	 * out we want to scramble the order of
 	 * planetary_ring_material[i].textured_planet_ring.texture_v
 	 * so that consecutively generated planets will not have rings that are
 	 * too similar.
@@ -16897,6 +17076,27 @@ static void load_textures(void)
 static int main_da_button_press(GtkWidget *w, GdkEventButton *event,
 	__attribute__((unused)) void *unused)
 {
+	switch (event->button) {
+		case 1:
+			mouse.button1.state = 1;
+			gettimeofday( &(mouse.button1.time_pressed), NULL);
+			mouse.button1.press_x = event->x;
+			mouse.button1.press_y = event->y;
+			break;
+		case 2:
+			mouse.button2.state = 1;
+			gettimeofday( &(mouse.button2.time_pressed), NULL);
+			mouse.button2.press_x = event->x;
+			mouse.button2.press_y = event->y;
+			break;
+		case 3:
+			mouse.button3.state = 1;
+			gettimeofday( &(mouse.button3.time_pressed), NULL);
+			mouse.button3.press_x = event->x;
+			mouse.button3.press_y = event->y;
+			break;
+	}
+
 	switch (displaymode) {
 		case DISPLAYMODE_DEMON:
 			demon_button_press(event->button, event->x, event->y);
@@ -16909,8 +17109,26 @@ static int main_da_button_press(GtkWidget *w, GdkEventButton *event,
 
 static int main_da_button_release(GtkWidget *w, GdkEventButton *event,
 	__attribute__((unused)) void *unused)
-		
+
 {
+	switch (event->button) {
+		case 1:
+			mouse.button1.state = -1;
+			mouse.button1.release_x = event->x;
+			mouse.button1.release_y = event->y;
+			break;
+		case 2:
+			mouse.button2.state = -1;
+			mouse.button2.release_x = event->x;
+			mouse.button2.release_y = event->y;
+			break;
+		case 3:
+			mouse.button3.state = -1;
+			mouse.button3.release_x = event->x;
+			mouse.button3.release_y = event->y;
+			break;
+	}
+
 	if (display_frame_stats) {
 		if (graph_dev_graph_dev_debug_menu_click(event->x, event->y))
 			return TRUE;
@@ -16974,6 +17192,29 @@ static void smooth_mousexy(float x, float y, float *nx, float *ny)
 	*ny = smoothy;
 }
 
+static int mouse_button_held(int button)
+{
+	int sx, sy;
+
+	sx = (int) mouse.x;
+	sy = (int) mouse.y;
+
+	switch (displaymode) {
+		case DISPLAYMODE_DEMON:
+			break;
+		case DISPLAYMODE_WEAPONS:
+			break;
+		case DISPLAYMODE_ENGINEERING:
+			break;
+		case DISPLAYMODE_SCIENCE:
+			science_button_held( button, sx, sy);
+			break;
+		default:
+			break;
+	}
+	return TRUE;
+}
+
 static int main_da_motion_notify(GtkWidget *w, GdkEventMotion *event,
 	__attribute__((unused)) void *unused)
 {
@@ -16981,8 +17222,13 @@ static int main_da_motion_notify(GtkWidget *w, GdkEventMotion *event,
 	float smoothx, smoothy;
 	int sx, sy;
 
-	global_mouse_x = event->x;
+	int traffic_throttle = (int) ((FRAME_RATE_HZ / 15.0) + 0.5);
+
+	global_mouse_x = event->x; /* deprecated */
 	global_mouse_y = event->y;
+
+	mouse.x = event->x; /* new implementation */
+	mouse.y = event->y;
 
 	switch (displaymode) {
 	case DISPLAYMODE_DEMON:
@@ -17027,7 +17273,7 @@ static int main_da_motion_notify(GtkWidget *w, GdkEventMotion *event,
 	return TRUE;
 }
 
-static gboolean delete_event(GtkWidget *widget, 
+static gboolean delete_event(GtkWidget *widget,
 	GdkEvent *event, gpointer data)
 {
     /* If you return FALSE in the "delete_event" signal handler,
@@ -17039,7 +17285,7 @@ static gboolean delete_event(GtkWidget *widget,
     /* Change TRUE to FALSE and the main window will be destroyed with
      * a "delete_event". */
     gettimeofday(&end_time, NULL);
-    printf("%d frames / %d seconds, %g frames/sec\n", 
+    printf("%d frames / %d seconds, %g frames/sec\n",
 		nframes, (int) (end_time.tv_sec - start_time.tv_sec),
 		(0.0 + nframes) / (0.0 + end_time.tv_sec - start_time.tv_sec));
     return FALSE;
@@ -17297,13 +17543,13 @@ static void check_for_screensaver(void)
 
 	/* Another possibility would be synthesizing events somehow.  There is a libXTst */
 	/* for testing X which could probably be used to synthesize events and thus */
-	/* possibly inhibit the screensaver, but I don't really know how to do it. */ 
+	/* possibly inhibit the screensaver, but I don't really know how to do it. */
 
 	/* Then there is crap like what's described here: */
 	/* http://www.jwz.org/xscreensaver/faq.html#dvd */
 	/* which advocates doing this, triggered by a timer,  while asserting */
 	/* that it's fast enough:
- 
+
 		if (playing && !paused) {
 			system ("xscreensaver-command -deactivate >&- 2>&- &");
 		}  */
@@ -17318,7 +17564,7 @@ static void check_for_screensaver(void)
 	/* which I can't be bothered to look up, on account of I hate KDE, because it */
 	/* seems designed by insane people who actually *like* the way the Windows UI works. */
 
-	/* All of that is of course bullshit up with which I will not put.  There needs to be */ 
+	/* All of that is of course bullshit up with which I will not put.  There needs to be */
 	/* a universal, screen saver agnostic, sane way that doesn't involve starting a new process. */
 	/* Nothing less is acceptable. */
 
@@ -17580,7 +17826,7 @@ static void *monitor_physical_io_devices(__attribute__((unused)) void *arg)
 				(struct sockaddr *) &client_addr, &len);
 		if (bytecount < 0) {
 			fprintf(stderr, "recvfrom returned %d (%s) in %s\n",
-				bytecount, strerror(errno), __func__); 
+				bytecount, strerror(errno), __func__);
 			fprintf(stderr, "Physical io device monitor thread exiting\n");
 			return NULL;
 		}
@@ -17789,7 +18035,7 @@ static void init_meshes()
 {
 	int i;
 	char *d = asset_dir;
-	struct mtwist_state *mt; 
+	struct mtwist_state *mt;
 
 	mt = mtwist_init(mtwist_seed);
 	if (!mt) {
@@ -17961,7 +18207,7 @@ static void init_gl(int argc, char *argv[], GtkWidget *drawing_area)
 						GDK_GL_RGBA_TYPE))
 		g_assert_not_reached();
 #endif
-	
+
 }
 
 static void prevent_zombies(void)

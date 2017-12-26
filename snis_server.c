@@ -970,7 +970,7 @@ static void get_peer_name(int connection, char *buffer)
 
 	/* This seems to get the wrong info... not sure what's going wrong */
 	/* Get the game server's ip addr (don't trust what we were told.) */
-	rc = getpeername(connection, (struct sockaddr * __restrict__) &p, &addrlen); 
+	rc = getpeername(connection, (struct sockaddr * __restrict__) &p, &addrlen);
 	if (rc != 0) {
 		/* this happens quite a lot, so SSGL_INFO... */
 		snis_log(SNIS_INFO, "getpeername failed: %s\n", strerror(errno));
@@ -1350,7 +1350,7 @@ static void wormhole_collision_detection(void *wormhole, void *object)
 		if (dist2 < 30.0 * 30.0) {
 			a = snis_randn(360) * M_PI / 180.0;
 			r = 60.0;
-			set_object_location(t, o->tsd.wormhole.dest_x + cos(a) * r, 
+			set_object_location(t, o->tsd.wormhole.dest_x + cos(a) * r,
 						o->tsd.wormhole.dest_y,
 						o->tsd.wormhole.dest_z + sin(a) * r);
 			t->timestamp = universe_timestamp;
@@ -1536,8 +1536,8 @@ static void snis_queue_delete_object(struct snis_entity *o)
 	 * an object is gone.
 	 * Careful with the locking, we have 3 layers of locks
 	 * here (couldn't figure out a simpler way.
-	 * 
-	 * We should already hold the universe_mutex, we 
+	 *
+	 * We should already hold the universe_mutex, we
 	 * need the client lock to iterate over the clients,
 	 * and when we build the packet, we'll need the
 	 * client_write_queue_mutexes.  Hope there's no deadlocks.
@@ -1850,7 +1850,7 @@ static void distribute_damage_to_damcon_system_parts(struct snis_entity *o,
 
 	total_damage = damage * DAMCON_PARTS_PER_SYSTEM;
 
-	/* distribute total_damage into per_part_damage[] 
+	/* distribute total_damage into per_part_damage[]
 	 * (unequally, just because it is easy)
 	 */
 	for (i = 0; i < DAMCON_PARTS_PER_SYSTEM - 1; i++) {
@@ -1895,7 +1895,7 @@ static void distribute_damage_to_damcon_system_parts(struct snis_entity *o,
 	return;
 }
 
-static int roll_damage(struct snis_entity *o, struct damcon_data *d, 
+static int roll_damage(struct snis_entity *o, struct damcon_data *d,
 			double weapons_factor, double shield_strength, uint8_t system,
 			int damcon_system)
 {
@@ -1905,7 +1905,7 @@ static int roll_damage(struct snis_entity *o, struct damcon_data *d,
 		damage = 255 - system;
 
 	distribute_damage_to_damcon_system_parts(o, d, damage, damcon_system);
-	
+
 	return damage + system;
 }
 
@@ -1986,7 +1986,7 @@ static void calculate_torpedolike_damage(struct snis_entity *o, double weapons_f
 	o->tsd.ship.damage.lifesupport_damage = roll_damage(o, d, twp, ss,
 			o->tsd.ship.damage.lifesupport_damage, DAMCON_TYPE_LIFESUPPORTSYSTEM);
 
-	if (o->tsd.ship.damage.shield_damage == 255) { 
+	if (o->tsd.ship.damage.shield_damage == 255) {
 		o->timestamp = universe_timestamp;
 		o->respawn_time = universe_timestamp + RESPAWN_TIME_SECS * 10;
 		o->alive = 0;
@@ -2065,7 +2065,7 @@ static void calculate_laser_starbase_damage(struct snis_entity *o, uint8_t wavel
 				o->sdata.shield_wavelength);
 
 	damage = (0.95 - ss) * (double) (snis_randn(5) + 2.0) + 1.0;
-	
+
 	new_strength = (double) o->sdata.shield_strength - damage;
 	if (new_strength < 0)
 		new_strength = 0;
@@ -2230,8 +2230,8 @@ static void buddies_join_the_fight(int fleet_number, struct snis_entity *victim,
 
 static void calculate_attack_vector(struct snis_entity *o, int mindist, int maxdist)
 {
-	/* Assumptions: 
-	 * o is attacker, 
+	/* Assumptions:
+	 * o is attacker,
 	 * o->tsd.ship.ai[o->tsd.ship.nai_entries - 1].u.attack.victim_id is victim
  	 * o->tsd.ship.dox,doy,doz are set to offsets from victim location to aim at.
 	 * mindist and maxdist are the min and max dist for the offset.
@@ -2457,8 +2457,8 @@ static void ship_security_avoidance(void *context, void *entity);
 static void process_potential_victim(void *context, void *entity)
 {
 	struct potential_victim_info *info = context;
-	struct snis_entity *v = entity; 
-	struct snis_entity *o = info->o; 
+	struct snis_entity *v = entity;
+	struct snis_entity *o = info->o;
 	double dist;
 	float hostility, fightiness;
 
@@ -2596,7 +2596,7 @@ static void ship_figure_out_what_to_do(struct snis_entity *o)
 		return;
 	switch (snis_randn(100) % 3) {
 	case 0:
-	case 1:	
+	case 1:
 		setup_patrol_route(o);
 		break;
 	case 2:
@@ -2706,7 +2706,7 @@ static void notify_a_cop(void *context, void *entity)
 
 	if (perp->type == OBJTYPE_STARBASE)
 		return;
-	
+
 	if (perp->type == OBJTYPE_SHIP2 && perp->tsd.ship.ai[0].ai_mode == AI_MODE_COP)
 		return;
 
@@ -2917,7 +2917,7 @@ static void torpedo_collision_detection(void *context, void *entity)
 				make_derelict(t);
 			respawn_object(t);
 			delete_from_clients_and_server(t);
-			
+
 		} else {
 			snis_queue_add_sound(EXPLOSION_SOUND,
 				ROLE_SOUNDSERVER, t->id);
@@ -3080,7 +3080,7 @@ static void laser_collision_detection(void *context, void *entity)
 	 */
 	impact_time = universe_timestamp;
 	impact_fractional_time = (double) delta_t;
-		
+
 	/* hit!!!! */
 	o->alive = 0;
 	notify_the_cops(o);
@@ -3194,7 +3194,7 @@ static void taunt_player(struct snis_entity *alien, struct snis_entity *player)
 	}
 }
 
-static void calculate_torpedo_velocities(double ox, double oy, double oz, 
+static void calculate_torpedo_velocities(double ox, double oy, double oz,
 			double tx, double ty, double tz, double speed,
 			double *vx, double *vy, double *vz)
 {
@@ -3272,7 +3272,7 @@ delete_it:
 		if (!e->alive)
 			continue;
 
-		dist2 = dist3dsqrd(o->x - e->x, o->y - e->y, o->z - e->z); 
+		dist2 = dist3dsqrd(o->x - e->x, o->y - e->y, o->z - e->z);
 		if (d < 0 || d > dist2) {
 			d = dist2;
 			eid = go[index].id;
@@ -4078,9 +4078,9 @@ static void mining_bot_unload_one_ore(struct snis_entity *bot,
 	quantity = ((float) *ore / 255.0) * 10;
 	if (parent->tsd.ship.cargo[cargo_bay].contents.item == -1) {
 		parent->tsd.ship.cargo[cargo_bay].contents.item = commodity_index;
-		parent->tsd.ship.cargo[cargo_bay].contents.qty = quantity; 
+		parent->tsd.ship.cargo[cargo_bay].contents.qty = quantity;
 	} else {
-		parent->tsd.ship.cargo[cargo_bay].contents.qty += quantity; 
+		parent->tsd.ship.cargo[cargo_bay].contents.qty += quantity;
 	}
 	parent->tsd.ship.cargo[cargo_bay].paid = 0.0;
 	parent->tsd.ship.cargo[cargo_bay].origin = ai->asteroid;
@@ -4088,7 +4088,7 @@ static void mining_bot_unload_one_ore(struct snis_entity *bot,
 	parent->tsd.ship.cargo[cargo_bay].due_date = -1;
 }
 
-static void mining_bot_unload_ores(struct snis_entity *bot, 
+static void mining_bot_unload_ores(struct snis_entity *bot,
 					struct snis_entity *parent,
 					struct ai_mining_bot_data *ai)
 {
@@ -5004,7 +5004,7 @@ static void ai_brain(struct snis_entity *o)
 			o->tsd.ship.ai[n].ai_mode = AI_MODE_RTS_OUT_OF_FUEL;
 		}
 	}
-		
+
 	/* main AI brain code is here... */
 	switch (o->tsd.ship.ai[n].ai_mode) {
 	case AI_MODE_ATTACK:
@@ -5157,7 +5157,7 @@ static void ship_collision_avoidance(void *context, void *entity)
 	if (d < 2.0)
 		o->tsd.ship.braking_factor = 1.0 - 1.0 / 2;
 	else
-		o->tsd.ship.braking_factor = 1.0 - 1.0 / d; 
+		o->tsd.ship.braking_factor = 1.0 - 1.0 / d;
 
 	/* Compute a steering force */
 	o->tsd.ship.steering_adjustment.v.x = o->x - obstacle->x;
@@ -5265,11 +5265,11 @@ static double rpmx[] = {
 		256.0 };
 
 static double powery[] =  {
-	0.0, 0.0, 
-		0.33 * (double) UINT32_MAX, 
-		0.6 * (double) UINT32_MAX, 
-		0.8 * (double) UINT32_MAX,  
-		0.95 * (double) UINT32_MAX,  
+	0.0, 0.0,
+		0.33 * (double) UINT32_MAX,
+		0.6 * (double) UINT32_MAX,
+		0.8 * (double) UINT32_MAX,
+		0.95 * (double) UINT32_MAX,
 		0.8 * (double) UINT32_MAX,  } ;
 
 static double tempy[] = {
@@ -5282,7 +5282,7 @@ static double tempy[] = {
 	};
 
 static double powertempy[] = {
-	0.0, 0.0, 
+	0.0, 0.0,
 		0.4,
 		0.5,
 		0.7,
@@ -5851,7 +5851,7 @@ static void damcon_robot_move(struct snis_damcon_entity *o, struct damcon_data *
 		vy = 0;
 		o->velocity = 0;
 		if (fabs(o->tsd.robot.desired_velocity) > MAX_ROBOT_VELOCITY / 5.0)
-			o->tsd.robot.desired_velocity =  
+			o->tsd.robot.desired_velocity =
 				(MAX_ROBOT_VELOCITY / 5.5) * o->tsd.robot.desired_velocity /
 					fabs(o->tsd.robot.desired_velocity);
 	}
@@ -5874,7 +5874,7 @@ static void damcon_robot_move(struct snis_damcon_entity *o, struct damcon_data *
 		}
 
 		/* Slower you're going, quicker you can turn */
-		max_heading_change = (MAX_ROBOT_VELOCITY / fabs(o->velocity)) * 6.0 * M_PI / 180.0; 
+		max_heading_change = (MAX_ROBOT_VELOCITY / fabs(o->velocity)) * 6.0 * M_PI / 180.0;
 		if (fabs(diff) > max_heading_change)
 			diff = max_heading_change * diff / fabs(diff);
 
@@ -5893,7 +5893,7 @@ static void damcon_robot_move(struct snis_damcon_entity *o, struct damcon_data *
 			if (fabs(diff) > MAX_ROBOT_BRAKING)
 				diff = MAX_ROBOT_BRAKING * diff / fabs(diff);
 		} else {
-			/* accelerating. */ 
+			/* accelerating. */
 			if (fabs(diff) > MAX_ROBOT_ACCELERATION)
 				diff = MAX_ROBOT_ACCELERATION * diff / fabs(diff);
 		}
@@ -5922,7 +5922,7 @@ static void damcon_robot_move(struct snis_damcon_entity *o, struct damcon_data *
 	if (bounds_hit) {
 		o->velocity *= 0.4;
 		if (fabs(o->tsd.robot.desired_velocity) > MAX_ROBOT_VELOCITY / 5.0)
-			o->tsd.robot.desired_velocity =  
+			o->tsd.robot.desired_velocity =
 				(MAX_ROBOT_VELOCITY / 5.5) * o->tsd.robot.desired_velocity /
 					fabs(o->tsd.robot.desired_velocity);
 	}
@@ -5941,7 +5941,7 @@ static void damcon_robot_move(struct snis_damcon_entity *o, struct damcon_data *
 
 	if (o->tsd.robot.cargo_id != ROBOT_CARGO_EMPTY) {
 		int i;
-		
+
 		i = lookup_by_damcon_id(d, o->tsd.robot.cargo_id);
 		if (i >= 0) {
 			int new_damage;
@@ -6193,13 +6193,13 @@ static int calc_overheat_damage(struct snis_entity *o, struct damcon_data *d,
 	if (temperature < (uint8_t) (0.9f * 255.0f))
 		return 0; /* temp is ok, no damage */
 
-	if (snis_randn(100) > 10) 
+	if (snis_randn(100) > 10)
 		return 0; /* lucky, no damage */
 
 	overheat_amount = (temperature - (0.9f * 255.0f)) / (0.1f * 255.0f);
 
 	damage = (float) snis_randn(5) / 100.0f;
-	damage *= overheat_amount; 
+	damage *= overheat_amount;
 	old_value = (float) *system;
 	new_value = old_value + 255.0f * damage;
 	if (new_value > 255.0f)
@@ -6218,7 +6218,7 @@ static int do_overheating_damage(struct snis_entity *o)
 
 	b = lookup_bridge_by_shipid(o->id);
 	d = &bridgelist[b].damcon;
-	
+
 
 	damage_was_done += calc_overheat_damage(o, d, &o->tsd.ship.damage.warp_damage,
 			o->tsd.ship.temperature_data.warp_damage);
@@ -6588,7 +6588,7 @@ static void player_collision_detection(void *player, void *object)
 
 	o = player;
 	t = object;
-	
+
 	switch (t->type) {
 	case OBJTYPE_DEBRIS:
 	case OBJTYPE_SPARK:
@@ -6717,11 +6717,11 @@ static void player_collision_detection(void *player, void *object)
 	}
 	if (t->type != OBJTYPE_DOCKING_PORT && dist2 < proximity_dist2 && (universe_timestamp & 0x7) == 0) {
 		do_collision_impulse(o, t);
-		send_packet_to_all_clients_on_a_bridge(o->id, 
+		send_packet_to_all_clients_on_a_bridge(o->id,
 			snis_opcode_pkt("b", OPCODE_PROXIMITY_ALERT),
 					ROLE_SOUNDSERVER | ROLE_NAVIGATION);
 		if (dist2 < crash_dist2) {
-			send_packet_to_all_clients_on_a_bridge(o->id, 
+			send_packet_to_all_clients_on_a_bridge(o->id,
 				snis_opcode_pkt("b", OPCODE_COLLISION_NOTIFICATION),
 					ROLE_SOUNDSERVER | ROLE_NAVIGATION);
 		}
@@ -6848,6 +6848,14 @@ static void update_player_sciball_orientation(struct snis_entity *o)
 			o->tsd.ship.sciball_rollvel);
 }
 
+static void set_player_sciball_orientation(struct snis_entity *o,float x, float y)
+{
+	quat_apply_relative_yaw_pitch_roll(&o->tsd.ship.sciball_orientation,
+			(double) x,
+			(double) y,
+			(double) 0);
+}
+
 static void update_player_weap_orientation(struct snis_entity *o)
 {
 	quat_apply_relative_yaw_pitch(&o->tsd.ship.weap_orientation,
@@ -6944,7 +6952,7 @@ static void update_ship_position_and_velocity(struct snis_entity *o)
 	}
 
 	/* Construct vector of desired velocity */
-	desired_velocity.v.x = destn.v.x * o->tsd.ship.velocity; 
+	desired_velocity.v.x = destn.v.x * o->tsd.ship.velocity;
 	desired_velocity.v.y = destn.v.y * o->tsd.ship.velocity;
 	desired_velocity.v.z = destn.v.z * o->tsd.ship.velocity;
 
@@ -7026,11 +7034,11 @@ static int calc_sunburn_damage(struct snis_entity *o, struct damcon_data *d,
 	if (system_number < 0 || system_number >= DAMCON_SYSTEM_COUNT - 1)
 		fprintf(stderr, "system_number out of range: %d at %s:%d\n",
 			system_number, __FILE__, __LINE__);
-	if (snis_randn(1000) > 10) 
+	if (snis_randn(1000) > 10)
 		return 0; /* lucky, no damage */
 
 	damage = (float) snis_randn(3) / 100.0f;
-	damage *= sunburn; 
+	damage *= sunburn;
 	old_value = (float) *system;
 	new_value = old_value + 255.0f * damage;
 	if (new_value > 255.0f)
@@ -7060,7 +7068,7 @@ static int do_sunburn_damage(struct snis_entity *o)
 
 	b = lookup_bridge_by_shipid(o->id);
 	d = &bridgelist[b].damcon;
-	
+
 	damage_was_done += calc_sunburn_damage(o, d, &o->tsd.ship.damage.sensors_damage,
 			(uint8_t) (sunburn * 255.0));
 	damage_was_done += calc_sunburn_damage(o, d, &o->tsd.ship.damage.shield_damage,
@@ -7155,7 +7163,7 @@ static void check_science_selection(struct snis_entity *o)
 deselect:
 	bridgelist[bn].science_selection = (uint32_t) -1;
 }
-		
+
 static void player_move(struct snis_entity *o)
 {
 	int i, desired_rpm, desired_temp, diff;
@@ -7208,7 +7216,7 @@ static void player_move(struct snis_entity *o)
 	update_player_sciball_orientation(o);
 	update_player_weap_orientation(o);
 	update_player_position_and_velocity(o);
-	
+
 	o->tsd.ship.sci_heading += o->tsd.ship.sci_yaw_velocity;
 	o->tsd.ship.shields = universe_timestamp % 100;
 
@@ -7723,7 +7731,7 @@ static void starbase_move(struct snis_entity *o)
 	then = o->tsd.starbase.last_time_called_for_help;
 	now = universe_timestamp;
 	if (o->tsd.starbase.under_attack &&
-		(then < now - 2000 || 
+		(then < now - 2000 ||
 		o->tsd.starbase.last_time_called_for_help == 0)) {
 		o->tsd.starbase.last_time_called_for_help = universe_timestamp;
 		// printf("starbase name = '%s'\n", o->tsd.starbase.name);
@@ -7870,7 +7878,7 @@ static int add_generic_object(double x, double y, double z,
 	if (!mt)
 		mt = mtwist_init(mtwist_seed);
 
-	i = snis_object_pool_alloc_obj(pool); 	 
+	i = snis_object_pool_alloc_obj(pool);
 	if (i < 0)
 		return -1;
 	memset(&go[i], 0, sizeof(go[i]));
@@ -8016,7 +8024,7 @@ static void init_power_model(struct snis_entity *o)
 
 	pm = new_power_model(MAX_CURRENT, MAX_VOLTAGE, INTERNAL_RESIST);
 	pd = &o->tsd.ship.power_data;
-	o->tsd.ship.power_model = pm; 
+	o->tsd.ship.power_model = pm;
 
 	/* Warp */
 	pd->warp.r1 = 0;
@@ -8096,7 +8104,7 @@ static void init_coolant_model(struct snis_entity *o)
 
 	pm = new_power_model(MAX_COOLANT, MAX_VOLTAGE, INTERNAL_RESIST);
 	pd = &o->tsd.ship.coolant_data;
-	o->tsd.ship.coolant_model = pm; 
+	o->tsd.ship.coolant_model = pm;
 
 	/* Warp */
 	pd->warp.r1 = 255;
@@ -8183,8 +8191,8 @@ static void repair_damcon_systems(struct snis_entity *o)
 		p->tsd.part.damage = 0;
 		p->version++;
 	}
-}	
-	
+}
+
 static void init_player(struct snis_entity *o, int clear_cargo_bay, float *charges)
 {
 	int i;
@@ -8247,7 +8255,7 @@ static void init_player(struct snis_entity *o, int clear_cargo_bay, float *charg
 	o->tsd.ship.scibeam_a2 = 0;
 	o->tsd.ship.sci_heading = M_PI / 2.0;
 	o->tsd.ship.reverse = 0;
-	o->tsd.ship.shiptype = SHIP_CLASS_WOMBAT; 
+	o->tsd.ship.shiptype = SHIP_CLASS_WOMBAT;
 	o->tsd.ship.overheating_damage_done = 0;
 	o->tsd.ship.ncargo_bays = 8;
 	o->tsd.ship.passenger_berths = 2;
@@ -8437,7 +8445,7 @@ static int add_ship(int faction, int auto_respawn)
 		if (dist3d(x - SUNX, y - SUNY, z - SUNZ) > SUN_DIST_LIMIT)
 			break;
 	}
-	heading = degrees_to_radians(0.0 + snis_randn(360)); 
+	heading = degrees_to_radians(0.0 + snis_randn(360));
 	i = add_generic_object(x, y, z, 0.0, 0.0, 0.0, heading, OBJTYPE_SHIP2);
 	if (i < 0)
 		return i;
@@ -8900,7 +8908,7 @@ static int add_spacemonster(double x, double y, double z)
 	int i;
 	double heading;
 
-	heading = degrees_to_radians(0.0 + snis_randn(360)); 
+	heading = degrees_to_radians(0.0 + snis_randn(360));
 	i = add_generic_object(x, y, z, 0.0, 0.0, 0.0, heading, OBJTYPE_SPACEMONSTER);
 	if (i < 0)
 		return i;
@@ -9083,6 +9091,7 @@ static int commodity_sample(void)
 		return nonuniform_sample(d);
 
 	d = nonuniform_sample_distribution_init(ncommodities, 77277);
+	/* this is not a random seed.. should it be? it should right? */
 	for (i = 0; i < ncommodities; i++)
 		nonuniform_sample_add_item(d, i, commodity[i].odds);
 	return nonuniform_sample(d);
@@ -9162,7 +9171,7 @@ static void init_starbase_market(struct snis_entity *o)
 		int item;
 		do {
 			item = commodity_sample();
-		} while (mkt_item_already_present(mkt, i, item)); 
+		} while (mkt_item_already_present(mkt, i, item));
 		mkt[i].item = item;
 		mkt[i].qty = snis_randn(100); /* TODO: something better */
 		mkt[i].refill_rate = (float) snis_randn(1000) / 1000.0; /* TODO: something better */
@@ -9468,7 +9477,7 @@ static void add_turrets_to_block_face(int parent_id, int face, int rows, int col
 			block = add_subblock(parent_id, 1.0, platformsx, platformsy, platformsz,
 						x + platformxo, y + platformyo, z + platformzo, 1);
 			if (block >= 0) {
-				printf("ADDING TURRET parent = %d, %lf, %lf, %lf\n", go[block].id, x, y, z); 
+				printf("ADDING TURRET parent = %d, %lf, %lf, %lf\n", go[block].id, x, y, z);
 				add_turret(go[block].id, 0, 0, 0,
 						platformsx * 0.65 * xoff[face],
 						platformsy * 0.65 * yoff[face],
@@ -9707,7 +9716,7 @@ static int lookup_by_id(uint32_t id)
 	return -1;
 }
 
-static int lookup_by_damcon_id(struct damcon_data *d, int id) 
+static int lookup_by_damcon_id(struct damcon_data *d, int id)
 {
 	int i;
 
@@ -9784,11 +9793,11 @@ static void laserbeam_move(struct snis_entity *o)
 		delete_from_clients_and_server(o);
 		return;
 	}
-		 
+
 	target = &go[tid];
 	origin = &go[oid];
 	ttype = target->type;
-	
+
 	if (ttype == OBJTYPE_STARBASE) {
 		target->tsd.starbase.under_attack = 1;
 		add_starbase_attacker(target, o->tsd.laserbeam.origin);
@@ -9886,7 +9895,7 @@ static void tractorbeam_move(struct snis_entity *o)
 	normalize_vector(&nto_object, &nto_object);
 	mat41_scale(&nto_object, TRACTOR_BEAM_IDEAL_DIST, &desired_object_loc);
 
-	/* Find vector from current object position towards desired position */ 
+	/* Find vector from current object position towards desired position */
 	tractor_vec.m[0] = desired_object_loc.m[0] - to_object.m[0];
 	tractor_vec.m[1] = desired_object_loc.m[1] - to_object.m[1];
 	tractor_vec.m[2] = desired_object_loc.m[2] - to_object.m[2];
@@ -10041,7 +10050,7 @@ static int nebula_too_close(double ix[], double iy[], double iz[], int n)
 	for (i = 0; i < n; i++) {
 		const double d = dist3dsqrd(ix[i] - ix[n], iy[i] - iy[n], iz[i] - iz[n]);
 		if (d < limit)
-			return 1; 
+			return 1;
 	}
 	return 0;
 }
@@ -10389,7 +10398,7 @@ static void add_wormhole_pair(int *id1, int *id2,
 
 static int l_add_wormhole_pair(lua_State *l)
 {
-	double x1, y1, z1, x2, y2, z2; 
+	double x1, y1, z1, x2, y2, z2;
 	int id1, id2;
 
 	x1 = lua_tonumber(lua_state, 1);
@@ -10636,7 +10645,7 @@ static int add_generic_damcon_object(struct damcon_data *d, int x, int y,
 	int i, j;
 	struct snis_damcon_entity *o;
 
-	i = snis_object_pool_alloc_obj(d->pool); 	 
+	i = snis_object_pool_alloc_obj(d->pool);
 	if (i < 0)
 		return -1;
 	o = &d->o[i];
@@ -10647,7 +10656,7 @@ static int add_generic_damcon_object(struct damcon_data *d, int x, int y,
 	o->velocity = 0;
 	o->heading = 0;
 	o->version = 1;
-	o->type = type; 
+	o->type = type;
 	o->move = move_fn;
 
 	/* clear out the client update state */
@@ -10736,11 +10745,11 @@ static void add_damcon_sockets(struct damcon_data *d, int x, int y,
 
 	for (i = 0; i < n; i++) {
 		if (left_side) {
-			px = x + dcxo[i] + 30;	
-			py = y + dcyo[i];	
+			px = x + dcxo[i] + 30;
+			py = y + dcyo[i];
 		} else {
-			px = x - dcxo[i] + 210 + 30;	
-			py = y + dcyo[i];	
+			px = x - dcxo[i] + 210 + 30;
+			py = y + dcyo[i];
 		}
 		p = add_generic_damcon_object(d, px, py, DAMCON_TYPE_SOCKET, fn);
 		d->o[p].version++;
@@ -11060,6 +11069,7 @@ static void do_robot_thrust(struct game_client *c, int thrust)
 }
 
 typedef void (*do_yaw_function)(struct game_client *c, int yaw);
+typedef void (*do_mouse_rot_function)(struct game_client *c, float x, float y);
 
 static void do_generic_axis_rot(double *axisvel, int amount, double max_amount,
 				double amount_inc, double amount_inc_fine)
@@ -11132,6 +11142,14 @@ static void do_sciball_roll(struct game_client *c, int roll)
 
 	do_generic_axis_rot(&ship->tsd.ship.sciball_rollvel, roll, max_roll_velocity,
 			ROLL_INCREMENT, ROLL_INCREMENT_FINE);
+}
+
+/* This is currently broken. It seems to hang the server.*/
+static void do_sciball_mouse_rot(struct game_client *c, float x, float y)
+{
+	struct snis_entity *ship = &go[c->ship_index];
+
+	set_player_sciball_orientation(ship, x, y);
 }
 
 static void do_manual_gunyaw(struct game_client *c, int yaw)
@@ -11366,7 +11384,7 @@ static int process_request_robot_cmd(struct game_client *c)
 static void send_ship_sdata_packet(struct game_client *c, struct ship_sdata_packet *sip);
 static void pack_and_send_ship_sdata_packet(struct game_client *c, struct snis_entity *o)
 {
-	struct ship_sdata_packet p; 
+	struct ship_sdata_packet p;
 
 	memset(p.name, 0, sizeof(p.name));
 	strcpy(p.name, o->sdata.name);
@@ -11447,7 +11465,7 @@ static int should_send_sdata(struct game_client *c, struct snis_entity *ship,
 	dr = dr * MAX_SCIENCE_SCREEN_RADIUS / range;
 #if 0
 	if (nebula_factor) {
-		dr = dr * 10; 
+		dr = dr * 10;
 		dr += 200;
 	}
 #endif
@@ -11512,7 +11530,7 @@ static int process_role_onscreen(struct game_client *c)
 		return rc;
 	if (new_displaymode >= DISPLAYMODE_FONTTEST)
 		new_displaymode = DISPLAYMODE_MAINSCREEN;
-	send_packet_to_all_clients_on_a_bridge(c->shipid, 
+	send_packet_to_all_clients_on_a_bridge(c->shipid,
 			snis_opcode_pkt("bb", OPCODE_ROLE_ONSCREEN, new_displaymode),
 			ROLE_MAIN);
 	bridgelist[c->bridge].current_displaymode = new_displaymode;
@@ -11531,7 +11549,7 @@ static int process_sci_details(struct game_client *c)
 	/* just turn it around and fan it out to all the right places */
 	if (new_details > 4)
 		new_details = 0;
-	send_packet_to_requestor_plus_role_on_a_bridge(c, 
+	send_packet_to_requestor_plus_role_on_a_bridge(c,
 			snis_opcode_pkt("bb", OPCODE_SCI_DETAILS,
 			new_details), ROLE_MAIN);
 	return 0;
@@ -11567,14 +11585,14 @@ static int process_request_weapons_yaw_pitch(struct game_client *c)
 	if (i < 0)
 		return 0;
 	o = &go[i];
-	yaw = fmod(yaw, 2.0 * M_PI); 
-	pitch = fmod(pitch, M_PI / 2.0); 
+	yaw = fmod(yaw, 2.0 * M_PI);
+	pitch = fmod(pitch, M_PI / 2.0);
 
 	quat_init_axis(&y, 0, 1, 0, yaw);
 	quat_init_axis(&p, 0, 0, 1, pitch);
 	quat_mul(&o->tsd.ship.weap_orientation, &y, &p);
 	quat_normalize_self(&o->tsd.ship.weap_orientation);
-	
+
 	return 0;
 }
 
@@ -13882,7 +13900,7 @@ static void update_command_data(uint32_t id, struct command_data *cmd_data)
 			ship_choose_new_attack_victim(o);
 			break;
 		default:
-			goto out;	
+			goto out;
 	}
 
 out:
@@ -13939,7 +13957,7 @@ static int l_ai_push_patrol(lua_State *l)
 
 	if (o->tsd.ship.nai_entries >= MAX_AI_STACK_ENTRIES)
 		goto error;
-	
+
 	n = o->tsd.ship.nai_entries;
 	o->tsd.ship.ai[n].ai_mode = AI_MODE_PATROL;
 
@@ -13958,9 +13976,9 @@ static int l_ai_push_patrol(lua_State *l)
 		z = lua_tonumber(lua_state, i);
 		i++;
 
-		o->tsd.ship.ai[n].u.patrol.p[p].v.x = x; 
-		o->tsd.ship.ai[n].u.patrol.p[p].v.y = y; 
-		o->tsd.ship.ai[n].u.patrol.p[p].v.z = z; 
+		o->tsd.ship.ai[n].u.patrol.p[p].v.x = x;
+		o->tsd.ship.ai[n].u.patrol.p[p].v.y = y;
+		o->tsd.ship.ai[n].u.patrol.p[p].v.z = z;
 
 		if (p >= ARRAYSIZE(o->tsd.ship.ai[n].u.patrol.p))
 			break;
@@ -14406,7 +14424,7 @@ static void do_robot_drop(struct damcon_data *d)
 				continue;
 			if (d->o[i].tsd.socket.contents_id != DAMCON_SOCKET_EMPTY)
 				continue;
-			dist2 = (cargo->x - d->o[i].x) * (cargo->x - d->o[i].x) + 
+			dist2 = (cargo->x - d->o[i].x) * (cargo->x - d->o[i].x) +
 				(cargo->y - d->o[i].y) * (cargo->y - d->o[i].y);
 
 			if (mindist < 0 || mindist > dist2) {
@@ -14505,7 +14523,7 @@ static int process_mainscreen_view_mode(struct game_client *c)
 	if (rc)
 		return rc;
 	/* Rebuild packet and send to all clients with main screen role */
-	send_packet_to_all_clients_on_a_bridge(c->shipid, 
+	send_packet_to_all_clients_on_a_bridge(c->shipid,
 			snis_opcode_pkt("bRb", OPCODE_MAINSCREEN_VIEW_MODE,
 					view_angle, view_mode),
 			ROLE_MAIN);
@@ -14597,7 +14615,7 @@ static int process_demon_command(struct game_client *c)
 
 	for (i = 0; i < nids1; i++)
 		update_command_data(id1[i], &cmd_data);
-	
+
 	return 0;
 }
 
@@ -15993,6 +16011,23 @@ static int process_request_yaw(struct game_client *c, do_yaw_function yaw_func)
 	return 0;
 }
 
+static int process_request_rot(struct game_client *c, do_mouse_rot_function rot_func)
+{
+	unsigned char buffer[10];
+	float x, y;
+	int rc;
+
+	rc = read_and_unpack_buffer(c, buffer, "qq", &x, &y);
+	if (rc)
+		return rc;
+	/*debugging noises*/
+	struct snis_entity *ship = &go[c->ship_index];
+	snis_queue_add_sound(DOCKING_SOUND, ROLE_ALL, ship->id);
+
+	rot_func(c, x, y);
+	return 0;
+}
+
 static int process_demon_rot(struct game_client *c)
 {
 	unsigned char buffer[10];
@@ -16358,7 +16393,7 @@ static int turn_on_tractor_beam(struct game_client *c, struct snis_entity *ship,
 	}
 
 	/* TODO: check tractor beam energy here */
-	if (0) 
+	if (0)
 		goto tractorfail;
 
 	/* TODO check tractor distance here */
@@ -16539,6 +16574,11 @@ static void process_instructions_from_client(struct game_client *c)
 			break;
 		case OPCODE_REQUEST_SCIBALL_ROLL:
 			rc = process_request_yaw(c, do_sciball_roll); /* process_request_yaw is correct */
+			if (rc)
+				goto protocol_error;
+			break;
+		case OPCODE_REQUEST_SCIBALL_ROT:
+			rc = process_request_rot(c, do_sciball_mouse_rot);
 			if (rc)
 				goto protocol_error;
 			break;
@@ -16875,7 +16915,7 @@ static void write_queued_updates_to_client(struct game_client *c, uint8_t over_c
 		rc = snis_writesocket(c->socket, buffer->buffer, buffer->buffer_size);
 		packed_buffer_free(buffer);
 		if (rc != 0) {
-			snis_log(SNIS_ERROR, "writesocket failed, rc= %d, errno = %d(%s)\n", 
+			snis_log(SNIS_ERROR, "writesocket failed, rc= %d, errno = %d(%s)\n",
 				rc, errno, strerror(errno));
 			goto badclient;
 		}
@@ -16884,7 +16924,7 @@ static void write_queued_updates_to_client(struct game_client *c, uint8_t over_c
 		/* no-op, just so we know if client is still there */
 		rc = snis_writesocket(c->socket, &noop, sizeof(noop));
 		if (rc != 0) {
-			snis_log(SNIS_ERROR, "(noop) writesocket failed, rc= %d, errno = %d(%s)\n", 
+			snis_log(SNIS_ERROR, "(noop) writesocket failed, rc= %d, errno = %d(%s)\n",
 				rc, errno, strerror(errno));
 			goto badclient;
 		}
@@ -17151,7 +17191,7 @@ static void queue_up_client_damcon_update(struct game_client *c)
 {
 	int i;
 	struct damcon_data *d = &bridgelist[c->bridge].damcon;
-	
+
 	for (i = 0; i <= snis_object_pool_highest_object(d->pool); i++)
 		queue_up_client_damcon_object_update(c, d, &d->o[i]);
 }
@@ -17292,7 +17332,7 @@ static void simulate_slow_server(__attribute__((unused)) int x)
 #else
 #define simulate_slow_server(x)
 #endif
-	
+
 static void *per_client_write_thread(__attribute__((unused)) void /* struct game_client */ *client)
 {
 	struct game_client *c = (struct game_client *) client;
@@ -17340,7 +17380,7 @@ static void *per_client_write_thread(__attribute__((unused)) void /* struct game
 			if (timeToSleep > 0)
 				sleep_double(timeToSleep);
 		}
-		simulate_slow_server(0);
+		simulate_slow_server(0); /* This being set to zero doesn't seem to do anything... it still simulates running slowly */
 		if (disconnect_timer > 0.0)
 			break;
 	}
@@ -17431,7 +17471,7 @@ static void send_econ_update_ship_packet(struct game_client *c,
 	}
 
 	if (c->debug_ai) {
-		opcode = OPCODE_ECON_UPDATE_SHIP_DEBUG_AI; 
+		opcode = OPCODE_ECON_UPDATE_SHIP_DEBUG_AI;
 		memset(ai, 0, MAX_AI_STACK_ENTRIES);
 		for (i = 0; i < o->tsd.ship.nai_entries && i < MAX_AI_STACK_ENTRIES; i++) {
 			switch (o->tsd.ship.ai[i].ai_mode) {
@@ -17642,10 +17682,10 @@ static void send_update_power_model_data(struct game_client *c,
 	pb = packed_buffer_allocate(sizeof(uint8_t) +
 			sizeof(o->tsd.ship.power_data) + sizeof(uint32_t));
 	packed_buffer_append(pb, "bwr", OPCODE_UPDATE_POWER_DATA, o->id,
-		(char *) &o->tsd.ship.power_data, (unsigned short) sizeof(o->tsd.ship.power_data)); 
+		(char *) &o->tsd.ship.power_data, (unsigned short) sizeof(o->tsd.ship.power_data));
 	pb_queue_to_client(c, pb);
 }
-	
+
 static void send_update_coolant_model_data(struct game_client *c,
 		struct snis_entity *o)
 {
@@ -17658,7 +17698,7 @@ static void send_update_coolant_model_data(struct game_client *c,
 		(char *) &o->tsd.ship.coolant_data, (unsigned short) sizeof(o->tsd.ship.coolant_data));
 	packed_buffer_append(pb, "r",
 		(char *) &o->tsd.ship.temperature_data,
-			(unsigned short) sizeof(o->tsd.ship.temperature_data)); 
+			(unsigned short) sizeof(o->tsd.ship.temperature_data));
 	pb_queue_to_client(c, pb);
 }
 
@@ -17731,7 +17771,7 @@ static void send_update_damcon_obj_packet(struct game_client *c,
 		struct snis_damcon_entity *o)
 {
 	pb_queue_to_client(c, snis_opcode_pkt("bwwwSSSRb",
-					OPCODE_DAMCON_OBJ_UPDATE,   
+					OPCODE_DAMCON_OBJ_UPDATE,
 					o->id, o->ship_id, o->type,
 					o->x, (int32_t) DAMCONXDIM,
 					o->y, (int32_t) DAMCONYDIM,
@@ -17745,7 +17785,7 @@ static void send_update_damcon_socket_packet(struct game_client *c,
 		struct snis_damcon_entity *o)
 {
 	pb_queue_to_client(c, snis_opcode_pkt("bwwwSSwbb",
-					OPCODE_DAMCON_SOCKET_UPDATE,   
+					OPCODE_DAMCON_SOCKET_UPDATE,
 					o->id, o->ship_id, o->type,
 					o->x, (int32_t) DAMCONXDIM,
 					o->y, (int32_t) DAMCONYDIM,
@@ -17758,7 +17798,7 @@ static void send_update_damcon_part_packet(struct game_client *c,
 		struct snis_damcon_entity *o)
 {
 	pb_queue_to_client(c, snis_opcode_pkt("bwwwSSRbbb",
-					OPCODE_DAMCON_PART_UPDATE,   
+					OPCODE_DAMCON_PART_UPDATE,
 					o->id, o->ship_id, o->type,
 					o->x, (int32_t) DAMCONXDIM,
 					o->y, (int32_t) DAMCONYDIM,
@@ -18061,7 +18101,7 @@ static int add_new_player(struct game_client *c)
 		clear_bridge_waypoints(nbridges);
 		c->bridge = nbridges;
 		populate_damcon_arena(&bridgelist[c->bridge].damcon);
-	
+
 		nbridges++;
 		schedule_callback(event_callback, &callback_schedule,
 				"player-respawn-event", (double) c->shipid);
@@ -18123,7 +18163,7 @@ static void service_connection(int connection)
 
 	log_client_info(SNIS_INFO, connection, "servicing snis_client connection\n");
         /* get connection moved off the stack so that when the thread needs it,
-	 * it's actually still around. 
+	 * it's actually still around.
 	 */
 
 	i = setsockopt(connection, IPPROTO_TCP, TCP_NODELAY, (char *) &flag, sizeof(int));
@@ -18193,7 +18233,7 @@ static void service_connection(int connection)
 	for (j = 0; j < nclients; j++) {
 		if (client[j].refcount && client[j].bridge == bridgenum)
 			client_count++;
-	} 
+	}
 
 	client_unlock();
 	pthread_mutex_unlock(&universe_mutex);
@@ -18238,7 +18278,7 @@ static void service_connection(int connection)
 static pthread_t listener_thread;
 
 /* This thread listens for incoming client connections, and
- * on establishing a connection, starts a thread for that 
+ * on establishing a connection, starts a thread for that
  * connection.
  */
 static void *listener_thread_fn(__attribute__((unused)) void *unused)
@@ -18271,7 +18311,7 @@ static void *listener_thread_fn(__attribute__((unused)) void *unused)
 	 */
 	while (1) {
 
-		/* 
+		/*
 		 * choose a random port in the "Dynamic and/or Private" range
 		 * see http://www.iana.org/assignments/port-numbers
 		 */
@@ -18299,7 +18339,7 @@ static void *listener_thread_fn(__attribute__((unused)) void *unused)
 		/* getaddrinfo() returns a list of address structures.
 		 * Try each address until we successfully bind(2).
 		 * If socket(2) (or bind(2)) fails, we (close the socket
-		 * and) try the next address. 
+		 * and) try the next address.
 		 */
 
 		for (rp = result; rp != NULL; rp = rp->ai_next) {
@@ -18354,7 +18394,7 @@ static void *listener_thread_fn(__attribute__((unused)) void *unused)
 }
 
 /* Starts listener thread to listen for incoming client connections.
- * Returns port on which listener thread is listening. 
+ * Returns port on which listener thread is listening.
  */
 static int start_listener_thread(void)
 {
@@ -18375,7 +18415,7 @@ static int start_listener_thread(void)
 	pthread_cond_wait(&listener_started, &listener_mutex);
 	(void) pthread_mutex_unlock(&listener_mutex);
 	snis_log(SNIS_INFO, "Listener started.\n");
-	
+
 	return listener_port;
 }
 
@@ -18654,7 +18694,7 @@ static void register_with_game_lobby(char *lobbyhost, int port,
 	snis_log(SNIS_INFO, "port = %hu\n", port);
 	gs.port = htons(port);
 	snis_log(SNIS_INFO, "gs.port = %hu\n", gs.port);
-		
+
 	strncpy(gs.server_nickname, servernick, 14);
 	strncpy(gs.protocol_version, SNIS_PROTOCOL_VERSION, sizeof(gs.protocol_version));
 	strncpy(gs.game_instance, gameinstance, 19);
@@ -18667,9 +18707,9 @@ static void register_with_game_lobby(char *lobbyhost, int port,
 	snis_log(SNIS_INFO, "Registering game server\n");
 	if (ssgl_register_gameserver(lobbyhost, &gs, &lobbythread, &nclients))
 		snis_log(SNIS_WARN, "Game server registration failed.\n");
-	else	
+	else
 		snis_log(SNIS_INFO, "Game server registered.\n");
-	return;	
+	return;
 }
 
 static void usage(void)
@@ -22929,7 +22969,7 @@ int main(int argc, char *argv[])
 	run_initial_lua_scripts();
 	port = start_listener_thread();
 
-	ignore_sigpipe();	
+	ignore_sigpipe();
 	snis_collect_netstats(&netstats);
 	if (getenv("SNISSERVERNOLOBBY") == NULL) {
 		/* Pack the solarsystem position into the gameinstance string */
