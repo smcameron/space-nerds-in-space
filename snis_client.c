@@ -2732,16 +2732,20 @@ static double timeval_difference(struct timeval t1, struct timeval t2)
 	    return elapsed_time;
 }
 
-struct mouse_button {
-	int state; /* Pressed: 1, Released: -1, no activity: 0 */
+struct mouse_button_state {
+	int state;
+#define MOUSE_BUTTON_NO_ACTIVITY 0
+#define MOUSE_BUTTON_PRESSED 1
+#define MOUSE_BUTTON_HELD 2
+#define MOUSE_BUTTON_RELEASED (-1)
 	struct timeval time_pressed;
 	double press_x, press_y;
 	double release_x, release_y;
 };
 
-static struct mouse {
+static struct mouse_state {
 	int x, y;
-	struct mouse_button button[3];
+	struct mouse_button_state button[3];
 } mouse;
 
 static void request_demon_rot_packet(uint32_t oid, uint8_t kind, uint8_t amount)
@@ -3382,11 +3386,11 @@ static void deal_with_mouse()
 	gettimeofday(&time_now, NULL);
 
 	for (i = 0; i < 3; i++)
-		if (mouse.button[i].state == 1)
+		if (mouse.button[i].state == MOUSE_BUTTON_PRESSED)
 			if (timeval_difference(mouse.button[i].time_pressed, time_now) > BUTTON_HOLD_INTERVAL)
-				mouse.button[i].state = 2;
+				mouse.button[i].state = MOUSE_BUTTON_HELD;
 	for (i = 0; i < 3; i++)
-		if (mouse.button[i].state == 2)
+		if (mouse.button[i].state == MOUSE_BUTTON_HELD)
 			mouse_button_held(i);
 }
 
@@ -17059,7 +17063,7 @@ static int main_da_button_press(GtkWidget *w, GdkEventButton *event,
 	if (event->button < 1 || event->button > 3)
 		return TRUE;
 
-	mouse.button[event->button - 1].state = 1;
+	mouse.button[event->button - 1].state = MOUSE_BUTTON_PRESSED;
 	gettimeofday(&mouse.button[event->button - 1].time_pressed, NULL);
 	mouse.button[event->button - 1].press_x = event->x;
 	mouse.button[event->button - 1].press_y = event->y;
@@ -17081,7 +17085,7 @@ static int main_da_button_release(GtkWidget *w, GdkEventButton *event,
 	if (event->button < 1 || event->button > 3)
 		return TRUE;
 
-	mouse.button[event->button - 1].state = -1;
+	mouse.button[event->button - 1].state = MOUSE_BUTTON_RELEASED;
 	mouse.button[event->button - 1].release_x = event->x;
 	mouse.button[event->button - 1].release_y = event->y;
 
