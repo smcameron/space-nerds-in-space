@@ -333,9 +333,6 @@ static ui_element_inside_function ui_button_inside = (ui_element_inside_function
 					snis_button_inside;
 static ui_element_inside_function ui_slider_inside = (ui_element_inside_function)
 					snis_slider_mouse_inside;
-/* global_mouse_x, global_mouse_y are updated in main_da_motion_notify() and used for tooltips */
-static int global_mouse_x;
-static int global_mouse_y;
 
 #define MAXTEXTURES 10
 
@@ -15542,7 +15539,7 @@ static void show_warp_limbo_screen(GtkWidget *w)
 		if (displaymode == DISPLAYMODE_WEAPONS) {
 			show_manual_weapons(w);
 			ui_element_list_draw(uiobjs);
-			ui_element_list_maybe_draw_tooltips(uiobjs, global_mouse_x, global_mouse_y);
+			ui_element_list_maybe_draw_tooltips(uiobjs, mouse.x, mouse.y);
 		} else {
 			show_warp_hash_screen(w);
 		}
@@ -16456,7 +16453,7 @@ static int main_da_expose(GtkWidget *w, GdkEvent *event, gpointer p)
 		break;
 	}
 	ui_element_list_draw(uiobjs);
-	ui_element_list_maybe_draw_tooltips(uiobjs, global_mouse_x, global_mouse_y);
+	ui_element_list_maybe_draw_tooltips(uiobjs, mouse.x, mouse.y);
 
 	/* this has to come after ui_element_list_draw() to avoid getting clobbered */
 	if (displaymode == DISPLAYMODE_ENGINEERING)
@@ -17176,10 +17173,7 @@ static int main_da_motion_notify(GtkWidget *w, GdkEventMotion *event,
 	float smoothx, smoothy;
 	int sx, sy;
 
-	global_mouse_x = event->x; /* still used for tooltips */
-	global_mouse_y = event->y;
-
-	mouse.x = event->x; /* new implementation */
+	mouse.x = event->x;
 	mouse.y = event->y;
 
 	switch (displaymode) {
