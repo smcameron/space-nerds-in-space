@@ -11034,23 +11034,6 @@ static void show_navigation(GtkWidget *w)
 	show_common_screen(w, "NAV");
 }
 
-static void show_mouse_debug()
-{
-	sng_set_foreground(UI_COLOR(quit_text));
-	char debug_buffer[100];
-	int i;
-
-	for (i = 0; i < 3; i++) {
-		snprintf(debug_buffer, sizeof(debug_buffer),
-			"Mouse %d -- state: %d press x,y: %d,%d release x,y: %d,%d",
-			i, mouse.button[i].state, (int) mouse.button[i].press_x, (int) mouse.button[i].press_y,
-			(int) mouse.button[i].release_x, (int) mouse.button[i].release_y);
-		sng_abs_xy_draw_string(debug_buffer, NANO_FONT, txx(10), txy(20 + i * 10));
-	}
-	snprintf(debug_buffer, sizeof(debug_buffer), "Mouse x,y: %d,%d", mouse.x, mouse.y);
-	sng_abs_xy_draw_string(debug_buffer, NANO_FONT, txx(10), txy(50));
-}
-
 static void main_engineering_button_pressed(void *x)
 {
 	displaymode = DISPLAYMODE_ENGINEERING;
