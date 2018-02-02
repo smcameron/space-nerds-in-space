@@ -10508,6 +10508,7 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 	static int current_zoom = 0;
 	/* struct entity *targeted_entity = NULL; */
 	struct entity *science_entity = NULL;
+	double lowest_altitude = 1e20;
 
 	if (!ring_mesh) {
 		ring_mesh = init_circle_mesh(0, 0, 1, 180, 2.0f * M_PI);
@@ -10782,6 +10783,9 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 			else
 				obj_radius = cam_pos_scale * obj_entity_mesh->radius *
 						fabs(entity_get_scale(go[i].entity));
+			double dist = dist3d(o->x - go[i].x, o->y - go[i].y, o->z - go[i].z) - go[i].tsd.planet.radius;
+			if (dist < lowest_altitude)
+				lowest_altitude = dist;
 		}
 
 		if (nav_entity_too_far_away(o->x, o->y, o->z, go[i].x, go[i].y, go[i].z,
@@ -10977,6 +10981,13 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 	pthread_mutex_unlock(&universe_mutex);
 
 	remove_all_entity(instrumentecx);
+
+	if (lowest_altitude < MAX_PLANET_RADIUS * 1.5) {
+		char buf[25];
+		snprintf(buf, sizeof(buf), "ALTITUDE: %5.1f", lowest_altitude);
+		sng_abs_xy_draw_string(buf, NANO_FONT, txx(290), txy(15));
+	}
+
 }
 
 static void show_navigation(GtkWidget *w)
