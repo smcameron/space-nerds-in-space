@@ -207,10 +207,18 @@ int snis_text_input_box_keypress(struct snis_text_input_box *t, GdkEventKey *eve
 			t->cursor_pos++;
 	} else {
 		if (currentlen < t->buflen - 2) {
-			memmove(&t->buffer[t->cursor_pos + 1], &t->buffer[t->cursor_pos],
-				currentlen - t->cursor_pos);
-			t->buffer[t->cursor_pos] = c;
-			t->cursor_pos++;
+			if (currentlen - t->cursor_pos >= 0) {
+				memmove(&t->buffer[t->cursor_pos + 1], &t->buffer[t->cursor_pos],
+					currentlen - t->cursor_pos);
+				t->buffer[t->cursor_pos] = c;
+				t->cursor_pos++;
+			} else {
+				fprintf(stderr,
+					"Bug detected at %s:%d, currentlen = %d, t->cursor_pos = %d, "
+					"expected t->cursor_pos <= currentlen, but it isn't.\n",
+					__FILE__, __LINE__, currentlen, t->cursor_pos);
+				t->cursor_pos = currentlen; /* Fix this anomalous condition */
+			}
 		}
 	}
 	return 0;
