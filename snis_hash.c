@@ -135,7 +135,7 @@ int main(int argc, char *argv)
 
 	char *shipname = "enterprise";
 	char *password = "khaaan";
-	char crypted[1000], recrypted[1000];
+	char crypted[1000], recrypted[1000], formatted[1000];
 	int cryptsize = sizeof(crypted);
 	int rc;
 	char salt[100];
@@ -151,6 +151,8 @@ int main(int argc, char *argv)
 	printf("recrypted = '%s' (len = %lu)\n", recrypted, strlen(recrypted));
 	if (strcmp(crypted, recrypted) != 0)
 		printf("FAIL: encryption came out different with same salt!\n");
+	snis_format_hash(crypted, strlen(crypted), formatted, sizeof(formatted));
+	printf("formatted = '%s', len = %ld\n", formatted, strlen(formatted));
 
 	return 0;
 }

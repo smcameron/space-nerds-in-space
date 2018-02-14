@@ -923,7 +923,7 @@ static int restore_data_from_file(const char *path)
 		goto error;
 	}
 	if (strlen(hexpwdhash) != PWDHASHLEN * 2) {
-		fprintf(stderr, "bridge data filename '%s' is not %d chars long.\n", path, PWDHASHLEN * 2);
+		fprintf(stderr, "hexpwdhash '%s' is not %d chars long.\n", hexpwdhash, PWDHASHLEN * 2);
 		goto error;
 	}
 	for (i = 0; i < PWDHASHLEN * 2; i++) {

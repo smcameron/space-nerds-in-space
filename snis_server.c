@@ -18598,7 +18598,11 @@ static void update_multiverse(struct snis_entity *o)
 		queue_to_multiverse(multiverse_server, pb);
 		return;
 	} else {
-		fprintf(stderr, "%s: not requesting verification\n", logprefix());
+		char reason[100];
+		snprintf(reason, sizeof(reason), "Requested already: %s, socket status: %s",
+			bridgelist[bridge].requested_verification ? "yes" : "no",
+			multiverse_server->sock >= 0 ? "valid" : "invalid");
+		fprintf(stderr, "%s: not requesting verification: %s\n", logprefix(), reason);
 	}
 
 	/* Skip updating multiverse server if the bridge isn't verified yet. */
