@@ -239,6 +239,7 @@ static uint32_t my_home_planet_oid = UNKNOWN_ID;
 static int real_screen_width;
 static int real_screen_height;
 static int warp_limbo_countdown = 0;
+static int warp_field_error = 0;
 static int damage_limbo_countdown = 0;
 
 static struct entity_context *ecx;
@@ -2383,6 +2384,12 @@ static void block_emit_sparks(struct snis_entity *o)
 	emit_flames(o, 5.0, 1.0);
 }
 
+static void update_warp_field_error(void)
+{
+	if (warp_field_error > 0)
+		warp_field_error--;
+}
+
 static void move_objects(void)
 {
 	int i;
@@ -2395,6 +2402,7 @@ static void move_objects(void)
 			continue;
 		switch (o->type) {
 		case OBJTYPE_SHIP1:
+			update_warp_field_error();
 		case OBJTYPE_SHIP2:
 			move_object(timestamp, o, &interpolate_oriented_object);
 			ship_emit_sparks(o);
@@ -9452,6 +9460,7 @@ CREATE_TEMPERATURE_SAMPLER_FUNC(lifesupport) /* sample_lifesupport_temperature d
 static void engage_warp_button_pressed(__attribute__((unused)) void *cookie)
 {
 	do_adjust_byte_value(0,  OPCODE_ENGAGE_WARP);
+	warp_field_error = 3 * PLAYER_WARP_SPINUP_TIME; /* 3x since client clock is 30hz, server's is 10hz */
 }
 
 static void docking_magnets_button_pressed(__attribute__((unused)) void *cookie)
@@ -10976,6 +10985,16 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 
 		entity_get_screen_coords(science_entity, &sx, &sy);
 		draw_targeting_indicator(w, gc, sx, sy, UI_COLOR(nav_science_select), 0, 1.0f, 2.0f);
+	}
+
+	/* Draw warp field error indicator */
+	if (warp_field_error > 0) {
+		char buf[64];
+		float error_fraction = warp_field_error / (3.0 * PLAYER_WARP_SPINUP_TIME);
+		float jitter = 0.2 * error_fraction * (snis_randn(100) - 50);
+		sng_set_foreground(UI_COLOR(nav_entity_label));
+		snprintf(buf, sizeof(buf), "WARP FIELD ERROR: %3.2f%%", error_fraction * 100.0 + jitter);
+		sng_abs_xy_draw_string(buf, NANO_FONT, txx(540), txy(130));
 	}
 
 	pthread_mutex_unlock(&universe_mutex);

@@ -15946,7 +15946,7 @@ static int do_engage_warp_drive(struct snis_entity *o)
 		bridgelist[b].warpx = o->x + wfactor * warpvec.v.x;
 		bridgelist[b].warpy = o->y + wfactor * warpvec.v.y;
 		bridgelist[b].warpz = o->z + wfactor * warpvec.v.z;
-		o->tsd.ship.warp_time = 85; /* 8.5 seconds */
+		o->tsd.ship.warp_time = PLAYER_WARP_SPINUP_TIME;
 	}
 	return enough_oomph;
 }

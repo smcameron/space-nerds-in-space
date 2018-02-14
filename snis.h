@@ -379,6 +379,7 @@ struct ship_data {
 #define PLAYER_VELOCITY_INCREMENT (1.0)
 	double yaw_velocity, pitch_velocity, roll_velocity;
 	double desired_velocity;
+#define PLAYER_WARP_SPINUP_TIME 85 /* 8.5 seconds */
 #define PLAYER_ORIENTATION_DAMPING (0.85)
 #define DAMPING_SUPPRESSION_DECAY (0.98)
 #define COMPUTER_STEERING_TIME 120.0f
