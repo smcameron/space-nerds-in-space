@@ -406,11 +406,9 @@ static int update_bridge(struct starsystem_info *ss)
 	struct packed_buffer pb;
 	struct snis_entity *o;
 
-#define bytes_to_read (sizeof(struct update_ship_packet) - 9 + 25 + 5 + \
-			sizeof(struct power_model_data) + \
-			sizeof(struct power_model_data) - 1 - 1 - 1)
+#define bytes_to_read (UPDATE_BRIDGE_PACKET_SIZE - PWDHASHLEN - 1)
 
-	fprintf(stderr, "snis_multiverse: update bridge 1, expecting %lu bytes\n", bytes_to_read);
+	fprintf(stderr, "snis_multiverse: update bridge 1, expecting %d bytes\n", bytes_to_read);
 	memset(buffer, 0, sizeof(buffer));
 	memset(pwdhash, 0, sizeof(pwdhash));
 	rc = read_and_unpack_fixed_size_buffer(ss, buffer, PWDHASHLEN, "r", pwdhash, (uint16_t) PWDHASHLEN);
@@ -473,6 +471,11 @@ static void send_bridge_update_to_snis_server(struct starsystem_info *ss, unsign
 
 	/* Update the ship */
 	pb = build_bridge_update_packet(o, pwdhash);
+	if (packed_buffer_length(pb) != UPDATE_BRIDGE_PACKET_SIZE) {
+		fprintf(stderr, "snis_multiverse: bridge packet size is wrong (actual: %d, nominal: %d)\n",
+			packed_buffer_length(pb), UPDATE_BRIDGE_PACKET_SIZE);
+		abort();
+	}
 	pthread_mutex_unlock(&data_mutex);
 	packed_buffer_queue_add(&ss->write_queue, pb, &ss->write_queue_mutex);
 }

@@ -18614,6 +18614,11 @@ static void update_multiverse(struct snis_entity *o)
 
 	/* Update the ship */
 	pb = build_bridge_update_packet(o, bridgelist[bridge].pwdhash);
+	if (packed_buffer_length(pb) != UPDATE_BRIDGE_PACKET_SIZE) {
+		fprintf(stderr, "snis_multiverse: bridge packet size is wrong (actual: %d, nominal: %d)\n",
+			packed_buffer_length(pb), UPDATE_BRIDGE_PACKET_SIZE);
+		abort();
+	}
 	queue_to_multiverse(multiverse_server, pb);
 }
 
@@ -22453,11 +22458,9 @@ static int process_update_bridge(struct multiverse_server_info *msi)
 	struct snis_entity *o;
 	double x, y, z;
 
-#define bytes_to_read (sizeof(struct update_ship_packet) - 9 + 25 + 5 + \
-			sizeof(struct power_model_data) + \
-			sizeof(struct power_model_data) - 1 - 1)
+#define bytes_to_read (UPDATE_BRIDGE_PACKET_SIZE - PWDHASHLEN - 1)
 
-	fprintf(stderr, "%s: process_update bridge 1, expecting %lu bytes\n", logprefix(), bytes_to_read);
+	fprintf(stderr, "%s: process_update bridge 1, expecting %d bytes\n", logprefix(), bytes_to_read);
 	memset(buffer, 0, sizeof(buffer));
 	memset(pwdhash, 0, sizeof(pwdhash));
 	rc = snis_readsocket(msi->sock, buffer, PWDHASHLEN);
