@@ -169,7 +169,11 @@ id = add_starbase(x, y, z, n) - adds a starbase at location x,y with number n (0
 
 id = add_planet(name, x, y, z, r, s) - adds planet at x,y,z with specified name, radius,
 	and security (security: 0 = low, 1 = medium, 2 = high)
-	returns id of planet or -1.0 on failure.   Radius should be between 800 and 2000.
+	returns id of planet or -1.0 on failure.   Radius should be between 800 and 7000.
+
+id = add_black_hole(name, x, y, z, r) - adds a black hole at x,y,z with specified name, and
+	radius, returns id of black hole or -1.0 on failure.   Radius should be between 1000
+	and 7000.
 
 id = add_nebula(name, x, y, z, r) - adds nebula at x,y with specified radius and name,
 	returns id of nebula or -1.0 on failure. 

@@ -33,7 +33,7 @@
 #define OPCODE_ID_CLIENT_SHIP	106
 #define OPCODE_UPDATE_ASTEROID	107
 #define OPCODE_REQUEST_YAW	108
-/* UNUSED OPCODE 109 */
+#define OPCODE_UPDATE_BLACK_HOLE 109
 /* UNUSED OPCODE 110 */
 #define OPCODE_REQUEST_TORPEDO	111
 #define OPCODE_DELETE_OBJECT    112
@@ -326,6 +326,13 @@ struct update_econ_ship_packet {
 struct client_ship_id_packet {
 	uint8_t opcode;
 	uint32_t shipid;
+};
+
+struct update_black_hole_packet {
+	uint8_t opcode;
+	uint32_t id;
+	uint32_t timestampe;
+	uint32_t x, y, z;
 };
 
 struct update_asteroid_packet {

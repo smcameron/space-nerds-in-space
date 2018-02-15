@@ -1131,6 +1131,63 @@ static void add_new_rts_unit(struct snis_entity *builder)
 	fprintf(stderr, "Added ship successfully\n");
 }
 
+static void snis_queue_add_sound(uint16_t sound_number, uint32_t roles, uint32_t shipid);
+static void black_hole_collision_detection(void *o1, void *o2)
+{
+	struct snis_entity *black_hole = o1;
+	struct snis_entity *object = o2;
+	double dist;
+
+	if (o1 == o2)
+		return;
+	if (!object->alive)
+		return;
+	dist = dist3d(black_hole->x - object->x, black_hole->y - object->y, black_hole->z - object->z);
+	if (dist > BLACK_HOLE_INFLUENCE_LIMIT * black_hole->tsd.black_hole.radius)
+		return;
+	if (dist < BLACK_HOLE_EVENT_HORIZON * black_hole->tsd.black_hole.radius) {
+		if (object->type != OBJTYPE_SHIP1) {
+			delete_from_clients_and_server_helper(object, 0);
+			return;
+		} else {
+			object->alive = 0;
+			object->respawn_time = universe_timestamp + RESPAWN_TIME_SECS * 10;
+			object->timestamp = universe_timestamp;
+			snis_queue_add_sound(EXPLOSION_SOUND,
+				ROLE_SOUNDSERVER, object->id);
+			schedule_callback(event_callback, &callback_schedule,
+					"player-death-callback", object->id);
+		}
+		return;
+	} else {
+		/* in the zone of influence, but not dead yet */
+		union vec3 towards_black_hole;
+
+		towards_black_hole.v.x = black_hole->x - object->x;
+		towards_black_hole.v.y = black_hole->y - object->y;
+		towards_black_hole.v.z = black_hole->z - object->z;
+		vec3_normalize_self(&towards_black_hole);
+		vec3_mul_self(&towards_black_hole, BLACK_HOLE_VFACTOR);
+		vec3_mul_self(&towards_black_hole, 1.0 / (dist + 1.0));
+		object->vx += towards_black_hole.v.x;
+		object->vy += towards_black_hole.v.y;
+		object->vz += towards_black_hole.v.z;
+		set_object_location(object, object->x + object->vx, object->y + object->vy, object->z + object->vz);
+		object->timestamp = universe_timestamp;
+	}
+}
+
+static void black_hole_move(struct snis_entity *o)
+{
+	set_object_location(o, o->x + o->vx, o->y + o->vy, o->z + o->vy);
+	o->vx *= 0.95;
+	o->vy *= 0.95;
+	o->vz *= 0.95;
+	space_partition_process(space_partition, o, o->x, o->z, o,
+				black_hole_collision_detection);
+	return;
+}
+
 static void planet_move(struct snis_entity *o)
 {
 	if (!rts_mode)
@@ -1250,7 +1307,6 @@ static void warp_core_collision_detection(void *o1, void *o2)
 static int add_explosion(double x, double y, double z, uint16_t velocity,
 				uint16_t nsparks, uint16_t time, uint8_t victim_type);
 
-static void snis_queue_add_sound(uint16_t sound_number, uint32_t roles, uint32_t shipid);
 static void delete_from_clients_and_server(struct snis_entity *o);
 static void warp_core_move(struct snis_entity *o)
 {
@@ -1401,6 +1457,9 @@ static void gather_opcode_not_sent_stats(struct snis_entity *o)
 		break;
 	case OBJTYPE_DERELICT:
 		opcode[0] = OPCODE_UPDATE_DERELICT;
+		break;
+	case OBJTYPE_BLACK_HOLE:
+		opcode[0] = OPCODE_UPDATE_BLACK_HOLE;
 		break;
 	case OBJTYPE_PLANET:
 		opcode[0] = OPCODE_UPDATE_PLANET;
@@ -7906,6 +7965,7 @@ static int add_generic_object(double x, double y, double z,
 	case OBJTYPE_STARBASE:
 	case OBJTYPE_DERELICT:
 	case OBJTYPE_PLANET:
+	case OBJTYPE_BLACK_HOLE:
 		n = random_name(mt);
 		strncpy(go[i].sdata.name, n, sizeof(go[i].sdata.name) - 1);
 		free(n);
@@ -10252,6 +10312,23 @@ static int select_atmospheric_profile(struct snis_entity *planet)
 	return random_planetary_atmosphere_by_type(NULL, atm_type, atm_instance);
 }
 
+static int add_black_hole(double x, double y, double z, float radius)
+{
+	int i;
+
+	i = add_generic_object(x, y, z, 0, 0, 0, 0, OBJTYPE_BLACK_HOLE);
+	if (i < 0)
+		return i;
+	go[i].sdata.shield_strength = 0;
+	go[i].sdata.shield_wavelength = 0;
+	go[i].sdata.shield_width = 0;
+	go[i].sdata.shield_depth = 0;
+	go[i].move = black_hole_move;
+	go[i].tsd.black_hole.radius = radius;
+
+	return i;
+}
+
 static int add_planet(double x, double y, double z, float radius, uint8_t security)
 {
 	int i, sst;
@@ -10322,6 +10399,36 @@ static int l_add_planet(lua_State *l)
 	return 1;
 }
 
+static int l_add_black_hole(lua_State *l)
+{
+	double x, y, z, r;
+	const char *name;
+	int i;
+
+	name = lua_tostring(lua_state, 1);
+	x = lua_tonumber(lua_state, 2);
+	y = lua_tonumber(lua_state, 3);
+	z = lua_tonumber(lua_state, 4);
+	r = lua_tonumber(lua_state, 5);
+
+	if (r < MIN_BLACK_HOLE_RADIUS)
+		r = MIN_BLACK_HOLE_RADIUS;
+	if (r > MAX_BLACK_HOLE_RADIUS)
+		r = MAX_BLACK_HOLE_RADIUS;
+
+	pthread_mutex_lock(&universe_mutex);
+	i = add_black_hole(x, y, z, r);
+	if (i < 0) {
+		pthread_mutex_unlock(&universe_mutex);
+		lua_pushnumber(lua_state, -1.0);
+		return 1;
+	}
+	strncpy(go[i].sdata.name, name, sizeof(go[i].sdata.name) - 1);
+	lua_pushnumber(lua_state, (double) go[i].id);
+	pthread_mutex_unlock(&universe_mutex);
+	return 1;
+}
+
 static int too_close_to_other_planet_or_sun(double x, double y, double z, double limit)
 {
 	int i;
@@ -10346,6 +10453,21 @@ static int too_close_to_other_planet_or_sun(double x, double y, double z, double
 	if (mindist > limit)
 		return 0;
 	return 1;
+}
+
+static void add_black_holes(void)
+{
+	int i;
+	double x, y, z, radius;
+
+	for (i = 0; i < NBLACK_HOLES; i++) {
+		x = ((double) snis_randn(1000)) * XKNOWN_DIM / 1000.0;
+		y = ((double) snis_randn(2000) - 1000.0) * YKNOWN_DIM / 1000.0;
+		z = ((double) snis_randn(1000)) * ZKNOWN_DIM / 1000.0;
+		radius = (float) snis_randn(MAX_BLACK_HOLE_RADIUS - MIN_BLACK_HOLE_RADIUS) +
+						MIN_BLACK_HOLE_RADIUS;
+		add_black_hole(x, y, z, radius);
+	}
 }
 
 static void add_planets(void)
@@ -10635,6 +10757,7 @@ static void make_universe(void)
 	add_enforcers();
 	add_spacemonsters();
 	add_passengers();
+	add_black_holes();
 	pthread_mutex_unlock(&universe_mutex);
 }
 
@@ -15500,6 +15623,11 @@ static int process_create_item(struct game_client *c)
 					MIN_PLANET_RADIUS;
 		i = add_planet(x, y, z, r, 0);
 		break;
+	case OBJTYPE_BLACK_HOLE:
+		r = (float) snis_randn(MAX_BLACK_HOLE_RADIUS - MIN_BLACK_HOLE_RADIUS) +
+					MIN_BLACK_HOLE_RADIUS;
+		i = add_black_hole(x, y, z, r);
+		break;
 	case OBJTYPE_ASTEROID:
 		i = add_asteroid(x, y, z, 0.0, 0.0, 0.0, 1.0);
 		break;
@@ -16955,6 +17083,8 @@ static void send_update_cargo_container_packet(struct game_client *c,
 	struct snis_entity *o);
 static void send_update_derelict_packet(struct game_client *c,
 	struct snis_entity *o);
+static void send_update_black_hole_packet(struct game_client *c,
+	struct snis_entity *o);
 static void send_update_planet_packet(struct game_client *c,
 	struct snis_entity *o);
 static void send_update_wormhole_packet(struct game_client *c,
@@ -17015,6 +17145,9 @@ static void queue_up_client_object_update(struct game_client *c, struct snis_ent
 		break;
 	case OBJTYPE_DERELICT:
 		send_update_derelict_packet(c, o);
+		break;
+	case OBJTYPE_BLACK_HOLE:
+		send_update_black_hole_packet(c, o);
 		break;
 	case OBJTYPE_PLANET:
 		send_update_planet_packet(c, o);
@@ -17090,6 +17223,7 @@ static void queue_up_client_object_sdata_update(struct game_client *c, struct sn
 	case OBJTYPE_LASER:
 	case OBJTYPE_SPACEMONSTER:
 	case OBJTYPE_WARP_CORE:
+	case OBJTYPE_BLACK_HOLE:
 		send_update_sdata_packets(c, o);
 		break;
 	default:
@@ -17841,6 +17975,17 @@ static void send_update_derelict_packet(struct game_client *c,
 					o->tsd.derelict.oxygen));
 }
 
+
+static void send_update_black_hole_packet(struct game_client *c,
+	struct snis_entity *o)
+{
+	pb_queue_to_client(c, snis_opcode_pkt("bwwSSSS", OPCODE_UPDATE_BLACK_HOLE,
+					o->id, o->timestamp,
+					o->x, (int32_t) UNIVERSE_DIM,
+					o->y, (int32_t) UNIVERSE_DIM,
+					o->z, (int32_t) UNIVERSE_DIM,
+					o->tsd.black_hole.radius, (int32_t) UNIVERSE_DIM));
+}
 
 static void send_update_planet_packet(struct game_client *c,
 	struct snis_entity *o)
@@ -18812,6 +18957,7 @@ static void setup_lua(void)
 	add_lua_callable_fn(l_comms_channel_listen, "comms_channel_listen");
 	add_lua_callable_fn(l_comms_channel_unlisten, "comms_channel_unlisten");
 	add_lua_callable_fn(l_comms_channel_transmit, "comms_channel_transmit");
+	add_lua_callable_fn(l_add_black_hole, "add_black_hole");
 }
 
 static int run_initial_lua_scripts(void)

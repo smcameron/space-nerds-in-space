@@ -30,7 +30,7 @@
 #define MAXSTARMAPENTRIES 1000 /* max number of solar systems */
 #define MAX_STARMAP_ADJACENCIES 5 /* max warp lanes from one star to other stars */
 #define DEFAULT_SOLAR_SYSTEM "default"
-#define SNIS_PROTOCOL_VERSION "SNIS010"
+#define SNIS_PROTOCOL_VERSION "SNIS011"
 #define COMMON_MTWIST_SEED 97872
 /* dimensions of the "known" universe */
 #define XKNOWN_DIM 600000.0
@@ -77,6 +77,7 @@
  */
 #define SNIS_WARP_GATE_THRESHOLD 15.0
 
+#define NBLACK_HOLES 2
 #define NPLANETS 6
 #define NUM_RTS_BASES 9
 #define RTS_HOME_PLANET_BUTTON NUM_RTS_BASES
@@ -116,6 +117,7 @@
 #define OBJTYPE_BLOCK 22
 #define OBJTYPE_TURRET 23
 #define OBJTYPE_WARP_CORE 24
+#define OBJTYPE_BLACK_HOLE 25
 
 #define SHIELD_EFFECT_LIFETIME 30
 
@@ -658,6 +660,16 @@ struct laserbeam_data {
 	uint8_t mining_laser;
 };
 
+#define MIN_BLACK_HOLE_RADIUS 1000.0
+#define MAX_BLACK_HOLE_RADIUS 7000.0
+#define BLACK_HOLE_INFLUENCE_LIMIT 15.0
+#define BLACK_HOLE_EVENT_HORIZON 1.0
+#define BLACK_HOLE_VFACTOR 3000.0
+
+struct black_hole_data {
+	float radius;
+};
+
 struct planet_data {
 	uint32_t description_seed;
 	uint8_t government;
@@ -748,6 +760,7 @@ union type_specific_data {
 	struct block_data block;
 	struct turret_data turret;
 	struct warp_core_data warp_core;
+	struct black_hole_data black_hole;
 };
 
 struct snis_entity;

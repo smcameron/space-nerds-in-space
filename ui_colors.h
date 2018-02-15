@@ -150,6 +150,7 @@ struct ui_color_map {
 	struct ui_color_entry sci_ball_asteroid;
 	struct ui_color_entry sci_ball_derelict;
 	struct ui_color_entry sci_ball_planet;
+	struct ui_color_entry sci_ball_black_hole;
 	struct ui_color_entry sci_ball_starbase;
 	struct ui_color_entry sci_ball_warpgate;
 	struct ui_color_entry sci_ball_energy;
@@ -182,6 +183,7 @@ struct ui_color_map {
 	struct ui_color_entry demon_group_text;
 	struct ui_color_entry demon_asteroid;
 	struct ui_color_entry demon_planet;
+	struct ui_color_entry demon_black_hole;
 	struct ui_color_entry demon_derelict;
 	struct ui_color_entry demon_nebula;
 	struct ui_color_entry demon_starbase;
@@ -326,6 +328,7 @@ struct ui_color_map_accessor {
 	.u.map.sci_ball_asteroid	= { AMBER,		"sci-ball-asteroid" },
 	.u.map.sci_ball_derelict	= { ORANGERED,		"sci-ball-derelict" },
 	.u.map.sci_ball_planet		= { BLUE_FIXUP,		"sci-ball-planet" },
+	.u.map.sci_ball_black_hole	= { CYAN_FIXUP,		"sci-ball-black-hole" },
 	.u.map.sci_ball_starbase	= { WHITE,		"sci-ball-starbase" },
 	.u.map.sci_ball_warpgate	= { WHITE,		"sci-ball-warpgate" },
 	.u.map.sci_ball_energy		= { LIMEGREEN,		"sci-ball-energy" },
@@ -358,6 +361,7 @@ struct ui_color_map_accessor {
 	.u.map.demon_group_text		= { GREEN_FIXUP,	"demon-group-text" },
 	.u.map.demon_asteroid		= { AMBER,		"demon-asteroid" },
 	.u.map.demon_planet		= { GREEN_FIXUP,	"demon-planet" },
+	.u.map.demon_black_hole		= { BLUE_FIXUP,		"demon-black-hole" },
 	.u.map.demon_derelict		= { BLUE_FIXUP,		"demon-derelict" },
 	.u.map.demon_nebula		= { MAGENTA,		"demon-nebula" },
 	.u.map.demon_starbase		= { RED,		"demon-starbase" },

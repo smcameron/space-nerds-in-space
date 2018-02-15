@@ -120,6 +120,7 @@
 #define WARPGATE_COLOR WHITE
 #define WORMHOLE_COLOR WHITE
 #define PLANET_COLOR GREEN
+#define BLACK_HOLE_COLOR WHITE
 #define ASTEROID_COLOR AMBER
 #define WARP_CORE_COLOR YELLOW
 #define CARGO_CONTAINER_COLOR YELLOW 
@@ -373,6 +374,7 @@ static struct mesh *heading_indicator_mesh;
 static struct mesh *cargo_container_mesh;
 static struct mesh *nebula_mesh;
 static struct mesh *sun_mesh;
+static struct mesh *black_hole_mesh;
 static struct mesh *thrust_animation_mesh;
 static struct mesh *warpgate_mesh;
 static struct mesh *warp_core_mesh;
@@ -397,6 +399,7 @@ static struct material spark_material;
 static struct material laserflash_material;
 static struct material warp_effect_material;
 static struct material sun_material;
+static struct material black_hole_material;
 #define NPLANETARY_RING_MATERIALS 256
 #define NPLANET_MATERIALS 256
 static int planetary_ring_texture_id = -1;
@@ -1191,10 +1194,12 @@ static int update_ship_sdata(uint32_t id, uint8_t subclass, char *name,
 		go[i].tsd.starbase.lifeform_count = lifeform_count;
 	if (!go[i].sdata.science_data_known && displaymode == DISPLAYMODE_SCIENCE)
 		wwviaudio_add_sound(SCIENCE_PROBE_SOUND);
-	if (go[i].type != OBJTYPE_PLANET && go[i].type != OBJTYPE_STARBASE)
+	if (go[i].type != OBJTYPE_PLANET &&
+		go[i].type != OBJTYPE_STARBASE &&
+		go[i].type != OBJTYPE_BLACK_HOLE)
 		go[i].sdata.science_data_known = 30 * 10; /* only remember for ten secs. */
 	else
-		go[i].sdata.science_data_known = 30 * 60; /* unless planet or starbase */
+		go[i].sdata.science_data_known = 30 * 60; /* unless planet, starbase or black hole */
 		
 	return 0;
 }
@@ -1757,6 +1762,38 @@ static int update_derelict(uint32_t id, uint32_t timestamp, double x, double y, 
 	return 0;
 }
 
+static int update_black_hole(uint32_t id, uint32_t timestamp, double x, double y, double z, double r)
+{
+	int i;
+	struct entity *e;
+	union quat orientation = random_orientation[id % NRANDOM_ORIENTATIONS];
+
+	i = lookup_object_by_id(id);
+	if (i < 0) {
+		e = add_entity(ecx, black_hole_mesh, x, y, z, BLACK_HOLE_COLOR);
+		if (e) {
+			update_entity_material(e, &black_hole_material);
+			update_entity_scale(e, 2.0 * r);
+		}
+		i = add_generic_object(id, timestamp, x, y, z, 0.0, 0.0, 0.0,
+					&orientation, OBJTYPE_BLACK_HOLE, 1, e);
+		if (i < 0)
+			return i;
+		/* Have to set visibility because this normally only gets set on
+		 * the first interpolation but because black holes don't move, there
+		 * won't be a first interpolation.
+		 */
+		update_entity_visibility(e, 1);
+	} else {
+		update_generic_object(i, timestamp, x, y, z, 0.0, 0.0, 0.0, NULL, 1);
+	}
+	go[i].x = x;
+	go[i].y = y;
+	go[i].z = z;
+	go[i].tsd.black_hole.radius = r;
+	return 0;
+}
+
 static int update_planet(uint32_t id, uint32_t timestamp, double x, double y, double z, double r, uint8_t government,
 				uint8_t tech_level, uint8_t economy, uint32_t dseed, int hasring,
 				uint8_t security, uint16_t contraband,
@@ -1859,6 +1896,7 @@ static int update_planet(uint32_t id, uint32_t timestamp, double x, double y, do
 	go[i].tsd.planet.build_unit_type = build_unit_type;
 	return 0;
 }
+
 
 static int update_wormhole(uint32_t id, uint32_t timestamp, double x, double y, double z)
 {
@@ -2781,6 +2819,7 @@ static struct demon_ui {
 	struct button *demon_ship_button;
 	struct button *demon_starbase_button;
 	struct button *demon_planet_button;
+	struct button *demon_black_hole_button;
 	struct button *demon_asteroid_button;
 	struct button *demon_nebula_button;
 	struct button *demon_spacemonster_button;
@@ -2811,9 +2850,10 @@ static struct demon_ui {
 #define DEMON_BUTTON_ASTEROIDMODE 4
 #define DEMON_BUTTON_NEBULAMODE 5
 #define DEMON_BUTTON_SPACEMONSTERMODE 6
-#define DEMON_BUTTON_DELETE 7
-#define DEMON_BUTTON_SELECTNONE 8
-#define DEMON_BUTTON_CAPTAINMODE 9
+#define DEMON_BUTTON_BLACKHOLEMODE 7
+#define DEMON_BUTTON_DELETE 8
+#define DEMON_BUTTON_SELECTNONE 9
+#define DEMON_BUTTON_CAPTAINMODE 10
 	int use_3d;
 	union vec3 camera_pos;
 	union quat camera_orientation;
@@ -5919,6 +5959,27 @@ static int process_update_derelict_packet(void)
 	return (rc < 0);
 } 
 
+static int process_update_black_hole_packet(void)
+{
+	unsigned char buffer[100];
+	uint32_t id, timestamp;
+	double dx, dy, dz, r;
+	int rc;
+
+	assert(sizeof(buffer) > sizeof(struct update_black_hole_packet) - sizeof(uint8_t));
+	rc = read_and_unpack_buffer(buffer, "wwSSSS", &id, &timestamp,
+			&dx, (int32_t) UNIVERSE_DIM,
+			&dy, (int32_t) UNIVERSE_DIM,
+			&dz, (int32_t) UNIVERSE_DIM,
+			&r, (int32_t) UNIVERSE_DIM);
+	if (rc)
+		return rc;
+	pthread_mutex_lock(&universe_mutex);
+	rc = update_black_hole(id, timestamp, dx, dy, dz, r);
+	pthread_mutex_unlock(&universe_mutex);
+	return (rc < 0);
+}
+
 static int process_update_planet_packet(void)
 {
 	unsigned char buffer[100];
@@ -6302,6 +6363,9 @@ static void *gameserver_reader(__attribute__((unused)) void *arg)
 			break;
 		case OPCODE_UPDATE_DERELICT:
 			rc = process_update_derelict_packet();
+			break;
+		case OPCODE_UPDATE_BLACK_HOLE:
+			rc = process_update_black_hole_packet();
 			break;
 		case OPCODE_UPDATE_PLANET:
 			rc = process_update_planet_packet();
@@ -7775,6 +7839,9 @@ static void snis_draw_science_guy(GtkWidget *w, GdkGC *gc, struct snis_entity *o
 		case OBJTYPE_PLANET:
 			sng_set_foreground(UI_COLOR(sci_ball_planet));
 			break;
+		case OBJTYPE_BLACK_HOLE:
+			sng_set_foreground(UI_COLOR(sci_ball_black_hole));
+			break;
 		case OBJTYPE_TORPEDO:
 			sng_set_foreground(UI_COLOR(sci_ball_energy));
 			break;
@@ -7833,6 +7900,10 @@ static void snis_draw_science_guy(GtkWidget *w, GdkGC *gc, struct snis_entity *o
 		case OBJTYPE_DERELICT:
 			sng_set_foreground(UI_COLOR(sci_ball_derelict));
 			sprintf(buffer, "%s %s\n", "D",  "???"); 
+			break;
+		case OBJTYPE_BLACK_HOLE:
+			sng_set_foreground(UI_COLOR(sci_ball_black_hole));
+			sprintf(buffer, "%s %s\n", "B",  o->sdata.name);
 			break;
 		case OBJTYPE_PLANET:
 			sng_set_foreground(UI_COLOR(sci_ball_planet));
@@ -7916,6 +7987,9 @@ static void snis_draw_3d_science_guy(GtkWidget *w, GdkGC *gc, struct snis_entity
 		case OBJTYPE_DERELICT:
 			sng_set_foreground(UI_COLOR(sci_ball_asteroid));
 			break;
+		case OBJTYPE_BLACK_HOLE:
+			sng_set_foreground(UI_COLOR(sci_ball_black_hole));
+			break;
 		case OBJTYPE_PLANET:
 			sng_set_foreground(UI_COLOR(sci_ball_planet));
 			break;
@@ -7962,6 +8036,10 @@ static void snis_draw_3d_science_guy(GtkWidget *w, GdkGC *gc, struct snis_entity
 		case OBJTYPE_DERELICT:
 			sng_set_foreground(UI_COLOR(sci_ball_asteroid));
 			sprintf(buffer, "%s %s\n", "A",  "???");
+			break;
+		case OBJTYPE_BLACK_HOLE:
+			sng_set_foreground(UI_COLOR(sci_ball_black_hole));
+			sprintf(buffer, "%s %s\n", "B",  o->sdata.name);
 			break;
 		case OBJTYPE_PLANET:
 			sng_set_foreground(UI_COLOR(sci_ball_planet));
@@ -8955,7 +9033,8 @@ static void draw_all_the_3d_science_guys(GtkWidget *w, struct snis_entity *o, do
 		if (dist < range || go[i].type == OBJTYPE_PLANET ||
 					go[i].type == OBJTYPE_NEBULA ||
 					go[i].type == OBJTYPE_WARPGATE ||
-					go[i].type == OBJTYPE_STARBASE)
+					go[i].type == OBJTYPE_STARBASE ||
+					go[i].type == OBJTYPE_BLACK_HOLE)
 			snis_draw_3d_science_guy(w, gc, &go[i], &x, &y, dist, bw, pwr, range,
 				&go[i] == curr_science_guy, 100.0 * current_zoom / 255.0, nebula_factor);
 
@@ -10815,6 +10894,7 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 		case OBJTYPE_TORPEDO:
 		case OBJTYPE_ASTEROID:
 		case OBJTYPE_PLANET:
+		case OBJTYPE_BLACK_HOLE:
 		case OBJTYPE_STARBASE:
 		case OBJTYPE_WARPGATE:
 		case OBJTYPE_SHIP2:
@@ -10839,6 +10919,13 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 					entity_set_user_data(contact, &go[i]); /* for debug */
 				}
 			} else if (go[i].type == OBJTYPE_PLANET) {
+				contact = add_entity(instrumentecx, low_poly_sphere_mesh,
+							go[i].x, go[i].y, go[i].z, UI_COLOR(nav_entity));
+				if (contact) {
+					set_render_style(contact, science_style);
+					entity_set_user_data(contact, &go[i]);
+				}
+			} else if (go[i].type == OBJTYPE_BLACK_HOLE) {
 				contact = add_entity(instrumentecx, low_poly_sphere_mesh,
 							go[i].x, go[i].y, go[i].z, UI_COLOR(nav_entity));
 				if (contact) {
@@ -10882,6 +10969,10 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 			case OBJTYPE_PLANET:
 				contact_scale = ((255.0 - current_zoom) / 255.0) * 0.0 + 1.0;
 				break;
+			case OBJTYPE_BLACK_HOLE:
+				contact_scale = ((255.0 - current_zoom) / 255.0) * 0.0 + 1.0;
+				contact_scale *= 0.9 + 0.1 * sin(4.0 * (timer % 90) * M_PI / 180.0);
+				break;
 			case OBJTYPE_WARPGATE:
 				contact_scale = ((255.0 - current_zoom) / 255.0) * 4.0 + 1.0;
 				break;
@@ -10914,7 +11005,7 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 
 			/* update the scale based on current scale */
 			if (contact) {
-				if (go[i].type == OBJTYPE_PLANET)
+				if (go[i].type == OBJTYPE_PLANET || go[i].type == OBJTYPE_BLACK_HOLE)
 					update_entity_scale(contact, entity_get_scale(contact) * contact_scale);
 				else
 					update_entity_scale(contact, cam_pos_scale *
@@ -13438,12 +13529,15 @@ static void draw_science_details(GtkWidget *w, GdkGC *gc)
 		return;
 
 	set_renderer(sciecx, WIREFRAME_RENDERER | BLACK_TRIS);
-	if (curr_science_guy->type == OBJTYPE_PLANET)
+	if (curr_science_guy->type == OBJTYPE_PLANET ||
+		curr_science_guy->type == OBJTYPE_BLACK_HOLE)
 		m = low_poly_sphere_mesh;
 	else
 		m = entity_get_mesh(curr_science_guy->entity);
 	angle = (M_PI / 180.0) * (timer % 360);
-	if (curr_science_guy->type == OBJTYPE_STARBASE || curr_science_guy->type == OBJTYPE_PLANET) {
+	if (curr_science_guy->type == OBJTYPE_STARBASE ||
+		curr_science_guy->type == OBJTYPE_PLANET ||
+		curr_science_guy->type == OBJTYPE_BLACK_HOLE) {
 		e = add_entity(sciecx, m, 0.0, -m->radius, 0.0, UI_COLOR(sci_wireframe));
 		quat_init_axis(&orientation, 0.0, 0.0, 1.0, angle);
 	} else {
@@ -13958,6 +14052,9 @@ static void demon_button_create_item(gdouble x, gdouble y, gdouble z)
 		case DEMON_BUTTON_PLANETMODE:
 			item_type = OBJTYPE_PLANET;
 			break;
+		case DEMON_BUTTON_BLACKHOLEMODE:
+			item_type = OBJTYPE_BLACK_HOLE;
+			break;
 		case DEMON_BUTTON_ASTEROIDMODE:
 			item_type = OBJTYPE_ASTEROID;
 			break;
@@ -14232,6 +14329,11 @@ static void debug_draw_object(GtkWidget *w, struct snis_entity *o,
 	case OBJTYPE_STARBASE:
 		sng_set_foreground(UI_COLOR(demon_starbase));
 		sng_draw_circle(0, x, y, 5);
+		break;
+	case OBJTYPE_BLACK_HOLE:
+		sng_set_foreground(UI_COLOR(demon_black_hole));
+		r = ur_to_usersr(o->tsd.black_hole.radius, ux1, ux2);
+		sng_draw_circle(0, x, y, r > 5 ? r : 5);
 		break;
 	case OBJTYPE_PLANET:
 		sng_set_foreground(UI_COLOR(demon_planet));
@@ -14657,6 +14759,8 @@ static void set_demon_button_colors()
 		demon_ui.buttonmode == DEMON_BUTTON_STARBASEMODE ? selected : deselected);
 	snis_button_set_color(demon_ui.demon_planet_button,
 		demon_ui.buttonmode == DEMON_BUTTON_PLANETMODE ? selected : deselected);
+	snis_button_set_color(demon_ui.demon_black_hole_button,
+		demon_ui.buttonmode == DEMON_BUTTON_BLACKHOLEMODE ? selected : deselected);
 	snis_button_set_color(demon_ui.demon_asteroid_button,
 		demon_ui.buttonmode == DEMON_BUTTON_ASTEROIDMODE ? selected : deselected);
 	snis_button_set_color(demon_ui.demon_nebula_button,
@@ -14719,6 +14823,11 @@ static void demon_starbase_button_pressed(void *x)
 static void demon_planet_button_pressed(void *x)
 {
 	demon_modebutton_pressed(DEMON_BUTTON_PLANETMODE);
+}
+
+static void demon_black_hole_button_pressed(void *x)
+{
+	demon_modebutton_pressed(DEMON_BUTTON_BLACKHOLEMODE);
 }
 
 static void demon_asteroid_button_pressed(void *x)
@@ -14903,6 +15012,10 @@ static void init_demon_ui()
 			"PLANET", UI_COLOR(demon_deselected_button),
 			NANO_FONT, demon_planet_button_pressed, NULL);
 	snis_button_set_sound(demon_ui.demon_planet_button, UISND26);
+	demon_ui.demon_black_hole_button = snis_button_init(x, y + dy * n++, txx(70), txy(20),
+			"BLACK HOLE", UI_COLOR(demon_deselected_button),
+			NANO_FONT, demon_black_hole_button_pressed, NULL);
+	snis_button_set_sound(demon_ui.demon_planet_button, UISND26);
 	demon_ui.demon_asteroid_button = snis_button_init(x, y + dy * n++, txx(70), txy(20),
 			"ASTEROID", UI_COLOR(demon_deselected_button),
 			NANO_FONT, demon_asteroid_button_pressed, NULL);
@@ -14976,6 +15089,8 @@ static void init_demon_ui()
 			"CREATE A STARBASE");
 	ui_add_button(demon_ui.demon_planet_button, DISPLAYMODE_DEMON,
 			"CREATE A PLANET");
+	ui_add_button(demon_ui.demon_black_hole_button, DISPLAYMODE_DEMON,
+			"CREATE A BLACK HOLE");
 	ui_add_button(demon_ui.demon_asteroid_button, DISPLAYMODE_DEMON,
 			"CREATE AN ASTEROID");
 	ui_add_button(demon_ui.demon_nebula_button, DISPLAYMODE_DEMON,
@@ -15280,6 +15395,11 @@ static void show_demon_3d(GtkWidget *w)
 			strcpy(label, o->sdata.name);
 			draw_label = 1;
 			break;
+		case OBJTYPE_BLACK_HOLE:
+			color = UI_COLOR(demon_black_hole);
+			strcpy(label, o->sdata.name);
+			draw_label = 1;
+			break;
 		case OBJTYPE_SHIP1:
 			color = MAGENTA;
 			strcpy(label, o->sdata.name);
@@ -15331,6 +15451,13 @@ static void show_demon_3d(GtkWidget *w)
 			e = add_entity(instrumentecx, low_poly_sphere_mesh,  o->x, o->y, o->z, color);
 			if (e) {
 				update_entity_scale(e, o->tsd.planet.radius);
+				entity_set_user_data(e, o);
+			}
+			break;
+		case OBJTYPE_BLACK_HOLE:
+			e = add_entity(instrumentecx, low_poly_sphere_mesh,  o->x, o->y, o->z, color);
+			if (e) {
+				update_entity_scale(e, o->tsd.black_hole.radius * 2.0);
 				entity_set_user_data(e, o);
 			}
 			break;
@@ -16951,6 +17078,13 @@ static int load_static_textures(void)
 	small_block_material.texture_mapped.texture_id = load_texture("textures/spaceplate_small.png");
 	small_block_material.texture_mapped.emit_texture_id = load_texture("textures/spaceplate_small_emit.png");
 
+	material_init_texture_mapped_unlit(&black_hole_material);
+	black_hole_material.billboard_type = MATERIAL_BILLBOARD_TYPE_SPHERICAL;
+	black_hole_material.texture_mapped_unlit.texture_id = load_texture("textures/black_hole.png");
+	black_hole_material.texture_mapped_unlit.do_blend = 1;
+	black_hole_material.texture_mapped_unlit.do_cullface = 0;
+	black_hole_material.texture_mapped_unlit.alpha = 1.0;
+
 	static_textures_loaded = 1;
 
 	mtwist_free(mt);
@@ -18116,6 +18250,7 @@ static void init_meshes()
 	docking_port_mesh[2] = snis_read_model(d, "tetrahedron.stl");
 	nebula_mesh = mesh_fabricate_billboard(2, 2);
 	sun_mesh = mesh_fabricate_billboard(30000, 30000);
+	black_hole_mesh = mesh_fabricate_billboard(1, 1);
 	thrust_animation_mesh = init_thrust_mesh(30, 30, 1.3, 1);
 	warpgate_mesh = snis_read_model(d, "warpgate.stl");
 	warp_core_mesh = snis_read_model(d, "warp-core.stl");
