@@ -13847,6 +13847,15 @@ static void enscript_planet(FILE *f, struct snis_entity *o, int planet)
 			o->tsd.planet.radius, o->tsd.planet.security);
 }
 
+static void enscript_black_hole(FILE *f, struct snis_entity *o, int black_hole)
+{
+	if (black_hole == 1)
+		fprintf(f, "black_hole = {};\n");
+	fprintf(f, "black_hole[%d] = add_black_hole(\"%s\", %lf, %lf, %lf, %lf);\n",
+			black_hole, o->sdata.name, o->x, o->y, o->z,
+			o->tsd.black_hole.radius);
+}
+
 static void enscript_derelict(FILE *f, struct snis_entity *o, int derelict)
 {
 	if (derelict == 1)
@@ -13875,6 +13884,7 @@ static void partially_enscript_game_state(FILE *f)
 	int wormhole = 0;
 	int spacemonster = 0;
 	int planet = 0;
+	int black_hole = 0;
 	int derelict = 0;
 	int cargo_container = 0;
 
@@ -13908,6 +13918,9 @@ static void partially_enscript_game_state(FILE *f)
 			break;
 		case OBJTYPE_PLANET:
 			enscript_planet(f, o, ++planet);
+			break;
+		case OBJTYPE_BLACK_HOLE:
+			enscript_black_hole(f, o, ++black_hole);
 			break;
 		case OBJTYPE_DERELICT:
 			enscript_derelict(f, o, ++derelict);
