@@ -7523,18 +7523,6 @@ static void show_weapons_camera_view(GtkWidget *w)
 	draw_plane_radar(w, o, &camera_orientation, 0.5 * SCREEN_WIDTH, 0.8333 * SCREEN_HEIGHT,
 				0.125 * SCREEN_HEIGHT, XKNOWN_DIM * 0.02);
 
-#if 0
-	/* Draw targeting indicator on main screen */
-	if (o->tsd.ship.ai[0].u.attack.victim_id != -1) {
-		float sx, sy;
-		struct snis_entity *target = lookup_entity_by_id(o->tsd.ship.ai[0].u.attack.victim_id);
-
-		if (target && target->alive && target->entity && entity_onscreen(target->entity)) {
-			entity_get_screen_coords(target->entity, &sx, &sy);
-			draw_targeting_indicator(w, gc, sx, sy, TARGETING_COLOR, 0, 1.0f, 2.0f);
-		}
-	}
-#endif
 	/* Draw science selector indicator on main screen */
 	if (curr_science_guy) {
 		float sx, sy;
@@ -7719,19 +7707,6 @@ static void show_mainscreen(GtkWidget *w)
 		remove_entity(ecx, player_ship);
 	}
 
-#if 0
-	/* Draw targeting indicator on main screen */
-	if (o->tsd.ship.ai[0].u.attack.victim_id != -1) {
-		float sx, sy;
-		struct snis_entity *target = lookup_entity_by_id(o->tsd.ship.ai[0].u.attack.victim_id);
-
-		if (target && target->alive && target->entity &&
-			entity_onscreen(target->entity)) {
-			entity_get_screen_coords(target->entity, &sx, &sy);
-			draw_targeting_indicator(w, gc, sx, sy, TARGETING_COLOR, 0, 1.0f, 2.0f);
-		}
-	}
-#endif
 	/* Draw science selector indicator on main screen */
 	if (curr_science_guy) {
 		float sx, sy;
@@ -7742,32 +7717,6 @@ static void show_mainscreen(GtkWidget *w)
 			draw_targeting_indicator(w, gc, sx, sy, UI_COLOR(main_sci_selection), 0, 1.0f, 2.0f);
 		}
 	}
-
-#if 0
-	/* Debug info */
-	sng_set_foreground(GREEN);
-	for (i = 0; i <= get_entity_count(ecx); i++) {
-		struct entity *e;
-		struct snis_entity *oo;
-		float sx, sy;
-		char buffer[100];
-
-		e = get_entity(ecx, i);
-		oo = entity_get_user_data(e);
-		if (!oo)
-			continue;
-		entity_get_screen_coords(e, &sx, &sy);
-		sprintf(buffer, "%3.1f,%6.1f,%6.1f,%6.1f",
-				oo->heading * 180.0 / M_PI, oo->x, oo->y, oo->z);
-		sng_abs_xy_draw_string(buffer, NANO_FONT, sx + 10, sy);
-	}
-	{
-		char buffer[100];
-		sprintf(buffer, "%3.1f,%6.1f,%6.1f,%6.1f",
-				o->heading * 180.0 / M_PI, o->x, o->y, o->z);
-		sng_abs_xy_draw_string(buffer, NANO_FONT, 0, 10);
-	}
-#endif
 
 	if (o->tsd.ship.view_mode == MAINSCREEN_VIEW_MODE_WEAPONS)
 		show_gunsight(w);
@@ -10121,15 +10070,6 @@ static void draw_orientation_trident(GtkWidget *w, GdkGC *gc, struct snis_entity
 
 }
 
-#if 0
-#define NAV_SCOPE_X 20
-#define NAV_SCOPE_Y 70 
-#define NAV_SCOPE_W 500
-#define NAV_SCOPE_H NAV_SCOPE_W
-#define NAV_SCOPE_R (NAV_SCOPE_H / 2)
-#define NAV_SCOPE_CX (NAV_SCOPE_X + NAV_SCOPE_R)
-#define NAV_SCOPE_CY (NAV_SCOPE_Y + NAV_SCOPE_R)
-#endif
 #define NAV_DATA_X 530 
 #define NAV_DATA_Y 40 
 #define NAV_DATA_W ((SCREEN_WIDTH - 5) - NAV_DATA_X)
@@ -11883,31 +11823,10 @@ static void draw_damcon_robot(GtkWidget *w, struct snis_damcon_entity *o)
 	int x, y;
 	int byteangle = (int) (o->heading * 128.0 / M_PI);
 
-#if 0
-	if (!on_damcon_screen(o, &damcon_robot_spun[byteangle]))
-		return;
-#endif
-
 	x = o->x + damconscreenx0 + damconscreenxdim / 2.0 - *damconscreenx;
 	y = o->y + damconscreeny0 + damconscreenydim / 2.0 - *damconscreeny;
 	sng_set_foreground(UI_COLOR(damcon_robot));
 	sng_draw_vect_obj(&damcon_robot_spun[byteangle], x, y);
-#if 0
-	x = damconx_to_screenx(o->tsd.robot.short_term_goal_x);
-	y = damcony_to_screeny(o->tsd.robot.short_term_goal_y);
-	sng_current_draw_line(x - 5, y, x + 5, y);
-	sng_current_draw_line(x, y - 5, x, y + 5);
-	x = damconx_to_screenx(o->tsd.robot.long_term_goal_x);
-	y = damcony_to_screeny(o->tsd.robot.long_term_goal_y);
-	sng_set_foreground(UI_COLOR(damcon_system));
-	sng_current_draw_line(x - 5, y, x + 5, y);
-	sng_current_draw_line(x, y - 5, x, y + 5);
-	x = damconx_to_screenx(o->tsd.robot.angle_debug_x);
-	y = damcony_to_screeny(o->tsd.robot.angle_debug_y);
-	sng_set_foreground(UI_COLOR(common_red_alert));
-	sng_current_draw_line(x - 5, y, x + 5, y);
-	sng_current_draw_line(x, y - 5, x, y + 5);
-#endif
 }
 
 static void draw_damcon_system(GtkWidget *w, struct snis_damcon_entity *o)
@@ -11938,11 +11857,6 @@ static void draw_damcon_socket_or_part(GtkWidget *w, struct snis_damcon_entity *
 	sng_set_foreground(color);
 	sng_draw_vect_obj(&placeholder_socket, x, y);
 	sng_abs_xy_draw_string(msg, NANO_FONT, x - 10, y);
-#if 0
-	sng_set_foreground(AMBER);
-	snis_draw_line(x, y - 20, x, y + 20);
-	snis_draw_line(x - 20, y, x + 20, y);
-#endif
 }
 
 static void draw_damcon_socket(GtkWidget *w, struct snis_damcon_entity *o)
@@ -12991,15 +12905,6 @@ static void science_mouse_rotate(int x, int y)
 			if (fabs(scaled_dy) < 0.33 && dyi >= 0)
 				dyi += 2;
 
-#if 0
-			sng_set_foreground(UI_COLOR(quit_text));
-			char debug_buffer[100];
-			snprintf(debug_buffer, sizeof(debug_buffer),
-				"scaled x,y: %f,%f or %d,%f - angle: %f - timer: %d", scaled_dx, scaled_dy,
-				(int) dxi, dyi, angle, timer);
-			sng_abs_xy_draw_string(debug_buffer , NANO_FONT, txx(10), txy(70));
-#endif
-
 			/*send the network requests to the server*/
 			if (dxi >= 0)
 				queue_to_server(snis_opcode_pkt("bb", OPCODE_REQUEST_SCIBALL_YAW, (int) dxi));
@@ -13413,17 +13318,6 @@ static void draw_science_data(GtkWidget *w, struct snis_entity *ship, struct sni
 	}
 	y += yinc;
 	sng_abs_xy_draw_string(buffer, TINY_FONT, x, y);
-#if 0
-	sprintf(buffer, "STRENGTH: %hhu", o->sdata.shield_strength);
-	y += yinc;
-	sng_abs_xy_draw_string(w, gd, buffer, TINY_FONT, x, y);
-	sprintf(buffer, "WAVELENGTH: %hhu", o->sdata.shield_wavelength);
-	y += yinc;
-	sng_abs_xy_draw_string(buffer, TINY_FONT, x, y);
-	sprintf(buffer, "WIDTH: %hhu", o->sdata.shield_width);
-	y += yinc;
-	sng_abs_xy_draw_string(buffer, TINY_FONT, x, y);
-#endif
 
 	gx1 = x;
 	gy1 = y + 20 * SCREEN_HEIGHT / 600;
@@ -16486,15 +16380,6 @@ static int main_da_expose(GtkWidget *w, GdkEvent *event, gpointer p)
 
 	sng_set_foreground(WHITE);
 	
-#if 0	
-	for (i = 0; i <= highest_object_number;i++) {
-		if (!game_state.go[i].alive)
-			continue;
-		if (onscreen(&game_state.go[i]))
-			game_state.go[i].draw(&game_state.go[i], main_da); 
-	}
-#endif
-
 	/* show_mouse_debug(); */
 
 	if (warp_limbo_countdown) {
@@ -16928,14 +16813,6 @@ static int read_solarsystem_config(const char *solarsystem_name,
 	*assets = solarsystem_asset_spec_read(path);
 	if (!*assets)
 		return -1;
-#if 0
-	if (planet_material)
-		free(planet_material);
-	planet_material = malloc(sizeof(planet_material[0]) *
-				(*assets)->nplanet_textures * (NPLANETARY_RING_MATERIALS + 1));
-	memset(planet_material, 0, sizeof(planet_material[0]) *
-		(*assets)->nplanet_textures * (NPLANETARY_RING_MATERIALS + 1));
-#endif
 	printf("done\n");
 	fflush(stdout);
 	return 0;
@@ -17127,14 +17004,6 @@ static int load_per_solarsystem_textures()
 			sprintf(path, "solarsystems/%s/%s", solarsystem_name, solarsystem_assets->planet_normalmap[i]);
 			planet_material[i].textured_planet.normalmap_id = load_cubemap_textures(0, path);
 		}
-#if 0
-		int k;
-		for (k = 0; k < NPLANETARY_RING_MATERIALS; k++) {
-			int pm_index = (k + 1) * solarsystem_assets->nplanet_textures + i;
-			planet_material[pm_index] = planet_material[i];
-			planet_material[pm_index].textured_planet.ring_material = &planetary_ring_material[k];
-		}
-#endif
 	}
 	j = 0;
 	for (i = solarsystem_assets->nplanet_textures; i < NPLANET_MATERIALS; i++) {
@@ -17148,11 +17017,6 @@ static int load_per_solarsystem_textures()
 			planet_material[i].textured_planet.ring_material = NULL;
 		j = (j + 1) % solarsystem_assets->nplanet_textures;
 	}
-#if 0
-	fprintf(stderr, "XXXXXXX ----------- planetary_ring_texture id before = %d\n", planetary_ring_texture_id);
-	planetary_ring_texture_id = load_texture("textures/planetary-ring0.png");
-	fprintf(stderr, "XXXXXXX ----------- planetary_ring_texture id after = %d\n", planetary_ring_texture_id);
-#endif
 	per_solarsystem_textures_loaded = 1;
 	return 1;
 }
@@ -18183,14 +18047,6 @@ static void init_meshes()
 
 	for (i = 0; i < nstarbase_models; i++) {
 		char *filename = starbase_metadata[i].model_file;
-#if 0
-		if (i == 0)
-			sprintf(filename, "starbase/starbase.obj");
-		else if (i == 1)
-			sprintf(filename, "starbase%d/starbase%d.obj", i + 1, i + 1);
-		else
-			sprintf(filename, "starbase%d.stl", i + 1);
-#endif
 		printf("reading starbase model %d of %d '%s'\n", i + 1, nstarbase_models, filename);
 		starbase_mesh[i] = snis_read_model(d, filename);
 		mesh_scale(starbase_mesh[i], STARBASE_SCALE_FACTOR);
