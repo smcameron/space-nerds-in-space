@@ -3340,17 +3340,54 @@ delete_it:
 	push_attack_mode(o, eid, 0);
 }
 
+static void update_ship_orientation(struct snis_entity *o);
 static void spacemonster_move(struct snis_entity *o)
 {
 	/* FIXME: make this better */
-	o->vx = cos(o->heading) * 10.0;
-	o->vz = -sin(o->heading) * 10.0;
-	o->tsd.spacemonster.zz =
-		sin(M_PI *((universe_timestamp * 10 + o->id) % 360) / 180.0) * 35.0;
+	float v, dx, dy, dz;
 	set_object_location(o, o->x + o->vx, o->y + o->vy, o->z + o->vz);
-	if (snis_randn(1000) < 50) {
-		o->heading += (snis_randn(40) - 20) * M_PI / 180.0;
-		normalize_angle(&o->heading);
+	switch (o->tsd.spacemonster.mode) {
+	/* TODO: implement the spacemonster brains */
+	case SPACEMONSTER_MODE_REST:
+	case SPACEMONSTER_MODE_CHASE:
+	case SPACEMONSTER_MODE_WANDER:
+	case SPACEMONSTER_MODE_FLEE:
+	default:
+		if (snis_randn(1000) < 50) {
+			random_point_on_sphere(1.0, &dx, &dy, &dz);
+			v = snis_randn(1000) / 1000.0;
+			v = v * MAX_SPACEMONSTER_VELOCITY;
+			o->tsd.spacemonster.dvx = v * dx;
+			o->tsd.spacemonster.dvy = v * dy;
+			o->tsd.spacemonster.dvz = v * dz;
+		}
+	}
+	dx = o->tsd.spacemonster.dvx - o->vx;
+	if (dx > 0.5)
+		dx = 0.5;
+	if (dx < -0.5)
+		dx = -0.5;
+	dy = o->tsd.spacemonster.dvy - o->vy;
+	if (dy > 0.5)
+		dy = 0.5;
+	if (dy < -0.5)
+		dy = -0.5;
+	dz = o->tsd.spacemonster.dvz - o->vz;
+	if (dz > 0.5)
+		dz = 0.5;
+	if (dz < -0.5)
+		dz = -0.5;
+	o->vx += dx;
+	o->vy += dy;
+	o->vz += dz;
+	update_ship_orientation(o);
+
+	/* Move tentacles */
+	if (o->tsd.spacemonster.movement_countdown > 0) {
+		o->tsd.spacemonster.movement_countdown--;
+	} else {
+		o->tsd.spacemonster.movement_countdown = snis_randn(20) + 5; /* 0.5 secs to 2.5 secs */
+		o->tsd.spacemonster.seed = snis_randn(1000);
 	}
 	o->timestamp = universe_timestamp;
 }
@@ -8966,14 +9003,20 @@ static int l_add_random_ship(lua_State *l)
 static int add_spacemonster(double x, double y, double z)
 {
 	int i;
-	double heading;
+	float dx, dy, dz, v;
 
-	heading = degrees_to_radians(0.0 + snis_randn(360)); 
-	i = add_generic_object(x, y, z, 0.0, 0.0, 0.0, heading, OBJTYPE_SPACEMONSTER);
+	i = add_generic_object(x, y, z, 0.0, 0.0, 0.0, 0.0, OBJTYPE_SPACEMONSTER);
 	if (i < 0)
 		return i;
-	go[i].tsd.spacemonster.zz = 0.0;
+	go[i].tsd.spacemonster.seed = snis_randn(1000);
 	go[i].move = spacemonster_move;
+	random_point_on_sphere(1.0, &dx, &dy, &dz);
+	v = snis_randn(1000) / 1000.0;
+	v = v * MAX_SPACEMONSTER_VELOCITY;
+	go[i].vx = v * dx;
+	go[i].vy = v * dy;
+	go[i].vz = v * dz;
+	update_ship_orientation(&go[i]);
 	return i;
 }
 
@@ -18188,10 +18231,12 @@ static void send_update_turret_packet(struct game_client *c,
 static void send_update_spacemonster_packet(struct game_client *c,
 	struct snis_entity *o)
 {
-	pb_queue_to_client(c, snis_opcode_pkt("bwwSSS", OPCODE_UPDATE_SPACEMONSTER, o->id, o->timestamp,
+	pb_queue_to_client(c, snis_opcode_pkt("bwwSSSwQ", OPCODE_UPDATE_SPACEMONSTER, o->id, o->timestamp,
 					o->x, (int32_t) UNIVERSE_DIM,
+					o->y, (int32_t) UNIVERSE_DIM,
 					o->z, (int32_t) UNIVERSE_DIM,
-					o->tsd.spacemonster.zz, (int32_t) UNIVERSE_DIM));
+					o->tsd.spacemonster.seed,
+					&o->orientation));
 }
 
 static int add_new_player(struct game_client *c)

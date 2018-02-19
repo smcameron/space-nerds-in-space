@@ -65,7 +65,7 @@
 #define NEBULA_CLUSTERS 4
 #define NEBULAS_PER_CLUSTER 10
 #define NNEBULA (NEBULA_CLUSTERS * NEBULAS_PER_CLUSTER)
-#define NSPACEMONSTERS 3
+#define NSPACEMONSTERS 2
 #define NWORMHOLE_PAIRS 10
 #define NEBULA_RADIUS 5000
 #define MIN_NEBULA_RADIUS 200
@@ -377,6 +377,7 @@ struct ship_data {
 #define STANDARD_ORBIT_RADIUS_FACTOR (1.1)
 #define MIN_PLAYER_VELOCITY (0.1)
 #define MAX_PLAYER_VELOCITY (30.0)
+#define MAX_SPACEMONSTER_VELOCITY (MAX_PLAYER_VELOCITY * 1.5)
 #define PLAYER_VELOCITY_DAMPING (0.97)
 #define PLAYER_VELOCITY_INCREMENT (1.0)
 	double yaw_velocity, pitch_velocity, roll_velocity;
@@ -640,14 +641,20 @@ struct wormhole_data {
 	double dest_x, dest_y, dest_z;
 };
 
-#define MAX_SPACEMONSTER_SEGMENTS 20
 struct spacemonster_data {
-	double zz;
-	int front;
-	double *x;
-	double *y;
-	double *z;
-	struct entity **entity;
+#define SPACEMONSTER_MODE_REST 0
+#define SPACEMONSTER_MODE_CHASE 1
+#define SPACEMONSTER_MODE_WANDER 2
+#define SPACEMONSTER_MODE_FLEE 3
+	int movement_countdown;
+	uint8_t mode;
+	uint32_t seed;
+	uint32_t interest;
+	float dvx, dvy, dvz; /* desired velocity */
+#define NTENTACLES 5
+#define NTENTACLE_SEGMENTS 7
+	struct entity *tentacle[NTENTACLES][NTENTACLE_SEGMENTS];
+	float tentacle_angle[NTENTACLES][NTENTACLE_SEGMENTS];
 };
 
 struct laserbeam_data {

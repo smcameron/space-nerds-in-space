@@ -488,7 +488,9 @@ MODELS=${MD}/freighter.stl \
 	${MD}/laser_turret.stl \
 	${MD}/laser_turret_base.stl \
 	${MD}/uv_sphere.stl \
-	${MD}/warp-core.stl
+	${MD}/warp-core.stl \
+	${MD}/space_monster_torso.stl \
+	${MD}/space_monster_tentacle_segment.stl
 
 
 MYCFLAGS=-DPREFIX=${PREFIX} ${DEBUGFLAG} ${PROFILEFLAG} ${OPTIMIZEFLAG}\

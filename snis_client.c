@@ -366,6 +366,7 @@ static struct mesh *debris_mesh;
 static struct mesh *debris2_mesh;
 static struct mesh *wormhole_mesh;
 static struct mesh *spacemonster_mesh;
+static struct mesh *tentacle_segment_mesh;
 static struct mesh *laserbeam_mesh;
 static struct mesh *phaser_mesh;
 static struct mesh *laserbeam_nav_mesh;
@@ -1302,32 +1303,6 @@ static int update_laser(uint32_t id, uint32_t timestamp, uint8_t power, double x
 	return 0;
 }
 
-static void init_spacemonster_data(struct snis_entity *o, double y)
-{
-	int i;
-	struct spacemonster_data *sd = &o->tsd.spacemonster;
-
-	sd->zz = y;
-	sd->front = 0;
-	sd->x = malloc(sizeof(*o->tsd.spacemonster.x) *
-					MAX_SPACEMONSTER_SEGMENTS);
-	sd->y = malloc(sizeof(*o->tsd.spacemonster.x) *
-					MAX_SPACEMONSTER_SEGMENTS);
-	sd->z = malloc(sizeof(*o->tsd.spacemonster.x) *
-					MAX_SPACEMONSTER_SEGMENTS);
-	sd->entity = malloc(sizeof(*o->tsd.spacemonster.entity) *
-					MAX_SPACEMONSTER_SEGMENTS);
-	for (i = 0; i < MAX_SPACEMONSTER_SEGMENTS; i++) {
-		sd->x[i] = o->x;
-		sd->y[i] = 0.0;
-		sd->z[i] = o->z;
-		sd->entity[i] = add_entity(ecx, spacemonster_mesh, o->x, 0, o->z,
-						SPACEMONSTER_COLOR);
-		if (sd->entity[i])
-			set_render_style(sd->entity[i], RENDER_SPARKLE);
-	}
-}
-
 static __attribute__((unused)) struct mesh *init_sector_mesh(int extra_extent)
 {
 	int nlines = (2 * extra_extent + 2) * (2 * extra_extent + 2) * 4;
@@ -1371,36 +1346,6 @@ static __attribute__((unused)) struct mesh *init_sector_mesh(int extra_extent)
 		}
 	}
 	return my_mesh;
-}
-
-static void free_spacemonster_data(struct snis_entity *o)
-{
-	int i;
-	struct spacemonster_data *sd = &o->tsd.spacemonster;
-
-	if (o->type != OBJTYPE_SPACEMONSTER)
-		return;
-
-	if (sd->x) {
-		free(sd->x);
-		sd->x = NULL;
-	}
-	if (sd->y) {
-		free(sd->y);
-		sd->y = NULL;
-	}
-	if (sd->z) {
-		free(sd->z);
-		sd->z = NULL;
-	}
-
-	if (sd->entity) {
-		for (i = 0; i < MAX_SPACEMONSTER_SEGMENTS; i++)
-			if (sd->entity[i])
-				remove_entity(ecx, sd->entity[i]);
-		free(sd->entity);
-		sd->entity = NULL;
-	}
 }
 
 static void laserbeam_move(struct snis_entity *o)
@@ -1496,38 +1441,107 @@ static void init_laserbeam_data(struct snis_entity *o)
 	laserbeam_move(o);
 }
 
-static int update_spacemonster(uint32_t id, uint32_t timestamp, double x, double y, double z)
+static void spacemonster_move_tentacles(struct snis_entity *o)
+{
+	int i, j;
+	struct mtwist_state *mt;
+	float initial_angle, delta_angle, desired_angle, new_angle, current_angle;
+	union quat rotation, new_orientation;
+
+	mt = mtwist_init(o->tsd.spacemonster.seed);
+	for (i = 0; i < NTENTACLES; i++) {
+		initial_angle = mtwist_float(mt) * 40.0 * M_PI / 180.0 - 20 * M_PI / 180.0;
+		delta_angle = mtwist_float(mt) * 20.0 * M_PI / 180.0 - 10.0 * M_PI / 180.0;
+		desired_angle = initial_angle;
+		quat_init_axis(&rotation, 1, 0, 0, i * -2.0 * M_PI / NTENTACLES);
+		for (j = 0; j < NTENTACLE_SEGMENTS; j++) {
+			if (o->tsd.spacemonster.tentacle[i][j]) {
+				union quat nq;
+				current_angle = o->tsd.spacemonster.tentacle_angle[i][j];
+				new_angle = current_angle + 0.05 * (desired_angle - current_angle);
+				quat_init_axis(&nq, 0, 1, 0, new_angle);
+				quat_conjugate(&new_orientation, &nq, &rotation);
+				update_entity_orientation(o->tsd.spacemonster.tentacle[i][j], &new_orientation);
+				o->tsd.spacemonster.tentacle_angle[i][j] = new_angle;
+			}
+			desired_angle = desired_angle + delta_angle;
+		}
+	}
+	mtwist_free(mt);
+}
+
+static void init_spacemonster_data(struct snis_entity *o)
+{
+	int i, j;
+	struct entity *parent;
+	float shrinkage = 0.98;
+	union quat orientation, new_orientation;
+	float angle, y, z;
+	union quat rotation;
+
+	quat_init_axis(&orientation, 0, 1, 0, -10.0 * M_PI / 180.0);
+	quat_init_axis(&rotation, 1, 0, 0, -2.0 * M_PI / NTENTACLES);
+
+	for (i = 0; i < NTENTACLES; i++) {
+		angle = i * (2.0 * M_PI / NTENTACLES);
+		parent = o->entity;
+		float tentacle_length = 40.0;
+		float tentacle_scale = 1.1;
+		for (j = 0; j < NTENTACLE_SEGMENTS; j++) {
+			struct entity **e = &o->tsd.spacemonster.tentacle[i][j];
+			o->tsd.spacemonster.tentacle_angle[i][j] = -5.0 * M_PI / 180.0;
+			if (j == 0) {
+				y = 20.0 * sin(angle);
+				z = 20.0 * cos(angle);
+			} else {
+				y = 0.0;
+				z = 0.0;
+			}
+			*e = add_entity(ecx, tentacle_segment_mesh,
+				1.9 * tentacle_length, y, z, SPACEMONSTER_COLOR);
+			if (*e) {
+				update_entity_orientation(*e, &orientation);
+				update_entity_parent(ecx, *e, parent);
+				update_entity_scale(*e, tentacle_scale);
+				parent = *e;
+			} else {
+				break;
+			}
+			tentacle_length *= shrinkage;
+			tentacle_scale *= shrinkage;
+		}
+		quat_conjugate(&new_orientation, &orientation, &rotation);
+		orientation = new_orientation;
+	}
+}
+
+static int update_spacemonster(uint32_t id, uint32_t timestamp, double x, double y, double z,
+				uint32_t seed, union quat *orientation)
 {
 	int i;
 	struct entity *e;
 
 	i = lookup_object_by_id(id);
 	if (i < 0) {
-		e = add_entity(ecx, spacemonster_mesh, x, 0, z, SPACEMONSTER_COLOR);
+		e = add_entity(ecx, spacemonster_mesh, x, y, z, SPACEMONSTER_COLOR);
 		if (e)
 			set_render_style(e, RENDER_SPARKLE);
-		i = add_generic_object(id, timestamp, x, 0, z, 0, 0, 0,
+		/* initial orientation is identity quat to make setting up tentacles easier */
+		i = add_generic_object(id, timestamp, x, y, z, 0, 0, 0,
 				&identity_quat, OBJTYPE_SPACEMONSTER, 1, e);
 		if (i < 0)
 			return i;
 		go[i].entity = e;
-		init_spacemonster_data(&go[i], y);
+		go[i].tsd.spacemonster.seed = seed;
+		go[i].move = spacemonster_move_tentacles;
+		init_spacemonster_data(&go[i]);
+		/* Now update the orientation */
+		update_generic_object(i, timestamp, x, y, z, 0, 0, 0, orientation, 1);
 	} else {
-		struct spacemonster_data *sd;
-		int n;
-
-		update_generic_object(i, timestamp, x, 0, z, 0, 0, 0, &identity_quat, 1);
+		update_generic_object(i, timestamp, x, y, z, 0, 0, 0, orientation, 1);
 		if (go[i].entity)
 			update_entity_pos(go[i].entity, x, y, z);
-		sd = &go[i].tsd.spacemonster;
-		sd->zz = y;
-		n = (sd->front + 1) % MAX_SPACEMONSTER_SEGMENTS;
-		sd->front = n;
-		sd->x[n] = x;
-		sd->y[n] = y;
-		sd->z[n] = z;
-		if (sd->entity[sd->front])
-			update_entity_pos(sd->entity[sd->front], x, y, z);
+		go[i].tsd.spacemonster.seed = seed;
 	}
 	return 0;
 }
@@ -2453,6 +2467,10 @@ static void move_objects(void)
 		case OBJTYPE_WARPGATE:
 		case OBJTYPE_DOCKING_PORT:
 			move_object(timestamp, o, &interpolate_oriented_object);
+			break;
+		case OBJTYPE_SPACEMONSTER:
+			move_object(timestamp, o, &interpolate_oriented_object);
+			spacemonster_move_tentacles(o);
 			break;
 		case OBJTYPE_BLOCK:
 			move_object(timestamp, o, &interpolate_oriented_object);
@@ -4394,18 +4412,20 @@ static int process_update_laser_packet(void)
 static int process_update_spacemonster(void)
 {
 	unsigned char buffer[100];
-	uint32_t id, timestamp;
+	uint32_t id, timestamp, seed;
 	double dx, dy, dz;
 	int rc;
+	union quat orientation;
 
 	assert(sizeof(buffer) > sizeof(struct update_spacemonster_packet) - sizeof(uint8_t));
-	rc = read_and_unpack_buffer(buffer, "wwSSS", &id, &timestamp,
-				&dx, (int32_t) UNIVERSE_DIM, &dy, (int32_t) UNIVERSE_DIM,
-				&dz, (int32_t) UNIVERSE_DIM);
+	rc = read_and_unpack_buffer(buffer, "wwSSSwQ", &id, &timestamp,
+				&dx, (int32_t) UNIVERSE_DIM,
+				&dy, (int32_t) UNIVERSE_DIM,
+				&dz, (int32_t) UNIVERSE_DIM, &seed, &orientation);
 	if (rc != 0)
 		return rc;
 	pthread_mutex_lock(&universe_mutex);
-	rc = update_spacemonster(id, timestamp, dx, dy, dz);
+	rc = update_spacemonster(id, timestamp, dx, dy, dz, seed, &orientation);
 	pthread_mutex_unlock(&universe_mutex);
 	return (rc < 0);
 }
@@ -4796,7 +4816,6 @@ static void delete_object(uint32_t id)
 	if (go[i].type == OBJTYPE_TURRET && go[i].tsd.turret.turret_base_entity)
 		remove_entity(ecx, go[i].tsd.turret.turret_base_entity);
 	go[i].entity = NULL;
-	free_spacemonster_data(&go[i]);
 	if (go[i].type == OBJTYPE_LASERBEAM || go[i].type == OBJTYPE_TRACTORBEAM) {
 		if (go[i].tsd.laserbeam.laserflash_entity) {
 			remove_entity(ecx, go[i].tsd.laserbeam.laserflash_entity);
@@ -4817,7 +4836,6 @@ static void delete_all_objects(void)
 		go[i].alive = 0;
 		remove_entity(ecx, go[i].entity);
 		go[i].entity = NULL;
-		free_spacemonster_data(&go[i]);
 		go[i].id = -1;
 		snis_object_pool_free_object(pool, i);
 	}
@@ -15434,6 +15452,9 @@ static void show_demon_3d(GtkWidget *w)
 		case OBJTYPE_WARP_CORE:
 			color = WARP_CORE_COLOR;
 			break;
+		case OBJTYPE_SPACEMONSTER:
+			color = MAGENTA;
+			break;
 		default:
 			color = MAGENTA;
 			break;
@@ -15468,6 +15489,7 @@ static void show_demon_3d(GtkWidget *w)
 		case OBJTYPE_LASER:
 		case OBJTYPE_WARPGATE:
 		case OBJTYPE_TORPEDO:
+		case OBJTYPE_SPACEMONSTER:
 		case OBJTYPE_WARP_CORE:
 			if (!o->entity)
 				break;
@@ -18193,8 +18215,9 @@ static void init_meshes()
 #else
 	mesh_scale(wormhole_mesh, 3.0f);
 #endif
-	spacemonster_mesh = snis_read_model(d, "spacemonster.stl");
-	spacemonster_mesh->geometry_mode = MESH_GEOMETRY_POINTS;
+	spacemonster_mesh = snis_read_model(d, "space_monster_torso.stl");
+	tentacle_segment_mesh = snis_read_model(d, "space_monster_tentacle_segment.stl");
+
 	laserbeam_nav_mesh = snis_read_model(d, "long-triangular-prism.stl");
 #ifndef WITHOUTOPENGL
 	laserbeam_mesh = mesh_fabricate_billboard(1.0, 1.0);

@@ -163,7 +163,7 @@ int snis_opcode_def_init(void)
 	rc |= init_opcode_def(OPCODE_MAINSCREEN_VIEW_MODE, "bRb");
 	rc |= init_opcode_def(OPCODE_UPDATE_WORMHOLE, "bwwSSS");
 	rc |= init_opcode_def(OPCODE_WORMHOLE_LIMBO, "bh");
-	rc |= init_opcode_def(OPCODE_UPDATE_SPACEMONSTER, "bwwSSS");
+	rc |= init_opcode_def(OPCODE_UPDATE_SPACEMONSTER, "bwwSSSwQ");
 	rc |= init_opcode_def(OPCODE_REQUEST_WEAPZOOM, "bwb");
 	rc |= init_opcode_def(OPCODE_REQUEST_REDALERT, "bb");
 	rc |= init_opcode_def(OPCODE_UPDATE_POWER_DATA, "n/a");

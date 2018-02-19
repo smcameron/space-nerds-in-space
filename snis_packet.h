@@ -430,6 +430,7 @@ struct update_spacemonster_packet {
 	uint32_t id;
 	uint32_t timestamp;
 	uint32_t x, y, z;
+	uint16_t orientation[4]; /* encoded orientation quaternion */
 };
 
 struct request_torpedo_packet {
