@@ -175,20 +175,15 @@ void ui_element_list_button_press(struct ui_element_list *list, int x, int y)
 			 * button action's focus setting.
 			 */
 			if (e->inside_fn) {
-				fprintf(stderr, "CHECKING INSIDE....\n");
 				hit = e->inside_fn(e->element, x, y);
 				if (hit) {
-					fprintf(stderr, "SETTING FOCUS 1\n");
 					ui_set_focus(list, e, 1);
-					fprintf(stderr, "TRIGGERING BUTTON 1\n");
 					(void) e->button_press(e->element, x, y);
 					break;
 				}
 			} else {
-					fprintf(stderr, "MAYBE TRIGGERING BUTTON 2\n");
 				hit = e->button_press(e->element, x, y);
 				if (hit) {
-					fprintf(stderr, "SETTING FOCUS 2\n");
 					ui_set_focus(list, e, 1);
 					break;
 				}
