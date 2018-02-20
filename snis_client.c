@@ -5152,6 +5152,13 @@ static struct comms_ui {
 	struct button *rts_main_planet_button;
 	struct button *rts_order_unit_button[NUM_RTS_UNIT_TYPES];
 	struct button *rts_order_command_button[NUM_RTS_ORDER_TYPES];
+	struct button *hail_button;
+	struct button *channel_button;
+	struct button *manifest_button;
+	struct button *computer_button;
+	struct button *eject_button;
+	struct button *help_button;
+	struct button *about_button;
 #define FLEET_BUTTON_COLS 9
 #define FLEET_BUTTON_ROWS 10
 	struct button *fleet_unit_button[FLEET_BUTTON_COLS][FLEET_BUTTON_ROWS];
@@ -12241,6 +12248,60 @@ static void comms_screen_button_pressed(void *x)
 	return;
 }
 
+static void comms_hail_button_pressed(__attribute__((unused)) void *x)
+{
+	snis_text_input_box_set_contents(comms_ui.comms_input, "/HAIL ");
+	ui_set_focus(uiobjs, (struct ui_element *) comms_ui.comms_input, 1);
+	return;
+}
+
+static void comms_channel_button_pressed(__attribute__((unused)) void *x)
+{
+	snis_text_input_box_set_contents(comms_ui.comms_input, "/CHANNEL ");
+	ui_set_focus(uiobjs, (struct ui_element *) comms_ui.comms_input, 1);
+	return;
+}
+
+static void comms_transmit_button_pressed(void *x);
+
+static void comms_manifest_button_pressed(__attribute__((unused)) void *x)
+{
+	snis_text_input_box_set_contents(comms_ui.comms_input, "/MANIFEST");
+	ui_set_focus(uiobjs, (struct ui_element *) comms_ui.comms_input, 1);
+	comms_transmit_button_pressed(NULL);
+	return;
+}
+
+static void comms_computer_button_pressed(__attribute__((unused)) void *x)
+{
+	snis_text_input_box_set_contents(comms_ui.comms_input, "/COMPUTER ");
+	ui_set_focus(uiobjs, (struct ui_element *) comms_ui.comms_input, 1);
+	return;
+}
+
+static void comms_eject_button_pressed(__attribute__((unused)) void *x)
+{
+	snis_text_input_box_set_contents(comms_ui.comms_input, "/EJECT ");
+	ui_set_focus(uiobjs, (struct ui_element *) comms_ui.comms_input, 1);
+	return;
+}
+
+static void comms_help_button_pressed(__attribute__((unused)) void *x)
+{
+	snis_text_input_box_set_contents(comms_ui.comms_input, "/HELP");
+	ui_set_focus(uiobjs, (struct ui_element *) comms_ui.comms_input, 1);
+	comms_transmit_button_pressed(NULL);
+	return;
+}
+
+static void comms_about_button_pressed(__attribute__((unused)) void *x)
+{
+	snis_text_input_box_set_contents(comms_ui.comms_input, "/ABOUT");
+	ui_set_focus(uiobjs, (struct ui_element *) comms_ui.comms_input, 1);
+	comms_transmit_button_pressed(NULL);
+	return;
+}
+
 static void comms_screen_red_alert_pressed(void *x)
 {
 	unsigned char new_alert_mode;
@@ -12480,8 +12541,8 @@ static void comms_fleet_ship_button_pressed(__attribute__((unused)) void *x)
 static void init_comms_ui(void)
 {
 	int i, j;
-	int x = txx(200);
-	int y = txy(20);
+	int x = txx(140);
+	int y = txy(5);
 	int bw = txx(70);
 	int bh = txy(25);
 	int button_color = UI_COLOR(comms_button);
@@ -12515,6 +12576,36 @@ static void init_comms_ui(void)
 	comms_ui.main_onscreen_button = snis_button_init(x, y, bw, bh, "MAIN", button_color,
 			NANO_FONT, comms_screen_button_pressed, (void *) 6);
 	snis_button_set_sound(comms_ui.main_onscreen_button, UISND15);
+	x = txx(140);
+	y = txy(30);
+	comms_ui.hail_button = snis_button_init(x, y, bw, bh, "/HAIL", button_color,
+			NANO_FONT, comms_hail_button_pressed, (void *) 0);
+	snis_button_set_sound(comms_ui.hail_button, UISND15);
+	x += bw;
+	comms_ui.channel_button = snis_button_init(x, y, bw, bh, "/CHANNEL", button_color,
+			NANO_FONT, comms_channel_button_pressed, (void *) 0);
+	snis_button_set_sound(comms_ui.channel_button, UISND15);
+	x += bw;
+	comms_ui.manifest_button = snis_button_init(x, y, bw, bh, "/MANIFEST", button_color,
+			NANO_FONT, comms_manifest_button_pressed, (void *) 0);
+	snis_button_set_sound(comms_ui.manifest_button, UISND15);
+	x += bw;
+	comms_ui.computer_button = snis_button_init(x, y, bw, bh, "/COMPUTER", button_color,
+			NANO_FONT, comms_computer_button_pressed, (void *) 0);
+	snis_button_set_sound(comms_ui.computer_button, UISND15);
+	x += bw;
+	comms_ui.eject_button = snis_button_init(x, y, bw, bh, "/EJECT", button_color,
+			NANO_FONT, comms_eject_button_pressed, (void *) 0);
+	snis_button_set_sound(comms_ui.eject_button, UISND15);
+	x += bw;
+	comms_ui.help_button = snis_button_init(x, y, bw, bh, "/HELP", button_color,
+			NANO_FONT, comms_help_button_pressed, (void *) 0);
+	snis_button_set_sound(comms_ui.help_button, UISND15);
+	x += bw;
+	comms_ui.about_button = snis_button_init(x, y, bw, bh, "/ABOUT", button_color,
+			NANO_FONT, comms_about_button_pressed, (void *) 0);
+	snis_button_set_sound(comms_ui.about_button, UISND15);
+
 	x = SCREEN_WIDTH - txx(150);
 	y = SCREEN_HEIGHT - txy(90);
 	comms_ui.red_alert_button = snis_button_init(x, y, -1, bh, "RED ALERT", red_alert_color,
@@ -12621,6 +12712,20 @@ static void init_comms_ui(void)
 			"PROJECT SCIENCE SCREEN ON THE MAIN VIEW");
 	ui_add_button(comms_ui.main_onscreen_button, DISPLAYMODE_COMMS,
 			"PROJECT MAIN SCREEN ON THE MAIN VIEW");
+	ui_add_button(comms_ui.hail_button, DISPLAYMODE_COMMS,
+			"HAIL ANOTHER SHIP OR STARBASE BY NAME");
+	ui_add_button(comms_ui.channel_button, DISPLAYMODE_COMMS,
+			"SET THE CHANNEL NUMBER ON WHICH TO XMIT/RECV");
+	ui_add_button(comms_ui.manifest_button, DISPLAYMODE_COMMS,
+			"SHOW SHIP'S MANIFEST");
+	ui_add_button(comms_ui.computer_button, DISPLAYMODE_COMMS,
+			"COMMAND THE SHIP'S COMPUTER");
+	ui_add_button(comms_ui.eject_button, DISPLAYMODE_COMMS,
+			"EJECT CONTENTS OF ONE OF THE SHIPS CARGO BAYS");
+	ui_add_button(comms_ui.help_button, DISPLAYMODE_COMMS,
+			"SHOW HELP SCREEN FOR COMMS TERMINAL");
+	ui_add_button(comms_ui.about_button, DISPLAYMODE_COMMS,
+			"SHOW VERSION INFO ABOUT SPACE NERDS IN SPACE");
 	ui_add_button(comms_ui.red_alert_button, DISPLAYMODE_COMMS,
 			"ACTIVATE RED ALERT ALARM");
 	ui_add_button(comms_ui.mainscreen_comms, DISPLAYMODE_COMMS,
