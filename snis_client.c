@@ -12248,24 +12248,17 @@ static void comms_screen_button_pressed(void *x)
 	return;
 }
 
-static void set_comms_input_focus(void)
-{
-	struct ui_element *uie = widget_to_ui_element(uiobjs, comms_ui.comms_input);
-	if (uie)
-		ui_set_focus(uiobjs, uie, 1);
-}
-
 static void comms_hail_button_pressed(__attribute__((unused)) void *x)
 {
 	snis_text_input_box_set_contents(comms_ui.comms_input, "/HAIL ");
-	set_comms_input_focus();
+	ui_set_widget_focus(uiobjs, comms_ui.comms_input);
 	return;
 }
 
 static void comms_channel_button_pressed(__attribute__((unused)) void *x)
 {
 	snis_text_input_box_set_contents(comms_ui.comms_input, "/CHANNEL ");
-	set_comms_input_focus();
+	ui_set_widget_focus(uiobjs, comms_ui.comms_input);
 	return;
 }
 
@@ -12274,7 +12267,7 @@ static void comms_transmit_button_pressed(void *x);
 static void comms_manifest_button_pressed(__attribute__((unused)) void *x)
 {
 	snis_text_input_box_set_contents(comms_ui.comms_input, "/MANIFEST");
-	set_comms_input_focus();
+	ui_set_widget_focus(uiobjs, comms_ui.comms_input);
 	comms_transmit_button_pressed(NULL);
 	return;
 }
@@ -12282,21 +12275,21 @@ static void comms_manifest_button_pressed(__attribute__((unused)) void *x)
 static void comms_computer_button_pressed(__attribute__((unused)) void *x)
 {
 	snis_text_input_box_set_contents(comms_ui.comms_input, "/COMPUTER ");
-	set_comms_input_focus();
+	ui_set_widget_focus(uiobjs, comms_ui.comms_input);
 	return;
 }
 
 static void comms_eject_button_pressed(__attribute__((unused)) void *x)
 {
 	snis_text_input_box_set_contents(comms_ui.comms_input, "/EJECT ");
-	set_comms_input_focus();
+	ui_set_widget_focus(uiobjs, comms_ui.comms_input);
 	return;
 }
 
 static void comms_help_button_pressed(__attribute__((unused)) void *x)
 {
 	snis_text_input_box_set_contents(comms_ui.comms_input, "/HELP");
-	set_comms_input_focus();
+	ui_set_widget_focus(uiobjs, comms_ui.comms_input);
 	comms_transmit_button_pressed(NULL);
 	return;
 }
@@ -12305,7 +12298,7 @@ static void comms_about_button_pressed(__attribute__((unused)) void *x)
 {
 	snis_text_input_box_set_contents(comms_ui.comms_input, "/ABOUT");
 	comms_transmit_button_pressed(NULL);
-	set_comms_input_focus();
+	ui_set_widget_focus(uiobjs, comms_ui.comms_input);
 	return;
 }
 

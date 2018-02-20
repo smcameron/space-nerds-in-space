@@ -35,6 +35,7 @@ GLOBAL void ui_element_list_button_press(struct ui_element_list *list, int x, in
 GLOBAL void ui_element_set_focus_callback(struct ui_element *e,
 						ui_element_set_focus_function set_focus);
 GLOBAL void ui_set_focus(struct ui_element_list *list, struct ui_element *e, int has_focus);
+GLOBAL void ui_set_widget_focus(struct ui_element_list *list, void *widget);
 GLOBAL void ui_element_get_keystrokes(struct ui_element *e, 
 				ui_element_keypress_function keypress_fn,
 				ui_element_keypress_function keyrelease_fn);

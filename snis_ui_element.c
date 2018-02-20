@@ -323,6 +323,13 @@ struct ui_element *widget_to_ui_element(struct ui_element_list *list, void *widg
 	return NULL;
 }
 
+void ui_set_widget_focus(struct ui_element_list *list, void *widget)
+{
+	struct ui_element *uie = widget_to_ui_element(list, widget);
+	if (uie)
+		ui_set_focus(list, uie, 1);
+}
+
 void ui_set_tooltip_drawing_function(ui_tooltip_drawing_function f)
 {
 	draw_tooltip = f;
