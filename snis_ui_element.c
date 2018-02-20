@@ -169,10 +169,29 @@ void ui_element_list_button_press(struct ui_element_list *list, int x, int y)
 	for (i = list; i != NULL; i = i->next) {
 		e = i->element;
 		if (e->button_press && e->active_displaymode == *e->displaymode && !e->hidden) {
-			hit = e->button_press(e->element, x, y);
-			if (hit) {
-				ui_set_focus(list, e, 1);
-				break;
+			/* If we have the inside_fn, use it so that we can set the focus before
+			 * triggering the button action in case the button action wants to set the
+			 * focus, otherwise, if we set the focus afterwards, it will undo the
+			 * button action's focus setting.
+			 */
+			if (e->inside_fn) {
+				fprintf(stderr, "CHECKING INSIDE....\n");
+				hit = e->inside_fn(e->element, x, y);
+				if (hit) {
+					fprintf(stderr, "SETTING FOCUS 1\n");
+					ui_set_focus(list, e, 1);
+					fprintf(stderr, "TRIGGERING BUTTON 1\n");
+					(void) e->button_press(e->element, x, y);
+					break;
+				}
+			} else {
+					fprintf(stderr, "MAYBE TRIGGERING BUTTON 2\n");
+				hit = e->button_press(e->element, x, y);
+				if (hit) {
+					fprintf(stderr, "SETTING FOCUS 2\n");
+					ui_set_focus(list, e, 1);
+					break;
+				}
 			}
 		}
 	}

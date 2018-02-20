@@ -12248,17 +12248,24 @@ static void comms_screen_button_pressed(void *x)
 	return;
 }
 
+static void set_comms_input_focus(void)
+{
+	struct ui_element *uie = widget_to_ui_element(uiobjs, comms_ui.comms_input);
+	if (uie)
+		ui_set_focus(uiobjs, uie, 1);
+}
+
 static void comms_hail_button_pressed(__attribute__((unused)) void *x)
 {
 	snis_text_input_box_set_contents(comms_ui.comms_input, "/HAIL ");
-	ui_set_focus(uiobjs, (struct ui_element *) comms_ui.comms_input, 1);
+	set_comms_input_focus();
 	return;
 }
 
 static void comms_channel_button_pressed(__attribute__((unused)) void *x)
 {
 	snis_text_input_box_set_contents(comms_ui.comms_input, "/CHANNEL ");
-	ui_set_focus(uiobjs, (struct ui_element *) comms_ui.comms_input, 1);
+	set_comms_input_focus();
 	return;
 }
 
@@ -12267,7 +12274,7 @@ static void comms_transmit_button_pressed(void *x);
 static void comms_manifest_button_pressed(__attribute__((unused)) void *x)
 {
 	snis_text_input_box_set_contents(comms_ui.comms_input, "/MANIFEST");
-	ui_set_focus(uiobjs, (struct ui_element *) comms_ui.comms_input, 1);
+	set_comms_input_focus();
 	comms_transmit_button_pressed(NULL);
 	return;
 }
@@ -12275,21 +12282,21 @@ static void comms_manifest_button_pressed(__attribute__((unused)) void *x)
 static void comms_computer_button_pressed(__attribute__((unused)) void *x)
 {
 	snis_text_input_box_set_contents(comms_ui.comms_input, "/COMPUTER ");
-	ui_set_focus(uiobjs, (struct ui_element *) comms_ui.comms_input, 1);
+	set_comms_input_focus();
 	return;
 }
 
 static void comms_eject_button_pressed(__attribute__((unused)) void *x)
 {
 	snis_text_input_box_set_contents(comms_ui.comms_input, "/EJECT ");
-	ui_set_focus(uiobjs, (struct ui_element *) comms_ui.comms_input, 1);
+	set_comms_input_focus();
 	return;
 }
 
 static void comms_help_button_pressed(__attribute__((unused)) void *x)
 {
 	snis_text_input_box_set_contents(comms_ui.comms_input, "/HELP");
-	ui_set_focus(uiobjs, (struct ui_element *) comms_ui.comms_input, 1);
+	set_comms_input_focus();
 	comms_transmit_button_pressed(NULL);
 	return;
 }
@@ -12297,8 +12304,8 @@ static void comms_help_button_pressed(__attribute__((unused)) void *x)
 static void comms_about_button_pressed(__attribute__((unused)) void *x)
 {
 	snis_text_input_box_set_contents(comms_ui.comms_input, "/ABOUT");
-	ui_set_focus(uiobjs, (struct ui_element *) comms_ui.comms_input, 1);
 	comms_transmit_button_pressed(NULL);
+	set_comms_input_focus();
 	return;
 }
 
