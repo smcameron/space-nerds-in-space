@@ -49,15 +49,15 @@ void mesh_distort_helper(struct mesh *m, float distortion)
 	int i;
 
 	for (i = 0; i < m->nvertices; i++) {
-		float dx, dy, dz;
-
-		dx = (float) snis_randn(1000) / 1000.0 * distortion - 0.5;
-		dy = (float) snis_randn(1000) / 1000.0 * distortion - 0.5;
-		dz = (float) snis_randn(1000) / 1000.0 * distortion - 0.5;
-
-		m->v[i].x += m->v[i].x * dx;
-		m->v[i].y += m->v[i].y * dy;
-		m->v[i].z += m->v[i].z * dz;
+		float n = 2.0 * (0.001 * snis_randn(1000) - 0.5);
+		union vec3 v;
+		v.v.x = m->v[i].x;
+		v.v.y = m->v[i].y;
+		v.v.z = m->v[i].z;
+		vec3_mul_self(&v, 1.0 + n * distortion);
+		m->v[i].x = v.v.x;
+		m->v[i].y = v.v.y;
+		m->v[i].z = v.v.z;
 	}
 	m->radius = mesh_compute_radius(m);
 	mesh_set_flat_shading_vertex_normals(m);

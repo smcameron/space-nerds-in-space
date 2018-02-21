@@ -18196,7 +18196,7 @@ static void init_meshes()
 			sprintf(filename, "asteroid%d.stl", i + 1);
 		printf("reading '%s'\n", filename);
 		asteroid_mesh[i] = snis_read_model(d, filename);
-		mesh_distort(asteroid_mesh[i], 0.05);
+		mesh_distort(asteroid_mesh[i], 0.15);
 		mesh_set_average_vertex_normals(asteroid_mesh[i]);
 		mesh_graph_dev_init(asteroid_mesh[i]);
 		printf("zzz radius %d = %f\n", i, mesh_compute_radius(asteroid_mesh[i]));
