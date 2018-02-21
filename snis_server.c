@@ -11816,6 +11816,8 @@ static void science_select_target(struct game_client *c, uint8_t selection_type,
 	if (selection_type == OPCODE_SCI_SELECT_TARGET_TYPE_OBJECT) {
 		bridgelist[c->bridge].selected_waypoint = -1;
 		bridgelist[c->bridge].science_selection = id;
+		schedule_callback2(event_callback, &callback_schedule,
+			"object-scanned-event", (double) c->shipid, (double) id);
 	}
 	if (selection_type == OPCODE_SCI_SELECT_TARGET_TYPE_WAYPOINT) {
 		if (id < bridgelist[c->bridge].nwaypoints || id == (uint32_t) -1) {

@@ -126,6 +126,10 @@ EVENT TYPES in snis:
 	"object-hit-event"
 		arguments: object id of the thing that was hit by laser or torpedo
 		object id of the thing that fired the laser or torpedo
+	"object-scanned-event"
+		arguments: object id of the player ship and object id of the object
+		scanned. The player must actually select the item for this event to
+		be triggered.
 
 Functions which you may call from lua: 
 
