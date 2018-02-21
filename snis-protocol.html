@@ -242,8 +242,8 @@ An authoritative list of opcodes may be found in snis_packet.h
 <tr><td>OPCODE_ID_CLIENT_SHIP</td><td>	106</td></tr>
 <tr><td>OPCODE_UPDATE_ASTEROID</td><td>	107</td></tr>
 <tr><td>OPCODE_REQUEST_YAW</td><td>	108</td></tr>
-<tr><td>not used</td><td>	109</td></tr>
-<tr><td>not used</td><td>	110</td></tr>
+<tr><td>OPCODE_UPDATE_BLACK_HOLE</td><td>	109</td></tr>
+<tr><td>OPCODE_UPDATE_SCI_SELECTION</td><td>	110</td></tr>
 <tr><td>OPCODE_REQUEST_TORPEDO</td><td>	111</td></tr>
 <tr><td>OPCODE_DELETE_OBJECT</td><td>    112</td></tr>
 <tr><td>OPCODE_UPDATE_EXPLOSION</td><td> 113</td></tr>
@@ -519,6 +519,29 @@ An authoritative list of opcodes may be found in snis_packet.h
 <tr><td>Offset</td><td>Data Type</td><td>Value</td><td>Scale</td></tr>
 <tr><td>0</td><td>b</td><td>108</td></tr>
 <tr><td>1</td><td>b</td><td>Yaw Code</td></tr>
+</table>
+
+<h4>109 Update Black Hole</h4> (Server to Client)
+
+<p align=center><table border=1, width=60%>
+<tr><td>Offset</td><td>Data Type</td><td>Value</td><td>Scale</td></tr>
+<tr><td>0</td><td>b</td><td>109</td></tr>
+<tr><td>1</td><td>w</td><td>Object ID</td></tr>
+<tr><td>5</td><td>w</td><td>Timestamp</td></tr>
+<tr><td>9</td><td>S</td><td>x</td><td>UNIVERSE_DIM</td></tr>
+<tr><td>13</td><td>S</td><td>y</td><td>UNIVERSE_DIM</td></tr>
+<tr><td>17</td><td>S</td><td>z</td><td>UNIVERSE_DIM</td></tr>
+<tr><td>21</td><td>S</td><td>radius</td><td>UNIVERSE_DIM</td></tr>
+</table>
+
+<h4>110 Update Science Text</h4> (Server to Client)
+
+<p align=center><table border=1, width=60%>
+<tr><td>Offset</td><td>Data Type</td><td>Value</td><td>Scale</td></tr>
+<tr><td>0</td><td>b</td><td>110</td></tr>
+<tr><td>1</td><td>w</td><td>Object ID</td></tr>
+<tr><td>5</td><td>h</td><td>Length (range: 1 - 256)</td></tr>
+<tr><td>7</td><td>r</td><td>Raw string of length Length</td></tr>
 </table>
 
 <h4>111 Request Torpedo</h4> (Client to Server)

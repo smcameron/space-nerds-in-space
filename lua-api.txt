@@ -757,6 +757,14 @@ add_turrets_to_block_face(parent_id, face, rows, cols)
 	block = add_block(-1, 1000, 1000, 1000, 500, 500, 500, 1, 0, 0, 45 * 3.1415927 / 180.0, 0);
 	add_turrets_to_block_face(block, 1, 2, 3);
 
+attach_science_text(id, text)
+	Adds a string of up to 256 characters to the object with the specified ID. This text
+	will be displayed on the science screen when the object is scanned. This allows for
+	scenarios to inject arbitrary (fictional) content into the game via the science console.
+	For example, you might attach "This asteroid contains a high proportion of crystalline
+	kryptonite", to an asteroid object, and then this would be displayed when the object is
+	scanned by science.
+
 NOTE: Your lua scripts must not sleep, call any function which blocks, or require excessive
 long running calculations (nothing more than a few hundredths of a second) because the lua
 scripts are called from the main thread and if the scripts block, the entire game will block.

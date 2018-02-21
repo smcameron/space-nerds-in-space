@@ -1574,6 +1574,10 @@ static void respawn_object(struct snis_entity *o)
 static void delete_object(struct snis_entity *o)
 {
 	remove_space_partition_entry(space_partition, &o->partition);
+	if (o->sdata.science_text) {
+		free(o->sdata.science_text);
+		o->sdata.science_text = NULL;
+	}
 	snis_object_pool_free_object(pool, go_index(o));
 	o->id = -1;
 	o->alive = 0;
@@ -7229,8 +7233,27 @@ static void maybe_do_player_warp(struct snis_entity *o)
 	}
 }
 
+static void maybe_transmit_attached_science_text(int bridge, struct snis_entity *ship,
+	struct snis_entity *sci_selection)
+{
+	static int timer = 0;
+	struct packed_buffer *pb;
+	uint16_t len;
+
+	if (!sci_selection->sdata.science_text) /* Nothing to send */
+		return;
+	timer++;
+	if ((timer % 13) == 0) /* Throttle this transmission */
+		return;
+	len = strnlen(sci_selection->sdata.science_text, 256);
+	pb = packed_buffer_allocate(len + 7);
+	packed_buffer_append(pb, "bwhr", OPCODE_UPDATE_SCI_TEXT,
+				sci_selection->id, len, sci_selection->sdata.science_text, len);
+	send_packet_to_all_clients_on_a_bridge(ship->id, pb, ROLE_SCIENCE);
+}
+
 /* If the selected object is too far away and is not a planet, starbase, or waypoint,
- * deselect it.
+ * deselect it. Also maybe transmit attached science text.
  */
 static void check_science_selection(struct snis_entity *o)
 {
@@ -7251,8 +7274,10 @@ static void check_science_selection(struct snis_entity *o)
 		goto deselect;
 	dist2 = dist3dsqrd(o->x - go[i].x, o->y - go[i].y, o->z - go[i].z);
 	range2 = o->tsd.ship.scibeam_range * o->tsd.ship.scibeam_range;
-	if (dist2 <= range2)
+	if (dist2 <= range2) {
+		maybe_transmit_attached_science_text(bn, o, &go[i]);
 		return;
+	}
 	if ((go[i].type == OBJTYPE_PLANET || go[i].type == OBJTYPE_STARBASE) &&
 		dist2 <= range2 * 4.0)
 		return;
@@ -8635,6 +8660,26 @@ static int add_specific_ship(const char *name, double x, double y, double z,
 	go[i].sdata.faction = the_faction % nfactions();
 	strncpy(go[i].sdata.name, name, sizeof(go[i].sdata.name) - 1);
 	return i;
+}
+
+static int l_attach_science_text(lua_State *l)
+{
+	const double id = luaL_checknumber(lua_state, 1);
+	const char *text = lua_tostring(lua_state, 2);
+	pthread_mutex_lock(&universe_mutex);
+	int i = lookup_by_id((uint32_t) id);
+	if (i < 0)
+		goto error;
+	if (go[i].sdata.science_text)
+		free(go[i].sdata.science_text);
+	go[i].sdata.science_text = strndup(text, 256);
+	pthread_mutex_unlock(&universe_mutex);
+	lua_pushnumber(lua_state, 0.0);
+	return 1;
+error:
+	pthread_mutex_unlock(&universe_mutex);
+	lua_pushnil(lua_state);
+	return 1;
 }
 
 static int l_add_ship(lua_State *l)
@@ -19016,6 +19061,7 @@ static void setup_lua(void)
 	add_lua_callable_fn(l_comms_channel_unlisten, "comms_channel_unlisten");
 	add_lua_callable_fn(l_comms_channel_transmit, "comms_channel_transmit");
 	add_lua_callable_fn(l_add_black_hole, "add_black_hole");
+	add_lua_callable_fn(l_attach_science_text, "attach_science_text");
 }
 
 static int run_initial_lua_scripts(void)

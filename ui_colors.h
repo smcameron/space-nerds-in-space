@@ -123,6 +123,7 @@ struct ui_color_map {
 	struct ui_color_entry science_graph_plot_strong;
 	struct ui_color_entry science_graph_plot_weak;
 	struct ui_color_entry science_data_label;
+	struct ui_color_entry science_annotation;
 
 	struct ui_color_entry damcon_arena_border;
 	struct ui_color_entry damcon_robot;
@@ -301,6 +302,7 @@ struct ui_color_map_accessor {
 	.u.map.science_graph_plot_strong = { LIMEGREEN,		"science-graph-plot-strong" },
 	.u.map.science_graph_plot_weak	= { RED,		"science-graph-plot-weak" },
 	.u.map.science_data_label	= { GREEN_FIXUP,	"science-data-label" },
+	.u.map.science_annotation	= { CYAN_FIXUP,		"science-annotation" },
 
 	.u.map.damcon_arena_border	= { RED,		"damcon-arena-border" },
 	.u.map.damcon_robot		= { GREEN_FIXUP,	"damcon-robot" },

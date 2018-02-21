@@ -4823,6 +4823,10 @@ static void delete_object(uint32_t id)
 		}
 	}
 	go[i].id = -1;
+	if (go[i].sdata.science_text) {
+		free(go[i].sdata.science_text);
+		go[i].sdata.science_text = NULL;
+	}
 	snis_object_pool_free_object(pool, i);
 }
 
@@ -6005,6 +6009,37 @@ static int process_update_black_hole_packet(void)
 	return (rc < 0);
 }
 
+static int process_update_science_text(void)
+{
+	unsigned char buffer[5 + 257];
+	char text[257];
+	uint32_t id;
+	uint16_t len;
+	int rc, i;
+
+	rc = read_and_unpack_buffer(buffer, "wh", &id, &len);
+	if (rc)
+		return rc;
+	rc = snis_readsocket(gameserver_sock, buffer, len);
+	if (rc)
+		return rc;
+	if (len > 256)
+		return -1;
+	text[len] = '\0';
+	memcpy(text, buffer, len);
+	pthread_mutex_lock(&universe_mutex);
+	i = lookup_object_by_id(id);
+	if (i < 0) { /* maybe we just joined and don't know this object yet */
+		pthread_mutex_unlock(&universe_mutex);
+		return 0;
+	}
+	if (go[i].sdata.science_text)
+		free(go[i].sdata.science_text);
+	go[i].sdata.science_text = strndup(text, 256);
+	pthread_mutex_unlock(&universe_mutex);
+	return 0;
+}
+
 static int process_update_planet_packet(void)
 {
 	unsigned char buffer[100];
@@ -6391,6 +6426,9 @@ static void *gameserver_reader(__attribute__((unused)) void *arg)
 			break;
 		case OPCODE_UPDATE_BLACK_HOLE:
 			rc = process_update_black_hole_packet();
+			break;
+		case OPCODE_UPDATE_SCI_TEXT:
+			rc = process_update_science_text();
 			break;
 		case OPCODE_UPDATE_PLANET:
 			rc = process_update_planet_packet();
@@ -13447,6 +13485,11 @@ static void draw_science_data(GtkWidget *w, struct snis_entity *ship, struct sni
 	gx2 = SCIENCE_DATA_X + SCIENCE_DATA_W - 10 * SCREEN_WIDTH / 800;
 	gy2 = SCIENCE_DATA_Y + SCIENCE_DATA_H - 40 * SCREEN_HEIGHT / 600;
 	draw_science_graph(w, ship, o, gx1, gy1, gx2, gy2);
+
+	if (o && o->sdata.science_text) {
+		sng_set_foreground(UI_COLOR(science_annotation));
+		sng_abs_xy_draw_string(o->sdata.science_text, PICO_FONT, txx(20), txy(300));
+	}
 }
 
 static void draw_science_waypoints(GtkWidget *w)
