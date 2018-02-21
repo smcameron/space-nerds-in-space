@@ -19418,6 +19418,7 @@ static void init_synonyms(void)
 	snis_nl_add_synonym("far away", "far");
 	snis_nl_add_synonym("far is it", "far");
 	snis_nl_add_synonym("far is", "far");
+	snis_nl_add_synonym("black hole", "blackhole");
 }
 
 static const struct noun_description_entry {
@@ -19427,6 +19428,8 @@ static const struct noun_description_entry {
 	{ "drive", "The warp drive is a powerful sub-nuclear device that enables faster than light space travel." },
 	{ "warp drive", "The warp drive is a powerful sub-nuclear device that enables faster than light space travel." },
 	{ "impulse drive", "The impulse drive is a sub light speed conventional thruster." },
+	{ "blackhole", "A black hole is a singularity in space time with a gravitational field so intense "
+		"that no matter or radiation is able to escape." },
 	/* TODO: flesh this out more */
 };
 
@@ -19620,6 +19623,8 @@ static int nl_find_nearest_object(struct game_client *c, int argc, char *argv[],
 		objtype = OBJTYPE_ASTEROID;
 	else if (strcmp(argv[object], "gate") == 0)
 		objtype = OBJTYPE_WARPGATE;
+	else if (strcmp(argv[object], "blackhole") == 0)
+		objtype = OBJTYPE_BLACK_HOLE;
 	else if (strcmp(argv[object], "selection") == 0 ||
 		strcmp(argv[object], "target") == 0) {
 		if (bridgelist[c->bridge].science_selection < 0)
@@ -22333,7 +22338,7 @@ static void init_dictionary(void)
 	snis_nl_add_dictionary_word("selection",	"selection",	POS_NOUN);
 	snis_nl_add_dictionary_word("swallow",		"swallow",	POS_NOUN);
 	snis_nl_add_dictionary_word("waypoint",		"waypoint",	POS_NOUN);
-
+	snis_nl_add_dictionary_word("blackhole",	"blackhole",	POS_NOUN);
 
 	snis_nl_add_dictionary_word("a",		"a",		POS_ARTICLE);
 	snis_nl_add_dictionary_word("an",		"an",		POS_ARTICLE);
