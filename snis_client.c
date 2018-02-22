@@ -401,6 +401,8 @@ static struct material laserflash_material;
 static struct material warp_effect_material;
 static struct material sun_material;
 static struct material black_hole_material;
+static struct material spacemonster_tentacle_material;
+static struct material spacemonster_material;
 #define NPLANETARY_RING_MATERIALS 256
 #define NPLANET_MATERIALS 256
 static int planetary_ring_texture_id = -1;
@@ -1504,6 +1506,7 @@ static void init_spacemonster_data(struct snis_entity *o)
 				update_entity_orientation(*e, &orientation);
 				update_entity_parent(ecx, *e, parent);
 				update_entity_scale(*e, tentacle_scale);
+				update_entity_material(*e, &spacemonster_tentacle_material);
 				parent = *e;
 			} else {
 				break;
@@ -1525,8 +1528,10 @@ static int update_spacemonster(uint32_t id, uint32_t timestamp, double x, double
 	i = lookup_object_by_id(id);
 	if (i < 0) {
 		e = add_entity(ecx, spacemonster_mesh, x, y, z, SPACEMONSTER_COLOR);
-		if (e)
+		if (e) {
 			set_render_style(e, RENDER_SPARKLE);
+			update_entity_material(e, &spacemonster_material);
+		}
 		/* initial orientation is identity quat to make setting up tentacles easier */
 		i = add_generic_object(id, timestamp, x, y, z, 0, 0, 0,
 				&identity_quat, OBJTYPE_SPACEMONSTER, 1, e);
@@ -17133,6 +17138,14 @@ static int load_static_textures(void)
 	black_hole_material.texture_mapped_unlit.do_cullface = 0;
 	black_hole_material.texture_mapped_unlit.alpha = 1.0;
 
+	material_init_texture_mapped(&spacemonster_tentacle_material);
+	spacemonster_tentacle_material.texture_mapped.texture_id =
+		load_texture("textures/spacemonster_tentacle_texture.png");
+
+	material_init_texture_mapped(&spacemonster_material);
+	spacemonster_material.texture_mapped.texture_id =
+		load_texture("textures/spacemonster_texture.png");
+
 	static_textures_loaded = 1;
 
 	mtwist_free(mt);
@@ -18260,7 +18273,9 @@ static void init_meshes()
 	mesh_scale(wormhole_mesh, 3.0f);
 #endif
 	spacemonster_mesh = snis_read_model(d, "space_monster_torso.stl");
+	mesh_sphere_uv_map(spacemonster_mesh);
 	tentacle_segment_mesh = snis_read_model(d, "space_monster_tentacle_segment.stl");
+	mesh_sphere_uv_map(tentacle_segment_mesh);
 
 	laserbeam_nav_mesh = snis_read_model(d, "long-triangular-prism.stl");
 #ifndef WITHOUTOPENGL
