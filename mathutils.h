@@ -126,4 +126,7 @@ double short_angular_distance(double from, double to);
  */
 float sigmoid(float x, float sigma, float lambda);
 
+int imax(int a, int b);
+int imin(int a, int b);
+
 #endif

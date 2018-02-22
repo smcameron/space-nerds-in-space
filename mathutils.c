@@ -512,3 +512,16 @@ float sigmoid(float x, float sigma, float lambda)
 	return powf(x, lambda) / (powf(x, lambda) + powf(sigma, lambda));
 }
 
+int imax(int a, int b)
+{
+	if (a > b)
+		return a;
+	return b;
+}
+
+int imin(int a, int b)
+{
+	if (a < b)
+		return a;
+	return b;
+}

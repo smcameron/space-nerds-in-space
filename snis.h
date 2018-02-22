@@ -377,7 +377,7 @@ struct ship_data {
 #define STANDARD_ORBIT_RADIUS_FACTOR (1.1)
 #define MIN_PLAYER_VELOCITY (0.1)
 #define MAX_PLAYER_VELOCITY (30.0)
-#define MAX_SPACEMONSTER_VELOCITY (MAX_PLAYER_VELOCITY * 1.5)
+#define MAX_SPACEMONSTER_VELOCITY (MAX_PLAYER_VELOCITY * 2.5)
 #define PLAYER_VELOCITY_DAMPING (0.97)
 #define PLAYER_VELOCITY_INCREMENT (1.0)
 	double yaw_velocity, pitch_velocity, roll_velocity;
@@ -642,10 +642,11 @@ struct wormhole_data {
 };
 
 struct spacemonster_data {
-#define SPACEMONSTER_MODE_REST 0
-#define SPACEMONSTER_MODE_CHASE 1
-#define SPACEMONSTER_MODE_WANDER 2
-#define SPACEMONSTER_MODE_FLEE 3
+#define SPACEMONSTER_MODE_FLEE 0
+#define SPACEMONSTER_MODE_FIGHT 1
+#define SPACEMONSTER_MODE_EAT 2
+#define SPACEMONSTER_MODE_PLAY 3
+#define SPACEMONSTER_FLEE_DIST 2000.0
 	int movement_countdown;
 	uint8_t mode;
 	uint32_t seed;
@@ -658,6 +659,17 @@ struct spacemonster_data {
 #define NTENTACLE_SEGMENTS 7
 	struct entity *tentacle[NTENTACLES][NTENTACLE_SEGMENTS];
 	float tentacle_angle[NTENTACLES][NTENTACLE_SEGMENTS];
+	uint8_t anger, hunger, fear, toughness, health;
+	uint32_t home;
+	int current_antagonist;
+	uint32_t antagonist[5], friend[5];
+	uint8_t nantagonists, nfriends;
+	uint32_t nearest_asteroid;
+	uint32_t nearest_spacemonster;
+	float spacemonster_dist;
+	float asteroid_dist;
+	union vec3 dest;
+	int decision_age;
 };
 
 struct laserbeam_data {

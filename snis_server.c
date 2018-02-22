@@ -1986,6 +1986,43 @@ static void calculate_turret_damage(struct snis_entity *o)
 		o->alive = 0;
 }
 
+static void calculate_spacemonster_damage(struct snis_entity *o)
+{
+	if (o->type != OBJTYPE_SPACEMONSTER)
+		return;
+	int damage = 50 + snis_randn(50);
+	int defense = 25 * (snis_randn(o->tsd.spacemonster.toughness) / 255.0);
+	if (defense > damage)
+		defense = damage;
+	damage = damage - defense;
+	int health = o->tsd.spacemonster.health;
+	health -= damage;
+	if (health < 0)
+		health = 0;
+	o->tsd.spacemonster.health = health;
+	if (o->tsd.spacemonster.health == 0)
+		o->alive = 0;
+	else {
+		int anger, fear;
+		if (o->tsd.spacemonster.health > 100) {
+			anger = o->tsd.spacemonster.anger + damage;
+			if (anger > 255)
+				anger = 255;
+			o->tsd.spacemonster.anger = anger;
+		} else {
+			anger = o->tsd.spacemonster.anger - damage / 2;
+			if (anger < 0)
+				anger = 0;
+			o->tsd.spacemonster.anger = anger;
+			fear = o->tsd.spacemonster.fear + damage;
+			if (fear > 255)
+				fear = 255;
+			o->tsd.spacemonster.fear = fear;
+		}
+	}
+}
+
+
 static void calculate_block_damage(struct snis_entity *o)
 {
 	if (o->type != OBJTYPE_BLOCK)
@@ -2022,6 +2059,9 @@ static void calculate_torpedolike_damage(struct snis_entity *o, double weapons_f
 		return;
 	} else if (o->type == OBJTYPE_BLOCK) {
 		calculate_block_damage(o);
+		return;
+	} else if (o->type == OBJTYPE_SPACEMONSTER) {
+		calculate_spacemonster_damage(o);
 		return;
 	}
 
@@ -2087,6 +2127,9 @@ static void calculate_laser_damage(struct snis_entity *o, uint8_t wavelength, fl
 		return;
 	} else if (o->type == OBJTYPE_BLOCK) {
 		calculate_block_damage(o);
+		return;
+	} else if (o->type == OBJTYPE_SPACEMONSTER) {
+		calculate_spacemonster_damage(o); /* FIXME: this should take power into account. */
 		return;
 	}
 
@@ -2851,6 +2894,7 @@ static int projectile_collides(double x1, double y1, double z1,
 
 static void do_collision_impulse(struct snis_entity *player, struct snis_entity *object);
 static void block_add_to_naughty_list(struct snis_entity *o, uint32_t id);
+static void spacemonster_set_antagonist(struct snis_entity *o, uint32_t id);
 
 static void torpedo_collision_detection(void *context, void *entity)
 {
@@ -2875,7 +2919,8 @@ static void torpedo_collision_detection(void *context, void *entity)
 			t->type != OBJTYPE_ASTEROID &&
 			t->type != OBJTYPE_CARGO_CONTAINER &&
 			t->type != OBJTYPE_PLANET &&
-			t->type != OBJTYPE_BLOCK)
+			t->type != OBJTYPE_BLOCK &&
+			t->type != OBJTYPE_SPACEMONSTER)
 		return;
 	if (t->id == o->tsd.torpedo.ship_id)
 		return; /* can't torpedo yourself. */
@@ -2961,6 +3006,9 @@ static void torpedo_collision_detection(void *context, void *entity)
 		if (t->alive)
 			t->alive--;
 	} else if (t->type == OBJTYPE_TURRET) {
+		calculate_torpedo_damage(t);
+	} else if (t->type == OBJTYPE_SPACEMONSTER) {
+		spacemonster_set_antagonist(t, o->tsd.torpedo.ship_id);
 		calculate_torpedo_damage(t);
 	}
 
@@ -3085,7 +3133,7 @@ static void laser_collision_detection(void *context, void *entity)
 	if (t->type != OBJTYPE_SHIP1 && t->type != OBJTYPE_SHIP2 &&
 		t->type != OBJTYPE_STARBASE && t->type != OBJTYPE_ASTEROID &&
 		t->type != OBJTYPE_TORPEDO && t->type != OBJTYPE_CARGO_CONTAINER &&
-		t->type != OBJTYPE_BLOCK)
+		t->type != OBJTYPE_BLOCK && t->type != OBJTYPE_SPACEMONSTER)
 		return;
 
 	if (t->type == OBJTYPE_BLOCK) {
@@ -3174,6 +3222,12 @@ static void laser_collision_detection(void *context, void *entity)
 		t->type == OBJTYPE_CARGO_CONTAINER)
 		if (t->alive)
 			t->alive--;
+
+	if (t->type == OBJTYPE_SPACEMONSTER) {
+		calculate_laser_damage(t, o->tsd.laser.wavelength,
+			(float) o->tsd.laser.power * LASER_PROJECTILE_BOOST);
+		spacemonster_set_antagonist(t, o->id);
+	}
 
 	if (!t->alive) {
 		(void) add_explosion(t->x, t->y, t->z, 50, 150, 50, t->type);
@@ -3344,18 +3398,287 @@ delete_it:
 	push_attack_mode(o, eid, 0);
 }
 
+static void maybe_find_spacemonster_a_home(struct snis_entity *o)
+{
+	int i, nebula_count, home_nebula;
+
+	if (snis_randn(1000) > 50)
+		return;
+
+	if (o->tsd.spacemonster.home != (uint32_t) -1) {
+		i = lookup_by_id(o->tsd.spacemonster.home);
+		if (i >= 0 && go[i].alive && go[i].type == OBJTYPE_NEBULA)
+			return; /* already have a home */
+		else
+			o->tsd.spacemonster.home = (uint32_t) -1; /* home is gone */
+	}
+
+	/* Find our spacemonster a home */
+	nebula_count = 0;
+	for (i = 0; i < snis_object_pool_highest_object(pool); i++)
+		if (go[i].alive && go[i].type == OBJTYPE_NEBULA)
+			nebula_count++;
+	if (nebula_count != 0) {
+		home_nebula = snis_randn(nebula_count);
+		for (i = 0; i < snis_object_pool_highest_object(pool); i++) {
+			if (go[i].alive && go[i].type == OBJTYPE_NEBULA) {
+				if (home_nebula == 0) {
+					o->tsd.spacemonster.home = go[i].id;
+					break;
+				} else {
+					home_nebula--;
+				}
+			}
+		}
+	} else {
+		o->tsd.spacemonster.home = (uint32_t) -1;
+	}
+}
+
+static void spacemonster_set_antagonist(struct snis_entity *o, uint32_t id)
+{
+	int i;
+
+	for (i = 0; i < o->tsd.spacemonster.nantagonists; i++) {
+		if (o->tsd.spacemonster.antagonist[i] == id) {
+			o->tsd.spacemonster.current_antagonist = i;
+			return; /* already set */
+		}
+	}
+	if (o->tsd.spacemonster.nantagonists < 5) {
+		o->tsd.spacemonster.antagonist[o->tsd.spacemonster.nantagonists] = id;
+		o->tsd.spacemonster.current_antagonist = o->tsd.spacemonster.nantagonists;
+		o->tsd.spacemonster.nantagonists++;
+		return;
+	}
+	i = snis_randn(1000) % 5;
+	o->tsd.spacemonster.antagonist[i] = id;
+	o->tsd.spacemonster.current_antagonist = i;
+}
+
+static int nl_find_nearest_object_of_type(uint32_t id, int objtype);
 static void update_ship_orientation(struct snis_entity *o);
+
+static void spacemonster_collision_process(void *context, void *entity)
+{
+	struct snis_entity *o = context;
+	struct snis_entity *thing = entity;
+	float dist;
+
+	switch (thing->type) {
+	case OBJTYPE_SPACEMONSTER:
+		if (o->tsd.spacemonster.nearest_spacemonster == (uint32_t) -1) {
+			o->tsd.spacemonster.nearest_spacemonster = thing->id;
+			o->tsd.spacemonster.spacemonster_dist =
+				dist3d(o->x - thing->x, o->y - thing->y, o->z - thing->z);
+		} else if (o->id != o->tsd.spacemonster.nearest_spacemonster) {
+			dist = dist3d(o->x - thing->x, o->y - thing->y, o->z - thing->z);
+			if (dist < o->tsd.spacemonster.spacemonster_dist) {
+				o->tsd.spacemonster.spacemonster_dist = dist;
+				o->tsd.spacemonster.nearest_spacemonster = thing->id;
+			}
+		}
+		break;
+	case OBJTYPE_ASTEROID:
+		if (o->tsd.spacemonster.nearest_asteroid == (uint32_t) -1) {
+			o->tsd.spacemonster.nearest_asteroid = thing->id;
+			o->tsd.spacemonster.asteroid_dist =
+				dist3d(o->x - thing->x, o->y - thing->y, o->z - thing->z);
+		} else if (o->id != o->tsd.spacemonster.nearest_asteroid) {
+			dist = dist3d(o->x - thing->x, o->y - thing->y, o->z - thing->z);
+			if (dist < o->tsd.spacemonster.asteroid_dist) {
+				o->tsd.spacemonster.asteroid_dist = dist;
+				o->tsd.spacemonster.nearest_asteroid = thing->id;
+			}
+		}
+		break;
+	case OBJTYPE_SHIP1:
+		break;
+	case OBJTYPE_SHIP2:
+		break;
+	case OBJTYPE_NEBULA:
+		break;
+	}
+}
+
+static void spacemonster_flee(struct snis_entity *o)
+{
+	int i, n, count;
+	union vec3 total;
+	double mag;
+
+	total.v.x = 0;
+	total.v.y = 0;
+	total.v.z = 0;
+
+	if (o->tsd.spacemonster.decision_age == 0) { /* Have just decided to flee? */
+		count = 0;
+		for (i = 0; i < o->tsd.spacemonster.nantagonists; i++) {
+			union vec3 v, total;
+			n = lookup_by_id(o->tsd.spacemonster.antagonist[i]);
+			if (n < 0)
+				continue;
+			count++;
+			v.v.x = o->x - go[n].x;
+			v.v.y = o->y - go[n].y;
+			v.v.z = o->z - go[n].z;
+			mag = vec3_magnitude(&v);
+			vec3_normalize_self(&v);
+			vec3_mul_self(&v, 1.0 / mag);
+			vec3_add_self(&total, &v);
+		}
+		if (count > 0 && snis_randn(1000) < 750) {
+			vec3_normalize_self(&total);
+			vec3_mul_self(&total, SPACEMONSTER_FLEE_DIST);
+			o->tsd.spacemonster.dest = total;
+		} else {
+			random_point_on_sphere(SPACEMONSTER_FLEE_DIST, &total.v.x, &total.v.y, &total.v.z);
+		}
+	}
+	o->tsd.spacemonster.decision_age++;
+}
+
+static void spacemonster_fight(struct snis_entity *o)
+{
+}
+
+static void spacemonster_eat(struct snis_entity *o)
+{
+	int i;
+	union vec3 v;
+	double dist, mindist = -1.0;
+	int found = -1;
+	float vscale;
+
+	if (o->tsd.spacemonster.nearest_asteroid == -1 || snis_randn(1000) < 20) {
+		/* Find the nearest asteroid somewhere We look sometimes randomly too
+		 * because asteroids move, and the nearest one could change
+		 */
+		for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
+			if (!go[i].alive || go[i].type != OBJTYPE_ASTEROID)
+				continue;
+			dist = dist3d(o->x - go[i].x, o->y - go[i].y, o->z - go[i].z);
+			if (mindist < 0.0 || dist < mindist) {
+				found = i;
+				mindist = dist;
+			}
+		}
+		if (found < 0)
+			return;
+		o->tsd.spacemonster.nearest_asteroid = go[found].id;
+	}
+	i = lookup_by_id(o->tsd.spacemonster.nearest_asteroid);
+	if (i < 0)
+		return;
+	o->tsd.spacemonster.dest.v.x = go[i].x;
+	o->tsd.spacemonster.dest.v.y = go[i].y;
+	o->tsd.spacemonster.dest.v.z = go[i].z;
+	v.v.x = go[i].x - o->x;
+	v.v.y = go[i].y - o->y;
+	v.v.z = go[i].z - o->z;
+	dist = vec3_magnitude(&v);
+	if (dist > 1000)
+		vscale = MAX_SPACEMONSTER_VELOCITY;
+	else {
+		if (dist <= 1000) {
+			if (snis_randn(1000) < 100) {
+				if (o->tsd.spacemonster.hunger > 105)
+					o->tsd.spacemonster.hunger--;
+				else
+					o->tsd.spacemonster.hunger = 0;
+			}
+		}
+		if (dist <= 500)
+			vscale = 0.1;
+		else
+			vscale = MAX_SPACEMONSTER_VELOCITY * (dist - 500.0) / 500.0;
+	}
+	vec3_normalize_self(&v);
+	vec3_mul_self(&v, vscale);
+	o->tsd.spacemonster.dvx = v.v.x;
+	o->tsd.spacemonster.dvy = v.v.y;
+	o->tsd.spacemonster.dvz = v.v.z;
+}
+
+static void spacemonster_play(struct snis_entity *o)
+{
+	int i;
+	union vec3 v;
+
+	if (o->tsd.spacemonster.nearest_spacemonster == -1)
+		return;
+	i = lookup_by_id(o->tsd.spacemonster.nearest_spacemonster);
+	if (i < 0)
+		return;
+	o->tsd.spacemonster.dest.v.x = go[i].x;
+	o->tsd.spacemonster.dest.v.y = go[i].y;
+	o->tsd.spacemonster.dest.v.z = go[i].z;
+	v.v.x = go[i].x - o->x;
+	v.v.y = go[i].y - o->y;
+	v.v.z = go[i].z - o->z;
+	vec3_normalize_self(&v);
+	vec3_mul_self(&v, MAX_SPACEMONSTER_VELOCITY);
+	o->tsd.spacemonster.dvx = v.v.x;
+	o->tsd.spacemonster.dvy = v.v.y;
+	o->tsd.spacemonster.dvz = v.v.z;
+}
+
 static void spacemonster_move(struct snis_entity *o)
 {
 	/* FIXME: make this better */
 	float v, dx, dy, dz;
 	set_object_location(o, o->x + o->vx, o->y + o->vy, o->z + o->vz);
+	int anger, fear, hunger, health;
+
+	maybe_find_spacemonster_a_home(o);
+
+	anger = o->tsd.spacemonster.anger;
+	fear = o->tsd.spacemonster.fear;
+	hunger = o->tsd.spacemonster.hunger;
+	health = o->tsd.spacemonster.health;
+
+	if (snis_randn(1000) < 20)
+		o->tsd.spacemonster.hunger = imin(hunger + 1, 255);
+
+	if (o->tsd.spacemonster.hunger > 150 && snis_randn(1000) < 25
+		&& o->tsd.spacemonster.health > 0)
+			o->tsd.spacemonster.health--;
+
+	space_partition_process(space_partition, o, o->x, o->z, o,
+		spacemonster_collision_process);
+
+	/* See if we need to do something other than what we're already doing */
+	if (fear >= anger && fear >= hunger && fear > 20) {
+		if (o->tsd.spacemonster.mode != SPACEMONSTER_MODE_FLEE)
+			o->tsd.spacemonster.decision_age = 0;
+		o->tsd.spacemonster.mode = SPACEMONSTER_MODE_FLEE;
+	} else if (anger >= fear && anger >= hunger && anger > 20) {
+		if (o->tsd.spacemonster.mode != SPACEMONSTER_MODE_FIGHT)
+			o->tsd.spacemonster.decision_age = 0;
+		o->tsd.spacemonster.mode = SPACEMONSTER_MODE_FIGHT;
+	} else if (hunger >= fear && hunger >= anger && hunger > 100) {
+		if (o->tsd.spacemonster.mode != SPACEMONSTER_MODE_EAT)
+			o->tsd.spacemonster.decision_age = 0;
+		o->tsd.spacemonster.mode = SPACEMONSTER_MODE_EAT;
+	} else {
+		if (o->tsd.spacemonster.mode != SPACEMONSTER_MODE_PLAY)
+			o->tsd.spacemonster.decision_age = 0;
+		o->tsd.spacemonster.mode = SPACEMONSTER_MODE_PLAY;
+	}
+
 	switch (o->tsd.spacemonster.mode) {
-	/* TODO: implement the spacemonster brains */
-	case SPACEMONSTER_MODE_REST:
-	case SPACEMONSTER_MODE_CHASE:
-	case SPACEMONSTER_MODE_WANDER:
 	case SPACEMONSTER_MODE_FLEE:
+		spacemonster_flee(o);
+		break;
+	case SPACEMONSTER_MODE_FIGHT:
+		spacemonster_fight(o);
+		break;
+	case SPACEMONSTER_MODE_EAT:
+		spacemonster_eat(o);
+		break;
+	case SPACEMONSTER_MODE_PLAY:
+		spacemonster_play(o);
+		break;
 	default:
 		if (snis_randn(1000) < 50) {
 			random_point_on_sphere(1.0, &dx, &dy, &dz);
@@ -9064,7 +9387,13 @@ static int add_spacemonster(double x, double y, double z)
 	go[i].vx = v * dx;
 	go[i].vy = v * dy;
 	go[i].vz = v * dz;
+	go[i].tsd.spacemonster.fear = 0;
+	go[i].tsd.spacemonster.anger = 0;
+	go[i].tsd.spacemonster.health = 255;
+	go[i].tsd.spacemonster.hunger = 0;
 	update_ship_orientation(&go[i]);
+
+	go[i].tsd.spacemonster.home = (uint32_t) -1;
 	return i;
 }
 
@@ -16067,8 +16396,6 @@ static int process_docking_magnets(struct game_client *c)
 				ROLE_TEXT_TO_SPEECH, c->shipid);
 	return 0;
 }
-
-static int nl_find_nearest_object_of_type(uint32_t id, int objtype);
 
 /* Assumes universe lock is held, and releases it. */
 static void toggle_standard_orbit(struct game_client *c, struct snis_entity *ship)
