@@ -52,6 +52,8 @@ static int snapshot_number = 0;
 static char *planetname = NULL;
 static char *normalmapname = NULL;
 static char *cubemapname = NULL;
+static char *cylinder_ambient = NULL;
+static char *cylinder_emit = NULL;
 static char *modelfile = NULL;
 static char *thrustfile = NULL;
 static char *program;
@@ -437,6 +439,7 @@ static struct material planet_material;
 static struct material green_phaser_material;
 static struct material thrust_material;
 static struct material atmosphere_material;
+static struct material cyl_ambient;
 static int planet_mode = 0;
 static int cubemap_mode = 0;
 static int burst_rod_mode = 0;
@@ -529,6 +532,8 @@ static void draw_screen()
 		update_entity_material(e, &green_phaser_material);
 	} else if (thrust_mode) {
 		update_entity_material(e, &thrust_material);
+	} else if (cylinder_ambient) {
+		update_entity_material(e, &cyl_ambient);
 	}
 	if (!turret_mode) {
 		update_entity_orientation(e, &lobby_orientation);
@@ -699,6 +704,9 @@ __attribute__((noreturn)) void usage(char *program)
 	fprintf(stderr, " %s --burstrod\n", program);
 	fprintf(stderr, " %s --thrust <image-file>\n", program);
 	fprintf(stderr, " %s --turret <turret-model> --turretbase <turret-base-model>\n", program);
+	fprintf(stderr, " %s --cylindrical <cylindrical-texture-map>\n", program);
+	fprintf(stderr, " %s -m <mesh-file> --emittance <cylindrical-emittance-map>\n", program);
+	fprintf(stderr, "             (emittance requires --cylindrical to be set)\n");
 	exit(-1);
 }
 
@@ -718,6 +726,8 @@ static struct option long_options[] = {
 	{ "model", required_argument, NULL, 'm' },
 	{ "turretbase", required_argument, NULL, 'B' },
 	{ "cubemap", required_argument, NULL, 'c' },
+	{ "cylindrical", required_argument, NULL, 'C' },
+	{ "emittance", required_argument, NULL, 'e' },
 	{ "help", no_argument, NULL, 'h' },
 	{ "planetmode", required_argument, NULL, 'p' },
 	{ "icosahedron", required_argument, NULL, 'i' },
@@ -736,7 +746,7 @@ static void process_options(int argc, char *argv[])
 	while (1) {
 		int option_index;
 
-		c = getopt_long(argc, argv, "B:T:bc:hi:m:n:p:s:t:", long_options, &option_index);
+		c = getopt_long(argc, argv, "B:T:bc:C:e:hi:m:n:p:s:t:", long_options, &option_index);
 		if (c < 0) {
 			break;
 		}
@@ -762,6 +772,12 @@ static void process_options(int argc, char *argv[])
 		case 'c':
 			cubemap_mode = 1;
 			cubemapname = optarg;
+			break;
+		case 'C':
+			cylinder_ambient = optarg;
+			break;
+		case 'e':
+			cylinder_emit = optarg;
 			break;
 		case 'i':
 			process_int_option("icosahedron", optarg, &icosahedron_subdivision);
@@ -940,6 +956,15 @@ int main(int argc, char *argv[])
 		atmosphere_mesh = NULL;
 	} else { /* just ordinary model mode */
 		target_mesh = snis_read_model(filename);
+		if (cylinder_ambient) {
+			mesh_cylindrical_yz_uv_map(target_mesh);
+			material_init_texture_mapped(&cyl_ambient);
+			cyl_ambient.texture_mapped.texture_id = graph_dev_load_texture(cylinder_ambient);
+		}
+		if (cylinder_emit && cylinder_ambient) {
+			mesh_cylindrical_yz_uv_map(target_mesh);
+			cyl_ambient.texture_mapped.emit_texture_id = graph_dev_load_texture(cylinder_emit);
+		}
 		atmosphere_mesh = NULL;
 	}
 	if (!target_mesh) {

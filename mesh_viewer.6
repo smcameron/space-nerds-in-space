@@ -29,6 +29,18 @@ In "turret mode", two models are required, the turret, and the turret
 base. (See the --turret option, below.) The turret is animated to
 always try to point at the light source.
 .TP
+\fB-C, --cylindrical\fR cylindrical-ambient-texture-file
+Allows a texture to be specified to wrap around the model as a cylinder,
+with the height of the cylinder along the X axis, and the top and bottom
+faces parallel to the YZ plane.
+.TP
+\fB-e, --emittance\fR cylindrical-emittance-texture-file
+Allows an emittance texture to be specified to wrap around the model as a cylinder,
+with the height of the cylinder along the X axis, and the top and bottom
+faces parallel to the YZ plane. This can only be specified in combination with the
+-C option, because there is only one uv-mapping used for both the ambient and
+emittance textures, so if either is cylindrical, both must be cylindrical.
+.TP
 \fB-T, --turret\fR turret-model
 Set "turret-mode" and specify the model for the turret.
 In "turret mode", two models are required, the turret, and the turret
