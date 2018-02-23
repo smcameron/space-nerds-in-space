@@ -17141,10 +17141,14 @@ static int load_static_textures(void)
 	material_init_texture_mapped(&spacemonster_tentacle_material);
 	spacemonster_tentacle_material.texture_mapped.texture_id =
 		load_texture("textures/spacemonster_tentacle_texture.png");
+	spacemonster_tentacle_material.texture_mapped.emit_texture_id =
+		load_texture("textures/spacemonster_tentacle_emit.png");
 
 	material_init_texture_mapped(&spacemonster_material);
 	spacemonster_material.texture_mapped.texture_id =
 		load_texture("textures/spacemonster_texture.png");
+	spacemonster_material.texture_mapped.emit_texture_id =
+		load_texture("textures/spacemonster_emit.png");
 
 	static_textures_loaded = 1;
 
