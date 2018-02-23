@@ -6026,11 +6026,11 @@ static int process_update_science_text(void)
 	rc = read_and_unpack_buffer(buffer, "wh", &id, &len);
 	if (rc)
 		return rc;
+	if (len > 256)
+		return -1;
 	rc = snis_readsocket(gameserver_sock, buffer, len);
 	if (rc)
 		return rc;
-	if (len > 256)
-		return -1;
 	text[len] = '\0';
 	memcpy(text, buffer, len);
 	pthread_mutex_lock(&universe_mutex);
