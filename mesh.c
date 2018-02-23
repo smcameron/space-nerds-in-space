@@ -1564,11 +1564,11 @@ void mesh_cylindrical_yz_uv_map(struct mesh *m)
 		t2z = (vtx2->z - minz) / (maxz - minz);
 
 		u0 = t0x;
-		v0 = (atan2f(t0y, t0z) + M_PI) / (2.0 * M_PI);
+		v0 = (atan2f(2.0 * t0y - 1.0, 2.0 * t0z - 1.0) + M_PI) / (2.0 * M_PI);
 		u1 = t1x;
-		v1 = (atan2f(t1y, t1z) + M_PI) / (2.0 * M_PI);
+		v1 = (atan2f(2.0 * t1y - 1.0, 2.0 * t1z - 1.0) + M_PI) / (2.0 * M_PI);
 		u2 = t2x;
-		v2 = (atan2f(t2y, t2z) + M_PI) / (2.0 * M_PI);
+		v2 = (atan2f(2.0 * t2y - 1.0, 2.0 * t2z - 1.0) + M_PI) / (2.0 * M_PI);
 
 		mesh_set_triangle_texture_coords(m, i, u0, v0, u1, v1, u2, v2);
 	}
