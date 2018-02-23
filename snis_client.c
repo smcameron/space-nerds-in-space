@@ -18273,9 +18273,9 @@ static void init_meshes()
 	mesh_scale(wormhole_mesh, 3.0f);
 #endif
 	spacemonster_mesh = snis_read_model(d, "space_monster_torso.stl");
-	mesh_sphere_uv_map(spacemonster_mesh);
+	mesh_cylindrical_yz_uv_map(spacemonster_mesh);
 	tentacle_segment_mesh = snis_read_model(d, "space_monster_tentacle_segment.stl");
-	mesh_sphere_uv_map(tentacle_segment_mesh);
+	mesh_cylindrical_yz_uv_map(tentacle_segment_mesh);
 
 	laserbeam_nav_mesh = snis_read_model(d, "long-triangular-prism.stl");
 #ifndef WITHOUTOPENGL
