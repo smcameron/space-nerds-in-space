@@ -111,6 +111,9 @@ EVENT TYPES in snis:
 	"player-respawn-event",
 		arguments: object id of player
 		return values: none.
+	"player-red-alert-status-event"
+		arguments: object id of player, red alert status value (0 or 1 = off or on)
+		return values: none.
 	"player-death-event",
 		arguments: object id of player
 		return values: none.

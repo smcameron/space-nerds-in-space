@@ -14760,6 +14760,8 @@ static void set_red_alert_mode(struct game_client *c, unsigned char new_alert_mo
 {
 	send_packet_to_all_clients_on_a_bridge(c->shipid,
 			snis_opcode_pkt("bb", OPCODE_REQUEST_REDALERT, new_alert_mode), ROLE_ALL);
+	schedule_callback2(event_callback, &callback_schedule, "player-red-alert-status-event",
+				(double) c->shipid, (double) !!new_alert_mode);
 }
 
 static int process_request_redalert(struct game_client *c)
