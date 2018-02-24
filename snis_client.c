@@ -1520,7 +1520,7 @@ static void init_spacemonster_data(struct snis_entity *o)
 }
 
 static int update_spacemonster(uint32_t id, uint32_t timestamp, double x, double y, double z,
-				uint32_t seed, union quat *orientation)
+				uint32_t seed, union quat *orientation, uint8_t emit_intensity)
 {
 	int i;
 	struct entity *e;
@@ -1549,6 +1549,15 @@ static int update_spacemonster(uint32_t id, uint32_t timestamp, double x, double
 			update_entity_pos(go[i].entity, x, y, z);
 		go[i].tsd.spacemonster.seed = seed;
 	}
+	/* FIXME: This means all space monsters pulsate together, and the last spacemonster
+	 * to update sets the value. This should somehow be per space monster. If there's only
+	 * one or two space monsters around, it is not a big deal, but this isn't really how it
+	 * should work.
+	 */
+	spacemonster_material.texture_mapped.emit_intensity =
+		fabs(sin(((float) emit_intensity / 255.0) * 2.0 * M_PI));
+	spacemonster_tentacle_material.texture_mapped.emit_intensity =
+		fabs(sin(((float) emit_intensity / 255.0) * 2.0 * M_PI));
 	return 0;
 }
 
@@ -4420,18 +4429,19 @@ static int process_update_spacemonster(void)
 	unsigned char buffer[100];
 	uint32_t id, timestamp, seed;
 	double dx, dy, dz;
-	int rc;
 	union quat orientation;
+	int rc;
+	uint8_t emit_intensity;
 
 	assert(sizeof(buffer) > sizeof(struct update_spacemonster_packet) - sizeof(uint8_t));
-	rc = read_and_unpack_buffer(buffer, "wwSSSwQ", &id, &timestamp,
+	rc = read_and_unpack_buffer(buffer, "wwSSSwQb", &id, &timestamp,
 				&dx, (int32_t) UNIVERSE_DIM,
 				&dy, (int32_t) UNIVERSE_DIM,
-				&dz, (int32_t) UNIVERSE_DIM, &seed, &orientation);
+				&dz, (int32_t) UNIVERSE_DIM, &seed, &orientation, &emit_intensity);
 	if (rc != 0)
 		return rc;
 	pthread_mutex_lock(&universe_mutex);
-	rc = update_spacemonster(id, timestamp, dx, dy, dz, seed, &orientation);
+	rc = update_spacemonster(id, timestamp, dx, dy, dz, seed, &orientation, emit_intensity);
 	pthread_mutex_unlock(&universe_mutex);
 	return (rc < 0);
 }

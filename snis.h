@@ -649,6 +649,7 @@ struct spacemonster_data {
 	int movement_countdown;
 	uint8_t mode;
 	uint32_t seed;
+	uint8_t emit_intensity; /* This is what makes the glow effect pulsate */
 	uint32_t interest;
 	float dvx, dvy, dvz; /* desired velocity */
 #define NTENTACLES 5

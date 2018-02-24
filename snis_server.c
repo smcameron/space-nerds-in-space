@@ -3393,6 +3393,7 @@ static void spacemonster_move(struct snis_entity *o)
 		o->tsd.spacemonster.movement_countdown = snis_randn(20) + 5; /* 0.5 secs to 2.5 secs */
 		o->tsd.spacemonster.seed = snis_randn(1000);
 	}
+	o->tsd.spacemonster.emit_intensity += snis_randn(10);
 	o->timestamp = universe_timestamp;
 }
 
@@ -18278,12 +18279,13 @@ static void send_update_turret_packet(struct game_client *c,
 static void send_update_spacemonster_packet(struct game_client *c,
 	struct snis_entity *o)
 {
-	pb_queue_to_client(c, snis_opcode_pkt("bwwSSSwQ", OPCODE_UPDATE_SPACEMONSTER, o->id, o->timestamp,
+	pb_queue_to_client(c, snis_opcode_pkt("bwwSSSwQb", OPCODE_UPDATE_SPACEMONSTER, o->id, o->timestamp,
 					o->x, (int32_t) UNIVERSE_DIM,
 					o->y, (int32_t) UNIVERSE_DIM,
 					o->z, (int32_t) UNIVERSE_DIM,
 					o->tsd.spacemonster.seed,
-					&o->orientation));
+					&o->orientation,
+					o->tsd.spacemonster.emit_intensity));
 }
 
 static int add_new_player(struct game_client *c)
