@@ -78,6 +78,7 @@ uniform float u_SpecularIntensity; /* between 0 and 1, 1 is very shiny, 0 is fla
 	#endif
 	#ifdef USE_EMIT_MAP
 		uniform TEX_SAMPLER u_EmitTex;
+		uniform float u_EmitIntensity;
 	#endif
 
 	void main()
@@ -106,7 +107,7 @@ uniform float u_SpecularIntensity; /* between 0 and 1, 1 is very shiny, 0 is fla
 		vec3 color = albedo.rgb * u_LightColor * diffuse;
 
 		#ifdef USE_EMIT_MAP
-			color = max(color, TEX_READ(u_EmitTex, uv).rgb);
+			color = max(color, u_EmitIntensity * TEX_READ(u_EmitTex, uv).rgb);
 		#endif
 		#ifdef USE_SPECULAR
 			// blinn phong half vector specular
