@@ -26,8 +26,8 @@
 #include <gdk/gdktypes.h>
 #endif
 
-#define MAX_JOYSTICK_BUTTONS 20
-#define MAX_JOYSTICK_AXES 20
+#define MAX_JOYSTICK_BUTTONS 40
+#define MAX_JOYSTICK_AXES 40
 
 #define JS_EVENT_BUTTON         0x01    /* button pressed/released */
 #define JS_EVENT_AXIS           0x02    /* joystick moved */

@@ -30,7 +30,7 @@
 #include "string-utils.h"
 
 #define MAX_DEVICES 6
-#define MAX_BUTTONS 30
+#define MAX_BUTTONS 40
 #define MAX_AXES 30
 #define MAX_FUNCTIONS 256
 #define MAX_MODES 20
