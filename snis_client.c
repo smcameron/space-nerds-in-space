@@ -1448,7 +1448,7 @@ static void spacemonster_move_tentacles(struct snis_entity *o)
 	int i, j;
 	struct mtwist_state *mt;
 	float initial_angle, delta_angle, desired_angle, new_angle, current_angle;
-	union quat rotation, new_orientation;
+	union quat rotation;
 	int ntentacles = (o->id % 3) + 3;
 
 	mt = mtwist_init(o->tsd.spacemonster.seed);
@@ -1457,14 +1457,13 @@ static void spacemonster_move_tentacles(struct snis_entity *o)
 		delta_angle = mtwist_float(mt) * 20.0 * M_PI / 180.0 - 10.0 * M_PI / 180.0;
 		desired_angle = initial_angle;
 		quat_init_axis(&rotation, 1, 0, 0, i * -2.0 * M_PI / ntentacles);
-		for (j = 0; j < NTENTACLE_SEGMENTS; j++) {
+		for (j = 1; j < NTENTACLE_SEGMENTS; j++) { /* Note: first segment is skipped. */
 			if (o->tsd.spacemonster.tentacle[i][j]) {
 				union quat nq;
 				current_angle = o->tsd.spacemonster.tentacle_angle[i][j];
 				new_angle = current_angle + 0.05 * (desired_angle - current_angle);
 				quat_init_axis(&nq, 0, 1, 0, new_angle);
-				quat_conjugate(&new_orientation, &nq, &rotation);
-				update_entity_orientation(o->tsd.spacemonster.tentacle[i][j], &new_orientation);
+				update_entity_orientation(o->tsd.spacemonster.tentacle[i][j], &nq);
 				o->tsd.spacemonster.tentacle_angle[i][j] = new_angle;
 			}
 			desired_angle = desired_angle + delta_angle;
@@ -1514,6 +1513,7 @@ static void init_spacemonster_data(struct snis_entity *o)
 			tentacle_length *= shrinkage;
 			tentacle_scale *= shrinkage;
 		}
+		quat_mul_self(&orientation, &rotation);
 		quat_conjugate(&new_orientation, &orientation, &rotation);
 		orientation = new_orientation;
 	}
