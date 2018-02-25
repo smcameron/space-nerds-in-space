@@ -1,0 +1,15 @@
+Replace this line with a single line imperative description of your change.
+
+Replace this paragraph with a longer description of your change.
+Here you may want to explain why the change was done if it isn't
+obvious. Finally, add a "Signed-off-by:" line below. This indicates
+that you have read and comply with the developer's certificate of
+origin described in item 12 at the bottom of this page:
+https://github.com/smcameron/space-nerds-in-space/blob/master/CONTRIBUTING.md
+You may also wish to add "Author:..." line(s) if the patch has multiple
+or different author(s). Ideally, you should submit your patch via
+email rather than as a pull request, but pull requests will work too.
+
+Signed-off-by: Your Name Here <your-email@your-domain>
+
+
