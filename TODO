@@ -12,15 +12,29 @@ Too much to list, but here's a list anyway:
 	situation more obvious.)
 
 * Communications screen
-    Starbase comm stuff
-    Enemy ship comm monitoring
+    Starbase comm stuff -- mostly done, there are undoubtedly more things that could
+	be added. Probably need a way to shut off annoying messages about being attacked
+	constantly for scenarios.
+    Enemy ship comm monitoring -- Right now there is no enemy comms to monitor. Seems
+	like there should be something for comms to do here though. Do not have any very
+	good ideas about how it should work though.
     Friendly ship stuff
     bridge-to-bridge comm
-    take damage into account
+	I think this is done. If two bridges are on the same channel, then they
+	can communicate.
+    Take damage and power into account
+	Right now, power of comms systems does nothing -- it works regardless
+	This should probably have some ill effect.  One idea: based on power
+	and damage, some fraction of characters is garbled. If high power and
+	low damage, 99.9% of characters go through unmangled, as power drops and
+	damage increases, a higher and higher fraction of characters is garbled.
+	Not very realistic, but might provide a workable degradation.
+	Other ideas?  Range limitations?
     Allow submitting natural language queries to 'the computer' and
-      get responses verbally (text to speech) and in actions.  Ideally,
-      these could be activated via speech recognition as well, but this
-      may not be feasible.
+	get responses verbally (text to speech) and in actions.  Ideally,
+	these could be activated via speech recognition as well. This is
+	done. There are undoubtedly lots of holes here, but the basic
+	concept is done.
 
       For example:
 
@@ -47,14 +61,21 @@ Too much to list, but here's a list anyway:
 	* (set) impulse to <value> percent
 
 * Navigation screen
-  Allow easier navigation by coordinates so lua scripts can say: goto x,y,z
-  and it's possible for nav to reasonably follow such orders.
+	Allow easier navigation by coordinates so lua scripts can say: goto x,y,z
+	and it's possible for nav to reasonably follow such orders.
+	This is done. Science can set a waypoint at x,y,z, and nav can follow the
+	green arrow, or science can give Heading and Mark, and nav can set that
+	(amounts to the same thing as following the green arrow).
 
 * Weapons screen
+     Improve joystick support.  Right now, weapons is probably unusable with a
+	joystick controller.
+     There are cases where damage from lasers is handled in the same way as
+	damage from torpedoes. That is not how it should work.
 
 * Science station
   Allow some sort of arbitrary info about objects or just in general
-  to be detected and fed to the game via lua.
+  to be detected and fed to the game via lua. This is done. Via attach_science_text().
   * Allow scanning of planet surface
 
 * Add some kind of transporter control which interacts with science
@@ -79,6 +100,8 @@ Too much to list, but here's a list anyway:
     and science should have some insight into this.  Some ships should be noticeably
     more difficult or easier to destroy.
   * Allow ship to ship docking?
+  * There are still cases where ships get into strange "flipping" states, maybe while trying
+    to traverse around planets.
 
 * Add proximity mines
 * Add missiles of some kind
@@ -107,16 +130,14 @@ Too much to list, but here's a list anyway:
   the main screen relative to the instruments, size of the universe.
   Or else maybe some kind of fog.
 * joystick support for weapons and nav, and maybe others.
-* allow mining of asteroids, asteroid mining bots or something
 * trading of stuff mined from asteroids at stations.
 * Need to be able to checkpoint-restart universe state on server side
-  (how do lua scripts fit into checkpoint restart?)
+  (how do lua scripts fit into checkpoint restart? Currently Lua ruins
+  this.)
 * more lua event callbacks, some mission scripts done with lua
   basically, flesh out the lua scripting system.
 * Moar mission scripts!
 * Remove use of "heading" field in snis_entity
-* Make space monster do something interesting
-* Make space monster work again
 * make tractor beam work again/better.
 * Currently, number keypad doesn't work for numbers.  It should work.
 
@@ -151,6 +172,9 @@ NICE TO HAVE:
   of brightness. See for example: https://www.seedofandromeda.com/blogs/51-procedural-star-rendering
   The sunspots, corona, etc are overkill, but the lens flare, the way
   it comes around the edge of a planet, etc, all look really good.
+
+* Make black hole shader better.  Right now it's just a billboard with a
+  fuzzy black disc on it.
 
 * Allow for self-shadowing in the renderer (i.e. ships to cast shadows
   on themselves.) This may be relevant:
@@ -218,4 +242,39 @@ NICE TO HAVE:
   ai_ship_travel_towards() and ai_ship_add_movement_variety() in snis_server.c
   could be improved (or replaced) with something better. Those alone do not
   touch the orientation problem though, so there's more to it than that.
+
+* Finish/Improve Space Monster behavior.
+
+* Improve black hole behavior.
+
+* Add more special things, like comets, anomalies of some kind, just generally
+  interesting stuff of one sort or another.  I.e., go all Dwarf Fortress on this
+  thing and just program shitloads of custom variety.
+
+* Make nebula more interesting.  Right now hiding in nebulas doesn't really work
+  very well, because visually, you can kind of see right through them.
+  I do not recall exactly what happens on science regarding things which are inside
+  nebulas.  Also, nebulas are kind of small, and few and far between, so, the hiding
+  place is rather obvious. https://www.youtube.com/watch?v=ifmRgQX82O4&t=0m57s
+
+* Get better models, or properly uv-map and texture models we do have. Scrap the
+  more terrible models.
+
+* Add support for DMX lighting
+
+* Add support for more joysticks.
+
+* Add support for toggle switches (as opposed to momentary switches).
+  I.e. HOTAS warthog has some toggle (non-momentary) switches that are either on,
+  off, or in one of several positions.
+
+* Consider that some controls might well be served by both buttons and axes.
+  For example, you might wish to assign an axis to control the warp level slider
+  on the navigation screen, but mostly, people won't have enough axes on their
+  joystick to devote one for that purpose, so may wish to have buttons to nudge
+  the warp slider up and down.  That is, it should be possible to control sliders
+  with both buttons AND axes at the same time. Currently this is not the case.
+
+* Consider building some hardware controllers for each station and fleshing out
+  the code for dealing with such hardware.
 
