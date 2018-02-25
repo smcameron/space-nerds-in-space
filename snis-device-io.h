@@ -60,6 +60,7 @@
 #define DEVIO_OPCODE_NAV_DOCKING_MAGNETS	111
 #define DEVIO_OPCODE_NAV_STANDARD_ORBIT		112
 #define DEVIO_OPCODE_NAV_STARMAP		113
+#define DEVIO_OPCODE_NAV_LIGHTS			114
 
 /* everything you can do on the weapons screen */
 #define DEVIO_OPCODE_WEAPONS_YAW_LEFT		200

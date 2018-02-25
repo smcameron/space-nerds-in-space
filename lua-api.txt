@@ -661,6 +661,7 @@ get_ship_attribute(id, attribute_name); -- returns the specified attribute of th
                       orientation.vec[1]    f       2732          4          0
                       orientation.vec[2]    f       2736          4          0
                       orientation.vec[3]    f       2740          4          0
+                         exterior_lights    b       2226          1          0
 
 	Example usage:
 

@@ -7120,7 +7120,7 @@ static int rate_limit_docking_permission_denied(struct bridge_data *b)
 }
 
 static int starbase_grant_docker_permission(struct snis_entity *starbase,
-						uint32_t docker, struct bridge_data *b,
+						struct snis_entity *docker, struct bridge_data *b,
 						char *npcname, int channel)
 {
 	/* check if permission is already granted.... */
@@ -7129,25 +7129,35 @@ static int starbase_grant_docker_permission(struct snis_entity *starbase,
 	int i;
 
 	for (i = 0; i < docking_port_info[model]->nports; i++) {
-		if (starbase->tsd.starbase.expected_docker[i] == docker &&
+		if (starbase->tsd.starbase.expected_docker[i] == docker->id &&
 			starbase->tsd.starbase.expected_docker_timer[i] > 0) {
 			starbase->tsd.starbase.expected_docker_timer[i] = STARBASE_DOCK_TIME;
 			/* transmit re-granting of docking permission */
 			snprintf(msg, sizeof(msg), "%s, PERMISSION TO DOCK RE-GRANTED.", b->shipname);
 			send_comms_packet(npcname, channel, msg);
 			snis_queue_add_sound(PERMISSION_TO_DOCK_GRANTED, ROLE_NAVIGATION, b->shipid);
+			if (docker->tsd.ship.exterior_lights != 255) {
+				snprintf(msg, sizeof(msg), "%s, ALSO, PLEASE TURN ON YOUR EXTERIOR LIGHTS.",
+					b->shipname);
+				send_comms_packet(npcname, channel, msg);
+			}
 			return 1;
 		}
 	}
 	/* See if there are any empty slots */
 	for (i = 0; i < docking_port_info[model]->nports; i++) {
 		if (starbase->tsd.starbase.expected_docker_timer[i] == 0) {
-			starbase->tsd.starbase.expected_docker[i] = docker;
+			starbase->tsd.starbase.expected_docker[i] = docker->id;
 			starbase->tsd.starbase.expected_docker_timer[i] = STARBASE_DOCK_TIME;
 			/* transmit granting of docking permission */
 			snprintf(msg, sizeof(msg), "%s, PERMISSION TO DOCK GRANTED.", b->shipname);
 			send_comms_packet(npcname, channel, msg);
 			snis_queue_add_sound(PERMISSION_TO_DOCK_GRANTED, ROLE_NAVIGATION, b->shipid);
+			if (docker->tsd.ship.exterior_lights != 255) {
+				snprintf(msg, sizeof(msg), "%s, ALSO, PLEASE TURN ON YOUR EXTERIOR LIGHTS.",
+					b->shipname);
+				send_comms_packet(npcname, channel, msg);
+			}
 			return 1;
 		}
 	}
@@ -9123,6 +9133,7 @@ static void init_player(struct snis_entity *o, int clear_cargo_bay, float *charg
 	o->tsd.ship.nav_damping_suppression = 0.0;
 	o->tsd.ship.rts_mode = 0;
 	o->tsd.ship.rts_active_button = 255; /* none active */
+	o->tsd.ship.exterior_lights = 255; /* On */
 	if (o->tsd.ship.warp_core_status != WARP_CORE_STATUS_GOOD)
 		money += WARP_CORE_COST;
 	o->tsd.ship.warp_core_status = WARP_CORE_STATUS_GOOD;
@@ -13713,7 +13724,7 @@ static void npc_menu_item_request_dock(struct npc_menu_item *item,
 		send_comms_packet(npcname, ch, msg);
 		return;
 	}
-	starbase_grant_docker_permission(sb, o->id, b, npcname, ch);
+	starbase_grant_docker_permission(sb, o, b, npcname, ch);
 }
 
 static void warp_gate_ticket_buying_npc_bot(struct snis_entity *o, int bridge,
@@ -16968,6 +16979,9 @@ static int process_adjust_control_input(struct game_client *c)
 	case OPCODE_ADJUST_CONTROL_COMMS_COOLANT:
 		return process_adjust_control_bytevalue(c, id,
 			offsetof(struct snis_entity, tsd.ship.coolant_data.comms.r2), v, no_limit);
+	case OPCODE_ADJUST_CONTROL_EXTERIOR_LIGHTS:
+		return process_adjust_control_bytevalue(c, id,
+			offsetof(struct snis_entity, tsd.ship.exterior_lights), v, no_limit);
 	default:
 		return -1;
 	}
@@ -18927,7 +18941,7 @@ static void send_update_ship_packet(struct game_client *c,
 	packed_buffer_append(pb, "bwwhSSS", opcode, o->id, o->timestamp, o->alive,
 			o->x, (int32_t) UNIVERSE_DIM, o->y, (int32_t) UNIVERSE_DIM,
 			o->z, (int32_t) UNIVERSE_DIM);
-	packed_buffer_append(pb, "RRRwwRRRbbbwwbbbbbbbbbbbbbwQQQbbbbbbbw",
+	packed_buffer_append(pb, "RRRwwRRRbbbwwbbbbbbbbbbbbbwQQQbbbbbbbbw",
 			o->tsd.ship.yaw_velocity,
 			o->tsd.ship.pitch_velocity,
 			o->tsd.ship.roll_velocity,
@@ -18952,6 +18966,7 @@ static void send_update_ship_packet(struct game_client *c,
 			o->tsd.ship.nav_mode,
 			o->tsd.ship.warp_core_status,
 			rts_mode,
+			o->tsd.ship.exterior_lights,
 			o->tsd.ship.rts_active_button,
 			wallet);
 	pb_queue_to_client(c, pb);

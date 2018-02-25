@@ -30,7 +30,7 @@
 #define MAXSTARMAPENTRIES 1000 /* max number of solar systems */
 #define MAX_STARMAP_ADJACENCIES 5 /* max warp lanes from one star to other stars */
 #define DEFAULT_SOLAR_SYSTEM "default"
-#define SNIS_PROTOCOL_VERSION "SNIS015"
+#define SNIS_PROTOCOL_VERSION "SNIS016"
 #define COMMON_MTWIST_SEED 97872
 /* dimensions of the "known" universe */
 #define XKNOWN_DIM 600000.0
@@ -476,6 +476,7 @@ struct ship_data {
 	double scibeam_a1, scibeam_a2, scibeam_range; /* used server side to cache sci beam calcs */
 	uint8_t reverse;
 	uint8_t trident;
+	uint8_t exterior_lights; /* 255 = on, 0 = off */
 	int32_t next_torpedo_time;
 #define ENEMY_TORPEDO_FIRE_INTERVAL (4 * 30) /* 4 seconds */ 
 	int32_t next_laser_time;

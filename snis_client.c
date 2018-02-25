@@ -872,6 +872,7 @@ static struct navigation_ui {
 	struct button *trident_button;
 	struct button *computer_button;
 	struct button *starmap_button;
+	struct button *lights_button;
 	int gauge_radius;
 	struct snis_text_input_box *computer_input;
 	char input[100];
@@ -4223,7 +4224,7 @@ static int process_update_ship_packet(uint8_t opcode)
 		mainzoom, warpdrive, requested_warpdrive,
 		requested_shield, phaser_charge, phaser_wavelength, shiptype,
 		reverse, trident, in_secure_area, docking_magnets, emf_detector,
-		nav_mode, warp_core_status, rts_mode, rts_active_button;
+		nav_mode, warp_core_status, rts_mode, exterior_lights, rts_active_button;
 	union quat orientation, sciball_orientation, weap_orientation;
 	union euler ypr;
 	struct entity *e;
@@ -4246,15 +4247,15 @@ static int process_update_ship_packet(uint8_t opcode)
 				&dgunyawvel,
 				&dsheading,
 				&dbeamwidth);
-	packed_buffer_extract(&pb, "bbbwwbbbbbbbbbbbbbwQQQbbbbbbbw",
+	packed_buffer_extract(&pb, "bbbwwbbbbbbbbbbbbbwQQQbbbbbbbbw",
 			&tloading, &throttle, &rpm, &fuel, &oxygen, &temp,
 			&scizoom, &weapzoom, &navzoom, &mainzoom,
 			&warpdrive, &requested_warpdrive,
 			&requested_shield, &phaser_charge, &phaser_wavelength, &shiptype,
 			&reverse, &trident, &victim_id, &orientation.vec[0],
 			&sciball_orientation.vec[0], &weap_orientation.vec[0], &in_secure_area,
-			&docking_magnets, &emf_detector, &nav_mode, &warp_core_status, &rts_mode, &rts_active_button,
-			&wallet);
+			&docking_magnets, &emf_detector, &nav_mode, &warp_core_status, &rts_mode,
+			&exterior_lights, &rts_active_button, &wallet);
 	tloaded = (tloading >> 4) & 0x0f;
 	tloading = tloading & 0x0f;
 	quat_to_euler(&ypr, &orientation);	
@@ -4328,6 +4329,7 @@ static int process_update_ship_packet(uint8_t opcode)
 	if (!o->tsd.ship.reverse && reverse)
 		wwviaudio_add_sound(REVERSE_SOUND);
 	o->tsd.ship.reverse = reverse;
+	o->tsd.ship.exterior_lights = exterior_lights;
 	o->tsd.ship.trident = trident;
 	o->tsd.ship.wallet = (float) wallet;
 	snis_button_set_label(nav_ui.trident_button, trident ? "RELATIVE" : "ABSOLUTE");
@@ -7729,6 +7731,7 @@ static void show_weapons_camera_view(GtkWidget *w)
 				o->x, o->y, o->z, SHIP_COLOR);
 	if (o->entity) {
 		update_entity_orientation(o->entity, &o->orientation);
+		entity_update_emit_intensity(o->entity, (float) o->tsd.ship.exterior_lights / 255.0);
 		set_render_style(o->entity, RENDER_NORMAL);
 	}
 
@@ -7887,8 +7890,11 @@ static void show_mainscreen(GtkWidget *w)
 			/* temporarily add ship into scene for camera mode 1 & 2 */
 			player_ship = add_entity(ecx, ship_mesh_map[o->tsd.ship.shiptype],
 					o->x, o->y, o->z, SHIP_COLOR);
-			if (player_ship)
+			if (player_ship) {
 				update_entity_orientation(player_ship, &o->orientation);
+				entity_update_emit_intensity(player_ship,
+						(float) o->tsd.ship.exterior_lights / 255.0);
+			}
 
 			struct entity *turret_base = add_entity(ecx, ship_turret_base_mesh,
 				-4 * SHIP_MESH_SCALE, 5.45 * SHIP_MESH_SCALE, 0 * SHIP_MESH_SCALE,
@@ -9766,6 +9772,19 @@ static void nav_starmap_button_pressed(__attribute__((unused)) void *cookie)
 	do_adjust_byte_value(0, OPCODE_REQUEST_STARMAP);
 }
 
+static void nav_lights_button_pressed(__attribute__((unused)) void *cookie)
+{
+	struct snis_entity *o;
+
+	o = find_my_ship();
+	if (!o)
+		return;
+	if (o->tsd.ship.exterior_lights == 0)
+		transmit_adjust_control_input((uint8_t) 255, OPCODE_ADJUST_CONTROL_EXTERIOR_LIGHTS);
+	else
+		transmit_adjust_control_input((uint8_t) 0, OPCODE_ADJUST_CONTROL_EXTERIOR_LIGHTS);
+}
+
 static void reverse_button_pressed(__attribute__((unused)) void *s)
 {
 	struct snis_entity *o;
@@ -10067,6 +10086,12 @@ static void init_nav_ui(void)
 					button_color,
 					NANO_FONT, nav_starmap_button_pressed, NULL);
 	snis_button_set_sound(nav_ui.starmap_button, UISND7);
+	y += 40;
+	nav_ui.lights_button = snis_button_init(SCREEN_WIDTH - nav_ui.gauge_radius * 2 - 40,
+					nav_ui.gauge_radius * 2 + y, -1, -1, "LIGHTS",
+					button_color,
+					NANO_FONT, nav_lights_button_pressed, NULL);
+	snis_button_set_sound(nav_ui.lights_button, UISND7);
 	nav_ui.reverse_button = snis_button_init(SCREEN_WIDTH - 40 + x, 5, 30, 25, "R", button_color,
 			NANO_FONT, reverse_button_pressed, NULL);
 	snis_button_set_sound(nav_ui.reverse_button, UISND8);
@@ -10092,6 +10117,8 @@ static void init_nav_ui(void)
 				"ENTER OR LEAVE STANDARD ORBIT AROUND NEARBY PLANET");
 	ui_add_button(nav_ui.starmap_button, DISPLAYMODE_NAVIGATION,
 				"SWITCH BETWEEN NAVIGATION AND STAR MAP");
+	ui_add_button(nav_ui.lights_button, DISPLAYMODE_NAVIGATION,
+				"TOGGLE EXTERIOR LIGHTS ON/OFF");
 	ui_add_button(nav_ui.reverse_button, DISPLAYMODE_NAVIGATION,
 				"TOGGLE REVERSE THRUST");
 	ui_add_button(nav_ui.trident_button, DISPLAYMODE_NAVIGATION,
@@ -18095,6 +18122,9 @@ static void process_physical_device_io(unsigned short opcode, unsigned short val
 		break;
 	case DEVIO_OPCODE_NAV_STARMAP:
 		nav_starmap_button_pressed((void *) 0);
+		break;
+	case DEVIO_OPCODE_NAV_LIGHTS:
+		nav_lights_button_pressed((void *) 0);
 		break;
 	case DEVIO_OPCODE_NAV_THROTTLE:
 		snis_slider_poke_input(nav_ui.throttle_slider, d, 1);
