@@ -9055,6 +9055,8 @@ static int add_spacemonster(double x, double y, double z)
 	if (i < 0)
 		return i;
 	go[i].tsd.spacemonster.seed = snis_randn(1000);
+	go[i].tsd.spacemonster.head_size = snis_randn(255);
+	go[i].tsd.spacemonster.tentacle_size = snis_randn(255);
 	go[i].move = spacemonster_move;
 	random_point_on_sphere(1.0, &dx, &dy, &dz);
 	v = snis_randn(1000) / 1000.0;
@@ -18281,13 +18283,15 @@ static void send_update_turret_packet(struct game_client *c,
 static void send_update_spacemonster_packet(struct game_client *c,
 	struct snis_entity *o)
 {
-	pb_queue_to_client(c, snis_opcode_pkt("bwwSSSwQb", OPCODE_UPDATE_SPACEMONSTER, o->id, o->timestamp,
+	pb_queue_to_client(c, snis_opcode_pkt("bwwSSSwQbbb", OPCODE_UPDATE_SPACEMONSTER, o->id, o->timestamp,
 					o->x, (int32_t) UNIVERSE_DIM,
 					o->y, (int32_t) UNIVERSE_DIM,
 					o->z, (int32_t) UNIVERSE_DIM,
 					o->tsd.spacemonster.seed,
 					&o->orientation,
-					o->tsd.spacemonster.emit_intensity));
+					o->tsd.spacemonster.emit_intensity,
+					o->tsd.spacemonster.head_size,
+					o->tsd.spacemonster.tentacle_size));
 }
 
 static int add_new_player(struct game_client *c)

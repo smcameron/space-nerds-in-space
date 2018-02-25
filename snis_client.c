@@ -1472,7 +1472,7 @@ static void spacemonster_move_tentacles(struct snis_entity *o)
 	mtwist_free(mt);
 }
 
-static void init_spacemonster_data(struct snis_entity *o)
+static void init_spacemonster_data(struct snis_entity *o, float tentacle_scale)
 {
 	int i, j, ntentacles;
 	struct entity *parent;
@@ -1506,6 +1506,7 @@ static void init_spacemonster_data(struct snis_entity *o)
 				update_entity_parent(ecx, *e, parent);
 				update_entity_scale(*e, tentacle_scale);
 				update_entity_material(*e, &spacemonster_tentacle_material);
+				update_entity_non_uniform_scale(*e, 1.0, tentacle_scale, tentacle_scale);
 				parent = *e;
 			} else {
 				break;
@@ -1520,17 +1521,23 @@ static void init_spacemonster_data(struct snis_entity *o)
 }
 
 static int update_spacemonster(uint32_t id, uint32_t timestamp, double x, double y, double z,
-				uint32_t seed, union quat *orientation, uint8_t emit_intensity)
+				uint32_t seed, union quat *orientation, uint8_t emit_intensity,
+				uint8_t head_size, uint8_t tentacle_size)
 {
 	int i;
 	struct entity *e;
 
 	i = lookup_object_by_id(id);
 	if (i < 0) {
+		float tentacle_scale, head_scale;
+
+		tentacle_scale = 0.5 + (float) tentacle_size / 255.0;
+		head_scale = 0.5 + (float) head_size / 255.0;
 		e = add_entity(ecx, spacemonster_mesh, x, y, z, SPACEMONSTER_COLOR);
 		if (e) {
 			set_render_style(e, RENDER_SPARKLE);
 			update_entity_material(e, &spacemonster_material);
+			update_entity_non_uniform_scale(e, 1.0, head_scale, head_scale);
 		}
 		/* initial orientation is identity quat to make setting up tentacles easier */
 		i = add_generic_object(id, timestamp, x, y, z, 0, 0, 0,
@@ -1540,7 +1547,7 @@ static int update_spacemonster(uint32_t id, uint32_t timestamp, double x, double
 		go[i].entity = e;
 		go[i].tsd.spacemonster.seed = seed;
 		go[i].move = spacemonster_move_tentacles;
-		init_spacemonster_data(&go[i]);
+		init_spacemonster_data(&go[i], tentacle_scale);
 		/* Now update the orientation */
 		update_generic_object(i, timestamp, x, y, z, 0, 0, 0, orientation, 1);
 	} else {
@@ -1558,6 +1565,8 @@ static int update_spacemonster(uint32_t id, uint32_t timestamp, double x, double
 		fabs(sin(((float) emit_intensity / 255.0) * 2.0 * M_PI));
 	spacemonster_tentacle_material.texture_mapped.emit_intensity =
 		fabs(sin(((float) emit_intensity / 255.0) * 2.0 * M_PI));
+	go[i].tsd.spacemonster.head_size = head_size;
+	go[i].tsd.spacemonster.tentacle_size = tentacle_size;
 	return 0;
 }
 
@@ -4431,17 +4440,19 @@ static int process_update_spacemonster(void)
 	double dx, dy, dz;
 	union quat orientation;
 	int rc;
-	uint8_t emit_intensity;
+	uint8_t emit_intensity, head_size, tentacle_size;
 
 	assert(sizeof(buffer) > sizeof(struct update_spacemonster_packet) - sizeof(uint8_t));
-	rc = read_and_unpack_buffer(buffer, "wwSSSwQb", &id, &timestamp,
+	rc = read_and_unpack_buffer(buffer, "wwSSSwQbbb", &id, &timestamp,
 				&dx, (int32_t) UNIVERSE_DIM,
 				&dy, (int32_t) UNIVERSE_DIM,
-				&dz, (int32_t) UNIVERSE_DIM, &seed, &orientation, &emit_intensity);
+				&dz, (int32_t) UNIVERSE_DIM, &seed, &orientation, &emit_intensity,
+				&head_size, &tentacle_size);
 	if (rc != 0)
 		return rc;
 	pthread_mutex_lock(&universe_mutex);
-	rc = update_spacemonster(id, timestamp, dx, dy, dz, seed, &orientation, emit_intensity);
+	rc = update_spacemonster(id, timestamp, dx, dy, dz, seed, &orientation, emit_intensity,
+					head_size, tentacle_size);
 	pthread_mutex_unlock(&universe_mutex);
 	return (rc < 0);
 }

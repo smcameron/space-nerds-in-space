@@ -30,7 +30,7 @@
 #define MAXSTARMAPENTRIES 1000 /* max number of solar systems */
 #define MAX_STARMAP_ADJACENCIES 5 /* max warp lanes from one star to other stars */
 #define DEFAULT_SOLAR_SYSTEM "default"
-#define SNIS_PROTOCOL_VERSION "SNIS012"
+#define SNIS_PROTOCOL_VERSION "SNIS013"
 #define COMMON_MTWIST_SEED 97872
 /* dimensions of the "known" universe */
 #define XKNOWN_DIM 600000.0
@@ -650,6 +650,8 @@ struct spacemonster_data {
 	uint8_t mode;
 	uint32_t seed;
 	uint8_t emit_intensity; /* This is what makes the glow effect pulsate */
+	uint8_t head_size;
+	uint8_t tentacle_size;
 	uint32_t interest;
 	float dvx, dvy, dvz; /* desired velocity */
 #define NTENTACLES 5
