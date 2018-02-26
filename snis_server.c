@@ -11717,7 +11717,7 @@ static void send_update_sdata_packets(struct game_client *c, struct snis_entity 
 	if (i < 0)
 		return;
 	ship = &go[i];
-	if (save_sdata_bandwidth()) {
+	if (save_sdata_bandwidth() && o != &go[c->ship_index]) {
 #if GATHER_OPCODE_STATS
 		write_opcode_stats[OPCODE_SHIP_SDATA].count_not_sent++;
 #endif
@@ -17315,11 +17315,6 @@ static void queue_up_client_object_sdata_update(struct game_client *c, struct sn
 {
 	switch (o->type) {
 	case OBJTYPE_SHIP1:
-		send_update_sdata_packets(c, o);
-		/* TODO: remove the next two lines when send_update_sdata_packets does it already */
-		if (o == &go[c->ship_index])
-			pack_and_send_ship_sdata_packet(c, o);
-		break;
 	case OBJTYPE_SHIP2:
 	case OBJTYPE_ASTEROID:
 	case OBJTYPE_CARGO_CONTAINER:
