@@ -1500,6 +1500,7 @@ void mesh_sphere_uv_map(struct mesh *m)
 	mesh_graph_dev_init(m);
 }
 
+/* UV map points to cylinder aligned with X axis */
 /* this has a known issue mapping vertices of tris that span the "international date line" */
 void mesh_cylindrical_yz_uv_map(struct mesh *m)
 {
@@ -1569,6 +1570,158 @@ void mesh_cylindrical_yz_uv_map(struct mesh *m)
 		v1 = (atan2f(2.0 * t1y - 1.0, 2.0 * t1z - 1.0) + M_PI) / (2.0 * M_PI);
 		u2 = t2x;
 		v2 = (atan2f(2.0 * t2y - 1.0, 2.0 * t2z - 1.0) + M_PI) / (2.0 * M_PI);
+
+		mesh_set_triangle_texture_coords(m, i, u0, v0, u1, v1, u2, v2);
+	}
+	mesh_graph_dev_init(m);
+}
+
+/* UV map points to cylinder aligned with Z axis */
+/* this has a known issue mapping vertices of tris that span the "international date line" */
+void mesh_cylindrical_xy_uv_map(struct mesh *m)
+{
+	float u0, v0, u1, v1, u2, v2;
+	int i;
+	float minx, miny, minz, maxx, maxy, maxz;
+
+	minx = 0;
+	miny = 0;
+	minz = 0;
+	maxx = 0;
+	maxy = 0;
+	maxz = 0;
+
+	if (m->tex)
+		free(m->tex);
+
+	m->tex = malloc(sizeof(*m->tex) * m->ntriangles * 3);
+	if (!m->tex)
+		return;
+
+	for (i = 0; i < m->nvertices; i++) {
+		if (i == 0) {
+			minx = m->v[i].x;
+			maxx = m->v[i].x;
+			miny = m->v[i].y;
+			maxy = m->v[i].y;
+			minz = m->v[i].z;
+			maxz = m->v[i].z;
+		} else {
+			if (m->v[i].x < minx)
+				minx = m->v[i].x;
+			if (m->v[i].x > maxx)
+				maxx = m->v[i].x;
+			if (m->v[i].y < miny)
+				miny = m->v[i].y;
+			if (m->v[i].y > maxy)
+				maxy = m->v[i].y;
+			if (m->v[i].z < minz)
+				minz = m->v[i].z;
+			if (m->v[i].z > maxz)
+				maxz = m->v[i].z;
+		}
+	}
+
+	for (i = 0; i < m->ntriangles; i++) {
+		struct vertex *vtx0, *vtx1, *vtx2;
+		float t0x, t0y, t0z, t1x, t1y, t1z, t2x, t2y, t2z;
+
+		vtx0 = m->t[i].v[0];
+		vtx1 = m->t[i].v[1];
+		vtx2 = m->t[i].v[2];
+
+		t0x = (vtx0->x - minx) / (maxx - minx);
+		t0y = (vtx0->y - miny) / (maxy - miny);
+		t0z = (vtx0->z - minz) / (maxz - minz);
+		t1x = (vtx1->x - minx) / (maxx - minx);
+		t1y = (vtx1->y - miny) / (maxy - miny);
+		t1z = (vtx1->z - minz) / (maxz - minz);
+		t2x = (vtx2->x - minx) / (maxx - minx);
+		t2y = (vtx2->y - miny) / (maxy - miny);
+		t2z = (vtx2->z - minz) / (maxz - minz);
+
+		u0 = t0z;
+		v0 = (atan2f(2.0 * t0y - 1.0, 2.0 * t0x - 1.0) + M_PI) / (2.0 * M_PI);
+		u1 = t1z;
+		v1 = (atan2f(2.0 * t1y - 1.0, 2.0 * t1x - 1.0) + M_PI) / (2.0 * M_PI);
+		u2 = t2z;
+		v2 = (atan2f(2.0 * t2y - 1.0, 2.0 * t2x - 1.0) + M_PI) / (2.0 * M_PI);
+
+		mesh_set_triangle_texture_coords(m, i, u0, v0, u1, v1, u2, v2);
+	}
+	mesh_graph_dev_init(m);
+}
+
+/* UV map points to cylinder aligned with Y axis */
+/* this has a known issue mapping vertices of tris that span the "international date line" */
+void mesh_cylindrical_xz_uv_map(struct mesh *m)
+{
+	float u0, v0, u1, v1, u2, v2;
+	int i;
+	float minx, miny, minz, maxx, maxy, maxz;
+
+	minx = 0;
+	miny = 0;
+	minz = 0;
+	maxx = 0;
+	maxy = 0;
+	maxz = 0;
+
+	if (m->tex)
+		free(m->tex);
+
+	m->tex = malloc(sizeof(*m->tex) * m->ntriangles * 3);
+	if (!m->tex)
+		return;
+
+	for (i = 0; i < m->nvertices; i++) {
+		if (i == 0) {
+			minx = m->v[i].x;
+			maxx = m->v[i].x;
+			miny = m->v[i].y;
+			maxy = m->v[i].y;
+			minz = m->v[i].z;
+			maxz = m->v[i].z;
+		} else {
+			if (m->v[i].x < minx)
+				minx = m->v[i].x;
+			if (m->v[i].x > maxx)
+				maxx = m->v[i].x;
+			if (m->v[i].y < miny)
+				miny = m->v[i].y;
+			if (m->v[i].y > maxy)
+				maxy = m->v[i].y;
+			if (m->v[i].z < minz)
+				minz = m->v[i].z;
+			if (m->v[i].z > maxz)
+				maxz = m->v[i].z;
+		}
+	}
+
+	for (i = 0; i < m->ntriangles; i++) {
+		struct vertex *vtx0, *vtx1, *vtx2;
+		float t0x, t0y, t0z, t1x, t1y, t1z, t2x, t2y, t2z;
+
+		vtx0 = m->t[i].v[0];
+		vtx1 = m->t[i].v[1];
+		vtx2 = m->t[i].v[2];
+
+		t0x = (vtx0->x - minx) / (maxx - minx);
+		t0y = (vtx0->y - miny) / (maxy - miny);
+		t0z = (vtx0->z - minz) / (maxz - minz);
+		t1x = (vtx1->x - minx) / (maxx - minx);
+		t1y = (vtx1->y - miny) / (maxy - miny);
+		t1z = (vtx1->z - minz) / (maxz - minz);
+		t2x = (vtx2->x - minx) / (maxx - minx);
+		t2y = (vtx2->y - miny) / (maxy - miny);
+		t2z = (vtx2->z - minz) / (maxz - minz);
+
+		u0 = t0y;
+		v0 = (atan2f(2.0 * t0z - 1.0, 2.0 * t0x - 1.0) + M_PI) / (2.0 * M_PI);
+		u1 = t1y;
+		v1 = (atan2f(2.0 * t1z - 1.0, 2.0 * t1x - 1.0) + M_PI) / (2.0 * M_PI);
+		u2 = t2y;
+		v2 = (atan2f(2.0 * t2z - 1.0, 2.0 * t2x - 1.0) + M_PI) / (2.0 * M_PI);
 
 		mesh_set_triangle_texture_coords(m, i, u0, v0, u1, v1, u2, v2);
 	}

@@ -53,6 +53,7 @@ static char *planetname = NULL;
 static char *normalmapname = NULL;
 static char *cubemapname = NULL;
 static char *cylinder_ambient = NULL;
+static char cylindrical_axis = 0; /* 0 = x, 1 = z */
 static char *cylinder_emit = NULL;
 static char *modelfile = NULL;
 static char *thrustfile = NULL;
@@ -727,6 +728,8 @@ static struct option long_options[] = {
 	{ "turretbase", required_argument, NULL, 'B' },
 	{ "cubemap", required_argument, NULL, 'c' },
 	{ "cylindrical", required_argument, NULL, 'C' },
+	{ "zcylindrical", required_argument, NULL, 'Z' },
+	{ "ycylindrical", required_argument, NULL, 'Y' },
 	{ "emittance", required_argument, NULL, 'e' },
 	{ "help", no_argument, NULL, 'h' },
 	{ "planetmode", required_argument, NULL, 'p' },
@@ -746,7 +749,7 @@ static void process_options(int argc, char *argv[])
 	while (1) {
 		int option_index;
 
-		c = getopt_long(argc, argv, "B:T:bc:C:e:hi:m:n:p:s:t:", long_options, &option_index);
+		c = getopt_long(argc, argv, "B:T:bc:C:Y:Z:e:hi:m:n:p:s:t:", long_options, &option_index);
 		if (c < 0) {
 			break;
 		}
@@ -775,6 +778,15 @@ static void process_options(int argc, char *argv[])
 			break;
 		case 'C':
 			cylinder_ambient = optarg;
+			cylindrical_axis = 0;
+			break;
+		case 'Y':
+			cylinder_ambient = optarg;
+			cylindrical_axis = 1;
+			break;
+		case 'Z':
+			cylinder_ambient = optarg;
+			cylindrical_axis = 2;
 			break;
 		case 'e':
 			cylinder_emit = optarg;
@@ -957,12 +969,22 @@ int main(int argc, char *argv[])
 	} else { /* just ordinary model mode */
 		target_mesh = snis_read_model(filename);
 		if (cylinder_ambient) {
-			mesh_cylindrical_yz_uv_map(target_mesh);
+			if (cylindrical_axis == 0)
+				mesh_cylindrical_yz_uv_map(target_mesh);
+			else if (cylindrical_axis == 1)
+				mesh_cylindrical_xz_uv_map(target_mesh);
+			else
+				mesh_cylindrical_xy_uv_map(target_mesh);
 			material_init_texture_mapped(&cyl_ambient);
 			cyl_ambient.texture_mapped.texture_id = graph_dev_load_texture(cylinder_ambient);
 		}
 		if (cylinder_emit && cylinder_ambient) {
-			mesh_cylindrical_yz_uv_map(target_mesh);
+			if (cylindrical_axis == 0)
+				mesh_cylindrical_yz_uv_map(target_mesh);
+			else if (cylindrical_axis == 1)
+				mesh_cylindrical_xz_uv_map(target_mesh);
+			else
+				mesh_cylindrical_xy_uv_map(target_mesh);
 			cyl_ambient.texture_mapped.emit_texture_id = graph_dev_load_texture(cylinder_emit);
 		}
 		atmosphere_mesh = NULL;
