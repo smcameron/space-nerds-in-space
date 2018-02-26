@@ -16183,15 +16183,21 @@ static int main_da_scroll(GtkWidget *w, GdkEvent *event, gpointer p)
 	struct _GdkEventScroll *e = (struct _GdkEventScroll *) event;
 	struct snis_entity *o;
 	int16_t newval = 0;
+	/* Science zoom scroll sensitivity table */
+	const double szx[] = { 0, 10, 30, 50, 100, 150, 200, 250, 300 };
+	const double szy[] = { 1, 2,  4,  8,  16,  30,  30,  30, 30};
+	BUILD_ASSERT(sizeof(szx) == sizeof(szy));
 
 	if (!(o = find_my_ship()))
 		return 0;
 	switch (displaymode) {
 	case DISPLAYMODE_SCIENCE:
 		if (e->direction == GDK_SCROLL_UP)
-			newval = o->tsd.ship.scizoom - 30;
+			newval = o->tsd.ship.scizoom -
+				(int) table_interp(o->tsd.ship.scizoom, szx, szy, ARRAYSIZE(szx));
 		if (e->direction == GDK_SCROLL_DOWN)
-			newval = o->tsd.ship.scizoom + 30;
+			newval = o->tsd.ship.scizoom +
+				(int) table_interp(o->tsd.ship.scizoom, szx, szy, ARRAYSIZE(szx));
 		if (newval < 0)
 			newval = 0;
 		if (newval > 255)
