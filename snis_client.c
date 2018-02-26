@@ -15413,6 +15413,7 @@ static void show_demon_3d(GtkWidget *w)
 	int color;
 	float camera_movement_rate = 0.05;
 	const int faction_color[] = { CYAN, YELLOW, ORANGERED, AMBER, };
+	float entity_scale;
 
 	/* If in captain mode, then set desired camera position/orientation accordingly */
 	if (demon_ui.captain_of >= 0) {
@@ -15488,7 +15489,10 @@ static void show_demon_3d(GtkWidget *w)
 			draw_label = 1;
 			break;
 		case OBJTYPE_SHIP1:
-			color = MAGENTA;
+			if (timer & 0x4)
+				color = MAGENTA;
+			else
+				color = GREEN;
 			strcpy(label, o->sdata.name);
 			draw_label = 1;
 			break;
@@ -15561,7 +15565,7 @@ static void show_demon_3d(GtkWidget *w)
 		case OBJTYPE_TORPEDO:
 		case OBJTYPE_SPACEMONSTER:
 		case OBJTYPE_WARP_CORE:
-			if (!o->entity)
+			if (!o->entity && o->type != OBJTYPE_SHIP1)
 				break;
 			if (o->type != OBJTYPE_SHIP1)
 				m = entity_get_mesh(o->entity);
@@ -15579,8 +15583,14 @@ static void show_demon_3d(GtkWidget *w)
 			if (!e)
 				break;
 			entity_set_user_data(e, o);
-			update_entity_scale(e, demon_ui.exaggerated_scale * scale +
-					(1.0 - demon_ui.exaggerated_scale) * entity_get_scale(o->entity));
+			if (o->entity) {
+				entity_scale = demon_ui.exaggerated_scale * scale +
+					(1.0 - demon_ui.exaggerated_scale) * entity_get_scale(o->entity);
+			} else {
+				entity_scale = demon_ui.exaggerated_scale * scale +
+					(1.0 - demon_ui.exaggerated_scale);
+			}
+			update_entity_scale(e, entity_scale);
 			update_entity_orientation(e, &o->orientation);
 			if (draw_label) {
 				union vec3 opos = { { o->x, o->y, o->z } };
@@ -15707,6 +15717,25 @@ static void show_demon_3d(GtkWidget *w)
 	pthread_mutex_unlock(&universe_mutex);
 	render_entities(instrumentecx);
 	pthread_mutex_lock(&universe_mutex);
+	for (i = 0; i <= get_entity_count(instrumentecx); i++) {
+		float sx, sy;
+		struct entity *e;
+		struct snis_entity *o;
+
+		e = get_entity(instrumentecx, i);
+		if (!entity_onscreen(e))
+			continue;
+		o = entity_get_user_data(e);
+		if (!o) /* e.g. axes have no associated object */
+			continue;
+		if (o->type == OBJTYPE_SHIP1) {
+			entity_get_screen_coords(e, &sx, &sy);
+			sng_set_foreground(MAGENTA);
+			sng_draw_circle(0, sx, sy, txx(20));
+			/* TODO: figure out why this sdata.name seems to be empty. */
+			sng_abs_xy_draw_string(o->sdata.name, NANO_FONT, sx + txx(5), sy - txy(5));
+		}
+	}
 	pthread_mutex_unlock(&universe_mutex);
 
 
