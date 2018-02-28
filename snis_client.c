@@ -405,6 +405,7 @@ static struct material black_hole_material;
 static struct material spacemonster_tentacle_material;
 static struct material spacemonster_material;
 static struct material warpgate_material;
+static struct material docking_port_material;
 #define NPLANETARY_RING_MATERIALS 256
 #define NPLANET_MATERIALS 256
 static int planetary_ring_texture_id = -1;
@@ -1593,8 +1594,10 @@ static int update_docking_port(uint32_t id, uint32_t timestamp, double scale,
 		int docking_port_model = docking_port_info[model]->docking_port_model;
 		docking_port_model %= NDOCKING_PORT_STYLES;
 		e = add_entity(ecx, docking_port_mesh[docking_port_model], x, y, z, SHIP_COLOR);
-		if (e)
+		if (e) {
 			update_entity_scale(e, scale);
+			update_entity_material(e, &docking_port_material);
+		}
 		i = add_generic_object(id, timestamp, x, y, z, 0, 0, 0,
 				orientation, OBJTYPE_DOCKING_PORT, 1, e);
 		if (i < 0)
@@ -17242,6 +17245,11 @@ static int load_static_textures(void)
 		load_texture("textures/warpgate_texture.png");
 	warpgate_material.texture_mapped.emit_texture_id =
 		load_texture("textures/warpgate_emit.png");
+	material_init_texture_mapped(&docking_port_material);
+	docking_port_material.texture_mapped.texture_id =
+		load_texture("textures/docking_port_texture.png");
+	docking_port_material.texture_mapped.emit_texture_id =
+		load_texture("textures/docking_port_emit.png");
 
 	static_textures_loaded = 1;
 
@@ -18391,7 +18399,9 @@ static void init_meshes()
 	heading_indicator_mesh = snis_read_model(d, "heading_indicator.stl");
 	cargo_container_mesh = snis_read_model(d, "cargocontainer/cargocontainer.obj");
 	docking_port_mesh[0] = snis_read_model(d, "docking_port.stl");
+	mesh_cylindrical_yz_uv_map(docking_port_mesh[0]);
 	docking_port_mesh[1] = snis_read_model(d, "docking_port2.stl");
+	mesh_cylindrical_yz_uv_map(docking_port_mesh[1]);
 	docking_port_mesh[2] = snis_read_model(d, "tetrahedron.stl");
 	nebula_mesh = mesh_fabricate_billboard(2, 2);
 	sun_mesh = mesh_fabricate_billboard(30000, 30000);
