@@ -2472,6 +2472,12 @@ static void update_warp_field_error(void)
 		warp_field_error--;
 }
 
+static void warpgate_blink_lights(struct snis_entity *o)
+{
+	warpgate_material.texture_mapped.emit_intensity =
+		cos(((float) (timer & 0x1f) / 32.0) * 0.5 * M_PI);
+}
+
 static void move_objects(void)
 {
 	int i;
@@ -2494,9 +2500,12 @@ static void move_objects(void)
 			spin_wormhole(timestamp, o);
 			break;
 		case OBJTYPE_STARBASE:
-		case OBJTYPE_WARPGATE:
 		case OBJTYPE_DOCKING_PORT:
 			move_object(timestamp, o, &interpolate_oriented_object);
+			break;
+		case OBJTYPE_WARPGATE:
+			move_object(timestamp, o, &interpolate_oriented_object);
+			warpgate_blink_lights(o);
 			break;
 		case OBJTYPE_SPACEMONSTER:
 			move_object(timestamp, o, &interpolate_oriented_object);
