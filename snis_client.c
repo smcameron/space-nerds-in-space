@@ -12482,6 +12482,7 @@ static void send_lua_script_packet_to_server(char *script)
 {
 	struct packed_buffer *pb;
 	uint8_t len = strlen(script);
+	printf("script = '%s', len = %hhu\n", script, len);
 
 	pb = packed_buffer_allocate(sizeof(struct lua_script_packet) + len);
 	packed_buffer_append(pb, "bb", OPCODE_EXEC_LUA_SCRIPT, len);
@@ -14783,11 +14784,16 @@ static int construct_demon_command(char *input,
 			demon_ui.nselected = demon_group[g].nids;
 			break; 
 		case 7: /* say */
+			if (!saveptr || strlen(saveptr) == 0)
+				goto error;
 			send_demon_comms_packet_to_server(saveptr);
 			break;
 		case 8: send_demon_clear_all_packet_to_server();
 			break;
-		case 9: send_lua_script_packet_to_server(saveptr);
+		case 9:
+			if (!saveptr || strlen(saveptr) == 0)
+				goto error;
+			send_lua_script_packet_to_server(saveptr);
 			break;
 		case 10: toggle_demon_ai_debug_mode();
 			break;
@@ -14796,9 +14802,13 @@ static int construct_demon_command(char *input,
 		case 12: demon_help_mode = 1; 
 			break;
 		case 13:
+			if (!saveptr || strlen(saveptr) == 0)
+				goto error;
 			send_enscript_packet_to_server(saveptr);
 			break;
 		case 14:
+			if (!saveptr || strlen(saveptr) == 0)
+				goto error;
 			send_text_to_speech_packet_to_server(original + (saveptr - input));
 			break;
 		case 15: /* enable real-time-strategy mode */
