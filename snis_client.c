@@ -403,6 +403,7 @@ static struct material sun_material;
 static struct material black_hole_material;
 static struct material spacemonster_tentacle_material;
 static struct material spacemonster_material;
+static struct material warpgate_material;
 #define NPLANETARY_RING_MATERIALS 256
 #define NPLANET_MATERIALS 256
 static int planetary_ring_texture_id = -1;
@@ -1996,10 +1997,15 @@ static int update_warpgate(uint32_t id, uint32_t timestamp, double x, double y, 
 	i = lookup_object_by_id(id);
 	if (i < 0) {
 		e = add_entity(ecx, warpgate_mesh, x, y, z, WARPGATE_COLOR);
-		i = add_generic_object(id, timestamp, x, y, z, 0.0, 0.0, 0.0,
-					orientation, OBJTYPE_WARPGATE, 1, e);
-		if (i < 0)
-			return i;
+		if (e) {
+			update_entity_material(e, &warpgate_material);
+			i = add_generic_object(id, timestamp, x, y, z, 0.0, 0.0, 0.0,
+						orientation, OBJTYPE_WARPGATE, 1, e);
+			if (i < 0) {
+				remove_entity(ecx, e);
+				return i;
+			}
+		}
 	} else {
 		update_generic_object(i, timestamp, x, y, z, 0.0, 0.0, 0.0, orientation, 1);
 	}
@@ -17205,6 +17211,11 @@ static int load_static_textures(void)
 		load_texture("textures/spacemonster_texture.png");
 	spacemonster_material.texture_mapped.emit_texture_id =
 		load_texture("textures/spacemonster_emit.png");
+	material_init_texture_mapped(&warpgate_material);
+	warpgate_material.texture_mapped.texture_id =
+		load_texture("textures/warpgate_texture.png");
+	warpgate_material.texture_mapped.emit_texture_id =
+		load_texture("textures/warpgate_emit.png");
 
 	static_textures_loaded = 1;
 
@@ -18356,6 +18367,7 @@ static void init_meshes()
 	black_hole_mesh = mesh_fabricate_billboard(1, 1);
 	thrust_animation_mesh = init_thrust_mesh(30, 30, 1.3, 1);
 	warpgate_mesh = snis_read_model(d, "warpgate.stl");
+	mesh_cylindrical_yz_uv_map(warpgate_mesh);
 	warp_core_mesh = snis_read_model(d, "warp-core.stl");
 
 	mtwist_free(mt);
