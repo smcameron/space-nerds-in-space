@@ -344,6 +344,7 @@ static ui_element_inside_function ui_slider_inside = (ui_element_inside_function
 
 static volatile int static_textures_loaded = 0; /* blech, volatile global. */
 static volatile int per_solarsystem_textures_loaded = 0;
+static char *lua_skybox_prefix = NULL;
 
 static struct mesh *torpedo_mesh;
 static struct mesh *torpedo_nav_mesh;
@@ -4523,9 +4524,15 @@ static int process_load_skybox(void)
 
 	string[100] = '\0';
 	string[length] = '\0';
-	if (solarsystem_assets->skybox_prefix)
-		free(solarsystem_assets->skybox_prefix);
-	solarsystem_assets->skybox_prefix = strdup(string);
+	if (lua_skybox_prefix)
+		free(lua_skybox_prefix);
+	lua_skybox_prefix = NULL;
+	if (strncmp(string, "restore-default", sizeof(string)) != 0)
+		lua_skybox_prefix = strdup(string);
+	printf("snis_client: LOAD SKYBOX: '%s'\n", string);
+	strncpy(old_solarsystem_name, solarsystem_name, sizeof(old_solarsystem_name) - 1);
+	old_solarsystem_name[99] = '\0';
+	old_solarsystem_assets = solarsystem_assets;
 	per_solarsystem_textures_loaded = 0;
 
 	return 0;
@@ -17244,7 +17251,11 @@ static int load_per_solarsystem_textures()
 	reload_per_solarsystem_textures(old_solarsystem_name, solarsystem_name,
 					old_solarsystem_assets, solarsystem_assets);
 	fprintf(stderr, "load_per_solarsystem_textures, loading\n");
-	sprintf(path, "solarsystems/%s/%s", solarsystem_name, solarsystem_assets->skybox_prefix);
+	if (!lua_skybox_prefix)
+		snprintf(path, sizeof(path), "solarsystems/%s/%s",
+			solarsystem_name, solarsystem_assets->skybox_prefix);
+	else
+		snprintf(path, sizeof(path), "textures/%s", lua_skybox_prefix);
 	load_skybox_textures(path);
 
 	material_init_texture_mapped_unlit(&sun_material);
@@ -17314,7 +17325,8 @@ static void reload_per_solarsystem_textures(char *old_solarsystem, char *new_sol
 	fprintf(stderr, "Re-loading per solarsystem textures\n");
 	if (old_assets) {
 		expire_per_solarsystem_textures(old_solarsystem, old_assets);
-		solarsystem_asset_spec_free(old_assets);
+		if (new_assets != old_assets)
+			solarsystem_asset_spec_free(old_assets);
 	}
 	solarsystem_assets = new_assets;
 	per_solarsystem_textures_loaded = 0;

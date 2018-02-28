@@ -338,7 +338,9 @@ set_player_damage(id, system, value) -- sets the damage of the specified system 
 load_skybox(ship_id, filenameprefix) -- loads a new skybox composed of six images for any clients
 	with specified ship id that have the role of main screen.  If filenameprefix is
 	the string "x", then the six images are x0.png, x1.png, x2.png, x3.png, x4.png, and
-	x5.png.
+	x5.png. These must reside in ${SNIS_ASSET_DIR} (by default, share/snis/textures).
+	If the value "restore-default" is passed as the filenameprefix, then the default
+	skybox for the current solarsystem is loaded.
 
 ux,uy,uz = user_coords(x, y, z) -- returns user (player) coordinates given program coordinates.
 	(this really just swaps y and z. ux == x, uy == z, uz == y).
