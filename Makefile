@@ -1017,6 +1017,9 @@ snis_test_audio.1.gz:	snis_test_audio.1
 print_ship_attributes:	snis_entity_key_value_specification.h key_value_parser.o
 	gcc -o print_ship_attributes print_ship_attributes.c key_value_parser.o
 
+snis_dmx.o:	snis_dmx.c snis_dmx.h Makefile
+	$(Q)$(COMPILE)
+
 snis_test_audio.o:	snis_test_audio.c Makefile ${SNDOBJS} ${OGGOBJ}
 	$(Q)$(VORBISCOMPILE)
 
