@@ -22,7 +22,7 @@
 #include <stdint.h>
 
 /* Closes the device and stops the associated thread */
-int snis_dmx_close_serial_device(int handle);
+int snis_dmx_close_device(int handle);
 
 /* Starts the main thread for transmitting DMX data to the device */
 int snis_dmx_start_main_thread(char *device);
@@ -32,9 +32,9 @@ int snis_dmx_start_main_thread(char *device);
  * If you had one light, with a 3 bytes to control RGB brightness, and a 2nd light with
  * 1 byte for brightness, and a 3rd light, with RGB, you would do:
  *
- * snis_dmx_add_light(fd, 0, 3); -- add the first light, with 3 bytes for brightness
- * snis_dmx_add_light(fd, 0, 1); -- add the 2nd light, with 1 byte for brightness
- * snis_dmx_add_light(fd, 0, 3); -- add the 3rd light, with 3 byte for brightness
+ * snis_dmx_add_light(fd, 3); -- add the first light, with 3 bytes for brightness
+ * snis_dmx_add_light(fd, 1); -- add the 2nd light, with 1 byte for brightness
+ * snis_dmx_add_light(fd, 3); -- add the 3rd light, with 3 byte for brightness
  *
  */
 int snis_dmx_add_light(int handle, int size);
