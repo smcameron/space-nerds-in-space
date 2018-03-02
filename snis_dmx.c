@@ -135,6 +135,8 @@ static void *dmx_writer_thread(void *arg)
 			rc = write(t->fd, dmx_packet, sizeof(dmx_packet));
 			if (rc >= 0) {
 				bytes_left -= rc;
+			} else if (rc == -1 && errno == EINTR) {
+				continue;
 			} else {
 				/* Some error on the file descriptor */
 				return NULL;
