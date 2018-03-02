@@ -1020,6 +1020,9 @@ print_ship_attributes:	snis_entity_key_value_specification.h key_value_parser.o
 snis_dmx.o:	snis_dmx.c snis_dmx.h Makefile
 	$(Q)$(COMPILE)
 
+test_snis_dmx:	test_snis_dmx.c snis_dmx.o
+	$(Q)gcc -pthread -o test_snis_dmx test_snis_dmx.c snis_dmx.o
+
 snis_test_audio.o:	snis_test_audio.c Makefile ${SNDOBJS} ${OGGOBJ}
 	$(Q)$(VORBISCOMPILE)
 
