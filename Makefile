@@ -954,7 +954,7 @@ ${SSGL}:
 mostly-clean:
 	rm -f ${SERVEROBJS} ${CLIENTOBJS} ${LIMCLIENTOBJS} ${SDLCLIENTOBJS} ${PROGS} ${SSGL} \
 	${BINPROGS} ${UTILPROGS} stl_parser snis_limited_graph.c snis_limited_client.c \
-	test-space-partition snis_test_audio.o snis_test_audio joystick_test
+	test-space-partition snis_test_audio.o snis_test_audio joystick_test local_termios2.h
 	( cd ssgl; ${MAKE} clean )
 
 test-marshal:	snis_marshal.c stacktrace.o Makefile
@@ -1017,7 +1017,10 @@ snis_test_audio.1.gz:	snis_test_audio.1
 print_ship_attributes:	snis_entity_key_value_specification.h key_value_parser.o
 	gcc -o print_ship_attributes print_ship_attributes.c key_value_parser.o
 
-snis_dmx.o:	snis_dmx.c snis_dmx.h Makefile
+local_termios2.h:	termios2.h
+	$(Q)./check_for_termios2.sh
+
+snis_dmx.o:	snis_dmx.c snis_dmx.h Makefile local_termios2.h
 	$(Q)$(COMPILE)
 
 test_snis_dmx:	test_snis_dmx.c snis_dmx.o

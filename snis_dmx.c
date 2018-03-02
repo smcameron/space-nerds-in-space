@@ -34,7 +34,7 @@
 
 
 #include "snis_dmx.h"
-#include "termios2.h"
+#include "local_termios2.h"
 
 #define MAX_DMX_DEVICE_CHAINS 10 /* Number of serial ports connected to DMX device chains */
 #define DMX_BAUD_RATE 250000	 /* This is what the standard says, so you can't really change this. */
