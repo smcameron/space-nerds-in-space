@@ -93,7 +93,6 @@ static void init_per_thread_data(struct per_thread_data *t, int fd)
 /* Closes the device and ends the associated thread */
 int snis_dmx_close_device(int handle)
 {
-	void *res;
 	struct per_thread_data *t;
 
 	if (handle < 0 || handle >= MAX_DMX_DEVICE_CHAINS)
@@ -101,11 +100,9 @@ int snis_dmx_close_device(int handle)
 	t = &thread_data[handle];
 	pthread_mutex_lock(&mutex);
 	t->time_to_quit = 1;
-	pthread_mutex_unlock(&mutex);
-	(void) pthread_join(t->thread, &res); /* if this fails, not much we can do. */
-	pthread_mutex_lock(&mutex);
 	init_per_thread_data(t, -1);
 	t->thread_in_use = 0;
+	/* No need to join thread we just told to quit since it was created in detached state. */
 	pthread_mutex_unlock(&mutex);
 	return 0;
 }
@@ -254,6 +251,7 @@ int snis_dmx_start_main_thread(char *device)
 	rc = pthread_attr_init(&attr);
 	if (rc)
 		return -1;
+	pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
 	rc = pthread_create(&t->thread, &attr, dmx_writer_thread, t);
 	pthread_attr_destroy(&attr);
 	if (rc)
