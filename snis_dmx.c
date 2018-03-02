@@ -331,16 +331,19 @@ int snis_dmx_set_rgb(int handle, int number, uint8_t r, uint8_t b, uint8_t g)
 		return -1;
 	t = &thread_data[handle];
 	pthread_mutex_lock(&mutex);
-	if (!t->thread_in_use || t->fd < 0 || number >= t->nlights || t->light[number].size != 3) {
-		pthread_mutex_unlock(&mutex);
-		return -1;
-	}
+	if (!t->thread_in_use || t->fd < 0 || number >= t->nlights || t->light[number].size != 3)
+		goto error;
 	offset = t->light[number].byte + 2; /* +2 to account for MARK AFTER BREAK and NULL START byte */
+	if (offset < 0 || offset >= sizeof(t->dmx_packet))
+		goto error;
 	t->dmx_packet[offset] = r;
 	t->dmx_packet[offset + 1] = g;
 	t->dmx_packet[offset + 2] = b;
 	pthread_mutex_unlock(&mutex);
 	return 0;
+error:
+	pthread_mutex_unlock(&mutex);
+	return -1;
 }
 
 int snis_dmx_set_u8_level(int handle, int number, uint8_t level)
@@ -354,12 +357,15 @@ int snis_dmx_set_u8_level(int handle, int number, uint8_t level)
 		return -1;
 	t = &thread_data[handle];
 	pthread_mutex_lock(&mutex);
-	if (!t->thread_in_use || t->fd < 0 || number >= t->nlights || t->light[number].size != 1) {
-		pthread_mutex_unlock(&mutex);
-		return -1;
-	}
+	if (!t->thread_in_use || t->fd < 0 || number >= t->nlights || t->light[number].size != 1)
+		goto error;
 	offset = t->light[number].byte + 2; /* +2 to account for MARK AFTER BREAK and NULL START byte */
+	if (offset < 0 || offset >= sizeof(t->dmx_packet))
+		goto error;
 	t->dmx_packet[offset] = level;
 	pthread_mutex_unlock(&mutex);
 	return 0;
+error:
+	pthread_mutex_unlock(&mutex);
+	return -1;
 }
