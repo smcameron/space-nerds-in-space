@@ -38,7 +38,9 @@
 
 #define MAX_DMX_DEVICE_CHAINS 10 /* Number of serial ports connected to DMX device chains */
 #define DMX_BAUD_RATE 250000	 /* This is what the standard says, so you can't really change this. */
-#define DMX_PACKET_SIZE 513	 /* NULL START plus 512 bytes of data */
+#define DMX_PACKET_SIZE 514	 /* Mark after break, plus NULL START plus 512 bytes of data */
+#define MARK_AFTER_BREAK (0xff)
+#define NULL_START_BYTE (0x00)
 #define SERIAL_BREAK_LENGTH_MS 10 /* Send BREAK for this many ms before sending next packet */
 #define SLEEP_MS_BETWEEN_PACKETS 1 /* Wait this many ms after break sent before sending packet */
 
@@ -124,12 +126,21 @@ static void *dmx_writer_thread(void *arg)
 		}
 		pthread_mutex_unlock(&mutex);
 
-		/* I suspect this part is almost certainly wrong in some way. */
-		/* Send break, then wait a bit to set up for sending packet (is this right???) */
+		/* I suspect this part is almost certainly wrong in some way.
+		 * Send break, then a single 1 bit, then the data.
+		 * From the man page: "tcsendbreak() transmits a continuous stream of
+		 * zero-valued bits for a specific duration, if the terminal is using
+		 * asynchronous serial data transmission."
+		 *
+		 * So if we use tcsendbreak() to send the break, then follow it by
+		 * 0xff for the MARK AFTER BREAK, then our data, then maybe that... should
+		 * do it? Maybe?
+		 */
 		tcsendbreak(t->fd, SERIAL_BREAK_LENGTH_MS); /* some small ms of break, this is not super portable */
-		thread_safe_msleep(SLEEP_MS_BETWEEN_PACKETS); /* mark after break? */
 
 		/* Write packet to device */
+		dmx_packet[0] = MARK_AFTER_BREAK;
+		dmx_packet[1] = NULL_START_BYTE;
 		bytes_left = sizeof(dmx_packet);
 		do {
 			rc = write(t->fd, dmx_packet, sizeof(dmx_packet));
@@ -142,6 +153,7 @@ static void *dmx_writer_thread(void *arg)
 				return NULL;
 			}
 		} while (bytes_left > 0);
+		thread_safe_msleep(SLEEP_MS_BETWEEN_PACKETS);
 	} while (1);
 }
 
@@ -323,7 +335,7 @@ int snis_dmx_set_rgb(int handle, int number, uint8_t r, uint8_t b, uint8_t g)
 		pthread_mutex_unlock(&mutex);
 		return -1;
 	}
-	offset = t->light[number].byte + 1; /* +1 to account for the first NULL START byte */
+	offset = t->light[number].byte + 2; /* +2 to account for MARK AFTER BREAK and NULL START byte */
 	t->dmx_packet[offset] = r;
 	t->dmx_packet[offset + 1] = g;
 	t->dmx_packet[offset + 2] = b;
@@ -346,7 +358,7 @@ int snis_dmx_set_u8_level(int handle, int number, uint8_t level)
 		pthread_mutex_unlock(&mutex);
 		return -1;
 	}
-	offset = t->light[number].byte + 1; /* +1 to account for the first NULL START byte */
+	offset = t->light[number].byte + 2; /* +2 to account for MARK AFTER BREAK and NULL START byte */
 	t->dmx_packet[offset] = level;
 	pthread_mutex_unlock(&mutex);
 	return 0;
