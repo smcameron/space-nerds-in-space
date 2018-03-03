@@ -369,3 +369,33 @@ error:
 	pthread_mutex_unlock(&mutex);
 	return -1;
 }
+
+/* Set a 2 byte big endian 16-bit light level, level is CPU native format. */
+int snis_dmx_set_be16_level(int handle, int number, uint16_t level)
+{
+	int offset;
+	struct per_thread_data *t;
+	const uint16_t cpu_value = 0x0102;
+	const int cpu_is_little_endian = (((char *) &cpu_value)[0] == 0x02);
+	unsigned char *levelbyte = (unsigned char *) &level;
+
+	printf("Setting u16 light level for f:%dn%d to %hhu\n",
+		handle, number, level);
+	if (number < 0 || handle < 0 || handle >= MAX_DMX_DEVICE_CHAINS)
+		return -1;
+	t = &thread_data[handle];
+	pthread_mutex_lock(&mutex);
+	if (!t->thread_in_use || t->fd < 0 || number >= t->nlights || t->light[number].size != 2)
+		goto error;
+	offset = t->light[number].byte + 2; /* +2 to account for MARK AFTER BREAK and NULL START byte */
+	if (offset < 0 || offset >= sizeof(t->dmx_packet))
+		goto error;
+	/* Convert native CPU endian u16 to big endian u16 */
+	t->dmx_packet[offset] = levelbyte[cpu_is_little_endian];
+	t->dmx_packet[offset + 1] = levelbyte[!cpu_is_little_endian];
+	pthread_mutex_unlock(&mutex);
+	return 0;
+error:
+	pthread_mutex_unlock(&mutex);
+	return -1;
+}
