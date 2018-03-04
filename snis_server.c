@@ -9391,6 +9391,7 @@ static int add_spacemonster(double x, double y, double z)
 	go[i].tsd.spacemonster.anger = 0;
 	go[i].tsd.spacemonster.health = 255;
 	go[i].tsd.spacemonster.hunger = 0;
+	go[i].tsd.spacemonster.nearest_spacemonster = -1;
 	update_ship_orientation(&go[i]);
 
 	go[i].tsd.spacemonster.home = (uint32_t) -1;
