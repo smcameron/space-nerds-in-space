@@ -3465,6 +3465,9 @@ static void spacemonster_collision_process(void *context, void *entity)
 	struct snis_entity *thing = entity;
 	float dist;
 
+	if (thing == o)
+		return;
+
 	switch (thing->type) {
 	case OBJTYPE_SPACEMONSTER:
 		if (o->tsd.spacemonster.nearest_spacemonster == (uint32_t) -1) {
