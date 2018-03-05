@@ -3470,7 +3470,7 @@ static void spacemonster_collision_process(void *context, void *entity)
 
 	switch (thing->type) {
 	case OBJTYPE_SPACEMONSTER:
-		if (o->tsd.spacemonster.nearest_spacemonster == (uint32_t) -1) {
+		if (o->tsd.spacemonster.spacemonster_dist < 0.0) {
 			o->tsd.spacemonster.nearest_spacemonster = thing->id;
 			o->tsd.spacemonster.spacemonster_dist =
 				dist3d(o->x - thing->x, o->y - thing->y, o->z - thing->z);
@@ -3483,7 +3483,7 @@ static void spacemonster_collision_process(void *context, void *entity)
 		}
 		break;
 	case OBJTYPE_ASTEROID:
-		if (o->tsd.spacemonster.nearest_asteroid == (uint32_t) -1) {
+		if (o->tsd.spacemonster.asteroid_dist < 0.0) {
 			o->tsd.spacemonster.nearest_asteroid = thing->id;
 			o->tsd.spacemonster.asteroid_dist =
 				dist3d(o->x - thing->x, o->y - thing->y, o->z - thing->z);
@@ -3702,6 +3702,11 @@ static void spacemonster_move(struct snis_entity *o)
 		&& o->tsd.spacemonster.health > 0)
 			o->tsd.spacemonster.health--;
 
+	/* Clear out distance knowledge so it won't be stale */
+	o->tsd.spacemonster.asteroid_dist = -1.0;
+	o->tsd.spacemonster.nearest_asteroid = (uint32_t) -1;
+	o->tsd.spacemonster.spacemonster_dist = -1.0;
+	o->tsd.spacemonster.nearest_spacemonster = (uint32_t) -1;
 	space_partition_process(space_partition, o, o->x, o->z, o,
 		spacemonster_collision_process);
 
