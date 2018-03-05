@@ -3552,6 +3552,7 @@ static void spacemonster_eat(struct snis_entity *o)
 	double dist, mindist = -1.0;
 	int found = -1;
 	float vscale;
+	int candidate;
 
 	if (o->tsd.spacemonster.nearest_asteroid == -1 || snis_randn(1000) < 20) {
 		/* Find the nearest asteroid somewhere We look sometimes randomly too
@@ -3570,7 +3571,8 @@ static void spacemonster_eat(struct snis_entity *o)
 			return;
 		o->tsd.spacemonster.nearest_asteroid = go[found].id;
 	}
-	i = lookup_by_id(o->tsd.spacemonster.nearest_asteroid);
+	candidate = o->tsd.spacemonster.nearest_asteroid;
+	i = lookup_by_id(candidate);
 	if (i < 0)
 		return;
 	o->tsd.spacemonster.dest.v.x = go[i].x;
@@ -3630,6 +3632,7 @@ static void spacemonster_play(struct snis_entity *o)
 	int i;
 	union vec3 v;
 	double dist;
+	float vel, esttime;
 
 	if (o->tsd.spacemonster.nearest_spacemonster == -1)
 		return;
@@ -3643,20 +3646,38 @@ static void spacemonster_play(struct snis_entity *o)
 	v.v.y = go[i].y - o->y;
 	v.v.z = go[i].z - o->z;
 	dist = vec3_magnitude(&v);
+	vel = sqrt(o->vx * o->vx + o->vy * o->vy + o->vz * o->vz);
+	if (vel < 0.01)
+		vel = 0.01;
+	esttime = 0.75 * dist / vel;
+	v.v.x += go[i].vx * esttime;
+	v.v.y += go[i].vy * esttime;
+	v.v.z += go[i].vz * esttime;
 	vec3_normalize_self(&v);
 	if (dist > 3000) {
 		vec3_mul_self(&v, MAX_SPACEMONSTER_VELOCITY);
 		o->tsd.spacemonster.dvx = v.v.x;
 		o->tsd.spacemonster.dvy = v.v.y;
 		o->tsd.spacemonster.dvz = v.v.z;
-	} else {
-		if (snis_randn(1000) < 50) {
+	} else if (snis_randn(1000) < 50) {
 			random_point_on_sphere(1.0, &v.v.x, &v.v.y, &v.v.y);
 			vec3_mul_self(&v, MAX_SPACEMONSTER_VELOCITY);
 			o->tsd.spacemonster.dvx = v.v.x;
 			o->tsd.spacemonster.dvy = v.v.y;
 			o->tsd.spacemonster.dvz = v.v.z;
-		}
+	} else if (dist < 500) {
+		union vec3 steer;
+		float mul;
+
+		steer.v.x = o->x - go[i].x;
+		steer.v.y = o->y - go[i].y;
+		steer.v.z = o->z - go[i].z;
+		vec3_normalize_self(&steer);
+		mul = MAX_SPACEMONSTER_VELOCITY * 0.5;
+		vec3_mul_self(&steer, mul);
+		o->tsd.spacemonster.dvx += steer.v.x;
+		o->tsd.spacemonster.dvy += steer.v.y;
+		o->tsd.spacemonster.dvz += steer.v.z;
 	}
 }
 
@@ -3727,20 +3748,20 @@ static void spacemonster_move(struct snis_entity *o)
 		}
 	}
 	dx = o->tsd.spacemonster.dvx - o->vx;
-	if (dx > 0.5)
-		dx = 0.5;
-	if (dx < -0.5)
-		dx = -0.5;
+	if (dx > MAX_SPACEMONSTER_ACCEL)
+		dx = MAX_SPACEMONSTER_ACCEL;
+	if (dx < -MAX_SPACEMONSTER_ACCEL)
+		dx = -MAX_SPACEMONSTER_ACCEL;
 	dy = o->tsd.spacemonster.dvy - o->vy;
-	if (dy > 0.5)
-		dy = 0.5;
-	if (dy < -0.5)
-		dy = -0.5;
+	if (dy > MAX_SPACEMONSTER_ACCEL)
+		dy = MAX_SPACEMONSTER_ACCEL;
+	if (dy < -MAX_SPACEMONSTER_ACCEL)
+		dy = -MAX_SPACEMONSTER_ACCEL;
 	dz = o->tsd.spacemonster.dvz - o->vz;
-	if (dz > 0.5)
-		dz = 0.5;
-	if (dz < -0.5)
-		dz = -0.5;
+	if (dz > MAX_SPACEMONSTER_ACCEL)
+		dz = MAX_SPACEMONSTER_ACCEL;
+	if (dz < -MAX_SPACEMONSTER_ACCEL)
+		dz = -MAX_SPACEMONSTER_ACCEL;
 	o->vx += dx;
 	o->vy += dy;
 	o->vz += dz;
