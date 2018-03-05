@@ -3496,8 +3496,34 @@ static void spacemonster_collision_process(void *context, void *entity)
 		}
 		break;
 	case OBJTYPE_SHIP1:
-		break;
 	case OBJTYPE_SHIP2:
+		if (o->tsd.spacemonster.ship_dist < 0.0) {
+			o->tsd.spacemonster.nearest_ship = thing->id;
+			o->tsd.spacemonster.ship_dist =
+				dist3d(o->x - thing->x, o->y - thing->y, o->z - thing->z);
+		} else if (o->id != o->tsd.spacemonster.nearest_ship) {
+			dist = dist3d(o->x - thing->x, o->y - thing->y, o->z - thing->z);
+			if (dist < o->tsd.spacemonster.ship_dist) {
+				o->tsd.spacemonster.ship_dist = dist;
+				o->tsd.spacemonster.nearest_ship = thing->id;
+			}
+		}
+		/* Space monster gets angry if healthy and ship is too close
+		 * Space monster gets fearful if not healthy and ship is too close
+		 * Ship interactions happen in ship collision processing functions.
+		 */
+		if (o->tsd.spacemonster.ship_dist >= 0.0) {
+			if (o->tsd.spacemonster.ship_dist < SPACEMONSTER_AGGRO_RADIUS &&
+				snis_randn(1000) < 200) {
+				if (o->tsd.spacemonster.health > 100) {
+					if (o->tsd.spacemonster.anger < 255)
+						o->tsd.spacemonster.anger += snis_randn(10);
+				} else {
+					if (o->tsd.spacemonster.fear < 255)
+						o->tsd.spacemonster.fear += snis_randn(10);
+				}
+			}
+		}
 		break;
 	case OBJTYPE_NEBULA:
 		break;
@@ -3541,8 +3567,117 @@ static void spacemonster_flee(struct snis_entity *o)
 	o->tsd.spacemonster.decision_age++;
 }
 
+static void spacemonster_play(struct snis_entity *o)
+{
+	int i;
+	union vec3 v;
+	double dist;
+	float vel, esttime;
+
+	if (o->tsd.spacemonster.nearest_spacemonster == -1)
+		return;
+	i = lookup_by_id(o->tsd.spacemonster.nearest_spacemonster);
+	if (i < 0)
+		return;
+	printf("nearest spacemonster id is %u, type is %d\n", go[i].id, (int) go[i].type);
+	o->tsd.spacemonster.dest.v.x = go[i].x;
+	o->tsd.spacemonster.dest.v.y = go[i].y;
+	o->tsd.spacemonster.dest.v.z = go[i].z;
+	v.v.x = go[i].x - o->x;
+	v.v.y = go[i].y - o->y;
+	v.v.z = go[i].z - o->z;
+	dist = vec3_magnitude(&v);
+	vel = sqrt(go[i].vx * go[i].vx + go[i].vy * go[i].vy + go[i].vz * go[i].vz);
+	if (vel < 0.01)
+		vel = 0.01;
+	esttime = 0.75 * dist / vel;
+	v.v.x += go[i].vx * esttime;
+	v.v.y += go[i].vy * esttime;
+	v.v.z += go[i].vz * esttime;
+	vec3_normalize_self(&v);
+	if (dist > 3000) {
+		vec3_mul_self(&v, MAX_SPACEMONSTER_VELOCITY);
+		o->tsd.spacemonster.dvx = v.v.x;
+		o->tsd.spacemonster.dvy = v.v.y;
+		o->tsd.spacemonster.dvz = v.v.z;
+	} else if (snis_randn(1000) < 50) {
+			random_point_on_sphere(1.0, &v.v.x, &v.v.y, &v.v.y);
+			vec3_mul_self(&v, MAX_SPACEMONSTER_VELOCITY);
+			o->tsd.spacemonster.dvx = v.v.x;
+			o->tsd.spacemonster.dvy = v.v.y;
+			o->tsd.spacemonster.dvz = v.v.z;
+	} else if (dist < 500) {
+		union vec3 steer;
+		float mul;
+
+		steer.v.x = o->x - go[i].x;
+		steer.v.y = o->y - go[i].y;
+		steer.v.z = o->z - go[i].z;
+		vec3_normalize_self(&steer);
+		mul = MAX_SPACEMONSTER_VELOCITY * 0.5;
+		vec3_mul_self(&steer, mul);
+		o->tsd.spacemonster.dvx += steer.v.x;
+		o->tsd.spacemonster.dvy += steer.v.y;
+		o->tsd.spacemonster.dvz += steer.v.z;
+	}
+}
+
 static void spacemonster_fight(struct snis_entity *o)
 {
+	int i;
+	union vec3 ship_vel, to_player, to_target;
+	float esttime;
+
+	if (o->tsd.spacemonster.nearest_ship == (uint32_t) -1 ||
+		o->tsd.spacemonster.ship_dist < 0.0) {
+		spacemonster_play(o);
+		return;
+	}
+	i = lookup_by_id(o->tsd.spacemonster.nearest_ship);
+	if (i < 0) {
+		spacemonster_play(o);
+		return;
+	}
+	if (o->tsd.spacemonster.ship_dist > SPACEMONSTER_AGGRO_RADIUS) {
+		spacemonster_play(o);
+		o->tsd.spacemonster.anger = imax(o->tsd.spacemonster.anger - snis_randn(10), 0);
+		o->tsd.spacemonster.fear = imax(o->tsd.spacemonster.fear - snis_randn(10), 0);
+		return;
+	}
+	ship_vel.v.x = go[i].vx;
+	ship_vel.v.y = go[i].vy;
+	ship_vel.v.z = go[i].vz;
+	to_player.v.x = go[i].x - o->x;
+	to_player.v.y = go[i].y - o->y;
+	to_player.v.z = go[i].z - o->z;
+	esttime = 0.75 * vec3_magnitude(&to_player) / MAX_SPACEMONSTER_VELOCITY;
+	vec3_mul_self(&ship_vel, esttime);
+	vec3_add(&to_target, &to_player, &ship_vel);
+	vec3_normalize_self(&to_target);
+	vec3_mul_self(&to_target, MAX_SPACEMONSTER_VELOCITY);
+	o->tsd.spacemonster.dvx = to_target.v.x;
+	o->tsd.spacemonster.dvy = to_target.v.y;
+	o->tsd.spacemonster.dvz = to_target.v.z;
+
+	/* If too close to other spacemonster, steer away from it */
+	if (o->tsd.spacemonster.nearest_spacemonster != -1) {
+		i = lookup_by_id(o->tsd.spacemonster.nearest_spacemonster);
+		if (i >= 0) {
+			double dist = dist3d(o->x - go[i].x, o->y - go[i].y, o->z - go[i].z);
+			if (dist < 500) { /* too close */
+				union vec3 steer;
+
+				steer.v.x = o->x - go[i].x;
+				steer.v.y = o->y - go[i].y;
+				steer.v.z = o->z - go[i].z;
+				vec3_normalize_self(&steer);
+				vec3_mul_self(&steer, 0.5 * MAX_SPACEMONSTER_VELOCITY);
+				o->tsd.spacemonster.dvx += steer.v.x;
+				o->tsd.spacemonster.dvy += steer.v.y;
+				o->tsd.spacemonster.dvz += steer.v.z;
+			}
+		}
+	}
 }
 
 static void spacemonster_eat(struct snis_entity *o)
@@ -3627,60 +3762,6 @@ static void spacemonster_eat(struct snis_entity *o)
 	}
 }
 
-static void spacemonster_play(struct snis_entity *o)
-{
-	int i;
-	union vec3 v;
-	double dist;
-	float vel, esttime;
-
-	if (o->tsd.spacemonster.nearest_spacemonster == -1)
-		return;
-	i = lookup_by_id(o->tsd.spacemonster.nearest_spacemonster);
-	if (i < 0)
-		return;
-	o->tsd.spacemonster.dest.v.x = go[i].x;
-	o->tsd.spacemonster.dest.v.y = go[i].y;
-	o->tsd.spacemonster.dest.v.z = go[i].z;
-	v.v.x = go[i].x - o->x;
-	v.v.y = go[i].y - o->y;
-	v.v.z = go[i].z - o->z;
-	dist = vec3_magnitude(&v);
-	vel = sqrt(o->vx * o->vx + o->vy * o->vy + o->vz * o->vz);
-	if (vel < 0.01)
-		vel = 0.01;
-	esttime = 0.75 * dist / vel;
-	v.v.x += go[i].vx * esttime;
-	v.v.y += go[i].vy * esttime;
-	v.v.z += go[i].vz * esttime;
-	vec3_normalize_self(&v);
-	if (dist > 3000) {
-		vec3_mul_self(&v, MAX_SPACEMONSTER_VELOCITY);
-		o->tsd.spacemonster.dvx = v.v.x;
-		o->tsd.spacemonster.dvy = v.v.y;
-		o->tsd.spacemonster.dvz = v.v.z;
-	} else if (snis_randn(1000) < 50) {
-			random_point_on_sphere(1.0, &v.v.x, &v.v.y, &v.v.y);
-			vec3_mul_self(&v, MAX_SPACEMONSTER_VELOCITY);
-			o->tsd.spacemonster.dvx = v.v.x;
-			o->tsd.spacemonster.dvy = v.v.y;
-			o->tsd.spacemonster.dvz = v.v.z;
-	} else if (dist < 500) {
-		union vec3 steer;
-		float mul;
-
-		steer.v.x = o->x - go[i].x;
-		steer.v.y = o->y - go[i].y;
-		steer.v.z = o->z - go[i].z;
-		vec3_normalize_self(&steer);
-		mul = MAX_SPACEMONSTER_VELOCITY * 0.5;
-		vec3_mul_self(&steer, mul);
-		o->tsd.spacemonster.dvx += steer.v.x;
-		o->tsd.spacemonster.dvy += steer.v.y;
-		o->tsd.spacemonster.dvz += steer.v.z;
-	}
-}
-
 static void spacemonster_move(struct snis_entity *o)
 {
 	/* FIXME: make this better */
@@ -3707,6 +3788,9 @@ static void spacemonster_move(struct snis_entity *o)
 	o->tsd.spacemonster.nearest_asteroid = (uint32_t) -1;
 	o->tsd.spacemonster.spacemonster_dist = -1.0;
 	o->tsd.spacemonster.nearest_spacemonster = (uint32_t) -1;
+	o->tsd.spacemonster.ship_dist = -1.0;
+	o->tsd.spacemonster.nearest_ship = (uint32_t) -1;
+	/* Re-acquire distance knowledge */
 	space_partition_process(space_partition, o, o->x, o->z, o,
 		spacemonster_collision_process);
 
@@ -5620,7 +5704,12 @@ static void ship_collision_avoidance(void *context, void *entity)
 		if (d <= 0.0)
 			d = 1.0;
 	}
-
+	if (obstacle->type == OBJTYPE_SPACEMONSTER) {
+		if (d < SPACEMONSTER_COLLISION_RADIUS * SPACEMONSTER_COLLISION_RADIUS) {
+			calculate_torpedolike_damage(o, SPACEMONSTER_WEAPONS_FACTOR);
+			do_collision_impulse(o, obstacle);
+		}
+	}
 	/* Pretend torpedoes are closer than they are since they're scary */
 	if (obstacle->type == OBJTYPE_TORPEDO)
 		d = d / 6.0;
@@ -7084,7 +7173,6 @@ static void player_collision_detection(void *player, void *object)
 	case OBJTYPE_EXPLOSION:
 	case OBJTYPE_NEBULA:
 	case OBJTYPE_WORMHOLE:
-	case OBJTYPE_SPACEMONSTER:
 	case OBJTYPE_STARBASE:
 	case OBJTYPE_WARP_CORE:
 		return;
@@ -7198,6 +7286,13 @@ static void player_collision_detection(void *player, void *object)
 	}
 	proximity_dist2 = PROXIMITY_DIST2;
 	crash_dist2 = CRASH_DIST2;
+	if (t->type == OBJTYPE_SPACEMONSTER) {
+		if (dist2 < SPACEMONSTER_COLLISION_RADIUS * SPACEMONSTER_COLLISION_RADIUS) {
+			do_collision_impulse(o, t);
+			snis_queue_add_sound(SPACEMONSTER_SLAP, ROLE_SOUNDSERVER, o->id);
+			/* TODO: some sort of damage to ship */
+		}
+	}
 	if (t->type == OBJTYPE_STARBASE) {
 		proximity_dist2 *= STARBASE_SCALE_FACTOR;
 		crash_dist2 *= STARBASE_SCALE_FACTOR;

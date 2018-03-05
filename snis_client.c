@@ -17737,6 +17737,7 @@ static void read_sound_clips(void)
 	read_ogg_clip(UISND27, d, "ui27.ogg");
 	read_ogg_clip(UISND28, d, "ui28.ogg");
 	read_ogg_clip(UISND29, d, "ui29.ogg");
+	read_ogg_clip(SPACEMONSTER_SLAP, d, "spacemonster_slap.ogg");
 	printf("Done.\n");
 }
 

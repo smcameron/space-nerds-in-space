@@ -336,6 +336,7 @@ struct ship_data {
 #define TORPEDO_VELOCITY (90.0)
 #define TORPEDO_RANGE (TORPEDO_LIFETIME * TORPEDO_VELOCITY)
 #define TORPEDO_WEAPONS_FACTOR (3.0)
+#define SPACEMONSTER_WEAPONS_FACTOR (3.0)
 #define TORPEDO_DETONATE_DIST2 (150 * 150)
 #define INITIAL_TORPEDO_COUNT 10
 #define LASER_LIFETIME 15
@@ -648,6 +649,8 @@ struct spacemonster_data {
 #define SPACEMONSTER_MODE_EAT 2
 #define SPACEMONSTER_MODE_PLAY 3
 #define SPACEMONSTER_FLEE_DIST 2000.0
+#define SPACEMONSTER_AGGRO_RADIUS 6000.0
+#define SPACEMONSTER_COLLISION_RADIUS 200.0
 	int movement_countdown;
 	uint8_t mode;
 	uint32_t seed;
@@ -667,8 +670,10 @@ struct spacemonster_data {
 	uint8_t nantagonists, nfriends;
 	uint32_t nearest_asteroid;
 	uint32_t nearest_spacemonster;
+	uint32_t nearest_ship;
 	float spacemonster_dist;
 	float asteroid_dist;
+	float ship_dist;
 	union vec3 dest;
 	int decision_age;
 };
