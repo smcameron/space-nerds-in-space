@@ -2419,10 +2419,18 @@ static void push_attack_mode(struct snis_entity *attacker, uint32_t victim_id, i
 	if (i < 0)
 		return;
 
-	if (attacker->tsd.ship.ai[0].ai_mode != AI_MODE_COP) {
-		if (go[i].tsd.ship.ai[0].ai_mode == AI_MODE_COP)
-			return; /* Don't attack the cops */
+	if (attacker->type != OBJTYPE_SHIP2) {
+		fprintf(stderr, "%s:%d: Unexpectedly called push_attack_mode on objtype %d\n",
+			__FILE__, __LINE__, (int) attacker->type);
+		return;
+	}
 
+	if (go[i].type == OBJTYPE_SHIP2 || go[i].type == OBJTYPE_SHIP1) {
+		if (attacker->tsd.ship.ai[0].ai_mode != AI_MODE_COP) {
+			if (go[i].type == OBJTYPE_SHIP2 &&
+				go[i].tsd.ship.ai[0].ai_mode == AI_MODE_COP)
+				return; /* Don't attack the cops */
+		}
 		if (attacker->tsd.ship.in_secure_area || go[i].tsd.ship.in_secure_area) {
 			/* TODO: something better */
 			return;
