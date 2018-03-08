@@ -2579,9 +2579,9 @@ static void process_potential_victim(void *context, void *entity)
 	if (o == v) /* don't victimize self */
 		return;
 
-	/* only victimize players, other ships and starbases */
+	/* only victimize players, other ships, starbases, and space monsters */
 	if (v->type != OBJTYPE_STARBASE && v->type != OBJTYPE_SHIP1 &&
-		v->type != OBJTYPE_SHIP2)
+		v->type != OBJTYPE_SHIP2 && v->type != OBJTYPE_SPACEMONSTER)
 		return;
 
 	if (!v->alive) /* skip the dead guys */
@@ -2606,18 +2606,26 @@ static void process_potential_victim(void *context, void *entity)
 	if (dist > XKNOWN_DIM / 10.0) /* too far away */
 		return;
 
-	/* nearby friendlies reduce threat level */
-	if (o->sdata.faction == v->sdata.faction)
-		o->tsd.ship.threat_level -= 10000.0 / (dist + 1.0);
-
-	if (hostility < FACTION_HOSTILITY_THRESHOLD)
+	if (v->type == OBJTYPE_SPACEMONSTER) {
+		hostility = 1.0;
+		fightiness = (10000.0 * hostility) / (dist + 1.0);
+		o->tsd.ship.threat_level += fightiness;
 		return;
+	} else {
 
-	fightiness = (10000.0 * hostility) / (dist + 1.0);
-	o->tsd.ship.threat_level += fightiness;
+		/* nearby friendlies reduce threat level */
+		if (o->sdata.faction == v->sdata.faction)
+			o->tsd.ship.threat_level -= 10000.0 / (dist + 1.0);
 
-	if (v->type == OBJTYPE_SHIP1)
-		fightiness *= 3.0f; /* prioritize hitting player... */
+		if (hostility < FACTION_HOSTILITY_THRESHOLD)
+			return;
+
+		fightiness = (10000.0 * hostility) / (dist + 1.0);
+		o->tsd.ship.threat_level += fightiness;
+
+		if (v->type == OBJTYPE_SHIP1)
+			fightiness *= 3.0f; /* prioritize hitting player... */
+	}
 
 	if (info->victim_id == -1 || fightiness > info->fightiness) {
 		info->victim_id = v->id;
@@ -4280,7 +4288,9 @@ static void compute_danger_vectors(void *context, void *entity)
 	if (o == di->me)
 		return;
 
-	if (o->type != OBJTYPE_STARBASE && o->type != OBJTYPE_SHIP2)
+	if (o->type != OBJTYPE_STARBASE &&
+		o->type != OBJTYPE_SHIP2 &&
+		o->type != OBJTYPE_SPACEMONSTER)
 		return;
 
 	dist = dist3d(o->x - di->me->x, o->y - di->me->y, o->z - di->me->z);
@@ -4288,7 +4298,7 @@ static void compute_danger_vectors(void *context, void *entity)
 	if (dist > XKNOWN_DIM / 10.0) /* too far, no effect */
 		return;
 
-	if (o->sdata.faction == di->me->sdata.faction) {
+	if (o->type != OBJTYPE_SPACEMONSTER && o->sdata.faction == di->me->sdata.faction) {
 		union vec3 f, fn;
 		float factor;
 
@@ -4310,7 +4320,10 @@ static void compute_danger_vectors(void *context, void *entity)
 		float factor, hostility, fightiness;
 		union vec3 d, dn;
 
-		hostility = faction_hostility(o->sdata.faction, di->me->sdata.faction);
+		if (o->type == OBJTYPE_SPACEMONSTER)
+			hostility = 1.0;
+		else
+			hostility = faction_hostility(o->sdata.faction, di->me->sdata.faction);
 		fightiness = ((XKNOWN_DIM / 10.0) * hostility) / (dist + 1.0);
 		d.v.x = di->me->x - o->x;
 		d.v.y = di->me->y - o->y;
@@ -5715,6 +5728,7 @@ static void ship_collision_avoidance(void *context, void *entity)
 		if (d < SPACEMONSTER_COLLISION_RADIUS * SPACEMONSTER_COLLISION_RADIUS) {
 			calculate_torpedolike_damage(o, SPACEMONSTER_WEAPONS_FACTOR);
 			do_collision_impulse(o, obstacle);
+			attack_your_attacker(o, obstacle);
 		}
 	}
 	/* Pretend torpedoes are closer than they are since they're scary */

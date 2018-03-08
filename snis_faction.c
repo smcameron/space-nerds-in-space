@@ -16,7 +16,7 @@
 struct faction {
 	char *name;
 	union vec3 center;
-	float hostility[MAX_FACTIONS];
+	float hostility[MAX_FACTIONS]; /* Range 0.0 to 1.0. 0.0 == good friends, 1.0 == terrible foes */
 #define DEFAULT_FACTION_HOSTILITY 0.03f
 };
 
