@@ -1226,10 +1226,10 @@ static void asteroid_move(struct snis_entity *o)
 				&o->tsd.asteroid.rotational_velocity);
 }
 
-static void calculate_torpedolike_damage(struct snis_entity *o, double weapons_factor);
-static void calculate_warp_core_explosion_damage(struct snis_entity *o, double damage_factor)
+static void calculate_torpedolike_damage(struct snis_entity *target, double weapons_factor);
+static void calculate_warp_core_explosion_damage(struct snis_entity *target, double damage_factor)
 {
-	calculate_torpedolike_damage(o, WARP_CORE_EXPLOSION_WEAPONS_FACTOR * damage_factor);
+	calculate_torpedolike_damage(target, WARP_CORE_EXPLOSION_WEAPONS_FACTOR * damage_factor);
 }
 
 static void send_ship_damage_packet(struct snis_entity *o);
@@ -2040,70 +2040,70 @@ static void calculate_block_damage(struct snis_entity *o)
 }
 
 static int lookup_bridge_by_shipid(uint32_t shipid);
-static void calculate_torpedolike_damage(struct snis_entity *o, double weapons_factor)
+static void calculate_torpedolike_damage(struct snis_entity *target, double weapons_factor)
 {
 	double ss;
-	const double twp = weapons_factor * (o->type == OBJTYPE_SHIP1 ? 0.333 : 1.0);
+	const double twp = weapons_factor * (target->type == OBJTYPE_SHIP1 ? 0.333 : 1.0);
 	struct damcon_data *d = NULL;
 
-	if (o->type == OBJTYPE_SHIP1) {
-		int bridge = lookup_bridge_by_shipid(o->id);
+	if (target->type == OBJTYPE_SHIP1) {
+		int bridge = lookup_bridge_by_shipid(target->id);
 
 		if (bridge < 0) {
 			fprintf(stderr, "bug at %s:%d, bridge lookup failed.\n", __FILE__, __LINE__);
 			return;
 		}
 		d = &bridgelist[bridge].damcon;
-	} else if (o->type == OBJTYPE_TURRET) {
-		calculate_turret_damage(o);
+	} else if (target->type == OBJTYPE_TURRET) {
+		calculate_turret_damage(target);
 		return;
-	} else if (o->type == OBJTYPE_BLOCK) {
-		calculate_block_damage(o);
+	} else if (target->type == OBJTYPE_BLOCK) {
+		calculate_block_damage(target);
 		return;
-	} else if (o->type == OBJTYPE_SPACEMONSTER) {
-		calculate_spacemonster_damage(o);
+	} else if (target->type == OBJTYPE_SPACEMONSTER) {
+		calculate_spacemonster_damage(target);
 		return;
 	}
 
-	ss = shield_strength(snis_randn(255), o->sdata.shield_strength,
-				o->sdata.shield_width,
-				o->sdata.shield_depth,
-				o->sdata.shield_wavelength);
+	ss = shield_strength(snis_randn(255), target->sdata.shield_strength,
+				target->sdata.shield_width,
+				target->sdata.shield_depth,
+				target->sdata.shield_wavelength);
 
-	o->tsd.ship.damage.shield_damage = roll_damage(o, d, twp, ss,
-			o->tsd.ship.damage.shield_damage, DAMCON_TYPE_SHIELDSYSTEM);
-	o->tsd.ship.damage.impulse_damage = roll_damage(o, d, twp, ss,
-			o->tsd.ship.damage.impulse_damage, DAMCON_TYPE_IMPULSE);
-	o->tsd.ship.damage.warp_damage = roll_damage(o, d, twp, ss,
-			o->tsd.ship.damage.warp_damage, DAMCON_TYPE_WARPDRIVE);
-	o->tsd.ship.damage.maneuvering_damage = roll_damage(o, d, twp, ss,
-			o->tsd.ship.damage.maneuvering_damage, DAMCON_TYPE_MANEUVERING);
-	o->tsd.ship.damage.phaser_banks_damage = roll_damage(o, d, twp, ss,
-			o->tsd.ship.damage.phaser_banks_damage, DAMCON_TYPE_PHASERBANK);
-	o->tsd.ship.damage.sensors_damage = roll_damage(o, d, twp, ss,
-			o->tsd.ship.damage.sensors_damage, DAMCON_TYPE_SENSORARRAY);
-	o->tsd.ship.damage.comms_damage = roll_damage(o, d, twp, ss,
-			o->tsd.ship.damage.comms_damage, DAMCON_TYPE_COMMUNICATIONS);
-	o->tsd.ship.damage.tractor_damage = roll_damage(o, d, twp, ss,
-			o->tsd.ship.damage.tractor_damage, DAMCON_TYPE_TRACTORSYSTEM);
-	o->tsd.ship.damage.lifesupport_damage = roll_damage(o, d, twp, ss,
-			o->tsd.ship.damage.lifesupport_damage, DAMCON_TYPE_LIFESUPPORTSYSTEM);
+	target->tsd.ship.damage.shield_damage = roll_damage(target, d, twp, ss,
+			target->tsd.ship.damage.shield_damage, DAMCON_TYPE_SHIELDSYSTEM);
+	target->tsd.ship.damage.impulse_damage = roll_damage(target, d, twp, ss,
+			target->tsd.ship.damage.impulse_damage, DAMCON_TYPE_IMPULSE);
+	target->tsd.ship.damage.warp_damage = roll_damage(target, d, twp, ss,
+			target->tsd.ship.damage.warp_damage, DAMCON_TYPE_WARPDRIVE);
+	target->tsd.ship.damage.maneuvering_damage = roll_damage(target, d, twp, ss,
+			target->tsd.ship.damage.maneuvering_damage, DAMCON_TYPE_MANEUVERING);
+	target->tsd.ship.damage.phaser_banks_damage = roll_damage(target, d, twp, ss,
+			target->tsd.ship.damage.phaser_banks_damage, DAMCON_TYPE_PHASERBANK);
+	target->tsd.ship.damage.sensors_damage = roll_damage(target, d, twp, ss,
+			target->tsd.ship.damage.sensors_damage, DAMCON_TYPE_SENSORARRAY);
+	target->tsd.ship.damage.comms_damage = roll_damage(target, d, twp, ss,
+			target->tsd.ship.damage.comms_damage, DAMCON_TYPE_COMMUNICATIONS);
+	target->tsd.ship.damage.tractor_damage = roll_damage(target, d, twp, ss,
+			target->tsd.ship.damage.tractor_damage, DAMCON_TYPE_TRACTORSYSTEM);
+	target->tsd.ship.damage.lifesupport_damage = roll_damage(target, d, twp, ss,
+			target->tsd.ship.damage.lifesupport_damage, DAMCON_TYPE_LIFESUPPORTSYSTEM);
 
-	if (o->tsd.ship.damage.shield_damage == 255) { 
-		o->timestamp = universe_timestamp;
-		o->respawn_time = universe_timestamp + RESPAWN_TIME_SECS * 10;
-		o->alive = 0;
+	if (target->tsd.ship.damage.shield_damage == 255) {
+		target->timestamp = universe_timestamp;
+		target->respawn_time = universe_timestamp + RESPAWN_TIME_SECS * 10;
+		target->alive = 0;
 	}
 }
 
-static void calculate_torpedo_damage(struct snis_entity *o)
+static void calculate_torpedo_damage(struct snis_entity *target)
 {
-	calculate_torpedolike_damage(o, TORPEDO_WEAPONS_FACTOR);
+	calculate_torpedolike_damage(target, TORPEDO_WEAPONS_FACTOR);
 }
 
-static void calculate_atmosphere_damage(struct snis_entity *o)
+static void calculate_atmosphere_damage(struct snis_entity *target)
 {
-	calculate_torpedolike_damage(o, ATMOSPHERE_DAMAGE_FACTOR);
+	calculate_torpedolike_damage(target, ATMOSPHERE_DAMAGE_FACTOR);
 }
 
 static void calculate_laser_damage(struct snis_entity *o, uint8_t wavelength, float power)
@@ -2948,7 +2948,7 @@ static void torpedo_collision_detection(void *context, void *entity)
 		(void) add_explosion(closest_point.v.x, closest_point.v.y, closest_point.v.z, 50, 5, 5, t->type);
 		snis_queue_add_sound(DISTANT_TORPEDO_HIT_SOUND, ROLE_SOUNDSERVER, t->id);
 		block_add_to_naughty_list(t, o->tsd.torpedo.ship_id);
-		calculate_torpedo_damage(o);
+		calculate_torpedo_damage(t);
 		return;
 	}
 
