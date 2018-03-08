@@ -3579,7 +3579,6 @@ static void spacemonster_play(struct snis_entity *o)
 	i = lookup_by_id(o->tsd.spacemonster.nearest_spacemonster);
 	if (i < 0)
 		return;
-	printf("nearest spacemonster id is %u, type is %d\n", go[i].id, (int) go[i].type);
 	o->tsd.spacemonster.dest.v.x = go[i].x;
 	o->tsd.spacemonster.dest.v.y = go[i].y;
 	o->tsd.spacemonster.dest.v.z = go[i].z;
