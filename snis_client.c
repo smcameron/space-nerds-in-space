@@ -14466,6 +14466,12 @@ static void debug_draw_object(GtkWidget *w, struct snis_entity *o,
 		sng_set_foreground(UI_COLOR(demon_wormhole));
 		sng_draw_circle(0, x, y, 5);
 		break;
+	case OBJTYPE_SPACEMONSTER:
+		sng_set_foreground(UI_COLOR(demon_spacemonster));
+		snis_draw_arrow(w, gc, x, y, SCIENCE_SCOPE_R, o->heading, 0.4);
+		sng_abs_xy_draw_string("M", PICO_FONT,
+			x - cos(o->heading) * txx(8), y + sin(o->heading) * txy(8));
+		break;
 	default:
 		sng_set_foreground(UI_COLOR(demon_default));
 	}

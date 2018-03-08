@@ -189,6 +189,7 @@ struct ui_color_map {
 	struct ui_color_entry demon_nebula;
 	struct ui_color_entry demon_starbase;
 	struct ui_color_entry demon_wormhole;
+	struct ui_color_entry demon_spacemonster;
 	struct ui_color_entry demon_victim_vector;
 	struct ui_color_entry demon_cross;
 	struct ui_color_entry demon_selection_box;
@@ -368,6 +369,7 @@ struct ui_color_map_accessor {
 	.u.map.demon_nebula		= { MAGENTA,		"demon-nebula" },
 	.u.map.demon_starbase		= { RED,		"demon-starbase" },
 	.u.map.demon_wormhole		= { WHITE,		"demon-wormhole" },
+	.u.map.demon_spacemonster	= { GREEN_FIXUP,	"demon-spacemonster" },
 	.u.map.demon_victim_vector	= { RED,		"demon-victim-vector" },
 	.u.map.demon_cross		= { BLUE_FIXUP,		"demon-cross" },
 	.u.map.demon_selection_box	= { WHITE,		"demon-selection-box" },
