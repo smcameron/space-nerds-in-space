@@ -9584,6 +9584,7 @@ static int add_spacemonster(double x, double y, double z)
 	go[i].tsd.spacemonster.health = 255;
 	go[i].tsd.spacemonster.hunger = 0;
 	go[i].tsd.spacemonster.nearest_spacemonster = -1;
+	go[i].tsd.spacemonster.toughness = snis_randn(50); /* out of 255 */
 	update_ship_orientation(&go[i]);
 
 	go[i].tsd.spacemonster.home = (uint32_t) -1;
@@ -10495,6 +10496,11 @@ static void laserbeam_move(struct snis_entity *o)
 
 	if (ttype == OBJTYPE_ASTEROID)
 		target->alive = 0;
+
+	if (ttype == OBJTYPE_SPACEMONSTER) {
+		calculate_laser_damage(target, o->tsd.laserbeam.wavelength,
+					(float) o->tsd.laserbeam.power);
+	}
 
 	if (!target->alive) {
 		(void) add_explosion(target->x, target->y, target->z, 50, 50, 50, ttype);
