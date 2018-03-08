@@ -2608,7 +2608,7 @@ static void process_potential_victim(void *context, void *entity)
 
 	if (v->type == OBJTYPE_SPACEMONSTER) {
 		hostility = 1.0;
-		fightiness = (10000.0 * hostility) / (dist + 1.0);
+		fightiness = (100000.0 * hostility) / (dist + 1.0);
 		o->tsd.ship.threat_level += fightiness;
 		return;
 	} else {
@@ -4161,6 +4161,7 @@ static void ai_attack_mode_brain(struct snis_entity *o)
 	int notacop = 1;
 	int imacop = 0;
 	double extra_range;
+	uint32_t assailant;
 
 	n = o->tsd.ship.nai_entries - 1;
 	assert(n >= 0);
@@ -4169,8 +4170,10 @@ static void ai_attack_mode_brain(struct snis_entity *o)
 	if ((universe_timestamp & 0x07) == (o->id & 0x07) &&
 			calculate_threat_level(o) > THREAT_LEVEL_FLEE_THRESHOLD) {
 		/* just change current mode to flee (pop + push) */
+		assailant = o->tsd.ship.ai[n].u.attack.victim_id;
 		o->tsd.ship.ai[n].ai_mode = AI_MODE_FLEE;
 		o->tsd.ship.ai[n].u.flee.warp_countdown = 10 * (10 + snis_randn(10));
+		o->tsd.ship.ai[n].u.flee.assailant = assailant;
 		return;
 	}
 
@@ -4362,7 +4365,8 @@ static void ai_flee_mode_brain(struct snis_entity *o)
 {
 	struct danger_info info;
 	union vec3 thataway;
-	int n;
+	double vdist;
+	int i, n;
 
 	n = o->tsd.ship.nai_entries - 1;
 	if (n < 0) {
@@ -4401,6 +4405,15 @@ static void ai_flee_mode_brain(struct snis_entity *o)
 		add_warp_effect(o->id, o->x, o->y, o->z,
 			o->tsd.ship.dox, o->tsd.ship.doy, o->tsd.ship.doz);
 		set_object_location(o, o->tsd.ship.dox, o->tsd.ship.doy, o->tsd.ship.doz);
+	}
+
+	/* Maybe shoot at assailant if he is close enough */
+	i = lookup_by_id(o->tsd.ship.ai[n].u.flee.assailant);
+	if (i >= 0) {
+		vdist = dist3d(go[i].x - o->x, go[i].y - o->y, go[i].z - o->z);
+		if (vdist < LASER_RANGE)
+			ai_maybe_fire_weapon(o, &go[i], o->tsd.ship.ai[0].ai_mode == AI_MODE_COP,
+						vdist, 0.0);
 	}
 }
 

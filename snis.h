@@ -228,6 +228,7 @@ struct ai_fleet_data {
 
 struct ai_flee_data {
 	int warp_countdown;
+	int32_t assailant;
 };
 
 struct ai_hangout_data {
