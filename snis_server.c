@@ -2043,7 +2043,7 @@ static int lookup_bridge_by_shipid(uint32_t shipid);
 static void calculate_torpedolike_damage(struct snis_entity *o, double weapons_factor)
 {
 	double ss;
-	const double twp = TORPEDO_WEAPONS_FACTOR * (o->type == OBJTYPE_SHIP1 ? 0.333 : 1.0);
+	const double twp = weapons_factor * (o->type == OBJTYPE_SHIP1 ? 0.333 : 1.0);
 	struct damcon_data *d = NULL;
 
 	if (o->type == OBJTYPE_SHIP1) {
