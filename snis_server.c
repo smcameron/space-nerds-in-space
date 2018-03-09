@@ -10497,6 +10497,11 @@ static void laserbeam_move(struct snis_entity *o)
 	if (ttype == OBJTYPE_ASTEROID)
 		target->alive = 0;
 
+	if (ttype == OBJTYPE_SPACEMONSTER) {
+		calculate_laser_damage(target, o->tsd.laserbeam.wavelength,
+					(float) o->tsd.laserbeam.power);
+	}
+
 	if (!target->alive) {
 		(void) add_explosion(target->x, target->y, target->z, 50, 50, 50, ttype);
 		/* TODO -- these should be different sounds */
