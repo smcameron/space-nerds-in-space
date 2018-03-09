@@ -10039,7 +10039,7 @@ static int l_add_block(lua_State *l)
 {
 	double rid, x, y, z, sx, sy, sz, rotx, roty, rotz, angle, material_index;
 	double dx, dy, dz;
-	uint32_t parent_id;
+	int parent_id;
 	union quat rotation;
 	int i;
 
@@ -10065,16 +10065,18 @@ static int l_add_block(lua_State *l)
 	}
 	quat_init_axis(&rotation, rotx, roty, rotz, angle);
 
+	parent_id = (int) rid;
 	pthread_mutex_lock(&universe_mutex);
-	parent_id = (uint32_t) rid;
-	i = lookup_by_id(parent_id);
-	if (i >= 0) {
-		dx = x;
-		dy = y;
-		dz = z;
-		x = 0.0;
-		y = 0.0;
-		z = 0.0;
+	if (parent_id >= 0) {
+		i = lookup_by_id(parent_id);
+		if (i >= 0) {
+			dx = x;
+			dy = y;
+			dz = z;
+			x = 0.0;
+			y = 0.0;
+			z = 0.0;
+		}
 	}
 	i = add_block_object(parent_id, x, y, z, 0.0, 0.0, 0.0, dx, dy, dz, sx, sy, sz, rotation,
 				(int) material_index);
