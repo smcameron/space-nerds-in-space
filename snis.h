@@ -30,7 +30,7 @@
 #define MAXSTARMAPENTRIES 1000 /* max number of solar systems */
 #define MAX_STARMAP_ADJACENCIES 5 /* max warp lanes from one star to other stars */
 #define DEFAULT_SOLAR_SYSTEM "default"
-#define SNIS_PROTOCOL_VERSION "SNIS013"
+#define SNIS_PROTOCOL_VERSION "SNIS014"
 #define COMMON_MTWIST_SEED 97872
 /* dimensions of the "known" universe */
 #define XKNOWN_DIM 600000.0
@@ -745,6 +745,9 @@ struct block_data {
 	union quat rotational_velocity;
 	uint8_t block_material_index; /* For now, 0 for big blocks, 1 for small blocks */
 	uint8_t health;
+	uint8_t form;
+#define BLOCK_FORM_BLOCK 0
+#define BLOCK_FORM_SPHEROID 1
 };
 
 struct turret_data {

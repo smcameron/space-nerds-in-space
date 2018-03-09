@@ -1610,7 +1610,7 @@ static int update_docking_port(uint32_t id, uint32_t timestamp, double scale,
 
 static int update_block(uint32_t id, uint32_t timestamp, double x, double y, double z,
 		double sizex, double sizey, double sizez, union quat *orientation,
-		uint8_t block_material_index, uint8_t health)
+		uint8_t block_material_index, uint8_t health, uint8_t form)
 {
 	int i;
 	struct entity *e;
@@ -1626,14 +1626,24 @@ static int update_block(uint32_t id, uint32_t timestamp, double x, double y, dou
 		go[i].tsd.block.sy = sizey;
 		go[i].tsd.block.sz = sizez;
 		go[i].tsd.block.health = health;
-		if (go[i].entity)
-			update_entity_non_uniform_scale(go[i].entity, sizex, sizey, sizez);
+		if (go[i].entity) {
+			if (form == BLOCK_FORM_BLOCK)
+				update_entity_non_uniform_scale(go[i].entity, sizex, sizey, sizez);
+			else /* half the size for spheroid because the radius is 1.0, diameter is 2.0 */
+				update_entity_non_uniform_scale(go[i].entity, 0.5 * sizex, 0.5 * sizey, 0.5 * sizez);
+		}
 		return 0;
 	}
-	e = add_entity(ecx, unit_cube_mesh, x, y, z, BLOCK_COLOR);
+	if (form == BLOCK_FORM_BLOCK)
+		e = add_entity(ecx, unit_cube_mesh, x, y, z, BLOCK_COLOR);
+	else
+		e = add_entity(ecx, low_poly_sphere_mesh, x, y, z, BLOCK_COLOR);
 	if (!e)
 		return -1;
-	update_entity_non_uniform_scale(e, sizex, sizey, sizez);
+	if (form == BLOCK_FORM_BLOCK)
+		update_entity_non_uniform_scale(e, sizex, sizey, sizez);
+	else /* half the size for sphere because the radius is 1.0, diameter is 2.0 */
+		update_entity_non_uniform_scale(e, 0.5 * sizex, 0.5 * sizey, 0.5 * sizez);
 	if ((block_material_index % 2) == 0)
 		update_entity_material(e, &block_material);
 	else
@@ -5920,10 +5930,10 @@ static int process_update_block_packet(void)
 	uint32_t id, timestamp;
 	double dx, dy, dz, dsx, dsy, dsz;
 	union quat orientation;
-	uint8_t block_material_index, health;
+	uint8_t block_material_index, health, form;
 	int rc;
 
-	rc = read_and_unpack_buffer(buffer, "wwSSSSSSQbb", &id, &timestamp,
+	rc = read_and_unpack_buffer(buffer, "wwSSSSSSQbbb", &id, &timestamp,
 			&dx, (int32_t) UNIVERSE_DIM,
 			&dy, (int32_t) UNIVERSE_DIM,
 			&dz, (int32_t) UNIVERSE_DIM,
@@ -5932,12 +5942,13 @@ static int process_update_block_packet(void)
 			&dsz, (int32_t) UNIVERSE_DIM,
 			&orientation,
 			&block_material_index,
-			&health);
+			&health,
+			&form);
 	if (rc != 0)
 		return rc;
 	pthread_mutex_lock(&universe_mutex);
 	rc = update_block(id, timestamp, dx, dy, dz, dsx, dsy, dsz,
-				&orientation, block_material_index, health);
+				&orientation, block_material_index, health, form);
 	pthread_mutex_unlock(&universe_mutex);
 	return (rc < 0);
 }
@@ -18348,6 +18359,7 @@ static void init_meshes()
 
 	sphere_mesh = mesh_unit_spherified_cube(16);
 	low_poly_sphere_mesh = snis_read_model(d, "uv_sphere.stl");
+	mesh_cylindrical_xy_uv_map(low_poly_sphere_mesh);
 	warp_tunnel_mesh = mesh_tube(XKNOWN_DIM, 450.0, 20);
 	nav_axes_mesh = mesh_fabricate_axes();
 	mesh_scale(nav_axes_mesh, SNIS_WARP_GATE_THRESHOLD * 0.05);

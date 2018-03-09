@@ -98,6 +98,7 @@
 #include "a_star.h"
 #include "nonuniform_random_sampler.h"
 #include "planetary_atmosphere.h"
+#include "vertex.h"
 #include "mesh.h"
 #include "turret_aimer.h"
 #include "pthread_util.h"
@@ -386,6 +387,7 @@ static int ncontraband;
 static struct commodity *commodity;
 
 static struct mesh *unit_cube_mesh;
+static struct mesh *low_poly_sphere_mesh;
 
 static struct snis_object_pool *pool;
 static struct snis_entity go[MAXGAMEOBJS];
@@ -2912,6 +2914,70 @@ static void do_collision_impulse(struct snis_entity *player, struct snis_entity 
 static void block_add_to_naughty_list(struct snis_entity *o, uint32_t id);
 static void spacemonster_set_antagonist(struct snis_entity *o, uint32_t id);
 
+static void block_closest_point(union vec3 *point, struct snis_entity *o, union vec3 *closest_point)
+{
+	union vec3 meshpos, heretothere;
+#if 0
+	float dist;
+	int i = -1;
+	union vec3 relpos;
+	union quat inverse_rotation;
+#endif
+
+	assert(o->type == OBJTYPE_BLOCK);
+	switch (o->tsd.block.form) {
+	case BLOCK_FORM_SPHEROID:
+#if 0
+		/* This was my attempt at ellipsoid collision detection.
+		 * It does not seem to work very well. Not sure why not,
+		 * It is a pretty hard problem though. Some insight here:
+		 * https://www.geometrictools.com/Documentation/DistancePointEllipseEllipsoid.pdf
+		 * What follows is not really an attempt at the algorithm in the
+		 * PDF though.
+		 */
+		oriented_bounding_box_closest_point(point, &o->tsd.block.obb, closest_point);
+		vec3_sub(&heretothere, point, closest_point);
+		dist = vec3_magnitude(&heretothere);
+		if (dist > 0.55 * o->tsd.block.sx &&
+			dist > 0.55 * o->tsd.block.sy &&
+			dist > 0.55 * o->tsd.block.sz)
+			return; /* Far enough away that obb is good enough */
+		meshpos.v.x = o->x;
+		meshpos.v.y = o->y;
+		meshpos.v.z = o->z;
+		vec3_sub(&relpos, point, &meshpos);
+		quat_inverse(&inverse_rotation, &o->orientation);
+		quat_rot_vec_self(&relpos, &inverse_rotation);
+		i = mesh_nearest_vertex(low_poly_sphere_mesh, relpos.v.x, relpos.v.y, relpos.v.z,
+			0.5 * o->tsd.block.sx, 0.5 * o->tsd.block.sy, 0.5 * o->tsd.block.sz, &dist);
+		if (i >= 0) {
+			closest_point->v.x = low_poly_sphere_mesh->v[i].x;
+			closest_point->v.y = low_poly_sphere_mesh->v[i].y;
+			closest_point->v.z = low_poly_sphere_mesh->v[i].z;
+			quat_rot_vec_self(closest_point, &o->orientation);
+			vec3_add_self(closest_point, &meshpos);
+		}
+#else
+		/* Here we have simple sphere collision detection, because in add_block_object(),
+		 * we forced axial scaling factors to be equal, (i.e. we forced
+		 * (tsd.block.sx == tsd.block.sy == tsd.block.sz) to be true.)
+		 */
+		meshpos.v.x = o->x;
+		meshpos.v.y = o->y;
+		meshpos.v.z = o->z;
+		vec3_sub(&heretothere, point, &meshpos);
+		vec3_normalize_self(&heretothere);
+		vec3_mul_self(&heretothere, 0.5 * o->tsd.block.sx);
+		vec3_add(closest_point, &heretothere, &meshpos);
+#endif
+		break;
+	case BLOCK_FORM_BLOCK:
+		oriented_bounding_box_closest_point(point, &o->tsd.block.obb, closest_point);
+	default:
+		return;
+	}
+}
+
 static void torpedo_collision_detection(void *context, void *entity)
 {
 	struct snis_entity *t = entity;  /* target */
@@ -2951,7 +3017,7 @@ static void torpedo_collision_detection(void *context, void *entity)
 		torpedo_pos.v.y = o->y;
 		torpedo_pos.v.z = o->z;
 
-		oriented_bounding_box_closest_point(&torpedo_pos, &t->tsd.block.obb, &closest_point);
+		block_closest_point(&torpedo_pos, t, &closest_point);
 
 		dist2 = dist3dsqrd(o->x - closest_point.v.x, o->y - closest_point.v.y, o->z - closest_point.v.z);
 		if (dist2 > TORPEDO_VELOCITY * TORPEDO_VELOCITY)
@@ -7295,7 +7361,7 @@ static void player_collision_detection(void *player, void *object)
 		my_ship.v.y = o->y;
 		my_ship.v.z = o->z;
 
-		oriented_bounding_box_closest_point(&my_ship, &t->tsd.block.obb, &closest_point);
+		block_closest_point(&my_ship, t, &closest_point);
 
 		dist2 = dist3dsqrd(o->x - closest_point.v.x, o->y - closest_point.v.y, o->z - closest_point.v.z);
 		if (dist2 > 8.0 * 8.0)
@@ -7307,15 +7373,29 @@ static void player_collision_detection(void *player, void *object)
 		o->vy = 0;
 		o->vz = 0;
 
-		displacement.v.x = o->x - closest_point.v.x;
-		displacement.v.y = o->y - closest_point.v.y;
-		displacement.v.z = o->z - closest_point.v.z;
+		switch (t->tsd.block.form) {
+		case BLOCK_FORM_BLOCK:
+			displacement.v.x = o->x - closest_point.v.x;
+			displacement.v.y = o->y - closest_point.v.y;
+			displacement.v.z = o->z - closest_point.v.z;
+			break;
+		case BLOCK_FORM_SPHEROID:
+		default:
+			displacement.v.x = o->x - t->x;
+			displacement.v.y = o->y - t->y;
+			displacement.v.z = o->z - t->z;
+			break;
+		}
 		vec3_normalize_self(&displacement);
 		vec3_mul_self(&displacement, 30.0);
 		o->x += displacement.v.x;
 		o->y += displacement.v.y;
 		o->z += displacement.v.z;
-		(void) add_explosion(closest_point.v.x, closest_point.v.y, closest_point.v.z, 85, 5, 20, OBJTYPE_SPARK);
+		o->vx += displacement.v.x * 0.5;
+		o->vy += displacement.v.y * 0.5;
+		o->vz += displacement.v.z * 0.5;
+		(void) add_explosion(closest_point.v.x, closest_point.v.y, closest_point.v.z,
+					85, 5, 20, OBJTYPE_SPARK);
 		return;
 	}
 	proximity_dist2 = PROXIMITY_DIST2;
@@ -10010,7 +10090,7 @@ static int add_block_object(int parent_id, double x, double y, double z,
 				double dx, double dy, double dz, /* displacement from parent */
 				double sx, double sy, double sz, /* nonuniform scaling */
 				union quat relative_orientation,
-				uint8_t block_material_index)
+				uint8_t block_material_index, uint8_t form)
 {
 	int i;
 	i = add_generic_object(x, y, z, vx, vy, vz, 0.0, OBJTYPE_BLOCK);
@@ -10027,8 +10107,26 @@ static int add_block_object(int parent_id, double x, double y, double z,
 	go[i].tsd.block.health = 255; /* immortal */
 	go[i].tsd.block.rotational_velocity = random_spin[go[i].id % NRANDOM_SPINS];
 	go[i].tsd.block.relative_orientation = relative_orientation;
-	go[i].tsd.block.radius = mesh_compute_nonuniform_scaled_radius(unit_cube_mesh, sx, sy, sz);
+	if (form == BLOCK_FORM_SPHEROID) {
+		/* Force a sphere, forbid ellipsoids */
+		if (sx >= sy && sx >= sz) {
+			go[i].tsd.block.radius = 0.5 * sx;
+			go[i].tsd.block.sy = sx;
+			go[i].tsd.block.sz = sx;
+		} else if (sy >= sx && sy >= sz) {
+			go[i].tsd.block.radius = 0.5 * sy;
+			go[i].tsd.block.sx = sy;
+			go[i].tsd.block.sz = sy;
+		} else {
+			go[i].tsd.block.radius = 0.5 * sz;
+			go[i].tsd.block.sx = sz;
+			go[i].tsd.block.sy = sz;
+		}
+	} else if (form == BLOCK_FORM_BLOCK || 1) {
+		go[i].tsd.block.radius = mesh_compute_nonuniform_scaled_radius(unit_cube_mesh, sx, sy, sz);
+	}
 	go[i].tsd.block.block_material_index = block_material_index;
+	go[i].tsd.block.form = form;
 	memset(&go[i].tsd.block.naughty_list, 0xff, sizeof(go[i].tsd.block.naughty_list));
 	go[i].move = block_move;
 	block_calculate_obb(&go[i], &go[i].tsd.block.obb);
@@ -10037,7 +10135,7 @@ static int add_block_object(int parent_id, double x, double y, double z,
 
 static int l_add_block(lua_State *l)
 {
-	double rid, x, y, z, sx, sy, sz, rotx, roty, rotz, angle, material_index;
+	double rid, x, y, z, sx, sy, sz, rotx, roty, rotz, angle, material_index, form;
 	double dx, dy, dz;
 	int parent_id;
 	union quat rotation;
@@ -10055,11 +10153,16 @@ static int l_add_block(lua_State *l)
 	rotz = lua_tonumber(lua_state, 10);
 	angle = lua_tonumber(lua_state, 11);
 	material_index = lua_tonumber(lua_state, 12);
+	form = lua_tonumber(lua_state, 13);
 	dx = 0.0;
 	dy = 0.0;
 	dz = 0.0;
 
 	if ((int) material_index != 0 && (int) material_index != 1) {
+		lua_pushnumber(lua_state, -1.0);
+		return 1;
+	}
+	if ((int) form != BLOCK_FORM_BLOCK && (int) form != BLOCK_FORM_SPHEROID) {
 		lua_pushnumber(lua_state, -1.0);
 		return 1;
 	}
@@ -10079,7 +10182,7 @@ static int l_add_block(lua_State *l)
 		}
 	}
 	i = add_block_object(parent_id, x, y, z, 0.0, 0.0, 0.0, dx, dy, dz, sx, sy, sz, rotation,
-				(int) material_index);
+				(int) material_index, (int) form);
 	lua_pushnumber(lua_state, i < 0 ? -1.0 : (double) go[i].id);
 	pthread_mutex_unlock(&universe_mutex);
 	return 1;
@@ -10087,7 +10190,7 @@ static int l_add_block(lua_State *l)
 
 static int add_subblock(int parent_id, double scalefactor, double sx, double sy, double sz, /* nonuniform scaling */
 			double dx, double dy, double dz, /* displacement from parent */
-			uint8_t block_material_index)
+			uint8_t block_material_index, uint8_t form)
 {
 	const double s = scalefactor;
 	int i;
@@ -10095,7 +10198,7 @@ static int add_subblock(int parent_id, double scalefactor, double sx, double sy,
 	i = add_block_object(parent_id, 0, 0, 0, 0, 0, 0,
 				dx * s, dy * s, dz * s,
 				sx * s, sy * s, sz * s, identity_quat,
-				block_material_index);
+				block_material_index, form);
 	return i;
 }
 
@@ -10195,7 +10298,8 @@ static void add_turrets_to_block_face(int parent_id, int face, int rows, int col
 			y = rowfactor * yrowstep + colfactor * ycolstep + yo;
 			z = rowfactor * zrowstep + colfactor * zcolstep + zo;
 			block = add_subblock(parent_id, 1.0, platformsx, platformsy, platformsz,
-						x + platformxo, y + platformyo, z + platformzo, 1);
+						x + platformxo, y + platformyo, z + platformzo, 1,
+						BLOCK_FORM_BLOCK);
 			if (block >= 0) {
 				printf("ADDING TURRET parent = %d, %lf, %lf, %lf\n", go[block].id, x, y, z); 
 				add_turret(go[block].id, 0, 0, 0,
@@ -18822,7 +18926,7 @@ static void send_update_docking_port_packet(struct game_client *c,
 static void send_update_block_packet(struct game_client *c,
 	struct snis_entity *o)
 {
-	pb_queue_to_client(c, snis_opcode_pkt("bwwSSSSSSQbb", OPCODE_UPDATE_BLOCK,
+	pb_queue_to_client(c, snis_opcode_pkt("bwwSSSSSSQbbb", OPCODE_UPDATE_BLOCK,
 					o->id, o->timestamp,
 					o->x, (int32_t) UNIVERSE_DIM,
 					o->y, (int32_t) UNIVERSE_DIM,
@@ -18832,7 +18936,8 @@ static void send_update_block_packet(struct game_client *c,
 					o->tsd.block.sz, (int32_t) UNIVERSE_DIM,
 					&o->orientation,
 					o->tsd.block.block_material_index,
-					o->tsd.block.health));
+					o->tsd.block.health,
+					o->tsd.block.form));
 }
 
 static void send_update_turret_packet(struct game_client *c,
@@ -23741,6 +23846,8 @@ static void init_meshes(void)
 	unit_cube_mesh = mesh_unit_cube(1);
 	/* The "unit" cube is 1 unit in *radius* -- we need one with 0.5 unit radius. */
 	mesh_scale(unit_cube_mesh, 0.5);
+	low_poly_sphere_mesh = mesh_unit_icosphere(4);
+	mesh_scale(low_poly_sphere_mesh, 0.5);
 }
 
 int main(int argc, char *argv[])
