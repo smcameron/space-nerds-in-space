@@ -108,6 +108,10 @@ GLOBAL struct mesh *init_burst_rod_mesh(int streaks, double h, double r1, double
 GLOBAL void mesh_update_material(struct mesh *m, struct material *material);
 GLOBAL void mesh_rotate(struct mesh *m, union quat *q);
 GLOBAL struct mesh *mesh_tube(float h, float r, float nfaces);
+/* Given point x, y, z and assuming mesh m is at origin, return the index of the
+ * closest vertex to x, y, z. Distance is returned in *dist unless dist is NULL.
+ */
+GLOBAL int mesh_nearest_vertex(struct mesh *m, float x, float y, float z, float sx, float sy, float sz, float *dist);
 
 #undef GLOBAL
 #endif

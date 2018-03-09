@@ -2228,3 +2228,30 @@ struct mesh *mesh_tube(float h, float r, float nfaces)
 	return m;
 }
 
+/* Given point x, y, z and assuming mesh m is at origin, return the index of the
+ * closest vertex scaled by (sx, sy, sz) to x, y, z.  Distance is returned in *dist,
+ * unless dist is NULL.
+ */
+int mesh_nearest_vertex(struct mesh *m, float x, float y, float z,
+				float sx, float sy, float sz, float *dist)
+{
+	int i, answer;
+	float d, dist2 = -1;
+	struct vertex *v;
+
+	answer = -1;
+	for (i = 0; i < m->nvertices; i++) {
+		v = &m->v[i];
+		d = (v->x * sx - x) * (v->x * sx - x) +
+			(v->y * sy - y) * (v->y * sy - y) +
+			(v->z * sz - z) * (v->z * sz - z);
+		if (dist2 < 0 || d < dist2) {
+			dist2 = d;
+			answer = i;
+		}
+	}
+	if (answer >= 0 && dist)
+			*dist = sqrtf(dist2);
+	return answer;
+}
+
