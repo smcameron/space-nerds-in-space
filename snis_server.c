@@ -7529,6 +7529,48 @@ static float new_velocity(float desired_velocity, float current_velocity)
 	return current_velocity + (delta / 20.0);
 }
 
+/* If an NPC ship wants to do a 180, or some other drastic direction change,
+ * we don't want to just gradually shift the velocity towards the new velocity,
+ * because this will result in strange things like the ship slowly coming to a halt,
+ * very rapidly doing a 180, then slowly accelerating. Instead, we want it to
+ * execute a nice turn. So we limit the desired change of angle to no more than
+ * 45 degrees by just capping such desires.
+ */
+static void temper_velocity_change(union vec3 *desired_velocity, float vx, float vy, float vz)
+{
+	union vec3 current_velocity, cross, newv1, newv2;
+	union quat rotation1, rotation2;
+	float dot, d1, d2;
+
+	if (vec3_magnitude(desired_velocity) < 0.01)
+		return;
+	current_velocity.v.x = vx;
+	current_velocity.v.y = vy;
+	current_velocity.v.z = vz;
+	if (vec3_magnitude(&current_velocity) < 0.01)
+		return;
+	dot = vec3_dot(&current_velocity, desired_velocity);
+	if (dot >= cos(45.0 * M_PI / 180.0)) /* Angle of turn is less than +/- 45 degrees */
+		return;
+	/* Angle of turn is more than +/- 45 degrees */
+	/* Find a vector perpendicular to current and desired velocities */
+	vec3_cross(&cross, &current_velocity, desired_velocity);
+	vec3_normalize_self(&cross);
+	/* Try plus and minus 45 degrees */
+	quat_init_axis_v(&rotation1, &cross, 45.0 * M_PI / 180.0);
+	quat_init_axis_v(&rotation2, &cross, -45.0 * M_PI / 180.0);
+	quat_rot_vec(&newv1, &current_velocity, &rotation1);
+	quat_rot_vec(&newv2, &current_velocity, &rotation2);
+	/* Find the cos(angles) between our +/- 45 degree vectors and desired velocity */
+	d1 = vec3_dot(&newv1, desired_velocity);
+	d2 = vec3_dot(&newv2, desired_velocity);
+	/* Figure out which one is the smallest angle */
+	if (d1 > d2) /* d1 is the larger cos == smaller angle */
+		*desired_velocity = newv1;
+	else /* d2 is the larger cos == smaller angle */
+		*desired_velocity = newv2;
+}
+
 static void update_ship_position_and_velocity(struct snis_entity *o)
 {
 	union vec3 desired_velocity;
@@ -7575,6 +7617,9 @@ static void update_ship_position_and_velocity(struct snis_entity *o)
 	/* apply braking and steering adjustments */
 	vec3_mul_self(&desired_velocity, o->tsd.ship.braking_factor);
 	vec3_add_self(&desired_velocity, &o->tsd.ship.steering_adjustment);
+
+	/* Make the ship execute nice turns instead of stopping and quickly reversing */
+	temper_velocity_change(&desired_velocity, o->vx, o->vy, o->vz);
 
 	union vec3 curvel = { { o->vx, o->vy, o->vz } };
 	float dot = vec3_dot(&curvel, &desired_velocity);
