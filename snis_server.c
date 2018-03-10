@@ -2973,6 +2973,7 @@ static float block_closest_point(union vec3 *point, struct snis_entity *o, union
 		vec3_normalize_self(&heretothere);
 		vec3_mul_self(&heretothere, 0.5 * o->tsd.block.sx);
 		vec3_add(closest_point, &heretothere, &meshpos);
+		vec3_sub(&heretothere, closest_point, point);
 		return vec3_magnitude2(&heretothere);
 #endif
 		break;
@@ -2981,7 +2982,7 @@ static float block_closest_point(union vec3 *point, struct snis_entity *o, union
 		meshpos.v.y = o->y;
 		meshpos.v.z = o->z;
 		oriented_bounding_box_closest_point(point, &o->tsd.block.obb, closest_point);
-		vec3_sub(&heretothere, closest_point, &meshpos);
+		vec3_sub(&heretothere, closest_point, point);
 		return vec3_magnitude2(&heretothere);
 	case BLOCK_FORM_CAPSULE:
 		p1.v.x = o->x + 0.5 * o->tsd.block.sx;
