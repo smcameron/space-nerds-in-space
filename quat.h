@@ -265,6 +265,10 @@ int sphere_line_segment_intersection(const union vec3 *v0, const union vec3 *v1,
 void plane_vector_u_and_v_from_normal(union vec3 *u, union vec3 *v, const union vec3 *n);
 void random_point_in_3d_annulus(float r1, float r2, const union vec3 *center, const union vec3 *u, const union vec3 *v, union vec3 *point);
 
+/* Returns the square of the magnitude (length) of v */
+float vec3_magnitude2(union vec3 *v);
+
+/* Returns the magnitude (length) of v  */
 float vec3_magnitude(union vec3 *v);
 
 int ray_intersects_sphere(const union vec3 *ray_origin,
@@ -288,6 +292,11 @@ int moving_spheres_intersection(union vec3 *s1, float r1, union vec3 *v1,
 
 /* For the +z face of a cubemapped unit sphere, returns tangent and bitangent vectors */
 void cubemapped_sphere_tangent_and_bitangent(float x, float y, union vec3 *u, union vec3 *v);
+
+/* Returns the square of the distance between a point p, and the line segment formed by
+ * seg1 and seg2.
+ */
+float dist2_from_point_to_line_segment(union vec3 *p, union vec3 *seg1, union vec3 *seg2);
 
 /***********************************************************************************************
 

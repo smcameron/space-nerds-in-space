@@ -893,14 +893,18 @@ void random_point_in_3d_annulus(float r1, float r2, const union vec3 *center, co
 	point->v.z = center->v.z + r * cos(angle) * u->v.z + r * sin(angle) * v->v.z;
 }
 
-
-float vec3_magnitude(union vec3 *v)
+float vec3_magnitude2(union vec3 *v)
 {
 	const float x2 = v->v.x * v->v.x;
 	const float y2 = v->v.y * v->v.y;
 	const float z2 = v->v.z * v->v.z;
 
-	return sqrt(x2 + y2 + z2);
+	return x2 + y2 + z2;
+}
+
+float vec3_magnitude(union vec3 *v)
+{
+	return sqrt(vec3_magnitude2(v));
 }
 
 /* See TestRaySphere() in "Real Time Collision Detection", p. 179, by Christer Ericson. */
@@ -991,4 +995,30 @@ void cubemapped_sphere_tangent_and_bitangent(float x, float y, union vec3 *u, un
 	v->v.y = -(1 + x * x);
 	v->v.z = y;
 	vec3_normalize_self(v);
+}
+
+/* Returns the square of the distance between a point p, and the line segment formed by
+ * p1 and p2.
+ */
+float dist2_from_point_to_line_segment(union vec3 *p, union vec3 *p1, union vec3 *p2)
+{
+	union vec3 p1_to_p2, p1_to_p, pb;
+	double dot1, dot2, b;
+
+	vec3_sub(&p1_to_p2, p2, p1);
+	vec3_sub(&p1_to_p, p, p1);
+
+	dot1 = vec3_dot(&p1_to_p, &p1_to_p2);
+	if (dot1 <= 0.0)
+		return vec3_magnitude2(&p1_to_p);
+	dot2 = vec3_dot(&p1_to_p2, &p1_to_p2);
+	if (dot1 >= dot2) {
+		union vec3 p_to_p2;
+		vec3_sub(&p_to_p2, p2, p);
+		return  vec3_magnitude2(&p_to_p2);
+	}
+	b = dot1 / dot2;
+	vec3_mul(&pb, &p1_to_p2, b);
+	vec3_add_self(&pb, p);
+	return vec3_magnitude2(&pb);
 }
