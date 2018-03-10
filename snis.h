@@ -746,8 +746,10 @@ struct block_data {
 	uint8_t block_material_index; /* For now, 0 for big blocks, 1 for small blocks */
 	uint8_t health;
 	uint8_t form;
+	struct entity *capsule_sphere[2];
 #define BLOCK_FORM_BLOCK 0
 #define BLOCK_FORM_SPHEROID 1
+#define BLOCK_FORM_CAPSULE 2
 };
 
 struct turret_data {

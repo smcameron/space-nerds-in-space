@@ -2973,6 +2973,9 @@ static void block_closest_point(union vec3 *point, struct snis_entity *o, union 
 		break;
 	case BLOCK_FORM_BLOCK:
 		oriented_bounding_box_closest_point(point, &o->tsd.block.obb, closest_point);
+	case BLOCK_FORM_CAPSULE:
+		/* TODO make this right. */
+		oriented_bounding_box_closest_point(point, &o->tsd.block.obb, closest_point);
 	default:
 		return;
 	}
@@ -10124,6 +10127,12 @@ static int add_block_object(int parent_id, double x, double y, double z,
 		}
 	} else if (form == BLOCK_FORM_BLOCK || 1) {
 		go[i].tsd.block.radius = mesh_compute_nonuniform_scaled_radius(unit_cube_mesh, sx, sy, sz);
+	} else if (form == BLOCK_FORM_CAPSULE) {
+		if (sy >= sz)
+			go[i].tsd.block.sz = sy;
+		else
+			go[i].tsd.block.sy = sz;
+		go[i].tsd.block.radius = 0.5 * (go[i].tsd.block.sx + go[i].tsd.block.sy * 2.0);
 	}
 	go[i].tsd.block.block_material_index = block_material_index;
 	go[i].tsd.block.form = form;
@@ -10162,7 +10171,12 @@ static int l_add_block(lua_State *l)
 		lua_pushnumber(lua_state, -1.0);
 		return 1;
 	}
-	if ((int) form != BLOCK_FORM_BLOCK && (int) form != BLOCK_FORM_SPHEROID) {
+	switch ((int) form) {
+	case BLOCK_FORM_BLOCK:
+	case BLOCK_FORM_SPHEROID:
+	case BLOCK_FORM_CAPSULE:
+		break;
+	default:
 		lua_pushnumber(lua_state, -1.0);
 		return 1;
 	}

@@ -735,13 +735,15 @@ add_block(parent_id, x, y, z, sx, sy, sz, rotx, roty, rotz, angle, material_inde
 	form:
 		0.0: block form is a "block" (i.e. a rectangular solid).
 		1.0: block form is a sphere. The maximum of sx, sy, and sz is used for all
-		three. The sphere cannot be non-uniformly scaled in x,y and z, scaling must
-		be uniform in all three axes. This is because collision detection for an
-		ellipsoid is too difficult. See for example:
-		https://www.geometrictools.com/Documentation/DistancePointEllipseEllipsoid.pdf
-		I have not implemented that algorithm, so we've got spheres, not ellipsoids.
-		The sphere will by cylindrically texture mapped with the Z axis corresponding
-		to the long axis of the cylinder.
+		  three. The sphere cannot be non-uniformly scaled in x,y and z, scaling must
+		  be uniform in all three axes. This is because collision detection for an
+		  ellipsoid is too difficult. See for example:
+		  https://www.geometrictools.com/Documentation/DistancePointEllipseEllipsoid.pdf
+		  I have not implemented that algorithm, so we've got spheres, not ellipsoids.
+		  The sphere will by cylindrically texture mapped with the Z axis corresponding
+		  to the long axis of the cylinder.
+		2.0: block form is a capsule (cylinder with hemispheres at the end).
+		  The length of the cylinder is sx, and the radius is max(sy, sz).
 
 	Returns the ID of the created block.
 

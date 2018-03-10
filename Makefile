@@ -490,8 +490,8 @@ MODELS=${MD}/freighter.stl \
 	${MD}/uv_sphere.stl \
 	${MD}/warp-core.stl \
 	${MD}/space_monster_torso.stl \
-	${MD}/space_monster_tentacle_segment.stl
-
+	${MD}/space_monster_tentacle_segment.stl \
+	${MD}/cylinder.stl
 
 MYCFLAGS=-DPREFIX=${PREFIX} ${DEBUGFLAG} ${PROFILEFLAG} ${OPTIMIZEFLAG}\
 	--pedantic -Wall ${STOP_ON_WARN} -pthread -std=gnu99 -rdynamic $(CFLAGS)
