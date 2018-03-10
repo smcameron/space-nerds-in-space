@@ -2914,11 +2914,15 @@ static void do_collision_impulse(struct snis_entity *player, struct snis_entity 
 static void block_add_to_naughty_list(struct snis_entity *o, uint32_t id);
 static void spacemonster_set_antagonist(struct snis_entity *o, uint32_t id);
 
-static void block_closest_point(union vec3 *point, struct snis_entity *o, union vec3 *closest_point)
+/* Given point point, and an entity o of type OBJTYPE_BLOCK, find the
+ * closest point on the surface of o to point, (returned in *closest_point)
+ * and the square of the distance is returned.
+ */
+static float block_closest_point(union vec3 *point, struct snis_entity *o, union vec3 *closest_point)
 {
-	union vec3 meshpos, heretothere;
-#if 0
+	union vec3 meshpos, heretothere, p1, p2;
 	float dist;
+#if 0
 	int i = -1;
 	union vec3 relpos;
 	union quat inverse_rotation;
@@ -2969,16 +2973,38 @@ static void block_closest_point(union vec3 *point, struct snis_entity *o, union 
 		vec3_normalize_self(&heretothere);
 		vec3_mul_self(&heretothere, 0.5 * o->tsd.block.sx);
 		vec3_add(closest_point, &heretothere, &meshpos);
+		return vec3_magnitude2(&heretothere);
 #endif
 		break;
 	case BLOCK_FORM_BLOCK:
+		meshpos.v.x = o->x;
+		meshpos.v.y = o->y;
+		meshpos.v.z = o->z;
 		oriented_bounding_box_closest_point(point, &o->tsd.block.obb, closest_point);
+		vec3_sub(&heretothere, closest_point, &meshpos);
+		return vec3_magnitude2(&heretothere);
 	case BLOCK_FORM_CAPSULE:
-		/* TODO make this right. */
-		oriented_bounding_box_closest_point(point, &o->tsd.block.obb, closest_point);
+		p1.v.x = o->x + 0.5 * o->tsd.block.sx;
+		p1.v.y = o->y;
+		p1.v.z = o->z;
+		p2.v.x = o->x - 0.5 * o->tsd.block.sx;
+		p2.v.y = o->y;
+		p2.v.z = o->z;
+		quat_rot_vec_self(&p1, &o->orientation);
+		quat_rot_vec_self(&p2, &o->orientation);
+		dist = dist2_from_point_to_line_segment(point, &p1, &p2) - 0.5 * o->tsd.block.sy;
+		/* TODO: fill in *closest_point correctly, this is not correct; */
+		meshpos.v.x = o->x;
+		meshpos.v.y = o->y;
+		meshpos.v.z = o->z;
+		vec3_sub(closest_point, &meshpos, point);
+		vec3_normalize_self(closest_point);
+		vec3_mul_self(closest_point, sqrtf(dist));
+		break;
 	default:
-		return;
+		break;
 	}
+	return 0.0;
 }
 
 static void torpedo_collision_detection(void *context, void *entity)
@@ -3020,11 +3046,14 @@ static void torpedo_collision_detection(void *context, void *entity)
 		torpedo_pos.v.y = o->y;
 		torpedo_pos.v.z = o->z;
 
-		block_closest_point(&torpedo_pos, t, &closest_point);
-
-		dist2 = dist3dsqrd(o->x - closest_point.v.x, o->y - closest_point.v.y, o->z - closest_point.v.z);
-		if (dist2 > TORPEDO_VELOCITY * TORPEDO_VELOCITY)
-			return;
+		dist2 = block_closest_point(&torpedo_pos, t, &closest_point);
+		if (t->tsd.block.form == BLOCK_FORM_CAPSULE) {
+			if (sqrtf(dist2) - 0.5 * t->tsd.block.sy > TORPEDO_VELOCITY)
+				return;
+		} else {
+			if (dist2 > TORPEDO_VELOCITY * TORPEDO_VELOCITY)
+				return;
+		}
 		o->alive = 0; /* hit!!!! */
 		schedule_callback2(event_callback, &callback_schedule,
 					"object-hit-event", t->id, (double) o->tsd.torpedo.ship_id);
@@ -7364,11 +7393,14 @@ static void player_collision_detection(void *player, void *object)
 		my_ship.v.y = o->y;
 		my_ship.v.z = o->z;
 
-		block_closest_point(&my_ship, t, &closest_point);
-
-		dist2 = dist3dsqrd(o->x - closest_point.v.x, o->y - closest_point.v.y, o->z - closest_point.v.z);
-		if (dist2 > 8.0 * 8.0)
-			return;
+		dist2 = block_closest_point(&my_ship, t, &closest_point);
+		if (t->tsd.block.form == BLOCK_FORM_CAPSULE) {
+			if (sqrtf(dist2) - 0.5 * t->tsd.block.sy > 8.0)
+				return;
+		} else {
+			if (dist2 > 8.0 * 8.0)
+				return;
+		}
 		printf("BLOCK COLLISION DETECTION:HIT, dist2 = %f\n", sqrt(dist2));
 		snis_queue_add_sound(HULL_CREAK_0 + (snis_randn(1000) % NHULL_CREAK_SOUNDS),
 							ROLE_SOUNDSERVER, o->id);
