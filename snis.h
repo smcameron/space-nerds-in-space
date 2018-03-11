@@ -594,6 +594,9 @@ struct explosion_data {
 	uint16_t velocity;
 	uint16_t time;
 	uint8_t victim_type;
+	uint8_t explosion_type;
+#define EXPLOSION_TYPE_REGULAR 0
+#define EXPLOSION_TYPE_BLACKHOLE 1
 };
 
 struct spark_data {
