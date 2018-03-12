@@ -97,13 +97,15 @@ int snis_object_pool_alloc_obj(struct snis_object_pool *pool)
 				continue;	/* try the next bit. */
 			}
 
-			/* Found free bit, bit j.  Set it, marking it non free.  */
-			pool->free_obj_bitmap[i] |= (1 << j);
+			/* Found free bit j */
 			answer = (i * 32 + j);	/* return the corresponding array index, if in bounds. */
+			/* But it might be in the tail end of the last block, make sure it's in bounds. */
 			if (answer >= pool->maxobjs)
 				goto allocation_failure;
 			if (answer > pool->highest_object_number)
 				pool->highest_object_number = answer;
+			/* Found free bit, bit j.  Set it, marking it non free.  */
+			pool->free_obj_bitmap[i] |= (1 << j);
 			return answer;
 		}
 	}
