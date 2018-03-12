@@ -13165,6 +13165,7 @@ static void npc_menu_item_mining_bot_retarget(struct npc_menu_item *item,
 		return;
 	}
 	ai->asteroid = b->science_selection;
+	ai->mode = MINING_MODE_APPROACH_ASTEROID;
 	dist = dist3d(asteroid->x - miner->x, asteroid->y - miner->y, asteroid->z - miner->z);
 	sprintf(msg, " RETARGETED TO %s, DISTANCE: %f",
 			asteroid ? asteroid->sdata.name : "UNKNOWN", dist);
