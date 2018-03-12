@@ -5169,10 +5169,16 @@ static void ai_mining_mode_mine_asteroid(struct snis_entity *o, struct ai_mining
 		case OBJTYPE_ASTEROID:
 			send_comms_packet(o->sdata.name, channel,
 				"MINING OPERATION COMPLETE -- RETURNING TO SHIP");
+			schedule_callback2(event_callback, &callback_schedule,
+						"asteroid-mined-event", (double) asteroid->id,
+						(double) bridgelist[b].shipid);
 			break;
 		case OBJTYPE_DERELICT:
 			send_comms_packet(o->sdata.name, channel,
 				"SALVAGE OPERATION COMPLETE -- RETURNING TO SHIP");
+			schedule_callback2(event_callback, &callback_schedule,
+						"derelict-salvaged-event", (double) asteroid->id,
+						(double) bridgelist[b].shipid);
 			break;
 		default:
 			send_comms_packet(o->sdata.name, channel,
@@ -13364,6 +13370,9 @@ static void npc_menu_item_mining_bot_status_report(struct npc_menu_item *item,
 				send_comms_packet(npcname, channel, msg);
 				sprintf(msg, "*** END OF PARTIAL SHIP'S LOG FROM %s ***\n", asteroid->sdata.name);
 				send_comms_packet(npcname, channel, msg);
+				schedule_callback2(event_callback, &callback_schedule,
+							"ships-logs-recovered-event", (double) asteroid->id,
+							parent ? (double) parent->id : -1.0);
 			} else {
 				sprintf(msg, "UNABLE TO RECOVER SHIPS LOG FROM %s\n", asteroid->sdata.name);
 				send_comms_packet(npcname, channel, msg);

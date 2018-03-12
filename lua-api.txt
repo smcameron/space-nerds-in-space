@@ -133,6 +133,15 @@ EVENT TYPES in snis:
 		arguments: object id of the player ship and object id of the object
 		scanned. The player must actually select the item for this event to
 		be triggered.
+	"asteroid-mined-event"
+		An asteroid was mined. Arguments: object id of the asteroid and player ship
+		the mining bot belongs to.
+	"derelict-salvaged-event"
+		A derelict was salvaged by the mining bot. Arguments: object id of the derelict
+		and player ship the mining bot belongs to.
+	"ships-logs-recovered-event"
+		Ships logs were recovered from a derelict by the mining bot. Arguments: object id
+		of derelict and object id of player ship mining bot belongs to.
 
 Functions which you may call from lua: 
 
