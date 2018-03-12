@@ -1974,6 +1974,48 @@ static void distribute_damage_to_damcon_system_parts(struct snis_entity *o,
 	return;
 }
 
+static int lookup_bridge_by_shipid(uint32_t shipid);
+static void player_update_shield_wavelength_width_depth(struct snis_entity *player_ship)
+{
+	/* Dig through the damcon system and find the individual shield system parts
+	 * and translate their damage values in to shield wavelength, width and depth.
+	 */
+	int i, bridge;
+	struct damcon_data *d;
+	struct snis_damcon_entity *t;
+	int n = 0;
+
+	bridge = lookup_bridge_by_shipid(player_ship->id);
+	if (bridge < 0)
+		return;
+	d = &bridgelist[bridge].damcon;
+	for (i = 0; i <= snis_object_pool_highest_object(d->pool); i++) {
+		t = &d->o[i];
+		switch (t->type) {
+		case DAMCON_TYPE_PART:
+			if (d->o[i].tsd.part.system != DAMCON_TYPE_SHIELDSYSTEM)
+				break;
+			switch (n % 3) {
+			case 0:
+				player_ship->sdata.shield_wavelength = ((t->tsd.part.damage * 11) % 255);
+				break;
+			case 1:
+				player_ship->sdata.shield_width = t->tsd.part.damage;
+				break;
+			case 2:
+				player_ship->sdata.shield_depth = t->tsd.part.damage;
+				break;
+			default:
+				break;
+			}
+			n++;
+			break;
+		default:
+			break;
+		}
+	}
+}
+
 static int roll_damage(struct snis_entity *o, struct damcon_data *d, 
 			double weapons_factor, double shield_strength, uint8_t system,
 			int damcon_system)
@@ -2055,7 +2097,6 @@ static void calculate_block_damage(struct snis_entity *o)
 	/* Doesn't die, just breaks away... */
 }
 
-static int lookup_bridge_by_shipid(uint32_t shipid);
 static void calculate_torpedolike_damage(struct snis_entity *target, double weapons_factor)
 {
 	double ss;
@@ -8118,6 +8159,7 @@ static void player_move(struct snis_entity *o)
 		o->sdata.shield_strength--;
 	if (o->sdata.shield_strength > (255 - o->tsd.ship.damage.shield_damage))
 		o->sdata.shield_strength = 255 - o->tsd.ship.damage.shield_damage;
+	player_update_shield_wavelength_width_depth(o);
 
 	/* Update warp drive */
 	if (o->tsd.ship.warpdrive < o->tsd.ship.power_data.warp.i)

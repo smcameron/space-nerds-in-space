@@ -33,7 +33,7 @@
  *
  * "sh_strength" 0-255, mapped to 0.0 to 1.0, defines the baseline level.
  *
- * "width", 0-255, mapped to region 10 - 50, and describes the width
+ * "width", 0-255, mapped to region 0 - 50, and describes the width
  * of the dip.
  *
  * "wavelength" describes the x position 0-255, mapped to 10-50.
