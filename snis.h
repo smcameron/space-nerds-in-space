@@ -373,7 +373,6 @@ struct ship_data {
 #define LASER_PROJECTILE_BOOST 20.0
 
 	uint32_t power;
-	uint32_t shields;
 	char shipname[100];
 	double velocity;
 #define STANDARD_ORBIT_RADIUS_FACTOR (1.1)

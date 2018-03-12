@@ -8027,7 +8027,6 @@ static void player_move(struct snis_entity *o)
 	update_player_position_and_velocity(o);
 	
 	o->tsd.ship.sci_heading += o->tsd.ship.sci_yaw_velocity;
-	o->tsd.ship.shields = universe_timestamp % 100;
 
 	normalize_angle(&o->tsd.ship.sci_heading);
 	o->timestamp = universe_timestamp;
@@ -9010,15 +9009,12 @@ static void init_player(struct snis_entity *o, int clear_cargo_bay, float *charg
 	float money = 0.0;
 
 #define TORPEDO_UNIT_COST 50.0f
-#define SHIELD_UNIT_COST 5.0f;
 #define FUEL_UNIT_COST (1500.0f / (float) UINT32_MAX)
 #define WARP_CORE_COST 1500
 	b = lookup_bridge_by_shipid(o->id);
 	o->move = player_move;
 	money += (INITIAL_TORPEDO_COUNT - o->tsd.ship.torpedoes) * TORPEDO_UNIT_COST;
 	o->tsd.ship.torpedoes = INITIAL_TORPEDO_COUNT;
-	money += (100.0 - o->tsd.ship.shields) * SHIELD_UNIT_COST;
-	o->tsd.ship.shields = 100.0;
 	o->tsd.ship.power = 100.0;
 	o->tsd.ship.yaw_velocity = 0.0;
 	o->tsd.ship.pitch_velocity = 0.0;
@@ -9261,7 +9257,6 @@ static int add_ship(int faction, int auto_respawn)
 		return i;
 	go[i].move = ship_move;
 	go[i].tsd.ship.torpedoes = INITIAL_TORPEDO_COUNT;
-	go[i].tsd.ship.shields = 100.0;
 	go[i].tsd.ship.power = 100.0;
 	go[i].tsd.ship.yaw_velocity = 0.0;
 	go[i].tsd.ship.pitch_velocity = 0.0;
