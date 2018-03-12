@@ -170,6 +170,18 @@ id = add_cargo_container(x, y, z, vx, vy, vz) -- adds a cargo container at speci
 id = add_derelict(name, x, y, z, shiptype, faction) -- adds a derelict vessel at
 	specified location
 
+rc = derelict_set_ships_log(id, ships_log_entry)
+	Sets the ships log entry (a string) to the specified value for the derelict identified
+	by id. Returns 0.0 if successful, -1.0 otherwise. Maximum length of ships_log_entry is
+	100 characters.
+
+	Example:
+
+	id = add_derelict("BOUNTY", 100, 100, 100, 1, 1);
+	derelict_set_ships_log(id, "Stardate 112.34. Situation is dire. We are being attacked by Zarkon disruptors.");
+
+	These log entries can be recovered by the mining bot.
+
 id = add_starbase(x, y, z, n) - adds a starbase at location x,y with number n (0 <= n <= 99).
 	the starbase will be named "SB-n"
 	TODO: allow starbases to be named arbitrary strings.

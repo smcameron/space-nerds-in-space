@@ -1587,6 +1587,10 @@ static void delete_object(struct snis_entity *o)
 		free(o->sdata.science_text);
 		o->sdata.science_text = NULL;
 	}
+	if (o->type == OBJTYPE_DERELICT && o->tsd.derelict.ships_log) {
+		free(o->tsd.derelict.ships_log);
+		o->tsd.derelict.ships_log = NULL;
+	}
 	snis_object_pool_free_object(pool, go_index(o));
 	o->id = -1;
 	o->alive = 0;
@@ -11086,7 +11090,31 @@ static int add_derelict(const char *name, double x, double y, double z,
 	go[i].tsd.derelict.persistent = persistent & 0xff;
 	go[i].tsd.derelict.fuel = snis_randn(255); /* TODO some better non-uniform distribution */
 	go[i].tsd.derelict.oxygen = snis_randn(255); /* TODO some better non-uniform distribution */
+	go[i].tsd.derelict.ships_log = NULL;
 	return i;
+}
+
+static int derelict_set_ships_log(uint32_t id, const char *ships_log)
+{
+	int i;
+
+	pthread_mutex_lock(&universe_mutex);
+	i = lookup_by_id(id);
+	if (i < 0) {
+		pthread_mutex_unlock(&universe_mutex);
+		return -1;
+	}
+	if (go[i].type != OBJTYPE_DERELICT) {
+		pthread_mutex_unlock(&universe_mutex);
+		return -1;
+	}
+	if (go[i].tsd.derelict.ships_log) {
+		free(go[i].tsd.derelict.ships_log);
+		go[i].tsd.derelict.ships_log = NULL;
+	}
+	go[i].tsd.derelict.ships_log = strndup(ships_log, 100);
+	pthread_mutex_unlock(&universe_mutex);
+	return 0;
 }
 
 static int l_add_derelict(lua_State *l)
@@ -11112,6 +11140,28 @@ static int l_add_derelict(lua_State *l)
 	pthread_mutex_unlock(&universe_mutex);
 	return 1;
 }
+
+static int l_derelict_set_ships_log(lua_State *l)
+{
+	double did;
+	const char *ships_log;
+	int rc, id;
+
+	did = lua_tonumber(lua_state, 1);
+	ships_log = lua_tostring(lua_state, 2);
+	id = (int) did;
+	if (id < 0) {
+		lua_pushnumber(lua_state, -1.0);
+		return 1;
+	}
+	rc = derelict_set_ships_log(id, ships_log);
+	if (rc)
+		lua_pushnumber(lua_state, -1.0);
+	else
+		lua_pushnumber(lua_state, 0.0);
+	return 1;
+}
+
 
 static int choose_contraband(void)
 {
@@ -13223,10 +13273,28 @@ static void npc_menu_item_mining_bot_status_report(struct npc_menu_item *item,
 	case OBJTYPE_DERELICT:
 		sprintf(msg, "FUEL AND OXYGEN COLLECTED:\n");
 		send_comms_packet(npcname, channel, msg);
-		sprintf(msg, "FUEL: %2f%%\n", fuel / 255.0);
+		sprintf(msg, "- FUEL: %2f%%\n", fuel / 255.0);
 		send_comms_packet(npcname, channel, msg);
-		sprintf(msg, "OXYGEN: %2f%%\n", oxygen / 255.0);
+		sprintf(msg, "- OXYGEN: %2f%%\n", oxygen / 255.0);
 		send_comms_packet(npcname, channel, msg);
+		/* FIXME: This ai->mode test is a little imprecise about whether we've recovered
+		 * the logs. But, maybe it's good enough.
+		 */
+		if (ai->mode == MINING_MODE_RETURN_TO_PARENT ||
+			ai->mode == MINING_MODE_STOW_BOT ||
+			ai->mode == MINING_MODE_STANDBY_TO_TRANSPORT_ORE) {
+			if (asteroid->tsd.derelict.ships_log) {
+				sprintf(msg, "*** RECOVERED PARTIAL SHIPS LOG FROM %s ***\n", asteroid->sdata.name);
+				send_comms_packet(npcname, channel, msg);
+				sprintf(msg, "... %s\n", asteroid->tsd.derelict.ships_log);
+				send_comms_packet(npcname, channel, msg);
+				sprintf(msg, "*** END OF PARTIAL SHIP'S LOG FROM %s ***\n", asteroid->sdata.name);
+				send_comms_packet(npcname, channel, msg);
+			} else {
+				sprintf(msg, "UNABLE TO RECOVER SHIPS LOG FROM %s\n", asteroid->sdata.name);
+				send_comms_packet(npcname, channel, msg);
+			}
+		}
 		break;
 	default:
 		break;
@@ -19774,6 +19842,7 @@ static void setup_lua(void)
 	add_lua_callable_fn(l_add_nebula, "add_nebula");
 	add_lua_callable_fn(l_add_spacemonster, "add_spacemonster");
 	add_lua_callable_fn(l_add_derelict, "add_derelict");
+	add_lua_callable_fn(l_derelict_set_ships_log, "derelict_set_ships_log");
 	add_lua_callable_fn(l_add_wormhole_pair, "add_wormhole_pair");
 	add_lua_callable_fn(l_get_player_ship_ids, "get_player_ship_ids");
 	add_lua_callable_fn(l_get_object_location, "get_object_location");

@@ -641,6 +641,7 @@ struct derelict_data {
 	uint8_t persistent;
 	uint8_t fuel;
 	uint8_t oxygen;
+	char *ships_log;
 };
 
 struct wormhole_data {
