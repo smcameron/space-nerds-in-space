@@ -1149,6 +1149,8 @@ static void black_hole_collision_detection(void *o1, void *o2)
 		return;
 	if (object->type == OBJTYPE_EXPLOSION)
 		return;
+	if (object->type == OBJTYPE_NEBULA)
+		return;
 	dist = dist3d(black_hole->x - object->x, black_hole->y - object->y, black_hole->z - object->z);
 	if (dist > BLACK_HOLE_INFLUENCE_LIMIT * black_hole->tsd.black_hole.radius)
 		return;
