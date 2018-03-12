@@ -79,9 +79,9 @@ players, and scenarios may be constructed with a Lua based scripting API.
 <hr>
 
 
-<p align=center>Latest development video (February 2018):
+<p align=center>Latest development video (March 2018):
 
-<p align=center><iframe width="560" height="315" src="https://www.youtube.com/embed/l8r5Ac4r_QU" frameborder="0" allowfullscreen></iframe>
+<p align=center><iframe width="560" height="315" src="https://www.youtube.com/watch?v=woMkFN47U-Q" frameborder="0" allowfullscreen></iframe>
 
 <!-- Commented this out because the binaries at these links are old. --!>
 <!-- <p align=center><font size=+3><a href="http://packages.libregeek.org/debian/pool/games/s/snis/" title="Binaries for Debian Jessie built and hosted by github user ProfessorKaos64">Debian Jessie Binaries</a><br><a href="http://packages.libregeek.org/steamos-tools/pool/games/s/snis/" title="Binaries for SteamOS Brewmaster built and hosted by github user ProfessorKaos64">SteamOS Brewmaster Binaries</a></font><br>(Note: These binaries are build by a third party, not me.) -->
@@ -1472,7 +1472,7 @@ think that is via pulse, so if snis_test_audio shows "pulse" as a device it
 knows, then you should probably do: export SNIS_AUDIO_DEVICE={whatever number
 portaudio thinks pulse is according to snis_test_audio output}  (You can install
 <cmd>pulse</cmd> and <cmd>pavucontrol</cmd> if they aren't installed and
-see if that helps.  The <cmd>pavucontrul</cmd> program should let you dynamically
+see if that helps.  The <cmd>pavucontrol</cmd> program should let you dynamically
 control to which device a running program's sound output is directed.
 <hr>
 <li><b><a name="crashing">The game is crashing!  What can I do?</a></b>
@@ -1499,7 +1499,7 @@ First, see if you can make it happen reliably.  If you can, then do the followin
 Here is a summary of what to do (more detailed instructions are below).
 <ol>
 <li><b><hili><cmd>make mostly-clean</cmd></hili></b>
-<li><b><hili><cmd>make</cmd></hili></b>
+<li><b><hili><cmd>make O=0</cmd></hili></b> # Capital letter O = zero -- suppress optimization.
 <li><b><hili><cmd>ulimit -c unlimited</cmd></hili></b>
 <li>Reproduce the problem with the unoptimized program and
 obtain a core file.
