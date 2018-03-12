@@ -8038,6 +8038,9 @@ static void snis_draw_science_guy(GtkWidget *w, GdkGC *gc, struct snis_entity *o
 		case OBJTYPE_LASER:
 			sng_set_foreground(UI_COLOR(sci_ball_energy));
 			break;
+		case OBJTYPE_SPACEMONSTER:
+			sng_set_foreground(UI_COLOR(sci_ball_monster));
+			break;
 		case OBJTYPE_SPARK:
 		case OBJTYPE_EXPLOSION:
 		default:
@@ -8094,6 +8097,10 @@ static void snis_draw_science_guy(GtkWidget *w, GdkGC *gc, struct snis_entity *o
 		case OBJTYPE_BLACK_HOLE:
 			sng_set_foreground(UI_COLOR(sci_ball_black_hole));
 			sprintf(buffer, "%s %s\n", "B",  o->sdata.name);
+			break;
+		case OBJTYPE_SPACEMONSTER:
+			sng_set_foreground(UI_COLOR(sci_ball_monster));
+			sprintf(buffer, "%s\n", o->sdata.name);
 			break;
 		case OBJTYPE_PLANET:
 			sng_set_foreground(UI_COLOR(sci_ball_planet));

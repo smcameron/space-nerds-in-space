@@ -9741,6 +9741,7 @@ static int add_spacemonster(double x, double y, double z)
 	go[i].tsd.spacemonster.head_size = snis_randn(255);
 	go[i].tsd.spacemonster.tentacle_size = snis_randn(255);
 	go[i].move = spacemonster_move;
+	strncpy(go[i].sdata.name, "M. MYSTERIUM", sizeof(go[i].sdata.name) - 1);
 	random_point_on_sphere(1.0, &dx, &dy, &dz);
 	v = snis_randn(1000) / 1000.0;
 	v = v * MAX_SPACEMONSTER_VELOCITY;

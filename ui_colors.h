@@ -155,6 +155,7 @@ struct ui_color_map {
 	struct ui_color_entry sci_ball_starbase;
 	struct ui_color_entry sci_ball_warpgate;
 	struct ui_color_entry sci_ball_energy;
+	struct ui_color_entry sci_ball_monster;
 	struct ui_color_entry sci_plane_ship_vector;
 	struct ui_color_entry sci_plane_weapon_vector;
 	struct ui_color_entry sci_plane_beam;
@@ -335,6 +336,7 @@ struct ui_color_map_accessor {
 	.u.map.sci_ball_starbase	= { WHITE,		"sci-ball-starbase" },
 	.u.map.sci_ball_warpgate	= { WHITE,		"sci-ball-warpgate" },
 	.u.map.sci_ball_energy		= { LIMEGREEN,		"sci-ball-energy" },
+	.u.map.sci_ball_monster		= { ORANGERED,		"sci-ball-monster" },
 	.u.map.sci_plane_ship_vector	= { RED,		"sci-plane-ship-vector" },
 	.u.map.sci_plane_weapon_vector	= { CYAN_FIXUP,		"sci-plane-weapon-vector" },
 	.u.map.sci_plane_beam		= { LIMEGREEN,		"sci-plane-beam" },
