@@ -1887,7 +1887,8 @@ static int update_black_hole(uint32_t id, uint32_t timestamp, double x, double y
 		 * the first interpolation but because black holes don't move, there
 		 * won't be a first interpolation.
 		 */
-		update_entity_visibility(e, 1);
+		if (e)
+			update_entity_visibility(e, 1);
 	} else {
 		update_generic_object(i, timestamp, x, y, z, 0.0, 0.0, 0.0, NULL, 1);
 	}
