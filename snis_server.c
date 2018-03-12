@@ -14112,12 +14112,20 @@ static void starbase_cargo_selling_npc_bot(struct snis_entity *o, int bridge,
 
 static void generic_npc_bot(struct snis_entity *o, int bridge, char *name, char *msg)
 {
-	char *n = o->tsd.starbase.name;
+	char *n;
 	uint32_t channel = bridgelist[bridge].comms_channel;
 	char m[100];
 	int selection, menu_count, i, rc;
 	struct npc_menu_item *menu = bridgelist[bridge].npcbot.current_menu;
 
+	switch (o->type) {
+	case OBJTYPE_STARBASE:
+		n = o->tsd.starbase.name;
+		break;
+	default:
+		n = o->sdata.name;
+		break;
+	}
 	/* count current menu items */
 	menu_count = -1;
 	if (menu) {
@@ -18705,7 +18713,7 @@ static void send_comms_packet(char *sender, uint32_t channel, const char *str)
 	struct packed_buffer *pb;
 	char tmpbuf[100];
 
-	snprintf(tmpbuf, 99, "%s%s", sender, str);
+	snprintf(tmpbuf, 99, "%s | %s", sender, str);
 	pb = packed_buffer_allocate(sizeof(struct comms_transmission_packet) + 100);
 	packed_buffer_append(pb, "bb", OPCODE_COMMS_TRANSMISSION, (uint8_t) strlen(tmpbuf) + 1);
 	packed_buffer_append_raw(pb, tmpbuf, strlen(tmpbuf) + 1);
