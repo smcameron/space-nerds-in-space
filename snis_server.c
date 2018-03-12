@@ -10589,6 +10589,37 @@ static int add_blackhole_explosion(uint32_t black_hole, double x, double y, doub
 					EXPLOSION_TYPE_BLACKHOLE);
 }
 
+static int l_add_explosion(lua_State *l)
+{
+	int rc;
+	double x, y, z, v, nsparks, time, victim_type, explosion_type;
+
+	x = lua_tonumber(lua_state, 1);
+	y = lua_tonumber(lua_state, 2);
+	z = lua_tonumber(lua_state, 3);
+	v = lua_tonumber(lua_state, 4);
+	nsparks = lua_tonumber(lua_state, 5);
+	time = lua_tonumber(lua_state, 6);
+	victim_type = lua_tonumber(lua_state, 7);
+	explosion_type = lua_tonumber(lua_state, 8);
+
+	if (nsparks <= 0 || time <= 0 || v <= 0) {
+		lua_pushnumber(lua_state, -1.0);
+		return 1;
+	}
+	if (nsparks >= 200.0)
+		nsparks = 200.0;
+	rc = add_typed_explosion((uint32_t) -1, x, y, z, (uint16_t) v,
+				(uint16_t) nsparks, (uint16_t) time, (uint8_t) victim_type,
+				(uint8_t) explosion_type);
+	if (rc < 0) {
+		lua_pushnumber(lua_state, -1.0);
+		return 1;
+	}
+	lua_pushnumber(lua_state, 0.0);
+	return 1;
+}
+
 /* must hold universe mutex */
 static int lookup_by_id(uint32_t id)
 {
@@ -19896,6 +19927,7 @@ static void setup_lua(void)
 	add_lua_callable_fn(l_comms_channel_transmit, "comms_channel_transmit");
 	add_lua_callable_fn(l_add_black_hole, "add_black_hole");
 	add_lua_callable_fn(l_attach_science_text, "attach_science_text");
+	add_lua_callable_fn(l_add_explosion, "add_explosion");
 }
 
 static int run_initial_lua_scripts(void)

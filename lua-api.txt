@@ -797,6 +797,44 @@ attach_science_text(id, text)
 	kryptonite", to an asteroid object, and then this would be displayed when the object is
 	scanned by science.
 
+add_explosion(x, y, z, v, nsparks, time, victim_type, explosion_type);
+	Adds an explosion into the simulation with (nsparks) sparks, traveling at
+	velocity related to (v), lasting (time) ticks (30th sec). Victim type
+	should be a small integer (see the #defines for OBJTYPE_... in snis.h:
+	Typically use OBJTYPE_SHIP2 (1) or the type of the thing which is exploding,
+	if there is such a thing (see below). victim_type is used to decide whether
+	or not there should be debris mixed in with the sparks. explosion_type should
+	be 0 (regular explosion) or 1 (black hole explosion). The former has orange
+	sparks and is spherical in shape, the latter has greenish sparks and is much
+	larger and has a non-spherical shape.
+
+	snis.h:#define OBJTYPE_SHIP1 9 /* players */
+	snis.h:#define OBJTYPE_SHIP2 1 /* computer controlled ships */
+	snis.h:#define OBJTYPE_ASTEROID 2
+	snis.h:#define OBJTYPE_STARBASE 3
+	snis.h:#define OBJTYPE_DEBRIS 4
+	snis.h:#define OBJTYPE_SPARK 5
+	snis.h:#define OBJTYPE_TORPEDO 6
+	snis.h:#define OBJTYPE_LASER 7
+	snis.h:#define OBJTYPE_EXPLOSION 8
+	snis.h:#define OBJTYPE_NEBULA 10
+	snis.h:#define OBJTYPE_WORMHOLE 11
+	snis.h:#define OBJTYPE_SPACEMONSTER 12
+	snis.h:#define OBJTYPE_PLANET 13
+	snis.h:#define OBJTYPE_LASERBEAM 14
+	snis.h:#define OBJTYPE_DERELICT 15
+	snis.h:#define OBJTYPE_TRACTORBEAM 16
+	snis.h:#define OBJTYPE_CARGO_CONTAINER 17
+	snis.h:#define OBJTYPE_WARP_EFFECT 18
+	snis.h:#define OBJTYPE_SHIELD_EFFECT 19
+	snis.h:#define OBJTYPE_DOCKING_PORT 20
+	snis.h:#define OBJTYPE_WARPGATE 21
+	snis.h:#define OBJTYPE_BLOCK 22
+	snis.h:#define OBJTYPE_TURRET 23
+	snis.h:#define OBJTYPE_WARP_CORE 24
+	snis.h:#define OBJTYPE_BLACK_HOLE 25
+
+
 NOTE: Your lua scripts must not sleep, call any function which blocks, or require excessive
 long running calculations (nothing more than a few hundredths of a second) because the lua
 scripts are called from the main thread and if the scripts block, the entire game will block.
