@@ -20220,6 +20220,11 @@ static void init_synonyms(void)
 	snis_nl_add_synonym("far is it", "far");
 	snis_nl_add_synonym("far is", "far");
 	snis_nl_add_synonym("black hole", "blackhole");
+	snis_nl_add_synonym("space monster", "spacemonster");
+	snis_nl_add_synonym("monster", "spacemonster");
+	snis_nl_add_synonym("creature", "spacemonster");
+	snis_nl_add_synonym("m. mysterium", "spacemonster");
+	snis_nl_add_synonym("monstrum mysterium", "spacemonster");
 }
 
 static const struct noun_description_entry {
@@ -20231,6 +20236,8 @@ static const struct noun_description_entry {
 	{ "impulse drive", "The impulse drive is a sub light speed conventional thruster." },
 	{ "blackhole", "A black hole is a singularity in space time with a gravitational field so intense "
 		"that no matter or radiation is able to escape." },
+	{ "spacemonster", "Very little is known about the species Monstrum Mysterium, "
+		"but they have proven to be quite dangerous." },
 	/* TODO: flesh this out more */
 };
 
@@ -23140,6 +23147,7 @@ static void init_dictionary(void)
 	snis_nl_add_dictionary_word("swallow",		"swallow",	POS_NOUN);
 	snis_nl_add_dictionary_word("waypoint",		"waypoint",	POS_NOUN);
 	snis_nl_add_dictionary_word("blackhole",	"blackhole",	POS_NOUN);
+	snis_nl_add_dictionary_word("spacemonster",	"spacemonster",	POS_NOUN);
 
 	snis_nl_add_dictionary_word("a",		"a",		POS_ARTICLE);
 	snis_nl_add_dictionary_word("an",		"an",		POS_ARTICLE);
