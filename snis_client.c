@@ -2764,7 +2764,8 @@ static void add_shield_effect(double x, double y, double z,
 }
 
 
-static void do_explosion(double x, double y, double z, uint16_t nsparks, uint16_t velocity, int time,
+static void do_explosion(uint32_t related_id, double x, double y, double z,
+				uint16_t nsparks, uint16_t velocity, int time,
 				uint8_t victim_type, uint8_t explosion_type)
 {
 	double zangle, angle, v, vx, vy, vz;
@@ -2799,25 +2800,34 @@ static void do_explosion(double x, double y, double z, uint16_t nsparks, uint16_
 
 	switch (explosion_type) {
 	case EXPLOSION_TYPE_BLACKHOLE:
-		random_quat(&orientation);
+		if (related_id == (uint32_t) -1) {
+			random_quat(&orientation);
+		} else {
+			i = lookup_object_by_id(related_id);
+			if (i < 0)
+				random_quat(&orientation);
+			else
+				orientation = go[i].orientation;
+		}
 		if (nsparks > 40) /* a big explosion, add one big freakin' stationary spark that fades quickly */
 			add_spark(x, y, z, 0, 0, 0, 15, color, &blackhole_spark_material, 0.8, 0, 250.0);
 		for (i = 0; i < nsparks; i++) {
-			switch (i % 3) {
+			switch (i % 6) {
 			case 0: /* Shoot out in mostly +X direction */
-				vel.v.x = (25000.0 + snis_randn(1000 * velocity)) / 1000.0;
-				vel.v.y = (snis_randn(100.0 * velocity) - 50.0 * velocity) / 1000.0;
-				vel.v.z = (snis_randn(100.0 * velocity) - 50.0 * velocity) / 1000.0;
+				vel.v.x = (35000.0 + snis_randn(1000 * velocity)) / 1000.0;
+				vel.v.y = (snis_randn(20.0 * velocity) - 10.0 * velocity) / 1000.0;
+				vel.v.z = (snis_randn(20.0 * velocity) - 10.0 * velocity) / 1000.0;
 				break;
 			case 1: /* Shoot out in mostly -X direction */
-				vel.v.x = -(25000.0 + snis_randn(1000 * velocity)) / 1000.0;
-				vel.v.y = (snis_randn(100.0 * velocity) - 50.0 * velocity) / 1000.0;
-				vel.v.z = (snis_randn(100.0 * velocity) - 50.0 * velocity) / 1000.0;
+				vel.v.x = -(35000.0 + snis_randn(1000 * velocity)) / 1000.0;
+				vel.v.y = (snis_randn(20.0 * velocity) - 10.0 * velocity) / 1000.0;
+				vel.v.z = (snis_randn(20.0 * velocity) - 10.0 * velocity) / 1000.0;
 				break;
 			case 2: /* Shoot out radially in Y-Z plane, mostly */
+			default:
 				angle = (snis_randn(3600) / 10.0) * M_PI / 180.0;
 				v = (65000.0 + snis_randn(500 * velocity)) / 1000.0;
-				vel.v.x = (snis_randn(100.0 * velocity) - 50.0 * velocity) / 1000.0;
+				vel.v.x = (snis_randn(30.0 * velocity) - 15.0 * velocity) / 1000.0;
 				vel.v.y = sin(angle) * v;
 				vel.v.z = cos(angle) * v;
 				break;
@@ -2844,7 +2854,8 @@ static void do_explosion(double x, double y, double z, uint16_t nsparks, uint16_
 	}
 }
 
-static int update_explosion(uint32_t id, uint32_t timestamp, double x, double y, double z,
+static int update_explosion(uint32_t id, uint32_t timestamp, uint32_t related_id,
+		double x, double y, double z,
 		uint16_t nsparks, uint16_t velocity, uint16_t time, uint8_t victim_type,
 		uint8_t explosion_type)
 {
@@ -2858,7 +2869,8 @@ static int update_explosion(uint32_t id, uint32_t timestamp, double x, double y,
 		go[i].tsd.explosion.nsparks = nsparks;
 		go[i].tsd.explosion.velocity = velocity;
 		go[i].tsd.explosion.explosion_type = explosion_type;
-		do_explosion(x, y, z, nsparks, velocity, (int) time, victim_type, explosion_type);
+		go[i].tsd.explosion.related_id = related_id;
+		do_explosion(related_id, x, y, z, nsparks, velocity, (int) time, victim_type, explosion_type);
 	}
 	return 0;
 }
@@ -6384,21 +6396,21 @@ static int process_update_tractorbeam(void)
 static int process_update_explosion_packet(void)
 {
 	unsigned char buffer[sizeof(struct update_explosion_packet)];
-	uint32_t id, timestamp;
+	uint32_t id, timestamp, related_id;
 	double dx, dy, dz;
 	uint16_t nsparks, velocity, time;
 	uint8_t victim_type, explosion_type;
 	int rc;
 
 	assert(sizeof(buffer) > sizeof(struct update_explosion_packet) - sizeof(uint8_t));
-	rc = read_and_unpack_buffer(buffer, "wwSSShhhbb", &id, &timestamp,
+	rc = read_and_unpack_buffer(buffer, "wwwSSShhhbb", &id, &timestamp, &related_id,
 		&dx, (int32_t) UNIVERSE_DIM, &dy, (int32_t) UNIVERSE_DIM,
 		&dz, (int32_t) UNIVERSE_DIM,
 		&nsparks, &velocity, &time, &victim_type, &explosion_type);
 	if (rc != 0)
 		return rc;
 	pthread_mutex_lock(&universe_mutex);
-	rc = update_explosion(id, timestamp, dx, dy, dz, nsparks, velocity, time,
+	rc = update_explosion(id, timestamp, related_id, dx, dy, dz, nsparks, velocity, time,
 				victim_type, explosion_type);
 	pthread_mutex_unlock(&universe_mutex);
 	return (rc < 0);

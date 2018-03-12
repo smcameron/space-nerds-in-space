@@ -30,7 +30,7 @@
 #define MAXSTARMAPENTRIES 1000 /* max number of solar systems */
 #define MAX_STARMAP_ADJACENCIES 5 /* max warp lanes from one star to other stars */
 #define DEFAULT_SOLAR_SYSTEM "default"
-#define SNIS_PROTOCOL_VERSION "SNIS014"
+#define SNIS_PROTOCOL_VERSION "SNIS015"
 #define COMMON_MTWIST_SEED 97872
 /* dimensions of the "known" universe */
 #define XKNOWN_DIM 600000.0
@@ -589,6 +589,7 @@ struct torpedo_data {
 };
 
 struct explosion_data {
+	uint32_t related_id; /* -1, or which black hole caused the explosion */
 	uint16_t nsparks;
 	uint16_t velocity;
 	uint16_t time;
@@ -692,8 +693,8 @@ struct laserbeam_data {
 	uint8_t mining_laser;
 };
 
-#define MIN_BLACK_HOLE_RADIUS 1000.0
-#define MAX_BLACK_HOLE_RADIUS 7000.0
+#define MIN_BLACK_HOLE_RADIUS 500.0
+#define MAX_BLACK_HOLE_RADIUS 2000.0
 #define BLACK_HOLE_INFLUENCE_LIMIT 15.0
 #define BLACK_HOLE_EVENT_HORIZON 1.0
 #define BLACK_HOLE_VFACTOR 3000.0

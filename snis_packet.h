@@ -386,6 +386,7 @@ struct update_explosion_packet {
 	uint8_t opcode;
 	uint32_t id;
 	uint32_t timestamp;
+	uint32_t related_id;
 	uint32_t x, y, z;
 	uint16_t nsparks;
 	uint16_t velocity;

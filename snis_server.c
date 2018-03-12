@@ -1133,7 +1133,7 @@ static void add_new_rts_unit(struct snis_entity *builder)
 	fprintf(stderr, "Added ship successfully\n");
 }
 
-static int add_blackhole_explosion(double x, double y, double z, uint16_t velocity,
+static int add_blackhole_explosion(uint32_t related_id, double x, double y, double z, uint16_t velocity,
 				uint16_t nsparks, uint16_t time, uint8_t victim_type);
 static void snis_queue_add_sound(uint16_t sound_number, uint32_t roles, uint32_t shipid);
 
@@ -1154,8 +1154,9 @@ static void black_hole_collision_detection(void *o1, void *o2)
 		return;
 	if (dist < BLACK_HOLE_EVENT_HORIZON * black_hole->tsd.black_hole.radius) {
 		if (object->type != OBJTYPE_SHIP1) {
-			(void) add_blackhole_explosion(black_hole->x, black_hole->y, black_hole->z,
-							500, 100, 100, object->type);
+			(void) add_blackhole_explosion(black_hole->id,
+						black_hole->x, black_hole->y, black_hole->z,
+						500, 100, 100, object->type);
 			delete_from_clients_and_server_helper(object, 0);
 			return;
 		} else {
@@ -10551,7 +10552,8 @@ static int add_nebula(double x, double y, double z,
 	return i;
 }
 
-static int add_typed_explosion(double x, double y, double z, uint16_t velocity,
+static int add_typed_explosion(uint32_t related_id,
+				double x, double y, double z, uint16_t velocity,
 				uint16_t nsparks, uint16_t time, uint8_t victim_type,
 				uint8_t explosion_type)
 {
@@ -10567,20 +10569,21 @@ static int add_typed_explosion(double x, double y, double z, uint16_t velocity,
 	go[i].tsd.explosion.time = time;
 	go[i].tsd.explosion.victim_type = victim_type;
 	go[i].tsd.explosion.explosion_type = explosion_type;
+	go[i].tsd.explosion.related_id = related_id;
 	return i;
 }
 
 static int add_explosion(double x, double y, double z, uint16_t velocity,
 				uint16_t nsparks, uint16_t time, uint8_t victim_type)
 {
-	return add_typed_explosion(x, y, z, velocity, nsparks, time, victim_type,
+	return add_typed_explosion((uint32_t) -1, x, y, z, velocity, nsparks, time, victim_type,
 					EXPLOSION_TYPE_REGULAR);
 }
 
-static int add_blackhole_explosion(double x, double y, double z, uint16_t velocity,
+static int add_blackhole_explosion(uint32_t black_hole, double x, double y, double z, uint16_t velocity,
 				uint16_t nsparks, uint16_t time, uint8_t victim_type)
 {
-	return add_typed_explosion(x, y, z, velocity, nsparks, time, victim_type,
+	return add_typed_explosion(black_hole, x, y, z, velocity, nsparks, time, victim_type,
 					EXPLOSION_TYPE_BLACKHOLE);
 }
 
@@ -18996,7 +18999,8 @@ static void send_update_nebula_packet(struct game_client *c,
 static void send_update_explosion_packet(struct game_client *c,
 	struct snis_entity *o)
 {
-	pb_queue_to_client(c, snis_opcode_pkt("bwwSSShhhbb", OPCODE_UPDATE_EXPLOSION, o->id, o->timestamp,
+	pb_queue_to_client(c, snis_opcode_pkt("bwwwSSShhhbb", OPCODE_UPDATE_EXPLOSION, o->id, o->timestamp,
+				o->tsd.explosion.related_id,
 				o->x, (int32_t) UNIVERSE_DIM, o->y, (int32_t) UNIVERSE_DIM,
 				o->z, (int32_t) UNIVERSE_DIM,
 				o->tsd.explosion.nsparks, o->tsd.explosion.velocity,

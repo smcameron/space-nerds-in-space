@@ -84,7 +84,7 @@ int snis_opcode_def_init(void)
 	rc |= init_opcode_def(OPCODE_REQUEST_YAW, "bb");
 	rc |= init_opcode_def(OPCODE_REQUEST_TORPEDO, "b");
 	rc |= init_opcode_def(OPCODE_DELETE_OBJECT, "bw");
-	rc |= init_opcode_def(OPCODE_UPDATE_EXPLOSION, "bwwSSShhhbb");
+	rc |= init_opcode_def(OPCODE_UPDATE_EXPLOSION, "bwwwSSShhhbb");
 	rc |= init_opcode_def(OPCODE_PLAY_SOUND, "bh");
 	rc |= init_opcode_def(OPCODE_REQUEST_SCIYAW, "bb");
 	rc |= init_opcode_def(OPCODE_REQUEST_SCIBEAMWIDTH, "bb");
