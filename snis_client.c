@@ -7619,11 +7619,17 @@ static void update_warp_tunnel(struct snis_entity *o, struct entity **warp_tunne
 		vec3_normalize_self(&v);
 		quat_from_u2v(&orientation, &down_x_axis, &warp_tunnel_direction, &up);
 		*warp_tunnel = add_entity(ecx, warp_tunnel_mesh, o->x, o->y, o->z, SHIP_COLOR);
-		update_entity_material(*warp_tunnel, &warp_tunnel_material);
-		update_entity_orientation(*warp_tunnel, &orientation);
+		if (*warp_tunnel) {
+			update_entity_material(*warp_tunnel, &warp_tunnel_material);
+			update_entity_orientation(*warp_tunnel, &orientation);
+		} else {
+			return;
+		}
 	}
-	entity_update_alpha(*warp_tunnel, new_alpha);
-	warp_tunnel_material.texture_mapped_unlit.alpha = new_alpha;
+	if (*warp_tunnel) {
+		entity_update_alpha(*warp_tunnel, new_alpha);
+		warp_tunnel_material.texture_mapped_unlit.alpha = new_alpha;
+	}
 }
 
 
