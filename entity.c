@@ -54,6 +54,7 @@ struct entity *add_entity(struct entity_context *cx,
 	struct mesh *m, float x, float y, float z, int color)
 {
 	int n;
+	static int throttle = 0;
 
 #if ADD_ENTITY_CHAOS_MONKEY
 	/* for testing that code can withstand add_entity failures */
@@ -63,9 +64,15 @@ struct entity *add_entity(struct entity_context *cx,
 
 	n = snis_object_pool_alloc_obj(cx->entity_pool);
 	if (n < 0) {
-		printf("Out of entities at %s:%d\n", __FILE__, __LINE__);
-		fflush(stdout);
+		if (throttle < 10 || (throttle & (0x3f)) == 0) { /* Throttle these messages */
+			printf("Out of entities at %s:%d\n", __FILE__, __LINE__);
+			fflush(stdout);
+		}
+		throttle++;
 		return NULL;
+	} else {
+		if (throttle > 0)
+			throttle--;
 	}
 
 	cx->entity_list[n].visible = 1;

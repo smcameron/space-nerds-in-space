@@ -111,9 +111,10 @@ int snis_object_pool_alloc_obj(struct snis_object_pool *pool)
 	}
 
 allocation_failure:
-
+#if 0
 	printf("snis_object_pool_alloc_obj allocation failed, pool = %p\n", (void *) pool);
 	stacktrace("snis_object_pool_alloc_obj allocation failed.\n");
+#endif
 	return -1;
 }
 
