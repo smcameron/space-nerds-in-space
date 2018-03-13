@@ -16613,6 +16613,56 @@ out:
 	return 1;
 }
 
+static int l_dock_player_to_starbase(lua_State *l)
+{
+	int i, b;
+	struct snis_entity *player, *starbase, *docking_port;
+	const double player_id = luaL_checknumber(l, 1);
+	const double starbase_id = luaL_checknumber(l, 2);
+
+	pthread_mutex_lock(&universe_mutex);
+	i = lookup_by_id(player_id);
+	if (i < 0)
+		goto failure;
+	if (go[i].type != OBJTYPE_SHIP1)
+		goto failure;
+	player = &go[i];
+	i = lookup_by_id(starbase_id);
+	if (i < 0)
+		goto failure;
+	if (go[i].type != OBJTYPE_STARBASE)
+		goto failure;
+	starbase = &go[i];
+	/* Find a docking port */
+	b = lookup_bridge_by_shipid(player->id);
+	if (b < 0) {
+		fprintf(stderr, "%s:%d: player bridge unexpectedly not found.\n",
+			__FILE__, __LINE__);
+		goto failure;
+	}
+	for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
+		if (go[i].type != OBJTYPE_DOCKING_PORT)
+			continue;
+		docking_port = &go[i];
+		if (!docking_port->alive || docking_port->tsd.docking_port.parent != starbase->id ||
+			docking_port->tsd.docking_port.docked_guy != (uint32_t) -1)
+			continue;
+		docking_port->tsd.docking_port.docked_guy = player->id; /* Dock player */
+		player->tsd.ship.docking_magnets = 1; /* Turn on docking magnets */
+		break;
+	}
+	/* docking_port_move() will move the player ship to the right place. */
+	do_docking_action(player, starbase, &bridgelist[b], starbase->tsd.starbase.name);
+
+	pthread_mutex_unlock(&universe_mutex);
+	lua_pushnumber(l, 0.0);
+	return 1;
+failure:
+	pthread_mutex_unlock(&universe_mutex);
+	lua_pushnumber(l, -1.0);
+	return 1;
+}
+
 static int process_create_item(struct game_client *c)
 {
 	unsigned char buffer[14];
@@ -19979,6 +20029,7 @@ static void setup_lua(void)
 	add_lua_callable_fn(l_add_black_hole, "add_black_hole");
 	add_lua_callable_fn(l_attach_science_text, "attach_science_text");
 	add_lua_callable_fn(l_add_explosion, "add_explosion");
+	add_lua_callable_fn(l_dock_player_to_starbase, "dock_player_to_starbase");
 }
 
 static int run_initial_lua_scripts(void)
