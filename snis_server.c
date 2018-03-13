@@ -13306,66 +13306,66 @@ static void npc_menu_item_mining_bot_status_report(struct npc_menu_item *item,
 	send_comms_packet(npcname, channel, "--- BEGIN STATUS REPORT ---");
 	switch (ai->mode) {
 	case MINING_MODE_APPROACH_ASTEROID:
-		sprintf(msg, "RENDEZVOUS WITH %s, DISTANCE: %f\n",
+		snprintf(msg, sizeof(msg), "RENDEZVOUS WITH %s, DISTANCE: %f\n",
 			asteroid ? asteroid->sdata.name : "UNKNOWN", dist);
 		send_comms_packet(npcname, channel, msg);
 		break;
 	case MINING_MODE_LAND_ON_ASTEROID:
-		sprintf(msg, "DESCENT ONTO %s, ALTITUDE: %f\n",
+		snprintf(msg, sizeof(msg), "DESCENT ONTO %s, ALTITUDE: %f\n",
 			asteroid ? asteroid->sdata.name : "UNKNOWN", dist * 0.3);
 		send_comms_packet(npcname, channel, msg);
 		break;
 	case MINING_MODE_MINE:
 		if (asteroid->type == OBJTYPE_ASTEROID)
-			sprintf(msg, "MINING ON %s\n",
+			snprintf(msg, sizeof(msg), "MINING ON %s\n",
 				asteroid ? asteroid->sdata.name : "UNKNOWN");
 		else
-			sprintf(msg, "SALVAGING %s\n",
+			snprintf(msg, sizeof(msg), "SALVAGING %s\n",
 				asteroid ? asteroid->sdata.name : "UNKNOWN");
 		send_comms_packet(npcname, channel, msg);
 		break;
 	case MINING_MODE_RETURN_TO_PARENT:
 	case MINING_MODE_STOW_BOT:
-		sprintf(msg, "RETURNING FROM %s\n",
+		snprintf(msg, sizeof(msg), "RETURNING FROM %s\n",
 			asteroid ? asteroid->sdata.name : "UNKNOWN");
 		send_comms_packet(npcname, channel, msg);
-		sprintf(msg, "DISTANCE TO %s: %f\n",
+		snprintf(msg, sizeof(msg), "DISTANCE TO %s: %f\n",
 			asteroid ? asteroid->sdata.name : "UNKNOWN", dist);
 		send_comms_packet(npcname, channel, msg);
 		break;
 	case MINING_MODE_STANDBY_TO_TRANSPORT_ORE:
-		sprintf(msg, "STANDING BY TO TRANSPORT MATERIALS\n");
+		snprintf(msg, sizeof(msg), "STANDING BY TO TRANSPORT MATERIALS\n");
 		send_comms_packet(npcname, channel, msg);
-		sprintf(msg, "DISTANCE TO %s: %f\n",
+		snprintf(msg, sizeof(msg), "DISTANCE TO %s: %f\n",
 			asteroid ? asteroid->sdata.name : "UNKNOWN", dist);
 		send_comms_packet(npcname, channel, msg);
 		break;
 	default:
 		break;
 	}
-	sprintf(msg, "DISTANCE TO %s: %f\n",
+	snprintf(msg, sizeof(msg), "DISTANCE TO %s: %f\n",
 		parent ? parent->sdata.name : "MOTHER SHIP", dist_to_parent);
 	send_comms_packet(npcname, channel, msg);
 	switch (asteroid->type) {
 	case OBJTYPE_ASTEROID:
-		sprintf(msg, "ORE COLLECTED: %f TONS\n", 2.0 * total / (255.0 * 4.0));
+		snprintf(msg, sizeof(msg), "ORE COLLECTED: %f TONS\n", 2.0 * total / (255.0 * 4.0));
 		send_comms_packet(npcname, channel, msg);
 		send_comms_packet(npcname, channel, "ORE COMPOSITION:");
-		sprintf(msg, "GOLD: %2f%%\n", gold / total);
+		snprintf(msg, sizeof(msg), "GOLD: %2f%%\n", gold / total);
 		send_comms_packet(npcname, channel, msg);
-		sprintf(msg, "PLATINUM: %2f%%\n", platinum / total);
+		snprintf(msg, sizeof(msg), "PLATINUM: %2f%%\n", platinum / total);
 		send_comms_packet(npcname, channel, msg);
-		sprintf(msg, "GERMANIUM: %2f%%\n", germanium / total);
+		snprintf(msg, sizeof(msg), "GERMANIUM: %2f%%\n", germanium / total);
 		send_comms_packet(npcname, channel, msg);
-		sprintf(msg, "URANIUM: %2f%%\n", uranium / total);
+		snprintf(msg, sizeof(msg), "URANIUM: %2f%%\n", uranium / total);
 		send_comms_packet(npcname, channel, msg);
 		break;
 	case OBJTYPE_DERELICT:
-		sprintf(msg, "FUEL AND OXYGEN COLLECTED:\n");
+		snprintf(msg, sizeof(msg), "FUEL AND OXYGEN COLLECTED:\n");
 		send_comms_packet(npcname, channel, msg);
-		sprintf(msg, "- FUEL: %2f%%\n", fuel / 255.0);
+		snprintf(msg, sizeof(msg), "- FUEL: %2f%%\n", fuel / 255.0);
 		send_comms_packet(npcname, channel, msg);
-		sprintf(msg, "- OXYGEN: %2f%%\n", oxygen / 255.0);
+		snprintf(msg, sizeof(msg), "- OXYGEN: %2f%%\n", oxygen / 255.0);
 		send_comms_packet(npcname, channel, msg);
 		/* FIXME: This ai->mode test is a little imprecise about whether we've recovered
 		 * the logs. But, maybe it's good enough.
@@ -13374,17 +13374,34 @@ static void npc_menu_item_mining_bot_status_report(struct npc_menu_item *item,
 			ai->mode == MINING_MODE_STOW_BOT ||
 			ai->mode == MINING_MODE_STANDBY_TO_TRANSPORT_ORE) {
 			if (asteroid->tsd.derelict.ships_log) {
-				sprintf(msg, "*** RECOVERED PARTIAL SHIPS LOG FROM %s ***\n", asteroid->sdata.name);
+				int i, n;
+				char m[50];
+
+				snprintf(msg, sizeof(msg), "*** RECOVERED PARTIAL SHIPS LOG FROM %s ***\n",
+						asteroid->sdata.name);
 				send_comms_packet(npcname, channel, msg);
-				sprintf(msg, "... %s\n", asteroid->tsd.derelict.ships_log);
-				send_comms_packet(npcname, channel, msg);
-				sprintf(msg, "*** END OF PARTIAL SHIP'S LOG FROM %s ***\n", asteroid->sdata.name);
+				n = strlen(asteroid->tsd.derelict.ships_log);
+				i = 0;
+				do {
+					int len;
+					memset(m, 0, sizeof(m));
+					strncpy(m, asteroid->tsd.derelict.ships_log + i, sizeof(m) - 1);
+					snprintf(msg, sizeof(msg), "... %s\n", m);
+					send_comms_packet(npcname, channel, msg);
+					len = strlen(m);
+					n = n - len;
+					i = i + len;
+					printf("m = '%s', n = %d, i = %d\n", m, n, i);
+				} while (n > 0);
+				snprintf(msg, sizeof(msg), "*** END OF PARTIAL SHIP'S LOG FROM %s ***\n",
+					asteroid->sdata.name);
 				send_comms_packet(npcname, channel, msg);
 				schedule_callback2(event_callback, &callback_schedule,
 							"ships-logs-recovered-event", (double) asteroid->id,
 							parent ? (double) parent->id : -1.0);
 			} else {
-				sprintf(msg, "UNABLE TO RECOVER SHIPS LOG FROM %s\n", asteroid->sdata.name);
+				snprintf(msg, sizeof(msg), "UNABLE TO RECOVER SHIPS LOG FROM %s\n",
+						asteroid->sdata.name);
 				send_comms_packet(npcname, channel, msg);
 			}
 		}
