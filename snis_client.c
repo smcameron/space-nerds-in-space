@@ -4659,8 +4659,9 @@ static int process_red_alert()
 	return 0;
 }
 
+#define MAINSCREEN_COMMS_LINES 12
 static struct main_screen_text_data {
-	char text[4][100];
+	char text[MAINSCREEN_COMMS_LINES][100];
 	int last;
 	int comms_on_mainscreen;
 } main_screen_text;
@@ -7531,24 +7532,25 @@ static void show_gunsight(GtkWidget *w)
 
 static void main_screen_add_text(char *msg)
 {
-	main_screen_text.last = (main_screen_text.last + 1) % 4;
+	main_screen_text.last = (main_screen_text.last + 1) % MAINSCREEN_COMMS_LINES;
 	strncpy(main_screen_text.text[main_screen_text.last], msg, 99);
 }
 
 static void draw_main_screen_text(GtkWidget *w, GdkGC *gc)
 {
 	int first, i;
+	const int comms_lines = MAINSCREEN_COMMS_LINES;
 
 	if (!main_screen_text.comms_on_mainscreen)
 		return;
 
-	first = (main_screen_text.last + 1) % 4;;
+	first = (main_screen_text.last + 1) % comms_lines;
 
 	sng_set_foreground(UI_COLOR(main_text));
-	for (i = 0; i < 4; i++) {
+	for (i = 0; i < comms_lines; i++) {
 		sng_abs_xy_draw_string(main_screen_text.text[first],
-				NANO_FONT, 10, SCREEN_HEIGHT - (4 - i) * 18 - 10);
-		first = (first + 1) % 4;
+				NANO_FONT, 10, SCREEN_HEIGHT - (comms_lines - i) * 18 - 10);
+		first = (first + 1) % comms_lines;
 	}
 }
 
