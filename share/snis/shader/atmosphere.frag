@@ -1,5 +1,6 @@
 
 uniform vec3 u_LightPos;       // The position of the light in eye space.
+uniform float u_Alpha;		// Relative alpha, 0.0 - 1.0.
 
 varying vec3 v_Position;       // Interpolated position for this fragment.
 varying vec3 v_Color;          // This is the color from the vertex shader interpolated across the triangle per fragment
@@ -33,6 +34,6 @@ void main()
 	attenuation = 15.0 * attenuation * attenuation;
 
 	gl_FragColor = 2.1 * vec4(v_Color * attenuation * lightdot * eyedot2 * 0.7,
-					attenuation * lightdot * eyedot2 * 0.7);
+					attenuation * lightdot * eyedot2 * 0.7 * u_Alpha);
 }
 

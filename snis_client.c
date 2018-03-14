@@ -1965,6 +1965,7 @@ static int update_planet(uint32_t id, uint32_t timestamp, double x, double y, do
 			go[i].tsd.planet.atmosphere = atm;
 			if (atm) {
 				update_entity_scale(atm, atm_scale);
+				entity_update_alpha(atm, 0.5);
 				material_init_atmosphere(&go[i].tsd.planet.atm_material);
 				go[i].tsd.planet.atm_material.atmosphere.r = (float) atm_r / 255.0f;
 				go[i].tsd.planet.atm_material.atmosphere.g = (float) atm_g / 255.0f;
@@ -2157,15 +2158,38 @@ static void warp_effect_move(struct snis_entity *o)
 
 static void shield_effect_move(struct snis_entity *o)
 {
-	o->x += o->vx;
-	o->y += o->vy;
-	o->z += o->vz;
+
+	int i;
+
+	i = lookup_object_by_id(o->tsd.spark.id);
+	if (i < 0) {
+		o->x += o->vx;
+		o->y += o->vy;
+		o->z += o->vz;
+	} else {
+		o->x = go[i].x;
+		o->y = go[i].y;
+		o->z = go[i].z;
+		o->vx = go[i].vx;
+		o->vy = go[i].vy;
+		o->vz = go[i].vz;
+	}
 	o->alive--;
-	if (o->entity)
+	if (o->entity) {
 		entity_update_alpha(o->entity, entity_get_alpha(o->entity) * 0.9);
+		update_entity_pos(o->entity, o->x, o->y, o->z);
+	}
+	if (o->tsd.spark.shield_entity) /* don't update shield_entity pos because parent is o->entity */
+		entity_update_alpha(o->tsd.spark.shield_entity, entity_get_alpha(o->tsd.spark.shield_entity) * 0.88);
 	if (o->alive <= 0) {
-		if (o->entity)
+		if (o->entity) {
 			remove_entity(ecx, o->entity);
+			o->entity = NULL;
+		}
+		if (o->tsd.spark.shield_entity) {
+			remove_entity(ecx, o->tsd.spark.shield_entity);
+			o->tsd.spark.shield_entity = NULL;
+		}
 		snis_object_pool_free_object(sparkpool, spark_index(o));
 	}
 }
@@ -2180,9 +2204,14 @@ static void spark_move(struct snis_entity *o)
 	o->z += o->vz;
 	o->alive--;
 	if (o->alive <= 0) {
-		if (o->entity)
+		if (o->entity) {
 			remove_entity(ecx, o->entity);
-		o->entity = NULL;
+			o->entity = NULL;
+		}
+		if (o->tsd.spark.shield_entity) {
+			remove_entity(ecx, o->tsd.spark.shield_entity);
+			o->tsd.spark.shield_entity = NULL;
+		}
 		snis_object_pool_free_object(sparkpool, spark_index(o));
 		return;
 	}
@@ -2630,6 +2659,10 @@ static void move_objects(void)
 			move_object(timestamp, o, &interpolate_oriented_object);
 			spin_planet(timestamp, o);
 			break;
+		case OBJTYPE_SHIELD_EFFECT:
+			move_object(timestamp, o, &interpolate_generic_object);
+			o->move(o);
+			break;
 		default:
 			break;
 		}
@@ -2731,36 +2764,50 @@ static void add_warp_effect(double x, double y, double z, int arriving, int time
 	return;
 }
 
-static void add_shield_effect(double x, double y, double z,
-			double vx, double vy, double vz,
+static void add_shield_effect(struct snis_entity *o,
 			double radius, union quat *orientation)
 {
 	int i;
-	struct entity *e;
+	struct entity *e, *atm;
 
 	i = snis_object_pool_alloc_obj(sparkpool);
 	if (i < 0)
 		return;
-	e = add_entity(ecx, sphere_mesh, x, y, z, PARTICLE_COLOR);
+	e = add_entity(ecx, sphere_mesh, o->x, o->y, o->z, PARTICLE_COLOR);
 	if (e) {
 		set_render_style(e, RENDER_NORMAL);
 		update_entity_material(e, &shield_material);
 		update_entity_scale(e, radius);
 		update_entity_orientation(e, orientation);
 		update_entity_visibility(e, 1);
-		entity_update_alpha(e, 0.7);
+		entity_update_alpha(e, 0.5);
 	}
 	memset(&spark[i], 0, sizeof(spark[i]));
-	spark[i].x = x;
-	spark[i].y = y;
-	spark[i].z = z;
-	spark[i].vx = vx;
-	spark[i].vy = vy;
-	spark[i].vz = vz;
+	spark[i].x = o->x;
+	spark[i].y = o->y;
+	spark[i].z = o->z;
+	spark[i].vx = o->vx;
+	spark[i].vy = o->vy;
+	spark[i].vz = o->vz;
 	spark[i].type = OBJTYPE_SHIELD_EFFECT;
 	spark[i].alive = SHIELD_EFFECT_LIFETIME;
 	spark[i].move = shield_effect_move;
 	spark[i].entity = e;
+	atm = add_entity(ecx, sphere_mesh, 0, 0, 0, WHITE);
+	if (atm && e) {
+		material_init_atmosphere(&spark[i].tsd.spark.atm_material);
+		spark[i].tsd.spark.atm_material.atmosphere.r = 0.5;
+		spark[i].tsd.spark.atm_material.atmosphere.g = 1.0;
+		spark[i].tsd.spark.atm_material.atmosphere.b = 1.0;
+		spark[i].tsd.spark.atm_material.atmosphere.scale = 1.05;
+		update_entity_material(atm, &spark[i].tsd.spark.atm_material);
+		entity_update_alpha(atm, 0.5);
+		update_entity_scale(atm, 1.05);
+		update_entity_visibility(atm, 1);
+		update_entity_parent(ecx, atm, e);
+	}
+	spark[i].tsd.spark.shield_entity = atm;
+	spark[i].tsd.spark.id = o->id;
 	return;
 }
 
@@ -4781,7 +4828,7 @@ static void do_whatever_detonate_does(uint32_t id, double x, double y, double z,
 
 	quat_from_u2v(&orientation, &u, &v, NULL);
 
-	add_shield_effect(o->x, o->y, o->z, o->vx, o->vy, o->vz, radius, &orientation);
+	add_shield_effect(o, radius, &orientation);
 }
 
 static int process_detonate(void)

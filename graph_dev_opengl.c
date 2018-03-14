@@ -629,6 +629,7 @@ struct graph_dev_gl_atmosphere_shader {
 	GLint vertex_normal_id;
 	GLint light_pos_id;
 	GLint color_id;
+	GLfloat alpha;
 };
 
 struct graph_dev_gl_filled_wireframe_shader {
@@ -1503,7 +1504,7 @@ static void graph_dev_raster_single_color_lit(const struct mat44 *mat_mvp, const
 
 static void graph_dev_raster_atmosphere(const struct mat44 *mat_mvp, const struct mat44 *mat_mv,
 	const struct mat33 *mat_normal,
-	struct mesh *m, struct sng_color *triangle_color, union vec3 *eye_light_pos)
+	struct mesh *m, struct sng_color *triangle_color, union vec3 *eye_light_pos, GLfloat alpha)
 {
 	enable_3d_viewport();
 
@@ -1534,6 +1535,7 @@ static void graph_dev_raster_atmosphere(const struct mat44 *mat_mvp, const struc
 	glUniform3f(atmosphere_shader.color_id, triangle_color->red,
 		triangle_color->green, triangle_color->blue);
 	glUniform3f(atmosphere_shader.light_pos_id, eye_light_pos->v.x, eye_light_pos->v.y, eye_light_pos->v.z);
+	glUniform1f(atmosphere_shader.alpha, alpha);
 
 	glEnableVertexAttribArray(atmosphere_shader.vertex_position_id);
 	glBindBuffer(GL_ARRAY_BUFFER, ptr->vertex_buffer);
@@ -2265,7 +2267,7 @@ void graph_dev_draw_entity(struct entity_context *cx, struct entity *e, union ve
 				break;
 			case MATERIAL_ATMOSPHERE: {
 				do_blend = 1;
-				texture_alpha = 0.5;
+				texture_alpha = entity_get_alpha(e);
 				atmosphere = 1;
 				atmosphere_color.red = e->material_ptr->atmosphere.r;
 				atmosphere_color.green = e->material_ptr->atmosphere.g;
@@ -2393,7 +2395,7 @@ void graph_dev_draw_entity(struct entity_context *cx, struct entity *e, union ve
 						specular_power, specular_intensity, emit_intensity);
 				else if (atmosphere)
 					graph_dev_raster_atmosphere(mat_mvp, mat_mv, mat_normal,
-						e->m, &atmosphere_color, eye_light_pos);
+						e->m, &atmosphere_color, eye_light_pos, texture_alpha);
 				else
 					graph_dev_raster_single_color_lit(mat_mvp, mat_mv, mat_normal,
 						e->m, &triangle_color, eye_light_pos);
@@ -2846,6 +2848,7 @@ static void setup_atmosphere_shader(struct graph_dev_gl_atmosphere_shader *shade
 	shader->vertex_position_id = glGetAttribLocation(shader->program_id, "a_Position");
 	shader->vertex_normal_id = glGetAttribLocation(shader->program_id, "a_Normal");
 	shader->color_id = glGetUniformLocation(shader->program_id, "u_Color");
+	shader->alpha = glGetUniformLocation(shader->program_id, "u_Alpha");
 }
 
 static void setup_textured_shader(const char *basename, const char *defines,

@@ -119,7 +119,7 @@
 #define OBJTYPE_WARP_CORE 24
 #define OBJTYPE_BLACK_HOLE 25
 
-#define SHIELD_EFFECT_LIFETIME 30
+#define SHIELD_EFFECT_LIFETIME 60
 
 #define SNIS_ENTITY_NUPDATE_HISTORY 4
 
@@ -603,6 +603,9 @@ struct explosion_data {
 struct spark_data {
 	union quat rotational_velocity;
 	float shrink_factor;
+	struct entity *shield_entity;
+	struct material atm_material;
+	uint32_t id;
 };
 
 struct asteroid_data {
