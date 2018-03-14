@@ -5352,6 +5352,7 @@ static struct comms_ui {
 	struct button *main_onscreen_button;
 	struct button *comms_transmit_button;
 	struct button *red_alert_button;
+	struct button *hail_mining_bot_button;
 	struct button *mainscreen_comms;
 	struct button *rts_starbase_button[NUM_RTS_BASES];
 	struct button *rts_fleet_button;
@@ -12591,6 +12592,14 @@ static void comms_screen_red_alert_pressed(void *x)
 	queue_to_server(snis_opcode_pkt("bb", OPCODE_REQUEST_REDALERT, new_alert_mode));
 }
 
+static void comms_hail_mining_bot_pressed(__attribute__((unused)) void *x)
+{
+	snis_text_input_box_set_contents(comms_ui.comms_input, "/HAIL MINING-BOT");
+	comms_transmit_button_pressed(NULL);
+	ui_set_widget_focus(uiobjs, comms_ui.comms_input);
+	return;
+}
+
 static void comms_main_screen_pressed(void *x)
 {
 	unsigned char new_comms_mode;
@@ -12893,6 +12902,10 @@ static void init_comms_ui(void)
 	comms_ui.red_alert_button = snis_button_init(x, y, -1, bh, "RED ALERT", red_alert_color,
 			NANO_FONT, comms_screen_red_alert_pressed, NULL);
 	snis_button_set_sound(comms_ui.red_alert_button, UISND16);
+	y += bh + 2;
+	comms_ui.hail_mining_bot_button = snis_button_init(x, y, -1, bh, "MINING BOT", button_color,
+			NANO_FONT, comms_hail_mining_bot_pressed, NULL);
+	snis_button_set_sound(comms_ui.hail_mining_bot_button, UISND16);
 	y = SCREEN_HEIGHT - 60;
 	comms_ui.mainscreen_comms = snis_button_init(x, y, -1, bh, "MAIN SCREEN", button_color,
 			NANO_FONT, comms_main_screen_pressed, NULL);
@@ -13010,6 +13023,8 @@ static void init_comms_ui(void)
 			"SHOW VERSION INFO ABOUT SPACE NERDS IN SPACE");
 	ui_add_button(comms_ui.red_alert_button, DISPLAYMODE_COMMS,
 			"ACTIVATE RED ALERT ALARM");
+	ui_add_button(comms_ui.hail_mining_bot_button, DISPLAYMODE_COMMS,
+			"HAIL THE MINING BOT IF IT IS DEPLOYED");
 	ui_add_button(comms_ui.mainscreen_comms, DISPLAYMODE_COMMS,
 			"DISPLAY MOST RECENT COMMS TRANSMISSSIONS ON MAIN SCREEN");
 	ui_add_button(comms_ui.comms_transmit_button, DISPLAYMODE_COMMS,
@@ -18239,6 +18254,9 @@ static void process_physical_device_io(unsigned short opcode, unsigned short val
 		break;
 	case DEVIO_OPCODE_COMMS_RED_ALERT:
 		comms_screen_red_alert_pressed(NULL);
+		break;
+	case DEVIO_OPCODE_COMMS_HAIL_MINING_BOT:
+		comms_hail_mining_bot_pressed(NULL);
 		break;
 	case DEVIO_OPCODE_COMMS_MAINSCREEN_COMMS:
 		comms_main_screen_pressed(NULL);

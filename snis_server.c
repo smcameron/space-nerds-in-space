@@ -14399,7 +14399,7 @@ static void meta_comms_hail(char *name, struct game_client *c, char *txt)
 		}
 	}
 
-	/* check for starbases being hailed */
+	/* check for starbases and NPC ships (mining bots) being hailed */
 	for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
 		struct snis_entity *o = &go[i];
 		char *sbname = NULL;
@@ -14412,10 +14412,15 @@ static void meta_comms_hail(char *name, struct game_client *c, char *txt)
 			continue;
 
 		for (j = 0; j < nnames; j++) {
-			printf("comparing '%s' to '%s'\n",
-				sbname, namelist[j]);
-			if (strcasecmp(sbname, namelist[j]) != 0)
-				continue;
+			if (strcasecmp(namelist[j], "MINING-BOT") == 0) {
+				if (strcasecmp(go[c->ship_index].tsd.ship.mining_bot_name, sbname) != 0)
+					continue;
+			} else {
+				printf("comparing '%s' to '%s'\n",
+					sbname, namelist[j]);
+				if (strcasecmp(sbname, namelist[j]) != 0)
+					continue;
+			}
 			nchannels = 1;
 			channel[0] = find_free_channel();
 			switch_channel = 1;

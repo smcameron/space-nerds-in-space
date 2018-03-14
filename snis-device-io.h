@@ -107,6 +107,7 @@
 #define DEVIO_OPCODE_COMMS_RED_ALERT		508
 #define DEVIO_OPCODE_COMMS_MAINSCREEN_COMMS	509
 #define DEVIO_OPCODE_COMMS_MAINZOOM		510
+#define DEVIO_OPCODE_COMMS_HAIL_MINING_BOT	511
 
 struct snis_device_io_connection;
 int snis_device_io_setup(struct snis_device_io_connection **c);
