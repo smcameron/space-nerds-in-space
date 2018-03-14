@@ -12442,7 +12442,8 @@ static void init_science_ui(void)
 	ui_add_slider(sci_ui.scizoom, DISPLAYMODE_SCIENCE, "SCIENCE SCOPE ZOOM CONTROL");
 	ui_add_slider(sci_ui.scipower, DISPLAYMODE_SCIENCE, "SCANNING BEAM POWER CONTROL");
 	ui_add_button(sci_ui.details_button, DISPLAYMODE_SCIENCE, "VIEW DETAILS ABOUT SELECTED TARGET");
-	ui_add_button(sci_ui.launch_mining_bot_button, DISPLAYMODE_SCIENCE, "LAUNCH THE MINING ROBOT");
+	ui_add_button(sci_ui.launch_mining_bot_button, DISPLAYMODE_SCIENCE,
+			"LAUNCH THE MINING ROBOT TOWARDS SELECTED TARGET");
 	ui_add_button(sci_ui.tractor_button, DISPLAYMODE_SCIENCE, "TOGGLE THE TRACTOR BEAM ON OR OFF");
 	ui_add_button(sci_ui.threed_button, DISPLAYMODE_SCIENCE, "SELECT LONG RANGE SCANNERS");
 	ui_add_button(sci_ui.sciplane_button, DISPLAYMODE_SCIENCE, "SELECT SHORT RANGE SCANNERS");

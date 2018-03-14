@@ -17652,14 +17652,25 @@ static void launch_mining_bot(struct game_client *c, struct snis_entity *ship, u
 	if (i < 0)
 		goto miningbotfail;
 	pthread_mutex_unlock(&universe_mutex);
-	queue_add_text_to_speech(c, "Mining robot deployed");
+	switch (go[i].type) {
+	case OBJTYPE_ASTEROID:
+		queue_add_text_to_speech(c, "Mining robot deployed to mine selected asteroid.");
+		break;
+	case OBJTYPE_DERELICT:
+		queue_add_text_to_speech(c, "Mining robot deployed to salvage selected derelict wreckage.");
+		break;
+	default:
+		/* Shouldn't get here. */
+		queue_add_text_to_speech(c, "Mining robot deployed.");
+		break;
+	}
 	return;
 
 miningbotfail:
 	/* TODO: make special miningbot failure sound */
 	snis_queue_add_sound(LASER_FAILURE, ROLE_SOUNDSERVER, ship->id);
 	pthread_mutex_unlock(&universe_mutex);
-	queue_add_text_to_speech(c, "No target selected for mining robot");
+	queue_add_text_to_speech(c, "No appropriate target selected for mining robot");
 	return;
 }
 
