@@ -3936,14 +3936,13 @@ static void spacemonster_move(struct snis_entity *o)
 	/* FIXME: make this better */
 	float v, dx, dy, dz;
 	set_object_location(o, o->x + o->vx, o->y + o->vy, o->z + o->vz);
-	int anger, fear, hunger, health;
+	int anger, fear, hunger;
 
 	maybe_find_spacemonster_a_home(o);
 
 	anger = o->tsd.spacemonster.anger;
 	fear = o->tsd.spacemonster.fear;
 	hunger = o->tsd.spacemonster.hunger;
-	health = o->tsd.spacemonster.health;
 
 	if (snis_randn(1000) < 20)
 		o->tsd.spacemonster.hunger = imin(hunger + 1, 255);
