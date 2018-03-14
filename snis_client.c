@@ -7708,6 +7708,7 @@ static void show_weapons_camera_view(GtkWidget *w)
 	union vec3 recoil = { { -1.0f, 0.0f, 0.0f } };
 	char buf[20];
 	int i;
+	static float current_lights = 1.0;
 
 	static int last_timer = 0;
 	int first_frame = (timer != last_timer+1);
@@ -7778,8 +7779,10 @@ static void show_weapons_camera_view(GtkWidget *w)
 	o->entity = add_entity(ecx, ship_mesh_map[o->tsd.ship.shiptype],
 				o->x, o->y, o->z, SHIP_COLOR);
 	if (o->entity) {
+		float desired_lights = (float) o->tsd.ship.exterior_lights / 255.0;
+		current_lights += (desired_lights - current_lights) * 0.05;
 		update_entity_orientation(o->entity, &o->orientation);
-		entity_update_emit_intensity(o->entity, (float) o->tsd.ship.exterior_lights / 255.0);
+		entity_update_emit_intensity(o->entity, current_lights);
 		set_render_style(o->entity, RENDER_NORMAL);
 	}
 
@@ -7883,6 +7886,7 @@ static void show_mainscreen(GtkWidget *w)
 	union quat desired_cam_orientation;
 	static union vec3 cam_offset;
 	union vec3 cam_pos;
+	static float current_lights = 1.0;
 
 	if (!(o = find_my_ship()))
 		return;
@@ -7939,9 +7943,10 @@ static void show_mainscreen(GtkWidget *w)
 			player_ship = add_entity(ecx, ship_mesh_map[o->tsd.ship.shiptype],
 					o->x, o->y, o->z, SHIP_COLOR);
 			if (player_ship) {
+				float desired_lights = (float) o->tsd.ship.exterior_lights / 255.0;
+				current_lights += (desired_lights - current_lights) * 0.05;
 				update_entity_orientation(player_ship, &o->orientation);
-				entity_update_emit_intensity(player_ship,
-						(float) o->tsd.ship.exterior_lights / 255.0);
+				entity_update_emit_intensity(player_ship, current_lights);
 			}
 
 			struct entity *turret_base = add_entity(ecx, ship_turret_base_mesh,
