@@ -2755,8 +2755,8 @@ static void add_shield_effect(double x, double y, double z,
 	spark[i].y = y;
 	spark[i].z = z;
 	spark[i].vx = vx;
-	spark[i].vy = vx;
-	spark[i].vz = vx;
+	spark[i].vy = vy;
+	spark[i].vz = vz;
 	spark[i].type = OBJTYPE_SHIELD_EFFECT;
 	spark[i].alive = SHIELD_EFFECT_LIFETIME;
 	spark[i].move = shield_effect_move;
