@@ -30,6 +30,7 @@ struct entity {
 	float sx, sy; /* screen coords */
 	union vec3 scale;
 	float dist3dsqrd;
+	float emit_intensity; /* Range 0.0 - 1.0. Multiplied with material emit intensity. */
 	int color;
 	int shadecolor;
 	float alpha;

@@ -93,6 +93,7 @@ struct entity *add_entity(struct entity_context *cx,
 	cx->entity_list[n].material_ptr = 0;
 	cx->entity_list[n].parent = 0;
 	cx->entity_list[n].entity_child_index = -1;
+	cx->entity_list[n].emit_intensity = 1.0;
 	if (m && m->material)
 		update_entity_material(&cx->entity_list[n], m->material);
 
@@ -1378,3 +1379,12 @@ void entity_update_alpha(struct entity *e, float alpha)
 	e->alpha = alpha;
 }
 
+void entity_update_emit_intensity(struct entity *e, float intensity)
+{
+	e->emit_intensity = intensity;
+}
+
+float entity_get_emit_intensity(struct entity *e)
+{
+	return e->emit_intensity;
+}

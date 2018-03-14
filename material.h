@@ -62,7 +62,7 @@ struct material_texture_mapped {
 	int emit_texture_id;
 	float specular_power;
 	float specular_intensity;
-	float emit_intensity;
+	float emit_intensity; /* Range 0.0 - 1.0, and later multiplied by per-entity emit_intensity */
 };
 
 struct material_texture_mapped_unlit {

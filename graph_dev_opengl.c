@@ -2243,7 +2243,7 @@ void graph_dev_draw_entity(struct entity_context *cx, struct entity *e, union ve
 				emit_texture_id = mt->emit_texture_id;
 				specular_power = mt->specular_power;
 				specular_intensity = mt->specular_intensity;
-				emit_intensity = mt->emit_intensity;
+				emit_intensity = mt->emit_intensity * e->emit_intensity;
 
 				if (emit_texture_id > 0)
 					tex_shader = &textured_lit_emit_shader;
