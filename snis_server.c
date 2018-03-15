@@ -3040,15 +3040,21 @@ static float block_closest_point(union vec3 *point, struct snis_entity *o, union
 		vec3_sub(&heretothere, closest_point, point);
 		return vec3_magnitude2(&heretothere);
 	case BLOCK_FORM_CAPSULE:
-		p1.v.x = o->x + 0.5 * o->tsd.block.sx;
-		p1.v.y = o->y;
-		p1.v.z = o->z;
-		p2.v.x = o->x - 0.5 * o->tsd.block.sx;
-		p2.v.y = o->y;
-		p2.v.z = o->z;
+		p1.v.x = 0.5 * o->tsd.block.sx;
+		p1.v.y = 0.0;
+		p1.v.z = 0.0;
+		p2.v.x = -0.5 * o->tsd.block.sx;
+		p2.v.y = 0;
+		p2.v.z = 0;
 		quat_rot_vec_self(&p1, &o->orientation);
 		quat_rot_vec_self(&p2, &o->orientation);
-		dist = dist2_from_point_to_line_segment(point, &p1, &p2) - 0.5 * o->tsd.block.sy;
+		p1.v.x += o->x;
+		p1.v.y += o->y;
+		p1.v.z += o->z;
+		p2.v.x += o->x;
+		p2.v.y += o->y;
+		p2.v.z += o->z;
+		dist = dist2_from_point_to_line_segment(point, &p1, &p2);
 		/* TODO: fill in *closest_point correctly, this is not correct; */
 		meshpos.v.x = o->x;
 		meshpos.v.y = o->y;
@@ -3056,6 +3062,7 @@ static float block_closest_point(union vec3 *point, struct snis_entity *o, union
 		vec3_sub(closest_point, &meshpos, point);
 		vec3_normalize_self(closest_point);
 		vec3_mul_self(closest_point, sqrtf(dist));
+		return dist;
 		break;
 	default:
 		break;
@@ -7466,7 +7473,8 @@ static void player_collision_detection(void *player, void *object)
 
 		dist2 = block_closest_point(&my_ship, t, &closest_point);
 		if (t->tsd.block.form == BLOCK_FORM_CAPSULE) {
-			if (sqrtf(dist2) - 0.5 * t->tsd.block.sy > 8.0)
+			printf("CAPSULE DIST = %f\n", sqrtf(dist2) - 0.5 * t->tsd.block.sy);
+			if (sqrtf(dist2) - 0.5 * t->tsd.block.sy > 2.0 * 2.0)
 				return;
 		} else {
 			if (dist2 > 8.0 * 8.0)
@@ -10226,14 +10234,14 @@ static int add_block_object(int parent_id, double x, double y, double z,
 			go[i].tsd.block.sx = sz;
 			go[i].tsd.block.sy = sz;
 		}
-	} else if (form == BLOCK_FORM_BLOCK || 1) {
+	} else if (form == BLOCK_FORM_BLOCK) {
 		go[i].tsd.block.radius = mesh_compute_nonuniform_scaled_radius(unit_cube_mesh, sx, sy, sz);
 	} else if (form == BLOCK_FORM_CAPSULE) {
 		if (sy >= sz)
 			go[i].tsd.block.sz = sy;
 		else
 			go[i].tsd.block.sy = sz;
-		go[i].tsd.block.radius = 0.5 * (go[i].tsd.block.sx + go[i].tsd.block.sy * 2.0);
+		go[i].tsd.block.radius = 0.5 * (go[i].tsd.block.sx + go[i].tsd.block.sy);
 	}
 	go[i].tsd.block.block_material_index = block_material_index;
 	go[i].tsd.block.form = form;

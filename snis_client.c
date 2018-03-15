@@ -353,6 +353,7 @@ static struct mesh *asteroid_mesh[NASTEROID_MODELS];
 static struct mesh *unit_cube_mesh;
 static struct mesh *sphere_mesh;
 static struct mesh *low_poly_sphere_mesh;
+static struct mesh *half_size_low_poly_sphere_mesh;
 static struct mesh *planetary_ring_mesh;
 static struct mesh **starbase_mesh;
 static int nstarbase_models = -1;
@@ -1692,7 +1693,7 @@ static int update_block(uint32_t id, uint32_t timestamp, double x, double y, dou
 	if (e && form == BLOCK_FORM_CAPSULE) {
 		for (j = 0; j < 2; j++) {
 			go[i].tsd.block.capsule_sphere[j] =
-				add_entity(ecx, low_poly_sphere_mesh,
+				add_entity(ecx, half_size_low_poly_sphere_mesh,
 					0.5 * (1.0 - (j * 2.0)) * sizex, 0, 0, BLOCK_COLOR);
 			if (go[i].tsd.block.capsule_sphere[j]) {
 				update_entity_parent(ecx, go[i].tsd.block.capsule_sphere[j], e);
@@ -18593,6 +18594,9 @@ static void init_meshes()
 	sphere_mesh = mesh_unit_spherified_cube(16);
 	low_poly_sphere_mesh = snis_read_model(d, "uv_sphere.stl");
 	mesh_cylindrical_xy_uv_map(low_poly_sphere_mesh);
+	half_size_low_poly_sphere_mesh = mesh_duplicate(low_poly_sphere_mesh);
+	mesh_scale(half_size_low_poly_sphere_mesh, 0.5);
+	mesh_cylindrical_xy_uv_map(half_size_low_poly_sphere_mesh);
 	warp_tunnel_mesh = mesh_tube(XKNOWN_DIM, 450.0, 20);
 	nav_axes_mesh = mesh_fabricate_axes();
 	mesh_scale(nav_axes_mesh, SNIS_WARP_GATE_THRESHOLD * 0.05);
