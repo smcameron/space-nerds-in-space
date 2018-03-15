@@ -6,10 +6,32 @@ Too much to list, but here's a list anyway:
 
 * Engineering screen
     make comms power do something
+	This is somewhat hard, because currently comms works by a kind of publish
+	subscribe method. You tune your radio to a channel number (subscribe) and
+	transmit messages on a channel (publish). There is currently no notion of say
+	"distance" that a message travels. "Private" messages between two parties are no
+	such thing, a random channel is chosen (among a very large number of channels)
+	so collisions are unlikely but possible. To implement impace of comms power and
+	message travel distance, each message would need to be tagged with an origin,
+	and then each message would need to be say, pre-distorted or suppressed based
+	on (say) comms power of transmitter and on distance between message origin and
+	message receiver. Which I guess is not that hard, but we could not use the
+	generic send_packet_to_all_clients() for the broadcast channel as we do now,
+	and send_packet_to_all_bridges_on_a_channel would need to be customized.
+	Consider carefully how say, distorting messages, etc. might merely cause
+	frustration without being fun, in the name of some quest for "making some kind
+	of sense." Maybe binary works/doesn't work based on power and range alone might
+	be preferable to message distortion?
+
     Some sliders set only a maximum, while others control power usage
 	this is confusing.  Figure something out to make it less confusing.
 	(partially done -- fuzzing the power output kind of makes the
 	situation more obvious.)
+
+    Make the dials at the top of the screen (AMPS, VOLTS, TEMP) more relevant.
+
+    Just for fun, Add some kind of "Reverse the polarity" button(s) (maybe on
+    damage control) that does something useful under some circumstances.
 
 * Communications screen
     Starbase comm stuff -- mostly done, there are undoubtedly more things that could
@@ -82,6 +104,9 @@ Too much to list, but here's a list anyway:
   scanning of planet surface/scanning of ships to allow beaming up/down
   of "passengers" or cargo.
 
+* Augment the tractor beam with a stasis field to hold ships steady
+  and allow player to demand ships eject their cargo.
+
 * Setup screen
   Try to make it more intuitive for people who are seeing it for
   the first time ever.
@@ -108,9 +133,22 @@ Too much to list, but here's a list anyway:
 * Add Lua controllable macguffins of some kind
 
 * starbase behavior
-  Allow refueler ships to be requested for remote refueling.
+  Allow suppressing default behavior of crying about getting attacked
+  all the time and spamming the comms screen.
 
 * anomalies, macguffins etc. need to be implemented
+* Possibly have some way of having special commodities.
+  For example, Tradewars had corbomite, and if a ship took damage
+  while carrying corbomite, there was a chance the corbomite could
+  "go off", and hence there was the notion of a "corbomite trap", in
+  which a honeypot ship loaded with corbomite was left around and
+  anyone who attacked it got blown up. Some general way to add
+  special behaviors like this to commodities seems like a good idea.
+  Might be cool to allow a mining bot to carry a cargo container filled
+  with explosives over to a ship and blow it up, or leave it near the
+  ship, and and then the player can shoot it, setting it off. Another
+  idea for a special commodity: remotely controllable black hole
+  generator.
 
 * 3D out the window view
   Fade distant objects to black
@@ -138,6 +176,8 @@ Too much to list, but here's a list anyway:
   basically, flesh out the lua scripting system.
 * Moar mission scripts!
 * Remove use of "heading" field in snis_entity
+  I think it is used by damcon, and by 2D demon screen though, so
+  maybe not.
 * make tractor beam work again/better.
 * Currently, number keypad doesn't work for numbers.  It should work.
 
@@ -164,7 +204,6 @@ NICE TO HAVE:
   It now understands "set a course for waypoint X", but doesn't understand
   "set a course for the nearest waypoint", or "set a course for the selected
   waypoint", or "how far to waypoint blah"
-
 
 * Make the central star shader better. Right now it is simply a
   dumb billboard, which looks ok, but there it looks unnatural as
@@ -245,7 +284,28 @@ NICE TO HAVE:
 
 * Finish/Improve Space Monster behavior.
 
+  Currently, space monsters have a few behaviors. They have a notion of hunger,
+  anger, and fear. If they are not hungry, angry, or fearful they will seek out
+  another nearby spacemonster and kind of randomly move about if another space
+  monster is close enough, or move towards the nearest space monster if the nearest
+  space monster is too far away. So you tend to see spacemonsters in pairs or in
+  groups of a few due to this. Spacemonsters will become angry at nearby ships and
+  attack them. If spacemonsters are not very healthy they may become fearful and
+  flee from ships (i.e. after taking some damage.) If a spacemonter becomes hungry
+  it will seek out some asteroids to feed. It doesn't eat the asteroids, but it
+  (presumably) eats something on the asteroids. That is about the current (circa
+  March 2018) extent of the behavior. Maybe they should do something else (e.g.
+  be influenced by the exterior lights or thruster activity of your spaceship...
+  maybe you could avoid attacks by shutting down thrusters and lights?) Noises?
+  Attempts to communicate? Other intersting behaviors?
+
+  Currently when destroyed, space monsters simply explode, leaving no carcass.
+  Leaving some carcass would probably be better.
+
 * Improve black hole behavior.
+
+  Gravitational attraction as currently implemented is kind of ... meh.  Not very
+  black-hole-like. Rendering of black holes is currently crap.
 
 * Add more special things, like comets, anomalies of some kind, just generally
   interesting stuff of one sort or another.  I.e., go all Dwarf Fortress on this
@@ -256,11 +316,18 @@ NICE TO HAVE:
   I do not recall exactly what happens on science regarding things which are inside
   nebulas.  Also, nebulas are kind of small, and few and far between, so, the hiding
   place is rather obvious. https://www.youtube.com/watch?v=ifmRgQX82O4&t=0m57s
+  Maybe make nebula block science with ray-sphere intersection test.
+
+  Look into raymarching signed distance fields (as if I know what that is)
+  as a way of rendering nebula.  See: http://spaceengine.org/news/blog161008/
 
 * Get better models, or properly uv-map and texture models we do have. Scrap the
   more terrible models.
 
-* Add support for DMX lighting
+* Add support for DMX lighting. Started on this in snis_dmx.h and snis_dmx.c,
+  however it is not tested with any hardware and probably doesn't work. And that
+  is just a bare library to do something with DMX, the game doesn't even link
+  those files in yet.
 
 * Add support for more joysticks.
 
@@ -276,5 +343,28 @@ NICE TO HAVE:
   with both buttons AND axes at the same time. Currently this is not the case.
 
 * Consider building some hardware controllers for each station and fleshing out
-  the code for dealing with such hardware.
+  the code for dealing with such hardware. I have started learning Kicad and thinking
+  about building some arduino based stuff since arduino is easy. This looks like
+  a good way to make the panels look good: https://imgur.com/a/DyQZL
+
+* Consider allowing clients to fetch files from the server. That is, they could
+  look locally for files, and if not found, download the from the server.  There
+  are a number of problems to solve for this to work. 1) Typically the client wants
+  to load a bunch of files before it even contacts the server. 2) If I try to do it
+  with the existing opcode system, then it is asynchronous, and I have to have
+  request identifiers so that I can connect up the response with the request in the
+  client, and the client thread has to go to sleep and be woken up when the tranfser
+  is done somehow. Not insurmountable, but seems like a lot of work, and doesn't help
+  with problem 1. Maybe easier to just set up a known web server someplace hosting the
+  data and set up a new connection per request.
+
+  The idea would be, instead of open(), and fopen(), use open_and_fetch(), and
+  fopen_and_fetch(), and these would attempt a local [f]open(), and if that doesn't
+  work, fetch the file, then re-do the [f]open(). That way client installation should
+  be simpler, and scenarios could get their files distributed on-demand.
+
+* Consider having NPC ships engage in piracy, esp. enemy ships when they have
+  inflicted some amount of damage, perhaps they hold off and demand player eject
+  cargo or make payment instead of killing them. Maybe use some specialized weapon
+  to disable warp and impulse on player ship (temporarily? Stasis field?)
 
