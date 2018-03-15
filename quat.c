@@ -1002,23 +1002,21 @@ void cubemapped_sphere_tangent_and_bitangent(float x, float y, union vec3 *u, un
  */
 float dist2_from_point_to_line_segment(union vec3 *p, union vec3 *p1, union vec3 *p2)
 {
-	union vec3 p1_to_p2, p1_to_p, pb;
-	double dot1, dot2, b;
+	union vec3 point, p_to_p1, p_to_p2, p1_to_p2;
+	float t;
 
 	vec3_sub(&p1_to_p2, p2, p1);
-	vec3_sub(&p1_to_p, p, p1);
+	vec3_sub(&p_to_p1, p, p1);
 
-	dot1 = vec3_dot(&p1_to_p, &p1_to_p2);
-	if (dot1 <= 0.0)
-		return vec3_magnitude2(&p1_to_p);
-	dot2 = vec3_dot(&p1_to_p2, &p1_to_p2);
-	if (dot1 >= dot2) {
-		union vec3 p_to_p2;
-		vec3_sub(&p_to_p2, p2, p);
-		return  vec3_magnitude2(&p_to_p2);
+	t = vec3_dot(&p1_to_p2, &p_to_p1) / vec3_dot(&p1_to_p2, &p1_to_p2);
+	if (t < 0.0) {
+		return vec3_magnitude2(&p_to_p1);
+	} else if (t > 1.0) {
+		vec3_sub(&p_to_p2, p, p2);
+		return vec3_magnitude2(&p_to_p2);
 	}
-	b = dot1 / dot2;
-	vec3_mul(&pb, &p1_to_p2, b);
-	vec3_add_self(&pb, p);
-	return vec3_magnitude2(&pb);
+	vec3_mul_self(&p1_to_p2, t);
+	vec3_add(&point, p1, &p1_to_p2); 
+	vec3_sub(&p1_to_p2, p, &point);
+	return vec3_magnitude2(&p1_to_p2);
 }
