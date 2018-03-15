@@ -7473,7 +7473,6 @@ static void player_collision_detection(void *player, void *object)
 
 		dist2 = block_closest_point(&my_ship, t, &closest_point);
 		if (t->tsd.block.form == BLOCK_FORM_CAPSULE) {
-			printf("CAPSULE DIST = %f\n", sqrtf(dist2) - 0.5 * t->tsd.block.sy);
 			if (sqrtf(dist2) - 0.5 * t->tsd.block.sy > 2.0 * 2.0)
 				return;
 		} else {
