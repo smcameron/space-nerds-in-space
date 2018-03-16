@@ -294,9 +294,10 @@ int moving_spheres_intersection(union vec3 *s1, float r1, union vec3 *v1,
 void cubemapped_sphere_tangent_and_bitangent(float x, float y, union vec3 *u, union vec3 *v);
 
 /* Returns the square of the distance between a point p, and the line segment formed by
- * seg1 and seg2.
+ * seg1 and seg2, and the nearest point on the line.
  */
-float dist2_from_point_to_line_segment(union vec3 *p, union vec3 *seg1, union vec3 *seg2);
+float dist2_from_point_to_line_segment(union vec3 *p, union vec3 *seg1, union vec3 *seg2,
+	union vec3 *nearest_point);
 
 /***********************************************************************************************
 

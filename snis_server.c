@@ -2969,11 +2969,45 @@ static void do_collision_impulse(struct snis_entity *player, struct snis_entity 
 static void block_add_to_naughty_list(struct snis_entity *o, uint32_t id);
 static void spacemonster_set_antagonist(struct snis_entity *o, uint32_t id);
 
+/* Given a block and a point on the surface of that block, find the position of that
+ * point 1/10th second ago. This is for calculating how that point is moving for
+ * collision response
+ */
+static void find_block_point_last_pos(struct snis_entity *block, union vec3 *point,
+		union vec3 *previous_point)
+{
+	int i;
+	struct snis_entity *root;
+	union vec3 root_to_point;
+	union quat inverse_rotation;
+
+	if (block->tsd.block.root_id == (uint32_t) -1) {
+		root = block;
+	} else {
+		i = lookup_by_id(block->tsd.block.root_id);
+		if (i == -1)
+			root = block; /* shouldn't happen */
+		else
+			root = &go[i];
+	}
+	root_to_point.v.x = point->v.x - root->x;
+	root_to_point.v.y = point->v.y - root->y;
+	root_to_point.v.z = point->v.z - root->z;
+	quat_inverse(&inverse_rotation, &root->tsd.block.rotational_velocity);
+	quat_rot_vec_self(&root_to_point, &inverse_rotation);
+	previous_point->v.x = root_to_point.v.x + root->x - root->vx;
+	previous_point->v.y = root_to_point.v.y + root->y - root->vy;
+	previous_point->v.z = root_to_point.v.z + root->z - root->vz;
+}
+
 /* Given point point, and an entity o of type OBJTYPE_BLOCK, find the
  * closest point on the surface of o to point, (returned in *closest_point)
- * and the square of the distance is returned.
+ * and the square of the distance is returned. For capsules and spheres the
+ * normal_vector is filled in. TODO: Fill in the normal vector for blocks too.
  */
-static float block_closest_point(union vec3 *point, struct snis_entity *o, union vec3 *closest_point)
+static float block_closest_point(union vec3 *point, struct snis_entity *o,
+					union vec3 *closest_point,
+					union vec3 *normal_vector)
 {
 	union vec3 meshpos, heretothere, p1, p2;
 	float dist;
@@ -3026,6 +3060,7 @@ static float block_closest_point(union vec3 *point, struct snis_entity *o, union
 		meshpos.v.z = o->z;
 		vec3_sub(&heretothere, point, &meshpos);
 		vec3_normalize_self(&heretothere);
+		*normal_vector = heretothere;
 		vec3_mul_self(&heretothere, 0.5 * o->tsd.block.sx);
 		vec3_add(closest_point, &heretothere, &meshpos);
 		vec3_sub(&heretothere, closest_point, point);
@@ -3036,6 +3071,7 @@ static float block_closest_point(union vec3 *point, struct snis_entity *o, union
 		meshpos.v.x = o->x;
 		meshpos.v.y = o->y;
 		meshpos.v.z = o->z;
+		/* TODO: fill in the normal_vector */
 		oriented_bounding_box_closest_point(point, &o->tsd.block.obb, closest_point);
 		vec3_sub(&heretothere, closest_point, point);
 		return vec3_magnitude2(&heretothere);
@@ -3054,14 +3090,14 @@ static float block_closest_point(union vec3 *point, struct snis_entity *o, union
 		p2.v.x += o->x;
 		p2.v.y += o->y;
 		p2.v.z += o->z;
-		dist = dist2_from_point_to_line_segment(point, &p1, &p2);
-		/* TODO: fill in *closest_point correctly, this is not correct; */
-		meshpos.v.x = o->x;
-		meshpos.v.y = o->y;
-		meshpos.v.z = o->z;
-		vec3_sub(closest_point, &meshpos, point);
-		vec3_normalize_self(closest_point);
-		vec3_mul_self(closest_point, sqrtf(dist));
+		dist = dist2_from_point_to_line_segment(point, &p1, &p2, closest_point);
+		p2 = *closest_point;
+		vec3_sub(&p1, point, closest_point);
+		vec3_normalize_self(&p1);
+		vec3_mul_self(&p1, o->tsd.block.sy * 0.5);
+		vec3_add_self(closest_point, &p1);
+		vec3_sub(normal_vector, closest_point, &p2);
+		vec3_normalize_self(normal_vector);
 		return dist;
 		break;
 	default:
@@ -3101,7 +3137,7 @@ static void torpedo_collision_detection(void *context, void *entity)
 	dist2 = dist3dsqrd(t->x - o->x, t->y - o->y, t->z - o->z);
 
 	if (t->type == OBJTYPE_BLOCK) {
-		union vec3 torpedo_pos, closest_point;
+		union vec3 torpedo_pos, closest_point, normal;
 
 		if (dist2 > t->tsd.block.radius * t->tsd.block.radius)
 			return;
@@ -3109,7 +3145,7 @@ static void torpedo_collision_detection(void *context, void *entity)
 		torpedo_pos.v.y = o->y;
 		torpedo_pos.v.z = o->z;
 
-		dist2 = block_closest_point(&torpedo_pos, t, &closest_point);
+		dist2 = block_closest_point(&torpedo_pos, t, &closest_point, &normal);
 		if (t->tsd.block.form == BLOCK_FORM_CAPSULE) {
 			if (sqrtf(dist2) - 0.5 * t->tsd.block.sy > TORPEDO_VELOCITY)
 				return;
@@ -7462,7 +7498,8 @@ static void player_collision_detection(void *player, void *object)
 		return;
 	}
 	if (t->type == OBJTYPE_BLOCK) {
-		union vec3 my_ship, closest_point, displacement;
+		union vec3 my_ship, closest_point, displacement, normal, hit_vel, prev_point;
+		float bounce_speed;
 
 		if (dist2 > t->tsd.block.radius * t->tsd.block.radius)
 			return;
@@ -7471,7 +7508,7 @@ static void player_collision_detection(void *player, void *object)
 		my_ship.v.y = o->y;
 		my_ship.v.z = o->z;
 
-		dist2 = block_closest_point(&my_ship, t, &closest_point);
+		dist2 = block_closest_point(&my_ship, t, &closest_point, &normal);
 		if (t->tsd.block.form == BLOCK_FORM_CAPSULE) {
 			if (sqrtf(dist2) - 0.5 * t->tsd.block.sy > 2.0 * 2.0)
 				return;
@@ -7491,22 +7528,38 @@ static void player_collision_detection(void *player, void *object)
 			displacement.v.x = o->x - closest_point.v.x;
 			displacement.v.y = o->y - closest_point.v.y;
 			displacement.v.z = o->z - closest_point.v.z;
+			vec3_normalize_self(&displacement);
 			break;
 		case BLOCK_FORM_SPHEROID:
+		case BLOCK_FORM_CAPSULE:
+			displacement = normal;
+			break;
 		default:
 			displacement.v.x = o->x - t->x;
 			displacement.v.y = o->y - t->y;
 			displacement.v.z = o->z - t->z;
+			vec3_normalize_self(&displacement);
 			break;
 		}
-		vec3_normalize_self(&displacement);
-		vec3_mul_self(&displacement, 30.0);
+		/* Find where this closest point was a tick ago */
+		find_block_point_last_pos(t, &closest_point, &prev_point);
+		/* Find how fast and what dir this point is moving. */
+		vec3_sub(&hit_vel, &closest_point, &prev_point);
+		vec3_mul_self(&hit_vel, 1.4); /* If the baseball bat is moving, it imparts energy */
+		/* Add in our velocity */
+		hit_vel.v.x -= o->vx;
+		hit_vel.v.y -= o->vy;
+		hit_vel.v.z -= o->vz;
+		bounce_speed = fabsf(vec3_dot(&hit_vel, &displacement));
+		if (bounce_speed < 10.0)
+			bounce_speed = 10.0;
+		vec3_mul_self(&displacement, bounce_speed);
 		o->x += displacement.v.x;
 		o->y += displacement.v.y;
 		o->z += displacement.v.z;
-		o->vx += displacement.v.x * 0.5;
-		o->vy += displacement.v.y * 0.5;
-		o->vz += displacement.v.z * 0.5;
+		o->vx += displacement.v.x * 1.05; /* conservation of energy? Nah. */
+		o->vy += displacement.v.y * 1.05;
+		o->vz += displacement.v.z * 1.05;
 		(void) add_explosion(closest_point.v.x, closest_point.v.y, closest_point.v.z,
 					85, 5, 20, OBJTYPE_SPARK);
 		return;

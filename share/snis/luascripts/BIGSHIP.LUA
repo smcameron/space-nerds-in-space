@@ -60,7 +60,7 @@ function big_ship(x, y, z, s)
 	add_block(e, s * -45, s * 30, s * 10, s * 20, s * 2, s * 40, 1, 0, 0, -20.0 * math.pi / 180.0, t, block);
 end
 
-clear_all(nil);
+-- clear_all(nil);
 player_ids = get_player_ship_ids();
 if (player_ids[1]) then
 	x,y,z = get_object_location(player_ids[1]);

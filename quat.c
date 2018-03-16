@@ -1000,7 +1000,8 @@ void cubemapped_sphere_tangent_and_bitangent(float x, float y, union vec3 *u, un
 /* Returns the square of the distance between a point p, and the line segment formed by
  * p1 and p2.
  */
-float dist2_from_point_to_line_segment(union vec3 *p, union vec3 *p1, union vec3 *p2)
+float dist2_from_point_to_line_segment(union vec3 *p, union vec3 *p1, union vec3 *p2,
+					union vec3 *nearest_point)
 {
 	union vec3 point, p_to_p1, p_to_p2, p1_to_p2;
 	float t;
@@ -1010,13 +1011,16 @@ float dist2_from_point_to_line_segment(union vec3 *p, union vec3 *p1, union vec3
 
 	t = vec3_dot(&p1_to_p2, &p_to_p1) / vec3_dot(&p1_to_p2, &p1_to_p2);
 	if (t < 0.0) {
+		*nearest_point = *p1;
 		return vec3_magnitude2(&p_to_p1);
 	} else if (t > 1.0) {
 		vec3_sub(&p_to_p2, p, p2);
+		*nearest_point = *p2;
 		return vec3_magnitude2(&p_to_p2);
 	}
 	vec3_mul_self(&p1_to_p2, t);
 	vec3_add(&point, p1, &p1_to_p2); 
 	vec3_sub(&p1_to_p2, p, &point);
+	*nearest_point = point;
 	return vec3_magnitude2(&p1_to_p2);
 }
