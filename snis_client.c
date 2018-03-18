@@ -3063,6 +3063,7 @@ static struct demon_ui {
 	struct button *demon_move_button;
 	struct button *demon_scale_button;
 	struct button *demon_netstats_button;
+	struct button *demon_render_style_button;
 	struct snis_text_input_box *demon_input;
 	struct scaling_strip_chart *bytes_recd_strip_chart;
 	struct scaling_strip_chart *bytes_sent_strip_chart;
@@ -3073,6 +3074,9 @@ static struct demon_ui {
 	int captain_of;
 	int selectmode;
 	int buttonmode;
+	int render_style;
+#define DEMON_UI_RENDER_STYLE_WIREFRAME 0
+#define DEMON_UI_RENDER_STYLE_ALPHA_BY_NORMAL 1
 	int move_from_x, move_from_y; /* mouse coords where move begins */
 #define DEMON_BUTTON_NOMODE 0
 #define DEMON_BUTTON_SHIPMODE 1
@@ -15354,6 +15358,7 @@ static void init_demon_ui()
 	demon_ui.selectmode = 0;
 	demon_ui.captain_of = -1;
 	demon_ui.use_3d = 0;
+	demon_ui.render_style = DEMON_UI_RENDER_STYLE_WIREFRAME;
 	strcpy(demon_ui.error_msg, "");
 	memset(demon_ui.selected_id, 0, sizeof(demon_ui.selected_id));
 	demon_ui.demon_input = snis_text_input_box_init(txx(10), txy(520), txy(30), txx(550),
@@ -15437,6 +15442,11 @@ static void init_demon_ui()
 			NANO_FONT, demon_netstats_button_pressed, NULL);
 	snis_button_checkbox(demon_ui.demon_netstats_button, &demon_ui.netstats_active);
 	snis_button_set_sound(demon_ui.demon_netstats_button, UISND14);
+	demon_ui.demon_render_style_button = snis_button_init(x, y + dy * n++, txx(70), txy(20),
+			"RENDER STYLE", UI_COLOR(demon_deselected_button),
+			NANO_FONT, NULL, NULL);
+	snis_button_checkbox(demon_ui.demon_render_style_button, &demon_ui.render_style);
+	snis_button_set_sound(demon_ui.demon_render_style_button, UISND14);
 #define NETSTATS_SAMPLES 1000
 	demon_ui.bytes_recd_strip_chart =
 		snis_scaling_strip_chart_init(txx(120), txy(5), txx(550.0), txy(100.0),
@@ -15486,6 +15496,8 @@ static void init_demon_ui()
 			"TOGGLE BETWEEN NORMAL AND EXAGGERATED SCALES");
 	ui_add_button(demon_ui.demon_netstats_button, DISPLAYMODE_DEMON,
 			"DISPLAY GRAPHS OF NETWORK STATISTICS");
+	ui_add_button(demon_ui.demon_render_style_button, DISPLAYMODE_DEMON,
+			"TOGGLE RENDERING STYLE BETWEEN WIREFRAME AND SEMI-TRANSPARENT");
 	ui_hide_widget(demon_ui.demon_move_button);
 	ui_hide_widget(demon_ui.demon_scale_button);
 	ui_add_text_input_box(demon_ui.demon_input, DISPLAYMODE_DEMON);
@@ -15698,6 +15710,63 @@ static void show_demon_3d(GtkWidget *w)
 	float camera_movement_rate = 0.05;
 	const int faction_color[] = { CYAN, YELLOW, ORANGERED, AMBER, };
 	float entity_scale;
+	struct material *faction_material[4];
+	static int initialized_materials = 0;
+	static struct material red_material, blue_material, white_material,
+		green_material, magenta_material, amber_material,
+		orangered_material, yellow_material, cyan_material;
+
+	if (!initialized_materials) {
+		material_init_alpha_by_normal(&cyan_material);
+		cyan_material.alpha_by_normal.tint.red = 0.0;
+		cyan_material.alpha_by_normal.tint.green = 1.0;
+		cyan_material.alpha_by_normal.tint.blue = 1.0;
+		cyan_material.alpha_by_normal.alpha = 0.5;
+		material_init_alpha_by_normal(&red_material);
+		red_material.alpha_by_normal.tint.red = 1.0;
+		red_material.alpha_by_normal.tint.green = 0.1;
+		red_material.alpha_by_normal.tint.blue = 0.1;
+		red_material.alpha_by_normal.alpha = 0.5;
+		material_init_alpha_by_normal(&blue_material);
+		blue_material.alpha_by_normal.tint.red = 0.0;
+		blue_material.alpha_by_normal.tint.green = 0.0;
+		blue_material.alpha_by_normal.tint.blue = 1.0;
+		blue_material.alpha_by_normal.alpha = 0.5;
+		material_init_alpha_by_normal(&white_material);
+		white_material.alpha_by_normal.tint.red = 1.0;
+		white_material.alpha_by_normal.tint.green = 1.0;
+		white_material.alpha_by_normal.tint.blue = 1.0;
+		white_material.alpha_by_normal.alpha = 0.5;
+		material_init_alpha_by_normal(&green_material);
+		green_material.alpha_by_normal.tint.red = 0.0;
+		green_material.alpha_by_normal.tint.green = 1.0;
+		green_material.alpha_by_normal.tint.blue = 0.0;
+		green_material.alpha_by_normal.alpha = 0.5;
+		material_init_alpha_by_normal(&magenta_material);
+		magenta_material.alpha_by_normal.tint.red = 1.0;
+		magenta_material.alpha_by_normal.tint.green = 0.0;
+		magenta_material.alpha_by_normal.tint.blue = 1.0;
+		magenta_material.alpha_by_normal.alpha = 0.5;
+		material_init_alpha_by_normal(&amber_material);
+		amber_material.alpha_by_normal.tint.red = 1.0;
+		amber_material.alpha_by_normal.tint.green = 0.76;
+		amber_material.alpha_by_normal.tint.blue = 0.0;
+		amber_material.alpha_by_normal.alpha = 0.5;
+		material_init_alpha_by_normal(&orangered_material);
+		orangered_material.alpha_by_normal.tint.red = 1.0;
+		orangered_material.alpha_by_normal.tint.green = 0.27;
+		orangered_material.alpha_by_normal.tint.blue = 0.0;
+		orangered_material.alpha_by_normal.alpha = 0.5;
+		material_init_alpha_by_normal(&yellow_material);
+		yellow_material.alpha_by_normal.tint.red = 1.0;
+		yellow_material.alpha_by_normal.tint.green = 1.0;
+		yellow_material.alpha_by_normal.tint.blue = 0.0;
+		yellow_material.alpha_by_normal.alpha = 0.5;
+		faction_material[0] = &cyan_material;
+		faction_material[1] = &yellow_material;
+		faction_material[2] = &orangered_material;
+		faction_material[3] = &amber_material;
+	}
 
 	/* If in captain mode, then set desired camera position/orientation accordingly */
 	if (demon_ui.captain_of >= 0) {
@@ -15741,7 +15810,10 @@ static void show_demon_3d(GtkWidget *w)
 		}
 	}
 
-	set_renderer(instrumentecx, WIREFRAME_RENDERER);
+	if (demon_ui.render_style == DEMON_UI_RENDER_STYLE_WIREFRAME)
+		set_renderer(instrumentecx, WIREFRAME_RENDERER);
+	else
+		set_renderer(instrumentecx, FLATSHADING_RENDERER);
 	camera_set_pos(instrumentecx, demon_ui.camera_pos.v.x, demon_ui.camera_pos.v.y, demon_ui.camera_pos.v.z);
 	camera_set_orientation(instrumentecx, &demon_ui.camera_orientation);
 	camera_set_parameters(instrumentecx, 10.0, XKNOWN_DIM * 2.0, SCREEN_WIDTH, SCREEN_HEIGHT, angle_of_view);
@@ -15758,6 +15830,7 @@ static void show_demon_3d(GtkWidget *w)
 		int draw_label = 0;
 		char label[100];
 		float sx, sy;
+		struct material *material;
 
 		if (!o->alive)
 			continue;
@@ -15766,11 +15839,13 @@ static void show_demon_3d(GtkWidget *w)
 			color = WHITE;
 			strcpy(label, o->sdata.name);
 			draw_label = 1;
+			material = &white_material;
 			break;
 		case OBJTYPE_BLACK_HOLE:
 			color = UI_COLOR(demon_black_hole);
 			strcpy(label, o->sdata.name);
 			draw_label = 1;
+			material = &blue_material;
 			break;
 		case OBJTYPE_SHIP1:
 			if (timer & 0x4)
@@ -15778,50 +15853,64 @@ static void show_demon_3d(GtkWidget *w)
 			else
 				color = GREEN;
 			strcpy(label, o->sdata.name);
+			material = &magenta_material;
 			draw_label = 1;
 			break;
 		case OBJTYPE_SHIP2:
 			color = faction_color[o->sdata.faction % ARRAYSIZE(faction_color)];
 			strcpy(label, o->sdata.name);
+			material = faction_material[o->sdata.faction % ARRAYSIZE(faction_color)];
 			draw_label = 1;
 			break;
 		case OBJTYPE_ASTEROID:
 			color = ORANGE;
+			material = &amber_material;
 			break;
 		case OBJTYPE_STARBASE:
 			scale = XKNOWN_DIM / 50000.0;
 			color = RED;
 			strcpy(label, o->sdata.name);
 			draw_label = 1;
+			material = &red_material;
 			break;
 		case OBJTYPE_CARGO_CONTAINER:
 			color = GREEN;
+			material = &green_material;
 			break;
 		case OBJTYPE_LASER:
 			color = ORANGERED;
+			material = &orangered_material;
 			break;
 		case OBJTYPE_TORPEDO:
 			color = ORANGERED;
+			material = &orangered_material;
 			break;
 		case OBJTYPE_WARPGATE:
 			color = YELLOW;
 			scale = XKNOWN_DIM / 100000.0;
+			material = &yellow_material;
 			break;
 		case OBJTYPE_WARP_CORE:
 			color = WARP_CORE_COLOR;
+			material = &blue_material;
 			break;
 		case OBJTYPE_SPACEMONSTER:
 			color = MAGENTA;
+			material = &magenta_material;
 			break;
 		default:
 			color = MAGENTA;
+			material = &magenta_material;
 			break;
 		}
 		if (demon_id_selected(o->id)) {
-			if ((timer & 0x0f) < 0x03)
+			if ((timer & 0x0f) < 0x03) {
 				color = BLACK;
-			else
+				material = &green_material;
+			} else {
 				color = MAGENTA;
+				material = &magenta_material;
+			}
 		}
 
 		switch (o->type) {
@@ -15830,6 +15919,7 @@ static void show_demon_3d(GtkWidget *w)
 			if (e) {
 				update_entity_scale(e, o->tsd.planet.radius);
 				entity_set_user_data(e, o);
+				update_entity_material(e, material);
 			}
 			break;
 		case OBJTYPE_BLACK_HOLE:
@@ -15837,6 +15927,7 @@ static void show_demon_3d(GtkWidget *w)
 			if (e) {
 				update_entity_scale(e, o->tsd.black_hole.radius * 2.0);
 				entity_set_user_data(e, o);
+				update_entity_material(e, &blue_material);
 			}
 			break;
 		case OBJTYPE_SHIP2:
@@ -15866,6 +15957,7 @@ static void show_demon_3d(GtkWidget *w)
 			e = add_entity(instrumentecx, m, o->x, o->y, o->z, color);
 			if (!e)
 				break;
+			update_entity_material(e, material);
 			entity_set_user_data(e, o);
 			if (o->entity) {
 				entity_scale = demon_ui.exaggerated_scale * scale +
