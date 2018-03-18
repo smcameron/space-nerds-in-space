@@ -49,6 +49,8 @@ static int draw_atmosphere = 1;
 static int frame_counter = 0;
 static int periodic_snapshots = 0;
 static int snapshot_number = 0;
+static int use_alpha_by_normal = 0;
+static float alpha_by_normal_invert = 0.0;
 static char *planetname = NULL;
 static char *normalmapname = NULL;
 static char *cubemapname = NULL;
@@ -441,6 +443,7 @@ static struct material green_phaser_material;
 static struct material thrust_material;
 static struct material atmosphere_material;
 static struct material cyl_albedo;
+static struct material alpha_by_normal;
 static int planet_mode = 0;
 static int cubemap_mode = 0;
 static int burst_rod_mode = 0;
@@ -535,6 +538,8 @@ static void draw_screen()
 		update_entity_material(e, &thrust_material);
 	} else if (cylinder_albedo) {
 		update_entity_material(e, &cyl_albedo);
+	} else if (use_alpha_by_normal) {
+		update_entity_material(e, &alpha_by_normal);
 	}
 	if (!turret_mode) {
 		update_entity_orientation(e, &lobby_orientation);
@@ -734,11 +739,13 @@ static struct option long_options[] = {
 	{ "help", no_argument, NULL, 'h' },
 	{ "planetmode", required_argument, NULL, 'p' },
 	{ "icosahedron", required_argument, NULL, 'i' },
+	{ "invertalphabynormal", no_argument, NULL, 'I' },
 	{ "normalmap", required_argument, NULL, 'n' },
 	{ "burstrod", no_argument, NULL, 'b' },
 	{ "thrust", required_argument, NULL, 't' },
 	{ "skybox", required_argument, NULL, 's' },
 	{ "turret", required_argument, NULL, 'T' },
+	{ "alphabynormal", no_argument, NULL, 'A' },
 	{ 0, 0, 0, 0 },
 };
 
@@ -749,7 +756,7 @@ static void process_options(int argc, char *argv[])
 	while (1) {
 		int option_index;
 
-		c = getopt_long(argc, argv, "B:T:bc:C:Y:Z:e:hi:m:n:p:s:t:", long_options, &option_index);
+		c = getopt_long(argc, argv, "IAB:T:bc:C:Y:Z:e:hi:m:n:p:s:t:", long_options, &option_index);
 		if (c < 0) {
 			break;
 		}
@@ -768,6 +775,12 @@ static void process_options(int argc, char *argv[])
 		case 'p':
 			planet_mode = 1;
 			planetname = optarg;
+			break;
+		case 'A':
+			use_alpha_by_normal = 1;
+			break;
+		case 'I':
+			alpha_by_normal_invert = 1.0;
 			break;
 		case 'm':
 			modelfile = optarg;
@@ -986,6 +999,14 @@ int main(int argc, char *argv[])
 			else
 				mesh_cylindrical_xy_uv_map(target_mesh);
 			cyl_albedo.texture_mapped.emit_texture_id = graph_dev_load_texture(cylinder_emit);
+		}
+		if (use_alpha_by_normal) {
+			material_init_alpha_by_normal(&alpha_by_normal);
+			alpha_by_normal.alpha_by_normal.alpha = 0.5;
+			alpha_by_normal.alpha_by_normal.tint.red = 0.5;
+			alpha_by_normal.alpha_by_normal.tint.green = 0.8;
+			alpha_by_normal.alpha_by_normal.tint.blue = 1.0;
+			alpha_by_normal.alpha_by_normal.invert = alpha_by_normal_invert;
 		}
 		atmosphere_mesh = NULL;
 	}

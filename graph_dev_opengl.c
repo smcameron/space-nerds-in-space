@@ -740,6 +740,7 @@ struct graph_dev_gl_textured_shader {
 	GLint ring_texture_v_id;
 	GLint ring_inner_radius_id;
 	GLint ring_outer_radius_id;
+	GLint invert; /* used by alpha_by_normal shader */
 };
 
 struct clip_sphere_data {
@@ -835,6 +836,8 @@ static struct graph_dev_gl_textured_shader textured_cubemap_shield_shader;
 static struct graph_dev_gl_textured_shader textured_cubemap_lit_with_annulus_shadow_shader;
 static struct graph_dev_gl_textured_shader textured_cubemap_normal_mapped_lit_with_annulus_shadow_shader;
 static struct graph_dev_gl_textured_particle_shader textured_particle_shader;
+static struct graph_dev_gl_textured_shader alpha_by_normal_shader;
+static struct graph_dev_gl_textured_shader textured_alpha_by_normal_shader;
 static struct graph_dev_gl_fs_effect_shader fs_copy_shader;
 static struct graph_dev_smaa_effect smaa_effect;
 
@@ -1259,7 +1262,7 @@ static void graph_dev_raster_texture(struct graph_dev_gl_textured_shader *shader
 	GLuint emit_texture_number, GLuint normalmap_texture_number, struct shadow_sphere_data *shadow_sphere,
 	struct shadow_annulus_data *shadow_annulus, int do_cullface, int do_blend,
 	float ring_texture_v, float ring_inner_radius, float ring_outer_radius,
-	float specular_power, float specular_intensity, float emit_intensity)
+	float specular_power, float specular_intensity, float emit_intensity, float invert)
 {
 	enable_3d_viewport();
 
@@ -1323,6 +1326,8 @@ static void graph_dev_raster_texture(struct graph_dev_gl_textured_shader *shader
 		glUniform1f(shader->ring_inner_radius_id, ring_inner_radius);
 	if (shader->ring_outer_radius_id >= 0)
 		glUniform1f(shader->ring_outer_radius_id, ring_outer_radius);
+	if (shader->invert >= 0)
+		glUniform1f(shader->invert, invert);
 
 	/* shadow sphere */
 	if (shader->shadow_sphere_id >= 0)
@@ -1966,7 +1971,7 @@ static void graph_dev_draw_nebula(const struct mat44 *mat_mvp, const struct mat4
 
 		graph_dev_raster_texture(&textured_shader, &mat_mvp_local_r, &mat_mv_local_r, &mat_normal_local_r,
 			e->m, &mt->tint, alpha, eye_light_pos, mt->texture_id[i], 0, -1, 0, 0, 0, 1, 0.0f,
-				2.0f, 4.0f, 512.0, 0.2, 1.0);
+				2.0f, 4.0f, 512.0, 0.2, 1.0, 0.0);
 
 		if (draw_billboard_wireframe) {
 			struct sng_color line_color = sng_get_color(WHITE);
@@ -2153,6 +2158,7 @@ extern int graph_dev_entity_render_order(struct entity_context *cx, struct entit
 	case MATERIAL_TEXTURED_PARTICLE:
 	case MATERIAL_TEXTURED_PLANET_RING:
 	case MATERIAL_TEXTURED_SHIELD:
+	case MATERIAL_ALPHA_BY_NORMAL:
 		does_blending = 1;
 		break;
 	case MATERIAL_TEXTURE_MAPPED_UNLIT:
@@ -2182,6 +2188,7 @@ void graph_dev_draw_entity(struct entity_context *cx, struct entity *e, union ve
 	float specular_power = 512.0;
 	float emit_intensity = 1.0;
 	float specular_intensity = 0.2;
+	float invert = 0.0;
 
 	draw_vertex_buffer_2d();
 
@@ -2272,6 +2279,20 @@ void graph_dev_draw_entity(struct entity_context *cx, struct entity *e, union ve
 				atmosphere_color.red = e->material_ptr->atmosphere.r;
 				atmosphere_color.green = e->material_ptr->atmosphere.g;
 				atmosphere_color.blue = e->material_ptr->atmosphere.b;
+				break;
+				}
+			case MATERIAL_ALPHA_BY_NORMAL: {
+				struct material_alpha_by_normal *mt = &e->material_ptr->alpha_by_normal;
+				texture_id = mt->texture_id;
+				if (texture_id >= 0)
+					tex_shader = &textured_alpha_by_normal_shader;
+				else
+					tex_shader = &alpha_by_normal_shader;
+				do_blend = 1;
+				texture_alpha = mt->alpha;
+				do_cullface = mt->do_cullface;
+				texture_tint = mt->tint;
+				invert = mt->invert;
 				break;
 				}
 			case MATERIAL_TEXTURE_CUBEMAP: {
@@ -2392,7 +2413,7 @@ void graph_dev_draw_entity(struct entity_context *cx, struct entity *e, union ve
 						emit_texture_id, normalmap_id, &shadow_sphere, &shadow_annulus,
 						do_cullface, do_blend, ring_texture_v,
 						ring_inner_radius, ring_outer_radius,
-						specular_power, specular_intensity, emit_intensity);
+						specular_power, specular_intensity, emit_intensity, invert);
 				else if (atmosphere)
 					graph_dev_raster_atmosphere(mat_mvp, mat_mv, mat_normal,
 						e->m, &atmosphere_color, eye_light_pos, texture_alpha);
@@ -2877,7 +2898,8 @@ static void setup_textured_shader(const char *basename, const char *defines,
 	shader->tint_color_id = glGetUniformLocation(shader->program_id, "u_TintColor");
 	shader->light_pos_id = glGetUniformLocation(shader->program_id, "u_LightPos");
 	shader->texture_2d_id = glGetUniformLocation(shader->program_id, "u_AlbedoTex");
-	glUniform1i(shader->texture_2d_id, 0);
+	if (shader->texture_2d_id >= 0)
+		glUniform1i(shader->texture_2d_id, 0);
 	shader->emit_texture_2d_id = glGetUniformLocation(shader->program_id, "u_EmitTex");
 	if (shader->emit_texture_2d_id >= 0)
 		glUniform1i(shader->emit_texture_2d_id, 1);
@@ -2897,6 +2919,7 @@ static void setup_textured_shader(const char *basename, const char *defines,
 	shader->specular_intensity_id = glGetUniformLocation(shader->program_id, "u_SpecularIntensity");
 	if (shader->specular_power_id >= 0)
 		glUniform1f(shader->specular_intensity_id, 0.2);
+	shader->invert = glGetUniformLocation(shader->program_id, "u_Invert");
 
 	shader->vertex_position_id = glGetAttribLocation(shader->program_id, "a_Position");
 	shader->vertex_normal_id = glGetAttribLocation(shader->program_id, "a_Normal");
@@ -3538,6 +3561,9 @@ int graph_dev_setup(const char *shader_dir)
 		&textured_cubemap_normal_mapped_lit_with_annulus_shadow_shader);
 	setup_textured_particle_shader(&textured_particle_shader);
 	setup_fs_effect_shader("fs-effect-copy", &fs_copy_shader);
+	setup_textured_shader("alpha_by_normal", UNIVERSAL_SHADER_HEADER, &alpha_by_normal_shader);
+	setup_textured_shader("alpha_by_normal", UNIVERSAL_SHADER_HEADER "#define TEXTURED_ALPHA_BY_NORMAL",
+				&textured_alpha_by_normal_shader);
 
 	if (fbo_render_to_texture_supported())
 		setup_smaa_effect(&smaa_effect);

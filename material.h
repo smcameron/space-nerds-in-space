@@ -41,6 +41,7 @@ struct entity;
 #define MATERIAL_POINT_CLOUD_INTENSITY_NOISE 12
 #define MATERIAL_TEXTURED_SHIELD 13
 #define MATERIAL_ATMOSPHERE 14
+#define MATERIAL_ALPHA_BY_NORMAL 15
 
 #define MATERIAL_BILLBOARD_TYPE_NONE 0
 #define MATERIAL_BILLBOARD_TYPE_SCREEN 1
@@ -86,6 +87,18 @@ struct material_texture_cubemap {
 struct material_nebula {
 	int texture_id[MATERIAL_NEBULA_NPLANES];
 	union quat orientation[MATERIAL_NEBULA_NPLANES];
+	float alpha;
+	struct sng_color tint;
+};
+
+struct material_alpha_by_normal {
+	int texture_id;
+	/* Alpha is related to eye-direction dot surface normal */
+	int invert;	/* 0 means planes facing eye direction are more opaque, */
+			/* and oblique surfaces more transparent, 1 means the reverse, */
+			/* planes facing eye direcction are more transparent, oblique */
+			/* surfaces more opaque. */
+	int do_cullface;
 	float alpha;
 	struct sng_color tint;
 };
@@ -140,6 +153,7 @@ struct material {
 		struct material_textured_planet_ring textured_planet_ring;
 		struct material_wireframe_sphere_clip wireframe_sphere_clip;
 		struct material_atmosphere atmosphere;
+		struct material_alpha_by_normal alpha_by_normal;
 	};
 	int type;
 	int billboard_type;
@@ -155,6 +169,7 @@ extern void material_init_textured_shield(struct material *m);
 extern void material_init_textured_planet_ring(struct material *m);
 extern void material_init_wireframe_sphere_clip(struct material *m);
 extern void material_init_atmosphere(struct material *m);
+extern void material_init_alpha_by_normal(struct material *m);
 
 extern int material_nebula_read_from_file(const char *asset_dir, const char *filename,
 						struct material *nebula);

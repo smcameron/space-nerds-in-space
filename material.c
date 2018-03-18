@@ -212,6 +212,18 @@ void material_init_atmosphere(struct material *m)
 	m->atmosphere.scale = 1.03f;
 }
 
+void material_init_alpha_by_normal(struct material *m)
+{
+	m->type = MATERIAL_ALPHA_BY_NORMAL;
+	m->billboard_type = MATERIAL_BILLBOARD_TYPE_NONE;
+	m->alpha_by_normal.texture_id = -1; /* texture is optional for alpha by normal */
+	m->alpha_by_normal.do_cullface = 1;
+	m->alpha_by_normal.texture_id = 0;
+	m->alpha_by_normal.invert = 0;
+	m->alpha_by_normal.alpha = 1.0;
+	m->alpha_by_normal.tint = sng_get_color(WHITE);
+}
+
 void material_init_textured_planet_ring(struct material *m)
 {
 	m->type = MATERIAL_TEXTURED_PLANET_RING;
