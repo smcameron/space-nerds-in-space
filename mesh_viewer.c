@@ -52,7 +52,7 @@ static int snapshot_number = 0;
 static char *planetname = NULL;
 static char *normalmapname = NULL;
 static char *cubemapname = NULL;
-static char *cylinder_ambient = NULL;
+static char *cylinder_albedo = NULL;
 static char cylindrical_axis = 0; /* 0 = x, 1 = z */
 static char *cylinder_emit = NULL;
 static char *modelfile = NULL;
@@ -440,7 +440,7 @@ static struct material planet_material;
 static struct material green_phaser_material;
 static struct material thrust_material;
 static struct material atmosphere_material;
-static struct material cyl_ambient;
+static struct material cyl_albedo;
 static int planet_mode = 0;
 static int cubemap_mode = 0;
 static int burst_rod_mode = 0;
@@ -533,8 +533,8 @@ static void draw_screen()
 		update_entity_material(e, &green_phaser_material);
 	} else if (thrust_mode) {
 		update_entity_material(e, &thrust_material);
-	} else if (cylinder_ambient) {
-		update_entity_material(e, &cyl_ambient);
+	} else if (cylinder_albedo) {
+		update_entity_material(e, &cyl_albedo);
 	}
 	if (!turret_mode) {
 		update_entity_orientation(e, &lobby_orientation);
@@ -777,15 +777,15 @@ static void process_options(int argc, char *argv[])
 			cubemapname = optarg;
 			break;
 		case 'C':
-			cylinder_ambient = optarg;
+			cylinder_albedo = optarg;
 			cylindrical_axis = 0;
 			break;
 		case 'Y':
-			cylinder_ambient = optarg;
+			cylinder_albedo = optarg;
 			cylindrical_axis = 1;
 			break;
 		case 'Z':
-			cylinder_ambient = optarg;
+			cylinder_albedo = optarg;
 			cylindrical_axis = 2;
 			break;
 		case 'e':
@@ -968,24 +968,24 @@ int main(int argc, char *argv[])
 		atmosphere_mesh = NULL;
 	} else { /* just ordinary model mode */
 		target_mesh = snis_read_model(filename);
-		if (cylinder_ambient) {
+		if (cylinder_albedo) {
 			if (cylindrical_axis == 0)
 				mesh_cylindrical_yz_uv_map(target_mesh);
 			else if (cylindrical_axis == 1)
 				mesh_cylindrical_xz_uv_map(target_mesh);
 			else
 				mesh_cylindrical_xy_uv_map(target_mesh);
-			material_init_texture_mapped(&cyl_ambient);
-			cyl_ambient.texture_mapped.texture_id = graph_dev_load_texture(cylinder_ambient);
+			material_init_texture_mapped(&cyl_albedo);
+			cyl_albedo.texture_mapped.texture_id = graph_dev_load_texture(cylinder_albedo);
 		}
-		if (cylinder_emit && cylinder_ambient) {
+		if (cylinder_emit && cylinder_albedo) {
 			if (cylindrical_axis == 0)
 				mesh_cylindrical_yz_uv_map(target_mesh);
 			else if (cylindrical_axis == 1)
 				mesh_cylindrical_xz_uv_map(target_mesh);
 			else
 				mesh_cylindrical_xy_uv_map(target_mesh);
-			cyl_ambient.texture_mapped.emit_texture_id = graph_dev_load_texture(cylinder_emit);
+			cyl_albedo.texture_mapped.emit_texture_id = graph_dev_load_texture(cylinder_emit);
 		}
 		atmosphere_mesh = NULL;
 	}
