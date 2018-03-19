@@ -248,6 +248,7 @@ static struct entity_context *sciecx;
 static struct entity_context *instrumentecx; /* Used by nav screen, sciplane screen, and demon screen */
 static struct entity_context *tridentecx;
 static struct entity_context *sciballecx;
+static struct entity_context *network_setup_ecx;
 
 static int ecx_fake_stars_initialized = 0;
 static int nfake_stars = 0;
@@ -4088,6 +4089,34 @@ static void ui_set_widget_tooltip(void *widget, char *tooltip)
 
 static void show_common_screen(GtkWidget *w, char *title);
 
+static void show_rotating_wombat(void)
+{
+	const float angle_of_view = 70.0 * M_PI / 180.0;
+	const float near = 1.0;
+	const float far = 5000.0;
+	union vec3 camera_up = { {0, 1, 0}, };
+	union vec3 camera_pos = { { -17.0, 7.0, 0 }, };
+	union vec3 camera_lookat = { { 0, -5, 0 } };
+	struct entity *wombat;
+	union quat orientation;
+
+	if (!network_setup_ecx)
+		network_setup_ecx = entity_context_new(2, 2);
+	camera_assign_up_direction(network_setup_ecx, camera_up.v.x, camera_up.v.y, camera_up.v.z);
+	camera_set_pos(network_setup_ecx, camera_pos.v.x, camera_pos.v.y, camera_pos.v.z);
+	camera_look_at(network_setup_ecx, camera_lookat.v.x, camera_lookat.v.y, camera_lookat.v.z);
+
+	set_renderer(network_setup_ecx, FLATSHADING_RENDERER | WIREFRAME_RENDERER | BLACK_TRIS);
+	camera_set_parameters(network_setup_ecx, near, far, SCREEN_WIDTH, SCREEN_HEIGHT, angle_of_view);
+	calculate_camera_transform(network_setup_ecx);
+	wombat = add_entity(network_setup_ecx, ship_mesh_map[SHIP_CLASS_WOMBAT], 0.0, 0.0, 0.0, DARKGREEN);
+	quat_init_axis(&orientation, 0, 1, 0, (timer % 360) * M_PI / 180);
+	update_entity_orientation(wombat, &orientation);
+	render_entities(network_setup_ecx);
+	if (wombat)
+		remove_entity(network_setup_ecx, wombat);
+}
+
 static void show_lobbyscreen(GtkWidget *w)
 {
 	char msg[100];
@@ -4096,6 +4125,7 @@ static void show_lobbyscreen(GtkWidget *w)
 #define LINEHEIGHT 30
 
 	show_common_screen(w, "");
+	show_rotating_wombat();
 	sng_set_foreground(UI_COLOR(lobby_connecting));
 	if (lobby_socket == -1 && switched_server2 == -1) {
 		sng_abs_xy_draw_string("Space Nerds", BIG_FONT, txx(80), txy(200));
@@ -16594,6 +16624,7 @@ static void init_net_setup_ui(void)
 static void show_network_setup(GtkWidget *w)
 {
 	show_common_screen(w, "SPACE NERDS IN SPACE");
+	show_rotating_wombat();
 	sng_set_foreground(UI_COLOR(network_setup_logo));
 	sng_draw_vect_obj(&snis_logo, txx(100), txy(500));
 	sng_set_foreground(UI_COLOR(network_setup_text));
@@ -19362,7 +19393,7 @@ int main(int argc, char *argv[])
 	setup_physical_io_socket();
 	setup_natural_language_fifo();
 	setup_text_to_speech_thread();
-	ecx = entity_context_new(5000, 1000);
+	ecx = entity_context_new(5000, 2000);
 
 	snis_protocol_debugging(1);
 
