@@ -459,11 +459,6 @@ static const int laserbeam_render_style = RENDER_NORMAL;
 static const int spark_render_style = RENDER_NORMAL;
 #endif
 
-static struct my_point_t snis_logo_points[] = {
-#include "snis-logo.h"
-};
-static struct my_vect_obj snis_logo;
-
 static struct my_point_t damcon_robot_points[] = {
 #include "damcon-robot-points.h"
 };
@@ -16625,8 +16620,6 @@ static void show_network_setup(GtkWidget *w)
 {
 	show_common_screen(w, "SPACE NERDS IN SPACE");
 	show_rotating_wombat();
-	sng_set_foreground(UI_COLOR(network_setup_logo));
-	sng_draw_vect_obj(&snis_logo, txx(100), txy(500));
 	sng_set_foreground(UI_COLOR(network_setup_text));
 	sng_abs_xy_draw_string("NETWORK SETUP", SMALL_FONT, txx(25), txy(10 + LINEHEIGHT * 2));
 	sng_abs_xy_draw_string("LOBBY SERVER NAME OR IP ADDRESS", TINY_FONT, txx(25), txy(130));
@@ -18866,7 +18859,6 @@ static void init_vects(void)
 {
 	int i;
 
-	setup_vect(snis_logo, snis_logo_points);
 	setup_vect(placeholder_system, placeholder_system_points);
 	setup_vect(placeholder_socket, placeholder_socket_points);
 	setup_vect(placeholder_part, placeholder_part_points);

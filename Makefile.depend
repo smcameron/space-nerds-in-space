@@ -232,7 +232,6 @@ snis_client.o: snis_graph.h
 snis_client.o: snis.h
 snis_client.o: snis_keyboard.h
 snis_client.o: snis_label.h
-snis_client.o: snis-logo.h
 snis_client.o: snis_marshal.h
 snis_client.o: snis_opcode_def.h
 snis_client.o: snis_packet.h
@@ -340,7 +339,6 @@ snis_limited_client.o: snis_graph.h
 snis_limited_client.o: snis.h
 snis_limited_client.o: snis_keyboard.h
 snis_limited_client.o: snis_label.h
-snis_limited_client.o: snis-logo.h
 snis_limited_client.o: snis_marshal.h
 snis_limited_client.o: snis_opcode_def.h
 snis_limited_client.o: snis_packet.h
