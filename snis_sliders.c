@@ -88,6 +88,14 @@ static int choose_barcolor(struct slider *s, double v)
 	return ((s->timer & 0x04) == 0) ? UI_COLOR(slider_black) : UI_COLOR(slider_warning);
 }
 
+int snis_slider_alarm_triggered(struct slider *s)
+{
+	double v = s->sample();
+	if (!s->colors_reversed)
+		return (v <= 15.0);
+	return (v >= 90.0);
+}
+
 static void snis_slider_draw_vertical(struct slider *s)
 {
 	double v;

@@ -98,6 +98,7 @@
 #define   OPCODE_ADJUST_CONTROL_PHASERBANKS_COOLANT 23
 #define   OPCODE_ADJUST_CONTROL_COMMS_COOLANT 24
 #define	  OPCODE_ADJUST_CONTROL_EXTERIOR_LIGHTS 25
+#define   OPCODE_ADJUST_CONTROL_SILENCE_ALARMS 26
 
 /* UNUSED OPCODE 140 */
 #define OPCODE_UPDATE_RESPAWN_TIME 141
@@ -291,9 +292,10 @@ struct update_ship_packet {
 	uint8_t nav_mode;
 	uint8_t warp_core_status;
 	uint8_t rts_mode;
+	uint8_t exterior_lights;
+	uint8_t alarms_silenced;
 	uint8_t rts_active_button;
 	uint32_t wallet;
-	uint8_t exterior_lights;
 };
 
 struct ship_sdata_packet {

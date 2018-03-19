@@ -32,6 +32,7 @@ GLOBAL void snis_slider_set_label_font(struct slider *s, int font);
 GLOBAL void snis_slider_set_fuzz(struct slider *s, int fuzz);
 GLOBAL int snis_slider_mouse_inside(struct slider *s, int x, int y);
 GLOBAL void snis_slider_get_location(struct slider *s, float *x, float *y, float *length, float *height);
+GLOBAL int snis_slider_alarm_triggered(struct slider *s);
 
 #undef GLOBAL
 #endif

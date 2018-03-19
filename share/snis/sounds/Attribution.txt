@@ -256,3 +256,6 @@ spacemonster_slap.ogg
 COPYRIGHT=2018 by Stephen M. Cameron
 LICENSE=Creative Commons Attribution-Share Alike 3.0 License  http://creativecommons.org/licenses/by-sa/3.0/
 
+alarm_buzzer.ogg
+COPYRIGHT=2018 by Stephen M. Cameron
+LICENSE=Creative Commons Attribution-Share Alike 3.0 License  http://creativecommons.org/licenses/by-sa/3.0/

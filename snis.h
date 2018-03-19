@@ -30,7 +30,7 @@
 #define MAXSTARMAPENTRIES 1000 /* max number of solar systems */
 #define MAX_STARMAP_ADJACENCIES 5 /* max warp lanes from one star to other stars */
 #define DEFAULT_SOLAR_SYSTEM "default"
-#define SNIS_PROTOCOL_VERSION "SNIS016"
+#define SNIS_PROTOCOL_VERSION "SNIS017"
 #define COMMON_MTWIST_SEED 97872
 /* dimensions of the "known" universe */
 #define XKNOWN_DIM 600000.0
@@ -521,6 +521,7 @@ struct ship_data {
 	union quat computer_desired_orientation;
 	uint32_t computer_steering_time_left;
 	uint8_t rts_active_button; /* which comms RTS button is currently active. 255 means none */
+	uint8_t alarms_silenced;
 };
 
 #define MIN_COMBAT_ATTACK_DIST 200

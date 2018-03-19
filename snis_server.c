@@ -17063,6 +17063,9 @@ static int process_adjust_control_input(struct game_client *c)
 	case OPCODE_ADJUST_CONTROL_EXTERIOR_LIGHTS:
 		return process_adjust_control_bytevalue(c, id,
 			offsetof(struct snis_entity, tsd.ship.exterior_lights), v, no_limit);
+	case OPCODE_ADJUST_CONTROL_SILENCE_ALARMS:
+		return process_adjust_control_bytevalue(c, id,
+			offsetof(struct snis_entity, tsd.ship.alarms_silenced), v, no_limit);
 	default:
 		return -1;
 	}
@@ -19033,7 +19036,7 @@ static void send_update_ship_packet(struct game_client *c,
 	packed_buffer_append(pb, "bwwhSSS", opcode, o->id, o->timestamp, o->alive,
 			o->x, (int32_t) UNIVERSE_DIM, o->y, (int32_t) UNIVERSE_DIM,
 			o->z, (int32_t) UNIVERSE_DIM);
-	packed_buffer_append(pb, "RRRwwRRRbbbwwbbbbbbbbbbbbbwQQQbbbbbbbbw",
+	packed_buffer_append(pb, "RRRwwRRRbbbwwbbbbbbbbbbbbbwQQQbbbbbbbbbw",
 			o->tsd.ship.yaw_velocity,
 			o->tsd.ship.pitch_velocity,
 			o->tsd.ship.roll_velocity,
@@ -19059,6 +19062,7 @@ static void send_update_ship_packet(struct game_client *c,
 			o->tsd.ship.warp_core_status,
 			rts_mode,
 			o->tsd.ship.exterior_lights,
+			o->tsd.ship.alarms_silenced,
 			o->tsd.ship.rts_active_button,
 			wallet);
 	pb_queue_to_client(c, pb);

@@ -4276,7 +4276,8 @@ static int process_update_ship_packet(uint8_t opcode)
 		mainzoom, warpdrive, requested_warpdrive,
 		requested_shield, phaser_charge, phaser_wavelength, shiptype,
 		reverse, trident, in_secure_area, docking_magnets, emf_detector,
-		nav_mode, warp_core_status, rts_mode, exterior_lights, rts_active_button;
+		nav_mode, warp_core_status, rts_mode, exterior_lights, alarms_silenced,
+		rts_active_button;
 	union quat orientation, sciball_orientation, weap_orientation;
 	union euler ypr;
 	struct entity *e;
@@ -4299,7 +4300,7 @@ static int process_update_ship_packet(uint8_t opcode)
 				&dgunyawvel,
 				&dsheading,
 				&dbeamwidth);
-	packed_buffer_extract(&pb, "bbbwwbbbbbbbbbbbbbwQQQbbbbbbbbw",
+	packed_buffer_extract(&pb, "bbbwwbbbbbbbbbbbbbwQQQbbbbbbbbbw",
 			&tloading, &throttle, &rpm, &fuel, &oxygen, &temp,
 			&scizoom, &weapzoom, &navzoom, &mainzoom,
 			&warpdrive, &requested_warpdrive,
@@ -4307,7 +4308,7 @@ static int process_update_ship_packet(uint8_t opcode)
 			&reverse, &trident, &victim_id, &orientation.vec[0],
 			&sciball_orientation.vec[0], &weap_orientation.vec[0], &in_secure_area,
 			&docking_magnets, &emf_detector, &nav_mode, &warp_core_status, &rts_mode,
-			&exterior_lights, &rts_active_button, &wallet);
+			&exterior_lights, &alarms_silenced, &rts_active_button, &wallet);
 	tloaded = (tloading >> 4) & 0x0f;
 	tloading = tloading & 0x0f;
 	quat_to_euler(&ypr, &orientation);	
@@ -4382,6 +4383,7 @@ static int process_update_ship_packet(uint8_t opcode)
 		wwviaudio_add_sound(REVERSE_SOUND);
 	o->tsd.ship.reverse = reverse;
 	o->tsd.ship.exterior_lights = exterior_lights;
+	o->tsd.ship.alarms_silenced = alarms_silenced;
 	o->tsd.ship.trident = trident;
 	o->tsd.ship.wallet = (float) wallet;
 	snis_button_set_label(nav_ui.trident_button, trident ? "RELATIVE" : "ABSOLUTE");
@@ -11542,6 +11544,7 @@ static struct engineering_ui {
 	struct button *damcon_button;
 	struct button *preset1_button;
 	struct button *preset2_button;
+	struct button *silence_alarms;
 	struct slider *shield_slider;
 	struct slider *shield_coolant_slider;
 	struct slider *maneuvering_slider;
@@ -11589,6 +11592,15 @@ static struct engineering_ui {
 static void damcon_button_pressed(void *x)
 {
 	displaymode = DISPLAYMODE_DAMCON;
+}
+
+static void silence_alarms_pressed(void *x)
+{
+	struct snis_entity *o = find_my_ship();
+	if (!o)
+		return;
+	transmit_adjust_control_input(!o->tsd.ship.alarms_silenced,
+		OPCODE_ADJUST_CONTROL_SILENCE_ALARMS);
 }
 
 static void preset1_button_pressed(void *x)
@@ -11710,6 +11722,11 @@ static void init_engineering_ui(void)
 	snis_button_set_sound(eu->preset2_button, UISND12);
 	eu->damcon_button = snis_button_init(snis_button_get_x(eu->preset2_button) + snis_button_get_width(eu->preset2_button) + txx(5),
 						y + txx(30), -1, -1, "DAMAGE CONTROL", color, NANO_FONT, damcon_button_pressed, (void *) 0);
+	eu->silence_alarms = snis_button_init(snis_button_get_x(eu->damcon_button) +
+						snis_button_get_width(eu->damcon_button) + txx(5),
+						y + txx(30), -1, -1, "UNSILENCE ALARMS",
+						color, NANO_FONT, silence_alarms_pressed, (void *) 0);
+	snis_button_set_sound(eu->silence_alarms, UISND13);
 	y += yinc;
 	color = UI_COLOR(eng_power_meter);
 	eu->shield_slider = snis_slider_init(20, y += yinc, powersliderlen, sh, color,
@@ -11822,6 +11839,7 @@ static void init_engineering_ui(void)
 	ui_add_button(eu->damcon_button, dm, "SWITCH TO THE DAMAGE CONTROL SCREEN");
 	ui_add_button(eu->preset1_button, dm, "SELECT ENGINEERING PRESET 1 - NORMAL MODE");
 	ui_add_button(eu->preset2_button, dm, "SELECT ENGINEERING PRESET 2 - QUIESCENT MODE");
+	ui_add_button(eu->silence_alarms, dm, "SILENCE/UNSILENCE ENGINEERING SYSTEM ALARMS");
 
 	y = 220 + yinc;
 	y = eng_ui.gauge_radius * 2.5 + yinc;
@@ -11988,10 +12006,24 @@ static void show_engineering_damage_report(GtkWidget *w, int subsystem)
 	}
 }
 
+static int engineering_warnings_active()
+{
+	return snis_slider_alarm_triggered(eng_ui.shield_damage) ||
+		snis_slider_alarm_triggered(eng_ui.phaser_banks_damage) ||
+		snis_slider_alarm_triggered(eng_ui.comms_damage) ||
+		snis_slider_alarm_triggered(eng_ui.sensors_damage) ||
+		snis_slider_alarm_triggered(eng_ui.impulse_damage) ||
+		snis_slider_alarm_triggered(eng_ui.warp_damage) ||
+		snis_slider_alarm_triggered(eng_ui.maneuvering_damage) ||
+		snis_slider_alarm_triggered(eng_ui.tractor_damage) ||
+		snis_slider_alarm_triggered(eng_ui.lifesupport_damage);
+}
+
 static void show_engineering(GtkWidget *w)
 {
 	struct snis_entity *o;
 	int gx1, gy1, gx2, gy2;
+	static int alarms_were_active = 0;
 
 	if (!(o = find_my_ship()))
 		return;
@@ -12016,6 +12048,28 @@ static void show_engineering(GtkWidget *w)
 	snis_slider_set_input(eng_ui.maneuvering_coolant_slider, o->tsd.ship.coolant_data.maneuvering.r2 / 255.0);
 	snis_slider_set_input(eng_ui.tractor_coolant_slider, o->tsd.ship.coolant_data.tractor.r2 / 255.0);
 	snis_slider_set_input(eng_ui.lifesupport_coolant_slider, o->tsd.ship.coolant_data.lifesupport.r2 / 255.0);
+
+	if (o->tsd.ship.alarms_silenced)
+		snis_button_set_label(eng_ui.silence_alarms, "UNSILENCE ALARMS");
+	else
+		snis_button_set_label(eng_ui.silence_alarms, "SILENCE ALARMS");
+
+	if ((timer % 30) == 0) { /* Trigger alarm buzzer if something's badly broken */
+		if (engineering_warnings_active()) {
+			if (!o->tsd.ship.alarms_silenced)
+				wwviaudio_add_sound(ALARM_BUZZER);
+			alarms_were_active = 1;
+		} else {
+			/* No alarms currently active */
+			if (alarms_were_active) {
+				alarms_were_active = 0;
+				/* Auto-unsilence alarms when no alarms active. */
+				if (o->tsd.ship.alarms_silenced)
+					transmit_adjust_control_input(0,
+						OPCODE_ADJUST_CONTROL_SILENCE_ALARMS);
+			}
+		}
+	}
 
 	/* idiot lights for low power of various systems */
 	const int low_power_threshold = 10;
@@ -18075,6 +18129,7 @@ static void read_sound_clips(void)
 	read_ogg_clip(UISND28, d, "ui28.ogg");
 	read_ogg_clip(UISND29, d, "ui29.ogg");
 	read_ogg_clip(SPACEMONSTER_SLAP, d, "spacemonster_slap.ogg");
+	read_ogg_clip(ALARM_BUZZER, d, "alarm_buzzer.ogg");
 	printf("Done.\n");
 }
 
@@ -18246,6 +18301,9 @@ static void process_physical_device_io(unsigned short opcode, unsigned short val
 		break;
 	case DEVIO_OPCODE_ENG_DAMAGE_CTRL:
 		damcon_button_pressed((void *) 0);
+		break;
+	case DEVIO_OPCODE_ENG_SILENCE_ALARMS:
+		silence_alarms_pressed((void *) 0);
 		break;
 	case DEVIO_OPCODE_NAV_YAW_LEFT:
 		navigation_dirkey(-1, 0, 0);
