@@ -1910,7 +1910,8 @@ struct mesh *mesh_fabricate_planetary_ring(float ir, float or, int nvertices)
 		m->t[i + 1].v[0] = v2;
 		m->t[i + 1].v[1] = v3;
 		m->t[i + 1].v[2] = v4;
-		/* FIXME: set coplanar flags */
+		m->t[i].flag = TRIANGLE_0_1_COPLANAR;
+		m->t[i + 1].flag = TRIANGLE_0_1_COPLANAR;
 	}
 	m->radius = mesh_compute_radius(m);
 	mesh_set_flat_shading_vertex_normals(m);
