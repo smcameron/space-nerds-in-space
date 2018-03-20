@@ -257,6 +257,8 @@ union quat *quat_apply_relative_yaw_pitch_roll(union quat *q,
 union quat *quat_apply_relative_yaw_pitch(union quat *q, double yaw, double pitch);
 
 /* decompose a quaternion into a rotation (swing) perpendicular to v1 and a rotation (twist) around v1 */
+/* For example, if you have a turret mounted horizontally that can rotate around a vertical axis, and has */
+/* another horizontal axis, then twist corresponds to azimuth, and swing corresponds to elevation. */
 void quat_decompose_twist_swing(const union quat *q, const union vec3 *v1, union quat *twist, union quat *swing);
 void quat_decompose_swing_twist(const union quat *q, const union vec3 *v1, union quat *swing, union quat *twist);
 

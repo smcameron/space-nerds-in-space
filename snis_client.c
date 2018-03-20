@@ -11150,10 +11150,29 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 
 	/* add my ship */
 	e = add_entity(instrumentecx, ship_mesh_map[o->tsd.ship.shiptype], o->x, o->y, o->z, UI_COLOR(nav_self));
-	if (e) {
+	if (e) { /* Add turret to ship */
+		struct entity *turret, *turret_base;
+		union vec3 vertical = { { 0, 1, 0, }, };
+		union quat elevation, azimuth;
+		quat_decompose_swing_twist(&o->tsd.ship.weap_orientation, &vertical, &elevation, &azimuth);
+
 		set_render_style(e, science_style);
 		update_entity_scale(e, ship_scale * cam_pos_scale);
 		update_entity_orientation(e, &o->orientation);
+		turret = add_entity(instrumentecx, ship_turret_mesh,
+					ship_scale * cam_pos_scale * -1.5, ship_scale * cam_pos_scale * 3.0, 0.0,
+					UI_COLOR(nav_self));
+		turret_base = add_entity(instrumentecx, ship_turret_base_mesh,
+					ship_scale * cam_pos_scale * -1.5, ship_scale * cam_pos_scale * 3.0, 0.0,
+					UI_COLOR(nav_self));
+		if (turret) {
+			update_entity_parent(instrumentecx, turret, e);
+			update_entity_orientation(turret, &o->tsd.ship.weap_orientation);
+		}
+		if (turret_base) {
+			update_entity_parent(instrumentecx, turret_base, e);
+			update_entity_orientation(turret_base, &azimuth);
+		}
 	}
 
 	struct material wireframe_material;
