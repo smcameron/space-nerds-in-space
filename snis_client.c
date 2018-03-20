@@ -4092,11 +4092,11 @@ static void show_rotating_wombat(void)
 	union vec3 camera_up = { {0, 1, 0}, };
 	union vec3 camera_pos = { { -17.0, 7.0, 0 }, };
 	union vec3 camera_lookat = { { 0, -5, 0 } };
-	struct entity *wombat;
+	struct entity *wombat, *turret_base, *turret;
 	union quat orientation;
 
 	if (!network_setup_ecx)
-		network_setup_ecx = entity_context_new(2, 2);
+		network_setup_ecx = entity_context_new(3, 3);
 	camera_assign_up_direction(network_setup_ecx, camera_up.v.x, camera_up.v.y, camera_up.v.z);
 	camera_set_pos(network_setup_ecx, camera_pos.v.x, camera_pos.v.y, camera_pos.v.z);
 	camera_look_at(network_setup_ecx, camera_lookat.v.x, camera_lookat.v.y, camera_lookat.v.z);
@@ -4107,9 +4107,12 @@ static void show_rotating_wombat(void)
 	wombat = add_entity(network_setup_ecx, ship_mesh_map[SHIP_CLASS_WOMBAT], 0.0, 0.0, 0.0, DARKGREEN);
 	quat_init_axis(&orientation, 0, 1, 0, (timer % 360) * M_PI / 180);
 	update_entity_orientation(wombat, &orientation);
+	turret_base = add_entity(network_setup_ecx, ship_turret_base_mesh, -1.5, 3.0, 0.0, DARKGREEN);
+	turret = add_entity(network_setup_ecx, ship_turret_mesh, -1.5, 3.0, 0.0, DARKGREEN);
+	update_entity_parent(network_setup_ecx, turret_base, wombat);
+	update_entity_parent(network_setup_ecx, turret, wombat);
 	render_entities(network_setup_ecx);
-	if (wombat)
-		remove_entity(network_setup_ecx, wombat);
+	remove_all_entity(network_setup_ecx);
 }
 
 static void show_lobbyscreen(GtkWidget *w)
