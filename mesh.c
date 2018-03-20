@@ -1860,7 +1860,7 @@ void mesh_unit_cube_uv_map(struct mesh *m)
 	mesh_graph_dev_init(m);
 }
 
-struct mesh *mesh_fabricate_planetary_ring(float ir, float or)
+struct mesh *mesh_fabricate_planetary_ring(float ir, float or, int nvertices)
 {
 	struct mesh *m;
 	int i;
@@ -1869,7 +1869,7 @@ struct mesh *mesh_fabricate_planetary_ring(float ir, float or)
 	if (!m)
 		return m;
 	memset(m, 0, sizeof(*m));
-	m->nvertices = 360;
+	m->nvertices = nvertices;
 	m->ntriangles = m->nvertices;
 
 	m->t = malloc(sizeof(*m->t) * m->ntriangles);

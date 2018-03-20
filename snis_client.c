@@ -18798,7 +18798,7 @@ static void init_meshes()
 	mesh_scale(nav_axes_mesh, SNIS_WARP_GATE_THRESHOLD * 0.05);
 	demon3d_axes_mesh = mesh_fabricate_axes();
 	mesh_scale(demon3d_axes_mesh, 0.002 * XKNOWN_DIM);
-	planetary_ring_mesh = mesh_fabricate_planetary_ring(MIN_RING_RADIUS, MAX_RING_RADIUS);
+	planetary_ring_mesh = mesh_fabricate_planetary_ring(MIN_RING_RADIUS, MAX_RING_RADIUS, 360);
 
 	for (i = 0; i < nstarbase_models; i++) {
 		char *filename = starbase_metadata[i].model_file;
