@@ -356,6 +356,7 @@ static struct mesh *sphere_mesh;
 static struct mesh *low_poly_sphere_mesh;
 static struct mesh *half_size_low_poly_sphere_mesh;
 static struct mesh *planetary_ring_mesh;
+static struct mesh *nav_planetary_ring_mesh;
 static struct mesh **starbase_mesh;
 static int nstarbase_models = -1;
 static struct starbase_file_metadata *starbase_metadata;
@@ -11261,6 +11262,24 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 					set_render_style(contact, science_style);
 					entity_set_user_data(contact, &go[i]);
 				}
+				if (go[i].tsd.planet.ring) {
+					struct entity *ring =
+						add_entity(instrumentecx, nav_planetary_ring_mesh, 0, 0, 0,
+								UI_COLOR(nav_entity));
+					struct entity *ring2 =
+						add_entity(instrumentecx, nav_planetary_ring_mesh, 0, 0, 0,
+								UI_COLOR(nav_entity));
+					if (ring) {
+						update_entity_orientation(ring, &identity_quat);
+						update_entity_parent(instrumentecx, ring, contact);
+					}
+					if (ring2) { /* Defeat backface culling by adding an upside down ring */
+						union quat upside_down;
+						quat_init_axis(&upside_down, 1, 0, 0, 180.0 * M_PI / 180.0);
+						update_entity_orientation(ring2, &upside_down);
+						update_entity_parent(instrumentecx, ring2, contact);
+					}
+				}
 			} else if (go[i].type == OBJTYPE_BLACK_HOLE) {
 				contact = add_entity(instrumentecx, low_poly_sphere_mesh,
 							go[i].x, go[i].y, go[i].z, UI_COLOR(nav_entity));
@@ -18799,6 +18818,7 @@ static void init_meshes()
 	demon3d_axes_mesh = mesh_fabricate_axes();
 	mesh_scale(demon3d_axes_mesh, 0.002 * XKNOWN_DIM);
 	planetary_ring_mesh = mesh_fabricate_planetary_ring(MIN_RING_RADIUS, MAX_RING_RADIUS, 360);
+	nav_planetary_ring_mesh = mesh_fabricate_planetary_ring(MIN_RING_RADIUS * 1.5, MAX_RING_RADIUS * 0.75, 36);
 
 	for (i = 0; i < nstarbase_models; i++) {
 		char *filename = starbase_metadata[i].model_file;
