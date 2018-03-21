@@ -10758,6 +10758,8 @@ static void draw_attitude_indicator_reticles(GtkWidget *w, GdkGC *gc, struct sni
 	union vec3 ship_direction; /* vector pointing in the direction the ship points */
 	float dot;
 	double display_heading, display_mark;
+	static const float wide = 0.033;
+	static const float narrow = 0.02;
 
 	to_snis_heading_mark(&o->orientation, &display_heading, &display_mark);
 
@@ -10768,27 +10770,27 @@ static void draw_attitude_indicator_reticles(GtkWidget *w, GdkGC *gc, struct sni
 
 	v1.v.x = -1.0; /* v1 to v2: Short z-axis-aligned line 1 unit down the X axis */
 	v1.v.y = 0.0;
-	v1.v.z = 0.03;
+	v1.v.z = narrow;
 	v2.v.x = -1.0;
 	v2.v.y = 0.0;
-	v2.v.z = -0.03;
+	v2.v.z = -narrow;
 	vec3_mul_self(&v1, screen_radius);
 	vec3_mul_self(&v2, screen_radius);
 
-	v5.v.x = 0.03; /* v5 to v6: Short x-axis-aligned line 1 unit down the Z axis */
+	v5.v.x = narrow; /* v5 to v6: Short x-axis-aligned line 1 unit down the Z axis */
 	v5.v.y = 0.0;
 	v5.v.z = 1.0;
-	v6.v.x = -0.03;
+	v6.v.x = -narrow;
 	v6.v.y = 0.0;
 	v6.v.z = 1.0;
 	vec3_mul_self(&v5, screen_radius);
 	vec3_mul_self(&v6, screen_radius);
 
 	v7.v.x = 1.0; /* v7 to v8: Short y-axis aligned line 1 unit down the X axis */
-	v7.v.y = 0.03;
+	v7.v.y = narrow;
 	v7.v.z = 0.0;
 	v8.v.x = 1.0;
-	v8.v.y = -0.03;
+	v8.v.y = -narrow;
 	v8.v.z = 0.0;
 	vec3_mul_self(&v7, screen_radius);
 	vec3_mul_self(&v8, screen_radius);
@@ -10800,12 +10802,24 @@ static void draw_attitude_indicator_reticles(GtkWidget *w, GdkGC *gc, struct sni
 	 */
 	for (i = -5; i < 360; i += 5) {
 		if ((i % 15) == 0) {
+			v1.v.z = wide * screen_radius;
+			v2.v.z = -wide * screen_radius;
+			v5.v.x = wide * screen_radius;
+			v6.v.x = -wide * screen_radius;
+			v7.v.y = wide * screen_radius;
+			v8.v.y = -wide * screen_radius;
 			sng_set_foreground(UI_COLOR(nav_gauge_needle));
 			if ((i % 90) == 0)
 				draw_numbers = 0;
 			else
 				draw_numbers = 1;
 		} else {
+			v1.v.z = narrow * screen_radius;
+			v2.v.z = -narrow * screen_radius;
+			v5.v.x = narrow * screen_radius;
+			v6.v.x = -narrow * screen_radius;
+			v7.v.y = narrow * screen_radius;
+			v8.v.y = -narrow * screen_radius;
 			sng_set_foreground(UI_COLOR(nav_ring));
 			draw_numbers = 0;
 		}
