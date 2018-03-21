@@ -8151,7 +8151,13 @@ static void player_move(struct snis_entity *o)
 	o->timestamp = universe_timestamp;
 
 	orientation_damping = PLAYER_ORIENTATION_DAMPING +
+			(1.0 - o->tsd.ship.power_data.maneuvering.i / 255.0) *
+				(0.98 - PLAYER_ORIENTATION_DAMPING) +
 			(0.98 - PLAYER_ORIENTATION_DAMPING) * o->tsd.ship.nav_damping_suppression;
+	if (orientation_damping > 0.998)
+		orientation_damping = 0.998;
+	if (orientation_damping < 0.85)
+		orientation_damping = 0.85;
 	damp_yaw_velocity(&o->tsd.ship.yaw_velocity, orientation_damping);
 	damp_yaw_velocity(&o->tsd.ship.pitch_velocity, orientation_damping);
 	damp_yaw_velocity(&o->tsd.ship.roll_velocity, orientation_damping);
