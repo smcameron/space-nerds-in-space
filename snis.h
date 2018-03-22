@@ -255,6 +255,8 @@ struct ai_mining_bot_data {
 	uint8_t oxygen;
 	uint8_t fuel;
 	uint8_t object_or_waypoint; /* 0 means object, 1 means waypoint */
+	uint8_t towing;
+	uint32_t towed_object;
 #define MINING_BOT_WAYPOINT_PROXIMITY 400
 	double wpx, wpy, wpz; /* waypoint coordinates */
 #define MINING_BOT_MAX_ORPHAN_TIME (60 * 10 * 5) /* 5 minutes */

@@ -2618,6 +2618,8 @@ static void push_mining_bot_mode(struct snis_entity *miner, uint32_t parent_ship
 	miner->tsd.ship.ai[n].u.mining_bot.parent_ship = parent_ship_id;
 	miner->tsd.ship.ai[n].u.mining_bot.mode = MINING_MODE_APPROACH_ASTEROID;
 	miner->tsd.ship.ai[n].u.mining_bot.orphan_time = 0;
+	miner->tsd.ship.ai[n].u.mining_bot.towing = 0;
+	miner->tsd.ship.ai[n].u.mining_bot.towed_object = (uint32_t) -1;
 	random_quat(&miner->tsd.ship.ai[n].u.mining_bot.orbital_orientation);
 }
 
@@ -5035,7 +5037,7 @@ static float estimate_asteroid_radius(uint32_t id)
 static void ai_mining_mode_approach_asteroid(struct snis_entity *o, struct ai_mining_bot_data *ai)
 {
 	int i;
-	struct snis_entity *asteroid;
+	struct snis_entity *asteroid = NULL;
 	float threshold;
 	double x, y, z, vx, vy, vz;
 	float my_speed = dist3d(o->vx, o->vy, o->vz);
@@ -5044,13 +5046,13 @@ static void ai_mining_mode_approach_asteroid(struct snis_entity *o, struct ai_mi
 	if (ai->object_or_waypoint == 0) /* destination is object */ {
 		i = lookup_by_id(ai->asteroid);
 		if (i < 0) {
-			/* asteroid got blown up maybe */
+			/* asteroid/cargo container got blown up maybe */
 			b = lookup_bridge_by_shipid(ai->parent_ship);
 			if (b >= 0) {
 				int channel = bridgelist[b].npcbot.channel;
 				ai->orphan_time = 0;
 				send_comms_packet(o->sdata.name, channel,
-					"TARGET ASTEROID LOST -- RETURNING TO SHIP");
+					"TARGET LOST -- RETURNING TO SHIP.");
 			} else {
 				ai->orphan_time++;
 			}
@@ -5064,7 +5066,14 @@ static void ai_mining_mode_approach_asteroid(struct snis_entity *o, struct ai_mi
 		vx = asteroid->vx;
 		vy = asteroid->vy;
 		vz = asteroid->vz;
-		threshold = 2.0 * estimate_asteroid_radius(asteroid->id);
+		switch (asteroid->type) {
+		case OBJTYPE_ASTEROID:
+			threshold = 2.0 * estimate_asteroid_radius(asteroid->id);
+			break;
+		default:
+			threshold = 100.0;
+			break;
+		}
 	} else { /* destination is waypoint */
 		x = ai->wpx;
 		y = ai->wpy;
@@ -5092,16 +5101,38 @@ static void ai_mining_mode_approach_asteroid(struct snis_entity *o, struct ai_mi
 			int channel = bridgelist[b].npcbot.channel;
 			ai->orphan_time = 0;
 			if (ai->object_or_waypoint == 0) /* object */
-				send_comms_packet(o->sdata.name, channel,
-					"COMMENCING ORBITAL INJECTION BURN");
+				switch (asteroid->type) {
+				case OBJTYPE_ASTEROID:
+					send_comms_packet(o->sdata.name, channel,
+						"COMMENCING ORBITAL INJECTION BURN");
+					break;
+				case OBJTYPE_CARGO_CONTAINER:
+					if (!ai->towing) {
+						send_comms_packet(o->sdata.name, channel,
+							"PICKED UP CARGO CONTAINER.");
+						ai->towing = 1;
+						ai->towed_object = asteroid->id;
+					} else {
+						send_comms_packet(o->sdata.name, channel,
+							"ARRIVING AT CARGO CONTAINER "
+							"(ALREADY TOWING ANOTHER CONTAINER).");
+					}
+					break;
+				default:
+					send_comms_packet(o->sdata.name, channel,
+						"APPROACHING OBJECT.");
+					break;
+				}
 			else
 				send_comms_packet(o->sdata.name, channel,
 					"ARRIVING AT WAYPOINT");
 		} else {
 			ai->orphan_time++;
 		}
-		if (ai->object_or_waypoint == 0) /* object */
+		if (ai->object_or_waypoint == 0 && !ai->towing) /* object */
 			ai->mode = MINING_MODE_LAND_ON_ASTEROID;
+		else if (ai->towing)
+			ai->mode = MINING_MODE_RETURN_TO_PARENT;
 		else
 			ai->mode = MINING_MODE_IDLE;
 		ai->countdown = 100;
@@ -5382,6 +5413,38 @@ static void ai_tow_ship_mode_brain(struct snis_entity *o)
 	}
 }
 
+static void mining_bot_move_towed_cargo(struct snis_entity *o)
+{
+	int i, n = o->tsd.ship.nai_entries - 1;
+	union vec3 cargo_position = { { 40, 0, 0 } };
+	struct snis_entity *cargo;
+
+	struct ai_mining_bot_data *ai = &o->tsd.ship.ai[n].u.mining_bot;
+	if (!ai->towing)
+		return;
+	if (ai->towed_object == (uint32_t) -1)
+		return;
+	i = lookup_by_id(ai->towed_object);
+	if (i < 0) {
+		ai->towing = 0;
+		ai->towed_object = (uint32_t) -1;
+		return;
+	}
+	quat_rot_vec_self(&cargo_position, &o->orientation);
+	cargo = &go[i];
+	set_object_location(cargo, o->x + cargo_position.v.x, o->y + cargo_position.v.y, o->z + cargo_position.v.z);
+	cargo->vx = o->vx;
+	cargo->vy = o->vy;
+	cargo->vz = o->vz;
+	switch (cargo->type) {
+	case OBJTYPE_CARGO_CONTAINER:
+		quat_init_axis(&cargo->tsd.cargo_container.rotational_velocity, 1, 0, 0, 0);
+		break;
+	default:
+		break;
+	}
+}
+
 static void ai_mining_mode_brain(struct snis_entity *o)
 {
 	int n = o->tsd.ship.nai_entries - 1;
@@ -5392,6 +5455,7 @@ static void ai_mining_mode_brain(struct snis_entity *o)
 		delete_from_clients_and_server(o);
 		return;
 	}
+	mining_bot_move_towed_cargo(o);
 	switch (mining_bot->mode) {
 	case MINING_MODE_APPROACH_ASTEROID:
 		ai_mining_mode_approach_asteroid(o, mining_bot);
@@ -17911,17 +17975,18 @@ static void launch_mining_bot(struct game_client *c, struct snis_entity *ship, u
 		message = "No target selected for miniing robot.";
 		goto miningbotfail;
 	}
+	if (ship->tsd.ship.mining_bots <= 0) { /* no bots left */
+		message = "No mining bots remain to be launched.";
+		goto miningbotfail;
+	}
 	if (bridgelist[c->bridge].selected_waypoint == -1) {
 		i = lookup_by_id(oid);
 		if (i < 0) {
 			message = "Malfunction detected. The mining robot's navigation system has failed to start.";
 			goto miningbotfail;
 		}
-		if (ship->tsd.ship.mining_bots <= 0) { /* no bots left */
-			message = "No mining bots remain to be launched.";
-			goto miningbotfail;
-		}
-		if (go[i].type != OBJTYPE_ASTEROID && go[i].type != OBJTYPE_DERELICT) {
+		if (go[i].type != OBJTYPE_ASTEROID && go[i].type != OBJTYPE_DERELICT &&
+			go[i].type != OBJTYPE_CARGO_CONTAINER) {
 			message = "No appropriate target selected for miniing robot.";
 			goto miningbotfail;
 		}
@@ -17948,6 +18013,9 @@ static void launch_mining_bot(struct game_client *c, struct snis_entity *ship, u
 		break;
 	case OBJTYPE_DERELICT:
 		queue_add_text_to_speech(c, "Mining robot deployed to salvage selected derelict wreckage.");
+		break;
+	case OBJTYPE_CARGO_CONTAINER:
+		queue_add_text_to_speech(c, "Mining robot deployed to salvage selected cargo container.");
 		break;
 	default:
 		/* Shouldn't get here. */
