@@ -257,6 +257,8 @@ struct ai_mining_bot_data {
 	uint8_t object_or_waypoint; /* 0 means object, 1 means waypoint */
 #define MINING_BOT_WAYPOINT_PROXIMITY 400
 	double wpx, wpy, wpz; /* waypoint coordinates */
+#define MINING_BOT_MAX_ORPHAN_TIME (60 * 10 * 5) /* 5 minutes */
+	int orphan_time;
 };
 
 struct ai_tow_ship_data {
