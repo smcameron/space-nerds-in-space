@@ -247,12 +247,16 @@ struct ai_mining_bot_data {
 #define MINING_MODE_RETURN_TO_PARENT 3
 #define MINING_MODE_STANDBY_TO_TRANSPORT_ORE 4
 #define MINING_MODE_STOW_BOT 5
+#define MINING_MODE_IDLE 6
 	uint8_t gold;
 	uint8_t platinum;
 	uint8_t germanium;
 	uint8_t uranium;
 	uint8_t oxygen;
 	uint8_t fuel;
+	uint8_t object_or_waypoint; /* 0 means object, 1 means waypoint */
+#define MINING_BOT_WAYPOINT_PROXIMITY 400
+	double wpx, wpy, wpz; /* waypoint coordinates */
 };
 
 struct ai_tow_ship_data {

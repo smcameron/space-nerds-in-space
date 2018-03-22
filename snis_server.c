@@ -2563,23 +2563,44 @@ static void attack_your_attacker(struct snis_entity *attackee, struct snis_entit
 }
 
 static void push_mining_bot_mode(struct snis_entity *miner, uint32_t parent_ship_id,
-					uint32_t asteroid_id)
+					uint32_t asteroid_id, int bridge, int selected_waypoint)
 {
-	int i = lookup_by_id(asteroid_id);
-	if (i < 0)
+	int i, n;
+
+	n = miner->tsd.ship.nai_entries;
+	if (asteroid_id == (uint32_t) -1 && selected_waypoint == -1)
 		return;
-	int n = miner->tsd.ship.nai_entries;
-	if (n >= MAX_AI_STACK_ENTRIES)
-		return;
-	miner->tsd.ship.nai_entries++;
+	if (asteroid_id != (uint32_t) -1) {
+		i = lookup_by_id(asteroid_id);
+		if (i < 0)
+			return;
+		int n = miner->tsd.ship.nai_entries;
+		if (n >= MAX_AI_STACK_ENTRIES)
+			return;
+		miner->tsd.ship.nai_entries++;
+		miner->tsd.ship.ai[n].u.mining_bot.object_or_waypoint = 0; /* object */
+		miner->tsd.ship.dox = go[i].x;
+		miner->tsd.ship.doy = go[i].y;
+		miner->tsd.ship.doz = go[i].z;
+	} else if (selected_waypoint >= 0 && selected_waypoint < bridgelist[bridge].nwaypoints) {
+		if (n >= MAX_AI_STACK_ENTRIES)
+			return;
+		miner->tsd.ship.nai_entries++;
+		struct player_waypoint *wp =
+			&bridgelist[bridge].waypoint[selected_waypoint];
+		miner->tsd.ship.ai[n].u.mining_bot.object_or_waypoint = 1; /* waypoint */
+		miner->tsd.ship.ai[n].u.mining_bot.wpx = wp->x;
+		miner->tsd.ship.ai[n].u.mining_bot.wpy = wp->y;
+		miner->tsd.ship.ai[n].u.mining_bot.wpz = wp->z;
+		miner->tsd.ship.dox = wp->x;
+		miner->tsd.ship.doy = wp->y;
+		miner->tsd.ship.doz = wp->z;
+	}
 	miner->tsd.ship.ai[n].ai_mode = AI_MODE_MINING_BOT;
 	miner->tsd.ship.ai[n].u.mining_bot.asteroid = asteroid_id;
 	miner->tsd.ship.ai[n].u.mining_bot.parent_ship = parent_ship_id;
 	miner->tsd.ship.ai[n].u.mining_bot.mode = MINING_MODE_APPROACH_ASTEROID;
 	random_quat(&miner->tsd.ship.ai[n].u.mining_bot.orbital_orientation);
-	miner->tsd.ship.dox = go[i].x;
-	miner->tsd.ship.doy = go[i].y;
-	miner->tsd.ship.doz = go[i].z;
 }
 
 static int add_derelict(const char *name, double x, double y, double z,
@@ -4992,43 +5013,67 @@ static void ai_mining_mode_approach_asteroid(struct snis_entity *o, struct ai_mi
 	int i;
 	struct snis_entity *asteroid;
 	float threshold;
+	double x, y, z, vx, vy, vz;
 	float my_speed = dist3d(o->vx, o->vy, o->vz);
 	int b;
 
-	i = lookup_by_id(ai->asteroid);
-	if (i < 0) {
-		/* asteroid got blown up maybe */
-		b = lookup_bridge_by_shipid(ai->parent_ship);
-		if (b >= 0) {
-			int channel = bridgelist[b].npcbot.channel;
-			send_comms_packet(o->sdata.name, channel,
-				"TARGET ASTEROID LOST -- RETURNING TO SHIP");
+	if (ai->object_or_waypoint == 0) /* destination is object */ {
+		i = lookup_by_id(ai->asteroid);
+		if (i < 0) {
+			/* asteroid got blown up maybe */
+			b = lookup_bridge_by_shipid(ai->parent_ship);
+			if (b >= 0) {
+				int channel = bridgelist[b].npcbot.channel;
+				send_comms_packet(o->sdata.name, channel,
+					"TARGET ASTEROID LOST -- RETURNING TO SHIP");
+			}
+			ai->mode = MINING_MODE_RETURN_TO_PARENT;
+			return;
 		}
-		ai->mode = MINING_MODE_RETURN_TO_PARENT;
-		return;
+		asteroid = &go[i];
+		x = asteroid->x;
+		y = asteroid->y;
+		z = asteroid->z;
+		vx = asteroid->vx;
+		vy = asteroid->vy;
+		vz = asteroid->vz;
+		threshold = 2.0 * estimate_asteroid_radius(asteroid->id);
+	} else { /* destination is waypoint */
+		x = ai->wpx;
+		y = ai->wpy;
+		z = ai->wpz;
+		vx = 0.0;
+		vy = 0.0;
+		vz = 0.0;
+		threshold = MINING_BOT_WAYPOINT_PROXIMITY;
 	}
-	asteroid = &go[i];
-	float distance = dist3d(o->x - asteroid->x, o->y - asteroid->y, o->z - asteroid->z);
-	threshold = 2.0 * estimate_asteroid_radius(asteroid->id);
+	float distance = dist3d(o->x - x, o->y - y, o->z - z);
 	if (my_speed < 0.1) {
-		o->tsd.ship.dox = asteroid->x;
-		o->tsd.ship.doy = asteroid->y;
-		o->tsd.ship.doz = asteroid->z;
+		o->tsd.ship.dox = x;
+		o->tsd.ship.doy = y;
+		o->tsd.ship.doz = z;
 	} else {
 		float time_to_travel = distance / my_speed;
-		o->tsd.ship.dox = asteroid->x + asteroid->vx * time_to_travel;
-		o->tsd.ship.doy = asteroid->y + asteroid->vy * time_to_travel;
-		o->tsd.ship.doz = asteroid->z + asteroid->vz * time_to_travel;
+		o->tsd.ship.dox = x + vx * time_to_travel;
+		o->tsd.ship.doy = y + vy * time_to_travel;
+		o->tsd.ship.doz = z + vz * time_to_travel;
 	}
-	double dist2 = ai_ship_travel_towards(o, asteroid->x, asteroid->y, asteroid->z);
+	double dist2 = ai_ship_travel_towards(o, x, y, z);
 	if (dist2 < threshold * threshold) {
 		b = lookup_bridge_by_shipid(ai->parent_ship);
 		if (b >= 0) {
 			int channel = bridgelist[b].npcbot.channel;
-			send_comms_packet(o->sdata.name, channel,
-				"COMMENCING ORBITAL INJECTION BURN");
+			if (ai->object_or_waypoint == 0) /* object */
+				send_comms_packet(o->sdata.name, channel,
+					"COMMENCING ORBITAL INJECTION BURN");
+			else
+				send_comms_packet(o->sdata.name, channel,
+					"ARRIVING AT WAYPOINT");
 		}
-		ai->mode = MINING_MODE_LAND_ON_ASTEROID;
+		if (ai->object_or_waypoint == 0) /* object */
+			ai->mode = MINING_MODE_LAND_ON_ASTEROID;
+		else
+			ai->mode = MINING_MODE_IDLE;
 		ai->countdown = 100;
 	}
 }
@@ -5311,6 +5356,11 @@ static void ai_mining_mode_brain(struct snis_entity *o)
 	case MINING_MODE_STOW_BOT:
 	case MINING_MODE_STANDBY_TO_TRANSPORT_ORE:
 		ai_mining_mode_return_to_parent(o, mining_bot);
+		break;
+	case MINING_MODE_IDLE:
+		o->vx *= 0.95; /* Come to a stop */
+		o->vy *= 0.95;
+		o->vz *= 0.95;
 		break;
 	default:
 		fprintf(stderr, "unexpected default value of mining ai mode; %hhu\n",
@@ -9431,7 +9481,8 @@ static int add_ship(int faction, int auto_respawn)
 	return i;
 }
 
-static int add_mining_bot(struct snis_entity *parent_ship, uint32_t asteroid_id)
+static int add_mining_bot(struct snis_entity *parent_ship, uint32_t asteroid_id,
+				int bridge, int selected_waypoint)
 {
 	int rc;
 	struct snis_entity *o;
@@ -9443,7 +9494,7 @@ static int add_mining_bot(struct snis_entity *parent_ship, uint32_t asteroid_id)
 	o = &go[rc];
 	parent_ship->tsd.ship.mining_bots--; /* maybe we want miningbots to live in cargo hold? */
 	o->tsd.ship.shiptype = SHIP_CLASS_ASTEROIDMINER;
-	push_mining_bot_mode(o, parent_ship->id, asteroid_id);
+	push_mining_bot_mode(o, parent_ship->id, asteroid_id, bridge, selected_waypoint);
 	snprintf(o->sdata.name, sizeof(o->sdata.name), "%s-MINER-%02d",
 		parent_ship->sdata.name, parent_ship->tsd.ship.mining_bots);
 	memset(o->sdata.name, 0, sizeof(o->sdata.name));
@@ -13309,22 +13360,40 @@ static void npc_menu_item_mining_bot_retarget(struct npc_menu_item *item,
 	miner = &go[i];
 	ai = &miner->tsd.ship.ai[0].u.mining_bot;
 
-	i = lookup_by_id(b->science_selection);
-	if (i < 0) {
+	if (b->science_selection == (uint32_t) -1 && b->selected_waypoint == -1) {
 		send_comms_packet(npcname, channel, " NO DESTINATION TARGETED");
 		return;
 	}
-	asteroid = &go[i];
-	if (asteroid->type != OBJTYPE_ASTEROID && asteroid->type != OBJTYPE_DERELICT) {
-		send_comms_packet(npcname, channel, " SELECTED DESTINATION INAPPROPRIATE");
-		return;
+	if (b->science_selection != (uint32_t) -1) {
+		i = lookup_by_id(b->science_selection);
+		if (i < 0) {
+			send_comms_packet(npcname, channel, " NO DESTINATION TARGETED");
+			return;
+		}
+		asteroid = &go[i];
+		if (asteroid->type != OBJTYPE_ASTEROID && asteroid->type != OBJTYPE_DERELICT) {
+			send_comms_packet(npcname, channel, " SELECTED DESTINATION INAPPROPRIATE");
+			return;
+		}
+		ai->asteroid = b->science_selection;
+		dist = dist3d(asteroid->x - miner->x, asteroid->y - miner->y, asteroid->z - miner->z);
+		sprintf(msg, " RETARGETED TO %s, DISTANCE: %f",
+				asteroid ? asteroid->sdata.name : "UNKNOWN", dist);
+	} else {
+		if (b->selected_waypoint < 0 || b->selected_waypoint >= b->nwaypoints) {
+			sprintf(msg, "INAPPROPRIATE WAYPOINT %d SELECTED", b->selected_waypoint);
+		} else {
+			struct player_waypoint *wp = &b->waypoint[b->selected_waypoint];
+			ai->asteroid = (uint32_t) -1;
+			ai->wpx = wp->x;
+			ai->wpy = wp->y;
+			ai->wpz = wp->z;
+			dist = dist3d(ai->wpx - miner->x, ai->wpy - miner->y, ai->wpz - miner->z);
+			sprintf(msg, " RETARGETED TO SELECTED_WAYPOINT, DISTANCE: %f", dist);
+		}
 	}
-	ai->asteroid = b->science_selection;
-	ai->mode = MINING_MODE_APPROACH_ASTEROID;
-	dist = dist3d(asteroid->x - miner->x, asteroid->y - miner->y, asteroid->z - miner->z);
-	sprintf(msg, " RETARGETED TO %s, DISTANCE: %f",
-			asteroid ? asteroid->sdata.name : "UNKNOWN", dist);
 	send_comms_packet(npcname, channel, msg);
+	ai->mode = MINING_MODE_APPROACH_ASTEROID;
 }
 
 static void npc_menu_item_mining_bot_status_report(struct npc_menu_item *item,
@@ -13343,13 +13412,18 @@ static void npc_menu_item_mining_bot_status_report(struct npc_menu_item *item,
 		return;
 	miner = &go[i];
 	ai = &miner->tsd.ship.ai[0].u.mining_bot;
-	i = lookup_by_id(ai->asteroid);
-	if (i >= 0) {
-		asteroid = &go[i];
-		dist = dist3d(asteroid->x - miner->x, asteroid->y - miner->y, asteroid->z - miner->z);
+	if (ai->object_or_waypoint == 0) {
+		i = lookup_by_id(ai->asteroid);
+		if (i >= 0) {
+			asteroid = &go[i];
+			dist = dist3d(asteroid->x - miner->x, asteroid->y - miner->y, asteroid->z - miner->z);
+		} else {
+			asteroid = NULL;
+			dist = -1.0;
+		}
 	} else {
 		asteroid = NULL;
-		dist = -1.0;
+		dist = dist3d(ai->wpx - miner->x, ai->wpy - miner->y, ai->wpz - miner->z);
 	}
 
 	i = lookup_by_id(ai->parent_ship);
@@ -13372,8 +13446,11 @@ static void npc_menu_item_mining_bot_status_report(struct npc_menu_item *item,
 	send_comms_packet(npcname, channel, "--- BEGIN STATUS REPORT ---");
 	switch (ai->mode) {
 	case MINING_MODE_APPROACH_ASTEROID:
-		snprintf(msg, sizeof(msg), "RENDEZVOUS WITH %s, DISTANCE: %f\n",
-			asteroid ? asteroid->sdata.name : "UNKNOWN", dist);
+		if (ai->object_or_waypoint == 0) /* object */
+			snprintf(msg, sizeof(msg), "RENDEZVOUS WITH %s, DISTANCE: %f\n",
+				asteroid ? asteroid->sdata.name : "UNKNOWN", dist);
+		else
+			snprintf(msg, sizeof(msg), "RENDEZVOUS WITH WAYPOINT, DISTANCE: %f\n", dist);
 		send_comms_packet(npcname, channel, msg);
 		break;
 	case MINING_MODE_LAND_ON_ASTEROID:
@@ -13406,74 +13483,81 @@ static void npc_menu_item_mining_bot_status_report(struct npc_menu_item *item,
 			asteroid ? asteroid->sdata.name : "UNKNOWN", dist);
 		send_comms_packet(npcname, channel, msg);
 		break;
+	case MINING_MODE_IDLE:
+		snprintf(msg, sizeof(msg), "STANDING BY FOR ORDERS\n");
+		send_comms_packet(npcname, channel, msg);
+		snprintf(msg, sizeof(msg), "DISTANCE TO DESTINATION: %f\n", dist);
+		send_comms_packet(npcname, channel, msg);
 	default:
 		break;
 	}
 	snprintf(msg, sizeof(msg), "DISTANCE TO %s: %f\n",
 		parent ? parent->sdata.name : "MOTHER SHIP", dist_to_parent);
 	send_comms_packet(npcname, channel, msg);
-	switch (asteroid->type) {
-	case OBJTYPE_ASTEROID:
-		snprintf(msg, sizeof(msg), "ORE COLLECTED: %f TONS\n", 2.0 * total / (255.0 * 4.0));
-		send_comms_packet(npcname, channel, msg);
-		send_comms_packet(npcname, channel, "ORE COMPOSITION:");
-		snprintf(msg, sizeof(msg), "GOLD: %2f%%\n", gold / total);
-		send_comms_packet(npcname, channel, msg);
-		snprintf(msg, sizeof(msg), "PLATINUM: %2f%%\n", platinum / total);
-		send_comms_packet(npcname, channel, msg);
-		snprintf(msg, sizeof(msg), "GERMANIUM: %2f%%\n", germanium / total);
-		send_comms_packet(npcname, channel, msg);
-		snprintf(msg, sizeof(msg), "URANIUM: %2f%%\n", uranium / total);
-		send_comms_packet(npcname, channel, msg);
-		break;
-	case OBJTYPE_DERELICT:
-		snprintf(msg, sizeof(msg), "FUEL AND OXYGEN COLLECTED:\n");
-		send_comms_packet(npcname, channel, msg);
-		snprintf(msg, sizeof(msg), "- FUEL: %2f%%\n", fuel / 255.0);
-		send_comms_packet(npcname, channel, msg);
-		snprintf(msg, sizeof(msg), "- OXYGEN: %2f%%\n", oxygen / 255.0);
-		send_comms_packet(npcname, channel, msg);
-		/* FIXME: This ai->mode test is a little imprecise about whether we've recovered
-		 * the logs. But, maybe it's good enough.
-		 */
-		if (ai->mode == MINING_MODE_RETURN_TO_PARENT ||
-			ai->mode == MINING_MODE_STOW_BOT ||
-			ai->mode == MINING_MODE_STANDBY_TO_TRANSPORT_ORE) {
-			if (asteroid->tsd.derelict.ships_log) {
-				int i, n;
-				char m[50];
+	if (ai->object_or_waypoint == 0) {
+		switch (asteroid->type) {
+		case OBJTYPE_ASTEROID:
+			snprintf(msg, sizeof(msg), "ORE COLLECTED: %f TONS\n", 2.0 * total / (255.0 * 4.0));
+			send_comms_packet(npcname, channel, msg);
+			send_comms_packet(npcname, channel, "ORE COMPOSITION:");
+			snprintf(msg, sizeof(msg), "GOLD: %2f%%\n", gold / total);
+			send_comms_packet(npcname, channel, msg);
+			snprintf(msg, sizeof(msg), "PLATINUM: %2f%%\n", platinum / total);
+			send_comms_packet(npcname, channel, msg);
+			snprintf(msg, sizeof(msg), "GERMANIUM: %2f%%\n", germanium / total);
+			send_comms_packet(npcname, channel, msg);
+			snprintf(msg, sizeof(msg), "URANIUM: %2f%%\n", uranium / total);
+			send_comms_packet(npcname, channel, msg);
+			break;
+		case OBJTYPE_DERELICT:
+			snprintf(msg, sizeof(msg), "FUEL AND OXYGEN COLLECTED:\n");
+			send_comms_packet(npcname, channel, msg);
+			snprintf(msg, sizeof(msg), "- FUEL: %2f%%\n", fuel / 255.0);
+			send_comms_packet(npcname, channel, msg);
+			snprintf(msg, sizeof(msg), "- OXYGEN: %2f%%\n", oxygen / 255.0);
+			send_comms_packet(npcname, channel, msg);
+			/* FIXME: This ai->mode test is a little imprecise about whether we've recovered
+			 * the logs. But, maybe it's good enough.
+			 */
+			if (ai->mode == MINING_MODE_RETURN_TO_PARENT ||
+				ai->mode == MINING_MODE_STOW_BOT ||
+				ai->mode == MINING_MODE_STANDBY_TO_TRANSPORT_ORE) {
+				if (asteroid->tsd.derelict.ships_log) {
+					int i, n;
+					char m[50];
 
-				snprintf(msg, sizeof(msg), "*** RECOVERED PARTIAL SHIPS LOG FROM %s ***\n",
-						asteroid->sdata.name);
-				send_comms_packet(npcname, channel, msg);
-				n = strlen(asteroid->tsd.derelict.ships_log);
-				i = 0;
-				do {
-					int len;
-					memset(m, 0, sizeof(m));
-					strncpy(m, asteroid->tsd.derelict.ships_log + i, sizeof(m) - 1);
-					snprintf(msg, sizeof(msg), "... %s\n", m);
+					snprintf(msg, sizeof(msg), "*** RECOVERED PARTIAL SHIPS LOG FROM %s ***\n",
+							asteroid->sdata.name);
 					send_comms_packet(npcname, channel, msg);
-					len = strlen(m);
-					n = n - len;
-					i = i + len;
-					printf("m = '%s', n = %d, i = %d\n", m, n, i);
-				} while (n > 0);
-				snprintf(msg, sizeof(msg), "*** END OF PARTIAL SHIP'S LOG FROM %s ***\n",
-					asteroid->sdata.name);
-				send_comms_packet(npcname, channel, msg);
-				schedule_callback2(event_callback, &callback_schedule,
-							"ships-logs-recovered-event", (double) asteroid->id,
-							parent ? (double) parent->id : -1.0);
-			} else {
-				snprintf(msg, sizeof(msg), "UNABLE TO RECOVER SHIPS LOG FROM %s\n",
+					n = strlen(asteroid->tsd.derelict.ships_log);
+					i = 0;
+					do {
+						int len;
+						memset(m, 0, sizeof(m));
+						strncpy(m, asteroid->tsd.derelict.ships_log + i, sizeof(m) - 1);
+						snprintf(msg, sizeof(msg), "... %s\n", m);
+						send_comms_packet(npcname, channel, msg);
+						len = strlen(m);
+						n = n - len;
+						i = i + len;
+						printf("m = '%s', n = %d, i = %d\n", m, n, i);
+					} while (n > 0);
+					snprintf(msg, sizeof(msg), "*** END OF PARTIAL SHIP'S LOG FROM %s ***\n",
 						asteroid->sdata.name);
-				send_comms_packet(npcname, channel, msg);
+					send_comms_packet(npcname, channel, msg);
+					schedule_callback2(event_callback, &callback_schedule,
+								"ships-logs-recovered-event", (double) asteroid->id,
+								parent ? (double) parent->id : -1.0);
+				} else {
+					snprintf(msg, sizeof(msg), "UNABLE TO RECOVER SHIPS LOG FROM %s\n",
+							asteroid->sdata.name);
+					send_comms_packet(npcname, channel, msg);
+				}
 			}
+			break;
+		default:
+			break;
 		}
-		break;
-	default:
-		break;
 	}
 	send_comms_packet(npcname, channel, "--- END STATUS REPORT ---");
 }
@@ -17729,25 +17813,33 @@ static void launch_mining_bot(struct game_client *c, struct snis_entity *ship, u
 	char *message = "What?";
 
 	pthread_mutex_lock(&universe_mutex);
-	if (oid == (uint32_t) 0xffffffff) { /* nothing selected */
+	if (oid == (uint32_t) 0xffffffff && bridgelist[c->bridge].selected_waypoint == -1) { /* nothing selected */
 		message = "No target selected for miniing robot.";
 		goto miningbotfail;
 	}
-	i = lookup_by_id(oid);
-	if (i < 0) {
-		message = "Malfunction detected. The mining robot's navigation system has failed to start.";
-		goto miningbotfail;
-	}
-	if (ship->tsd.ship.mining_bots <= 0) { /* no bots left */
-		message = "No mining bots remain to be launched.";
-		goto miningbotfail;
-	}
-	if (go[i].type != OBJTYPE_ASTEROID && go[i].type != OBJTYPE_DERELICT) {
-		message = "No appropriate target selected for miniing robot.";
-		goto miningbotfail;
+	if (bridgelist[c->bridge].selected_waypoint == -1) {
+		i = lookup_by_id(oid);
+		if (i < 0) {
+			message = "Malfunction detected. The mining robot's navigation system has failed to start.";
+			goto miningbotfail;
+		}
+		if (ship->tsd.ship.mining_bots <= 0) { /* no bots left */
+			message = "No mining bots remain to be launched.";
+			goto miningbotfail;
+		}
+		if (go[i].type != OBJTYPE_ASTEROID && go[i].type != OBJTYPE_DERELICT) {
+			message = "No appropriate target selected for miniing robot.";
+			goto miningbotfail;
+		}
+	} else {
+		if (bridgelist[c->bridge].selected_waypoint < 0 ||
+			bridgelist[c->bridge].selected_waypoint >= bridgelist[c->bridge].nwaypoints) {
+			message = "Invalid waypoint selected for mining robot.";
+			goto miningbotfail;
+		}
 	}
 
-	i = add_mining_bot(ship, oid);
+	i = add_mining_bot(ship, oid, c->bridge, bridgelist[c->bridge].selected_waypoint);
 	if (i < 0) {
 		message = "Malfunction detected. The mining robot's thrusters have failed to ignite.";
 		goto miningbotfail;
