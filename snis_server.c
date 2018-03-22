@@ -202,6 +202,8 @@ static void npc_menu_item_mining_bot_stow(struct npc_menu_item *item,
 				char *npcname, struct npc_bot_state *botstate);
 static void npc_menu_item_mining_bot_retarget(struct npc_menu_item *item,
 				char *npcname, struct npc_bot_state *botstate);
+static void npc_menu_item_mining_bot_cam(struct npc_menu_item *item,
+				char *npcname, struct npc_bot_state *botstate);
 static void send_to_npcbot(int bridge, char *name, char *msg);
 
 typedef void (*npc_special_bot_fn)(struct snis_entity *o, int bridge, char *name, char *msg);
@@ -268,6 +270,7 @@ static struct npc_menu_item mining_bot_main_menu[] = {
 	{ "TRANSPORT MATERIALS TO CARGO BAYS", 0, 0, npc_menu_item_mining_bot_transport_ores },
 	{ "STOW MINING BOT", 0, 0, npc_menu_item_mining_bot_stow },
 	{ "RETARGET MINING BOT", 0, 0, npc_menu_item_mining_bot_retarget },
+	{ "TOGGLE MINING BOT CAMERA FEED", 0, 0, npc_menu_item_mining_bot_cam },
 	{ "SIGN OFF", 0, 0, npc_menu_item_sign_off },
 	{ 0, 0, 0, 0 }, /* mark end of menu items */
 };
@@ -1687,6 +1690,19 @@ static void delete_starbase_docking_ports(struct snis_entity *o)
 	}
 }
 
+static void unhook_remote_cameras(uint32_t id)
+{
+	int i;
+
+	/* id is an object about to be deleted. Make sure anyone ship with a remote
+	 * camera feed from this object gets unhooked from it.
+	 */
+	for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
+		if (go[i].alive && go[i].type == OBJTYPE_SHIP1 && go[i].tsd.ship.viewpoint_object == id)
+			go[i].tsd.ship.viewpoint_object = go[i].id;
+	}
+}
+
 static void delete_from_clients_and_server_helper(struct snis_entity *o, int take_client_lock)
 {
 	if (take_client_lock)
@@ -1715,6 +1731,7 @@ static void delete_from_clients_and_server_helper(struct snis_entity *o, int tak
 	if (o->type == OBJTYPE_SHIP2)
 		fleet_leave(o->id); /* leave any fleets ship might be a member of */
 	remove_from_attack_lists(o->id);
+	unhook_remote_cameras(o->id);
 	delete_object(o);
 }
 
@@ -9305,6 +9322,7 @@ static void init_player(struct snis_entity *o, int clear_cargo_bay, float *charg
 		else
 			o->tsd.ship.wallet = INITIAL_WALLET_MONEY;
 	}
+	o->tsd.ship.viewpoint_object = o->id;
 	quat_init_axis(&o->tsd.ship.sciball_orientation, 1, 0, 0, 0);
 	quat_init_axis(&o->tsd.ship.weap_orientation, 1, 0, 0, 0);
 	memset(&o->tsd.ship.damage, 0, sizeof(o->tsd.ship.damage));
@@ -13437,6 +13455,40 @@ static void npc_menu_item_mining_bot_retarget(struct npc_menu_item *item,
 	send_comms_packet(npcname, channel, msg);
 	ai->mode = MINING_MODE_APPROACH_ASTEROID;
 }
+
+static void npc_menu_item_mining_bot_cam(struct npc_menu_item *item,
+				char *npcname, struct npc_bot_state *botstate)
+{
+	int i;
+	uint32_t channel = botstate->channel;
+	struct ai_mining_bot_data *ai;
+	char msg[60];
+	struct snis_entity *miner, *parent;
+
+	i = lookup_by_id(botstate->object_id);
+	if (i < 0) {
+		snprintf(msg, sizeof(msg), "MINING BOT CAMERA FEED MALFUNCTION.");
+		send_comms_packet(npcname, channel, msg);
+		return;
+	}
+	miner = &go[i];
+	ai = &miner->tsd.ship.ai[0].u.mining_bot;
+	i = lookup_by_id(ai->parent_ship);
+	if (i >= 0) {
+		parent = &go[i];
+		if (parent->tsd.ship.viewpoint_object != parent->id) {
+			parent->tsd.ship.viewpoint_object = parent->id;
+			snprintf(msg, sizeof(msg), "MINING BOT CAMERA FEED TERMINATED.");
+		} else {
+			parent->tsd.ship.viewpoint_object = miner->id;
+			snprintf(msg, sizeof(msg), "MINING BOT CAMERA FEED INITIATED.");
+		}
+	} else {
+		snprintf(msg, sizeof(msg), "MINING BOT CAMERA FEED MALFUNCTION.");
+	}
+	send_comms_packet(npcname, channel, msg);
+}
+
 
 static void npc_menu_item_mining_bot_status_report(struct npc_menu_item *item,
 				char *npcname, struct npc_bot_state *botstate)
@@ -19190,7 +19242,7 @@ static void send_update_ship_packet(struct game_client *c,
 	packed_buffer_append(pb, "bwwhSSS", opcode, o->id, o->timestamp, o->alive,
 			o->x, (int32_t) UNIVERSE_DIM, o->y, (int32_t) UNIVERSE_DIM,
 			o->z, (int32_t) UNIVERSE_DIM);
-	packed_buffer_append(pb, "RRRwwRRRbbbwwbbbbbbbbbbbbbwQQQbbbbbbbbbw",
+	packed_buffer_append(pb, "RRRwwRRRbbbwwbbbbbbbbbbbbbwQQQbbbbbbbbbww",
 			o->tsd.ship.yaw_velocity,
 			o->tsd.ship.pitch_velocity,
 			o->tsd.ship.roll_velocity,
@@ -19218,7 +19270,7 @@ static void send_update_ship_packet(struct game_client *c,
 			o->tsd.ship.exterior_lights,
 			o->tsd.ship.alarms_silenced,
 			o->tsd.ship.rts_active_button,
-			wallet);
+			wallet, o->tsd.ship.viewpoint_object);
 	pb_queue_to_client(c, pb);
 
 	/* now that we've sent the accumulated value, clear the emf_detector to the noise floor */

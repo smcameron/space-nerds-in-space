@@ -528,6 +528,7 @@ struct ship_data {
 	uint32_t computer_steering_time_left;
 	uint8_t rts_active_button; /* which comms RTS button is currently active. 255 means none */
 	uint8_t alarms_silenced;
+	uint32_t viewpoint_object;
 };
 
 #define MIN_COMBAT_ATTACK_DIST 200

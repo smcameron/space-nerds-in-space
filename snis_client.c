@@ -4296,7 +4296,7 @@ static int process_update_ship_packet(uint8_t opcode)
 	struct packed_buffer pb;
 	uint16_t alive;
 	uint32_t id, timestamp, torpedoes, power;
-	uint32_t fuel, oxygen, victim_id, wallet;
+	uint32_t fuel, oxygen, victim_id, wallet, viewpoint_object;
 	double dx, dy, dz, dyawvel, dpitchvel, drollvel;
 	double dgunyawvel, dsheading, dbeamwidth;
 	int rc;
@@ -4329,7 +4329,7 @@ static int process_update_ship_packet(uint8_t opcode)
 				&dgunyawvel,
 				&dsheading,
 				&dbeamwidth);
-	packed_buffer_extract(&pb, "bbbwwbbbbbbbbbbbbbwQQQbbbbbbbbbw",
+	packed_buffer_extract(&pb, "bbbwwbbbbbbbbbbbbbwQQQbbbbbbbbbww",
 			&tloading, &throttle, &rpm, &fuel, &oxygen, &temp,
 			&scizoom, &weapzoom, &navzoom, &mainzoom,
 			&warpdrive, &requested_warpdrive,
@@ -4337,7 +4337,7 @@ static int process_update_ship_packet(uint8_t opcode)
 			&reverse, &trident, &victim_id, &orientation.vec[0],
 			&sciball_orientation.vec[0], &weap_orientation.vec[0], &in_secure_area,
 			&docking_magnets, &emf_detector, &nav_mode, &warp_core_status, &rts_mode,
-			&exterior_lights, &alarms_silenced, &rts_active_button, &wallet);
+			&exterior_lights, &alarms_silenced, &rts_active_button, &wallet, &viewpoint_object);
 	tloaded = (tloading >> 4) & 0x0f;
 	tloading = tloading & 0x0f;
 	quat_to_euler(&ypr, &orientation);	
@@ -4415,6 +4415,7 @@ static int process_update_ship_packet(uint8_t opcode)
 	o->tsd.ship.alarms_silenced = alarms_silenced;
 	o->tsd.ship.trident = trident;
 	o->tsd.ship.wallet = (float) wallet;
+	o->tsd.ship.viewpoint_object = viewpoint_object;
 	snis_button_set_label(nav_ui.trident_button, trident ? "RELATIVE" : "ABSOLUTE");
 	o->tsd.ship.ai[0].u.attack.victim_id = victim_id;
 	rc = 0;
@@ -7925,11 +7926,22 @@ static void show_mainscreen(GtkWidget *w)
 	static union vec3 cam_offset;
 	union vec3 cam_pos;
 	static float current_lights = 1.0;
+	struct snis_entity *vp;
 
 	if (!(o = find_my_ship()))
 		return;
+	vp = o;
 
-	update_warp_tunnel(o, &warp_tunnel);
+	/* Set up for alternate viewpoint (e.g. mining robot camera) */
+	if (o->tsd.ship.viewpoint_object != o->id && o->tsd.ship.view_mode != MAINSCREEN_VIEW_MODE_WEAPONS) {
+		int i;
+
+		i = lookup_object_by_id(o->tsd.ship.viewpoint_object);
+		if (i >= 0)
+			vp = &go[i];
+	}
+	if (vp == o)
+		update_warp_tunnel(o, &warp_tunnel);
 
 	static int last_timer = 0;
 	int first_frame = (timer != last_timer+1);
@@ -7946,12 +7958,12 @@ static void show_mainscreen(GtkWidget *w)
 	if (o->tsd.ship.view_mode == MAINSCREEN_VIEW_MODE_NORMAL) {
 		switch (camera_mode) {
 		case 0:
-			camera_orientation = o->orientation;
+			camera_orientation = vp->orientation;
 			desired_cam_orientation = camera_orientation;
 			break;
 		case 1:
 		case 2:
-			desired_cam_orientation = o->orientation;
+			desired_cam_orientation = vp->orientation;
 			if (first_frame)
 				camera_orientation = desired_cam_orientation;
 			else
@@ -7969,7 +7981,8 @@ static void show_mainscreen(GtkWidget *w)
 	switch (camera_mode) {
 	case 0:
 		vec3_init(&desired_cam_offset, 0, 0, 0);
-		break;
+		if (vp == o)
+			break;
 	case 1:
 	case 2: {
 			vec3_init(&desired_cam_offset, -1.0f, 0.25f, 0.0f);
@@ -8010,9 +8023,8 @@ static void show_mainscreen(GtkWidget *w)
 				add_ship_thrust_entities(NULL, NULL, ecx,
 					player_ship, o->tsd.ship.shiptype,
 					o->tsd.ship.power_data.impulse.i, 0);
-
-			break;
 		}
+		break;
 	}
 
 	if (first_frame)
@@ -8020,7 +8032,7 @@ static void show_mainscreen(GtkWidget *w)
 	else
 		vec3_lerp(&cam_offset, &cam_offset, &desired_cam_offset, 0.15);
 
-	if (main_camera_shake > 0.05) {
+	if (main_camera_shake > 0.05 && vp == o) {
 		float ryaw, rpitch;
 
 		ryaw = main_camera_shake * ((snis_randn(100) - 50) * 0.025f) * M_PI / 180.0;
@@ -8029,9 +8041,9 @@ static void show_mainscreen(GtkWidget *w)
 		main_camera_shake = 0.7f * main_camera_shake;
 	}
 
-	cam_pos.v.x = o->x + cam_offset.v.x;
-	cam_pos.v.y = o->y + cam_offset.v.y;
-	cam_pos.v.z = o->z + cam_offset.v.z;
+	cam_pos.v.x = vp->x + cam_offset.v.x;
+	cam_pos.v.y = vp->y + cam_offset.v.y;
+	cam_pos.v.z = vp->z + cam_offset.v.z;
 
 	camera_set_pos(ecx, cam_pos.v.x, cam_pos.v.y, cam_pos.v.z);
 	camera_set_orientation(ecx, &camera_orientation);
@@ -8058,7 +8070,7 @@ static void show_mainscreen(GtkWidget *w)
 	}
 
 	/* Draw science selector indicator on main screen */
-	if (curr_science_guy) {
+	if (curr_science_guy && vp == o) {
 		float sx, sy;
 
 		if (curr_science_guy->alive && curr_science_guy->entity &&
@@ -8070,9 +8082,13 @@ static void show_mainscreen(GtkWidget *w)
 
 	if (o->tsd.ship.view_mode == MAINSCREEN_VIEW_MODE_WEAPONS)
 		show_gunsight(w);
-	draw_main_screen_text(w, gc);
+	if (vp == o)
+		draw_main_screen_text(w, gc);
 	pthread_mutex_unlock(&universe_mutex);
-	show_common_screen(w, "");	
+	if (vp == o)
+		show_common_screen(w, "");
+	else
+		show_common_screen(w, "REMOTE CAMERA FEED");
 }
 
 /* position and dimensions of science scope */
