@@ -11421,6 +11421,8 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 		e = get_entity(instrumentecx, i);
 		if (!e)
 			continue;
+		if (!entity_onscreen(e))
+			continue;
 		o = entity_get_user_data(e);
 		if (!o)
 			continue; 
