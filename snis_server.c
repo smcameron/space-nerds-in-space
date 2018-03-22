@@ -17726,21 +17726,32 @@ static int process_request_tractor_beam(struct game_client *c)
 static void launch_mining_bot(struct game_client *c, struct snis_entity *ship, uint32_t oid)
 {
 	int i;
+	char *message = "What?";
 
 	pthread_mutex_lock(&universe_mutex);
-	if (oid == (uint32_t) 0xffffffff) /* nothing selected */
+	if (oid == (uint32_t) 0xffffffff) { /* nothing selected */
+		message = "No target selected for miniing robot.";
 		goto miningbotfail;
+	}
 	i = lookup_by_id(oid);
-	if (i < 0)
+	if (i < 0) {
+		message = "Malfunction detected. The mining robot's navigation system has failed to start.";
 		goto miningbotfail;
-	if (ship->tsd.ship.mining_bots <= 0) /* no bots left */
+	}
+	if (ship->tsd.ship.mining_bots <= 0) { /* no bots left */
+		message = "No mining bots remain to be launched.";
 		goto miningbotfail;
-	if (go[i].type != OBJTYPE_ASTEROID && go[i].type != OBJTYPE_DERELICT)
+	}
+	if (go[i].type != OBJTYPE_ASTEROID && go[i].type != OBJTYPE_DERELICT) {
+		message = "No appropriate target selected for miniing robot.";
 		goto miningbotfail;
+	}
 
 	i = add_mining_bot(ship, oid);
-	if (i < 0)
+	if (i < 0) {
+		message = "Malfunction detected. The mining robot's thrusters have failed to ignite.";
 		goto miningbotfail;
+	}
 	pthread_mutex_unlock(&universe_mutex);
 	switch (go[i].type) {
 	case OBJTYPE_ASTEROID:
@@ -17760,7 +17771,7 @@ miningbotfail:
 	/* TODO: make special miningbot failure sound */
 	snis_queue_add_sound(LASER_FAILURE, ROLE_SOUNDSERVER, ship->id);
 	pthread_mutex_unlock(&universe_mutex);
-	queue_add_text_to_speech(c, "No appropriate target selected for mining robot");
+	queue_add_text_to_speech(c, message);
 	return;
 }
 
