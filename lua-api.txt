@@ -142,6 +142,21 @@ EVENT TYPES in snis:
 	"ships-logs-recovered-event"
 		Ships logs were recovered from a derelict by the mining bot. Arguments: object id
 		of derelict and object id of player ship mining bot belongs to.
+	"mining-bot-deployed-event"
+		Arguments are id of player ship owning bot, id of mining robot, and id of destination object
+		robot is headed towards. Note that id may be -1 if the destination is a waypoint.
+		See get_mining_bot_destination(), below.
+	"mining-bot-arrived-event"
+		Arguments are id of player ship owning bot and id of mining robot.
+	"mining-bot-retargeted-event"
+		Arguments are id of player ship owning bot, id of mining bot, id of
+		object bot is heading towards (may be -1 if waypoint), and x, y, z
+		coordinates of bot destination.
+	"mining-bot-stowed-event"
+		Arguments are id of player ship owning bot (The bot doesn't exist as an
+		object when it is stowed, so there is no id for it.)
+	"mining-bot-cargo-transfer-event"
+		Arguments are id of player ship owning bot and id of mining robot.
 
 Functions which you may call from lua: 
 
@@ -858,6 +873,11 @@ dock_player_to_starbase(player_id, starbase_id)
 	Docks the player with an empty docking port on the specified starbase.
 	returns -1.0 on failure, 0.0 on success. May fail if all docking ports
 	are full or if the player id or starbase id are not correct.
+
+x,y,z,id = get_mining_bot_destination(id)
+	Returns the current coordinates of the mining bots destination and the id
+	of that destination if the destination is an object (not a waypoint), or nil
+	if the id is inappropriate or if the mining bot is not deployed.
 
 NOTE: Your lua scripts must not sleep, call any function which blocks, or require excessive
 long running calculations (nothing more than a few hundredths of a second) because the lua

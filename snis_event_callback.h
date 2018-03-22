@@ -49,7 +49,7 @@
   "my_callback" with params 1.0, 2.0, 3.0:
 
   struct callback_schedule_entry *my_schedule = NULL;
-  schedule_one_callback(&my_schedule, "my_callback", 1.0, 2.0, 3.0);
+  schedule_one_callback(&my_schedule, "my_callback", 1.0, 2.0, 3.0, 4.0, 5.0, 6.0);
 
 ***************************************************/
 
@@ -58,7 +58,7 @@ struct callback_schedule_entry;
 
 /* Adds a new callback onto the schedule e */
 void schedule_one_callback(struct callback_schedule_entry **e,
-		const char *callback, double param1, double param2, double param3);
+		const char *callback, double p1, double p2, double p3, double p4, double p5, double p6);
 
 /* looks up the specified event in the list of callbacks for events, e, and
  * adds all the callbacks for that event (if found) into the schedule
@@ -77,8 +77,18 @@ void schedule_callback2(struct event_callback_entry *e, struct callback_schedule
  * adds all the callbacks for that event (if found) into the schedule
  * with the given 1 param (plus 0.0, 0.0 as implicit 2nd and 3rd params).
  */
-void schedule_callback3(struct event_callback_entry *e, struct callback_schedule_entry **s, 
-                const char *callback, double param1, double param2, double param3);
+void schedule_callback3(struct event_callback_entry *e, struct callback_schedule_entry **s,
+		const char *callback, double param1, double param2, double param3);
+
+void schedule_callback4(struct event_callback_entry *e, struct callback_schedule_entry **s,
+		const char *callback, double param1, double param2, double param3, double p4);
+
+void schedule_callback5(struct event_callback_entry *e, struct callback_schedule_entry **s,
+		const char *callback, double param1, double param2, double param3, double p4, double p5);
+
+void schedule_callback6(struct event_callback_entry *e, struct callback_schedule_entry **s,
+		const char *callback, double p1, double p2, double p3,
+		double p4, double p5, double p6);
 
 /* Frees everthing in a callback schedule */
 void free_callback_schedule(struct callback_schedule_entry **e);

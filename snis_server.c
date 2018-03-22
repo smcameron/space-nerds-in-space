@@ -4996,6 +4996,7 @@ static void ai_mining_mode_return_to_parent(struct snis_entity *o, struct ai_min
 		delete_from_clients_and_server(o);
 		snis_queue_add_sound(MINING_BOT_STOWED,
 			ROLE_SOUNDSERVER | ROLE_COMMS | ROLE_SCIENCE, parent->id);
+		schedule_callback(event_callback, "mining-bot-stowed-event", (double) parent->id);
 		parent->tsd.ship.mining_bots = 1;
 	}
 }
@@ -5075,6 +5076,9 @@ static void ai_mining_mode_approach_asteroid(struct snis_entity *o, struct ai_mi
 		else
 			ai->mode = MINING_MODE_IDLE;
 		ai->countdown = 100;
+		schedule_callback2(event_callback, &callback_schedule,
+				"mining-bot-arrived-event", (double) bridgelist[b].shipid,
+				(double) o->id);
 	}
 }
 
@@ -13314,6 +13318,9 @@ static void npc_menu_item_mining_bot_transport_ores(struct npc_menu_item *item,
 		send_comms_packet(npcname, channel,
 			"COMMENCING RENDEZVOUS WITH TARGET");
 		ai->mode = MINING_MODE_APPROACH_ASTEROID;
+		schedule_callback2(event_callback, &callback_schedule,
+				"mining-bot-cargo-transfer-event",
+				(double) c->shipid, (double) miner->id);
 	}
 }
 
@@ -13379,6 +13386,9 @@ static void npc_menu_item_mining_bot_retarget(struct npc_menu_item *item,
 		dist = dist3d(asteroid->x - miner->x, asteroid->y - miner->y, asteroid->z - miner->z);
 		sprintf(msg, " RETARGETED TO %s, DISTANCE: %f",
 				asteroid ? asteroid->sdata.name : "UNKNOWN", dist);
+		schedule_callback6(event_callback, &callback_schedule,
+				"mining-bot-retargeted-event", (double) b->shipid, (double) miner->id,
+					asteroid->id, asteroid->x, asteroid->y, asteroid->z);
 	} else {
 		if (b->selected_waypoint < 0 || b->selected_waypoint >= b->nwaypoints) {
 			sprintf(msg, "INAPPROPRIATE WAYPOINT %d SELECTED", b->selected_waypoint);
@@ -13390,6 +13400,9 @@ static void npc_menu_item_mining_bot_retarget(struct npc_menu_item *item,
 			ai->wpz = wp->z;
 			dist = dist3d(ai->wpx - miner->x, ai->wpy - miner->y, ai->wpz - miner->z);
 			sprintf(msg, " RETARGETED TO SELECTED_WAYPOINT, DISTANCE: %f", dist);
+			schedule_callback6(event_callback, &callback_schedule,
+					"mining-bot-retargeted-event", (double) b->shipid, (double) miner->id,
+						-1.0, wp->x, wp->y, wp->z);
 		}
 	}
 	send_comms_packet(npcname, channel, msg);
@@ -14783,7 +14796,7 @@ static int process_textscreen_op(struct game_client *c)
 	switch (subcommand) {
 	case OPCODE_TEXTSCREEN_MENU_CHOICE:
 		schedule_one_callback(&callback_schedule, current_user_menu_callback,
-			(double) c->shipid, (double) selection, 0.0);
+			(double) c->shipid, (double) selection, 0.0, 0.0, 0.0, 0.0);
 		break;
 	default:
 		return -1;
@@ -17844,6 +17857,9 @@ static void launch_mining_bot(struct game_client *c, struct snis_entity *ship, u
 		message = "Malfunction detected. The mining robot's thrusters have failed to ignite.";
 		goto miningbotfail;
 	}
+	schedule_callback3(event_callback, &callback_schedule,
+		"mining-bot-deployed-event", (double) ship->id, (double) go[i].id,
+			oid == (uint32_t) -1 ? -1.0 : (double) oid);
 	pthread_mutex_unlock(&universe_mutex);
 	switch (go[i].type) {
 	case OBJTYPE_ASTEROID:
