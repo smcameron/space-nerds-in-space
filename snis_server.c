@@ -5002,7 +5002,7 @@ static void ai_mining_mode_return_to_parent(struct snis_entity *o, struct ai_min
 		delete_from_clients_and_server(o);
 		snis_queue_add_sound(MINING_BOT_STOWED,
 			ROLE_SOUNDSERVER | ROLE_COMMS | ROLE_SCIENCE, parent->id);
-		schedule_callback(event_callback, "mining-bot-stowed-event", (double) parent->id);
+		schedule_callback(event_callback, &callback_schedule, "mining-bot-stowed-event", (double) parent->id);
 		parent->tsd.ship.mining_bots = 1;
 	}
 }
@@ -13349,7 +13349,7 @@ static void npc_menu_item_mining_bot_transport_ores(struct npc_menu_item *item,
 		ai->mode = MINING_MODE_APPROACH_ASTEROID;
 		schedule_callback2(event_callback, &callback_schedule,
 				"mining-bot-cargo-transfer-event",
-				(double) c->shipid, (double) miner->id);
+				(double) parent->id, (double) miner->id);
 	}
 }
 
