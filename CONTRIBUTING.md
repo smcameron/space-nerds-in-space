@@ -4,13 +4,30 @@ How to Contribute
 How can I help?
 ---------------
 
+1. Nobody seems to know this game exists. Tell your friends about it. Bring it up at your
+   local [hackerspace](https://hackerspaces.org), where you might actually find enough
+   interested people and a space to be able to play it.
+
+1. Got ideas for some mission scenarios? Open an issue describing the mission you'd like to see.
+   Do you know [Lua](https://www.lua.org/)?  We need more mission scenario scripts.
+   Take a look at [lua-api.txt](https://github.com/smcameron/space-nerds-in-space/blob/master/lua-api.txt)
+   and at some of the mission scripts in
+   [share/snis/luascripts](https://github.com/smcameron/space-nerds-in-space/tree/master/share/snis/luascripts).
+   Reasonably good examples are [Saving Planet Erph](https://github.com/smcameron/space-nerds-in-space/blob/master/share/snis/luascripts/SAVING-PLANET-ERPH.LUA),
+   [Space Pox](https://github.com/smcameron/space-nerds-in-space/blob/master/share/snis/luascripts/SPACEPOX.LUA).
+   See also these tutorial videos about how to create mission scripts:
+
+   * [Space Nerds In Space Lua Scripting Tutorial Part 1](https://www.youtube.com/watch?v=p-98bsIYoWI)
+   * [Space Nerds In Space Lua Scripting Tutorial Part 2](https://www.youtube.com/watch?v=K-nt7147ksU)
+   * [Space Nerds In Space Lua Scripting Tutorial Part 3](https://www.youtube.com/watch?v=8EgWLZfvcYs)
+   * [Space Nerds In Space Lua Scripting Tutorial Part 4](https://www.youtube.com/watch?v=W6vm4m0voQ4)
+
 1. Do you have an unused *working* laptop computer *newer than 2011* lying around that has reasonable graphics capabilities (integrated Intel is ok)?  Send it to me. I could use more laptops for testing purposes.
 
-2. Do you have some joystick or controller lying around? Create a joystick mapping entry for it and send this mapping to me (see https://smcameron.github.io/space-nerds-in-space/#troubleshooting) or just send me the joystick or controller.
+1. Do you have some joystick or controller lying around? Create a joystick mapping entry for it and send this mapping to me (see https://smcameron.github.io/space-nerds-in-space/#troubleshooting) or just send me the joystick or controller.
 
-3. Nobody seems to know this game exists. Tell your friends about it.
-
-4. Do you know how to hack on C code? Will your employer let you contribute to open source projects? Maybe hacking on the Space Nerds In Space code is something you'd be interested in. 
+1. Do you know how to hack on C code? Will your employer let you contribute to open source projects?
+   Maybe hacking on the Space Nerds In Space code is something you'd be interested in.
 
 TODO: figure out how to help people know how to contribute
 
@@ -40,7 +57,7 @@ Important variables:
 
 1. client[] -- one element per game client
 2. bridgelist[] -- one element per bridge (crew) in the game.
-3. go[] -- one element per "game object" (struct snis_entity) 
+3. go[] -- one element per "game object" (struct snis_entity)
 4. bridgelist[].damcon -- sub-game for the damage control screen containing
    all the objects in the damage control sub-game.
 
@@ -61,9 +78,9 @@ Functions:
 Important variables:
 
 1. uiobjs -- all the user interface objects for all the screens
-2. go[] all the game objects 
+2. go[] all the game objects
 3. dco[] all the damage control objects
-4. ... 
+4. ...
 
 
 Adding new features
@@ -98,7 +115,7 @@ The gist of it is:
 1.  Indent with tabs not spaces.
 2.  Tabs are 8 characters wide, and this is about as malleable as the value of PI.
 3.  if either the "then" or "else" arm of the if statement requires braces, then both
-    arms should use braces.  If neither arm requires braces, then no braces. 
+    arms should use braces.  If neither arm requires braces, then no braces.
 4.  Variable names should_be_like_this, NotLikeThis, use lowercase with underscores
     not camel case.
 5.  Macros all uppercase, try not to be too clever with macros.
