@@ -107,6 +107,7 @@ struct ui_color_map {
 	struct ui_color_entry weap_warning;
 	struct ui_color_entry weap_gunsight;
 	struct ui_color_entry weap_targeting;
+	struct ui_color_entry weap_in_range;
 
 	struct ui_color_entry eng_gauge;
 	struct ui_color_entry eng_gauge_needle;
@@ -287,7 +288,8 @@ struct ui_color_map_accessor {
 	.u.map.weap_torpedoes_loaded	= { AMBER,		"weap-torpedoes_loaded" },
 	.u.map.weap_warning		= { RED,		"weap-warning" },
 	.u.map.weap_gunsight		= { GREEN_FIXUP,	"weap-gunsight" },
-	.u.map.weap_targeting		= { ORANGERED,		"weap-targeting" },
+	.u.map.weap_targeting		= { BLUE_FIXUP,		"weap-targeting" },
+	.u.map.weap_in_range		= { ORANGERED,		"weap-in-range" },
 
 	.u.map.eng_gauge		= { AMBER,		"eng-gauge" },
 	.u.map.eng_gauge_needle		= { RED,		"eng-gauge-needle" },
