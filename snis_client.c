@@ -15062,11 +15062,12 @@ static int construct_demon_command(char *input,
 		struct demon_cmd_packet **cmd, char *errmsg)
 {
 	char *s;
-	int i, l, g, g2, found, v;
+	int i, l, g, g2, v;
 	char *saveptr;
 	struct packed_buffer *pb;
 	int idcount;
 	char *original = NULL;
+	char lua_script[100];
 
 	original = strdup(input); /* save lowercase version for text to speech */
 	uppercase(input);
@@ -15077,17 +15078,12 @@ static int construct_demon_command(char *input,
 		goto error;
 	}
 
-	found = 0;
+	v = -1;
 	for (i = 0; i < ARRAYSIZE(demon_cmd); i++) {
 		if (strncmp(demon_cmd[i].verb, s, strlen(s)))
 			continue;
-		found = 1;
 		v = i;
 		break;
-	}
-	if (!found) {
-		sprintf(errmsg, "Unknown verb '%s'", s);
-		goto error;
 	}
 
 	switch (v) {
@@ -15237,9 +15233,10 @@ static int construct_demon_command(char *input,
 		case 16: /* disable real-time-strategy mode */
 			send_rtsmode_change_to_server(0);
 			break;
-		default: /* unknown */
-			sprintf(errmsg, "Unknown ver number %d\n", v);
-			goto error;
+		default: /* unknown, maybe it's a lua script */
+			snprintf(lua_script, sizeof(lua_script), "%s.LUA", s);
+			send_lua_script_packet_to_server(lua_script);
+			break;
 	}
 	if (original)
 		free(original);
