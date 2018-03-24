@@ -217,7 +217,7 @@ struct key_value_specification snis_entity_kvs[] = {
 	DOUBLE_TSDFIELD(next_laser_time),
 	UINT8_TSDFIELD(lifeform_count),
 	UINT32_TSDFIELD(tractor_beam),
-	UINT8_TSDFIELD(overheating_damage_done),
+	UINT8_TSDFIELD(damage_data_dirty),
 	FLOAT_TSDFIELD(steering_adjustment.vec[0]),
 	FLOAT_TSDFIELD(steering_adjustment.vec[1]),
 	FLOAT_TSDFIELD(steering_adjustment.vec[2]),

@@ -7402,7 +7402,6 @@ static void do_docking_action(struct snis_entity *ship, struct snis_entity *star
 	snprintf(msg, sizeof(msg), "%s, YOUR SHIP HAS BEEN REPAIRED AND REFUELED.\n",
 		b->shipname);
 	init_player(ship, 0, &charges);
-	send_ship_damage_packet(ship);
 	ship->timestamp = universe_timestamp;
 	snis_queue_add_sound(DOCKING_SOUND, ROLE_ALL, ship->id);
 	snis_queue_add_sound(WELCOME_TO_STARBASE, ROLE_NAVIGATION, ship->id);
@@ -8284,8 +8283,8 @@ static void player_move(struct snis_entity *o)
 	do_power_model_computations(o);
 	do_coolant_model_computations(o);
 	do_temperature_computations(o);
-	o->tsd.ship.overheating_damage_done = do_overheating_damage(o);
-	o->tsd.ship.overheating_damage_done |= do_sunburn_damage(o);
+	o->tsd.ship.damage_data_dirty = do_overheating_damage(o);
+	o->tsd.ship.damage_data_dirty |= do_sunburn_damage(o);
 	if (o->tsd.ship.fuel > FUEL_CONSUMPTION_UNIT) {
 		power_model_enable(o->tsd.ship.power_model);
 		o->tsd.ship.fuel -= (int) (FUEL_CONSUMPTION_UNIT *
@@ -9290,6 +9289,7 @@ static void repair_damcon_systems(struct snis_entity *o)
 		p->tsd.part.damage = 0;
 		p->version++;
 	}
+	o->tsd.ship.damage_data_dirty = 1;
 }	
 	
 static void init_player(struct snis_entity *o, int clear_cargo_bay, float *charges)
@@ -9352,7 +9352,7 @@ static void init_player(struct snis_entity *o, int clear_cargo_bay, float *charg
 	o->tsd.ship.sci_heading = M_PI / 2.0;
 	o->tsd.ship.reverse = 0;
 	o->tsd.ship.shiptype = SHIP_CLASS_WOMBAT; 
-	o->tsd.ship.overheating_damage_done = 0;
+	o->tsd.ship.damage_data_dirty = 1;
 	o->tsd.ship.ncargo_bays = 8;
 	o->tsd.ship.passenger_berths = 2;
 	o->tsd.ship.mining_bots = 1;
@@ -18626,8 +18626,10 @@ static void queue_up_client_object_update(struct game_client *c, struct snis_ent
 			send_respawn_time(c, o);
 		send_update_power_model_data(c, o);
 		send_update_coolant_model_data(c, o);
-		if (o->tsd.ship.overheating_damage_done)
+		if (o->tsd.ship.damage_data_dirty) {
 			send_silent_ship_damage_packet(o); /* sends to all clients. */
+			o->tsd.ship.damage_data_dirty = 0;
+		}
 		break;
 	case OBJTYPE_SHIP2:
 		send_econ_update_ship_packet(c, o);
@@ -20145,7 +20147,7 @@ static void move_damcon_entities_on_bridge(int bridge_number)
 		}
 	}
 	if (changed)
-		send_silent_ship_damage_packet(o);
+		o->tsd.ship.damage_data_dirty = 1;
 }
 
 static void move_damcon_entities(void)
