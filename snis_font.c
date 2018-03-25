@@ -156,6 +156,7 @@ static stroke_t glyph_rightbracket[] = { 2, 4, 24, 22, 99 };
 static stroke_t glyph_leftbracket[] = { 2, 0, 20, 22, 99 }; 
 static stroke_t glyph_semicolon[] = { 6, 7, LP, 16, 17, 22, 99 }; 
 static stroke_t glyph_tilde[] = { 5, 1, 7, 3, 4, 99 };
+static stroke_t glyph_equals[] = { 5, 9, LP, 15, 19, 99 };
 
 /* x and y offsets for decoding stroke_t's, above */
 static struct my_point_t decode_glyph[] = {
@@ -357,6 +358,7 @@ int snis_make_font(struct my_vect_obj ***font, float xscale, float yscale)
 	v['~'] = prerender_glyph(glyph_tilde, xscale, yscale);
 	v['{'] = prerender_glyph(glyph_open_curly, xscale, yscale);
 	v['}'] = prerender_glyph(glyph_close_curly, xscale, yscale);
+	v['='] = prerender_glyph(glyph_equals, xscale, yscale);
 
 	*font = v;
 	return 0;
