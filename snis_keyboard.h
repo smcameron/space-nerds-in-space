@@ -46,7 +46,8 @@ enum keyaction {
 		key_toggle_space_dust = 41,
 		key_toggle_credits = 42,
 		key_toggle_watermark = 43,
-#define NKEYSTATES 44
+		key_mouse_mode = 44,
+#define NKEYSTATES 45
 };
 
 struct keyboard_state {

@@ -153,6 +153,13 @@ static inline int txy(int y) { return y * SCREEN_HEIGHT / 600; }
 #define BUTTON_HOLD_INTERVAL 100 /* ms */
 static int vertical_controls_inverted = VERTICAL_CONTROLS_NORMAL;
 static volatile int vertical_controls_timer = 0;
+
+#define MOUSE_MODE_FREE_MOUSE 0
+#define MOUSE_MODE_CAPTURED_MOUSE 1
+static int desired_mouse_ui_mode = MOUSE_MODE_FREE_MOUSE;
+static int current_mouse_ui_mode = MOUSE_MODE_FREE_MOUSE;
+static volatile int mouse_mode_timer = 0;
+
 static int display_frame_stats = 0;
 static int quickstartmode = 0; /* allows auto connecting to first (only) lobby entry */
 static float turret_recoil_amount = 0.0f;
@@ -3016,6 +3023,7 @@ struct mouse_button_state {
 
 static struct mouse_state {
 	int x, y;
+	int deltax, deltay; /* for captured mouse on weapons screen */
 	struct mouse_button_state button[3];
 } mouse;
 
@@ -3803,6 +3811,16 @@ static gint key_press_cb(GtkWidget* widget, GdkEventKey* event, gpointer data)
 				vertical_controls_timer = FRAME_RATE_HZ;
 			}
 			return TRUE;
+	case key_mouse_mode:
+			if (control_key_pressed && displaymode == DISPLAYMODE_WEAPONS) {
+				if (current_mouse_ui_mode == MOUSE_MODE_CAPTURED_MOUSE)
+					desired_mouse_ui_mode = MOUSE_MODE_FREE_MOUSE;
+				else
+					desired_mouse_ui_mode = MOUSE_MODE_CAPTURED_MOUSE;
+				mouse_mode_timer = FRAME_RATE_HZ;
+				return TRUE;
+			}
+			break;
 	case key_toggle_space_dust:
 			if (displaymode != DISPLAYMODE_MAINSCREEN)
 				break;
@@ -7483,6 +7501,16 @@ static void show_common_screen(GtkWidget *w, char *title)
 			sng_center_xy_draw_string("VERTICAL CONTROLS INVERTED",
 					SMALL_FONT, SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2);
 	}
+	if (mouse_mode_timer) {
+		sng_set_foreground(UI_COLOR(special_options));
+		mouse_mode_timer--;
+		if (current_mouse_ui_mode == MOUSE_MODE_FREE_MOUSE)
+			sng_center_xy_draw_string("MOUSE MODE = NORMAL",
+					SMALL_FONT, SCREEN_WIDTH / 2, SCREEN_HEIGHT / 3);
+		else
+			sng_center_xy_draw_string("MOUSE MODE = CAPTURED",
+					SMALL_FONT, SCREEN_WIDTH / 2, SCREEN_HEIGHT / 3);
+	}
 	if (fake_stars_timer) {
 		sng_set_foreground(UI_COLOR(special_options));
 		fake_stars_timer--;
@@ -10115,6 +10143,48 @@ static void show_rts_win_screen(GtkWidget *w)
 	sng_abs_xy_draw_string(buf, BIG_FONT, txx(20), txy(150));
 	sprintf(buf, "THE ENEMY...");
 	sng_abs_xy_draw_string(buf, BIG_FONT, txx(20), txy(250));
+}
+
+void set_cursor(GtkWidget *window, int cursor_type)
+{
+	GdkCursor *cursor;
+	cursor = gdk_cursor_new(cursor_type);
+	gdk_window_set_cursor(window->window, cursor);
+	gdk_cursor_destroy(cursor);
+}
+
+void set_cross_cursor(GtkWidget *window)
+{
+	set_cursor(window, GDK_CROSS);
+}
+
+void set_normal_cursor(GtkWidget *window)
+{
+	set_cursor(window, GDK_ARROW);
+}
+
+static void maybe_grab_or_ungrab_mouse(GtkWidget *w, GdkEventMask event_mask)
+{
+	/* If we are not on the weapons screen, free the mouse if not already free. */
+	if (displaymode != DISPLAYMODE_WEAPONS) {
+		if (current_mouse_ui_mode != MOUSE_MODE_FREE_MOUSE) {
+			current_mouse_ui_mode = MOUSE_MODE_FREE_MOUSE;
+			(void) gdk_pointer_ungrab(GDK_CURRENT_TIME); /* free the mouse */
+			set_normal_cursor(w);
+		}
+		return;
+	}
+	if (desired_mouse_ui_mode == current_mouse_ui_mode)
+		return;
+	if (desired_mouse_ui_mode == MOUSE_MODE_CAPTURED_MOUSE) { /* capture the mouse */
+		(void) gdk_pointer_grab(gtk_widget_get_window(w), FALSE, event_mask,
+					NULL, NULL, GDK_CURRENT_TIME);
+		set_cross_cursor(w);
+	} else {
+		(void) gdk_pointer_ungrab(GDK_CURRENT_TIME); /* free the mouse */
+		set_normal_cursor(w);
+	}
+	current_mouse_ui_mode = desired_mouse_ui_mode;
 }
 
 static void show_manual_weapons(GtkWidget *w)
@@ -16864,6 +16934,7 @@ static char *help_text[] = {
 	"  * MATCH PHASER WAVELENGTH TO WEAKNESSES\n"
 	"    IN ENEMY SHIELDS\n"
 	"  * CTRL-I INVERTS VERTICAL KEYBOARD CONTROLS\n"
+	"  * CTRL-M TOGGLE WEAPONS MOUSE BEHAVIOR\n"
 	"  * CTRL-S TOGGLES SPACE DUST EFFECT\n"
 	"\nPRESS ESC TO EXIT HELP\n",
 
@@ -17196,6 +17267,10 @@ static int main_da_expose(GtkWidget *w, GdkEvent *event, gpointer p)
 			}
 		}
 	}
+	maybe_grab_or_ungrab_mouse(w, GDK_BUTTON_PRESS_MASK |
+					GDK_BUTTON_RELEASE_MASK |
+					GDK_BUTTON3_MOTION_MASK |
+					GDK_POINTER_MOTION_MASK);
 	switch (displaymode) {
 	case DISPLAYMODE_FONTTEST:
 		show_fonttest(w);
@@ -17987,6 +18062,35 @@ static int main_da_motion_notify(GtkWidget *w, GdkEventMotion *event,
 
 	mouse.x = event->x;
 	mouse.y = event->y;
+	if (current_mouse_ui_mode == MOUSE_MODE_CAPTURED_MOUSE) {
+		int cx, cy, window_origin_x, window_origin_y;
+
+		/* Find window origin in real screen coords */
+		window_origin_x = event->x_root - event->x;
+		window_origin_y = event->y_root - event->y;
+
+		/* Find center of window in real screen coords */
+		cx = window_origin_x + real_screen_width / 2;
+		cy = window_origin_y + real_screen_height / 2;
+
+		/* If the mouse is at the center of the screen, then do nothing,
+		 * as this is due to events from us warping to the center of the screen.
+		 */
+		if (event->x_root == cx && event->y_root == cy) {
+			mouse.deltax = 0;
+			mouse.deltay = 0;
+			mouse.x = event->x;
+			mouse.y = event->y;
+			return TRUE;
+		}
+		/* If the mouse is not at the center of the screen, then record the
+		 * delta from the center and warp it to the center of the screen,
+		 */
+		mouse.deltax = event->x - real_screen_width / 2;
+		mouse.deltay = event->y - real_screen_height / 2;
+		/* I suspect this might have trouble with multi-monitor setups */
+		gdk_display_warp_pointer(gdk_display_get_default(), gdk_screen_get_default(), cx, cy);
+	}
 
 	switch (displaymode) {
 	case DISPLAYMODE_DEMON:
@@ -17995,11 +18099,33 @@ static int main_da_motion_notify(GtkWidget *w, GdkEventMotion *event,
 		break;
 	case DISPLAYMODE_WEAPONS:
 		/* FIXME: throttle this network traffic */
-		smooth_mousexy(event->x, event->y, &smoothx, &smoothy);
-		yaw = weapons_mousex_to_yaw(smoothx);
-		pitch = weapons_mousey_to_pitch(smoothy);
-		queue_to_server(snis_opcode_pkt("bRR", OPCODE_REQUEST_WEAPONS_YAW_PITCH,
-					yaw, pitch));
+		if (current_mouse_ui_mode == MOUSE_MODE_FREE_MOUSE) {
+			smooth_mousexy(event->x, event->y, &smoothx, &smoothy);
+			yaw = weapons_mousex_to_yaw(smoothx);
+			pitch = weapons_mousey_to_pitch(smoothy);
+			queue_to_server(snis_opcode_pkt("bRR", OPCODE_REQUEST_WEAPONS_YAW_PITCH,
+						yaw, pitch));
+		} else { /* Captured mouse */
+			int yaw, pitch, v;
+			const int dead_threshold = 2;
+			const int fine_threshold = 7;
+			if (mouse.deltax < -dead_threshold) {
+				yaw = YAW_LEFT + 2 * (mouse.deltax > -fine_threshold);
+				request_weapons_manual_yaw_packet(yaw);
+			} else if (mouse.deltax > dead_threshold) {
+				yaw = YAW_RIGHT + 2 * (mouse.deltax < fine_threshold);
+				request_weapons_manual_yaw_packet(yaw);
+			}
+			if (mouse.deltay < -dead_threshold) {
+				v = vertical_controls_inverted < 0 ? PITCH_BACK : PITCH_FORWARD;
+				pitch = v + 2 * (mouse.deltay > -fine_threshold);
+				request_weapons_manual_pitch_packet(pitch);
+			} else if (mouse.deltay > dead_threshold) {
+				v = vertical_controls_inverted < 0 ? PITCH_FORWARD : PITCH_BACK;
+				pitch = v + 2 * (mouse.deltay < fine_threshold);
+				request_weapons_manual_pitch_packet(pitch);
+			}
+		}
 		break;
 	case DISPLAYMODE_ENGINEERING:
 		sx = (int) event->x;

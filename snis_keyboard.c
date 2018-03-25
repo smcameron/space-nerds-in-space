@@ -175,6 +175,7 @@ char *keyactionstring[] = {
 	"key_toggle_space_dust",
 	"key_toggle_credits",
 	"key_toggle_watermark",
+	"key_mouse_mode",
 };
 
 void init_keymap()
@@ -201,7 +202,8 @@ void init_keymap()
 	keymap[GDK_q] = keyrollleft;
 	keymap[GDK_e] = keyrollright;
 	keymap[GDK_c] = key_toggle_credits;
-	keymap[GDK_m] = key_toggle_watermark;
+	keymap[GDK_M] = key_toggle_watermark;
+	keymap[GDK_m] = key_mouse_mode;
 
 	keymap[GDK_space] = keyphaser;
 	keymap[GDK_z] = keytorpedo;
