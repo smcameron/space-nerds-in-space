@@ -9569,6 +9569,7 @@ static int add_ship(int faction, int auto_respawn)
 	go[i].tsd.ship.steering_adjustment.v.y = 0.0;
 	go[i].tsd.ship.steering_adjustment.v.z = 0.0;
 	go[i].tsd.ship.ncargo_bays = ship_type[st].ncargo_bays;
+	memset(go[i].tsd.ship.cargo, 0, sizeof(go[i].tsd.ship.cargo));
 	for (cb = 0; cb < go[i].tsd.ship.ncargo_bays; cb++) {
 		int item = commodity_sample();
 		float qty = (float) snis_randn(100);
@@ -9585,7 +9586,6 @@ static int add_ship(int faction, int auto_respawn)
 	quat_init_axis(&go[i].tsd.ship.computer_desired_orientation, 0, 1, 0, 0);
 	go[i].tsd.ship.computer_steering_time_left = 0;
 	go[i].tsd.ship.orbiting_object_id = 0xffffffff;
-	memset(go[i].tsd.ship.cargo, 0, sizeof(go[i].tsd.ship.cargo));
 	if (faction >= 0 && faction < nfactions())
 		go[i].sdata.faction = faction;
 	if (st == SHIP_CLASS_MANTIS) /* Ensure all Mantis tow ships are neutral faction */
@@ -12744,6 +12744,49 @@ static void pack_and_send_ship_sdata_packet(struct game_client *c, struct snis_e
 	pthread_mutex_lock(&universe_mutex);
 }
 
+static void send_update_ship_cargo_info(struct game_client *c, struct snis_entity *o)
+{
+	struct packed_buffer *pb;
+	int i, count;
+	uint32_t item;
+	double qty;
+
+	/* TODO: maybe we do not always send all this info or throttle it some how */
+
+	if (o->type != OBJTYPE_SHIP1 && o->type != OBJTYPE_SHIP2)
+		return;
+
+	/* If ship has no cargo, skip it */
+	count = 0;
+	for (i = 0; i < ship_type[o->tsd.ship.shiptype].ncargo_bays; i++) {
+		struct cargo_container_contents *cbc = &o->tsd.ship.cargo[i].contents;
+		if (cbc->item == -1 || cbc->qty == 0.0) /* empty */
+			continue;
+		count++;
+	}
+	if (count == 0)
+		return;
+
+	/* Ship has cargo, build up the buffer, opcode, id, non-empty bay count, contents...
+	 * 6 for "bwb", 9 for "bwS" per non-empty bay.
+	 */
+	pb = packed_buffer_allocate(6 + 9 * MAX_CARGO_BAYS_PER_SHIP);
+	packed_buffer_append(pb, "bwb", OPCODE_UPDATE_SHIP_CARGO_INFO, o->id, (uint8_t) count);
+
+	/* Build up the contents */
+	for (i = 0; i < ship_type[o->tsd.ship.shiptype].ncargo_bays; i++) {
+		struct cargo_container_contents *cbc = &o->tsd.ship.cargo[i].contents;
+		if (cbc->item == -1 || cbc->qty == 0.0) /* empty */
+			continue;
+		item = cbc->item;
+		qty = cbc->qty;
+		packed_buffer_append(pb, "bwS", (uint8_t) i, item, qty, (int32_t) 1000000);
+	}
+	pthread_mutex_unlock(&universe_mutex);
+	send_packet_to_all_clients_on_a_bridge(c->shipid, pb, ROLE_SCIENCE);
+	pthread_mutex_lock(&universe_mutex);
+}
+
 static int save_sdata_bandwidth(void)
 {
 	/* TODO: something clever here. */
@@ -12841,16 +12884,19 @@ static void send_update_sdata_packets(struct game_client *c, struct snis_entity 
 	if (save_sdata_bandwidth() && o != &go[c->ship_index]) {
 #if GATHER_OPCODE_STATS
 		write_opcode_stats[OPCODE_SHIP_SDATA].count_not_sent++;
+		write_opcode_stats[OPCODE_UPDATE_SHIP_CARGO_INFO].count_not_sent++;
 #endif
 		return;
 	}
 	if (!should_send_sdata(c, ship, o)) {
 #if GATHER_OPCODE_STATS
 		write_opcode_stats[OPCODE_SHIP_SDATA].count_not_sent++;
+		write_opcode_stats[OPCODE_UPDATE_SHIP_CARGO_INFO].count_not_sent++;
 #endif
 		return;
 	}
 	pack_and_send_ship_sdata_packet(c, o);
+	send_update_ship_cargo_info(c, o);
 }
 
 static int process_role_onscreen(struct game_client *c)

@@ -381,10 +381,11 @@ COMMONOBJS=mathutils.o snis_alloc.o snis_socket_io.o snis_marshal.o \
 		bline.o shield_strength.o stacktrace.o snis_ship_type.o \
 		snis_faction.o mtwist.o names.o infinite-taunt.o snis_damcon_systems.o \
 		string-utils.o c-is-the-locale.o starbase_metadata.o arbitrary_spin.o \
-		planetary_atmosphere.o mesh.o pthread_util.o snis_opcode_def.o rts_unit_data.o
+		planetary_atmosphere.o mesh.o pthread_util.o snis_opcode_def.o rts_unit_data.o \
+		commodities.o
 SERVEROBJS=${COMMONOBJS} snis_server.o starbase-comms.o \
 		power-model.o quat.o vec4.o matrix.o snis_event_callback.o space-part.o fleet.o \
-		commodities.o docking_port.o elastic_collision.o snis_nl.o spelled_numbers.o \
+		docking_port.o elastic_collision.o snis_nl.o spelled_numbers.o \
 		snis_server_tracker.o snis_bridge_update_packet.o solarsystem_config.o a_star.o \
 		key_value_parser.o nonuniform_random_sampler.o oriented_bounding_box.o \
 		graph_dev_mesh_stub.o turret_aimer.o snis_hash.o

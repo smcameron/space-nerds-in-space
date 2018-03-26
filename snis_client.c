@@ -103,6 +103,7 @@
 #include "pronunciation.h"
 #include "planetary_atmosphere.h"
 #include "rts_unit_data.h"
+#include "commodities.h"
 
 #include "vertex.h"
 #include "triangle.h"
@@ -313,6 +314,9 @@ static int monitorid = -1;
 static int avoid_lobby = 0;
 static struct ssgl_game_server lobby_game_server[100];
 static int ngameservers = 0;
+
+static struct commodity *commodity;
+static int ncommodities;
 
 static struct ui_element_list *uiobjs = NULL;
 static ui_element_drawing_function ui_slider_draw = (ui_element_drawing_function) snis_slider_draw;
@@ -5187,6 +5191,46 @@ static int process_ship_sdata_packet(void)
 	return 0;
 }
 
+static int process_update_ship_cargo_info(void)
+{
+	uint32_t id, item;
+	uint8_t bay;
+	double qty;
+	int i, rc;
+	struct snis_entity *o;
+	unsigned char buffer[6 + 9 * MAX_CARGO_BAYS_PER_SHIP];
+	uint8_t count;
+
+	rc = read_and_unpack_buffer(buffer, "wb", &id, &count);
+	if (rc)
+		return rc;
+	if (count == 0 || count > MAX_CARGO_BAYS_PER_SHIP)
+		return -1;
+	pthread_mutex_lock(&universe_mutex);
+	i = lookup_object_by_id(id);
+	if (i < 0)
+		goto out;
+	o = &go[i];
+	if (o->type != OBJTYPE_SHIP1 && o->type != OBJTYPE_SHIP2)
+		goto out;
+	for (i = 0; i < count; i++) {
+		rc = read_and_unpack_buffer(buffer, "bwS", &bay, &item, &qty, (int32_t) 1000000);
+		if (rc)
+			goto bail;
+		if (bay >= MAX_CARGO_BAYS_PER_SHIP)
+			goto bail;
+		struct cargo_container_contents *cbc = &o->tsd.ship.cargo[bay].contents;
+		cbc->item = item;
+		cbc->qty = qty;
+	}
+out:
+	pthread_mutex_unlock(&universe_mutex);
+	return 0;
+bail:
+	pthread_mutex_unlock(&universe_mutex);
+	return -1;
+}
+
 static int process_role_onscreen_packet(void)
 {
 	unsigned char buffer[sizeof(struct role_onscreen_packet)];
@@ -6902,6 +6946,11 @@ static void *gameserver_reader(__attribute__((unused)) void *arg)
 			break;
 		case OPCODE_RTS_FUNC:
 			rc = process_rts_func();
+			if (rc)
+				goto protocol_error;
+			break;
+		case OPCODE_UPDATE_SHIP_CARGO_INFO:
+			rc = process_update_ship_cargo_info();
 			if (rc)
 				goto protocol_error;
 			break;
@@ -14118,6 +14167,7 @@ static void draw_science_details(GtkWidget *w, GdkGC *gc)
 	float angle;
 	union quat orientation;
 	int y, yinc = 20 * SCREEN_HEIGHT / 600;
+	int i;
 
 	if (!curr_science_guy || !curr_science_guy->entity)
 		return;
@@ -14269,6 +14319,23 @@ static void draw_science_details(GtkWidget *w, GdkGC *gc)
 			sprintf(buf, "WEAPONRY: TORPEDOES");
 		sng_abs_xy_draw_string(buf, TINY_FONT, 10, y);
 		y += yinc;
+
+		for (i = 0; i < ship_type[s->shiptype].ncargo_bays; i++) {
+			struct cargo_container_contents *cbc = &s->cargo[i].contents;
+			if (cbc->item < 0)
+				continue;
+			if (i == 0) {
+				sprintf(buf, "PROBABLE CARGO:");
+				sng_abs_xy_draw_string(buf, TINY_FONT, 10, y);
+				y += yinc;
+			}
+			if (cbc->item < ncommodities) {
+				sprintf(buf, "- %4.2f %s %s", cbc->qty,
+					commodity[cbc->item].unit, commodity[cbc->item].name);
+				sng_abs_xy_draw_string(buf, TINY_FONT, 10, y);
+			}
+			y += yinc;
+		}
 	}
 }
  
@@ -16798,7 +16865,7 @@ static void show_network_setup(GtkWidget *w)
 
 static void make_science_forget_stuff(void)
 {
-	int i;
+	int i, j;
 
 	/* After awhile, science forgets... this is so the scientist
 	 * can't just scan everything then sit back and relax for the
@@ -16809,6 +16876,14 @@ static void make_science_forget_stuff(void)
 		struct snis_entity *o = &go[i];
 		if (o->sdata.science_data_known) /* forget after awhile */
 			o->sdata.science_data_known--;
+		if (!o->sdata.science_data_known) {
+			if (o->type == OBJTYPE_SHIP1 || o->type == OBJTYPE_SHIP2) {
+				for (j = 0; j < MAX_CARGO_BAYS_PER_SHIP; j++) {
+					o->tsd.ship.cargo[j].contents.item = -1;
+					o->tsd.ship.cargo[j].contents.qty = 0;
+				}
+			}
+		}
 	}
 	pthread_mutex_unlock(&universe_mutex);
 }
@@ -19516,6 +19591,10 @@ int main(int argc, char *argv[])
 	memset(dco, 0, sizeof(dco));
 	damconscreenx = NULL;
 	damconscreeny = NULL;
+
+	char commodity_path[PATH_MAX];
+	sprintf(commodity_path, "%s/%s", asset_dir, "commodities.txt");
+	commodity = read_commodities(commodity_path, &ncommodities);
 
 	if (read_ship_types())
 		return -1;
