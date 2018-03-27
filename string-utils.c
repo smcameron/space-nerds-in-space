@@ -194,3 +194,14 @@ int strchrcount(char *s, int c)
 			count++;
 	return count;
 }
+
+/* strncpy but force terminating null */
+char *strnzcpy(char *dest, const char *src, size_t n)
+{
+	char *rc;
+
+	rc = strncpy(dest, src, n);
+	dest[n - 1] = '\0';
+	return rc;
+}
+

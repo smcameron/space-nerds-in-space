@@ -46,7 +46,7 @@ static int parse_float_field(char *filename, char *line, int ln, float *value, c
 	c = strtok_r(NULL, ",", saveptr);
 	if (!c)
 		return parse_error(filename, line, ln, NULL);
-	strcpy(word, c);
+	strnzcpy(word, c, sizeof(word));
 	clean_spaces(word);
 	rc = sscanf(word, "%f", value);
 	if (rc != 1)
@@ -63,7 +63,7 @@ static int parse_int_field(char *filename, char *line, int ln, int *value, char 
 	c = strtok_r(NULL, ",", saveptr);
 	if (!c)
 		return parse_error(filename, line, ln, NULL);
-	strcpy(word, c);
+	strnzcpy(word, c, sizeof(word));
 	clean_spaces(word);
 	rc = sscanf(word, "%d", value);
 	if (rc != 1)
@@ -87,28 +87,28 @@ static int parse_line(char *filename, char *line, int ln, struct commodity *c)
 	x = strtok_r(line, ",", &saveptr);
 	if (!x)
 		return parse_error(filename, line, ln, NULL);
-	strcpy(word, x);
+	strnzcpy(word, x, sizeof(word));
 	clean_spaces(word);
 	uppercase(word);
-	strcpy(c->name, word);
+	strnzcpy(c->name, word, sizeof(c->name));
 
 	/* unit */
 	x = strtok_r(NULL, ",", &saveptr);
 	if (!x)
 		return parse_error(filename, line, ln, NULL);
-	strcpy(word, x);
+	strnzcpy(word, x, sizeof(word));
 	clean_spaces(word);
 	uppercase(word);
-	strcpy(c->unit, word);
+	strnzcpy(c->unit, word, sizeof(c->unit));
 
 	/* scans_as */
 	x = strtok_r(NULL, ",", &saveptr);
 	if (!x)
 		return parse_error(filename, line, ln, NULL);
-	strcpy(word, x);
+	strnzcpy(word, x, sizeof(word));
 	clean_spaces(word);
 	uppercase(word);
-	strcpy(c->scans_as, word);
+	strnzcpy(c->scans_as, word, sizeof(c->scans_as));
 
 	rc = parse_float_field(filename, line, ln, &c->base_price, &saveptr);
 	if (rc)
@@ -210,9 +210,9 @@ int add_commodity(struct commodity **c, int *ncommodities, const char *name, con
 	*c = newc;
 	newc = &(*c)[n - 1];
 
-	strncpy(newc->name, name, sizeof(newc->name));
-	strncpy(newc->unit, unit, sizeof(newc->unit));
-	strncpy(newc->scans_as, scans_as, sizeof(newc->scans_as));
+	strnzcpy(newc->name, name, sizeof(newc->name));
+	strnzcpy(newc->unit, unit, sizeof(newc->unit));
+	strnzcpy(newc->scans_as, scans_as, sizeof(newc->scans_as));
 	newc->base_price = base_price;
 	newc->volatility = volatility;
 	newc->legality = legality;

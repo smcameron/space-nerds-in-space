@@ -12,5 +12,6 @@ int has_prefix(char *prefix, char *str);
 char *slurp_file(const char *path, int *bytes); /* returns allocated string containingg contents of file */
 void remove_single_quotes(char *text);
 int strchrcount(char *s, int c); /* returns count of occurrences of c within s */
+char *strnzcpy(char *dest, const char *src, size_t n);
 
 #endif
