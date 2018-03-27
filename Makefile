@@ -984,8 +984,8 @@ nonuniform_random_sampler.o:	nonuniform_random_sampler.c nonuniform_random_sampl
 test_nonuniform_random_sampler:	nonuniform_random_sampler.o mathutils.o mtwist.o
 	gcc -D TEST_NONUNIFORM_SAMPLER -o test_nonuniform_random_sampler mtwist.o mathutils.o -lm nonuniform_random_sampler.c
 
-test-commodities:	commodities.o Makefile
-	gcc -DTESTCOMMODITIES=1 -c commodities.c -o test-commodities.o
+test-commodities:	commodities.o Makefile string-utils.o
+	gcc -DTESTCOMMODITIES=1 -O3 -c commodities.c -o test-commodities.o
 	gcc -DTESTCOMMODITIES=1 -o test-commodities string-utils.o test-commodities.o
 
 test-obj-parser:	test-obj-parser.c stl_parser.o mesh.o mtwist.o mathutils.o matrix.o quat.o Makefile
