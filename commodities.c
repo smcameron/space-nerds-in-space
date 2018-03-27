@@ -231,7 +231,7 @@ static void test_price(struct commodity *c, float e, float g, float t)
 	float p;
 
 	p = commodity_calculate_price(c, e, t, g);
-	printf("%s %0.2f %0.2f %0.2f %3.2f\n", c->name, e, t, g, p);
+	printf("%s %s %s %0.2f %0.2f %0.2f %3.2f\n", c->name, c->unit, c->scans_as, e, t, g, p);
 }
 
 int main(int argc, char *argv[])
