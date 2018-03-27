@@ -14331,7 +14331,7 @@ static void draw_science_details(GtkWidget *w, GdkGC *gc)
 			}
 			if (cbc->item < ncommodities) {
 				sprintf(buf, "- %4.2f %s %s", cbc->qty,
-					commodity[cbc->item].unit, commodity[cbc->item].name);
+					commodity[cbc->item].unit, commodity[cbc->item].scans_as);
 				sng_abs_xy_draw_string(buf, TINY_FONT, 10, y);
 			}
 			y += yinc;

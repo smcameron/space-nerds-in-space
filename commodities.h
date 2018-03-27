@@ -23,7 +23,8 @@
 
 struct commodity {
 	char name[40];
-	char unit[40];
+	char unit[20];
+	char scans_as[20];
 	float base_price;
 	float volatility;
 	float legality;
@@ -49,7 +50,7 @@ float commodity_calculate_price(struct commodity *c,
 		float economy, float tech_level, float government);
 
 int add_commodity(struct commodity **c, int *ncommodities, const char *name, const char *unit,
-			float base_price, float volatility, float legality,
+			const char *scans_as, float base_price, float volatility, float legality,
 			float econ_sensitivity, float govt_sensitivity, float tech_sensitivity, int odds);
 
 #endif

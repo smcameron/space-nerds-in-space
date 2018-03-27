@@ -729,7 +729,7 @@ set_commodity_contents(object_id, commodity_index, quantity, cargo_bay_number) -
 	set_commodity_contents(player_ids[1], n, 100.0, 0);
 	set_commodity_contents(my_container, n, 100.0);
 
-add_commodity(name, unit, base_price, volatility, legality,
+add_commodity(name, unit, scans_as, base_price, volatility, legality,
 		econ_sensitivity, govt_sensitivity, tech_sensitivity,
 		odds);
   Adds a new commodity to the predefined set of commodities.  This is useful for

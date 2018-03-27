@@ -16959,17 +16959,18 @@ static int l_add_commodity(lua_State *l)
 {
 	const char *name = luaL_checkstring(l, 1);
 	const char *units = luaL_checkstring(l, 2);
-	const double base_price = luaL_checknumber(l, 3);
-	const double volatility = luaL_checknumber(l, 4);
-	const double legality = luaL_checknumber(l, 5);
-	const double econ_sensitivity = luaL_checknumber(l, 6);
-	const double govt_sensitivity = luaL_checknumber(l, 7);
-	const double tech_sensitivity = luaL_checknumber(l, 8);
-	const double odds = luaL_checknumber(l, 9);
+	const char *scans_as = luaL_checkstring(l, 3);
+	const double base_price = luaL_checknumber(l, 4);
+	const double volatility = luaL_checknumber(l, 5);
+	const double legality = luaL_checknumber(l, 6);
+	const double econ_sensitivity = luaL_checknumber(l, 7);
+	const double govt_sensitivity = luaL_checknumber(l, 8);
+	const double tech_sensitivity = luaL_checknumber(l, 9);
+	const double odds = luaL_checknumber(l, 10);
 	int iodds = odds;
 
 	int n = add_commodity(&commodity, &ncommodities,
-		name, units, base_price, volatility, legality,
+		name, units, scans_as, base_price, volatility, legality,
 		econ_sensitivity, govt_sensitivity, tech_sensitivity, iodds);
 	lua_pushnumber(l, (double) n);
 	return 1;

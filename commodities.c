@@ -101,6 +101,15 @@ static int parse_line(char *filename, char *line, int ln, struct commodity *c)
 	uppercase(word);
 	strcpy(c->unit, word);
 
+	/* scans_as */
+	x = strtok_r(NULL, ",", &saveptr);
+	if (!x)
+		return parse_error(filename, line, ln, NULL);
+	strcpy(word, x);
+	clean_spaces(word);
+	uppercase(word);
+	strcpy(c->scans_as, word);
+
 	rc = parse_float_field(filename, line, ln, &c->base_price, &saveptr);
 	if (rc)
 		return rc;
@@ -189,7 +198,7 @@ float commodity_calculate_price(struct commodity *c,
 }
 
 int add_commodity(struct commodity **c, int *ncommodities, const char *name, const char *unit,
-			float base_price, float volatility, float legality,
+			const char *scans_as, float base_price, float volatility, float legality,
 			float econ_sensitivity, float govt_sensitivity, float tech_sensitivity, int odds)
 {
 	struct commodity *newc;
@@ -202,7 +211,8 @@ int add_commodity(struct commodity **c, int *ncommodities, const char *name, con
 	newc = &(*c)[n - 1];
 
 	strncpy(newc->name, name, sizeof(newc->name));
-	strncpy(newc->unit, unit, sizeof(newc->name));
+	strncpy(newc->unit, unit, sizeof(newc->unit));
+	strncpy(newc->scans_as, scans_as, sizeof(newc->scans_as));
 	newc->base_price = base_price;
 	newc->volatility = volatility;
 	newc->legality = legality;
