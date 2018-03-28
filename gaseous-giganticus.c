@@ -65,6 +65,7 @@ static int wstep_period = 10;
 static float wstep = 0.0f;
 #define FBM_DEFAULT_FALLOFF (0.5)
 static float fbm_falloff = FBM_DEFAULT_FALLOFF; 
+static float gain = 1.0;
 static float ff[] = {
 	1.0,
 	FBM_DEFAULT_FALLOFF,
@@ -968,6 +969,7 @@ static void usage(void)
 	fprintf(stderr, "                 Default is 1000\n");
 	fprintf(stderr, "   -C, --cloudmode: modulate image output by to produce clouds\n");
 	fprintf(stderr, "   -f, --fbm-falloff: Use specified falloff for FBM noise.  Default is 0.5\n");
+	fprintf(stderr, "   -g, --gain, 2nd and later octaves are multiplied by pow(fbm-falloff, (octave-1)*gain)\n");
 	fprintf(stderr, "   -F, --vfdim: Set size of velocity field.  Default:2048. Min: 16. Max: 2048\n");
 	fprintf(stderr, "   -i, --input : Input image filename.  Must be RGB or RGBA png file.\n");
 	fprintf(stderr, "   -I, --image-save-period: Interval of simulation iterations after which\n");
@@ -1048,6 +1050,7 @@ static struct option long_options[] = {
 	{ "opacity", required_argument, NULL, 'O' },
 	{ "w-offset", required_argument, NULL, 'w' },
 	{ "fbm-falloff", required_argument, NULL, 'f' },
+	{ "gain", required_argument, NULL, 'g' },
 	{ "hot-pink", no_argument, NULL, 'h' },
 	{ "help", no_argument, NULL, 'H' },
 	{ "no-fade", no_argument, NULL, 'n' },
@@ -1137,7 +1140,7 @@ static void process_options(int argc, char *argv[])
 
 	while (1) {
 		int option_index;
-		c = getopt_long(argc, argv, "a:B:b:c:Cd:D:f:F:hHi:k:I:lL:nNm:o:O:p:PRr:sSt:Vv:w:W:x:z:",
+		c = getopt_long(argc, argv, "a:B:b:c:Cd:D:f:g:F:hHi:k:I:lL:nNm:o:O:p:PRr:sSt:Vv:w:W:x:z:",
 				long_options, &option_index);
 		if (c == -1)
 			break;
@@ -1184,6 +1187,16 @@ static void process_options(int argc, char *argv[])
 			ff[4] = ff[3] * fbm_falloff;
 			ff[5] = ff[4] * fbm_falloff;
 			ff[6] = ff[5] * fbm_falloff;
+			break;
+		case 'g':
+			process_float_option("gain", optarg, &gain);
+			ff[0] = 1.0;
+			ff[1] = fbm_falloff; /* same as pow(fbm_fallof, 0.0 * gain); */
+			ff[2] = pow(fbm_falloff, 1.0 * gain);
+			ff[3] = pow(fbm_falloff, 2.0 * gain);
+			ff[4] = pow(fbm_falloff, 3.0 * gain);
+			ff[5] = pow(fbm_falloff, 4.0 * gain);
+			ff[6] = pow(fbm_falloff, 5.0 * gain);
 			break;
 		case 'F':
 			process_int_option("vfdim", optarg, &vfdim);

@@ -13,6 +13,7 @@ gaseous-giganticus \- make 6 images forming a cube map for a gas giant planet
 [ -C ]
 [ -d velocity-field-dumpfile ]
 [ -f fbm-falloff ]
+[ -g gain ]
 [ -F velocity-field-dimension ]
 [ -h ]
 [ -H ]
@@ -152,6 +153,13 @@ by this value.  Default is 0.5.   So for example, the lowest octave of noise
 is multiplied by 1.0, the 2nd octave by 0.5, the 3rd by 0.25, and the fourth
 (last) by 0.125.  If fbm-falloff is specified as 0.4, then the lowest octave
 is multiplied by 1.0, the next by 0.4, the next by 0.16 and the last by 0.064.
+-g, --gain
+2nd and successive octaves of fbm noise are multiplied by
+pow(fbm-falloff, (octave - 1) * gain). Default value is 1.0. Assuming that
+fbm-falloff is less than 1.0, gain should be between 0.0 and 2.0. Values larger
+than 1.0 give more prominence to lower octaves (noise will be smoother) while
+values lower than 1.0 give more prominence to higher octaves (noise will be
+rougher).
 .TP
 -F, --vfdim
 Set the velocity field dimension.  Default is 2048, yielding a velocity field
