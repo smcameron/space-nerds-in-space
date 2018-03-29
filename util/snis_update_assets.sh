@@ -25,7 +25,8 @@ fetch_file()
 	local URL="$1"
 	local FILE="$2"
 	local dryrun="$3"
-	echo -n 1>&2 "Fetching $URL... "
+	updating_or_creating="$4"
+	echo -n 1>&2 "$updating_or_creating $FILE... "
 	if [ "$dryrun" = "0" ]
 	then
 		wget --quiet "$1" -O - > "$FILE"
@@ -43,7 +44,7 @@ fetch_file()
 
 move_file()
 {
-	local dryrun= "$1"
+	local dryrun="$1"
 	local old="$2"
 	local new="$3"
 	if [ "$dryrun" = "0" ]
@@ -70,7 +71,7 @@ update_file()
 				echo "$PROG"':Cannot move old $filename out of the way, skipping' 1>&2
 				update_fail_count=$((update_fail_count + 1))
 			else
-				fetch_file "$ASSET_URL"/"$filename" "$filename" "$dryrun"
+				fetch_file "$ASSET_URL"/"$filename" "$filename" "$dryrun" "Updating"
 				if [ "$?" != "0" ]
 				then
 					update_fail_count=$((update_fail_count + 1))
@@ -95,7 +96,7 @@ update_file()
 		fi
 		if [ -d "$dname" -o "$dryrun" != "0" ]
 		then
-			fetch_file $ASSET_URL/$filename $filename "$dryrun"
+			fetch_file $ASSET_URL/$filename $filename "$dryrun" "Creating"
 			if [ "$?" = "0" ]
 			then
 				new_count=$((new_count+1))
@@ -146,7 +147,7 @@ then
 fi
 
 sanity_check_environment
-fetch_file "$MANIFEST_URL" "$MANIFEST_FILE" 0
+fetch_file "$MANIFEST_URL" "$MANIFEST_FILE" 0 "Fetching"
 if [ "$?" != "0" ]
 then
 	exit 1
