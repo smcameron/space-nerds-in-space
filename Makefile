@@ -541,7 +541,12 @@ GGOBJS=mtwist.o mathutils.o open-simplex-noise.o quat.o png_utils.o pthread_util
 GGLIBS=-lm ${LRTLIB} -lpng
 GGLINK=$(ECHO) '  LINK' $@ && $(CC) ${MYCFLAGS} -o $@ ${GTKCFLAGS} gaseous-giganticus.o ${GGOBJS} ${GGLIBS} $(LDFLAGS)
 
-all:	${COMMONOBJS} ${SERVEROBJS} ${MULTIVERSEOBJS} ${CLIENTOBJS} ${LIMCLIENTOBJS} ${PROGS} ${MODELS} ${BINPROGS} ${SCAD_PARAMS_FILES} ${DOCKING_PORT_FILES}
+all:	${COMMONOBJS} ${SERVEROBJS} ${MULTIVERSEOBJS} ${CLIENTOBJS} ${LIMCLIENTOBJS} ${PROGS} ${BINPROGS} ${SCAD_PARAMS_FILES} ${DOCKING_PORT_FILES}
+
+models:	${MODELS}
+
+update-assets:
+	@util/snis_update_assets.sh
 
 build:	all
 
