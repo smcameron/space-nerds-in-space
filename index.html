@@ -134,16 +134,21 @@ apt-get install libvorbis-dev
 apt-get install libgtk2.0-dev
 apt-get install git
 apt-get install stgit
-apt-get install openscad # or get it from http://www.openscad.org/downloads.html
 apt-get install libgtkglext1-dev
 apt-get install liblua5.2-dev
 apt-get install libglew1.5-dev
 apt-get install libssl-dev
 apt-get install libttspico-utils # for text to speech
 apt-get install sox # for "play" command, used by text to speech
+
+(The following are optional)
+
 apt-get install espeak # optional alternative to libttspico-utils
 apt-get install alsa-utils # optional alternative to sox, for "aplay" command
 apt-get-install libsdl1.2-dev # optional, only needed for mesh_viewer
+apt-get install openscad # optional, only needed if you intend to work on 3D models.
+                Also, it is recommended to get it from http://www.openscad.org/downloads.html
+                as the version in the repos tends to be out of date.
 </blockquote>
 </pre>
 
@@ -203,7 +208,7 @@ directory for the game ("space-nerds-in-space" if you
 got the source using git, or "space-nerds-in-space-master" if you
 downloaded the zip file), and type:
 <pre><blockquote>
-make O=1
+make
 </blockquote></pre>
 <p>You should see quite a lot of output, like this:
 <pre>
@@ -232,7 +237,27 @@ account to file a bug report.
 <li><a href="https://github.com/smcameron/space-nerds-in-space/issues">Click here to file a bug report</a>.
 </ul>
 
-<h2><a name="singlemachineinstructions">Step 4. Run the Game on a single system (Try this before trying multiplayer)</a></h2>
+<h2>Step 4: build openscad models (optional)</h2>
+<p>Or you can skip to step 5 and download them.
+This step will take a long time and requires that you installed OpenSCAD.
+In general, unless you are working on the models, you can skip this step.
+<pre>
+<blockquote>
+  make models
+</blockquote>
+</pre>
+<h2>Step 5: Download additional assets</h2>
+<p>If you skipped step 4 and didn't build the openscad models, they will be downloaded
+in this step, along with some other things. This step requires an internet connection.
+If you performed step 4, you may skip this step though it is not recommended,
+as you will be missing some additional solarsystem assets.
+<pre>
+<blockquote>
+  make update-assets
+</blockquote>
+</pre>
+
+<h2><a name="singlemachineinstructions">Step 6. Run the Game on a single system (Try this before trying multiplayer)</a></h2>
 <p>Type:
 <blockquote>
 <pre>
@@ -266,7 +291,7 @@ exactly like this as your ship will be placed in a semi-random location facing
 an arbitrary direction.  If you've gotten this far, congratulations, you're doing
 better than most.
 <p align=center><img src="out-the-window.jpg", width=85%>
-<h2>Step 5. Play around</h2>
+<h2>Step 6. Play around</h2>
 <h3><a name="controls">Keyboard Controls</b></h3>
 <p>The function keys are used to switch between screens, except for F1, which is the 'help' key.
 <ul>
