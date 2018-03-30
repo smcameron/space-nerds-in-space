@@ -20,8 +20,6 @@ uniform float u_Invert;
 #endif
 	void main()
 	{
-		vec4 pos = u_MVPMatrix * a_Position;
-
 		// Transform the vertex into eye space.
 		vec3 modelViewVertex = vec3(u_MVMatrix * a_Position);
 
