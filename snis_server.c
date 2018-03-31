@@ -7625,6 +7625,8 @@ static void player_collision_detection(void *player, void *object)
 					(t->tsd.planet.radius + PLAYER_PLANET_DIST_WARN);
 		const float too_close2 = (t->tsd.planet.radius + PLAYER_PLANET_DIST_TOO_CLOSE) *
 					(t->tsd.planet.radius + PLAYER_PLANET_DIST_TOO_CLOSE);
+		const float low_alt = (t->tsd.planet.radius + PLAYER_PLANET_LOW_ALT_WARN) *
+					(t->tsd.planet.radius + PLAYER_PLANET_LOW_ALT_WARN);
 
 		/* check security level ... */
 		if (t->tsd.planet.security > o->tsd.ship.in_secure_area &&
@@ -7642,14 +7644,19 @@ static void player_collision_detection(void *player, void *object)
 			schedule_callback(event_callback, &callback_schedule,
 					"player-death-callback", o->id);
 		} else if (dist2 < too_close2 && (universe_timestamp & 0x7) == 0) {
-			(void) add_explosion(o->x + o->vx * 2, o->y + o->vy * 2, o->z + o->vz * 2,
-				20, 10, 50, OBJTYPE_SPARK);
-			calculate_atmosphere_damage(o);
-			send_ship_damage_packet(o);
-			send_packet_to_all_clients_on_a_bridge(o->id,
-				snis_opcode_pkt("b", OPCODE_ATMOSPHERIC_FRICTION),
-					ROLE_SOUNDSERVER | ROLE_NAVIGATION);
-		} else if (dist2 < warn_dist2 && (universe_timestamp & 0x7) == 0) {
+			if (t->tsd.planet.has_atmosphere) {
+				(void) add_explosion(o->x + o->vx * 2, o->y + o->vy * 2, o->z + o->vz * 2,
+					20, 10, 50, OBJTYPE_SPARK);
+				calculate_atmosphere_damage(o);
+				send_ship_damage_packet(o);
+				send_packet_to_all_clients_on_a_bridge(o->id,
+					snis_opcode_pkt("b", OPCODE_ATMOSPHERIC_FRICTION),
+						ROLE_SOUNDSERVER | ROLE_NAVIGATION);
+			} else if (dist2 < low_alt && (universe_timestamp & 0x1f) == 0) {
+				snis_queue_add_text_to_speech("Warning, low altitude.",
+					ROLE_TEXT_TO_SPEECH, o->id);
+			}
+		} else if (dist2 < warn_dist2 && (universe_timestamp & 0x7) == 0 && t->tsd.planet.has_atmosphere) {
 			(void) add_explosion(o->x + o->vx * 2, o->y + o->vy * 2, o->z + o->vz * 2,
 				5, 5, 50, OBJTYPE_SPARK);
 			calculate_atmosphere_damage(o);

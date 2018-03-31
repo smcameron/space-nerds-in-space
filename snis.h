@@ -731,6 +731,7 @@ struct planet_data {
 #define SECURITY_RADIUS (MAX_PLANET_RADIUS * 1.5)
 #define PLAYER_PLANET_DIST_TOO_CLOSE (200)
 #define PLAYER_PLANET_DIST_WARN (400)
+#define PLAYER_PLANET_LOW_ALT_WARN (100)
 	float radius;
 	uint8_t has_atmosphere;
 	uint8_t ring_selector;
