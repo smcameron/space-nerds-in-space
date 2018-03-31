@@ -167,6 +167,7 @@ static float turret_recoil_amount = 0.0f;
 static int global_rts_mode = 0;
 
 static int mtwist_seed = COMMON_MTWIST_SEED;
+static float current_altitude = 1e20;
 
 /* I can switch out the line drawing function with these macros */
 /* in case I come across something faster than gdk_draw_line */
@@ -2589,6 +2590,31 @@ static void docking_port_blink_lights(struct snis_entity *o)
 		cos(((float) (timer & 0x0f) / 16.0) * 0.5 * M_PI);
 }
 
+static void calculate_planetary_altitude(struct snis_entity *o)
+{
+	int i;
+	current_altitude = 1e20;
+	struct entity *e;
+	struct mesh *m;
+	float obj_radius;
+
+	for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
+		const struct snis_entity *p = &go[i];
+		if (p->type != OBJTYPE_PLANET)
+			continue;
+		e = p->entity;
+		if (!e)
+			continue;
+		m = entity_get_mesh(e);
+		if (!m)
+			continue;
+		obj_radius = m->radius * fabs(entity_get_scale(e));
+		float a = dist3d(o->x - p->x, o->y - p->y, o->z - p->z) - obj_radius;
+		if (a < current_altitude)
+			current_altitude = a;
+	}
+}
+
 static void move_objects(void)
 {
 	int i;
@@ -2602,6 +2628,7 @@ static void move_objects(void)
 		switch (o->type) {
 		case OBJTYPE_SHIP1:
 			update_warp_field_error();
+			calculate_planetary_altitude(o);
 		case OBJTYPE_SHIP2:
 			move_object(timestamp, o, &interpolate_oriented_object);
 			ship_emit_sparks(o);
@@ -8169,6 +8196,12 @@ static void show_mainscreen(GtkWidget *w)
 		}
 	}
 
+	if (current_altitude < 2000) {
+		char buf[25];
+		snprintf(buf, sizeof(buf), "ALTITUDE: %5.1f", current_altitude);
+		sng_abs_xy_draw_string(buf, NANO_FONT, txx(20), txy(20));
+	}
+
 	if (o->tsd.ship.view_mode == MAINSCREEN_VIEW_MODE_WEAPONS)
 		show_gunsight(w);
 	if (vp == o)
@@ -11075,7 +11108,6 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 	static int current_zoom = 0;
 	/* struct entity *targeted_entity = NULL; */
 	struct entity *science_entity = NULL;
-	double lowest_altitude = 1e20;
 
 	if (!ring_mesh) {
 		ring_mesh = init_circle_mesh(0, 0, 1, 180, 2.0f * M_PI);
@@ -11361,19 +11393,15 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 		if (!go[i].entity)
 			continue;
 
-		struct mesh *obj_entity_mesh = entity_get_mesh(go[i].entity);
 		float obj_radius = 0.0;
+		struct mesh *obj_entity_mesh = entity_get_mesh(go[i].entity);
 		if (obj_entity_mesh) {
 			if (go[i].type == OBJTYPE_PLANET)
 				obj_radius = obj_entity_mesh->radius * fabs(entity_get_scale(go[i].entity));
 			else
 				obj_radius = cam_pos_scale * obj_entity_mesh->radius *
 						fabs(entity_get_scale(go[i].entity));
-			double dist = dist3d(o->x - go[i].x, o->y - go[i].y, o->z - go[i].z) - go[i].tsd.planet.radius;
-			if (dist < lowest_altitude)
-				lowest_altitude = dist;
 		}
-
 		if (nav_entity_too_far_away(o->x, o->y, o->z, go[i].x, go[i].y, go[i].z,
 						obj_radius, display_radius))
 			continue; /* not close enough */
@@ -11610,9 +11638,9 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 
 	remove_all_entity(instrumentecx);
 
-	if (lowest_altitude < MAX_PLANET_RADIUS * 1.5) {
+	if (current_altitude < MAX_PLANET_RADIUS * 1.5) {
 		char buf[25];
-		snprintf(buf, sizeof(buf), "ALTITUDE: %5.1f", lowest_altitude);
+		snprintf(buf, sizeof(buf), "ALTITUDE: %5.1f", current_altitude);
 		sng_abs_xy_draw_string(buf, NANO_FONT, txx(290), txy(15));
 	}
 
