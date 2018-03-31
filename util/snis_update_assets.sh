@@ -1,6 +1,6 @@
 #!/bin/sh
 
-ASSET_URL="http://spacenerdsinspace.com/snis-assets"
+ASSET_URL="https://spacenerdsinspace.com/snis-assets"
 MANIFEST_URL="$ASSET_URL/manifest.txt"
 PROG="$0"
 MANIFEST_FILE=/tmp/snis_asset_manifest$$.txt
