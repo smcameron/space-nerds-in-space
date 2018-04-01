@@ -79,6 +79,33 @@ module dual_tooth_array() {
 			tooth_array();
 }
 
-torso();
-dual_tooth_array();
+/* By splitting the monster in two on the x-z plane, and making
+ * the monster in two parts that are separated by a tiny gap, the
+ * procedural cylindrical uv-mapping does not cross the international
+ * dateline and looks better.
+ */
+module half_monster() {
+	difference() {
+		union() {
+			torso();
+			dual_tooth_array();
+		}
+		translate(v = [-200, -50, 0])
+			cube(size = [300, 100, 100]);
+	}
+}
+
+module whole_monster() {
+	union() {
+		translate(v = [0, 0, -0.01])
+			half_monster();
+		rotate(v = [1, 0, 0], a = 180)
+			translate(v = [0, 0, -0.01])
+				half_monster();
+	}
+}
+
+rotate(v = [1, 0, 0], a = 90)
+	whole_monster();
+
 

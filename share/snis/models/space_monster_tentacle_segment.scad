@@ -17,5 +17,17 @@ module tentacle_segment(length, girth)
 	}
 }
 
-tentacle_segment(60, 6);
+module half_tentacle_segment()
+{
+	difference() {
+		tentacle_segment(60, 6);
+		translate(v = [-25, 0, -10])
+			cube(size = [100, 20, 20]);
+	}
+}
 
+translate(v = [0, -0.01, 0])
+	half_tentacle_segment();
+rotate(v = [1, 0, 0], a = 180)
+	translate(v = [0, -0.01, 0])
+		half_tentacle_segment();
