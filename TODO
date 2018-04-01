@@ -215,9 +215,10 @@ NICE TO HAVE:
 * Make black hole shader better.  Right now it's just a billboard with a
   fuzzy black disc on it.
 
-* Allow for self-shadowing in the renderer (i.e. ships to cast shadows
-  on themselves.) This may be relevant:
+* Allow for shadowing in the renderer. These may be relevant:
   http://www.opengl-tutorial.org/intermediate-tutorials/tutorial-16-shadow-mapping/
+  https://gamedev.stackexchange.com/questions/73851/how-do-i-fit-the-camera-frustum-inside-directional-light-space
+  https://en.wikipedia.org/wiki/Shadow_mapping
 
 * Add a Real Time Strategy game into SNIS.
 
@@ -320,6 +321,8 @@ NICE TO HAVE:
 
   Look into raymarching signed distance fields (as if I know what that is)
   as a way of rendering nebula.  See: http://spaceengine.org/news/blog161008/
+  See: http://iquilezles.org/www/articles/distfunctions/distfunctions.htm
+  for a load of signed-distance-field functions for various primitives.
 
 * Get better models, or properly uv-map and texture models we do have. Scrap the
   more terrible models.
