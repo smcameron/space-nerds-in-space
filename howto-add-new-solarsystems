@@ -316,6 +316,47 @@ light blue value: (153,153,255). Example for a green atmosphere:
 
 planet texture: planet2- planet2-normal earthlike 153 255 153
 
+You can test your assets.txt file in this way:
+
+  $ ./make solarsystem_config_test
+  $ ./solarsystem_config_test share/snis/solarsystems/my-solarsystem/assets.txt
+
+The output should look something like what's below. In particular the last
+line of the output should be "0 errors, 0 warnings."
+
+Reading solarsystem config file share/snis/solarsystems/quidgebo/assets.txt
+-----------------------------
+Solarsystem share/snis/solarsystems/quidgebo/assets.txt:
+  Sun texture: sun.png
+  skybox prefix: bluegreen-skybox
+  nplanet textures: 6
+    planet_texture[0]   : lettek
+    planet_normalmap[0] : lettek-normalmap
+    planet_type[0] : rocky
+    planet  rgb[0] : 153, 153, 255
+    planet_texture[1]   : kratoria
+    planet_normalmap[1] : kratoria-normalmap
+    planet_type[1] : rocky
+    planet  rgb[1] : 153, 153, 255
+    planet_texture[2]   : kojax-with-clouds-
+    planet_normalmap[2] : kojax-normalmap-masked
+    planet_type[2] : earthlike
+    planet  rgb[2] : 153, 153, 255
+    planet_texture[3]   : kang-with-clouds-
+    planet_normalmap[3] : kang-normalmap-masked
+    planet_type[3] : earthlike
+    planet  rgb[3] : 153, 153, 255
+    planet_texture[4]   : guleldob
+    planet_normalmap[4] : no-normal-map
+    planet_type[4] : gas-giant
+    planet  rgb[4] : 153, 153, 255
+    planet_texture[5]   : behko
+    planet_normalmap[5] : no-normal-map
+    planet_type[5] : gas-giant
+    planet  rgb[5] : 153, 153, 255
+0 errors, 0 warnings.
+
+
 *** Step 7 Copy all the files to the right location ***
 
 Assuming the name of the solarsystem is "my-solarsystem", create the directory

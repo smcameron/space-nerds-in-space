@@ -17759,6 +17759,9 @@ static int read_solarsystem_config(const char *solarsystem_name,
 	*assets = solarsystem_asset_spec_read(path);
 	if (!*assets)
 		return -1;
+	if ((*assets)->spec_errors || (*assets)->spec_warnings)
+		fprintf(stderr, "snis_client: solarsystem asset spec %s: %d errors, %d warnings.\n",
+			path, (*assets)->spec_errors, (*assets)->spec_warnings);
 	printf("done\n");
 	fflush(stdout);
 	return 0;

@@ -20718,6 +20718,9 @@ static struct solarsystem_asset_spec *read_solarsystem_assets(char *solarsystem_
 		fprintf(stderr, "Unable to read solarsystem asset spec from '%s'", path);
 		if (errno)
 			fprintf(stderr, "%s: %s\n", path, strerror(errno));
+	} else if (s->spec_warnings || s->spec_errors) {
+		fprintf(stderr, "Solarsystem asset spec %s: %d errors, %d warnings.\n",
+			path, s->spec_errors, s->spec_warnings);
 	}
 	return s;
 }

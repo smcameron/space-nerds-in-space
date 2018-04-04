@@ -47,6 +47,22 @@ static char *get_field(char *line)
 	return i;
 }
 
+static void sanity_check(struct solarsystem_asset_spec *ss)
+{
+	int i;
+
+	for (i = 0; i < ss->nplanet_textures; i++) {
+		if (strcmp(ss->planet_type[i], "rocky") != 0 &&
+			strcmp(ss->planet_type[i], "earthlike") != 0)
+			continue;
+		if (strcmp(ss->planet_normalmap[i], "no-normal-map") == 0) {
+			fprintf(stderr, "planet texture %s is type %s but has no normalmap\n",
+				ss->planet_texture[i], ss->planet_type[i]);
+			ss->spec_warnings++;
+		}
+	}
+}
+
 struct solarsystem_asset_spec *solarsystem_asset_spec_read(char *filename)
 {
 	FILE *f;
@@ -92,6 +108,7 @@ struct solarsystem_asset_spec *solarsystem_asset_spec_read(char *filename)
 				fprintf(stderr, "%s:line %d: planet texture count %d exceeds max %d, capping\n",
 						filename, ln, value, PLANET_TYPE_COUNT_SHALL_BE);
 				value = PLANET_TYPE_COUNT_SHALL_BE;
+				a->spec_warnings++;
 			}
 			planet_textures_expected = value;
 			if (a->planet_texture != NULL || a->nplanet_textures != 0) {
@@ -169,6 +186,7 @@ struct solarsystem_asset_spec *solarsystem_asset_spec_read(char *filename)
 				fprintf(stderr,
 					"%s:line %d: Assuming old style without normal map (use no-normal-map to suppress this message).\n",
 					filename, ln);
+				a->spec_warnings++;
 				continue;
 			}
 			fprintf(stderr,
@@ -206,9 +224,11 @@ struct solarsystem_asset_spec *solarsystem_asset_spec_read(char *filename)
 		}
 bad_line:
 		fprintf(stderr, "solar system asset file %s:ignoring line %d:%s\n", filename, ln, line);
+		a->spec_errors++;
 	}
 
 	if (!got_position) {
+		a->spec_warnings++;
 		fprintf(stderr, "Solar system '%s' had no position information, using default.\n", filename);
 		a->x = 0.0;
 		a->y = 0.0;
@@ -225,12 +245,14 @@ bad_line:
 	if (planet_textures_read < planet_textures_expected) {
 		fprintf(stderr, "%s: expected %d planet types, but only found %d.\n",
 			filename, planet_textures_expected, planet_textures_read);
+		a->spec_errors++;
 	}
 
 	if (planet_textures_read < PLANET_TYPE_COUNT_SHALL_BE) {
 		int i, n;
 		fprintf(stderr, "solar system asset file is short %d planet types, padding with duplicates\n",
 			PLANET_TYPE_COUNT_SHALL_BE - planet_textures_read);
+		a->spec_warnings++;
 
 		n = PLANET_TYPE_COUNT_SHALL_BE - planet_textures_read;
 		for (i = 0; i < n; i++)  {
@@ -242,6 +264,8 @@ bad_line:
 					strdup(a->planet_type[i % planet_textures_read]);
 		}
 	}
+
+	sanity_check(a);
 
 	return a;
 }
@@ -290,6 +314,7 @@ static void print_solarsystem_config(char *name, struct solarsystem_asset_spec *
 		printf("    planet  rgb[%d] : %hhu, %hhu, %hhu\n", i,
 			ss->atmosphere_color[i].r, ss->atmosphere_color[i].g, ss->atmosphere_color[i].b);
 	}
+	printf("%d errors, %d warnings.\n", ss->spec_errors, ss->spec_warnings);
 }
 
 int main(int argc, char *argv[])
