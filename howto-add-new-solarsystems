@@ -1,0 +1,368 @@
+
+How to add new solar systems to space nerds in space
+----------------------------------------------------
+
+Solarsystems in space nerds in space consist mainly of a few new assets --
+mostly cubemap planet textures. But there are a few other details as well. This
+file is meant to document these things, mainly so I don't forget how to do it.
+
+Solarsystem data is in share/snis/solarsystems. We now have a system to update
+these assets (and some others) via "make update-assets" which will pull things
+down from a web server at spacenerdsinspace.com.
+
+Here are the elements that make up a solarsystem in SNIS:
+
+1. A directory under share/snis/solarsystems. The name of this
+   directory is the name of the solarsystem.
+2. An assets.txt file in this directory which lists the assets
+   and position of the solarsystem as it relates to other solar
+   systems.
+3. Skybox texture
+4. Sun texture
+5. Planet textures
+
+*** Step 1. Name your solarsystem ***
+
+Think of a name for your solarsystem, and create a directory in share/snis/solarsystems
+with that name.
+
+
+
+*** Step 2. Create a skybox cubemap texture. ***
+
+The easiest way I know of to do this is with the program "cosmic-space-boxinator"
+which you will find here: https://github.com/smcameron/cosmic-space-boxinator
+It is written in processing.
+
+It is not required that you use this program however, if you have another way
+to make a skybox, that's fine too. The main constraint is on the expectation for
+image orientations and naming. The expected naming for the skybox png image
+files are:
+
+prefix0.png
+prefix1.png
+prefix2.png
+prefix3.png
+prefix4.png
+prefix5.png
+
+Where "prefix" can be anything you like, perhaps "skybox-", for example.
+
+The layout of the files in the form of an unfolded cube is as follows:
+
+                +------+
+                |  4   |
+                |      |
+  +------+------+------+------+
+  |  0   |  1   |  2   |  3   |
+  |      |      |      |      |
+  +------+------+------+------+
+                |  5   |
+                |      |
+                +------+
+
+Each file should be a 2048x2048 png file, or at least square.
+
+
+
+*** Step 3. Create a "sun" texture. ***
+
+It should be a 512x512 png image with alpha. You can create this however you like.
+The main thing to keep in mind is that at the edges, the image should be completely
+transparent.  The easiest way for me to create a sun texture is to use the gimp, as
+follows:
+
+	a. Start a new file, set the size to 512x512, and under advanced options, fill with
+		transparency.
+	b. Then under Filters/Light and Shadow/Supernova, choose a color (should
+		be something close to white, but with some tint), set the x,y to 256,256 and the
+		radius to say, 50 or so.
+	c. Then, add a layer mask under Layer/Mask/Add Layer Mask.
+	e. Double-click the "gradient" tool. Set the "Shape" to "Radial".
+	f. Set the current the foreground color to white, and the background
+		color to black.
+	g. Create a gradient by clicking in the center of your supernove and dragging
+	   almost to the side of the image horizontally. The idea is we want the image
+	   to be completely transparent at all edges so that it will blend nicely when
+	   rendered. If it is merely "mostly transparent" at the edges, you will see a
+	   visible square around your sun, which is not good.
+	h. When you get things looking how you like, export the file as a png.
+
+*** Step 4. Create planet cubemap textures
+
+You will need to create planet cubemap textures for 6 different planets.
+
+You want to have three planet types -- rocky, earthlike, and gas giant - represented
+in your solarsystem. Rocky and earthlike planet textures can be created with "earthlike",
+and gas-giant planet textures can be created with gaseous-giganticus. Or you can use
+another program if you like.
+
+Rocky and Earth-like planets:
+
+  Earthlike planets: See howto-generate-earthlike-planets.txt
+
+  Rocky planets: These are done just like earthlike planets except:
+                 1. you do not need any cloud textures
+                 2. you do not need to input any water texture.  Instead, use the
+                    same land sample input texture for both land and water.
+		 3. You should use the --craters option to put craters in.
+
+  The command "./earthlike --help" will remind you how to run it.
+
+  For earthlike planets:
+  ./earthlike -B 25 -h heightdata.png -l land.png -w water.png --bumpsize 0.5 -o myplanet
+
+  For more rocky, mars-like planets (a.png and b.png should both be land images):
+  ./earthlike -B 400 -b 1 -h heightdata.png -l ~/a.png -w ~/b.png -O 0 --bumpsize 0.5 \
+         --craters 250 -o myplanet
+
+  heightdata.png is provided. I've not found a better texture, but feel free to try.
+  It is elevation data from the western United States.
+
+  land.png and water.png are also provided, but you should probably make your own.
+  These textures are sampled for water and land, respectively. The top of the image
+  corresponds to low-elevation areas and the bottom of the image correspondes to
+  high elevation areas. The horizontal axis is sampled via a noise function, so is
+  less important, but probably should not have too many sharp transitions in color.
+
+Gas Giant planets:
+
+For this, use gaseous-giganticus. You will need an input image texture. To
+create the input texture, find some image that is more-or-less mostly the color
+that you want your gas giant to be, then with the gimp, cut a vertical slice
+about 100-200 pixels wide and about 1000-1200 pixels tall, something like that.
+Change the levels to make it lighter rather than darker, and for best results,
+you do not want a lot of high contrast, so you kind of want to squash the dynamic
+range. Then blur the image to remove any sharp transitions, and export it as
+a png. Then run gaseous giganticus as follows:
+
+  ./gaseous-giganticus -V --sinusoidal --noise-scale 2.5 --velocity-factor 1300 \
+        -i your-input-image.png -o your-planet-name --bands 10
+
+  You can vary the noise-scale (see:
+	https://smcameron.github.io/space-nerds-in-space/gaseous-giganticus-noise-scale.html )
+
+  You can vary the velocity-factor.
+
+  You can vary the --bands (controls how many counter-rotating horizontal bands there are.)
+
+  You may also wish to experiment with the --noise-levels and --gain parameters.
+
+  You can (and should) monitor what gaseous-giganticus is doing by running mesh_viewer
+  once the first output files have been produced (when gaseous giganticus prints out an
+  "o") as follows:
+
+	  make mesh_viewer
+	  ./mesh_viewer -p your-planet-name
+
+  At first the planet will be kind of blurry, but after awhile, things will get more
+  swirly and sharper. If you let it run for too long, things will start looking a bit
+  strange. The trick is to stop gaseous-giganticus with Ctrl-C when things look good and
+  before they get too strange.
+
+  It will produce 6 files:
+
+	  your-planet-name0.png
+	  your-planet-name1.png
+	  your-planet-name2.png
+	  your-planet-name3.png
+	  your-planet-name4.png
+	  your-planet-name5.png
+
+  See also this video: https://www.youtube.com/watch?v=8nx5yPpQh2M
+
+
+
+*** Step 6: Figure solarsystem coordinates ***
+
+Run the following commands:
+
+  $ grep 'star location' share/snis/solarsystems/*/assets.txt
+  share/snis/solarsystems/default2/assets.txt:star location: 0 0 0
+  share/snis/solarsystems/default/assets.txt:star location: 0.8 9.0 9.7
+  share/snis/solarsystems/karado/assets.txt:star location: 7.2 10.0 -3.3
+  share/snis/solarsystems/polaris/assets.txt:star location: 6.0 -4.5 -4.1
+  share/snis/solarsystems/quidgebo/assets.txt:star location: 15.3 -5.3 -12.4
+  share/snis/solarsystems/sirius/assets.txt:star location: 7.1 -4.8 -16.4
+  share/snis/solarsystems/tau-scorpii/assets.txt:star location: 20.1 6.9 -4.1
+
+Note that the above command found 7 solarsystems with locations:
+
+  $ grep 'star location' share/snis/solarsystems/*/assets.txt | wc -l
+  7
+
+Now generate some more locations (more than 7, say 15...).
+
+  $ make util/generate_solarsystem_positions
+  make: `util/generate_solarsystem_positions' is up to date.
+  $ util/generate_solarsystem_positions -s 15
+      4 0.0 0.0 0.0 : solarsystem 0
+      3 0.8 9.0 9.7 : solarsystem 1
+      5 7.2 10.0 -3.3 : solarsystem 2
+      5 6.0 -4.5 -4.1 : solarsystem 3
+      5 7.1 -4.8 -16.4 : solarsystem 4
+      3 20.1 6.9 -4.1 : solarsystem 5
+      5 15.3 -5.3 -12.4 : solarsystem 6
+      1 4.4 3.4 14.7 : solarsystem 7
+      3 24.2 -5.7 -19.3 : solarsystem 8
+      3 1.1 -8.0 -8.2 : solarsystem 9
+      1 0.2 -1.2 -25.2 : solarsystem 10
+      3 20.9 12.2 -1.4 : solarsystem 11
+      3 13.7 -13.1 -22.7 : solarsystem 12
+      1 32.9 20.5 0.6 : solarsystem 13
+      3 28.2 -2.9 -10.7 : solarsystem 14
+  Exporting data to OpenSCAD model starmap.scad
+
+Note that the solarsystem numbers start at 0. Since we have 7 solarsystems
+(0 - 6), we want to add the eighth solarsystem, or "solarsystem 7", so we are
+interested in this line:
+
+  1 4.4 3.4 14.7 : solarsystem 7
+
+Ignore the first number (this is how many solarsystems this new solarsystem is connected
+to) and take the next 3 numbers:
+
+  4.4, 3.4, 14.7
+
+These are our new star coordinates.
+
+
+*** Step 7 Create new assets.txt file
+
+At this point we should have a name for our new solarsystem, a sun texture, a
+cubemap skybox texture and cubemap planet textures for six planets, and a set of
+coordinates. For the earthlike and rocky planets, we should also have normal
+cubemap textures.
+
+Let's say we have:
+
+  Name: my-solarsystem
+  Coordinates: 4.4, 3.4, 14.7
+  star-texture.png
+  skybox0.png
+  skybox1.png
+  skybox2.png
+  skybox3.png
+  skybox4.png
+  skybox5.png
+  planet1-0.png
+  planet1-1.png
+  planet1-2.png
+  planet1-3.png
+  planet1-4.png
+  planet1-5.png
+  planet1-normal0.png
+  planet1-normal1.png
+  planet1-normal2.png
+  planet1-normal3.png
+  planet1-normal4.png
+  planet1-normal5.png
+  planet2-0.png
+  planet2-1.png
+  planet2-2.png
+  planet2-3.png
+  planet2-4.png
+  planet2-5.png
+  planet2-normal0.png
+  planet2-normal1.png
+  planet2-normal2.png
+  planet2-normal3.png
+  planet2-normal4.png
+  planet2-normal5.png
+  planet3-0.png
+  planet3-1.png
+  planet3-2.png
+  planet3-3.png
+  planet3-4.png
+  planet3-5.png
+  planet4-0.png
+  planet4-1.png
+  planet4-2.png
+  planet4-3.png
+  planet4-4.png
+  planet4-5.png
+  planet5-0.png
+  planet5-1.png
+  planet5-2.png
+  planet5-3.png
+  planet5-4.png
+  planet5-5.png
+  planet6-0.png
+  planet6-1.png
+  planet6-2.png
+  planet6-3.png
+  planet6-4.png
+  planet6-5.png
+
+We encode this in the assets.text file as follows:
+
+----------8<----------8<----------8<----------8<----------8<----------
+planet texture count: 6
+planet texture: planet1- planet1-normal rocky
+planet texture: planet2- planet2-normal earthlike
+planet texture: planet3- no-normal-map gas-giant
+planet texture: planet4- no-normal-map gas-giant
+planet texture: planet5- no-normal-map gas-giant
+planet texture: planet6- no-normal-map gas-giant
+
+sun texture: star-texture.png
+skybox texture: skybox
+star location: 4.4, 3.4, 14.7
+----------8<----------8<----------8<----------8<----------8<----------
+
+Note that optionally, for each planet texture specification, you may add
+rgb values for atmosphere tinting. By default the values used will be a
+light blue value: (153,153,255). Example for a green atmosphere:
+
+planet texture: planet2- planet2-normal earthlike 153 255 153
+
+*** Step 7 Copy all the files to the right location ***
+
+Assuming the name of the solarsystem is "my-solarsystem", create the directory
+share/snis/solarsystems/my-solarsystem and copy all the files into
+share/snis/solarsystems/my-solarsystem.
+
+*** Step 8 Start up a snis_server instance using the new solarsystem data ***
+
+At this point, you can use the new solarsystem by starting up a snis_server
+instance. The easiest way to do this is with the snis_launcher script.
+
+$ ./snis_launcher
+
+     Welcome to Space Nerds In Space
+
+------------------------------------------------------------
+No SNIS processes are currently running.
+------------------------------------------------------------
+
+   1. Launch SNIS lobby server
+	The lobby server allows clients to find servers
+	There should be one lobby server total.
+   2. Launch SNIS multiverse server
+	The multiverse server stores player ship data
+	There should be one multiverse server total
+   3. Launch SNIS server
+	There should be one snis server per solarsystem.
+	There should be at least one instance of snis_server.
+   4. Launch SNIS client process
+	There should be one snis client process per player
+	plus one more per ship for the main screen.
+   5. Stop all SNIS processes
+   6. Stop all SNIS clients
+   7. Stop all SNIS servers
+   0. Quit
+   Choose [0-7]: 3
+
+Starting snis_server
+
+Choose a solar system:
+   default
+   default2
+   karado
+   polaris
+   quidgebo
+   sirius
+   tau-scorpii
+   my-solarsystem
+Enter the name of the solarsystem: my-solarsystem
+
