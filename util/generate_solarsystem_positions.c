@@ -34,7 +34,7 @@ static struct solarsystem_data {
 	char name[256];
 	double x, y, z;
 	int nconnections;
-} ss[MAX_SS] = { 0 };
+} ss[MAX_SS];
 static int nsolarsystems = 0;
 static int num_to_add = 10;
 static int max_connections = 5; /* Should match MAX_STARMAP_ADJACENCIES in ../snis.h */
@@ -137,7 +137,7 @@ static struct option long_options[] = {
 	{ "starcount", required_argument, NULL, 's' },
 	{ "connections", required_argument, NULL, 'c' },
 	{ "threshold", required_argument, NULL, 't' },
-	{ NULL, NULL, NULL, '\0' },
+	{ NULL, 0, NULL, '\0' },
 };
 
 static int get_parameters(int argc, char *argv[])
