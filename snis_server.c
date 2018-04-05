@@ -13233,6 +13233,11 @@ static void meta_comms_inventory(char *name, struct game_client *c, char *txt)
 	}
 	snprintf(msg, sizeof(msg), " CASH ON HAND:  $%.2f", ship->tsd.ship.wallet);
 	send_comms_packet(name, ch, msg);
+	if (bridgelist[c->bridge].warp_gate_ticket.ipaddr != 0) { /* no current ticket held */
+		sprintf(msg, " HOLDING WARP-GATE TICKET TO %s\n",
+			bridgelist[c->bridge].warp_gate_ticket.location);
+		send_comms_packet(name, ch, msg);
+	}
 	send_comms_packet(name, ch, " --------------------------------------");
 }
 
