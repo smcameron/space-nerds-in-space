@@ -7495,9 +7495,24 @@ static void do_detailed_collision_impulse(struct snis_entity *o1, struct snis_en
 	v1.v.y = o1->vy;
 	v1.v.z = o1->vz;
 
-	p2.v.x = o2->x;
-	p2.v.y = o2->y;
-	p2.v.z = o2->z;
+	if (o2->type != OBJTYPE_WARPGATE) {
+		p2.v.x = o2->x;
+		p2.v.y = o2->y;
+		p2.v.z = o2->z;
+	} else { /* Warp gate is approximately a torus in y,z plane, major radius ~75, minor radius ~25 */
+		union vec3 o1_in_torus_space;
+		union vec3 closest_point_on_yz_circle;
+		p2.v.x = o2->x;
+		p2.v.y = o2->y;
+		p2.v.z = o2->z;
+		vec3_sub(&o1_in_torus_space, &p1, &p2);
+		closest_point_on_yz_circle.v.x = 0.0;
+		closest_point_on_yz_circle.v.y = o1_in_torus_space.v.y;
+		closest_point_on_yz_circle.v.z = o1_in_torus_space.v.z;
+		vec3_normalize_self(&closest_point_on_yz_circle);
+		vec3_mul_self(&closest_point_on_yz_circle, 75.0);
+		vec3_add_self(&p2, &closest_point_on_yz_circle);
+	}
 
 	v2.v.x = o2->vx;
 	v2.v.y = o2->vy;
