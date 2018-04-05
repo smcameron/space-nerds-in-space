@@ -7499,7 +7499,7 @@ static void do_detailed_collision_impulse(struct snis_entity *o1, struct snis_en
 		p2.v.x = o2->x;
 		p2.v.y = o2->y;
 		p2.v.z = o2->z;
-	} else { /* Warp gate is approximately a torus in y,z plane, major radius ~75, minor radius ~25 */
+	} else { /* Warp gate is approximately a torus in y,z plane, major radius ~92, minor radius ~25 */
 		union vec3 o1_in_torus_space;
 		union vec3 closest_point_on_yz_circle;
 		p2.v.x = o2->x;
@@ -7510,7 +7510,7 @@ static void do_detailed_collision_impulse(struct snis_entity *o1, struct snis_en
 		closest_point_on_yz_circle.v.y = o1_in_torus_space.v.y;
 		closest_point_on_yz_circle.v.z = o1_in_torus_space.v.z;
 		vec3_normalize_self(&closest_point_on_yz_circle);
-		vec3_mul_self(&closest_point_on_yz_circle, 75.0);
+		vec3_mul_self(&closest_point_on_yz_circle, WARPGATE_MAJOR_RADIUS);
 		vec3_add_self(&p2, &closest_point_on_yz_circle);
 	}
 
@@ -7631,9 +7631,9 @@ static void player_collision_detection(void *player, void *object)
 		player_attempt_dock_with_starbase(t, o);
 	}
 	if (t->type == OBJTYPE_WARPGATE && dist2 < 110.0 * 110.0) {
-		/* Warp gate is approximately a torus with major radius 100 - 25.0, minor radius 25.0. */
-		const float minor_radius = 25.0;
-		const float major_radius = 100.0 - minor_radius;
+		/* Warp gate is approximately a torus with major radius 92, minor radius 25.0. */
+		const float minor_radius = WARPGATE_MINOR_RADIUS;
+		const float major_radius = WARPGATE_MAJOR_RADIUS;
 		const float trigger_dist2 = (major_radius - minor_radius) * (major_radius - minor_radius);
 		union vec3 point;
 		float dist;
@@ -11822,6 +11822,10 @@ static int add_warpgate(double x, double y, double z,
 	go[i].tsd.warpgate.warpgate_number = n;
 	sprintf(go[i].tsd.starbase.name, "WG-%02d", n);
 	sprintf(go[i].sdata.name, "WG-%02d", n);
+	/* Note: if we ever change the orientation from un-rotated, it will break
+	 * collision detection because of point_to_torus_dist(), and probably
+	 * some other places related to toroidal collision detection.
+	 */
 	return i;
 }
 

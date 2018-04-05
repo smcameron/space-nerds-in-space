@@ -749,6 +749,9 @@ struct planet_data {
 };
 
 struct warpgate_data {
+/* These are used for collision detection with warp gate */
+#define WARPGATE_MAJOR_RADIUS 92
+#define WARPGATE_MINOR_RADIUS 25
 	uint32_t warpgate_number;
 };
 
