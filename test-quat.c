@@ -205,13 +205,103 @@ static void test1()
 	}
 }
 
+static void test_torus_dist(void)
+{
+	union vec3 p;
+	float dist;
+
+	printf("\n\nTesting torus distance function\n\n");
+
+	p.v.x = 0.0;
+	p.v.y = 0.0;
+	p.v.z = 0.0;
+	dist = point_to_torus_dist(&p, 20.0, 5.0);
+	TESTIT(fabsf(dist) - 15.0 > 1e-5, "point_to_torus_dist failed.\n");
+	printf("got %f, expected %f\n", dist, 15.0);
+
+	p.v.x = 20.0;
+	p.v.y = 0.0;
+	p.v.z = 0.0;
+	dist = point_to_torus_dist(&p, 20.0, 5.0);
+	TESTIT(fabsf(dist - (sqrtf((20.0 * 20.0) + (20.0 * 20.0)) - 5.0)) > 1e-5, "torus test 1 failed.");
+	printf("got %f, expected %f\n", dist, sqrtf((20.0 * 20.0) + (20.0 * 20.0)) - 5.0);
+
+	p.v.x = 0.0;
+	p.v.y = 20.0;
+	p.v.z = 0.0;
+	dist = point_to_torus_dist(&p, 20.0, 5.0);
+	TESTIT(fabsf(dist - -5.0) > 1e-5, "torus test 2 failed.");
+	printf("got %f, expected %f\n", dist, -5.0);
+
+	p.v.x = 0.0;
+	p.v.y = 0.0;
+	p.v.z = 20.0;
+	dist = point_to_torus_dist(&p, 20.0, 5.0);
+	TESTIT(fabsf(dist - -5.0) > 1e-5, "torus test 3 failed.");
+	printf("got %f, expected %f\n", dist, -5.0);
+
+	p.v.x = 40.0;
+	p.v.y = 20.0;
+	p.v.z = 0.0;
+	dist = point_to_torus_dist(&p, 20.0, 5.0);
+	TESTIT(fabsf(dist - (40.0 - 5.0)) > 1e-5, "torus test 4 failed.");
+	printf("got %f, expected %f\n", dist, 40.0 - 5.0);
+
+	p.v.x = 0.0;
+	p.v.y = 40.0;
+	p.v.z = 0.0;
+	dist = point_to_torus_dist(&p, 20.0, 5.0);
+	TESTIT(fabsf(dist - (20.0 - 5.0)) > 1e-5, "torus test 5 failed.");
+	printf("got %f, expected %f\n", dist, 20.0 - 5.0);
+
+	p.v.x = 0.0;
+	p.v.y = -40.0;
+	p.v.z = 0.0;
+	dist = point_to_torus_dist(&p, 20.0, 5.0);
+	TESTIT(fabsf(dist - (20.0 - 5.0)) > 1e-5, "torus test 6 failed.");
+	printf("got %f, expected %f\n", dist, 20.0 - 5.0);
+
+	p.v.x = -5.0;
+	p.v.y = (1.0 / sqrtf(2.0)) * 20.0;
+	p.v.z = (1.0 / sqrtf(2.0)) * 20.0;
+	dist = point_to_torus_dist(&p, 20.0, 5.0);
+	TESTIT(fabsf(dist - 0.0) > 1e-5, "torus test 7 failed.");
+	printf("got %f, expected %f\n", dist, 0.0);
+
+	p.v.x = -5.0;
+	p.v.y = -(1.0 / sqrtf(2.0)) * 20.0;
+	p.v.z = (1.0 / sqrtf(2.0)) * 20.0;
+	dist = point_to_torus_dist(&p, 20.0, 5.0);
+	TESTIT(fabsf(dist - 0.0) > 1e-5, "torus test 7 failed.");
+	printf("got %f, expected %f\n", dist, 0.0);
+
+	p.v.x = -5.0;
+	p.v.y = -(1.0 / sqrtf(2.0)) * 20.0;
+	p.v.z = -(1.0 / sqrtf(2.0)) * 20.0;
+	dist = point_to_torus_dist(&p, 20.0, 5.0);
+	TESTIT(fabsf(dist - 0.0) > 1e-5, "torus test 7 failed.");
+	printf("got %f, expected %f\n", dist, 0.0);
+
+	p.v.x = -4.0;
+	p.v.y = -(1.0 / sqrtf(2.0)) * 20.0;
+	p.v.z = -(1.0 / sqrtf(2.0)) * 20.0;
+	dist = point_to_torus_dist(&p, 20.0, 5.0);
+	TESTIT(fabsf(dist - -1.0) > 1e-5, "torus test 7 failed.");
+	printf("got %f, expected %f\n", dist, -1.0);
+
+	p.v.x = -40.0;
+	p.v.y = -(1.0 / sqrtf(2.0)) * 20.0;
+	p.v.z = -(1.0 / sqrtf(2.0)) * 20.0;
+	dist = point_to_torus_dist(&p, 20.0, 5.0);
+	TESTIT(fabsf(dist - 35.0) > 1e-5, "torus test 7 failed.");
+	printf("got %f, expected %f\n", dist, 35.0);
+}
+
 int main(__attribute__((unused)) int argc, __attribute__((unused))  char *argv[])
 {
 	test1();
-	if (total_tests_failed)
-		printf("%d tests failed, %d tests passed.\n", total_tests_failed,
+	test_torus_dist();
+	printf("%d tests failed, %d tests passed.\n", total_tests_failed,
 				total_tests - total_tests_failed);
-	else
-		printf("%d tests passed.\n", total_tests);
 	return 0;
 } 

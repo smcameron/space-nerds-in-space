@@ -1024,3 +1024,17 @@ float dist2_from_point_to_line_segment(union vec3 *p, union vec3 *p1, union vec3
 	*nearest_point = point;
 	return vec3_magnitude2(&p1_to_p2);
 }
+
+/* Returns distance from the given point to surface of a torus at the origin
+ * with given major and minor radius. The torus is assumed to be in the y,z plane,
+ * so if you were to fly down the x axis, you would fly through the doughnut hole.
+ * From http://iquilezles.org/www/articles/distfunctions/distfunctions.htm
+ */
+float point_to_torus_dist(const union vec3 * const point, const float major_radius, const float minor_radius)
+{
+	union vec2 q;
+
+	q.v.y = sqrtf(point->v.y * point->v.y + point->v.z * point->v.z) - major_radius;
+	q.v.x = point->v.x;
+	return sqrtf(q.v.x * q.v.x + q.v.y * q.v.y) - minor_radius;
+}

@@ -7615,9 +7615,24 @@ static void player_collision_detection(void *player, void *object)
 		o->tsd.ship.docking_magnets) {
 		player_attempt_dock_with_starbase(t, o);
 	}
-	if (t->type == OBJTYPE_WARPGATE && dist2 < 50.0 * 50.0) {
-		if (player_attempt_warpgate_jump(t, o))
+	if (t->type == OBJTYPE_WARPGATE && dist2 < 110.0 * 110.0) {
+		/* Warp gate is approximately a torus with major radius 100 - 25.0, minor radius 25.0. */
+		const float minor_radius = 25.0;
+		const float major_radius = 100.0 - minor_radius;
+		const float trigger_dist2 = (major_radius - minor_radius) * (major_radius - minor_radius);
+		union vec3 point;
+		float dist;
+		point.v.x = o->x - t->x;
+		point.v.y = o->y - t->y;
+		point.v.z = o->z - t->z;
+		dist = point_to_torus_dist(&point, major_radius, minor_radius);
+		if (dist > 20.0) { /* No collision with warp gate */
+			if (dist2 < trigger_dist2) {
+				/* Going through the middle of the warp gate */
+				player_attempt_warpgate_jump(t, o);
+			}
 			return;
+		} /* else, dist to torus is <= 20.0, collision with warp gate */
 	}
 	if (t->type == OBJTYPE_PLANET) {
 		const float surface_dist2 = t->tsd.planet.radius * t->tsd.planet.radius;
