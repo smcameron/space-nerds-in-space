@@ -6,8 +6,17 @@
 #include "quat.h"
 #include "matrix.h"
 #include "mathutils.h"
+static int total_tests_failed = 0;
+static int total_tests = 0;
 
-#define TESTIT(x, msg) do { if ((x)) printf("%s:%d: failed.  %s\n", __FILE__, __LINE__, (msg)); } while(0);
+#define TESTIT(x, msg) \
+	do { \
+		total_tests++; \
+		if ((x)) { \
+			printf("%s:%d: failed.  %s\n", __FILE__, __LINE__, (msg)); \
+			total_tests_failed++; \
+		} \
+	 } while (0)
 
 static void test1()
 {
@@ -199,5 +208,10 @@ static void test1()
 int main(__attribute__((unused)) int argc, __attribute__((unused))  char *argv[])
 {
 	test1();
+	if (total_tests_failed)
+		printf("%d tests failed, %d tests passed.\n", total_tests_failed,
+				total_tests - total_tests_failed);
+	else
+		printf("%d tests passed.\n", total_tests);
 	return 0;
 } 
