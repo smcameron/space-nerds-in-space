@@ -113,5 +113,8 @@ GLOBAL struct mesh *mesh_tube(float h, float r, float nfaces);
  */
 GLOBAL int mesh_nearest_vertex(struct mesh *m, float x, float y, float z, float sx, float sy, float sz, float *dist);
 
+/* Return axis aligned bounding box for a mesh in min[x,y,z], max[x,y,z] */
+GLOBAL void mesh_aabb(struct mesh *m, float *minx, float *miny, float *minz, float *maxx, float *maxy, float *maxz);
+
 #undef GLOBAL
 #endif

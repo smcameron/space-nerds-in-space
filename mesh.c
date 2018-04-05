@@ -2256,3 +2256,40 @@ int mesh_nearest_vertex(struct mesh *m, float x, float y, float z,
 	return answer;
 }
 
+/* Return axis aligned bounding box for a mesh in min[x,y,z], max[x,y,z] */
+void mesh_aabb(struct mesh *m, float *minx, float *miny, float *minz, float *maxx, float *maxy, float *maxz)
+{
+	int i;
+
+	*minx = 0;
+	*miny = 0;
+	*minz = 0;
+	*maxx = 0;
+	*maxy = 0;
+	*maxz = 0;
+
+	if (m->nvertices < 1)
+		return;
+	*minx = m->v[0].x;
+	*miny = m->v[0].y;
+	*minz = m->v[0].z;
+	*maxx = m->v[0].x;
+	*maxy = m->v[0].y;
+	*maxz = m->v[0].z;
+
+	for (i = 0; i < m->nvertices; i++) {
+		if (m->v[i].x < *minx)
+			*minx = m->v[i].x;
+		if (m->v[i].x > *maxx)
+			*maxx = m->v[i].x;
+		if (m->v[i].y < *miny)
+			*miny = m->v[i].y;
+		if (m->v[i].y > *maxy)
+			*maxy = m->v[i].y;
+		if (m->v[i].z < *minz)
+			*minz = m->v[i].z;
+		if (m->v[i].z > *maxz)
+			*maxz = m->v[i].z;
+	}
+	return;
+}
