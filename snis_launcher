@@ -19,7 +19,7 @@ else
 	ASPECT_RATIO_ARG=""
 fi
 
-SOLARSYSTEM_NAME="default2"
+SOLARSYSTEM_NAME="default"
 
 print_main_menu()
 {
@@ -95,7 +95,7 @@ get_solarsystem_name()
 {
 	while [ "1" = "1" ]
 	do
-		default="default2"
+		default="default"
 		dname="."
 
 		echo "Choose a solar system:"
@@ -122,7 +122,7 @@ get_solarsystem_name()
 	then
 		SOLARSYSTEM_NAME="$ssname"
 	else
-		SOLARSYSTEM_NAME="default2"
+		SOLARSYSTEM_NAME="default"
 	fi
 }
 
