@@ -40,6 +40,7 @@ cat << EOF 1>&2
    5. Stop all SNIS processes
    6. Stop all SNIS clients
    7. Stop all SNIS servers
+   8. Check for asset updates
    0. Quit
 EOF
 }
@@ -206,6 +207,8 @@ do
 	3) start_snis_server
 		;;
 	4) start_snis_client
+		;;
+	8) util/snis_update_assets.sh --dry-run
 		;;
 	*) echo "Invalid choice."
 	        ;;
