@@ -171,9 +171,44 @@ a png. Then run gaseous giganticus as follows:
 
   See also this video: https://www.youtube.com/watch?v=8nx5yPpQh2M
 
+  You will also need to rotate your gas giant cubemap textures 90 degrees
+  about the x axis. There is a script to do this:
 
+	  util/turn-cubemap-about-axis x your-planet-name
 
-*** Step 6: Figure solarsystem coordinates ***
+  This is so that the counter-rotating bands will line up with any planetary
+  rings in the game.
+
+*** Step 6: Convert RGBA files to RGB ***
+
+Many of the files generated are RGBA, but should be RGB. The "file" command will
+tell you if the files are RGBA. For example:
+
+	$ file blah.png
+	blah.png:         PNG image data, 1024 x 1024, 8-bit/color RGBA, non-interlaced
+
+There is a script to convert the files to RGB that relies on Imagemagick.
+Assuming 6 RGBA files named:
+
+	  your-planet-name0.png
+	  your-planet-name1.png
+	  your-planet-name2.png
+	  your-planet-name3.png
+	  your-planet-name4.png
+	  your-planet-name5.png
+
+	Run "util/remove_alpha_cubemap your-planet-name"
+
+and this will will create RGB files:
+
+	  your-planet-name-rgb-0.png
+	  your-planet-name-rgb-1.png
+	  your-planet-name-rgb-2.png
+	  your-planet-name-rgb-3.png
+	  your-planet-name-rgb-4.png
+	  your-planet-name-rgb-5.png
+
+*** Step 7: Figure solarsystem coordinates ***
 
 Run the following commands:
 
@@ -227,7 +262,7 @@ to) and take the next 3 numbers:
 These are our new star coordinates.
 
 
-*** Step 7 Create new assets.txt file
+*** Step 8 Create new assets.txt file
 
 At this point we should have a name for our new solarsystem, a sun texture, a
 cubemap skybox texture and cubemap planet textures for six planets, and a set of
@@ -357,13 +392,13 @@ Solarsystem share/snis/solarsystems/quidgebo/assets.txt:
 0 errors, 0 warnings.
 
 
-*** Step 7 Copy all the files to the right location ***
+*** Step 9 Copy all the files to the right location ***
 
 Assuming the name of the solarsystem is "my-solarsystem", create the directory
 share/snis/solarsystems/my-solarsystem and copy all the files into
 share/snis/solarsystems/my-solarsystem.
 
-*** Step 8 Start up a snis_server instance using the new solarsystem data ***
+*** Step 10 Start up a snis_server instance using the new solarsystem data ***
 
 At this point, you can use the new solarsystem by starting up a snis_server
 instance. The easiest way to do this is with the snis_launcher script.
