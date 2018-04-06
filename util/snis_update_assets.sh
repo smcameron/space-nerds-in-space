@@ -26,6 +26,10 @@ fetch_file()
 	local FILE="$2"
 	local dryrun="$3"
 	updating_or_creating="$4"
+	if [ "$dryrun" != "0" ]
+	then
+		updating_or_creating="Not $updating_or_creating"
+	fi
 	echo -n 1>&2 "$updating_or_creating $FILE... "
 	if [ "$dryrun" = "0" ]
 	then
