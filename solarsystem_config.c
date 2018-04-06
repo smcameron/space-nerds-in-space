@@ -80,6 +80,7 @@ struct solarsystem_asset_spec *solarsystem_asset_spec_read(char *filename)
 	}
 	a = malloc(sizeof(*a));
 	memset(a, 0, sizeof(*a));
+	a->random_seed = -1; /* no seed */
 
 	while (!feof(f)) {
 		l = fgets(line, 1000, f);
@@ -221,6 +222,13 @@ struct solarsystem_asset_spec *solarsystem_asset_spec_read(char *filename)
 				got_position = 1;
 			}
 			continue;
+		} else if (has_prefix("random seed:", line)) {
+			int random_seed;
+			field = get_field(line);
+			rc = sscanf(field, "%d", &random_seed);
+			if (rc == 1)
+				a->random_seed = random_seed;
+			continue;
 		}
 bad_line:
 		fprintf(stderr, "solar system asset file %s:ignoring line %d:%s\n", filename, ln, line);
@@ -328,6 +336,10 @@ int main(int argc, char *argv[])
 		if (!ss) {
 			fprintf(stderr, "Failed to read solarsystem config '%s'\n", argv[i]);
 			continue;
+		}
+		if (ss->random_seed == -1) {
+			fprintf(stderr, "Solarsystem %s has no random seed set.\n", argv[i]);
+			ss->spec_warnings++;
 		}
 		print_solarsystem_config(argv[i], ss);
 		solarsystem_asset_spec_free(ss);

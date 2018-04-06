@@ -1,4 +1,5 @@
 # Locations of assets for "default" solar system
+random seed: 31415927
 
 planet texture count: 6
 planet texture: ../../textures/planet-texture0- no-normal-map gas-giant

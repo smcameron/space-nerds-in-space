@@ -11993,8 +11993,36 @@ static void add_passengers(void)
 	npassengers = MAX_PASSENGERS;
 }
 
+/* Sets random seeds to value in environment variable SNISRAND
+ * if set, or to value of new_seed if new_seed is not -1.
+ * If both SNISRAND is not set and new_seed is -1, then there
+ * is no effect.
+ */
+static void set_random_seed(int new_seed)
+{
+	char *seed = getenv("SNISRAND");
+	int i, rc;
+
+	if (!seed && !new_seed)
+		return;
+
+	if (seed) {
+		rc = sscanf(seed, "%d", &i);
+		if (rc != 1)
+			return;
+	} else if (new_seed != -1) {
+		i = new_seed;
+	}
+
+	snis_srand((unsigned int) i);
+	srand(i);
+	mtwist_seed = (uint32_t) i;
+}
+
 static void make_universe(void)
 {
+	if (solarsystem_assets->random_seed != -1)
+		set_random_seed(solarsystem_assets->random_seed);
 	initialize_random_orientations_and_spins(COMMON_MTWIST_SEED);
 	planetary_atmosphere_model_init_models(ATMOSPHERE_TYPE_GEN_SEED, NATMOSPHERE_TYPES);
 	pthread_mutex_lock(&universe_mutex);
@@ -20764,23 +20792,6 @@ static struct solarsystem_asset_spec *read_solarsystem_assets(char *solarsystem_
 	return s;
 }
 
-static void set_random_seed(void)
-{
-	char *seed = getenv("SNISRAND");
-	int i, rc;
-
-	if (!seed)
-		return;
-
-	rc = sscanf(seed, "%d", &i);
-	if (rc != 1)
-		return;
-
-	snis_srand((unsigned int) i);
-	srand(i);
-	mtwist_seed = (uint32_t) i;
-}
-
 static void take_your_locale_and_shove_it(void)
 {
 	/* need this so that fscanf can read floats properly */
@@ -24636,7 +24647,7 @@ int main(int argc, char *argv[])
 	process_options(argc, argv);
 
 	override_asset_dir();
-	set_random_seed();
+	set_random_seed(-1);
 	init_natural_language_system();
 	init_meshes();
 

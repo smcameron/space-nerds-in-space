@@ -138,7 +138,6 @@ start_snis_server()
 	get_solarsystem_name
 	echo "Using solar system $SOLARSYSTEM_NAME"
 	SS1="$SOLARSYSTEM_NAME"
-	export SNISRAND=12345
 	${SNIS_SERVER} -l localhost -L $(uppercase "$SS1") --enable-enscript -m narnia -s "$SS1" > snis_server_log.txt 2>&1 &
 	sleep 2.5
 }

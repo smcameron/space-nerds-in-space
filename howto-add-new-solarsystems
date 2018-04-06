@@ -20,6 +20,7 @@ Here are the elements that make up a solarsystem in SNIS:
 3. Skybox texture
 4. Sun texture
 5. Planet textures
+6. A random seed
 
 *** Step 1. Name your solarsystem ***
 
@@ -343,6 +344,9 @@ planet texture: planet6- no-normal-map gas-giant
 sun texture: star-texture.png
 skybox texture: skybox
 star location: 4.4, 3.4, 14.7
+
+# The random seed is arbitrarily chosen, just make up a number.
+random seed: 12345
 ----------8<----------8<----------8<----------8<----------8<----------
 
 Note that optionally, for each planet texture specification, you may add

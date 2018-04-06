@@ -37,6 +37,7 @@ struct solarsystem_asset_spec {
 	struct atmosphere_color_rgb *atmosphere_color;
 	double x, y, z; /* Location of solarsystem (separate coord sys from rest of objects) */
 	int spec_errors, spec_warnings;
+	int random_seed;
 };
 
 struct solarsystem_asset_spec *solarsystem_asset_spec_read(char *filename);
