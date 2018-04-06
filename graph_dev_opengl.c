@@ -692,8 +692,6 @@ struct graph_dev_gl_skybox_shader {
 	GLint mvp_id;
 	GLint vertex_id;
 	GLint texture_id;
-
-	int texture_loaded;
 	GLuint cube_texture_id;
 };
 
@@ -3131,8 +3129,6 @@ static void setup_skybox_shader(struct graph_dev_gl_skybox_shader *shader)
 
 	/* Get a handle for our buffers */
 	shader->vertex_id = glGetAttribLocation(shader->program_id, "vertex");
-
-	shader->texture_loaded = 0;
 }
 
 static void setup_cubemap_cube(struct graph_dev_primitive *obj)
@@ -3958,20 +3954,12 @@ int graph_dev_load_skybox_texture(
 	const char *texture_filename_pos_z,
 	const char *texture_filename_neg_z)
 {
-	if (skybox_shader.texture_loaded) {
-		glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
-		glDeleteTextures(1, &skybox_shader.cube_texture_id);
-		skybox_shader.texture_loaded = 0;
-	}
-
 	skybox_shader.cube_texture_id = graph_dev_load_cubemap_texture(1, texture_filename_pos_x,
 		texture_filename_neg_x, texture_filename_pos_y, texture_filename_neg_y, texture_filename_pos_z,
 		texture_filename_neg_z);
 
-	if (skybox_shader.cube_texture_id != 0) {
-		skybox_shader.texture_loaded = 1;
+	if (skybox_shader.cube_texture_id != 0)
 		return 0;
-	}
 	return -1;
 }
 
