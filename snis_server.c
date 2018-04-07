@@ -11580,7 +11580,7 @@ static int add_black_hole(double x, double y, double z, float radius)
 
 static int add_planet(double x, double y, double z, float radius, uint8_t security)
 {
-	int i, sst;
+	int i, sst, minr, maxr;
 
 	i = add_generic_object(x, y, z, 0, 0, 0, 0, OBJTYPE_PLANET);
 	if (i < 0)
@@ -11600,10 +11600,29 @@ static int add_planet(double x, double y, double z, float radius, uint8_t securi
 	go[i].tsd.planet.economy = snis_randn(1000) % ARRAYSIZE(economy_name);
 	go[i].tsd.planet.tech_level = snis_randn(1000) % ARRAYSIZE(tech_level_name);
 	go[i].tsd.planet.description_seed = snis_rand();
-	go[i].tsd.planet.radius = radius;
 	go[i].tsd.planet.ring = snis_randn(100) < 50;
 	sst = (uint8_t) (go[i].id % solarsystem_assets->nplanet_textures);
 	go[i].tsd.planet.solarsystem_planet_type = sst;
+
+	/* Enforce planet sizes based on planet type */
+	if (strcmp(solarsystem_assets->planet_type[sst], "rocky") == 0) {
+		minr = MIN_ROCKY_RADIUS;
+		maxr = MAX_ROCKY_RADIUS;
+	} else if (strcmp(solarsystem_assets->planet_type[sst], "earthlike") == 0) {
+		minr = MIN_EARTHLIKE_RADIUS;
+		maxr = MAX_EARTHLIKE_RADIUS;
+	} else if (strcmp(solarsystem_assets->planet_type[sst], "gas-giant") == 0) {
+		minr = MIN_GAS_GIANT_RADIUS;
+		maxr = MAX_GAS_GIANT_RADIUS;
+	} else {
+		fprintf(stderr, "snis_server:%s:%d: Unexpected planet type '%s'\n",
+			__FILE__, __LINE__, solarsystem_assets->planet_type[sst]);
+		minr = MIN_PLANET_RADIUS;
+		maxr = MAX_PLANET_RADIUS;
+	}
+	if (radius < minr || radius > maxr)
+		radius = (float) snis_randn(maxr - minr) + minr;
+	go[i].tsd.planet.radius = radius;
 	go[i].tsd.planet.has_atmosphere = has_atmosphere(go[i].tsd.planet.solarsystem_planet_type);
 	go[i].tsd.planet.atmosphere_type = select_atmospheric_profile(&go[i]);
 	go[i].tsd.planet.ring_selector = snis_randn(256);
