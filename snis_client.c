@@ -11198,21 +11198,21 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 		break;
 	case 1:
 		new_nav_camera_pos_factor = 0.5;
-		cam_pos_scale = 0.75;
+		cam_pos_scale = 0.90;
 		radar_ring_count = 8;
 		break;
 	case 2:
 		new_nav_camera_pos_factor = 0.25;
-		cam_pos_scale = 0.75 * 0.75;
+		cam_pos_scale = 0.90 * 0.90;
 		radar_ring_count = 8;
 		break;
 	case 3:
 		new_nav_camera_pos_factor = 0.125;
-		cam_pos_scale = 0.75 * 0.75 * 0.75;
+		cam_pos_scale = 0.90 * 0.90 * 0.90;
 		radar_ring_count = 8;
 		break;
 	case 4:
-		new_nav_camera_pos_factor = 2.0;
+		new_nav_camera_pos_factor = 1.6;
 		cam_pos_scale = 1.0;
 		radar_ring_count = 4;
 		break;
