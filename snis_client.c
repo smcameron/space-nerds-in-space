@@ -4361,6 +4361,7 @@ static int process_update_ship_packet(uint8_t opcode)
 	uint32_t fuel, oxygen, victim_id, wallet, viewpoint_object;
 	double dx, dy, dz, dyawvel, dpitchvel, drollvel;
 	double dgunyawvel, dsheading, dbeamwidth;
+	double hgax, hgay, hgaz; /* high gain antenna aim */
 	int rc;
 	int type = opcode == OPCODE_UPDATE_SHIP ? OBJTYPE_SHIP1 : OBJTYPE_SHIP2;
 	uint8_t tloading, tloaded, throttle, rpm, temp, scizoom, weapzoom, navzoom,
@@ -4369,7 +4370,7 @@ static int process_update_ship_packet(uint8_t opcode)
 		reverse, trident, in_secure_area, docking_magnets, emf_detector,
 		nav_mode, warp_core_status, rts_mode, exterior_lights, alarms_silenced,
 		rts_active_button;
-	union quat orientation, sciball_orientation, weap_orientation;
+	union quat orientation, sciball_orientation, weap_orientation, hg_ant_orientation;
 	union euler ypr;
 	struct entity *e;
 	struct snis_entity *o;
@@ -4391,13 +4392,17 @@ static int process_update_ship_packet(uint8_t opcode)
 				&dgunyawvel,
 				&dsheading,
 				&dbeamwidth);
-	packed_buffer_extract(&pb, "bbbwwbbbbbbbbbbbbbwQQQbbbbbbbbbww",
+	packed_buffer_extract(&pb, "bbbwwbbbbbbbbbbbbbwQQQQSSSbbbbbbbbbww",
 			&tloading, &throttle, &rpm, &fuel, &oxygen, &temp,
 			&scizoom, &weapzoom, &navzoom, &mainzoom,
 			&warpdrive, &requested_warpdrive,
 			&requested_shield, &phaser_charge, &phaser_wavelength, &shiptype,
 			&reverse, &trident, &victim_id, &orientation.vec[0],
-			&sciball_orientation.vec[0], &weap_orientation.vec[0], &in_secure_area,
+			&sciball_orientation.vec[0], &weap_orientation.vec[0], &hg_ant_orientation.vec[0],
+			&hgax, (int32_t) 1000000,
+			&hgay, (int32_t) 1000000,
+			&hgaz, (int32_t) 1000000,
+			&in_secure_area,
 			&docking_magnets, &emf_detector, &nav_mode, &warp_core_status, &rts_mode,
 			&exterior_lights, &alarms_silenced, &rts_active_button, &wallet, &viewpoint_object);
 	tloaded = (tloading >> 4) & 0x0f;
@@ -4469,7 +4474,11 @@ static int process_update_ship_packet(uint8_t opcode)
 
 	update_orientation_history(o->tsd.ship.sciball_o, &sciball_orientation);
 	update_orientation_history(o->tsd.ship.weap_o, &weap_orientation);
-
+	o->tsd.ship.current_hg_ant_orientation = hg_ant_orientation;
+	o->tsd.ship.desired_hg_ant_aim.v.x = hgax;
+	o->tsd.ship.desired_hg_ant_aim.v.y = hgay;
+	o->tsd.ship.desired_hg_ant_aim.v.z = hgaz;
+	vec3_normalize_self(&o->tsd.ship.desired_hg_ant_aim);
 	if (!o->tsd.ship.reverse && reverse)
 		wwviaudio_add_sound(REVERSE_SOUND);
 	o->tsd.ship.reverse = reverse;
@@ -11279,13 +11288,22 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 		}
 	}
 
-	for (i = 0; i < 2; ++i) {
-		int color = (i == 0) ? UI_COLOR(nav_weapon_vector) : UI_COLOR(nav_science_vector);
+	const int vector_color[] = {
+		UI_COLOR(nav_weapon_vector),
+		UI_COLOR(nav_science_vector),
+		UI_COLOR(nav_comms_curr_vector),
+		UI_COLOR(nav_comms_desired_vector),
+	};
+	char *arrow_label[] = { "WEAP", "SCI", "COMMS", "COMMS" };
+	for (i = 0; i < 4; ++i) {
+		int color = vector_color[i];
 
 		union quat ind_orientation;
-		if (i == 0)
+		switch (i) {
+		case 0:
 			quat_mul(&ind_orientation, &o->orientation, &o->tsd.ship.weap_orientation);
-		else {
+			break;
+		case 1: {
 			union vec3 up = { { 0, 1, 0 } };
 			union vec3 xaxis = { { 1, 0, 0 } };
 
@@ -11303,6 +11321,17 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 							sci_ui.waypoint[curr_science_waypoint][2]  - o->z, } };
 				quat_from_u2v(&ind_orientation, &xaxis, &sci_wp, &up);
 			}
+			}
+			break;
+		case 2:
+			ind_orientation = o->tsd.ship.current_hg_ant_orientation;
+			break;
+		case 3:
+		default: {
+			union vec3 r = { { 1.0, 0.0, 0.0 } };
+			quat_from_u2v(&ind_orientation, &r, &o->tsd.ship.desired_hg_ant_aim, 0);
+			break;
+			}
 		}
 
 		/* heading arrow head */
@@ -11314,6 +11343,7 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 			update_entity_scale(e, heading_indicator_mesh->radius*screen_radius/100.0);
 			update_entity_orientation(e, &ind_orientation);
 			set_render_style(e, RENDER_NORMAL);
+			entity_set_user_data(e, &arrow_label[i]);
 		}
 
 		/* heading arrow tail */
@@ -11601,7 +11631,8 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 		struct entity *e;
 		struct snis_entity *o;
 		double *wp;
-		int waypoint_diff;
+		char **arrowlabel;
+		int waypoint_diff, arrow_label_diff;
 
 		e = get_entity(instrumentecx, i);
 		if (!e)
@@ -11618,11 +11649,17 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 		 */
 		wp = (double *) o;
 		waypoint_diff = wp - &sci_ui.waypoint[0][0];
+		arrowlabel = (char **) o;
+		arrow_label_diff = arrowlabel - &arrow_label[0];
 		if (waypoint_diff >= 0 && waypoint_diff < 3 * MAXWAYPOINTS) {
 			/* It is a waypoint */
 			waypoint_diff = waypoint_diff / 3;
 			entity_get_screen_coords(e, &sx, &sy);
 			sprintf(buffer, "WAYPOINT-%02d", waypoint_diff);
+			sng_abs_xy_draw_string(buffer, NANO_FONT, sx + 10, sy - 15);
+		} else if (arrow_label_diff >= 0 && arrow_label_diff < 4) { /* Arrow head */
+			entity_get_screen_coords(e, &sx, &sy);
+			snprintf(buffer, sizeof(buffer), "%s", *arrowlabel);
 			sng_abs_xy_draw_string(buffer, NANO_FONT, sx + 10, sy - 15);
 		} else {
 			/* It is not a waypoint */

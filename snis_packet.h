@@ -286,6 +286,8 @@ struct update_ship_packet {
 	int16_t orientation[4]; /* int16_t encoded orientation quaternion */
 	int16_t sciball_orientation[4]; /* int16_t encoded orientation quaternion */
 	int16_t weap_orientation[4];
+	int16_t current_hg_ant_orientation[4]; /* high gain antenna orientation */
+	uint32_t desired_hg_ant_aim[3]; /* high gain antenna desired vec3 direction vector */
 	uint8_t in_secure_area;
 	uint8_t docking_magnets;
 	uint8_t emf_detector;

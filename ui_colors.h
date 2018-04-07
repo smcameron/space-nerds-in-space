@@ -92,6 +92,8 @@ struct ui_color_map {
 	struct ui_color_entry nav_laser;
 	struct ui_color_entry nav_weapon_vector;
 	struct ui_color_entry nav_science_vector;
+	struct ui_color_entry nav_comms_curr_vector;
+	struct ui_color_entry nav_comms_desired_vector;
 	struct ui_color_entry nav_entity_label;
 	struct ui_color_entry nav_science_select;
 	struct ui_color_entry nav_trident_ship;
@@ -274,6 +276,8 @@ struct ui_color_map_accessor {
 	.u.map.nav_laser		= { YELLOW,		"nav-laser" },
 	.u.map.nav_weapon_vector	= { CYAN_FIXUP,		"nav-weapon-vector" },
 	.u.map.nav_science_vector	= { GREEN_FIXUP,	"nav-science-vector" },
+	.u.map.nav_comms_curr_vector	= { AMBER,		"nav-comms-vector" },
+	.u.map.nav_comms_desired_vector	= { YELLOW,		"nav-comms-vector" },
 	.u.map.nav_entity_label		= { GREEN_FIXUP,	"nav-entity-label" },
 	.u.map.nav_science_select	= { GREEN_FIXUP,	"nav-science-select" },
 	.u.map.nav_trident_ship		= { AMBER,		"nav-trident-ship" },

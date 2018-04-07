@@ -30,7 +30,7 @@
 #define MAXSTARMAPENTRIES 1000 /* max number of solar systems */
 #define MAX_STARMAP_ADJACENCIES 5 /* max warp lanes from one star to other stars */
 #define DEFAULT_SOLAR_SYSTEM "default"
-#define SNIS_PROTOCOL_VERSION "SNIS017"
+#define SNIS_PROTOCOL_VERSION "SNIS018"
 #define COMMON_MTWIST_SEED 97872
 /* dimensions of the "known" universe */
 #define XKNOWN_DIM 600000.0
@@ -532,6 +532,10 @@ struct ship_data {
 	uint8_t rts_active_button; /* which comms RTS button is currently active. 255 means none */
 	uint8_t alarms_silenced;
 	uint32_t viewpoint_object;
+	union quat current_hg_ant_orientation; /* current high gain antenna orientation */
+	union vec3 desired_hg_ant_aim; /* direction we would like high gain antenna to aim */
+#define COMMS_SHORT_RANGE 5000
+#define COMMS_LONG_RANGE_ANGLE (10.0 * M_PI / 180.0)
 };
 
 #define MIN_COMBAT_ATTACK_DIST 200

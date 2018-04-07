@@ -7890,6 +7890,19 @@ static void update_player_sciball_orientation(struct snis_entity *o)
 			o->tsd.ship.sciball_rollvel);
 }
 
+static void update_high_gain_antenna_orientation(struct snis_entity *o)
+{
+	/* Normally we would want to recalculate this from the reference orientation
+	 * of the ship from scratch and not accumulate rotations like this
+	 * lest they eventually get out of sync with the ship, but it is OK because
+	 * aim_high_gain_antenna() will refigger it properly immediately after this.
+	 */
+	quat_apply_relative_yaw_pitch_roll(&o->tsd.ship.current_hg_ant_orientation,
+			-o->tsd.ship.yaw_velocity,
+			-o->tsd.ship.pitch_velocity,
+			-o->tsd.ship.roll_velocity);
+}
+
 static void set_player_sciball_orientation(struct snis_entity *o, float x, float y)
 {
 	quat_apply_relative_yaw_pitch_roll(&o->tsd.ship.sciball_orientation,
@@ -8271,7 +8284,44 @@ static void check_science_selection(struct snis_entity *o)
 deselect:
 	bridgelist[bn].science_selection = (uint32_t) -1;
 }
-		
+
+static void aim_high_gain_antenna(struct snis_entity *o)
+{
+	union vec3 straight_ahead = { { 1.0, 0.0, 0.0 } };
+	union vec3 aim_point = o->tsd.ship.desired_hg_ant_aim;
+	union quat new_orientation;
+	float d;
+
+	/* Figure what "straight ahead" means in the ship's orientation */
+	quat_rot_vec_self(&straight_ahead, &o->orientation);
+
+	vec3_normalize_self(&aim_point);
+	/* Figure if the aim point is more or less behind the ship */
+	d = vec3_dot(&aim_point, &straight_ahead);
+	if (d < 0.0) { /* aim point is behind ship */
+		/* Subtract out the backwards portion of the aim point */
+		vec3_mul_self(&straight_ahead, -d);
+		vec3_add_self(&aim_point, &straight_ahead); /* */
+		vec3_normalize_self(&aim_point);
+	}
+	/* Figure what the new orientation should be */
+	straight_ahead.v.x = 1.0;
+	straight_ahead.v.y = 0.0;
+	straight_ahead.v.z = 0.0;
+	quat_from_u2v(&new_orientation, &straight_ahead, &aim_point, NULL);
+	quat_normalize_self(&new_orientation);
+	if (d < 0.0) { /* hard limit, antenna physically cannot point backwards */
+		o->tsd.ship.current_hg_ant_orientation = new_orientation;
+	} else {
+		/* TODO: would be nice to rate limit the antenna movement to something
+		 * less than the ship's rotation rate. However, doing so is a bit tricky,
+		 * akin to the turret movement code. Here we just snap the antenna to the
+		 * new orientation.
+		 */
+		o->tsd.ship.current_hg_ant_orientation = new_orientation;
+	}
+}
+
 static void player_move(struct snis_entity *o)
 {
 	int i, desired_rpm, desired_temp, diff;
@@ -8323,6 +8373,8 @@ static void player_move(struct snis_entity *o)
 	update_player_orientation(o);
 	update_player_sciball_orientation(o);
 	update_player_weap_orientation(o);
+	update_high_gain_antenna_orientation(o);	/* apply ship rotation to antenna */
+	aim_high_gain_antenna(o);			/* try to aim antenna at desired comms target */
 	update_player_position_and_velocity(o);
 	
 	o->tsd.ship.sci_heading += o->tsd.ship.sci_yaw_velocity;
@@ -9415,6 +9467,10 @@ static void init_player(struct snis_entity *o, int clear_cargo_bay, float *charg
 		o->tsd.ship.wallet -= money;
 		*charges = money;
 	}
+	o->tsd.ship.current_hg_ant_orientation = identity_quat;
+	o->tsd.ship.desired_hg_ant_aim.v.x = 1.0;
+	o->tsd.ship.desired_hg_ant_aim.v.y = 0.0;
+	o->tsd.ship.desired_hg_ant_aim.v.z = 0.0;
 }
 
 static void clear_bridge_waypoints(int bridge)
@@ -9610,6 +9666,10 @@ static int add_ship(int faction, int auto_respawn)
 	ship_name(mt, go[i].sdata.name, sizeof(go[i].sdata.name));
 	uppercase(go[i].sdata.name);
 	go[i].tsd.ship.fuel = 0; /* TODO: maybe sandbox mode should consume fuel too? */
+	go[i].tsd.ship.current_hg_ant_orientation = identity_quat;
+	go[i].tsd.ship.desired_hg_ant_aim.v.x = 1;
+	go[i].tsd.ship.desired_hg_ant_aim.v.y = 0;
+	go[i].tsd.ship.desired_hg_ant_aim.v.z = 0;
 	return i;
 }
 
@@ -13118,6 +13178,7 @@ static void meta_comms_help(char *name, struct game_client *c, char *txt)
 		"  * /hail ship-name - hail ship or starbase on current channel",
 		"  * /inventory - report inventory of ship's cargo hold",
 		"  * /passengers - report list of passengers",
+		"  * /antenna <bearing> <mark> - aim the high gain antenna",
 		"  * /about - information about the game",
 		"",
 		0,
@@ -14783,6 +14844,27 @@ static void meta_comms_computer(char *name, struct game_client *c, char *txt)
 	free(duptxt);
 }
 
+static void meta_comms_antenna(char *name, struct game_client *c, char *txt)
+{
+	char *duptxt;
+	float bearing, mark;
+	int rc;
+
+	duptxt = strndup(txt, 256);
+	printf("Antenna text = '%s'\n", duptxt);
+	rc = sscanf(duptxt, "%*s %f %f", &bearing, &mark);
+	printf("antenna rc = %d\n", rc);
+	if (rc == 2) {
+		union vec3 dir;
+		printf("bearing %f, mark %f\n", bearing, mark);
+		bearing *= M_PI / 180.0;
+		mark *= M_PI / 180.0;
+		bearing = math_angle_to_game_angle(bearing);
+		heading_mark_to_vec3(1.0, bearing, mark, &dir);
+		go[c->ship_index].tsd.ship.desired_hg_ant_aim = dir;
+	}
+}
+
 static void meta_comms_hail(char *name, struct game_client *c, char *txt)
 {
 #define MAX_SHIPS_HAILABLE 10
@@ -14915,6 +14997,7 @@ static const struct meta_comms_data {
 	{ "/about", meta_comms_about },
 	{ "/help", meta_comms_help },
 	{ "/computer", meta_comms_computer },
+	{ "/antenna", meta_comms_antenna },
 };
 
 static void process_meta_comms_packet(char *name, struct game_client *c, char *txt)
@@ -19456,7 +19539,7 @@ static void send_update_ship_packet(struct game_client *c,
 	packed_buffer_append(pb, "bwwhSSS", opcode, o->id, o->timestamp, o->alive,
 			o->x, (int32_t) UNIVERSE_DIM, o->y, (int32_t) UNIVERSE_DIM,
 			o->z, (int32_t) UNIVERSE_DIM);
-	packed_buffer_append(pb, "RRRwwRRRbbbwwbbbbbbbbbbbbbwQQQbbbbbbbbbww",
+	packed_buffer_append(pb, "RRRwwRRRbbbwwbbbbbbbbbbbbbwQQQQSSSbbbbbbbbbww",
 			o->tsd.ship.yaw_velocity,
 			o->tsd.ship.pitch_velocity,
 			o->tsd.ship.roll_velocity,
@@ -19475,6 +19558,10 @@ static void send_update_ship_packet(struct game_client *c,
 			&o->orientation.vec[0],
 			&o->tsd.ship.sciball_orientation.vec[0],
 			&o->tsd.ship.weap_orientation.vec[0],
+			&o->tsd.ship.current_hg_ant_orientation.vec[0],
+			o->tsd.ship.desired_hg_ant_aim.v.x * 100000, (int32_t) 1000000,
+			o->tsd.ship.desired_hg_ant_aim.v.y * 100000, (int32_t) 1000000,
+			o->tsd.ship.desired_hg_ant_aim.v.z * 100000, (int32_t) 1000000,
 			o->tsd.ship.in_secure_area,
 			o->tsd.ship.docking_magnets,
 			o->tsd.ship.emf_detector,
