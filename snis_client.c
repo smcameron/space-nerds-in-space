@@ -8538,7 +8538,7 @@ static int nscience_guys = 0;
 
 static void draw_3d_laserbeam(GtkWidget *w, GdkGC *gc, struct entity_context *cx, struct snis_entity *o, struct snis_entity *laserbeam, double r)
 {
-	int rc, color;
+	int rc;
 	struct snis_entity *shooter, *shootee;
 
 	shooter = lookup_entity_by_id(laserbeam->tsd.laserbeam.origin);
@@ -8547,11 +8547,6 @@ static void draw_3d_laserbeam(GtkWidget *w, GdkGC *gc, struct entity_context *cx
 	shootee = lookup_entity_by_id(laserbeam->tsd.laserbeam.target);
 	if (!shootee)
 		return;
-
-	if (shooter->type == OBJTYPE_SHIP2)
-		color = NPC_LASER_COLOR;
-	else
-		color = PLAYER_LASER_COLOR;
 
 	union vec3 center = {{o->x, o->y, o->z}};
 	union vec3 vshooter = {{shooter->x, shooter->y, shooter->z}};
@@ -8563,7 +8558,7 @@ static void draw_3d_laserbeam(GtkWidget *w, GdkGC *gc, struct entity_context *cx
 		return;
 	float sx1, sy1, sx2, sy2;
 	if (!transform_line(cx, clip1.v.x, clip1.v.y, clip1.v.z, clip2.v.x, clip2.v.y, clip2.v.z, &sx1, &sy1, &sx2, &sy2)) {
-		sng_draw_laser_line(sx1, sy1, sx2, sy2, color);
+		sng_draw_laser_line(sx1, sy1, sx2, sy2, UI_COLOR(nav_laser));
 	}
 }
 
@@ -11431,12 +11426,13 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 			struct mesh *m = entity_get_mesh(go[i].entity);
 
 			if (go[i].type == OBJTYPE_TORPEDO) {
+				union quat orientation;
+				random_quat(&orientation); /* make torpedo flip around randomly */
 				contact = add_entity(instrumentecx, torpedo_nav_mesh, go[i].x, go[i].y, go[i].z,
-							UI_COLOR(nav_torpedo));
-				if (contact) {
-					set_render_style(contact, science_style | RENDER_BRIGHT_LINE | RENDER_NO_FILL);
+							(timer & 0x04) == 0 ? UI_COLOR(nav_torpedo) : BLACK);
+				update_entity_orientation(contact, &orientation);
+				if (contact)
 					entity_set_user_data(contact, &go[i]); /* for debug */
-				}
 			} else if (go[i].type == OBJTYPE_LASER) {
 				contact = add_entity(instrumentecx, laserbeam_nav_mesh, go[i].x, go[i].y, go[i].z,
 					UI_COLOR(nav_laser));
@@ -11488,7 +11484,8 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 					update_entity_scale(contact, entity_get_scale(go[i].entity));
 				else
 					update_entity_scale(contact, cam_pos_scale * entity_get_scale(go[i].entity));
-				update_entity_orientation(contact, entity_get_orientation(go[i].entity));
+				if (go[i].type != OBJTYPE_TORPEDO)
+					update_entity_orientation(contact, entity_get_orientation(go[i].entity));
 			}
 #if 0
 			if (o->tsd.ship.ai[0].u.attack.victim_id != -1 && go[i].id == o->tsd.ship.ai[0].u.attack.victim_id)
@@ -11530,6 +11527,8 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 				contact_scale = ((255.0 - current_zoom) / 255.0) * 2.0 + 1.0;
 				break;
 			case OBJTYPE_TORPEDO:
+				contact_scale = 20.0 * ((255.0 - current_zoom) / 255.0) * 2.0 + 1.0;
+				break;
 			case OBJTYPE_LASER:
 				contact_scale = ((255.0 - current_zoom) / 255.0) * 3.0 + 1.0;
 				draw_contact_offset_and_ring = 0;
