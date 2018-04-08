@@ -297,10 +297,39 @@ static void test_torus_dist(void)
 	printf("got %f, expected %f\n", dist, 35.0);
 }
 
+static void test_heading_mark_vec3(void)
+{
+	double h1, m1, h2, m2, h3, m3, r;
+	union vec3 v;
+	const union vec3 straight_ahead = { { 1.0, 0.0, 0.0 } };
+	union quat rotation;
+
+	for (h1 = 0.0; h1 <= 2.0 * M_PI; h1 += M_PI / 180.0) {
+		for (m1 = -90.0 * M_PI / 180.0; m1 <= 90.0 * M_PI / 180.0; m1 += M_PI / 180.0) {
+			heading_mark_to_vec3(1.0, h1, m1, &v);
+			quat_from_u2v(&rotation, &straight_ahead, &v, NULL);
+			vec3_to_heading_mark(&v, &r, &h2, &m2);
+			quat_to_heading_mark(&rotation, &h3, &m3);
+			printf("h1,m1: %f,%f  h2,m2: %f,%f  h3,m3: %f,%f\n",
+				h1 * 180.0 / M_PI, m1 * 180.0 / M_PI,
+				h2 * 180.0 / M_PI, m2 * 180.0 / M_PI,
+				h3 * 180.0 / M_PI, m3 * 180.0 / M_PI);
+			TESTIT(fabsf(m1 - m2) > 0.5 * M_PI / 180.0, "heading mark vec3 m1m2 test failed.");
+			TESTIT(fabsf(m1 - m3) > 0.5 * M_PI / 180.0, "heading mark vec3 m1h3 test failed.");
+			if (fabsf(fabsf(m1) - 90.0 * M_PI / 180.0) > 0.01) {
+				/* at mark +/- 90, heading can be anything */
+				TESTIT(fabsf(h1 - h2) > 0.5 * M_PI / 180.0, "heading mark vec3 h1h2 testfailed.");
+				TESTIT(fabsf(h1 - h3) > 0.5 * M_PI / 180.0, "heading mark vec3 h1h3 test failed.");
+			}
+		}
+	}
+}
+
 int main(__attribute__((unused)) int argc, __attribute__((unused))  char *argv[])
 {
 	test1();
 	test_torus_dist();
+	test_heading_mark_vec3();
 	printf("%d tests failed, %d tests passed.\n", total_tests_failed,
 				total_tests - total_tests_failed);
 	return 0;
