@@ -3247,7 +3247,7 @@ static void draw_plane_radar(GtkWidget *w, struct snis_entity *o, union quat *ai
 			continue;
 		}
 
-		float dist2 = dist3dsqrd(go[i].x - o->x, go[i].y - o->y, go[i].z - o->z);
+		float dist2 = object_dist2(&go[i], o);
 		if (dist2 > range2)
 			continue; /* not close enough */
 
@@ -9079,7 +9079,7 @@ static void draw_sciplane_display(GtkWidget *w, struct snis_entity *o, double ra
 				continue;
 			}
 
-			dist2 = dist3dsqrd(go[i].x - o->x, go[i].y - o->y, go[i].z - o->z);
+			dist2 = object_dist2(&go[i], o);
 			if (go[i].type == OBJTYPE_NEBULA) {
 				if (dist2 < go[i].tsd.nebula.r * go[i].tsd.nebula.r)
 					nebula_factor++;
@@ -9439,7 +9439,7 @@ static void draw_all_the_3d_science_guys(GtkWidget *w, struct snis_entity *o, do
 		}
 #endif
 
-		dist2 = dist3dsqrd(go[i].x - o->x, go[i].y - o->y, go[i].z - o->z);
+		dist2 = object_dist2(&go[i], o);
 		if (go[i].type == OBJTYPE_NEBULA) {
 			if (dist2 < go[i].tsd.nebula.r * go[i].tsd.nebula.r)
 				nebula_factor++;

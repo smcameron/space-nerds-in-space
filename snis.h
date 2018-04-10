@@ -993,4 +993,11 @@ struct player_waypoint {
 	char name[15];
 };
 
+#define object_dist2(a, b) \
+	((((a)->x - (b)->x) * ((a)->x - (b)->x)) + \
+	 (((a)->y - (b)->y) * ((a)->y - (b)->y)) + \
+	 (((a)->z - (b)->z) * ((a)->z - (b)->z)))
+
+#define object_dist(a, b) (sqrtf(object_dist2((a), (b))))
+
 #endif

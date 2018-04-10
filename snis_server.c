@@ -809,8 +809,7 @@ static void fire_lua_proximity_checks(void)
 {
 	struct lua_proximity_check *i, *last, *next;
 	struct lua_proximity_check *temp_list = NULL;
-	struct snis_entity *o1, *o2;
-	double dx, dy, dz, dist2;
+	double dist2;
 	int a, b;
 
 	last = NULL;
@@ -829,14 +828,7 @@ static void fire_lua_proximity_checks(void)
 			continue;
 		}
 
-		o1 = &go[a];
-		o2 = &go[b];
-		dx = o1->x - o2->x;
-		dy = o1->y - o2->y;
-		dz = o1->z - o2->z;
-		dist2 = dx * dx + dy * dy + dz * dz;
-
-
+		dist2 = object_dist2(&go[a], &go[b]);
 		if (dist2 <= i->distance2) { /* add the proximity check to temp list */
 			/* Remove the proximity check */
 			if (last)
@@ -1154,7 +1146,7 @@ static void black_hole_collision_detection(void *o1, void *o2)
 		return;
 	if (object->type == OBJTYPE_NEBULA)
 		return;
-	dist = dist3d(black_hole->x - object->x, black_hole->y - object->y, black_hole->z - object->z);
+	dist = object_dist(black_hole, object);
 	if (dist > BLACK_HOLE_INFLUENCE_LIMIT * black_hole->tsd.black_hole.radius)
 		return;
 	if (dist < BLACK_HOLE_EVENT_HORIZON * black_hole->tsd.black_hole.radius) {
@@ -1257,7 +1249,7 @@ static void check_warp_core_explosion_damage(struct snis_entity *warp_core,
 	switch (object->type) {
 	case OBJTYPE_SHIP1:
 	case OBJTYPE_SHIP2:
-		dist = dist3d(warp_core->x - object->x, warp_core->y - object->y, warp_core->z - object->z);
+		dist = object_dist(warp_core, object);
 		if (dist > WARP_CORE_EXPLOSION_DAMAGE_DISTANCE)
 			return;
 		damage_factor = WARP_CORE_EXPLOSION_DAMAGE_DISTANCE / (dist + 1.0);
@@ -1285,10 +1277,7 @@ static void warp_core_collision_detection(void *o1, void *o2)
 		check_warp_core_explosion_damage(warp_core, object);
 	if (object->type != OBJTYPE_BLOCK)
 		return;
-	dist2 = dist3dsqrd(warp_core->x - object->x,
-				warp_core->y - object->y,
-				warp_core->z - object->z);
-
+	dist2 = object_dist2(warp_core, object);
 	if (dist2 > object->tsd.block.radius * object->tsd.block.radius)
 		return;
 
@@ -1417,7 +1406,7 @@ static void wormhole_collision_detection(void *wormhole, void *object)
 	case OBJTYPE_WORMHOLE:
 		return;
 	default:
-		dist2 = dist3dsqrd(t->x - o->x, t->y - o->y, t->z - o->z);
+		dist2 = object_dist2(t, o);
 		if (dist2 < 30.0 * 30.0) {
 			a = snis_randn(360) * M_PI / 180.0;
 			r = 60.0;
@@ -2699,7 +2688,7 @@ static void process_potential_victim(void *context, void *entity)
 	}
 
 	hostility = faction_hostility(o->sdata.faction, v->sdata.faction);
-	dist = dist3d(o->x - v->x, o->y - v->y, o->z - v->z);
+	dist = object_dist(o, v);
 
 	if (dist > XKNOWN_DIM / 10.0) /* too far away */
 		return;
@@ -2933,7 +2922,7 @@ static void notify_a_cop(void *context, void *entity)
 	if (cop->tsd.ship.ai[0].ai_mode != AI_MODE_COP)
 		return;
 
-	dist2 = dist3dsqrd(cop->x - perp->x, cop->y - perp->y, cop->z - perp->z);
+	dist2 = object_dist2(cop, perp);
 	if (dist2 > SECURITY_RADIUS * SECURITY_RADIUS)
 		return;
 
@@ -3175,7 +3164,7 @@ static void torpedo_collision_detection(void *context, void *entity)
 		return;
 	if (t->id == o->tsd.torpedo.ship_id)
 		return; /* can't torpedo yourself. */
-	dist2 = dist3dsqrd(t->x - o->x, t->y - o->y, t->z - o->z);
+	dist2 = object_dist2(t, o);
 
 	if (t->type == OBJTYPE_BLOCK) {
 		union vec3 torpedo_pos, closest_point, normal;
@@ -3394,7 +3383,7 @@ static void laser_collision_detection(void *context, void *entity)
 		double dist2;
 		union vec3 laser_pos, closest_point;
 
-		dist2 = dist3dsqrd(o->x - t->x, o->y - t->y, o->z - t->z);
+		dist2 = object_dist2(o, t);
 		if (dist2 > t->tsd.block.radius * t->tsd.block.radius)
 			return;
 		laser_pos.v.x = o->x;
@@ -3726,10 +3715,9 @@ static void spacemonster_collision_process(void *context, void *entity)
 	case OBJTYPE_SPACEMONSTER:
 		if (o->tsd.spacemonster.spacemonster_dist < 0.0) {
 			o->tsd.spacemonster.nearest_spacemonster = thing->id;
-			o->tsd.spacemonster.spacemonster_dist =
-				dist3d(o->x - thing->x, o->y - thing->y, o->z - thing->z);
+			o->tsd.spacemonster.spacemonster_dist = object_dist(o, thing);
 		} else if (o->id != o->tsd.spacemonster.nearest_spacemonster) {
-			dist = dist3d(o->x - thing->x, o->y - thing->y, o->z - thing->z);
+			dist = object_dist(o, thing);
 			if (dist < o->tsd.spacemonster.spacemonster_dist) {
 				o->tsd.spacemonster.spacemonster_dist = dist;
 				o->tsd.spacemonster.nearest_spacemonster = thing->id;
@@ -3739,10 +3727,9 @@ static void spacemonster_collision_process(void *context, void *entity)
 	case OBJTYPE_ASTEROID:
 		if (o->tsd.spacemonster.asteroid_dist < 0.0) {
 			o->tsd.spacemonster.nearest_asteroid = thing->id;
-			o->tsd.spacemonster.asteroid_dist =
-				dist3d(o->x - thing->x, o->y - thing->y, o->z - thing->z);
+			o->tsd.spacemonster.asteroid_dist = object_dist(o, thing);
 		} else if (o->id != o->tsd.spacemonster.nearest_asteroid) {
-			dist = dist3d(o->x - thing->x, o->y - thing->y, o->z - thing->z);
+			dist = object_dist(o, thing);
 			if (dist < o->tsd.spacemonster.asteroid_dist) {
 				o->tsd.spacemonster.asteroid_dist = dist;
 				o->tsd.spacemonster.nearest_asteroid = thing->id;
@@ -3753,10 +3740,9 @@ static void spacemonster_collision_process(void *context, void *entity)
 	case OBJTYPE_SHIP2:
 		if (o->tsd.spacemonster.ship_dist < 0.0) {
 			o->tsd.spacemonster.nearest_ship = thing->id;
-			o->tsd.spacemonster.ship_dist =
-				dist3d(o->x - thing->x, o->y - thing->y, o->z - thing->z);
+			o->tsd.spacemonster.ship_dist = object_dist(o, thing);
 		} else if (o->id != o->tsd.spacemonster.nearest_ship) {
-			dist = dist3d(o->x - thing->x, o->y - thing->y, o->z - thing->z);
+			dist = object_dist(o, thing);
 			if (dist < o->tsd.spacemonster.ship_dist) {
 				o->tsd.spacemonster.ship_dist = dist;
 				o->tsd.spacemonster.nearest_ship = thing->id;
@@ -3916,7 +3902,7 @@ static void spacemonster_fight(struct snis_entity *o)
 	if (o->tsd.spacemonster.nearest_spacemonster != -1) {
 		i = lookup_by_id(o->tsd.spacemonster.nearest_spacemonster);
 		if (i >= 0) {
-			double dist = dist3d(o->x - go[i].x, o->y - go[i].y, o->z - go[i].z);
+			float dist = object_dist(o, &go[i]);
 			if (dist < 500) { /* too close */
 				union vec3 steer;
 
@@ -3949,7 +3935,7 @@ static void spacemonster_eat(struct snis_entity *o)
 		for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
 			if (!go[i].alive || go[i].type != OBJTYPE_ASTEROID)
 				continue;
-			dist = dist3d(o->x - go[i].x, o->y - go[i].y, o->z - go[i].z);
+			dist = object_dist(o, &go[i]);
 			if (mindist < 0.0 || dist < mindist) {
 				found = i;
 				mindist = dist;
@@ -3996,7 +3982,7 @@ static void spacemonster_eat(struct snis_entity *o)
 	if (o->tsd.spacemonster.nearest_spacemonster != -1) {
 		i = lookup_by_id(o->tsd.spacemonster.nearest_spacemonster);
 		if (i >= 0) {
-			dist = dist3d(o->x - go[i].x, o->y - go[i].y, o->z - go[i].z);
+			dist = object_dist(o, &go[i]);
 			if (dist < 500) { /* too close */
 				union vec3 steer;
 				float mul;
@@ -4253,7 +4239,7 @@ static void check_for_nearby_targets(struct snis_entity *o)
 			double dist2;
 
 			v = &go[i];
-			dist2 = dist3dsqrd(o->x - v->x, o->y - v->y, o->z - v->z);
+			dist2 = object_dist2(o, v);
 			if (dist2 < PATROL_ATTACK_DIST * PATROL_ATTACK_DIST)
 				push_attack_mode(o, victim_id, 0);
 		}
@@ -4331,7 +4317,7 @@ static void count_nearby_cops(void *context, void *entity)
 	if (cop->tsd.ship.ai[0].ai_mode != AI_MODE_COP)
 		return;
 
-	dist2 = dist3dsqrd(ship->x - cop->x, ship->y - cop->y, ship->z - cop->z);
+	dist2 = object_dist2(ship, cop);
 	if (dist2 < SECURITY_RADIUS * SECURITY_RADIUS)
 		ship->tsd.ship.in_secure_area = 1;
 }
@@ -4359,7 +4345,7 @@ static void ai_maybe_fire_weapon(struct snis_entity *o, struct snis_entity *v, i
 		/* int inside_nebula = in_nebula(o->x, o->y) || in_nebula(v->x, v->y); */
 
 		if (v->type == OBJTYPE_PLANET || !planet_between_objs(o, v)) {
-			dist = hypot3d(v->x - o->x, v->y - o->y, v->z - o->z);
+			dist = object_dist(v, o);
 			flight_time = dist / TORPEDO_VELOCITY;
 			tx = v->x + (v->vx * flight_time);
 			tz = v->z + (v->vz * flight_time);
@@ -4446,7 +4432,7 @@ static void ai_attack_mode_brain(struct snis_entity *o)
 	dx = destx - o->x;
 	dy = desty - o->y;
 	dz = destz - o->z;
-	vdist = dist3d(o->x - v->x, o->y - v->y, o->z - v->z);
+	vdist = object_dist(o, v);
 	if (vdist > ATTACK_MODE_GIVE_UP_DISTANCE &&
 		v->type != OBJTYPE_PLANET && v->type != OBJTYPE_STARBASE && !rts_mode) {
 		pop_ai_attack_mode(o);
@@ -4647,7 +4633,7 @@ static void ai_flee_mode_brain(struct snis_entity *o)
 	/* Maybe shoot at assailant if he is close enough */
 	i = lookup_by_id(o->tsd.ship.ai[n].u.flee.assailant);
 	if (i >= 0) {
-		vdist = dist3d(go[i].x - o->x, go[i].y - o->y, go[i].z - o->z);
+		vdist = object_dist(&go[i], o);
 		if (vdist < LASER_RANGE)
 			ai_maybe_fire_weapon(o, &go[i], o->tsd.ship.ai[0].ai_mode == AI_MODE_COP,
 						vdist, 0.0);
@@ -4779,14 +4765,8 @@ static float ai_ship_travel_towards(struct snis_entity *o,
 	/* Check if there's a planet in the way and try to avoid it. */
 	planet = planet_between_points(&startv, &endv);
 	if (planet) {
-		double planet_distance;
-		double dx, dy, dz;
-		dx = planet->x - o->x;
-		dy = planet->y - o->y;
-		dz = planet->z - o->z;
-
 		/* Don't bother trying to avoid the planet unless it is close */
-		planet_distance = sqrt(dx * dx + dy * dy + dz + dz);
+		double planet_distance = object_dist(planet, o);
 		if (planet_distance < 2.0 * planet->tsd.planet.radius) {
 			union vec3 planetv, planet_to_dest, planet_to_ship;
 			union quat ship_to_dest;
@@ -5688,7 +5668,7 @@ static void ai_occupy_enemy_base_mode_brain(struct snis_entity *o)
 				continue;
 			if (sb->tsd.starbase.occupant[3] == o->sdata.faction)
 				continue;
-			dist = dist3d(sb->x - o->x, sb->y - o->y, sb->z - o->z);
+			dist = object_dist(sb, o);
 			if (closest == -1 || dist < min_dist) {
 				closest = i;
 				min_dist = dist;
@@ -5814,7 +5794,7 @@ static void ai_rts_guard_base(struct snis_entity *o)
 			if (b->type == OBJTYPE_STARBASE) {
 				if (b->sdata.faction != o->sdata.faction)
 					continue;
-				dist2 = dist3dsqrd(o->x - b->x, o->y - b->y, o->z - b->z);
+				dist2 = object_dist2(o, b);
 				if (closest < 0 || dist2 < closest) {
 					closest = dist2;
 					found = i;
@@ -5832,7 +5812,7 @@ static void ai_rts_guard_base(struct snis_entity *o)
 				}
 				if (!found_planet)
 					continue;
-				dist2 = dist3dsqrd(o->x - b->x, o->y - b->y, o->z - b->z);
+				dist2 = object_dist2(o, b);
 				if (closest < 0 || dist2 < closest) {
 					closest = dist2;
 					found = i;
@@ -5865,7 +5845,7 @@ static void ai_rts_guard_base(struct snis_entity *o)
 		if (s->tsd.ship.ai[0].ai_mode == AI_MODE_RTS_OCCUPY_NEAR_BASE &&
 			s->tsd.ship.ai[0].u.occupy_base.base_id == o->tsd.ship.ai[n].u.guard_base.base_id) {
 			/* We found a ship that is attempting to occupy the base that we are guarding */
-			dist2 = dist3dsqrd(o->x - s->x, o->y - s->y, o->z - s->z);
+			dist2 = object_dist2(o, s);
 			if (closest < 0 || dist2 < closest) {
 				closest = dist2;
 				found = i;
@@ -5873,7 +5853,7 @@ static void ai_rts_guard_base(struct snis_entity *o)
 		} else if (s->tsd.ship.ai[0].ai_mode == AI_MODE_RTS_ATK_MAIN_BASE &&
 			s->tsd.ship.ai[0].u.atk_main_base.base_id == o->tsd.ship.ai[n].u.guard_base.base_id) {
 			/* We found a ship that is attacking the base that we are guarding */
-			dist2 = dist3dsqrd(o->x - s->x, o->y - s->y, o->z - s->z);
+			dist2 = object_dist2(o, s);
 			if (closest < 0 || dist2 < closest) {
 				closest = dist2;
 				found = i;
@@ -5927,7 +5907,7 @@ static void ai_rts_resupply(struct snis_entity *o)
 			if (sn < 0)
 				continue;
 			if (s->tsd.ship.ai[sn].ai_mode == AI_MODE_RTS_OUT_OF_FUEL) {
-				double dist = dist3dsqrd(o->x - s->x, o->y - s->y, o->z - s->z);
+				double dist = object_dist2(o, s);
 				if (closest == -1 || dist < closest_dist) {
 					closest_dist = dist;
 					closest = i;
@@ -6058,7 +6038,7 @@ static void ship_security_avoidance(void *context, void *entity)
 	if (planet->tsd.planet.security == LOW_SECURITY)
 		return;
 
-	dist2 = dist3dsqrd(ship->x - planet->x, ship->y - planet->y, ship->z - planet->z);
+	dist2 = object_dist2(ship, planet);
 	if (dist2 < SECURITY_RADIUS * SECURITY_RADIUS)
 		return;
 
@@ -7621,7 +7601,7 @@ static void player_collision_detection(void *player, void *object)
 		return;
 	}
 
-	dist2 = dist3dsqrd(o->x - t->x, o->y - t->y, o->z - t->z);
+	dist2 = object_dist2(o, t);
 	if (t->type == OBJTYPE_CARGO_CONTAINER && dist2 < 150.0 * 150.0) {
 			scoop_up_cargo(o, t);
 			return;
@@ -8279,7 +8259,7 @@ static void check_science_selection(struct snis_entity *o)
 		goto deselect;
 	if (!go[i].alive)
 		goto deselect;
-	dist2 = dist3dsqrd(o->x - go[i].x, o->y - go[i].y, o->z - go[i].z);
+	dist2 = object_dist2(o, &go[i]);
 	range2 = o->tsd.ship.scibeam_range * o->tsd.ship.scibeam_range;
 	if (dist2 <= range2) {
 		maybe_transmit_attached_science_text(bn, o, &go[i]);
@@ -8736,7 +8716,7 @@ static void turret_move(struct snis_entity *o)
 			uint32_t n = lookup_by_id(go[root].tsd.block.naughty_list[i]);
 			if (n < 0)
 				continue;
-			double dist2 = dist3dsqrd(o->x - go[n].x, o->y - go[n].y, o->z - go[n].z);
+			double dist2 = object_dist2(o, &go[n]);
 			if (dist2 > LASER_RANGE * LASER_RANGE) /* too far? */
 				continue;
 			if (dist2 < min_dist) {
@@ -8889,7 +8869,7 @@ static void starbase_move(struct snis_entity *o)
 			continue;
 		if (a->type != OBJTYPE_SHIP1 && a->type != OBJTYPE_SHIP2)
 			continue;
-		float dist2 = dist3dsqrd(o->x - a->x, o->y - a->y, o->z - a->z);
+		float dist2 = object_dist2(o, a);
 		if (dist2 > TORPEDO_RANGE * TORPEDO_RANGE)
 			continue;
 		if (snis_randn(1000) < STARBASE_FIRE_CHANCE)
@@ -11135,9 +11115,7 @@ static void tractorbeam_move(struct snis_entity *o)
 	}
 	target = &go[tid];
 	origin = &go[oid];
-
-	dist = hypot3d(target->x - origin->x, target->y - origin->y, target->z - origin->z);
-
+	dist = object_dist(target, origin);
 	if (dist > MAX_TRACTOR_DIST) {
 		/* Tractor beam distance too much, beam failure... */
 		o->alive = 0;
@@ -12909,8 +12887,7 @@ static int should_send_sdata(struct game_client *c, struct snis_entity *ship,
 	range2 = ship->tsd.ship.scibeam_range * ship->tsd.ship.scibeam_range;
 	range3 = 4.0 * ship->tsd.ship.scibeam_range * 4.0 * ship->tsd.ship.scibeam_range;
 	/* distance to target... */
-	dist2 = (o->x - ship->x) * (o->x - ship->x) +
-		(o->z - ship->z) * (o->z - ship->z);
+	dist2 = object_dist2(o, ship);
 	if ((dist2 > range2 && o->type != OBJTYPE_PLANET && o->type != OBJTYPE_STARBASE) ||
 			(dist2 > range3))  /* too far, no sdata for you. */
 		return 0;
@@ -13633,7 +13610,7 @@ static void npc_menu_item_mining_bot_retarget(struct npc_menu_item *item,
 			return;
 		}
 		ai->asteroid = b->science_selection;
-		dist = dist3d(asteroid->x - miner->x, asteroid->y - miner->y, asteroid->z - miner->z);
+		dist = object_dist(asteroid, miner);
 		sprintf(msg, " RETARGETED TO %s, DISTANCE: %f",
 				asteroid ? asteroid->sdata.name : "UNKNOWN", dist);
 		schedule_callback6(event_callback, &callback_schedule,
@@ -13713,7 +13690,7 @@ static void npc_menu_item_mining_bot_status_report(struct npc_menu_item *item,
 		i = lookup_by_id(ai->asteroid);
 		if (i >= 0) {
 			asteroid = &go[i];
-			dist = dist3d(asteroid->x - miner->x, asteroid->y - miner->y, asteroid->z - miner->z);
+			dist = object_dist(asteroid, miner);
 		} else {
 			asteroid = NULL;
 			dist = -1.0;
@@ -14176,7 +14153,7 @@ static void npc_menu_item_request_dock(struct npc_menu_item *item,
 			return;
 		}
 	}
-	dist = dist3d(sb->x - o->x, sb->y - o->y, sb->z - o->z);
+	dist = object_dist(sb, o);
 	if (dist > STARBASE_DOCKING_PERM_DIST) {
 		snprintf(msg, sizeof(msg), "%s, YOU ARE TOO FAR AWAY (%lf).\n", b->shipname, dist);
 		send_comms_packet(npcname, ch, msg);
