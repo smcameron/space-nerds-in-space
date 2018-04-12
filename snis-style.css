@@ -5,10 +5,10 @@ body {
 	color:#7fafff; 
 	background-color:#000000;
 	font-family:"Helvetica",mono;
-	margin:.5em;
-	max-width:1200px;
 	line-height:1.6;
 	/*font-size:18px;color:#444;padding:0 10px
+	max-width:1200px;
+	margin:.5em;
 	*/
 }
 h1,h2,h3{
@@ -18,22 +18,36 @@ h1 {
 	text-align:center;
 	font-size:3em;
 	font-weight: normal;
-	letter-spacing:.333em;
-	word-spacing:.66em;
+	letter-spacing:.3em;
+	word-spacing:.6em;
 }
 a:link {
-	color:#7780FF; 
+	color:#4050FF; 
 }
 a:visited{
-	color:#8888DD; 
+	color:#8A80DF; 
 }
 a:hover{
 	color:#AAAAFF; 
 }
 
+
+#main {
+	width: 75em;
+	margin: 0 auto;
+}
+#main p,ol {
+	font-size: 1.1em;
+}
+
 .console {
+	/* old, abandoned green?
 	color:#7fff7f; 
-	background-color:#000000;
+	*/
+	color: #7fafff;
+	background-color:#0A0A0F;
 	padding-left: 1em;
-	padding-right: 1em;
+}
+.console b {
+	color: #afafff;
 }

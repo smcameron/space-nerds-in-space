@@ -6,6 +6,7 @@
 	<link rel="stylesheet" type="text/css" href="snis-style.css">
 </head>
 <body>
+<div id="main">
 <h1><a name="Space Nerds In Space">SPACE NERDS IN SPACE</a></h1>
 <p style="text-align:center;font-size:2em;">An Open Source Multi-player Networked Starship Bridge Simulator for Linux
 </p>
@@ -140,7 +141,8 @@ history -c
 	</li>
 	<li> Download the <a href="https://www.linux-live.org/">Linux Live Kit to /tmp</a> and extract.
 		<pre class="console">
-mkdir /LINUXLIVEKIT
+sudo mkdir /LINUXLIVEKIT
+sudo chown snis /LINUXLIVEKIT
 cd /LINUXLIVEKIT
 curl -LO https://github.com/Tomas-M/linux-live/tarball/master
 ls -lF
@@ -239,5 +241,6 @@ umount /mnt/usbmedia
 
 <p>The code is licensed under the GPL v. 2, or at your option, any later version.  Audio files have various other licenses, typically some variant of a Creative Commons license.  
 </p>
+</div>
 </body>
 </html>
