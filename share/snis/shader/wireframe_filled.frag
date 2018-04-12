@@ -20,7 +20,7 @@
  *  Alexandros Frantzis (glmark2)
  */
 
-varying vec4 dist;
+in vec4 dist;
 
 uniform vec3 line_color;
 uniform vec3 triangle_color;

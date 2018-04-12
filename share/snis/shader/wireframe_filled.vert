@@ -29,17 +29,17 @@
 // We are not using geometry shaders, though, as they are not
 // available in GLES 2.0.
 
-attribute vec3 position;
+in vec3 position;
 // Coordinates of the triangle vertices this vertex belongs to
-attribute vec3 tvertex0;
-attribute vec3 tvertex1;
-attribute vec3 tvertex2;
-attribute vec3 edge_mask;
+in vec3 tvertex0;
+in vec3 tvertex1;
+in vec3 tvertex2;
+in vec3 edge_mask;
 
 uniform vec2 Viewport;
 uniform mat4 ModelViewProjectionMatrix;
 
-varying vec4 dist;
+out vec4 dist;
 
 void main(void)
 {

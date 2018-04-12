@@ -18,15 +18,15 @@
 	Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
 
-varying vec2 v_TexCoord;
-varying vec2 v_PixCoord;
-varying vec4 v_Offset[3];
-
 #if defined(INCLUDE_VS)
+	out vec2 v_TexCoord;
+	out vec2 v_PixCoord;
+	out vec4 v_Offset[3];
+
 	uniform mat4 u_MVPMatrix;
 
-	attribute vec4 a_Position;
-	attribute vec2 a_TexCoord;
+	in vec4 a_Position;
+	in vec2 a_TexCoord;
 
 	void main()
 	{
@@ -38,6 +38,9 @@ varying vec4 v_Offset[3];
 #endif
 
 #if defined(INCLUDE_FS)
+	in vec2 v_TexCoord;
+	in vec2 v_PixCoord;
+	in vec4 v_Offset[3];
 	uniform sampler2D u_EdgeTex;
 	uniform sampler2D u_AreaTex;
 	uniform sampler2D u_SearchTex;

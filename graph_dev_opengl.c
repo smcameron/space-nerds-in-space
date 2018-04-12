@@ -24,7 +24,7 @@
 #include "snis_typeface.h"
 #include "opengl_cap.h"
 
-#define OPENGL_VERSION_STRING "#version 120\n"
+#define OPENGL_VERSION_STRING "#version 130\n"
 #define AMBIENT_LIGHT_DEFINE "#define AMBIENT 0.05\n"
 #define UNIVERSAL_SHADER_HEADER \
 	OPENGL_VERSION_STRING \

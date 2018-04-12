@@ -4,9 +4,9 @@ uniform float u_PointSize;
 uniform vec4 u_Color;
 uniform float u_Time; // 0 - 1 in seconds period
 
-attribute vec4 a_Position; // Per-vertex position information we will pass in.
+in vec4 a_Position; // Per-vertex position information we will pass in.
 
-varying vec4 v_Color;
+out vec4 v_Color;
 
 /* Return a pseudo-random number 0 - 1 for a two element seed
    http://stackoverflow.com/questions/12964279/whats-the-origin-of-this-glsl-rand-one-liner */

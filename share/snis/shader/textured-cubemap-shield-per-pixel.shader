@@ -25,17 +25,18 @@
 #define AMBIENT 0.1
 #endif
 
-varying vec3 v_Position;
-varying vec3 v_Normal;
-varying vec3 v_TexCoord;
 
 #if defined(INCLUDE_VS)
+	out vec3 v_Position;
+	out vec3 v_Normal;
+	out vec3 v_TexCoord;
+
 	uniform mat4 u_MVPMatrix;  // A constant representing the combined model/view/projection matrix.
 	uniform mat4 u_MVMatrix;   // A constant representing the combined model/view matrix.
 	uniform mat3 u_NormalMatrix;
 
-	attribute vec4 a_Position; // Per-vertex position information we will pass in.
-	attribute vec3 a_Normal;   // Per-vertex normal information we will pass in.
+	in vec4 a_Position; // Per-vertex position information we will pass in.
+	in vec3 a_Normal;   // Per-vertex normal information we will pass in.
 
 	void main()
 	{
@@ -54,6 +55,10 @@ varying vec3 v_TexCoord;
 #endif
 
 #if defined(INCLUDE_FS)
+	in vec3 v_Position;
+	in vec3 v_Normal;
+	in vec3 v_TexCoord;
+
 	uniform samplerCube u_AlbedoTex;
 	uniform vec4 u_TintColor;
 	uniform vec3 u_LightPos;   // The position of the light in eye space.

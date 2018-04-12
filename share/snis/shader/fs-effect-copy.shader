@@ -18,13 +18,13 @@
 	Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
 
-varying vec2 v_TexCoord;
 
 #ifdef INCLUDE_VS
+	out vec2 v_TexCoord;
 	uniform mat4 u_MVPMatrix;
 
-	attribute vec4 a_Position;
-	attribute vec2 a_TexCoord;
+	in vec4 a_Position;
+	in vec2 a_TexCoord;
 
 	void main(void)
 	{
@@ -34,6 +34,7 @@ varying vec2 v_TexCoord;
 #endif
 
 #ifdef INCLUDE_FS
+	in vec2 v_TexCoord;
 	uniform sampler2D texture0Sampler;
 	uniform vec4 u_TintColor;
 

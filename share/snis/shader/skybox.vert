@@ -1,9 +1,8 @@
 
 uniform mat4 MVP;
 
-attribute vec3 vertex;
-
-varying vec3 texCoord;
+in vec3 vertex;
+out vec3 texCoord;
 
 void main() {
 	texCoord = vertex;

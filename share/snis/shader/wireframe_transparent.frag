@@ -1,7 +1,7 @@
 
 uniform vec3 u_Color;      // Per-object color information we will pass in.
 
-varying float v_EyeDot;
+in float v_EyeDot;
 
 void main()
 {

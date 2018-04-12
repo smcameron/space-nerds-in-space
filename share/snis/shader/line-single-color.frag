@@ -25,8 +25,8 @@ uniform float u_DotSize;
 uniform float u_DotPitch;
 uniform vec4 u_LineColor;
 
-varying float v_IsDotted;
-varying vec4 v_Dist;
+in float v_IsDotted;
+in vec4 v_Dist;
 
 void main(void)
 {

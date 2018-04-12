@@ -1,5 +1,5 @@
 
-varying vec4 v_Color;
+in vec4 v_Color;
 
 void main()
 {
