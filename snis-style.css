@@ -1,0 +1,39 @@
+/* For the Space Nerds in Space informational website 
+*/
+
+body {
+	color:#7fafff; 
+	background-color:#000000;
+	font-family:"Helvetica",mono;
+	margin:.5em;
+	max-width:1200px;
+	line-height:1.6;
+	/*font-size:18px;color:#444;padding:0 10px
+	*/
+}
+h1,h2,h3{
+	line-height:1.2
+}
+h1 {
+	text-align:center;
+	font-size:3em;
+	font-weight: normal;
+	letter-spacing:.333em;
+	word-spacing:.66em;
+}
+a:link {
+	color:#7780FF; 
+}
+a:visited{
+	color:#8888DD; 
+}
+a:hover{
+	color:#AAAAFF; 
+}
+
+.console {
+	color:#7fff7f; 
+	background-color:#000000;
+	padding-left: 1em;
+	padding-right: 1em;
+}
