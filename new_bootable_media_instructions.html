@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset=utf-8>
+	<title>Space Nerds In Space - A Multi-player Networked Starship Bridge Simulator</title>
+	<link rel="stylesheet" type="text/css" href="snis-style.css">
+</head>
+<body>
+<div id="main">
+<h1><a name="Space Nerds In Space">SPACE NERDS IN SPACE</a></h1>
+<p style="text-align:center;font-size:2em;">An Open Source Multi-player Networked Starship Bridge Simulator for Linux
+</p>
+
+<hr/><!-- ------------------------------------ -->
+
+<h2>Instructions for making a bootable image for playing Space Nerds In Space</h2>
+
+<p><b>Instructions for creating a Live DVD image to run the game</b>
+</p>
+<ol>Summary
+	<li>Fresh Install Linux Mint 18 </li>
+	<li>Prerequisite package installations </li>
+	<li>SNIS source code retrieval from Github</li>
+	<li>SNIS build from source</li>
+	<li>Desktop customizations &amp; cleanup</li>
+	<li>Test the game briefly</li>
+	<li>Use Linux Live Kit to generate a new bootable disk image from self</li>
+	<li>Burn/copy/cast/press freshly created image to bootable media</li>
+</ol>
+
+<p>
+	Warning: if this trashes your hard drive, you're on your own.  This procedure
+	worked for me, but you assume all risk and responsibility for the safety of your data. Partially based on instructions found at https://community.linuxmint.com/tutorial/view/1784
+and https://wiki.debian.org/ReduceDebian
+</p>
+<p>These instructions assume you have a Mint 18 linux distribution installed and running to create the bootable ISO image.  You can use Virtualbox and install linux Mint 18 on the virtual machine to make the ISO, then when you're done, you can trash the virtual machine.  Linux Mint 18 ISO can be found at the <a href="https://linuxmint.com/download.php">Linux Mint download page</a>.
+</p>
+<p> For convenience, consider creating a user "snis" with password "snis" and making it an auto-logon user during OS install.
+</p>
+
+<ol>
+	<li> Boot into freshly installed Linux Mint desktop</li>
+	<li>
+		<pre class="console">
+#Optional trimming
+sudo apt-get remove mono-runtime-common gnome-orca cupsys*
+sudo apt-get remove thunderbird*
+sudo apt-get remove libreoffice*
+sudo apt-get remove mint-backgrounds-sarah mint-backgrounds-serena mint-backgrounds-sonya mint-backgrounds-sylvia
+sudo apt-get remove mint-x-icons
+		</pre>
+
+	</li>
+	<li>
+		Now perform standard build of Space Nerds in Space
+		from <a href="https://smcameron.github.io/space-nerds-in-space/#buildinstructions">main SNIS build instructions</a>.
+		<p>If the openscad package isn't around, you can get it from here:
+		<pre class="console">
+	http://www.openscad.org/downloads.html
+		</pre>
+		</p>
+<!--
+<pre class="console">
+
+   cd /root
+   tar xzvf openscad-2014.03.x86-64.tar.gz
+   cd openscad-2014.03/
+   ./install.sh
+   cd ..
+
+   git clone https://github.com/smcameron/space-nerds-in-space.git
+   cd space-nerds-in-space/
+   make
+</pre>
+-->
+	</li>
+	<li><p>Once SNIS build is complete, resume here:
+		</p>
+		After you exit from the game client in quickstart.sh, server may still be running.
+		<pre class="console">
+cd Games/space-nerds-in-space
+./killem.sh
+		</pre>
+	</li>
+	<li> Desktop customizations:
+		<pre class="console">
+curl -LO https://apod.nasa.gov/apod/image/1406/hud2014_1280.jpg
+mv hud2014_1280.jpg ~/Pictures
+gsettings set org.cinnamon.desktop.background picture-uri  "file:///$HOME/Pictures/hud2014_1280.jpg"
+cp /usr/share/pix/icons/hicolor/22x22/actions/browser-mode.png /usr/lib/linuxmint/mintMenu/mintMenu.png
+
+sed -i 's/^/SNIS Live (based on/' /etc/issue
+echo ')' &gt;&gt; /etc/issue
+
+cat &lt;&lt;__EOF__&gt;~/Desktop/SNIS_Client.desktop
+[Desktop Entry]
+Version=1.0
+Type=Application
+Terminal=false
+Exec=/home/snis/Games/space-nerds-in-space/snis_client --fulscreen
+Path=/home/snis/Games/space-nerds-in-space/
+Name=SNIS Client
+Comment=Space Nerds in Space Game client
+Icon=/usr/share/icons/gnome/32x32/categories/applications-games.png
+
+__EOF__
+
+chmod ug+x ~/Desktop/SNIS_Client.desktop
+		</pre>
+<!-- Optional and needs some blessing before fully publishing
+curl -LO https://github.com/jrwarwick/sbs-ui-supplement/archive/master.zip
+unzip -d ~/Games master.zip
+rm master.zip
+
+# Create webbrowser bookmark to optional SNIS UI console supplementals (on local disk, in Games dir).
+-->
+
+Create webbrowser bookmark and set homepage to SNIS homepage.
+<!-- Haven't tested this yet, got it from commandlinefu.com
+	sed -i 's|\("browser.startup.homepage",\) "\(.*\)"|\1 "https://smcameron.github.io/space-nerds-in-space/"|' .mozilla/firefox/*.default/prefs.js
+-->
+
+	</li>
+	<li>Prerequisites for live image building:
+		<pre class="console">
+apt-get install squashfs-tools genisoimage
+		</pre>
+	</li>
+	<li> Now clean up the game environment before we prepare the disk image (and yes aptitude takes the weird tilde options for some reason):
+		<pre class="console">
+aptitude purge ~c
+aptitude unmarkauto ~M
+apt-get clean; rm -rf /var/cache/debconf/*.dat-old; rm -rf /var/lib/aptitude/*.old; rm -rf /var/lib/dpkg/*-old; rm -rf /var/cache/apt/*.bin; updatedb
+history -c
+rm /root/.bash_history
+rm /root/.nano_history
+rm ~snis/.bash_history
+rm ~snis/.nano_history
+history -c
+		</pre>
+	</li>
+	<li> Download the <a href="https://www.linux-live.org/">Linux Live Kit to /tmp</a> and extract.
+		<pre class="console">
+sudo mkdir /LINUXLIVEKIT
+sudo chown snis /LINUXLIVEKIT
+cd /LINUXLIVEKIT
+curl -LO https://github.com/Tomas-M/linux-live/tarball/master
+ls -lF
+gunzip *gz
+tar xvf *.tar
+cd linux-live*
+		</pre>
+	</li>
+	<li>
+		<p>Give your ISO a description (which will be embedded as the name of the CD or USB stick onto which the ISO is burnt) by editing the file named "config". Don't pick too long of a name though because if you do, it won't work.
+		</p>
+		<pre class="console">
+sed -i 's/^LIVEKITNAME="linux"/LIVEKITNAME="SNISlinux"/' config
+sudo ./tools/isolinux.bin.update
+		</pre>
+	</li>
+	<li>Now build filesystem and generate ISO image, which will take a while:
+		<pre class="console">
+sudo ./build && sudo /tmp/gen_SNISlinux_iso.sh
+		</pre>
+		<p>ISO image will be made right in /tmp ; if you will be burning to DVD, this is what you need.  There will also be a directory named something like SNISlinux-data-##### (where ##### is some integer) which is the package for bootable USB flash volume. Although the linux live website mentions a tar file, I did not find one, and this directory appears to be the goods.
+		</p>
+	</li>
+	<li>Virtualbox has some integration features to help you get files off of the guest virtual machine, or you can use an SFTP client to retrieve the files from the virtual machine to the host. But you can also expose a flashdrive to the virtual machine via the Devices menu in VirtualBox.
+	</li>
+	<li><p>Burn/copy/write this image to your DVD.
+ <a href="https://etcher.io/"> Etcher </a> is a really nice Windows-based image writer.
+		</p>
+		<p>Or:
+		</p>
+		<p>
+		USB Media build:
+		</p>
+		<p> There was some trouble with the automounting of the USB flash drive (which was formatted with vfat) due to showexec mount option. Apparently the udisks2 automounter used by Linux Mint does not currently have a method for changing the mount options. The bootinst.sh file errored out with this option set. Therefore it is necessary to remount the flash media manually without this option.
+
+			<pre class="console">
+# Just switch to root at this point.
+sudo su -
+
+MOUNTLINE=( $(mount | grep /media/ | sed 's#showexec,##') )
+MOUNTOPT="rw,owner,umask=000,users,exec"
+udisksctl unmount --block-device ${MOUNTLINE[0]}
+mkdir /mnt/usbmedia
+mount -t ${MOUNTLINE[${#MOUNTLINE[@]}-2]} -o $MOUNTOPT ${MOUNTLINE[0]} /mnt/usbmedia
+			</pre>
+		</p>
+			<pre class="console">
+cd /tmp/SNISlinux-data*
+cp -r SNISlinux /mnt/usbmedia/
+cd /mnt/usbmedia/SNISlinux/boot
+sh ./bootinst.sh
+cd /tmp
+sync
+umount /mnt/usbmedia
+	</pre>
+		You can now safely remove the USB media, repeat just this last numbered step to get all the bootable USB media you need.
+		</p>
+	</li>
+</ol>
+
+
+<p>Then to run the game, boot up all your machines from the built DVD or USB media. Log in as user snis (if you did not opt for auto-login). /home/snis/Games/space-nerds-in-space/ is where the game executables can be launched from.
+</p>
+
+<p>Repeat for several machines on your LAN, say, five of them or so.
+</p>
+
+<p>On one machine that is connected to a projector, note the IP address:
+(run ifconfig from a command terminal window to figure this out.)
+</p>
+
+<p>Then start the snis client:
+</p>
+<pre class="console">
+  ./snis_client
+</pre>
+
+<p>From there, start the lobby server on localhost, start the gameserver, connect to lobby, and connect to the gameserver.
+</p>
+
+<p>Note the shipname and password you use (make up what you want, but note that you must use a password).
+</p>
+
+<p>On the remaining machines, start snis_client, replace the lobby host "localhost" with the ip address noted above, fill in only the shipname and password as above, and connect to the lobby, then to the gameserver. You can be choosy about the 'roles' for each station at this point, but you don't have to.
+</p>
+
+<p>That's it.
+</p>
+
+<p>btw, prior to making live dvd iso's and burning a bunch of dvds, we tried to run the game in linux installed to virtual machines on the windows boxes -- that didn't work out so well, performance was kind of crap for whatever reason. With the dvds, performance was fine at least for the few minutes the network was working.  They were relatively low performance, inexpensive USB flash drives though.
+</p>
+
+<p>One other side note: as of Mint 18.3, I found that the install of apparmor was actually blocking dhclient from running and getting an IP address. Somewhere on one of the stackexchange sites I found some instructions to overcome this with some edits in /etc/apparmor.d/.
+</p>
+
+<p>The code is licensed under the GPL v. 2, or at your option, any later version.  Audio files have various other licenses, typically some variant of a Creative Commons license.
+</p>
+</div>
+</body>
+</html>
