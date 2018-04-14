@@ -16,13 +16,16 @@
 gold ore, tons, metallic ore, 1010.0, 0.2, 1.0, 0.3, 0.2, 0.2, 10
 platinum ore, tons, metallic ore, 1480.0, 0.2, 1.0, 0.3, 0.2, 0.2, 5
 germanium ore, tons, semi-metallic ore, 490.0, 0.2, 1.0, 0.3, 0.2, 0.2, 30
-uranium ore, tons, uranium ore, 420.0, 0.2, 1.0, 0.3, 0.2, 0.2, 20
+uranium ore, tons, radioactive ore, 420.0, 0.2, 1.0, 0.3, 0.2, 0.2, 20
 gold, grams, gold, 10.0, 0.2, 1.0, 0.3, 0.2, 0.2, 10
 platinum, grams, platinum, 10.0, 0.2, 1.0, 0.3, 0.2, 0.2, 5
 germanium, kilograms, semi-metallic ore, 10.0, 0.2, 1.0, 0.3, 0.2, 0.2, 30
 uranium, grams, uranium, 10.0, 0.2, 1.0, 0.3, 0.2, 0.2, 20
 
 # "normal" items
+# name,    unit,    scans_as,    base_price, volatil., legality, econ_sens., govt_sens., tech_sens., odds
+refined sugar, kilograms, granulated organic crystals, 4.0, 0.2, 2.0, 0.2, 0.0, 0.0, 100
+sodium chloride, kilograms, granulated crystals, 4.0, 0.2, 2.0, 0.2, 0.0, 0.0, 100
 spicy curry, barrels, various organics, 10.0, 0.2, 1.0, 0.2, 0.0, 0.0, 100
 wine, casks, water and ethanol, 10.0, 0.2, 1.0, 0.2, 0.2, 0.0, 100
 jakk, kilograms, organic compounds, 10.0, 0.2, 0.2, 0.3, 0.2, 0.0, 100
@@ -46,6 +49,7 @@ bauxite, tons, aluminum, 10.0, 0.2, 1.0, 0.2, 0.0, 0.2, 700
 Champagne, bottles, silicon dioxide, 10.0, 0.2, 1.0, 0.2, 0.2, 0.1, 200
 vodka, bottles, water and ethanol, 10.0, 0.2, 1.0, 0.1, 0.2, 0.1, 300
 whiskey, barrels, water and ethanol, 10.0, 0.2, 1.0, 0.3, 0.1, 0.1, 100
+epoxy, liters, organic polymer, 10.0, 0.2, 1.0, 0.3, 0.1, 0.1, 100
 distilling equipment, tons, scrap metal, 10.0, 0.2, 0.2, 0.1, 0.3, 0.2, 50
 textiles, tons, unknown, 10.0, 0.2, 1.0, 0.05, 0.05, 0.05, 900
 flour, tons, vegetable matter, 10.0, 0.2, 1.0, 0.05, 0.0, 0.05, 500
@@ -61,6 +65,7 @@ bullets, gross, lead, 10.0, 0.2, 1.0, 0.2, 0.2, 0.0, 20
 pharmaceuticals, kilograms, inorganic compounds, 10.0, 0.2, 1.0, 0.2, 0.2, 0.2, 100
 
 # silly items
+# name,    unit,    scans_as,    base_price, volatil., legality, econ_sens., govt_sens., tech_sens., odds
 stolen weapons designs, briefcases, paper, 10.0, 0.2, 1.0, 0.0, -0.2, 0.3, 10
 diplomatic papers, briefcases, paper, 10.0, 0.2, 1.0, 0.0, -0.2, 0.3, 10
 bolonium, tons, unknown, 10.0, 0.2, 1.0, 0.0, 0.0, -0.2, 10
@@ -95,3 +100,4 @@ duunmelons, bushels, organic matter, 10.0, 0.2, 1.0, 0.05, 0.0, 0.05, 10
 betelberries, bushels, organic matter, 10.0, 0.2, 1.0, 0.05, 0.0, 0.05, 10
 coffins, units, organic matter, 10.0, 0.2, 1.0, 0.03, 0.0, 0.03, 10
 laser pistols, units, scrap metal, 10.0, 0.2, 0.2, 0.1, 0.1, 0.1, 10
+the spice, lumps, organic compound, 30.0, 0.2, 0.2, 1.0, 0.5, 0.5, 5
