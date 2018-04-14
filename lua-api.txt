@@ -740,7 +740,7 @@ add_commodity(name, unit, scans_as, base_price, volatility, legality,
 
   Example:
 
-	macguffin = add_commodity("flux capacity", "gigawatts", 100.0, 0.5, 1.0, 0.0, 0.0, 0.0, 0.0);
+	macguffin = add_commodity("flux capacity", "gigawatts", "tachyon flux" 100.0, 0.5, 1.0, 0.0, 0.0, 0.0, 0.0);
 	my_container = add_cargo_container(1000, 1000, 1000, 0, 0, 0);
 	player_ids = get_player_ship_ids();
 	n = lookup_commodity("gold ore");
