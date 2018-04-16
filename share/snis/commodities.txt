@@ -2,14 +2,14 @@
 #
 #        char name[40];
 #        char unit[20];
-#	 char scans_as[20]; /* how it shows up in science scan */
+#        char scans_as[20]; /* how it shows up in science scan */
 #        float base_price;
 #        float volatility;
 #        float legality;
 #        float econ_sensitivity; range: 0 - 1, how sensitive price is to wealth of econ
 #        float govt_sensitivity; range: 0 - 1, how sensitive price is to govt. stability
 #        float tech_sensitivity; range: 0 - 1, how sensitive price is to tech level
-#	 int odds
+#        int odds
 #
 # Note, first 8 must match mining-bot in snis.h
 #
@@ -24,7 +24,7 @@ uranium, grams, uranium, 10.0, 0.2, 1.0, 0.3, 0.2, 0.2, 20
 
 # "normal" items
 # name,    unit,    scans_as,    base_price, volatil., legality, econ_sens., govt_sens., tech_sens., odds
-refined sugar, kilograms, granulated organic crystals, 4.0, 0.2, 2.0, 0.2, 0.0, 0.0, 100
+refined sugar, kilograms, organic crystals, 4.0, 0.2, 2.0, 0.2, 0.0, 0.0, 100
 sodium chloride, kilograms, granulated crystals, 4.0, 0.2, 2.0, 0.2, 0.0, 0.0, 100
 spicy curry, barrels, various organics, 10.0, 0.2, 1.0, 0.2, 0.0, 0.0, 100
 wine, casks, water and ethanol, 10.0, 0.2, 1.0, 0.2, 0.2, 0.0, 100
@@ -86,7 +86,7 @@ corn fritters, baskets, vegetable matter, 10.0, 0.2, 1.0, 0.1, 0.0, 0.1, 10
 conspiracy theories, manifestos, paper, 10.0, 0.2, 1.0, 0.1, 0.2, 0.0, 10
 double entendres, comprehensions, paper, 10.0, 0.2, 1.0, 0.2, 0.2, 0.0, 10
 airtight religions, prevarications, paper,  10.0, 0.2, 1.0, -0.1, 0.2, -0.2, 10
-ancient artifacts, crates, silicates and organics, 10.0, 0.2, 1.0, 0.3, 0.0, 0.3, 10
+ancient artifacts, crates, silicate and organic, 10.0, 0.2, 1.0, 0.3, 0.0, 0.3, 10
 Misc. Krustaceans, tons, calcium and proteins, 10.0, 0.2, 1.0, 0.2, 0.0, 0.0, 10
 bacon, tons, organic matter, 10.0, 0.2, 1.0, 0.0, 0.0, -0.1, 10
 cream gravy, barrels, water and organics, 10.0, 0.2, 1.0, 0.0, 0.0, 0.1, 10
