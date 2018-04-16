@@ -13,6 +13,14 @@
 #
 # Note, first 8 must match mining-bot in snis.h
 #
+# You can perform some tests on this file via:
+#   make test-commodities
+#   ./test-commodities share/snis/commodities.txt
+#
+# or
+#
+#   ./test-commodities share/snis/commodities.txt > /dev/null # suppress everything but errors
+#
 gold ore, tons, metallic ore, 1010.0, 0.2, 1.0, 0.3, 0.2, 0.2, 10
 platinum ore, tons, metallic ore, 1480.0, 0.2, 1.0, 0.3, 0.2, 0.2, 5
 germanium ore, tons, semi-metallic ore, 490.0, 0.2, 1.0, 0.3, 0.2, 0.2, 30

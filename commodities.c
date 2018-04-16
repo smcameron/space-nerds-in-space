@@ -71,6 +71,24 @@ static int parse_int_field(char *filename, char *line, int ln, int *value, char 
 	return 0;
 }
 
+static void sanity_check_float(char *filename, int ln, char *quantity, float v, float min, float max)
+{
+	if (v >= min && v <= max)
+		return;
+	fprintf(stderr, "%s:%d %s has value %f, out of range %f - %f\n",
+		filename, ln, quantity, v, min, max);
+}
+
+static void sanity_check_commodity_values(char *filename, int ln, struct commodity *c)
+{
+	sanity_check_float(filename, ln, "base_price", c->base_price, 0.0, 1e6);
+	sanity_check_float(filename, ln, "volatility", c->volatility, 0.0, 1.0);
+	sanity_check_float(filename, ln, "legality", c->volatility, 0.0, 1.0);
+	sanity_check_float(filename, ln, "econ sensitivity", c->econ_sensitivity, 0.0, 1.0);
+	sanity_check_float(filename, ln, "govt sensitivity", c->govt_sensitivity, 0.0, 1.0);
+	sanity_check_float(filename, ln, "tech sensitivity", c->tech_sensitivity, 0.0, 1.0);
+}
+
 static int parse_line(char *filename, char *line, int ln, struct commodity *c)
 {
 	char *x, *saveptr;
@@ -91,6 +109,10 @@ static int parse_line(char *filename, char *line, int ln, struct commodity *c)
 	clean_spaces(word);
 	uppercase(word);
 	strnzcpy(c->name, word, sizeof(c->name));
+	if (strcmp(c->name, word) != 0) {
+		fprintf(stderr, "%s:%d: '%s' truncated to %lu chars.\n", filename, ln, word, strlen(c->name));
+		fprintf(stderr, "   '%s' -> '%s'\n", word, c->name);
+	}
 
 	/* unit */
 	x = strtok_r(NULL, ",", &saveptr);
@@ -100,6 +122,10 @@ static int parse_line(char *filename, char *line, int ln, struct commodity *c)
 	clean_spaces(word);
 	uppercase(word);
 	strnzcpy(c->unit, word, sizeof(c->unit));
+	if (strcmp(c->unit, word) != 0) {
+		fprintf(stderr, "%s:%d: '%s' truncated to %lu chars.\n", filename, ln, word, strlen(c->unit));
+		fprintf(stderr, "   '%s' -> '%s'\n", word, c->unit);
+	}
 
 	/* scans_as */
 	x = strtok_r(NULL, ",", &saveptr);
@@ -109,6 +135,10 @@ static int parse_line(char *filename, char *line, int ln, struct commodity *c)
 	clean_spaces(word);
 	uppercase(word);
 	strnzcpy(c->scans_as, word, sizeof(c->scans_as));
+	if (strcmp(c->scans_as, word) != 0) {
+		fprintf(stderr, "%s:%d: '%s' truncated to %lu chars.\n", filename, ln, word, strlen(c->scans_as));
+		fprintf(stderr, "   '%s' -> '%s'\n", word, c->scans_as);
+	}
 
 	rc = parse_float_field(filename, line, ln, &c->base_price, &saveptr);
 	if (rc)
@@ -131,6 +161,7 @@ static int parse_line(char *filename, char *line, int ln, struct commodity *c)
 	rc = parse_int_field(filename, line, ln, &c->odds, &saveptr);
 	if (rc)
 		return rc;
+	sanity_check_commodity_values(filename, ln, c);
 	return 0;
 }
 
@@ -251,9 +282,9 @@ int main(int argc, char *argv[])
 	}
 
 	for (i = 0; i < ncommodities; i++)
-		for (e = -1.0; e <= 1.0; e += 0.1)
-			for (g = -1.0; g <= 1.0; g += 0.1)
-				for (t = -1.0; t <= 1.0; t += 0.1)
+		for (e = 0.0; e <= 1.0; e += 0.1)
+			for (g = 0.0; g <= 1.0; g += 0.1)
+				for (t = 0.0; t <= 1.0; t += 0.1)
 					test_price(&c[i], e, g, t);
 	return 0;
 }
