@@ -1245,6 +1245,9 @@ static int update_torpedo(uint32_t id, uint32_t timestamp, double x, double y, d
 			weapons_camera_shake = 1.0;
 	} else {
 		update_generic_object(i, timestamp, x, y, z, 0.0, 0.0, 0.0, &identity_quat, 1);
+		e = go[i].entity;
+		if (e)
+			update_entity_scale(e, 0.01 * snis_randn(100) + 0.5);
 	}
 	return 0;
 }
