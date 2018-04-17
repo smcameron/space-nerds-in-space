@@ -508,9 +508,10 @@ struct ship_data {
 	float wallet;
 #define THREAT_LEVEL_FLEE_THRESHOLD 50.0 /* arrived at empirically */
 	float threat_level;
+#define THRUST_FLARE_SCALE (0.15)
 #define MAX_THRUST_PORTS 5
 	int nthrust_ports;
-	struct entity *thrust_entity[MAX_THRUST_PORTS];
+	struct entity *thrust_entity[MAX_THRUST_PORTS * 2];
 	uint8_t in_secure_area;
 	uint8_t emf_detector;
 	uint8_t auto_respawn;

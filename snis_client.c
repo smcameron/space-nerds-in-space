@@ -408,6 +408,7 @@ static struct mesh **ship_mesh_map;
 static struct mesh **derelict_mesh;
 
 #define NNEBULA_MATERIALS 20
+static struct material thrust_flare_material;
 static struct material nebula_material[NNEBULA_MATERIALS];
 static struct material red_torpedo_material;
 static struct material red_laser_material;
@@ -1097,7 +1098,7 @@ static int update_econ_ship(uint32_t id, uint32_t timestamp, double x, double y,
 {
 	int i;
 	struct entity *e;
-	struct entity *thrust_entity[MAX_THRUST_PORTS];
+	struct entity *thrust_entity[MAX_THRUST_PORTS * 2];
 	int nthrust_ports = 0;
 	double vx, vy, vz;
 
@@ -1138,10 +1139,16 @@ static int update_econ_ship(uint32_t id, uint32_t timestamp, double x, double y,
 			struct thrust_attachment_point *ap = ship_thrust_attachment_point(shiptype);
 			struct entity *t = go[i].tsd.ship.thrust_entity[j];
 			if (t) {
-				union vec3 thrust_scale = { { thrust_size, 1.0, 1.0 } };
-				vec3_mul_self(&thrust_scale, ap->port[j].scale);
-				update_entity_non_uniform_scale(t, thrust_scale.v.x,
-							thrust_scale.v.y, thrust_scale.v.z);
+				if ((j & 0x01) == 0) { /* Even are thrust entities, odd are thrust flares */
+					union vec3 thrust_scale = { { thrust_size, 1.0, 1.0 } };
+					vec3_mul_self(&thrust_scale, ap->port[j / 2].scale);
+					update_entity_non_uniform_scale(t, thrust_scale.v.x,
+								thrust_scale.v.y, thrust_scale.v.z);
+				} else {
+					update_entity_scale(t, (0.5 * THRUST_FLARE_SCALE +
+							snis_randn(100) * THRUST_FLARE_SCALE * 0.02) *
+							thrust_size * ap->port[j / 2].scale);
+				}
 			}
 		}
 	}
@@ -7735,7 +7742,7 @@ static void add_ship_thrust_entities(struct entity *thrust_entity[],
 		int *nthrust_ports, struct entity_context *cx, struct entity *e,
 		int shiptype, int impulse, const int thrust_material_index)
 {
-	int i;
+	int i, p;
 	struct thrust_attachment_point *ap = ship_thrust_attachment_point(shiptype);
 
 	if (!ap)
@@ -7748,9 +7755,10 @@ static void add_ship_thrust_entities(struct entity *thrust_entity[],
 
 	if (nthrust_ports)
 		*nthrust_ports = 0;
-	for (i = 0; i < ap->nports; i++) {
+	p = 0;
+	for (i = 0; i < ap->nports * 2; i += 2) {
 		struct entity *t = add_entity(cx, thrust_animation_mesh,
-			ap->port[i].pos.v.x, ap->port[i].pos.v.y, ap->port[i].pos.v.z, WHITE);
+			ap->port[p].pos.v.x, ap->port[p].pos.v.y, ap->port[p].pos.v.z, WHITE);
 		if (thrust_entity) {
 			thrust_entity[i] = t;
 			(*nthrust_ports)++;
@@ -7759,10 +7767,23 @@ static void add_ship_thrust_entities(struct entity *thrust_entity[],
 			update_entity_material(t, &thrust_material[thrust_material_index]);
 			update_entity_orientation(t, &identity_quat);
 			union vec3 thrust_scale = { { thrust_size, 1.0, 1.0 } };
-			vec3_mul_self(&thrust_scale, ap->port[i].scale);
+			vec3_mul_self(&thrust_scale, ap->port[p].scale);
 			update_entity_non_uniform_scale(t, thrust_scale.v.x, thrust_scale.v.y, thrust_scale.v.z);
 			update_entity_parent(cx, t, e);
 		}
+		t = add_entity(cx, torpedo_mesh,
+			ap->port[p].pos.v.x, ap->port[p].pos.v.y, ap->port[p].pos.v.z, WHITE);
+		if (thrust_entity) {
+			thrust_entity[i + 1] = t;
+			(*nthrust_ports)++;
+		}
+		if (t) {
+			update_entity_material(t, &thrust_flare_material);
+			update_entity_orientation(t, &identity_quat);
+			update_entity_scale(t, THRUST_FLARE_SCALE * thrust_size * ap->port[p].scale);
+			update_entity_parent(cx, t, e);
+		}
+		p++;
 	}
 }
 
@@ -17813,6 +17834,11 @@ static int load_static_textures(void)
 	red_torpedo_material.texture_mapped_unlit.texture_id = load_texture("textures/red-torpedo-texture.png");
 	red_torpedo_material.texture_mapped_unlit.do_blend = 1;
 
+	material_init_texture_mapped_unlit(&thrust_flare_material);
+	thrust_flare_material.billboard_type = MATERIAL_BILLBOARD_TYPE_SPHERICAL;
+	thrust_flare_material.texture_mapped_unlit.texture_id = load_texture("textures/thrust_flare.png");
+	thrust_flare_material.texture_mapped_unlit.do_blend = 1;
+
 	material_init_texture_mapped_unlit(&spark_material);
 	spark_material.billboard_type = MATERIAL_BILLBOARD_TYPE_SPHERICAL;
 	spark_material.texture_mapped_unlit.texture_id = load_texture("textures/spark-texture.png");
@@ -19706,7 +19732,7 @@ int main(int argc, char *argv[])
 	setup_physical_io_socket();
 	setup_natural_language_fifo();
 	setup_text_to_speech_thread();
-	ecx = entity_context_new(5000, 2000);
+	ecx = entity_context_new(5000, 5000);
 
 	snis_protocol_debugging(1);
 
