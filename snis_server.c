@@ -3658,12 +3658,12 @@ static void maybe_find_spacemonster_a_home(struct snis_entity *o)
 
 	/* Find our spacemonster a home */
 	nebula_count = 0;
-	for (i = 0; i < snis_object_pool_highest_object(pool); i++)
+	for (i = 0; i <= snis_object_pool_highest_object(pool); i++)
 		if (go[i].alive && go[i].type == OBJTYPE_NEBULA)
 			nebula_count++;
 	if (nebula_count != 0) {
 		home_nebula = snis_randn(nebula_count);
-		for (i = 0; i < snis_object_pool_highest_object(pool); i++) {
+		for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
 			if (go[i].alive && go[i].type == OBJTYPE_NEBULA) {
 				if (home_nebula == 0) {
 					o->tsd.spacemonster.home = go[i].id;
@@ -16995,7 +16995,7 @@ static int l_set_commodity_contents(lua_State *l)
 	i = lookup_by_id(oid);
 	if (i < 0)
 		goto out;
-	if (i >= snis_object_pool_highest_object(pool))
+	if (i > snis_object_pool_highest_object(pool))
 		goto out;
 	o = &go[i];
 	if (o->type != OBJTYPE_SHIP1 && o->type != OBJTYPE_CARGO_CONTAINER)
@@ -20663,7 +20663,7 @@ static void rts_ai_assign_orders_to_units(int starbase_count, int unit_count)
 	else
 		orders = RTS_ORDERS_ATK_MAIN_BASE;
 
-	for (i = 0; i < snis_object_pool_highest_object(pool); i++) {
+	for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
 		struct snis_entity *o = &go[i];
 		if (o->alive && o->type == OBJTYPE_SHIP2 && o->sdata.faction == rts_ai.faction) {
 			int unit_type = ship_type[o->tsd.ship.shiptype].rts_unit_type;
@@ -20701,7 +20701,7 @@ static void rts_ai_run(void)
 		return;
 
 	/* Find all the starbases we own */
-	for (i = 0; i < snis_object_pool_highest_object(pool); i++) {
+	for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
 		struct snis_entity *o = &go[i];
 		if (o->alive && o->type == OBJTYPE_STARBASE && o->sdata.faction == rts_ai.faction) {
 			starbase_index[starbase_count] = i;
@@ -20828,7 +20828,7 @@ static uint32_t natural_language_object_lookup(void *context, char *word)
 	char *w = strdup(word);
 	uppercase(w);
 	pthread_mutex_lock(&universe_mutex);
-	for (i = 0; i < snis_object_pool_highest_object(pool); i++) {
+	for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
 		switch (go[i].type) {
 		case OBJTYPE_STARBASE:
 			if (strcmp(go[i].tsd.starbase.name, w) == 0) {
