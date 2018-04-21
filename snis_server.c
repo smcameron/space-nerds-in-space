@@ -17120,6 +17120,33 @@ failure:
 	return 1;
 }
 
+static int l_object_distance(lua_State *l)
+{
+	int i;
+	struct snis_entity *o1, *o2;
+	const double oid1 = luaL_checknumber(l, 1);
+	const double oid2 = luaL_checknumber(l, 2);
+	double dist;
+
+	pthread_mutex_lock(&universe_mutex);
+	i = lookup_by_id(oid1);
+	if (i < 0)
+		goto failure;
+	o1 = &go[i];
+	i = lookup_by_id(oid2);
+	if (i < 0)
+		goto failure;
+	o2 = &go[i];
+	dist = object_dist(o1, o2);
+	pthread_mutex_unlock(&universe_mutex);
+	lua_pushnumber(lua_state, dist);
+	return 1;
+failure:
+	pthread_mutex_unlock(&universe_mutex);
+	lua_pushnil(lua_state);
+	return 1;
+}
+
 static int process_create_item(struct game_client *c)
 {
 	unsigned char buffer[14];
@@ -20534,6 +20561,7 @@ static void setup_lua(void)
 	add_lua_callable_fn(l_attach_science_text, "attach_science_text");
 	add_lua_callable_fn(l_add_explosion, "add_explosion");
 	add_lua_callable_fn(l_dock_player_to_starbase, "dock_player_to_starbase");
+	add_lua_callable_fn(l_object_distance, "object_distance");
 }
 
 static int run_initial_lua_scripts(void)

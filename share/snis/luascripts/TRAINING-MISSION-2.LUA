@@ -74,24 +74,12 @@ function spring_second_trap()
 	ai_push_attack(badguy6, player_ids[1]);
 end
 
-function distancexyz(dx, dy, dz)
-	return math.sqrt(dx * dx + dy * dy + dz * dz);
-end
-
-function distance(o1, o2)
-	local x1, y1, z1, x2, y2, z2;
-
-	x1, y1, z1 = get_object_location(o1);
-	x2, y2, z2 = get_object_location(o2);
-	return distancexyz(x1 - x2, y1 - y2, z1 - z2);
-end
-
 function mayday_message(cookie)
 
 	local dist;
 	local ux, uy, uz;
 
-	dist = distance(derelict, player_ids[1]);
+	dist = object_distance(derelict, player_ids[1]);
 
 	if dist < 50000 and dist > 2000 then
 		ux, uy, uz = user_coords(trapx, trapy, trapz);
@@ -110,7 +98,7 @@ function mayday_message(cookie)
 end
 
 function check_trap(cookie)
-	if distance(derelict, player_ids[1]) < trap_spring_distance then
+	if object_distance(derelict, player_ids[1]) < trap_spring_distance then
 		spring_the_trap();
 	else
 		register_timer_callback("check_trap", 10, cookie + 1);
@@ -140,7 +128,7 @@ function check_derelict_pos()
 
 	local dist;
 
-	dist = distance(derelict, sb);
+	dist = object_distance(derelict, sb);
 
 	if dist < 40000 and second_trap_sprung == 0 then
 		second_trap_sprung = 1;

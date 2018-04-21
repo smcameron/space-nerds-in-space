@@ -359,6 +359,10 @@ register_proximity_callback(callback, oid1, oid2, distance); -- when the objects
 
 	register_proximity_callback("mycallback", player_ids[1], starbase_x, 300);
 
+object_distance(oid1, oid2)
+	Returns the distance between the two specified objects, or nil if either of the objects
+	does not exist.
+
 get_player_damage(id, system); -- returns value of damage to player ship system.
 	id is the id of the player's ship (see get_player_ship_ids() above.)
 	system is the name of the system for which you want damage info, and must be one of:
