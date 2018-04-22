@@ -1755,6 +1755,13 @@ static void send_packet_to_all_clients_on_a_bridge(uint32_t shipid, struct packe
 	client_unlock();
 }
 
+static void send_comms_packet_to_all_clients(struct snis_entity *transmitter,
+					struct packed_buffer *pb, uint32_t roles)
+{
+	/* TODO check if transmitter can reach client */
+	send_packet_to_all_clients_on_a_bridge(ANY_SHIP_ID, pb, roles);
+}
+
 static void set_waypoints_dirty_all_clients_on_bridge(uint32_t shipid, int value)
 {
 	int i;
@@ -1770,8 +1777,8 @@ static void set_waypoints_dirty_all_clients_on_bridge(uint32_t shipid, int value
 	/* client_unlock(); TODO - do we need this lock? (it deadlocks though) */
 }
 
-static void send_packet_to_all_bridges_on_channel(uint32_t channel,
-				struct packed_buffer *pb, uint32_t roles)
+static void send_comms_packet_to_all_bridges_on_channel(struct snis_entity *transmitter,
+				uint32_t channel, struct packed_buffer *pb, uint32_t roles)
 {
 	int i;
 
@@ -3513,7 +3520,7 @@ static void laser_move(struct snis_entity *o)
 		delete_from_clients_and_server(o);
 }
 
-static void send_comms_packet(char *sender, uint32_t channel, const char *str);
+static void send_comms_packet(struct snis_entity *transmitter, char *sender, uint32_t channel, const char *str);
 static void taunt_player(struct snis_entity *alien, struct snis_entity *player)
 {
 	char buffer[1000];
@@ -3541,7 +3548,7 @@ static void taunt_player(struct snis_entity *alien, struct snis_entity *player)
 		if (last_space > 28) {
 			strncpy(tmpbuf, start, bytes_so_far);
 			tmpbuf[bytes_so_far] = '\0';
-			send_comms_packet(name, 0, tmpbuf);
+			send_comms_packet(alien, name, 0, tmpbuf);
 			strcpy(name, "-  ");
 			start = &buffer[i];
 			bytes_so_far = 0;
@@ -3550,7 +3557,7 @@ static void taunt_player(struct snis_entity *alien, struct snis_entity *player)
 	}
 	if (bytes_so_far > 0) {
 		strcpy(tmpbuf, start);
-		send_comms_packet(name, 0, tmpbuf);
+		send_comms_packet(alien, name, 0, tmpbuf);
 	}
 }
 
@@ -4975,7 +4982,7 @@ static void ai_mining_mode_return_to_parent(struct snis_entity *o, struct ai_min
 			ai->orphan_time++;
 		} else {
 			ai->orphan_time = 0;
-			send_comms_packet(o->sdata.name, bridgelist[b].npcbot.channel,
+			send_comms_packet(o, o->sdata.name, bridgelist[b].npcbot.channel,
 				" -- STANDING BY FOR TRANSPORT OF MATERIALS --");
 		}
 		ai->mode = MINING_MODE_STANDBY_TO_TRANSPORT_ORE;
@@ -4988,9 +4995,9 @@ static void ai_mining_mode_return_to_parent(struct snis_entity *o, struct ai_min
 		if (b >= 0) {
 			ai->orphan_time = 0;
 			channel = bridgelist[b].npcbot.channel;
-			send_comms_packet(o->sdata.name, channel, "--- TRANSPORTING MATERIALS ---");
-			send_comms_packet(o->sdata.name, channel, "--- MATERIALS TRANSPORTED ---");
-			send_comms_packet(o->sdata.name, bridgelist[b].npcbot.channel,
+			send_comms_packet(o, o->sdata.name, channel, "--- TRANSPORTING MATERIALS ---");
+			send_comms_packet(o, o->sdata.name, channel, "--- MATERIALS TRANSPORTED ---");
+			send_comms_packet(o, o->sdata.name, bridgelist[b].npcbot.channel,
 				" MINING BOT STOWING AND SHUTTING DOWN");
 			bridgelist[b].npcbot.current_menu = NULL;
 			bridgelist[b].npcbot.special_bot = NULL;
@@ -5031,7 +5038,7 @@ static void ai_mining_mode_approach_asteroid(struct snis_entity *o, struct ai_mi
 			if (b >= 0) {
 				int channel = bridgelist[b].npcbot.channel;
 				ai->orphan_time = 0;
-				send_comms_packet(o->sdata.name, channel,
+				send_comms_packet(o, o->sdata.name, channel,
 					"TARGET LOST -- RETURNING TO SHIP.");
 			} else {
 				ai->orphan_time++;
@@ -5083,28 +5090,28 @@ static void ai_mining_mode_approach_asteroid(struct snis_entity *o, struct ai_mi
 			if (ai->object_or_waypoint == 0) /* object */
 				switch (asteroid->type) {
 				case OBJTYPE_ASTEROID:
-					send_comms_packet(o->sdata.name, channel,
+					send_comms_packet(o, o->sdata.name, channel,
 						"COMMENCING ORBITAL INJECTION BURN");
 					break;
 				case OBJTYPE_CARGO_CONTAINER:
 					if (!ai->towing) {
-						send_comms_packet(o->sdata.name, channel,
+						send_comms_packet(o, o->sdata.name, channel,
 							"PICKED UP CARGO CONTAINER.");
 						ai->towing = 1;
 						ai->towed_object = asteroid->id;
 					} else {
-						send_comms_packet(o->sdata.name, channel,
+						send_comms_packet(o, o->sdata.name, channel,
 							"ARRIVING AT CARGO CONTAINER "
 							"(ALREADY TOWING ANOTHER CONTAINER).");
 					}
 					break;
 				default:
-					send_comms_packet(o->sdata.name, channel,
+					send_comms_packet(o, o->sdata.name, channel,
 						"APPROACHING OBJECT.");
 					break;
 				}
 			else
-				send_comms_packet(o->sdata.name, channel,
+				send_comms_packet(o, o->sdata.name, channel,
 					"ARRIVING AT WAYPOINT");
 		} else {
 			ai->orphan_time++;
@@ -5139,7 +5146,7 @@ static void ai_mining_mode_land_on_asteroid(struct snis_entity *o, struct ai_min
 		if (b >= 0) {
 			int channel = bridgelist[b].npcbot.channel;
 			ai->orphan_time = 0;
-			send_comms_packet(o->sdata.name, channel,
+			send_comms_packet(o, o->sdata.name, channel,
 				"TARGET ASTEROID LOST -- RETURNING TO SHIP");
 		} else {
 			ai->orphan_time++;
@@ -5174,13 +5181,13 @@ static void ai_mining_mode_land_on_asteroid(struct snis_entity *o, struct ai_min
 			int channel = bridgelist[b].npcbot.channel;
 			ai->orphan_time = 0;
 			if (asteroid->type == OBJTYPE_ASTEROID)
-				send_comms_packet(o->sdata.name, channel,
+				send_comms_packet(o, o->sdata.name, channel,
 					"COMMENCING MINING OPERATION");
 			else if (asteroid->type == OBJTYPE_DERELICT)
-				send_comms_packet(o->sdata.name, channel,
+				send_comms_packet(o, o->sdata.name, channel,
 					"COMMENCING SALVAGE OPERATION");
 			else
-				send_comms_packet(o->sdata.name, channel,
+				send_comms_packet(o, o->sdata.name, channel,
 					"COMMENCING OPERATION");
 		} else {
 			ai->orphan_time++;
@@ -5217,7 +5224,7 @@ static void ai_mining_mode_mine_asteroid(struct snis_entity *o, struct ai_mining
 		if (b >= 0) {
 			int channel = bridgelist[b].npcbot.channel;
 			ai->orphan_time = 0;
-			send_comms_packet(o->sdata.name, channel,
+			send_comms_packet(o, o->sdata.name, channel,
 				"TARGET LOST -- RETURNING TO SHIP");
 		} else {
 			ai->orphan_time++;
@@ -5310,21 +5317,21 @@ static void ai_mining_mode_mine_asteroid(struct snis_entity *o, struct ai_mining
 		int channel = bridgelist[b].npcbot.channel;
 		switch (asteroid->type) {
 		case OBJTYPE_ASTEROID:
-			send_comms_packet(o->sdata.name, channel,
+			send_comms_packet(o, o->sdata.name, channel,
 				"MINING OPERATION COMPLETE -- RETURNING TO SHIP");
 			schedule_callback2(event_callback, &callback_schedule,
 						"asteroid-mined-event", (double) asteroid->id,
 						(double) bridgelist[b].shipid);
 			break;
 		case OBJTYPE_DERELICT:
-			send_comms_packet(o->sdata.name, channel,
+			send_comms_packet(o, o->sdata.name, channel,
 				"SALVAGE OPERATION COMPLETE -- RETURNING TO SHIP");
 			schedule_callback2(event_callback, &callback_schedule,
 						"derelict-salvaged-event", (double) asteroid->id,
 						(double) bridgelist[b].shipid);
 			break;
 		default:
-			send_comms_packet(o->sdata.name, channel,
+			send_comms_packet(o, o->sdata.name, channel,
 				"OPERATION COMPLETE -- RETURNING TO SHIP");
 			break;
 		}
@@ -7320,12 +7327,12 @@ static int starbase_grant_docker_permission(struct snis_entity *starbase,
 			starbase->tsd.starbase.expected_docker_timer[i] = STARBASE_DOCK_TIME;
 			/* transmit re-granting of docking permission */
 			snprintf(msg, sizeof(msg), "%s, PERMISSION TO DOCK RE-GRANTED.", b->shipname);
-			send_comms_packet(npcname, channel, msg);
+			send_comms_packet(starbase, npcname, channel, msg);
 			snis_queue_add_sound(PERMISSION_TO_DOCK_GRANTED, ROLE_NAVIGATION, b->shipid);
 			if (docker->tsd.ship.exterior_lights != 255) {
 				snprintf(msg, sizeof(msg), "%s, ALSO, PLEASE TURN ON YOUR EXTERIOR LIGHTS.",
 					b->shipname);
-				send_comms_packet(npcname, channel, msg);
+				send_comms_packet(starbase, npcname, channel, msg);
 			}
 			return 1;
 		}
@@ -7337,19 +7344,19 @@ static int starbase_grant_docker_permission(struct snis_entity *starbase,
 			starbase->tsd.starbase.expected_docker_timer[i] = STARBASE_DOCK_TIME;
 			/* transmit granting of docking permission */
 			snprintf(msg, sizeof(msg), "%s, PERMISSION TO DOCK GRANTED.", b->shipname);
-			send_comms_packet(npcname, channel, msg);
+			send_comms_packet(starbase, npcname, channel, msg);
 			snis_queue_add_sound(PERMISSION_TO_DOCK_GRANTED, ROLE_NAVIGATION, b->shipid);
 			if (docker->tsd.ship.exterior_lights != 255) {
 				snprintf(msg, sizeof(msg), "%s, ALSO, PLEASE TURN ON YOUR EXTERIOR LIGHTS.",
 					b->shipname);
-				send_comms_packet(npcname, channel, msg);
+				send_comms_packet(starbase, npcname, channel, msg);
 			}
 			return 1;
 		}
 	}
 	if (rate_limit_docking_permission_denied(b)) {
 		snprintf(msg, sizeof(msg), "%s, PERMISSION TO DOCK DENIED.", b->shipname);
-		send_comms_packet(npcname, channel, msg);
+		send_comms_packet(starbase, npcname, channel, msg);
 		snis_queue_add_sound(PERMISSION_TO_DOCK_DENIED, ROLE_NAVIGATION, b->shipid);
 	}
 	return 0;
@@ -7377,7 +7384,7 @@ static void do_docking_action(struct snis_entity *ship, struct snis_entity *star
 	int channel = b->npcbot.channel;
 
 	snprintf(msg, sizeof(msg), "%s, WELCOME TO OUR STARBASE, ENJOY YOUR STAY.", b->shipname);
-	send_comms_packet(npcname, channel, msg);
+	send_comms_packet(starbase, npcname, channel, msg);
 	/* TODO make the repair/refuel process a bit less easy */
 	snprintf(msg, sizeof(msg), "%s, YOUR SHIP HAS BEEN REPAIRED AND REFUELED.\n",
 		b->shipname);
@@ -7385,10 +7392,10 @@ static void do_docking_action(struct snis_entity *ship, struct snis_entity *star
 	ship->timestamp = universe_timestamp;
 	snis_queue_add_sound(DOCKING_SOUND, ROLE_ALL, ship->id);
 	snis_queue_add_sound(WELCOME_TO_STARBASE, ROLE_NAVIGATION, ship->id);
-	send_comms_packet(npcname, channel, msg);
+	send_comms_packet(starbase, npcname, channel, msg);
 	snprintf(msg, sizeof(msg), "%s, YOUR ACCOUNT HAS BEEN BILLED $%5.2f\n",
 		b->shipname, charges);
-	send_comms_packet(npcname, channel, msg);
+	send_comms_packet(starbase, npcname, channel, msg);
 	schedule_callback2(event_callback, &callback_schedule,
 			"player-docked-event", (double) ship->id, starbase->id);
 }
@@ -7442,7 +7449,7 @@ static void player_attempt_dock_with_starbase(struct snis_entity *docking_port,
 		if (rate_limit_docking_permission_denied(bridge)) {
 			snprintf(msg, sizeof(msg), "%s, YOU ARE NOT CLEARED TO DOCK\n",
 				bridge->shipname);
-			send_comms_packet(npcname, channel, msg);
+			send_comms_packet(sb, npcname, channel, msg);
 			snis_queue_add_sound(PERMISSION_TO_DOCK_DENIED, ROLE_NAVIGATION, bridge->shipid);
 		}
 		return;
@@ -7454,7 +7461,7 @@ static void player_attempt_dock_with_starbase(struct snis_entity *docking_port,
 		if (rate_limit_docking_permission_denied(bridge)) {
 			snprintf(msg, sizeof(msg), "%s, YOU ARE NOT CLEARED FOR DOCKING\n",
 				bridge->shipname);
-			send_comms_packet(npcname, channel, msg);
+			send_comms_packet(sb, npcname, channel, msg);
 			snis_queue_add_sound(PERMISSION_TO_DOCK_DENIED, ROLE_NAVIGATION, bridge->shipid);
 		}
 	}
@@ -8902,11 +8909,11 @@ static void starbase_move(struct snis_entity *o)
 		o->tsd.starbase.last_time_called_for_help = universe_timestamp;
 		// printf("starbase name = '%s'\n", o->tsd.starbase.name);
 		sprintf(buf, "STARBASE %s:", o->sdata.name);
-		send_comms_packet("", 0, buf);
-		send_comms_packet("-  ", 0, starbase_comm_under_attack());
+		send_comms_packet(o, "", 0, buf);
+		send_comms_packet(o, "-  ", 0, starbase_comm_under_attack());
 		coords_to_location_string(o->x, o->z, location, sizeof(location) - 1);
 		sprintf(buf, "LOCATION %s", location);
-		send_comms_packet("-  ", 0, buf);
+		send_comms_packet(o, "-  ", 0, buf);
 	}
 
 	for (i = 0; i < o->tsd.starbase.nattackers; i++) {
@@ -8972,10 +8979,10 @@ static void starbase_move(struct snis_entity *o)
 					else
 						snprintf(msg, sizeof(msg), ":  %s", lastc);
 					c++;
-					send_comms_packet(o->tsd.starbase.name, 0, msg);
+					send_comms_packet(o, o->tsd.starbase.name, 0, msg);
 				} else {
 					snprintf(msg, sizeof(msg), ":  %s", lastc);
-					send_comms_packet(o->tsd.starbase.name, 0, msg);
+					send_comms_packet(o, o->tsd.starbase.name, 0, msg);
 				}
 			}
 		}
@@ -9000,7 +9007,7 @@ static void starbase_move(struct snis_entity *o)
 			struct bridge_data *b = &bridgelist[bn];
 			o->tsd.starbase.expected_docker[j] = -1;
 			snprintf(msg, sizeof(msg), "%s, PERMISSION TO DOCK EXPIRED.", b->shipname);
-			send_comms_packet(o->tsd.starbase.name, b->npcbot.channel, msg);
+			send_comms_packet(o, o->tsd.starbase.name, b->npcbot.channel, msg);
 			snis_queue_add_sound(PERMISSION_TO_DOCK_EXPIRED, ROLE_NAVIGATION, b->shipid);
 		}
 	}
@@ -13184,7 +13191,7 @@ static void meta_comms_help(char *name, struct game_client *c, char *txt)
 		0,
 	};
 	for (i = 0; hlptxt[i]; i++)
-		send_comms_packet("", bridgelist[c->bridge].comms_channel, hlptxt[i]);
+		send_comms_packet(NULL, "", bridgelist[c->bridge].comms_channel, hlptxt[i]);
 }
 
 static void meta_comms_about(char *name, struct game_client *c, char *txt)
@@ -13198,22 +13205,22 @@ static void meta_comms_about(char *name, struct game_client *c, char *txt)
 		"--------------------------",
 		0,
 	};
-	send_comms_packet("", bridgelist[c->bridge].comms_channel, "--------------------------");
+	send_comms_packet(NULL, "", bridgelist[c->bridge].comms_channel, "--------------------------");
 	snprintf(version, sizeof(version), "SPACE NERDS IN SPACE CLIENT:");
-	send_comms_packet("", bridgelist[c->bridge].comms_channel, version);
+	send_comms_packet(NULL, "", bridgelist[c->bridge].comms_channel, version);
 	if (c->build_info[0])
-		send_comms_packet("", bridgelist[c->bridge].comms_channel, c->build_info[0]);
+		send_comms_packet(NULL, "", bridgelist[c->bridge].comms_channel, c->build_info[0]);
 	else
-		send_comms_packet("", bridgelist[c->bridge].comms_channel, "UNKNOWN SNIS CLIENT");
+		send_comms_packet(NULL, "", bridgelist[c->bridge].comms_channel, "UNKNOWN SNIS CLIENT");
 	if (c->build_info[1])
-		send_comms_packet("", bridgelist[c->bridge].comms_channel, c->build_info[1]);
+		send_comms_packet(NULL, "", bridgelist[c->bridge].comms_channel, c->build_info[1]);
 	snprintf(version, sizeof(version), "SPACE NERDS IN SPACE SERVER:");
-	send_comms_packet("", bridgelist[c->bridge].comms_channel, version);
-	send_comms_packet("", bridgelist[c->bridge].comms_channel, BUILD_INFO_STRING1);
-	send_comms_packet("", bridgelist[c->bridge].comms_channel, BUILD_INFO_STRING2);
-	send_comms_packet("", bridgelist[c->bridge].comms_channel, "--------------------------");
+	send_comms_packet(NULL, "", bridgelist[c->bridge].comms_channel, version);
+	send_comms_packet(NULL, "", bridgelist[c->bridge].comms_channel, BUILD_INFO_STRING1);
+	send_comms_packet(NULL, "", bridgelist[c->bridge].comms_channel, BUILD_INFO_STRING2);
+	send_comms_packet(NULL, "", bridgelist[c->bridge].comms_channel, "--------------------------");
 	for (i = 0; abouttxt[i]; i++)
-		send_comms_packet("", bridgelist[c->bridge].comms_channel, abouttxt[i]);
+		send_comms_packet(NULL, "", bridgelist[c->bridge].comms_channel, abouttxt[i]);
 }
 
 static void get_location_name(int id, char *buffer, int bufsize)
@@ -13265,7 +13272,7 @@ static void meta_comms_inventory(char *name, struct game_client *c, char *txt)
 	ship = &go[i];
 
 	/* FIXME: sending this on current channel -- should make it private to ship somehow */
-	send_comms_packet(name, ch, " PASSENGER LIST:");
+	send_comms_packet(NULL, name, ch, " PASSENGER LIST:");
 	for (i = 0; i < npassengers; i++) {
 		if (passenger[i].location == ship->id) {
 			int x = lookup_by_id(passenger[i].destination);
@@ -13273,19 +13280,19 @@ static void meta_comms_inventory(char *name, struct game_client *c, char *txt)
 					passenger_count + 1, passenger[i].fare,
 					x < 0 ? "UNKNOWN" : go[x].tsd.starbase.name,
 					passenger[i].name);
-			send_comms_packet(name, ch, msg);
+			send_comms_packet(NULL, name, ch, msg);
 			passenger_count++;
 		}
 	}
 	snprintf(msg, sizeof(msg), "  %d PASSENGERS ABOARD\n", passenger_count);
-	send_comms_packet(name, ch, msg);
+	send_comms_packet(NULL, name, ch, msg);
 	if (strncasecmp(txt, "/passengers", 11) == 0)
 		return;
-	send_comms_packet(name, ch, " INVENTORY OF HOLD:");
-	send_comms_packet(name, ch, " --------------------------------------");
+	send_comms_packet(NULL, name, ch, " INVENTORY OF HOLD:");
+	send_comms_packet(NULL, name, ch, " --------------------------------------");
 	if (ship->tsd.ship.ncargo_bays == 0) {
-		send_comms_packet(name, ch, "   SHIP HAS ZERO CARGO BAYS.");
-		send_comms_packet(name, ch, " --------------------------------------");
+		send_comms_packet(NULL, name, ch, "   SHIP HAS ZERO CARGO BAYS.");
+		send_comms_packet(NULL, name, ch, " --------------------------------------");
 		return;
 	}
 	for (i = 0; i < ship->tsd.ship.ncargo_bays; i++) {
@@ -13296,7 +13303,7 @@ static void meta_comms_inventory(char *name, struct game_client *c, char *txt)
 
 		if (ccc->item == -1) {
 			snprintf(msg, sizeof(msg), "    CARGO BAY %d: ** EMPTY **", i);
-			send_comms_packet(name, ch, msg);
+			send_comms_packet(NULL, name, ch, msg);
 		} else {
 			char due_date[20];
 			itemname = commodity[ccc->item].name;
@@ -13310,24 +13317,24 @@ static void meta_comms_inventory(char *name, struct game_client *c, char *txt)
 				"    CARGO BAY %d: %4.2f %s %s - PAID $%.2f ORIG %10s DEST %10s DUE %s",
 					i, qty, unit, itemname, ship->tsd.ship.cargo[i].paid,
 					origin, dest, due_date);
-			send_comms_packet(name, ch, msg);
+			send_comms_packet(NULL, name, ch, msg);
 		}
 	}
-	send_comms_packet(name, ch, " --------------------------------------");
+	send_comms_packet(NULL, name, ch, " --------------------------------------");
 	if (ship->tsd.ship.mining_bots > 0) {
 		snprintf(msg, sizeof(msg), " %d MINING BOT%s DOCKED AND STOWED.",
 			ship->tsd.ship.mining_bots,
 			ship->tsd.ship.mining_bots == 1 ? "" : "S");
-		send_comms_packet(name, ch, msg);
+		send_comms_packet(NULL, name, ch, msg);
 	}
 	snprintf(msg, sizeof(msg), " CASH ON HAND:  $%.2f", ship->tsd.ship.wallet);
-	send_comms_packet(name, ch, msg);
+	send_comms_packet(NULL, name, ch, msg);
 	if (bridgelist[c->bridge].warp_gate_ticket.ipaddr != 0) { /* ticket currently held? */
 		sprintf(msg, " HOLDING WARP-GATE TICKET TO %s\n",
 			bridgelist[c->bridge].warp_gate_ticket.location);
-		send_comms_packet(name, ch, msg);
+		send_comms_packet(NULL, name, ch, msg);
 	}
-	send_comms_packet(name, ch, " --------------------------------------");
+	send_comms_packet(NULL, name, ch, " --------------------------------------");
 }
 
 static void meta_comms_channel(char *name, struct game_client *c, char *txt)
@@ -13340,12 +13347,12 @@ static void meta_comms_channel(char *name, struct game_client *c, char *txt)
 	if (rc != 1) {
 		snprintf(msg, sizeof(msg), "INVALID CHANNEL - CURRENT CHANNEL %u",
 				bridgelist[c->bridge].comms_channel);
-		send_comms_packet(name, bridgelist[c->bridge].comms_channel, msg);
+		send_comms_packet(NULL, name, bridgelist[c->bridge].comms_channel, msg);
 		return;
 	}
 	snprintf(msg, sizeof(msg), "TRANSMISSION TERMINATED ON CHANNEL %u",
 			bridgelist[c->bridge].comms_channel);
-	send_comms_packet(name, bridgelist[c->bridge].comms_channel, msg);
+	send_comms_packet(NULL, name, bridgelist[c->bridge].comms_channel, msg);
 	bridgelist[c->bridge].comms_channel = newchannel;
 
 	if (bridgelist[c->bridge].npcbot.channel != newchannel) {
@@ -13358,7 +13365,7 @@ static void meta_comms_channel(char *name, struct game_client *c, char *txt)
 
 	/* Note: client snoops this channel change message. */
 	snprintf(msg, sizeof(msg), "%s%u", COMMS_CHANNEL_CHANGE_MSG, newchannel);
-	send_comms_packet(name, newchannel, msg);
+	send_comms_packet(NULL, name, newchannel, msg);
 }
 
 static void meta_comms_eject(char *name, struct game_client *c, char *txt)
@@ -13408,17 +13415,17 @@ static void meta_comms_eject(char *name, struct game_client *c, char *txt)
 				container_vel.v.x, container_vel.v.y, container_vel.v.z,
 				item, qty, 1);
 	snprintf(msg, sizeof(msg), "CARGO BAY %d EJECTED", cargobay);
-	send_comms_packet(name, bridgelist[c->bridge].comms_channel, msg);
+	send_comms_packet(NULL, name, bridgelist[c->bridge].comms_channel, msg);
 	return;
 
 invalid_cargo_bay:
 	snprintf(msg, sizeof(msg), "INVALID CARGO BAY");
-	send_comms_packet(name, bridgelist[c->bridge].comms_channel, msg);
+	send_comms_packet(NULL, name, bridgelist[c->bridge].comms_channel, msg);
 	return;
 
 empty_cargo_bay:
 	snprintf(msg, sizeof(msg), "EMPTY CARGO BAY");
-	send_comms_packet(name, bridgelist[c->bridge].comms_channel, msg);
+	send_comms_packet(NULL, name, bridgelist[c->bridge].comms_channel, msg);
 	return;
 }
 
@@ -13431,16 +13438,22 @@ static uint32_t find_free_channel(void)
 static void npc_menu_item_not_implemented(struct npc_menu_item *item,
 					char *npcname, struct npc_bot_state *botstate)
 {
-	send_comms_packet(npcname, botstate->channel,
+	send_comms_packet(NULL, npcname, botstate->channel,
 				"  SORRY, THAT IS NOT IMPLEMENTED");
 }
 
 static void npc_menu_item_sign_off(struct npc_menu_item *item,
 					char *npcname, struct npc_bot_state *botstate)
 {
-	send_comms_packet(npcname, botstate->channel,
+	int i;
+	struct snis_entity *transmitter = NULL;
+
+	i = lookup_by_id(botstate->object_id);
+	if (i >= 0)
+		transmitter = &go[i];
+	send_comms_packet(transmitter, npcname, botstate->channel,
 				"  IT HAS BEEN A PLEASURE SERVING YOU");
-	send_comms_packet(npcname, botstate->channel,
+	send_comms_packet(transmitter, npcname, botstate->channel,
 				"  ZX81 SERVICE ROBOT TERMINATING TRANSMISSION");
 	botstate->channel = (uint32_t) -1;
 	botstate->object_id = (uint32_t) -1;
@@ -13458,18 +13471,18 @@ static void npc_send_parts_menu(char *npcname, struct npc_bot_state *botstate)
 		return;
 	sb = &go[i];
 
-	send_comms_packet(npcname, botstate->channel, "");
+	send_comms_packet(sb, npcname, botstate->channel, "");
 	snprintf(msg, sizeof(msg), "  -- BUY %s PARTS --", damcon_system_name(botstate->parts_menu));
-	send_comms_packet(npcname, botstate->channel, msg);
+	send_comms_packet(sb, npcname, botstate->channel, msg);
 	for (i = 0; i < DAMCON_PARTS_PER_SYSTEM; i++) {
 		float price = sb->tsd.starbase.part_price[botstate->parts_menu *
 								DAMCON_PARTS_PER_SYSTEM + i];
 		snprintf(msg, sizeof(msg), "  %c:   $%.2f   %s\n", i + 'A', price,
 				damcon_part_name(botstate->parts_menu, i));
-		send_comms_packet(npcname, botstate->channel, msg);
+		send_comms_packet(sb, npcname, botstate->channel, msg);
 	}
-	send_comms_packet(npcname, botstate->channel, "  0:   PREVIOUS MENU");
-	send_comms_packet(npcname, botstate->channel, "");
+	send_comms_packet(sb, npcname, botstate->channel, "  0:   PREVIOUS MENU");
+	send_comms_packet(sb, npcname, botstate->channel, "");
 }
 
 static void parts_buying_npc_bot(struct snis_entity *o, int bridge,
@@ -13516,17 +13529,17 @@ static void parts_buying_npc_bot(struct snis_entity *o, int bridge,
 
 	/* check transporter range */
 	if (range2 > TRANSPORTER_RANGE * TRANSPORTER_RANGE) {
-		send_comms_packet(n, channel,
+		send_comms_packet(o, n, channel,
 			" TRANSACTION NOT POSSIBLE - TRANSPORTER RANGE EXCEEDED");
 		return;
 	}
 	price = o->tsd.starbase.part_price[botstate->parts_menu * DAMCON_PARTS_PER_SYSTEM + selection];
 	if (price > ship->tsd.ship.wallet) {
-		send_comms_packet(n, channel, " INSUFFICIENT FUNDS");
+		send_comms_packet(o, n, channel, " INSUFFICIENT FUNDS");
 		return;
 	}
 	ship->tsd.ship.wallet -= price;
-	send_comms_packet(n, channel, " THANK YOU FOR YOUR PURCHASE.");
+	send_comms_packet(o, n, channel, " THANK YOU FOR YOUR PURCHASE.");
 	instantly_repair_damcon_part(&bridgelist[bridge].damcon, botstate->parts_menu, selection); /* "buy" the part. */
 }
 
@@ -13597,13 +13610,13 @@ static void npc_menu_item_mining_bot_transport_ores(struct npc_menu_item *item,
 	else
 		parent = &go[i];
 	if (ai->mode != MINING_MODE_STANDBY_TO_TRANSPORT_ORE) {
-		send_comms_packet(npcname, channel,
+		send_comms_packet(miner, npcname, channel,
 			"UNABLE TO OBTAIN COHERENT TRANSPORTER BEAM LOCK");
 	} else {
-		send_comms_packet(npcname, channel, "--- TRANSPORTING MATERIALS ---");
+		send_comms_packet(miner, npcname, channel, "--- TRANSPORTING MATERIALS ---");
 		mining_bot_unload_ores(miner, parent, ai);
-		send_comms_packet(npcname, channel, "--- MATERIALS TRANSPORTED ---");
-		send_comms_packet(npcname, channel,
+		send_comms_packet(miner, npcname, channel, "--- MATERIALS TRANSPORTED ---");
+		send_comms_packet(miner, npcname, channel,
 			"COMMENCING RENDEZVOUS WITH TARGET");
 		ai->mode = MINING_MODE_APPROACH_ASTEROID;
 		schedule_callback2(event_callback, &callback_schedule,
@@ -13632,7 +13645,7 @@ static void npc_menu_item_mining_bot_stow(struct npc_menu_item *item,
 			ai->mode = MINING_MODE_RETURN_TO_PARENT;
 		}
 	}
-	send_comms_packet(npcname, channel, " RETURNING TO SHIP");
+	send_comms_packet(miner, npcname, channel, " RETURNING TO SHIP");
 }
 
 static void npc_menu_item_mining_bot_retarget(struct npc_menu_item *item,
@@ -13656,18 +13669,18 @@ static void npc_menu_item_mining_bot_retarget(struct npc_menu_item *item,
 	ai = &miner->tsd.ship.ai[0].u.mining_bot;
 
 	if (b->science_selection == (uint32_t) -1 && b->selected_waypoint == -1) {
-		send_comms_packet(npcname, channel, " NO DESTINATION TARGETED");
+		send_comms_packet(miner, npcname, channel, " NO DESTINATION TARGETED");
 		return;
 	}
 	if (b->science_selection != (uint32_t) -1) {
 		i = lookup_by_id(b->science_selection);
 		if (i < 0) {
-			send_comms_packet(npcname, channel, " NO DESTINATION TARGETED");
+			send_comms_packet(miner, npcname, channel, " NO DESTINATION TARGETED");
 			return;
 		}
 		asteroid = &go[i];
 		if (asteroid->type != OBJTYPE_ASTEROID && asteroid->type != OBJTYPE_DERELICT) {
-			send_comms_packet(npcname, channel, " SELECTED DESTINATION INAPPROPRIATE");
+			send_comms_packet(miner, npcname, channel, " SELECTED DESTINATION INAPPROPRIATE");
 			return;
 		}
 		ai->asteroid = b->science_selection;
@@ -13693,7 +13706,7 @@ static void npc_menu_item_mining_bot_retarget(struct npc_menu_item *item,
 						-1.0, wp->x, wp->y, wp->z);
 		}
 	}
-	send_comms_packet(npcname, channel, msg);
+	send_comms_packet(miner, npcname, channel, msg);
 	ai->mode = MINING_MODE_APPROACH_ASTEROID;
 }
 
@@ -13709,7 +13722,7 @@ static void npc_menu_item_mining_bot_cam(struct npc_menu_item *item,
 	i = lookup_by_id(botstate->object_id);
 	if (i < 0) {
 		snprintf(msg, sizeof(msg), "MINING BOT CAMERA FEED MALFUNCTION.");
-		send_comms_packet(npcname, channel, msg);
+		send_comms_packet(NULL, npcname, channel, msg);
 		return;
 	}
 	miner = &go[i];
@@ -13727,7 +13740,7 @@ static void npc_menu_item_mining_bot_cam(struct npc_menu_item *item,
 	} else {
 		snprintf(msg, sizeof(msg), "MINING BOT CAMERA FEED MALFUNCTION.");
 	}
-	send_comms_packet(npcname, channel, msg);
+	send_comms_packet(miner, npcname, channel, msg);
 }
 
 
@@ -13778,7 +13791,7 @@ static void npc_menu_item_mining_bot_status_report(struct npc_menu_item *item,
 	total = gold + platinum + germanium + uranium;
 	fuel = ai->fuel;
 	oxygen = ai->oxygen;
-	send_comms_packet(npcname, channel, "--- BEGIN STATUS REPORT ---");
+	send_comms_packet(miner, npcname, channel, "--- BEGIN STATUS REPORT ---");
 	switch (ai->mode) {
 	case MINING_MODE_APPROACH_ASTEROID:
 		if (ai->object_or_waypoint == 0) /* object */
@@ -13786,12 +13799,12 @@ static void npc_menu_item_mining_bot_status_report(struct npc_menu_item *item,
 				asteroid ? asteroid->sdata.name : "UNKNOWN", dist);
 		else
 			snprintf(msg, sizeof(msg), "RENDEZVOUS WITH WAYPOINT, DISTANCE: %f\n", dist);
-		send_comms_packet(npcname, channel, msg);
+		send_comms_packet(miner, npcname, channel, msg);
 		break;
 	case MINING_MODE_LAND_ON_ASTEROID:
 		snprintf(msg, sizeof(msg), "DESCENT ONTO %s, ALTITUDE: %f\n",
 			asteroid ? asteroid->sdata.name : "UNKNOWN", dist * 0.3);
-		send_comms_packet(npcname, channel, msg);
+		send_comms_packet(miner, npcname, channel, msg);
 		break;
 	case MINING_MODE_MINE:
 		if (asteroid->type == OBJTYPE_ASTEROID)
@@ -13800,57 +13813,57 @@ static void npc_menu_item_mining_bot_status_report(struct npc_menu_item *item,
 		else
 			snprintf(msg, sizeof(msg), "SALVAGING %s\n",
 				asteroid ? asteroid->sdata.name : "UNKNOWN");
-		send_comms_packet(npcname, channel, msg);
+		send_comms_packet(miner, npcname, channel, msg);
 		break;
 	case MINING_MODE_RETURN_TO_PARENT:
 	case MINING_MODE_STOW_BOT:
 		snprintf(msg, sizeof(msg), "RETURNING FROM %s\n",
 			asteroid ? asteroid->sdata.name : "UNKNOWN");
-		send_comms_packet(npcname, channel, msg);
+		send_comms_packet(miner, npcname, channel, msg);
 		snprintf(msg, sizeof(msg), "DISTANCE TO %s: %f\n",
 			asteroid ? asteroid->sdata.name : "UNKNOWN", dist);
-		send_comms_packet(npcname, channel, msg);
+		send_comms_packet(miner, npcname, channel, msg);
 		break;
 	case MINING_MODE_STANDBY_TO_TRANSPORT_ORE:
 		snprintf(msg, sizeof(msg), "STANDING BY TO TRANSPORT MATERIALS\n");
-		send_comms_packet(npcname, channel, msg);
+		send_comms_packet(miner, npcname, channel, msg);
 		snprintf(msg, sizeof(msg), "DISTANCE TO %s: %f\n",
 			asteroid ? asteroid->sdata.name : "UNKNOWN", dist);
-		send_comms_packet(npcname, channel, msg);
+		send_comms_packet(miner, npcname, channel, msg);
 		break;
 	case MINING_MODE_IDLE:
 		snprintf(msg, sizeof(msg), "STANDING BY FOR ORDERS\n");
-		send_comms_packet(npcname, channel, msg);
+		send_comms_packet(miner, npcname, channel, msg);
 		snprintf(msg, sizeof(msg), "DISTANCE TO DESTINATION: %f\n", dist);
-		send_comms_packet(npcname, channel, msg);
+		send_comms_packet(miner, npcname, channel, msg);
 	default:
 		break;
 	}
 	snprintf(msg, sizeof(msg), "DISTANCE TO %s: %f\n",
 		parent ? parent->sdata.name : "MOTHER SHIP", dist_to_parent);
-	send_comms_packet(npcname, channel, msg);
+	send_comms_packet(miner, npcname, channel, msg);
 	if (ai->object_or_waypoint == 0) {
 		switch (asteroid->type) {
 		case OBJTYPE_ASTEROID:
 			snprintf(msg, sizeof(msg), "ORE COLLECTED: %f TONS\n", 2.0 * total / (255.0 * 4.0));
-			send_comms_packet(npcname, channel, msg);
-			send_comms_packet(npcname, channel, "ORE COMPOSITION:");
+			send_comms_packet(miner, npcname, channel, msg);
+			send_comms_packet(miner, npcname, channel, "ORE COMPOSITION:");
 			snprintf(msg, sizeof(msg), "GOLD: %2f%%\n", gold / total);
-			send_comms_packet(npcname, channel, msg);
+			send_comms_packet(miner, npcname, channel, msg);
 			snprintf(msg, sizeof(msg), "PLATINUM: %2f%%\n", platinum / total);
-			send_comms_packet(npcname, channel, msg);
+			send_comms_packet(miner, npcname, channel, msg);
 			snprintf(msg, sizeof(msg), "GERMANIUM: %2f%%\n", germanium / total);
-			send_comms_packet(npcname, channel, msg);
+			send_comms_packet(miner, npcname, channel, msg);
 			snprintf(msg, sizeof(msg), "URANIUM: %2f%%\n", uranium / total);
-			send_comms_packet(npcname, channel, msg);
+			send_comms_packet(miner, npcname, channel, msg);
 			break;
 		case OBJTYPE_DERELICT:
 			snprintf(msg, sizeof(msg), "FUEL AND OXYGEN COLLECTED:\n");
-			send_comms_packet(npcname, channel, msg);
+			send_comms_packet(miner, npcname, channel, msg);
 			snprintf(msg, sizeof(msg), "- FUEL: %2f%%\n", fuel / 255.0);
-			send_comms_packet(npcname, channel, msg);
+			send_comms_packet(miner, npcname, channel, msg);
 			snprintf(msg, sizeof(msg), "- OXYGEN: %2f%%\n", oxygen / 255.0);
-			send_comms_packet(npcname, channel, msg);
+			send_comms_packet(miner, npcname, channel, msg);
 			/* FIXME: This ai->mode test is a little imprecise about whether we've recovered
 			 * the logs. But, maybe it's good enough.
 			 */
@@ -13863,7 +13876,7 @@ static void npc_menu_item_mining_bot_status_report(struct npc_menu_item *item,
 
 					snprintf(msg, sizeof(msg), "*** RECOVERED PARTIAL SHIPS LOG FROM %s ***\n",
 							asteroid->sdata.name);
-					send_comms_packet(npcname, channel, msg);
+					send_comms_packet(miner, npcname, channel, msg);
 					n = strlen(asteroid->tsd.derelict.ships_log);
 					i = 0;
 					do {
@@ -13871,7 +13884,7 @@ static void npc_menu_item_mining_bot_status_report(struct npc_menu_item *item,
 						memset(m, 0, sizeof(m));
 						strncpy(m, asteroid->tsd.derelict.ships_log + i, sizeof(m) - 1);
 						snprintf(msg, sizeof(msg), "... %s\n", m);
-						send_comms_packet(npcname, channel, msg);
+						send_comms_packet(miner, npcname, channel, msg);
 						len = strlen(m);
 						n = n - len;
 						i = i + len;
@@ -13879,14 +13892,14 @@ static void npc_menu_item_mining_bot_status_report(struct npc_menu_item *item,
 					} while (n > 0);
 					snprintf(msg, sizeof(msg), "*** END OF PARTIAL SHIP'S LOG FROM %s ***\n",
 						asteroid->sdata.name);
-					send_comms_packet(npcname, channel, msg);
+					send_comms_packet(miner, npcname, channel, msg);
 					schedule_callback2(event_callback, &callback_schedule,
 								"ships-logs-recovered-event", (double) asteroid->id,
 								parent ? (double) parent->id : -1.0);
 				} else {
 					snprintf(msg, sizeof(msg), "UNABLE TO RECOVER SHIPS LOG FROM %s\n",
 							asteroid->sdata.name);
-					send_comms_packet(npcname, channel, msg);
+					send_comms_packet(miner, npcname, channel, msg);
 				}
 			}
 			break;
@@ -13894,7 +13907,7 @@ static void npc_menu_item_mining_bot_status_report(struct npc_menu_item *item,
 			break;
 		}
 	}
-	send_comms_packet(npcname, channel, "--- END STATUS REPORT ---");
+	send_comms_packet(miner, npcname, channel, "--- END STATUS REPORT ---");
 }
 
 static int ship_is_docked(uint32_t ship_id, struct snis_entity *starbase)
@@ -13953,7 +13966,7 @@ static void starbase_passenger_boarding_npc_bot(struct snis_entity *sb, int brid
 
 	if (strcmp(command, "") == 0 || strcmp(command, "?") == 0) {
 		snprintf(msg, sizeof(msg), " TRAVELERS SEEKING PASSAGE\n");
-		send_comms_packet(npcname, ch, msg);
+		send_comms_packet(sb, npcname, ch, msg);
 
 		count = 0;
 		for (i = 0; i < npassengers; i++) {
@@ -13963,13 +13976,13 @@ static void starbase_passenger_boarding_npc_bot(struct snis_entity *sb, int brid
 				count++;
 				snprintf(msg, sizeof(msg), "  %2d: DEST: %12s  FARE: $%5d  NAME: %s\n",
 					count, dest, passenger[i].fare, passenger[i].name);
-				send_comms_packet(npcname, ch, msg);
+				send_comms_packet(sb, npcname, ch, msg);
 			}
 		}
 		if (count == 0)
-			send_comms_packet(npcname, ch, " NO PASSENGERS AVAILABLE");
-		send_comms_packet(npcname, ch, "\n");
-		send_comms_packet(npcname, ch, " 0. PREVIOUS MENU\n");
+			send_comms_packet(sb, npcname, ch, " NO PASSENGERS AVAILABLE");
+		send_comms_packet(sb, npcname, ch, "\n");
+		send_comms_packet(sb, npcname, ch, " 0. PREVIOUS MENU\n");
 		return;
 	}
 
@@ -13977,7 +13990,7 @@ static void starbase_passenger_boarding_npc_bot(struct snis_entity *sb, int brid
 	player_is_docked = ship_is_docked(bridgelist[bridge].shipid, sb);
 	rc = sscanf(command, "%d", &selection);
 	if (rc != 1) {
-		send_comms_packet(npcname, ch, " HUH? TRY AGAIN\n");
+		send_comms_packet(sb, npcname, ch, " HUH? TRY AGAIN\n");
 		return;
 	}
 	if (selection == 0) {
@@ -13986,16 +13999,16 @@ static void starbase_passenger_boarding_npc_bot(struct snis_entity *sb, int brid
 		return;
 	}
 	if (selection < 1) {
-		send_comms_packet(npcname, ch, " BAD SELECTION, TRY AGAIN\n");
+		send_comms_packet(sb, npcname, ch, " BAD SELECTION, TRY AGAIN\n");
 		return;
 	}
 
 	if (!player_is_docked) {
-		send_comms_packet(npcname, ch, " YOU MUST BE DOCKED TO BOARD PASSENGERS\n");
+		send_comms_packet(sb, npcname, ch, " YOU MUST BE DOCKED TO BOARD PASSENGERS\n");
 		return;
 	}
 	if (already_aboard >= ship->tsd.ship.passenger_berths) {
-		send_comms_packet(npcname, ch, " ALL OF YOUR PASSENGER BERTHS ARE BOOKED\n");
+		send_comms_packet(sb, npcname, ch, " ALL OF YOUR PASSENGER BERTHS ARE BOOKED\n");
 		return;
 	}
 	count = 0;
@@ -14005,7 +14018,7 @@ static void starbase_passenger_boarding_npc_bot(struct snis_entity *sb, int brid
 				count++;
 				if (count == selection) {
 					sprintf(msg, " BOARDING PASSENGER %s\n", passenger[i].name);
-					send_comms_packet(npcname, ch, msg);
+					send_comms_packet(sb, npcname, ch, msg);
 					passenger[i].location = bridgelist[bridge].shipid;
 					break;
 				}
@@ -14013,7 +14026,7 @@ static void starbase_passenger_boarding_npc_bot(struct snis_entity *sb, int brid
 		}
 	}
 	if (count != selection) {
-		send_comms_packet(npcname, ch, " UNKNOWN SELECTION, TRY AGAIN\n");
+		send_comms_packet(sb, npcname, ch, " UNKNOWN SELECTION, TRY AGAIN\n");
 		return;
 	}
 }
@@ -14040,14 +14053,14 @@ static void npc_menu_item_eject_passengers(struct npc_menu_item *item,
 	ship = &go[i];
 
 	if (!ship_is_docked(b->shipid, sb)) {
-		send_comms_packet(npcname, ch, " YOU MUST BE DOCKED TO DISEMBARK PASSENGERS\n");
+		send_comms_packet(sb, npcname, ch, " YOU MUST BE DOCKED TO DISEMBARK PASSENGERS\n");
 		return;
 	}
 	for (i = 0; i < npassengers; i++) {
 		if (passenger[i].location == b->shipid && passenger[i].destination == sb->id) {
 			snprintf(msg, sizeof(msg), "  PASSENGER %s DISEMBARKED\n",
 					passenger[i].name);
-			send_comms_packet(npcname, ch, msg);
+			send_comms_packet(sb, npcname, ch, msg);
 			ship->tsd.ship.wallet += passenger[i].fare;
 			/* passenger disembarks, ceases to be a passenger, replace with new one */
 			update_passenger(i, nstarbases);
@@ -14056,7 +14069,7 @@ static void npc_menu_item_eject_passengers(struct npc_menu_item *item,
 		if (passenger[i].location == b->shipid) {
 			snprintf(msg, sizeof(msg), "  PASSENGER %s EJECTED\n",
 					passenger[i].name);
-			send_comms_packet(npcname, ch, msg);
+			send_comms_packet(sb, npcname, ch, msg);
 			/* Player is fined for ejecting passengers */
 			ship->tsd.ship.wallet -= passenger[i].fare;
 			/* passenger ejected, ceases to be a passenger, replace with new one */
@@ -14087,14 +14100,14 @@ static void npc_menu_item_disembark_passengers(struct npc_menu_item *item,
 	ship = &go[i];
 
 	if (!ship_is_docked(b->shipid, sb)) {
-		send_comms_packet(npcname, ch, " YOU MUST BE DOCKED TO DISEMBARK PASSENGERS\n");
+		send_comms_packet(sb, npcname, ch, " YOU MUST BE DOCKED TO DISEMBARK PASSENGERS\n");
 		return;
 	}
 	for (i = 0; i < npassengers; i++) {
 		if (passenger[i].location == b->shipid && passenger[i].destination == sb->id) {
 			snprintf(msg, sizeof(msg), "  PASSENGER %s DISEMBARKED\n",
 					passenger[i].name);
-			send_comms_packet(npcname, ch, msg);
+			send_comms_packet(sb, npcname, ch, msg);
 			ship->tsd.ship.wallet += passenger[i].fare;
 			/* passenger disembarks, ceases to be a passenger, replace with new one */
 			update_passenger(i, nstarbases);
@@ -14153,34 +14166,34 @@ static void npc_menu_item_travel_advisory(struct npc_menu_item *item,
 	if (pl) {
 		/* TODO: fill in all this crap */
 		snprintf(msg, sizeof(msg), " TRAVEL ADVISORY FOR %s", name);
-		send_comms_packet(npcname, ch, msg);
-		send_comms_packet(npcname, ch, "-----------------------------------------------------");
+		send_comms_packet(sb, npcname, ch, msg);
+		send_comms_packet(sb, npcname, ch, "-----------------------------------------------------");
 		snprintf(msg, sizeof(msg), " WELCOME TO STARBASE %s, IN ORBIT", sb->tsd.starbase.name);
-		send_comms_packet(npcname, ch, msg);
+		send_comms_packet(sb, npcname, ch, msg);
 		snprintf(msg, sizeof(msg), " AROUND THE BEAUTIFUL PLANET %s.", name);
-		send_comms_packet(npcname, ch, msg);
-		send_comms_packet(npcname, ch, "");
-		send_comms_packet(npcname, ch, " PLANETARY SURFACE TEMP: -15 - 103");
-		send_comms_packet(npcname, ch, " PLANETARY SURFACE WIND SPEED: 0 - 203");
+		send_comms_packet(sb, npcname, ch, msg);
+		send_comms_packet(sb, npcname, ch, "");
+		send_comms_packet(sb, npcname, ch, " PLANETARY SURFACE TEMP: -15 - 103");
+		send_comms_packet(sb, npcname, ch, " PLANETARY SURFACE WIND SPEED: 0 - 203");
 	} else {
 		snprintf(msg, sizeof(msg), " TRAVEL ADVISORY FOR STARBASE %s", name);
-		send_comms_packet(npcname, ch, msg);
-		send_comms_packet(npcname, ch, "-----------------------------------------------------");
+		send_comms_packet(sb, npcname, ch, msg);
+		send_comms_packet(sb, npcname, ch, "-----------------------------------------------------");
 		snprintf(msg, sizeof(msg), " WELCOME TO STARBASE %s, IN DEEP SPACE",
 				sb->tsd.starbase.name);
-		send_comms_packet(npcname, ch, msg);
-		send_comms_packet(npcname, ch, "");
+		send_comms_packet(sb, npcname, ch, msg);
+		send_comms_packet(sb, npcname, ch, "");
 	}
-	send_comms_packet(npcname, ch, " SPACE WEATHER ADVISORY: ALL CLEAR");
-	send_comms_packet(npcname, ch, "");
+	send_comms_packet(sb, npcname, ch, " SPACE WEATHER ADVISORY: ALL CLEAR");
+	send_comms_packet(sb, npcname, ch, "");
 	if (contraband != (uint16_t) -1) {
-		send_comms_packet(npcname, ch, " TRAVELERS TAKE NOTICE OF PROHIBITED ITEMS:");
+		send_comms_packet(sb, npcname, ch, " TRAVELERS TAKE NOTICE OF PROHIBITED ITEMS:");
 		snprintf(msg, sizeof(msg), "    %s", commodity[contraband].name);
-		send_comms_packet(npcname, ch, msg);
+		send_comms_packet(sb, npcname, ch, msg);
 	}
-	send_comms_packet(npcname, ch, "");
-	send_comms_packet(npcname, ch, " ENJOY YOUR VISIT!");
-	send_comms_packet(npcname, ch, "-----------------------------------------------------");
+	send_comms_packet(sb, npcname, ch, "");
+	send_comms_packet(sb, npcname, ch, " ENJOY YOUR VISIT!");
+	send_comms_packet(sb, npcname, ch, "-----------------------------------------------------");
 }
 
 static void npc_menu_item_request_dock(struct npc_menu_item *item,
@@ -14210,19 +14223,19 @@ static void npc_menu_item_request_dock(struct npc_menu_item *item,
 		/* Do not grant permission to dock to enemy faction in RTS mode */
 		if (sb->sdata.faction != 255 && sb->sdata.faction != o->sdata.faction) {
 			snprintf(msg, sizeof(msg), "%s, PERMISSION DENIED, ENEMY SCUM!\n", b->shipname);
-			send_comms_packet(npcname, ch, msg);
+			send_comms_packet(sb, npcname, ch, msg);
 			return;
 		}
 	}
 	dist = object_dist(sb, o);
 	if (dist > STARBASE_DOCKING_PERM_DIST) {
 		snprintf(msg, sizeof(msg), "%s, YOU ARE TOO FAR AWAY (%lf).\n", b->shipname, dist);
-		send_comms_packet(npcname, ch, msg);
+		send_comms_packet(sb, npcname, ch, msg);
 		return;
 	}
 	if (o->sdata.shield_strength > 15) {
 		snprintf(msg, sizeof(msg), "%s, YOU MUST LOWER SHIELDS FIRST.\n", b->shipname);
-		send_comms_packet(npcname, ch, msg);
+		send_comms_packet(sb, npcname, ch, msg);
 		return;
 	}
 	starbase_grant_docker_permission(sb, o, b, npcname, ch);
@@ -14231,6 +14244,7 @@ static void npc_menu_item_request_dock(struct npc_menu_item *item,
 static void warp_gate_ticket_buying_npc_bot(struct snis_entity *o, int bridge,
 		char *name, char *msg)
 {
+	struct npc_bot_state *botstate = &bridgelist[bridge].npcbot;
 	struct ssgl_game_server *gameserver = NULL;
 	int selection, rc, i, nservers;
 	char buf[100];
@@ -14239,14 +14253,20 @@ static void warp_gate_ticket_buying_npc_bot(struct snis_entity *o, int bridge,
 	double dx, dy, dz;
 	int sslist[100];
 	int nsslist = 0;
+	struct snis_entity *sb;
+
+	i = lookup_by_id(botstate->object_id);
+	if (i < 0)
+		return;
+	sb = &go[i];
 
 	if (server_tracker_get_server_list(server_tracker, &gameserver, &nservers) != 0
 		|| nservers <= 0) {
-		send_comms_packet(name, ch, "NO WARP-GATE TICKETS AVAILABLE\n");
+		send_comms_packet(sb, name, ch, "NO WARP-GATE TICKETS AVAILABLE\n");
 		return;
 	}
-	send_comms_packet(name, ch, "WARP-GATE TICKETS:\n");
-	send_comms_packet(name, ch, "------------------\n");
+	send_comms_packet(sb, name, ch, "WARP-GATE TICKETS:\n");
+	send_comms_packet(sb, name, ch, "------------------\n");
 
 	/* Find our solarsystem */
 	int len = strlen(solarsystem_name);
@@ -14286,12 +14306,12 @@ static void warp_gate_ticket_buying_npc_bot(struct snis_entity *o, int bridge,
 				sslist[nsslist] = i;
 				nsslist++;
 				sprintf(buf, "%3d: %s\n", nsslist, gameserver[i].location);
-				send_comms_packet(name, ch, buf);
+				send_comms_packet(sb, name, ch, buf);
 			}
 		}
 	}
-	send_comms_packet(name, ch, "------------------\n");
-	send_comms_packet(name, ch, "  0: PREVIOUS MENU\n");
+	send_comms_packet(sb, name, ch, "------------------\n");
+	send_comms_packet(sb, name, ch, "  0: PREVIOUS MENU\n");
 	rc = sscanf(msg, "%d", &selection);
 	if (rc != 1)
 		selection = -1;
@@ -14313,13 +14333,13 @@ static void warp_gate_ticket_buying_npc_bot(struct snis_entity *o, int bridge,
 	}
 	if (bridgelist[bridge].warp_gate_ticket.ipaddr == 0) { /* no current ticket held */
 		sprintf(buf, "WARP-GATE TICKET TO %s BOOKED\n", gameserver[selection].location);
-		send_comms_packet(name, ch, buf);
+		send_comms_packet(sb, name, ch, buf);
 	} else {
 		sprintf(buf, "WARP-GATE TICKET TO %s EXCHANGED\n",
 			bridgelist[bridge].warp_gate_ticket.location);
-		send_comms_packet(name, ch, buf);
+		send_comms_packet(sb, name, ch, buf);
 		sprintf(buf, "FOR WARP-GATE TICKET TO %s\n", gameserver[selection].location);
-		send_comms_packet(name, ch, buf);
+		send_comms_packet(sb, name, ch, buf);
 	}
 	bridgelist[bridge].warp_gate_ticket = gameserver[selection];
 	free(gameserver);
@@ -14371,12 +14391,18 @@ static void npc_menu_item_towing_service(struct npc_menu_item *item,
 	int closest_tow_ship;
 	double closest_tow_ship_distance;
 	uint32_t channel = bridgelist[bridge].npcbot.channel;
+	struct snis_entity *sb;
 
 	pthread_mutex_lock(&universe_mutex);
 	i = lookup_by_id(b->shipid);
 	if (i < 0)
 		goto out;
 	o = &go[i];
+
+	i = lookup_by_id(botstate->object_id);
+	if (i < 0)
+		return;
+	sb = &go[i];
 
 	closest_tow_ship = -1;
 	for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
@@ -14391,7 +14417,7 @@ static void npc_menu_item_towing_service(struct npc_menu_item *item,
 					snprintf(msg, sizeof(msg),
 						"%s, THE MANTIS TOW SHIP %s IS ALREADY EN ROUTE",
 						b->shipname, go[i].sdata.name);
-					send_comms_packet(npcname, channel, msg);
+					send_comms_packet(sb, npcname, channel, msg);
 					goto out;
 				}
 			} else {
@@ -14412,7 +14438,7 @@ static void npc_menu_item_towing_service(struct npc_menu_item *item,
 	if (closest_tow_ship == -1) { /* No tow ships, or all tow ships busy */
 		snprintf(msg, sizeof(msg), "%s, SORRY, ALL MANTIS TOW SHPS ARE CURRENTLY BUSY.",
 				b->shipname);
-		send_comms_packet(npcname, channel, msg);
+		send_comms_packet(sb, npcname, channel, msg);
 		goto out;
 	}
 
@@ -14420,23 +14446,23 @@ static void npc_menu_item_towing_service(struct npc_menu_item *item,
 	push_tow_mode(&go[closest_tow_ship], o->id, botstate->object_id);
 	snprintf(msg, sizeof(msg), "%s, THE MANTIS TOW SHIP %s HAS BEEN",
 			b->shipname, go[closest_tow_ship].sdata.name);
-	send_comms_packet(npcname, channel, msg);
+	send_comms_packet(sb, npcname, channel, msg);
 	snprintf(msg, sizeof(msg), "DISPATCHED TO YOUR LOCATION");
-	send_comms_packet(npcname, channel, msg);
+	send_comms_packet(sb, npcname, channel, msg);
 	snprintf(msg, sizeof(msg), "%s, UPON DELIVERY YOUR ACCOUNT\n", b->shipname);
-	send_comms_packet(npcname, channel, msg);
+	send_comms_packet(sb, npcname, channel, msg);
 	snprintf(msg, sizeof(msg), "WILL BE BILLED $%5.2f\n", TOW_SHIP_CHARGE);
-	send_comms_packet(npcname, channel, msg);
-	send_comms_packet(npcname, channel, " WARNING THE TOW SHIP NAVIGATION ALGORITHM IS BUGGY");
-	send_comms_packet(npcname, channel, " AND IT MAY OCCASIONALLY TRY TO DRIVE YOU INTO A PLANET");
-	send_comms_packet(npcname, channel, " USE DOCKING MAGNETS TO DISCONNECT IF NECESSARY");
+	send_comms_packet(sb, npcname, channel, msg);
+	send_comms_packet(sb, npcname, channel, " WARNING THE TOW SHIP NAVIGATION ALGORITHM IS BUGGY");
+	send_comms_packet(sb, npcname, channel, " AND IT MAY OCCASIONALLY TRY TO DRIVE YOU INTO A PLANET");
+	send_comms_packet(sb, npcname, channel, " USE DOCKING MAGNETS TO DISCONNECT IF NECESSARY");
 
 out:
 	pthread_mutex_unlock(&universe_mutex);
 	return;
 }
 
-static void send_npc_menu(char *npcname,  int bridge)
+static void send_npc_menu(struct snis_entity *transmitter, char *npcname,  int bridge)
 {
 	int i;
 	uint32_t channel = bridgelist[bridge].npcbot.channel;
@@ -14446,26 +14472,26 @@ static void send_npc_menu(char *npcname,  int bridge)
 	if (!menu || !menu->name)
 		return;
 
-	send_comms_packet(npcname, channel, "-----------------------------------------------------");
+	send_comms_packet(transmitter, npcname, channel, "-----------------------------------------------------");
 	sprintf(msg, "     %s", menu->name);
-	send_comms_packet(npcname, channel, msg);
-	send_comms_packet(npcname, channel, "");
+	send_comms_packet(transmitter, npcname, channel, msg);
+	send_comms_packet(transmitter, npcname, channel, "");
 	menu++;
 	i = 1;
 	while (menu->name) {
 		snprintf(msg, sizeof(msg), "     %d: %s\n", i, menu->name);
-		send_comms_packet(npcname, channel, msg);
+		send_comms_packet(transmitter, npcname, channel, msg);
 		menu++;
 		i++;
 	};
 	menu = &bridgelist[bridge].npcbot.current_menu[0];
 	if (menu->parent_menu) {
 		snprintf(msg, sizeof(msg), "     %d: BACK TO %s\n", 0, menu->parent_menu->name);
-		send_comms_packet(npcname, channel, msg);
+		send_comms_packet(transmitter, npcname, channel, msg);
 	}
-	send_comms_packet(npcname, channel, "");
-	send_comms_packet(npcname, channel, "    MAKE YOUR SELECTION WHEN READY.");
-	send_comms_packet(npcname, channel, "-----------------------------------------------------");
+	send_comms_packet(transmitter, npcname, channel, "");
+	send_comms_packet(transmitter, npcname, channel, "    MAKE YOUR SELECTION WHEN READY.");
+	send_comms_packet(transmitter, npcname, channel, "-----------------------------------------------------");
 }
 
 static void starbase_cargo_buyingselling_npc_bot(struct snis_entity *o, int bridge,
@@ -14507,7 +14533,7 @@ static void starbase_cargo_buyingselling_npc_bot(struct snis_entity *o, int brid
 
 			/* check transporter range */
 			if (range2 > TRANSPORTER_RANGE * TRANSPORTER_RANGE) {
-				send_comms_packet(n, channel,
+				send_comms_packet(o, n, channel,
 					" TRANSACTION NOT POSSIBLE - TRANSPORTER RANGE EXCEEDED");
 				return;
 			}
@@ -14524,34 +14550,34 @@ static void starbase_cargo_buyingselling_npc_bot(struct snis_entity *o, int brid
 				}
 			}
 			if (empty_bay == -1) {
-				send_comms_packet(n, channel, " ALL YOUR CARGO BAYS ARE FULL");
+				send_comms_packet(o, n, channel, " ALL YOUR CARGO BAYS ARE FULL");
 				return;
 			}
 
 			/* decode the buy order */
 			rc = sscanf(msg + 4, "%d %c", &q, &x);
 			if (rc != 2) {
-				send_comms_packet(n, channel, " INVALID BUY ORDER");
+				send_comms_packet(o, n, channel, " INVALID BUY ORDER");
 				return;
 			}
 
 			/* check buy order is in range */
 			x = toupper(x);
 			if (x < 'A' || x >= 'A' + COMMODITIES_PER_BASE) {
-				send_comms_packet(n, channel, " INVALID BUY ORDER");
+				send_comms_packet(o, n, channel, " INVALID BUY ORDER");
 				return;
 			}
 
 			/* check qty */
 			if (q <= 0 || q > mkt[x - 'A'].qty) {
-				send_comms_packet(n, channel, " INVALID BUY ORDER");
+				send_comms_packet(o, n, channel, " INVALID BUY ORDER");
 				return;
 			}
 
 			ask = mkt[x - 'A'].ask;
 			/* check fundage */
 			if (q * ask > ship->tsd.ship.wallet) {
-				send_comms_packet(n, channel, " INSUFFICIENT FUNDS");
+				send_comms_packet(o, n, channel, " INSUFFICIENT FUNDS");
 				return;
 			}
 			ship->tsd.ship.wallet -= q * ask;
@@ -14563,20 +14589,20 @@ static void starbase_cargo_buyingselling_npc_bot(struct snis_entity *o, int brid
 			ship->tsd.ship.cargo[empty_bay].due_date = -1;
 			mkt[x - 'A'].qty -= q;
 			snprintf(m, sizeof(m), " EXECUTING BUY ORDER %d %c", q, x);
-			send_comms_packet(n, channel, m);
+			send_comms_packet(o, n, channel, m);
 			snis_queue_add_sound(TRANSPORTER_SOUND,
 					ROLE_SOUNDSERVER, ship->id);
-			send_comms_packet(n, channel,
+			send_comms_packet(o, n, channel,
 				"TRANSPORTER BEAM ACTIVATED - GOODS TRANSFERRED");
 			return;
 		}
 		if (strncasecmp("sell ", msg, 5) == 0)  {
-			send_comms_packet(n, channel, " INVALID SELL ORDER (USE THE 'SELL' MENU)");
+			send_comms_packet(o, n, channel, " INVALID SELL ORDER (USE THE 'SELL' MENU)");
 			return;
 		}
 	} else {
 		if (strncasecmp("buy ", msg, 4) == 0)  {
-			send_comms_packet(n, channel, " INVALID BUY ORDER (USE THE 'BUY' MENU)");
+			send_comms_packet(o, n, channel, " INVALID BUY ORDER (USE THE 'BUY' MENU)");
 			return;
 		}
 		if (strncasecmp("sell ", msg, 5) == 0)  {
@@ -14585,7 +14611,7 @@ static void starbase_cargo_buyingselling_npc_bot(struct snis_entity *o, int brid
 
 			/* check transporter range */
 			if (range2 > TRANSPORTER_RANGE * TRANSPORTER_RANGE) {
-				send_comms_packet(n, channel,
+				send_comms_packet(o, n, channel,
 					" TRANSACTION NOT POSSIBLE - TRANSPORTER RANGE EXCEEDED");
 				return;
 			}
@@ -14595,22 +14621,22 @@ static void starbase_cargo_buyingselling_npc_bot(struct snis_entity *o, int brid
 				rc = sscanf(msg + 5, "%c", &x);
 				if (rc == 1 && strlen(msg) == 6) {
 					if (toupper(x) - 'A' < 0 || toupper(x) - 'A' >= ship->tsd.ship.ncargo_bays) {
-						send_comms_packet(n, channel, " INVALID SELL ORDER, BAD CARGO BAY");
+						send_comms_packet(o, n, channel, " INVALID SELL ORDER, BAD CARGO BAY");
 						return;
 					}
 					qf = ship->tsd.ship.cargo[(int) toupper(x) - 'A'].contents.qty;
 				} else {
-					send_comms_packet(n, channel, " INVALID SELL ORDER, PARSE ERROR");
+					send_comms_packet(o, n, channel, " INVALID SELL ORDER, PARSE ERROR");
 					return;
 				}
 			}
 			x = toupper(x) - 'A';
 			if (x < 0 || x >= ship->tsd.ship.ncargo_bays) {
-				send_comms_packet(n, channel, " INVALID SELL ORDER, BAD CARGO BAY");
+				send_comms_packet(o, n, channel, " INVALID SELL ORDER, BAD CARGO BAY");
 				return;
 			}
 			if (qf > ship->tsd.ship.cargo[(int) x].contents.qty) {
-				send_comms_packet(n, channel, " INVALID SELL ORDER, INSUFFICIENT QUANTITY");
+				send_comms_packet(o, n, channel, " INVALID SELL ORDER, INSUFFICIENT QUANTITY");
 				return;
 			}
 			ship->tsd.ship.cargo[(int) x].contents.qty -= qf;
@@ -14627,22 +14653,22 @@ static void starbase_cargo_buyingselling_npc_bot(struct snis_entity *o, int brid
 				ship->tsd.ship.cargo[(int) x].due_date = -1;
 			}
 			snprintf(m, sizeof(m), " EXECUTING SELL ORDER %.2f %c", qf, x);
-			send_comms_packet(n, channel, m);
+			send_comms_packet(o, n, channel, m);
 			snis_queue_add_sound(TRANSPORTER_SOUND,
 					ROLE_SOUNDSERVER, ship->id);
-			send_comms_packet(n, channel,
+			send_comms_packet(o, n, channel,
 				"TRANSPORTER BEAM ACTIVATED - GOODS TRANSFERRED");
 			snprintf(m, sizeof(m), " SOLD FOR A %s OF $%.2f",
 				profitloss < 0 ? "LOSS" : "PROFIT", profitloss);
-			send_comms_packet(n, channel, m);
+			send_comms_packet(o, n, channel, m);
 			return;
 		}
 	}
 
 	if (selection == -1) {
-		send_comms_packet(n, channel, "----------------------------");
+		send_comms_packet(o, n, channel, "----------------------------");
 		if (buy) {
-			send_comms_packet(n, channel,
+			send_comms_packet(o, n, channel,
 				"   QTY  UNIT ITEM   BID/UNIT     ASK/UNIT    ITEM");
 			for (i = 0; i < COMMODITIES_PER_BASE; i++) {
 				float bid, ask, qty;
@@ -14653,10 +14679,10 @@ static void starbase_cargo_buyingselling_npc_bot(struct snis_entity *o, int brid
 				qty = mkt[i].qty;
 				snprintf(m, sizeof(m), " %c: %4.2f %s %s -- $%4.2f  $%4.2f\n",
 					i + 'A', qty, unit, itemname, bid, ask);
-				send_comms_packet(n, channel, m);
+				send_comms_packet(o, n, channel, m);
 			}
 		} else {
-			send_comms_packet(n, channel,
+			send_comms_packet(o, n, channel,
 				"   QTY  UNIT ITEM   BID/UNIT     ITEM");
 			int count = 0;
 			for (i = 0; i < ship->tsd.ship.ncargo_bays; i++) {
@@ -14673,20 +14699,20 @@ static void starbase_cargo_buyingselling_npc_bot(struct snis_entity *o, int brid
 				snprintf(m, sizeof(m), " %c: %4.2f %s %s -- $%4.2f (PAID $%.2f)",
 					i + 'A', qty, unit, itemname, bid,
 					ship->tsd.ship.cargo[i].paid);
-				send_comms_packet(n, channel, m);
+				send_comms_packet(o, n, channel, m);
 				count++;
 			}
 			if (count == 0)
-				send_comms_packet(n, channel, "   ** CARGO HOLD IS EMPTY **");
+				send_comms_packet(o, n, channel, "   ** CARGO HOLD IS EMPTY **");
 		}
-		send_comms_packet(n, channel, " 0: PREVIOUS MENU");
-		send_comms_packet(n, channel, "----------------------------");
+		send_comms_packet(o, n, channel, " 0: PREVIOUS MENU");
+		send_comms_packet(o, n, channel, "----------------------------");
 		if (buy)
-			send_comms_packet(n, channel, "  (TYPE 'BUY 3 A' TO BUY 3 of item A)");
+			send_comms_packet(o, n, channel, "  (TYPE 'BUY 3 A' TO BUY 3 of item A)");
 		else
-			send_comms_packet(n, channel,
+			send_comms_packet(o, n, channel,
 				"  (TYPE 'SELL 3 A' TO SELL 3 of item A or 'SELL A' to sell all A)");
-		send_comms_packet(n, channel, "----------------------------");
+		send_comms_packet(o, n, channel, "----------------------------");
 	}
 	if (selection == 0) {
 		bridgelist[bridge].npcbot.special_bot = NULL; /* deactivate cargo buying bot */
@@ -14744,22 +14770,22 @@ static void generic_npc_bot(struct snis_entity *o, int bridge, char *name, char 
 
 	if (selection == -1) {
 		/* TODO: make this welcome message customizable per npc bot */
-		send_comms_packet(n, channel, "");
+		send_comms_packet(o, n, channel, "");
 		snprintf(m, sizeof(m),
 			"  WELCOME %s, I AM A MODEL ZX81 SERVICE", name);
-		send_comms_packet(n, channel, m);
-		send_comms_packet(n, channel,
+		send_comms_packet(o, n, channel, m);
+		send_comms_packet(o, n, channel,
 			"  ROBOT PROGRAMMED TO BE AT YOUR SERVICE");
-		send_comms_packet(n, channel,
+		send_comms_packet(o, n, channel,
 			"  THE FOLLOWING SERVICES ARE AVAILABLE:");
-		send_comms_packet(n, channel, "");
-		send_npc_menu(n, bridge);
+		send_comms_packet(o, n, channel, "");
+		send_npc_menu(o, n, bridge);
 	} else {
 		if (menu[selection].submenu) {
 			menu[selection].submenu->parent_menu = menu;
 			bridgelist[bridge].npcbot.current_menu = menu[selection].submenu;
-			send_comms_packet(n, channel, "");
-			send_npc_menu(n, bridge);
+			send_comms_packet(o, n, channel, "");
+			send_npc_menu(o, n, bridge);
 		} else {
 			if (menu[selection].f)
 				menu[selection].f(&menu[selection], n, &bridgelist[bridge].npcbot);
@@ -14800,6 +14826,8 @@ static void send_to_npcbot(int bridge, char *name, char *msg)
 		return;
 
 	o = &go[i];
+
+	/* TODO: check if transmission is successful */
 
 	/* if a special bot is active, use that instead. */
 	if (bridgelist[bridge].npcbot.special_bot) {
@@ -14959,21 +14987,23 @@ channels_maxxed:
 	if (switch_channel && bridgelist[c->bridge].comms_channel != channel[0]) {
 		snprintf(msg, sizeof(msg), "TRANSMISSION TERMINATED ON CHANNEL %u",
 				bridgelist[c->bridge].comms_channel);
-		send_comms_packet(name, bridgelist[c->bridge].comms_channel, msg);
+		send_comms_packet(&go[c->ship_index], name, bridgelist[c->bridge].comms_channel, msg);
 		bridgelist[c->bridge].comms_channel = channel[0];
 		bridgelist[c->bridge].npcbot.object_id = id;
 		bridgelist[c->bridge].npcbot.channel = channel[0];
 		bridgelist[c->bridge].npcbot.current_menu = starbase_main_menu;
 		bridgelist[c->bridge].npcbot.special_bot = NULL;
 		/* Note: client snoops this channel change message */
+		/* TODO: add check here to see if hail is successful first */
 		snprintf(msg, sizeof(msg), "%s%u", COMMS_CHANNEL_CHANGE_MSG, channel[0]);
-		send_comms_packet(name, channel[0], msg);
+		send_comms_packet(&go[c->ship_index], name, channel[0], msg);
 		send_to_npcbot(c->bridge, name, msg);
 	} else {
 		for (i = 0; i < nchannels; i++) {
 			snprintf(msg, sizeof(msg), "*** HAILING ON CHANNEL %u ***",
 					bridgelist[c->bridge].comms_channel);
-			send_comms_packet(name, channel[i], msg);
+			/* TODO: check to see if hail successful first? */
+			send_comms_packet(&go[c->ship_index], name, channel[i], msg);
 		}
 	}
 	free(duptxt);
@@ -15078,7 +15108,7 @@ static int process_comms_transmission(struct game_client *c, int use_real_name)
 		process_meta_comms_packet(name, c, txt);
 		return 0;
 	}
-	send_comms_packet(name, bridgelist[c->bridge].comms_channel, txt);
+	send_comms_packet(&go[c->ship_index], name, bridgelist[c->bridge].comms_channel, txt);
 	if (bridgelist[c->bridge].npcbot.channel == bridgelist[c->bridge].comms_channel)
 		send_to_npcbot(c->bridge, name, txt);
 	return 0;
@@ -15744,10 +15774,10 @@ static int l_comms_transmission(lua_State *l)
 	transmitter = &go[i];
 	switch (transmitter->type) {
 	case OBJTYPE_STARBASE:
-		send_comms_packet(transmitter->tsd.starbase.name, 0, transmission);
+		send_comms_packet(transmitter, transmitter->tsd.starbase.name, 0, transmission);
 		break;
 	default:
-		send_comms_packet(transmitter->sdata.name, 0, transmission);
+		send_comms_packet(transmitter, transmitter->sdata.name, 0, transmission);
 		break;
 	}
 error:
@@ -15763,7 +15793,8 @@ static int l_comms_channel_transmit(lua_State *l)
 	uint32_t ch;
 
 	ch = (uint32_t) channel;
-	send_comms_packet((char *) name, ch, transmission);
+	/* TODO: should probably have transmitter object here. */
+	send_comms_packet(NULL, (char *) name, ch, transmission);
 	return 0;
 }
 
@@ -19454,7 +19485,7 @@ static void queue_comms_to_lua_channels(char *sender, uint32_t channel, const ch
 	}
 }
 
-static void send_comms_packet(char *sender, uint32_t channel, const char *str)
+static void send_comms_packet(struct snis_entity *transmitter, char *sender, uint32_t channel, const char *str)
 {
 	struct packed_buffer *pb;
 	char tmpbuf[100];
@@ -19464,9 +19495,9 @@ static void send_comms_packet(char *sender, uint32_t channel, const char *str)
 	packed_buffer_append(pb, "bb", OPCODE_COMMS_TRANSMISSION, (uint8_t) strlen(tmpbuf) + 1);
 	packed_buffer_append_raw(pb, tmpbuf, strlen(tmpbuf) + 1);
 	if (channel == 0)
-		send_packet_to_all_clients(pb, ROLE_ALL);
+		send_comms_packet_to_all_clients(transmitter, pb, ROLE_ALL);
 	else
-		send_packet_to_all_bridges_on_channel(channel, pb, ROLE_ALL);
+		send_comms_packet_to_all_bridges_on_channel(transmitter, channel, pb, ROLE_ALL);
 	/* Send comms to any lua scripts that are listening */
 	queue_comms_to_lua_channels(sender, channel, str);
 }
