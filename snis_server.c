@@ -397,6 +397,9 @@ static struct snis_entity go[MAXGAMEOBJS];
 #define go_index(snis_entity_ptr) ((snis_entity_ptr) - &go[0])
 static struct space_partition *space_partition = NULL;
 
+/* Do planets, black holes, nebula and antenna mis-aiming block comms?  Default is yes, enabled */
+static int enable_comms_attenuation = 1;
+
 #define MAX_LUA_CHANNELS 10
 static struct lua_comms_channel {
 	uint32_t channel;
@@ -1755,11 +1758,125 @@ static void send_packet_to_all_clients_on_a_bridge(uint32_t shipid, struct packe
 	client_unlock();
 }
 
+static float comms_transmission_strength(struct snis_entity *transmitter, struct snis_entity *receiver)
+{
+	int i;
+	float blocking_factor = 0.0;
+	float max_blocking_factor = 0.0;
+	float signal_strength = 1.0;
+	float radius;
+	union vec3 source, target, occluder, ray_direction;
+	const float to_receiver = object_dist(transmitter, receiver);
+
+	if (transmitter == NULL || !enable_comms_attenuation)
+		return 1.0;
+
+	source.v.x = transmitter->x;
+	source.v.y = transmitter->y;
+	source.v.z = transmitter->z;
+	target.v.x = receiver->x;
+	target.v.y = receiver->y;
+	target.v.z = receiver->z;
+	vec3_sub(&ray_direction, &target, &source);
+	vec3_normalize_self(&ray_direction);
+
+	/* Check for planets, nebula or black holes occluding comms transmission */
+	for (i = -1; i <= snis_object_pool_highest_object(pool); i++) {
+		if (i == -1) {
+			occluder.v.x = SUNX;
+			occluder.v.y = SUNY;
+			occluder.v.z = SUNZ;
+			radius = 5000;
+		} else {
+			if (!go[i].alive)
+				continue;
+			switch (go[i].type) {
+			case OBJTYPE_PLANET:
+				occluder.v.x = go[i].x;
+				occluder.v.y = go[i].y;
+				occluder.v.z = go[i].z;
+				radius = 1.05 * go[i].tsd.planet.radius;
+				blocking_factor = 1.0;
+				break;
+			case OBJTYPE_NEBULA:
+				occluder.v.x = go[i].x;
+				occluder.v.y = go[i].y;
+				occluder.v.z = go[i].z;
+				radius = 1.05 * go[i].tsd.nebula.r;
+				blocking_factor = 0.75;
+				break;
+			case OBJTYPE_BLACK_HOLE:
+				occluder.v.x = go[i].x;
+				occluder.v.y = go[i].y;
+				occluder.v.z = go[i].z;
+				radius = 1.3 * go[i].tsd.black_hole.radius;
+				blocking_factor = 1.0;
+			default:
+				continue;
+			}
+			if (ray_intersects_sphere(&source, &ray_direction, &occluder, radius)) {
+				float to_occluder = object_dist(transmitter, &go[i]);
+				if (to_receiver > to_occluder) { /* occluder blocks transmission */
+					if (blocking_factor > max_blocking_factor)
+						max_blocking_factor = blocking_factor;
+				}
+			} else {
+				if (to_receiver > COMMS_LONG_DISTANCE_THRESHOLD) {
+					blocking_factor = blocking_factor +
+						(0.5 * blocking_factor * to_receiver /
+							(2.0 * COMMS_LONG_DISTANCE_THRESHOLD));
+					if (blocking_factor > max_blocking_factor)
+						max_blocking_factor = blocking_factor;
+				}
+			}
+		}
+	}
+	if (transmitter->type == OBJTYPE_SHIP1) {
+		/* Account for antenna aim */
+		union vec3 antenna_dir;
+		antenna_dir.v.x = 1.0;
+		antenna_dir.v.y = 0.0;
+		antenna_dir.v.z = 0.0;
+		quat_rot_vec_self(&antenna_dir, &transmitter->tsd.ship.current_hg_ant_orientation);
+		signal_strength = vec3_dot(&antenna_dir, &transmitter->tsd.ship.desired_hg_ant_aim) -
+					max_blocking_factor;
+		/* Account for comms power */
+		signal_strength *= 2.0 * (float) (transmitter->tsd.ship.power_data.comms.i) / 255.0;
+	} else {
+		signal_strength = 1.0 - max_blocking_factor;
+	}
+	if (signal_strength < 0.0)
+		signal_strength = 0.0;
+	return signal_strength;
+}
+
 static void send_comms_packet_to_all_clients(struct snis_entity *transmitter,
 					struct packed_buffer *pb, uint32_t roles)
 {
-	/* TODO check if transmitter can reach client */
-	send_packet_to_all_clients_on_a_bridge(ANY_SHIP_ID, pb, roles);
+	int i;
+
+	client_lock();
+	for (i = 0; i < nclients; i++) {
+		struct packed_buffer *pbc;
+		struct game_client *c = &client[i];
+
+		if (!c->refcount)
+			continue;
+
+		if (!(c->role & roles))
+			continue;
+
+		if (c->shipid != transmitter->id) {
+			float strength = comms_transmission_strength(transmitter, &go[c->ship_index]);
+			if (strength < COMMS_TRANSMISSION_STRENGTH_THRESHOLD) /* TODO: something better here */
+				continue;
+		}
+
+		pbc = packed_buffer_copy(pb);
+		pb_queue_to_client(c, pbc);
+	}
+	packed_buffer_free(pb);
+	client_unlock();
 }
 
 static void set_waypoints_dirty_all_clients_on_bridge(uint32_t shipid, int value)
@@ -1777,10 +1894,38 @@ static void set_waypoints_dirty_all_clients_on_bridge(uint32_t shipid, int value
 	/* client_unlock(); TODO - do we need this lock? (it deadlocks though) */
 }
 
+static struct packed_buffer *distort_comms_message(struct packed_buffer *pb, float strength)
+{
+	struct packed_buffer *pbc;
+	int distortion = (int) (((1.0 - strength) * 0.5) * 1000);
+	int i, length;
+	unsigned char *buffer;
+
+	pbc = packed_buffer_copy(pb);
+	if (strength >= COMMS_TRANSMISSION_STRENGTH_THRESHOLD) /* Signal strength is fine, no distortion */
+		return pbc;
+	/* Signal strength is weak, some distortion */
+
+	/* This is a little ugly, as it requires knowing the format of the comms transmission packet.
+	 * Luckily, the format is very simple, byte 1 is opcode, byte 2 is length, and the
+	 * remainder is the message. It also requires knowing innards of struct packed_buffer,
+	 * which is even uglier. Might be cleaner to distort the message before packing, but the message
+	 * is unfortunately packed early and in very many places.
+	 */
+	buffer = (unsigned char *) pbc->buffer;
+	length = packed_buffer_length(pbc);
+	/* Clobber some of the message */
+	for (i = 2; i < length; i++)
+		if (snis_randn(1000) < distortion)
+			buffer[i] = '*'; /* clobber it */
+	return pbc;
+}
+
 static void send_comms_packet_to_all_bridges_on_channel(struct snis_entity *transmitter,
 				uint32_t channel, struct packed_buffer *pb, uint32_t roles)
 {
 	int i;
+	float strength;
 
 	client_lock();
 	for (i = 0; i < nclients; i++) {
@@ -1796,7 +1941,15 @@ static void send_comms_packet_to_all_bridges_on_channel(struct snis_entity *tran
 		if (bridgelist[c->bridge].comms_channel != channel)
 			continue;
 
-		pbc = packed_buffer_copy(pb);
+		if (transmitter && c->shipid != transmitter->id) {
+			strength = comms_transmission_strength(transmitter, &go[c->ship_index]);
+			if (strength <= 0.05)  /* Too weak, drop the message */
+				continue;
+		} else {
+			strength = 1.0;
+		}
+
+		pbc = distort_comms_message(pb, strength);
 		pb_queue_to_client(c, pbc);
 	}
 	packed_buffer_free(pb);
@@ -15089,6 +15242,10 @@ static int process_comms_transmission(struct game_client *c, int use_real_name)
 	uint32_t id;
 	char name[30];
 
+	/* REMINDER: If the format of OPCODE_COMMS_TRANSMISSION ever changes, you need to
+	 * fix distort_comms_message in snis_server.c too.
+	 */
+
 	rc = read_and_unpack_buffer(c, buffer, "bw", &len, &id);
 	if (rc)
 		return rc;
@@ -19473,6 +19630,7 @@ static void queue_comms_to_lua_channels(char *sender, uint32_t channel, const ch
 {
 	int i;
 
+	/* TODO somehow incorporate comms_transmission_strength() in here */
 	/* assumes universe lock is held */
 	for (i = 0; i < nlua_channels; i++) {
 		if (channel != lua_channel[i].channel)
@@ -19489,6 +19647,10 @@ static void send_comms_packet(struct snis_entity *transmitter, char *sender, uin
 {
 	struct packed_buffer *pb;
 	char tmpbuf[100];
+
+	/* REMINDER: If the format of OPCODE_COMMS_TRANSMISSION ever changes, you need to
+	 * fix distort_comms_message in snis_server.c too.
+	 */
 
 	snprintf(tmpbuf, 99, "%s | %s", sender, str);
 	pb = packed_buffer_allocate(sizeof(struct comms_transmission_packet) + 100);

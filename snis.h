@@ -536,6 +536,15 @@ struct ship_data {
 	union vec3 desired_hg_ant_aim; /* direction we would like high gain antenna to aim */
 #define COMMS_SHORT_RANGE 5000
 #define COMMS_LONG_RANGE_ANGLE (10.0 * M_PI / 180.0)
+/* If comms power is below Comms transmission strength threshold, then some
+ * distortion of messages or dropping of comms messages may occur. The comms power
+ * takes into account the aiming (or mis-aiming) of the high gain antenna, potential
+ * occluders like planets, nebula, or black holes between transmitter and receiver,
+ * as well as power to the comms system assigned from engineering.
+ */
+#define COMMS_TRANSMISSION_STRENGTH_THRESHOLD (0.3)
+/* For distances longer than COMMS_LONG_DISTANCE_THRESHOLD comms may not work perfectly. */
+#define COMMS_LONG_DISTANCE_THRESHOLD (XKNOWN_DIM / 2.0)
 };
 
 #define MIN_COMBAT_ATTACK_DIST 200

@@ -5621,6 +5621,9 @@ static int process_comm_transmission(void)
 	const char const *channel_change_pattern = COMMS_CHANNEL_CHANGE_MSG " %u";
 	char *channel_change_msg;
 
+	/* REMINDER: If the format of OPCODE_COMMS_TRANSMISSION ever changes, you need to
+	 * fix distort_comms_message in snis_server.c too.
+	 */
 	rc = read_and_unpack_buffer(buffer, "b", &length);
 	if (rc != 0)
 		return rc;
