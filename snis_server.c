@@ -397,8 +397,8 @@ static struct snis_entity go[MAXGAMEOBJS];
 #define go_index(snis_entity_ptr) ((snis_entity_ptr) - &go[0])
 static struct space_partition *space_partition = NULL;
 
-/* Do planets, black holes, nebula and antenna mis-aiming block comms?  Default is yes, enabled */
-static int enable_comms_attenuation = 1;
+/* Do planets, black holes, nebula and antenna mis-aiming block comms?  Default is false, disabled */
+static int enable_comms_attenuation = 0;
 
 #define MAX_LUA_CHANNELS 10
 static struct lua_comms_channel {
@@ -17418,6 +17418,18 @@ failure:
 	return 1;
 }
 
+static int l_enable_antenna_aiming(lua_State *l)
+{
+	enable_comms_attenuation = 1;
+	return 0;
+}
+
+static int l_disable_antenna_aiming(lua_State *l)
+{
+	enable_comms_attenuation = 0;
+	return 0;
+}
+
 static int process_create_item(struct game_client *c)
 {
 	unsigned char buffer[14];
@@ -20842,6 +20854,8 @@ static void setup_lua(void)
 	add_lua_callable_fn(l_add_explosion, "add_explosion");
 	add_lua_callable_fn(l_dock_player_to_starbase, "dock_player_to_starbase");
 	add_lua_callable_fn(l_object_distance, "object_distance");
+	add_lua_callable_fn(l_enable_antenna_aiming, "enable_antenna_aiming");
+	add_lua_callable_fn(l_disable_antenna_aiming, "disable_antenna_aiming");
 }
 
 static int run_initial_lua_scripts(void)
