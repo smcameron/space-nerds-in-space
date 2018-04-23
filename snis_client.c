@@ -3016,6 +3016,8 @@ static void request_navigation_roll_packet(uint8_t roll)
 	queue_to_server(snis_opcode_pkt("bb", OPCODE_REQUEST_ROLL, roll));
 }
 
+static int control_key_pressed = 0;
+
 static void navigation_dirkey(int h, int v, int r)
 {
 	uint8_t yaw, pitch, roll;
@@ -3318,18 +3320,20 @@ static void weapons_dirkey(int h, int v)
 static void science_dirkey(int h, int v)
 {
 	uint8_t yaw;
+	int fine;
 
 	if (!h && !v)
 		return;
+	fine = 2 * control_key_pressed;
 	if (v) {
 		yaw = v < 0 ? YAW_LEFT : YAW_RIGHT;
 		queue_to_server(snis_opcode_pkt("bb",
-				OPCODE_REQUEST_SCIBEAMWIDTH, yaw));
+				OPCODE_REQUEST_SCIBEAMWIDTH, yaw + fine));
 	}
 	if (h) {
 		yaw = h < 0 ? YAW_LEFT : YAW_RIGHT;
 		queue_to_server(snis_opcode_pkt("bb",
-				OPCODE_REQUEST_SCIYAW, yaw));
+				OPCODE_REQUEST_SCIYAW, yaw + fine));
 	}
 }
 
@@ -3820,8 +3824,6 @@ static void deal_with_keyboard()
 	if (sbh || sbv || sbr)
 		do_sciball_dirkey(sbh, sbv, sbr);
 }
-
-static int control_key_pressed = 0;
 
 static gint key_press_cb(GtkWidget* widget, GdkEventKey* event, gpointer data)
 {
