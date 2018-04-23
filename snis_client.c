@@ -3422,6 +3422,7 @@ static void do_dirkey(int h, int v, int r, int t)
 static void do_sciball_dirkey(int h, int v, int r)
 {
 	uint8_t value;
+	int fine = 2 * control_key_pressed;
 
 	v = v * vertical_controls_inverted;
 
@@ -3432,17 +3433,17 @@ static void do_sciball_dirkey(int h, int v, int r)
 			if (v) {
 				value = v < 0 ? YAW_LEFT : YAW_RIGHT;
 				queue_to_server(snis_opcode_pkt("bb",
-						OPCODE_REQUEST_SCIBALL_PITCH, value));
+						OPCODE_REQUEST_SCIBALL_PITCH, value + fine));
 			}
 			if (h) {
 				value = h < 0 ? YAW_LEFT : YAW_RIGHT;
 				queue_to_server(snis_opcode_pkt("bb",
-						OPCODE_REQUEST_SCIBALL_YAW, value));
+						OPCODE_REQUEST_SCIBALL_YAW, value + fine));
 			}
 			if (r) {
 				value = r < 0 ? YAW_LEFT : YAW_RIGHT;
 				queue_to_server(snis_opcode_pkt("bb",
-						OPCODE_REQUEST_SCIBALL_ROLL, value));
+						OPCODE_REQUEST_SCIBALL_ROLL, value + fine));
 			}
 			break;
 		default:
@@ -13653,6 +13654,8 @@ static void science_mouse_rotate(int x, int y)
 {
 	double dist_from_center, dx, dy, scaled_dx, scaled_dy;
 	float dxi, dyi, angle, abs_angle, octant;
+	int finex = 2 * control_key_pressed;
+	int finey = 2 * control_key_pressed;
 
 	if (sci_ui.details_mode != SCI_DETAILS_MODE_THREED)
 		return;
@@ -13697,17 +13700,17 @@ static void science_mouse_rotate(int x, int y)
 			/* would be more fitting */
 
 			if (fabs(scaled_dx) < 0.33 && dxi >= 0)
-				dxi += 2; /* see YAW_INCREMENT and YAW_INCREMENT_FINE for this convention */
+				finex = 2; /* see YAW_INCREMENT and YAW_INCREMENT_FINE for this convention */
 
 			if (fabs(scaled_dy) < 0.33 && dyi >= 0)
-				dyi += 2;
+				finey = 2;
 
 			/*send the network requests to the server*/
 			if (dxi >= 0)
-				queue_to_server(snis_opcode_pkt("bb", OPCODE_REQUEST_SCIBALL_YAW, (int) dxi));
+				queue_to_server(snis_opcode_pkt("bb", OPCODE_REQUEST_SCIBALL_YAW, (int) dxi + finex));
 
 			if (dyi >= 0)
-				queue_to_server(snis_opcode_pkt("bb", OPCODE_REQUEST_SCIBALL_PITCH, (int) dyi));
+				queue_to_server(snis_opcode_pkt("bb", OPCODE_REQUEST_SCIBALL_PITCH, (int) dyi + finey));
 		}
 	}
 	return;
