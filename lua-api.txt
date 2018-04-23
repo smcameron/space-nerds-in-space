@@ -883,6 +883,19 @@ x,y,z,id = get_mining_bot_destination(id)
 	of that destination if the destination is an object (not a waypoint), or nil
 	if the id is inappropriate or if the mining bot is not deployed.
 
+
+enable_antenna_aiming()
+disable_antenna_aiming()
+	Enables or disables experimental comms antenna aiming code. These are meant to be called from
+	the ENABLE_ANTENNA.LUA and DISABLE_ANTENNA.LUA scripts, run from the demon screen. By default
+	antenna aiming is off. When enabled, comms transmissions may fail or be distorted if the antenna
+	is not aimed well enough, or if some occluder such as a planet, black hole, nebula or star
+	lies between the transmitter and receiver. The antenna aim is indicated on the NAV screen.
+	The antenna aiming feature is not really complete, as there is not enough feedback for COMMS
+	about how well or poorly the transmissions are working, which while somewhat realistic for radio
+	transmissions, aren't fun. So for now, this feature is deemed experimental, and hidden behind
+	this enabling/disabling switch.
+
 NOTE: Your lua scripts must not sleep, call any function which blocks, or require excessive
 long running calculations (nothing more than a few hundredths of a second) because the lua
 scripts are called from the main thread and if the scripts block, the entire game will block.
