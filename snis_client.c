@@ -4478,7 +4478,8 @@ static int process_update_ship_packet(uint8_t opcode)
 	o->tsd.ship.desired_hg_ant_aim.v.x = hgax;
 	o->tsd.ship.desired_hg_ant_aim.v.y = hgay;
 	o->tsd.ship.desired_hg_ant_aim.v.z = hgaz;
-	vec3_normalize_self(&o->tsd.ship.desired_hg_ant_aim);
+	if (vec3_magnitude(&o->tsd.ship.desired_hg_ant_aim) > 0.001)
+		vec3_normalize_self(&o->tsd.ship.desired_hg_ant_aim);
 	if (!o->tsd.ship.reverse && reverse)
 		wwviaudio_add_sound(REVERSE_SOUND);
 	o->tsd.ship.reverse = reverse;
@@ -11327,11 +11328,15 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 			}
 			break;
 		case 2:
+			if (vec3_magnitude(&o->tsd.ship.desired_hg_ant_aim) < 0.01)
+				continue; /* antenna aiming is disabled */
 			ind_orientation = o->tsd.ship.current_hg_ant_orientation;
 			break;
 		case 3:
 		default: {
 			union vec3 r = { { 1.0, 0.0, 0.0 } };
+			if (vec3_magnitude(&o->tsd.ship.desired_hg_ant_aim) < 0.01)
+				continue; /* antenna aiming is disabled */
 			quat_from_u2v(&ind_orientation, &r, &o->tsd.ship.desired_hg_ant_aim, 0);
 			break;
 			}

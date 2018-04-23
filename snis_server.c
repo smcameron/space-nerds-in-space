@@ -8452,8 +8452,24 @@ static void aim_high_gain_antenna(struct snis_entity *o)
 	union quat new_orientation;
 	float d;
 
+	if (!enable_comms_attenuation) {
+		/* This is a hack to let the client know that antenna is disabled so
+		 * it knows whether to draw the arrows on the nav screen.
+		 */
+		o->tsd.ship.desired_hg_ant_aim.v.x = 0.0;
+		o->tsd.ship.desired_hg_ant_aim.v.y = 0.0;
+		o->tsd.ship.desired_hg_ant_aim.v.z = 0.0;
+		return;
+	}
 	/* Figure what "straight ahead" means in the ship's orientation */
 	quat_rot_vec_self(&straight_ahead, &o->orientation);
+
+	if (vec3_magnitude(&o->tsd.ship.desired_hg_ant_aim) < 0.1) {
+		/* If we get here it means that previously enable_comms_attenuation was zero (disabled)
+		 * but now it has been enabled.
+		 */
+		o->tsd.ship.desired_hg_ant_aim = straight_ahead;
+	}
 
 	vec3_normalize_self(&aim_point);
 	/* Figure if the aim point is more or less behind the ship */
