@@ -49,18 +49,19 @@
   "my_callback" with params 1.0, 2.0, 3.0:
 
   struct callback_schedule_entry *my_schedule = NULL;
-  schedule_one_callback(&my_schedule, "my_callback", 1.0, 2.0, 3.0, 4.0, 5.0, 6.0);
+  schedule_one_callback(&my_schedule, "my_callback", 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0);
 
 ***************************************************/
 
 struct event_callback_entry;
 struct callback_schedule_entry;
 
-#define MAX_LUA_CALLBACK_PARAMS (6)
+#define MAX_LUA_CALLBACK_PARAMS (8)
 
 /* Adds a new callback onto the schedule e */
 void schedule_one_callback(struct callback_schedule_entry **e,
-		const char *callback, double p1, double p2, double p3, double p4, double p5, double p6);
+		const char *callback, double p1, double p2, double p3, double p4, double p5, double p6,
+		double p7, double p8);
 
 /* looks up the specified event in the list of callbacks for events, e, and
  * adds all the callbacks for that event (if found) into the schedule
@@ -91,6 +92,14 @@ void schedule_callback5(struct event_callback_entry *e, struct callback_schedule
 void schedule_callback6(struct event_callback_entry *e, struct callback_schedule_entry **s,
 		const char *callback, double p1, double p2, double p3,
 		double p4, double p5, double p6);
+
+void schedule_callback7(struct event_callback_entry *e, struct callback_schedule_entry **s,
+		const char *callback, double p1, double p2, double p3,
+		double p4, double p5, double p6, double p7);
+
+void schedule_callback8(struct event_callback_entry *e, struct callback_schedule_entry **s,
+		const char *callback, double p1, double p2, double p3,
+		double p4, double p5, double p6, double p7, double p8);
 
 /* Frees everthing in a callback schedule */
 void free_callback_schedule(struct callback_schedule_entry **e);

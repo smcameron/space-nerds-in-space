@@ -157,6 +157,12 @@ EVENT TYPES in snis:
 		object when it is stowed, so there is no id for it.)
 	"mining-bot-cargo-transfer-event"
 		Arguments are id of player ship owning bot and id of mining robot.
+	"player-warp-travel-event"
+		Arguments are id of player ship, x, y, z coordinates of departed location,
+		x, y, z coordinates of arriving location, and warp factor.
+	"player-wormhole-travel-event"
+		Arguments are id of player ship, x, y, z coordinates of departed location,
+		x, y, z coordinates of arriving location, and equivalent warp factor.
 
 Functions which you may call from lua: 
 

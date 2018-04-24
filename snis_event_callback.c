@@ -43,18 +43,20 @@ struct callback_schedule_entry {
 /* Adds a new callback onto the schedule e */
 void schedule_one_callback(struct callback_schedule_entry **e,
 		const char *callback, double param1, double param2, double param3,
-		double param4, double param5, double param6)
+		double param4, double param5, double param6, double param7, double param8)
 {
 	struct callback_schedule_entry *newone;
 	newone = calloc(sizeof(**e), 1);
 	newone->callback = strdup(callback);
-	newone->nparams = 6;
+	newone->nparams = MAX_LUA_CALLBACK_PARAMS;
 	newone->param[0] = param1;
 	newone->param[1] = param2;
 	newone->param[2] = param3;
 	newone->param[3] = param4;
 	newone->param[4] = param5;
 	newone->param[5] = param6;
+	newone->param[6] = param7;
+	newone->param[7] = param8;
 
 	if (!*e) {
 		*e = newone;
@@ -68,9 +70,9 @@ void schedule_one_callback(struct callback_schedule_entry **e,
  * adds all the callbacks for that event (if found) into the schedule
  * with the given 6 params.
  */
-void schedule_callback6(struct event_callback_entry *e, struct callback_schedule_entry **s,
+void schedule_callback8(struct event_callback_entry *e, struct callback_schedule_entry **s,
 		const char *event, double p1, double p2, double p3,
-		double p4, double p5, double p6)
+		double p4, double p5, double p6, double p7, double p8)
 {
 	struct event_callback_entry *i, *next;
 	int j;
@@ -80,11 +82,25 @@ void schedule_callback6(struct event_callback_entry *e, struct callback_schedule
 		if (strcmp(i->event, event))
 			continue;
 		for (j = 0; j < i->ncallbacks; j++) {
-			schedule_one_callback(s, i->callback[j], p1, p2, p3, p4, p5, p6);
+			schedule_one_callback(s, i->callback[j], p1, p2, p3, p4, p5, p6, p7, p8);
 			break;
 		}
 		return;
 	}
+}
+
+void schedule_callback7(struct event_callback_entry *e, struct callback_schedule_entry **s,
+		const char *event, double param1, double param2, double param3,
+		double param4, double param5, double param6, double param7)
+{
+	schedule_callback8(e, s, event, param1, param2, param3, param4, param5, param6, param7, 0.0);
+}
+
+void schedule_callback6(struct event_callback_entry *e, struct callback_schedule_entry **s,
+		const char *event, double param1, double param2, double param3,
+		double param4, double param5, double param6)
+{
+	schedule_callback8(e, s, event, param1, param2, param3, param4, param5, param6, 0.0, 0.0);
 }
 
 /* looks up the specified event in the list of callbacks for events, e, and
@@ -95,7 +111,7 @@ void schedule_callback5(struct event_callback_entry *e, struct callback_schedule
 		const char *event, double param1, double param2, double param3,
 		double param4, double param5)
 {
-	schedule_callback6(e, s, event, param1, param2, param3, param4, param5, 0.0);
+	schedule_callback8(e, s, event, param1, param2, param3, param4, param5, 0.0, 0.0, 0.0);
 }
 
 /* looks up the specified event in the list of callbacks for events, e, and
@@ -105,7 +121,7 @@ void schedule_callback5(struct event_callback_entry *e, struct callback_schedule
 void schedule_callback4(struct event_callback_entry *e, struct callback_schedule_entry **s,
 		const char *event, double param1, double param2, double param3, double param4)
 {
-	schedule_callback6(e, s, event, param1, param2, param3, param4, 0.0, 0.0);
+	schedule_callback8(e, s, event, param1, param2, param3, param4, 0.0, 0.0, 0.0, 0.0);
 }
 
 /* looks up the specified event in the list of callbacks for events, e, and
@@ -115,7 +131,7 @@ void schedule_callback4(struct event_callback_entry *e, struct callback_schedule
 void schedule_callback3(struct event_callback_entry *e, struct callback_schedule_entry **s,
 		const char *event, double param1, double param2, double param3)
 {
-	schedule_callback6(e, s, event, param1, param2, param3, 0.0, 0.0, 0.0);
+	schedule_callback8(e, s, event, param1, param2, param3, 0.0, 0.0, 0.0, 0.0, 0.0);
 }
 
 /* looks up the specified event in the list of callbacks for events, e, and
@@ -125,7 +141,7 @@ void schedule_callback3(struct event_callback_entry *e, struct callback_schedule
 void schedule_callback2(struct event_callback_entry *e, struct callback_schedule_entry **s,
 		const char *event, double param1, double param2)
 {
-	schedule_callback6(e, s, event, param1, param2, 0.0, 0.0, 0.0, 0.0);
+	schedule_callback8(e, s, event, param1, param2, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
 }
 
 /* looks up the specified event in the list of callbacks for events, e, and
@@ -135,7 +151,7 @@ void schedule_callback2(struct event_callback_entry *e, struct callback_schedule
 void schedule_callback(struct event_callback_entry *e, struct callback_schedule_entry **s,
 		const char *event, double param1)
 {
-	schedule_callback6(e, s, event, param1, 0.0, 0.0, 0.0, 0.0, 0.0);
+	schedule_callback8(e, s, event, param1, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
 }
 
 /* literally returns e->next, useful for iterating through a callback schedule */

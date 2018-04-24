@@ -1396,6 +1396,7 @@ static void wormhole_collision_detection(void *wormhole, void *object)
 {
 	struct snis_entity *t, *o;
 	double dist2, a, r;
+	double x1, y1, z1, warp_dist, equiv_warp_factor;
 
 	o = wormhole;
 	t = object;
@@ -1413,12 +1414,21 @@ static void wormhole_collision_detection(void *wormhole, void *object)
 		if (dist2 < 30.0 * 30.0) {
 			a = snis_randn(360) * M_PI / 180.0;
 			r = 60.0;
+			x1 = o->x;
+			y1 = o->y;
+			z1 = o->z;
 			set_object_location(t, o->tsd.wormhole.dest_x + cos(a) * r, 
 						o->tsd.wormhole.dest_y,
 						o->tsd.wormhole.dest_z + sin(a) * r);
 			t->timestamp = universe_timestamp;
-			if (t->type == OBJTYPE_SHIP1)
+			if (t->type == OBJTYPE_SHIP1) {
+				warp_dist = hypot3d(o->x - x1, o->y - y1, o->z - z1);
+				equiv_warp_factor = 10.0 * warp_dist / (XKNOWN_DIM / 2.0);
+				schedule_callback8(event_callback, &callback_schedule,
+					"player-wormhole-travel-event", (double) o->id,
+					x1, y1, z1, o->x, o->y, o->z, equiv_warp_factor);
 				send_wormhole_limbo_packet(t->id, 5 * 30);
+			}
 		}
 	}
 }
@@ -8374,6 +8384,10 @@ static void maybe_do_player_warp(struct snis_entity *o)
 				bridgelist[b].warpx,
 				bridgelist[b].warpy,
 				bridgelist[b].warpz);
+		/* At this point, warp[xyz] holds coordinates we are warping FROM */
+		bridgelist[b].warpx = o->x;
+		bridgelist[b].warpy = o->y;
+		bridgelist[b].warpz = o->z;
 	}
 
 	if (bridgelist[b].warptimeleft <= 0)
@@ -8387,9 +8401,19 @@ static void maybe_do_player_warp(struct snis_entity *o)
 	o->timestamp = universe_timestamp;
 	bridgelist[b].warptimeleft--;
 	if (bridgelist[b].warptimeleft == 0) {
+		double dist_travelled = hypot3d(bridgelist[b].warpx - o->x,
+						bridgelist[b].warpy - o->y,
+						bridgelist[b].warpz - o->z);
+		double warp_factor = 10.0 * dist_travelled / (XKNOWN_DIM / 2.0);
 		o->vx = 0;
 		o->vy = 0;
 		o->vz = 0;
+		schedule_callback8(event_callback, &callback_schedule,
+				"player-warp-travel-event", (double) o->id,
+					bridgelist[b].warpx,
+					bridgelist[b].warpy,
+					bridgelist[b].warpz,
+					o->x, o->y, o->z, warp_factor);
 	}
 }
 
@@ -15343,7 +15367,7 @@ static int process_textscreen_op(struct game_client *c)
 	switch (subcommand) {
 	case OPCODE_TEXTSCREEN_MENU_CHOICE:
 		schedule_one_callback(&callback_schedule, current_user_menu_callback,
-			(double) c->shipid, (double) selection, 0.0, 0.0, 0.0, 0.0);
+			(double) c->shipid, (double) selection, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
 		break;
 	default:
 		return -1;
@@ -17925,6 +17949,7 @@ static int do_engage_warp_drive(struct snis_entity *o)
 	if (enough_oomph) {
 		wfactor = ((double) o->tsd.ship.warpdrive / 255.0) * (XKNOWN_DIM / 2.0);
 		quat_rot_vec(&warpvec, &rightvec, &o->orientation);
+		/* At this point, warp[xyz] holds coordinates we are warping TO */
 		bridgelist[b].warpx = o->x + wfactor * warpvec.v.x;
 		bridgelist[b].warpy = o->y + wfactor * warpvec.v.y;
 		bridgelist[b].warpz = o->z + wfactor * warpvec.v.z;
