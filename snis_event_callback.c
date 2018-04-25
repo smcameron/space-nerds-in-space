@@ -36,7 +36,7 @@ struct event_callback_entry {
 struct callback_schedule_entry {
 	char *callback;
 	int nparams;
-	double param[6];
+	double param[MAX_LUA_CALLBACK_PARAMS];
 	struct callback_schedule_entry *next;
 };
 

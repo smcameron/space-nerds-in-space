@@ -56,6 +56,8 @@
 struct event_callback_entry;
 struct callback_schedule_entry;
 
+#define MAX_LUA_CALLBACK_PARAMS (6)
+
 /* Adds a new callback onto the schedule e */
 void schedule_one_callback(struct callback_schedule_entry **e,
 		const char *callback, double p1, double p2, double p3, double p4, double p5, double p6);

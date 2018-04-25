@@ -907,15 +907,15 @@ static void fire_lua_callbacks(struct callback_schedule_entry **sched)
 {
 	struct callback_schedule_entry *i, *next;
 	char *callback;
+	int j;
 
 	for (i = *sched; i != NULL; i = next) {
 		next = next_scheduled_callback(i);
 		callback = callback_name(i);
 		lua_getglobal(lua_state, callback);
-		lua_pushnumber(lua_state, callback_schedule_entry_param(i, 0));
-		lua_pushnumber(lua_state, callback_schedule_entry_param(i, 1));
-		lua_pushnumber(lua_state, callback_schedule_entry_param(i, 2));
-		do_lua_pcall(callback, lua_state, 3, 0, 0);
+		for (j = 0; j < MAX_LUA_CALLBACK_PARAMS; j++)
+			lua_pushnumber(lua_state, callback_schedule_entry_param(i, j));
+		do_lua_pcall(callback, lua_state, MAX_LUA_CALLBACK_PARAMS, 0, 0);
 		free(callback);
 	}
 	free_callback_schedule(sched);
