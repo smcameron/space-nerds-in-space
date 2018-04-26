@@ -13841,6 +13841,7 @@ static void science_button_release(int button, int x, int y)
 	int xdist, ydist, dist2, mindist;
 	struct snis_entity *selected;
 	int waypoint_selected = -1;
+	int near_enough_to_fail = 0;
 
 	x = sng_pixelx_to_screenx(x);
 	y = sng_pixely_to_screeny(y);
@@ -13871,6 +13872,8 @@ static void science_button_release(int button, int x, int y)
 				mindist = dist2;
 			}
 		}
+		if (dist2 < 100 * 100)
+			near_enough_to_fail = 1;
 	}
 	if (selected) {
 		if (curr_science_guy != selected)
@@ -13884,7 +13887,8 @@ static void science_button_release(int button, int x, int y)
 		else
 			request_sci_select_target(OPCODE_SCI_SELECT_TARGET_TYPE_WAYPOINT,
 					(uint32_t) -1); /* deselect */
-	}
+	} else if (near_enough_to_fail)
+		wwviaudio_add_sound(UISND1);
 	pthread_mutex_unlock(&universe_mutex);
 	return;
 }
