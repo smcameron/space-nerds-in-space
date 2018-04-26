@@ -7525,6 +7525,25 @@ static int starbase_grant_docker_permission(struct snis_entity *starbase,
 	return 0;
 }
 
+static int ship_is_docked(uint32_t ship_id, struct snis_entity *starbase)
+{
+	int i;
+	int model = starbase->id % nstarbase_models;
+
+	for (i = 0; i < docking_port_info[model]->nports; i++) {
+		struct snis_entity *docking_port;
+		int dpi = lookup_by_id(starbase->tsd.starbase.docking_port[i]);
+		if (dpi < 0)
+			continue;
+		docking_port = &go[dpi];
+		if (docking_port->tsd.docking_port.docked_guy == ship_id) {
+			return 1;
+			break;
+		}
+	}
+	return 0;
+}
+
 static int starbase_expecting_docker(struct snis_entity *starbase, uint32_t docker)
 {
 	int model = starbase->id % nstarbase_models;
@@ -7546,7 +7565,19 @@ static void do_docking_action(struct snis_entity *ship, struct snis_entity *star
 	float charges;
 	int channel = b->npcbot.channel;
 
-	snprintf(msg, sizeof(msg), "%s, WELCOME TO OUR STARBASE, ENJOY YOUR STAY.", b->shipname);
+	if (enemy_faction(ship->sdata.faction, starbase->sdata.faction)) {
+		snprintf(msg, sizeof(msg), "DEPART IMMEDIATELY %s! YOU ARE A SWORN ENEMY OF THE %s.",
+			b->shipname, faction_name(starbase->id));
+	} else {
+		if (starbase->sdata.faction == 0) {  /* Neutral */
+			snprintf(msg, sizeof(msg), "%s, PERMISSION GRANTED TO ENTER THIS STARBASE. WELCOME.",
+				b->shipname);
+		} else {
+			snprintf(msg, sizeof(msg), "%s, WELCOME TO OUR STARBASE, ENJOY YOUR STAY.", b->shipname);
+		}
+		send_comms_packet(starbase, npcname, channel, msg);
+		snprintf(msg, sizeof(msg), "CONTINUOUS AIR SUPPLY ESTABLISH THROUGH DOCKING PORT AIRLOCK.");
+	}
 	send_comms_packet(starbase, npcname, channel, msg);
 	/* TODO make the repair/refuel process a bit less easy */
 	snprintf(msg, sizeof(msg), "%s, YOUR SHIP HAS BEEN REPAIRED AND REFUELED.\n",
@@ -8566,6 +8597,13 @@ static void player_move(struct snis_entity *o)
 	/* Generate oxygen */
 	uint32_t new_oxygen = (uint32_t) (OXYGEN_PRODUCTION_UNIT *
 				o->tsd.ship.power_data.lifesupport.i / 255.0);
+	/* Acquire oxygen from friendly starbase when docked */
+	for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
+		if (go[i].type == OBJTYPE_STARBASE && ship_is_docked(o->id, &go[i])
+				&& !enemy_faction(o->sdata.faction, go[i].sdata.faction)) {
+			new_oxygen += OXYGEN_CONSUMPTION_UNIT * 1.5;
+		}
+	}
 	if (o->tsd.ship.oxygen < UINT32_MAX - new_oxygen)
 		o->tsd.ship.oxygen += new_oxygen;
 	else
@@ -14101,25 +14139,6 @@ static void npc_menu_item_mining_bot_status_report(struct npc_menu_item *item,
 		}
 	}
 	send_comms_packet(miner, npcname, channel, "--- END STATUS REPORT ---");
-}
-
-static int ship_is_docked(uint32_t ship_id, struct snis_entity *starbase)
-{
-	int i;
-	int model = starbase->id % nstarbase_models;
-
-	for (i = 0; i < docking_port_info[model]->nports; i++) {
-		struct snis_entity *docking_port;
-		int dpi = lookup_by_id(starbase->tsd.starbase.docking_port[i]);
-		if (dpi < 0)
-			continue;
-		docking_port = &go[dpi];
-		if (docking_port->tsd.docking_port.docked_guy == ship_id) {
-			return 1;
-			break;
-		}
-	}
-	return 0;
 }
 
 static void npc_menu_item_buy_cargo(struct npc_menu_item *item,
