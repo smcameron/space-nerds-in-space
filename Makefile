@@ -618,7 +618,7 @@ stacktrace.o:   stacktrace.c Makefile
 snis_ship_type.o:   snis_ship_type.c Makefile
 	$(Q)$(COMPILE)
 
-snis_faction.o:   snis_faction.c Makefile
+snis_faction.o:   snis_faction.c string-utils.h Makefile
 	$(Q)$(COMPILE)
 
 liang-barsky.o:   liang-barsky.c Makefile

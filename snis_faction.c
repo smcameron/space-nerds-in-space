@@ -8,6 +8,7 @@
 #include "quat.h"
 #define DEFINE_FACTION_GLOBALS 1
 #include "snis_faction.h"
+#include "string-utils.h"
 
 #undef DEFINE_FACTION_GLOBALS
 
@@ -48,6 +49,8 @@ static int process_hostility(char *line)
 	n = sscanf(line, "hostility %[A-Za-z] %[A-Za-z] %d", a, b, &hostility);
 	if (n != 3)
 		return -1;
+	uppercase(a);
+	uppercase(b);
 	f1 = lookup_faction(a);
 	if (f1 < 0) {
 		fprintf(stderr, "Bad faction '%s'\n", a);
@@ -122,6 +125,7 @@ int snis_read_factions(char *filename)
 			return -1;
 		}
 		strcpy(fact[n].name, line);
+		uppercase(fact[n].name);
 		c = fgets(line, sizeof(line) - 1, f);
 		if (!c)
 			break;
