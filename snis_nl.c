@@ -554,7 +554,10 @@ static void nl_parse_machine_process_token(struct nl_parse_machine **list, struc
 	if (!found) {
 		/* didn't find a required meaning for this token, we're done */
 		if (debuglevel > 0) {
-			printf("   Failed to parse '%s'\n", token[p->current_token]->word);
+			if (p->current_token >= 0 && p->current_token < ntokens)
+				printf("   Failed to parse '%s'\n", token[p->current_token]->word);
+			else
+				printf("   Ran out of tokens\n");
 			printf("   Looking for %s\n", part_of_speech[looking_for_pos]);
 		}
 		p->state = NL_STATE_FAILED;
