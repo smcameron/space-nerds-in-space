@@ -479,6 +479,7 @@ static struct nl_parse_machine *nl_parse_machines_find_highest_score(struct nl_p
 	float highest_score;
 	struct nl_parse_machine *highest, *p = *list;
 	highest = NULL;
+	int syntax_length = 0;
 
 	while (p) {
 		if (!highest || highest_score < p->score) {
@@ -486,6 +487,22 @@ static struct nl_parse_machine *nl_parse_machines_find_highest_score(struct nl_p
 			highest_score = p->score;
 		}
 		p = p->next;
+	}
+
+	if (!highest)
+		return highest;
+
+	/* Break tie scores by length of syntax, so that e.g. "an" beats "n" */
+	p = *list;
+	while (p) {
+		if (p->score == highest_score) {
+			int len = strlen(p->syntax);
+			if (len > syntax_length) {
+				syntax_length = len;
+				highest = p;
+			}
+			p = p->next;
+		}
 	}
 	return highest;
 }
