@@ -531,8 +531,23 @@ static void nl_parse_machine_process_token(struct nl_parse_machine **list, struc
 			}
 			found++;
 			break;
-		} else {
-			if (looking_for_pos == POS_NOUN && (p_o_s == POS_ARTICLE || p_o_s == POS_ADJECTIVE)) {
+		} else if (looking_for_pos == POS_NOUN && (p_o_s == POS_ARTICLE || p_o_s == POS_ADJECTIVE)) {
+			/* Don't advance syntax_pos, but advance to next token */
+			p->meaning[p->current_token] = i;
+			if (found == 0) {
+				p->current_token++;
+				if (p->current_token >= ntokens) {
+					p->state = NL_STATE_FAILED;
+					break;
+				}
+			} else {
+				new_parse_machine = malloc(sizeof(*new_parse_machine));
+				nl_parse_machine_init(new_parse_machine, p->syntax,
+						p->syntax_pos, p->current_token + 1, p->meaning);
+				insert_parse_machine_before(list, new_parse_machine);
+			}
+			found++;
+		} else if (looking_for_pos == POS_ADJECTIVE && p_o_s == POS_ARTICLE) {
 				/* Don't advance syntax_pos, but advance to next token */
 				p->meaning[p->current_token] = i;
 				if (found == 0) {
@@ -548,7 +563,6 @@ static void nl_parse_machine_process_token(struct nl_parse_machine **list, struc
 					insert_parse_machine_before(list, new_parse_machine);
 				}
 				found++;
-			}
 		}
 	}
 	if (!found) {
