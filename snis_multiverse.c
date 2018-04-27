@@ -71,14 +71,13 @@ static char *database_root = "./snisdb";
 static const int database_mode = 0744;
 static pthread_mutex_t data_mutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t listener_mutex = PTHREAD_MUTEX_INITIALIZER;
-pthread_cond_t listener_started;
+static pthread_cond_t listener_started;
 static pthread_mutex_t service_mutex = PTHREAD_MUTEX_INITIALIZER;
-int listener_port = -1;
+static int listener_port = -1;
 static int default_snis_multiverse_port = -1; /* -1 means choose a random port */
-pthread_t lobbythread;
-char *lobbyserver = NULL;
 static int snis_log_level = 2;
-int nconnections = 0;
+static int nconnections = 0;
+static int debuglevel = 0;
 
 #define MAX_BRIDGES 1024
 #define MAX_CONNECTIONS 100
@@ -206,7 +205,8 @@ static int save_bridge_info(struct bridge_info *b)
 	unsigned char hexpwdhash[PWDHASHLEN * 2 + 1];
 	FILE *f;
 
-	fprintf(stderr, "save_bridge_info 1\n");
+	if (debuglevel > 0)
+		fprintf(stderr, "save_bridge_info 1\n");
 	memset(dir1, 0, sizeof(dir1));
 	memset(dir2, 0, sizeof(dir2));
 
@@ -246,7 +246,8 @@ static int save_bridge_info(struct bridge_info *b)
 			path, path2, strerror(errno));
 		return -1;
 	}
-	fprintf(stderr, "snis_multiverse: wrote bridge info to %s\n", path2);
+	if (debuglevel > 0)
+		fprintf(stderr, "snis_multiverse: wrote bridge info to %s\n", path2);
 	return 0;
 }
 
@@ -365,14 +366,12 @@ static int read_and_unpack_fixed_size_buffer(struct starsystem_info *ss,
 	va_list ap;
 	struct packed_buffer pb;
 	int rc;
-	fprintf(stderr, "KKKKKKKKKKKK size = %d\n", size);
 
 	rc = snis_readsocket(ss->socket, buffer, size);
 	if (rc != 0)
 		return rc;
 	packed_buffer_init(&pb, buffer, size);
 	va_start(ap, format);
-	fprintf(stderr, "KKKKKKKK format = '%s'\n", format);
 	rc = packed_buffer_extract_va(&pb, format, ap);
 	va_end(ap);
 	return rc;
@@ -384,17 +383,20 @@ static int lookup_ship_by_hash(unsigned char *hash)
 	unsigned char phash[PWDHASHLEN * 2 + 1];
 
 	snis_format_hash(hash, PWDHASHLEN, phash, PWDHASHLEN * 2 + 1);
-	fprintf(stderr, "snis_multiverse: looking up hash '%s'\n", phash);
+	if (debuglevel > 0)
+		fprintf(stderr, "snis_multiverse: looking up hash '%s'\n", phash);
 
 	for (i = 0; i < nbridges; i++) {
 		snis_format_hash(ship[i].pwdhash, PWDHASHLEN, phash, PWDHASHLEN * 2 + 1);
-		fprintf(stderr, "snis_multiverse: checking against '%s'\n", phash);
+		if (debuglevel > 0)
+			fprintf(stderr, "snis_multiverse: checking against '%s'\n", phash);
 		if (memcmp(ship[i].pwdhash, hash, PWDHASHLEN) == 0) {
 			fprintf(stderr, "snis_multiverse: match hash '%s'\n", phash);
 			return i;
 		}
 	}
-	fprintf(stderr, "snis_multiverse: no match found\n");
+	if (debuglevel > 0)
+		fprintf(stderr, "snis_multiverse: no match found\n");
 	return -1;
 }
 
@@ -408,19 +410,22 @@ static int update_bridge(struct starsystem_info *ss)
 
 #define bytes_to_read (UPDATE_BRIDGE_PACKET_SIZE - PWDHASHLEN - 1)
 
-	fprintf(stderr, "snis_multiverse: update bridge 1, expecting %d bytes\n", bytes_to_read);
+	if (debuglevel > 0)
+		fprintf(stderr, "snis_multiverse: update bridge 1, expecting %d bytes\n", bytes_to_read);
 	memset(buffer, 0, sizeof(buffer));
 	memset(pwdhash, 0, sizeof(pwdhash));
 	rc = read_and_unpack_fixed_size_buffer(ss, buffer, PWDHASHLEN, "r", pwdhash, (uint16_t) PWDHASHLEN);
 	if (rc != 0)
 		return rc;
-	print_hash("update bridge 2: ", pwdhash);
+	if (debuglevel > 0)
+		print_hash("update bridge 2: ", pwdhash);
 	BUILD_ASSERT(sizeof(buffer) > bytes_to_read);
 	memset(buffer, 0, sizeof(buffer));
 	rc = snis_readsocket(ss->socket, buffer, bytes_to_read);
 	if (rc != 0)
 		return rc;
-	fprintf(stderr, "snis_multiverse: update bridge 3\n");
+	if (debuglevel > 0)
+		fprintf(stderr, "snis_multiverse: update bridge 3\n");
 	pthread_mutex_lock(&data_mutex);
 	i = lookup_ship_by_hash(pwdhash);
 	if (i < 0) {
@@ -428,7 +433,8 @@ static int update_bridge(struct starsystem_info *ss)
 		pthread_mutex_unlock(&data_mutex);
 		return rc;
 	}
-	fprintf(stderr, "snis_multiverse: update bridge 4\n");
+	if (debuglevel > 0)
+		fprintf(stderr, "snis_multiverse: update bridge 4\n");
 
 	o = &ship[i].entity;
 	if (!o->tsd.ship.damcon) {
@@ -441,7 +447,8 @@ static int update_bridge(struct starsystem_info *ss)
 	ship[i].initialized = 1;
 	pthread_mutex_unlock(&data_mutex);
 	rc = 0;
-	fprintf(stderr, "snis_multiverse: update bridge 10\n");
+	if (debuglevel > 0)
+		fprintf(stderr, "snis_multiverse: update bridge 10\n");
 	return rc;
 }
 
@@ -604,9 +611,11 @@ static void write_queued_updates_to_snis_server(struct starsystem_info *ss)
 
 	buffer = packed_buffer_queue_combine(&ss->write_queue, &ss->write_queue_mutex);
 	if (buffer) {
-		fprintf(stderr, "snis_multiverse: writing buffer %d bytes.\n", buffer->buffer_size);
+		if (debuglevel > 0)
+			fprintf(stderr, "snis_multiverse: writing buffer %d bytes.\n", buffer->buffer_size);
 		rc = snis_writesocket(ss->socket, buffer->buffer, buffer->buffer_size);
-		fprintf(stderr, "snis_multiverse: wrote buffer %d bytes, rc = %d\n",
+		if (debuglevel > 0)
+			fprintf(stderr, "snis_multiverse: wrote buffer %d bytes, rc = %d\n",
 				buffer->buffer_size, rc);
 		packed_buffer_free(buffer);
 		if (rc != 0) {
@@ -616,16 +625,19 @@ static void write_queued_updates_to_snis_server(struct starsystem_info *ss)
 		}
 	} else {
 		/* Nothing to write, send a no-op just so we know if client is still there */
-		fprintf(stderr, "snis_multiverse: writing noop.\n");
+		if (debuglevel > 0)
+			fprintf(stderr, "snis_multiverse: writing noop.\n");
 		rc = snis_writesocket(ss->socket, &noop, sizeof(noop));
-		fprintf(stderr, "snis_multiverse: wrote noop, rc = %d.\n", rc);
+		if (debuglevel > 0)
+			fprintf(stderr, "snis_multiverse: wrote noop, rc = %d.\n", rc);
 		if (rc != 0) {
 			fprintf(stderr, "snis_multiverse: (noop) writesocket failed, rc= %d, errno = %d(%s)\n",
 				rc, errno, strerror(errno));
 			goto badclient;
 		}
 	}
-	fprintf(stderr, "snis_multiverse: done writing for now\n");
+	if (debuglevel > 0)
+		fprintf(stderr, "snis_multiverse: done writing for now\n");
 	return;
 
 badclient:
