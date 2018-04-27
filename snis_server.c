@@ -22832,7 +22832,10 @@ no_understand:
 	return;
 }
 
-/* increase power to impulse, increase coolant to blah, raise shields to maximum */
+/* increase power to impulse, increase coolant to blah, raise shields to maximum.
+ * "raise" value of 0 means decrease, 1 means increase, 2 means set, used only in
+ * figuring maximum/minimum and in reply construction.
+ */
 static void nl_raise_or_lower_npa(void *context, int argc, char *argv[], int pos[],
 		union snis_nl_extra_data extra_data[], int raise)
 {
@@ -22840,6 +22843,17 @@ static void nl_raise_or_lower_npa(void *context, int argc, char *argv[], int pos
 	nl_set_function setit = NULL;
 	char answer[100];
 	int i, noun, prep, adj;
+	char *active_verb;
+
+	switch (raise) {
+	case 0: active_verb = "increase";
+		break;
+	case 1: active_verb = "decrease";
+		break;
+	default:
+	case 2: active_verb = "set";
+		break;
+	}
 
 	noun = nl_find_next_word(argc, pos, POS_NOUN, 0);
 	if (noun < 0)
@@ -22858,15 +22872,15 @@ static void nl_raise_or_lower_npa(void *context, int argc, char *argv[], int pos
 		}
 	}
 	if (setit) {
-		if (raise && strcasecmp(argv[adj], "maximum") == 0) {
+		if ((raise == 1  || raise == 2) && strcasecmp(argv[adj], "maximum") == 0) {
 			setit(c, argv[noun], 1.0);
 			return;
 		}
-		if (!raise && strcasecmp(argv[adj], "minimum") == 0) {
+		if ((raise == 0 || raise == 2) && strcasecmp(argv[adj], "minimum") == 0) {
 			setit(c, argv[noun], 0.0);
 			return;
 		}
-		sprintf(answer, "I don't know how to %s %s %s %s\n", raise ? "increase" : "decrease",
+		sprintf(answer, "I don't know how to %s %s %s %s\n", active_verb,
 				argv[noun], argv[prep], argv[adj]);
 		queue_add_text_to_speech(c, answer);
 		return;
@@ -22882,7 +22896,7 @@ static void nl_raise_or_lower_npa(void *context, int argc, char *argv[], int pos
 			queue_add_text_to_speech(c, answer);
 			return;
 		}
-		setit(c, argv[adj], raise ? 1.0 : 0.0);
+		setit(c, argv[adj], (raise == 0) ? 0.0 : 1.0);
 		return;
 	} else if (strcasecmp(argv[noun], "coolant") == 0) {
 		for (i = 0; i < ARRAYSIZE(nl_settable_coolant_thing); i++) {
@@ -22892,11 +22906,11 @@ static void nl_raise_or_lower_npa(void *context, int argc, char *argv[], int pos
 			}
 		}
 		if (!setit) {
-			sprintf(answer, "I don't know how to decrease power to that.\n");
+			sprintf(answer, "I don't know how to %s power to that.\n", active_verb);
 			queue_add_text_to_speech(c, answer);
 			return;
 		}
-		setit(c, argv[adj], raise ? 1.0 : 0.0);
+		setit(c, argv[adj], (raise == 0) ? 0.0 : 1.0);
 		return;
 	}
 no_understand:
@@ -22913,6 +22927,12 @@ static void nl_lower_npa(void *context, int argc, char *argv[], int pos[],
 		union snis_nl_extra_data extra_data[])
 {
 	nl_raise_or_lower_npa(context, argc, argv, pos, extra_data, 0);
+}
+
+static void nl_set_npa(void *context, int argc, char *argv[], int pos[],
+		union snis_nl_extra_data extra_data[])
+{
+	nl_raise_or_lower_npa(context, argc, argv, pos, extra_data, 2);
 }
 
 /* "raise shields" */
@@ -24027,7 +24047,7 @@ static void init_dictionary(void)
 	snis_nl_add_dictionary_verb("navigate",		"navigate",	"pnq", nl_navigate_pnq);
 	snis_nl_add_dictionary_verb("head",		"navigate",	"pnq", nl_navigate_pnq);
 	snis_nl_add_dictionary_verb("set",		"set",		"npq", nl_set_npq); /* set warp drive to 50 percent */
-	snis_nl_add_dictionary_verb("set",		"set",		"npa", sorry_dave);
+	snis_nl_add_dictionary_verb("set",		"set",		"npa", nl_set_npa);
 	snis_nl_add_dictionary_verb("set",		"set",		"npn", nl_set_npn);
 	snis_nl_add_dictionary_verb("set",		"set",		"npan", nl_set_npn); /* set a course for the nearest planet */
 	snis_nl_add_dictionary_verb("set",		"set",		"npnq", nl_set_npnq); /* set a course for starbase one */
