@@ -22018,6 +22018,141 @@ no_understand:
 	queue_add_text_to_speech(c, "Sorry, I do not understand which direction you want to turn.");
 }
 
+/* lights on/off/out */
+static void nl_lights_p(void *context, int argc, char *argv[], int pos[],
+			union snis_nl_extra_data extra_data[])
+{
+	struct game_client *c = context;
+	int i, prep;
+	uint8_t current_lights;
+	prep = nl_find_next_word(argc, pos, POS_PREPOSITION, 0);
+	if (prep < 0)
+		goto no_understand;
+
+	pthread_mutex_lock(&universe_mutex);
+	i = lookup_by_id(c->shipid);
+	if (i < 0) {
+		pthread_mutex_unlock(&universe_mutex);
+		return;
+	}
+	current_lights = go[i].tsd.ship.exterior_lights;
+	pthread_mutex_unlock(&universe_mutex);
+	if (strcasecmp(argv[prep], "on") == 0 || strcasecmp(argv[prep], "up") == 0) {
+		if (current_lights) {
+			queue_add_text_to_speech(c, "The exterior lights are already on.");
+		} else {
+			queue_add_text_to_speech(c, "Turning exterior lights on.");
+			process_adjust_control_bytevalue(c, c->shipid,
+				offsetof(struct snis_entity, tsd.ship.exterior_lights), 1, no_limit);
+		}
+	} else if (strcasecmp(argv[prep], "off") == 0 || strcasecmp(argv[prep], "out") == 0 ||
+			strcasecmp(argv[prep], "down") == 0) {
+		if (!current_lights) {
+			queue_add_text_to_speech(c, "The exterior lights are already off.");
+		} else {
+			queue_add_text_to_speech(c, "Turning exterior lights off.");
+			process_adjust_control_bytevalue(c, c->shipid,
+				offsetof(struct snis_entity, tsd.ship.exterior_lights), 0, no_limit);
+		}
+	} else {
+		goto no_understand;
+	}
+	return;
+
+no_understand:
+	queue_add_text_to_speech(c, "Sorry, I do not understand which direction you want to turn.");
+}
+
+/* Eg: "turn/shut on/off/out lights" */
+static void nl_turn_pn(void *context, int argc, char *argv[], int pos[],
+			union snis_nl_extra_data extra_data[])
+{
+	struct game_client *c = context;
+	int i, prep, noun, value;
+	uint8_t current_lights, current_docking;
+	uint32_t current_tractor;
+	char buffer[100];
+
+	prep = nl_find_next_word(argc, pos, POS_PREPOSITION, 0);
+	if (prep < 0)
+		goto no_understand;
+	noun = nl_find_next_word(argc, pos, POS_NOUN, prep + 1);
+	if (noun < 0)
+		goto no_understand;
+	if (strcasecmp(argv[prep], "on") == 0 || strcasecmp(argv[prep], "up") == 0)
+		value = 1;
+	else if (strcasecmp(argv[prep], "off") == 0 || strcasecmp(argv[prep], "out") == 0 ||
+			strcasecmp(argv[prep], "down") == 0)
+		value = 0;
+	else
+		goto no_understand;
+	pthread_mutex_lock(&universe_mutex);
+	i = lookup_by_id(c->shipid);
+	if (i < 0) {
+		pthread_mutex_unlock(&universe_mutex);
+		return;
+	}
+	current_lights = go[i].tsd.ship.exterior_lights;
+	current_docking = go[i].tsd.ship.docking_magnets = 0;
+	current_tractor = go[i].tsd.ship.tractor_beam;
+	pthread_mutex_unlock(&universe_mutex);
+
+	if (strcasecmp(argv[noun], "lights") == 0) {
+		if (current_lights == value) {
+			snprintf(buffer, sizeof(buffer), "The exterior lights are already %s.",
+				value ? "on" : "off");
+			queue_add_text_to_speech(c, buffer);
+			return;
+		}
+		snprintf(buffer, sizeof(buffer), "Turning exterior lights %s.", value ? "on" : "off");
+		queue_add_text_to_speech(c, buffer);
+		process_adjust_control_bytevalue(c, c->shipid,
+			offsetof(struct snis_entity, tsd.ship.exterior_lights), value, no_limit);
+		return;
+	} else if (strcasecmp(argv[noun], "docking system") == 0) {
+		if (value == current_docking) {
+			snprintf(buffer, sizeof(buffer), "The docking system is already %s.",
+				value ? "engaged" : "disengaged");
+			queue_add_text_to_speech(c, buffer);
+			return;
+		}
+		snprintf(buffer, sizeof(buffer), "%s docking system.",
+			current_docking ? "Disengaging" : "Engaging");
+		queue_add_text_to_speech(c, buffer);
+		process_adjust_control_bytevalue(c, c->shipid,
+			offsetof(struct snis_entity, tsd.ship.docking_magnets), value, no_limit);
+	} else if (strcasecmp(argv[noun], "tractor beam") == 0) {
+		if (value == 1) {
+			if (current_tractor != 0xffffffff) {
+				queue_add_text_to_speech(c, "The tractor beam is already engaged.");
+				return;
+			}
+			turn_on_tractor_beam(c, &go[i], 0xffffffff, 0); /* TODO: fix raciness. */
+			return;
+		} else {
+			if (current_tractor == 0xffffffff) {
+				queue_add_text_to_speech(c, "The tractor beam is already disengaged.");
+				return;
+			}
+			pthread_mutex_lock(&universe_mutex);
+			i = lookup_by_id(c->shipid);
+			if (i < 0) {
+				pthread_mutex_unlock(&universe_mutex);
+				return;
+			}
+			turn_off_tractorbeam(&go[i]);
+			pthread_mutex_unlock(&universe_mutex);
+			queue_add_text_to_speech(c, "Tractor beam disengaged.");
+		}
+	} else if (strcasecmp(argv[noun], "red alert") == 0) {
+		set_red_alert_mode(c, value);
+	}
+	return;
+
+no_understand:
+	queue_add_text_to_speech(c, "Sorry, I do not understand which direction you want to turn.");
+}
+
 /* Eg: "turn right 90 degrees" */
 static void nl_turn_aqa(void *context, int argc, char *argv[], int pos[],
 				union snis_nl_extra_data extra_data[])
@@ -24080,7 +24215,8 @@ static void init_dictionary(void)
 	snis_nl_add_dictionary_verb("enter",		"enter",	"an", nl_enter_an); /* enter standard orbit */
 	snis_nl_add_dictionary_verb("disengage",	"disengage",	"n", nl_disengage_n);
 	snis_nl_add_dictionary_verb("stop",		"disengage",	"n", nl_disengage_n);
-	snis_nl_add_dictionary_verb("turn",		"turn",		"pn", sorry_dave);
+	snis_nl_add_dictionary_verb("turn",		"turn",		"pn", nl_turn_pn);
+	snis_nl_add_dictionary_verb("shut",		"shut",		"pn", nl_turn_pn);
 	snis_nl_add_dictionary_verb("turn",		"turn",		"aqa", nl_turn_aqa);
 	snis_nl_add_dictionary_verb("rotate",		"rotate",	"aqa", nl_turn_aqa);
 	snis_nl_add_dictionary_verb("turn",		"turn",		"qaa", nl_turn_qaa);
@@ -24103,8 +24239,6 @@ static void init_dictionary(void)
 	snis_nl_add_dictionary_verb("zoom",		"zoom",		"q", nl_zoom_q);
 	snis_nl_add_dictionary_verb("zoom",		"zoom",		"p", sorry_dave);
 	snis_nl_add_dictionary_verb("zoom",		"zoom",		"pq", nl_zoom_pq);
-	snis_nl_add_dictionary_verb("shut",		"shut",		"an", sorry_dave);
-	snis_nl_add_dictionary_verb("shut",		"shut",		"na", sorry_dave);
 	snis_nl_add_dictionary_verb("launch",		"launch",	"n", nl_launch_n);
 	snis_nl_add_dictionary_verb("eject",		"eject",	"n", sorry_dave);
 	snis_nl_add_dictionary_verb("full",		"full",		"a", nl_full_n),    /* full impulse */
@@ -24157,6 +24291,8 @@ static void init_dictionary(void)
 	snis_nl_add_dictionary_verb("european",		"european",		"", nl_african_or_european);
 		/* do we have enough fuel */
 	snis_nl_add_dictionary_verb("do",		"do",			"Pxan", nl_do_Pxan);
+		/* lights on/off/out */
+	snis_nl_add_dictionary_verb("lights",		"lights",		"p",	nl_lights_p);
 
 	snis_nl_add_dictionary_word("drive",		"drive",	POS_NOUN);
 	snis_nl_add_dictionary_word("system",		"system",	POS_NOUN);
@@ -24253,6 +24389,7 @@ static void init_dictionary(void)
 	snis_nl_add_dictionary_word("waypoint",		"waypoint",	POS_NOUN);
 	snis_nl_add_dictionary_word("blackhole",	"blackhole",	POS_NOUN);
 	snis_nl_add_dictionary_word("spacemonster",	"spacemonster",	POS_NOUN);
+	snis_nl_add_dictionary_word("lights",		"lights",	POS_NOUN);
 
 	snis_nl_add_dictionary_word("a",		"a",		POS_ARTICLE);
 	snis_nl_add_dictionary_word("an",		"an",		POS_ARTICLE);
@@ -24366,6 +24503,8 @@ static void init_dictionary(void)
 	snis_nl_add_dictionary_word("much",		"much",		POS_ADJECTIVE);
 	snis_nl_add_dictionary_word("enough",		"enough",	POS_ADJECTIVE);
 	snis_nl_add_dictionary_word("sufficient",	"enough",	POS_ADJECTIVE);
+	snis_nl_add_dictionary_word("exterior",		"exterior",	POS_ADJECTIVE);
+	snis_nl_add_dictionary_word("external",		"external",	POS_ADJECTIVE);
 
 	snis_nl_add_dictionary_word("percent",		"percent",	POS_ADVERB);
 	snis_nl_add_dictionary_word("quickly",		"quickly",	POS_ADVERB);
