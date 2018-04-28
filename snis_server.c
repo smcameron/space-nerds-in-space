@@ -22064,8 +22064,8 @@ no_understand:
 }
 
 /* Eg: "turn/shut on/off/out lights" */
-static void nl_turn_pn(void *context, int argc, char *argv[], int pos[],
-			union snis_nl_extra_data extra_data[])
+static void nl_turn_pn_or_np(void *context, int argc, char *argv[], int pos[],
+			union snis_nl_extra_data extra_data[], int np)
 {
 	struct game_client *c = context;
 	int i, prep, noun, value;
@@ -22073,12 +22073,21 @@ static void nl_turn_pn(void *context, int argc, char *argv[], int pos[],
 	uint32_t current_tractor;
 	char buffer[100];
 
-	prep = nl_find_next_word(argc, pos, POS_PREPOSITION, 0);
-	if (prep < 0)
-		goto no_understand;
-	noun = nl_find_next_word(argc, pos, POS_NOUN, prep + 1);
-	if (noun < 0)
-		goto no_understand;
+	if (!np) { /* pn */
+		prep = nl_find_next_word(argc, pos, POS_PREPOSITION, 0);
+		if (prep < 0)
+			goto no_understand;
+		noun = nl_find_next_word(argc, pos, POS_NOUN, prep + 1);
+		if (noun < 0)
+			goto no_understand;
+	} else { /* np */
+		noun = nl_find_next_word(argc, pos, POS_NOUN, 0);
+		if (noun < 0)
+			goto no_understand;
+		prep = nl_find_next_word(argc, pos, POS_PREPOSITION, noun + 1);
+		if (prep < 0)
+			goto no_understand;
+	}
 	if (strcasecmp(argv[prep], "on") == 0 || strcasecmp(argv[prep], "up") == 0)
 		value = 1;
 	else if (strcasecmp(argv[prep], "off") == 0 || strcasecmp(argv[prep], "out") == 0 ||
@@ -22151,6 +22160,20 @@ static void nl_turn_pn(void *context, int argc, char *argv[], int pos[],
 
 no_understand:
 	queue_add_text_to_speech(c, "Sorry, I do not understand which direction you want to turn.");
+}
+
+/* Eg: "turn/shut on/off/out lights" */
+static void nl_turn_pn(void *context, int argc, char *argv[], int pos[],
+			union snis_nl_extra_data extra_data[])
+{
+	nl_turn_pn_or_np(context, argc, argv, pos, extra_data, 0);
+}
+
+/* Eg: "turn/shut lights on/off/out" */
+static void nl_turn_np(void *context, int argc, char *argv[], int pos[],
+			union snis_nl_extra_data extra_data[])
+{
+	nl_turn_pn_or_np(context, argc, argv, pos, extra_data, 1);
 }
 
 /* Eg: "turn right 90 degrees" */
@@ -24215,8 +24238,10 @@ static void init_dictionary(void)
 	snis_nl_add_dictionary_verb("enter",		"enter",	"an", nl_enter_an); /* enter standard orbit */
 	snis_nl_add_dictionary_verb("disengage",	"disengage",	"n", nl_disengage_n);
 	snis_nl_add_dictionary_verb("stop",		"disengage",	"n", nl_disengage_n);
-	snis_nl_add_dictionary_verb("turn",		"turn",		"pn", nl_turn_pn);
-	snis_nl_add_dictionary_verb("shut",		"shut",		"pn", nl_turn_pn);
+	snis_nl_add_dictionary_verb("turn",		"turn",		"pn", nl_turn_pn); /* turn on lights */
+	snis_nl_add_dictionary_verb("turn",		"turn",		"np", nl_turn_np); /* turn lights on */
+	snis_nl_add_dictionary_verb("shut",		"shut",		"pn", nl_turn_pn); /* shut off lights */
+	snis_nl_add_dictionary_verb("shut",		"shut",		"np", nl_turn_np); /* shut lights off */
 	snis_nl_add_dictionary_verb("turn",		"turn",		"aqa", nl_turn_aqa);
 	snis_nl_add_dictionary_verb("rotate",		"rotate",	"aqa", nl_turn_aqa);
 	snis_nl_add_dictionary_verb("turn",		"turn",		"qaa", nl_turn_qaa);
