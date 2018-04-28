@@ -17,7 +17,7 @@ AND - Main
 ANTI - Main 
 ANTI - Main [base] 
 CLOCKWISE - Main [base] 
-pronounce: verbosity is 1
+LtoS pronounce: verbosity is 1
 ANTICLOCKWISE - Morpheme: ANTI CLOCK WISE 
 AROUND - Main 
 ASTEROID - Main 
@@ -94,6 +94,7 @@ ENTER - Main
 EUROPEAN - Main 
 EVERYTHING - Main 
 EXCEPT - Main 
+EXTERIOR - Main 
 FACTOR - Main 
 FAR - Main 
 FIFTEEN - Main 
@@ -128,6 +129,7 @@ LEAVE - Main
 LEFT - Main 
 LEVEL - Main 
 LIFE - Main 
+LIGHTS - Main 
 LONG - Main 
 LOWER - Main 
 MAGNETS - Main 
