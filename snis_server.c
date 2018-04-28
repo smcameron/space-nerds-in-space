@@ -22107,7 +22107,7 @@ static void nl_turn_pn_or_np(void *context, int argc, char *argv[], int pos[],
 	pthread_mutex_unlock(&universe_mutex);
 
 	if (strcasecmp(argv[noun], "lights") == 0) {
-		if (current_lights == value) {
+		if (current_lights == value * 255) {
 			snprintf(buffer, sizeof(buffer), "The exterior lights are already %s.",
 				value ? "on" : "off");
 			queue_add_text_to_speech(c, buffer);
@@ -22116,7 +22116,7 @@ static void nl_turn_pn_or_np(void *context, int argc, char *argv[], int pos[],
 		snprintf(buffer, sizeof(buffer), "Turning exterior lights %s.", value ? "on" : "off");
 		queue_add_text_to_speech(c, buffer);
 		process_adjust_control_bytevalue(c, c->shipid,
-			offsetof(struct snis_entity, tsd.ship.exterior_lights), value, no_limit);
+			offsetof(struct snis_entity, tsd.ship.exterior_lights), value * 255, no_limit);
 		return;
 	} else if (strcasecmp(argv[noun], "docking system") == 0) {
 		if (value == current_docking) {
