@@ -362,6 +362,8 @@ struct update_cargo_container_packet {
 	uint32_t id;
 	uint32_t timestamp;
 	uint32_t x, y, z;
+	uint32_t item;
+	uint32_t qty;
 };
 
 struct update_wormhole_packet {

@@ -1833,7 +1833,8 @@ static int update_warp_core(uint32_t id, uint32_t timestamp, double x, double y,
 	return 0;
 }
 
-static int update_cargo_container(uint32_t id, uint32_t timestamp, double x, double y, double z)
+static int update_cargo_container(uint32_t id, uint32_t timestamp, double x, double y, double z,
+		uint32_t item, double qty)
 {
 	int i;
 	struct entity *e;
@@ -1853,6 +1854,8 @@ static int update_cargo_container(uint32_t id, uint32_t timestamp, double x, dou
 			return i;
 		o = &go[i];
 		o->tsd.cargo_container.rotational_velocity = random_spin[id % NRANDOM_SPINS];
+		o->tsd.cargo_container.contents.item = item;
+		o->tsd.cargo_container.contents.qty = qty;
 	} else {
 		double vx, vy, vz;
 
@@ -1860,6 +1863,8 @@ static int update_cargo_container(uint32_t id, uint32_t timestamp, double x, dou
 		vy = y - go[i].y;
 		vz = z - go[i].z;
 		update_generic_object(i, timestamp, x, y, z, vx, vy, vz, NULL, 1);
+		go[i].tsd.cargo_container.contents.item = item;
+		go[i].tsd.cargo_container.contents.qty = qty;
 	}
 	return 0;
 }
@@ -6336,19 +6341,20 @@ static int process_update_warp_core_packet(void)
 static int process_update_cargo_container_packet(void)
 {
 	unsigned char buffer[100];
-	uint32_t id, timestamp;
-	double dx, dy, dz;
+	uint32_t id, timestamp, item;
+	double dx, dy, dz, qty;
 	int rc;
 
 	assert(sizeof(buffer) > sizeof(struct update_cargo_container_packet) - sizeof(uint8_t));
-	rc = read_and_unpack_buffer(buffer, "wwSSS", &id, &timestamp,
+	rc = read_and_unpack_buffer(buffer, "wwSSSwS", &id, &timestamp,
 			&dx, (int32_t) UNIVERSE_DIM,
 			&dy,(int32_t) UNIVERSE_DIM,
-			&dz, (int32_t) UNIVERSE_DIM);
+			&dz, (int32_t) UNIVERSE_DIM,
+			&item, &qty, (int32_t) 1000000);
 	if (rc != 0)
 		return rc;
 	pthread_mutex_lock(&universe_mutex);
-	rc = update_cargo_container(id, timestamp, dx, dy, dz);
+	rc = update_cargo_container(id, timestamp, dx, dy, dz, item, qty);
 	pthread_mutex_unlock(&universe_mutex);
 	return (rc < 0);
 } 
@@ -14450,6 +14456,18 @@ static void draw_science_details(GtkWidget *w, GdkGC *gc)
 			}
 			y += yinc;
 		}
+	} else if (curr_science_guy->type == OBJTYPE_CARGO_CONTAINER) {
+		struct cargo_container_contents *ccc = &curr_science_guy->tsd.cargo_container.contents;
+		sprintf(buf, "PROBABLE CONTENTS:");
+		sng_abs_xy_draw_string(buf, TINY_FONT, 10, y);
+		y += yinc;
+		if (ccc->item >= 0) {
+			sprintf(buf, "- %4.2f %s %s", ccc->qty,
+				commodity[ccc->item].unit, commodity[ccc->item].scans_as);
+			sng_abs_xy_draw_string(buf, TINY_FONT, 10, y);
+		} else {
+			sng_abs_xy_draw_string("UNKNOWN", TINY_FONT, 10, y);
+		}
 	}
 }
  
@@ -16996,6 +17014,9 @@ static void make_science_forget_stuff(void)
 					o->tsd.ship.cargo[j].contents.item = -1;
 					o->tsd.ship.cargo[j].contents.qty = 0;
 				}
+			} else if (o->type == OBJTYPE_CARGO_CONTAINER) {
+					o->tsd.cargo_container.contents.item = -1;
+					o->tsd.cargo_container.contents.qty = 0;
 			}
 		}
 	}

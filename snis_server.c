@@ -19900,10 +19900,12 @@ static void send_update_asteroid_packet(struct game_client *c,
 static void send_update_cargo_container_packet(struct game_client *c,
 	struct snis_entity *o)
 {
-	pb_queue_to_client(c, snis_opcode_pkt("bwwSSS", OPCODE_UPDATE_CARGO_CONTAINER, o->id, o->timestamp,
+	pb_queue_to_client(c, snis_opcode_pkt("bwwSSSwS", OPCODE_UPDATE_CARGO_CONTAINER, o->id, o->timestamp,
 					o->x, (int32_t) UNIVERSE_DIM,
 					o->y, (int32_t) UNIVERSE_DIM,
-					o->z, (int32_t) UNIVERSE_DIM));
+					o->z, (int32_t) UNIVERSE_DIM,
+					(uint32_t) o->tsd.cargo_container.contents.item,
+					o->tsd.cargo_container.contents.qty, (int32_t) 1000000));
 }
 
 static void send_update_derelict_packet(struct game_client *c,
