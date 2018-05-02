@@ -5191,6 +5191,7 @@ static void ai_mining_mode_approach_asteroid(struct snis_entity *o, struct ai_mi
 	float threshold;
 	double x, y, z, vx, vy, vz;
 	float my_speed = dist3d(o->vx, o->vy, o->vz);
+	float time_to_travel = 0.0;
 	int b;
 
 	if (ai->object_or_waypoint == 0) /* destination is object */ {
@@ -5221,7 +5222,7 @@ static void ai_mining_mode_approach_asteroid(struct snis_entity *o, struct ai_mi
 			threshold = 2.0 * estimate_asteroid_radius(asteroid->id);
 			break;
 		default:
-			threshold = 100.0;
+			threshold = 200.0;
 			break;
 		}
 	} else { /* destination is waypoint */
@@ -5239,12 +5240,15 @@ static void ai_mining_mode_approach_asteroid(struct snis_entity *o, struct ai_mi
 		o->tsd.ship.doy = y;
 		o->tsd.ship.doz = z;
 	} else {
-		float time_to_travel = distance / my_speed;
+		time_to_travel = distance / my_speed;
 		o->tsd.ship.dox = x + vx * time_to_travel;
 		o->tsd.ship.doy = y + vy * time_to_travel;
 		o->tsd.ship.doz = z + vz * time_to_travel;
 	}
-	double dist2 = ai_ship_travel_towards(o, x, y, z);
+	double dist2 = ai_ship_travel_towards(o, x + vx * time_to_travel,
+						y + vy * time_to_travel,
+						z + vz * time_to_travel);
+	dist2 = object_dist2(o, asteroid);
 	if (dist2 < threshold * threshold) {
 		b = lookup_bridge_by_shipid(ai->parent_ship);
 		if (b >= 0) {
@@ -5318,8 +5322,11 @@ static void ai_mining_mode_land_on_asteroid(struct snis_entity *o, struct ai_min
 		return;
 	}
 	asteroid = &go[i];
-	radius = estimate_asteroid_radius(asteroid->id) *
-			(1.0 - 0.2 * ai->countdown / 200.0);
+	if (go[i].type == OBJTYPE_ASTEROID)
+		radius = estimate_asteroid_radius(asteroid->id) *
+				(1.0 - 0.2 * ai->countdown / 200.0);
+	else
+		radius = 180.0;
 	vec3_mul_self(&offset, radius);
 	n = o->tsd.ship.nai_entries - 1;
 	quat_rot_vec_self(&offset, &o->tsd.ship.ai[n].u.mining_bot.orbital_orientation);
