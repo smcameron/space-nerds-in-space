@@ -35,6 +35,20 @@ Some way to checkpoint the universe state and restart it.  This is
 hard for two reasons:  player state, and lua state.
 
 
+*** PIRATE SHIPS
 
+Ships could have a pirate mode in which they apprehend other ships (incl. player
+ships) and demand they eject cargo. They could have a bomb they attach to the
+ship which they detonate if the victim does not comply (or just shoot them). The
+pirate ships could band together in a fleet to have more firepower. Q: How does
+the player escape from attached bomb without giving up cargo? (Bomb model could be
+implemented via BLOCK_FORM_CAPSULE).
 
+Ships could have some history and have captains with some proc gen history, and
+be "registered" at particular planets, etc. Captains/ships could be "wanted" in
+various planets a la Elite.
+
+Maybe player ships can engage in piracy as well, having some way to hail ships
+and demand cargo ejection, maybe be able to use the mining robot to plant a bomb
+on other ships?
 
