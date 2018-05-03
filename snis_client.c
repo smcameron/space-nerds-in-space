@@ -408,7 +408,6 @@ static struct mesh **ship_mesh_map;
 static struct mesh **derelict_mesh;
 
 #define NNEBULA_MATERIALS 20
-static struct material thrust_flare_material;
 static struct material nebula_material[NNEBULA_MATERIALS];
 static struct material red_torpedo_material;
 static struct material red_laser_material;
@@ -457,6 +456,7 @@ static struct material asteroid_material[NASTEROID_TEXTURES];
 static struct material wormhole_material;
 #define NTHRUSTMATERIALS 5
 static struct material thrust_material[NTHRUSTMATERIALS];
+static struct material thrust_flare_material[NTHRUSTMATERIALS];
 static struct material atmosphere_material;
 static struct material block_material;
 static struct material small_block_material;
@@ -7809,7 +7809,7 @@ static void add_ship_thrust_entities(struct entity *thrust_entity[],
 			(*nthrust_ports)++;
 		}
 		if (t) {
-			update_entity_material(t, &thrust_flare_material);
+			update_entity_material(t, &thrust_flare_material[thrust_material_index]);
 			update_entity_orientation(t, &identity_quat);
 			update_entity_scale(t, THRUST_FLARE_SCALE * thrust_size * ap->port[p].scale);
 			update_entity_parent(cx, t, e);
@@ -17919,11 +17919,6 @@ static int load_static_textures(void)
 	red_torpedo_material.texture_mapped_unlit.texture_id = load_texture("textures/red-torpedo-texture.png");
 	red_torpedo_material.texture_mapped_unlit.do_blend = 1;
 
-	material_init_texture_mapped_unlit(&thrust_flare_material);
-	thrust_flare_material.billboard_type = MATERIAL_BILLBOARD_TYPE_SPHERICAL;
-	thrust_flare_material.texture_mapped_unlit.texture_id = load_texture("textures/thrust_flare.png");
-	thrust_flare_material.texture_mapped_unlit.do_blend = 1;
-
 	material_init_texture_mapped_unlit(&spark_material);
 	spark_material.billboard_type = MATERIAL_BILLBOARD_TYPE_SPHERICAL;
 	spark_material.texture_mapped_unlit.texture_id = load_texture("textures/spark-texture.png");
@@ -18008,6 +18003,36 @@ static int load_static_textures(void)
 	init_thrust_material(&thrust_material[2], "textures/thrustgreen.png");
 	init_thrust_material(&thrust_material[3], "textures/thrustyellow.png");
 	init_thrust_material(&thrust_material[4], "textures/thrustviolet.png");
+
+	material_init_texture_mapped_unlit(&thrust_flare_material[0]);
+	thrust_flare_material[0].billboard_type = MATERIAL_BILLBOARD_TYPE_SPHERICAL;
+	thrust_flare_material[0].texture_mapped_unlit.texture_id = load_texture("textures/thrust_flare.png");
+	thrust_flare_material[0].texture_mapped_unlit.do_blend = 1;
+
+	thrust_flare_material[1] = thrust_flare_material[0];
+	thrust_flare_material[2] = thrust_flare_material[0];
+	thrust_flare_material[3] = thrust_flare_material[0];
+	thrust_flare_material[4] = thrust_flare_material[0];
+
+	thrust_flare_material[0].texture_mapped_unlit.tint.red = 0.8;
+	thrust_flare_material[0].texture_mapped_unlit.tint.blue = 1.0;
+	thrust_flare_material[0].texture_mapped_unlit.tint.green = 0.8;
+
+	thrust_flare_material[1].texture_mapped_unlit.tint.red = 1.0;
+	thrust_flare_material[1].texture_mapped_unlit.tint.blue = 0.8;
+	thrust_flare_material[1].texture_mapped_unlit.tint.green = 0.8;
+
+	thrust_flare_material[2].texture_mapped_unlit.tint.red = 0.8;
+	thrust_flare_material[2].texture_mapped_unlit.tint.blue = 0.8;
+	thrust_flare_material[2].texture_mapped_unlit.tint.green = 1.0;
+
+	thrust_flare_material[3].texture_mapped_unlit.tint.red = 1.0;
+	thrust_flare_material[3].texture_mapped_unlit.tint.blue = 0.8;
+	thrust_flare_material[3].texture_mapped_unlit.tint.green = 1.0;
+
+	thrust_flare_material[4].texture_mapped_unlit.tint.red = 1.0;
+	thrust_flare_material[4].texture_mapped_unlit.tint.blue = 1.0;
+	thrust_flare_material[4].texture_mapped_unlit.tint.green = 0.8;
 
 	material_init_texture_mapped_unlit(&warp_tunnel_material);
 	warp_tunnel_material.texture_mapped_unlit.texture_id = load_texture("textures/warp-tunnel.png");
