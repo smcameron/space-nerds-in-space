@@ -325,4 +325,5 @@ void read_keymap_config_file(void)
 		fprintf(stderr, "%s: syntax error at line %d:'%s'\n",
 			filename, lineno, line);
 	}
+	fclose(f);
 }
