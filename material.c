@@ -72,6 +72,7 @@ int material_nebula_read_from_file(const char *asset_dir, const char *filename,
 		rc = fscanf(f, "texture %s\n", texture_filename);
 		if (rc != 1) {
 			fprintf(stderr, "material_nebula: Error reading 'texture' from file '%s'\n", full_filename);
+			fclose(f);
 			return -1;
 		}
 		mt->texture_id[i] = load_texture(asset_dir, texture_filename);
@@ -80,6 +81,7 @@ int material_nebula_read_from_file(const char *asset_dir, const char *filename,
 			&mt->orientation[i].q.q2, &mt->orientation[i].q.q3);
 		if (rc != 4) {
 			fprintf(stderr, "material_nebula: Error reading 'orientation' from file '%s'\n", full_filename);
+			fclose(f);
 			return -1;
 		}
 	}
@@ -87,17 +89,18 @@ int material_nebula_read_from_file(const char *asset_dir, const char *filename,
 	rc = fscanf(f, "alpha %f\n", &mt->alpha);
 	if (rc != 1) {
 		fprintf(stderr, "material_nebula: Error reading 'alpha' from file '%s'\n", full_filename);
+		fclose(f);
 		return -1;
 	}
 
 	rc = fscanf(f, "tint %f %f %f\n", &mt->tint.red, &mt->tint.green, &mt->tint.blue);
 	if (rc != 3) {
 		fprintf(stderr, "material_nebula: Error reading 'tint' from file '%s'\n", full_filename);
+		fclose(f);
 		return -1;
 	}
 
 	fclose(f);
-
 	return 0;
 }
 
