@@ -67,6 +67,7 @@ struct thrust_attachment_point *read_thrust_attachments(char *filename, float sc
 		vec3_mul_self(&answer->port[i].pos, scaling_factor);
 	}
 	answer->nports = n;
+	fclose(f);
 	return answer;
 
 error_out:
