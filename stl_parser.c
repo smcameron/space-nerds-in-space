@@ -465,6 +465,7 @@ struct mesh *read_stl_file(char *file)
 	linecount++;
 	if (!s) {
 		stl_error("unexpected EOF", linecount);
+		fclose(f);
 		return NULL;
 	}
 	facetcount = count_facets(file);
@@ -473,8 +474,10 @@ struct mesh *read_stl_file(char *file)
 		return NULL;
 	}
 	my_mesh = malloc(sizeof(*my_mesh));
-	if (!my_mesh)
+	if (!my_mesh) {
+		fclose(f);
 		return my_mesh;
+	}
 	memset(my_mesh, 0, sizeof(*my_mesh));
 	my_mesh->geometry_mode = MESH_GEOMETRY_TRIANGLES;
 	my_mesh->nvertices = 0;
