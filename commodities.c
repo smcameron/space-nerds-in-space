@@ -181,8 +181,11 @@ struct commodity *read_commodities(char *filename, int *ncommodities)
 	memset(clist, 0, sizeof(*clist) * MAX_COMMODITIES);
 
 	f = fopen(filename, "r");
-	if (!f)
+	if (!f) {
+		if (clist)
+			free(clist);
 		return NULL;
+	}
 
 	while (!feof(f)) {
 		l = fgets(line, 1000, f);
