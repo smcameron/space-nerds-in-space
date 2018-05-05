@@ -149,6 +149,7 @@ done_scanfing_line:
 				*count = n;
 				return st;
 			}
+			st = newst;
 		}
 		st[n].thrust_attachment_file = strdup(thrust_attach);
 		st[n].class = strdup(class);
