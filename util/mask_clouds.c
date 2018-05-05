@@ -67,6 +67,10 @@ int main(int argc, char *argv[])
 
 	for (i = 0; i < 6; i++) {
 		char inputfilename[PATH_MAX], outputfilename[PATH_MAX];
+		if (strlen(argv[1]) > PATH_MAX - 20) {
+			fprintf(stderr, "Length of argv[1] is too long, buster.\n");
+			return 1;
+		}
 		sprintf(inputfilename, "%s%d.png", argv[1], i);
 		sprintf(outputfilename, "%s-masked%d.png", argv[1], i);
 		printf("Processing %s -> %s\n", inputfilename, outputfilename);
