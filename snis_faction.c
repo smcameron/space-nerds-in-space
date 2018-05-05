@@ -95,6 +95,7 @@ int snis_read_factions(char *filename)
 	fact = malloc(MAX_FACTIONS * sizeof(*fact));
 	if (!fact) {
 		fprintf(stderr, "out of memory at %s:%d\n", __FILE__, __LINE__);
+		fclose(f);
 		return -1;
 	}
 
@@ -122,6 +123,7 @@ int snis_read_factions(char *filename)
 		fact[n].name = malloc(strlen(line) + 1);
 		if (!fact[n].name) {
 			fprintf(stderr, "out of memory at %s:%d\n", filename, linecount);
+			fclose(f);
 			return -1;
 		}
 		strcpy(fact[n].name, line);
@@ -133,6 +135,7 @@ int snis_read_factions(char *filename)
 		r = sscanf(line, "%d %d %d", &x, &y, &z);
 		if (r != 3) {
 			fprintf(stderr, "bad line '%s' at %s:%d\n", line, filename, linecount);
+			fclose(f);
 			return -1;
 		}
 		linecount++;
@@ -142,6 +145,7 @@ int snis_read_factions(char *filename)
 		nfacts++;
 		n++;
 	}
+	fclose(f);
 	return 0;
 }
 
