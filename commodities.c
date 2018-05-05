@@ -199,10 +199,12 @@ struct commodity *read_commodities(char *filename, int *ncommodities)
 		case 1: /* comment */
 			continue;
 		case -1:
+			fclose(f);
 			return NULL;
 		}
 	}
 	*ncommodities = n;
+	fclose(f);
 	return clist;
 }
 
