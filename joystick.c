@@ -367,5 +367,6 @@ int main(int argc, char *argv[])
 		}
 		usleep(1000);
 	}
+	free(fd);
 }
 #endif
