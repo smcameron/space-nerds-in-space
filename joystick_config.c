@@ -250,6 +250,7 @@ int read_joystick_config(struct joystick_config *cfg, char *filename, char *joys
 		rc += parse_joystick_cfg_line(cfg, filename, line, ln, joysticks_found,
 						njoysticks_found, &current_device);
 	}
+	fclose(f);
 	return rc;
 }
 
