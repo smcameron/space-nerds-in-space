@@ -33,6 +33,7 @@ static char *read_file(const char *shader_directory, const char *filename)
 	/* allocate a string that can hold it all */
 	buffer = (char *) malloc(sizeof(char) * (string_size + 1));
 	/* read it all in one operation */
+	/* TODO: rewrite this for better error handling */
 	read_size = fread(buffer, sizeof(char), string_size, handler);
 	/* fread doesnt set it so put a \0 in the last position
 	   and buffer is now officialy a string */
@@ -44,6 +45,7 @@ static char *read_file(const char *shader_directory, const char *filename)
 		free(buffer);
 		buffer = NULL;
 	}
+	fclose(handler);
 	return buffer;
 }
 
