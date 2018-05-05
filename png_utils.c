@@ -33,6 +33,7 @@ int png_utils_write_png_image(const char *filename, unsigned char *pixels, int w
 	int bytes_per_pixel = has_alpha ? 4 : 3;
 	FILE *f;
 
+	rc = -1; /* assume failure until we eventually succeed */
 	f = fopen(filename, "w");
 	if (!f) {
 		fprintf(stderr, "fopen: %s:%s\n", filename, strerror(errno));
@@ -84,7 +85,7 @@ int png_utils_write_png_image(const char *filename, unsigned char *pixels, int w
 	for (y = 0; y < h; y++)
 		png_free(png_ptr, row[y]);
 	png_free(png_ptr, row);
-	rc = 0;
+	rc = 0; /* success */
 cleanup2:
 	png_destroy_write_struct(&png_ptr, &info_ptr);
 cleanup1:
