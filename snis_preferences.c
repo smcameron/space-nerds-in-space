@@ -147,8 +147,10 @@ void snis_prefs_read_checkbox_defaults(int *role_main_v, int *role_nav_v, int *r
 		&value[0], &value[1], &value[2], &value[3],
 		&value[4], &value[5], &value[6], &value[7],
 		&value[8], &value[9], &value[10], &value[11]);
-	if (rc != 12)
+	if (rc != 12) {
+		fclose(f);
 		return;
+	}
 	fclose(f);
 	*role_main_v = value[0];
 	*role_nav_v = value[1];
