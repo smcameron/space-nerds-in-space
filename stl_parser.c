@@ -913,11 +913,11 @@ struct mesh *read_obj_file(char *filename)
 
 	continuation = 0;
 	while (!feof(f)) {
+		char *d = line;
 		/* read a line... */
 		do {
-			char *d;
-
-			d = continuation ? d + strlen(d) - 1 : line;
+			if (continuation)
+				d += strlen(d) - 1;
 			s = fgets(buffer, sizeof(buffer), f);
 			if (!s)
 				break;
