@@ -283,6 +283,7 @@ static void generate_openscad_starmap(void)
 		}
 	}
 	fprintf(f, "\n");
+	fclose(f);
 }
 
 int main(int argc, char *argv[])
