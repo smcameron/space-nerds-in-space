@@ -12314,6 +12314,8 @@ static void set_random_seed(int new_seed)
 			return;
 	} else if (new_seed != -1) {
 		i = new_seed;
+	} else { /* new_seed is -1 */
+		return;
 	}
 
 	snis_srand((unsigned int) i);
