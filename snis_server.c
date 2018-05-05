@@ -15098,8 +15098,11 @@ static void meta_comms_antenna(char *name, struct game_client *c, char *txt)
 	int rc;
 
 	duptxt = strndup(txt, 256);
+	if (!duptxt)
+		return;
 	printf("Antenna text = '%s'\n", duptxt);
 	rc = sscanf(duptxt, "%*s %f %f", &bearing, &mark);
+	free(duptxt);
 	printf("antenna rc = %d\n", rc);
 	if (rc == 2) {
 		union vec3 dir;
