@@ -984,12 +984,14 @@ struct mesh *read_obj_file(char *filename)
 	}
 
 	mesh_graph_dev_init(m);
+	fclose(f);
 	return m;
 
 flame_out:
 	fprintf(stderr, "Error parsing %s:%d: %s\n",
 		filename, lineno, line);
 	free_mesh(m);
+	fclose(f);
 	return NULL;
 }
 
