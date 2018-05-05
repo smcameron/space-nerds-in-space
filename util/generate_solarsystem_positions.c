@@ -284,6 +284,7 @@ static void generate_openscad_starmap(void)
 	}
 	fprintf(f, "\n");
 	fclose(f);
+	free(done);
 }
 
 int main(int argc, char *argv[])
