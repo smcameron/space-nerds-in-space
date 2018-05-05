@@ -74,6 +74,7 @@ struct docking_port_attachment_point *read_docking_port_attachments(char *filena
 		quat_init_axis(&answer->port[i].orientation, rx, ry, rz, ra * M_PI / 180.0);
 	}
 	answer->nports = n;
+	fclose(f);
 	return answer;
 
 error_out:
