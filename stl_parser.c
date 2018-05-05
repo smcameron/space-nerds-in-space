@@ -764,12 +764,22 @@ process_it:
 static void compact_mesh_allocations(struct mesh *m)
 {
 	struct vertex *oldptr;
+	struct triangle *newtri;
+	struct texture_coord *newtex;
 
 	oldptr = m->v;
 	m->v = realloc(m->v, m->nvertices * sizeof(*m->v));
+	if (!m->v) {
+		m->v = oldptr;
+		return;
+	}
 	fixup_triangle_vertex_ptrs(m, oldptr, m->v);
-	m->t = realloc(m->t, m->ntriangles * sizeof(*m->t));
-	m->tex = realloc(m->tex, 3 * m->ntriangles * sizeof(*m->tex));
+	newtri = realloc(m->t, m->ntriangles * sizeof(*m->t));
+	if (newtri)
+		m->t = newtri;
+	newtex = realloc(m->tex, 3 * m->ntriangles * sizeof(*m->tex));
+	if (newtex)
+		m->tex = newtex;
 }
 
 static void parse_mtllib(char *parentfilename, char *mtllib_line, char *tfile, int tfilelen, char *efile, int efilelen)
