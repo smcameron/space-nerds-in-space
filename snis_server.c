@@ -343,6 +343,7 @@ static struct bridge_data {
 	int nwaypoints;
 	int warp_core_critical_timer;
 	int warp_core_critical;
+	char last_text_to_speech[256];
 } bridgelist[MAXCLIENTS];
 static int nbridges = 0;
 static pthread_mutex_t universe_mutex = PTHREAD_MUTEX_INITIALIZER;
@@ -2022,6 +2023,12 @@ static void queue_add_text_to_speech(struct game_client *c, const char *text)
 		length = 254;
 	snprintf(tmpbuf, 255, "%s", text);
 	tmpbuf[255] = '\0';
+
+	/* Save this text in case we are asked to repeat it later, unless this text is already a repeat */
+	if (strncmp(tmpbuf, "I said, ", 8) != 0 && strcmp(tmpbuf, "I didn't say anything") != 0)
+		strncpy(bridgelist[c->bridge].last_text_to_speech, tmpbuf,
+			sizeof(bridgelist[c->bridge].last_text_to_speech) - 1);
+
 	pb = packed_buffer_allocate(512);
 	packed_buffer_append(pb, "bbb", OPCODE_NATURAL_LANGUAGE_REQUEST,
 				OPCODE_NL_SUBCOMMAND_TEXT_TO_SPEECH, (uint8_t) strlen(tmpbuf) + 1);
@@ -9681,6 +9688,7 @@ static void init_player(struct snis_entity *o, int clear_cargo_bay, float *charg
 		money += WARP_CORE_COST;
 	o->tsd.ship.warp_core_status = WARP_CORE_STATUS_GOOD;
 	bridgelist[b].warp_core_critical = 0;
+	strcpy(bridgelist[b].last_text_to_speech, "");
 	quat_init_axis(&o->tsd.ship.computer_desired_orientation, 0, 1, 0, 0);
 	o->tsd.ship.computer_steering_time_left = 0;
 	if (clear_cargo_bay) {
@@ -21324,6 +21332,12 @@ static void init_synonyms(void)
 	snis_nl_add_synonym("creature", "spacemonster");
 	snis_nl_add_synonym("m. mysterium", "spacemonster");
 	snis_nl_add_synonym("monstrum mysterium", "spacemonster");
+	snis_nl_add_synonym("could you repeat", "repeat");
+	snis_nl_add_synonym("say again", "repeat");
+	snis_nl_add_synonym("say what", "repeat");
+	snis_nl_add_synonym("come again", "repeat");
+	snis_nl_add_synonym("pardon me", "repeat");
+	snis_nl_add_synonym("what did you say", "repeat");
 }
 
 static const struct noun_description_entry {
@@ -22075,6 +22089,19 @@ static void nl_lights_p(void *context, int argc, char *argv[], int pos[],
 
 no_understand:
 	queue_add_text_to_speech(c, "Sorry, I do not understand which direction you want to turn.");
+}
+
+static void nl_repeat_n(void *context, int argc, char *argv[], int pos[],
+			union snis_nl_extra_data extra_data[])
+{
+	char buf[256];
+	struct game_client *c = context;
+
+	if (strcmp(bridgelist[c->bridge].last_text_to_speech, "") == 0)
+		snprintf(buf, sizeof(buf), "I didn't say anything.");
+	else
+		snprintf(buf, sizeof(buf), "I said, %s", bridgelist[c->bridge].last_text_to_speech);
+	queue_add_text_to_speech(c, buf);
 }
 
 /* Eg: "turn/shut on/off/out lights" */
@@ -24332,6 +24359,10 @@ static void init_dictionary(void)
 	snis_nl_add_dictionary_verb("do",		"do",			"Pxan", nl_do_Pxan);
 		/* lights on/off/out */
 	snis_nl_add_dictionary_verb("lights",		"lights",		"p",	nl_lights_p);
+	snis_nl_add_dictionary_verb("repeat",		"repeat",		"n",	nl_repeat_n);
+	snis_nl_add_dictionary_verb("repeat",		"repeat",		"",	nl_repeat_n);
+	snis_nl_add_dictionary_verb("what",		"repeat",		"",	nl_repeat_n);
+	snis_nl_add_dictionary_verb("huh",		"repeat",		"",	nl_repeat_n);
 
 	snis_nl_add_dictionary_word("drive",		"drive",	POS_NOUN);
 	snis_nl_add_dictionary_word("system",		"system",	POS_NOUN);
@@ -24557,6 +24588,7 @@ static void init_dictionary(void)
 	snis_nl_add_dictionary_word("them",		"them",		POS_PRONOUN);
 	snis_nl_add_dictionary_word("all",		"all",		POS_PRONOUN);
 	snis_nl_add_dictionary_word("everything",	"everything",	POS_PRONOUN);
+	snis_nl_add_dictionary_word("that",		"that",		POS_PRONOUN);
 
 	snis_nl_add_dictionary_word("do",		"do",		POS_AUXVERB);
 	snis_nl_add_dictionary_word("be",		"be",		POS_AUXVERB);

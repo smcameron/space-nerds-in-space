@@ -7,6 +7,7 @@ ACTIVATE - Main
 ACTUATE - Main 
 AFRICAN - Main 
 AFTER - Main 
+AGAIN - Main 
 AHEAD - Main 
 AIRSPEED - Main 
 ALERT - Main 
@@ -46,6 +47,7 @@ CLOCKWISE - Main
 CLOSE - Main 
 CLOSEST - Main 
 CODE - Main 
+COME - Main 
 COMMS - By LtoS rules
 COMMUNICATIONS - Main 
 COMPUTE - Main 
@@ -70,6 +72,7 @@ DESCRIBE - Main
 DESTRUCT - Main 
 DETAIL - Main 
 DETAILS - Main 
+DID - Main 
 DISABLE - Main 
 DISENGAGE - Main 
 DISTANCE - Main 
@@ -115,6 +118,7 @@ HAVE - Main
 HEAD - Main 
 HOLE - Main 
 HOW - Main 
+HUH - Main 
 HULL - Main 
 HUNDRED - Main 
 IMPULSE - Main 
@@ -177,6 +181,7 @@ RAMMING - Main
 RANGE - Main 
 RAPIDLY - Main 
 RED - Main 
+REPEAT - Main 
 REPORT - Main 
 REVERSE - Main 
 RIGHT - Main 
@@ -184,6 +189,7 @@ ROBOT - Main
 ROLL - Main 
 ROTATE - Main 
 ROUTE - Main 
+SAY - Main 
 SCAN - Main 
 SCANNER - Main 
 SCANNERS - Main 
@@ -228,6 +234,7 @@ SYSTEM - Main
 TARGET - Main 
 TELL - Main 
 TEN - Main 
+THAT - Main 
 THE - Main 
 THEM - Main 
 THEN - Main 
@@ -268,6 +275,7 @@ WILL - Main
 WITH - Main 
 WORM - Main 
 YAW - Main 
+YOU - Main 
 ZERO - Main 
 ZOOM - Main 
 

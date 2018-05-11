@@ -528,3 +528,11 @@ turn on red alert
 shut off red alert
 turn off red alert
 shut down red alert
+repeat that
+repeat
+what
+huh
+what did you say
+come again
+say again
+
