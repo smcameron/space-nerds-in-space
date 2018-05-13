@@ -10236,22 +10236,22 @@ static void show_death_screen(GtkWidget *w)
 
 	if (o && o->tsd.ship.oxygen < 10) {
 		sprintf(buf, "YOUR CREW HAS DIED");
-		sng_abs_xy_draw_string(buf, BIG_FONT, 20, 150);
+		sng_abs_xy_draw_string(buf, BIG_FONT, txx(20), txy(150));
 		sprintf(buf, "BY ASPHYXIATION");
-		sng_abs_xy_draw_string(buf, BIG_FONT, 20, 250);
+		sng_abs_xy_draw_string(buf, BIG_FONT, txx(20), txy(250));
 		sprintf(buf, "RESPAWNING IN %d SECONDS", go[my_ship_oid].respawn_time);
-		sng_abs_xy_draw_string(buf, TINY_FONT, 20, 500);
+		sng_abs_xy_draw_string(buf, TINY_FONT, txx(20), txy(500));
 	} else {
 		sprintf(buf, "YOUR SHIP");
-		sng_abs_xy_draw_string(buf, BIG_FONT, 20, 150);
+		sng_abs_xy_draw_string(buf, BIG_FONT, txx(20), txy(150));
 		sprintf(buf, "HAS BEEN");
-		sng_abs_xy_draw_string(buf, BIG_FONT, 20, 250);
+		sng_abs_xy_draw_string(buf, BIG_FONT, txx(20), txy(250));
 		sprintf(buf, "BLOWN TO");
-		sng_abs_xy_draw_string(buf, BIG_FONT, 20, 350);
+		sng_abs_xy_draw_string(buf, BIG_FONT, txx(20), txy(350));
 		sprintf(buf, "SMITHEREENS");
-		sng_abs_xy_draw_string(buf, BIG_FONT, 20, 450);
+		sng_abs_xy_draw_string(buf, BIG_FONT, txx(20), txy(450));
 		sprintf(buf, "RESPAWNING IN %d SECONDS", go[my_ship_oid].respawn_time);
-		sng_abs_xy_draw_string(buf, TINY_FONT, 20, 500);
+		sng_abs_xy_draw_string(buf, TINY_FONT, txx(20), txy(500));
 	}
 }
 
