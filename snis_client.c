@@ -10353,73 +10353,74 @@ static void init_nav_ui(void)
 	const int gauge_color = UI_COLOR(nav_gauge);
 	const int needle_color = UI_COLOR(nav_gauge_needle);
 	const int button_color = UI_COLOR(nav_button);
+	const int button_y_spacing = 22;
 
 	x = 0;
-	nav_ui.gauge_radius = 100;
+	nav_ui.gauge_radius = 40;
 	
-	nav_ui.warp_slider = snis_slider_init(SCREEN_WIDTH - 2 * nav_ui.gauge_radius - 40,
-				2 * nav_ui.gauge_radius + 10,
-				160, 15, UI_COLOR(nav_slider), "",
+	nav_ui.warp_slider = snis_slider_init(SCREEN_WIDTH - txx(2.2 * nav_ui.gauge_radius + 10),
+				txy(2.2 * nav_ui.gauge_radius + 30),
+				txx(2.0 * nav_ui.gauge_radius), txy(10), UI_COLOR(nav_slider), "",
 				"0", "100", 0.0, 255.0, sample_power_data_warp_current,
 				do_warpdrive);
 	snis_slider_set_fuzz(nav_ui.warp_slider, 3);
-	nav_ui.navzoom_slider = snis_slider_init(10, 80, 200, 15, UI_COLOR(nav_slider), "ZOOM",
+	nav_ui.navzoom_slider = snis_slider_init(txx(4), txy(44), txx(83), txy(10), UI_COLOR(nav_slider), "ZOOM",
 				"1", "10", 0.0, 100.0, sample_navzoom,
 				do_navzoom);
-	nav_ui.throttle_slider = snis_slider_init(SCREEN_WIDTH - 30 + x, 40, 230, 15,
+	nav_ui.throttle_slider = snis_slider_init(SCREEN_WIDTH - txx(12 + x), txy(22), txx(96), txy(8),
 				UI_COLOR(nav_slider), "THROTTLE", "1", "10", 0.0, 255.0,
 				sample_power_data_impulse_current, do_throttle);
 	snis_slider_set_fuzz(nav_ui.throttle_slider, 3);
 	snis_slider_set_vertical(nav_ui.throttle_slider, 1);
-	nav_ui.warp_gauge = gauge_init(SCREEN_WIDTH - nav_ui.gauge_radius - 40,
-				nav_ui.gauge_radius + 5,
-				nav_ui.gauge_radius, 0.0, 10.0, -120.0 * M_PI / 180.0,
+	nav_ui.warp_gauge = gauge_init(SCREEN_WIDTH - txx(1.2 * nav_ui.gauge_radius + 10),
+				txy(nav_ui.gauge_radius + 16),
+				txx(nav_ui.gauge_radius), 0.0, 10.0, -120.0 * M_PI / 180.0,
 				120.0 * 2.0 * M_PI / 180.0, needle_color, gauge_color,
 				10, "WARP", sample_warpdrive);
 	gauge_set_fonts(nav_ui.warp_gauge, PICO_FONT, PICO_FONT);
-	nav_ui.speedometer = gauge_init(SCREEN_WIDTH - 3.5 * nav_ui.gauge_radius - 40,
-				nav_ui.gauge_radius + 5,
-				nav_ui.gauge_radius, 0.0, 1000.0, -120.0 * M_PI / 180.0,
+	nav_ui.speedometer = gauge_init(SCREEN_WIDTH - txx(3.6 * nav_ui.gauge_radius + 10),
+				txy(nav_ui.gauge_radius + 16),
+				txx(nav_ui.gauge_radius), 0.0, 1000.0, -120.0 * M_PI / 180.0,
 				120.0 * 2.0 * M_PI / 180.0, needle_color, gauge_color,
 				10, "VEL", sample_ship_velocity);
 	gauge_set_fonts(nav_ui.speedometer, PICO_FONT, PICO_FONT);
-	y = 80;
-	nav_ui.engage_warp_button = snis_button_init(SCREEN_WIDTH - nav_ui.gauge_radius * 2 - 40,
-					nav_ui.gauge_radius * 2 + y,
+	y = 3 * button_y_spacing;
+	nav_ui.engage_warp_button = snis_button_init(SCREEN_WIDTH - txx(nav_ui.gauge_radius * 2.2 + 10),
+					txy(nav_ui.gauge_radius * 2 + y),
 					-1, -1, "ENGAGE WARP", button_color,
 					NANO_FONT, engage_warp_button_pressed, NULL);
 	snis_button_set_sound(nav_ui.engage_warp_button, UISND4);
-	y += 40;
-	nav_ui.docking_magnets_button = snis_button_init(SCREEN_WIDTH - nav_ui.gauge_radius * 2 - 40,
-					nav_ui.gauge_radius * 2 + y,
+	y += button_y_spacing;
+	nav_ui.docking_magnets_button = snis_button_init(SCREEN_WIDTH - txx(nav_ui.gauge_radius * 2.2 + 10),
+					txy(nav_ui.gauge_radius * 2 + y),
 					-1, -1, "DOCKING MAGNETS", button_color,
 					NANO_FONT, docking_magnets_button_pressed, NULL);
 	snis_button_set_sound(nav_ui.docking_magnets_button, UISND5);
-	y += 40;
-	nav_ui.standard_orbit_button = snis_button_init(SCREEN_WIDTH - nav_ui.gauge_radius * 2 - 40,
-					nav_ui.gauge_radius * 2 + y,
+	y += button_y_spacing;
+	nav_ui.standard_orbit_button = snis_button_init(SCREEN_WIDTH - txx(nav_ui.gauge_radius * 2.2 + 10),
+					txy(nav_ui.gauge_radius * 2 + y),
 					-1, -1, "STANDARD ORBIT", button_color,
 					NANO_FONT, standard_orbit_button_pressed, NULL);
 	snis_button_set_sound(nav_ui.standard_orbit_button, UISND6);
-	y += 40;
-	nav_ui.starmap_button = snis_button_init(SCREEN_WIDTH - nav_ui.gauge_radius * 2 - 40,
-					nav_ui.gauge_radius * 2 + y, -1, -1, "STAR MAP",
+	y += button_y_spacing;
+	nav_ui.starmap_button = snis_button_init(SCREEN_WIDTH - txx(nav_ui.gauge_radius * 2.2 + 10),
+					txy(nav_ui.gauge_radius * 2 + y), -1, -1, "STAR MAP",
 					button_color,
 					NANO_FONT, nav_starmap_button_pressed, NULL);
 	snis_button_set_sound(nav_ui.starmap_button, UISND7);
-	y += 40;
-	nav_ui.lights_button = snis_button_init(SCREEN_WIDTH - nav_ui.gauge_radius * 2 - 40,
-					nav_ui.gauge_radius * 2 + y, -1, -1, "LIGHTS",
+	y += button_y_spacing;
+	nav_ui.lights_button = snis_button_init(SCREEN_WIDTH - txx(nav_ui.gauge_radius * 2.2 + 10),
+					txy(nav_ui.gauge_radius * 2 + y), -1, -1, "LIGHTS",
 					button_color,
 					NANO_FONT, nav_lights_button_pressed, NULL);
 	snis_button_set_sound(nav_ui.lights_button, UISND7);
-	nav_ui.reverse_button = snis_button_init(SCREEN_WIDTH - 40 + x, 5, 30, 25, "R", button_color,
-			NANO_FONT, reverse_button_pressed, NULL);
+	nav_ui.reverse_button = snis_button_init(SCREEN_WIDTH - txx(16.6 + x), txy(3), txx(12.5), txy(14),
+			"R", button_color, NANO_FONT, reverse_button_pressed, NULL);
 	snis_button_set_sound(nav_ui.reverse_button, UISND8);
-	nav_ui.trident_button = snis_button_init(10, 300, -1, -1, "ABSOLUTE", button_color,
+	nav_ui.trident_button = snis_button_init(txx(4), txy(166), -1, -1, "ABSOLUTE", button_color,
 			NANO_FONT, trident_button_pressed, NULL);
 	snis_button_set_sound(nav_ui.trident_button, UISND9);
-	nav_ui.computer_button = snis_button_init(txx(10), txy(570), -1, -1, "COMPUTER", UI_COLOR(nav_button),
+	nav_ui.computer_button = snis_button_init(txx(4), txy(570), -1, -1, "COMPUTER", UI_COLOR(nav_button),
 			NANO_FONT, nav_computer_button_pressed, NULL);
 	snis_button_set_sound(nav_ui.computer_button, UISND10);
 	nav_ui.computer_active = 0;
