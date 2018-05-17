@@ -4761,6 +4761,17 @@ static void add_warp_effect(uint32_t oid, double ox, double oy, double oz, doubl
 		send_packet_to_all_clients(pb, ROLE_ALL);
 }
 
+static void warp_ship(struct snis_entity *o, double x, double y, double z)
+{
+	float ox, oy, oz;
+
+	ox = o->x;
+	oy = o->y;
+	oz = o->z;
+	set_object_location(o, x, y, z);
+	add_warp_effect(o->id, ox, oy, oz, o->x, o->y, o->z);
+}
+
 static void ai_flee_mode_brain(struct snis_entity *o)
 {
 	struct danger_info info;
@@ -4802,9 +4813,7 @@ static void ai_flee_mode_brain(struct snis_entity *o)
 	o->tsd.ship.ai[n].u.flee.warp_countdown--;
 	if (o->tsd.ship.ai[n].u.flee.warp_countdown <= 0) {
 		o->tsd.ship.ai[n].u.flee.warp_countdown = 10 * (20 + snis_randn(10));
-		add_warp_effect(o->id, o->x, o->y, o->z,
-			o->tsd.ship.dox, o->tsd.ship.doy, o->tsd.ship.doz);
-		set_object_location(o, o->tsd.ship.dox, o->tsd.ship.doy, o->tsd.ship.doz);
+		warp_ship(o, o->tsd.ship.dox, o->tsd.ship.doy, o->tsd.ship.doz);
 	}
 
 	/* Maybe shoot at assailant if he is close enough */
@@ -4853,9 +4862,7 @@ static void ai_fleet_member_mode_brain(struct snis_entity *o)
 		o->tsd.ship.velocity = leader->tsd.ship.velocity * 1.5;
 	} else if (dist2 > FLEET_WARP_DISTANCE * FLEET_WARP_DISTANCE && snis_randn(100) < 8) {
 		/* If distance is too far, just warp */
-		add_warp_effect(o->id, o->x, o->y, o->z,
-			o->tsd.ship.dox, o->tsd.ship.doy, o->tsd.ship.doz);
-		set_object_location(o, o->tsd.ship.dox, o->tsd.ship.doy, o->tsd.ship.doz);
+		warp_ship(o, o->tsd.ship.dox, o->tsd.ship.doy, o->tsd.ship.doz);
 		o->vx = leader->vx;
 		o->vy = leader->vy;
 		o->vz = leader->vz;
@@ -4912,13 +4919,12 @@ static void ai_ship_warp_to(struct snis_entity *o, float destx, float desty, flo
 	v.v.z = destz - o->z;
 	vec3_mul_self(&v, 0.90 + 0.05 * (float) snis_randn(100) / 100.0);
 	if (!inside_planet(v.v.x, v.v.y, v.v.z)) {
-		add_warp_effect(o->id, o->x, o->y, o->z,
-			o->x + v.v.x, o->y + v.v.y, o->z + v.v.z);
-		set_object_location(o, o->x + v.v.x, o->y + v.v.y, o->z + v.v.z);
+		warp_ship(o, o->x + v.v.x, o->y + v.v.y, o->z + v.v.z);
 		/* reset destination after warping to prevent backtracking */
 		o->tsd.ship.dox = destx;
 		o->tsd.ship.doy = desty;
 		o->tsd.ship.doz = destz;
+		o->timestamp = universe_timestamp;
 	}
 }
 
@@ -13045,8 +13051,9 @@ static int process_demon_move_object(struct game_client *c)
 		goto out;
 	o = &go[i];
 	if (o->type == OBJTYPE_SHIP2 || o->type == OBJTYPE_SHIP1)
-		add_warp_effect(o->id, o->x, o->y, o->z, o->x + dx, o->y, o->z + dz);
-	set_object_location(o, o->x + dx, o->y + dy, o->z + dz);
+		warp_ship(o, o->x + dx, o->y, o->z + dz);
+	else
+		set_object_location(o, o->x + dx, o->y + dy, o->z + dz);
 	o->orientation = orientation;
 	o->timestamp = universe_timestamp;
 out:
