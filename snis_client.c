@@ -10693,21 +10693,21 @@ static void draw_nav_idiot_lights(GtkWidget *w, GdkGC *gc, struct snis_entity *s
 	const int low_power_threshold = 10;
 	sng_set_foreground(UI_COLOR(nav_warning));
 	if (ship->tsd.ship.power_data.sensors.i < low_power_threshold) {
-		sng_abs_xy_draw_string("LOW SENSOR POWER", NANO_FONT, SCREEN_WIDTH / 2 + 20, 65);
+		sng_center_xy_draw_string("LOW SENSOR POWER", NANO_FONT, SCREEN_WIDTH / 2, txy(65));
 	}
 	if (ship->tsd.ship.power_data.maneuvering.i < low_power_threshold) {
-		sng_abs_xy_draw_string("LOW MANEUVERING POWER", NANO_FONT, SCREEN_WIDTH / 2  + 20, 80);
+		sng_center_xy_draw_string("LOW MANEUVERING POWER", NANO_FONT, SCREEN_WIDTH / 2, txy(80));
 	}
 	if (ship->tsd.ship.power_data.impulse.r2 < low_power_threshold) {
-		sng_abs_xy_draw_string("LOW IMPULSE POWER", NANO_FONT, SCREEN_WIDTH / 2 + 20, 95);
+		sng_center_xy_draw_string("LOW IMPULSE POWER", NANO_FONT, SCREEN_WIDTH / 2, txy(95));
 	}
 	if (ship->tsd.ship.warp_core_status == WARP_CORE_STATUS_EJECTED) {
-		sng_abs_xy_draw_string("WARP CORE EJECTED", NANO_FONT, SCREEN_WIDTH / 2 + 20, 110);
+		sng_center_xy_draw_string("WARP CORE EJECTED", NANO_FONT, SCREEN_WIDTH / 2, txy(110));
 	}
 	if (ship->tsd.ship.power_data.warp.r2 < low_power_threshold) {
-		sng_abs_xy_draw_string("LOW WARP POWER", NANO_FONT,
-				SCREEN_WIDTH - nav_ui.gauge_radius * 2 - 35,
-				nav_ui.gauge_radius * 2 + 20);
+		sng_center_xy_draw_string("LOW WARP POWER", NANO_FONT,
+				SCREEN_WIDTH - txx(1.2 * nav_ui.gauge_radius + 10), /* should match gauge x */
+				txy(nav_ui.gauge_radius * 2 + 20));
 	}
 }
 
