@@ -3244,10 +3244,10 @@ static void setup_fs_effect_shader(const char *basename,
 	struct graph_dev_gl_fs_effect_shader *shader)
 {
 	const char *vert_header =
-		"#version 120\n"
+		OPENGL_VERSION_STRING
 		"#define INCLUDE_VS 1\n";
 	const char *frag_header =
-		"#version 120\n"
+		OPENGL_VERSION_STRING
 		"#define INCLUDE_FS 1\n";
 
 	/* Create and compile our GLSL program from the shaders */
