@@ -80,6 +80,7 @@
 #include "snis_text_window.h"
 #include "snis_text_input.h"
 #include "snis_strip_chart.h"
+#include "snis_pull_down_menu.h"
 #include "snis_socket_io.h"
 #include "ssgl/ssgl.h"
 #include "snis_marshal.h"
@@ -332,10 +333,14 @@ static ui_element_drawing_function ui_scaling_strip_chart_draw =
 static ui_element_drawing_function ui_label_draw = (ui_element_drawing_function) snis_label_draw;
 static ui_element_button_press_function ui_button_button_press =
 		(ui_element_button_press_function) snis_button_button_press;
+static ui_element_button_press_function ui_pull_down_menu_button_press =
+	(ui_element_button_press_function) pull_down_menu_button_press;
 static ui_element_drawing_function ui_gauge_draw = (ui_element_drawing_function) gauge_draw;
 static ui_element_drawing_function ui_text_window_draw = (ui_element_drawing_function) text_window_draw;
 static ui_element_drawing_function ui_text_input_draw = (ui_element_drawing_function)
 					snis_text_input_box_draw;
+static ui_element_drawing_function ui_pull_down_menu_draw =
+		(ui_element_drawing_function) pull_down_menu_draw;
 static ui_element_set_focus_function ui_text_input_box_set_focus = (ui_element_set_focus_function)
 					snis_text_input_box_set_focus;
 static ui_element_button_press_function ui_text_input_button_press = (ui_element_button_press_function)
@@ -346,6 +351,8 @@ static ui_element_button_press_function ui_text_window_button_press = (ui_elemen
 					text_window_button_press;
 static ui_element_inside_function ui_button_inside = (ui_element_inside_function)
 					snis_button_inside;
+static ui_element_inside_function ui_pull_down_menu_inside =
+	(ui_element_inside_function) pull_down_menu_inside;
 static ui_element_inside_function ui_slider_inside = (ui_element_inside_function)
 					snis_slider_mouse_inside;
 
@@ -6661,6 +6668,9 @@ static struct network_setup_ui {
 	char solarsystem[60];
 	char shipname[SHIPNAME_LEN];
 	char password[PASSWORD_LEN];
+#if 0
+	struct pull_down_menu *pdm;
+#endif
 } net_setup_ui;
 
 static int process_client_id_packet(void)
@@ -10101,6 +10111,18 @@ static void ui_add_button(struct button *b, int active_displaymode, char *toolti
 						active_displaymode, &displaymode);
 	ui_element_set_tooltip(uie, tooltip);
 	ui_element_list_add_element(&uiobjs, uie); 
+}
+
+static void ui_add_pull_down_menu(struct pull_down_menu *pdm, int active_display_mode)
+{
+	struct ui_element *uie;
+
+	uie = ui_element_init(pdm, ui_pull_down_menu_draw, ui_pull_down_menu_button_press,
+				ui_pull_down_menu_inside, active_display_mode, &displaymode);
+	ui_element_set_tooltip(uie, "");
+	ui_set_update_mouse_pos_callback(uie, (ui_update_mouse_pos_function)
+						pull_down_menu_update_mouse_pos);
+	ui_element_list_add_element(&uiobjs, uie);
 }
 
 static void ui_add_strip_chart(struct strip_chart *sc, int active_displaymode)
@@ -16954,6 +16976,17 @@ static void init_net_setup_ui(void)
 		snis_text_input_box_set_contents(net_setup_ui.shipname_box, preferred_shipname);
 		net_setup_ui.create_ship_v = 0;
 	}
+#if 0
+	net_setup_ui.pdm = create_pull_down_menu(NANO_FONT);
+	pull_down_menu_add_column(net_setup_ui.pdm, "FILE");
+	pull_down_menu_add_row(net_setup_ui.pdm, "FILE", "BLAH1", NULL);
+	pull_down_menu_add_row(net_setup_ui.pdm, "FILE", "BLAH2", NULL);
+	pull_down_menu_add_row(net_setup_ui.pdm, "FILE", "BLAH3", NULL);
+	pull_down_menu_add_column(net_setup_ui.pdm, "SUPERCALIFRAGILISTICEXPIALADOCIOUS");
+	pull_down_menu_add_row(net_setup_ui.pdm, "SUPERCALIFRAGILISTICEXPIALADOCIOUS", "BLAH1", NULL);
+	pull_down_menu_add_row(net_setup_ui.pdm, "SUPERCALIFRAGILISTICEXPIALADOCIOUS", "BLAH2", NULL);
+	pull_down_menu_add_row(net_setup_ui.pdm, "SUPERCALIFRAGILISTICEXPIALADOCIOUS", "BLAH3", NULL);
+#endif
 	ui_add_button(net_setup_ui.start_lobbyserver, DISPLAYMODE_NETWORK_SETUP,
 			"START THE LOBBY SERVER PROCESS");
 	ui_add_button(net_setup_ui.start_gameserver, DISPLAYMODE_NETWORK_SETUP,
@@ -16966,6 +16999,9 @@ static void init_net_setup_ui(void)
 	ui_add_text_input_box(net_setup_ui.solarsystemname, DISPLAYMODE_NETWORK_SETUP);
 	ui_add_text_input_box(net_setup_ui.shipname_box, DISPLAYMODE_NETWORK_SETUP);
 	ui_add_text_input_box(net_setup_ui.password_box, DISPLAYMODE_NETWORK_SETUP);
+#if 0
+	ui_add_pull_down_menu(net_setup_ui.pdm, DISPLAYMODE_NETWORK_SETUP);
+#endif
 } 
 
 static void show_network_setup(GtkWidget *w)

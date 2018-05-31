@@ -16,6 +16,7 @@ struct ui_element {
 	int has_focus;
 	ui_element_keypress_function keypress_fn, keyrelease_fn;
 	ui_element_inside_function inside_fn;
+	ui_update_mouse_pos_function update_mouse_pos;
 	int hidden;
 	char *tooltip;
 	int tooltip_timer;
@@ -50,6 +51,7 @@ struct ui_element *ui_element_init(void *element,
 	e->hidden = 0;
 	e->tooltip = NULL;
 	e->tooltip_timer = TOOLTIP_DELAY;
+	e->update_mouse_pos = NULL;
 	return e;
 }
 
@@ -60,6 +62,8 @@ void ui_element_draw(struct ui_element *element)
 
 void ui_element_maybe_draw_tooltip(struct ui_element *element, int mousex, int mousey)
 {
+	if (element->update_mouse_pos)
+		element->update_mouse_pos(element->element, mousex, mousey);
 	if (!element->inside_fn) {
 		return;
 	}
@@ -335,3 +339,7 @@ void ui_set_tooltip_drawing_function(ui_tooltip_drawing_function f)
 	draw_tooltip = f;
 }
 
+void ui_set_update_mouse_pos_callback(struct ui_element *e, ui_update_mouse_pos_function f)
+{
+	e->update_mouse_pos = f;
+}

@@ -10,6 +10,7 @@ typedef void (*ui_element_set_focus_function)(void *element, int has_focus);
 typedef int (*ui_element_keypress_function)(void *element, GdkEventKey *event);
 typedef int (*ui_element_inside_function)(void *element, int physical_x, int physical_y);
 typedef void (*ui_tooltip_drawing_function)(int x, int y, char *tooltip);
+typedef void (*ui_update_mouse_pos_function)(void *element, int physical_x, int physical_y);
 
 #ifdef DEFINE_UI_ELEMENT_LIST_GLOBALS
 #define GLOBAL
@@ -36,6 +37,7 @@ GLOBAL void ui_element_set_focus_callback(struct ui_element *e,
 						ui_element_set_focus_function set_focus);
 GLOBAL void ui_set_focus(struct ui_element_list *list, struct ui_element *e, int has_focus);
 GLOBAL void ui_set_widget_focus(struct ui_element_list *list, void *widget);
+GLOBAL void ui_set_update_mouse_pos_callback(struct ui_element *e, ui_update_mouse_pos_function f);
 GLOBAL void ui_element_get_keystrokes(struct ui_element *e, 
 				ui_element_keypress_function keypress_fn,
 				ui_element_keypress_function keyrelease_fn);

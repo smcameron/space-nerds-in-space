@@ -397,7 +397,7 @@ COMMONCLIENTOBJS=${COMMONOBJS} ${OGGOBJ} ${SNDOBJS} snis_ui_element.o snis_font.
 	snis_typeface.o snis_gauge.o snis_button.o snis_label.o snis_sliders.o snis_text_window.o \
 	snis_strip_chart.o material.o stl_parser.o entity.o matrix.o my_point.o liang-barsky.o joystick.o \
 	quat.o vec4.o thrust_attachment.o docking_port.o ui_colors.o snis_keyboard.o solarsystem_config.o \
-	pronunciation.o snis_preferences.o
+	pronunciation.o snis_preferences.o snis_pull_down_menu.o
 
 CLIENTOBJS=${COMMONCLIENTOBJS} shader.o graph_dev_opengl.o opengl_cap.o snis_graph.o snis_client.o joystick_config.o
 
@@ -825,6 +825,9 @@ snis_gauge.o:	snis_gauge.c Makefile
 	$(Q)$(GTKCOMPILE)
 
 snis_button.o:	snis_button.c Makefile
+	$(Q)$(GTKCOMPILE)
+
+snis_pull_down_menu.o:	snis_pull_down_menu.c snis_pull_down_menu.h Makefile
 	$(Q)$(GTKCOMPILE)
 
 snis_strip_chart.o:	snis_strip_chart.c Makefile
