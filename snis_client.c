@@ -15914,22 +15914,26 @@ static void init_demon_ui()
 	demon_ui.menu = create_pull_down_menu(NANO_FONT);
 	pull_down_menu_set_color(demon_ui.menu, UI_COLOR(demon_deselected_button));
 	pull_down_menu_add_column(demon_ui.menu, "META");
-	pull_down_menu_add_row(demon_ui.menu, "META", "HOME", NULL);
-	pull_down_menu_add_row(demon_ui.menu, "META", "2D/3D", NULL);
-	pull_down_menu_add_row(demon_ui.menu, "META", "NETSTATS", NULL);
+	pull_down_menu_add_row(demon_ui.menu, "META", "HOME", demon_home_button_pressed);
+	pull_down_menu_add_row(demon_ui.menu, "META", "2D/3D", demon_2d3d_button_pressed);
+	/* TODO: make this netstats work */
+	pull_down_menu_add_row(demon_ui.menu, "META", "NETSTATS", demon_netstats_button_pressed);
+	pull_down_menu_add_row(demon_ui.menu, "META", "EXAG SCALE", demon_scale_button_pressed);
+	pull_down_menu_add_row(demon_ui.menu, "META", "RENDER STYLE", NULL); /* TODO: implement this */
 	pull_down_menu_add_column(demon_ui.menu, "ADD");
-	pull_down_menu_add_row(demon_ui.menu, "ADD", "SHIP", NULL);
-	pull_down_menu_add_row(demon_ui.menu, "ADD", "STARBASE", NULL);
-	pull_down_menu_add_row(demon_ui.menu, "ADD", "PLANET", NULL);
-	pull_down_menu_add_row(demon_ui.menu, "ADD", "BLACK HOLE", NULL);
-	pull_down_menu_add_row(demon_ui.menu, "ADD", "ASTEROID", NULL);
-	pull_down_menu_add_row(demon_ui.menu, "ADD", "SPACE MONSTER", NULL);
+	pull_down_menu_add_row(demon_ui.menu, "ADD", "SHIP", demon_ship_button_pressed);
+	pull_down_menu_add_row(demon_ui.menu, "ADD", "STARBASE", demon_starbase_button_pressed);
+	pull_down_menu_add_row(demon_ui.menu, "ADD", "PLANET", demon_planet_button_pressed);
+	pull_down_menu_add_row(demon_ui.menu, "ADD", "BLACK HOLE", demon_black_hole_button_pressed);
+	pull_down_menu_add_row(demon_ui.menu, "ADD", "ASTEROID", demon_asteroid_button_pressed);
+	pull_down_menu_add_row(demon_ui.menu, "ADD", "SPACE MONSTER", demon_spacemonster_button_pressed);
 	pull_down_menu_add_column(demon_ui.menu, "SELECTION");
-	pull_down_menu_add_row(demon_ui.menu, "SELECTION", "DELETE", NULL);
-	pull_down_menu_add_row(demon_ui.menu, "SELECTION", "SELECT NONE", NULL);
+	pull_down_menu_add_row(demon_ui.menu, "SELECTION", "DELETE", demon_delete_button_pressed);
+	pull_down_menu_add_row(demon_ui.menu, "SELECTION", "SELECT NONE", demon_select_none_button_pressed);
 	pull_down_menu_add_column(demon_ui.menu, "CAPTAIN");
-	pull_down_menu_add_row(demon_ui.menu, "CAPTAIN", "FIRE TORPEDO", NULL);
-	pull_down_menu_add_row(demon_ui.menu, "CAPTAIN", "FIRE PHASER", NULL);
+	pull_down_menu_add_row(demon_ui.menu, "CAPTAIN", "TOGGLE CAPTAIN ON/OFF", demon_captain_button_pressed);
+	pull_down_menu_add_row(demon_ui.menu, "CAPTAIN", "FIRE TORPEDO", demon_torpedo_button_pressed);
+	pull_down_menu_add_row(demon_ui.menu, "CAPTAIN", "FIRE PHASER", demon_phaser_button_pressed);
 	ui_add_button(demon_ui.demon_exec_button, DISPLAYMODE_DEMON,
 			"EXECUTE THE ENTERED COMMAND");
 	ui_add_button(demon_ui.demon_home_button, DISPLAYMODE_DEMON,
