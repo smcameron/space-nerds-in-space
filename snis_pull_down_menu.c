@@ -33,18 +33,22 @@ static int pull_down_menu_inside_col(struct pull_down_menu *m, int x, int col,
 			int physical_x, int physical_y, int is_open)
 {
 	int limit;
+	int sx, sy;
+
+	sx = sng_pixelx_to_screenx(physical_x);
+	sy = sng_pixely_to_screeny(physical_y);
 
 	if (is_open)
 		limit = m->col[col]->nrows;
 	else
 		limit = 1;
 
-	if (physical_x < x)
+	if (sx < x)
 		return 0;
-	if (physical_x > x + m->col[col]->width)
+	if (sx > x + m->col[col]->width)
 		return 0;
 
-	if (physical_y > 0 && physical_y < limit * (font_lineheight[m->font] + 6))
+	if (sy > 0 && sy < limit * (font_lineheight[m->font] + 6))
 		return 1;
 	return 0;
 }
@@ -64,7 +68,7 @@ int pull_down_menu_inside(struct pull_down_menu *m, int physical_x, int physical
 
 void pull_down_menu_update_mouse_pos(struct pull_down_menu *m, int physical_x, int physical_y)
 {
-	int i, x, new_col = -1;
+	int i, x, sy, new_col = -1;
 
 	m->current_physical_x = physical_x;
 	m->current_physical_y = physical_y;
@@ -77,9 +81,9 @@ void pull_down_menu_update_mouse_pos(struct pull_down_menu *m, int physical_x, i
 		x += m->col[i]->width;
 	}
 	if (new_col >= 0 && new_col < m->ncols) {
-		if (physical_y > 0 && physical_y < m->col[new_col]->nrows * (font_lineheight[m->font] + 6))
-			m->current_row =
-				(int) (physical_y / (font_lineheight[m->font] + 6));
+		sy = sng_pixely_to_screeny(physical_y);
+		if (sy > 0 && sy < m->col[new_col]->nrows * (font_lineheight[m->font] + 6))
+			m->current_row = sy / (font_lineheight[m->font] + 6);
 	}
 	m->current_col = new_col;
 }
@@ -223,7 +227,6 @@ int pull_down_menu_button_press(struct pull_down_menu *m, int x, int y)
 		m->current_row >= 0 && m->current_row < m->col[m->current_col]->nrows) {
 			col = &m->col[m->current_col]->item[0];
 			row = &m->col[m->current_col]->item[m->current_row];
-			printf("selected %s/%s\n", col->name, row->name);
 			if (row->func)
 				row->func(row->cookie);
 			m->current_row = -1; /* deselect it */
