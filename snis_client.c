@@ -3863,7 +3863,8 @@ static gint key_press_cb(GtkWidget* widget, GdkEventKey* event, gpointer data)
 
         switch (ka) {
 	case key_invert_vertical:
-			if (control_key_pressed) {
+			if (control_key_pressed && (displaymode == DISPLAYMODE_MAINSCREEN ||
+				displaymode == DISPLAYMODE_NAVIGATION)) {
 				vertical_controls_inverted *= -1;
 				vertical_controls_timer = FRAME_RATE_HZ;
 			}
