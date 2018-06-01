@@ -15912,6 +15912,7 @@ static void init_demon_ui()
 				"LATENCY (ms)", "", UI_COLOR(science_graph_plot_strong),
 				UI_COLOR(common_red_alert), 200000.0, NANO_FONT, NETSTATS_SAMPLES);
 	demon_ui.menu = create_pull_down_menu(NANO_FONT);
+	pull_down_menu_set_color(demon_ui.menu, UI_COLOR(demon_deselected_button));
 	pull_down_menu_add_column(demon_ui.menu, "META");
 	pull_down_menu_add_row(demon_ui.menu, "META", "HOME", NULL);
 	pull_down_menu_add_row(demon_ui.menu, "META", "2D/3D", NULL);

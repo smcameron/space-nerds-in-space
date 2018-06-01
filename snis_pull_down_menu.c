@@ -22,6 +22,7 @@ struct pull_down_menu {
 	int x, y;
 	int ncols;
 	int font;
+	int color;
 	int current_col, current_row;
 	int current_physical_x, current_physical_y; /* mouse pos */
 	struct pull_down_menu_column *col[MAX_PULL_DOWN_COLUMNS];
@@ -121,9 +122,10 @@ static void update_menu_widths(struct pull_down_menu *m)
 		update_menu_column_width(m->col[i], m->font);
 }
 
-static void draw_menu_col(struct pull_down_menu_column *c, float x, float y, int current_row, int font, int is_open)
+static void draw_menu_col(struct pull_down_menu *m, int col, float x, float y, int current_row, int font, int is_open)
 {
 	int i, limit;
+	struct pull_down_menu_column *c = m->col[col];
 
 	if (is_open)
 		limit = c->nrows;
@@ -132,6 +134,9 @@ static void draw_menu_col(struct pull_down_menu_column *c, float x, float y, int
 
 	for (i = 0; i < limit; i++) {
 		struct pull_down_menu_item *r = &c->item[i];
+		sng_set_foreground(BLACK);
+		sng_current_draw_rectangle(1, x, y, c->width, font_lineheight[font] + 6);
+		sng_set_foreground(m->color);
 		sng_current_draw_line(x, y, x, y + font_lineheight[font] + 6);
 		sng_current_draw_line(x + c->width, y, x + c->width, y + font_lineheight[font] + 6);
 		if (i == 0 || i == limit - 1)
@@ -154,7 +159,7 @@ void pull_down_menu_draw(struct pull_down_menu *m)
 		return;
 	x = m->x;
 	for (i = 0; i < m->ncols; i++) {
-		draw_menu_col(m->col[i], x, m->y, m->current_row, m->font, m->current_col == i);
+		draw_menu_col(m, i, x, m->y, m->current_row, m->font, m->current_col == i);
 		x += m->col[i]->width;
 	}
 }
@@ -222,3 +227,9 @@ int pull_down_menu_button_press(struct pull_down_menu *m, int x, int y)
 	}
 	return 0;
 }
+
+void pull_down_menu_set_color(struct pull_down_menu *m, int color)
+{
+	m->color = color;
+}
+

@@ -13,5 +13,6 @@ int pull_down_menu_add_row(struct pull_down_menu *pdm, char *column, char *row, 
 int pull_down_menu_button_press(struct pull_down_menu *pdm, int x, int y);
 int pull_down_menu_inside(struct pull_down_menu *pdm, int physical_x, int physical_y);
 void pull_down_menu_update_mouse_pos(struct pull_down_menu *m, int physical_x, int physical_y);
+void pull_down_menu_set_color(struct pull_down_menu *m, int color);
 
 #endif
