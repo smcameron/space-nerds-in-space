@@ -6668,9 +6668,6 @@ static struct network_setup_ui {
 	char solarsystem[60];
 	char shipname[SHIPNAME_LEN];
 	char password[PASSWORD_LEN];
-#if 0
-	struct pull_down_menu *pdm;
-#endif
 } net_setup_ui;
 
 static int process_client_id_packet(void)
@@ -16976,17 +16973,6 @@ static void init_net_setup_ui(void)
 		snis_text_input_box_set_contents(net_setup_ui.shipname_box, preferred_shipname);
 		net_setup_ui.create_ship_v = 0;
 	}
-#if 0
-	net_setup_ui.pdm = create_pull_down_menu(NANO_FONT);
-	pull_down_menu_add_column(net_setup_ui.pdm, "FILE");
-	pull_down_menu_add_row(net_setup_ui.pdm, "FILE", "BLAH1", NULL);
-	pull_down_menu_add_row(net_setup_ui.pdm, "FILE", "BLAH2", NULL);
-	pull_down_menu_add_row(net_setup_ui.pdm, "FILE", "BLAH3", NULL);
-	pull_down_menu_add_column(net_setup_ui.pdm, "SUPERCALIFRAGILISTICEXPIALADOCIOUS");
-	pull_down_menu_add_row(net_setup_ui.pdm, "SUPERCALIFRAGILISTICEXPIALADOCIOUS", "BLAH1", NULL);
-	pull_down_menu_add_row(net_setup_ui.pdm, "SUPERCALIFRAGILISTICEXPIALADOCIOUS", "BLAH2", NULL);
-	pull_down_menu_add_row(net_setup_ui.pdm, "SUPERCALIFRAGILISTICEXPIALADOCIOUS", "BLAH3", NULL);
-#endif
 	ui_add_button(net_setup_ui.start_lobbyserver, DISPLAYMODE_NETWORK_SETUP,
 			"START THE LOBBY SERVER PROCESS");
 	ui_add_button(net_setup_ui.start_gameserver, DISPLAYMODE_NETWORK_SETUP,
@@ -16999,9 +16985,6 @@ static void init_net_setup_ui(void)
 	ui_add_text_input_box(net_setup_ui.solarsystemname, DISPLAYMODE_NETWORK_SETUP);
 	ui_add_text_input_box(net_setup_ui.shipname_box, DISPLAYMODE_NETWORK_SETUP);
 	ui_add_text_input_box(net_setup_ui.password_box, DISPLAYMODE_NETWORK_SETUP);
-#if 0
-	ui_add_pull_down_menu(net_setup_ui.pdm, DISPLAYMODE_NETWORK_SETUP);
-#endif
 } 
 
 static void show_network_setup(GtkWidget *w)
