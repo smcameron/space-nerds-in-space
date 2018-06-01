@@ -15934,6 +15934,7 @@ static void init_demon_ui()
 	pull_down_menu_add_row(demon_ui.menu, "CAPTAIN", "TOGGLE CAPTAIN ON/OFF", demon_captain_button_pressed);
 	pull_down_menu_add_row(demon_ui.menu, "CAPTAIN", "FIRE TORPEDO", demon_torpedo_button_pressed);
 	pull_down_menu_add_row(demon_ui.menu, "CAPTAIN", "FIRE PHASER", demon_phaser_button_pressed);
+	pull_down_menu_add_column(demon_ui.menu, "<-- THIS WHOLE MENU IS EXPERIMENTAL AND A LITTLE BUGGY");
 	ui_add_button(demon_ui.demon_exec_button, DISPLAYMODE_DEMON,
 			"EXECUTE THE ENTERED COMMAND");
 	ui_add_button(demon_ui.demon_home_button, DISPLAYMODE_DEMON,
