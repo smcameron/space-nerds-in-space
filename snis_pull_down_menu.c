@@ -221,11 +221,10 @@ int pull_down_menu_add_row(struct pull_down_menu *m, char *column, char *row, vo
 
 int pull_down_menu_button_press(struct pull_down_menu *m, int x, int y)
 {
-	struct pull_down_menu_item *col, *row;
+	struct pull_down_menu_item *row;
 
 	if (m->current_col >= 0 && m->current_col < m->ncols &&
 		m->current_row >= 0 && m->current_row < m->col[m->current_col]->nrows) {
-			col = &m->col[m->current_col]->item[0];
 			row = &m->col[m->current_col]->item[m->current_row];
 			if (row->func)
 				row->func(row->cookie);
