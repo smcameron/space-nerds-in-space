@@ -3128,6 +3128,7 @@ static struct demon_ui {
 	struct scaling_strip_chart *bytes_recd_strip_chart;
 	struct scaling_strip_chart *bytes_sent_strip_chart;
 	struct scaling_strip_chart *latency_strip_chart;
+	struct pull_down_menu *menu;
 	char input[100];
 	char error_msg[80];
 	double ix, iz, ix2, iz2;
@@ -15910,6 +15911,24 @@ static void init_demon_ui()
 		snis_scaling_strip_chart_init(txx(120), txy(265), txx(550.0), txy(100.0),
 				"LATENCY (ms)", "", UI_COLOR(science_graph_plot_strong),
 				UI_COLOR(common_red_alert), 200000.0, NANO_FONT, NETSTATS_SAMPLES);
+	demon_ui.menu = create_pull_down_menu(NANO_FONT);
+	pull_down_menu_add_column(demon_ui.menu, "META");
+	pull_down_menu_add_row(demon_ui.menu, "META", "HOME", NULL);
+	pull_down_menu_add_row(demon_ui.menu, "META", "2D/3D", NULL);
+	pull_down_menu_add_row(demon_ui.menu, "META", "NETSTATS", NULL);
+	pull_down_menu_add_column(demon_ui.menu, "ADD");
+	pull_down_menu_add_row(demon_ui.menu, "ADD", "SHIP", NULL);
+	pull_down_menu_add_row(demon_ui.menu, "ADD", "STARBASE", NULL);
+	pull_down_menu_add_row(demon_ui.menu, "ADD", "PLANET", NULL);
+	pull_down_menu_add_row(demon_ui.menu, "ADD", "BLACK HOLE", NULL);
+	pull_down_menu_add_row(demon_ui.menu, "ADD", "ASTEROID", NULL);
+	pull_down_menu_add_row(demon_ui.menu, "ADD", "SPACE MONSTER", NULL);
+	pull_down_menu_add_column(demon_ui.menu, "SELECTION");
+	pull_down_menu_add_row(demon_ui.menu, "SELECTION", "DELETE", NULL);
+	pull_down_menu_add_row(demon_ui.menu, "SELECTION", "SELECT NONE", NULL);
+	pull_down_menu_add_column(demon_ui.menu, "CAPTAIN");
+	pull_down_menu_add_row(demon_ui.menu, "CAPTAIN", "FIRE TORPEDO", NULL);
+	pull_down_menu_add_row(demon_ui.menu, "CAPTAIN", "FIRE PHASER", NULL);
 	ui_add_button(demon_ui.demon_exec_button, DISPLAYMODE_DEMON,
 			"EXECUTE THE ENTERED COMMAND");
 	ui_add_button(demon_ui.demon_home_button, DISPLAYMODE_DEMON,
@@ -15948,6 +15967,7 @@ static void init_demon_ui()
 			"DISPLAY GRAPHS OF NETWORK STATISTICS");
 	ui_add_button(demon_ui.demon_render_style_button, DISPLAYMODE_DEMON,
 			"TOGGLE RENDERING STYLE BETWEEN WIREFRAME AND SEMI-TRANSPARENT");
+	ui_add_pull_down_menu(demon_ui.menu, DISPLAYMODE_DEMON);
 	ui_hide_widget(demon_ui.demon_move_button);
 	ui_hide_widget(demon_ui.demon_scale_button);
 	ui_add_text_input_box(demon_ui.demon_input, DISPLAYMODE_DEMON);
