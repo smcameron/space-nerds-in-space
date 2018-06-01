@@ -9,7 +9,7 @@ struct pull_down_menu;
 struct pull_down_menu *create_pull_down_menu(int font);
 void pull_down_menu_draw(struct pull_down_menu *pdm);
 int pull_down_menu_add_column(struct pull_down_menu *pdm, char *column);
-int pull_down_menu_add_row(struct pull_down_menu *pdm, char *column, char *row, void (*func)(void *));
+int pull_down_menu_add_row(struct pull_down_menu *pdm, char *column, char *row, void (*func)(void *), void *cookie);
 int pull_down_menu_button_press(struct pull_down_menu *pdm, int x, int y);
 int pull_down_menu_inside(struct pull_down_menu *pdm, int physical_x, int physical_y);
 void pull_down_menu_update_mouse_pos(struct pull_down_menu *m, int physical_x, int physical_y);

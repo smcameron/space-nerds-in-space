@@ -10,6 +10,7 @@
 struct pull_down_menu_item {
 	char *name;
 	void (*func)(void *);
+	void *cookie;
 };
 
 struct pull_down_menu_column {
@@ -185,7 +186,7 @@ int pull_down_menu_add_column(struct pull_down_menu *m, char *column)
 	return 0;
 }
 
-int pull_down_menu_add_row(struct pull_down_menu *m, char *column, char *row, void (*func)(void *))
+int pull_down_menu_add_row(struct pull_down_menu *m, char *column, char *row, void (*func)(void *), void *cookie)
 {
 	int i;
 	if (!m)
@@ -206,6 +207,7 @@ int pull_down_menu_add_row(struct pull_down_menu *m, char *column, char *row, vo
 		r = &c->item[c->nrows];
 		r->name = strdup(row);
 		r->func = func;
+		r->cookie = cookie;
 		c->nrows++;
 		c->width = 0; /* So it will get recalculated */
 		return 0;
@@ -215,13 +217,15 @@ int pull_down_menu_add_row(struct pull_down_menu *m, char *column, char *row, vo
 
 int pull_down_menu_button_press(struct pull_down_menu *m, int x, int y)
 {
+	struct pull_down_menu_item *col, *row;
+
 	if (m->current_col >= 0 && m->current_col < m->ncols &&
 		m->current_row >= 0 && m->current_row < m->col[m->current_col]->nrows) {
-			printf("selected %s/%s\n", m->col[m->current_col]->item[0].name,
-					m->col[m->current_col]->item[m->current_row].name);
-			if (m->col[m->current_col]->item[m->current_row].func)
-				/* TODO: pass a cookie */
-				m->col[m->current_col]->item[m->current_row].func(NULL);
+			col = &m->col[m->current_col]->item[0];
+			row = &m->col[m->current_col]->item[m->current_row];
+			printf("selected %s/%s\n", col->name, row->name);
+			if (row->func)
+				row->func(row->cookie);
 			m->current_row = -1; /* deselect it */
 			m->current_col = -1;
 	}
