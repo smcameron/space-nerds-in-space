@@ -11,6 +11,8 @@ struct pull_down_menu_item {
 	char *name;
 	void (*func)(void *);
 	void *cookie;
+	int (*checkbox_function)(void *);
+	void *checkbox_cookie;
 };
 
 struct pull_down_menu_column {
@@ -114,7 +116,7 @@ static void update_menu_column_width(struct pull_down_menu_column *c, int font)
 		return;
 	for (i = 0; i < c->nrows; i++) {
 		sng_string_bounding_box(c->item[i].name, font, &x1, &y1, &x2, &y2);
-		if (fabsf(x2 - x1) + 10 > c->width)
+		if (fabsf(x2 - x1) + 10 + 20 * (c->item[i].checkbox_function != NULL) > c->width)
 			c->width = fabsf(x2 - x1) + 10;
 	}
 }
@@ -129,7 +131,7 @@ static void update_menu_widths(struct pull_down_menu *m)
 
 static void draw_menu_col(struct pull_down_menu *m, int col, float x, float y, int current_row, int font, int is_open)
 {
-	int i, limit;
+	int i, limit, cb, cbw;
 	struct pull_down_menu_column *c = m->col[col];
 
 	if (is_open)
@@ -139,6 +141,13 @@ static void draw_menu_col(struct pull_down_menu *m, int col, float x, float y, i
 
 	for (i = 0; i < limit; i++) {
 		struct pull_down_menu_item *r = &c->item[i];
+		if (r->checkbox_function) {
+			cb = r->checkbox_function(r->checkbox_cookie);
+			cbw = 20;
+		} else {
+			cb = 0;
+			cbw = 0;
+		}
 		sng_set_foreground(BLACK);
 		sng_current_draw_rectangle(1, x, y, c->width, font_lineheight[font] + 6);
 		sng_set_foreground(m->color);
@@ -147,10 +156,22 @@ static void draw_menu_col(struct pull_down_menu *m, int col, float x, float y, i
 		if (i == 0 || i == limit - 1)
 			sng_current_draw_line(x, y + font_lineheight[font] + 6,
 				x + c->width, y + font_lineheight[font] + 6);
+		if (cbw) {
+			float x1, y1, x2, y2;
+			x1 = x + 5;
+			x2 = x1 + 16;
+			y1 = y + 8;
+			y2 = y1 + 16;
+			sng_current_draw_rectangle(0, x1, y1, 16, 16);
+			if (cb) {
+				sng_current_draw_line(x1, y1, x2, y2);
+				sng_current_draw_line(x1, y2, x2, y1);
+			}
+		}
 		y = y + font_lineheight[font];
-		sng_abs_xy_draw_string(r->name, font, x + 4, y - 2);
+		sng_abs_xy_draw_string(r->name, font, x + 4 + cbw, y - 2);
 		if (i == current_row && is_open)
-			sng_abs_xy_draw_string(r->name, font, x + 5, y - 1);
+			sng_abs_xy_draw_string(r->name, font, x + 5 + cbw, y - 1);
 		y = y + 6;
 	}
 }
@@ -184,6 +205,8 @@ int pull_down_menu_add_column(struct pull_down_menu *m, char *column)
 	m->col[m->ncols] = c;
 	m->col[m->ncols]->item[0].name = strdup(column);
 	m->col[m->ncols]->item[0].func = NULL;
+	m->col[m->ncols]->item[0].checkbox_function = NULL;
+	m->col[m->ncols]->item[0].checkbox_cookie = NULL;
 	c->nrows = 1;
 	c->width = 0; /* So it will get recalculated */
 	m->ncols++;
@@ -211,6 +234,8 @@ int pull_down_menu_add_row(struct pull_down_menu *m, char *column, char *row, vo
 		r = &c->item[c->nrows];
 		r->name = strdup(row);
 		r->func = func;
+		r->checkbox_function = NULL;
+		r->checkbox_cookie = NULL;
 		r->cookie = cookie;
 		c->nrows++;
 		c->width = 0; /* So it will get recalculated */
@@ -239,3 +264,40 @@ void pull_down_menu_set_color(struct pull_down_menu *m, int color)
 	m->color = color;
 }
 
+static struct pull_down_menu_item *find_menu_item(struct pull_down_menu *m, char *column, char *row)
+{
+	int i;
+	struct pull_down_menu_column *c;
+
+	for (i = 0; i < m->ncols; i++) {
+		c = m->col[i];
+		if (!c) {
+			fprintf(stderr, "BUG detected at %s:%d, m->col[%d] is NULL but m->ncols is %d\n",
+				__FILE__, __LINE__, i, m->ncols);
+			continue;
+		}
+		if (strcmp(c->item[0].name, column) == 0)
+			goto found_column;
+	}
+	return NULL;
+
+found_column:
+	for (i = 1; i < c->nrows; i++) {
+		if (strcmp(c->item[i].name, row) == 0)
+			return &c->item[i];
+	}
+	return NULL;
+}
+
+void pull_down_menu_set_checkbox_function(struct pull_down_menu *m, char *column, char *row,
+						int (*checkbox_function)(void *cookie), void *cookie)
+{
+	struct pull_down_menu_item *r;
+
+	r = find_menu_item(m, column, row);
+	if (!r)
+		return;
+	r->checkbox_function = checkbox_function;
+	r->checkbox_cookie = cookie;
+	update_menu_widths(m);
+}
