@@ -15,7 +15,7 @@ static int default_button_sound = -1;
 
 struct button {
 	int x, y, width, height;
-	char label[20];
+	char label[80];
 	int enabled;
 	int color;
 	int disabled_color;

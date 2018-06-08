@@ -6654,6 +6654,9 @@ static struct network_setup_ui {
 	struct button *role_text_to_speech;
 	struct button *join_ship_checkbox;
 	struct button *create_ship_checkbox;
+	struct button *support_button;
+	struct button *website_button;
+	struct button *forum_button;
 	int role_main_v;
 	int role_nav_v;
 	int role_weap_v;
@@ -16840,6 +16843,22 @@ static void connect_to_lobby_button_pressed()
 	connect_to_lobby();
 }
 
+static void browser_button_pressed(void *v)
+{
+	int rc;
+	char *site = v;
+	char cmd[1000];
+
+	sprintf(cmd, "google-chrome %s &", site);
+	rc = system(cmd);
+	if (rc == 0)
+		return;
+	sprintf(cmd, "firefox %s &", site);
+	rc = system(cmd);
+	if (rc == 0)
+		return;
+}
+
 static struct button *init_net_checkbox_button(int x, int *y, char *txt, int *value,
 			button_function bf, void *cookie)
 {
@@ -16984,9 +17003,21 @@ static void init_net_setup_ui(void)
 					net_setup_ui.password, sizeof(net_setup_ui.password), &timer,
 					password_entered, NULL);
 	y += yinc;
-	net_setup_ui.connect_to_lobby = 
+	net_setup_ui.connect_to_lobby =
 		snis_button_init(left, y, -1, -1, "CONNECT TO LOBBY", inactive_button_color,
 			TINY_FONT, connect_to_lobby_button_pressed, NULL);
+	net_setup_ui.website_button =
+		snis_button_init(left + txx(300), y, -1, -1, "WEBSITE",
+			active_button_color,
+			TINY_FONT, browser_button_pressed, "http://spacenerdsinspace.com");
+	net_setup_ui.forum_button =
+		snis_button_init(left + txx(400), y, -1, -1, "FORUM",
+			active_button_color,
+			TINY_FONT, browser_button_pressed, "http://spacenerdsinspace.com/forum.html");
+	net_setup_ui.support_button =
+		snis_button_init(left + txx(500), y, -1, -1, "DONATE",
+			active_button_color,
+			TINY_FONT, browser_button_pressed, "http://spacenerdsinspace.com/donate.html");
 	init_net_role_buttons(&net_setup_ui);
 	init_join_create_buttons(&net_setup_ui);
 	snis_prefs_read_checkbox_defaults(&net_setup_ui.role_main_v, &net_setup_ui.role_nav_v,
@@ -17006,6 +17037,12 @@ static void init_net_setup_ui(void)
 			"START THE GAME SERVER PROCESS");
 	ui_add_button(net_setup_ui.connect_to_lobby, DISPLAYMODE_NETWORK_SETUP,
 			"CONNECT TO THE LOBBY SERVER");
+	ui_add_button(net_setup_ui.website_button, DISPLAYMODE_NETWORK_SETUP,
+			"SPACE NERDS IN SPACE WEBSITE");
+	ui_add_button(net_setup_ui.forum_button, DISPLAYMODE_NETWORK_SETUP,
+			"SPACE NERDS IN SPACE FORUM ON BRIDGESIM.NET");
+	ui_add_button(net_setup_ui.support_button, DISPLAYMODE_NETWORK_SETUP,
+			"HELP SUPPORT SPACE NERDS IN SPACE DEVELOPMENT");
 
 	/* note: the order of these is important for TAB key focus advance */
 	ui_add_text_input_box(net_setup_ui.lobbyservername, DISPLAYMODE_NETWORK_SETUP);
