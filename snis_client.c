@@ -11799,7 +11799,7 @@ static void show_navigation(GtkWidget *w)
 	quat_to_euler(&ypr, &o->orientation);	
 	sng_set_foreground(UI_COLOR(nav_text));
 	draw_nav_idiot_lights(w, gc, o);
-	draw_orientation_trident(w, gc, o, 75, 200, 75);
+	draw_orientation_trident(w, gc, o, txx(31), txy(111), txx(31));
 	switch (o->tsd.ship.nav_mode) {
 	case NAV_MODE_STARMAP:
 		draw_3d_nav_starmap(w, gc);
