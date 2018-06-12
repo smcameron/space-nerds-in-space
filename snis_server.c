@@ -1877,7 +1877,8 @@ static void send_comms_packet_to_all_clients(struct snis_entity *transmitter,
 		if (!(c->role & roles))
 			continue;
 
-		if (c->shipid != transmitter->id) {
+		/* transmitter may be null (e.g. from LUA script) */
+		if (transmitter && c->shipid != transmitter->id) {
 			float strength = comms_transmission_strength(transmitter, &go[c->ship_index]);
 			if (strength < COMMS_TRANSMISSION_STRENGTH_THRESHOLD) /* TODO: something better here */
 				continue;
@@ -1952,6 +1953,7 @@ static void send_comms_packet_to_all_bridges_on_channel(struct snis_entity *tran
 		if (bridgelist[c->bridge].comms_channel != channel)
 			continue;
 
+		/* transmitter may be null (e.g. LUA script) */
 		if (transmitter && c->shipid != transmitter->id) {
 			strength = comms_transmission_strength(transmitter, &go[c->ship_index]);
 			if (strength <= 0.05)  /* Too weak, drop the message */
