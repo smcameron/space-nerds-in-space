@@ -15,6 +15,9 @@ function main_menu_callback(shipid, selection)
 		text_to_speech(player_ids[1], "Begin mission, space pox");
 		enqueue_lua_script("SPACEPOX.LUA");
 	elseif (selection == 3) then
+		text_to_speech(player_ids[1], "Begin mission, kali");
+		enqueue_lua_script("KALI.LUA");
+	elseif (selection == 4) then
 		text_to_speech(player_ids[1], "Begin mission, demolisher");
 		enqueue_lua_script("DEMOLISHER.LUA");
 	end
@@ -25,6 +28,7 @@ show_menu(player_ids[1],
 		"TRAINING MISSION 1\n" ..
 		"SAVING PLANET ERPH\n" ..
 		"SPACE POX\n" ..
+		"KALI\n" ..
 		"DEMOLISHER\n",
 		"main_menu_callback");
 
