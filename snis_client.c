@@ -13391,7 +13391,7 @@ static void init_comms_ui(void)
 	comms_ui.mainscreen_comms = snis_button_init(x, y, -1, bh, "MAIN SCREEN", button_color,
 			NANO_FONT, comms_main_screen_pressed, NULL);
 	snis_button_set_sound(comms_ui.mainscreen_comms, UISND17);
-	comms_ui.tw = text_window_init(txx(10), txy(70), SCREEN_WIDTH - txx(20), 300, 20, text_color);
+	comms_ui.tw = text_window_init(txx(10), txy(70), SCREEN_WIDTH - txx(20), 300, 17, text_color);
 	comms_ui.comms_input = snis_text_input_box_init(txx(10), txy(520), txy(30), txx(550),
 					text_color, TINY_FONT,
 					comms_ui.input, 50, &timer,

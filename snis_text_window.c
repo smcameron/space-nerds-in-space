@@ -76,7 +76,7 @@ struct text_window *text_window_init(int x, int y, int w,
 		tw->text[i] = malloc(80);
 		memset(tw->text[i], 0, 80);
 	}
-	tw->lineheight = 20;
+	tw->lineheight = font_lineheight[NANO_FONT];
 	tw->thumb_pos = 0;
 	tw->first_entry = 0;
 	tw->last_entry = 0;
