@@ -1507,6 +1507,15 @@ portaudio thinks pulse is according to snis_test_audio output}  (You can install
 <cmd>pulse</cmd> and <cmd>pavucontrol</cmd> if they aren't installed and
 see if that helps.  The <cmd>pavucontrol</cmd> program should let you dynamically
 control to which device a running program's sound output is directed.
+<p>Note: I have seen the sound get stuck on a per-program basis to a particular
+audio device. For example, I used the "Sound Settings..." to set the audio output
+to HDMI for Space Nerds In Space. Later, I disconnected the HDMI cable. The sound
+output remained stuck to HDMI, however, since there was no HDMI cable plugged in,
+the HDMI interface doesn't even show up in the Sound Settings. However other programs
+which used portaudio (e.g. Word War Vi) continued to work just fine. I was able to
+fix this using pavucontrol (which is will show the HDMI sound interface even if no HDMI
+cable is connected), or by manually using the SNIS_AUDIO_DEVICE environment
+variable to override the default.
 <hr>
 <li><b><a name="crashing">The game is crashing!  What can I do?</a></b>
 <p>Suppose you see something like this ("Segmentation fault"):
