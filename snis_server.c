@@ -9695,8 +9695,10 @@ static void init_player(struct snis_entity *o, int clear_cargo_bay, float *charg
 	if (o->tsd.ship.warp_core_status != WARP_CORE_STATUS_GOOD)
 		money += WARP_CORE_COST;
 	o->tsd.ship.warp_core_status = WARP_CORE_STATUS_GOOD;
-	bridgelist[b].warp_core_critical = 0;
-	strcpy(bridgelist[b].last_text_to_speech, "");
+	if (b >= 0) { /* On first joining, ship won't have a bridge yet. */
+		bridgelist[b].warp_core_critical = 0;
+		strcpy(bridgelist[b].last_text_to_speech, "");
+	}
 	quat_init_axis(&o->tsd.ship.computer_desired_orientation, 0, 1, 0, 0);
 	o->tsd.ship.computer_steering_time_left = 0;
 	if (clear_cargo_bay) {
