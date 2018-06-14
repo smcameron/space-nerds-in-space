@@ -163,6 +163,9 @@ EVENT TYPES in snis:
 	"player-wormhole-travel-event"
 		Arguments are id of player ship, x, y, z coordinates of departed location,
 		x, y, z coordinates of arriving location, and equivalent warp factor.
+	"cargo-container-acquired-event"
+		Arguments are id of player ship, commodity index, and
+		commodity quantity. (See get_commodity_name(), get_commodity_units(), below.)
 
 Functions which you may call from lua: 
 

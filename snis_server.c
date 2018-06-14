@@ -7467,6 +7467,11 @@ static void scoop_up_cargo(struct snis_entity *player, struct snis_entity *cargo
 			delete_from_clients_and_server(cargo);
 			snis_queue_add_sound(TRANSPORTER_SOUND,
 					ROLE_SOUNDSERVER, player->id);
+			schedule_callback3(event_callback, &callback_schedule,
+					"cargo-container-acquired-event",
+					(double) player->id,
+					(double) player->tsd.ship.cargo[i].contents.item,
+					(double) player->tsd.ship.cargo[i].contents.qty);
 			break;
 		}
 }
