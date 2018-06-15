@@ -58,8 +58,11 @@ function greetings(cookie)
 	comms_transmission(sb1, ": 4. " .. sb4_name);
 	comms_transmission(sb1, ": FINALLY, RETURN TO " .. sb1_name .. " AND DOCK");
 	comms_transmission(sb1, ": ");
-	comms_transmission(sb1, ": -- IMPORTANT-- TO DOCK: MOVE CLOSE TO STARBASE THEN");
-	comms_transmission(sb1, ": -- TYPE 'dock' ON THE COMMS SCREEN");
+	comms_transmission(sb1, ": -- IMPORTANT-- TO DOCK: ");
+	comms_transmission(sb1, ": 1. LOWER SHIELDS");
+	comms_transmission(sb1, ": 2. ENGAGE DOCKING MAGNETS");
+	comms_transmission(sb1, ": 3. HAIL STARBASE AND REQUEST PERMISSION TO DOCk");
+	comms_transmission(sb1, ": 4. RAM A DOCKING PORT ON THE STATION");
 	comms_transmission(sb1, ": ");
 	comms_transmission(sb1, ": GOOD LUCK...");
 	show_timed_text(player_ids[1], 10,
