@@ -16481,11 +16481,11 @@ static int process_mainscreen_view_mode(struct game_client *c)
 	rc = read_and_unpack_buffer(c, buffer, "Rb", &view_angle, &view_mode);
 	if (rc)
 		return rc;
-	/* Rebuild packet and send to all clients with main screen role */
+	/* Rebuild packet and send to all clients with main screen, nav or weapons roles */
 	send_packet_to_all_clients_on_a_bridge(c->shipid, 
 			snis_opcode_pkt("bRb", OPCODE_MAINSCREEN_VIEW_MODE,
 					view_angle, view_mode),
-			ROLE_MAIN);
+			ROLE_MAIN | ROLE_WEAPONS | ROLE_NAVIGATION);
 	return 0;
 }
 
