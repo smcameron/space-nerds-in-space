@@ -176,6 +176,12 @@ char *keyactionstring[] = {
 	"key_toggle_credits",
 	"key_toggle_watermark",
 	"key_mouse_mode",
+	"key_sci_mining_bot",
+	"key_sci_tractor_beam",
+	"key_sci_waypoints",
+	"key_sci_lrs",
+	"key_sci_srs",
+	"key_sci_details",
 };
 
 void init_keymap()
@@ -243,6 +249,12 @@ void init_keymap()
 	keymap[GDK_KEY_plus] = keyzoom;
 	keymap[GDK_KEY_equal] = keyzoom;
 	keymap[GDK_KEY_minus] = keyunzoom;
+	keymap[GDK_KEY_m] = key_sci_mining_bot;
+	keymap[GDK_KEY_t] = key_sci_tractor_beam;
+	keymap[GDK_KEY_l] = key_sci_lrs;
+	keymap[GDK_KEY_s] = key_sci_srs;
+	keymap[GDK_KEY_w] = key_sci_waypoints;
+	keymap[GDK_KEY_d] = key_sci_details;
 	ffkeymap[GDK_KEY_KP_Add & 0x00ff] = keyzoom;
 	ffkeymap[GDK_KEY_KP_Subtract & 0x00ff] = keyunzoom;
 

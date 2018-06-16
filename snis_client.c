@@ -3775,6 +3775,12 @@ static void do_zoom(int z)
 
 static void do_pageup(void);
 static void do_pagedown(void);
+static void sci_mining_bot_pressed(void *x);
+static void sci_tractor_pressed(void *x);
+static void sci_threed_pressed(void *x);
+static void sci_sciplane_pressed(void *x);
+static void sci_waypoints_pressed(void *x);
+static void sci_details_pressed(void *x);
 
 static void deal_with_keyboard()
 {
@@ -3834,6 +3840,20 @@ static void deal_with_keyboard()
 		sbh = -1;
 	if (kbstate.pressed[keysciball_yawright])
 		sbh = +1;
+	if (displaymode == DISPLAYMODE_SCIENCE) {
+		if (kbstate.pressed[key_sci_mining_bot])
+			sci_mining_bot_pressed(NULL);
+		if (kbstate.pressed[key_sci_tractor_beam])
+			sci_tractor_pressed(NULL);
+		if (kbstate.pressed[key_sci_lrs])
+			sci_threed_pressed(NULL);
+		if (kbstate.pressed[key_sci_srs])
+			sci_sciplane_pressed(NULL);
+		if (kbstate.pressed[key_sci_waypoints])
+			sci_waypoints_pressed(NULL);
+		if (kbstate.pressed[key_sci_details])
+			sci_details_pressed(NULL);
+	}
 
 	if (sbh || sbv || sbr)
 		do_sciball_dirkey(sbh, sbv, sbr);

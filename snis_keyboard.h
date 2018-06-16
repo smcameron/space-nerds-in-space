@@ -47,7 +47,13 @@ enum keyaction {
 		key_toggle_credits = 42,
 		key_toggle_watermark = 43,
 		key_mouse_mode = 44,
-#define NKEYSTATES 45
+		key_sci_mining_bot = 45,
+		key_sci_tractor_beam = 46,
+		key_sci_waypoints = 47,
+		key_sci_lrs = 48,
+		key_sci_srs = 49,
+		key_sci_details = 50,
+#define NKEYSTATES 51
 };
 
 struct keyboard_state {
