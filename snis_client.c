@@ -7400,6 +7400,12 @@ static void show_connected_screen(GtkWidget *w)
 	sng_abs_xy_draw_string("DOWNLOADING GAME DATA", SMALL_FONT, txx(100), txy(300) + LINEHEIGHT * 3);
 }
 
+static void show_info_message(GtkWidget *w, char *msg)
+{
+	sng_set_foreground(UI_COLOR(lobby_connecting));
+	sng_abs_xy_draw_string(msg, SMALL_FONT, txx(100), txy(300) + LINEHEIGHT * 3);
+}
+
 static char *credits_text[] = {
 	"S P A C E   N E R D S   I N   S P A C E",
 	"",
@@ -17507,6 +17513,7 @@ static void draw_quit_screen(GtkWidget *w)
 static int main_da_expose(GtkWidget *w, GdkEvent *event, gpointer p)
 {
 	static double last_frame_time = 0;
+	static int how_long_to_wait = 30 * 4; /* 4 seconds */
 	static int frame_index = 0;
 	static float frame_rates[FRAME_INDEX_MAX];
 	static float frame_times[FRAME_INDEX_MAX];
@@ -17551,8 +17558,24 @@ static int main_da_expose(GtkWidget *w, GdkEvent *event, gpointer p)
 	}
 
 	if (displaymode < DISPLAYMODE_FONTTEST) {
-		if (!(o = find_my_ship()))
+		if (!(o = find_my_ship())) {
+			char msg[100];
+			if (how_long_to_wait > 0) {
+				snprintf(msg, sizeof(msg) - 1,
+						"PREPARE FOR THE JUMP TO LIGHTSPEED, SPACE NERD");
+				how_long_to_wait--;
+			}
+			if (how_long_to_wait == 0) {
+				snprintf(msg, sizeof(msg) - 1,
+						"ERROR: CANNOT FIND POINTER TO PLAYER SHIP, SORRY!");
+			}
+			show_info_message(w, msg);
+			if (in_the_process_of_quitting)
+				draw_quit_screen(w);
 			goto end_of_drawing;
+		} else {
+			how_long_to_wait = 30 * 4; /* 4 seconds */
+		}
 		if (o->alive <= 0 && displaymode != DISPLAYMODE_DEMON) {
 			red_alert_mode = 0;
 			show_death_screen(w);
