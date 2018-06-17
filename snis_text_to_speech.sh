@@ -32,6 +32,11 @@ echo "snis_text_to_speech.sh $1" 1>&2
 
 export SNISTTSLOCKDIR=/tmp/snisttslockdir
 
+if [ "${SNIS_TTS_VOLUME}" = "" ]
+then
+	SNIS_TTS_VOLUME="0.33"
+fi
+
 check_presence()
 {
 	program="$1"
@@ -126,7 +131,7 @@ do_text_to_speech()
 	get_lock
 	tmpfile=/tmp/tts-$$.wav
 	pico2wave -l=en-GB -w "$tmpfile" "$1" || espeak "$1"
-	play -q --volume 0.33 "$tmpfile" > /dev/null 2>&1 || aplay "$tmpfile" > /dev/null 2>&1
+	play -q --volume "${SNIS_TTS_VOLUME}" "$tmpfile" > /dev/null 2>&1 || aplay "$tmpfile" > /dev/null 2>&1
 	# mplayer /tmp/x.wav
 	/bin/rm -f "$tmpfile"
 }
