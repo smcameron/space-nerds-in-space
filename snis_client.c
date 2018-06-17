@@ -3958,9 +3958,10 @@ static gint key_press_cb(GtkWidget* widget, GdkEventKey* event, gpointer data)
 			do_nav_camera_mode();
 		break;
 	case keyf1:
-		helpmode = 1;
+		helpmode = !helpmode;
 		break;
 	case keyf2:
+		helpmode = 0;
 		if (displaymode >= DISPLAYMODE_FONTTEST)
 			break;
 		if (role & ROLE_NAVIGATION) {
@@ -3969,6 +3970,7 @@ static gint key_press_cb(GtkWidget* widget, GdkEventKey* event, gpointer data)
 		}
 		break;
 	case keyf3:
+		helpmode = 0;
 		if (displaymode >= DISPLAYMODE_FONTTEST)
 			break;
 		if (role & ROLE_WEAPONS) {
@@ -3977,6 +3979,7 @@ static gint key_press_cb(GtkWidget* widget, GdkEventKey* event, gpointer data)
 		}
 		break;
 	case keyf4:
+		helpmode = 0;
 		if (displaymode >= DISPLAYMODE_FONTTEST)
 			break;
 		if (role & ROLE_ENGINEERING) {
@@ -3985,6 +3988,7 @@ static gint key_press_cb(GtkWidget* widget, GdkEventKey* event, gpointer data)
 		}
 		break;
 	case keyf5:
+		helpmode = 0;
 		if (displaymode >= DISPLAYMODE_FONTTEST)
 			break;
 		if (role & ROLE_DAMCON) {
@@ -3993,6 +3997,7 @@ static gint key_press_cb(GtkWidget* widget, GdkEventKey* event, gpointer data)
 		}
 		break;
 	case keyf6:
+		helpmode = 0;
 		if (displaymode >= DISPLAYMODE_FONTTEST)
 			break;
 		if (role & ROLE_SCIENCE) {
@@ -4001,6 +4006,7 @@ static gint key_press_cb(GtkWidget* widget, GdkEventKey* event, gpointer data)
 		}
 		break;
 	case keyf7:
+		helpmode = 0;
 		if (displaymode >= DISPLAYMODE_FONTTEST)
 			break;
 		if (role & ROLE_COMMS) {
@@ -4009,6 +4015,7 @@ static gint key_press_cb(GtkWidget* widget, GdkEventKey* event, gpointer data)
 		}
 		break;
 	case keyf8:
+		helpmode = 0;
 		if (displaymode >= DISPLAYMODE_FONTTEST)
 			break;
 		if (role & ROLE_MAIN) {
@@ -4017,6 +4024,7 @@ static gint key_press_cb(GtkWidget* widget, GdkEventKey* event, gpointer data)
 		}
 		break;
 	case keyf9:
+		helpmode = 0;
 		if (displaymode >= DISPLAYMODE_FONTTEST)
 			break;
 		if (role & ROLE_DEMON) {
@@ -17226,7 +17234,7 @@ static char *help_text[] = {
 	"  * 'f' TOGGLES SPACE DUST EFFECT\n"
 	"  * CTRL-C TOGGLES CREDITS SCREEN\n"
 	"  * CTRL-R CYCLES RENDER MODES (FOR DEBUGGING ONLY)\n"
-	"\nPRESS ESC TO EXIT HELP\n",
+	"\nPRESS ESC OR F1 AGAIN TO EXIT HELP\n",
 
 	/* 1 - Navigation help text */
 	"NAVIGATION HELP\n\n"
@@ -17255,7 +17263,7 @@ static char *help_text[] = {
 	"        AND MUST BE REQUESTED AGAIN TO RE-DOCK.\n\n"
 	"  GREEN ARROW INDICATES DIRECTION OF SCIENCE SELECTION.\n\n"
 	"  CYAN ARROW INDICATES DIRECTION WEAPONS ARE AIMED.\n\n"
-	"\nPRESS ESC TO EXIT HELP\n",
+	"\nPRESS ESC OR F1 AGAIN TO EXIT HELP\n",
 
 	/* 2 - Weapons help text */
 	"WEAPONS HELP\n\n"
@@ -17272,7 +17280,7 @@ static char *help_text[] = {
 	"  * CTRL-I INVERTS VERTICAL KEYBOARD CONTROLS\n"
 	"  * CTRL-M TOGGLE WEAPONS MOUSE BEHAVIOR\n"
 	"  * CTRL-S TOGGLES SPACE DUST EFFECT\n"
-	"\nPRESS ESC TO EXIT HELP\n",
+	"\nPRESS ESC OR F1 AGAIN TO EXIT HELP\n",
 
 	/* 3 - Engineering help text */
 	"ENGINEERING HELP\n\n"
@@ -17290,7 +17298,7 @@ static char *help_text[] = {
 	"  * LIFE SUPPORT SYSTEM PRODUCES OXYGEN\n"
 	"  * IF OXYGEN LEVELS REACH ZERO, CREW ASPHYXIATES\n"
 	"  * IF SHIELDS ARE DESTROYED, SHIP IS DESTROYED\n"
-	"\nPRESS ESC TO EXIT HELP\n",
+	"\nPRESS ESC OR F1 AGAIN TO EXIT HELP\n",
 
 	/* 4 - Science help text */
 	"SCIENCE HELP\n\n"
@@ -17314,7 +17322,7 @@ static char *help_text[] = {
 	"       SELECT A NEARBY TARGET AND ENGAGE THE TRACTOR BEAM TO DRAW\n"
 	"       THE TARGET TOWARDS THE SHIP\n"
 	"  * SET WAYPOINTS TO AID NAVIGATION\n"
-	"\nPRESS ESC TO EXIT HELP\n",
+	"\nPRESS ESC OR F1 AGAIN TO EXIT HELP\n",
 
 
 	/* 5 - Comms help text */
@@ -17332,7 +17340,7 @@ static char *help_text[] = {
 	"  * /channel channel-number - change current channel\n"
 	"  * /computer <english request for computer>\n"
 	"  * /hail ship-name - hail ship on current channel\n"
-	"\nPRESS ESC TO EXIT HELP\n",
+	"\nPRESS ESC OR F1 AGAIN TO EXIT HELP\n",
 
 	/* 6 - Demon screen help text */
 	"DEMON SCREEN HELP\n\n"
@@ -17353,7 +17361,7 @@ static char *help_text[] = {
 	"  USE PHASER AND TORPEDO BUTTONS WHILE\n"
 	"  \"CAPTAINING SHIPS.\n"
 	"* USE \"HELP\" COMMAND IN TEXT BOX FOR MORE INFO\n"
-	"\nPRESS ESC TO EXIT HELP\n",
+	"\nPRESS ESC TO OR F1 AGAIN EXIT HELP\n",
 
 	/* 7 - Damage control help text */
 	"DAMAGE CONTROL HELP\n"
@@ -17365,18 +17373,18 @@ static char *help_text[] = {
 	"       * USE REPAIR STATION TO REPAIR BADLY DAMAGED MODULES\n"
 	"    * AUTOMATIC CONTROL\n"
 	"       * SELECT AUTO TO ALLOW THE ROBOT TO CONTROL ITSELF\n"
-	"\nPRESS ESC TO EXIT HELP\n",
+	"\nPRESS ESC OR F1 AGAIN TO EXIT HELP\n",
 
 	/* 8 - Fonttest */
 	"\nFONT TEST SCREEN HELP\n"
 	"ABCDEFGHIJKLMNOPQRSTUVWXYZ\n"
 	"abcdefghijklmnopqrstuvwxyz\n"
 	"0123456789\n"
-	"\nPRESS ESC TO EXIT HELP\n",
+	"\nPRESS ESC OR F1 AGAIN TO EXIT HELP\n",
 
 	/* 9 - Intro Screen */
 	"\nINTRO SCREEN HELP\n"
-	"\nPRESS ESC TO EXIT HELP\n",
+	"\nPRESS ESC OR F1 AGAIN TO EXIT HELP\n",
 
 	/* 10 - Lobby screen */
 	"\nLOBBY SCREEN HELP\n\n"
@@ -17386,15 +17394,15 @@ static char *help_text[] = {
 	"      BUTTON TO CONNECT TO THE SERVER.\n\n"
 	" * CLICK ON THE CANCEL BUTTON TO RETURN TO\n"
 	"   THE NETWORK SETUP SCREEN.\n\n"
-	"\nPRESS ESC TO EXIT HELP\n",
+	"\nPRESS ESC OR F1 AGAIN TO EXIT HELP\n",
 
 	/* 11 - Connecting screen */
 	"\nCONNECTING SCREEN HELP\n"
-	"\nPRESS ESC TO EXIT HELP\n",
+	"\nPRESS ESC OR F1 AGAIN TO EXIT HELP\n",
 
 	/* 12 - Connected screen */
 	"\nCONNECTED SCREEN HELP\n"
-	"\nPRESS ESC TO EXIT HELP\n",
+	"\nPRESS ESC OR F1 AGAIN TO EXIT HELP\n",
 
 	/* 13 - Network Setup screen */
 	"\nNETWORK SETUP SCREEN HELP\n\n"
@@ -17431,7 +17439,7 @@ static char *help_text[] = {
 	"     ENTER THE NAME OF YOUR SHIP AND PASSWORD FOR YOUR SHIP\n"
 	"* CONNECT TO LOBBY\n"
 	"     PRESS THE CONNECT TO LOBBY BUTTON TO CONNECT TO THE LOBBY\n"
-	"\nPRESS ESC TO EXIT HELP\n",
+	"\nPRESS ESC OR F1 AGAIN TO EXIT HELP\n",
 };
 
 static void draw_help_text(GtkWidget *w, char *text)
