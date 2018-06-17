@@ -6043,6 +6043,8 @@ static void do_text_to_speech(char *text)
 	char bindir[PATH_MAX];
 	struct stat statbuf;
 	int rc;
+	static char last_speech[1000] = { 0 };
+	static int last_time = { 0 };
 
 	/* This is all a little gross... */
 
@@ -6066,6 +6068,17 @@ static void do_text_to_speech(char *text)
 	}
 	remove_single_quotes(text);
 	fixed_text = fix_pronunciation(text);
+
+	/* Suppress temporally proximate duplicate speech requests */
+	if (timer - last_time < FRAME_RATE_HZ * 6
+		&& strncmp(fixed_text, last_speech, sizeof(last_speech) - 1) == 0) {
+		free(fixed_text);
+		return;
+	}
+
+	strncpy(last_speech, fixed_text, sizeof(last_speech) - 1);
+	last_time = timer;
+
 	snprintf(command, sizeof(command), "%s/snis_text_to_speech.sh '%s'", bindir, fixed_text);
 	free(fixed_text);
 	rc = system(command);
