@@ -7085,10 +7085,10 @@ static void *gameserver_reader(__attribute__((unused)) void *arg)
 					"snis_client: failed to add player: ship does not exist\n");
 				break;
 			case ADD_PLAYER_ERROR_SHIP_ALREADY_EXISTS:
-				printf("snis_client: failed to add player: ship already exists\n");
+				fprintf(stderr, "snis_client: failed to add player: ship already exists\n");
 				break;
 			default:
-				printf("snis_client: failed to add player: unknown error %d\n",
+				fprintf(stderr, "snis_client: failed to add player: unknown error %d\n",
 					add_player_error);
 				goto protocol_error;
 			}
@@ -7107,10 +7107,10 @@ static void *gameserver_reader(__attribute__((unused)) void *arg)
 	}
 
 protocol_error:
-	printf("snis_client: Protocol error in gameserver reader, opcode = %hu\n", opcode);
+	fprintf(stderr, "snis_client: Protocol error in gameserver reader, opcode = %hu\n", opcode);
 	snis_print_last_buffer("snis_client: ", gameserver_sock);
-	printf("snis_client: last opcode was %hhu, before that %hhu\n", last_opcode, previous_opcode);
-	printf("snis_client: total successful opcodes = %u\n", successful_opcodes);
+	fprintf(stderr, "snis_client: last opcode was %hhu, before that %hhu\n", last_opcode, previous_opcode);
+	fprintf(stderr, "snis_client: total successful opcodes = %u\n", successful_opcodes);
 	close(gameserver_sock);
 	gameserver_sock = -1;
 	return NULL;

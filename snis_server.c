@@ -25178,9 +25178,9 @@ static void servers_changed_cb(void *cookie)
 	uint16_t port = -1;
 	int found_multiverse_server = 0;
 
-	fprintf(stderr, "%s: servers_changed_cb zzz\n", logprefix());
+	fprintf(stderr, "%s: servers_changed_cb\n", logprefix());
 	if (!multiverse_server) {
-		fprintf(stderr, "%s: multiverse_server not set zzz\n", logprefix());
+		fprintf(stderr, "%s: multiverse_server not set\n", logprefix());
 		return;
 	}
 
@@ -25236,7 +25236,7 @@ static void servers_changed_cb(void *cookie)
 	}
 
 	if (same_as_before) {
-		fprintf(stderr, "%s: multiverse servers same as before zzz\n", logprefix());
+		fprintf(stderr, "%s: multiverse servers same as before\n", logprefix());
 		pthread_mutex_unlock(&multiverse_server->queue_mutex);
 		free(gameserver);
 		return;

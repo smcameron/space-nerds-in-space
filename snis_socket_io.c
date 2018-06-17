@@ -157,9 +157,9 @@ void snis_print_last_buffer(char *title, int socket)
 	if (socket >= MAX_DEBUGGABLE_SOCKETS)
 		return;
 
-	printf("%s: Last buffer length read from socket %d was %d\n%s: ", title, socket,
+	fprintf(stderr, "%s: Last buffer length read from socket %d was %d\n%s: ", title, socket,
 			dbgbuf[socket]->len, title);
 	for (i = 0; i < dbgbuf[socket]->len; i++)
-		printf("%02x ", dbgbuf[socket]->buf[i]);
-	printf("\n");
+		fprintf(stderr, "%02x ", dbgbuf[socket]->buf[i]);
+	fprintf(stderr, "\n");
 }
