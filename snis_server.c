@@ -9146,6 +9146,16 @@ static void starbase_update_docking_ports(struct snis_entity *o)
 	}
 }
 
+static uint32_t docking_port_resident(uint32_t docking_port_id)
+{
+	int i;
+
+	i = lookup_by_id(docking_port_id);
+	if (i < 0)
+		return (uint32_t) -1;
+	return go[i].tsd.docking_port.docked_guy;
+}
+
 static void starbase_move(struct snis_entity *o)
 {
 	char buf[100], location[50];
@@ -9263,6 +9273,8 @@ static void starbase_move(struct snis_entity *o)
 			if (bn < 0)
 				continue;
 			struct bridge_data *b = &bridgelist[bn];
+			if (docking_port_resident(o->tsd.starbase.docking_port[j]) == b->shipid)
+				continue; /* Do not expire docking permission on a docked ship */
 			o->tsd.starbase.expected_docker[j] = -1;
 			snprintf(msg, sizeof(msg), "%s, PERMISSION TO DOCK EXPIRED.", b->shipname);
 			send_comms_packet(o, o->tsd.starbase.name, b->npcbot.channel, msg);
