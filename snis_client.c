@@ -4044,10 +4044,12 @@ static gint key_press_cb(GtkWidget* widget, GdkEventKey* event, gpointer data)
 			FLATSHADING_RENDERER | WIREFRAME_RENDERER,
 			FLATSHADING_RENDERER | WIREFRAME_RENDERER | BLACK_TRIS,
 			};
-		if (displaymode != DISPLAYMODE_MAINSCREEN)
-			break;
-		r = (r + 1) % ARRAYSIZE(valid_combos);
-		set_renderer(ecx, valid_combos[r]);
+		if (control_key_pressed) {
+			if (displaymode != DISPLAYMODE_MAINSCREEN)
+				break;
+			r = (r + 1) % ARRAYSIZE(valid_combos);
+			set_renderer(ecx, valid_combos[r]);
+		}
 		break;
 		}
 	case key_toggle_credits:
@@ -17223,6 +17225,7 @@ static char *help_text[] = {
 	"  * CTRL-I INVERTS VERTICAL KEYBOARD CONTROLS\n"
 	"  * 'f' TOGGLES SPACE DUST EFFECT\n"
 	"  * CTRL-C TOGGLES CREDITS SCREEN\n"
+	"  * CTRL-R CYCLES RENDER MODES (FOR DEBUGGING ONLY)\n"
 	"\nPRESS ESC TO EXIT HELP\n",
 
 	/* 1 - Navigation help text */
