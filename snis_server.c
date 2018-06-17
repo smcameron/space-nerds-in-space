@@ -344,6 +344,8 @@ static struct bridge_data {
 	int warp_core_critical_timer;
 	int warp_core_critical;
 	char last_text_to_speech[256];
+	uint32_t text_to_speech_volume_timestamp;
+	float text_to_speech_volume;
 } bridgelist[MAXCLIENTS];
 static int nbridges = 0;
 static pthread_mutex_t universe_mutex = PTHREAD_MUTEX_INITIALIZER;
@@ -9715,6 +9717,8 @@ static void init_player(struct snis_entity *o, int clear_cargo_bay, float *charg
 	if (b >= 0) { /* On first joining, ship won't have a bridge yet. */
 		bridgelist[b].warp_core_critical = 0;
 		strcpy(bridgelist[b].last_text_to_speech, "");
+		bridgelist[b].text_to_speech_volume = 0.33;
+		bridgelist[b].text_to_speech_volume_timestamp = universe_timestamp;
 	}
 	quat_init_axis(&o->tsd.ship.computer_desired_orientation, 0, 1, 0, 0);
 	o->tsd.ship.computer_steering_time_left = 0;
@@ -19349,6 +19353,20 @@ static void queue_up_client_rts_update(struct game_client *c)
 	}
 }
 
+static void queue_up_client_volume_update(struct game_client *c)
+{
+	struct bridge_data *b;
+	uint8_t new_volume;
+
+	if (c->bridge < 0 && c->bridge >= nbridges)
+		return;
+	b  = &bridgelist[c->bridge];
+	if (universe_timestamp - b->text_to_speech_volume_timestamp > 3)
+		return;
+	new_volume = (uint8_t) (b->text_to_speech_volume * 255.0);
+	pb_queue_to_client(c, snis_opcode_pkt("bb", OPCODE_ADJUST_TTS_VOLUME, new_volume));
+}
+
 #define GO_TOO_FAR_UPDATE_PER_NTICKS 7
 
 static void queue_up_client_updates(struct game_client *c)
@@ -19384,6 +19402,7 @@ static void queue_up_client_updates(struct game_client *c)
 		queue_up_client_damcon_update(c);
 		queue_up_client_waypoint_update(c);
 		queue_up_client_rts_update(c);
+		queue_up_client_volume_update(c);
 		queue_latency_check(c);
 		/* printf("queued up %d updates for client\n", count); */
 
@@ -20240,6 +20259,8 @@ static int add_new_player(struct game_client *c)
 		bridgelist[nbridges].warp_core_critical_timer = 0;
 		bridgelist[nbridges].warp_core_critical = 0;
 		strcpy(bridgelist[nbridges].last_text_to_speech, "");
+		bridgelist[nbridges].text_to_speech_volume = 0.33;
+		bridgelist[nbridges].text_to_speech_volume_timestamp = universe_timestamp;
 		clear_bridge_waypoints(nbridges);
 		c->bridge = nbridges;
 		populate_damcon_arena(&bridgelist[c->bridge].damcon);
@@ -22493,6 +22514,27 @@ static void nl_set_mainzoom(struct game_client *c, char *word, float fraction)
 	nl_set_controllable_byte_value(c, word, fraction, offset, no_limit);
 }
 
+static void nl_set_volume(struct game_client *c, char *word, float value)
+{
+	char text[100];
+	if (c->bridge < 0 && c->bridge >= nbridges) {
+		queue_add_text_to_speech(c, "I can't seem to do that right now.");
+		return;
+	}
+	if (fabsf(value - bridgelist[c->bridge].text_to_speech_volume) <= 0.01) {
+		snprintf(text, sizeof(text), "Volume already set to %d percent.",
+			(int) (100.0 * value));
+		queue_add_text_to_speech(c, text);
+		return;
+	}
+	bridgelist[c->bridge].text_to_speech_volume_timestamp = universe_timestamp;
+	bridgelist[c->bridge].text_to_speech_volume = value;
+	snprintf(text, sizeof(text), "Setting volume to %d percent.",
+			(int) (100.0 * value));
+	queue_add_text_to_speech(c, text);
+	return;
+}
+
 static void nl_set_zoom(struct game_client *c, char *word, float value)
 {
 	char *zoom_name;
@@ -22583,6 +22625,7 @@ static struct settable_thing_entry nl_settable_thing[] = {
 	{ "tractor beam coolant", nl_set_tractor_coolant, },
 	{ "life support coolant", nl_set_lifesupport_coolant, },
 	{ "zoom", nl_set_zoom, },
+	{ "volume", nl_set_volume, },
 };
 
 static void nl_set_npq(void *context, int argc, char *argv[], int pos[],
@@ -24485,6 +24528,7 @@ static void init_dictionary(void)
 	snis_nl_add_dictionary_word("blackhole",	"blackhole",	POS_NOUN);
 	snis_nl_add_dictionary_word("spacemonster",	"spacemonster",	POS_NOUN);
 	snis_nl_add_dictionary_word("lights",		"lights",	POS_NOUN);
+	snis_nl_add_dictionary_word("volume",		"volume",	POS_NOUN);
 
 	snis_nl_add_dictionary_word("a",		"a",		POS_ARTICLE);
 	snis_nl_add_dictionary_word("an",		"an",		POS_ARTICLE);

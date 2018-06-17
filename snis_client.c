@@ -219,6 +219,7 @@ static pthread_t text_to_speech_thread;
 static pthread_mutex_t text_to_speech_mutex;
 static pthread_cond_t text_to_speech_cond = PTHREAD_COND_INITIALIZER;
 static int text_to_speech_thread_time_to_quit = 0;
+static float text_to_speech_volume = 0.33;
 
 static GtkWidget *window;
 static GdkGC *gc = NULL;               /* our graphics context. */
@@ -6045,6 +6046,23 @@ static int process_demon_rtsmode(void)
 	return 0;
 }
 
+static int process_adjust_tts_volume(void)
+{
+	int rc;
+	uint8_t volume;
+	uint8_t buffer[10];
+
+	rc = read_and_unpack_buffer(buffer, "b", &volume);
+	if (rc)
+		return rc;
+	if (volume > 255.0)
+		volume = 255.0;
+	if (volume < 0.0)
+		volume = 0.0;
+	text_to_speech_volume = (float) volume / 255.0;
+	return 0;
+}
+
 static void do_text_to_speech(char *text)
 {
 	char command[PATH_MAX];
@@ -6089,7 +6107,8 @@ static void do_text_to_speech(char *text)
 	strncpy(last_speech, fixed_text, sizeof(last_speech) - 1);
 	last_time = timer;
 
-	snprintf(command, sizeof(command), "%s/snis_text_to_speech.sh '%s'", bindir, fixed_text);
+	snprintf(command, sizeof(command), "export SNIS_TTS_VOLUME=%1.2f; %s/snis_text_to_speech.sh '%s'",
+				text_to_speech_volume, bindir, fixed_text);
 	free(fixed_text);
 	rc = system(command);
 	if (rc != 0 && errno != ECHILD)  { /* we have ignored SIGCHLD, so we get ECHILD here */
@@ -7070,6 +7089,11 @@ static void *gameserver_reader(__attribute__((unused)) void *arg)
 			break;
 		case OPCODE_DEMON_RTSMODE:
 			rc = process_demon_rtsmode();
+			if (rc)
+				goto protocol_error;
+			break;
+		case OPCODE_ADJUST_TTS_VOLUME:
+			rc = process_adjust_tts_volume();
 			if (rc)
 				goto protocol_error;
 			break;

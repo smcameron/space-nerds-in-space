@@ -82,6 +82,7 @@ int snis_opcode_def_init(void)
 	rc |= init_opcode_subcode_def(OPCODE_RTS_FUNC, OPCODE_RTS_FUNC_COMMAND_UNIT, "bbwbw");
 	rc |= init_opcode_subcode_def(OPCODE_RTS_FUNC, OPCODE_RTS_FUNC_MAIN_BASE_UPDATE, "bbbww");
 	rc |= init_opcode_def(OPCODE_UPDATE_SHIP_CARGO_INFO, "bwbwS");
+	rc |= init_opcode_def(OPCODE_ADJUST_TTS_VOLUME, "bb");
 	rc |= init_opcode_def(OPCODE_REQUEST_YAW, "bb");
 	rc |= init_opcode_def(OPCODE_REQUEST_TORPEDO, "b");
 	rc |= init_opcode_def(OPCODE_DELETE_OBJECT, "bw");
