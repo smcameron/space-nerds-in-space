@@ -13136,9 +13136,7 @@ static void pack_and_send_ship_sdata_packet(struct game_client *c, struct snis_e
 		p.lifeform_count = o->tsd.starbase.lifeform_count;
 	else
 		p.lifeform_count = 0;
-	pthread_mutex_unlock(&universe_mutex);
 	send_ship_sdata_packet(c, &p);
-	pthread_mutex_lock(&universe_mutex);
 }
 
 static void send_update_ship_cargo_info(struct game_client *c, struct snis_entity *o)
@@ -13179,9 +13177,7 @@ static void send_update_ship_cargo_info(struct game_client *c, struct snis_entit
 		qty = cbc->qty;
 		packed_buffer_append(pb, "bwS", (uint8_t) i, item, qty, (int32_t) 1000000);
 	}
-	pthread_mutex_unlock(&universe_mutex);
-	send_packet_to_all_clients_on_a_bridge(c->shipid, pb, ROLE_SCIENCE);
-	pthread_mutex_lock(&universe_mutex);
+	pb_queue_to_client(c, pb);
 }
 
 static int save_sdata_bandwidth(void)
@@ -19672,7 +19668,7 @@ static void send_ship_sdata_packet(struct game_client *c, struct ship_sdata_pack
 		sip->shield_strength, sip->shield_wavelength, sip->shield_width, sip->shield_depth,
 		sip->faction, sip->lifeform_count,
 		sip->name, (unsigned short) sizeof(sip->name));
-	send_packet_to_all_clients_on_a_bridge(c->shipid, pb, ROLE_ALL);
+	pb_queue_to_client(c, pb);
 }
 
 static void send_generic_ship_damage_packet(struct snis_entity *o, uint8_t opcode)
