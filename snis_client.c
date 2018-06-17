@@ -19164,7 +19164,7 @@ static void setup_physical_io_socket(void)
 	}
 	if (bind(physical_io_socket, (struct sockaddr *) &addr,
 			sizeof(struct sockaddr_un)) == -1) {
-		fprintf(stderr, "Failed to bind to linux abstrack socket address 'snis-phys-io'.\n");
+		fprintf(stderr, "Failed to bind to linux abstract socket address 'snis-phys-io'.\n");
 		fprintf(stderr, "Perhaps another snis_client process is running.\n");
 		/* FIXME: is this how to deal with the socket at this point? */
 		physical_io_socket = -1;
