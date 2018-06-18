@@ -135,6 +135,7 @@ LEVEL - Main
 LIFE - Main 
 LIGHTS - Main 
 LONG - Main 
+LOUDER - Main 
 LOWER - Main 
 MAGNETS - Main 
 MAIN - Main 
@@ -143,6 +144,7 @@ MANUEVERING - By LtoS rules
 MAX - Main 
 MAXIMUM - Main 
 ME - Main 
+MINIMUM - Main 
 MINING - Main 
 MUCH - Main 
 NAVIGATE - Main 
@@ -175,6 +177,7 @@ POWER - Main
 QUARTER - Main 
 QUARTERS - Main 
 QUICKLY - Main 
+QUIETER - Main 
 RADIATION - Main 
 RAISE - Main 
 RAMMING - Main 
@@ -264,6 +267,7 @@ UNTIL - Main
 UP - Main 
 VELOCITY - Main 
 VIEW - Main 
+VOLUME - Main 
 WARP - Main 
 WAVELENGTH - Main 
 WAYPOINT - Morpheme: WAY POINT 

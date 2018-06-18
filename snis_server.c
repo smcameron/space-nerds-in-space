@@ -22150,7 +22150,33 @@ static void nl_repeat_n(void *context, int argc, char *argv[], int pos[],
 	queue_add_text_to_speech(c, buf);
 }
 
-/* Eg: "turn/shut on/off/out lights" */
+static void nl_set_volume(struct game_client *c, char *word, float value)
+{
+	char text[100];
+
+	if (value > 1.0)
+		value = 1.0;
+	if (value < 0.0)
+		value = 0.0;
+	if (c->bridge < 0 && c->bridge >= nbridges) {
+		queue_add_text_to_speech(c, "I can't seem to do that right now.");
+		return;
+	}
+	if (fabsf(value - bridgelist[c->bridge].text_to_speech_volume) <= 0.01) {
+		snprintf(text, sizeof(text), "Volume already set to %d percent.",
+			(int) (100.0 * value));
+		queue_add_text_to_speech(c, text);
+		return;
+	}
+	bridgelist[c->bridge].text_to_speech_volume_timestamp = universe_timestamp;
+	bridgelist[c->bridge].text_to_speech_volume = value;
+	snprintf(text, sizeof(text), "Setting volume to %d percent.",
+			(int) (100.0 * value));
+	queue_add_text_to_speech(c, text);
+	return;
+}
+
+/* Eg: "turn/shut on/off/out lights", "turn up/down volume" */
 static void nl_turn_pn_or_np(void *context, int argc, char *argv[], int pos[],
 			union snis_nl_extra_data extra_data[], int np)
 {
@@ -22242,6 +22268,11 @@ static void nl_turn_pn_or_np(void *context, int argc, char *argv[], int pos[],
 		}
 	} else if (strcasecmp(argv[noun], "red alert") == 0) {
 		set_red_alert_mode(c, value);
+	} else if (strcasecmp(argv[noun], "volume") == 0) {
+		if (value == 0)
+			nl_set_volume(c, "volume", bridgelist[c->bridge].text_to_speech_volume / 2.0);
+		else
+			nl_set_volume(c, "volume", bridgelist[c->bridge].text_to_speech_volume * 2.0);
 	}
 	return;
 
@@ -22512,27 +22543,6 @@ static void nl_set_mainzoom(struct game_client *c, char *word, float fraction)
 {
 	int offset = offsetof(struct snis_entity, tsd.ship.mainzoom);
 	nl_set_controllable_byte_value(c, word, fraction, offset, no_limit);
-}
-
-static void nl_set_volume(struct game_client *c, char *word, float value)
-{
-	char text[100];
-	if (c->bridge < 0 && c->bridge >= nbridges) {
-		queue_add_text_to_speech(c, "I can't seem to do that right now.");
-		return;
-	}
-	if (fabsf(value - bridgelist[c->bridge].text_to_speech_volume) <= 0.01) {
-		snprintf(text, sizeof(text), "Volume already set to %d percent.",
-			(int) (100.0 * value));
-		queue_add_text_to_speech(c, text);
-		return;
-	}
-	bridgelist[c->bridge].text_to_speech_volume_timestamp = universe_timestamp;
-	bridgelist[c->bridge].text_to_speech_volume = value;
-	snprintf(text, sizeof(text), "Setting volume to %d percent.",
-			(int) (100.0 * value));
-	queue_add_text_to_speech(c, text);
-	return;
 }
 
 static void nl_set_zoom(struct game_client *c, char *word, float value)

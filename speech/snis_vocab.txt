@@ -521,6 +521,17 @@ shut off the lights
 shut down the lights
 turn down the lights
 turn up the lights
+turn up the volume
+turn down the volume
+increase the volume
+decrease the volume
+raise the volume to maximum
+lower the volume to minimum
+raise the volume to
+lower the volume to
+set the volume to
+louder
+quieter
 shut off the tractor beam
 turn off the tractor beam
 turn on the tractor beam
