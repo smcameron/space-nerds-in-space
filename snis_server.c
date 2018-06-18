@@ -20239,6 +20239,7 @@ static int add_new_player(struct game_client *c)
 		bridgelist[nbridges].nwaypoints = 0;
 		bridgelist[nbridges].warp_core_critical_timer = 0;
 		bridgelist[nbridges].warp_core_critical = 0;
+		strcpy(bridgelist[nbridges].last_text_to_speech, "");
 		clear_bridge_waypoints(nbridges);
 		c->bridge = nbridges;
 		populate_damcon_arena(&bridgelist[c->bridge].damcon);
