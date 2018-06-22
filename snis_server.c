@@ -1008,6 +1008,7 @@ static void log_client_info(int level, int connection, char *info)
 }
 
 static void delete_from_clients_and_server_helper(struct snis_entity *o, int take_client_lock);
+static void delete_from_clients_and_server(struct snis_entity *o);
 static void delete_object(struct snis_entity *o);
 static void remove_from_attack_lists(uint32_t victim_id);
 
@@ -1038,7 +1039,7 @@ static void delete_bridge(int b)
 	fprintf(stderr, "snis_server: deleting player ship\n");
 	for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
 		if (go[i].type == OBJTYPE_SHIP1 && go[i].id == bridgelist[b].shipid) {
-			delete_from_clients_and_server_helper(&go[i], 0);
+			delete_from_clients_and_server_helper(&go[i], 0); /* 0 because client lock is already held. */
 			break;
 		}
 	}
@@ -1160,7 +1161,7 @@ static void black_hole_collision_detection(void *o1, void *o2)
 			(void) add_blackhole_explosion(black_hole->id,
 						black_hole->x, black_hole->y, black_hole->z,
 						500, 100, 100, object->type);
-			delete_from_clients_and_server_helper(object, 0);
+			delete_from_clients_and_server(object);
 			return;
 		} else {
 			object->alive = 0;
