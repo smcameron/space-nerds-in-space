@@ -13006,7 +13006,7 @@ static void init_science_ui(void)
 	ui_add_button(sci_ui.align_to_ship_button, DISPLAYMODE_SCIENCE,
 				"ALIGN LONG RANGE SCANNERS TO SHIP'S ORIENTATION");
 	ui_hide_widget(sci_ui.align_to_ship_button);
-	sciecx = entity_context_new(50, 10);
+	sciecx = entity_context_new(50, 50);
 	sciballecx = entity_context_new(5000, 1000);
 	sciplane_tween = tween_init(500);
 	sci_ui.details_mode = SCI_DETAILS_MODE_SCIPLANE;
@@ -14377,6 +14377,51 @@ static void science_details_draw_atmosphere_data(GtkWidget *w, GdkGC *gc,
 	}
 }
 
+static void sci_add_tentacles(struct snis_entity *o, struct entity *torso)
+{
+	int i, j, ntentacles;
+	struct entity *parent;
+	float shrinkage = 0.98;
+	union quat orientation;
+	float angle, y, z;
+	union quat rotation;
+	ntentacles = (o->id % 3) + 3;
+	quat_init_axis(&orientation, 0, 1, 0, -10.0 * M_PI / 180.0);
+	quat_init_axis(&rotation, 1, 0, 0, -2.0 * M_PI / ntentacles);
+
+	for (i = 0; i < ntentacles; i++) {
+		angle = i * (2.0 * M_PI / ntentacles);
+		parent = torso;
+		float tentacle_length = 40.0;
+		float tentacle_scale = 1.1;
+		for (j = 0; j < NTENTACLE_SEGMENTS; j++) {
+			struct entity *e;
+			if (j == 0) {
+				y = 20.0 * sin(angle);
+				z = 20.0 * cos(angle);
+			} else {
+				y = 0.0;
+				z = 0.0;
+			}
+			e = add_entity(sciecx, tentacle_segment_mesh,
+				1.0 * tentacle_length, y, z, SPACEMONSTER_COLOR);
+			if (e) {
+				orientation = *entity_get_orientation(o->tsd.spacemonster.tentacle[i][j]);
+				update_entity_orientation(e, &orientation);
+				update_entity_parent(sciecx, e, parent);
+				update_entity_scale(e, tentacle_scale);
+				update_entity_material(e, &spacemonster_tentacle_material);
+				update_entity_non_uniform_scale(e, 1.0, tentacle_scale, tentacle_scale);
+				parent = e;
+			} else {
+				break;
+			}
+			tentacle_length *= shrinkage;
+			tentacle_scale *= shrinkage;
+		}
+	}
+}
+
 static void draw_science_details(GtkWidget *w, GdkGC *gc)
 {
 	struct entity *e = NULL;
@@ -14405,6 +14450,8 @@ static void draw_science_details(GtkWidget *w, GdkGC *gc)
 	} else {
 		e = add_entity(sciecx, m, 0.0, 0.0, -m->radius, UI_COLOR(sci_wireframe));
 		quat_init_axis(&orientation, 0.0, 1.0, 0.0, angle);
+		if (e && curr_science_guy->type == OBJTYPE_SPACEMONSTER)
+			sci_add_tentacles(curr_science_guy, e);
 	}
 	if (e)
 		update_entity_orientation(e, &orientation);
