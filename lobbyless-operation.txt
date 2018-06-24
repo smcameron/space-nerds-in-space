@@ -1,0 +1,33 @@
+It is possible to run snis_server and snis_clients without the lobby.
+
+I have run snis_server on a digitalocean droplet this way, and it seemed
+to work ok (1 client). There were occasional lag problems, but overall it
+worked *a lot* better than I thought it would.
+
+Here's what I did:
+
+Compile snis_server on the droplet.  Note, I did not install all the dependencies,
+just those needed to build snis_server.
+
+ sudo apt-get install build-essential;
+ sudo apt-get install pkg-config;
+ sudo apt-get install liblua5.2-dev;
+
+  make snis_server
+
+Then run the server
+
+  SNISSERVERNOLOBBY=1 # suppress lobby
+  SNISSERVERPORT=10007 # or some port number of your choosing.
+  ./snis_server -L x
+
+To connect to it with snis_client without a lobby, run on your local machine:
+
+./snis_client --nolobby --serverhost myipaddr --serverport myport --starship myship --pw myshippw
+
+Replace myipaddr with the IP addr of the server host, myport with the port snis_server is running
+on, and myship and myshippw with your ship name and ship password.
+
+Note, you must specify the ip address, not the hostname. (It seems getaddrinfo() doesn't work
+with the hostname?  I need to look into why that doesn't work, I think it should.)
+
