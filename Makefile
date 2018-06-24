@@ -645,7 +645,7 @@ wwviaudio.o:    wwviaudio.c Makefile
 shield_strength.o:	shield_strength.c Makefile
 	$(Q)$(COMPILE)
 
-snis_server.o:	snis_server.c Makefile build_info.h
+snis_server.o:	snis_server.c Makefile build_info.h ${DOCKING_PORT_FILES}
 	$(Q)$(COMPILE)
 
 snis_multiverse.o:	snis_multiverse.c snis_multiverse.h Makefile build_info.h \
