@@ -346,6 +346,8 @@ static struct bridge_data {
 	char last_text_to_speech[256];
 	uint32_t text_to_speech_volume_timestamp;
 	float text_to_speech_volume;
+	uint8_t active_custom_buttons;
+	char custom_button_text[6][16];
 } bridgelist[MAXCLIENTS];
 static int nbridges = 0;
 static pthread_mutex_t universe_mutex = PTHREAD_MUTEX_INITIALIZER;
@@ -9720,6 +9722,8 @@ static void init_player(struct snis_entity *o, int clear_cargo_bay, float *charg
 		strcpy(bridgelist[b].last_text_to_speech, "");
 		bridgelist[b].text_to_speech_volume = 0.33;
 		bridgelist[b].text_to_speech_volume_timestamp = universe_timestamp;
+		bridgelist[b].active_custom_buttons = 0;
+		memset(bridgelist[b].custom_button_text, 0, sizeof(bridgelist[b].custom_button_text));
 	}
 	quat_init_axis(&o->tsd.ship.computer_desired_orientation, 0, 1, 0, 0);
 	o->tsd.ship.computer_steering_time_left = 0;
@@ -16959,6 +16963,22 @@ static int process_rts_func(struct game_client *c)
 	return 0;
 }
 
+static int process_custom_button(struct game_client *c)
+{
+	int rc;
+	uint8_t subcode;
+	unsigned char buffer[16];
+
+	rc = read_and_unpack_buffer(c, buffer, "b", &subcode);
+	if (rc)
+		return rc;
+	if (subcode > 5) /* must be 0 - 5... a custom button press */
+		return rc;
+	schedule_callback2(event_callback, &callback_schedule,
+				"custom-button-press-event", c->shipid, subcode);
+	return 0;
+}
+
 static int process_toggle_demon_ai_debug_mode(struct game_client *c)
 {
 	c->debug_ai = !c->debug_ai;
@@ -17536,6 +17556,76 @@ static int l_disable_antenna_aiming(lua_State *l)
 {
 	enable_comms_attenuation = 0;
 	return 0;
+}
+
+static int l_set_custom_button_label(lua_State *l)
+{
+	int i, b, s;
+	const double oid = luaL_checknumber(l, 1);
+	const double screen = luaL_checknumber(l, 2);
+	const char *text = lua_tostring(lua_state, 3);
+
+	s = (int) screen;
+	pthread_mutex_lock(&universe_mutex);
+	i = lookup_by_id(oid);
+	if (i < 0)
+		goto error;
+	b = lookup_bridge_by_shipid(go[i].id);
+	if (b < 0)
+		goto error;
+	if (s < 0 || s > 5)
+		goto error;
+	memset(bridgelist[b].custom_button_text[s], 0, sizeof(bridgelist[b].custom_button_text[s]));
+	strncpy(bridgelist[b].custom_button_text[s], text, sizeof(bridgelist[b].custom_button_text[s]) - 1);
+	pthread_mutex_unlock(&universe_mutex);
+	lua_pushnumber(lua_state, 0);
+	return 1;
+error:
+	pthread_mutex_unlock(&universe_mutex);
+	lua_pushnumber(lua_state, -1);
+	return 1;
+}
+
+static int enable_or_disable_custom_button(double oid, double screen, int enable)
+{
+	int i, b, s;
+
+	s = (int) screen;
+
+	pthread_mutex_lock(&universe_mutex);
+	i = lookup_by_id(oid);
+	if (i < 0)
+		goto error;
+	b = lookup_bridge_by_shipid(go[i].id);
+	if (b < 0)
+		goto error;
+	if (s < 0 || s > 5)
+		goto error;
+	if (enable)
+		bridgelist[b].active_custom_buttons |= (1 << s);
+	else
+		bridgelist[b].active_custom_buttons &= ~(1 << s);
+	pthread_mutex_unlock(&universe_mutex);
+	lua_pushnumber(lua_state, 0);
+	return 1;
+error:
+	pthread_mutex_unlock(&universe_mutex);
+	lua_pushnumber(lua_state, -1);
+	return 1;
+}
+
+static int l_enable_custom_button(lua_State *l)
+{
+	const double oid = luaL_checknumber(l, 1);
+	const double screen = luaL_checknumber(l, 2);
+	return enable_or_disable_custom_button(oid, screen, 1);
+}
+
+static int l_disable_custom_button(lua_State *l)
+{
+	const double oid = luaL_checknumber(l, 1);
+	const double screen = luaL_checknumber(l, 2);
+	return enable_or_disable_custom_button(oid, screen, 0);
 }
 
 static int process_create_item(struct game_client *c)
@@ -18939,6 +19029,11 @@ static void process_instructions_from_client(struct game_client *c)
 			if (rc)
 				goto protocol_error;
 			break;
+		case OPCODE_CUSTOM_BUTTON:
+			rc = process_custom_button(c);
+			if (rc)
+				goto protocol_error;
+			break;
 		default:
 			goto protocol_error;
 	}
@@ -19368,6 +19463,39 @@ static void queue_up_client_volume_update(struct game_client *c)
 	pb_queue_to_client(c, snis_opcode_pkt("bb", OPCODE_ADJUST_TTS_VOLUME, new_volume));
 }
 
+static void queue_up_client_custom_buttons(struct game_client *c)
+{
+	struct bridge_data *b;
+	int i;
+
+	if (c->bridge < 0 && c->bridge >= nbridges)
+		return;
+	b  = &bridgelist[c->bridge];
+	if ((universe_timestamp % 10) != 0) /* Update at 1 Hz */
+		return;
+	pb_queue_to_client(c, snis_opcode_subcode_pkt("bbb", OPCODE_CUSTOM_BUTTON,
+			OPCODE_CUSTOM_BUTTON_SUBCMD_ACTIVE_LIST, b->active_custom_buttons));
+	for (i = 0; i < 6; i++)
+		if (b->active_custom_buttons & (1 << i))
+			pb_queue_to_client(c, snis_opcode_subcode_pkt("bbbbbbbbbbbbbbbbbb",
+				OPCODE_CUSTOM_BUTTON, OPCODE_CUSTOM_BUTTON_SUBCMD_UPDATE_TEXT, (uint8_t) i,
+				b->custom_button_text[i][0],
+				b->custom_button_text[i][1],
+				b->custom_button_text[i][2],
+				b->custom_button_text[i][3],
+				b->custom_button_text[i][4],
+				b->custom_button_text[i][5],
+				b->custom_button_text[i][6],
+				b->custom_button_text[i][7],
+				b->custom_button_text[i][8],
+				b->custom_button_text[i][9],
+				b->custom_button_text[i][10],
+				b->custom_button_text[i][11],
+				b->custom_button_text[i][12],
+				b->custom_button_text[i][13],
+				b->custom_button_text[i][14]));
+}
+
 #define GO_TOO_FAR_UPDATE_PER_NTICKS 7
 
 static void queue_up_client_updates(struct game_client *c)
@@ -19404,6 +19532,7 @@ static void queue_up_client_updates(struct game_client *c)
 		queue_up_client_waypoint_update(c);
 		queue_up_client_rts_update(c);
 		queue_up_client_volume_update(c);
+		queue_up_client_custom_buttons(c);
 		queue_latency_check(c);
 		/* printf("queued up %d updates for client\n", count); */
 
@@ -20259,6 +20388,8 @@ static int add_new_player(struct game_client *c)
 		bridgelist[nbridges].nwaypoints = 0;
 		bridgelist[nbridges].warp_core_critical_timer = 0;
 		bridgelist[nbridges].warp_core_critical = 0;
+		bridgelist[nbridges].active_custom_buttons = 0;
+		memset(bridgelist[nbridges].custom_button_text, 0, sizeof(bridgelist[nbridges].custom_button_text));
 		strcpy(bridgelist[nbridges].last_text_to_speech, "");
 		bridgelist[nbridges].text_to_speech_volume = 0.33;
 		bridgelist[nbridges].text_to_speech_volume_timestamp = universe_timestamp;
@@ -20985,6 +21116,9 @@ static void setup_lua(void)
 	add_lua_callable_fn(l_object_distance, "object_distance");
 	add_lua_callable_fn(l_enable_antenna_aiming, "enable_antenna_aiming");
 	add_lua_callable_fn(l_disable_antenna_aiming, "disable_antenna_aiming");
+	add_lua_callable_fn(l_set_custom_button_label, "set_custom_button_label");
+	add_lua_callable_fn(l_enable_custom_button, "enable_custom_button");
+	add_lua_callable_fn(l_disable_custom_button, "disable_custom_button");
 }
 
 static int run_initial_lua_scripts(void)

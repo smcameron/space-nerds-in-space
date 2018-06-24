@@ -83,6 +83,15 @@ int snis_opcode_def_init(void)
 	rc |= init_opcode_subcode_def(OPCODE_RTS_FUNC, OPCODE_RTS_FUNC_MAIN_BASE_UPDATE, "bbbww");
 	rc |= init_opcode_def(OPCODE_UPDATE_SHIP_CARGO_INFO, "bwbwS");
 	rc |= init_opcode_def(OPCODE_ADJUST_TTS_VOLUME, "bb");
+	rc |= init_opcode_subcode_def(OPCODE_CUSTOM_BUTTON, OPCODE_CUSTOM_BUTTON_SUBCMD_NAV, "bb");
+	rc |= init_opcode_subcode_def(OPCODE_CUSTOM_BUTTON, OPCODE_CUSTOM_BUTTON_SUBCMD_WEAPONS, "bb");
+	rc |= init_opcode_subcode_def(OPCODE_CUSTOM_BUTTON, OPCODE_CUSTOM_BUTTON_SUBCMD_ENG, "bb");
+	rc |= init_opcode_subcode_def(OPCODE_CUSTOM_BUTTON, OPCODE_CUSTOM_BUTTON_SUBCMD_DAMCON, "bb");
+	rc |= init_opcode_subcode_def(OPCODE_CUSTOM_BUTTON, OPCODE_CUSTOM_BUTTON_SUBCMD_SCIENCE, "bb");
+	rc |= init_opcode_subcode_def(OPCODE_CUSTOM_BUTTON, OPCODE_CUSTOM_BUTTON_SUBCMD_COMMS, "bb");
+	rc |= init_opcode_subcode_def(OPCODE_CUSTOM_BUTTON, OPCODE_CUSTOM_BUTTON_SUBCMD_ACTIVE_LIST, "bbb");
+	rc |= init_opcode_subcode_def(OPCODE_CUSTOM_BUTTON, OPCODE_CUSTOM_BUTTON_SUBCMD_UPDATE_TEXT,
+					"bbbbbbbbbbbbbbbbbb");
 	rc |= init_opcode_def(OPCODE_REQUEST_YAW, "bb");
 	rc |= init_opcode_def(OPCODE_REQUEST_TORPEDO, "b");
 	rc |= init_opcode_def(OPCODE_DELETE_OBJECT, "bw");

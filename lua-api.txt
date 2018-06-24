@@ -166,6 +166,9 @@ EVENT TYPES in snis:
 	"cargo-container-acquired-event"
 		Arguments are id of player ship, commodity index, and
 		commodity quantity. (See get_commodity_name(), get_commodity_units(), below.)
+	"custom-button-press-event"
+		Arguments are the id of the player ship, and the screen (0 - 5 inclusive)
+		that the custom button was on. See set_custom_button_label(), below.
 
 Functions which you may call from lua: 
 
@@ -904,6 +907,29 @@ disable_antenna_aiming()
 	about how well or poorly the transmissions are working, which while somewhat realistic for radio
 	transmissions, aren't fun. So for now, this feature is deemed experimental, and hidden behind
 	this enabling/disabling switch.
+
+set_custom_button_label(player_id, screen, label)
+	Sets the label for a custom button for the specified player ship and screen.
+	"player_id" is the id of the player's ship
+	"screen" is an integer between 0 and 5 inclusive, corresponding to:
+		0 - NAV
+		1 - WEAPONS
+		2 - ENGINERRING
+		3 - DAMAGE CONTROL
+		4 - SCIENCE
+		5 - COMMS
+	"label" is a string that you want the button to display. The string must be
+	15 characters or fewer, or it will be truncated.
+
+enable_custom_button(player_id, screen);
+	Enables the specified custom button for the specified player.
+	"screen" is an integer as described above (see set_custom_button_label).
+	You can register a callback for the event "custom-button-press-event" to
+	react to custom button presses.
+
+disable_custom_button(player_id, screen);
+	Disables (hides) the specified custom button for the specified player.
+	"screen" is an integer as described above (see set_custom_button_label).
 
 NOTE: Your lua scripts must not sleep, call any function which blocks, or require excessive
 long running calculations (nothing more than a few hundredths of a second) because the lua

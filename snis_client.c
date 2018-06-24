@@ -235,6 +235,7 @@ static int user_defined_menu_active = 0;
 static char textscreen[1024] = { 0 };
 #define NUM_USER_MENU_BUTTONS 10
 static struct button *user_menu_button[NUM_USER_MENU_BUTTONS];
+static uint8_t active_custom_buttons;
 
 static struct ship_type_entry *ship_type;
 static int nshiptypes = 0;
@@ -892,6 +893,7 @@ static struct navigation_ui {
 	struct button *computer_button;
 	struct button *starmap_button;
 	struct button *lights_button;
+	struct button *custom_button;
 	int gauge_radius;
 	struct snis_text_input_box *computer_input;
 	char input[100];
@@ -909,6 +911,7 @@ static struct damcon_ui {
 	struct button *robot_auto_button;
 	struct button *robot_manual_button;
 	struct button *eject_warp_core_button;
+	struct button *custom_button;
 } damcon_ui;
 
 static int update_damcon_object(uint32_t id, uint32_t ship_id, uint32_t type,
@@ -3228,6 +3231,7 @@ static struct weapons_ui {
 	struct gauge *phaser_bank_gauge;
 	struct gauge *phaser_wavelength;
 	struct slider *wavelen_slider;
+	struct button *custom_button;
 } weapons;
 
 static void draw_plane_radar(GtkWidget *w, struct snis_entity *o, union quat *aim, float cx, float cy, float r, float range)
@@ -5387,6 +5391,7 @@ static struct science_ui {
 	struct button *waypoints_button;
 	struct button *add_waypoint_button;
 	struct button *add_current_pos_button;
+	struct button *custom_button;
 	struct snis_text_input_box *waypoint_input[3];
 	char waypoint_text[3][15];
 	struct button *clear_waypoint_button[MAXWAYPOINTS];
@@ -5592,6 +5597,7 @@ static struct comms_ui {
 	struct button *damcon_onscreen_button;
 	struct button *sci_onscreen_button;
 	struct button *main_onscreen_button;
+	struct button *custom_button;
 	struct button *comms_transmit_button;
 	struct button *red_alert_button;
 	struct button *hail_mining_bot_button;
@@ -6821,6 +6827,8 @@ static void stop_gameserver_writer_thread(void)
 	/* FIXME: when this returns, to_server_queue_event_mutex is held */
 }
 
+static int process_custom_button(void);
+
 static void *gameserver_reader(__attribute__((unused)) void *arg)
 {
 	static uint32_t successful_opcodes;
@@ -7094,6 +7102,11 @@ static void *gameserver_reader(__attribute__((unused)) void *arg)
 			break;
 		case OPCODE_ADJUST_TTS_VOLUME:
 			rc = process_adjust_tts_volume();
+			if (rc)
+				goto protocol_error;
+			break;
+		case OPCODE_CUSTOM_BUTTON:
+			rc = process_custom_button();
 			if (rc)
 				goto protocol_error;
 			break;
@@ -10149,6 +10162,11 @@ static void nav_lights_button_pressed(__attribute__((unused)) void *cookie)
 		transmit_adjust_control_input((uint8_t) 0, OPCODE_ADJUST_CONTROL_EXTERIOR_LIGHTS);
 }
 
+static void nav_custom_button_pressed(__attribute__((unused)) void *cookie)
+{
+	queue_to_server(snis_opcode_pkt("bb", OPCODE_CUSTOM_BUTTON, OPCODE_CUSTOM_BUTTON_SUBCMD_NAV));
+}
+
 static void reverse_button_pressed(__attribute__((unused)) void *s)
 {
 	struct snis_entity *o;
@@ -10292,6 +10310,12 @@ static void init_lobby_ui()
 }
 
 static double sample_phaser_wavelength(void);
+
+static void weapons_custom_button_pressed(__attribute__((unused)) void *x)
+{
+	queue_to_server(snis_opcode_pkt("bb", OPCODE_CUSTOM_BUTTON, OPCODE_CUSTOM_BUTTON_SUBCMD_WEAPONS));
+}
+
 static void init_weapons_ui(void)
 {
 	const int phx = 0.35 * SCREEN_WIDTH;
@@ -10316,9 +10340,14 @@ static void init_weapons_ui(void)
 	weapons.wavelen_slider = snis_slider_init(wlsx, wlsy, wlsw, wlsh, UI_COLOR(weap_slider), "",
 				"10", "60", 10, 60, sample_phaser_wavelength,
 				do_phaser_wavelength);
+	weapons.custom_button = snis_button_init(txx(10), SCREEN_HEIGHT - txy(30), -1, -1, "CUSTOM BUTTON",
+					UI_COLOR(weap_gauge),
+					NANO_FONT, weapons_custom_button_pressed, NULL);
+	snis_button_set_sound(nav_ui.custom_button, UISND21);
 	ui_add_slider(weapons.wavelen_slider, DISPLAYMODE_WEAPONS, "PHASER WAVELENGTH CONTROL");
 	ui_add_gauge(weapons.phaser_bank_gauge, DISPLAYMODE_WEAPONS);
 	ui_add_gauge(weapons.phaser_wavelength, DISPLAYMODE_WEAPONS);
+	ui_add_button(weapons.custom_button, DISPLAYMODE_WEAPONS, "CUSTOM BUTTON");
 }
 
 static void show_death_screen(GtkWidget *w)
@@ -10511,6 +10540,12 @@ static void init_nav_ui(void)
 					button_color,
 					NANO_FONT, nav_lights_button_pressed, NULL);
 	snis_button_set_sound(nav_ui.lights_button, UISND7);
+	y += button_y_spacing;
+	nav_ui.custom_button = snis_button_init(SCREEN_WIDTH - txx(nav_ui.gauge_radius * 2.2 + 10),
+					txy(nav_ui.gauge_radius * 2 + y), -1, -1, "CUSTOM BUTTON",
+					button_color,
+					NANO_FONT, nav_custom_button_pressed, NULL);
+	snis_button_set_sound(nav_ui.custom_button, UISND21);
 	nav_ui.reverse_button = snis_button_init(SCREEN_WIDTH - txx(16.6 + x), txy(3), txx(12.5), txy(14),
 			"R", button_color, NANO_FONT, reverse_button_pressed, NULL);
 	snis_button_set_sound(nav_ui.reverse_button, UISND8);
@@ -10538,6 +10573,7 @@ static void init_nav_ui(void)
 				"SWITCH BETWEEN NAVIGATION AND STAR MAP");
 	ui_add_button(nav_ui.lights_button, DISPLAYMODE_NAVIGATION,
 				"TOGGLE EXTERIOR LIGHTS ON/OFF");
+	ui_add_button(nav_ui.custom_button, DISPLAYMODE_NAVIGATION, "CUSTOM BUTTON");
 	ui_add_button(nav_ui.reverse_button, DISPLAYMODE_NAVIGATION,
 				"TOGGLE REVERSE THRUST");
 	ui_add_button(nav_ui.trident_button, DISPLAYMODE_NAVIGATION,
@@ -11979,6 +12015,11 @@ static void eject_warp_core_button_pressed(void *x)
 	return;
 }
 
+static void damcon_custom_button_pressed(void *x)
+{
+	queue_to_server(snis_opcode_pkt("bb", OPCODE_CUSTOM_BUTTON, OPCODE_CUSTOM_BUTTON_SUBCMD_DAMCON));
+}
+
 static void init_damcon_ui(void)
 {
 	damcon_ui.engineering_button = snis_button_init(txx(630), txy(550), txx(140), txy(25),
@@ -12000,6 +12041,10 @@ static void init_damcon_ui(void)
 							UI_COLOR(damcon_button), NANO_FONT,
 							robot_gripper_button_pressed, (void *) 0);
 	snis_button_set_sound(damcon_ui.robot_gripper_button, UISND24);
+	damcon_ui.custom_button = snis_button_init(txx(650), txy(220), txx(90), txy(25),
+						"CUSTOM BUTTON", UI_COLOR(damcon_button), NANO_FONT,
+						damcon_custom_button_pressed, (void *) 0);
+	snis_button_set_sound(damcon_ui.custom_button, UISND13);
 	damcon_ui.robot_auto_button = snis_button_init(txx(400), txy(30), txx(90), txy(25),
 				"AUTO", UI_COLOR(damcon_button), NANO_FONT, robot_auto_button_pressed, (void *) 0);
 	snis_button_set_sound(damcon_ui.robot_gripper_button, UISND25);
@@ -12018,6 +12063,7 @@ static void init_damcon_ui(void)
 	ui_add_button(damcon_ui.robot_right_button, DISPLAYMODE_DAMCON, "TURN THE ROBOT RIGHT");
 	ui_add_button(damcon_ui.robot_backward_button, DISPLAYMODE_DAMCON, "MOVE THE ROBOT BACKWARD");
 	ui_add_button(damcon_ui.robot_gripper_button, DISPLAYMODE_DAMCON, "OPERATE THE ROBOT GRIPPER");
+	ui_add_button(damcon_ui.custom_button, DISPLAYMODE_DAMCON, "CUSTOM BUTTON");
 	ui_add_button(damcon_ui.robot_auto_button, DISPLAYMODE_DAMCON, "SELECT AUTONOMOUS ROBOT OPERATION");
 	ui_add_button(damcon_ui.robot_manual_button, DISPLAYMODE_DAMCON, "SELECT MANUAL ROBOT CONTROL");
 	ui_add_label(damcon_ui.robot_controls, DISPLAYMODE_DAMCON);
@@ -12034,6 +12080,7 @@ static struct engineering_ui {
 	struct button *preset1_button;
 	struct button *preset2_button;
 	struct button *silence_alarms;
+	struct button *custom_button;
 	struct slider *shield_slider;
 	struct slider *shield_coolant_slider;
 	struct slider *maneuvering_slider;
@@ -12078,6 +12125,86 @@ static struct engineering_ui {
 	int gauge_radius;
 } eng_ui;
 
+static int process_custom_button(void)
+{
+	int rc;
+	uint8_t subcmd, active_buttons;
+	uint8_t buffer[32];
+	uint8_t button_index;
+	char text[16];
+
+	rc = read_and_unpack_buffer(buffer, "b", &subcmd);
+	if (rc != 0)
+		return rc;
+	switch (subcmd) {
+	case OPCODE_CUSTOM_BUTTON_SUBCMD_ACTIVE_LIST:
+		rc = read_and_unpack_buffer(buffer, "b", &active_buttons);
+		if (rc != 0)
+			return rc;
+		active_custom_buttons = active_buttons;
+		if (active_custom_buttons & (1 << OPCODE_CUSTOM_BUTTON_SUBCMD_NAV))
+			ui_unhide_widget(nav_ui.custom_button);
+		else
+			ui_hide_widget(nav_ui.custom_button);
+		if (active_custom_buttons & (1 << OPCODE_CUSTOM_BUTTON_SUBCMD_WEAPONS))
+			ui_unhide_widget(weapons.custom_button);
+		else
+			ui_hide_widget(weapons.custom_button);
+		if (active_custom_buttons & (1 << OPCODE_CUSTOM_BUTTON_SUBCMD_ENG))
+			ui_unhide_widget(eng_ui.custom_button);
+		else
+			ui_hide_widget(eng_ui.custom_button);
+		if (active_custom_buttons & (1 << OPCODE_CUSTOM_BUTTON_SUBCMD_DAMCON))
+			ui_unhide_widget(damcon_ui.custom_button);
+		else
+			ui_hide_widget(damcon_ui.custom_button);
+		if (active_custom_buttons & (1 << OPCODE_CUSTOM_BUTTON_SUBCMD_SCIENCE))
+			ui_unhide_widget(sci_ui.custom_button);
+		else
+			ui_hide_widget(sci_ui.custom_button);
+		if (active_custom_buttons & (1 << OPCODE_CUSTOM_BUTTON_SUBCMD_COMMS))
+			ui_unhide_widget(comms_ui.custom_button);
+		else
+			ui_hide_widget(comms_ui.custom_button);
+		break;
+	case OPCODE_CUSTOM_BUTTON_SUBCMD_UPDATE_TEXT:
+		memset(text, 0, sizeof(text));
+		rc = read_and_unpack_buffer(buffer, "bbbbbbbbbbbbbbbb", &button_index,
+			&text[0], &text[1], &text[2], &text[3],
+			&text[4], &text[5], &text[6], &text[7],
+			&text[8], &text[9], &text[10], &text[11],
+			&text[12], &text[13], &text[14]);
+		if (rc != 0)
+			return rc;
+		switch (button_index) {
+		case 0:
+			snis_button_set_label(nav_ui.custom_button, text);
+			break;
+		case 1:
+			snis_button_set_label(weapons.custom_button, text);
+			break;
+		case 2:
+			snis_button_set_label(eng_ui.custom_button, text);
+			break;
+		case 3:
+			snis_button_set_label(damcon_ui.custom_button, text);
+			break;
+		case 4:
+			snis_button_set_label(sci_ui.custom_button, text);
+			break;
+		case 5:
+			snis_button_set_label(comms_ui.custom_button, text);
+			break;
+		default:
+			return -1;
+		}
+		break;
+	default:
+		return -1;
+	}
+	return 0;
+}
+
 static void damcon_button_pressed(void *x)
 {
 	displaymode = DISPLAYMODE_DAMCON;
@@ -12090,6 +12217,11 @@ static void silence_alarms_pressed(void *x)
 		return;
 	transmit_adjust_control_input(!o->tsd.ship.alarms_silenced,
 		OPCODE_ADJUST_CONTROL_SILENCE_ALARMS);
+}
+
+static void eng_custom_button_pressed(void *x)
+{
+	queue_to_server(snis_opcode_pkt("bb", OPCODE_CUSTOM_BUTTON, OPCODE_CUSTOM_BUTTON_SUBCMD_ENG));
 }
 
 static void preset1_button_pressed(void *x)
@@ -12216,6 +12348,11 @@ static void init_engineering_ui(void)
 						y + txx(30), -1, -1, "UNSILENCE ALARMS",
 						color, NANO_FONT, silence_alarms_pressed, (void *) 0);
 	snis_button_set_sound(eu->silence_alarms, UISND13);
+	eu->custom_button = snis_button_init(snis_button_get_x(eu->silence_alarms) +
+						snis_button_get_width(eu->silence_alarms) + txx(5),
+						y + txx(30), -1, -1, "CUSTOM BUTTON",
+						color, NANO_FONT, eng_custom_button_pressed, (void *) 0);
+	snis_button_set_sound(eu->custom_button, UISND14);
 	y += yinc;
 	color = UI_COLOR(eng_power_meter);
 	eu->shield_slider = snis_slider_init(20, y += yinc, powersliderlen, sh, color,
@@ -12329,6 +12466,7 @@ static void init_engineering_ui(void)
 	ui_add_button(eu->preset1_button, dm, "SELECT ENGINEERING PRESET 1 - NORMAL MODE");
 	ui_add_button(eu->preset2_button, dm, "SELECT ENGINEERING PRESET 2 - QUIESCENT MODE");
 	ui_add_button(eu->silence_alarms, dm, "SILENCE/UNSILENCE ENGINEERING SYSTEM ALARMS");
+	ui_add_button(eu->custom_button, dm, "CUSTOM BUTTON");
 
 	y = 220 + yinc;
 	y = eng_ui.gauge_radius * 2.5 + yinc;
@@ -12904,6 +13042,11 @@ static void sci_mining_bot_pressed(void *x)
 	queue_to_server(snis_opcode_pkt("bw", OPCODE_REQUEST_MINING_BOT, id));
 }
 
+static void sci_custom_button_pressed(__attribute__((unused)) void *x)
+{
+	queue_to_server(snis_opcode_pkt("bb", OPCODE_CUSTOM_BUTTON, OPCODE_CUSTOM_BUTTON_SUBCMD_SCIENCE));
+}
+
 static void science_waypoint_entered(void *cookie)
 {
 	return;
@@ -13012,7 +13155,9 @@ static void init_science_ui(void)
 	const int atsy = trby;
 	const int atsw = 75 * SCREEN_WIDTH / 800;
 	const int atsh = trbh;
-	
+
+	const int cbbx = SCREEN_WIDTH - txx(100);
+	const int cbby = txy(30);
 
 	sci_ui.scizoom = snis_slider_init(szx, szy, szw, szh, UI_COLOR(sci_slider), "RANGE", "0", "100",
 				0.0, 100.0, sample_scizoom, do_scizoom);
@@ -13024,6 +13169,9 @@ static void init_science_ui(void)
 	sci_ui.launch_mining_bot_button = snis_button_init(mbbx, mbby, mbbw, mbbh, "MINING BOT",
 			UI_COLOR(sci_button), NANO_FONT, sci_mining_bot_pressed, (void *) 0);
 	snis_button_set_sound(sci_ui.launch_mining_bot_button, UISND13);
+	sci_ui.custom_button = snis_button_init(cbbx, cbby, -1, -1, "CUSTOM BUTTON", UI_COLOR(sci_button),
+						NANO_FONT, sci_custom_button_pressed, (void *) 0);
+	snis_button_set_sound(sci_ui.custom_button, UISND14);
 	sci_ui.tractor_button = snis_button_init(trbx, trby, trbw, trbh, "TRACTOR",
 			UI_COLOR(sci_button), NANO_FONT, sci_tractor_pressed, (void *) 0);
 	snis_button_set_sound(sci_ui.tractor_button, UISND14);
@@ -13047,6 +13195,7 @@ static void init_science_ui(void)
 	ui_add_button(sci_ui.details_button, DISPLAYMODE_SCIENCE, "VIEW DETAILS ABOUT SELECTED TARGET");
 	ui_add_button(sci_ui.launch_mining_bot_button, DISPLAYMODE_SCIENCE,
 			"LAUNCH THE MINING ROBOT TOWARDS SELECTED TARGET");
+	ui_add_button(sci_ui.custom_button, DISPLAYMODE_SCIENCE, "CUSTOM BUTTON");
 	ui_add_button(sci_ui.tractor_button, DISPLAYMODE_SCIENCE, "TOGGLE THE TRACTOR BEAM ON OR OFF");
 	ui_add_button(sci_ui.threed_button, DISPLAYMODE_SCIENCE, "SELECT LONG RANGE SCANNERS");
 	ui_add_button(sci_ui.sciplane_button, DISPLAYMODE_SCIENCE, "SELECT SHORT RANGE SCANNERS");
@@ -13130,6 +13279,11 @@ static void comms_screen_button_pressed(void *x)
 		break;
 	}
 	return;
+}
+
+static void comms_custom_button_pressed(__attribute__((unused)) void *x)
+{
+	queue_to_server(snis_opcode_pkt("bb", OPCODE_CUSTOM_BUTTON, OPCODE_CUSTOM_BUTTON_SUBCMD_COMMS));
 }
 
 static void comms_hail_button_pressed(__attribute__((unused)) void *x)
@@ -13469,6 +13623,10 @@ static void init_comms_ui(void)
 	comms_ui.main_onscreen_button = snis_button_init(x, y, bw, bh, "MAIN", button_color,
 			NANO_FONT, comms_screen_button_pressed, (void *) 6);
 	snis_button_set_sound(comms_ui.main_onscreen_button, UISND15);
+	x += bw;
+	comms_ui.custom_button = snis_button_init(x, y, bw, bh, "CUSTOM BUTTON", button_color,
+			NANO_FONT, comms_custom_button_pressed, (void *) 0);
+	snis_button_set_sound(comms_ui.custom_button, UISND16);
 	x = txx(140);
 	y = txy(30);
 	comms_ui.hail_button = snis_button_init(x, y, bw, bh, "/HAIL", button_color,
@@ -13609,6 +13767,8 @@ static void init_comms_ui(void)
 			"PROJECT SCIENCE SCREEN ON THE MAIN VIEW");
 	ui_add_button(comms_ui.main_onscreen_button, DISPLAYMODE_COMMS,
 			"PROJECT MAIN SCREEN ON THE MAIN VIEW");
+	ui_add_button(comms_ui.custom_button, DISPLAYMODE_COMMS,
+			"CUSTOM BUTTON");
 	ui_add_button(comms_ui.hail_button, DISPLAYMODE_COMMS,
 			"HAIL ANOTHER SHIP OR STARBASE BY NAME");
 	ui_add_button(comms_ui.channel_button, DISPLAYMODE_COMMS,
