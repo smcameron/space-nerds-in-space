@@ -552,6 +552,7 @@ static int switched_server2 = -1;
 static int writer_thread_should_die = 0;
 static int writer_thread_alive = 0;
 static int connected_to_gameserver = 0;
+static char connecting_to_server_msg[100] = { 0 };
 
 #define MAX_LOBBY_TRIES 3
 static void *connect_to_lobby_thread(__attribute__((unused)) void *arg)
@@ -7328,6 +7329,8 @@ static void *connect_to_gameserver_thread(__attribute__((unused)) void *arg)
 		sprintf(hoststr, "%d.%d.%d.%d", x[0], x[1], x[2], x[3]);
 	}
 	fprintf(stderr, "snis_client: connecting to %s/%s\n", hoststr, portstr);
+	strncpy(connecting_to_server_msg, "CONNECTING TO SERVER...",
+		sizeof(connecting_to_server_msg) - 1);
 
 	memset(&hints, 0, sizeof hints);
 	hints.ai_family = AF_INET;
@@ -7337,6 +7340,9 @@ static void *connect_to_gameserver_thread(__attribute__((unused)) void *arg)
 	if (rc) {
 		fprintf(stderr, "snis_client: Failed looking up %s:%s: %s\n",
 			hoststr, portstr, gai_strerror(rc));
+		snprintf(connecting_to_server_msg, sizeof(connecting_to_server_msg),
+				"snis_client: Failed looking up %s:%s: %s\n",
+				hoststr, portstr, gai_strerror(rc));
 		goto error;
 	}
 
@@ -7362,8 +7368,11 @@ static void *connect_to_gameserver_thread(__attribute__((unused)) void *arg)
 		goto error;
 
 	rc = setsockopt(gameserver_sock, IPPROTO_TCP, TCP_NODELAY, (char *) &flag, sizeof(int));
-	if (rc)
+	if (rc) {
 		fprintf(stderr, "setsockopt(TCP_NODELAY) failed.\n");
+		snprintf(connecting_to_server_msg, sizeof(connecting_to_server_msg),
+				"setsockopt(TCP_NODELAY) failed.");
+	}
 
 	rc = snis_writesocket(gameserver_sock, SNIS_PROTOCOL_VERSION, strlen(SNIS_PROTOCOL_VERSION));
 	if (rc < 0) {
@@ -7392,6 +7401,8 @@ static void *connect_to_gameserver_thread(__attribute__((unused)) void *arg)
 	printf("Notifying server, opcode update player\n");
 	if (snis_writesocket(gameserver_sock, &app, sizeof(app)) < 0) {
 		fprintf(stderr, "Initial write to gameserver failed.\n");
+		snprintf(connecting_to_server_msg, sizeof(connecting_to_server_msg),
+				"Initial write to gameserver failed.");
 		shutdown(gameserver_sock, SHUT_RDWR);
 		close(gameserver_sock);
 		gameserver_sock = -1;
@@ -7404,6 +7415,9 @@ static void *connect_to_gameserver_thread(__attribute__((unused)) void *arg)
 	if (rc) {
 		fprintf(stderr, "Failed to create gameserver reader thread: %d '%s', '%s'\n",
 			rc, strerror(rc), strerror(errno));
+		snprintf(connecting_to_server_msg, sizeof(connecting_to_server_msg),
+				"Failed to create gameserver reader thread: %d '%s', '%s'",
+			rc, strerror(rc), strerror(errno));
 	}
 	printf("started gameserver reader thread\n");
 
@@ -7414,6 +7428,9 @@ static void *connect_to_gameserver_thread(__attribute__((unused)) void *arg)
 	printf("starting gameserver writer thread\n");
 	rc = create_thread(&write_to_gameserver_thread, gameserver_writer, NULL, "snisc-writer", 1);
 	if (rc) {
+		snprintf(connecting_to_server_msg, sizeof(connecting_to_server_msg),
+				"Failed to create gameserver writer thread: %d '%s', '%s'",
+			rc, strerror(rc), strerror(errno));
 		fprintf(stderr, "Failed to create gameserver writer thread: %d '%s', '%s'\n",
 			rc, strerror(rc), strerror(errno));
 	}
@@ -7445,8 +7462,11 @@ static int connect_to_gameserver(int selected_server)
 
 static void show_connecting_screen(GtkWidget *w)
 {
+	if (strcmp(connecting_to_server_msg, "") == 0)
+		strncpy(connecting_to_server_msg, "CONNECTING TO SERVER...",
+			sizeof(connecting_to_server_msg) - 1);
 	sng_set_foreground(UI_COLOR(lobby_connecting));
-	sng_abs_xy_draw_string("CONNECTING TO SERVER...", SMALL_FONT, txx(100), txy(300) + LINEHEIGHT);
+	sng_abs_xy_draw_string(connecting_to_server_msg, SMALL_FONT, txx(100), txy(300) + LINEHEIGHT);
 	if (!connected_to_gameserver) {
 		connected_to_gameserver = 1;
 		(void) connect_to_gameserver(lobby_selected_server);
