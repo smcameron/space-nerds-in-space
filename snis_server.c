@@ -629,10 +629,7 @@ static void dequeue_lua_command(char *cmdbuf, int bufsize)
 	lua_command_queue_head = qe->next;
 	qe->next = NULL;
 	strncpy(cmdbuf, qe->lua_command, bufsize - 1);
-	printf("xxxx1\n"); fflush(stdout);
 	free(qe);
-	fflush(stdout); fflush(stderr);
-	printf("xxxx2\n"); fflush(stdout);
 }
 
 static struct timer_event {
