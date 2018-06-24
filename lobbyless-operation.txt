@@ -9,16 +9,21 @@ Here's what I did:
 Compile snis_server on the droplet.  Note, I did not install all the dependencies,
 just those needed to build snis_server.
 
- sudo apt-get install build-essential;
- sudo apt-get install pkg-config;
- sudo apt-get install liblua5.2-dev;
+  sudo apt-get install build-essential;
+  sudo apt-get install pkg-config;
+  sudo apt-get install liblua5.2-dev;
 
   make snis_server
 
+You will have to open up the firewall to allow your port:
+
+  MYPORT=10007 # or some port of your choosing
+  sudo ufw allow ${MYPORT}
+
 Then run the server
 
-  SNISSERVERNOLOBBY=1 # suppress lobby
-  SNISSERVERPORT=10007 # or some port number of your choosing.
+  export SNISSERVERNOLOBBY=1 # suppress lobby
+  export SNISSERVERPORT=${MYPORT} # or some port number of your choosing.
   ./snis_server -L x
 
 To connect to it with snis_client without a lobby, run on your local machine:
