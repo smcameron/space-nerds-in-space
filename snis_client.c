@@ -18566,8 +18566,10 @@ static void load_textures(void)
 	int loaded_something;
 	loaded_something = load_static_textures();
 	loaded_something += load_per_solarsystem_textures();
+#ifndef WITHOUTOPENGL
 	if (loaded_something)
 		glFinish();
+#endif
 }
 
 static int main_da_button_press(GtkWidget *w, GdkEventButton *event,

@@ -1,6 +1,8 @@
 #ifndef SNIS_ENTITY_KEY_VALUE_SPECIFICATION_H__
 #define SNIS_ENTITY_KEY_VALUE_SPECIFICATION_H__
 
+#include <stddef.h>
+
 /* Macros for constructing key value specifications for snis_entity, and snis_entity.tsd.ship */
 #define DOUBLE_FIELD(x) { #x, KVS_DOUBLE, 0, offsetof(struct snis_entity, x), sizeof(double), }
 #define FLOAT_FIELD(x) { #x, KVS_FLOAT, 0, offsetof(struct snis_entity, x), sizeof(float), }

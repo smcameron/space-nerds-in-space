@@ -36,7 +36,6 @@
 #define MESH_LINE_DOTTED (1<<2)
 
 #include "snis_graph.h"
-#include <GL/glew.h>
 
 struct mesh_line
 {
