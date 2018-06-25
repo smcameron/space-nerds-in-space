@@ -185,7 +185,7 @@ int snis_opcode_def_init(void)
 	rc |= init_opcode_def(OPCODE_UPDATE_PLANET, "bwwSSSSwbbbbhbbbSbhbbwb");
 	rc |= init_opcode_def(OPCODE_UPDATE_BLACK_HOLE, "bwwSSSS");
 	/* rc |= init_opcode_def(OPCODE_UPDATE_SCI_TEXT, "bwhr"); */
-	rc |= init_opcode_def(OPCODE_CREATE_ITEM, "bbSSS");
+	rc |= init_opcode_def(OPCODE_CREATE_ITEM, "bbSSSbb");
 	rc |= init_opcode_def(OPCODE_DEMON_COMMS_XMIT, "n/a");
 	rc |= init_opcode_def(OPCODE_DEMON_FIRE_TORPEDO, "bw");
 	rc |= init_opcode_def(OPCODE_DEMON_FIRE_PHASER, "bw");

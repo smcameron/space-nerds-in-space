@@ -3140,6 +3140,7 @@ static struct demon_ui {
 	int captain_of;
 	int selectmode;
 	int buttonmode;
+	int shiptype;
 	int render_style;
 #define DEMON_UI_RENDER_STYLE_WIREFRAME 0
 #define DEMON_UI_RENDER_STYLE_ALPHA_BY_NORMAL 1
@@ -15151,7 +15152,7 @@ static inline int between(double a, double b, double v)
 static void demon_button_create_item(gdouble x, gdouble y, gdouble z)
 {
 	double ux, uy, uz;
-	uint8_t item_type;
+	uint8_t item_type, data1, data2;
 
 	if (demon_ui.use_3d) {
 		ux = x;
@@ -15163,9 +15164,13 @@ static void demon_button_create_item(gdouble x, gdouble y, gdouble z)
 		uy = y;
 	}
 
+	data1 = 255;
+	data2 = 255;
+
 	switch (demon_ui.buttonmode) {
 		case DEMON_BUTTON_SHIPMODE:
 			item_type = OBJTYPE_SHIP2;
+			data1 = demon_ui.shiptype;
 			break;
 		case DEMON_BUTTON_STARBASEMODE:
 			item_type = OBJTYPE_STARBASE;
@@ -15188,8 +15193,9 @@ static void demon_button_create_item(gdouble x, gdouble y, gdouble z)
 		default:
 			return;
 	}
-	queue_to_server(snis_opcode_pkt("bbSSS", OPCODE_CREATE_ITEM, item_type,
-			ux, (int32_t) UNIVERSE_DIM, uy, (int32_t) UNIVERSE_DIM, uz, (int32_t) UNIVERSE_DIM));
+	queue_to_server(snis_opcode_pkt("bbSSSbb", OPCODE_CREATE_ITEM, item_type,
+			ux, (int32_t) UNIVERSE_DIM, uy, (int32_t) UNIVERSE_DIM, uz, (int32_t) UNIVERSE_DIM,
+			data1, data2));
 }
 
 typedef int (*demon_select_test)(uint32_t oid);
@@ -15945,6 +15951,8 @@ static void demon_home_button_pressed(void *x)
 
 static void demon_ship_button_pressed(void *x)
 {
+	uint8_t data = (uint8_t) (((intptr_t) x) & 0x0ff);
+	demon_ui.shiptype = data;
 	demon_modebutton_pressed(DEMON_BUTTON_SHIPMODE);
 }
 
@@ -16104,7 +16112,7 @@ static void demon_netstats_button_pressed(void *x)
 
 static void init_demon_ui()
 {
-	int x, y, dy, n;
+	int i, x, y, dy, n;
 
 	demon_ui.ux1 = 0;
 	demon_ui.uy1 = 0;
@@ -16136,7 +16144,7 @@ static void init_demon_ui()
 	snis_button_set_sound(demon_ui.demon_home_button, UISND29);
 	demon_ui.demon_ship_button = snis_button_init(x, y + dy * n++, txx(70), txy(20),
 			"SHIP", UI_COLOR(demon_deselected_button),
-			NANO_FONT, demon_ship_button_pressed, NULL);
+			NANO_FONT, demon_ship_button_pressed, (void *) 255);
 	snis_button_set_sound(demon_ui.demon_ship_button, UISND28);
 	demon_ui.demon_starbase_button = snis_button_init(x, y + dy * n++, txx(70), txy(20),
 			"STARBASE", UI_COLOR(demon_deselected_button),
@@ -16228,12 +16236,16 @@ static void init_demon_ui()
 	pull_down_menu_add_row(demon_ui.menu, "META", "EXAG SCALE", demon_scale_button_pressed, NULL);
 	pull_down_menu_add_row(demon_ui.menu, "META", "RENDER STYLE", NULL, NULL); /* TODO: implement this */
 	pull_down_menu_add_column(demon_ui.menu, "ADD");
-	pull_down_menu_add_row(demon_ui.menu, "ADD", "SHIP", demon_ship_button_pressed, NULL);
+	pull_down_menu_add_row(demon_ui.menu, "ADD", "SHIP", demon_ship_button_pressed, (void *) 255);
 	pull_down_menu_add_row(demon_ui.menu, "ADD", "STARBASE", demon_starbase_button_pressed, NULL);
 	pull_down_menu_add_row(demon_ui.menu, "ADD", "PLANET", demon_planet_button_pressed, NULL);
 	pull_down_menu_add_row(demon_ui.menu, "ADD", "BLACK HOLE", demon_black_hole_button_pressed, NULL);
 	pull_down_menu_add_row(demon_ui.menu, "ADD", "ASTEROID", demon_asteroid_button_pressed, NULL);
 	pull_down_menu_add_row(demon_ui.menu, "ADD", "SPACE MONSTER", demon_spacemonster_button_pressed, NULL);
+	pull_down_menu_add_column(demon_ui.menu, "SHIP");
+	for (i = 0; i < nshiptypes; i++)
+		pull_down_menu_add_row(demon_ui.menu, "SHIP", ship_type[i].class,
+			demon_ship_button_pressed, (void *) ((intptr_t) i));
 	pull_down_menu_add_column(demon_ui.menu, "SELECTION");
 	pull_down_menu_add_row(demon_ui.menu, "SELECTION", "DELETE", demon_delete_button_pressed, NULL);
 	pull_down_menu_add_row(demon_ui.menu, "SELECTION", "SELECT NONE", demon_select_none_button_pressed, NULL);

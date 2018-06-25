@@ -17628,21 +17628,32 @@ static int l_disable_custom_button(lua_State *l)
 static int process_create_item(struct game_client *c)
 {
 	unsigned char buffer[14];
-	unsigned char item_type;
+	unsigned char item_type, data1, data2;
+	char *n;
 	double x, y, z, r;
 	int rc, i = -1;
+	static struct mtwist_state *mt = NULL;
 
-	rc = read_and_unpack_buffer(c, buffer, "bSSS", &item_type,
+	if (!mt)
+		mt = mtwist_init(mtwist_seed);
+
+	rc = read_and_unpack_buffer(c, buffer, "bSSSbb", &item_type,
 			&x, (int32_t) UNIVERSE_DIM,
 			&y, (int32_t) UNIVERSE_DIM,
-			&z, (int32_t) UNIVERSE_DIM);
+			&z, (int32_t) UNIVERSE_DIM, &data1, &data2);
 	if (rc)
 		return rc;
 
 	pthread_mutex_lock(&universe_mutex);
 	switch (item_type) {
 	case OBJTYPE_SHIP2:
-		i = add_ship(-1, 1);
+		if (data1 >= 0 && data1 < nshiptypes) {
+			n = random_name(mt);
+			i = add_specific_ship(n, x, y, z, data1, 0, 1);
+			free(n);
+		} else {
+			i = add_ship(-1, 1);
+		}
 		break;
 	case OBJTYPE_STARBASE:
 		i = add_starbase(x, y, z, 0, 0, 0, snis_randn(100), -1);
