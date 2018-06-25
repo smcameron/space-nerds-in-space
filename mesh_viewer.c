@@ -14,6 +14,7 @@
 #include <limits.h>
 #include <getopt.h>
 #include <locale.h>
+#include <GL/glew.h>
 
 #include "mtwist.h"
 #include "vertex.h"
