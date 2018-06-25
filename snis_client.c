@@ -3141,6 +3141,7 @@ static struct demon_ui {
 	int selectmode;
 	int buttonmode;
 	int shiptype;
+	int faction;
 	int render_style;
 #define DEMON_UI_RENDER_STYLE_WIREFRAME 0
 #define DEMON_UI_RENDER_STYLE_ALPHA_BY_NORMAL 1
@@ -15171,6 +15172,7 @@ static void demon_button_create_item(gdouble x, gdouble y, gdouble z)
 		case DEMON_BUTTON_SHIPMODE:
 			item_type = OBJTYPE_SHIP2;
 			data1 = demon_ui.shiptype;
+			data2 = demon_ui.faction;
 			break;
 		case DEMON_BUTTON_STARBASEMODE:
 			item_type = OBJTYPE_STARBASE;
@@ -15952,8 +15954,16 @@ static void demon_home_button_pressed(void *x)
 static void demon_ship_button_pressed(void *x)
 {
 	uint8_t data = (uint8_t) (((intptr_t) x) & 0x0ff);
-	demon_ui.shiptype = data;
+	if (data == 255)
+		data = demon_ui.shiptype;
+	demon_ui.shiptype = data % (nshiptypes + 1);
 	demon_modebutton_pressed(DEMON_BUTTON_SHIPMODE);
+}
+
+static void demon_faction_button_pressed(void *x)
+{
+	int faction = (int) ((intptr_t) x);
+	demon_ui.faction = faction % (nfactions() + 1);
 }
 
 static void demon_starbase_button_pressed(void *x)
@@ -16144,7 +16154,7 @@ static void init_demon_ui()
 	snis_button_set_sound(demon_ui.demon_home_button, UISND29);
 	demon_ui.demon_ship_button = snis_button_init(x, y + dy * n++, txx(70), txy(20),
 			"SHIP", UI_COLOR(demon_deselected_button),
-			NANO_FONT, demon_ship_button_pressed, (void *) 255);
+			NANO_FONT, demon_ship_button_pressed, (void *) (intptr_t) 255);
 	snis_button_set_sound(demon_ui.demon_ship_button, UISND28);
 	demon_ui.demon_starbase_button = snis_button_init(x, y + dy * n++, txx(70), txy(20),
 			"STARBASE", UI_COLOR(demon_deselected_button),
@@ -16236,7 +16246,8 @@ static void init_demon_ui()
 	pull_down_menu_add_row(demon_ui.menu, "META", "EXAG SCALE", demon_scale_button_pressed, NULL);
 	pull_down_menu_add_row(demon_ui.menu, "META", "RENDER STYLE", NULL, NULL); /* TODO: implement this */
 	pull_down_menu_add_column(demon_ui.menu, "ADD");
-	pull_down_menu_add_row(demon_ui.menu, "ADD", "SHIP", demon_ship_button_pressed, (void *) 255);
+	pull_down_menu_add_row(demon_ui.menu, "ADD", "SHIP", demon_ship_button_pressed, (void *)
+					(intptr_t) demon_ui.shiptype);
 	pull_down_menu_add_row(demon_ui.menu, "ADD", "STARBASE", demon_starbase_button_pressed, NULL);
 	pull_down_menu_add_row(demon_ui.menu, "ADD", "PLANET", demon_planet_button_pressed, NULL);
 	pull_down_menu_add_row(demon_ui.menu, "ADD", "BLACK HOLE", demon_black_hole_button_pressed, NULL);
@@ -16246,6 +16257,14 @@ static void init_demon_ui()
 	for (i = 0; i < nshiptypes; i++)
 		pull_down_menu_add_row(demon_ui.menu, "SHIP", ship_type[i].class,
 			demon_ship_button_pressed, (void *) ((intptr_t) i));
+	pull_down_menu_add_row(demon_ui.menu, "SHIP", "RANDOM",
+		demon_ship_button_pressed, (void *) ((intptr_t) nshiptypes));
+	pull_down_menu_add_column(demon_ui.menu, "FACTION");
+	for (i = 0; i < nfactions(); i++)
+		pull_down_menu_add_row(demon_ui.menu, "FACTION", faction_name(i),
+			demon_faction_button_pressed, (void *) ((intptr_t) i));
+	pull_down_menu_add_row(demon_ui.menu, "FACTION", "RANDOM",
+		demon_faction_button_pressed, (void *) (intptr_t) nfactions());
 	pull_down_menu_add_column(demon_ui.menu, "SELECTION");
 	pull_down_menu_add_row(demon_ui.menu, "SELECTION", "DELETE", demon_delete_button_pressed, NULL);
 	pull_down_menu_add_row(demon_ui.menu, "SELECTION", "SELECT NONE", demon_select_none_button_pressed, NULL);
@@ -16935,7 +16954,7 @@ static void show_demon_3d(GtkWidget *w)
 
 static void show_demon(GtkWidget *w)
 {
-	char shiptype_label[100];
+	char label[100];
 	if (demon_ui.use_3d)
 		show_demon_3d(w);
 	else
@@ -16945,11 +16964,16 @@ static void show_demon(GtkWidget *w)
 		sng_center_xy_draw_string("CAPTAIN MODE", SMALL_FONT, SCREEN_WIDTH / 2, txy(20));
 	}
 	if (demon_ui.shiptype >= 0 && demon_ui.shiptype < nshiptypes)
-		snprintf(shiptype_label, sizeof(shiptype_label), "SHIP TYPE = %s",
+		snprintf(label, sizeof(label), "SHIP TYPE = %s",
 				ship_type[demon_ui.shiptype].class);
 	else
-		snprintf(shiptype_label, sizeof(shiptype_label), "SHIP TYPE = RANDOM");
-	sng_abs_xy_draw_string(shiptype_label, PICO_FONT, SCREEN_WIDTH - txx(100), txy(20));
+		snprintf(label, sizeof(label), "SHIP TYPE = RANDOM");
+	sng_abs_xy_draw_string(label, PICO_FONT, SCREEN_WIDTH - txx(100), txy(20));
+	if (demon_ui.faction >= 0 && demon_ui.faction < nfactions())
+		snprintf(label, sizeof(label), "FACTION = %s", faction_name(demon_ui.faction % nfactions()));
+	else
+		snprintf(label, sizeof(label), "FACTION = RANDOM");
+	sng_abs_xy_draw_string(label, PICO_FONT, SCREEN_WIDTH - txx(100), txy(40));
 	show_common_screen(w, "DEMON");
 }
 

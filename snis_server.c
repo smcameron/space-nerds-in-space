@@ -17647,13 +17647,13 @@ static int process_create_item(struct game_client *c)
 	pthread_mutex_lock(&universe_mutex);
 	switch (item_type) {
 	case OBJTYPE_SHIP2:
-		if (data1 >= 0 && data1 < nshiptypes) {
-			n = random_name(mt);
-			i = add_specific_ship(n, x, y, z, data1, 0, 1);
-			free(n);
-		} else {
-			i = add_ship(-1, 1);
-		}
+		if (data1 < 0 || data1 >= nshiptypes)
+			data1 = snis_randn(nshiptypes);
+		n = random_name(mt);
+		if (data2 >= nfactions())
+			data2 = snis_randn(nfactions());
+		i = add_specific_ship(n, x, y, z, data1, data2, 1);
+		free(n);
 		break;
 	case OBJTYPE_STARBASE:
 		i = add_starbase(x, y, z, 0, 0, 0, snis_randn(100), -1);
