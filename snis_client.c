@@ -16935,6 +16935,7 @@ static void show_demon_3d(GtkWidget *w)
 
 static void show_demon(GtkWidget *w)
 {
+	char shiptype_label[100];
 	if (demon_ui.use_3d)
 		show_demon_3d(w);
 	else
@@ -16943,6 +16944,12 @@ static void show_demon(GtkWidget *w)
 		sng_set_foreground(WHITE);
 		sng_center_xy_draw_string("CAPTAIN MODE", SMALL_FONT, SCREEN_WIDTH / 2, txy(20));
 	}
+	if (demon_ui.shiptype >= 0 && demon_ui.shiptype < nshiptypes)
+		snprintf(shiptype_label, sizeof(shiptype_label), "SHIP TYPE = %s",
+				ship_type[demon_ui.shiptype].class);
+	else
+		snprintf(shiptype_label, sizeof(shiptype_label), "SHIP TYPE = RANDOM");
+	sng_abs_xy_draw_string(shiptype_label, PICO_FONT, SCREEN_WIDTH - txx(100), txy(20));
 	show_common_screen(w, "DEMON");
 }
 
