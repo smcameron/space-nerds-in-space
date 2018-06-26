@@ -7,6 +7,7 @@ SNIS_MULTIVERSE=${BINDIR}/snis_multiverse
 SSGL_SERVER=${BINDIR}/ssgl_server
 LSSSGL=${BINDIR}/lsssgl
 ASPECT_RATIO="${ASPECT_RATIO:-}"
+LOBBYHOST=localhost
 # ASPECT_RATIO="5:4"
 # ASPECT_RATIO="4:3"
 # ASPECT_RATIO="16:10"
@@ -41,6 +42,7 @@ cat << EOF 1>&2
    6. Stop all SNIS clients
    7. Stop all SNIS servers
    8. Check for asset updates
+   9. Enter Lobby Host IP addr (currently $LOBBYHOST)
    0. Quit
 EOF
 }
@@ -62,6 +64,20 @@ kill_processes()
 
 start_snis_lobby()
 {
+	if [ "${LOBBYHOST}" != "localhost" ]
+	then
+		echo
+		echo "WARNING: current lobby host is ${LOBBYHOST}, not localhost."
+		echo "Are you sure you mean to start a local lobby server (y/n)?"
+		read x
+		if [ "$x" != "y" ]
+		then
+			echo "Not starting lobby host."
+			return
+		else
+			echo "Starting local lobby host anyway."
+		fi
+	fi
 	echo
 	echo "Starting the lobby server"
 	echo
@@ -87,7 +103,7 @@ start_snis_multiverse()
 		fi
 		echo "Created ./snisdb for snis_multiverse" 1>&2
 	fi
-	(${SNIS_MULTIVERSE} localhost nickname narnia > snis_multiverse_log.txt 2>&1 ; \
+	(${SNIS_MULTIVERSE} "${LOBBYHOST}" nickname narnia > snis_multiverse_log.txt 2>&1 ; \
 		echo "snis_multiverse died, status was $?" 1>&2 ) &
 }
 
@@ -139,7 +155,7 @@ start_snis_server()
 	get_solarsystem_name
 	echo "Using solar system $SOLARSYSTEM_NAME"
 	SS1="$SOLARSYSTEM_NAME"
-	${SNIS_SERVER} -l localhost -L $(uppercase "$SS1") --enable-enscript -m narnia -s "$SS1" > snis_server_log.txt 2>&1 &
+	${SNIS_SERVER} -l "${LOBBYHOST}" -L $(uppercase "$SS1") -m narnia -s "$SS1" > snis_server_log.txt 2>&1 &
 	sleep 2.5
 }
 
@@ -148,9 +164,16 @@ start_snis_client()
 	echo
 	echo "Starting snis_client"
 	echo
-	${SNIS_CLIENT} $ASPECT_RATIO_ARG --fullscreen > snis_client_log.txt 2>&1 &
+	${SNIS_CLIENT} --lobbyhost "${LOBBYHOST}" $ASPECT_RATIO_ARG --fullscreen > snis_client_log.txt 2>&1 &
 	sleep 1
 	# --starship "$shipname" --pw "$password" $@
+}
+
+enter_lobby_host()
+{
+	echo -n "Enter lobby host: "
+	read x
+	export LOBBYHOST="$x"
 }
 
 reformat_processes()
@@ -209,6 +232,8 @@ do
 	4) start_snis_client
 		;;
 	8) util/snis_update_assets.sh --dry-run
+		;;
+	9) enter_lobby_host
 		;;
 	*) echo "Invalid choice."
 	        ;;
