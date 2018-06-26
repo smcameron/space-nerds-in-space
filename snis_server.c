@@ -13078,7 +13078,7 @@ static int process_demon_move_object(struct game_client *c)
 		goto out;
 	o = &go[i];
 	if (o->type == OBJTYPE_SHIP2 || o->type == OBJTYPE_SHIP1)
-		warp_ship(o, o->x + dx, o->y, o->z + dz);
+		warp_ship(o, o->x + dx, o->y + dy, o->z + dz);
 	else
 		set_object_location(o, o->x + dx, o->y + dy, o->z + dz);
 	o->orientation = orientation;
