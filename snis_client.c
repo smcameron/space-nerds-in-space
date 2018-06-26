@@ -15514,6 +15514,10 @@ static void debug_draw_object(GtkWidget *w, struct snis_entity *o,
 			sprintf(buffer, "TL: %.1f", threat_level);
 			sng_abs_xy_draw_string(buffer, NANO_FONT, x + xoffset, y + yoffset + 20);
 		}
+		if (o->type == OBJTYPE_SHIP1 && !(timer & 0x02)) {
+			sng_set_foreground(MAGENTA);
+			sng_draw_circle(0, x, y, txx(20));
+		}
 	}
 	if (v) {
 		sng_set_foreground(UI_COLOR(demon_victim_vector));
