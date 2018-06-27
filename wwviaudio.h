@@ -127,8 +127,9 @@ GLOBAL /* channel */ int wwviaudio_add_sound(int sound_number);
 /* Begin playing a segment of a sound at "begin" until "end" at "volume" (all between 0.0 and 1.0).
  * Upon reaching "end", call "callback" with "cookie" as a parameter.
  */
-GLOBAL /* channel */ int wwviaudio_add_sound_segment(int sound_number, float volume,
-			float begin, float end, void (*callback)(void *cookie), void *cookie);
+GLOBAL /* channel */ int wwviaudio_add_sound_segment(int sound_number, float initial_volume,
+			float target_volume, float begin, float end, void (*callback)(void *cookie),
+			void *cookie);
 
 /* Begin playing a sound on a non-music channel.  The channel is returned.
  * If fewer than five channels are open, the sound is not played, and -1

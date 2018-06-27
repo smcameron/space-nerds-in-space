@@ -18067,8 +18067,9 @@ static void really_quit(void);
 
 static void maybe_play_rocket_sample(void)
 {
-	double value;
+	double volume;
 	float begin, end;
+	static float last_volume = 0.0;
 
 	if (suppress_rocket_noise)
 		return;
@@ -18076,14 +18077,15 @@ static void maybe_play_rocket_sample(void)
 		return;
 	if ((timer & 0x00f) != 0)
 		return;
-	value = snis_slider_get_value(nav_ui.throttle_slider);
+	volume = snis_slider_get_value(nav_ui.throttle_slider);
 	begin = snis_randn(1000);
 	/* Rocket sample is 20 seconds long. We want to choose 16/30ths of a second
 	 * somewhere after the 1st second, and ending before the last second
 	 */
 	begin = 1.0 / 20.0 + (begin / 1000.0) * 0.90;
 	end = begin + 16.0 / 30.0 / 20.0;
-	wwviaudio_add_sound_segment(ROCKET_SAMPLE, value, begin, end, NULL, NULL);
+	wwviaudio_add_sound_segment(ROCKET_SAMPLE, last_volume, volume, begin, end, NULL, NULL);
+	last_volume = volume;
 }
 
 gint advance_game(gpointer data)
