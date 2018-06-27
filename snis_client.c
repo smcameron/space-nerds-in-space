@@ -18057,6 +18057,25 @@ end_of_drawing:
 
 static void really_quit(void);
 
+static void maybe_play_rocket_sample(void)
+{
+	double value;
+	float begin, end;
+
+	if (!(role & ROLE_SOUNDSERVER))
+		return;
+	if ((timer & 0x00f) != 0)
+		return;
+	value = snis_slider_get_value(nav_ui.throttle_slider);
+	begin = snis_randn(1000);
+	/* Rocket sample is 20 seconds long. We want to choose 16/30ths of a second
+	 * somewhere after the 1st second, and ending before the last second
+	 */
+	begin = 1.0 / 20.0 + (begin / 1000.0) * 0.90;
+	end = begin + 16.0 / 30.0 / 20.0;
+	wwviaudio_add_sound_segment(ROCKET_SAMPLE, value, begin, end, NULL, NULL);
+}
+
 gint advance_game(gpointer data)
 {
 	int time_to_switch_servers;
@@ -18109,6 +18128,7 @@ gint advance_game(gpointer data)
 		displaymode = DISPLAYMODE_LOBBYSCREEN;
 	}
 	pthread_mutex_unlock(&to_server_queue_event_mutex);
+	maybe_play_rocket_sample();
 
 	return TRUE;
 }
@@ -19059,6 +19079,7 @@ static void read_sound_clips(void)
 	read_ogg_clip(UISND29, d, "ui29.ogg");
 	read_ogg_clip(SPACEMONSTER_SLAP, d, "spacemonster_slap.ogg");
 	read_ogg_clip(ALARM_BUZZER, d, "alarm_buzzer.ogg");
+	read_ogg_clip(ROCKET_SAMPLE, d, "atlas_rocket_sample.ogg");
 	printf("Done.\n");
 }
 
