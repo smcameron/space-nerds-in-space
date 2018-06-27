@@ -18077,7 +18077,7 @@ static void maybe_play_rocket_sample(void)
 		return;
 	if ((timer & 0x00f) != 0)
 		return;
-	volume = snis_slider_get_value(nav_ui.throttle_slider);
+	volume = sample_power_data_impulse_current() / 255.0;
 	begin = snis_randn(1000);
 	/* Rocket sample is 20 seconds long. We want to choose 16/30ths of a second
 	 * somewhere after the 1st second, and ending before the last second
