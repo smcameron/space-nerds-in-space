@@ -18093,6 +18093,10 @@ static void maybe_play_rocket_sample(void)
 	}
 	volume = table_interp(volume, xv, yv, 4);
 
+	/* If main thruster is really pushing, make some extra creaking noises */
+	if (volume >= 0.94 && snis_randn(1000) < 50)
+		wwviaudio_add_sound(HULL_CREAK_0 + (snis_randn(1000) % NHULL_CREAK_SOUNDS));
+
 	if (volume < 0.01 && thruster_volume < 0.01) { /* Don't waste CPU playing silence. */
 		last_volume = volume;
 		last_thruster_volume = thruster_volume;
