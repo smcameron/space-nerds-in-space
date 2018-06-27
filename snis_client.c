@@ -262,6 +262,7 @@ static struct entity_context *tridentecx;
 static struct entity_context *sciballecx;
 static struct entity_context *network_setup_ecx;
 
+static int suppress_rocket_noise = 0;
 static int ecx_fake_stars_initialized = 0;
 static int nfake_stars = 0;
 static volatile int fake_stars_timer = 0;
@@ -16111,6 +16112,11 @@ static void demon_scale_button_pressed(void *x)
 		demon_ui.desired_exaggerated_scale = 1.0;
 }
 
+static void demon_toggle_rocket_noise_pressed(void *x)
+{
+	suppress_rocket_noise = !suppress_rocket_noise;
+}
+
 static void demon_netstats_button_pressed(void *x)
 {
 	if (!demon_ui.netstats_active) {
@@ -16249,6 +16255,8 @@ static void init_demon_ui()
 	pull_down_menu_add_row(demon_ui.menu, "META", "NETSTATS", demon_netstats_button_pressed, NULL);
 	pull_down_menu_add_row(demon_ui.menu, "META", "EXAG SCALE", demon_scale_button_pressed, NULL);
 	pull_down_menu_add_row(demon_ui.menu, "META", "RENDER STYLE", NULL, NULL); /* TODO: implement this */
+	pull_down_menu_add_row(demon_ui.menu, "META", "TOGGLE ROCKET ENGINE NOISE",
+			demon_toggle_rocket_noise_pressed, NULL);
 	pull_down_menu_add_column(demon_ui.menu, "ADD");
 	pull_down_menu_add_row(demon_ui.menu, "ADD", "SHIP", demon_ship_button_pressed, (void *)
 					(intptr_t) demon_ui.shiptype);
@@ -18062,6 +18070,8 @@ static void maybe_play_rocket_sample(void)
 	double value;
 	float begin, end;
 
+	if (suppress_rocket_noise)
+		return;
 	if (!(role & ROLE_SOUNDSERVER))
 		return;
 	if ((timer & 0x00f) != 0)
