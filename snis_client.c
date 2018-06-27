@@ -18072,6 +18072,8 @@ static void maybe_play_rocket_sample(void)
 	static float last_volume = 0.0;
 	static float last_thruster_volume = 0.0;
 	struct snis_entity *o = find_my_ship();
+	const double xv[] = { 0.0, 0.75, 1.0, 2.0 };
+	const double yv[] = { 0.0, 0.25, 1.0, 1.0 };
 
 	if (suppress_rocket_noise)
 		return;
@@ -18089,6 +18091,7 @@ static void maybe_play_rocket_sample(void)
 	} else {
 		thruster_volume = 0;
 	}
+	volume = table_interp(volume, xv, yv, 4);
 
 	if (volume < 0.01 && thruster_volume < 0.01) { /* Don't waste CPU playing silence. */
 		last_volume = volume;
