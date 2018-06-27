@@ -548,6 +548,9 @@ models:	${MODELS}
 update-assets:
 	@util/snis_update_assets.sh
 
+check-assets:
+	@util/snis_update_assets.sh --dry-run
+
 build:	all
 
 utils:	${UTILPROGS}
