@@ -1028,7 +1028,7 @@ static void allocate_ship_thrust_attachment_points(int n)
 }
 
 static void read_thrust_attachment_points(char *dir, char *model_path, int shiptype,
-			struct thrust_attachment_point **ap)
+			struct thrust_attachment_point **ap, float extra_scaling)
 {
 	char path[PATH_MAX + 1];
 	int i;
@@ -1087,7 +1087,7 @@ static void read_thrust_attachment_points(char *dir, char *model_path, int shipt
 		strcat(path, ship_type[shiptype].thrust_attachment_file);
 	}
 	/* now read the scad_params.h file. */
-	*ap = read_thrust_attachments(path, SHIP_MESH_SCALE);
+	*ap = read_thrust_attachments(path, SHIP_MESH_SCALE * extra_scaling);
 	return;
 }
 
@@ -19695,7 +19695,8 @@ static void init_meshes()
 	for (i = 0; i < nshiptypes; i++) {
 		ship_mesh_map[i] = snis_read_model(d, ship_type[i].model_file);
 		read_thrust_attachment_points(d, ship_type[i].model_file, i,
-						&ship_thrust_attachment_points[i]);
+						&ship_thrust_attachment_points[i],
+						ship_type[i].extra_scaling);
 		for (int j = 0; j < ship_type[i].nrotations; j++) {
 			char axis = ship_type[i].axis[j];
 			union quat q;
@@ -19708,7 +19709,7 @@ static void init_meshes()
 					   (float) ('z' == axis), ship_type[i].angle[j]);
 			mesh_rotate(ship_mesh_map[i], &q);
 		}
-		mesh_scale(ship_mesh_map[i], SHIP_MESH_SCALE);
+		mesh_scale(ship_mesh_map[i], SHIP_MESH_SCALE * ship_type[i].extra_scaling);
 		derelict_mesh[i] = make_derelict_mesh(ship_mesh_map[i]);
 	}
 

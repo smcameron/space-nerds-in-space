@@ -24,6 +24,7 @@ struct ship_type_entry *snis_read_ship_types(char *filename, int *count)
 	int linecount = 0, n = 0;
 	int nalloced = 0;
 	struct ship_type_entry *st;
+	float extra_scaling;
 	int nrots;
 	char axis[4];
 	float rot[4];
@@ -55,24 +56,25 @@ struct ship_type_entry *snis_read_ship_types(char *filename, int *count)
 		if (strcmp(line, "") == 0)
 			continue; /* skip blank lines */
 
-		scancount = sscanf(line, "%s %s %s %lf %d %d %d %d %d %d %[xyzs] %f %[xyzs] %f %[xyzs] %f %[xyzs] %f\n",
+		scancount = sscanf(line,
+			"%s %s %s %lf %d %d %d %d %d %d %f %[xyzs] %f %[xyzs] %f %[xyzs] %f %[xyzs] %f\n",
 				class, model_file, thrust_attach,
 				&toughness, &integer, &warpchance, &crew_max, &ncargo_bays,
-				&has_lasers, &has_torpedoes,
+				&has_lasers, &has_torpedoes, &extra_scaling,
 				&axis[0], &rot[0],
 				&axis[1], &rot[1],
 				&axis[2], &rot[2],
 				&axis[3], &rot[3]);
-		expected_count = 18;
+		expected_count = 19;
 		if (scancount == expected_count) {
 			nrots = 4;
 			goto done_scanfing_line;
 		}
 		expected_count -= 2;
-		scancount = sscanf(line, "%s %s %s %lf %d %d %d %d %d %d %[xyzs] %f %[xyzs] %f %[xyzs] %f\n",
+		scancount = sscanf(line, "%s %s %s %lf %d %d %d %d %d %d %f %[xyzs] %f %[xyzs] %f %[xyzs] %f\n",
 				class, model_file, thrust_attach,
 				&toughness, &integer, &warpchance, &crew_max, &ncargo_bays,
-				&has_lasers, &has_torpedoes,
+				&has_lasers, &has_torpedoes, &extra_scaling,
 				&axis[0], &rot[0],
 				&axis[1], &rot[1],
 				&axis[2], &rot[2]);
@@ -81,30 +83,30 @@ struct ship_type_entry *snis_read_ship_types(char *filename, int *count)
 			goto done_scanfing_line;
 		}
 		expected_count -= 2;
-		scancount = sscanf(line, "%s %s %s %lf %d %d %d %d %d %d %[xyzs] %f %[xyzs] %f\n",
+		scancount = sscanf(line, "%s %s %s %lf %d %d %d %d %d %d %f %[xyzs] %f %[xyzs] %f\n",
 				class, model_file, thrust_attach,
 				&toughness, &integer, &warpchance, &crew_max, &ncargo_bays,
-				&has_lasers, &has_torpedoes,
+				&has_lasers, &has_torpedoes, &extra_scaling,
 				&axis[0], &rot[0], &axis[1], &rot[1]);
 		if (scancount == expected_count) {
 			nrots = 2;
 			goto done_scanfing_line;
 		}
 		expected_count -= 2;
-		scancount = sscanf(line, "%s %s %s %lf %d %d %d %d %d %d %[xyzs] %f\n",
+		scancount = sscanf(line, "%s %s %s %lf %d %d %d %d %d %d %f, %[xyzs] %f\n",
 				class, model_file, thrust_attach,
 				&toughness, &integer, &warpchance, &crew_max, &ncargo_bays,
-				&has_lasers, &has_torpedoes,
+				&has_lasers, &has_torpedoes, &extra_scaling,
 				&axis[0], &rot[0]);
 		if (scancount == expected_count) {
 			nrots = 1;
 			goto done_scanfing_line;
 		}
 		expected_count -= 2;
-		scancount = sscanf(line, "%s %s %s %lf %d %d %d %d %d %d\n", class, model_file,
+		scancount = sscanf(line, "%s %s %s %lf %d %d %d %d %d %d %f\n", class, model_file,
 					thrust_attach, &toughness, &integer, &warpchance,
 					&crew_max, &ncargo_bays,
-					&has_lasers, &has_torpedoes);
+					&has_lasers, &has_torpedoes, &extra_scaling);
 		if (scancount != expected_count) {
 			fprintf(stderr, "Error at line %d in %s: '%s'\n",
 				linecount, filename, line);
@@ -174,6 +176,7 @@ done_scanfing_line:
 		st[n].ncargo_bays = ncargo_bays;
 		st[n].has_lasers = has_lasers;
 		st[n].has_torpedoes = has_torpedoes;
+		st[n].extra_scaling = extra_scaling;
 
 		st[n].nrotations = nrots;
 		for (i = 0; i < nrots; i++) {

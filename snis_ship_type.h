@@ -43,6 +43,7 @@ struct ship_type_entry {
 	int has_lasers;
 	int has_torpedoes;
 	int rts_unit_type;
+	float extra_scaling;
 };
 
 struct ship_type_entry *snis_read_ship_types(char *filename, int *count);
