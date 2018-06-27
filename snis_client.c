@@ -18078,12 +18078,20 @@ static void maybe_play_rocket_sample(void)
 	if ((timer & 0x00f) != 0)
 		return;
 	volume = sample_power_data_impulse_current() / 255.0;
+	if (volume < 0.01) { /* Don't waste CPU playing silence. */
+		last_volume = volume;
+		return;
+	}
 	begin = snis_randn(1000);
-	/* Rocket sample is 20 seconds long. We want to choose 16/30ths of a second
-	 * somewhere after the 1st second, and ending before the last second
+	/* Rocket sample is 20 seconds long. We want to choose 1 second sample
+	 * somewhere after the 1st second, and ending before the last second.
+	 * We start new samples every 16/30ths of a second, so there is about a
+	 * half second of overlap, in general, there will be two samples playing
+	 * at once. This helps mask the half-second periodicity in the
+	 * starting/ending of new/old bits of sound.
 	 */
 	begin = 1.0 / 20.0 + (begin / 1000.0) * 0.90;
-	end = begin + 16.0 / 30.0 / 20.0;
+	end = begin + 1.0 / 20.0;
 	wwviaudio_add_sound_segment(ROCKET_SAMPLE, last_volume, volume, begin, end, NULL, NULL);
 	last_volume = volume;
 }
