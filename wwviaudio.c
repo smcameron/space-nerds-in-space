@@ -107,7 +107,17 @@ static struct sound_clip {
 	int16_t *sample;
 } *clip = NULL;
 
-static struct sound_clip *audio_queue = NULL;
+struct audio_queue_entry {
+	int active;
+	int nsamples;
+	int pos;
+	int16_t *sample;
+	float volume;
+	void (*callback)(void *cookie);
+	void *cookie;
+};
+
+static struct audio_queue_entry *audio_queue = NULL;
 
 int wwviaudio_read_ogg_clip(int clipnum, char *filename)
 {
@@ -215,7 +225,8 @@ static int patestCallback(__attribute__ ((unused)) const void *inputBuffer,
 				continue;
 			}
 			if (j != WWVIAUDIO_MUSIC_SLOT && sound_effects_on)
-				output += (float) audio_queue[j].sample[sample] * 0.5 / (float) (INT16_MAX);
+				output += (float) audio_queue[j].sample[sample] *
+					audio_queue[j].volume * 0.5 / (float) (INT16_MAX);
 			else if (j == WWVIAUDIO_MUSIC_SLOT && music_playing)
 				output += (float) audio_queue[j].sample[sample] / (float) (INT16_MAX);
 		}
@@ -225,8 +236,11 @@ static int patestCallback(__attribute__ ((unused)) const void *inputBuffer,
 		if (!audio_queue[i].active)
 			continue;
 		audio_queue[i].pos += framesPerBuffer;
-		if (audio_queue[i].pos >= audio_queue[i].nsamples)
+		if (audio_queue[i].pos >= audio_queue[i].nsamples) {
 			audio_queue[i].active = 0;
+			if (audio_queue[i].callback)
+				audio_queue[i].callback(audio_queue[i].cookie);
+		}
 	}
 	return 0; /* we're never finished */
 }
@@ -355,9 +369,14 @@ error:
 	return;
 }
 
-static int wwviaudio_add_sound_to_slot(int which_sound, int which_slot)
+/* Begin playing a segment of a sound at "begin" until "end" at "volume" (all between 0.0 and 1.0).
+ * Upon reaching "end", call "callback" with "cookie" as a parameter.
+ */
+static int wwviaudio_add_sound_segment_to_slot(int which_sound, int which_slot, float volume,
+		float begin, float end, void (*callback)(void *cookie), void *cookie)
 {
 	unsigned int i;
+	int start, stop;
 
 	if (!sound_working)
 		return 0;
@@ -365,28 +384,65 @@ static int wwviaudio_add_sound_to_slot(int which_sound, int which_slot)
 	if (nomusic && which_slot == WWVIAUDIO_MUSIC_SLOT)
 		return 0;
 
+	if (begin > 1.0)
+		return 0;
+	if (end < 0.0)
+		return 0;
+	if (end <= begin)
+		return 0;
+	if (begin < 0.0)
+		begin = 0.0;
+	if (end > 1.0)
+		end = 1.0;
+
 	if (which_slot != WWVIAUDIO_ANY_SLOT) {
 		if (audio_queue[which_slot].active)
 			audio_queue[which_slot].active = 0;
 		audio_queue[which_slot].pos = 0;
 		audio_queue[which_slot].nsamples = 0;
 		/* would like to put a memory barrier here. */
+		start = clip[which_sound].nsamples * begin;
+		stop = clip[which_sound].nsamples * end;
+		audio_queue[which_slot].pos = start;
 		audio_queue[which_slot].sample = clip[which_sound].sample;
-		audio_queue[which_slot].nsamples = clip[which_sound].nsamples;
+		audio_queue[which_slot].nsamples = stop;
+		audio_queue[which_slot].callback = callback;
+		audio_queue[which_slot].cookie = cookie;
+		audio_queue[which_slot].volume = volume;
 		/* would like to put a memory barrier here. */
 		audio_queue[which_slot].active = 1;
 		return which_slot;
 	}
 	for (i=1;i<max_concurrent_sounds;i++) {
 		if (audio_queue[i].active == 0) {
-			audio_queue[i].nsamples = clip[which_sound].nsamples;
-			audio_queue[i].pos = 0;
+			start = clip[which_sound].nsamples * begin;
+			stop = clip[which_sound].nsamples * end;
+			audio_queue[i].nsamples = stop;
+			audio_queue[i].pos = start;
 			audio_queue[i].sample = clip[which_sound].sample;
+			audio_queue[i].callback = callback;
+			audio_queue[i].cookie = cookie;
+			audio_queue[i].volume = volume;
 			audio_queue[i].active = 1;
 			break;
 		}
 	}
 	return (i >= max_concurrent_sounds) ? -1 : (int) i;
+}
+
+/* Begin playing a segment of a sound at "begin" until "end" at "volume" (all between 0.0 and 1.0).
+ * Upon reaching "end", call "callback" with "cookie" as a parameter.
+ */
+int wwviaudio_add_sound_segment(int which_sound, float volume,
+		float begin, float end, void (*callback)(void *cookie), void *cookie)
+{
+	return wwviaudio_add_sound_segment_to_slot(which_sound, WWVIAUDIO_ANY_SLOT,
+					volume, begin, end, callback, cookie);
+}
+
+static int wwviaudio_add_sound_to_slot(int which_sound, int which_slot)
+{
+	return wwviaudio_add_sound_segment_to_slot(which_sound, which_slot, 1.0, 0.0, 1.0, NULL, NULL);
 }
 
 int wwviaudio_add_sound(int which_sound)
@@ -428,6 +484,9 @@ void wwviaudio_add_sound_low_priority(int which_sound)
 		audio_queue[i].nsamples = clip[which_sound].nsamples;
 		audio_queue[i].pos = 0;
 		audio_queue[i].sample = clip[which_sound].sample;
+		audio_queue[i].volume = 1.0;
+		audio_queue[i].callback = NULL;
+		audio_queue[i].cookie = NULL;
 		audio_queue[i].active = 1;
 	}
 	return;
