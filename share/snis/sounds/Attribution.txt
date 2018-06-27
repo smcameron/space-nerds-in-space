@@ -264,3 +264,10 @@ atlas_rocket_sample.ogg
 atlas_rocket_sample.ogg is public domain, obtained from NASA.
 It is this sound: http://www.nasa.gov/mp3/590329main_ringtone_SDO_launchNats.mp3
 (mixed with a reversed instance of itself).
+
+maneuvering_thruster.ogg
+maneuvering_thruster.ogg is public domain, obtained from NASA,
+It is this sound: http://www.nasa.gov/mp3/590329main_ringtone_SDO_launchNats.mp3
+(mixed with a reversed instance of itself with a high pass filter plus brownian
+noise with a high pass filter).
+

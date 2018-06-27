@@ -18067,9 +18067,11 @@ static void really_quit(void);
 
 static void maybe_play_rocket_sample(void)
 {
-	double volume;
+	double volume, thruster_volume;
 	float begin, end;
 	static float last_volume = 0.0;
+	static float last_thruster_volume = 0.0;
+	struct snis_entity *o = find_my_ship();
 
 	if (suppress_rocket_noise)
 		return;
@@ -18078,8 +18080,16 @@ static void maybe_play_rocket_sample(void)
 	if ((timer & 0x00f) != 0)
 		return;
 	volume = sample_power_data_impulse_current() / 255.0;
-	if (volume < 0.01) { /* Don't waste CPU playing silence. */
+	if (o)
+		thruster_volume = (fabs(o->tsd.ship.yaw_velocity) / MAX_YAW_VELOCITY +
+					fabs(o->tsd.ship.pitch_velocity) / MAX_PITCH_VELOCITY +
+					fabs(o->tsd.ship.roll_velocity) / MAX_ROLL_VELOCITY) / 3.0;
+	else
+		thruster_volume = 0;
+
+	if (volume < 0.01 && thruster_volume < 0.01) { /* Don't waste CPU playing silence. */
 		last_volume = volume;
+		last_thruster_volume = thruster_volume;
 		return;
 	}
 	begin = snis_randn(1000);
@@ -18094,6 +18104,12 @@ static void maybe_play_rocket_sample(void)
 	end = begin + 1.0 / 20.0;
 	wwviaudio_add_sound_segment(ROCKET_SAMPLE, last_volume, volume, begin, end, NULL, NULL);
 	last_volume = volume;
+
+	/* Thruster volume sample is 10 seconds long, choose 1 second randomly from those 10 seconds. */
+	begin = snis_randn(900) / 1000.0;
+	end = begin + 0.05;
+	wwviaudio_add_sound_segment(THRUSTER_SAMPLE, last_thruster_volume, thruster_volume, begin, end, NULL, NULL);
+	last_thruster_volume = thruster_volume;
 }
 
 gint advance_game(gpointer data)
@@ -19100,6 +19116,7 @@ static void read_sound_clips(void)
 	read_ogg_clip(SPACEMONSTER_SLAP, d, "spacemonster_slap.ogg");
 	read_ogg_clip(ALARM_BUZZER, d, "alarm_buzzer.ogg");
 	read_ogg_clip(ROCKET_SAMPLE, d, "atlas_rocket_sample.ogg");
+	read_ogg_clip(THRUSTER_SAMPLE, d, "maneuvering_thruster.ogg");
 	printf("Done.\n");
 }
 

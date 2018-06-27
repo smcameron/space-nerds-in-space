@@ -2,7 +2,7 @@
 #define SOUNDS_H
 
 #define MAX_CONCURRENT_SOUNDS 20
-#define NSOUND_CLIPS 84
+#define NSOUND_CLIPS 85
 #define NHULL_CREAK_SOUNDS 10
 
 #define EXPLOSION_SOUND 1
@@ -92,5 +92,6 @@
 #define SPACEMONSTER_SLAP 81
 #define ALARM_BUZZER 82
 #define ROCKET_SAMPLE 83
+#define THRUSTER_SAMPLE 84
 
 #endif
