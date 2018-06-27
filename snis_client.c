@@ -18080,12 +18080,15 @@ static void maybe_play_rocket_sample(void)
 	if ((timer & 0x00f) != 0)
 		return;
 	volume = sample_power_data_impulse_current() / 255.0;
-	if (o)
+	if (o) {
+		if (o->alive <= 0) /* ship is dead, do not make rocket noises */
+			return;
 		thruster_volume = (fabs(o->tsd.ship.yaw_velocity) / MAX_YAW_VELOCITY +
 					fabs(o->tsd.ship.pitch_velocity) / MAX_PITCH_VELOCITY +
 					fabs(o->tsd.ship.roll_velocity) / MAX_ROLL_VELOCITY) / 3.0;
-	else
+	} else {
 		thruster_volume = 0;
+	}
 
 	if (volume < 0.01 && thruster_volume < 0.01) { /* Don't waste CPU playing silence. */
 		last_volume = volume;
