@@ -228,6 +228,7 @@ maximum
 maximum power
 maximum power to
 mining
+more
 navigate
 navigation
 navigation on screen
@@ -508,6 +509,7 @@ head for the target
 how much fuel do we have
 do we have enough fuel
 do we have sufficient fuel
+less
 lights off
 lights on
 lights out

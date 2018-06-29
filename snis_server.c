@@ -21473,8 +21473,10 @@ static void init_synonyms(void)
 	snis_nl_add_synonym("cut", "lower");
 	snis_nl_add_synonym("reduce", "lower");
 	snis_nl_add_synonym("decrease", "lower");
+	snis_nl_add_synonym("less", "lower");
 	snis_nl_add_synonym("boost", "raise");
 	snis_nl_add_synonym("increase", "raise");
+	snis_nl_add_synonym("more", "raise");
 	snis_nl_add_synonym("calculate", "compute");
 	snis_nl_add_synonym("figure", "compute");
 	snis_nl_add_synonym("activate", "engage");
