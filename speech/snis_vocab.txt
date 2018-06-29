@@ -203,6 +203,13 @@ long range scanner
 lower
 lower shields
 magnets
+magnify
+magnify fifty
+magnify ninety
+magnify one hundred
+magnify thirty
+magnify twenty
+magnify zero
 main
 main view on screen
 main view screen

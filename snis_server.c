@@ -21527,6 +21527,7 @@ static void init_synonyms(void)
 	snis_nl_add_synonym("come again", "repeat");
 	snis_nl_add_synonym("pardon me", "repeat");
 	snis_nl_add_synonym("what did you say", "repeat");
+	snis_nl_add_synonym("magnify", "zoom");
 }
 
 static const struct noun_description_entry {
