@@ -23754,30 +23754,7 @@ static void nl_zoom_pq(void *context, int argc, char *argv[], int pos[], union s
 	if (direction < 0)
 		amount = 1.0 - amount;
 
-#if 1
 	nl_set_zoom(c, "", amount);
-#else
-	switch (bridgelist[c->bridge].current_displaymode) {
-	case DISPLAYMODE_MAINSCREEN:
-		zoom_name = "main screen zoom";
-		nl_set_mainzoom(c, zoom_name, amount);
-		break;
-	case DISPLAYMODE_NAVIGATION:
-		zoom_name = "navigation zoom";
-		nl_set_navzoom(c, zoom_name, amount);
-		break;
-	case DISPLAYMODE_WEAPONS:
-		zoom_name = "weapons zoom";
-		nl_set_weapzoom(c, zoom_name, amount);
-		break;
-	case DISPLAYMODE_SCIENCE:
-		zoom_name = "science zoom";
-		nl_set_scizoom(c, zoom_name, amount);
-		break;
-	default:
-		goto no_understand;
-	}
-#endif
 	return;
 
 no_understand:
