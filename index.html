@@ -73,6 +73,7 @@ players, and scenarios may be constructed with a Lua based scripting API.
 </ul>
 <li><a href="#multiplayerinstructions">How to run Space Nerds In Space in a multiplayer LAN setup</a>
 <li><a href="new_bootable_media_instructions.html">Instructions for creating bootable media</a> (updated Apr 13, 2018, thanks to Justin Warwick.)
+<li><a href="#speech-recognition">Talking to "The Computer" (how to set up speech recognition)</a>
 <li><a href="#troubleshooting">Troubleshooting (joysticks, audio, bridge verification, crashing)</a>
 <li><a href="#luascripting">Lua Scripting</a>
 <li><a href="#misctopics">Miscellaneous development topics</a>
@@ -160,7 +161,8 @@ which is a utility program for viewing 3D models, and which is not
 required to run the game.  mesh_viewer uses SDL 1.2, not SDL 2.x
 </blockquote>
 
-<p>If you want to try the optional speech recognition, you will want the following packages:
+<p>If you want to try the optional pocketsphinx based local speech recognition,
+you will want the following packages:
 <pre>
 <blockquote>
 apt-get install pocketsphinx-utils;
@@ -1165,6 +1167,72 @@ console (e.g. if you mean for this to be the NAVIGATION station, press F2).
 </ul>
 </ol>
 <p>That's it for the bridge station setup.  Repeat for each station.
+<hr>
+<h1><a name="speech-recognition">Talking to "The Computer" (how to set up speech recognition)</a></h1>
+<p>Anything you can type into "the computer" via the Navigation screen or the Comms screen,
+you can also just speak, provided you set things up. There are two methods by which you can
+do speech recognition: local, pocketsphinx-based speech recognition, and Android based speech
+recognition using your phone or other Android device. Both methods are done outside of Space
+Nerds In Space proper, and feed the text of the recognized speech into snis_client through a
+fifo: <cmd>/tmp/snis-natural-language-fifo</cmd>.  For that matter, you can echo text directly
+into this fifo if you want to, e.g.:
+<pre>
+	echo "turn right forty five degrees" &gt; /tmp/snis-natural-language-fifo</cmd>
+</pre>
+<ul>
+<li><b>Pocketsphinx based speech-recognition</b>
+<p>You must install some packages:
+<pre>
+<blockquote>
+apt-get install libttspico-utils; # for text to speech
+apt-get install espeak; # optional alternative to libttspico-utils
+apt-get install sox; # for "play" command, used by text to speech
+apt-get install alsa-utils; # optional alternative to sox, for "aplay" command
+</blockquote>
+</pre>
+<p>And for the pocketsphinx based speech recognition:
+<pre>
+<blockquote>
+apt-get install pocketsphinx-utils;
+apt-get install pocketsphinx-lm-en-hub4;
+apt-get install pocketsphinx-lm-en-hub4;
+apt-get install libpocketsphinx1;
+</blockquote>
+</pre>
+
+<p>Once these are installed, on a machine that is running <cmd>snis_client</cmd>, you
+can then open up a terminal window and run <cmd>speech/queeg500</cmd> This will start
+up pocketsphinx listening on the default microphone to recognize text and feed it into
+<cmd>/tmp/snis-natural-language-fifo</cmd>. If you're wondering why it's called
+<cmd>queeg500</cmd>, <a href="https://www.youtube.com/results?search_query=queeg+500">
+this is the reason</a>.
+
+You must begin every spoken command with "Computer". For example, try saying:
+"Computer, Ramming speed!"
+
+<li><b>Android based speech recognition</b>
+<p>There is an Android app called <a href="https://github.com/Athulus/SpaceNerdsCommunicator">Space Nerds Communicator</a> which is very simple and just allows your Android device to do speech recognition and forward
+the resulting text to a specified IP address and port. By default the port is <cmd>8080</cmd>.
+<ul>
+<li><a href="https://github.com/Athulus/SpaceNerdsCommunicator/releases">Download Space Nerds Communicatr</a>.
+</ul>
+To use it, find out the IP address your machine running <cmd>snis_client</cmd> (e.g. run
+<cmd>ip addr show</cmd> or <cmd>ifconfig -a</cmd>), and open up a terminal window
+on this machine.  Run the following command:
+<pre>
+	netcat -lvk -p 8080 &gt; /tmp/snis-natural-language-fifo
+</pre>
+This starts up a <cmd>netcat</cmd> process listening for connections on port 8080
+(or choose another port).  Netcat just copies whatever comes in to its stdout, which
+in this case is redirected into <cmd>/tmp/snis-natural-language-fifo</cmd>.
+<p>Then run the <cmd>Space Nerds Communicator</cmd> app on your Android device, and
+configure the IP address and port to match your snis_client machine. Then tap the
+microphone button and speak your commands. The app will send them to netcat, which
+will then feed them into the fifo.
+<p>Note that with the Android app, you should <em>not</em> precede your commands with
+"Computer". For example, use "Ramming speed!" not "Computer, ramming speed!"
+<p>
+</ul>
 <hr>
 <h1><a name="troubleshooting">Troubleshooting</a></h1>
 <b>Contents:</b>
