@@ -21527,7 +21527,6 @@ static void init_synonyms(void)
 	snis_nl_add_synonym("come again", "repeat");
 	snis_nl_add_synonym("pardon me", "repeat");
 	snis_nl_add_synonym("what did you say", "repeat");
-	snis_nl_add_synonym("magnify", "zoom");
 }
 
 static const struct noun_description_entry {
@@ -22689,26 +22688,47 @@ static void nl_set_mainzoom(struct game_client *c, char *word, float fraction)
 	nl_set_controllable_byte_value(c, word, fraction, offset, no_limit);
 }
 
-static void nl_set_zoom(struct game_client *c, char *word, float value)
+static float nl_get_zoom(struct game_client *c)
 {
-	char *zoom_name;
+	struct snis_entity *o;
+	int i;
 
+	i = lookup_by_id(c->shipid);
+	if (i < 0) {
+		queue_add_text_to_speech(c, "Sorry Dave, I can't do that right now.");
+		return -1.0;
+	}
+	o = &go[i];
 	switch (bridgelist[c->bridge].current_displaymode) {
 	case DISPLAYMODE_MAINSCREEN:
-		zoom_name = "main screen zoom";
-		nl_set_mainzoom(c, zoom_name, value);
+		return (float) o->tsd.ship.mainzoom / 255.0;
+	case DISPLAYMODE_NAVIGATION:
+		return (float) o->tsd.ship.navzoom / 255.0;
+	case DISPLAYMODE_WEAPONS:
+		return (float) o->tsd.ship.weapzoom / 255.0;
+	case DISPLAYMODE_SCIENCE:
+		return (float) o->tsd.ship.scizoom / 255.0;
+	default:
+		break;
+	}
+	queue_add_text_to_speech(c, "I do not understand your zoom request.");
+	return -1.0;
+}
+
+static void nl_set_zoom(struct game_client *c, char *word, float value)
+{
+	switch (bridgelist[c->bridge].current_displaymode) {
+	case DISPLAYMODE_MAINSCREEN:
+		nl_set_mainzoom(c, "main screen zoom", value);
 		break;
 	case DISPLAYMODE_NAVIGATION:
-		zoom_name = "navigation zoom";
-		nl_set_navzoom(c, zoom_name, value);
+		nl_set_navzoom(c, "navigation zoom", value);
 		break;
 	case DISPLAYMODE_WEAPONS:
-		zoom_name = "weapons zoom";
-		nl_set_weapzoom(c, zoom_name, value);
+		nl_set_weapzoom(c, "weapons zoom", value);
 		break;
 	case DISPLAYMODE_SCIENCE:
-		zoom_name = "science zoom";
-		nl_set_scizoom(c, zoom_name, value);
+		nl_set_scizoom(c, "science zoom", value);
 		break;
 	default:
 		goto no_understand;
@@ -23708,6 +23728,7 @@ no_understand:
 	return;
 }
 
+/* "zoom 10%" */
 static void nl_zoom_q(void *context, int argc, char *argv[], int pos[], union snis_nl_extra_data extra_data[])
 {
 	struct game_client *c = context;
@@ -23728,13 +23749,13 @@ no_understand:
 	queue_add_text_to_speech(c, "I do not understand your zoom request.");
 }
 
+/* "zoom in/out x%" */
 static void nl_zoom_pq(void *context, int argc, char *argv[], int pos[], union snis_nl_extra_data extra_data[])
 {
 	struct game_client *c = context;
 	int prep, number;
 	float direction = 1.0;
 	float amount;
-	/* char *zoom_name; */
 
 	prep = nl_find_next_word(argc, pos, POS_PREPOSITION, 0);
 	if (prep < 0)
@@ -23755,6 +23776,71 @@ static void nl_zoom_pq(void *context, int argc, char *argv[], int pos[], union s
 	if (direction < 0)
 		amount = 1.0 - amount;
 
+	nl_set_zoom(c, "", amount);
+	return;
+
+no_understand:
+	queue_add_text_to_speech(c, "I do not understand your zoom request.");
+}
+
+/* Just "zoom" or "magnify", by itself */
+static void nl_zoom(void *context, int argc, char *argv[], int pos[],
+			union snis_nl_extra_data extra_data[])
+{
+	struct game_client *c = context;
+	float amount;
+
+	amount = nl_get_zoom(c);
+	if (amount < 0.0) /* This means we couldn't find our ship object. */
+		return;
+	if (amount >= 0.999) {
+		queue_add_text_to_speech(c, "Already at maximum zoom.");
+		return;
+	}
+	amount = amount + 0.25;
+	if (amount > 1.0)
+		amount = 1.0;
+	nl_set_zoom(c, "", amount);
+	return;
+}
+
+/* "zoom in/out" */
+static void nl_zoom_p(void *context, int argc, char *argv[], int pos[],
+			union snis_nl_extra_data extra_data[])
+{
+	struct game_client *c = context;
+	int prep;
+	float direction = 1.0;
+	float amount;
+
+	amount = nl_get_zoom(c);
+	if (amount < 0.0) /* This means we couldn't find our ship object. */
+		return;
+	prep = nl_find_next_word(argc, pos, POS_PREPOSITION, 0);
+	if (prep < 0)
+		goto no_understand;
+	if (strcasecmp(argv[prep], "out") == 0)
+		direction = -1.0;
+	else
+		direction = 1.0;
+
+	if (direction < 0) {
+		if (amount <= 0.001) {
+			queue_add_text_to_speech(c, "Already at minimum zoom.");
+			return;
+		}
+		amount = amount - 0.25;
+		if (amount < 0.0)
+			amount = 0.0;
+	} else {
+		if (amount >= 0.999) {
+			queue_add_text_to_speech(c, "Already at maximum zoom.");
+			return;
+		}
+		amount = amount + 0.25;
+		if (amount > 1.0)
+			amount = 1.0;
+	}
 	nl_set_zoom(c, "", amount);
 	return;
 
@@ -24501,9 +24587,14 @@ static void init_dictionary(void)
 	snis_nl_add_dictionary_verb("yaw",		"yaw",		"qaa", nl_turn_qaa);
 	snis_nl_add_dictionary_verb("pitch",		"pitch",	"qaa", nl_turn_qaa);
 	snis_nl_add_dictionary_verb("roll",		"roll",		"qaa", nl_turn_qaa);
+	snis_nl_add_dictionary_verb("zoom",		"zoom",		"", nl_zoom);
 	snis_nl_add_dictionary_verb("zoom",		"zoom",		"q", nl_zoom_q);
-	snis_nl_add_dictionary_verb("zoom",		"zoom",		"p", sorry_dave);
+	snis_nl_add_dictionary_verb("zoom",		"zoom",		"p", nl_zoom_p);
 	snis_nl_add_dictionary_verb("zoom",		"zoom",		"pq", nl_zoom_pq);
+	snis_nl_add_dictionary_verb("magnify",		"zoom",		"", nl_zoom);
+	snis_nl_add_dictionary_verb("magnify",		"zoom",		"q", nl_zoom_q);
+	snis_nl_add_dictionary_verb("magnify",		"zoom",		"p", nl_zoom_p);
+	snis_nl_add_dictionary_verb("magnify",		"zoom",		"pq", nl_zoom_pq);
 	snis_nl_add_dictionary_verb("launch",		"launch",	"n", nl_launch_n);
 	snis_nl_add_dictionary_verb("eject",		"eject",	"n", sorry_dave);
 	snis_nl_add_dictionary_verb("full",		"full",		"a", nl_full_n),    /* full impulse */
