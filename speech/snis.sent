@@ -203,6 +203,13 @@
 <s> LOWER </s>
 <s> LOWER SHIELDS </s>
 <s> MAGNETS </s>
+<s> MAGNIFY </s>
+<s> MAGNIFY FIFTY </s>
+<s> MAGNIFY NINETY </s>
+<s> MAGNIFY ONE HUNDRED </s>
+<s> MAGNIFY THIRTY </s>
+<s> MAGNIFY TWENTY </s>
+<s> MAGNIFY ZERO </s>
 <s> MAIN </s>
 <s> MAIN VIEW ON SCREEN </s>
 <s> MAIN VIEW SCREEN </s>
@@ -221,6 +228,7 @@
 <s> MAXIMUM POWER </s>
 <s> MAXIMUM POWER TO </s>
 <s> MINING </s>
+<s> MORE </s>
 <s> NAVIGATE </s>
 <s> NAVIGATION </s>
 <s> NAVIGATION ON SCREEN </s>
@@ -501,6 +509,7 @@
 <s> HOW MUCH FUEL DO WE HAVE </s>
 <s> DO WE HAVE ENOUGH FUEL </s>
 <s> DO WE HAVE SUFFICIENT FUEL </s>
+<s> LESS </s>
 <s> LIGHTS OFF </s>
 <s> LIGHTS ON </s>
 <s> LIGHTS OUT </s>
