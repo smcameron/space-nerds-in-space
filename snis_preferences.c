@@ -119,8 +119,8 @@ void snis_prefs_save_checkbox_defaults(int role_main_v, int role_nav_v, int role
 	snprintf(filename, PATH_MAX, "%s/%s", path, "role_defaults.txt");
 	f = fopen(filename, "w");
 	if (!f) {
-		fprintf(stderr, "%s:%d: Failed to open %s for writing. Not writing preference defaults.\n",
-			__FILE__, __LINE__, path);
+		fprintf(stderr, "%s:%d: Failed to open %s for write: %s. Not writing preference defaults.\n",
+			__FILE__, __LINE__, path, strerror(errno));
 		return;
 	}
 	fprintf(f, "%d %d %d %d %d %d %d %d %d %d %d %d\n",
