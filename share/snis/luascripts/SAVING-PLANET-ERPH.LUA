@@ -42,7 +42,7 @@ nowwhat = add_planet("NOWWHAT", 3000, 3000, 2000, 5000);
 nowwhat_starbase = add_starbase(8500, 5500, 2200, 1);
 
 erph = add_planet("ERPH", erphx, erphy, erphz, 3000);
-erph_starbase = add_starbase(erphx + 500, erphy + 4500, erphz - 1000, 2);
+erph_starbase = add_starbase(erphx + 5500, erphy + 4500, erphz - 1000, 2);
 
 zark = add_planet("ZARK", zarkx, zarky, zarkz, 0); 
 zark_starbase = add_starbase(zarkx + 900, zarky - 1200, zarkz + 1700, 3);
