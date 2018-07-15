@@ -22787,6 +22787,8 @@ static struct settable_thing_entry nl_settable_thing[] = {
 	{ "sensor power", nl_set_sensor_power, },
 	{ "communications power", nl_set_comms_power, },
 	{ "phaser power", nl_set_phaser_power, },
+	{ "weapons power", nl_set_phaser_power, },
+	{ "weapon power", nl_set_phaser_power, },
 	{ "shield power", nl_set_shield_power, },
 	{ "tractor beam power", nl_set_tractor_power, },
 	{ "life support power", nl_set_lifesupport_power, },
@@ -22797,6 +22799,8 @@ static struct settable_thing_entry nl_settable_thing[] = {
 	{ "sensor coolant", nl_set_sensor_coolant, },
 	{ "communications coolant", nl_set_comms_coolant, },
 	{ "phaser coolant", nl_set_phaser_coolant, },
+	{ "weapons coolant", nl_set_phaser_coolant, },
+	{ "weapon coolant", nl_set_phaser_coolant, },
 	{ "shield coolant", nl_set_shield_coolant, },
 	{ "tractor beam coolant", nl_set_tractor_coolant, },
 	{ "life support coolant", nl_set_lifesupport_coolant, },
@@ -24676,6 +24680,8 @@ static void init_dictionary(void)
 	snis_nl_add_dictionary_word("sensors power", "sensor power",	POS_NOUN);
 	snis_nl_add_dictionary_word("communications power", "communications power",	POS_NOUN);
 	snis_nl_add_dictionary_word("phaser power", "phaser power",	POS_NOUN);
+	snis_nl_add_dictionary_word("weapons power", "phaser power",	POS_NOUN);
+	snis_nl_add_dictionary_word("weapon power", "phaser power",	POS_NOUN);
 	snis_nl_add_dictionary_word("shield power", "shield power",	POS_NOUN);
 	snis_nl_add_dictionary_word("shields power", "shield power",	POS_NOUN);
 	snis_nl_add_dictionary_word("tractor beam power", "tractor beam power",	POS_NOUN);
@@ -24688,6 +24694,8 @@ static void init_dictionary(void)
 	snis_nl_add_dictionary_word("sensors coolant", "sensor coolant",	POS_NOUN);
 	snis_nl_add_dictionary_word("communications coolant", "communications coolant",	POS_NOUN);
 	snis_nl_add_dictionary_word("phaser coolant", "phaser coolant",	POS_NOUN);
+	snis_nl_add_dictionary_word("weapons coolant", "phaser coolant",	POS_NOUN);
+	snis_nl_add_dictionary_word("weapon coolant", "phaser coolant",	POS_NOUN);
 	snis_nl_add_dictionary_word("shield coolant", "shield coolant",	POS_NOUN);
 	snis_nl_add_dictionary_word("shields coolant", "shield coolant",	POS_NOUN);
 	snis_nl_add_dictionary_word("tractor beam coolant", "tractor beam coolant",	POS_NOUN);
@@ -24714,6 +24722,8 @@ static void init_dictionary(void)
 	snis_nl_add_dictionary_word("robot",		"robot",	POS_NOUN);
 	snis_nl_add_dictionary_word("torpedo",		"torpedo",	POS_NOUN);
 	snis_nl_add_dictionary_word("phasers",		"phasers",	POS_NOUN);
+	snis_nl_add_dictionary_word("weapons",		"phasers",	POS_NOUN);
+	snis_nl_add_dictionary_word("weapon",		"phasers",	POS_NOUN);
 	snis_nl_add_dictionary_word("maneuvering",	"maneuvering",	POS_NOUN);
 	snis_nl_add_dictionary_word("thruster",		"thrusters",	POS_NOUN);
 	snis_nl_add_dictionary_word("thrusters",	"thrusters",	POS_NOUN);
