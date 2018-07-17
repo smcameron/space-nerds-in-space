@@ -8224,6 +8224,8 @@ static void temper_velocity_change(union vec3 *desired_velocity, float vx, float
 	/* Angle of turn is more than +/- 45 degrees */
 	/* Find a vector perpendicular to current and desired velocities */
 	vec3_cross(&cross, &current_velocity, desired_velocity);
+	if (vec3_magnitude(&cross) < 0.001) /* Avoid NaNs when normalizing */
+		return;
 	vec3_normalize_self(&cross);
 	/* Try plus and minus 45 degrees */
 	quat_init_axis_v(&rotation1, &cross, 45.0 * M_PI / 180.0);
