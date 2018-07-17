@@ -2602,6 +2602,14 @@ static void calculate_attack_vector(struct snis_entity *o, int mindist, int maxd
 					&o->tsd.ship.doz);
 }
 
+/* Sets short term destination of a ship, tsd.ship.dox, doy, doz = x,y,z */
+static void set_ship_destination(struct snis_entity *o, double x, double y, double z)
+{
+	o->tsd.ship.dox = x;
+	o->tsd.ship.doy = y;
+	o->tsd.ship.doz = z;
+}
+
 static void push_cop_mode(struct snis_entity *cop)
 {
 	int i, npoints;
@@ -2636,9 +2644,7 @@ static void push_cop_mode(struct snis_entity *cop)
 		quat_rot_vec(&patrol->p[i], &v, &q);
 		vec3_add_self(&patrol->p[i], &home_planet);
 	}
-	cop->tsd.ship.dox = patrol->p[0].v.x;
-	cop->tsd.ship.doy = patrol->p[0].v.y;
-	cop->tsd.ship.doz = patrol->p[0].v.z;
+	set_ship_destination(cop, patrol->p[0].v.x, patrol->p[0].v.y, patrol->p[0].v.z);
 }
 
 static void push_attack_mode(struct snis_entity *attacker, uint32_t victim_id, int recursion_level)
@@ -2766,9 +2772,7 @@ static void push_mining_bot_mode(struct snis_entity *miner, uint32_t parent_ship
 			return;
 		miner->tsd.ship.nai_entries++;
 		miner->tsd.ship.ai[n].u.mining_bot.object_or_waypoint = 0; /* object */
-		miner->tsd.ship.dox = go[i].x;
-		miner->tsd.ship.doy = go[i].y;
-		miner->tsd.ship.doz = go[i].z;
+		set_ship_destination(miner, go[i].x, go[i].y, go[i].z);
 	} else if (selected_waypoint >= 0 && selected_waypoint < bridgelist[bridge].nwaypoints) {
 		if (n >= MAX_AI_STACK_ENTRIES)
 			return;
@@ -2779,9 +2783,7 @@ static void push_mining_bot_mode(struct snis_entity *miner, uint32_t parent_ship
 		miner->tsd.ship.ai[n].u.mining_bot.wpx = wp->x;
 		miner->tsd.ship.ai[n].u.mining_bot.wpy = wp->y;
 		miner->tsd.ship.ai[n].u.mining_bot.wpz = wp->z;
-		miner->tsd.ship.dox = wp->x;
-		miner->tsd.ship.doy = wp->y;
-		miner->tsd.ship.doz = wp->z;
+		set_ship_destination(miner, wp->x, wp->y, wp->z);
 	}
 	miner->tsd.ship.ai[n].ai_mode = AI_MODE_MINING_BOT;
 	miner->tsd.ship.ai[n].u.mining_bot.asteroid = asteroid_id;
@@ -2973,9 +2975,7 @@ static void setup_patrol_route(struct snis_entity *o)
 	/* FIXME: ensure no duplicate points and order in some sane way */
 	for (i = 0; i < npoints; i++)
 		patrol->p[i] = pick_random_patrol_destination(o);
-	o->tsd.ship.dox = patrol->p[0].v.x;
-	o->tsd.ship.doy = patrol->p[0].v.y;
-	o->tsd.ship.doz = patrol->p[0].v.z;
+	set_ship_destination(o, patrol->p[0].v.x, patrol->p[0].v.y, patrol->p[0].v.z);
 }
 
 static void ship_figure_out_what_to_do(struct snis_entity *o)
@@ -4646,9 +4646,7 @@ static void ai_attack_mode_brain(struct snis_entity *o)
 			vel.v.z = (float) o->vz;
 			vec3_normalize(&veln, &vel);
 			vec3_mul_self(&veln, 800.0f + snis_randn(600));
-			o->tsd.ship.dox = veln.v.x;
-			o->tsd.ship.doy = veln.v.y;
-			o->tsd.ship.doz = veln.v.z;
+			set_ship_destination(o, veln.v.x, veln.v.y, veln.v.z);
 		} else {
 			calculate_attack_vector(o, MIN_COMBAT_ATTACK_DIST,
 							MAX_COMBAT_ATTACK_DIST);
@@ -4808,10 +4806,7 @@ static void ai_flee_mode_brain(struct snis_entity *o)
 	vec3_add(&thataway, &info.danger, &info.friendly);
 	vec3_normalize_self(&thataway);
 	vec3_mul_self(&thataway, 4000.0);
-
-	o->tsd.ship.dox = o->x + thataway.v.x;
-	o->tsd.ship.doy = o->y + thataway.v.y;
-	o->tsd.ship.doz = o->z + thataway.v.z;
+	set_ship_destination(o, o->x + thataway.v.x, o->y + thataway.v.y, o->z + thataway.v.z);
 	o->tsd.ship.desired_velocity = ship_type[o->tsd.ship.shiptype].max_speed;
 
 	o->tsd.ship.ai[n].u.flee.warp_countdown--;
@@ -4853,9 +4848,7 @@ static void ai_fleet_member_mode_brain(struct snis_entity *o)
 		return;
 	leader = &go[i];
 	offset = fleet_position(f->fleet, position, &leader->orientation);
-	o->tsd.ship.dox = offset.v.x + leader->x;
-	o->tsd.ship.doy = offset.v.y + leader->y;
-	o->tsd.ship.doz = offset.v.z + leader->z;
+	set_ship_destination(o, offset.v.x + leader->x, offset.v.y + leader->y, offset.v.z + leader->z);
 	o->tsd.ship.velocity = leader->tsd.ship.velocity * 1.05;
 
 	dist2 = dist3dsqrd(o->x - o->tsd.ship.dox, o->y - o->tsd.ship.doy,
@@ -4908,10 +4901,7 @@ static void ai_add_ship_movement_variety(struct snis_entity *o,
 	v.v.x += vn.v.x;
 	v.v.y += vn.v.y;
 	v.v.z += vn.v.z;
-
-	o->tsd.ship.dox = v.v.x + o->x;
-	o->tsd.ship.doy = v.v.y + o->y;
-	o->tsd.ship.doz = v.v.z + o->z;
+	set_ship_destination(o, v.v.x + o->x, v.v.y + o->y, v.v.z + o->z);
 }
 
 static void ai_ship_warp_to(struct snis_entity *o, float destx, float desty, float destz)
@@ -4925,9 +4915,7 @@ static void ai_ship_warp_to(struct snis_entity *o, float destx, float desty, flo
 	if (!inside_planet(v.v.x, v.v.y, v.v.z)) {
 		warp_ship(o, o->x + v.v.x, o->y + v.v.y, o->z + v.v.z);
 		/* reset destination after warping to prevent backtracking */
-		o->tsd.ship.dox = destx;
-		o->tsd.ship.doy = desty;
-		o->tsd.ship.doz = destz;
+		set_ship_destination(o, destx, desty, destz);
 		o->timestamp = universe_timestamp;
 	}
 }
@@ -5011,9 +4999,7 @@ static float ai_ship_travel_towards(struct snis_entity *o,
 					o->tsd.ship.doy - desty,
 					o->tsd.ship.doz - destz);
 		if (dest_discrepancy > 0.05 * dist2 * 0.05 * dist2) {
-			o->tsd.ship.dox = destx;
-			o->tsd.ship.doy = desty;
-			o->tsd.ship.doz = destz;
+			set_ship_destination(o, destx, desty, destz);
 		}
 		/* sometimes just warp if it's too far... */
 		if (snis_randn(warproll) < ship_type[o->tsd.ship.shiptype].warpchance) {
@@ -5034,9 +5020,7 @@ static float ai_ship_travel_towards(struct snis_entity *o,
 					/* If already pretty close, do not warp. This prevents warping
 					 * right up to a starbase and entering, giving defenders a chance.
 					 */
-					o->tsd.ship.dox = destx;
-					o->tsd.ship.doy = desty;
-					o->tsd.ship.doz = destz;
+					set_ship_destination(o, destx, desty, destz);
 					return dist2;
 				}
 				/* Limit max warp distance to a reasonably short distance. */
@@ -5051,9 +5035,7 @@ static float ai_ship_travel_towards(struct snis_entity *o,
 			ai_ship_warp_to(o, destx, desty, destz);
 		}
 	} else {
-		o->tsd.ship.dox = destx;
-		o->tsd.ship.doy = desty;
-		o->tsd.ship.doz = destz;
+		set_ship_destination(o, destx, desty, destz);
 	}
 	return dist2;
 }
@@ -5150,10 +5132,7 @@ static void ai_mining_mode_return_to_parent(struct snis_entity *o, struct ai_min
 	ai->orphan_time = 0;
 	parent = &go[i];
 	quat_rot_vec_self(&offset, &parent->orientation);
-
-	o->tsd.ship.dox = parent->x + offset.v.x;
-	o->tsd.ship.doy = parent->y + offset.v.y;
-	o->tsd.ship.doz = parent->z + offset.v.z;
+	set_ship_destination(o, parent->x + offset.v.x, parent->y + offset.v.y, parent->z + offset.v.z);
 
 	double dist2 = ai_ship_travel_towards(o, parent->x, parent->y, parent->z);
 	if (dist2 < 300.0 * 300.0 && ai->mode == MINING_MODE_RETURN_TO_PARENT) {
@@ -5253,14 +5232,10 @@ static void ai_mining_mode_approach_asteroid(struct snis_entity *o, struct ai_mi
 	}
 	float distance = dist3d(o->x - x, o->y - y, o->z - z);
 	if (my_speed < 0.1) {
-		o->tsd.ship.dox = x;
-		o->tsd.ship.doy = y;
-		o->tsd.ship.doz = z;
+		set_ship_destination(o, x, y, z);
 	} else {
 		time_to_travel = distance / my_speed;
-		o->tsd.ship.dox = x + vx * time_to_travel;
-		o->tsd.ship.doy = y + vy * time_to_travel;
-		o->tsd.ship.doz = z + vz * time_to_travel;
+		set_ship_destination(o, x + vx * time_to_travel, y + vy * time_to_travel, z + vz * time_to_travel);
 	}
 	double dist2 = ai_ship_travel_towards(o, x + vx * time_to_travel,
 						y + vy * time_to_travel,
@@ -5678,9 +5653,7 @@ static void ai_patrol_mode_brain(struct snis_entity *o)
 			o->tsd.ship.nai_entries++;
 		} else {
 			d = patrol->dest;
-			o->tsd.ship.dox = patrol->p[d].v.x;
-			o->tsd.ship.doy = patrol->p[d].v.y;
-			o->tsd.ship.doz = patrol->p[d].v.z;
+			set_ship_destination(o, patrol->p[d].v.x, patrol->p[d].v.y, patrol->p[d].v.z);
 		}
 	}
 	check_for_nearby_targets(o);
@@ -5708,9 +5681,7 @@ static void ai_cop_mode_brain(struct snis_entity *o)
 			o->tsd.ship.nai_entries++;
 		} else {
 			d = patrol->dest;
-			o->tsd.ship.dox = patrol->p[d].v.x;
-			o->tsd.ship.doy = patrol->p[d].v.y;
-			o->tsd.ship.doz = patrol->p[d].v.z;
+			set_ship_destination(o, patrol->p[d].v.x, patrol->p[d].v.y, patrol->p[d].v.z);
 		}
 	}
 }
@@ -9939,9 +9910,7 @@ static int add_ship(int faction, int auto_respawn)
 		if (snis_randn(10000) < 2000)
 			break;
 	}
-	go[i].tsd.ship.dox = 0.0;
-	go[i].tsd.ship.doy = 0.0;
-	go[i].tsd.ship.doz = 0.0;
+	set_ship_destination(&go[i], 0.0, 0.0, 0.0);
 	go[i].tsd.ship.home_planet = choose_ship_home_planet();
 	go[i].tsd.ship.auto_respawn = (uint8_t) auto_respawn;
 	quat_init_axis(&go[i].tsd.ship.computer_desired_orientation, 0, 1, 0, 0);
