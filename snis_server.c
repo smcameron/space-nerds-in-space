@@ -4804,7 +4804,10 @@ static void ai_flee_mode_brain(struct snis_entity *o)
 				compute_danger_vectors);
 	vec3_mul_self(&info.danger, 2.0);
 	vec3_add(&thataway, &info.danger, &info.friendly);
-	vec3_normalize_self(&thataway);
+	if (vec3_magnitude(&thataway) < 0.01) /* it can happen that that info.thataway == { 0, 0, 0 } */
+		random_point_on_sphere(1.0, &thataway.v.x, &thataway.v.y, &thataway.v.z);
+	else
+		vec3_normalize_self(&thataway);
 	vec3_mul_self(&thataway, 4000.0);
 	set_ship_destination(o, o->x + thataway.v.x, o->y + thataway.v.y, o->z + thataway.v.z);
 	o->tsd.ship.desired_velocity = ship_type[o->tsd.ship.shiptype].max_speed;
