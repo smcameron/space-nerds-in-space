@@ -676,6 +676,13 @@ static double quat_to_heading(const union quat *q)
 	return atan2(-v.v.z, v.v.x);
 }
 
+static void set_object_location(struct snis_entity *o, double x, double y, double z)
+{
+	o->x = x;
+	o->y = y;
+	o->z = z;
+}
+
 static int add_generic_object(uint32_t id, uint32_t timestamp, double x, double y, double z,
 		double vx, double vy, double vz,
 		const union quat *orientation, int type, uint16_t alive, struct entity *entity)
@@ -700,9 +707,7 @@ static int add_generic_object(uint32_t id, uint32_t timestamp, double x, double 
 	go[i].r[0].v.z = z;
 
 	/* entity move will update this */
-	go[i].x = 0;
-	go[i].y = 0;
-	go[i].z = 0;
+	set_object_location(&go[i], 0, 0, 0);
 	go[i].orientation = identity_quat;
 
 	go[i].vx = vx;
@@ -1470,11 +1475,9 @@ static void init_laserbeam_data(struct snis_entity *o)
 						0.01 * (snis_randn(50) + 50.0));
 		}
 	}
-	o->x = shooter->x + (target->x - shooter->x) / 2.0;
-	o->y = shooter->y + (target->y - shooter->y) / 2.0;
-	o->z = shooter->z + (target->z - shooter->z) / 2.0;
-
-
+	set_object_location(o, shooter->x + (target->x - shooter->x) / 2.0,
+				shooter->y + (target->y - shooter->y) / 2.0,
+				shooter->z + (target->z - shooter->z) / 2.0);
 
 	o->entity = add_entity(ecx, laserbeam_mesh, o->x, o->y, o->z, color);
 	if (o->entity)
@@ -1931,9 +1934,7 @@ static int update_black_hole(uint32_t id, uint32_t timestamp, double x, double y
 	} else {
 		update_generic_object(i, timestamp, x, y, z, 0.0, 0.0, 0.0, NULL, 1);
 	}
-	go[i].x = x;
-	go[i].y = y;
-	go[i].z = z;
+	set_object_location(&go[i], x, y, z);
 	go[i].tsd.black_hole.radius = r;
 	return 0;
 }
@@ -2201,13 +2202,9 @@ static void shield_effect_move(struct snis_entity *o)
 
 	i = lookup_object_by_id(o->tsd.spark.id);
 	if (i < 0) {
-		o->x += o->vx;
-		o->y += o->vy;
-		o->z += o->vz;
+		set_object_location(o, o->x + o->vx, o->y + o->vy, o->z + o->vz);
 	} else {
-		o->x = go[i].x;
-		o->y = go[i].y;
-		o->z = go[i].z;
+		set_object_location(o, go[i].x, go[i].y, go[i].z);
 		o->vx = go[i].vx;
 		o->vy = go[i].vy;
 		o->vz = go[i].vz;
@@ -2237,9 +2234,7 @@ static void spark_move(struct snis_entity *o)
 	union quat orientation;
 	float scale;
 
-	o->x += o->vx;
-	o->y += o->vy;
-	o->z += o->vz;
+	set_object_location(o, o->x + o->vx, o->y + o->vy, o->z + o->vz);
 	o->alive--;
 	if (o->alive <= 0) {
 		if (o->entity) {
@@ -2329,15 +2324,11 @@ static void interpolate_generic_object(double timestamp, struct snis_entity *o, 
 #endif
 
 	if (from_index == to_index) {
-		o->x = o->r[to_index].v.x;
-		o->y = o->r[to_index].v.y;
-		o->z = o->r[to_index].v.z;
+		set_object_location(o, o->r[to_index].v.x, o->r[to_index].v.y, o->r[to_index].v.z);
 	} else {
 		union vec3 interp_position;
 		vec3_lerp(&interp_position, &o->r[from_index], &o->r[to_index], t);
-		o->x = interp_position.v.x;
-		o->y = interp_position.v.y;
-		o->z = interp_position.v.z;
+		set_object_location(o, interp_position.v.x, interp_position.v.y, interp_position.v.z);
 	}
 
 	if (o->entity) {
@@ -2355,9 +2346,7 @@ static void interpolate_oriented_object(double timestamp, struct snis_entity *o,
 #endif
 
 	if (from_index == to_index) {
-		o->x = o->r[to_index].v.x;
-		o->y = o->r[to_index].v.y;
-		o->z = o->r[to_index].v.z;
+		set_object_location(o, o->r[to_index].v.x, o->r[to_index].v.y, o->r[to_index].v.z);
 		o->orientation = o->o[to_index];
 		if (o->type == OBJTYPE_SHIP1) {
 			o->tsd.ship.sciball_orientation = o->tsd.ship.sciball_o[to_index];
@@ -2371,9 +2360,7 @@ static void interpolate_oriented_object(double timestamp, struct snis_entity *o,
 		union vec3 interp_position;
 
 		vec3_lerp(&interp_position, &o->r[from_index], &o->r[to_index], t);
-		o->x = interp_position.v.x;
-		o->y = interp_position.v.y;
-		o->z = interp_position.v.z;
+		set_object_location(o, interp_position.v.x, interp_position.v.y, interp_position.v.z);
 
 		quat_nlerp(&o->orientation, &o->o[from_index], &o->o[to_index], t);
 		o->heading = quat_to_heading(&o->orientation);
@@ -2761,9 +2748,7 @@ static void add_spark(double x, double y, double z, double vx, double vy, double
 		return;
 	}
 	memset(&spark[i], 0, sizeof(spark[i]));
-	spark[i].x = x;
-	spark[i].y = y;
-	spark[i].z = z;
+	set_object_location(&spark[i], x, y, z);
 	spark[i].vx = vx;
 	spark[i].vy = vy;
 	spark[i].vz = vz;
@@ -2800,9 +2785,7 @@ static void add_warp_effect(double x, double y, double z, int arriving, int time
 		update_entity_scale(e, 0.1);
 	}
 	memset(&spark[i], 0, sizeof(spark[i]));
-	spark[i].x = x;
-	spark[i].y = y;
-	spark[i].z = z;
+	set_object_location(&spark[i], x, y, z);
 	spark[i].vx = 0;
 	spark[i].vy = 0;
 	spark[i].vz = 0;
@@ -2847,9 +2830,7 @@ static void add_shield_effect(struct snis_entity *o,
 		entity_update_alpha(e, 0.5);
 	}
 	memset(&spark[i], 0, sizeof(spark[i]));
-	spark[i].x = o->x;
-	spark[i].y = o->y;
-	spark[i].z = o->z;
+	set_object_location(&spark[i], o->x, o->y, o->z);
 	spark[i].vx = o->vx;
 	spark[i].vy = o->vy;
 	spark[i].vz = o->vz;
