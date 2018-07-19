@@ -9922,9 +9922,11 @@ static double sample_ship_velocity(void)
 	static double lastx = 0.0;
 	static double lasty = 0.0;
 	static double lastz = 0.0;
-	static double lastdist = 0.0;
+#define VELOCITY_INDICATOR_SAMPLES 5
+	static double lastdist[VELOCITY_INDICATOR_SAMPLES] = { 0.0 };
 	double vx, vy, vz;
 	double dist;
+	int i;
 
 	if (!(o = find_my_ship()))
 		return 0.0;
@@ -9937,10 +9939,13 @@ static double sample_ship_velocity(void)
 	lastz = o->z;
 
 	dist = FRAME_RATE_HZ * dist3d(vx, vy, vz);
-	if (dist > 1000)
+	if (dist > 10000)
 		dist = 0;
-	dist = (dist + lastdist) / 2.0; /* smooth it */
-	lastdist = dist;
+	memmove(&lastdist[0], &lastdist[1], (VELOCITY_INDICATOR_SAMPLES - 1) * sizeof(lastdist[0]));
+	lastdist[VELOCITY_INDICATOR_SAMPLES - 1] = dist;
+	for (i = 0; i < VELOCITY_INDICATOR_SAMPLES - 1; i++)
+		dist += lastdist[i];
+	dist = dist / (float) VELOCITY_INDICATOR_SAMPLES; /* smooth it */
 	return dist;
 }
 
