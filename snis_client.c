@@ -16092,10 +16092,18 @@ static void demon_move_button_pressed(void *x)
 
 static void demon_scale_button_pressed(void *x)
 {
-	if (demon_ui.desired_exaggerated_scale > 0.0)
+	if (demon_ui.desired_exaggerated_scale > 0.0) {
 		demon_ui.desired_exaggerated_scale = 0.0;
-	else
+		demon_ui.exaggerated_scale_active = 0;
+	} else {
 		demon_ui.desired_exaggerated_scale = 1.0;
+		demon_ui.exaggerated_scale_active = 1;
+	}
+}
+
+static int demon_scale_checkbox(void *x)
+{
+	return demon_ui.exaggerated_scale_active;
 }
 
 static void demon_toggle_rocket_noise_pressed(void *x)
@@ -16109,11 +16117,28 @@ static void demon_netstats_button_pressed(void *x)
 		ui_unhide_widget(demon_ui.bytes_sent_strip_chart);
 		ui_unhide_widget(demon_ui.bytes_recd_strip_chart);
 		ui_unhide_widget(demon_ui.latency_strip_chart);
+		demon_ui.netstats_active = 1;
 	} else {
 		ui_hide_widget(demon_ui.bytes_sent_strip_chart);
 		ui_hide_widget(demon_ui.bytes_recd_strip_chart);
 		ui_hide_widget(demon_ui.latency_strip_chart);
+		demon_ui.netstats_active = 0;
 	}
+}
+
+static int demon_netstats_checkbox(void *x)
+{
+	return demon_ui.netstats_active;
+}
+
+static void demon_render_style_pressed(void *x)
+{
+	demon_ui.render_style = !demon_ui.render_style;
+}
+
+static int demon_render_style_checkbox(void *x)
+{
+	return demon_ui.render_style;
 }
 
 static void init_demon_ui()
@@ -16216,7 +16241,7 @@ static void init_demon_ui()
 	snis_button_set_sound(demon_ui.demon_netstats_button, UISND14);
 	demon_ui.demon_render_style_button = snis_button_init(x, y + dy * n++, txx(70), txy(20),
 			"RENDER STYLE", UI_COLOR(demon_deselected_button),
-			NANO_FONT, NULL, NULL);
+			NANO_FONT, demon_render_style_pressed, NULL);
 	snis_button_checkbox(demon_ui.demon_render_style_button, &demon_ui.render_style);
 	snis_button_set_sound(demon_ui.demon_render_style_button, UISND14);
 #define NETSTATS_SAMPLES 1000
@@ -16238,9 +16263,12 @@ static void init_demon_ui()
 	pull_down_menu_add_row(demon_ui.menu, "META", "HOME", demon_home_button_pressed, NULL);
 	pull_down_menu_add_row(demon_ui.menu, "META", "2D/3D", demon_2d3d_button_pressed, NULL);
 	/* TODO: make this netstats work */
-	pull_down_menu_add_row(demon_ui.menu, "META", "NETSTATS", demon_netstats_button_pressed, NULL);
+	pull_down_menu_add_row(demon_ui.menu, "META", "NET STATS", demon_netstats_button_pressed, NULL);
+	pull_down_menu_set_checkbox_function(demon_ui.menu, "META", "NET STATS", demon_netstats_checkbox, NULL);
 	pull_down_menu_add_row(demon_ui.menu, "META", "EXAG SCALE", demon_scale_button_pressed, NULL);
-	pull_down_menu_add_row(demon_ui.menu, "META", "RENDER STYLE", NULL, NULL); /* TODO: implement this */
+	pull_down_menu_set_checkbox_function(demon_ui.menu, "META", "EXAG SCALE", demon_scale_checkbox, NULL);
+	pull_down_menu_add_row(demon_ui.menu, "META", "RENDER STYLE", demon_render_style_pressed, NULL);
+	pull_down_menu_set_checkbox_function(demon_ui.menu, "META", "RENDER STYLE", demon_render_style_checkbox, NULL);
 	pull_down_menu_add_row(demon_ui.menu, "META", "TOGGLE ROCKET ENGINE NOISE",
 			demon_toggle_rocket_noise_pressed, NULL);
 	pull_down_menu_add_column(demon_ui.menu, "ADD");
