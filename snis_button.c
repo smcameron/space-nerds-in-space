@@ -20,7 +20,8 @@ struct button {
 	int color;
 	int disabled_color;
 	int font;
-	int *checkbox_value;
+	int (*checkbox_function)(void *);
+	void *checkbox_cookie;
 	button_function bf;
 	int button_sound;
 	void *cookie;
@@ -64,7 +65,8 @@ struct button *snis_button_init(int x, int y, int width, int height,
 	b->font = font;
 	b->bf = bf;
 	b->cookie = cookie;
-	b->checkbox_value = NULL;
+	b->checkbox_function = NULL;
+	b->checkbox_cookie = NULL;
 	b->button_press_feedback_counter = 0;
 	b->button_sound = default_button_sound;
 	b->enabled = 1;
@@ -123,7 +125,7 @@ void snis_button_draw(struct button *b)
 	if (b->button_press_feedback_counter)
 		snis_button_draw_outline(b->x + 1 + offset, b->y + 1 + offset,
 					b->width - 2 + offset, b->height - 2 + offset);
-	if (!b->checkbox_value) {
+	if (!b->checkbox_function) {
 		sng_abs_xy_draw_string(b->label, b->font, b->x + 10, b->y + b->height / 1.7);
 		if (b->button_press_feedback_counter)
 			sng_abs_xy_draw_string(b->label, b->font, b->x + 11, b->y + b->height / 1.7 + 1);
@@ -136,7 +138,7 @@ void snis_button_draw(struct button *b)
 		y2 = b->y + b->height / 2 + 8;
 
 		sng_current_draw_rectangle(0, x1, y1, 16, 16);
-		if (*b->checkbox_value) {
+		if (b->checkbox_function(b->checkbox_cookie)) {
 			sng_current_draw_line(x1, y1, x2, y2);
 			sng_current_draw_line(x1, y2, x2, y1);
 		}
@@ -155,8 +157,6 @@ int snis_button_trigger_button(struct button *b)
 		wwviaudio_add_sound(b->button_sound);
 	if (b->bf)
 		b->bf(b->cookie);
-	if (b->checkbox_value)
-		*b->checkbox_value = !*b->checkbox_value;
 	b->button_press_feedback_counter = 5;
 	return 1;
 }
@@ -188,11 +188,6 @@ int snis_button_get_color(struct button *b)
 int snis_button_get_disabled_color(struct button *b)
 {
 	return b->disabled_color;
-}
-
-void snis_button_checkbox(struct button *b, int *value)
-{
-	b->checkbox_value = value;
 }
 
 void snis_button_set_position(struct button *b, int x, int y)
@@ -230,3 +225,16 @@ void snis_button_set_cookie(struct button *b, void *cookie)
 {
 	b->cookie = cookie;
 }
+
+void snis_button_set_checkbox_function(struct button *b, int (*checkbox_function)(void *), void *cookie)
+{
+	b->checkbox_function = checkbox_function;
+	b->checkbox_cookie = cookie;
+}
+
+/* This is meant for use as a checkbox function for checkboxes that modify/reflect a simple int */
+int snis_button_generic_checkbox_function(void *x)
+{
+	return *((int *) x);
+}
+

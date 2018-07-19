@@ -13538,6 +13538,8 @@ static void comms_rts_order_command_button_pressed(void *x)
 	for (i = 0; i < NUM_RTS_ORDER_TYPES; i++) {
 		if (i != rts_command_number)
 			comms_ui.fleet_order_checkbox[i] = 0;
+		else
+			comms_ui.fleet_order_checkbox[i] = 1;
 		/* Note, we do not have to do anything for the one selected, as the
 		 * generic button code will toggle that one. In fact, we should not set
 		 * it, since if we do, the button code will afterwards toggle it off
@@ -13545,6 +13547,12 @@ static void comms_rts_order_command_button_pressed(void *x)
 		 */
 		printf("comms_ui.fleet_order_checkbox[%d] = %d\n", i, comms_ui.fleet_order_checkbox[i]);
 	}
+}
+
+static int comms_rts_order_checkbox(void *x)
+{
+	int *fleet_order_checkbox = x;
+	return *fleet_order_checkbox;
 }
 
 static void comms_input_entered()
@@ -13736,7 +13744,8 @@ static void init_comms_ui(void)
 		comms_ui.rts_order_command_button[i] = snis_button_init(txx(22), txy(375) + txy(14) * i, txx(100), -1,
 				button_label, button_color, PICO_FONT, comms_rts_order_command_button_pressed,
 				(void *) (intptr_t) i);
-		snis_button_checkbox(comms_ui.rts_order_command_button[i], &comms_ui.fleet_order_checkbox[i]);
+		snis_button_set_checkbox_function(comms_ui.rts_order_command_button[i],
+					comms_rts_order_checkbox, &comms_ui.fleet_order_checkbox[i]);
 	}
 
 	for (i = 0; i < FLEET_BUTTON_COLS; i++) {
@@ -16232,17 +16241,23 @@ static void init_demon_ui()
 	demon_ui.demon_scale_button = snis_button_init(x, y + dy * n++, txx(70), txy(20),
 			"EXAG SCALE", UI_COLOR(demon_deselected_button),
 			NANO_FONT, demon_scale_button_pressed, NULL);
-	snis_button_checkbox(demon_ui.demon_scale_button, &demon_ui.exaggerated_scale_active);
+	snis_button_set_checkbox_function(demon_ui.demon_scale_button,
+			snis_button_generic_checkbox_function,
+			&demon_ui.exaggerated_scale_active);
 	snis_button_set_sound(demon_ui.demon_scale_button, UISND15);
 	demon_ui.demon_netstats_button = snis_button_init(x, y + dy * n++, txx(70), txy(20),
 			"NET STATS", UI_COLOR(demon_deselected_button),
 			NANO_FONT, demon_netstats_button_pressed, NULL);
-	snis_button_checkbox(demon_ui.demon_netstats_button, &demon_ui.netstats_active);
+	snis_button_set_checkbox_function(demon_ui.demon_netstats_button,
+			snis_button_generic_checkbox_function,
+			&demon_ui.netstats_active);
 	snis_button_set_sound(demon_ui.demon_netstats_button, UISND14);
 	demon_ui.demon_render_style_button = snis_button_init(x, y + dy * n++, txx(70), txy(20),
 			"RENDER STYLE", UI_COLOR(demon_deselected_button),
 			NANO_FONT, demon_render_style_pressed, NULL);
-	snis_button_checkbox(demon_ui.demon_render_style_button, &demon_ui.render_style);
+	snis_button_set_checkbox_function(demon_ui.demon_render_style_button,
+			snis_button_generic_checkbox_function,
+			&demon_ui.render_style);
 	snis_button_set_sound(demon_ui.demon_render_style_button, UISND14);
 #define NETSTATS_SAMPLES 1000
 	demon_ui.bytes_recd_strip_chart =
@@ -17230,20 +17245,28 @@ static void browser_button_pressed(void *v)
 		return;
 }
 
-static struct button *init_net_checkbox_button(int x, int *y, char *txt, int *value,
-			button_function bf, void *cookie)
+static struct button *init_net_checkbox_button(int x, int *y, char *txt,
+			button_function bf, void *cookie, int (*checkbox_function)(void *))
 {
 	struct button *b;
 	b = snis_button_init(x, *y, txx(140), txy(18), txt, UI_COLOR(network_setup_role),
 			NANO_FONT, bf, cookie);
-	snis_button_checkbox(b, value);
+	snis_button_set_checkbox_function(b, checkbox_function, cookie);
 	*y = *y + txy(18);
 	return b;
 }
 
+static void network_checkbox_pressed(void *x)
+{
+	int *i = x;
+
+	*i = !*i;
+}
+
 static struct button *init_net_role_button(int x, int *y, char *txt, int *value)
 {
-	return init_net_checkbox_button(x, y, txt, value, NULL, NULL);
+	return init_net_checkbox_button(x, y, txt, network_checkbox_pressed, value,
+			snis_button_generic_checkbox_function);
 }
 
 static void init_net_role_buttons(struct network_setup_ui *nsu)
@@ -17297,18 +17320,37 @@ static void init_net_role_buttons(struct network_setup_ui *nsu)
 			"WHETHER THIS TERMINAL SHOULD ACT AS TEXT TO SPEECH SERVER");
 }
 
-static void create_ship_checkbox_cb(__attribute__((unused)) void *cookie)
+/* This gets called when the create ship checkbox button is pressed */
+static void create_ship_checkbox_cb(void *cookie)
 {
-	/* If create-ship selected, make sure join-ship is turned off. */
 	struct network_setup_ui *nsu = cookie;
-	nsu->join_ship_v = 0;
+	nsu->create_ship_v = !nsu->create_ship_v;
+	if (nsu->create_ship_v) /* If create ship is set, unset join ship */
+		nsu->join_ship_v = 0;
 }
 
-static void join_ship_checkbox_cb(__attribute__((unused)) void *cookie)
+/* This returns the current value of the create ship checkbox */
+static int create_ship_checkbox(void *cookie)
+{
+	struct network_setup_ui *nsu = cookie;
+	return nsu->create_ship_v;
+}
+
+/* This gets called when the join ship checkbox is pressed */
+static void join_ship_checkbox_cb(void *cookie)
 {
 	/* If join-ship selected, make sure create-ship is turned off. */
 	struct network_setup_ui *nsu = cookie;
-	nsu->create_ship_v = 0;
+	nsu->join_ship_v = !nsu->join_ship_v;
+	if (nsu->join_ship_v) /* if join ship is is set, unset create ship */
+		nsu->create_ship_v = 0;
+}
+
+/* This returns the current value of join ship checkbox */
+static int join_ship_checkbox(void *cookie)
+{
+	struct network_setup_ui *nsu = cookie;
+	return nsu->join_ship_v;
 }
 
 static void init_join_create_buttons(struct network_setup_ui *nsu)
@@ -17318,10 +17360,10 @@ static void init_join_create_buttons(struct network_setup_ui *nsu)
 	int x = txx(350);
 	int y = txy(400);
 	nsu->create_ship_checkbox = init_net_checkbox_button(x, &y,
-						"CREATE SHIP", &nsu->create_ship_v,
-						create_ship_checkbox_cb, nsu);
-	nsu->join_ship_checkbox = init_net_checkbox_button(x, &y, "JOIN SHIP", &nsu->join_ship_v,
-						join_ship_checkbox_cb, nsu);
+						"CREATE SHIP", create_ship_checkbox_cb,
+						nsu, create_ship_checkbox);
+	nsu->join_ship_checkbox = init_net_checkbox_button(x, &y, "JOIN SHIP",
+						join_ship_checkbox_cb, nsu, join_ship_checkbox);
 	ui_add_button(nsu->create_ship_checkbox, DISPLAYMODE_NETWORK_SETUP,
 			"SELECT THIS IF YOU WISH TO CREATE A NEW SHIP FOR THE FIRST TIME");
 	ui_add_button(nsu->join_ship_checkbox, DISPLAYMODE_NETWORK_SETUP,
