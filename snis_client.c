@@ -16115,9 +16115,14 @@ static int demon_scale_checkbox(void *x)
 	return demon_ui.exaggerated_scale_active;
 }
 
-static void demon_toggle_rocket_noise_pressed(void *x)
+static void demon_rocket_noise_pressed(void *x)
 {
 	suppress_rocket_noise = !suppress_rocket_noise;
+}
+
+static int demon_rocket_noise_checkbox(void *x)
+{
+	return !suppress_rocket_noise;
 }
 
 static void demon_netstats_button_pressed(void *x)
@@ -16284,8 +16289,10 @@ static void init_demon_ui()
 	pull_down_menu_set_checkbox_function(demon_ui.menu, "META", "EXAG SCALE", demon_scale_checkbox, NULL);
 	pull_down_menu_add_row(demon_ui.menu, "META", "RENDER STYLE", demon_render_style_pressed, NULL);
 	pull_down_menu_set_checkbox_function(demon_ui.menu, "META", "RENDER STYLE", demon_render_style_checkbox, NULL);
-	pull_down_menu_add_row(demon_ui.menu, "META", "TOGGLE ROCKET ENGINE NOISE",
-			demon_toggle_rocket_noise_pressed, NULL);
+	pull_down_menu_add_row(demon_ui.menu, "META", "ROCKET ENGINE NOISE",
+			demon_rocket_noise_pressed, NULL);
+	pull_down_menu_set_checkbox_function(demon_ui.menu, "META", "ROCKET ENGINE NOISE",
+			demon_rocket_noise_checkbox, NULL);
 	pull_down_menu_add_column(demon_ui.menu, "ADD");
 	pull_down_menu_add_row(demon_ui.menu, "ADD", "SHIP", demon_ship_button_pressed, (void *)
 					(intptr_t) demon_ui.shiptype);
