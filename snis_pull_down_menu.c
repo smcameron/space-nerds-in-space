@@ -117,7 +117,7 @@ static void update_menu_column_width(struct pull_down_menu_column *c, int font)
 	for (i = 0; i < c->nrows; i++) {
 		sng_string_bounding_box(c->item[i].name, font, &x1, &y1, &x2, &y2);
 		if (fabsf(x2 - x1) + 10 + 20 * (c->item[i].checkbox_function != NULL) > c->width)
-			c->width = fabsf(x2 - x1) + 10;
+			c->width = fabsf(x2 - x1) + 10 + 20 * (c->item[i].checkbox_function != NULL);
 	}
 }
 
