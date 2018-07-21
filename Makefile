@@ -300,7 +300,8 @@ SCAD_PARAMS_FILES=${MODELSRCDIR}/disruptor.scad_params.h \
 	${MODELSRCDIR}/spaceship.scad_params.h \
 	${MODELSRCDIR}/transport.scad_params.h \
 	${MODELSRCDIR}/escapepod.scad_params.h \
-	${MODELSRCDIR}/mantis.scad_params.h
+	${MODELSRCDIR}/mantis.scad_params.h \
+	${MODELSRCDIR}/missile.scad_params.h
 
 DOCKING_PORT_FILES=${MODELSRCDIR}/starbase2.docking_ports.h \
 	${MODELSRCDIR}/starbase3.docking_ports.h \
@@ -492,7 +493,8 @@ MODELS=${MD}/freighter.stl \
 	${MD}/warp-core.stl \
 	${MD}/space_monster_torso.stl \
 	${MD}/space_monster_tentacle_segment.stl \
-	${MD}/cylinder.stl
+	${MD}/cylinder.stl \
+	${MD}/missile.stl
 
 MYCFLAGS=-DPREFIX=${PREFIX} ${DEBUGFLAG} ${PROFILEFLAG} ${OPTIMIZEFLAG}\
 	--pedantic -Wall ${STOP_ON_WARN} -pthread -std=gnu99 -rdynamic $(CFLAGS)
