@@ -4390,7 +4390,7 @@ static void comms_setup_rts_buttons(int activate, struct snis_entity *player_shi
 static int process_update_ship_packet(uint8_t opcode)
 {
 	int i;
-	unsigned char buffer[144];
+	unsigned char buffer[145];
 	struct packed_buffer pb;
 	uint16_t alive;
 	uint32_t id, timestamp, torpedoes, power;
@@ -4402,7 +4402,7 @@ static int process_update_ship_packet(uint8_t opcode)
 	int type = opcode == OPCODE_UPDATE_SHIP ? OBJTYPE_SHIP1 : OBJTYPE_SHIP2;
 	uint8_t tloading, tloaded, throttle, rpm, temp, scizoom, weapzoom, navzoom,
 		mainzoom, warpdrive, requested_warpdrive,
-		requested_shield, phaser_charge, phaser_wavelength, shiptype,
+		requested_shield, missile_count, phaser_charge, phaser_wavelength, shiptype,
 		reverse, trident, in_secure_area, docking_magnets, emf_detector,
 		nav_mode, warp_core_status, rts_mode, exterior_lights, alarms_silenced,
 		rts_active_button;
@@ -4428,11 +4428,11 @@ static int process_update_ship_packet(uint8_t opcode)
 				&dgunyawvel,
 				&dsheading,
 				&dbeamwidth);
-	packed_buffer_extract(&pb, "bbbwwbbbbbbbbbbbbbwQQQQSSSbbbbbbbbbww",
+	packed_buffer_extract(&pb, "bbbwwbbbbbbbbbbbbbbwQQQQSSSbbbbbbbbbww",
 			&tloading, &throttle, &rpm, &fuel, &oxygen, &temp,
 			&scizoom, &weapzoom, &navzoom, &mainzoom,
 			&warpdrive, &requested_warpdrive,
-			&requested_shield, &phaser_charge, &phaser_wavelength, &shiptype,
+			&requested_shield, &missile_count, &phaser_charge, &phaser_wavelength, &shiptype,
 			&reverse, &trident, &victim_id, &orientation.vec[0],
 			&sciball_orientation.vec[0], &weap_orientation.vec[0], &hg_ant_orientation.vec[0],
 			&hgax, (int32_t) 1000000,
@@ -4491,6 +4491,7 @@ static int process_update_ship_packet(uint8_t opcode)
 	o->tsd.ship.requested_warpdrive = requested_warpdrive;
 	o->tsd.ship.requested_shield = requested_shield;
 	o->tsd.ship.warpdrive = warpdrive;
+	o->tsd.ship.missile_count = missile_count;
 	o->tsd.ship.phaser_charge = phaser_charge;
 	o->tsd.ship.phaser_wavelength = phaser_wavelength;
 	o->tsd.ship.damcon = NULL;

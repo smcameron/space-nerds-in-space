@@ -285,6 +285,7 @@ struct update_ship_packet {
 	uint8_t warpdrive;
 	uint8_t requested_warpdrive;
 	uint8_t requested_shield;
+	uint8_t missile_count;
 	uint8_t phaser_charge;
 	uint8_t phaser_wavelength;
 	uint8_t shiptype; /* same as ship_sdata_packet subclass */

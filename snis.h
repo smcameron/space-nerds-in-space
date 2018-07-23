@@ -30,7 +30,7 @@
 #define MAXSTARMAPENTRIES 1000 /* max number of solar systems */
 #define MAX_STARMAP_ADJACENCIES 5 /* max warp lanes from one star to other stars */
 #define DEFAULT_SOLAR_SYSTEM "default"
-#define SNIS_PROTOCOL_VERSION "SNIS022"
+#define SNIS_PROTOCOL_VERSION "SNIS023"
 #define COMMON_MTWIST_SEED 97872
 /* dimensions of the "known" universe */
 #define XKNOWN_DIM 600000.0
@@ -118,6 +118,7 @@
 #define OBJTYPE_TURRET 23
 #define OBJTYPE_WARP_CORE 24
 #define OBJTYPE_BLACK_HOLE 25
+#define OBJTYPE_MISSILE 26
 
 #define SHIELD_EFFECT_LIFETIME 60
 
@@ -348,6 +349,7 @@ struct ship_data {
 #define SPACEMONSTER_WEAPONS_FACTOR (1.0)
 #define TORPEDO_DETONATE_DIST2 (150 * 150)
 #define INITIAL_TORPEDO_COUNT 10
+#define INITIAL_MISSILE_COUNT 10
 #define LASER_LIFETIME 15
 #define LASER_VELOCITY (200.0)
 #define LASER_RANGE (LASER_VELOCITY * LASER_LIFETIME)
@@ -459,6 +461,7 @@ struct ship_data {
 	uint8_t warpdrive;
 	uint8_t requested_warpdrive;
 	uint8_t requested_shield;
+	uint8_t missile_count;
 	uint8_t phaser_wavelength;
 	uint8_t phaser_charge;
 #define WARP_CORE_STATUS_GOOD 0
@@ -731,6 +734,10 @@ struct black_hole_data {
 	float radius;
 };
 
+struct missile_data {
+	uint32_t target;
+};
+
 struct planet_data {
 	uint32_t description_seed;
 	uint8_t government;
@@ -837,6 +844,7 @@ union type_specific_data {
 	struct turret_data turret;
 	struct warp_core_data warp_core;
 	struct black_hole_data black_hole;
+	struct missile_data missile;
 };
 
 struct snis_entity;

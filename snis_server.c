@@ -9648,6 +9648,7 @@ static void init_player(struct snis_entity *o, int clear_cargo_bay, float *charg
 	o->tsd.ship.torpedo_load_time = 0;
 	o->tsd.ship.torpedoes_loaded = 1;
 	o->tsd.ship.torpedoes_loading = 0;
+	o->tsd.ship.missile_count = INITIAL_MISSILE_COUNT;
 	o->tsd.ship.phaser_bank_charge = 0;
 	o->tsd.ship.scizoom = 0;
 	o->tsd.ship.weapzoom = 0;
@@ -19979,7 +19980,7 @@ static void send_update_ship_packet(struct game_client *c,
 	packed_buffer_append(pb, "bwwhSSS", opcode, o->id, o->timestamp, o->alive,
 			o->x, (int32_t) UNIVERSE_DIM, o->y, (int32_t) UNIVERSE_DIM,
 			o->z, (int32_t) UNIVERSE_DIM);
-	packed_buffer_append(pb, "RRRwwRRRbbbwwbbbbbbbbbbbbbwQQQQSSSbbbbbbbbbww",
+	packed_buffer_append(pb, "RRRwwRRRbbbwwbbbbbbbbbbbbbbwQQQQSSSbbbbbbbbbww",
 			o->tsd.ship.yaw_velocity,
 			o->tsd.ship.pitch_velocity,
 			o->tsd.ship.roll_velocity,
@@ -19991,8 +19992,9 @@ static void send_update_ship_packet(struct game_client *c,
 			o->tsd.ship.scizoom, o->tsd.ship.weapzoom, o->tsd.ship.navzoom,
 			o->tsd.ship.mainzoom,
 			o->tsd.ship.warpdrive, o->tsd.ship.requested_warpdrive,
-			o->tsd.ship.requested_shield, o->tsd.ship.phaser_charge,
-			o->tsd.ship.phaser_wavelength, o->tsd.ship.shiptype,
+			o->tsd.ship.requested_shield, o->tsd.ship.missile_count,
+			o->tsd.ship.phaser_charge, o->tsd.ship.phaser_wavelength,
+			o->tsd.ship.shiptype,
 			o->tsd.ship.reverse, o->tsd.ship.trident,
 			o->tsd.ship.ai[0].u.attack.victim_id,
 			&o->orientation.vec[0],

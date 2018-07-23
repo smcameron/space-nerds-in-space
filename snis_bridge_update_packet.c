@@ -52,7 +52,7 @@ struct packed_buffer *build_bridge_update_packet(struct snis_entity *o, unsigned
 			o->x, (int32_t) UNIVERSE_DIM,
 			o->y, (int32_t) UNIVERSE_DIM,
 			o->z, (int32_t) UNIVERSE_DIM);
-	packed_buffer_append(pb, "RRRwwRRRbbbwwbbbbbbbbbbbbbwQQQbbwbbb",
+	packed_buffer_append(pb, "RRRwwRRRbbbwwbbbbbbbbbbbbbbwQQQbbwbbb",
 			o->tsd.ship.yaw_velocity,
 			o->tsd.ship.pitch_velocity,
 			o->tsd.ship.roll_velocity,
@@ -64,8 +64,10 @@ struct packed_buffer *build_bridge_update_packet(struct snis_entity *o, unsigned
 			o->tsd.ship.scizoom, o->tsd.ship.weapzoom, o->tsd.ship.navzoom,
 			o->tsd.ship.mainzoom,
 			o->tsd.ship.warpdrive, o->tsd.ship.requested_warpdrive,
-			o->tsd.ship.requested_shield, o->tsd.ship.phaser_charge,
-			o->tsd.ship.phaser_wavelength, o->tsd.ship.shiptype,
+			o->tsd.ship.requested_shield,
+			o->tsd.ship.missile_count,
+			o->tsd.ship.phaser_charge, o->tsd.ship.phaser_wavelength,
+			o->tsd.ship.shiptype,
 			o->tsd.ship.reverse, o->tsd.ship.trident,
 			o->tsd.ship.ai[0].u.attack.victim_id,
 			&o->orientation.vec[0],
@@ -94,7 +96,7 @@ void unpack_bridge_update_packet(struct snis_entity *o, struct packed_buffer *pb
 	double dgunyawvel, dsheading, dbeamwidth;
 	uint8_t tloading, tloaded, throttle, rpm, temp, scizoom, weapzoom, navzoom,
 		mainzoom, warpdrive, requested_warpdrive,
-		requested_shield, phaser_charge, phaser_wavelength, shiptype,
+		requested_shield, missile_count, phaser_charge, phaser_wavelength, shiptype,
 		reverse, trident, in_secure_area, docking_magnets, shield_strength,
 		shield_wavelength, shield_width, shield_depth, faction;
 	union quat orientation, sciball_orientation, weap_orientation;
@@ -115,11 +117,11 @@ void unpack_bridge_update_packet(struct snis_entity *o, struct packed_buffer *pb
 				&dgunyawvel,
 				&dsheading,
 				&dbeamwidth);
-	packed_buffer_extract(pb, "bbbwwbbbbbbbbbbbbbwQQQbbwbbb",
+	packed_buffer_extract(pb, "bbbwwbbbbbbbbbbbbbbwQQQbbwbbb",
 			&tloading, &throttle, &rpm, &fuel, &oxygen, &temp,
 			&scizoom, &weapzoom, &navzoom, &mainzoom,
 			&warpdrive, &requested_warpdrive,
-			&requested_shield, &phaser_charge, &phaser_wavelength, &shiptype,
+			&requested_shield, &missile_count, &phaser_charge, &phaser_wavelength, &shiptype,
 			&reverse, &trident, &victim_id, &orientation.vec[0],
 			&sciball_orientation.vec[0], &weap_orientation.vec[0], &in_secure_area,
 			&docking_magnets, (uint32_t *) &iwallet, &warp_core_status, &exterior_lights,
