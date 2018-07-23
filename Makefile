@@ -199,7 +199,8 @@ TEXTUREFILES=${TEXTURESRCDIR}/AreaTex.h \
 	${TEXTURESRCDIR}/warp-tunnel.png \
 	${TEXTURESRCDIR}/wormhole.png \
 	${TEXTURESRCDIR}/green-burst.png \
-	${TEXTURESRCDIR}/blue-tractor-texture.png
+	${TEXTURESRCDIR}/blue-tractor-texture.png \
+	${TEXTURESRCDIR}/missile_texture.png
 
 LUASCRIPTDIR=${DATADIR}/luascripts
 LUASRCDIR=${ASSETSSRCDIR}/luascripts
