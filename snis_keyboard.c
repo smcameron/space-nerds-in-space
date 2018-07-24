@@ -209,7 +209,9 @@ void init_keymap()
 	keymap[GDK_e] = keyrollright;
 	keymap[GDK_c] = key_toggle_credits;
 	keymap[GDK_M] = key_toggle_watermark;
-	keymap[GDK_m] = key_mouse_mode;
+	keymap[GDK_m] = key_mouse_mode; /* FIXME: Note this is overridden by key_sci_mining_bot, below */
+					/* Proper fix is probably something like make keymap into a 2D array */
+					/* with displaymode as first index, key as second index. */
 
 	keymap[GDK_space] = keyphaser;
 	keymap[GDK_z] = keytorpedo;

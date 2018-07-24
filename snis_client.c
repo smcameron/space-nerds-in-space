@@ -3879,7 +3879,9 @@ static gint key_press_cb(GtkWidget* widget, GdkEventKey* event, gpointer data)
 				vertical_controls_timer = FRAME_RATE_HZ;
 			}
 			return TRUE;
+	/* FIXME: key_mouse_mode conflicts with key_sci_mining_bot */
 	case key_mouse_mode:
+	case key_sci_mining_bot:
 			if (control_key_pressed && displaymode == DISPLAYMODE_WEAPONS) {
 				if (current_mouse_ui_mode == MOUSE_MODE_CAPTURED_MOUSE)
 					desired_mouse_ui_mode = MOUSE_MODE_FREE_MOUSE;
