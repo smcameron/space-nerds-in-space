@@ -346,8 +346,15 @@ struct ship_data {
 #define TORPEDO_VELOCITY (90.0)
 #define TORPEDO_RANGE (TORPEDO_LIFETIME * TORPEDO_VELOCITY)
 #define TORPEDO_WEAPONS_FACTOR (3.0)
+#define MISSILE_TARGET_DIST TORPEDO_RANGE
+#define MISSILE_VELOCITY (180.0)
+#define MISSILE_LIFETIME 120
+#define MAX_MISSILE_DV 5
+#define MISSILE_EXPLOSION_DAMAGE_DISTANCE (200.0)
+#define MISSILE_EXPLOSION_WEAPONS_FACTOR (20000.0)
 #define SPACEMONSTER_WEAPONS_FACTOR (1.0)
 #define TORPEDO_DETONATE_DIST2 (150 * 150)
+#define MISSILE_PROXIMITY_DISTANCE (75.0)
 #define INITIAL_TORPEDO_COUNT 10
 #define INITIAL_MISSILE_COUNT 10
 #define LASER_LIFETIME 15
@@ -735,7 +742,8 @@ struct black_hole_data {
 };
 
 struct missile_data {
-	uint32_t target;
+	uint32_t target_id;
+	uint32_t origin;
 };
 
 struct planet_data {

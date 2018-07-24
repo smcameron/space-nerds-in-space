@@ -133,6 +133,7 @@
 #define NPC_LASER_COLOR ORANGERED
 #define TARGETING_COLOR ORANGERED
 #define TORPEDO_COLOR RED
+#define MISSILE_COLOR RED
 #define SPACEMONSTER_COLOR GREEN
 #define NEBULA_COLOR MAGENTA
 #define TRACTORBEAM_COLOR BLUE
@@ -370,6 +371,7 @@ static volatile int per_solarsystem_textures_loaded = 0;
 static char *lua_skybox_prefix = NULL;
 
 static struct mesh *torpedo_mesh;
+static struct mesh *missile_mesh;
 static struct mesh *torpedo_nav_mesh;
 static struct mesh *laser_mesh;
 static struct mesh *asteroid_mesh[NASTEROID_MODELS];
@@ -419,6 +421,7 @@ static struct mesh **derelict_mesh;
 
 #define NNEBULA_MATERIALS 20
 static struct material nebula_material[NNEBULA_MATERIALS];
+static struct material missile_material;
 static struct material red_torpedo_material;
 static struct material red_laser_material;
 static struct material blue_tractor_material;
@@ -474,11 +477,13 @@ static struct material small_block_material;
 #ifdef WITHOUTOPENGL
 static const int wormhole_render_style = RENDER_SPARKLE;
 static const int torpedo_render_style = RENDER_WIREFRAME | RENDER_BRIGHT_LINE | RENDER_NO_FILL;
+static const int missile_render_style = RENDER_WIREFRAME | RENDER_BRIGHT_LINE | RENDER_NO_FILL;
 static const int laserbeam_render_style = RENDER_WIREFRAME | RENDER_BRIGHT_LINE | RENDER_NO_FILL;
 static const int spark_render_style = RENDER_WIREFRAME | RENDER_BRIGHT_LINE | RENDER_NO_FILL;
 #else
 static const int wormhole_render_style = RENDER_NORMAL;
 static const int torpedo_render_style = RENDER_NORMAL;
+static const int missile_render_style = RENDER_NORMAL;
 static const int laserbeam_render_style = RENDER_NORMAL;
 static const int spark_render_style = RENDER_NORMAL;
 #endif
@@ -1273,6 +1278,37 @@ static int update_torpedo(uint32_t id, uint32_t timestamp, double x, double y, d
 		e = go[i].entity;
 		if (e)
 			update_entity_scale(e, 0.01 * snis_randn(100) + 0.5);
+	}
+	return 0;
+}
+
+static int update_missile(uint32_t id, uint32_t timestamp, double x, double y, double z,
+			union quat *orientation)
+{
+	int i;
+	struct entity *e;
+#if 0
+	struct snis_entity *myship;
+#endif
+
+	i = lookup_object_by_id(id);
+	if (i < 0) {
+		e = add_entity(ecx, missile_mesh, x, y, z, MISSILE_COLOR);
+		if (e) {
+			set_render_style(e, missile_render_style);
+			update_entity_material(e, &missile_material);
+		}
+		i = add_generic_object(id, timestamp, x, y, z, 0.0, 0.0, 0.0, orientation, OBJTYPE_MISSILE, 1, e);
+		if (i < 0)
+			return i;
+		go[i].tsd.missile.target_id = (uint32_t) -1;
+#if 0
+		myship = find_my_ship();
+		if (myship && myship->id == ship_id)
+			weapons_camera_shake = 1.0;
+#endif
+	} else {
+		update_generic_object(i, timestamp, x, y, z, 0.0, 0.0, 0.0, orientation, 1);
 	}
 	return 0;
 }
@@ -2680,6 +2716,9 @@ static void move_objects(void)
 		case OBJTYPE_TORPEDO:
 			move_object(timestamp, o, &interpolate_oriented_object);
 			break;
+		case OBJTYPE_MISSILE:
+			move_object(timestamp, o, &interpolate_oriented_object);
+			break;
 		case OBJTYPE_ASTEROID:
 			move_object(timestamp, o, &interpolate_generic_object);
 			spin_asteroid(timestamp, o);
@@ -3466,6 +3505,12 @@ static void do_torpedo(void)
 	queue_to_server(snis_opcode_pkt("b", OPCODE_REQUEST_TORPEDO));
 }
 
+static void transmit_adjust_control_input(uint8_t value,  uint8_t subcode);
+static void fire_missile_button_pressed(__attribute__((unused)) void *notused)
+{
+	transmit_adjust_control_input(1, OPCODE_ADJUST_CONTROL_FIRE_MISSILE);
+}
+
 static void do_mainscreen_camera_mode()
 {
 	if (displaymode != DISPLAYMODE_MAINSCREEN)
@@ -3496,6 +3541,7 @@ static void robot_auto_button_pressed(void *x);
 static void robot_manual_button_pressed(void *x);
 static void fire_phaser_button_pressed(__attribute__((unused)) void *notused);
 static void fire_torpedo_button_pressed(__attribute__((unused)) void *notused);
+static void fire_missile_button_pressed(__attribute__((unused)) void *notused);
 static void load_torpedo_button_pressed();
 
 static void do_joystick_engage_warp(__attribute__((unused)) void *notused)
@@ -3555,8 +3601,7 @@ static void do_joystick_nav_nudge_zoom_up(__attribute__((unused)) void *notused)
 
 static void do_joystick_torpedo(__attribute__((unused)) void *x)
 {
-	do_torpedo();
-	load_torpedo_button_pressed();
+	fire_torpedo_button_pressed(NULL);
 }
 
 static void do_joystick_pitch(__attribute__((unused)) void *x, int value)
@@ -3729,7 +3774,6 @@ static void deal_with_mouse()
 }
 
 static void do_adjust_byte_value(uint8_t value,  uint8_t opcode);
-static void transmit_adjust_control_input(uint8_t value,  uint8_t subcode);
 static void do_zoom(int z)
 {
 	int newval;
@@ -3926,10 +3970,12 @@ static gint key_press_cb(GtkWidget* widget, GdkEventKey* event, gpointer data)
 				current_quit_selection = 0;
 			break;
 	case keytorpedo:
-		if (displaymode == DISPLAYMODE_WEAPONS) {
-			do_torpedo();
-			load_torpedo_button_pressed();
-		}
+		if (displaymode == DISPLAYMODE_WEAPONS)
+			fire_torpedo_button_pressed(NULL);
+		break;
+	case key_weap_fire_missile:
+		if (displaymode == DISPLAYMODE_WEAPONS)
+			fire_missile_button_pressed(NULL);
 		break;
 	case keyphaser:
 		if (in_the_process_of_quitting) {
@@ -4710,6 +4756,26 @@ static int process_update_torpedo_packet(void)
 	pthread_mutex_unlock(&universe_mutex);
 	return (rc < 0);
 } 
+
+static int process_update_missile_packet(void)
+{
+	unsigned char buffer[100];
+	uint32_t id, timestamp;
+	double dx, dy, dz;
+	union quat orientation;
+	int rc;
+
+	assert(sizeof(buffer) > sizeof(struct update_missile_packet) - sizeof(uint8_t));
+	rc = read_and_unpack_buffer(buffer, "wwSSSQ", &id, &timestamp,
+				&dx, (int32_t) UNIVERSE_DIM, &dy, (int32_t) UNIVERSE_DIM,
+				&dz, (int32_t) UNIVERSE_DIM, &orientation);
+	if (rc != 0)
+		return rc;
+	pthread_mutex_lock(&universe_mutex);
+	rc = update_missile(id, timestamp, dx, dy, dz, &orientation);
+	pthread_mutex_unlock(&universe_mutex);
+	return (rc < 0);
+}
 
 static int process_warp_limbo_packet(void)
 {
@@ -6923,6 +6989,9 @@ static void *gameserver_reader(__attribute__((unused)) void *arg)
 		case OPCODE_UPDATE_TORPEDO:
 			rc = process_update_torpedo_packet();
 			break;
+		case OPCODE_UPDATE_MISSILE:
+			rc = process_update_missile_packet();
+			break;
 		case OPCODE_WARP_LIMBO:
 			rc = process_warp_limbo_packet();
 			break;
@@ -8167,6 +8236,9 @@ static void show_weapons_camera_view(GtkWidget *w)
 					o->tsd.ship.torpedoes_loaded);
 		sng_abs_xy_draw_string(buf, NANO_FONT, 570 * SCREEN_WIDTH / 800,
 					SCREEN_HEIGHT - 15 * SCREEN_HEIGHT / 600);
+		sprintf(buf, "MISSILES: %03d", o->tsd.ship.missile_count);
+		sng_abs_xy_draw_string(buf, NANO_FONT, 700 * SCREEN_WIDTH / 800,
+					SCREEN_HEIGHT - 15 * SCREEN_HEIGHT / 600);
 	}
 
 	/* idiot lights for low power */
@@ -8442,6 +8514,9 @@ static void snis_draw_science_guy(GtkWidget *w, GdkGC *gc, struct snis_entity *o
 		case OBJTYPE_TORPEDO:
 			sng_set_foreground(UI_COLOR(sci_ball_energy));
 			break;
+		case OBJTYPE_MISSILE:
+			sng_set_foreground(UI_COLOR(sci_ball_energy));
+			break;
 		case OBJTYPE_LASER:
 			sng_set_foreground(UI_COLOR(sci_ball_energy));
 			break;
@@ -8514,6 +8589,7 @@ static void snis_draw_science_guy(GtkWidget *w, GdkGC *gc, struct snis_entity *o
 			sprintf(buffer, "%s %s\n", "P",  o->sdata.name); 
 			break;
 		case OBJTYPE_TORPEDO:
+		case OBJTYPE_MISSILE:
 		case OBJTYPE_SPARK:
 		case OBJTYPE_EXPLOSION:
 		case OBJTYPE_LASER:
@@ -8598,6 +8674,7 @@ static void snis_draw_3d_science_guy(GtkWidget *w, GdkGC *gc, struct snis_entity
 			sng_set_foreground(UI_COLOR(sci_ball_planet));
 			break;
 		case OBJTYPE_TORPEDO:
+		case OBJTYPE_MISSILE:
 		case OBJTYPE_SPARK:
 		case OBJTYPE_EXPLOSION:
 		case OBJTYPE_LASER:
@@ -8650,6 +8727,7 @@ static void snis_draw_3d_science_guy(GtkWidget *w, GdkGC *gc, struct snis_entity
 			sprintf(buffer, "%s %s\n", "P",  o->sdata.name); 
 			break;
 		case OBJTYPE_TORPEDO:
+		case OBJTYPE_MISSILE:
 		case OBJTYPE_SPARK:
 		case OBJTYPE_EXPLOSION:
 		case OBJTYPE_LASER:
@@ -9267,7 +9345,8 @@ static void draw_sciplane_display(GtkWidget *w, struct snis_entity *o, double ra
 			float tween = 0;
 			int draw_popout_arc = 0;
 
-			if (go[i].type == OBJTYPE_LASER || go[i].type == OBJTYPE_TORPEDO) {
+			if (go[i].type == OBJTYPE_LASER || go[i].type == OBJTYPE_TORPEDO ||
+				go[i].type == OBJTYPE_MISSILE) {
 				/* set projectile tween value to be the same as the popout if they pass in popout area */
 				tween = selected_guy_tween;
 				draw_popout_arc = 0;
@@ -11684,6 +11763,7 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 		case OBJTYPE_WORMHOLE:
 		case OBJTYPE_LASER:
 		case OBJTYPE_TORPEDO:
+		case OBJTYPE_MISSILE:
 		case OBJTYPE_ASTEROID:
 		case OBJTYPE_PLANET:
 		case OBJTYPE_BLACK_HOLE:
@@ -11801,6 +11881,7 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 				contact_scale = ((255.0 - current_zoom) / 255.0) * 2.0 + 1.0;
 				break;
 			case OBJTYPE_TORPEDO:
+			case OBJTYPE_MISSILE:
 				contact_scale = 20.0 * ((255.0 - current_zoom) / 255.0) * 2.0 + 1.0;
 				break;
 			case OBJTYPE_LASER:
@@ -16745,6 +16826,7 @@ static void show_demon_3d(GtkWidget *w)
 			color = ORANGERED;
 			material = &orangered_material;
 			break;
+		case OBJTYPE_MISSILE:
 		case OBJTYPE_TORPEDO:
 			color = ORANGERED;
 			material = &orangered_material;
@@ -16802,6 +16884,7 @@ static void show_demon_3d(GtkWidget *w)
 		case OBJTYPE_LASER:
 		case OBJTYPE_WARPGATE:
 		case OBJTYPE_TORPEDO:
+		case OBJTYPE_MISSILE:
 		case OBJTYPE_SPACEMONSTER:
 		case OBJTYPE_WARP_CORE:
 			if (!o->entity && o->type != OBJTYPE_SHIP1)
@@ -17646,7 +17729,9 @@ static char *help_text[] = {
 	"    F6: SCIENCE F7: COMMS F8: MAIN SCREEN F9: DEMON SCREEN\n\n"
 	"  * USE ARROW KEYS OR MOUSE TO AIM WEAPONS\n"
 	"  * AWSD KEYS ALSO WORK\n"
-	"  * FIRE WITH SPACE BAR OR MOUSE BUTTON\n"
+	"  * FIRE PHASERS WITH SPACE BAR OR LEFT MOUSE BUTTON\n"
+	"  * FIRE TORPEDOES WITH Z OR RIGHT MOUSE BUTTON\n"
+	"  * FIRE MISSILES WITH N\n"
 	"  * PLUS/MINUS KEYS SET PHASER WAVELENGTH\n"
 	"    (OR USE MOUSE WHEEL)\n"
 	"  * MATCH PHASER WAVELENGTH TO WEAKNESSES\n"
@@ -18643,6 +18728,10 @@ static int load_static_textures(void)
 	spacemonster_tentacle_material.texture_mapped.emit_texture_id =
 		load_texture("textures/spacemonster_tentacle_emit.png");
 
+	material_init_texture_mapped(&missile_material);
+	missile_material.texture_mapped.texture_id =
+		load_texture("textures/missile_texture.png");
+
 	material_init_texture_mapped(&spacemonster_material);
 	spacemonster_material.texture_mapped.texture_id =
 		load_texture("textures/spacemonster_texture.png");
@@ -18837,10 +18926,8 @@ static int main_da_button_release(GtkWidget *w, GdkEventButton *event,
 	case DISPLAYMODE_WEAPONS:
 		if (event->button == 1)
 			do_laser();
-		if (event->button == 3) {
-			do_torpedo();
-			load_torpedo_button_pressed();
-		}
+		if (event->button == 3)
+			fire_torpedo_button_pressed(NULL);
 		break;
 	case DISPLAYMODE_DAMCON:
 		do_damcon_button_release(event->button, event->x, event->y);
@@ -19431,6 +19518,9 @@ static void process_physical_device_io(unsigned short opcode, unsigned short val
 	case DEVIO_OPCODE_WEAPONS_FIRE_TORPEDO:
 		fire_torpedo_button_pressed(NULL);
 		break;
+	case DEVIO_OPCODE_WEAPONS_FIRE_MISSILE:
+		fire_missile_button_pressed(NULL);
+		break;
 	case DEVIO_OPCODE_WEAPONS_WAVELENGTH:
 		snis_slider_poke_input(weapons.wavelen_slider, d, 1);
 		break;
@@ -19778,6 +19868,9 @@ static void init_meshes()
 	mesh_scale(ship_turret_mesh, SHIP_MESH_SCALE);
 	mesh_scale(ship_turret_base_mesh, SHIP_MESH_SCALE);
 	torpedo_nav_mesh = snis_read_model(d, "torpedo.stl");
+	missile_mesh = snis_read_model(d, "missile.stl");
+	mesh_scale(missile_mesh, SHIP_MESH_SCALE);
+	mesh_cylindrical_yz_uv_map(missile_mesh);
 #ifndef WITHOUTOPENGL
 	torpedo_mesh = mesh_fabricate_billboard(50.0f, 50.0f);
 #else

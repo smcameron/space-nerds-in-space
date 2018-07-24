@@ -1245,6 +1245,11 @@ static void calculate_warp_core_explosion_damage(struct snis_entity *target, dou
 	calculate_torpedolike_damage(target, WARP_CORE_EXPLOSION_WEAPONS_FACTOR * damage_factor);
 }
 
+static void calculate_missile_explosion_damage(struct snis_entity *target, double damage_factor)
+{
+	calculate_torpedolike_damage(target, MISSILE_EXPLOSION_WEAPONS_FACTOR * damage_factor);
+}
+
 static void send_ship_damage_packet(struct snis_entity *o);
 static void check_warp_core_explosion_damage(struct snis_entity *warp_core,
 						struct snis_entity *object)
@@ -3141,6 +3146,9 @@ static void notify_the_cops(struct snis_entity *weapon)
 	case OBJTYPE_LASERBEAM:
 		perp_id = weapon->tsd.laserbeam.origin;
 		break;
+	case OBJTYPE_MISSILE:
+		perp_id = weapon->tsd.missile.origin;
+		break;
 	default:
 		return;
 	}
@@ -3317,6 +3325,67 @@ static float block_closest_point(union vec3 *point, struct snis_entity *o,
 	return 0.0;
 }
 
+static void missile_explode(struct snis_entity *o)
+{
+	delete_from_clients_and_server(o);
+	(void) add_explosion(o->x, o->y, o->z, 50, 50, 50, o->type);
+}
+
+static void missile_collision_detection(void *context, void *entity)
+{
+	struct snis_entity *missile = context;
+	struct snis_entity *target = entity;
+	double dist2, damage_factor;
+
+	if (missile == target)
+		return;
+	if (missile->tsd.missile.target_id != target->id)
+		return;
+
+	dist2 = object_dist2(missile, target);
+	if (dist2 < MISSILE_PROXIMITY_DISTANCE * MISSILE_PROXIMITY_DISTANCE) {
+		switch (target->type) {
+		case OBJTYPE_SHIP1:
+		case OBJTYPE_SHIP2:
+			notify_the_cops(missile);
+			damage_factor = MISSILE_EXPLOSION_DAMAGE_DISTANCE / (sqrt(dist2) + 1.0);
+			calculate_missile_explosion_damage(target, damage_factor);
+			send_ship_damage_packet(target);
+			if (target->type == OBJTYPE_SHIP2)
+				attack_your_attacker(target, lookup_entity_by_id(missile->tsd.missile.origin));
+			if (!target->alive) {
+				(void) add_explosion(target->x, target->y, target->z, 50, 150, 50, target->type);
+				/* TODO -- these should be different sounds */
+				/* make sound for players that got hit */
+				/* make sound for players that did the hitting */
+				snis_queue_add_sound(EXPLOSION_SOUND, ROLE_SOUNDSERVER, missile->tsd.missile.target_id);
+				if (target->type != OBJTYPE_SHIP1) {
+					if (target->type == OBJTYPE_SHIP2)
+						make_derelict(target);
+					respawn_object(target);
+					delete_from_clients_and_server(target);
+				} else {
+					snis_queue_add_sound(EXPLOSION_SOUND,
+						ROLE_SOUNDSERVER, target->id);
+					schedule_callback(event_callback, &callback_schedule,
+							"player-death-callback", target->id);
+				}
+				missile_explode(missile);
+			} else {
+				(void) add_explosion(target->x, target->y, target->z, 50, 5, 5, target->type);
+				snis_queue_add_sound(DISTANT_TORPEDO_HIT_SOUND, ROLE_SOUNDSERVER,
+							missile->tsd.missile.origin);
+				snis_queue_add_sound(TORPEDO_HIT_SOUND, ROLE_SOUNDSERVER,
+							missile->tsd.missile.target_id);
+				missile_explode(missile);
+			}
+			break;
+		default:
+			break;
+		}
+	}
+}
+
 static void torpedo_collision_detection(void *context, void *entity)
 {
 	struct snis_entity *t = entity;  /* target */
@@ -3480,6 +3549,64 @@ static void torpedo_move(struct snis_entity *o)
 			torpedo_collision_detection);
 	if (!o->alive)
 		delete_from_clients_and_server(o);
+}
+
+static void update_ship_orientation(struct snis_entity *o);
+static void missile_move(struct snis_entity *o)
+{
+	int i;
+	struct snis_entity *target;
+	union vec3 desired_v, to_target, target_v;
+	float flight_time;
+
+	if (o->alive)
+		o->alive--;
+	if (o->alive == 0) {
+		missile_explode(o);
+		return;
+	}
+	o->timestamp = universe_timestamp;
+
+	i = lookup_by_id(o->tsd.missile.target_id);
+	if (i >= 0) { /* our target is still around */
+		target = &go[i];
+
+		/* Calculate desired velocity */
+		to_target.v.x = target->x - o->x;
+		to_target.v.y = target->y - o->y;
+		to_target.v.z = target->z - o->z;
+
+		target_v.v.x = target->vx;
+		target_v.v.y = target->vy;
+		target_v.v.z = target->vz;
+
+		flight_time = vec3_magnitude(&to_target) / MISSILE_VELOCITY;
+		vec3_mul_self(&target_v, flight_time);
+		vec3_add_self(&to_target, &target_v);
+		vec3_normalize_self(&to_target);
+		vec3_mul(&desired_v, &to_target, MISSILE_VELOCITY);
+	} else { /* our target is gone, just keep going straight */
+		desired_v.v.x = o->vx;
+		desired_v.v.y = o->vy;
+		desired_v.v.z = o->vz;
+		vec3_normalize_self(&desired_v);
+		vec3_mul_self(&desired_v, MISSILE_VELOCITY);
+	}
+
+	/* Update velocity towards desired velocity */
+	o->vx += clampf(0.1 * (desired_v.v.x - o->vx), -MAX_MISSILE_DV, MAX_MISSILE_DV);
+	o->vy += clampf(0.1 * (desired_v.v.y - o->vy), -MAX_MISSILE_DV, MAX_MISSILE_DV);
+	o->vz += clampf(0.1 * (desired_v.v.z - o->vz), -MAX_MISSILE_DV, MAX_MISSILE_DV);
+
+	/* Move missile */
+	set_object_location(o, o->x + o->vx, o->y + o->vy, o->z + o->vz);
+	update_ship_orientation(o); /* Update missile orienation */
+
+	/* See if we hit something */
+	space_partition_process(space_partition, o, o->x, o->z, o,
+			missile_collision_detection);
+	if (!o->alive)
+		missile_explode(o);
 }
 
 static double __attribute__((unused)) point_to_line_dist(double lx1, double ly1,
@@ -3881,7 +4008,6 @@ static void spacemonster_set_antagonist(struct snis_entity *o, uint32_t id)
 }
 
 static int nl_find_nearest_object_of_type(uint32_t id, int objtype);
-static void update_ship_orientation(struct snis_entity *o);
 
 static void spacemonster_collision_process(void *context, void *entity)
 {
@@ -7777,6 +7903,7 @@ static void player_collision_detection(void *player, void *object)
 	case OBJTYPE_DEBRIS:
 	case OBJTYPE_SPARK:
 	case OBJTYPE_TORPEDO:
+	case OBJTYPE_MISSILE:
 	case OBJTYPE_LASER:
 	case OBJTYPE_EXPLOSION:
 	case OBJTYPE_NEBULA:
@@ -11557,6 +11684,20 @@ static int add_torpedo(double x, double y, double z, double vx, double vy, doubl
 	go[i].move = torpedo_move;
 	go[i].alive = TORPEDO_LIFETIME;
 	go[i].tsd.torpedo.ship_id = ship_id;
+	return i;
+}
+
+static int add_missile(double x, double y, double z, double vx, double vy, double vz,
+			uint32_t target_id, uint32_t origin_id)
+{
+	int i;
+	i = add_generic_object(x, y, z, vx, vy, vz, 0.0, OBJTYPE_MISSILE);
+	if (i < 0)
+		return i;
+	go[i].move = missile_move;
+	go[i].alive = MISSILE_LIFETIME;
+	go[i].tsd.missile.target_id = target_id;
+	go[i].tsd.missile.origin = origin_id;
 	return i;
 }
 
@@ -17830,6 +17971,99 @@ static int process_adjust_control_bytevalue(struct game_client *c, uint32_t id,
 	return 0;
 }
 
+/* Find in-range potential target that best matches weapons direction */
+static uint32_t find_potential_missile_target(struct snis_entity *shooter)
+{
+	int i;
+	float dist, dot, bestdot;
+	int best;
+	union vec3 to_target;
+	union vec3 weapons_vec;
+	struct snis_entity *target;
+	union quat orientation;
+
+	weapons_vec.v.x = 1.0;
+	weapons_vec.v.y = 0.0;
+	weapons_vec.v.z = 0.0;
+
+	/* Calculate which way weapons is pointed, and velocity of torpedo. */
+	quat_mul(&orientation, &shooter->orientation, &shooter->tsd.ship.weap_orientation);
+	quat_rot_vec_self(&weapons_vec, &orientation);
+	vec3_normalize_self(&weapons_vec);
+
+	best = -1;
+	bestdot = -1.0;
+	for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
+		target = &go[i];
+		switch (target->type) {
+		case OBJTYPE_SHIP1:
+		case OBJTYPE_SHIP2:
+		case OBJTYPE_STARBASE:
+		case OBJTYPE_DERELICT:
+		case OBJTYPE_CARGO_CONTAINER:
+			break;
+		default:
+			continue;
+		}
+		if (target->id == shooter->id) /* Don't target self */
+			continue;
+		dist = object_dist2(shooter, target);
+		if (dist > MISSILE_TARGET_DIST * MISSILE_TARGET_DIST)
+			continue;
+		to_target.v.x = target->x - shooter->x;
+		to_target.v.y = target->y - shooter->y;
+		to_target.v.z = target->z - shooter->z;
+		vec3_normalize_self(&to_target);
+		dot = vec3_dot(&to_target, &weapons_vec);
+		if (dot < 0.98) /* Not aimed well enough. */
+			continue;
+		if (dot > bestdot) {
+			best = i;
+			bestdot = dot;
+		}
+	}
+	if (best < 0)
+		return (uint32_t) -1;
+	return go[best].id;
+}
+
+static void fire_missile(struct snis_entity *shooter, uint32_t target_id)
+{
+	add_missile(shooter->x, shooter->y, shooter->z, shooter->vx, shooter->vy, shooter->vz,
+			target_id, shooter->id);
+}
+
+static int process_adjust_control_fire_missile(struct game_client *c, uint32_t id)
+{
+	int i;
+	struct snis_entity *o;
+	uint32_t target_id;
+
+	pthread_mutex_lock(&universe_mutex);
+	i = lookup_by_id(id);
+	if (i < 0) {
+		pthread_mutex_unlock(&universe_mutex);
+		return -1;
+	}
+	if (i != c->ship_index)
+		snis_log(SNIS_ERROR, "i != ship index at %s:%d\n", __FILE__, __LINE__);
+	o = &go[i];
+	if (o->tsd.ship.missile_count <= 0)
+		goto missile_fail;
+	target_id = find_potential_missile_target(o);
+	if (target_id == (uint32_t) -1)
+		goto missile_fail;
+	fire_missile(o, target_id);
+	o->tsd.ship.missile_count--;
+	pthread_mutex_unlock(&universe_mutex);
+	return 0;
+
+missile_fail:
+	pthread_mutex_unlock(&universe_mutex);
+	snis_queue_add_sound(LASER_FAILURE, ROLE_SOUNDSERVER, o->id);
+	return 0;
+}
+
 static int process_adjust_control_input(struct game_client *c)
 {
 	int rc;
@@ -17922,6 +18156,8 @@ static int process_adjust_control_input(struct game_client *c)
 	case OPCODE_ADJUST_CONTROL_SILENCE_ALARMS:
 		return process_adjust_control_bytevalue(c, id,
 			offsetof(struct snis_entity, tsd.ship.alarms_silenced), v, no_limit);
+	case OPCODE_ADJUST_CONTROL_FIRE_MISSILE:
+		return process_adjust_control_fire_missile(c, id);
 	default:
 		return -1;
 	}
@@ -19159,6 +19395,8 @@ static void send_update_explosion_packet(struct game_client *c,
 	struct snis_entity *o);
 static void send_update_torpedo_packet(struct game_client *c,
 	struct snis_entity *o);
+static void send_update_missile_packet(struct game_client *c,
+	struct snis_entity *o);
 static void send_update_laser_packet(struct game_client *c,
 	struct snis_entity *o);
 static void send_update_laserbeam_packet(struct game_client *c,
@@ -19237,6 +19475,9 @@ static void queue_up_client_object_update(struct game_client *c, struct snis_ent
 		break;
 	case OBJTYPE_TORPEDO:
 		send_update_torpedo_packet(c, o);
+		break;
+	case OBJTYPE_MISSILE:
+		send_update_missile_packet(c, o);
 		break;
 	case OBJTYPE_LASER:
 		send_update_laser_packet(c, o);
@@ -20220,6 +20461,15 @@ static void send_update_torpedo_packet(struct game_client *c,
 					o->x, (int32_t) UNIVERSE_DIM,
 					o->y, (int32_t) UNIVERSE_DIM,
 					o->z, (int32_t) UNIVERSE_DIM));
+}
+
+static void send_update_missile_packet(struct game_client *c, struct snis_entity *o)
+{
+	pb_queue_to_client(c, snis_opcode_pkt("bwwSSSQ", OPCODE_UPDATE_MISSILE, o->id, o->timestamp,
+					o->x, (int32_t) UNIVERSE_DIM,
+					o->y, (int32_t) UNIVERSE_DIM,
+					o->z, (int32_t) UNIVERSE_DIM,
+					&o->orientation));
 }
 
 static void send_update_laser_packet(struct game_client *c,

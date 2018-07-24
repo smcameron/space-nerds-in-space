@@ -77,7 +77,7 @@
 #define   OPCODE_SCI_SELECT_TARGET_TYPE_WAYPOINT 2
 #define OPCODE_UPDATE_DAMAGE 136
 #define OPCODE_REQUEST_LASER 137
-/* UNUSED OPCODE 138 */
+#define OPCODE_UPDATE_MISSILE 138
 
 #define OPCODE_ADJUST_CONTROL_INPUT 139
 #define   OPCODE_ADJUST_CONTROL_LASER_WAVELENGTH 0
@@ -107,6 +107,7 @@
 #define   OPCODE_ADJUST_CONTROL_COMMS_COOLANT 24
 #define	  OPCODE_ADJUST_CONTROL_EXTERIOR_LIGHTS 25
 #define   OPCODE_ADJUST_CONTROL_SILENCE_ALARMS 26
+#define   OPCODE_ADJUST_CONTROL_FIRE_MISSILE 27
 
 /* UNUSED OPCODE 140 */
 #define OPCODE_UPDATE_RESPAWN_TIME 141
@@ -435,6 +436,14 @@ struct update_torpedo_packet {
 	uint32_t ship_oid; /* ship torpedo came from */
 	uint32_t x, y, z;
 }; 
+
+struct update_missile_packet {
+	uint8_t opcode;
+	uint32_t id;
+	uint32_t timestamp;
+	uint32_t x, y, z;
+	uint16_t orientation[4];
+};
 
 struct update_laser_packet {
 	uint8_t opcode;

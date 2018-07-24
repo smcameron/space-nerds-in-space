@@ -34,7 +34,7 @@
 #include "snis_marshal.h"
 #include "stacktrace.h"
 
-#define NSUBCODES 27
+#define NSUBCODES 28
 #define NOPCODES (256 * NSUBCODES)
 
 static struct opcode_format_descriptor opcode_def[NOPCODES] = { { 0 } };
@@ -72,6 +72,7 @@ int snis_opcode_def_init(void)
 	rc |= init_opcode_def(OPCODE_UPDATE_STARBASE, "bwwSSSQbbbbwbb");
 	rc |= init_opcode_def(OPCODE_UPDATE_LASER, "bwwwbSSSQ");
 	rc |= init_opcode_def(OPCODE_UPDATE_TORPEDO, "bwwwSSS");
+	rc |= init_opcode_def(OPCODE_UPDATE_MISSILE, "bwwSSSQ");
 	rc |= init_opcode_def(OPCODE_UPDATE_PLAYER, "n/a");
 	rc |= init_opcode_def(OPCODE_ID_CLIENT_SHIP, "bw");
 	rc |= init_opcode_def(OPCODE_UPDATE_ASTEROID, "bwwSSSbbbb");
@@ -163,6 +164,8 @@ int snis_opcode_def_init(void)
 			OPCODE_ADJUST_CONTROL_EXTERIOR_LIGHTS, "bbwb");
 	rc |= init_opcode_subcode_def(OPCODE_ADJUST_CONTROL_INPUT,
 			OPCODE_ADJUST_CONTROL_SILENCE_ALARMS, "bbwb");
+	rc |= init_opcode_subcode_def(OPCODE_ADJUST_CONTROL_INPUT,
+			OPCODE_ADJUST_CONTROL_FIRE_MISSILE, "bbwb");
 	rc |= init_opcode_def(OPCODE_UPDATE_RESPAWN_TIME, "bb");
 	rc |= init_opcode_def(OPCODE_UPDATE_NETSTATS, "bqqwwwwwwwww");
 	rc |= init_opcode_def(OPCODE_COMMS_TRANSMISSION, "n/a");

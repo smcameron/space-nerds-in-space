@@ -53,7 +53,8 @@ enum keyaction {
 		key_sci_lrs = 48,
 		key_sci_srs = 49,
 		key_sci_details = 50,
-#define NKEYSTATES 51
+		key_weap_fire_missile = 51
+#define NKEYSTATES 52
 };
 
 struct keyboard_state {
