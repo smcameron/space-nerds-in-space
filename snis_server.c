@@ -18029,6 +18029,7 @@ static uint32_t find_potential_missile_target(struct snis_entity *shooter)
 
 static void fire_missile(struct snis_entity *shooter, uint32_t target_id)
 {
+	snis_queue_add_sound(MISSILE_LAUNCH, ROLE_SOUNDSERVER, shooter->id);
 	add_missile(shooter->x, shooter->y, shooter->z, shooter->vx, shooter->vy, shooter->vz,
 			target_id, shooter->id);
 }

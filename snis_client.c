@@ -19328,6 +19328,7 @@ static void read_sound_clips(void)
 	read_ogg_clip(ALARM_BUZZER, d, "alarm_buzzer.ogg");
 	read_ogg_clip(ROCKET_SAMPLE, d, "atlas_rocket_sample.ogg");
 	read_ogg_clip(THRUSTER_SAMPLE, d, "maneuvering_thruster.ogg");
+	read_ogg_clip(MISSILE_LAUNCH, d, "missile_launch.ogg");
 	printf("Done.\n");
 }
 

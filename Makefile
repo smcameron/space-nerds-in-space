@@ -104,7 +104,42 @@ SOUNDFILES=${SOUNDSRCDIR}/Attribution.txt \
 	${SOUNDSRCDIR}/hull-creak-6.ogg \
 	${SOUNDSRCDIR}/hull-creak-7.ogg \
 	${SOUNDSRCDIR}/hull-creak-8.ogg \
-	${SOUNDSRCDIR}/hull-creak-9.ogg
+	${SOUNDSRCDIR}/hull-creak-9.ogg \
+	${SOUNDSRCDIR}/ui1.ogg \
+	${SOUNDSRCDIR}/ui2.ogg \
+	${SOUNDSRCDIR}/ui3.ogg \
+	${SOUNDSRCDIR}/ui4.ogg \
+	${SOUNDSRCDIR}/ui5.ogg \
+	${SOUNDSRCDIR}/ui6.ogg \
+	${SOUNDSRCDIR}/ui7.ogg \
+	${SOUNDSRCDIR}/ui8.ogg \
+	${SOUNDSRCDIR}/ui9.ogg \
+	${SOUNDSRCDIR}/ui10.ogg \
+	${SOUNDSRCDIR}/ui11.ogg \
+	${SOUNDSRCDIR}/ui12.ogg \
+	${SOUNDSRCDIR}/ui13.ogg \
+	${SOUNDSRCDIR}/ui14.ogg \
+	${SOUNDSRCDIR}/ui15.ogg \
+	${SOUNDSRCDIR}/ui16.ogg \
+	${SOUNDSRCDIR}/ui17.ogg \
+	${SOUNDSRCDIR}/ui18.ogg \
+	${SOUNDSRCDIR}/ui19.ogg \
+	${SOUNDSRCDIR}/ui20.ogg \
+	${SOUNDSRCDIR}/ui21.ogg \
+	${SOUNDSRCDIR}/ui22.ogg \
+	${SOUNDSRCDIR}/ui23.ogg \
+	${SOUNDSRCDIR}/ui24.ogg \
+	${SOUNDSRCDIR}/ui25.ogg \
+	${SOUNDSRCDIR}/ui26.ogg \
+	${SOUNDSRCDIR}/ui27.ogg \
+	${SOUNDSRCDIR}/ui28.ogg \
+	${SOUNDSRCDIR}/ui29.ogg \
+	${SOUNDSRCDIR}/spacemonster_slap.ogg \
+	${SOUNDSRCDIR}/alarm_buzzer.ogg \
+	${SOUNDSRCDIR}/atlas_rocket_sample.ogg \
+	${SOUNDSRCDIR}/maneuvering_thruster.ogg \
+	${SOUNDSRCDIR}/missile_launch.ogg
+
 TEXTUREDIR=${DATADIR}/textures
 TEXTURESRCDIR=${ASSETSSRCDIR}/textures
 TEXTUREFILES=${TEXTURESRCDIR}/AreaTex.h \

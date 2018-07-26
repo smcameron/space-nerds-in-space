@@ -271,3 +271,6 @@ It is this sound: http://www.nasa.gov/mp3/590329main_ringtone_SDO_launchNats.mp3
 (mixed with a reversed instance of itself with a high pass filter plus brownian
 noise with a high pass filter).
 
+missile_launch.ogg
+COPYRIGHT=2018 by Stephen M. Cameron
+LICENSE=Creative Commons Attribution-Share Alike 3.0 License  http://creativecommons.org/licenses/by-sa/3.0/
