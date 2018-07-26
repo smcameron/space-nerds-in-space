@@ -4635,6 +4635,8 @@ static int too_many_cops_around(struct snis_entity *o)
 	return o->tsd.ship.in_secure_area;
 }
 
+static void fire_missile(struct snis_entity *shooter, uint32_t target_id);
+
 /* o is ai controled entity doing the weapons firing
  * v is the victim object being fired upon
  * imacop is true if o is a cop
@@ -4677,6 +4679,16 @@ static void ai_maybe_fire_weapon(struct snis_entity *o, struct snis_entity *v, i
 					ENEMY_LASER_FIRE_INTERVAL;
 				add_laserbeam(o->id, v->id, LASERBEAM_DURATION);
 				check_for_incoming_fire(v);
+			}
+		} else {
+			/* TODO: This probability may need tuning. */
+			if (snis_randn(1000) < 300 + imacop * 200 &&
+				o->tsd.ship.next_laser_time < universe_timestamp &&
+				ship_type[o->tsd.ship.shiptype].has_missiles) {
+				if (v->type == OBJTYPE_SHIP1 || v->type == OBJTYPE_SHIP2) {
+					fire_missile(o, v->id);
+					check_for_incoming_fire(v);
+				}
 			}
 		}
 	}

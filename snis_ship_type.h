@@ -42,6 +42,7 @@ struct ship_type_entry {
 	float angle[3];
 	int has_lasers;
 	int has_torpedoes;
+	int has_missiles;
 	int rts_unit_type;
 	float extra_scaling;
 };
