@@ -1027,6 +1027,7 @@ static int update_damcon_part(uint32_t id, uint32_t ship_id, uint32_t type,
 }
 
 static struct thrust_attachment_point **ship_thrust_attachment_points = NULL;
+static struct thrust_attachment_point *missile_thrust_attachment_point = NULL;
 
 static void allocate_ship_thrust_attachment_points(int n)
 {
@@ -1282,11 +1283,17 @@ static int update_torpedo(uint32_t id, uint32_t timestamp, double x, double y, d
 	return 0;
 }
 
+static void add_thrust_entities(struct entity *thrust_entity[],
+		int *nthrust_ports, struct entity_context *cx, struct entity *e,
+		struct thrust_attachment_point *ap, int impulse, const int thrust_material_index);
+
 static int update_missile(uint32_t id, uint32_t timestamp, double x, double y, double z,
 			union quat *orientation)
 {
 	int i;
 	struct entity *e;
+	struct entity *thrust_entity[2];
+	int nthrust_ports = 0;
 #if 0
 	struct snis_entity *myship;
 #endif
@@ -1297,18 +1304,49 @@ static int update_missile(uint32_t id, uint32_t timestamp, double x, double y, d
 		if (e) {
 			set_render_style(e, missile_render_style);
 			update_entity_material(e, &missile_material);
+			add_thrust_entities(thrust_entity, &nthrust_ports, ecx, e,
+						missile_thrust_attachment_point, 36, 0);
 		}
 		i = add_generic_object(id, timestamp, x, y, z, 0.0, 0.0, 0.0, orientation, OBJTYPE_MISSILE, 1, e);
 		if (i < 0)
 			return i;
 		go[i].tsd.missile.target_id = (uint32_t) -1;
+		go[i].tsd.missile.thrust_entity[0] = thrust_entity[0];
+		go[i].tsd.missile.thrust_entity[1] = thrust_entity[1];
 #if 0
 		myship = find_my_ship();
 		if (myship && myship->id == ship_id)
 			weapons_camera_shake = 1.0;
 #endif
 	} else {
+		float vx, vy, vz;
+		vx = x - go[i].x;
+		vy = y - go[i].y;
+		vz = z - go[i].z;
+
+		int j;
+		float v = sqrt(vx * vx + vy * vy + vz * vz);
+		int throttle = (int) (180.0 * v / (float) MISSILE_VELOCITY);
+		float thrust_size = clampf(throttle / 36.0, 0.1, 5.0);
+
 		update_generic_object(i, timestamp, x, y, z, 0.0, 0.0, 0.0, orientation, 1);
+		struct thrust_attachment_point *ap = missile_thrust_attachment_point;
+
+		for (j = 0; j < 2; j++) {
+			struct entity *t = go[i].tsd.missile.thrust_entity[j];
+			if (t) {
+				if ((j & 0x01) == 0) { /* Even are thrust entities, odd are thrust flares */
+					union vec3 thrust_scale = { { thrust_size, 1.0, 1.0 } };
+					vec3_mul_self(&thrust_scale, ap->port[j / 2].scale);
+					update_entity_non_uniform_scale(t, thrust_scale.v.x,
+								thrust_scale.v.y, thrust_scale.v.z);
+				} else {
+					update_entity_scale(t, (0.5 * THRUST_FLARE_SCALE +
+							snis_randn(100) * THRUST_FLARE_SCALE * 0.02) *
+							thrust_size * ap->port[j / 2].scale);
+				}
+			}
+		}
 	}
 	return 0;
 }
@@ -7942,13 +7980,11 @@ static void draw_targeting_indicator(GtkWidget *w, GdkGC *gc, int x, int y, int 
 	}
 }
 
-/* size is 0.0 to 1.0 */
-static void add_ship_thrust_entities(struct entity *thrust_entity[],
+static void add_thrust_entities(struct entity *thrust_entity[],
 		int *nthrust_ports, struct entity_context *cx, struct entity *e,
-		int shiptype, int impulse, const int thrust_material_index)
+		struct thrust_attachment_point *ap, int impulse, const int thrust_material_index)
 {
 	int i, p;
-	struct thrust_attachment_point *ap = ship_thrust_attachment_point(shiptype);
 
 	if (!ap)
 		return;
@@ -7990,6 +8026,18 @@ static void add_ship_thrust_entities(struct entity *thrust_entity[],
 		}
 		p++;
 	}
+}
+
+/* size is 0.0 to 1.0 */
+static void add_ship_thrust_entities(struct entity *thrust_entity[],
+		int *nthrust_ports, struct entity_context *cx, struct entity *e,
+		int shiptype, int impulse, const int thrust_material_index)
+{
+	struct thrust_attachment_point *ap = ship_thrust_attachment_point(shiptype);
+
+	if (!ap)
+		return;
+	add_thrust_entities(thrust_entity, nthrust_ports, cx, e, ap, impulse, thrust_material_index);
 }
 
 static void update_warp_tunnel(struct snis_entity *o, struct entity **warp_tunnel)
@@ -19852,6 +19900,7 @@ static void init_meshes()
 	int i;
 	char *d = asset_dir;
 	struct mtwist_state *mt; 
+	char missile_thrust_attachment_path[PATH_MAX];
 
 	mt = mtwist_init(mtwist_seed);
 	if (!mt) {
@@ -19871,6 +19920,10 @@ static void init_meshes()
 	missile_mesh = snis_read_model(d, "missile.stl");
 	mesh_scale(missile_mesh, SHIP_MESH_SCALE);
 	mesh_cylindrical_yz_uv_map(missile_mesh);
+	snprintf(missile_thrust_attachment_path, sizeof(missile_thrust_attachment_path),
+						"%s/models/missile.scad_params.h", d);
+	missile_thrust_attachment_point =
+		read_thrust_attachments(missile_thrust_attachment_path, SHIP_MESH_SCALE);
 #ifndef WITHOUTOPENGL
 	torpedo_mesh = mesh_fabricate_billboard(50.0f, 50.0f);
 #else

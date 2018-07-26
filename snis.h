@@ -744,6 +744,7 @@ struct black_hole_data {
 struct missile_data {
 	uint32_t target_id;
 	uint32_t origin;
+	struct entity *thrust_entity[2]; /* one for exhaust jet, one for exhaust flare */
 };
 
 struct planet_data {
