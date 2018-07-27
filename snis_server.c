@@ -4686,6 +4686,8 @@ static void ai_maybe_fire_weapon(struct snis_entity *o, struct snis_entity *v, i
 				o->tsd.ship.next_laser_time < universe_timestamp &&
 				ship_type[o->tsd.ship.shiptype].has_missiles) {
 				if (v->type == OBJTYPE_SHIP1 || v->type == OBJTYPE_SHIP2) {
+					o->tsd.ship.next_laser_time = universe_timestamp +
+						ENEMY_LASER_FIRE_INTERVAL;
 					fire_missile(o, v->id);
 					check_for_incoming_fire(v);
 				}
