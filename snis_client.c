@@ -11881,6 +11881,9 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 				/* Is it better to have monsters invisible on nav for the element of surprise? */
 				if (go[i].type == OBJTYPE_SPACEMONSTER)
 					sci_nav_add_tentacles(instrumentecx, &go[i], contact);
+				if (go[i].type == OBJTYPE_MISSILE)
+					update_entity_color(contact,
+							(timer & 0x04) == 0 ? UI_COLOR(nav_torpedo) : BLACK);
 			}
 			if (contact) {
 				if (go[i].type == OBJTYPE_PLANET)
