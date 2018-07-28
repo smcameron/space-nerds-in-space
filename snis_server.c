@@ -17755,6 +17755,21 @@ static int l_disable_custom_button(lua_State *l)
 	return enable_or_disable_custom_button(oid, screen, 0);
 }
 
+static int l_fire_missile(lua_State *l)
+{
+	const double sid = luaL_checknumber(l, 1);
+	const double tid = luaL_checknumber(l, 2);
+	int s, t;
+
+	pthread_mutex_lock(&universe_mutex);
+	s = lookup_by_id((uint32_t) sid);
+	t = lookup_by_id((uint32_t) tid);
+	if (s >= 0 && t >= 0)
+		fire_missile(&go[s], go[t].id);
+	pthread_mutex_unlock(&universe_mutex);
+	return 0;
+}
+
 static int process_create_item(struct game_client *c)
 {
 	unsigned char buffer[14];
@@ -21368,6 +21383,7 @@ static void setup_lua(void)
 	add_lua_callable_fn(l_set_custom_button_label, "set_custom_button_label");
 	add_lua_callable_fn(l_enable_custom_button, "enable_custom_button");
 	add_lua_callable_fn(l_disable_custom_button, "disable_custom_button");
+	add_lua_callable_fn(l_fire_missile, "fire_missile");
 }
 
 static int run_initial_lua_scripts(void)

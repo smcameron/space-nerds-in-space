@@ -931,6 +931,11 @@ disable_custom_button(player_id, screen);
 	Disables (hides) the specified custom button for the specified player.
 	"screen" is an integer as described above (see set_custom_button_label).
 
+fire_missile(shooter_id, target_id)
+	Fires a missile from the location of shooter id homing on target_id
+	If either shooter id or target id do not match an existing object,
+	then nothing happens. Nothing is returned.
+
 NOTE: Your lua scripts must not sleep, call any function which blocks, or require excessive
 long running calculations (nothing more than a few hundredths of a second) because the lua
 scripts are called from the main thread and if the scripts block, the entire game will block.
