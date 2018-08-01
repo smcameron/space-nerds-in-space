@@ -21,6 +21,7 @@ struct text_window {
 	int printing_pos;
 	char **text;
 	int color;
+	int do_blank;
 };
 
 static int default_timer = 0;
@@ -85,6 +86,7 @@ struct text_window *text_window_init(int x, int y, int w,
 	tw->font = NANO_FONT;
 	tw->print_slowly = 1;
 	tw->printing_pos = 0;
+	tw->do_blank = 0;
 	return tw;
 }
 
@@ -93,6 +95,10 @@ void text_window_draw(struct text_window *tw)
 	int i, j;
 	int thumb_top, thumb_bottom, twec;
 
+	if (tw->do_blank) {
+		sng_set_foreground(BLACK);
+		sng_current_draw_rectangle(1, tw->x, tw->y, tw->w, tw->h);
+	}
 	sng_set_foreground(tw->color);
 	/* draw outer rectangle */
 	sng_current_draw_rectangle(0, tw->x, tw->y, tw->w, tw->h);
@@ -260,3 +266,7 @@ int text_window_button_press(struct text_window *tw, int x, int y)
 	return 0;
 }
 
+void text_window_blank_background(struct text_window *tw, int do_blank)
+{
+	tw->do_blank = do_blank;
+}
