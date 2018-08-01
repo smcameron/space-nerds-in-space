@@ -22,11 +22,11 @@ struct text_window {
 	char **text;
 	int color;
 	int do_blank;
+	int tty_chatter_sound;
 };
 
 static int default_timer = 0;
 static volatile int *textwindow_timer = &default_timer;
-static int tty_chatter_sound = -1;
 
 int text_window_entry_count(struct text_window *tw)
 {
@@ -87,6 +87,7 @@ struct text_window *text_window_init(int x, int y, int w,
 	tw->print_slowly = 1;
 	tw->printing_pos = 0;
 	tw->do_blank = 0;
+	tw->tty_chatter_sound = -1;
 	return tw;
 }
 
@@ -157,8 +158,8 @@ void text_window_draw(struct text_window *tw)
 						tmpbuf[tw->printing_pos] = '\0';
 					}
 					tw->printing_pos++;
-					if (tty_chatter_sound != -1)
-						wwviaudio_add_sound(tty_chatter_sound);
+					if (tw->tty_chatter_sound != -1)
+						wwviaudio_add_sound(tw->tty_chatter_sound);
 				} else {
 					if (((*textwindow_timer >> 2) & 0x01) == 0) 
 						strcat(tmpbuf, "_");
@@ -183,9 +184,9 @@ void text_window_set_timer(volatile int *timer)
 	textwindow_timer = timer;
 }
 
-void text_window_set_chatter_sound(int chatter_sound)
+void text_window_set_chatter_sound(struct text_window *tw, int chatter_sound)
 {
-	tty_chatter_sound = chatter_sound;
+	tw->tty_chatter_sound = chatter_sound;
 }
 
 void text_window_scroll_down(struct text_window *tw)

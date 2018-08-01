@@ -13823,6 +13823,7 @@ static void init_comms_ui(void)
 			NANO_FONT, comms_main_screen_pressed, NULL);
 	snis_button_set_sound(comms_ui.mainscreen_comms, UISND17);
 	comms_ui.tw = text_window_init(txx(10), txy(70), SCREEN_WIDTH - txx(20), 300, 17, text_color);
+	text_window_set_chatter_sound(comms_ui.tw, TTY_CHATTER_SOUND);
 	comms_ui.comms_input = snis_text_input_box_init(txx(10), txy(520), txy(30), txx(550),
 					text_color, TINY_FONT,
 					comms_ui.input, 50, &timer,
@@ -20564,7 +20565,6 @@ int main(int argc, char *argv[])
 	universe_timestamp_offset = time_now_double(); /* until we get real time from server */
 
 	snis_slider_set_sound(SLIDER_SOUND);
-	text_window_set_chatter_sound(TTY_CHATTER_SOUND);
 	text_window_set_timer(&timer);
 	ui_set_tooltip_drawing_function(draw_tooltip);
 	init_lobby_ui();
