@@ -15970,11 +15970,34 @@ static int process_enscript_command(struct game_client *c)
 	return 0;
 }
 
+static void server_builtin_clients(void)
+{
+	int i;
+	char buf[80];
+
+	snprintf(buf, sizeof(buf), "%5s %5s %20s %8s", "CLNT", "BRDG", "SHIP NAME", "ROLES");
+	send_demon_console_msg(buf);
+	send_demon_console_msg("--------------------------------------------------------");
+	for (i = 0; i < nclients; i++) {
+		struct game_client *c = &client[i];
+		snprintf(buf, sizeof(buf), "%5d %5d %20s %08x", i, c->bridge,
+				bridgelist[c->bridge].shipname, c->role);
+		send_demon_console_msg(buf);
+	}
+}
+
+static struct server_builtin_cmd {
+	char *cmd;
+	void (*fn)(void);
+} server_builtin[] = {
+	{ "CLIENTS", server_builtin_clients, },
+};
+
 static int process_exec_lua_script(struct game_client *c)
 {
 	unsigned char buffer[sizeof(struct lua_script_packet)];
-	char txt[256];
-	int rc;
+	char txt[300];
+	int i, rc;
 	uint8_t len;
 	char scriptname[PATH_MAX];
 
@@ -15985,6 +16008,17 @@ static int process_exec_lua_script(struct game_client *c)
 	if (rc)
 		return rc;
 	txt[len] = '\0';
+
+	/* See if it's a server builtin command */
+	for (i = 0; i < ARRAYSIZE(server_builtin); i++) {
+		if (strcmp(txt, server_builtin[i].cmd) == 0) {
+			server_builtin[i].fn();
+			return 0;
+		}
+	}
+
+	/* Maybe it's a lua script. */
+	strncat(txt, ".LUA", sizeof(txt));
 
 #define LUASCRIPTDIR "share/snis/luascripts"
 	snprintf(scriptname, sizeof(scriptname) - 1, "%s/%s", LUASCRIPTDIR, txt);

@@ -15721,6 +15721,7 @@ static struct demon_cmd_def {
 	{ "RTSMODE-ON", "ENABLE REAL TIME STRATEGY MODE" },
 	{ "RTSMODE-OFF", "DISABLE REAL TIME STRATEGY MODE" },
 	{ "CONSOLE", "TOGGLE DEMON CONSOLE ON/OFF" },
+	{ "CLIENTS", "LIST CLIENTS" },
 };
 static int demon_help_mode = 0;
 #define DEMON_CMD_DELIM " ,"
@@ -16015,8 +16016,8 @@ static int construct_demon_command(char *input,
 		case 17: /* activate demon console */
 			demon_ui.console_active = !demon_ui.console_active;
 			break;
-		default: /* unknown, maybe it's a lua script */
-			snprintf(lua_script, sizeof(lua_script), "%s.LUA", s);
+		default: /* unknown, maybe it's a builtin server command or a lua script */
+			snprintf(lua_script, sizeof(lua_script), "%s", s);
 			send_lua_script_packet_to_server(lua_script);
 			break;
 	}
