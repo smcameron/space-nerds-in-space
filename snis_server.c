@@ -15970,7 +15970,7 @@ static int process_enscript_command(struct game_client *c)
 	return 0;
 }
 
-static void server_builtin_clients(void)
+static void server_builtin_clients(__attribute__((unused)) char *cmd)
 {
 	int i;
 	char buf[80];
@@ -15986,11 +15986,34 @@ static void server_builtin_clients(void)
 	}
 }
 
+static void server_builtin_disconnect(char *cmd)
+{
+	char msg[DEMON_CONSOLE_MSG_MAX];
+	int rc, i;
+
+	rc = sscanf(cmd, "%*s %d", &i);
+	if (rc != 1) {
+		send_demon_console_msg("INVALID DISCONNECT COMMAND");
+		sprintf(msg, "     \"%s\"", cmd);
+	send_demon_console_msg(msg);
+		return;
+	}
+	if (i >= 0 && i < nclients) {
+		close(client[i].socket);
+		client[i].socket = -1;
+		sprintf(msg, "DISCONNECTED CLIENT %d", i);
+	} else {
+		sprintf(msg, "INVALID CLIENT %d", i);
+	}
+	send_demon_console_msg(msg);
+}
+
 static struct server_builtin_cmd {
 	char *cmd;
-	void (*fn)(void);
+	void (*fn)(char *cmd);
 } server_builtin[] = {
 	{ "CLIENTS", server_builtin_clients, },
+	{ "DISCONNECT", server_builtin_disconnect, },
 };
 
 static int process_exec_lua_script(struct game_client *c)
@@ -16000,6 +16023,7 @@ static int process_exec_lua_script(struct game_client *c)
 	int i, rc;
 	uint8_t len;
 	char scriptname[PATH_MAX];
+	char firstword[300];
 
 	rc = read_and_unpack_buffer(c, buffer, "b", &len);
 	if (rc)
@@ -16008,11 +16032,17 @@ static int process_exec_lua_script(struct game_client *c)
 	if (rc)
 		return rc;
 	txt[len] = '\0';
+	memset(firstword, 0, sizeof(firstword));
+	for (i = 0; txt[i] != '\0'; i++) {
+		if (txt[i] == ' ')
+			break;
+		firstword[i] = txt[i];
+	}
 
 	/* See if it's a server builtin command */
 	for (i = 0; i < ARRAYSIZE(server_builtin); i++) {
-		if (strcmp(txt, server_builtin[i].cmd) == 0) {
-			server_builtin[i].fn();
+		if (strcmp(firstword, server_builtin[i].cmd) == 0) {
+			server_builtin[i].fn(txt);
 			return 0;
 		}
 	}
