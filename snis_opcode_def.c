@@ -270,6 +270,7 @@ int snis_opcode_def_init(void)
 	rc |= init_opcode_subcode_def(OPCODE_SET_WAYPOINT, OPCODE_SET_WAYPOINT_ROW, "bbbSSS");
 	rc |= init_opcode_subcode_def(OPCODE_SET_WAYPOINT, OPCODE_SET_WAYPOINT_ADD_ROW, "bbSSS");
 	rc |= init_opcode_subcode_def(OPCODE_SET_WAYPOINT, OPCODE_SET_WAYPOINT_UPDATE_SELECTION, "bbw");
+	rc |= init_opcode_subcode_def(OPCODE_CONSOLE_OP, OPCODE_CONSOLE_SUBCMD_ADD_TEXT, "n/a");
 	rc |= init_opcode_def(OPCODE_NOOP, "b");
 	return rc;
 }

@@ -3193,6 +3193,7 @@ static struct demon_ui {
 	struct scaling_strip_chart *bytes_sent_strip_chart;
 	struct scaling_strip_chart *latency_strip_chart;
 	struct pull_down_menu *menu;
+	struct text_window *console;
 	char input[100];
 	char error_msg[80];
 	double ix, iz, ix2, iz2;
@@ -3225,6 +3226,7 @@ static struct demon_ui {
 	float desired_exaggerated_scale;
 	int exaggerated_scale_active;
 	int netstats_active;
+	int console_active;
 } demon_ui;
 
 static void home_demon_camera(void)
@@ -6920,6 +6922,7 @@ static void stop_gameserver_writer_thread(void)
 }
 
 static int process_custom_button(void);
+static int process_console_op(void);
 
 static void *gameserver_reader(__attribute__((unused)) void *arg)
 {
@@ -7202,6 +7205,11 @@ static void *gameserver_reader(__attribute__((unused)) void *arg)
 			break;
 		case OPCODE_CUSTOM_BUTTON:
 			rc = process_custom_button();
+			if (rc)
+				goto protocol_error;
+			break;
+		case OPCODE_CONSOLE_OP:
+			rc = process_console_op();
 			if (rc)
 				goto protocol_error;
 			break;
@@ -12349,6 +12357,28 @@ static int process_custom_button(void)
 	return 0;
 }
 
+static int process_console_op(void)
+{
+	int rc;
+	uint8_t subcmd;
+	uint8_t buffer[DEMON_CONSOLE_MSG_MAX];
+
+	rc = read_and_unpack_buffer(buffer, "b", &subcmd);
+	if (rc != 0)
+		return rc;
+	switch (subcmd) {
+	case OPCODE_CONSOLE_SUBCMD_ADD_TEXT:
+		memset(buffer, 0, sizeof(buffer));
+		rc = snis_readsocket(gameserver_sock, buffer, sizeof(buffer));
+		buffer[DEMON_CONSOLE_MSG_MAX - 1] = '\0';
+		text_window_add_text(demon_ui.console, (char *) buffer);
+		break;
+	default:
+		return -1;
+	}
+	return 0;
+}
+
 static void damcon_button_pressed(void *x)
 {
 	displaymode = DISPLAYMODE_DAMCON;
@@ -15690,6 +15720,7 @@ static struct demon_cmd_def {
 	{ "TTS", "USE TEXT-TO-SPEECH TO SPEAK SOMETHING TO SPECIFIED SHIP. E.G.: TTS SHIPNAME: HELLO" },
 	{ "RTSMODE-ON", "ENABLE REAL TIME STRATEGY MODE" },
 	{ "RTSMODE-OFF", "DISABLE REAL TIME STRATEGY MODE" },
+	{ "CONSOLE", "TOGGLE DEMON CONSOLE ON/OFF" },
 };
 static int demon_help_mode = 0;
 #define DEMON_CMD_DELIM " ,"
@@ -15705,6 +15736,10 @@ static void show_cmd_help(GtkWidget *w, struct demon_cmd_def cmd[], int nitems)
 		sng_abs_xy_draw_string(buffer, PICO_FONT, txx(85), txy(i * 15 + 60));
 		sprintf(buffer, "%s", cmd[i].help);
 		sng_abs_xy_draw_string(buffer, PICO_FONT, txx(170), txy(i * 15 + 60));
+		if (demon_ui.console_active) {
+			sprintf(buffer, "%15s %s", cmd[i].verb, cmd[i].help);
+			text_window_add_text(demon_ui.console, buffer);
+		}
 	}
 }
 
@@ -15808,9 +15843,12 @@ static int construct_demon_command(char *input,
 	struct packed_buffer *pb;
 	int idcount;
 	char *original = NULL;
+	char console_text[255];
 	char lua_script[100];
 
 	original = strdup(input); /* save lowercase version for text to speech */
+	snprintf(console_text, sizeof(console_text), "> %s", input);
+	text_window_add_text(demon_ui.console, console_text);
 	uppercase(input);
 	saveptr = NULL;
 	s = strtok_r(input, DEMON_CMD_DELIM, &saveptr);
@@ -15974,6 +16012,9 @@ static int construct_demon_command(char *input,
 		case 16: /* disable real-time-strategy mode */
 			send_rtsmode_change_to_server(0);
 			break;
+		case 17: /* activate demon console */
+			demon_ui.console_active = !demon_ui.console_active;
+			break;
 		default: /* unknown, maybe it's a lua script */
 			snprintf(lua_script, sizeof(lua_script), "%s.LUA", s);
 			send_lua_script_packet_to_server(lua_script);
@@ -16017,6 +16058,7 @@ static void demon_exec_button_pressed(void *x)
 	strcpy(demon_ui.error_msg, "");
 	rc = construct_demon_command(demon_ui.input, &demon_cmd, demon_ui.error_msg);
 	if (rc) {
+		text_window_add_text(demon_ui.console, demon_ui.error_msg);
 		printf("Error msg: %s\n", demon_ui.error_msg);
 	} else {
 		printf("Command is ok\n");
@@ -16305,6 +16347,7 @@ static void init_demon_ui()
 	demon_ui.selectmode = 0;
 	demon_ui.captain_of = -1;
 	demon_ui.use_3d = 0;
+	demon_ui.console_active = 0;
 	demon_ui.render_style = DEMON_UI_RENDER_STYLE_WIREFRAME;
 	strcpy(demon_ui.error_msg, "");
 	memset(demon_ui.selected_id, 0, sizeof(demon_ui.selected_id));
@@ -16456,6 +16499,9 @@ static void init_demon_ui()
 	pull_down_menu_add_row(demon_ui.menu, "CAPTAIN", "TOGGLE CAPTAIN ON/OFF", demon_captain_button_pressed, NULL);
 	pull_down_menu_add_row(demon_ui.menu, "CAPTAIN", "FIRE TORPEDO", demon_torpedo_button_pressed, NULL);
 	pull_down_menu_add_row(demon_ui.menu, "CAPTAIN", "FIRE PHASER", demon_phaser_button_pressed, NULL);
+	demon_ui.console = text_window_init(txx(100), txy(10), SCREEN_WIDTH - txx(110), 500, 35,
+						UI_COLOR(demon_default));
+	text_window_blank_background(demon_ui.console, 1);
 	ui_add_button(demon_ui.demon_exec_button, DISPLAYMODE_DEMON,
 			"EXECUTE THE ENTERED COMMAND");
 	ui_add_button(demon_ui.demon_home_button, DISPLAYMODE_DEMON,
@@ -16494,7 +16540,8 @@ static void init_demon_ui()
 			"DISPLAY GRAPHS OF NETWORK STATISTICS");
 	ui_add_button(demon_ui.demon_render_style_button, DISPLAYMODE_DEMON,
 			"TOGGLE RENDERING STYLE BETWEEN WIREFRAME AND SEMI-TRANSPARENT");
-	ui_add_pull_down_menu(demon_ui.menu, DISPLAYMODE_DEMON);
+	ui_add_text_window(demon_ui.console, DISPLAYMODE_DEMON);
+	ui_add_pull_down_menu(demon_ui.menu, DISPLAYMODE_DEMON); /* needs to be last */
 	ui_hide_widget(demon_ui.demon_move_button);
 	ui_hide_widget(demon_ui.demon_scale_button);
 	ui_add_text_input_box(demon_ui.demon_input, DISPLAYMODE_DEMON);
@@ -16504,6 +16551,7 @@ static void init_demon_ui()
 	ui_hide_widget(demon_ui.bytes_recd_strip_chart);
 	ui_hide_widget(demon_ui.bytes_sent_strip_chart);
 	ui_hide_widget(demon_ui.latency_strip_chart);
+	ui_hide_widget(demon_ui.console);
 	home_demon_camera();
 	demon_ui.camera_orientation = demon_ui.desired_camera_orientation;
 	demon_ui.camera_pos = demon_ui.desired_camera_pos;
@@ -17137,6 +17185,14 @@ static void show_demon_3d(GtkWidget *w)
 	remove_all_entity(instrumentecx);
 }
 
+static void show_demon_console(GtkWidget *w)
+{
+	if (demon_ui.console_active)
+		ui_unhide_widget(demon_ui.console);
+	else
+		ui_hide_widget(demon_ui.console);
+}
+
 static void show_demon(GtkWidget *w)
 {
 	char label[100];
@@ -17159,6 +17215,7 @@ static void show_demon(GtkWidget *w)
 	else
 		snprintf(label, sizeof(label), "FACTION = RANDOM");
 	sng_abs_xy_draw_string(label, PICO_FONT, SCREEN_WIDTH - txx(100), txy(40));
+	show_demon_console(w);
 	show_common_screen(w, "DEMON");
 }
 

@@ -13151,6 +13151,20 @@ static int process_request_thrust(struct game_client *c)
 }
 #endif
 
+static void send_demon_console_msg(const char *msg)
+{
+	char buf[DEMON_CONSOLE_MSG_MAX];
+	struct packed_buffer *pb;
+
+	memset(buf, 0, sizeof(buf));
+	snprintf(buf, sizeof(buf), "%s", msg);
+	buf[sizeof(buf) - 1] = '\0';
+	pb = packed_buffer_allocate(2 + sizeof(buf));
+	packed_buffer_append(pb, "bb", OPCODE_CONSOLE_OP, OPCODE_CONSOLE_SUBCMD_ADD_TEXT);
+	packed_buffer_append_raw(pb, buf, sizeof(buf));
+	send_packet_to_all_clients(pb, ROLE_DEMON);
+}
+
 static int process_demon_thrust(struct game_client *c)
 {
 	struct snis_entity *o;
@@ -16743,6 +16757,7 @@ static void process_demon_clear_all(void)
 			delete_from_clients_and_server(o);
 	}
 	rts_mode = 0;
+	send_demon_console_msg("CLEAR ALL COMPLETE");
 	pthread_mutex_unlock(&universe_mutex);
 }
 
@@ -17169,10 +17184,13 @@ static int process_build_info(struct game_client *c)
 static int process_toggle_demon_safe_mode(void)
 {
 	safe_mode = !safe_mode;
-	if (safe_mode)
+	if (safe_mode) {
 		snis_queue_add_global_text_to_speech("Safe mode enabled.");
-	else
+		send_demon_console_msg("SAFE MODE ENABLED.");
+	} else {
 		snis_queue_add_global_text_to_speech("Safe mode disabled.");
+		send_demon_console_msg("SAFE MODE DISABLED.");
+	}
 	return 0;
 }
 
@@ -21410,6 +21428,7 @@ static int run_initial_lua_scripts(void)
 static void process_lua_commands(void)
 {
 	char lua_command[PATH_MAX];
+	char error_msg[DEMON_CONSOLE_MSG_MAX];
 	int rc;
 
 	pthread_mutex_lock(&universe_mutex);
@@ -21420,9 +21439,16 @@ static void process_lua_commands(void)
 
 		pthread_mutex_unlock(&universe_mutex);
 		rc = luaL_dofile(lua_state, lua_command);
-		if (rc)
-			fprintf(stderr, "Error executing lua script: %s\n",
+		if (rc) {
+			snprintf(error_msg, sizeof(error_msg), "Error executing lua script: %s\n",
 				lua_tostring(lua_state, -1));
+			fprintf(stderr, "%s", error_msg);
+			send_demon_console_msg("Error executing lua script:");
+			send_demon_console_msg(lua_tostring(lua_state, -1));
+		} else {
+			snprintf(error_msg, sizeof(error_msg), "LUA SCRIPT %s STARTED", lua_command);
+			send_demon_console_msg(error_msg);
+		}
 		pthread_mutex_lock(&universe_mutex);
 	}
 	pthread_mutex_unlock(&universe_mutex);

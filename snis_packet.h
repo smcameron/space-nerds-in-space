@@ -67,7 +67,8 @@
 #define   OPCODE_CUSTOM_BUTTON_SUBCMD_COMMS 5
 #define   OPCODE_CUSTOM_BUTTON_SUBCMD_ACTIVE_LIST 20
 #define   OPCODE_CUSTOM_BUTTON_SUBCMD_UPDATE_TEXT 21
-/* UNUSED OPCODE 130 */
+#define OPCODE_CONSOLE_OP 130
+#define   OPCODE_CONSOLE_SUBCMD_ADD_TEXT 0
 /* UNUSED OPCODE 131 */
 /* UNUSED OPCODE 132 */
 #define OPCODE_ENGAGE_WARP 133
@@ -712,6 +713,8 @@ struct opcode_format_descriptor {
 	uint8_t subcode;
 	char format[256];
 };
+
+#define DEMON_CONSOLE_MSG_MAX 80
 
 #pragma pack()
 #endif	
