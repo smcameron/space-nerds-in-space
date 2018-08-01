@@ -4334,10 +4334,12 @@ static void show_lobbyscreen(GtkWidget *w)
 				fprintf(stderr, "snis_client: time to switch servers\n");
 				lobby_selected_server =
 					lobby_lookup_server_by_location(switch_server_location_string);
-				fprintf(stderr, "snis_client: lobby_seleted_server = %d (%s)\n",
+				fprintf(stderr, "snis_client: lobby_selected_server = %d (%s)\n",
 					lobby_selected_server, switch_server_location_string);
-				if (lobby_selected_server == -1)
+				if (lobby_selected_server == -1) {
+					pthread_mutex_unlock(&to_server_queue_event_mutex);
 					return;
+				}
 				switched_server2 = -1;
 				displaymode = DISPLAYMODE_CONNECTING;
 			}
