@@ -7253,9 +7253,10 @@ protocol_error:
 	snis_print_last_buffer("snis_client: ", gameserver_sock);
 	fprintf(stderr, "snis_client: last opcode was %hhu, before that %hhu\n", last_opcode, previous_opcode);
 	fprintf(stderr, "snis_client: total successful opcodes = %u\n", successful_opcodes);
+	stop_gameserver_writer_thread();
+	shutdown(gameserver_sock, SHUT_RDWR);
 	close(gameserver_sock);
 	gameserver_sock = -1;
-	writer_thread_should_die = 1;
 	connected_to_gameserver = 0;
 	lobby_selected_server = -1;
 	quickstartmode = 0;
@@ -7313,10 +7314,10 @@ badserver:
 	 */
 	printf("client bailing on server...\n");
 	pthread_mutex_unlock(&to_server_queue_event_mutex);
+	stop_gameserver_writer_thread();
 	shutdown(gameserver_sock, SHUT_RDWR);
 	close(gameserver_sock);
 	gameserver_sock = -1;
-	writer_thread_should_die = 1;
 	connected_to_gameserver = 0;
 	lobby_selected_server = -1;
 	quickstartmode = 0;
@@ -7550,7 +7551,6 @@ static void *connect_to_gameserver_thread(__attribute__((unused)) void *arg)
 	packed_buffer_queue_init(&to_server_queue);
 
 	printf("starting gameserver writer thread\n");
-	writer_thread_should_die = 0;
 	rc = create_thread(&write_to_gameserver_thread, gameserver_writer, NULL, "snisc-writer", 1);
 	if (rc) {
 		snprintf(connecting_to_server_msg, sizeof(connecting_to_server_msg),
