@@ -12497,15 +12497,12 @@ static void set_random_seed(int new_seed)
 	mtwist_seed = (uint32_t) i;
 }
 
-static void make_universe(void)
+static void populate_universe(void)
 {
 	if (solarsystem_assets->random_seed != -1)
 		set_random_seed(solarsystem_assets->random_seed);
 	initialize_random_orientations_and_spins(COMMON_MTWIST_SEED);
 	planetary_atmosphere_model_init_models(ATMOSPHERE_TYPE_GEN_SEED, NATMOSPHERE_TYPES);
-	pthread_mutex_lock(&universe_mutex);
-	snis_object_pool_setup(&pool, MAXGAMEOBJS);
-
 	add_nebulae(); /* do nebula first */
 	add_asteroids();
 	add_planets();
@@ -12517,7 +12514,22 @@ static void make_universe(void)
 	add_spacemonsters();
 	add_passengers();
 	add_black_holes();
+}
+
+static void make_universe(void)
+{
+	pthread_mutex_lock(&universe_mutex);
+	snis_object_pool_setup(&pool, MAXGAMEOBJS);
+	populate_universe();
 	pthread_mutex_unlock(&universe_mutex);
+}
+
+static void send_demon_console_msg(const char *msg);
+static void regenerate_universe(void)
+{
+	disable_rts_mode();
+	populate_universe();
+	send_demon_console_msg("UNIVERSE REGENERATED");
 }
 
 static int add_generic_damcon_object(struct damcon_data *d, int x, int y,
@@ -16937,6 +16949,7 @@ static void enable_rts_mode(void)
 
 static void disable_rts_mode(void)
 {
+	int orig_rts_mode = rts_mode;
 	initialize_rts_ai();
 	rts_ai.active = 0;
 	send_packet_to_all_clients(snis_opcode_pkt("bb",
@@ -16945,7 +16958,8 @@ static void disable_rts_mode(void)
 	pthread_mutex_lock(&universe_mutex);
 	rts_mode = 0;
 	rts_finish_timer = -1;
-	snis_queue_add_global_text_to_speech("Real time strategy mode has been disabled.");
+	if (orig_rts_mode)
+		snis_queue_add_global_text_to_speech("Real time strategy mode has been disabled.");
 	pthread_mutex_unlock(&universe_mutex);
 }
 
@@ -17852,6 +17866,13 @@ static int l_fire_missile(lua_State *l)
 	if (s >= 0 && t >= 0)
 		fire_missile(&go[s], go[t].id);
 	pthread_mutex_unlock(&universe_mutex);
+	return 0;
+}
+
+static void regenerate_universe(void);
+static int l_regenerate_universe(lua_State *l)
+{
+	regenerate_universe();
 	return 0;
 }
 
@@ -21469,6 +21490,7 @@ static void setup_lua(void)
 	add_lua_callable_fn(l_enable_custom_button, "enable_custom_button");
 	add_lua_callable_fn(l_disable_custom_button, "disable_custom_button");
 	add_lua_callable_fn(l_fire_missile, "fire_missile");
+	add_lua_callable_fn(l_regenerate_universe, "regenerate_universe");
 }
 
 static int run_initial_lua_scripts(void)
