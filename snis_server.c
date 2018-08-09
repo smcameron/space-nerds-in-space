@@ -309,7 +309,7 @@ static struct game_client {
 #endif
 } client[MAXCLIENTS];
 static int nclients = 0;
-#define client_index(client_ptr) ((client_ptr) - &client[0])
+#define client_index(client_ptr) ((long) ((client_ptr) - &client[0]))
 static pthread_mutex_t client_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 static struct bridge_data {
@@ -399,7 +399,7 @@ static struct mesh *low_poly_sphere_mesh;
 
 static struct snis_object_pool *pool;
 static struct snis_entity go[MAXGAMEOBJS];
-#define go_index(snis_entity_ptr) ((snis_entity_ptr) - &go[0])
+#define go_index(snis_entity_ptr) ((long) ((snis_entity_ptr) - &go[0]))
 static struct space_partition *space_partition = NULL;
 
 /* Do planets, black holes, nebula and antenna mis-aiming block comms?  Default is false, disabled */
@@ -21235,7 +21235,7 @@ static void update_multiverse(struct snis_entity *o)
 	bridge = lookup_bridge_by_shipid(o->id);
 	if (bridge < 0) {
 		fprintf(stderr,
-			"%s: did not find bridge for id:%d, index=%lu, alive=%d: %s:%d\n",
+			"%s: did not find bridge for id:%d, index=%ld, alive=%d: %s:%d\n",
 				logprefix(), o->id, go_index(o), o->alive, __FILE__, __LINE__);
 		return;
 	}

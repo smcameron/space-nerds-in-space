@@ -110,7 +110,8 @@ static int parse_line(char *filename, char *line, int ln, struct commodity *c)
 	uppercase(word);
 	strnzcpy(c->name, word, sizeof(c->name));
 	if (strcmp(c->name, word) != 0) {
-		fprintf(stderr, "%s:%d: '%s' truncated to %lu chars.\n", filename, ln, word, strlen(c->name));
+		fprintf(stderr, "%s:%d: '%s' truncated to %lu chars.\n", filename, ln, word,
+			(unsigned long) strlen(c->name));
 		fprintf(stderr, "   '%s' -> '%s'\n", word, c->name);
 	}
 
@@ -123,7 +124,8 @@ static int parse_line(char *filename, char *line, int ln, struct commodity *c)
 	uppercase(word);
 	strnzcpy(c->unit, word, sizeof(c->unit));
 	if (strcmp(c->unit, word) != 0) {
-		fprintf(stderr, "%s:%d: '%s' truncated to %lu chars.\n", filename, ln, word, strlen(c->unit));
+		fprintf(stderr, "%s:%d: '%s' truncated to %lu chars.\n", filename, ln, word,
+			(unsigned long) strlen(c->unit));
 		fprintf(stderr, "   '%s' -> '%s'\n", word, c->unit);
 	}
 
@@ -136,7 +138,8 @@ static int parse_line(char *filename, char *line, int ln, struct commodity *c)
 	uppercase(word);
 	strnzcpy(c->scans_as, word, sizeof(c->scans_as));
 	if (strcmp(c->scans_as, word) != 0) {
-		fprintf(stderr, "%s:%d: '%s' truncated to %lu chars.\n", filename, ln, word, strlen(c->scans_as));
+		fprintf(stderr, "%s:%d: '%s' truncated to %lu chars.\n", filename, ln, word,
+			(unsigned long) strlen(c->scans_as));
 		fprintf(stderr, "   '%s' -> '%s'\n", word, c->scans_as);
 	}
 
