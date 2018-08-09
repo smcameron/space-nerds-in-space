@@ -29,7 +29,7 @@ int create_thread(pthread_t *thread,  void *(*start_routine) (void *), void *arg
 {
 	int rc;
 	pthread_attr_t attr;
-	char *thread_name;
+	char *thread_name = NULL;
 
 	if (name) {
 		thread_name = strdup(name);
@@ -44,7 +44,7 @@ int create_thread(pthread_t *thread,  void *(*start_routine) (void *), void *arg
 	} else {
 		rc = pthread_create(thread, NULL, start_routine, arg);
 	}
-	if (!rc && name)
+	if (!rc && name && thread_name)
 		pthread_setname_np(*thread, thread_name);
 	return rc;
 }
