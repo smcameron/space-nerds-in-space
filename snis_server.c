@@ -115,6 +115,14 @@
  */
 static int initial_missile_count = INITIAL_MISSILE_COUNT;
 
+	/* TODO: adjusting the following player velocity related variables to
+	 * allow high player velocities can cause spurious warp tunnel entities
+	 * to be created on the clients. That should be fixed somehow.
+	 */
+static float max_player_velocity = MAX_PLAYER_VELOCITY;
+static float player_velocity_damping = PLAYER_VELOCITY_DAMPING;
+static float player_velocity_increment = PLAYER_VELOCITY_INCREMENT;
+
 /*
  * End of runtime adjustable globals
  */
@@ -7565,18 +7573,18 @@ static void calculate_ship_scibeam_info(struct snis_entity *ship)
 
 static void do_thrust(struct snis_entity *ship)
 {
-	double max_player_velocity =
-		(MAX_PLAYER_VELOCITY * ship->tsd.ship.power_data.impulse.i) / 255;
+	double current_max_player_velocity =
+		(max_player_velocity * ship->tsd.ship.power_data.impulse.i) / 255;
 
 	if (!ship->tsd.ship.reverse) {
-		if (ship->tsd.ship.velocity < max_player_velocity)
-			ship->tsd.ship.velocity += PLAYER_VELOCITY_INCREMENT;
+		if (ship->tsd.ship.velocity < current_max_player_velocity)
+			ship->tsd.ship.velocity += player_velocity_increment;
 	} else {
-		if (ship->tsd.ship.velocity > -max_player_velocity)
-			ship->tsd.ship.velocity -= PLAYER_VELOCITY_INCREMENT;
+		if (ship->tsd.ship.velocity > -current_max_player_velocity)
+			ship->tsd.ship.velocity -= player_velocity_increment;
 	}
-	if (ship->tsd.ship.velocity > max_player_velocity ||
-		ship->tsd.ship.velocity < -max_player_velocity)
+	if (ship->tsd.ship.velocity > current_max_player_velocity ||
+		ship->tsd.ship.velocity < -current_max_player_velocity)
 		ship->tsd.ship.velocity = ship->tsd.ship.velocity * 0.99;
 }
 
@@ -8799,8 +8807,8 @@ static void player_move(struct snis_entity *o)
 	damp_yaw_velocity(&o->tsd.ship.weap_pitchvel, PITCH_DAMPING);
 
 	/* Damp velocity */
-	velocity_damping = PLAYER_VELOCITY_DAMPING +
-		(1.0 - PLAYER_VELOCITY_DAMPING) * o->tsd.ship.nav_damping_suppression;
+	velocity_damping = player_velocity_damping +
+		(1.0 - player_velocity_damping) * o->tsd.ship.nav_damping_suppression;
 
 	if (fabs(o->tsd.ship.velocity) < MIN_PLAYER_VELOCITY &&
 			o->tsd.ship.nav_damping_suppression < 0.05)
@@ -8936,7 +8944,7 @@ static void demon_ship_move(struct snis_entity *o)
 	if (fabs(o->tsd.ship.velocity) < MIN_PLAYER_VELOCITY)
 		o->tsd.ship.velocity = 0.0;
 	else
-		o->tsd.ship.velocity *= PLAYER_VELOCITY_DAMPING;
+		o->tsd.ship.velocity *= player_velocity_damping;
 }
 
 static void coords_to_location_string(double x, double z, char *buffer, int buflen)
@@ -9977,10 +9985,10 @@ finished:
 	if (warpgate_number != (uint8_t) -1) { /* Give player a little boost out of the warp gate */
 		union vec3 boost;
 
-		o->tsd.ship.velocity = MAX_PLAYER_VELOCITY;
-		boost.v.x = MAX_PLAYER_VELOCITY * 4.0;
-		boost.v.y = MAX_PLAYER_VELOCITY * 4.0;
-		boost.v.z = MAX_PLAYER_VELOCITY * 4.0;
+		o->tsd.ship.velocity = max_player_velocity;
+		boost.v.x = max_player_velocity * 4.0;
+		boost.v.y = max_player_velocity * 4.0;
+		boost.v.z = max_player_velocity * 4.0;
 		quat_rot_vec_self(&boost, &o->orientation);
 		o->x += boost.v.x;
 		o->y += boost.v.y;
@@ -12943,14 +12951,14 @@ typedef void (*thrust_function)(struct game_client *c, int thrust);
 
 static void do_demon_thrust(struct snis_entity *o, int thrust)
 {
-	double max_player_velocity = MAX_PLAYER_VELOCITY;
+	double max_player_velocity = max_player_velocity;
 
 	if (thrust > 0) {
 		if (o->tsd.ship.velocity < max_player_velocity)
-			o->tsd.ship.velocity += PLAYER_VELOCITY_INCREMENT;
+			o->tsd.ship.velocity += player_velocity_increment;
 	} else {
 		if (o->tsd.ship.velocity > -max_player_velocity)
-			o->tsd.ship.velocity -= PLAYER_VELOCITY_INCREMENT;
+			o->tsd.ship.velocity -= player_velocity_increment;
 	}
 	if (o->tsd.ship.velocity > max_player_velocity)
 		o->tsd.ship.velocity = max_player_velocity;
@@ -16039,6 +16047,14 @@ static struct global_var_decriptor {
 } global_var_desc[] = {
 	{ "INITIAL_MISSILE_COUNT", &initial_missile_count, 'i', 0, 100, INITIAL_MISSILE_COUNT,
 				0.0, 100.0, INITIAL_MISSILE_COUNT },
+	{ "INITIAL_MISSILE_COUNT", &initial_missile_count, 'i', 0, 100, INITIAL_MISSILE_COUNT,
+				0.0, 100.0, INITIAL_MISSILE_COUNT },
+	{ "MAX_PLAYER_VELOCITY", &max_player_velocity, 'f',
+				20.0, 20000.0, MAX_PLAYER_VELOCITY, 0, 0, 0},
+	{ "PLAYER_VELOCITY_INCREMENT", &player_velocity_increment, 'f',
+				0.0, 100.0, PLAYER_VELOCITY_INCREMENT, 0, 0, 0 },
+	{ "PLAYER_VELOCITY_DAMPING", &player_velocity_damping, 'f',
+				0.1, 0.9999, PLAYER_VELOCITY_DAMPING, 0, 0, 0 },
 	{ NULL, NULL, '\0', 0.0, 0.0, 0.0, 0, 0, 0 },
 };
 
