@@ -16020,12 +16020,136 @@ static void server_builtin_disconnect(char *cmd)
 	send_demon_console_msg(msg);
 }
 
+static struct global_var_decriptor {
+	char *name;
+	void *address;
+	char type;
+	float minf, maxf, defaultf;
+	int mini, maxi, defaulti;
+} global_var_desc[] = {
+	{ NULL, NULL, '\0', 0.0, 0.0, 0.0, 0, 0, 0 },
+};
+
+static int find_global_var_descriptor(char *name)
+{
+	int i;
+
+	for (i = 0; i < ARRAYSIZE(global_var_desc); i++) {
+		if (!global_var_desc[i].name)
+			return -1;
+		if (strcmp(name, global_var_desc[i].name) == 0)
+			return i;
+	}
+	return -1;
+}
+
+static void server_builtin_set(char *cmd)
+{
+	int rc;
+	char variable[255], valuestr[255];
+	struct global_var_decriptor *v;
+	float f;
+	int i;
+	uint8_t b;
+
+	fprintf(stderr, "demon command set: %s\n", cmd);
+	rc = sscanf(cmd, "SET %s%*[ ]=%*[ ]%s", variable, valuestr);
+	if (rc != 2) {
+		send_demon_console_msg("SET: INVALID SET COMMAND");
+		return;
+	}
+	rc = find_global_var_descriptor(variable);
+	if (rc < 0) {
+		send_demon_console_msg("SET: INVALID VARIABLE NAME");
+		return;
+	}
+	v = &global_var_desc[rc];
+	switch (v->type) {
+	case 'f':
+		rc = sscanf(valuestr, "%f", &f);
+		if (rc != 1) {
+			send_demon_console_msg("SET: UNPARSEABLE FLOAT VALUE");
+			return;
+		}
+		if (f < v->minf || f > v->maxf) {
+			send_demon_console_msg("SET: FLOAT VALUE OUT OF RANGE");
+			return;
+		}
+		*((float *) v->address) = f;
+		send_demon_console_msg("DONE.");
+		break;
+	case 'b':
+		rc = sscanf(valuestr, "%hhu", &b);
+		if (rc != 1) {
+			send_demon_console_msg("SET: UNPARSEABLE BYTE VALUE");
+			return;
+		}
+		if (b < v->mini || b > v->maxi) {
+			send_demon_console_msg("SET: BYTE VALUE OUT OF RANGE");
+			return;
+		}
+		*((uint8_t *) v->address) = b;
+		send_demon_console_msg("DONE.");
+		break;
+	case 'i':
+		rc = sscanf(valuestr, "%d", &i);
+		if (rc != 1) {
+			send_demon_console_msg("SET: UNPARSEABLE INT VALUE");
+			return;
+		}
+		if (i < v->mini || i > v->maxi) {
+			send_demon_console_msg("SET: INT VALUE OUT OF RANGE");
+			return;
+		}
+		*((int *) v->address) = i;
+		send_demon_console_msg("DONE.");
+		break;
+	default:
+		send_demon_console_msg("VARIABLE NOT SET, UNKNOWN TYPE.");
+		break;
+	}
+	return;
+}
+
+static void server_builtin_vars(char *cmd)
+{
+	int i;
+	char msg[128];
+	struct global_var_decriptor *v;
+
+	for (i = 0; i < ARRAYSIZE(global_var_desc); i++) {
+		v = &global_var_desc[i];
+		if (!v->name)
+			break;
+		switch (v->type) {
+		case 'f':
+			snprintf(msg, sizeof(msg), "%s = %f (D=%f, MN=%f, MX=%f)", v->name,
+					*((float *) v->address), v->defaultf, v->minf, v->maxf);
+			break;
+		case 'b':
+			snprintf(msg, sizeof(msg), "%s = %hhu (D=%d, MN=%d, MX=%d)", v->name,
+					*((uint8_t *) global_var_desc[i].address), v->defaulti, v->mini, v->maxi);
+			break;
+		case 'i':
+			snprintf(msg, sizeof(msg), "%s = %d (D=%d,MN=%d,MX=%d)", v->name,
+					*((int32_t *) v->address), v->defaulti, v->mini, v->maxi);
+			break;
+		default:
+			snprintf(msg, sizeof(msg), "%s = ? (unknown type '%c')", v->name, v->type);
+			break;
+		}
+		send_demon_console_msg(msg);
+	}
+}
+
 static struct server_builtin_cmd {
 	char *cmd;
 	void (*fn)(char *cmd);
 } server_builtin[] = {
 	{ "CLIENTS", server_builtin_clients, },
 	{ "DISCONNECT", server_builtin_disconnect, },
+	{ "SET", server_builtin_set, },
+	{ "VARS", server_builtin_vars, },
 };
 
 static int process_exec_lua_script(struct game_client *c)
