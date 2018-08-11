@@ -109,6 +109,16 @@
 #define CLIENT_UPDATE_PERIOD_NSECS 500000000
 #define MAXCLIENTS 100
 
+/*
+ * The following globals are adjustable at runtime via the demon console.
+ * See server_builtin_set(), and server_builtin_vars();
+ */
+static int initial_missile_count = INITIAL_MISSILE_COUNT;
+
+/*
+ * End of runtime adjustable globals
+ */
+
 static uint32_t mtwist_seed = COMMON_MTWIST_SEED;
 
 static int lua_enscript_enabled = 0;
@@ -9792,7 +9802,7 @@ static void init_player(struct snis_entity *o, int clear_cargo_bay, float *charg
 	o->tsd.ship.torpedo_load_time = 0;
 	o->tsd.ship.torpedoes_loaded = 1;
 	o->tsd.ship.torpedoes_loading = 0;
-	o->tsd.ship.missile_count = INITIAL_MISSILE_COUNT;
+	o->tsd.ship.missile_count = initial_missile_count;
 	o->tsd.ship.phaser_bank_charge = 0;
 	o->tsd.ship.scizoom = 0;
 	o->tsd.ship.weapzoom = 0;
@@ -16027,6 +16037,8 @@ static struct global_var_decriptor {
 	float minf, maxf, defaultf;
 	int mini, maxi, defaulti;
 } global_var_desc[] = {
+	{ "INITIAL_MISSILE_COUNT", &initial_missile_count, 'i', 0, 100, INITIAL_MISSILE_COUNT,
+				0.0, 100.0, INITIAL_MISSILE_COUNT },
 	{ NULL, NULL, '\0', 0.0, 0.0, 0.0, 0, 0, 0 },
 };
 
