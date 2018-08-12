@@ -16040,22 +16040,28 @@ static void server_builtin_disconnect(char *cmd)
 
 static struct global_var_decriptor {
 	char *name;
+	char *description;
 	void *address;
 	char type;
 	float minf, maxf, defaultf;
 	int mini, maxi, defaulti;
 } global_var_desc[] = {
-	{ "INITIAL_MISSILE_COUNT", &initial_missile_count, 'i', 0, 100, INITIAL_MISSILE_COUNT,
-				0.0, 100.0, INITIAL_MISSILE_COUNT },
-	{ "INITIAL_MISSILE_COUNT", &initial_missile_count, 'i', 0, 100, INITIAL_MISSILE_COUNT,
-				0.0, 100.0, INITIAL_MISSILE_COUNT },
-	{ "MAX_PLAYER_VELOCITY", &max_player_velocity, 'f',
-				20.0, 20000.0, MAX_PLAYER_VELOCITY, 0, 0, 0},
-	{ "PLAYER_VELOCITY_INCREMENT", &player_velocity_increment, 'f',
-				0.0, 100.0, PLAYER_VELOCITY_INCREMENT, 0, 0, 0 },
-	{ "PLAYER_VELOCITY_DAMPING", &player_velocity_damping, 'f',
-				0.1, 0.9999, PLAYER_VELOCITY_DAMPING, 0, 0, 0 },
-	{ NULL, NULL, '\0', 0.0, 0.0, 0.0, 0, 0, 0 },
+	{ "INITIAL_MISSILE_COUNT",
+		"NUMBER OF MISSILES PLAYERS MAY HAVE",
+		&initial_missile_count, 'i', 0, 100, INITIAL_MISSILE_COUNT,
+		0.0, 100.0, INITIAL_MISSILE_COUNT },
+	{ "MAX_PLAYER_VELOCITY",
+		"MAXIMUM VELOCITY PLAYER MAY TRAVEL USING IMPULSE POWER",
+		&max_player_velocity, 'f', 20.0, 20000.0, MAX_PLAYER_VELOCITY, 0, 0, 0},
+	{ "PLAYER_VELOCITY_INCREMENT",
+		"MAXIMUM ACCELERATION PLAYER SHIP HAS USING IMPULSE POWER",
+		&player_velocity_increment, 'f',
+		0.0, 100.0, PLAYER_VELOCITY_INCREMENT, 0, 0, 0 },
+	{ "PLAYER_VELOCITY_DAMPING",
+		"DECELERATION FACTOR OF PLAYER SHIP",
+		&player_velocity_damping, 'f',
+		0.1, 0.9999, PLAYER_VELOCITY_DAMPING, 0, 0, 0 },
+	{ NULL, NULL, NULL, '\0', 0.0, 0.0, 0.0, 0, 0, 0 },
 };
 
 static int find_global_var_descriptor(char *name)
@@ -16170,6 +16176,65 @@ static void server_builtin_vars(char *cmd)
 	}
 }
 
+static void server_builtin_describe(char *cmd)
+{
+	int rc;
+	char msg[128], variable[255];
+	struct global_var_decriptor *v;
+
+	rc = sscanf(cmd, "DESCRIBE%*[ ]%s", variable);
+	if (rc != 1) {
+		send_demon_console_msg("DESCRIBE: INVALID USAGE. USE E.G., DESCRIBE MAX_PLAYER_VELOCITY");
+		return;
+	}
+	rc = find_global_var_descriptor(variable);
+	if (rc < 0) {
+		send_demon_console_msg("DESCRIBE: INVALID VARIABLE NAME");
+		return;
+	}
+	v = &global_var_desc[rc];
+	send_demon_console_msg(variable);
+	sprintf(msg, "   DESC: %s", v->description);
+	send_demon_console_msg(msg);
+	sprintf(msg, "   TYPE: %c", toupper(v->type));
+	send_demon_console_msg(msg);
+	switch (v->type) {
+	case 'b':
+		sprintf(msg, "   CURRENT VALUE: %hhu", *((uint8_t *) v->address));
+		send_demon_console_msg(msg);
+		sprintf(msg, "   DEFAULT VALUE: %d", v->defaulti);
+		send_demon_console_msg(msg);
+		sprintf(msg, "   MINIMUM VALUE: %d", v->mini);
+		send_demon_console_msg(msg);
+		sprintf(msg, "   MAXIMUM VALUE: %d", v->maxi);
+		send_demon_console_msg(msg);
+		break;
+	case 'i':
+		sprintf(msg, "   CURRENT VALUE: %d", *((int *) v->address));
+		send_demon_console_msg(msg);
+		sprintf(msg, "   DEFAULT VALUE: %d", v->defaulti);
+		send_demon_console_msg(msg);
+		sprintf(msg, "   MINIMUM VALUE: %d", v->mini);
+		send_demon_console_msg(msg);
+		sprintf(msg, "   MAXIMUM VALUE: %d", v->maxi);
+		send_demon_console_msg(msg);
+		break;
+	case 'f':
+		sprintf(msg, "   CURRENT VALUE: %f", *((float *) v->address));
+		send_demon_console_msg(msg);
+		sprintf(msg, "   DEFAULT VALUE: %f", v->defaultf);
+		send_demon_console_msg(msg);
+		sprintf(msg, "   MINIMUM VALUE: %f", v->minf);
+		send_demon_console_msg(msg);
+		sprintf(msg, "   MAXIMUM VALUE: %f", v->maxf);
+		send_demon_console_msg(msg);
+		break;
+	default:
+		send_demon_console_msg("   VARIABLE HAS UNKNOWN TYPE");
+		break;
+	}
+}
+
 static struct server_builtin_cmd {
 	char *cmd;
 	void (*fn)(char *cmd);
@@ -16178,6 +16243,7 @@ static struct server_builtin_cmd {
 	{ "DISCONNECT", server_builtin_disconnect, },
 	{ "SET", server_builtin_set, },
 	{ "VARS", server_builtin_vars, },
+	{ "DESCRIBE", server_builtin_describe, },
 };
 
 static int process_exec_lua_script(struct game_client *c)
