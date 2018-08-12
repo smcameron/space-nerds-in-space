@@ -17792,6 +17792,13 @@ static int main_da_scroll(GtkWidget *w, GdkEvent *event, gpointer p)
 		transmit_adjust_control_input((uint8_t) newval, OPCODE_ADJUST_CONTROL_SCIZOOM);
 		return 0;
 	case DISPLAYMODE_DEMON:
+		if (demon_ui.console_active) {
+			if (e->direction == 0)
+				text_window_scroll_up(demon_ui.console);
+			else if (e->direction > 0)
+				text_window_scroll_down(demon_ui.console);
+			return 0;
+		}
 		if (demon_ui.use_3d)
 			demon_3d_scroll(e->direction, e->x, e->y);
 		else
