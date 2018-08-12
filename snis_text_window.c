@@ -249,6 +249,9 @@ int text_window_button_press(struct text_window *tw, int x, int y)
 {
 	int i, left, right, top, bottom;
 
+	x = sng_pixelx_to_screenx(x);
+	y = sng_pixelx_to_screenx(y);
+
 	left = tw->x + tw->w - 15;
 	right = tw->x + tw->w - 5;
 	top = tw->y + 5;
