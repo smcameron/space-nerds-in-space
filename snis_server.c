@@ -16235,16 +16235,32 @@ static void server_builtin_describe(char *cmd)
 	}
 }
 
+static void server_builtin_help(char *cmd);
+
 static struct server_builtin_cmd {
 	char *cmd;
+	char *description;
 	void (*fn)(char *cmd);
 } server_builtin[] = {
-	{ "CLIENTS", server_builtin_clients, },
-	{ "DISCONNECT", server_builtin_disconnect, },
-	{ "SET", server_builtin_set, },
-	{ "VARS", server_builtin_vars, },
-	{ "DESCRIBE", server_builtin_describe, },
+	{ "CLIENTS", "LIST CURRENTLY CONNECTED CLIENTS", server_builtin_clients, },
+	{ "DISCONNECT", "DISCONNECT A SPECIFIED CLIENT", server_builtin_disconnect, },
+	{ "SET", "SET A SERVER BUILTIN VARIABLE", server_builtin_set, },
+	{ "VARS", "LIST SERVER BUILTIN VARIABLES", server_builtin_vars, },
+	{ "DESCRIBE", "DESCRIBE A SERVER BUILTIN VARIABLE", server_builtin_describe, },
+	{ "HELP", "LIST SERVER BUILTIN COMMANDS", server_builtin_help, },
 };
+
+static void server_builtin_help(char *cmd)
+{
+	char msg[255];
+	int i;
+
+	send_demon_console_msg("SERVER BUILTIN COMMANDS:");
+	for (i = 0; i < ARRAYSIZE(server_builtin) - 1; i++) {
+		sprintf(msg, "  %10s %s", server_builtin[i].cmd, server_builtin[i].description);
+		send_demon_console_msg(msg);
+	}
+}
 
 static int process_exec_lua_script(struct game_client *c)
 {
