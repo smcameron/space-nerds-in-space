@@ -16080,7 +16080,7 @@ static int find_global_var_descriptor(char *name)
 static void server_builtin_set(char *cmd)
 {
 	int rc;
-	char variable[255], valuestr[255];
+	char variable[255], valuestr[255], msg[255];
 	struct global_var_decriptor *v;
 	float f;
 	int i;
@@ -16089,12 +16089,14 @@ static void server_builtin_set(char *cmd)
 	fprintf(stderr, "demon command set: %s\n", cmd);
 	rc = sscanf(cmd, "SET %s%*[ ]=%*[ ]%s", variable, valuestr);
 	if (rc != 2) {
-		send_demon_console_msg("SET: INVALID SET COMMAND");
+		snprintf(msg, sizeof(msg), "SET: INVALID SET COMMAND: %s", cmd);
+		send_demon_console_msg(msg);
 		return;
 	}
 	rc = find_global_var_descriptor(variable);
 	if (rc < 0) {
-		send_demon_console_msg("SET: INVALID VARIABLE NAME");
+		snprintf(msg, sizeof(msg), "SET: INVALID VARIABLE: %s", variable);
+		send_demon_console_msg(msg);
 		return;
 	}
 	v = &global_var_desc[rc];
@@ -16114,7 +16116,8 @@ static void server_builtin_set(char *cmd)
 			return;
 		}
 		*((float *) v->address) = f;
-		send_demon_console_msg("DONE.");
+		snprintf(msg, sizeof(msg), "%s SET TO %f", variable, f);
+		send_demon_console_msg(msg);
 		break;
 	case 'b':
 		if (strcmp(valuestr, "DEFAULT") == 0) {
@@ -16131,7 +16134,8 @@ static void server_builtin_set(char *cmd)
 			return;
 		}
 		*((uint8_t *) v->address) = b;
-		send_demon_console_msg("DONE.");
+		snprintf(msg, sizeof(msg), "%s SET TO %hhu", variable, b);
+		send_demon_console_msg(msg);
 		break;
 	case 'i':
 		if (strcmp(valuestr, "DEFAULT") == 0) {
@@ -16148,7 +16152,8 @@ static void server_builtin_set(char *cmd)
 			return;
 		}
 		*((int *) v->address) = i;
-		send_demon_console_msg("DONE.");
+		snprintf(msg, sizeof(msg), "%s SET TO %d", variable, i);
+		send_demon_console_msg(msg);
 		break;
 	default:
 		send_demon_console_msg("VARIABLE NOT SET, UNKNOWN TYPE.");
@@ -18119,6 +18124,18 @@ static void regenerate_universe(void);
 static int l_regenerate_universe(lua_State *l)
 {
 	regenerate_universe();
+	return 0;
+}
+
+static int l_set_variable(lua_State *l)
+{
+	const char *name = luaL_checkstring(l, 1);
+	const char *value = luaL_checkstring(l, 2);
+	char cmd[255];
+
+	snprintf(cmd, sizeof(cmd), "SET %s = %s", name, value);
+	server_builtin_set(cmd);
+
 	return 0;
 }
 
@@ -21737,6 +21754,7 @@ static void setup_lua(void)
 	add_lua_callable_fn(l_disable_custom_button, "disable_custom_button");
 	add_lua_callable_fn(l_fire_missile, "fire_missile");
 	add_lua_callable_fn(l_regenerate_universe, "regenerate_universe");
+	add_lua_callable_fn(l_set_variable, "set_variable");
 }
 
 static int run_initial_lua_scripts(void)

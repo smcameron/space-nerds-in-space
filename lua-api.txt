@@ -939,6 +939,14 @@ fire_missile(shooter_id, target_id)
 regenerate_universe()
 	Regenerates the universe as is done at the start of the game.
 
+set_variable(variable_name, new_value)
+	Allows setting runtime adjustable variables. You can also set these
+	from the demon console (Type "console" to toggle the console on, then,
+	"vars" to see a list of variables, then, e.g. "set max_player_velocity 500",
+	to set a variable, or e.g., "describe max_player_velocity" to see a description
+	of a particular variable.) Note: the value "DEFAULT" may be used for new_value
+	to set a variable back to its default value.
+
 NOTE: Your lua scripts must not sleep, call any function which blocks, or require excessive
 long running calculations (nothing more than a few hundredths of a second) because the lua
 scripts are called from the main thread and if the scripts block, the entire game will block.
