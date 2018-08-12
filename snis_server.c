@@ -16100,10 +16100,14 @@ static void server_builtin_set(char *cmd)
 	v = &global_var_desc[rc];
 	switch (v->type) {
 	case 'f':
-		rc = sscanf(valuestr, "%f", &f);
-		if (rc != 1) {
-			send_demon_console_msg("SET: UNPARSEABLE FLOAT VALUE");
-			return;
+		if (strcmp(valuestr, "DEFAULT") == 0) {
+			f = v->defaultf;
+		} else {
+			rc = sscanf(valuestr, "%f", &f);
+			if (rc != 1) {
+				send_demon_console_msg("SET: UNPARSEABLE FLOAT VALUE");
+				return;
+			}
 		}
 		if (f < v->minf || f > v->maxf) {
 			send_demon_console_msg("SET: FLOAT VALUE OUT OF RANGE");
@@ -16113,10 +16117,14 @@ static void server_builtin_set(char *cmd)
 		send_demon_console_msg("DONE.");
 		break;
 	case 'b':
-		rc = sscanf(valuestr, "%hhu", &b);
-		if (rc != 1) {
-			send_demon_console_msg("SET: UNPARSEABLE BYTE VALUE");
-			return;
+		if (strcmp(valuestr, "DEFAULT") == 0) {
+			b = v->defaulti;
+		} else {
+			rc = sscanf(valuestr, "%hhu", &b);
+			if (rc != 1) {
+				send_demon_console_msg("SET: UNPARSEABLE BYTE VALUE");
+				return;
+			}
 		}
 		if (b < v->mini || b > v->maxi) {
 			send_demon_console_msg("SET: BYTE VALUE OUT OF RANGE");
@@ -16126,10 +16134,14 @@ static void server_builtin_set(char *cmd)
 		send_demon_console_msg("DONE.");
 		break;
 	case 'i':
-		rc = sscanf(valuestr, "%d", &i);
-		if (rc != 1) {
-			send_demon_console_msg("SET: UNPARSEABLE INT VALUE");
-			return;
+		if (strcmp(valuestr, "DEFAULT") == 0) {
+			i = v->defaulti;
+		} else {
+			rc = sscanf(valuestr, "%d", &i);
+			if (rc != 1) {
+				send_demon_console_msg("SET: UNPARSEABLE INT VALUE");
+				return;
+			}
 		}
 		if (i < v->mini || i > v->maxi) {
 			send_demon_console_msg("SET: INT VALUE OUT OF RANGE");
