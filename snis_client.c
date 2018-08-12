@@ -15744,8 +15744,9 @@ static struct demon_cmd_def {
 	{ "RTSMODE-ON", "ENABLE REAL TIME STRATEGY MODE" },
 	{ "RTSMODE-OFF", "DISABLE REAL TIME STRATEGY MODE" },
 	{ "CONSOLE", "TOGGLE DEMON CONSOLE ON/OFF" },
-	{ "CLIENTS", "LIST CLIENTS" },
-	{ "DISCONNECT", "DISCONNECT SPECIFIED CLIENT" },
+	/* Note: Server builtin command help isn't here, it's in the server code,
+	 * elicited by a call to "send_lua_script_packet_to_server("HELP")"
+	 */
 };
 static int demon_help_mode = 0;
 #define DEMON_CMD_DELIM " ,"
@@ -15761,10 +15762,17 @@ static void show_cmd_help(GtkWidget *w, struct demon_cmd_def cmd[], int nitems)
 		sng_abs_xy_draw_string(buffer, PICO_FONT, txx(85), txy(i * 15 + 60));
 		sprintf(buffer, "%s", cmd[i].help);
 		sng_abs_xy_draw_string(buffer, PICO_FONT, txx(170), txy(i * 15 + 60));
-		if (demon_ui.console_active) {
-			sprintf(buffer, "%15s %s", cmd[i].verb, cmd[i].help);
-			text_window_add_text(demon_ui.console, buffer);
-		}
+	}
+}
+
+static void add_demon_cmd_help_to_console(struct demon_cmd_def cmd[], int nitems)
+{
+	int i;
+	char buffer[100];
+
+	for (i = 0; i < nitems; i++) {
+		sprintf(buffer, "%15s %s", cmd[i].verb, cmd[i].help);
+		text_window_add_text(demon_ui.console, buffer);
 	}
 }
 
@@ -16020,6 +16028,8 @@ static int construct_demon_command(char *input,
 		case 11: toggle_demon_safe_mode();
 			break;
 		case 12: demon_help_mode = 1; 
+			add_demon_cmd_help_to_console(demon_cmd, ARRAYSIZE(demon_cmd));
+			send_lua_script_packet_to_server("HELP");
 			break;
 		case 13:
 			if (!saveptr || strlen(saveptr) == 0)
