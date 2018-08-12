@@ -91,6 +91,13 @@ struct text_window *text_window_init(int x, int y, int w,
 	return tw;
 }
 
+void text_window_set_font(struct text_window *tw, int font)
+{
+	tw->font = font;
+	tw->lineheight = font_lineheight[font];
+	tw->h = tw->lineheight * tw->visible_lines + 10;
+}
+
 void text_window_draw(struct text_window *tw)
 {
 	int i, j;
