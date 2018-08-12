@@ -15726,6 +15726,11 @@ static struct demon_cmd_def {
 	char *verb;
 	char *help;
 } demon_cmd[] = {
+	/* TODO: The client knows these commands. For many of them, it may be
+	 * possible to replace them with a send_lua_script_packet_to_server(cmd)
+	 * and remove all knowledge on the client side and eliminate special command
+	 * specific opcodes, which would be a good thing.
+	 */
 	{ "MARK", "MARK LOCATION WITH A NAME" },
 	{ "NAME", "NAME CURRENTLY SELECTED GROUP OF OBJECTS" },
 	{ "ATTACK", "ATTACK G1 G2 - COMMAND GROUP G1 to ATTACK GROUP G2" },

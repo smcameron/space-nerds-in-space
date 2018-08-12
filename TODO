@@ -371,3 +371,8 @@ NICE TO HAVE:
   cargo or make payment instead of killing them. Maybe use some specialized weapon
   to disable warp and impulse on player ship (temporarily? Stasis field?)
 
+* The client currently knows many demon screen commands and many of them are implemented
+  with custom opcodes sent to the server. Recently, server-side builtin demon commands
+  have been implemented, and many of these client-side commands and opcodes could be replaced
+  by server-side builtins.  This should probably be done wherever possible. See "demon_cmd_def"
+  variable in snis_client.c.
