@@ -116,6 +116,7 @@
 #include "graph_dev.h"
 #include "ui_colors.h"
 #include "pthread_util.h"
+#include "snis_tweak.h"
 
 #define SHIP_COLOR CYAN
 #define STARBASE_COLOR RED
@@ -15749,6 +15750,9 @@ static struct demon_cmd_def {
 	{ "RTSMODE-ON", "ENABLE REAL TIME STRATEGY MODE" },
 	{ "RTSMODE-OFF", "DISABLE REAL TIME STRATEGY MODE" },
 	{ "CONSOLE", "TOGGLE DEMON CONSOLE ON/OFF" },
+	{ "SET", "SET TWEAKABLE VARIABLES" },
+	{ "VARS", "LIST TWEAKABLE VARIABLES" },
+	{ "DESCRIBE", "DESCRIBE A TWEAKABLE VARIABLE" },
 	/* Note: Server builtin command help isn't here, it's in the server code,
 	 * elicited by a call to "send_lua_script_packet_to_server("HELP")"
 	 */
@@ -15872,6 +15876,34 @@ static void set_demon_group(int n)
 	dg->nids = count;
 }
 
+static void print_demon_console_msg(const char *msg)
+{
+	text_window_add_text(demon_ui.console, msg);
+}
+
+static struct tweakable_var_descriptor client_tweak[] = {
+	{ "SUPPRESS_ROCKET_NOISE", "1 MEANS SUPPRESS, 0 MEANS DO NOT SUPPRESS", &suppress_rocket_noise, 'i',
+		0.0, 1.0, 0.0, 0, 1, 0 },
+	{ NULL, NULL, '\0', 0.0, 0.0, 0.0, 0, 0, 0 },
+};
+
+static int set_clientside_variable(char *cmd)
+{
+	int rc;
+	char msg[255];
+
+	msg[0] = '\0';
+	rc = tweak_variable(client_tweak, ARRAYSIZE(client_tweak), cmd, msg, sizeof(msg));
+	switch (rc) {
+	case TWEAK_UNKNOWN_VARIABLE:
+		break; /* Suppress message, try it on the server */
+	default:
+		text_window_add_text(demon_ui.console, msg);
+		break;
+	}
+	return rc;
+}
+
 static int construct_demon_command(char *input,
 		struct demon_cmd_packet **cmd, char *errmsg)
 {
@@ -15882,7 +15914,7 @@ static int construct_demon_command(char *input,
 	int idcount;
 	char *original = NULL;
 	char console_text[255];
-	char lua_script[100];
+	int rc;
 
 	original = strdup(input); /* save lowercase version for text to speech */
 	snprintf(console_text, sizeof(console_text), "> %s", input);
@@ -16055,8 +16087,29 @@ static int construct_demon_command(char *input,
 		case 17: /* activate demon console */
 			demon_ui.console_active = !demon_ui.console_active;
 			break;
+		case 18: /* Set tweakable variable possibly client side, possibly server side. */
+			uppercase(original);
+			switch (set_clientside_variable(original)) {
+			case TWEAK_UNKNOWN_VARIABLE:
+				send_lua_script_packet_to_server(original); /* Try it on server */
+				break;
+			default:
+				break;
+			}
+			break;
+		case 19: /* "VARS", list tweakable vars */
+			uppercase(original);
+			tweakable_vars_list(client_tweak, ARRAYSIZE(client_tweak), print_demon_console_msg);
+			send_lua_script_packet_to_server(original);
+			break;
+		case 20: /* "DESCRIBE", describe a tweakable variable */
+			uppercase(original);
+			rc = tweakable_var_describe(client_tweak, ARRAYSIZE(client_tweak), original,
+							print_demon_console_msg, 1);
+			if (rc == TWEAK_UNKNOWN_VARIABLE)
+				send_lua_script_packet_to_server(original);
+			break;
 		default: /* unknown, maybe it's a builtin server command or a lua script */
-			snprintf(lua_script, sizeof(lua_script), "%s", input);
 			uppercase(original);
 			send_lua_script_packet_to_server(original);
 			break;

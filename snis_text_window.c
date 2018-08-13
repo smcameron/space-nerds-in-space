@@ -38,7 +38,7 @@ int text_window_entry_count(struct text_window *tw)
 	return rc;
 }
 
-void text_window_add_text(struct text_window *tw, char *text)
+void text_window_add_text(struct text_window *tw, const char *text)
 {
 	strncpy(tw->text[tw->last_entry], text, 79);
 	tw->text[tw->last_entry][79] = '\0';
