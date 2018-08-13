@@ -265,6 +265,7 @@ static struct entity_context *sciballecx;
 static struct entity_context *network_setup_ecx;
 
 static int suppress_rocket_noise = 0;
+static float rocket_noise_volume = 1.0;
 static int ecx_fake_stars_initialized = 0;
 static int nfake_stars = 0;
 static volatile int fake_stars_timer = 0;
@@ -15882,8 +15883,12 @@ static void print_demon_console_msg(const char *msg)
 }
 
 static struct tweakable_var_descriptor client_tweak[] = {
+	{ "TTS_VOLUME", "TEXT TO SPEECH VOLUME", &text_to_speech_volume, 'f',
+		0.0, 1.0, 0.33, 0, 0, 0 },
 	{ "SUPPRESS_ROCKET_NOISE", "1 MEANS SUPPRESS, 0 MEANS DO NOT SUPPRESS", &suppress_rocket_noise, 'i',
 		0.0, 1.0, 0.0, 0, 1, 0 },
+	{ "ROCKET_NOISE_VOLUME", "VOLUME OF ROCKET NOISE, 0 to 1", &rocket_noise_volume, 'f',
+		0.0, 1.0, 1.0, 0, 1, 1 },
 	{ NULL, NULL, '\0', 0.0, 0.0, 0.0, 0, 0, 0 },
 };
 
@@ -18475,13 +18480,15 @@ static void maybe_play_rocket_sample(void)
 	 */
 	begin = 1.0 / 20.0 + (begin / 1000.0) * 0.90;
 	end = begin + 1.0 / 20.0;
-	wwviaudio_add_sound_segment(ROCKET_SAMPLE, last_volume, volume, begin, end, NULL, NULL);
+	wwviaudio_add_sound_segment(ROCKET_SAMPLE, last_volume * rocket_noise_volume,
+					volume * rocket_noise_volume, begin, end, NULL, NULL);
 	last_volume = volume;
 
 	/* Thruster volume sample is 10 seconds long, choose 1 second randomly from those 10 seconds. */
 	begin = snis_randn(900) / 1000.0;
 	end = begin + 0.05;
-	wwviaudio_add_sound_segment(THRUSTER_SAMPLE, last_thruster_volume, thruster_volume, begin, end, NULL, NULL);
+	wwviaudio_add_sound_segment(THRUSTER_SAMPLE, last_thruster_volume * rocket_noise_volume,
+					thruster_volume * rocket_noise_volume, begin, end, NULL, NULL);
 	last_thruster_volume = thruster_volume;
 }
 
