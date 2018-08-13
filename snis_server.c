@@ -103,6 +103,7 @@
 #include "turret_aimer.h"
 #include "pthread_util.h"
 #include "rts_unit_data.h"
+#include "snis_tweak.h"
 
 #include "snis_entity_key_value_specification.h"
 
@@ -16038,14 +16039,7 @@ static void server_builtin_disconnect(char *cmd)
 	send_demon_console_msg(msg);
 }
 
-static struct global_var_decriptor {
-	char *name;
-	char *description;
-	void *address;
-	char type;
-	float minf, maxf, defaultf;
-	int mini, maxi, defaulti;
-} global_var_desc[] = {
+static struct tweakable_var_descriptor server_tweak[] = {
 	{ "INITIAL_MISSILE_COUNT",
 		"NUMBER OF MISSILES PLAYERS MAY HAVE",
 		&initial_missile_count, 'i', 0, 100, INITIAL_MISSILE_COUNT,
@@ -16064,192 +16058,22 @@ static struct global_var_decriptor {
 	{ NULL, NULL, NULL, '\0', 0.0, 0.0, 0.0, 0, 0, 0 },
 };
 
-static int find_global_var_descriptor(char *name)
-{
-	int i;
-
-	for (i = 0; i < ARRAYSIZE(global_var_desc); i++) {
-		if (!global_var_desc[i].name)
-			return -1;
-		if (strcmp(name, global_var_desc[i].name) == 0)
-			return i;
-	}
-	return -1;
-}
-
 static void server_builtin_set(char *cmd)
 {
-	int rc;
-	char variable[255], valuestr[255], msg[255];
-	struct global_var_decriptor *v;
-	float f;
-	int i;
-	uint8_t b;
+	char msg[255];
 
-	fprintf(stderr, "demon command set: %s\n", cmd);
-	rc = sscanf(cmd, "SET %s%*[ ]=%*[ ]%s", variable, valuestr);
-	if (rc != 2) {
-		snprintf(msg, sizeof(msg), "SET: INVALID SET COMMAND: %s", cmd);
-		send_demon_console_msg(msg);
-		return;
-	}
-	rc = find_global_var_descriptor(variable);
-	if (rc < 0) {
-		snprintf(msg, sizeof(msg), "SET: INVALID VARIABLE: %s", variable);
-		send_demon_console_msg(msg);
-		return;
-	}
-	v = &global_var_desc[rc];
-	switch (v->type) {
-	case 'f':
-		if (strcmp(valuestr, "DEFAULT") == 0) {
-			f = v->defaultf;
-		} else {
-			rc = sscanf(valuestr, "%f", &f);
-			if (rc != 1) {
-				send_demon_console_msg("SET: UNPARSEABLE FLOAT VALUE");
-				return;
-			}
-		}
-		if (f < v->minf || f > v->maxf) {
-			send_demon_console_msg("SET: FLOAT VALUE OUT OF RANGE");
-			return;
-		}
-		*((float *) v->address) = f;
-		snprintf(msg, sizeof(msg), "%s SET TO %f", variable, f);
-		send_demon_console_msg(msg);
-		break;
-	case 'b':
-		if (strcmp(valuestr, "DEFAULT") == 0) {
-			b = v->defaulti;
-		} else {
-			rc = sscanf(valuestr, "%hhu", &b);
-			if (rc != 1) {
-				send_demon_console_msg("SET: UNPARSEABLE BYTE VALUE");
-				return;
-			}
-		}
-		if (b < v->mini || b > v->maxi) {
-			send_demon_console_msg("SET: BYTE VALUE OUT OF RANGE");
-			return;
-		}
-		*((uint8_t *) v->address) = b;
-		snprintf(msg, sizeof(msg), "%s SET TO %hhu", variable, b);
-		send_demon_console_msg(msg);
-		break;
-	case 'i':
-		if (strcmp(valuestr, "DEFAULT") == 0) {
-			i = v->defaulti;
-		} else {
-			rc = sscanf(valuestr, "%d", &i);
-			if (rc != 1) {
-				send_demon_console_msg("SET: UNPARSEABLE INT VALUE");
-				return;
-			}
-		}
-		if (i < v->mini || i > v->maxi) {
-			send_demon_console_msg("SET: INT VALUE OUT OF RANGE");
-			return;
-		}
-		*((int *) v->address) = i;
-		snprintf(msg, sizeof(msg), "%s SET TO %d", variable, i);
-		send_demon_console_msg(msg);
-		break;
-	default:
-		send_demon_console_msg("VARIABLE NOT SET, UNKNOWN TYPE.");
-		break;
-	}
-	return;
+	(void) tweak_variable(server_tweak, ARRAYSIZE(server_tweak), cmd, msg, sizeof(msg));
+	send_demon_console_msg(msg);
 }
 
-static void server_builtin_vars(char *cmd)
+static void server_builtin_vars(__attribute__((unused)) char *cmd)
 {
-	int i;
-	char msg[128];
-	struct global_var_decriptor *v;
-
-	for (i = 0; i < ARRAYSIZE(global_var_desc); i++) {
-		v = &global_var_desc[i];
-		if (!v->name)
-			break;
-		switch (v->type) {
-		case 'f':
-			snprintf(msg, sizeof(msg), "%s = %f (D=%f, MN=%f, MX=%f)", v->name,
-					*((float *) v->address), v->defaultf, v->minf, v->maxf);
-			break;
-		case 'b':
-			snprintf(msg, sizeof(msg), "%s = %hhu (D=%d, MN=%d, MX=%d)", v->name,
-					*((uint8_t *) global_var_desc[i].address), v->defaulti, v->mini, v->maxi);
-			break;
-		case 'i':
-			snprintf(msg, sizeof(msg), "%s = %d (D=%d,MN=%d,MX=%d)", v->name,
-					*((int32_t *) v->address), v->defaulti, v->mini, v->maxi);
-			break;
-		default:
-			snprintf(msg, sizeof(msg), "%s = ? (unknown type '%c')", v->name, v->type);
-			break;
-		}
-		send_demon_console_msg(msg);
-	}
+	tweakable_vars_list(server_tweak, ARRAYSIZE(server_tweak), send_demon_console_msg);
 }
 
 static void server_builtin_describe(char *cmd)
 {
-	int rc;
-	char msg[128], variable[255];
-	struct global_var_decriptor *v;
-
-	rc = sscanf(cmd, "DESCRIBE%*[ ]%s", variable);
-	if (rc != 1) {
-		send_demon_console_msg("DESCRIBE: INVALID USAGE. USE E.G., DESCRIBE MAX_PLAYER_VELOCITY");
-		return;
-	}
-	rc = find_global_var_descriptor(variable);
-	if (rc < 0) {
-		send_demon_console_msg("DESCRIBE: INVALID VARIABLE NAME");
-		return;
-	}
-	v = &global_var_desc[rc];
-	send_demon_console_msg(variable);
-	sprintf(msg, "   DESC: %s", v->description);
-	send_demon_console_msg(msg);
-	sprintf(msg, "   TYPE: %c", toupper(v->type));
-	send_demon_console_msg(msg);
-	switch (v->type) {
-	case 'b':
-		sprintf(msg, "   CURRENT VALUE: %hhu", *((uint8_t *) v->address));
-		send_demon_console_msg(msg);
-		sprintf(msg, "   DEFAULT VALUE: %d", v->defaulti);
-		send_demon_console_msg(msg);
-		sprintf(msg, "   MINIMUM VALUE: %d", v->mini);
-		send_demon_console_msg(msg);
-		sprintf(msg, "   MAXIMUM VALUE: %d", v->maxi);
-		send_demon_console_msg(msg);
-		break;
-	case 'i':
-		sprintf(msg, "   CURRENT VALUE: %d", *((int *) v->address));
-		send_demon_console_msg(msg);
-		sprintf(msg, "   DEFAULT VALUE: %d", v->defaulti);
-		send_demon_console_msg(msg);
-		sprintf(msg, "   MINIMUM VALUE: %d", v->mini);
-		send_demon_console_msg(msg);
-		sprintf(msg, "   MAXIMUM VALUE: %d", v->maxi);
-		send_demon_console_msg(msg);
-		break;
-	case 'f':
-		sprintf(msg, "   CURRENT VALUE: %f", *((float *) v->address));
-		send_demon_console_msg(msg);
-		sprintf(msg, "   DEFAULT VALUE: %f", v->defaultf);
-		send_demon_console_msg(msg);
-		sprintf(msg, "   MINIMUM VALUE: %f", v->minf);
-		send_demon_console_msg(msg);
-		sprintf(msg, "   MAXIMUM VALUE: %f", v->maxf);
-		send_demon_console_msg(msg);
-		break;
-	default:
-		send_demon_console_msg("   VARIABLE HAS UNKNOWN TYPE");
-		break;
-	}
+	(void) tweakable_var_describe(server_tweak, ARRAYSIZE(server_tweak), cmd, send_demon_console_msg, 0);
 }
 
 static void server_builtin_help(char *cmd);

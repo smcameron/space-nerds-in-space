@@ -419,7 +419,7 @@ COMMONOBJS=mathutils.o snis_alloc.o snis_socket_io.o snis_marshal.o \
 		snis_faction.o mtwist.o names.o infinite-taunt.o snis_damcon_systems.o \
 		string-utils.o c-is-the-locale.o starbase_metadata.o arbitrary_spin.o \
 		planetary_atmosphere.o mesh.o pthread_util.o snis_opcode_def.o rts_unit_data.o \
-		commodities.o
+		commodities.o snis_tweak.o
 SERVEROBJS=${COMMONOBJS} snis_server.o starbase-comms.o \
 		power-model.o quat.o vec4.o matrix.o snis_event_callback.o space-part.o fleet.o \
 		docking_port.o elastic_collision.o snis_nl.o spelled_numbers.o \
@@ -950,6 +950,9 @@ commodities.o:	commodities.c Makefile
 	$(Q)$(COMPILE)
 
 string-utils.o:	string-utils.c Makefile
+	$(Q)$(COMPILE)
+
+snis_tweak.o: snis_tweak.c snis_tweak.h Makefile
 	$(Q)$(COMPILE)
 
 pronunciation.o:	pronunciation.c Makefile
