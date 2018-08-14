@@ -8,6 +8,22 @@
 #include "build_bug_on.h"
 #include "string-utils.h"
 
+const char *displaymode_name[] = {
+	"mainscreen",
+	"navigation",
+	"weapons",
+	"engineering",
+	"science",
+	"comms",
+	"demon",
+	"damcon",
+	"fonttest",
+	"introscreen",
+	"lobbyscreen",
+	"connecting",
+	"connected",
+	"network_setup",
+};
 
 struct keyname_value_entry keyname_value_map[] = {
 	{ "a", GDK_a },
@@ -148,9 +164,8 @@ struct keyname_value_entry keyname_value_map[] = {
 	{ "quoteleft", GDK_KEY_quoteleft },
 };
 
-enum keyaction keymap[256];
-enum keyaction ffkeymap[256];
-unsigned char *keycharmap[256];
+enum keyaction keymap[DISPLAYMODE_COUNT][256];
+enum keyaction ffkeymap[DISPLAYMODE_COUNT][256];
 struct keyboard_state kbstate = { {0} };
 
 char *keyactionstring[] = {
@@ -185,76 +200,108 @@ char *keyactionstring[] = {
 	"key_weap_fire_missile",
 };
 
-void init_keymap()
+void zero_keymaps(void)
 {
 	memset(keymap, 0, sizeof(keymap));
 	memset(ffkeymap, 0, sizeof(ffkeymap));
-	memset(keycharmap, 0, sizeof(keycharmap));
+}
 
-	keymap[GDK_j] = keydown;
-	ffkeymap[GDK_Down & 0x00ff] = keydown;
+static void mapkey(int displaymodes, unsigned int keysym, enum keyaction key)
+{
+	int i;
 
-	keymap[GDK_k] = keyup;
-	ffkeymap[GDK_Up & 0x00ff] = keyup;
+	for (i = 0; i < DISPLAYMODE_COUNT; i++) {
+		if (displaymodes & (0x1 << i))
+			keymap[i][keysym] = key; /* map key on this station */
+		else
+			continue;
+	}
+}
 
-	keymap[GDK_l] = keyright;
-	ffkeymap[GDK_Right & 0x00ff] = keyright;
-	keymap[GDK_period] = keyright;
-	keymap[GDK_greater] = keyright;
 
-	keymap[GDK_h] = keyleft;
-	ffkeymap[GDK_Left & 0x00ff] = keyleft;
-	keymap[GDK_comma] = keyleft;
-	keymap[GDK_less] = keyleft;
-	keymap[GDK_q] = keyrollleft;
-	keymap[GDK_e] = keyrollright;
-	keymap[GDK_c] = key_toggle_credits;
-	keymap[GDK_M] = key_toggle_watermark;
-	keymap[GDK_m] = key_mouse_mode; /* FIXME: Note this is overridden by key_sci_mining_bot, below */
-					/* Proper fix is probably something like make keymap into a 2D array */
-					/* with displaymode as first index, key as second index. */
-	keymap[GDK_n] = key_weap_fire_missile;
+static void ffmapkey(int displaymodes, unsigned int keysym, enum keyaction key)
+{
+	int i;
 
-	keymap[GDK_space] = keyphaser;
-	keymap[GDK_z] = keytorpedo;
+	for (i = 0; i < DISPLAYMODE_COUNT; i++) {
+		if (displaymodes & (0x1 << i))
+			ffkeymap[i][keysym & 0x00ff] = key; /* map key on this station */
+		else
+			continue;
+	}
+}
 
-	keymap[GDK_b] = keytransform;
-	keymap[GDK_x] = keythrust;
-	keymap[GDK_r] = keyrenderswitch;
-	ffkeymap[GDK_F1 & 0x00ff] = keypausehelp;
-	ffkeymap[GDK_Escape & 0x00ff] = keyquit;
 
-	keymap[GDK_O] = keyonscreen;
-	keymap[GDK_o] = keyonscreen;
-	keymap[GDK_w] = keyup;
-	keymap[GDK_a] = keyleft;
-	keymap[GDK_s] = keydown;
-	keymap[GDK_d] = keyright;
-	ffkeymap[GDK_KP_Up & 0xff] = keyup;
-	ffkeymap[GDK_KP_Down & 0xff] = keydown;
-	ffkeymap[GDK_KP_Left & 0xff] = keyleft;
-	ffkeymap[GDK_KP_Right & 0xff] = keyright;
-	ffkeymap[GDK_KP_Home & 0xff] = keyrollleft;
-	ffkeymap[GDK_KP_Page_Up & 0xff] = keyrollright;
+void init_keymap(void)
+{
 
-	keymap[GDK_i] = key_invert_vertical;
-	ffkeymap[GDK_KEY_Pause & 0x00ff] = key_toggle_frame_stats;
-	keymap[GDK_f] = key_toggle_space_dust;
+	const unsigned short all = 0x03fff; /* all 14 displaymodes */
+	zero_keymaps();
 
-	keymap[GDK_k] = keysciball_rollleft;
-	keymap[GDK_semicolon] = keysciball_rollright;
-	keymap[GDK_comma] = keysciball_yawleft;
-	keymap[GDK_slash] = keysciball_yawright;
-	keymap[GDK_l] = keysciball_pitchdown;
-	keymap[GDK_period] = keysciball_pitchup;
-	keymap[GDK_KEY_quoteleft] = key_camera_mode;
+	mapkey(all, GDK_j, keydown);
+	ffmapkey(all, GDK_Down, keydown);
 
-	keymap[GDK_W] = keyviewmode;
-	keymap[GDK_KEY_plus] = keyzoom;
-	keymap[GDK_KEY_equal] = keyzoom;
-	keymap[GDK_KEY_minus] = keyunzoom;
-	keymap[GDK_KEY_m] = key_sci_mining_bot;
-	keymap[GDK_KEY_t] = key_sci_tractor_beam;
+	mapkey(all, GDK_k, keyup);
+	ffmapkey(all, GDK_Up, keyup);
+
+	mapkey(all, GDK_l, keyright);
+	ffmapkey(all, GDK_Right, keyright);
+	mapkey(all, GDK_period, keyright);
+	mapkey(all, GDK_greater, keyright);
+
+	mapkey(all, GDK_h, keyleft);
+	ffmapkey(all, GDK_Left, keyleft);
+	mapkey(all, GDK_comma, keyleft);
+	mapkey(all, GDK_less, keyleft);
+	mapkey(all, GDK_q, keyrollleft);
+	mapkey(all, GDK_e, keyrollright);
+	mapkey(all, GDK_c, key_toggle_credits);
+	mapkey(all, GDK_M, key_toggle_watermark);
+	mapkey(all, GDK_m, key_mouse_mode);	/* FIXME: Note this is overridden by key_sci_mining_bot, below */
+						/* Proper fix is probably something like make keymap into a 2D array */
+						/* with displaymode as first index, key as second index. */
+	mapkey(all, GDK_n, key_weap_fire_missile);
+	mapkey(all, GDK_space, keyphaser);
+	mapkey(all, GDK_z, keytorpedo);
+
+	mapkey(all, GDK_b, keytransform);
+	mapkey(all, GDK_x, keythrust);
+	mapkey(all, GDK_r, keyrenderswitch);
+
+	ffmapkey(all, GDK_F1, keypausehelp);
+	ffmapkey(all, GDK_Escape, keyquit);
+
+	mapkey(all, GDK_O, keyonscreen);
+	mapkey(all, GDK_o, keyonscreen);
+	mapkey(all, GDK_w, keyup);
+	mapkey(all, GDK_a, keyleft);
+	mapkey(all, GDK_s, keydown);
+	mapkey(all, GDK_d, keyright);
+	ffmapkey(all, GDK_KP_Up, keyup);
+	ffmapkey(all, GDK_KP_Down, keydown);
+	ffmapkey(all, GDK_KP_Left, keyleft);
+	ffmapkey(all, GDK_KP_Right, keyright);
+	ffmapkey(all, GDK_KP_Home, keyrollleft);
+	ffmapkey(all, GDK_KP_Page_Up, keyrollright);
+
+	mapkey(all, GDK_i, key_invert_vertical);
+	ffmapkey(all, GDK_KEY_Pause, key_toggle_frame_stats);
+	mapkey(all, GDK_f, key_toggle_space_dust);
+
+	mapkey(all, GDK_k, keysciball_rollleft);
+	mapkey(all, GDK_semicolon, keysciball_rollright);
+	mapkey(all, GDK_comma, keysciball_yawleft);
+	mapkey(all, GDK_slash, keysciball_yawright);
+	mapkey(all, GDK_l, keysciball_pitchdown);
+	mapkey(all, GDK_period, keysciball_pitchup);
+	mapkey(all, GDK_KEY_quoteleft, key_camera_mode);
+
+	mapkey(all, GDK_W, keyviewmode);
+	mapkey(all, GDK_KEY_plus, keyzoom);
+	mapkey(all, GDK_KEY_equal, keyzoom);
+	mapkey(all, GDK_KEY_minus, keyunzoom);
+	mapkey(all, GDK_KEY_m, key_sci_mining_bot);
+	mapkey(all, GDK_KEY_t, key_sci_tractor_beam);
 
 	/* keymap[GDK_KEY_l] = key_sci_lrs; */ /* <-- this interferes with keysciball_pitchdown, above */
 
@@ -266,33 +313,43 @@ void init_keymap()
 	/* keymap[GDK_KEY_w] = key_sci_waypoints; */
 	/* keymap[GDK_KEY_d] = key_sci_details; */
 
-	ffkeymap[GDK_KEY_KP_Add & 0x00ff] = keyzoom;
-	ffkeymap[GDK_KEY_KP_Subtract & 0x00ff] = keyunzoom;
+	ffmapkey(all, GDK_KEY_KP_Add, keyzoom);
+	ffmapkey(all, GDK_KEY_KP_Subtract, keyunzoom);
+	ffmapkey(all, GDK_F1, keyf1);
+	ffmapkey(all, GDK_F2, keyf2);
+	ffmapkey(all, GDK_F3, keyf3);
+	ffmapkey(all, GDK_F4, keyf4);
+	ffmapkey(all, GDK_F5, keyf5);
+	ffmapkey(all, GDK_F6, keyf6);
+	ffmapkey(all, GDK_F7, keyf7);
+	ffmapkey(all, GDK_F8, keyf8);
+	ffmapkey(all, GDK_F9, keyf9);
+	ffmapkey(all, GDK_F10, keyf10);
 
-	ffkeymap[GDK_F1 & 0x00ff] = keyf1;
-	ffkeymap[GDK_F2 & 0x00ff] = keyf2;
-	ffkeymap[GDK_F3 & 0x00ff] = keyf3;
-	ffkeymap[GDK_F4 & 0x00ff] = keyf4;
-	ffkeymap[GDK_F5 & 0x00ff] = keyf5;
-	ffkeymap[GDK_F6 & 0x00ff] = keyf6;
-	ffkeymap[GDK_F7 & 0x00ff] = keyf7;
-	ffkeymap[GDK_F8 & 0x00ff] = keyf8;
-	ffkeymap[GDK_F9 & 0x00ff] = keyf9;
-	ffkeymap[GDK_F10 & 0x00ff] = keyf10;
-
-	ffkeymap[GDK_F11 & 0x00ff] = keyfullscreen;
-
-	ffkeymap[GDK_Page_Down & 0x00ff] = key_page_down;
-	ffkeymap[GDK_Page_Up & 0x00ff] = key_page_up;
+	ffmapkey(all, GDK_F11, keyfullscreen);
+	ffmapkey(all, GDK_Page_Down, key_page_down);
+	ffmapkey(all, GDK_Page_Up, key_page_up);
 }
 
-int remapkey(char *keyname, char *actionname)
+int remapkey(char *stations, char *keyname, char *actionname)
 {
 	enum keyaction i;
 	unsigned int j;
 	int index;
+	int displaymodes = 0;
 
 	BUILD_ASSERT(ARRAYSIZE(keyactionstring) == NKEYSTATES);
+
+	if (strcmp(stations, "all") == 0) {
+		displaymodes = 0x3fff;
+	} else {
+		for (i = 0; i < ARRAYSIZE(displaymode_name); i++) {
+			char *x = strstr(stations, displaymode_name[i]);
+			if (!x)
+				continue;
+			displaymodes |= (1 << i);
+		}
+	}
 
 	for (i = keynone; i <= NKEYSTATES; i++) {
 		if (strcmp(keyactionstring[i], actionname) != 0)
@@ -302,9 +359,9 @@ int remapkey(char *keyname, char *actionname)
 			if (strcmp(keyname_value_map[j].name, keyname) == 0) {
 				if ((keyname_value_map[j].value & 0xff00) != 0) {
 					index = keyname_value_map[j].value & 0x00ff;
-					ffkeymap[index] = i;
+					ffmapkey(displaymodes, index, i);
 				} else
-					keymap[keyname_value_map[j].value] = i;
+					mapkey(displaymodes, keyname_value_map[j].value, i);
 				return 0;
 			}
 		}
@@ -317,7 +374,7 @@ void read_keymap_config_file(void)
 	FILE *f;
 	char line[256];
 	char *s, *homedir;
-	char filename[PATH_MAX], keyname[256], actionname[256];
+	char filename[PATH_MAX], keyname[256], actionname[256], stations[256];
 	int lineno, rc;
 
 	homedir = getenv("HOME");
@@ -340,9 +397,9 @@ void read_keymap_config_file(void)
 			continue;
 		if (s[0] == '#') /* comment? */
 			continue;
-		rc = sscanf(s, "map %s %s", keyname, actionname);
+		rc = sscanf(s, "map %s %s %s", stations, keyname, actionname);
 		if (rc == 2) {
-			if (remapkey(keyname, actionname) == 0)
+			if (remapkey(stations, keyname, actionname) == 0)
 				continue;
 		}
 		fprintf(stderr, "%s: syntax error at line %d:'%s'\n",

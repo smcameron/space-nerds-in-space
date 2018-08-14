@@ -3941,9 +3941,9 @@ static gint key_press_cb(GtkWidget* widget, GdkEventKey* event, gpointer data)
 
 	ui_element_list_keypress(uiobjs, event);
         if ((event->keyval & 0xff00) == 0) 
-                ka = keymap[event->keyval];
+		ka = keymap[displaymode][event->keyval];
         else
-                ka = ffkeymap[event->keyval & 0x00ff];
+		ka = ffkeymap[displaymode][event->keyval & 0x00ff];
 	if (ka > 0 && ka < NKEYSTATES)
 		kbstate.pressed[ka] = 1;
 
@@ -4168,9 +4168,9 @@ static gint key_release_cb(GtkWidget* widget, GdkEventKey* event, gpointer data)
 	}
 
         if ((event->keyval & 0xff00) == 0)
-                ka = keymap[event->keyval];
+		ka = keymap[displaymode][event->keyval];
         else
-                ka = ffkeymap[event->keyval & 0x00ff];
+		ka = ffkeymap[displaymode][event->keyval & 0x00ff];
 	if (ka > 0 && ka < NKEYSTATES)
 		kbstate.pressed[ka] = 0;
 

@@ -68,15 +68,15 @@ struct keyname_value_entry {
 
 extern struct keyname_value_entry keyname_value_map[];
 
-extern enum keyaction keymap[256];
-extern enum keyaction ffkeymap[256];
-extern unsigned char *keycharmap[256];
+#define DISPLAYMODE_COUNT 14
+extern enum keyaction keymap[DISPLAYMODE_COUNT][256];
+extern enum keyaction ffkeymap[DISPLAYMODE_COUNT][256];
 extern struct keyboard_state kbstate;
 
 extern char *keyactionstring[];
 
 extern void init_keymap();
-extern int remapkey(char *keyname, char *actionname);
+extern int remapkey(char *stations, char *keyname, char *actionname);
 extern void read_keymap_config_file(void);
 
 #endif

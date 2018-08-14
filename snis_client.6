@@ -231,7 +231,7 @@ The format of the keyboard remapping file is as follows:
 Lines beginning with a '#' are comments.
 .br
 .br
-Key mappings are defined by lines of the form "map key action"
+Key mappings are defined by lines of the form "map stationlist key action"
 .br
 .br
 Valid actions are:
@@ -272,6 +272,28 @@ specify the corresponding keys:
        kp_insert   home          down     end          delete
        insert
 .DE
+.br
+.br
+stationlist is a comma separated list of stations for which the action and key
+should be associated. Valid station names are as follows:
+.DI
+        mainscreen,
+        navigation,
+        weapons,
+        engineering,
+        science,
+        comms,
+        demon,
+        damcon,
+        fonttest,
+        introscreen,
+        lobbyscreen,
+        connecting,
+        connected,
+        network_setup,
+.DE
+Additionally, the word "all" may be used to indicate the key-action assocation
+should be in effect on all stations.
 
 .PP
 $SNIS_ASSET_DIR/user_colors.cfg allows customizing of the colors of nearlly all UI
