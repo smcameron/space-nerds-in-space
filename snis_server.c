@@ -49,6 +49,7 @@
 #include <lauxlib.h>
 #include <assert.h>
 #include <locale.h>
+#include <dirent.h>
 
 #include "arraysize.h"
 #include "container-of.h"
@@ -16091,6 +16092,37 @@ static struct server_builtin_cmd {
 	{ "HELP", "LIST SERVER BUILTIN COMMANDS", server_builtin_help, },
 };
 
+static int filter_lua_scripts(const struct dirent *d)
+{
+	int l = strlen(d->d_name);
+
+	if (l > 4 && strcmp(&d->d_name[l - 4], ".LUA") == 0)
+		return 1;
+	return 0;
+}
+
+static void list_lua_scripts(void)
+{
+	struct dirent **namelist;
+	char msg[255];
+	int i, n;
+
+	n = scandir(LUASCRIPTDIR, &namelist, filter_lua_scripts, alphasort);
+	if (n < 0) {
+		snprintf(msg, sizeof(msg), "%s: %s\n", LUASCRIPTDIR, strerror(errno));
+		send_demon_console_msg(msg);
+		return;
+	}
+	send_demon_console_msg("LUA SCRIPTS:");
+
+	for (i = 0; i < n; i++) {
+		snprintf(msg, sizeof(msg), "- %s", namelist[i]->d_name);
+		free(namelist[i]);
+		send_demon_console_msg(msg);
+	}
+	free(namelist);
+}
+
 static void server_builtin_help(char *cmd)
 {
 	char msg[255];
@@ -16101,6 +16133,7 @@ static void server_builtin_help(char *cmd)
 		sprintf(msg, "  %10s %s", server_builtin[i].cmd, server_builtin[i].description);
 		send_demon_console_msg(msg);
 	}
+	list_lua_scripts();
 }
 
 static int process_exec_lua_script(struct game_client *c)
