@@ -3959,16 +3959,13 @@ static gint key_press_cb(GtkWidget* widget, GdkEventKey* event, gpointer data)
 
         switch (ka) {
 	case key_invert_vertical:
-			if (control_key_pressed && (displaymode == DISPLAYMODE_MAINSCREEN ||
-				displaymode == DISPLAYMODE_NAVIGATION)) {
+			if (control_key_pressed) {
 				vertical_controls_inverted *= -1;
 				vertical_controls_timer = FRAME_RATE_HZ;
 			}
 			return TRUE;
-	/* FIXME: key_mouse_mode conflicts with key_sci_mining_bot */
 	case key_mouse_mode:
-	case key_sci_mining_bot:
-			if (control_key_pressed && displaymode == DISPLAYMODE_WEAPONS) {
+			if (control_key_pressed) {
 				if (current_mouse_ui_mode == MOUSE_MODE_CAPTURED_MOUSE)
 					desired_mouse_ui_mode = MOUSE_MODE_FREE_MOUSE;
 				else
@@ -3977,9 +3974,10 @@ static gint key_press_cb(GtkWidget* widget, GdkEventKey* event, gpointer data)
 				return TRUE;
 			}
 			break;
+	case key_sci_mining_bot:
+			sci_mining_bot_pressed((void *) 0);
+			break;
 	case key_toggle_space_dust:
-			if (displaymode != DISPLAYMODE_MAINSCREEN)
-				break;
 			if (nfake_stars == 0)
 				nfake_stars = 2000;
 			else
@@ -4012,12 +4010,10 @@ static gint key_press_cb(GtkWidget* widget, GdkEventKey* event, gpointer data)
 				current_quit_selection = 0;
 			break;
 	case keytorpedo:
-		if (displaymode == DISPLAYMODE_WEAPONS)
-			fire_torpedo_button_pressed(NULL);
+		fire_torpedo_button_pressed(NULL);
 		break;
 	case key_weap_fire_missile:
-		if (displaymode == DISPLAYMODE_WEAPONS)
-			fire_missile_button_pressed(NULL);
+		fire_missile_button_pressed(NULL);
 		break;
 	case keyphaser:
 		if (in_the_process_of_quitting) {
@@ -4026,11 +4022,24 @@ static gint key_press_cb(GtkWidget* widget, GdkEventKey* event, gpointer data)
 				in_the_process_of_quitting = 0;
 			break;
 		}
-		if (displaymode == DISPLAYMODE_WEAPONS)
-			do_laser();
-		else if (displaymode == DISPLAYMODE_DAMCON)
-			robot_gripper_button_pressed(NULL);
+		do_laser();
 		break;
+	case key_robot_gripper:
+		if (in_the_process_of_quitting) {
+			final_quit_selection = current_quit_selection;
+			if (!final_quit_selection)
+				in_the_process_of_quitting = 0;
+			break;
+		}
+		robot_gripper_button_pressed(NULL);
+		break;
+	case key_space:
+		if (in_the_process_of_quitting) {
+			final_quit_selection = current_quit_selection;
+			if (!final_quit_selection)
+				in_the_process_of_quitting = 0;
+			break;
+		}
 	case key_camera_mode:
 		if (displaymode == DISPLAYMODE_MAINSCREEN)
 			do_mainscreen_camera_mode();
@@ -4117,10 +4126,6 @@ static gint key_press_cb(GtkWidget* widget, GdkEventKey* event, gpointer data)
 			do_onscreen((uint8_t) displaymode & 0xff);
 		break;
 	case keyviewmode:
-		if (displaymode != DISPLAYMODE_MAINSCREEN &&
-			displaymode != DISPLAYMODE_WEAPONS &&
-			displaymode != DISPLAYMODE_NAVIGATION)
-			break;
 		/* Toggle main screen between "normal" and "weapons" view */
 		do_view_mode_change();
 		break;
@@ -4133,8 +4138,6 @@ static gint key_press_cb(GtkWidget* widget, GdkEventKey* event, gpointer data)
 			FLATSHADING_RENDERER | WIREFRAME_RENDERER | BLACK_TRIS,
 			};
 		if (control_key_pressed) {
-			if (displaymode != DISPLAYMODE_MAINSCREEN)
-				break;
 			r = (r + 1) % ARRAYSIZE(valid_combos);
 			set_renderer(ecx, valid_combos[r]);
 		}

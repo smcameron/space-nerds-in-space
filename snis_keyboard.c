@@ -8,6 +8,8 @@
 #include "build_bug_on.h"
 #include "string-utils.h"
 
+#include "snis_packet.h"
+
 const char *displaymode_name[] = {
 	"mainscreen",
 	"navigation",
@@ -198,6 +200,8 @@ char *keyactionstring[] = {
 	"key_sci_srs",
 	"key_sci_details",
 	"key_weap_fire_missile",
+	"key_space",
+	"key_robot_gripper",
 };
 
 void zero_keymaps(void)
@@ -236,6 +240,15 @@ void init_keymap(void)
 {
 
 	const unsigned short all = 0x03fff; /* all 14 displaymodes */
+	const unsigned short nav = 1 << DISPLAYMODE_NAVIGATION;
+	const unsigned short weap = 1 << DISPLAYMODE_WEAPONS;
+	const unsigned short eng = 1 << DISPLAYMODE_ENGINEERING;
+	const unsigned short damcon = 1 << DISPLAYMODE_DAMCON;
+	const unsigned short sci = 1 << DISPLAYMODE_SCIENCE;
+	const unsigned short comms = 1 << DISPLAYMODE_COMMS;
+	const unsigned short main = 1 << DISPLAYMODE_MAINSCREEN;
+	const unsigned short demon = 1 << DISPLAYMODE_DEMON;
+
 	zero_keymaps();
 
 	mapkey(all, GDK_j, keydown);
@@ -253,68 +266,68 @@ void init_keymap(void)
 	ffmapkey(all, GDK_Left, keyleft);
 	mapkey(all, GDK_comma, keyleft);
 	mapkey(all, GDK_less, keyleft);
-	mapkey(all, GDK_q, keyrollleft);
-	mapkey(all, GDK_e, keyrollright);
-	mapkey(all, GDK_c, key_toggle_credits);
+	mapkey(nav | main, GDK_q, keyrollleft);
+	mapkey(nav | main, GDK_e, keyrollright);
+	mapkey(main, GDK_c, key_toggle_credits);
 	mapkey(all, GDK_M, key_toggle_watermark);
-	mapkey(all, GDK_m, key_mouse_mode);	/* FIXME: Note this is overridden by key_sci_mining_bot, below */
-						/* Proper fix is probably something like make keymap into a 2D array */
-						/* with displaymode as first index, key as second index. */
-	mapkey(all, GDK_n, key_weap_fire_missile);
-	mapkey(all, GDK_space, keyphaser);
-	mapkey(all, GDK_z, keytorpedo);
+	mapkey(weap, GDK_m, key_mouse_mode);
+	mapkey(weap, GDK_n, key_weap_fire_missile);
+	mapkey(all, GDK_space, key_space);
+	mapkey(weap, GDK_space, keyphaser);
+	mapkey(damcon, GDK_space, key_robot_gripper);
+	mapkey(weap, GDK_z, keytorpedo);
 
-	mapkey(all, GDK_b, keytransform);
-	mapkey(all, GDK_x, keythrust);
-	mapkey(all, GDK_r, keyrenderswitch);
+	mapkey(all, GDK_b, keytransform); /* wtf is this? */
+	mapkey(demon, GDK_x, keythrust);
+	mapkey(main | weap, GDK_r, keyrenderswitch);
 
 	ffmapkey(all, GDK_F1, keypausehelp);
 	ffmapkey(all, GDK_Escape, keyquit);
 
 	mapkey(all, GDK_O, keyonscreen);
 	mapkey(all, GDK_o, keyonscreen);
-	mapkey(all, GDK_w, keyup);
-	mapkey(all, GDK_a, keyleft);
-	mapkey(all, GDK_s, keydown);
-	mapkey(all, GDK_d, keyright);
-	ffmapkey(all, GDK_KP_Up, keyup);
-	ffmapkey(all, GDK_KP_Down, keydown);
-	ffmapkey(all, GDK_KP_Left, keyleft);
-	ffmapkey(all, GDK_KP_Right, keyright);
-	ffmapkey(all, GDK_KP_Home, keyrollleft);
-	ffmapkey(all, GDK_KP_Page_Up, keyrollright);
+	mapkey(nav | main | weap | damcon, GDK_w, keyup);
+	mapkey(nav | main | weap | damcon, GDK_a, keyleft);
+	mapkey(nav | main | weap | damcon, GDK_s, keydown);
+	mapkey(nav | main | weap | damcon, GDK_d, keyright);
+	ffmapkey(nav | main | weap | damcon, GDK_KP_Up, keyup);
+	ffmapkey(nav | main | weap | damcon, GDK_KP_Down, keydown);
+	ffmapkey(nav | main | weap | damcon, GDK_KP_Left, keyleft);
+	ffmapkey(nav | main | weap | damcon, GDK_KP_Right, keyright);
+	ffmapkey(nav | main | weap, GDK_KP_Home, keyrollleft);
+	ffmapkey(nav | main | weap, GDK_KP_Page_Up, keyrollright);
 
-	mapkey(all, GDK_i, key_invert_vertical);
+	mapkey(nav | main | weap, GDK_i, key_invert_vertical);
 	ffmapkey(all, GDK_KEY_Pause, key_toggle_frame_stats);
-	mapkey(all, GDK_f, key_toggle_space_dust);
+	mapkey(weap | main, GDK_f, key_toggle_space_dust);
 
-	mapkey(all, GDK_k, keysciball_rollleft);
-	mapkey(all, GDK_semicolon, keysciball_rollright);
-	mapkey(all, GDK_comma, keysciball_yawleft);
-	mapkey(all, GDK_slash, keysciball_yawright);
-	mapkey(all, GDK_l, keysciball_pitchdown);
-	mapkey(all, GDK_period, keysciball_pitchup);
-	mapkey(all, GDK_KEY_quoteleft, key_camera_mode);
+	mapkey(sci, GDK_k, keysciball_rollleft);
+	ffmapkey(sci, GDK_KP_Home, keysciball_rollleft);
+	mapkey(sci, GDK_semicolon, keysciball_rollright);
+	ffmapkey(sci, GDK_KP_Page_Up, keysciball_rollright);
+	mapkey(sci, GDK_comma, keysciball_yawleft);
+	ffmapkey(sci, GDK_KP_Left, keysciball_yawleft);
+	mapkey(sci, GDK_slash, keysciball_yawright);
+	ffmapkey(sci, GDK_KP_Right, keysciball_yawright);
+	mapkey(sci, GDK_l, keysciball_pitchdown);
+	ffmapkey(sci, GDK_KP_Up, keysciball_pitchdown);
+	mapkey(sci, GDK_period, keysciball_pitchup);
+	ffmapkey(sci, GDK_KP_Down, keysciball_pitchup);
+	mapkey(nav | main, GDK_KEY_quoteleft, key_camera_mode);
 
-	mapkey(all, GDK_W, keyviewmode);
-	mapkey(all, GDK_KEY_plus, keyzoom);
-	mapkey(all, GDK_KEY_equal, keyzoom);
-	mapkey(all, GDK_KEY_minus, keyunzoom);
-	mapkey(all, GDK_KEY_m, key_sci_mining_bot);
-	mapkey(all, GDK_KEY_t, key_sci_tractor_beam);
+	mapkey(nav | main | weap, GDK_W, keyviewmode);
+	mapkey(nav | main | sci, GDK_KEY_plus, keyzoom);
+	mapkey(nav | main | sci, GDK_KEY_equal, keyzoom);
+	mapkey(nav | main | sci, GDK_KEY_minus, keyunzoom);
+	mapkey(sci, GDK_KEY_m, key_sci_mining_bot);
+	mapkey(sci, GDK_KEY_t, key_sci_tractor_beam);
+	mapkey(sci, GDK_KEY_l, key_sci_lrs); /* interferes with pitchdown */
+	mapkey(sci, GDK_KEY_s, key_sci_srs);
+	mapkey(sci, GDK_KEY_w, key_sci_waypoints);
+	mapkey(sci, GDK_KEY_d, key_sci_details);
 
-	/* keymap[GDK_KEY_l] = key_sci_lrs; */ /* <-- this interferes with keysciball_pitchdown, above */
-
-	/* NOTE: The following 3 keys interfere with AWSD on Nav, Weapons, and Mainscreen.
-	 * The real fix is to have per-screen keybindings, not game-wide keybindings.
-	 */
-
-	/* keymap[GDK_KEY_s] = key_sci_srs; */
-	/* keymap[GDK_KEY_w] = key_sci_waypoints; */
-	/* keymap[GDK_KEY_d] = key_sci_details; */
-
-	ffmapkey(all, GDK_KEY_KP_Add, keyzoom);
-	ffmapkey(all, GDK_KEY_KP_Subtract, keyunzoom);
+	ffmapkey(nav | main | sci, GDK_KEY_KP_Add, keyzoom);
+	ffmapkey(nav | main | sci, GDK_KEY_KP_Subtract, keyunzoom);
 	ffmapkey(all, GDK_F1, keyf1);
 	ffmapkey(all, GDK_F2, keyf2);
 	ffmapkey(all, GDK_F3, keyf3);
