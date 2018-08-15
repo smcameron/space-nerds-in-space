@@ -64,13 +64,13 @@ COMPILE=$(CC) ${MYCFLAGS} -c -o $@ $< && $(ECHO) '  COMPILE' $<
 MYCFLAGS=${DEBUGFLAG} ${OPTIMIZEFLAG} --pedantic -Wall ${STOP_ON_WARN} -pthread ${LRTFLAGS} $(CFLAGS)
 
 SERVEROBJS=ssgl_sanitize.o ssgl_sleep.o \
-	ssgl_socket_io.o ssgl_log.o
+	ssgl_socket_io.o ssgl_log.o ssgl_get_primary_host_ip_addr.o
 LINKSERVER=$(CC) ${MYCFLAGS} ${LINKFLAGS} $< ${SERVEROBJS} -o $@ $(LDFLAGS) && $(ECHO) '  LINK' $<
 LINKCLIENT=$(CC) ${MYCFLAGS} -L. -o $@ $< -lssglclient $(LDFLAGS) && $(ECHO) '  LINK' $<
 
 ARCHIVEOBJS=ssgl_sleep.o ssgl_sanitize.o ssgl_recv_game_servers.o \
 		ssgl_connect_to_lobby.o ssgl_socket_io.o ssgl_get_primary_host_ip_addr.o \
-		ssgl_register_gameserver.o ssgl_log.o
+		ssgl_register_gameserver.o ssgl_log.o ssgl_register_for_bcast_packet.o
 
 AR ?= ar
 ARCHIVE=$(AR) -cr $@ ${ARCHIVEOBJS} && $(ECHO) '  ARCHIVE' $@
@@ -121,6 +121,9 @@ ssgl_get_primary_host_ip_addr.o:	ssgl_get_primary_host_ip_addr.c
 	$(Q)$(COMPILE)
 
 ssgl_connect_to_lobby.o:	ssgl_connect_to_lobby.c
+	$(Q)$(COMPILE)
+
+ssgl_register_for_bcast_packet.o: ssgl_register_for_bcast_packet.c
 	$(Q)$(COMPILE)
 
 ssgl_server.o:	ssgl_server.c ${SERVEROBJS}

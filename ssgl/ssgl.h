@@ -69,6 +69,7 @@ GLOBAL int ssgl_recv_game_servers(int sock,
 GLOBAL void ssgl_sleep(int seconds); /* just a thread safe sleep implemented by nanosleep w/ retries */
 GLOBAL void ssgl_msleep(int milliseconds); /* just a thread safe sleep implemented by nanosleep w/ retries */
 GLOBAL int ssgl_get_primary_host_ip_addr(uint32_t *ipaddr);
+GLOBAL int ssgl_register_for_bcast_packet(uint32_t *ipaddr, uint16_t *port);
 
 #define SSGL_INFO 1
 #define SSGL_WARN 2

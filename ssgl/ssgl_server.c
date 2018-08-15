@@ -38,6 +38,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 #include <pthread.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
+#include <ifaddrs.h>
 
 #include "ssgl.h"
 #include "ssgl_sanitize.h"
@@ -435,12 +436,142 @@ static void start_game_server_expiration_thread(void)
 	pthread_attr_t attr;
 	int rc;
 
+
 	pthread_attr_init(&attr);
 	pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
 	rc = pthread_create(&expiry_thread, &attr, expire_game_servers, NULL);
 	pthread_attr_destroy(&attr);
 	if (rc < 0) {
 		ssgl_log(SSGL_ERROR, "Unable to create game server expiration thread: %s.\n",
+			strerror(errno));
+	}
+}
+
+static pthread_t broadcast_thread;
+
+struct bcast_payload {
+	uint32_t ipaddr;
+	uint16_t port;
+};
+
+static void *broadcast_lobby_info(__attribute__((unused)) void *arg)
+{
+	int on, rc, bcast;
+	uint32_t ipaddr, netmask, broadcast;
+	struct bcast_payload payload;
+	struct servent *gamelobby_service;
+	struct protoent *gamelobby_proto;
+	struct ifaddrs *ifaddr, *a;
+	struct sockaddr_in bcast_addr;
+
+	/* Get the IP address of this machine's primary interface (the IP address of
+	 * interface that would be used to send a packet to 8.8.8.8 if we were to
+	 * try that. */
+	rc = ssgl_get_primary_host_ip_addr(&ipaddr);
+	if (rc < 0) {
+		ssgl_log(SSGL_WARN, "broadcast_lobby_info: Failed to get lobby host primary IP address: %s.\n",
+			strerror(errno));
+		return NULL;
+	}
+
+	/* Get the "gamelobby" UDP service protocol/port */
+	gamelobby_service = getservbyname(GAMELOBBY_SERVICE_NAME, "udp");
+	if (!gamelobby_service) {
+		ssgl_log(SSGL_WARN, "getservbyname failed, %s\n", strerror(errno));
+		ssgl_log(SSGL_WARN, "Check that /etc/services contains the following lines:\n");
+		ssgl_log(SSGL_WARN, "gamelobby	2419/tcp\n");
+		ssgl_log(SSGL_WARN, "gamelobby	2419/udp\n");
+		ssgl_log(SSGL_WARN, "Continuing anyway, will assume port is 2419.\n");
+	}
+
+	/* Get the protocol number... */
+	if (gamelobby_service) {
+		gamelobby_proto = getprotobyname(gamelobby_service->s_proto);
+		if (!gamelobby_proto) {
+			ssgl_log(SSGL_WARN, "getprotobyname(%s) failed: %s\n",
+				gamelobby_service->s_proto, strerror(errno));
+		}
+	} else {
+		gamelobby_proto = NULL;
+	}
+
+	/* Make ourselves a UDP datagram socket */
+	bcast = socket(AF_INET, SOCK_DGRAM, gamelobby_proto ? gamelobby_proto->p_proto : 0);
+	if (bcast < 0) {
+		ssgl_log(SSGL_ERROR, "broadcast_lobby_info: socket() failed: %s\n", strerror(errno));
+		return NULL;
+	}
+
+	/* Set socket up for broadcasting */
+	on = 1;
+	rc = setsockopt(bcast, SOL_SOCKET, SO_REUSEADDR | SO_BROADCAST, (const char *) &on, sizeof(on));
+	if (rc < 0) {
+		ssgl_log(SSGL_ERROR, "setsockopt() failed: %s\n", strerror(errno));
+		close(bcast);
+		return NULL;
+	}
+
+	/* Get the netmask for our primary network interface */
+	rc = getifaddrs(&ifaddr);
+	if (rc < 0) {
+		ssgl_log(SSGL_ERROR, "getifaddrs() failed: %s\n", strerror(errno));
+		close(bcast);
+		return NULL;
+	}
+
+	netmask = 0xa5a5a5a5; /* guess something excessively improbable */
+	for (a = ifaddr; a; a = a->ifa_next) {
+		if (a->ifa_addr == NULL)
+			continue;
+		if (a->ifa_addr->sa_family != AF_INET)
+			continue;
+		uint32_t s = ((struct sockaddr_in *) a->ifa_addr)->sin_addr.s_addr;
+		bcast_addr = *(struct sockaddr_in *) a->ifa_addr;
+		ssgl_log(SSGL_INFO, "comparing ipaddr %08x to %08x\n", s, ipaddr);
+		if (s == ipaddr) {
+			ssgl_log(SSGL_INFO, "Matched IP address %08x\n", ipaddr);
+			netmask = ((struct sockaddr_in *) a->ifa_netmask)->sin_addr.s_addr;
+			break;
+		}
+	}
+	if (ifaddr)
+		freeifaddrs(ifaddr);
+	if (netmask == 0xa5a5a5a5) {
+		ssgl_log(SSGL_ERROR, "failed to get netmask.\n");
+		close(bcast);
+		return NULL;
+	}
+	broadcast = ~netmask | ipaddr;
+	memcpy(&bcast_addr.sin_addr.s_addr, &broadcast, sizeof(broadcast));
+	bcast_addr.sin_port =
+		gamelobby_service ?  gamelobby_service->s_port : htons(GAMELOBBY_SERVICE_NUMBER);
+
+	ssgl_log(SSGL_INFO, "netmask is %08x\n", netmask);
+	ssgl_log(SSGL_INFO, "broadcast is %08x\n", broadcast);
+	payload.ipaddr = ipaddr;
+	payload.port = gamelobby_service ?  gamelobby_service->s_port : htons(GAMELOBBY_SERVICE_NUMBER);
+
+	do {
+		rc = sendto(bcast, &payload, sizeof(payload), 0, &bcast_addr, sizeof(struct sockaddr_in));
+		if (rc < 0)
+			ssgl_log(SSGL_ERROR, "sendto failed: %s\n", strerror(errno));
+		ssgl_sleep(2);
+	} while (1);
+	close(bcast);
+	return NULL;
+}
+
+static void start_broadcast_lobby_info_thread(void)
+{
+	pthread_attr_t attr;
+	int rc;
+
+	pthread_attr_init(&attr);
+	pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
+	rc = pthread_create(&broadcast_thread, &attr, broadcast_lobby_info, NULL);
+	pthread_attr_destroy(&attr);
+	if (rc < 0) {
+		ssgl_log(SSGL_ERROR, "Unable to create broadcast_lobby_info thread: %s.\n",
 			strerror(errno));
 	}
 }
@@ -472,6 +603,7 @@ int main(int argc, char *argv[])
 
 	ssgl_log(SSGL_INFO, "ssgl_server starting\n");
 	start_game_server_expiration_thread();
+	start_broadcast_lobby_info_thread();
 
 	/* Get the "gamelobby" service protocol/port */
 	gamelobby_service = getservbyname(GAMELOBBY_SERVICE_NAME, "tcp");

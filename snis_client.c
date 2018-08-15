@@ -301,6 +301,8 @@ static struct timeval start_time, end_time;
 static double universe_timestamp_offset = 0;
 
 static volatile int done_with_lobby = 0;
+static uint32_t bcast_lobby_ipaddr = 0xfffffff;
+static uint16_t bcast_lobby_port = 0xffff;
 static pthread_t lobby_thread;
 static pthread_t gameserver_connect_thread;
 static pthread_t read_from_gameserver_thread;
@@ -17891,11 +17893,24 @@ static void init_net_setup_ui(void)
 
 static void show_network_setup(GtkWidget *w)
 {
+	char msg[255];
+
 	show_common_screen(w, "SPACE NERDS IN SPACE");
 	show_rotating_wombat();
+
 	sng_set_foreground(UI_COLOR(network_setup_text));
 	sng_abs_xy_draw_string("NETWORK SETUP", SMALL_FONT, txx(25), txy(10 + LINEHEIGHT * 2));
-	sng_abs_xy_draw_string("LOBBY SERVER NAME OR IP ADDRESS", TINY_FONT, txx(25), txy(130));
+	if (bcast_lobby_ipaddr != 0xffffffff || 1) {
+		sprintf(msg, "LOBBY SERVER NAME OR IP ADDRESS - DETECTED LOBBY AT %d.%d.%d.%d port %d",
+			(ntohl(bcast_lobby_ipaddr) & 0xff000000) >> 24,
+			(ntohl(bcast_lobby_ipaddr) & 0x00ff0000) >> 16,
+			(ntohl(bcast_lobby_ipaddr) & 0x0000ff00) >> 8,
+			(ntohl(bcast_lobby_ipaddr) & 0x000000ff),
+			ntohs(bcast_lobby_port));
+	} else  {
+		sprintf(msg, "LOBBY SERVER NAME OR IP ADDRESS");
+	}
+	sng_abs_xy_draw_string(msg, TINY_FONT, txx(25), txy(130));
 	sng_abs_xy_draw_string("SOLARSYSTEM NAME", TINY_FONT, txx(25), txy(280));
 	sng_abs_xy_draw_string("SHIP NAME", TINY_FONT, txx(20), txy(470));
 	sng_abs_xy_draw_string("PASSWORD", TINY_FONT, txx(20), txy(520));
@@ -20849,6 +20864,7 @@ int main(int argc, char *argv[])
 #endif
 	gdk_threads_init();
 
+	ssgl_register_for_bcast_packet(&bcast_lobby_ipaddr, &bcast_lobby_port);
 	gettimeofday(&start_time, NULL);
 	universe_timestamp_offset = time_now_double(); /* until we get real time from server */
 
