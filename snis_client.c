@@ -17915,30 +17915,36 @@ static void init_net_setup_ui(void)
 static void show_network_setup(GtkWidget *w)
 {
 	char msg[255], button_label[100];
+	char ipaddr[100];
 
 	show_common_screen(w, "SPACE NERDS IN SPACE");
 	show_rotating_wombat();
 
 	sng_set_foreground(UI_COLOR(network_setup_text));
 	sng_abs_xy_draw_string("NETWORK SETUP", SMALL_FONT, txx(25), txy(10 + LINEHEIGHT * 2));
-	if (bcast_lobby_ipaddr != 0xffffffff || 1) {
-		sprintf(msg, "LOBBY SERVER NAME OR IP ADDRESS - DETECTED LOBBY AT %d.%d.%d.%d port %d",
-			(ntohl(bcast_lobby_ipaddr) & 0xff000000) >> 24,
-			(ntohl(bcast_lobby_ipaddr) & 0x00ff0000) >> 16,
-			(ntohl(bcast_lobby_ipaddr) & 0x0000ff00) >> 8,
-			(ntohl(bcast_lobby_ipaddr) & 0x000000ff),
-			ntohs(bcast_lobby_port));
-		ui_unhide_widget(net_setup_ui.connect_to_detected_lobby);
-		sprintf(button_label, "ENTER LOBBY %d.%d.%d.%d",
+	sprintf(ipaddr, "%d.%d.%d.%d",
 			(ntohl(bcast_lobby_ipaddr) & 0xff000000) >> 24,
 			(ntohl(bcast_lobby_ipaddr) & 0x00ff0000) >> 16,
 			(ntohl(bcast_lobby_ipaddr) & 0x0000ff00) >> 8,
 			(ntohl(bcast_lobby_ipaddr) & 0x000000ff));
+	if (bcast_lobby_ipaddr != 0xffffffff || 1) {
+		sprintf(msg, "LOBBY SERVER NAME OR IP ADDRESS - DETECTED LOBBY AT %s port %d",
+			ipaddr, ntohs(bcast_lobby_port));
+		ui_unhide_widget(net_setup_ui.connect_to_detected_lobby);
+		sprintf(button_label, "ENTER LOBBY %s", ipaddr);
 		snis_button_set_label(net_setup_ui.connect_to_detected_lobby, button_label);
 	} else  {
 		sprintf(msg, "LOBBY SERVER NAME OR IP ADDRESS");
 		ui_hide_widget(net_setup_ui.connect_to_detected_lobby);
 	}
+	/* If manual and auto-detected lobbies are the same, hide the manual button. */
+	if (strcmp(ipaddr, net_setup_ui.lobbyname) == 0 && strcmp(ipaddr, "255.255.255.255") != 0)
+		ui_hide_widget(net_setup_ui.connect_to_lobby);
+	else if (strcmp(net_setup_ui.lobbyname, "") != 0)
+		ui_unhide_widget(net_setup_ui.connect_to_lobby);
+	else
+		ui_hide_widget(net_setup_ui.connect_to_lobby);
+
 	sprintf(button_label, "ENTER LOBBY %s", net_setup_ui.lobbyname);
 	snis_button_set_label(net_setup_ui.connect_to_lobby, button_label);
 	sng_abs_xy_draw_string(msg, TINY_FONT, txx(25), txy(130));
@@ -17955,10 +17961,12 @@ static void show_network_setup(GtkWidget *w)
 	else
 		snis_button_set_color(net_setup_ui.start_gameserver, UI_COLOR(network_setup_inactive));
 
-	if (strcmp(net_setup_ui.lobbyname, "") != 0 &&
-		strcmp(net_setup_ui.shipname, "") != 0 &&
+	if (strcmp(net_setup_ui.shipname, "") != 0 &&
 		strcmp(net_setup_ui.password, "") != 0) {
-		snis_button_set_color(net_setup_ui.connect_to_lobby, UI_COLOR(network_setup_active));
+		if (strcmp(net_setup_ui.lobbyname, "") != 0)
+			snis_button_set_color(net_setup_ui.connect_to_lobby, UI_COLOR(network_setup_active));
+		else
+			snis_button_set_color(net_setup_ui.connect_to_lobby, UI_COLOR(network_setup_inactive));
 		snis_button_set_color(net_setup_ui.connect_to_detected_lobby, UI_COLOR(network_setup_active));
 	} else {
 		snis_button_set_color(net_setup_ui.connect_to_lobby, UI_COLOR(network_setup_inactive));
