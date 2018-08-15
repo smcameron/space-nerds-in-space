@@ -121,9 +121,24 @@ static int initial_missile_count = INITIAL_MISSILE_COUNT;
 	 * allow high player velocities can cause spurious warp tunnel entities
 	 * to be created on the clients. That should be fixed somehow.
 	 */
+static float max_damcon_robot_velocity = MAX_ROBOT_VELOCITY;
+static float max_damcon_robot_braking = MAX_ROBOT_BRAKING;
 static float max_player_velocity = MAX_PLAYER_VELOCITY;
 static float player_velocity_damping = PLAYER_VELOCITY_DAMPING;
 static float player_velocity_increment = PLAYER_VELOCITY_INCREMENT;
+static float torpedo_damage_factor = TORPEDO_WEAPONS_FACTOR;
+static float atmosphere_damage_factor = ATMOSPHERE_DAMAGE_FACTOR;
+static float missile_damage_factor = MISSILE_EXPLOSION_WEAPONS_FACTOR;
+static float spacemonster_damage_factor = SPACEMONSTER_WEAPONS_FACTOR;
+static float warp_core_damage_factor = WARP_CORE_EXPLOSION_WEAPONS_FACTOR;
+static float threat_level_flee_threshold = THREAT_LEVEL_FLEE_THRESHOLD;
+static float max_spacemonster_accel = MAX_SPACEMONSTER_ACCEL;
+static float max_spacemonster_velocity = MAX_SPACEMONSTER_VELOCITY;
+static int torpedo_lifetime = TORPEDO_LIFETIME;
+static int missile_lifetime = MISSILE_LIFETIME;
+static float torpedo_velocity = TORPEDO_VELOCITY;
+static float missile_target_dist = MISSILE_TARGET_DIST;
+static float max_missile_deltav = MAX_MISSILE_DELTAV;
 
 /*
  * End of runtime adjustable globals
@@ -1262,12 +1277,12 @@ static void asteroid_move(struct snis_entity *o)
 static void calculate_torpedolike_damage(struct snis_entity *target, double weapons_factor);
 static void calculate_warp_core_explosion_damage(struct snis_entity *target, double damage_factor)
 {
-	calculate_torpedolike_damage(target, WARP_CORE_EXPLOSION_WEAPONS_FACTOR * damage_factor);
+	calculate_torpedolike_damage(target, warp_core_damage_factor * damage_factor);
 }
 
 static void calculate_missile_explosion_damage(struct snis_entity *target, double damage_factor)
 {
-	calculate_torpedolike_damage(target, MISSILE_EXPLOSION_WEAPONS_FACTOR * damage_factor);
+	calculate_torpedolike_damage(target, missile_damage_factor * damage_factor);
 }
 
 static void send_ship_damage_packet(struct snis_entity *o);
@@ -2367,12 +2382,12 @@ static void calculate_torpedolike_damage(struct snis_entity *target, double weap
 
 static void calculate_torpedo_damage(struct snis_entity *target)
 {
-	calculate_torpedolike_damage(target, TORPEDO_WEAPONS_FACTOR);
+	calculate_torpedolike_damage(target, torpedo_damage_factor);
 }
 
 static void calculate_atmosphere_damage(struct snis_entity *target)
 {
-	calculate_torpedolike_damage(target, ATMOSPHERE_DAMAGE_FACTOR);
+	calculate_torpedolike_damage(target, atmosphere_damage_factor);
 }
 
 static void calculate_laser_damage(struct snis_entity *o, uint8_t wavelength, float power)
@@ -3422,7 +3437,7 @@ static void torpedo_collision_detection(void *context, void *entity)
 		return;
 
 	/* What's the -3 about? */
-	if (o->alive >= TORPEDO_LIFETIME - 3)
+	if (o->alive >= torpedo_lifetime - 3)
 		return;
 	if (t->type != OBJTYPE_SHIP1 && t->type != OBJTYPE_SHIP2 &&
 			t->type != OBJTYPE_STARBASE &&
@@ -3447,10 +3462,10 @@ static void torpedo_collision_detection(void *context, void *entity)
 
 		dist2 = block_closest_point(&torpedo_pos, t, &closest_point, &normal);
 		if (t->tsd.block.form == BLOCK_FORM_CAPSULE) {
-			if (sqrtf(dist2) - 0.5 * t->tsd.block.sy > TORPEDO_VELOCITY)
+			if (sqrtf(dist2) - 0.5 * t->tsd.block.sy > torpedo_velocity)
 				return;
 		} else {
-			if (dist2 > TORPEDO_VELOCITY * TORPEDO_VELOCITY)
+			if (dist2 > torpedo_velocity * torpedo_velocity)
 				return;
 		}
 		o->alive = 0; /* hit!!!! */
@@ -3614,9 +3629,9 @@ static void missile_move(struct snis_entity *o)
 	}
 
 	/* Update velocity towards desired velocity */
-	o->vx += clampf(0.1 * (desired_v.v.x - o->vx), -MAX_MISSILE_DV, MAX_MISSILE_DV);
-	o->vy += clampf(0.1 * (desired_v.v.y - o->vy), -MAX_MISSILE_DV, MAX_MISSILE_DV);
-	o->vz += clampf(0.1 * (desired_v.v.z - o->vz), -MAX_MISSILE_DV, MAX_MISSILE_DV);
+	o->vx += clampf(0.1 * (desired_v.v.x - o->vx), -max_missile_deltav, max_missile_deltav);
+	o->vy += clampf(0.1 * (desired_v.v.y - o->vy), -max_missile_deltav, max_missile_deltav);
+	o->vz += clampf(0.1 * (desired_v.v.z - o->vz), -max_missile_deltav, max_missile_deltav);
 
 	/* Move missile */
 	set_object_location(o, o->x + o->vx, o->y + o->vy, o->z + o->vz);
@@ -4162,13 +4177,13 @@ static void spacemonster_play(struct snis_entity *o)
 	v.v.z += go[i].vz * esttime;
 	vec3_normalize_self(&v);
 	if (dist > 3000) {
-		vec3_mul_self(&v, MAX_SPACEMONSTER_VELOCITY);
+		vec3_mul_self(&v, max_spacemonster_velocity);
 		o->tsd.spacemonster.dvx = v.v.x;
 		o->tsd.spacemonster.dvy = v.v.y;
 		o->tsd.spacemonster.dvz = v.v.z;
 	} else if (snis_randn(1000) < 50) {
 			random_point_on_sphere(1.0, &v.v.x, &v.v.y, &v.v.y);
-			vec3_mul_self(&v, MAX_SPACEMONSTER_VELOCITY);
+			vec3_mul_self(&v, max_spacemonster_velocity);
 			o->tsd.spacemonster.dvx = v.v.x;
 			o->tsd.spacemonster.dvy = v.v.y;
 			o->tsd.spacemonster.dvz = v.v.z;
@@ -4180,7 +4195,7 @@ static void spacemonster_play(struct snis_entity *o)
 		steer.v.y = o->y - go[i].y;
 		steer.v.z = o->z - go[i].z;
 		vec3_normalize_self(&steer);
-		mul = MAX_SPACEMONSTER_VELOCITY * 0.5;
+		mul = max_spacemonster_velocity * 0.5;
 		vec3_mul_self(&steer, mul);
 		o->tsd.spacemonster.dvx += steer.v.x;
 		o->tsd.spacemonster.dvy += steer.v.y;
@@ -4216,11 +4231,11 @@ static void spacemonster_fight(struct snis_entity *o)
 	to_player.v.x = go[i].x - o->x;
 	to_player.v.y = go[i].y - o->y;
 	to_player.v.z = go[i].z - o->z;
-	esttime = 0.75 * vec3_magnitude(&to_player) / MAX_SPACEMONSTER_VELOCITY;
+	esttime = 0.75 * vec3_magnitude(&to_player) / max_spacemonster_velocity;
 	vec3_mul_self(&ship_vel, esttime);
 	vec3_add(&to_target, &to_player, &ship_vel);
 	vec3_normalize_self(&to_target);
-	vec3_mul_self(&to_target, MAX_SPACEMONSTER_VELOCITY);
+	vec3_mul_self(&to_target, max_spacemonster_velocity);
 	o->tsd.spacemonster.dvx = to_target.v.x;
 	o->tsd.spacemonster.dvy = to_target.v.y;
 	o->tsd.spacemonster.dvz = to_target.v.z;
@@ -4237,7 +4252,7 @@ static void spacemonster_fight(struct snis_entity *o)
 				steer.v.y = o->y - go[i].y;
 				steer.v.z = o->z - go[i].z;
 				vec3_normalize_self(&steer);
-				vec3_mul_self(&steer, 0.5 * MAX_SPACEMONSTER_VELOCITY);
+				vec3_mul_self(&steer, 0.5 * max_spacemonster_velocity);
 				o->tsd.spacemonster.dvx += steer.v.x;
 				o->tsd.spacemonster.dvy += steer.v.y;
 				o->tsd.spacemonster.dvz += steer.v.z;
@@ -4284,7 +4299,7 @@ static void spacemonster_eat(struct snis_entity *o)
 	v.v.z = go[i].z - o->z;
 	dist = vec3_magnitude(&v);
 	if (dist > 1000)
-		vscale = MAX_SPACEMONSTER_VELOCITY;
+		vscale = max_spacemonster_velocity;
 	else {
 		if (dist <= 1000) {
 			if (snis_randn(1000) < 100) {
@@ -4297,7 +4312,7 @@ static void spacemonster_eat(struct snis_entity *o)
 		if (dist <= 500)
 			vscale = 0.1;
 		else
-			vscale = MAX_SPACEMONSTER_VELOCITY * (dist - 500.0) / 500.0;
+			vscale = max_spacemonster_velocity * (dist - 500.0) / 500.0;
 	}
 	vec3_normalize_self(&v);
 	vec3_mul_self(&v, vscale);
@@ -4395,27 +4410,27 @@ static void spacemonster_move(struct snis_entity *o)
 		if (snis_randn(1000) < 50) {
 			random_point_on_sphere(1.0, &dx, &dy, &dz);
 			v = snis_randn(1000) / 1000.0;
-			v = v * MAX_SPACEMONSTER_VELOCITY;
+			v = v * max_spacemonster_velocity;
 			o->tsd.spacemonster.dvx = v * dx;
 			o->tsd.spacemonster.dvy = v * dy;
 			o->tsd.spacemonster.dvz = v * dz;
 		}
 	}
 	dx = o->tsd.spacemonster.dvx - o->vx;
-	if (dx > MAX_SPACEMONSTER_ACCEL)
-		dx = MAX_SPACEMONSTER_ACCEL;
-	if (dx < -MAX_SPACEMONSTER_ACCEL)
-		dx = -MAX_SPACEMONSTER_ACCEL;
+	if (dx > max_spacemonster_accel)
+		dx = max_spacemonster_accel;
+	if (dx < -max_spacemonster_accel)
+		dx = -max_spacemonster_accel;
 	dy = o->tsd.spacemonster.dvy - o->vy;
-	if (dy > MAX_SPACEMONSTER_ACCEL)
-		dy = MAX_SPACEMONSTER_ACCEL;
-	if (dy < -MAX_SPACEMONSTER_ACCEL)
-		dy = -MAX_SPACEMONSTER_ACCEL;
+	if (dy > max_spacemonster_accel)
+		dy = max_spacemonster_accel;
+	if (dy < -max_spacemonster_accel)
+		dy = -max_spacemonster_accel;
 	dz = o->tsd.spacemonster.dvz - o->vz;
-	if (dz > MAX_SPACEMONSTER_ACCEL)
-		dz = MAX_SPACEMONSTER_ACCEL;
-	if (dz < -MAX_SPACEMONSTER_ACCEL)
-		dz = -MAX_SPACEMONSTER_ACCEL;
+	if (dz > max_spacemonster_accel)
+		dz = max_spacemonster_accel;
+	if (dz < -max_spacemonster_accel)
+		dz = -max_spacemonster_accel;
 	o->vx += dx;
 	o->vy += dy;
 	o->vz += dz;
@@ -4666,7 +4681,7 @@ static void fire_missile(struct snis_entity *shooter, uint32_t target_id);
 static void ai_maybe_fire_weapon(struct snis_entity *o, struct snis_entity *v, int imacop,
 					double vdist, float extra_range)
 {
-	if (snis_randn(1000) < 150 + imacop * 150 && vdist <= TORPEDO_RANGE + extra_range &&
+	if (snis_randn(1000) < 150 + imacop * 150 && vdist <= (torpedo_lifetime * torpedo_velocity) + extra_range &&
 		o->tsd.ship.next_torpedo_time <= universe_timestamp &&
 		o->tsd.ship.torpedoes > 0 &&
 		ship_type[o->tsd.ship.shiptype].has_torpedoes) {
@@ -4675,13 +4690,13 @@ static void ai_maybe_fire_weapon(struct snis_entity *o, struct snis_entity *v, i
 
 		if (v->type == OBJTYPE_PLANET || !planet_between_objs(o, v)) {
 			dist = object_dist(v, o);
-			flight_time = dist / TORPEDO_VELOCITY;
+			flight_time = dist / torpedo_velocity;
 			tx = v->x + (v->vx * flight_time);
 			tz = v->z + (v->vz * flight_time);
 			ty = v->y + (v->vy * flight_time);
 
 			calculate_torpedo_velocities(o->x, o->y, o->z,
-				tx, ty, tz, TORPEDO_VELOCITY, &vx, &vy, &vz);
+				tx, ty, tz, torpedo_velocity, &vx, &vy, &vz);
 
 			add_torpedo(o->x, o->y, o->z, vx, vy, vz, o->id);
 			o->tsd.ship.torpedoes--;
@@ -4732,7 +4747,7 @@ static void ai_attack_mode_brain(struct snis_entity *o)
 
 	/* Don't evaluate this every tick */
 	if ((universe_timestamp & 0x07) == (o->id & 0x07) &&
-			calculate_threat_level(o) > THREAT_LEVEL_FLEE_THRESHOLD) {
+			calculate_threat_level(o) > threat_level_flee_threshold) {
 		/* just change current mode to flee (pop + push) */
 		assailant = o->tsd.ship.ai[n].u.attack.victim_id;
 		o->tsd.ship.ai[n].ai_mode = AI_MODE_FLEE;
@@ -4948,7 +4963,7 @@ static void ai_flee_mode_brain(struct snis_entity *o)
 	}
 
 	if ((universe_timestamp & 0x07) == (o->id & 0x07) &&
-		calculate_threat_level(o) < THREAT_LEVEL_FLEE_THRESHOLD * 0.5) {
+		calculate_threat_level(o) < threat_level_flee_threshold * 0.5) {
 		pop_ai_stack(o);
 		return;
 	}
@@ -6413,7 +6428,7 @@ static void ship_collision_avoidance(void *context, void *entity)
 	}
 	if (obstacle->type == OBJTYPE_SPACEMONSTER) {
 		if (d < SPACEMONSTER_COLLISION_RADIUS * SPACEMONSTER_COLLISION_RADIUS) {
-			calculate_torpedolike_damage(o, SPACEMONSTER_WEAPONS_FACTOR);
+			calculate_torpedolike_damage(o, spacemonster_damage_factor);
 			do_collision_impulse(o, obstacle);
 			attack_your_attacker(o, obstacle);
 		}
@@ -7024,10 +7039,12 @@ static void damcon_robot_think(struct snis_damcon_entity *o, struct damcon_data 
 
 		if (fabs(desired_delta_angle) < 15.0 * M_PI / 180.0 && dist > 600)
 			o->tsd.robot.desired_velocity =
-					-MAX_ROBOT_VELOCITY / ((fabs(desired_delta_angle) * 180.0 / M_PI) + 1.0) / 3.0;
+					-max_damcon_robot_velocity /
+						((fabs(desired_delta_angle) * 180.0 / M_PI) + 1.0) / 3.0;
 		else if (fabs(desired_delta_angle) < 40.0 * M_PI / 180.0 && dist > 200)
 			o->tsd.robot.desired_velocity = 0.5 *
-					-MAX_ROBOT_VELOCITY / ((fabs(desired_delta_angle) * 180.0 / M_PI) + 1.0) / 3.0;
+					-max_damcon_robot_velocity /
+						((fabs(desired_delta_angle) * 180.0 / M_PI) + 1.0) / 3.0;
 		else
 			o->tsd.robot.desired_velocity = 0;
 
@@ -7134,9 +7151,9 @@ static void damcon_robot_move(struct snis_damcon_entity *o, struct damcon_data *
 		vx = 0;
 		vy = 0;
 		o->velocity = 0;
-		if (fabs(o->tsd.robot.desired_velocity) > MAX_ROBOT_VELOCITY / 5.0)
+		if (fabs(o->tsd.robot.desired_velocity) > max_damcon_robot_velocity / 5.0)
 			o->tsd.robot.desired_velocity =  
-				(MAX_ROBOT_VELOCITY / 5.5) * o->tsd.robot.desired_velocity /
+				(max_damcon_robot_velocity / 5.5) * o->tsd.robot.desired_velocity /
 					fabs(o->tsd.robot.desired_velocity);
 	}
 
@@ -7158,7 +7175,7 @@ static void damcon_robot_move(struct snis_damcon_entity *o, struct damcon_data *
 		}
 
 		/* Slower you're going, quicker you can turn */
-		max_heading_change = (MAX_ROBOT_VELOCITY / fabs(o->velocity)) * 6.0 * M_PI / 180.0; 
+		max_heading_change = (max_damcon_robot_velocity / fabs(o->velocity)) * 6.0 * M_PI / 180.0;
 		if (fabs(diff) > max_heading_change)
 			diff = max_heading_change * diff / fabs(diff);
 
@@ -7174,8 +7191,8 @@ static void damcon_robot_move(struct snis_damcon_entity *o, struct damcon_data *
 
 		if (fabs(o->velocity) - fabs(dv) > 0) {
 			/* braking */
-			if (fabs(diff) > MAX_ROBOT_BRAKING)
-				diff = MAX_ROBOT_BRAKING * diff / fabs(diff);
+			if (fabs(diff) > max_damcon_robot_braking)
+				diff = max_damcon_robot_braking * diff / fabs(diff);
 		} else {
 			/* accelerating. */ 
 			if (fabs(diff) > MAX_ROBOT_ACCELERATION)
@@ -7205,9 +7222,9 @@ static void damcon_robot_move(struct snis_damcon_entity *o, struct damcon_data *
 	}
 	if (bounds_hit) {
 		o->velocity *= 0.4;
-		if (fabs(o->tsd.robot.desired_velocity) > MAX_ROBOT_VELOCITY / 5.0)
+		if (fabs(o->tsd.robot.desired_velocity) > max_damcon_robot_velocity / 5.0)
 			o->tsd.robot.desired_velocity =  
-				(MAX_ROBOT_VELOCITY / 5.5) * o->tsd.robot.desired_velocity /
+				(max_damcon_robot_velocity / 5.5) * o->tsd.robot.desired_velocity /
 					fabs(o->tsd.robot.desired_velocity);
 	}
 
@@ -9339,7 +9356,7 @@ static void starbase_move(struct snis_entity *o)
 		if (a->type != OBJTYPE_SHIP1 && a->type != OBJTYPE_SHIP2)
 			continue;
 		float dist2 = object_dist2(o, a);
-		if (dist2 > TORPEDO_RANGE * TORPEDO_RANGE)
+		if (dist2 > (torpedo_velocity * torpedo_lifetime) * (torpedo_velocity * torpedo_lifetime))
 			continue;
 		if (snis_randn(1000) < STARBASE_FIRE_CHANCE)
 			continue;
@@ -9350,13 +9367,13 @@ static void starbase_move(struct snis_entity *o)
 			/* fire torpedo */
 			float dist = sqrt(dist2);
 			double tx, ty, tz, vx, vy, vz;
-			float flight_time = dist / TORPEDO_VELOCITY;
+			float flight_time = dist / torpedo_velocity;
 
 			tx = a->x + (a->vx * flight_time);
 			tz = a->z + (a->vz * flight_time);
 			ty = a->y + (a->vy * flight_time);
 			calculate_torpedo_velocities(o->x, o->y, o->z,
-				tx, ty, tz, TORPEDO_VELOCITY, &vx, &vy, &vz);
+				tx, ty, tz, torpedo_velocity, &vx, &vy, &vz);
 			add_torpedo(o->x, o->y, o->z, vx, vy, vz, o->id);
 			o->tsd.starbase.next_torpedo_time = universe_timestamp +
 					STARBASE_TORPEDO_FIRE_INTERVAL;
@@ -10538,7 +10555,7 @@ static int add_spacemonster(double x, double y, double z)
 	strncpy(go[i].sdata.name, "M. MYSTERIUM", sizeof(go[i].sdata.name) - 1);
 	random_point_on_sphere(1.0, &dx, &dy, &dz);
 	v = snis_randn(1000) / 1000.0;
-	v = v * MAX_SPACEMONSTER_VELOCITY;
+	v = v * max_spacemonster_velocity;
 	go[i].vx = v * dx;
 	go[i].vy = v * dy;
 	go[i].vz = v * dz;
@@ -11719,7 +11736,7 @@ static int add_torpedo(double x, double y, double z, double vx, double vy, doubl
 	if (i < 0)
 		return i;
 	go[i].move = torpedo_move;
-	go[i].alive = TORPEDO_LIFETIME;
+	go[i].alive = torpedo_lifetime;
 	go[i].tsd.torpedo.ship_id = ship_id;
 	return i;
 }
@@ -11732,7 +11749,7 @@ static int add_missile(double x, double y, double z, double vx, double vy, doubl
 	if (i < 0)
 		return i;
 	go[i].move = missile_move;
-	go[i].alive = MISSILE_LIFETIME;
+	go[i].alive = missile_lifetime;
 	go[i].tsd.missile.target_id = target_id;
 	go[i].tsd.missile.origin = origin_id;
 	return i;
@@ -12973,10 +12990,10 @@ static void do_robot_thrust(struct game_client *c, int thrust)
 	struct snis_damcon_entity *robot = bridgelist[c->bridge].damcon.robot;
 
 	if (thrust > 0) {
-		if (robot->tsd.robot.desired_velocity < MAX_ROBOT_VELOCITY)
+		if (robot->tsd.robot.desired_velocity < max_damcon_robot_velocity)
 			robot->tsd.robot.desired_velocity += ROBOT_VELOCITY_INCREMENT;
 	} else {
-		if (robot->tsd.robot.desired_velocity > -MAX_ROBOT_VELOCITY)
+		if (robot->tsd.robot.desired_velocity > -max_damcon_robot_velocity)
 			robot->tsd.robot.desired_velocity -= ROBOT_VELOCITY_INCREMENT;
 	}
 }
@@ -16056,6 +16073,66 @@ static struct tweakable_var_descriptor server_tweak[] = {
 		"DECELERATION FACTOR OF PLAYER SHIP",
 		&player_velocity_damping, 'f',
 		0.1, 0.9999, PLAYER_VELOCITY_DAMPING, 0, 0, 0 },
+	{ "TORPEDO_DAMAGE_FACTOR",
+		"TORPEDO DAMAGE MULTIPLIER",
+		&torpedo_damage_factor, 'f',
+		0.0, 100.0, TORPEDO_WEAPONS_FACTOR, 0, 0, 0 },
+	{ "MISSILE_DAMAGE_FACTOR",
+		"MISSILE DAMAGE MULTIPLIER",
+		&missile_damage_factor, 'f',
+		0.0, 100.0, MISSILE_EXPLOSION_WEAPONS_FACTOR, 0, 0, 0 },
+	{ "SPACEMONSTER_DAMAGE_FACTOR",
+		"SPACE MONSTER DAMAGE MULTIPLIER",
+		&spacemonster_damage_factor, 'f',
+		0.0, 100.0, SPACEMONSTER_WEAPONS_FACTOR, 0, 0, 0 },
+	{ "ATMOSPHERE_DAMAGE_FACTOR",
+		"ATMOSPHERE DAMAGE MULTIPLIER",
+		&atmosphere_damage_factor, 'f',
+		0.0, 100.0, ATMOSPHERE_DAMAGE_FACTOR, 0, 0, 0 },
+	{ "WARP_CORE_DAMAGE_FACTOR",
+		"WARP CORE EXPLOSION DAMAGE MULTIPLIER",
+		&warp_core_damage_factor, 'f',
+		0.0, 100.0, WARP_CORE_EXPLOSION_WEAPONS_FACTOR, 0, 0, 0 },
+	{ "THREAT_LEVEL_FLEE_THRESHOLD",
+		"DANGER LEVEL AT WHICH NPC SHIPS DECIDE TO FLEE",
+		&threat_level_flee_threshold, 'f',
+		0.0, 1000.0, THREAT_LEVEL_FLEE_THRESHOLD, 0, 0, 0 },
+	{ "MAX_DAMCON_ROBOT_VELOCITY",
+		"MAX VELOCITY OF DAMAGE CONTROL ROBOT",
+		&max_damcon_robot_velocity, 'f',
+		0.0, 100.0, MAX_ROBOT_VELOCITY, 0, 0, 0 },
+	{ "MAX_SPACEMONSTER_ACCEL",
+		"MAX ACCELERATION OF SPACEMONSTERS",
+		&max_spacemonster_accel, 'f',
+		0.0, 100.0, MAX_SPACEMONSTER_ACCEL, 0, 0, 0 },
+	{ "MAX_SPACEMONSTER_VELOCITY",
+		"MAX VELOCITY OF SPACEMONSTERS",
+		&max_spacemonster_velocity, 'f',
+		0.0, 100.0, MAX_SPACEMONSTER_VELOCITY, 0, 0, 0 },
+	{ "MAX_DAMCON_ROBOT_BRAKING",
+		"MAX DECELERATION RATE OF DAMAGE CONTROL ROBOT",
+		&max_damcon_robot_braking, 'f',
+		0.0, 100.0, MAX_ROBOT_BRAKING, 0, 0, 0 },
+	{ "TORPEDO_LIFETIME",
+		"TORPEDO LIFETIME IN 10ths OF A SECOND",
+		&torpedo_lifetime, 'i',
+		0.0, 0.0, 0.0, 0, TORPEDO_LIFETIME * 10, TORPEDO_LIFETIME },
+	{ "MISSILE_LIFETIME",
+		"MISSILE LIFETIME IN 10ths OF A SECOND",
+		&missile_lifetime, 'i',
+		0.0, 0.0, 0.0, 0, MISSILE_LIFETIME * 10, MISSILE_LIFETIME },
+	{ "TORPEDO_VELOCITY",
+		"TORPEDO VELOCITY",
+		&torpedo_velocity, 'f',
+		0.0, TORPEDO_VELOCITY * 10.0, TORPEDO_VELOCITY, 0, 0, 0 },
+	{ "MISSILE_TARGET_DIST",
+		"HOW CLOSE TARGET MUST BE FOR MISSILE TO BE FIREABLE",
+		&missile_target_dist, 'f',
+		0.0, MISSILE_TARGET_DIST * 10.0, MISSILE_TARGET_DIST, 0, 0, 0 },
+	{ "MAX_MISSILE_DELTAV",
+		"MAX ACCELERATION OF MISSILES",
+		&max_missile_deltav, 'f',
+		0.0, MAX_MISSILE_DELTAV * 10.0, MAX_MISSILE_DELTAV, 0, 0, 0 },
 	{ NULL, NULL, NULL, '\0', 0.0, 0.0, 0.0, 0, 0, 0 },
 };
 
@@ -18263,7 +18340,7 @@ static uint32_t find_potential_missile_target(struct snis_entity *shooter)
 		if (target->id == shooter->id) /* Don't target self */
 			continue;
 		dist = object_dist2(shooter, target);
-		if (dist > MISSILE_TARGET_DIST * MISSILE_TARGET_DIST)
+		if (dist > missile_target_dist * missile_target_dist)
 			continue;
 		to_target.v.x = target->x - shooter->x;
 		to_target.v.y = target->y - shooter->y;
@@ -18793,7 +18870,7 @@ static int process_eject_warp_core(struct game_client *c)
 static int process_request_torpedo(struct game_client *c)
 {
 	struct snis_entity *ship = &go[c->ship_index];
-	union vec3 forwardvec = { { TORPEDO_VELOCITY, 0.0f, 0.0f } };
+	union vec3 forwardvec = { { torpedo_velocity, 0.0f, 0.0f } };
 	union vec3 velocity;
 	union quat orientation;
 
@@ -18845,7 +18922,7 @@ static int process_demon_fire_torpedo(struct game_client *c)
 		goto out;
 
 	quat_rot_vec_self(&tv, &o->orientation);
-	vec3_mul_self(&tv, TORPEDO_VELOCITY);
+	vec3_mul_self(&tv, torpedo_velocity);
 	tv.v.x += o->vx;
 	tv.v.y += o->vy;
 	tv.v.z += o->vz;

@@ -8383,7 +8383,11 @@ static void show_weapons_camera_view(GtkWidget *w)
 				entity_get_pos(target->entity, &ex, &ey, &ez);
 				dist = dist3d(o->x - ex, o->y - ey, o->z - ez);
 				entity_get_screen_coords(target->entity, &sx, &sy);
-				if (dist < TORPEDO_RANGE) {
+				/* BUG: TORPEDO_VELOCITY and TORPEDO_LIFETIME are server-side tweakable
+				 * on the demon console, but if tweaked, the client will have no knowledge
+				 * of this tweaking, so this next condition will be incorrect.
+				 */
+				if (dist < TORPEDO_VELOCITY * TORPEDO_LIFETIME) {
 					char msg[20];
 					draw_targeting_indicator(w, gc, sx, sy, UI_COLOR(weap_in_range),
 								0, 0.5, 1.5f);
