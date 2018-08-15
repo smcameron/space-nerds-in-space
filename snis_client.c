@@ -6944,6 +6944,7 @@ static struct network_setup_ui {
 	struct button *start_lobbyserver;
 	struct button *start_gameserver;
 	struct button *connect_to_lobby;
+	struct button *connect_to_detected_lobby;
 	struct snis_text_input_box *lobbyservername;
 	struct snis_text_input_box *solarsystemname;
 	struct snis_text_input_box *shipname_box;
@@ -17656,6 +17657,21 @@ static void connect_to_lobby_button_pressed()
 	connect_to_lobby();
 }
 
+static void connect_to_detected_lobby_button_pressed()
+{
+	char msg[100];
+
+	if (bcast_lobby_ipaddr != 0xffffffff) {
+		sprintf(msg, "%d.%d.%d.%d",
+				(ntohl(bcast_lobby_ipaddr) & 0xff000000) >> 24,
+				(ntohl(bcast_lobby_ipaddr) & 0x00ff0000) >> 16,
+				(ntohl(bcast_lobby_ipaddr) & 0x0000ff00) >> 8,
+				(ntohl(bcast_lobby_ipaddr) & 0x000000ff));
+		snis_text_input_box_set_contents(net_setup_ui.lobbyservername, msg);
+		connect_to_lobby_button_pressed();
+	}
+}
+
 static void browser_button_pressed(void *v)
 {
 	int rc;
@@ -17844,18 +17860,21 @@ static void init_net_setup_ui(void)
 					password_entered, NULL);
 	y += yinc;
 	net_setup_ui.connect_to_lobby =
-		snis_button_init(left, y, -1, -1, "CONNECT TO LOBBY", inactive_button_color,
+		snis_button_init(left + txx(220), y, -1, -1, "ENTER LOBBY xxxxxxxxxxxxxxx", inactive_button_color,
 			TINY_FONT, connect_to_lobby_button_pressed, NULL);
+	net_setup_ui.connect_to_detected_lobby =
+		snis_button_init(left, y, -1, -1, "ENTER LOBBY XXXXXXXXXXXX", inactive_button_color,
+			TINY_FONT, connect_to_detected_lobby_button_pressed, NULL);
 	net_setup_ui.website_button =
-		snis_button_init(left + txx(300), y, -1, -1, "WEBSITE",
+		snis_button_init(left + txx(500), y, -1, -1, "WEBSITE",
 			active_button_color,
 			TINY_FONT, browser_button_pressed, "http://spacenerdsinspace.com");
 	net_setup_ui.forum_button =
-		snis_button_init(left + txx(400), y, -1, -1, "FORUM",
+		snis_button_init(left + txx(600), y, -1, -1, "FORUM",
 			active_button_color,
 			TINY_FONT, browser_button_pressed, "http://spacenerdsinspace.com/forum.html");
 	net_setup_ui.support_button =
-		snis_button_init(left + txx(500), y, -1, -1, "DONATE",
+		snis_button_init(left + txx(700), y, -1, -1, "DONATE",
 			active_button_color,
 			TINY_FONT, browser_button_pressed, "http://spacenerdsinspace.com/donate.html");
 	init_net_role_buttons(&net_setup_ui);
@@ -17877,6 +17896,8 @@ static void init_net_setup_ui(void)
 			"START THE GAME SERVER PROCESS");
 	ui_add_button(net_setup_ui.connect_to_lobby, DISPLAYMODE_NETWORK_SETUP,
 			"CONNECT TO THE LOBBY SERVER");
+	ui_add_button(net_setup_ui.connect_to_detected_lobby, DISPLAYMODE_NETWORK_SETUP,
+			"CONNECT TO THE AUTO-DETECTED LOBBY SERVER");
 	ui_add_button(net_setup_ui.website_button, DISPLAYMODE_NETWORK_SETUP,
 			"SPACE NERDS IN SPACE WEBSITE");
 	ui_add_button(net_setup_ui.forum_button, DISPLAYMODE_NETWORK_SETUP,
@@ -17893,7 +17914,7 @@ static void init_net_setup_ui(void)
 
 static void show_network_setup(GtkWidget *w)
 {
-	char msg[255];
+	char msg[255], button_label[100];
 
 	show_common_screen(w, "SPACE NERDS IN SPACE");
 	show_rotating_wombat();
@@ -17907,9 +17928,19 @@ static void show_network_setup(GtkWidget *w)
 			(ntohl(bcast_lobby_ipaddr) & 0x0000ff00) >> 8,
 			(ntohl(bcast_lobby_ipaddr) & 0x000000ff),
 			ntohs(bcast_lobby_port));
+		ui_unhide_widget(net_setup_ui.connect_to_detected_lobby);
+		sprintf(button_label, "ENTER LOBBY %d.%d.%d.%d",
+			(ntohl(bcast_lobby_ipaddr) & 0xff000000) >> 24,
+			(ntohl(bcast_lobby_ipaddr) & 0x00ff0000) >> 16,
+			(ntohl(bcast_lobby_ipaddr) & 0x0000ff00) >> 8,
+			(ntohl(bcast_lobby_ipaddr) & 0x000000ff));
+		snis_button_set_label(net_setup_ui.connect_to_detected_lobby, button_label);
 	} else  {
 		sprintf(msg, "LOBBY SERVER NAME OR IP ADDRESS");
+		ui_hide_widget(net_setup_ui.connect_to_detected_lobby);
 	}
+	sprintf(button_label, "ENTER LOBBY %s", net_setup_ui.lobbyname);
+	snis_button_set_label(net_setup_ui.connect_to_lobby, button_label);
 	sng_abs_xy_draw_string(msg, TINY_FONT, txx(25), txy(130));
 	sng_abs_xy_draw_string("SOLARSYSTEM NAME", TINY_FONT, txx(25), txy(280));
 	sng_abs_xy_draw_string("SHIP NAME", TINY_FONT, txx(20), txy(470));
@@ -17926,10 +17957,13 @@ static void show_network_setup(GtkWidget *w)
 
 	if (strcmp(net_setup_ui.lobbyname, "") != 0 &&
 		strcmp(net_setup_ui.shipname, "") != 0 &&
-		strcmp(net_setup_ui.password, "") != 0)
+		strcmp(net_setup_ui.password, "") != 0) {
 		snis_button_set_color(net_setup_ui.connect_to_lobby, UI_COLOR(network_setup_active));
-	else
+		snis_button_set_color(net_setup_ui.connect_to_detected_lobby, UI_COLOR(network_setup_active));
+	} else {
 		snis_button_set_color(net_setup_ui.connect_to_lobby, UI_COLOR(network_setup_inactive));
+		snis_button_set_color(net_setup_ui.connect_to_detected_lobby, UI_COLOR(network_setup_inactive));
+	}
 }
 
 static void make_science_forget_stuff(void)
