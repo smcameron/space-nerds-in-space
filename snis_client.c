@@ -320,6 +320,8 @@ static char *serverhost = NULL;
 static int serverport = -1;
 static int monitorid = -1;
 static int avoid_lobby = 0;
+
+static pthread_mutex_t lobby_data_mutex = PTHREAD_MUTEX_INITIALIZER;
 static struct ssgl_game_server lobby_game_server[100];
 static int ngameservers = 0;
 
@@ -563,6 +565,88 @@ static int connected_to_gameserver = 0;
 static char connecting_to_server_msg[100] = { 0 };
 
 #define MAX_LOBBY_TRIES 3
+static void synchronous_update_lobby_info(void)
+{
+	int i, sock = -1, rc, game_server_count;
+	struct ssgl_game_server *game_server = NULL;
+	struct ssgl_client_filter filter;
+	lobby_count = 0;
+	char lobbyerror[255];
+
+	/* Loop, trying to connect to the lobby server... */
+	strcpy(lobbyerror, "");
+	while (1 && lobby_count < MAX_LOBBY_TRIES) {
+		fprintf(stderr, "snis_client: synchronous connecting to lobby\n");
+		sock = ssgl_gameclient_connect_to_lobby(lobbyhost);
+		lobby_count++;
+		if (sock >= 0) {
+			printf("snis_client: synchronous connected to lobby\n");
+			break;
+		}
+		if (errno)
+			sprintf(lobbyerror, "%s (%d)", strerror(errno), errno);
+		else
+			sprintf(lobbyerror, "%s (%d)", gai_strerror(sock), sock);
+		fprintf(stderr, "snis_client: synchronous lobby connection failed: %s\n", lobbyerror);
+		ssgl_sleep(5);
+	}
+
+	if (sock < 0) {
+		fprintf(stderr, "snis_client: synchronous lobby connection failed %d times, giving up.\n", lobby_count);
+		goto outta_here;
+	}
+
+	strcpy(lobbyerror, "");
+
+	/* Ok, we've connected to the lobby server... */
+
+	memset(&filter, 0, sizeof(filter));
+	strcpy(filter.game_type, "SNIS");
+
+	rc = ssgl_recv_game_servers(sock, &game_server, &game_server_count, &filter);
+	if (rc) {
+		sprintf(lobbyerror, "ssgl_recv_game_servers failed: %s\n", strerror(errno));
+		fprintf(stderr, "snis_client: synchronous lobby connection: ssgl_recv_game_server failed: %s\n",
+			lobbyerror);
+		goto handle_error;
+	}
+
+	/* copy the game server data to where the display thread will see it. */
+	fprintf(stderr, "snis_client: received %d game servers from lobby server\n", game_server_count);
+	if (game_server_count > 100)
+		game_server_count = 100;
+
+	pthread_mutex_lock(&lobby_data_mutex);
+	for (i = 0; i < game_server_count; i++) {
+		fprintf(stderr, "snis_client: received game server '%s' from lobby server\n", game_server[i].location);
+		lobby_game_server[i] = game_server[i];
+	}
+	ngameservers = game_server_count;
+	pthread_mutex_unlock(&lobby_data_mutex);
+
+	if (game_server_count > 0) {
+		free(game_server);
+		game_server_count = 0;
+	}
+
+outta_here:
+	fprintf(stderr, "snis_client: synchronous lobby connection: lobby socket = %d, done with lobby\n", sock);
+	/* close connection to the lobby */
+	shutdown(sock, SHUT_RDWR);
+	close(sock);
+	return;
+
+handle_error:
+	if (sock >= 0)
+		close(lobby_socket);
+	if (game_server_count > 0) {
+		free(game_server);
+		game_server_count = 0;
+		game_server = NULL;
+	}
+	return;
+}
+
 static void *connect_to_lobby_thread(__attribute__((unused)) void *arg)
 {
 	int i, sock = -1, rc, game_server_count;
@@ -616,9 +700,11 @@ try_again:
 		/* copy the game server data to where the display thread will see it. */
 		if (game_server_count > 100)
 			game_server_count = 100;
+		pthread_mutex_lock(&lobby_data_mutex);
 		for (i = 0; i < game_server_count; i++)
 			lobby_game_server[i] = game_server[i];
 		ngameservers = game_server_count;
+		pthread_mutex_unlock(&lobby_data_mutex);
 		if (game_server_count > 0) {
 			free(game_server);
 			game_server_count = 0;
@@ -647,7 +733,7 @@ handle_error:
 	goto try_again;
 }
 
-static void connect_to_lobby()
+static void connect_to_lobby(void)
 {
 	int rc;
 
@@ -4238,15 +4324,20 @@ static void lobby_cancel_button_pressed()
 	}
 }
 
+/* lobby_data_mutex should be held. */
 static int lobby_lookup_server_by_location(char *location)
 {
 	/* FIXME, this is racy with connect_to_lobby() */
 	int i;
 
+	fprintf(stderr, "snis_client: looking up server '%s', ngameservers = %d\n", location, ngameservers);
 	for (i = 0; i < ngameservers; i++) {
+		fprintf(stderr, "snis_client: looking up server '%s' vs. %s\n",
+				location, lobby_game_server[i].location);
 		if (strcmp(lobby_game_server[i].location, location) == 0)
 			return i;
 	}
+	fprintf(stderr, "snis_client: didn't find server '%s'\n", location);
 	return -1;
 }
 
@@ -4305,6 +4396,32 @@ static void show_rotating_wombat(void)
 	remove_all_entity(network_setup_ecx);
 }
 
+static void delete_all_objects(void);
+static void stop_gameserver_writer_thread(void);
+
+/* We lost snis server.  Go back to network setup screen. */
+static void we_lost_snis_server(void)
+{
+	stop_gameserver_writer_thread();
+	if (gameserver_sock != -1) {
+		shutdown(gameserver_sock, SHUT_RDWR);
+		close(gameserver_sock);
+		gameserver_sock = -1;
+	}
+	connected_to_gameserver = 0;
+	lobby_selected_server = -1;
+	quickstartmode = 0;
+	delete_all_objects();
+	clear_damcon_pool();
+	displaymode = DISPLAYMODE_NETWORK_SETUP;
+	if (lobby_socket != -1)
+		close(lobby_socket);
+	lobby_socket = -1;
+	switched_server = -1;
+	switched_server2 = -1;
+	synchronous_update_lobby_info(); /* lobby info might be old, so let's update it. */
+}
+
 static void show_lobbyscreen(GtkWidget *w)
 {
 	char msg[100];
@@ -4336,17 +4453,33 @@ static void show_lobbyscreen(GtkWidget *w)
 			pthread_mutex_lock(&to_server_queue_event_mutex);
 			time_to_switch_servers = (switched_server2 != -1);
 			if (time_to_switch_servers) {
-				fprintf(stderr, "snis_client: time to switch servers\n");
-				lobby_selected_server =
-					lobby_lookup_server_by_location(switch_server_location_string);
-				fprintf(stderr, "snis_client: lobby_selected_server = %d (%s)\n",
-					lobby_selected_server, switch_server_location_string);
-				if (lobby_selected_server == -1) {
+				int count = 0;
+				do {
+					fprintf(stderr, "snis_client: time to switch servers (try = %d)\n", count);
+					pthread_mutex_lock(&lobby_data_mutex);
+					lobby_selected_server =
+						lobby_lookup_server_by_location(switch_server_location_string);
+					pthread_mutex_unlock(&lobby_data_mutex);
+					/* lobby_selected_server is still racy */
+					fprintf(stderr, "snis_client: lobby_selected_server = %d (%s)\n",
+						lobby_selected_server, switch_server_location_string);
+					if (lobby_selected_server == -1) {
+						pthread_mutex_unlock(&to_server_queue_event_mutex);
+						fprintf(stderr, "snis_client: didn't find switch server.\n");
+						synchronous_update_lobby_info();
+						pthread_mutex_lock(&to_server_queue_event_mutex);
+					}
+					count++;
+				} while (lobby_selected_server == -1 && count < 3);
+				if (lobby_selected_server != -1) {
+					switched_server2 = -1;
+					displaymode = DISPLAYMODE_CONNECTING;
+				} else {
+					/* We got lost, we can't find the server we're supposed to warp to. */
 					pthread_mutex_unlock(&to_server_queue_event_mutex);
+					we_lost_snis_server();
 					return;
 				}
-				switched_server2 = -1;
-				displaymode = DISPLAYMODE_CONNECTING;
 			}
 			pthread_mutex_unlock(&to_server_queue_event_mutex);
 			if (displaymode == DISPLAYMODE_CONNECTING)
@@ -4386,6 +4519,7 @@ static void show_lobbyscreen(GtkWidget *w)
 
 		/* Draw server info */
 		sng_set_foreground(UI_COLOR(lobby_connecting));
+		pthread_mutex_lock(&lobby_data_mutex);
 		for (i = 0; i < ngameservers; i++) {
 			unsigned char *x = (unsigned char *) 
 				&lobby_game_server[i].ipaddr;
@@ -4424,6 +4558,7 @@ static void show_lobbyscreen(GtkWidget *w)
 			sprintf(msg, "%d", lobby_game_server[i].nconnections);
 			sng_abs_xy_draw_string(msg, NANO_FONT, txx(550), txy(100) + i * LINEHEIGHT);
 		}
+		pthread_mutex_unlock(&lobby_data_mutex);
 		if (lobby_selected_server != -1)
 			snis_button_set_color(lobby_ui.lobby_connect_to_server_button, UI_COLOR(lobby_connect_ok));
 		else
@@ -6925,7 +7060,6 @@ static void stop_gameserver_writer_thread(void)
 	writer_thread_should_die = 0;
 	pthread_mutex_unlock(&to_server_queue_event_mutex);
 	fprintf(stderr, "stop_gameserver_writer_thread 4\n");
-	/* FIXME: when this returns, to_server_queue_event_mutex is held */
 }
 
 static int process_custom_button(void);
@@ -7156,7 +7290,6 @@ static void *gameserver_reader(__attribute__((unused)) void *arg)
 			printf("snis_client: Switch server opcode received\n");
 			quickstartmode = 0;
 			stop_gameserver_writer_thread();
-			/* FIXME: when this ^^^ returns, to_server_queue_event_mutex is held */
 			delete_all_objects();
 			clear_damcon_pool();
 			printf("snis_client: writer thread left\n");
@@ -7168,7 +7301,6 @@ static void *gameserver_reader(__attribute__((unused)) void *arg)
 			gameserver_sock = -1;
 			rc = 0;
 			connected_to_gameserver = 0;
-			// pthread_mutex_unlock(&to_server_queue_event_mutex);
 			return NULL;
 		case OPCODE_TEXTSCREEN_OP:
 			rc = process_textscreen_op();
@@ -7240,14 +7372,12 @@ static void *gameserver_reader(__attribute__((unused)) void *arg)
 				goto protocol_error;
 			}
 			stop_gameserver_writer_thread();
-			/* FIXME: when this ^^^ returns, to_server_queue_event_mutex is held */
 			lobby_selected_server = -1;
 			close(gameserver_sock);
 			gameserver_sock = -1;
 			rc = 0;
 			connected_to_gameserver = 0;
 			displaymode = DISPLAYMODE_NETWORK_SETUP;
-			// pthread_mutex_unlock(&to_server_queue_event_mutex);
 			return NULL;
 		}
 		successful_opcodes++;
@@ -7258,19 +7388,7 @@ protocol_error:
 	snis_print_last_buffer("snis_client: ", gameserver_sock);
 	fprintf(stderr, "snis_client: last opcode was %hhu, before that %hhu\n", last_opcode, previous_opcode);
 	fprintf(stderr, "snis_client: total successful opcodes = %u\n", successful_opcodes);
-	stop_gameserver_writer_thread();
-	shutdown(gameserver_sock, SHUT_RDWR);
-	close(gameserver_sock);
-	gameserver_sock = -1;
-	connected_to_gameserver = 0;
-	lobby_selected_server = -1;
-	quickstartmode = 0;
-	delete_all_objects();
-	clear_damcon_pool();
-	displaymode = DISPLAYMODE_NETWORK_SETUP;
-	if (lobby_socket != -1)
-		close(lobby_socket);
-	lobby_socket = -1;
+	we_lost_snis_server();
 	return NULL;
 }
 
@@ -7319,19 +7437,7 @@ badserver:
 	 */
 	printf("client bailing on server...\n");
 	pthread_mutex_unlock(&to_server_queue_event_mutex);
-	stop_gameserver_writer_thread();
-	shutdown(gameserver_sock, SHUT_RDWR);
-	close(gameserver_sock);
-	gameserver_sock = -1;
-	connected_to_gameserver = 0;
-	lobby_selected_server = -1;
-	quickstartmode = 0;
-	clear_damcon_pool();
-	delete_all_objects();
-	displaymode = DISPLAYMODE_NETWORK_SETUP;
-	if (lobby_socket != -1)
-		close(lobby_socket);
-	lobby_socket = -1;
+	we_lost_snis_server();
 }
 
 static void wakeup_gameserver_writer(void)
@@ -7454,6 +7560,8 @@ static void *connect_to_gameserver_thread(__attribute__((unused)) void *arg)
 		strcpy(hoststr, serverhost);
 		sprintf(portstr, "%d", serverport);
 	} else {
+		fprintf(stderr, "snis_client: connect_to_gameserver_thread, lobby_selected_server = %d\n",
+				lobby_selected_server);
 		x = (unsigned char *) &lobby_game_server[lobby_selected_server].ipaddr;
 		sprintf(portstr, "%d", ntohs(lobby_game_server[lobby_selected_server].port));
 		sprintf(hoststr, "%d.%d.%d.%d", x[0], x[1], x[2], x[3]);
@@ -7569,9 +7677,13 @@ static void *connect_to_gameserver_thread(__attribute__((unused)) void *arg)
 	snis_client_cross_check_opcodes();
 	request_universe_timestamp();
 	send_build_info_to_server();
+	freeaddrinfo(gameserverinfo);
+	return NULL;
+
 error:
 	/* FIXME, this isn't right... */
 	freeaddrinfo(gameserverinfo);
+	we_lost_snis_server();
 
 	return NULL;
 }
@@ -18546,7 +18658,6 @@ gint advance_game(gpointer data)
 		/* this is a hack */
 		switched_server2 = switched_server;
 		switched_server = -1;
-		connect_to_lobby();
 		displaymode = DISPLAYMODE_LOBBYSCREEN;
 	}
 	pthread_mutex_unlock(&to_server_queue_event_mutex);
