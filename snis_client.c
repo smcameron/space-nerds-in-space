@@ -15595,6 +15595,9 @@ static void debug_draw_object(GtkWidget *w, struct snis_entity *o,
 	int tardy;
 	char buffer[20];
 
+	vx = 0; /* Some gcc complain about unitialized vars if we don't do this. */
+	vy = 0;
+
 	if (!o->alive)
 		return;
 
