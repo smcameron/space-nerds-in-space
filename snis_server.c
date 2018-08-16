@@ -16203,6 +16203,177 @@ static void server_builtin_describe(char *cmd)
 	(void) tweakable_var_describe(server_tweak, ARRAYSIZE(server_tweak), cmd, send_demon_console_msg, 0);
 }
 
+static uint32_t verify_role(uint32_t role)
+{
+	/* Enforce that we always have at least one "on screen" role active.
+	 * We can't set a client to have no onscreen role.
+	 */
+	const uint32_t onscreen_roles = ROLE_MAIN | ROLE_NAVIGATION | ROLE_WEAPONS |
+				ROLE_ENGINEERING | ROLE_SCIENCE | ROLE_COMMS |
+				ROLE_DEMON | ROLE_DAMCON;
+
+	if ((role & onscreen_roles) == 0)
+		role = role | ROLE_MAIN;
+	role = role | ROLE_DEMON; /* always have demon, otherwise you can get into trouble. */
+	return role;
+}
+
+static void invalid_role_syntax_msg(void)
+{
+	send_demon_console_msg("INVALID ROLE SYNTAX");
+	send_demon_console_msg("USAGE:");
+	send_demon_console_msg("- TO LIST ROLES: ROLE <CLIENT>");
+	send_demon_console_msg("- TO ADD ROLES: ROLE <CLIENT> +ROLE");
+	send_demon_console_msg("- TO REMOVE ROLES: ROLE <CLIENT> -ROLE");
+	send_demon_console_msg("- TO SET SINGLE ROLE: ROLE <CLIENT> ROLE");
+	send_demon_console_msg(
+		" - ROLES ARE: MAIN, NAV, WEAP, ENG, DAM, COM, SCI, DEM, TTS, SOU, ALL");
+}
+
+static void server_builtin_setrole(char *cmd)
+{
+	int rc;
+	int c, mode;
+	uint32_t role, newrole;
+	char rolestr[255];
+	char msg[80];
+
+	rc = sscanf(cmd, "ROLE %d +%s", &c, rolestr);
+	if (rc == 2) {
+		/* Add a new role to a client */
+		mode = 0;
+	} else {
+		rc = sscanf(cmd, "ROLE %d -%s", &c, rolestr);
+		if (rc == 2) {
+			/* Subtract a role from a client */
+			mode = 1;
+		} else {
+			rc = sscanf(cmd, "ROLE %d %s", &c, rolestr);
+			if (rc == 2) {
+				/* set a client to have a single role */
+				mode = 2;
+			} else {
+				rc = sscanf(cmd, "ROLE %d", &c);
+				if (rc == 1) {
+					/* List a client's roles */
+					mode = 3;
+				} else {
+					invalid_role_syntax_msg();
+					return;
+				}
+
+			}
+		}
+	}
+
+	newrole = 0;
+	/* Verify the role name */
+	if (mode != 3) { /* list roles */
+		if (strncmp(rolestr, "MAI", 3) == 0)
+			newrole = ROLE_MAIN;
+		else if (strncmp(rolestr, "NAV", 3) == 0)
+			newrole = ROLE_NAVIGATION;
+		else if (strncmp(rolestr, "WEA", 3) == 0)
+			newrole = ROLE_WEAPONS;
+		else if (strncmp(rolestr, "ENG", 3) == 0)
+			newrole = ROLE_ENGINEERING;
+		else if (strncmp(rolestr, "DAM", 3) == 0)
+			newrole = ROLE_DAMCON;
+		else if (strncmp(rolestr, "SCI", 3) == 0)
+			newrole = ROLE_SCIENCE;
+		else if (strncmp(rolestr, "COM", 3) == 0)
+			newrole = ROLE_COMMS;
+		else if (strncmp(rolestr, "DEM", 3) == 0)
+			newrole = ROLE_DEMON;
+		else if (strncmp(rolestr, "TTS", 3) == 0)
+			newrole = ROLE_TEXT_TO_SPEECH;
+		else if (strncmp(rolestr, "SOU", 3) == 0)
+			newrole = ROLE_SOUNDSERVER;
+		else if (strncmp(rolestr, "ALL", 3) == 0)
+			newrole = ROLE_MAIN | ROLE_NAVIGATION | ROLE_WEAPONS | ROLE_ENGINEERING | ROLE_DAMCON |
+					ROLE_SCIENCE | ROLE_COMMS | ROLE_DEMON | ROLE_TEXT_TO_SPEECH |
+					ROLE_SOUNDSERVER;
+		else {
+			send_demon_console_msg("INVALID ROLE NAME");
+			return;
+		}
+	}
+
+	/* Verify the client number */
+	if (c < 0) {
+		send_demon_console_msg("ROLE: INVALID CLIENT NUMBER");
+		return;
+	}
+	client_lock();
+	if (c >= nclients) {
+		client_unlock();
+		send_demon_console_msg("ROLE: INVALID CLIENT NUMBER");
+		return;
+	}
+
+
+	switch (mode) {
+	case 0: /* Add a new role to a client */
+		role = verify_role(client[c].role | newrole);
+		client[c].role = role;
+		pb_queue_to_client(&client[c], snis_opcode_subcode_pkt("bbw",
+			OPCODE_CLIENT_CONFIG, OPCODE_CLIENT_SET_PERMITTED_ROLES, role));
+		client_unlock();
+		snprintf(msg, sizeof(msg), "SET CLIENT %d ROLE TO %08x", c, role);
+		send_demon_console_msg(msg);
+		break;
+	case 1: /* Subtract a role from a client */
+		role = verify_role(client[c].role & ~newrole);
+		client[c].role = role;
+		pb_queue_to_client(&client[c], snis_opcode_subcode_pkt("bbw",
+			OPCODE_CLIENT_CONFIG, OPCODE_CLIENT_SET_PERMITTED_ROLES, role));
+		client_unlock();
+		snprintf(msg, sizeof(msg), "SET CLIENT %d ROLE TO %08x", c, role);
+		send_demon_console_msg(msg);
+		break;
+	case 2: /* Set client to have a single role */
+		role = verify_role(newrole);
+		client[c].role = role;
+		pb_queue_to_client(&client[c], snis_opcode_subcode_pkt("bbw",
+			OPCODE_CLIENT_CONFIG, OPCODE_CLIENT_SET_PERMITTED_ROLES, role));
+		client_unlock();
+		snprintf(msg, sizeof(msg), "SET CLIENT %d ROLE TO %08x", c, role);
+		send_demon_console_msg(msg);
+		break;
+	case 3: /* List client roles */
+		role = client[c].role;
+		client_unlock();
+		snprintf(msg, sizeof(msg), "CLIENT %d HAS THE FOLLOWING ROLES:", c);
+		send_demon_console_msg(msg);
+		if (role & ROLE_MAIN)
+			send_demon_console_msg("- MAIN VIEW");
+		if (role & ROLE_NAVIGATION)
+			send_demon_console_msg("- NAVIGATION");
+		if (role & ROLE_WEAPONS)
+			send_demon_console_msg("- WEAPONS");
+		if (role & ROLE_ENGINEERING)
+			send_demon_console_msg("- ENGINEERING");
+		if (role & ROLE_DAMCON)
+			send_demon_console_msg("- DAMAGE CONTROL");
+		if (role & ROLE_COMMS)
+			send_demon_console_msg("- COMMUNICATIONS");
+		if (role & ROLE_SCIENCE)
+			send_demon_console_msg("- SCIENCE");
+		if (role & ROLE_DEMON)
+			send_demon_console_msg("- DEMON");
+		if (role & ROLE_TEXT_TO_SPEECH)
+			send_demon_console_msg("- TEXT TO SPEECH");
+		if (role & ROLE_SOUNDSERVER)
+			send_demon_console_msg("- SOUND SERVER");
+		break;
+	default:
+		client_unlock();
+		snprintf(msg, sizeof(msg), "BUG: UNKNOWN ROLE MODE %d", mode);
+		send_demon_console_msg(msg);
+		break;
+	}
+}
+
 static void server_builtin_help(char *cmd);
 
 static struct server_builtin_cmd {
@@ -16215,6 +16386,7 @@ static struct server_builtin_cmd {
 	{ "SET", "SET A SERVER BUILTIN VARIABLE", server_builtin_set, },
 	{ "VARS", "LIST SERVER BUILTIN VARIABLES", server_builtin_vars, },
 	{ "DESCRIBE", "DESCRIBE A SERVER BUILTIN VARIABLE", server_builtin_describe, },
+	{ "ROLE", "ADD, REMOVE, or LIST CLIENT ROLES", server_builtin_setrole, },
 	{ "HELP", "LIST SERVER BUILTIN COMMANDS", server_builtin_help, },
 };
 

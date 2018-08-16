@@ -7067,6 +7067,7 @@ static void stop_gameserver_writer_thread(void)
 
 static int process_custom_button(void);
 static int process_console_op(void);
+static int process_client_config(void);
 
 static void *gameserver_reader(__attribute__((unused)) void *arg)
 {
@@ -7352,6 +7353,11 @@ static void *gameserver_reader(__attribute__((unused)) void *arg)
 			break;
 		case OPCODE_CONSOLE_OP:
 			rc = process_console_op();
+			if (rc)
+				goto protocol_error;
+			break;
+		case OPCODE_CLIENT_CONFIG:
+			rc = process_client_config();
 			if (rc)
 				goto protocol_error;
 			break;
@@ -12519,6 +12525,46 @@ static int process_console_op(void)
 		rc = snis_readsocket(gameserver_sock, buffer, sizeof(buffer));
 		buffer[DEMON_CONSOLE_MSG_MAX - 1] = '\0';
 		text_window_add_text(demon_ui.console, (char *) buffer);
+		break;
+	default:
+		return -1;
+	}
+	return 0;
+}
+
+static void enforce_displaymode_matches_roles(void)
+{
+	int i, newdisplaymode;
+
+	if ((1 << displaymode) & role)
+		return;
+
+	newdisplaymode = ROLE_MAIN;
+	for (i = 0; i < 32; i++) {
+		if ((1 << i) & role) {
+			newdisplaymode = i;
+			break;
+		}
+	}
+	displaymode = newdisplaymode;
+}
+
+static int process_client_config(void)
+{
+	int rc;
+	uint8_t subcmd, buffer[10];
+	uint32_t permitted_roles;
+
+	rc = read_and_unpack_buffer(buffer, "b", &subcmd);
+	if (rc != 0)
+		return rc;
+	switch (subcmd) {
+	case OPCODE_CLIENT_SET_PERMITTED_ROLES:
+		rc = read_and_unpack_buffer(buffer, "w", &permitted_roles);
+		if (rc != 0)
+			return rc;
+		role = permitted_roles;
+		enforce_displaymode_matches_roles();
 		break;
 	default:
 		return -1;
