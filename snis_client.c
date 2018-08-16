@@ -17927,7 +17927,7 @@ static void show_network_setup(GtkWidget *w)
 			(ntohl(bcast_lobby_ipaddr) & 0x00ff0000) >> 16,
 			(ntohl(bcast_lobby_ipaddr) & 0x0000ff00) >> 8,
 			(ntohl(bcast_lobby_ipaddr) & 0x000000ff));
-	if (bcast_lobby_ipaddr != 0xffffffff || 1) {
+	if (bcast_lobby_ipaddr != 0xffffffff) {
 		sprintf(msg, "LOBBY SERVER NAME OR IP ADDRESS - DETECTED LOBBY AT %s port %d",
 			ipaddr, ntohs(bcast_lobby_port));
 		ui_unhide_widget(net_setup_ui.connect_to_detected_lobby);
