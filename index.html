@@ -283,7 +283,7 @@ checked.  On subsequent runs, make sure CREATE SHIP is not checked.
 <li>Enter the name of your ship in the "SHIP NAME" field.
 <li>Choose a password for your ship and enter it in the PASSWORD field.
 (Note: the passwords are not cryptographically secure.)
-<li>Click the "CONNECT TO LOBBY" button in the lower left part of the screen
+<li>Click the "ENTER LOBBY ..." button in the lower left part of the screen
 </ol>
 <p>Once connected to the lobby, you should see something like this:
 <p align=center><img src="lobby1.jpg", width=85%>
@@ -1069,7 +1069,7 @@ leave the CREATE SHIP checkbox unchecked.
 <li>Since ssgl_server is running on the same system as snis_client (our <b>Main Computer</b>),
 it is fine to leave the LOBBY SERVER NAME OR IP ADDRESS field as "localhost".
 <li>Enter your ship's name and password (these you make up.)
-<li>Click on the CONNECT TO LOBBY button.
+<li>Click on either of the ENTER LOBBY buttons.
 You should then see something like this, with one line for each <b>snis_server</b>
 that you started (in this case, one.):
 <p align=center><img src="lobby1.jpg", width=85%>
@@ -1150,11 +1150,15 @@ which will quickly be covered up by the network setup screen, something like thi
 <li>Make sure MAIN SCREEN checkbox is <b>not</b> checked.
 <li>Make sure CREATE SHIP checkbox is <b>not</b> checked.
 <li>Make sure JOIN SHIP checkbox <b>is checked</b>.
-<li>For LOBBY SERVER NAME OR IP ADDRESS enter the IP address that
-you noted for the <b>MAIN COMPUTER</b> in step 10, above.
+<li>If the lobby is not autodetected, for LOBBY SERVER NAME OR IP
+ADDRESS enter the IP address that you noted for the <b>MAIN COMPUTER</b> in step 10, above.
+If the lobby is correctly auto detected, you do not need to enter the
+IP address.
 <li>For SHIP NAME and PASSWORD, enter the same name and password
 you used for the <b>Main Computer</b> setup in step 5 above.
-<li>Click the CONNECT TO LOBBY button.
+<li>Click the ENTER LOBBY XXX.XXX.XXX.XXX button if the lobby is autodetected,
+otherwise use the 2nd ENTER LOBBY button to choose the lobby with the IP
+address you have typed in.
 You should then see something like this, with one line for each <b>snis_server</b>
 that you started (in this case, one.):
 <p align=center><img src="lobby1.jpg", width=85%>
