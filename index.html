@@ -843,6 +843,45 @@ Example: <b>enscript myscript.lua</b>
 <li><b>TTS</b> - Text to speech.  Select one or more player ships, then
 use the tts command to cause the computer on those ships to speak something.
 (This appears to be broken at the moment.)
+<li><b>CONSOLE</b> - toggle the demon screen console on and off. The console
+is a large terminal-like text box that you can interact with.
+<li><b>VARS</b> - list tweakable variables and their minimum, maximum,
+and default values on the demon console.  There are a number of tweakable
+variables that can affect gameplay.
+<li><b>SET <em>variable</em> = <em>value</em></b> - set a tweakable variable. The special
+value <cmd>DEFAULT</cmd> sets the variable back to its default value. List the
+tweakable variables using the <cmd>VARS</cmd> command.
+<li><b>CLIENTS</b> - list the connected clients. The currently displayed
+station for the client is listed, along with the client number, the client
+ship, and the possible client roles (as a bitfield. See the <cmd>ROLE</cmd>
+command, below.)
+<li><b>ROLE <em>client-number</em> <em>role-modification</em></b> - Modify or list
+the permissible roles for a specified client number.  The client numbers may
+be obtained using the <cmd>CLIENTS</cmd> command (see above.)
+<p>Possible roles are as follows:
+<ul>
+<li><cmd>MAIN VIEW</cmd>
+<li><cmd>NAVIGATION</cmd>
+<li><cmd>WEAPONS</cmd>
+<li><cmd>ENGINEERING</cmd>
+<li><cmd>DAMAGE CONTROL</cmd>
+<li><cmd>COMMS</cmd>
+<li><cmd>SCIENCE</cmd>
+<li><cmd>DEMON</cmd>
+<li><cmd>TTS</cmd> (text to speech)
+<li><cmd>SOUND SERVER</cmd>
+</ul>
+The command takes several forms.  Here are some examples:
+<table align=center width=80%>
+<tr><td> <cmd>ROLE 10</cmd> </td><td>lists the roles for client number 10.</td></tr>
+<tr><td><cmd>ROLE 7 MAIN</cmd></td><td>restrict client number 7 to role <cmd>MAIN SCREEN</cmd>.</td></tr>
+<tr><td><cmd>ROLE 7 +ENG</cmd></td><td>add <cmd>ENGINEERING</cmd> role to client 7</td></tr>
+<tr><td><cmd>ROLE 4 -WEAP</cmd></td><td>remove <cmd>WEAPONS</cmd> role from client 4.</td></tr>
+<tr><td><cmd>ROLE 3 ALL</cmd></td><td>allow client 3 to use all roles.</td></tr>
+</table>
+NOTE: You only have to type the first three characters of the role names (e.g. <cmd>ENG</cmd>
+is the same as <cmd>ENGINEERING</cmd>.)<br>
+NOTE: it is not possible to remove the <cmd>DEMON</cmd> role from a client.
 <li><b>LUA</b> - run a lua script.  The lua scripts must reside on the
 server in share/snis/luascripts.  Currently there are few scripts:
 <ul>
