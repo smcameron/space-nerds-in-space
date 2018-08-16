@@ -337,6 +337,7 @@ static struct game_client {
 	char *build_info[2];
 	uint32_t latency_in_usec;
 	int waypoints_dirty;
+	uint8_t current_station; /* what station (displaymode) client is currently on */
 #define COMPUTE_AVERAGE_TO_CLIENT_BUFFER_SIZE 0
 #if COMPUTE_AVERAGE_TO_CLIENT_BUFFER_SIZE
 	uint64_t write_sum;
@@ -16023,13 +16024,61 @@ static void server_builtin_clients(__attribute__((unused)) char *cmd)
 {
 	int i;
 	char buf[80];
+	char *station;
 
-	snprintf(buf, sizeof(buf), "%5s %5s %20s %8s", "CLNT", "BRDG", "SHIP NAME", "ROLES");
+	snprintf(buf, sizeof(buf), "%10s %5s %5s %20s %8s", "CURRENT", "CLNT", "BRDG", "SHIP NAME", "ROLES");
 	send_demon_console_msg(buf);
-	send_demon_console_msg("--------------------------------------------------------");
+	send_demon_console_msg("--------------------------------------------------------------");
 	for (i = 0; i < nclients; i++) {
 		struct game_client *c = &client[i];
-		snprintf(buf, sizeof(buf), "%5d %5d %20s %08x", i, c->bridge,
+		switch (c->current_station) {
+		case DISPLAYMODE_MAINSCREEN:
+			station = "MAIN VIEW";
+			break;
+		case DISPLAYMODE_NAVIGATION:
+			station = "NAVIGATION";
+			break;
+		case DISPLAYMODE_WEAPONS:
+			station = "WEAPONS";
+			break;
+		case DISPLAYMODE_ENGINEERING:
+			station = "ENGINEERING";
+			break;
+		case DISPLAYMODE_SCIENCE:
+			station = "SCIENCE";
+			break;
+		case DISPLAYMODE_COMMS:
+			station = "COMMS";
+			break;
+		case DISPLAYMODE_DEMON:
+			station = "DEMON";
+			break;
+		case DISPLAYMODE_DAMCON:
+			station = "DAMCON";
+			break;
+		case DISPLAYMODE_FONTTEST:
+			station = "FONTTEST";
+			break;
+		case DISPLAYMODE_INTROSCREEN:
+			station = "INTROSCREEN";
+			break;
+		case DISPLAYMODE_LOBBYSCREEN:
+			station = "LOBBYSCREEN";
+			break;
+		case DISPLAYMODE_CONNECTING:
+			station = "CONNECTING";
+			break;
+		case DISPLAYMODE_CONNECTED:
+			station = "CONNECTED";
+			break;
+		case DISPLAYMODE_NETWORK_SETUP:
+			station = "NETWORK SETUP";
+			break;
+		default:
+			station = "UNKNOWN";
+			break;
+		}
+		snprintf(buf, sizeof(buf), "%s %5d %5d %20s %08x", station, i, c->bridge,
 				bridgelist[c->bridge].shipname, c->role);
 		send_demon_console_msg(buf);
 	}
@@ -17384,6 +17433,29 @@ static int process_custom_button(struct game_client *c)
 		return rc;
 	schedule_callback2(event_callback, &callback_schedule,
 				"custom-button-press-event", c->shipid, subcode);
+	return 0;
+}
+
+static int process_client_config(struct game_client *c)
+{
+	int rc;
+	unsigned char subcode, current_station;
+	unsigned char buffer[10];
+
+	rc = read_and_unpack_buffer(c, buffer, "b", &subcode);
+	if (rc)
+		return rc;
+	switch (subcode) {
+	case OPCODE_CLIENT_NOTIFY_CURRENT_STATION:
+		rc = read_and_unpack_buffer(c, buffer, "b", &current_station);
+		if (rc)
+			return rc;
+		c->current_station = current_station;
+		break;
+	default:
+		fprintf(stderr, "snis_server: OPCODE_CLIENT_CONFIG subcode is unknown value%hhu\n", subcode);
+		return -1;
+	}
 	return 0;
 }
 
@@ -19586,6 +19658,11 @@ static void process_instructions_from_client(struct game_client *c)
 			if (rc)
 				goto protocol_error;
 			break;
+		case OPCODE_CLIENT_CONFIG:
+			rc = process_client_config(c);
+			if (rc)
+				goto protocol_error;
+			break;
 		default:
 			goto protocol_error;
 	}
@@ -21046,6 +21123,7 @@ static void service_connection(int connection)
 		client_unlock();
 		pthread_mutex_unlock(&universe_mutex);
 		snis_log(SNIS_ERROR, "Too many clients.\n");
+		/* TODO: isn't there more to do here?  Close the socket, etc? */
 		return;
 	}
 
@@ -21058,6 +21136,7 @@ static void service_connection(int connection)
 
 	client[i].socket = connection;
 	client[i].timestamp = 0;  /* newborn client, needs everything */
+	client[i].current_station = 255; /* unknown */
 
 	log_client_info(SNIS_INFO, connection, "add new player\n");
 

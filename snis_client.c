@@ -18671,6 +18671,16 @@ static void maybe_play_rocket_sample(void)
 	last_thruster_volume = thruster_volume;
 }
 
+static void notify_server_of_displaymode_change(void)
+{
+	static int old_displaymode = -1;
+	if (displaymode == old_displaymode)
+		return;
+	queue_to_server(snis_opcode_subcode_pkt("bbb", OPCODE_CLIENT_CONFIG,
+			OPCODE_CLIENT_NOTIFY_CURRENT_STATION, (uint8_t) displaymode));
+	old_displaymode = displaymode;
+}
+
 gint advance_game(gpointer data)
 {
 	int time_to_switch_servers;
@@ -18702,6 +18712,7 @@ gint advance_game(gpointer data)
 	move_sparks();
 	move_objects();
 	expire_starmap_entries();
+	notify_server_of_displaymode_change();
 	pthread_mutex_unlock(&universe_mutex);
 	nframes++;
 
