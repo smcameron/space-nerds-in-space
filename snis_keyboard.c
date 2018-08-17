@@ -242,11 +242,11 @@ void init_keymap(void)
 	const unsigned short all = 0x03fff; /* all 14 displaymodes */
 	const unsigned short nav = 1 << DISPLAYMODE_NAVIGATION;
 	const unsigned short weap = 1 << DISPLAYMODE_WEAPONS;
-	const unsigned short eng = 1 << DISPLAYMODE_ENGINEERING;
+	/* const unsigned short eng = 1 << DISPLAYMODE_ENGINEERING; */
 	const unsigned short damcon = 1 << DISPLAYMODE_DAMCON;
 	const unsigned short sci = 1 << DISPLAYMODE_SCIENCE;
-	const unsigned short comms = 1 << DISPLAYMODE_COMMS;
-	const unsigned short main = 1 << DISPLAYMODE_MAINSCREEN;
+	/* const unsigned short comms = 1 << DISPLAYMODE_COMMS; */
+	const unsigned short mainscreen = 1 << DISPLAYMODE_MAINSCREEN;
 	const unsigned short demon = 1 << DISPLAYMODE_DEMON;
 
 	zero_keymaps();
@@ -266,9 +266,9 @@ void init_keymap(void)
 	ffmapkey(all, GDK_Left, keyleft);
 	mapkey(all, GDK_comma, keyleft);
 	mapkey(all, GDK_less, keyleft);
-	mapkey(nav | main, GDK_q, keyrollleft);
-	mapkey(nav | main, GDK_e, keyrollright);
-	mapkey(main, GDK_c, key_toggle_credits);
+	mapkey(nav | mainscreen, GDK_q, keyrollleft);
+	mapkey(nav | mainscreen, GDK_e, keyrollright);
+	mapkey(mainscreen, GDK_c, key_toggle_credits);
 	mapkey(all, GDK_M, key_toggle_watermark);
 	mapkey(weap, GDK_m, key_mouse_mode);
 	mapkey(weap, GDK_n, key_weap_fire_missile);
@@ -279,27 +279,27 @@ void init_keymap(void)
 
 	mapkey(all, GDK_b, keytransform); /* wtf is this? */
 	mapkey(demon, GDK_x, keythrust);
-	mapkey(main | weap, GDK_r, keyrenderswitch);
+	mapkey(mainscreen | weap, GDK_r, keyrenderswitch);
 
 	ffmapkey(all, GDK_F1, keypausehelp);
 	ffmapkey(all, GDK_Escape, keyquit);
 
 	mapkey(all, GDK_O, keyonscreen);
 	mapkey(all, GDK_o, keyonscreen);
-	mapkey(nav | main | weap | damcon, GDK_w, keyup);
-	mapkey(nav | main | weap | damcon, GDK_a, keyleft);
-	mapkey(nav | main | weap | damcon, GDK_s, keydown);
-	mapkey(nav | main | weap | damcon, GDK_d, keyright);
-	ffmapkey(nav | main | weap | damcon, GDK_KP_Up, keyup);
-	ffmapkey(nav | main | weap | damcon, GDK_KP_Down, keydown);
-	ffmapkey(nav | main | weap | damcon, GDK_KP_Left, keyleft);
-	ffmapkey(nav | main | weap | damcon, GDK_KP_Right, keyright);
-	ffmapkey(nav | main | weap, GDK_KP_Home, keyrollleft);
-	ffmapkey(nav | main | weap, GDK_KP_Page_Up, keyrollright);
+	mapkey(nav | mainscreen | weap | damcon, GDK_w, keyup);
+	mapkey(nav | mainscreen | weap | damcon, GDK_a, keyleft);
+	mapkey(nav | mainscreen | weap | damcon, GDK_s, keydown);
+	mapkey(nav | mainscreen | weap | damcon, GDK_d, keyright);
+	ffmapkey(nav | mainscreen | weap | damcon, GDK_KP_Up, keyup);
+	ffmapkey(nav | mainscreen | weap | damcon, GDK_KP_Down, keydown);
+	ffmapkey(nav | mainscreen | weap | damcon, GDK_KP_Left, keyleft);
+	ffmapkey(nav | mainscreen | weap | damcon, GDK_KP_Right, keyright);
+	ffmapkey(nav | mainscreen | weap, GDK_KP_Home, keyrollleft);
+	ffmapkey(nav | mainscreen | weap, GDK_KP_Page_Up, keyrollright);
 
-	mapkey(nav | main | weap, GDK_i, key_invert_vertical);
+	mapkey(nav | mainscreen | weap, GDK_i, key_invert_vertical);
 	ffmapkey(all, GDK_KEY_Pause, key_toggle_frame_stats);
-	mapkey(weap | main, GDK_f, key_toggle_space_dust);
+	mapkey(weap | mainscreen, GDK_f, key_toggle_space_dust);
 
 	mapkey(sci, GDK_k, keysciball_rollleft);
 	ffmapkey(sci, GDK_KP_Home, keysciball_rollleft);
@@ -313,12 +313,12 @@ void init_keymap(void)
 	ffmapkey(sci, GDK_KP_Up, keysciball_pitchdown);
 	mapkey(sci, GDK_period, keysciball_pitchup);
 	ffmapkey(sci, GDK_KP_Down, keysciball_pitchup);
-	mapkey(nav | main, GDK_KEY_quoteleft, key_camera_mode);
+	mapkey(nav | mainscreen, GDK_KEY_quoteleft, key_camera_mode);
 
-	mapkey(nav | main | weap, GDK_W, keyviewmode);
-	mapkey(nav | main | sci, GDK_KEY_plus, keyzoom);
-	mapkey(nav | main | sci, GDK_KEY_equal, keyzoom);
-	mapkey(nav | main | sci, GDK_KEY_minus, keyunzoom);
+	mapkey(nav | mainscreen | weap, GDK_W, keyviewmode);
+	mapkey(nav | mainscreen | sci, GDK_KEY_plus, keyzoom);
+	mapkey(nav | mainscreen | sci, GDK_KEY_equal, keyzoom);
+	mapkey(nav | mainscreen | sci, GDK_KEY_minus, keyunzoom);
 	mapkey(sci, GDK_KEY_m, key_sci_mining_bot);
 	mapkey(sci, GDK_KEY_t, key_sci_tractor_beam);
 	mapkey(sci, GDK_KEY_l, key_sci_lrs); /* interferes with pitchdown */
@@ -326,8 +326,8 @@ void init_keymap(void)
 	mapkey(sci, GDK_KEY_w, key_sci_waypoints);
 	mapkey(sci, GDK_KEY_d, key_sci_details);
 
-	ffmapkey(nav | main | sci, GDK_KEY_KP_Add, keyzoom);
-	ffmapkey(nav | main | sci, GDK_KEY_KP_Subtract, keyunzoom);
+	ffmapkey(nav | mainscreen | sci, GDK_KEY_KP_Add, keyzoom);
+	ffmapkey(nav | mainscreen | sci, GDK_KEY_KP_Subtract, keyunzoom);
 	ffmapkey(all, GDK_F1, keyf1);
 	ffmapkey(all, GDK_F2, keyf2);
 	ffmapkey(all, GDK_F3, keyf3);
