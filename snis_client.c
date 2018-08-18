@@ -15297,11 +15297,13 @@ static void show_comms(GtkWidget *w)
 	show_common_screen(w, "COMMS");
 }
 
+static void print_demon_console_msg(const char *msg);
 static void send_demon_comms_packet_to_server(char *msg)
 {
-	if (demon_ui.captain_of < 0)
+	if (demon_ui.captain_of < 0) {
+		print_demon_console_msg("YOU MUST BE IN CAPTAIN MODE TO DO THAT");
 		return;
-	printf("demon_ui.captain_of = %d\n", demon_ui.captain_of);
+	}
 	send_comms_packet_to_server(msg, OPCODE_DEMON_COMMS_XMIT, go[demon_ui.captain_of].id);
 }
 
@@ -16161,7 +16163,8 @@ static int construct_demon_command(char *input,
 				goto error;
 			}
 			/* TODO - finish this */
-			printf("group %d commanded to attack group %d\n", g, g2);
+			sprintf(console_text, "group %d commanded to attack group %d\n", g, g2);
+			print_demon_console_msg(console_text);
 			idcount = demon_group[g].nids + demon_group[g2].nids;
 			pb = packed_buffer_allocate(sizeof(struct demon_cmd_packet)
 							+ (idcount - 1) * sizeof(uint32_t));
@@ -16189,6 +16192,7 @@ static int construct_demon_command(char *input,
 				sprintf(errmsg, "missing argument to goto command");
 				goto error;
 			}
+			print_demon_console_msg("GOTO COMMAND IS NOT IMPLEMENTED");
 			break; 
 		case 4: /* patrol */
 			s = strtok_r(NULL, DEMON_CMD_DELIM, &saveptr);
@@ -16196,6 +16200,7 @@ static int construct_demon_command(char *input,
 				sprintf(errmsg, "missing argument to patrol command");
 				goto error;
 			}
+			print_demon_console_msg("PATROL COMMAND IS NOT IMPLEMENTED");
 			break; 
 		case 5: /* halt */
 			s = strtok_r(NULL, DEMON_CMD_DELIM, &saveptr);
@@ -16203,6 +16208,7 @@ static int construct_demon_command(char *input,
 				sprintf(errmsg, "missing argument to halt command");
 				goto error;
 			}
+			print_demon_console_msg("HALT COMMAND IS NOT IMPLEMENTED");
 			break; 
 		case 6: /* identify */
 			s = strtok_r(NULL, DEMON_CMD_DELIM, &saveptr);
@@ -16220,8 +16226,16 @@ static int construct_demon_command(char *input,
 				demon_ui.selectedx = demon_location[l].x;
 				demon_ui.selectedz = demon_location[l].z;
 			}
-			for (i = 0; i < demon_group[g].nids; i++)
+			for (i = 0; i < demon_group[g].nids; i++) {
+				int n;
 				demon_ui.selected_id[i] = demon_group[g].id[i];
+				n = lookup_object_by_id(demon_ui.selected_id[i]);
+				if (n >= 0) {
+					sprintf(console_text, "%d %d %s ( %f, %f, %f )", i, demon_ui.selected_id[i],
+							go[n].sdata.name, go[n].x, go[n].y, go[n].z);
+					print_demon_console_msg(console_text);
+				}
+			}
 			demon_ui.nselected = demon_group[g].nids;
 			break; 
 		case 7: /* say */
