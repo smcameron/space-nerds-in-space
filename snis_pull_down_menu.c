@@ -2,10 +2,12 @@
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
+#include <pthread.h>
 
 #include "snis_pull_down_menu.h"
 #include "snis_graph.h"
 #include "snis_typeface.h"
+
 
 struct pull_down_menu_item {
 	char *name;
@@ -29,6 +31,7 @@ struct pull_down_menu {
 	int current_col, current_row;
 	int current_physical_x, current_physical_y; /* mouse pos */
 	struct pull_down_menu_column *col[MAX_PULL_DOWN_COLUMNS];
+	pthread_mutex_t mutex;
 };
 
 static int pull_down_menu_inside_col(struct pull_down_menu *m, int x, int col,
@@ -55,17 +58,29 @@ static int pull_down_menu_inside_col(struct pull_down_menu *m, int x, int col,
 	return 0;
 }
 
-int pull_down_menu_inside(struct pull_down_menu *m, int physical_x, int physical_y)
+static int pull_down_menu_inside_internal(struct pull_down_menu *m, int physical_x, int physical_y, int lock)
 {
 	int i, x;
 
+	if (lock)
+		pthread_mutex_lock(&m->mutex);
 	x = 0;
 	for (i = 0; i < m->ncols; i++) {
-		if (pull_down_menu_inside_col(m, x, i, physical_x, physical_y, i == m->current_col))
+		if (pull_down_menu_inside_col(m, x, i, physical_x, physical_y, i == m->current_col)) {
+			if (lock)
+				pthread_mutex_unlock(&m->mutex);
 			return 1;
+		}
 		x += m->col[i]->width;
 	}
+	if (lock)
+		pthread_mutex_unlock(&m->mutex);
 	return 0;
+}
+
+int pull_down_menu_inside(struct pull_down_menu *m, int physical_x, int physical_y)
+{
+	return pull_down_menu_inside_internal(m, physical_x, physical_y, 1);
 }
 
 void pull_down_menu_update_mouse_pos(struct pull_down_menu *m, int physical_x, int physical_y)
@@ -180,26 +195,39 @@ void pull_down_menu_draw(struct pull_down_menu *m)
 {
 	int i, x;
 
+
+	pthread_mutex_lock(&m->mutex);
 	update_menu_widths(m);
-	if (!pull_down_menu_inside(m, m->current_physical_x, m->current_physical_y))
+	if (!pull_down_menu_inside_internal(m, m->current_physical_x, m->current_physical_y, 0)) {
+		pthread_mutex_unlock(&m->mutex);
 		return;
+	}
 	x = m->x;
 	for (i = 0; i < m->ncols; i++) {
 		draw_menu_col(m, i, x, m->y, m->current_row, m->font, m->current_col == i);
 		x += m->col[i]->width;
 	}
+	pthread_mutex_unlock(&m->mutex);
 }
 
-int pull_down_menu_add_column(struct pull_down_menu *m, char *column)
+static int pull_down_menu_add_column_internal(struct pull_down_menu *m, char *column, int lock)
 {
 	struct pull_down_menu_column *c;
 	if (!m)
 		return -1;
-	if (m->ncols >= MAX_PULL_DOWN_COLUMNS)
+	if (lock)
+		pthread_mutex_lock(&m->mutex);
+	if (m->ncols >= MAX_PULL_DOWN_COLUMNS) {
+		if (lock)
+			pthread_mutex_unlock(&m->mutex);
 		return -1;
+	}
 	c = malloc(sizeof(*c));
-	if (!c)
+	if (!c) {
+		if (lock)
+			pthread_mutex_unlock(&m->mutex);
 		return -1;
+	}
 	c->width = 0;
 	memset(c->item, 0, sizeof(c->item));
 	m->col[m->ncols] = c;
@@ -210,14 +238,24 @@ int pull_down_menu_add_column(struct pull_down_menu *m, char *column)
 	c->nrows = 1;
 	c->width = 0; /* So it will get recalculated */
 	m->ncols++;
+	if (lock)
+		pthread_mutex_unlock(&m->mutex);
 	return 0;
 }
 
-int pull_down_menu_add_row(struct pull_down_menu *m, char *column, char *row, void (*func)(void *), void *cookie)
+int pull_down_menu_add_column(struct pull_down_menu *m, char *column)
+{
+	return pull_down_menu_add_column_internal(m, column, 1);
+}
+
+static int pull_down_menu_add_row_internal(struct pull_down_menu *m,
+			char *column, char *row, void (*func)(void *), void *cookie, int lock)
 {
 	int i;
 	if (!m)
 		return -1;
+	if (lock)
+		pthread_mutex_lock(&m->mutex);
 	for (i = 0; i < m->ncols; i++) {
 		struct pull_down_menu_column *c;
 		struct pull_down_menu_item *r;
@@ -229,8 +267,11 @@ int pull_down_menu_add_row(struct pull_down_menu *m, char *column, char *row, vo
 		}
 		if (strcmp(c->item[0].name, column) != 0)
 			continue;
-		if (c->nrows >= MAX_PULL_DOWN_ROWS_PER_COLUMN)
+		if (c->nrows >= MAX_PULL_DOWN_ROWS_PER_COLUMN) {
+			if (lock)
+				pthread_mutex_unlock(&m->mutex);
 			return -1;
+		}
 		r = &c->item[c->nrows];
 		r->name = strdup(row);
 		r->func = func;
@@ -239,15 +280,27 @@ int pull_down_menu_add_row(struct pull_down_menu *m, char *column, char *row, vo
 		r->cookie = cookie;
 		c->nrows++;
 		c->width = 0; /* So it will get recalculated */
+		if (lock)
+			pthread_mutex_unlock(&m->mutex);
 		return 0;
 	}
+	if (lock)
+		pthread_mutex_unlock(&m->mutex);
 	return -1;
+}
+
+int pull_down_menu_add_row(struct pull_down_menu *m, char *column, char *row, void (*func)(void *), void *cookie)
+{
+	return pull_down_menu_add_row_internal(m, column, row, func, cookie, 1);
 }
 
 int pull_down_menu_button_press(struct pull_down_menu *m, int x, int y)
 {
 	struct pull_down_menu_item *row;
 
+	if (!m)
+		return 0;
+	pthread_mutex_lock(&m->mutex);
 	if (m->current_col >= 0 && m->current_col < m->ncols &&
 		m->current_row >= 0 && m->current_row < m->col[m->current_col]->nrows) {
 			row = &m->col[m->current_col]->item[m->current_row];
@@ -256,12 +309,15 @@ int pull_down_menu_button_press(struct pull_down_menu *m, int x, int y)
 			m->current_row = -1; /* deselect it */
 			m->current_col = -1;
 	}
+	pthread_mutex_unlock(&m->mutex);
 	return 0;
 }
 
 void pull_down_menu_set_color(struct pull_down_menu *m, int color)
 {
+	pthread_mutex_lock(&m->mutex);
 	m->color = color;
+	pthread_mutex_unlock(&m->mutex);
 }
 
 static struct pull_down_menu_item *find_menu_item(struct pull_down_menu *m, char *column, char *row)
@@ -294,20 +350,26 @@ void pull_down_menu_set_checkbox_function(struct pull_down_menu *m, char *column
 {
 	struct pull_down_menu_item *r;
 
+	pthread_mutex_lock(&m->mutex);
 	r = find_menu_item(m, column, row);
-	if (!r)
+	if (!r) {
+		pthread_mutex_unlock(&m->mutex);
 		return;
+	}
 	r->checkbox_function = checkbox_function;
 	r->checkbox_cookie = cookie;
 	update_menu_widths(m);
+	pthread_mutex_unlock(&m->mutex);
 }
 
-void pull_down_menu_clear(struct pull_down_menu *m)
+static void pull_down_menu_clear_internal(struct pull_down_menu *m, int lock)
 {
 	int i, j;
 
 	if (!m)
 		return;
+	if (lock)
+		pthread_mutex_lock(&m->mutex);
 	for (i = 0; i < m->ncols; i++) {
 		if (m->col[i]) {
 			for (j = 0; j < m->col[i]->nrows; j++) {
@@ -321,5 +383,48 @@ void pull_down_menu_clear(struct pull_down_menu *m)
 		}
 	}
 	m->ncols = 0;
+	if (lock)
+		pthread_mutex_unlock(&m->mutex);
 }
 
+void pull_down_menu_clear(struct pull_down_menu *m)
+{
+	pull_down_menu_clear_internal(m, 1);
+}
+
+void pull_down_menu_copy(struct pull_down_menu *dest, struct pull_down_menu *src)
+{
+	int i, j;
+
+	pthread_mutex_lock(&dest->mutex);
+	pthread_mutex_lock(&src->mutex);
+
+	pull_down_menu_clear_internal(dest, 0);
+	dest->x = src->x;
+	dest->y = src->y;
+	dest->font = src->font;
+	dest->color = src->color;
+	dest->ncols = 0;
+	dest->current_col = -1;
+	dest->current_row = -1;
+	dest->current_physical_x = src->current_physical_x;
+	dest->current_physical_y = src->current_physical_y;
+
+	for (i = 0; i < src->ncols; i++) {
+		if (src->col[i]) {
+			pull_down_menu_add_column_internal(dest, src->col[i]->item[0].name, 0);
+			for (j = 1; j < src->col[i]->nrows; j++) {
+				struct pull_down_menu_item *r = &src->col[i]->item[j];
+				pull_down_menu_add_row_internal(dest, src->col[i]->item[0].name,
+								r->name, r->func, r->cookie, 0);
+				dest->col[i]->item[j].checkbox_function = r->checkbox_function;
+				dest->col[i]->item[j].checkbox_cookie = r->checkbox_cookie;
+			}
+		} else {
+			dest->col[i] = NULL;
+		}
+	}
+
+	pthread_mutex_unlock(&src->mutex);
+	pthread_mutex_unlock(&dest->mutex);
+}

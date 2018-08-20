@@ -17,5 +17,6 @@ void pull_down_menu_set_color(struct pull_down_menu *m, int color);
 void pull_down_menu_set_checkbox_function(struct pull_down_menu *pdm, char *column, char *row,
 						int (*checkbox_value)(void *cookie), void *cookie);
 void pull_down_menu_clear(struct pull_down_menu *pdm);
+void pull_down_menu_copy(struct pull_down_menu *dest, struct pull_down_menu *src);
 
 #endif

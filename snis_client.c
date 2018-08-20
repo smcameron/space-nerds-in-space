@@ -301,8 +301,6 @@ static struct timeval start_time, end_time;
 static double universe_timestamp_offset = 0;
 
 static volatile int done_with_lobby = 0;
-static struct ssgl_lobby_descriptor lobbylist[256] = { 0 };
-static int nlobbies = 0;
 static pthread_t lobby_thread;
 static pthread_t gameserver_connect_thread;
 static pthread_t read_from_gameserver_thread;
@@ -20860,16 +20858,20 @@ static void lobby_list_change_notification(struct ssgl_lobby_descriptor *list, i
 {
 	int i;
 	char msg[255];
+	struct ssgl_lobby_descriptor lobbylist[256] = { 0 };
+	struct pull_down_menu *newmenu;
+	int nlobbies = 0;
 
-	/* Copy the list */
+	/* Make a local copy of the list */
 	if (nitems >= ARRAYSIZE(lobbylist))
 		nitems = ARRAYSIZE(lobbylist);
-	memcpy(lobbylist, list, sizeof(lobbylist[0]) * nitems); /* FIXME: This lobbylist modification is racy. */
+	memcpy(lobbylist, list, sizeof(lobbylist[0]) * nitems);
 	nlobbies = nitems;
 
-	/* Copy the lobby info to the network setup pull down menu */
-	pull_down_menu_clear(net_setup_ui.menu);
-	pull_down_menu_add_column(net_setup_ui.menu, "SELECT LOBBY");
+	/* Copy the lobby info to a new pull down menu */
+	newmenu = create_pull_down_menu(NANO_FONT);
+	pull_down_menu_set_color(newmenu, UI_COLOR(network_setup_active));
+	pull_down_menu_add_column(newmenu, "SELECT LOBBY");
 	for (i = 0; i < nlobbies; i++) {
 		sprintf(msg, "%d.%d.%d.%d:%d %s",
 			(ntohl(lobbylist[i].ipaddr) & 0xff000000) >> 24,
@@ -20878,9 +20880,14 @@ static void lobby_list_change_notification(struct ssgl_lobby_descriptor *list, i
 			(ntohl(lobbylist[i].ipaddr) & 0x000000ff),
 			ntohs(lobbylist[i].port),
 			lobbylist[i].hostname);
-		pull_down_menu_add_row(net_setup_ui.menu, "SELECT LOBBY", msg, lobby_chosen,
+		pull_down_menu_add_row(newmenu, "SELECT LOBBY", msg, lobby_chosen,
 					(void *) (intptr_t) lobbylist[i].ipaddr);
 	}
+
+	/* Swap in the new network setup menu */
+	pull_down_menu_copy(net_setup_ui.menu, newmenu);
+	pull_down_menu_clear(newmenu);
+	free(newmenu);
 }
 
 static void maybe_connect_to_lobby(void)
