@@ -49,6 +49,12 @@ struct ssgl_game_server {
 struct ssgl_client_filter {
 	char game_type[15];
 };
+
+struct ssgl_lobby_descriptor {
+	uint32_t ipaddr;
+	uint16_t port;
+	char hostname[32];
+};
 #pragma pack()
 
 #define SSGL_GAME_SERVER_TIMEOUT_SECS (20)
@@ -69,7 +75,7 @@ GLOBAL int ssgl_recv_game_servers(int sock,
 GLOBAL void ssgl_sleep(int seconds); /* just a thread safe sleep implemented by nanosleep w/ retries */
 GLOBAL void ssgl_msleep(int milliseconds); /* just a thread safe sleep implemented by nanosleep w/ retries */
 GLOBAL int ssgl_get_primary_host_ip_addr(uint32_t *ipaddr);
-GLOBAL int ssgl_register_for_bcast_packet(uint32_t *ipaddr, uint16_t *port);
+GLOBAL int ssgl_get_lobby_list(struct ssgl_lobby_descriptor[], int *maxlobbies);
 
 #define SSGL_INFO 1
 #define SSGL_WARN 2
@@ -79,6 +85,7 @@ extern int ssgl_open_logfile(char *logfilename);
 extern void ssgl_log(int level, const char* format, ...);
 extern void ssgl_close_logfile(void);
 extern void ssgl_set_log_level(int level);
+extern int ssgl_register_for_bcast_packets(void (*notify_fn)(struct ssgl_lobby_descriptor *, int));
 
 #undef GLOBAL
 #endif

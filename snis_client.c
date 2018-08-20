@@ -301,8 +301,8 @@ static struct timeval start_time, end_time;
 static double universe_timestamp_offset = 0;
 
 static volatile int done_with_lobby = 0;
-static uint32_t bcast_lobby_ipaddr = 0xfffffff;
-static uint16_t bcast_lobby_port = 0xffff;
+static struct ssgl_lobby_descriptor lobbylist[256] = { 0 };
+static int nlobbies = 0;
 static pthread_t lobby_thread;
 static pthread_t gameserver_connect_thread;
 static pthread_t read_from_gameserver_thread;
@@ -6944,7 +6944,6 @@ static struct network_setup_ui {
 	struct button *start_lobbyserver;
 	struct button *start_gameserver;
 	struct button *connect_to_lobby;
-	struct button *connect_to_detected_lobby;
 	struct snis_text_input_box *lobbyservername;
 	struct snis_text_input_box *solarsystemname;
 	struct snis_text_input_box *shipname_box;
@@ -6964,6 +6963,7 @@ static struct network_setup_ui {
 	struct button *support_button;
 	struct button *website_button;
 	struct button *forum_button;
+	struct pull_down_menu *menu;
 	int role_main_v;
 	int role_nav_v;
 	int role_weap_v;
@@ -17717,21 +17717,6 @@ static void connect_to_lobby_button_pressed()
 	connect_to_lobby();
 }
 
-static void connect_to_detected_lobby_button_pressed()
-{
-	char msg[100];
-
-	if (bcast_lobby_ipaddr != 0xffffffff) {
-		sprintf(msg, "%d.%d.%d.%d",
-				(ntohl(bcast_lobby_ipaddr) & 0xff000000) >> 24,
-				(ntohl(bcast_lobby_ipaddr) & 0x00ff0000) >> 16,
-				(ntohl(bcast_lobby_ipaddr) & 0x0000ff00) >> 8,
-				(ntohl(bcast_lobby_ipaddr) & 0x000000ff));
-		snis_text_input_box_set_contents(net_setup_ui.lobbyservername, msg);
-		connect_to_lobby_button_pressed();
-	}
-}
-
 static void browser_button_pressed(void *v)
 {
 	int rc;
@@ -17920,11 +17905,8 @@ static void init_net_setup_ui(void)
 					password_entered, NULL);
 	y += yinc;
 	net_setup_ui.connect_to_lobby =
-		snis_button_init(left + txx(220), y, -1, -1, "ENTER LOBBY xxxxxxxxxxxxxxx", inactive_button_color,
+		snis_button_init(left, y, -1, -1, "ENTER LOBBY xxxxxxxxxxxxxxx", inactive_button_color,
 			TINY_FONT, connect_to_lobby_button_pressed, NULL);
-	net_setup_ui.connect_to_detected_lobby =
-		snis_button_init(left, y, -1, -1, "ENTER LOBBY XXXXXXXXXXXX", inactive_button_color,
-			TINY_FONT, connect_to_detected_lobby_button_pressed, NULL);
 	net_setup_ui.website_button =
 		snis_button_init(left + txx(500), y, -1, -1, "WEBSITE",
 			active_button_color,
@@ -17937,6 +17919,8 @@ static void init_net_setup_ui(void)
 		snis_button_init(left + txx(700), y, -1, -1, "DONATE",
 			active_button_color,
 			TINY_FONT, browser_button_pressed, "http://spacenerdsinspace.com/donate.html");
+	net_setup_ui.menu = create_pull_down_menu(NANO_FONT);
+	pull_down_menu_set_color(net_setup_ui.menu, active_button_color);
 	init_net_role_buttons(&net_setup_ui);
 	init_join_create_buttons(&net_setup_ui);
 	snis_prefs_read_checkbox_defaults(&net_setup_ui.role_main_v, &net_setup_ui.role_nav_v,
@@ -17956,8 +17940,6 @@ static void init_net_setup_ui(void)
 			"START THE GAME SERVER PROCESS");
 	ui_add_button(net_setup_ui.connect_to_lobby, DISPLAYMODE_NETWORK_SETUP,
 			"CONNECT TO THE LOBBY SERVER");
-	ui_add_button(net_setup_ui.connect_to_detected_lobby, DISPLAYMODE_NETWORK_SETUP,
-			"CONNECT TO THE AUTO-DETECTED LOBBY SERVER");
 	ui_add_button(net_setup_ui.website_button, DISPLAYMODE_NETWORK_SETUP,
 			"SPACE NERDS IN SPACE WEBSITE");
 	ui_add_button(net_setup_ui.forum_button, DISPLAYMODE_NETWORK_SETUP,
@@ -17970,37 +17952,21 @@ static void init_net_setup_ui(void)
 	ui_add_text_input_box(net_setup_ui.solarsystemname, DISPLAYMODE_NETWORK_SETUP);
 	ui_add_text_input_box(net_setup_ui.shipname_box, DISPLAYMODE_NETWORK_SETUP);
 	ui_add_text_input_box(net_setup_ui.password_box, DISPLAYMODE_NETWORK_SETUP);
+	ui_add_pull_down_menu(net_setup_ui.menu, DISPLAYMODE_NETWORK_SETUP); /* needs to be last */
 } 
 
 static void show_network_setup(GtkWidget *w)
 {
 	char msg[255], button_label[100];
-	char ipaddr[100];
 
 	show_common_screen(w, "SPACE NERDS IN SPACE");
 	show_rotating_wombat();
 
 	sng_set_foreground(UI_COLOR(network_setup_text));
 	sng_abs_xy_draw_string("NETWORK SETUP", SMALL_FONT, txx(25), txy(10 + LINEHEIGHT * 2));
-	sprintf(ipaddr, "%d.%d.%d.%d",
-			(ntohl(bcast_lobby_ipaddr) & 0xff000000) >> 24,
-			(ntohl(bcast_lobby_ipaddr) & 0x00ff0000) >> 16,
-			(ntohl(bcast_lobby_ipaddr) & 0x0000ff00) >> 8,
-			(ntohl(bcast_lobby_ipaddr) & 0x000000ff));
-	if (bcast_lobby_ipaddr != 0xffffffff) {
-		sprintf(msg, "LOBBY SERVER NAME OR IP ADDRESS - DETECTED LOBBY AT %s port %d",
-			ipaddr, ntohs(bcast_lobby_port));
-		ui_unhide_widget(net_setup_ui.connect_to_detected_lobby);
-		sprintf(button_label, "ENTER LOBBY %s", ipaddr);
-		snis_button_set_label(net_setup_ui.connect_to_detected_lobby, button_label);
-	} else  {
-		sprintf(msg, "LOBBY SERVER NAME OR IP ADDRESS");
-		ui_hide_widget(net_setup_ui.connect_to_detected_lobby);
-	}
+	sprintf(msg, "LOBBY SERVER NAME OR IP ADDRESS");
 	/* If manual and auto-detected lobbies are the same, hide the manual button. */
-	if (strcmp(ipaddr, net_setup_ui.lobbyname) == 0 && strcmp(ipaddr, "255.255.255.255") != 0)
-		ui_hide_widget(net_setup_ui.connect_to_lobby);
-	else if (strcmp(net_setup_ui.lobbyname, "") != 0)
+	if (strcmp(net_setup_ui.lobbyname, "") != 0)
 		ui_unhide_widget(net_setup_ui.connect_to_lobby);
 	else
 		ui_hide_widget(net_setup_ui.connect_to_lobby);
@@ -18027,10 +17993,8 @@ static void show_network_setup(GtkWidget *w)
 			snis_button_set_color(net_setup_ui.connect_to_lobby, UI_COLOR(network_setup_active));
 		else
 			snis_button_set_color(net_setup_ui.connect_to_lobby, UI_COLOR(network_setup_inactive));
-		snis_button_set_color(net_setup_ui.connect_to_detected_lobby, UI_COLOR(network_setup_active));
 	} else {
 		snis_button_set_color(net_setup_ui.connect_to_lobby, UI_COLOR(network_setup_inactive));
-		snis_button_set_color(net_setup_ui.connect_to_detected_lobby, UI_COLOR(network_setup_inactive));
 	}
 }
 
@@ -20877,6 +20841,48 @@ static void setup_gtk_window_and_drawing_area(GtkWidget **window, GtkWidget **vb
 	gtk_window_set_default_size(GTK_WINDOW(*window), real_screen_width, real_screen_height);
 }
 
+static void lobby_chosen(void *x)
+{
+	uint32_t ipaddr = (uint32_t) (intptr_t) x;
+	char msg[100];
+
+	sprintf(msg, "%d.%d.%d.%d",
+		(ntohl(ipaddr) & 0xff000000) >> 24,
+		(ntohl(ipaddr) & 0x00ff0000) >> 16,
+		(ntohl(ipaddr) & 0x0000ff00) >> 8,
+		(ntohl(ipaddr) & 0x000000ff));
+	snis_text_input_box_set_contents(net_setup_ui.lobbyservername, msg);
+	connect_to_lobby_button_pressed();
+}
+
+/* This gets called from a thread created by ssgl_register_for_bcast_packets() with a mutex held. */
+static void lobby_list_change_notification(struct ssgl_lobby_descriptor *list, int nitems)
+{
+	int i;
+	char msg[255];
+
+	/* Copy the list */
+	if (nitems >= ARRAYSIZE(lobbylist))
+		nitems = ARRAYSIZE(lobbylist);
+	memcpy(lobbylist, list, sizeof(lobbylist[0]) * nitems); /* FIXME: This lobbylist modification is racy. */
+	nlobbies = nitems;
+
+	/* Copy the lobby info to the network setup pull down menu */
+	pull_down_menu_clear(net_setup_ui.menu);
+	pull_down_menu_add_column(net_setup_ui.menu, "SELECT LOBBY");
+	for (i = 0; i < nlobbies; i++) {
+		sprintf(msg, "%d.%d.%d.%d:%d %s",
+			(ntohl(lobbylist[i].ipaddr) & 0xff000000) >> 24,
+			(ntohl(lobbylist[i].ipaddr) & 0x00ff0000) >> 16,
+			(ntohl(lobbylist[i].ipaddr) & 0x0000ff00) >> 8,
+			(ntohl(lobbylist[i].ipaddr) & 0x000000ff),
+			ntohs(lobbylist[i].port),
+			lobbylist[i].hostname);
+		pull_down_menu_add_row(net_setup_ui.menu, "SELECT LOBBY", msg, lobby_chosen,
+					(void *) (intptr_t) lobbylist[i].ipaddr);
+	}
+}
+
 static void maybe_connect_to_lobby(void)
 {
 	if (avoid_lobby) {
@@ -20977,7 +20983,7 @@ int main(int argc, char *argv[])
 #endif
 	gdk_threads_init();
 
-	ssgl_register_for_bcast_packet(&bcast_lobby_ipaddr, &bcast_lobby_port);
+	ssgl_register_for_bcast_packets(lobby_list_change_notification);
 	gettimeofday(&start_time, NULL);
 	universe_timestamp_offset = time_now_double(); /* until we get real time from server */
 

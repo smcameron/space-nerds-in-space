@@ -449,20 +449,24 @@ static void start_game_server_expiration_thread(void)
 
 static pthread_t broadcast_thread;
 
-struct bcast_payload {
-	uint32_t ipaddr;
-	uint16_t port;
-};
-
 static void *broadcast_lobby_info(__attribute__((unused)) void *arg)
 {
 	int on, rc, bcast;
 	uint32_t ipaddr, netmask, broadcast;
-	struct bcast_payload payload;
+	struct ssgl_lobby_descriptor payload;
 	struct servent *gamelobby_service;
 	struct protoent *gamelobby_proto;
 	struct ifaddrs *ifaddr, *a;
 	struct sockaddr_in bcast_addr;
+	static char hostname[32] = { 0 };
+
+
+	if (hostname[0] == 0) {
+		rc = gethostname(hostname, sizeof(hostname) - 1);
+		if (rc)
+			memset(hostname, 0, sizeof(hostname));
+		hostname[31] = 0;
+	}
 
 	/* Get the IP address of this machine's primary interface (the IP address of
 	 * interface that would be used to send a packet to 8.8.8.8 if we were to
@@ -550,6 +554,7 @@ static void *broadcast_lobby_info(__attribute__((unused)) void *arg)
 	ssgl_log(SSGL_INFO, "broadcast is %08x\n", broadcast);
 	payload.ipaddr = ipaddr;
 	payload.port = gamelobby_service ?  gamelobby_service->s_port : htons(GAMELOBBY_SERVICE_NUMBER);
+	memcpy(payload.hostname, hostname, sizeof(payload.hostname));
 
 	do {
 		rc = sendto(bcast, &payload, sizeof(payload), 0, &bcast_addr, sizeof(struct sockaddr_in));
