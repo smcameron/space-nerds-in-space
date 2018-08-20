@@ -301,3 +301,25 @@ void pull_down_menu_set_checkbox_function(struct pull_down_menu *m, char *column
 	r->checkbox_cookie = cookie;
 	update_menu_widths(m);
 }
+
+void pull_down_menu_clear(struct pull_down_menu *m)
+{
+	int i, j;
+
+	if (!m)
+		return;
+	for (i = 0; i < m->ncols; i++) {
+		if (m->col[i]) {
+			for (j = 0; j < m->col[i]->nrows; j++) {
+				if (m->col[i]->item[j].name) {
+					free(m->col[i]->item[j].name);
+					m->col[i]->item[j].name = NULL;
+				}
+			}
+			free(m->col[i]);
+			m->col[i] = NULL;
+		}
+	}
+	m->ncols = 0;
+}
+
