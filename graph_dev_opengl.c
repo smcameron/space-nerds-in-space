@@ -1328,12 +1328,12 @@ static void graph_dev_raster_texture(struct graph_dev_gl_textured_shader *shader
 		glUniform1f(shader->invert, invert);
 
 	/* shadow sphere */
-	if (shader->shadow_sphere_id >= 0)
+	if (shader->shadow_sphere_id >= 0 && shadow_sphere)
 		glUniform4f(shader->shadow_sphere_id, shadow_sphere->eye_pos.v.x, shadow_sphere->eye_pos.v.y,
 			shadow_sphere->eye_pos.v.z, shadow_sphere->r * shadow_sphere->r);
 
 	/* shadow annulus */
-	if (shader->shadow_annulus_texture_id >= 0) {
+	if (shader->shadow_annulus_texture_id >= 0 && shadow_annulus) {
 		BIND_TEXTURE(GL_TEXTURE1, GL_TEXTURE_2D, shadow_annulus->texture_id);
 
 		glUniform4f(shader->shadow_annulus_tint_color_id, shadow_annulus->tint_color.red,
@@ -1685,6 +1685,8 @@ static void graph_dev_raster_trans_wireframe_mesh(struct graph_dev_gl_trans_wire
 	glEnable(GL_DEPTH_TEST);
 
 	if (do_cullface) {
+		assert(shader);
+		assert(clip_sphere);
 		glUseProgram(shader->program_id);
 
 		glUniformMatrix4fv(shader->mvp_matrix_id, 1, GL_FALSE, &mat_mvp->m[0][0]);
