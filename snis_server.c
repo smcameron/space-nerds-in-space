@@ -9190,7 +9190,7 @@ static void turret_move(struct snis_entity *o)
 		for (i = 0; i < ARRAYSIZE(go[root].tsd.block.naughty_list); i++)  {
 			if (go[root].tsd.block.naughty_list[i] == (uint32_t) -1)
 				break;
-			uint32_t n = lookup_by_id(go[root].tsd.block.naughty_list[i]);
+			int n = lookup_by_id(go[root].tsd.block.naughty_list[i]);
 			if (n < 0)
 				continue;
 			double dist2 = object_dist2(o, &go[n]);
