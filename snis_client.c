@@ -11513,7 +11513,7 @@ static void draw_attitude_indicator_reticles(GtkWidget *w, GdkGC *gc, struct sni
 		} else {
 			sprintf(buffer, "%d", (int) (display_mark * 180.0 / M_PI));
 		}
-		if (fabsf((float) m - 180.0 * display_mark / M_PI) < 2.5) {
+		if (fabs((float) m - 180.0 * display_mark / M_PI) < 2.5) {
 			/* Change the color of tick mark if it is close enough to display_mark. */
 			sng_set_foreground(UI_COLOR(nav_heading_ring));
 		}
@@ -14469,8 +14469,8 @@ static void science_mouse_click_rotate(int x, int y)
 		return;
 	yaw = -dx;
 	pitch = -dy;
-	yawcount = (abs(dx));
-	pitchcount = (abs(dy));
+	yawcount = fabs(dx);
+	pitchcount = fabs(dy);
 	if (yawcount > 0 && pitchcount / yawcount > 3)
 		yawcount = 0;
 	else if (pitchcount > 0 && yawcount / pitchcount > 3)
@@ -17327,8 +17327,8 @@ static void show_demon_3d(GtkWidget *w)
 			if (!entity_onscreen(e))
 				continue;
 			entity_get_screen_coords(e, &sx, &sy);
-			if (fabsf(sx - demon_ui.release_mousex) < threshold &&
-			    fabsf(sy - demon_ui.release_mousey) < threshold) {
+			if (fabs(sx - demon_ui.release_mousex) < threshold &&
+			    fabs(sy - demon_ui.release_mousey) < threshold) {
 				entity_get_pos(e, &epos.v.x, &epos.v.y, &epos.v.z);
 				m = entity_get_mesh(e);
 				if (m) {
