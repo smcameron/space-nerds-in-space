@@ -16057,7 +16057,7 @@ static struct tweakable_var_descriptor client_tweak[] = {
 		0.0, 1.0, 0.0, 0, 1, 0 },
 	{ "ROCKET_NOISE_VOLUME", "VOLUME OF ROCKET NOISE, 0 to 1", &rocket_noise_volume, 'f',
 		0.0, 1.0, 1.0, 0, 1, 1 },
-	{ NULL, NULL, '\0', 0.0, 0.0, 0.0, 0, 0, 0 },
+	{ NULL, NULL, NULL, '\0', 0.0, 0.0, 0.0, 0, 0, 0 },
 };
 
 static int set_clientside_variable(char *cmd)
