@@ -7388,7 +7388,7 @@ static void *gameserver_reader(__attribute__((unused)) void *arg)
 	}
 
 protocol_error:
-	fprintf(stderr, "snis_client: Protocol error in gameserver reader, opcode = %hu\n", opcode);
+	fprintf(stderr, "snis_client: Protocol error in gameserver reader, opcode = %hhu\n", opcode);
 	snis_print_last_buffer("snis_client: ", gameserver_sock);
 	fprintf(stderr, "snis_client: last opcode was %hhu, before that %hhu\n", last_opcode, previous_opcode);
 	fprintf(stderr, "snis_client: total successful opcodes = %u\n", successful_opcodes);
