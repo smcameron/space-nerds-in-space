@@ -534,11 +534,6 @@ static void to_snis_heading_mark(const union quat *q, double *heading, double *m
 	*heading = game_angle_to_math_angle(*heading);
 }
 
-static inline double to_uheading(double heading)
-{
-	return game_angle_to_math_angle(heading);
-}
-
 static void set_default_clip_window(void)
 {
 	sng_set_clip_window(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
