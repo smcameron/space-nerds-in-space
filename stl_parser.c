@@ -423,7 +423,7 @@ void free_mesh(struct mesh * m)
 		return;
 	if (m->t)
 		free(m->t);
-	if (m->v);
+	if (m->v)
 		free(m->v);
 	free(m);
 }
