@@ -364,7 +364,7 @@ int remapkey(char *stations, char *keyname, char *actionname)
 		}
 	}
 
-	for (i = keynone; i <= NKEYSTATES; i++) {
+	for (i = keynone; i < NKEYSTATES; i++) {
 		if (strcmp(keyactionstring[i], actionname) != 0)
 			continue;
 
