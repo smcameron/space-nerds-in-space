@@ -6744,7 +6744,7 @@ static struct snis_damcon_entity *damcon_find_closest_damaged_part_by_damage(str
 			continue;
 		part = &d->o[i];
 		if (part->tsd.part.damage > max_damage && part->tsd.part.damage > damage_limit) {
-			dist = fabsf(d->robot->x - part->x) + fabsf(d->robot->y - part->y);
+			dist = fabs(d->robot->x - part->x) + fabs(d->robot->y - part->y);
 			if (dist < min_dist || damaged_part == NULL) {
 				damaged_part = part;
 				max_damage = part->tsd.part.damage;
