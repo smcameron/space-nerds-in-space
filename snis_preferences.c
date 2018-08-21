@@ -70,8 +70,8 @@ void snis_prefs_save_default_ship_name(char *name)
 
 	int n = strlen(name);
 	n = strlen(name) + 1;
-	if (n > SHIPNAME_LEN)
-		n = SHIPNAME_LEN;
+	if (n > SHIPNAME_LEN - 1)
+		n = SHIPNAME_LEN - 1;
 	strncpy(default_ship_name, name, n);
 	default_ship_name[n] = '\0';
 	snprintf(path, PATH_MAX, "%s/.space-nerds-in-space", homedir);
