@@ -19073,7 +19073,7 @@ static int process_load_torpedo(struct game_client *c)
 {
 	struct snis_entity *ship = &go[c->ship_index];
 
-	if (ship->tsd.ship.torpedoes < 0)
+	if (ship->tsd.ship.torpedoes == 0)
 		return -1;
 	if (ship->tsd.ship.torpedoes_loading != 0)
 		return -1;
