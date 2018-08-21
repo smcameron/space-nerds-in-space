@@ -10841,7 +10841,7 @@ static void init_nav_ui(void)
 					button_color,
 					NANO_FONT, nav_custom_button_pressed, NULL);
 	snis_button_set_sound(nav_ui.custom_button, UISND21);
-	nav_ui.reverse_button = snis_button_init(SCREEN_WIDTH - txx(16.6 + x), txy(3), txx(12.5), txy(14),
+	nav_ui.reverse_button = snis_button_init(SCREEN_WIDTH - txx(16.6 + x), txy(3), txx(12), txy(14),
 			"R", button_color, NANO_FONT, reverse_button_pressed, NULL);
 	snis_button_set_sound(nav_ui.reverse_button, UISND8);
 	nav_ui.trident_button = snis_button_init(txx(4), txy(166), -1, -1, "ABSOLUTE", button_color,
