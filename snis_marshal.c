@@ -154,7 +154,7 @@ double packed_buffer_extract_double(struct packed_buffer *pb)
 {
 	struct packed_double pd;
 
-	memcpy(&pb->buffer[pb->buffer_cursor], &pd, sizeof(pd));
+	memcpy(&pd, &pb->buffer[pb->buffer_cursor], sizeof(pd));
 	pb->buffer_cursor += sizeof(pd);
 	PACKED_BUFFER_CHECK(pb);
 	packed_double_to_host(&pd);
