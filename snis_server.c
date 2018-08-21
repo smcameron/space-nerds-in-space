@@ -16464,7 +16464,7 @@ static int process_exec_lua_script(struct game_client *c)
 	}
 
 	/* Maybe it's a lua script. */
-	strncat(txt, ".LUA", sizeof(txt));
+	strncat(txt, ".LUA", sizeof(txt) - strlen(txt) - 1);
 
 #define LUASCRIPTDIR "share/snis/luascripts"
 	snprintf(scriptname, sizeof(scriptname) - 1, "%s/%s", LUASCRIPTDIR, txt);
