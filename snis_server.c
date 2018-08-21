@@ -12971,8 +12971,6 @@ typedef void (*thrust_function)(struct game_client *c, int thrust);
 
 static void do_demon_thrust(struct snis_entity *o, int thrust)
 {
-	double max_player_velocity = max_player_velocity;
-
 	if (thrust > 0) {
 		if (o->tsd.ship.velocity < max_player_velocity)
 			o->tsd.ship.velocity += player_velocity_increment;
