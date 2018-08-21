@@ -12655,8 +12655,6 @@ static int add_damcon_waypoint(struct damcon_data *d, int x, int y)
 /* offsets for sockets... */
 static const int dcxo[] = { 20, 160, 205, 160, 20 };
 static const int dcyo[] = { -65, -65, 0, 65, 65 };
-static const int socket_waypoint_xoff[] = { -70, 0, 70, 0 };
-static const int socket_waypoint_yoff[] = { 0, 90, 0, -90 };
 
 static void add_damcon_sockets(struct damcon_data *d, int x, int y,
 				uint8_t system, int left_side)
