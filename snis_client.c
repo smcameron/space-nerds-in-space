@@ -879,12 +879,7 @@ static int lookup_object_by_id(uint32_t id)
 
 static struct snis_entity *lookup_entity_by_id(uint32_t id)
 {
-	int index;
-
-	if (id < 0)
-		return NULL;
-
-	index = lookup_object_by_id(id);
+	int index = lookup_object_by_id(id);
 	if (index < 0)
 		return NULL;
 	return &go[index];
