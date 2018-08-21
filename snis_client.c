@@ -14311,7 +14311,7 @@ static void comms_setup_rts_buttons(int activate, struct snis_entity *player_shi
 				starbase->sdata.faction == player_ship->sdata.faction) {
 			/* Modify the Home Planet button with activity spinner */
 			char button_label[20];
-			char activity;
+			char activity = ' ';
 			if (set_planet_spinner == 0) { /* only look at the first planet with the right faction */
 				if (starbase->tsd.planet.time_left_to_build == 0)
 					activity = ' ';
