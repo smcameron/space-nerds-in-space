@@ -359,6 +359,14 @@ UPDATE_DESKTOP=update-desktop-database ${DESKTOPDIR} || :
 
 CC ?= gcc
 
+# -rdynamic is used by gcc for runtime stack traces (see stacktrace.c)
+# but clang complains about it.
+ifeq (${CC},clang)
+RDYNAMIC=
+else
+RDYNAMIC=-rdynamic
+endif
+
 ifeq (${WITHAUDIO},yes)
 SNDLIBS:=$(shell pkg-config --libs portaudio-2.0 vorbisfile)
 SNDFLAGS:=-DWITHAUDIOSUPPORT $(shell pkg-config --cflags portaudio-2.0) -DDATADIR=\"${DATADIR}\"
@@ -533,7 +541,7 @@ MODELS=${MD}/freighter.stl \
 	${MD}/missile.stl
 
 MYCFLAGS=-DPREFIX=${PREFIX} ${DEBUGFLAG} ${PROFILEFLAG} ${OPTIMIZEFLAG}\
-	--pedantic -Wall ${STOP_ON_WARN} -pthread -std=gnu99 -rdynamic \
+	--pedantic -Wall ${STOP_ON_WARN} -pthread -std=gnu99 ${RDYNAMIC} \
 	-Wno-extended-offsetof -Wno-gnu-folding-constant $(CFLAGS)
 GTKCFLAGS:=$(subst -I,-isystem ,$(shell pkg-config --cflags gtk+-2.0))
 GLEXTCFLAGS:=$(subst -I,-isystem ,$(shell pkg-config --cflags gtkglext-1.0)) ${PNGCFLAGS}
