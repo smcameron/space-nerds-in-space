@@ -7,7 +7,11 @@ WITHAUDIO=yes
 OSX=0
 
 ifeq (${OSX},0)
+ifeq (${CC}, clang)
+LRTLIB=
+else
 LRTLIB=-lrt
+endif
 else
 LRTLIB=
 endif

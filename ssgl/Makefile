@@ -55,8 +55,13 @@ ifeq (${OSX},1)
 LINKFLAGS=
 LRTFLAGS=
 else
+ifeq (${CC}, clang)
+LINKFLAGS=
+LRTFLAGS=
+else
 LINKFLAGS=-lrt
 LRTFLAGS=-lrt
+endif
 endif
 
 COMPILE=$(CC) ${MYCFLAGS} -c -o $@ $< && $(ECHO) '  COMPILE' $<
