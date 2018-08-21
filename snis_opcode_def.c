@@ -33,6 +33,7 @@
 #include "snis_packet.h"
 #include "snis_marshal.h"
 #include "stacktrace.h"
+#include "arraysize.h"
 
 #define NSUBCODES 29
 #define NOPCODES (256 * NSUBCODES)
@@ -277,12 +278,21 @@ int snis_opcode_def_init(void)
 	return rc;
 }
 
+static void check_index(int index)
+{
+	if (index < 0 || index > ARRAYSIZE(opcode_def)) {
+		fprintf(stderr, "Bad opcode index %d detected\n", index);
+		stacktrace("Bad opcode index");
+		abort();
+	}
+}
+
 /* Returns payload size of an opcode (that has no subcode) */
 const int snis_opcode_payload_size(uint8_t opcode)
 {
 	int index = opcode * NSUBCODES;
 
-	assert(opcode < NOPCODES);
+	check_index(index);
 	return opcode_def[index].size;
 }
 
@@ -291,16 +301,19 @@ const int snis_opcode_subcode_payload_size(uint8_t opcode, uint8_t subcode)
 {
 	int index = opcode * NSUBCODES + subcode;
 
-	assert(opcode < NOPCODES);
+	check_index(index);
 	assert(subcode < NSUBCODES);
+	if (index < 0 || index > ARRAYSIZE(opcode_def))
+		abort();
 	return opcode_def[index].size;
 }
 
 /* Returns format of opcode that has no subcode */
 const char *snis_opcode_format(uint8_t opcode)
 {
-	assert(opcode < NOPCODES);
 	int index = opcode * NSUBCODES;
+
+	check_index(index);
 	return opcode_def[index].format;
 }
 
@@ -309,7 +322,7 @@ const char *snis_opcode_subcode_format(uint8_t opcode, uint8_t subcode)
 {
 	int index = opcode * NSUBCODES + subcode;
 
-	assert(opcode < NOPCODES);
+	check_index(index);
 	assert(subcode < NSUBCODES);
 	return opcode_def[index].format;
 }
