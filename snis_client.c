@@ -5901,7 +5901,7 @@ static int process_comm_transmission(void)
 	uint8_t length;
 	int rc, n;
 	uint32_t comms_channel;
-	const char const *channel_change_pattern = COMMS_CHANNEL_CHANGE_MSG " %u";
+	const char *channel_change_pattern = COMMS_CHANNEL_CHANGE_MSG " %u";
 	char *channel_change_msg;
 
 	/* REMINDER: If the format of OPCODE_COMMS_TRANSMISSION ever changes, you need to
