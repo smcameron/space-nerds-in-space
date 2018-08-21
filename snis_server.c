@@ -22556,7 +22556,7 @@ static int nl_find_nearest_object(struct game_client *c, int argc, char *argv[],
 		objtype = OBJTYPE_BLACK_HOLE;
 	else if (strcmp(argv[object], "selection") == 0 ||
 		strcmp(argv[object], "target") == 0) {
-		if (bridgelist[c->bridge].science_selection < 0)
+		if (bridgelist[c->bridge].science_selection == (uint32_t) -1)
 			return -1;
 		i = lookup_by_id(bridgelist[c->bridge].science_selection);
 		if (i >= 0)
@@ -22567,7 +22567,7 @@ static int nl_find_nearest_object(struct game_client *c, int argc, char *argv[],
 	if (objtype < 0)
 		goto no_understand;
 	if (adj > 0 && strcmp(argv[adj], "selected") == 0) {
-		if (bridgelist[c->bridge].science_selection < 0)
+		if (bridgelist[c->bridge].science_selection == (uint32_t) -1)
 			return -1;
 		i = lookup_by_id(bridgelist[c->bridge].science_selection);
 	} else {
