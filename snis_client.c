@@ -9035,16 +9035,16 @@ static void draw_3d_mark_arc(GtkWidget *w, GdkGC *gc, struct entity_context *ecx
 			const union vec3 *center, float r, float heading, float mark)
 {
 	/* break arc into max 5 degree segments */
-	int increments = abs(mark / (5.0 * M_PI / 180.0))+1;
-	float delta = mark/increments;
+	int increments = (int) fabs(mark / (5.0 * M_PI / 180.0)) + 1;
+	float delta = mark / increments;
 	int i;
 	union vec3 p1;
-	for (i=0;i<=increments; i++){
+	for (i = 0; i <= increments; i++) {
 		union vec3 p2;
 		heading_mark_to_vec3(r, heading, delta * i, &p2);
 		vec3_add_self(&p2, center);
 
-		if (i!=0) {
+		if (i != 0) {
 			snis_draw_3d_line(w, gc, ecx, p1.v.x, p1.v.y, p1.v.z, p2.v.x, p2.v.y, p2.v.z);
 		}
 		p1 = p2;
@@ -11336,7 +11336,7 @@ static void draw_nav_contact_offset_and_ring(struct snis_entity *player_ship,
 		e = add_entity(instrumentecx, vline_mesh_pos, contact_pos->v.x, contact_pos->v.y,
 			contact_pos->v.z, UI_COLOR(nav_ring));
 	if (e) {
-		update_entity_scale(e, abs(proj_distance));
+		update_entity_scale(e, fabs(proj_distance));
 		update_entity_orientation(e, &player_ship->orientation);
 	}
 
