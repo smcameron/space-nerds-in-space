@@ -600,11 +600,6 @@ static void sort_entity_distances(struct entity_context *cx)
 #endif
 }
 
-static inline float sqr(float a)
-{
-	return a * a;
-}
-
 /* from http://www.crownandcutlass.com/features/technicaldetails/frustum.html
 This page and its contents are Copyright 2000 by Mark Morley
 Unless otherwise noted, you may use any and all code examples provided herein in any way you want. */
