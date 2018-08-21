@@ -13540,7 +13540,7 @@ static int process_sci_details(struct game_client *c)
 
 static int process_sci_align_to_ship(struct game_client *c)
 {
-	if (c->ship_index < 0)
+	if (c->ship_index == (uint32_t) -1)
 		return 0;
 	/* Snap sciball orientation to ship orientation */
 	struct snis_entity *o = &go[c->ship_index];
