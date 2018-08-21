@@ -533,7 +533,8 @@ MODELS=${MD}/freighter.stl \
 	${MD}/missile.stl
 
 MYCFLAGS=-DPREFIX=${PREFIX} ${DEBUGFLAG} ${PROFILEFLAG} ${OPTIMIZEFLAG}\
-	--pedantic -Wall ${STOP_ON_WARN} -pthread -std=gnu99 -rdynamic $(CFLAGS)
+	--pedantic -Wall ${STOP_ON_WARN} -pthread -std=gnu99 -rdynamic \
+	-Wno-extended-offsetof -Wno-gnu-folding-constant $(CFLAGS)
 GTKCFLAGS:=$(subst -I,-isystem ,$(shell pkg-config --cflags gtk+-2.0))
 GLEXTCFLAGS:=$(subst -I,-isystem ,$(shell pkg-config --cflags gtkglext-1.0)) ${PNGCFLAGS}
 GTKLDFLAGS:=$(shell pkg-config --libs gtk+-2.0) $(shell pkg-config --libs gthread-2.0)
@@ -669,7 +670,7 @@ joystick.o:   joystick.c Makefile
 	$(Q)$(COMPILE)
 
 joystick_test:	joystick.c joystick.h Makefile
-	gcc -g -DJOYSTICK_TEST -o joystick_test joystick.c
+	$(CC) -g -DJOYSTICK_TEST -o joystick_test joystick.c
 
 joystick_config.o:	joystick_config.c joystick_config.h string-utils.h
 	$(Q)$(COMPILE)
@@ -929,7 +930,7 @@ a_star_test.o:	a_star_test.c a_star.h Makefile
 	$(Q)$(COMPILE)
 
 a_star_test:	a_star_test.o a_star.o Makefile
-	gcc -g -o a_star_test a_star_test.c a_star.o -lm
+	$(CC) -g -o a_star_test a_star_test.c a_star.o -lm
 
 mtwist.o:	mtwist.c Makefile
 	$(Q)$(COMPILE)
@@ -959,13 +960,13 @@ pronunciation.o:	pronunciation.c Makefile
 	$(Q)$(COMPILE)
 
 test_pronunciation:	pronunciation.c Makefile
-	gcc -DTEST_PRONUNCIATION_FIXUP -o test_pronunciation pronunciation.c
+	$(CC) -DTEST_PRONUNCIATION_FIXUP -o test_pronunciation pronunciation.c
 
 planetary_atmosphere.o:	planetary_atmosphere.c Makefile
 	$(Q)$(COMPILE)
 
 test_planetary_atmosphere:	planetary_atmosphere.c mtwist.o Makefile
-	gcc -g -DTEST_PLANETARY_ATMOSPHERE_PROFILE -o test_planetary_atmosphere planetary_atmosphere.c mtwist.o
+	$(CC) -g -DTEST_PLANETARY_ATMOSPHERE_PROFILE -o test_planetary_atmosphere planetary_atmosphere.c mtwist.o
 
 key_value_parser.o:	key_value_parser.c key_value_parser.h Makefile
 	$(Q)$(COMPILE)
@@ -1014,43 +1015,43 @@ test-marshal:	snis_marshal.c stacktrace.o Makefile
 	$(CC) -DTEST_MARSHALL -o test-marshal snis_marshal.c stacktrace.o
 
 test-quat:	test-quat.c quat.o matrix.o mathutils.o mtwist.o Makefile
-	gcc -Wall -Wextra --pedantic -o test-quat test-quat.c quat.o matrix.o mathutils.o mtwist.o -lm
+	$(CC) -Wall -Wextra --pedantic -o test-quat test-quat.c quat.o matrix.o mathutils.o mtwist.o -lm
 
 test-fleet: quat.o fleet.o mathutils.o mtwist.o Makefile
-	gcc -DTESTFLEET=1 -c -o test-fleet.o fleet.c
-	gcc -DTESTFLEET=1 -o test-fleet test-fleet.o mathutils.o quat.o mtwist.o -lm
+	$(CC) -DTESTFLEET=1 -c -o test-fleet.o fleet.c
+	$(CC) -DTESTFLEET=1 -o test-fleet test-fleet.o mathutils.o quat.o mtwist.o -lm
 
 test-mtwist: mtwist.o test-mtwist.c Makefile
-	gcc -o test-mtwist mtwist.o test-mtwist.c
+	$(CC) -o test-mtwist mtwist.o test-mtwist.c
 
 snis-device-io.o:	snis-device-io.h snis-device-io.c Makefile
-	gcc -Wall -Wextra --pedantic -pthread -c snis-device-io.c
+	$(CC) -Wall -Wextra --pedantic -pthread -c snis-device-io.c
 
 device-io-sample-1:	device-io-sample-1.c snis-device-io.o
-	gcc -Wall -Wextra --pedantic -pthread -o device-io-sample-1 snis-device-io.o \
+	$(CC) -Wall -Wextra --pedantic -pthread -o device-io-sample-1 snis-device-io.o \
 			device-io-sample-1.c
 
 nonuniform_random_sampler.o:	nonuniform_random_sampler.c nonuniform_random_sampler.h
 	$(Q)$(COMPILE)
 
 test_nonuniform_random_sampler:	nonuniform_random_sampler.o mathutils.o mtwist.o
-	gcc -D TEST_NONUNIFORM_SAMPLER -o test_nonuniform_random_sampler mtwist.o mathutils.o -lm nonuniform_random_sampler.c
+	$(CC) -D TEST_NONUNIFORM_SAMPLER -o test_nonuniform_random_sampler mtwist.o mathutils.o -lm nonuniform_random_sampler.c
 
 test-commodities:	commodities.o Makefile string-utils.o
-	gcc -DTESTCOMMODITIES=1 -O3 -c commodities.c -o test-commodities.o
-	gcc -DTESTCOMMODITIES=1 -o test-commodities string-utils.o test-commodities.o
+	$(CC) -DTESTCOMMODITIES=1 -O3 -c commodities.c -o test-commodities.o
+	$(CC) -DTESTCOMMODITIES=1 -o test-commodities string-utils.o test-commodities.o
 
 test-obj-parser:	test-obj-parser.c stl_parser.o mesh.o mtwist.o mathutils.o matrix.o quat.o Makefile
-	gcc -o test-obj-parser stl_parser.o mtwist.o mathutils.o matrix.o mesh.o quat.o -lm test-obj-parser.c
+	$(CC) -o test-obj-parser stl_parser.o mtwist.o mathutils.o matrix.o mesh.o quat.o -lm test-obj-parser.c
 
 test:	test-matrix test-space-partition test-marshal test-quat test-fleet test-mtwist test-commodities test_solarsystem_config
-	/bin/true	# Prevent make from running "gcc test.o".
+	/bin/true	# Prevent make from running "$(CC) test.o".
 
 test_solarsystem_config:	test_solarsystem_config.c solarsystem_config.o string-utils.o
-	gcc -o $@ $< solarsystem_config.o string-utils.o
+	$(CC) -o $@ $< solarsystem_config.o string-utils.o
 
 test_crater:	test_crater.o crater.o mathutils.o mtwist.o png_utils.o png_utils.o
-	gcc -o $@ ${PNGCFLAGS} test_crater.o crater.o mtwist.o png_utils.o ${PNGLIBS} mathutils.o -lm
+	$(CC) -o $@ ${PNGCFLAGS} test_crater.o crater.o mtwist.o png_utils.o ${PNGLIBS} mathutils.o -lm
 
 snis_client.6.gz:	snis_client.6
 	gzip -9 - < snis_client.6 > snis_client.6.gz
@@ -1068,7 +1069,7 @@ snis_test_audio.1.gz:	snis_test_audio.1
 	gzip -9 - < snis_test_audio.1 > snis_test_audio.1.gz
 
 print_ship_attributes:	snis_entity_key_value_specification.h key_value_parser.o
-	gcc -o print_ship_attributes print_ship_attributes.c key_value_parser.o
+	$(CC) -o print_ship_attributes print_ship_attributes.c key_value_parser.o
 
 local_termios2.h:	termios2.h
 	$(Q)./check_for_termios2.sh
@@ -1077,13 +1078,13 @@ snis_dmx.o:	snis_dmx.c snis_dmx.h Makefile local_termios2.h
 	$(Q)$(COMPILE)
 
 test_snis_dmx:	test_snis_dmx.c snis_dmx.o
-	$(Q)gcc -pthread -o test_snis_dmx test_snis_dmx.c snis_dmx.o
+	$(Q)$(CC) -pthread -o test_snis_dmx test_snis_dmx.c snis_dmx.o
 
 snis_test_audio.o:	snis_test_audio.c Makefile ${SNDOBJS} ${OGGOBJ}
 	$(Q)$(VORBISCOMPILE)
 
 snis_test_audio:	snis_test_audio.o ${SNDLIBS} Makefile
-	gcc -o snis_test_audio snis_test_audio.o ${SNDOBJS} ${OGGOBJ} ${SNDLIBS}
+	$(CC) -o snis_test_audio snis_test_audio.o ${SNDOBJS} ${OGGOBJ} ${SNDLIBS}
 
 install:	${PROGS} ${MODELS} ${AUDIOFILES} ${TEXTURES} \
 		${MATERIALS} ${CONFIGFILES} ${SHADERS} ${LUASCRIPTS} ${MANPAGES} ${SSGL} \
@@ -1183,7 +1184,7 @@ Makefile.depend :
 	mv Makefile.depend.tmp Makefile.depend
 
 check-endianness:	check-endianness.c
-	gcc -o check-endianness check-endianness.c
+	$(CC) -o check-endianness check-endianness.c
 
 build_info.h: check-endianness snis.h gather_build_info Makefile
 	./gather_build_info > build_info.h
