@@ -4535,7 +4535,7 @@ static void show_lobbyscreen(GtkWidget *w)
 				lobby_selected_server = 0;
 			}
 			 
-			sprintf(msg, "%hu.%hu.%hu.%hu/%hu", x[0], x[1], x[2], x[3], lobby_game_server[i].port);
+			sprintf(msg, "%hhu.%hhu.%hhu.%hhu/%hu", x[0], x[1], x[2], x[3], lobby_game_server[i].port);
 			sng_abs_xy_draw_string(msg, NANO_FONT, txx(30), txy(100) + i * LINEHEIGHT);
 			sprintf(msg, "%s", lobby_game_server[i].game_instance);
 			sng_abs_xy_draw_string(msg, NANO_FONT, txx(150), txy(100) + i * LINEHEIGHT);
