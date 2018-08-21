@@ -20855,7 +20855,7 @@ static void lobby_list_change_notification(struct ssgl_lobby_descriptor *list, i
 {
 	int i;
 	char msg[255];
-	struct ssgl_lobby_descriptor lobbylist[256] = { 0 };
+	struct ssgl_lobby_descriptor lobbylist[256] = { { 0 } };
 	struct pull_down_menu *newmenu;
 	int nlobbies = 0;
 
