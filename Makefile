@@ -1188,4 +1188,7 @@ check-endianness:	check-endianness.c
 build_info.h: check-endianness snis.h gather_build_info Makefile
 	./gather_build_info > build_info.h
 
+cppcheck:
+	cppcheck .
+
 include Makefile.depend
