@@ -6155,7 +6155,6 @@ static int process_set_waypoint(void)
 {
 	int rc;
 	uint8_t subcode, row, count;
-	uint32_t row32;
 	double x, y, z;
 	unsigned char buffer[64];
 
@@ -6191,14 +6190,13 @@ static int process_set_waypoint(void)
 		}
 		return 0;
 	case OPCODE_SET_WAYPOINT_UPDATE_SELECTION: /* silent update of selection */
-		rc = read_and_unpack_buffer(buffer, "w", &row32);
+		rc = read_and_unpack_buffer(buffer, "w", &row);
 		if (rc)
 			return rc;
-		if (row32 == (uint32_t) -1 || row32 < sci_ui.nwaypoints) {
-			row = (uint8_t) row32;
+		if (row == (uint32_t) -1 || row < sci_ui.nwaypoints) {
 			curr_science_waypoint = row;
 			prev_science_waypoint = row;
-			if (row != (uint8_t) -1) {
+			if (row != (uint32_t) -1) {
 				curr_science_guy = NULL;
 				prev_science_guy = NULL;
 			}
