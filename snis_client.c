@@ -13124,6 +13124,7 @@ static void show_engineering(GtkWidget *w)
 	show_common_screen(w, "ENGINEERING");
 }
 
+#if 0
 static inline double screenx_to_damconx(double x)
 {
 	return x - damconscreenx0 - damconscreenxdim / 2.0 + *damconscreenx;
@@ -13133,6 +13134,7 @@ static inline double screeny_to_damcony(double y)
 {
 	return y - damconscreeny0 - damconscreenydim / 2.0 + *damconscreeny;
 }
+#endif
 
 static inline int damconx_to_screenx(double x)
 {
