@@ -144,10 +144,10 @@ static void *broadcast_recv_thread(__attribute__((unused)) void *arg)
 		memset(&payload, 0, sizeof(payload));
 		rc = recvfrom(bcast, &payload, sizeof(payload), 0, &remote_addr, &remote_addr_len);
 		if (rc < 0) {
-			fprintf(stderr, "sendto failed: %s\n", strerror(errno));
+			fprintf(stderr, "recvfrom failed: %s\n", strerror(errno));
 		} else {
-			fprintf(stderr, "Received broadcast lobby info: addr = %08x, port = %04x\n",
-				ntohl(payload.ipaddr), ntohs(payload.port));
+			/* fprintf(stderr, "Received broadcast lobby info: addr = %08x, port = %04x\n",
+				ntohl(payload.ipaddr), ntohs(payload.port)); */
 			save_payload(&payload);
 		}
 	} while (1);
