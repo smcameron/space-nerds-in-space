@@ -1130,7 +1130,7 @@ static void add_new_rts_unit(struct snis_entity *builder)
 		random_point_on_sphere(400.0f + snis_randn(400), &dx, &dy, &dz);
 		unit_type = builder->tsd.starbase.build_unit_type;
 	} else {
-		fprintf(stderr, "Unexpected builder type %hhu\n", builder->type);
+		fprintf(stderr, "Unexpected builder type %u\n", builder->type);
 		return;
 	}
 	dx += builder->x;
@@ -5917,7 +5917,7 @@ static void announce_starbase_status_change(char *basename, int winner, int lose
 static void rts_occupy_starbase_slot(struct snis_entity *starbase, struct snis_entity *occupier)
 {
 	int i;
-	int loser, zone = -1;
+	int loser = 255, zone = -1;
 	/* See if there's an unoccupied slot in the first 3 */
 	for (i = 0; i < 3; i++) {
 		if (starbase->tsd.starbase.occupant[i] == 255) {
