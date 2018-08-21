@@ -2284,7 +2284,7 @@ void graph_dev_draw_entity(struct entity_context *cx, struct entity *e, union ve
 			case MATERIAL_ALPHA_BY_NORMAL: {
 				struct material_alpha_by_normal *mt = &e->material_ptr->alpha_by_normal;
 				texture_id = mt->texture_id;
-				if (texture_id >= 0)
+				if (mt->texture_id >= 0)
 					tex_shader = &textured_alpha_by_normal_shader;
 				else
 					tex_shader = &alpha_by_normal_shader;
