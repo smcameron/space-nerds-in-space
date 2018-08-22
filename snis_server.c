@@ -2248,8 +2248,7 @@ static int roll_damage(struct snis_entity *o, struct damcon_data *d,
 			double weapons_factor, double shield_strength, uint8_t system,
 			int damcon_system)
 {
-	int damage = (uint8_t) (weapons_factor *
-				(double) (20 + snis_randn(40)) * (1.2 - shield_strength));
+	int damage = (weapons_factor * (double) (20 + snis_randn(40)) * (1.2 - shield_strength));
 	if (damage + system > 255)
 		damage = 255 - system;
 
