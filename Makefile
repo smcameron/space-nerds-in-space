@@ -6,15 +6,9 @@ WITHAUDIO=yes
 # use "make OSX=1" for mac
 OSX=0
 
-ifeq (${OSX},0)
-ifeq (${CC}, clang)
+# -lrt is only needed for clock_gettime() and only for glibc before 2.17
+# LRTLIB=-lrt
 LRTLIB=
-else
-LRTLIB=-lrt
-endif
-else
-LRTLIB=
-endif
 
 INSTALL ?= install
 AWK ?= awk

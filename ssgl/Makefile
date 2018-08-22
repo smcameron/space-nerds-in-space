@@ -51,18 +51,9 @@ endif
 
 OSX=0
 
-ifeq (${OSX},1)
-LINKFLAGS=
-LRTFLAGS=
-else
-ifeq (${CC}, clang)
-LINKFLAGS=
-LRTFLAGS=
-else
-LINKFLAGS=-lrt
-LRTFLAGS=-lrt
-endif
-endif
+# -lrt is needed for clock_gettime(), but only for glibc before 2.17
+# LINKFLAGS=-lrt
+# LRTFLAGS=-lrt
 
 COMPILE=$(CC) ${MYCFLAGS} -c -o $@ $< && $(ECHO) '  COMPILE' $<
 
