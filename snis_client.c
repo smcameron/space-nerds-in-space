@@ -18719,7 +18719,6 @@ gint advance_game(gpointer data)
 		gdk_threads_leave();
 		if (final_quit_selection)
 			really_quit();
-		return TRUE;
 	}
 
 	gdk_threads_enter();
