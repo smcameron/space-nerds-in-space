@@ -139,8 +139,12 @@ static int missile_lifetime = MISSILE_LIFETIME;
 static float torpedo_velocity = TORPEDO_VELOCITY;
 static float missile_target_dist = MISSILE_TARGET_DIST;
 static float max_missile_deltav = MAX_MISSILE_DELTAV;
-static float missile_fire_chance = MISSILE_FIRE_CHANCE;
-
+static float enemy_missile_fire_chance = ENEMY_MISSILE_FIRE_CHANCE;
+static float enemy_laser_fire_chance = ENEMY_LASER_FIRE_CHANCE;
+static float enemy_torpedo_fire_chance = ENEMY_LASER_FIRE_CHANCE;
+static int enemy_laser_fire_interval = ENEMY_LASER_FIRE_INTERVAL;
+static int enemy_torpedo_fire_interval = ENEMY_TORPEDO_FIRE_INTERVAL;
+static int enemy_missile_fire_interval = ENEMY_MISSILE_FIRE_INTERVAL;
 /*
  * End of runtime adjustable globals
  */
@@ -4682,7 +4686,8 @@ static void fire_missile(struct snis_entity *shooter, uint32_t target_id);
 static void ai_maybe_fire_weapon(struct snis_entity *o, struct snis_entity *v, int imacop,
 					double vdist, float extra_range)
 {
-	if (snis_randn(1000) < 150 + imacop * 150 && vdist <= (torpedo_lifetime * torpedo_velocity) + extra_range &&
+	if (snis_randn(1000) < (enemy_torpedo_fire_chance * 10) + imacop * 150 &&
+		vdist <= (torpedo_lifetime * torpedo_velocity) + extra_range &&
 		o->tsd.ship.next_torpedo_time <= universe_timestamp &&
 		o->tsd.ship.torpedoes > 0 &&
 		ship_type[o->tsd.ship.shiptype].has_torpedoes) {
@@ -4703,27 +4708,27 @@ static void ai_maybe_fire_weapon(struct snis_entity *o, struct snis_entity *v, i
 			o->tsd.ship.torpedoes--;
 			/* FIXME: how do the torpedoes refill? */
 			o->tsd.ship.next_torpedo_time = universe_timestamp +
-				ENEMY_TORPEDO_FIRE_INTERVAL;
+				enemy_torpedo_fire_interval;
 			check_for_incoming_fire(v);
 		}
 	} else {
-		if (snis_randn(1000) < 300 + imacop * 200 &&
+		if (snis_randn(1000) < enemy_laser_fire_chance * 10 + imacop * 200 &&
 			o->tsd.ship.next_laser_time <= universe_timestamp &&
 			ship_type[o->tsd.ship.shiptype].has_lasers) {
 			if (v->type == OBJTYPE_PLANET || !planet_between_objs(o, v)) {
 				o->tsd.ship.next_laser_time = universe_timestamp +
-					ENEMY_LASER_FIRE_INTERVAL;
+					enemy_laser_fire_interval;
 				add_laserbeam(o->id, v->id, LASERBEAM_DURATION);
 				check_for_incoming_fire(v);
 			}
 		} else {
 			/* TODO: This probability may need tuning. */
-			if (snis_randn(1000) < (missile_fire_chance * 10) + imacop * 200 &&
-				o->tsd.ship.next_laser_time < universe_timestamp &&
+			if (snis_randn(1000) < (enemy_missile_fire_chance * 10) + imacop * 200 &&
+				o->tsd.ship.next_missile_time < universe_timestamp &&
 				ship_type[o->tsd.ship.shiptype].has_missiles) {
 				if (v->type == OBJTYPE_SHIP1 || v->type == OBJTYPE_SHIP2) {
-					o->tsd.ship.next_laser_time = universe_timestamp +
-						ENEMY_LASER_FIRE_INTERVAL;
+					o->tsd.ship.next_missile_time = universe_timestamp +
+						enemy_missile_fire_interval;
 					fire_missile(o, v->id);
 					check_for_incoming_fire(v);
 				}
@@ -16179,9 +16184,29 @@ static struct tweakable_var_descriptor server_tweak[] = {
 		&max_missile_deltav, 'f',
 		0.0, MAX_MISSILE_DELTAV * 10.0, MAX_MISSILE_DELTAV, 0, 0, 0 },
 	{ "MISSILE_FIRE_CHANCE",
-		"CHANCE OF NPC SHIP FIRING MISSILES",
-		&missile_fire_chance, 'f',
-		0.0, 100.0, MISSILE_FIRE_CHANCE, 0, 0, 0 },
+		"CHANCE OF NPC SHIP FIRING MISSILES (0-100)",
+		&enemy_missile_fire_chance, 'f',
+		0.0, 100.0, ENEMY_MISSILE_FIRE_CHANCE, 0, 0, 0 },
+	{ "TORPEDO_FIRE_CHANCE",
+		"CHANCE OF NPC SHIP FIRING TORPEDOES (0-100)",
+		&enemy_torpedo_fire_chance, 'f',
+		0.0, 100.0, ENEMY_TORPEDO_FIRE_CHANCE, 0, 0, 0 },
+	{ "LASER_FIRE_CHANCE",
+		"CHANCE OF NPC SHIP FIRING LASER (0-100)",
+		&enemy_laser_fire_chance, 'f',
+		0.0, 100.0, ENEMY_LASER_FIRE_CHANCE, 0, 0, 0 },
+	{ "MISSILE_FIRE_INTERVAL",
+		"10THS OF SECS. MINIMUM PERIOD BETWEEN ENEMY MISSILE LAUNCHES",
+		&enemy_missile_fire_interval, 'i',
+		0.0, 0.0, 0.0, 0, 10000, ENEMY_MISSILE_FIRE_INTERVAL },
+	{ "LASER_FIRE_INTERVAL",
+		"10THS OF SECS. MINIMUM PERIOD BETWEEN ENEMY LASER FIRE",
+		&enemy_laser_fire_interval, 'i',
+		0.0, 0.0, 0.0, 0, 10000, ENEMY_LASER_FIRE_INTERVAL },
+	{ "TORPEDO_FIRE_INTERVAL",
+		"10THS OF SECS. MINIMUM PERIOD BETWEEN ENEMY TORPEDO FIRE",
+		&enemy_laser_fire_interval, 'i',
+		0.0, 0.0, 0.0, 0, 10000, ENEMY_TORPEDO_FIRE_INTERVAL },
 	{ NULL, NULL, NULL, '\0', 0.0, 0.0, 0.0, 0, 0, 0 },
 };
 

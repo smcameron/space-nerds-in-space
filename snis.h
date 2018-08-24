@@ -351,7 +351,9 @@ struct ship_data {
 #define MAX_MISSILE_DELTAV 5
 #define MISSILE_EXPLOSION_DAMAGE_DISTANCE (200.0)
 #define MISSILE_EXPLOSION_WEAPONS_FACTOR (4.0)
-#define MISSILE_FIRE_CHANCE 20 /* out of 100 */
+#define ENEMY_MISSILE_FIRE_CHANCE 20 /* out of 100 */
+#define ENEMY_LASER_FIRE_CHANCE 20 /* out of 100 */
+#define ENEMY_TORPEDO_FIRE_CHANCE 20 /* out of 100 */
 #define SPACEMONSTER_WEAPONS_FACTOR (1.0)
 #define TORPEDO_DETONATE_DIST2 (150 * 150)
 #define MISSILE_PROXIMITY_DISTANCE (75.0)
@@ -496,9 +498,11 @@ struct ship_data {
 	uint8_t trident;
 	uint8_t exterior_lights; /* 255 = on, 0 = off */
 	int32_t next_torpedo_time;
-#define ENEMY_TORPEDO_FIRE_INTERVAL (4 * 30) /* 4 seconds */ 
+#define ENEMY_TORPEDO_FIRE_INTERVAL (12 * 10) /* 12 seconds */
 	int32_t next_laser_time;
-#define ENEMY_LASER_FIRE_INTERVAL (2 * 30) /* 2 seconds */ 
+#define ENEMY_LASER_FIRE_INTERVAL (6 * 10) /* 6 seconds */
+	int32_t next_missile_time;
+#define ENEMY_MISSILE_FIRE_INTERVAL (12 * 10) /* 12 seconds */
 	uint8_t lifeform_count;
 #define MAX_TRACTOR_DIST 5000.0 /* TODO: tweak this */
 #define TRACTOR_BEAM_IDEAL_DIST 200.0 /* TODO: tweak this */
