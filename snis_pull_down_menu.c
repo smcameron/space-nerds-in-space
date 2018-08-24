@@ -119,6 +119,7 @@ struct pull_down_menu *create_pull_down_menu(int font)
 	m->current_col = -1;
 	m->current_row = -1;
 	memset(m->col, 0, sizeof(m->col));
+	pthread_mutex_init(&m->mutex, NULL);
 	return m;
 }
 
