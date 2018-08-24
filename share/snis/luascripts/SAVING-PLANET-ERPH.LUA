@@ -5,6 +5,7 @@
 
 -- First, clear the board
 clear_all();
+set_variable("MISSILE_FIRE_CHANCE", "0");
 
 startx = 1000;
 starty = -6000;
