@@ -20983,7 +20983,6 @@ int main(int argc, char *argv[])
 #endif
 	gdk_threads_init();
 
-	ssgl_register_for_bcast_packets(lobby_list_change_notification);
 	gettimeofday(&start_time, NULL);
 	universe_timestamp_offset = time_now_double(); /* until we get real time from server */
 
@@ -21005,6 +21004,7 @@ int main(int argc, char *argv[])
 	setup_text_to_speech_thread();
 	ecx = entity_context_new(5000, 5000);
 
+	ssgl_register_for_bcast_packets(lobby_list_change_notification); /* must happen after init_net_setup_ui() */
 	snis_protocol_debugging(1);
 
 	set_default_clip_window();
