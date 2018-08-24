@@ -139,6 +139,7 @@ static int missile_lifetime = MISSILE_LIFETIME;
 static float torpedo_velocity = TORPEDO_VELOCITY;
 static float missile_target_dist = MISSILE_TARGET_DIST;
 static float max_missile_deltav = MAX_MISSILE_DELTAV;
+static float missile_fire_chance = MISSILE_FIRE_CHANCE;
 
 /*
  * End of runtime adjustable globals
@@ -4717,7 +4718,7 @@ static void ai_maybe_fire_weapon(struct snis_entity *o, struct snis_entity *v, i
 			}
 		} else {
 			/* TODO: This probability may need tuning. */
-			if (snis_randn(1000) < 300 + imacop * 200 &&
+			if (snis_randn(1000) < (missile_fire_chance * 10) + imacop * 200 &&
 				o->tsd.ship.next_laser_time < universe_timestamp &&
 				ship_type[o->tsd.ship.shiptype].has_missiles) {
 				if (v->type == OBJTYPE_SHIP1 || v->type == OBJTYPE_SHIP2) {
@@ -16177,6 +16178,10 @@ static struct tweakable_var_descriptor server_tweak[] = {
 		"MAX ACCELERATION OF MISSILES",
 		&max_missile_deltav, 'f',
 		0.0, MAX_MISSILE_DELTAV * 10.0, MAX_MISSILE_DELTAV, 0, 0, 0 },
+	{ "MISSILE_FIRE_CHANCE",
+		"CHANCE OF NPC SHIP FIRING MISSILES",
+		&missile_fire_chance, 'f',
+		0.0, 100.0, MISSILE_FIRE_CHANCE, 0, 0, 0 },
 	{ NULL, NULL, NULL, '\0', 0.0, 0.0, 0.0, 0, 0, 0 },
 };
 
