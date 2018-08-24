@@ -145,6 +145,9 @@ static float enemy_torpedo_fire_chance = ENEMY_LASER_FIRE_CHANCE;
 static int enemy_laser_fire_interval = ENEMY_LASER_FIRE_INTERVAL;
 static int enemy_torpedo_fire_interval = ENEMY_TORPEDO_FIRE_INTERVAL;
 static int enemy_missile_fire_interval = ENEMY_MISSILE_FIRE_INTERVAL;
+static float missile_proximity_distance = MISSILE_PROXIMITY_DISTANCE;
+static float missile_explosion_damage_distance = MISSILE_EXPLOSION_DAMAGE_DISTANCE;
+
 /*
  * End of runtime adjustable globals
  */
@@ -3383,12 +3386,12 @@ static void missile_collision_detection(void *context, void *entity)
 		return;
 
 	dist2 = object_dist2(missile, target);
-	if (dist2 < MISSILE_PROXIMITY_DISTANCE * MISSILE_PROXIMITY_DISTANCE) {
+	if (dist2 < missile_proximity_distance * missile_proximity_distance) {
 		switch (target->type) {
 		case OBJTYPE_SHIP1:
 		case OBJTYPE_SHIP2:
 			notify_the_cops(missile);
-			damage_factor = MISSILE_EXPLOSION_DAMAGE_DISTANCE / (sqrt(dist2) + 1.0);
+			damage_factor = missile_explosion_damage_distance / (sqrt(dist2) + 1.0);
 			calculate_missile_explosion_damage(target, damage_factor);
 			send_ship_damage_packet(target);
 			if (target->type == OBJTYPE_SHIP2)
@@ -16207,6 +16210,14 @@ static struct tweakable_var_descriptor server_tweak[] = {
 		"10THS OF SECS. MINIMUM PERIOD BETWEEN ENEMY TORPEDO FIRE",
 		&enemy_laser_fire_interval, 'i',
 		0.0, 0.0, 0.0, 0, 10000, ENEMY_TORPEDO_FIRE_INTERVAL },
+	{ "MISSILE_PROXIMITY_DISTANCE",
+		"MINIMUM DISTANCE BETWEEN MISSILE AND TARGET TO DETONATE",
+		&missile_proximity_distance, 'f',
+		0.0, 2000.0, MISSILE_PROXIMITY_DISTANCE, 0, 0, 0 },
+	{ "MISSILE_EXPLOSION_DAMAGE_DISTANCE",
+		"DAMAGE FACTOR PER UNIT DISTANCE",
+		&missile_explosion_damage_distance, 'f',
+		0.0, 2000.0, MISSILE_EXPLOSION_DAMAGE_DISTANCE, 0, 0, 0 },
 	{ NULL, NULL, NULL, '\0', 0.0, 0.0, 0.0, 0, 0, 0 },
 };
 
