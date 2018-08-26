@@ -198,6 +198,30 @@ struct damcon_data;
 #define AI_MODE_RTS_RESUPPLY 18
 #define AI_MODE_RTS_OUT_OF_FUEL 19
 
+static const char * const ai_mode_name[] = {
+	"IDLE",
+	"ATTACK",
+	"TRAVEL",
+	"FLEE",
+	"PATROL",
+	"FLEET MEMBER",
+	"FLEET LEADER",
+	"HANGOUT",
+	"COP",
+	"MINING BOT",
+	"TOW SHIP",
+	"RTS FIRST COMMAND",
+	"RTS STANDBY",
+	"RTS GUARD BASE",
+	"RTS ESCORT",
+	"RTS ATTACK NEAREST ENEMY",
+	"RTS MOVE TO WAYPOINT",
+	"RTS OCCUPY NEAREST BASE",
+	"RTS ATTACK MAIN BASE",
+	"RTS RESUPPLY",
+	"RTS OUT OF FUEL",
+};
+
 /* distance more than which fleet ships will warp back to position rather than simply flying */
 #define FLEET_WARP_DISTANCE 5000.0
 

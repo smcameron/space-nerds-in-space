@@ -15401,11 +15401,14 @@ static int demon_id_selected(uint32_t id)
 static void demon_select(uint32_t id)
 {
 	int old_captain = -1;
+	char console_msg[100];
 
 	if (demon_ui.nselected >= MAX_DEMON_SELECTABLE)
 		return;
 	demon_ui.selected_id[demon_ui.nselected] = id;
 	demon_ui.nselected++;
+	snprintf(console_msg, sizeof(console_msg) - 1, "SELECTED OBJECT %d", id);
+	print_demon_console_msg(console_msg);
 	if (demon_ui.buttonmode == DEMON_BUTTON_CAPTAINMODE) {
 		int index = lookup_object_by_id(id);
 
@@ -15435,10 +15438,13 @@ static void demon_select(uint32_t id)
 static void demon_deselect(uint32_t id)
 {
 	int i;
+	char console_msg[100];
+
 	for (i = 0; i < demon_ui.nselected; i++) {
 		if (demon_ui.selected_id[i] == id) {
 			int index;
-
+			snprintf(console_msg, sizeof(console_msg) - 1, "DESELECTED %u\n", id);
+			print_demon_console_msg(console_msg);
 			if (demon_ui.captain_of != -1) {
 				index = lookup_object_by_id(id);
 				if (demon_ui.captain_of == index) {
@@ -15460,6 +15466,7 @@ static void demon_deselect(uint32_t id)
 
 static void demon_select_none(void)
 {
+	print_demon_console_msg("NOTHING SELECTED");
 	demon_ui.nselected = 0;
 }
 
@@ -15729,9 +15736,10 @@ static void debug_draw_ship_patrol_route(uint8_t npoints, union vec3 patrol[],
 	}
 }
 
-static void draw_selection_marker(int x1, int y1, int x2, int y2, int offset)
+static void draw_selection_marker(int x1, int y1, int x2, int y2, int offset, uint32_t oid)
 {
 	const int w = 3;
+	char oidstr[12];
 	offset += (4 - ((timer >> 1) % 4));
 
 	snis_draw_line(x1 - offset, y1 - offset, x1 - offset + w, y1 - offset);
@@ -15742,6 +15750,8 @@ static void draw_selection_marker(int x1, int y1, int x2, int y2, int offset)
 	snis_draw_line(x1 - offset, y2 + offset, x1 - offset + w, y2 + offset);
 	snis_draw_line(x2 + offset, y2 + offset - w, x2 + offset, y2 + offset);
 	snis_draw_line(x2 + offset - w, y2 + offset, x2 + offset, y2 + offset);
+	snprintf(oidstr, sizeof(oidstr) - 1, "%u", oid);
+	sng_abs_xy_draw_string(oidstr, PICO_FONT, x1 + 8, y1 - 8);
 }
 
 static void debug_draw_object(GtkWidget *w, struct snis_entity *o,
@@ -15840,7 +15850,7 @@ static void debug_draw_object(GtkWidget *w, struct snis_entity *o,
 	snis_draw_line(x1, y1, x2, y2);
 	snis_draw_line(x1, y2, x2, y1);
 	if (demon_id_selected(o->id)) {
-		draw_selection_marker(x1, y1, x2, y2, 6);
+		draw_selection_marker(x1, y1, x2, y2, 6, o->id);
 		if (o->type == OBJTYPE_SHIP1 || o->type == OBJTYPE_SHIP2) {
 			snis_draw_arrow(w, gc, x, y, SCIENCE_SCOPE_R, o->heading, 0.4);
 		}
@@ -17038,6 +17048,8 @@ static void show_demon_3d(GtkWidget *w)
 	static struct material red_material, blue_material, white_material,
 		green_material, magenta_material, amber_material,
 		orangered_material, yellow_material, cyan_material;
+	char oidstr[12];
+	float oidstrx, oidstry;
 
 	if (!initialized_materials) {
 		material_init_alpha_by_normal(&cyan_material);
@@ -17154,7 +17166,9 @@ static void show_demon_3d(GtkWidget *w)
 		char label[100];
 		float sx, sy;
 		struct material *material;
+		int selected;
 
+		selected = 0;
 		if (!o->alive)
 			continue;
 		switch (o->type) {
@@ -17228,6 +17242,8 @@ static void show_demon_3d(GtkWidget *w)
 			break;
 		}
 		if (demon_id_selected(o->id)) {
+			selected = 1;
+			snprintf(oidstr, sizeof(oidstr) - 1, "%u", o->id);
 			if ((timer & 0x0f) < 0x03) {
 				color = BLACK;
 				material = &green_material;
@@ -17305,6 +17321,12 @@ static void show_demon_3d(GtkWidget *w)
 			}
 		default:
 			break;
+		}
+		if (selected && e) {
+			entity_get_screen_coords(e, &oidstrx, &oidstry);
+			oidstrx += txx(10);
+			oidstry -= txy(20);
+			sng_abs_xy_draw_string(oidstr, PICO_FONT, oidstrx, oidstry);
 		}
 	}
 

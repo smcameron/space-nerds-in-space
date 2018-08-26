@@ -16412,6 +16412,375 @@ static void server_builtin_setrole(char *cmd)
 
 static void server_builtin_help(char *cmd);
 
+static void server_builtin_dump(char *cmd)
+{
+	int i, j, rc;
+	uint32_t id;
+	char console_msg[100];
+	char *t;
+	struct snis_entity *o;
+
+	rc = sscanf(cmd, "%*s %u", &id);
+	if (rc != 1) {
+		send_demon_console_msg("INVALID DUMP COMMAND");
+		return;
+	}
+
+	i = lookup_by_id(id);
+	if (i < 0) {
+		snprintf(console_msg, sizeof(console_msg) - 1, "ID %u NOT FOUND", id);
+		send_demon_console_msg(console_msg);
+		return;
+	}
+	o = &go[i];
+	snprintf(console_msg, sizeof(console_msg) - 1,
+			"%u  %s X,Y,Z,T = %f,%f,%f, %d", id, o->sdata.name, o->x, o->y, o->z, o->type);
+	send_demon_console_msg(console_msg);
+	switch (o->type) {
+	case OBJTYPE_SHIP1:
+		t = "PLAYER SHIP";
+		snprintf(console_msg, sizeof(console_msg) - 1, "TYPE: %s", t);
+		send_demon_console_msg(console_msg);
+		break;
+	case OBJTYPE_SHIP2:
+		t = "NPC SHIP";
+		snprintf(console_msg, sizeof(console_msg) - 1, "TYPE: %s", t);
+		send_demon_console_msg(console_msg);
+		snprintf(console_msg, sizeof(console_msg) - 1, "TORPEDOES: %u", o->tsd.ship.torpedoes);
+		send_demon_console_msg(console_msg);
+		snprintf(console_msg, sizeof(console_msg) - 1, "POWER: %u", o->tsd.ship.power);
+		send_demon_console_msg(console_msg);
+		snprintf(console_msg, sizeof(console_msg) - 1, "VELOCITY: %f", o->tsd.ship.velocity);
+		send_demon_console_msg(console_msg);
+		snprintf(console_msg, sizeof(console_msg) - 1, "SHIELD DAMAGE: %u",
+				o->tsd.ship.damage.shield_damage);
+		send_demon_console_msg(console_msg);
+		send_demon_console_msg("- AI STACK");
+		for (i = 0; i < o->tsd.ship.nai_entries; i++) {
+			snprintf(console_msg, sizeof(console_msg) - 1,
+				"--- %s", ai_mode_name[o->tsd.ship.ai[i].ai_mode]);
+			send_demon_console_msg(console_msg);
+			switch (o->tsd.ship.ai[i].ai_mode) {
+			case AI_MODE_IDLE:
+				break;
+			case AI_MODE_ATTACK:
+				snprintf(console_msg, sizeof(console_msg) - 1, "-----  VICTIM %u",
+						o->tsd.ship.ai[i].u.attack.victim_id);
+				send_demon_console_msg(console_msg);
+				break;
+			case AI_MODE_TRAVEL:
+				break;
+			case AI_MODE_FLEE:
+				snprintf(console_msg, sizeof(console_msg) - 1, "----- ASSAILANT %u",
+						o->tsd.ship.ai[i].u.flee.assailant);
+				send_demon_console_msg(console_msg);
+				snprintf(console_msg, sizeof(console_msg) - 1, "----- WARP COUNTDOWN %d",
+						o->tsd.ship.ai[i].u.flee.warp_countdown);
+				send_demon_console_msg(console_msg);
+				break;
+			case AI_MODE_PATROL:
+				for (j = 0; j < o->tsd.ship.ai[i].u.patrol.npoints; j++) {
+					char c;
+					if (j == o->tsd.ship.ai[i].u.patrol.dest)
+						c = '>';
+					else
+						c = '-';
+					snprintf(console_msg, sizeof(console_msg) - 1, "-----%c %f,%f,%f\n",
+						c, o->tsd.ship.ai[i].u.patrol.p[j].v.x,
+						o->tsd.ship.ai[i].u.patrol.p[j].v.y,
+						o->tsd.ship.ai[i].u.patrol.p[j].v.z);
+					send_demon_console_msg(console_msg);
+				}
+				break;
+			case AI_MODE_FLEET_MEMBER:
+				snprintf(console_msg, sizeof(console_msg) - 1, "----- fleet number %d, position %d",
+						o->tsd.ship.ai[i].u.fleet.fleet,
+						o->tsd.ship.ai[i].u.fleet.fleet_position);
+				send_demon_console_msg(console_msg);
+				break;
+			case AI_MODE_FLEET_LEADER:
+				snprintf(console_msg, sizeof(console_msg) - 1, "----- fleet number %d, position %d",
+						o->tsd.ship.ai[i].u.fleet.fleet,
+						o->tsd.ship.ai[i].u.fleet.fleet_position);
+				send_demon_console_msg(console_msg);
+				for (j = 0; j < o->tsd.ship.ai[i].u.fleet.patrol.npoints; j++) {
+					char c;
+					if (j == o->tsd.ship.ai[i].u.fleet.patrol.dest)
+						c = '>';
+					else
+						c = '-';
+					snprintf(console_msg, sizeof(console_msg) - 1, "-----%c %f,%f,%f\n",
+						c, o->tsd.ship.ai[i].u.fleet.patrol.p[j].v.x,
+						o->tsd.ship.ai[i].u.fleet.patrol.p[j].v.y,
+						o->tsd.ship.ai[i].u.fleet.patrol.p[j].v.z);
+					send_demon_console_msg(console_msg);
+				}
+				break;
+			case AI_MODE_HANGOUT:
+				snprintf(console_msg, sizeof(console_msg), "----- time to go %d\n",
+						o->tsd.ship.ai[i].u.hangout.time_to_go);
+				send_demon_console_msg(console_msg);
+				break;
+			case AI_MODE_COP:
+				for (j = 0; j < o->tsd.ship.ai[i].u.cop.npoints; j++) {
+					char c;
+					if (j == o->tsd.ship.ai[i].u.cop.dest)
+						c = '>';
+					else
+						c = '-';
+					snprintf(console_msg, sizeof(console_msg) - 1, "-----%c %f,%f,%f\n",
+						c, o->tsd.ship.ai[i].u.cop.p[j].v.x,
+						o->tsd.ship.ai[i].u.cop.p[j].v.y,
+						o->tsd.ship.ai[i].u.cop.p[j].v.z);
+					send_demon_console_msg(console_msg);
+				}
+				break;
+			case AI_MODE_MINING_BOT:
+				switch (o->tsd.ship.ai[i].u.mining_bot.mode) {
+				case MINING_MODE_APPROACH_ASTEROID:
+					send_demon_console_msg("-- MODE APPROACH ASTEROID");
+					break;
+				case MINING_MODE_LAND_ON_ASTEROID:
+					send_demon_console_msg("-- MODE LAND ON ASTEROID");
+					break;
+				case MINING_MODE_MINE:
+					send_demon_console_msg("-- MODE MINE");
+					break;
+				case MINING_MODE_RETURN_TO_PARENT:
+					send_demon_console_msg("-- MODE RETURN TO PARENT");
+					break;
+				case MINING_MODE_STANDBY_TO_TRANSPORT_ORE:
+					send_demon_console_msg("-- MODE STANDBY TO TRANSPORT ORE");
+					break;
+				case MINING_MODE_STOW_BOT:
+					send_demon_console_msg("-- MODE STOW BOT");
+					break;
+				case MINING_MODE_IDLE:
+					send_demon_console_msg("-- MODE IDLE");
+					break;
+				default:
+					send_demon_console_msg("-- MODE UNKNOWN");
+					break;
+				}
+				snprintf(console_msg, sizeof(console_msg) - 1, "----- PARENT SHIP %d",
+						o->tsd.ship.ai[i].u.mining_bot.parent_ship);
+				send_demon_console_msg(console_msg);
+				snprintf(console_msg, sizeof(console_msg) - 1, "----- ASTEROID %d",
+						o->tsd.ship.ai[i].u.mining_bot.parent_ship);
+				send_demon_console_msg(console_msg);
+				snprintf(console_msg, sizeof(console_msg) - 1, "----- COUNTDOWN %hu",
+						o->tsd.ship.ai[i].u.mining_bot.parent_ship);
+				send_demon_console_msg(console_msg);
+				snprintf(console_msg, sizeof(console_msg) - 1,
+						"----- AU %hhu, PL %hhu, GE %hhu, U %hhu, O2 %hhu, FUEL %hhu",
+						o->tsd.ship.ai[i].u.mining_bot.gold,
+						o->tsd.ship.ai[i].u.mining_bot.platinum,
+						o->tsd.ship.ai[i].u.mining_bot.germanium,
+						o->tsd.ship.ai[i].u.mining_bot.uranium,
+						o->tsd.ship.ai[i].u.mining_bot.oxygen,
+						o->tsd.ship.ai[i].u.mining_bot.fuel);
+				send_demon_console_msg(console_msg);
+				snprintf(console_msg, sizeof(console_msg) - 1, "----- DESTINATION: %s",
+						o->tsd.ship.ai[i].u.mining_bot.object_or_waypoint ?
+							"WAYPOINT" : "OBJECT");
+				send_demon_console_msg(console_msg);
+				if (o->tsd.ship.ai[i].u.mining_bot.object_or_waypoint) {
+					snprintf(console_msg, sizeof(console_msg) - 1, "----- WAYPOINT XYZ %f,%f,%f",
+						o->tsd.ship.ai[i].u.mining_bot.wpx,
+						o->tsd.ship.ai[i].u.mining_bot.wpy,
+						o->tsd.ship.ai[i].u.mining_bot.wpz);
+					send_demon_console_msg(console_msg);
+				}
+				snprintf(console_msg, sizeof(console_msg) - 1, "----- TOWING: %s, %d",
+					o->tsd.ship.ai[i].u.mining_bot.towing ? "YES" : "NO",
+					o->tsd.ship.ai[i].u.mining_bot.towed_object);
+				send_demon_console_msg(console_msg);
+				snprintf(console_msg, sizeof(console_msg) - 1, "----- ORPHAN TIME: %d",
+					o->tsd.ship.ai[i].u.mining_bot.orphan_time);
+				send_demon_console_msg(console_msg);
+				break;
+			case AI_MODE_TOW_SHIP:
+				snprintf(console_msg, sizeof(console_msg) - 1,
+					"----- DISABLED SHIP %u", o->tsd.ship.ai[i].u.tow_ship.disabled_ship);
+				send_demon_console_msg(console_msg);
+				snprintf(console_msg, sizeof(console_msg) - 1,
+					"----- STARBASE DISPATCHER %u",
+					o->tsd.ship.ai[i].u.tow_ship.starbase_dispatcher);
+				send_demon_console_msg(console_msg);
+				snprintf(console_msg, sizeof(console_msg) - 1,
+					"----- SHIP CONNECTED %d", o->tsd.ship.ai[i].u.tow_ship.ship_connected);
+				send_demon_console_msg(console_msg);
+				break;
+			case AI_MODE_RTS_STANDBY:
+				break;
+			case AI_MODE_RTS_GUARD_BASE:
+				snprintf(console_msg, sizeof(console_msg) - 1,
+					"----- GUARD BASE ID %d",
+					o->tsd.ship.ai[i].u.guard_base.base_id);
+				break;
+			case AI_MODE_RTS_ESCORT:
+				break;
+			case AI_MODE_RTS_ATK_NEAR_ENEMY:
+				snprintf(console_msg, sizeof(console_msg) - 1, "----- NEAREST ENEMY %d",
+					o->tsd.ship.ai[i].u.atk_near_enemy.enemy_id);
+				send_demon_console_msg(console_msg);
+				break;
+			case AI_MODE_RTS_MOVE_TO_WAYPOINT:
+				snprintf(console_msg, sizeof(console_msg) - 1,
+						"----- waypoint %d, bridge ship id %d",
+						o->tsd.ship.ai[i].u.goto_waypoint.waypoint,
+						o->tsd.ship.ai[i].u.goto_waypoint.bridge_ship_id);
+				send_demon_console_msg(console_msg);
+				break;
+			case AI_MODE_RTS_OCCUPY_NEAR_BASE:
+				snprintf(console_msg, sizeof(console_msg) - 1,
+					"----- OCCUPY BASE ID %d",
+					o->tsd.ship.ai[i].u.occupy_base.base_id);
+				send_demon_console_msg(console_msg);
+				break;
+			case AI_MODE_RTS_ATK_MAIN_BASE:
+				snprintf(console_msg, sizeof(console_msg) - 1,
+					"----- ATTACK MAIN BASE ID %d",
+					o->tsd.ship.ai[i].u.atk_main_base.base_id);
+				send_demon_console_msg(console_msg);
+				break;
+			case AI_MODE_RTS_RESUPPLY:
+				snprintf(console_msg, sizeof(console_msg) - 1,
+					"----- UNIT TO RESUPPLY %d",
+					o->tsd.ship.ai[i].u.resupply.unit_to_resupply);
+				send_demon_console_msg(console_msg);
+				break;
+			case AI_MODE_RTS_OUT_OF_FUEL:
+				break;
+			default:
+				break;
+			}
+		}
+		send_demon_console_msg("- END OF AI STACK");
+		break;
+	case OBJTYPE_ASTEROID:
+		t = "ASTEROID";
+		snprintf(console_msg, sizeof(console_msg) - 1, "TYPE: %s", t);
+		send_demon_console_msg(console_msg);
+		break;
+	case OBJTYPE_STARBASE:
+		t = "STARBASE";
+		snprintf(console_msg, sizeof(console_msg) - 1, "TYPE: %s", t);
+		send_demon_console_msg(console_msg);
+		break;
+	case OBJTYPE_DEBRIS:
+		t = "DEBRIS";
+		snprintf(console_msg, sizeof(console_msg) - 1, "TYPE: %s", t);
+		send_demon_console_msg(console_msg);
+		break;
+	case OBJTYPE_SPARK:
+		t = "SPARK";
+		snprintf(console_msg, sizeof(console_msg) - 1, "TYPE: %s", t);
+		send_demon_console_msg(console_msg);
+		break;
+	case OBJTYPE_TORPEDO:
+		t = "TORPEDO";
+		snprintf(console_msg, sizeof(console_msg) - 1, "TYPE: %s", t);
+		send_demon_console_msg(console_msg);
+		break;
+	case OBJTYPE_LASER:
+		t = "LASER";
+		snprintf(console_msg, sizeof(console_msg) - 1, "TYPE: %s", t);
+		send_demon_console_msg(console_msg);
+		break;
+	case OBJTYPE_EXPLOSION:
+		t = "EXPLOSION";
+		snprintf(console_msg, sizeof(console_msg) - 1, "TYPE: %s", t);
+		send_demon_console_msg(console_msg);
+		break;
+	case OBJTYPE_NEBULA:
+		t = "NEBULA";
+		snprintf(console_msg, sizeof(console_msg) - 1, "TYPE: %s", t);
+		send_demon_console_msg(console_msg);
+		break;
+	case OBJTYPE_WORMHOLE:
+		t = "WORMHOLE";
+		snprintf(console_msg, sizeof(console_msg) - 1, "TYPE: %s", t);
+		send_demon_console_msg(console_msg);
+		break;
+	case OBJTYPE_SPACEMONSTER:
+		t = "SPACEMONSTER";
+		snprintf(console_msg, sizeof(console_msg) - 1, "TYPE: %s", t);
+		send_demon_console_msg(console_msg);
+		break;
+	case OBJTYPE_PLANET:
+		t = "PLANET";
+		snprintf(console_msg, sizeof(console_msg) - 1, "TYPE: %s", t);
+		send_demon_console_msg(console_msg);
+		break;
+	case OBJTYPE_LASERBEAM:
+		t = "LASERBEAM";
+		snprintf(console_msg, sizeof(console_msg) - 1, "TYPE: %s", t);
+		send_demon_console_msg(console_msg);
+		break;
+	case OBJTYPE_DERELICT:
+		t = "DERELICT";
+		snprintf(console_msg, sizeof(console_msg) - 1, "TYPE: %s", t);
+		send_demon_console_msg(console_msg);
+		break;
+	case OBJTYPE_TRACTORBEAM:
+		t = "TRACTORBEAM";
+		snprintf(console_msg, sizeof(console_msg) - 1, "TYPE: %s", t);
+		send_demon_console_msg(console_msg);
+		break;
+	case OBJTYPE_CARGO_CONTAINER:
+		t = "CARGO CONTAINER";
+		snprintf(console_msg, sizeof(console_msg) - 1, "TYPE: %s", t);
+		send_demon_console_msg(console_msg);
+		break;
+	case OBJTYPE_WARP_EFFECT:
+		t = "WARP EFFECT";
+		snprintf(console_msg, sizeof(console_msg) - 1, "TYPE: %s", t);
+		send_demon_console_msg(console_msg);
+		break;
+	case OBJTYPE_SHIELD_EFFECT:
+		t = "SHEILD EFFECT";
+		snprintf(console_msg, sizeof(console_msg) - 1, "TYPE: %s", t);
+		send_demon_console_msg(console_msg);
+		break;
+	case OBJTYPE_DOCKING_PORT:
+		t = "DOCKING PORT";
+		snprintf(console_msg, sizeof(console_msg) - 1, "TYPE: %s", t);
+		send_demon_console_msg(console_msg);
+		break;
+	case OBJTYPE_WARPGATE:
+		t = "WARP GATE";
+		snprintf(console_msg, sizeof(console_msg) - 1, "TYPE: %s", t);
+		send_demon_console_msg(console_msg);
+		break;
+	case OBJTYPE_BLOCK:
+		t = "BLOCK";
+		snprintf(console_msg, sizeof(console_msg) - 1, "TYPE: %s", t);
+		send_demon_console_msg(console_msg);
+		break;
+	case OBJTYPE_TURRET:
+		t = "TURRET";
+		snprintf(console_msg, sizeof(console_msg) - 1, "TYPE: %s", t);
+		send_demon_console_msg(console_msg);
+		break;
+	case OBJTYPE_WARP_CORE:
+		t = "WARP CORE";
+		snprintf(console_msg, sizeof(console_msg) - 1, "TYPE: %s", t);
+		send_demon_console_msg(console_msg);
+		break;
+	case OBJTYPE_BLACK_HOLE:
+		t = "BLACK HOLE";
+		snprintf(console_msg, sizeof(console_msg) - 1, "TYPE: %s", t);
+		send_demon_console_msg(console_msg);
+		break;
+	case OBJTYPE_MISSILE:
+		t = "MISSILE";
+		snprintf(console_msg, sizeof(console_msg) - 1, "TYPE: %s", t);
+		send_demon_console_msg(console_msg);
+		break;
+	}
+}
+
 static struct server_builtin_cmd {
 	char *cmd;
 	char *description;
@@ -16423,6 +16792,7 @@ static struct server_builtin_cmd {
 	{ "VARS", "LIST SERVER BUILTIN VARIABLES", server_builtin_vars, },
 	{ "DESCRIBE", "DESCRIBE A SERVER BUILTIN VARIABLE", server_builtin_describe, },
 	{ "ROLE", "ADD, REMOVE, or LIST CLIENT ROLES", server_builtin_setrole, },
+	{ "DUMP", "DUMP STATE OF SELECTED OBJECTS", server_builtin_dump, },
 	{ "HELP", "LIST SERVER BUILTIN COMMANDS", server_builtin_help, },
 };
 
