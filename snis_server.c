@@ -17011,6 +17011,30 @@ static void server_builtin_dump(char *cmd)
 		t = "BLOCK";
 		snprintf(console_msg, sizeof(console_msg) - 1, "TYPE: %s", t);
 		send_demon_console_msg(console_msg);
+		snprintf(console_msg, sizeof(console_msg) - 1, "PARENT: %u",
+			o->tsd.block.parent_id);
+		send_demon_console_msg(console_msg);
+		snprintf(console_msg, sizeof(console_msg) - 1, "SCALE: %f %f %f",
+			o->tsd.block.sx, o->tsd.block.sy, o->tsd.block.sz);
+		send_demon_console_msg(console_msg);
+		snprintf(console_msg, sizeof(console_msg) - 1, "OFFSET FROM PARENT: %f %f %f",
+			o->tsd.block.dx, o->tsd.block.dy, o->tsd.block.dz);
+		send_demon_console_msg(console_msg);
+		snprintf(console_msg, sizeof(console_msg) - 1, "RADIUS: %f",
+			o->tsd.block.radius);
+		send_demon_console_msg(console_msg);
+		snprintf(console_msg, sizeof(console_msg) - 1, "ROOT ID: %u",
+			o->tsd.block.root_id);
+		send_demon_console_msg(console_msg);
+		snprintf(console_msg, sizeof(console_msg) - 1, "MATERIAL INDEX: %hhu",
+			o->tsd.block.block_material_index);
+		send_demon_console_msg(console_msg);
+		snprintf(console_msg, sizeof(console_msg) - 1, "HEALTH: %hhu",
+			o->tsd.block.health);
+		send_demon_console_msg(console_msg);
+		snprintf(console_msg, sizeof(console_msg) - 1, "FORM: %hhu",
+			o->tsd.block.form);
+		send_demon_console_msg(console_msg);
 		break;
 	case OBJTYPE_TURRET:
 		t = "TURRET";
