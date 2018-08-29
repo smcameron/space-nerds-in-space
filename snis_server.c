@@ -16418,6 +16418,26 @@ static void server_builtin_setrole(char *cmd)
 
 static void server_builtin_help(char *cmd);
 
+static void server_builtin_find(char *cmd)
+{
+	char name[100], msg[255];
+	int i, rc;
+
+	rc = sscanf(cmd, "%*s %s", name);
+	if (rc != 1) {
+		send_demon_console_msg("INVALID FIND COMMAND");
+		return;
+	}
+	pthread_mutex_lock(&universe_mutex);
+	for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
+		if (strncmp(go[i].sdata.name, name, strlen(name)) == 0) {
+			snprintf(msg, sizeof(msg) - 1, "- %d %s", go[i].id, go[i].sdata.name);
+			send_demon_console_msg(msg);
+		}
+	}
+	pthread_mutex_unlock(&universe_mutex);
+}
+
 static void server_builtin_dump(char *cmd)
 {
 	int i, j, rc;
@@ -16869,6 +16889,8 @@ static struct server_builtin_cmd {
 	{ "DESCRIBE", "DESCRIBE A SERVER BUILTIN VARIABLE", server_builtin_describe, },
 	{ "ROLE", "ADD, REMOVE, or LIST CLIENT ROLES", server_builtin_setrole, },
 	{ "DUMP", "DUMP STATE OF SELECTED OBJECTS", server_builtin_dump, },
+	{ "FIND", "FIND AN OBJECT BY NAME", server_builtin_find, },
+	{ "F", "FIND AN OBJECT BY NAME", server_builtin_find, },
 	{ "HELP", "LIST SERVER BUILTIN COMMANDS", server_builtin_help, },
 };
 
