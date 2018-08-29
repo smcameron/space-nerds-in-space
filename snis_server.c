@@ -16040,8 +16040,7 @@ static void server_builtin_clients(__attribute__((unused)) char *cmd)
 	char buf[80];
 	char *station;
 
-	snprintf(buf, sizeof(buf), "%10s %5s %5s %20s %8s", "CURRENT", "CLNT", "BRDG", "SHIP NAME", "ROLES");
-	send_demon_console_msg(buf);
+	send_demon_console_msg("%10s %5s %5s %20s %8s", "CURRENT", "CLNT", "BRDG", "SHIP NAME", "ROLES");
 	send_demon_console_msg("--------------------------------------------------------------");
 	for (i = 0; i < nclients; i++) {
 		struct game_client *c = &client[i];
@@ -16100,24 +16099,21 @@ static void server_builtin_clients(__attribute__((unused)) char *cmd)
 
 static void server_builtin_disconnect(char *cmd)
 {
-	char msg[DEMON_CONSOLE_MSG_MAX];
 	int rc, i;
 
 	rc = sscanf(cmd, "%*s %d", &i);
 	if (rc != 1) {
 		send_demon_console_msg("INVALID DISCONNECT COMMAND");
-		sprintf(msg, "     \"%s\"", cmd);
-	send_demon_console_msg(msg);
+		send_demon_console_msg("     \"%s\"", cmd);
 		return;
 	}
 	if (i >= 0 && i < nclients) {
 		close(client[i].socket);
 		client[i].socket = -1;
-		sprintf(msg, "DISCONNECTED CLIENT %d", i);
+		send_demon_console_msg("DISCONNECTED CLIENT %d", i);
 	} else {
-		sprintf(msg, "INVALID CLIENT %d", i);
+		send_demon_console_msg("INVALID CLIENT %d", i);
 	}
-	send_demon_console_msg(msg);
 }
 
 static struct tweakable_var_descriptor server_tweak[] = {
@@ -16282,7 +16278,6 @@ static void server_builtin_setrole(char *cmd)
 	int c, mode;
 	uint32_t role, newrole;
 	char rolestr[255];
-	char msg[80];
 
 	rc = sscanf(cmd, "ROLE %d +%s", &c, rolestr);
 	if (rc == 2) {
@@ -16365,8 +16360,7 @@ static void server_builtin_setrole(char *cmd)
 		pb_queue_to_client(&client[c], snis_opcode_subcode_pkt("bbw",
 			OPCODE_CLIENT_CONFIG, OPCODE_CLIENT_SET_PERMITTED_ROLES, role));
 		client_unlock();
-		snprintf(msg, sizeof(msg), "SET CLIENT %d ROLE TO %08x", c, role);
-		send_demon_console_msg(msg);
+		send_demon_console_msg("SET CLIENT %d ROLE TO %08x", c, role);
 		break;
 	case 1: /* Subtract a role from a client */
 		role = verify_role(client[c].role & ~newrole);
@@ -16374,8 +16368,7 @@ static void server_builtin_setrole(char *cmd)
 		pb_queue_to_client(&client[c], snis_opcode_subcode_pkt("bbw",
 			OPCODE_CLIENT_CONFIG, OPCODE_CLIENT_SET_PERMITTED_ROLES, role));
 		client_unlock();
-		snprintf(msg, sizeof(msg), "SET CLIENT %d ROLE TO %08x", c, role);
-		send_demon_console_msg(msg);
+		send_demon_console_msg("SET CLIENT %d ROLE TO %08x", c, role);
 		break;
 	case 2: /* Set client to have a single role */
 		role = verify_role(newrole);
@@ -16383,14 +16376,12 @@ static void server_builtin_setrole(char *cmd)
 		pb_queue_to_client(&client[c], snis_opcode_subcode_pkt("bbw",
 			OPCODE_CLIENT_CONFIG, OPCODE_CLIENT_SET_PERMITTED_ROLES, role));
 		client_unlock();
-		snprintf(msg, sizeof(msg), "SET CLIENT %d ROLE TO %08x", c, role);
-		send_demon_console_msg(msg);
+		send_demon_console_msg("SET CLIENT %d ROLE TO %08x", c, role);
 		break;
 	case 3: /* List client roles */
 		role = client[c].role;
 		client_unlock();
-		snprintf(msg, sizeof(msg), "CLIENT %d HAS THE FOLLOWING ROLES:", c);
-		send_demon_console_msg(msg);
+		send_demon_console_msg("CLIENT %d HAS THE FOLLOWING ROLES:", c);
 		if (role & ROLE_MAIN)
 			send_demon_console_msg("- MAIN VIEW");
 		if (role & ROLE_NAVIGATION)
@@ -16414,8 +16405,7 @@ static void server_builtin_setrole(char *cmd)
 		break;
 	default:
 		client_unlock();
-		snprintf(msg, sizeof(msg), "BUG: UNKNOWN ROLE MODE %d", mode);
-		send_demon_console_msg(msg);
+		send_demon_console_msg("BUG: UNKNOWN ROLE MODE %d", mode);
 		break;
 	}
 }
@@ -16424,7 +16414,7 @@ static void server_builtin_help(char *cmd);
 
 static void server_builtin_find(char *cmd)
 {
-	char name[100], msg[255];
+	char name[100];
 	int i, rc;
 
 	rc = sscanf(cmd, "%*s %s", name);
@@ -16433,12 +16423,9 @@ static void server_builtin_find(char *cmd)
 		return;
 	}
 	pthread_mutex_lock(&universe_mutex);
-	for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
-		if (strncmp(go[i].sdata.name, name, strlen(name)) == 0) {
-			snprintf(msg, sizeof(msg) - 1, "- %d %s", go[i].id, go[i].sdata.name);
-			send_demon_console_msg(msg);
-		}
-	}
+	for (i = 0; i <= snis_object_pool_highest_object(pool); i++)
+		if (strncmp(go[i].sdata.name, name, strlen(name)) == 0)
+			send_demon_console_msg("- %d %s", go[i].id, go[i].sdata.name);
 	pthread_mutex_unlock(&universe_mutex);
 }
 
@@ -16449,7 +16436,6 @@ static void server_builtin_dump(char *cmd)
 	char *t;
 	struct snis_entity *o;
 	char fnptraddr[32];
-	char console_msg[100];
 
 	rc = sscanf(cmd, "%*s %u", &id);
 	if (rc != 1) {
@@ -16459,58 +16445,44 @@ static void server_builtin_dump(char *cmd)
 
 	i = lookup_by_id(id);
 	if (i < 0) {
-		snprintf(console_msg, sizeof(console_msg) - 1, "ID %u NOT FOUND", id);
-		send_demon_console_msg(console_msg);
+		send_demon_console_msg("ID %u NOT FOUND", id);
 		return;
 	}
 	o = &go[i];
-	snprintf(console_msg, sizeof(console_msg) - 1,
-			"%u  %s X,Y,Z,T = %f,%f,%f, %d", id, o->sdata.name, o->x, o->y, o->z, o->type);
-	send_demon_console_msg(console_msg);
+	send_demon_console_msg("%u  %s X,Y,Z,T = %f,%f,%f, %d",
+			id, o->sdata.name, o->x, o->y, o->z, o->type);
 	format_function_pointer(fnptraddr, (void (*)(void)) o->move);
-	snprintf(console_msg, sizeof(console_msg) - 1, "-- MOVE FN %s", fnptraddr);
-	send_demon_console_msg(console_msg);
+	send_demon_console_msg("-- MOVE FN %s", fnptraddr);
 	switch (o->type) {
 	case OBJTYPE_SHIP1:
 		t = "PLAYER SHIP";
-		snprintf(console_msg, sizeof(console_msg) - 1, "TYPE: %s", t);
-		send_demon_console_msg(console_msg);
+		send_demon_console_msg("TYPE: %s", t);
 		break;
 	case OBJTYPE_SHIP2:
 		t = "NPC SHIP";
-		snprintf(console_msg, sizeof(console_msg) - 1, "TYPE: %s", t);
-		send_demon_console_msg(console_msg);
-		snprintf(console_msg, sizeof(console_msg) - 1, "TORPEDOES: %u", o->tsd.ship.torpedoes);
-		send_demon_console_msg(console_msg);
-		snprintf(console_msg, sizeof(console_msg) - 1, "POWER: %u", o->tsd.ship.power);
-		send_demon_console_msg(console_msg);
-		snprintf(console_msg, sizeof(console_msg) - 1, "VELOCITY: %f", o->tsd.ship.velocity);
-		send_demon_console_msg(console_msg);
-		snprintf(console_msg, sizeof(console_msg) - 1, "SHIELD DAMAGE: %u",
-				o->tsd.ship.damage.shield_damage);
-		send_demon_console_msg(console_msg);
+		send_demon_console_msg("TYPE: %s", t);
+		send_demon_console_msg("TORPEDOES: %u", o->tsd.ship.torpedoes);
+		send_demon_console_msg("POWER: %u", o->tsd.ship.power);
+		send_demon_console_msg("VELOCITY: %f", o->tsd.ship.velocity);
+		send_demon_console_msg("SHIELD DAMAGE: %u", o->tsd.ship.damage.shield_damage);
 		send_demon_console_msg("- AI STACK");
 		for (i = 0; i < o->tsd.ship.nai_entries; i++) {
-			snprintf(console_msg, sizeof(console_msg) - 1,
-				"--- %s", ai_mode_name[o->tsd.ship.ai[i].ai_mode]);
-			send_demon_console_msg(console_msg);
+			send_demon_console_msg("--- %s",
+				ai_mode_name[o->tsd.ship.ai[i].ai_mode]);
 			switch (o->tsd.ship.ai[i].ai_mode) {
 			case AI_MODE_IDLE:
 				break;
 			case AI_MODE_ATTACK:
-				snprintf(console_msg, sizeof(console_msg) - 1, "-----  VICTIM %u",
+				send_demon_console_msg("-----  VICTIM %u",
 						o->tsd.ship.ai[i].u.attack.victim_id);
-				send_demon_console_msg(console_msg);
 				break;
 			case AI_MODE_TRAVEL:
 				break;
 			case AI_MODE_FLEE:
-				snprintf(console_msg, sizeof(console_msg) - 1, "----- ASSAILANT %u",
+				send_demon_console_msg("----- ASSAILANT %u",
 						o->tsd.ship.ai[i].u.flee.assailant);
-				send_demon_console_msg(console_msg);
-				snprintf(console_msg, sizeof(console_msg) - 1, "----- WARP COUNTDOWN %d",
+				send_demon_console_msg("----- WARP COUNTDOWN %d",
 						o->tsd.ship.ai[i].u.flee.warp_countdown);
-				send_demon_console_msg(console_msg);
 				break;
 			case AI_MODE_PATROL:
 				for (j = 0; j < o->tsd.ship.ai[i].u.patrol.npoints; j++) {
@@ -16519,41 +16491,36 @@ static void server_builtin_dump(char *cmd)
 						c = '>';
 					else
 						c = '-';
-					snprintf(console_msg, sizeof(console_msg) - 1, "-----%c %f,%f,%f\n",
+					send_demon_console_msg("-----%c %f,%f,%f\n",
 						c, o->tsd.ship.ai[i].u.patrol.p[j].v.x,
 						o->tsd.ship.ai[i].u.patrol.p[j].v.y,
 						o->tsd.ship.ai[i].u.patrol.p[j].v.z);
-					send_demon_console_msg(console_msg);
 				}
 				break;
 			case AI_MODE_FLEET_MEMBER:
-				snprintf(console_msg, sizeof(console_msg) - 1, "----- fleet number %d, position %d",
+				send_demon_console_msg("----- fleet number %d, position %d",
 						o->tsd.ship.ai[i].u.fleet.fleet,
 						o->tsd.ship.ai[i].u.fleet.fleet_position);
-				send_demon_console_msg(console_msg);
 				break;
 			case AI_MODE_FLEET_LEADER:
-				snprintf(console_msg, sizeof(console_msg) - 1, "----- fleet number %d, position %d",
+				send_demon_console_msg("----- fleet number %d, position %d",
 						o->tsd.ship.ai[i].u.fleet.fleet,
 						o->tsd.ship.ai[i].u.fleet.fleet_position);
-				send_demon_console_msg(console_msg);
 				for (j = 0; j < o->tsd.ship.ai[i].u.fleet.patrol.npoints; j++) {
 					char c;
 					if (j == o->tsd.ship.ai[i].u.fleet.patrol.dest)
 						c = '>';
 					else
 						c = '-';
-					snprintf(console_msg, sizeof(console_msg) - 1, "-----%c %f,%f,%f\n",
+					send_demon_console_msg("-----%c %f,%f,%f\n",
 						c, o->tsd.ship.ai[i].u.fleet.patrol.p[j].v.x,
 						o->tsd.ship.ai[i].u.fleet.patrol.p[j].v.y,
 						o->tsd.ship.ai[i].u.fleet.patrol.p[j].v.z);
-					send_demon_console_msg(console_msg);
 				}
 				break;
 			case AI_MODE_HANGOUT:
-				snprintf(console_msg, sizeof(console_msg), "----- time to go %d\n",
+				send_demon_console_msg("----- time to go %d\n",
 						o->tsd.ship.ai[i].u.hangout.time_to_go);
-				send_demon_console_msg(console_msg);
 				break;
 			case AI_MODE_COP:
 				for (j = 0; j < o->tsd.ship.ai[i].u.cop.npoints; j++) {
@@ -16562,11 +16529,10 @@ static void server_builtin_dump(char *cmd)
 						c = '>';
 					else
 						c = '-';
-					snprintf(console_msg, sizeof(console_msg) - 1, "-----%c %f,%f,%f\n",
+					send_demon_console_msg("-----%c %f,%f,%f\n",
 						c, o->tsd.ship.ai[i].u.cop.p[j].v.x,
 						o->tsd.ship.ai[i].u.cop.p[j].v.y,
 						o->tsd.ship.ai[i].u.cop.p[j].v.z);
-					send_demon_console_msg(console_msg);
 				}
 				break;
 			case AI_MODE_MINING_BOT:
@@ -16596,16 +16562,13 @@ static void server_builtin_dump(char *cmd)
 					send_demon_console_msg("-- MODE UNKNOWN");
 					break;
 				}
-				snprintf(console_msg, sizeof(console_msg) - 1, "----- PARENT SHIP %d",
+				send_demon_console_msg("----- PARENT SHIP %d",
 						o->tsd.ship.ai[i].u.mining_bot.parent_ship);
-				send_demon_console_msg(console_msg);
-				snprintf(console_msg, sizeof(console_msg) - 1, "----- ASTEROID %d",
+				send_demon_console_msg("----- ASTEROID %d",
 						o->tsd.ship.ai[i].u.mining_bot.parent_ship);
-				send_demon_console_msg(console_msg);
-				snprintf(console_msg, sizeof(console_msg) - 1, "----- COUNTDOWN %hu",
+				send_demon_console_msg("----- COUNTDOWN %hu",
 						o->tsd.ship.ai[i].u.mining_bot.parent_ship);
-				send_demon_console_msg(console_msg);
-				snprintf(console_msg, sizeof(console_msg) - 1,
+				send_demon_console_msg(
 						"----- AU %hhu, PL %hhu, GE %hhu, U %hhu, O2 %hhu, FUEL %hhu",
 						o->tsd.ship.ai[i].u.mining_bot.gold,
 						o->tsd.ship.ai[i].u.mining_bot.platinum,
@@ -16613,76 +16576,56 @@ static void server_builtin_dump(char *cmd)
 						o->tsd.ship.ai[i].u.mining_bot.uranium,
 						o->tsd.ship.ai[i].u.mining_bot.oxygen,
 						o->tsd.ship.ai[i].u.mining_bot.fuel);
-				send_demon_console_msg(console_msg);
-				snprintf(console_msg, sizeof(console_msg) - 1, "----- DESTINATION: %s",
+				send_demon_console_msg("----- DESTINATION: %s",
 						o->tsd.ship.ai[i].u.mining_bot.object_or_waypoint ?
 							"WAYPOINT" : "OBJECT");
-				send_demon_console_msg(console_msg);
-				if (o->tsd.ship.ai[i].u.mining_bot.object_or_waypoint) {
-					snprintf(console_msg, sizeof(console_msg) - 1, "----- WAYPOINT XYZ %f,%f,%f",
+				if (o->tsd.ship.ai[i].u.mining_bot.object_or_waypoint)
+					send_demon_console_msg("----- WAYPOINT XYZ %f,%f,%f",
 						o->tsd.ship.ai[i].u.mining_bot.wpx,
 						o->tsd.ship.ai[i].u.mining_bot.wpy,
 						o->tsd.ship.ai[i].u.mining_bot.wpz);
-					send_demon_console_msg(console_msg);
-				}
-				snprintf(console_msg, sizeof(console_msg) - 1, "----- TOWING: %s, %d",
+				send_demon_console_msg("----- TOWING: %s, %d",
 					o->tsd.ship.ai[i].u.mining_bot.towing ? "YES" : "NO",
 					o->tsd.ship.ai[i].u.mining_bot.towed_object);
-				send_demon_console_msg(console_msg);
-				snprintf(console_msg, sizeof(console_msg) - 1, "----- ORPHAN TIME: %d",
+				send_demon_console_msg("----- ORPHAN TIME: %d",
 					o->tsd.ship.ai[i].u.mining_bot.orphan_time);
-				send_demon_console_msg(console_msg);
 				break;
 			case AI_MODE_TOW_SHIP:
-				snprintf(console_msg, sizeof(console_msg) - 1,
-					"----- DISABLED SHIP %u", o->tsd.ship.ai[i].u.tow_ship.disabled_ship);
-				send_demon_console_msg(console_msg);
-				snprintf(console_msg, sizeof(console_msg) - 1,
-					"----- STARBASE DISPATCHER %u",
+				send_demon_console_msg("----- DISABLED SHIP %u",
+					o->tsd.ship.ai[i].u.tow_ship.disabled_ship);
+				send_demon_console_msg("----- STARBASE DISPATCHER %u",
 					o->tsd.ship.ai[i].u.tow_ship.starbase_dispatcher);
-				send_demon_console_msg(console_msg);
-				snprintf(console_msg, sizeof(console_msg) - 1,
-					"----- SHIP CONNECTED %d", o->tsd.ship.ai[i].u.tow_ship.ship_connected);
-				send_demon_console_msg(console_msg);
+				send_demon_console_msg("----- SHIP CONNECTED %d",
+					o->tsd.ship.ai[i].u.tow_ship.ship_connected);
 				break;
 			case AI_MODE_RTS_STANDBY:
 				break;
 			case AI_MODE_RTS_GUARD_BASE:
-				snprintf(console_msg, sizeof(console_msg) - 1,
-					"----- GUARD BASE ID %d",
+				send_demon_console_msg("----- GUARD BASE ID %d",
 					o->tsd.ship.ai[i].u.guard_base.base_id);
 				break;
 			case AI_MODE_RTS_ESCORT:
 				break;
 			case AI_MODE_RTS_ATK_NEAR_ENEMY:
-				snprintf(console_msg, sizeof(console_msg) - 1, "----- NEAREST ENEMY %d",
+				send_demon_console_msg("----- NEAREST ENEMY %d",
 					o->tsd.ship.ai[i].u.atk_near_enemy.enemy_id);
-				send_demon_console_msg(console_msg);
 				break;
 			case AI_MODE_RTS_MOVE_TO_WAYPOINT:
-				snprintf(console_msg, sizeof(console_msg) - 1,
-						"----- waypoint %d, bridge ship id %d",
+				send_demon_console_msg("----- waypoint %d, bridge ship id %d",
 						o->tsd.ship.ai[i].u.goto_waypoint.waypoint,
 						o->tsd.ship.ai[i].u.goto_waypoint.bridge_ship_id);
-				send_demon_console_msg(console_msg);
 				break;
 			case AI_MODE_RTS_OCCUPY_NEAR_BASE:
-				snprintf(console_msg, sizeof(console_msg) - 1,
-					"----- OCCUPY BASE ID %d",
+				send_demon_console_msg("----- OCCUPY BASE ID %d",
 					o->tsd.ship.ai[i].u.occupy_base.base_id);
-				send_demon_console_msg(console_msg);
 				break;
 			case AI_MODE_RTS_ATK_MAIN_BASE:
-				snprintf(console_msg, sizeof(console_msg) - 1,
-					"----- ATTACK MAIN BASE ID %d",
+				send_demon_console_msg("----- ATTACK MAIN BASE ID %d",
 					o->tsd.ship.ai[i].u.atk_main_base.base_id);
-				send_demon_console_msg(console_msg);
 				break;
 			case AI_MODE_RTS_RESUPPLY:
-				snprintf(console_msg, sizeof(console_msg) - 1,
-					"----- UNIT TO RESUPPLY %d",
+				send_demon_console_msg("----- UNIT TO RESUPPLY %d",
 					o->tsd.ship.ai[i].u.resupply.unit_to_resupply);
-				send_demon_console_msg(console_msg);
 				break;
 			case AI_MODE_RTS_OUT_OF_FUEL:
 				break;
@@ -16694,392 +16637,225 @@ static void server_builtin_dump(char *cmd)
 		break;
 	case OBJTYPE_ASTEROID:
 		t = "ASTEROID";
-		snprintf(console_msg, sizeof(console_msg) - 1, "TYPE: %s", t);
-		send_demon_console_msg(console_msg);
+		send_demon_console_msg("TYPE: %s", t);
 		break;
 	case OBJTYPE_STARBASE:
 		t = "STARBASE";
-		snprintf(console_msg, sizeof(console_msg) - 1, "-- TYPE: %s", t);
-		send_demon_console_msg(console_msg);
-		snprintf(console_msg, sizeof(console_msg) - 1, "-- UNDER ATTACK: %hhu",
-			o->tsd.starbase.under_attack);
-		send_demon_console_msg(console_msg);
-		snprintf(console_msg, sizeof(console_msg) - 1, "-- LIFEFORM COUNT: %hhu",
-			o->tsd.starbase.lifeform_count);
-		send_demon_console_msg(console_msg);
-		snprintf(console_msg, sizeof(console_msg) - 1, "-- SECURITY: %hhu",
-			o->tsd.starbase.security);
-		send_demon_console_msg(console_msg);
-		snprintf(console_msg, sizeof(console_msg) - 1, "-- STARBASE NUMBER: %hhu",
-			o->tsd.starbase.starbase_number);
-		send_demon_console_msg(console_msg);
-		snprintf(console_msg, sizeof(console_msg) - 1, "-- NAME: %s",
-			o->tsd.starbase.name);
-		send_demon_console_msg(console_msg);
-		snprintf(console_msg, sizeof(console_msg) - 1, "-- ASSOCIATED PLANET: %d",
-			o->tsd.starbase.associated_planet_id);
-		send_demon_console_msg(console_msg);
-		snprintf(console_msg, sizeof(console_msg) - 1, "-- NATTACKERS: %d",
-			o->tsd.starbase.nattackers);
-		send_demon_console_msg(console_msg);
-		for (i = 0; i < o->tsd.starbase.nattackers; i++) {
-			snprintf(console_msg, sizeof(console_msg) - 1, "----  ATTACKER %d: %d", i,
+		send_demon_console_msg("-- TYPE: %s", t);
+		send_demon_console_msg("-- UNDER ATTACK: %hhu", o->tsd.starbase.under_attack);
+		send_demon_console_msg("-- LIFEFORM COUNT: %hhu", o->tsd.starbase.lifeform_count);
+		send_demon_console_msg("-- SECURITY: %hhu", o->tsd.starbase.security);
+		send_demon_console_msg("-- STARBASE NUMBER: %hhu", o->tsd.starbase.starbase_number);
+		send_demon_console_msg("-- NAME: %s", o->tsd.starbase.name);
+		send_demon_console_msg("-- ASSOCIATED PLANET: %d", o->tsd.starbase.associated_planet_id);
+		send_demon_console_msg("-- NATTACKERS: %d", o->tsd.starbase.nattackers);
+		for (i = 0; i < o->tsd.starbase.nattackers; i++)
+			send_demon_console_msg("----  ATTACKER %d: %d", i,
 				o->tsd.starbase.attacker[i]);
-			send_demon_console_msg(console_msg);
-		}
-		snprintf(console_msg, sizeof(console_msg) - 1, "-- NEXT LASER TIME: %u",
-			o->tsd.starbase.next_laser_time);
-		send_demon_console_msg(console_msg);
-		snprintf(console_msg, sizeof(console_msg) - 1, "-- NEXT TORPEDO TIME: %u",
-			o->tsd.starbase.next_torpedo_time);
-		send_demon_console_msg(console_msg);
-		snprintf(console_msg, sizeof(console_msg) - 1, "-- NEXT TORPEDO TIME: %u",
-			o->tsd.starbase.next_torpedo_time);
-		send_demon_console_msg(console_msg);
+		send_demon_console_msg("-- NEXT LASER TIME: %u", o->tsd.starbase.next_laser_time);
+		send_demon_console_msg("-- NEXT TORPEDO TIME: %u", o->tsd.starbase.next_torpedo_time);
+		send_demon_console_msg("-- NEXT TORPEDO TIME: %u", o->tsd.starbase.next_torpedo_time);
 		int model = o->id % nstarbase_models;
-		snprintf(console_msg, sizeof(console_msg) - 1, "-- MODEL: %d", model);
-		send_demon_console_msg(console_msg);
-		for (i = 0; i < docking_port_info[model]->nports; i++) {
-			snprintf(console_msg, sizeof(console_msg) - 1, "-- DOCKING PORT[%d] %d", i,
+		send_demon_console_msg("-- MODEL: %d", model);
+		for (i = 0; i < docking_port_info[model]->nports; i++)
+			send_demon_console_msg("-- DOCKING PORT[%d] %d", i,
 				o->tsd.starbase.docking_port[i]);
-			send_demon_console_msg(console_msg);
-		}
 		for (i = 0; i < docking_port_info[model]->nports; i++) {
-			snprintf(console_msg, sizeof(console_msg) - 1, "-- EXPECTED DOCKER[%d] %d", i,
+			send_demon_console_msg("-- EXPECTED DOCKER[%d] %d", i,
 					o->tsd.starbase.expected_docker[i]);
-			send_demon_console_msg(console_msg);
-			snprintf(console_msg, sizeof(console_msg) - 1, "-- EXPECTED DOCKER TIMER[%d] %d", i,
+			send_demon_console_msg("-- EXPECTED DOCKER TIMER[%d] %d", i,
 					o->tsd.starbase.expected_docker_timer[i]);
-			send_demon_console_msg(console_msg);
 		}
-		snprintf(console_msg, sizeof(console_msg) - 1, "-- SPIN RATE 10ths DEG / SEC: %d",
+		send_demon_console_msg("-- SPIN RATE 10ths DEG / SEC: %d",
 				o->tsd.starbase.spin_rate_10ths_deg_per_sec);
-		send_demon_console_msg(console_msg);
-		for (i = 0; i < 4; i++) {
-			snprintf(console_msg, sizeof(console_msg) - 1, "-- occupant[%d] %hhu", i,
+		for (i = 0; i < 4; i++)
+			send_demon_console_msg("-- occupant[%d] %hhu", i,
 					o->tsd.starbase.occupant[i]);
-			send_demon_console_msg(console_msg);
-		}
-		snprintf(console_msg, sizeof(console_msg) - 1, "-- TIME_LEFT_TO_BUILD %d",
+		send_demon_console_msg("-- TIME_LEFT_TO_BUILD %d",
 				o->tsd.starbase.time_left_to_build);
-		send_demon_console_msg(console_msg);
-		snprintf(console_msg, sizeof(console_msg) - 1, "-- BUILD UNIT TYPE %hhu",
+		send_demon_console_msg("-- BUILD UNIT TYPE %hhu",
 				o->tsd.starbase.build_unit_type);
-		send_demon_console_msg(console_msg);
 		/* TODO: debug info for marketplace data, bid_price, part_price */
 		break;
 	case OBJTYPE_DEBRIS:
 		t = "DEBRIS";
-		snprintf(console_msg, sizeof(console_msg) - 1, "TYPE: %s", t);
-		send_demon_console_msg(console_msg);
+		send_demon_console_msg("TYPE: %s", t);
 		break;
 	case OBJTYPE_SPARK:
 		t = "SPARK";
-		snprintf(console_msg, sizeof(console_msg) - 1, "TYPE: %s", t);
-		send_demon_console_msg(console_msg);
+		send_demon_console_msg("TYPE: %s", t);
 		break;
 	case OBJTYPE_TORPEDO:
 		t = "TORPEDO";
-		snprintf(console_msg, sizeof(console_msg) - 1, "TYPE: %s", t);
-		send_demon_console_msg(console_msg);
+		send_demon_console_msg("TYPE: %s", t);
 		break;
 	case OBJTYPE_LASER:
 		t = "LASER";
-		snprintf(console_msg, sizeof(console_msg) - 1, "TYPE: %s", t);
-		send_demon_console_msg(console_msg);
+		send_demon_console_msg("TYPE: %s", t);
 		break;
 	case OBJTYPE_EXPLOSION:
 		t = "EXPLOSION";
-		snprintf(console_msg, sizeof(console_msg) - 1, "TYPE: %s", t);
-		send_demon_console_msg(console_msg);
+		send_demon_console_msg("TYPE: %s", t);
 		break;
 	case OBJTYPE_NEBULA:
 		t = "NEBULA";
-		snprintf(console_msg, sizeof(console_msg) - 1, "TYPE: %s", t);
-		send_demon_console_msg(console_msg);
+		send_demon_console_msg("TYPE: %s", t);
 		break;
 	case OBJTYPE_WORMHOLE:
 		t = "WORMHOLE";
-		snprintf(console_msg, sizeof(console_msg) - 1, "TYPE: %s", t);
-		send_demon_console_msg(console_msg);
-		snprintf(console_msg, sizeof(console_msg) - 1, "DEST: %f, %f, %f",
+		send_demon_console_msg("TYPE: %s", t);
+		send_demon_console_msg("DEST: %f, %f, %f",
 			o->tsd.wormhole.dest_x,
 			o->tsd.wormhole.dest_y,
 			o->tsd.wormhole.dest_z);
-		send_demon_console_msg(console_msg);
 		break;
 	case OBJTYPE_SPACEMONSTER:
 		t = "SPACEMONSTER";
-		snprintf(console_msg, sizeof(console_msg) - 1, "TYPE: %s", t);
-		send_demon_console_msg(console_msg);
-		snprintf(console_msg, sizeof(console_msg) - 1, "MOVEMENT COUNTDOWN: %d",
-			o->tsd.spacemonster.movement_countdown);
-		send_demon_console_msg(console_msg);
-		snprintf(console_msg, sizeof(console_msg) - 1, "MODE: %hhu",
-			o->tsd.spacemonster.mode);
-		send_demon_console_msg(console_msg);
-		snprintf(console_msg, sizeof(console_msg) - 1, "SEED: %u",
-			o->tsd.spacemonster.seed);
-		send_demon_console_msg(console_msg);
-		snprintf(console_msg, sizeof(console_msg) - 1, "EMIT INTENSITY: %d",
-			o->tsd.spacemonster.emit_intensity);
-		send_demon_console_msg(console_msg);
-		snprintf(console_msg, sizeof(console_msg) - 1, "HEAD SIZE: %d",
-			o->tsd.spacemonster.head_size);
-		send_demon_console_msg(console_msg);
-		snprintf(console_msg, sizeof(console_msg) - 1, "TENTACLE SIZE: %d",
-			o->tsd.spacemonster.tentacle_size);
-		send_demon_console_msg(console_msg);
-		snprintf(console_msg, sizeof(console_msg) - 1, "INTEREST: %u",
-			o->tsd.spacemonster.interest);
-		send_demon_console_msg(console_msg);
-		snprintf(console_msg, sizeof(console_msg) - 1, "DESIRED V: %f, %f, %f",
+		send_demon_console_msg("TYPE: %s", t);
+		send_demon_console_msg("MOVEMENT COUNTDOWN: %d", o->tsd.spacemonster.movement_countdown);
+		send_demon_console_msg("MODE: %hhu", o->tsd.spacemonster.mode);
+		send_demon_console_msg("SEED: %u", o->tsd.spacemonster.seed);
+		send_demon_console_msg("EMIT INTENSITY: %d", o->tsd.spacemonster.emit_intensity);
+		send_demon_console_msg("HEAD SIZE: %d", o->tsd.spacemonster.head_size);
+		send_demon_console_msg("TENTACLE SIZE: %d", o->tsd.spacemonster.tentacle_size);
+		send_demon_console_msg("INTEREST: %u", o->tsd.spacemonster.interest);
+		send_demon_console_msg("DESIRED V: %f, %f, %f",
 			o->tsd.spacemonster.dvx,
 			o->tsd.spacemonster.dvy,
 			o->tsd.spacemonster.dvz);
-		send_demon_console_msg(console_msg);
-		snprintf(console_msg, sizeof(console_msg) - 1,
-			"ANGR, HNGR, FEAR, TGHNS, HLTH %hhu, %hhu, %hhu, %hhu, %hhu",
+		send_demon_console_msg("ANGR, HNGR, FEAR, TGHNS, HLTH %hhu, %hhu, %hhu, %hhu, %hhu",
 			o->tsd.spacemonster.anger,
 			o->tsd.spacemonster.hunger,
 			o->tsd.spacemonster.fear,
 			o->tsd.spacemonster.toughness,
 			o->tsd.spacemonster.health);
-		send_demon_console_msg(console_msg);
-		snprintf(console_msg, sizeof(console_msg) - 1, "HOME: %u",
-			o->tsd.spacemonster.home);
-		send_demon_console_msg(console_msg);
-		snprintf(console_msg, sizeof(console_msg) - 1, "ANTAGONIST: %d",
-			o->tsd.spacemonster.current_antagonist);
-		send_demon_console_msg(console_msg);
-		snprintf(console_msg, sizeof(console_msg) - 1,
-			"NANTAGONISTS, NFRIENDS %hhu, %hhu",
+		send_demon_console_msg("HOME: %u", o->tsd.spacemonster.home);
+		send_demon_console_msg("ANTAGONIST: %d", o->tsd.spacemonster.current_antagonist);
+		send_demon_console_msg("NANTAGONISTS, NFRIENDS %hhu, %hhu",
 			o->tsd.spacemonster.nantagonists, o->tsd.spacemonster.nfriends);
-		for (i = 0; i < o->tsd.spacemonster.nantagonists; i++) {
-			snprintf(console_msg, sizeof(console_msg) - 1,
-				"--- ANTAGONIST[%d] %u", i,
-				o->tsd.spacemonster.antagonist[i]);
-			send_demon_console_msg(console_msg);
-		}
-		for (i = 0; i < o->tsd.spacemonster.nfriends; i++) {
-			snprintf(console_msg, sizeof(console_msg) - 1,
-				"--- FRIEND[%d] %u", i,
-				o->tsd.spacemonster.friend[i]);
-			send_demon_console_msg(console_msg);
-		}
-		send_demon_console_msg(console_msg);
-		snprintf(console_msg, sizeof(console_msg) - 1,
-			"NEAREST ASTEROID, SPACEMONSTER, SHIP %u, %u, %u",
+		for (i = 0; i < o->tsd.spacemonster.nantagonists; i++)
+			send_demon_console_msg("--- ANTAGONIST[%d] %u", i, o->tsd.spacemonster.antagonist[i]);
+		for (i = 0; i < o->tsd.spacemonster.nfriends; i++)
+			send_demon_console_msg("--- FRIEND[%d] %u", i, o->tsd.spacemonster.friend[i]);
+		send_demon_console_msg("NEAREST ASTEROID, SPACEMONSTER, SHIP %u, %u, %u",
 			o->tsd.spacemonster.nearest_asteroid,
 			o->tsd.spacemonster.nearest_spacemonster,
 			o->tsd.spacemonster.nearest_ship);
-		send_demon_console_msg(console_msg);
-		snprintf(console_msg, sizeof(console_msg) - 1,
-			"DIST TO NEAREST ASTEROID, SPACEMONSTER, SHIP %f, %f, %f",
+		send_demon_console_msg("DIST TO NEAREST ASTEROID, SPACEMONSTER, SHIP %f, %f, %f",
 			o->tsd.spacemonster.asteroid_dist,
 			o->tsd.spacemonster.spacemonster_dist,
 			o->tsd.spacemonster.ship_dist);
-		send_demon_console_msg(console_msg);
-		snprintf(console_msg, sizeof(console_msg) - 1,
-			"DEST %f, %f, %f",
+		send_demon_console_msg("DEST %f, %f, %f",
 			o->tsd.spacemonster.dest.v.x,
 			o->tsd.spacemonster.dest.v.y,
 			o->tsd.spacemonster.dest.v.z);
-		send_demon_console_msg(console_msg);
-		snprintf(console_msg, sizeof(console_msg) - 1, "DECISION AGE %d",
-			o->tsd.spacemonster.decision_age);
-		send_demon_console_msg(console_msg);
+		send_demon_console_msg("DECISION AGE %d", o->tsd.spacemonster.decision_age);
 		break;
 	case OBJTYPE_PLANET:
 		t = "PLANET";
-		snprintf(console_msg, sizeof(console_msg) - 1, "TYPE: %s", t);
-		send_demon_console_msg(console_msg);
-		snprintf(console_msg, sizeof(console_msg) - 1, "DESC SEED: %u",
-			o->tsd.planet.description_seed);
-		send_demon_console_msg(console_msg);
-		snprintf(console_msg, sizeof(console_msg) - 1, "GOVT: %hhu",
-			o->tsd.planet.government);
-		send_demon_console_msg(console_msg);
-		snprintf(console_msg, sizeof(console_msg) - 1, "TECH LVL: %hhu",
-			o->tsd.planet.tech_level);
-		send_demon_console_msg(console_msg);
-		snprintf(console_msg, sizeof(console_msg) - 1, "ECONOMY: %hhu",
-			o->tsd.planet.economy);
-		send_demon_console_msg(console_msg);
-		snprintf(console_msg, sizeof(console_msg) - 1, "SECURITY: %hhu",
-			o->tsd.planet.security);
-		send_demon_console_msg(console_msg);
-		snprintf(console_msg, sizeof(console_msg) - 1, "RADIUS: %f",
-			o->tsd.planet.radius);
-		send_demon_console_msg(console_msg);
-		snprintf(console_msg, sizeof(console_msg) - 1, "HAS ATMOSPHERE: %hhu",
-			o->tsd.planet.has_atmosphere);
-		send_demon_console_msg(console_msg);
-		snprintf(console_msg, sizeof(console_msg) - 1, "RING SELECTOR: %hhu",
-			o->tsd.planet.ring_selector);
-		send_demon_console_msg(console_msg);
-		snprintf(console_msg, sizeof(console_msg) - 1, "SOLARSYS PLANET TYPE: %hhu",
-			o->tsd.planet.solarsystem_planet_type);
-		send_demon_console_msg(console_msg);
-		snprintf(console_msg, sizeof(console_msg) - 1, "RING: %hhu",
-			o->tsd.planet.ring);
-		send_demon_console_msg(console_msg);
-		snprintf(console_msg, sizeof(console_msg) - 1, "ATMOSPHERE RGB: %hhu  %hhu  %hhu",
+		send_demon_console_msg("TYPE: %s", t);
+		send_demon_console_msg("DESC SEED: %u", o->tsd.planet.description_seed);
+		send_demon_console_msg("GOVT: %hhu", o->tsd.planet.government);
+		send_demon_console_msg("TECH LVL: %hhu", o->tsd.planet.tech_level);
+		send_demon_console_msg("ECONOMY: %hhu", o->tsd.planet.economy);
+		send_demon_console_msg("SECURITY: %hhu", o->tsd.planet.security);
+		send_demon_console_msg("RADIUS: %f", o->tsd.planet.radius);
+		send_demon_console_msg("HAS ATMOSPHERE: %hhu", o->tsd.planet.has_atmosphere);
+		send_demon_console_msg("RING SELECTOR: %hhu", o->tsd.planet.ring_selector);
+		send_demon_console_msg("SOLARSYS PLANET TYPE: %hhu", o->tsd.planet.solarsystem_planet_type);
+		send_demon_console_msg("RING: %hhu", o->tsd.planet.ring);
+		send_demon_console_msg("ATMOSPHERE RGB: %hhu  %hhu  %hhu",
 			o->tsd.planet.atmosphere_r,
 			o->tsd.planet.atmosphere_g,
 			o->tsd.planet.atmosphere_b);
-		send_demon_console_msg(console_msg);
-		snprintf(console_msg, sizeof(console_msg) - 1, "ATMOSPHERE TYPE: %hu",
-			o->tsd.planet.atmosphere_type);
-		send_demon_console_msg(console_msg);
-		snprintf(console_msg, sizeof(console_msg) - 1, "ATMOSPHERE SCALE: %f",
-			o->tsd.planet.atmosphere_scale);
-		send_demon_console_msg(console_msg);
-		snprintf(console_msg, sizeof(console_msg) - 1, "CONTRABAND: %hu",
-			o->tsd.planet.contraband);
-		send_demon_console_msg(console_msg);
-		snprintf(console_msg, sizeof(console_msg) - 1, "ATMOSPHERE PTR: %p",
-			(void *) o->tsd.planet.atmosphere);
-		send_demon_console_msg(console_msg);
-		snprintf(console_msg, sizeof(console_msg) - 1, "TIME LEFT TO BUILD: %u",
-			o->tsd.planet.time_left_to_build);
-		send_demon_console_msg(console_msg);
-		snprintf(console_msg, sizeof(console_msg) - 1, "BUILD UNIT TYPE: %hhu",
-			o->tsd.planet.build_unit_type);
-		send_demon_console_msg(console_msg);
+		send_demon_console_msg("ATMOSPHERE TYPE: %hu", o->tsd.planet.atmosphere_type);
+		send_demon_console_msg("ATMOSPHERE SCALE: %f", o->tsd.planet.atmosphere_scale);
+		send_demon_console_msg("CONTRABAND: %hu", o->tsd.planet.contraband);
+		send_demon_console_msg("ATMOSPHERE PTR: %p", (void *) o->tsd.planet.atmosphere);
+		send_demon_console_msg("TIME LEFT TO BUILD: %u", o->tsd.planet.time_left_to_build);
+		send_demon_console_msg("BUILD UNIT TYPE: %hhu", o->tsd.planet.build_unit_type);
 		break;
 	case OBJTYPE_LASERBEAM:
 		t = "LASERBEAM";
-		snprintf(console_msg, sizeof(console_msg) - 1, "TYPE: %s", t);
-		send_demon_console_msg(console_msg);
+		send_demon_console_msg("TYPE: %s", t);
 		break;
 	case OBJTYPE_DERELICT:
 		t = "DERELICT";
-		snprintf(console_msg, sizeof(console_msg) - 1, "TYPE: %s", t);
-		send_demon_console_msg(console_msg);
-		snprintf(console_msg, sizeof(console_msg) - 1, "-- PERSISTENT: %hhu",
-				o->tsd.derelict.persistent);
-		send_demon_console_msg(console_msg);
-		snprintf(console_msg, sizeof(console_msg) - 1, "-- FUEL: %hhu",
-				o->tsd.derelict.fuel);
-		send_demon_console_msg(console_msg);
-		snprintf(console_msg, sizeof(console_msg) - 1, "-- OXYGEN: %hhu",
-				o->tsd.derelict.oxygen);
-		send_demon_console_msg(console_msg);
-		snprintf(console_msg, sizeof(console_msg) - 1, "-- SHIPS LOG: %s",
+		send_demon_console_msg("TYPE: %s", t);
+		send_demon_console_msg("-- PERSISTENT: %hhu", o->tsd.derelict.persistent);
+		send_demon_console_msg("-- FUEL: %hhu", o->tsd.derelict.fuel);
+		send_demon_console_msg("-- OXYGEN: %hhu", o->tsd.derelict.oxygen);
+		send_demon_console_msg("-- SHIPS LOG: %s",
 				o->tsd.derelict.ships_log ? o->tsd.derelict.ships_log : "NULL");
-		send_demon_console_msg(console_msg);
 		break;
 	case OBJTYPE_TRACTORBEAM:
 		t = "TRACTORBEAM";
-		snprintf(console_msg, sizeof(console_msg) - 1, "TYPE: %s", t);
-		send_demon_console_msg(console_msg);
+		send_demon_console_msg("TYPE: %s", t);
 		break;
 	case OBJTYPE_CARGO_CONTAINER:
 		t = "CARGO CONTAINER";
-		snprintf(console_msg, sizeof(console_msg) - 1, "TYPE: %s", t);
-		send_demon_console_msg(console_msg);
+		send_demon_console_msg("TYPE: %s", t);
 		break;
 	case OBJTYPE_WARP_EFFECT:
 		t = "WARP EFFECT";
-		snprintf(console_msg, sizeof(console_msg) - 1, "TYPE: %s", t);
-		send_demon_console_msg(console_msg);
-		snprintf(console_msg, sizeof(console_msg) - 1, "WARPGATE NUMBER: %u",
-				o->tsd.warpgate.warpgate_number);
-		send_demon_console_msg(console_msg);
+		send_demon_console_msg("TYPE: %s", t);
+		send_demon_console_msg("WARPGATE NUMBER: %u", o->tsd.warpgate.warpgate_number);
 		break;
 	case OBJTYPE_SHIELD_EFFECT:
 		t = "SHEILD EFFECT";
-		snprintf(console_msg, sizeof(console_msg) - 1, "TYPE: %s", t);
-		send_demon_console_msg(console_msg);
+		send_demon_console_msg("TYPE: %s", t);
 		break;
 	case OBJTYPE_DOCKING_PORT:
 		t = "DOCKING PORT";
-		snprintf(console_msg, sizeof(console_msg) - 1, "TYPE: %s", t);
-		send_demon_console_msg(console_msg);
-		snprintf(console_msg, sizeof(console_msg) - 1, "-- PARENT: %u", o->tsd.docking_port.parent);
-		send_demon_console_msg(console_msg);
-		snprintf(console_msg, sizeof(console_msg) - 1, "-- DOCKED GUY: %u", o->tsd.docking_port.docked_guy);
-		send_demon_console_msg(console_msg);
-		snprintf(console_msg, sizeof(console_msg) - 1, "-- PORT NUMBER: %hhu", o->tsd.docking_port.portnumber);
-		send_demon_console_msg(console_msg);
-		snprintf(console_msg, sizeof(console_msg) - 1, "-- MODEL: %hhu", o->tsd.docking_port.model);
-		send_demon_console_msg(console_msg);
+		send_demon_console_msg("TYPE: %s", t);
+		send_demon_console_msg("-- PARENT: %u", o->tsd.docking_port.parent);
+		send_demon_console_msg("-- DOCKED GUY: %u", o->tsd.docking_port.docked_guy);
+		send_demon_console_msg("-- PORT NUMBER: %hhu", o->tsd.docking_port.portnumber);
+		send_demon_console_msg("-- MODEL: %hhu", o->tsd.docking_port.model);
 		break;
 	case OBJTYPE_WARPGATE:
 		t = "WARP GATE";
-		snprintf(console_msg, sizeof(console_msg) - 1, "TYPE: %s", t);
-		send_demon_console_msg(console_msg);
+		send_demon_console_msg("TYPE: %s", t);
 		break;
 	case OBJTYPE_BLOCK:
 		t = "BLOCK";
-		snprintf(console_msg, sizeof(console_msg) - 1, "TYPE: %s", t);
-		send_demon_console_msg(console_msg);
-		snprintf(console_msg, sizeof(console_msg) - 1, "PARENT: %u",
-			o->tsd.block.parent_id);
-		send_demon_console_msg(console_msg);
-		snprintf(console_msg, sizeof(console_msg) - 1, "SCALE: %f %f %f",
+		send_demon_console_msg("TYPE: %s", t);
+		send_demon_console_msg("PARENT: %u", o->tsd.block.parent_id);
+		send_demon_console_msg("SCALE: %f %f %f",
 			o->tsd.block.sx, o->tsd.block.sy, o->tsd.block.sz);
-		send_demon_console_msg(console_msg);
-		snprintf(console_msg, sizeof(console_msg) - 1, "OFFSET FROM PARENT: %f %f %f",
+		send_demon_console_msg("OFFSET FROM PARENT: %f %f %f",
 			o->tsd.block.dx, o->tsd.block.dy, o->tsd.block.dz);
-		send_demon_console_msg(console_msg);
-		snprintf(console_msg, sizeof(console_msg) - 1, "RADIUS: %f",
-			o->tsd.block.radius);
-		send_demon_console_msg(console_msg);
-		snprintf(console_msg, sizeof(console_msg) - 1, "ROOT ID: %u",
-			o->tsd.block.root_id);
-		send_demon_console_msg(console_msg);
-		snprintf(console_msg, sizeof(console_msg) - 1, "MATERIAL INDEX: %hhu",
+		send_demon_console_msg("RADIUS: %f", o->tsd.block.radius);
+		send_demon_console_msg("ROOT ID: %u", o->tsd.block.root_id);
+		send_demon_console_msg("MATERIAL INDEX: %hhu",
 			o->tsd.block.block_material_index);
-		send_demon_console_msg(console_msg);
-		snprintf(console_msg, sizeof(console_msg) - 1, "HEALTH: %hhu",
-			o->tsd.block.health);
-		send_demon_console_msg(console_msg);
-		snprintf(console_msg, sizeof(console_msg) - 1, "FORM: %hhu",
-			o->tsd.block.form);
-		send_demon_console_msg(console_msg);
+		send_demon_console_msg("HEALTH: %hhu", o->tsd.block.health);
+		send_demon_console_msg("FORM: %hhu", o->tsd.block.form);
 		break;
 	case OBJTYPE_TURRET:
 		t = "TURRET";
-		snprintf(console_msg, sizeof(console_msg) - 1, "TYPE: %s", t);
-		send_demon_console_msg(console_msg);
-		snprintf(console_msg, sizeof(console_msg) - 1, "PARENT ID: %u",
-			o->tsd.turret.parent_id);
-		send_demon_console_msg(console_msg);
-		snprintf(console_msg, sizeof(console_msg) - 1, "ROOT ID: %u",
-			o->tsd.turret.root_id);
-		send_demon_console_msg(console_msg);
-		snprintf(console_msg, sizeof(console_msg) - 1, "OFFSET FROM PARENT: %f %f %f",
+		send_demon_console_msg("TYPE: %s", t);
+		send_demon_console_msg("PARENT ID: %u", o->tsd.turret.parent_id);
+		send_demon_console_msg("ROOT ID: %u", o->tsd.turret.root_id);
+		send_demon_console_msg("OFFSET FROM PARENT: %f %f %f",
 			o->tsd.turret.dx, o->tsd.turret.dy, o->tsd.turret.dz);
-		send_demon_console_msg(console_msg);
-		snprintf(console_msg, sizeof(console_msg) - 1, "CURRENT TARGET: %u",
-			o->tsd.turret.current_target_id);
-		send_demon_console_msg(console_msg);
-		snprintf(console_msg, sizeof(console_msg) - 1, "FIRE COUNTDOWN: %hhu",
-			o->tsd.turret.fire_countdown);
-		send_demon_console_msg(console_msg);
-		snprintf(console_msg, sizeof(console_msg) - 1, "FIRE COUNTDOWN RESET: %hhu",
+		send_demon_console_msg("CURRENT TARGET: %u", o->tsd.turret.current_target_id);
+		send_demon_console_msg("FIRE COUNTDOWN: %hhu", o->tsd.turret.fire_countdown);
+		send_demon_console_msg("FIRE COUNTDOWN RESET: %hhu",
 			o->tsd.turret.fire_countdown_reset_value);
-		send_demon_console_msg(console_msg);
-		snprintf(console_msg, sizeof(console_msg) - 1, "HEALTH: %hhu",
-			o->tsd.turret.health);
-		send_demon_console_msg(console_msg);
+		send_demon_console_msg("HEALTH: %hhu", o->tsd.turret.health);
 		break;
 	case OBJTYPE_WARP_CORE:
 		t = "WARP CORE";
-		snprintf(console_msg, sizeof(console_msg) - 1, "TYPE: %s", t);
-		send_demon_console_msg(console_msg);
+		send_demon_console_msg("TYPE: %s", t);
 		break;
 	case OBJTYPE_BLACK_HOLE:
 		t = "BLACK HOLE";
-		snprintf(console_msg, sizeof(console_msg) - 1, "TYPE: %s", t);
-		send_demon_console_msg(console_msg);
+		send_demon_console_msg("TYPE: %s", t);
 		break;
 	case OBJTYPE_MISSILE:
 		t = "MISSILE";
-		snprintf(console_msg, sizeof(console_msg) - 1, "TYPE: %s", t);
-		send_demon_console_msg(console_msg);
+		send_demon_console_msg("TYPE: %s", t);
 		break;
 	}
 }
@@ -17114,35 +16890,29 @@ static int filter_lua_scripts(const struct dirent *d)
 static void list_lua_scripts(void)
 {
 	struct dirent **namelist;
-	char msg[255];
 	int i, n;
 
 	n = scandir(LUASCRIPTDIR, &namelist, filter_lua_scripts, alphasort);
 	if (n < 0) {
-		snprintf(msg, sizeof(msg), "%s: %s\n", LUASCRIPTDIR, strerror(errno));
-		send_demon_console_msg(msg);
+		send_demon_console_msg("%s: %s\n", LUASCRIPTDIR, strerror(errno));
 		return;
 	}
 	send_demon_console_msg("LUA SCRIPTS:");
 
 	for (i = 0; i < n; i++) {
-		snprintf(msg, sizeof(msg), "- %s", namelist[i]->d_name);
+		send_demon_console_msg("- %s", namelist[i]->d_name);
 		free(namelist[i]);
-		send_demon_console_msg(msg);
 	}
 	free(namelist);
 }
 
 static void server_builtin_help(char *cmd)
 {
-	char msg[255];
 	int i;
 
 	send_demon_console_msg("SERVER BUILTIN COMMANDS:");
-	for (i = 0; i < ARRAYSIZE(server_builtin) - 1; i++) {
-		sprintf(msg, "  %10s %s", server_builtin[i].cmd, server_builtin[i].description);
-		send_demon_console_msg(msg);
-	}
+	for (i = 0; i < ARRAYSIZE(server_builtin) - 1; i++)
+		send_demon_console_msg("  %10s %s", server_builtin[i].cmd, server_builtin[i].description);
 	list_lua_scripts();
 }
 
