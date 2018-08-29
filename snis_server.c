@@ -16980,6 +16980,9 @@ static void server_builtin_dump(char *cmd)
 		t = "WARP EFFECT";
 		snprintf(console_msg, sizeof(console_msg) - 1, "TYPE: %s", t);
 		send_demon_console_msg(console_msg);
+		snprintf(console_msg, sizeof(console_msg) - 1, "WARPGATE NUMBER: %u",
+				o->tsd.warpgate.warpgate_number);
+		send_demon_console_msg(console_msg);
 		break;
 	case OBJTYPE_SHIELD_EFFECT:
 		t = "SHEILD EFFECT";
