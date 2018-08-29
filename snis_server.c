@@ -16818,6 +16818,18 @@ static void server_builtin_dump(char *cmd)
 		t = "DERELICT";
 		snprintf(console_msg, sizeof(console_msg) - 1, "TYPE: %s", t);
 		send_demon_console_msg(console_msg);
+		snprintf(console_msg, sizeof(console_msg) - 1, "-- PERSISTENT: %hhu",
+				o->tsd.derelict.persistent);
+		send_demon_console_msg(console_msg);
+		snprintf(console_msg, sizeof(console_msg) - 1, "-- FUEL: %hhu",
+				o->tsd.derelict.fuel);
+		send_demon_console_msg(console_msg);
+		snprintf(console_msg, sizeof(console_msg) - 1, "-- OXYGEN: %hhu",
+				o->tsd.derelict.oxygen);
+		send_demon_console_msg(console_msg);
+		snprintf(console_msg, sizeof(console_msg) - 1, "-- SHIPS LOG: %s",
+				o->tsd.derelict.ships_log ? o->tsd.derelict.ships_log : "NULL");
+		send_demon_console_msg(console_msg);
 		break;
 	case OBJTYPE_TRACTORBEAM:
 		t = "TRACTORBEAM";
