@@ -16843,6 +16843,14 @@ static void server_builtin_dump(char *cmd)
 		t = "DOCKING PORT";
 		snprintf(console_msg, sizeof(console_msg) - 1, "TYPE: %s", t);
 		send_demon_console_msg(console_msg);
+		snprintf(console_msg, sizeof(console_msg) - 1, "-- PARENT: %u", o->tsd.docking_port.parent);
+		send_demon_console_msg(console_msg);
+		snprintf(console_msg, sizeof(console_msg) - 1, "-- DOCKED GUY: %u", o->tsd.docking_port.docked_guy);
+		send_demon_console_msg(console_msg);
+		snprintf(console_msg, sizeof(console_msg) - 1, "-- PORT NUMBER: %hhu", o->tsd.docking_port.portnumber);
+		send_demon_console_msg(console_msg);
+		snprintf(console_msg, sizeof(console_msg) - 1, "-- MODEL: %hhu", o->tsd.docking_port.model);
+		send_demon_console_msg(console_msg);
 		break;
 	case OBJTYPE_WARPGATE:
 		t = "WARP GATE";
