@@ -16808,6 +16808,83 @@ static void server_builtin_dump(char *cmd)
 		t = "SPACEMONSTER";
 		snprintf(console_msg, sizeof(console_msg) - 1, "TYPE: %s", t);
 		send_demon_console_msg(console_msg);
+		snprintf(console_msg, sizeof(console_msg) - 1, "MOVEMENT COUNTDOWN: %d",
+			o->tsd.spacemonster.movement_countdown);
+		send_demon_console_msg(console_msg);
+		snprintf(console_msg, sizeof(console_msg) - 1, "MODE: %hhu",
+			o->tsd.spacemonster.mode);
+		send_demon_console_msg(console_msg);
+		snprintf(console_msg, sizeof(console_msg) - 1, "SEED: %u",
+			o->tsd.spacemonster.seed);
+		send_demon_console_msg(console_msg);
+		snprintf(console_msg, sizeof(console_msg) - 1, "EMIT INTENSITY: %d",
+			o->tsd.spacemonster.emit_intensity);
+		send_demon_console_msg(console_msg);
+		snprintf(console_msg, sizeof(console_msg) - 1, "HEAD SIZE: %d",
+			o->tsd.spacemonster.head_size);
+		send_demon_console_msg(console_msg);
+		snprintf(console_msg, sizeof(console_msg) - 1, "TENTACLE SIZE: %d",
+			o->tsd.spacemonster.tentacle_size);
+		send_demon_console_msg(console_msg);
+		snprintf(console_msg, sizeof(console_msg) - 1, "INTEREST: %u",
+			o->tsd.spacemonster.interest);
+		send_demon_console_msg(console_msg);
+		snprintf(console_msg, sizeof(console_msg) - 1, "DESIRED V: %f, %f, %f",
+			o->tsd.spacemonster.dvx,
+			o->tsd.spacemonster.dvy,
+			o->tsd.spacemonster.dvz);
+		send_demon_console_msg(console_msg);
+		snprintf(console_msg, sizeof(console_msg) - 1,
+			"ANGR, HNGR, FEAR, TGHNS, HLTH %hhu, %hhu, %hhu, %hhu, %hhu",
+			o->tsd.spacemonster.anger,
+			o->tsd.spacemonster.hunger,
+			o->tsd.spacemonster.fear,
+			o->tsd.spacemonster.toughness,
+			o->tsd.spacemonster.health);
+		send_demon_console_msg(console_msg);
+		snprintf(console_msg, sizeof(console_msg) - 1, "HOME: %u",
+			o->tsd.spacemonster.home);
+		send_demon_console_msg(console_msg);
+		snprintf(console_msg, sizeof(console_msg) - 1, "ANTAGONIST: %d",
+			o->tsd.spacemonster.current_antagonist);
+		send_demon_console_msg(console_msg);
+		snprintf(console_msg, sizeof(console_msg) - 1,
+			"NANTAGONISTS, NFRIENDS %hhu, %hhu",
+			o->tsd.spacemonster.nantagonists, o->tsd.spacemonster.nfriends);
+		for (i = 0; i < o->tsd.spacemonster.nantagonists; i++) {
+			snprintf(console_msg, sizeof(console_msg) - 1,
+				"--- ANTAGONIST[%d] %u", i,
+				o->tsd.spacemonster.antagonist[i]);
+			send_demon_console_msg(console_msg);
+		}
+		for (i = 0; i < o->tsd.spacemonster.nfriends; i++) {
+			snprintf(console_msg, sizeof(console_msg) - 1,
+				"--- FRIEND[%d] %u", i,
+				o->tsd.spacemonster.friend[i]);
+			send_demon_console_msg(console_msg);
+		}
+		send_demon_console_msg(console_msg);
+		snprintf(console_msg, sizeof(console_msg) - 1,
+			"NEAREST ASTEROID, SPACEMONSTER, SHIP %u, %u, %u",
+			o->tsd.spacemonster.nearest_asteroid,
+			o->tsd.spacemonster.nearest_spacemonster,
+			o->tsd.spacemonster.nearest_ship);
+		send_demon_console_msg(console_msg);
+		snprintf(console_msg, sizeof(console_msg) - 1,
+			"DIST TO NEAREST ASTEROID, SPACEMONSTER, SHIP %f, %f, %f",
+			o->tsd.spacemonster.asteroid_dist,
+			o->tsd.spacemonster.spacemonster_dist,
+			o->tsd.spacemonster.ship_dist);
+		send_demon_console_msg(console_msg);
+		snprintf(console_msg, sizeof(console_msg) - 1,
+			"DEST %f, %f, %f",
+			o->tsd.spacemonster.dest.v.x,
+			o->tsd.spacemonster.dest.v.y,
+			o->tsd.spacemonster.dest.v.z);
+		send_demon_console_msg(console_msg);
+		snprintf(console_msg, sizeof(console_msg) - 1, "DECISION AGE %d",
+			o->tsd.spacemonster.decision_age);
+		send_demon_console_msg(console_msg);
 		break;
 	case OBJTYPE_PLANET:
 		t = "PLANET";
