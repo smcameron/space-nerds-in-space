@@ -17040,6 +17040,27 @@ static void server_builtin_dump(char *cmd)
 		t = "TURRET";
 		snprintf(console_msg, sizeof(console_msg) - 1, "TYPE: %s", t);
 		send_demon_console_msg(console_msg);
+		snprintf(console_msg, sizeof(console_msg) - 1, "PARENT ID: %u",
+			o->tsd.turret.parent_id);
+		send_demon_console_msg(console_msg);
+		snprintf(console_msg, sizeof(console_msg) - 1, "ROOT ID: %u",
+			o->tsd.turret.root_id);
+		send_demon_console_msg(console_msg);
+		snprintf(console_msg, sizeof(console_msg) - 1, "OFFSET FROM PARENT: %f %f %f",
+			o->tsd.turret.dx, o->tsd.turret.dy, o->tsd.turret.dz);
+		send_demon_console_msg(console_msg);
+		snprintf(console_msg, sizeof(console_msg) - 1, "CURRENT TARGET: %u",
+			o->tsd.turret.current_target_id);
+		send_demon_console_msg(console_msg);
+		snprintf(console_msg, sizeof(console_msg) - 1, "FIRE COUNTDOWN: %hhu",
+			o->tsd.turret.fire_countdown);
+		send_demon_console_msg(console_msg);
+		snprintf(console_msg, sizeof(console_msg) - 1, "FIRE COUNTDOWN RESET: %hhu",
+			o->tsd.turret.fire_countdown_reset_value);
+		send_demon_console_msg(console_msg);
+		snprintf(console_msg, sizeof(console_msg) - 1, "HEALTH: %hhu",
+			o->tsd.turret.health);
+		send_demon_console_msg(console_msg);
 		break;
 	case OBJTYPE_WARP_CORE:
 		t = "WARP CORE";
