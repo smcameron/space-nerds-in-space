@@ -3122,8 +3122,14 @@ static void pop_ai_attack_mode(struct snis_entity *o)
 
 static void add_starbase_attacker(struct snis_entity *starbase, int attacker_id)
 {
-	int n;
+	int i, n;
 
+	/* First check if this attacker is already known */
+	for (i = 0; i < starbase->tsd.starbase.nattackers; i++)
+		if (starbase->tsd.starbase.attacker[i] == attacker_id)
+			return; /* Attacker is already known */
+
+	/* Attacker is not already known */
 	n = starbase->tsd.starbase.nattackers;
 	if (n >= ARRAYSIZE(starbase->tsd.starbase.attacker))
 		n %= ARRAYSIZE(starbase->tsd.starbase.attacker);
