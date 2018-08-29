@@ -16889,6 +16889,7 @@ static struct server_builtin_cmd {
 	{ "DESCRIBE", "DESCRIBE A SERVER BUILTIN VARIABLE", server_builtin_describe, },
 	{ "ROLE", "ADD, REMOVE, or LIST CLIENT ROLES", server_builtin_setrole, },
 	{ "DUMP", "DUMP STATE OF SELECTED OBJECTS", server_builtin_dump, },
+	{ "DU", "DUMP STATE OF SELECTED OBJECTS", server_builtin_dump, },
 	{ "FIND", "FIND AN OBJECT BY NAME", server_builtin_find, },
 	{ "F", "FIND AN OBJECT BY NAME", server_builtin_find, },
 	{ "HELP", "LIST SERVER BUILTIN COMMANDS", server_builtin_help, },
