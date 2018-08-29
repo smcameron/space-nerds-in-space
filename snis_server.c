@@ -16798,6 +16798,11 @@ static void server_builtin_dump(char *cmd)
 		t = "WORMHOLE";
 		snprintf(console_msg, sizeof(console_msg) - 1, "TYPE: %s", t);
 		send_demon_console_msg(console_msg);
+		snprintf(console_msg, sizeof(console_msg) - 1, "DEST: %f, %f, %f",
+			o->tsd.wormhole.dest_x,
+			o->tsd.wormhole.dest_y,
+			o->tsd.wormhole.dest_z);
+		send_demon_console_msg(console_msg);
 		break;
 	case OBJTYPE_SPACEMONSTER:
 		t = "SPACEMONSTER";
