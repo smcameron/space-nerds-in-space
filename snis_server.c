@@ -16890,6 +16890,59 @@ static void server_builtin_dump(char *cmd)
 		t = "PLANET";
 		snprintf(console_msg, sizeof(console_msg) - 1, "TYPE: %s", t);
 		send_demon_console_msg(console_msg);
+		snprintf(console_msg, sizeof(console_msg) - 1, "DESC SEED: %u",
+			o->tsd.planet.description_seed);
+		send_demon_console_msg(console_msg);
+		snprintf(console_msg, sizeof(console_msg) - 1, "GOVT: %hhu",
+			o->tsd.planet.government);
+		send_demon_console_msg(console_msg);
+		snprintf(console_msg, sizeof(console_msg) - 1, "TECH LVL: %hhu",
+			o->tsd.planet.tech_level);
+		send_demon_console_msg(console_msg);
+		snprintf(console_msg, sizeof(console_msg) - 1, "ECONOMY: %hhu",
+			o->tsd.planet.economy);
+		send_demon_console_msg(console_msg);
+		snprintf(console_msg, sizeof(console_msg) - 1, "SECURITY: %hhu",
+			o->tsd.planet.security);
+		send_demon_console_msg(console_msg);
+		snprintf(console_msg, sizeof(console_msg) - 1, "RADIUS: %f",
+			o->tsd.planet.radius);
+		send_demon_console_msg(console_msg);
+		snprintf(console_msg, sizeof(console_msg) - 1, "HAS ATMOSPHERE: %hhu",
+			o->tsd.planet.has_atmosphere);
+		send_demon_console_msg(console_msg);
+		snprintf(console_msg, sizeof(console_msg) - 1, "RING SELECTOR: %hhu",
+			o->tsd.planet.ring_selector);
+		send_demon_console_msg(console_msg);
+		snprintf(console_msg, sizeof(console_msg) - 1, "SOLARSYS PLANET TYPE: %hhu",
+			o->tsd.planet.solarsystem_planet_type);
+		send_demon_console_msg(console_msg);
+		snprintf(console_msg, sizeof(console_msg) - 1, "RING: %hhu",
+			o->tsd.planet.ring);
+		send_demon_console_msg(console_msg);
+		snprintf(console_msg, sizeof(console_msg) - 1, "ATMOSPHERE RGB: %hhu  %hhu  %hhu",
+			o->tsd.planet.atmosphere_r,
+			o->tsd.planet.atmosphere_g,
+			o->tsd.planet.atmosphere_b);
+		send_demon_console_msg(console_msg);
+		snprintf(console_msg, sizeof(console_msg) - 1, "ATMOSPHERE TYPE: %hu",
+			o->tsd.planet.atmosphere_type);
+		send_demon_console_msg(console_msg);
+		snprintf(console_msg, sizeof(console_msg) - 1, "ATMOSPHERE SCALE: %f",
+			o->tsd.planet.atmosphere_scale);
+		send_demon_console_msg(console_msg);
+		snprintf(console_msg, sizeof(console_msg) - 1, "CONTRABAND: %hu",
+			o->tsd.planet.contraband);
+		send_demon_console_msg(console_msg);
+		snprintf(console_msg, sizeof(console_msg) - 1, "ATMOSPHERE PTR: %p",
+			(void *) o->tsd.planet.atmosphere);
+		send_demon_console_msg(console_msg);
+		snprintf(console_msg, sizeof(console_msg) - 1, "TIME LEFT TO BUILD: %u",
+			o->tsd.planet.time_left_to_build);
+		send_demon_console_msg(console_msg);
+		snprintf(console_msg, sizeof(console_msg) - 1, "BUILD UNIT TYPE: %hhu",
+			o->tsd.planet.build_unit_type);
+		send_demon_console_msg(console_msg);
 		break;
 	case OBJTYPE_LASERBEAM:
 		t = "LASERBEAM";
