@@ -13,5 +13,6 @@ char *slurp_file(const char *path, int *bytes); /* returns allocated string cont
 void remove_single_quotes(char *text);
 int strchrcount(char *s, int c); /* returns count of occurrences of c within s */
 char *strnzcpy(char *dest, const char *src, size_t n);
+void format_function_pointer(char *buffer, void (*function_pointer)(void));
 
 #endif

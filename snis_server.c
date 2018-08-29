@@ -16416,9 +16416,10 @@ static void server_builtin_dump(char *cmd)
 {
 	int i, j, rc;
 	uint32_t id;
-	char console_msg[100];
 	char *t;
 	struct snis_entity *o;
+	char fnptraddr[32];
+	char console_msg[100];
 
 	rc = sscanf(cmd, "%*s %u", &id);
 	if (rc != 1) {
@@ -16435,6 +16436,9 @@ static void server_builtin_dump(char *cmd)
 	o = &go[i];
 	snprintf(console_msg, sizeof(console_msg) - 1,
 			"%u  %s X,Y,Z,T = %f,%f,%f, %d", id, o->sdata.name, o->x, o->y, o->z, o->type);
+	send_demon_console_msg(console_msg);
+	format_function_pointer(fnptraddr, (void (*)(void)) o->move);
+	snprintf(console_msg, sizeof(console_msg) - 1, "-- MOVE FN %s", fnptraddr);
 	send_demon_console_msg(console_msg);
 	switch (o->type) {
 	case OBJTYPE_SHIP1:
@@ -16665,8 +16669,74 @@ static void server_builtin_dump(char *cmd)
 		break;
 	case OBJTYPE_STARBASE:
 		t = "STARBASE";
-		snprintf(console_msg, sizeof(console_msg) - 1, "TYPE: %s", t);
+		snprintf(console_msg, sizeof(console_msg) - 1, "-- TYPE: %s", t);
 		send_demon_console_msg(console_msg);
+		snprintf(console_msg, sizeof(console_msg) - 1, "-- UNDER ATTACK: %hhu",
+			o->tsd.starbase.under_attack);
+		send_demon_console_msg(console_msg);
+		snprintf(console_msg, sizeof(console_msg) - 1, "-- LIFEFORM COUNT: %hhu",
+			o->tsd.starbase.lifeform_count);
+		send_demon_console_msg(console_msg);
+		snprintf(console_msg, sizeof(console_msg) - 1, "-- SECURITY: %hhu",
+			o->tsd.starbase.security);
+		send_demon_console_msg(console_msg);
+		snprintf(console_msg, sizeof(console_msg) - 1, "-- STARBASE NUMBER: %hhu",
+			o->tsd.starbase.starbase_number);
+		send_demon_console_msg(console_msg);
+		snprintf(console_msg, sizeof(console_msg) - 1, "-- NAME: %s",
+			o->tsd.starbase.name);
+		send_demon_console_msg(console_msg);
+		snprintf(console_msg, sizeof(console_msg) - 1, "-- ASSOCIATED PLANET: %d",
+			o->tsd.starbase.associated_planet_id);
+		send_demon_console_msg(console_msg);
+		snprintf(console_msg, sizeof(console_msg) - 1, "-- NATTACKERS: %d",
+			o->tsd.starbase.nattackers);
+		send_demon_console_msg(console_msg);
+		for (i = 0; i < o->tsd.starbase.nattackers; i++) {
+			snprintf(console_msg, sizeof(console_msg) - 1, "----  ATTACKER %d: %d", i,
+				o->tsd.starbase.attacker[i]);
+			send_demon_console_msg(console_msg);
+		}
+		snprintf(console_msg, sizeof(console_msg) - 1, "-- NEXT LASER TIME: %u",
+			o->tsd.starbase.next_laser_time);
+		send_demon_console_msg(console_msg);
+		snprintf(console_msg, sizeof(console_msg) - 1, "-- NEXT TORPEDO TIME: %u",
+			o->tsd.starbase.next_torpedo_time);
+		send_demon_console_msg(console_msg);
+		snprintf(console_msg, sizeof(console_msg) - 1, "-- NEXT TORPEDO TIME: %u",
+			o->tsd.starbase.next_torpedo_time);
+		send_demon_console_msg(console_msg);
+		int model = o->id % nstarbase_models;
+		snprintf(console_msg, sizeof(console_msg) - 1, "-- MODEL: %d", model);
+		send_demon_console_msg(console_msg);
+		for (i = 0; i < docking_port_info[model]->nports; i++) {
+			snprintf(console_msg, sizeof(console_msg) - 1, "-- DOCKING PORT[%d] %d", i,
+				o->tsd.starbase.docking_port[i]);
+			send_demon_console_msg(console_msg);
+		}
+		for (i = 0; i < docking_port_info[model]->nports; i++) {
+			snprintf(console_msg, sizeof(console_msg) - 1, "-- EXPECTED DOCKER[%d] %d", i,
+					o->tsd.starbase.expected_docker[i]);
+			send_demon_console_msg(console_msg);
+			snprintf(console_msg, sizeof(console_msg) - 1, "-- EXPECTED DOCKER TIMER[%d] %d", i,
+					o->tsd.starbase.expected_docker_timer[i]);
+			send_demon_console_msg(console_msg);
+		}
+		snprintf(console_msg, sizeof(console_msg) - 1, "-- SPIN RATE 10ths DEG / SEC: %d",
+				o->tsd.starbase.spin_rate_10ths_deg_per_sec);
+		send_demon_console_msg(console_msg);
+		for (i = 0; i < 4; i++) {
+			snprintf(console_msg, sizeof(console_msg) - 1, "-- occupant[%d] %hhu", i,
+					o->tsd.starbase.occupant[i]);
+			send_demon_console_msg(console_msg);
+		}
+		snprintf(console_msg, sizeof(console_msg) - 1, "-- TIME_LEFT_TO_BUILD %d",
+				o->tsd.starbase.time_left_to_build);
+		send_demon_console_msg(console_msg);
+		snprintf(console_msg, sizeof(console_msg) - 1, "-- BUILD UNIT TYPE %hhu",
+				o->tsd.starbase.build_unit_type);
+		send_demon_console_msg(console_msg);
+		/* TODO: debug info for marketplace data, bid_price, part_price */
 		break;
 	case OBJTYPE_DEBRIS:
 		t = "DEBRIS";

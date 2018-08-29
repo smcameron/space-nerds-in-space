@@ -205,3 +205,27 @@ char *strnzcpy(char *dest, const char *src, size_t n)
 	return rc;
 }
 
+/* Printing a pointer to a function via %p is forbidden by ISO C, so we have this BS instead: */
+void format_function_pointer(char *buffer, void (*function_pointer)(void))
+{
+	int direction = 0x01020304;
+	int i, p, start, end;
+	char *endian = (char *) &direction;
+
+	if (endian[0] == 0x01) { /* big endian */
+		direction = 1;
+		start = 0;
+		end = sizeof(function_pointer);
+	} else {
+		direction = -1;
+		start = sizeof(function_pointer) - 1;
+		end = -1;
+	}
+	sprintf(buffer, "0x");
+	p = 1;
+	for (i = start; i != end; i += direction) {
+		sprintf(&buffer[p * 2], "%02X", ((unsigned char *) &function_pointer)[i]);
+		p++;
+	}
+}
+
