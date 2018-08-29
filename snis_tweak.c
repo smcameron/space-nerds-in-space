@@ -131,7 +131,7 @@ int tweak_variable(struct tweakable_var_descriptor *tweak, int count, char *cmd,
 	return 0;
 }
 
-void tweakable_vars_list(struct tweakable_var_descriptor *tweak, int count, void (*printfn)(const char *))
+void tweakable_vars_list(struct tweakable_var_descriptor *tweak, int count, void (*printfn)(const char *, ...))
 {
 	int i;
 	char msg[128];
@@ -163,10 +163,10 @@ void tweakable_vars_list(struct tweakable_var_descriptor *tweak, int count, void
 }
 
 int tweakable_var_describe(struct tweakable_var_descriptor *tweak, int count, char *cmd,
-				void (*printfn)(const char *), int suppress_unknown_var)
+				void (*printfn)(const char *, ...), int suppress_unknown_var)
 {
 	int rc;
-	char msg[255], variable[255];
+	char variable[255];
 	struct tweakable_var_descriptor *v;
 
 	rc = sscanf(cmd, "DESCRIBE%*[ ]%s", variable);
@@ -182,40 +182,26 @@ int tweakable_var_describe(struct tweakable_var_descriptor *tweak, int count, ch
 	}
 	v = &tweak[rc];
 	printfn(variable);
-	sprintf(msg, "   DESC: %s", v->description);
-	printfn(msg);
-	sprintf(msg, "   TYPE: %c", toupper(v->type));
-	printfn(msg);
+	printfn("   DESC: %s", v->description);
+	printfn("   TYPE: %c", toupper(v->type));
 	switch (v->type) {
 	case 'b':
-		sprintf(msg, "   CURRENT VALUE: %hhu", *((uint8_t *) v->address));
-		printfn(msg);
-		sprintf(msg, "   DEFAULT VALUE: %d", v->defaulti);
-		printfn(msg);
-		sprintf(msg, "   MINIMUM VALUE: %d", v->mini);
-		printfn(msg);
-		sprintf(msg, "   MAXIMUM VALUE: %d", v->maxi);
-		printfn(msg);
+		printfn("   CURRENT VALUE: %hhu", *((uint8_t *) v->address));
+		printfn("   DEFAULT VALUE: %d", v->defaulti);
+		printfn("   MINIMUM VALUE: %d", v->mini);
+		printfn("   MAXIMUM VALUE: %d", v->maxi);
 		break;
 	case 'i':
-		sprintf(msg, "   CURRENT VALUE: %d", *((int *) v->address));
-		printfn(msg);
-		sprintf(msg, "   DEFAULT VALUE: %d", v->defaulti);
-		printfn(msg);
-		sprintf(msg, "   MINIMUM VALUE: %d", v->mini);
-		printfn(msg);
-		sprintf(msg, "   MAXIMUM VALUE: %d", v->maxi);
-		printfn(msg);
+		printfn("   CURRENT VALUE: %d", *((int *) v->address));
+		printfn("   DEFAULT VALUE: %d", v->defaulti);
+		printfn("   MINIMUM VALUE: %d", v->mini);
+		printfn("   MAXIMUM VALUE: %d", v->maxi);
 		break;
 	case 'f':
-		sprintf(msg, "   CURRENT VALUE: %f", *((float *) v->address));
-		printfn(msg);
-		sprintf(msg, "   DEFAULT VALUE: %f", v->defaultf);
-		printfn(msg);
-		sprintf(msg, "   MINIMUM VALUE: %f", v->minf);
-		printfn(msg);
-		sprintf(msg, "   MAXIMUM VALUE: %f", v->maxf);
-		printfn(msg);
+		printfn("   CURRENT VALUE: %f", *((float *) v->address));
+		printfn("   DEFAULT VALUE: %f", v->defaultf);
+		printfn("   MINIMUM VALUE: %f", v->minf);
+		printfn("   MAXIMUM VALUE: %f", v->maxf);
 		break;
 	default:
 		printfn("   VARIABLE HAS UNKNOWN TYPE");

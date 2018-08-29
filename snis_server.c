@@ -12576,7 +12576,8 @@ static void make_universe(void)
 	pthread_mutex_unlock(&universe_mutex);
 }
 
-static void send_demon_console_msg(const char *msg);
+static void send_demon_console_msg(const char *fmt, ...);
+
 static void regenerate_universe(void)
 {
 	disable_rts_mode();
@@ -13211,13 +13212,16 @@ static int process_request_thrust(struct game_client *c)
 }
 #endif
 
-static void send_demon_console_msg(const char *msg)
+static void send_demon_console_msg(const char *fmt, ...)
 {
 	char buf[DEMON_CONSOLE_MSG_MAX];
 	struct packed_buffer *pb;
+	va_list arg_ptr;
 
 	memset(buf, 0, sizeof(buf));
-	snprintf(buf, sizeof(buf), "%s", msg);
+	va_start(arg_ptr, fmt);
+	vsnprintf(buf, sizeof(buf) - 1, fmt, arg_ptr);
+	va_end(arg_ptr);
 	buf[sizeof(buf) - 1] = '\0';
 	pb = packed_buffer_allocate(2 + sizeof(buf));
 	packed_buffer_append(pb, "bb", OPCODE_CONSOLE_OP, OPCODE_CONSOLE_SUBCMD_ADD_TEXT);
