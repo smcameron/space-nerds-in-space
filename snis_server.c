@@ -16451,8 +16451,17 @@ static void server_builtin_dump(char *cmd)
 	o = &go[i];
 	send_demon_console_msg("%u  %s X,Y,Z,T = %f,%f,%f, %d",
 			id, o->sdata.name, o->x, o->y, o->z, o->type);
+	send_demon_console_msg("-- NUPDATES %d", o->nupdates);
+	for (i = 0; i < SNIS_ENTITY_NUPDATE_HISTORY; i++)
+		send_demon_console_msg("---- update time %f", o->updatetime[i]);
+	send_demon_console_msg("-- VX, VY, VZ = %f, %f, %f", o->vx, o->vy, o->vz);
+	send_demon_console_msg("-- HEADING = %f", o->heading);
+	send_demon_console_msg("-- ALIVE = %hu", o->alive);
+	send_demon_console_msg("-- TIMESTAMP = %u", o->timestamp);
+	send_demon_console_msg("-- RESPAWN TIME = %u", o->timestamp);
 	format_function_pointer(fnptraddr, (void (*)(void)) o->move);
 	send_demon_console_msg("-- MOVE FN %s", fnptraddr);
+
 	switch (o->type) {
 	case OBJTYPE_SHIP1:
 		t = "PLAYER SHIP";
