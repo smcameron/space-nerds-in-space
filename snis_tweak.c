@@ -134,7 +134,6 @@ int tweak_variable(struct tweakable_var_descriptor *tweak, int count, char *cmd,
 void tweakable_vars_list(struct tweakable_var_descriptor *tweak, int count, void (*printfn)(const char *, ...))
 {
 	int i;
-	char msg[128];
 	struct tweakable_var_descriptor *v;
 
 	for (i = 0; i < count; i++) {
@@ -143,22 +142,21 @@ void tweakable_vars_list(struct tweakable_var_descriptor *tweak, int count, void
 			break;
 		switch (v->type) {
 		case 'f':
-			snprintf(msg, sizeof(msg), "%s = %f (D=%f, MN=%f, MX=%f)", v->name,
+			printfn("%s = %.2f (D=%.2f, MN=%.2f, MX=%.2f)", v->name,
 					*((float *) v->address), v->defaultf, v->minf, v->maxf);
 			break;
 		case 'b':
-			snprintf(msg, sizeof(msg), "%s = %hhu (D=%d, MN=%d, MX=%d)", v->name,
+			printfn("%s = %hhu (D=%d, MN=%d, MX=%d)", v->name,
 					*((uint8_t *) v->address), v->defaulti, v->mini, v->maxi);
 			break;
 		case 'i':
-			snprintf(msg, sizeof(msg), "%s = %d (D=%d,MN=%d,MX=%d)", v->name,
+			printfn("%s = %d (D=%d,MN=%d,MX=%d)", v->name,
 					*((int32_t *) v->address), v->defaulti, v->mini, v->maxi);
 			break;
 		default:
-			snprintf(msg, sizeof(msg), "%s = ? (unknown type '%c')", v->name, v->type);
+			printfn("%s = ? (unknown type '%c')", v->name, v->type);
 			break;
 		}
-		printfn(msg);
 	}
 }
 
