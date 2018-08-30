@@ -1989,6 +1989,8 @@ static int update_warp_core(uint32_t id, uint32_t timestamp, double x, double y,
 		 */
 		orientation = random_orientation[id % NRANDOM_ORIENTATIONS];
 		e = add_entity(ecx, warp_core_mesh, x, y, z, WARP_CORE_COLOR);
+		if (e)
+			update_entity_material(e, &warpgate_material); /* re-use warp gate material for now */
 		i = add_generic_object(id, timestamp, x, y, z, 0, 0, 0,
 				&orientation, OBJTYPE_WARP_CORE, 1, e);
 		if (i < 0)
@@ -20448,6 +20450,7 @@ static void init_meshes()
 	warpgate_mesh = snis_read_model(d, "warpgate.stl");
 	mesh_cylindrical_yz_uv_map(warpgate_mesh);
 	warp_core_mesh = snis_read_model(d, "warp-core.stl");
+	mesh_cylindrical_yz_uv_map(warp_core_mesh);
 	cylinder_mesh = snis_read_model(d, "cylinder.stl");
 	mesh_cylindrical_yz_uv_map(cylinder_mesh);
 
