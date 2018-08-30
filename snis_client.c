@@ -4227,6 +4227,9 @@ static gint key_press_cb(GtkWidget* widget, GdkEventKey* event, gpointer data)
 		if (control_key_pressed)
 			watermark_active = !watermark_active;
 		break;
+	case key_demon_console:
+		demon_ui.console_active = !demon_ui.console_active;
+		break;
 	default:
 		break;
 	}

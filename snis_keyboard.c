@@ -202,6 +202,7 @@ char *keyactionstring[] = {
 	"key_weap_fire_missile",
 	"key_space",
 	"key_robot_gripper",
+	"key_demon_console",
 };
 
 void zero_keymaps(void)
@@ -314,6 +315,7 @@ void init_keymap(void)
 	mapkey(sci, GDK_period, keysciball_pitchup);
 	ffmapkey(sci, GDK_KP_Down, keysciball_pitchup);
 	mapkey(nav | mainscreen, GDK_KEY_quoteleft, key_camera_mode);
+	mapkey(demon, GDK_KEY_quoteleft, key_demon_console);
 
 	mapkey(nav | mainscreen | weap, GDK_W, keyviewmode);
 	mapkey(nav | mainscreen | sci, GDK_KEY_plus, keyzoom);
