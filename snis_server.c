@@ -148,6 +148,9 @@ static int enemy_torpedo_fire_interval = ENEMY_TORPEDO_FIRE_INTERVAL;
 static int enemy_missile_fire_interval = ENEMY_MISSILE_FIRE_INTERVAL;
 static float missile_proximity_distance = MISSILE_PROXIMITY_DISTANCE;
 static float missile_explosion_damage_distance = MISSILE_EXPLOSION_DAMAGE_DISTANCE;
+static float spacemonster_flee_dist = SPACEMONSTER_FLEE_DIST;
+static float spacemonster_aggro_radius = SPACEMONSTER_AGGRO_RADIUS;
+static float spacemonster_collision_radius = SPACEMONSTER_COLLISION_RADIUS;
 
 /*
  * End of runtime adjustable globals
@@ -4110,7 +4113,7 @@ static void spacemonster_collision_process(void *context, void *entity)
 		 * Ship interactions happen in ship collision processing functions.
 		 */
 		if (o->tsd.spacemonster.ship_dist >= 0.0) {
-			if (o->tsd.spacemonster.ship_dist < SPACEMONSTER_AGGRO_RADIUS &&
+			if (o->tsd.spacemonster.ship_dist < spacemonster_aggro_radius &&
 				snis_randn(1000) < 200) {
 				if (o->tsd.spacemonster.health > 100) {
 					if (o->tsd.spacemonster.anger < 255)
@@ -4155,10 +4158,10 @@ static void spacemonster_flee(struct snis_entity *o)
 		}
 		if (count > 0 && snis_randn(1000) < 750) {
 			vec3_normalize_self(&total);
-			vec3_mul_self(&total, SPACEMONSTER_FLEE_DIST);
+			vec3_mul_self(&total, spacemonster_flee_dist);
 			o->tsd.spacemonster.dest = total;
 		} else {
-			random_point_on_sphere(SPACEMONSTER_FLEE_DIST, &total.v.x, &total.v.y, &total.v.z);
+			random_point_on_sphere(spacemonster_flee_dist, &total.v.x, &total.v.y, &total.v.z);
 		}
 	}
 	o->tsd.spacemonster.decision_age++;
@@ -4234,7 +4237,7 @@ static void spacemonster_fight(struct snis_entity *o)
 		spacemonster_play(o);
 		return;
 	}
-	if (o->tsd.spacemonster.ship_dist > SPACEMONSTER_AGGRO_RADIUS) {
+	if (o->tsd.spacemonster.ship_dist > spacemonster_aggro_radius) {
 		spacemonster_play(o);
 		o->tsd.spacemonster.anger = imax(o->tsd.spacemonster.anger - snis_randn(10), 0);
 		o->tsd.spacemonster.fear = imax(o->tsd.spacemonster.fear - snis_randn(10), 0);
@@ -6443,7 +6446,7 @@ static void ship_collision_avoidance(void *context, void *entity)
 			d = 1.0;
 	}
 	if (obstacle->type == OBJTYPE_SPACEMONSTER) {
-		if (d < SPACEMONSTER_COLLISION_RADIUS * SPACEMONSTER_COLLISION_RADIUS) {
+		if (d < spacemonster_collision_radius * spacemonster_collision_radius) {
 			calculate_torpedolike_damage(o, spacemonster_damage_factor);
 			do_collision_impulse(o, obstacle);
 			attack_your_attacker(o, obstacle);
@@ -8148,7 +8151,7 @@ static void player_collision_detection(void *player, void *object)
 	proximity_dist2 = PROXIMITY_DIST2;
 	crash_dist2 = CRASH_DIST2;
 	if (t->type == OBJTYPE_SPACEMONSTER) {
-		if (dist2 < SPACEMONSTER_COLLISION_RADIUS * SPACEMONSTER_COLLISION_RADIUS) {
+		if (dist2 < spacemonster_collision_radius * spacemonster_collision_radius) {
 			do_collision_impulse(o, t);
 			snis_queue_add_sound(SPACEMONSTER_SLAP, ROLE_SOUNDSERVER, o->id);
 			/* TODO: some sort of damage to ship */
@@ -16225,6 +16228,18 @@ static struct tweakable_var_descriptor server_tweak[] = {
 		"DAMAGE FACTOR PER UNIT DISTANCE",
 		&missile_explosion_damage_distance, 'f',
 		0.0, 2000.0, MISSILE_EXPLOSION_DAMAGE_DISTANCE, 0, 0, 0 },
+	{ "SPACEMONSTER_FLEE_DIST",
+		"SPACE MONSTER FLEE DISTANCE",
+		&spacemonster_flee_dist, 'f',
+		500.0, 5000.0, SPACEMONSTER_FLEE_DIST, 0, 0, 0 },
+	{ "SPACEMONSTER_AGGRO_RADIUS",
+		"SPACE MONSTER AGGRO RADIUS",
+		&spacemonster_aggro_radius, 'f',
+		500.0, 15000.0, SPACEMONSTER_AGGRO_RADIUS, 0, 0, 0 },
+	{ "SPACEMONSTER_COLLISION_RADIUS",
+		"SPACE MONSTER COLLISION RADIUS",
+		&spacemonster_collision_radius, 'f',
+		10.0, 500.0, SPACEMONSTER_COLLISION_RADIUS, 0, 0, 0 },
 	{ NULL, NULL, NULL, '\0', 0.0, 0.0, 0.0, 0, 0, 0 },
 };
 
