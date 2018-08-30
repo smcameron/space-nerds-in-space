@@ -15289,7 +15289,7 @@ static void show_comms(GtkWidget *w)
 	show_common_screen(w, "COMMS");
 }
 
-static void print_demon_console_msg(const char *msg);
+static void print_demon_console_msg(const char *fmt, ...);
 static void send_demon_comms_packet_to_server(char *msg)
 {
 	if (demon_ui.captain_of < 0) {
@@ -15401,14 +15401,12 @@ static int demon_id_selected(uint32_t id)
 static void demon_select(uint32_t id)
 {
 	int old_captain = -1;
-	char console_msg[100];
 
 	if (demon_ui.nselected >= MAX_DEMON_SELECTABLE)
 		return;
 	demon_ui.selected_id[demon_ui.nselected] = id;
 	demon_ui.nselected++;
-	snprintf(console_msg, sizeof(console_msg) - 1, "SELECTED OBJECT %d", id);
-	print_demon_console_msg(console_msg);
+	print_demon_console_msg("SELECTED OBJECT %d", id);
 	if (demon_ui.buttonmode == DEMON_BUTTON_CAPTAINMODE) {
 		int index = lookup_object_by_id(id);
 
@@ -15438,13 +15436,11 @@ static void demon_select(uint32_t id)
 static void demon_deselect(uint32_t id)
 {
 	int i;
-	char console_msg[100];
 
 	for (i = 0; i < demon_ui.nselected; i++) {
 		if (demon_ui.selected_id[i] == id) {
 			int index;
-			snprintf(console_msg, sizeof(console_msg) - 1, "DESELECTED %u\n", id);
-			print_demon_console_msg(console_msg);
+			print_demon_console_msg("DESELECTED %u\n", id);
 			if (demon_ui.captain_of != -1) {
 				index = lookup_object_by_id(id);
 				if (demon_ui.captain_of == index) {
@@ -16052,9 +16048,15 @@ static void set_demon_group(int n)
 	dg->nids = count;
 }
 
-static void print_demon_console_msg(const char *msg)
+static void print_demon_console_msg(const char *fmt, ...)
 {
-	text_window_add_text(demon_ui.console, msg);
+	va_list arg_ptr;
+	char buffer[256];
+
+	va_start(arg_ptr, fmt);
+	vsnprintf(buffer, sizeof(buffer) - 1, fmt, arg_ptr);
+	va_end(arg_ptr);
+	text_window_add_text(demon_ui.console, buffer);
 }
 
 static struct tweakable_var_descriptor client_tweak[] = {
@@ -16165,8 +16167,7 @@ static int construct_demon_command(char *input,
 				goto error;
 			}
 			/* TODO - finish this */
-			sprintf(console_text, "group %d commanded to attack group %d\n", g, g2);
-			print_demon_console_msg(console_text);
+			print_demon_console_msg("group %d commanded to attack group %d\n", g, g2);
 			idcount = demon_group[g].nids + demon_group[g2].nids;
 			pb = packed_buffer_allocate(sizeof(struct demon_cmd_packet)
 							+ (idcount - 1) * sizeof(uint32_t));
@@ -16232,11 +16233,9 @@ static int construct_demon_command(char *input,
 				int n;
 				demon_ui.selected_id[i] = demon_group[g].id[i];
 				n = lookup_object_by_id(demon_ui.selected_id[i]);
-				if (n >= 0) {
-					sprintf(console_text, "%d %d %s ( %f, %f, %f )", i, demon_ui.selected_id[i],
+				if (n >= 0)
+					print_demon_console_msg("%d %d %s ( %f, %f, %f )", i, demon_ui.selected_id[i],
 							go[n].sdata.name, go[n].x, go[n].y, go[n].z);
-					print_demon_console_msg(console_text);
-				}
 			}
 			demon_ui.nselected = demon_group[g].nids;
 			break; 
