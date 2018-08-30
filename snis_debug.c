@@ -57,6 +57,15 @@ void snis_debug_dump(char *cmd, struct snis_entity go[], int nstarbase_models,
 	printfn("-- RESPAWN TIME = %u", o->timestamp);
 	format_function_pointer(fnptraddr, (void (*)(void)) o->move);
 	printfn("-- MOVE FN %s", fnptraddr);
+	printfn("-- SDATA NAME = %s", o->sdata.name);
+	printfn("-- SDATA SCIENCE TEXT = %s", o->sdata.science_text ? o->sdata.science_text : "NULL");
+	printfn("-- SDATA SCIENCE DATA KNOWN = %hu", o->sdata.science_data_known);
+	printfn("-- SDATA SUBCLASS = %hhu", o->sdata.subclass);
+	printfn("-- SDATA SHIELD STRENGTH = %hhu", o->sdata.shield_strength);
+	printfn("-- SDATA SHIELD WAVELENGTH = %hhu", o->sdata.shield_wavelength);
+	printfn("-- SDATA SHIELD WIDTH = %hhu", o->sdata.shield_width);
+	printfn("-- SDATA SHIELD DEPTH = %hhu", o->sdata.shield_depth);
+	printfn("-- SDATA FACTION = %hhu", o->sdata.faction);
 
 	switch (o->type) {
 	case OBJTYPE_SHIP1:
