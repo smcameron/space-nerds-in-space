@@ -117,6 +117,7 @@
 #include "ui_colors.h"
 #include "pthread_util.h"
 #include "snis_tweak.h"
+#include "snis_debug.h"
 
 #define SHIP_COLOR CYAN
 #define STARBASE_COLOR RED
@@ -15928,6 +15929,7 @@ static struct demon_cmd_def {
 	{ "SET", "SET TWEAKABLE VARIABLES" },
 	{ "VARS", "LIST TWEAKABLE VARIABLES" },
 	{ "DESCRIBE", "DESCRIBE A TWEAKABLE VARIABLE" },
+	{ "CDUMP", "DUMP CLIENT-SIDE OBJECT" },
 	/* Note: Server builtin command help isn't here, it's in the server code,
 	 * elicited by a call to "send_lua_script_packet_to_server("HELP")"
 	 */
@@ -16087,6 +16089,12 @@ static int set_clientside_variable(char *cmd)
 		break;
 	}
 	return rc;
+}
+
+static void client_side_dump(char *cmd)
+{
+	snis_debug_dump(cmd, go, nstarbase_models, docking_port_info,
+			lookup_object_by_id, print_demon_console_msg);
 }
 
 static int construct_demon_command(char *input,
@@ -16302,6 +16310,10 @@ static int construct_demon_command(char *input,
 							print_demon_console_msg, 1);
 			if (rc == TWEAK_UNKNOWN_VARIABLE)
 				send_lua_script_packet_to_server(original);
+			break;
+		case 21: /* client side dump object */
+			uppercase(original);
+			client_side_dump(original);
 			break;
 		default: /* unknown, maybe it's a builtin server command or a lua script */
 			uppercase(original);
