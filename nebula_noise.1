@@ -1,0 +1,38 @@
+.TH SPACE-NERDS-IN-SPACE "1" "AUGUST 2018" "nebula_noise" "Games"
+.SH NAME
+nebula_noise \- generate nebula noise images
+.SH SYNOPSIS
+.B nebula_noise [--octaves o] [--featuresize f]
+	[--width w] [--height h] [--output outputfile]
+
+.SH DESCRIPTION
+.\" Add any additional description here
+.PP
+nebula_noise generates nebula noise images
+.SH Options:
+.TP
+\fB\-a, --alpha\fR
+Produce an output file with an alpha channel (an RGBA png file).
+By default, an RGB png file with no alpha channel is produced.
+.TP
+\fB\-f n, --featuresize n\fR
+Controls the scale of the noise. Reasonable values are 8, 16, 32, depending
+on the size of the image.
+.TP
+\fB\-h n, --height n\fR
+Specifies the height of the produced image.
+.TP
+\fB-O n,  --octaves n\fR
+Specifies the number of octaves of noise to generate, between 1 and 4, inclusive.
+.TP
+\fB-o file,  --output file\fR
+Specifies the output image file name.
+.TP
+\fB\-w n, --width n\fR
+Specifies the width of the produced image.
+.SH EXAMPLE
+.TP
+.B nebula_noise --f 32 --width 1024 --height 1024 --output myoutput.png
+.SH AUTHOR
+Written by Stephen M. Cameron
+.br

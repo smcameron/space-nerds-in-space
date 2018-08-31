@@ -28,6 +28,8 @@ P ?= 0
 # verbose (default 0=no, 1=yes)
 V ?= 0
 
+CC ?= gcc
+
 DESTDIR=.
 PREFIX?=.
 
@@ -355,8 +357,6 @@ DESKTOPSRCDIR=.
 DESKTOPFILES=${DESKTOPSRCDIR}/snis.desktop
 UPDATE_DESKTOP=update-desktop-database ${DESKTOPDIR} || :
 
-CC ?= gcc
-
 # -rdynamic is used by gcc for runtime stack traces (see stacktrace.c)
 # but clang complains about it.
 ifeq (${CC},clang)
@@ -451,7 +451,8 @@ SDLCLIENTOBJS=shader.o graph_dev_opengl.o opengl_cap.o snis_graph.o mesh_viewer.
 				material.o entity.o snis_alloc.o matrix.o stacktrace.o stl_parser.o \
 				snis_typeface.o snis_font.o string-utils.o ui_colors.o liang-barsky.o \
 				bline.o vec4.o
-
+NEBULANOISEOBJS=nebula_noise.o open-simplex-noise.o png_utils.o
+NEBULANOISELIBS=-lm -lpng
 
 SSGL=ssgl/libssglclient.a
 LIBS=-lGL -Lssgl -lssglclient -ldl -lm ${LUALIBS} ${PNGLIBS} ${GLEWLIBS} -lcrypt
@@ -481,7 +482,7 @@ PROGS=snis_server snis_client snis_limited_client snis_multiverse
 BINPROGS=bin/ssgl_server bin/snis_server bin/snis_client bin/snis_limited_client bin/snis_text_to_speech.sh \
 		bin/snis_multiverse bin/lsssgl
 UTILPROGS=util/mask_clouds util/cloud-mask-normalmap mesh_viewer util/sample_image_colors \
-		util/generate_solarsystem_positions
+		util/generate_solarsystem_positions nebula_noise
 ESSENTIAL_SCRIPTS=snis_text_to_speech.sh
 
 # model directory
@@ -567,6 +568,7 @@ LIMCLIENTLINK=$(ECHO) '  LINK' $@ && $(CC) ${MYCFLAGS} ${SNDFLAGS} -o $@ ${GTKCF
 SDLCLIENTLINK=$(ECHO) '  LINK' $@ && $(CC) ${MYCFLAGS} ${SNDFLAGS} -o $@ ${SDLCFLAGS} ${SDLCLIENTOBJS} ${SDLLIBS} ${LIBS} ${SNDLIBS} $(LDFLAGS)
 SERVERLINK=$(ECHO) '  LINK' $@ && $(CC) ${MYCFLAGS} -o $@ ${SERVEROBJS} ${SERVERLIBS} $(LDFLAGS)
 MULTIVERSELINK=$(ECHO) '  LINK' $@ && $(CC) ${MYCFLAGS} -o $@ ${MULTIVERSEOBJS} ${MULTIVERSELIBS} $(LDFLAGS)
+NEBULANOISELINK=$(ECHO) '  LINK' $@ && $(CC) ${MYCFLAGS} -o $@ ${NEBULANOISEOBJS} ${NEBULANOISELIBS} $(LDFLAGS)
 OPENSCAD=$(ECHO) '  OPENSCAD' $< && openscad -o $@ $<
 EXTRACTSCADPARAMS=$(ECHO) '  EXTRACT THRUST PARAMS' $@ && $(AWK) -f extract_scad_params.awk $< > $@
 EXTRACTDOCKINGPORTS=$(ECHO) '  EXTRACT DOCKING PORTS' $@ && $(AWK) -f extract_docking_ports.awk $< > $@
@@ -721,6 +723,12 @@ mesh_viewer.o:	mesh_viewer.c Makefile build_info.h
 
 open-simplex-noise.o:	open-simplex-noise.c Makefile build_info.h
 	$(Q)$(COMPILE)
+
+nebula_noise.o:	nebula_noise.c png_utils.h open-simplex-noise.h Makefile
+	$(Q)$(COMPILE)
+
+nebula_noise:	$(NEBULANOISEOBJS)
+	$(Q)$(NEBULANOISELINK)
 
 gaseous-giganticus.o:	gaseous-giganticus.c ${GGOBJS} Makefile build_info.h
 	$(Q)$(COMPILE)
