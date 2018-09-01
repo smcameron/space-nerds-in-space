@@ -452,7 +452,10 @@ SDLCLIENTOBJS=shader.o graph_dev_opengl.o opengl_cap.o snis_graph.o mesh_viewer.
 				snis_typeface.o snis_font.o string-utils.o ui_colors.o liang-barsky.o \
 				bline.o vec4.o
 NEBULANOISEOBJS=nebula_noise.o open-simplex-noise.o png_utils.o
-NEBULANOISELIBS=-lm -lpng
+NEBULANOISELIBS=-lm ${PNGLIBS}
+
+GENERATE_SKYBOX_OBJS=generate_skybox.o open-simplex-noise.o png_utils.o mathutils.o quat.o mtwist.o
+GENERATE_SKYBOX_LIBS=-lm ${PNGLIBS}
 
 SSGL=ssgl/libssglclient.a
 LIBS=-lGL -Lssgl -lssglclient -ldl -lm ${LUALIBS} ${PNGLIBS} ${GLEWLIBS} -lcrypt
@@ -482,7 +485,7 @@ PROGS=snis_server snis_client snis_limited_client snis_multiverse
 BINPROGS=bin/ssgl_server bin/snis_server bin/snis_client bin/snis_limited_client bin/snis_text_to_speech.sh \
 		bin/snis_multiverse bin/lsssgl
 UTILPROGS=util/mask_clouds util/cloud-mask-normalmap mesh_viewer util/sample_image_colors \
-		util/generate_solarsystem_positions nebula_noise
+		util/generate_solarsystem_positions nebula_noise generate_skybox
 ESSENTIAL_SCRIPTS=snis_text_to_speech.sh
 
 # model directory
@@ -569,6 +572,7 @@ SDLCLIENTLINK=$(ECHO) '  LINK' $@ && $(CC) ${MYCFLAGS} ${SNDFLAGS} -o $@ ${SDLCF
 SERVERLINK=$(ECHO) '  LINK' $@ && $(CC) ${MYCFLAGS} -o $@ ${SERVEROBJS} ${SERVERLIBS} $(LDFLAGS)
 MULTIVERSELINK=$(ECHO) '  LINK' $@ && $(CC) ${MYCFLAGS} -o $@ ${MULTIVERSEOBJS} ${MULTIVERSELIBS} $(LDFLAGS)
 NEBULANOISELINK=$(ECHO) '  LINK' $@ && $(CC) ${MYCFLAGS} -o $@ ${NEBULANOISEOBJS} ${NEBULANOISELIBS} $(LDFLAGS)
+GENERATE_SKYBOX_LINK=$(ECHO) '  LINK' $@ && $(CC) ${MYCFLAGS} -o $@ ${GENERATE_SKYBOX_OBJS} ${GENERATE_SKYBOX_LIBS} $(LDFLAGS)
 OPENSCAD=$(ECHO) '  OPENSCAD' $< && openscad -o $@ $<
 EXTRACTSCADPARAMS=$(ECHO) '  EXTRACT THRUST PARAMS' $@ && $(AWK) -f extract_scad_params.awk $< > $@
 EXTRACTDOCKINGPORTS=$(ECHO) '  EXTRACT DOCKING PORTS' $@ && $(AWK) -f extract_docking_ports.awk $< > $@
@@ -729,6 +733,12 @@ nebula_noise.o:	nebula_noise.c png_utils.h open-simplex-noise.h Makefile
 
 nebula_noise:	$(NEBULANOISEOBJS)
 	$(Q)$(NEBULANOISELINK)
+
+generate_skybox.o:	generate_skybox.c png_utils.h open-simplex-noise.h quat.h mtwist.h mathutils.h Makefile
+	$(Q)$(COMPILE)
+
+generate_skybox:	$(GENERATE_SKYBOX_OBJS)
+	$(Q)$(GENERATE_SKYBOX_LINK)
 
 gaseous-giganticus.o:	gaseous-giganticus.c ${GGOBJS} Makefile build_info.h
 	$(Q)$(COMPILE)
