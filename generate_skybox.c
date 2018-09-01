@@ -253,6 +253,14 @@ static uint32_t get_pixel_rgb(uint8_t *image, const int width, const int height,
 	return c;
 }
 
+static void set_pixel_rgb(uint8_t *image, const int width, const int height, int x, int y, uint32_t color)
+{
+	uint8_t *p = &image[(y * width + x) * 3];
+	p[0] = (color >> 16) & 0xff;
+	p[1] = (color >> 8) & 0xff;
+	p[2] = (color) & 0xff;
+}
+
 static uint32_t get_pixel_rgba(uint32_t *image, const int width, const int height, int x, int y)
 {
 	return image[y * width + x];
@@ -363,16 +371,53 @@ static void generate_stars(struct mtwist_state *mt)
 		generate_star(mt);
 }
 
+uint8_t *half_scale_rgb(uint8_t *input, const int width, const int height)
+{
+	int nw = width / 2;
+	int nh = height / 2;
+	uint32_t color[4], newcolor;
+	int x, y, sx, sy, i;
+	int r, g, b;
+
+	uint8_t *new = malloc(nw * nh * 3);
+
+	for (y = 0; y < nh; y++) {
+		for (x = 0; x < nw; x++) {
+			sx = x * 2;
+			sy = y * 2;
+			color[0] = get_pixel_rgb(input, width, height, sx, sy);
+			color[1] = get_pixel_rgb(input, width, height, sx + 1, sy);
+			color[2] = get_pixel_rgb(input, width, height, sx, sy + 1);
+			color[3] = get_pixel_rgb(input, width, height, sx + 1, sy + 1);
+			r = 0;
+			g = 0;
+			b = 0;
+			for (i = 0; i < 4; i++) {
+				r += (color[i] >> 16) & 0xff;
+				g += (color[i] >> 8) & 0xff;
+				b += color[i] & 0xff;
+			}
+			r = (uint8_t) (r / 4);
+			g = (uint8_t) (g / 4);
+			b = (uint8_t) (b / 4);
+			newcolor = (0xff << 24) | (r << 16) | (g << 8) | b;
+			set_pixel_rgb(new, nw, nh, x, y, newcolor);
+		}
+	}
+	return new;
+}
+
 static void save_output_images()
 {
 	int i, rc;
 	char filename[PATH_MAX];
-	uint8_t *stripped;
+	uint8_t *stripped, *half;
 
 	for (i = 0; i < 6; i++) {
-		snprintf(filename, sizeof(filename) - 1, "%s-%d.png", "skybox", i);
+		snprintf(filename, sizeof(filename) - 1, "%s%d.png", "skybox", i);
 		stripped = strip_alpha(output_image[i], dim, dim);
-		rc = png_utils_write_png_image(filename, stripped, dim, dim, 0, 0);
+		half = half_scale_rgb(stripped, dim, dim);
+		rc = png_utils_write_png_image(filename, half, dim / 2, dim / 2, 0, 0);
 		if (rc)
 			fprintf(stderr, "generate_skybox: Failed to save image to %s: %s\n",
 				filename, strerror(errno));
