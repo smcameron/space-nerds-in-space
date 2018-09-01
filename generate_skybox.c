@@ -30,7 +30,7 @@
 #include "mathutils.h"
 #include "quat.h"
 
-#define NSTARS 100000
+#define NSTARS 50000
 
 static int dim = 4096;
 static int nstars = NSTARS;
@@ -297,7 +297,7 @@ static float random_star_radius(struct mtwist_state *mt)
 {
 	/* TODO: something better */
 	float r = mtwist_float(mt);
-	return r * r * 10.0;
+	return r * r * 8.0;
 }
 
 static void generate_star(struct mtwist_state *mt)
