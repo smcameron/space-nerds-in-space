@@ -30,16 +30,16 @@
 #include "mathutils.h"
 #include "quat.h"
 
-#define MAXDIM 2048
-#define NSTARS 10000
+#define NSTARS 100000
 
-int dim = 2048;
-int nstars = NSTARS;
-uint32_t seed = 23342;
+static int dim = 4096;
+static int nstars = NSTARS;
+static uint32_t seed = 23342;
 static uint8_t *output_image[6];
-static char *starcolors;
+static uint8_t *starcolors;
 static int starcolorwidth, starcolorheight, starcoloralpha;
 struct mtwist_state *mt;
+static int samples_per_star = 500;
 
 union cast {
 	double d;
@@ -62,14 +62,14 @@ struct color {
 	float r, g, b, a;
 };
 
-static struct color combine_color(struct color *oc, struct color *c)
+static struct color combine_color(struct color *overc, struct color *underc)
 {
 	struct color nc;
 
-	nc.a = (c->a + oc->a * (1.0f - c->a));
-	nc.r = alphablendcolor(oc->r, oc->a, c->r, c->a) / nc.a;
-	nc.b = alphablendcolor(oc->b, oc->a, c->b, c->a) / nc.a;
-	nc.g = alphablendcolor(oc->g, oc->a, c->g, c->a) / nc.a;
+	nc.a = (overc->a + underc->a * (1.0f - overc->a));
+	nc.r = alphablendcolor(underc->r, underc->a, overc->r, overc->a) / nc.a;
+	nc.b = alphablendcolor(underc->b, underc->a, overc->b, overc->a) / nc.a;
+	nc.g = alphablendcolor(underc->g, underc->a, overc->g, overc->a) / nc.a;
 	return nc;
 }
 
@@ -78,6 +78,7 @@ struct fij {
 	int f, i, j;
 };
 
+#if 0
 /* convert from cubemap coords to cartesian coords on surface of sphere */
 static union vec3 fij_to_xyz(int f, int i, int j, const int dim)
 {
@@ -118,6 +119,7 @@ static union vec3 fij_to_xyz(int f, int i, int j, const int dim)
 	vec3_normalize_self(&answer);
 	return answer;
 }
+#endif
 
 /* convert from cartesian coords on surface of a sphere to cubemap coords */
 static struct fij xyz_to_fij(const union vec3 *p, const int dim)
@@ -232,7 +234,7 @@ static void read_starcolors(void)
 	/* This image is a 64x64 pixel image with white at the top, and gradients
 	 * to various colors as you move towards the bottom.
 	 */
-	starcolors = png_utils_read_png_image("starcolors.png", 0, 0, 0,
+	starcolors = (uint8_t *) png_utils_read_png_image("starcolors.png", 0, 0, 0,
 				&starcolorwidth, &starcolorheight, &starcoloralpha,
 				msg, sizeof(msg) - 1);
 	if (!starcolors) {
@@ -241,12 +243,22 @@ static void read_starcolors(void)
 	}
 }
 
-static uint32_t get_pixel(uint32_t *image, const int width, const int height, int x, int y)
+static uint32_t get_pixel_rgb(uint8_t *image, const int width, const int height, int x, int y)
+{
+	uint32_t c;
+	uint8_t *p;
+
+	p = &image[(y * width + x) * 3];
+	c = 0xff << 24 | p[0] << 16 | p[1] << 8 | p[2];
+	return c;
+}
+
+static uint32_t get_pixel_rgba(uint32_t *image, const int width, const int height, int x, int y)
 {
 	return image[y * width + x];
 }
 
-static void set_pixel(uint32_t *image, const int width, const int height, int x, int y, uint32_t value)
+static void set_pixel_rgba(uint32_t *image, const int width, const int height, int x, int y, uint32_t value)
 {
 	image[y * width + x] = value;
 }
@@ -263,7 +275,7 @@ static uint8_t *strip_alpha(uint8_t *input_image, int width, int height)
 	newimage = malloc(3 * width * height);
 	for (y = 0; y < height; y++) {
 		for (x = 0; x < width; x++) {
-			v = get_pixel(image, width, height, x, y);
+			v = get_pixel_rgba(image, width, height, x, y);
 			newimage[n] = (v >> 16) & 0x0ff;
 			newimage[n + 1] = (v >> 8) & 0x0ff;
 			newimage[n + 2] = v & 0x0ff;
@@ -273,18 +285,74 @@ static uint8_t *strip_alpha(uint8_t *input_image, int width, int height)
 	return newimage;
 }
 
+static float random_star_radius(struct mtwist_state *mt)
+{
+	/* TODO: something better */
+	float r = mtwist_float(mt);
+	return r * r * 10.0;
+}
+
 static void generate_star(struct mtwist_state *mt)
 {
 	union vec3 position;
 	struct fij p;
-	uint32_t color = 0xffffffff;
 	uint32_t *image;
+	float radius = random_star_radius(mt);
+	float alpha;
+	int colorx = mtwist_float(mt) * starcolorwidth;
+	int colory;
+	int i;
+	union vec3 xaxis = { { 1.0, 0.0, 0.0 } };
+	union vec3 jitter;
+	union vec3 topoint;
+	union quat q;
+	struct color undercolor, overcolor, newcolor;
+	uint32_t pixel;
+	uint32_t starcolorpixel;
+	float angle, dist;
+	uint8_t a, r, g, b;
 
-	/* TODO: something much better than this garbage. */
 	consistent_random_point_on_sphere(mt, 1.0, &position.v.x, &position.v.y, &position.v.z);
-	p = xyz_to_fij(&position, dim);
-	image = (uint32_t *) output_image[p.f];
-	set_pixel(image, dim, dim, p.i, p.j, color);
+
+	for (i = 0; i < samples_per_star; i++) {
+		angle = mtwist_float(mt) * 2.0 * M_PI;
+		dist = mtwist_float(mt) * radius;
+
+		jitter.v.x = 0;
+		jitter.v.y = sin(angle) * dist;
+		jitter.v.z = cos(angle) * dist;
+
+		vec3_mul(&topoint, &xaxis, 1.41421356237309504880 * 0.5 * dim);
+		vec3_add_self(&topoint, &jitter);
+		vec3_normalize_self(&topoint);
+		quat_from_u2v(&q, &xaxis, &position, NULL);
+		quat_rot_vec_self(&topoint, &q);
+
+		p = xyz_to_fij(&topoint, dim);
+		image = (uint32_t *) output_image[p.f];
+		pixel = get_pixel_rgba(image, dim, dim, p.i, p.j);
+		undercolor.r = ((pixel >> 16) & 0xff) / 255.0;
+		undercolor.g = ((pixel >> 8) & 0xff) / 255.0;
+		undercolor.b = (pixel & 0xff) / 255.0;
+		undercolor.a = 1.0;
+
+		colory = (dist / radius) * starcolorheight;
+		starcolorpixel = get_pixel_rgb(starcolors, starcolorwidth, starcolorheight, colorx, colory);
+		alpha = clampf((radius - dist) / radius, 0.0, 1.0);
+		overcolor.a = alpha * alpha;
+		overcolor.r = ((starcolorpixel >> 16) & 0xff) / 255.0;
+		overcolor.g = ((starcolorpixel >> 8) & 0xff) / 255.0;
+		overcolor.b = ((starcolorpixel) & 0xff) / 255.0;
+
+		newcolor = combine_color(&overcolor, &undercolor);
+		a = (uint8_t) (255.0 * newcolor.a);
+		r = (uint8_t) (255.0 * newcolor.r);
+		g = (uint8_t) (255.0 * newcolor.g);
+		b = (uint8_t) (255.0 * newcolor.b);
+
+		pixel = (a << 24) | (r << 16) | (g << 8) | b;
+		set_pixel_rgba(image, dim, dim, p.i, p.j, pixel);
+	}
 }
 
 static void generate_stars(struct mtwist_state *mt)
