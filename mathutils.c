@@ -307,14 +307,14 @@ void consistent_random_point_on_sphere(struct mtwist_state *mt,
 
 	/* The Marsaglia 1972 rejection method */
 	do {
-		x1 = mtwist_float(mt);
-		x2 = mtwist_float(mt);
+		x1 = 2.0 * (mtwist_float(mt) - 0.5);
+		x2 = 2.0 * (mtwist_float(mt) - 0.5);
 		s = x1 * x1 + x2 * x2;
 	} while (s > 1.0f);
 
 	*x = 2.0f * x1 * sqrt(1.0f - s);
 	*y = 2.0f * x2 * sqrt(1.0f - s);
-	*z = fabs(1.0f - 2.0f * s);
+	*z = 1.0f - 2.0f * s;
 
 	*x *= radius;
 	*y *= radius;
