@@ -39,7 +39,7 @@ static uint8_t *output_image[6];
 static uint8_t *starcolors;
 static int starcolorwidth, starcolorheight, starcoloralpha;
 struct mtwist_state *mt;
-static int samples_per_star = 500;
+static int samples_per_star = 8;
 
 union cast {
 	double d;
@@ -319,10 +319,11 @@ static void generate_star(struct mtwist_state *mt)
 	uint32_t starcolorpixel;
 	float angle, dist;
 	uint8_t a, r, g, b;
+	int samples = samples_per_star * radius * radius * M_PI;
 
 	consistent_random_point_on_sphere(mt, 1.0, &position.v.x, &position.v.y, &position.v.z);
 
-	for (i = 0; i < samples_per_star; i++) {
+	for (i = 0; i < samples; i++) {
 		angle = mtwist_float(mt) * 2.0 * M_PI;
 		dist = mtwist_float(mt) * radius;
 
