@@ -422,6 +422,7 @@ static void save_output_images()
 			fprintf(stderr, "generate_skybox: Failed to save image to %s: %s\n",
 				filename, strerror(errno));
 		free(stripped);
+		free(half);
 	}
 }
 
