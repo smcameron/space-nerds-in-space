@@ -1,6 +1,30 @@
 Here be ideas about what might or might not be added into the game
 at some point.
 
+
+-------------------------
+Sun Sep  2 08:25:58 EDT 2018
+
+snis_text_window...  the text should be cut-and-pasteable with the mouse.
+This shouldn't be too hard.  We know where the text is displayed, and we know
+where the mouse is.  Drag events can copy the text to a buffer. Some code around
+here might be instructive:
+https://github.com/smcameron/gneutronica/blob/master/gneutronica.c#L1198
+
+It should be possible to turn on logging of the client and server consoles,
+so whatever is in the console is logged to stderr/stdout as well.
+
+Need to put a speed limit on cargo containers.
+
+Need to change the screen-switching sound affect. The current
+one is a little annoying.
+
+In earthlike, instead of craters deforming the height map, how about
+deforming the normalmap directly? I think this might solve the
+overlapping crater problem.
+
+-------------------------
+
 *** MONEY:
 
 Add some kind of money into the game, and each ship would have an
