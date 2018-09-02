@@ -16096,7 +16096,8 @@ static int set_clientside_variable(char *cmd)
 static void client_side_dump(char *cmd)
 {
 	snis_debug_dump(cmd, go, nstarbase_models, docking_port_info,
-			lookup_object_by_id, print_demon_console_msg);
+			lookup_object_by_id, print_demon_console_msg,
+			ship_type, nshiptypes);
 }
 
 static int construct_demon_command(char *input,

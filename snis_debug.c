@@ -25,7 +25,8 @@
 
 void snis_debug_dump(char *cmd, struct snis_entity go[], int nstarbase_models,
 			struct docking_port_attachment_point **docking_port_info,
-			int (*lookup)(uint32_t object_id), void (*printfn)(const char *fmt, ...))
+			int (*lookup)(uint32_t object_id), void (*printfn)(const char *fmt, ...),
+			struct ship_type_entry *ship_type, int nshiptypes)
 {
 	int i, j, rc;
 	uint32_t id;
@@ -45,13 +46,13 @@ void snis_debug_dump(char *cmd, struct snis_entity go[], int nstarbase_models,
 		return;
 	}
 	o = &go[i];
-	printfn("%u  %s X,Y,Z,T = %f,%f,%f, %d",
+	printfn("%u  %s X,Y,Z,T = %.2f, %.2f, %.2f, %d",
 			id, o->sdata.name, o->x, o->y, o->z, o->type);
 	printfn("-- NUPDATES %d", o->nupdates);
 	for (i = 0; i < SNIS_ENTITY_NUPDATE_HISTORY; i++)
-		printfn("---- update time %f", o->updatetime[i]);
-	printfn("-- VX, VY, VZ = %f, %f, %f", o->vx, o->vy, o->vz);
-	printfn("-- HEADING = %f", o->heading);
+		printfn("---- update time %.2f", o->updatetime[i]);
+	printfn("-- VX, VY, VZ = %.2f, %.2f, %.2f", o->vx, o->vy, o->vz);
+	printfn("-- HEADING = %.2f", o->heading);
 	printfn("-- ALIVE = %hu", o->alive);
 	printfn("-- TIMESTAMP = %u", o->timestamp);
 	printfn("-- RESPAWN TIME = %u", o->timestamp);
@@ -74,11 +75,18 @@ void snis_debug_dump(char *cmd, struct snis_entity go[], int nstarbase_models,
 		break;
 	case OBJTYPE_SHIP2:
 		t = "NPC SHIP";
-		printfn("TYPE: %s", t);
+		printfn("TYPE: %s, SHIPTYPE: %s (%d)", t,
+			o->tsd.ship.shiptype >= 0 && o->tsd.ship.shiptype < nshiptypes ?
+				ship_type[o->tsd.ship.shiptype].class : "UNKNOWN",
+			o->tsd.ship.shiptype);
+		printfn("DESTINATION XYZ = %.2f, %.2f, %.2f",
+			o->tsd.ship.dox, o->tsd.ship.doy, o->tsd.ship.doz);
 		printfn("TORPEDOES: %u", o->tsd.ship.torpedoes);
 		printfn("POWER: %u", o->tsd.ship.power);
-		printfn("VELOCITY: %f", o->tsd.ship.velocity);
+		printfn("VELOCITY: %.2f", o->tsd.ship.velocity);
+		printfn("FUEL = %u", o->tsd.ship.fuel);
 		printfn("SHIELD DAMAGE: %u", o->tsd.ship.damage.shield_damage);
+		printfn("THREAT LEVEL = %.2f", o->tsd.ship.threat_level);
 		printfn("- AI STACK");
 		for (i = 0; i < o->tsd.ship.nai_entries; i++) {
 			printfn("--- %s",
@@ -105,7 +113,7 @@ void snis_debug_dump(char *cmd, struct snis_entity go[], int nstarbase_models,
 						c = '>';
 					else
 						c = '-';
-					printfn("-----%c %f,%f,%f\n",
+					printfn("-----%c %.2f, %.2f, %.2f\n",
 						c, o->tsd.ship.ai[i].u.patrol.p[j].v.x,
 						o->tsd.ship.ai[i].u.patrol.p[j].v.y,
 						o->tsd.ship.ai[i].u.patrol.p[j].v.z);
@@ -126,7 +134,7 @@ void snis_debug_dump(char *cmd, struct snis_entity go[], int nstarbase_models,
 						c = '>';
 					else
 						c = '-';
-					printfn("-----%c %f,%f,%f\n",
+					printfn("-----%c %.2f, %.2f, %.2f\n",
 						c, o->tsd.ship.ai[i].u.fleet.patrol.p[j].v.x,
 						o->tsd.ship.ai[i].u.fleet.patrol.p[j].v.y,
 						o->tsd.ship.ai[i].u.fleet.patrol.p[j].v.z);
@@ -143,7 +151,7 @@ void snis_debug_dump(char *cmd, struct snis_entity go[], int nstarbase_models,
 						c = '>';
 					else
 						c = '-';
-					printfn("-----%c %f,%f,%f\n",
+					printfn("-----%c %.2f, %.2f, %.2f\n",
 						c, o->tsd.ship.ai[i].u.cop.p[j].v.x,
 						o->tsd.ship.ai[i].u.cop.p[j].v.y,
 						o->tsd.ship.ai[i].u.cop.p[j].v.z);
@@ -194,7 +202,7 @@ void snis_debug_dump(char *cmd, struct snis_entity go[], int nstarbase_models,
 						o->tsd.ship.ai[i].u.mining_bot.object_or_waypoint ?
 							"WAYPOINT" : "OBJECT");
 				if (o->tsd.ship.ai[i].u.mining_bot.object_or_waypoint)
-					printfn("----- WAYPOINT XYZ %f,%f,%f",
+					printfn("----- WAYPOINT XYZ %.2f, %.2f, %.2f",
 						o->tsd.ship.ai[i].u.mining_bot.wpx,
 						o->tsd.ship.ai[i].u.mining_bot.wpy,
 						o->tsd.ship.ai[i].u.mining_bot.wpz);
@@ -318,7 +326,7 @@ void snis_debug_dump(char *cmd, struct snis_entity go[], int nstarbase_models,
 	case OBJTYPE_WORMHOLE:
 		t = "WORMHOLE";
 		printfn("TYPE: %s", t);
-		printfn("DEST: %f, %f, %f",
+		printfn("DEST: %.2f, %.2f, %.2f",
 			o->tsd.wormhole.dest_x,
 			o->tsd.wormhole.dest_y,
 			o->tsd.wormhole.dest_z);
@@ -333,7 +341,7 @@ void snis_debug_dump(char *cmd, struct snis_entity go[], int nstarbase_models,
 		printfn("HEAD SIZE: %d", o->tsd.spacemonster.head_size);
 		printfn("TENTACLE SIZE: %d", o->tsd.spacemonster.tentacle_size);
 		printfn("INTEREST: %u", o->tsd.spacemonster.interest);
-		printfn("DESIRED V: %f, %f, %f",
+		printfn("DESIRED V: %.2f, %.2f, %.2f",
 			o->tsd.spacemonster.dvx,
 			o->tsd.spacemonster.dvy,
 			o->tsd.spacemonster.dvz);
@@ -355,11 +363,11 @@ void snis_debug_dump(char *cmd, struct snis_entity go[], int nstarbase_models,
 			o->tsd.spacemonster.nearest_asteroid,
 			o->tsd.spacemonster.nearest_spacemonster,
 			o->tsd.spacemonster.nearest_ship);
-		printfn("DIST TO NEAREST ASTEROID, SPACEMONSTER, SHIP %f, %f, %f",
+		printfn("DIST TO NEAREST ASTR, MNSTR, SHIP %.2f, %.2f, %.2f",
 			o->tsd.spacemonster.asteroid_dist,
 			o->tsd.spacemonster.spacemonster_dist,
 			o->tsd.spacemonster.ship_dist);
-		printfn("DEST %f, %f, %f",
+		printfn("DEST %.2f, %.2f, %.2f",
 			o->tsd.spacemonster.dest.v.x,
 			o->tsd.spacemonster.dest.v.y,
 			o->tsd.spacemonster.dest.v.z);
@@ -373,7 +381,7 @@ void snis_debug_dump(char *cmd, struct snis_entity go[], int nstarbase_models,
 		printfn("TECH LVL: %hhu", o->tsd.planet.tech_level);
 		printfn("ECONOMY: %hhu", o->tsd.planet.economy);
 		printfn("SECURITY: %hhu", o->tsd.planet.security);
-		printfn("RADIUS: %f", o->tsd.planet.radius);
+		printfn("RADIUS: %.2f", o->tsd.planet.radius);
 		printfn("HAS ATMOSPHERE: %hhu", o->tsd.planet.has_atmosphere);
 		printfn("RING SELECTOR: %hhu", o->tsd.planet.ring_selector);
 		printfn("SOLARSYS PLANET TYPE: %hhu", o->tsd.planet.solarsystem_planet_type);
@@ -383,7 +391,7 @@ void snis_debug_dump(char *cmd, struct snis_entity go[], int nstarbase_models,
 			o->tsd.planet.atmosphere_g,
 			o->tsd.planet.atmosphere_b);
 		printfn("ATMOSPHERE TYPE: %hu", o->tsd.planet.atmosphere_type);
-		printfn("ATMOSPHERE SCALE: %f", o->tsd.planet.atmosphere_scale);
+		printfn("ATMOSPHERE SCALE: %.2f", o->tsd.planet.atmosphere_scale);
 		printfn("CONTRABAND: %hu", o->tsd.planet.contraband);
 		printfn("ATMOSPHERE PTR: %p", (void *) o->tsd.planet.atmosphere);
 		printfn("TIME LEFT TO BUILD: %u", o->tsd.planet.time_left_to_build);
@@ -435,11 +443,11 @@ void snis_debug_dump(char *cmd, struct snis_entity go[], int nstarbase_models,
 		t = "BLOCK";
 		printfn("TYPE: %s", t);
 		printfn("PARENT: %u", o->tsd.block.parent_id);
-		printfn("SCALE: %f %f %f",
+		printfn("SCALE: %.2f %.2f %.2f",
 			o->tsd.block.sx, o->tsd.block.sy, o->tsd.block.sz);
-		printfn("OFFSET FROM PARENT: %f %f %f",
+		printfn("OFFSET FROM PARENT: %.2f %.2f %.2f",
 			o->tsd.block.dx, o->tsd.block.dy, o->tsd.block.dz);
-		printfn("RADIUS: %f", o->tsd.block.radius);
+		printfn("RADIUS: %.2f", o->tsd.block.radius);
 		printfn("ROOT ID: %u", o->tsd.block.root_id);
 		printfn("MATERIAL INDEX: %hhu",
 			o->tsd.block.block_material_index);
@@ -451,7 +459,7 @@ void snis_debug_dump(char *cmd, struct snis_entity go[], int nstarbase_models,
 		printfn("TYPE: %s", t);
 		printfn("PARENT ID: %u", o->tsd.turret.parent_id);
 		printfn("ROOT ID: %u", o->tsd.turret.root_id);
-		printfn("OFFSET FROM PARENT: %f %f %f",
+		printfn("OFFSET FROM PARENT: %.2f %.2f %.2f",
 			o->tsd.turret.dx, o->tsd.turret.dy, o->tsd.turret.dz);
 		printfn("CURRENT TARGET: %u", o->tsd.turret.current_target_id);
 		printfn("FIRE COUNTDOWN: %hhu", o->tsd.turret.fire_countdown);

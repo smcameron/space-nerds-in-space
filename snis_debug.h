@@ -24,11 +24,14 @@
 #include "quat.h"
 #include "snis.h"
 #include "string-utils.h"
+#include "snis_ship_type.h"
 
 void snis_debug_dump(char *cmd, struct snis_entity go[],
 			int nstarbase_models,
 			struct docking_port_attachment_point **docking_port_info,
 			int (*lookup)(uint32_t object_id),
-			void (*printfn)(const char *fmt, ...));
+			void (*printfn)(const char *fmt, ...),
+			struct ship_type_entry *ship_type,
+			int nshiptypes);
 
 #endif
