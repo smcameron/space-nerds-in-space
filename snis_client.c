@@ -16888,6 +16888,7 @@ static void init_demon_ui()
 	demon_ui.desired_exaggerated_scale = 1.0;
 	demon_ui.exaggerated_scale_active = 1;
 	demon_ui.netstats_active = 0;
+	snis_debug_dump_set_label("CLIENT");
 }
 
 static void calculate_new_2d_zoom(int direction, gdouble x, gdouble y, double zoom_amount,

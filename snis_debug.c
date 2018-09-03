@@ -23,6 +23,13 @@
 
 #include "snis_debug.h"
 
+static char *label = "";
+
+void snis_debug_dump_set_label(char *s)
+{
+	label = s;
+}
+
 void snis_debug_dump(char *cmd, struct snis_entity go[], int nstarbase_models,
 			struct docking_port_attachment_point **docking_port_info,
 			int (*lookup)(uint32_t object_id), void (*printfn)(const char *fmt, ...),
@@ -39,9 +46,9 @@ void snis_debug_dump(char *cmd, struct snis_entity go[], int nstarbase_models,
 	if (rc != 1) {
 		if (last_object != -1) {
 			id = last_object;
-			printfn("DUMPING LAST OBJECT ID %u", id);
+			printfn("%s - DUMPING LAST OBJECT ID %u", label, id);
 		} else {
-			printfn("INVALID DUMP COMMAND");
+			printfn("%s - INVALID DUMP COMMAND", label);
 			return;
 		}
 	} else {
@@ -50,12 +57,12 @@ void snis_debug_dump(char *cmd, struct snis_entity go[], int nstarbase_models,
 
 	i = lookup(id);
 	if (i < 0) {
-		printfn("ID %u NOT FOUND", id);
+		printfn("%s - OBJECT ID %u NOT FOUND", label, id);
 		return;
 	}
 	o = &go[i];
-	printfn("%u  %s X,Y,Z,T = %.2f, %.2f, %.2f, %d",
-			id, o->sdata.name, o->x, o->y, o->z, o->type);
+	printfn("%s DUMP - %u  %s X,Y,Z,T = %.2f, %.2f, %.2f, %d",
+			label, id, o->sdata.name, o->x, o->y, o->z, o->type);
 	printfn("-- NUPDATES %d", o->nupdates);
 	for (i = 0; i < SNIS_ENTITY_NUPDATE_HISTORY; i++)
 		printfn("---- update time %.2f", o->updatetime[i]);

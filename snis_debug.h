@@ -26,6 +26,7 @@
 #include "string-utils.h"
 #include "snis_ship_type.h"
 
+void snis_debug_dump_set_label(char *label);
 void snis_debug_dump(char *cmd, struct snis_entity go[],
 			int nstarbase_models,
 			struct docking_port_attachment_point **docking_port_info,

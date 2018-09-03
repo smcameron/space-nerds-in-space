@@ -26498,6 +26498,7 @@ int main(int argc, char *argv[])
 
 	setup_lua();
 	snis_protocol_debugging(1);
+	snis_debug_dump_set_label("SERVER");
 	snis_opcode_def_init();
 
 	memset(&thirtieth_second, 0, sizeof(thirtieth_second));
