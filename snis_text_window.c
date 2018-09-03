@@ -23,6 +23,7 @@ struct text_window {
 	int color;
 	int do_blank;
 	int tty_chatter_sound;
+	float alpha;
 };
 
 static int default_timer = 0;
@@ -88,6 +89,7 @@ struct text_window *text_window_init(int x, int y, int w,
 	tw->printing_pos = 0;
 	tw->do_blank = 0;
 	tw->tty_chatter_sound = -1;
+	tw->alpha = -1.0; /* no alpha */
 	return tw;
 }
 
@@ -104,7 +106,7 @@ void text_window_draw(struct text_window *tw)
 	int thumb_top, thumb_bottom, twec;
 
 	if (tw->do_blank) {
-		sng_set_foreground(BLACK);
+		sng_set_foreground_alpha(BLACK, tw->alpha);
 		sng_current_draw_rectangle(1, tw->x, tw->y, tw->w, tw->h);
 	}
 	sng_set_foreground(tw->color);
@@ -280,4 +282,13 @@ int text_window_button_press(struct text_window *tw, int x, int y)
 void text_window_blank_background(struct text_window *tw, int do_blank)
 {
 	tw->do_blank = do_blank;
+}
+
+void text_window_set_background_alpha(struct text_window *tw, float alpha)
+{
+	if (alpha > 1.0)
+		alpha = 1.0;
+	if (alpha < -1.0)
+		alpha = -1.0;
+	tw->alpha =  alpha;
 }
