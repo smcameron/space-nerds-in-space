@@ -16780,6 +16780,7 @@ static void init_demon_ui()
 				UI_COLOR(common_red_alert), 200000.0, NANO_FONT, NETSTATS_SAMPLES);
 	demon_ui.menu = create_pull_down_menu(NANO_FONT);
 	pull_down_menu_set_color(demon_ui.menu, UI_COLOR(demon_deselected_button));
+	pull_down_menu_set_background_alpha(demon_ui.menu, 0.75);
 	pull_down_menu_add_column(demon_ui.menu, "META");
 	pull_down_menu_add_row(demon_ui.menu, "META", "HOME", demon_home_button_pressed, NULL);
 	pull_down_menu_add_row(demon_ui.menu, "META", "2D/3D", demon_2d3d_button_pressed, NULL);
