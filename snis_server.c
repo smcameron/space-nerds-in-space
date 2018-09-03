@@ -16441,7 +16441,12 @@ static void server_builtin_find(char *cmd)
 	pthread_mutex_lock(&universe_mutex);
 	for (i = 0; i <= snis_object_pool_highest_object(pool); i++)
 		if (strncmp(go[i].sdata.name, name, strlen(name)) == 0)
-			send_demon_console_msg("- %d %s", go[i].id, go[i].sdata.name);
+			send_demon_console_msg("- %d %s TYPE = %d", go[i].id, go[i].sdata.name, go[i].type);
+	for (i = 0; i < nbridges; i++) {
+		if (strncasecmp((char *) bridgelist[i].shipname, name, strlen(name)) == 0)
+			send_demon_console_msg("- %d %s - PLAYER SHIP BRIDGE %d",
+				bridgelist[i].shipid, bridgelist[i].shipname, i);
+	}
 	pthread_mutex_unlock(&universe_mutex);
 }
 
