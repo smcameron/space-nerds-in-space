@@ -3269,6 +3269,7 @@ static struct demon_ui {
 	struct button *demon_scale_button;
 	struct button *demon_netstats_button;
 	struct button *demon_render_style_button;
+	struct button *demon_console_button;
 	struct snis_text_input_box *demon_input;
 	struct scaling_strip_chart *bytes_recd_strip_chart;
 	struct scaling_strip_chart *bytes_sent_strip_chart;
@@ -16637,6 +16638,16 @@ static int demon_render_style_checkbox(void *x)
 	return demon_ui.render_style;
 }
 
+static void demon_console_pressed(void *x)
+{
+	demon_ui.console_active = !demon_ui.console_active;
+}
+
+static int demon_console_checkbox(void *x)
+{
+	return demon_ui.console_active;
+}
+
 static void init_demon_ui()
 {
 	int i, x, y, dy, n;
@@ -16664,7 +16675,7 @@ static void init_demon_ui()
 			"EXECUTE", UI_COLOR(demon_input), TINY_FONT, demon_exec_button_pressed, NULL);
 	x = txx(3);
 	y = txy(60);
-	dy = txy(25);
+	dy = txy(22);
 	n = 0;
 	demon_ui.demon_home_button = snis_button_init(x, y + dy * n++, txx(70), txy(20),
 			"HOME", UI_COLOR(demon_deselected_button),
@@ -16747,6 +16758,13 @@ static void init_demon_ui()
 			snis_button_generic_checkbox_function,
 			&demon_ui.render_style);
 	snis_button_set_sound(demon_ui.demon_render_style_button, UISND14);
+	demon_ui.demon_console_button = snis_button_init(x, y + dy * n++, txx(70), txy(20),
+			"CONSOLE", UI_COLOR(demon_deselected_button),
+			NANO_FONT, demon_console_pressed, NULL);
+	snis_button_set_checkbox_function(demon_ui.demon_console_button,
+			snis_button_generic_checkbox_function,
+			&demon_ui.console_active);
+	snis_button_set_sound(demon_ui.demon_console_button, UISND14);
 #define NETSTATS_SAMPLES 1000
 	demon_ui.bytes_recd_strip_chart =
 		snis_scaling_strip_chart_init(txx(120), txy(5), txx(550.0), txy(100.0),
@@ -16772,6 +16790,8 @@ static void init_demon_ui()
 	pull_down_menu_set_checkbox_function(demon_ui.menu, "META", "EXAG SCALE", demon_scale_checkbox, NULL);
 	pull_down_menu_add_row(demon_ui.menu, "META", "RENDER STYLE", demon_render_style_pressed, NULL);
 	pull_down_menu_set_checkbox_function(demon_ui.menu, "META", "RENDER STYLE", demon_render_style_checkbox, NULL);
+	pull_down_menu_add_row(demon_ui.menu, "META", "CONSOLE", demon_console_pressed, NULL);
+	pull_down_menu_set_checkbox_function(demon_ui.menu, "META", "CONSOLE", demon_console_checkbox, NULL);
 	pull_down_menu_add_row(demon_ui.menu, "META", "ROCKET ENGINE NOISE",
 			demon_rocket_noise_pressed, NULL);
 	pull_down_menu_set_checkbox_function(demon_ui.menu, "META", "ROCKET ENGINE NOISE",
@@ -16845,6 +16865,8 @@ static void init_demon_ui()
 			"DISPLAY GRAPHS OF NETWORK STATISTICS");
 	ui_add_button(demon_ui.demon_render_style_button, DISPLAYMODE_DEMON,
 			"TOGGLE RENDERING STYLE BETWEEN WIREFRAME AND SEMI-TRANSPARENT");
+	ui_add_button(demon_ui.demon_console_button, DISPLAYMODE_DEMON,
+			"TOGGLE DEBUGGING CONSOLE ON/OFF");
 	ui_add_text_window(demon_ui.console, DISPLAYMODE_DEMON);
 	ui_add_pull_down_menu(demon_ui.menu, DISPLAYMODE_DEMON); /* needs to be last */
 	ui_hide_widget(demon_ui.demon_move_button);
