@@ -2731,9 +2731,19 @@ void graph_dev_draw_line(float x1, float y1, float x2, float y2)
 void graph_dev_draw_rectangle(int filled, float x, float y, float width, float height)
 {
 	int x2, y2;
+	GLubyte alpha = 255;
 
 	x2 = x + width;
 	y2 = y + height;
+
+	if (sgc.alpha_blend) {
+		/* must empty the vertex buffer to draw this primitive with blending */
+		draw_vertex_buffer_2d();
+
+		glEnable(GL_BLEND);
+		BLEND_FUNC(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+		alpha = 255 * sgc.alpha;
+	}
 
 	if (filled ) {
 		/* filled rectangle with two triangles
@@ -2749,23 +2759,30 @@ void graph_dev_draw_rectangle(int filled, float x, float y, float width, float h
 		make_room_in_vertex_buffer_2d(6);
 
 		/* triangle 1 = 0, 3, 1 */
-		add_vertex_2d(x, y, sgc.hue, 255, GL_TRIANGLES);
-		add_vertex_2d(x2, y2, sgc.hue, 255, GL_TRIANGLES);
-		add_vertex_2d(x2, y, sgc.hue, 255, GL_TRIANGLES);
+		add_vertex_2d(x, y, sgc.hue, alpha, GL_TRIANGLES);
+		add_vertex_2d(x2, y2, sgc.hue, alpha, GL_TRIANGLES);
+		add_vertex_2d(x2, y, sgc.hue, alpha, GL_TRIANGLES);
 
 		/* triangle 2 = 0, 2, 3 */
-		add_vertex_2d(x, y, sgc.hue, 255, GL_TRIANGLES);
-		add_vertex_2d(x, y2, sgc.hue, 255, GL_TRIANGLES);
-		add_vertex_2d(x2, y2, sgc.hue, 255, GL_TRIANGLES);
+		add_vertex_2d(x, y, sgc.hue, alpha, GL_TRIANGLES);
+		add_vertex_2d(x, y2, sgc.hue, alpha, GL_TRIANGLES);
+		add_vertex_2d(x2, y2, sgc.hue, alpha, GL_TRIANGLES);
 	} else {
 		/* not filled */
 		make_room_in_vertex_buffer_2d(5);
 
-		add_vertex_2d(x, y, sgc.hue, 255, GL_LINE_STRIP);
-		add_vertex_2d(x2, y, sgc.hue, 255, GL_LINE_STRIP);
-		add_vertex_2d(x2, y2, sgc.hue, 255, GL_LINE_STRIP);
-		add_vertex_2d(x, y2, sgc.hue, 255, GL_LINE_STRIP);
-		add_vertex_2d(x, y, sgc.hue, 255, -1 /* primitive end */);
+		add_vertex_2d(x, y, sgc.hue, alpha, GL_LINE_STRIP);
+		add_vertex_2d(x2, y, sgc.hue, alpha, GL_LINE_STRIP);
+		add_vertex_2d(x2, y2, sgc.hue, alpha, GL_LINE_STRIP);
+		add_vertex_2d(x, y2, sgc.hue, alpha, GL_LINE_STRIP);
+		add_vertex_2d(x, y, sgc.hue, alpha, -1 /* primitive end */);
+	}
+
+	if (sgc.alpha_blend) {
+		/* must draw the vertex buffer to complete the blending */
+		draw_vertex_buffer_2d();
+
+		glDisable(GL_BLEND);
 	}
 }
 
