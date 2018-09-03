@@ -33,11 +33,19 @@ void snis_debug_dump(char *cmd, struct snis_entity go[], int nstarbase_models,
 	char *t;
 	struct snis_entity *o;
 	char fnptraddr[32];
+	static uint32_t last_object = (uint32_t) -1;
 
 	rc = sscanf(cmd, "%*s %u", &id);
 	if (rc != 1) {
-		printfn("INVALID DUMP COMMAND");
-		return;
+		if (last_object != -1) {
+			id = last_object;
+			printfn("DUMPING LAST OBJECT ID %u", id);
+		} else {
+			printfn("INVALID DUMP COMMAND");
+			return;
+		}
+	} else {
+		last_object = id;
 	}
 
 	i = lookup(id);
