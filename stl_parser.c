@@ -414,7 +414,6 @@ void process_vertex_normals(struct mesh *m, float sharp_edge_angle, struct verte
 			m->t[tri_index].vnormal[vert_index].z = vnormal.v.z;
 		}
 	}
-
 }
 
 void free_mesh(struct mesh * m)
@@ -501,6 +500,7 @@ struct mesh *read_stl_file(char *file)
 	process_coplanar_triangles(my_mesh, owners);
 	check_triangle_vertices(my_mesh);
 	process_vertex_normals(my_mesh, DEFAULT_SHARP_CORNER_ANGLE, owners);
+	mesh_set_reasonable_tangents_and_bitangents(my_mesh);
 
 	free_vertex_owners(owners, facetcount * 3);
 
@@ -992,7 +992,8 @@ struct mesh *read_obj_file(char *filename)
 		}
 		free_vertex_owners(owners, m->ntriangles * 3);
 	}
-
+	/* TODO: if obj file actually contains tangents/bitangents, we should use those. */
+	mesh_set_reasonable_tangents_and_bitangents(m);
 	mesh_graph_dev_init(m);
 	fclose(f);
 	return m;

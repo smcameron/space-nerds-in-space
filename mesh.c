@@ -86,6 +86,53 @@ void mesh_random_uv_map(struct mesh *m)
 	}
 }
 
+void mesh_set_reasonable_tangent_and_bitangent(struct vertex *vnormal,
+		struct vertex *vtangent, struct vertex *vbitangent)
+{
+	union vec3 normal, tangent, bitangent;
+
+	normal.v.x = vnormal->x;
+	normal.v.y = vnormal->y;
+	normal.v.z = vnormal->z;
+	vec3_normalize_self(&normal);
+
+	/* Find a perpendicular vector by switching two coords & negating 1, avoiding degenerate case */
+	if (fabsf(normal.v.x - normal.v.y) < 0.00001) {
+		tangent.v.x = -normal.v.z;
+		tangent.v.y = 0;
+		tangent.v.z = normal.v.x;
+	} else {
+		tangent.v.x = -normal.v.y;
+		tangent.v.y = 0;
+		tangent.v.z = normal.v.x;
+	}
+
+	vec3_normalize_self(&tangent);
+	vec3_cross(&bitangent, &normal, &tangent);
+	vec3_normalize_self(&bitangent);
+	vtangent->x = tangent.v.x;
+	vtangent->y = tangent.v.y;
+	vtangent->z = tangent.v.z;
+	vtangent->w = 1.0;
+	vbitangent->x = bitangent.v.x;
+	vbitangent->y = bitangent.v.y;
+	vbitangent->z = bitangent.v.z;
+	vbitangent->w = 1.0;
+}
+
+/* If normals are already set, then this will set some reasonable tangents and bitangents */
+void mesh_set_reasonable_tangents_and_bitangents(struct mesh *m)
+{
+	int i, j;
+
+	for (i = 0; i < m->ntriangles; i++) {
+		for (j = 0; j < 3; j++) {
+			mesh_set_reasonable_tangent_and_bitangent(&m->t[i].vnormal[j],
+					&m->t[i].vtangent[j], &m->t[i].vbitangent[j]);
+		}
+	}
+}
+
 void mesh_distort(struct mesh *m, float distortion)
 {
 	mesh_distort_helper(m, distortion);
@@ -482,8 +529,11 @@ void mesh_set_flat_shading_vertex_normals(struct mesh *m)
 		m->t[i].n.x = normal.v.x;
 		m->t[i].n.y = normal.v.y;
 		m->t[i].n.z = normal.v.z;
-		for (j = 0; j < 3; j++)
+		for (j = 0; j < 3; j++) {
 			m->t[i].vnormal[j] = m->t[i].n;
+			mesh_set_reasonable_tangent_and_bitangent(&m->t[i].vnormal[j],
+					&m->t[i].vtangent[j], &m->t[i].vbitangent[j]);
+		}
 	}
 }
 
@@ -677,6 +727,8 @@ void mesh_set_average_vertex_normals(struct mesh *m)
 			m->t[i].vnormal[j].x = vn[k].x / m->t[i].v[j]->w;
 			m->t[i].vnormal[j].y = vn[k].y / m->t[i].v[j]->w;
 			m->t[i].vnormal[j].z = vn[k].z / m->t[i].v[j]->w;
+			mesh_set_reasonable_tangent_and_bitangent(&m->t[i].vnormal[j],
+					&m->t[i].vtangent[j], &m->t[i].vbitangent[j]);
 		}
 	}
 
