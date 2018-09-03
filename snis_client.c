@@ -16826,6 +16826,7 @@ static void init_demon_ui()
 	demon_ui.console = text_window_init(txx(100), txy(10), SCREEN_WIDTH - txx(110), 500, 45,
 						UI_COLOR(demon_default));
 	text_window_blank_background(demon_ui.console, 1);
+	text_window_set_background_alpha(demon_ui.console, 0.75);
 	text_window_set_font(demon_ui.console, PICO_FONT);
 	ui_add_button(demon_ui.demon_exec_button, DISPLAYMODE_DEMON,
 			"EXECUTE THE ENTERED COMMAND");
