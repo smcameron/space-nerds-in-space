@@ -32,6 +32,7 @@ struct pull_down_menu {
 	int current_physical_x, current_physical_y; /* mouse pos */
 	struct pull_down_menu_column *col[MAX_PULL_DOWN_COLUMNS];
 	pthread_mutex_t mutex;
+	float alpha;
 };
 
 static int pull_down_menu_inside_col(struct pull_down_menu *m, int x, int col,
@@ -120,6 +121,7 @@ struct pull_down_menu *create_pull_down_menu(int font)
 	m->current_row = -1;
 	memset(m->col, 0, sizeof(m->col));
 	pthread_mutex_init(&m->mutex, NULL);
+	m->alpha = -1; /* no alpha */
 	return m;
 }
 
@@ -164,7 +166,7 @@ static void draw_menu_col(struct pull_down_menu *m, int col, float x, float y, i
 			cb = 0;
 			cbw = 0;
 		}
-		sng_set_foreground(BLACK);
+		sng_set_foreground_alpha(BLACK, m->alpha);
 		sng_current_draw_rectangle(1, x, y, c->width, font_lineheight[font] + 6);
 		sng_set_foreground(m->color);
 		sng_current_draw_line(x, y, x, y + font_lineheight[font] + 6);
@@ -319,6 +321,15 @@ void pull_down_menu_set_color(struct pull_down_menu *m, int color)
 	pthread_mutex_lock(&m->mutex);
 	m->color = color;
 	pthread_mutex_unlock(&m->mutex);
+}
+
+void pull_down_menu_set_background_alpha(struct pull_down_menu *m, float alpha)
+{
+	if (alpha < -1.0)
+		alpha = -1.0;
+	if (alpha > 1.0)
+		alpha = 1.0;
+	m->alpha = alpha;
 }
 
 static struct pull_down_menu_item *find_menu_item(struct pull_down_menu *m, char *column, char *row)

@@ -14,6 +14,7 @@ int pull_down_menu_button_press(struct pull_down_menu *pdm, int x, int y);
 int pull_down_menu_inside(struct pull_down_menu *pdm, int physical_x, int physical_y);
 void pull_down_menu_update_mouse_pos(struct pull_down_menu *m, int physical_x, int physical_y);
 void pull_down_menu_set_color(struct pull_down_menu *m, int color);
+void pull_down_menu_set_background_alpha(struct pull_down_menu *m, float alpha);
 void pull_down_menu_set_checkbox_function(struct pull_down_menu *pdm, char *column, char *row,
 						int (*checkbox_value)(void *cookie), void *cookie);
 void pull_down_menu_clear(struct pull_down_menu *pdm);
