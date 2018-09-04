@@ -5099,6 +5099,17 @@ static void ai_ship_warp_to(struct snis_entity *o, float destx, float desty, flo
 	}
 }
 
+static int has_arrived_at_destination(struct snis_entity *o, float dist2)
+{
+	float max_speed, arrival_dist2;
+
+	if (o->type != OBJTYPE_SHIP2)
+		return 0;
+	max_speed = ship_type[o->tsd.ship.shiptype].max_speed;
+	arrival_dist2 = (max_speed * 10.0) * (max_speed * 10.0);
+	return dist2 < arrival_dist2;
+}
+
 static float ai_ship_travel_towards(struct snis_entity *o,
 		float destx, float desty, float destz)
 {
@@ -5312,7 +5323,7 @@ static void ai_mining_mode_return_to_parent(struct snis_entity *o, struct ai_min
 	set_ship_destination(o, parent->x + offset.v.x, parent->y + offset.v.y, parent->z + offset.v.z);
 
 	double dist2 = ai_ship_travel_towards(o, parent->x, parent->y, parent->z);
-	if (dist2 < 300.0 * 300.0 && ai->mode == MINING_MODE_RETURN_TO_PARENT) {
+	if (has_arrived_at_destination(o, dist2) && ai->mode == MINING_MODE_RETURN_TO_PARENT) {
 		b = lookup_bridge_by_shipid(parent->id);
 		if (b < 0) {
 			ai->orphan_time++;
@@ -5405,7 +5416,7 @@ static void ai_mining_mode_approach_asteroid(struct snis_entity *o, struct ai_mi
 		vx = 0.0;
 		vy = 0.0;
 		vz = 0.0;
-		threshold = MINING_BOT_WAYPOINT_PROXIMITY;
+		threshold = ship_type[o->tsd.ship.shiptype].max_speed * 10.0;
 	}
 	float distance = dist3d(o->x - x, o->y - y, o->z - z);
 	if (my_speed < 0.1) {
@@ -5819,7 +5830,7 @@ static void ai_patrol_mode_brain(struct snis_entity *o)
 	double dist2 = ai_ship_travel_towards(o,
 			patrol->p[d].v.x, patrol->p[d].v.y, patrol->p[d].v.z);
 
-	if (dist2 < 300.0 * 300.0) {
+	if (has_arrived_at_destination(o, dist2)) {
 		patrol->dest = (patrol->dest + 1) % patrol->npoints;
 		/* hang out here awhile... */
 		n = o->tsd.ship.nai_entries;
@@ -5847,7 +5858,7 @@ static void ai_cop_mode_brain(struct snis_entity *o)
 	double dist2 = ai_ship_travel_towards(o,
 				patrol->p[d].v.x, patrol->p[d].v.y, patrol->p[d].v.z);
 
-	if (dist2 < 300.0 * 300.0) {
+	if (has_arrived_at_destination(o, dist2)) {
 		patrol->dest = (patrol->dest + 1) % patrol->npoints;
 		/* hang out here awhile... */
 		n = o->tsd.ship.nai_entries;
@@ -6029,7 +6040,7 @@ static void ai_occupy_enemy_base_mode_brain(struct snis_entity *o)
 			struct snis_entity *sb = &go[i];
 			if (sb->type == OBJTYPE_STARBASE && sb->tsd.starbase.occupant[3] != o->sdata.faction) {
 				dist = ai_ship_travel_towards(o, sb->x, sb->y, sb->z);
-				if (dist < 300.0 * 300.0) {
+				if (has_arrived_at_destination(o, dist)) {
 					rts_occupy_starbase_slot(sb, o);
 				}
 			}
@@ -6268,7 +6279,7 @@ static void ai_rts_resupply(struct snis_entity *o)
 	}
 	u = &go[i];
 	dist = ai_ship_travel_towards(o, u->x, u->y, u->z);
-	if (dist < 300.0 * 300.0) { /* Refuel the ship */
+	if (has_arrived_at_destination(o, dist)) { /* Refuel the ship */
 		int unit_type = ship_type[o->tsd.ship.shiptype].rts_unit_type;
 		u->tsd.ship.fuel = rts_unit_type(unit_type)->fuel_capacity;
 		u->tsd.ship.nai_entries--; /* restore the previous ai mode */
