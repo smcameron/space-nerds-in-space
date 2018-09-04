@@ -5083,24 +5083,6 @@ static int inside_planet(float x, float y, float z)
 	return 0;
 }
 
-static void ai_add_ship_movement_variety(struct snis_entity *o,
-			float destx, float desty, float destz, float fractional_distance)
-{
-	union vec3 v, vn;
-	union quat q;
-
-	random_quat(&q);
-	v.v.x = destx - o->x;
-	v.v.y = desty - o->y;
-	v.v.z = destz - o->z;
-	vec3_mul(&v, &vn, fractional_distance);
-	quat_rot_vec_self(&v, &q);
-	v.v.x += vn.v.x;
-	v.v.y += vn.v.y;
-	v.v.z += vn.v.z;
-	set_ship_destination(o, v.v.x + o->x, v.v.y + o->y, v.v.z + o->z);
-}
-
 static void ai_ship_warp_to(struct snis_entity *o, float destx, float desty, float destz)
 {
 	union vec3 v;
@@ -5182,9 +5164,7 @@ static float ai_ship_travel_towards(struct snis_entity *o,
 	if (dist2 > 2000.0 * 2000.0) {
 		double ld = dist3dsqrd(o->x - o->tsd.ship.dox,
 				o->y - o->tsd.ship.doy, o->z - o->tsd.ship.doz);
-		/* give ships some variety in movement */
-		if (((universe_timestamp + o->id) & 0x3ff) == 0 || ld < 50.0 * 50.0)
-			ai_add_ship_movement_variety(o, destx, desty, destz, 0.05);
+		/* TODO: give ships some variety in movement? */
 
 		/* Check that current destination isn't too far from desired destination,
 		 * If we have just set a new destination, we want it to take effect right
