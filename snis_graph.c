@@ -878,6 +878,8 @@ void sng_set_foreground_alpha(int c, float a)
 
 void sng_set_foreground(int c)
 {
+	if (c < 0)
+		return; /* TODO: find out why snis_limited_client calls this with negative color */
 	sgc.hue = c;
 	graph_dev_set_color(&huex[c], -1);
 }
