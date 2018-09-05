@@ -5173,8 +5173,6 @@ static float ai_ship_travel_towards(struct snis_entity *o,
 
 	double dist2 = dist3dsqrd(o->x - destx, o->y - desty, o->z - destz);
 	if (dist2 > 2000.0 * 2000.0) {
-		double ld = dist3dsqrd(o->x - o->tsd.ship.dox,
-				o->y - o->tsd.ship.doy, o->z - o->tsd.ship.doz);
 		/* TODO: give ships some variety in movement? */
 
 		/* Check that current destination isn't too far from desired destination,
