@@ -12546,15 +12546,9 @@ static void set_random_seed(int new_seed)
 
 static void populate_universe(void)
 {
-	static int already_did_atmospheres = 0;
-
 	if (solarsystem_assets->random_seed != -1)
 		set_random_seed(solarsystem_assets->random_seed);
 	initialize_random_orientations_and_spins(COMMON_MTWIST_SEED);
-	if (!already_did_atmospheres) {
-		planetary_atmosphere_model_init_models(ATMOSPHERE_TYPE_GEN_SEED, NATMOSPHERE_TYPES);
-		already_did_atmospheres = 1;
-	}
 	add_nebulae(); /* do nebula first */
 	add_asteroids();
 	add_planets();
@@ -12572,6 +12566,7 @@ static void make_universe(void)
 {
 	pthread_mutex_lock(&universe_mutex);
 	snis_object_pool_setup(&pool, MAXGAMEOBJS);
+	planetary_atmosphere_model_init_models(ATMOSPHERE_TYPE_GEN_SEED, NATMOSPHERE_TYPES);
 	populate_universe();
 	pthread_mutex_unlock(&universe_mutex);
 }
