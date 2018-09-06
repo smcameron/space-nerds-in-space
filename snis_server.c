@@ -8566,7 +8566,7 @@ static void update_ship_position_and_velocity(struct snis_entity *o)
 		dest.v.z = o->tsd.ship.doz - o->z;
 	}
 
-	if (vec3_len2(&dest) > 0.0001) {
+	if (vec3_len2(&dest) > 20.0) { /* If this is too tight, ships wiggle around too much */
 		vec3_normalize(&destn, &dest);
 	} else {
 		destn.v.x = 0.0f;
