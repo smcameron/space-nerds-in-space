@@ -4934,7 +4934,7 @@ static void ai_attack_mode_brain(struct snis_entity *o)
 		/* FIXME: give neutrals soemthing to do so they don't just sit there */;
 		ai_trace(o->id, "ATTACK - HIT DO NOTHING CASE");
 	}
-	if (notacop)
+	if (notacop && o->sdata.faction != 0)
 		check_for_nearby_targets(o);
 }
 
