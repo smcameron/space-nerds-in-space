@@ -478,12 +478,14 @@ void snis_debug_dump(char *cmd, struct snis_entity go[], int nstarbase_models,
 		printfn("TYPE: %s", t);
 		printfn("PARENT ID: %u", o->tsd.turret.parent_id);
 		printfn("ROOT ID: %u", o->tsd.turret.root_id);
+#ifdef SNIS_SERVER_DATA
 		printfn("OFFSET FROM PARENT: %.2f %.2f %.2f",
 			o->tsd.turret.dx, o->tsd.turret.dy, o->tsd.turret.dz);
 		printfn("CURRENT TARGET: %u", o->tsd.turret.current_target_id);
 		printfn("FIRE COUNTDOWN: %hhu", o->tsd.turret.fire_countdown);
 		printfn("FIRE COUNTDOWN RESET: %hhu",
 			o->tsd.turret.fire_countdown_reset_value);
+#endif
 		printfn("HEALTH: %hhu", o->tsd.turret.health);
 		break;
 	case OBJTYPE_WARP_CORE:
