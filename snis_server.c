@@ -158,6 +158,8 @@ static float spacemonster_collision_radius = SPACEMONSTER_COLLISION_RADIUS;
  * End of runtime adjustable globals
  */
 
+static uint32_t ai_trace_id = (uint32_t) -1;
+
 static uint32_t mtwist_seed = COMMON_MTWIST_SEED;
 
 static int lua_enscript_enabled = 0;
@@ -1763,6 +1765,7 @@ static void unhook_remote_cameras(uint32_t id)
 	}
 }
 
+static void ai_trace(uint32_t id, char *format, ...);
 static void delete_from_clients_and_server_helper(struct snis_entity *o, int take_client_lock)
 {
 	if (take_client_lock)
@@ -1792,6 +1795,10 @@ static void delete_from_clients_and_server_helper(struct snis_entity *o, int tak
 		fleet_leave(o->id); /* leave any fleets ship might be a member of */
 	remove_from_attack_lists(o->id);
 	unhook_remote_cameras(o->id);
+	if (o->id == ai_trace_id) {
+		ai_trace(o->id, "TRACED OBJECT %u DELETED", o->id);
+		ai_trace_id = (uint32_t) -1;
+	}
 	delete_object(o);
 }
 
@@ -2064,6 +2071,30 @@ static void send_packet_to_requestor_plus_role_on_a_bridge(struct game_client *r
 static void send_packet_to_all_clients(struct packed_buffer *pb, uint32_t roles)
 {
 	send_packet_to_all_clients_on_a_bridge(ANY_SHIP_ID, pb, roles);
+}
+
+static void ai_trace(uint32_t id, char *format, ...)
+{
+	char buf[DEMON_CONSOLE_MSG_MAX];
+	struct packed_buffer *pb;
+	va_list arg_ptr;
+	static char last_buf[DEMON_CONSOLE_MSG_MAX] = { 0 };
+
+	if (id == (uint32_t) -1 || id != ai_trace_id)
+		return;
+
+	memset(buf, 0, sizeof(buf));
+	va_start(arg_ptr, format);
+	vsnprintf(buf, sizeof(buf) - 1, format, arg_ptr);
+	va_end(arg_ptr);
+	buf[sizeof(buf) - 1] = '\0';
+	if (strcmp(buf, last_buf) == 0) /* suppress duplicate messages */
+		return;
+	strcpy(last_buf, buf);
+	pb = packed_buffer_allocate(2 + sizeof(buf));
+	packed_buffer_append(pb, "bb", OPCODE_CONSOLE_OP, OPCODE_CONSOLE_SUBCMD_ADD_TEXT);
+	packed_buffer_append_raw(pb, buf, sizeof(buf));
+	send_packet_to_all_clients(pb, ROLE_DEMON);
 }
 
 static void queue_add_sound(struct game_client *c, uint16_t sound_number)
@@ -3027,8 +3058,11 @@ static void setup_patrol_route(struct snis_entity *o)
 	patrol->dest = 0;
 
 	/* FIXME: ensure no duplicate points and order in some sane way */
-	for (i = 0; i < npoints; i++)
+	ai_trace(o->id, "SET UP PATROL ROUTE");
+	for (i = 0; i < npoints; i++) {
 		patrol->p[i] = pick_random_patrol_destination(o);
+		ai_trace(o->id, "- %.2f, %.2f, %.2f", patrol->p[i].v.x, patrol->p[i].v.y, patrol->p[i].v.z);
+	}
 	set_ship_destination(o, patrol->p[0].v.x, patrol->p[0].v.y, patrol->p[0].v.z);
 }
 
@@ -3036,15 +3070,18 @@ static void ship_figure_out_what_to_do(struct snis_entity *o)
 {
 	int fleet_shape;
 
+	ai_trace(o->id, "FIGURING WHAT TO DO");
 	if (o->tsd.ship.nai_entries > 0)
 		return;
 	switch (snis_randn(100) % 3) {
 	case 0:
 	case 1:	
+		ai_trace(o->id, "NORMAL PATROL");
 		setup_patrol_route(o);
 		break;
 	case 2:
 		if (o->sdata.faction == 0) {
+			ai_trace(o->id, "FACTION 0 NORMAL PATROL");
 			setup_patrol_route(o);
 			break;
 		}
@@ -3054,6 +3091,7 @@ static void ship_figure_out_what_to_do(struct snis_entity *o)
 			fleet_shape = FLEET_SQUARE;
 		setup_patrol_route(o);
 		if (fleet_count() < max_fleets()) {
+			ai_trace(o->id, "FLEET LEADER");
 			o->tsd.ship.ai[0].ai_mode = AI_MODE_FLEET_LEADER;
 			o->tsd.ship.ai[0].u.fleet.fleet = fleet_new(fleet_shape, o->id);
 			o->tsd.ship.ai[0].u.fleet.fleet_position = 0;
@@ -3078,13 +3116,16 @@ static void ship_figure_out_what_to_do(struct snis_entity *o)
 				o->tsd.ship.ai[0].u.fleet.fleet = i;
 				o->tsd.ship.ai[0].u.fleet.fleet_position = fleet_pos;
 				joined = 1;
+				ai_trace(o->id, "FLEET MEMBER");
 			}
 			if (!joined) {
+				ai_trace(o->id, "FAILED TO FIND FLEET, NORMAL PATROL");
 				setup_patrol_route(o);
 				break;
 			}
 		}
 	default:
+		ai_trace(o->id, "UNEXPECTED DEFAULT, NO ACTION");
 		break;
 	}
 }
@@ -4593,8 +4634,10 @@ static void check_for_nearby_targets(struct snis_entity *o)
 		int i;
 		struct snis_entity *v;
 
-		if (victim_id == -1) /* no nearby victims */
+		if (victim_id == -1) {/* no nearby victims */
+			ai_trace(o->id, "CHECKING FOR NEARBY TARGETS, FOUND NONE");
 			return;
+		}
 
 		i = lookup_by_id(victim_id);
 		if (i >= 0) {
@@ -4602,8 +4645,10 @@ static void check_for_nearby_targets(struct snis_entity *o)
 
 			v = &go[i];
 			dist2 = object_dist2(o, v);
-			if (dist2 < PATROL_ATTACK_DIST * PATROL_ATTACK_DIST)
+			if (dist2 < PATROL_ATTACK_DIST * PATROL_ATTACK_DIST) {
+				ai_trace(o->id, "CHECKING FOR NEARBY TARGETS, FOUND %u", victim_id);
 				push_attack_mode(o, victim_id, 0);
+			}
 		}
 	}
 }
@@ -4719,6 +4764,7 @@ static void ai_maybe_fire_weapon(struct snis_entity *o, struct snis_entity *v, i
 			calculate_torpedo_velocities(o->x, o->y, o->z,
 				tx, ty, tz, torpedo_velocity, &vx, &vy, &vz);
 
+			ai_trace(o->id, "FIRING TORPEDO AT %u", v->id);
 			add_torpedo(o->x, o->y, o->z, vx, vy, vz, o->id);
 			o->tsd.ship.torpedoes--;
 			/* FIXME: how do the torpedoes refill? */
@@ -4733,6 +4779,7 @@ static void ai_maybe_fire_weapon(struct snis_entity *o, struct snis_entity *v, i
 			if (v->type == OBJTYPE_PLANET || !planet_between_objs(o, v)) {
 				o->tsd.ship.next_laser_time = universe_timestamp +
 					enemy_laser_fire_interval;
+				ai_trace(o->id, "FIRING LASERBEAM AT %u", v->id);
 				add_laserbeam(o->id, v->id, LASERBEAM_DURATION);
 				check_for_incoming_fire(v);
 			}
@@ -4744,6 +4791,7 @@ static void ai_maybe_fire_weapon(struct snis_entity *o, struct snis_entity *v, i
 				if (v->type == OBJTYPE_SHIP1 || v->type == OBJTYPE_SHIP2) {
 					o->tsd.ship.next_missile_time = universe_timestamp +
 						enemy_missile_fire_interval;
+					ai_trace(o->id, "FIRING MISSILE AT %u", v->id);
 					fire_missile(o, v->id);
 					check_for_incoming_fire(v);
 				}
@@ -4774,10 +4822,12 @@ static void ai_attack_mode_brain(struct snis_entity *o)
 		o->tsd.ship.ai[n].ai_mode = AI_MODE_FLEE;
 		o->tsd.ship.ai[n].u.flee.warp_countdown = 10 * (10 + snis_randn(10));
 		o->tsd.ship.ai[n].u.flee.assailant = assailant;
+		ai_trace(o->id, "ATTACK -> FLEE");
 		return;
 	}
 
 	if (o->tsd.ship.ai[n].u.attack.victim_id == (uint32_t) -2) { /* victim was removed */
+		ai_trace(o->id, "POP ATTACK, VICTIM WAS REMOVED");
 		pop_ai_attack_mode(o);
 		return;
 	}
@@ -4786,19 +4836,24 @@ static void ai_attack_mode_brain(struct snis_entity *o)
 		int victim_id = find_nearest_victim(o);
 
 		if (victim_id == -1) { /* no nearby victims */
+			ai_trace(o->id, "NO NEARBY VICTIM, POPPING ATTACK");
 			pop_ai_attack_mode(o);
 			return;
 		}
 		o->tsd.ship.ai[n].u.attack.victim_id = victim_id;
 		calculate_attack_vector(o, MIN_COMBAT_ATTACK_DIST,
 						MAX_COMBAT_ATTACK_DIST);
+		ai_trace(o->id, "CALC ATTACK VECTOR TO %u", victim_id);
 	}
 	maxv = ship_type[o->tsd.ship.shiptype].max_speed;
 	v = lookup_entity_by_id(o->tsd.ship.ai[n].u.attack.victim_id);
 	firing_range = 0;
-	if (!v)
+	if (!v) {
+		ai_trace(o->id, "FAILED TO LOOKUP VICTIM %u", o->tsd.ship.ai[n].u.attack.victim_id);
 		return;
+	}
 	if (!v->alive) {
+		ai_trace(o->id, "VICTIM DEAD, POPPING ATTACK");
 		pop_ai_attack_mode(o);
 		return;
 	}
@@ -4812,6 +4867,7 @@ static void ai_attack_mode_brain(struct snis_entity *o)
 	vdist = object_dist(o, v);
 	if (vdist > ATTACK_MODE_GIVE_UP_DISTANCE &&
 		v->type != OBJTYPE_PLANET && v->type != OBJTYPE_STARBASE && !rts_mode) {
+		ai_trace(o->id, "VICTIM TOO FAR, POPPING ATTACK");
 		pop_ai_attack_mode(o);
 		return;
 	}
@@ -4836,6 +4892,7 @@ static void ai_attack_mode_brain(struct snis_entity *o)
 
 		/* pretty close to enemy? */
 		if (vdist < 1000) {
+			ai_trace(o->id, "ATTACK VICTIM %u CLOSE, ZIPPING PAST", v->id);
 			/* continue zipping past target */
 			vel.v.x = (float) o->vx;
 			vel.v.y = (float) o->vy;
@@ -4844,18 +4901,23 @@ static void ai_attack_mode_brain(struct snis_entity *o)
 			vec3_mul_self(&veln, 800.0f + snis_randn(600));
 			set_ship_destination(o, veln.v.x, veln.v.y, veln.v.z);
 		} else {
+			ai_trace(o->id, "ATTACK VICTIM %u FAR, CALC ATK VECTOR", v->id);
 			calculate_attack_vector(o, MIN_COMBAT_ATTACK_DIST,
 							MAX_COMBAT_ATTACK_DIST);
 		}
 	}
 
-	if (!firing_range)
+	if (!firing_range) {
+		ai_trace(o->id, "VICTIM %u OUT OF FIRING RANGE",
+				o->tsd.ship.ai[n].u.attack.victim_id);
 		return;
+	}
 
 	notacop = o->tsd.ship.ai[0].ai_mode != AI_MODE_COP;
 	imacop = !notacop;
 
 	if (notacop && too_many_cops_around(o)) {
+		ai_trace(o->id, "TOO MANY COPS, POPPING ATTACK");
 		pop_ai_stack(o); /* forget about attacking... do something else */
 		return;
 	}
@@ -4870,6 +4932,7 @@ static void ai_attack_mode_brain(struct snis_entity *o)
 			taunt_player(o, v);
 	} else {
 		/* FIXME: give neutrals soemthing to do so they don't just sit there */;
+		ai_trace(o->id, "ATTACK - HIT DO NOTHING CASE");
 	}
 	if (notacop)
 		check_for_nearby_targets(o);
@@ -4979,12 +5042,14 @@ static void ai_flee_mode_brain(struct snis_entity *o)
 
 	n = o->tsd.ship.nai_entries - 1;
 	if (n < 0) {
+		ai_trace(o->id, "n < 0 at %s:%d\n", __FILE__, __LINE__);
 		printf("n < 0 at %s:%d\n", __FILE__, __LINE__);
 		return;
 	}
 
 	if ((universe_timestamp & 0x07) == (o->id & 0x07) &&
 		calculate_threat_level(o) < threat_level_flee_threshold * 0.5) {
+		ai_trace(o->id, "POPPING FLEE DUE TO REDUCED THREAT LEVEL");
 		pop_ai_stack(o);
 		return;
 	}
@@ -5000,10 +5065,13 @@ static void ai_flee_mode_brain(struct snis_entity *o)
 				compute_danger_vectors);
 	vec3_mul_self(&info.danger, 2.0);
 	vec3_add(&thataway, &info.danger, &info.friendly);
-	if (vec3_magnitude(&thataway) < 0.01) /* it can happen that that info.thataway == { 0, 0, 0 } */
+	if (vec3_magnitude(&thataway) < 0.01) { /* it can happen that that info.thataway == { 0, 0, 0 } */
+		ai_trace(o->id, "FLEE DANGER VECTOR INDETERMINATE");
 		random_point_on_sphere(1.0, &thataway.v.x, &thataway.v.y, &thataway.v.z);
-	else
+	} else {
 		vec3_normalize_self(&thataway);
+		ai_trace(o->id, "FLEE DANGER VECTOR %.2f, %.2f, %.2f", thataway.v.x, thataway.v.y, thataway.v.z);
+	}
 	vec3_mul_self(&thataway, 4000.0);
 	set_ship_destination(o, o->x + thataway.v.x, o->y + thataway.v.y, o->z + thataway.v.z);
 	o->tsd.ship.desired_velocity = ship_type[o->tsd.ship.shiptype].max_speed;
@@ -5037,14 +5105,17 @@ static void ai_fleet_member_mode_brain(struct snis_entity *o)
 	position = fleet_position_number(f->fleet, o->id);
 	leader_id = fleet_get_leader_id(f->fleet);
 	if (leader_id == o->id) { /* I'm the leader now */
+		ai_trace(o->id, "BECAME FLEET LEADER");
 		o->tsd.ship.ai[n].ai_mode = AI_MODE_FLEET_LEADER;
 		o->tsd.ship.ai[0].u.fleet.fleet_position = 0;
 		setup_patrol_route(o);
 		return;
 	}
 	i = lookup_by_id(leader_id);
-	if (i < 0)
+	if (i < 0) {
+		ai_trace(o->id, "FAILED TO FIND FLEET LEADER");
 		return;
+	}
 	leader = &go[i];
 	offset = fleet_position(f->fleet, position, &leader->orientation);
 	set_ship_destination(o, offset.v.x + leader->x, offset.v.y + leader->y, offset.v.z + leader->z);
@@ -5055,9 +5126,11 @@ static void ai_fleet_member_mode_brain(struct snis_entity *o)
 
 	if (dist2 > 75.0 * 75.0 && dist2 <= FLEET_WARP_DISTANCE * FLEET_WARP_DISTANCE) {
 		/* catch up if too far away */
+		ai_trace(o->id, "CATCHING UP TO FLEET POSITION");
 		o->tsd.ship.velocity = leader->tsd.ship.velocity * 1.5;
 	} else if (dist2 > FLEET_WARP_DISTANCE * FLEET_WARP_DISTANCE && snis_randn(100) < 8) {
 		/* If distance is too far, just warp */
+		ai_trace(o->id, "WARPING TO FLEET POSITION");
 		warp_ship(o, o->tsd.ship.dox, o->tsd.ship.doy, o->tsd.ship.doz);
 		o->vx = leader->vx;
 		o->vy = leader->vy;
@@ -5094,6 +5167,8 @@ static void ai_ship_warp_to(struct snis_entity *o, float destx, float desty, flo
 	v.v.z = destz - o->z;
 	vec3_mul_self(&v, 0.90 + 0.05 * (float) snis_randn(100) / 100.0);
 	if (!inside_planet(v.v.x, v.v.y, v.v.z)) {
+		ai_trace(o->id, "WARPING TO %.2f, %.2f, %.2f",
+				o->x + v.v.x, o->y + v.v.y, o->z + v.v.z);
 		warp_ship(o, o->x + v.v.x, o->y + v.v.y, o->z + v.v.z);
 		/* reset destination after warping to prevent backtracking */
 		set_ship_destination(o, destx, desty, destz);
@@ -5141,6 +5216,7 @@ static float ai_ship_travel_towards(struct snis_entity *o,
 			planetv.v.x = planet->x;
 			planetv.v.y = planet->y;
 			planetv.v.z = planet->z;
+			ai_trace(o->id, "AVOIDING PLANET");
 
 			/*
 			 * Find vector from planet to ship, and from planet to
@@ -5329,6 +5405,7 @@ static void ai_mining_mode_return_to_parent(struct snis_entity *o, struct ai_min
 			ai->orphan_time++;
 		} else {
 			ai->orphan_time = 0;
+			ai_trace(o->id, "STANDING BY FOR TRANSPORT OF MATERIALS");
 			send_comms_packet(o, o->sdata.name, bridgelist[b].npcbot.channel,
 				" -- STANDING BY FOR TRANSPORT OF MATERIALS --");
 		}
@@ -5342,6 +5419,7 @@ static void ai_mining_mode_return_to_parent(struct snis_entity *o, struct ai_min
 		if (b >= 0) {
 			ai->orphan_time = 0;
 			channel = bridgelist[b].npcbot.channel;
+			ai_trace(o->id, "TRANSPORTED MATERIALS");
 			send_comms_packet(o, o->sdata.name, channel, "--- TRANSPORTING MATERIALS ---");
 			send_comms_packet(o, o->sdata.name, channel, "--- MATERIALS TRANSPORTED ---");
 			send_comms_packet(o, o->sdata.name, bridgelist[b].npcbot.channel,
@@ -5351,6 +5429,7 @@ static void ai_mining_mode_return_to_parent(struct snis_entity *o, struct ai_min
 		} else {
 			ai->orphan_time++;
 		}
+		ai_trace(o->id, "MINING BOT STOWED");
 		mining_bot_unload_ores(o, parent, ai);
 		delete_from_clients_and_server(o);
 		snis_queue_add_sound(MINING_BOT_STOWED,
@@ -5388,7 +5467,9 @@ static void ai_mining_mode_approach_asteroid(struct snis_entity *o, struct ai_mi
 				ai->orphan_time = 0;
 				send_comms_packet(o, o->sdata.name, channel,
 					"TARGET LOST -- RETURNING TO SHIP.");
+				ai_trace(o->id, "MINING BOT TARGET LOST");
 			} else {
+				ai_trace(o->id, "MINING BOT ORPHANED");
 				ai->orphan_time++;
 			}
 			ai->mode = MINING_MODE_RETURN_TO_PARENT;
@@ -5439,36 +5520,47 @@ static void ai_mining_mode_approach_asteroid(struct snis_entity *o, struct ai_mi
 				case OBJTYPE_ASTEROID:
 					send_comms_packet(o, o->sdata.name, channel,
 						"COMMENCING ORBITAL INJECTION BURN");
+					ai_trace(o->id, "ORBITAL INJECTION BURN");
 					break;
 				case OBJTYPE_CARGO_CONTAINER:
 					if (!ai->towing) {
+						ai_trace(o->id, "PICKED UP CARGO CONTAINER");
 						send_comms_packet(o, o->sdata.name, channel,
 							"PICKED UP CARGO CONTAINER.");
 						ai->towing = 1;
 						ai->towed_object = asteroid->id;
 					} else {
+						ai_trace(o->id, "ARRIVING AT CARGO CONTAINER (TOWING ALREADY)");
 						send_comms_packet(o, o->sdata.name, channel,
 							"ARRIVING AT CARGO CONTAINER "
 							"(ALREADY TOWING ANOTHER CONTAINER).");
 					}
 					break;
 				default:
+					ai_trace(o->id, "APPROACHING OBJECT");
 					send_comms_packet(o, o->sdata.name, channel,
 						"APPROACHING OBJECT.");
 					break;
 				}
-			else
+			else {
+				ai_trace(o->id, "ARRIVING AT WAYPOINT");
 				send_comms_packet(o, o->sdata.name, channel,
 					"ARRIVING AT WAYPOINT");
+			}
 		} else {
+			ai_trace(o->id, "MINING BOT ORPHANED");
 			ai->orphan_time++;
 		}
-		if (ai->object_or_waypoint == 0 && !ai->towing) /* object */
+		if (ai->object_or_waypoint == 0 && !ai->towing) { /* object */
+			ai_trace(o->id, "MINING BOT APPROACH -> LAND ON ASTEROID");
 			ai->mode = MINING_MODE_LAND_ON_ASTEROID;
-		else if (ai->towing)
+		} else if (ai->towing) {
 			ai->mode = MINING_MODE_RETURN_TO_PARENT;
-		else
+			ai_trace(o->id, "MINING BOT APPROACH -> RETURN TO PARENT");
+		} else {
 			ai->mode = MINING_MODE_IDLE;
+			ai_trace(o->id, "MINING BOT APPROACH -> IDLE");
+		}
 		ai->countdown = 100;
 		schedule_callback2(event_callback, &callback_schedule,
 				"mining-bot-arrived-event", (double) bridgelist[b].shipid,
@@ -5495,10 +5587,12 @@ static void ai_mining_mode_land_on_asteroid(struct snis_entity *o, struct ai_min
 			ai->orphan_time = 0;
 			send_comms_packet(o, o->sdata.name, channel,
 				"TARGET ASTEROID LOST -- RETURNING TO SHIP");
+			ai_trace(o->id, "MINING BOT TARGET LOST");
 		} else {
 			ai->orphan_time++;
 		}
 		ai->mode = MINING_MODE_RETURN_TO_PARENT;
+		ai_trace(o->id, "MINING BOT -> RETURN TO PARENT");
 		return;
 	}
 	asteroid = &go[i];
@@ -5530,18 +5624,23 @@ static void ai_mining_mode_land_on_asteroid(struct snis_entity *o, struct ai_min
 		if (b >= 0) {
 			int channel = bridgelist[b].npcbot.channel;
 			ai->orphan_time = 0;
-			if (asteroid->type == OBJTYPE_ASTEROID)
+			if (asteroid->type == OBJTYPE_ASTEROID) {
+				ai_trace(o->id, "COMMENCING MINING OPERATION");
 				send_comms_packet(o, o->sdata.name, channel,
 					"COMMENCING MINING OPERATION");
-			else if (asteroid->type == OBJTYPE_DERELICT)
+			} else if (asteroid->type == OBJTYPE_DERELICT) {
+				ai_trace(o->id, "COMMENCING SALVAGE OPERATION");
 				send_comms_packet(o, o->sdata.name, channel,
 					"COMMENCING SALVAGE OPERATION");
-			else
+			} else {
+				ai_trace(o->id, "COMMENCING OPERATION");
 				send_comms_packet(o, o->sdata.name, channel,
 					"COMMENCING OPERATION");
+			}
 		} else {
 			ai->orphan_time++;
 		}
+		ai_trace(o->id, "MINING BOT -> MINE MODE");
 		ai->mode = MINING_MODE_MINE;
 		ai->countdown = 400;
 	}
@@ -5576,6 +5675,7 @@ static void ai_mining_mode_mine_asteroid(struct snis_entity *o, struct ai_mining
 			ai->orphan_time = 0;
 			send_comms_packet(o, o->sdata.name, channel,
 				"TARGET LOST -- RETURNING TO SHIP");
+			ai_trace(o->id, "MINING TARGET LOST, RETURN TO SHIP");
 		} else {
 			ai->orphan_time++;
 		}
@@ -5667,6 +5767,7 @@ static void ai_mining_mode_mine_asteroid(struct snis_entity *o, struct ai_mining
 		int channel = bridgelist[b].npcbot.channel;
 		switch (asteroid->type) {
 		case OBJTYPE_ASTEROID:
+			ai_trace(o->id, "MINING COMPLETE, RETURNING TO SHIP");
 			send_comms_packet(o, o->sdata.name, channel,
 				"MINING OPERATION COMPLETE -- RETURNING TO SHIP");
 			schedule_callback2(event_callback, &callback_schedule,
@@ -5674,6 +5775,7 @@ static void ai_mining_mode_mine_asteroid(struct snis_entity *o, struct ai_mining
 						(double) bridgelist[b].shipid);
 			break;
 		case OBJTYPE_DERELICT:
+			ai_trace(o->id, "SALVAGE COMPLETE, RETURNING TO SHIP");
 			send_comms_packet(o, o->sdata.name, channel,
 				"SALVAGE OPERATION COMPLETE -- RETURNING TO SHIP");
 			schedule_callback2(event_callback, &callback_schedule,
@@ -5681,6 +5783,7 @@ static void ai_mining_mode_mine_asteroid(struct snis_entity *o, struct ai_mining
 						(double) bridgelist[b].shipid);
 			break;
 		default:
+			ai_trace(o->id, "OPERATION COMPLETE, RETURNING TO SHIP");
 			send_comms_packet(o, o->sdata.name, channel,
 				"OPERATION COMPLETE -- RETURNING TO SHIP");
 			break;
@@ -5710,6 +5813,8 @@ static void ai_tow_ship_mode_brain(struct snis_entity *o)
 	/* Find the ship we're supposed to be towing */
 	i = lookup_by_id(o->tsd.ship.ai[n].u.tow_ship.disabled_ship);
 	if (i < 0) {
+		ai_trace(o->id, "CANNOT FIND SHIP TO TOW %u, POPPING TOW SHIP",
+				o->tsd.ship.ai[n].u.tow_ship.disabled_ship);
 		pop_ai_stack(o);
 		return;
 	}
@@ -5718,6 +5823,8 @@ static void ai_tow_ship_mode_brain(struct snis_entity *o)
 	/* Find the starbase we are supposed to tow it to */
 	i = lookup_by_id(o->tsd.ship.ai[n].u.tow_ship.starbase_dispatcher);
 	if (i < 0) {
+		ai_trace(o->id, "CANNOT FIND STARBASE TO TOW TO %u, POPPING TOW SHIP",
+				o->tsd.ship.ai[n].u.tow_ship.starbase_dispatcher);
 		pop_ai_stack(o);
 		return;
 	}
@@ -5731,6 +5838,7 @@ static void ai_tow_ship_mode_brain(struct snis_entity *o)
 			if (disabled_ship->tsd.ship.fuel < FUEL_CONSUMPTION_UNIT * 30 * 60)
 				disabled_ship->tsd.ship.fuel = FUEL_CONSUMPTION_UNIT * 30 * 60;
 			/* We're done */
+			ai_trace(o->id, "DROPPING OFF DISABLED SHIP %u", disabled_ship->id);
 			disconnect_from_tow_ship(o, disabled_ship);
 			return;
 		}
@@ -5745,6 +5853,7 @@ static void ai_tow_ship_mode_brain(struct snis_entity *o)
 							ROLE_TEXT_TO_SPEECH, disabled_ship->id);
 			dist2 = ai_ship_travel_towards(o,
 				starbase_dispatcher->x, starbase_dispatcher->y, starbase_dispatcher->z);
+			ai_trace(o->id, "ATTACHED TO DISABLED SHIP %u", disabled_ship->id);
 			return;
 		}
 	}
@@ -5788,6 +5897,7 @@ static void ai_mining_mode_brain(struct snis_entity *o)
 	struct ai_mining_bot_data *mining_bot = &o->tsd.ship.ai[n].u.mining_bot;
 
 	if (mining_bot->orphan_time > MINING_BOT_MAX_ORPHAN_TIME) {
+		ai_trace(o->id, "MINING BOT ORPHANED TOO LONG");
 		printf("Mining bot orphaned for too long.\n");
 		delete_from_clients_and_server(o);
 		return;
@@ -5809,11 +5919,13 @@ static void ai_mining_mode_brain(struct snis_entity *o)
 		ai_mining_mode_return_to_parent(o, mining_bot);
 		break;
 	case MINING_MODE_IDLE:
+		ai_trace(o->id, "MINING BOT IDLE");
 		o->vx *= 0.95; /* Come to a stop */
 		o->vy *= 0.95;
 		o->vz *= 0.95;
 		break;
 	default:
+		ai_trace(o->id, "MINING BOT MODE UNKNOWN %hhu", mining_bot->mode);
 		fprintf(stderr, "unexpected default value of mining ai mode; %hhu\n",
 			mining_bot->mode);
 		break;
@@ -5829,18 +5941,22 @@ static void ai_patrol_mode_brain(struct snis_entity *o)
 	d = patrol->dest;
 	double dist2 = ai_ship_travel_towards(o,
 			patrol->p[d].v.x, patrol->p[d].v.y, patrol->p[d].v.z);
+	ai_trace(o->id, "PATROL DIST TO DEST = %.2f", sqrt(dist2));
 
 	if (has_arrived_at_destination(o, dist2)) {
+		ai_trace(o->id, "PATROL ARRIVED AT DEST");
 		patrol->dest = (patrol->dest + 1) % patrol->npoints;
 		/* hang out here awhile... */
 		n = o->tsd.ship.nai_entries;
 		if (n < MAX_AI_STACK_ENTRIES) {
+			ai_trace(o->id, "PATROL -> HANGOUT");
 			o->tsd.ship.ai[n].ai_mode = AI_MODE_HANGOUT;
 			o->tsd.ship.ai[n].u.hangout.time_to_go = 100 + snis_randn(100);
 			o->tsd.ship.desired_velocity = 0;
 			o->tsd.ship.nai_entries++;
 		} else {
 			d = patrol->dest;
+			ai_trace(o->id, "PATROL ADVANCE TO NEXT DEST %d", d);
 			set_ship_destination(o, patrol->p[d].v.x, patrol->p[d].v.y, patrol->p[d].v.z);
 		}
 	}
@@ -5857,18 +5973,21 @@ static void ai_cop_mode_brain(struct snis_entity *o)
 
 	double dist2 = ai_ship_travel_towards(o,
 				patrol->p[d].v.x, patrol->p[d].v.y, patrol->p[d].v.z);
+	ai_trace(o->id, "COP MODE DIST TO DEST = %.2f", sqrt(dist2));
 
 	if (has_arrived_at_destination(o, dist2)) {
 		patrol->dest = (patrol->dest + 1) % patrol->npoints;
 		/* hang out here awhile... */
 		n = o->tsd.ship.nai_entries;
 		if (n < MAX_AI_STACK_ENTRIES) {
+			ai_trace(o->id, "COP -> HANGOUT");
 			o->tsd.ship.ai[n].ai_mode = AI_MODE_HANGOUT;
 			o->tsd.ship.ai[n].u.hangout.time_to_go = 100 + snis_randn(100);
 			o->tsd.ship.desired_velocity = 0;
 			o->tsd.ship.nai_entries++;
 		} else {
 			d = patrol->dest;
+			ai_trace(o->id, "COP ADVANCE TO NEXT DEST %d", d);
 			set_ship_destination(o, patrol->p[d].v.x, patrol->p[d].v.y, patrol->p[d].v.z);
 		}
 	}
@@ -5883,6 +6002,7 @@ static void maybe_leave_fleet(struct snis_entity *o)
 
 	for (i = 0; i < o->tsd.ship.nai_entries; i++) {
 		if (o->tsd.ship.ai[i].ai_mode == AI_MODE_FLEET_MEMBER) {
+			ai_trace(o->id, "LEAVING FLEET");
 			fleet_leave(o->id);
 			o->tsd.ship.nai_entries = 0;
 			memset(o->tsd.ship.ai, 0, sizeof(o->tsd.ship.ai));
@@ -6305,9 +6425,10 @@ static void ai_brain(struct snis_entity *o)
 				o->tsd.ship.nai_entries++;
 			}
 			o->tsd.ship.ai[n].ai_mode = AI_MODE_RTS_OUT_OF_FUEL;
+			ai_trace(o->id, "OUT OF FUEL (RTS)");
 		}
 	}
-		
+
 	/* main AI brain code is here... */
 	switch (o->tsd.ship.ai[n].ai_mode) {
 	case AI_MODE_ATTACK:
@@ -6334,8 +6455,10 @@ static void ai_brain(struct snis_entity *o)
 		ai_fleet_member_mode_brain(o);
 		break;
 	case AI_MODE_HANGOUT:
+		ai_trace(o->id, "HANGOUT %d", 10 * o->tsd.ship.ai[n].u.hangout.time_to_go / 10);
 		o->tsd.ship.ai[n].u.hangout.time_to_go--;
 		if (o->tsd.ship.ai[n].u.hangout.time_to_go <= 0) {
+			ai_trace(o->id, "POP HANGOUT");
 			pop_ai_stack(o);
 			return;
 		}
@@ -6352,7 +6475,13 @@ static void ai_brain(struct snis_entity *o)
 		ai_tow_ship_mode_brain(o);
 		break;
 	case AI_MODE_RTS_OUT_OF_FUEL:
+		ai_trace(o->id, "RTS MODE OUT OF FUEL");
+		o->vx = 0;
+		o->vy = 0;
+		o->vz = 0;
+		break;
 	case AI_MODE_RTS_STANDBY: /* Just sit there not doing anything. */
+		ai_trace(o->id, "RTS MODE STANDBY");
 		o->vx = 0;
 		o->vy = 0;
 		o->vz = 0;
@@ -16449,6 +16578,38 @@ static void server_builtin_dump(char *cmd)
 			send_demon_console_msg, ship_type, nshiptypes);
 }
 
+static void server_builtin_ai_trace(char *cmd)
+{
+	uint32_t id;
+	int rc;
+
+	rc = sscanf(cmd, "%*s %u", &id);
+	if (rc == 1) {
+		if (ai_trace_id != (uint32_t) -1)
+			send_demon_console_msg("DISABLED AI TRACING FOR %u", ai_trace_id);
+		ai_trace_id = id;
+		if (ai_trace_id != (uint32_t) -1)
+			send_demon_console_msg("ENABLED AI TRACING FOR %u", ai_trace_id);
+		pthread_mutex_lock(&universe_mutex);
+		rc = lookup_by_id(ai_trace_id);
+		if (rc < 0) {
+			pthread_mutex_unlock(&universe_mutex);
+			send_demon_console_msg("WARNING TRACING %u, OBJECT NOT FOUND", ai_trace_id);
+		} else {
+			if (go[rc].type != OBJTYPE_SHIP2) {
+				pthread_mutex_unlock(&universe_mutex);
+				send_demon_console_msg("WARNING TRACING %u, NOT NPC SHIP", ai_trace_id);
+			} else {
+				pthread_mutex_unlock(&universe_mutex);
+			}
+		}
+	} else {
+		if (ai_trace_id != (uint32_t) -1)
+			send_demon_console_msg("DISABLED AI TRACING FOR %u", ai_trace_id);
+		ai_trace_id = (uint32_t) -1;
+	}
+}
+
 static struct server_builtin_cmd {
 	char *cmd;
 	char *description;
@@ -16464,6 +16625,7 @@ static struct server_builtin_cmd {
 	{ "DU", "DUMP STATE OF SELECTED OBJECTS", server_builtin_dump, },
 	{ "FIND", "FIND AN OBJECT BY NAME", server_builtin_find, },
 	{ "F", "FIND AN OBJECT BY NAME", server_builtin_find, },
+	{ "AITRACE", "DEBUG TRACE NPC SHIP AI", server_builtin_ai_trace, },
 	{ "HELP", "LIST SERVER BUILTIN COMMANDS", server_builtin_help, },
 };
 
