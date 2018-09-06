@@ -64,7 +64,9 @@
 #include "quat.h"
 #include "oriented_bounding_box.h"
 #include "arbitrary_spin.h"
+#define SNIS_SERVER_DATA 1
 #include "snis.h"
+#undef SNIS_SERVER_DATA
 #include "snis-culture.h"
 #include "snis_log.h"
 #include "mathutils.h"

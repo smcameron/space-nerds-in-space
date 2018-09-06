@@ -65,7 +65,9 @@
 #include "mathutils.h"
 #include "quat.h"
 #include "arbitrary_spin.h"
+#define SNIS_CLIENT_DATA
 #include "snis.h"
+#undef SNIS_CLIENT_DATA
 #include "snis-culture.h"
 #include "snis_alloc.h"
 #include "my_point.h"

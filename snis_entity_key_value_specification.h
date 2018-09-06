@@ -289,7 +289,6 @@ struct key_value_specification snis_entity_kvs[] = {
 	UINT8_TSDFIELD(mining_bots),
 	STRING_TSDFIELD(mining_bot_name),
 	STRING_FIELD(sdata.name),
-	UINT16_FIELD(sdata.science_data_known),
 	UINT8_FIELD(sdata.subclass),
 	UINT8_FIELD(sdata.shield_strength),
 	UINT8_FIELD(sdata.shield_wavelength),

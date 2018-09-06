@@ -63,9 +63,11 @@ void snis_debug_dump(char *cmd, struct snis_entity go[], int nstarbase_models,
 	o = &go[i];
 	printfn("%s DUMP - %u  %s X,Y,Z,T = %.2f, %.2f, %.2f, %d",
 			label, id, o->sdata.name, o->x, o->y, o->z, o->type);
+#ifdef SNIS_CLIENT_DATA
 	printfn("-- NUPDATES %d", o->nupdates);
 	for (i = 0; i < SNIS_ENTITY_NUPDATE_HISTORY; i++)
 		printfn("---- update time %.2f", o->updatetime[i]);
+#endif
 	printfn("-- VX, VY, VZ = %.2f, %.2f, %.2f", o->vx, o->vy, o->vz);
 	printfn("-- HEADING = %.2f", o->heading);
 	printfn("-- ALIVE = %hu", o->alive);
@@ -75,7 +77,9 @@ void snis_debug_dump(char *cmd, struct snis_entity go[], int nstarbase_models,
 	printfn("-- MOVE FN %s", fnptraddr);
 	printfn("-- SDATA NAME = %s", o->sdata.name);
 	printfn("-- SDATA SCIENCE TEXT = %s", o->sdata.science_text ? o->sdata.science_text : "NULL");
+#ifdef SNIS_CLIENT_DATA
 	printfn("-- SDATA SCIENCE DATA KNOWN = %hu", o->sdata.science_data_known);
+#endif
 	printfn("-- SDATA SUBCLASS = %hhu", o->sdata.subclass);
 	printfn("-- SDATA SHIELD STRENGTH = %hhu", o->sdata.shield_strength);
 	printfn("-- SDATA SHIELD WAVELENGTH = %hhu", o->sdata.shield_wavelength);

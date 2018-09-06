@@ -840,16 +840,20 @@ struct block_data {
 struct turret_data {
 	uint32_t parent_id, root_id;
 	union quat relative_orientation;
-	double dx, dy, dz; /* offset position from parent, used only server side */
 	uint32_t current_target_id;
 	union quat rotational_velocity;
 	union quat base_orientation;
-	union quat base_orientation_history[SNIS_ENTITY_NUPDATE_HISTORY];
 	union vec3 up_direction;
+	uint8_t health;
+#ifdef SNIS_CLIENT_DATA
+	union quat base_orientation_history[SNIS_ENTITY_NUPDATE_HISTORY];
+	struct entity *turret_base_entity;
+#endif
+#ifdef SNIS_SERVER_DATA
 	uint8_t fire_countdown;
 	uint8_t fire_countdown_reset_value;
-	uint8_t health;
-	struct entity *turret_base_entity;
+	double dx, dy, dz; /* offset position from parent, used only server side */
+#endif
 };
 
 struct warp_core_data {
@@ -889,20 +893,19 @@ typedef void (*move_function)(struct snis_entity *o);
 struct snis_entity_science_data {
 	char name[20];
 	char *science_text; /* usually, this will be null. */
-	uint16_t science_data_known;
 	uint8_t subclass;
 	uint8_t shield_strength;
 	uint8_t shield_wavelength;
 	uint8_t shield_width;
 	uint8_t shield_depth;
 	uint8_t faction;
+#ifdef SNIS_CLIENT_DATA
+	uint16_t science_data_known;
+#endif
 };
 
 struct snis_entity {
-	int nupdates;
-	double updatetime[SNIS_ENTITY_NUPDATE_HISTORY];
 	uint32_t id;
-	union vec3 r[SNIS_ENTITY_NUPDATE_HISTORY];
 	double x, y, z;
 	double vx, vy, vz;
 	double heading;
@@ -913,10 +916,17 @@ struct snis_entity {
 	union type_specific_data tsd;
 	move_function move;
 	struct snis_entity_science_data sdata;
-	struct entity *entity;
-	struct space_partition_entry partition;
-	union quat o[SNIS_ENTITY_NUPDATE_HISTORY];
 	union quat orientation;
+#ifdef SNIS_SERVER_DATA
+	struct space_partition_entry partition;
+#endif
+#ifdef SNIS_CLIENT_DATA
+	struct entity *entity;
+	int nupdates;
+	double updatetime[SNIS_ENTITY_NUPDATE_HISTORY];
+	union vec3 r[SNIS_ENTITY_NUPDATE_HISTORY];
+	union quat o[SNIS_ENTITY_NUPDATE_HISTORY];
+#endif
 	char ai[6];
 };
 
@@ -997,7 +1007,9 @@ union damcon_type_specific_data {
 	struct damcon_system_specific_data system;
 	struct damcon_part_specific_data part;
 	struct damcon_socket_specific_data socket;
+#ifdef SNIS_SERVER_DATA
 	struct damcon_waypoint_specific_data waypoint;
+#endif
 };
 
 struct snis_damcon_entity {
