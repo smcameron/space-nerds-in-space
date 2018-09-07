@@ -73,7 +73,7 @@ struct text_window *text_window_init(int x, int y, int w,
 	tw->total_lines = total_lines;
 	tw->visible_lines = visible_lines;
 	tw->color = color;
-	tw->text = malloc(sizeof(*tw) * total_lines);
+	tw->text = malloc(sizeof(*tw->text) * total_lines);
 	for (i = 0; i < total_lines; i++) {
 		tw->text[i] = malloc(80);
 		memset(tw->text[i], 0, 80);
