@@ -301,3 +301,8 @@ void text_window_set_background_alpha(struct text_window *tw, float alpha)
 		alpha = -1.0;
 	tw->alpha =  alpha;
 }
+
+void text_window_slow_printing_effect(struct text_window *tw, int value)
+{
+	tw->print_slowly = !!value;
+}
