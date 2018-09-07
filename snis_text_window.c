@@ -20,6 +20,7 @@ struct text_window {
 	int print_slowly;
 	int printing_pos;
 	char **text;
+	int *textcolor;
 	int color;
 	int do_blank;
 	int tty_chatter_sound;
@@ -39,10 +40,11 @@ int text_window_entry_count(struct text_window *tw)
 	return rc;
 }
 
-void text_window_add_text(struct text_window *tw, const char *text)
+void text_window_add_color_text(struct text_window *tw, const char *text, int color)
 {
 	strncpy(tw->text[tw->last_entry], text, 79);
 	tw->text[tw->last_entry][79] = '\0';
+	tw->textcolor[tw->last_entry] = color;
 	tw->last_entry = (tw->last_entry + 1) % tw->total_lines;
 	if (tw->last_entry == tw->first_entry)
 		tw->first_entry = (tw->first_entry + 1) % tw->total_lines;
@@ -57,6 +59,11 @@ void text_window_add_text(struct text_window *tw, const char *text)
 			text_window_entry_count(tw));
 #endif
 	tw->printing_pos = 0;
+}
+
+void text_window_add_text(struct text_window *tw, const char *text)
+{
+	text_window_add_color_text(tw, text, tw->color);
 }
 
 struct text_window *text_window_init(int x, int y, int w,
@@ -78,6 +85,7 @@ struct text_window *text_window_init(int x, int y, int w,
 		tw->text[i] = malloc(80);
 		memset(tw->text[i], 0, 80);
 	}
+	tw->textcolor = malloc(sizeof(*tw->textcolor) * total_lines);
 	tw->lineheight = font_lineheight[NANO_FONT];
 	tw->thumb_pos = 0;
 	tw->first_entry = 0;
@@ -152,6 +160,7 @@ void text_window_draw(struct text_window *tw)
 		i = (i + 1) % tw->total_lines) {
 			int len = strlen(tw->text[i]);
 
+			sng_set_foreground(tw->textcolor[i]);
 			if (!tw->print_slowly || i != tw->last_entry -1) {
 				sng_abs_xy_draw_string(tw->text[i], tw->font, tw->x + 10,
 						tw->y + j * tw->lineheight + tw->lineheight);

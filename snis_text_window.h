@@ -11,6 +11,7 @@ struct text_window;
 
 GLOBAL int text_window_entry_count(struct text_window *tw);
 GLOBAL void text_window_add_text(struct text_window *tw, const char *text);
+GLOBAL void text_window_add_color_text(struct text_window *tw, const char *text, int color);
 GLOBAL struct text_window *text_window_init(int x, int y, int w,
 			int total_lines, int visible_lines, int color);
 GLOBAL void text_window_draw(struct text_window *tw);
