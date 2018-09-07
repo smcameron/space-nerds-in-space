@@ -16117,7 +16117,7 @@ static int construct_demon_command(char *input,
 
 	original = strdup(input); /* save lowercase version for text to speech */
 	snprintf(console_text, sizeof(console_text), "> %s", input);
-	text_window_add_text(demon_ui.console, console_text);
+	text_window_add_color_text(demon_ui.console, console_text, CYAN);
 	uppercase(input);
 	saveptr = NULL;
 	s = strtok_r(input, DEMON_CMD_DELIM, &saveptr);
