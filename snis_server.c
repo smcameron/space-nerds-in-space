@@ -153,6 +153,7 @@ static float missile_explosion_damage_distance = MISSILE_EXPLOSION_DAMAGE_DISTAN
 static float spacemonster_flee_dist = SPACEMONSTER_FLEE_DIST;
 static float spacemonster_aggro_radius = SPACEMONSTER_AGGRO_RADIUS;
 static float spacemonster_collision_radius = SPACEMONSTER_COLLISION_RADIUS;
+static float cargo_container_max_velocity = CARGO_CONTAINER_MAX_VELOCITY;
 
 /*
  * End of runtime adjustable globals
@@ -1394,7 +1395,18 @@ static void warp_core_move(struct snis_entity *o)
 
 static void cargo_container_move(struct snis_entity *o)
 {
+	float v;
+
 	set_object_location(o, o->x + o->vx, o->y + o->vy, o->z + o->vz);
+
+	/* Make sure the player can catch the cargo containers */
+	v = dist3d(o->vx, o->vy, o->vz);
+	if (v > cargo_container_max_velocity) {
+		o->vx *= 0.95;
+		o->vy *= 0.95;
+		o->vz *= 0.95;
+	}
+
 	o->timestamp = universe_timestamp;
 	if (o->tsd.cargo_container.persistent)
 		return;
@@ -16362,6 +16374,10 @@ static struct tweakable_var_descriptor server_tweak[] = {
 		"SPACE MONSTER COLLISION RADIUS",
 		&spacemonster_collision_radius, 'f',
 		10.0, 500.0, SPACEMONSTER_COLLISION_RADIUS, 0, 0, 0 },
+	{ "CARGO_CONTAINER_MAX_VELOCITY",
+		"CARGO CONTAINER MAX VELOCITY",
+		&cargo_container_max_velocity, 'f',
+		0.0, MAX_PLAYER_VELOCITY * 10.0, CARGO_CONTAINER_MAX_VELOCITY, 0, 0, 0 },
 	{ NULL, NULL, NULL, '\0', 0.0, 0.0, 0.0, 0, 0, 0 },
 };
 

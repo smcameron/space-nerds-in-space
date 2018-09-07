@@ -348,6 +348,7 @@ struct ai_stack_entry {
 };
 
 #define CARGO_CONTAINER_LIFETIME (4 * 10 * 60) /* 4 minutes */
+#define CARGO_CONTAINER_MAX_VELOCITY (MAX_PLAYER_VELOCITY * 0.8)
 struct cargo_container_contents {
 	int item;
 	float qty;
