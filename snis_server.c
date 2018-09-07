@@ -15238,6 +15238,10 @@ static void starbase_cargo_buyingselling_npc_bot(struct snis_entity *o, int brid
 					return;
 				}
 			}
+			if (qf < 0.0) {
+				send_comms_packet(o, n, channel, " OH A WISE GUY, EH?");
+				return;
+			}
 			x = toupper(x) - 'A';
 			if (x < 0 || x >= ship->tsd.ship.ncargo_bays) {
 				send_comms_packet(o, n, channel, " INVALID SELL ORDER, BAD CARGO BAY");
