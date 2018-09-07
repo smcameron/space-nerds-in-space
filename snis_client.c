@@ -16831,6 +16831,7 @@ static void init_demon_ui()
 	text_window_blank_background(demon_ui.console, 1);
 	text_window_set_background_alpha(demon_ui.console, 0.75);
 	text_window_set_font(demon_ui.console, PICO_FONT);
+	text_window_slow_printing_effect(demon_ui.console, 0);
 	ui_add_button(demon_ui.demon_exec_button, DISPLAYMODE_DEMON,
 			"EXECUTE THE ENTERED COMMAND");
 	ui_add_button(demon_ui.demon_home_button, DISPLAYMODE_DEMON,
