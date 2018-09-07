@@ -22032,6 +22032,9 @@ static void move_objects(double absolute_time, int discontinuity)
 						go[i].timestamp = universe_timestamp; /* respawn is counting down */
 					}
 				}
+			} else {
+				if (snis_object_pool_is_allocated(pool, i)) /* dead, but not de-allocated */
+					delete_from_clients_and_server(&go[i]);
 			}
 		}
 	}
