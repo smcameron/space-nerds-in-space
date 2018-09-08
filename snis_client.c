@@ -5411,6 +5411,12 @@ static void delete_object(uint32_t id)
 {
 	int i;
 
+	if (id == (uint32_t) -1) {
+		fprintf(stderr, "snis_client: %s:%s:%d: BUG detected, attempted deletion of id -1\n",
+			__FILE__, __func__, __LINE__);
+		return;
+	}
+
 	i = lookup_object_by_id(id);
 	/* perhaps we just joined and so don't know about this object. */
 	if (i < 0)
