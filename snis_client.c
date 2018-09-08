@@ -3282,6 +3282,7 @@ static struct demon_ui {
 	char error_msg[80];
 	double ix, iz, ix2, iz2;
 	int captain_of;
+	int follow_id;
 	int selectmode;
 	int buttonmode;
 	int shiptype;
@@ -5407,6 +5408,7 @@ static int process_collision_notification()
 	return 0;
 }
 
+static void print_demon_console_msg(const char *fmt, ...);
 static void delete_object(uint32_t id)
 {
 	int i;
@@ -5434,6 +5436,10 @@ static void delete_object(uint32_t id)
 	/* if demon screen was captain of this thing, it isn't now. */
 	if (i == demon_ui.captain_of)
 		demon_ui.captain_of = -1;
+	if (id == demon_ui.follow_id) {
+		demon_ui.follow_id = -1;
+		print_demon_console_msg("NO LONGER FOLLOWING DELETED OBJECT");
+	}
 	remove_entity(ecx, go[i].entity);
 	if (go[i].type == OBJTYPE_TURRET && go[i].tsd.turret.turret_base_entity)
 		remove_entity(ecx, go[i].tsd.turret.turret_base_entity);
@@ -15304,7 +15310,6 @@ static void show_comms(GtkWidget *w)
 	show_common_screen(w, "COMMS");
 }
 
-static void print_demon_console_msg(const char *fmt, ...);
 static void send_demon_comms_packet_to_server(char *msg)
 {
 	if (demon_ui.captain_of < 0) {
@@ -15429,7 +15434,6 @@ static void demon_select(uint32_t id)
 			queue_to_server(snis_opcode_pkt("bw", OPCODE_DEMON_DISPOSSESS,
 				go[demon_ui.captain_of].id));
 				old_captain = demon_ui.captain_of;
-				demon_ui.captain_of = -1;
 				demon_ui.captain_of = -1;
 		}
 		if (index >= 0 && (go[index].type == OBJTYPE_SHIP2 ||
@@ -15941,6 +15945,7 @@ static struct demon_cmd_def {
 	{ "VARS", "LIST TWEAKABLE VARIABLES" },
 	{ "DESCRIBE", "DESCRIBE A TWEAKABLE VARIABLE" },
 	{ "CDUMP", "DUMP CLIENT-SIDE OBJECT" },
+	{ "FOLLOW", "FOLLOW AN OBJECT" },
 	/* Note: Server builtin command help isn't here, it's in the server code,
 	 * elicited by a call to "send_lua_script_packet_to_server("HELP")"
 	 */
@@ -16107,6 +16112,30 @@ static void client_side_dump(char *cmd)
 	snis_debug_dump(cmd, go, nstarbase_models, docking_port_info,
 			lookup_object_by_id, print_demon_console_msg,
 			ship_type, nshiptypes);
+}
+
+static void client_demon_follow(char *cmd)
+{
+	int rc;
+	uint32_t id;
+
+	rc = sscanf(cmd, "%*s %u", &id);
+	if (rc != 1) {
+		if (demon_ui.follow_id != -1) {
+			print_demon_console_msg("NO LONGER FOLLOWING %u", demon_ui.follow_id);
+			demon_ui.follow_id = -1;
+		} else {
+			print_demon_console_msg("INVALID FOLLOW COMMAND");
+		}
+		return;
+	}
+	rc = lookup_object_by_id(id);
+	if (rc < 0) {
+		print_demon_console_msg("FAILED TO LOOKUP ID %u", id);
+		return;
+	}
+	demon_ui.follow_id = id;
+	print_demon_console_msg("FOLLOWING ID %u", id);
 }
 
 static int construct_demon_command(char *input,
@@ -16326,6 +16355,10 @@ static int construct_demon_command(char *input,
 		case 21: /* client side dump object */
 			uppercase(original);
 			client_side_dump(original);
+			break;
+		case 22: /* FOLLOW object */
+			uppercase(original);
+			client_demon_follow(original);
 			break;
 		default: /* unknown, maybe it's a builtin server command or a lua script */
 			uppercase(original);
@@ -16669,6 +16702,7 @@ static void init_demon_ui()
 	demon_ui.selectedz = -1.0;
 	demon_ui.selectmode = 0;
 	demon_ui.captain_of = -1;
+	demon_ui.follow_id = -1;
 	demon_ui.use_3d = 0;
 	demon_ui.console_active = 0;
 	demon_ui.render_style = DEMON_UI_RENDER_STYLE_WIREFRAME;
@@ -17154,16 +17188,29 @@ static void show_demon_3d(GtkWidget *w)
 		faction_material[3] = &amber_material;
 	}
 
-	/* If in captain mode, then set desired camera position/orientation accordingly */
-	if (demon_ui.captain_of >= 0) {
-		struct snis_entity *o = &go[demon_ui.captain_of];
-		union vec3 rel_cam_pos = { { -50.0, 10.0, 0.0 } };
-		union vec3 ship_pos = { { o->x, o->y, o->z } };
+	/* If in captain mode or follow mode, then set desired camera position/orientation accordingly */
+	if (demon_ui.captain_of >= 0 || demon_ui.follow_id >= 0) {
+		struct snis_entity *o;
 
-		demon_ui.desired_camera_orientation = o->orientation;
-		quat_rot_vec_self(&rel_cam_pos, &o->orientation);
-		vec3_add(&demon_ui.desired_camera_pos, &ship_pos, &rel_cam_pos);
-		camera_movement_rate = 0.1;
+		if (demon_ui.captain_of >= 0) {
+			o = &go[demon_ui.captain_of];
+		} else {
+			int i = lookup_object_by_id(demon_ui.follow_id);
+			if (i >= 0)
+				o = &go[i];
+			else
+				o = NULL;
+		}
+
+		if (o) {
+			union vec3 rel_cam_pos = { { -50.0, 10.0, 0.0 } };
+			union vec3 ship_pos = { { o->x, o->y, o->z } };
+
+			demon_ui.desired_camera_orientation = o->orientation;
+			quat_rot_vec_self(&rel_cam_pos, &o->orientation);
+			vec3_add(&demon_ui.desired_camera_pos, &ship_pos, &rel_cam_pos);
+			camera_movement_rate = 0.1;
+		}
 	}
 
 	if (go[my_ship_oid].alive > 0)
