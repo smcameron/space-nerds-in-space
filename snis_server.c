@@ -22048,8 +22048,12 @@ static void move_objects(double absolute_time, int discontinuity)
 					}
 				}
 			} else {
-				if (snis_object_pool_is_allocated(pool, i)) /* dead, but not de-allocated */
+				if (snis_object_pool_is_allocated(pool, i)) { /* dead, but not de-allocated */
+					fprintf(stderr,
+						"%s:%s:%s:%d BUG: dead object still allocated: id = %u, type = %hhu\n",
+						logprefix(), __FILE__, __func__, __LINE__, go[i].id, go[i].type);
 					delete_from_clients_and_server(&go[i]);
+				}
 			}
 		}
 	}
