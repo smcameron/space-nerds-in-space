@@ -505,7 +505,7 @@ struct ship_data {
 #define MAX_AI_STACK_ENTRIES 5
 	struct ai_stack_entry ai[MAX_AI_STACK_ENTRIES];
 	int nai_entries;
-	double dox, doy, doz; /* destination offsets */
+	double dox, doy, doz, dist; /* destination offsets and distance */
 	struct ship_damage_data damage;
 	struct command_data cmd_data;
 	struct damcon_data *damcon;
