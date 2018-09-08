@@ -18581,6 +18581,15 @@ static int l_set_variable(lua_State *l)
 	return 0;
 }
 
+static int l_demon_print(lua_State *l)
+{
+	const char *str = luaL_checkstring(l, 1);
+	char buf[DEMON_CONSOLE_MSG_MAX];
+	snprintf(buf, sizeof(buf) - 1, "%s", str);
+	send_demon_console_msg(buf);
+	return 0;
+}
+
 static int process_create_item(struct game_client *c)
 {
 	unsigned char buffer[14];
@@ -22211,6 +22220,7 @@ static void setup_lua(void)
 	add_lua_callable_fn(l_fire_missile, "fire_missile");
 	add_lua_callable_fn(l_regenerate_universe, "regenerate_universe");
 	add_lua_callable_fn(l_set_variable, "set_variable");
+	add_lua_callable_fn(l_demon_print, "demon_print");
 }
 
 static int run_initial_lua_scripts(void)
