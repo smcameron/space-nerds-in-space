@@ -3724,8 +3724,6 @@ static void missile_move(struct snis_entity *o)
 	/* See if we hit something */
 	space_partition_process(space_partition, o, o->x, o->z, o,
 			missile_collision_detection);
-	if (!o->alive)
-		missile_explode(o);
 }
 
 static double __attribute__((unused)) point_to_line_dist(double lx1, double ly1,
