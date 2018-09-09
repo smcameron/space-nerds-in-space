@@ -1686,11 +1686,7 @@ static void snis_queue_delete_object_helper(struct snis_entity *o)
 	int i;
 	uint32_t oid = o->id;
 
-	/* TODO: Debug why this even happens. It seems to happen with missiles.
-	 * missile_move() does not see o->id == -1, but when it calls missile_explode()
-	 * missile_explode() does seem to see o->id == -1. Very mysterious bug.
-	 * At least though we should not propagate such a bug to the clients.
-	 */
+	/* This should never happen. If it does happen, don't propagate it to the clients. */
 	if (oid == (uint32_t) -1) {
 		fprintf(stderr, "%s BUG detected at %s:%s:%d, o->id == -1, o->type = %hhu\n",
 				logprefix(), __FILE__, __func__,  __LINE__, o->type);
