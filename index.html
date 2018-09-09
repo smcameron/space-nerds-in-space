@@ -882,6 +882,19 @@ The command takes several forms.  Here are some examples:
 NOTE: You only have to type the first three characters of the role names (e.g. <cmd>ENG</cmd>
 is the same as <cmd>ENGINEERING</cmd>.)<br>
 NOTE: it is not possible to remove the <cmd>DEMON</cmd> role from a client.
+<li><b>FIND</b> - find an object with the given name, e.g. "find enterprise"
+will find any objects or player ships named "enterprise" and print out the
+object IDs for any matching objects.
+<li><b>DUMP</b> and <b>CDUMP</b> - print out the state of the specified object
+ID. "Dump" prints out the state on the server, "Cdump" prints out the state on
+the client. The server and the client don't necessarily have the same (or any)
+information for all fields. This command is really a debugging aid for developers.
+<li><b>AITRACE</b> - trace (continuously print) the AI state of the specified
+object id. If no object id is specified, any current tracing activity is ceased.
+<li><b>FOLLOW</b> - Causes the 3D demon screen camera to follow the specified
+object ID. If no object ID is specified, any current following activity is
+ceased. Note that the "HOME" button will not work if an object is currently
+being followed.
 <li><b>LUA</b> - run a lua script.  The lua scripts must reside on the
 server in share/snis/luascripts.  Currently there are few scripts:
 <ul>
@@ -893,7 +906,7 @@ server in share/snis/luascripts.  Currently there are few scripts:
 <li>TRAINING-MISSION-1.LUA
 <li>TRAINING-MISSION-2.LUA
 </ul>
-<p>Example: <b>lua saving-planet-erph.lua</b>
+<p>Example: <b>saving-planet-erph</b>
 <p>Note: Now if you enter a command that isn't a built-in, an
 attempt is made to run it as a lua script.  This means that
 instead of entering <cmd>lua saving-planet-erph.lua</cmd>,
