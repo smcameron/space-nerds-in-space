@@ -108,8 +108,8 @@
 #include "rts_unit_data.h"
 #include "snis_tweak.h"
 #include "snis_debug.h"
-
 #include "snis_entity_key_value_specification.h"
+#include "snis_cardinal_colors.h"
 
 #define CLIENT_UPDATE_PERIOD_NSECS 500000000
 #define MAXCLIENTS 100
@@ -751,6 +751,7 @@ static void free_timer_events(struct timer_event **e)
 }
 
 static void send_demon_console_msg(const char *fmt, ...);
+static void send_demon_console_color_msg(uint8_t color, const char *fmt, ...);
 
 static int do_lua_pcall(char *function_name, lua_State *l, int nargs, int nresults, int errfunc)
 {
@@ -761,7 +762,7 @@ static int do_lua_pcall(char *function_name, lua_State *l, int nargs, int nresul
 		char errmsg[1000];
 		snprintf(errmsg, sizeof(errmsg) - 1, "snis_server: lua callback '%s' had error %d: '%s'.\n",
 			function_name, rc, lua_tostring(l, -1));
-		send_demon_console_msg("%s", errmsg);
+		send_demon_console_color_msg(YELLOW, "%s", errmsg);
 		fprintf(stderr, "%s\n", errmsg);
 		stacktrace("do_lua_pcall");
 		fflush(stderr);
@@ -2115,8 +2116,8 @@ static void ai_trace(uint32_t id, char *format, ...)
 	if (strcmp(buf, last_buf) == 0) /* suppress duplicate messages */
 		return;
 	strcpy(last_buf, buf);
-	pb = packed_buffer_allocate(2 + sizeof(buf));
-	packed_buffer_append(pb, "bb", OPCODE_CONSOLE_OP, OPCODE_CONSOLE_SUBCMD_ADD_TEXT);
+	pb = packed_buffer_allocate(3 + sizeof(buf));
+	packed_buffer_append(pb, "bbb", OPCODE_CONSOLE_OP, OPCODE_CONSOLE_SUBCMD_ADD_TEXT, 255);
 	packed_buffer_append_raw(pb, buf, sizeof(buf));
 	send_packet_to_all_clients(pb, ROLE_DEMON);
 }
@@ -13360,6 +13361,23 @@ static int process_request_thrust(struct game_client *c)
 }
 #endif
 
+static void send_demon_console_color_msg(uint8_t color, const char *fmt, ...)
+{
+	char buf[DEMON_CONSOLE_MSG_MAX];
+	struct packed_buffer *pb;
+	va_list arg_ptr;
+
+	memset(buf, 0, sizeof(buf));
+	va_start(arg_ptr, fmt);
+	vsnprintf(buf, sizeof(buf) - 1, fmt, arg_ptr);
+	va_end(arg_ptr);
+	buf[sizeof(buf) - 1] = '\0';
+	pb = packed_buffer_allocate(3 + sizeof(buf));
+	packed_buffer_append(pb, "bbb", OPCODE_CONSOLE_OP, OPCODE_CONSOLE_SUBCMD_ADD_TEXT, color);
+	packed_buffer_append_raw(pb, buf, sizeof(buf));
+	send_packet_to_all_clients(pb, ROLE_DEMON);
+}
+
 static void send_demon_console_msg(const char *fmt, ...)
 {
 	char buf[DEMON_CONSOLE_MSG_MAX];
@@ -13371,8 +13389,8 @@ static void send_demon_console_msg(const char *fmt, ...)
 	vsnprintf(buf, sizeof(buf) - 1, fmt, arg_ptr);
 	va_end(arg_ptr);
 	buf[sizeof(buf) - 1] = '\0';
-	pb = packed_buffer_allocate(2 + sizeof(buf));
-	packed_buffer_append(pb, "bb", OPCODE_CONSOLE_OP, OPCODE_CONSOLE_SUBCMD_ADD_TEXT);
+	pb = packed_buffer_allocate(3 + sizeof(buf));
+	packed_buffer_append(pb, "bbb", OPCODE_CONSOLE_OP, OPCODE_CONSOLE_SUBCMD_ADD_TEXT, 255);
 	packed_buffer_append_raw(pb, buf, sizeof(buf));
 	send_packet_to_all_clients(pb, ROLE_DEMON);
 }
@@ -16255,8 +16273,8 @@ static void server_builtin_disconnect(char *cmd)
 
 	rc = sscanf(cmd, "%*s %d", &i);
 	if (rc != 1) {
-		send_demon_console_msg("INVALID DISCONNECT COMMAND");
-		send_demon_console_msg("     \"%s\"", cmd);
+		send_demon_console_color_msg(YELLOW, "INVALID DISCONNECT COMMAND");
+		send_demon_console_color_msg(YELLOW, "     \"%s\"", cmd);
 		return;
 	}
 	if (i >= 0 && i < nclients) {
@@ -16264,7 +16282,7 @@ static void server_builtin_disconnect(char *cmd)
 		client[i].socket = -1;
 		send_demon_console_msg("DISCONNECTED CLIENT %d", i);
 	} else {
-		send_demon_console_msg("INVALID CLIENT %d", i);
+		send_demon_console_color_msg(YELLOW, "INVALID CLIENT %d", i);
 	}
 }
 
@@ -16430,14 +16448,14 @@ static uint32_t verify_role(uint32_t role)
 
 static void invalid_role_syntax_msg(void)
 {
-	send_demon_console_msg("INVALID ROLE SYNTAX");
-	send_demon_console_msg("USAGE:");
-	send_demon_console_msg("- TO LIST ROLES: ROLE <CLIENT>");
-	send_demon_console_msg("- TO ADD ROLES: ROLE <CLIENT> +ROLE");
-	send_demon_console_msg("- TO REMOVE ROLES: ROLE <CLIENT> -ROLE");
-	send_demon_console_msg("- TO SET SINGLE ROLE: ROLE <CLIENT> ROLE");
-	send_demon_console_msg(
-		" - ROLES ARE: MAIN, NAV, WEAP, ENG, DAM, COM, SCI, DEM, TTS, SOU, ALL");
+	send_demon_console_color_msg(YELLOW, "INVALID ROLE SYNTAX");
+	send_demon_console_color_msg(YELLOW, "USAGE:");
+	send_demon_console_color_msg(YELLOW, "- TO LIST ROLES: ROLE <CLIENT>");
+	send_demon_console_color_msg(YELLOW, "- TO ADD ROLES: ROLE <CLIENT> +ROLE");
+	send_demon_console_color_msg(YELLOW, "- TO REMOVE ROLES: ROLE <CLIENT> -ROLE");
+	send_demon_console_color_msg(YELLOW, "- TO SET SINGLE ROLE: ROLE <CLIENT> ROLE");
+	send_demon_console_color_msg(
+		YELLOW, " - ROLES ARE: MAIN, NAV, WEAP, ENG, DAM, COM, SCI, DEM, TTS, SOU, ALL");
 }
 
 static void server_builtin_setrole(char *cmd)
@@ -16503,20 +16521,20 @@ static void server_builtin_setrole(char *cmd)
 					ROLE_SCIENCE | ROLE_COMMS | ROLE_DEMON | ROLE_TEXT_TO_SPEECH |
 					ROLE_SOUNDSERVER;
 		else {
-			send_demon_console_msg("INVALID ROLE NAME");
+			send_demon_console_color_msg(YELLOW, "INVALID ROLE NAME");
 			return;
 		}
 	}
 
 	/* Verify the client number */
 	if (c < 0) {
-		send_demon_console_msg("ROLE: INVALID CLIENT NUMBER");
+		send_demon_console_color_msg(YELLOW, "ROLE: INVALID CLIENT NUMBER");
 		return;
 	}
 	client_lock();
 	if (c >= nclients) {
 		client_unlock();
-		send_demon_console_msg("ROLE: INVALID CLIENT NUMBER");
+		send_demon_console_color_msg(YELLOW, "ROLE: INVALID CLIENT NUMBER");
 		return;
 	}
 
@@ -16573,7 +16591,7 @@ static void server_builtin_setrole(char *cmd)
 		break;
 	default:
 		client_unlock();
-		send_demon_console_msg("BUG: UNKNOWN ROLE MODE %d", mode);
+		send_demon_console_color_msg(YELLOW, "BUG: UNKNOWN ROLE MODE %d", mode);
 		break;
 	}
 }
@@ -16587,7 +16605,7 @@ static void server_builtin_find(char *cmd)
 
 	rc = sscanf(cmd, "%*s %s", name);
 	if (rc != 1) {
-		send_demon_console_msg("INVALID FIND COMMAND");
+		send_demon_console_color_msg(YELLOW, "INVALID FIND COMMAND");
 		return;
 	}
 	pthread_mutex_lock(&universe_mutex);
@@ -16624,11 +16642,11 @@ static void server_builtin_ai_trace(char *cmd)
 		rc = lookup_by_id(ai_trace_id);
 		if (rc < 0) {
 			pthread_mutex_unlock(&universe_mutex);
-			send_demon_console_msg("WARNING TRACING %u, OBJECT NOT FOUND", ai_trace_id);
+			send_demon_console_color_msg(YELLOW, "WARNING TRACING %u, OBJECT NOT FOUND", ai_trace_id);
 		} else {
 			if (go[rc].type != OBJTYPE_SHIP2) {
 				pthread_mutex_unlock(&universe_mutex);
-				send_demon_console_msg("WARNING TRACING %u, NOT NPC SHIP", ai_trace_id);
+				send_demon_console_color_msg(YELLOW, "WARNING TRACING %u, NOT NPC SHIP", ai_trace_id);
 			} else {
 				pthread_mutex_unlock(&universe_mutex);
 			}
@@ -22231,12 +22249,12 @@ static int run_initial_lua_scripts(void)
 	if (rc) {
 		char errmsg[1000];
 		snprintf(errmsg, sizeof(errmsg) - 1, "ERROR IN SCRIPT %s", initial_lua_script);
-		send_demon_console_msg("%s", errmsg);
+		send_demon_console_color_msg(YELLOW, "%s", errmsg);
 		fprintf(stderr, "%s\n", errmsg);
 
 		snprintf(errmsg, sizeof(errmsg) - 1, "LUA: %s",
 			lua_tostring(lua_state, -1));
-		send_demon_console_msg("%s", errmsg);
+		send_demon_console_color_msg(YELLOW, "%s", errmsg);
 		fprintf(stderr, "%s\n", errmsg);
 	}
 	return rc;
@@ -22248,12 +22266,12 @@ static void print_lua_error_message(char *error_context, char *lua_command)
 
 	snprintf(error_msg, sizeof(error_msg) - 1, "%s %s", error_context, lua_command);
 	fprintf(stderr, "%s", error_msg);
-	send_demon_console_msg("%s", error_msg);
+	send_demon_console_color_msg(YELLOW, "%s", error_msg);
 
 	snprintf(error_msg, sizeof(error_msg) - 1, "LUA: %s",
 		lua_tostring(lua_state, -1));
 	fprintf(stderr, "%s", error_msg);
-	send_demon_console_msg("%s", error_msg);
+	send_demon_console_color_msg(YELLOW, "%s", error_msg);
 }
 
 /* Parse a lua command into tokens.  Input is lua_command, output is arg[],
@@ -22305,7 +22323,7 @@ static void process_lua_commands(void)
 
 		nargs = tokenize_lua_command_args(lua_command, arg, ARRAYSIZE(arg));
 		if (nargs <= 0) {
-			send_demon_console_msg("NARGS IS UNEXPECTEDLY %d", nargs);
+			send_demon_console_color_msg(YELLOW, "NARGS IS UNEXPECTEDLY %d", nargs);
 			pthread_mutex_lock(&universe_mutex);
 			continue;
 		}

@@ -5409,6 +5409,7 @@ static int process_collision_notification()
 }
 
 static void print_demon_console_msg(const char *fmt, ...);
+static void print_demon_console_color_msg(int color, const char *fmt, ...);
 static void delete_object(uint32_t id)
 {
 	int i;
@@ -12525,6 +12526,8 @@ static int process_console_op(void)
 {
 	int rc;
 	uint8_t subcmd;
+	int color;
+	uint8_t u8color;
 	uint8_t buffer[DEMON_CONSOLE_MSG_MAX];
 
 	rc = read_and_unpack_buffer(buffer, "b", &subcmd);
@@ -12532,10 +12535,16 @@ static int process_console_op(void)
 		return rc;
 	switch (subcmd) {
 	case OPCODE_CONSOLE_SUBCMD_ADD_TEXT:
+		rc = read_and_unpack_buffer(buffer, "b", &u8color);
+		if (rc != 0)
+			return rc;
+		color = u8color;
+		if (color >= NCOLORS)
+			color = UI_COLOR(demon_default);
 		memset(buffer, 0, sizeof(buffer));
 		rc = snis_readsocket(gameserver_sock, buffer, sizeof(buffer));
 		buffer[DEMON_CONSOLE_MSG_MAX - 1] = '\0';
-		text_window_add_text(demon_ui.console, (char *) buffer);
+		text_window_add_color_text(demon_ui.console, (char *) buffer, color);
 		break;
 	default:
 		return -1;
@@ -15313,7 +15322,7 @@ static void show_comms(GtkWidget *w)
 static void send_demon_comms_packet_to_server(char *msg)
 {
 	if (demon_ui.captain_of < 0) {
-		print_demon_console_msg("YOU MUST BE IN CAPTAIN MODE TO DO THAT");
+		print_demon_console_color_msg(YELLOW, "YOU MUST BE IN CAPTAIN MODE TO DO THAT");
 		return;
 	}
 	send_comms_packet_to_server(msg, OPCODE_DEMON_COMMS_XMIT, go[demon_ui.captain_of].id);
@@ -16080,6 +16089,18 @@ static void print_demon_console_msg(const char *fmt, ...)
 	text_window_add_text(demon_ui.console, buffer);
 }
 
+static void print_demon_console_color_msg(int color, const char *fmt, ...)
+{
+	va_list arg_ptr;
+	char buffer[256];
+
+	va_start(arg_ptr, fmt);
+	vsnprintf(buffer, sizeof(buffer) - 1, fmt, arg_ptr);
+	va_end(arg_ptr);
+	text_window_add_color_text(demon_ui.console, buffer, color);
+}
+
+
 static struct tweakable_var_descriptor client_tweak[] = {
 	{ "TTS_VOLUME", "TEXT TO SPEECH VOLUME", &text_to_speech_volume, 'f',
 		0.0, 1.0, 0.33, 0, 0, 0 },
@@ -16125,13 +16146,13 @@ static void client_demon_follow(char *cmd)
 			print_demon_console_msg("NO LONGER FOLLOWING %u", demon_ui.follow_id);
 			demon_ui.follow_id = -1;
 		} else {
-			print_demon_console_msg("INVALID FOLLOW COMMAND");
+			print_demon_console_color_msg(YELLOW, "INVALID FOLLOW COMMAND");
 		}
 		return;
 	}
 	rc = lookup_object_by_id(id);
 	if (rc < 0) {
-		print_demon_console_msg("FAILED TO LOOKUP ID %u", id);
+		print_demon_console_color_msg(YELLOW, "FAILED TO LOOKUP ID %u", id);
 		return;
 	}
 	demon_ui.follow_id = id;
@@ -16247,7 +16268,7 @@ static int construct_demon_command(char *input,
 				sprintf(errmsg, "missing argument to goto command");
 				goto error;
 			}
-			print_demon_console_msg("GOTO COMMAND IS NOT IMPLEMENTED");
+			print_demon_console_color_msg(YELLOW, "GOTO COMMAND IS NOT IMPLEMENTED");
 			break; 
 		case 4: /* patrol */
 			s = strtok_r(NULL, DEMON_CMD_DELIM, &saveptr);
@@ -16255,7 +16276,7 @@ static int construct_demon_command(char *input,
 				sprintf(errmsg, "missing argument to patrol command");
 				goto error;
 			}
-			print_demon_console_msg("PATROL COMMAND IS NOT IMPLEMENTED");
+			print_demon_console_color_msg(YELLOW, "PATROL COMMAND IS NOT IMPLEMENTED");
 			break; 
 		case 5: /* halt */
 			s = strtok_r(NULL, DEMON_CMD_DELIM, &saveptr);
@@ -16263,7 +16284,7 @@ static int construct_demon_command(char *input,
 				sprintf(errmsg, "missing argument to halt command");
 				goto error;
 			}
-			print_demon_console_msg("HALT COMMAND IS NOT IMPLEMENTED");
+			print_demon_console_color_msg(YELLOW, "HALT COMMAND IS NOT IMPLEMENTED");
 			break; 
 		case 6: /* identify */
 			s = strtok_r(NULL, DEMON_CMD_DELIM, &saveptr);

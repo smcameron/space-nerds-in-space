@@ -12,21 +12,10 @@
 #endif
 
 /* cardinal color indexes into huex array */
-#define BLACK 0
-#define WHITE 1
+#include "snis_cardinal_colors.h"
 extern int BLUE;
 extern int GREEN;
-#define YELLOW 2
-#define RED 3
-#define ORANGE 4
 extern int CYAN;
-#define MAGENTA 5
-#define DARKGREEN 6
-#define DARKRED 7
-#define AMBER 8
-#define LIMEGREEN 9
-#define DARKTURQUOISE 10
-#define ORANGERED 11
 
 #define NCOLORS 12              /* number of "cardinal" colors */
 #define NSPARKCOLORS 25         /* 25 shades from yellow to red for the sparks */
