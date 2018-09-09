@@ -750,14 +750,19 @@ static void free_timer_events(struct timer_event **e)
 	*e = NULL;
 }
 
+static void send_demon_console_msg(const char *fmt, ...);
+
 static int do_lua_pcall(char *function_name, lua_State *l, int nargs, int nresults, int errfunc)
 {
 	int rc;
 
 	rc = lua_pcall(l, nargs, nresults, errfunc);
 	if (rc) {
-		fprintf(stderr, "snis_server: lua callback '%s' had error %d: '%s'.\n",
+		char errmsg[1000];
+		snprintf(errmsg, sizeof(errmsg) - 1, "snis_server: lua callback '%s' had error %d: '%s'.\n",
 			function_name, rc, lua_tostring(l, -1));
+		send_demon_console_msg("%s", errmsg);
+		fprintf(stderr, "%s\n", errmsg);
 		stacktrace("do_lua_pcall");
 		fflush(stderr);
 	}
@@ -12723,8 +12728,6 @@ static void make_universe(void)
 	pthread_mutex_unlock(&universe_mutex);
 }
 
-static void send_demon_console_msg(const char *fmt, ...);
-
 static void regenerate_universe(void)
 {
 	disable_rts_mode();
@@ -22235,9 +22238,17 @@ static int run_initial_lua_scripts(void)
 	if (rc != 0)
 		return rc;
 	rc = luaL_dofile(lua_state, scriptname);
-	if (rc)
-		fprintf(stderr, "Error executing lua script: %s\n",
+	if (rc) {
+		char errmsg[1000];
+		snprintf(errmsg, sizeof(errmsg) - 1, "ERROR IN SCRIPT %s", initial_lua_script);
+		send_demon_console_msg("%s", errmsg);
+		fprintf(stderr, "%s\n", errmsg);
+
+		snprintf(errmsg, sizeof(errmsg) - 1, "LUA: %s",
 			lua_tostring(lua_state, -1));
+		send_demon_console_msg("%s", errmsg);
+		fprintf(stderr, "%s\n", errmsg);
+	}
 	return rc;
 }
 
@@ -22256,13 +22267,16 @@ static void process_lua_commands(void)
 		pthread_mutex_unlock(&universe_mutex);
 		rc = luaL_dofile(lua_state, lua_command);
 		if (rc) {
-			snprintf(error_msg, sizeof(error_msg), "Error executing lua script: %s\n",
+			snprintf(error_msg, sizeof(error_msg) - 1, "ERROR IN SCRIPT %s", lua_command);
+			fprintf(stderr, "%s", error_msg);
+			send_demon_console_msg("%s", error_msg);
+
+			snprintf(error_msg, sizeof(error_msg) - 1, "LUA: %s",
 				lua_tostring(lua_state, -1));
 			fprintf(stderr, "%s", error_msg);
-			send_demon_console_msg("Error executing lua script:");
-			send_demon_console_msg(lua_tostring(lua_state, -1));
+			send_demon_console_msg("%s", error_msg);
 		} else {
-			snprintf(error_msg, sizeof(error_msg), "LUA SCRIPT %s STARTED", lua_command);
+			snprintf(error_msg, sizeof(error_msg), "EXECUTING LUA SCRIPT %s", lua_command);
 			send_demon_console_msg(error_msg);
 		}
 		pthread_mutex_lock(&universe_mutex);
