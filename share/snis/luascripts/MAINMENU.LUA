@@ -7,19 +7,19 @@ function main_menu_callback(shipid, selection)
 	player_ids = get_player_ship_ids();
 	if (selection == 0) then
 		text_to_speech(player_ids[1], "Begin mission, training mission one");
-		enqueue_lua_script("TRAINING-MISSION-1.LUA");
+		enqueue_lua_script("TRAINING-MISSION-1");
 	elseif (selection == 1) then
 		text_to_speech(player_ids[1], "Begin mission, saving planet erph");
-		enqueue_lua_script("SAVING-PLANET-ERPH.LUA");
+		enqueue_lua_script("SAVING-PLANET-ERPH");
 	elseif (selection == 2) then
 		text_to_speech(player_ids[1], "Begin mission, space pox");
-		enqueue_lua_script("SPACEPOX.LUA");
+		enqueue_lua_script("SPACEPOX");
 	elseif (selection == 3) then
 		text_to_speech(player_ids[1], "Begin mission, kali");
-		enqueue_lua_script("KALI.LUA");
+		enqueue_lua_script("KALI");
 	elseif (selection == 4) then
 		text_to_speech(player_ids[1], "Begin mission, demolisher");
-		enqueue_lua_script("DEMOLISHER.LUA");
+		enqueue_lua_script("DEMOLISHER");
 	end
 end
 

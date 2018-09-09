@@ -16707,7 +16707,6 @@ static int process_exec_lua_script(struct game_client *c)
 	char txt[300];
 	int i, rc;
 	uint8_t len;
-	char scriptname[PATH_MAX];
 	char firstword[300];
 
 	rc = read_and_unpack_buffer(c, buffer, "b", &len);
@@ -16732,13 +16731,8 @@ static int process_exec_lua_script(struct game_client *c)
 		}
 	}
 
-	/* Maybe it's a lua script. */
-	strncat(txt, ".LUA", sizeof(txt) - strlen(txt) - 1);
-
-#define LUASCRIPTDIR "share/snis/luascripts"
-	snprintf(scriptname, sizeof(scriptname) - 1, "%s/%s", LUASCRIPTDIR, txt);
 	pthread_mutex_lock(&universe_mutex);
-	enqueue_lua_command(scriptname); /* queue up for execution by main thread. */
+	enqueue_lua_command(txt); /* queue up for execution by main thread. */
 	pthread_mutex_unlock(&universe_mutex);
 	return 0;
 }
@@ -18124,7 +18118,7 @@ static int l_enqueue_lua_script(lua_State *l)
 		goto error;
 
 	uppercase(upper_scriptname);
-	snprintf(scriptname, sizeof(scriptname) - 1, "%s/%s", LUASCRIPTDIR, upper_scriptname);
+	snprintf(scriptname, sizeof(scriptname) - 1, "%s", upper_scriptname);
 	pthread_mutex_lock(&universe_mutex);
 	enqueue_lua_command(scriptname); /* queue up for execution by main thread. */
 	pthread_mutex_unlock(&universe_mutex);
@@ -22252,33 +22246,90 @@ static int run_initial_lua_scripts(void)
 	return rc;
 }
 
+static void print_lua_error_message(char *error_context, char *lua_command)
+{
+	char error_msg[1000];
+
+	snprintf(error_msg, sizeof(error_msg) - 1, "%s %s", error_context, lua_command);
+	fprintf(stderr, "%s", error_msg);
+	send_demon_console_msg("%s", error_msg);
+
+	snprintf(error_msg, sizeof(error_msg) - 1, "LUA: %s",
+		lua_tostring(lua_state, -1));
+	fprintf(stderr, "%s", error_msg);
+	send_demon_console_msg("%s", error_msg);
+}
+
+/* Parse a lua command into tokens.  Input is lua_command, output is arg[],
+ * full of allocated strings. Return is the number of args.
+ */
+static int tokenize_lua_command_args(char *lua_command, char *arg[], int maxargs)
+{
+	char *saveptr;
+	char *cmd, *c, *token;
+	int i = 0;
+
+	cmd = strdup(lua_command);
+	c = cmd;
+	do {
+		token = strtok_r(c, " ", &saveptr);
+		c = NULL;
+		if (!token)
+			break;
+		arg[i] = strdup(token);
+		i++;
+	} while (i < maxargs);
+	free(cmd);
+	return i;
+}
+
+static void free_lua_command_tokens(char *arg[], int nargs, int maxargs)
+{
+	int i;
+
+	for (i = 0; i < nargs; i++) {
+		free(arg[i]);
+		arg[i] = NULL;
+	}
+	memset(arg, 0, sizeof(arg[0]) * maxargs);
+}
+
 static void process_lua_commands(void)
 {
-	char lua_command[PATH_MAX];
-	char error_msg[DEMON_CONSOLE_MSG_MAX];
-	int rc;
+	char lua_command[PATH_MAX], scriptname[PATH_MAX];
+	char *arg[16];
+	int rc, nargs;
 
 	pthread_mutex_lock(&universe_mutex);
 	for (;;) {
 		dequeue_lua_command(lua_command, sizeof(lua_command));
 		if (lua_command[0] == '\0') /* empty string */
 			break;
-
 		pthread_mutex_unlock(&universe_mutex);
-		rc = luaL_dofile(lua_state, lua_command);
-		if (rc) {
-			snprintf(error_msg, sizeof(error_msg) - 1, "ERROR IN SCRIPT %s", lua_command);
-			fprintf(stderr, "%s", error_msg);
-			send_demon_console_msg("%s", error_msg);
 
-			snprintf(error_msg, sizeof(error_msg) - 1, "LUA: %s",
-				lua_tostring(lua_state, -1));
-			fprintf(stderr, "%s", error_msg);
-			send_demon_console_msg("%s", error_msg);
-		} else {
-			snprintf(error_msg, sizeof(error_msg), "EXECUTING LUA SCRIPT %s", lua_command);
-			send_demon_console_msg(error_msg);
+		nargs = tokenize_lua_command_args(lua_command, arg, ARRAYSIZE(arg));
+		if (nargs <= 0) {
+			send_demon_console_msg("NARGS IS UNEXPECTEDLY %d", nargs);
+			pthread_mutex_lock(&universe_mutex);
+			continue;
 		}
+
+		snprintf(scriptname, sizeof(scriptname) - 1, "%s/%s.LUA", LUASCRIPTDIR, arg[0]);
+		rc = luaL_loadfile(lua_state, scriptname);
+		if (rc) {
+			print_lua_error_message("ERROR LOADING", scriptname);
+			free_lua_command_tokens(arg, nargs, ARRAYSIZE(arg));
+			pthread_mutex_lock(&universe_mutex);
+			continue;
+		}
+
+		for (int i = 0; i < nargs; i++) /* Push the args. */
+			lua_pushstring(lua_state, arg[i]);
+
+		rc = lua_pcall(lua_state, nargs, 0, 0); /* Call the script */
+		if (rc)
+			print_lua_error_message("ERROR IN SCRIPT", arg[0]);
+		free_lua_command_tokens(arg, nargs, ARRAYSIZE(arg));
 		pthread_mutex_lock(&universe_mutex);
 	}
 	pthread_mutex_unlock(&universe_mutex);

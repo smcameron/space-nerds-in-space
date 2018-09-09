@@ -441,6 +441,14 @@ show_menu(id, menustring, callback_function);
 enqueue_lua_script(scriptname);
 	Queue the named lua script for execution;
 
+	The script must reside in share/snis/luascripts, and the filename must
+	end in ".LUA". However you must omit the directory and ".LUA" in the
+	call to enqueue_lua_script.  That is to say:
+
+		enqueue_lua_script("X");
+
+	will queue up the script "share/snis/luascripts/X.LUA" for execution.
+
 get_ship_attribute(id, attribute_name); -- returns the specified attribute of the ship.  The
 	type depends on the attribute, though generally will be a number or a string.
 
