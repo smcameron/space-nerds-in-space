@@ -1,0 +1,11 @@
+
+Do not modify the mikktspace.c or mikktspace.h in this directory.
+
+This is unmodified code by Morton Mikkelsen for computing tangent and
+bitangent vectors for purposes of normal mapping.
+    
+I have taken this code from from the godot engine project.
+https://github.com/godotengine/godot from thirdparty/misc/mikktspace.[ch]
+    
+There's a relevant pdf here: http://image.diku.dk/projects/media/morten.mikkelsen.08.pdf
+

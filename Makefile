@@ -1037,11 +1037,15 @@ spelled_numbers:	spelled_numbers.c
 ${SSGL}:
 	(cd ssgl ; ${MAKE} )
 
+mikktspace/mikktspace.o:
+	(cd mikktspace; ${MAKE} )
+
 mostly-clean:
 	rm -f ${SERVEROBJS} ${CLIENTOBJS} ${LIMCLIENTOBJS} ${SDLCLIENTOBJS} ${PROGS} ${SSGL} \
 	${BINPROGS} ${UTILPROGS} stl_parser snis_limited_graph.c snis_limited_client.c \
 	test-space-partition snis_test_audio.o snis_test_audio joystick_test local_termios2.h
 	( cd ssgl; ${MAKE} clean )
+	( cd mikktspace; ${MAKE} clean )
 
 test-marshal:	snis_marshal.c stacktrace.o Makefile
 	$(CC) -DTEST_MARSHALL -o test-marshal snis_marshal.c stacktrace.o
