@@ -13,6 +13,7 @@
 #include "snis_graph.h"
 #include "material.h"
 #include "quat.h"
+#include "mikktspace/mikktspace.h"
 
 #define DEFINE_MESH_GLOBALS 1
 #include "mesh.h"
@@ -2344,4 +2345,141 @@ void mesh_aabb(struct mesh *m, float *minx, float *miny, float *minz, float *max
 			*maxz = m->v[i].z;
 	}
 	return;
+}
+
+/* Functions to allow mikktspace library to interface with our mesh representation */
+static int mikktspace_get_num_faces(const SMikkTSpaceContext *pContext)
+{
+	struct mesh *m = pContext->m_pUserData;
+
+	return m->ntriangles;
+}
+
+static int mikktspace_get_num_vertices_of_face(const SMikkTSpaceContext *pContext, const int iFace)
+{
+	return 3;
+}
+
+static void mikktspace_get_position(const SMikkTSpaceContext *pContext, float fvPosOut[],
+					const int iFace, const int iVert)
+{
+	struct mesh *m = pContext->m_pUserData;
+	struct triangle *t = &m->t[iFace];
+	struct vertex *v = t->v[iVert];
+
+	fvPosOut[0] = v->x;
+	fvPosOut[1] = v->y;
+	fvPosOut[2] = v->z;
+}
+
+static void mikktspace_get_normal(const SMikkTSpaceContext *pContext, float fvNormOut[],
+					const int iFace, const int iVert)
+{
+	struct mesh *m = pContext->m_pUserData;
+	struct triangle *t = &m->t[iFace];
+	struct vertex *v = &t->vnormal[iVert];
+
+	fvNormOut[0] = v->x;
+	fvNormOut[1] = v->y;
+	fvNormOut[2] = v->z;
+}
+
+static void mikktspace_get_tex_coord(const SMikkTSpaceContext *pContext, float fvTexcOut[],
+					const int iFace, const int iVert)
+{
+	struct mesh *m = pContext->m_pUserData;
+
+	fvTexcOut[0] = m->tex[iFace * 3 + iVert].u;
+	fvTexcOut[1] = m->tex[iFace * 3 + iVert].v;
+}
+
+static void mikktspace_set_t_space_basic(const SMikkTSpaceContext *pContext, const float fvTangent[],
+				const float fSign, const int iFace, const int iVert)
+{
+	struct mesh *m = pContext->m_pUserData;
+	struct triangle *t = &m->t[iFace];
+	union vec3 normal, tangent, bitangent;
+
+	/* Note this comment from mikktspace.h:
+	 *
+	 * -------
+	 * This function is used to return the tangent and fSign to the application.
+	 * fvTangent is a unit length vector.
+	 * For normal maps it is sufficient to use the following simplified version of the
+	 * bitangent which is generated at pixel/vertex level.
+	 *
+	 * bitangent = fSign * cross(vN, tangent);
+	 *
+	 * Note that the results are returned unindexed. It is possible to generate a new index list
+	 * But averaging/overwriting tangent spaces by using an already existing index list WILL
+	 * produce INCRORRECT results.  DO NOT! use an already existing index list.
+	 * -------
+	 *
+	 * I am not quite sure what those last 3 lines mean. I think they *might* mean that
+	 * if you were to try to store "the" normal/tangent/bitangent (NTB) with the vertex,
+	 * and vertices might be shared among triangles (this latter being true in our case),
+	 * you would run into problems. However, we store 3 NTBs per triangle, and we don't
+	 * store them in the vertices, so two triangles will never share the same storage for
+	 * NTBs for any vertices, so I *think* * that means we're fine here. I think what is
+	 * meant by "index list", is to have an array(s) of NTBs that is separate from the
+	 * triangles, with the triangles containing indices into this NTB array(s), with
+	 * different triangles potentially sharing NTB entries for shared vertices. We don't
+	 * do that.
+	 */
+
+	normal.v.x = t->vnormal[iVert].x;
+	normal.v.y = t->vnormal[iVert].y;
+	normal.v.z = t->vnormal[iVert].z;
+
+	tangent.v.x = fvTangent[0];
+	tangent.v.y = fvTangent[1];
+	tangent.v.z = fvTangent[2];
+
+	vec3_cross(&bitangent, &normal, &tangent);
+	vec3_mul_self(&bitangent, fSign);
+
+	t->vtangent[iVert].x = fvTangent[0];
+	t->vtangent[iVert].y = fvTangent[1];
+	t->vtangent[iVert].z = fvTangent[2];
+	t->vtangent[iVert].w = fSign; /* Put fSign in w, so we can calc bitangent in pixel shader */
+
+	t->vbitangent[iVert].x = bitangent.v.x;
+	t->vbitangent[iVert].y = bitangent.v.y;
+	t->vbitangent[iVert].z = bitangent.v.z;
+	t->vbitangent[iVert].w = 1.0;
+}
+
+#if 0
+/* TODO: fill this in if needed */
+static void mikktspace_set_t_space(const SMikkTSpaceContext *pContext, const float fvTangent[],
+				const float fvBiTangent[], const float fMagS, const float fMagT,
+				const tbool bIsOrientationPreserving, const int iFace,
+				const int iVert)
+{
+}
+#endif
+
+static SMikkTSpaceInterface mikktspace_interface = {
+	.m_getNumFaces			= mikktspace_get_num_faces,
+	.m_getNumVerticesOfFace		= mikktspace_get_num_vertices_of_face,
+	.m_getPosition			= mikktspace_get_position,
+	.m_getNormal			= mikktspace_get_normal,
+	.m_getTexCoord			= mikktspace_get_tex_coord,
+	.m_setTSpaceBasic		= mikktspace_set_t_space_basic,
+#if 0
+	/* TODO: fill this in if needed */
+	.m_setTSpace			= mikktspace_set_t_space,
+#else
+	.m_setTSpace			= NULL,
+#endif
+};
+
+void mesh_set_mikktspace_tangents_and_bitangents(struct mesh *m)
+{
+
+	struct SMikkTSpaceContext mikktspace_context;
+
+	mikktspace_context.m_pInterface = &mikktspace_interface;
+	mikktspace_context.m_pUserData = m;
+	genTangSpaceDefault(&mikktspace_context);
 }
