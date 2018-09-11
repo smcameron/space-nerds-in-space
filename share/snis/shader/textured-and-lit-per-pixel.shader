@@ -26,7 +26,9 @@ uniform float u_SpecularIntensity; /* between 0 and 1, 1 is very shiny, 0 is fla
 	out vec3 v_Normal;
 
 	#ifdef USE_NORMAL_MAP
-		out vec4 v_Tangent;
+		out vec3 v_Tangent;
+		out vec3 v_BiTangent;
+		out mat3 tbn;
 	#endif
 
 	uniform mat4 u_MVPMatrix;
@@ -39,14 +41,17 @@ uniform float u_SpecularIntensity; /* between 0 and 1, 1 is very shiny, 0 is fla
 	#endif
 	in vec3 a_Normal;
 	#ifdef USE_NORMAL_MAP
-		in vec4 a_Tangent;
+		in vec3 a_Tangent;
+		in vec3 a_BiTangent;
 	#endif
 
 	void main()
 	{
 		v_Normal = normalize(u_NormalMatrix * a_Normal);
 		#ifdef USE_NORMAL_MAP
-			v_Tangent = vec4(vec3(u_MVMatrix * vec4(a_Tangent.xyz, 0)), a_Tangent.w);
+			v_Tangent = normalize(u_NormalMatrix * a_Tangent);
+			v_BiTangent = normalize(u_NormalMatrix * a_BiTangent);
+			tbn = mat3(v_Tangent, v_BiTangent, v_Normal);
 		#endif
 
 		v_Position = vec3(u_MVMatrix * a_Position);
@@ -66,7 +71,9 @@ uniform float u_SpecularIntensity; /* between 0 and 1, 1 is very shiny, 0 is fla
 	in vec3 v_Normal;
 
 	#ifdef USE_NORMAL_MAP
-		in vec4 v_Tangent;
+		in vec3 v_Tangent;
+		in vec3 v_BiTangent;
+		in mat3 tbn;
 	#endif
 
 	uniform TEX_SAMPLER u_AlbedoTex;
@@ -75,7 +82,7 @@ uniform float u_SpecularIntensity; /* between 0 and 1, 1 is very shiny, 0 is fla
 	uniform vec4 u_TintColor;
 
 	#ifdef USE_NORMAL_MAP
-		uniform TEX_SAMPLER u_NormalTex;
+		uniform TEX_SAMPLER u_NormalMapTex;
 	#endif
 	#if defined(USE_SPECULAR) || defined(USE_SPECULAR_MAP)
 		#ifdef USE_SPECULAR_MAP
@@ -95,12 +102,11 @@ uniform float u_SpecularIntensity; /* between 0 and 1, 1 is very shiny, 0 is fla
 
 		vec3 light_dir = normalize(u_LightPos - v_Position);
 
-		#ifdef USE_NORMALMAP
-			// construct bitagnet and tbn matrix to convert normal map
-			vec3 bitangent = cross(v_Normal, v_Tangent.xyz) * v_Tangent.w;
-			vec3 normal_map = TEX_READ(u_NormalTex, uv).rgb;
-			vec3 normal = normalize(normal_map.x * v_Tangent.xyz +
-				normal_map.y * bitangent + normal_map.z * v_Normal);
+		#ifdef USE_NORMAL_MAP
+			// Hmm, this still needs work.
+			// vec3 normal = normalize(tbn * normalize(TEX_READ(u_NormalMapTex, uv).xyz * 2.0 - 1.0));
+			vec3 normal = normalize(tbn * (TEX_READ(u_NormalMapTex, uv).xyz * 2.0 - 1.0));
+			// vec3 normal = tbn * normalize(TEX_READ(u_NormalMapTex, uv).xyz);
 		#else
 			vec3 normal = v_Normal;
 		#endif
@@ -109,7 +115,7 @@ uniform float u_SpecularIntensity; /* between 0 and 1, 1 is very shiny, 0 is fla
 		vec4 albedo = TEX_READ(u_AlbedoTex, uv);
 
 		// diffuse is light dot normal
-		float diffuse = max(AMBIENT, dot(normal, light_dir));
+		float diffuse = max(AMBIENT, clamp(dot(normal, light_dir), 0.0, 1.0));
 
 		// base diffuse color
 		vec3 color = albedo.rgb * u_LightColor * diffuse;
@@ -121,7 +127,7 @@ uniform float u_SpecularIntensity; /* between 0 and 1, 1 is very shiny, 0 is fla
 			// blinn phong half vector specular
 			vec3 view_dir = normalize(-v_Position);
 			vec3 half_dir = normalize(light_dir + view_dir);
-			float n_dot_h = max(0, dot(normal, half_dir));
+			float n_dot_h = max(0, clamp(dot(normal, half_dir), 0.0, 1.0));
 			float spec = pow(n_dot_h, u_SpecularPower);
 
 			color += u_SpecularColor * u_SpecularIntensity * spec;

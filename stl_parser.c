@@ -790,7 +790,8 @@ static void compact_mesh_allocations(struct mesh *m)
 		m->tex = newtex;
 }
 
-static void parse_mtllib(char *parentfilename, char *mtllib_line, char *tfile, int tfilelen, char *efile, int efilelen)
+static void parse_mtllib(char *parentfilename, char *mtllib_line, char *tfile,
+				int tfilelen, char *efile, int efilelen, char *nfile, int nfilelen)
 {
 	char fname[PATH_MAX];
 	char fname2[PATH_MAX];
@@ -822,6 +823,7 @@ static void parse_mtllib(char *parentfilename, char *mtllib_line, char *tfile, i
 
 	tfile[0] = '\0';
 	efile[0] = '\0';
+	nfile[0] = '\0';
 
 	while (!feof(f)) {
 		s = fgets(ln, sizeof(ln), f);
@@ -845,6 +847,15 @@ static void parse_mtllib(char *parentfilename, char *mtllib_line, char *tfile, i
 			if (rc != 1)
 				continue;
 			snprintf(efile, efilelen, "%s/%s", dname, texturefile);
+		}
+		/* This is a non-standard extension to obj... wavefront obj doesn't support
+		 * normal maps, only bump maps, which the latter are fairly useless.
+		 */
+		if (!nfile[0] && strncmp(ln, "norm ", 5) == 0) {
+			rc = sscanf(ln, "norm %s", texturefile);
+			if (rc != 1)
+				continue;
+			snprintf(nfile, nfilelen, "%s/%s", dname, texturefile);
 		}
 	}
 out:
@@ -880,6 +891,30 @@ static void mesh_compute_shared_vertex_flags(struct mesh *m, struct vertex_owner
 	}
 }
 
+/* If we have a file-blah-blah.obj, check for file-blah-blah-normalmap.png and if
+ * we find it, assume it is a normal map we can use.
+ */
+static void search_for_normalmap_file(char *filename, char *normalmapfile, int nmlen)
+{
+	int rc, n;
+	struct stat statbuf;
+	char candidate[PATH_MAX];
+
+	n = strlen(filename);
+	if (n < 5)
+		return;
+
+	if (strcmp(&filename[n - 4], ".obj") == 0) {
+		snprintf(candidate, sizeof(candidate) - 1, "%s", filename);
+		candidate[n - 4] = '\0';
+		strncat(candidate, "-normalmap.png", sizeof(candidate) - 1);
+		candidate[sizeof(candidate) - 1] = '\0';
+		rc = stat(candidate, &statbuf);
+		if (rc == 0)
+			snprintf(normalmapfile, nmlen, "%s", candidate);
+	}
+}
+
 struct mesh *read_obj_file(char *filename)
 {
 	FILE *f;
@@ -888,6 +923,7 @@ struct mesh *read_obj_file(char *filename)
 	char line[1000];
 	char tfile[PATH_MAX];
 	char efile[PATH_MAX];
+	char nfile[PATH_MAX];
 	int continuation;
 	int lineno = 0;
 	int verts_alloced = 0;
@@ -961,7 +997,7 @@ struct mesh *read_obj_file(char *filename)
 				goto flame_out;
 		} else if (strncmp(line, "mtllib ", 2) == 0) {
 			printf("parsing material library: %s\n", line);
-			parse_mtllib(filename, line, tfile, sizeof(tfile), efile, sizeof(efile));
+			parse_mtllib(filename, line, tfile, sizeof(tfile), efile, sizeof(efile), nfile, sizeof(nfile));
 			if (strcmp(tfile, "") != 0) {
 				struct material *mtl;
 
@@ -970,6 +1006,11 @@ struct mesh *read_obj_file(char *filename)
 				mtl->texture_mapped.texture_id = graph_dev_load_texture(tfile);
 				if (strcmp(efile, "") != 0)
 					mtl->texture_mapped.emit_texture_id = graph_dev_load_texture(efile);
+				if (strcmp(nfile, "") == 0)
+					search_for_normalmap_file(filename, nfile, sizeof(nfile));
+				if (strcmp(nfile, "") != 0) {
+					mtl->texture_mapped.normalmap_id = graph_dev_load_texture(nfile);
+				}
 				m->material = mtl;
 			}
 		} else if (strncmp(line, "usemtl ", 2) == 0) {

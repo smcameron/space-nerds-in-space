@@ -723,6 +723,7 @@ struct graph_dev_gl_textured_shader {
 	GLint emit_intensity_id;
 	GLint texture_cubemap_id;
 	GLint normalmap_cubemap_id;
+	GLint normalmap_id;
 	GLint light_pos_id;
 	GLint specular_power_id;
 	GLint specular_intensity_id;
@@ -828,6 +829,8 @@ static struct graph_dev_gl_textured_shader textured_shader;
 static struct graph_dev_gl_textured_shader textured_with_sphere_shadow_shader;
 static struct graph_dev_gl_textured_shader textured_lit_shader;
 static struct graph_dev_gl_textured_shader textured_lit_emit_shader;
+static struct graph_dev_gl_textured_shader textured_lit_emit_normal_shader;
+static struct graph_dev_gl_textured_shader textured_lit_normal_shader;
 static struct graph_dev_gl_textured_shader textured_cubemap_lit_shader;
 static struct graph_dev_gl_textured_shader textured_cubemap_lit_normal_map_shader;
 static struct graph_dev_gl_textured_shader textured_cubemap_shield_shader;
@@ -1294,6 +1297,9 @@ static void graph_dev_raster_texture(struct graph_dev_gl_textured_shader *shader
 
 	if (shader->normalmap_cubemap_id >= 0)
 		BIND_TEXTURE(GL_TEXTURE3, GL_TEXTURE_CUBE_MAP, normalmap_texture_number);
+
+	if (shader->normalmap_id >= 0)
+		BIND_TEXTURE(GL_TEXTURE3, GL_TEXTURE_2D, normalmap_texture_number);
 
 	if (shader->emit_texture_2d_id >= 0)
 		BIND_TEXTURE(GL_TEXTURE1, GL_TEXTURE_2D, emit_texture_number);
@@ -2218,7 +2224,7 @@ void graph_dev_draw_entity(struct entity_context *cx, struct entity *e, union ve
 		float texture_alpha = 1.0;
 		GLuint texture_id = 0;
 		GLuint emit_texture_id = 0;
-		GLuint normalmap_id = -1;
+		GLuint normalmap_id = 0;
 
 		/* for sphere shadows */
 		struct shadow_sphere_data shadow_sphere;
@@ -2253,8 +2259,13 @@ void graph_dev_draw_entity(struct entity_context *cx, struct entity *e, union ve
 				specular_power = mt->specular_power;
 				specular_intensity = mt->specular_intensity;
 				emit_intensity = mt->emit_intensity * e->emit_intensity;
+				normalmap_id = mt->normalmap_id;
 
-				if (emit_texture_id > 0)
+				if (emit_texture_id > 0 && normalmap_id > 0)
+					tex_shader = &textured_lit_emit_normal_shader;
+				else if (normalmap_id > 0)
+					tex_shader = &textured_lit_normal_shader;
+				else if (emit_texture_id > 0)
 					tex_shader = &textured_lit_emit_shader;
 				else
 					tex_shader = &textured_lit_shader;
@@ -2321,7 +2332,7 @@ void graph_dev_draw_entity(struct entity_context *cx, struct entity *e, union ve
 				normalmap_id = mt->normalmap_id;
 
 				if (mt->ring_material && mt->ring_material->type == MATERIAL_TEXTURED_PLANET_RING) {
-					if (normalmap_id == (GLuint) -1)
+					if (normalmap_id <= 0)
 						tex_shader = &textured_cubemap_lit_with_annulus_shadow_shader;
 					else
 						tex_shader =
@@ -2348,7 +2359,7 @@ void graph_dev_draw_entity(struct entity_context *cx, struct entity *e, union ve
 					shadow_annulus.r2 = vec3_cwise_max(&e->scale) *
 									ring_outer_radius;
 				} else {
-					if (normalmap_id != (GLuint) -1)
+					if (normalmap_id > 0)
 						tex_shader = &textured_cubemap_lit_normal_map_shader;
 					else
 						tex_shader = &textured_cubemap_lit_shader;
@@ -2920,6 +2931,11 @@ static void setup_textured_shader(const char *basename, const char *defines,
 	shader->emit_texture_2d_id = glGetUniformLocation(shader->program_id, "u_EmitTex");
 	if (shader->emit_texture_2d_id >= 0)
 		glUniform1i(shader->emit_texture_2d_id, 1);
+	shader->normalmap_cubemap_id = -1;
+	shader->texture_cubemap_id = -1;
+	shader->normalmap_id = glGetUniformLocation(shader->program_id, "u_NormalMapTex");
+	if (shader->normalmap_id >= 0)
+		glUniform1i(shader->normalmap_id, 3);
 	shader->emit_intensity_id = glGetUniformLocation(shader->program_id, "u_EmitIntensity");
 	if (shader->emit_intensity_id >= 0)
 		glUniform1f(shader->emit_intensity_id, 1.0);
@@ -2940,6 +2956,8 @@ static void setup_textured_shader(const char *basename, const char *defines,
 
 	shader->vertex_position_id = glGetAttribLocation(shader->program_id, "a_Position");
 	shader->vertex_normal_id = glGetAttribLocation(shader->program_id, "a_Normal");
+	shader->vertex_tangent_id = glGetAttribLocation(shader->program_id, "a_Tangent");
+	shader->vertex_bitangent_id = glGetAttribLocation(shader->program_id, "a_BiTangent");
 	shader->texture_coord_id = glGetAttribLocation(shader->program_id, "a_TexCoord");
 
 	shader->shadow_sphere_id = glGetUniformLocation(shader->program_id, "u_Sphere");
@@ -2975,12 +2993,15 @@ static void setup_textured_cubemap_shader(const char *basename, int use_normal_m
 	shader->mv_matrix_id = glGetUniformLocation(shader->program_id, "u_MVMatrix");
 	shader->normal_matrix_id = glGetUniformLocation(shader->program_id, "u_NormalMatrix");
 	shader->light_pos_id = glGetUniformLocation(shader->program_id, "u_LightPos");
+
 	shader->texture_cubemap_id = glGetUniformLocation(shader->program_id, "u_AlbedoTex");
 	glUniform1i(shader->texture_cubemap_id, 0);
 	if (use_normal_map) {
 		shader->normalmap_cubemap_id = glGetUniformLocation(shader->program_id, "u_NormalMapTex");
 		glUniform1i(shader->normalmap_cubemap_id, 3); /* GL_TEXTURE3 */
 	}
+	shader->texture_2d_id = -1;
+	shader->normalmap_id = -1;
 	shader->tint_color_id = glGetUniformLocation(shader->program_id, "u_TintColor");
 	shader->ring_texture_v_id = glGetUniformLocation(shader->program_id, "u_ring_texture_v");
 	if (shader->ring_texture_v_id >= 0)
@@ -3567,6 +3588,13 @@ int graph_dev_setup(const char *shader_dir)
 	setup_textured_shader("textured-and-lit-per-pixel", UNIVERSAL_SHADER_HEADER, &textured_lit_shader);
 	setup_textured_shader("textured-and-lit-per-pixel", UNIVERSAL_SHADER_HEADER "#define USE_EMIT_MAP",
 				&textured_lit_emit_shader);
+	setup_textured_shader("textured-and-lit-per-pixel", UNIVERSAL_SHADER_HEADER
+				"#define USE_EMIT_MAP\n"
+				"#define USE_NORMAL_MAP 1\n",
+				&textured_lit_emit_normal_shader);
+	setup_textured_shader("textured-and-lit-per-pixel", UNIVERSAL_SHADER_HEADER
+				"#define USE_NORMAL_MAP 1\n",
+				&textured_lit_normal_shader);
 	setup_textured_cubemap_shader("textured-cubemap-and-lit-per-pixel", 0, &textured_cubemap_lit_shader);
 	setup_textured_cubemap_shader("textured-cubemap-and-lit-per-pixel", 1, &textured_cubemap_lit_normal_map_shader);
 	setup_textured_cubemap_shader("textured-cubemap-shield-per-pixel", 0, &textured_cubemap_shield_shader);

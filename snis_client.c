@@ -19308,7 +19308,7 @@ static int load_per_solarsystem_textures()
 		else
 			planet_material[i].textured_planet.ring_material = NULL;
 		if (strcmp(solarsystem_assets->planet_normalmap[i], "no-normal-map") == 0) {
-			planet_material[i].textured_planet.normalmap_id = -1;
+			planet_material[i].textured_planet.normalmap_id = 0;
 		} else {
 			sprintf(path, "solarsystems/%s/%s", solarsystem_name, solarsystem_assets->planet_normalmap[i]);
 			planet_material[i].textured_planet.normalmap_id = load_cubemap_textures(0, path);

@@ -2441,7 +2441,7 @@ static void mikktspace_set_t_space_basic(const SMikkTSpaceContext *pContext, con
 	t->vtangent[iVert].x = fvTangent[0];
 	t->vtangent[iVert].y = fvTangent[1];
 	t->vtangent[iVert].z = fvTangent[2];
-	t->vtangent[iVert].w = fSign; /* Put fSign in w, so we can calc bitangent in pixel shader */
+	t->vtangent[iVert].w = 1.0; /* Put fSign in w, so we can calc bitangent in pixel shader? */
 
 	t->vbitangent[iVert].x = bitangent.v.x;
 	t->vbitangent[iVert].y = bitangent.v.y;

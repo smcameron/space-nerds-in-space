@@ -61,6 +61,7 @@ struct material_color_by_w {
 struct material_texture_mapped {
 	int texture_id;
 	int emit_texture_id;
+	int normalmap_id;
 	float specular_power;
 	float specular_intensity;
 	float emit_intensity; /* Range 0.0 - 1.0, and later multiplied by per-entity emit_intensity */

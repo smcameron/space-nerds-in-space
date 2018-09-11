@@ -966,7 +966,7 @@ int main(int argc, char *argv[])
 		if (normalmapname)
 			planet_material.textured_planet.normalmap_id = load_cubemap_textures(0, normalmapname);
 		else
-			planet_material.textured_planet.normalmap_id = -1;
+			planet_material.textured_planet.normalmap_id = 0;
 		planet_material.textured_planet.ring_material = 0;
 		material_init_atmosphere(&atmosphere_material);
 	} else if (cubemap_mode) {
@@ -978,7 +978,7 @@ int main(int argc, char *argv[])
 		if (normalmapname)
 			planet_material.textured_planet.normalmap_id = load_cubemap_textures(0, normalmapname);
 		else
-			planet_material.textured_planet.normalmap_id = -1;
+			planet_material.textured_planet.normalmap_id = 0;
 	} else if (thrust_mode) {
 		target_mesh = init_thrust_mesh(70, 200, 1.3, 1);
 		material_init_textured_particle(&thrust_material);
@@ -998,8 +998,11 @@ int main(int argc, char *argv[])
 				mesh_cylindrical_xz_uv_map(target_mesh);
 			else
 				mesh_cylindrical_xy_uv_map(target_mesh);
+			mesh_set_mikktspace_tangents_and_bitangents(target_mesh);
 			material_init_texture_mapped(&cyl_albedo);
 			cyl_albedo.texture_mapped.texture_id = graph_dev_load_texture(cylinder_albedo);
+			if (normalmapname && cyl_albedo.texture_mapped.normalmap_id <= 0)
+				cyl_albedo.texture_mapped.normalmap_id = graph_dev_load_texture(normalmapname);
 		}
 		if (cylinder_emit && cylinder_albedo) {
 			if (cylindrical_axis == 0)
@@ -1008,7 +1011,10 @@ int main(int argc, char *argv[])
 				mesh_cylindrical_xz_uv_map(target_mesh);
 			else
 				mesh_cylindrical_xy_uv_map(target_mesh);
+			mesh_set_mikktspace_tangents_and_bitangents(target_mesh);
 			cyl_albedo.texture_mapped.emit_texture_id = graph_dev_load_texture(cylinder_emit);
+			if (normalmapname && cyl_albedo.texture_mapped.normalmap_id <= 0)
+				cyl_albedo.texture_mapped.normalmap_id = graph_dev_load_texture(normalmapname);
 		}
 		if (use_alpha_by_normal) {
 			material_init_alpha_by_normal(&alpha_by_normal);
@@ -1021,6 +1027,8 @@ int main(int argc, char *argv[])
 		if (diffusename) {
 			material_init_texture_mapped(&diffuse_material);
 			diffuse_material.texture_mapped.texture_id = graph_dev_load_texture(diffusename);
+			if (normalmapname)
+				diffuse_material.texture_mapped.normalmap_id = graph_dev_load_texture(normalmapname);
 		}
 		atmosphere_mesh = NULL;
 	}
