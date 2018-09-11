@@ -54,6 +54,7 @@ static int use_alpha_by_normal = 0;
 static float alpha_by_normal_invert = 0.0;
 static char *planetname = NULL;
 static char *normalmapname = NULL;
+static char *diffusename = NULL;
 static char *cubemapname = NULL;
 static char *cylinder_albedo = NULL;
 static char cylindrical_axis = 0; /* 0 = x, 1 = z */
@@ -445,6 +446,7 @@ static struct material green_phaser_material;
 static struct material thrust_material;
 static struct material atmosphere_material;
 static struct material cyl_albedo;
+static struct material diffuse_material;
 static struct material alpha_by_normal;
 static int planet_mode = 0;
 static int cubemap_mode = 0;
@@ -540,6 +542,8 @@ static void draw_screen()
 		update_entity_material(e, &thrust_material);
 	} else if (cylinder_albedo) {
 		update_entity_material(e, &cyl_albedo);
+	} else if (diffusename) {
+		update_entity_material(e, &diffuse_material);
 	} else if (use_alpha_by_normal) {
 		update_entity_material(e, &alpha_by_normal);
 	}
@@ -748,6 +752,7 @@ static struct option long_options[] = {
 	{ "skybox", required_argument, NULL, 's' },
 	{ "turret", required_argument, NULL, 'T' },
 	{ "alphabynormal", no_argument, NULL, 'A' },
+	{ "diffuse", required_argument, NULL, 'd' },
 	{ 0, 0, 0, 0 },
 };
 
@@ -758,7 +763,7 @@ static void process_options(int argc, char *argv[])
 	while (1) {
 		int option_index;
 
-		c = getopt_long(argc, argv, "IAB:T:bc:C:Y:Z:e:hi:m:n:p:s:t:", long_options, &option_index);
+		c = getopt_long(argc, argv, "IAB:T:bc:d:C:Y:Z:e:hi:m:n:p:s:t:", long_options, &option_index);
 		if (c < 0) {
 			break;
 		}
@@ -818,6 +823,9 @@ static void process_options(int argc, char *argv[])
 			break;
 		case 'n':
 			normalmapname = optarg;
+			break;
+		case 'd':
+			diffusename = optarg;
 			break;
 		case 'h':
 			usage(program);
@@ -1009,6 +1017,10 @@ int main(int argc, char *argv[])
 			alpha_by_normal.alpha_by_normal.tint.green = 0.8;
 			alpha_by_normal.alpha_by_normal.tint.blue = 1.0;
 			alpha_by_normal.alpha_by_normal.invert = alpha_by_normal_invert;
+		}
+		if (diffusename) {
+			material_init_texture_mapped(&diffuse_material);
+			diffuse_material.texture_mapped.texture_id = graph_dev_load_texture(diffusename);
 		}
 		atmosphere_mesh = NULL;
 	}

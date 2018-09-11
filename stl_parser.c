@@ -525,11 +525,25 @@ static void fixup_triangle_vertex_ptrs(struct mesh *m, struct vertex *oldptr, st
 	}
 }
 
+static int allocate_more_vertices(struct mesh *m, int *verts_alloced, int additional_verts)
+{
+	/* Get some more memory for vertices if needed */
+	struct vertex *oldptr = m->v;
+	struct vertex *newmem;
+
+	*verts_alloced = *verts_alloced + additional_verts;
+	newmem = realloc(m->v, *verts_alloced * sizeof(*m->v));
+	if (!newmem)
+		return -1;
+	m->v = newmem;
+	fixup_triangle_vertex_ptrs(m, oldptr, newmem);
+	return 0;
+}
+
 static int obj_add_vertex(struct mesh *m, char *line, int *verts_alloced)
 {
 	int rc;
 	float x, y, z, w;
-	struct vertex *newmem;
 
 	rc = sscanf(line, "v %f %f %f %f", &x, &y, &z, &w);
 	if (rc != 4) {
@@ -540,15 +554,9 @@ static int obj_add_vertex(struct mesh *m, char *line, int *verts_alloced)
 	}
 
 	/* Get some more memory for vertices if needed */
-	if (m->nvertices + 1 > *verts_alloced) {
-		struct vertex *oldptr = m->v;
-		*verts_alloced = *verts_alloced + 100;
-		newmem = realloc(m->v, *verts_alloced * sizeof(*m->v));
-		if (!newmem)
+	if (m->nvertices + 1 > *verts_alloced)
+		if (allocate_more_vertices(m, verts_alloced, 100))
 			return -1;
-		m->v = newmem;
-		fixup_triangle_vertex_ptrs(m, oldptr, newmem);
-	}
 
 	m->v[m->nvertices].x = x;
 	m->v[m->nvertices].y = y;
@@ -1006,6 +1014,231 @@ flame_out:
 	return NULL;
 }
 
+struct mesh *read_oolite_dat_file(char *filename)
+{
+	FILE *f;
+	char *s;
+	char buffer[500];
+	char line[1000];
+	int continuation;
+	int lineno = 0;
+	int verts_alloced = 0;
+	int rc, ival;
+	struct mesh *m;
+	struct vertex_owner *owners;
+	int mode = -1;
+	int nfaces = 0;
+
+	f = fopen(filename, "r");
+	if (!f)
+		return NULL;
+
+	m = malloc(sizeof(*m));
+	memset(m, 0, sizeof(*m));
+	m->geometry_mode = MESH_GEOMETRY_TRIANGLES;
+	m->nvertices = 0;
+	m->ntriangles = 0;
+	m->nlines = 0;
+	m->t = NULL;
+	m->v = NULL;
+	m->l = NULL;
+	m->tex = NULL;
+	m->graph_ptr = 0;
+
+	continuation = 0;
+	while (!feof(f)) {
+		char *d = line;
+		/* read a line... */
+		do {
+			if (continuation)
+				d += strlen(d) - 1;
+			s = fgets(buffer, sizeof(buffer), f);
+			if (!s)
+				break;
+			lineno++;
+			if (s[0] == '/' && s[1] == '/') /* skip comments */
+				continue;
+			remove_trailing_whitespace(s);
+			continuation = (s[strlen(s) - 1] == '\\');
+			clean_spaces(s);
+			strcpy(d, s);
+		} while (continuation || s[0] == '#' || strcmp(line, "") == 0);
+
+		if (!s)
+			break;
+
+		if (strncmp(line, "NVERTS ", 6) == 0) { /* number of vertices */
+			if (verts_alloced != 0)  {
+				fprintf(stderr, "Duplicate NVERTS line at %s:%d\n", filename, lineno);
+				goto error;
+			}
+			rc = sscanf(line, "NVERTS %d", &ival);
+			if (rc != 1) {
+				fprintf(stderr, "Bad NVERTS line at %s:%d:%s\n", filename, lineno, line);
+				goto error;
+			}
+			if (ival < verts_alloced) {
+				fprintf(stderr, "Bad NVERTS line %s:%d:%s: (%d < %d)\n",
+					filename, lineno, line, ival, verts_alloced);
+				goto error;
+			}
+			if (allocate_more_vertices(m, &verts_alloced, ival - verts_alloced)) {
+				fprintf(stderr, "%s:%d:%s: Failed to allocated %d vertices\n",
+						filename, lineno, line, ival - verts_alloced);
+			}
+			continue;
+		}
+
+		if (strncmp(line, "NFACES ", 7) == 0) { /* number of faces */
+			struct triangle *newmem = NULL;
+			struct texture_coord *newtex;
+			if (nfaces != 0)  {
+				fprintf(stderr, "Duplicate NFACES line at %s:%d\n", filename, lineno);
+				goto error;
+			}
+			rc = sscanf(line, "NFACES %d", &ival);
+			if (rc != 1) {
+				fprintf(stderr, "Bad NFACES line at %s:%d:%s\n", filename, lineno, line);
+				goto error;
+			}
+			nfaces = ival;
+			newmem = realloc(m->t, nfaces * sizeof(*m->t));
+			if (!newmem) {
+				fprintf(stderr, "realloc failed at %s:%d\n", __FILE__, __LINE__);
+				goto error;
+			}
+			memset(newmem, 0, nfaces * sizeof(*m->t));
+			m->t = newmem;
+			newtex = realloc(m->tex, nfaces * 3 * sizeof(*m->tex));
+			if (!newtex) {
+				fprintf(stderr, "realloc failed at %s:%d\n", __FILE__, __LINE__);
+				goto error;
+			}
+			m->tex = newtex;
+			continue;
+		}
+
+		if (strncmp(line, "VERTEX", 6) == 0) { /* enter face mode */
+			printf("ENTER VERTEX MODE\n");
+			mode = 1; /* vertex mode */
+			continue;
+		}
+		if (strncmp(line, "FACES", 5) == 0) { /* enter face mode */
+			printf("ENTER FACES MODE\n");
+			mode = 2; /* face mode */
+			continue;
+		}
+		if (strncmp(line, "TEXTURES", 8) == 0) { /* enter face mode */
+			printf("ENTER TEXTURES MODE\n");
+			mode = 3; /* texture mode */
+			continue;
+		}
+		if (strncmp(line, "NORMALS", 7) == 0) { /* enter normals mode */
+			printf("ENTER NORMALS MODE\n");
+			mode = 4;
+			continue;
+		}
+		if (strncmp(line, "NAMES", 5) == 0) { /* enter names mode */
+			printf("ENTER NAMES MODE\n");
+			mode = 5;
+			continue;
+		}
+		if (strncmp(line, "END", 5) == 0) { /* enter names mode */
+			printf("ENTER END MODE\n");
+			mode = 6;
+			continue;
+		}
+
+		if (mode == 1) { /* vertex mode */
+			float x, y, z;
+			rc = sscanf(line, "%f%*[, ]%f%*[, ]%f", &x, &y, &z);
+			if (rc != 3) {
+				fprintf(stderr, "%s:%d:%s: bad vertex line\n", filename, lineno, line);
+				goto error;
+			}
+			if (m->nvertices >= verts_alloced) {
+				fprintf(stderr, "%s:%d:%s Too many vertices (should be %d)\n",
+					filename, lineno, line, verts_alloced);
+				goto error;
+			}
+			m->v[m->nvertices].x = x;
+			m->v[m->nvertices].y = y;
+			m->v[m->nvertices].z = z;
+			m->nvertices++;
+		} else if (mode == 2) { /* face mode */
+			float nx, ny, nz;
+			int v1, v2, v3;
+			rc = sscanf(line,
+				"%*d%*[, ]%*d%*[, ]%*d%*[, ]%f%*[, ]%f%*[, ]%f%*[, ]%*d%*[, ]%d%*[, ]%d%*[, ]%d",
+				&nx, &ny, &nz, &v1, &v2, &v3);
+			if (rc != 6) {
+				fprintf(stderr, "%s:%d:%s: bad face\n", filename, lineno, line);
+				goto error;
+			}
+			if (v1 < 0 || v1 >= m->nvertices ||
+				v2 < 0 || v2 >= m->nvertices ||
+				v3 < 0 || v3 >= m->nvertices) {
+				fprintf(stderr, "%s:%d:%s: vertex out of range (min = %d, max = %d\n",
+					filename, lineno, line, 0, m->nvertices - 1);
+				goto error;
+			}
+			if (m->ntriangles >= nfaces) {
+				fprintf(stderr, "%s:%d:%s: too many faces\n", filename, lineno, line);
+				goto error;
+			}
+			/* Wtf? They put the vertices in backwards?
+			 * Something's a bit weird here. I noticed most of their models have
+			 * the vertices backwards, but some don't.
+			 */
+			m->t[m->ntriangles].v[2] = &m->v[v1];
+			m->t[m->ntriangles].v[1] = &m->v[v2];
+			m->t[m->ntriangles].v[0] = &m->v[v3];
+#if 0
+			/* I don't really know what's going on with their normals. And they don't
+			 * seem to have per-vertex normals either.
+			 */
+			m->t[m->ntriangles].n.x = nx;
+			m->t[m->ntriangles].n.y = ny;
+			m->t[m->ntriangles].n.z = nz;
+#endif
+			m->t[m->ntriangles].flag = 0;
+			calculate_triangle_normal(&m->t[m->ntriangles]); /* Just calc the triangle normal ourself. */
+			m->ntriangles++;
+		} else if (mode == 3) { /* texture mode */
+			char filename[PATH_MAX];
+			float u[3], v[3];
+			rc = sscanf(line, "%s%*[ ,]%*f%*[ ,]%*f%*[ ,]%f%*[ ,]%f%*[ ,]%f%*[ ,]%f%*[ ,]%f%*[ ,]%f",
+				filename, &u[2], &v[2], &u[1], &v[1], &u[0], &v[0]);
+			if (rc != 7) {
+				fprintf(stderr, "%s:%d:%s: bad texture line\n", filename, lineno, line);
+				goto error;
+			}
+		}
+	}
+
+	compact_mesh_allocations(m);
+	m->radius = mesh_compute_radius(m);
+	check_triangle_vertices(m);
+	owners = mesh_compute_vertex_owners(m);
+	if (owners) {
+		mesh_compute_shared_vertex_flags(m, owners);
+		process_coplanar_triangles(m, owners);
+		printf("No normals in oolite, using default smoothing\n");
+		process_vertex_normals(m, DEFAULT_SHARP_CORNER_ANGLE, owners);
+		free_vertex_owners(owners, m->ntriangles * 3);
+	}
+	mesh_set_mikktspace_tangents_and_bitangents(m);
+	mesh_graph_dev_init(m);
+	fclose(f);
+
+	return m;
+error:
+	free_mesh(m);
+	m = NULL;
+	fclose(f);
+	return m;
+}
+
 struct mesh *read_mesh(char *filename)
 {
 	int n;
@@ -1017,6 +1250,8 @@ struct mesh *read_mesh(char *filename)
 		return read_stl_file(filename);
 	if (strcmp(&filename[n - 4], ".obj") == 0)
 		return read_obj_file(filename);
+	if (strcmp(&filename[n - 4], ".dat") == 0)
+		return read_oolite_dat_file(filename);
 	return NULL;
 }
 
