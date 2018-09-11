@@ -447,8 +447,8 @@ CLIENTOBJS=${COMMONCLIENTOBJS} shader.o graph_dev_opengl.o opengl_cap.o snis_gra
 LIMCLIENTOBJS=${COMMONCLIENTOBJS} graph_dev_gdk.o snis_limited_graph.o snis_limited_client.o joystick_config.o
 
 SDLCLIENTOBJS=shader.o graph_dev_opengl.o opengl_cap.o snis_graph.o mesh_viewer.o \
-				png_utils.o turret_aimer.o quat.o mathutils.o mesh.o mtwist.o \
-				material.o entity.o snis_alloc.o matrix.o stacktrace.o stl_parser.o \
+				png_utils.o turret_aimer.o quat.o mathutils.o mesh.o mikktspace/mikktspace.o \
+				mtwist.o material.o entity.o snis_alloc.o matrix.o stacktrace.o stl_parser.o \
 				snis_typeface.o snis_font.o string-utils.o ui_colors.o liang-barsky.o \
 				bline.o vec4.o
 NEBULANOISEOBJS=nebula_noise.o open-simplex-noise.o png_utils.o
