@@ -93,7 +93,7 @@ struct ship_type_entry *snis_read_ship_types(char *filename, int *count)
 			goto done_scanfing_line;
 		}
 		expected_count -= 2;
-		scancount = sscanf(line, "%s %s %s %lf %d %d %d %d %d %d %d %f, %[xyzs] %f\n",
+		scancount = sscanf(line, "%s %s %s %lf %d %d %d %d %d %d %d %f %[xyzs] %f\n",
 				class, model_file, thrust_attach,
 				&toughness, &integer, &warpchance, &crew_max, &ncargo_bays,
 				&has_lasers, &has_torpedoes, &has_missiles, &extra_scaling,
