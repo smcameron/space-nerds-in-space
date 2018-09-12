@@ -922,8 +922,10 @@ matrix.o:	matrix.c Makefile
 stl_parser.o:	stl_parser.c Makefile
 	$(Q)$(COMPILE)
 
-stl_parser:	stl_parser.c matrix.o mesh.o mathutils.o quat.o mtwist.o Makefile
-	$(CC) -DTEST_STL_PARSER ${MYCFLAGS} ${GTKCFLAGS} -o stl_parser stl_parser.c matrix.o mesh.o mathutils.o quat.o mtwist.o -lm $(LDFLAGS)
+stl_parser:	stl_parser.c matrix.o mesh.o mathutils.o quat.o mtwist.o mikktspace/mikktspace.o \
+		string-utils.o Makefile
+	$(CC) -DTEST_STL_PARSER ${MYCFLAGS} ${GTKCFLAGS} -o stl_parser stl_parser.c matrix.o mesh.o mathutils.o \
+		quat.o mtwist.o mikktspace/mikktspace.o string-utils.o -lm $(LDFLAGS)
 
 entity.o:	entity.c Makefile
 	$(Q)$(GTKCOMPILE)

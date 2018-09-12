@@ -1068,4 +1068,14 @@ void mesh_graph_dev_cleanup(struct mesh *m)
 {
 
 }
+
+unsigned int graph_dev_load_texture(const char *filename)
+{
+	return 1;
+}
+
+void material_init_texture_mapped(struct material *m)
+{
+}
+
 #endif
