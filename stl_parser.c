@@ -1028,6 +1028,7 @@ struct mesh *read_oolite_dat_file(char *filename)
 	struct vertex_owner *owners;
 	int mode = -1;
 	int nfaces = 0;
+	int ntex = 0;
 
 	f = fopen(filename, "r");
 	if (!f)
@@ -1208,11 +1209,19 @@ struct mesh *read_oolite_dat_file(char *filename)
 			char filename[PATH_MAX];
 			float u[3], v[3];
 			rc = sscanf(line, "%s%*[ ,]%*f%*[ ,]%*f%*[ ,]%f%*[ ,]%f%*[ ,]%f%*[ ,]%f%*[ ,]%f%*[ ,]%f",
-				filename, &u[2], &v[2], &u[1], &v[1], &u[0], &v[0]);
+				filename, &u[0], &v[0], &u[1], &v[1], &u[2], &v[2]);
 			if (rc != 7) {
 				fprintf(stderr, "%s:%d:%s: bad texture line\n", filename, lineno, line);
 				goto error;
 			}
+			/* Backwards?  Ok. */
+			m->tex[ntex * 3 + 2].u = u[0];
+			m->tex[ntex * 3 + 2].v = v[0];
+			m->tex[ntex * 3 + 1].u = u[1];
+			m->tex[ntex * 3 + 1].v = v[1];
+			m->tex[ntex * 3 + 0].u = u[2];
+			m->tex[ntex * 3 + 0].v = v[2];
+			ntex++;
 		}
 	}
 
