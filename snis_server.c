@@ -1689,7 +1689,7 @@ static void snis_queue_delete_object_helper(struct snis_entity *o)
 
 	/* This should never happen. If it does happen, don't propagate it to the clients. */
 	if (oid == (uint32_t) -1) {
-		fprintf(stderr, "%s BUG detected at %s:%s:%d, o->id == -1, o->type = %hhu\n",
+		fprintf(stderr, "%s BUG detected at %s:%s:%d, o->id == -1, o->type = %d\n",
 				logprefix(), __FILE__, __func__,  __LINE__, o->type);
 		return;
 	}
