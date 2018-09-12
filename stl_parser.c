@@ -1052,10 +1052,10 @@ int main(int argc, char *argv[])
 	} else {
 		fprintf(stderr, "Success!, nvertices = %d, ntriangle = %d\n",
 				s->nvertices, s->ntriangles);
+		print_mesh(s);
+		free_mesh(s);
+		s = NULL;
 	}
-	print_mesh(s);
-	free_mesh(s);
-	s = NULL;
 	return 0;
 }
 
