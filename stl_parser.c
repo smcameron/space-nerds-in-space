@@ -1143,7 +1143,7 @@ struct mesh *read_oolite_dat_file(char *filename)
 			mode = 5;
 			continue;
 		}
-		if (strncmp(line, "END", 5) == 0) { /* enter names mode */
+		if (strncmp(line, "END", 3) == 0) { /* enter names mode */
 			printf("ENTER END MODE\n");
 			mode = 6;
 			continue;
