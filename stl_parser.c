@@ -1006,6 +1006,20 @@ flame_out:
 	return NULL;
 }
 
+struct mesh *read_mesh(char *filename)
+{
+	int n;
+
+	n = strlen(filename);
+	if (n < 5)
+		return NULL;
+	if (strcmp(&filename[n - 4], ".stl") == 0)
+		return read_stl_file(filename);
+	if (strcmp(&filename[n - 4], ".obj") == 0)
+		return read_obj_file(filename);
+	return NULL;
+}
+
 #ifdef TEST_STL_PARSER 
 
 void print_mesh(struct mesh *m)
@@ -1043,12 +1057,18 @@ int main(int argc, char *argv[])
 {
 	struct mesh *s;
 
-	s = read_stl_file(argv[1]);
+	if (argc < 2) {
+		fprintf(stderr, "usage: stl_parser mesh-file\n");
+		return 1;
+	}
+
+	s = read_mesh(argv[1]);
 	if (!s) {
 		if (errno)
 			fprintf(stderr, "%s: %s\n", argv[1], strerror(errno));
 		else
-			fprintf(stderr, "Failed to read stl file\n");
+			fprintf(stderr, "Failed to read mesh file '%s'\n", argv[1]);
+		return 1;
 	} else {
 		fprintf(stderr, "Success!, nvertices = %d, ntriangle = %d\n",
 				s->nvertices, s->ntriangles);

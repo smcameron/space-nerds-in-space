@@ -27,6 +27,7 @@
 #define GLOBAL extern
 #endif
 
+GLOBAL struct mesh *read_mesh(char *file);
 GLOBAL struct mesh *read_stl_file(char *file);
 GLOBAL struct mesh *read_obj_file(char *file);
 GLOBAL void free_mesh(struct mesh *m);
