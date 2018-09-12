@@ -20379,19 +20379,10 @@ static void setup_joysticks(GtkWidget *window)
 static struct mesh *snis_read_model(char *directory, char *filename)
 {
 	char path[PATH_MAX];
-	int l = strlen(filename);
 	struct mesh *m;
 
 	sprintf(path, "%s/models/%s", directory, filename);
-	if (strcasecmp(&filename[l - 3], "obj") == 0)
-		m = read_obj_file(path);
-	else if (strcasecmp(&filename[l - 3], "stl") == 0)
-		m = read_stl_file(path);
-	else {
-		printf("bad path '%s', filename='%s', filename[l - 3] = '%s'\n",
-			path, filename, &filename[l - 4]);
-		m = NULL;
-	}
+	m = read_mesh(path);
 	if (!m) {
 		printf("Failed to read model from file '%s'\n", path);
 		printf("Assume form of . . . A SPHERICAL COW!\n");

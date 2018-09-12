@@ -77,15 +77,10 @@ static struct mesh *snis_read_model(char *filename)
 {
 	float minx, miny, minz, maxx, maxy, maxz;
 	struct mesh *m;
-	int l = strlen(filename);
 
-	if (strcasecmp(&filename[l - 3], "obj") == 0)
-		m = read_obj_file(filename);
-	else if (strcasecmp(&filename[l - 3], "stl") == 0)
-		m = read_stl_file(filename);
-	else {
-		printf("bad filename='%s', filename[l - 3] = '%s'\n",
-			filename, &filename[l - 4]);
+	m = read_mesh(filename);
+	if (!m) {
+		fprintf(stderr, "mesh_viewer: bad mesh file '%s'\n", filename);
 		return NULL;
 	}
 	mesh_aabb(m, &minx, &miny, &minz, &maxx, &maxy, &maxz);
