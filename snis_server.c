@@ -110,6 +110,7 @@
 #include "snis_debug.h"
 #include "snis_entity_key_value_specification.h"
 #include "snis_cardinal_colors.h"
+#include "starmap_adjacency.h"
 
 #define CLIENT_UPDATE_PERIOD_NSECS 500000000
 #define MAXCLIENTS 100
@@ -420,10 +421,7 @@ static int nshiptypes;
  * via the game_instance data in the lobby -- 1 star system
  * corresponds to 1 server process.  See queue_starmap().
  */
-static struct starmap_entry {
-	char name[SSGL_LOCATIONSIZE];
-	double x, y, z;
-} starmap[MAXSTARMAPENTRIES];
+static struct starmap_entry starmap[MAXSTARMAPENTRIES];
 static int nstarmap_entries = 0;
 static int starmap_dirty = 0;
 

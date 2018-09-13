@@ -120,6 +120,7 @@
 #include "pthread_util.h"
 #include "snis_tweak.h"
 #include "snis_debug.h"
+#include "starmap_adjacency.h"
 
 #define SHIP_COLOR CYAN
 #define STARBASE_COLOR RED
@@ -458,11 +459,7 @@ static char old_solarsystem_name[100] = { 0 };
  * as discovered by snis_server via ssgl_lobby and relayed to
  * clients via OPCODE_UPDATE_SOLARSYSTEM_LOCATION
  */
-static struct starmap_entry {
-	char name[SSGL_LOCATIONSIZE];
-	double x, y, z;
-	int time_before_expiration;
-} starmap[MAXSTARMAPENTRIES];
+static struct starmap_entry starmap[MAXSTARMAPENTRIES];
 static int nstarmap_entries = 0;
 static int starmap_adjacency[MAXSTARMAPENTRIES][MAX_STARMAP_ADJACENCIES];
 
@@ -6053,60 +6050,6 @@ static int process_check_opcode_format(void)
 	return 0;
 }
 
-static void starmap_set_one_adjacency(int star_a, int star_b)
-{
-	int i;
-
-	for (i = 0; i < MAX_STARMAP_ADJACENCIES; i++) {
-		if (starmap_adjacency[star_a][i] == star_b) /* already set */
-			return;
-		if (starmap_adjacency[star_a][i] == -1) {
-			starmap_adjacency[star_a][i] = star_b;
-			return;
-		}
-	}
-	fprintf(stderr, "snis_client: Exceeded MAX_STARMAP_ADJACENCIES (%d)\n",
-			MAX_STARMAP_ADJACENCIES);
-}
-
-static void starmap_set_adjacency(int star_a, int star_b)
-{
-	starmap_set_one_adjacency(star_a, star_b);
-	starmap_set_one_adjacency(star_b, star_a);
-}
-
-static void starmap_clear_all_adjacencies(void)
-{
-	int i, j;
-
-	for (i = 0; i < nstarmap_entries; i++)
-		for (j = 0; j < MAX_STARMAP_ADJACENCIES; j++)
-			starmap_adjacency[i][j] = -1;
-}
-
-static void starmap_recompute_adjacencies(void)
-{
-	int i, j;
-	union vec3 s1, s2, d;
-
-	starmap_clear_all_adjacencies();
-	for (i = 0; i < nstarmap_entries; i++) {
-		for (j = i + 1; j < nstarmap_entries; j++) {
-			double dist;
-			s1.v.x = starmap[i].x;
-			s1.v.y = starmap[i].y;
-			s1.v.z = starmap[i].z;
-			s2.v.x = starmap[j].x;
-			s2.v.y = starmap[j].y;
-			s2.v.z = starmap[j].z;
-			vec3_sub(&d, &s1, &s2);
-			dist = vec3_magnitude(&d);
-			if (dist <= SNIS_WARP_GATE_THRESHOLD)
-				starmap_set_adjacency(i, j);
-		}
-	}
-}
-
 static int process_update_solarsystem_location(void)
 {
 	int i, rc, found;
@@ -6147,7 +6090,7 @@ static int process_update_solarsystem_location(void)
 			nstarmap_entries++;
 		}
 	}
-	starmap_recompute_adjacencies();
+	starmap_compute_adjacencies(starmap_adjacency, starmap, nstarmap_entries);
 	pthread_mutex_unlock(&universe_mutex);
 	return 0;
 }
@@ -6169,7 +6112,7 @@ static void expire_starmap_entries(void)
 		}
 	}
 	if (changed)
-		starmap_recompute_adjacencies();
+		starmap_compute_adjacencies(starmap_adjacency, starmap, nstarmap_entries);
 }
 
 static int process_set_waypoint(void)

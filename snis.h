@@ -27,8 +27,6 @@
 #include "space-part.h"
 #include "oriented_bounding_box.h"
 
-#define MAXSTARMAPENTRIES 1000 /* max number of solar systems */
-#define MAX_STARMAP_ADJACENCIES 5 /* max warp lanes from one star to other stars */
 #define DEFAULT_SOLAR_SYSTEM "default"
 #define SNIS_PROTOCOL_VERSION "SNIS027"
 #define COMMON_MTWIST_SEED 97872
