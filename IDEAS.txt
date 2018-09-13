@@ -1,6 +1,57 @@
 Here be ideas about what might or might not be added into the game
 at some point.
 
+----------------------------
+Thu Sep 13 13:24:40 EDT 2018
+
+Let us call this idea THE EMBIGGENING.
+
+I've had this idea for a long while (ever since multiverse) but it has a
+problem, so I never really thought about it very hard, plus, for purposes of
+developing the game and fixing bugs and making things look and work better, so
+far just tooling around in a single solarsystem has really been quite enough to
+occupy my attention.  But I think this idea is worth writing down.
+
+The basic idea is as follows:  Allow the multiverse process to auto-start
+snis_server instances for systems which are reachable via a single warp-gate
+hop by any current player-ship, and auto-shutdown any snis_server that is not
+reachable via a single warp-gate hop by any current player-ship.  In this way
+we can create a large universe with many solarsystems that is explorable by
+the players, and has some sense of "terrain" or "topological structure" given
+by the warp-gate routes. And we can do this *without* having to simultaneously
+run a snis_server for every possible solarsystem the player might ever visit.
+
+Possibly, we could also auto-transmit solarsystem assets on-demand (only
+once a player is within one hop) and thus save a bit on transmitting assets by
+only transmitting to players who actually visit someplace near those assets.
+
+Problems:
+
+If we have a lot of players scattered around, we will end up starting many
+instances of snis_server.  In the worst case, we'll run all possible
+snis_server instances at once -- which really, is the same as the current state
+of affairs.  Performance will be a problem, unless we start them on multiple
+machines, which is possible, but a bit more complicated, not to mention
+expensive.  Mitigating this, we're not going to have a lot of players.  We're
+just not. And anyway, I don't run the servers, players do.  So is this really a
+problem?
+
+It seems the choice is between:
+
+1) Making it *possible* to have a very large universe consisting of hundreds of
+explorable solarsystems, but with the limitation that only one or two
+player-ships may be active concurrently, or if there are more player ships that
+they always stick together in one or two solarsystems, and thus keep the total
+number of running snis_server processes acceptably low.
+
+and:
+
+2) The current situation, in which it is *impossible* to have a universe of
+100s of solarsystems *at all* since it would currently require running 100s
+of snis_servers simultaneously to achieve this.
+
+So now I am inclined to think this idea of enabling multiverse to optionally
+auto-start/stop snis_servers on demand may actually be worthwhile.
 
 -------------------------
 Sun Sep  2 08:25:58 EDT 2018
