@@ -68,6 +68,7 @@ persisted in a simple database by snis_multiverse.
 #include "snis_bridge_update_packet.h"
 #include "pthread_util.h"
 #include "rootcheck.h"
+#include "starmap_adjacency.h"
 
 static char *database_root = "./snisdb";
 static const int database_mode = 0744;
@@ -106,8 +107,68 @@ static struct bridge_info {
 } ship[MAX_BRIDGES];
 int nbridges = 0;
 
+/* star map data -- corresponds to known snis_server instances
+ * as discovered by digging through share/snis/solarsystems
+ */
+static struct starmap_entry starmap[MAXSTARMAPENTRIES];
+static int nstarmap_entries = 0;
+static int starmap_adjacency[MAXSTARMAPENTRIES][MAX_STARMAP_ADJACENCIES];
+
 #define INCLUDE_BRIDGE_INFO_FIELDS 1
 #include "snis_entity_key_value_specification.h"
+
+static void extract_starmap_entry(char *path, char *starname)
+{
+	int rc, bytes;
+	char *content;
+	char *starlocation;
+	float x, y, z;
+
+	printf("Extracting starmap entry from %s... ", path);
+	content = slurp_file(path, &bytes);
+	if (!content)
+		return;
+	starlocation = strstr(content, "\nstar location: ");
+	if (!starlocation)
+		return;
+	rc = sscanf(starlocation + 1, "star location: %f%*[, ]%f%*[, ]%f%*[, ]", &x, &y, &z);
+	if (rc != 3)
+		return;
+	snprintf(starmap[nstarmap_entries].name,
+		sizeof(starmap[nstarmap_entries].name) - 1, "%s", starname);
+	starmap[nstarmap_entries].x = x;
+	starmap[nstarmap_entries].y = y;
+	starmap[nstarmap_entries].z = z;
+	nstarmap_entries++;
+	printf("%s %f, %f, %f\n", starname, x, y, z);
+	return;
+}
+
+static void construct_starmap(void)
+{
+	struct dirent **namelist;
+	char newpath[PATH_MAX];
+	int i, n;
+	char *path = "share/snis/solarsystems";
+
+	n = scandir(path, &namelist, NULL, alphasort);
+	if (n < 0) {
+		fprintf(stderr, "snis_multiverse: scandir(%s): %s\n", path, strerror(errno));
+		return;
+	}
+	for (i = 0; i < n; i++) {
+		if (strcmp(namelist[i]->d_name, ".") == 0)
+			continue;
+		if (strcmp(namelist[i]->d_name, "..") == 0)
+			continue;
+		sprintf(newpath, "%s/%s/assets.txt", path, namelist[i]->d_name);
+		extract_starmap_entry(newpath, namelist[i]->d_name);
+		free(namelist[i]);
+	}
+	free(namelist);
+	starmap_compute_adjacencies(starmap_adjacency, starmap, nstarmap_entries);
+	return;
+}
 
 static void remove_starsystem(struct starsystem_info *ss)
 {
@@ -1122,6 +1183,7 @@ int main(int argc, char *argv[])
 
 	refuse_to_run_as_root("snis_multiverse");
 	parse_options(argc, argv, &lobby, &nick, &location);
+	construct_starmap();
 
 	open_log_file();
 	if (restore_data()) {

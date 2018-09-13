@@ -434,7 +434,7 @@ SERVEROBJS=${COMMONOBJS} snis_server.o starbase-comms.o \
 		graph_dev_mesh_stub.o turret_aimer.o snis_hash.o snis_server_debug.o
 MULTIVERSEOBJS=snis_multiverse.o snis_marshal.o snis_socket_io.o mathutils.o mtwist.o stacktrace.o \
 		snis_hash.o quat.o string-utils.o key_value_parser.o snis_bridge_update_packet.o \
-		pthread_util.o rootcheck.o
+		pthread_util.o rootcheck.o starmap_adjacency.o
 
 COMMONCLIENTOBJS=${COMMONOBJS} ${OGGOBJ} ${SNDOBJS} snis_ui_element.o snis_font.o snis_text_input.o \
 	snis_typeface.o snis_gauge.o snis_button.o snis_label.o snis_sliders.o snis_text_window.o \
