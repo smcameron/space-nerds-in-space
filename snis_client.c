@@ -6092,7 +6092,7 @@ static void starmap_recompute_adjacencies(void)
 
 	starmap_clear_all_adjacencies();
 	for (i = 0; i < nstarmap_entries; i++) {
-		for (j = 0; j < nstarmap_entries; j++) {
+		for (j = i + 1; j < nstarmap_entries; j++) {
 			double dist;
 			s1.v.x = starmap[i].x;
 			s1.v.y = starmap[i].y;
