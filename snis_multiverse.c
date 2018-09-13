@@ -48,6 +48,7 @@ persisted in a simple database by snis_multiverse.
 #include <stdarg.h>
 #include <limits.h>
 #include <dirent.h>
+#include <getopt.h>
 
 #include "build_bug_on.h"
 #include "snis_marshal.h"
@@ -268,7 +269,7 @@ static int restore_bridge_info(const char *filename, struct bridge_info *b, unsi
 
 static void usage()
 {
-	fprintf(stderr, "usage: snis_multiverse lobbyserver servernick location\n");
+	fprintf(stderr, "usage: snis_multiverse -l lobbyserver -n servernick -L location\n");
 	exit(1);
 }
 
@@ -1066,11 +1067,59 @@ static void open_log_file(void)
 	}
 }
 
+static struct option long_options[] = {
+	{ "lobby", required_argument, NULL, 'l'},
+	{ "servernick", required_argument, NULL, 'n'},
+	{ "location", required_argument, NULL, 'L'},
+	{ 0, 0, 0, 0 },
+};
+
+static void parse_options(int argc, char *argv[], char **lobby, char **nick, char **location)
+{
+	int c;
+
+	*lobby = NULL;
+	*location = NULL;
+	*nick = NULL;
+
+	if (argc < 4)
+		usage();
+	while (1) {
+		int option_index;
+		c = getopt_long(argc, argv, "L:l:n:", long_options, &option_index);
+		if (c == -1)
+			break;
+		switch (c) {
+		case 'h':
+			usage(); /* no return */
+			break;
+		case 'l':
+			*lobby = optarg;
+			break;
+		case 'L':
+			*location = optarg;
+			break;
+		case 'n':
+			*nick = optarg;
+			break;
+		default:
+			usage(); /* no return */
+			break;
+		}
+	}
+
+	if (!*lobby || !*nick || !*location)
+		usage(); /* no return */
+}
+
 int main(int argc, char *argv[])
 {
 	struct ssgl_game_server gameserver;
 	int rc;
 	pthread_t lobby_thread;
+	char *lobby, *nick, *location;
+
+	parse_options(argc, argv, &lobby, &nick, &location);
 
 	open_log_file();
 	if (restore_data()) {
@@ -1078,8 +1127,6 @@ int main(int argc, char *argv[])
 		return -1;
 	}
 
-	if (argc < 4)
-		usage();
 
 	printf("SNIS multiverse server\n");
 
@@ -1097,15 +1144,15 @@ int main(int argc, char *argv[])
 	if (ssgl_get_primary_host_ip_addr(&gameserver.ipaddr) != 0)
 		snis_log(SNIS_WARN, "snis_multiverse: Failed to get local ip address.\n");
 	gameserver.port = htons(listener_port);
-#define COPYINARG(field, arg) strncpy(gameserver.field, argv[arg], sizeof(gameserver.field) - 1)
-	COPYINARG(server_nickname, 2);
+
+	snprintf(gameserver.server_nickname, sizeof(gameserver.server_nickname - 1), "%s", nick);
+	snprintf(gameserver.location, sizeof(gameserver.location - 1), "%s", location);
 	strcpy(gameserver.protocol_version, SNIS_PROTOCOL_VERSION);
 	strcpy(gameserver.game_type, "SNIS-MVERSE");
 	strcpy(gameserver.game_instance, "-");
-	COPYINARG(location, 3);
 
 	/* create a thread to contact and update the lobby server... */
-	(void) ssgl_register_gameserver(argv[1], &gameserver, &lobby_thread, &nconnections);
+	(void) ssgl_register_gameserver(lobby, &gameserver, &lobby_thread, &nconnections);
 
 	do {
 		/* do whatever it is that your game server does here... */

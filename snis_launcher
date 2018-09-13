@@ -103,7 +103,7 @@ start_snis_multiverse()
 		fi
 		echo "Created ./snisdb for snis_multiverse" 1>&2
 	fi
-	(${SNIS_MULTIVERSE} "${LOBBYHOST}" nickname narnia > snis_multiverse_log.txt 2>&1 ; \
+	(${SNIS_MULTIVERSE} -l "${LOBBYHOST}" -n nickname -L narnia > snis_multiverse_log.txt 2>&1 ; \
 		echo "snis_multiverse died, status was $?" 1>&2 ) &
 }
 

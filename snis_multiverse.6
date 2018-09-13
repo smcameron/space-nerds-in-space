@@ -2,7 +2,7 @@
 .SH NAME
 snis_multiverse \- Multi player cooperative star ship bridge simulator (server wrangler)
 .SH SYNOPSIS
-.B snis_multiverse gameinstance serverhost location
+.B snis_multiverse -l lobby -n server-nickname, -L server-location
 .SH DESCRIPTION
 .\" Add any additional description here
 .warn 511
@@ -20,8 +20,18 @@ ssgl_multiverse process.  The location is a human readable string giving some id
 of the location of the server, or some other descriptive information.
 .SH Options:
 .TP
+\fB\--lobby, -l lobbyserver\fR
+Specify the lobby server hostname or IP address.
+.TP
+\fB\--servernick, -n nickname\fR
+Specify the nickname of this multiverse process.
+(It's not really used for anything, nevertheless, it's required.)
+\fB\--location, -L location\fR
+Specify the location of this multiverse process.
+(It's not really used for anything, nevertheless, it's required.)
 \fB\--version\fR
 Print the program's version number and exit.
+.TP
 .SH FILES
 .PP
 TBD
