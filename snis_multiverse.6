@@ -2,7 +2,7 @@
 .SH NAME
 snis_multiverse \- Multi player cooperative star ship bridge simulator (server wrangler)
 .SH SYNOPSIS
-.B snis_multiverse -l lobby -n server-nickname, -L server-location
+.B snis_multiverse [--autowrangle] -l lobby -n server-nickname, -L server-location [--exempt snis-server-location]
 .SH DESCRIPTION
 .\" Add any additional description here
 .warn 511
@@ -19,6 +19,17 @@ the game instance.  The serverhost is the hostname of the server hosting the
 ssgl_multiverse process.  The location is a human readable string giving some idea
 of the location of the server, or some other descriptive information.
 .SH Options:
+.TP
+\fB\--autowrangle, -a\fR
+Automatically start snis_server processes within one warp-gate hop
+of any player, and automatically shutdown snis_server process not within
+one warp gate hop of any player.
+.TP
+\fB\--exempt, -e\fR
+Exempt a snis_server location from autowrangling. If you use autowrangling
+you need to exempt at least one snis_server location otherwise snis_multiverse
+will immediately shut down all snis_servers since, initially, there are no
+connected player ships anywhere.
 .TP
 \fB\--lobby, -l lobbyserver\fR
 Specify the lobby server hostname or IP address.

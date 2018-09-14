@@ -50,6 +50,7 @@
 #include <assert.h>
 #include <locale.h>
 #include <dirent.h>
+#include <signal.h>
 
 #include "arraysize.h"
 #include "container-of.h"
@@ -22462,6 +22463,20 @@ static void rts_ai_assign_orders_to_units(int starbase_count, int unit_count)
 	}
 }
 
+static void update_multiverse_bridge_count(double current_time)
+{
+	static double last_time = 0;
+	uint32_t bridge_count;
+
+	if (current_time - last_time < 5.0)
+		return;
+
+	bridge_count = nbridges;
+	queue_to_multiverse(multiverse_server, packed_buffer_new("bw",
+				SNISMV_OPCODE_UPDATE_BRIDGE_COUNT, bridge_count));
+	last_time = current_time;
+}
+
 static void rts_ai_run(void)
 {
 	int i;
@@ -26120,6 +26135,60 @@ static char lobby_gameinstance[GAMEINSTANCESIZE];
 static char *lobbyhost = NULL;
 static char *lobby_location = NULL;
 static char *lobby_servernick = NULL;
+static char snis_server_lockfile[PATH_MAX] = { 0 };
+
+/* Clean up the lock file on SIGTERM */
+static void sigterm_handler(int sig, siginfo_t *siginfo, void *context)
+{
+	static const char buffer[] = "snis_server: Received SIGTERM, exiting.\n";
+	int rc;
+
+	if (snis_server_lockfile[0] != '\0')
+		(void) rmdir(snis_server_lockfile);
+	/* Need to check return value of write() here even though we can't do
+	 * anything with that info at this point, otherwise the compiler complains
+	 * if we just ignore write() return value.
+	 */
+	rc = write(2, buffer, sizeof(buffer));  /* We're assuming 2 is still hooked to stderr */
+	if (rc < 0)
+		exit(2);
+	exit(1);
+}
+
+static void catch_sigterm(void)
+{
+	struct sigaction action;
+
+	memset(&action, 0, sizeof(action));
+	action.sa_sigaction = &sigterm_handler;
+	action.sa_flags = SA_SIGINFO;
+	if (sigaction(SIGTERM, &action, NULL) < 0)
+		fprintf(stderr, "%s: Failed to register SIGTERM handler.\n", logprefix());
+}
+
+static void cleanup_lockfile(void)
+{
+	if (snis_server_lockfile[0] != '\0')
+		(void) rmdir(snis_server_lockfile);
+}
+
+static void create_lock_or_die(char *location)
+{
+	int rc;
+
+	if (!location)
+		return;
+
+	snprintf(snis_server_lockfile, sizeof(snis_server_lockfile) - 1, "/tmp/snis_server_lock.%s", location);
+	catch_sigterm();
+	rc = mkdir(snis_server_lockfile, 0755);
+	if (rc != 0) {
+		fprintf(stderr, "%s: Failed to create lockdir %s, exiting.\n", logprefix(), snis_server_lockfile);
+		exit(1);
+	}
+	atexit(cleanup_lockfile);
+	fprintf(stderr, "%s: Created lockfile %s, proceeding.\n", logprefix(), snis_server_lockfile);
+}
 
 static void process_options(int argc, char *argv[])
 {
@@ -26150,6 +26219,7 @@ static void process_options(int argc, char *argv[])
 			break;
 		case 'L':
 			lobby_location = optarg;
+			create_lock_or_die(lobby_location);
 			break;
 		case 'm':
 			if (!multiverse_server) {
@@ -26411,6 +26481,12 @@ static void *multiverse_reader(void *arg)
 			if (rc)
 				goto protocol_error;
 			break;
+		case SNISMV_OPCODE_SHUTDOWN_SNIS_SERVER:
+			fprintf(stderr, "%s: multiverse requested snis_server shutdown. Shutting down now.\n",
+				logprefix());
+			fflush(stderr);
+			exit(0); /* Is this all we need to do? I think so... */
+			break;
 		default:
 			fprintf(stderr, "%s: unimplemented multiverse opcode %hhu\n",
 				logprefix(), opcode);
@@ -26512,11 +26588,13 @@ static void connect_to_multiverse(struct multiverse_server_info *msi, uint32_t i
 
 	memset(starsystem_name, 0, sizeof(starsystem_name));
 	snprintf(starsystem_name, sizeof(starsystem_name) - 1, "%s", solarsystem_name);
+	fprintf(stderr, "%s: writing starsystem name %s to multiverse\n", logprefix(), starsystem_name);
 	rc = snis_writesocket(sock, starsystem_name, SSGL_LOCATIONSIZE);
 	if (rc != 0) {
 		fprintf(stderr, "%s: failed to write starsystem name to snis_multiverse\n",
 			logprefix());
 	}
+	fprintf(stderr, "%s: write starsystem name %s to multiverse\n", logprefix(), starsystem_name);
 
 	fprintf(stderr, "%s: connected to snis_multiverse (%hhu.%hhu.%hhu.%hhu/%hu on socket %d)\n",
 		logprefix(), x[0], x[1], x[2], x[3], port, sock);
@@ -26844,6 +26922,7 @@ int main(int argc, char *argv[])
 			move_objects(nextTime, discontinuity);
 			process_lua_commands();
 			rts_ai_run();
+			update_multiverse_bridge_count(currentTime);
 
 			discontinuity = 0;
 			nextTime += delta;

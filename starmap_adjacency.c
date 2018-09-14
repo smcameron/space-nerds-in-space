@@ -89,7 +89,7 @@ int starmap_stars_are_adjacent(int starmap_adjacency[MAXSTARMAPENTRIES][MAX_STAR
 
 	for (i = 0; i < MAX_STARMAP_ADJACENCIES; i++) {
 		if (starmap_adjacency[star_a][i] == -1)
-			break;
+			return 0;
 		if (starmap_adjacency[star_a][i] == star_b)
 			return 1;
 	}

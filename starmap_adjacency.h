@@ -11,7 +11,7 @@
 struct starmap_entry {
 	char name[SSGL_LOCATIONSIZE];
 	double x, y, z;
-	int time_before_expiration;
+	int time_before_expiration; /* Used by client */
 };
 
 void starmap_set_one_adjacency(int starmap_adjacency[MAXSTARMAPENTRIES][MAX_STARMAP_ADJACENCIES],

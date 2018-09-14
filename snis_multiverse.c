@@ -69,7 +69,9 @@ persisted in a simple database by snis_multiverse.
 #include "pthread_util.h"
 #include "rootcheck.h"
 #include "starmap_adjacency.h"
+#include "string-utils.h"
 
+static char *lobby, *nick, *location;
 static char *database_root = "./snisdb";
 static const int database_mode = 0744;
 static pthread_mutex_t data_mutex = PTHREAD_MUTEX_INITIALIZER;
@@ -84,7 +86,7 @@ static int debuglevel = 0;
 
 #define MAX_BRIDGES 1024
 #define MAX_CONNECTIONS 100
-#define MAX_STARSYSTEMS 100
+#define MAX_STARSYSTEMS MAXSTARMAPENTRIES
 
 static struct starsystem_info { /* one of these per connected snis_server */
 	int socket;
@@ -93,7 +95,9 @@ static struct starsystem_info { /* one of these per connected snis_server */
 	pthread_t write_thread;
 	struct packed_buffer_queue write_queue;
 	pthread_mutex_t write_queue_mutex;
-	char starsystem_name[20]; /* corresponds to "location" parameter of snis_server */
+	char starsystem_name[SSGL_LOCATIONSIZE]; /* corresponds to "location" parameter of snis_server */
+	int bridge_count;
+	int shutdown_countdown;
 } starsystem[MAX_STARSYSTEMS] = { { 0 } };
 static int nstarsystems = 0;
 
@@ -104,8 +108,12 @@ static struct bridge_info {
 	struct timeval created_on;
 	struct timeval last_seen;
 	struct snis_entity entity;
+	char starsystem_name[SSGL_LOCATIONSIZE];
 } ship[MAX_BRIDGES];
 int nbridges = 0;
+
+static char *exempt_server[MAX_STARSYSTEMS] = { 0 };
+static int nexempt_servers = 0;
 
 /* star map data -- corresponds to known snis_server instances
  * as discovered by digging through share/snis/solarsystems
@@ -113,9 +121,32 @@ int nbridges = 0;
 static struct starmap_entry starmap[MAXSTARMAPENTRIES];
 static int nstarmap_entries = 0;
 static int starmap_adjacency[MAXSTARMAPENTRIES][MAX_STARMAP_ADJACENCIES];
+static int autowrangle = 0;
 
 #define INCLUDE_BRIDGE_INFO_FIELDS 1
 #include "snis_entity_key_value_specification.h"
+
+static void exempt_snis_server(char *name)
+{
+	if (nexempt_servers >= MAX_STARSYSTEMS) {
+		fprintf(stderr,
+			"snis_multiverse: Too many exempt starsystems, not exempting '%s'\n",
+			name);
+		return;
+	}
+	exempt_server[nexempt_servers] = strdup(name);
+	nexempt_servers++;
+}
+
+static int snis_server_is_exempt(char *name)
+{
+	int i;
+
+	for (i = 0; i < nexempt_servers; i++)
+		if (strcasecmp(exempt_server[i], name) == 0)
+			return 1;
+	return 0;
+}
 
 static void extract_starmap_entry(char *path, char *starname)
 {
@@ -247,6 +278,7 @@ static int write_bridge_info(FILE *f, struct bridge_info *b)
 {
 	void *base_address[] = { &b->entity, b };
 
+	fprintf(f, "starsystem:%s", b->starsystem_name);
 	return key_value_write_lines(f, snis_entity_kvs, base_address);
 }
 
@@ -319,19 +351,35 @@ static int restore_bridge_info(const char *filename, struct bridge_info *b, unsi
 	char *contents;
 	int rc;
 	void *base_address[] = { &b->entity, b };
+	char starsystem[100];
+	char *nextline;
 
 	contents = slurp_file(filename, NULL);
 	if (!contents)
 		return -1;
 	memcpy(b->pwdhash, pwdhash, PWDHASHLEN);
-	rc = key_value_parse_lines(snis_entity_kvs, contents, base_address);
+
+	/* Figure out this bridge's current starsystem, then read all the bridge data
+	 * We need to be careful not to overwrite the starsystem with old data.
+	 */
+	memset(b->starsystem_name, 0, sizeof(b->starsystem_name));
+	rc = sscanf(contents, "starsystem:%s", starsystem);
+	if (rc == 1) {
+		snprintf(b->starsystem_name, sizeof(b->starsystem_name) - 1, "%s", starsystem);
+		nextline = strchr(contents, '\n');
+		rc = key_value_parse_lines(snis_entity_kvs, nextline + 1, base_address);
+	} else {
+		snprintf(b->starsystem_name, sizeof(b->starsystem_name) - 1, "%s", "UNKNOWN");
+		rc = key_value_parse_lines(snis_entity_kvs, contents, base_address);
+	}
 	free(contents);
 	return rc;
 }
 
 static void usage()
 {
-	fprintf(stderr, "usage: snis_multiverse -l lobbyserver -n servernick -L location\n");
+	fprintf(stderr, "usage: snis_multiverse [--autowrangle] -l lobbyserver -n servernick \\\n");
+	fprintf(stderr, "          -L location [ --exempt snis-server-location]\n");
 	exit(1);
 }
 
@@ -407,7 +455,7 @@ static int lookup_bridge(void)
 }
 
 /* TODO: this is very similar to snis_server's version of same function */
-static int __attribute__((unused)) read_and_unpack_buffer(struct starsystem_info *ss, unsigned char *buffer, char *format, ...)
+static int read_and_unpack_buffer(struct starsystem_info *ss, unsigned char *buffer, char *format, ...)
 {
 	va_list ap;
 	struct packed_buffer pb;
@@ -508,6 +556,10 @@ static int update_bridge(struct starsystem_info *ss)
 	packed_buffer_init(&pb, buffer, bytes_to_read);
 	unpack_bridge_update_packet(o, &pb);
 	ship[i].initialized = 1;
+
+	/* Update the ship's starsystem */
+	snprintf(ship[i].starsystem_name, sizeof(ship[i].starsystem_name) - 1, "%s", ss->starsystem_name);
+
 	pthread_mutex_unlock(&data_mutex);
 	rc = 0;
 	if (debuglevel > 0)
@@ -608,6 +660,21 @@ static int verify_existence(struct starsystem_info *ss, int should_already_exist
 	return 0;
 }
 
+static int update_bridge_count(struct starsystem_info *ss)
+{
+	uint8_t buffer[16];
+	uint32_t bridge_count;
+	int rc;
+
+	rc = read_and_unpack_buffer(ss, buffer, "w", &bridge_count);
+	if (rc)
+		return rc;
+	ss->bridge_count = bridge_count;
+	if (bridge_count > 0)
+		ss->shutdown_countdown = -1;
+	return 0;
+}
+
 static void process_instructions_from_snis_server(struct starsystem_info *ss)
 {
 	uint8_t opcode;
@@ -636,6 +703,11 @@ static void process_instructions_from_snis_server(struct starsystem_info *ss)
 		break;
 	case SNISMV_OPCODE_VERIFY_EXISTS:
 		rc = verify_existence(ss, 1);
+		if (rc)
+			goto bad_client;
+		break;
+	case SNISMV_OPCODE_UPDATE_BRIDGE_COUNT:
+		rc = update_bridge_count(ss);
 		if (rc)
 			goto bad_client;
 		break;
@@ -736,7 +808,7 @@ static void service_connection(int connection)
 {
 	int i, rc, flag = 1;
 	int thread_count, iterations;
-	char starsystem_name[SSGL_LOCATIONSIZE];
+	char starsystem_name[SSGL_LOCATIONSIZE + 1];
 
 	fprintf(stderr, "snis_multiverse: zzz 1\n");
 
@@ -757,8 +829,9 @@ static void service_connection(int connection)
 		fprintf(stderr, "snis_multiverse, client verification failed.\n");
 		return;
 	}
-	fprintf(stderr, "snis_multiverse: zzz 3\n");
+	fprintf(stderr, "snis_multiverse: zzz 3, waiting for starsystem name\n");
 
+	memset(starsystem_name, 0, sizeof(starsystem_name));
 	rc = snis_readsocket(connection, starsystem_name, SSGL_LOCATIONSIZE);
 	if (rc < 0) {
 		log_client_info(SNIS_ERROR, connection,
@@ -767,6 +840,7 @@ static void service_connection(int connection)
 		fprintf(stderr, "snis_multiverse, client verification failed.\n");
 		return;
 	}
+	fprintf(stderr, "snis_muliverse: starsystem name is '%s'\n", starsystem_name);
 
 	pthread_mutex_lock(&service_mutex);
 	fprintf(stderr, "snis_multiverse: zzz 5\n");
@@ -789,6 +863,8 @@ static void service_connection(int connection)
 		}
 	}
 
+	starsystem[i].bridge_count = 1; /* Assume 1 for now. SNISMV_OPCODE_UPDATE_BRIDGE_COUNT will update later */
+	starsystem[i].shutdown_countdown = -1;
 	starsystem[i].socket = connection;
 	snprintf(starsystem[i].starsystem_name, sizeof(starsystem[i].starsystem_name) - 1,
 			"%s", starsystem_name);
@@ -1144,6 +1220,8 @@ static void open_log_file(void)
 }
 
 static struct option long_options[] = {
+	{ "autowrangle", no_argument, NULL, 'a' },
+	{ "exempt", required_argument, NULL, 'e'},
 	{ "lobby", required_argument, NULL, 'l'},
 	{ "servernick", required_argument, NULL, 'n'},
 	{ "location", required_argument, NULL, 'L'},
@@ -1162,10 +1240,16 @@ static void parse_options(int argc, char *argv[], char **lobby, char **nick, cha
 		usage();
 	while (1) {
 		int option_index;
-		c = getopt_long(argc, argv, "L:l:n:", long_options, &option_index);
+		c = getopt_long(argc, argv, "ae:L:l:n:", long_options, &option_index);
 		if (c == -1)
 			break;
 		switch (c) {
+		case 'e':
+			exempt_snis_server(optarg);
+			break;
+		case 'a':
+			autowrangle = 1;
+			break;
 		case 'h':
 			usage(); /* no return */
 			break;
@@ -1188,12 +1272,198 @@ static void parse_options(int argc, char *argv[], char **lobby, char **nick, cha
 		usage(); /* no return */
 }
 
+static int snis_server_lockfile_exists(char *starsystem_name)
+{
+	char name[PATH_MAX], snis_server_lockfile[PATH_MAX];
+	struct stat statbuf;
+	int rc;
+
+	strcpy(name, starsystem_name);
+	uppercase(name);
+	snprintf(snis_server_lockfile, sizeof(snis_server_lockfile) - 1, "/tmp/snis_server_lock.%s", name);
+	rc = stat(snis_server_lockfile, &statbuf);
+	if (rc < 0 && errno == ENOENT)
+		return 0;
+	return 1;
+}
+
+static void start_snis_server(char *starsystem_name)
+{
+	char cmd[PATH_MAX];
+	char snis_server_location[PATH_MAX];
+	char upper_snis_server_location[PATH_MAX];
+	int rc;
+
+	snprintf(snis_server_location, sizeof(snis_server_location) - 1, "%s", starsystem_name);
+	strcpy(upper_snis_server_location, snis_server_location);
+	uppercase(upper_snis_server_location);
+	snprintf(cmd, sizeof(cmd) - 1, "./snis_server -l %s -L %s -m %s -s %s &",
+				lobby, upper_snis_server_location, location, snis_server_location);
+
+	fprintf(stderr, "snis_multiverse: STARTING SNIS SERVER for %s\n", starsystem_name);
+	fprintf(stderr, "snis_multiverse: Executing cmd: %s\n", cmd);
+	/* TODO: We should really fork() and exec() this ourself without getting bash involved. */
+	rc = system(cmd);
+	if (rc) {
+		fprintf(stderr, "snis_multiverse: Failed to start snis_server: %s\n", strerror(errno));
+		return;
+	}
+}
+
+static void maybe_startup_snis_server(int n)
+{
+	int i;
+
+	pthread_mutex_lock(&service_mutex);
+	/* Check if snis_server for starmap[i].name is already running or about to be running ... */
+	for (i = 0; i < nstarsystems; i++) {
+		if (strcmp(starsystem[i].starsystem_name, starmap[n].name) == 0) {
+			if (starsystem[i].socket >= 0) {
+				pthread_mutex_unlock(&service_mutex);
+				return;
+			}
+			if (snis_server_lockfile_exists(starsystem[i].starsystem_name)) {
+				pthread_mutex_unlock(&service_mutex);
+				return;
+			}
+			break;
+		}
+	}
+	pthread_mutex_unlock(&service_mutex);
+	start_snis_server(starmap[n].name);
+}
+
+static void maybe_shutdown_snis_server(int n)
+{
+	int i, rc;
+	uint8_t shutdown_opcode = SNISMV_OPCODE_SHUTDOWN_SNIS_SERVER;
+
+	if (snis_server_is_exempt(starmap[n].name))
+		return;
+
+	pthread_mutex_lock(&service_mutex);
+	/* Check if snis_server for starmap[i].name is already not running ... */
+	for (i = 0; i < nstarsystems; i++) {
+		if (strcmp(starsystem[i].starsystem_name, starmap[n].name) == 0) {
+			if (starsystem[i].socket < 0) {
+				pthread_mutex_unlock(&service_mutex);
+				return; /* It's already not running. */
+			}
+			if (!snis_server_lockfile_exists(starsystem[i].starsystem_name)) {
+				pthread_mutex_unlock(&service_mutex);
+				return; /* It's already not running */
+			}
+			break;
+		}
+	}
+	if (i >= nstarsystems) {
+		pthread_mutex_unlock(&service_mutex);
+		return;
+	}
+	if (starsystem[i].shutdown_countdown == -1) {
+		starsystem[i].shutdown_countdown = 10;
+		fprintf(stderr, "snis_multiverse, STARTED SHUTDOWN COUNTER FOR snis_server %s, countdown = %d\n",
+				starmap[n].name, starsystem[i].shutdown_countdown);
+	}
+	if (starsystem[i].shutdown_countdown > 0)
+		starsystem[i].shutdown_countdown--;
+	if (starsystem[i].shutdown_countdown > 0) {
+		pthread_mutex_unlock(&service_mutex);
+		return;
+	}
+
+	printf("snis_multiverse: SHUTTING DOWN SNIS SERVER for %s\n", starmap[n].name);
+	rc = snis_writesocket(starsystem[i].socket, &shutdown_opcode, sizeof(shutdown_opcode));
+	pthread_mutex_unlock(&service_mutex);
+	if (rc)
+		fprintf(stderr, "snis_multiverse: Failed to write shutdown opcode to snis_server.\n");
+}
+
+static void wrangle_snis_server_processes(void)
+{
+	int i, j, k;
+	char active_starsystems[MAXSTARMAPENTRIES];
+	char adj_starsystem[MAXSTARMAPENTRIES];
+	char bridge_location[MAXSTARMAPENTRIES][SSGL_LOCATIONSIZE];
+	int nbridge_locations = 0;
+	int found;
+
+	if (!autowrangle)
+		return;
+
+	/* Make a list of the names of star systems with active bridges in them */
+	pthread_mutex_lock(&data_mutex);
+	for (i = 0; i < nbridges; i++) {
+		if (strcmp(ship[i].starsystem_name, "UNKNOWN") == 0)
+			continue;
+		found = 0;
+		for (j = 0; j < nbridge_locations; j++) {
+			if (strcmp(bridge_location[j], ship[i].starsystem_name) == 0) {
+				found = 1;
+				break;
+			}
+		}
+		if (!found) {
+			memcpy(bridge_location[nbridge_locations], ship[i].starsystem_name, SSGL_LOCATIONSIZE);
+			nbridge_locations++;
+		}
+	}
+	pthread_mutex_unlock(&data_mutex);
+
+	/* Make a map of active starsystems */
+	memset(active_starsystems, 0, sizeof(active_starsystems));
+	pthread_mutex_lock(&service_mutex);
+	for (i = 0; i < nbridge_locations; i++) {
+		for (j = 0; j < nstarmap_entries; j++) {
+			if (strcmp(starmap[j].name, bridge_location[i]) == 0) {
+				active_starsystems[j] = 1;
+				break;
+			}
+			/* But if a starsystem has refcount 0, or bridge_count 0, then it's inactive */
+			for (k = 0; k < nstarsystems; k++) {
+				if (strcasecmp(starsystem[k].starsystem_name, starmap[j].name) == 0) {
+					if (starsystem[k].refcount == 0)
+						active_starsystems[j] = 0;
+					if (starsystem[k].bridge_count == 0)
+						active_starsystems[j] = 0;
+				}
+			}
+		}
+	}
+	pthread_mutex_unlock(&service_mutex);
+
+
+	/* Make a map of starsystems which are active, or adjacent to active starsystems */
+	memset(adj_starsystem, 0, sizeof(adj_starsystem));
+	for (i = 0; i < nstarmap_entries; i++) {
+		if (active_starsystems[i]) {
+			adj_starsystem[i] = 1;
+			for (j = 0; j < nstarmap_entries; j++) {
+				if (j == i)
+					continue;
+				if (starmap_stars_are_adjacent(starmap_adjacency, i, j))
+					adj_starsystem[j] = 1;
+			}
+		}
+	}
+
+	printf("snis_multiverse: ---------------------------\n");
+	for (i = 0; i < nstarmap_entries; i++) {
+		if (adj_starsystem[i]) {
+			printf("snis_multiverse: ACTIVE STAR SYSTEM %d '%s'\n", i, starmap[i].name);
+			maybe_startup_snis_server(i);
+		} else {
+			printf("snis_multiverse:        STAR SYSTEM %d '%s'\n", i, starmap[i].name);
+			maybe_shutdown_snis_server(i);
+		}
+	}
+}
+
 int main(int argc, char *argv[])
 {
 	struct ssgl_game_server gameserver;
-	int rc;
+	int i, rc;
 	pthread_t lobby_thread;
-	char *lobby, *nick, *location;
 
 	refuse_to_run_as_root("snis_multiverse");
 	parse_options(argc, argv, &lobby, &nick, &location);
@@ -1232,10 +1502,13 @@ int main(int argc, char *argv[])
 	/* create a thread to contact and update the lobby server... */
 	(void) ssgl_register_gameserver(lobby, &gameserver, &lobby_thread, &nconnections);
 
+	i = 0;
 	do {
-		/* do whatever it is that your game server does here... */
-		ssgl_sleep(30);
-		checkpoint_data();
+		ssgl_sleep(1);
+		wrangle_snis_server_processes(); /* Wrangle snis_server processes at 1Hz */
+		if ((i % 30) == 0)
+			checkpoint_data(); /* Checkpoint data every 30 secs */
+		i = (i + 1) % 30;
 	} while (1);
 	return 0;
 }
