@@ -192,9 +192,8 @@ static struct multiverse_server_info {
 	int have_packets_to_xmit;
 	int writer_time_to_exit;
 	int reader_time_to_exit;
-#define LOCATIONSIZE (sizeof((struct ssgl_game_server *) 0)->location)
 #define GAMEINSTANCESIZE (sizeof((struct ssgl_game_server *) 0)->game_instance)
-	char location[LOCATIONSIZE];
+	char location[SSGL_LOCATIONSIZE];
 } *multiverse_server = NULL;
 
 static char *solarsystem_name = DEFAULT_SOLAR_SYSTEM;
@@ -422,7 +421,7 @@ static int nshiptypes;
  * corresponds to 1 server process.  See queue_starmap().
  */
 static struct starmap_entry {
-	char name[LOCATIONSIZE];
+	char name[SSGL_LOCATIONSIZE];
 	double x, y, z;
 } starmap[MAXSTARMAPENTRIES];
 static int nstarmap_entries = 0;
@@ -14906,8 +14905,8 @@ static void warp_gate_ticket_buying_npc_bot(struct snis_entity *o, int bridge,
 
 	/* Find our solarsystem */
 	int len = strlen(solarsystem_name);
-	if (len > LOCATIONSIZE)
-		len = LOCATIONSIZE;
+	if (len > SSGL_LOCATIONSIZE)
+		len = SSGL_LOCATIONSIZE;
 	for (i = 0; i < nservers; i++) {
 		if (strncasecmp(gameserver[i].location, solarsystem_name, len) == 0) {
 			rc = sscanf(gameserver[i].game_instance, "%lf %lf %lf", &ssx, &ssy, &ssz);
@@ -20455,12 +20454,12 @@ static void queue_starmap(struct game_client *c)
 	if (!starmap_dirty && ((universe_timestamp + 20) % 80) != 0)
 		return;
 	for (i = 0; i < nstarmap_entries; i++) {
-		pb = packed_buffer_allocate(1 + 4 + 4 + 4 + LOCATIONSIZE);
+		pb = packed_buffer_allocate(1 + 4 + 4 + 4 + SSGL_LOCATIONSIZE);
 		packed_buffer_append(pb, "bSSS", OPCODE_UPDATE_SOLARSYSTEM_LOCATION,
 					starmap[i].x, (int32_t) 1000.0,
 					starmap[i].y, (int32_t) 1000.0,
 					starmap[i].z, (int32_t) 1000.0);
-		packed_buffer_append_raw(pb, starmap[i].name, LOCATIONSIZE);
+		packed_buffer_append_raw(pb, starmap[i].name, SSGL_LOCATIONSIZE);
 		pb_queue_to_client(c, pb);
 	}
 }
@@ -26584,7 +26583,7 @@ static void update_starmap(struct ssgl_game_server *gameserver, int ngameservers
 		/* Lookup this entry in the current star map */
 		found = 0;
 		for (j = 0; j < nstarmap_entries; j++) {
-			if (strncasecmp(starmap[j].name, gameserver[i].location, LOCATIONSIZE) == 0) {
+			if (strncasecmp(starmap[j].name, gameserver[i].location, SSGL_LOCATIONSIZE) == 0) {
 				if (x != starmap[j].x || y != starmap[j].y || z != starmap[j].z) {
 					/* found it, and (strangely) it moved */
 					starmap[j].x = x;
@@ -26598,7 +26597,7 @@ static void update_starmap(struct ssgl_game_server *gameserver, int ngameservers
 		}
 		/* Didn't find it, it is one we do not know about, add it. */
 		if (!found && nstarmap_entries < ARRAYSIZE(starmap)) {
-			strncpy(starmap[nstarmap_entries].name, gameserver[i].location, LOCATIONSIZE);
+			strncpy(starmap[nstarmap_entries].name, gameserver[i].location, SSGL_LOCATIONSIZE);
 			starmap[j].x = x;
 			starmap[j].y = y;
 			starmap[j].z = z;
@@ -26611,7 +26610,7 @@ static void update_starmap(struct ssgl_game_server *gameserver, int ngameservers
 	for (i = 0; i < nstarmap_entries; /* no increment here */) {
 		found = 0;
 		for (j = 0; j < ngameservers; j++) {
-			if (strncasecmp(starmap[i].name, gameserver[j].location, LOCATIONSIZE) == 0) {
+			if (strncasecmp(starmap[i].name, gameserver[j].location, SSGL_LOCATIONSIZE) == 0) {
 				found = 1;
 				break;
 			}
@@ -26665,7 +26664,7 @@ static void servers_changed_cb(void *cookie)
 			logprefix(), nservers);
 	for (i = 0; i < nservers; i++) {
 		fprintf(stderr, "%s: servers_changed_cb i = %d\n", logprefix(), i);
-		if (strncmp(gameserver[i].location, multiverse_server->location, LOCATIONSIZE) != 0)
+		if (strncmp(gameserver[i].location, multiverse_server->location, SSGL_LOCATIONSIZE) != 0)
 			continue;
 		fprintf(stderr, "%s: servers_changed_cb i = %d, location = %s\n",
 					logprefix(), i, multiverse_server->location);

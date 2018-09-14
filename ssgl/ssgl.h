@@ -35,6 +35,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 #define GAMELOBBY_SERVICE_NUMBER_AS_STRING "2914"
 
 #pragma pack(1)
+#define SSGL_LOCATIONSIZE (20)
 struct ssgl_game_server {
 	uint32_t ipaddr;
 	uint16_t port;
@@ -42,7 +43,7 @@ struct ssgl_game_server {
 	char game_instance[20];		/* which instance on the server of the game */
 	char server_nickname[15];	/* server nickname where game is hosted */
 	char protocol_version[9];
-	char location[20];
+	char location[SSGL_LOCATIONSIZE];
 	uint32_t nconnections;
 };
 

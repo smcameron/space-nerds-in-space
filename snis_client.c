@@ -458,9 +458,8 @@ static char old_solarsystem_name[100] = { 0 };
  * as discovered by snis_server via ssgl_lobby and relayed to
  * clients via OPCODE_UPDATE_SOLARSYSTEM_LOCATION
  */
-#define LOCATIONSIZE (sizeof(((struct ssgl_game_server *) 0)->location))
 static struct starmap_entry {
-	char name[LOCATIONSIZE];
+	char name[SSGL_LOCATIONSIZE];
 	double x, y, z;
 	int time_before_expiration;
 } starmap[MAXSTARMAPENTRIES];
@@ -6112,8 +6111,8 @@ static int process_update_solarsystem_location(void)
 {
 	int i, rc, found;
 	double x, y, z;
-	unsigned char buffer[1 + 4 + 4 + 4 + LOCATIONSIZE];
-	char name[LOCATIONSIZE];
+	unsigned char buffer[1 + 4 + 4 + 4 + SSGL_LOCATIONSIZE];
+	char name[SSGL_LOCATIONSIZE];
 
 	rc = read_and_unpack_buffer(buffer, "SSS",
 			&x, (int32_t) 1000,
@@ -6121,15 +6120,15 @@ static int process_update_solarsystem_location(void)
 			&z, (int32_t) 1000);
 	if (rc != 0)
 		return -1;
-	rc = snis_readsocket(gameserver_sock, name, LOCATIONSIZE);
+	rc = snis_readsocket(gameserver_sock, name, SSGL_LOCATIONSIZE);
 	if (rc != 0)
 		return rc;
-	name[LOCATIONSIZE - 1] = '\0';
+	name[SSGL_LOCATIONSIZE - 1] = '\0';
 	pthread_mutex_lock(&universe_mutex);
 	found = 0;
 
 	for (i = 0; i < nstarmap_entries; i++) {
-		if (strncasecmp(starmap[i].name, name, LOCATIONSIZE) != 0)
+		if (strncasecmp(starmap[i].name, name, SSGL_LOCATIONSIZE) != 0)
 			continue;
 		found = 1;
 		starmap[i].x = x;
@@ -6140,7 +6139,7 @@ static int process_update_solarsystem_location(void)
 	if (!found) {
 		if (nstarmap_entries < MAXSTARMAPENTRIES) {
 			i = nstarmap_entries;
-			memcpy(starmap[i].name, name, LOCATIONSIZE);
+			memcpy(starmap[i].name, name, SSGL_LOCATIONSIZE);
 			starmap[i].x = x;
 			starmap[i].y = y;
 			starmap[i].z = z;
