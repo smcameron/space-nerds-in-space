@@ -26438,6 +26438,7 @@ static void connect_to_multiverse(struct multiverse_server_info *msi, uint32_t i
 	struct addrinfo hints;
 	unsigned char *x = (unsigned char *) &ipaddr;
 	char response[100];
+	char starsystem_name[SSGL_LOCATIONSIZE];
 
 	assert(msi);
 
@@ -26507,6 +26508,14 @@ static void connect_to_multiverse(struct multiverse_server_info *msi, uint32_t i
 		fprintf(stderr, "%s: expected '%s' got '%s' from snis_multiverse\n",
 			logprefix(), SNIS_MULTIVERSE_VERSION, response);
 		goto error;
+	}
+
+	memset(starsystem_name, 0, sizeof(starsystem_name));
+	snprintf(starsystem_name, sizeof(starsystem_name) - 1, "%s", solarsystem_name);
+	rc = snis_writesocket(sock, starsystem_name, SSGL_LOCATIONSIZE);
+	if (rc != 0) {
+		fprintf(stderr, "%s: failed to write starsystem name to snis_multiverse\n",
+			logprefix());
 	}
 
 	fprintf(stderr, "%s: connected to snis_multiverse (%hhu.%hhu.%hhu.%hhu/%hu on socket %d)\n",

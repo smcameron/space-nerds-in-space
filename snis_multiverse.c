@@ -734,6 +734,7 @@ static void service_connection(int connection)
 {
 	int i, rc, flag = 1;
 	int thread_count, iterations;
+	char starsystem_name[SSGL_LOCATIONSIZE];
 
 	fprintf(stderr, "snis_multiverse: zzz 1\n");
 
@@ -755,6 +756,15 @@ static void service_connection(int connection)
 		return;
 	}
 	fprintf(stderr, "snis_multiverse: zzz 3\n");
+
+	rc = snis_readsocket(connection, starsystem_name, SSGL_LOCATIONSIZE);
+	if (rc < 0) {
+		log_client_info(SNIS_ERROR, connection,
+			"snis_multiverse: disconnected, failed to read starsystem name\n");
+		close(connection);
+		fprintf(stderr, "snis_multiverse, client verification failed.\n");
+		return;
+	}
 
 	pthread_mutex_lock(&service_mutex);
 	fprintf(stderr, "snis_multiverse: zzz 5\n");
@@ -778,6 +788,8 @@ static void service_connection(int connection)
 	}
 
 	starsystem[i].socket = connection;
+	snprintf(starsystem[i].starsystem_name, sizeof(starsystem[i].starsystem_name) - 1,
+			"%s", starsystem_name);
 
 	log_client_info(SNIS_INFO, connection, "snis_multiverse: snis_server connected\n");
 
