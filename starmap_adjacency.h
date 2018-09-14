@@ -22,6 +22,8 @@ void starmap_clear_all_adjacencies(int starmap_adjacency[MAXSTARMAPENTRIES][MAX_
 					int nstarmap_entries);
 void starmap_compute_adjacencies(int starmap_adjacency[MAXSTARMAPENTRIES][MAX_STARMAP_ADJACENCIES],
 					struct starmap_entry starmap[], int nstarmap_entries);
+int starmap_stars_are_adjacent(int starmap_adjacency[MAXSTARMAPENTRIES][MAX_STARMAP_ADJACENCIES],
+		int star_a, int star_b);
 
 #endif
 

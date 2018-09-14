@@ -82,3 +82,17 @@ void starmap_compute_adjacencies(int starmap_adjacency[MAXSTARMAPENTRIES][MAX_ST
 	}
 }
 
+int starmap_stars_are_adjacent(int starmap_adjacency[MAXSTARMAPENTRIES][MAX_STARMAP_ADJACENCIES],
+		int star_a, int star_b)
+{
+	int i;
+
+	for (i = 0; i < MAX_STARMAP_ADJACENCIES; i++) {
+		if (starmap_adjacency[star_a][i] == -1)
+			break;
+		if (starmap_adjacency[star_a][i] == star_b)
+			return 1;
+	}
+	return 0;
+}
+
