@@ -93,6 +93,23 @@ start_snis_lobby()
 
 start_snis_multiverse()
 {
+	local autowrangle=
+	local exempt=
+	echo -n "Autowrangle snis_servers (y/n, default = y)?"
+	read x
+	if [ "$x" != "n" ]
+	then
+		echo
+		echo "Which solarsystem should be exempted from auto-wrangling?"
+		get_solarsystem_name
+		exempt="-e $SOLARSYSTEM_NAME"
+		autowrangle=-a
+		echo "Exempting solarsystem $SOLARSYSTEM_NAME from auto-wrangling."
+	else
+		autowrangle=
+		exempt=
+	fi
+
 	if [ ! -d ./snisdb ]
 	then
 		echo "./snisdb/ does not exist, creating directory." 1>&2
@@ -109,7 +126,7 @@ start_snis_multiverse()
 		fi
 		echo "Created ./snisdb for snis_multiverse" 1>&2
 	fi
-	(${SNIS_MULTIVERSE} -l "${LOBBYHOST}" -n nickname -L narnia > snis_multiverse_log.txt 2>&1 ; \
+	(${SNIS_MULTIVERSE} $autowrangle -l "${LOBBYHOST}" -n nickname -L narnia $exempt > snis_multiverse_log.txt 2>&1 ; \
 		echo "snis_multiverse died, status was $?" 1>&2 ) &
 }
 
@@ -117,7 +134,7 @@ get_solarsystem_name()
 {
 	while [ "1" = "1" ]
 	do
-		default="default"
+		default="$SOLARSYSTEM_NAME"
 		dname="."
 
 		echo "Choose a solar system:"
@@ -127,7 +144,7 @@ get_solarsystem_name()
 			name=$(basename "$dname")
 			echo "   $name"
 		done
-		echo -n "Enter the name of the solarsystem: "
+		echo -n "Enter the name of the solarsystem (default = $default): "
 		read ssname;
 		if [ "$ssname" = "" ]
 		then
