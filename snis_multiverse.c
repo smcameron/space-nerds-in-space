@@ -1447,13 +1447,13 @@ static void wrangle_snis_server_processes(void)
 		}
 	}
 
-	printf("snis_multiverse: ---------------------------\n");
+	/* printf("snis_multiverse: ---------------------------\n"); */
 	for (i = 0; i < nstarmap_entries; i++) {
 		if (adj_starsystem[i]) {
-			printf("snis_multiverse: ACTIVE STAR SYSTEM %d '%s'\n", i, starmap[i].name);
+			/* printf("snis_multiverse: ACTIVE STAR SYSTEM %d '%s'\n", i, starmap[i].name); */
 			maybe_startup_snis_server(i);
 		} else {
-			printf("snis_multiverse:        STAR SYSTEM %d '%s'\n", i, starmap[i].name);
+			/* printf("snis_multiverse:        STAR SYSTEM %d '%s'\n", i, starmap[i].name); */
 			maybe_shutdown_snis_server(i);
 		}
 	}
