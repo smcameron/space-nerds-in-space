@@ -535,8 +535,10 @@ static void send_bridge_update_to_snis_server(struct starsystem_info *ss, unsign
 
 	pthread_mutex_lock(&data_mutex);
 	i = lookup_ship_by_hash(pwdhash);
-	if (i < 0)
+	if (i < 0) {
+		pthread_mutex_unlock(&data_mutex);
 		return;
+	}
 	o = &ship[i].entity;
 
 	/* Update the ship */
