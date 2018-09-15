@@ -425,7 +425,7 @@ COMMONOBJS=mathutils.o snis_alloc.o snis_socket_io.o snis_marshal.o \
 		snis_faction.o mtwist.o names.o infinite-taunt.o snis_damcon_systems.o \
 		string-utils.o c-is-the-locale.o starbase_metadata.o arbitrary_spin.o \
 		planetary_atmosphere.o mesh.o mikktspace/mikktspace.o pthread_util.o \
-		snis_opcode_def.o rts_unit_data.o commodities.o snis_tweak.o
+		snis_opcode_def.o rts_unit_data.o commodities.o snis_tweak.o rootcheck.o
 SERVEROBJS=${COMMONOBJS} snis_server.o starbase-comms.o \
 		power-model.o quat.o vec4.o matrix.o snis_event_callback.o space-part.o fleet.o \
 		docking_port.o elastic_collision.o snis_nl.o spelled_numbers.o \
@@ -434,7 +434,7 @@ SERVEROBJS=${COMMONOBJS} snis_server.o starbase-comms.o \
 		graph_dev_mesh_stub.o turret_aimer.o snis_hash.o snis_server_debug.o
 MULTIVERSEOBJS=snis_multiverse.o snis_marshal.o snis_socket_io.o mathutils.o mtwist.o stacktrace.o \
 		snis_hash.o quat.o string-utils.o key_value_parser.o snis_bridge_update_packet.o \
-		pthread_util.o
+		pthread_util.o rootcheck.o
 
 COMMONCLIENTOBJS=${COMMONOBJS} ${OGGOBJ} ${SNDOBJS} snis_ui_element.o snis_font.o snis_text_input.o \
 	snis_typeface.o snis_gauge.o snis_button.o snis_label.o snis_sliders.o snis_text_window.o \
@@ -607,6 +607,9 @@ check-assets:
 build:	all
 
 utils:	${UTILPROGS}
+
+rootcheck.o:	rootcheck.c rootcheck.h Makefile
+	$(Q)$(COMPILE)
 
 graph_dev_opengl.o : graph_dev_opengl.c Makefile
 	$(Q)$(GLEXTCOMPILE)

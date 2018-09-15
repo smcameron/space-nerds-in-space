@@ -1,5 +1,11 @@
 #!/bin/sh
 
+if [ "$(id -u)" = "0" ]
+then
+	echo "You are root. Do not run this script as root." 1>&2
+	exit 1
+fi
+
 # stop any existing processes first
 ./killem.sh
 sleep 0.25

@@ -67,6 +67,7 @@ persisted in a simple database by snis_multiverse.
 #include "build_bug_on.h"
 #include "snis_bridge_update_packet.h"
 #include "pthread_util.h"
+#include "rootcheck.h"
 
 static char *database_root = "./snisdb";
 static const int database_mode = 0744;
@@ -1119,6 +1120,7 @@ int main(int argc, char *argv[])
 	pthread_t lobby_thread;
 	char *lobby, *nick, *location;
 
+	refuse_to_run_as_root("snis_multiverse");
 	parse_options(argc, argv, &lobby, &nick, &location);
 
 	open_log_file();

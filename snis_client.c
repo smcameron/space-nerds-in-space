@@ -121,6 +121,7 @@
 #include "snis_tweak.h"
 #include "snis_debug.h"
 #include "starmap_adjacency.h"
+#include "rootcheck.h"
 
 #define SHIP_COLOR CYAN
 #define STARBASE_COLOR RED
@@ -20978,6 +20979,7 @@ int main(int argc, char *argv[])
 	GtkWidget *vbox;
 	int i;
 
+	refuse_to_run_as_root("snis_client");
 	displaymode = DISPLAYMODE_NETWORK_SETUP;
 
 	take_your_locale_and_shove_it();

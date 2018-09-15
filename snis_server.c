@@ -111,6 +111,7 @@
 #include "snis_entity_key_value_specification.h"
 #include "snis_cardinal_colors.h"
 #include "starmap_adjacency.h"
+#include "rootcheck.h"
 
 #define CLIENT_UPDATE_PERIOD_NSECS 500000000
 #define MAXCLIENTS 100
@@ -26731,6 +26732,7 @@ int main(int argc, char *argv[])
 	int port, i;
 	struct timespec thirtieth_second;
 
+	refuse_to_run_as_root("snis_server");
 	take_your_locale_and_shove_it();
 
 	process_options(argc, argv);
