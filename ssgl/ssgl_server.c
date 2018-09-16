@@ -39,6 +39,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <ifaddrs.h>
+#include <signal.h>
 
 #include "ssgl.h"
 #include "ssgl_sanitize.h"
@@ -598,6 +599,8 @@ int main(int argc, char *argv[])
 		else
 			_exit(-1);
 	}
+
+	signal(SIGPIPE, SIG_IGN);
 
 	if (ssgl_open_logfile("SSGL_LOGFILE"))
 		return 0;
