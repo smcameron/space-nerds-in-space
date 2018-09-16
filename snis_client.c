@@ -10612,15 +10612,17 @@ static void show_death_screen(GtkWidget *w)
 	struct snis_entity *o;
 
 	o = find_my_ship();
+	if (!o)
+		return;
 
 	sng_set_foreground(UI_COLOR(death_text));
 
-	if (o && o->tsd.ship.oxygen < 10) {
+	if (o->tsd.ship.oxygen < 10) {
 		sprintf(buf, "YOUR CREW HAS DIED");
 		sng_abs_xy_draw_string(buf, BIG_FONT, txx(20), txy(150));
 		sprintf(buf, "BY ASPHYXIATION");
 		sng_abs_xy_draw_string(buf, BIG_FONT, txx(20), txy(250));
-		sprintf(buf, "RESPAWNING IN %d SECONDS", go[my_ship_oid].respawn_time);
+		sprintf(buf, "RESPAWNING IN %d SECONDS", o->respawn_time);
 		sng_abs_xy_draw_string(buf, TINY_FONT, txx(20), txy(500));
 	} else {
 		sprintf(buf, "YOUR SHIP");
@@ -10631,7 +10633,7 @@ static void show_death_screen(GtkWidget *w)
 		sng_abs_xy_draw_string(buf, BIG_FONT, txx(20), txy(350));
 		sprintf(buf, "SMITHEREENS");
 		sng_abs_xy_draw_string(buf, BIG_FONT, txx(20), txy(450));
-		sprintf(buf, "RESPAWNING IN %d SECONDS", go[my_ship_oid].respawn_time);
+		sprintf(buf, "RESPAWNING IN %d SECONDS", o->respawn_time);
 		sng_abs_xy_draw_string(buf, TINY_FONT, txx(20), txy(500));
 	}
 }
@@ -14574,8 +14576,8 @@ static void draw_science_graph(GtkWidget *w, struct snis_entity *ship, struct sn
 	
 	if (o) {
 		if (o != ship) {
-			dist = hypot(o->x - go[my_ship_oid].x, o->y - go[my_ship_oid].y);
-			bw = (int) (go[my_ship_oid].tsd.ship.sci_beam_width * 180.0 / M_PI);
+			dist = hypot(o->x - ship->x, o->y - ship->y);
+			bw = (int) (ship->tsd.ship.sci_beam_width * 180.0 / M_PI);
 			pwr = ship->tsd.ship.power_data.sensors.i;
 		} else {
 			dist = 0.1;
@@ -14776,13 +14778,13 @@ static void draw_science_data(GtkWidget *w, struct snis_entity *ship, struct sni
 
 	if (o || waypoint_index != (uint32_t) -1) {
 		if (o) {
-			dx = o->x - go[my_ship_oid].x;
-			dy = o->y - go[my_ship_oid].y;
-			dz = o->z - go[my_ship_oid].z;
+			dx = o->x - ship->x;
+			dy = o->y - ship->y;
+			dz = o->z - ship->z;
 		} else {
-			dx = sci_ui.waypoint[waypoint_index][0] - go[my_ship_oid].x;
-			dy = sci_ui.waypoint[waypoint_index][1] - go[my_ship_oid].y;
-			dz = sci_ui.waypoint[waypoint_index][2] - go[my_ship_oid].z;
+			dx = sci_ui.waypoint[waypoint_index][0] - ship->x;
+			dy = sci_ui.waypoint[waypoint_index][1] - ship->y;
+			dz = sci_ui.waypoint[waypoint_index][2] - ship->z;
 		}
 
 		union quat q_to_o;
@@ -17027,8 +17029,13 @@ static void show_demon_2d(GtkWidget *w)
 {
 	int i;
 	char buffer[100];
+	struct snis_entity *o;
 
-	if (go[my_ship_oid].alive > 0)
+	o = find_my_ship();
+	if (!o)
+		return;
+
+	if (o->alive > 0)
 		sng_set_foreground(UI_COLOR(demon_default));
 	else
 		sng_set_foreground(UI_COLOR(demon_default_dead));
@@ -17099,6 +17106,11 @@ static void show_demon_3d(GtkWidget *w)
 		orangered_material, yellow_material, cyan_material;
 	char oidstr[12];
 	float oidstrx, oidstry;
+	struct snis_entity *my_ship;
+
+	my_ship = find_my_ship();
+	if (!my_ship)
+		return;
 
 	if (!initialized_materials) {
 		material_init_alpha_by_normal(&cyan_material);
@@ -17177,7 +17189,7 @@ static void show_demon_3d(GtkWidget *w)
 		}
 	}
 
-	if (go[my_ship_oid].alive > 0)
+	if (my_ship->alive > 0)
 		sng_set_foreground(UI_COLOR(demon_default));
 	else
 		sng_set_foreground(UI_COLOR(demon_default_dead));
