@@ -113,6 +113,7 @@
 #include "snis_cardinal_colors.h"
 #include "starmap_adjacency.h"
 #include "rootcheck.h"
+#include "ship_registration.h"
 
 #define CLIENT_UPDATE_PERIOD_NSECS 500000000
 #define MAXCLIENTS 100
@@ -238,6 +239,8 @@ static void npc_menu_item_buy_cargo(struct npc_menu_item *item,
 				char *npcname, struct npc_bot_state *botstate);
 static void npc_menu_item_sell_cargo(struct npc_menu_item *item,
 				char *npcname, struct npc_bot_state *botstate);
+static void npc_menu_item_query_ship_registration(struct npc_menu_item *item,
+				char *npcname, struct npc_bot_state *botstate);
 static void npc_menu_item_board_passengers(struct npc_menu_item *item,
 				char *npcname, struct npc_bot_state *botstate);
 static void npc_menu_item_disembark_passengers(struct npc_menu_item *item,
@@ -313,6 +316,7 @@ static struct npc_menu_item starbase_main_menu[] = {
 	{ "BUY FUEL", 0, 0, npc_menu_item_not_implemented },
 	{ "REPAIRS AND MAINTENANCE", 0, repairs_and_maintenance_menu, 0 },
 	{ "ARRANGE TRANSPORT CONTRACTS", 0, arrange_transport_contracts_menu, 0 },
+	{ "QUERY SHIP REGISTRATIONS", 0, 0, npc_menu_item_query_ship_registration },
 	{ "SIGN OFF", 0, 0, npc_menu_item_sign_off },
 	{ 0, 0, 0, 0 }, /* mark end of menu items */
 };
@@ -453,6 +457,8 @@ static struct snis_object_pool *pool;
 static struct snis_entity go[MAXGAMEOBJS];
 #define go_index(snis_entity_ptr) ((long) ((snis_entity_ptr) - &go[0]))
 static struct space_partition *space_partition = NULL;
+
+static struct ship_registry ship_registry;
 
 /* Do planets, black holes, nebula and antenna mis-aiming block comms?  Default is false, disabled */
 static int enable_comms_attenuation = 0;
@@ -1672,6 +1678,8 @@ static void delete_object(struct snis_entity *o)
 		free(o->sdata.science_text);
 		o->sdata.science_text = NULL;
 	}
+	if (o->type == OBJTYPE_SHIP1 || o->type == OBJTYPE_SHIP2 || o->type == OBJTYPE_DERELICT)
+		ship_registry_delete_ship_entries(&ship_registry, o->id);
 	if (o->type == OBJTYPE_DERELICT && o->tsd.derelict.ships_log) {
 		free(o->tsd.derelict.ships_log);
 		o->tsd.derelict.ships_log = NULL;
@@ -10212,6 +10220,7 @@ static int add_ship(int faction, int auto_respawn)
 	double x, y, z, heading;
 	int st;
 	static struct mtwist_state *mt = NULL;
+	char registration[100];
 
 	if (!mt)
 		mt = mtwist_init(mtwist_seed);
@@ -10275,6 +10284,10 @@ static int add_ship(int faction, int auto_respawn)
 	go[i].tsd.ship.desired_hg_ant_aim.v.x = 1;
 	go[i].tsd.ship.desired_hg_ant_aim.v.y = 0;
 	go[i].tsd.ship.desired_hg_ant_aim.v.z = 0;
+
+	snprintf(registration, sizeof(registration) - 1, "PRIVATE SPACECRAFT");
+	ship_registry_add_entry(&ship_registry, go[i].id, SHIP_REG_TYPE_REGISTRATION, registration);
+	ship_registry_add_entry(&ship_registry, go[i].id, SHIP_REG_TYPE_OWNER, "OMEGA MINING CORP.");
 	return i;
 }
 
@@ -12703,6 +12716,7 @@ static void populate_universe(void)
 	if (solarsystem_assets->random_seed != -1)
 		set_random_seed(solarsystem_assets->random_seed);
 	initialize_random_orientations_and_spins(COMMON_MTWIST_SEED);
+	ship_registry_init(&ship_registry);
 	add_nebulae(); /* do nebula first */
 	add_asteroids();
 	add_planets();
@@ -14215,6 +14229,113 @@ static void npc_menu_item_buy_parts(struct npc_menu_item *item,
 	botstate->parts_menu = (item - &repairs_and_maintenance_menu[0] - 1) %
 				(DAMCON_SYSTEM_COUNT - 1);
 	botstate->special_bot = parts_buying_npc_bot;
+	botstate->special_bot(&go[i], bridge, (char *) b->shipname, "");
+}
+
+static int lookup_by_registration(uint32_t id)
+{
+	int i;
+
+	for (i = 0; i <= snis_object_pool_highest_object(pool); i++)
+		if (go[i].id == id || (go[i].type == OBJTYPE_DERELICT && go[i].tsd.derelict.orig_ship_id == id))
+			return i;
+	return -1;
+}
+static void starbase_registration_query_npc_bot(struct snis_entity *o, int bridge,
+		char *name, char *msg)
+{
+	int i;
+	char m[100];
+	char *n = o->tsd.starbase.name;
+	uint32_t channel = bridgelist[bridge].npcbot.channel;
+	int rc, selection;
+
+	i = lookup_by_id(bridgelist[bridge].shipid);
+	if (i < 0) {
+		printf("Non fatal error at %s:%s:%d\n",
+			__FILE__, __func__, __LINE__);
+		return;
+	}
+
+	if (strcasecmp(msg, "Q") == 0) {
+		bridgelist[bridge].npcbot.special_bot = NULL; /* deactivate cargo buying bot */
+		send_to_npcbot(bridge, name, ""); /* poke generic bot so he says something */
+	}
+
+	rc = sscanf(msg, "%d", &selection);
+	if (rc != 1) {
+		selection = -1;
+		send_comms_packet(o, n, channel,
+			" ENTER REGISTRATION ID (Q to quit) ");
+		return;
+	}
+
+	i = lookup_by_id(selection);
+	if (i < 0) {
+		i = lookup_by_registration(selection);
+		if (i < 0) {
+			send_comms_packet(o, n, channel, "NO SUCH REGISTRATION FOUND");
+			return;
+		}
+	}
+	if (go[i].type != OBJTYPE_SHIP1 &&
+		go[i].type != OBJTYPE_SHIP2 &&
+		go[i].type != OBJTYPE_DERELICT) {
+		send_comms_packet(o, n, channel, "NO SUCH REGISTRATION FOUND");
+		return;
+	}
+	snprintf(m, sizeof(m) - 1, "REGISTRATION ID - %d", selection);
+	send_comms_packet(o, n, channel, m);
+	snprintf(m, sizeof(m) - 1, "NAME - %s", go[i].sdata.name);
+	send_comms_packet(o, n, channel, m);
+	for (i = 0; i >= 0;) {
+		i = ship_registry_get_next_entry(&ship_registry, selection, i);
+		if (i < 0)
+			break;
+		switch (ship_registry.entry[i].type) {
+		case SHIP_REG_TYPE_OWNER:
+			snprintf(m, sizeof(m) - 1, "OWNER - %s", ship_registry.entry[i].entry);
+			send_comms_packet(o, n, channel, m);
+			break;
+		case SHIP_REG_TYPE_REGISTRATION:
+			snprintf(m, sizeof(m) - 1, "REGISTRATION - %s", ship_registry.entry[i].entry);
+			send_comms_packet(o, n, channel, m);
+			break;
+		case SHIP_REG_TYPE_WARRANT:
+			snprintf(m, sizeof(m) - 1, "WARRANT - %s", ship_registry.entry[i].entry);
+			send_comms_packet(o, n, channel, m);
+			break;
+		case SHIP_REG_TYPE_CAPTAIN:
+			snprintf(m, sizeof(m) - 1, "CAPTAIN - %s", ship_registry.entry[i].entry);
+			send_comms_packet(o, n, channel, m);
+			break;
+		case SHIP_REG_TYPE_COMMENT:
+			snprintf(m, sizeof(m) - 1, " - %s", ship_registry.entry[i].entry);
+			send_comms_packet(o, n, channel, m);
+			break;
+		}
+		i++;
+	}
+}
+
+static void npc_menu_item_query_ship_registration(struct npc_menu_item *item,
+					char *npcname, struct npc_bot_state *botstate)
+{
+	struct bridge_data *b;
+	int i, bridge;
+
+	i = lookup_by_id(botstate->object_id);
+	if (i < 0) {
+		printf("nonfatal bug in %s at %s:%d\n", __func__, __FILE__, __LINE__);
+		return;
+	}
+
+	/* find our bridge... */
+	b = container_of(botstate, struct bridge_data, npcbot);
+	bridge = b - bridgelist;
+
+	/* poke the special bot to make it say something. */
+	botstate->special_bot = starbase_registration_query_npc_bot;
 	botstate->special_bot(&go[i], bridge, (char *) b->shipname, "");
 }
 
@@ -16624,7 +16745,7 @@ static void server_builtin_dump(char *cmd)
 {
 	pthread_mutex_lock(&universe_mutex);
 	snis_debug_dump(cmd, go, nstarbase_models, docking_port_info, lookup_by_id,
-			send_demon_console_msg, ship_type, nshiptypes);
+			send_demon_console_msg, ship_type, nshiptypes, &ship_registry);
 	pthread_mutex_unlock(&universe_mutex);
 }
 

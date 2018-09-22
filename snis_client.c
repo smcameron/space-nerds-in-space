@@ -14677,13 +14677,20 @@ static void draw_science_data(GtkWidget *w, struct snis_entity *ship, struct sni
 		if (o && (o->type == OBJTYPE_SHIP1 ||
 			o->type == OBJTYPE_SHIP2 ||
 			o->type == OBJTYPE_WARPGATE ||
-			o->type == OBJTYPE_STARBASE)) {
+			o->type == OBJTYPE_STARBASE ||
+			o->type == OBJTYPE_DERELICT)) {
 			y += yinc;
 			the_faction = o ?
 				o->sdata.faction >= 0 &&
 				o->sdata.faction < nfactions() ?
 					faction_name(o->sdata.faction) : "UNKNOWN" : "UNKNOWN";
 			sprintf(buffer, "ORIG: %s", the_faction);
+			sng_abs_xy_draw_string(buffer, TINY_FONT, x, y);
+			y += yinc;
+			if (o->type != OBJTYPE_DERELICT)
+				sprintf(buffer, "REGISTRATION: %d", o->id);
+			else
+				sprintf(buffer, "REGISTRATION: %d", o->tsd.derelict.orig_ship_id);
 			sng_abs_xy_draw_string(buffer, TINY_FONT, x, y);
 		}
 	}
@@ -16077,7 +16084,7 @@ static void client_side_dump(char *cmd)
 {
 	snis_debug_dump(cmd, go, nstarbase_models, docking_port_info,
 			lookup_object_by_id, print_demon_console_msg,
-			ship_type, nshiptypes);
+			ship_type, nshiptypes, NULL);
 }
 
 static void client_demon_follow(char *cmd)

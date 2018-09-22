@@ -20,8 +20,10 @@
 */
 
 #include <stdio.h>
+#include <string.h>
 
 #include "snis_debug.h"
+#include "ship_registration.h"
 
 static char *label = "";
 
@@ -30,17 +32,40 @@ void snis_debug_dump_set_label(char *s)
 	label = s;
 }
 
+static void dump_registry(void (*printfn)(const char *fmt, ...), struct ship_registry *registry)
+{
+	int i;
+
+	printfn("DUMPING SHIP REGISTRY:");
+	for (i = 0; i < registry->nentries; i++) {
+		if (registry->entry[i].bounty_collection_site != (uint32_t) -1)
+			printfn("- %u %c $%.0f, %u %s", registry->entry[i].id, registry->entry[i].type,
+				registry->entry[i].entry, registry->entry[i].bounty,
+				registry->entry[i].bounty_collection_site);
+		else
+			printfn("- %u %c %s", registry->entry[i].id, registry->entry[i].type,
+				registry->entry[i].entry);
+	}
+}
+
 void snis_debug_dump(char *cmd, struct snis_entity go[], int nstarbase_models,
 			struct docking_port_attachment_point **docking_port_info,
 			int (*lookup)(uint32_t object_id), void (*printfn)(const char *fmt, ...),
-			struct ship_type_entry *ship_type, int nshiptypes)
+			struct ship_type_entry *ship_type, int nshiptypes, struct ship_registry *registry)
 {
 	int i, j, rc;
 	uint32_t id;
 	char *t;
 	struct snis_entity *o;
 	char fnptraddr[32];
+	char arg2[256];
 	static uint32_t last_object = (uint32_t) -1;
+
+	rc = sscanf(cmd, "%*s %s", arg2);
+	if (rc == 1 && strcasecmp(arg2, "registry") == 0 && registry) {
+		dump_registry(printfn, registry);
+		return;
+	}
 
 	rc = sscanf(cmd, "%*s %u", &id);
 	if (rc != 1) {

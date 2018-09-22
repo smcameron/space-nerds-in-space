@@ -25,6 +25,7 @@
 #include "snis.h"
 #include "string-utils.h"
 #include "snis_ship_type.h"
+#include "ship_registration.h"
 
 void snis_debug_dump_set_label(char *label);
 void snis_debug_dump(char *cmd, struct snis_entity go[],
@@ -33,6 +34,6 @@ void snis_debug_dump(char *cmd, struct snis_entity go[],
 			int (*lookup)(uint32_t object_id),
 			void (*printfn)(const char *fmt, ...),
 			struct ship_type_entry *ship_type,
-			int nshiptypes);
+			int nshiptypes, struct ship_registry *registry);
 
 #endif

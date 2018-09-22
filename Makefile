@@ -431,7 +431,8 @@ SERVEROBJS=${COMMONOBJS} snis_server.o starbase-comms.o \
 		docking_port.o elastic_collision.o snis_nl.o spelled_numbers.o \
 		snis_server_tracker.o snis_bridge_update_packet.o solarsystem_config.o a_star.o \
 		key_value_parser.o nonuniform_random_sampler.o oriented_bounding_box.o \
-		graph_dev_mesh_stub.o turret_aimer.o snis_hash.o snis_server_debug.o
+		graph_dev_mesh_stub.o turret_aimer.o snis_hash.o snis_server_debug.o \
+		ship_registration.o
 MULTIVERSEOBJS=snis_multiverse.o snis_marshal.o snis_socket_io.o mathutils.o mtwist.o stacktrace.o \
 		snis_hash.o quat.o string-utils.o key_value_parser.o snis_bridge_update_packet.o \
 		pthread_util.o rootcheck.o starmap_adjacency.o
@@ -888,6 +889,9 @@ snis_limited_graph.o:	snis_limited_graph.c Makefile
 
 snis_graph.o:	snis_graph.c Makefile
 	$(Q)$(GLEXTCOMPILE)
+
+ship_registration.o:	ship_registration.c ship_registration.h Makefile
+	$(Q)$(COMPILE)
 
 snis_typeface.o:	snis_typeface.c Makefile
 	$(Q)$(GTKCOMPILE)
