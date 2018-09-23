@@ -425,7 +425,8 @@ COMMONOBJS=mathutils.o snis_alloc.o snis_socket_io.o snis_marshal.o \
 		snis_faction.o mtwist.o names.o infinite-taunt.o snis_damcon_systems.o \
 		string-utils.o c-is-the-locale.o starbase_metadata.o arbitrary_spin.o \
 		planetary_atmosphere.o mesh.o mikktspace/mikktspace.o pthread_util.o \
-		snis_opcode_def.o rts_unit_data.o commodities.o snis_tweak.o rootcheck.o
+		snis_opcode_def.o rts_unit_data.o commodities.o snis_tweak.o rootcheck.o \
+		corporations.o
 SERVEROBJS=${COMMONOBJS} snis_server.o starbase-comms.o \
 		power-model.o quat.o vec4.o matrix.o snis_event_callback.o space-part.o fleet.o \
 		docking_port.o elastic_collision.o snis_nl.o spelled_numbers.o \
@@ -675,7 +676,7 @@ power-model.o:   power-model.c Makefile
 stacktrace.o:   stacktrace.c Makefile
 	$(Q)$(COMPILE)
 
-snis_ship_type.o:   snis_ship_type.c Makefile
+snis_ship_type.o:   snis_ship_type.c snis_ship_type.h corporations.h Makefile
 	$(Q)$(COMPILE)
 
 snis_faction.o:   snis_faction.c string-utils.h Makefile
@@ -891,6 +892,9 @@ snis_graph.o:	snis_graph.c Makefile
 	$(Q)$(GLEXTCOMPILE)
 
 ship_registration.o:	ship_registration.c ship_registration.h Makefile
+	$(Q)$(COMPILE)
+
+corporations.o:	corporations.c corporations.h Makefile
 	$(Q)$(COMPILE)
 
 snis_typeface.o:	snis_typeface.c Makefile

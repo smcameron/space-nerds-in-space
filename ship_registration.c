@@ -53,7 +53,7 @@ void ship_registry_init(struct ship_registry *r)
 }
 
 static void ship_registry_add_entry_helper(struct ship_registry *r, uint32_t id, char entry_type,
-			char *entry, float bounty, uint32_t bounty_collection_site)
+			char *entry, float bounty, uint32_t bounty_collection_site, int owner)
 {
 	static const int allocation_unit = 1024;
 	struct ship_registry_entry *e;
@@ -74,18 +74,24 @@ static void ship_registry_add_entry_helper(struct ship_registry *r, uint32_t id,
 	r->entry[r->nentries].id = id;
 	r->entry[r->nentries].bounty = bounty;
 	r->entry[r->nentries].bounty_collection_site = bounty_collection_site;
+	r->entry[r->nentries].owner = owner;
 	r->nentries++;
 }
 
 void ship_registry_add_entry(struct ship_registry *r, uint32_t id, char entry_type, char *entry)
 {
-	ship_registry_add_entry_helper(r, id, entry_type, entry, 0.0, (uint32_t) -1);
+	ship_registry_add_entry_helper(r, id, entry_type, entry, 0.0, (uint32_t) -1, -1);
 }
 
 void ship_registry_add_bounty(struct ship_registry *r, uint32_t id, char *entry,
 				float bounty, uint32_t bounty_collection_site)
 {
-	ship_registry_add_entry_helper(r, id, SHIP_REG_TYPE_WARRANT, entry, bounty, bounty_collection_site);
+	ship_registry_add_entry_helper(r, id, SHIP_REG_TYPE_WARRANT, entry, bounty, bounty_collection_site, -1);
+}
+
+void ship_registry_add_owner(struct ship_registry *r, uint32_t id, int owner)
+{
+	ship_registry_add_entry_helper(r, id, SHIP_REG_TYPE_OWNER, "", 0.0, (uint32_t) -1, owner);
 }
 
 void ship_registry_delete_ship_entries(struct ship_registry *r, uint32_t id)

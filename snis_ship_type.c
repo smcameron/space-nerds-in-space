@@ -9,6 +9,7 @@
 #include "snis_ship_type.h"
 #include "string-utils.h"
 #include "rts_unit_data.h"
+#include "corporations.h"
 
 struct ship_type_entry *snis_read_ship_types(char *filename, int *count)
 {
@@ -184,6 +185,11 @@ done_scanfing_line:
 			st[n].axis[i] = axis[i];
 			st[n].angle[i] = rot[i];
 		}
+		/* TODO: manufacturer is an index into the corporations in corporations.c
+		 * We should probably read this from the file, and the corporations should
+		 * probably also be read from a file. For now, we'll just assign them.
+		 */
+		st[n].manufacturer = (n % num_spacecraft_manufacturers()) + 1;
 		n++;
 	}
 	*count = n;

@@ -24,6 +24,7 @@
 
 #include "snis_debug.h"
 #include "ship_registration.h"
+#include "corporations.h"
 
 static char *label = "";
 
@@ -38,13 +39,26 @@ static void dump_registry(void (*printfn)(const char *fmt, ...), struct ship_reg
 
 	printfn("DUMPING SHIP REGISTRY:");
 	for (i = 0; i < registry->nentries; i++) {
-		if (registry->entry[i].bounty_collection_site != (uint32_t) -1)
+		switch (registry->entry[i].type) {
+		case SHIP_REG_TYPE_REGISTRATION:
+		case SHIP_REG_TYPE_COMMENT:
+		case SHIP_REG_TYPE_CAPTAIN:
+			printfn("- %u %c %s", registry->entry[i].id, registry->entry[i].type,
+				registry->entry[i].entry);
+			break;
+		case SHIP_REG_TYPE_WARRANT:
 			printfn("- %u %c $%.0f, %u %s", registry->entry[i].id, registry->entry[i].type,
 				registry->entry[i].entry, registry->entry[i].bounty,
 				registry->entry[i].bounty_collection_site);
-		else
+			break;
+		case SHIP_REG_TYPE_OWNER:
 			printfn("- %u %c %s", registry->entry[i].id, registry->entry[i].type,
-				registry->entry[i].entry);
+				corporation_get_name(registry->entry[i].owner));
+			break;
+		default:
+			printf("- UNKNOWN REGISTRY ENTRY TYPE %c", registry->entry[i].type);
+			break;
+		}
 	}
 }
 

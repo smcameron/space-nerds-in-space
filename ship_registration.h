@@ -31,6 +31,7 @@ struct ship_registry_entry {
 #define SHIP_REG_TYPE_OWNER 'o'
 #define SHIP_REG_TYPE_COMMENT 'c'
 #define SHIP_REG_TYPE_CAPTAIN 'C'
+	int owner;
 	char *entry;
 	float bounty;
 	uint32_t bounty_collection_site;
@@ -46,6 +47,7 @@ void ship_registry_init(struct ship_registry *r);
 void ship_registry_add_entry(struct ship_registry *r, uint32_t id, char entry_type, char *entry);
 void ship_registry_add_bounty(struct ship_registry *r, uint32_t id, char *entry,
 				float bounty, uint32_t bounty_collection_site);
+void ship_registry_add_owner(struct ship_registry *r, uint32_t id, int owner);
 void ship_registry_delete_ship_entries(struct ship_registry *r, uint32_t id);
 int ship_registry_get_next_entry(struct ship_registry *r, uint32_t id, int n);
 

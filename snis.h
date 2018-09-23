@@ -28,7 +28,7 @@
 #include "oriented_bounding_box.h"
 
 #define DEFAULT_SOLAR_SYSTEM "default"
-#define SNIS_PROTOCOL_VERSION "SNIS027"
+#define SNIS_PROTOCOL_VERSION "SNIS028"
 #define COMMON_MTWIST_SEED 97872
 /* dimensions of the "known" universe */
 #define XKNOWN_DIM 600000.0

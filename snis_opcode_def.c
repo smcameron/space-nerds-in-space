@@ -207,7 +207,7 @@ int snis_opcode_def_init(void)
 	rc |= init_opcode_def(OPCODE_SCI_DETAILS, "bb");
 	rc |= init_opcode_def(OPCODE_PROXIMITY_ALERT, "b");
 	rc |= init_opcode_def(OPCODE_COLLISION_NOTIFICATION, "b");
-	rc |= init_opcode_def(OPCODE_UPDATE_DERELICT, "bwwSSSbbb");
+	rc |= init_opcode_def(OPCODE_UPDATE_DERELICT, "bwwSSSbbbw");
 	rc |= init_opcode_def(OPCODE_DEMON_CLEAR_ALL, "b");
 	rc |= init_opcode_def(OPCODE_EXEC_LUA_SCRIPT, "n/a");
 	rc |= init_opcode_def(OPCODE_REQUEST_TRACTORBEAM, "bw");

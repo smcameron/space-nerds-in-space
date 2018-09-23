@@ -114,6 +114,7 @@
 #include "starmap_adjacency.h"
 #include "rootcheck.h"
 #include "ship_registration.h"
+#include "corporations.h"
 
 #define CLIENT_UPDATE_PERIOD_NSECS 500000000
 #define MAXCLIENTS 100
@@ -1678,8 +1679,11 @@ static void delete_object(struct snis_entity *o)
 		free(o->sdata.science_text);
 		o->sdata.science_text = NULL;
 	}
-	if (o->type == OBJTYPE_SHIP1 || o->type == OBJTYPE_SHIP2 || o->type == OBJTYPE_DERELICT)
+
+	/* Omit OBJTYPE_SHIP2 here because we want the registration preserved for the derelict */
+	if (o->type == OBJTYPE_SHIP1 || o->type == OBJTYPE_DERELICT)
 		ship_registry_delete_ship_entries(&ship_registry, o->id);
+
 	if (o->type == OBJTYPE_DERELICT && o->tsd.derelict.ships_log) {
 		free(o->tsd.derelict.ships_log);
 		o->tsd.derelict.ships_log = NULL;
@@ -10285,9 +10289,14 @@ static int add_ship(int faction, int auto_respawn)
 	go[i].tsd.ship.desired_hg_ant_aim.v.y = 0;
 	go[i].tsd.ship.desired_hg_ant_aim.v.z = 0;
 
-	snprintf(registration, sizeof(registration) - 1, "PRIVATE SPACECRAFT");
+	if (go[i].tsd.ship.shiptype == SHIP_CLASS_ENFORCER) {
+		snprintf(registration, sizeof(registration) - 1, "EXEMPT - GOVERNMENT SPACECRAFT");
+		ship_registry_add_owner(&ship_registry, go[i].id, 0);
+	} else {
+		snprintf(registration, sizeof(registration) - 1, "PRIVATE SPACECRAFT");
+		ship_registry_add_owner(&ship_registry, go[i].id, snis_randn(ncorporations()));
+	}
 	ship_registry_add_entry(&ship_registry, go[i].id, SHIP_REG_TYPE_REGISTRATION, registration);
-	ship_registry_add_entry(&ship_registry, go[i].id, SHIP_REG_TYPE_OWNER, "OMEGA MINING CORP.");
 	return i;
 }
 
@@ -12576,6 +12585,11 @@ static void add_enforcers_to_planet(struct snis_entity *p)
 		go[x].tsd.ship.home_planet = p->id;
 		snprintf(go[x].sdata.name, sizeof(go[i].sdata.name), "POLICE-%02d",
 			snis_randn(100));
+		ship_registry_delete_ship_entries(&ship_registry, go[x].id);
+		ship_registry_add_entry(&ship_registry, go[x].id, SHIP_REG_TYPE_REGISTRATION,
+					"LAW ENFORCEMENT SPACECRAFT");
+		/* TODO: zero is law enforcement... something better. */
+		ship_registry_add_owner(&ship_registry, go[x].id, 0);
 		push_cop_mode(&go[x]);
 	}
 }
@@ -14288,13 +14302,18 @@ static void starbase_registration_query_npc_bot(struct snis_entity *o, int bridg
 	send_comms_packet(o, n, channel, m);
 	snprintf(m, sizeof(m) - 1, "NAME - %s", go[i].sdata.name);
 	send_comms_packet(o, n, channel, m);
+	snprintf(m, sizeof(m) - 1, "MAKE - %s",
+			corporation_get_name(ship_type[go[i].tsd.ship.shiptype].manufacturer));
+	send_comms_packet(o, n, channel, m);
+	snprintf(m, sizeof(m) - 1, "MODEL - %s", ship_type[go[i].tsd.ship.shiptype].class);
+	send_comms_packet(o, n, channel, m);
 	for (i = 0; i >= 0;) {
 		i = ship_registry_get_next_entry(&ship_registry, selection, i);
 		if (i < 0)
 			break;
 		switch (ship_registry.entry[i].type) {
 		case SHIP_REG_TYPE_OWNER:
-			snprintf(m, sizeof(m) - 1, "OWNER - %s", ship_registry.entry[i].entry);
+			snprintf(m, sizeof(m) - 1, "OWNER - %s", corporation_get_name(ship_registry.entry[i].owner));
 			send_comms_packet(o, n, channel, m);
 			break;
 		case SHIP_REG_TYPE_REGISTRATION:
@@ -21318,13 +21337,14 @@ static void send_update_cargo_container_packet(struct game_client *c,
 static void send_update_derelict_packet(struct game_client *c,
 	struct snis_entity *o)
 {
-	pb_queue_to_client(c, snis_opcode_pkt("bwwSSSbbb", OPCODE_UPDATE_DERELICT, o->id, o->timestamp,
+	pb_queue_to_client(c, snis_opcode_pkt("bwwSSSbbbw", OPCODE_UPDATE_DERELICT, o->id, o->timestamp,
 					o->x, (int32_t) UNIVERSE_DIM,
 					o->y, (int32_t) UNIVERSE_DIM,
 					o->z, (int32_t) UNIVERSE_DIM,
 					o->tsd.derelict.shiptype,
 					o->tsd.derelict.fuel,
-					o->tsd.derelict.oxygen));
+					o->tsd.derelict.oxygen,
+					o->tsd.derelict.orig_ship_id));
 }
 
 

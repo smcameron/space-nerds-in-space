@@ -2040,7 +2040,7 @@ static int update_cargo_container(uint32_t id, uint32_t timestamp, double x, dou
 }
 
 static int update_derelict(uint32_t id, uint32_t timestamp, double x, double y, double z,
-				uint8_t ship_kind, uint8_t fuel, uint8_t oxygen)
+				uint8_t ship_kind, uint8_t fuel, uint8_t oxygen, uint32_t orig_ship_id)
 {
 	int i, m;
 	struct entity *e;
@@ -2059,6 +2059,7 @@ static int update_derelict(uint32_t id, uint32_t timestamp, double x, double y, 
 	}
 	go[i].tsd.derelict.fuel = fuel;
 	go[i].tsd.derelict.oxygen = oxygen;
+	go[i].tsd.derelict.orig_ship_id = orig_ship_id;
 	return 0;
 }
 
@@ -6632,20 +6633,21 @@ static int process_update_cargo_container_packet(void)
 static int process_update_derelict_packet(void)
 {
 	unsigned char buffer[100];
-	uint32_t id, timestamp;
+	uint32_t id, timestamp, orig_ship_id;
 	double dx, dy, dz;
 	uint8_t shiptype, fuel, oxygen;
 	int rc;
 
 	assert(sizeof(buffer) > sizeof(struct update_asteroid_packet) - sizeof(uint8_t));
-	rc = read_and_unpack_buffer(buffer, "wwSSSbbb", &id, &timestamp,
+	rc = read_and_unpack_buffer(buffer, "wwSSSbbbw", &id, &timestamp,
 			&dx, (int32_t) UNIVERSE_DIM,
 			&dy,(int32_t) UNIVERSE_DIM,
-			&dz, (int32_t) UNIVERSE_DIM, &shiptype, &fuel, &oxygen);
+			&dz, (int32_t) UNIVERSE_DIM,
+			&shiptype, &fuel, &oxygen, &orig_ship_id);
 	if (rc != 0)
 		return rc;
 	pthread_mutex_lock(&universe_mutex);
-	rc = update_derelict(id, timestamp, dx, dy, dz, shiptype, fuel, oxygen);
+	rc = update_derelict(id, timestamp, dx, dy, dz, shiptype, fuel, oxygen, orig_ship_id);
 	pthread_mutex_unlock(&universe_mutex);
 	return (rc < 0);
 } 
