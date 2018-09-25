@@ -700,6 +700,7 @@ struct docking_port_data {
 };
 
 struct derelict_data {
+	uint32_t orig_ship_id; /* ID of original ship, or -1 if unknown */
 	uint8_t shiptype; /* same as snis_entity_science_data subclass */
 	union quat rotational_velocity;
 	uint8_t persistent;

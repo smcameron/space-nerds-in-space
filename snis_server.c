@@ -2906,7 +2906,7 @@ static void push_mining_bot_mode(struct snis_entity *miner, uint32_t parent_ship
 
 static int add_derelict(const char *name, double x, double y, double z,
 			double vx, double vy, double vz, int shiptype,
-			int the_faction, int persistent);
+			int the_faction, int persistent, uint32_t orig_ship_id);
 
 static int add_cargo_container(double x, double y, double z, double vx, double vy, double vz,
 				int item, float qty, int persistent);
@@ -2917,7 +2917,7 @@ static int make_derelict(struct snis_entity *o)
 				o->vx + snis_random_float() * 2.0,
 				o->vy + snis_random_float() * 2.0,
 				o->vz + snis_random_float() * 2.0,
-				o->tsd.ship.shiptype, o->sdata.faction, 0);
+				o->tsd.ship.shiptype, o->sdata.faction, 0, o->id);
 	if (o->type == OBJTYPE_SHIP1 || o->type == OBJTYPE_SHIP2) {
 		for (i = 0; i < o->tsd.ship.ncargo_bays; i++) {
 			int item;
@@ -12071,7 +12071,7 @@ static void add_asteroids(void)
 
 static int add_derelict(const char *name, double x, double y, double z,
 			double vx, double vy, double vz,
-			int shiptype, int the_faction, int persistent)
+			int shiptype, int the_faction, int persistent, uint32_t orig_ship_id)
 {
 	int i;
 
@@ -12106,6 +12106,7 @@ static int add_derelict(const char *name, double x, double y, double z,
 	go[i].tsd.derelict.fuel = snis_randn(255); /* TODO some better non-uniform distribution */
 	go[i].tsd.derelict.oxygen = snis_randn(255); /* TODO some better non-uniform distribution */
 	go[i].tsd.derelict.ships_log = NULL;
+	go[i].tsd.derelict.orig_ship_id = orig_ship_id;
 	return i;
 }
 
@@ -12150,7 +12151,7 @@ static int l_add_derelict(lua_State *l)
 	vy = snis_random_float() * 10.0;
 	vz = snis_random_float() * 10.0;
 	/* assume lua-added derelicts are part of some scenario, so should be persistent */
-	i = add_derelict(name, x, y, z, vx, vy, vz, shiptype, the_faction, 1);
+	i = add_derelict(name, x, y, z, vx, vy, vz, shiptype, the_faction, 1, (uint32_t) -1);
 	lua_pushnumber(lua_state, i < 0 ? -1.0 : (double) go[i].id);
 	pthread_mutex_unlock(&universe_mutex);
 	return 1;
