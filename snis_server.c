@@ -16621,8 +16621,10 @@ static void server_builtin_find(char *cmd)
 
 static void server_builtin_dump(char *cmd)
 {
+	pthread_mutex_lock(&universe_mutex);
 	snis_debug_dump(cmd, go, nstarbase_models, docking_port_info, lookup_by_id,
 			send_demon_console_msg, ship_type, nshiptypes);
+	pthread_mutex_unlock(&universe_mutex);
 }
 
 static void server_builtin_ai_trace(char *cmd)
