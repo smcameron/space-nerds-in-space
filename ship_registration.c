@@ -66,7 +66,7 @@ void ship_registry_add_entry(struct ship_registry *r, uint32_t id, char entry_ty
 void ship_registry_add_bounty(struct ship_registry *r, uint32_t id, char *entry,
 				float bounty, uint32_t bounty_collection_site)
 {
-	ship_registry_add_entry_helper(r, id, SHIP_REG_TYPE_WARRANT, entry, bounty, bounty_collection_site, -1);
+	ship_registry_add_entry_helper(r, id, SHIP_REG_TYPE_BOUNTY, entry, bounty, bounty_collection_site, -1);
 }
 
 void ship_registry_add_owner(struct ship_registry *r, uint32_t id, int owner)

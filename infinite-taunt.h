@@ -16,5 +16,6 @@ extern void cop_attack_warning(struct mtwist_state *mt, char *buffer, int buflen
 extern void character_name(struct mtwist_state *mt, char *buffer, int buflen);
 extern void robot_name(struct mtwist_state *mt, char *buffer, int buflen);
 extern void ship_name(struct mtwist_state *mt, char *buffer, int buflen);
+extern void generate_crime(struct mtwist_state *mt, char *buffer, int buflen);
 
 #endif 

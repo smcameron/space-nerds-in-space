@@ -27,7 +27,7 @@ struct ship_registry_entry {
 	uint32_t id;
 	char type;
 #define SHIP_REG_TYPE_REGISTRATION 'r'
-#define SHIP_REG_TYPE_WARRANT 'w'
+#define SHIP_REG_TYPE_BOUNTY 'b'
 #define SHIP_REG_TYPE_OWNER 'o'
 #define SHIP_REG_TYPE_COMMENT 'c'
 #define SHIP_REG_TYPE_CAPTAIN 'C'

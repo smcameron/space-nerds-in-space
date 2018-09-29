@@ -1671,6 +1671,11 @@ enum planet_type planet_type_from_string(char *s)
 	return planet_type_rocky;
 }
 
+void generate_crime(struct mtwist_state *mt, char *buffer, int buflen)
+{
+	sprintf(buffer, "HEINOUS CRIMES");
+}
+
 #ifdef TEST_TAUNT
 #include "mtwist.h"
 #include <sys/time.h>
@@ -1691,6 +1696,7 @@ enum planet_type PlanetType(struct mtwist_state *mt)
 
 static struct option long_options[] = {
 	{ "count", required_argument, NULL, 'c' },
+	{ "crime", no_argument, NULL, 'C' },
 	{ "npc", no_argument, NULL, 'n' },
 	{ "planet", no_argument, NULL, 'p' },
 	{ "robot", no_argument, NULL, 'r' },
@@ -1726,13 +1732,14 @@ int main(int argc, char *argv[])
 	int ship_mode = 0;
 	int taunt_mode = 0;
 	int warning_mode = 0;
+	int crime_mode = 0;
 
 	set_random_seed(&mt);
 
 	while (1) {
 		int option_index;
 
-		c = getopt_long(argc, argv, "c:nprstw", long_options, &option_index);
+		c = getopt_long(argc, argv, "Cc:nprstw", long_options, &option_index);
 		if (c < 0) {
 			break;
 		}
@@ -1741,6 +1748,9 @@ int main(int argc, char *argv[])
 			rc = sscanf(optarg, "%d", &count);
 			if (rc != 1)
 				count = 0;
+			break;
+		case 'C':
+			crime_mode = 1;
 			break;
 		case 'n':
 			npc_mode = 1;
@@ -1766,7 +1776,7 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	if (taunt_mode + planet_mode + warning_mode + npc_mode + robot_mode + ship_mode == 0)
+	if (taunt_mode + planet_mode + warning_mode + npc_mode + robot_mode + ship_mode + crime_mode == 0)
 		usage(argv[0]);
 
 	for (i = 0; i < count; i++) {
@@ -1793,6 +1803,10 @@ int main(int argc, char *argv[])
 		}
 		if (ship_mode) {
 			ship_name(mt, buffer, sizeof(buffer) - 1);
+			printf("%s\n", buffer);
+		}
+		if (crime_mode) {
+			generate_crime(mt, buffer, sizeof(buffer) - 1);
 			printf("%s\n", buffer);
 		}
 	}

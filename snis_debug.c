@@ -46,10 +46,11 @@ static void dump_registry(void (*printfn)(const char *fmt, ...), struct ship_reg
 			printfn("- %u %c %s", registry->entry[i].id, registry->entry[i].type,
 				registry->entry[i].entry);
 			break;
-		case SHIP_REG_TYPE_WARRANT:
+		case SHIP_REG_TYPE_BOUNTY:
 			printfn("- %u %c $%.0f, %u %s", registry->entry[i].id, registry->entry[i].type,
-				registry->entry[i].entry, registry->entry[i].bounty,
-				registry->entry[i].bounty_collection_site);
+				registry->entry[i].bounty,
+				registry->entry[i].bounty_collection_site,
+				registry->entry[i].entry);
 			break;
 		case SHIP_REG_TYPE_OWNER:
 			printfn("- %u %c %s", registry->entry[i].id, registry->entry[i].type,

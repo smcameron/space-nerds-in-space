@@ -10200,6 +10200,7 @@ static uint32_t choose_ship_home_planet(void)
 	return (uint32_t) -1;
 }
 
+static uint32_t nth_starbase(int n);
 static int commodity_sample(void);
 static int add_ship(int faction, int auto_respawn)
 {
@@ -10278,6 +10279,13 @@ static int add_ship(int faction, int auto_respawn)
 	} else {
 		snprintf(registration, sizeof(registration) - 1, "PRIVATE SPACECRAFT");
 		ship_registry_add_owner(&ship_registry, go[i].id, snis_randn(ncorporations()));
+		if (snis_randn(1000) <= 100) {
+			char crime[100];
+			generate_crime(mt, crime, sizeof(crime) - 1);
+			ship_registry_add_bounty(&ship_registry, go[i].id, crime,
+				1000.0 + snis_randn(10) * 100.0,
+				nth_starbase(snis_randn(NBASES)));
+		}
 	}
 	ship_registry_add_entry(&ship_registry, go[i].id, SHIP_REG_TYPE_REGISTRATION, registration);
 	return i;
@@ -14218,7 +14226,7 @@ static int lookup_by_registration(uint32_t id)
 static void starbase_registration_query_npc_bot(struct snis_entity *o, int bridge,
 		char *name, char *msg)
 {
-	int i;
+	int i, c;
 	char *n = o->tsd.starbase.name;
 	uint32_t channel = bridgelist[bridge].npcbot.channel;
 	int rc, selection;
@@ -14274,8 +14282,20 @@ static void starbase_registration_query_npc_bot(struct snis_entity *o, int bridg
 		case SHIP_REG_TYPE_REGISTRATION:
 			send_comms_packet(o, n, channel, "REGISTRATION - %s", ship_registry.entry[i].entry);
 			break;
-		case SHIP_REG_TYPE_WARRANT:
-			send_comms_packet(o, n, channel, "WARRANT - %s", ship_registry.entry[i].entry);
+		case SHIP_REG_TYPE_BOUNTY:
+			c = lookup_by_id(ship_registry.entry[i].bounty_collection_site);
+			if (c >= 0 && go[c].type == OBJTYPE_STARBASE && go[c].alive) {
+				send_comms_packet(o, n, channel, "BOUNTY - %s", ship_registry.entry[i].entry);
+				int p = lookup_by_id(go[c].tsd.starbase.associated_planet_id);
+				if (p >= 0 && go[c].tsd.starbase.associated_planet_id != (uint32_t) -1)
+					send_comms_packet(o, n, channel, "BOUNTY - $%.0f COLLECTIBLE AT %s ORBITING %s",
+						ship_registry.entry[i].bounty,
+						c < 0 ? "UNKNOWN" : go[c].sdata.name, go[p].sdata.name);
+				else
+					send_comms_packet(o, n, channel, "BOUNTY - $%.0f COLLECTIBLE AT %s",
+						ship_registry.entry[i].bounty,
+						c < 0 ? "UNKNOWN" : go[c].sdata.name);
+			}
 			break;
 		case SHIP_REG_TYPE_CAPTAIN:
 			send_comms_packet(o, n, channel, "CAPTAIN - %s", ship_registry.entry[i].entry);
