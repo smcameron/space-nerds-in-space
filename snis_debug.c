@@ -240,7 +240,7 @@ void snis_debug_dump(char *cmd, struct snis_entity go[], int nstarbase_models,
 					printfn("-- MODE IDLE");
 					break;
 				default:
-					printfn("-- MODE UNKNOWN");
+					printfn("-- MINING MODE UNKNOWN");
 					break;
 				}
 				printfn("----- PARENT SHIP %d",
@@ -270,6 +270,10 @@ void snis_debug_dump(char *cmd, struct snis_entity go[], int nstarbase_models,
 					o->tsd.ship.ai[i].u.mining_bot.towed_object);
 				printfn("----- ORPHAN TIME: %d",
 					o->tsd.ship.ai[i].u.mining_bot.orphan_time);
+				if (i == 0) {
+					printfn("----- SHIP ID CHIP %u",
+						o->tsd.ship.tractor_beam);
+				}
 				break;
 			case AI_MODE_TOW_SHIP:
 				printfn("----- DISABLED SHIP %u",
@@ -468,6 +472,7 @@ void snis_debug_dump(char *cmd, struct snis_entity go[], int nstarbase_models,
 		printfn("-- OXYGEN: %hhu", o->tsd.derelict.oxygen);
 		printfn("-- SHIPS LOG: %s",
 				o->tsd.derelict.ships_log ? o->tsd.derelict.ships_log : "NULL");
+		printfn("-- ORIG_SHIP_ID: %u", o->tsd.derelict.orig_ship_id);
 		break;
 	case OBJTYPE_TRACTORBEAM:
 		t = "TRACTORBEAM";

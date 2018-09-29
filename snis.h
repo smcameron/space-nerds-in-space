@@ -707,6 +707,7 @@ struct derelict_data {
 	uint8_t fuel;
 	uint8_t oxygen;
 	char *ships_log;
+	uint8_t ship_id_chip_present;
 };
 
 struct wormhole_data {

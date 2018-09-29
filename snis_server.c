@@ -248,6 +248,8 @@ static void npc_menu_item_disembark_passengers(struct npc_menu_item *item,
 				char *npcname, struct npc_bot_state *botstate);
 static void npc_menu_item_eject_passengers(struct npc_menu_item *item,
 				char *npcname, struct npc_bot_state *botstate);
+static void npc_menu_item_collect_bounties(struct npc_menu_item *item,
+				char *npcname, struct npc_bot_state *botstate);
 static void npc_menu_item_sign_off(struct npc_menu_item *item,
 				char *npcname, struct npc_bot_state *botstate);
 static void npc_menu_item_buy_parts(struct npc_menu_item *item,
@@ -298,26 +300,27 @@ static struct npc_menu_item repairs_and_fuel_menu[] = {
 	{ 0, 0, 0, 0 }, /* mark end of menu items */
 };
 
-static struct npc_menu_item arrange_transport_contracts_menu[] = {
+static struct npc_menu_item cargo_and_passengers_menu[] = {
 	/* by convention, first element is menu title */
-	{ "TRANSPORT CONTRACT MENU", 0, 0, 0 },
+	{ "CARGO PASSENGERS AND BOUNTIES", 0, 0, 0 },
 	{ "BUY CARGO", 0, 0, npc_menu_item_buy_cargo },
 	{ "SELL CARGO", 0, 0, npc_menu_item_sell_cargo },
 	{ "BOARD PASSENGERS", 0, 0, npc_menu_item_board_passengers },
 	{ "DISEMBARK PASSENGERS", 0, 0, npc_menu_item_disembark_passengers },
 	{ "EJECT PASSENGERS", 0, 0, npc_menu_item_eject_passengers },
+	{ "COLLECT BOUNTIES", 0, 0, npc_menu_item_collect_bounties },
 	{ 0, 0, 0, 0 }, /* mark end of menu items */
 };
 
 static struct npc_menu_item starbase_main_menu[] = {
 	{ "STARBASE MAIN MENU", 0, 0, 0 },  /* by convention, first element is menu title */
-	{ "LOCAL TRAVEL ADVISORY", 0, 0, npc_menu_item_travel_advisory },
 	{ "REQUEST PERMISSION TO DOCK", 0, 0, npc_menu_item_request_dock },
 	{ "BUY WARP-GATE TICKETS", 0, 0, npc_menu_item_warp_gate_tickets },
 	{ "REQUEST TOWING SERVICE", 0, 0, npc_menu_item_towing_service },
 	{ "REPAIRS AND FUEL", 0, repairs_and_fuel_menu, 0 },
-	{ "ARRANGE TRANSPORT CONTRACTS", 0, arrange_transport_contracts_menu, 0 },
+	{ "CARGO PASSENGERS AND BOUNTIES", 0, cargo_and_passengers_menu, 0 },
 	{ "QUERY SHIP REGISTRATIONS", 0, 0, npc_menu_item_query_ship_registration },
+	{ "LOCAL TRAVEL ADVISORY", 0, 0, npc_menu_item_travel_advisory },
 	{ "SIGN OFF", 0, 0, npc_menu_item_sign_off },
 	{ 0, 0, 0, 0 }, /* mark end of menu items */
 };
@@ -408,6 +411,10 @@ static struct bridge_data {
 	float text_to_speech_volume;
 	uint8_t active_custom_buttons;
 	char custom_button_text[6][16];
+	/* ship id chips are used for collecting bounties */
+#define MAX_SHIP_ID_CHIPS 5
+	uint32_t ship_id_chip[MAX_SHIP_ID_CHIPS];
+	int nship_id_chips;
 } bridgelist[MAXCLIENTS];
 static int nbridges = 0;
 static pthread_mutex_t universe_mutex = PTHREAD_MUTEX_INITIALIZER;
@@ -1683,11 +1690,15 @@ static void delete_object(struct snis_entity *o)
 	/* Omit OBJTYPE_SHIP2 here because we want the registration preserved for the derelict */
 	if (o->type == OBJTYPE_SHIP1 || o->type == OBJTYPE_DERELICT)
 		ship_registry_delete_ship_entries(&ship_registry, o->id);
+	/* If a starbase gets killed, any bounties registered for it should get wiped out */
+	if (o->type == OBJTYPE_STARBASE)
+		ship_registry_delete_bounty_entries_by_site(&ship_registry, o->id);
 
 	if (o->type == OBJTYPE_DERELICT && o->tsd.derelict.ships_log) {
 		free(o->tsd.derelict.ships_log);
 		o->tsd.derelict.ships_log = NULL;
 	}
+
 	snis_object_pool_free_object(pool, go_index(o));
 	o->id = -1;
 	o->alive = 0;
@@ -5460,6 +5471,20 @@ static void ai_mining_mode_return_to_parent(struct snis_entity *o, struct ai_min
 				" MINING BOT STOWING AND SHUTTING DOWN");
 			bridgelist[b].npcbot.current_menu = NULL;
 			bridgelist[b].npcbot.special_bot = NULL;
+			/* Hack, we overload the tractor beam to hold ship id of salvaged derelict */
+			if (o->tsd.ship.tractor_beam != 0xffffffff) {
+				int s = bridgelist[b].nship_id_chips;
+				bridgelist[b].nship_id_chips = s + 1;
+				if (bridgelist[b].nship_id_chips > MAX_SHIP_ID_CHIPS)
+					bridgelist[b].nship_id_chips = MAX_SHIP_ID_CHIPS;
+				if (s >= MAX_SHIP_ID_CHIPS) {
+					s = MAX_SHIP_ID_CHIPS - 1;
+				}
+				send_comms_packet(o, o->sdata.name, bridgelist[b].npcbot.channel,
+						"TRANSFERRED SHIP ID CHIP TO INVENTORY");
+				bridgelist[b].ship_id_chip[s] = o->tsd.ship.tractor_beam;
+				o->tsd.ship.tractor_beam = 0xffffffff;
+			}
 		} else {
 			ai->orphan_time++;
 		}
@@ -5815,6 +5840,17 @@ static void ai_mining_mode_mine_asteroid(struct snis_entity *o, struct ai_mining
 			schedule_callback2(event_callback, &callback_schedule,
 						"derelict-salvaged-event", (double) asteroid->id,
 						(double) bridgelist[b].shipid);
+			if (asteroid->tsd.derelict.ship_id_chip_present) {
+				send_comms_packet(o, o->sdata.name, channel,
+					"*** SHIPS IDENTIFICATION CHIP RECOVERED ***");
+				asteroid->tsd.derelict.ship_id_chip_present = 0;
+				/* Hack alert... we're overloading otherwise unused miner tractor_beam
+				 * to contain ID of derelict original ship here. */
+				o->tsd.ship.tractor_beam = asteroid->tsd.derelict.orig_ship_id;
+			} else {
+				send_comms_packet(o, o->sdata.name, channel,
+					"*** SHIPS IDENTIFICATION CHIP NOT FOUND ***");
+			}
 			break;
 		default:
 			ai_trace(o->id, "OPERATION COMPLETE, RETURNING TO SHIP");
@@ -10037,6 +10073,8 @@ static void init_player(struct snis_entity *o, int clear_cargo_bay, float *charg
 		bridgelist[b].text_to_speech_volume_timestamp = universe_timestamp;
 		bridgelist[b].active_custom_buttons = 0;
 		memset(bridgelist[b].custom_button_text, 0, sizeof(bridgelist[b].custom_button_text));
+		memset(bridgelist[b].ship_id_chip, 0, sizeof(bridgelist[b].ship_id_chip));
+		bridgelist[b].nship_id_chips = 0;
 	}
 	quat_init_axis(&o->tsd.ship.computer_desired_orientation, 0, 1, 0, 0);
 	o->tsd.ship.computer_steering_time_left = 0;
@@ -12121,6 +12159,7 @@ static int add_derelict(const char *name, double x, double y, double z,
 	go[i].tsd.derelict.oxygen = snis_randn(255); /* TODO some better non-uniform distribution */
 	go[i].tsd.derelict.ships_log = NULL;
 	go[i].tsd.derelict.orig_ship_id = orig_ship_id;
+	go[i].tsd.derelict.ship_id_chip_present = 1;
 	return i;
 }
 
@@ -13996,6 +14035,11 @@ static void meta_comms_inventory(char *name, struct game_client *c, char *txt)
 	if (bridgelist[c->bridge].warp_gate_ticket.ipaddr != 0) /* ticket currently held? */
 		send_comms_packet(NULL, name, ch, " HOLDING WARP-GATE TICKET TO %s\n",
 			bridgelist[c->bridge].warp_gate_ticket.location);
+	if (bridgelist[c->bridge].nship_id_chips > 0) {
+		for (i = 0; i < bridgelist[c->bridge].nship_id_chips; i++)
+			send_comms_packet(NULL, name, ch, " SHIP ID CHIP REGISTERED AS %u",
+						bridgelist[c->bridge].ship_id_chip[i]);
+	}
 	send_comms_packet(NULL, name, ch, " --------------------------------------");
 }
 
@@ -14645,6 +14689,10 @@ static void npc_menu_item_mining_bot_status_report(struct npc_menu_item *item,
 					send_comms_packet(miner, npcname, channel,
 							"UNABLE TO RECOVER SHIPS LOG FROM %s\n", asteroid->sdata.name);
 				}
+				/* Hack, we overload miner's tractor_beam to hold ship id of salvaged derelict */
+				if (miner->tsd.ship.tractor_beam != 0xffffffff)
+					send_comms_packet(miner, npcname, channel,
+						"*** SHIPS IDENTIFICATION CHIP RECOVERED ***");
 			}
 			break;
 		default:
@@ -14846,6 +14894,121 @@ static void npc_menu_item_board_passengers(struct npc_menu_item *item,
 	sb = &go[i];
 	botstate->special_bot = starbase_passenger_boarding_npc_bot;
 	botstate->special_bot(sb, bridge, (char *) b->shipname, "");
+}
+
+static void npc_menu_item_collect_bounties(struct npc_menu_item *item,
+					char *npcname, struct npc_bot_state *botstate)
+{
+	struct snis_entity *sb, *ship;
+	uint32_t ch = botstate->channel;
+	struct bridge_data *b = container_of(botstate, struct bridge_data, npcbot);
+	int count = 0;
+	int i, j, s, d;
+	uint32_t ids[MAX_SHIP_ID_CHIPS];
+	float total = 0.0;
+
+	pthread_mutex_lock(&universe_mutex);
+	i = lookup_by_id(botstate->object_id);
+	if (i < 0) {
+		pthread_mutex_unlock(&universe_mutex);
+		printf("nonfatal bug in %s at %s:%d\n", __func__, __FILE__, __LINE__);
+		return;
+	}
+	sb = &go[i];
+
+	i = lookup_by_id(b->shipid);
+	if (i < 0) {
+		pthread_mutex_unlock(&universe_mutex);
+		printf("nonfatal bug in %s at %s:%d\n", __func__, __FILE__, __LINE__);
+		return;
+	}
+	ship = &go[i];
+
+	if (!ship_is_docked(ship->id, sb)) {
+		send_comms_packet(sb, npcname, ch,
+				" YOU MUST BE DOCKED TO REDEEM SHIP ID CHIPS FOR BOUNTIES");
+		pthread_mutex_unlock(&universe_mutex);
+		return;
+	}
+
+	if (b->nship_id_chips <= 0) {
+		send_comms_packet(sb, npcname, ch, " SORRY, YOU HAVE NO SHIP ID CHIPS");
+		pthread_mutex_unlock(&universe_mutex);
+		return;
+	}
+
+	for (i = 0; i < b->nship_id_chips; i++) {
+		uint32_t id = b->ship_id_chip[i];
+		for (j = 0; j >= 0; j++) {
+			j = ship_registry_get_next_entry(&ship_registry, id, j);
+			if (j < 0)
+				break;
+			if (ship_registry.entry[j].id != id)
+				continue;
+			if (ship_registry.entry[j].type != SHIP_REG_TYPE_BOUNTY)
+				continue;
+			if (ship_registry.entry[j].bounty_collection_site != sb->id)
+				continue;
+			ids[count] = id;
+			count++;
+			b->ship_id_chip[i] = 0; /* player doesn't get to keep the id chip */
+			send_comms_packet(sb, npcname, ch, " BOUNTY of $%.2f AWARDED FOR SHIP ID CHIP %u",
+						ship_registry.entry[j].bounty, id);
+			send_comms_packet(sb, npcname, ch, " FOR %s",
+						ship_registry.entry[j].entry);
+			total += ship_registry.entry[j].bounty;
+			break;
+		}
+	}
+	if (count == 0) {
+		send_comms_packet(sb, npcname, ch, " SORRY, YOU HAVE NO REDEEMABLE SHIP ID CHIPS");
+		pthread_mutex_unlock(&universe_mutex);
+		return;
+	}
+	for (i = 0; i < count; i++)
+		ship_registry_delete_ship_entries(&ship_registry, ids[i]);
+	send_comms_packet(sb, npcname, ch, " TOTAL BOUNTY AWARDED - $%.2f", total);
+
+	/* Clear out ID chips for ships that have no bounties anywhere */
+	for (i = 0; i < b->nship_id_chips; i++) {
+		uint32_t id = b->ship_id_chip[i];
+		if (id == 0)
+			continue;
+		for (j = 0; j >= 0; j++) {
+			j = ship_registry_get_next_entry(&ship_registry, id, j);
+			if (ship_registry.entry[j].id != id)
+				continue;
+			if (ship_registry.entry[j].type != SHIP_REG_TYPE_BOUNTY)
+				continue;
+			break;
+		}
+		if (j < 0) {
+			send_comms_packet(sb, npcname, ch, " SHIP ID CHIP %u IS CLEAN WITH NO KNOWN BOUNTIES", id);
+			b->ship_id_chip[i] = 0;
+		}
+	}
+	ship->tsd.ship.wallet += total;
+
+	/* Clean up b->ship_id_chip[i], gettting rid of zeroed entries */
+	count = 0;
+	s = 0;
+	d = 0;
+	while (s < b->nship_id_chips) {
+		if (b->ship_id_chip[s] == 0) {
+			s++;
+			continue;
+		}
+		if (s != d)
+			b->ship_id_chip[d] = b->ship_id_chip[s];
+		count++;
+		s++;
+		d++;
+	}
+	if (count != b->nship_id_chips)
+		send_comms_packet(sb, npcname, ch, " COLLECTED %d SHIP ID CHIPS", b->nship_id_chips - count);
+	b->nship_id_chips = count;
+	send_comms_packet(sb, npcname, ch, " THANK YOU FOR YOUR SERVICE", total);
+	pthread_mutex_unlock(&universe_mutex);
 }
 
 static void npc_menu_item_travel_advisory(struct npc_menu_item *item,

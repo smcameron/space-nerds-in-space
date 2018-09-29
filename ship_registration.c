@@ -104,6 +104,36 @@ void ship_registry_delete_ship_entries(struct ship_registry *r, uint32_t id)
 	r->nentries = d;
 }
 
+void ship_registry_delete_bounty_entries_by_site(struct ship_registry *r, uint32_t collection_site)
+{
+	int s, d; /* dest, src */
+
+	d = 0;
+	/* Remove entries with specified id */
+	for (s = 0; s < r->nentries; s++) {
+		if (r->entry[s].type == SHIP_REG_TYPE_BOUNTY &&
+			r->entry[s].bounty_collection_site == collection_site) {
+			if (r->entry[s].entry)
+				free(r->entry[s].entry);
+			r->entry[s].entry = NULL;
+			continue; /* Don't copy */
+		}
+		if (d == s) {
+			d++;
+			continue; /* Don't copy items on top of themselves */
+		}
+		memcpy(&r->entry[d], &r->entry[s], sizeof(r->entry[0]));
+		d++;
+	}
+	/* Zero out any trailing entries */
+	for (s = d; s < r->nentries; s++) {
+		if (r->entry[s].entry)
+			free(r->entry[s].entry);
+		memset(&r->entry[s], 0, sizeof(r->entry[0]));
+	}
+	r->nentries = d;
+}
+
 int ship_registry_get_next_entry(struct ship_registry *r, uint32_t id, int n)
 {
 	int i;
