@@ -1278,6 +1278,108 @@ static char *ShipThing[] = {
 	"Delta",
 };
 
+static char *CrimeModifier[] = {
+	"accessory to",
+	"conspiracy to commit",
+	"aggravated",
+	"attempted",
+	"capital",
+	"first degree",
+	"second degree",
+	"premeditated",
+	"willful",
+	"negligent",
+	"armed",
+	"unauthorized",
+	"inappropriate",
+	"+with intent to sell",
+	"+with a deadly weapon",
+	"+with a minor",
+	"+with a slave",
+	"+with a pineapple",
+	"+without a pineapple",
+	"+without consent",
+	"+without humor",
+	"+while intoxicated",
+	"+under the influence of religion",
+};
+
+
+static char *Crime[] = {
+	"regicide",
+	"homicide",
+	"zarkicide",
+	"murder",
+	"kidnapping",
+	"robbery",
+	"assault",
+	"piracy",
+	"sabotage",
+	"espionage",
+	"treason",
+	"rustling of livestock",
+	"embezzling",
+	"counterfeiting",
+	"smuggling",
+	"assassination",
+	"acts of piracy",
+	"spacing",
+	"murder by spacing",
+	"asteroid marooning",
+	"blasphemy",
+	"deicide",
+	"flatulence",
+	"slaughter",
+	"reckless endangerment",
+	"destruction of property",
+	"destruction of the environment",
+	"bad puns",
+	"possession of stolen property",
+	"possession of controlled substances",
+	"possession of controlled firearms",
+	"parole violation",
+	"escape from prison",
+	"escape from slavery",
+	"insulting of majesty",
+	"contempt of court",
+	"smoking",
+	"trespassing",
+	"reincarnation without prior consent of deity",
+	"copyright infringement",
+	"desecration",
+	"failure to desecrate",
+	"transporting of stolen slaves",
+	"transporting of stolen property",
+	"wrongful enslavement",
+	"insulting of a deity",
+	"failure to insult a deity",
+	"invention of religion",
+	"disproving of religion",
+	"proving of religion",
+	"propagation of faith",
+	"suppression of faith",
+	"insufficiency of faith",
+	"excessive faith",
+	"time traveling",
+	"resisting arrest",
+	"loitering",
+	"littering",
+	"vagrancy",
+	"failure to pay debts",
+	"failure to incur sufficient debt",
+	"tax evasion",
+	"money laundering",
+	"gambling",
+	"fraud",
+	"burglary",
+	"theft",
+	"grand theft spacecraft",
+	"participation in a tontine",
+	"conjuring",
+	"sorcery",
+	"witchcraft",
+};
+
 static char *random_word(struct mtwist_state *mt, char *w[], int nwords)
 {
 	int x;
@@ -1673,7 +1775,24 @@ enum planet_type planet_type_from_string(char *s)
 
 void generate_crime(struct mtwist_state *mt, char *buffer, int buflen)
 {
-	sprintf(buffer, "HEINOUS CRIMES");
+	int x = (int) (((double) mtwist_next(mt) / (double) (0xffffffff)) * 1000);
+	char *modifier, *act;
+
+	switch (x % 3) {
+	case 0:
+		act = random_word(mt, Crime, ARRAYSIZE(Crime));
+		sprintf(buffer, "%s", act);
+		break;
+	case 1:
+	case 2:
+		modifier = random_word(mt, CrimeModifier, ARRAYSIZE(CrimeModifier));
+		act = random_word(mt, Crime, ARRAYSIZE(Crime));
+		if (modifier[0] != '+')
+			sprintf(buffer, "%s %s", modifier, act);
+		else
+			sprintf(buffer, "%s %s", act, modifier + 1);
+		break;
+	}
 }
 
 #ifdef TEST_TAUNT

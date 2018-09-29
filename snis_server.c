@@ -10282,6 +10282,7 @@ static int add_ship(int faction, int auto_respawn)
 		if (snis_randn(1000) <= 100) {
 			char crime[100];
 			generate_crime(mt, crime, sizeof(crime) - 1);
+			uppercase(crime);
 			ship_registry_add_bounty(&ship_registry, go[i].id, crime,
 				1000.0 + snis_randn(10) * 100.0,
 				nth_starbase(snis_randn(NBASES)));
@@ -14285,7 +14286,7 @@ static void starbase_registration_query_npc_bot(struct snis_entity *o, int bridg
 		case SHIP_REG_TYPE_BOUNTY:
 			c = lookup_by_id(ship_registry.entry[i].bounty_collection_site);
 			if (c >= 0 && go[c].type == OBJTYPE_STARBASE && go[c].alive) {
-				send_comms_packet(o, n, channel, "BOUNTY - %s", ship_registry.entry[i].entry);
+				send_comms_packet(o, n, channel, "WANTED FOR - %s", ship_registry.entry[i].entry);
 				int p = lookup_by_id(go[c].tsd.starbase.associated_planet_id);
 				if (p >= 0 && go[c].tsd.starbase.associated_planet_id != (uint32_t) -1)
 					send_comms_packet(o, n, channel, "BOUNTY - $%.0f COLLECTIBLE AT %s ORBITING %s",
