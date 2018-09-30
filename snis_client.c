@@ -17319,6 +17319,10 @@ static void show_demon_3d(GtkWidget *w)
 			color = MAGENTA;
 			material = &magenta_material;
 			break;
+		case OBJTYPE_DERELICT:
+			color = BLUE;
+			material = &blue_material;
+			break;
 		default:
 			color = MAGENTA;
 			material = &magenta_material;
@@ -17364,6 +17368,7 @@ static void show_demon_3d(GtkWidget *w)
 		case OBJTYPE_MISSILE:
 		case OBJTYPE_SPACEMONSTER:
 		case OBJTYPE_WARP_CORE:
+		case OBJTYPE_DERELICT:
 			if (!o->entity && o->type != OBJTYPE_SHIP1)
 				break;
 			if (o->type != OBJTYPE_SHIP1)
