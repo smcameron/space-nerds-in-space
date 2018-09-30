@@ -282,9 +282,9 @@ struct npc_bot_state {
 	npc_special_bot_fn special_bot; /* for special case interactions, non-standard menus, etc. */
 };
 
-static struct npc_menu_item repairs_and_maintenance_menu[] = {
+static struct npc_menu_item repairs_and_fuel_menu[] = {
 	/* by convention, first element is menu title */
-	{ "REPAIRS AND MAINTENANCE MENU", 0, 0, 0 },
+	{ "REPAIRS AND FUEL MENU", 0, 0, 0 },
 	{ "BUY SHIELD SYSTEM PARTS", 0, 0, npc_menu_item_buy_parts },
 	{ "BUY IMPULSE DRIVE PARTS", 0, 0, npc_menu_item_buy_parts },
 	{ "BUY WARP DRIVE PARTS", 0, 0, npc_menu_item_buy_parts },
@@ -294,6 +294,7 @@ static struct npc_menu_item repairs_and_maintenance_menu[] = {
 	{ "BUY COMMUNICATIONS PARTS", 0, 0, npc_menu_item_buy_parts },
 	{ "BUY TRACTOR BEAM PARTS", 0, 0, npc_menu_item_buy_parts },
 	{ "BUY LIFE SUPPORT SYSTEM PARTS", 0, 0, npc_menu_item_buy_parts },
+	{ "BUY FUEL", 0, 0, npc_menu_item_not_implemented },
 	{ 0, 0, 0, 0 }, /* mark end of menu items */
 };
 
@@ -314,8 +315,7 @@ static struct npc_menu_item starbase_main_menu[] = {
 	{ "REQUEST PERMISSION TO DOCK", 0, 0, npc_menu_item_request_dock },
 	{ "BUY WARP-GATE TICKETS", 0, 0, npc_menu_item_warp_gate_tickets },
 	{ "REQUEST TOWING SERVICE", 0, 0, npc_menu_item_towing_service },
-	{ "BUY FUEL", 0, 0, npc_menu_item_not_implemented },
-	{ "REPAIRS AND MAINTENANCE", 0, repairs_and_maintenance_menu, 0 },
+	{ "REPAIRS AND FUEL", 0, repairs_and_fuel_menu, 0 },
 	{ "ARRANGE TRANSPORT CONTRACTS", 0, arrange_transport_contracts_menu, 0 },
 	{ "QUERY SHIP REGISTRATIONS", 0, 0, npc_menu_item_query_ship_registration },
 	{ "SIGN OFF", 0, 0, npc_menu_item_sign_off },
@@ -14209,7 +14209,7 @@ static void npc_menu_item_buy_parts(struct npc_menu_item *item,
 	b = container_of(botstate, struct bridge_data, npcbot);
 	bridge = b - bridgelist;
 
-	botstate->parts_menu = (item - &repairs_and_maintenance_menu[0] - 1) %
+	botstate->parts_menu = (item - &repairs_and_fuel_menu[0] - 1) %
 				(DAMCON_SYSTEM_COUNT - 1);
 	botstate->special_bot = parts_buying_npc_bot;
 	botstate->special_bot(&go[i], bridge, (char *) b->shipname, "");
