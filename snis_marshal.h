@@ -17,7 +17,7 @@ struct packed_double
 struct packed_buffer
 {
 	unsigned char *buffer;
-	uint16_t buffer_size; /* size of space allocated for buffer */
+	uint32_t buffer_size; /* size of space allocated for buffer */
 	int buffer_cursor;
 };
 
