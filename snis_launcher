@@ -28,6 +28,17 @@ fi
 
 SOLARSYSTEM_NAME="default"
 
+remove_snis_lock_dirs()
+{
+	for x in /tmp/snis_lock_dir.*
+	do
+		if [ -d "$x" ]
+		then
+			rmdir "$x"
+		fi
+	done
+}
+
 print_main_menu()
 {
 cat << EOF 1>&2
@@ -241,10 +252,12 @@ do
 	   exit
 		;;
 	5) kill_processes 'snis_server|snis_client|snis_multiverse|ssgl_server'
+		remove_snis_lock_dirs
 		;;
 	6) kill_processes 'snis_client'
 		;;
 	7) kill_processes 'snis_server|snis_multiverse|ssgl_server'
+		remove_snis_lock_dirs
 		;;
 	1) start_snis_lobby
 		;;

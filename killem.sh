@@ -46,16 +46,29 @@ kill_pattern()
 	fi
 }
 
+remove_lock_dirs()
+{
+	for x in /tmp/snis_lock_dir.*
+	do
+		if [ -d "$x" ]
+		then
+			rmdir "$x"
+		fi
+	done
+}
+
 # Default is to Killem all
 if [ "$1" = "" ]
 then
 	kill_pattern 'ssgl_server|snis_client|snis_server|snis_multiverse'
+	remove_lock_dirs
 elif [ "$1" = "client" ]
 then
 	kill_pattern 'snis_client'
 elif [ "$1" = "server" ]
 then
 	kill_pattern 'snis_server|snis_multiverse|ssgl_server'
+	remove_lock_dirs
 else
 	usage
 fi
