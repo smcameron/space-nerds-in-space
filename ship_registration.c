@@ -81,8 +81,13 @@ void ship_registry_delete_ship_entries(struct ship_registry *r, uint32_t id)
 	d = 0;
 	/* Remove entries with specified id */
 	for (s = 0; s < r->nentries; s++) {
-		if (r->entry[s].id == id)
+		if (r->entry[s].id == id) {
+			if (r->entry[s].entry) {
+				free(r->entry[s].entry);
+				r->entry[s].entry = NULL;
+			}
 			continue; /* Don't copy */
+		}
 		if (d == s) {
 			d++;
 			continue; /* Don't copy items on top of themselves */
@@ -91,8 +96,11 @@ void ship_registry_delete_ship_entries(struct ship_registry *r, uint32_t id)
 		d++;
 	}
 	/* Zero out any trailing entries */
-	for (s = d; s < r->nentries; s++)
+	for (s = d; s < r->nentries; s++) {
+		if (r->entry[s].entry)
+			free(r->entry[s].entry);
 		memset(&r->entry[s], 0, sizeof(r->entry[0]));
+	}
 	r->nentries = d;
 }
 
