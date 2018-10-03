@@ -467,7 +467,7 @@ static struct snis_entity go[MAXGAMEOBJS];
 #define go_index(snis_entity_ptr) ((long) ((snis_entity_ptr) - &go[0]))
 static struct space_partition *space_partition = NULL;
 
-static struct ship_registry ship_registry;
+static struct ship_registry ship_registry = { 0 };
 
 /* Do planets, black holes, nebula and antenna mis-aiming block comms?  Default is false, disabled */
 static int enable_comms_attenuation = 0;
@@ -12762,6 +12762,8 @@ static void populate_universe(void)
 	if (solarsystem_assets->random_seed != -1)
 		set_random_seed(solarsystem_assets->random_seed);
 	initialize_random_orientations_and_spins(COMMON_MTWIST_SEED);
+	if (ship_registry.entry)
+		free_ship_registry(&ship_registry);
 	ship_registry_init(&ship_registry);
 	add_nebulae(); /* do nebula first */
 	add_asteroids();

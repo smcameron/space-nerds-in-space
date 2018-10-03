@@ -145,3 +145,24 @@ int ship_registry_get_next_entry(struct ship_registry *r, uint32_t id, int n)
 	return -1;
 }
 
+void free_ship_registry(struct ship_registry *r)
+{
+	int i;
+
+	if (!r->entry) {
+		r->nallocated = 0;
+		r->nentries = 0;
+		return;
+	}
+
+	for (i = 0; i < r->nentries; r++) {
+		if (r->entry[i].entry) {
+			free(r->entry[i].entry);
+			r->entry[i].entry = NULL;
+		}
+	}
+	free(r->entry);
+	r->nallocated = 0;
+	r->nentries = 0;
+	r->entry = NULL;
+}
