@@ -396,6 +396,7 @@ struct ship_data {
 #define MINIMUM_TURN_SPEED 5.0
 #define MAX_SLOW_TURN_ANGLE 2 /* degrees */
 #define TRANSPORTER_RANGE 1500.0f
+#define BOUNTY_CHANCE (0.1)
 
 /* Max damage dealt per "hit"
  * laser damage is boosted by increased phaser power and diminished

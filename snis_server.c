@@ -159,6 +159,7 @@ static float spacemonster_flee_dist = SPACEMONSTER_FLEE_DIST;
 static float spacemonster_aggro_radius = SPACEMONSTER_AGGRO_RADIUS;
 static float spacemonster_collision_radius = SPACEMONSTER_COLLISION_RADIUS;
 static float cargo_container_max_velocity = CARGO_CONTAINER_MAX_VELOCITY;
+static float bounty_chance = BOUNTY_CHANCE;
 
 /*
  * End of runtime adjustable globals
@@ -10317,7 +10318,7 @@ static int add_ship(int faction, int auto_respawn)
 	} else {
 		snprintf(registration, sizeof(registration) - 1, "PRIVATE SPACECRAFT");
 		ship_registry_add_owner(&ship_registry, go[i].id, snis_randn(ncorporations()));
-		if (snis_randn(1000) <= 100) {
+		if (snis_randn(1000) <= 1000.0 * bounty_chance) {
 			char crime[100];
 			generate_crime(mt, crime, sizeof(crime) - 1);
 			uppercase(crime);
@@ -16619,6 +16620,10 @@ static struct tweakable_var_descriptor server_tweak[] = {
 		"CARGO CONTAINER MAX VELOCITY",
 		&cargo_container_max_velocity, 'f',
 		0.0, MAX_PLAYER_VELOCITY * 10.0, CARGO_CONTAINER_MAX_VELOCITY, 0, 0, 0 },
+	{ "BOUNTY_CHANCE",
+		"CHANCE THAT A NEWLY ADDED SHIP WILL HAVE A BOUNTY ON IT",
+		&bounty_chance, 'f',
+		0.0, 1.0, BOUNTY_CHANCE, 0, 0, 0 },
 	{ NULL, NULL, NULL, '\0', 0.0, 0.0, 0.0, 0, 0, 0 },
 };
 
