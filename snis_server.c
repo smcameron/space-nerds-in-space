@@ -2904,7 +2904,7 @@ static void push_mining_bot_mode(struct snis_entity *miner, uint32_t parent_ship
 		if (n >= MAX_AI_STACK_ENTRIES)
 			return;
 		miner->tsd.ship.nai_entries++;
-		miner->tsd.ship.ai[n].u.mining_bot.object_or_waypoint = 0; /* object */
+		miner->tsd.ship.ai[n].u.mining_bot.object_or_waypoint = go[i].type;
 		set_ship_destination(miner, go[i].x, go[i].y, go[i].z);
 	} else if (selected_waypoint >= 0 && selected_waypoint < bridgelist[bridge].nwaypoints) {
 		if (n >= MAX_AI_STACK_ENTRIES)
@@ -2912,7 +2912,7 @@ static void push_mining_bot_mode(struct snis_entity *miner, uint32_t parent_ship
 		miner->tsd.ship.nai_entries++;
 		struct player_waypoint *wp =
 			&bridgelist[bridge].waypoint[selected_waypoint];
-		miner->tsd.ship.ai[n].u.mining_bot.object_or_waypoint = 1; /* waypoint */
+		miner->tsd.ship.ai[n].u.mining_bot.object_or_waypoint = 128; /* waypoint */
 		miner->tsd.ship.ai[n].u.mining_bot.wpx = wp->x;
 		miner->tsd.ship.ai[n].u.mining_bot.wpy = wp->y;
 		miner->tsd.ship.ai[n].u.mining_bot.wpz = wp->z;
@@ -5517,7 +5517,8 @@ static void ai_mining_mode_approach_asteroid(struct snis_entity *o, struct ai_mi
 	float time_to_travel = 0.0;
 	int b;
 
-	if (ai->object_or_waypoint == 0) /* destination is object */ {
+	if (ai->object_or_waypoint < 128) {
+		/* destination is asteroid or derelict  */
 		i = lookup_by_id(ai->asteroid);
 		if (i < 0) {
 			/* asteroid/cargo container got blown up maybe */
@@ -5575,7 +5576,7 @@ static void ai_mining_mode_approach_asteroid(struct snis_entity *o, struct ai_mi
 		if (b >= 0) {
 			int channel = bridgelist[b].npcbot.channel;
 			ai->orphan_time = 0;
-			if (ai->object_or_waypoint == 0) /* object */
+			if (ai->object_or_waypoint < 128) /* object */
 				switch (asteroid->type) {
 				case OBJTYPE_ASTEROID:
 					send_comms_packet(o, o->sdata.name, channel,
@@ -5611,7 +5612,7 @@ static void ai_mining_mode_approach_asteroid(struct snis_entity *o, struct ai_mi
 			ai_trace(o->id, "MINING BOT ORPHANED");
 			ai->orphan_time++;
 		}
-		if (ai->object_or_waypoint == 0 && !ai->towing) { /* object */
+		if (ai->object_or_waypoint < 128 && !ai->towing) { /* object */
 			ai_trace(o->id, "MINING BOT APPROACH -> LAND ON ASTEROID");
 			ai->mode = MINING_MODE_LAND_ON_ASTEROID;
 		} else if (ai->towing) {
@@ -14569,7 +14570,7 @@ static void npc_menu_item_mining_bot_status_report(struct npc_menu_item *item,
 		return;
 	miner = &go[i];
 	ai = &miner->tsd.ship.ai[0].u.mining_bot;
-	if (ai->object_or_waypoint == 0) {
+	if (ai->object_or_waypoint < 128) {
 		i = lookup_by_id(ai->asteroid);
 		if (i >= 0) {
 			asteroid = &go[i];
@@ -14603,7 +14604,7 @@ static void npc_menu_item_mining_bot_status_report(struct npc_menu_item *item,
 	send_comms_packet(miner, npcname, channel, "--- BEGIN STATUS REPORT ---");
 	switch (ai->mode) {
 	case MINING_MODE_APPROACH_ASTEROID:
-		if (ai->object_or_waypoint == 0) /* object */
+		if (ai->object_or_waypoint < 128) /* object */
 			send_comms_packet(miner, npcname, channel, "RENDEZVOUS WITH %s, DISTANCE: %f\n",
 				asteroid ? asteroid->sdata.name : "UNKNOWN", dist);
 		else
@@ -14615,6 +14616,10 @@ static void npc_menu_item_mining_bot_status_report(struct npc_menu_item *item,
 			asteroid ? asteroid->sdata.name : "UNKNOWN", dist * 0.3);
 		break;
 	case MINING_MODE_MINE:
+		if (!asteroid) {
+			send_comms_packet(miner, npcname, channel, "LOST CONTACT WITH TARGET");
+			break;
+		}
 		if (asteroid->type == OBJTYPE_ASTEROID)
 			send_comms_packet(miner, npcname, channel, "MINING ON %s\n",
 				asteroid ? asteroid->sdata.name : "UNKNOWN");
@@ -14643,8 +14648,8 @@ static void npc_menu_item_mining_bot_status_report(struct npc_menu_item *item,
 	}
 	send_comms_packet(miner, npcname, channel, "DISTANCE TO %s: %f\n",
 		parent ? parent->sdata.name : "MOTHER SHIP", dist_to_parent);
-	if (ai->object_or_waypoint == 0) {
-		switch (asteroid->type) {
+	if (ai->object_or_waypoint < 128) {
+		switch (ai->object_or_waypoint) {
 		case OBJTYPE_ASTEROID:
 			send_comms_packet(miner, npcname, channel,
 				"ORE COLLECTED: %f TONS\n", 2.0 * total / (255.0 * 4.0));
@@ -14664,7 +14669,10 @@ static void npc_menu_item_mining_bot_status_report(struct npc_menu_item *item,
 			if (ai->mode == MINING_MODE_RETURN_TO_PARENT ||
 				ai->mode == MINING_MODE_STOW_BOT ||
 				ai->mode == MINING_MODE_STANDBY_TO_TRANSPORT_ORE) {
-				if (asteroid->tsd.derelict.ships_log) {
+				/* This is a bug, because if we recovered the ship's log, we should not require
+				 * the ship to exist. The bug is, we left the ships log on the ship
+				 * instead of making a copy of it. */
+				if (asteroid && asteroid->tsd.derelict.ships_log) {
 					int i, n;
 					char m[50];
 
@@ -14689,8 +14697,12 @@ static void npc_menu_item_mining_bot_status_report(struct npc_menu_item *item,
 								"ships-logs-recovered-event", (double) asteroid->id,
 								parent ? (double) parent->id : -1.0);
 				} else {
-					send_comms_packet(miner, npcname, channel,
+					if (asteroid)
+						send_comms_packet(miner, npcname, channel,
 							"UNABLE TO RECOVER SHIPS LOG FROM %s\n", asteroid->sdata.name);
+					else
+						send_comms_packet(miner, npcname, channel,
+							"UNABLE TO RECOVER SHIPS LOG\n");
 				}
 				/* Hack, we overload miner's tractor_beam to hold ship id of salvaged derelict */
 				if (miner->tsd.ship.tractor_beam != 0xffffffff)

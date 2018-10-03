@@ -277,7 +277,7 @@ struct ai_mining_bot_data {
 	uint8_t uranium;
 	uint8_t oxygen;
 	uint8_t fuel;
-	uint8_t object_or_waypoint; /* 0 means object, 1 means waypoint */
+	uint8_t object_or_waypoint; /* >= 128 means waypoint, < 128 means the object type */
 	uint8_t towing;
 	uint32_t towed_object;
 #define MINING_BOT_WAYPOINT_PROXIMITY 400
