@@ -10075,8 +10075,10 @@ static void init_player(struct snis_entity *o, int clear_cargo_bay, float *charg
 		bridgelist[b].text_to_speech_volume_timestamp = universe_timestamp;
 		bridgelist[b].active_custom_buttons = 0;
 		memset(bridgelist[b].custom_button_text, 0, sizeof(bridgelist[b].custom_button_text));
-		memset(bridgelist[b].ship_id_chip, 0, sizeof(bridgelist[b].ship_id_chip));
-		bridgelist[b].nship_id_chips = 0;
+		if (clear_cargo_bay) {
+			memset(bridgelist[b].ship_id_chip, 0, sizeof(bridgelist[b].ship_id_chip));
+			bridgelist[b].nship_id_chips = 0;
+		}
 	}
 	quat_init_axis(&o->tsd.ship.computer_desired_orientation, 0, 1, 0, 0);
 	o->tsd.ship.computer_steering_time_left = 0;
