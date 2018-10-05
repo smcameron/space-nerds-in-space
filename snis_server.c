@@ -17742,7 +17742,7 @@ static void process_demon_clear_all(void)
 	for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
 		struct snis_entity *o = &go[i];
 
-		if (o->type != OBJTYPE_SHIP1)
+		if (o->type != OBJTYPE_SHIP1 && snis_object_pool_is_allocated(pool, i) && o->id != (uint32_t) -1)
 			delete_from_clients_and_server(o);
 	}
 	rts_mode = 0;
