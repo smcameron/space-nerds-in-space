@@ -3153,6 +3153,8 @@ static void ship_figure_out_what_to_do(struct snis_entity *o)
 				int fleet_pos;
 				leader_id = fleet_get_leader_id(i);
 				j = lookup_by_id(leader_id);
+				if (j < 0)
+					continue;
 				leader = &go[j];
 				/* only join fleet of own faction */
 				if (leader->sdata.faction != o->sdata.faction)
