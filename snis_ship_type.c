@@ -43,11 +43,13 @@ struct ship_type_entry *snis_read_ship_types(char *filename, int *count)
 
 	while (!feof(f)) {
 		x = fgets(line, sizeof(line) - 1, f);
-		line[strlen(line) - 1] = '\0'; /* cut off trailing \n */
 		if (!x) {
 			if (feof(f))
 				break;
 		}
+		if (strlen(line) == 0)
+			continue;
+		line[strlen(line) - 1] = '\0'; /* cut off trailing \n */
 		linecount++;
 
 		if (line[0] == '#') /* skip comment lines */

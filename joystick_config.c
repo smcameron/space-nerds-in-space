@@ -243,6 +243,8 @@ int read_joystick_config(struct joystick_config *cfg, char *filename, char *joys
 		l = fgets(line, 1000, f);
 		if (!l)
 			break;
+		if (strlen(line) == 0)
+			continue;
 		line[strlen(line) - 1] = '\0';
 		ln++;
 		squash_comments(line);

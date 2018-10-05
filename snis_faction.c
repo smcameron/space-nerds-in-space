@@ -105,6 +105,8 @@ int snis_read_factions(char *filename)
 		c = fgets(line, sizeof(line) - 1, f);
 		if (!c)
 			break;
+		if (strlen(line) == 0)
+			continue;
 		line[strlen(line) - 1] = '\0';
 		linecount++;
 
@@ -131,6 +133,8 @@ int snis_read_factions(char *filename)
 		c = fgets(line, sizeof(line) - 1, f);
 		if (!c)
 			break;
+		if (strlen(line) == 0)
+			continue;
 		line[strlen(line) - 1] = '\0';
 		r = sscanf(line, "%d %d %d", &x, &y, &z);
 		if (r != 3) {
