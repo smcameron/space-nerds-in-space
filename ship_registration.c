@@ -96,11 +96,12 @@ void ship_registry_delete_ship_entries(struct ship_registry *r, uint32_t id)
 		d++;
 	}
 	/* Zero out any trailing entries */
-	for (s = d; s < r->nentries; s++) {
-		if (r->entry[s].entry)
-			free(r->entry[s].entry);
+	for (s = d; s < r->nentries; s++)
+		/* Note, we do not need to free any r->entry[s].entry, because those
+		 * pointers are still valid, but were copied to earlier positions in
+		 * the array.
+		 */
 		memset(&r->entry[s], 0, sizeof(r->entry[0]));
-	}
 	r->nentries = d;
 }
 
@@ -113,9 +114,10 @@ void ship_registry_delete_bounty_entries_by_site(struct ship_registry *r, uint32
 	for (s = 0; s < r->nentries; s++) {
 		if (r->entry[s].type == SHIP_REG_TYPE_BOUNTY &&
 			r->entry[s].bounty_collection_site == collection_site) {
-			if (r->entry[s].entry)
+			if (r->entry[s].entry) {
 				free(r->entry[s].entry);
-			r->entry[s].entry = NULL;
+				r->entry[s].entry = NULL;
+			}
 			continue; /* Don't copy */
 		}
 		if (d == s) {
@@ -126,11 +128,12 @@ void ship_registry_delete_bounty_entries_by_site(struct ship_registry *r, uint32
 		d++;
 	}
 	/* Zero out any trailing entries */
-	for (s = d; s < r->nentries; s++) {
-		if (r->entry[s].entry)
-			free(r->entry[s].entry);
+	for (s = d; s < r->nentries; s++)
+		/* Note, we do not need to free any r->entry[s].entry, because those
+		 * pointers are still valid, but were copied to earlier positions in
+		 * the array.
+		 */
 		memset(&r->entry[s], 0, sizeof(r->entry[0]));
-	}
 	r->nentries = d;
 }
 
