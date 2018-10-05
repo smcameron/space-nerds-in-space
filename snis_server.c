@@ -11467,8 +11467,8 @@ static int add_docking_port(int parent_id, int portnumber)
 	pos.v.x = parent->x;
 	pos.v.y = parent->y;
 	pos.v.z = parent->z;
-	vec3_add_self(&pos, &dp[model].port[portnumber].pos);
-	quat_mul(&orientation, &parent->orientation, &dp[model].port[portnumber].orientation);
+	vec3_add_self(&pos, &dp->port[portnumber].pos);
+	quat_mul(&orientation, &parent->orientation, &dp->port[portnumber].orientation);
 
 	i = add_generic_object(pos.v.x, pos.v.y, pos.v.z, parent->vx, parent->vy, parent->vz,
 			parent->heading, OBJTYPE_DOCKING_PORT);
