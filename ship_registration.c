@@ -158,7 +158,7 @@ void free_ship_registry(struct ship_registry *r)
 		return;
 	}
 
-	for (i = 0; i < r->nentries; r++) {
+	for (i = 0; i < r->nentries; i++) {
 		if (r->entry[i].entry) {
 			free(r->entry[i].entry);
 			r->entry[i].entry = NULL;
