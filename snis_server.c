@@ -22824,23 +22824,6 @@ static void take_your_locale_and_shove_it(void)
 	setlocale(LC_ALL, "C");
 }
 
-#if 0
-static struct docking_port_attachment_point **read_docking_port_info(
-		struct starbase_file_metadata starbase_metadata[], int n)
-{
-	int i;
-	struct docking_port_attachment_point **d = malloc(sizeof(*d) * n);
-	memset(d, 0, sizeof(*d) * n);
-	for (i = 0; i < n; i++) {
-		if (!starbase_metadata[i].docking_port_file)
-			continue;
-		d[i] = read_docking_port_attachments(starbase_metadata[i].docking_port_file,
-				STARBASE_SCALE_FACTOR);
-	}
-	return d;
-}
-#endif
-
 /*****************************************************************************************
  * Here begins the natural language parsing code.
  *****************************************************************************************/
