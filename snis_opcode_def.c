@@ -35,7 +35,7 @@
 #include "stacktrace.h"
 #include "arraysize.h"
 
-#define NSUBCODES 29
+#define NSUBCODES 30
 #define NOPCODES (256 * NSUBCODES)
 
 static struct opcode_format_descriptor opcode_def[NOPCODES] = { { 0 } };
@@ -98,6 +98,7 @@ int snis_opcode_def_init(void)
 	rc |= init_opcode_def(OPCODE_REQUEST_TORPEDO, "b");
 	rc |= init_opcode_def(OPCODE_DELETE_OBJECT, "bw");
 	rc |= init_opcode_def(OPCODE_UPDATE_EXPLOSION, "bwwwSSShhhbb");
+	rc |= init_opcode_def(OPCODE_UPDATE_CHAFF, "bwwSSS");
 	rc |= init_opcode_def(OPCODE_PLAY_SOUND, "bh");
 	rc |= init_opcode_def(OPCODE_REQUEST_SCIYAW, "bb");
 	rc |= init_opcode_def(OPCODE_REQUEST_SCIBEAMWIDTH, "bb");
@@ -167,6 +168,8 @@ int snis_opcode_def_init(void)
 			OPCODE_ADJUST_CONTROL_SILENCE_ALARMS, "bbwb");
 	rc |= init_opcode_subcode_def(OPCODE_ADJUST_CONTROL_INPUT,
 			OPCODE_ADJUST_CONTROL_FIRE_MISSILE, "bbwb");
+	rc |= init_opcode_subcode_def(OPCODE_ADJUST_CONTROL_INPUT,
+			OPCODE_ADJUST_CONTROL_DEPLOY_CHAFF, "bbwb");
 	rc |= init_opcode_def(OPCODE_UPDATE_RESPAWN_TIME, "bb");
 	rc |= init_opcode_def(OPCODE_UPDATE_NETSTATS, "bqqwwwwwwwww");
 	rc |= init_opcode_def(OPCODE_COMMS_TRANSMISSION, "n/a");

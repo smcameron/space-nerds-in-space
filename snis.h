@@ -28,7 +28,7 @@
 #include "oriented_bounding_box.h"
 
 #define DEFAULT_SOLAR_SYSTEM "default"
-#define SNIS_PROTOCOL_VERSION "SNIS029"
+#define SNIS_PROTOCOL_VERSION "SNIS030"
 #define COMMON_MTWIST_SEED 97872
 /* dimensions of the "known" universe */
 #define XKNOWN_DIM 600000.0
@@ -117,6 +117,7 @@
 #define OBJTYPE_WARP_CORE 24
 #define OBJTYPE_BLACK_HOLE 25
 #define OBJTYPE_MISSILE 26
+#define OBJTYPE_CHAFF 27
 
 #define SHIELD_EFFECT_LIFETIME 60
 
@@ -662,6 +663,12 @@ struct explosion_data {
 #define EXPLOSION_TYPE_BLACKHOLE 1
 };
 
+#define CHAFF_COUNT (10)
+#define CHAFF_SPEED (50.0)
+struct chaff_data {
+	uint16_t unused;
+};
+
 struct spark_data {
 	union quat rotational_velocity;
 	float shrink_factor;
@@ -871,6 +878,7 @@ union type_specific_data {
 	struct torpedo_data torpedo;
 	struct starbase_data starbase;
 	struct explosion_data explosion;
+	struct chaff_data chaff;
 	struct nebula_data nebula;
 	struct spark_data spark;
 	struct asteroid_data asteroid;

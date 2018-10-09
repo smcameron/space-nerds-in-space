@@ -160,6 +160,8 @@ static float spacemonster_aggro_radius = SPACEMONSTER_AGGRO_RADIUS;
 static float spacemonster_collision_radius = SPACEMONSTER_COLLISION_RADIUS;
 static float cargo_container_max_velocity = CARGO_CONTAINER_MAX_VELOCITY;
 static float bounty_chance = BOUNTY_CHANCE;
+static float chaff_speed = CHAFF_SPEED;
+static int chaff_count = CHAFF_COUNT;
 
 /*
  * End of runtime adjustable globals
@@ -8167,6 +8169,7 @@ static void player_collision_detection(void *player, void *object)
 	case OBJTYPE_WORMHOLE:
 	case OBJTYPE_STARBASE:
 	case OBJTYPE_WARP_CORE:
+	case OBJTYPE_CHAFF:
 		return;
 	default:
 		break;
@@ -9666,7 +9669,17 @@ static void explosion_move(struct snis_entity *o)
 {
 	if (o->alive > 0)
 		o->alive--;
+	if (o->alive <= 0)
+		delete_from_clients_and_server(o);
+}
 
+static void chaff_move(struct snis_entity *o)
+{
+	set_object_location(o, o->x + o->vx, o->y + o->vy, o->z + o->vz);
+	o->timestamp = universe_timestamp;
+	if (o->alive > 0)
+		o->alive--;
+	/* TODO collide with missiles */
 	if (o->alive <= 0)
 		delete_from_clients_and_server(o);
 }
@@ -11623,6 +11636,23 @@ static int add_blackhole_explosion(uint32_t black_hole, double x, double y, doub
 {
 	return add_typed_explosion(black_hole, x, y, z, velocity, nsparks, time, victim_type,
 					EXPLOSION_TYPE_BLACKHOLE);
+}
+
+static int add_chaff(double x, double y, double z)
+{
+	int i;
+	float vx, vy, vz;
+
+	random_point_on_sphere(1.0 * chaff_speed, &vx, &vy, &vz);
+	i = add_generic_object(x, y, z, 0, 0, 0, 0, OBJTYPE_CHAFF);
+	if (i < 0)
+		return i;
+	go[i].vx = vx;
+	go[i].vy = vy;
+	go[i].vz = vz;
+	go[i].move = chaff_move;
+	go[i].alive = 30;
+	return i;
 }
 
 static int l_add_explosion(lua_State *l)
@@ -16648,6 +16678,14 @@ static struct tweakable_var_descriptor server_tweak[] = {
 		"CHANCE THAT A NEWLY ADDED SHIP WILL HAVE A BOUNTY ON IT",
 		&bounty_chance, 'f',
 		0.0, 1.0, BOUNTY_CHANCE, 0, 0, 0 },
+	{ "CHAFF_SPEED",
+		"SPEED OF CHAFF PARTICLES",
+		&chaff_speed, 'f',
+		10.0, 500.0, CHAFF_SPEED, 0, 0, 0 },
+	{ "CHAFF_COUNT",
+		"NUMBER OF CHAFF PARTICLES TO DEPLOY",
+		&chaff_count, 'i',
+		0.0, 0.0, 0.0, 1, 25, CHAFF_COUNT },
 	{ NULL, NULL, NULL, '\0', 0.0, 0.0, 0.0, 0, 0, 0 },
 };
 
@@ -19165,6 +19203,26 @@ missile_fail:
 	return 0;
 }
 
+static int process_adjust_control_deploy_chaff(struct game_client *c, uint32_t id)
+{
+	int i;
+	struct snis_entity *o;
+
+	pthread_mutex_lock(&universe_mutex);
+	i = lookup_by_id(id);
+	if (i < 0) {
+		pthread_mutex_unlock(&universe_mutex);
+		return -1;
+	}
+	if (i != c->ship_index)
+		snis_log(SNIS_ERROR, "i != ship index at %s:%d\n", __FILE__, __LINE__);
+	o = &go[i];
+	for (i = 0; i < chaff_count; i++)
+		(void) add_chaff(o->x, o->y, o->z);
+	pthread_mutex_unlock(&universe_mutex);
+	return 0;
+}
+
 static int process_adjust_control_input(struct game_client *c)
 {
 	int rc;
@@ -19259,6 +19317,8 @@ static int process_adjust_control_input(struct game_client *c)
 			offsetof(struct snis_entity, tsd.ship.alarms_silenced), v, no_limit);
 	case OPCODE_ADJUST_CONTROL_FIRE_MISSILE:
 		return process_adjust_control_fire_missile(c, id);
+	case OPCODE_ADJUST_CONTROL_DEPLOY_CHAFF:
+		return process_adjust_control_deploy_chaff(c, id);
 	default:
 		return -1;
 	}
@@ -20499,6 +20559,8 @@ static void send_update_warpgate_packet(struct game_client *c,
 	struct snis_entity *o);
 static void send_update_explosion_packet(struct game_client *c,
 	struct snis_entity *o);
+static void send_update_chaff_packet(struct game_client *c,
+	struct snis_entity *o);
 static void send_update_torpedo_packet(struct game_client *c,
 	struct snis_entity *o);
 static void send_update_missile_packet(struct game_client *c,
@@ -20574,6 +20636,9 @@ static void queue_up_client_object_update(struct game_client *c, struct snis_ent
 		break;
 	case OBJTYPE_EXPLOSION:
 		send_update_explosion_packet(c, o);
+		break;
+	case OBJTYPE_CHAFF:
+		send_update_chaff_packet(c, o);
 		break;
 	case OBJTYPE_DEBRIS:
 		break;
@@ -21564,6 +21629,14 @@ static void send_update_explosion_packet(struct game_client *c,
 				o->tsd.explosion.nsparks, o->tsd.explosion.velocity,
 				o->tsd.explosion.time, o->tsd.explosion.victim_type,
 				o->tsd.explosion.explosion_type));
+}
+
+static void send_update_chaff_packet(struct game_client *c,
+	struct snis_entity *o)
+{
+	pb_queue_to_client(c, snis_opcode_pkt("bwwSSS", OPCODE_UPDATE_CHAFF, o->id, o->timestamp,
+				o->x, (int32_t) UNIVERSE_DIM, o->y, (int32_t) UNIVERSE_DIM,
+				o->z, (int32_t) UNIVERSE_DIM));
 }
 
 static void send_update_torpedo_packet(struct game_client *c,

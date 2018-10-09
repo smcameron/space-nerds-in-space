@@ -436,6 +436,7 @@ static struct material red_laser_material;
 static struct material blue_tractor_material;
 static struct material green_phaser_material;
 static struct material spark_material;
+static struct material chaff_material;
 static struct material blackhole_spark_material;
 static struct material laserflash_material;
 static struct material warp_effect_material;
@@ -2858,6 +2859,9 @@ static void move_objects(void)
 		case OBJTYPE_LASERBEAM:
 		case OBJTYPE_TRACTORBEAM:
 			o->move(o);
+			break;
+		case OBJTYPE_CHAFF:
+			move_object(timestamp, o, &interpolate_generic_object);
 			break;
 		case OBJTYPE_NEBULA:
 			/* move_object(timestamp, o, &interpolate_oriented_object); */
@@ -6899,6 +6903,45 @@ static int process_update_explosion_packet(void)
 	return (rc < 0);
 }
 
+static int update_chaff(uint32_t id, uint32_t timestamp, double x, double y, double z)
+{
+	int i;
+	struct snis_entity *o;
+
+	i = lookup_object_by_id(id);
+	if (i < 0) {
+		i = add_generic_object(id, timestamp, x, y, z, 0.0, 0.0, 0.0,
+					&identity_quat, OBJTYPE_CHAFF, 1, NULL);
+		if (i < 0)
+			return i;
+		o = &go[i];
+		o->entity = add_entity(ecx, particle_mesh, x, y, z, PARTICLE_COLOR);
+		if (o->entity) {
+			update_entity_material(o->entity, &chaff_material);
+			update_entity_scale(o->entity, 5.0);
+		}
+	}
+	update_generic_object(i, timestamp, x, y, z, 0, 0, 0, NULL, 1);
+	return 0;
+}
+
+static int process_update_chaff_packet(void)
+{
+	unsigned char buffer[sizeof(struct update_chaff_packet)];
+	uint32_t id, timestamp;
+	double vx, vy, vz;
+	int rc;
+
+	rc = read_and_unpack_buffer(buffer, "wwSSS", &id, &timestamp,
+		&vx, (int32_t) UNIVERSE_DIM, &vy, (int32_t) UNIVERSE_DIM, &vz, (int32_t) UNIVERSE_DIM);
+	if (rc != 0)
+		return rc;
+	pthread_mutex_lock(&universe_mutex);
+	rc = update_chaff(id, timestamp, vx, vy, vz);
+	pthread_mutex_unlock(&universe_mutex);
+	return rc < 0;
+}
+
 static struct network_setup_ui {
 	struct button *start_lobbyserver;
 	struct button *start_gameserver;
@@ -7127,6 +7170,9 @@ static void *gameserver_reader(__attribute__((unused)) void *arg)
 			break;
 		case OPCODE_UPDATE_EXPLOSION:
 			rc = process_update_explosion_packet();
+			break;
+		case OPCODE_UPDATE_CHAFF:
+			rc = process_update_chaff_packet();
 			break;
 		case OPCODE_UPDATE_LASER:
 			rc = process_update_laser_packet();
@@ -12346,6 +12392,7 @@ static struct engineering_ui {
 	struct button *preset1_button;
 	struct button *preset2_button;
 	struct button *silence_alarms;
+	struct button *deploy_chaff;
 	struct button *custom_button;
 	struct slider *shield_slider;
 	struct slider *shield_coolant_slider;
@@ -12560,6 +12607,11 @@ static void eng_custom_button_pressed(void *x)
 	queue_to_server(snis_opcode_pkt("bb", OPCODE_CUSTOM_BUTTON, OPCODE_CUSTOM_BUTTON_SUBCMD_ENG));
 }
 
+static void eng_deploy_chaff_button_pressed(void *x)
+{
+	transmit_adjust_control_input(0, OPCODE_ADJUST_CONTROL_DEPLOY_CHAFF);
+}
+
 static void preset1_button_pressed(void *x)
 {
 	/* a "normal" preset, note only one poke has sound to avoid noise */
@@ -12689,6 +12741,11 @@ static void init_engineering_ui(void)
 						y + txx(30), -1, -1, "CUSTOM BUTTON",
 						color, NANO_FONT, eng_custom_button_pressed, (void *) 0);
 	snis_button_set_sound(eu->custom_button, UISND14);
+	eu->deploy_chaff = snis_button_init(snis_button_get_x(eu->custom_button) +
+						snis_button_get_width(eu->custom_button) + txx(5), y + txx(30),
+						-1, -1, "DEPLOY CHAFF",
+						color, NANO_FONT, eng_deploy_chaff_button_pressed, (void *) 0);
+	snis_button_set_sound(eu->deploy_chaff, UISND14);
 	y += yinc;
 	color = UI_COLOR(eng_power_meter);
 	eu->shield_slider = snis_slider_init(20, y += yinc, powersliderlen, sh, color,
@@ -12803,6 +12860,7 @@ static void init_engineering_ui(void)
 	ui_add_button(eu->preset2_button, dm, "SELECT ENGINEERING PRESET 2 - QUIESCENT MODE");
 	ui_add_button(eu->silence_alarms, dm, "SILENCE/UNSILENCE ENGINEERING SYSTEM ALARMS");
 	ui_add_button(eu->custom_button, dm, "CUSTOM BUTTON");
+	ui_add_button(eu->deploy_chaff, dm, "DEPLOY CHAFF");
 
 	y = 220 + yinc;
 	y = eng_ui.gauge_radius * 2.5 + yinc;
@@ -19132,6 +19190,11 @@ static int load_static_textures(void)
 	spark_material.billboard_type = MATERIAL_BILLBOARD_TYPE_SPHERICAL;
 	spark_material.texture_mapped_unlit.texture_id = load_texture("textures/spark-texture.png");
 	spark_material.texture_mapped_unlit.do_blend = 1;
+
+	material_init_texture_mapped_unlit(&chaff_material);
+	chaff_material.billboard_type = MATERIAL_BILLBOARD_TYPE_SPHERICAL;
+	chaff_material.texture_mapped_unlit.texture_id = load_texture("textures/spark-texture.png");
+	chaff_material.texture_mapped_unlit.do_blend = 1;
 
 	material_init_texture_mapped_unlit(&blackhole_spark_material);
 	blackhole_spark_material.billboard_type = MATERIAL_BILLBOARD_TYPE_SPHERICAL;

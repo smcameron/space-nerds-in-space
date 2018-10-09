@@ -72,7 +72,7 @@
 #define OPCODE_CLIENT_CONFIG 131
 #define   OPCODE_CLIENT_NOTIFY_CURRENT_STATION 0
 #define   OPCODE_CLIENT_SET_PERMITTED_ROLES 1
-/* UNUSED OPCODE 132 */
+#define OPCODE_UPDATE_CHAFF 132
 #define OPCODE_ENGAGE_WARP 133
 #define OPCODE_ROLE_ONSCREEN 134
 #define OPCODE_SCI_SELECT_TARGET 135
@@ -111,6 +111,7 @@
 #define	  OPCODE_ADJUST_CONTROL_EXTERIOR_LIGHTS 25
 #define   OPCODE_ADJUST_CONTROL_SILENCE_ALARMS 26
 #define   OPCODE_ADJUST_CONTROL_FIRE_MISSILE 27
+#define   OPCODE_ADJUST_CONTROL_DEPLOY_CHAFF 28
 
 /* UNUSED OPCODE 140 */
 #define OPCODE_UPDATE_RESPAWN_TIME 141
@@ -416,6 +417,13 @@ struct update_explosion_packet {
 	uint16_t time;
 	uint8_t victim_type;
 	uint8_t explosion_type;
+};
+
+struct update_chaff_packet {
+	uint8_t opcode;
+	uint32_t id;
+	uint32_t timestamp;
+	uint32_t x, y, z;
 };
 
 struct add_laser_packet {
