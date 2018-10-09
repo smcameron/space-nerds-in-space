@@ -3716,6 +3716,8 @@ static void missile_move(struct snis_entity *o)
 	i = lookup_by_id(o->tsd.missile.target_id);
 	if (i >= 0) { /* our target is still around */
 		target = &go[i];
+		if (target->type == OBJTYPE_SHIP1)
+			target->tsd.ship.missile_lock_detected = 10;
 
 		/* Calculate desired velocity */
 		to_target.v.x = target->x - o->x;
@@ -9138,6 +9140,10 @@ static void player_move(struct snis_entity *o)
 					RTS_WALLET_REFRESH_MINIMUM;
 	}
 	check_science_selection(o);
+
+	/* Missiles will set this to 10, here we decrement, and if no missiles are around, it will hit zero soon. */
+	if (o->tsd.ship.missile_lock_detected > 0)
+		o->tsd.ship.missile_lock_detected--;
 }
 
 static void demon_ship_move(struct snis_entity *o)
@@ -21326,7 +21332,7 @@ static void send_update_ship_packet(struct game_client *c,
 	packed_buffer_append(pb, "bwwhSSS", opcode, o->id, o->timestamp, o->alive,
 			o->x, (int32_t) UNIVERSE_DIM, o->y, (int32_t) UNIVERSE_DIM,
 			o->z, (int32_t) UNIVERSE_DIM);
-	packed_buffer_append(pb, "RRRwwRRRbbbwwbbbbbbbbbbbbbbwQQQQSSSbbbbbbbbbww",
+	packed_buffer_append(pb, "RRRwwRRRbbbwwbbbbbbbbbbbbbbwQQQQSSSbbbbbbbbbbww",
 			o->tsd.ship.yaw_velocity,
 			o->tsd.ship.pitch_velocity,
 			o->tsd.ship.roll_velocity,
@@ -21358,6 +21364,7 @@ static void send_update_ship_packet(struct game_client *c,
 			rts_mode,
 			o->tsd.ship.exterior_lights,
 			o->tsd.ship.alarms_silenced,
+			o->tsd.ship.missile_lock_detected,
 			o->tsd.ship.rts_active_button,
 			wallet, o->tsd.ship.viewpoint_object);
 	pb_queue_to_client(c, pb);

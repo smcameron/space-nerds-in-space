@@ -4616,7 +4616,7 @@ static void comms_setup_rts_buttons(int activate, struct snis_entity *player_shi
 static int process_update_ship_packet(uint8_t opcode)
 {
 	int i;
-	unsigned char buffer[145];
+	unsigned char buffer[146];
 	struct packed_buffer pb;
 	uint16_t alive;
 	uint32_t id, timestamp, torpedoes, power;
@@ -4631,7 +4631,7 @@ static int process_update_ship_packet(uint8_t opcode)
 		requested_shield, missile_count, phaser_charge, phaser_wavelength, shiptype,
 		reverse, trident, in_secure_area, docking_magnets, emf_detector,
 		nav_mode, warp_core_status, rts_mode, exterior_lights, alarms_silenced,
-		rts_active_button;
+		missile_lock_detected, rts_active_button;
 	union quat orientation, sciball_orientation, weap_orientation, hg_ant_orientation;
 	union euler ypr;
 	struct entity *e;
@@ -4654,7 +4654,7 @@ static int process_update_ship_packet(uint8_t opcode)
 				&dgunyawvel,
 				&dsheading,
 				&dbeamwidth);
-	packed_buffer_extract(&pb, "bbbwwbbbbbbbbbbbbbbwQQQQSSSbbbbbbbbbww",
+	packed_buffer_extract(&pb, "bbbwwbbbbbbbbbbbbbbwQQQQSSSbbbbbbbbbbww",
 			&tloading, &throttle, &rpm, &fuel, &oxygen, &temp,
 			&scizoom, &weapzoom, &navzoom, &mainzoom,
 			&warpdrive, &requested_warpdrive,
@@ -4666,7 +4666,8 @@ static int process_update_ship_packet(uint8_t opcode)
 			&hgaz, (int32_t) 1000000,
 			&in_secure_area,
 			&docking_magnets, &emf_detector, &nav_mode, &warp_core_status, &rts_mode,
-			&exterior_lights, &alarms_silenced, &rts_active_button, &wallet, &viewpoint_object);
+			&exterior_lights, &alarms_silenced, &missile_lock_detected, &rts_active_button, &wallet,
+			&viewpoint_object);
 	tloaded = (tloading >> 4) & 0x0f;
 	tloading = tloading & 0x0f;
 	quat_to_euler(&ypr, &orientation);	
@@ -4748,6 +4749,7 @@ static int process_update_ship_packet(uint8_t opcode)
 	o->tsd.ship.reverse = reverse;
 	o->tsd.ship.exterior_lights = exterior_lights;
 	o->tsd.ship.alarms_silenced = alarms_silenced;
+	o->tsd.ship.missile_lock_detected = missile_lock_detected;
 	o->tsd.ship.trident = trident;
 	o->tsd.ship.wallet = (float) wallet;
 	o->tsd.ship.viewpoint_object = viewpoint_object;
@@ -15269,6 +15271,12 @@ static void show_comms(GtkWidget *w)
 				sng_abs_xy_draw_string(comms_buffer, TINY_FONT, txx(22), txy(365));
 			}
 		}
+	}
+	if (o->tsd.ship.missile_lock_detected && timer & 0x08) {
+		sng_set_foreground(BLACK);
+		snis_draw_rectangle(1, txx(100), txy(125), txx(SCREEN_WIDTH - 100), txy(175));
+		sng_set_foreground(UI_COLOR(common_red_alert));
+		sng_center_xy_draw_string("MISSILE LOCK DETECTED", SMALL_FONT, txx(400), txy(150));
 	}
 	show_common_screen(w, "COMMS");
 }

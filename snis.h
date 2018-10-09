@@ -28,7 +28,7 @@
 #include "oriented_bounding_box.h"
 
 #define DEFAULT_SOLAR_SYSTEM "default"
-#define SNIS_PROTOCOL_VERSION "SNIS028"
+#define SNIS_PROTOCOL_VERSION "SNIS029"
 #define COMMON_MTWIST_SEED 97872
 /* dimensions of the "known" universe */
 #define XKNOWN_DIM 600000.0
@@ -568,6 +568,7 @@ struct ship_data {
 	uint32_t computer_steering_time_left;
 	uint8_t rts_active_button; /* which comms RTS button is currently active. 255 means none */
 	uint8_t alarms_silenced;
+	uint8_t missile_lock_detected;
 	uint32_t viewpoint_object;
 	union quat current_hg_ant_orientation; /* current high gain antenna orientation */
 	union vec3 desired_hg_ant_aim; /* direction we would like high gain antenna to aim */
