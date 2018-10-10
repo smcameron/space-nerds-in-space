@@ -3423,6 +3423,7 @@ static void draw_plane_radar(GtkWidget *w, struct snis_entity *o, union quat *ai
 			go[i].type != OBJTYPE_WARPGATE &&
 			go[i].type != OBJTYPE_ASTEROID &&
 			go[i].type != OBJTYPE_SPACEMONSTER &&
+			go[i].type != OBJTYPE_CHAFF &&
 			go[i].type != OBJTYPE_CARGO_CONTAINER)
 		{
 			continue;
@@ -9560,7 +9561,7 @@ static void draw_sciplane_display(GtkWidget *w, struct snis_entity *o, double ra
 			int draw_popout_arc = 0;
 
 			if (go[i].type == OBJTYPE_LASER || go[i].type == OBJTYPE_TORPEDO ||
-				go[i].type == OBJTYPE_MISSILE) {
+				go[i].type == OBJTYPE_MISSILE || go[i].type == OBJTYPE_CHAFF) {
 				/* set projectile tween value to be the same as the popout if they pass in popout area */
 				tween = selected_guy_tween;
 				draw_popout_arc = 0;
@@ -17389,6 +17390,10 @@ static void show_demon_3d(GtkWidget *w)
 			color = BLUE;
 			material = &blue_material;
 			break;
+		case OBJTYPE_CHAFF:
+			color = YELLOW;
+			material = &yellow_material;
+			break;
 		default:
 			color = MAGENTA;
 			material = &magenta_material;
@@ -17421,6 +17426,14 @@ static void show_demon_3d(GtkWidget *w)
 				update_entity_scale(e, o->tsd.black_hole.radius * 2.0);
 				entity_set_user_data(e, o);
 				update_entity_material(e, &blue_material);
+			}
+			break;
+		case OBJTYPE_CHAFF:
+			e = add_entity(instrumentecx, torpedo_nav_mesh, o->x, o->y, o->z, color);
+			if (e) {
+				update_entity_scale(e,  demon_ui.exaggerated_scale * scale +
+						(1.0 - demon_ui.exaggerated_scale) * entity_get_scale(o->entity));
+				update_entity_material(e, &yellow_material);
 			}
 			break;
 		case OBJTYPE_SHIP2:
