@@ -162,6 +162,7 @@ static float cargo_container_max_velocity = CARGO_CONTAINER_MAX_VELOCITY;
 static float bounty_chance = BOUNTY_CHANCE;
 static float chaff_speed = CHAFF_SPEED;
 static int chaff_count = CHAFF_COUNT;
+static float chaff_confuse_chance = CHAFF_CONFUSE_CHANCE;
 
 /*
  * End of runtime adjustable globals
@@ -3487,12 +3488,16 @@ static void missile_collision_detection(void *context, void *entity)
 
 	if (missile == target)
 		return;
-	if (missile->tsd.missile.target_id != target->id)
+	if (missile->tsd.missile.target_id != target->id && target->type != OBJTYPE_CHAFF)
 		return;
 
 	dist2 = object_dist2(missile, target);
 	if (dist2 < missile_proximity_distance * missile_proximity_distance) {
 		switch (target->type) {
+		case OBJTYPE_CHAFF:
+			if (snis_randn(1000) < 1000.0 * chaff_confuse_chance)
+				missile->tsd.missile.target_id = target->id;
+			break;
 		case OBJTYPE_SHIP1:
 		case OBJTYPE_SHIP2:
 			notify_the_cops(missile);
@@ -16686,6 +16691,10 @@ static struct tweakable_var_descriptor server_tweak[] = {
 		"NUMBER OF CHAFF PARTICLES TO DEPLOY",
 		&chaff_count, 'i',
 		0.0, 0.0, 0.0, 1, 25, CHAFF_COUNT },
+	{ "CHAFF_CONFUSE_CHANCE",
+		"LIKELYHOOD CHAFF WILL CONFUSE MISSILES",
+		&chaff_confuse_chance, 'f',
+		0.0, 1.0, CHAFF_CONFUSE_CHANCE, 0, 0, 0 },
 	{ NULL, NULL, NULL, '\0', 0.0, 0.0, 0.0, 0, 0, 0 },
 };
 
