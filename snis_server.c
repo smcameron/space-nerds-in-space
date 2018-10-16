@@ -16881,6 +16881,52 @@ static void server_builtin_setrole(char *cmd)
 	}
 }
 
+static void server_builtin_lockroles(char *cmd)
+{
+	int i;
+	uint32_t newrole;
+	const uint32_t player_roles = ROLE_NAVIGATION | ROLE_MAIN | ROLE_WEAPONS |
+					ROLE_ENGINEERING | ROLE_DAMCON | ROLE_COMMS | ROLE_SCIENCE;
+
+	pthread_mutex_lock(&universe_mutex);
+	client_lock();
+	for (i = 0; i < nclients; i++) {
+		switch (client[i].current_station) {
+		case DISPLAYMODE_MAINSCREEN:
+			newrole = ROLE_MAIN;
+			break;
+		case DISPLAYMODE_NAVIGATION:
+			newrole = ROLE_NAVIGATION;
+			break;
+		case DISPLAYMODE_WEAPONS:
+			newrole = ROLE_WEAPONS;
+			break;
+		case DISPLAYMODE_ENGINEERING:
+			newrole = ROLE_ENGINEERING;
+			break;
+		case DISPLAYMODE_SCIENCE:
+			newrole = ROLE_SCIENCE;
+			break;
+		case DISPLAYMODE_COMMS:
+			newrole = ROLE_COMMS;
+			break;
+		case DISPLAYMODE_DAMCON:
+			newrole = ROLE_DAMCON;
+			break;
+		default:
+			continue; /* No change */
+		}
+		newrole = verify_role(newrole | (client[i].role & ~player_roles));
+		client[i].role = newrole;
+		pb_queue_to_client(&client[i], snis_opcode_subcode_pkt("bbw",
+				OPCODE_CLIENT_CONFIG, OPCODE_CLIENT_SET_PERMITTED_ROLES, newrole));
+	}
+	client_unlock();
+	pthread_mutex_unlock(&universe_mutex);
+	send_demon_console_msg("LOCKED CLIENT ROLES");
+	server_builtin_clients(NULL);
+}
+
 static void server_builtin_help(char *cmd);
 
 static void server_builtin_find(char *cmd)
@@ -16956,6 +17002,7 @@ static struct server_builtin_cmd {
 	{ "VARS", "LIST SERVER BUILTIN VARIABLES", server_builtin_vars, },
 	{ "DESCRIBE", "DESCRIBE A SERVER BUILTIN VARIABLE", server_builtin_describe, },
 	{ "ROLE", "ADD, REMOVE, or LIST CLIENT ROLES", server_builtin_setrole, },
+	{ "LOCKROLES", "LOCK DOWN CURRENT CLIENT ROLES", server_builtin_lockroles, },
 	{ "DUMP", "DUMP STATE OF SELECTED OBJECTS", server_builtin_dump, },
 	{ "DU", "DUMP STATE OF SELECTED OBJECTS", server_builtin_dump, },
 	{ "FIND", "FIND AN OBJECT BY NAME", server_builtin_find, },
