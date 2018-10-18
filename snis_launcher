@@ -9,6 +9,7 @@ fi
 BINDIR=./bin
 SNIS_SERVER=${BINDIR}/snis_server
 SNIS_CLIENT=${BINDIR}/snis_client
+SNIS_LIMITED_CLIENT=${BINDIR}/snis_limited_client
 SNIS_MULTIVERSE=${BINDIR}/snis_multiverse
 SSGL_SERVER=${BINDIR}/ssgl_server
 LSSSGL=${BINDIR}/lsssgl
@@ -55,11 +56,12 @@ cat << EOF 1>&2
    4. Launch SNIS client process
 	There should be one snis client process per player
 	plus one more per ship for the main screen.
-   5. Stop all SNIS processes
-   6. Stop all SNIS clients
-   7. Stop all SNIS servers
-   8. Check for asset updates
-   9. Enter Lobby Host IP addr (currently $LOBBYHOST)
+   5. Launch limited SNIS client process (no Open GL required).
+   6. Stop all SNIS processes
+   7. Stop all SNIS clients
+   8. Stop all SNIS servers
+   9. Check for asset updates
+   10. Enter Lobby Host IP addr (currently $LOBBYHOST)
    0. Quit
 EOF
 }
@@ -198,7 +200,8 @@ start_snis_client()
 	echo
 	echo "Starting snis_client"
 	echo
-	${SNIS_CLIENT} --lobbyhost "${LOBBYHOST}" $ASPECT_RATIO_ARG --fullscreen > snis_client_log.txt 2>&1 &
+	CLIENT="$1"
+	${CLIENT} --lobbyhost "${LOBBYHOST}" $ASPECT_RATIO_ARG --fullscreen > snis_client_log.txt 2>&1 &
 	sleep 1
 	# --starship "$shipname" --pw "$password" $@
 }
@@ -251,12 +254,12 @@ do
 	   echo
 	   exit
 		;;
-	5) kill_processes 'snis_server|snis_client|snis_multiverse|ssgl_server'
+	6) kill_processes 'snis_server|snis_client|snis_multiverse|ssgl_server'
 		remove_snis_lock_dirs
 		;;
-	6) kill_processes 'snis_client'
+	7) kill_processes 'snis_client'
 		;;
-	7) kill_processes 'snis_server|snis_multiverse|ssgl_server'
+	8) kill_processes 'snis_server|snis_multiverse|ssgl_server'
 		remove_snis_lock_dirs
 		;;
 	1) start_snis_lobby
@@ -265,11 +268,13 @@ do
 		;;
 	3) start_snis_server
 		;;
-	4) start_snis_client
+	4) start_snis_client "$SNIS_CLIENT"
 		;;
-	8) util/snis_update_assets.sh --dry-run
+	5) start_snis_client "$SNIS_LIMITED_CLIENT"
 		;;
-	9) enter_lobby_host
+	9) util/snis_update_assets.sh --dry-run
+		;;
+	10) enter_lobby_host
 		;;
 	*) echo "Invalid choice."
 	        ;;
