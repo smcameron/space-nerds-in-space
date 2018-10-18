@@ -888,7 +888,7 @@ static void free_lua_proximity_checks(struct lua_proximity_check **e)
 
 static void fire_lua_proximity_checks(void)
 {
-	struct lua_proximity_check *i, *last, *next;
+	struct lua_proximity_check *i, *last, *next, *this;
 	struct lua_proximity_check *temp_list = NULL;
 	double dist2;
 	int a, b;
@@ -902,10 +902,14 @@ static void fire_lua_proximity_checks(void)
 		b = lookup_by_id(i->oid2);
 		if (a < 0 || b < 0) {
 			/* remove this check */
-			if (last)
+			if (last) {
+				this = last->next;
 				last->next = next;
-			else
+			} else {
+				this = lua_proximity_check;
 				lua_proximity_check = next;
+			}
+			free_lua_proximity_check(&this);
 			continue;
 		}
 
