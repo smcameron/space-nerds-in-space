@@ -16905,7 +16905,7 @@ static void server_builtin_lockroles(char *cmd)
 			newrole = ROLE_WEAPONS;
 			break;
 		case DISPLAYMODE_ENGINEERING:
-			newrole = ROLE_ENGINEERING;
+			newrole = ROLE_ENGINEERING | ROLE_DAMCON;
 			break;
 		case DISPLAYMODE_SCIENCE:
 			newrole = ROLE_SCIENCE;
@@ -16914,7 +16914,7 @@ static void server_builtin_lockroles(char *cmd)
 			newrole = ROLE_COMMS;
 			break;
 		case DISPLAYMODE_DAMCON:
-			newrole = ROLE_DAMCON;
+			newrole = ROLE_ENGINEERING | ROLE_DAMCON;
 			break;
 		default:
 			continue; /* No change */
