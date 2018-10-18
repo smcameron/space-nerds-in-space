@@ -272,8 +272,7 @@ as you will be missing some additional solarsystem assets. As a non-root user:
 </pre>
 </blockquote>
 <p>Note: This will run both the "server" and the "client" on your machine.
-After awhile, you should see a screen that looks something like this
-(without the white ovals):
+After awhile, you should see a screen that looks something like this:
 <p align=center><img src="network-setup.jpg", width=85%>
 
 <ol>
@@ -882,6 +881,13 @@ The command takes several forms.  Here are some examples:
 NOTE: You only have to type the first three characters of the role names (e.g. <cmd>ENG</cmd>
 is the same as <cmd>ENGINEERING</cmd>.)<br>
 NOTE: it is not possible to remove the <cmd>DEMON</cmd> role from a client.
+<li><b>LOCKROLES</b> - Lock all clients to their current roles. This is useful if
+you want players to select their own roles initially, and then confine them to those
+roles for the whole game or a period of time. If a client is on the MAINSCREEN, or
+the DEMON screen, then this will have no effect on that client.  ENGINEERING and
+DAMAGE CONTROL are considered a single screen for purposes of this command.
+<li><b>UNLOCKROLES</b> - Allow all clients to freely switch between all roles.
+This is the complement of the <b>LOCKROLES</b> command.
 <li><b>FIND</b> - find an object with the given name, e.g. "find enterprise"
 will find any objects or player ships named "enterprise" and print out the
 object IDs for any matching objects.
