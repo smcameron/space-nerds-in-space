@@ -8305,6 +8305,7 @@ static void show_weapons_camera_view(GtkWidget *w)
 	if (!(o = find_my_ship()))
 		return;
 
+	snis_slider_set_input(weapons.wavelen_slider, o->tsd.ship.phaser_wavelength / 255.0);
 	update_warp_tunnel(o, &warp_tunnel);
 
 	/* current_zoom = newzoom(current_zoom, o->tsd.ship.mainzoom); */
