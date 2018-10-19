@@ -18595,6 +18595,36 @@ static void draw_quit_screen(GtkWidget *w)
 
 #define FRAME_INDEX_MAX 10
 
+static void do_display_frame_stats(const float frame_rates[], const float frame_times[], const int nframes)
+{
+#define ACCEPTABLE_FRAME_RATE (29.0)
+	float avg_frame_rate = 0;
+	float avg_frame_time = 0;
+	int i;
+	for (i = 0; i < nframes; i++) {
+		avg_frame_rate += frame_rates[i];
+		avg_frame_time += frame_times[i];
+	}
+	avg_frame_rate /= (float) nframes;
+	avg_frame_time /= (float) nframes;
+
+	if (display_frame_stats > 0 || avg_frame_rate > 1.0 / ACCEPTABLE_FRAME_RATE) {
+		if (avg_frame_rate <= 1.0 / ACCEPTABLE_FRAME_RATE)
+			sng_set_foreground(WHITE);
+		else
+			sng_set_foreground(ORANGERED);
+		char stat_buffer[30];
+		sprintf(stat_buffer, "FPS %5.2f", 1.0 / avg_frame_rate);
+		sng_abs_xy_draw_string(stat_buffer, NANO_FONT, txx(2), txy(10));
+		sprintf(stat_buffer, "T %0.2f ms", avg_frame_time * 1000.0);
+		sng_abs_xy_draw_string(stat_buffer, NANO_FONT, txx(92), txy(10));
+		sprintf(stat_buffer, "%8.0f", universe_timestamp());
+		sng_abs_xy_draw_string(stat_buffer, NANO_FONT, SCREEN_WIDTH-85, 10);
+	}
+	if (display_frame_stats > 1)
+		graph_dev_display_debug_menu_show();
+}
+
 static int main_da_expose(GtkWidget *w, GdkEvent *event, gpointer p)
 {
 	static double last_frame_time = 0;
@@ -18756,29 +18786,7 @@ static int main_da_expose(GtkWidget *w, GdkEvent *event, gpointer p)
 	if (in_the_process_of_quitting)
 		draw_quit_screen(w);
 
-	if (display_frame_stats > 0) {
-		float avg_frame_rate=0;
-		float avg_frame_time=0;
-		int i;
-		for (i=0; i<FRAME_INDEX_MAX; i++) {
-			avg_frame_rate += frame_rates[i];
-			avg_frame_time += frame_times[i];
-		}
-		avg_frame_rate /= (float)FRAME_INDEX_MAX;
-		avg_frame_time /= (float)FRAME_INDEX_MAX;
-
-		sng_set_foreground(WHITE);
-		char stat_buffer[30];
-		sprintf(stat_buffer, "fps %5.2f", 1.0/avg_frame_rate);
-		sng_abs_xy_draw_string(stat_buffer, NANO_FONT, 2, 10);
-		sprintf(stat_buffer, "t %0.2f ms", avg_frame_time*1000.0);
-		sng_abs_xy_draw_string(stat_buffer, NANO_FONT, 92, 10);
-		sprintf(stat_buffer, "%8.0f", universe_timestamp());
-		sng_abs_xy_draw_string(stat_buffer, NANO_FONT, SCREEN_WIDTH-85, 10);
-	}
-	if (display_frame_stats > 1) {
-		graph_dev_display_debug_menu_show();
-	}
+	do_display_frame_stats(frame_rates, frame_times, FRAME_INDEX_MAX);
 
 end_of_drawing:
 
@@ -18805,14 +18813,13 @@ end_of_drawing:
 	gdk_gl_drawable_gl_end(gl_drawable);
 #endif
 
-	if (display_frame_stats > 0) {
-		double end_time = time_now_double();
+	double end_time = time_now_double();
 
-		frame_rates[frame_index] = start_time - last_frame_time;
-		frame_times[frame_index] = end_time - start_time;
-		frame_index = (frame_index+1) % FRAME_INDEX_MAX;
-		last_frame_time = start_time;
-	}
+	frame_rates[frame_index] = start_time - last_frame_time;
+	frame_times[frame_index] = end_time - start_time;
+	frame_index = (frame_index + 1) % FRAME_INDEX_MAX;
+	last_frame_time = start_time;
+
 	return 0;
 }
 
