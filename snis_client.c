@@ -15193,12 +15193,29 @@ static void draw_science_details(GtkWidget *w, GdkGC *gc)
 		}
 	}
 }
+
+static void draw_science_location_indicator(struct snis_entity *o)
+{
+	char ssname[12], buf[80];
+
+	strncpy(ssname, solarsystem_name, 11);
+	ssname[11] = '\0';
+	uppercase(ssname);
+	sprintf(buf, "%s SYSTEM", ssname);
+	sng_abs_xy_draw_string(buf, NANO_FONT, txx(200), txy(10));
+	sprintf(buf, "POSITION:");
+	sng_abs_xy_draw_string(buf, NANO_FONT, txx(360), txy(10));
+	sprintf(buf, "X: %5.2lf,", o->x);
+	sng_abs_xy_draw_string(buf, NANO_FONT, txx(415), txy(10));
+	sprintf(buf, "Y: %5.2lf,", o->y);
+	sng_abs_xy_draw_string(buf, NANO_FONT, txx(480), txy(10));
+	sprintf(buf, "Z: %5.2lf", o->z);
+	sng_abs_xy_draw_string(buf, NANO_FONT, txx(555), txy(10));
+}
  
 static void show_science(GtkWidget *w)
 {
 	struct snis_entity *o;
-	char buf[80];
-	char ssname[12];
 	double zoom;
 	static int current_zoom = 0;
 
@@ -15210,11 +15227,7 @@ static void show_science(GtkWidget *w)
 	current_zoom = newzoom(current_zoom, o->tsd.ship.scizoom);
 
 	sng_set_foreground(UI_COLOR(sci_coords));
-	strncpy(ssname, solarsystem_name, 11);
-	ssname[11] = '\0';
-	uppercase(ssname);
-	sprintf(buf, "LOC: %s SYSTEM (%5.2lf, %5.2lf, %5.2lf)", ssname, o->x, o->y, o->z);
-	sng_abs_xy_draw_string(buf, TINY_FONT, 0.25 * SCREEN_WIDTH, LINEHEIGHT * 0.5);
+	draw_science_location_indicator(o);
 	zoom = (MAX_SCIENCE_SCREEN_RADIUS - MIN_SCIENCE_SCREEN_RADIUS) *
 			(current_zoom / 255.0) + MIN_SCIENCE_SCREEN_RADIUS;
 	sng_set_foreground(DARKGREEN); /* zzzz check this */
@@ -15238,7 +15251,6 @@ static void show_3d_science(GtkWidget *w)
 {
 	int /* rx, ry, rw, rh, */ cx, cy, r;
 	struct snis_entity *o;
-	char buf[80], ssname[12];
 	double zoom;
 	static int current_zoom = 0;
 
@@ -15250,11 +15262,7 @@ static void show_3d_science(GtkWidget *w)
 	current_zoom = newzoom(current_zoom, o->tsd.ship.scizoom);
 
 	sng_set_foreground(UI_COLOR(sci_coords));
-	strncpy(ssname, solarsystem_name, 11);
-	ssname[11] = '\0';
-	uppercase(ssname);
-	sprintf(buf, "LOC: %s SYSTEM (%5.2lf, %5.2lf, %5.2lf)", ssname, o->x, o->y, o->z);
-	sng_abs_xy_draw_string(buf, TINY_FONT, 200, LINEHEIGHT * 0.5);
+	draw_science_location_indicator(o);
 	cx = SCIENCE_SCOPE_CX;
 	cy = SCIENCE_SCOPE_CY;
 	r = SCIENCE_SCOPE_R;
