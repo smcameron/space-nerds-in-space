@@ -9040,7 +9040,8 @@ static void snis_draw_3d_string(struct entity_context *cx, char *string, int fon
 	float sx, sy;
 
 	transform_point(cx, x, y, z, &sx, &sy);
-	sng_abs_xy_draw_string(string, font, sx, sy);
+	if (sx >= 0 && sy >= 0)
+		sng_abs_xy_draw_string(string, font, sx, sy);
 }
 
 static void draw_3d_mark_arc(GtkWidget *w, GdkGC *gc, struct entity_context *ecx,
