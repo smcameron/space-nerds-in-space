@@ -169,6 +169,10 @@ EVENT TYPES in snis:
 	"custom-button-press-event"
 		Arguments are the id of the player ship, and the screen (0 - 5 inclusive)
 		that the custom button was on. See set_custom_button_label(), below.
+	"player-collected-bounty"
+		Arguments are the id of the player ship, the id of the ship the bounty was
+		collected for, the amount of the bounty, and the id of the starbase at which
+		the bounty was collected.
 
 Functions which you may call from lua: 
 

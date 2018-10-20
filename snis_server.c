@@ -15020,6 +15020,9 @@ static void npc_menu_item_collect_bounties(struct npc_menu_item *item,
 						ship_registry.entry[j].bounty, id);
 			send_comms_packet(sb, npcname, ch, " FOR %s",
 						ship_registry.entry[j].entry);
+			schedule_callback4(event_callback, &callback_schedule,
+					"player-collected-bounty", (double) ship->id, (double) id,
+					ship_registry.entry[j].bounty, (double) sb->id);
 			total += ship_registry.entry[j].bounty;
 			break;
 		}
