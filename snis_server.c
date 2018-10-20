@@ -18992,6 +18992,48 @@ static int l_demon_print(lua_State *l)
 	return 0;
 }
 
+static int l_add_bounty(lua_State *l)
+{
+	const float fid = luaL_checknumber(l, 1);
+	const char *crime_desc = luaL_checkstring(l, 2);
+	const float amount = luaL_checknumber(l, 3);
+	const float fsbid = luaL_checknumber(l, 4);
+	int i;
+
+	uint32_t id = (uint32_t) fid;
+	uint32_t sbid = (uint32_t) fsbid;
+	char *crime = strdup(crime_desc);
+	uppercase(crime);
+
+	pthread_mutex_lock(&universe_mutex);
+	i = lookup_by_id(sbid);
+	if (i < 0) {
+		pthread_mutex_unlock(&universe_mutex);
+		lua_pushnumber(l, -1);
+		return 1;
+	}
+	if (go[i].type != OBJTYPE_STARBASE) {
+		pthread_mutex_unlock(&universe_mutex);
+		lua_pushnumber(l, -1);
+		return 1;
+	}
+	i = lookup_by_id(id);
+	if (i < 0) {
+		pthread_mutex_unlock(&universe_mutex);
+		lua_pushnumber(l, -1);
+		return 1;
+	}
+	if (go[i].type != OBJTYPE_SHIP2) {
+		pthread_mutex_unlock(&universe_mutex);
+		lua_pushnumber(l, -1);
+		return 1;
+	}
+	ship_registry_add_bounty(&ship_registry, id, crime, amount, sbid);
+	pthread_mutex_unlock(&universe_mutex);
+	lua_pushnumber(l, 0);
+	return 0;
+}
+
 static int process_create_item(struct game_client *c)
 {
 	unsigned char buffer[14];
@@ -22665,6 +22707,7 @@ static void setup_lua(void)
 	add_lua_callable_fn(l_regenerate_universe, "regenerate_universe");
 	add_lua_callable_fn(l_set_variable, "set_variable");
 	add_lua_callable_fn(l_demon_print, "demon_print");
+	add_lua_callable_fn(l_add_bounty, "add_bounty");
 }
 
 static int run_initial_lua_scripts(void)

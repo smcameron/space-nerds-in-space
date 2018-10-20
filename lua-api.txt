@@ -958,6 +958,15 @@ set_variable(variable_name, new_value)
 demon_print(string)
 	Output a string to the demon console
 
+add_bounty(ship_id, crime, amount, starbase_id)
+
+	Add a bounty for the specified amount (number) for the specified ship_id (number)
+	and crime (string) redeemable at the specified starbase_id (number);
+
+	On success, 0 is returned. On failure, -1 is returned.
+	Failure can happen if the ship_id is not the id of a ship, or if the starbase_id
+	is not the id of a starbase.
+
 NOTE: Your lua scripts must not sleep, call any function which blocks, or require excessive
 long running calculations (nothing more than a few hundredths of a second) because the lua
 scripts are called from the main thread and if the scripts block, the entire game will block.
