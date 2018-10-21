@@ -1207,6 +1207,7 @@ static int update_econ_ship(uint32_t id, uint32_t timestamp, double x, double y,
 
 	i = lookup_object_by_id(id);
 	if (i < 0) {
+		memset(thrust_entity, 0, sizeof(thrust_entity));
 		e = add_entity(ecx, ship_mesh_map[shiptype % nshiptypes], x, y, z, SHIP_COLOR);
 		if (e)
 			add_ship_thrust_entities(thrust_entity, &nthrust_ports, ecx, e, shiptype, 36,
@@ -1390,8 +1391,13 @@ static int update_missile(uint32_t id, uint32_t timestamp, double x, double y, d
 		if (i < 0)
 			return i;
 		go[i].tsd.missile.target_id = (uint32_t) -1;
-		go[i].tsd.missile.thrust_entity[0] = thrust_entity[0];
-		go[i].tsd.missile.thrust_entity[1] = thrust_entity[1];
+		if (e) {
+			go[i].tsd.missile.thrust_entity[0] = thrust_entity[0];
+			go[i].tsd.missile.thrust_entity[1] = thrust_entity[1];
+		} else {
+			go[i].tsd.missile.thrust_entity[0] = NULL;
+			go[i].tsd.missile.thrust_entity[1] = NULL;
+		}
 #if 0
 		myship = find_my_ship();
 		if (myship && myship->id == ship_id)
