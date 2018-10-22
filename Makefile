@@ -1221,7 +1221,8 @@ check-endianness:	check-endianness.c
 	$(CC) -o check-endianness check-endianness.c
 
 build_info.h: check-endianness snis.h gather_build_info Makefile
-	./gather_build_info > build_info.h
+	@echo "  GATHER BUILD INFO"
+	$(Q)@./gather_build_info > build_info.h
 
 cppcheck:
 	cppcheck .
