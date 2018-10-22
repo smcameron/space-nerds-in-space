@@ -716,10 +716,8 @@ snis_server_tracker.o:	snis_server_tracker.c snis_server_tracker.h pthread_util.
 snis_client.o:	snis_client.c Makefile build_info.h ui_colors.h
 	$(Q)$(GLEXTCOMPILE)
 
-snis_limited_client.c:	snis_client.c Makefile build_info.h ui_colors.h
-	cp snis_client.c snis_limited_client.c
-
-snis_limited_client.o:	snis_limited_client.c Makefile build_info.h
+snis_limited_client.o:	snis_client.c Makefile build_info.h
+	@echo -n "  (limited client) "
 	$(Q)$(LIMCOMPILE)
 
 mesh_viewer.o:	mesh_viewer.c Makefile build_info.h
@@ -872,10 +870,8 @@ infinite-taunt:	infinite-taunt.o names.o mtwist.o Makefile
 names:	names.c names.h mtwist.o
 	$(CC) -DTEST_NAMES -o names ${MYCFLAGS} ${GTKCFLAGS} mtwist.o names.c
 
-snis_limited_graph.c:	snis_graph.c Makefile
-	cp snis_graph.c snis_limited_graph.c
-
-snis_limited_graph.o:	snis_limited_graph.c Makefile
+snis_limited_graph.o:	snis_graph.c Makefile
+	@echo -n "  (limited client) "
 	$(Q)$(LIMCOMPILE)
 
 snis_graph.o:	snis_graph.c Makefile
@@ -1048,7 +1044,7 @@ mikktspace/mikktspace.o:
 
 mostly-clean:
 	rm -f ${SERVEROBJS} ${CLIENTOBJS} ${LIMCLIENTOBJS} ${SDLCLIENTOBJS} ${PROGS} ${SSGL} \
-	${BINPROGS} ${UTILPROGS} stl_parser snis_limited_graph.c snis_limited_client.c \
+	${BINPROGS} ${UTILPROGS} stl_parser snis_limited_client.c \
 	test-space-partition snis_test_audio.o snis_test_audio joystick_test local_termios2.h
 	( cd ssgl; ${MAKE} clean )
 	( cd mikktspace; ${MAKE} clean )
