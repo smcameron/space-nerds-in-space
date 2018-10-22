@@ -254,10 +254,10 @@ do
 	   echo
 	   exit
 		;;
-	6) kill_processes 'snis_server|snis_client|snis_multiverse|ssgl_server'
+	6) kill_processes 'snis_server|snis_client|snis_limited_client|snis_multiverse|ssgl_server'
 		remove_snis_lock_dirs
 		;;
-	7) kill_processes 'snis_client'
+	7) kill_processes 'snis_client|snis_limited_client'
 		;;
 	8) kill_processes 'snis_server|snis_multiverse|ssgl_server'
 		remove_snis_lock_dirs
