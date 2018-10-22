@@ -85,7 +85,7 @@ This file describes how to generate earthlike planet cubemap textures.
 3. Swirl the clouds
 
    Those clouds might be ok, but you might find that they aren't swirly enough.  So we can swirl
-   them a bit with gaseous giganticus.
+   them a bit with gaseous giganticus (see https://github.com/smcameron/gaseous-giganticus).
 
    First we have to remove the alpha channel though.  There is a script to do that,
    util/remove_alpha_cubemap.

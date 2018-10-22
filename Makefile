@@ -348,7 +348,7 @@ DOCKING_PORT_FILES=${MODELSRCDIR}/starbase2.docking_ports.h \
 
 MANSRCDIR=.
 MANPAGES=${MANSRCDIR}/snis_client.6.gz ${MANSRCDIR}/snis_server.6.gz \
-	${MANSRCDIR}/earthlike.1.gz ${MANSRCDIR}/gaseous-giganticus.1 \
+	${MANSRCDIR}/earthlike.1.gz \
 	${MANSRCDIR}/snis_text_to_speech.sh.6 ${MANSRCDIR}/snis_test_audio.1.gz
 MANDIR=${DESTDIR}/${PREFIX}/share/man/man6
 
@@ -592,10 +592,6 @@ CMNMLIBS=-lm ${LRTLIB} -lpng
 CMNMOBJS=png_utils.o
 CMNMLINK=$(ECHO) '  LINK' $@ && $(CC) ${MYCFLAGS} -o $@ ${GTKCFLAGS} util/cloud-mask-normalmap.o ${CMNMOBJS} ${CMNMLIBS} $(LDFLAGS)
 
-GGOBJS=mtwist.o mathutils.o open-simplex-noise.o quat.o png_utils.o pthread_util.o
-GGLIBS=-lm ${LRTLIB} -lpng
-GGLINK=$(ECHO) '  LINK' $@ && $(CC) ${MYCFLAGS} -o $@ ${GTKCFLAGS} gaseous-giganticus.o ${GGOBJS} ${GGLIBS} $(LDFLAGS)
-
 all:	${COMMONOBJS} ${SERVEROBJS} ${MULTIVERSEOBJS} ${CLIENTOBJS} ${LIMCLIENTOBJS} ${PROGS} ${BINPROGS} ${SCAD_PARAMS_FILES} ${DOCKING_PORT_FILES}
 
 models:	${MODELS}
@@ -747,9 +743,6 @@ generate_skybox.o:	generate_skybox.c png_utils.h open-simplex-noise.h quat.h mtw
 generate_skybox:	$(GENERATE_SKYBOX_OBJS)
 	$(Q)$(GENERATE_SKYBOX_LINK)
 
-gaseous-giganticus.o:	gaseous-giganticus.c ${GGOBJS} Makefile build_info.h
-	$(Q)$(COMPILE)
-
 earthlike.o:	earthlike.c
 	$(Q)$(COMPILE)
 
@@ -854,9 +847,6 @@ mesh_viewer:	${SDLCLIENTOBJS} ${SSGL} Makefile
 	$(Q)$(SDLCLIENTLINK)
 	@mkdir -p bin
 	@cp mesh_viewer bin
-
-gaseous-giganticus:	gaseous-giganticus.o ${GGOBJS} Makefile
-	$(Q)$(GGLINK)
 
 earthlike:	earthlike.o ${ELOBJS} Makefile
 	$(Q)$(ELLINK)
@@ -1114,9 +1104,6 @@ snis_server.6.gz:	snis_server.6
 earthlike.1.gz:	earthlike.1
 	gzip -9 - < earthlike.1 > earthlike.1.gz
 
-gaseous-giganticus.1.gz:	gaseous-giganticus.1
-	gzip -9 - < gaseous-giganticus.6 > gaseous-giganticus.6.gz
-
 snis_test_audio.1.gz:	snis_test_audio.1
 	gzip -9 - < snis_test_audio.1 > snis_test_audio.1.gz
 
@@ -1218,7 +1205,6 @@ uninstall:
 	rm -f ${MANDIR}/snis_client.6.gz ${MANDIR}/snis_client.6
 	rm -f ${MANDIR}/snis_server.6.gz ${MANDIR}/snis_server.6
 	rm -f ${MANDIR}/earthlike.1.gz ${MANDIR}/earthlike.1
-	rm -f ${MANDIR}/gaseous-giganticus.1.gz ${MANDIR}/gaseous-giganticus.1
 	rm -f ${DESKTOPDIR}/snis.desktop
 	${UPDATE_DESKTOP}
 

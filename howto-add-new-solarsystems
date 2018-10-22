@@ -95,8 +95,8 @@ You will need to create planet cubemap textures for 6 different planets.
 
 You want to have three planet types -- rocky, earthlike, and gas giant - represented
 in your solarsystem. Rocky and earthlike planet textures can be created with "earthlike",
-and gas-giant planet textures can be created with gaseous-giganticus. Or you can use
-another program if you like.
+and gas-giant planet textures can be created with gaseous-giganticus (see
+https://github.com/smcameron/gaseous-giganticus). Or you can use another program if you like.
 
 Rocky and Earth-like planets:
 
@@ -128,14 +128,15 @@ Rocky and Earth-like planets:
 
 Gas Giant planets:
 
-For this, use gaseous-giganticus. You will need an input image texture. To
-create the input texture, find some image that is more-or-less mostly the color
-that you want your gas giant to be, then with the gimp, cut a vertical slice
-about 100-200 pixels wide and about 1000-1200 pixels tall, something like that.
-Change the levels to make it lighter rather than darker, and for best results,
-you do not want a lot of high contrast, so you kind of want to squash the dynamic
-range. Then blur the image to remove any sharp transitions, and export it as
-a png. Then run gaseous giganticus as follows:
+For this, use gaseous-giganticus (https://github.com/smcameron/gaseous-giganticus).
+You will need an input image texture. To create the input texture, find some image
+that is more-or-less mostly the color that you want your gas giant to be, then
+with the gimp, cut a vertical slice about 100-200 pixels wide and about
+1000-1200 pixels tall, something like that.  Change the levels to make it
+lighter rather than darker, and for best results, you do not want a lot of high
+contrast, so you kind of want to squash the dynamic range. Then blur the image
+to remove any sharp transitions, and export it as a png. Then run gaseous
+giganticus as follows:
 
   ./gaseous-giganticus -V --sinusoidal --noise-scale 2.5 --velocity-factor 1300 \
         -i your-input-image.png -o your-planet-name --bands 10
