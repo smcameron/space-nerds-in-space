@@ -888,6 +888,8 @@ the DEMON screen, then this will have no effect on that client.  ENGINEERING and
 DAMAGE CONTROL are considered a single screen for purposes of this command.
 <li><b>UNLOCKROLES</b> - Allow all clients to freely switch between all roles.
 This is the complement of the <b>LOCKROLES</b> command.
+<li><b>ROTATEROLES</b> - Rotate roles on client stations. Used in conjuction with
+<b>LOCKROLES</b>, this is a good way to keep people from hogging the weapons console.
 <li><b>FIND</b> - find an object with the given name, e.g. "find enterprise"
 will find any objects or player ships named "enterprise" and print out the
 object IDs for any matching objects.
@@ -1306,6 +1308,7 @@ will then feed them into the fifo.
 <li><a href="#joystick">Using Joysticks and Controllers</a>
 <li><a href="#bridgeverification">Bridge Verification Failed</a>
 <li><a href="#audioproblems">Audio Problems</a>
+<li><a href="#openglversion">OpenGL versions</a>
 <li><a href="#crashing">The game is crashing!</a>
 </ol>
 <hr>
@@ -1650,6 +1653,20 @@ which used portaudio (e.g. Word War Vi) continued to work just fine. I was able 
 fix this using pavucontrol (which is will show the HDMI sound interface even if no HDMI
 cable is connected), or by manually using the SNIS_AUDIO_DEVICE environment
 variable to override the default.
+<hr>
+<li><b><a name="openglversion">OpenGL version problems</a></b>
+The shaders used by Space Nerds In Space require OpenGL version 3.0
+(aka "#version 130") or better.  If your computer does not support a
+recent enough version of OpenGL, you can run the limited client instead,
+which does not use OpenGL at all. Be sure to de-select MAIN SCREEN and
+WEAPONS roles on the login screen, as these screens do not work well
+with the limited client. The remaining should work sufficiently
+well with the limited client, although <b>NAVIGATION</b> and especially
+the <b>DEMON</b> screen will probably exhibit poor performance and reduced
+FPS, so it's best to use the limited client only for <b>ENGINEERING</b>,
+<b>DAMAGE CONTROL</b>, <b>COMMS</b>, and <b>SCIENCE</b>.
+<p>NOTE: The limited client is not as well tested as the OpenGL client,
+so you are more likely to encounter bugs.
 <hr>
 <li><b><a name="crashing">The game is crashing!  What can I do?</a></b>
 <p>Suppose you see something like this ("Segmentation fault"):
