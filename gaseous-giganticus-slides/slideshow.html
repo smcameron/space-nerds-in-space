@@ -383,14 +383,14 @@ velocity field of each face
 <section>
 <hgroup>
 <h1>Gaseous Giganticus
-<h2><a href="https://github.com/smcameron/space-nerds-in-space/blob/master/gaseous-giganticus.c">Gaseous-Giganticus is such a program</a>
+<h2><a href="https://github.com/smcameron/gaseous-giganticus/blob/master/gaseous-giganticus.c">Gaseous-Giganticus is such a program</a>
 </hgroup>
 </section>
 
 <section>
 <hgroup>
 <h1>Gaseous Giganticus - Computing the 6 velocity fields
-<h2><a href="https://github.com/smcameron/space-nerds-in-space/blob/master/gaseous-giganticus.c#L512-558">Code to compute velocity fields</a>
+<h2><a href="https://github.com/smcameron/gaseous-giganticus/blob/master/gaseous-giganticus.c#L512-558">Code to compute velocity fields</a>
 <h2>Multithreaded -- 1 thread per cube face (I got tired of waiting).
 <h2>velocity field contained in arrays corresponding to 6 faces of a cube representing velocities on surface of a sphere (like cube mapping)
 <h2><img src="cubemap.jpg" width = 500 height=500>
@@ -400,7 +400,7 @@ velocity field of each face
 <section>
 <hgroup>
 <h1>Gaseous Giganticus - Computing the noise gradient 
-<h2><a href="https://github.com/smcameron/space-nerds-in-space/blob/master/gaseous-giganticus.c#L460-475">Code to compute noise gradient</a>
+<h2><a href="https://github.com/smcameron/gaseous-giganticus/blob/master/gaseous-giganticus.c#L460-475">Code to compute noise gradient</a>
 &lt;--- the line numbers in this link have changed, look for the function named noise_gradient(...).
 <h2>6 noise values on 3 axes are sampled in the immediate vicinity of the point of interest
 </hgroup>
@@ -409,7 +409,7 @@ velocity field of each face
 <section>
 <hgroup>
 <h1>Gaseous Giganticus - Computing the 6 velocity fields
-<h2><a href="https://github.com/smcameron/space-nerds-in-space/blob/master/gaseous-giganticus.c#L477-503">Code to compute velocity from noise gradient </a>
+<h2><a href="https://github.com/smcameron/gaseous-giganticus/blob/master/gaseous-giganticus.c#L477-503">Code to compute velocity from noise gradient </a>
 
 &lt;--- the line numbers in this link have changed.  Look for the function named update_velocity_field(...) and update_velocity_field_thread_fn().
 <h2><img src="curl2-calculation.jpg">
@@ -419,7 +419,7 @@ velocity field of each face
 <section>
 <hgroup>
 <h1>Gaseous Giganticus - Particle motion 
-<h2><a href="https://github.com/smcameron/space-nerds-in-space/blob/master/gaseous-giganticus.c#L584-594">Code for particle motion</a>
+<h2><a href="https://github.com/smcameron/gaseous-giganticus/blob/master/gaseous-giganticus.c#L584-594">Code for particle motion</a>
 <h2>Particle position determines velocity field array element.
 <h2>New particle position is old position plus velocity field array element.
 </hgroup>
@@ -600,7 +600,7 @@ velocity field of each face
 <h2><ul>
 <li>My github account: <a href="https://github.com/smcameron">https://github.com/smcameron</a>
 <li>Curly Vortex source: <a href="https://github.com/smcameron/curly-vortex">https://github.com/smcameron/curly-vortex</a>
-<li>Gaseous-Giganticus source: <a href="https://github.com/smcameron/space-nerds-in-space">https://github.com/smcameron/space-nerds-in-space</a> (gaseous-giganticus is a program residing within the Space Nerds In Space codebase).
+<li>Gaseous-Giganticus source: <a href="https://github.com/smcameron/gaseous-giganticus">https://github.com/smcameron/gaseous-giganticus/a> (gaseous-giganticus is a program residing within the Space Nerds In Space codebase).
 <li><a href="http://www.cs.ubc.ca/~rbridson/docs/bridson-siggraph2007-curlnoise.pdf">Curl Noise for Procedural Fluid Flow</a> by Robert Bridson, et al. (pdf)
 </ul>
 <hgroup>
