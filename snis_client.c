@@ -2471,7 +2471,24 @@ static inline void spin_derelict(double timestamp, struct snis_entity *o)
 
 static inline void spin_planet(double timestamp, struct snis_entity *o)
 {
-	arbitrary_spin(timestamp, o, &o->tsd.planet.rotational_velocity);
+	union quat spun, local_rotation, new_orientation;
+
+	/* For planets, o->orientation is constant, and tsd.planet.rotational_velocity is
+	 * some rotational velocity about the Z axis.  We calculate the amount of rotation
+	 * for the current time and then transform this into the coord system of the planet
+	 * and apply the new orientation to the entity only, leaving o->orientation alone.
+	 * Arguably this should be done on the server and o->orientation updated as normal,
+	 * but this saves a bit of bandwidth at the cost of being a little too clever.
+	 */
+	compute_arbitrary_spin(frame_rate_hz, timestamp, &spun, &o->tsd.planet.rotational_velocity);
+	quat_conjugate(&local_rotation, &spun, &o->orientation);
+	quat_mul(&new_orientation, &local_rotation, &o->orientation);
+
+	/* we do not need to normalize new_orientation because we calculate it
+	 * fresh each time from o->orientation which is constant.
+	 */
+	if (o->entity)
+		update_entity_orientation(o->entity, &new_orientation);
 }
 
 typedef void(*interpolate_update_func)(double timestamp, struct snis_entity *o, int visible,
