@@ -1493,8 +1493,8 @@ int main(int argc, char *argv[])
 		snis_log(SNIS_WARN, "snis_multiverse: Failed to get local ip address.\n");
 	gameserver.port = htons(listener_port);
 
-	snprintf(gameserver.server_nickname, sizeof(gameserver.server_nickname - 1), "%s", nick);
-	snprintf(gameserver.location, sizeof(gameserver.location - 1), "%s", location);
+	snprintf(gameserver.server_nickname, sizeof(gameserver.server_nickname) - 1, "%s", nick);
+	snprintf(gameserver.location, sizeof(gameserver.location) - 1, "%s", location);
 	strcpy(gameserver.protocol_version, SNIS_PROTOCOL_VERSION);
 	strcpy(gameserver.game_type, "SNIS-MVERSE");
 	strcpy(gameserver.game_instance, "-");
