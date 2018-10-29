@@ -17449,6 +17449,24 @@ static void show_demon_3d(GtkWidget *w)
 				update_entity_scale(e, o->tsd.planet.radius);
 				entity_set_user_data(e, o);
 				update_entity_material(e, material);
+				if (o->entity)
+					update_entity_orientation(e, entity_get_orientation(o->entity));
+			}
+			if (o->tsd.planet.ring) {
+				struct entity *ring =
+					add_entity(instrumentecx, nav_planetary_ring_mesh, 0, 0, 0, color);
+				struct entity *ring2 =
+					add_entity(instrumentecx, nav_planetary_ring_mesh, 0, 0, 0, color);
+				if (ring) {
+					update_entity_orientation(ring, &identity_quat);
+					update_entity_parent(instrumentecx, ring, e);
+				}
+				if (ring2) { /* Defeat backface culling by adding an upside down ring */
+					union quat upside_down;
+					quat_init_axis(&upside_down, 1, 0, 0, 180.0 * M_PI / 180.0);
+					update_entity_orientation(ring2, &upside_down);
+					update_entity_parent(instrumentecx, ring2, e);
+				}
 			}
 			break;
 		case OBJTYPE_BLACK_HOLE:
