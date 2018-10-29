@@ -17784,9 +17784,8 @@ static int process_request_robot_gripper(struct game_client *c)
 static int process_mainscreen_view_mode(struct game_client *c)
 {
 	int rc;
-	const int bufsize = sizeof(struct request_mainscreen_view_change) -
-					sizeof(uint8_t);
-	unsigned char buffer[bufsize];
+	unsigned char buffer[sizeof(struct request_mainscreen_view_change) -
+					sizeof(uint8_t)];
 	double view_angle;
 	uint8_t view_mode;
 

@@ -6,6 +6,7 @@
 #include <GL/glew.h>
 
 #include "shader.h"
+#include "stacktrace.h"
 
 static char *read_file(const char *shader_directory, const char *filename)
 {
@@ -55,18 +56,33 @@ GLuint load_concat_shaders(const char *shader_directory,
 {
 	GLuint program_id = 0;
 	int i;
+#define MAX_VERTEX_FILES 5
+#define MAX_FRAGMENT_FILES 5
+
+	if (nvertex_files > MAX_VERTEX_FILES) {
+		printf("%s:%d: too many vertex files %d > %d\n", __FILE__, __LINE__,
+			nvertex_files, MAX_VERTEX_FILES);
+		stacktrace("Too many vertex files");
+		return 0;
+	}
+	if (nfragment_files > MAX_FRAGMENT_FILES) {
+		printf("%s:%d: too many fragment files %d > %d\n", __FILE__, __LINE__,
+			nfragment_files, MAX_FRAGMENT_FILES);
+		stacktrace("Too many fragment files");
+		return 0;
+	}
 
 	/* Create the shaders */
 	GLuint vertex_shader_id = glCreateShader(GL_VERTEX_SHADER);
 	GLuint fragment_shader_id = glCreateShader(GL_FRAGMENT_SHADER);
 
 	int nvertex_shader = 0;
-	char *vertex_shader_filename[nvertex_files + 1];
-	GLchar *vertex_shader_code[nvertex_files + 1];
+	char *vertex_shader_filename[MAX_VERTEX_FILES + 1];
+	GLchar *vertex_shader_code[MAX_VERTEX_FILES + 1];
 
 	int nfragment_shader = 0;
-	char *fragment_shader_filename[nfragment_files + 1];
-	GLchar *fragment_shader_code[nfragment_files + 1];
+	char *fragment_shader_filename[MAX_FRAGMENT_FILES + 1];
+	GLchar *fragment_shader_code[MAX_FRAGMENT_FILES + 1];
 
 	/* Build the Vertex Shader code */
 	if (vertex_header) {
@@ -122,9 +138,11 @@ GLuint load_concat_shaders(const char *shader_directory,
 		}
 		glGetShaderiv(vertex_shader_id, GL_INFO_LOG_LENGTH, &info_log_length);
 		if (info_log_length > 0) {
-			GLchar error_message[info_log_length + 1];
-			glGetShaderInfoLog(vertex_shader_id, info_log_length, NULL, &error_message[0]);
+			GLchar *error_message;
+			error_message = malloc(sizeof(GLchar) * info_log_length + 1);
+			glGetShaderInfoLog(vertex_shader_id, info_log_length, NULL, error_message);
 			printf("Error:\n%s\n", error_message);
+			free(error_message);
 		} else {
 			printf("error: unknown\n");
 		}
@@ -144,9 +162,11 @@ GLuint load_concat_shaders(const char *shader_directory,
 		}
 		glGetShaderiv(fragment_shader_id, GL_INFO_LOG_LENGTH, &info_log_length);
 		if (info_log_length > 0) {
-			char error_message[info_log_length + 1];
+			char *error_message;
+			error_message = malloc(sizeof(GLchar) * info_log_length + 1);
 			glGetShaderInfoLog(fragment_shader_id, info_log_length, NULL, &error_message[0]);
 			printf("Error:\n%s\n", error_message);
+			free(error_message);
 		} else {
 			printf("error: unknown\n");
 		}
@@ -172,9 +192,11 @@ GLuint load_concat_shaders(const char *shader_directory,
 
 		glGetProgramiv(program_id, GL_INFO_LOG_LENGTH, &info_log_length);
 		if (info_log_length > 0) {
-			GLchar error_message[info_log_length + 1];
+			GLchar *error_message;
+			error_message = malloc(sizeof(GLchar) * info_log_length + 1);
 			glGetProgramInfoLog(program_id, info_log_length, NULL, &error_message[0]);
 			printf("Error:\n%s\n", error_message);
+			free(error_message);
 
 			glDeleteProgram(program_id);
 			program_id = 0;

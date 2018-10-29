@@ -2026,6 +2026,7 @@ static void evolve_particle(float h, struct particle *particles, int i)
 
 struct mesh *init_thrust_mesh(int streaks, double h, double r1, double r2)
 {
+#define MAX_THRUST_MESH_STREAKS 70
 	struct mesh *my_mesh = malloc(sizeof(*my_mesh));
 
 	if (!my_mesh)
@@ -2034,6 +2035,8 @@ struct mesh *init_thrust_mesh(int streaks, double h, double r1, double r2)
 
 	my_mesh->geometry_mode = MESH_GEOMETRY_PARTICLE_ANIMATION;
 
+	if (streaks > MAX_THRUST_MESH_STREAKS)
+		streaks = MAX_THRUST_MESH_STREAKS;
 	my_mesh->nlines = streaks * 50;
 	my_mesh->nvertices = my_mesh->nlines * 2;
 	my_mesh->ntriangles = 0;
@@ -2045,7 +2048,7 @@ struct mesh *init_thrust_mesh(int streaks, double h, double r1, double r2)
 	my_mesh->graph_ptr = 0;
 
 	int maxparticle = streaks;
-	struct particle particles[maxparticle];
+	struct particle particles[MAX_THRUST_MESH_STREAKS];
 	int i;
 	for (i = 0; i < maxparticle; i++)
 		create_particle(h, r1, particles, i);

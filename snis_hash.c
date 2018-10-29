@@ -19,6 +19,7 @@
 	Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 #include <errno.h>
@@ -69,7 +70,7 @@ void snis_scan_hash(char *hexhash, int hexhashlen, unsigned char *hash, int hash
 static int get_salt(unsigned char *salt, int saltsize)
 {
 	int f, i, rc, bytesleft, offset;
-	unsigned char buffer[saltsize];
+	unsigned char *buffer;
 	/* note: we remove . and / from seedchar because we use some of them as dir paths (fixme: should not do that) */
 	const char *const seedchar = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
 	const int nseedchars = strlen(seedchar);
@@ -77,7 +78,10 @@ static int get_salt(unsigned char *salt, int saltsize)
 	f = open("/dev/random", O_RDONLY);
 	if (f < 0)
 		return f;
-	memset(buffer, 0, sizeof(buffer));
+	buffer = malloc(saltsize);
+	if (!buffer)
+		return -1;
+	memset(buffer, 0, saltsize);
 	bytesleft = saltsize;
 	offset = 0;
 	do {
@@ -85,6 +89,7 @@ static int get_salt(unsigned char *salt, int saltsize)
 		if (rc < 0) {
 			if (errno == EINTR)
 				continue;
+			free(buffer);
 			return rc;
 		}
 		bytesleft -= rc;
@@ -93,6 +98,7 @@ static int get_salt(unsigned char *salt, int saltsize)
 	for (i = 0; i < saltsize; i++)
 		buffer[i] = seedchar[buffer[i] % nseedchars];
 	memcpy(salt, buffer, saltsize);
+	free(buffer);
 	return 0;
 }
 
