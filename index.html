@@ -73,6 +73,7 @@ players, and scenarios may be constructed with a Lua based scripting API.
 </ul>
 <li><a href="#multiplayerinstructions">How to run Space Nerds In Space in a multiplayer LAN setup</a>
 <li><a href="new_bootable_media_instructions.html">Instructions for creating bootable media</a> (updated Apr 13, 2018, thanks to Justin Warwick.)
+<li><a href="#updateinstructions">Updating Space Nerds In Space</a>
 <li><a href="#speech-recognition">Talking to "The Computer" (how to set up speech recognition)</a>
 <li><a href="#troubleshooting">Troubleshooting (joysticks, audio, bridge verification, crashing)</a>
 <li><a href="#luascripting">Lua Scripting</a>
@@ -1235,6 +1236,25 @@ console (e.g. if you mean for this to be the NAVIGATION station, press F2).
 </ul>
 </ol>
 <p>That's it for the bridge station setup.  Repeat for each station.
+<hr>
+<h1><a name="updateinstructions">Updating Space Nerds In Space</a></h1>
+<p>Suppose you have set up Space Nerds In Space previously but development has
+moved on and now what's in github and on the assets server is newer than what you
+have, or that you have several players together to play the game but they each
+have a different version of Space Nerds In Space.  How do you sync up your game
+with the latest stuff?
+
+<p>Use the following procedure:
+
+<pre>
+	cd space-nerds-in-space;	# Or wherever you checked out the code
+	git checkout master;		# Just in case you switched branches
+	make mostly-clean;		# Let's start fresh
+	git pull;			# Fetch the new code from github
+	make;				# Build everything
+	make update-assets;		# Fetch any new or updated art
+</pre>
+
 <hr>
 <h1><a name="speech-recognition">Talking to "The Computer" (how to set up speech recognition)</a></h1>
 <p>Anything you can type into "the computer" via the Navigation screen or the Comms screen,
