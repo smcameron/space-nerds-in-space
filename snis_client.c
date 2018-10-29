@@ -7965,6 +7965,8 @@ static void show_watermark(void)
 	sng_abs_xy_draw_string(BUILD_INFO_STRING3, NANO_FONT, txx(25), txy(590));
 }
 
+static int blue_rectangle = 1; /* tweakable via console */
+
 static void show_common_screen(GtkWidget *w, char *title)
 {
 	int title_color;
@@ -7991,11 +7993,14 @@ static void show_common_screen(GtkWidget *w, char *title)
 		sng_set_foreground(title_color);
 		sng_abs_xy_draw_string(title, SMALL_FONT, txx(25), txy(LINEHEIGHT));
 	}
-	sng_set_foreground(border_color);
-	snis_draw_line(1, 1, SCREEN_WIDTH, 0);
-	snis_draw_line(SCREEN_WIDTH - 1, 1, SCREEN_WIDTH - 1, SCREEN_HEIGHT - 1);
-	snis_draw_line(SCREEN_WIDTH - 1, SCREEN_HEIGHT - 1, 1, SCREEN_HEIGHT - 1);
-	snis_draw_line(1, 1, 1, SCREEN_HEIGHT - 1);
+
+	if (blue_rectangle) {
+		sng_set_foreground(border_color);
+		snis_draw_line(1, 1, SCREEN_WIDTH, 0);
+		snis_draw_line(SCREEN_WIDTH - 1, 1, SCREEN_WIDTH - 1, SCREEN_HEIGHT - 1);
+		snis_draw_line(SCREEN_WIDTH - 1, SCREEN_HEIGHT - 1, 1, SCREEN_HEIGHT - 1);
+		snis_draw_line(1, 1, 1, SCREEN_HEIGHT - 1);
+	}
 
 	if (vertical_controls_timer) {
 		sng_set_foreground(UI_COLOR(special_options));
@@ -16153,6 +16158,8 @@ static struct tweakable_var_descriptor client_tweak[] = {
 		0.0, 1.0, 0.0, 0, 1, 0 },
 	{ "ROCKET_NOISE_VOLUME", "VOLUME OF ROCKET NOISE, 0 to 1", &rocket_noise_volume, 'f',
 		0.0, 1.0, 1.0, 0, 1, 1 },
+	{ "BLUE_RECTANGLE", "0 OR 1 TO TURN OFF OR ON THE BLUE RECTANGLE, RESPECTIVELY",
+		&blue_rectangle, 'i', 0.0, 0.0, 0.0, 0, 1, 1 },
 	{ NULL, NULL, NULL, '\0', 0.0, 0.0, 0.0, 0, 0, 0 },
 };
 
