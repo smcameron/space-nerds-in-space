@@ -2750,6 +2750,21 @@ static void set_ship_destination(struct snis_entity *o, double x, double y, doub
 	o->tsd.ship.doz = z;
 }
 
+static uint32_t choose_ship_home_planet(void)
+{
+	int i, hp;
+
+	hp = snis_randn(NPLANETS);
+	for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
+		if (go[i].type == OBJTYPE_PLANET) {
+			if (hp <= 0)
+				return go[i].id;
+			hp--;
+		}
+	}
+	return (uint32_t) -1;
+}
+
 static void push_cop_mode(struct snis_entity *cop)
 {
 	int i, npoints;
@@ -2763,13 +2778,26 @@ static void push_cop_mode(struct snis_entity *cop)
 	cop->tsd.ship.ai[0].ai_mode = AI_MODE_COP;
 
 	i = lookup_by_id(cop->tsd.ship.home_planet);
-	assert(i >= 0);
-	p = &go[i];
-	home_planet.v.x = p->x;
-	home_planet.v.y = p->y;
-	home_planet.v.z = p->z;
-
-	orbit_radius = (0.01 * (float) snis_randn(100) + 2.0) * p->tsd.planet.radius;
+	if (i < 0) { /* The planet might get deleted on the demon screen, for instance. */
+		cop->tsd.ship.home_planet = choose_ship_home_planet(); /* Pick a new home planet */
+		i = lookup_by_id(cop->tsd.ship.home_planet);
+	}
+	if (i >= 0) {
+		p = &go[i];
+		home_planet.v.x = p->x;
+		home_planet.v.y = p->y;
+		home_planet.v.z = p->z;
+		orbit_radius = (0.01 * (float) snis_randn(100) + 2.0) * p->tsd.planet.radius;
+	} else {
+		/* Apparently there aren't any planets.  Alright... let's just patrol around our current position.
+		 * TODO: I should probably figure out something better here.  A cop with a destroyed home planet
+		 * should probably stop being a cop and do something else.
+		 */
+		home_planet.v.x = cop->x;
+		home_planet.v.y = cop->y;
+		home_planet.v.z = cop->z;
+		orbit_radius = (float) snis_randn(MAX_GAS_GIANT_RADIUS - MIN_GAS_GIANT_RADIUS) + MIN_GAS_GIANT_RADIUS;
+	}
 
 	npoints = MAX_PATROL_POINTS;
 	patrol = &cop->tsd.ship.ai[0].u.cop;
@@ -10255,21 +10283,6 @@ static int add_player(double x, double z, double vx, double vz, double heading, 
 		return i;
 	respawn_player(&go[i], warpgate_number);
 	return i;
-}
-
-static uint32_t choose_ship_home_planet(void)
-{
-	int i, hp;
-
-	hp = snis_randn(NPLANETS);
-	for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
-		if (go[i].type == OBJTYPE_PLANET) {
-			if (hp <= 0)
-				return go[i].id;
-			hp--;
-		}
-	}
-	return (uint32_t) -1;
 }
 
 static uint32_t nth_starbase(int n);
