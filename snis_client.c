@@ -8523,6 +8523,45 @@ static void show_weapons_camera_view(GtkWidget *w)
 	pthread_mutex_unlock(&universe_mutex);
 }
 
+/* Add player ship entity into the scene for some camera modes */
+static struct entity *main_view_add_player_ship_entity(struct snis_entity *o)
+{
+	struct entity *player_ship;
+	static float current_lights = 1.0;
+
+	/* temporarily add ship into scene */
+	player_ship = add_entity(ecx, ship_mesh_map[o->tsd.ship.shiptype], o->x, o->y, o->z, SHIP_COLOR);
+	if (!player_ship)
+		return NULL;
+
+	float desired_lights = (float) o->tsd.ship.exterior_lights / 255.0;
+	current_lights += (desired_lights - current_lights) * 0.05;
+	update_entity_orientation(player_ship, &o->orientation);
+	entity_update_emit_intensity(player_ship, current_lights);
+
+	struct entity *turret_base = add_entity(ecx, ship_turret_base_mesh,
+		-4 * SHIP_MESH_SCALE, 5.45 * SHIP_MESH_SCALE, 0 * SHIP_MESH_SCALE,
+		SHIP_COLOR);
+
+	if (turret_base) {
+		update_entity_orientation(turret_base, &identity_quat);
+		update_entity_parent(ecx, turret_base, player_ship);
+	}
+
+	struct entity *turret = add_entity(ecx, ship_turret_mesh, 0, 0, 0, SHIP_COLOR);
+
+	if (turret) {
+		/* TODO: this should probably happen in interpolate_oriented_object */
+		update_entity_orientation(turret, &o->tsd.ship.weap_orientation);
+		if (turret_base)
+			update_entity_parent(ecx, turret, turret_base);
+	}
+
+	add_ship_thrust_entities(NULL, NULL, ecx, player_ship, o->tsd.ship.shiptype,
+				o->tsd.ship.power_data.impulse.i, 0);
+	return player_ship;
+}
+
 static void show_mainscreen(GtkWidget *w)
 {
 	const float min_angle_of_view = 5.0 * M_PI / 180.0;
@@ -8534,7 +8573,6 @@ static void show_mainscreen(GtkWidget *w)
 	union quat desired_cam_orientation;
 	static union vec3 cam_offset;
 	union vec3 cam_pos;
-	static float current_lights = 1.0;
 	struct snis_entity *vp;
 
 	if (!(o = find_my_ship()))
@@ -8598,40 +8636,7 @@ static void show_mainscreen(GtkWidget *w)
 			vec3_mul_self(&desired_cam_offset,
 					200.0f * camera_mode * SHIP_MESH_SCALE);
 			quat_rot_vec_self(&desired_cam_offset, &camera_orientation);
-
-			/* temporarily add ship into scene for camera mode 1 & 2 */
-			player_ship = add_entity(ecx, ship_mesh_map[o->tsd.ship.shiptype],
-					o->x, o->y, o->z, SHIP_COLOR);
-			if (player_ship) {
-				float desired_lights = (float) o->tsd.ship.exterior_lights / 255.0;
-				current_lights += (desired_lights - current_lights) * 0.05;
-				update_entity_orientation(player_ship, &o->orientation);
-				entity_update_emit_intensity(player_ship, current_lights);
-			}
-
-			struct entity *turret_base = add_entity(ecx, ship_turret_base_mesh,
-				-4 * SHIP_MESH_SCALE, 5.45 * SHIP_MESH_SCALE, 0 * SHIP_MESH_SCALE,
-				SHIP_COLOR);
-
-			if (turret_base) {
-				update_entity_orientation(turret_base, &identity_quat);
-				if (player_ship)
-					update_entity_parent(ecx, turret_base, player_ship);
-			}
-
-			struct entity *turret = add_entity(ecx, ship_turret_mesh, 0, 0, 0, SHIP_COLOR);
-
-			if (turret) {
-				/* TODO: this should probably happen in interpolate_oriented_object */
-				update_entity_orientation(turret, &o->tsd.ship.weap_orientation);
-				if (turret_base)
-					update_entity_parent(ecx, turret, turret_base);
-			}
-
-			if (player_ship)
-				add_ship_thrust_entities(NULL, NULL, ecx,
-					player_ship, o->tsd.ship.shiptype,
-					o->tsd.ship.power_data.impulse.i, 0);
+			player_ship = main_view_add_player_ship_entity(o);
 		}
 		break;
 	}
