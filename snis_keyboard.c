@@ -203,6 +203,7 @@ char *keyactionstring[] = {
 	"key_space",
 	"key_robot_gripper",
 	"key_demon_console",
+	"key_toggle_external_camera",
 };
 
 void zero_keymaps(void)
@@ -270,6 +271,7 @@ void init_keymap(void)
 	mapkey(nav | mainscreen, GDK_q, keyrollleft);
 	mapkey(nav | mainscreen, GDK_e, keyrollright);
 	mapkey(mainscreen, GDK_c, key_toggle_credits);
+	mapkey(mainscreen, GDK_x, key_toggle_external_camera);
 	mapkey(all, GDK_M, key_toggle_watermark);
 	mapkey(weap, GDK_m, key_mouse_mode);
 	mapkey(weap, GDK_n, key_weap_fire_missile);

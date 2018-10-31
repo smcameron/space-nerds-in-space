@@ -57,7 +57,8 @@ enum keyaction {
 		key_space = 52,
 		key_robot_gripper = 53,
 		key_demon_console = 54,
-#define NKEYSTATES 55
+		key_toggle_external_camera = 55,
+#define NKEYSTATES 56
 };
 
 struct keyboard_state {

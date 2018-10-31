@@ -287,6 +287,15 @@ static volatile float main_camera_shake = 0.0f;
 static unsigned char camera_mode;
 static unsigned char nav_camera_mode;
 
+/* "Scenic" camera for beauty shots. */
+static int external_camera_active = 0; /* tweakable */
+static int external_camera_active_timer = 0;
+union vec3 external_camera_position, desired_external_camera_position, external_camera_velocity;
+union quat external_camera_orientation, desired_external_camera_orientation;
+static int external_camera_mode = 0;
+static const int num_external_camera_modes = 3;
+static const char * const external_camera_mode_name[] = { "FOLLOW", "TRACK", "FREE" };
+
 static struct client_network_stats {
 	uint64_t bytes_sent;
 	uint64_t bytes_recd;
@@ -3202,6 +3211,26 @@ static void request_navigation_roll_packet(uint8_t roll)
 
 static int control_key_pressed = 0;
 
+static void external_camera_dirkey(int h, int v, int r)
+{
+	float yaw, pitch, roll;
+	union vec3 motion;
+
+	if (!control_key_pressed) { /* control key not pressed, rotate */
+		yaw = -h * 2.0 * M_PI / 180.0;
+		pitch = v * 2.0 * M_PI / 180.0;
+		roll = -r * 2.0 * M_PI / 180.0;
+
+		quat_apply_relative_yaw_pitch_roll(&desired_external_camera_orientation, yaw, pitch, roll);
+	} else { /* control key pressed, move */
+		motion.v.x = -v * 5.0;
+		motion.v.y = r * 5.0;
+		motion.v.z = h * 5.0;
+		quat_rot_vec_self(&motion, &external_camera_orientation);
+		vec3_add_self(&external_camera_velocity, &motion);
+	}
+}
+
 static void navigation_dirkey(int h, int v, int r)
 {
 	uint8_t yaw, pitch, roll;
@@ -3586,6 +3615,11 @@ static void do_dirkey(int h, int v, int r, int t)
 
 	switch (displaymode) {
 		case DISPLAYMODE_MAINSCREEN:
+			if (external_camera_active) {
+				external_camera_dirkey(h, v, r);
+				break;
+			}
+			/* Deliberate fallthrough here */
 		case DISPLAYMODE_NAVIGATION:
 			if (nav_ui_computer_active()) /* suppress keystrokes typed to computer */
 				break;
@@ -4149,6 +4183,16 @@ static gint key_press_cb(GtkWidget* widget, GdkEventKey* event, gpointer data)
 				in_the_process_of_quitting = 0;
 			break;
 		}
+		if (displaymode == DISPLAYMODE_MAINSCREEN) {
+			if (external_camera_active) {
+				external_camera_mode = (external_camera_mode + 1) % num_external_camera_modes;
+				external_camera_velocity.v.x = 0.0;
+				external_camera_velocity.v.y = 0.0;
+				external_camera_velocity.v.z = 0.0;
+				external_camera_active_timer = FRAME_RATE_HZ;
+			}
+		}
+		break;
 	case key_camera_mode:
 		if (displaymode == DISPLAYMODE_MAINSCREEN)
 			do_mainscreen_camera_mode();
@@ -4255,6 +4299,10 @@ static gint key_press_cb(GtkWidget* widget, GdkEventKey* event, gpointer data)
 	case key_toggle_credits:
 		if (control_key_pressed)
 			credits_screen_active = !credits_screen_active;
+		break;
+	case key_toggle_external_camera:
+		if (control_key_pressed)
+			external_camera_active = !external_camera_active;
 		break;
 	case key_toggle_watermark:
 		if (control_key_pressed)
@@ -8028,6 +8076,17 @@ static void show_common_screen(GtkWidget *w, char *title)
 		snis_draw_line(1, 1, 1, SCREEN_HEIGHT - 1);
 	}
 
+	if (external_camera_active_timer > 0 && external_camera_active) {
+		char msg[100];
+		sng_set_foreground(UI_COLOR(special_options));
+		external_camera_active_timer--;
+		snprintf(msg, sizeof(msg), "EXTERNAL CAMERA MODE %d (%s)", external_camera_mode,
+				external_camera_mode_name[external_camera_mode]);
+		sng_center_xy_draw_string(msg, SMALL_FONT, SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2);
+	} else {
+		if (external_camera_active_timer == 0 && !external_camera_active)
+			external_camera_active_timer = FRAME_RATE_HZ;
+	}
 	if (vertical_controls_timer) {
 		sng_set_foreground(UI_COLOR(special_options));
 		vertical_controls_timer--;
@@ -8562,6 +8621,58 @@ static struct entity *main_view_add_player_ship_entity(struct snis_entity *o)
 	return player_ship;
 }
 
+static void point_external_camera_at_ship(void)
+{
+	struct snis_entity *o;
+	union vec3 to_ship;
+	union vec3 xaxis = { { 1.0, 0.0, 0.0 } };
+	union vec3 ship_up = { { 0.0, 1.0, 0.0 } };
+
+	if (external_camera_mode == 2)
+		return;
+
+	o = find_my_ship();
+	if (!o)
+		return;
+
+	to_ship.v.x = o->x - external_camera_position.v.x;
+	to_ship.v.y = o->y - external_camera_position.v.y;
+	to_ship.v.z = o->z - external_camera_position.v.z;
+	quat_rot_vec_self(&ship_up, &o->orientation);
+	quat_from_u2v(&desired_external_camera_orientation, &xaxis, &to_ship, &ship_up);
+
+	if (external_camera_mode == 1)
+		return;
+
+	desired_external_camera_position.v.x = 200;
+	desired_external_camera_position.v.y = 200;
+	desired_external_camera_position.v.z = 200;
+	quat_rot_vec_self(&desired_external_camera_position, &o->orientation);
+	desired_external_camera_position.v.x += o->x;
+	desired_external_camera_position.v.y += o->y;
+	desired_external_camera_position.v.z += o->z;
+}
+
+static void update_external_camera_position_and_orientation(struct snis_entity *o, int first_frame,
+					union vec3 *cam_pos, union quat *cam_orientation)
+{
+	point_external_camera_at_ship();
+
+	if (first_frame) {
+		external_camera_orientation = desired_external_camera_orientation;
+		external_camera_position = desired_external_camera_position;
+	} else {
+		quat_nlerp(&external_camera_orientation, &external_camera_orientation,
+				&desired_external_camera_orientation, 0.15);
+		vec3_add_self(&desired_external_camera_position, &external_camera_velocity);
+		vec3_mul_self(&external_camera_velocity, 0.95); /* Damping */
+		vec3_lerp(&external_camera_position, &external_camera_position,
+				&desired_external_camera_position, 0.15);
+	}
+	*cam_orientation = external_camera_orientation;
+	*cam_pos = external_camera_position;
+}
+
 static void show_mainscreen(GtkWidget *w)
 {
 	const float min_angle_of_view = 5.0 * M_PI / 180.0;
@@ -8574,6 +8685,7 @@ static void show_mainscreen(GtkWidget *w)
 	static union vec3 cam_offset;
 	union vec3 cam_pos;
 	struct snis_entity *vp;
+	struct entity *player_ship = 0;
 
 	if (!(o = find_my_ship()))
 		return;
@@ -8602,62 +8714,69 @@ static void show_mainscreen(GtkWidget *w)
 	angle_of_view = ((255.0 - (float) current_zoom) / 255.0) *
 				(max_angle_of_view - min_angle_of_view) + min_angle_of_view;
 
-	if (o->tsd.ship.view_mode == MAINSCREEN_VIEW_MODE_NORMAL) {
+	if (!external_camera_active) {
+		if (o->tsd.ship.view_mode == MAINSCREEN_VIEW_MODE_NORMAL) {
+			switch (camera_mode) {
+			case 0:
+				camera_orientation = vp->orientation;
+				desired_cam_orientation = camera_orientation;
+				break;
+			case 1:
+			case 2:
+				desired_cam_orientation = vp->orientation;
+				if (first_frame)
+					camera_orientation = desired_cam_orientation;
+				else
+					quat_nlerp(&camera_orientation, &camera_orientation,
+							&desired_cam_orientation, 0.08);
+				break;
+			}
+		} else {
+			quat_mul(&camera_orientation, &o->orientation, &o->tsd.ship.weap_orientation);
+		}
+
+		union vec3 desired_cam_offset;
+
 		switch (camera_mode) {
 		case 0:
-			camera_orientation = vp->orientation;
-			desired_cam_orientation = camera_orientation;
-			break;
+			vec3_init(&desired_cam_offset, 0, 0, 0);
+			if (vp == o)
+				break;
 		case 1:
-		case 2:
-			desired_cam_orientation = vp->orientation;
-			if (first_frame)
-				camera_orientation = desired_cam_orientation;
-			else
-				quat_nlerp(&camera_orientation, &camera_orientation,
-						&desired_cam_orientation, 0.08);
+		case 2: {
+				vec3_init(&desired_cam_offset, -1.0f, 0.25f, 0.0f);
+				vec3_mul_self(&desired_cam_offset,
+						200.0f * camera_mode * SHIP_MESH_SCALE);
+				quat_rot_vec_self(&desired_cam_offset, &camera_orientation);
+				player_ship = main_view_add_player_ship_entity(o);
+			}
 			break;
 		}
-	} else {
-		quat_mul(&camera_orientation, &o->orientation, &o->tsd.ship.weap_orientation);
-	}
 
-	struct entity *player_ship = 0;
-	union vec3 desired_cam_offset;
+		if (first_frame)
+			cam_offset = desired_cam_offset;
+		else
+			vec3_lerp(&cam_offset, &cam_offset, &desired_cam_offset, 0.15);
 
-	switch (camera_mode) {
-	case 0:
-		vec3_init(&desired_cam_offset, 0, 0, 0);
-		if (vp == o)
-			break;
-	case 1:
-	case 2: {
-			vec3_init(&desired_cam_offset, -1.0f, 0.25f, 0.0f);
-			vec3_mul_self(&desired_cam_offset,
-					200.0f * camera_mode * SHIP_MESH_SCALE);
-			quat_rot_vec_self(&desired_cam_offset, &camera_orientation);
-			player_ship = main_view_add_player_ship_entity(o);
+		if (main_camera_shake > 0.05 && vp == o) {
+			float ryaw, rpitch;
+
+			ryaw = main_camera_shake * ((snis_randn(100) - 50) * 0.025f) * M_PI / 180.0;
+			rpitch = main_camera_shake * ((snis_randn(100) - 50) * 0.025f) * M_PI / 180.0;
+			quat_apply_relative_yaw_pitch(&camera_orientation, ryaw, rpitch);
+			main_camera_shake = 0.7f * main_camera_shake;
 		}
-		break;
+
+		cam_pos.v.x = vp->x + cam_offset.v.x;
+		cam_pos.v.y = vp->y + cam_offset.v.y;
+		cam_pos.v.z = vp->z + cam_offset.v.z;
+	} else { /* external camera is active */
+		cam_pos.v.x = 0;
+		cam_pos.v.y = 0;
+		cam_pos.v.z = 0;
+		update_external_camera_position_and_orientation(o, first_frame, &cam_pos, &camera_orientation);
+		player_ship = main_view_add_player_ship_entity(o);
 	}
-
-	if (first_frame)
-		cam_offset = desired_cam_offset;
-	else
-		vec3_lerp(&cam_offset, &cam_offset, &desired_cam_offset, 0.15);
-
-	if (main_camera_shake > 0.05 && vp == o) {
-		float ryaw, rpitch;
-
-		ryaw = main_camera_shake * ((snis_randn(100) - 50) * 0.025f) * M_PI / 180.0;
-		rpitch = main_camera_shake * ((snis_randn(100) - 50) * 0.025f) * M_PI / 180.0;
-		quat_apply_relative_yaw_pitch(&camera_orientation, ryaw, rpitch);
-		main_camera_shake = 0.7f * main_camera_shake;
-	}
-
-	cam_pos.v.x = vp->x + cam_offset.v.x;
-	cam_pos.v.y = vp->y + cam_offset.v.y;
-	cam_pos.v.z = vp->z + cam_offset.v.z;
 
 	camera_set_pos(ecx, cam_pos.v.x, cam_pos.v.y, cam_pos.v.z);
 	camera_set_orientation(ecx, &camera_orientation);
@@ -8694,7 +8813,7 @@ static void show_mainscreen(GtkWidget *w)
 		}
 	}
 
-	if (current_altitude < 2000) {
+	if (current_altitude < 2000 && !external_camera_active) {
 		char buf[25];
 		snprintf(buf, sizeof(buf), "ALTITUDE: %5.1f", current_altitude);
 		sng_abs_xy_draw_string(buf, NANO_FONT, txx(20), txy(20));
@@ -16191,6 +16310,8 @@ static struct tweakable_var_descriptor client_tweak[] = {
 		0.0, 1.0, 1.0, 0, 1, 1 },
 	{ "BLUE_RECTANGLE", "0 OR 1 TO TURN OFF OR ON THE BLUE RECTANGLE, RESPECTIVELY",
 		&blue_rectangle, 'i', 0.0, 0.0, 0.0, 0, 1, 1 },
+	{ "EXTERNAL_CAMERA", "0 OR 1 TO TURN OFF OR ON THE EXTERNAL CAMERA, RESPECTIVELY",
+		&external_camera_active, 'i', 0.0, 0.0, 0.0, 0, 1, 0 },
 	{ NULL, NULL, NULL, '\0', 0.0, 0.0, 0.0, 0, 0, 0 },
 };
 
