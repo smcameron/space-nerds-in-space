@@ -7024,6 +7024,15 @@ static int process_client_id_packet(void)
 	printf("Saving default shipname as '%s'\n", shipname);
 	/* shipname is set to net_setup_ui.shipname in connect_to_lobby_button_pressed() */
 	snis_prefs_save_default_ship_name(shipname);
+
+	/* We turn this off for two reason.  1. You only do this once for a ship typically, so
+	 * saving it "turned on" as a preference doesn't make much sense. 2. If we create a new
+	 * ship, leave it turned on, then transit a warp gate, we will end up requesting ship
+	 * creation a second time on the warp gate transit.  This 2nd request will fail and we
+	 * will get a bridge verification failure.
+	 */
+	net_setup_ui.create_ship_v = 0;
+
 	snis_prefs_save_checkbox_defaults(net_setup_ui.role_main_v, net_setup_ui.role_nav_v,
 					net_setup_ui.role_weap_v, net_setup_ui.role_eng_v,
 					net_setup_ui.role_damcon_v, net_setup_ui.role_sci_v,
