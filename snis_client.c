@@ -1956,8 +1956,10 @@ static int update_asteroid(uint32_t id, uint32_t timestamp, double x, double y, 
 {
 	int i, k, m, s;
 	struct entity *e;
-	union quat orientation;
+	union quat orientation, rotational_velocity;
 	struct snis_entity *o;
+	union vec3 axis;
+	float angle;
 
 	i = lookup_object_by_id(id);
 	if (i < 0) {
@@ -1978,7 +1980,13 @@ static int update_asteroid(uint32_t id, uint32_t timestamp, double x, double y, 
 		if (i < 0)
 			return i;
 		o = &go[i];
-		o->tsd.asteroid.rotational_velocity = random_spin[id % NRANDOM_SPINS];
+
+		rotational_velocity = random_spin[id % NRANDOM_SPINS];
+		quat_to_axis_v(&rotational_velocity, &axis, &angle);
+		if ((i % 20) != 0) /* Most asteroids should spin slowly. Only a few spin rapidly. */
+			angle *= 0.2;
+		quat_init_axis_v(&rotational_velocity, &axis, angle);
+		o->tsd.asteroid.rotational_velocity = rotational_velocity;
 	} else {
 		o = &go[i];
 		update_generic_object(i, timestamp, x, y, z, 0, 0, 0, NULL, 1);
