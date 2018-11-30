@@ -237,6 +237,26 @@ show_snis_processes()
 	echo "------------------------------------------------------------"
 }
 
+check_for_bad_lockfiles()
+{
+	for x in /tmp/snis_server_lock.*
+	do
+		if [ ! -d "$x" ]
+		then
+			continue;
+		fi
+		instancename=$(echo "$x" | sed -e 's/.*[.]//')
+		ps aux | grep snis_server | grep "[-]L $instancename[ ]" > /dev/null 2>&1
+		if [ "$?" = "1" ]
+		then
+			echo 1>&2
+			echo "WARNING: lockdir $x found, but no corresponding snis_server process!" 1>&2
+			echo "You may need to execute the following command: rmdir $x" 1>&2
+			echo 1>&2
+		fi
+	done
+}
+
 while [ "1" = "1" ]
 do
 	echo
@@ -244,6 +264,7 @@ do
 	echo
 	show_snis_processes
 	print_main_menu
+	check_for_bad_lockfiles
 	echo -n "   Choose [0-7]: "
 	read x
 
