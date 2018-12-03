@@ -9215,28 +9215,6 @@ static void demon_ship_move(struct snis_entity *o)
 		o->tsd.ship.velocity *= player_velocity_damping;
 }
 
-static void coords_to_location_string(double x, double z, char *buffer, int buflen)
-{
-	int sectorx, sectorz;
-	static char *military_alphabet[] = {
-		"ALPHA", "BRAVO", "CHARLIE", "DELTA", "ECHO",
-		"FOXTROT", "GOLF", "HOTEL", "INDIA", "JULIETT",
-	};
-	static char *military_numerals[] = {
-		"ZERO ZERO", "ZERO ONE", "ZERO TWO", "ZERO THREE",
-		"ZERO FOUR", "ZERO FIVE",
-		"ZERO SIX", "ZERO SEVEN", "ZERO EIGHT", "ZERO NINER", "ONE ZERO", };
-
-	sectorx = floor((x / (double) XKNOWN_DIM) * 10.0);
-	sectorz = floor((z / (double) ZKNOWN_DIM) * 10.0);
-
-	if (sectorx >= 0 && sectorx <= 9 && sectorz >= 0 && sectorz <= 10)
-		snprintf(buffer, buflen, "SECTOR %s %s",
-			military_alphabet[sectorx], military_numerals[sectorz]);
-	else
-		snprintf(buffer, buflen, "(%8.2lf, %8.2lf)", x, z);
-}
-
 static void nebula_move(struct snis_entity *o)
 {
 	return;
@@ -9586,7 +9564,7 @@ static void starbase_move(struct snis_entity *o)
 		// printf("starbase name = '%s'\n", o->tsd.starbase.name);
 		send_comms_packet(o, "", 0, "STARBASE %s:", o->sdata.name);
 		send_comms_packet(o, "-  ", 0, starbase_comm_under_attack());
-		coords_to_location_string(o->x, o->z, location, sizeof(location) - 1);
+		snprintf(location, sizeof(location), "COORDINATES %.0lf, %.0lf, %.0lf", o->x, o->y, o->z);
 		send_comms_packet(o, "-  ", 0, "LOCATION %s", location);
 	}
 
