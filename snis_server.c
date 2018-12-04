@@ -19024,7 +19024,7 @@ static int l_add_bounty(lua_State *l)
 	ship_registry_add_bounty(&ship_registry, id, crime, amount, sbid);
 	pthread_mutex_unlock(&universe_mutex);
 	lua_pushnumber(l, 0);
-	return 0;
+	return 1;
 }
 
 static int process_create_item(struct game_client *c)
