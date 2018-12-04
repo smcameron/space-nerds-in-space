@@ -19027,6 +19027,18 @@ static int l_add_bounty(lua_State *l)
 	return 1;
 }
 
+static int l_random_point_on_sphere(lua_State *l)
+{
+	const float radius = luaL_checknumber(l, 1);
+	float x, y, z;
+
+	random_point_on_sphere(radius, &x, &y, &z);
+	lua_pushnumber(l, x);
+	lua_pushnumber(l, y);
+	lua_pushnumber(l, z);
+	return 3;
+}
+
 static int process_create_item(struct game_client *c)
 {
 	unsigned char buffer[14];
@@ -22701,6 +22713,7 @@ static void setup_lua(void)
 	add_lua_callable_fn(l_set_variable, "set_variable");
 	add_lua_callable_fn(l_demon_print, "demon_print");
 	add_lua_callable_fn(l_add_bounty, "add_bounty");
+	add_lua_callable_fn(l_random_point_on_sphere, "random_point_on_sphere");
 }
 
 static int run_initial_lua_scripts(void)

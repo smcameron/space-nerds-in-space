@@ -971,6 +971,11 @@ add_bounty(ship_id, crime, amount, starbase_id)
 	Failure can happen if the ship_id is not the id of a ship, or if the starbase_id
 	is not the id of a starbase.
 
+x,y,z = random_point_on_sphere(radius)
+
+	Returns x, y, z coordinates of a random point on a sphere centered at 0,0,0
+	with the specified radius. Distribution is uniform.
+
 NOTE: Your lua scripts must not sleep, call any function which blocks, or require excessive
 long running calculations (nothing more than a few hundredths of a second) because the lua
 scripts are called from the main thread and if the scripts block, the entire game will block.
