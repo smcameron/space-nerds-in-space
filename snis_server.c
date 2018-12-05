@@ -19039,6 +19039,49 @@ static int l_random_point_on_sphere(lua_State *l)
 	return 3;
 }
 
+static int l_generate_ship_name(lua_State *l)
+{
+	char shipname[256];
+	static struct mtwist_state *mt = NULL;
+
+	if (!mt)
+		mt = mtwist_init(mtwist_seed);
+
+	ship_name(mt, shipname, sizeof(shipname) - 1);
+	uppercase(shipname);
+	lua_pushfstring(l, "%s", shipname);
+	return 1;
+}
+
+static int l_generate_character_name(lua_State *l)
+{
+	char charname[256];
+	static struct mtwist_state *mt = NULL;
+
+	if (!mt)
+		mt = mtwist_init(mtwist_seed);
+
+	character_name(mt, charname, sizeof(charname) - 1);
+	uppercase(charname);
+	lua_pushfstring(l, "%s", charname);
+	return 1;
+}
+
+static int l_generate_name(lua_State *l)
+{
+	char *name;
+	static struct mtwist_state *mt = NULL;
+
+	if (!mt)
+		mt = mtwist_init(mtwist_seed);
+
+	name = random_name(mt);
+	uppercase(name);
+	lua_pushfstring(l, "%s", name);
+	free(name);
+	return 1;
+}
+
 static int process_create_item(struct game_client *c)
 {
 	unsigned char buffer[14];
@@ -22714,6 +22757,9 @@ static void setup_lua(void)
 	add_lua_callable_fn(l_demon_print, "demon_print");
 	add_lua_callable_fn(l_add_bounty, "add_bounty");
 	add_lua_callable_fn(l_random_point_on_sphere, "random_point_on_sphere");
+	add_lua_callable_fn(l_generate_ship_name, "generate_ship_name");
+	add_lua_callable_fn(l_generate_character_name, "generate_character_name");
+	add_lua_callable_fn(l_generate_name, "generate_name");
 }
 
 static int run_initial_lua_scripts(void)
