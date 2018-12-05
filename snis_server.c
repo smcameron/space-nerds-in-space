@@ -19082,6 +19082,32 @@ static int l_generate_name(lua_State *l)
 	return 1;
 }
 
+static int l_ai_trace(lua_State *l)
+{
+	const double id = luaL_checknumber(lua_state, 1);
+	uint32_t id32 = (uint32_t) id;
+	int i;
+
+	if (id < 0) {
+		ai_trace_id = (uint32_t) -1;
+		send_demon_console_msg("AI TRACING OFF");
+		return 0;
+	}
+
+	pthread_mutex_lock(&universe_mutex);
+	i = lookup_by_id(id32);
+	if (i < 0)
+		ai_trace_id = (uint32_t) -1;
+	else
+		ai_trace_id = id32;
+	pthread_mutex_unlock(&universe_mutex);
+	if (ai_trace_id != (uint32_t) -1)
+		send_demon_console_msg("AI TRACING OBJECT %u", ai_trace_id);
+	else
+		send_demon_console_msg("AI TRACING OFF");
+	return 0;
+}
+
 static int process_create_item(struct game_client *c)
 {
 	unsigned char buffer[14];
@@ -22760,6 +22786,7 @@ static void setup_lua(void)
 	add_lua_callable_fn(l_generate_ship_name, "generate_ship_name");
 	add_lua_callable_fn(l_generate_character_name, "generate_character_name");
 	add_lua_callable_fn(l_generate_name, "generate_name");
+	add_lua_callable_fn(l_ai_trace, "ai_trace");
 }
 
 static int run_initial_lua_scripts(void)

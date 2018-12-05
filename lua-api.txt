@@ -980,6 +980,9 @@ generate_character_name() -- returns a randomly generated character name
 generate_ship_name() -- returns a randomly generated ship name
 generate_name() -- returns a randomly generated name (suitable for e.g. planets or asteroids).
 
+ai_trace(id) -- enable AI tracing for the specified object id.  If id is less than zero,
+	or refers to a non-existent object, ai tracing is turned off.
+
 NOTE: Your lua scripts must not sleep, call any function which blocks, or require excessive
 long running calculations (nothing more than a few hundredths of a second) because the lua
 scripts are called from the main thread and if the scripts block, the entire game will block.
