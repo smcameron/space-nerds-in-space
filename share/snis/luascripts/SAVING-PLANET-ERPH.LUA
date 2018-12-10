@@ -40,13 +40,25 @@ erphy = y - 15000;
 erphz = z - 12000;
 
 nowwhat = add_planet("NOWWHAT", 3000, 3000, 2000, 5000);
-nowwhat_starbase = add_starbase(8500, 5500, 2200, 1);
+nwsbx,nwsby,nwsbz = random_point_on_sphere(7000);
+nwsbx = nwsbx + 3000;
+nwsby = nwsby + 3000;
+nwsbz = nwsbz + 2000;
+nowwhat_starbase = add_starbase(nwsbx, nwsby, nwsbz, 1);
 
 erph = add_planet("ERPH", erphx, erphy, erphz, 3000);
-erph_starbase = add_starbase(erphx + 5500, erphy + 4500, erphz - 1000, 2);
+erphsbx, erphsby, erphsbz = random_point_on_sphere(9000);
+erphsbx = erphsbx + erphx;
+erphsby = erphsby + erphy;
+erphsbz = erphsbz + erphz;
+erph_starbase = add_starbase(erphsbx, erphsby, erphsbz, 2);
 
 zark = add_planet("ZARK", zarkx, zarky, zarkz, 0); 
-zark_starbase = add_starbase(zarkx + 900, zarky - 1200, zarkz + 1700, 3);
+zarksbx, zarksby, zarksbz = random_point_on_sphere(10000);
+zarksbx = zarksbx + zarkx;
+zarksby = zarksby + zarky;
+zarksbz = zarksbz + zarkz;
+zark_starbase = add_starbase(zarksbx, zarksby, zarksbz, 3);
 
 n1 = add_nebula("INSANITY-MAJORIS", x + 5000, y - 100, z - 1500, 5000);
 n2 = add_nebula("INSANITY-MINORIS", x + 500, y - 200, z - 3000, 3000);
