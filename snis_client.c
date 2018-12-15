@@ -7949,6 +7949,7 @@ static void show_textscreen(GtkWidget *w)
 {
 	int i;
 	static struct button *dismiss_button = NULL;
+	char *saveptr = NULL;
 	int menucount = 0;
 
 	if (displaymode != DISPLAYMODE_MAINSCREEN)
@@ -8019,7 +8020,7 @@ static void show_textscreen(GtkWidget *w)
 			SCREEN_WIDTH - txx(100), SCREEN_HEIGHT - txy(100));
 	sng_set_foreground(WHITE);
 
-	line = strtok(tmp_textscreen, "\n");
+	line = strtok_r(tmp_textscreen, "\n", &saveptr);
 	if (!line) {
 		textscreen_timer = 0;
 		return;
@@ -8027,7 +8028,7 @@ static void show_textscreen(GtkWidget *w)
 	sng_center_xy_draw_string(line, BIG_FONT, SCREEN_WIDTH / 2, txy(y)); y += txy(35);
 
 	i = 0;
-	while ((line = strtok(NULL, "\n"))) {
+	while ((line = strtok_r(NULL, "\n", &saveptr))) {
 		if (!user_defined_menu_active) {
 			sng_abs_xy_draw_string(line, SMALL_FONT, txx(60), txy(y));
 			y += txy(20);

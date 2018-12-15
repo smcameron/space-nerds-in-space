@@ -3253,6 +3253,11 @@ sub process {
 				$herecurr);
 		}
 
+# warn about strtok
+		if ($line =~ /[	 (=]*strtok[	 ]*[(]/) {
+			WARN("STRTOK", "Please use strtok_r instead of strtok\n " . $herecurr);
+		}
+
 # check for needless "if (<foo>) fn(<foo>)" uses
 		if ($prevline =~ /\bif\s*\(\s*($Lval)\s*\)/) {
 			my $expr = '\s*\(\s*' . quotemeta($1) . '\s*\)\s*;';
