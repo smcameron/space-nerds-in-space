@@ -403,8 +403,8 @@ ifeq (${OSX},0)
 # Arch pkg-config seems to be broken for lua5.2, so we have
 # this "... || echo" hack thing.
 #
-LUALIBS:=$(shell pkg-config --libs lua5.2 || echo '-llua')
-LUACFLAGS:=$(shell pkg-config --cflags lua5.2 || echo '')
+LUALIBS:=$(shell pkg-config --libs lua5.2 --silence-errors || pkg-config --libs lua52 --silence-errors || pkg-config --libs lua --silence-errors || echo '-llua5.2')
+LUACFLAGS:=$(shell pkg-config --cflags lua5.2 --silence-errors || pkg-config --cflags lua52 --silence-errors || pkg-config --libs lua --silence-errors || echo '')
 else
 # OSX needs to do it this way (what is the point of pkgconfig if they all do it differently?)
 LUALIBS:=$(shell pkg-config --libs lua)
