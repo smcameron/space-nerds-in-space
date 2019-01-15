@@ -16450,7 +16450,7 @@ static int process_enscript_command(struct game_client *c)
 		return 0;
 
 	/* TODO: Send this client side instead of storing server side. */
-#define LUASCRIPTDIR "share/snis/luascripts"
+#define LUASCRIPTDIR STRPREFIX(PREFIX) "/share/snis/luascripts"
 	snprintf(scriptname, sizeof(scriptname) - 1, "%s/%s", LUASCRIPTDIR, txt);
 
 	/* Open the file only if it doesn't already exist.
