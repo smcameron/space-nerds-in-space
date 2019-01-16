@@ -20721,7 +20721,6 @@ static void init_meshes()
 		mesh_distort(asteroid_mesh[i], 0.15);
 		mesh_set_average_vertex_normals(asteroid_mesh[i]);
 		mesh_graph_dev_init(asteroid_mesh[i]);
-		printf("zzz radius %d = %f\n", i, mesh_compute_radius(asteroid_mesh[i]));
 	}
 
 	unit_cube_mesh = mesh_unit_cube(2);
