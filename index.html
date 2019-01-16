@@ -2016,24 +2016,46 @@ MAINMENU.LUA</a> to see how you can tie them all together with a menu system.
 </ul>
 <hr>
 <h2><a name="misctopics">Miscellaneous Development Topics</a></h2>
-<p>Here is a <a href="http://www.youtube.com/playlist?list=PLcSUyKz3gfa9BG8X0DKkIMTnQag8_tJFQ">youtube
+<ul>
+<li><p><b>What about installing the game?</b> The above instructions for building the game have you
+download the source, compile it, then run it right where you compiled it.  What if you want to install
+it on your system?
+<p>One reason you might <em>not</em> want to install the game is that the game changes quite frequently, and
+if the protocol changes (as it does) the version you installed is likely to be out of date and you will
+have to recompile anyway.  So "git pull" followed by "make" is not that hard.
+<p>That being said, maybe you do want to try installing the game in the traditional sense. Here's how to
+install the game into /usr/local:
+<ul>
+<li><cmd>make mostly-clean</cmd>
+<li><cmd>make DESTDIR= PREFIX=/usr/local</cmd>
+<li><cmd>sudo make DESTDIR= PREFIX=/usr/local install</cmd>
+</ul>
+<p>Note that <cmd>DESTDIR</cmd> is <cmd>.</cmd> by default, so you must specify <cmd>DESTDIR=</cmd>
+if you want it to really land in <cmd>/usr/local</cmd>.
+
+<p>Then you can run it via:
+<p><cmd>/usr/local/bin/snis_launcher</p>
+<p>Note that I don't use "make install" very much, so it's quite possible there are some bugs in the
+Makefile around this area, though it worked as of Jan 16, 2019, so far as I know.
+
+<li>Here is a <a href="http://www.youtube.com/playlist?list=PLcSUyKz3gfa9BG8X0DKkIMTnQag8_tJFQ">youtube
 playlist of development videos for Space Nerds In Space</a> spanning the time from the very beginning
 when the game was literally not much more than
 <a href="http://www.youtube.com/watch?v=BF19sPZGvmo&list=PLcSUyKz3gfa9BG8X0DKkIMTnQag8_tJFQ&index=20">just a bunch of dots on the screen</a> up until the present day.
 <p>Here is <a href="snis-nl-slides/slideshow.html">a set of slides about speech recognition and
 natural language processing in Space Nerds In Space</a>.
 
-<p>Here is a set of slides from a talk I gave about procedurally generating gas giant
+<li>Here is a set of slides from a talk I gave about procedurally generating gas giant
 planet textures: <a href="gaseous-giganticus-slides/slideshow.html">Procedurally Generating
 Gas Giant Textures</a>.
 <p>Here are some pictures showing <a href="gaseous-giganticus-noise-scale.html">various noise-scales and the effect they have in gaseous-giganticus</a>.
 
 
-<p>Here is a <a href="planetary-rings/example/slideshow.html">slideshow about the
+<li>Here is a <a href="planetary-rings/example/slideshow.html">slideshow about the
 implemenation of planetary rings and shadows cast by and on them</a> in Space Nerds
 In Space.
 
-<p>Here is a <a href="earthlike/example/slideshow.html">slideshow about 'earthlike'</a>, which
+<li>Here is a <a href="earthlike/example/slideshow.html">slideshow about 'earthlike'</a>, which
 is a program used to generate some of the earthlike planet textures within Space Nerds In Space.
 (Use arrow keys to navigate the slideshow.  And press F11 for full screen.)
 
@@ -2044,11 +2066,12 @@ various other licenses, typically some variant of a Creative Commons license. I 
 to be diligent about making sure it is clear which parts of the code have what licenses.
 Consult the source if in doubt.
 
-<p>Here are <a href="old_bootable_cd_instructions.html">some very old out-of-date instructions</a>
+<li>Here are <a href="old_bootable_cd_instructions.html">some very old out-of-date instructions</a>
 about creating bootable images to play the game.
+<li><a href="history.html">Here is a copy of the freegamdev.net thread about this game (just a backup in case some disaster strikes that forum)</a>
+</ul>
 <hr>
 <br>
 <br>
-<a href="history.html">Here is a copy of the freegamdev.net thread about this game (just a backup in case some disaster strikes that forum)</a>
 </body>
 </html>
