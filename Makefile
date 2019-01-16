@@ -65,6 +65,7 @@ SOUNDFILES=${SOUNDSRCDIR}/Attribution.txt \
 	${SOUNDSRCDIR}/docking-system-engaged.ogg \
 	${SOUNDSRCDIR}/entering-high-security-area.ogg \
 	${SOUNDSRCDIR}/flak_gun_sound.ogg \
+	${SOUNDSRCDIR}/flak_hit.ogg \
 	${SOUNDSRCDIR}/fuel-levels-critical.ogg \
 	${SOUNDSRCDIR}/incoming-fire-detected.ogg \
 	${SOUNDSRCDIR}/laser-fail.ogg \
