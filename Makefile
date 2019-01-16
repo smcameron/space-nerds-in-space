@@ -1199,6 +1199,7 @@ install:	${PROGS} ${MODELS} ${AUDIOFILES} ${TEXTURES} \
 		cp ${MODELSRCDIR}/$$d/$$d.png ${MODELDIR}/$$d ; \
 		if [ -f ${MODELSRCDIR}/$$d/$$d"lights.png" ] ; then \
 			cp ${MODELSRCDIR}/$$d/$$d"lights.png" ${MODELDIR}/$$d ; \
+		fi ; \
 		if [ -f ${MODELSRCDIR}/$$d/$$d"lighting.png" ] ; then \
 			cp ${MODELSRCDIR}/$$d/$$d"lighting.png" ${MODELDIR}/$$d ; \
 		fi ; \
