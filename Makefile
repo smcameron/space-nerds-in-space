@@ -878,6 +878,7 @@ bin/lsssgl:	ssgl/lsssgl
 	@cp ssgl/lsssgl bin
 
 bin/snis_text_to_speech.sh:	snis_text_to_speech.sh
+	@mkdir -p bin
 	@cp snis_text_to_speech.sh bin/snis_text_to_speech.sh
 	@chmod +x bin/snis_text_to_speech.sh
 
