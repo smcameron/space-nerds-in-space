@@ -6,7 +6,14 @@ then
 	exit 1
 fi
 
-BINDIR=./bin
+DESTDIR=.
+PREFIX=
+
+BINDIR=${DESTDIR}/${PREFIX}/bin
+if [ "$SNIS_ASSET_DIR" = "" ]
+then
+	export SNIS_ASSET_DIR=${DESTDIR}/${PREFIX}/share/snis
+fi
 SNIS_SERVER=${BINDIR}/snis_server
 SNIS_CLIENT=${BINDIR}/snis_client
 SNIS_LIMITED_CLIENT=${BINDIR}/snis_limited_client
@@ -151,7 +158,7 @@ get_solarsystem_name()
 		dname="."
 
 		echo "Choose a solar system:"
-		for ss in share/snis/solarsystems/*/assets.txt
+		for ss in ${SNIS_ASSET_DIR}/solarsystems/*/assets.txt
 		do
 			dname=$(dirname "$ss")
 			name=$(basename "$dname")
@@ -163,14 +170,14 @@ get_solarsystem_name()
 		then
 			ssname="$default"
 		fi
-		if [ ! -f "share/snis/solarsystems"/"$ssname"/assets.txt ]
+		if [ ! -f "${SNIS_ASSET_DIR}/solarsystems"/"$ssname"/assets.txt ]
 		then
 			echo "Invalid choice: $ssname"
 		else
 			break;
 		fi
 	done
-	if [ -d share/snis/solarsystems/"$ssname" -a -f share/snis/solarsystems/"$ssname"/assets.txt ]
+	if [ -d ${SNIS_ASSET_DIR}/solarsystems/"$ssname" -a -f ${SNIS_ASSET_DIR}/solarsystems/"$ssname"/assets.txt ]
 	then
 		SOLARSYSTEM_NAME="$ssname"
 	else
