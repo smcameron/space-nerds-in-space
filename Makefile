@@ -235,7 +235,28 @@ TEXTUREFILES=${TEXTURESRCDIR}/AreaTex.h \
 	${TEXTURESRCDIR}/wormhole.png \
 	${TEXTURESRCDIR}/green-burst.png \
 	${TEXTURESRCDIR}/blue-tractor-texture.png \
-	${TEXTURESRCDIR}/missile_texture.png
+	${TEXTURESRCDIR}/missile_texture.png \
+	${TEXTURESRCDIR}/black_hole.png \
+	${TEXTURESRCDIR}/docking_port_emit.png \
+	${TEXTURESRCDIR}/docking_port_texture.png \
+	${TEXTURESRCDIR}/green-spark.png \
+	${TEXTURESRCDIR}/laserflash.png \
+	${TEXTURESRCDIR}/spacemonster_emit.png \
+	${TEXTURESRCDIR}/spacemonster_tentacle_emit.png \
+	${TEXTURESRCDIR}/spacemonster_tentacle_texture.png \
+	${TEXTURESRCDIR}/spacemonster_texture.png \
+	${TEXTURESRCDIR}/spaceplate.png \
+	${TEXTURESRCDIR}/spaceplate_small.png \
+	${TEXTURESRCDIR}/spaceplate_small_emit.png \
+	${TEXTURESRCDIR}/spaceplateemit.png \
+	${TEXTURESRCDIR}/thrust_flare.png \
+	${TEXTURESRCDIR}/thrustblue.png \
+	${TEXTURESRCDIR}/thrustgreen.png \
+	${TEXTURESRCDIR}/thrustred.png \
+	${TEXTURESRCDIR}/thrustviolet.png \
+	${TEXTURESRCDIR}/thrustyellow.png \
+	${TEXTURESRCDIR}/warpgate_emit.png \
+	${TEXTURESRCDIR}/warpgate_texture.png
 
 LUASCRIPTDIR=${DATADIR}/luascripts
 LUASRCDIR=${ASSETSSRCDIR}/luascripts
