@@ -1180,6 +1180,7 @@ install:	${PROGS} ${MODELS} ${AUDIOFILES} ${TEXTURES} \
 		${INSTALL} -m 755 bin/$$x \
 				${DESTDIR}/${PREFIX}/bin; \
 	done
+	${INSTALL} -m 755 snis_launcher ${DESTDIR}/${PREFIX}/bin
 	for d in ${MATERIALDIR} ${LUASCRIPTDIR} ${SHADERDIR} ${SOUNDDIR} \
 		${TEXTUREDIR} ${MODELDIR}/wombat ${SHADERDIR} ; do \
 		mkdir -p $$d ; \
