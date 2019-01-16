@@ -350,7 +350,8 @@ SHADERS=${SHADERSRCDIR}/atmosphere.frag \
 	${SHADERSRCDIR}/wireframe_transparent.frag \
 	${SHADERSRCDIR}/wireframe-transparent-sphere-clip.frag \
 	${SHADERSRCDIR}/wireframe-transparent-sphere-clip.vert \
-	${SHADERSRCDIR}/wireframe_transparent.vert
+	${SHADERSRCDIR}/wireframe_transparent.vert \
+	${SHADERSRCDIR}/alpha_by_normal.shader
 
 SCAD_PARAMS_FILES=${MODELSRCDIR}/disruptor.scad_params.h \
 	${MODELSRCDIR}/enforcer.scad_params.h \
