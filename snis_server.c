@@ -1069,7 +1069,7 @@ static char *logprefix(void)
 	static char *logprefixstr = NULL;
 	if (logprefixstr != NULL)
 		return logprefixstr;
-	sprintf(logprefixstrbuffer, "%s(%s):", "snis_server", solarsystem_name);
+	snprintf(logprefixstrbuffer, sizeof(logprefixstrbuffer), "%s(%s):", "snis_server", solarsystem_name);
 	logprefixstr = logprefixstrbuffer;
 	return logprefixstr;
 }
@@ -1198,7 +1198,8 @@ static void add_new_rts_unit(struct snis_entity *builder)
 
 	/* Give the unit a short name based on the type, ie. a scout becomes, eg. "S5". */
 	unit_number = rts_allocate_unit_number(unit_type, builder->sdata.faction);
-	sprintf(unit->sdata.name, "%s%d", rts_unit_type(unit_type)->short_name_prefix, unit_number);
+	snprintf(unit->sdata.name, sizeof(unit->sdata.name), "%s%d",
+			rts_unit_type(unit_type)->short_name_prefix, unit_number);
 
 	i = rts_unit_type_to_ship_type(unit_type);
 	if (i < 0) {
@@ -4025,7 +4026,7 @@ static void taunt_player(struct snis_entity *alien, struct snis_entity *player)
 	else
 		infinite_taunt(mt, buffer, sizeof(buffer) - 1);
 
-	sprintf(name, "%s: ", alien->sdata.name);
+	snprintf(name, sizeof(name), "%s: ", alien->sdata.name);
 	for (i = 0; buffer[i]; i++) {
 		buffer[i] = toupper(buffer[i]);
 		if (buffer[i] == ' ')
@@ -11540,8 +11541,8 @@ static int add_starbase(double x, double y, double z,
 	 * but might be because we should know starbase name even if science
 	 * doesn't scan it.
 	 */
-	sprintf(go[i].tsd.starbase.name, "SB-%02d", n);
-	sprintf(go[i].sdata.name, "SB-%02d", n);
+	snprintf(go[i].tsd.starbase.name, sizeof(go[i].tsd.starbase.name), "SB-%02d", n);
+	snprintf(go[i].sdata.name, sizeof(go[i].sdata.name), "SB-%02d", n);
 
 	model = go[i].id % nstarbase_models;
 	if (docking_port_info[model]) {
@@ -12592,8 +12593,8 @@ static int add_warpgate(double x, double y, double z,
 	go[i].type = OBJTYPE_WARPGATE;
 	go[i].sdata.shield_strength = 255;
 	go[i].tsd.warpgate.warpgate_number = n;
-	sprintf(go[i].tsd.starbase.name, "WG-%02d", n);
-	sprintf(go[i].sdata.name, "WG-%02d", n);
+	snprintf(go[i].tsd.starbase.name, sizeof(go[i].tsd.starbase.name), "WG-%02d", n);
+	snprintf(go[i].sdata.name, sizeof(go[i].sdata.name), "WG-%02d", n);
 	/* Note: if we ever change the orientation from un-rotated, it will break
 	 * collision detection because of point_to_torus_dist(), and probably
 	 * some other places related to toroidal collision detection.
@@ -16011,12 +16012,12 @@ static int process_comms_transmission(struct game_client *c, int use_real_name)
 		return rc;
 	txt[len] = '\0';
 	if (use_real_name) {
-		sprintf(name, "%s: ", bridgelist[c->bridge].shipname);
+		snprintf(name, sizeof(name), "%s: ", bridgelist[c->bridge].shipname);
 	} else {
 		i = lookup_by_id(id);
 		if (i < 0)
 			return 0;
-		sprintf(name, "%s: ", go[i].sdata.name);
+		snprintf(name, sizeof(name), "%s: ", go[i].sdata.name);
 	}
 	if (txt[0] == '/') {
 		process_meta_comms_packet(name, c, txt);
@@ -18101,7 +18102,7 @@ static int process_rts_func_build_unit(struct game_client *c)
 		return 0;
 	}
 	if (ship->sdata.faction != builder->sdata.faction) {
-		sprintf(speech, "You do not control %s", builder->sdata.name);
+		snprintf(speech, sizeof(speech), "You do not control %s", builder->sdata.name);
 		pthread_mutex_unlock(&universe_mutex);
 		snis_queue_add_text_to_speech(speech, ROLE_TEXT_TO_SPEECH, c->shipid);
 		return 0;
@@ -18109,7 +18110,7 @@ static int process_rts_func_build_unit(struct game_client *c)
 	if (builder->type == OBJTYPE_STARBASE) {
 		if (builder->tsd.starbase.time_left_to_build != 0) {
 			pthread_mutex_unlock(&universe_mutex);
-			sprintf(speech, "%s already building %s.", builder->sdata.name,
+			snprintf(speech, sizeof(speech), "%s already building %s.", builder->sdata.name,
 				rts_unit_type(builder->tsd.planet.build_unit_type)->name);
 			snis_queue_add_text_to_speech(speech, ROLE_TEXT_TO_SPEECH, c->shipid);
 			return 0;
@@ -18123,7 +18124,7 @@ static int process_rts_func_build_unit(struct game_client *c)
 	} else if (builder->type == OBJTYPE_PLANET) {
 		if (builder->tsd.planet.time_left_to_build != 0) {
 			pthread_mutex_unlock(&universe_mutex);
-			sprintf(speech, "Home planet already building %s.",
+			snprintf(speech, sizeof(speech), "Home planet already building %s.",
 				rts_unit_type(builder->tsd.planet.build_unit_type)->name);
 			snis_queue_add_text_to_speech(speech, ROLE_TEXT_TO_SPEECH, c->shipid);
 			return 0;
@@ -22266,7 +22267,7 @@ static void *listener_thread_fn(__attribute__((unused)) void *unused)
 		else
 			port = default_snis_server_port;
 		snis_log(SNIS_INFO, "Trying port %d\n", port);
-		sprintf(portstr, "%d", port);
+		snprintf(portstr, sizeof(portstr), "%d", port);
 		memset(&hints, 0, sizeof(struct addrinfo));
 		hints.ai_family = AF_UNSPEC;    /* Allow IPv4 or IPv6 */
 		hints.ai_socktype = SOCK_STREAM;
@@ -23085,7 +23086,7 @@ static int read_ship_types(void)
 {
 	char path[PATH_MAX];
 
-	sprintf(path, "%s/%s", asset_dir, "ship_types.txt");
+	snprintf(path, sizeof(path), "%s/%s", asset_dir, "ship_types.txt");
 
 	ship_type = snis_read_ship_types(path, &nshiptypes);
 	if (!ship_type) {
@@ -23101,7 +23102,7 @@ static int read_factions(void)
 {
 	char path[PATH_MAX];
 
-	sprintf(path, "%s/%s", asset_dir, "factions.txt");
+	snprintf(path, sizeof(path), "%s/%s", asset_dir, "factions.txt");
 
 	if (snis_read_factions(path)) {
 		fprintf(stderr, "Unable to read factions from %s", path);
@@ -23117,7 +23118,7 @@ static struct solarsystem_asset_spec *read_solarsystem_assets(char *solarsystem_
 	char path[PATH_MAX];
 	struct solarsystem_asset_spec *s;
 
-	sprintf(path, "%s/solarsystems/%s/assets.txt", asset_dir, solarsystem_name);
+	snprintf(path, sizeof(path), "%s/solarsystems/%s/assets.txt", asset_dir, solarsystem_name);
 
 	s = solarsystem_asset_spec_read(path);
 	if (!s) {
@@ -23345,18 +23346,22 @@ static void nl_describe_game_object(struct game_client *c, uint32_t id)
 		return;
 	case OBJTYPE_ASTEROID:
 		pthread_mutex_unlock(&universe_mutex);
-		sprintf(description, "%s is a small and rather ordinary asteroid", go[i].sdata.name);
+		snprintf(description, sizeof(description), "%s is a small and rather ordinary asteroid",
+				go[i].sdata.name);
 		queue_add_text_to_speech(c, description);
 		return;
 	case OBJTYPE_STARBASE:
 		if (go[i].tsd.starbase.associated_planet_id < 0) {
-			sprintf(description, "%s is a star base in deep space", go[i].tsd.starbase.name);
+			snprintf(description, sizeof(description), "%s is a star base in deep space",
+					go[i].tsd.starbase.name);
 		} else {
 			planet = lookup_by_id(go[i].tsd.starbase.associated_planet_id);
 			if (planet < 0)
-				sprintf(description, "%s is a star base in deep space", go[i].tsd.starbase.name);
+				snprintf(description, sizeof(description), "%s is a star base in deep space",
+						go[i].tsd.starbase.name);
 			else
-				sprintf(description, "%s is a star base in orbit around the planet %s",
+				snprintf(description, sizeof(description),
+					"%s is a star base in orbit around the planet %s",
 					go[i].tsd.starbase.name, go[planet].sdata.name);
 		}
 		pthread_mutex_unlock(&universe_mutex);
@@ -23366,17 +23371,18 @@ static void nl_describe_game_object(struct game_client *c, uint32_t id)
 		planet = lookup_by_id(go[i].tsd.ship.home_planet);
 		pthread_mutex_unlock(&universe_mutex);
 		if (planet >= 0)
-			sprintf(extradescription, " originating from the planet %s",
+			snprintf(extradescription, sizeof(extradescription), " originating from the planet %s",
 				go[planet].sdata.name);
 		else
 			strcpy(extradescription, " of unknown origin");
-		sprintf(description, "%s is a %s class ship %s", go[i].sdata.name,
+		snprintf(description, sizeof(description), "%s is a %s class ship %s", go[i].sdata.name,
 				ship_type[go[i].tsd.ship.shiptype].class, extradescription);
 		queue_add_text_to_speech(c, description);
 		return;
 	case OBJTYPE_SHIP1:
 		pthread_mutex_unlock(&universe_mutex);
-		sprintf(description, "%s is a human piloted wombat class space ship", go[i].sdata.name);
+		snprintf(description, sizeof(description),
+				"%s is a human piloted wombat class space ship", go[i].sdata.name);
 		queue_add_text_to_speech(c, description);
 		return;
 	default:
@@ -23550,7 +23556,7 @@ static void calculate_course_and_distance(struct game_client *c, int argc, char 
 			pthread_mutex_unlock(&universe_mutex);
 			goto no_understand;
 		}
-		sprintf(destination_name, "%s", nl_get_object_name(&go[i]));
+		snprintf(destination_name, sizeof(destination_name), "%s", nl_get_object_name(&go[i]));
 	} else {
 		i = lookup_by_id(extra_data[second_noun].external_noun.handle);
 		if (i < 0) {
@@ -23563,7 +23569,7 @@ static void calculate_course_and_distance(struct game_client *c, int argc, char 
 					"Sorry, I cannot compute the distance to an unknown location.");
 			return;
 		}
-		sprintf(destination_name, "%s", argv[second_noun]);
+		snprintf(destination_name, sizeof(destination_name), "%s", argv[second_noun]);
 	}
 	dest = &go[i];
 	if (dest->type == OBJTYPE_PLANET)
@@ -23591,11 +23597,12 @@ static void calculate_course_and_distance(struct game_client *c, int argc, char 
 	heading = 360 - heading + 90; /* why?  why do I have to do this? */
 	mark = mark * 180.0 / M_PI;
 	if (calculate_course)
-		sprintf(directions,
+		snprintf(directions, sizeof(directions),
 			"Course to %s%s calculated.  Destination lies at bearing %3.0lf, mark %3.0lf at a distance of %.0f clicks",
 			modifier, destination_name, heading, mark, distance);
 	if (calculate_distance)
-		sprintf(directions, "The distance to %s%s is %.0lf clicks", modifier, destination_name, distance);
+		snprintf(directions, sizeof(directions), "The distance to %s%s is %.0lf clicks",
+				modifier, destination_name, distance);
 	queue_add_text_to_speech(c, directions);
 	return;
 
@@ -23746,7 +23753,7 @@ static void nl_fuel_report(struct game_client *c)
 	fuel_level = 100.0 * (float) ship->tsd.ship.fuel / (float) UINT32_MAX;
 	pthread_mutex_unlock(&universe_mutex);
 
-	sprintf(fuel_report, "Fuel tanks are at %2.0f percent.", fuel_level);
+	snprintf(fuel_report, sizeof(fuel_report), "Fuel tanks are at %2.0f percent.", fuel_level);
 	queue_add_text_to_speech(c, fuel_report);
 }
 
@@ -24260,7 +24267,7 @@ static void nl_set_controllable_byte_value(struct game_client *c, char *word, fl
 	i = lookup_by_id(c->shipid);
 	if (i < 0) {
 		pthread_mutex_unlock(&universe_mutex);
-		sprintf(answer, "Sorry, I can't seem to find the %s, it must be a memory error", word);
+		snprintf(answer, sizeof(answer), "Sorry, I can't seem to find the %s, it must be a memory error", word);
 		queue_add_text_to_speech(c, answer);
 		return;
 	}
@@ -24269,7 +24276,7 @@ static void nl_set_controllable_byte_value(struct game_client *c, char *word, fl
 	new_value = limit(c, new_value);
 	*bytevalue = new_value;
 	pthread_mutex_unlock(&universe_mutex);
-	sprintf(answer, "setting the %s to %3.0f percent", word, fraction * 100.0);
+	snprintf(answer, sizeof(answer), "setting the %s to %3.0f percent", word, fraction * 100.0);
 	queue_add_text_to_speech(c, answer);
 }
 
@@ -24561,7 +24568,7 @@ static void nl_set_npq(void *context, int argc, char *argv[], int pos[],
 		}
 	}
 	if (!setit) {
-		sprintf(answer, "Sorry, I do not know how to set the %s", argv[noun]);
+		snprintf(answer, sizeof(answer), "Sorry, I do not know how to set the %s", argv[noun]);
 		queue_add_text_to_speech(c, answer);
 		return;
 	}
@@ -24581,7 +24588,7 @@ no_understand:
 	queue_add_text_to_speech(c, "Sorry, I do not know how to set that.");
 	return;
 no_understand2:
-	sprintf(answer, "Sorry, I do not understand how you want me to set the %s", argv[noun]);
+	snprintf(answer, sizeof(answer), "Sorry, I do not understand how you want me to set the %s", argv[noun]);
 	queue_add_text_to_speech(c, answer);
 	return;
 }
@@ -24609,7 +24616,7 @@ static void nl_set_ship_course_to_direction_helper(struct game_client *c,
 	ship->tsd.ship.orbiting_object_id = 0xffffffff;
 	pthread_mutex_unlock(&universe_mutex);
 
-	sprintf(reply, "Setting course for %s.", destination_name);
+	snprintf(reply, sizeof(reply), "Setting course for %s.", destination_name);
 	queue_add_text_to_speech(c, reply);
 	return;
 }
@@ -24656,7 +24663,7 @@ static void nl_set_ship_course_to_dest_helper(struct game_client *c,
 	else
 		modifier = "";
 
-	sprintf(dest_name, "%s%s", modifier, name);
+	snprintf(dest_name, sizeof(dest_name), "%s%s", modifier, name);
 	nl_set_ship_course_to_direction_helper(c, ship, direction, dest_name);
 	return;
 }
@@ -24686,13 +24693,13 @@ static void nl_navigate_pnq(void *context, int argc, char *argv[], int pos[],
 	value = extra_data[number].number.value;
 	i = -1;
 	if (strcasecmp(argv[noun], "starbase") == 0) {
-		sprintf(buffer, "SB-%02.0f", value);
+		snprintf(buffer, sizeof(buffer), "SB-%02.0f", value);
 		i = natural_language_object_lookup(NULL, buffer); /* slightly racy */
 	} else if (strcasecmp(argv[noun], "gate") == 0) {
-		sprintf(buffer, "WG-%02.0f", value);
+		snprintf(buffer, sizeof(buffer), "WG-%02.0f", value);
 		i = natural_language_object_lookup(NULL, buffer); /* slightly racy */
 	} else if (strcasecmp(argv[noun], "waypoint") == 0) {
-		sprintf(buffer, "WP-%02.0f", value);
+		snprintf(buffer, sizeof(buffer), "WP-%02.0f", value);
 		wp = (int) value;
 		if (wp < 0 || wp >= bridgelist[c->bridge].nwaypoints) {
 			queue_add_text_to_speech(c, "No such waypoint recorded.");
@@ -24815,13 +24822,13 @@ static void nl_set_npnq(void *context, int argc, char *argv[], int pos[],
 	value = extra_data[number].number.value;
 	i = -1;
 	if (strcasecmp(argv[settowhat], "starbase") == 0) {
-		sprintf(buffer, "SB-%02.0f", value);
+		snprintf(buffer, sizeof(buffer), "SB-%02.0f", value);
 		i = natural_language_object_lookup(NULL, buffer); /* slightly racy */
 	} else if (strcasecmp(argv[settowhat], "gate") == 0) {
-		sprintf(buffer, "WG-%02.0f", value);
+		snprintf(buffer, sizeof(buffer), "WG-%02.0f", value);
 		i = natural_language_object_lookup(NULL, buffer); /* slightly racy */
 	} else if (strcasecmp(argv[settowhat], "waypoint") == 0) {
-		sprintf(buffer, "WP-%02.0f", value);
+		snprintf(buffer, sizeof(buffer), "WP-%02.0f", value);
 		wp = (int) value;
 		if (wp < 0 || wp >= bridgelist[c->bridge].nwaypoints) {
 			queue_add_text_to_speech(c, "No such waypoint recorded.");
@@ -24970,7 +24977,7 @@ static void nl_disengage_n(void *context, int argc, char *argv[], int pos[],
 	i = lookup_by_id(c->shipid);
 	if (i < 0) {
 		pthread_mutex_unlock(&universe_mutex);
-		sprintf(response, "Sorry, I cannot seem to disengage the %s.", argv[device]);
+		snprintf(response, sizeof(response), "Sorry, I cannot seem to disengage the %s.", argv[device]);
 		queue_add_text_to_speech(c, response);
 		return;
 	}
@@ -25060,7 +25067,7 @@ static void nl_raise_or_lower_npa(void *context, int argc, char *argv[], int pos
 			setit(c, argv[noun], 0.0);
 			return;
 		}
-		sprintf(answer, "I don't know how to %s %s %s %s\n", active_verb,
+		snprintf(answer, sizeof(answer), "I don't know how to %s %s %s %s\n", active_verb,
 				argv[noun], argv[prep], argv[adj]);
 		queue_add_text_to_speech(c, answer);
 		return;
@@ -25072,7 +25079,7 @@ static void nl_raise_or_lower_npa(void *context, int argc, char *argv[], int pos
 			}
 		}
 		if (!setit) {
-			sprintf(answer, "I don't know how to increase power to that.\n");
+			snprintf(answer, sizeof(answer), "I don't know how to increase power to that.\n");
 			queue_add_text_to_speech(c, answer);
 			return;
 		}
@@ -25086,7 +25093,7 @@ static void nl_raise_or_lower_npa(void *context, int argc, char *argv[], int pos
 			}
 		}
 		if (!setit) {
-			sprintf(answer, "I don't know how to %s power to that.\n", active_verb);
+			snprintf(answer, sizeof(answer), "I don't know how to %s power to that.\n", active_verb);
 			queue_add_text_to_speech(c, answer);
 			return;
 		}
@@ -25157,7 +25164,7 @@ static void nl_raise_or_lower_n(void *context, int argc, char *argv[], int pos[]
 		}
 	}
 	if (!setit) {
-		sprintf(answer, "Sorry, I do not know how to raise the %s", argv[noun]);
+		snprintf(answer, sizeof(answer), "Sorry, I do not know how to raise the %s", argv[noun]);
 		queue_add_text_to_speech(c, answer);
 		return;
 	}
@@ -25199,7 +25206,7 @@ static void nl_engage_n(void *context, int argc, char *argv[], int pos[],
 	i = lookup_by_id(c->shipid);
 	if (i < 0) {
 		pthread_mutex_unlock(&universe_mutex);
-		sprintf(response, "Sorry, I cannot seem to engage the %s.", argv[device]);
+		snprintf(response, sizeof(response), "Sorry, I cannot seem to engage the %s.", argv[device]);
 		queue_add_text_to_speech(c, response);
 		return;
 	}
@@ -25208,7 +25215,7 @@ static void nl_engage_n(void *context, int argc, char *argv[], int pos[],
 		pthread_mutex_unlock(&universe_mutex);
 		enough_oomph = do_engage_warp_drive(&go[i]);
 		send_initiate_warp_packet(c, enough_oomph);
-		sprintf(response, "%s engaged", argv[device]);
+		snprintf(response, sizeof(response), "%s engaged", argv[device]);
 		queue_add_text_to_speech(c, response);
 		return;
 	} else if (strcasecmp("docking system", argv[device]) == 0) {
@@ -25262,7 +25269,7 @@ static void nl_engage_npn(void *context, int argc, char *argv[], int pos[],
 		i = lookup_by_id(c->shipid);
 		if (i < 0) {
 			pthread_mutex_unlock(&universe_mutex);
-			sprintf(reply, "Sorry, I cannot seem to engage the %s.", argv[device]);
+			snprintf(reply, sizeof(reply), "Sorry, I cannot seem to engage the %s.", argv[device]);
 			queue_add_text_to_speech(c, reply);
 			return;
 		}
@@ -25270,7 +25277,7 @@ static void nl_engage_npn(void *context, int argc, char *argv[], int pos[],
 		turn_on_tractor_beam(c, &go[i], extra_data[target].external_noun.handle, 0);
 		return;
 	} else {
-		sprintf(reply, "I do not understand how engaging the %s relates to the %s\n",
+		snprintf(reply, sizeof(reply), "I do not understand how engaging the %s relates to the %s\n",
 				argv[device], argv[target]);
 		queue_add_text_to_speech(c, reply);
 		return;
@@ -25364,7 +25371,7 @@ static void nl_red_alert_p(void *context, int argc, char *argv[], int pos[],
 		if (strcasecmp(argv[prep], "off") == 0) {
 			new_alert_mode = 0;
 		} else {
-			sprintf(reply, "Sorry, I do not know what red alert %s means.", argv[prep]);
+			snprintf(reply, sizeof(reply), "Sorry, I do not know what red alert %s means.", argv[prep]);
 			queue_add_text_to_speech(c, reply);
 			return;
 		}
@@ -25372,7 +25379,7 @@ static void nl_red_alert_p(void *context, int argc, char *argv[], int pos[],
 	set_red_alert_mode(c, new_alert_mode);
 
 no_understand:
-	sprintf(reply, "Did you want red alert on or off?  I seem to have missed the preposition.");
+	snprintf(reply, sizeof(reply), "Did you want red alert on or off?  I seem to have missed the preposition.");
 	return;
 }
 
@@ -25414,7 +25421,7 @@ static void nl_onscreen_verb_n(void *context, int argc, char *argv[], int pos[],
 	if (strcasecmp(argv[noun], "screen") != 0)
 		goto no_understand;
 
-	sprintf(reply, "Main screen displaying %s", argv[verb]);
+	snprintf(reply, sizeof(reply), "Main screen displaying %s", argv[verb]);
 	queue_add_text_to_speech(c, reply);
 	send_packet_to_all_clients_on_a_bridge(c->shipid,
 			snis_opcode_pkt("bb", OPCODE_ROLE_ONSCREEN, new_displaymode),
@@ -25454,7 +25461,7 @@ static void nl_onscreen_verb_pn(void *context, int argc, char *argv[], int pos[]
 	if (strcasecmp(argv[noun], "screen") != 0)
 		goto no_understand;
 
-	sprintf(reply, "Main screen displaying %s", argv[verb]);
+	snprintf(reply, sizeof(reply), "Main screen displaying %s", argv[verb]);
 	queue_add_text_to_speech(c, reply);
 	send_packet_to_all_clients_on_a_bridge(c->shipid,
 			snis_opcode_pkt("bb", OPCODE_ROLE_ONSCREEN, new_displaymode),
@@ -25696,7 +25703,7 @@ static void nl_target_n(void *context, int argc, char *argv[], int pos[], union 
 	pthread_mutex_unlock(&universe_mutex);
 	if (!namecopy)
 		goto target_lost;
-	sprintf(reply, "Targeting sensors on %s", namecopy);
+	snprintf(reply, sizeof(reply), "Targeting sensors on %s", namecopy);
 	free(namecopy);
 	queue_add_text_to_speech(c, reply);
 	science_select_target(c, OPCODE_SCI_SELECT_TARGET_TYPE_OBJECT, id);
@@ -25727,10 +25734,10 @@ static void nl_target_nq(void *context, int argc, char *argv[], int pos[], union
 		goto target_lost;
 	amount = extra_data[number].number.value;
 	if (strcmp(argv[noun], "starbase") == 0) {
-		sprintf(buffer, "SB-%02.0f", amount);
+		snprintf(buffer, sizeof(buffer), "SB-%02.0f", amount);
 		i = natural_language_object_lookup(NULL, buffer); /* slightly racy */
 	} else if (strcmp(argv[noun], "gate") == 0) {
-		sprintf(buffer, "WG-%02.0f", amount);
+		snprintf(buffer, sizeof(buffer), "WG-%02.0f", amount);
 		i = natural_language_object_lookup(NULL, buffer); /* slightly racy */
 	} else {
 		goto target_lost;
@@ -25750,7 +25757,7 @@ static void nl_target_nq(void *context, int argc, char *argv[], int pos[], union
 	pthread_mutex_unlock(&universe_mutex);
 	if (!namecopy)
 		goto target_lost;
-	sprintf(reply, "Targeting sensors on %s", namecopy);
+	snprintf(reply, sizeof(reply), "Targeting sensors on %s", namecopy);
 	free(namecopy);
 	queue_add_text_to_speech(c, reply);
 	science_select_target(c, OPCODE_SCI_SELECT_TARGET_TYPE_OBJECT, id);
@@ -25796,32 +25803,32 @@ static void nl_damage_report(void *context, int argc, char *argv[], int pos[],
 	o = &go[i];
 
 	dr[0].percent = (int) (100.0 * (1.0 - (float) o->tsd.ship.damage.maneuvering_damage / 255.0));
-	sprintf(dr[0].system, "Maneuvering");
+	snprintf(dr[0].system, sizeof(dr[0].system), "Maneuvering");
 	dr[1].percent = (int) (100.0 * (1.0 - (float) o->tsd.ship.damage.warp_damage / 255.0));
-	sprintf(dr[1].system, "Impulse drive");
+	snprintf(dr[1].system, sizeof(dr[1].system), "Impulse drive");
 	dr[2].percent = (int) (100.0 * (1.0 - (float) o->tsd.ship.damage.impulse_damage / 255.0));
-	sprintf(dr[2].system, "Warp drive");
+	snprintf(dr[2].system, sizeof(dr[2].system), "Warp drive");
 	dr[3].percent = (int) (100.0 * (1.0 - (float) o->tsd.ship.damage.phaser_banks_damage / 255.0));
-	sprintf(dr[3].system, "Phasers");
+	snprintf(dr[3].system, sizeof(dr[3].system), "Phasers");
 	dr[4].percent = (int) (100.0 * (1.0 - (float) o->tsd.ship.damage.comms_damage / 255.0));
-	sprintf(dr[4].system, "Communications");
+	snprintf(dr[4].system, sizeof(dr[4].system), "Communications");
 	dr[5].percent = (int) (100.0 * (1.0 - (float) o->tsd.ship.damage.sensors_damage / 255.0));
-	sprintf(dr[5].system, "Sensors");
+	snprintf(dr[5].system, sizeof(dr[5].system), "Sensors");
 	dr[6].percent = (int) (100.0 * (1.0 - (float) o->tsd.ship.damage.shield_damage / 255.0));
-	sprintf(dr[6].system, "Shields");
+	snprintf(dr[6].system, sizeof(dr[6].system), "Shields");
 	dr[7].percent = (int) (100.0 * (1.0 - (float) o->tsd.ship.damage.tractor_damage / 255.0));
-	sprintf(dr[7].system, "Tractor beam");
+	snprintf(dr[7].system, sizeof(dr[7].system), "Tractor beam");
 	pthread_mutex_unlock(&universe_mutex);
 
 	qsort(dr, 8, sizeof(dr[0]), compare_damage_report_entries);
 
-	sprintf(damage_report, "Damage Report. ");
+	snprintf(damage_report, sizeof(damage_report), "Damage Report. ");
 	for (i = 0; i < 8; i++) {
 		if (dr[i].percent > 80) {
 			ok++;
 			continue;
 		}
-		sprintf(next_bit, "%s %d%%. ", dr[i].system, dr[i].percent);
+		snprintf(next_bit, sizeof(next_bit), "%s %d%%. ", dr[i].system, dr[i].percent);
 		strcat(damage_report, next_bit);
 	}
 	if (ok == 8) {
@@ -25835,7 +25842,7 @@ static void nl_damage_report(void *context, int argc, char *argv[], int pos[],
 		strcat(damage_report, " Suggest repairing sheilds immediately.");
 	}
 	queue_add_text_to_speech(c, damage_report);
-	sprintf(damage_report, "Fuel tanks are at %2.0f percent.",
+	snprintf(damage_report, sizeof(damage_report), "Fuel tanks are at %2.0f percent.",
 		100.0 * (float) o->tsd.ship.fuel / (float) UINT32_MAX);
 	queue_add_text_to_speech(c, damage_report);
 }
@@ -27063,8 +27070,8 @@ static void connect_to_multiverse(struct multiverse_server_info *msi, uint32_t i
 	char hoststr[50];
 	int flag = 1;
 
-	sprintf(portstr, "%d", port);
-	sprintf(hoststr, "%d.%d.%d.%d", x[0], x[1], x[2], x[3]);
+	snprintf(portstr, sizeof(portstr), "%d", port);
+	snprintf(hoststr, sizeof(hoststr), "%d.%d.%d.%d", x[0], x[1], x[2], x[3]);
 
 	memset(&hints, 0, sizeof(hints));
 	hints.ai_family = AF_INET;
@@ -27369,7 +27376,7 @@ int main(int argc, char *argv[])
 	init_meshes();
 
 	char commodity_path[PATH_MAX];
-	sprintf(commodity_path, "%s/%s", asset_dir, "commodities.txt");
+	snprintf(commodity_path, sizeof(commodity_path), "%s/%s", asset_dir, "commodities.txt");
 	commodity = read_commodities(commodity_path, &ncommodities);
 
 	/* count possible contraband items */
