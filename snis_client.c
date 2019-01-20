@@ -589,9 +589,9 @@ static void synchronous_update_lobby_info(void)
 			break;
 		}
 		if (errno)
-			sprintf(lobbyerror, "%s (%d)", strerror(errno), errno);
+			snprintf(lobbyerror, sizeof(lobbyerror), "%s (%d)", strerror(errno), errno);
 		else
-			sprintf(lobbyerror, "%s (%d)", gai_strerror(sock), sock);
+			snprintf(lobbyerror, sizeof(lobbyerror), "%s (%d)", gai_strerror(sock), sock);
 		fprintf(stderr, "snis_client: synchronous lobby connection failed: %s\n", lobbyerror);
 		ssgl_sleep(5);
 	}
@@ -610,7 +610,7 @@ static void synchronous_update_lobby_info(void)
 
 	rc = ssgl_recv_game_servers(sock, &game_server, &game_server_count, &filter);
 	if (rc) {
-		sprintf(lobbyerror, "ssgl_recv_game_servers failed: %s\n", strerror(errno));
+		snprintf(lobbyerror, sizeof(lobbyerror), "ssgl_recv_game_servers failed: %s\n", strerror(errno));
 		fprintf(stderr, "snis_client: synchronous lobby connection: ssgl_recv_game_server failed: %s\n",
 			lobbyerror);
 		goto handle_error;
@@ -674,9 +674,9 @@ try_again:
 			break;
 		}
 		if (errno)
-			sprintf(lobbyerror, "%s (%d)", strerror(errno), errno);
+			snprintf(lobbyerror, sizeof(lobbyerror), "%s (%d)", strerror(errno), errno);
 		else
-			sprintf(lobbyerror, "%s (%d)", 
+			snprintf(lobbyerror, sizeof(lobbyerror), "%s (%d)",
 				gai_strerror(sock), sock);
 		printf("snis_client: lobby connection failed: %s\n", lobbyerror);
 		ssgl_sleep(5);
@@ -697,7 +697,8 @@ try_again:
 	do {
 		rc = ssgl_recv_game_servers(sock, &game_server, &game_server_count, &filter);
 		if (rc) {
-			sprintf(lobbyerror, "ssgl_recv_game_servers failed: %s\n", strerror(errno));
+			snprintf(lobbyerror, sizeof(lobbyerror), "ssgl_recv_game_servers failed: %s\n",
+					strerror(errno));
 			printf("snis_client: ssgl_recv_game_server failed: %s\n", lobbyerror);
 			goto handle_error;
 		}
@@ -4520,10 +4521,10 @@ static void show_lobbyscreen(GtkWidget *w)
 		sng_abs_xy_draw_string("Copyright (C) 2010 Stephen M. Cameron", NANO_FONT,
 			txx(255), txy(550));
 		if (lobby_count >= MAX_LOBBY_TRIES)
-			sprintf(msg, "Giving up on lobby... tried %d times.",
+			snprintf(msg, sizeof(msg), "Giving up on lobby... tried %d times.",
 				lobby_count);
 		else
-			sprintf(msg, "Connecting to lobby... tried %d times.",
+			snprintf(msg, sizeof(msg), "Connecting to lobby... tried %d times.",
 				lobby_count);
 		sng_abs_xy_draw_string(msg, SMALL_FONT, txx(100), txy(400));
 		sng_abs_xy_draw_string(lobbyerror, NANO_FONT, txx(100), txy(430));
@@ -4574,29 +4575,23 @@ static void show_lobbyscreen(GtkWidget *w)
 		}
 
 		lobby_selected_server = -1;
-#if 0
-		sprintf(msg, "Connected to lobby on socket %d\n", lobby_socket);
-		sng_abs_xy_draw_string(msg, TINY_FONT, txx(30), LINEHEIGHT);
-		sprintf(msg, "Total game servers: %d\n", ngameservers);
-		sng_abs_xy_draw_string(msg, TINY_FONT, txx(30), LINEHEIGHT + txy(20));
-#endif
 		sng_center_xy_draw_string("SPACE NERDS IN SPACE LOBBY", TINY_FONT, txx(400), LINEHEIGHT);
 		sng_center_xy_draw_string("SELECT A SERVER", NANO_FONT, txx(400), LINEHEIGHT * 2);
-		sprintf(msg, "CLIENT PROTOCOL VERSION IS %s", SNIS_PROTOCOL_VERSION);
+		snprintf(msg, sizeof(msg), "CLIENT PROTOCOL VERSION IS %s", SNIS_PROTOCOL_VERSION);
 		sng_center_xy_draw_string(msg, NANO_FONT, txx(400), LINEHEIGHT * 3);
 
 		/* Draw column headings */
 		i = -1;
 		sng_set_foreground(UI_COLOR(lobby_server_heading));
-		sprintf(msg, "IP ADDRESS/PORT");
+		snprintf(msg, sizeof(msg), "IP ADDRESS/PORT");
 		sng_abs_xy_draw_string(msg, NANO_FONT, txx(30), txy(100) + i * LINEHEIGHT);
-		sprintf(msg, "GAME INSTANCE");
+		snprintf(msg, sizeof(msg), "GAME INSTANCE");
 		sng_abs_xy_draw_string(msg, NANO_FONT, txx(150), txy(100) + i * LINEHEIGHT);
-		sprintf(msg, "PROTOCOL");
+		snprintf(msg, sizeof(msg), "PROTOCOL");
 		sng_abs_xy_draw_string(msg, NANO_FONT, txx(350), txy(100) + i * LINEHEIGHT);
-		sprintf(msg, "LOCATION");
+		snprintf(msg, sizeof(msg), "LOCATION");
 		sng_abs_xy_draw_string(msg, NANO_FONT, txx(450), txy(100) + i * LINEHEIGHT);
-		sprintf(msg, "CONNECTIONS");
+		snprintf(msg, sizeof(msg), "CONNECTIONS");
 		sng_abs_xy_draw_string(msg, NANO_FONT, txx(550), txy(100) + i * LINEHEIGHT);
 
 		/* Draw server info */
@@ -4622,22 +4617,23 @@ static void show_lobbyscreen(GtkWidget *w)
 				lobby_selected_server = 0;
 			}
 			 
-			sprintf(msg, "%hhu.%hhu.%hhu.%hhu/%hu", x[0], x[1], x[2], x[3], lobby_game_server[i].port);
+			snprintf(msg, sizeof(msg), "%hhu.%hhu.%hhu.%hhu/%hu", x[0], x[1], x[2], x[3],
+					lobby_game_server[i].port);
 			sng_abs_xy_draw_string(msg, NANO_FONT, txx(30), txy(100) + i * LINEHEIGHT);
-			sprintf(msg, "%s", lobby_game_server[i].game_instance);
+			snprintf(msg, sizeof(msg), "%s", lobby_game_server[i].game_instance);
 			sng_abs_xy_draw_string(msg, NANO_FONT, txx(150), txy(100) + i * LINEHEIGHT);
 			protocol_mismatch = strncmp(lobby_game_server[i].protocol_version, SNIS_PROTOCOL_VERSION,
 							sizeof(lobby_game_server[i].protocol_version)) != 0;
 			if (timer & 0x04 || !protocol_mismatch) {
 				if (protocol_mismatch)
 					sng_set_foreground(ORANGERED);
-				sprintf(msg, "%s", lobby_game_server[i].protocol_version);
+				snprintf(msg, sizeof(msg), "%s", lobby_game_server[i].protocol_version);
 				sng_abs_xy_draw_string(msg, NANO_FONT, txx(350), txy(100) + i * LINEHEIGHT);
 			}
 			sng_set_foreground(UI_COLOR(lobby_connecting));
-			sprintf(msg, "%s", lobby_game_server[i].location);
+			snprintf(msg, sizeof(msg), "%s", lobby_game_server[i].location);
 			sng_abs_xy_draw_string(msg, NANO_FONT, txx(450), txy(100) + i * LINEHEIGHT);
-			sprintf(msg, "%d", lobby_game_server[i].nconnections);
+			snprintf(msg, sizeof(msg), "%d", lobby_game_server[i].nconnections);
 			sng_abs_xy_draw_string(msg, NANO_FONT, txx(550), txy(100) + i * LINEHEIGHT);
 		}
 		pthread_mutex_unlock(&lobby_data_mutex);
@@ -7111,19 +7107,19 @@ static int process_add_player_error(uint8_t *error)
 		return rc;
 	switch (err) {
 	case ADD_PLAYER_ERROR_SHIP_DOES_NOT_EXIST:
-		sprintf(login_failed_msg, "NO SHIP BY THAT NAME EXISTS");
+		snprintf(login_failed_msg, sizeof(login_failed_msg), "NO SHIP BY THAT NAME EXISTS");
 		break;
 	case ADD_PLAYER_ERROR_SHIP_ALREADY_EXISTS:
-		sprintf(login_failed_msg, "A SHIP WITH THAT NAME ALREADY_EXISTS");
+		snprintf(login_failed_msg, sizeof(login_failed_msg), "A SHIP WITH THAT NAME ALREADY_EXISTS");
 		break;
 	case ADD_PLAYER_ERROR_FAILED_VERIFICATION:
-		sprintf(login_failed_msg, "FAILED BRIDGE VERIFICATION");
+		snprintf(login_failed_msg, sizeof(login_failed_msg), "FAILED BRIDGE VERIFICATION");
 		break;
 	case ADD_PLAYER_ERROR_TOO_MANY_BRIDGES:
-		sprintf(login_failed_msg, "TOO_MANY_BRIDGES");
+		snprintf(login_failed_msg, sizeof(login_failed_msg), "TOO_MANY_BRIDGES");
 		break;
 	default:
-		sprintf(login_failed_msg, "UNKNOWN ERROR");
+		snprintf(login_failed_msg, sizeof(login_failed_msg), "UNKNOWN ERROR");
 		break;
 	}
 	login_failed_timer = FRAME_RATE_HZ * 5;
@@ -7661,13 +7657,13 @@ static void *connect_to_gameserver_thread(__attribute__((unused)) void *arg)
 	fprintf(stderr, "snis_client: connect to gameserver thread\n");
 	if (avoid_lobby) {
 		strcpy(hoststr, serverhost);
-		sprintf(portstr, "%d", serverport);
+		snprintf(portstr, sizeof(portstr), "%d", serverport);
 	} else {
 		fprintf(stderr, "snis_client: connect_to_gameserver_thread, lobby_selected_server = %d\n",
 				lobby_selected_server);
 		x = (unsigned char *) &lobby_game_server[lobby_selected_server].ipaddr;
-		sprintf(portstr, "%d", ntohs(lobby_game_server[lobby_selected_server].port));
-		sprintf(hoststr, "%d.%d.%d.%d", x[0], x[1], x[2], x[3]);
+		snprintf(portstr, sizeof(portstr), "%d", ntohs(lobby_game_server[lobby_selected_server].port));
+		snprintf(hoststr, sizeof(hoststr), "%d.%d.%d.%d", x[0], x[1], x[2], x[3]);
 	}
 	fprintf(stderr, "snis_client: connecting to %s/%s\n", hoststr, portstr);
 	strncpy(connecting_to_server_msg, "CONNECTING TO SERVER...",
@@ -8560,12 +8556,12 @@ static void show_weapons_camera_view(GtkWidget *w)
 			sng_set_foreground(UI_COLOR(weap_torpedoes_loading));
 		else
 			sng_set_foreground(UI_COLOR(weap_torpedoes_loaded));
-		sprintf(buf, "TORP: %03d", o->tsd.ship.torpedoes +
+		snprintf(buf, sizeof(buf), "TORP: %03d", o->tsd.ship.torpedoes +
 					o->tsd.ship.torpedoes_loading +
 					o->tsd.ship.torpedoes_loaded);
 		sng_abs_xy_draw_string(buf, NANO_FONT, 570 * SCREEN_WIDTH / 800,
 					SCREEN_HEIGHT - 15 * SCREEN_HEIGHT / 600);
-		sprintf(buf, "MISSILES: %03d", o->tsd.ship.missile_count);
+		snprintf(buf, sizeof(buf), "MISSILES: %03d", o->tsd.ship.missile_count);
 		sng_abs_xy_draw_string(buf, NANO_FONT, 700 * SCREEN_WIDTH / 800,
 					SCREEN_HEIGHT - 15 * SCREEN_HEIGHT / 600);
 	}
@@ -8943,44 +8939,44 @@ static void snis_draw_science_guy(GtkWidget *w, GdkGC *gc, struct snis_entity *o
 				unit_type = ship_type[o->sdata.subclass].rts_unit_type;
 				unit_type_name = unit_type < 0 ? "UNKNOWN" :
 						rts_unit_type(unit_type)->name;
-				sprintf(buffer, "%s %s\n", o->sdata.name, unit_type_name);
+				snprintf(buffer, sizeof(buffer), "%s %s\n", o->sdata.name, unit_type_name);
 			} else {
-				sprintf(buffer, "%s %s\n", o->sdata.name,
+				snprintf(buffer, sizeof(buffer), "%s %s\n", o->sdata.name,
 					ship_type[o->sdata.subclass].class);
 			}
 			break;
 		case OBJTYPE_SHIP1:
 			sng_set_foreground(UI_COLOR(sci_ball_ship));
-			sprintf(buffer, "%s %s\n", o->sdata.name,
+			snprintf(buffer, sizeof(buffer), "%s %s\n", o->sdata.name,
 					ship_type[o->sdata.subclass].class); 
 			break;
 		case OBJTYPE_WARPGATE:
 			sng_set_foreground(UI_COLOR(sci_ball_warpgate));
-			sprintf(buffer, "%s %s\n", "WG",  o->sdata.name);
+			snprintf(buffer, sizeof(buffer), "%s %s\n", "WG",  o->sdata.name);
 			break;
 		case OBJTYPE_STARBASE:
 			sng_set_foreground(UI_COLOR(sci_ball_starbase));
-			sprintf(buffer, "%s %s\n", "SB",  o->sdata.name);
+			snprintf(buffer, sizeof(buffer), "%s %s\n", "SB",  o->sdata.name);
 			break;
 		case OBJTYPE_ASTEROID:
 			sng_set_foreground(UI_COLOR(sci_ball_asteroid));
-			sprintf(buffer, "%s %s\n", "A",  o->sdata.name);
+			snprintf(buffer, sizeof(buffer), "%s %s\n", "A",  o->sdata.name);
 			break;
 		case OBJTYPE_DERELICT:
 			sng_set_foreground(UI_COLOR(sci_ball_derelict));
-			sprintf(buffer, "%s %s\n", "D",  "???"); 
+			snprintf(buffer, sizeof(buffer), "%s %s\n", "D",  "???");
 			break;
 		case OBJTYPE_BLACK_HOLE:
 			sng_set_foreground(UI_COLOR(sci_ball_black_hole));
-			sprintf(buffer, "%s %s\n", "B",  o->sdata.name);
+			snprintf(buffer, sizeof(buffer), "%s %s\n", "B",  o->sdata.name);
 			break;
 		case OBJTYPE_SPACEMONSTER:
 			sng_set_foreground(UI_COLOR(sci_ball_monster));
-			sprintf(buffer, "%s\n", o->sdata.name);
+			snprintf(buffer, sizeof(buffer), "%s\n", o->sdata.name);
 			break;
 		case OBJTYPE_PLANET:
 			sng_set_foreground(UI_COLOR(sci_ball_planet));
-			sprintf(buffer, "%s %s\n", "P",  o->sdata.name); 
+			snprintf(buffer, sizeof(buffer), "%s %s\n", "P",  o->sdata.name);
 			break;
 		case OBJTYPE_TORPEDO:
 		case OBJTYPE_MISSILE:
@@ -8992,7 +8988,7 @@ static void snis_draw_science_guy(GtkWidget *w, GdkGC *gc, struct snis_entity *o
 			break;
 		default:
 			sng_set_foreground(UI_COLOR(sci_ball_default_blip));
-			sprintf(buffer, "%s %s\n", "?", o->sdata.name); 
+			snprintf(buffer, sizeof(buffer), "%s %s\n", "?", o->sdata.name);
 			break;
 		}
 		sng_abs_xy_draw_string(buffer, PICO_FONT, x + 8, y - 8);
@@ -9094,31 +9090,31 @@ static void snis_draw_3d_science_guy(GtkWidget *w, GdkGC *gc, struct snis_entity
 		case OBJTYPE_SHIP2:
 		case OBJTYPE_SHIP1:
 			sng_set_foreground(UI_COLOR(sci_ball_ship));
-			sprintf(buffer, "%s %s\n", o->sdata.name,
+			snprintf(buffer, sizeof(buffer), "%s %s\n", o->sdata.name,
 				ship_type[o->sdata.subclass].class); 
 			break;
 		case OBJTYPE_WARPGATE:
 			sng_set_foreground(UI_COLOR(sci_ball_warpgate));
-			sprintf(buffer, "%s %s\n", "SB",  o->sdata.name);
+			snprintf(buffer, sizeof(buffer), "%s %s\n", "SB",  o->sdata.name);
 		case OBJTYPE_STARBASE:
 			sng_set_foreground(UI_COLOR(sci_ball_starbase));
-			sprintf(buffer, "%s %s\n", "SB",  o->sdata.name);
+			snprintf(buffer, sizeof(buffer), "%s %s\n", "SB",  o->sdata.name);
 			break;
 		case OBJTYPE_ASTEROID:
 			sng_set_foreground(UI_COLOR(sci_ball_asteroid));
-			sprintf(buffer, "%s %s\n", "A",  o->sdata.name);
+			snprintf(buffer, sizeof(buffer), "%s %s\n", "A",  o->sdata.name);
 			break;
 		case OBJTYPE_DERELICT:
 			sng_set_foreground(UI_COLOR(sci_ball_asteroid));
-			sprintf(buffer, "%s %s\n", "A",  "???");
+			snprintf(buffer, sizeof(buffer), "%s %s\n", "A",  "???");
 			break;
 		case OBJTYPE_BLACK_HOLE:
 			sng_set_foreground(UI_COLOR(sci_ball_black_hole));
-			sprintf(buffer, "%s %s\n", "B",  o->sdata.name);
+			snprintf(buffer, sizeof(buffer), "%s %s\n", "B",  o->sdata.name);
 			break;
 		case OBJTYPE_PLANET:
 			sng_set_foreground(UI_COLOR(sci_ball_planet));
-			sprintf(buffer, "%s %s\n", "P",  o->sdata.name); 
+			snprintf(buffer, sizeof(buffer), "%s %s\n", "P",  o->sdata.name);
 			break;
 		case OBJTYPE_TORPEDO:
 		case OBJTYPE_MISSILE:
@@ -9130,7 +9126,7 @@ static void snis_draw_3d_science_guy(GtkWidget *w, GdkGC *gc, struct snis_entity
 			break;
 		default:
 			sng_set_foreground(UI_COLOR(sci_ball_default_blip));
-			sprintf(buffer, "%s %s\n", "?", o->sdata.name); 
+			snprintf(buffer, sizeof(buffer), "%s %s\n", "?", o->sdata.name);
 			break;
 		}
 		sng_abs_xy_draw_string(buffer, PICO_FONT, *x + 8, *y - 8);
@@ -9639,7 +9635,8 @@ static void draw_sciplane_display(GtkWidget *w, struct snis_entity *o, double ra
 				sng_draw_dotted_line(sx1, sy1, sx2, sy2);
 			}
 			if (!transform_point(instrumentecx, x3, o->y, z3, &sx3, &sy3)) {
-				sprintf(buf, "%d", (int)math_angle_to_game_angle_degrees(i * 360.0/slices));
+				snprintf(buf, sizeof(buf), "%d",
+					(int) math_angle_to_game_angle_degrees(i * 360.0/slices));
 				sng_center_xy_draw_string(buf, font, sx3, sy3);
 			}
 		}
@@ -10849,22 +10846,22 @@ static void show_death_screen(GtkWidget *w)
 	sng_set_foreground(UI_COLOR(death_text));
 
 	if (o->tsd.ship.oxygen < 10) {
-		sprintf(buf, "YOUR CREW HAS DIED");
+		snprintf(buf, sizeof(buf), "YOUR CREW HAS DIED");
 		sng_abs_xy_draw_string(buf, BIG_FONT, txx(20), txy(150));
-		sprintf(buf, "BY ASPHYXIATION");
+		snprintf(buf, sizeof(buf), "BY ASPHYXIATION");
 		sng_abs_xy_draw_string(buf, BIG_FONT, txx(20), txy(250));
-		sprintf(buf, "RESPAWNING IN %d SECONDS", o->respawn_time);
+		snprintf(buf, sizeof(buf), "RESPAWNING IN %d SECONDS", o->respawn_time);
 		sng_abs_xy_draw_string(buf, TINY_FONT, txx(20), txy(500));
 	} else {
-		sprintf(buf, "YOUR SHIP");
+		snprintf(buf, sizeof(buf), "YOUR SHIP");
 		sng_abs_xy_draw_string(buf, BIG_FONT, txx(20), txy(150));
-		sprintf(buf, "HAS BEEN");
+		snprintf(buf, sizeof(buf), "HAS BEEN");
 		sng_abs_xy_draw_string(buf, BIG_FONT, txx(20), txy(250));
-		sprintf(buf, "BLOWN TO");
+		snprintf(buf, sizeof(buf), "BLOWN TO");
 		sng_abs_xy_draw_string(buf, BIG_FONT, txx(20), txy(350));
-		sprintf(buf, "SMITHEREENS");
+		snprintf(buf, sizeof(buf), "SMITHEREENS");
 		sng_abs_xy_draw_string(buf, BIG_FONT, txx(20), txy(450));
-		sprintf(buf, "RESPAWNING IN %d SECONDS", o->respawn_time);
+		snprintf(buf, sizeof(buf), "RESPAWNING IN %d SECONDS", o->respawn_time);
 		sng_abs_xy_draw_string(buf, TINY_FONT, txx(20), txy(500));
 	}
 }
@@ -10874,9 +10871,9 @@ static void show_rts_loss_screen(GtkWidget *w)
 	char buf[100];
 
 	sng_set_foreground(UI_COLOR(death_text));
-	sprintf(buf, "YOU HAVE");
+	snprintf(buf, sizeof(buf), "YOU HAVE");
 	sng_abs_xy_draw_string(buf, BIG_FONT, txx(20), txy(150));
-	sprintf(buf, "BEEN DEFEATED...");
+	snprintf(buf, sizeof(buf), "BEEN DEFEATED...");
 	sng_abs_xy_draw_string(buf, BIG_FONT, txx(20), txy(250));
 }
 
@@ -10885,9 +10882,9 @@ static void show_rts_win_screen(GtkWidget *w)
 	char buf[100];
 
 	sng_set_foreground(UI_COLOR(death_text));
-	sprintf(buf, "YOU HAVE DEFEATED");
+	snprintf(buf, sizeof(buf), "YOU HAVE DEFEATED");
 	sng_abs_xy_draw_string(buf, BIG_FONT, txx(20), txy(150));
-	sprintf(buf, "THE ENEMY...");
+	snprintf(buf, sizeof(buf), "THE ENEMY...");
 	sng_abs_xy_draw_string(buf, BIG_FONT, txx(20), txy(250));
 }
 
@@ -11469,7 +11466,7 @@ static void draw_3d_nav_starmap(GtkWidget *w, GdkGC *gc)
 		if (!s)
 			continue;
 		entity_get_screen_coords(e, &sx, &sy);
-		sprintf(buffer, "%s", s->name);
+		snprintf(buffer, sizeof(buffer), "%s", s->name);
 		sng_abs_xy_draw_string(buffer, NANO_FONT, sx + 10, sy - 15);
 	}
 	pthread_mutex_unlock(&universe_mutex);
@@ -11693,18 +11690,18 @@ static void draw_attitude_indicator_reticles(GtkWidget *w, GdkGC *gc, struct sni
 		m = 0;
 		if (i >= 270) {
 			m = abs(i - 360);
-			sprintf(buffer, "%d", m);
+			snprintf(buffer, sizeof(buffer), "%d", m);
 		} else if (i >= 180) {
 			m = abs(i - 180);
-			sprintf(buffer, "%d", m);
+			snprintf(buffer, sizeof(buffer), "%d", m);
 		} else if (i >= 90) {
 			m = -abs(i - 180);
-			sprintf(buffer, "%d", m);
+			snprintf(buffer, sizeof(buffer), "%d", m);
 		} else if (i >= 0) {
 			m = -i;
-			sprintf(buffer, "%d", m);
+			snprintf(buffer, sizeof(buffer), "%d", m);
 		} else {
-			sprintf(buffer, "%d", (int) (display_mark * 180.0 / M_PI));
+			snprintf(buffer, sizeof(buffer), "%d", (int) (display_mark * 180.0 / M_PI));
 		}
 		if (fabs((float) m - 180.0 * display_mark / M_PI) < 2.5) {
 			/* Change the color of tick mark if it is close enough to display_mark. */
@@ -11761,9 +11758,9 @@ static void draw_attitude_indicator_reticles(GtkWidget *w, GdkGC *gc, struct sni
 
 		sng_set_foreground(UI_COLOR(nav_heading_ring));
 		if (i > 0)
-			sprintf(buffer, "%d", (360 + 90 - i) % 360);
+			snprintf(buffer, sizeof(buffer), "%d", (360 + 90 - i) % 360);
 		else
-			sprintf(buffer, "%d", (int) (360 + 90 - 180.0 * angle / M_PI) % 360);
+			snprintf(buffer, sizeof(buffer), "%d", (int) (360 + 90 - 180.0 * angle / M_PI) % 360);
 		snis_draw_3d_line(w, gc, instrumentecx,
 				v3.v.x, v3.v.y, v3.v.z, v4.v.x, v4.v.y, v4.v.z);
 		if (draw_numbers && dot >= 0)
@@ -12353,7 +12350,7 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 			/* It is a waypoint */
 			waypoint_diff = waypoint_diff / 3;
 			entity_get_screen_coords(e, &sx, &sy);
-			sprintf(buffer, "WAYPOINT-%02d", waypoint_diff);
+			snprintf(buffer, sizeof(buffer), "WAYPOINT-%02d", waypoint_diff);
 			sng_abs_xy_draw_string(buffer, NANO_FONT, sx + 10, sy - 15);
 		} else if (arrow_label_diff >= 0 && arrow_label_diff < 4) { /* Arrow head */
 			entity_get_screen_coords(e, &sx, &sy);
@@ -12363,7 +12360,7 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 			/* It is not a waypoint */
 			entity_get_screen_coords(e, &sx, &sy);
 			if (o->sdata.science_data_known) {
-				sprintf(buffer, "%s", o->sdata.name);
+				snprintf(buffer, sizeof(buffer), "%s", o->sdata.name);
 				sng_abs_xy_draw_string(buffer, NANO_FONT, sx + 10, sy - 15);
 			}
 		}
@@ -12427,23 +12424,23 @@ static void show_navigation(GtkWidget *w)
 				UI_COLOR(nav_reverse_button) : UI_COLOR(nav_button));
 
 	current_zoom = newzoom(current_zoom, o->tsd.ship.navzoom);
-	sprintf(buf, "POSITION:");
+	snprintf(buf, sizeof(buf), "POSITION:");
 	sng_abs_xy_draw_string(buf, NANO_FONT, txx(75), txy(15));
-	sprintf(buf, "(%5.2lf,", o->x);
+	snprintf(buf, sizeof(buf), "(%5.2lf,", o->x);
 	sng_abs_xy_draw_string(buf, NANO_FONT, txx(120), txy(15));
-	sprintf(buf, "%5.2lf,", o->y);
+	snprintf(buf, sizeof(buf), "%5.2lf,", o->y);
 	sng_abs_xy_draw_string(buf, NANO_FONT, txx(175), txy(15));
-	sprintf(buf, "%5.2lf)", o->z);
+	snprintf(buf, sizeof(buf), "%5.2lf)", o->z);
 	sng_abs_xy_draw_string(buf, NANO_FONT, txx(230), txy(15));
 
 	double display_mark;
 	to_snis_heading_mark(&o->orientation, &display_heading, &display_mark);
-	sprintf(buf, "HEADING: %3.1lf", radians_to_degrees(display_heading));
+	snprintf(buf, sizeof(buf), "HEADING: %3.1lf", radians_to_degrees(display_heading));
 	sng_abs_xy_draw_string(buf, NANO_FONT, txx(5), txy(190));
-	sprintf(buf, "MARK: %3.1lf", radians_to_degrees(display_mark));
+	snprintf(buf, sizeof(buf), "MARK: %3.1lf", radians_to_degrees(display_mark));
 	sng_abs_xy_draw_string(buf, NANO_FONT, txx(5), txy(202));
 
-	sprintf(buf, o->tsd.ship.docking_magnets ? "DOCKING MAGNETS ENGAGED" : "DOCKING MAGNETS OFF");
+	snprintf(buf, sizeof(buf), o->tsd.ship.docking_magnets ? "DOCKING MAGNETS ENGAGED" : "DOCKING MAGNETS OFF");
 	sng_abs_xy_draw_string(buf, NANO_FONT, txx(75), txy(25));
 
 	quat_to_euler(&ypr, &o->orientation);	
@@ -13197,7 +13194,7 @@ static void show_engineering_damage_report(GtkWidget *w, int subsystem)
 			sng_set_foreground(UI_COLOR(eng_caution_status));
 		else
 			sng_set_foreground(UI_COLOR(eng_good_status));
-		sprintf(msg, "%3.2f%%: %s",
+		snprintf(msg, sizeof(msg), "%3.2f%%: %s",
 			(1.0f - (float) o->tsd.part.damage / 255.0f) * 100.0f,
 			damcon_part_name(o->tsd.part.system, o->tsd.part.part));
 		sng_abs_xy_draw_string(msg, NANO_FONT, x + 10, y + 10);
@@ -13458,7 +13455,7 @@ static void draw_damcon_socket_or_part(GtkWidget *w, struct snis_damcon_entity *
 		return;
 	x = damconx_to_screenx(o->x);
 	y = damcony_to_screeny(o->y);
-	sprintf(msg, "%d %d", o->tsd.socket.system, o->tsd.socket.part);
+	snprintf(msg, sizeof(msg), "%d %d", o->tsd.socket.system, o->tsd.socket.part);
 	sng_set_foreground(color);
 	sng_draw_vect_obj(&placeholder_socket, x, y);
 	sng_abs_xy_draw_string(msg, NANO_FONT, x - 10, y);
@@ -13490,7 +13487,7 @@ static void draw_damcon_part(GtkWidget *w, struct snis_damcon_entity *o)
 	else
 		dist = 1000000;
 	if (dist < 150)
-		sprintf(msg, "%s%s",
+		snprintf(msg, sizeof(msg), "%s%s",
 			damcon_part_name(o->tsd.part.system, o->tsd.part.part),
 			o->tsd.part.damage == 255 ? " (BADLY DAMAGED)" : "");
 	else
@@ -14067,7 +14064,7 @@ static void comms_rts_build_unit_button_pressed(void *x)
 		pthread_mutex_unlock(&universe_mutex);
 	} else { /* Figure out which starbase to use */
 		char sbname[10];
-		sprintf(sbname, "SB-%02d", o->tsd.ship.rts_active_button);
+		snprintf(sbname, sizeof(sbname), "SB-%02d", o->tsd.ship.rts_active_button);
 		pthread_mutex_lock(&universe_mutex);
 		for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
 			if (go[i].alive && go[i].type == OBJTYPE_STARBASE) {
@@ -14288,7 +14285,7 @@ static void init_comms_ui(void)
 	snis_button_set_sound(comms_ui.rts_fleet_button, UISND18);
 	for (i = 0; i < NUM_RTS_BASES; i++) {
 		char name[20];
-		sprintf(name, "SB-%02d ?/? X", i);
+		snprintf(name, sizeof(name), "SB-%02d ?/? X", i);
 		comms_ui.rts_starbase_button[i] = snis_button_init(txx(160) + rts_button_spacing * i,
 			rts_button_y, -1, txy(20), name, button_color, NANO_FONT,
 			comms_rts_button_pressed, (void *) ((intptr_t) i));
@@ -14505,7 +14502,8 @@ static void comms_setup_rts_buttons(int activate, struct snis_entity *player_shi
 						activity = ' ';
 					else
 						activity = spinner[(starbase->tsd.starbase.time_left_to_build / 2) % 4];
-					sprintf(button_label, "SB-%02d %01d/%01d %c", j, us, them, activity);
+					snprintf(button_label, sizeof(button_label), "SB-%02d %01d/%01d %c",
+							j, us, them, activity);
 					snis_button_set_label(comms_ui.rts_starbase_button[j], button_label);
 					if (starbase->tsd.starbase.occupant[3] == player_ship->sdata.faction)
 						snis_button_set_color(comms_ui.rts_starbase_button[j],
@@ -14531,7 +14529,7 @@ static void comms_setup_rts_buttons(int activate, struct snis_entity *player_shi
 					activity = spinner[(starbase->tsd.planet.time_left_to_build / 2) % 4];
 			}
 			set_planet_spinner++;
-			sprintf(button_label, "HOME PLANET %c", activity);
+			snprintf(button_label, sizeof(button_label), "HOME PLANET %c", activity);
 			snis_button_set_label(comms_ui.rts_main_planet_button, button_label);
 		}
 	}
@@ -14912,10 +14910,10 @@ static void draw_science_data(GtkWidget *w, struct snis_entity *ship, struct sni
 	snis_draw_rectangle(0, SCIENCE_DATA_X, SCIENCE_DATA_Y,
 					SCIENCE_DATA_W, SCIENCE_DATA_H);
 	if (waypoint_index != (uint32_t) -1)  {
-		sprintf(buffer, "NAME: WAYPOINT-%02d", waypoint_index);
+		snprintf(buffer, sizeof(buffer), "NAME: WAYPOINT-%02d", waypoint_index);
 		sng_abs_xy_draw_string(buffer, TINY_FONT, x, y);
 	} else {
-		sprintf(buffer, "NAME: %s", o ? o->sdata.name : "");
+		snprintf(buffer, sizeof(buffer), "NAME: %s", o ? o->sdata.name : "");
 		sng_abs_xy_draw_string(buffer, TINY_FONT, x, y);
 		if (o && (o->type == OBJTYPE_SHIP1 ||
 			o->type == OBJTYPE_SHIP2 ||
@@ -14927,13 +14925,13 @@ static void draw_science_data(GtkWidget *w, struct snis_entity *ship, struct sni
 				o->sdata.faction >= 0 &&
 				o->sdata.faction < nfactions() ?
 					faction_name(o->sdata.faction) : "UNKNOWN" : "UNKNOWN";
-			sprintf(buffer, "ORIG: %s", the_faction);
+			snprintf(buffer, sizeof(buffer), "ORIG: %s", the_faction);
 			sng_abs_xy_draw_string(buffer, TINY_FONT, x, y);
 			y += yinc;
 			if (o->type != OBJTYPE_DERELICT)
-				sprintf(buffer, "REGISTRATION: %d", o->id);
+				snprintf(buffer, sizeof(buffer), "REGISTRATION: %d", o->id);
 			else
-				sprintf(buffer, "REGISTRATION: %d", o->tsd.derelict.orig_ship_id);
+				snprintf(buffer, sizeof(buffer), "REGISTRATION: %d", o->tsd.derelict.orig_ship_id);
 			sng_abs_xy_draw_string(buffer, TINY_FONT, x, y);
 		}
 	}
@@ -14947,63 +14945,64 @@ static void draw_science_data(GtkWidget *w, struct snis_entity *ship, struct sni
 				unit_type = ship_type[o->sdata.subclass].rts_unit_type;
 				unit_type_name = unit_type < 0 ? "UNKNOWN" :
 						rts_unit_type(unit_type)->name,
-				sprintf(buffer, "TYPE: %s (%s)", ship_type[o->sdata.subclass].class,
+				snprintf(buffer, sizeof(buffer), "TYPE: %s (%s)",
+						ship_type[o->sdata.subclass].class,
 					unit_type_name);
 			} else {
-				sprintf(buffer, "TYPE: %s", ship_type[o->sdata.subclass].class);
+				snprintf(buffer, sizeof(buffer), "TYPE: %s", ship_type[o->sdata.subclass].class);
 			}
 			break;
 		case OBJTYPE_STARBASE:
-			sprintf(buffer, "TYPE: %s", "STARBASE");
+			snprintf(buffer, sizeof(buffer), "TYPE: %s", "STARBASE");
 			break;
 		case OBJTYPE_WARPGATE:
-			sprintf(buffer, "TYPE: %s", "WARPGATE");
+			snprintf(buffer, sizeof(buffer), "TYPE: %s", "WARPGATE");
 			break;
 		case OBJTYPE_ASTEROID:
-			sprintf(buffer, "TYPE: %s", "ASTEROID");
+			snprintf(buffer, sizeof(buffer), "TYPE: %s", "ASTEROID");
 			break;
 		case OBJTYPE_DERELICT:
-			sprintf(buffer, "TYPE: %s", "DERELICT");
+			snprintf(buffer, sizeof(buffer), "TYPE: %s", "DERELICT");
 			break;
 		case OBJTYPE_WARP_CORE:
-			sprintf(buffer, "TYPE: %s", "EJECTED WARP CORE");
+			snprintf(buffer, sizeof(buffer), "TYPE: %s", "EJECTED WARP CORE");
 			break;
 		default:
-			sprintf(buffer, "TYPE: %s", "UNKNOWN"); 
+			snprintf(buffer, sizeof(buffer), "TYPE: %s", "UNKNOWN");
 			break;
 		}
 	} else if (waypoint_index != (uint32_t) -1) {
-		sprintf(buffer, "TYPE: WAYPOINT");
+		snprintf(buffer, sizeof(buffer), "TYPE: WAYPOINT");
 	} else {
-		sprintf(buffer, "TYPE:"); 
+		snprintf(buffer, sizeof(buffer), "TYPE:");
 	}
 	y += yinc;
 	sng_abs_xy_draw_string(buffer, TINY_FONT, x, y);
 
 	if (o)
-		sprintf(buffer, "X: %0.2lf", o->x);
+		snprintf(buffer, sizeof(buffer), "X: %0.2lf", o->x);
 	else if (waypoint_index != (uint32_t) -1)
-		sprintf(buffer, "X: %0.2lf", sci_ui.waypoint[waypoint_index][0]);
+		snprintf(buffer, sizeof(buffer), "X: %0.2lf", sci_ui.waypoint[waypoint_index][0]);
 	else
-		sprintf(buffer, "X:");
+		snprintf(buffer, sizeof(buffer), "X:");
 	y += yinc;
 	sng_abs_xy_draw_string(buffer, TINY_FONT, x, y);
 
 	if (o)
-		sprintf(buffer, "Y: %0.2lf", o->y);
+		snprintf(buffer, sizeof(buffer), "Y: %0.2lf", o->y);
 	else if (waypoint_index != (uint32_t) -1)
-		sprintf(buffer, "Y: %0.2lf", sci_ui.waypoint[waypoint_index][1]);
+		snprintf(buffer, sizeof(buffer), "Y: %0.2lf", sci_ui.waypoint[waypoint_index][1]);
 	else
-		sprintf(buffer, "Y:");
+		snprintf(buffer, sizeof(buffer), "Y:");
 	y += yinc;
 	sng_abs_xy_draw_string(buffer, TINY_FONT, x, y);
 
 	if (o)
-		sprintf(buffer, "Z: %0.2lf", o->z);
+		snprintf(buffer, sizeof(buffer), "Z: %0.2lf", o->z);
 	else if (waypoint_index != (uint32_t) -1)
-		sprintf(buffer, "Z: %0.2lf", sci_ui.waypoint[waypoint_index][2]);
+		snprintf(buffer, sizeof(buffer), "Z: %0.2lf", sci_ui.waypoint[waypoint_index][2]);
 	else
-		sprintf(buffer, "Z:");
+		snprintf(buffer, sizeof(buffer), "Z:");
 	y += yinc;
 	sng_abs_xy_draw_string(buffer, TINY_FONT, x, y);
 
@@ -15019,9 +15018,9 @@ static void draw_science_data(GtkWidget *w, struct snis_entity *ship, struct sni
 		if (v > 3000)
 			v = 0;
 		lastvel = v;
-		sprintf(buffer, "VELOCITY: %0.1lf", v);
+		snprintf(buffer, sizeof(buffer), "VELOCITY: %0.1lf", v);
 	} else {
-		sprintf(buffer, "VELOCITY: 0.0");
+		snprintf(buffer, sizeof(buffer), "VELOCITY: 0.0");
 	}
 	y += yinc;
 	sng_abs_xy_draw_string(buffer, TINY_FONT, x, y);
@@ -15045,11 +15044,11 @@ static void draw_science_data(GtkWidget *w, struct snis_entity *ship, struct sni
 		double bearing=0, mark=0;
 		to_snis_heading_mark(&q_to_o, &bearing, &mark);
 
-		sprintf(buffer,  "BEARING: %0.1lf", radians_to_degrees(bearing));
-		sprintf(buffer2, "MARK: %0.1lf", radians_to_degrees(mark));
+		snprintf(buffer,  sizeof(buffer), "BEARING: %0.1lf", radians_to_degrees(bearing));
+		snprintf(buffer2, sizeof(buffer2), "MARK: %0.1lf", radians_to_degrees(mark));
 	} else {
-		sprintf(buffer,  "BEARING:");
-		sprintf(buffer2, "MARK:");
+		snprintf(buffer,  sizeof(buffer), "BEARING:");
+		snprintf(buffer2, sizeof(buffer2), "MARK:");
 	}
 	y += yinc;
 	sng_abs_xy_draw_string(buffer, TINY_FONT, x, y);
@@ -15058,9 +15057,9 @@ static void draw_science_data(GtkWidget *w, struct snis_entity *ship, struct sni
 
 	if (o || waypoint_index != (uint32_t) -1) {
 		range = dist3d(dx, dy, dz);
-		sprintf(buffer, "RANGE: %8.2lf", range);
+		snprintf(buffer, sizeof(buffer), "RANGE: %8.2lf", range);
 	} else {
-		sprintf(buffer, "RANGE:");
+		snprintf(buffer, sizeof(buffer), "RANGE:");
 	}
 	y += yinc;
 	sng_abs_xy_draw_string(buffer, TINY_FONT, x, y);
@@ -15068,17 +15067,17 @@ static void draw_science_data(GtkWidget *w, struct snis_entity *ship, struct sni
 	if (o || waypoint_index != (uint32_t) -1) {
 		closing_rate = FRAME_RATE_HZ * (last_range - range);
 		last_range = range;
-		sprintf(buffer, "CLOSING RATE: %0.2lf", closing_rate);
+		snprintf(buffer, sizeof(buffer), "CLOSING RATE: %0.2lf", closing_rate);
 	} else {
-		sprintf(buffer, "CLOSING RATE:");
+		snprintf(buffer, sizeof(buffer), "CLOSING RATE:");
 	}
 	y += yinc;
 	sng_abs_xy_draw_string(buffer, TINY_FONT, x, y);
 
 	if (o || waypoint_index != (uint32_t) -1) {
-		sprintf(buffer, "WARP FACTOR: %2.2lf", 10.0 * range / (XKNOWN_DIM / 2.0));
+		snprintf(buffer, sizeof(buffer), "WARP FACTOR: %2.2lf", 10.0 * range / (XKNOWN_DIM / 2.0));
 	} else {
-		sprintf(buffer, "WARP FACTOR:");
+		snprintf(buffer, sizeof(buffer), "WARP FACTOR:");
 	}
 	y += yinc;
 	sng_abs_xy_draw_string(buffer, TINY_FONT, x, y);
@@ -15155,17 +15154,17 @@ static void science_details_draw_atmosphere_data(GtkWidget *w, GdkGC *gc,
 
 	sng_abs_xy_draw_string("ATMOSPHERIC DATA:", TINY_FONT, 10, y); y += yinc;
 	yinc = 15 * SCREEN_HEIGHT / 600;
-	sprintf(buf, "%30s: %.0f Pa", "PRESSURE:", atm->pressure);
+	snprintf(buf, sizeof(buf), "%30s: %.0f Pa", "PRESSURE:", atm->pressure);
 	sng_abs_xy_draw_string(buf, NANO_FONT, 10, y); y += yinc;
-	sprintf(buf, "%30s: %.0f K / %.0f C / %.0f F", "TEMPERATURE:",
+	snprintf(buf, sizeof(buf), "%30s: %.0f K / %.0f C / %.0f F", "TEMPERATURE:",
 		atm->temperature, atm->temperature - 273.15, atm->temperature * 9.0 / 5.0 - 459.67);
 	sng_abs_xy_draw_string(buf, NANO_FONT, 10, y); y += yinc;
 	for (i = 0; i < atm->nmajor; i++) {
 		int compound = atm->major_compound[i];
 		char *name = atmospheric_compound[compound].name;
 		char *symbol = atmospheric_compound[compound].symbol;
-		sprintf(compound_name, "%s (%s)", name, symbol);
-		sprintf(buf, "%30s: %3.2f%%\n", compound_name, atm->major_fraction[i] * 100.0);
+		snprintf(compound_name, sizeof(compound_name), "%s (%s)", name, symbol);
+		snprintf(buf, sizeof(buf), "%30s: %3.2f%%\n", compound_name, atm->major_fraction[i] * 100.0);
 		sng_abs_xy_draw_string(buf, NANO_FONT, 10, y); y += yinc;
 	}
 
@@ -15173,8 +15172,8 @@ static void science_details_draw_atmosphere_data(GtkWidget *w, GdkGC *gc,
 		int compound = atm->minor_compound[i];
 		char *name = atmospheric_compound[compound].name;
 		char *symbol = atmospheric_compound[compound].symbol;
-		sprintf(compound_name, "%s (%s)", name, symbol);
-		sprintf(buf, "%30s: %4.2f ppm\n", compound_name, atm->minor_ppm[i]);
+		snprintf(compound_name, sizeof(compound_name), "%s (%s)", name, symbol);
+		snprintf(buf, sizeof(buf), "%30s: %4.2f ppm\n", compound_name, atm->minor_ppm[i]);
 		sng_abs_xy_draw_string(buf, NANO_FONT, 10, y); y += yinc;
 	}
 }
@@ -15233,10 +15232,10 @@ static void draw_science_details(GtkWidget *w, GdkGC *gc)
 	y = SCREEN_HEIGHT - 200 * SCREEN_HEIGHT / 600;
 	if (curr_science_guy->type == OBJTYPE_SHIP1 ||
 		curr_science_guy->type == OBJTYPE_SHIP2) {
-		sprintf(buf, "LIFEFORMS: %d", curr_science_guy->tsd.ship.lifeform_count);
+		snprintf(buf, sizeof(buf), "LIFEFORMS: %d", curr_science_guy->tsd.ship.lifeform_count);
 	} else {
 		if (curr_science_guy->type == OBJTYPE_STARBASE) {
-			sprintf(buf, "LIFEFORMS: %d", curr_science_guy->tsd.starbase.lifeform_count);
+			snprintf(buf, sizeof(buf), "LIFEFORMS: %d", curr_science_guy->tsd.starbase.lifeform_count);
 		} else {
 			buf[0] = '\0';
 		}
@@ -15268,18 +15267,18 @@ static void draw_science_details(GtkWidget *w, GdkGC *gc)
 			for (i = 0; planet_desc[i] != '\0'; i++)
 				planet_desc[i] = toupper(planet_desc[i]);
 		}
-		sprintf(buf, "TYPE: %s%s", p->ring ? "RINGED " : "",
+		snprintf(buf, sizeof(buf), "TYPE: %s%s", p->ring ? "RINGED " : "",
 				solarsystem_assets->planet_type[p->solarsystem_planet_type]);
 		uppercase(buf);
 		sng_abs_xy_draw_string(buf, TINY_FONT, 10, y);
 		y += yinc;
-		sprintf(buf, "GOVERNMENT: %s", government_name[p->government]);
+		snprintf(buf, sizeof(buf), "GOVERNMENT: %s", government_name[p->government]);
 		sng_abs_xy_draw_string(buf, TINY_FONT, 10, y);
 		y += yinc;
-		sprintf(buf, "TECH LEVEL: %d", p->tech_level);
+		snprintf(buf, sizeof(buf), "TECH LEVEL: %d", p->tech_level);
 		sng_abs_xy_draw_string(buf, TINY_FONT, 10, y);
 		y += yinc;
-		sprintf(buf, "ECONOMY: %s", economy_name[p->economy]);
+		snprintf(buf, sizeof(buf), "ECONOMY: %s", economy_name[p->economy]);
 		sng_abs_xy_draw_string(buf, TINY_FONT, 10, y);
 		y += yinc;
 		switch (p->security) {
@@ -15316,29 +15315,29 @@ static void draw_science_details(GtkWidget *w, GdkGC *gc)
 	}
 	if (curr_science_guy->type == OBJTYPE_ASTEROID) {
 		struct asteroid_data *a = &curr_science_guy->tsd.asteroid;
-		sprintf(buf, "%3.0f%% CARBONACEOUS", 100.0 * a->carbon / 255.0);
+		snprintf(buf, sizeof(buf), "%3.0f%% CARBONACEOUS", 100.0 * a->carbon / 255.0);
 		sng_abs_xy_draw_string(buf, TINY_FONT, 10, y);
 		y += yinc;
-		sprintf(buf, "%3.0f%% SILICATES", 100.0 * a->silicates / 255.0);
+		snprintf(buf, sizeof(buf), "%3.0f%% SILICATES", 100.0 * a->silicates / 255.0);
 		sng_abs_xy_draw_string(buf, TINY_FONT, 10, y);
 		y += yinc;
-		sprintf(buf, "%3.0f%% NICKEL/IRON", 100.0 * a->nickeliron / 255.0);
+		snprintf(buf, sizeof(buf), "%3.0f%% NICKEL/IRON", 100.0 * a->nickeliron / 255.0);
 		sng_abs_xy_draw_string(buf, TINY_FONT, 10, y);
 		y += yinc;
-		sprintf(buf, "%3.0f%% PRECIOUS METALS", 100.0 * a->preciousmetals / 255.0);
+		snprintf(buf, sizeof(buf), "%3.0f%% PRECIOUS METALS", 100.0 * a->preciousmetals / 255.0);
 		sng_abs_xy_draw_string(buf, TINY_FONT, 10, y);
 		y += yinc;
 	}
 	if (curr_science_guy->type == OBJTYPE_SHIP2) {
 		struct ship_data *s = &curr_science_guy->tsd.ship;
 		if (!ship_type[s->shiptype].has_lasers && !ship_type[s->shiptype].has_torpedoes)
-			sprintf(buf, "WEAPONRY: NONE");
+			snprintf(buf, sizeof(buf), "WEAPONRY: NONE");
 		else if (ship_type[s->shiptype].has_lasers && ship_type[s->shiptype].has_torpedoes)
-			sprintf(buf, "WEAPONRY: TORPEDOES AND LASERS");
+			snprintf(buf, sizeof(buf), "WEAPONRY: TORPEDOES AND LASERS");
 		else if (ship_type[s->shiptype].has_lasers)
-			sprintf(buf, "WEAPONRY: LASERS");
+			snprintf(buf, sizeof(buf), "WEAPONRY: LASERS");
 		else
-			sprintf(buf, "WEAPONRY: TORPEDOES");
+			snprintf(buf, sizeof(buf), "WEAPONRY: TORPEDOES");
 		sng_abs_xy_draw_string(buf, TINY_FONT, 10, y);
 		y += yinc;
 
@@ -15347,12 +15346,12 @@ static void draw_science_details(GtkWidget *w, GdkGC *gc)
 			if (cbc->item < 0)
 				continue;
 			if (i == 0) {
-				sprintf(buf, "PROBABLE CARGO:");
+				snprintf(buf, sizeof(buf), "PROBABLE CARGO:");
 				sng_abs_xy_draw_string(buf, TINY_FONT, 10, y);
 				y += yinc;
 			}
 			if (cbc->item < ncommodities) {
-				sprintf(buf, "- %4.2f %s %s", cbc->qty,
+				snprintf(buf, sizeof(buf), "- %4.2f %s %s", cbc->qty,
 					commodity[cbc->item].unit, commodity[cbc->item].scans_as);
 				sng_abs_xy_draw_string(buf, TINY_FONT, 10, y);
 			}
@@ -15360,11 +15359,11 @@ static void draw_science_details(GtkWidget *w, GdkGC *gc)
 		}
 	} else if (curr_science_guy->type == OBJTYPE_CARGO_CONTAINER) {
 		struct cargo_container_contents *ccc = &curr_science_guy->tsd.cargo_container.contents;
-		sprintf(buf, "PROBABLE CONTENTS:");
+		snprintf(buf, sizeof(buf), "PROBABLE CONTENTS:");
 		sng_abs_xy_draw_string(buf, TINY_FONT, 10, y);
 		y += yinc;
 		if (ccc->item >= 0) {
-			sprintf(buf, "- %4.2f %s %s", ccc->qty,
+			snprintf(buf, sizeof(buf), "- %4.2f %s %s", ccc->qty,
 				commodity[ccc->item].unit, commodity[ccc->item].scans_as);
 			sng_abs_xy_draw_string(buf, TINY_FONT, 10, y);
 		} else {
@@ -15380,15 +15379,15 @@ static void draw_science_location_indicator(struct snis_entity *o)
 	strncpy(ssname, solarsystem_name, 11);
 	ssname[11] = '\0';
 	uppercase(ssname);
-	sprintf(buf, "%s SYSTEM", ssname);
+	snprintf(buf, sizeof(buf), "%s SYSTEM", ssname);
 	sng_abs_xy_draw_string(buf, NANO_FONT, txx(200), txy(10));
-	sprintf(buf, "POSITION:");
+	snprintf(buf, sizeof(buf), "POSITION:");
 	sng_abs_xy_draw_string(buf, NANO_FONT, txx(360), txy(10));
-	sprintf(buf, "X: %5.2lf,", o->x);
+	snprintf(buf, sizeof(buf), "X: %5.2lf,", o->x);
 	sng_abs_xy_draw_string(buf, NANO_FONT, txx(415), txy(10));
-	sprintf(buf, "Y: %5.2lf,", o->y);
+	snprintf(buf, sizeof(buf), "Y: %5.2lf,", o->y);
 	sng_abs_xy_draw_string(buf, NANO_FONT, txx(480), txy(10));
-	sprintf(buf, "Z: %5.2lf", o->z);
+	snprintf(buf, sizeof(buf), "Z: %5.2lf", o->z);
 	sng_abs_xy_draw_string(buf, NANO_FONT, txx(555), txy(10));
 }
  
@@ -15471,18 +15470,18 @@ static void show_comms(GtkWidget *w)
 	} else {
 		sng_set_foreground(UI_COLOR(comms_good_status));
 		char buf[80];
-		sprintf(buf, "SHIELDS ARE %d%%", (int)(o->sdata.shield_strength / 2.55));
+		snprintf(buf, sizeof(buf), "SHIELDS ARE %d%%", (int)(o->sdata.shield_strength / 2.55));
 		sng_center_xy_draw_string(buf, NANO_FONT, shield_ind_x_center, shield_ind_y_center);
 	}
 	sng_set_foreground(UI_COLOR(comms_text));
 	format_date(current_date, sizeof(current_date), universe_timestamp());
-	sprintf(comms_buffer, "TIME: %s", current_date);
+	snprintf(comms_buffer, sizeof(comms_buffer), "TIME: %s", current_date);
 	sng_abs_xy_draw_string(comms_buffer, TINY_FONT, txx(25), txy(55));
 	if (o->tsd.ship.rts_mode) {
-		sprintf(comms_buffer, "FUNDS: $%6.0f", o->tsd.ship.wallet);
+		snprintf(comms_buffer, sizeof(comms_buffer), "FUNDS: $%6.0f", o->tsd.ship.wallet);
 		sng_abs_xy_draw_string(comms_buffer, TINY_FONT, txx(625), txy(350));
 	}
-	sprintf(comms_buffer, "CHANNEL: %u", comms_ui.channel);
+	snprintf(comms_buffer, sizeof(comms_buffer), "CHANNEL: %u", comms_ui.channel);
 	sng_center_xy_draw_string(comms_buffer, NANO_FONT, shield_ind_x_center, shield_ind_y_center - txy(15));
 	if (o->tsd.ship.rts_mode) {
 		if (o->tsd.ship.rts_active_button != 255) {
@@ -15490,31 +15489,35 @@ static void show_comms(GtkWidget *w)
 			if (o->tsd.ship.rts_active_button < NUM_RTS_BASES) {
 				struct snis_entity *starbase = rts_find_my_starbase(o->tsd.ship.rts_active_button);
 				if (starbase && starbase->tsd.starbase.time_left_to_build != 0) {
-					sprintf(comms_buffer, "STARBASE %02d: BUILDING %s, %d SECONDS REMAINING",
+					snprintf(comms_buffer, sizeof(comms_buffer),
+						"STARBASE %02d: BUILDING %s, %d SECONDS REMAINING",
 						starbase->tsd.starbase.starbase_number,
 						rts_unit_type(starbase->tsd.starbase.build_unit_type)->name,
 						starbase->tsd.starbase.time_left_to_build / 10);
 					disable_comms_rts_unit_ordering_buttons();
 				} else {
-					sprintf(comms_buffer, "STARBASE %02d", o->tsd.ship.rts_active_button);
+					snprintf(comms_buffer, sizeof(comms_buffer),
+						"STARBASE %02d", o->tsd.ship.rts_active_button);
 					enable_comms_rts_unit_ordering_buttons();
 				}
 				sng_abs_xy_draw_string(comms_buffer, TINY_FONT, txx(22), txy(365));
 			} else if (o->tsd.ship.rts_active_button == RTS_HOME_PLANET_BUTTON) {
 				struct snis_entity *home_planet = rts_find_my_home_planet();
 				if (home_planet && home_planet->tsd.planet.time_left_to_build != 0) {
-					sprintf(comms_buffer, "HOME PLANET: BUILDING %s, %d SECONDS REMAINING",
+					snprintf(comms_buffer, sizeof(comms_buffer),
+						"HOME PLANET: BUILDING %s, %d SECONDS REMAINING",
 						rts_unit_type(home_planet->tsd.planet.build_unit_type)->name,
 						home_planet->tsd.planet.time_left_to_build / 10);
 					disable_comms_rts_unit_ordering_buttons();
 				} else  {
-					sprintf(comms_buffer, "HOME PLANET (faction = %d/%d)",
+					snprintf(comms_buffer, sizeof(comms_buffer),
+						"HOME PLANET (faction = %d/%d)",
 						o->sdata.faction, home_planet ? home_planet->sdata.faction : 255);
 					enable_comms_rts_unit_ordering_buttons();
 				}
 				sng_abs_xy_draw_string(comms_buffer, TINY_FONT, txx(22), txy(365));
 			} else if (o->tsd.ship.rts_active_button == RTS_FLEET_BUTTON) {
-				sprintf(comms_buffer, "FLEET");
+				snprintf(comms_buffer, sizeof(comms_buffer), "FLEET");
 				sng_abs_xy_draw_string(comms_buffer, TINY_FONT, txx(22), txy(365));
 			}
 		}
@@ -16106,7 +16109,7 @@ static void debug_draw_object(GtkWidget *w, struct snis_entity *o,
 		if (o->tsd.ship.threat_level != 0.0) {
 			toughness = (255.0 - o->tsd.ship.damage.shield_damage) / 255.0;
 			threat_level = o->tsd.ship.threat_level / (toughness + 0.001);
-			sprintf(buffer, "TL: %.1f", threat_level);
+			snprintf(buffer, sizeof(buffer), "TL: %.1f", threat_level);
 			sng_abs_xy_draw_string(buffer, NANO_FONT, x + xoffset, y + yoffset + 20);
 		}
 		if (o->type == OBJTYPE_SHIP1 && !(timer & 0x02)) {
@@ -16178,9 +16181,9 @@ static void show_cmd_help(GtkWidget *w, struct demon_cmd_def cmd[], int nitems)
 
 	sng_set_foreground(UI_COLOR(help_text));
 	for (i = 0; i < nitems; i++) {
-		sprintf(buffer, "%s", cmd[i].verb);
+		snprintf(buffer, sizeof(buffer), "%s", cmd[i].verb);
 		sng_abs_xy_draw_string(buffer, PICO_FONT, txx(85), txy(i * 15 + 60));
-		sprintf(buffer, "%s", cmd[i].help);
+		snprintf(buffer, sizeof(buffer), "%s", cmd[i].help);
 		sng_abs_xy_draw_string(buffer, PICO_FONT, txx(170), txy(i * 15 + 60));
 	}
 }
@@ -16191,7 +16194,7 @@ static void add_demon_cmd_help_to_console(struct demon_cmd_def cmd[], int nitems
 	char buffer[100];
 
 	for (i = 0; i < nitems; i++) {
-		sprintf(buffer, "%15s %s", cmd[i].verb, cmd[i].help);
+		snprintf(buffer, sizeof(buffer), "%15s %s", cmd[i].verb, cmd[i].help);
 		text_window_add_text(demon_ui.console, buffer);
 	}
 }
@@ -17324,9 +17327,9 @@ static void show_demon_2d(GtkWidget *w)
 				UI_COLOR(demon_cross), 1);
 	sng_set_foreground(UI_COLOR(demon_default));
 	if (netstats.elapsed_seconds == 0)
-		sprintf(buffer, "Waiting for data");
+		snprintf(buffer, sizeof(buffer), "Waiting for data");
 	else 
-		sprintf(buffer,
+		snprintf(buffer, sizeof(buffer),
 			"TX:%llu RX:%llu T=%lu SECS. BW=%llu B/S SHIPS:%u OBJS:%u %u/%u/%u/%u/%u",
 			(unsigned long long) netstats.bytes_sent,
 			(unsigned long long) netstats.bytes_recd, 
@@ -17841,9 +17844,9 @@ static void show_demon_3d(GtkWidget *w)
 
 	sng_set_foreground(UI_COLOR(demon_default));
 	if (netstats.elapsed_seconds == 0)
-		sprintf(buffer, "Waiting for data");
+		snprintf(buffer, sizeof(buffer), "Waiting for data");
 	else
-		sprintf(buffer,
+		snprintf(buffer, sizeof(buffer),
 			"TX:%llu RX:%llu T=%lu SECS. BW=%llu B/S SHIPS:%u OBJS:%u %u/%u/%u/%u/%u",
 			(unsigned long long) netstats.bytes_sent,
 			(unsigned long long) netstats.bytes_recd,
@@ -18114,11 +18117,11 @@ static void browser_button_pressed(void *v)
 	char *site = v;
 	char cmd[1000];
 
-	sprintf(cmd, "google-chrome %s &", site);
+	snprintf(cmd, sizeof(cmd), "google-chrome %s &", site);
 	rc = system(cmd);
 	if (rc == 0)
 		return;
-	sprintf(cmd, "firefox %s &", site);
+	snprintf(cmd, sizeof(cmd), "firefox %s &", site);
 	rc = system(cmd);
 	if (rc == 0)
 		return;
@@ -18355,14 +18358,14 @@ static void show_network_setup(GtkWidget *w)
 
 	sng_set_foreground(UI_COLOR(network_setup_text));
 	sng_abs_xy_draw_string("NETWORK SETUP", SMALL_FONT, txx(25), txy(10 + LINEHEIGHT * 2));
-	sprintf(msg, "LOBBY SERVER NAME OR IP ADDRESS");
+	snprintf(msg, sizeof(msg), "LOBBY SERVER NAME OR IP ADDRESS");
 	/* If manual and auto-detected lobbies are the same, hide the manual button. */
 	if (strcmp(net_setup_ui.lobbyname, "") != 0)
 		ui_unhide_widget(net_setup_ui.connect_to_lobby);
 	else
 		ui_hide_widget(net_setup_ui.connect_to_lobby);
 
-	sprintf(button_label, "ENTER LOBBY %s", net_setup_ui.lobbyname);
+	snprintf(button_label, sizeof(button_label), "ENTER LOBBY %s", net_setup_ui.lobbyname);
 	snis_button_set_label(net_setup_ui.connect_to_lobby, button_label);
 	sng_abs_xy_draw_string(msg, TINY_FONT, txx(25), txy(130));
 	sng_abs_xy_draw_string("SOLARSYSTEM NAME", TINY_FONT, txx(25), txy(280));
@@ -18752,7 +18755,7 @@ static void draw_help_screen(GtkWidget *w)
 	snis_draw_rectangle(0, 50, 50, SCREEN_WIDTH - 100, SCREEN_HEIGHT - 100);
 	if (displaymode < 0 || displaymode >= ARRAYSIZE(help_text)) {
 		char msg[100];
-		sprintf(msg, "\nUNKNOWN SCREEN %d, NO HELP AVAILABLE\n", displaymode);
+		snprintf(msg, sizeof(msg), "\nUNKNOWN SCREEN %d, NO HELP AVAILABLE\n", displaymode);
 		draw_help_text(w, msg);
 		return;
 	}
@@ -18823,11 +18826,11 @@ static void do_display_frame_stats(const float frame_rates[], const float frame_
 		else
 			sng_set_foreground(ORANGERED);
 		char stat_buffer[30];
-		sprintf(stat_buffer, "FPS %5.2f", 1.0 / avg_frame_rate);
+		snprintf(stat_buffer, sizeof(stat_buffer), "FPS %5.2f", 1.0 / avg_frame_rate);
 		sng_abs_xy_draw_string(stat_buffer, NANO_FONT, txx(2), txy(10));
-		sprintf(stat_buffer, "T %0.2f ms", avg_frame_time * 1000.0);
+		snprintf(stat_buffer, sizeof(stat_buffer), "T %0.2f ms", avg_frame_time * 1000.0);
 		sng_abs_xy_draw_string(stat_buffer, NANO_FONT, txx(92), txy(10));
-		sprintf(stat_buffer, "%8.0f", universe_timestamp());
+		snprintf(stat_buffer, sizeof(stat_buffer), "%8.0f", universe_timestamp());
 		sng_abs_xy_draw_string(stat_buffer, NANO_FONT, SCREEN_WIDTH-85, 10);
 	}
 	if (display_frame_stats > 1)
@@ -19163,7 +19166,7 @@ static unsigned int load_texture(char *filename)
 {
 	char fname[PATH_MAX + 1];
 
-	sprintf(fname, "%s/%s", asset_dir, filename);
+	snprintf(fname, sizeof(fname), "%s/%s", asset_dir, filename);
 	return graph_dev_load_texture(fname);
 }
 
@@ -19171,7 +19174,7 @@ static unsigned int load_texture_no_mipmaps(char *filename)
 {
 	char fname[PATH_MAX + 1];
 
-	sprintf(fname, "%s/%s", asset_dir, filename);
+	snprintf(fname, sizeof(fname), "%s/%s", asset_dir, filename);
 	return graph_dev_load_texture_no_mipmaps(fname);
 }
 
@@ -19208,7 +19211,7 @@ static unsigned int load_cubemap_textures(int is_inside, char *filenameprefix)
 	char filename[6][PATH_MAX + 1];
 
 	for (i = 0; i < 6; i++)
-		sprintf(filename[i], "%s/%s%d.png", asset_dir, filenameprefix, i);
+		snprintf(filename[i], sizeof(filename[i]), "%s/%s%d.png", asset_dir, filenameprefix, i);
 
 	return graph_dev_load_cubemap_texture(is_inside, filename[1], filename[3], filename[4],
 					filename[5], filename[0], filename[2]);
@@ -19220,7 +19223,7 @@ static void expire_cubemap_texture(int is_inside, char *filenameprefix)
 	char filename[6][PATH_MAX + 1];
 
 	for (i = 0; i < 6; i++)
-		sprintf(filename[i], "%s/%s%d.png", asset_dir, filenameprefix, i);
+		snprintf(filename[i], sizeof(filename[i]), "%s/%s%d.png", asset_dir, filenameprefix, i);
 
 	graph_dev_expire_cubemap_texture(is_inside, filename[1], filename[3], filename[4],
 					filename[5], filename[0], filename[2]);
@@ -19259,7 +19262,7 @@ static void load_skybox_textures(char *filenameprefix)
 	char filename[6][PATH_MAX + 1];
 
 	for (i = 0; i < 6; i++)
-		sprintf(filename[i], "%s/%s%d.png", asset_dir, filenameprefix, i);
+		snprintf(filename[i], sizeof(filename[i]), "%s/%s%d.png", asset_dir, filenameprefix, i);
 
 	graph_dev_load_skybox_texture(filename[3], filename[1], filename[4],
 					filename[5], filename[0], filename[2]);
@@ -19271,7 +19274,7 @@ static void expire_skybox_texture(char *filenameprefix)
 	char filename[6][PATH_MAX + 1];
 
 	for (i = 0; i < 6; i++)
-		sprintf(filename[i], "%s/%s%d.png", asset_dir, filenameprefix, i);
+		snprintf(filename[i], sizeof(filename[i]), "%s/%s%d.png", asset_dir, filenameprefix, i);
 	graph_dev_expire_cubemap_texture(1, filename[3], filename[1], filename[4],
 					filename[5], filename[0], filename[2]);
 }
@@ -19358,7 +19361,7 @@ static int read_solarsystem_config(const char *solarsystem_name,
 
 	printf("Reading solarsystem specifications...");
 	fflush(stdout);
-	sprintf(path, "%s/solarsystems/%s/assets.txt", asset_dir, solarsystem_name);
+	snprintf(path, sizeof(path), "%s/solarsystems/%s/assets.txt", asset_dir, solarsystem_name);
 	if (*assets)
 		solarsystem_asset_spec_free(*assets);
 	*assets = solarsystem_asset_spec_read(path);
@@ -19482,7 +19485,7 @@ static int load_static_textures(void)
 
 	for (i = 0; i < NNEBULA_MATERIALS; i++) {
 		char filename[20];
-		sprintf(filename, "nebula%d.mat", i);
+		snprintf(filename, sizeof(filename), "nebula%d.mat", i);
 
 		material_nebula_read_from_file(asset_dir, filename, &nebula_material[i]);
 		nebula_material[i].nebula.alpha *= 0.25;
@@ -19609,12 +19612,13 @@ static int load_per_solarsystem_textures()
 
 	material_init_texture_mapped_unlit(&sun_material);
 	sun_material.billboard_type = MATERIAL_BILLBOARD_TYPE_SPHERICAL;
-	sprintf(path, "solarsystems/%s/%s", solarsystem_name, solarsystem_assets->sun_texture);
+	snprintf(path, sizeof(path), "solarsystems/%s/%s", solarsystem_name, solarsystem_assets->sun_texture);
 	sun_material.texture_mapped_unlit.texture_id = load_texture(path);
 	sun_material.texture_mapped_unlit.do_blend = 1;
 
 	for (i = 0; i < solarsystem_assets->nplanet_textures; i++) {
-		sprintf(path, "solarsystems/%s/%s", solarsystem_name, solarsystem_assets->planet_texture[i]);
+		snprintf(path, sizeof(path), "solarsystems/%s/%s", solarsystem_name,
+				solarsystem_assets->planet_texture[i]);
 		material_init_textured_planet(&planet_material[i]);
 		planet_material[i].textured_planet.texture_id = load_cubemap_textures(0, path);
 		if (i < NPLANET_MATERIALS / 2)
@@ -19625,7 +19629,8 @@ static int load_per_solarsystem_textures()
 		if (strcmp(solarsystem_assets->planet_normalmap[i], "no-normal-map") == 0) {
 			planet_material[i].textured_planet.normalmap_id = 0;
 		} else {
-			sprintf(path, "solarsystems/%s/%s", solarsystem_name, solarsystem_assets->planet_normalmap[i]);
+			snprintf(path, sizeof(path), "solarsystems/%s/%s", solarsystem_name,
+					solarsystem_assets->planet_normalmap[i]);
 			planet_material[i].textured_planet.normalmap_id = load_cubemap_textures(0, path);
 		}
 	}
@@ -19651,17 +19656,18 @@ static void expire_per_solarsystem_textures(char *old_solarsystem, struct solars
 	char path[PATH_MAX];
 
 	fprintf(stderr, "xxxxxxx asset_dir='%s', old_solarsystem='%s'\n", asset_dir, old_solarsystem);
-	sprintf(path, "solarsystems/%s/%s", old_solarsystem, assets->skybox_prefix);
+	snprintf(path, sizeof(path), "solarsystems/%s/%s", old_solarsystem, assets->skybox_prefix);
 	expire_skybox_texture(path);
 
-	sprintf(path, "%s/solarsystems/%s/%s", asset_dir, old_solarsystem, assets->sun_texture);
+	snprintf(path, sizeof(path), "%s/solarsystems/%s/%s", asset_dir, old_solarsystem, assets->sun_texture);
 	graph_dev_expire_texture(path);
 
 	for (i = 0; i < assets->nplanet_textures; i++) {
-		sprintf(path, "solarsystems/%s/%s", old_solarsystem, assets->planet_texture[i]);
+		snprintf(path, sizeof(path), "solarsystems/%s/%s", old_solarsystem, assets->planet_texture[i]);
 		expire_cubemap_texture(0, path);
 		if (strcmp(assets->planet_normalmap[i], "no-normal-map") != 0) {
-			sprintf(path, "solarsystems/%s/%s", old_solarsystem, assets->planet_normalmap[i]);
+			snprintf(path, sizeof(path), "solarsystems/%s/%s", old_solarsystem,
+					assets->planet_normalmap[i]);
 			expire_cubemap_texture(0, path);
 		}
 	}
@@ -19977,7 +19983,7 @@ static void read_ogg_clip(int sound, char *directory, char *filename)
 {
 	char path[PATH_MAX];
 
-	sprintf(path, "%s/sounds/%s", directory, filename);
+	snprintf(path, sizeof(path), "%s/sounds/%s", directory, filename);
 	wwviaudio_read_ogg_clip(sound, path);
 }
 
@@ -19999,7 +20005,7 @@ static int read_ship_types(void)
 {
 	char path[PATH_MAX];
 
-	sprintf(path, "%s/%s", asset_dir, "ship_types.txt");
+	snprintf(path, sizeof(path), "%s/%s", asset_dir, "ship_types.txt");
 
 	ship_type = snis_read_ship_types(path, &nshiptypes);
 	if (!ship_type) {
@@ -20015,7 +20021,7 @@ static int read_factions(void)
 {
 	char path[PATH_MAX];
 
-	sprintf(path, "%s/%s", asset_dir, "factions.txt");
+	snprintf(path, sizeof(path), "%s/%s", asset_dir, "factions.txt");
 
 	if (snis_read_factions(path)) {
 		fprintf(stderr, "Unable to read factions from %s", path);
@@ -20640,7 +20646,7 @@ static void setup_joysticks(GtkWidget *window)
 	set_joystick_button_fn(joystick_cfg, "nav-nudge-zoom-up", do_joystick_nav_nudge_zoom_up);
 	set_joystick_button_fn(joystick_cfg, "nav-nudge-zoom-down", do_joystick_nav_nudge_zoom_down);
 	set_joystick_button_fn(joystick_cfg, "nav-change-pov", do_joystick_nav_change_pov);
-	sprintf(joystick_config_file, "%s/joystick_config.txt", asset_dir);
+	snprintf(joystick_config_file, sizeof(joystick_config_file), "%s/joystick_config.txt", asset_dir);
 	read_joystick_config(joystick_cfg, joystick_config_file, joystick_name, njoysticks);
 
 	if (njoysticks > 0)
@@ -20652,7 +20658,7 @@ static struct mesh *snis_read_model(char *directory, char *filename)
 	char path[PATH_MAX];
 	struct mesh *m;
 
-	sprintf(path, "%s/models/%s", directory, filename);
+	snprintf(path, sizeof(path), "%s/models/%s", directory, filename);
 	m = read_mesh(path);
 	if (!m) {
 		printf("Failed to read model from file '%s'\n", path);
@@ -20714,9 +20720,9 @@ static void init_meshes()
 		char filename[100];
 
 		if (i == 0)
-			sprintf(filename, "asteroid.stl");
+			snprintf(filename, sizeof(filename), "asteroid.stl");
 		else
-			sprintf(filename, "asteroid%d.stl", i + 1);
+			snprintf(filename, sizeof(filename), "asteroid%d.stl", i + 1);
 		printf("reading '%s'\n", filename);
 		asteroid_mesh[i] = snis_read_model(d, filename);
 		mesh_distort(asteroid_mesh[i], 0.15);
@@ -20960,10 +20966,10 @@ static void init_colors(void)
 	char color_file[PATH_MAX];
 	char *alternate = getenv("SNIS_COLORS");
 	if (alternate && strlen(alternate) + strlen(asset_dir) < PATH_MAX - 3) {
-		sprintf(color_file, "%s/%s", asset_dir, alternate);
+		snprintf(color_file, sizeof(color_file), "%s/%s", asset_dir, alternate);
 	} else {
 		if (strlen(asset_dir) + strlen("user_colors.cfg") < PATH_MAX - 3)
-			sprintf(color_file, "%s/%s", asset_dir, "user_colors.cfg");
+			snprintf(color_file, sizeof(color_file), "%s/%s", asset_dir, "user_colors.cfg");
 		else {
 			fprintf(stderr, "Path to color config file too long, skipping.\n");
 			return;
@@ -21240,7 +21246,7 @@ static void lobby_chosen(void *x)
 	uint32_t ipaddr = (uint32_t) (intptr_t) x;
 	char msg[100];
 
-	sprintf(msg, "%d.%d.%d.%d",
+	snprintf(msg, sizeof(msg), "%d.%d.%d.%d",
 		(ntohl(ipaddr) & 0xff000000) >> 24,
 		(ntohl(ipaddr) & 0x00ff0000) >> 16,
 		(ntohl(ipaddr) & 0x0000ff00) >> 8,
@@ -21269,7 +21275,7 @@ static void lobby_list_change_notification(struct ssgl_lobby_descriptor *list, i
 	pull_down_menu_set_color(newmenu, UI_COLOR(network_setup_active));
 	pull_down_menu_add_column(newmenu, "SELECT LOBBY");
 	for (i = 0; i < nlobbies; i++) {
-		sprintf(msg, "%d.%d.%d.%d:%d %s",
+		snprintf(msg, sizeof(msg), "%d.%d.%d.%d:%d %s",
 			(ntohl(lobbylist[i].ipaddr) & 0xff000000) >> 24,
 			(ntohl(lobbylist[i].ipaddr) & 0x00ff0000) >> 16,
 			(ntohl(lobbylist[i].ipaddr) & 0x0000ff00) >> 8,
@@ -21327,7 +21333,7 @@ int main(int argc, char *argv[])
 	damconscreeny = NULL;
 
 	char commodity_path[PATH_MAX];
-	sprintf(commodity_path, "%s/%s", asset_dir, "commodities.txt");
+	snprintf(commodity_path, sizeof(commodity_path), "%s/%s", asset_dir, "commodities.txt");
 	commodity = read_commodities(commodity_path, &ncommodities);
 
 	if (read_ship_types())
