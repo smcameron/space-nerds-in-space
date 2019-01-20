@@ -192,7 +192,7 @@ static void construct_starmap(void)
 			continue;
 		if (strcmp(namelist[i]->d_name, "..") == 0)
 			continue;
-		sprintf(newpath, "%s/%s/assets.txt", path, namelist[i]->d_name);
+		snprintf(newpath, sizeof(newpath), "%s/%s/assets.txt", path, namelist[i]->d_name);
 		extract_starmap_entry(newpath, namelist[i]->d_name);
 		free(namelist[i]);
 	}
@@ -309,18 +309,18 @@ static int save_bridge_info(struct bridge_info *b)
 	memcpy(&dir1[0], &hexpwdhash[PWDSALTLEN], 4);
 	memcpy(&dir2[0], &hexpwdhash[PWDSALTLEN + 4], 4);
 
-	sprintf(path, "%s/%s", database_root, dir1);
+	snprintf(path, sizeof(path), "%s/%s", database_root, dir1);
 	if (make_dir(path)) {
 		fprintf(stderr, "snis_multiverse: mkdir failed: %s: %s\n", path, strerror(errno));
 		return -1;
 	}
-	sprintf(dirpath, "%s/%s/%s", database_root, dir1, dir2);
+	snprintf(dirpath, sizeof(dirpath), "%s/%s/%s", database_root, dir1, dir2);
 	if (make_dir(dirpath)) {
 		fprintf(stderr, "snis_multiverse: mkdir failed: %s: %s\n", dirpath, strerror(errno));
 		return -1;
 	}
-	sprintf(path, "%s/%s.update", dirpath, hexpwdhash);
-	sprintf(path2, "%s/%s.data", dirpath, hexpwdhash);
+	snprintf(path, sizeof(path), "%s/%s.update", dirpath, hexpwdhash);
+	snprintf(path2, sizeof(path2), "%s/%s.data", dirpath, hexpwdhash);
 	f = fopen(path, "w+");
 	if (!f) {
 		fprintf(stderr, "snis_multiverse: fopen %s failed: %s\n", path, strerror(errno));
@@ -963,7 +963,7 @@ static void *listener_thread_fn(__attribute__((unused)) void *unused)
 		else
 			port = default_snis_multiverse_port;
 		snis_log(SNIS_INFO, "snis_multiverse: Trying port %d\n", port);
-		sprintf(portstr, "%d", port);
+		snprintf(portstr, sizeof(portstr), "%d", port);
 		memset(&hints, 0, sizeof(struct addrinfo));
 		hints.ai_family = AF_UNSPEC;    /* Allow IPv4 or IPv6 */
 		hints.ai_socktype = SOCK_STREAM;
@@ -1131,7 +1131,7 @@ static int restore_data_from_directory(const char *path)
 		return n;
 	}
 	for (i = 0; i < n; i++) {
-		sprintf(newpath, "%s/%s", path, namelist[i]->d_name);
+		snprintf(newpath, sizeof(newpath), "%s/%s", path, namelist[i]->d_name);
 		rc += restore_data_from_path(newpath);
 		free(namelist[i]);
 	}
