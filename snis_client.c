@@ -14240,18 +14240,19 @@ static void init_comms_ui(void)
 	snis_button_set_sound(comms_ui.about_button, UISND15);
 
 	x = SCREEN_WIDTH - txx(150);
-	y = SCREEN_HEIGHT - txy(90);
-	comms_ui.red_alert_button = snis_button_init(x, y, -1, bh, "RED ALERT", red_alert_color,
-			NANO_FONT, comms_screen_red_alert_pressed, NULL);
-	snis_button_set_sound(comms_ui.red_alert_button, UISND16);
-	y += bh + 2;
-	comms_ui.hail_mining_bot_button = snis_button_init(x, y, -1, bh, "MINING BOT", button_color,
-			NANO_FONT, comms_hail_mining_bot_pressed, NULL);
-	snis_button_set_sound(comms_ui.hail_mining_bot_button, UISND16);
 	y = SCREEN_HEIGHT - 60;
 	comms_ui.mainscreen_comms = snis_button_init(x, y, -1, bh, "MAIN SCREEN", button_color,
 			NANO_FONT, comms_main_screen_pressed, NULL);
 	snis_button_set_sound(comms_ui.mainscreen_comms, UISND17);
+	y -= bh + 4;
+	comms_ui.hail_mining_bot_button = snis_button_init(x, y, -1, bh, "MINING BOT", button_color,
+			NANO_FONT, comms_hail_mining_bot_pressed, NULL);
+	snis_button_set_sound(comms_ui.hail_mining_bot_button, UISND16);
+	y -= bh + 4;
+	comms_ui.red_alert_button = snis_button_init(x, y, -1, bh, "RED ALERT", red_alert_color,
+			NANO_FONT, comms_screen_red_alert_pressed, NULL);
+	snis_button_set_sound(comms_ui.red_alert_button, UISND16);
+
 	comms_ui.tw = text_window_init(txx(10), txy(70), SCREEN_WIDTH - txx(20), 300, 17, text_color);
 	text_window_set_chatter_sound(comms_ui.tw, TTY_CHATTER_SOUND);
 	comms_ui.comms_input = snis_text_input_box_init(txx(10), txy(520), txy(30), txx(550),
@@ -14261,7 +14262,7 @@ static void init_comms_ui(void)
 	snis_text_input_box_set_return(comms_ui.comms_input,
 					comms_transmit_button_pressed);
 	snis_text_input_box_set_dynamic_width(comms_ui.comms_input, txx(100), txx(550));
-	comms_ui.comms_transmit_button = snis_button_init(txx(10), txy(550), -1, txy(30),
+	comms_ui.comms_transmit_button = snis_button_init(txx(10), txy(560), -1, txy(30),
 			"TRANSMIT", button_color,
 			TINY_FONT, comms_transmit_button_pressed, NULL);
 	snis_button_set_sound(comms_ui.comms_transmit_button, UISND18);
