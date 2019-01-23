@@ -12859,7 +12859,7 @@ static void init_engineering_ui(void)
 	y = r + 100.0;
 	x = r * 1.05;
 	xinc = (2.0 * r) * 1.1;
-	yinc = 0.06 * SCREEN_HEIGHT;
+	yinc = txy(36);
 
 	eu->selected_subsystem = -1;
 	eu->amp_gauge = gauge_init(x, y, r, 0.0, 100.0, -120.0 * M_PI / 180.0,
@@ -12899,32 +12899,36 @@ static void init_engineering_ui(void)
 	/* make shield slider have less fuzz just for variety */
 	snis_slider_set_fuzz(eu->shield_control_slider, 1);
 
-	y = eng_ui.gauge_radius * 2.5;
+	y = eng_ui.gauge_radius * 2.5 + yinc;
 	color = UI_COLOR(eng_button);
-	eu->preset1_button = snis_button_init(txx(20), y + txx(30), -1, -1, "1", color,
-			NANO_FONT, preset1_button_pressed, (void *) 0);
+	eu->preset1_button = snis_button_init(txx(20),
+						y, -1, -1, "1",
+						color, NANO_FONT, preset1_button_pressed, (void *) 0);
 	snis_button_set_sound(eu->preset1_button, UISND12);
-	eu->preset2_button = snis_button_init(snis_button_get_x(eu->preset1_button) + snis_button_get_width(eu->preset1_button) + txx(5),
-						y + txx(30), -1, -1, "2", color, NANO_FONT, preset2_button_pressed, (void *) 0);
+	eu->preset2_button = snis_button_init(snis_button_get_x(eu->preset1_button) +
+						snis_button_get_width(eu->preset1_button) + txx(5),
+						y, -1, -1, "2",
+						color, NANO_FONT, preset2_button_pressed, (void *) 0);
 	snis_button_set_sound(eu->preset2_button, UISND12);
-	eu->damcon_button = snis_button_init(snis_button_get_x(eu->preset2_button) + snis_button_get_width(eu->preset2_button) + txx(5),
-						y + txx(30), -1, -1, "DAMAGE CONTROL", color, NANO_FONT, damcon_button_pressed, (void *) 0);
+	eu->damcon_button = snis_button_init(snis_button_get_x(eu->preset2_button) +
+						snis_button_get_width(eu->preset2_button) + txx(5),
+						y, -1, -1, "DAMAGE CONTROL",
+						color, NANO_FONT, damcon_button_pressed, (void *) 0);
 	eu->silence_alarms = snis_button_init(snis_button_get_x(eu->damcon_button) +
 						snis_button_get_width(eu->damcon_button) + txx(5),
-						y + txx(30), -1, -1, "UNSILENCE ALARMS",
+						y, -1, -1, "UNSILENCE ALARMS",
 						color, NANO_FONT, silence_alarms_pressed, (void *) 0);
 	snis_button_set_sound(eu->silence_alarms, UISND13);
 	eu->custom_button = snis_button_init(snis_button_get_x(eu->silence_alarms) +
 						snis_button_get_width(eu->silence_alarms) + txx(5),
-						y + txx(30), -1, -1, "CUSTOM BUTTON",
+						y, -1, -1, "CUSTOM BUTTON",
 						color, NANO_FONT, eng_custom_button_pressed, (void *) 0);
 	snis_button_set_sound(eu->custom_button, UISND14);
 	eu->deploy_chaff = snis_button_init(snis_button_get_x(eu->custom_button) +
-						snis_button_get_width(eu->custom_button) + txx(5), y + txx(30),
-						-1, -1, "DEPLOY CHAFF",
+						snis_button_get_width(eu->custom_button) + txx(5),
+						y, -1, -1, "DEPLOY CHAFF",
 						color, NANO_FONT, eng_deploy_chaff_button_pressed, (void *) 0);
 	snis_button_set_sound(eu->deploy_chaff, UISND14);
-	y += yinc;
 	color = UI_COLOR(eng_power_meter);
 	eu->shield_slider = snis_slider_init(20, y += yinc, powersliderlen, sh, color,
 				"PWR SHIELDS", "0", "100", 0.0, 255.0,
@@ -13040,7 +13044,6 @@ static void init_engineering_ui(void)
 	ui_add_button(eu->custom_button, dm, "CUSTOM BUTTON");
 	ui_add_button(eu->deploy_chaff, dm, "DEPLOY CHAFF");
 
-	y = 220 + yinc;
 	y = eng_ui.gauge_radius * 2.5 + yinc;
 	eu->shield_damage = snis_slider_init(s2x, y += yinc, sw, sh, color, "SHIELD STATUS", "0", "100",
 				0.0, 100.0, sample_shield_damage, NULL);
