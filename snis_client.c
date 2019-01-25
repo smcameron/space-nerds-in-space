@@ -3870,6 +3870,16 @@ static void do_joystick_warp(__attribute__((unused)) void *x, int value)
 	}
 }
 
+static void do_joystick_weapons_wavelength(__attribute__((unused)) void *x, int value)
+{
+	double v = ((double) -value + 32767.0) / 65534.0;
+	double n = snis_slider_get_input(weapons.wavelen_slider);
+	if (fabs(n - v) > 0.01) {
+		printf("wavelen value is currently = %f, setting to %f\n", n, v);
+		snis_slider_poke_input(weapons.wavelen_slider, v, 0);
+	}
+}
+
 static void do_joystick_weapons_pitch(__attribute__((unused)) void *x, int value)
 {
 	if (value < -YJOYSTICK_THRESHOLD)
@@ -20668,6 +20678,7 @@ static void setup_joysticks(GtkWidget *window)
 	set_joystick_axis_fn(joystick_cfg, "damcon-roll", do_joystick_damcon_roll);
 	set_joystick_axis_fn(joystick_cfg, "throttle", do_joystick_throttle);
 	set_joystick_axis_fn(joystick_cfg, "warp", do_joystick_warp);
+	set_joystick_axis_fn(joystick_cfg, "weapons-wavelength", do_joystick_weapons_wavelength);
 	set_joystick_button_fn(joystick_cfg, "damcon-gripper", robot_gripper_button_pressed);
 	set_joystick_button_fn(joystick_cfg, "nav-engage-warp", do_joystick_engage_warp);
 	set_joystick_button_fn(joystick_cfg, "nav-standard-orbit", do_joystick_standard_orbit);
