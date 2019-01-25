@@ -3850,27 +3850,23 @@ static void do_joystick_damcon_roll(__attribute__((unused)) void *x, int value)
 		robot_right_button_pressed(NULL);
 }
 
-static void do_throttle(struct slider *s);
 static void do_joystick_throttle(__attribute__((unused)) void *x, int value)
 {
 	double v = ((double) -value + 32767.0) / 65534.0;
 	double n = snis_slider_get_input(nav_ui.throttle_slider);
 	if (fabs(n - v) > 0.01) {
 		printf("throttle value is currently = %f, setting to %f\n", n, v);
-		snis_slider_set_input(nav_ui.throttle_slider, v);
-		do_throttle(nav_ui.throttle_slider);
+		snis_slider_poke_input(nav_ui.throttle_slider, v, 0);
 	}
 }
 
-static void do_warpdrive(struct slider *s);
 static void do_joystick_warp(__attribute__((unused)) void *x, int value)
 {
 	double v = ((double) -value + 32767.0) / 65534.0;
 	double n = snis_slider_get_input(nav_ui.warp_slider);
 	if (fabs(n - v) > 0.01) {
 		printf("warp value is currently = %f, setting to %f\n", n, v);
-		snis_slider_set_input(nav_ui.warp_slider, v);
-		do_warpdrive(nav_ui.warp_slider);
+		snis_slider_poke_input(nav_ui.warp_slider, v, 0);
 	}
 }
 
