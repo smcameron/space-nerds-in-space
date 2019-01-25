@@ -3753,6 +3753,11 @@ static void do_joystick_docking_magnets(__attribute__((unused)) void *notused)
 	snis_button_trigger_button(nav_ui.docking_magnets_button);
 }
 
+static void do_joystick_lights(__attribute__((unused)) void *notused)
+{
+	snis_button_trigger_button(nav_ui.lights_button);
+}
+
 static void do_joystick_attitude_indicator(__attribute__((unused)) void *notused)
 {
 	snis_button_trigger_button(nav_ui.trident_button);
@@ -20645,6 +20650,7 @@ static void setup_joysticks(GtkWidget *window)
 	set_joystick_button_fn(joystick_cfg, "nav-attitude-indicator-abs-rel", do_joystick_attitude_indicator);
 	set_joystick_button_fn(joystick_cfg, "nav-starmap", do_joystick_starmap);
 	set_joystick_button_fn(joystick_cfg, "nav-reverse", do_joystick_reverse);
+	set_joystick_button_fn(joystick_cfg, "nav-lights", do_joystick_lights);
 	set_joystick_button_fn(joystick_cfg, "nav-nudge-warp-up", do_joystick_nudge_warp_up);
 	set_joystick_button_fn(joystick_cfg, "nav-nudge-warp-down", do_joystick_nudge_warp_down);
 	set_joystick_button_fn(joystick_cfg, "nav-nudge-zoom-up", do_joystick_nav_nudge_zoom_up);
