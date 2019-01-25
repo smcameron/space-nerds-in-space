@@ -3798,6 +3798,16 @@ static void do_joystick_nav_nudge_zoom_up(__attribute__((unused)) void *notused)
 	snis_slider_nudge(nav_ui.navzoom_slider, 0.05, 0);
 }
 
+static void do_joystick_weapons_wavelength_up(__attribute__((unused)) void *notused)
+{
+	snis_slider_nudge(weapons.wavelen_slider, 0.05, 0);
+}
+
+static void do_joystick_weapons_wavelength_down(__attribute__((unused)) void *notused)
+{
+	snis_slider_nudge(weapons.wavelen_slider, -0.05, 0);
+}
+
 static void do_joystick_torpedo(__attribute__((unused)) void *x)
 {
 	fire_torpedo_button_pressed(NULL);
@@ -20661,6 +20671,8 @@ static void setup_joysticks(GtkWidget *window)
 	set_joystick_button_fn(joystick_cfg, "nav-nudge-warp-down", do_joystick_nudge_warp_down);
 	set_joystick_button_fn(joystick_cfg, "nav-nudge-zoom-up", do_joystick_nav_nudge_zoom_up);
 	set_joystick_button_fn(joystick_cfg, "nav-nudge-zoom-down", do_joystick_nav_nudge_zoom_down);
+	set_joystick_button_fn(joystick_cfg, "weapons-wavelength-up", do_joystick_weapons_wavelength_up);
+	set_joystick_button_fn(joystick_cfg, "weapons-wavelength-down", do_joystick_weapons_wavelength_down);
 	set_joystick_button_fn(joystick_cfg, "nav-change-pov", do_joystick_nav_change_pov);
 	snprintf(joystick_config_file, sizeof(joystick_config_file), "%s/joystick_config.txt", asset_dir);
 	read_joystick_config(joystick_cfg, joystick_config_file, joystick_name, njoysticks);
