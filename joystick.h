@@ -29,6 +29,10 @@
 #define MAX_JOYSTICK_BUTTONS 40
 #define MAX_JOYSTICK_AXES 40
 
+/* joystick axes limits */
+#define JOYSTICK_AXIS_MIN -32767
+#define JOYSTICK_AXIS_MAX 32767
+
 #define JS_EVENT_BUTTON         0x01    /* button pressed/released */
 #define JS_EVENT_AXIS           0x02    /* joystick moved */
 #define JS_EVENT_INIT           0x80    /* initial state of device */

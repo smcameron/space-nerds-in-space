@@ -3850,34 +3850,28 @@ static void do_joystick_damcon_roll(__attribute__((unused)) void *x, int value)
 		robot_right_button_pressed(NULL);
 }
 
+static void do_joystick_axis_to_slider(struct slider *s, int value)
+{
+	double v = ((double) -value + JOYSTICK_AXIS_MAX) / (double)(JOYSTICK_AXIS_MAX * 2.0);
+	double n = snis_slider_get_input(s);
+	if (fabs(n - v) > 0.01) {
+		snis_slider_poke_input(s, v, 0);
+	}
+}
+
 static void do_joystick_throttle(__attribute__((unused)) void *x, int value)
 {
-	double v = ((double) -value + 32767.0) / 65534.0;
-	double n = snis_slider_get_input(nav_ui.throttle_slider);
-	if (fabs(n - v) > 0.01) {
-		printf("throttle value is currently = %f, setting to %f\n", n, v);
-		snis_slider_poke_input(nav_ui.throttle_slider, v, 0);
-	}
+	do_joystick_axis_to_slider(nav_ui.throttle_slider, value);
 }
 
 static void do_joystick_warp(__attribute__((unused)) void *x, int value)
 {
-	double v = ((double) -value + 32767.0) / 65534.0;
-	double n = snis_slider_get_input(nav_ui.warp_slider);
-	if (fabs(n - v) > 0.01) {
-		printf("warp value is currently = %f, setting to %f\n", n, v);
-		snis_slider_poke_input(nav_ui.warp_slider, v, 0);
-	}
+	do_joystick_axis_to_slider(nav_ui.warp_slider, value);
 }
 
 static void do_joystick_weapons_wavelength(__attribute__((unused)) void *x, int value)
 {
-	double v = ((double) -value + 32767.0) / 65534.0;
-	double n = snis_slider_get_input(weapons.wavelen_slider);
-	if (fabs(n - v) > 0.01) {
-		printf("wavelen value is currently = %f, setting to %f\n", n, v);
-		snis_slider_poke_input(weapons.wavelen_slider, v, 0);
-	}
+	do_joystick_axis_to_slider(weapons.wavelen_slider, value);
 }
 
 static void do_joystick_weapons_pitch(__attribute__((unused)) void *x, int value)

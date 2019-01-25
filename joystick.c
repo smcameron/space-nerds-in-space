@@ -30,10 +30,6 @@
 /* window handle */
 #include <gdk/gdkwin32.h>
 
-/* joystick axes limits */
-#define MIN_AXIS -32767
-#define MAX_AXIS 32767
-
 /* direct input interface */
 LPDIRECTINPUT8 dinput = NULL;
 
@@ -77,8 +73,8 @@ BOOL CALLBACK EnumObjectsCallback(const DIDEVICEOBJECTINSTANCE *devobj, VOID *ct
 		dipr.diph.dwHeaderSize = sizeof(DIPROPHEADER);
 		dipr.diph.dwHow = DIPH_BYID;
 		dipr.diph.dwObj = devobj->dwType;
-		dipr.lMin = MIN_AXIS;
-		dipr.lMax = MAX_AXIS;
+		dipr.lMin = JOYSTICK_AXIS_MIN;
+		dipr.lMax = JOYSTICK_AXIS_MAX;
 
 		hr = IDirectInputDevice_SetProperty(joystick, DIPROP_RANGE, &dipr.diph);
 		if (FAILED(hr))
