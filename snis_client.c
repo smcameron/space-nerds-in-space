@@ -3803,6 +3803,11 @@ static void do_joystick_torpedo(__attribute__((unused)) void *x)
 	fire_torpedo_button_pressed(NULL);
 }
 
+static void do_joystick_missile(__attribute__((unused)) void *x)
+{
+	fire_missile_button_pressed(NULL);
+}
+
 static void do_joystick_pitch(__attribute__((unused)) void *x, int value)
 {
 #define YJOYSTICK_THRESHOLD 23000
@@ -20638,6 +20643,7 @@ static void setup_joysticks(GtkWidget *window)
 	set_joystick_axis_fn(joystick_cfg, "pitch", do_joystick_pitch);
 	set_joystick_button_fn(joystick_cfg, "phaser", fire_phaser_button_pressed);
 	set_joystick_button_fn(joystick_cfg, "torpedo", do_joystick_torpedo);
+	set_joystick_button_fn(joystick_cfg, "missile", do_joystick_missile);
 	set_joystick_axis_fn(joystick_cfg, "weapons-yaw", do_joystick_weapons_yaw);
 	set_joystick_axis_fn(joystick_cfg, "weapons-pitch", do_joystick_weapons_pitch);
 	set_joystick_axis_fn(joystick_cfg, "damcon-pitch", do_joystick_damcon_pitch);
