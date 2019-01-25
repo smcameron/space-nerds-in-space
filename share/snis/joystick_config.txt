@@ -30,8 +30,14 @@
 #
 # The game functions are as follows:
 #
-# roll, pitch, yaw, phaser, torpedo, weapons-yaw, weapons-pitch
-# damcon-roll, damcon-pitch, damcon-gripper, throttle
+# yaw, roll, pitch,
+# phaser, torpedo,  missile,  weapons-yaw,  weapons-pitch, damcon-pitch,
+# damcon-roll, throttle, damcon-gripper, nav-engage-warp,  nav-standard-
+# orbit, nav-docking-magnets, nav-attitude-indicator-abs-rel, nav-
+# starmap, nav-reverse, nav-lights, nav-nudge-warp-up, nav-nudge-warp-
+# down, nav-nudge-zoom-up, nav-nudge-zoom-down, weapons-wavelength-up,
+# weapons-wavelength-down, nav-change-pov
+#
 #
 # Here are examples of mapping a mode + button or mode + axis to a function:
 #
