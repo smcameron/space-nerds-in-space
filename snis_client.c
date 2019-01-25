@@ -3821,14 +3821,13 @@ static void do_joystick_missile(__attribute__((unused)) void *x)
 static void do_joystick_pitch(__attribute__((unused)) void *x, int value)
 {
 #define YJOYSTICK_THRESHOLD 23000
-#define YJOYSTICK_THRESHOLD_FINE 6000
 	if (value < -YJOYSTICK_THRESHOLD)
 		request_navigation_pitch_packet(PITCH_BACK);
 	else if (value > YJOYSTICK_THRESHOLD)
 		request_navigation_pitch_packet(PITCH_FORWARD);
-	else if (value < -YJOYSTICK_THRESHOLD_FINE)
+	else if (value < 0)
 		request_navigation_pitch_packet(PITCH_BACK + 2);
-	else if (value > YJOYSTICK_THRESHOLD_FINE)
+	else if (value > 0)
 		request_navigation_pitch_packet(PITCH_FORWARD + 2);
 }
 
@@ -3843,7 +3842,6 @@ static void do_joystick_damcon_pitch(__attribute__((unused)) void *x, int value)
 static void do_joystick_damcon_roll(__attribute__((unused)) void *x, int value)
 {
 #define XJOYSTICK_THRESHOLD 23000
-#define XJOYSTICK_THRESHOLD_FINE 6000
 	if (value < -XJOYSTICK_THRESHOLD)
 		robot_left_button_pressed(NULL);
 	else if (value > XJOYSTICK_THRESHOLD)
@@ -3880,9 +3878,9 @@ static void do_joystick_weapons_pitch(__attribute__((unused)) void *x, int value
 		request_weapons_manual_pitch_packet(PITCH_BACK);
 	else if (value > YJOYSTICK_THRESHOLD)
 		request_weapons_manual_pitch_packet(PITCH_FORWARD);
-	else if (value < -YJOYSTICK_THRESHOLD_FINE)
+	else if (value < 0)
 		request_weapons_manual_pitch_packet(PITCH_BACK + 2);
-	else if (value > YJOYSTICK_THRESHOLD_FINE)
+	else if (value > 0)
 		request_weapons_manual_pitch_packet(PITCH_FORWARD + 2);
 }
 
@@ -3893,9 +3891,9 @@ static void do_joystick_yaw(__attribute__((unused)) void *x, int value)
 		request_navigation_yaw_packet(YAW_LEFT);
 	else if (value > XJOYSTICK_THRESHOLD)
 		request_navigation_yaw_packet(YAW_RIGHT);
-	else if (value < -XJOYSTICK_THRESHOLD_FINE)
+	else if (value < 0)
 		request_navigation_yaw_packet(YAW_LEFT + 2);
-	else if (value > XJOYSTICK_THRESHOLD_FINE)
+	else if (value > 0)
 		request_navigation_yaw_packet(YAW_RIGHT + 2);
 }
 
@@ -3905,9 +3903,9 @@ static void do_joystick_weapons_yaw(__attribute__((unused)) void *x, int value)
 		request_weapons_manual_yaw_packet(YAW_LEFT);
 	else if (value > XJOYSTICK_THRESHOLD)
 		request_weapons_manual_yaw_packet(YAW_RIGHT);
-	else if (value < -XJOYSTICK_THRESHOLD_FINE)
+	else if (value < 0)
 		request_weapons_manual_yaw_packet(YAW_LEFT + 2);
-	else if (value > XJOYSTICK_THRESHOLD_FINE)
+	else if (value > 0)
 		request_weapons_manual_yaw_packet(YAW_RIGHT + 2);
 }
 
@@ -3918,9 +3916,9 @@ static void do_joystick_roll(__attribute__((unused)) void *x, int value)
 		request_navigation_roll_packet(ROLL_RIGHT);
 	else if (value > XJOYSTICK_THRESHOLD)
 		request_navigation_roll_packet(ROLL_LEFT);
-	else if (value < -XJOYSTICK_THRESHOLD_FINE)
+	else if (value < 0)
 		request_navigation_roll_packet(ROLL_RIGHT + 2);
-	else if (value > XJOYSTICK_THRESHOLD_FINE)
+	else if (value > 0)
 		request_navigation_roll_packet(ROLL_LEFT + 2);
 }
 
@@ -3940,8 +3938,6 @@ static void deal_with_joysticks()
 	for (j = 0; j < njoysticks; j++) {
 		if (joystick_fd[j] < 0) /* no joystick */
 			continue;
-
-#define JOYSTICK_DEADZONE 6000
 
 		/* Read events even if we don't use them just to consume them. */
 		memset(&jss[j].button, 0, sizeof(jss[j].button));
@@ -3967,9 +3963,7 @@ static void deal_with_joysticks()
 
 		/* Fire off joystick axis callbacks registered via set_joystick_axis_fn() */
 		for (i = 0; i < ARRAYSIZE(jss[j].axis); i++)
-			if (jss[j].axis[i] < -JOYSTICK_DEADZONE ||
-				jss[j].axis[i] > JOYSTICK_DEADZONE)
-				joystick_axis(joystick_cfg, NULL, displaymode, j, i, jss[j].axis[i]);
+			joystick_axis(joystick_cfg, NULL, displaymode, j, i, jss[j].axis[i]);
 	}
 }
 

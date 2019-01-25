@@ -51,6 +51,7 @@ struct joystick_config {
 	joystick_button_fn button[MAX_MODES][MAX_DEVICES][MAX_BUTTONS];
 	joystick_axis_fn axis[MAX_MODES][MAX_DEVICES][MAX_AXES];
 	int invert[MAX_MODES][MAX_DEVICES][MAX_AXES];
+	int deadzone[MAX_MODES][MAX_DEVICES][MAX_AXES];
 	struct button_function_map_entry button_fn_map[MAX_FUNCTIONS];
 	struct axis_function_map_entry axis_fn_map[MAX_FUNCTIONS];
 	int nbutton_fns;
@@ -130,7 +131,7 @@ static int parse_joystick_cfg_line(struct joystick_config *cfg, char *filename, 
 {
 	int rc;
 	char device[1000];
-	int mode, axis, button, invert;
+	int mode, axis, button, invert, deadzone;
 	char function[1000];
 	joystick_axis_fn jaf;
 	joystick_button_fn jbf;
@@ -150,12 +151,16 @@ static int parse_joystick_cfg_line(struct joystick_config *cfg, char *filename, 
 		return 0;
 	}
 	invert = 1; /* not inverted */
-	rc = sscanf(line, " mode %d invert axis %d %s", &mode, &axis, function);
-	if (rc == 3)
+	rc = sscanf(line, " mode %d invert axis %d %s %d", &mode, &axis, function, &deadzone);
+	if (rc >= 3) {
 		invert = -1; /* inverted */
-	else
-		rc = sscanf(line, " mode %d axis %d %s", &mode, &axis, function);
-	if (rc == 3) {
+	} else {
+		rc = sscanf(line, " mode %d axis %d %s %d", &mode, &axis, function, &deadzone);
+	}
+	if (rc >= 3) {
+		if (rc < 4) {
+			deadzone = 6000; /* default value */
+		}
 		if (mode < 0 || mode >= MAX_MODES) {
 			fprintf(stderr, "%s:%d Bad mode %d (must be between 0 and %d)\n",
 				filename, ln, mode, MAX_MODES - 1);
@@ -175,6 +180,7 @@ static int parse_joystick_cfg_line(struct joystick_config *cfg, char *filename, 
 			return 0; /* valid syntax, but not a device we care about */
 		cfg->axis[mode][*current_device][axis] = jaf;
 		cfg->invert[mode][*current_device][axis] = invert;
+		cfg->deadzone[mode][*current_device][axis] = deadzone;
 		return 0;
 	}
 	rc = sscanf(line, " mode %d button %d %s", &mode, &button, function);
@@ -276,6 +282,8 @@ void joystick_axis(struct joystick_config *cfg, void *context, int mode, int dev
 		return;
 	if (axis < 0 || axis >= MAX_AXES)
 		return;
-	if (cfg->axis[mode][device][axis])
+	if (cfg->axis[mode][device][axis] &&
+		((value >= cfg->deadzone[mode][device][axis])
+		|| (value <= -cfg->deadzone[mode][device][axis])))
 		cfg->axis[mode][device][axis](context, value * cfg->invert[mode][device][axis]);
 }
