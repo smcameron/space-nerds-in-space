@@ -47,17 +47,22 @@ static char *get_field(char *line)
 	return i;
 }
 
-static void sanity_check(struct solarsystem_asset_spec *ss)
+static void sanity_check(char *filename, struct solarsystem_asset_spec *ss)
 {
 	int i;
 
 	for (i = 0; i < ss->nplanet_textures; i++) {
 		if (strcmp(ss->planet_type[i], "rocky") != 0 &&
+			strcmp(ss->planet_type[i], "earthlike") != 0 &&
+			strcmp(ss->planet_type[i], "gas-giant")) {
+			fprintf(stderr, "%s: unknown planet type '%s'\n", filename, ss->planet_type[i]);
+		}
+		if (strcmp(ss->planet_type[i], "rocky") != 0 &&
 			strcmp(ss->planet_type[i], "earthlike") != 0)
 			continue;
 		if (strcmp(ss->planet_normalmap[i], "no-normal-map") == 0) {
-			fprintf(stderr, "planet texture %s is type %s but has no normalmap\n",
-				ss->planet_texture[i], ss->planet_type[i]);
+			fprintf(stderr, "%s: planet texture %s is type %s but has no normalmap\n",
+				filename, ss->planet_texture[i], ss->planet_type[i]);
 			ss->spec_warnings++;
 		}
 	}
@@ -273,7 +278,7 @@ bad_line:
 		}
 	}
 
-	sanity_check(a);
+	sanity_check(filename, a);
 
 	return a;
 }
