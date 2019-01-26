@@ -1766,7 +1766,7 @@ enum planet_type planet_type_from_string(char *s)
 {
 	if (strcmp(s, "gas-giant") == 0)
 		return planet_type_gas_giant;
-	if (strcmp(s, "earth-like") == 0)
+	if (strcmp(s, "earthlike") == 0)
 		return planet_type_earthlike;
 	if (strcmp(s, "rocky") == 0)
 		return planet_type_rocky;

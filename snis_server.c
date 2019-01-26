@@ -12306,7 +12306,7 @@ static int select_atmospheric_profile(struct snis_entity *planet)
 
 	if (strcmp(solarsystem_assets->planet_type[planet_type], "rocky") == 0)
 		atm_type = marslike_atmosphere_type;
-	else if (strcmp(solarsystem_assets->planet_type[planet_type], "earth-like") == 0)
+	else if (strcmp(solarsystem_assets->planet_type[planet_type], "earthlike") == 0)
 		atm_type = earthlike_atmosphere_type;
 	else if (strcmp(solarsystem_assets->planet_type[planet_type], "gas-giant") == 0)
 		atm_type = gas_giant_atmosphere_type;
