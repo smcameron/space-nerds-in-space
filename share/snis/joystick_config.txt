@@ -130,6 +130,46 @@ device:usb-Thrustmaster_T.16000M-joystick
  mode 7 axis 1 damcon-pitch
  mode 7 axis 2 damcon-roll
 
+# Thrustmaster T.Flight Stick X
+device:usb-Thrustmaster_T.Flight_Stick_X-joystick
+ # main screen
+ mode 0 axis 0 roll
+ mode 0 axis 1 pitch
+ mode 0 axis 2 yaw
+ mode 0 button 0 phaser
+ mode 0 button 1 torpedo
+ # navigation
+ mode 1 axis 0 roll
+ mode 1 axis 1 pitch
+ mode 1 axis 2 yaw
+ mode 1 axis 3 throttle 0
+ mode 1 button 1 nav-change-pov
+ mode 1 button 2 nav-starmap
+ mode 1 button 3 nav-docking-magnets
+ mode 1 button 4 nav-standard-orbit
+ mode 1 button 0 nav-attitude-indicator-abs-rel
+ mode 1 button 5 nav-lights
+ mode 1 button 6 nav-nudge-warp-up
+ mode 1 button 7 nav-nudge-warp-down
+ mode 1 button 8 nav-engage-warp
+ mode 1 button 9 nav-reverse
+ mode 1 button 10 nav-nudge-zoom-up
+ mode 1 button 11 nav-nudge-zoom-down
+ # weapons
+ mode 2 axis 0 weapons-yaw
+ mode 2 axis 1 weapons-pitch
+ mode 2 axis 2 weapons-yaw
+ mode 2 axis 3 weapons-wavelength 0
+ mode 2 button 0 phaser
+ mode 2 button 1 torpedo
+ mode 2 button 3 missile
+ # damcon
+ mode 7 button 1 damcon-gripper
+ mode 7 button 0 damcon-gripper
+ mode 7 axis 0 damcon-roll
+ mode 7 axis 1 damcon-pitch
+ mode 7 axis 2 damcon-roll
+
 # HOTAS Warthog Throttle
 device:usb-Thrustmaster_Throttle_-_HOTAS_Warthog-joystick
  # main screen
