@@ -128,7 +128,10 @@ A "mode" is a number that refers to a terminal (screen) in the game. The modes
 are described in comments in the joystick config file example below.
 .PP
 An "axis" line defines how an axis is to be interpreted for the current (last specified)
-device by mapping the axis to a "function" (defined below).
+device by mapping the axis to a "function" (defined below).  Optionally, an axis may also
+specify a deadzone value (default is 6000), a range in the axis which will have no effect.
+If you do not want a deadzone (as is common for throttle controls), specify the deadzone
+as 0.
 .PP
 A "button" line defines how a button is to be interpreted for the current (last specified)
 device by mapping the button to a "function" (defined below).
@@ -206,10 +209,10 @@ device:usb-©Microsoft_Corporation_Controller_05EB4AD-joystick
  mode 2 button 2 torpedo
 device:usb-Thrustmaster_TWCS_Throttle-joystick
  # main screen
- mode 0 axis 2 throttle
+ mode 0 axis 2 throttle 0
  mode 0 axis 5 yaw
  # navigation
- mode 1 axis 2 throttle
+ mode 1 axis 2 throttle 0
  mode 1 axis 5 yaw
  # weapons
  mode 2 axis 5 weapons-yaw

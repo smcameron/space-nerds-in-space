@@ -152,15 +152,14 @@ static int parse_joystick_cfg_line(struct joystick_config *cfg, char *filename, 
 	}
 	invert = 1; /* not inverted */
 	rc = sscanf(line, " mode %d invert axis %d %s %d", &mode, &axis, function, &deadzone);
-	if (rc >= 3) {
+	if (rc >= 3)
 		invert = -1; /* inverted */
-	} else {
+	else
 		rc = sscanf(line, " mode %d axis %d %s %d", &mode, &axis, function, &deadzone);
-	}
 	if (rc >= 3) {
-		if (rc < 4) {
-			deadzone = 6000; /* default value */
-		}
+#define DEFAULT_DEADZONE_VALUE 6000
+		if (rc < 4)
+			deadzone = DEFAULT_DEADZONE_VALUE;
 		if (mode < 0 || mode >= MAX_MODES) {
 			fprintf(stderr, "%s:%d Bad mode %d (must be between 0 and %d)\n",
 				filename, ln, mode, MAX_MODES - 1);

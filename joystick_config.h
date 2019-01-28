@@ -38,7 +38,7 @@
  *  mode 0 axis 2 yaw
  *  mode 0 axis 3 roll
  *  mode 0 button 1 shoot
- *  mode 0 button 2 thrust
+ *  mode 0 button 2 thrust 0
  * device:my_other_joystick
  *  mode 0 axis 1 yaw
  *  mode 0 axis 2 pitch
@@ -57,6 +57,9 @@
  * The "yaw", "pitch", "roll", "shoot", "thrust", etc. must match the "function_name" parameters
  * passed  into set_joystick_axis_fn() and set_joystick_button_fn() functions. These are
  * made up by you to fit the purposes of your program.
+ *
+ * An optional deadzone value may be appended to axis mappings. The default is 6000.
+ * It is common to use a deadzone of 0 for e.g., throttle mappings.
  *
  * The mode numbers are a way to have the same button do different things in different
  * situations. For example, maybe you have a "tank" and an "airplane" mode, and when

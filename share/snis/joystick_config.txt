@@ -44,6 +44,8 @@
 #  mode 0 button 1 phaser		# map mode 0 button 1 to phaser function
 #  mode 1 axis 2 yaw			# map mode 1 axis 2 to yaw function
 #  mode 1 invert axis 3 roll 		# map mode 1 axis 3 to roll function and invert the axis
+#  mode 1 axis 2 throttle 0		# map mode 1 axis 2 to throttle with 0 deadzone
+#					# (default deadzone is 6000).
 #
 
 # Microsoft Xbox 360 controller
@@ -73,7 +75,7 @@ device:usb-©Microsoft_Corporation_Controller_05EB4AD-joystick
 # Thrustmaster Throttle
 device:usb-Thrustmaster_TWCS_Throttle-joystick
  # main screen
- mode 0 axis 2 throttle
+ mode 0 axis 2 throttle 0
  mode 0 axis 5 yaw
  mode 0 button 0 nav-reverse
  mode 0 button 1 nav-docking-magnets
@@ -84,7 +86,7 @@ device:usb-Thrustmaster_TWCS_Throttle-joystick
  mode 0 button 7 nav-standard-orbit
  mode 0 axis 6 yaw # rudder pedals
  # navigation
- mode 1 axis 2 throttle
+ mode 1 axis 2 throttle 0
  mode 1 axis 5 yaw
  mode 1 button 0 nav-reverse
  mode 1 button 1 nav-docking-magnets
@@ -131,7 +133,7 @@ device:usb-Thrustmaster_T.16000M-joystick
 # HOTAS Warthog Throttle
 device:usb-Thrustmaster_Throttle_-_HOTAS_Warthog-joystick
  # main screen
- mode 0 axis 2 throttle
+ mode 0 axis 2 throttle 0
  mode 0 axis 5 yaw
  mode 0 button 0 nav-reverse
  mode 0 button 1 nav-docking-magnets
@@ -142,7 +144,7 @@ device:usb-Thrustmaster_Throttle_-_HOTAS_Warthog-joystick
  mode 0 button 25 nav-standard-orbit
  mode 0 axis 6 yaw # rudder pedals
  # navigation
- mode 1 axis 2 throttle
+ mode 1 axis 2 throttle 0
  mode 1 axis 5 yaw
  mode 1 button 0 nav-reverse
  mode 1 button 1 nav-docking-magnets
