@@ -106,7 +106,7 @@ function add_planet_plus_starbase(name, x, y, z, r, starbase_number)
 	sby = sby + y;
 	sbz = sbz + z;
 	p = add_planet(name, x, y, z, r);
-	sb = add_starbase(sbx, sby, sbz, starbase_numberJ);
+	sb = add_starbase(sbx, sby, sbz, starbase_number);
 	return p, sb;
 end
 
