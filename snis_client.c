@@ -12933,7 +12933,7 @@ static void init_engineering_ui(void)
 
 	r = SCREEN_WIDTH / 16;
 	eng_ui.gauge_radius = r;
-	y = r + 100.0;
+	y = r + txy(50);
 	x = r * 1.05;
 	xinc = (2.0 * r) * 1.1;
 	yinc = txy(36);
@@ -12976,7 +12976,7 @@ static void init_engineering_ui(void)
 	/* make shield slider have less fuzz just for variety */
 	snis_slider_set_fuzz(eu->shield_control_slider, 1);
 
-	y = eng_ui.gauge_radius * 2.5 + yinc;
+	y += eng_ui.gauge_radius + txy(30);
 	color = UI_COLOR(eng_button);
 	eu->preset1_button = snis_button_init(txx(20),
 						y, -1, -1, "1",
@@ -13121,7 +13121,7 @@ static void init_engineering_ui(void)
 	ui_add_button(eu->custom_button, dm, "CUSTOM BUTTON");
 	ui_add_button(eu->deploy_chaff, dm, "DEPLOY CHAFF");
 
-	y = eng_ui.gauge_radius * 2.5 + yinc;
+	y = eng_ui.gauge_radius * 2 + txy(50) + txy(30);
 	eu->shield_damage = snis_slider_init(s2x, y += yinc, sw, sh, color, "SHIELD STATUS", "0", "100",
 				0.0, 100.0, sample_shield_damage, NULL);
 	snis_slider_set_label_font(eu->shield_damage, NANO_FONT);
