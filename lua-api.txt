@@ -173,6 +173,11 @@ EVENT TYPES in snis:
 		Arguments are the id of the player ship, the id of the ship the bounty was
 		collected for, the amount of the bounty, and the id of the starbase at which
 		the bounty was collected.
+	"passenger-disembarked"
+		Arguments are the passenger number (0 - 80) and id of the destination starbase.
+	"passenger-ejected"
+		Arguments are the passenger number (0 - 80) and id of the starbase at which
+		the passenger was ejected.
 
 Functions which you may call from lua: 
 
@@ -982,6 +987,25 @@ generate_name() -- returns a randomly generated name (suitable for e.g. planets 
 
 ai_trace(id) -- enable AI tracing for the specified object id.  If id is less than zero,
 	or refers to a non-existent object, ai tracing is turned off.
+
+create_passenger(n, name, location, destination, fare) -- set a passenger's name, location,
+	destination and fare. Parameters:
+        n: the passenger number, which should be between 0 and 80.
+	name: is the name of the passenger, a string, no longer than 49 characters.
+	location: the ID of a starbase to move the passenger to.
+	destination: the ID of a starbase to which the passenger wants to travel.
+	fare: The fare the player should get upon delivering the passenger.
+
+set_passenger_location(n, location) -- sets passenger location
+	Parameters:
+	n: the passenger number (between 0 and 80, inclusive).
+	location: The ID of the starbase or player ship where the passenger should be located.
+
+get_passenger_location(n) -- gets passenger location
+	Parameters:
+	n: the passenger number (0 - 80).
+	Returns:
+	ID of the starbase or player ship where the passenger is currently located.
 
 NOTE: Your lua scripts must not sleep, call any function which blocks, or require excessive
 long running calculations (nothing more than a few hundredths of a second) because the lua

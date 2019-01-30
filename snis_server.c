@@ -14888,6 +14888,8 @@ static void npc_menu_item_eject_passengers(struct npc_menu_item *item,
 			ship->tsd.ship.wallet += passenger[i].fare;
 			/* passenger disembarks, ceases to be a passenger, replace with new one */
 			update_passenger(i, nstarbases);
+			schedule_callback2(event_callback, &callback_schedule,
+						"passenger-disembarked", (double) i, (double) sb->id);
 			continue;
 		}
 		if (passenger[i].location == b->shipid) {
@@ -14897,6 +14899,8 @@ static void npc_menu_item_eject_passengers(struct npc_menu_item *item,
 			ship->tsd.ship.wallet -= passenger[i].fare;
 			/* passenger ejected, ceases to be a passenger, replace with new one */
 			update_passenger(i, nstarbases);
+			schedule_callback2(event_callback, &callback_schedule,
+						"passenger-ejected", (double) i, (double) sb->id);
 		}
 	}
 }
@@ -14932,6 +14936,8 @@ static void npc_menu_item_disembark_passengers(struct npc_menu_item *item,
 			ship->tsd.ship.wallet += passenger[i].fare;
 			/* passenger disembarks, ceases to be a passenger, replace with new one */
 			update_passenger(i, nstarbases);
+			schedule_callback2(event_callback, &callback_schedule,
+						"passenger-disembarked", (double) i, (double) sb->id);
 		}
 	}
 }
@@ -19109,6 +19115,101 @@ static int l_ai_trace(lua_State *l)
 	return 0;
 }
 
+static int l_get_passenger_location(lua_State *l)
+{
+	const double pidx = luaL_checknumber(lua_state, 1);
+	int p = (int) pidx;
+	double location;
+
+	if (p < 0 || p > MAX_PASSENGERS) {
+		send_demon_console_msg("GET_PASSENGER_LOCATION: PASSENGER OUT OF RANGE (0 - %d): %d",
+			MAX_PASSENGERS, p);
+		return 0;
+	}
+	pthread_mutex_lock(&universe_mutex);
+	location = passenger[p].location;
+	pthread_mutex_unlock(&universe_mutex);
+	lua_pushnumber(lua_state, location);
+	return 1;
+}
+
+static int l_set_passenger_location(lua_State *l)
+{
+	const double pidx = luaL_checknumber(lua_state, 1);
+	const double ploc = luaL_checknumber(lua_state, 2);
+	int i, p = (int) pidx;
+	uint32_t location = (uint32_t) ploc;
+
+	if (p < 0 || p > MAX_PASSENGERS) {
+		send_demon_console_msg("SET_PASSENGER_LOCATION: PASSENGER OUT OF RANGE (0 - %d): %d",
+			MAX_PASSENGERS, p);
+		return 0;
+	}
+	pthread_mutex_lock(&universe_mutex);
+	i = lookup_by_id(location);
+	if (i < 0) {
+		pthread_mutex_unlock(&universe_mutex);
+		send_demon_console_msg("SET_PASSENGER_LOCATION: BAD LOCATION: %d", location);
+		return 0;
+	}
+	if (go[i].type != OBJTYPE_STARBASE && go[i].type != OBJTYPE_SHIP1) {
+		pthread_mutex_unlock(&universe_mutex);
+		send_demon_console_msg("SET_PASSENGER_LOCATION: INAPPROPRIATE LOCATION: %d", location);
+		return 0;
+	}
+	passenger[p].location = location;
+	pthread_mutex_unlock(&universe_mutex);
+	return 0;
+}
+
+static int l_create_passenger(lua_State *l)
+{
+	const double pidx = luaL_checknumber(lua_state, 1);
+	const char *name = luaL_checkstring(l, 2);
+	const double loc = luaL_checknumber(lua_state, 3);
+	const double dest = luaL_checknumber(lua_state, 4);
+	const double fare = luaL_checknumber(lua_state, 5);
+	uint32_t id32;
+	int location, destination, p = (int) pidx;
+
+	if (p < 0 || p > MAX_PASSENGERS) {
+		send_demon_console_msg("CREATE_PASSENGER: PASSENGER OUT OF RANGE (0 - %d): %d",
+			MAX_PASSENGERS, p);
+		return 0;
+	}
+	pthread_mutex_lock(&universe_mutex);
+	id32 = (uint32_t) loc;
+	location = lookup_by_id(id32);
+	if (location < 0) {
+		pthread_mutex_unlock(&universe_mutex);
+		send_demon_console_msg("CREATE_PASSENGER: BAD LOCATION ID %u", id32);
+		return 0;
+	}
+	if (go[location].type != OBJTYPE_SHIP1 && go[location].type != OBJTYPE_STARBASE) {
+		pthread_mutex_unlock(&universe_mutex);
+		send_demon_console_msg("CREATE_PASSENGER: INAPPROPRIATE LOCATION ID %u", id32);
+		return 0;
+	}
+	id32 = (uint32_t) dest;
+	destination = lookup_by_id(id32);
+	if (destination < 0) {
+		pthread_mutex_unlock(&universe_mutex);
+		send_demon_console_msg("CREATE_PASSENGER: BAD DESTINATION ID %u", id32);
+		return 0;
+	}
+	if (go[location].type != OBJTYPE_STARBASE) {
+		pthread_mutex_unlock(&universe_mutex);
+		send_demon_console_msg("CREATE_PASSENGER: INAPPROPRIATE DESTINATION ID %u", id32);
+		return 0;
+	}
+	snprintf(passenger[p].name, sizeof(passenger[p].name), "%s", name);
+	passenger[p].location = go[location].id;
+	passenger[p].destination = go[destination].id;
+	passenger[p].fare = fare;
+	pthread_mutex_unlock(&universe_mutex);
+	return 0;
+}
+
 static int process_create_item(struct game_client *c)
 {
 	unsigned char buffer[14];
@@ -22788,6 +22889,9 @@ static void setup_lua(void)
 	add_lua_callable_fn(l_generate_character_name, "generate_character_name");
 	add_lua_callable_fn(l_generate_name, "generate_name");
 	add_lua_callable_fn(l_ai_trace, "ai_trace");
+	add_lua_callable_fn(l_create_passenger, "create_passenger");
+	add_lua_callable_fn(l_set_passenger_location, "set_passenger_location");
+	add_lua_callable_fn(l_get_passenger_location, "get_passenger_location");
 }
 
 static int run_initial_lua_scripts(void)
