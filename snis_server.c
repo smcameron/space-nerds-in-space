@@ -12332,7 +12332,25 @@ static int add_black_hole(double x, double y, double z, float radius)
 	return i;
 }
 
-static int add_planet(double x, double y, double z, float radius, uint8_t security)
+/* type here is 0 == earthlike, 1 == gas-giant, 2 == rocky */
+static int choose_planet_texture_of_type(int planet_type)
+{
+	int i;
+	int ntextures = solarsystem_assets->nplanet_textures;
+	int n = snis_randn(100) % ntextures;
+	const char *ptypes[] = { "earthlike", "gas-giant", "rocky" };
+
+	planet_type %= 3;
+
+	for (i = 0; i < ntextures; i++) {
+		if (strcmp(solarsystem_assets->planet_type[(i + n) % ntextures], ptypes[planet_type]) == 0)
+			break;
+	}
+	return (i + n) % solarsystem_assets->nplanet_textures;
+}
+
+/* type here is -1 == random, 0 == earthlike, 1 == gas-giant, 2 == rocky */
+static int add_planet(double x, double y, double z, float radius, uint8_t security, int type)
 {
 	int i, sst, minr, maxr;
 
@@ -12355,7 +12373,10 @@ static int add_planet(double x, double y, double z, float radius, uint8_t securi
 	go[i].tsd.planet.tech_level = snis_randn(1000) % ARRAYSIZE(tech_level_name);
 	go[i].tsd.planet.description_seed = snis_rand();
 	go[i].tsd.planet.ring = snis_randn(100) < 50;
-	sst = (uint8_t) (go[i].id % solarsystem_assets->nplanet_textures);
+	if (type < 0) /* choose type randomly */
+		sst = (uint8_t) (go[i].id % solarsystem_assets->nplanet_textures);
+	else	/* choose a random instance of the given type */
+		sst = (uint8_t) choose_planet_texture_of_type(type);
 	go[i].tsd.planet.solarsystem_planet_type = sst;
 
 	/* Enforce planet sizes based on planet type */
@@ -12392,7 +12413,7 @@ static int add_planet(double x, double y, double z, float radius, uint8_t securi
 
 static int l_add_planet(lua_State *l)
 {
-	double x, y, z, r, s;
+	double x, y, z, r, s, t;
 	const char *name;
 	int i;
 
@@ -12403,13 +12424,19 @@ static int l_add_planet(lua_State *l)
 	r = lua_tonumber(lua_state, 5);
 	s = lua_tonumber(lua_state, 6);
 
+	/* 7th optional param is planet type, 0 = earthlike, 1 = gas-giant, 2 = rocky, default = random */
+	if (lua_gettop(l) >= 7)
+		t = (int) lua_tonumber(lua_state, 7) % 3;
+	else
+		t = -1;
+
 	if (r < MIN_PLANET_RADIUS)
 		r = MIN_PLANET_RADIUS;
 	if (r > MAX_PLANET_RADIUS)
 		r = MAX_PLANET_RADIUS;
 
 	pthread_mutex_lock(&universe_mutex);
-	i = add_planet(x, y, z, r, (uint8_t) s);
+	i = add_planet(x, y, z, r, (uint8_t) s, t);
 	if (i < 0) {
 		pthread_mutex_unlock(&universe_mutex);
 		lua_pushnumber(lua_state, -1.0);
@@ -12513,7 +12540,7 @@ static void add_planets(void)
 			printf("Minimum planet separation distance not attainable\n");
 		radius = (float) snis_randn(MAX_PLANET_RADIUS - MIN_PLANET_RADIUS) +
 						MIN_PLANET_RADIUS;
-		add_planet(x, y, z, radius, i < 4 ? HIGH_SECURITY : LOW_SECURITY);
+		add_planet(x, y, z, radius, i < 4 ? HIGH_SECURITY : LOW_SECURITY, -1);
 	}
 }
 
@@ -17950,7 +17977,7 @@ static void setup_rtsmode_battlefield(void)
 	for (i = 0; i < ARRAYSIZE(rts_planet); i++) { /* Add the main planets */
 		union vec3 *p = &rts_main_planet_pos[0];
 		struct snis_entity *planet;
-		rts_planet[i].index = add_planet(p[i].v.x, p[i].v.y, p[i].v.z, MAX_PLANET_RADIUS * 0.85, 0);
+		rts_planet[i].index = add_planet(p[i].v.x, p[i].v.y, p[i].v.z, MAX_PLANET_RADIUS * 0.85, 0, -1);
 		planet = &go[rts_planet[i].index];
 		fprintf(stderr, "Added main planet %d, index = %d\n", i, rts_planet[i].index);
 		fprintf(stderr, "Position = %fm %fm %f\n", planet->x, planet->y, planet->z);
@@ -17982,7 +18009,7 @@ static void setup_rtsmode_battlefield(void)
 		if (i % 2) {
 			/* Put a small planet near the starbase */
 			random_point_on_sphere(MAX_PLANET_RADIUS * 1.1, &x, &y, &z);
-			add_planet(go[rc].x + x, go[rc].y + y, go[rc].z + z, MAX_PLANET_RADIUS * 0.6, 0);
+			add_planet(go[rc].x + x, go[rc].y + y, go[rc].z + z, MAX_PLANET_RADIUS * 0.6, 0, -1);
 			go[rc].sdata.faction = 0; /* neutral */
 		} else {
 			/* Put some asteroids around the starbase */
@@ -19246,7 +19273,7 @@ static int process_create_item(struct game_client *c)
 	case OBJTYPE_PLANET:
 		r = (float) snis_randn(MAX_PLANET_RADIUS - MIN_PLANET_RADIUS) +
 					MIN_PLANET_RADIUS;
-		i = add_planet(x, y, z, r, 0);
+		i = add_planet(x, y, z, r, 0, -1);
 		break;
 	case OBJTYPE_BLACK_HOLE:
 		r = (float) snis_randn(MAX_BLACK_HOLE_RADIUS - MIN_BLACK_HOLE_RADIUS) +

@@ -231,8 +231,10 @@ id = add_starbase(x, y, z, n) - adds a starbase at location x,y with number n (0
 	the starbase will be named "SB-n"
 	TODO: allow starbases to be named arbitrary strings.
 
-id = add_planet(name, x, y, z, r, s) - adds planet at x,y,z with specified name, radius,
-	and security (security: 0 = low, 1 = medium, 2 = high)
+id = add_planet(name, x, y, z, r, s, t) - adds planet at x,y,z with specified name, radius,
+	and security (security: 0 = low, 1 = medium, 2 = high) and type t (0 = earthlike,
+	1 = gas-giant, 2 = rocky (you can remember because they are alphabetical order)).
+	The last parameter, t, is optional.
 	returns id of planet or -1.0 on failure.   Radius should be between 800 and 7000.
 
 id = add_black_hole(name, x, y, z, r) - adds a black hole at x,y,z with specified name, and
