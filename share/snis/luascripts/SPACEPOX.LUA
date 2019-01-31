@@ -143,7 +143,7 @@ function create_asteroid_field(number_of_asteroids, x, y, z, radius)
 			dz = math.random(radius * 2) - radius;
 			r2 = dx * dx + dy * dy + dz * dz
 		until r2 < radius * radius
-		add_asteroid(derelictx + dx, derelicty + dy, derelictz + dz);
+		add_asteroid(x + dx, y + dy, z + dz);
 	end
 end
 
