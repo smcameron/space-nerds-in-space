@@ -15337,7 +15337,7 @@ static void draw_science_details(GtkWidget *w, GdkGC *gc)
 		/* break planet_desc into multiple lines */
 		len = strlen(planet_desc);
 		j = 0;
-		for (i = 0; i < len; i++) {
+		for (i = 0; i <= len; i++) {
 			if (planet_desc[i] == '\n' || planet_desc[i] == '\0') {
 				tmpbuf[j] = '\0';
 				sng_abs_xy_draw_string(tmpbuf, NANO_FONT, 10, y);
