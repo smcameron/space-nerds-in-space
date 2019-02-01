@@ -8890,7 +8890,7 @@ static void maybe_transmit_attached_science_text(int bridge, struct snis_entity 
 	if (!sci_selection->sdata.science_text) /* Nothing to send */
 		return;
 	timer++;
-	if ((timer % 13) == 0) /* Throttle this transmission */
+	if ((timer % 13) != 0) /* Throttle this transmission */
 		return;
 	len = strnlen(sci_selection->sdata.science_text, 256);
 	pb = packed_buffer_allocate(len + 7);
