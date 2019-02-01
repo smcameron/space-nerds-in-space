@@ -19218,6 +19218,70 @@ static int l_set_planet_description(lua_State *l)
 	return 0;
 }
 
+static int set_planet_byte_property_helper(lua_State *l, char *property,
+						int offset, int lobound, int highbound)
+{
+	const double planet_id = luaL_checknumber(lua_state, 1);
+	const double value = luaL_checknumber(l, 2);
+	struct snis_entity *p;
+	uint8_t *target, v;
+	int i;
+
+	pthread_mutex_lock(&universe_mutex);
+	i = lookup_by_id(planet_id);
+	if (i < 0) {
+		pthread_mutex_unlock(&universe_mutex);
+		send_demon_console_msg("SET_PLANET_%s: BAD OBJECT ID: %u\n",
+				property, (unsigned int) planet_id);
+		return 0;
+	}
+	p = &go[i];
+	if (p->type != OBJTYPE_PLANET) {
+		pthread_mutex_unlock(&universe_mutex);
+		send_demon_console_msg("SET_PLANET_%s: OBJECT %u IS NOT A PLANET\n",
+				property, (unsigned int) planet_id);
+		return 0;
+	}
+	target = (uint8_t *) &p->tsd.planet;
+	target += offset;
+	v = (uint8_t) value;
+	if (v < lobound)
+		v = lobound;
+	if (v > highbound)
+		v = highbound;
+	*target = v;
+	p->timestamp = universe_timestamp;
+	pthread_mutex_unlock(&universe_mutex);
+	return 0;
+}
+
+#define PLANET_PROPERTY_OFFSET(property) ((char *) &((struct snis_entity *)0)->tsd.planet.property - \
+			(char *) &((struct snis_entity *)0)->tsd.planet)
+
+static int l_set_planet_government(lua_State *l)
+{
+	return set_planet_byte_property_helper(l, "GOVERNMENT",
+		PLANET_PROPERTY_OFFSET(government), 0, ARRAYSIZE(government_name) - 1);
+}
+
+static int l_set_planet_tech_level(lua_State *l)
+{
+	return set_planet_byte_property_helper(l, "TECH_LEVEL",
+		PLANET_PROPERTY_OFFSET(tech_level), 0, ARRAYSIZE(tech_level_name) - 1);
+}
+
+static int l_set_planet_economy(lua_State *l)
+{
+	return set_planet_byte_property_helper(l, "ECONOMY",
+		PLANET_PROPERTY_OFFSET(economy), 0, ARRAYSIZE(economy_name) - 1);
+}
+
+static int l_set_planet_security(lua_State *l)
+{
+	return set_planet_byte_property_helper(l, "SECURITY",
+		PLANET_PROPERTY_OFFSET(security), LOW_SECURITY, HIGH_SECURITY);
+}
+
 static int l_set_passenger_location(lua_State *l)
 {
 	const double pidx = luaL_checknumber(lua_state, 1);
@@ -22978,6 +23042,10 @@ static void setup_lua(void)
 	add_lua_callable_fn(l_set_passenger_location, "set_passenger_location");
 	add_lua_callable_fn(l_get_passenger_location, "get_passenger_location");
 	add_lua_callable_fn(l_set_planet_description, "set_planet_description");
+	add_lua_callable_fn(l_set_planet_government, "set_planet_government");
+	add_lua_callable_fn(l_set_planet_tech_level, "set_planet_tech_level");
+	add_lua_callable_fn(l_set_planet_economy, "set_planet_economy");
+	add_lua_callable_fn(l_set_planet_security, "set_planet_security");
 }
 
 static int run_initial_lua_scripts(void)

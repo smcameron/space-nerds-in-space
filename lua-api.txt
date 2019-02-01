@@ -1014,6 +1014,52 @@ set_planet_description(planet_id, description) -- set the description of a plane
 	planet_id: number, the ID of the planet
 	description: string, the description you want. Up to 253 characters.
 
+set_planet_government(planet_id, government) -- set government of planet.
+	Parameters:
+	planet_id: number, the ID of the planet
+	government: number:
+		0 - "Anarchy",
+		1 - "Feudal",
+		2 - "Multi-Governmental",
+		3 - "Dictatorship",
+		4 - "Communist",
+		5 - "Confederacy",
+		6 - "Democracy",
+		7 - "Corporate State"
+
+set_planet_tech_level(planet_id, tech_level) -- set tech_level of planet.
+	Parameters:
+	planet_id: number, the ID of the planet
+	tech_level: number:
+		0 - "stone age",
+		1 - "iron age",
+		2 - "steel age",
+		3 - "silicon age",
+		4 - "positronic age",
+		5 - "space age",
+		6 - "interstellar age",
+
+set_planet_economy(planet_id, economy) -- set economy of planet.
+	Parameters:
+	planet_id: number, the ID of the planet
+	economy: number:
+		0 - "Rich Industrial",
+		1 - "Average Industrial",
+		2 - "Poor Industrial",
+		3 - "Mainly Industrial",
+		4 - "Mainly Agricultural",
+		5 - "Rich Agricultural",
+		6 - "Average Agricultural",
+		7 - "Poor Agricultural",
+
+set_planet_security(planet_id, security) -- set security of planet.
+	Parameters:
+	planet_id: number, the ID of the planet
+	security: number:
+		0 - low security
+		1 - medium security
+		2 - high security
+
 NOTE: Your lua scripts must not sleep, call any function which blocks, or require excessive
 long running calculations (nothing more than a few hundredths of a second) because the lua
 scripts are called from the main thread and if the scripts block, the entire game will block.
