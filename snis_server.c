@@ -19242,7 +19242,7 @@ static int set_planet_byte_property_helper(lua_State *l, char *property,
 				property, (unsigned int) planet_id);
 		return 0;
 	}
-	target = (uint8_t *) &p->tsd.planet;
+	target = (uint8_t *) p;
 	target += offset;
 	v = (uint8_t) value;
 	if (v < lobound)
@@ -19255,31 +19255,28 @@ static int set_planet_byte_property_helper(lua_State *l, char *property,
 	return 0;
 }
 
-#define PLANET_PROPERTY_OFFSET(property) ((char *) &((struct snis_entity *)0)->tsd.planet.property - \
-			(char *) &((struct snis_entity *)0)->tsd.planet)
-
 static int l_set_planet_government(lua_State *l)
 {
 	return set_planet_byte_property_helper(l, "GOVERNMENT",
-		PLANET_PROPERTY_OFFSET(government), 0, ARRAYSIZE(government_name) - 1);
+		offsetof(struct snis_entity, tsd.planet.government), 0, ARRAYSIZE(government_name) - 1);
 }
 
 static int l_set_planet_tech_level(lua_State *l)
 {
 	return set_planet_byte_property_helper(l, "TECH_LEVEL",
-		PLANET_PROPERTY_OFFSET(tech_level), 0, ARRAYSIZE(tech_level_name) - 1);
+		offsetof(struct snis_entity, tsd.planet.tech_level), 0, ARRAYSIZE(tech_level_name) - 1);
 }
 
 static int l_set_planet_economy(lua_State *l)
 {
 	return set_planet_byte_property_helper(l, "ECONOMY",
-		PLANET_PROPERTY_OFFSET(economy), 0, ARRAYSIZE(economy_name) - 1);
+		offsetof(struct snis_entity, tsd.planet.economy), 0, ARRAYSIZE(economy_name) - 1);
 }
 
 static int l_set_planet_security(lua_State *l)
 {
 	return set_planet_byte_property_helper(l, "SECURITY",
-		PLANET_PROPERTY_OFFSET(security), LOW_SECURITY, HIGH_SECURITY);
+		offsetof(struct snis_entity, tsd.planet.security), LOW_SECURITY, HIGH_SECURITY);
 }
 
 static int l_set_passenger_location(lua_State *l)
