@@ -787,6 +787,7 @@ struct missile_data {
 
 struct planet_data {
 	uint32_t description_seed;
+	char *custom_description;
 	uint8_t government;
 	uint8_t tech_level;
 	uint8_t economy;

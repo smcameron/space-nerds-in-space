@@ -5571,6 +5571,10 @@ static void delete_object(uint32_t id)
 		free(go[i].sdata.science_text);
 		go[i].sdata.science_text = NULL;
 	}
+	if (go[i].type == OBJTYPE_PLANET && go[i].tsd.planet.custom_description) {
+		free(go[i].tsd.planet.custom_description);
+		go[i].tsd.planet.custom_description = NULL;
+	}
 	snis_object_pool_free_object(pool, i);
 }
 
@@ -6812,6 +6816,41 @@ static int process_update_science_text(void)
 	return 0;
 }
 
+static int process_update_planet_description(void)
+{
+	unsigned char buffer[5 + 257];
+	char text[257];
+	uint32_t id;
+	uint16_t len;
+	int rc, i;
+
+	rc = read_and_unpack_buffer(buffer, "wh", &id, &len);
+	if (rc)
+		return rc;
+	if (len > 256)
+		return -1;
+	rc = snis_readsocket(gameserver_sock, buffer, len);
+	if (rc)
+		return rc;
+	text[len] = '\0';
+	memcpy(text, buffer, len);
+	pthread_mutex_lock(&universe_mutex);
+	i = lookup_object_by_id(id);
+	if (i < 0) { /* maybe we just joined and don't know this object yet */
+		pthread_mutex_unlock(&universe_mutex);
+		return 0;
+	}
+	if (go[i].type != OBJTYPE_PLANET) {
+		pthread_mutex_unlock(&universe_mutex);
+		return 0;
+	}
+	if (go[i].tsd.planet.custom_description)
+		free(go[i].tsd.planet.custom_description);
+	go[i].tsd.planet.custom_description = strndup(text, 256);
+	pthread_mutex_unlock(&universe_mutex);
+	return 0;
+}
+
 static int process_update_planet_packet(void)
 {
 	unsigned char buffer[100];
@@ -7257,6 +7296,9 @@ static void *gameserver_reader(__attribute__((unused)) void *arg)
 			break;
 		case OPCODE_UPDATE_SCI_TEXT:
 			rc = process_update_science_text();
+			break;
+		case OPCODE_UPDATE_PLANET_DESCRIPTION:
+			rc = process_update_planet_description();
 			break;
 		case OPCODE_UPDATE_PLANET:
 			rc = process_update_planet_packet();
@@ -15299,7 +15341,12 @@ static void draw_science_details(GtkWidget *w, GdkGC *gc)
 
 		struct planet_data *p = &curr_science_guy->tsd.planet;
 
-		if (p->description_seed != last) {
+		if (p->custom_description) {
+			strncpy(planet_desc, p->custom_description, 255);
+			planet_desc[256] = '\0';
+			for (i = 0; planet_desc[i] != '\0'; i++)
+				planet_desc[i] = toupper(planet_desc[i]);
+		} else if (p->description_seed != last) {
 			mt = mtwist_init(p->description_seed);
 			planet_type_str = solarsystem_assets->planet_type[p->solarsystem_planet_type];
 			planet_description(mt, planet_desc, 500, 40, planet_type_from_string(planet_type_str));

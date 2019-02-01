@@ -1708,6 +1708,11 @@ static void delete_object(struct snis_entity *o)
 		o->tsd.derelict.ships_log = NULL;
 	}
 
+	if (o->type == OBJTYPE_PLANET && o->tsd.planet.custom_description) {
+		free(o->tsd.planet.custom_description);
+		o->tsd.planet.custom_description = NULL;
+	}
+
 	snis_object_pool_free_object(pool, go_index(o));
 	o->id = -1;
 	o->alive = 0;
@@ -8899,6 +8904,28 @@ static void maybe_transmit_attached_science_text(int bridge, struct snis_entity 
 	send_packet_to_all_clients_on_a_bridge(ship->id, pb, ROLE_SCIENCE);
 }
 
+static void maybe_transmit_custom_planet_description(int bridge, struct snis_entity *ship,
+				struct snis_entity *planet)
+{
+	struct packed_buffer *pb;
+	uint16_t len;
+	static int timer = 0;
+
+	if (planet->type != OBJTYPE_PLANET)
+		return;
+	if (!planet->tsd.planet.custom_description)
+		return;
+	timer++;
+	if ((timer % 13) != 0) /* Throttle this transmission */
+		return;
+
+	len = strnlen(planet->tsd.planet.custom_description, 256);
+	pb = packed_buffer_allocate(len + 7);
+	packed_buffer_append(pb, "bwhr", OPCODE_UPDATE_PLANET_DESCRIPTION,
+				planet->id, len, planet->tsd.planet.custom_description, len);
+	send_packet_to_all_clients_on_a_bridge(ship->id, pb, ROLE_SCIENCE);
+}
+
 /* If the selected object is too far away and is not a planet, starbase, or waypoint,
  * deselect it. Also maybe transmit attached science text.
  */
@@ -8923,6 +8950,7 @@ static void check_science_selection(struct snis_entity *o)
 	range2 = o->tsd.ship.scibeam_range * o->tsd.ship.scibeam_range;
 	if (dist2 <= range2) {
 		maybe_transmit_attached_science_text(bn, o, &go[i]);
+		maybe_transmit_custom_planet_description(bn, o, &go[i]);
 		return;
 	}
 	if ((go[i].type == OBJTYPE_PLANET || go[i].type == OBJTYPE_STARBASE) &&
@@ -19160,6 +19188,36 @@ static int l_get_passenger_location(lua_State *l)
 	return 1;
 }
 
+static int l_set_planet_description(lua_State *l)
+{
+	const double planet_id = luaL_checknumber(lua_state, 1);
+	const char *description = luaL_checkstring(l, 2);
+	struct snis_entity *o;
+	int i;
+
+	pthread_mutex_lock(&universe_mutex);
+	i = lookup_by_id(planet_id);
+	if (i < 0) {
+		pthread_mutex_unlock(&universe_mutex);
+		send_demon_console_msg("SET_PLANET_DESCRIPTION: BAD OBJECT ID: %u\n", (unsigned int) planet_id);
+		return 0;
+	}
+	o = &go[i];
+	if (o->type != OBJTYPE_PLANET) {
+		pthread_mutex_unlock(&universe_mutex);
+		send_demon_console_msg("SET_PLANET_DESCRIPTION: WRONG OBJECT TYPE FOR ID: %u\n",
+						(unsigned int) planet_id);
+		return 0;
+	}
+	if (o->tsd.planet.custom_description)
+		free(o->tsd.planet.custom_description);
+	o->tsd.planet.custom_description = strndup(description, 255);
+	o->tsd.planet.custom_description[255] = '\0';
+	o->timestamp = universe_timestamp;
+	pthread_mutex_unlock(&universe_mutex);
+	return 0;
+}
+
 static int l_set_passenger_location(lua_State *l)
 {
 	const double pidx = luaL_checknumber(lua_state, 1);
@@ -22919,6 +22977,7 @@ static void setup_lua(void)
 	add_lua_callable_fn(l_create_passenger, "create_passenger");
 	add_lua_callable_fn(l_set_passenger_location, "set_passenger_location");
 	add_lua_callable_fn(l_get_passenger_location, "get_passenger_location");
+	add_lua_callable_fn(l_set_planet_description, "set_planet_description");
 }
 
 static int run_initial_lua_scripts(void)
@@ -23467,12 +23526,17 @@ static void nl_describe_game_object(struct game_client *c, uint32_t id)
 	}
 	switch (go[i].type) {
 	case OBJTYPE_PLANET:
+		if (go[i].tsd.planet.custom_description) {
+			strncpy(description, go[i].tsd.planet.custom_description, 253);
+			description[253] = '\0';
+		} else {
+			mt = mtwist_init(go[i].tsd.planet.description_seed);
+			ss_planet_type = go[i].tsd.planet.solarsystem_planet_type;
+			planet_type_str = solarsystem_assets->planet_type[ss_planet_type];
+			planet_description(mt, description, 250, 254, planet_type_from_string(planet_type_str));
+			mtwist_free(mt);
+		}
 		pthread_mutex_unlock(&universe_mutex);
-		mt = mtwist_init(go[i].tsd.planet.description_seed);
-		ss_planet_type = go[i].tsd.planet.solarsystem_planet_type;
-		planet_type_str = solarsystem_assets->planet_type[ss_planet_type];
-		planet_description(mt, description, 250, 254, planet_type_from_string(planet_type_str));
-		mtwist_free(mt);
 		queue_add_text_to_speech(c, description);
 		return;
 	case OBJTYPE_ASTEROID:
