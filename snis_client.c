@@ -14997,6 +14997,14 @@ static void draw_science_data(GtkWidget *w, struct snis_entity *ship, struct sni
 		case OBJTYPE_WARP_CORE:
 			snprintf(buffer, sizeof(buffer), "TYPE: %s", "EJECTED WARP CORE");
 			break;
+		case OBJTYPE_PLANET:
+			snprintf(buffer, sizeof(buffer), "TYPE: %s%s PLANET", o->tsd.planet.ring ? "RINGED " : "",
+				solarsystem_assets->planet_type[o->tsd.planet.solarsystem_planet_type]);
+			uppercase(buffer);
+			break;
+		case OBJTYPE_BLACK_HOLE:
+			snprintf(buffer, sizeof(buffer), "TYPE: BLACK HOLE");
+			break;
 		default:
 			snprintf(buffer, sizeof(buffer), "TYPE: %s", "UNKNOWN");
 			break;
@@ -15297,11 +15305,6 @@ static void draw_science_details(GtkWidget *w, GdkGC *gc)
 			for (i = 0; planet_desc[i] != '\0'; i++)
 				planet_desc[i] = toupper(planet_desc[i]);
 		}
-		snprintf(buf, sizeof(buf), "TYPE: %s%s", p->ring ? "RINGED " : "",
-				solarsystem_assets->planet_type[p->solarsystem_planet_type]);
-		uppercase(buf);
-		sng_abs_xy_draw_string(buf, TINY_FONT, 10, y);
-		y += yinc;
 		snprintf(buf, sizeof(buf), "GOVERNMENT: %s", government_name[p->government]);
 		sng_abs_xy_draw_string(buf, TINY_FONT, 10, y);
 		y += yinc;
