@@ -25,9 +25,11 @@ for j, v in pairs(player_ids) do
         demon_print("UPDATED PLAYER WALLET");
         update_player_wallet(id, money);
         found = 1;
+	break;
     end
-    if (found == 0) then
-       demon_print("FAILED TO FIND PLAYER ID ");
-    end
+end
+
+if (found == 0) then
+   demon_print("FAILED TO FIND PLAYER ID ");
 end
 
