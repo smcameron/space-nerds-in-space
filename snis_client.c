@@ -19849,8 +19849,10 @@ static int main_da_button_release(GtkWidget *w, GdkEventButton *event,
 	case DISPLAYMODE_WEAPONS:
 		if (event->button == 1)
 			do_laser();
-		if (event->button == 3)
+		else if (event->button == 3)
 			fire_torpedo_button_pressed(NULL);
+		else if ((event->button == 2) || (event->button == 4))
+			fire_missile_button_pressed(NULL);
 		break;
 	case DISPLAYMODE_DAMCON:
 		do_damcon_button_release(event->button, event->x, event->y);
