@@ -4790,7 +4790,7 @@ static int process_update_ship_packet(uint8_t opcode)
 		else {
 			e = add_entity(ecx, ship_mesh_map[shiptype % nshiptypes],
 					dx, dy, dz, SHIP_COLOR);
-			if (e)
+			if (e && !reverse)
 				add_ship_thrust_entities(NULL, NULL, ecx, e, shiptype, 36, 0);
 		}
 		i = add_generic_object(id, timestamp, dx, dy, dz, 0.0, 0.0, 0.0, &orientation, type, alive, e);
@@ -8563,7 +8563,7 @@ static void show_weapons_camera_view(GtkWidget *w)
 		set_render_style(turret_entity, RENDER_NORMAL);
 	}
 
-	if (o->entity)
+	if (o->entity && !o->tsd.ship.reverse)
 		add_ship_thrust_entities(NULL, NULL, ecx, o->entity,
 				o->tsd.ship.shiptype, o->tsd.ship.power_data.impulse.i, 0);
 
@@ -8691,8 +8691,8 @@ static struct entity *main_view_add_player_ship_entity(struct snis_entity *o)
 		if (turret_base)
 			update_entity_parent(ecx, turret, turret_base);
 	}
-
-	add_ship_thrust_entities(NULL, NULL, ecx, player_ship, o->tsd.ship.shiptype,
+	if (!o->tsd.ship.reverse)
+		add_ship_thrust_entities(NULL, NULL, ecx, player_ship, o->tsd.ship.shiptype,
 				o->tsd.ship.power_data.impulse.i, 0);
 	return player_ship;
 }
