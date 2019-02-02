@@ -1060,6 +1060,12 @@ set_planet_security(planet_id, security) -- set security of planet.
 		1 - medium security
 		2 - high security
 
+update_player_wallet(player_ship_id, delta_money) -- Add delta_money (which may be negative) to
+	the specified player ship's wallet.
+	Parameters:
+	player_ship_id: id of the player ship to affect
+	delta_money: the amount of money to add to the wallet (may be negative).
+
 NOTE: Your lua scripts must not sleep, call any function which blocks, or require excessive
 long running calculations (nothing more than a few hundredths of a second) because the lua
 scripts are called from the main thread and if the scripts block, the entire game will block.

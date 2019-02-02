@@ -19279,6 +19279,29 @@ static int l_set_planet_security(lua_State *l)
 		offsetof(struct snis_entity, tsd.planet.security), LOW_SECURITY, HIGH_SECURITY);
 }
 
+static int l_update_player_wallet(lua_State *l)
+{
+	const double pid = luaL_checknumber(lua_state, 1);
+	const double delta_money = luaL_checknumber(lua_state, 2);
+	int i;
+
+	pthread_mutex_lock(&universe_mutex);
+	i = lookup_by_id(pid);
+	if (i < 0) {
+		pthread_mutex_unlock(&universe_mutex);
+		send_demon_console_msg("UPDATE_PLAYER_WALLET: BAD PLAYER SHIP ID: %u", (uint32_t) pid);
+		return 0;
+	}
+	if (go[i].type != OBJTYPE_SHIP1) {
+		pthread_mutex_unlock(&universe_mutex);
+		send_demon_console_msg("UPDATE_PLAYER_WALLET: WRONG OBJECT TYPE: %u", (uint32_t) pid);
+		return 0;
+	}
+	go[i].tsd.ship.wallet += delta_money;
+	pthread_mutex_unlock(&universe_mutex);
+	return 0;
+}
+
 static int l_set_passenger_location(lua_State *l)
 {
 	const double pidx = luaL_checknumber(lua_state, 1);
@@ -23043,6 +23066,7 @@ static void setup_lua(void)
 	add_lua_callable_fn(l_set_planet_tech_level, "set_planet_tech_level");
 	add_lua_callable_fn(l_set_planet_economy, "set_planet_economy");
 	add_lua_callable_fn(l_set_planet_security, "set_planet_security");
+	add_lua_callable_fn(l_update_player_wallet, "update_player_wallet");
 }
 
 static int run_initial_lua_scripts(void)
