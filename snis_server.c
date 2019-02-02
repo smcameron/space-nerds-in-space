@@ -8960,6 +8960,8 @@ static void check_science_selection(struct snis_entity *o)
 		return;
 deselect:
 	bridgelist[bn].science_selection = (uint32_t) -1;
+	send_packet_to_all_clients_on_a_bridge(o->id, snis_opcode_pkt("bbw", OPCODE_SCI_SELECT_TARGET,
+		OPCODE_SCI_SELECT_TARGET_TYPE_OBJECT, (uint32_t) -1), ROLE_SCIENCE);
 }
 
 static void aim_high_gain_antenna(struct snis_entity *o)
