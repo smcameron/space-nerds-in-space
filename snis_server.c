@@ -8897,7 +8897,7 @@ static void maybe_transmit_attached_science_text(int bridge, struct snis_entity 
 	if (!sci_selection->sdata.science_text) /* Nothing to send */
 		return;
 	timer++;
-	if ((timer % 13) != 0) /* Throttle this transmission */
+	if ((timer & 0x07) != 7) /* Throttle this transmission */
 		return;
 	len = strnlen(sci_selection->sdata.science_text, 256);
 	pb = packed_buffer_allocate(len + 7);
@@ -8918,7 +8918,7 @@ static void maybe_transmit_custom_planet_description(int bridge, struct snis_ent
 	if (!planet->tsd.planet.custom_description)
 		return;
 	timer++;
-	if ((timer % 13) != 0) /* Throttle this transmission */
+	if ((timer & 0x7) != 7) /* Throttle this transmission */
 		return;
 
 	len = strnlen(planet->tsd.planet.custom_description, 256);
@@ -8950,11 +8950,11 @@ static void check_science_selection(struct snis_entity *o)
 		goto deselect;
 	dist2 = object_dist2(o, &go[i]);
 	range2 = o->tsd.ship.scibeam_range * o->tsd.ship.scibeam_range;
-	if (dist2 <= range2) {
-		maybe_transmit_attached_science_text(bn, o, &go[i]);
+	maybe_transmit_attached_science_text(bn, o, &go[i]);
+	if (go[i].type == OBJTYPE_PLANET)
 		maybe_transmit_custom_planet_description(bn, o, &go[i]);
+	if (dist2 <= range2)
 		return;
-	}
 	if ((go[i].type == OBJTYPE_PLANET || go[i].type == OBJTYPE_STARBASE) &&
 		dist2 <= range2 * 4.0)
 		return;
