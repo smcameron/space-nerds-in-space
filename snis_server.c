@@ -132,6 +132,7 @@ static int initial_missile_count = INITIAL_MISSILE_COUNT;
 static float max_damcon_robot_velocity = MAX_ROBOT_VELOCITY;
 static float max_damcon_robot_braking = MAX_ROBOT_BRAKING;
 static float max_player_velocity = MAX_PLAYER_VELOCITY;
+static float max_reverse_player_velocity = MAX_REVERSE_PLAYER_VELOCITY;
 static float player_velocity_damping = PLAYER_VELOCITY_DAMPING;
 static float player_velocity_increment = PLAYER_VELOCITY_INCREMENT;
 static float torpedo_damage_factor = TORPEDO_WEAPONS_FACTOR;
@@ -7852,7 +7853,8 @@ static void calculate_ship_scibeam_info(struct snis_entity *ship)
 
 static void do_thrust(struct snis_entity *ship)
 {
-	double current_max_player_velocity =
+	double current_max_player_velocity = ship->tsd.ship.reverse ?
+		(max_reverse_player_velocity * ship->tsd.ship.power_data.impulse.i) / 255 :
 		(max_player_velocity * ship->tsd.ship.power_data.impulse.i) / 255;
 
 	if (!ship->tsd.ship.reverse) {
@@ -16623,6 +16625,9 @@ static struct tweakable_var_descriptor server_tweak[] = {
 	{ "MAX_PLAYER_VELOCITY",
 		"MAXIMUM VELOCITY PLAYER MAY TRAVEL USING IMPULSE POWER",
 		&max_player_velocity, 'f', 20.0, 20000.0, MAX_PLAYER_VELOCITY, 0, 0, 0},
+	{ "MAX_REVERSE_PLAYER_VELOCITY",
+		"MAXIMUM REVERSE VELOCITY PLAYER MAY TRAVEL USING IMPULSE POWER",
+		&max_reverse_player_velocity, 'f', 0.0, 20000.0, MAX_REVERSE_PLAYER_VELOCITY, 0, 0, 0},
 	{ "PLAYER_VELOCITY_INCREMENT",
 		"MAXIMUM ACCELERATION PLAYER SHIP HAS USING IMPULSE POWER",
 		&player_velocity_increment, 'f',
