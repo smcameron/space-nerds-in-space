@@ -286,6 +286,7 @@ static volatile float weapons_camera_shake = 0.0f;
 static volatile float main_camera_shake = 0.0f;
 static unsigned char camera_mode;
 static unsigned char nav_camera_mode;
+static unsigned char nav_has_computer_button = 0; /* tweakable */
 
 /* "Scenic" camera for beauty shots. */
 static int external_camera_active = 0; /* tweakable */
@@ -12488,6 +12489,11 @@ static void show_navigation(GtkWidget *w)
 	if (!(o = find_my_ship()))
 		return;
 
+	if (nav_has_computer_button)
+		ui_unhide_widget(nav_ui.computer_button);
+	else
+		ui_hide_widget(nav_ui.computer_button);
+
 	snis_slider_set_input(nav_ui.warp_slider, o->tsd.ship.power_data.warp.r1/255.0 );
 	snis_slider_set_input(nav_ui.navzoom_slider, o->tsd.ship.navzoom/255.0 );
 	snis_slider_set_input(nav_ui.throttle_slider, o->tsd.ship.power_data.impulse.r1/255.0 );
@@ -16407,6 +16413,8 @@ static struct tweakable_var_descriptor client_tweak[] = {
 		&blue_rectangle, 'i', 0.0, 0.0, 0.0, 0, 1, 1 },
 	{ "EXTERNAL_CAMERA", "0 OR 1 TO TURN OFF OR ON THE EXTERNAL CAMERA, RESPECTIVELY",
 		&external_camera_active, 'i', 0.0, 0.0, 0.0, 0, 1, 0 },
+	{ "NAV_HAS_COMPUTER", "0 OR 1 TO ALLOW NAV TO HAVE COMPUTER ACCESS",
+		&nav_has_computer_button, 'i', 0.0, 0.0, 0.0, 0, 1, 0 },
 	{ NULL, NULL, NULL, '\0', 0.0, 0.0, 0.0, 0, 0, 0 },
 };
 
