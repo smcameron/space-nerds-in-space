@@ -8956,7 +8956,7 @@ static void check_science_selection(struct snis_entity *o)
 	if (dist2 <= range2)
 		return;
 	if ((go[i].type == OBJTYPE_PLANET || go[i].type == OBJTYPE_STARBASE) &&
-		dist2 <= range2 * 4.0)
+		dist2 <= range2 * 4.0 * 4.0)
 		return;
 deselect:
 	bridgelist[bn].science_selection = (uint32_t) -1;
