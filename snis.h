@@ -68,7 +68,7 @@
 #define NEBULA_RADIUS 5000
 #define MIN_NEBULA_RADIUS 200
 #define NDERELICTS 20
-#define NWARPGATES 10
+#define NWARPGATES NPLANETS
 /* Maximum distance between solarsystems that can be warpgated
  * Note, this is on a completely different dimension than all other
  * positions in the game.
