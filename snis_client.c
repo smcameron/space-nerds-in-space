@@ -11040,6 +11040,16 @@ int nav_ui_docking_magnets_active(__attribute__((unused)) void *notused)
 	return o->tsd.ship.docking_magnets;
 }
 
+int nav_ui_lights_active(__attribute__((unused)) void *notused)
+{
+	struct snis_entity *o;
+
+	if (!(o = find_my_ship()))
+		return 0;
+
+	return o->tsd.ship.exterior_lights;
+}
+
 static void init_nav_ui(void)
 {
 	int x, y;
@@ -11107,9 +11117,13 @@ static void init_nav_ui(void)
 	snis_button_set_sound(nav_ui.starmap_button, UISND7);
 	y += button_y_spacing;
 	nav_ui.lights_button = snis_button_init(SCREEN_WIDTH - txx(nav_ui.gauge_radius * 2.2 + 10),
-					txy(nav_ui.gauge_radius * 2 + y), -1, -1, "LIGHTS",
+					txy(nav_ui.gauge_radius * 2 + y), -1, -1, "MLIGHTS",
 					button_color,
 					NANO_FONT, nav_lights_button_pressed, NULL);
+	snis_button_set_checkbox_function(nav_ui.lights_button,
+			nav_ui_lights_active,
+			NULL);
+	snis_button_set_label(nav_ui.lights_button, "LIGHTS");
 	snis_button_set_sound(nav_ui.lights_button, UISND7);
 	y += button_y_spacing;
 	nav_ui.custom_button = snis_button_init(SCREEN_WIDTH - txx(nav_ui.gauge_radius * 2.2 + 10),
