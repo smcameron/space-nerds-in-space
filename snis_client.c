@@ -11030,6 +11030,16 @@ static void nav_computer_button_pressed(__attribute__((unused)) void *s)
 	ui_unhide_widget(nav_ui.computer_input);
 }
 
+int nav_ui_docking_magnets_active(__attribute__((unused)) void *notused)
+{
+	struct snis_entity *o;
+
+	if (!(o = find_my_ship()))
+		return 0;
+
+	return o->tsd.ship.docking_magnets;
+}
+
 static void init_nav_ui(void)
 {
 	int x, y;
@@ -11076,8 +11086,12 @@ static void init_nav_ui(void)
 	y += button_y_spacing;
 	nav_ui.docking_magnets_button = snis_button_init(SCREEN_WIDTH - txx(nav_ui.gauge_radius * 2.2 + 10),
 					txy(nav_ui.gauge_radius * 2 + y),
-					-1, -1, "DOCKING MAGNETS", button_color,
+					-1, -1, "MMAGNETS", button_color,
 					NANO_FONT, docking_magnets_button_pressed, NULL);
+	snis_button_set_checkbox_function(nav_ui.docking_magnets_button,
+			nav_ui_docking_magnets_active,
+			NULL);
+	snis_button_set_label(nav_ui.docking_magnets_button, "MAGNETS");
 	snis_button_set_sound(nav_ui.docking_magnets_button, UISND5);
 	y += button_y_spacing;
 	nav_ui.standard_orbit_button = snis_button_init(SCREEN_WIDTH - txx(nav_ui.gauge_radius * 2.2 + 10),
@@ -12516,9 +12530,6 @@ static void show_navigation(GtkWidget *w)
 	sng_abs_xy_draw_string(buf, NANO_FONT, txx(5), txy(190));
 	snprintf(buf, sizeof(buf), "MARK: %3.1lf", radians_to_degrees(display_mark));
 	sng_abs_xy_draw_string(buf, NANO_FONT, txx(5), txy(202));
-
-	snprintf(buf, sizeof(buf), o->tsd.ship.docking_magnets ? "DOCKING MAGNETS ENGAGED" : "DOCKING MAGNETS OFF");
-	sng_abs_xy_draw_string(buf, NANO_FONT, txx(75), txy(25));
 
 	quat_to_euler(&ypr, &o->orientation);	
 	sng_set_foreground(UI_COLOR(nav_text));
