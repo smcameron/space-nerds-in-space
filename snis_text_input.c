@@ -174,6 +174,23 @@ int snis_text_input_box_keypress(struct snis_text_input_box *t, GdkEventKey *eve
 	int currentlen;
 	if (event->type != GDK_KEY_PRESS)
 		return 0;
+
+	/* Allow the numpad to work */
+	if (event->keyval >= 0x0ffb0 && event->keyval <= 0x0ffb9) /* Numbers on numpad */
+		event->keyval = event->keyval - 0x0ffb0 + '0';
+	else if (event->keyval == 0x0ffae) /* '.' on numpad */
+		event->keyval = '.';
+	else if (event->keyval == 0x0ff8d) /* 'enter' on numpad */
+		event->keyval = GDK_KEY_Return;
+	else if (event->keyval == 0x0ffab) /* '+' on numpad */
+		event->keyval = '+';
+	else if (event->keyval == 0x0ffad) /* '-' on numpad */
+		event->keyval = '-';
+	else if (event->keyval == 0x0ffaa) /* '*' on numpad */
+		event->keyval = '*';
+	else if (event->keyval == 0x0ffaf) /* '/' on numpad */
+		event->keyval = '/';
+
 	if ((event->keyval & ~0x7f) != 0) {
 #include "snis_fixup_gnome_key_screwups.h"
 		switch (event->keyval) {
