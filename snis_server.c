@@ -10070,6 +10070,9 @@ static void repair_damcon_systems(struct snis_entity *o)
 	o->tsd.ship.damage_data_dirty = 1;
 }	
 	
+static void update_passenger(int i, int nstarbases);
+static int count_starbases(void);
+
 static void init_player(struct snis_entity *o, int clear_cargo_bay, float *charges)
 {
 	int i;
@@ -10159,6 +10162,7 @@ static void init_player(struct snis_entity *o, int clear_cargo_bay, float *charg
 	quat_init_axis(&o->tsd.ship.computer_desired_orientation, 0, 1, 0, 0);
 	o->tsd.ship.computer_steering_time_left = 0;
 	if (clear_cargo_bay) {
+		int nstarbases = count_starbases();
 		/* The clear_cargo_bay param is a stopgap until real docking code
 		 * is done.
 		 */
@@ -10174,6 +10178,11 @@ static void init_player(struct snis_entity *o, int clear_cargo_bay, float *charg
 			o->tsd.ship.wallet = INITIAL_RTS_WALLET_MONEY;
 		else
 			o->tsd.ship.wallet = INITIAL_WALLET_MONEY;
+
+		/* Clear any passengers off the ship */
+		for (i = 0; i < MAX_PASSENGERS; i++)
+			if (passenger[i].location == o->id)
+				update_passenger(i, nstarbases);
 	}
 	o->tsd.ship.viewpoint_object = o->id;
 	quat_init_axis(&o->tsd.ship.sciball_orientation, 1, 0, 0, 0);
