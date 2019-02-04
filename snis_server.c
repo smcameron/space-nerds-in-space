@@ -14152,7 +14152,7 @@ static void meta_comms_channel(char *name, struct game_client *c, char *txt)
 	int rc;
 	uint32_t newchannel;
 
-	rc = sscanf(txt, "%*[/chanel] %u\n", &newchannel);
+	rc = sscanf(txt, "%*[/cChHaAnNeElL] %u\n", &newchannel);
 	if (rc != 1) {
 		send_comms_packet(NULL, name, bridgelist[c->bridge].comms_channel,
 			"INVALID CHANNEL - CURRENT CHANNEL %u", bridgelist[c->bridge].comms_channel);
