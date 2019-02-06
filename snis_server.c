@@ -14187,7 +14187,7 @@ static void meta_comms_eject(char *name, struct game_client *c, char *txt)
 		return;
 	ship = &go[i];
 
-	rc = sscanf(txt, "/eject %d\n", &cargobay);
+	rc = sscanf(txt, "/%*[eEjJcCtT] %d\n", &cargobay);
 	if (rc != 1)
 		goto invalid_cargo_bay;
 	if (cargobay < 0 || cargobay >= ship->tsd.ship.ncargo_bays)
