@@ -117,6 +117,22 @@ $SNIS_ASSET_DIR/models/*.stl, various 3D models used by the game.
 .PP
 $SNIS_ASSET_DIR/solarsystems/*/assets.txt, per-solarsystem art assets.
 .PP
+$SNIS_ASSET_DIR/replacement_assets.txt
+This file allows replacement of standard assets with other assets. The
+line of the file contains two filenames, separated by any combination
+of spaces and tabs. The first filename is the original asset file name,
+e.g., "./share/snis/models/cruiser.stl", and the second file name is the
+replacement asset file. e.g., "./share/snis/models/my_fancy_model.obj".
+Comments beginning with '#' and blank lines are permitted.
+Currently this asset replacement system only works for ship models.  Note the
+replacement models should be similarly scaled and oriented as the original
+models. Normally the orientation should be such that the positive X axis if
+forward and the positive Y axis is up.  Some models may deviate from this (e.g.
+snis3006.obj) and have some compensation applied via ship_types.txt.
+Replacement models should have the same deviation in orientation.  Note: likely
+this system does not yet work well when SNIS_ASSET_DIR has a value that
+deviates from the default.
+.PP
 $SNIS_ASSET_DIR/joystick_config.txt, joystick configuration file. The format
 of this file is as follows.
 .PP

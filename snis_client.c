@@ -122,6 +122,7 @@
 #include "snis_debug.h"
 #include "starmap_adjacency.h"
 #include "rootcheck.h"
+#include "replacement_assets.h"
 
 #define SHIP_COLOR CYAN
 #define STARBASE_COLOR RED
@@ -342,6 +343,8 @@ static int ngameservers = 0;
 
 static struct commodity *commodity;
 static int ncommodities;
+
+static struct replacement_asset *replacement_assets;
 
 static struct ui_element_list *uiobjs = NULL;
 static ui_element_drawing_function ui_slider_draw = (ui_element_drawing_function) snis_slider_draw;
@@ -20783,7 +20786,7 @@ static struct mesh *snis_read_model(char *directory, char *filename)
 	struct mesh *m;
 
 	snprintf(path, sizeof(path), "%s/models/%s", directory, filename);
-	m = read_mesh(path);
+	m = read_mesh(replacement_asset_lookup(path, replacement_assets));
 	if (!m) {
 		printf("Failed to read model from file '%s'\n", path);
 		printf("Assume form of . . . A SPHERICAL COW!\n");
@@ -21431,6 +21434,18 @@ static void maybe_connect_to_lobby(void)
 	}
 }
 
+static void read_replacement_assets(struct replacement_asset **r)
+{
+	int rc;
+	char p[PATH_MAX];
+
+	sprintf(p, "%s/replacement_assets.txt", asset_dir);
+	errno = 0;
+	rc = replacement_asset_read(p, r);
+	if (rc < 0 && errno != EEXIST)
+		fprintf(stderr, "%s: Warning:  %s\n", p, strerror(errno));
+}
+
 int main(int argc, char *argv[])
 {
 	GtkWidget *vbox;
@@ -21455,6 +21470,8 @@ int main(int argc, char *argv[])
 	memset(dco, 0, sizeof(dco));
 	damconscreenx = NULL;
 	damconscreeny = NULL;
+
+	read_replacement_assets(&replacement_assets);
 
 	char commodity_path[PATH_MAX];
 	snprintf(commodity_path, sizeof(commodity_path), "%s/%s", asset_dir, "commodities.txt");
