@@ -19286,7 +19286,7 @@ static unsigned int load_texture(char *filename)
 	char fname[PATH_MAX + 1];
 
 	snprintf(fname, sizeof(fname), "%s/%s", asset_dir, filename);
-	return graph_dev_load_texture(fname);
+	return graph_dev_load_texture(replacement_asset_lookup(fname, replacement_assets));
 }
 
 static unsigned int load_texture_no_mipmaps(char *filename)
@@ -19294,7 +19294,7 @@ static unsigned int load_texture_no_mipmaps(char *filename)
 	char fname[PATH_MAX + 1];
 
 	snprintf(fname, sizeof(fname), "%s/%s", asset_dir, filename);
-	return graph_dev_load_texture_no_mipmaps(fname);
+	return graph_dev_load_texture_no_mipmaps(replacement_asset_lookup(fname, replacement_assets));
 }
 
 static unsigned int load_cubemap_textures(int is_inside, char *filenameprefix)
@@ -19327,11 +19327,12 @@ static unsigned int load_cubemap_textures(int is_inside, char *filenameprefix)
 	 *  Opengl does it a bit differenty, so we have the arbitrariness you see below.
 	 */
 	int i;
-	char filename[6][PATH_MAX + 1];
+	char filename[6][PATH_MAX + 1], fname[PATH_MAX + 1];
 
-	for (i = 0; i < 6; i++)
-		snprintf(filename[i], sizeof(filename[i]), "%s/%s%d.png", asset_dir, filenameprefix, i);
-
+	for (i = 0; i < 6; i++) {
+		snprintf(fname, sizeof(fname), "%s/%s%d.png", asset_dir, filenameprefix, i);
+		strcpy(filename[i], replacement_asset_lookup(fname, replacement_assets));
+	}
 	return graph_dev_load_cubemap_texture(is_inside, filename[1], filename[3], filename[4],
 					filename[5], filename[0], filename[2]);
 }
@@ -19339,11 +19340,12 @@ static unsigned int load_cubemap_textures(int is_inside, char *filenameprefix)
 static void expire_cubemap_texture(int is_inside, char *filenameprefix)
 {
 	int i;
-	char filename[6][PATH_MAX + 1];
+	char filename[6][PATH_MAX + 1], fname[PATH_MAX + 1];
 
-	for (i = 0; i < 6; i++)
-		snprintf(filename[i], sizeof(filename[i]), "%s/%s%d.png", asset_dir, filenameprefix, i);
-
+	for (i = 0; i < 6; i++) {
+		snprintf(fname, sizeof(fname), "%s/%s%d.png", asset_dir, filenameprefix, i);
+		strcpy(filename[i], replacement_asset_lookup(fname, replacement_assets));
+	}
 	graph_dev_expire_cubemap_texture(is_inside, filename[1], filename[3], filename[4],
 					filename[5], filename[0], filename[2]);
 }
@@ -19378,11 +19380,12 @@ static void load_skybox_textures(char *filenameprefix)
 	 *  Opengl does it a bit differenty, so we have the arbitrariness you see below.
 	 */
 	int i;
-	char filename[6][PATH_MAX + 1];
+	char filename[6][PATH_MAX + 1], fname[PATH_MAX + 1];
 
-	for (i = 0; i < 6; i++)
-		snprintf(filename[i], sizeof(filename[i]), "%s/%s%d.png", asset_dir, filenameprefix, i);
-
+	for (i = 0; i < 6; i++) {
+		snprintf(fname, sizeof(fname), "%s/%s%d.png", asset_dir, filenameprefix, i);
+		strcpy(filename[i], replacement_asset_lookup(fname, replacement_assets));
+	}
 	graph_dev_load_skybox_texture(filename[3], filename[1], filename[4],
 					filename[5], filename[0], filename[2]);
 }
@@ -19390,10 +19393,12 @@ static void load_skybox_textures(char *filenameprefix)
 static void expire_skybox_texture(char *filenameprefix)
 {
 	int i;
-	char filename[6][PATH_MAX + 1];
+	char filename[6][PATH_MAX + 1], fname[PATH_MAX + 1];
 
-	for (i = 0; i < 6; i++)
-		snprintf(filename[i], sizeof(filename[i]), "%s/%s%d.png", asset_dir, filenameprefix, i);
+	for (i = 0; i < 6; i++) {
+		snprintf(fname, sizeof(fname), "%s/%s%d.png", asset_dir, filenameprefix, i);
+		strcpy(filename[i], replacement_asset_lookup(fname, replacement_assets));
+	}
 	graph_dev_expire_cubemap_texture(1, filename[3], filename[1], filename[4],
 					filename[5], filename[0], filename[2]);
 }
