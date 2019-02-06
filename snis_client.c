@@ -20110,7 +20110,7 @@ static void read_ogg_clip(int sound, char *directory, char *filename)
 	char path[PATH_MAX];
 
 	snprintf(path, sizeof(path), "%s/sounds/%s", directory, filename);
-	wwviaudio_read_ogg_clip(sound, path);
+	wwviaudio_read_ogg_clip(sound, replacement_asset_lookup(path, replacement_assets));
 }
 
 static void override_asset_dir(void)
