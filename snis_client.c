@@ -1192,7 +1192,7 @@ static void read_thrust_attachment_points(char *dir, char *model_path, int shipt
 		strcat(path, ship_type[shiptype].thrust_attachment_file);
 	}
 	/* now read the scad_params.h file. */
-	*ap = read_thrust_attachments(path, SHIP_MESH_SCALE * extra_scaling);
+	*ap = read_thrust_attachments(replacement_asset_lookup(path, replacement_assets), SHIP_MESH_SCALE * extra_scaling);
 	return;
 }
 
