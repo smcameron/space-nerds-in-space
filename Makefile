@@ -466,7 +466,7 @@ COMMONOBJS=mathutils.o snis_alloc.o snis_socket_io.o snis_marshal.o \
 		string-utils.o c-is-the-locale.o starbase_metadata.o arbitrary_spin.o \
 		planetary_atmosphere.o mesh.o mikktspace/mikktspace.o pthread_util.o \
 		snis_opcode_def.o rts_unit_data.o commodities.o snis_tweak.o rootcheck.o \
-		corporations.o
+		corporations.o replacement_assets.o
 SERVEROBJS=${COMMONOBJS} snis_server.o starbase-comms.o \
 		power-model.o quat.o vec4.o matrix.o snis_event_callback.o space-part.o fleet.o \
 		docking_port.o elastic_collision.o snis_nl.o spelled_numbers.o \
@@ -476,14 +476,13 @@ SERVEROBJS=${COMMONOBJS} snis_server.o starbase-comms.o \
 		ship_registration.o
 MULTIVERSEOBJS=snis_multiverse.o snis_marshal.o snis_socket_io.o mathutils.o mtwist.o stacktrace.o \
 		snis_hash.o quat.o string-utils.o key_value_parser.o snis_bridge_update_packet.o \
-		pthread_util.o rootcheck.o starmap_adjacency.o
+		pthread_util.o rootcheck.o starmap_adjacency.o replacement_assets.o
 
 COMMONCLIENTOBJS=${COMMONOBJS} ${OGGOBJ} ${SNDOBJS} snis_ui_element.o snis_font.o snis_text_input.o \
 	snis_typeface.o snis_gauge.o snis_button.o snis_label.o snis_sliders.o snis_text_window.o \
 	snis_strip_chart.o material.o stl_parser.o entity.o matrix.o my_point.o liang-barsky.o joystick.o \
 	quat.o vec4.o thrust_attachment.o docking_port.o ui_colors.o snis_keyboard.o solarsystem_config.o \
-	pronunciation.o snis_preferences.o snis_pull_down_menu.o snis_client_debug.o starmap_adjacency.o \
-	replacement_assets.o
+	pronunciation.o snis_preferences.o snis_pull_down_menu.o snis_client_debug.o starmap_adjacency.o
 
 CLIENTOBJS=${COMMONCLIENTOBJS} shader.o graph_dev_opengl.o opengl_cap.o snis_graph.o snis_client.o joystick_config.o
 

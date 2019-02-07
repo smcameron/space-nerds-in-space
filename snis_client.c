@@ -19488,7 +19488,7 @@ static int read_solarsystem_config(const char *solarsystem_name,
 	snprintf(path, sizeof(path), "%s/solarsystems/%s/assets.txt", asset_dir, solarsystem_name);
 	if (*assets)
 		solarsystem_asset_spec_free(*assets);
-	*assets = solarsystem_asset_spec_read(path);
+	*assets = solarsystem_asset_spec_read(replacement_asset_lookup(path, replacement_assets));
 	if (!*assets)
 		return -1;
 	if ((*assets)->spec_errors || (*assets)->spec_warnings)

@@ -115,6 +115,7 @@
 #include "rootcheck.h"
 #include "ship_registration.h"
 #include "corporations.h"
+#include "replacement_assets.h"
 
 #define CLIENT_UPDATE_PERIOD_NSECS 500000000
 #define MAXCLIENTS 100
@@ -456,6 +457,8 @@ static int safe_mode = 0; /* prevents enemies from attacking if set */
 
 static char *default_asset_dir = STRPREFIX(PREFIX) "/share/snis";
 static char *asset_dir;
+
+static struct replacement_asset *replacement_assets;
 
 static int nebulalist[NNEBULA] = { 0 };
 
@@ -23406,7 +23409,7 @@ static struct solarsystem_asset_spec *read_solarsystem_assets(char *solarsystem_
 
 	snprintf(path, sizeof(path), "%s/solarsystems/%s/assets.txt", asset_dir, solarsystem_name);
 
-	s = solarsystem_asset_spec_read(path);
+	s = solarsystem_asset_spec_read(replacement_asset_lookup(path, replacement_assets));
 	if (!s) {
 		fprintf(stderr, "Unable to read solarsystem asset spec from '%s'", path);
 		if (errno)
@@ -27651,6 +27654,18 @@ static void init_meshes(void)
 	mesh_scale(low_poly_sphere_mesh, 0.5);
 }
 
+static void read_replacement_assets(struct replacement_asset **r)
+{
+	int rc;
+	char p[PATH_MAX];
+
+	sprintf(p, "%s/replacement_assets.txt", asset_dir);
+	errno = 0;
+	rc = replacement_asset_read(p, r);
+	if (rc < 0 && errno != EEXIST)
+		fprintf(stderr, "%s: Warning:  %s\n", p, strerror(errno));
+}
+
 int main(int argc, char *argv[])
 {
 	int port, i;
@@ -27662,6 +27677,7 @@ int main(int argc, char *argv[])
 	process_options(argc, argv);
 
 	override_asset_dir();
+	read_replacement_assets(&replacement_assets);
 	set_random_seed(-1);
 	init_natural_language_system();
 	init_meshes();
