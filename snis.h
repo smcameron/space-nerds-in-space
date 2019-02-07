@@ -43,7 +43,7 @@
 #define SUNZ (ZKNOWN_DIM / 2.0)
 #define SUN_DIST_LIMIT (XKNOWN_DIM / 20.0)
 
-#define PROXIMITY_DIST2 (100.0 * 100.0)
+#define PROXIMITY_DIST2 (25.0 * 25.0)
 #define CRASH_DIST2 (40.0 * 40.0)
 #define TOWING_DROP_DIST (500.0)
 #define TOWING_PICKUP_DIST (40.0)
