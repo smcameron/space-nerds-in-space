@@ -124,7 +124,7 @@ static int nstarmap_entries = 0;
 static int starmap_adjacency[MAXSTARMAPENTRIES][MAX_STARMAP_ADJACENCIES];
 static int autowrangle = 0;
 
-static struct replacement_asset *replacement_assets;
+static struct replacement_asset replacement_assets;
 
 #define INCLUDE_BRIDGE_INFO_FIELDS 1
 #include "snis_entity_key_value_specification.h"
@@ -186,7 +186,7 @@ static void construct_starmap(void)
 	/* TODO: this needs to honor SNIS_ASSET_DIR */
 	char *path = "./share/snis/solarsystems";
 
-	n = scandir(replacement_asset_lookup(path, replacement_assets), &namelist, NULL, alphasort);
+	n = scandir(replacement_asset_lookup(path, &replacement_assets), &namelist, NULL, alphasort);
 	if (n < 0) {
 		fprintf(stderr, "snis_multiverse: scandir(%s): %s\n", path, strerror(errno));
 		return;
@@ -1463,16 +1463,14 @@ static void wrangle_snis_server_processes(void)
 	}
 }
 
-static void read_replacement_assets(struct replacement_asset **r)
+static void read_replacement_assets(struct replacement_asset *r, char *asset_dir)
 {
 	int rc;
 	char p[PATH_MAX];
-	/* TODO: this needs to honor SNIS_ASSET_DIR */
-	char *asset_dir = "./share/snis";
 
 	sprintf(p, "%s/replacement_assets.txt", asset_dir);
 	errno = 0;
-	rc = replacement_asset_read(p, r);
+	rc = replacement_asset_read(p, asset_dir, r);
 	if (rc < 0 && errno != EEXIST)
 		fprintf(stderr, "%s: Warning:  %s\n", p, strerror(errno));
 }
@@ -1482,10 +1480,12 @@ int main(int argc, char *argv[])
 	struct ssgl_game_server gameserver;
 	int i, rc;
 	pthread_t lobby_thread;
+	/* TODO: this needs to honor SNIS_ASSET_DIR */
+	char *asset_dir = "./share/snis";
 
 	refuse_to_run_as_root("snis_multiverse");
 	parse_options(argc, argv, &lobby, &nick, &location);
-	read_replacement_assets(&replacement_assets);
+	read_replacement_assets(&replacement_assets, asset_dir);
 	construct_starmap();
 
 	open_log_file();

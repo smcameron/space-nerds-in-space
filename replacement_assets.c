@@ -21,15 +21,24 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <limits.h>
 
 #include "replacement_assets.h"
 
-#if 0
-struct replacement_asset {
-	char *old_filename;
-	char *new_filename;
-};
-#endif
+static char *fixup_asset_dir(char *s, struct replacement_asset *ra)
+{
+	char *x;
+	char answer[PATH_MAX];
+	const char *asset_dir_pattern = "ASSET_DIR/";
+
+	if (strlen(s) <= 10)
+		return s;
+	x = strstr(s, asset_dir_pattern);
+	if (!x)
+		return s;
+	sprintf(answer, "%s/%s", ra->asset_dir, s + 10);
+	return strdup(answer);
+}
 
 /* read_replacement_assets() reads the specified file of asset replacements.
  * Each line in the file is a pair of filenames.  The first filename is the
@@ -41,7 +50,8 @@ struct replacement_asset {
  * containing the replacement asset records, plus one extra sentinel asset
  * with old_filename and new_filename both NULL.
  */
-int replacement_asset_read(char *replacement_list_filename, struct replacement_asset **replacement_asset)
+int replacement_asset_read(char *replacement_list_filename, char *asset_dir,
+				struct replacement_asset *replacement_asset)
 {
 	char line[1000], *l;
 	char f1[sizeof(line)], f2[sizeof(line)];
@@ -49,7 +59,9 @@ int replacement_asset_read(char *replacement_list_filename, struct replacement_a
 	int ln = 0;
 	int n = 0;
 	int rc;
-	struct replacement_asset *ra = NULL;
+
+	replacement_asset->e = NULL;
+	replacement_asset->asset_dir = strdup(asset_dir);
 
 	f = fopen(replacement_list_filename, "r");
 	if (!f)
@@ -72,16 +84,15 @@ int replacement_asset_read(char *replacement_list_filename, struct replacement_a
 			fprintf(stderr, "%s: syntax error at line %d\n", replacement_list_filename, ln);
 			continue;
 		}
-		ra = realloc(ra, sizeof(*ra) * (n + 1));
-		ra[n].old_filename = strdup(f1);
-		ra[n].new_filename = strdup(f2);
+		replacement_asset->e = realloc(replacement_asset->e, sizeof(*replacement_asset->e) * (n + 1));
+		replacement_asset->e[n].old_filename = fixup_asset_dir(f1, replacement_asset);
+		replacement_asset->e[n].new_filename = fixup_asset_dir(f2, replacement_asset);
 		n++;
 	}
-	ra = realloc(ra, sizeof(*ra) * (n + 1));
-	ra[n].old_filename = NULL;
-	ra[n].new_filename = NULL;
+	replacement_asset->e = realloc(replacement_asset->e, sizeof(*replacement_asset->e) * (n + 1));
+	replacement_asset->e[n].old_filename = NULL;
+	replacement_asset->e[n].new_filename = NULL;
 	n++;
-	*replacement_asset = ra;
 	return n;
 }
 
@@ -90,7 +101,7 @@ int replacement_asset_read(char *replacement_list_filename, struct replacement_a
  */
 char *replacement_asset_lookup(char *original, struct replacement_asset *replacement_assets)
 {
-	struct replacement_asset *r = replacement_assets;
+	struct replacement_asset_entry *r = replacement_assets->e;
 
 	while (r) {
 		if (!r->old_filename)
@@ -104,7 +115,7 @@ char *replacement_asset_lookup(char *original, struct replacement_asset *replace
 
 void replacement_asset_free(struct replacement_asset *replacement_assets)
 {
-	struct replacement_asset *r = replacement_assets;
+	struct replacement_asset_entry *r = replacement_assets->e;
 
 	while (r) {
 		if (r->new_filename)
@@ -115,5 +126,8 @@ void replacement_asset_free(struct replacement_asset *replacement_assets)
 			free(r->old_filename);
 		r++;
 	}
-	free(replacement_assets);
+	free(replacement_assets->e);
+	free(replacement_assets->asset_dir);
+	replacement_assets->e = NULL;
+	replacement_assets->asset_dir = NULL;
 }

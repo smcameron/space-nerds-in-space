@@ -344,7 +344,7 @@ static int ngameservers = 0;
 static struct commodity *commodity;
 static int ncommodities;
 
-static struct replacement_asset *replacement_assets;
+static struct replacement_asset replacement_assets;
 
 static struct ui_element_list *uiobjs = NULL;
 static ui_element_drawing_function ui_slider_draw = (ui_element_drawing_function) snis_slider_draw;
@@ -1192,7 +1192,8 @@ static void read_thrust_attachment_points(char *dir, char *model_path, int shipt
 		strcat(path, ship_type[shiptype].thrust_attachment_file);
 	}
 	/* now read the scad_params.h file. */
-	*ap = read_thrust_attachments(replacement_asset_lookup(path, replacement_assets), SHIP_MESH_SCALE * extra_scaling);
+	*ap = read_thrust_attachments(replacement_asset_lookup(path, &replacement_assets),
+					SHIP_MESH_SCALE * extra_scaling);
 	return;
 }
 
@@ -19287,7 +19288,7 @@ static unsigned int load_texture(char *filename)
 	char fname[PATH_MAX + 1];
 
 	snprintf(fname, sizeof(fname), "%s/%s", asset_dir, filename);
-	return graph_dev_load_texture(replacement_asset_lookup(fname, replacement_assets));
+	return graph_dev_load_texture(replacement_asset_lookup(fname, &replacement_assets));
 }
 
 static unsigned int load_texture_no_mipmaps(char *filename)
@@ -19295,7 +19296,7 @@ static unsigned int load_texture_no_mipmaps(char *filename)
 	char fname[PATH_MAX + 1];
 
 	snprintf(fname, sizeof(fname), "%s/%s", asset_dir, filename);
-	return graph_dev_load_texture_no_mipmaps(replacement_asset_lookup(fname, replacement_assets));
+	return graph_dev_load_texture_no_mipmaps(replacement_asset_lookup(fname, &replacement_assets));
 }
 
 static unsigned int load_cubemap_textures(int is_inside, char *filenameprefix)
@@ -19332,7 +19333,7 @@ static unsigned int load_cubemap_textures(int is_inside, char *filenameprefix)
 
 	for (i = 0; i < 6; i++) {
 		snprintf(fname, sizeof(fname), "%s/%s%d.png", asset_dir, filenameprefix, i);
-		strcpy(filename[i], replacement_asset_lookup(fname, replacement_assets));
+		strcpy(filename[i], replacement_asset_lookup(fname, &replacement_assets));
 	}
 	return graph_dev_load_cubemap_texture(is_inside, filename[1], filename[3], filename[4],
 					filename[5], filename[0], filename[2]);
@@ -19345,7 +19346,7 @@ static void expire_cubemap_texture(int is_inside, char *filenameprefix)
 
 	for (i = 0; i < 6; i++) {
 		snprintf(fname, sizeof(fname), "%s/%s%d.png", asset_dir, filenameprefix, i);
-		strcpy(filename[i], replacement_asset_lookup(fname, replacement_assets));
+		strcpy(filename[i], replacement_asset_lookup(fname, &replacement_assets));
 	}
 	graph_dev_expire_cubemap_texture(is_inside, filename[1], filename[3], filename[4],
 					filename[5], filename[0], filename[2]);
@@ -19385,7 +19386,7 @@ static void load_skybox_textures(char *filenameprefix)
 
 	for (i = 0; i < 6; i++) {
 		snprintf(fname, sizeof(fname), "%s/%s%d.png", asset_dir, filenameprefix, i);
-		strcpy(filename[i], replacement_asset_lookup(fname, replacement_assets));
+		strcpy(filename[i], replacement_asset_lookup(fname, &replacement_assets));
 	}
 	graph_dev_load_skybox_texture(filename[3], filename[1], filename[4],
 					filename[5], filename[0], filename[2]);
@@ -19398,7 +19399,7 @@ static void expire_skybox_texture(char *filenameprefix)
 
 	for (i = 0; i < 6; i++) {
 		snprintf(fname, sizeof(fname), "%s/%s%d.png", asset_dir, filenameprefix, i);
-		strcpy(filename[i], replacement_asset_lookup(fname, replacement_assets));
+		strcpy(filename[i], replacement_asset_lookup(fname, &replacement_assets));
 	}
 	graph_dev_expire_cubemap_texture(1, filename[3], filename[1], filename[4],
 					filename[5], filename[0], filename[2]);
@@ -19489,7 +19490,7 @@ static int read_solarsystem_config(const char *solarsystem_name,
 	snprintf(path, sizeof(path), "%s/solarsystems/%s/assets.txt", asset_dir, solarsystem_name);
 	if (*assets)
 		solarsystem_asset_spec_free(*assets);
-	*assets = solarsystem_asset_spec_read(replacement_asset_lookup(path, replacement_assets));
+	*assets = solarsystem_asset_spec_read(replacement_asset_lookup(path, &replacement_assets));
 	if (!*assets)
 		return -1;
 	if ((*assets)->spec_errors || (*assets)->spec_warnings)
@@ -20111,7 +20112,7 @@ static void read_ogg_clip(int sound, char *directory, char *filename)
 	char path[PATH_MAX];
 
 	snprintf(path, sizeof(path), "%s/sounds/%s", directory, filename);
-	wwviaudio_read_ogg_clip(sound, replacement_asset_lookup(path, replacement_assets));
+	wwviaudio_read_ogg_clip(sound, replacement_asset_lookup(path, &replacement_assets));
 }
 
 static void override_asset_dir(void)
@@ -20792,7 +20793,7 @@ static struct mesh *snis_read_model(char *directory, char *filename)
 	struct mesh *m;
 
 	snprintf(path, sizeof(path), "%s/models/%s", directory, filename);
-	m = read_mesh(replacement_asset_lookup(path, replacement_assets));
+	m = read_mesh(replacement_asset_lookup(path, &replacement_assets));
 	if (!m) {
 		printf("Failed to read model from file '%s'\n", path);
 		printf("Assume form of . . . A SPHERICAL COW!\n");
@@ -21440,14 +21441,14 @@ static void maybe_connect_to_lobby(void)
 	}
 }
 
-static void read_replacement_assets(struct replacement_asset **r)
+static void read_replacement_assets(struct replacement_asset *r, char *asset_dir)
 {
 	int rc;
 	char p[PATH_MAX];
 
 	sprintf(p, "%s/replacement_assets.txt", asset_dir);
 	errno = 0;
-	rc = replacement_asset_read(p, r);
+	rc = replacement_asset_read(p, asset_dir, r);
 	if (rc < 0 && errno != EEXIST)
 		fprintf(stderr, "%s: Warning:  %s\n", p, strerror(errno));
 }
@@ -21477,7 +21478,7 @@ int main(int argc, char *argv[])
 	damconscreenx = NULL;
 	damconscreeny = NULL;
 
-	read_replacement_assets(&replacement_assets);
+	read_replacement_assets(&replacement_assets, asset_dir);
 
 	char commodity_path[PATH_MAX];
 	snprintf(commodity_path, sizeof(commodity_path), "%s/%s", asset_dir, "commodities.txt");

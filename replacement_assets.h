@@ -21,9 +21,14 @@
 	Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
 
-struct replacement_asset {
+struct replacement_asset_entry {
 	char *old_filename;
 	char *new_filename;
+};
+
+struct replacement_asset {
+	struct replacement_asset_entry *e;
+	char *asset_dir;
 };
 
 /* read_replacement_assets() reads the specified file of asset replacements.
@@ -36,7 +41,8 @@ struct replacement_asset {
  * containing the replacement asset records, plus one extra sentinel asset
  * with old_filename and new_filename both NULL.
  */
-int replacement_asset_read(char *replacement_list_filename, struct replacement_asset **replacement_asset);
+int replacement_asset_read(char *replacement_list_filename, char *asset_dir,
+				struct replacement_asset *replacement_asset);
 
 /* Looks up original in replacement_assets and if found, returns the corresponding replacement
  * asset if found, otherwise it returns the original.
