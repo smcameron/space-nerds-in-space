@@ -185,17 +185,18 @@ struct damcon_data;
 #define AI_MODE_COP 8
 #define AI_MODE_MINING_BOT 9
 #define AI_MODE_TOW_SHIP 10
+#define AI_MODE_CATATONIC 11
 /* NOTE: These RTS modes must be contiguous and match the order in rts_unit_data.c order_data[] */
-#define AI_MODE_RTS_FIRST_COMMAND 11
-#define AI_MODE_RTS_STANDBY 11
-#define AI_MODE_RTS_GUARD_BASE 12
-#define AI_MODE_RTS_ESCORT 13
-#define AI_MODE_RTS_ATK_NEAR_ENEMY 14
-#define AI_MODE_RTS_MOVE_TO_WAYPOINT 15
-#define AI_MODE_RTS_OCCUPY_NEAR_BASE 16
-#define AI_MODE_RTS_ATK_MAIN_BASE 17
-#define AI_MODE_RTS_RESUPPLY 18
-#define AI_MODE_RTS_OUT_OF_FUEL 19
+#define AI_MODE_RTS_FIRST_COMMAND 111
+#define AI_MODE_RTS_STANDBY 111
+#define AI_MODE_RTS_GUARD_BASE 112
+#define AI_MODE_RTS_ESCORT 113
+#define AI_MODE_RTS_ATK_NEAR_ENEMY 114
+#define AI_MODE_RTS_MOVE_TO_WAYPOINT 115
+#define AI_MODE_RTS_OCCUPY_NEAR_BASE 116
+#define AI_MODE_RTS_ATK_MAIN_BASE 117
+#define AI_MODE_RTS_RESUPPLY 118
+#define AI_MODE_RTS_OUT_OF_FUEL 119
 
 static const char * const ai_mode_name[] = {
 	"IDLE",

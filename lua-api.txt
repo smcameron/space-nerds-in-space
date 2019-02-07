@@ -413,6 +413,8 @@ ai_push_patrol(id, nwaypoints, x, y, z, x2, y2, z2, x3, y3, z3, ... )
 ai_push_attack(attacker_id, victim_id)
 	make a ship attack something else
 
+ai_push_catatonic(ship_id) -- make a ship catatonic. This is mainly for debugging ship models.
+
 set_faction(object_id, faction_id) -- sets the specified object's faction to the specified
 	faction.  Clears the object's ai stack.
 

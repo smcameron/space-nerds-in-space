@@ -2825,6 +2825,14 @@ static void push_cop_mode(struct snis_entity *cop)
 	set_ship_destination(cop, patrol->p[0].v.x, patrol->p[0].v.y, patrol->p[0].v.z);
 }
 
+static void push_catatonic_mode(struct snis_entity *ship)
+{
+	if (ship->type != OBJTYPE_SHIP2)
+		return;
+	ship->tsd.ship.nai_entries = 1;
+	ship->tsd.ship.ai[0].ai_mode = AI_MODE_CATATONIC;
+}
+
 static void push_attack_mode(struct snis_entity *attacker, uint32_t victim_id, int recursion_level)
 {
 	int n, i;
@@ -2868,6 +2876,9 @@ static void push_attack_mode(struct snis_entity *attacker, uint32_t victim_id, i
 	fleet_number = find_fleet_number(attacker);
 
 	n = attacker->tsd.ship.nai_entries;
+
+	if (n > 0 && attacker->tsd.ship.ai[n - 1].ai_mode == AI_MODE_CATATONIC)
+		return;
 
 	/* too busy running away... */
 	if (n > 0 && attacker->tsd.ship.ai[n - 1].ai_mode == AI_MODE_FLEE) {
@@ -6628,6 +6639,8 @@ static void ai_brain(struct snis_entity *o)
 		break;
 	case AI_MODE_RTS_RESUPPLY:
 		ai_rts_resupply(o);
+	case AI_MODE_CATATONIC:
+		break;
 	default:
 		break;
 	}
@@ -8663,6 +8676,14 @@ static void update_ship_position_and_velocity(struct snis_entity *o)
 	n = o->tsd.ship.nai_entries - 1;
 	mode = o->tsd.ship.ai[n].ai_mode;
 
+	if (mode == AI_MODE_CATATONIC) {
+		o->vx = 0;
+		o->vy = 0;
+		o->vz = 0;
+		o->tsd.ship.desired_velocity = 0;
+		return;
+	}
+
 	/* FIXME: need a better way to do this. */
 	if (mode == AI_MODE_ATTACK) {
 		v = lookup_entity_by_id(o->tsd.ship.ai[n].u.attack.victim_id);
@@ -8689,6 +8710,7 @@ static void update_ship_position_and_velocity(struct snis_entity *o)
 		destn.v.x = 0.0f;
 		destn.v.y = 0.0f;
 		destn.v.z = 0.0f;
+		o->tsd.ship.desired_velocity = 0;
 	}
 
 	/* Construct vector of desired velocity */
@@ -17270,6 +17292,29 @@ error:
 	return 1;
 }
 
+static int l_ai_push_catatonic(lua_State *l)
+{
+	int i;
+	double oid;
+
+	pthread_mutex_lock(&universe_mutex);
+	oid = lua_tonumber(lua_state, 1);
+	i = lookup_by_id(oid);
+	if (i < 0)
+		goto error;
+	if (go[i].type != OBJTYPE_SHIP2)
+		goto error;
+	push_catatonic_mode(&go[i]);
+
+	pthread_mutex_unlock(&universe_mutex);
+	lua_pushnumber(l, 0.0);
+	return 1;
+error:
+	pthread_mutex_unlock(&universe_mutex);
+	lua_pushnil(l);
+	return 1;
+}
+
 static int l_ai_push_patrol(lua_State *l)
 {
 	int i, n, p, np;
@@ -21671,6 +21716,9 @@ static void send_econ_update_ship_packet(struct game_client *c,
 			case AI_MODE_RTS_OUT_OF_FUEL:
 				ai[i] = 'E';
 				break;
+			case AI_MODE_CATATONIC:
+				ai[i] = 'K';
+				break;
 			default:
 				ai[i] = '?';
 				break;
@@ -23077,6 +23125,7 @@ static void setup_lua(void)
 	add_lua_callable_fn(l_set_planet_economy, "set_planet_economy");
 	add_lua_callable_fn(l_set_planet_security, "set_planet_security");
 	add_lua_callable_fn(l_update_player_wallet, "update_player_wallet");
+	add_lua_callable_fn(l_ai_push_catatonic, "ai_push_catatonic");
 }
 
 static int run_initial_lua_scripts(void)
