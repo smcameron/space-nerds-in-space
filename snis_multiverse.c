@@ -72,6 +72,16 @@ persisted in a simple database by snis_multiverse.
 #include "string-utils.h"
 #include "replacement_assets.h"
 
+#ifndef PREFIX
+#define PREFIX .
+#warn "PREFIX defaulted to ."
+#endif
+
+#define STRPREFIX(s) str(s)
+#define str(s) #s
+
+static char *default_asset_dir = STRPREFIX(PREFIX) "/share/snis";
+static char *asset_dir;
 static char *lobby, *nick, *location;
 static char *database_root = "./snisdb";
 static const int database_mode = 0744;
@@ -183,9 +193,9 @@ static void construct_starmap(void)
 	struct dirent **namelist;
 	char newpath[PATH_MAX];
 	int i, n;
-	/* TODO: this needs to honor SNIS_ASSET_DIR */
-	char *path = "./share/snis/solarsystems";
+	char path[PATH_MAX];
 
+	sprintf(path, "%s/%s", asset_dir, "solarsystems");
 	n = scandir(replacement_asset_lookup(path, &replacement_assets), &namelist, NULL, alphasort);
 	if (n < 0) {
 		fprintf(stderr, "snis_multiverse: scandir(%s): %s\n", path, strerror(errno));
@@ -1475,14 +1485,24 @@ static void read_replacement_assets(struct replacement_asset *r, char *asset_dir
 		fprintf(stderr, "%s: Warning:  %s\n", p, strerror(errno));
 }
 
+static void override_asset_dir(void)
+{
+	char *d;
+
+	asset_dir = default_asset_dir;
+	d = getenv("SNIS_ASSET_DIR");
+	if (!d)
+		return;
+	asset_dir = d;
+}
+
 int main(int argc, char *argv[])
 {
 	struct ssgl_game_server gameserver;
 	int i, rc;
 	pthread_t lobby_thread;
-	/* TODO: this needs to honor SNIS_ASSET_DIR */
-	char *asset_dir = "./share/snis";
 
+	override_asset_dir();
 	refuse_to_run_as_root("snis_multiverse");
 	parse_options(argc, argv, &lobby, &nick, &location);
 	read_replacement_assets(&replacement_assets, asset_dir);
