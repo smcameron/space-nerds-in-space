@@ -116,6 +116,7 @@
 #include "ship_registration.h"
 #include "corporations.h"
 #include "replacement_assets.h"
+#include "snis_asset_dir.h"
 
 #define CLIENT_UPDATE_PERIOD_NSECS 500000000
 #define MAXCLIENTS 100
@@ -447,15 +448,6 @@ static int starmap_dirty = 0;
 
 static int safe_mode = 0; /* prevents enemies from attacking if set */
 
-#ifndef PREFIX
-#define PREFIX .
-#warn "PREFIX defaulted to ."
-#endif
-
-#define STRPREFIX(s) str(s)
-#define str(s) #s
-
-static char *default_asset_dir = STRPREFIX(PREFIX) "/share/snis";
 static char *asset_dir;
 
 static struct replacement_asset replacement_assets;
@@ -23409,17 +23401,6 @@ static void rts_ai_run(void)
 				RTS_WALLET_REFRESH_MINIMUM;
 }
 
-static void override_asset_dir(void)
-{
-	char *d;
-
-	asset_dir = default_asset_dir;
-	d = getenv("SNIS_ASSET_DIR");
-	if (!d)
-		return;
-	asset_dir = d;
-}
-
 static int read_ship_types(void)
 {
 	char path[PATH_MAX];
@@ -27725,7 +27706,7 @@ int main(int argc, char *argv[])
 
 	process_options(argc, argv);
 
-	override_asset_dir();
+	asset_dir = override_asset_dir();
 	read_replacement_assets(&replacement_assets, asset_dir);
 	set_random_seed(-1);
 	init_natural_language_system();

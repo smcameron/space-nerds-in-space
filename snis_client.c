@@ -123,6 +123,7 @@
 #include "starmap_adjacency.h"
 #include "rootcheck.h"
 #include "replacement_assets.h"
+#include "snis_asset_dir.h"
 
 #define SHIP_COLOR CYAN
 #define STARBASE_COLOR RED
@@ -196,15 +197,6 @@ static int red_alert_mode = 0;
 #define MAX_UPDATETIME_START_PAUSE 1.5
 #define MAX_UPDATETIME_INTERVAL 0.5
 
-#ifndef PREFIX
-#define PREFIX .
-#warn "PREFIX defaulted to ."
-#endif
-
-#define STRPREFIX(s) str(s)
-#define str(s) #s
-
-static char *default_asset_dir = STRPREFIX(PREFIX) "/share/snis";
 static char *asset_dir;
 
 #define MAX_JOYSTICKS 10
@@ -20115,20 +20107,6 @@ static void read_ogg_clip(int sound, char *directory, char *filename)
 	wwviaudio_read_ogg_clip(sound, replacement_asset_lookup(path, &replacement_assets));
 }
 
-static void override_asset_dir(void)
-{
-	char *d;
-
-	asset_dir = default_asset_dir;
-	d = getenv("SNIS_ASSET_DIR");
-	if (!d) {
-		printf("Assets will be loaded from %s (default)\n", default_asset_dir);
-		return;
-	}
-	printf("Assets will be loaded from %s (overriden)\n", d);
-	asset_dir = d;
-}
-
 static int read_ship_types(void)
 {
 	char path[PATH_MAX];
@@ -21467,7 +21445,7 @@ int main(int argc, char *argv[])
 	set_random_seed();
 	process_options(argc, argv);
 	check_lobby_serverhost_options();
-	override_asset_dir();
+	asset_dir = override_asset_dir();
 	setup_sound();
 	snis_opcode_def_init();
 	memset(&main_screen_text, 0, sizeof(main_screen_text));

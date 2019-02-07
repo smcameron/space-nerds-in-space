@@ -71,16 +71,8 @@ persisted in a simple database by snis_multiverse.
 #include "starmap_adjacency.h"
 #include "string-utils.h"
 #include "replacement_assets.h"
+#include "snis_asset_dir.h"
 
-#ifndef PREFIX
-#define PREFIX .
-#warn "PREFIX defaulted to ."
-#endif
-
-#define STRPREFIX(s) str(s)
-#define str(s) #s
-
-static char *default_asset_dir = STRPREFIX(PREFIX) "/share/snis";
 static char *asset_dir;
 static char *lobby, *nick, *location;
 static char *database_root = "./snisdb";
@@ -1485,24 +1477,13 @@ static void read_replacement_assets(struct replacement_asset *r, char *asset_dir
 		fprintf(stderr, "%s: Warning:  %s\n", p, strerror(errno));
 }
 
-static void override_asset_dir(void)
-{
-	char *d;
-
-	asset_dir = default_asset_dir;
-	d = getenv("SNIS_ASSET_DIR");
-	if (!d)
-		return;
-	asset_dir = d;
-}
-
 int main(int argc, char *argv[])
 {
 	struct ssgl_game_server gameserver;
 	int i, rc;
 	pthread_t lobby_thread;
 
-	override_asset_dir();
+	asset_dir = override_asset_dir();
 	refuse_to_run_as_root("snis_multiverse");
 	parse_options(argc, argv, &lobby, &nick, &location);
 	read_replacement_assets(&replacement_assets, asset_dir);
