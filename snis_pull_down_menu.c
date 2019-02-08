@@ -24,7 +24,7 @@ struct pull_down_menu_column {
 };
 
 struct pull_down_menu {
-	int x, y;
+	int x, y, screen_width;
 	int ncols;
 	int font;
 	int color;
@@ -33,6 +33,7 @@ struct pull_down_menu {
 	struct pull_down_menu_column *col[MAX_PULL_DOWN_COLUMNS];
 	pthread_mutex_t mutex;
 	float alpha;
+	int gravity;
 };
 
 static int pull_down_menu_inside_col(struct pull_down_menu *m, int x, int col,
@@ -54,25 +55,38 @@ static int pull_down_menu_inside_col(struct pull_down_menu *m, int x, int col,
 	if (sx > x + m->col[col]->width)
 		return 0;
 
-	if (sy > 0 && sy < limit * (font_lineheight[m->font] + 6))
+	if (sy >= 0 && sy < limit * (font_lineheight[m->font] + 6))
 		return 1;
 	return 0;
 }
 
 static int pull_down_menu_inside_internal(struct pull_down_menu *m, int physical_x, int physical_y, int lock)
 {
-	int i, x;
+	int i, x, start, end, inc;
 
 	if (lock)
 		pthread_mutex_lock(&m->mutex);
-	x = 0;
-	for (i = 0; i < m->ncols; i++) {
+	if (m->gravity) {
+		x = m->screen_width;
+		start = m->ncols - 1;
+		end = -1;
+		inc = -1;
+	} else {
+		x = 0;
+		start = 0;
+		end = m->ncols;
+		inc = 1;
+	}
+	for (i = start; i != end; i += inc) {
+		if (m->gravity)
+			x -= m->col[i]->width;
 		if (pull_down_menu_inside_col(m, x, i, physical_x, physical_y, i == m->current_col)) {
 			if (lock)
 				pthread_mutex_unlock(&m->mutex);
 			return 1;
 		}
-		x += m->col[i]->width;
+		if (!m->gravity)
+			x += m->col[i]->width;
 	}
 	if (lock)
 		pthread_mutex_unlock(&m->mutex);
@@ -86,17 +100,30 @@ int pull_down_menu_inside(struct pull_down_menu *m, int physical_x, int physical
 
 void pull_down_menu_update_mouse_pos(struct pull_down_menu *m, int physical_x, int physical_y)
 {
-	int i, x, sy, new_col = -1;
+	int i, x, sy, start, end, inc, new_col = -1;
 
 	m->current_physical_x = physical_x;
 	m->current_physical_y = physical_y;
-	x = 0;
-	for (i = 0; i < m->ncols; i++) {
+	if (m->gravity) {
+		x = m->screen_width;
+		start = m->ncols - 1;
+		end = -1;
+		inc = -1;
+	} else {
+		x = 0;
+		start = 0;
+		end = m->ncols;
+		inc = 1;
+	}
+	for (i = start; i != end; i += inc) {
+		if (m->gravity)
+			x -= m->col[i]->width;
 		if (pull_down_menu_inside_col(m, x, i, physical_x, physical_y, i == m->current_col)) {
 			new_col = i;
 			break;
 		}
-		x += m->col[i]->width;
+		if (!m->gravity)
+			x += m->col[i]->width;
 	}
 	if (new_col >= 0 && new_col < m->ncols) {
 		sy = sng_pixely_to_screeny(physical_y);
@@ -106,7 +133,7 @@ void pull_down_menu_update_mouse_pos(struct pull_down_menu *m, int physical_x, i
 	m->current_col = new_col;
 }
 
-struct pull_down_menu *create_pull_down_menu(int font)
+struct pull_down_menu *create_pull_down_menu(int font, int screen_width)
 {
 	struct pull_down_menu *m;
 
@@ -114,6 +141,7 @@ struct pull_down_menu *create_pull_down_menu(int font)
 	if (!m)
 		return m;
 	m->x = 10;
+	m->screen_width = screen_width;
 	m->y = 0;
 	m->font = font;
 	m->ncols = 0;
@@ -122,6 +150,7 @@ struct pull_down_menu *create_pull_down_menu(int font)
 	memset(m->col, 0, sizeof(m->col));
 	pthread_mutex_init(&m->mutex, NULL);
 	m->alpha = -1; /* no alpha */
+	m->gravity = 0;
 	return m;
 }
 
@@ -196,8 +225,7 @@ static void draw_menu_col(struct pull_down_menu *m, int col, float x, float y, i
 
 void pull_down_menu_draw(struct pull_down_menu *m)
 {
-	int i, x;
-
+	int i, x, start, end, inc;
 
 	pthread_mutex_lock(&m->mutex);
 	update_menu_widths(m);
@@ -206,9 +234,22 @@ void pull_down_menu_draw(struct pull_down_menu *m)
 		return;
 	}
 	x = m->x;
-	for (i = 0; i < m->ncols; i++) {
+	if (m->gravity) {
+		start = m->ncols - 1;
+		end = -1;
+		inc = -1;
+	} else {
+		start = 0;
+		end = m->ncols;
+		inc = 1;
+	}
+
+	for (i = start; i != end; i += inc) {
+		if (m->gravity)
+			x -= m->col[i]->width;
 		draw_menu_col(m, i, x, m->y, m->current_row, m->font, m->current_col == i);
-		x += m->col[i]->width;
+		if (!m->gravity)
+			x += m->col[i]->width;
 	}
 	pthread_mutex_unlock(&m->mutex);
 }
@@ -439,4 +480,13 @@ void pull_down_menu_copy(struct pull_down_menu *dest, struct pull_down_menu *src
 
 	pthread_mutex_unlock(&src->mutex);
 	pthread_mutex_unlock(&dest->mutex);
+}
+
+void pull_down_menu_set_gravity(struct pull_down_menu *pdm, int right)
+{
+	pdm->gravity = !!right;
+	if (pdm->gravity)
+		pdm->x = pdm->screen_width;
+	else
+		pdm->x = 10;
 }

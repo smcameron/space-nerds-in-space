@@ -17170,7 +17170,8 @@ static void init_demon_ui()
 		snis_scaling_strip_chart_init(txx(120), txy(265), txx(550.0), txy(100.0),
 				"LATENCY (ms)", "", UI_COLOR(science_graph_plot_strong),
 				UI_COLOR(common_red_alert), 200000.0, NANO_FONT, NETSTATS_SAMPLES);
-	demon_ui.menu = create_pull_down_menu(NANO_FONT);
+	demon_ui.menu = create_pull_down_menu(NANO_FONT, SCREEN_WIDTH);
+	pull_down_menu_set_gravity(demon_ui.menu, 1);
 	pull_down_menu_set_color(demon_ui.menu, UI_COLOR(demon_deselected_button));
 	pull_down_menu_set_background_alpha(demon_ui.menu, 0.75);
 	pull_down_menu_add_column(demon_ui.menu, "META");
@@ -18426,7 +18427,7 @@ static void init_net_setup_ui(void)
 		snis_button_init(left + txx(700), y, -1, -1, "DONATE",
 			active_button_color,
 			TINY_FONT, browser_button_pressed, "http://spacenerdsinspace.com/donate.html");
-	net_setup_ui.menu = create_pull_down_menu(NANO_FONT);
+	net_setup_ui.menu = create_pull_down_menu(NANO_FONT, SCREEN_WIDTH);
 	pull_down_menu_set_color(net_setup_ui.menu, active_button_color);
 	init_net_role_buttons(&net_setup_ui);
 	init_join_create_buttons(&net_setup_ui);
@@ -21383,7 +21384,7 @@ static void lobby_list_change_notification(struct ssgl_lobby_descriptor *list, i
 	nlobbies = nitems;
 
 	/* Copy the lobby info to a new pull down menu */
-	newmenu = create_pull_down_menu(NANO_FONT);
+	newmenu = create_pull_down_menu(NANO_FONT, SCREEN_WIDTH);
 	pull_down_menu_set_color(newmenu, UI_COLOR(network_setup_active));
 	pull_down_menu_add_column(newmenu, "SELECT LOBBY");
 	for (i = 0; i < nlobbies; i++) {
