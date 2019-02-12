@@ -15312,10 +15312,10 @@ static void draw_science_details(GtkWidget *w, GdkGC *gc)
 	if (curr_science_guy->type == OBJTYPE_STARBASE ||
 		curr_science_guy->type == OBJTYPE_PLANET ||
 		curr_science_guy->type == OBJTYPE_BLACK_HOLE) {
-		e = add_entity(sciecx, m, 0.0, -m->radius, 0.0, UI_COLOR(sci_wireframe));
+		e = add_entity(sciecx, m, 0.0, -m->radius, m->radius * 0.2, UI_COLOR(sci_wireframe));
 		quat_init_axis(&orientation, 0.0, 0.0, 1.0, angle);
 	} else {
-		e = add_entity(sciecx, m, 0.0, 0.0, -m->radius, UI_COLOR(sci_wireframe));
+		e = add_entity(sciecx, m, 0.0, m->radius * 0.2, -m->radius, UI_COLOR(sci_wireframe));
 		quat_init_axis(&orientation, 0.0, 1.0, 0.0, angle);
 		if (e && curr_science_guy->type == OBJTYPE_SPACEMONSTER)
 			sci_nav_add_tentacles(sciecx, curr_science_guy, e);
