@@ -1152,14 +1152,14 @@ static void generic_move(__attribute__((unused)) struct snis_entity *o)
 	return;
 }
 
-static int add_ship(int faction, int auto_respawn);
+static int add_ship(int faction, int shiptype, int auto_respawn);
 static void add_new_rts_unit(struct snis_entity *builder)
 {
 	float dx, dy, dz;
 	struct snis_entity *unit;
 	uint8_t unit_type;
 	int unit_number;
-	int i;
+	int i, shiptype;
 
 	/* Figure out where to add the new unit */
 	if (builder->type == OBJTYPE_PLANET) {
@@ -1173,10 +1173,15 @@ static void add_new_rts_unit(struct snis_entity *builder)
 		fprintf(stderr, "Unexpected builder type %u\n", builder->type);
 		return;
 	}
+	shiptype = rts_unit_type_to_ship_type(unit_type);
+	if (shiptype < 0) {
+		fprintf(stderr, "Did not figure out what model of ship to use.\n");
+		return;
+	}
 	dx += builder->x;
 	dy += builder->y;
 	dz += builder->z;
-	i = add_ship(builder->sdata.faction, 0);
+	i = add_ship(builder->sdata.faction, shiptype, 0);
 	if (i < 0) {
 		fprintf(stderr, "add_ship failed.\n");
 		return;
@@ -1196,17 +1201,6 @@ static void add_new_rts_unit(struct snis_entity *builder)
 	unit_number = rts_allocate_unit_number(unit_type, builder->sdata.faction);
 	snprintf(unit->sdata.name, sizeof(unit->sdata.name), "%s%d",
 			rts_unit_type(unit_type)->short_name_prefix, unit_number);
-
-	i = rts_unit_type_to_ship_type(unit_type);
-	if (i < 0) {
-		fprintf(stderr, "Did not figure out what model of ship to use.\n");
-		return;
-	}
-	unit->sdata.subclass = i;
-	unit->tsd.ship.shiptype = i;
-	unit->sdata.shield_strength = ship_type[i].max_shield_strength;
-	unit->tsd.ship.lifeform_count = ship_type[i].crew_max;
-	unit->tsd.ship.ncargo_bays = ship_type[i].ncargo_bays;
 	unit->tsd.ship.fuel = rts_unit_type(unit_type)->fuel_capacity;
 	fprintf(stderr, "Added ship successfully\n");
 }
@@ -1661,16 +1655,15 @@ static void respawn_object(struct snis_entity *o)
 			if (!o->tsd.ship.auto_respawn)
 				break;
 			if (o->tsd.ship.ai[0].ai_mode != AI_MODE_COP)
-				add_ship(lowest_faction, 1);
+				add_ship(lowest_faction, snis_randn(nshiptypes), 1);
 			else {
 				/* respawn cops as cops */
 				hp = o->tsd.ship.home_planet;
-				i = add_ship(o->sdata.faction, 1);
+				i = add_ship(o->sdata.faction, SHIP_CLASS_ENFORCER, 1);
 				if (i < 0)
 					break;
 				o = &go[i];
 				o->tsd.ship.home_planet = hp;
-				o->tsd.ship.shiptype = SHIP_CLASS_ENFORCER;
 				push_cop_mode(o);
 				break;
 			}
@@ -10315,11 +10308,10 @@ static int add_player(double x, double z, double vx, double vz, double heading, 
 
 static uint32_t nth_starbase(int n);
 static int commodity_sample(void);
-static int add_ship(int faction, int auto_respawn)
+static int add_ship(int faction, int shiptype, int auto_respawn)
 {
 	int i, cb;
 	double x, y, z, heading;
-	int st;
 	static struct mtwist_state *mt = NULL;
 	char registration[100];
 
@@ -10345,9 +10337,9 @@ static int add_ship(int faction, int auto_respawn)
 	go[i].tsd.ship.roll_velocity = 0.0;
 	go[i].tsd.ship.desired_velocity = 0;
 	go[i].tsd.ship.velocity = 0;
-	st = snis_randn(nshiptypes);
-	go[i].tsd.ship.shiptype = st;
-	go[i].sdata.shield_strength = ship_type[st].max_shield_strength;
+	go[i].tsd.ship.shiptype = shiptype;
+	go[i].sdata.subclass = shiptype;
+	go[i].sdata.shield_strength = ship_type[shiptype].max_shield_strength;
 	go[i].tsd.ship.nai_entries = 0;
 	memset(go[i].tsd.ship.ai, 0, sizeof(go[i].tsd.ship.ai));
 	go[i].tsd.ship.lifeform_count = ship_type[go[i].tsd.ship.shiptype].crew_max;
@@ -10358,7 +10350,7 @@ static int add_ship(int faction, int auto_respawn)
 	go[i].tsd.ship.steering_adjustment.v.x = 0.0;
 	go[i].tsd.ship.steering_adjustment.v.y = 0.0;
 	go[i].tsd.ship.steering_adjustment.v.z = 0.0;
-	go[i].tsd.ship.ncargo_bays = ship_type[st].ncargo_bays;
+	go[i].tsd.ship.ncargo_bays = ship_type[shiptype].ncargo_bays;
 	memset(go[i].tsd.ship.cargo, 0, sizeof(go[i].tsd.ship.cargo));
 	for (cb = 0; cb < go[i].tsd.ship.ncargo_bays; cb++) {
 		int item = commodity_sample();
@@ -10376,7 +10368,7 @@ static int add_ship(int faction, int auto_respawn)
 	go[i].tsd.ship.orbiting_object_id = 0xffffffff;
 	if (faction >= 0 && faction < nfactions())
 		go[i].sdata.faction = faction;
-	if (st == SHIP_CLASS_MANTIS) /* Ensure all Mantis tow ships are neutral faction */
+	if (shiptype == SHIP_CLASS_MANTIS) /* Ensure all Mantis tow ships are neutral faction */
 		faction = 0;
 	ship_name(mt, go[i].sdata.name, sizeof(go[i].sdata.name));
 	uppercase(go[i].sdata.name);
@@ -10411,13 +10403,12 @@ static int add_mining_bot(struct snis_entity *parent_ship, uint32_t asteroid_id,
 	int rc;
 	struct snis_entity *o;
 
-	rc = add_ship(parent_ship->sdata.faction, 0);
+	rc = add_ship(parent_ship->sdata.faction, SHIP_CLASS_ASTEROIDMINER, 0);
 	/* TODO may want to make a special model just for the mining bot */
 	if (rc < 0)
 		return rc;
 	o = &go[rc];
 	parent_ship->tsd.ship.mining_bots--; /* maybe we want miningbots to live in cargo hold? */
-	o->tsd.ship.shiptype = SHIP_CLASS_ASTEROIDMINER;
 	push_mining_bot_mode(o, parent_ship->id, asteroid_id, bridge, selected_waypoint);
 	snprintf(o->sdata.name, sizeof(o->sdata.name), "%s-MINER-%02d",
 		parent_ship->sdata.name, parent_ship->tsd.ship.mining_bots);
@@ -10437,11 +10428,10 @@ static int add_specific_ship(const char *name, double x, double y, double z,
 {
 	int i;
 
-	i = add_ship(-1, auto_respawn);
+	i = add_ship(the_faction, shiptype % nshiptypes, auto_respawn);
 	if (i < 0)
 		return i;
 	set_object_location(&go[i], x, y, z);
-	go[i].tsd.ship.shiptype = shiptype % nshiptypes;
 	go[i].sdata.faction = the_faction % nfactions();
 	strncpy(go[i].sdata.name, name, sizeof(go[i].sdata.name) - 1);
 	return i;
@@ -10824,7 +10814,7 @@ static int l_add_random_ship(lua_State *l)
 	int i;
 
 	pthread_mutex_lock(&universe_mutex);
-	i = add_ship(-1, 1);
+	i = add_ship(-1, snis_randn(nshiptypes), 1);
 	lua_pushnumber(lua_state, i >= 0 ? (double) go[i].id : -1.0);
 	pthread_mutex_unlock(&universe_mutex);
 	return 1;
@@ -12719,7 +12709,7 @@ static void add_eships(void)
 	int i;
 
 	for (i = 0; i < NESHIPS; i++)
-		add_ship(i % nfactions(), 1);
+		add_ship(i % nfactions(), snis_randn(nshiptypes), 1);
 }
 
 static void add_enforcers_to_planet(struct snis_entity *p)
@@ -12728,10 +12718,9 @@ static void add_enforcers_to_planet(struct snis_entity *p)
 	int x;
 
 	for (int i = 0; i < nenforcers; i++) {
-		x = add_ship(p->sdata.faction, 1);
+		x = add_ship(p->sdata.faction, SHIP_CLASS_ENFORCER, 1);
 		if (x < 0)
 			continue;
-		go[x].tsd.ship.shiptype = SHIP_CLASS_ENFORCER;
 		go[x].tsd.ship.home_planet = p->id;
 		snprintf(go[x].sdata.name, sizeof(go[i].sdata.name), "POLICE-%02d",
 			snis_randn(100));
