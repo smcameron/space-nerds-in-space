@@ -211,7 +211,6 @@ static pthread_t physical_io_thread;
 
 static pthread_t natural_language_thread;
 static pthread_t demon_fifo_thread;
-static int demon_fifo_enabled = 0; /* tweakable */
 
 static struct text_to_speech_queue_entry {
 	char *text;
@@ -16439,8 +16438,6 @@ static struct tweakable_var_descriptor client_tweak[] = {
 		&external_camera_active, 'i', 0.0, 0.0, 0.0, 0, 1, 0 },
 	{ "NAV_HAS_COMPUTER", "0 OR 1 TO ALLOW NAV TO HAVE COMPUTER ACCESS",
 		&nav_has_computer_button, 'i', 0.0, 0.0, 0.0, 0, 1, 0 },
-	{ "DEMON_FIFO_ENABLED", "0 or 1 TO ALLOW LUA SCRIPTS TO BE TRIGGED VIA CLIENT FIFO",
-		&demon_fifo_enabled, 'i', 0.0, 0.0, 0.0, 0, 1, 0 },
 	{ NULL, NULL, NULL, '\0', 0.0, 0.0, 0.0, 0, 0, 0 },
 };
 
