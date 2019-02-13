@@ -210,6 +210,8 @@ static int physical_io_socket = -1;
 static pthread_t physical_io_thread;
 
 static pthread_t natural_language_thread;
+static pthread_t demon_fifo_thread;
+static int demon_fifo_enabled = 0; /* tweakable */
 
 static struct text_to_speech_queue_entry {
 	char *text;
@@ -16437,6 +16439,8 @@ static struct tweakable_var_descriptor client_tweak[] = {
 		&external_camera_active, 'i', 0.0, 0.0, 0.0, 0, 1, 0 },
 	{ "NAV_HAS_COMPUTER", "0 OR 1 TO ALLOW NAV TO HAVE COMPUTER ACCESS",
 		&nav_has_computer_button, 'i', 0.0, 0.0, 0.0, 0, 1, 0 },
+	{ "DEMON_FIFO_ENABLED", "0 or 1 TO ALLOW LUA SCRIPTS TO BE TRIGGED VIA CLIENT FIFO",
+		&demon_fifo_enabled, 'i', 0.0, 0.0, 0.0, 0, 1, 0 },
 	{ NULL, NULL, NULL, '\0', 0.0, 0.0, 0.0, 0, 0, 0 },
 };
 
@@ -16742,23 +16746,28 @@ static void clear_empty_demon_variables(void)
 	}
 } 
 
-static void demon_exec_button_pressed(void *x)
+static void send_demon_text_command(char *command)
 {
 	struct demon_cmd_packet *demon_cmd;
 	int rc;
 
 	demon_help_mode = 0;
-	if (strlen(demon_ui.input) == 0)
+	if (strlen(command) == 0)
 		return;
 	clear_empty_demon_variables();
 	strcpy(demon_ui.error_msg, "");
-	rc = construct_demon_command(demon_ui.input, &demon_cmd, demon_ui.error_msg);
+	rc = construct_demon_command(command, &demon_cmd, demon_ui.error_msg);
 	if (rc) {
 		text_window_add_text(demon_ui.console, demon_ui.error_msg);
 		printf("Error msg: %s\n", demon_ui.error_msg);
 	} else {
 		printf("Command is ok\n");
 	}
+}
+
+static void demon_exec_button_pressed(void *x)
+{
+	send_demon_text_command(demon_ui.input);
 	snis_text_input_box_zero(demon_ui.demon_input);
 }
 
@@ -20656,16 +20665,23 @@ static void setup_physical_io_socket(void)
 #endif
 }
 
-#define SNIS_NL_FIFO "/tmp/snis-natural-language-fifo"
-static void *monitor_natural_language_fifo(__attribute__((unused)) void *arg)
+struct input_fifo_thread_data {
+	char fifoname[PATH_MAX];
+	void (*process_input)(char *);
+	char threadname[20];
+};
+
+static void *monitor_input_fifo(void *arg)
 {
+	struct input_fifo_thread_data *d = arg;
 	char *rc, line[256];
 	FILE *f;
 
 	do {
-		f = fopen(SNIS_NL_FIFO, "r");
+		f = fopen(d->fifoname, "r");
 		if (!f) {
-			fprintf(stderr, "snis_client: Failed to open '%s': %s\n", SNIS_NL_FIFO, strerror(errno));
+			fprintf(stderr, "snis_client: Failed to open '%s': %s\n",
+				d->fifoname, strerror(errno));
 			break;
 		}
 
@@ -20677,26 +20693,48 @@ static void *monitor_natural_language_fifo(__attribute__((unused)) void *arg)
 			clean_spaces(line);
 			if (strcmp(line, "") == 0) /* skip blank lines */
 				continue;
-			send_natural_language_request_to_server(line);
+			d->process_input(line);
 		} while (1);
 		fclose(f);
 	} while (1);
-	fprintf(stderr, "snis_client: natural language thread exiting.\n");
+	fprintf(stderr, "snis_client: %s thread exiting.\n", d->threadname);
+	free(d);
 	return NULL;
 }
 
-static void setup_natural_language_fifo(void)
+static void setup_input_fifo(char *fifoname, char *threadname,
+				pthread_t *thread, void (process_input)(char *))
 {
 	int rc;
 
-	rc = mkfifo(SNIS_NL_FIFO, 0644);
+	struct input_fifo_thread_data *d;
+
+	d = malloc(sizeof(*d));
+	strcpy(d->fifoname, fifoname);
+	strcpy(d->threadname, threadname);
+	d->process_input = process_input;
+
+	rc = mkfifo(fifoname, 0644);
 	if (rc != 0 && errno != EEXIST) {
-		fprintf(stderr, "snis_client: mkfifo(%s): %s\n", SNIS_NL_FIFO, strerror(errno));
+		fprintf(stderr, "snis_client: mkfifo(%s): %s\n", fifoname, strerror(errno));
 	}
-	rc = create_thread(&natural_language_thread,
-			monitor_natural_language_fifo, NULL, "snis-nat-lang", 0);
+	rc = create_thread(thread, monitor_input_fifo, d, threadname, 0);
 	if (rc)
-		fprintf(stderr, "Failed to create natural language fifo monitor thread.\n");
+		fprintf(stderr, "Failed to create %s fifo monitor thread.\n", threadname);
+}
+
+#define SNIS_NL_FIFO "/tmp/snis-natural-language-fifo"
+static void setup_natural_language_fifo(void)
+{
+	setup_input_fifo(SNIS_NL_FIFO, "snis-nl-fifo", &natural_language_thread,
+				send_natural_language_request_to_server);
+}
+
+#define SNIS_DEMON_FIFO "/tmp/snis-demon-fifo"
+static void setup_demon_fifo(void)
+{
+	setup_input_fifo(SNIS_DEMON_FIFO, "snisdemonfifo", &demon_fifo_thread,
+				send_demon_text_command);
 }
 
 static void setup_joysticks(GtkWidget *window)
@@ -21538,6 +21576,7 @@ int main(int argc, char *argv[])
 	setup_joysticks(window);
 	setup_physical_io_socket();
 	setup_natural_language_fifo();
+	setup_demon_fifo();
 	setup_text_to_speech_thread();
 	ecx = entity_context_new(5000, 5000);
 

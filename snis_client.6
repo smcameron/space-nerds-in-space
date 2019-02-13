@@ -272,6 +272,11 @@ likely change.
 pipe is forwarded to snis_server as a natural language request.  This is useful for sending the output
 of a speech recognition system to snis_server.
 .PP
+/tmp/snis-demon-fifo, a named pipe which the client reads from. Anything sent into this pipe
+is forwarded to snis_server as a command to be run on the demon screen. By default this feature
+is disabled, and everything sent into the fifo is ignored.  To enable it, the client-side
+tweakable, that is, type "set demon_fifo_enabled = 1" on the demon screen.
+.PP
 ~/.space-nerds-in-space/snis-keymap.txt, the keyboard remapping configuration file.
 .TP
 The format of the keyboard remapping file is as follows:
