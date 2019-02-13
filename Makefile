@@ -1189,8 +1189,7 @@ install:	${PROGS} ${MODELS} ${AUDIOFILES} ${TEXTURES} \
 		${INSTALL} -m 755 bin/$$x \
 				${DESTDIR}/${PREFIX}/bin; \
 	done
-	${AWK} '/^DESTDIR=[.]$$/ { printf("DESTDIR='${DESTDIR}'\n"); next; } \
-		/^PREFIX=$$/ { printf("PREFIX='${PREFIX}'\n"); next; } \
+	${AWK} '/^PREFIX=$$/ { printf("PREFIX='${PREFIX}'\n"); next; } \
 		{ print; } ' < snis_launcher > /tmp/snis_launcher
 	${INSTALL} -m 755 /tmp/snis_launcher ${DESTDIR}/${PREFIX}/bin
 	rm -f /tmp/snis_launcher

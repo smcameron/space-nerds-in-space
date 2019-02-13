@@ -6,13 +6,12 @@ then
 	exit 1
 fi
 
-DESTDIR=.
 PREFIX=
 
-BINDIR=${DESTDIR}/${PREFIX}/bin
+BINDIR=${PREFIX}/bin
 if [ "$SNIS_ASSET_DIR" = "" ]
 then
-	export SNIS_ASSET_DIR=${DESTDIR}/${PREFIX}/share/snis
+	export SNIS_ASSET_DIR=${PREFIX}/share/snis
 fi
 SNIS_SERVER=${BINDIR}/snis_server
 SNIS_CLIENT=${BINDIR}/snis_client
