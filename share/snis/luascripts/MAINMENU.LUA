@@ -20,6 +20,9 @@ function main_menu_callback(shipid, selection)
 		text_to_speech(player_ids[1], "Begin mission, demolisher");
 		enqueue_lua_script("DEMOLISHER");
 	elseif (selection == 5) then
+		text_to_speech(player_ids[1], "Regerating universe");
+		enqueue_lua_script("REGENERATE");
+	elseif (selection == 6) then
 		-- do nothing
 	end
 end
@@ -31,6 +34,7 @@ show_menu(player_ids[1],
 		"SPACE POX\n" ..
 		"KALI\n" ..
 		"DEMOLISHER\n" ..
+		"REGENERATE UNIVERSE\n" ..
 		"EXIT MENU\n",
 		"main_menu_callback");
 
