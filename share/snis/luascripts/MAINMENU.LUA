@@ -1,5 +1,4 @@
 
-clear_all();
 
 player_ids = get_player_ship_ids();
 
@@ -32,6 +31,6 @@ show_menu(player_ids[1],
 		"SPACE POX\n" ..
 		"KALI\n" ..
 		"DEMOLISHER\n" ..
-		"EXIT MENU",
+		"EXIT MENU\n",
 		"main_menu_callback");
 
