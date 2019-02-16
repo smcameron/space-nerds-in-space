@@ -1,4 +1,4 @@
-.TH SPACE-NERDS-IN-SPACE "6" "Jan 2014" "snis_server" "Games"
+.TH SPACE-NERDS-IN-SPACE "6" "Feb 2019" "snis_server" "Games"
 .SH NAME
 snis_server \- Multi player cooperative star ship bridge simulator (server) 
 .SH SYNOPSIS
@@ -54,7 +54,15 @@ Print the program's version number and exit.
 /usr/share/snis/sounds/*.ogg contain the audio data used by the game.
 .PP
 share/snis/luascripts/* -- various lua scripts which may be run to
-implement scenarios or missions.
+implement scenarios or missions. The file names of luascripts must
+be uppercase -- use ABC.LUA, not abc.lua. One level of subdirectories
+is allowed -- XXX/ABC.LUA is permitted, but not XXX/YYY/ABC.LUA.
+If multiple subdirectories contain scripts with the same name, the
+first script encountered is executed.  That is to say, if you have
+A.LUA, X/A.LUA, Y/A.LUA, Z/A.LUA, and you execute "a" from the demon
+screen, A.LUA will be executed. If A.LUA didn't exist, then X/A.LUA
+would be executed.  You can differentate by typing, e.g. "z/a" on
+the demon screen to execute Z/A.LUA.
 .PP
 .SH ENVIRONMENT VARIABLES
 .PP

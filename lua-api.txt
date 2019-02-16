@@ -455,12 +455,37 @@ enqueue_lua_script(scriptname);
 	Queue the named lua script for execution;
 
 	The script must reside in share/snis/luascripts, and the filename must
-	end in ".LUA". However you must omit the directory and ".LUA" in the
-	call to enqueue_lua_script.  That is to say:
+	end in ".LUA". However you must omit the share/snis/luascripts directory
+	and ".LUA" in the call to enqueue_lua_script.  That is to say:
 
 		enqueue_lua_script("X");
 
 	will queue up the script "share/snis/luascripts/X.LUA" for execution.
+
+	You may have one level of subdirectoires within share/snis/luascripts. If
+	multiple scripts have the same name differing only by subdirectory name,
+	and the invocation does not specify the subdirectory, then the first script
+	with the specified name is executed, starting with share/snis/luascripts and
+	proceeding to subdirectories alphabetically (via scandir(3)'s alphasort()).
+
+	For example, if you have:
+
+		ABC.LUA
+		A/ABC.LUA
+		A/XYZ.LUA
+		B/ABC.LUA
+		B/XYZ.LUA
+
+	enqueue_lua_script("ABC");   -- executes ABC.LUA
+	enqueue_lua_script("A/ABC"); -- executes A/ABC.LUA
+	enqueue_lua_script("B/ABC"); -- executes B/ABC.LUA
+	enqueue_lua_script("XYZ");   -- executes A/XYZ.LUA
+	enqueue_lua_script("A/XYZ"); -- executes A/XYZ.LUA
+	enqueue_lua_script("B/XYZ"); -- executes B/XYZ.LUA
+
+	The length of the commands which may be entered on the demon screen is very
+	limited so keep this in mind when naming scripts and directories and esp.
+	considering scripts that accept command line arguments.
 
 get_ship_attribute(id, attribute_name); -- returns the specified attribute of the ship.  The
 	type depends on the attribute, though generally will be a number or a string.
