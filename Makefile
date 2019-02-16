@@ -444,7 +444,7 @@ ifeq (${OSX},0)
 # this "... || echo" hack thing.
 #
 LUALIBS:=$(shell pkg-config --libs lua5.2 --silence-errors || pkg-config --libs lua52 --silence-errors || pkg-config --libs lua --silence-errors || echo '-llua5.2')
-LUACFLAGS:=$(shell pkg-config --cflags lua5.2 --silence-errors || pkg-config --cflags lua52 --silence-errors || pkg-config --libs lua --silence-errors || echo '')
+LUACFLAGS:=$(shell pkg-config --cflags lua5.2 --silence-errors || pkg-config --cflags lua52 --silence-errors || pkg-config --cflags lua --silence-errors || echo '')
 else
 # OSX needs to do it this way (what is the point of pkgconfig if they all do it differently?)
 LUALIBS:=$(shell pkg-config --libs lua)
