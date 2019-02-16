@@ -17137,11 +17137,30 @@ static struct server_builtin_cmd {
 	{ "HELP", "LIST SERVER BUILTIN COMMANDS", server_builtin_help, },
 };
 
-static int filter_lua_scripts(const struct dirent *d)
+static int filter_directories(const struct dirent *d)
+{
+	if (strcmp(d->d_name, ".") == 0)
+		return 0;
+	if (strcmp(d->d_name, "..") == 0)
+		return 0;
+	return d->d_type == DT_DIR;
+}
+
+static int filter_lua_scripts_and_dirs(const struct dirent *d)
 {
 	int l = strlen(d->d_name);
 
+	/* Check for xxx.LUA */
 	if (l > 4 && strcmp(&d->d_name[l - 4], ".LUA") == 0)
+		return 1;
+
+	/* Skip . and .. */
+	if (strcmp(d->d_name, ".") == 0)
+		return 0;
+	if (strcmp(d->d_name, "..") == 0)
+		return 0;
+
+	if (d->d_type == DT_DIR)
 		return 1;
 	return 0;
 }
@@ -17149,9 +17168,9 @@ static int filter_lua_scripts(const struct dirent *d)
 static void list_lua_scripts(void)
 {
 	struct dirent **namelist;
-	int i, n;
+	int i, j, n;
 
-	n = scandir(LUASCRIPTDIR, &namelist, filter_lua_scripts, alphasort);
+	n = scandir(LUASCRIPTDIR, &namelist, filter_lua_scripts_and_dirs, alphasort);
 	if (n < 0) {
 		send_demon_console_msg("%s: %s\n", LUASCRIPTDIR, strerror(errno));
 		return;
@@ -17159,7 +17178,30 @@ static void list_lua_scripts(void)
 	send_demon_console_msg("LUA SCRIPTS:");
 
 	for (i = 0; i < n; i++) {
-		send_demon_console_msg("- %s", namelist[i]->d_name);
+		if (namelist[i]->d_type == DT_REG) { /* regular file? */
+			send_demon_console_msg("- %s", namelist[i]->d_name);
+		} else if (namelist[i]->d_type == DT_DIR) { /* directory? */
+			struct dirent **subnamelist;
+			char path[PATH_MAX];
+			int sn;
+
+			snprintf(path, sizeof(path) - 1, "%s/%s", LUASCRIPTDIR, namelist[i]->d_name);
+			sn = scandir(path, &subnamelist, filter_lua_scripts_and_dirs, alphasort);
+			if (sn < 0) {
+				send_demon_console_msg("%s: %s\n", path, strerror(errno));
+				free(namelist[i]);
+				continue;
+			}
+			for (j = 0; j < sn; j++) {
+				if (subnamelist[j]->d_type != DT_REG) {
+					free(subnamelist[j]);
+					continue;
+				}
+				send_demon_console_msg("- %s/%s", namelist[i]->d_name, subnamelist[j]->d_name);
+				free(subnamelist[j]);
+			}
+			free(subnamelist);
+		}
 		free(namelist[i]);
 	}
 	free(namelist);
@@ -23183,9 +23225,40 @@ static void free_lua_command_tokens(char *arg[], int nargs, int maxargs)
 	memset(arg, 0, sizeof(arg[0]) * maxargs);
 }
 
+static char *find_lua_script(char *base_script_name)
+{
+	char path[PATH_MAX];
+	struct stat statbuf;
+	struct dirent **namelist;
+	int n, i, rc;
+
+	/* First, try the obvious. */
+	snprintf(path, sizeof(path) - 1, "%s/%s.LUA", LUASCRIPTDIR, base_script_name);
+	rc = stat(path, &statbuf);
+	if (rc == 0)
+		return strdup(path);
+
+	/* Maybe it's in a subdirectory */
+	n = scandir(LUASCRIPTDIR, &namelist, filter_directories, alphasort);
+	if (n < 0) {
+		send_demon_console_color_msg(YELLOW, "FAILED TO SCAN %s: %s", LUASCRIPTDIR, strerror(errno));
+		return NULL;
+	}
+	for (i = 0; i < n; i++) {
+		snprintf(path, sizeof(path) - 1, "%s/%s/%s.LUA", LUASCRIPTDIR,
+				namelist[i]->d_name, base_script_name);
+		rc = stat(path, &statbuf);
+		free(namelist[i]);
+		if (rc == 0)
+			return strdup(path);
+	}
+	free(namelist);
+	return NULL;
+}
+
 static void process_lua_commands(void)
 {
-	char lua_command[PATH_MAX], scriptname[PATH_MAX];
+	char lua_command[PATH_MAX], *scriptname = NULL;
 	char *arg[16];
 	int rc, nargs;
 
@@ -23203,14 +23276,22 @@ static void process_lua_commands(void)
 			continue;
 		}
 
-		snprintf(scriptname, sizeof(scriptname) - 1, "%s/%s.LUA", LUASCRIPTDIR, arg[0]);
-		rc = luaL_loadfile(lua_state, scriptname);
-		if (rc) {
-			print_lua_error_message("ERROR LOADING", scriptname);
+		scriptname = find_lua_script(arg[0]);
+		if (!scriptname) {
+			print_lua_error_message("SCRIPT NOT FOUND", scriptname);
 			free_lua_command_tokens(arg, nargs, ARRAYSIZE(arg));
 			pthread_mutex_lock(&universe_mutex);
 			continue;
 		}
+		rc = luaL_loadfile(lua_state, scriptname);
+		if (rc) {
+			print_lua_error_message("ERROR LOADING", scriptname);
+			free_lua_command_tokens(arg, nargs, ARRAYSIZE(arg));
+			free(scriptname);
+			pthread_mutex_lock(&universe_mutex);
+			continue;
+		}
+		free(scriptname);
 
 		for (int i = 0; i < nargs; i++) /* Push the args. */
 			lua_pushstring(lua_state, arg[i]);
