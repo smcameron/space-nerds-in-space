@@ -9717,23 +9717,24 @@ static void draw_sciplane_display(GtkWidget *w, struct snis_entity *o, double ra
 		float tx1, tz1, tx2, tz2, sx1, sy1, sx2, sy2;
 		float heading = o->tsd.ship.sci_heading;
 		float beam_width = fabs(o->tsd.ship.sci_beam_width);
+		float jitter_offset = ((timer % 3) - 1) * M_PI / 180.0;
 		sng_set_foreground(UI_COLOR(sci_plane_beam));
 
+		/* One side of the beam... */
 		tx1 = o->x + cos(heading - beam_width / 2) * range * 0.05;
 		tz1 = o->z - sin(heading - beam_width / 2) * range * 0.05;
-		tx2 = o->x + cos(heading - beam_width / 2) * range;
-		tz2 = o->z - sin(heading - beam_width / 2) * range;
-		if (!transform_line(instrumentecx, tx1, o->y, tz1, tx2, o->y, tz2, &sx1, &sy1, &sx2, &sy2)) {
+		tx2 = o->x + cos(heading - beam_width / 2 - jitter_offset) * range;
+		tz2 = o->z - sin(heading - beam_width / 2 - jitter_offset) * range;
+		if (!transform_line(instrumentecx, tx1, o->y, tz1, tx2, o->y, tz2, &sx1, &sy1, &sx2, &sy2))
 			sng_draw_electric_line(sx1, sy1, sx2, sy2);
-		}
 
+		/* The other side of the beam */
 		tx1 = o->x + cos(heading + beam_width / 2) * range * 0.05;
 		tz1 = o->z - sin(heading + beam_width / 2) * range * 0.05;
-		tx2 = o->x + cos(heading + beam_width / 2) * range;
-		tz2 = o->z - sin(heading + beam_width / 2) * range;
-		if (!transform_line(instrumentecx, tx1, o->y, tz1, tx2, o->y, tz2, &sx1, &sy1, &sx2, &sy2)) {
+		tx2 = o->x + cos(heading + beam_width / 2 + jitter_offset) * range;
+		tz2 = o->z - sin(heading + beam_width / 2 + jitter_offset) * range;
+		if (!transform_line(instrumentecx, tx1, o->y, tz1, tx2, o->y, tz2, &sx1, &sy1, &sx2, &sy2))
 			sng_draw_electric_line(sx1, sy1, sx2, sy2);
-		}
 	}
 
 	/* add my ship */
@@ -10029,6 +10030,7 @@ static void add_scanner_beam_orange_slice(struct entity_context *ecx,
 	static struct mesh *orange_slice = 0;
 	struct entity *e;
 	union quat q, q1, q2, q3;
+	float jitter_offset = ((timer % 3) - 1) * M_PI / 360.0;
 
 	if (!orange_slice) {
 		orange_slice = init_circle_mesh(0, 0, 1, 60, M_PI); /* half circle in x-z plane */
@@ -10037,9 +10039,9 @@ static void add_scanner_beam_orange_slice(struct entity_context *ecx,
 
 	quat_init_axis(&q, 0.0f, 0.0f, 1.0f, -M_PI / 2.0); /* rotate 90 degrees around z axis */
 	quat_init_axis(&q1, 0.0f, 1.0f, 0.0f,
-			o->tsd.ship.sci_heading - o->tsd.ship.sci_beam_width / 2.0 + M_PI / 2.0);
+			o->tsd.ship.sci_heading - o->tsd.ship.sci_beam_width / 2.0 + M_PI / 2.0 - jitter_offset);
 	quat_init_axis(&q2, 0.0f, 1.0f, 0.0f,
-			o->tsd.ship.sci_heading + o->tsd.ship.sci_beam_width / 2.0 + M_PI / 2.0);
+			o->tsd.ship.sci_heading + o->tsd.ship.sci_beam_width / 2.0 + M_PI / 2.0 + jitter_offset);
 	e = add_entity(sciballecx, orange_slice, o->x, o->y, o->z, color);
 	if (e) {
 		quat_mul(&q3, &q1, &q);
