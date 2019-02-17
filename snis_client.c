@@ -5754,6 +5754,7 @@ static struct science_ui {
 	struct button *select_waypoint_button[MAXWAYPOINTS];
 	double waypoint[MAXWAYPOINTS][3];
 	int nwaypoints;
+	struct pull_down_menu *menu;
 } sci_ui;
 
 static void science_activate_waypoints_widgets(void)
@@ -9234,6 +9235,75 @@ struct science_data {
 static struct science_data science_guy[MAXGAMEOBJS] = { {0}, };
 static int nscience_guys = 0;
 
+static void science_menu_selection(void *x)
+{
+	intptr_t id = (intptr_t) x;
+	struct snis_entity *selected;
+
+	pthread_mutex_lock(&universe_mutex);
+	if (id > snis_object_pool_highest_object(pool)) {
+		pthread_mutex_unlock(&universe_mutex);
+		return;
+	}
+
+	selected = lookup_entity_by_id((uint32_t) id);
+	if (!selected) {
+		pthread_mutex_unlock(&universe_mutex);
+		return;
+	}
+	if (curr_science_guy != selected)
+		request_sci_select_target(OPCODE_SCI_SELECT_TARGET_TYPE_OBJECT, selected->id);
+	else
+		request_sci_select_target(OPCODE_SCI_SELECT_TARGET_TYPE_OBJECT, (uint32_t) -1); /* deselect */
+	pthread_mutex_unlock(&universe_mutex);
+}
+
+/* Populate the science pull down menu with contents of science_guy[] array */
+static void populate_science_pull_down_menu(void)
+{
+	int i;
+	struct snis_entity *o;
+
+	pull_down_menu_clear(sci_ui.menu);
+	pull_down_menu_add_column(sci_ui.menu, "SHIPS");
+	pull_down_menu_add_column(sci_ui.menu, "STARBASES");
+	pull_down_menu_add_column(sci_ui.menu, "WARPGATES");
+	pull_down_menu_add_column(sci_ui.menu, "PLANETS");
+	pull_down_menu_add_column(sci_ui.menu, "ASTEROIDS");
+
+	for (i = 0; i < nscience_guys; i++) {
+		o = science_guy[i].o;
+		if (o && o->sdata.science_data_known) {
+			switch (o->type) {
+			case OBJTYPE_PLANET:
+				pull_down_menu_add_row(sci_ui.menu, "PLANETS", o->sdata.name,
+						science_menu_selection, (void *) (intptr_t) o->id);
+				break;
+			case OBJTYPE_WARPGATE:
+				pull_down_menu_add_row(sci_ui.menu, "WARPGATES", o->sdata.name,
+						science_menu_selection, (void *) (intptr_t) o->id);
+				break;
+			case OBJTYPE_STARBASE:
+				pull_down_menu_add_row(sci_ui.menu, "STARBASES", o->sdata.name,
+						science_menu_selection, (void *) (intptr_t) o->id);
+				break;
+			case OBJTYPE_SHIP1:
+			case OBJTYPE_SHIP2:
+			case OBJTYPE_DERELICT:
+				pull_down_menu_add_row(sci_ui.menu, "SHIPS", o->sdata.name,
+						science_menu_selection, (void *) (intptr_t) o->id);
+				break;
+			case OBJTYPE_ASTEROID:
+				pull_down_menu_add_row(sci_ui.menu, "ASTEROIDS", o->sdata.name,
+						science_menu_selection, (void *) (intptr_t) o->id);
+				break;
+			default:
+				break;
+			}
+		}
+	}
+}
+
 static void draw_3d_laserbeam(GtkWidget *w, GdkGC *gc, struct entity_context *cx, struct snis_entity *o, struct snis_entity *laserbeam, double r)
 {
 	int rc;
@@ -9875,6 +9945,7 @@ static void draw_sciplane_display(GtkWidget *w, struct snis_entity *o, double ra
 			}
 			nscience_guys++;
 		}
+		populate_science_pull_down_menu();
 
 		if (prev_science_guy && !selected_guy_still_visible && prev_selected_guy_still_visible) {
 			/* If we moved the beam off our guy, and back on, select him again. */
@@ -10194,6 +10265,7 @@ static void draw_all_the_3d_science_guys(GtkWidget *w, struct snis_entity *o, do
 		curr_science_guy = NULL;
 	}
 	draw_science_3d_waypoints(o, range);
+	populate_science_pull_down_menu();
 	pthread_mutex_unlock(&universe_mutex);
 	sng_set_foreground(UI_COLOR(sci_ball_default_blip));
 	if (nebula_factor) {
@@ -13869,6 +13941,12 @@ static void init_science_ui(void)
 	sci_ui.align_to_ship_button = snis_button_init(atsx, atsy, atsw, atsh, "ALIGN TO SHIP",
 			UI_COLOR(sci_button), NANO_FONT, sci_align_to_ship_pressed, (void *) 0);
 	snis_button_set_sound(sci_ui.align_to_ship_button, UISND19);
+
+	sci_ui.menu = create_pull_down_menu(NANO_FONT, SCREEN_WIDTH);
+	pull_down_menu_set_color(sci_ui.menu, UI_COLOR(sci_button));
+	pull_down_menu_set_background_alpha(sci_ui.menu, 0.75);
+	pull_down_menu_add_column(sci_ui.menu, "SCIENCE");
+
 	ui_add_slider(sci_ui.scizoom, DISPLAYMODE_SCIENCE, "SCIENCE SCOPE ZOOM CONTROL");
 	ui_add_slider(sci_ui.scipower, DISPLAYMODE_SCIENCE, "SCANNING BEAM POWER CONTROL");
 	ui_add_button(sci_ui.details_button, DISPLAYMODE_SCIENCE, "VIEW DETAILS ABOUT SELECTED TARGET");
@@ -13933,6 +14011,7 @@ static void init_science_ui(void)
 		ui_add_button(sci_ui.select_waypoint_button[i], DISPLAYMODE_SCIENCE, "SELECT THIS WAYPOINT");
 		ui_hide_widget(sci_ui.select_waypoint_button[i]);
 	}
+	ui_add_pull_down_menu(sci_ui.menu, DISPLAYMODE_SCIENCE); /* needs to be last */
 }
 
 static void comms_screen_button_pressed(void *x)
@@ -15302,6 +15381,7 @@ static void draw_science_details(GtkWidget *w, GdkGC *gc)
 	int y, yinc = 20 * SCREEN_HEIGHT / 600;
 	int i;
 
+	pull_down_menu_clear(sci_ui.menu);
 	if (!curr_science_guy || !curr_science_guy->entity)
 		return;
 
