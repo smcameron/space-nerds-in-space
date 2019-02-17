@@ -523,12 +523,10 @@ MULTIVERSELIBS=-Lssgl -lssglclient ${LRTLIB} -ldl -lm -lcrypt
 #
 
 
-PROGS=snis_server snis_client snis_limited_client snis_multiverse
 BINPROGS=bin/ssgl_server bin/snis_server bin/snis_client bin/snis_limited_client bin/snis_text_to_speech.sh \
 		bin/snis_multiverse bin/lsssgl
 UTILPROGS=util/mask_clouds util/cloud-mask-normalmap mesh_viewer util/sample_image_colors \
 		util/generate_solarsystem_positions nebula_noise generate_skybox
-ESSENTIAL_SCRIPTS=snis_text_to_speech.sh
 
 # model directory
 MD=${ASSETSSRCDIR}/models
@@ -632,7 +630,7 @@ CMNMLIBS=-lm ${LRTLIB} -lpng
 CMNMOBJS=png_utils.o
 CMNMLINK=$(ECHO) '  LINK' $@ && $(CC) ${MYCFLAGS} -o $@ ${GTKCFLAGS} util/cloud-mask-normalmap.o ${CMNMOBJS} ${CMNMLIBS} $(LDFLAGS)
 
-all:	${COMMONOBJS} ${SERVEROBJS} ${MULTIVERSEOBJS} ${CLIENTOBJS} ${LIMCLIENTOBJS} ${PROGS} ${BINPROGS} ${SCAD_PARAMS_FILES} ${DOCKING_PORT_FILES}
+all:	${COMMONOBJS} ${SERVEROBJS} ${MULTIVERSEOBJS} ${CLIENTOBJS} ${LIMCLIENTOBJS} ${BINPROGS} ${SCAD_PARAMS_FILES} ${DOCKING_PORT_FILES}
 
 models:	${MODELS}
 
@@ -835,16 +833,20 @@ snis_alloc.o:	snis_alloc.c Makefile
 snis_damcon_systems.o:	snis_damcon_systems.c Makefile
 	$(Q)$(COMPILE)
 
-snis_server:	${SERVEROBJS} ${SSGL} Makefile
+bin/snis_server:	${SERVEROBJS} ${SSGL} Makefile
+	@mkdir -p bin
 	$(Q)$(SERVERLINK)
 
-snis_client:	${CLIENTOBJS} ${SSGL} Makefile
+bin/snis_client:	${CLIENTOBJS} ${SSGL} Makefile
+	@mkdir -p bin
 	$(Q)$(CLIENTLINK)
 
-snis_multiverse:	${MULTIVERSEOBJS} ${SSGL} Makefile
+bin/snis_multiverse:	${MULTIVERSEOBJS} ${SSGL} Makefile
+	@mkdir -p bin
 	$(Q)$(MULTIVERSELINK)
 
-snis_limited_client:	${LIMCLIENTOBJS} ${SSGL} Makefile
+bin/snis_limited_client:	${LIMCLIENTOBJS} ${SSGL} Makefile
+	@mkdir -p bin
 	$(Q)$(LIMCLIENTLINK)
 
 ssgl/lsssgl:
@@ -852,22 +854,6 @@ ssgl/lsssgl:
 
 ssgl/ssgl_server:
 	(cd ssgl ; ${MAKE} )
-
-bin/snis_client:	snis_client
-	@mkdir -p bin
-	@cp snis_client bin
-
-bin/snis_multiverse:	snis_multiverse
-	@mkdir -p bin
-	@cp snis_multiverse bin
-
-bin/snis_server:	snis_server
-	@mkdir -p bin
-	@cp snis_server bin
-
-bin/snis_limited_client:	snis_limited_client
-	@mkdir -p bin
-	@cp snis_limited_client bin
 
 bin/ssgl_server:	ssgl/ssgl_server
 	@mkdir -p bin
@@ -882,10 +868,9 @@ bin/snis_text_to_speech.sh:	snis_text_to_speech.sh
 	@cp snis_text_to_speech.sh bin/snis_text_to_speech.sh
 	@chmod +x bin/snis_text_to_speech.sh
 
-mesh_viewer:	${SDLCLIENTOBJS} ${SSGL} Makefile
-	$(Q)$(SDLCLIENTLINK)
+bin/mesh_viewer:	${SDLCLIENTOBJS} ${SSGL} Makefile
 	@mkdir -p bin
-	@cp mesh_viewer bin
+	$(Q)$(SDLCLIENTLINK)
 
 earthlike:	earthlike.o ${ELOBJS} Makefile
 	$(Q)$(ELLINK)
@@ -1090,7 +1075,7 @@ mikktspace/mikktspace.o:
 	(cd mikktspace; ${MAKE} )
 
 mostly-clean:
-	rm -f ${SERVEROBJS} ${CLIENTOBJS} ${LIMCLIENTOBJS} ${SDLCLIENTOBJS} ${PROGS} ${SSGL} \
+	rm -f ${SERVEROBJS} ${CLIENTOBJS} ${LIMCLIENTOBJS} ${SDLCLIENTOBJS} ${SSGL} \
 	${BINPROGS} ${UTILPROGS} stl_parser snis_limited_client.c \
 	test-space-partition snis_test_audio.o snis_test_audio joystick_test local_termios2.h
 	( cd ssgl; ${MAKE} clean )
@@ -1168,9 +1153,9 @@ snis_test_audio.o:	snis_test_audio.c Makefile ${SNDOBJS} ${OGGOBJ}
 snis_test_audio:	snis_test_audio.o ${SNDLIBS} Makefile
 	$(CC) -o snis_test_audio snis_test_audio.o ${SNDOBJS} ${OGGOBJ} ${SNDLIBS}
 
-install:	${PROGS} ${MODELS} ${AUDIOFILES} ${TEXTURES} \
+install:	${BINPROGS} ${MODELS} ${AUDIOFILES} ${TEXTURES} \
 		${MATERIALS} ${CONFIGFILES} ${SHADERS} ${LUASCRIPTS} ${MANPAGES} ${SSGL} \
-		${SOLARSYSTEMFILES} ${ESSENTIAL_SCRIPTS}
+		${SOLARSYSTEMFILES}
 	@# First check that PREFIX is sane, and esp. that it's not pointed at source
 	@mkdir -p ${DESTDIR}/${PREFIX}
 	@touch ${DESTDIR}/${PREFIX}/.canary-in-the-coal-mine.canary
@@ -1184,10 +1169,9 @@ install:	${PROGS} ${MODELS} ${AUDIOFILES} ${TEXTURES} \
 	fi
 	@ rm -f ${DESTDIR}/${PREFIX}/.canary-in-the-coal-mine.canary
 	mkdir -p ${DESTDIR}/${PREFIX}/bin
-	${INSTALL} -m 755 ssgl/ssgl_server ${DESTDIR}/${PREFIX}/bin
-	for x in ${PROGS} ${ESSENTIAL_SCRIPTS} ; do \
-		${INSTALL} -m 755 bin/$$x \
-				${DESTDIR}/${PREFIX}/bin; \
+	for x in ${BINPROGS} ; do \
+		${INSTALL} -m 755 $$x \
+				${DESTDIR}/${PREFIX}; \
 	done
 	${AWK} '/^PREFIX=$$/ { printf("PREFIX='${PREFIX}'\n"); next; } \
 		{ print; } ' < snis_launcher > /tmp/snis_launcher
@@ -1247,10 +1231,9 @@ uninstall:
 		echo "DESTDIR/PREFIX is not a directory." 1>&2 ;\
 		exit 1 ;\
 	fi
-	for x in ${PROGS} ; do \
-		rm -f ${DESTDIR}/${PREFIX}/bin/$$x ; \
+	for x in ${BINPROGS} ; do \
+		rm -f ${DESTDIR}/${PREFIX}/$$x ; \
 	done
-	rm -f ${DESTDIR}/${PREFIX}/bin/ssgl_server
 	rm -fr ${DESTDIR}/${PREFIX}/share/snis
 	rm -f ${MANDIR}/snis_client.6.gz ${MANDIR}/snis_client.6
 	rm -f ${MANDIR}/snis_server.6.gz ${MANDIR}/snis_server.6

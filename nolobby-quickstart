@@ -55,7 +55,7 @@ fi
 export SNISRAND=12345
 export SNISSERVERPORT=12345
 export SNISSERVERNOLOBBY=1
-./snis_server localhost SPACENERDS `hostname` localhost --enable-enscript &
+./bin/snis_server localhost SPACENERDS `hostname` localhost --enable-enscript &
 
 sleep 2.50
 
@@ -69,8 +69,8 @@ ASPECT_RATIO="" # unspecified, figure it out from window manager
 # ASPECT_RATIO="--aspect-ratio 16:9"
 
 # start the game client and server in nolobby mode
-echo ./snis_client $ASPECT_RATIO --nolobby --serverport 12345 --serverhost "$SERVERHOST" --fullscreen --starship "$shipname" --pw "$password" $@
+echo ./bin/snis_client $ASPECT_RATIO --nolobby --serverport 12345 --serverhost "$SERVERHOST" --fullscreen --starship "$shipname" --pw "$password" $@
 
-./snis_client $ASPECT_RATIO --nolobby --serverport 12345 --serverhost "$SERVERHOST" --fullscreen --starship "$shipname" --pw "$password" $@
+./bin/snis_client $ASPECT_RATIO --nolobby --serverport 12345 --serverhost "$SERVERHOST" --fullscreen --starship "$shipname" --pw "$password" $@
 exit $?
 

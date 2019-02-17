@@ -24,11 +24,11 @@ Then run the server
 
   export SNISSERVERNOLOBBY=1 # suppress lobby
   export SNISSERVERPORT=${MYPORT} # or some port number of your choosing.
-  ./snis_server -L x
+  ./bin/snis_server -L x
 
 To connect to it with snis_client without a lobby, run on your local machine:
 
-./snis_client --nolobby --serverhost myipaddr --serverport myport --starship myship --pw myshippw
+./bin/snis_client --nolobby --serverhost myipaddr --serverport myport --starship myship --pw myshippw
 
 Replace myipaddr with the IP addr of the server host, myport with the port snis_server is running
 on, and myship and myshippw with your ship name and ship password.

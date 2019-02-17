@@ -65,7 +65,7 @@ start_multiverse()
 		fi
 		echo "Created ./snisdb for snis_multiverse" 1>&2
 	fi
-	./snis_multiverse -a -l localhost -n nickname -L narnia -e karado
+	./bin/snis_multiverse -a -l localhost -n nickname -L narnia -e karado
 	echo "snis_multiverse died, status was $?" 1>&2
 }
 
@@ -93,12 +93,12 @@ SS2=$(get_solarsystem_name sirius)
 SS3=$(get_solarsystem_name polaris)
 SS4=$(get_solarsystem_name tau-scorpii)
 
-./snis_server -l localhost -L $(uppercase "$SS1") --enable-enscript -m narnia -s "$SS1" &
+./bin/snis_server -l localhost -L $(uppercase "$SS1") --enable-enscript -m narnia -s "$SS1" &
 if [ "$MULTIVERSE_TEST" != "" ]
 then
-	./snis_server -l localhost -L $(uppercase "$SS2") --enable-enscript -m narnia -s "$SS2" &
-	./snis_server -l localhost -L $(uppercase "$SS3") --enable-enscript -m narnia -s "$SS3" &
-	./snis_server -l localhost -L $(uppercase "$SS4") --enable-enscript -m narnia -s "$SS4" &
+	./bin/snis_server -l localhost -L $(uppercase "$SS2") --enable-enscript -m narnia -s "$SS2" &
+	./bin/snis_server -l localhost -L $(uppercase "$SS3") --enable-enscript -m narnia -s "$SS3" &
+	./bin/snis_server -l localhost -L $(uppercase "$SS4") --enable-enscript -m narnia -s "$SS4" &
 fi
 
 sleep 2.50
@@ -121,8 +121,8 @@ else
 fi
 
 # start the game client and server in quickstart mode
-# ./snis_client $ASPECT_RATIO --fullscreen --solarsystem "$SNIS_SOLARSYSTEM" --quickstart --starship "$shipname" --pw "$password" $@
-./snis_client $ASPECT_RATIO_ARG --fullscreen --starship "$shipname" --pw "$password" \
+# ./bin/snis_client $ASPECT_RATIO --fullscreen --solarsystem "$SNIS_SOLARSYSTEM" --quickstart --starship "$shipname" --pw "$password" $@
+./bin/snis_client $ASPECT_RATIO_ARG --fullscreen --starship "$shipname" --pw "$password" \
 	-j '/dev/input/by-id/usb-Thrustmaster_T.16000M-joystick' \
 	-j '/dev/input/by-id/usb-Thrustmaster_TWCS_Throttle-joystick' $@
 exit $?

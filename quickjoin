@@ -36,14 +36,14 @@ ps aux | grep 'snis_server' | grep -v grep > /dev/null 2>&1
 if [ "$?" != "0" ]
 then
 	echo "Starting SNIS server"
-	./snis_server localhost SPACENERDS `hostname` localhost --enable-enscript &
+	./bin/snis_server localhost SPACENERDS `hostname` localhost --enable-enscript &
 	sleep 0.25
 else
 	echo "SNIS server already running."
 fi
 
 # start the game client and server in quickstart mode
-./snis_client --fullscreen --quickstart --starship "$shipname" --pw "$password"
+./bin/snis_client --fullscreen --quickstart --starship "$shipname" --pw "$password"
 
 exit $?
 
