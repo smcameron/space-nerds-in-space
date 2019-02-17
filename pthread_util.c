@@ -44,7 +44,9 @@ int create_thread(pthread_t *thread,  void *(*start_routine) (void *), void *arg
 	} else {
 		rc = pthread_create(thread, NULL, start_routine, arg);
 	}
+#ifdef _GNU_SOURCE
 	if (!rc && name && thread_name)
 		pthread_setname_np(*thread, thread_name);
+#endif
 	return rc;
 }
