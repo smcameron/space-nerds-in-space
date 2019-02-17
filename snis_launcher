@@ -6,7 +6,8 @@ then
 	exit 1
 fi
 
-PREFIX=
+# Hack this in for now
+PREFIX=./
 
 BINDIR=${PREFIX}/bin
 if [ "$SNIS_ASSET_DIR" = "" ]
