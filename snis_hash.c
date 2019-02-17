@@ -27,9 +27,12 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <assert.h>
+
+#ifndef __APPLE__
 #define _GNU_SOURCE
 #define __USE_GNU
 #include <crypt.h>
+#endif
 
 void snis_format_hash(unsigned char *hash, int hashlen, unsigned char *buffer, int len)
 {
@@ -102,12 +105,15 @@ static int get_salt(unsigned char *salt, int saltsize)
 	return 0;
 }
 
+/* Note this is not thread safe on __APPLE__, but it is thread safe on linux */
 int snis_crypt(unsigned char *shipname, unsigned char *password,
 		unsigned char *crypted, int cryptsize, char *insalt, int insaltsize)
 {
 	unsigned char salt[] = "$1$........";
 	unsigned char buffer[50];
+#ifndef __APPLE__
 	struct crypt_data data;
+#endif
 	int rc;
 
 	if (insalt) {
@@ -130,7 +136,12 @@ int snis_crypt(unsigned char *shipname, unsigned char *password,
 	memcpy(buffer + 20, password, strlen((char *) password));
 
 	data.initialized = 0;
+#ifndef __APPLE__
 	password = (unsigned char *) crypt_r((char *) buffer, (char *) salt, &data);
+#else
+	/* Apple doesn't have crypt_r(), use crypt() instead. */
+	password = (unsigned char *) crypt((char *) buffer, (char *) salt);
+#endif
 	strncpy((char *) crypted, (char *) password, cryptsize);
 	return 0;
 }
