@@ -822,7 +822,6 @@ static struct graph_dev_gl_single_color_shader single_color_shader;
 static struct graph_dev_gl_line_single_color_shader line_single_color_shader;
 static struct graph_dev_gl_vertex_color_shader vertex_color_shader;
 static struct graph_dev_gl_point_cloud_shader point_cloud_shader;
-static struct graph_dev_gl_point_cloud_shader point_cloud_intensity_noise_shader;
 static struct graph_dev_gl_skybox_shader skybox_shader;
 static struct graph_dev_gl_color_by_w_shader color_by_w_shader;
 static struct graph_dev_gl_textured_shader textured_shader;
@@ -2455,10 +2454,7 @@ void graph_dev_draw_entity(struct entity_context *cx, struct entity *e, union ve
 			float point_size = 1.0;
 			struct graph_dev_gl_point_cloud_shader *shader;
 
-			if (e->material_ptr && e->material_ptr->type == MATERIAL_POINT_CLOUD_INTENSITY_NOISE)
-				shader = &point_cloud_intensity_noise_shader;
-			else
-				shader = &point_cloud_shader;
+			shader = &point_cloud_shader;
 
 			graph_dev_raster_point_cloud_mesh(shader, mat_mvp, e->m, &line_color, alpha, point_size,
 				do_blend);
@@ -3579,7 +3575,6 @@ int graph_dev_setup(const char *shader_dir)
 	setup_vertex_color_shader(&vertex_color_shader);
 	setup_line_single_color_shader(&line_single_color_shader);
 	setup_point_cloud_shader("point_cloud", &point_cloud_shader);
-	setup_point_cloud_shader("point_cloud-intensity-noise", &point_cloud_intensity_noise_shader);
 	setup_color_by_w_shader(&color_by_w_shader);
 	setup_skybox_shader(&skybox_shader);
 	setup_textured_shader("textured", UNIVERSAL_SHADER_HEADER, &textured_shader);
