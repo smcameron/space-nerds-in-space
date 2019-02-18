@@ -9241,11 +9241,6 @@ static void science_menu_selection(void *x)
 	struct snis_entity *selected;
 
 	pthread_mutex_lock(&universe_mutex);
-	if (id > snis_object_pool_highest_object(pool)) {
-		pthread_mutex_unlock(&universe_mutex);
-		return;
-	}
-
 	selected = lookup_entity_by_id((uint32_t) id);
 	if (!selected) {
 		pthread_mutex_unlock(&universe_mutex);
