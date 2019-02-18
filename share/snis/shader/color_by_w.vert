@@ -9,9 +9,9 @@ uniform float u_CenterW;
 uniform vec3 u_FarColor;
 uniform float u_FarW;
 
-in vec4 a_Position; // Per-vertex position information we will pass in.
+attribute vec4 a_Position; // Per-vertex position information we will pass in.
 
-out vec3 v_Color;
+varying vec3 v_Color;
 
 void main()
 {

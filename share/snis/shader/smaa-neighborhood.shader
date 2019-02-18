@@ -19,13 +19,13 @@
 */
 
 #if defined(INCLUDE_VS)
-	out vec2 v_TexCoord;
-	out vec4 v_Offset;
+	varying vec2 v_TexCoord;
+	varying vec4 v_Offset;
 
 	uniform mat4 u_MVPMatrix;
 
-	in vec4 a_Position;
-	in vec2 a_TexCoord;
+	attribute vec4 a_Position;
+	attribute vec2 a_TexCoord;
 
 	void main()
 	{
@@ -37,8 +37,8 @@
 #endif
 
 #if defined(INCLUDE_FS)
-	in vec2 v_TexCoord;
-	in vec4 v_Offset;
+	varying vec2 v_TexCoord;
+	varying vec4 v_Offset;
 	uniform sampler2D u_AlbedoTex;
 	uniform sampler2D u_BlendTex;
 

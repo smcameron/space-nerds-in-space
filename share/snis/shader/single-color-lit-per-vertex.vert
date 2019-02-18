@@ -6,10 +6,10 @@ uniform vec3 u_Color;      // Per-object color information we will pass in.
 
 uniform vec3 u_LightPos;   // The position of the light in eye space.
 
-in vec4 a_Position; // Per-vertex position information we will pass in.
-in vec3 a_Normal;   // Per-vertex normal information we will pass in.
+attribute vec4 a_Position; // Per-vertex position information we will pass in.
+attribute vec3 a_Normal;   // Per-vertex normal information we will pass in.
 
-out vec3 v_Color;      // This will be passed into the fragment shader.
+varying vec3 v_Color;      // This will be passed into the fragment shader.
 
 #if !defined(AMBIENT)
 #define AMBIENT 0.1

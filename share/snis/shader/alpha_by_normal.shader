@@ -2,10 +2,10 @@
 uniform float u_Invert;
 
 #if defined(INCLUDE_VS)
-	out vec4 v_TintColor;
-	out float v_EyeDot;
+	varying vec4 v_TintColor;
+	varying float v_EyeDot;
 	#if defined(TEXTURED_ALPHA_BY_NORMAL)
-	out vec2 v_TexCoord;      // This will be passed into the fragment shader.
+	varying vec2 v_TexCoord;      // This will be passed into the fragment shader.
 	#endif
 
 	uniform mat4 u_MVPMatrix;  // A constant representing the combined model/view/projection matrix.
@@ -13,10 +13,10 @@ uniform float u_Invert;
 	uniform vec4 u_TintColor;
 	uniform mat3 u_NormalMatrix;
 
-	in vec4 a_Position; // Per-vertex position information we will pass in.
-	in vec3 a_Normal;
+	attribute vec4 a_Position; // Per-vertex position information we will pass in.
+	attribute vec3 a_Normal;
 #if defined(TEXTURED_ALPHA_BY_NORMAL)
-	in vec2 a_TexCoord; // Per-vertex texture coord we will pass in.
+	attribute vec2 a_TexCoord; // Per-vertex texture coord we will pass in.
 #endif
 	void main()
 	{
@@ -38,10 +38,10 @@ uniform float u_Invert;
 #endif
 
 #if defined(INCLUDE_FS)
-	in vec4 v_TintColor;
-	in float v_EyeDot;
+	varying vec4 v_TintColor;
+	varying float v_EyeDot;
 	#if defined(TEXTURED_ALPHA_BY_NORMAL)
-	in vec2 v_TexCoord;      // This will be passed into the fragment shader.
+	varying vec2 v_TexCoord;      // This will be passed into the fragment shader.
 	#endif
 
 #if defined(TEXTURED_ALPHA_BY_NORMAL)

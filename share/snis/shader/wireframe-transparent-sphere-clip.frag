@@ -3,9 +3,9 @@ uniform vec3 u_Color; // Per-object color information we will pass in.
 uniform vec4 u_ClipSphere; // clipping sphere, w=radius squared
 uniform float u_ClipSphereRadiusFade; // percent fade to black distance past clip radius
 
-in vec2 v_FragRadius; // this fragments distance to sphere center
-in float v_EyeDot;
-in float v_ClipSphereDot;
+varying vec2 v_FragRadius; // this fragments distance to sphere center
+varying float v_EyeDot;
+varying float v_ClipSphereDot;
 
 #define CULL_BACKFACE_CLIP_AND_CAMERA 0
 

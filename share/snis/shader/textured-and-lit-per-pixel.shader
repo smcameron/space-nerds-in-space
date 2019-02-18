@@ -21,28 +21,28 @@ uniform float u_SpecularIntensity; /* between 0 and 1, 1 is very shiny, 0 is fla
 #endif
 
 #if defined(INCLUDE_VS)
-	out vec3 v_Position;
-	out UV_TYPE v_TexCoord;
-	out vec3 v_Normal;
+	varying vec3 v_Position;
+	varying UV_TYPE v_TexCoord;
+	varying vec3 v_Normal;
 
 	#ifdef USE_NORMAL_MAP
-		out vec3 v_Tangent;
-		out vec3 v_BiTangent;
-		out mat3 tbn;
+		varying vec3 v_Tangent;
+		varying vec3 v_BiTangent;
+		varying mat3 tbn;
 	#endif
 
 	uniform mat4 u_MVPMatrix;
 	uniform mat4 u_MVMatrix;
 	uniform mat3 u_NormalMatrix;
 
-	in vec4 a_Position;
+	attribute vec4 a_Position;
 	#if !defined(USE_CUBEMAP)
-		in vec2 a_TexCoord;
+		attribute vec2 a_TexCoord;
 	#endif
-	in vec3 a_Normal;
+	attribute vec3 a_Normal;
 	#ifdef USE_NORMAL_MAP
-		in vec3 a_Tangent;
-		in vec3 a_BiTangent;
+		attribute vec3 a_Tangent;
+		attribute vec3 a_BiTangent;
 	#endif
 
 	void main()
@@ -66,14 +66,14 @@ uniform float u_SpecularIntensity; /* between 0 and 1, 1 is very shiny, 0 is fla
 #endif
 
 #if defined(INCLUDE_FS)
-	in vec3 v_Position;
-	in UV_TYPE v_TexCoord;
-	in vec3 v_Normal;
+	varying vec3 v_Position;
+	varying UV_TYPE v_TexCoord;
+	varying vec3 v_Normal;
 
 	#ifdef USE_NORMAL_MAP
-		in vec3 v_Tangent;
-		in vec3 v_BiTangent;
-		in mat3 tbn;
+		varying vec3 v_Tangent;
+		varying vec3 v_BiTangent;
+		varying mat3 tbn;
 	#endif
 
 	uniform TEX_SAMPLER u_AlbedoTex;

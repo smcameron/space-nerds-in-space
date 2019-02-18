@@ -1,5 +1,5 @@
 
-in vec4 v_Color;      // Per-vertex color information we got passed.
+varying vec4 v_Color;      // Per-vertex color information we got passed.
 
 void main()
 {

@@ -7,16 +7,16 @@ uniform vec3 u_CameraRightVec;		// model space camera right vector
 uniform float u_Time;			// 0.0 to 1.0 animation position
 uniform float u_Radius;			// size of billboard vertex offset
 
-in vec4 a_MultiOne;		// 0,1=texture coordinate 0,1; 2=time offset
-in vec3 a_StartPosition;	// start position
-in vec3 a_StartTintColor;	// start tint color
-in vec2 a_StartAPM;		// start APM 0=additivity; 1=opacity
-in vec3 a_EndPosition;		// end position
-in vec3 a_EndTintColor;		// end tint color
-in vec2 a_EndAPM;		// end APM 0=additivity; 1=opacity
+attribute vec4 a_MultiOne;		// 0,1=texture coordinate 0,1; 2=time offset
+attribute vec3 a_StartPosition;	// start position
+attribute vec3 a_StartTintColor;	// start tint color
+attribute vec2 a_StartAPM;		// start APM 0=additivity; 1=opacity
+attribute vec3 a_EndPosition;		// end position
+attribute vec3 a_EndTintColor;		// end tint color
+attribute vec2 a_EndAPM;		// end APM 0=additivity; 1=opacity
 
-out vec2 v_TexCoord;		// texture coordinate passed to fragment shader
-out vec4 v_TintColor;		// tint color passed to fragment shader
+varying vec2 v_TexCoord;		// texture coordinate passed to fragment shader
+varying vec4 v_TintColor;		// tint color passed to fragment shader
 
 void main()
 {

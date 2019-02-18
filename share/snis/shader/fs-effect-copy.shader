@@ -20,11 +20,11 @@
 
 
 #ifdef INCLUDE_VS
-	out vec2 v_TexCoord;
+	varying vec2 v_TexCoord;
 	uniform mat4 u_MVPMatrix;
 
-	in vec4 a_Position;
-	in vec2 a_TexCoord;
+	attribute vec4 a_Position;
+	attribute vec2 a_TexCoord;
 
 	void main(void)
 	{
@@ -34,7 +34,7 @@
 #endif
 
 #ifdef INCLUDE_FS
-	in vec2 v_TexCoord;
+	varying vec2 v_TexCoord;
 	uniform sampler2D texture0Sampler;
 	uniform vec4 u_TintColor;
 

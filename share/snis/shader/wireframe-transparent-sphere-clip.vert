@@ -5,12 +5,12 @@ uniform mat3 u_NormalMatrix;
 uniform vec3 u_Color;      // Per-object color information we will pass in.
 uniform vec4 u_ClipSphere; // clipping sphere, x,y,z=center in eye space
 
-in vec4 a_Position; // Per-vertex position information we will pass in.
-in vec3 a_Normal;   // Per-vertex normal information we will pass in.
+attribute vec4 a_Position; // Per-vertex position information we will pass in.
+attribute vec3 a_Normal;   // Per-vertex normal information we will pass in.
 
-out vec2 v_FragRadius; // fragment distance to sphere center
-out float v_EyeDot;
-out float v_ClipSphereDot;
+varying vec2 v_FragRadius; // fragment distance to sphere center
+varying float v_EyeDot;
+varying float v_ClipSphereDot;
 
 void main()
 {

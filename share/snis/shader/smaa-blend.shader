@@ -19,14 +19,14 @@
 */
 
 #if defined(INCLUDE_VS)
-	out vec2 v_TexCoord;
-	out vec2 v_PixCoord;
-	out vec4 v_Offset[3];
+	varying vec2 v_TexCoord;
+	varying vec2 v_PixCoord;
+	varying vec4 v_Offset[3];
 
 	uniform mat4 u_MVPMatrix;
 
-	in vec4 a_Position;
-	in vec2 a_TexCoord;
+	attribute vec4 a_Position;
+	attribute vec2 a_TexCoord;
 
 	void main()
 	{
@@ -38,9 +38,9 @@
 #endif
 
 #if defined(INCLUDE_FS)
-	in vec2 v_TexCoord;
-	in vec2 v_PixCoord;
-	in vec4 v_Offset[3];
+	varying vec2 v_TexCoord;
+	varying vec2 v_PixCoord;
+	varying vec4 v_Offset[3];
 	uniform sampler2D u_EdgeTex;
 	uniform sampler2D u_AreaTex;
 	uniform sampler2D u_SearchTex;

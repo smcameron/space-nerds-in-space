@@ -2,9 +2,9 @@
 uniform vec3 u_LightPos;       // The position of the light in eye space.
 uniform float u_Alpha;		// Relative alpha, 0.0 - 1.0.
 
-in vec3 v_Position;       // Interpolated position for this fragment.
-in vec3 v_Color;          // This is the color from the vertex shader interpolated across the triangle per fragment
-in vec3 v_Normal;         // Interpolated normal for this fragment.
+varying vec3 v_Position;       // Interpolated position for this fragment.
+varying vec3 v_Color;          // This is the color from the vertex shader interpolated across the triangle per fragment
+varying vec3 v_Normal;         // Interpolated normal for this fragment.
 
 #if !defined(AMBIENT)
 #define AMBIENT 0.01

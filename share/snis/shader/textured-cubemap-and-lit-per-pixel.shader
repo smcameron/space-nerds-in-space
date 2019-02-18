@@ -27,25 +27,25 @@
 #endif
 
 #if defined(INCLUDE_VS)
-	out vec3 v_Position;
-	out vec3 v_Normal;
-	out vec3 v_TexCoord;
+	varying vec3 v_Position;
+	varying vec3 v_Normal;
+	varying vec3 v_TexCoord;
 
 	#if defined(USE_NORMAL_MAP)
-	out vec3 v_Tangent;
-	out vec3 v_BiTangent;
-	out mat3 tbn;
+	varying vec3 v_Tangent;
+	varying vec3 v_BiTangent;
+	varying mat3 tbn;
 	#endif
 
 	uniform mat4 u_MVPMatrix;  // A constant representing the combined model/view/projection matrix.
 	uniform mat4 u_MVMatrix;   // A constant representing the combined model/view matrix.
 	uniform mat3 u_NormalMatrix;
 
-	in vec4 a_Position; // Per-vertex position information we will pass in.
-	in vec3 a_Normal;   // Per-vertex normal, tangent, and bitangent information we will pass in.
+	attribute vec4 a_Position; // Per-vertex position information we will pass in.
+	attribute vec3 a_Normal;   // Per-vertex normal, tangent, and bitangent information we will pass in.
 #if defined(USE_NORMAL_MAP)
-	in vec3 a_Tangent;
-	in vec3 a_BiTangent;
+	attribute vec3 a_Tangent;
+	attribute vec3 a_BiTangent;
 #endif
 
 	void main()
@@ -69,14 +69,14 @@
 #endif
 
 #if defined(INCLUDE_FS)
-	in vec3 v_Position;
-	in vec3 v_Normal;
-	in vec3 v_TexCoord;
+	varying vec3 v_Position;
+	varying vec3 v_Normal;
+	varying vec3 v_TexCoord;
 
 	#if defined(USE_NORMAL_MAP)
-	in vec3 v_Tangent;
-	in vec3 v_BiTangent;
-	in mat3 tbn;
+	varying vec3 v_Tangent;
+	varying vec3 v_BiTangent;
+	varying mat3 tbn;
 	#endif
 
 	uniform samplerCube u_AlbedoTex;

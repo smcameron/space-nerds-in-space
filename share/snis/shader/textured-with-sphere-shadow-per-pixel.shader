@@ -24,17 +24,17 @@
 
 
 #if defined(INCLUDE_VS)
-	in vec4 a_Position; // Per-vertex position information we will pass in.
-	in vec2 a_TexCoord; // Per-vertex texture coord we will pass in.
-	in vec3 a_Normal;   // Per-vertex normal we pass in.
+	attribute vec4 a_Position; // Per-vertex position information we will pass in.
+	attribute vec2 a_TexCoord; // Per-vertex texture coord we will pass in.
+	attribute vec3 a_Normal;   // Per-vertex normal we pass in.
 
-	out vec4 v_TintColor;
-	out vec2 v_TexCoord;
-	out vec3 v_Position;		// Fragment position in eye space
-	out vec3 v_LightDir;		// normalized vector from fragment to light in eye space
-	out float v_darkside_shading;	// Shading multiplier for ring, 1.0 on light side, 0.2 on dark side
-	out vec3 v_Normal;			// Normal at fragment (i.e. normal to the ring plane)
-	out float v_sameside;		// 1.0 if eye and light are on same side of ring plane, 0.0 otherwise
+	varying vec4 v_TintColor;
+	varying vec2 v_TexCoord;
+	varying vec3 v_Position;		// Fragment position in eye space
+	varying vec3 v_LightDir;		// normalized vector from fragment to light in eye space
+	varying float v_darkside_shading;	// Shading multiplier for ring, 1.0 on light side, 0.2 on dark side
+	varying vec3 v_Normal;			// Normal at fragment (i.e. normal to the ring plane)
+	varying float v_sameside;		// 1.0 if eye and light are on same side of ring plane, 0.0 otherwise
 
 	uniform mat4 u_MVMatrix;  // A constant representing the combined model/view matrix.
 	uniform mat4 u_MVPMatrix;  // A constant representing the combined model/view/projection matrix.
@@ -72,13 +72,13 @@
 #endif
 
 #if defined(INCLUDE_FS)
-	in vec4 v_TintColor;
-	in vec2 v_TexCoord;
-	in vec3 v_Position;		// Fragment position in eye space
-	in vec3 v_LightDir;		// normalized vector from fragment to light in eye space
-	in float v_darkside_shading;	// Shading multiplier for ring, 1.0 on light side, 0.2 on dark side
-	in vec3 v_Normal;			// Normal at fragment (i.e. normal to the ring plane)
-	in float v_sameside;		// 1.0 if eye and light are on same side of ring plane, 0.0 otherwise
+	varying vec4 v_TintColor;
+	varying vec2 v_TexCoord;
+	varying vec3 v_Position;		// Fragment position in eye space
+	varying vec3 v_LightDir;		// normalized vector from fragment to light in eye space
+	varying float v_darkside_shading;	// Shading multiplier for ring, 1.0 on light side, 0.2 on dark side
+	varying vec3 v_Normal;			// Normal at fragment (i.e. normal to the ring plane)
+	varying float v_sameside;		// 1.0 if eye and light are on same side of ring plane, 0.0 otherwise
 
 	uniform sampler2D u_AlbedoTex;
 	uniform vec4 u_Sphere; /* eye space occluding sphere, x,y,z = center, w = radius^2 */
