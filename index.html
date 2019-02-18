@@ -265,10 +265,10 @@ make
 
 ... many steps omitted here ...
 
-  LINK snis_server
-  LINK snis_client
-  LINK snis_limited_client
-  LINK snis_multiverse
+  LINK bin/snis_server
+  LINK bin/snis_client
+  LINK bin/snis_limited_client
+  LINK bin/snis_multiverse
 </blockquote>
 </pre>
 
@@ -1758,7 +1758,7 @@ obtain a core file.
 <li>Figure out which program the core file came from (most likely, <cmd>snis_client</cmd>
 but could be something else, like <cmd>snis_server</cmd> or <cmd>snis_multiverse</cmd>.)
 <li><b><hili><cmd>file core</cmd></hili></b>
-<li><b><hili><cmd>gdb -c core ./snis_client</cmd></hili></b>
+<li><b><hili><cmd>gdb -c core bin/snis_client</cmd></hili></b>
 <li>(gdb) <b><hili><cmd>bt</cmd></hili></b>
 <li>Capture the output of gdb and paste it into a bug report.
 </ol>
@@ -1793,7 +1793,7 @@ command:
 <li>See if we can get any information out of the core file with the debugger, <cmd>gdb</cmd>.  Run the following command:
 <pre>
 	$ <hili><b>$ file core</b></hili>
-	core: ELF 64-bit LSB core file x86-64, version 1 (SYSV), SVR4-style, from '<b><hili>./snis_client</hili></b> --fullscreen --starship spacenerd --pw spacenerd'
+	core: ELF 64-bit LSB core file x86-64, version 1 (SYSV), SVR4-style, from '<b><hili>bin/snis_client</hili></b> --fullscreen --starship spacenerd --pw spacenerd'
 </pre>
 From this, we can see that the core file came from the <cmd>snis_client</cmd>
 program (rather than from <cmd>snis_server</cmd>, <cmd>snis_multiverse</cmd>,
