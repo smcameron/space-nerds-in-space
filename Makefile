@@ -320,8 +320,6 @@ SHADERS=${SHADERSRCDIR}/atmosphere.frag \
 	${SHADERSRCDIR}/per_vertex_color.frag \
 	${SHADERSRCDIR}/per_vertex_color.vert \
 	${SHADERSRCDIR}/point_cloud.frag \
-	${SHADERSRCDIR}/point_cloud-intensity-noise.frag \
-	${SHADERSRCDIR}/point_cloud-intensity-noise.vert \
 	${SHADERSRCDIR}/point_cloud.vert \
 	${SHADERSRCDIR}/single_color.frag \
 	${SHADERSRCDIR}/single-color-lit-per-pixel.frag \
