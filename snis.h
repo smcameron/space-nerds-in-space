@@ -609,7 +609,6 @@ struct starbase_data {
 	uint8_t security;
 	uint8_t starbase_number;
 	uint32_t last_time_called_for_help;
-	char name[16];
 	struct marketplace_data *mkt;
 	int associated_planet_id;
 	float *bid_price;

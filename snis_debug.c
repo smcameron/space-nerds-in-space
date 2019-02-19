@@ -331,7 +331,6 @@ void snis_debug_dump(char *cmd, struct snis_entity go[], int nstarbase_models,
 		printfn("-- LIFEFORM COUNT: %hhu", o->tsd.starbase.lifeform_count);
 		printfn("-- SECURITY: %hhu", o->tsd.starbase.security);
 		printfn("-- STARBASE NUMBER: %hhu", o->tsd.starbase.starbase_number);
-		printfn("-- NAME: %s", o->tsd.starbase.name);
 		printfn("-- ASSOCIATED PLANET: %d", o->tsd.starbase.associated_planet_id);
 		printfn("-- NATTACKERS: %d", o->tsd.starbase.nattackers);
 		for (i = 0; i < o->tsd.starbase.nattackers; i++)

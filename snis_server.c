@@ -8074,7 +8074,7 @@ static void player_attempt_dock_with_starbase(struct snis_entity *docking_port,
 	struct snis_entity *sb = &go[sb_index];
 
 	/* Dock... */
-	npcname = sb->tsd.starbase.name;
+	npcname = sb->sdata.name;
 	if (!starbase_expecting_docker(sb, player->id)) {
 		if (rate_limit_docking_permission_denied(bridge)) {
 			send_comms_packet(sb, npcname, channel, "%s, YOU ARE NOT CLEARED TO DOCK\n",
@@ -9604,7 +9604,6 @@ static void starbase_move(struct snis_entity *o)
 		(then < now - 2000 || 
 		o->tsd.starbase.last_time_called_for_help == 0)) {
 		o->tsd.starbase.last_time_called_for_help = universe_timestamp;
-		// printf("starbase name = '%s'\n", o->tsd.starbase.name);
 		send_comms_packet(o, "", 0, "STARBASE %s:", o->sdata.name);
 		send_comms_packet(o, "-  ", 0, starbase_comm_under_attack());
 		snprintf(location, sizeof(location), "COORDINATES %.0lf, %.0lf, %.0lf", o->x, o->y, o->z);
@@ -9669,13 +9668,13 @@ static void starbase_move(struct snis_entity *o)
 				if (c) {
 					*c = '\0';
 					if (lastc == x)
-						send_comms_packet(o, o->tsd.starbase.name, 0,
+						send_comms_packet(o, o->sdata.name, 0,
 							":  %s,  %s", a->sdata.name, lastc);
 					else
-						send_comms_packet(o, o->tsd.starbase.name, 0, ":  %s", lastc);
+						send_comms_packet(o, o->sdata.name, 0, ":  %s", lastc);
 					c++;
 				} else {
-					send_comms_packet(o, o->tsd.starbase.name, 0, ":  %s", lastc);
+					send_comms_packet(o, o->sdata.name, 0, ":  %s", lastc);
 				}
 			}
 		}
@@ -9700,7 +9699,7 @@ static void starbase_move(struct snis_entity *o)
 			if (docking_port_resident(o->tsd.starbase.docking_port[j]) == b->shipid)
 				continue; /* Do not expire docking permission on a docked ship */
 			o->tsd.starbase.expected_docker[j] = -1;
-			send_comms_packet(o, o->tsd.starbase.name, b->npcbot.channel,
+			send_comms_packet(o, o->sdata.name, b->npcbot.channel,
 				"%s, PERMISSION TO DOCK EXPIRED.", b->shipname);
 			snis_queue_add_sound(PERMISSION_TO_DOCK_EXPIRED, ROLE_NAVIGATION, b->shipid);
 		}
@@ -11576,11 +11575,6 @@ static int add_starbase(double x, double y, double z,
 	go[i].tsd.starbase.starbase_number = n;
 	fabricate_prices(&go[i]);
 	init_starbase_market(&go[i]);
-	/* FIXME, why name stored twice? probably just use sdata.name is best
-	 * but might be because we should know starbase name even if science
-	 * doesn't scan it.
-	 */
-	snprintf(go[i].tsd.starbase.name, sizeof(go[i].tsd.starbase.name), "SB-%02d", n);
 	snprintf(go[i].sdata.name, sizeof(go[i].sdata.name), "SB-%02d", n);
 
 	model = go[i].id % nstarbase_models;
@@ -12659,7 +12653,6 @@ static int add_warpgate(double x, double y, double z,
 	go[i].type = OBJTYPE_WARPGATE;
 	go[i].sdata.shield_strength = 255;
 	go[i].tsd.warpgate.warpgate_number = n;
-	snprintf(go[i].tsd.starbase.name, sizeof(go[i].tsd.starbase.name), "WG-%02d", n);
 	snprintf(go[i].sdata.name, sizeof(go[i].sdata.name), "WG-%02d", n);
 	/* Note: if we ever change the orientation from un-rotated, it will break
 	 * collision detection because of point_to_torus_dist(), and probably
@@ -14098,7 +14091,7 @@ static void meta_comms_inventory(char *name, struct game_client *c, char *txt)
 			int x = lookup_by_id(passenger[i].destination);
 			send_comms_packet(NULL, name, ch, "%2d. FARE %4d DEST: %10s NAME: %30s\n",
 					passenger_count + 1, passenger[i].fare,
-					x < 0 ? "UNKNOWN" : go[x].tsd.starbase.name,
+					x < 0 ? "UNKNOWN" : go[x].sdata.name,
 					passenger[i].name);
 			passenger_count++;
 		}
@@ -14297,7 +14290,7 @@ static void parts_buying_npc_bot(struct snis_entity *o, int bridge,
 	int i, rc, selection;
 	char sel;
 	float range2;
-	char *n = o->tsd.starbase.name;
+	char *n = o->sdata.name;
 	struct snis_entity *ship;
 	struct npc_bot_state *botstate = &bridgelist[bridge].npcbot;
 	uint32_t channel = botstate->channel;
@@ -14382,7 +14375,7 @@ static void starbase_registration_query_npc_bot(struct snis_entity *o, int bridg
 		char *name, char *msg)
 {
 	int i, c;
-	char *n = o->tsd.starbase.name;
+	char *n = o->sdata.name;
 	uint32_t channel = bridgelist[bridge].npcbot.channel;
 	int rc, selection;
 
@@ -14840,7 +14833,7 @@ static void starbase_passenger_boarding_npc_bot(struct snis_entity *sb, int brid
 {
 	struct npc_bot_state *botstate = &bridgelist[bridge].npcbot;
 	uint32_t ch = botstate->channel;
-	char *npcname = sb->tsd.starbase.name;
+	char *npcname = sb->sdata.name;
 	int player_is_docked, count, i, rc, selection;
 	int already_aboard = 0;
 	struct snis_entity *ship;
@@ -14864,7 +14857,7 @@ static void starbase_passenger_boarding_npc_bot(struct snis_entity *sb, int brid
 		for (i = 0; i < npassengers; i++) {
 			if (passenger[i].location == sb->id) {
 				int d = lookup_by_id(passenger[i].destination);
-				char *dest = d < 0 ? "unknown" : go[d].tsd.starbase.name;
+				char *dest = d < 0 ? "unknown" : go[d].sdata.name;
 				count++;
 				send_comms_packet(sb, npcname, ch, "  %2d: DEST: %12s  FARE: $%5d  NAME: %s\n",
 					count, dest, passenger[i].fare, passenger[i].name);
@@ -15167,17 +15160,17 @@ static void npc_menu_item_travel_advisory(struct npc_menu_item *item,
 			name = pl->sdata.name;
 			contraband = pl->tsd.planet.contraband;
 		} else {
-			name = sb->tsd.starbase.name;
+			name = sb->sdata.name;
 		}
 	} else {
-		name = sb->tsd.starbase.name;
+		name = sb->sdata.name;
 	}
 
 	if (pl) {
 		/* TODO: fill in all this crap */
 		send_comms_packet(sb, npcname, ch, " TRAVEL ADVISORY FOR %s", name);
 		send_comms_packet(sb, npcname, ch, "-----------------------------------------------------");
-		send_comms_packet(sb, npcname, ch, " WELCOME TO STARBASE %s, IN ORBIT", sb->tsd.starbase.name);
+		send_comms_packet(sb, npcname, ch, " WELCOME TO STARBASE %s, IN ORBIT", sb->sdata.name);
 		send_comms_packet(sb, npcname, ch, " AROUND THE BEAUTIFUL PLANET %s.", name);
 		send_comms_packet(sb, npcname, ch, "");
 		send_comms_packet(sb, npcname, ch, " PLANETARY SURFACE TEMP: -15 - 103");
@@ -15185,7 +15178,7 @@ static void npc_menu_item_travel_advisory(struct npc_menu_item *item,
 	} else {
 		send_comms_packet(sb, npcname, ch, " TRAVEL ADVISORY FOR STARBASE %s", name);
 		send_comms_packet(sb, npcname, ch, "-----------------------------------------------------");
-		send_comms_packet(sb, npcname, ch, " WELCOME TO STARBASE %s, IN DEEP SPACE", sb->tsd.starbase.name);
+		send_comms_packet(sb, npcname, ch, " WELCOME TO STARBASE %s, IN DEEP SPACE", sb->sdata.name);
 		send_comms_packet(sb, npcname, ch, "");
 	}
 	send_comms_packet(sb, npcname, ch, " SPACE WEATHER ADVISORY: ALL CLEAR");
@@ -15482,7 +15475,7 @@ static void starbase_cargo_buyingselling_npc_bot(struct snis_entity *o, int brid
 		char *name, char *msg, int buy)
 {
 	int i;
-	char *n = o->tsd.starbase.name;
+	char *n = o->sdata.name;
 	struct snis_entity *ship;
 	struct marketplace_data *mkt = o->tsd.starbase.mkt;
 	uint32_t channel = bridgelist[bridge].npcbot.channel;
@@ -15721,14 +15714,7 @@ static void generic_npc_bot(struct snis_entity *o, int bridge, char *name, char 
 	int selection, menu_count, i, rc;
 	struct npc_menu_item *menu = bridgelist[bridge].npcbot.current_menu;
 
-	switch (o->type) {
-	case OBJTYPE_STARBASE:
-		n = o->tsd.starbase.name;
-		break;
-	default:
-		n = o->sdata.name;
-		break;
-	}
+	n = o->sdata.name;
 	/* count current menu items */
 	menu_count = -1;
 	if (menu) {
@@ -15938,13 +15924,11 @@ static void meta_comms_hail(char *name, struct game_client *c, char *txt)
 		struct snis_entity *o = &go[i];
 		char *sbname = NULL;
 
-		if (o->type == OBJTYPE_STARBASE)
-			sbname = o->tsd.starbase.name;
-		else if (o->type == OBJTYPE_SHIP2 && o->tsd.ship.ai[0].ai_mode == AI_MODE_MINING_BOT)
-			sbname = o->sdata.name;
-		if (!sbname)
+		if (o->type != OBJTYPE_STARBASE && o->type != OBJTYPE_SHIP2)
 			continue;
-
+		if (o->type == OBJTYPE_SHIP2 && o->tsd.ship.ai[0].ai_mode != AI_MODE_MINING_BOT)
+			continue;
+		sbname = o->sdata.name;
 		for (j = 0; j < nnames; j++) {
 			if (strcasecmp(namelist[j], "MINING-BOT") == 0) {
 				if (strcasecmp(go[c->ship_index].tsd.ship.mining_bot_name, sbname) != 0)
@@ -17469,7 +17453,7 @@ static int l_comms_transmission(lua_State *l)
 	transmitter = &go[i];
 	switch (transmitter->type) {
 	case OBJTYPE_STARBASE:
-		send_comms_packet(transmitter, transmitter->tsd.starbase.name, 0, "%s", transmission);
+		send_comms_packet(transmitter, transmitter->sdata.name, 0, "%s", transmission);
 		break;
 	default:
 		send_comms_packet(transmitter, transmitter->sdata.name, 0, "%s", transmission);
@@ -17580,7 +17564,7 @@ static int l_get_object_name(lua_State *l)
 	o = &go[i];
 	switch (o->type) {
 	case OBJTYPE_STARBASE:
-		lua_pushstring(l, o->tsd.starbase.name);
+		lua_pushstring(l, o->sdata.name);
 		break;
 	default:
 		lua_pushstring(l, o->sdata.name);
@@ -18962,7 +18946,7 @@ static int l_dock_player_to_starbase(lua_State *l)
 		break;
 	}
 	/* docking_port_move() will move the player ship to the right place. */
-	do_docking_action(player, starbase, &bridgelist[b], starbase->tsd.starbase.name);
+	do_docking_action(player, starbase, &bridgelist[b], starbase->sdata.name);
 
 	pthread_mutex_unlock(&universe_mutex);
 	lua_pushnumber(l, 0.0);
@@ -23547,7 +23531,7 @@ static uint32_t natural_language_object_lookup(void *context, char *word)
 	for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
 		switch (go[i].type) {
 		case OBJTYPE_STARBASE:
-			if (strcmp(go[i].tsd.starbase.name, w) == 0) {
+			if (strcmp(go[i].sdata.name, w) == 0) {
 				answer = go[i].id;
 				goto done;
 			}
@@ -23698,7 +23682,7 @@ static char *nl_get_object_name(struct snis_entity *o)
 	/* Assumes universe lock is held */
 	switch (o->type) {
 	case OBJTYPE_STARBASE:
-		return o->tsd.starbase.name;
+		return o->sdata.name;
 	case OBJTYPE_NEBULA:
 		return "nebula";
 	default:
@@ -23747,16 +23731,16 @@ static void nl_describe_game_object(struct game_client *c, uint32_t id)
 	case OBJTYPE_STARBASE:
 		if (go[i].tsd.starbase.associated_planet_id < 0) {
 			snprintf(description, sizeof(description), "%s is a star base in deep space",
-					go[i].tsd.starbase.name);
+					go[i].sdata.name);
 		} else {
 			planet = lookup_by_id(go[i].tsd.starbase.associated_planet_id);
 			if (planet < 0)
 				snprintf(description, sizeof(description), "%s is a star base in deep space",
-						go[i].tsd.starbase.name);
+						go[i].sdata.name);
 			else
 				snprintf(description, sizeof(description),
 					"%s is a star base in orbit around the planet %s",
-					go[i].tsd.starbase.name, go[planet].sdata.name);
+					go[i].sdata.name, go[planet].sdata.name);
 		}
 		pthread_mutex_unlock(&universe_mutex);
 		queue_add_text_to_speech(c, description);
