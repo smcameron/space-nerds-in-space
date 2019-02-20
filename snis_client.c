@@ -15550,10 +15550,12 @@ static void draw_science_details(GtkWidget *w, GdkGC *gc)
 				sng_abs_xy_draw_string(buf, TINY_FONT, 10, y);
 				y += yinc;
 			}
-			if (cbc->item < ncommodities) {
+			if (cbc->item >= 0 && cbc->item < ncommodities) {
 				snprintf(buf, sizeof(buf), "- %4.2f %s %s", cbc->qty,
 					commodity[cbc->item].unit, commodity[cbc->item].scans_as);
 				sng_abs_xy_draw_string(buf, TINY_FONT, 10, y);
+			} else {
+				sng_abs_xy_draw_string("UNKNOWN", TINY_FONT, 10, y);
 			}
 			y += yinc;
 		}
@@ -15562,7 +15564,7 @@ static void draw_science_details(GtkWidget *w, GdkGC *gc)
 		snprintf(buf, sizeof(buf), "PROBABLE CONTENTS:");
 		sng_abs_xy_draw_string(buf, TINY_FONT, 10, y);
 		y += yinc;
-		if (ccc->item >= 0) {
+		if (ccc->item >= 0 && ccc->item < ncommodities) {
 			snprintf(buf, sizeof(buf), "- %4.2f %s %s", ccc->qty,
 				commodity[ccc->item].unit, commodity[ccc->item].scans_as);
 			sng_abs_xy_draw_string(buf, TINY_FONT, 10, y);
