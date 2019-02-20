@@ -639,6 +639,9 @@ update-assets:
 check-assets:
 	@util/snis_update_assets.sh --dry-run
 
+install-assets:
+	@util/snis_update_assets.sh --localcopy --destdir ${DESTDIR}/${PREFIX}
+
 build:	all
 
 utils:	${UTILPROGS}
