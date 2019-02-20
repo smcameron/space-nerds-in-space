@@ -80,6 +80,7 @@ uniform float u_SpecularIntensity; /* between 0 and 1, 1 is very shiny, 0 is fla
 	uniform vec3 u_LightPos;
 	vec3 u_LightColor = vec3(1);
 	uniform vec4 u_TintColor;
+	uniform float u_in_shade;
 
 	#ifdef USE_NORMAL_MAP
 		uniform TEX_SAMPLER u_NormalMapTex;
@@ -115,7 +116,7 @@ uniform float u_SpecularIntensity; /* between 0 and 1, 1 is very shiny, 0 is fla
 		vec4 albedo = TEX_READ(u_AlbedoTex, uv);
 
 		// diffuse is light dot normal
-		float diffuse = max(AMBIENT, clamp(dot(normal, light_dir), 0.0, 1.0));
+		float diffuse = max(AMBIENT, (1.0 - u_in_shade) * clamp(dot(normal, light_dir), 0.0, 1.0));
 
 		// base diffuse color
 		vec3 color = albedo.rgb * u_LightColor * diffuse;

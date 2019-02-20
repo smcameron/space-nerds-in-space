@@ -2826,6 +2826,54 @@ static void calculate_planetary_altitude(struct snis_entity *o)
 	}
 }
 
+/* check if a planet is between two points */
+static struct snis_entity *planet_between_points(union vec3 *ray_origin, union vec3 *target)
+{
+	int i;
+	union vec3 ray_direction, sphere_origin;
+	float target_dist;
+	float planet_dist;
+
+	vec3_sub(&ray_direction, target, ray_origin);
+	target_dist = vec3_magnitude(&ray_direction);
+	vec3_normalize_self(&ray_direction);
+
+	for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
+		if (!go[i].alive)
+			continue;
+		if (go[i].type != OBJTYPE_PLANET)
+			continue;
+		sphere_origin.v.x = go[i].x;
+		sphere_origin.v.y = go[i].y;
+		sphere_origin.v.z = go[i].z;
+		if (!ray_intersects_sphere(ray_origin, &ray_direction,
+						&sphere_origin,
+						go[i].tsd.planet.radius))
+			continue;
+		planet_dist = dist3d(sphere_origin.v.x - ray_origin->v.x,
+					sphere_origin.v.y - ray_origin->v.y,
+					sphere_origin.v.z - ray_origin->v.z);
+		if (planet_dist < target_dist) /* planet blocks... */
+			return &go[i];
+	}
+	return NULL; /* no planets blocking */
+}
+
+static void update_shading_planet(struct snis_entity *o)
+{
+	union vec3 p1, p2;
+
+	p1.v.x = o->x;
+	p1.v.y = o->y;
+	p1.v.z = o->z;
+	p1.v.x = SUNX;
+	p1.v.y = SUNY;
+	p1.v.z = SUNZ;
+	o->shading_planet = planet_between_points(&p1, &p2);
+	if (o->entity)
+		entity_set_in_shade(o->entity, (float) 0.9 * (o->shading_planet != NULL) + 0.1);
+}
+
 static void move_objects(void)
 {
 	int i;
@@ -2840,9 +2888,11 @@ static void move_objects(void)
 		case OBJTYPE_SHIP1:
 			update_warp_field_error();
 			calculate_planetary_altitude(o);
+			update_shading_planet(o);
 		case OBJTYPE_SHIP2:
 			move_object(timestamp, o, &interpolate_oriented_object);
 			ship_emit_sparks(o);
+			update_shading_planet(o);
 			break;
 		case OBJTYPE_WORMHOLE:
 			move_object(timestamp, o, &interpolate_generic_object);
@@ -2850,25 +2900,31 @@ static void move_objects(void)
 			break;
 		case OBJTYPE_STARBASE:
 			move_object(timestamp, o, &interpolate_oriented_object);
+			update_shading_planet(o);
 			break;
 		case OBJTYPE_DOCKING_PORT:
 			move_object(timestamp, o, &interpolate_oriented_object);
 			docking_port_blink_lights(o);
+			update_shading_planet(o);
 			break;
 		case OBJTYPE_WARPGATE:
 			move_object(timestamp, o, &interpolate_oriented_object);
 			warpgate_blink_lights(o);
+			update_shading_planet(o);
 			break;
 		case OBJTYPE_SPACEMONSTER:
 			move_object(timestamp, o, &interpolate_oriented_object);
 			spacemonster_move_tentacles(o);
+			update_shading_planet(o);
 			break;
 		case OBJTYPE_BLOCK:
 			move_object(timestamp, o, &interpolate_oriented_object);
 			block_emit_sparks(o);
+			update_shading_planet(o);
 		case OBJTYPE_TURRET:
 			move_object(timestamp, o, &interpolate_oriented_object);
 			turret_emit_sparks(o);
+			update_shading_planet(o);
 			break;
 		case OBJTYPE_LASER:
 			move_object(timestamp, o, &interpolate_laser);
@@ -2878,23 +2934,28 @@ static void move_objects(void)
 			break;
 		case OBJTYPE_MISSILE:
 			move_object(timestamp, o, &interpolate_oriented_object);
+			update_shading_planet(o);
 			break;
 		case OBJTYPE_ASTEROID:
 			move_object(timestamp, o, &interpolate_generic_object);
 			spin_asteroid(timestamp, o);
+			update_shading_planet(o);
 			break;
 		case OBJTYPE_WARP_CORE:
 			move_object(timestamp, o, &interpolate_generic_object);
 			spin_warp_core(timestamp, o);
 			emit_warp_core_sparks(o, 0.3, 0.3);
+			update_shading_planet(o);
 			break;
 		case OBJTYPE_CARGO_CONTAINER:
 			move_object(timestamp, o, &interpolate_generic_object);
 			spin_cargo_container(timestamp, o);
+			update_shading_planet(o);
 			break;
 		case OBJTYPE_DERELICT:
 			move_object(timestamp, o, &interpolate_generic_object);
 			spin_derelict(timestamp, o);
+			update_shading_planet(o);
 			break;
 		case OBJTYPE_LASERBEAM:
 		case OBJTYPE_TRACTORBEAM:
@@ -8540,6 +8601,7 @@ static void show_weapons_camera_view(GtkWidget *w)
 		update_entity_orientation(o->entity, &o->orientation);
 		entity_update_emit_intensity(o->entity, current_lights);
 		set_render_style(o->entity, RENDER_NORMAL);
+		entity_set_in_shade(o->entity, 0.9 * (o->shading_planet != NULL) + 0.1);
 	}
 
 	/* Add our turret into the mix */
@@ -8553,6 +8615,7 @@ static void show_weapons_camera_view(GtkWidget *w)
 	if (turret_entity) {
 		update_entity_orientation(turret_entity, &camera_orientation);
 		set_render_style(turret_entity, RENDER_NORMAL);
+		entity_set_in_shade(turret_entity, 0.9 * (o->shading_planet != NULL) + 0.1);
 	}
 
 	if (o->entity && !o->tsd.ship.reverse)
@@ -8665,6 +8728,7 @@ static struct entity *main_view_add_player_ship_entity(struct snis_entity *o)
 	current_lights += (desired_lights - current_lights) * 0.05;
 	update_entity_orientation(player_ship, &o->orientation);
 	entity_update_emit_intensity(player_ship, current_lights);
+	entity_set_in_shade(player_ship, 0.9 * (o->shading_planet != NULL) + 0.1);
 
 	struct entity *turret_base = add_entity(ecx, ship_turret_base_mesh,
 		-4 * SHIP_MESH_SCALE, 5.45 * SHIP_MESH_SCALE, 0 * SHIP_MESH_SCALE,
@@ -8673,6 +8737,7 @@ static struct entity *main_view_add_player_ship_entity(struct snis_entity *o)
 	if (turret_base) {
 		update_entity_orientation(turret_base, &identity_quat);
 		update_entity_parent(ecx, turret_base, player_ship);
+		entity_set_in_shade(turret_base, 0.9 * (o->shading_planet != NULL) + 0.1);
 	}
 
 	struct entity *turret = add_entity(ecx, ship_turret_mesh, 0, 0, 0, SHIP_COLOR);
@@ -8682,6 +8747,7 @@ static struct entity *main_view_add_player_ship_entity(struct snis_entity *o)
 		update_entity_orientation(turret, &o->tsd.ship.weap_orientation);
 		if (turret_base)
 			update_entity_parent(ecx, turret, turret_base);
+		entity_set_in_shade(turret, 0.9 * (o->shading_planet != NULL) + 0.1);
 	}
 	if (!o->tsd.ship.reverse)
 		add_ship_thrust_entities(NULL, NULL, ecx, player_ship, o->tsd.ship.shiptype,

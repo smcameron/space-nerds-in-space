@@ -46,6 +46,7 @@ struct entity {
 	union quat e_orientation;
 	struct entity *parent;
 	int entity_child_index;
+	float in_shade;
 };
 
 struct entity_child {

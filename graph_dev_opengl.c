@@ -618,6 +618,7 @@ struct graph_dev_gl_single_color_lit_shader {
 	GLint vertex_normal_id;
 	GLint light_pos_id;
 	GLint color_id;
+	GLint in_shade_id;
 };
 
 struct graph_dev_gl_atmosphere_shader {
@@ -740,6 +741,7 @@ struct graph_dev_gl_textured_shader {
 	GLint ring_inner_radius_id;
 	GLint ring_outer_radius_id;
 	GLint invert; /* used by alpha_by_normal shader */
+	GLint in_shade;
 };
 
 struct clip_sphere_data {
@@ -1262,7 +1264,7 @@ static void graph_dev_raster_texture(struct graph_dev_gl_textured_shader *shader
 	GLuint emit_texture_number, GLuint normalmap_texture_number, struct shadow_sphere_data *shadow_sphere,
 	struct shadow_annulus_data *shadow_annulus, int do_cullface, int do_blend,
 	float ring_texture_v, float ring_inner_radius, float ring_outer_radius,
-	float specular_power, float specular_intensity, float emit_intensity, float invert)
+	float specular_power, float specular_intensity, float emit_intensity, float invert, float in_shade)
 {
 	enable_3d_viewport();
 
@@ -1331,6 +1333,8 @@ static void graph_dev_raster_texture(struct graph_dev_gl_textured_shader *shader
 		glUniform1f(shader->ring_outer_radius_id, ring_outer_radius);
 	if (shader->invert >= 0)
 		glUniform1f(shader->invert, invert);
+	if (shader->in_shade >= 0)
+		glUniform1f(shader->in_shade, in_shade);
 
 	/* shadow sphere */
 	if (shader->shadow_sphere_id >= 0 && shadow_sphere)
@@ -1448,7 +1452,8 @@ static void graph_dev_raster_texture(struct graph_dev_gl_textured_shader *shader
 }
 
 static void graph_dev_raster_single_color_lit(const struct mat44 *mat_mvp, const struct mat44 *mat_mv,
-	const struct mat33 *mat_normal, struct mesh *m, struct sng_color *triangle_color, union vec3 *eye_light_pos)
+	const struct mat33 *mat_normal, struct mesh *m, struct sng_color *triangle_color, union vec3 *eye_light_pos,
+	float in_shade)
 {
 	enable_3d_viewport();
 
@@ -1471,6 +1476,7 @@ static void graph_dev_raster_single_color_lit(const struct mat44 *mat_mvp, const
 	glUniform3f(single_color_lit_shader.color_id, triangle_color->red,
 		triangle_color->green, triangle_color->blue);
 	glUniform3f(single_color_lit_shader.light_pos_id, eye_light_pos->v.x, eye_light_pos->v.y, eye_light_pos->v.z);
+	glUniform1f(single_color_lit_shader.in_shade_id, in_shade);
 
 	glEnableVertexAttribArray(single_color_lit_shader.vertex_position_id);
 	glBindBuffer(GL_ARRAY_BUFFER, ptr->vertex_buffer);
@@ -1976,7 +1982,7 @@ static void graph_dev_draw_nebula(const struct mat44 *mat_mvp, const struct mat4
 
 		graph_dev_raster_texture(&textured_shader, &mat_mvp_local_r, &mat_mv_local_r, &mat_normal_local_r,
 			e->m, &mt->tint, alpha, eye_light_pos, mt->texture_id[i], 0, -1, 0, 0, 0, 1, 0.0f,
-				2.0f, 4.0f, 512.0, 0.2, 1.0, 0.0);
+				2.0f, 4.0f, 512.0, 0.2, 1.0, 0.0, 0.0);
 
 		if (draw_billboard_wireframe) {
 			struct sng_color line_color = sng_get_color(WHITE);
@@ -2423,13 +2429,14 @@ void graph_dev_draw_entity(struct entity_context *cx, struct entity *e, union ve
 						emit_texture_id, normalmap_id, &shadow_sphere, &shadow_annulus,
 						do_cullface, do_blend, ring_texture_v,
 						ring_inner_radius, ring_outer_radius,
-						specular_power, specular_intensity, emit_intensity, invert);
+						specular_power, specular_intensity, emit_intensity, invert,
+						e->in_shade);
 				else if (atmosphere)
 					graph_dev_raster_atmosphere(mat_mvp, mat_mv, mat_normal,
 						e->m, &atmosphere_color, eye_light_pos, texture_alpha);
 				else
 					graph_dev_raster_single_color_lit(mat_mvp, mat_mv, mat_normal,
-						e->m, &triangle_color, eye_light_pos);
+						e->m, &triangle_color, eye_light_pos, e->in_shade);
 			}
 		} else if (outline_triangle) {
 			graph_dev_raster_trans_wireframe_mesh(wireframe_trans_shader, mat_mvp, mat_mv,
@@ -2874,6 +2881,7 @@ static void setup_single_color_lit_shader(struct graph_dev_gl_single_color_lit_s
 	shader->vertex_position_id = glGetAttribLocation(shader->program_id, "a_Position");
 	shader->vertex_normal_id = glGetAttribLocation(shader->program_id, "a_Normal");
 	shader->color_id = glGetUniformLocation(shader->program_id, "u_Color");
+	shader->in_shade_id = glGetUniformLocation(shader->program_id, "u_in_shade");
 }
 
 static void setup_atmosphere_shader(struct graph_dev_gl_atmosphere_shader *shader)
@@ -2949,6 +2957,7 @@ static void setup_textured_shader(const char *basename, const char *defines,
 	if (shader->specular_power_id >= 0)
 		glUniform1f(shader->specular_intensity_id, 0.2);
 	shader->invert = glGetUniformLocation(shader->program_id, "u_Invert");
+	shader->in_shade = glGetUniformLocation(shader->program_id, "u_in_shade");
 
 	shader->vertex_position_id = glGetAttribLocation(shader->program_id, "a_Position");
 	shader->vertex_normal_id = glGetAttribLocation(shader->program_id, "a_Normal");
@@ -3008,6 +3017,9 @@ static void setup_textured_cubemap_shader(const char *basename, int use_normal_m
 	shader->ring_outer_radius_id = glGetUniformLocation(shader->program_id, "u_ring_outer_radius");
 	if (shader->ring_outer_radius_id >= 0)
 		glUniform1f(shader->ring_outer_radius_id, 2.0);
+	shader->in_shade = glGetUniformLocation(shader->program_id, "u_in_shade");
+	if (shader->in_shade >= 0)
+		glUniform1f(shader->in_shade, 0.0);
 
 	/* Get a handle for our buffers */
 	shader->vertex_position_id = glGetAttribLocation(shader->program_id, "a_Position");

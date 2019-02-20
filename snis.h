@@ -942,6 +942,7 @@ struct snis_entity {
 	union quat o[SNIS_ENTITY_NUPDATE_HISTORY];
 #endif
 	char ai[6];
+	struct snis_entity *shading_planet;
 };
 
 /* These are for the robot and various parts on the engineering deck on the damcon screen */

@@ -40,6 +40,7 @@
 	uniform mat4 u_MVPMatrix;  // A constant representing the combined model/view/projection matrix.
 	uniform mat4 u_MVMatrix;   // A constant representing the combined model/view matrix.
 	uniform mat3 u_NormalMatrix;
+	uniform float u_in_shade;
 
 	attribute vec4 a_Position; // Per-vertex position information we will pass in.
 	attribute vec3 a_Normal;   // Per-vertex normal, tangent, and bitangent information we will pass in.
@@ -82,6 +83,7 @@
 	uniform samplerCube u_AlbedoTex;
 	uniform vec4 u_TintColor;
 	uniform vec3 u_LightPos;   // The position of the light in eye space.
+	uniform float u_in_shade;
 #if defined(USE_NORMAL_MAP)
 	uniform samplerCube u_NormalMapTex;
 #endif
@@ -103,6 +105,7 @@
 		float diffuse = dot(normalize(v_Normal), light_dir);
 		diffuse = max(AMBIENT, diffuse);
 #endif
+		diffuse *= (1.0 - u_in_shade);
 		gl_FragColor = textureCube(u_AlbedoTex, v_TexCoord);
 		gl_FragColor.rgb *= diffuse;
 

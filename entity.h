@@ -103,5 +103,7 @@ GLOBAL float entity_get_alpha(struct entity *e);
 GLOBAL void entity_update_alpha(struct entity *e, float alpha);
 GLOBAL void entity_update_emit_intensity(struct entity *e, float intensity);
 GLOBAL float entity_get_emit_intensity(struct entity *e);
+GLOBAL float entity_get_in_shade(struct entity *e);
+GLOBAL void entity_set_in_shade(struct entity *e, float in_shade);
 
 #endif	

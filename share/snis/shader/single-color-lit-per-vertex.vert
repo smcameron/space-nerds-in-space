@@ -3,6 +3,9 @@ uniform mat4 u_MVPMatrix;  // A constant representing the combined model/view/pr
 uniform mat4 u_MVMatrix;   // A constant representing the combined model/view matrix.
 uniform mat3 u_NormalMatrix;
 uniform vec3 u_Color;      // Per-object color information we will pass in.
+uniform float u_in_shade;  // 1.0 means in full shade.  0.0 means not in shade.
+			   // This is used for macro shading of whole objects
+			   // e.g. a ship shaded by a planet
 
 uniform vec3 u_LightPos;   // The position of the light in eye space.
 
@@ -28,7 +31,7 @@ void main()                // The entry point for our vertex shader.
 
 	// Calculate the dot product of the light vector and vertex normal. If the normal and light vector are
 	// pointing in the same direction then it will get max illumination.
-	float dot = dot(modelViewNormal, lightVector);
+	float dot = (1 - u_in_shade) * dot(modelViewNormal, lightVector);
 
 	// mimic the original snis software render lighting
 	/* dot = (dot + 1.0) / 2.0; */

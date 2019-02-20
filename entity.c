@@ -1383,3 +1383,14 @@ float entity_get_emit_intensity(struct entity *e)
 {
 	return e->emit_intensity;
 }
+
+float entity_get_in_shade(struct entity *e)
+{
+	return e->in_shade;
+}
+
+void entity_set_in_shade(struct entity *e, float in_shade)
+{
+	e->in_shade = in_shade;
+}
+
