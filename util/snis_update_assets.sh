@@ -63,7 +63,7 @@ update_file()
 {
 	local checksum="$1"
 	local filename="$2"
-	if [ -f "$filename" ]
+	if [ -f "$DESTDIR/$filename" ]
 	then
 		localchksum=$(md5sum "$DESTDIR"/"$filename" | awk '{ print $1 }')
 		if [ "$localchksum" = "$checksum" ]
