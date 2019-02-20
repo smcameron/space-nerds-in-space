@@ -2939,7 +2939,8 @@ static void move_objects(void)
 		case OBJTYPE_ASTEROID:
 			move_object(timestamp, o, &interpolate_generic_object);
 			spin_asteroid(timestamp, o);
-			update_shading_planet(o);
+			/* This doesn't work for asteroids for some reason I don't yet understand */
+			/* update_shading_planet(o); */
 			break;
 		case OBJTYPE_WARP_CORE:
 			move_object(timestamp, o, &interpolate_generic_object);
