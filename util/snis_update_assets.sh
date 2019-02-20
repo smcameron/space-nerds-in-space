@@ -8,13 +8,14 @@ up_to_date_count=0
 new_count=0
 update_count=0
 update_fail_count=0
+DESTDIR=.
 export dryrun=0
 
 sanity_check_environment()
 {
-	if [ ! -d share/snis/solarsystems ]
+	if [ ! -d ${DESTDIR}/share/snis/solarsystems ]
 	then
-		echo "$PROG"': Cannot find share/snis/solarsystems directory. Exiting.' 1>&2
+		echo "$PROG"': Cannot find '"${DESTDIR}"'/share/snis/solarsystems directory. Exiting.' 1>&2
 		exit 1
 	fi
 	return 0
@@ -64,18 +65,18 @@ update_file()
 	local filename="$2"
 	if [ -f "$filename" ]
 	then
-		localchksum=$(md5sum $filename | awk '{ print $1 }')
+		localchksum=$(md5sum "$DESTDIR"/"$filename" | awk '{ print $1 }')
 		if [ "$localchksum" = "$checksum" ]
 		then
 			up_to_date_count=$((up_to_date_count + 1))
 		else
-			move_file "$dryrun" "$filename" "$filename".old
+			move_file "$dryrun" "$DESTDIR"/"$filename" "$DESTDIR"/"$filename".old
 			if [ "$?" != "0" ]
 			then
-				echo "$PROG"':Cannot move old $filename out of the way, skipping' 1>&2
+				echo "$PROG"':Cannot move old '"$DESTDIR"/"$filename"' out of the way, skipping' 1>&2
 				update_fail_count=$((update_fail_count + 1))
 			else
-				fetch_file "$ASSET_URL"/"$filename" "$filename" "$dryrun" "Updating"
+				fetch_file "$ASSET_URL"/"$filename" "$DESTDIR"/"$filename" "$dryrun" "Updating"
 				if [ "$?" != "0" ]
 				then
 					update_fail_count=$((update_fail_count + 1))
@@ -85,22 +86,22 @@ update_file()
 			fi
 		fi
 	else
-		local dname=$(dirname "$filename")
+		local dname=$(dirname "$DESTDIR"/"$filename")
 		if [ ! -d "$dname" ]
 		then
 			if [ "$dryrun" = "0" ]
 			then
-				mkdir -p $dname
+				mkdir -p "$dname"
 				if [ "$?" != "0" ]
 				then
-					echo "$PROG"': Failed to create directory for '"$filename" 1>&2
+					echo "$PROG"': Failed to create directory for '"$DESTDIR"/"$filename" 1>&2
 					update_fail_count=$((update_fail_count + 1))
 				fi
 			fi
 		fi
 		if [ -d "$dname" -o "$dryrun" != "0" ]
 		then
-			fetch_file $ASSET_URL/$filename $filename "$dryrun" "Creating"
+			fetch_file $ASSET_URL/$filename "$DESTDIR"/"$filename" "$dryrun" "Creating"
 			if [ "$?" = "0" ]
 			then
 				new_count=$((new_count+1))
@@ -148,6 +149,13 @@ if [ "$1" = "--dry-run" ]
 then
 	dryrun=1
 	shift;
+fi
+
+if [ "$1" = "--destdir" ]
+then
+	shift;
+	DESTDIR="$1"
+	echo "Using DESTDIR=$DESTDIR"
 fi
 
 sanity_check_environment
