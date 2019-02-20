@@ -72,6 +72,7 @@ persisted in a simple database by snis_multiverse.
 #include "string-utils.h"
 #include "replacement_assets.h"
 #include "snis_asset_dir.h"
+#include "snis_bin_dir.h"
 
 static char *asset_dir;
 static char *lobby, *nick, *location;
@@ -1296,6 +1297,7 @@ static int snis_server_lockfile_exists(char *starsystem_name)
 static void start_snis_server(char *starsystem_name)
 {
 	char cmd[PATH_MAX];
+	char *bindir;
 	char snis_server_location[PATH_MAX];
 	char upper_snis_server_location[PATH_MAX];
 	int rc;
@@ -1303,7 +1305,8 @@ static void start_snis_server(char *starsystem_name)
 	snprintf(snis_server_location, sizeof(snis_server_location) - 1, "%s", starsystem_name);
 	strcpy(upper_snis_server_location, snis_server_location);
 	uppercase(upper_snis_server_location);
-	snprintf(cmd, sizeof(cmd) - 1, "./snis_server -l %s -L %s -m %s -s %s &",
+	bindir = get_snis_bin_dir();
+	snprintf(cmd, sizeof(cmd) - 1, "%s/snis_server -l %s -L %s -m %s -s %s &", bindir,
 				lobby, upper_snis_server_location, location, snis_server_location);
 
 	fprintf(stderr, "snis_multiverse: STARTING SNIS SERVER for %s\n", starsystem_name);
