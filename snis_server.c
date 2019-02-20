@@ -12514,26 +12514,39 @@ static int l_add_black_hole(lua_State *l)
 static int too_close_to_other_planet_or_sun(double x, double y, double z, double limit)
 {
 	int i;
-	double mindist = -1.0;
 	double dist;
+
+	dist = dist3d(x - SUNX, y - SUNY, z - SUNZ);
+	if (dist < SUN_DIST_LIMIT) /* Too close to sun? */
+		return 1;
 
 	for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
 		struct snis_entity *o = &go[i];
 		if (o->type != OBJTYPE_PLANET)
 			continue;
 		dist = dist3d(o->x - x, o->y - y, o->z - z);
-		if (mindist < 0 || dist < mindist)
-			mindist = dist;
+		if (dist < limit)
+			return 1;
 	}
 
-	dist = dist3d(x - SUNX, y - SUNY, z - SUNZ);
-	if (dist < SUN_DIST_LIMIT) /* Too close to sun? */
-		return 1;
+	return 0;
+}
 
-	if (mindist < 0)
-		return 0;
-	if (mindist > limit)
-		return 0;
+static int l_too_close_to_planet_or_sun(lua_State *l)
+{
+	double x, y, z, limit;
+	int too_close;
+
+	x = lua_tonumber(lua_state, 1);
+	y = lua_tonumber(lua_state, 2);
+	z = lua_tonumber(lua_state, 3);
+	limit = lua_tonumber(lua_state, 4);
+
+	pthread_mutex_lock(&universe_mutex);
+	too_close = too_close_to_other_planet_or_sun(x, y, z, limit);
+	pthread_mutex_unlock(&universe_mutex);
+
+	lua_pushnumber(lua_state, too_close);
 	return 1;
 }
 
@@ -23133,6 +23146,7 @@ static void setup_lua(void)
 	add_lua_callable_fn(l_set_planet_security, "set_planet_security");
 	add_lua_callable_fn(l_update_player_wallet, "update_player_wallet");
 	add_lua_callable_fn(l_ai_push_catatonic, "ai_push_catatonic");
+	add_lua_callable_fn(l_too_close_to_planet_or_sun, "too_close_to_planet_or_sun");
 }
 
 static int run_initial_lua_scripts(void)
