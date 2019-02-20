@@ -124,6 +124,7 @@
 #include "rootcheck.h"
 #include "replacement_assets.h"
 #include "snis_asset_dir.h"
+#include "snis_bin_dir.h"
 
 #define SHIP_COLOR CYAN
 #define STARBASE_COLOR RED
@@ -6377,23 +6378,14 @@ static int process_adjust_tts_volume(void)
 static void do_text_to_speech(char *text)
 {
 	char command[PATH_MAX];
-	char *snisbindir;
 	char *fixed_text;
-	char bindir[PATH_MAX];
+	char *bindir;
 	struct stat statbuf;
 	int rc;
 	static char last_speech[1000] = { 0 };
 	static int last_time = { 0 };
 
-	/* This is all a little gross... */
-
-	snisbindir = getenv("SNISBINDIR");
-	if (!snisbindir) {
-		snisbindir = STRPREFIX(PREFIX);
-		snprintf(bindir, sizeof(bindir), "%s/bin", snisbindir);
-	} else {
-		strcpy(bindir, snisbindir);
-	}
+	bindir = get_snis_bin_dir();
 
 	/* test that snisbindir is actually a directory. */
 	rc = stat(bindir, &statbuf);
@@ -6402,7 +6394,7 @@ static void do_text_to_speech(char *text)
 		return;
 	}
 	if (!S_ISDIR(statbuf.st_mode)) {
-		fprintf(stderr, "%s is not a directory.\n", snisbindir);
+		fprintf(stderr, "%s is not a directory.\n", bindir);
 		return;
 	}
 	remove_single_quotes(text);
@@ -18168,21 +18160,14 @@ static void password_entered()
 
 static void start_lobbyserver_button_pressed()
 {
-	char *snisbindir;
-	char bindir[PATH_MAX];
+	char *bindir;
 	char cmd[PATH_MAX];
 	struct stat statbuf;
 	int rc;
 	pid_t child;
 	const char errorstr[] = "Failed to exec ssgl_server.\n";
 
-	snisbindir = getenv("SNISBINDIR");
-	if (!snisbindir) {
-		snisbindir = STRPREFIX(PREFIX);
-		snprintf(bindir, sizeof(bindir), "%s/bin", snisbindir);
-	} else {
-		strcpy(bindir, snisbindir);
-	}
+	bindir = get_snis_bin_dir();
 
 	/* test that snisbindir is actually a directory. */
 	rc = stat(bindir, &statbuf);
@@ -18191,7 +18176,7 @@ static void start_lobbyserver_button_pressed()
 		return;
 	}
 	if (!S_ISDIR(statbuf.st_mode)) {
-		fprintf(stderr, "%s is not a directory.\n", snisbindir);
+		fprintf(stderr, "%s is not a directory.\n", bindir);
 		return;
 	}
 
@@ -18235,8 +18220,8 @@ static void sanitize_string(char *s)
 
 static void start_gameserver_button_pressed()
 {
-	char command[PATH_MAX], bindir[PATH_MAX];
-	char *snisbindir;
+	char command[PATH_MAX];
+	char *bindir;
 	pid_t child;
 	const char errorstr[] = "Failed to exec snis_server.\n";
 	char *uppersolarsys, *lowersolarsys;
@@ -18255,13 +18240,7 @@ static void start_gameserver_button_pressed()
 		strcmp(net_setup_ui.lobbyname, "") == 0)
 		return;
 
-	snisbindir = getenv("SNISBINDIR");
-	if (!snisbindir) {
-		snisbindir = STRPREFIX(PREFIX);
-		snprintf(bindir, sizeof(bindir), "%s/bin", snisbindir);
-	} else {
-		strcpy(bindir, snisbindir);
-	}
+	bindir = get_snis_bin_dir();
 
 	memset(command, 0, sizeof(command));
 	printf("start game server button pressed.\n");
