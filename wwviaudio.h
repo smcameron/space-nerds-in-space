@@ -124,6 +124,14 @@ GLOBAL void wwviaudio_cancel_music(void);
  */
 GLOBAL /* channel */ int wwviaudio_add_sound(int sound_number);
 
+/* Read an ogg file, play it once. Only one one-shot sound can be played
+ * concurrently. Returns 0 on success, -1 on failure (e.g. file does not
+ * exist) or -2 if the one shot slot is busy (currently playing another
+ * one-shot sound.)  The memory allocated for the one-shot sound will be
+ * reclaimed the next time any one-shot sound is played.
+ */
+GLOBAL int wwviaudio_add_one_shot_sound(char *filename);
+
 /* Begin playing a segment of a sound at "begin" until "end" at "volume" (all between 0.0 and 1.0).
  * Upon reaching "end", call "callback" with "cookie" as a parameter.
  */

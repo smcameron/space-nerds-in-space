@@ -29,6 +29,7 @@
 #include <unistd.h>
 #include <string.h>
 #include <stdlib.h>
+#include <pthread.h>
 
 #define WWVIAUDIO_DEFINE_GLOBALS
 #include "wwviaudio.h"
@@ -48,6 +49,9 @@ static int sound_effects_on = 1;
 static int sound_device = -1; /* default sound device for port audio. */
 static unsigned int max_concurrent_sounds = 0;
 static int max_sound_clips = 0;
+static int allocated_sound_clips = 0;
+static int one_shot_busy = 0;
+static pthread_mutex_t one_shot_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 /* Pause all audio output, output silence. */
 void wwviaudio_pause_audio(void)
@@ -120,7 +124,7 @@ struct audio_queue_entry {
 
 static struct audio_queue_entry *audio_queue = NULL;
 
-int wwviaudio_read_ogg_clip(int clipnum, char *filename)
+static int wwviaudio_read_ogg_clip_internal(int clipnum, char *filename)
 {
 	uint64_t nframes;
 	char filebuf[PATH_MAX + 1];
@@ -129,7 +133,7 @@ int wwviaudio_read_ogg_clip(int clipnum, char *filename)
 	int nchannels;
 	int rc;
 
-	if (clipnum >= max_sound_clips || clipnum < 0)
+	if (clipnum >= allocated_sound_clips || clipnum < 0)
 		return -1;
 
 #ifndef __WIN32__
@@ -182,6 +186,13 @@ int wwviaudio_read_ogg_clip(int clipnum, char *filename)
 	return 0;
 error:
 	return -1;
+}
+
+int wwviaudio_read_ogg_clip(int clipnum, char *filename)
+{
+	if (clipnum >= max_sound_clips || clipnum < 0)
+		return -1;
+	return wwviaudio_read_ogg_clip_internal(clipnum, filename);
 }
 
 /* This routine will be called by the PortAudio engine when audio is needed.
@@ -275,12 +286,13 @@ int wwviaudio_initialize_portaudio(int maximum_concurrent_sounds, int maximum_so
 	max_sound_clips = maximum_sound_clips;
 
 	audio_queue = malloc(max_concurrent_sounds * sizeof(audio_queue[0]));
-	clip = malloc(max_sound_clips * sizeof(clip[0]));
+	clip = malloc((max_sound_clips + 1) * sizeof(clip[0])); /* +1 for the "one shot" sound */
 	if (audio_queue == NULL || clip == NULL)
 		return -1;
 
+	allocated_sound_clips = max_sound_clips + 1;
 	memset(audio_queue, 0, sizeof(audio_queue[0]) * max_concurrent_sounds);
-	memset(clip, 0, sizeof(clip[0]) * max_sound_clips);
+	memset(clip, 0, sizeof(clip[0]) * allocated_sound_clips);
 
 	rc = Pa_Initialize();
 	if (rc != paNoError)
@@ -359,13 +371,14 @@ error:
 		max_concurrent_sounds = 0;
 	}
 	if (clip) {
-		for (i = 0; i < max_sound_clips; i++) {
+		for (i = 0; i < allocated_sound_clips; i++) {
 			if (clip[i].sample)
 				free(clip[i].sample);
 		}
 		free(clip);
 		clip = NULL;
 		max_sound_clips = 0;
+		allocated_sound_clips = 0;
 	}
 	return;
 }
@@ -451,6 +464,31 @@ static int wwviaudio_add_sound_to_slot(int which_sound, int which_slot)
 int wwviaudio_add_sound(int which_sound)
 {
 	return wwviaudio_add_sound_to_slot(which_sound, WWVIAUDIO_ANY_SLOT);
+}
+
+static void one_shot_sound_cb(__attribute__((unused)) void *x)
+{
+	pthread_mutex_lock(&one_shot_mutex);
+	one_shot_busy = 0;
+	pthread_mutex_unlock(&one_shot_mutex);
+}
+
+int wwviaudio_add_one_shot_sound(char *filename)
+{
+	int rc;
+
+	pthread_mutex_lock(&one_shot_mutex);
+	if (one_shot_busy) {
+		pthread_mutex_unlock(&one_shot_mutex);
+		return -1;
+	}
+	one_shot_busy = 1;
+	pthread_mutex_unlock(&one_shot_mutex);
+	rc = wwviaudio_read_ogg_clip_internal(allocated_sound_clips - 1, filename);
+	if (rc)
+		return rc;
+	return wwviaudio_add_sound_segment_to_slot(allocated_sound_clips - 1, WWVIAUDIO_ANY_SLOT,
+				1.0, 1.0, 0.0, 1.0, one_shot_sound_cb, NULL);
 }
 
 int wwviaudio_play_music(int which_sound)
