@@ -221,10 +221,8 @@ static int patestCallback(__attribute__ ((unused)) const void *inputBuffer,
 				continue;
 			sample = i + audio_queue[j].pos;
 			count++;
-			if (sample >= audio_queue[j].nsamples) {
-				audio_queue[j].active = 0;
+			if (sample >= audio_queue[j].nsamples)
 				continue;
-			}
 			if (j != WWVIAUDIO_MUSIC_SLOT && sound_effects_on) {
 				output += (float) audio_queue[j].sample[sample] *
 					audio_queue[j].volume * 0.5 / (float) (INT16_MAX);
