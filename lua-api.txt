@@ -883,6 +883,11 @@ update_player_wallet(player_ship_id, delta_money) -- Add delta_money (which may 
 	player_ship_id: id of the player ship to affect
 	delta_money: the amount of money to add to the wallet (may be negative).
 
+too_close_to_other_planet_or_sun(x, y, z, limit) -- returns 1.0 if the given x, y, z are
+	coordinates within the given limit of another planet or the sun. This can be useful
+	when populating the universe with planets to avoid placing planets too close to each
+	other or to the central star.
+
 NOTE: Your lua scripts must not sleep, call any function which blocks, or require excessive
 long running calculations (nothing more than a few hundredths of a second) because the lua
 scripts are called from the main thread and if the scripts block, the entire game will block.
