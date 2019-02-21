@@ -7276,6 +7276,35 @@ static void stop_gameserver_writer_thread(void)
 	fprintf(stderr, "stop_gameserver_writer_thread 4\n");
 }
 
+static int process_request_oneshot_sound(void)
+{
+	unsigned char buffer[2 + 257];
+	char filename[257];
+	char path[PATH_MAX];
+	uint16_t len;
+	int rc;
+
+	rc = read_and_unpack_buffer(buffer, "h", &len);
+	if (rc)
+		return rc;
+	if (len > 256)
+		return -1;
+	rc = snis_readsocket(gameserver_sock, buffer, len);
+	if (rc)
+		return rc;
+	filename[len] = '\0';
+	memcpy(filename, buffer, len);
+	snprintf(path, sizeof(path), "%s/%s", asset_dir, filename);
+	/* wwviaudio_add_one_shot_sound does disk i/o.  Perhaps we should have a queue
+	 * and another thread that processes the queue and calls wwviaudio_add_one_shot_sound()
+	 * passing what's on the queue in order to keep disk i/o out of this thread (which is
+	 * processing opcodes from the server). But let's try this dumb way first to see if
+	 * it's a real problem.
+	 */
+	wwviaudio_add_one_shot_sound(path);
+	return 0;
+}
+
 static int process_custom_button(void);
 static int process_console_op(void);
 static int process_client_config(void);
@@ -7575,6 +7604,11 @@ static void *gameserver_reader(__attribute__((unused)) void *arg)
 			break;
 		case OPCODE_CLIENT_CONFIG:
 			rc = process_client_config();
+			if (rc)
+				goto protocol_error;
+			break;
+		case OPCODE_REQUEST_ONESHOT_SOUND:
+			rc = process_request_oneshot_sound();
 			if (rc)
 				goto protocol_error;
 			break;

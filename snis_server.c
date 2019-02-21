@@ -12550,6 +12550,47 @@ static int l_too_close_to_planet_or_sun(lua_State *l)
 	return 1;
 }
 
+static void send_oneshot_sound_request(struct snis_entity *ship, char *filename)
+{
+	struct packed_buffer *pb;
+	uint16_t len;
+
+	len = strnlen(filename, 256);
+	pb = packed_buffer_allocate(len + 3);
+	packed_buffer_append(pb, "bhr", OPCODE_REQUEST_ONESHOT_SOUND, len, filename, len);
+	send_packet_to_all_clients_on_a_bridge(ship->id, pb, ROLE_SOUNDSERVER);
+}
+
+static int l_play_sound(lua_State *l)
+{
+	const double lua_oid1 = luaL_checknumber(l, 1);
+	const char *filename = luaL_checkstring(l, 2);
+	int i;
+	char *fn = strdup(filename); /* damn const. */
+
+	pthread_mutex_lock(&universe_mutex);
+	i = lookup_by_id(lua_oid1);
+	if (i < 0) {
+		pthread_mutex_unlock(&universe_mutex);
+		send_demon_console_msg("PLAY_SOUND: BAD OBJECT ID: %f", lua_oid1);
+		lua_pushnumber(lua_state, -1);
+		goto out;
+	}
+	if (go[i].type != OBJTYPE_SHIP1) {
+		pthread_mutex_unlock(&universe_mutex);
+		send_demon_console_msg("PLAY_SOUND: NOT PLAYER SHIP: %f", lua_oid1);
+		lua_pushnumber(lua_state, -1);
+		goto out;
+	}
+	send_oneshot_sound_request(&go[i], fn);
+	pthread_mutex_unlock(&universe_mutex);
+	lua_pushnumber(lua_state, 0);
+out:
+	if (fn)
+		free(fn);
+	return 1;
+}
+
 static void add_black_holes(void)
 {
 	int i;
@@ -23147,6 +23188,7 @@ static void setup_lua(void)
 	add_lua_callable_fn(l_update_player_wallet, "update_player_wallet");
 	add_lua_callable_fn(l_ai_push_catatonic, "ai_push_catatonic");
 	add_lua_callable_fn(l_too_close_to_planet_or_sun, "too_close_to_planet_or_sun");
+	add_lua_callable_fn(l_play_sound, "play_sound");
 }
 
 static int run_initial_lua_scripts(void)

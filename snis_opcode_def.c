@@ -188,6 +188,7 @@ int snis_opcode_def_init(void)
 	rc |= init_opcode_def(OPCODE_WORMHOLE_LIMBO, "bh");
 	rc |= init_opcode_def(OPCODE_UPDATE_SPACEMONSTER, "bwwSSSwQbbb");
 	rc |= init_opcode_def(OPCODE_REQUEST_WEAPZOOM, "bwb");
+	/* rc |= init_opcode_def(OPCODE_REQUEST_ONESHOT_SOUND, "bhr"); */
 	rc |= init_opcode_def(OPCODE_REQUEST_REDALERT, "bb");
 	rc |= init_opcode_def(OPCODE_UPDATE_POWER_DATA, "n/a");
 	rc |= init_opcode_def(OPCODE_UPDATE_PLANET, "bwwSSSSwbbbbhbbbSbhbbwb");

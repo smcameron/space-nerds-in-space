@@ -888,6 +888,16 @@ too_close_to_other_planet_or_sun(x, y, z, limit) -- returns 1.0 if the given x, 
 	when populating the universe with planets to avoid placing planets too close to each
 	other or to the central star.
 
+play_sound(player_ship_id, ogg_file) -- Plays a "one shot" sound on any terminals of the
+	specified player ship which have the SOUNDSERVER role. Note, only one such sound
+	can play concurrently. If you attempt to play a second sound before the first
+	has finished playing, the second sound request will be ignored. The sounds files
+	must reside within the asset directory (by default, share/snis).
+
+	Example:
+		play_sound(player_ship_id, "sounds/red-alert.ogg");
+
+
 NOTE: Your lua scripts must not sleep, call any function which blocks, or require excessive
 long running calculations (nothing more than a few hundredths of a second) because the lua
 scripts are called from the main thread and if the scripts block, the entire game will block.
