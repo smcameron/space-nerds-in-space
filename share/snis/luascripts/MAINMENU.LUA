@@ -14,9 +14,12 @@ function main_menu_callback(shipid, selection)
 		text_to_speech(player_ids[1], "Begin mission, space pox");
 		enqueue_lua_script("SPACEPOX");
 	elseif (selection == 3) then
+		text_to_speech(player_ids[1], "Begin mission, royal wedding");
+		enqueue_lua_script("ROYAL-WEDDING");
+	elseif (selection == 4) then
 		text_to_speech(player_ids[1], "Begin mission, kali");
 		enqueue_lua_script("KALI");
-	elseif (selection == 4) then
+	elseif (selection == 5) then
 		text_to_speech(player_ids[1], "Begin mission, demolisher");
 		enqueue_lua_script("DEMOLISHER");
 	elseif (selection == 5) then
@@ -32,6 +35,7 @@ show_menu(player_ids[1],
 		"TRAINING MISSION 1\n" ..
 		"SAVING PLANET ERPH\n" ..
 		"SPACE POX\n" ..
+		"ROYAL WEDDING\n" ..
 		"KALI\n" ..
 		"DEMOLISHER\n" ..
 		"REGENERATE UNIVERSE\n" ..
