@@ -468,7 +468,7 @@ function warp_failure()
 	set_player_damage(player_ids[1], "warp", 255);
 	set_commodity_contents(player_ids[1], dead_bodyguard, 1, get_first_empty_cargo_bay(player_ids[1]));
 	delete_passenger(bodyguard);
-	text_to_speech(player_ids[1], "Warp engine failure");
+	play_sound(player_ids[1], "sounds/big_explosion.ogg");
 	comms_channel_transmit("Technician", 0, "There was a fire in the warp engine, it's badly damaged!");
 	comms_channel_transmit("Technician", 0, "The bodyguard was killed by the explosion!");
 	register_timer_callback("prince_remark2", 200, 0);
@@ -615,7 +615,7 @@ function prince_panic_crashing()
 	end
 	set_player_damage(player_ids[1], system, damage);
 	register_timer_callback("prince_panic_crashing", 10, 0);
-	--TODO make some noise as well
+	play_sound(player_ids[1], "sounds/flak_hit.ogg");
 end
 
 function restrain_prince()
