@@ -282,6 +282,7 @@ static volatile float main_camera_shake = 0.0f;
 static unsigned char camera_mode;
 static unsigned char nav_camera_mode;
 static unsigned char nav_has_computer_button = 0; /* tweakable */
+static unsigned char planets_shade_other_objects = 1; /* tweakable */
 
 /* "Scenic" camera for beauty shots. */
 static int external_camera_active = 0; /* tweakable */
@@ -2862,6 +2863,11 @@ static struct snis_entity *planet_between_points(union vec3 *ray_origin, union v
 static void update_shading_planet(struct snis_entity *o)
 {
 	union vec3 p1, p2;
+
+	if (!planets_shade_other_objects) {
+		o->shading_planet = NULL;
+		return;
+	}
 
 	p1.v.x = o->x;
 	p1.v.y = o->y;
@@ -16595,6 +16601,8 @@ static struct tweakable_var_descriptor client_tweak[] = {
 		&external_camera_active, 'i', 0.0, 0.0, 0.0, 0, 1, 0 },
 	{ "NAV_HAS_COMPUTER", "0 OR 1 TO ALLOW NAV TO HAVE COMPUTER ACCESS",
 		&nav_has_computer_button, 'i', 0.0, 0.0, 0.0, 0, 1, 0 },
+	{ "PLANETS_SHADE_OTHER_OBJECTS", "0 OR 1 TO ENABLE/DISABLE PLANET SHADOWS ON OTHER OBJECTS",
+		&planets_shade_other_objects, 'i', 0.0, 0.0, 0.0, 0, 1, 1 },
 	{ NULL, NULL, NULL, '\0', 0.0, 0.0, 0.0, 0, 0, 0 },
 };
 
