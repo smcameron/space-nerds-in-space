@@ -1258,10 +1258,15 @@ uninstall:
 	for x in ${BINPROGS} ; do \
 		rm -f ${DESTDIR}/${PREFIX}/$$x ; \
 	done
+	rm -f ${DESTDIR}/${PREFIX}/bin/snis_launcher
 	rm -fr ${DESTDIR}/${PREFIX}/share/snis
 	rm -f ${MANDIR}/snis_client.6.gz ${MANDIR}/snis_client.6
 	rm -f ${MANDIR}/snis_server.6.gz ${MANDIR}/snis_server.6
 	rm -f ${MANDIR}/earthlike.1.gz ${MANDIR}/earthlike.1
+	rm -f ${MANDIR}/ssgl_server.6
+	rm -f ${MANDIR}/snis_test_audio.1.gz
+	rm -f ${MANDIR}/snis_multiverse.6
+	rm -f ${MANDIR}/snis_text_to_speech.sh.6
 	rm -f ${DESKTOPDIR}/snis.desktop
 	${UPDATE_DESKTOP}
 
