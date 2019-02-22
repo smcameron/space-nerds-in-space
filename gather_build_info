@@ -45,7 +45,7 @@ fi
 #	today="unknown"
 # fi
 
-endianness=$(./check-endianness)
+endianness=$(bin/check-endianness)
 if [ "$?" != "0" ]
 then
 	endianness="unknown-wordsize unknown-endianness"
