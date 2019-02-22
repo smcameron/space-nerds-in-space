@@ -669,7 +669,9 @@ all:	${OD} ${COMMONOBJS} ${SERVEROBJS} ${MULTIVERSEOBJS} ${CLIENTOBJS} ${LIMCLIE
 models:	${MODELS}
 
 ${OD}:
-	@if [ ! -d ${OD} ] ; then ; mkdir ${OD}	; fi ;
+	@if [ ! -d ${OD} ] ; then \
+		 mkdir ${OD} ; \
+	fi ;
 
 update-assets:
 	@util/snis_update_assets.sh
