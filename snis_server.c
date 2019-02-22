@@ -12591,6 +12591,52 @@ out:
 	return 1;
 }
 
+static void set_red_alert_mode(struct game_client *c, unsigned char new_alert_mode);
+static int l_set_red_alert_status(lua_State *l)
+{
+	const double lua_oid = luaL_checknumber(l, 1);
+	const double status = luaL_checknumber(l, 2);
+	uint32_t shipid;
+	unsigned char redalert = 0;
+	struct game_client *c;
+	int i;
+
+	if (status > 0.5)
+		redalert = 1;
+
+	pthread_mutex_lock(&universe_mutex);
+	i = lookup_by_id(lua_oid);
+	if (i < 0) {
+		pthread_mutex_unlock(&universe_mutex);
+		lua_pushnumber(l, -1.0);
+		return 1;
+	}
+	if (go[i].type != OBJTYPE_SHIP1) {
+		pthread_mutex_unlock(&universe_mutex);
+		lua_pushnumber(l, -1.0);
+		return 1;
+	}
+	shipid = go[i].id;
+	pthread_mutex_unlock(&universe_mutex);
+
+	client_lock();
+	c = NULL;
+	for (i = 0; i < nclients; i++) {
+		c = &client[i];
+		if (c->refcount && c->shipid == shipid)
+			break;
+	}
+	client_unlock();
+	if (!c) {
+		pthread_mutex_unlock(&universe_mutex);
+		lua_pushnumber(l, -1.0);
+		return 1;
+	}
+	set_red_alert_mode(c, redalert);
+	lua_pushnumber(l, 0);
+	return 1;
+}
+
 static void add_black_holes(void)
 {
 	int i;
@@ -23189,6 +23235,7 @@ static void setup_lua(void)
 	add_lua_callable_fn(l_ai_push_catatonic, "ai_push_catatonic");
 	add_lua_callable_fn(l_too_close_to_planet_or_sun, "too_close_to_planet_or_sun");
 	add_lua_callable_fn(l_play_sound, "play_sound");
+	add_lua_callable_fn(l_set_red_alert_status, "set_red_alert_status");
 }
 
 static int run_initial_lua_scripts(void)

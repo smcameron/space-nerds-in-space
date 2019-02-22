@@ -897,6 +897,9 @@ play_sound(player_ship_id, ogg_file) -- Plays a "one shot" sound on any terminal
 	Example:
 		play_sound(player_ship_id, "sounds/red-alert.ogg");
 
+set_red_alert_status(ship_id, status) -- sets the red-alert status for the specified ship
+	to the specified status (1 = RED ALERT ON, 0 = RED ALERT OFF);
+
 
 NOTE: Your lua scripts must not sleep, call any function which blocks, or require excessive
 long running calculations (nothing more than a few hundredths of a second) because the lua
