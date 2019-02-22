@@ -1191,7 +1191,7 @@ install:	${BINPROGS} ${MODELS} ${AUDIOFILES} ${TEXTURES} \
 	mkdir -p ${DESTDIR}/${PREFIX}/bin
 	for x in ${BINPROGS} ; do \
 		${INSTALL} -m 755 $$x \
-				${DESTDIR}/${PREFIX}; \
+				${DESTDIR}/${PREFIX}/bin; \
 	done
 	${AWK} '/^PREFIX=$$/ { printf("PREFIX='${PREFIX}'\n"); next; } \
 		{ print; } ' < snis_launcher > /tmp/snis_launcher
