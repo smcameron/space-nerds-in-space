@@ -30,7 +30,7 @@ V ?= 0
 
 CC ?= gcc
 
-DESTDIR=.
+# DESTDIR=.
 PREFIX?=.
 
 DATADIR=${DESTDIR}/${PREFIX}/share/snis
