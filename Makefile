@@ -1130,8 +1130,8 @@ test-commodities:	commodities.o Makefile string-utils.o
 	$(CC) -DTESTCOMMODITIES=1 -O3 -c commodities.c -o test-commodities.o
 	$(CC) -DTESTCOMMODITIES=1 -o test-commodities string-utils.o test-commodities.o
 
-test-obj-parser:	test-obj-parser.c stl_parser.o mesh.o mtwist.o mathutils.o matrix.o quat.o Makefile
-	$(CC) -o test-obj-parser stl_parser.o mtwist.o mathutils.o matrix.o mesh.o quat.o -lm test-obj-parser.c
+test-obj-parser:	test-obj-parser.c mikktspace/mikktspace.o stl_parser.o mesh.o mtwist.o mathutils.o matrix.o quat.o string-utils.o Makefile
+	$(CC) -o test-obj-parser mikktspace/mikktspace.o stl_parser.o mtwist.o mathutils.o matrix.o mesh.o quat.o string-utils.o -lm test-obj-parser.c
 
 test:	test-matrix test-space-partition test-marshal test-quat test-fleet test-mtwist test-commodities test_solarsystem_config
 	/bin/true	# Prevent make from running "$(CC) test.o".
