@@ -524,7 +524,7 @@ MULTIVERSELIBS=-Lssgl -lssglclient ${LRTLIB} -ldl -lm -lcrypt
 
 BINPROGS=bin/ssgl_server bin/snis_server bin/snis_client bin/snis_limited_client bin/snis_text_to_speech.sh \
 		bin/snis_multiverse bin/lsssgl
-UTILPROGS=util/mask_clouds util/cloud-mask-normalmap mesh_viewer util/sample_image_colors \
+UTILPROGS=util/mask_clouds util/cloud-mask-normalmap bin/mesh_viewer util/sample_image_colors \
 		util/generate_solarsystem_positions nebula_noise generate_skybox
 
 # model directory
@@ -1080,7 +1080,7 @@ mikktspace/mikktspace.o:
 	(cd mikktspace; ${MAKE} )
 
 mostly-clean:
-	rm -f ${SERVEROBJS} ${CLIENTOBJS} ${LIMCLIENTOBJS} ${SDLCLIENTOBJS} ${SSGL} \
+	rm -f ${SERVEROBJS} ${CLIENTOBJS} ${LIMCLIENTOBJS} ${MULTIVERSEOBJS} ${SDLCLIENTOBJS} ${SSGL} \
 	${BINPROGS} ${UTILPROGS} stl_parser snis_limited_client.c \
 	test-space-partition snis_test_audio.o snis_test_audio joystick_test local_termios2.h
 	( cd ssgl; ${MAKE} clean )
