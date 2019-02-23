@@ -1315,8 +1315,9 @@ Makefile.depend :
 	makedepend -w0 -f- *.c | grep -v /usr | sort > Makefile.depend.tmp
 	mv Makefile.depend.tmp Makefile.depend
 
-bin/check-endianness:	check-endianness.c
-	$(CC) -o bin/check-endianness check-endianness.c
+bin/check-endianness:	check-endianness.c Makefile
+	@echo "  COMPILE check-endianness.c"
+	$(Q)$(CC) -o bin/check-endianness check-endianness.c
 
 build_info.h: bin/check-endianness snis.h gather_build_info Makefile
 	@echo "  GATHER BUILD INFO"
