@@ -1714,8 +1714,42 @@ cable is connected), or by manually using the SNIS_AUDIO_DEVICE environment
 variable to override the default.
 <hr>
 <li><b><a name="openglversion">OpenGL version problems</a></b>
-The shaders used by Space Nerds In Space require OpenGL version 3.0
-(aka "#version 130") or better.  If your computer does not support a
+<p>For most recent versions of Space Nerds In Space, OpenGL version 2.1 (aka "#version 120"
+(See <a href="https://en.wikipedia.org/wiki/OpenGL_Shading_Language#Versions">OpenGL
+version decoder ring</a>))
+is required.  This is quite old, so your computer probably supports it.
+<p>For awhile OpenGL version 3.0 (aka "#version 130") was required. This is
+no longer the case.
+<p>Historically, the following OpenGL versions were required:
+<p align=center>
+<table border=1>
+<tr>
+<td>Feb 17, 2019 - Present</td>
+<td>OpenGL 2.1</td>
+<td>Commit fa60c565411db509a9dccaf4a83ec2dfc7951a00</td>
+</tr>
+<tr><td>Apr 12, 2018 - Feb 16, 2019</td>
+<td>OpenGL 3.0</td>
+<td>Commit 3c8ea5c71021b3eb3ede34543013d30cce117529 </td>
+</tr>
+<tr>
+<td>Dec 22, 2013 - Apr 11, 2018</td>
+<td>OpenGL 2.1</td>
+<td>Commit fad901a5602c1edecab75e6cc1171e9c6f39cfe5</td>
+</tr>
+<tr>
+<td>Aug 31, 2013 - Dec 22, 2013</td>
+<td>Very old OpenGL (fixed pipeline)</td>
+<td>Commit 8b039d60cf96a08b69f394a9ee07c8f2a928b8da</td>
+</tr>
+<tr>
+<td>Nov 3, 2012 - Aug 31, 2013</td>
+<td>No OpenGL required at all</td>
+<td>Commit f421da62ce8d7a0b5e489e78a77e526d7448a62e (first commit)</td>
+</tr>
+</table>
+<p>From Apr 12, 2018 until Feb 17, 2019, the shaders used by Space Nerds In Space required
+OpenGL version 3.0 (aka "#version 130") or better.  If your computer does not support a
 recent enough version of OpenGL, you can run the limited client instead,
 which does not use OpenGL at all. Be sure to de-select MAIN SCREEN and
 WEAPONS roles on the login screen, as these screens do not work well
