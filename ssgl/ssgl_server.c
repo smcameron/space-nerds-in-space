@@ -639,6 +639,10 @@ int main(int argc, char *argv[])
 
 	/* Make ourselves a socket */
 	rendezvous = socket(AF_INET, SOCK_STREAM, gamelobby_tcp_proto.p_proto);
+	if (rendezvous < 0) {
+		ssgl_log(SSGL_ERROR, "socket() failed: %s\n", strerror(errno));
+		return -1;
+	}
 
 	on = 1;
 	rc = setsockopt(rendezvous, SOL_SOCKET, SO_REUSEADDR, (const char *) &on, sizeof(on));
