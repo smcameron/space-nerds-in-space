@@ -1116,7 +1116,7 @@ spelled_numbers:	spelled_numbers.c
 ${SSGL}:
 	(cd ssgl ; ${MAKE} )
 
-${OD}/mikktspace/mikktspace.o:
+mikktspace/mikktspace.o:
 	(cd mikktspace; ${MAKE} )
 
 mostly-clean:
