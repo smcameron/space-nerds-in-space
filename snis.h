@@ -940,9 +940,9 @@ struct snis_entity {
 	double updatetime[SNIS_ENTITY_NUPDATE_HISTORY];
 	union vec3 r[SNIS_ENTITY_NUPDATE_HISTORY];
 	union quat o[SNIS_ENTITY_NUPDATE_HISTORY];
+	struct snis_entity *shading_planet;
 #endif
 	char ai[6];
-	struct snis_entity *shading_planet;
 };
 
 /* These are for the robot and various parts on the engineering deck on the damcon screen */
