@@ -669,14 +669,10 @@ all:	bin ${OD} ${COMMONOBJS} ${SERVEROBJS} ${MULTIVERSEOBJS} ${CLIENTOBJS} ${LIM
 models:	${MODELS}
 
 ${OD}:
-	@if [ ! -d ${OD} ] ; then \
-		 mkdir ${OD} ; \
-	fi ;
+	@mkdir -p ${OD}
 
 bin:
-	@if [ ! -d bin ] ; then \
-		mkdir bin ; \
-	fi ;
+	@mkdir -p bin
 
 update-assets:
 	@util/snis_update_assets.sh
@@ -881,19 +877,15 @@ $(OD)/snis_damcon_systems.o:	snis_damcon_systems.c Makefile
 	$(Q)$(COMPILE)
 
 bin/snis_server:	${SERVEROBJS} ${SSGL} Makefile bin
-	@mkdir -p bin
 	$(Q)$(SERVERLINK)
 
-bin/snis_client:	${CLIENTOBJS} ${SSGL} Makefile
-	@mkdir -p bin
+bin/snis_client:	${CLIENTOBJS} ${SSGL} Makefile bin
 	$(Q)$(CLIENTLINK)
 
 bin/snis_multiverse:	${MULTIVERSEOBJS} ${SSGL} Makefile bin
-	@mkdir -p bin
 	$(Q)$(MULTIVERSELINK)
 
 bin/snis_limited_client:	${LIMCLIENTOBJS} ${SSGL} Makefile bin
-	@mkdir -p bin
 	$(Q)$(LIMCLIENTLINK)
 
 ssgl/lsssgl:
@@ -903,20 +895,16 @@ ssgl/ssgl_server:
 	(cd ssgl ; ${MAKE} )
 
 bin/ssgl_server:	ssgl/ssgl_server bin
-	@mkdir -p bin
 	@cp ssgl/ssgl_server bin
 
 bin/lsssgl:	ssgl/lsssgl bin
-	@mkdir -p bin
 	@cp ssgl/lsssgl bin
 
 bin/snis_text_to_speech.sh:	snis_text_to_speech.sh bin
-	@mkdir -p bin
 	@cp snis_text_to_speech.sh bin/snis_text_to_speech.sh
 	@chmod +x bin/snis_text_to_speech.sh
 
 bin/mesh_viewer:	${SDLCLIENTOBJS} ${SSGL} Makefile bin
-	@mkdir -p bin
 	$(Q)$(SDLCLIENTLINK)
 
 bin/earthlike:	${OD}/earthlike.o ${ELOBJS} Makefile bin
