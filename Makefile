@@ -888,16 +888,14 @@ bin/snis_multiverse:	${MULTIVERSEOBJS} ${SSGL} Makefile bin
 bin/snis_limited_client:	${LIMCLIENTOBJS} ${SSGL} Makefile bin
 	$(Q)$(LIMCLIENTLINK)
 
-ssgl/lsssgl:
-	(cd ssgl ; ${MAKE} )
+ssgl/lsssgl: ${SSGL}
 
-ssgl/ssgl_server:
-	(cd ssgl ; ${MAKE} )
+ssgl/ssgl_server: ${SSGL}
 
-bin/ssgl_server:	ssgl/ssgl_server bin
+bin/ssgl_server: ${SSGL}
 	@cp ssgl/ssgl_server bin
 
-bin/lsssgl:	ssgl/lsssgl bin
+bin/lsssgl:	${SSGL}
 	@cp ssgl/lsssgl bin
 
 bin/snis_text_to_speech.sh:	snis_text_to_speech.sh bin
@@ -1107,10 +1105,10 @@ spelled_numbers:	spelled_numbers.c
 	$(CC) -g -DSPELLED_NUMBERS_TEST_CASE -o spelled_numbers spelled_numbers.c
 
 ${SSGL}:
-	(cd ssgl ; ${MAKE} )
+	(cd ssgl && ${MAKE} )
 
 mikktspace/mikktspace.o:
-	(cd mikktspace; ${MAKE} )
+	(cd mikktspace && ${MAKE} )
 
 mostly-clean:
 	rm -f ${SERVEROBJS} ${CLIENTOBJS} ${LIMCLIENTOBJS} ${MULTIVERSEOBJS} ${SDLCLIENTOBJS} ${SSGL} \
@@ -1122,8 +1120,8 @@ mostly-clean:
 	object_files/*.o bin/test-matrix  bin/test_solarsystem_config  bin/test-space-partition \
 	bin/device-io-sample-1 bin/print_ship_attributes bin/snis_test_audio bin/test_crater \
 	bin/test_key_value_parser bin/test_snis_dmx
-	( cd ssgl; ${MAKE} clean )
-	( cd mikktspace; ${MAKE} clean )
+	( cd ssgl && ${MAKE} clean )
+	( cd mikktspace && ${MAKE} clean )
 
 bin/test-marshal:	snis_marshal.c ${OD}/stacktrace.o Makefile bin
 	$(CC) -DTEST_MARSHALL -o test-marshal snis_marshal.c ${OD}/stacktrace.o
