@@ -401,10 +401,10 @@ DOCKING_PORT_FILES=${MODELSRCDIR}/starbase2.docking_ports.h \
 	${MODELSRCDIR}/starbase6.docking_ports.h \
 	${MODELSRCDIR}/starbase.docking_ports.h
 
-MANSRCDIR=.
+MANSRCDIR=./man
 MANPAGES=${MANSRCDIR}/snis_client.6.gz ${MANSRCDIR}/snis_server.6.gz \
 	${MANSRCDIR}/earthlike.1.gz \
-	${MANSRCDIR}/snis_text_to_speech.sh.6 ${MANSRCDIR}/snis_test_audio.1.gz ssgl/ssgl_server.6 snis_multiverse.6
+	${MANSRCDIR}/snis_text_to_speech.sh.6 ${MANSRCDIR}/snis_test_audio.1.gz ssgl/ssgl_server.6 ${MANSRCDIR}/snis_multiverse.6
 MANDIR=${DESTDIR}/${PREFIX}/share/man/man6
 
 DESKTOPDIR=${DESTDIR}/${PREFIX}/share/applications
@@ -1119,7 +1119,9 @@ mostly-clean:
 	bin/test-quat bin/test-fleet bin/test-mtwist bin/snis-device-io-sample-1 bin/check-endianness \
 	object_files/*.o bin/test-matrix  bin/test_solarsystem_config  bin/test-space-partition \
 	bin/device-io-sample-1 bin/print_ship_attributes bin/snis_test_audio bin/test_crater \
-	bin/test_key_value_parser bin/test_snis_dmx
+	bin/test_key_value_parser bin/test_snis_dmx \
+	${MANSRCDIR}/earthlike.1.gz  ${MANSRCDIR}/snis_client.6.gz  ${MANSRCDIR}/snis_server.6.gz  \
+	${MANSRCDIR}/snis_test_audio.1.gz
 	( cd ssgl && ${MAKE} clean )
 	( cd mikktspace && ${MAKE} clean )
 
@@ -1165,17 +1167,17 @@ bin/test_solarsystem_config:	test_solarsystem_config.c ${OD}/solarsystem_config.
 bin/test_crater:	$(OD)/test_crater.o $(OD)/crater.o $(OD)/mathutils.o $(OD)/mtwist.o ${OD}/png_utils.o bin
 	$(CC) -o $@ ${PNGCFLAGS} $(OD)/test_crater.o $(OD)/crater.o $(OD)/mtwist.o ${OD}/png_utils.o ${PNGLIBS} $(OD)/mathutils.o -lm
 
-snis_client.6.gz:	snis_client.6
-	gzip -9 - < snis_client.6 > snis_client.6.gz
+${MANSRCDIR}/snis_client.6.gz:	${MANSRCDIR}/snis_client.6
+	gzip -9 - < ${MANSRCDIR}/snis_client.6 > ${MANSRCDIR}/snis_client.6.gz
 
-snis_server.6.gz:	snis_server.6
-	gzip -9 - < snis_server.6 > snis_server.6.gz
+${MANSRCDIR}/snis_server.6.gz:	${MANSRCDIR}/snis_server.6
+	gzip -9 - < ${MANSRCDIR}/snis_server.6 > ${MANSRCDIR}/snis_server.6.gz
 
-earthlike.1.gz:	earthlike.1
-	gzip -9 - < earthlike.1 > earthlike.1.gz
+${MANSRCDIR}/earthlike.1.gz:	${MANSRCDIR}/earthlike.1
+	gzip -9 - < ${MANSRCDIR}/earthlike.1 > ${MANSRCDIR}/earthlike.1.gz
 
-snis_test_audio.1.gz:	snis_test_audio.1
-	gzip -9 - < snis_test_audio.1 > snis_test_audio.1.gz
+${MANSRCDIR}/snis_test_audio.1.gz:	${MANSRCDIR}/snis_test_audio.1
+	gzip -9 - < ${MANSRCDIR}/snis_test_audio.1 > ${MANSRCDIR}/snis_test_audio.1.gz
 
 bin/print_ship_attributes:	snis_entity_key_value_specification.h $(OD)/key_value_parser.o bin
 	$(CC) -o bin/print_ship_attributes print_ship_attributes.c $(OD)/key_value_parser.o
