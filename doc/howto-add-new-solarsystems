@@ -100,7 +100,7 @@ https://github.com/smcameron/gaseous-giganticus). Or you can use another program
 
 Rocky and Earth-like planets:
 
-  Earthlike planets: See howto-generate-earthlike-planets.txt
+  Earthlike planets: See doc/howto-generate-earthlike-planets.txt
 
   Rocky planets: These are done just like earthlike planets except:
                  1. you do not need any cloud textures
@@ -108,13 +108,13 @@ Rocky and Earth-like planets:
                     same land sample input texture for both land and water.
 		 3. You should use the --craters option to put craters in.
 
-  The command "./earthlike --help" will remind you how to run it.
+  The command "bin/earthlike --help" will remind you how to run it.
 
   For earthlike planets:
-  ./earthlike -B 25 -h heightdata.png -l land.png -w water.png --bumpsize 0.5 -o myplanet
+  bin/earthlike -B 25 -h heightdata.png -l land.png -w water.png --bumpsize 0.5 -o myplanet
 
   For more rocky, mars-like planets (a.png and b.png should both be land images):
-  ./earthlike -B 400 -b 1 -h heightdata.png -l ~/a.png -w ~/b.png -O 0 --bumpsize 0.5 \
+  bin/earthlike -B 400 -b 1 -h heightdata.png -l ~/a.png -w ~/b.png -O 0 --bumpsize 0.5 \
          --craters 250 -o myplanet
 
   heightdata.png is provided. I've not found a better texture, but feel free to try.
@@ -154,8 +154,8 @@ giganticus as follows:
   once the first output files have been produced (when gaseous giganticus prints out an
   "o") as follows:
 
-	  make mesh_viewer
-	  ./mesh_viewer -p your-planet-name
+	  make bin/mesh_viewer
+	  bin/mesh_viewer -p your-planet-name
 
   At first the planet will be kind of blurry, but after awhile, things will get more
   swirly and sharper. If you let it run for too long, things will start looking a bit
