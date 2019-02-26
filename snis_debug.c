@@ -111,8 +111,10 @@ void snis_debug_dump(char *cmd, struct snis_entity go[], int nstarbase_models,
 	printfn("-- VX, VY, VZ = %.2f, %.2f, %.2f", o->vx, o->vy, o->vz);
 	printfn("-- HEADING = %.2f", o->heading);
 	printfn("-- ALIVE = %hu", o->alive);
+#ifdef SNIS_SERVER_DATA
 	printfn("-- TIMESTAMP = %u", o->timestamp);
-	printfn("-- RESPAWN TIME = %u", o->timestamp);
+#endif
+	printfn("-- RESPAWN TIME = %u", o->respawn_time);
 	format_function_pointer(fnptraddr, (void (*)(void)) o->move);
 	printfn("-- MOVE FN %s", fnptraddr);
 	printfn("-- SDATA NAME = %s", o->sdata.name);
