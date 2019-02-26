@@ -1135,7 +1135,7 @@ mostly-clean:
 	bin/test_key_value_parser bin/test_snis_dmx \
 	${MANSRCDIR}/earthlike.1.gz  ${MANSRCDIR}/snis_client.6.gz  ${MANSRCDIR}/snis_server.6.gz  \
 	${MANSRCDIR}/snis_test_audio.1.gz
-	rmdir ${OD}
+	rm -fr ${OD}
 	( cd ssgl && ${MAKE} clean )
 	( cd mikktspace && ${MAKE} clean )
 
