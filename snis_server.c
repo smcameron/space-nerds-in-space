@@ -189,23 +189,21 @@ static struct passenger_data passenger[MAX_PASSENGERS];
 static int npassengers;
 
 static struct multiverse_server_info {
-	int sock;
-	uint32_t ipaddr;
-	uint16_t port;
-	pthread_t read_thread;
-	pthread_t write_thread;
-	pthread_cond_t write_cond;
-	struct packed_buffer_queue mverse_queue;
-	pthread_mutex_t queue_mutex;
-	pthread_mutex_t event_mutex;
-	pthread_mutex_t exit_mutex;
-	struct ssgl_game_server *mverse;
-	int mverse_count;
-	int have_packets_to_xmit;
-	int writer_time_to_exit;
-	int reader_time_to_exit;
+	int sock;			/* Socket to the snis_multiverse process */
+	uint32_t ipaddr;		/* IP address of snis_multiverse obtained from ssgl_server */
+	uint16_t port;			/* listening port of snis_multiverse obtained from ssgl_server */
+	pthread_t read_thread;		/* Thread that reads from snis_multiverse */
+	pthread_t write_thread;		/* Thread to write to snis_multiverse */
+	pthread_cond_t write_cond;	/* Used by thread writing to snis_multiverse */
+	struct packed_buffer_queue mverse_queue; /* queue of packets to be sent to snis_multiverse */
+	pthread_mutex_t queue_mutex;	/* mutex to protext mverse_queue */
+	pthread_mutex_t event_mutex;	/* mutex to protect write_cond */
+	pthread_mutex_t exit_mutex;	/* Used to protect writer_time_to_exit and reader_time_to_exit */
+	int have_packets_to_xmit;	/* How write_thread knows there are things in the queue to xmit */
+	int writer_time_to_exit;	/* How write_thread knows when to exit */
+	int reader_time_to_exit;	/* How read_thread knows when to exit */
 #define GAMEINSTANCESIZE (sizeof((struct ssgl_game_server *) 0)->game_instance)
-	char location[SSGL_LOCATIONSIZE];
+	char location[SSGL_LOCATIONSIZE]; /* The "location" string that multiverse registers with ssgl_server */
 } *multiverse_server = NULL;
 
 static char *solarsystem_name = DEFAULT_SOLAR_SYSTEM;
