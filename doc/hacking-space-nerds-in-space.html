@@ -95,70 +95,66 @@ pre{
 </ol>
 <li><a href="#snisserver">SNIS Server</a>
 <ol>
-<li>Overview
-<li>Main data structures
+<li><a href="#snisserveroverview">Overview</a>
+<li><a href="#snisserverdatastr">Main data structures</a>
 <ol>
-<li>bridgelist[] array
-<li>go[] array
-<li>client[] array
+<li><a href="#snisserverclientarr">client[] array</a>
+<li><a href="#snisserverbridgelist">bridgelist[] array</a>
+<li><a href="#snisservergo">go[] array</a>
 </ol>
-<li>Overview
 <li><a href="#snisserverthreads">Threads</a>
 <ol>
-<li>Listener thread
-<li>Client reader and writer threads
-<li>Multiverse reader and writer threads
-<li>SSGL thread
-<li>Main thread
+<li><a href="#snisserverlistenerthr">Listener thread</a>
+<li><a href="#sniserverreadwritethr">Client reader and writer threads</a>
+<li><a href="#snisservermvreadwritethr">Multiverse reader and writer threads</a>
+<li><a href="#snisserverssglthr">SSGL thread</a>
+<li><a href="#snisservermainthr">Main thread</a>
 <ol>
-<li>Initialization
-<li>Main Loop
+<li><a href="#snisservermaininit">Initialization</a>
+<li><a href="#snisservermainloop">Main Loop</a>
 <ol>
-<li>Tracking time
-<li>Moving objects
-<li>Processing Lua Commands
-<li>RTS AI
-<li>Updating Multiverse
+<li><a href="#snisservertime">Tracking time</a>
+<li><a href="#snisservermoveobj">Moving objects</a>
+<li><a href="#snisserverlua">Processing Lua Commands</a>
+<li><a href="#snisserverrtsai">RTS AI</a>
 </ol>
 <li>
 </ol>
 </ol>
-<li>Player ship systems
+<li><a href="#snisserverplayership">Player ship systems</a>
 <ol>
-<li>Power and coolant models
-<li>Collision detection
-<li>Player Ship movement
+<li><a href="#snisserverpwrcool">Power and coolant models</a>
+<li><a href="#snisservercollision">Collision detection</a>
+<li><a href="#snisserverplayershipmove">Player Ship movement</a>
 </ol>
-<li>NPC Ships
+<li><a href="#snisservernpcship">NPC Ships</a>
 <ol>
-<li>Movement
-<li>NPC ship AI
-<li>NPC Fleets
-<li>Hostility matrix
+<li><a href="#snisservernpcmove">Movement</a>
+<li><a href="#snisservernpcai">NPC ship AI</a>
+<li><a href="#snisservernpcfleet">NPC Fleets</a>
+<li><a href="#snisserverhostile">Hostility matrix</a>
 </ol>
-<li>Lua script execution and API
-<li>Tweakable variables
-<li>NPC Comms (starbases, mining bot, etc)
-<li>Natural Language Processing
-<li>RTS mode
-<li>Power / Coolant and Damage Control
-<li>Damage Control Robot AI
+<li><a href="#snisservertweak">Tweakable variables</a>
+<li><a href="#snsiservernpccomms">NPC Comms (starbases, mining bot, etc)</a>
+<li><a href="#snisservernlproc">Natural Language Processing</a>
+<li><a href="#snisserverrtsmode">RTS mode</a>
+<li><a href="#snisserverdamconai">Damage Control Robot AI</a>
 </ol>
 <li><a href="#snismultiverse">SNIS Mulitverse</a>
 <ol>
-<li>Overview
-<li>Main data structures
+<li><a href="#mvoverview">Overview</a>
+<li><a href="#mvdatastr">Main data structures</a>
 <li><a href="#snismultiversethreads">Threads</a>
 <ol>
-<li>Listener thread
-<li>SNIS Server Reader / Writer threads
-<li>SSGL thread
-<li>Main thread
+<li><a href="#mvlistenerthr">Listener thread</a>
+<li><a href="#mvreadwritethr">SNIS Server Reader / Writer threads</a>
+<li><a href="#mvssglthr">SSGL thread</a>
+<li><a href="#mvmainthr">Main thread</a>
 <ol>
-<li>Initialization
-<li>Registering with SSGL (lobby)
-<li>Wrangle SNIS Servers (autowrangler)
-<li>Checkpoint Data
+<li><a href="#mvmaininit">Initialization</a>
+<li><a href="#mvssglreg">Registering with SSGL (lobby)</a>
+<li><a href="#mvwrangler">Wrangle SNIS Servers (autowrangler)</a>
+<li><a href="#mvdatachkpt">Checkpoint Data</a>
 </ol>
 </ol>
 </ol>
@@ -1066,11 +1062,298 @@ as "expired". then sets per_solarsystem_textures_loaded = 0, and then the next t
 through the new textures will be loaded and the old ones will be discarded.
 
 <h2><a name="snisserver">SNIS Server</a></h2>
-<h3>Overview</h3>
-<p>
-<h3>Main Data Structures</h3>
-<h4>go[] array</h4>
-<p>
+<h3><a name="snisserveroverview">Overview<a/></h3>
+<p>snis_server runs a simulation of a solarsystem. You can run multiple instances
+of snis_server on a single machine, or on different machines. snis_server has no
+UI to speak of, all interaction with snis_server happens through snis_client.
+Each snis_client process connected to a snis_server is part of a bridge. Multiple
+bridges may exist within snis server, and each snis_client is part of exactly one
+of those bridges. As the simulation progresses, various information is sent to
+each snis_client process such as the power settings, coolant level, and damage
+of all the systems on the bridge, the ship's location and orientation in the solar
+system, the positions and orientations of all the NPC ships, asteroids, planets,
+black holes, etc. in the solar system.  The simulation ticks at 10Hz, and updates
+cycles are begun at 10Hz.
+
+<h3><a name="snisserverdatastr">Main Data Structures</a></h3>
+
+<h4><a name="snisserverclientarr">client[] array</a></h4>
+
+<p>This array defined in snis_server.c has one entry per connected snis_client process,
+and holds information about the client, such as the file descriptor for the TCP socket
+connected to the client, the threads for reading and writing to the client socket, a
+queue to contain packets to be sent to the client and a mutex to protect that queue,
+and on and on.
+
+<pre>
+static struct game_client {
+	int socket;		/* socket to connect snis_client process */
+	pthread_t read_thread;	/* thread for reading from snis_client */
+	pthread_t write_thread; /* thread for writing to snis_client */
+	struct packed_buffer_queue client_write_queue; /* queue of packets to be writtent to snis_client */
+	pthread_mutex_t client_write_queue_mutex;	/* mutex to protect client_write_queue */
+	uint32_t shipid;	/* ID of player ship for this snis_client */
+	uint32_t ship_index;	/* Index into go[] for player ship for this client */
+	uint32_t role;		/* bitmap of roles this snis_client has set */
+	uint32_t timestamp;	/* The universe_timestamp when this client was last updated, */
+				/* see queue_up_client_updates() */
+	int bridge;		/* index into bridgelist[] for the bridge this client is on. */
+	int debug_ai;		/* Whether or not to transmit NPC ai debug info to this client */
+	struct snis_entity_client_info *go_clients; /* ptr to array of size MAXGAMEOBJS. Contains a timestamp */
+				/* for each object indicating when that obj was last updated to this client */
+	struct snis_damcon_entity_client_info *damcon_data_clients; /* ptr to array of size MAXDAMCONENTITIES */
+				/* Contains timestamps for last update time of damcon objs for this client */
+	uint8_t refcount; /* count of threads using this client structure. When 0, can delete. see put_client(). */
+	int request_universe_timestamp; /* Used for sending timestamp samples to client to gauge latency */
+	char *build_info[2]; /* version/endianness etc. of client, see gather_build_info script, string1, and string2 */
+	uint32_t latency_in_usec; /* network latency, visible via demon screen */
+	int waypoints_dirty;	/* trigger update of waypoints to client. If one client updates */
+				/* waypoints, all clients need to see that update */
+	uint8_t current_station; /* what station (displaymode) client is currently on. Mostly the server doesn't */
+				/* need to know this, but uses it for demon serverside builtin commands "clients" */
+				/* "lockroles", and "rotateroles" */
+#define COMPUTE_AVERAGE_TO_CLIENT_BUFFER_SIZE 0
+#if COMPUTE_AVERAGE_TO_CLIENT_BUFFER_SIZE
+	uint64_t write_sum;	/* Statistics about data written to client */
+	uint64_t write_count;
+#endif
+} client[MAXCLIENTS];
+static int nclients = 0; /* number of entries in client[] that are active */
+#define client_index(client_ptr) ((long) ((client_ptr) - &amp;client[0]))
+static pthread_mutex_t client_mutex = PTHREAD_MUTEX_INITIALIZER; /* protects client[] array */
+</pre>
+
+<h4><a name="snisserverbridgelist">bridgelist[] array</a></h4>
+
+<p>There is one element of the bridgelist array for each bridge. When the first
+snis_client instance for a particular bridge connects to snis_server, a new element
+is created. Subsequently connecting snis_client instances for that bridge share
+the same element. The bridgelist[] array is defined in snis_server.c.
+
+<pre>
+static struct bridge_data {
+	unsigned char shipname[20];	/* Name of this ship */
+	unsigned char password[20];	/* Password for this ship (plaintext) */
+	uint32_t shipid;		/* ID of this ship */
+	struct damcon_data damcon;	/* All the damage control objects for this ship */
+	int last_incoming_fire_sound_time; /* prevents incoming fire warning from sounding too frequently */
+	double warpx, warpy, warpz;	/* Holds coordinates related to warp drive. See maybe_do_player_warp() and */
+					/* do_engage_warp_drive() */
+	union vec3 warpv;		/* warp vector. 1/50th of the distance of the warp in direction of warp */
+	int warptimeleft;		/* How many ticks left for warp travel? See maybe_do_player_warp() */
+	int comms_channel;		/* Current channel number comms will transmit/recieve on */
+	struct npc_bot_state npcbot;	/* Context for NPC comms to maintain conversation */
+	int last_docking_permission_denied_time; /* rate limits "docking permission denied" messages */
+	uint32_t science_selection;	/* ID of currently selected item on science station */
+	int current_displaymode;	/* what the main screen(s) of the bridge are currently showing, */
+					/* See process_role_onscreen() */
+	struct ssgl_game_server warp_gate_ticket; /* ssgl server entry of the snis_server to which player has */
+					/* bought a warp gate ticket. */
+	unsigned char pwdhash[PWDHASHLEN]; /* hash of ship name+password+salt, used to identify ships */
+					/* to/from multiverse server */
+	int verified; /* whether this bridge has verified with multiverse server */
+#define BRIDGE_UNVERIFIED 0
+#define BRIDGE_VERIFIED 1
+#define BRIDGE_FAILED_VERIFICATION 2
+#define BRIDGE_REFUSED 3
+	int requested_verification; /* Whether we've requested verification from multiverse server yet */
+	int requested_creation; /* whether user has requested creating new ship */
+	int nclients;			/* Number of connected clients that are part of this bridge */
+	struct player_waypoint waypoint[MAXWAYPOINTS]; /* list of science waypoints created for this bridge */
+	int selected_waypoint;		/* Currently selected waypoint (or -1 if none) for this bridge */
+	int nwaypoints;			/* Number of waypoints created for this bridge */
+	int warp_core_critical_timer;	/* Time (ticks) until warp core explodes */
+	int warp_core_critical;		/* Is the warp core going to explode? */
+	char last_text_to_speech[256];  /* last uttered speech, used to answer "/computer what", See nl_repeat_n() */
+	uint32_t text_to_speech_volume_timestamp; /* last time we adjusted computer volume */
+	float text_to_speech_volume;	/* Current computer volume */
+	uint8_t active_custom_buttons;	/* Number of active custom buttons, see l_enable_custom_button() */
+	char custom_button_text[6][16]; /* Text of custom buttons. See queue_up_client_custom_buttons(), */
+					/* and l_set_custom_button_label() */
+	/* ship id chips are used for collecting bounties */
+#define MAX_SHIP_ID_CHIPS 5
+	uint32_t ship_id_chip[MAX_SHIP_ID_CHIPS]; /* The ship ID chips players on this bridge have collected */
+	int nship_id_chips;		/* Count of ship ID chips, number of ship_id_chip[] entries that are valid */
+} bridgelist[MAXCLIENTS];
+static int nbridges = 0;		/* Number of elements present in bridgelist[] */
+
+</pre>
+
+<h4><a name="snisservergo">go[] array</a></h4>
+
+<p>The "go" array, or "game object" array is a list of all the things with which you can
+interact in the space simulation.  It contains one element for each NPC spaceship, starbase,
+asteroid, planet, black hole, nebula, etc. within the game. The go[] array is declared in
+snis_server.c.  The go[] array is protected from concurrent access by the universe_mutex.
+
+<pre>
+static struct snis_object_pool *pool;
+static struct snis_entity go[MAXGAMEOBJS];
+#define go_index(snis_entity_ptr) ((long) ((snis_entity_ptr) - &amp;go[0]))
+</pre>
+
+The type of each element is struct snis_entity, which is defined in snis.h
+
+<pre>
+struct snis_entity {
+	uint32_t id;		/* unique ID of the object (unique within snis_server, and snis_client */
+	double x, y, z;		/* coordinates of object in space */
+	double vx, vy, vz;	/* velocity of object */
+	double heading;		/* heading of the object (archaic?) */
+	uint16_t alive;		/* when 0, object is no longer alive */
+	uint32_t type;		/* what kind of object is this? See OBJTYPE_* defines, above */
+	uint32_t respawn_time;	/* Used in different ways for respawning player ship, and NPC ships */
+	union type_specific_data tsd; /* data particular to the type of object */
+	move_function move;	/* function to move the object. Varies by object type, and there */
+				/* are client and server versions of these functions */
+	struct snis_entity_science_data sdata; /* "science" data. Name, type, and shield data */
+	union quat orientation; /* Orientation of an object */
+
+#ifdef SNIS_SERVER_DATA
+	/* This data only exists on the server */
+	uint32_t timestamp;	/* last tick something important about this object changed. Used */
+				/* to know if we need to transmit something about this object to */
+				/* clients */
+	struct space_partition_entry partition; /* Used for collision detection, see space-part.h, space-part.c */
+#endif
+
+#ifdef SNIS_CLIENT_DATA
+	/* This data only exists on the client */
+	struct entity *entity;	/* Corresponding renderer entity */
+	int nupdates;		/* number of times this object has been updated. Used for interpolation */
+				/* see move_object() in snis_client.c */
+	double updatetime[SNIS_ENTITY_NUPDATE_HISTORY]; /* last 4 update timestamps */
+	union vec3 r[SNIS_ENTITY_NUPDATE_HISTORY];	/* last 4 object x,y,z positions */
+	union quat o[SNIS_ENTITY_NUPDATE_HISTORY];	/* last 4 object orientations */
+
+	struct snis_entity *shading_planet;	/* if object is in shadow of planet, shading_planet will */
+				/* point to the planet that casts the shadow on the object. Otherwise null */
+				/* See calls to entity_set_in_shade() in snis_client.c, and in_shade parameter */
+				/* of graph_dev_raster_texture() in graph_dev_opengl.c */
+#endif
+	char ai[6];		/* really hacky NPC AI debug data */
+};
+</pre>
+<h3><a name="snisserverthreads">Threads</a></h3>
+<h4><a name="snisserverlistenerthr">Listener thread</a></h4>
+<p>The listener thread is started by start_listener_thread() in snis_server.c, called
+from main(). The thread function is listener_thread_fn() in snis_server.c. It enters
+an indefinite loop in which it listens on a random port for incoming connections.
+When an incoming connection is accepted, service_connection() in snis_server.c is
+called. service_connection() selects a free entry in the client[] array for this
+client and initializes it, and creates two new threads, one to read and one to
+write to the new client connection (See below).
+
+<p>Meanwhile, once the listener thread has been started, the randomly selected portnumber
+is communicated to ssgl_server elsewhere (See below).
+
+<h4><a name="sniserverreadwritethr">Client reader and writer threads</a></h4>
+
+<p>Threads to read and write to clients are started by service_connection() called
+from listener_thread_fn() as described above. The read thread function is per_client_read_thread()
+which is passed a pointer to the correct element of the client[] array. The write thread
+function is per_client_write_thread(), also passed the pointer to client[] element.
+
+<p>per_client_read_thread() enters an indefinite loop in which it calls process_instructions_from_client().
+process_instructions_from_client() reads an opcode from the client via c-&gt;socket,
+then a big switch statement calls the appropriate
+function to process that opcode (which involves reading any operands the opcode might have, and doing
+whatever the opcode requires.)
+
+<p>per_client_write_thread() periodically transmits data to the client. It enters an indefinite
+loop then checks the current time and either sleeps until it is time to transmit data, or transmits
+data then sleeps (up to 1/40th of a second (25ms)) until the next time to transmit data. To
+transmit the data, it calls queue_up_client_updates() followed by write_queued_updates_to_client().
+
+<p>queue_up_client_updates() loops through all the elements of the go[] array and queues up
+updates for that object to the client if there is anything to update (which depends on a
+few things, but mostly on the object's modification timestamp and the last time the object's
+data was sent to the client. Remember, each element of the client[] array contains a go_clients[]
+array which tracks the last time that object was sent to that client).
+
+<p>queue_up_client_object_update() is the function to package up an object's data to be sent
+to the client. It's a big switch statement based on object type which packages up each type
+of object's data.
+
+<p>queue_up_client_object_sdata() packages up each objects "sdata" (science data).
+
+<p>And more data is queued up:
+
+<pre>
+	queue_up_client_damcon_update(c);
+	queue_up_client_waypoint_update(c);
+	queue_up_client_rts_update(c);
+	queue_up_client_volume_update(c);
+	queue_up_client_custom_buttons(c);
+</pre>
+
+<p>At the bottom of all (or most) of these queue_up_client_blah_blah() functions is pb_queue_to_client()
+to add generic packets into the client's outgoing queue. ("pb" stands for packed_buffer). The queue
+that all this data is packed into is c-&gt;client_write_queue,
+where c is a pointer to an element of the client[] array. The queue is protected by
+c-&gt;client_write_queue_mutex.
+
+<p>Once all the data is queued up, per_client_write_thread() calls write_queued_updates_to_client().
+A timestamp opcode is put at the head of the client write queue for latency measuring purposes, and
+then all the packed buffers in the client write queue are combined into a single giant packed buffer.
+Then this giant packed buffer is written into the client socket via snis_writesocket() in
+snis_socket_io.c
+
+<p>Note that per_client_write_thread() is not the only way that
+data may enter the per-client write queues. For example, if a torpedo moves and hits a player ship,
+then, among other things, an opcode to play a sound will be sent to the player ship
+(see snis_queue_add_sound()) and this happens outside of per_client_write_thread(). That is to say,
+when per_client_write_thread transmits the contents of c-&gt;client_write_queue to the client,
+there are likely things in that queue that per_client_write_thread did not put there.
+
+<h4><a name="snisservermvreadwritethr">Multiverse reader and writer threads</a></h4>
+
+<p>snis_multiverse facilitates players traversing from one solarsystem to another,
+and for preserving ship state between snis_client invocations, and for ensuring that
+players don't create a new ship with the same name and password as an existing ship.
+
+<p>snis_server must communicate with snis_multiverse and snis_client(s) to make
+all this happen.
+
+<p>The multiverse reader thread function is multiverse_reader() in snis_server.c.
+It is started from connect_to_multiverse() in snis_server.c which is in turn called
+from servers_changed_cb() in snis_server.c. (See below).
+
+<p>multiverse_reader() enters an indefinite loop in which it reads an opcode
+from the snis_multiverse socket, then via a switch statement, calls an appropriate
+function to process that opcode and its operands.
+
+<p>There are only a few opcodes that snis_multiverse sends to snis_server,
+defined in snis_multiverse.h.
+
+<p>the multiverse writer thread function is multiverse_writer() in snis_server.c.
+It is started from connect_to_multiverse(0 in snis_server.c which is in turn called
+from servers_changed_cb() in snis_server.c. multiverse_writer just loops, waiting
+for packets to be queued, and then writing those packets to the multiverse server.
+Packets are queued elsewhere via queue_to_multiverse().
+
+<p>There is a rather horrendously complicated handshaking that happens between
+snis_server and snis_multiverse to determine what to do. If the player has
+just traversed a warpgate into a new solarsystem, snis_multiverse must transmit
+the bridge state to be carried over from the old snis_server to the bridge in
+the new snis_server.  Otherwise, we're starting fresh in a snis_server instance,
+and snis_server must transmit the bridge state to snis_multiverse.  There's some
+verification of intentions regarding creating a new ship vs. joining an existing
+ship that happens as well.
+
+<p>TODO: describe this horrendously complicated stuff more clearly.
+
+<h4><a name="snisserverssglthr">SSGL thread (Lobby thread)</a></h4>
+
+<p>There is a thread (lobbythread) in snis_server.c created by register_with_game_lobby()
+by calling ssgl_register_gameserver().  This thread periodically sends the IP
+address and port that snis_server is listening on, along with some other information
+(e.g. some identifying strings like the solarsystem name) to the ssgl_server process.
+This happens in update_lobby_thread() in ssgl/ssgl_register_gameserver.c
+
+<p>By this means ssgl_server maintains a current list of running snis_servers.
+
+<h4><a name="snisservermainthr">Main thread</a></h4>
 
 <h2><a name="snismultiverse">SNIS Multiverse</a></h2>
 <h3>Overview</h3>
