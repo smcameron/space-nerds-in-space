@@ -18565,6 +18565,8 @@ static int process_build_info(struct game_client *c)
 		return rc;
 	if (x != 0 && x != 1)
 		return -1;
+	if (buflen > 256)
+		return -1;
 	rc = snis_readsocket(c->socket, data, buflen);
 	if (rc != 0)
 		return rc;

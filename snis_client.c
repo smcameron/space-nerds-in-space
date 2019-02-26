@@ -7768,16 +7768,27 @@ static void request_universe_timestamp(void);
 
 static void send_build_info_to_server(void)
 {
-	char *buildinfo1 = BUILD_INFO_STRING1;
-	char *buildinfo2 = BUILD_INFO_STRING2;
+	char *buildinfo1 = strdup(BUILD_INFO_STRING1);
+	char *buildinfo2 = strdup(BUILD_INFO_STRING2);
 	struct packed_buffer *pb;
+	int len1 = strlen(buildinfo1);
+	int len2 = strlen(buildinfo2);
+
+	if (len1 > 255)
+		len1 = 255;
+	if (len2 > 255)
+		len2 = 255;
+	buildinfo1[len1] = '\0';
+	buildinfo2[len2] = '\0';
 
 	pb = packed_buffer_allocate(strlen(buildinfo1) + strlen(buildinfo2) + 20);
-	packed_buffer_append(pb, "bbw", OPCODE_UPDATE_BUILD_INFO, 0, strlen(buildinfo1) + 1);
-	packed_buffer_append_raw(pb, buildinfo1, (unsigned short) strlen(buildinfo1) + 1);
-	packed_buffer_append(pb, "bbw", OPCODE_UPDATE_BUILD_INFO, 1, strlen(buildinfo2) + 1);
-	packed_buffer_append_raw(pb, buildinfo2, (unsigned short) strlen(buildinfo2) + 1);
+	packed_buffer_append(pb, "bbw", OPCODE_UPDATE_BUILD_INFO, 0, len1 + 1);
+	packed_buffer_append_raw(pb, buildinfo1, (unsigned short) len1 + 1);
+	packed_buffer_append(pb, "bbw", OPCODE_UPDATE_BUILD_INFO, 1, len2 + 1);
+	packed_buffer_append_raw(pb, buildinfo2, (unsigned short) len2 + 1);
 	queue_to_server(pb);
+	free(buildinfo2);
+	free(buildinfo1);
 }
 
 static void snis_client_cross_check_opcodes(void)
