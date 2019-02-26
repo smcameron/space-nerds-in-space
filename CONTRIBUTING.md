@@ -29,15 +29,17 @@ How can I help?
 1. Do you know how to hack on C code? Will your employer let you contribute to open source projects?
    Maybe hacking on the Space Nerds In Space code is something you'd be interested in.
 
-TODO: figure out how to help people know how to contribute
-
 Jump in and start hacking... But!  Try to keep your commits sane, and make them change only one logical thing at a time (this does not mean only change one file, it is more like, make it add only one feature).  Each commit should build and work.  I have found [stacked git](http://www.procode.org/stgit/) very helpful for making sane commits, but other people have managed to get more or less the same functionality using git stashes, I think.  But, if you make a mess of it, but the code is still working and
 good, you can still try to send it to me, and I might be able to fix up the patches.
+
+
 
 Getting to know the code
 ------------------------
 
-TODO: put a better explanation here.
+**[HERE IS A DOCUMENT EXPLAINING THE CODE: doc/hacking-space-nerds-in-space.html](http://htmlpreview.github.io/?https://github.com/smcameron/space-nerds-in-space/blob/master/doc/hacking-space-nerds-in-space.html)**
+
+TODO: put a better explanation here, incorporate what's below into the above doc.
 
 There are two main pieces where most of the work is happening.  The snis_server is the place where the simulation of the universe, and all significant actions by game entities occurs.  The snis_client is what the players interact with directly, and where requests are made of the server (e.g. "please crank up the warp drive to warp 10.") and where responses from the server are accepted and interpreted and rendered ("warp drive cranked up to 7 because engineering deprived you a some amount of power").
 
