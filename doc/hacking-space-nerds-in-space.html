@@ -108,6 +108,7 @@ pre{
 <li><a href="#sniserverreadwritethr">Client reader and writer threads</a>
 <li><a href="#snisservermvreadwritethr">Multiverse reader and writer threads</a>
 <li><a href="#snisserverssglthr">SSGL thread</a>
+<li><a href="#snisserversrvrtrkr">Server Tracker thread</a>
 <li><a href="#snisservermainthr">Main thread</a>
 <ol>
 <li><a href="#snisservermaininit">Initialization</a>
@@ -1234,8 +1235,8 @@ struct snis_entity {
 	char ai[6];		/* really hacky NPC AI debug data */
 };
 </pre>
-<h3><a name="snisserverthreads">Threads</a></h3>
-<h4><a name="snisserverlistenerthr">Listener thread</a></h4>
+<h3><a name="snisserverthreads">snis_server Threads</a></h3>
+<h4><a name="snisserverlistenerthr">snis_server Listener thread</a></h4>
 <p>The listener thread is started by start_listener_thread() in snis_server.c, called
 from main(). The thread function is listener_thread_fn() in snis_server.c. It enters
 an indefinite loop in which it listens on a random port for incoming connections.
@@ -1247,7 +1248,7 @@ write to the new client connection (See below).
 <p>Meanwhile, once the listener thread has been started, the randomly selected portnumber
 is communicated to ssgl_server elsewhere (See below).
 
-<h4><a name="sniserverreadwritethr">Client reader and writer threads</a></h4>
+<h4><a name="sniserverreadwritethr">snis_server Client reader and writer threads</a></h4>
 
 <p>Threads to read and write to clients are started by service_connection() called
 from listener_thread_fn() as described above. The read thread function is per_client_read_thread()
@@ -1306,7 +1307,7 @@ then, among other things, an opcode to play a sound will be sent to the player s
 when per_client_write_thread transmits the contents of c-&gt;client_write_queue to the client,
 there are likely things in that queue that per_client_write_thread did not put there.
 
-<h4><a name="snisservermvreadwritethr">Multiverse reader and writer threads</a></h4>
+<h4><a name="snisservermvreadwritethr">snis_server Multiverse reader and writer threads</a></h4>
 
 <p>snis_multiverse facilitates players traversing from one solarsystem to another,
 and for preserving ship state between snis_client invocations, and for ensuring that
@@ -1343,7 +1344,7 @@ ship that happens as well.
 
 <p>TODO: describe this horrendously complicated stuff more clearly.
 
-<h4><a name="snisserverssglthr">SSGL thread (Lobby thread)</a></h4>
+<h4><a name="snisserverssglthr">snis_server SSGL thread (Lobby thread)</a></h4>
 
 <p>There is a thread (lobbythread) in snis_server.c created by register_with_game_lobby()
 by calling ssgl_register_gameserver().  This thread periodically sends the IP
@@ -1353,7 +1354,68 @@ This happens in update_lobby_thread() in ssgl/ssgl_register_gameserver.c
 
 <p>By this means ssgl_server maintains a current list of running snis_servers.
 
+<h4><a name="snisserversrvrtrkr">snis_server Server Tracker thread</a></h4>
+
+<p>main() calls server_tracker_start() in snis_server_tracker.c which
+starts the server tracker thread.
+
+<p>The server tracker thread connects to the lobby server, and maintains
+two lists, one for the current snis_servers and one for the current
+snis_multiverse servers.  It updates these lists (by polling the lobby
+server) every 20 seconds (unless either list is empty, in which case it
+updates these lists every 1 second. Whenever either list changes (what
+it receives from the lobby server is different than what it previously
+had recorded) it will call the callback function, servers_changed_cb()
+in snis_server.c.
+
+<p>servers_changed_cb() will cause snis_server to (possibly disconnect
+from an old multiverse_server and then) connect to the current multiverse
+server via connect_to_multiverse().
+
+<p>servers_changed_cb() will also call update_starmap() if the list of
+snis_servers has changed, which will update the starmap[] array and
+mark it dirty (so it will be transmitted to snis_client(s)).
+
+<p>The server tracker thread runs until server_tracker_stop() is called.
+
 <h4><a name="snisservermainthr">Main thread</a></h4>
+
+<p>The main thread of snis_server.c obviously starts with main().
+In the beginning, there is a lot of initialization and reading config
+files, processing command line options etc, and then the universe is
+created by calling make_universe() which populates the go[] array
+with a variety of objects.
+
+<p>The listener thread is started, it registers with ssgl_server and creates
+the lobby thread and server tracker thread, then it enters the main loop,
+near the bottom of main().
+
+<p>In the main loop, it gets the current time and then either waits for
+the next tick (10Hz) or does the following:
+
+<pre>
+	move_objects(nextTime, discontinuity);
+	process_lua_commands();
+	rts_ai_run();
+	update_multiverse_bridge_count(currentTime);
+</pre>
+
+<p>move_objects loops through all the live go[] elements and calls their go[i]->&gt;move()
+function, and for player ship objects (OBJTYPE_SHIP1), possibly queues the current
+bridge state to be sent to snis_multiverse. It may respawn dead player ships.
+Then it moves all the damage control entities on all the bridges. Then it handles
+Lua comms transmissions, timers, callbacks, and proximity checks.
+
+<p>process_lua_commands() executes any lua scripts that are queued up.
+
+<p>rts_ai_run() runs the real-time-strategy AI, if rts_mode is turned on.
+
+<p>update_multiverse_bridge_count() queues the current number of bridges running
+in this snis_server instance to be sent to snis_multiverse. (This is to allow
+snis_multiverse to "autowrangle" (automatically start and stop) snis_server instances.
+When the number of bridges in a snis_server instance drops to zero, and the snis_server
+instance is not adjacent to any other snis_server instance with at least one bridge
+running, then snis_multiverse can safely shut down that snis_server instance.)
 
 <h2><a name="snismultiverse">SNIS Multiverse</a></h2>
 <h3>Overview</h3>
