@@ -364,8 +364,12 @@ struct cargo_bay_info {
 
 #define ATMOSPHERE_DAMAGE_FACTOR (0.1)
 
+/* TODO: we use the same struct ship_data for the player ship and for NPC ships
+ * The player ship uses a lot more of the stuff though. We should probably make a
+ * slimmer structure for the NPC ships.
+ */
 struct ship_data {
-	uint32_t torpedoes;
+	uint32_t torpedoes; /* Number of torpedoes left to fire (used by player ships only) */
 #define TORPEDO_LIFETIME 40
 #define TORPEDO_LOAD_SECONDS 3
 #define TORPEDO_VELOCITY (90.0)
@@ -417,8 +421,8 @@ struct ship_data {
 #define LASER_DAMAGE_MAX (4)
 #define LASER_PROJECTILE_BOOST 20.0
 
-	uint32_t power;
-	double velocity;
+	uint32_t power;		/* Not sure this is *really* used anymore since the power model went in */
+	double velocity;	/* current speed of the ship */
 #define STANDARD_ORBIT_RADIUS_FACTOR (1.1)
 #define MIN_PLAYER_VELOCITY (0.1)
 #define MAX_PLAYER_VELOCITY (30.0)
@@ -427,8 +431,8 @@ struct ship_data {
 #define MAX_SPACEMONSTER_ACCEL 2.0
 #define PLAYER_VELOCITY_DAMPING (0.97)
 #define PLAYER_VELOCITY_INCREMENT (1.0)
-	double yaw_velocity, pitch_velocity, roll_velocity;
-	double desired_velocity;
+	double yaw_velocity, pitch_velocity, roll_velocity; /* in radians / tick */
+	double desired_velocity;	/* desired speed. velolocity is pushed towards desired_velocity over time */
 #define PLAYER_WARP_SPINUP_TIME 85 /* 8.5 seconds */
 #define PLAYER_ORIENTATION_DAMPING (0.85)
 #define DAMPING_SUPPRESSION_DECAY (0.98)
@@ -449,12 +453,12 @@ struct ship_data {
 #define GUN_YAW_INCREMENT (3.5 * PI / 180.0)
 #define GUN_YAW_INCREMENT_FINE (0.5 * PI / 180.0)
 #define GUN_YAW_DAMPING 0.1
-	double gun_yaw_velocity;
+	double gun_yaw_velocity; /* we can probably get rid of this since weap_orientation exists */
 #define MAX_SCI_YAW_VELOCITY (15 * PI / 180.0)
 #define SCI_YAW_INCREMENT (3.5 * PI / 180.0)
 #define SCI_YAW_INCREMENT_FINE (0.5 * PI / 180.0)
 #define SCI_YAW_DAMPING 0.45
-	double sci_heading;
+	double sci_heading; /* Angle short range science beam is aiming, radians */
 #define MAX_SCI_BW_YAW_VELOCITY (85 * PI / 180.0)
 #define SCI_BW_YAW_INCREMENT (1 * PI / 180.0)
 #define SCI_BW_YAW_INCREMENT_FINE (0.2 * PI / 180.0)
@@ -463,116 +467,127 @@ struct ship_data {
 #define MAX_SCIENCE_SCREEN_RADIUS (XKNOWN_DIM / 3.0)
 #define MIN_SCIENCE_SCREEN_RADIUS (XKNOWN_DIM / 45.0)
 #define SCIENCE_SHORT_RANGE (0.08 * XKNOWN_DIM)
-	double sci_beam_width;
-	double sci_yaw_velocity;
-	union quat sciball_orientation;
-	union quat sciball_o[SNIS_ENTITY_NUPDATE_HISTORY];
-	double sciball_yawvel, sciball_pitchvel, sciball_rollvel;
-	union quat weap_orientation, weap_o[SNIS_ENTITY_NUPDATE_HISTORY];
-	double weap_yawvel, weap_pitchvel; /* no roll for weapons */
-	uint8_t torpedoes_loaded;
-	uint8_t torpedoes_loading;
-	uint16_t torpedo_load_time;
-	uint8_t phaser_bank_charge;
+	double sci_beam_width;		/* width of short range science beam in radians */
+	double sci_yaw_velocity;	/* radians / tick */
+	union quat sciball_orientation;	/* orientation of long range science ball */
+	union quat sciball_o[SNIS_ENTITY_NUPDATE_HISTORY]; /* history of science ball orientation */
+	double sciball_yawvel, sciball_pitchvel, sciball_rollvel; /* radians / tick */
+	union quat weap_orientation, weap_o[SNIS_ENTITY_NUPDATE_HISTORY]; /* weapons orientation + history */
+	double weap_yawvel, weap_pitchvel; /* no roll for weapons, radians / tick */
+	uint8_t torpedoes_loaded;	/* 1 means torpedo is loaded, 0 not loaded */
+	uint8_t torpedoes_loading;	/* 1 means torpedo is currently loading, 0 means not currently loading */
+	uint16_t torpedo_load_time;	/* ticks remaining before torpedo finishes loading */
+	uint8_t phaser_bank_charge;	/* current level of phaser bank charge, 0 - 255 */
 /* These values are for the player ship, RTS units are different see rts_unit_data.h */
 #define FUEL_DURATION (10.0) /* minutes */
 #define FUEL_UNITS (FUEL_DURATION * 60.0 * 30.0)
 #define FUEL_CONSUMPTION_UNIT ((uint32_t) (UINT_MAX / FUEL_UNITS))
-	uint32_t fuel;
+	uint32_t fuel;			/* amount of fuel on the ship.  UINT_MAX == full fuel */
 #define OXYGEN_DURATION (4.0) /* minutes */
 #define OXYGEN_UNITS (OXYGEN_DURATION * 60.0 * 30.0)
 #define OXYGEN_CONSUMPTION_UNIT ((uint32_t) (UINT_MAX / OXYGEN_UNITS))
 #define OXYGEN_PRODUCTION_UNIT (1.8 * OXYGEN_CONSUMPTION_UNIT)
 #define OXYGEN_REPLENISHMENT_UNIT OXYGEN_CONSUMPTION_UNIT
-	uint32_t oxygen;
-	uint8_t rpm;
-	uint8_t throttle;
-	uint8_t temp;
+	uint32_t oxygen;		/* amount of oxygen available, UINT_MAX = full oxygen */
+	uint8_t rpm;			/* Not sure this is really used anymore */
+	uint8_t throttle;		/* Not sure this is really used anymore */
+	uint8_t temp;			/* displayed, but not really used, I think */
 	uint8_t shiptype; /* same as snis_entity_science_data subclass */
-	uint8_t scizoom;
-	uint8_t weapzoom;
-	uint8_t navzoom;
-	uint8_t mainzoom;
-	uint8_t warpdrive;
-	uint8_t requested_warpdrive;
-	uint8_t requested_shield;
-	uint8_t missile_count;
-	uint8_t phaser_wavelength;
-	uint8_t phaser_charge;
+	uint8_t scizoom;		/* Controlled by science range slider, shared by LRS and SRS */
+	uint8_t weapzoom;		/* I think this is not used anymore. */
+	uint8_t navzoom;		/* navigation zoom */
+	uint8_t mainzoom;		/* main screen zoom */
+	uint8_t warpdrive;		/* warp drive setting on navigation screen */
+	uint8_t requested_warpdrive;	/* Not sure this is really used anymore */
+	uint8_t requested_shield;	/* Not sure this is really used anymore */
+	uint8_t missile_count;		/* How many missiles on board */
+	uint8_t phaser_wavelength;	/* wavelength of phaser weapon */
+	uint8_t phaser_charge;		/* charge of phaser weapon */
 #define WARP_CORE_STATUS_GOOD 0
 #define WARP_CORE_STATUS_EJECTED 1
 #define WARP_CORE_EXPLOSION_DAMAGE_DISTANCE 20000.0
 #define WARP_CORE_EXPLOSION_WEAPONS_FACTOR 30.0
-	uint8_t warp_core_status;
+	uint8_t warp_core_status;	/* 0 = good, 1 = ejected */
 #define MAX_AI_STACK_ENTRIES 5
-	struct ai_stack_entry ai[MAX_AI_STACK_ENTRIES];
-	int nai_entries;
-	double dox, doy, doz, dist; /* destination offsets and distance */
-	struct ship_damage_data damage;
-	struct command_data cmd_data;
-	struct damcon_data *damcon;
-	uint8_t view_mode;
-	double view_angle;
+	struct ai_stack_entry ai[MAX_AI_STACK_ENTRIES];	/* Brain states for NPC ships */
+	int nai_entries;		/* number of brain states in use */
+	double dox, doy, doz, dist;	/* destination offsets and distance */
+	struct ship_damage_data damage;	/* damage to each of the ships systems. Only used for player ships, not NPCs */
+	struct command_data cmd_data;	/* Used for demon builtin commands, somewhat archaic */
+	struct damcon_data *damcon;	/* All the objects on the damage control screen, robot, modules, etc. */
+	uint8_t view_mode;		/* mainscreen view mode (normal or weapons) toggle via shift-W key */
+	double view_angle;		/* I don't think this is really used. */
+
+	/* Power and coolant model data.  See power-model.h and power-model.c */
 	struct power_model_data power_data;
 	struct power_model *power_model;
 	struct power_model_data coolant_data;
 	struct power_model *coolant_model;
 	struct ship_damage_data temperature_data;
+
 	int32_t warp_time; /* time remaining until warp engages */
-	double scibeam_a1, scibeam_a2, scibeam_range; /* used server side to cache sci beam calcs */
-	uint8_t reverse;
-	uint8_t trident;
+	double scibeam_a1, scibeam_a2, scibeam_range; /* used server side to cache sci beam calcs (why?) */
+	uint8_t reverse;		/* Is the ship in reverse? */
+	uint8_t trident;		/* trident mode on nav screen, 1 = ABSOLUTE, 0 = RELATIVE */
 	uint8_t exterior_lights; /* 255 = on, 0 = off */
-	int32_t next_torpedo_time;
-#define ENEMY_TORPEDO_FIRE_INTERVAL (12 * 10) /* 12 seconds */
-	int32_t next_laser_time;
-#define ENEMY_LASER_FIRE_INTERVAL (6 * 10) /* 6 seconds */
-	int32_t next_missile_time;
-#define ENEMY_MISSILE_FIRE_INTERVAL (12 * 10) /* 12 seconds */
-	uint8_t lifeform_count;
+	int32_t next_torpedo_time;		/* rate limits NPC torpedo firing */
+#define ENEMY_TORPEDO_FIRE_INTERVAL (12 * 10)	/* 12 seconds */
+	int32_t next_laser_time;		/* rate limits NPC laser firing */
+#define ENEMY_LASER_FIRE_INTERVAL (6 * 10)	/* 6 seconds */
+	int32_t next_missile_time;		/* rate limits NPC missile firing */
+#define ENEMY_MISSILE_FIRE_INTERVAL (12 * 10)	/* 12 seconds */
+	uint8_t lifeform_count;			/* Lifeforms aboard NPC ship, displayed on science details */
 #define MAX_TRACTOR_DIST 5000.0 /* TODO: tweak this */
 #define TRACTOR_BEAM_IDEAL_DIST 200.0 /* TODO: tweak this */
 #define MAX_TRACTOR_VELOCITY 10.0
-	uint32_t tractor_beam; 
-	uint8_t damage_data_dirty;
-	union vec3 steering_adjustment;
-	float braking_factor;
+	uint32_t tractor_beam;	/* player ship only: 0xffffffff means tractor beam is off.  Otherwise it holds */
+				/* the ID of the object being tractored */
+				/* For the mining bot, the tractor beam is overloaded to hold the ID of */
+				/* salvaged derelicts ("chip id", for bounties) */
+				/* For other NPC ships, tractor_beam is unused, I believe */
+	uint8_t damage_data_dirty; /* used by snis_server to know if damage data needs to be transmitted to clients */
+	union vec3 steering_adjustment; /* NPC ship steering adjustments to avoid obstacles */
+	float braking_factor;		/* NPC ship braking adjustment to avoid obstacles */
 #define MAX_CARGO_BAYS_PER_SHIP 8
 	/* struct cargo_container_contents cargo[MAX_CARGO_BAYS_PER_SHIP]; */
-	struct cargo_bay_info cargo[MAX_CARGO_BAYS_PER_SHIP];
-	int32_t ncargo_bays;
+	struct cargo_bay_info cargo[MAX_CARGO_BAYS_PER_SHIP]; /* cargo bays */
+	int32_t ncargo_bays;					/* cargo bay count */
 #define INITIAL_WALLET_MONEY (2500.0f)
 #define INITIAL_RTS_WALLET_MONEY (0.0f)
 #define RTS_WALLET_REFRESH_PER_BASE_PER_TICK (5.0f)
 #define RTS_WALLET_REFRESH_MINIMUM (5.0f)
-	float wallet;
+	float wallet;		/* player's money */
 #define THREAT_LEVEL_FLEE_THRESHOLD 50.0 /* arrived at empirically */
-	float threat_level;
+	float threat_level;	/* calculated threat level used to drive NPC behavior */
 #define THRUST_FLARE_SCALE (0.15)
 #define MAX_THRUST_PORTS 5
-	int nthrust_ports;
-	struct entity *thrust_entity[MAX_THRUST_PORTS * 2];
-	uint8_t in_secure_area;
-	uint8_t emf_detector;
-	uint8_t auto_respawn;
+	int nthrust_ports;	/* number of thrusters */
+	struct entity *thrust_entity[MAX_THRUST_PORTS * 2]; /* entities for the flames coming from thrusters */
+	uint8_t in_secure_area; /* Are cops nearby? */
+	uint8_t emf_detector;	/* Used for EMF graph on comms screen */
+	uint8_t auto_respawn;	/* For NPC ships when they get killed. Lua scripts can make */
+				/* NPC ships that don't respawn */
 #define NAV_MODE_NORMAL 0
 #define NAV_MODE_STARMAP 1
-	uint8_t nav_mode;
-	uint32_t home_planet;
-	int flames_timer;
-	uint8_t docking_magnets;
-	uint8_t passenger_berths;
-	uint8_t mining_bots;
-	uint8_t rts_mode; /* Is rts mode active? */
-	uint32_t orbiting_object_id;
-	char mining_bot_name[20];
-	float nav_damping_suppression;
-	union quat computer_desired_orientation;
-	uint32_t computer_steering_time_left;
+	uint8_t nav_mode;	/* 1 = Normal navigation screen or 0 = starmap mode */
+	uint32_t home_planet;	/* ID of planet NPC ships originate from */
+	int flames_timer;	/* how many ticks before damaged NPC ship stops emitting flames. */
+	uint8_t docking_magnets;	/* 1 = magnets engaged, 0 magnets disengaged */
+	uint8_t passenger_berths;	/* count of passenger berths */
+	uint8_t mining_bots;		/* count of mining bots */
+	uint8_t rts_mode;		/* Is rts mode active? */
+	uint32_t orbiting_object_id;	/* Object ID of planet when in "standard orbit" */
+	char mining_bot_name[20];	/* Name of ship's mining bot */
+	float nav_damping_suppression;	/* 1.0 means suppress nav orientation damping, used on */
+					/* collisions to temporarily make steering difficult. */
+	union quat computer_desired_orientation; /* for computer steering, e.g. standard orbit, or */
+					/* "computer, set a course for the nearest starbase" */
+	uint32_t computer_steering_time_left; /* Remaining time for computer steering to be in effect */
+					/* used for "computer, set a course for the nearest starbase" */
 	uint8_t rts_active_button; /* which comms RTS button is currently active. 255 means none */
-	uint8_t alarms_silenced;
-	uint8_t missile_lock_detected;
-	uint32_t viewpoint_object;
+	uint8_t alarms_silenced;	/* on engineering screen. 1 means silenced, 0 means not silenced */
+	uint8_t missile_lock_detected;	/* Used for message on comms screen about incoming missiles. */
+	uint32_t viewpoint_object;	/* Used for mining bot remote camera. */
 	union quat current_hg_ant_orientation; /* current high gain antenna orientation */
 	union vec3 desired_hg_ant_aim; /* direction we would like high gain antenna to aim */
 #define COMMS_SHORT_RANGE 5000
