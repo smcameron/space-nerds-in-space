@@ -351,34 +351,40 @@ struct snis_damcon_entity_client_info {
 };
 
 static struct game_client {
-	int socket;
-	pthread_t read_thread;
-	pthread_t write_thread;
-	struct packed_buffer_queue client_write_queue;
-	pthread_mutex_t client_write_queue_mutex;
-	uint32_t shipid;
-	uint32_t ship_index;
-	uint32_t role;
-	uint32_t timestamp;
-	int bridge;
-	int debug_ai;
-	struct snis_entity_client_info *go_clients; /* ptr to array of size MAXGAMEOBJS */
+	int socket;		/* socket to connect snis_client process */
+	pthread_t read_thread;	/* thread for reading from snis_client */
+	pthread_t write_thread; /* thread for writing to snis_client */
+	struct packed_buffer_queue client_write_queue; /* queue of packets to be writtent to snis_client */
+	pthread_mutex_t client_write_queue_mutex;	/* mutex to protect client_write_queue */
+	uint32_t shipid;	/* ID of player ship for this snis_client */
+	uint32_t ship_index;	/* Index into go[] for player ship for this client */
+	uint32_t role;		/* bitmap of roles this snis_client has set */
+	uint32_t timestamp;	/* The universe_timestamp when this client was last updated, */
+				/* see queue_up_client_updates() */
+	int bridge;		/* index into bridgelist[] for the bridge this client is on. */
+	int debug_ai;		/* Whether or not to transmit NPC ai debug info to this client */
+	struct snis_entity_client_info *go_clients; /* ptr to array of size MAXGAMEOBJS. Contains a timestamp */
+				/* for each object indicating when that obj was last updated to this client */
 	struct snis_damcon_entity_client_info *damcon_data_clients; /* ptr to array of size MAXDAMCONENTITIES */
-	uint8_t refcount; /* how many threads currently using this client structure. */
-	int request_universe_timestamp;
-	char *build_info[2];
-	uint32_t latency_in_usec;
-	int waypoints_dirty;
-	uint8_t current_station; /* what station (displaymode) client is currently on */
+				/* Contains timestamps for last update time of damcon objs for this client */
+	uint8_t refcount; /* count of threads using this client structure. When 0, can delete. see put_client(). */
+	int request_universe_timestamp; /* Used for sending timestamp samples to client to gauge latency */
+	char *build_info[2]; /* version/endianness etc. of client, see gather_build_info script, string1, and string2 */ 
+	uint32_t latency_in_usec; /* network latency, visible via demon screen */
+	int waypoints_dirty;	/* trigger update of waypoints to client. If one client updates */
+				/* waypoints, all clients need to see that update */
+	uint8_t current_station; /* what station (displaymode) client is currently on. Mostly the server doesn't */
+				/* need to know this, but uses it for demon serverside builtin commands "clients" */
+				/* "lockroles", and "rotateroles" */
 #define COMPUTE_AVERAGE_TO_CLIENT_BUFFER_SIZE 0
 #if COMPUTE_AVERAGE_TO_CLIENT_BUFFER_SIZE
-	uint64_t write_sum;
+	uint64_t write_sum;	/* Statistics about data written to client */
 	uint64_t write_count;
 #endif
 } client[MAXCLIENTS];
-static int nclients = 0;
+static int nclients = 0; /* number of entries in client[] that are active */
 #define client_index(client_ptr) ((long) ((client_ptr) - &client[0]))
-static pthread_mutex_t client_mutex = PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t client_mutex = PTHREAD_MUTEX_INITIALIZER; /* protects client[] array */
 
 static struct bridge_data {
 	unsigned char shipname[20];
