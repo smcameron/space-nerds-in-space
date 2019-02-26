@@ -918,31 +918,46 @@ struct snis_entity_science_data {
 #endif
 };
 
+/* struct snis_entity is holds data about each entity in the game, like
+ * NPC ships, player ships, asteroids, planets, nebula, etc.
+ */
 struct snis_entity {
-	uint32_t id;
-	double x, y, z;
-	double vx, vy, vz;
-	double heading;
-	uint16_t alive;
-	uint32_t type;
-	uint32_t timestamp;
-	uint32_t respawn_time;
-	union type_specific_data tsd;
-	move_function move;
-	struct snis_entity_science_data sdata;
-	union quat orientation;
+	uint32_t id;		/* unique ID of the object (unique within snis_server, and snis_client */
+	double x, y, z;		/* coordinates of object in space */
+	double vx, vy, vz;	/* velocity of object */
+	double heading;		/* heading of the object (archaic?) */
+	uint16_t alive;		/* when 0, object is no longer alive */
+	uint32_t type;		/* what kind of object is this? See OBJTYPE_* defines, above */
+	uint32_t respawn_time;	/* Used in different ways for respawning player ship, and NPC ships */
+	union type_specific_data tsd; /* data particular to the type of object */
+	move_function move;	/* function to move the object. Varies by object type, and there */
+				/* are client and server versions of these functions */
+	struct snis_entity_science_data sdata; /* "science" data. Name, type, and shield data */
+	union quat orientation; /* Orientation of an object */
+
 #ifdef SNIS_SERVER_DATA
-	struct space_partition_entry partition;
+	/* This data only exists on the server */
+	uint32_t timestamp;	/* last tick something important about this object changed. Used */
+				/* to know if we need to transmit something about this object to */
+				/* clients */
+	struct space_partition_entry partition; /* Used for collision detection, see space-part.h, space-part.c */
 #endif
+
 #ifdef SNIS_CLIENT_DATA
-	struct entity *entity;
-	int nupdates;
-	double updatetime[SNIS_ENTITY_NUPDATE_HISTORY];
-	union vec3 r[SNIS_ENTITY_NUPDATE_HISTORY];
-	union quat o[SNIS_ENTITY_NUPDATE_HISTORY];
-	struct snis_entity *shading_planet;
+	/* This data only exists on the client */
+	struct entity *entity;	/* Corresponding renderer entity */
+	int nupdates;		/* number of times this object has been updated. Used for interpolation */
+				/* see move_object() in snis_client.c */
+	double updatetime[SNIS_ENTITY_NUPDATE_HISTORY]; /* last 4 update timestamps */
+	union vec3 r[SNIS_ENTITY_NUPDATE_HISTORY];	/* last 4 object x,y,z positions */
+	union quat o[SNIS_ENTITY_NUPDATE_HISTORY];	/* last 4 object orientations */
+
+	struct snis_entity *shading_planet;	/* if object is in shadow of planet, shading_planet will */
+				/* point to the planet that casts the shadow on the object. Otherwise null */
+				/* See calls to entity_set_in_shade() in snis_client.c, and in_shade parameter */
+				/* of graph_dev_raster_texture() in graph_dev_opengl.c */
 #endif
-	char ai[6];
+	char ai[6];		/* really hacky NPC AI debug data */
 };
 
 /* These are for the robot and various parts on the engineering deck on the damcon screen */
