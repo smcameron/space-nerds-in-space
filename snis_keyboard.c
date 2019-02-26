@@ -247,16 +247,16 @@ void init_keymap(void)
 	/* const unsigned short eng = 1 << DISPLAYMODE_ENGINEERING; */
 	const unsigned short damcon = 1 << DISPLAYMODE_DAMCON;
 	const unsigned short sci = 1 << DISPLAYMODE_SCIENCE;
-	/* const unsigned short comms = 1 << DISPLAYMODE_COMMS; */
+	const unsigned short comms = 1 << DISPLAYMODE_COMMS;
 	const unsigned short mainscreen = 1 << DISPLAYMODE_MAINSCREEN;
 	const unsigned short demon = 1 << DISPLAYMODE_DEMON;
 
 	zero_keymaps();
 
-	mapkey(all, GDK_j, keydown);
+	mapkey(all & ~comms, GDK_j, keydown);
 	ffmapkey(all, GDK_Down, keydown);
 
-	mapkey(all, GDK_k, keyup);
+	mapkey(all & ~comms, GDK_k, keyup);
 	ffmapkey(all, GDK_Up, keyup);
 
 	mapkey(all, GDK_l, keyright);
