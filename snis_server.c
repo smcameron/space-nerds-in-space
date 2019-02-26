@@ -387,23 +387,25 @@ static int nclients = 0; /* number of entries in client[] that are active */
 static pthread_mutex_t client_mutex = PTHREAD_MUTEX_INITIALIZER; /* protects client[] array */
 
 static struct bridge_data {
-	unsigned char shipname[20];
-	unsigned char password[20];
-	uint32_t shipid;
-	struct damcon_data damcon;
-	struct snis_damcon_entity *robot;
-	int incoming_fire_detected;
-	int last_incoming_fire_sound_time;
-	double warpx, warpy, warpz;
-	union vec3 warpv;
-	int warptimeleft;
-	int comms_channel;
-	struct npc_bot_state npcbot;
-	int last_docking_permission_denied_time;
-	uint32_t science_selection;
-	int current_displaymode;
-	struct ssgl_game_server warp_gate_ticket;
-	unsigned char pwdhash[PWDHASHLEN];
+	unsigned char shipname[20];	/* Name of this ship */
+	unsigned char password[20];	/* Password for this ship (plaintext) */
+	uint32_t shipid;		/* ID of this ship */
+	struct damcon_data damcon;	/* All the damage control objects for this ship */
+	int last_incoming_fire_sound_time; /* prevents incoming fire warning from sounding too frequently */
+	double warpx, warpy, warpz;	/* Holds coordinates related to warp drive. See maybe_do_player_warp() and */
+					/* do_engage_warp_drive() */
+	union vec3 warpv;		/* warp vector. 1/50th of the distance of the warp in direction of warp */
+	int warptimeleft;		/* How many ticks left for warp travel? See maybe_do_player_warp() */
+	int comms_channel;		/* Current channel number comms will transmit/recieve on */
+	struct npc_bot_state npcbot;	/* Context for NPC comms to maintain conversation */
+	int last_docking_permission_denied_time; /* rate limits "docking permission denied" messages */
+	uint32_t science_selection;	/* ID of currently selected item on science station */
+	int current_displaymode;	/* what the main screen(s) of the bridge are currently showing, */
+					/* See process_role_onscreen() */
+	struct ssgl_game_server warp_gate_ticket; /* ssgl server entry of the snis_server to which player has */
+					/* bought a warp gate ticket. */
+	unsigned char pwdhash[PWDHASHLEN]; /* hash of ship name+password+salt, used to identify ships */
+					/* to/from multiverse server */
 	int verified; /* whether this bridge has verified with multiverse server */
 #define BRIDGE_UNVERIFIED 0
 #define BRIDGE_VERIFIED 1
@@ -411,24 +413,26 @@ static struct bridge_data {
 #define BRIDGE_REFUSED 3
 	int requested_verification; /* Whether we've requested verification from multiverse server yet */
 	int requested_creation; /* whether user has requested creating new ship */
-	int nclients;
-	struct player_waypoint waypoint[MAXWAYPOINTS];
-	int selected_waypoint;
-	int nwaypoints;
-	int warp_core_critical_timer;
-	int warp_core_critical;
-	char last_text_to_speech[256];
-	uint32_t text_to_speech_volume_timestamp;
-	float text_to_speech_volume;
-	uint8_t active_custom_buttons;
-	char custom_button_text[6][16];
+	int nclients;			/* Number of connected clients that are part of this bridge */
+	struct player_waypoint waypoint[MAXWAYPOINTS]; /* list of science waypoints created for this bridge */
+	int selected_waypoint;		/* Currently selected waypoint (or -1 if none) for this bridge */
+	int nwaypoints;			/* Number of waypoints created for this bridge */
+	int warp_core_critical_timer;	/* Time (ticks) until warp core explodes */
+	int warp_core_critical;		/* Is the warp core going to explode? */
+	char last_text_to_speech[256];  /* last uttered speech, used to answer "/computer what", See nl_repeat_n() */
+	uint32_t text_to_speech_volume_timestamp; /* last time we adjusted computer volume */
+	float text_to_speech_volume;	/* Current computer volume */
+	uint8_t active_custom_buttons;	/* Number of active custom buttons, see l_enable_custom_button() */
+	char custom_button_text[6][16]; /* Text of custom buttons. See queue_up_client_custom_buttons(), */
+					/* and l_set_custom_button_label() */
 	/* ship id chips are used for collecting bounties */
 #define MAX_SHIP_ID_CHIPS 5
-	uint32_t ship_id_chip[MAX_SHIP_ID_CHIPS];
-	int nship_id_chips;
+	uint32_t ship_id_chip[MAX_SHIP_ID_CHIPS]; /* The ship ID chips players on this bridge have collected */
+	int nship_id_chips;		/* Count of ship ID chips, number of ship_id_chip[] entries that are valid */
 } bridgelist[MAXCLIENTS];
-static int nbridges = 0;
-static pthread_mutex_t universe_mutex = PTHREAD_MUTEX_INITIALIZER;
+static int nbridges = 0;		/* Number of elements present in bridgelist[] */
+
+static pthread_mutex_t universe_mutex = PTHREAD_MUTEX_INITIALIZER; /* main mutex to protect go[] array */
 
 static pthread_mutex_t listener_mutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_cond_t listener_started;
