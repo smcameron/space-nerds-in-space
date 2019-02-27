@@ -65,6 +65,7 @@ static int ssgl_connect_to_lobby(char *ssgl_hostname, int client)
 	hints.ai_family = AF_INET;
 	hints.ai_socktype = SOCK_STREAM;
 	hints.ai_flags = AI_PASSIVE;
+	hints.ai_protocol = IPPROTO_TCP;
 	rc = getaddrinfo(ssgl_hostname, GAMELOBBY_SERVICE_NAME, &hints, &lobbyserverinfo);
 	if (rc) {
 		rc = getaddrinfo(ssgl_hostname, GAMELOBBY_SERVICE_NUMBER_AS_STRING,
