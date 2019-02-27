@@ -1445,7 +1445,7 @@ static void derelict_collision_detection(void *derelict, void *object)
 {
 	struct snis_entity *o = object;
 	struct snis_entity *d = derelict;
-	if (o->type == OBJTYPE_SHIP1 || o->type == OBJTYPE_SHIP2)
+	if (o->type == OBJTYPE_SHIP1) /* If some player ship is nearby, do not cull. */
 		d->alive = 1;
 }
 
