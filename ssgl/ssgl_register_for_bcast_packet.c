@@ -95,35 +95,15 @@ static void *broadcast_recv_thread(__attribute__((unused)) void *arg)
 
 	int rc, bcast;
 	struct ssgl_lobby_descriptor payload;
-	struct servent *gamelobby_service;
-	struct protoent *gamelobby_proto;
 	struct sockaddr_in bcast_addr;
 	struct sockaddr remote_addr;
 	socklen_t remote_addr_len;
+	unsigned short udp_port;
 
-	/* Get the "gamelobby" UDP service protocol/port */
-	gamelobby_service = getservbyname(GAMELOBBY_SERVICE_NAME, "udp");
-	if (!gamelobby_service) {
-		fprintf(stderr, "getservbyname failed, %s\n", strerror(errno));
-		fprintf(stderr, "Check that /etc/services contains the following lines:\n");
-		fprintf(stderr, "gamelobby	2419/tcp\n");
-		fprintf(stderr, "gamelobby	2419/udp\n");
-		fprintf(stderr, "Continuing anyway, will assume port is 2419.\n");
-	}
-
-	/* Get the protocol number... */
-	if (gamelobby_service) {
-		gamelobby_proto = getprotobyname(gamelobby_service->s_proto);
-		if (!gamelobby_proto) {
-			fprintf(stderr, "getprotobyname(%s) failed: %s\n",
-				gamelobby_service->s_proto, strerror(errno));
-		}
-	} else {
-		gamelobby_proto = NULL;
-	}
+	udp_port = ssgl_get_gamelobby_port("udp");
 
 	/* Make ourselves a UDP datagram socket */
-	bcast = socket(AF_INET, SOCK_DGRAM, gamelobby_proto ? gamelobby_proto->p_proto : 0);
+	bcast = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
 	if (bcast < 0) {
 		fprintf(stderr, "broadcast_lobby_info: socket() failed: %s\n", strerror(errno));
 		return NULL;
@@ -131,8 +111,7 @@ static void *broadcast_recv_thread(__attribute__((unused)) void *arg)
 
 	bcast_addr.sin_family = AF_INET;
 	bcast_addr.sin_addr.s_addr = INADDR_ANY;
-	bcast_addr.sin_port =
-		gamelobby_service ?  gamelobby_service->s_port : htons(GAMELOBBY_SERVICE_NUMBER);
+	bcast_addr.sin_port = udp_port;
 
 	rc = bind(bcast, (struct sockaddr *) &bcast_addr, sizeof(bcast_addr));
 	if (rc < 0) {

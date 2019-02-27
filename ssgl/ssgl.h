@@ -87,6 +87,7 @@ extern void ssgl_log(int level, const char* format, ...);
 extern void ssgl_close_logfile(void);
 extern void ssgl_set_log_level(int level);
 extern int ssgl_register_for_bcast_packets(void (*notify_fn)(struct ssgl_lobby_descriptor *, int));
+extern unsigned short ssgl_get_gamelobby_port(char *proto);
 
 #undef GLOBAL
 #endif

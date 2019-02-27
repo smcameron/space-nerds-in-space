@@ -46,58 +46,13 @@ OTHER DEALINGS IN THE SOFTWARE.
 #include "ssgl_socket_io.h"
 #include "ssgl_protocol_id.h"
 #include "ssgl_log.h"
+#include "ssgl_get_gamelobby_port.h"
 
 /* This is our directory of game servers, this is the data that we serve... */
 #define MAX_GAME_SERVERS 5000
 static int ngame_servers;
 static struct ssgl_game_server game_server[MAX_GAME_SERVERS];
 static time_t expiration[MAX_GAME_SERVERS]; 
-static struct protoent gamelobby_tcp_proto;
-static struct servent gamelobby_tcp_serv;
-static struct protoent gamelobby_udp_proto;
-static struct servent gamelobby_udp_serv;
-
-static void get_gamelobby_service_info(char *proto, struct servent *servent, struct protoent *protoent)
-{
-	/* Note: getservbyname() and getprotobyname() are not thread safe.  Call this from
-	 * the main thread before starting any other threads.
-	 */
-	struct servent *s;
-	struct protoent *p;
-
-	s = getservbyname(GAMELOBBY_SERVICE_NAME, proto);
-	if (!s) {
-		ssgl_log(SSGL_WARN, "getservbyname failed, %s\n", strerror(errno));
-		ssgl_log(SSGL_WARN, "Check that /etc/services contains the following lines:\n");
-		ssgl_log(SSGL_WARN, "gamelobby	2419/tcp\n");
-		ssgl_log(SSGL_WARN, "gamelobby	2419/udp\n");
-		ssgl_log(SSGL_WARN, "Continuing anyway, will assume port is 2419.\n");
-		servent->s_name = strdup(GAMELOBBY_SERVICE_NAME);
-		servent->s_proto = strdup(proto);
-		servent->s_port = 2419;
-		servent->s_aliases = NULL;
-	} else {
-		servent->s_proto = strdup(s->s_proto);
-		servent->s_name = strdup(s->s_name);
-		servent->s_port = s->s_port;
-		servent->s_aliases = NULL;
-	}
-	p = getprotobyname(proto);
-	if (!p) {
-		ssgl_log(SSGL_WARN, "getprotobyname(%s) failed: %s\n", proto, strerror(errno));
-		if (strcmp(proto, "tcp") == 0) {
-			protoent->p_name = strdup("tcp");
-			protoent->p_proto = 6;
-		} else if (strcmp(proto, "udp") == 0) {
-			protoent->p_name = strdup("tcp");
-			protoent->p_proto = 17;
-		}
-	} else {
-		protoent->p_name = strdup(p->p_name);
-		protoent->p_proto = p->p_proto;
-	}
-	protoent->p_aliases = NULL;
-}
 
 /* lock to protect ngame_servers, ssgl_game_server[] and expiration[] */ 
 static pthread_mutex_t ssgl_mutex = PTHREAD_MUTEX_INITIALIZER;
@@ -496,8 +451,14 @@ static void start_game_server_expiration_thread(void)
 
 static pthread_t broadcast_thread;
 
+struct broadcast_lobby_thread_info {
+	unsigned short udp_port;
+	unsigned short tcp_port;
+};
+
 static void *broadcast_lobby_info(__attribute__((unused)) void *arg)
 {
+	struct broadcast_lobby_thread_info *ports = arg;
 	int on, rc, bcast;
 	uint32_t ipaddr, netmask, broadcast;
 	struct ssgl_lobby_descriptor payload;
@@ -524,7 +485,7 @@ static void *broadcast_lobby_info(__attribute__((unused)) void *arg)
 	}
 
 	/* Make ourselves a UDP datagram socket */
-	bcast = socket(AF_INET, SOCK_DGRAM, gamelobby_udp_proto.p_proto);
+	bcast = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
 	if (bcast < 0) {
 		ssgl_log(SSGL_ERROR, "broadcast_lobby_info: socket() failed: %s\n", strerror(errno));
 		return NULL;
@@ -571,12 +532,12 @@ static void *broadcast_lobby_info(__attribute__((unused)) void *arg)
 	}
 	broadcast = ~netmask | ipaddr;
 	memcpy(&bcast_addr.sin_addr.s_addr, &broadcast, sizeof(broadcast));
-	bcast_addr.sin_port = gamelobby_udp_serv.s_port;
+	bcast_addr.sin_port = ports->udp_port;
 
 	ssgl_log(SSGL_INFO, "netmask is %08x\n", netmask);
 	ssgl_log(SSGL_INFO, "broadcast is %08x\n", broadcast);
 	payload.ipaddr = ipaddr;
-	payload.port = gamelobby_udp_serv.s_port;
+	payload.port = ports->tcp_port;
 	memcpy(payload.hostname, hostname, sizeof(payload.hostname));
 
 	do {
@@ -589,14 +550,14 @@ static void *broadcast_lobby_info(__attribute__((unused)) void *arg)
 	return NULL;
 }
 
-static void start_broadcast_lobby_info_thread(void)
+static void start_broadcast_lobby_info_thread(struct broadcast_lobby_thread_info *ports)
 {
 	pthread_attr_t attr;
 	int rc;
 
 	pthread_attr_init(&attr);
 	pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
-	rc = pthread_create(&broadcast_thread, &attr, broadcast_lobby_info, NULL);
+	rc = pthread_create(&broadcast_thread, &attr, broadcast_lobby_info, ports);
 	pthread_attr_destroy(&attr);
 	if (rc < 0) {
 		ssgl_log(SSGL_ERROR, "Unable to create broadcast_lobby_info thread: %s.\n",
@@ -612,6 +573,7 @@ int main(int argc, char *argv[])
 	socklen_t remote_addr_len;
 	int on;
 	const char daemon_failed[] = "daemon(3) failed, exiting.\n";
+	struct broadcast_lobby_thread_info ports;
 
 	if (daemon(1, 0) != 0) {
 		if (write(2, daemon_failed, sizeof(daemon_failed)) != sizeof(daemon_failed))
@@ -631,14 +593,14 @@ int main(int argc, char *argv[])
 
 	ssgl_log(SSGL_INFO, "ssgl_server starting\n");
 
-	get_gamelobby_service_info("tcp", &gamelobby_tcp_serv, &gamelobby_tcp_proto);
-	get_gamelobby_service_info("udp", &gamelobby_udp_serv, &gamelobby_udp_proto);
+	ports.tcp_port = ssgl_get_gamelobby_port("tcp");
+	ports.udp_port = ssgl_get_gamelobby_port("udp");
 
 	start_game_server_expiration_thread();
-	start_broadcast_lobby_info_thread();
+	start_broadcast_lobby_info_thread(&ports);
 
 	/* Make ourselves a socket */
-	rendezvous = socket(AF_INET, SOCK_STREAM, gamelobby_tcp_proto.p_proto);
+	rendezvous = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
 	if (rendezvous < 0) {
 		ssgl_log(SSGL_ERROR, "socket() failed: %s\n", strerror(errno));
 		return -1;
@@ -654,7 +616,7 @@ int main(int argc, char *argv[])
 	/* Bind the socket to "any address" on our port */
 	listen_address.sin_family = AF_INET;
 	listen_address.sin_addr.s_addr = INADDR_ANY;
-	listen_address.sin_port = gamelobby_tcp_serv.s_port;
+	listen_address.sin_port = ports.tcp_port;
 	rc = bind(rendezvous, (struct sockaddr *) &listen_address, sizeof(listen_address));
 	if (rc < 0) {
 		ssgl_log(SSGL_ERROR, "bind() failed: %s\n", strerror(errno));
