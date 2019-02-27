@@ -9101,6 +9101,8 @@ static void snis_draw_science_guy(GtkWidget *w, GdkGC *gc, struct snis_entity *o
 		}
 		if (o->type == OBJTYPE_SHIP2 || o->type == OBJTYPE_SHIP1) {
 			snis_draw_arrow(w, gc, x, y, SCIENCE_SCOPE_R / 2, o->heading, 0.3);
+		} else if (o->type == OBJTYPE_PLANET) {
+			sng_draw_circle(0, x, y, 20);
 		} else {
 			snis_draw_line(x - 1, y, x + 1, y);
 			snis_draw_line(x, y - 1, x, y + 1);
@@ -9108,7 +9110,7 @@ static void snis_draw_science_guy(GtkWidget *w, GdkGC *gc, struct snis_entity *o
 	}
 
 	if (selected)
-		sng_draw_circle(0, x, y, 10);
+		sng_draw_circle(0, x, y, 10 + timer % 4);
 	
 	if (o->sdata.science_data_known) {
 		switch (o->type) {
