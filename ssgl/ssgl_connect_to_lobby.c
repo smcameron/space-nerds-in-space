@@ -68,6 +68,7 @@ static int ssgl_connect_to_lobby(char *ssgl_hostname, int client)
 	hints.ai_protocol = IPPROTO_TCP;
 	rc = getaddrinfo(ssgl_hostname, GAMELOBBY_SERVICE_NAME, &hints, &lobbyserverinfo);
 	if (rc) {
+		hints.ai_flags |= AI_NUMERICSERV;
 		rc = getaddrinfo(ssgl_hostname, GAMELOBBY_SERVICE_NUMBER_AS_STRING,
 					&hints, &lobbyserverinfo);
 		if (rc)
