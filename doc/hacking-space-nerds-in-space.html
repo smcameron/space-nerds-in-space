@@ -143,7 +143,6 @@ pre{
 </ol>
 <li><a href="#snismultiverse">SNIS Mulitverse</a>
 <ol>
-<li><a href="#mvoverview">Overview</a>
 <li><a href="#mvdatastr">Main data structures</a>
 <li><a href="#snismultiversethreads">Threads</a>
 <ol>
@@ -151,12 +150,7 @@ pre{
 <li><a href="#mvreadwritethr">SNIS Server Reader / Writer threads</a>
 <li><a href="#mvssglthr">SSGL thread</a>
 <li><a href="#mvmainthr">Main thread</a>
-<ol>
-<li><a href="#mvmaininit">Initialization</a>
-<li><a href="#mvssglreg">Registering with SSGL (lobby)</a>
-<li><a href="#mvwrangler">Wrangle SNIS Servers (autowrangler)</a>
-<li><a href="#mvdatachkpt">Checkpoint Data</a>
-</ol>
+<li><a href="#mvdataxfer">Data transfer between snis_multiverse and snis_server</a>
 </ol>
 </ol>
 <li><a href="ssglserver">SSGL Server</a>
@@ -1418,8 +1412,174 @@ instance is not adjacent to any other snis_server instance with at least one bri
 running, then snis_multiverse can safely shut down that snis_server instance.)
 
 <h2><a name="snismultiverse">SNIS Multiverse</a></h2>
-<h3>Overview</h3>
-<p>
+
+<p>The purpose of snis_multiverse is to make it possible for players to
+traverse from one snis_server instance to another. For this to happen, the state of their
+bridge which resides in one snis_server instance must somehow be transplanted into a different
+snis_server instance. And it must work for multiple bridges.  All the snis_client instances
+that make up a brdige must disconnect from one snis_server, and connect to another.
+
+<p>The basic gist of it is that snis_server maintains a small database of bridge-states,
+keyed by a hash of the ship name, password, and salt. Periodically, snis_server sends
+the state of each connected bridge to snis_multiverse. When a new bridge is created within
+snis_server, it may be a truly new ship, or it may be an existing ship.  If it is a truly new ship,
+snis_multiverse will not know of it, and when snis_server informs snis_multiverse of this
+new ship, snis_multiverse will create a new database entry for this new ship.  If it is an
+existing ship, then it will have an existing state in the database, and snis_multiverse
+will send this state to snis_server.
+
+<h3><a name="mvdatastr">snis_multiverse data structures</a></h3>
+<h4>struct starsystem_info</h4>
+<pre>
+static struct starsystem_info { /* one of these per connected snis_server */
+	int socket;			/* socket to snis_server */
+	int refcount;			/* reference count of threads accessing this star system */
+	pthread_t read_thread;		/* thread to read from snis_server */
+	pthread_t write_thread;		/* thread to write to snis_server */
+	struct packed_buffer_queue write_queue; /* queue of data to be sent to snis server */
+	pthread_mutex_t write_queue_mutex;	/* protects the queue */
+	char starsystem_name[SSGL_LOCATIONSIZE]; /* corresponds to "location" parameter of snis_server */
+	int bridge_count;		/* How many bridges are in this star system */
+	int shutdown_countdown;		/* When this reaches zero (and some other conditions), shut down snis_server */
+					/* see maybe_shutdown_snis_server() */
+} starsystem[MAX_STARSYSTEMS] = { { 0 } };
+static int nstarsystems = 0;
+</pre>
+
+<h4>struct bridge_info</h4>
+<pre>
+static struct bridge_info {
+	unsigned char pwdhash[PWDHASHLEN];	/* hash of password, shipname, salt */
+	int32_t initialized;			/* Have we unpacked data from snis server for this bridge? */
+	struct snis_entity entity;		/* used to hold some of the bridge state */
+	char starsystem_name[SSGL_LOCATIONSIZE];/* Current location of this bridge */
+} ship[MAX_BRIDGES];
+int nbridges = 0;
+</pre>
+
+<h3><a name="snismultiversethreads">snis_multiverse threads</a></h3>
+<h4><a name="mvlistenerthr">snis_multiverse listener thread</a></h4>
+
+<p>The listener thread handles incoming connection requests from snis_server instances.
+It is started by start_listener_thread(), called by main(), and the thread function is
+listener_thread_fn(), in snis_multiverse.c
+
+<p>listener_thread_fn() enters a loop in which it accepts connections and for
+each new connecting snis_server process calls service_connection(). service_connection()
+verifies the protocol version via verify_client_protocol(), then reads the starsystem
+name from the snis_server process, and records the starsystem in the starsystem[] array.
+Then it creates a queue and a reader thread and a writer thread to communicate with this
+snis_server process.
+
+<h4><a name="mvreadwritethr">snis_multiverse reader/writer threads</a></h4>
+
+<p>The reader thread is starsystem_read_thread() in snis_multiverse.c, and it
+enters a loop which repeatedly calls process_instructions_from_snis_server();
+
+<p>process_instructions_from_snis_server() reads a 1-byte opcode and then via
+a switch statement, calls a function to process that opcode.
+
+<p>The writer thread is starsystem_write_thread() in snis_multiverse.c, and it
+enters a loop which repeatedly calls write_queued_updates_to_snis_server(),
+and then sleeps for 5 seconds.
+
+<p>write_queued_updates_to_snis_server() pulls items off the appropriate
+snis_server queue and writes them through a socket to the remote snis_server
+process, or if the queue is empty, fabricates a NO-OP instruction and writes
+that through the socket to the remote snis_server process.
+
+<p>Instructions enter the queue to be written to snis_server via other threads.
+
+<h4><a name="mvssglthr">SSGL thread</a></h4>
+
+<p>A thread to periodically update ssgl_server with snis_multiverse's information
+is created by ssgl_register_gameserver(), called from main() in snis_multiverse.c
+
+<h4><a name="mvmainthr">snis_multiverse Main thread</a></h4>
+
+<p>The main thread of snis_multiverse begins in main() in snis_multiverse.c.
+It constructs the starmap[] array by scanning ./share/snis/solarsystems
+for assets.txt files to obtain the coordinates of each star system and construct
+an adjacency list in starmap_adjacency[].  This is used to know what the valid
+paths are between starsystems.
+
+<p>The listener thread is started, it registers with ssgl_server, and then it enters
+a loop in which it "wrangles" snis_server processes and checkpoints data (saves
+brige information into a file).
+
+<p>wrangle_snis_server_processes() first makes a list of starsystems containing
+at least one active bridge (that is to say, a list of snis_servers with at least one
+connected snis_client). It then makes a list of active starsystems or starsystems
+which are adjacent to active starsystems.
+
+<p>Then, for each possible star system, if that star system is active, or adjacent
+to an active star system, a snis_server instance is started if it isn't already running,
+or if that star system is not active, and is not adjacent to an active starsystem,
+then if a snis_server instance is running for that star system and sufficient time has
+passed with it remaining inactive, that snis_server instance is shut down.
+
+<p>In this way, if players are in any given star system, any star system they can
+reach in a single hop will have a running snis_server instance in which they may
+land.
+
+<p>For checkpointing data, checkpoint_data() is called from main() in multiverse.c.
+checkpoint_data() loops through the ship[] array, saving the bridge info for each
+ship. The data is saved in the snis_db directory.
+
+<h3><a name="mvdataxfer">Data Transfer between snis_multiverse and snis_server<a></h3>
+
+<p>In the snis_server's server_tracker thread, it will connect to the snis_multiverse
+process which it locates by querying ssgl_server, and write the starsystem name to
+snis_multiverse.
+
+<p>When a new snis_client connects to snis_server, it provides a shipname and password
+to snis_server (see add_new_player() in snis_server.c).
+
+<p>In move_objects() in snis_server(), for each player ship (each bridge, essentially),
+update_multiverse() is called periodically (every 10 seconds).
+
+<p>update_multiverse() does one of several things. If this bridge is not yet verified
+and verification has not yet been requested, update_multiverse requests verification of
+the bridge (sends SNISMV_OPCODE_VERIFY_CREATE or SNISMV_OPCODE_VERIFY_EXISTS to snis_multiverse(),
+depending on whether the player intended to create a new ship, or join an existing ship).
+Along with these opcodes a password hash is supplied.
+
+<p>If verification has already been requested, but not yet recieved, update_multiverse()
+does nothing.
+
+<p>If the ship is already verified by snis_multiverse, then a large buffer containing the
+entire ship's state is constructed via build_bridge_update_packet() (see snis_bridge_update_packet.h
+and snis_bridge_update_packet.c), and sent to snis_multiverse using SNISMV_OPCODE_UPDATE_BRIDGE.
+
+<p>When snis_multiverse recieves SNISMV_OPCODE_VERIFY_CREATE, (the player is requesting
+to create a new ship) it calls verify_existence() with 0 for the 2nd parameter,
+should_already_exist. It then looks up the password hash to see if it already exists.
+If it does, then snis_multiverse sends SNISMV_VERIFICATION_RESPONSE_FAIL to snis_server
+along with the password hash.  If the entry does not yet exist, snis_multiverse sends
+SNISMV_VERIFICATION_RESPONSE_PASS along with the password has to snis_server.
+
+<p>When snis_multiverse recieves SNISMV_OPCODE_VERIFY_EXISTS, (the player is requesting
+to join an existing ship), it calls verify_existence with 1 for the 2nd parameter,
+should_already_exist. It then looks up the password hash to see if it already exists.
+If it does not exist, then snis_multiverse sends SNISMV_VERIFICATION_RESPONSE_FAIL
+along with the password hash to snis_server. If the ship does exist, then
+snis_multiverse sends SNISMV_VERIFICATION_RESPONSE_PASS along with the
+password hash to snis_server. It then also calls send_bridge_update_to_snis_server(),
+which calls build_bridge_update_packet() in snis_bridge_update_packet.c to build a
+large packet containing the entire bridge state and sends it to snis_server using opcode
+SNISMV_OPCODE_UPDATE_BRIDGE.
+
+<p>When snis_multiverse receives SNISMV_OPCODE_UPDATE_BRIDGE, it calls update_bridge()
+in snis_multiverse.c and it reads the bridge state and unpacks it into a struct snis_entity with
+unpack_bridge_update_packet() (see snis_bridge_update_packet.c) and update's the bridge's
+current starsystem (it may have gone through a warp gate to a different star system). This
+data will later be written out to a file via checkpoint_data() in the main thread.
+
+<p>When snis_server recieves SNISMV_OPCODE_UPDATE_BRIDGE, it calls process_update_bridge() in
+snis_server.c which saves the bridge's x, y, and z and reads in the packed bridge data and
+unpacks it into the struct snis_entity for that bridge, then restores the bridge's x, y, and
+z position. In this way the save state from snis_multiverse is transferred into the state
+within snis_server.
 
 <h2><a name="ssglserver">SSGL Server</a></h2>
 <h3>Overview</h3>

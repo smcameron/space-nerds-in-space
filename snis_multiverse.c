@@ -93,26 +93,24 @@ static int debuglevel = 0;
 #define MAX_STARSYSTEMS MAXSTARMAPENTRIES
 
 static struct starsystem_info { /* one of these per connected snis_server */
-	int socket;
-	int refcount;
-	pthread_t read_thread;
-	pthread_t write_thread;
-	struct packed_buffer_queue write_queue;
-	pthread_mutex_t write_queue_mutex;
+	int socket;			/* socket to snis_server */
+	int refcount;			/* reference count of threads accessing this star system */
+	pthread_t read_thread;		/* thread to read from snis_server */
+	pthread_t write_thread;		/* thread to write to snis_server */
+	struct packed_buffer_queue write_queue; /* queue of data to be sent to snis server */
+	pthread_mutex_t write_queue_mutex;	/* protects the queue */
 	char starsystem_name[SSGL_LOCATIONSIZE]; /* corresponds to "location" parameter of snis_server */
-	int bridge_count;
-	int shutdown_countdown;
+	int bridge_count;		/* How many bridges are in this star system */
+	int shutdown_countdown;		/* When this reaches zero (and some other conditions), shut down snis_server */
+					/* see maybe_shutdown_snis_server() */
 } starsystem[MAX_STARSYSTEMS] = { { 0 } };
 static int nstarsystems = 0;
 
 static struct bridge_info {
-	unsigned char pwdhash[PWDHASHLEN];
-	int occupied;
-	int32_t initialized;
-	struct timeval created_on;
-	struct timeval last_seen;
-	struct snis_entity entity;
-	char starsystem_name[SSGL_LOCATIONSIZE];
+	unsigned char pwdhash[PWDHASHLEN];	/* hash of password, shipname, salt */
+	int32_t initialized;			/* Have we unpacked data from snis server for this bridge? */
+	struct snis_entity entity;		/* used to hold some of the bridge state */
+	char starsystem_name[SSGL_LOCATIONSIZE];/* Current location of this bridge */
 } ship[MAX_BRIDGES];
 int nbridges = 0;
 
