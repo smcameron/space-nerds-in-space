@@ -3683,6 +3683,8 @@ static void torpedo_collision_detection(void *context, void *entity)
 		add_starbase_attacker(t, o->tsd.torpedo.ship_id);
 		calculate_laser_starbase_damage(t, snis_randn(255));
 		send_detonate_packet(t, ix, iy, iz, impact_time, impact_fractional_time);
+		if (!t->alive)
+			delete_from_clients_and_server(t);
 		return;
 	}
 
@@ -3952,6 +3954,8 @@ static void laser_collision_detection(void *context, void *entity)
 		t->tsd.starbase.under_attack = 1;
 		/* FIXME: looks like lasers do not harm starbases... seems wrong */
 		send_detonate_packet(t, ix, iy, iz, impact_time, impact_fractional_time);
+		if (!t->alive)
+			delete_from_clients_and_server(t);
 		return;
 	}
 
