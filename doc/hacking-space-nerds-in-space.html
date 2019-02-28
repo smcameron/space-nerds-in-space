@@ -494,7 +494,9 @@ in snis_client.c which also acts on information collected in the aforementioned 
 
 <h3><a name="snisclientthreads">snis_client Threads</a></h3>
 
-<h4><a name="snisclientlobbythread">snis_client lobby thread</a></h4>
+<h4><a name="snisclientlobbythread">snis_client lobby threads</a></h4>
+
+<h5>main lobby thread</h5>
 
 <p>See connect_to_lobby_thread() in snis_client.c
 
@@ -515,6 +517,29 @@ sleeps for a bit. It exits the loop upon an error or if the program exits.
 
 <p>The lobby_game_server[] array is used elsewhere in another thread to display the list of
 snis_server instances to the user.
+
+<h5>lobby broadcast packet recieving thread</h5>
+
+<p>So that the players do not need to know the IP address of the lobby server,
+the lobby server broadcasts UDP packets advertising its existence and port. Clients
+of ssgl_server (e.g. snis_client) may register to receive these packets by calling
+ssgl_register_for_bcast_packets() (see ssgl/ssgl_register_for_bcast_packet.c). This creates
+two threads, one to receive these broadcast packets, and one to expire old lobby
+information (see below). Each incoming packet contains an IP address, a port, and
+a hostname. These are saved in an lobbylist[] (see ssgl_register_for_bcast_packet.c).
+
+<h5>lobby expiring thread</h5>
+
+ssgl_register_for_bcast() creates a thread to notice when the internal list of lobby servers
+(lobbylist[]) has changed and for calling a notification function, passing this new information
+when such changes are detected.  Whenever the lobbylist[] array changes, the callback function
+provided to ssgl_register_for_bcast_packets is changed, and this new lobby data is passed.
+
+<p>For snis_client, this notification function is lobby_list_change_notification() in
+snis_client.c. It uses the information passed in to construct pull down menu entries
+for the network setup screen.  In this way, when on the network setup screen, hovering
+the mouse in the upper left hand corner of the screen brings down a menu containing all
+the lobby servers discovered via these broadcast packets.
 
 <h4><a name="snisclientconnectthread">snis_client connection thread</a></h4>
 
