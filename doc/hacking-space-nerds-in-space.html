@@ -225,6 +225,9 @@ the captain can give Picard's typical order: "On screen!" (This is accomplished 
 <li>Network traffic between processes takes the form of single byte "opcodes" each followed by its own
 particular operands of varying sizes.  The protocol should be endian-clean.
 <li>There should be a lobby server to enable the various processes to find one another on the network.
+<li>The bulk of the code should be in C. No C++. The reason for this is because I find programming
+C to be fun, but find programming in C++ to be the opposite of fun.  SNIS development is optimized
+for Steve's fun.
 </ol>
 
 
@@ -1608,8 +1611,142 @@ within snis_server.
 
 <h2><a name="ssglserver">SSGL Server</a></h2>
 <h3>Overview</h3>
-<p>
+<p>SSGL ostensibly stands for "super simple game lobby", whether it's all that simple
+is another question. It provides a means for different processes within Space Nerds in
+Space to find one another. Although SSGL predates any knowledge I had of Google's BNS
+(Borg Name Service), I later came to realize it performs much the same function, though
+it's less well thought out and less robust.
+(See <a href="https://ai.google/research/pubs/pub43438">https://ai.google/research/pubs/pub43438</a>)
 
+<p>ssgl_server has no real UI to speak of, it is purely a network process. (snis_client
+does provide a UI to present to the user snis_server instances which it has discovered
+via ssgl_server).
+
+<p>There is a single process, ssgl_server, which implements the lobby.  It broadcasts
+packets on the local network advertising its presence, which allows clients to find
+it without knowing where it is.  It uses port 2419 (udp and tcp).
+
+<p>"Game servers" periodically connect to ssgl_server and transmit identifying information
+(e.g what amounts to a service name, IP address, and port) ssgl_server will drop any
+entries which haven't been heard from recently enough on the assumption that they are dead.
+
+<p>"Game clients" (which may also be "game servers") connect to the lobby to find
+"game servers" that they want to connect to.
+
+<p>In the case of Space Nerds in Space, snis_client is a "game client", but not a
+"game server", and uses ssgl_server to locate snis_server instances.  snis_client
+also listens for the broadcast packets to help locating the ssgl_server. snis_server is
+both a "game client" and a "game server", registering itself with ssgl_server
+so that other programs may find it, and using ssgl_server to find snis_multiverse.
+snis_multiverse is also a "game server" and a "game client", registering with ssgl_server
+as a server so that snis_servers may find it, and using ssgl_server to know what
+snis_server instances exist so that it may maintain an internal list of active snis_server
+instances for "autowrangling" (automatically starting and stopping) them.
+
+<h3>Main data structures</h3>
+
+<p>From ssgl/ssgl.h:
+<pre>
+struct ssgl_game_server {
+        uint32_t ipaddr;
+        uint16_t port;
+        char game_type[15];             /* What kind of game is this? */
+        char game_instance[20];         /* which instance on the server of the game */
+        char server_nickname[15];       /* server nickname where game is hosted */
+        char protocol_version[9];
+        char location[SSGL_LOCATIONSIZE];
+        uint32_t nconnections;
+};
+</pre>
+
+<p>This structure is used to define a "game server", and is transmitted to ssgl_server
+by game servers, and from ssgl_server to game_clients, as well as stored internally
+by ssgl_server.
+
+<p>The ipaddr and port are the IP address and port number of a game server (IPV4 only, obviously).
+How the game_type, game_instance, server_nickname, protocol_version, and location are used is pretty much
+up to the design of whatever games are registering (though only SNIS uses ssgl at this time, or
+probably ever), although ssgl_server does provide a way for game clients to filter servers based
+on game_type.
+
+<p>nconnections is supposed to be the number of clients currently connected to a game server, so that
+a user of a lobby could have any idea of how many users were in any given game server, though it is
+provided by the game servers and forwarded by ssgl_server without caring about the value, so it could
+be used for whatever any game system wanted to use it for.
+
+<p>All integer quantites are transmitted in network byte order (big endian).
+
+<p>ssgl_server maintains an array of struct ssgl_game_server called game_server[].
+
+From ssgl/ssgl.h:
+<pre>
+struct ssgl_lobby_descriptor {
+        uint32_t ipaddr;
+        uint16_t port;
+        char hostname[32];
+};
+</pre>
+
+<p>The struct ssgl_lobby_descriptor is broadcast as a UDP packet periodically to advertise the
+IP addr, port and (non-canonical) hostname of the ssgl_server.
+
+From ssgl/ssgl.h
+<pre>
+struct ssgl_client_filter {
+        char game_type[15];
+};
+</pre>
+struct ssgl_client_filter allows game_clients to filter game_servers returned to it by ssgl_server
+by game type. The idea was that ssgl_server could potentially be a lobby to any sort of game, but
+in general, any one game client would only be interested in game servers for a particular type
+of game, but not in all game servers <em>regardless</em> of type of game.
+
+
+<h3>SSGL server threads</h3>
+
+<h4>SSGL server main thread</h4>
+
+<p>The main thread of ssgl_server (main(), ssgl_server.c) listens on a thread for
+incoming connections and calls service() (ssgl_server.c) for each connection. service()
+creates a service_thread() thread to service the connection.
+
+<h4>SSGL server "service" thread</h4>
+
+<p>One of these threads is created for each connection. The client identifies itself to ssgl_server
+as a game client or a game server (for the purposes of this particular connection), and for game
+servers, service_game_server() is called, for game clients, service_game_client() is called.
+
+<p>service_game_server() reads a struct ssgl_game_server from the connection and stores
+or updates an entry in the game_server[] array, and marks it with a timestamp, and returns,
+at which point the connection is terminated.
+
+<p>service_game_client() reads a struct ssgl_client_filter from the connection and constructs
+a list of struct ssgl_game_server entries that match the filter.  If the filter is "*", then
+the client will get all ssgl_game_server entries that ssgl_server knows about, otherwise only
+entries with a matching game type.
+
+<p>ssgl_server then writes the number of matching entries (in network byte order) into the
+connection, followed by the struct ssgl_game_server entries. It then returns and closes the
+connection.
+
+<p>You will notice that game servers and clients do not maintain a long lived connection to
+the ssgl_server, but periodically establish new, short lived connections.
+
+<h4>ssgl_server game server expiration thread</h4>
+
+<p>start_game_server_expiration_thread() is called from main() which starts a thread function
+expire_game_servers().  expire_game_servers() (ssgl/ssgl_server.c) loops, waking up once per minute, and deletes
+any entries in the game_server[] array that have not been updated within the last 20 seconds.
+
+<h4>ssgl_server broadcast lobby info thread</h4>
+
+<p>start_broadcast_lobby_info_thread() is called from main() and starts a thread function
+broadcast_lobby_info().  broadcast_lobby_info() (ssgl/ssgl_server.c) enters a loop in which
+it periodically (every 2 seconds) broadcasts UDP packet containing a struct
+ssgl_lobby_descriptor advertising the IP address and tcp port of itself (ssgl_server) so
+that clients may more easily find it.
+
+<p>
 <h2><a name="buildsystem">Build System</a></h2>
 
 <h3><a name="dependencies">Prerequisites (dependencies)</a></h3>
