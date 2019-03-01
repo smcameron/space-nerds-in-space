@@ -14726,7 +14726,7 @@ static void init_comms_ui(void)
 			NANO_FONT, comms_screen_red_alert_pressed, NULL);
 	snis_button_set_sound(comms_ui.red_alert_button, UISND16);
 
-	comms_ui.tw = text_window_init(txx(10), txy(70), SCREEN_WIDTH - txx(20), 300, 17, text_color);
+	comms_ui.tw = text_window_init(txx(10), txy(70), SCREEN_WIDTH - txx(20), 300, 27, text_color);
 	text_window_set_chatter_sound(comms_ui.tw, TTY_CHATTER_SOUND);
 	comms_ui.comms_input = snis_text_input_box_init(txx(10), txy(520), txy(30), txx(550),
 					text_color, TINY_FONT,
@@ -14919,6 +14919,7 @@ static void comms_activate_rts_buttons(struct snis_entity *player_ship)
 		snis_button_set_label(comms_ui.rts_order_command_button[4], "GOTO WAYPOINT");
 		snis_button_set_color(comms_ui.rts_order_command_button[4], UI_COLOR(comms_good_status));
 	}
+	text_window_set_visible_lines(comms_ui.tw, 17);
 }
 
 static void comms_deactivate_rts_buttons(void)
@@ -14938,6 +14939,7 @@ static void comms_deactivate_rts_buttons(void)
 	for (i = 0; i < FLEET_BUTTON_COLS; i++)
 		for (j = 0; j < FLEET_BUTTON_ROWS; j++)
 			ui_hide_widget(comms_ui.fleet_unit_button[i][j]);
+	text_window_set_visible_lines(comms_ui.tw, 27);
 }
 
 static void comms_setup_rts_buttons(int activate, struct snis_entity *player_ship) /* called with universe lock held */
