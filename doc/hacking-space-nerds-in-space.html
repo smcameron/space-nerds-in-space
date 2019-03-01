@@ -110,17 +110,6 @@ pre{
 <li><a href="#snisserverssglthr">SSGL thread</a>
 <li><a href="#snisserversrvrtrkr">Server Tracker thread</a>
 <li><a href="#snisservermainthr">Main thread</a>
-<ol>
-<li><a href="#snisservermaininit">Initialization</a>
-<li><a href="#snisservermainloop">Main Loop</a>
-<ol>
-<li><a href="#snisservertime">Tracking time</a>
-<li><a href="#snisservermoveobj">Moving objects</a>
-<li><a href="#snisserverlua">Processing Lua Commands</a>
-<li><a href="#snisserverrtsai">RTS AI</a>
-</ol>
-<li>
-</ol>
 </ol>
 <li><a href="#snisserverplayership">Player ship systems</a>
 <ol>
@@ -968,6 +957,10 @@ also a mapping from keypresses to actions which is configurable.
 in snis_keyboard.c) The keypress and release callbacks modify kbstate
 to reflect the current state of the keyboard.
 
+<p>keymap[] and ffkeymap[] defined in snis_keyboard.h contain
+key mappings for each displaymode for normal and modified (ctrl-,
+alt- and other combo) keys.
+
 <p>deal_with_keyboard() in snis_client.c consults the state of kbstate
 and uses that to initiate actions.
 
@@ -1438,6 +1431,135 @@ snis_multiverse to "autowrangle" (automatically start and stop) snis_server inst
 When the number of bridges in a snis_server instance drops to zero, and the snis_server
 instance is not adjacent to any other snis_server instance with at least one bridge
 running, then snis_multiverse can safely shut down that snis_server instance.)
+
+<h3><a name="snisserverplayership">Player ship systems</a></h3>
+
+<h4><a name="snisserverpwrcool">Power and coolant models</a></h4>
+
+<p>The power and coolant models are based on an electric circuit model.
+The code is in power-model.h and power-model.c.
+
+<pre>
+             R01        R02        R03
+ +---------/\/\/-------------------/\/\/--------+ S0
+ |                                              |
+ |           R11        R12         R13         |
+ +---------/\/\/-------------------/\/\/--------+ S1
+ |                                              |
+ |           R21        R22         R23         |
+ +---------/\/\/-------------------/\/\/--------+ S2
+ |                                              |
+ |           R31        R32         R33         |
+ +---------/\/\/-------------------/\/\/--------+ S3
+ |                                              |
+ |           R41        R42         R43         |
+ +---------/\/\/-------------------/\/\/--------+ S4
+ |                                              |
+ |           R51        R52         R53         |
+ +---------/\/\/-------------------/\/\/--------+ S5
+ |                                              |
+ |           R61        R62         R63         |
+ +---------/\/\/-------------------/\/\/--------+ S6
+ |                                              |
+ |                                              |
+ |      RS        | | | |                       |
+ +----/\/\/------||||||||-----------------------+
+                  | | | |
+                    V0, Imax
+</pre>
+<P>The power supply is a constant voltage supply with a limited
+maximum current.   Each row of three resistors represents a
+system.  R*1 is a variable resistor controlled by crewmembers
+and specific to a device, e.g. Warp power setting, or phaser
+power setting.   R*2 is a limit on R*1 controlled by engineering
+to control power consumption of a system, R*1 is not allowed to
+be a value below R*2, so engineering can limit the current consumed
+by a device.   R*3 is the innate resistance of the device.
+Some devices may have a constant R*1 (not user controllable), and
+then it is only engineering which controls the power consumption
+of the device.  r*3 is typically a constant.
+
+<p>The code that uses the power model code is in snis_server.c.  The
+power model is set up in init_power_model(), and the coolant model is
+set up in init_coolant_model().
+
+<p>Note that the values passed to int_power_model() are somewhat
+carefully tuned. See snis.h:
+
+<pre>
+/* Careful, CURRENT / VOLTAGE ratio is twitchy, keep it in the sweet spot
+ * MAX_CURRENT between 5 and 10, MAX_VOLTAGE at 1000000.0.
+ */
+#define MAX_CURRENT 6.5
+#define MAX_COOLANT 10
+#define MAX_VOLTAGE 1000000.0
+#define INTERNAL_RESIST 0.00000
+</pre>
+
+<p>Periodically (at 10Hz tick rate) the power and coolant models are advanced
+by do_power_model_computations and do_coolant_model_computations() which call
+power_model_compute(). These advance the model towards a new steady state,
+taking into account user input changes to resistor values (ultimately linked to
+sliders in the UI). These new current and temperature values are then extracted
+from the power and coolant models via device_power_byte_form() in snis_server.c
+which computes a ratio of the device current to the device maximum current and
+scales this into the range 0-255.  These byte values for all the different
+systems are then stored in o-&gt;tsd.ship.power_data.<em>system</em>.i and
+o-&gt;tsd.ship.coolant_data.<em>system</em>.i, where o is pointer to the
+player's ship's struct snis_entity, and where <em>system</em> is one of
+the systems on the ship, such as the warp drive, the shields, the impulse
+drive, etc.
+
+<p>Damage to a device is modeled as a fractional reduction in current for
+the device plus a random reduction, both of which vary proportionally to the
+amount of damage. (see power_device_set_damage() and device_current() in
+power-model.c)
+
+<p>You might notice that on the damage control screen, each of the systems on
+the ship has three separate components that can be separately damaged and repaired.
+Really, there is just a single byte representing the damage to a system. This
+real damage to each system is spread out randomly among that system's three components
+by distribute_damage_to_damcon_system_parts() in snis_server.c. Going the other way,
+changes to damage values due to repairs to the individual components are gathered
+up and accumulated into the single byte values in
+o-&gt;tsd.ship.damage.<em>system</em>.i in move_damcon_entities_on_bridge() in
+snis_server.c:
+
+<pre>
+	for (i = 0; i &lt;= nobjs; i++) {
+
+		[... much omitted ... ]
+
+		damage[part-&gt;tsd.part.system] +=
+			(float) part-&gt;tsd.part.damage / (float) DAMCON_PARTS_PER_SYSTEM;
+	}
+
+	[... much omitted ...]
+
+	for (i = 0; i &lt; DAMCON_SYSTEM_COUNT - 1; i++) {
+		unsigned char *x = (unsigned char *) &amp;o-&gt;tsd.ship.damage;
+		if (x[i] != (unsigned char) damage[i]) {
+			x[i] = (unsigned char) damage[i];
+			changed = 1;
+		}
+	}
+</pre>
+
+
+
+
+<p>The user adjustable resistance values in the power model are linked to byte values
+within struct snis_entity through sampling callbacks (see new_power_device() and
+power_model_update_resistances() in power-model.c) In snis_server.c, these sampling
+callbacks are created by the DECLARE_POWER_MODEL_SAMPLER macro, and passed to
+new_power_device() via the POWERFUNCS macro to sample byte values within snis_entity
+that are in turn controlled via the network by the UI in snis_client.c
+
+<p>
+
+<h4><a name="snisservercollision">Collision detection</a></h4>
+
+<h4><a name="snisserverplayershipmove">Player Ship movement</a></h4>
 
 <h2><a name="snismultiverse">SNIS Multiverse</a></h2>
 
