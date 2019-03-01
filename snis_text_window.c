@@ -306,3 +306,9 @@ void text_window_slow_printing_effect(struct text_window *tw, int value)
 {
 	tw->print_slowly = !!value;
 }
+
+void text_window_set_visible_lines(struct text_window *tw, int visible_lines)
+{
+	tw->visible_lines = visible_lines;
+	tw->h = tw->lineheight * tw->visible_lines + 10;
+}
