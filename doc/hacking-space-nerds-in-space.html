@@ -1559,6 +1559,124 @@ that are in turn controlled via the network by the UI in snis_client.c
 
 <h4><a name="snisservercollision">Collision detection</a></h4>
 
+<p>Collision detection is implemented with a space partitioning scheme
+that is defined by space-part.h and space-part.c
+
+<p>Space is divided into a 2D grid. Any time a collidable object (a snis
+entity) is moved, its grid cell is updated with its presence, so at any
+time any grid cell knows exactly which snis_entities lie within it. This is
+done via set_object_location() in snis_server.c, which calls space_partition_update()
+for the object.  Any time an object's location is changed, set_object_location
+is used (the coordinates are never changed directly).
+
+<p>In snis_server.c, in main(), there's this code:
+
+<pre>
+        space_partition = space_partition_init(40, 40,
+                        -UNIVERSE_LIMIT, UNIVERSE_LIMIT,
+                        -UNIVERSE_LIMIT, UNIVERSE_LIMIT,
+                        offsetof(struct snis_entity, partition));
+</pre>
+
+<p>This sets up a 40 x 40 space partitioning grid.
+
+<p>To see if an object is colliding, space_partition_process() is called.
+For any object, there are only 4 grid cells which must be checked, the
+grid cell the object is in, and the 3 nearest other grid cells. The remaining
+1596 grid cells and all the objects in them may be safely ignored.  For each
+of those four grid cells, we know all the objects in them. A callback function
+gets called passing the original object along with each object in any of those
+four closest grid cells. This callback function can then do a finer collision
+check.
+
+<p>An example of this usage in snis_server.c, in torpedo_move():
+
+<pre>
+static void torpedo_move(struct snis_entity *o)
+{
+	if (o-&gt;alive)
+		o-&gt;alive--;
+	if (o-&gt;alive == 0) {
+		delete_from_clients_and_server(o);
+		return;
+	}
+	o-&gt;timestamp = universe_timestamp;
+	set_object_location(o, o-&gt;x + o-&gt;vx, o-&gt;y + o-&gt;vy, o-&gt;z + o-&gt;vz);
+	<b>space_partition_process(space_partition, o, o-&gt;x, o-&gt;z, o,
+		torpedo_collision_detection);</b>
+	if (!o-&gt;alive)
+		delete_from_clients_and_server(o);
+}
+</pre>
+
+For each object in the four grid cells nearest the torpedo, torpedo_collision_detection()
+is called, where it does a more fine-grained test, e.g. calculating the distance between
+the torpedo and the other object to see if it is below some minimum.
+
+<pre>
+static void torpedo_collision_detection(void *context, void *entity)
+{
+	struct snis_entity *t = entity;  /* target */
+	struct snis_entity *o = context;
+
+	[ ... complications omitted ... ]
+
+	dist2 = object_dist2(t, o);
+
+	[ ... ]
+
+	if (t-&gt;type == OBJTYPE_PLANET &amp;&amp; dist2 &lt; t-&gt;tsd.planet.radius * t-&gt;tsd.planet.radius) {
+		o-&gt;alive = 0; /* smashed into planet */
+		schedule_callback2(event_callback, &amp;callback_schedule,
+			"object-hit-event", (double) t-&gt;id,
+			(double) o-&gt;tsd.torpedo.ship_id);
+
+	[ ... ]
+</pre>
+Or, it might do a "moving-spheres" collision test:
+<pre>
+	double tolerance = 350.0;
+	[ ... ]
+	if (!projectile_collides(o-&gt;x, o-&gt;y, o-&gt;z, o-&gt;vx, o-&gt;vy, o-&gt;vz, 0.5 * tolerance,
+				t-&gt;x, t-&gt;y, t-&gt;z, t-&gt;vx, t-&gt;vy, t-&gt;vz, 0.5 * tolerance, &amp;delta_t))
+		return;
+	o-&gt;alive = 0; /* hit!!!! */
+	schedule_callback2(event_callback, &amp;callback_schedule,
+					"object-hit-event", t-&gt;id, (double) o-&gt;tsd.torpedo.ship_i
+</pre>
+
+projectile_collides() in snis_server.c calls moving_spheres_intersection(), defined in quat.h:
+
+<pre>
+/* moving_spheres_intersection() returns true if moving spheres intersect, and fills
+ * in *time at which intersection occurs if time_horizon &lt; 0 or
+ * if *time &lt; time_horizon. IOW, negative time_horizon == no time horizon.
+ * if *time &gt;= time_horizon &amp;&amp; time_horizon &gt;= 0 and there is an intersection,
+ * then *time is filled in, otherwise, *time is not touched.
+ */
+int moving_spheres_intersection(union vec3 *s1, float r1, union vec3 *v1,
+                                union vec3 *s2, float r2, union vec3 *v2,
+                                float time_horizon, float *time);
+
+</pre>
+
+<p>There is one special type of object, the "block", (which may be a rectangular solid, a capsule,
+or a sphere) for which special collision detection is done.  These objects are used by Lua scripts
+to build composite objects, like the Demolisher spaceship in DEMOLISHER.LUA, or the big ship in
+BIGSHIP.LUA. For these objects, we actually want to figure out the point on the surface of the object
+with which we collide, not just a general proximity.
+
+<p>For this, the block_closest_point() function is used. This contains sections of code to compute
+the closest point on the surface of a rectangular solid, a capsule or a sphere.
+
+<p>Additionally, we can find out where that point on the surface was on the previous tick of the
+simulation with find_block_point_last_pos().  This is useful for rotating objects, to figure out
+how fast and in what direction the point was moving when it hit us, which we can use in a collision
+response. (See player_collision_detection() in snis_server.c)
+
+<p>For collision response, see do_detailed_collision_impulse() in snis_server.c and elastic_collision()
+in elastic_collision.h and elastic_collision.c
+
 <h4><a name="snisserverplayershipmove">Player Ship movement</a></h4>
 
 <h2><a name="snismultiverse">SNIS Multiverse</a></h2>
