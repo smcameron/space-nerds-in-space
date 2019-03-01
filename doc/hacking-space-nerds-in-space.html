@@ -877,6 +877,7 @@ along with a tag indicating which screen those widgets belong to.
 <ul>
 <li>Defined by struct network_setup_ui net_setup_ui in snis_client.c
 <li>Initialized by function init_net_setup_ui() called from main() in snis_client.c
+<li>Function to render the network setup UI is show_network_setup() in snis_client.c
 </ul>
 
 <h4><a name="navui">Navigation UI</a></h4>
@@ -884,6 +885,9 @@ along with a tag indicating which screen those widgets belong to.
 <ul>
 <li>Defined by struct navigation_ui nav_ui in snis_client.c
 <li>Initialized by init_nav_ui() called from main() in snis_client.c
+<li>Function to render the navigation UI is show_navigation().  The 3D Navigation
+display is drawn by draw_3d_nav_display(), and the star map display is drawn by
+draw_3d_nav_starmap() in snis_client.c.
 </ul>
 
 <h4><a name="weapui">Weapons UI</a></h4>
@@ -891,6 +895,8 @@ along with a tag indicating which screen those widgets belong to.
 <ul>
 <li>Defined by struct weapons_ui weapons in snis_client.c
 <li>Initialized by init_weapons_ui() called from main() in snis_client.c
+<li>Function to render the weapons screen is show_manual_weapons(), which
+calls show_weapons_camera_view().
 </ul>
 
 <h4><a name="engui">Engineering UI</a></h4>
@@ -898,6 +904,7 @@ along with a tag indicating which screen those widgets belong to.
 <ul>
 <li>Defined by struct engineering_ui eng_ui in snis_client.c
 <li>Initialized by init_engineering_ui() called from main() in snis_client.c
+<li>Function to render the engineering screen is show_engineering() in snis_client.c
 </ul>
 
 <h4><a name="damconui">Damage Control UI</a></h4>
@@ -905,6 +912,7 @@ along with a tag indicating which screen those widgets belong to.
 <ul>
 <li>Defined by struct damcon_ui damcon_ui in snis_client.c
 <li>Initialized by init_damcon_ui() called from main() in snis_client.c
+<li>Function to render the damage control screen is show_damcon().
 </ul>
 
 <h4><a name="sciui">Science UI</a></h4>
@@ -912,6 +920,11 @@ along with a tag indicating which screen those widgets belong to.
 <ul>
 <li>Defined by struct science_ui sci_ui in snis_client.c
 <li>Initialized by init_science_ui called from main() in snis_client.c
+<li>Function to render the science screen is show_science(). The short
+range scanners screen is rendered by draw_sciplane_display(). The
+long range scanners screen is rendered by show_3d_science(). The waypoints
+screen is rendered by draw_science_waypoints().  The details screen is
+rendered by draw_science_details() and draw_science_data().
 </ul>
 
 <h4><a name="commsui">Comms UI</a></h4>
@@ -919,6 +932,7 @@ along with a tag indicating which screen those widgets belong to.
 <ul>
 <li>Defined by struct comms_ui comms_ui in snis_client.c
 <li>Initialized by init_comms_ui() called from main() in snis_client.c
+<li>Function to render the comms screen is show_comms().
 </ul>
 
 <h4><a name="demonui">Demon UI</a></h4>
@@ -926,6 +940,10 @@ along with a tag indicating which screen those widgets belong to.
 <ul>
 <li>Defined by struct demon_ui demon_ui in snis_client.c
 <li>Initialized by init_demon_ui() called from main() in snis_client.c
+<li>Function to render the demon screen is show_demon(). The 2d demon
+screen is drawn by show_demon_2d() and the 3d demon screen is drawn by
+show_demon_3d(). The console on the demon screen is rendered by
+show_demon_console() -- though it's just unhiding a text box widget.
 </ul>
 
 <h4><a name="lobbyui">Lobby UI</a></h4>
