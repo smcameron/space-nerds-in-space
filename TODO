@@ -376,3 +376,12 @@ NICE TO HAVE:
   have been implemented, and many of these client-side commands and opcodes could be replaced
   by server-side builtins.  This should probably be done wherever possible. See "demon_cmd_def"
   variable in snis_client.c.
+
+* Replace god-awful libpng entirely with gtk stuff.  Gtk knows how to read png files already.
+  E.g. use gdk_pixbuf_new_from_file(). See https://developer.gnome.org/gdk-pixbuf/stable/gdk-pixbuf-The-GdkPixbuf-Structure.html
+  and https://developer.gnome.org/gdk-pixbuf/unstable/gdk-pixbuf-File-Loading.html#gdk-pixbuf-new-from-file
+
+* Replace texture reloading system based on file timestamp polling
+  in graph_dev_opengl.c (e.g.  graph_dev_reload_changed_textures() and
+  graph_dev_reload_changed_cubemap_textures) with an inotify(7) based system.
+
