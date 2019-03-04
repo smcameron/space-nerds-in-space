@@ -3,6 +3,7 @@
 
 #include "quat.h"
 #include "oriented_bounding_box.h"
+#include "math.h"
 
 struct shape {
 	uint8_t type;
@@ -38,4 +39,9 @@ float shape_closest_point(union vec3 *point, union vec3 *shape_position,
 					struct shape *s,
 					union vec3 *closest_point,
 					union vec3 *normal_vector);
+
+void shape_init_sphere(struct shape *s, double radius);
+void shape_init_capsule(struct shape *s, double length, double radius);
+void shape_init_cuboid(struct shape *s, double sx, double sy, double sz);
+
 #endif

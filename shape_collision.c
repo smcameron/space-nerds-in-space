@@ -62,3 +62,27 @@ float shape_closest_point(union vec3 *point, union vec3 *shape_position,
 	return 0.0;
 }
 
+void shape_init_sphere(struct shape *s, double radius)
+{
+	s->type = SHAPE_SPHERE;
+	s->overall_radius = radius;
+	s->sphere.radius = radius;
+}
+
+void shape_init_capsule(struct shape *s, double length, double radius)
+{
+	s->type = SHAPE_CAPSULE;
+	s->overall_radius = length + 2.0 * radius;
+	s->capsule.radius = radius;
+	s->capsule.length = length;
+}
+
+void shape_init_cuboid(struct shape *s, double sx, double sy, double sz)
+{
+	s->type = SHAPE_CUBOID;
+	s->overall_radius = sqrt(0.25 * sx * sx + 0.25 * sy * sy + 0.25 * sz * sz);
+	s->cuboid.sx = sx;
+	s->cuboid.sy = sy;
+	s->cuboid.sz = sz;
+}
+

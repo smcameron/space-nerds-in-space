@@ -125,6 +125,7 @@
 #include "replacement_assets.h"
 #include "snis_asset_dir.h"
 #include "snis_bin_dir.h"
+#include "shape_collision.h"
 
 #define SHIP_COLOR CYAN
 #define STARBASE_COLOR RED
@@ -1835,14 +1836,12 @@ static int update_block(uint32_t id, uint32_t timestamp, double x, double y, dou
 		if (go[i].entity) {
 			switch (form) {
 			case SHAPE_SPHERE:
-				go[i].tsd.block.shape.sphere.radius = sizex;
-				go[i].tsd.block.shape.overall_radius = sizex;
+				shape_init_sphere(&go[i].tsd.block.shape, sizex);
 				/* half the size for spheroid because the radius is 1.0, diameter is 2.0 */
 				update_entity_non_uniform_scale(go[i].entity, 0.5 * sizex, 0.5 * sizey, 0.5 * sizez);
 				break;
 			case SHAPE_CAPSULE:
-				go[i].tsd.block.shape.capsule.length = sizex;
-				go[i].tsd.block.shape.capsule.radius = sizez;
+				shape_init_capsule(&go[i].tsd.block.shape, sizex, sizey);
 				quat_init_axis(&capsule_sphere_orientation, 0.0, 1.0, 0.0, M_PI / 2.0);
 				update_entity_non_uniform_scale(go[i].entity, sizex, sizey, sizez);
 				for (j = 0; j < 2; j++) {
@@ -1855,12 +1854,7 @@ static int update_block(uint32_t id, uint32_t timestamp, double x, double y, dou
 				}
 				break;
 			case SHAPE_CUBOID:
-				go[i].tsd.block.shape.cuboid.sx = sizex;
-				go[i].tsd.block.shape.cuboid.sy = sizey;
-				go[i].tsd.block.shape.cuboid.sz = sizez;
-				go[i].tsd.block.shape.overall_radius = sqrtf(0.5 * sizex * 0.5 * sizex +
-										0.5 * sizey * 0.5 * sizey +
-										0.5 * sizez * 0.5 * sizez);
+				shape_init_cuboid(&go[i].tsd.block.shape, sizex, sizey, sizez);
 				break;
 			default:
 				update_entity_non_uniform_scale(go[i].entity, sizex, sizey, sizez);
@@ -1918,21 +1912,13 @@ static int update_block(uint32_t id, uint32_t timestamp, double x, double y, dou
 	}
 	switch (go[i].tsd.block.shape.type) {
 	case SHAPE_CUBOID:
-		go[i].tsd.block.shape.cuboid.sx = sizex;
-		go[i].tsd.block.shape.cuboid.sy = sizey;
-		go[i].tsd.block.shape.cuboid.sz = sizez;
-		go[i].tsd.block.shape.overall_radius = sqrtf(0.5 * sizex * 0.5 * sizex +
-								0.5 * sizey * 0.5 * sizey +
-								0.5 * sizez * 0.5 * sizez);
+		shape_init_cuboid(&go[i].tsd.block.shape, sizex, sizey, sizez);
 		break;
 	case SHAPE_CAPSULE:
-		go[i].tsd.block.shape.capsule.length = sizex;
-		go[i].tsd.block.shape.capsule.radius = sizey;
-		go[i].tsd.block.shape.overall_radius = 0.5 * sizex + sizey;
+		shape_init_capsule(&go[i].tsd.block.shape, sizex, sizey);
 		break;
 	case SHAPE_SPHERE:
-		go[i].tsd.block.shape.sphere.radius = sizex;
-		go[i].tsd.block.shape.overall_radius = sizex;
+		shape_init_sphere(&go[i].tsd.block.shape, sizex);
 		break;
 	}
 	go[i].tsd.block.health = health;

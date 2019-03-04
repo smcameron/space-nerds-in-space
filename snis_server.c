@@ -11165,32 +11165,21 @@ static int add_block_object(int parent_id, double x, double y, double z,
 	go[i].tsd.block.relative_orientation = relative_orientation;
 	if (form == SHAPE_SPHERE) {
 		/* Force a sphere, forbid ellipsoids */
-		if (sx >= sy && sx >= sz) {
-			go[i].tsd.block.shape.sphere.radius = 0.5 * sx;
-			go[i].tsd.block.shape.overall_radius = 0.5 * sx;
-		} else if (sy >= sx && sy >= sz) {
-			go[i].tsd.block.shape.sphere.radius = 0.5 * sy;
-			go[i].tsd.block.shape.overall_radius = 0.5 * sy;
-		} else {
-			go[i].tsd.block.shape.sphere.radius = 0.5 * sz;
-			go[i].tsd.block.shape.overall_radius = 0.5 * sz;
-		}
+		if (sx >= sy && sx >= sz)
+			shape_init_sphere(&go[i].tsd.block.shape, 0.5 * sx);
+		else if (sy >= sx && sy >= sz)
+			shape_init_sphere(&go[i].tsd.block.shape, 0.5 * sy);
+		else
+			shape_init_sphere(&go[i].tsd.block.shape, 0.5 * sz);
 	} else if (form == SHAPE_CUBOID) {
-		go[i].tsd.block.shape.overall_radius =
-			mesh_compute_nonuniform_scaled_radius(unit_cube_mesh, sx, sy, sz);
-		go[i].tsd.block.shape.cuboid.sx = sx;
-		go[i].tsd.block.shape.cuboid.sy = sy;
-		go[i].tsd.block.shape.cuboid.sz = sz;
+		shape_init_cuboid(&go[i].tsd.block.shape, sx, sy, sz);
 	} else if (form == SHAPE_CAPSULE) {
 		if (sy >= sz)
-			go[i].tsd.block.shape.capsule.radius = sy;
+			shape_init_capsule(&go[i].tsd.block.shape, sx, sy);
 		else
-			go[i].tsd.block.shape.capsule.radius = sz;
-		go[i].tsd.block.shape.capsule.length = sx;
-		go[i].tsd.block.shape.overall_radius = 0.5 * sx + 2.0 * go[i].tsd.block.shape.capsule.radius;
+			shape_init_capsule(&go[i].tsd.block.shape, sx, sz);
 	}
 	go[i].tsd.block.block_material_index = block_material_index;
-	go[i].tsd.block.shape.type = form;
 	memset(&go[i].tsd.block.naughty_list, 0xff, sizeof(go[i].tsd.block.naughty_list));
 	go[i].move = block_move;
 	block_calculate_obb(&go[i], &go[i].tsd.block.shape.cuboid.obb);
