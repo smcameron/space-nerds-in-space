@@ -576,7 +576,6 @@ struct ship_data {
 	uint8_t docking_magnets;	/* 1 = magnets engaged, 0 magnets disengaged */
 	uint8_t passenger_berths;	/* count of passenger berths */
 	uint8_t mining_bots;		/* count of mining bots */
-	uint8_t rts_mode;		/* Is rts mode active? */
 	uint32_t orbiting_object_id;	/* Object ID of planet when in "standard orbit" */
 	char mining_bot_name[20];	/* Name of ship's mining bot */
 	float nav_damping_suppression;	/* 1.0 means suppress nav orientation damping, used on */

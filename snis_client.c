@@ -4913,7 +4913,6 @@ static int process_update_ship_packet(uint8_t opcode)
 	update_emf_detector(emf_detector);
 	o->tsd.ship.nav_mode = nav_mode;
 	o->tsd.ship.warp_core_status = warp_core_status;
-	o->tsd.ship.rts_mode = rts_mode;
 	global_rts_mode = rts_mode;
 	o->tsd.ship.rts_active_button = rts_active_button;
 	comms_setup_rts_buttons(rts_mode, o);
@@ -15809,13 +15808,13 @@ static void show_comms(GtkWidget *w)
 	format_date(current_date, sizeof(current_date), universe_timestamp());
 	snprintf(comms_buffer, sizeof(comms_buffer), "TIME: %s", current_date);
 	sng_abs_xy_draw_string(comms_buffer, TINY_FONT, txx(25), txy(55));
-	if (o->tsd.ship.rts_mode) {
+	if (global_rts_mode) {
 		snprintf(comms_buffer, sizeof(comms_buffer), "FUNDS: $%6.0f", o->tsd.ship.wallet);
 		sng_abs_xy_draw_string(comms_buffer, TINY_FONT, txx(625), txy(350));
 	}
 	snprintf(comms_buffer, sizeof(comms_buffer), "CHANNEL: %u", comms_ui.channel);
 	sng_center_xy_draw_string(comms_buffer, NANO_FONT, shield_ind_x_center, shield_ind_y_center - txy(15));
-	if (o->tsd.ship.rts_mode) {
+	if (global_rts_mode) {
 		if (o->tsd.ship.rts_active_button != 255) {
 			snis_draw_rectangle(0, txx(10), txy(350), SCREEN_WIDTH - txx(200), txy(150));
 			if (o->tsd.ship.rts_active_button < NUM_RTS_BASES) {

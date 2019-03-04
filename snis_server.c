@@ -10065,7 +10065,6 @@ static void init_player(struct snis_entity *o, int clear_cargo_bay, float *charg
 	o->tsd.ship.nav_mode = NAV_MODE_NORMAL;
 	o->tsd.ship.orbiting_object_id = 0xffffffff;
 	o->tsd.ship.nav_damping_suppression = 0.0;
-	o->tsd.ship.rts_mode = 0;
 	o->tsd.ship.rts_active_button = 255; /* none active */
 	o->tsd.ship.exterior_lights = 255; /* On */
 	if (o->tsd.ship.warp_core_status != WARP_CORE_STATUS_GOOD)
