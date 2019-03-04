@@ -1684,13 +1684,14 @@ to build composite objects, like the Demolisher spaceship in DEMOLISHER.LUA, or 
 BIGSHIP.LUA. For these objects, we actually want to figure out the point on the surface of the object
 with which we collide, not just a general proximity.
 
-<p>For this, the block_closest_point() function is used. This contains sections of code to compute
-the closest point on the surface of a rectangular solid, a capsule or a sphere.
+<p>For this, the shape_closest_point() function in shape_collision.c is used. This contains
+sections of code to compute the closest point on the surface of a rectangular solid, a capsule
+or a sphere.
 
 <p>Additionally, we can find out where that point on the surface was on the previous tick of the
-simulation with find_block_point_last_pos().  This is useful for rotating objects, to figure out
-how fast and in what direction the point was moving when it hit us, which we can use in a collision
-response. (See player_collision_detection() in snis_server.c)
+simulation with find_block_point_last_pos() in snis_server.c.  This is useful for rotating objects,
+to figure out how fast and in what direction the point was moving when it hit us, which we can use
+in a collision response. (See player_collision_detection() in snis_server.c)
 
 <p>For collision response, see do_detailed_collision_impulse() in snis_server.c and elastic_collision()
 in elastic_collision.h and elastic_collision.c
