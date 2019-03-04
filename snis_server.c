@@ -117,6 +117,7 @@
 #include "corporations.h"
 #include "replacement_assets.h"
 #include "snis_asset_dir.h"
+#include "shape_collision.h"
 
 #define CLIENT_UPDATE_PERIOD_NSECS 500000000
 #define MAXCLIENTS 100
@@ -1360,7 +1361,7 @@ static void warp_core_collision_detection(void *o1, void *o2)
 {
 	struct snis_entity *warp_core = o1;
 	struct snis_entity *object = o2;
-	union vec3 core_pos, closest_point, displacement;
+	union vec3 core_pos, obj_pos, closest_point, displacement, normal_vector;
 	double dist2;
 
 	if (warp_core->tsd.warp_core.countdown_timer == 0)
@@ -1368,14 +1369,18 @@ static void warp_core_collision_detection(void *o1, void *o2)
 	if (object->type != OBJTYPE_BLOCK)
 		return;
 	dist2 = object_dist2(warp_core, object);
-	if (dist2 > object->tsd.block.radius * object->tsd.block.radius)
+	if (dist2 > object->tsd.block.shape.overall_radius * object->tsd.block.shape.overall_radius)
 		return;
 
 	core_pos.v.x = warp_core->x;
 	core_pos.v.y = warp_core->y;
 	core_pos.v.z = warp_core->z;
+	obj_pos.v.x = object->x;
+	obj_pos.v.y = object->y;
+	obj_pos.v.z = object->z;
 
-	oriented_bounding_box_closest_point(&core_pos, &object->tsd.block.obb, &closest_point);
+	shape_closest_point(&core_pos, &obj_pos, &object->orientation,
+				&object->tsd.block.shape, &closest_point, &normal_vector);
 
 	dist2 = dist3dsqrd(warp_core->x - closest_point.v.x,
 				warp_core->y - closest_point.v.y,
@@ -3414,112 +3419,6 @@ static void find_block_point_last_pos(struct snis_entity *block, union vec3 *poi
 	previous_point->v.z = root_to_point.v.z + root->z - root->vz;
 }
 
-/* Given point point, and an entity o of type OBJTYPE_BLOCK, find the
- * closest point on the surface of o to point, (returned in *closest_point)
- * and the square of the distance is returned. For capsules and spheres the
- * normal_vector is filled in. TODO: Fill in the normal vector for blocks too.
- */
-static float block_closest_point(union vec3 *point, struct snis_entity *o,
-					union vec3 *closest_point,
-					union vec3 *normal_vector)
-{
-	union vec3 meshpos, heretothere, p1, p2;
-	float dist;
-#if 0
-	int i = -1;
-	union vec3 relpos;
-	union quat inverse_rotation;
-#endif
-
-	assert(o->type == OBJTYPE_BLOCK);
-	switch (o->tsd.block.form) {
-	case BLOCK_FORM_SPHEROID:
-#if 0
-		/* This was my attempt at ellipsoid collision detection.
-		 * It does not seem to work very well. Not sure why not,
-		 * It is a pretty hard problem though. Some insight here:
-		 * https://www.geometrictools.com/Documentation/DistancePointEllipseEllipsoid.pdf
-		 * What follows is not really an attempt at the algorithm in the
-		 * PDF though.
-		 */
-		oriented_bounding_box_closest_point(point, &o->tsd.block.obb, closest_point);
-		vec3_sub(&heretothere, point, closest_point);
-		dist = vec3_magnitude(&heretothere);
-		if (dist > 0.55 * o->tsd.block.sx &&
-			dist > 0.55 * o->tsd.block.sy &&
-			dist > 0.55 * o->tsd.block.sz)
-			return; /* Far enough away that obb is good enough */
-		meshpos.v.x = o->x;
-		meshpos.v.y = o->y;
-		meshpos.v.z = o->z;
-		vec3_sub(&relpos, point, &meshpos);
-		quat_inverse(&inverse_rotation, &o->orientation);
-		quat_rot_vec_self(&relpos, &inverse_rotation);
-		i = mesh_nearest_vertex(low_poly_sphere_mesh, relpos.v.x, relpos.v.y, relpos.v.z,
-			0.5 * o->tsd.block.sx, 0.5 * o->tsd.block.sy, 0.5 * o->tsd.block.sz, &dist);
-		if (i >= 0) {
-			closest_point->v.x = low_poly_sphere_mesh->v[i].x;
-			closest_point->v.y = low_poly_sphere_mesh->v[i].y;
-			closest_point->v.z = low_poly_sphere_mesh->v[i].z;
-			quat_rot_vec_self(closest_point, &o->orientation);
-			vec3_add_self(closest_point, &meshpos);
-		}
-#else
-		/* Here we have simple sphere collision detection, because in add_block_object(),
-		 * we forced axial scaling factors to be equal, (i.e. we forced
-		 * (tsd.block.sx == tsd.block.sy == tsd.block.sz) to be true.)
-		 */
-		meshpos.v.x = o->x;
-		meshpos.v.y = o->y;
-		meshpos.v.z = o->z;
-		vec3_sub(&heretothere, point, &meshpos);
-		vec3_normalize_self(&heretothere);
-		*normal_vector = heretothere;
-		vec3_mul_self(&heretothere, 0.5 * o->tsd.block.sx);
-		vec3_add(closest_point, &heretothere, &meshpos);
-		vec3_sub(&heretothere, closest_point, point);
-		return vec3_magnitude2(&heretothere);
-#endif
-		break;
-	case BLOCK_FORM_BLOCK:
-		meshpos.v.x = o->x;
-		meshpos.v.y = o->y;
-		meshpos.v.z = o->z;
-		/* TODO: fill in the normal_vector */
-		oriented_bounding_box_closest_point(point, &o->tsd.block.obb, closest_point);
-		vec3_sub(&heretothere, closest_point, point);
-		return vec3_magnitude2(&heretothere);
-	case BLOCK_FORM_CAPSULE:
-		p1.v.x = 0.5 * o->tsd.block.sx;
-		p1.v.y = 0.0;
-		p1.v.z = 0.0;
-		p2.v.x = -0.5 * o->tsd.block.sx;
-		p2.v.y = 0;
-		p2.v.z = 0;
-		quat_rot_vec_self(&p1, &o->orientation);
-		quat_rot_vec_self(&p2, &o->orientation);
-		p1.v.x += o->x;
-		p1.v.y += o->y;
-		p1.v.z += o->z;
-		p2.v.x += o->x;
-		p2.v.y += o->y;
-		p2.v.z += o->z;
-		dist = dist2_from_point_to_line_segment(point, &p1, &p2, closest_point);
-		p2 = *closest_point;
-		vec3_sub(&p1, point, closest_point);
-		vec3_normalize_self(&p1);
-		vec3_mul_self(&p1, o->tsd.block.sy * 0.5);
-		vec3_add_self(closest_point, &p1);
-		vec3_sub(normal_vector, closest_point, &p2);
-		vec3_normalize_self(normal_vector);
-		return dist;
-		break;
-	default:
-		break;
-	}
-	return 0.0;
-}
-
 static void missile_explode(struct snis_entity *o)
 {
 	delete_from_clients_and_server(o);
@@ -3616,17 +3515,23 @@ static void torpedo_collision_detection(void *context, void *entity)
 	dist2 = object_dist2(t, o);
 
 	if (t->type == OBJTYPE_BLOCK) {
-		union vec3 torpedo_pos, closest_point, normal;
+		union vec3 torpedo_pos, closest_point, normal, block_pos;
 
-		if (dist2 > t->tsd.block.radius * t->tsd.block.radius)
+		if (dist2 > t->tsd.block.shape.overall_radius * t->tsd.block.shape.overall_radius)
 			return;
 		torpedo_pos.v.x = o->x;
 		torpedo_pos.v.y = o->y;
 		torpedo_pos.v.z = o->z;
 
-		dist2 = block_closest_point(&torpedo_pos, t, &closest_point, &normal);
-		if (t->tsd.block.form == BLOCK_FORM_CAPSULE) {
-			if (sqrtf(dist2) - 0.5 * t->tsd.block.sy > torpedo_velocity)
+		block_pos.v.x = t->x;
+		block_pos.v.y = t->y;
+		block_pos.v.z = t->z;
+
+		dist2 = shape_closest_point(&torpedo_pos, &block_pos, &t->orientation,
+						&t->tsd.block.shape, &closest_point, &normal);
+
+		if (t->tsd.block.shape.type == SHAPE_CAPSULE) {
+			if (sqrtf(dist2) - t->tsd.block.shape.capsule.radius > torpedo_velocity)
 				return;
 		} else {
 			if (dist2 > torpedo_velocity * torpedo_velocity)
@@ -3890,16 +3795,20 @@ static void laser_collision_detection(void *context, void *entity)
 
 	if (t->type == OBJTYPE_BLOCK) {
 		double dist2;
-		union vec3 laser_pos, closest_point;
+		union vec3 laser_pos, t_pos, closest_point, normal_vec;
 
 		dist2 = object_dist2(o, t);
-		if (dist2 > t->tsd.block.radius * t->tsd.block.radius)
+		if (dist2 > t->tsd.block.shape.overall_radius * t->tsd.block.shape.overall_radius)
 			return;
 		laser_pos.v.x = o->x;
 		laser_pos.v.y = o->y;
 		laser_pos.v.z = o->z;
+		t_pos.v.x = t->x;
+		t_pos.v.y = t->y;
+		t_pos.v.z = t->z;
 
-		oriented_bounding_box_closest_point(&laser_pos, &t->tsd.block.obb, &closest_point);
+		shape_closest_point(&laser_pos, &t_pos, &t->orientation, &t->tsd.block.shape,
+					&closest_point, &normal_vec);
 
 		dist2 = dist3dsqrd(o->x - closest_point.v.x, o->y - closest_point.v.y, o->z - closest_point.v.z);
 		if (dist2 > 0.5 * LASER_VELOCITY)
@@ -8202,9 +8111,9 @@ static void block_calculate_obb(struct snis_entity *block, struct oriented_bound
 	obb->u[1] = yaxis;
 	obb->u[2] = zaxis;
 
-	obb->e[0] = block->tsd.block.sx * 0.5;
-	obb->e[1] = block->tsd.block.sy * 0.5;
-	obb->e[2] = block->tsd.block.sz * 0.5;
+	obb->e[0] = block->tsd.block.shape.cuboid.sx * 0.5;
+	obb->e[1] = block->tsd.block.shape.cuboid.sy * 0.5;
+	obb->e[2] = block->tsd.block.shape.cuboid.sz * 0.5;
 }
 
 static void player_collision_detection(void *player, void *object)
@@ -8327,19 +8236,23 @@ static void player_collision_detection(void *player, void *object)
 		return;
 	}
 	if (t->type == OBJTYPE_BLOCK) {
-		union vec3 my_ship, closest_point, displacement, normal, hit_vel, prev_point;
+		union vec3 my_ship, t_pos, closest_point, displacement, normal, hit_vel, prev_point;
 		float bounce_speed;
 
-		if (dist2 > t->tsd.block.radius * t->tsd.block.radius)
+		if (dist2 > t->tsd.block.shape.overall_radius * t->tsd.block.shape.overall_radius)
 			return;
 
 		my_ship.v.x = o->x;
 		my_ship.v.y = o->y;
 		my_ship.v.z = o->z;
+		t_pos.v.x = t->x;
+		t_pos.v.y = t->y;
+		t_pos.v.z = t->z;
 
-		dist2 = block_closest_point(&my_ship, t, &closest_point, &normal);
-		if (t->tsd.block.form == BLOCK_FORM_CAPSULE) {
-			if (sqrtf(dist2) - 0.5 * t->tsd.block.sy > 2.0 * 2.0)
+		dist2 = shape_closest_point(&my_ship, &t_pos, &t->orientation, &t->tsd.block.shape,
+						&closest_point, &normal);
+		if (t->tsd.block.shape.type == SHAPE_CAPSULE) {
+			if (sqrtf(dist2) - t->tsd.block.shape.capsule.radius > 4.0)
 				return;
 		} else {
 			if (dist2 > 8.0 * 8.0)
@@ -8352,15 +8265,15 @@ static void player_collision_detection(void *player, void *object)
 		o->vy = 0;
 		o->vz = 0;
 
-		switch (t->tsd.block.form) {
-		case BLOCK_FORM_BLOCK:
+		switch (t->tsd.block.shape.type) {
+		case SHAPE_CUBOID:
 			displacement.v.x = o->x - closest_point.v.x;
 			displacement.v.y = o->y - closest_point.v.y;
 			displacement.v.z = o->z - closest_point.v.z;
 			vec3_normalize_self(&displacement);
 			break;
-		case BLOCK_FORM_SPHEROID:
-		case BLOCK_FORM_CAPSULE:
+		case SHAPE_SPHERE:
+		case SHAPE_CAPSULE:
 			displacement = normal;
 			break;
 		default:
@@ -9388,7 +9301,7 @@ static void block_move(struct snis_entity *o)
 	o->vy = pos.v.y + parent->y - o->y;
 	o->vz = pos.v.z + parent->z - o->z;
 	set_object_location(o, pos.v.x + parent->x, pos.v.y + parent->y, pos.v.z + parent->z);
-	block_calculate_obb(o, &o->tsd.block.obb);
+	block_calculate_obb(o, &o->tsd.block.shape.cuboid.obb);
 	o->timestamp = universe_timestamp;
 	if (o->tsd.block.health <= 100 && o->tsd.block.parent_id != (uint32_t) -1) {
 		o->tsd.block.parent_id = (uint32_t) -1;
@@ -9401,7 +9314,7 @@ default_move:
 	quat_mul(&o->orientation, &o->orientation, &o->tsd.block.rotational_velocity);
 	quat_normalize_self(&o->orientation);
 	set_object_location(o, o->x + o->vx, o->y + o->vy, o->z + o->vz);
-	block_calculate_obb(o, &o->tsd.block.obb);
+	block_calculate_obb(o, &o->tsd.block.shape.cuboid.obb);
 	if (o->tsd.block.health == 0) {
 		(void) add_explosion(o->x, o->y, o->z, 50, 150, 50, o->type);
 		o->alive = 0;
@@ -11247,41 +11160,40 @@ static int add_block_object(int parent_id, double x, double y, double z,
 	go[i].tsd.block.dx = dx;
 	go[i].tsd.block.dy = dy;
 	go[i].tsd.block.dz = dz;
-	go[i].tsd.block.sx = sx;
-	go[i].tsd.block.sy = sy;
-	go[i].tsd.block.sz = sz;
 	go[i].tsd.block.health = 255; /* immortal */
 	go[i].tsd.block.rotational_velocity = random_spin[go[i].id % NRANDOM_SPINS];
 	go[i].tsd.block.relative_orientation = relative_orientation;
-	if (form == BLOCK_FORM_SPHEROID) {
+	if (form == SHAPE_SPHERE) {
 		/* Force a sphere, forbid ellipsoids */
 		if (sx >= sy && sx >= sz) {
-			go[i].tsd.block.radius = 0.5 * sx;
-			go[i].tsd.block.sy = sx;
-			go[i].tsd.block.sz = sx;
+			go[i].tsd.block.shape.sphere.radius = 0.5 * sx;
+			go[i].tsd.block.shape.overall_radius = 0.5 * sx;
 		} else if (sy >= sx && sy >= sz) {
-			go[i].tsd.block.radius = 0.5 * sy;
-			go[i].tsd.block.sx = sy;
-			go[i].tsd.block.sz = sy;
+			go[i].tsd.block.shape.sphere.radius = 0.5 * sy;
+			go[i].tsd.block.shape.overall_radius = 0.5 * sy;
 		} else {
-			go[i].tsd.block.radius = 0.5 * sz;
-			go[i].tsd.block.sx = sz;
-			go[i].tsd.block.sy = sz;
+			go[i].tsd.block.shape.sphere.radius = 0.5 * sz;
+			go[i].tsd.block.shape.overall_radius = 0.5 * sz;
 		}
-	} else if (form == BLOCK_FORM_BLOCK) {
-		go[i].tsd.block.radius = mesh_compute_nonuniform_scaled_radius(unit_cube_mesh, sx, sy, sz);
-	} else if (form == BLOCK_FORM_CAPSULE) {
+	} else if (form == SHAPE_CUBOID) {
+		go[i].tsd.block.shape.overall_radius =
+			mesh_compute_nonuniform_scaled_radius(unit_cube_mesh, sx, sy, sz);
+		go[i].tsd.block.shape.cuboid.sx = sx;
+		go[i].tsd.block.shape.cuboid.sy = sy;
+		go[i].tsd.block.shape.cuboid.sz = sz;
+	} else if (form == SHAPE_CAPSULE) {
 		if (sy >= sz)
-			go[i].tsd.block.sz = sy;
+			go[i].tsd.block.shape.capsule.radius = sy;
 		else
-			go[i].tsd.block.sy = sz;
-		go[i].tsd.block.radius = 0.5 * (go[i].tsd.block.sx + go[i].tsd.block.sy);
+			go[i].tsd.block.shape.capsule.radius = sz;
+		go[i].tsd.block.shape.capsule.length = sx;
+		go[i].tsd.block.shape.overall_radius = 0.5 * sx + 2.0 * go[i].tsd.block.shape.capsule.radius;
 	}
 	go[i].tsd.block.block_material_index = block_material_index;
-	go[i].tsd.block.form = form;
+	go[i].tsd.block.shape.type = form;
 	memset(&go[i].tsd.block.naughty_list, 0xff, sizeof(go[i].tsd.block.naughty_list));
 	go[i].move = block_move;
-	block_calculate_obb(&go[i], &go[i].tsd.block.obb);
+	block_calculate_obb(&go[i], &go[i].tsd.block.shape.cuboid.obb);
 	return i;
 }
 
@@ -11315,9 +11227,9 @@ static int l_add_block(lua_State *l)
 		return 1;
 	}
 	switch ((int) form) {
-	case BLOCK_FORM_BLOCK:
-	case BLOCK_FORM_SPHEROID:
-	case BLOCK_FORM_CAPSULE:
+	case SHAPE_CUBOID:
+	case SHAPE_SPHERE:
+	case SHAPE_CAPSULE:
 		break;
 	default:
 		lua_pushnumber(lua_state, -1.0);
@@ -11387,9 +11299,9 @@ static void add_turrets_to_block_face(int parent_id, int face, int rows, int col
 	block = &go[index];
 	if (block->type != OBJTYPE_BLOCK)
 		return;
-	xo = xoff[face] * block->tsd.block.sx * 0.5 + turret_offset * xoff[face];
-	yo = yoff[face] * block->tsd.block.sy * 0.5 + turret_offset * yoff[face];
-	zo = zoff[face] * block->tsd.block.sz * 0.5 + turret_offset * zoff[face];
+	xo = xoff[face] * block->tsd.block.shape.cuboid.sx * 0.5 + turret_offset * xoff[face];
+	yo = yoff[face] * block->tsd.block.shape.cuboid.sy * 0.5 + turret_offset * yoff[face];
+	zo = zoff[face] * block->tsd.block.shape.cuboid.sz * 0.5 + turret_offset * zoff[face];
 
 	if (xoff[face] > 0.0)
 		quat_init_axis(&rest_orientation, 0, 0, 1, -0.5 * M_PI);
@@ -11423,22 +11335,22 @@ static void add_turrets_to_block_face(int parent_id, int face, int rows, int col
 	if (fabs(xo) > 0.01) {
 		/* y,z  plane */
 		printf("y z plane\n");
-		yrowstep = block->tsd.block.sy / (1.0 + rows);
-		zcolstep = block->tsd.block.sz / (1.0 + cols);
+		yrowstep = block->tsd.block.shape.cuboid.sy / (1.0 + rows);
+		zcolstep = block->tsd.block.shape.cuboid.sz / (1.0 + cols);
 		printf("yrowstep = %lf\n", yrowstep);
 		printf("zcolstep = %lf\n", zcolstep);
-		printf("block->tsd.block.sy = %lf\n", block->tsd.block.sy);
-		printf("block->tsd.block.sz = %lf\n", block->tsd.block.sz);
+		printf("block->tsd.block.sy = %lf\n", block->tsd.block.shape.cuboid.sy);
+		printf("block->tsd.block.sz = %lf\n", block->tsd.block.shape.cuboid.sz);
 	} else if (fabs(yo) > 0.01) {
 		printf("x z plane\n");
 		/* x,z  plane */
-		xrowstep = block->tsd.block.sx / (1.0 + rows);
-		zcolstep = block->tsd.block.sz / (1.0 + cols);
+		xrowstep = block->tsd.block.shape.cuboid.sx / (1.0 + rows);
+		zcolstep = block->tsd.block.shape.cuboid.sz / (1.0 + cols);
 	} else {
 		/* x,y  plane */
 		printf("x y plane\n");
-		xrowstep = block->tsd.block.sx / (1.0 + rows);
-		ycolstep = block->tsd.block.sy / (1.0 + cols);
+		xrowstep = block->tsd.block.shape.cuboid.sx / (1.0 + rows);
+		ycolstep = block->tsd.block.shape.cuboid.sy / (1.0 + cols);
 	}
 
 	printf("xcs, ycs, zcs, xrs, yrs, zrs = %lf, %lf, %lf, %lf, %lf, %lf\n",
@@ -11456,7 +11368,7 @@ static void add_turrets_to_block_face(int parent_id, int face, int rows, int col
 			z = rowfactor * zrowstep + colfactor * zcolstep + zo;
 			block = add_subblock(parent_id, 1.0, platformsx, platformsy, platformsz,
 						x + platformxo, y + platformyo, z + platformzo, 1,
-						BLOCK_FORM_BLOCK);
+						SHAPE_CUBOID);
 			if (block >= 0) {
 				printf("ADDING TURRET parent = %d, %lf, %lf, %lf\n", go[block].id, x, y, z); 
 				add_turret(go[block].id, 0, 0, 0,
@@ -22385,18 +22297,50 @@ static void send_update_docking_port_packet(struct game_client *c,
 static void send_update_block_packet(struct game_client *c,
 	struct snis_entity *o)
 {
-	pb_queue_to_client(c, snis_opcode_pkt("bwwSSSSSSQbbb", OPCODE_UPDATE_BLOCK,
+	switch (o->tsd.block.shape.type) {
+	case SHAPE_CUBOID:
+		pb_queue_to_client(c, snis_opcode_pkt("bwwSSSSSSQbbb", OPCODE_UPDATE_BLOCK,
 					o->id, o->timestamp,
 					o->x, (int32_t) UNIVERSE_DIM,
 					o->y, (int32_t) UNIVERSE_DIM,
 					o->z, (int32_t) UNIVERSE_DIM,
-					o->tsd.block.sx, (int32_t) UNIVERSE_DIM,
-					o->tsd.block.sy, (int32_t) UNIVERSE_DIM,
-					o->tsd.block.sz, (int32_t) UNIVERSE_DIM,
+					o->tsd.block.shape.cuboid.sx, (int32_t) UNIVERSE_DIM,
+					o->tsd.block.shape.cuboid.sy, (int32_t) UNIVERSE_DIM,
+					o->tsd.block.shape.cuboid.sz, (int32_t) UNIVERSE_DIM,
 					&o->orientation,
 					o->tsd.block.block_material_index,
 					o->tsd.block.health,
-					o->tsd.block.form));
+					o->tsd.block.shape.type));
+		break;
+	case SHAPE_SPHERE:
+		pb_queue_to_client(c, snis_opcode_pkt("bwwSSSSSSQbbb", OPCODE_UPDATE_BLOCK,
+					o->id, o->timestamp,
+					o->x, (int32_t) UNIVERSE_DIM,
+					o->y, (int32_t) UNIVERSE_DIM,
+					o->z, (int32_t) UNIVERSE_DIM,
+					o->tsd.block.shape.sphere.radius, (int32_t) UNIVERSE_DIM,
+					o->tsd.block.shape.sphere.radius, (int32_t) UNIVERSE_DIM,
+					o->tsd.block.shape.sphere.radius, (int32_t) UNIVERSE_DIM,
+					&o->orientation,
+					o->tsd.block.block_material_index,
+					o->tsd.block.health,
+					o->tsd.block.shape.type));
+		break;
+	case SHAPE_CAPSULE:
+		pb_queue_to_client(c, snis_opcode_pkt("bwwSSSSSSQbbb", OPCODE_UPDATE_BLOCK,
+					o->id, o->timestamp,
+					o->x, (int32_t) UNIVERSE_DIM,
+					o->y, (int32_t) UNIVERSE_DIM,
+					o->z, (int32_t) UNIVERSE_DIM,
+					o->tsd.block.shape.capsule.length, (int32_t) UNIVERSE_DIM,
+					o->tsd.block.shape.capsule.radius, (int32_t) UNIVERSE_DIM,
+					o->tsd.block.shape.capsule.radius, (int32_t) UNIVERSE_DIM,
+					&o->orientation,
+					o->tsd.block.block_material_index,
+					o->tsd.block.health,
+					o->tsd.block.shape.type));
+		break;
+	}
 }
 
 static void send_update_turret_packet(struct game_client *c,

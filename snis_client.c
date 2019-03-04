@@ -1831,17 +1831,18 @@ static int update_block(uint32_t id, uint32_t timestamp, double x, double y, dou
 		vy = y - go[i].y;
 		vz = z - go[i].z;
 		update_generic_object(i, timestamp, x, y, z, vx, vy, vz, orientation, 1);
-		go[i].tsd.block.sx = sizex;
-		go[i].tsd.block.sy = sizey;
-		go[i].tsd.block.sz = sizez;
 		go[i].tsd.block.health = health;
 		if (go[i].entity) {
 			switch (form) {
-			case BLOCK_FORM_SPHEROID:
+			case SHAPE_SPHERE:
+				go[i].tsd.block.shape.sphere.radius = sizex;
+				go[i].tsd.block.shape.overall_radius = sizex;
 				/* half the size for spheroid because the radius is 1.0, diameter is 2.0 */
 				update_entity_non_uniform_scale(go[i].entity, 0.5 * sizex, 0.5 * sizey, 0.5 * sizez);
 				break;
-			case BLOCK_FORM_CAPSULE:
+			case SHAPE_CAPSULE:
+				go[i].tsd.block.shape.capsule.length = sizex;
+				go[i].tsd.block.shape.capsule.radius = sizez;
 				quat_init_axis(&capsule_sphere_orientation, 0.0, 1.0, 0.0, M_PI / 2.0);
 				update_entity_non_uniform_scale(go[i].entity, sizex, sizey, sizez);
 				for (j = 0; j < 2; j++) {
@@ -1853,7 +1854,14 @@ static int update_block(uint32_t id, uint32_t timestamp, double x, double y, dou
 					}
 				}
 				break;
-			case BLOCK_FORM_BLOCK:
+			case SHAPE_CUBOID:
+				go[i].tsd.block.shape.cuboid.sx = sizex;
+				go[i].tsd.block.shape.cuboid.sy = sizey;
+				go[i].tsd.block.shape.cuboid.sz = sizez;
+				go[i].tsd.block.shape.overall_radius = sqrtf(0.5 * sizex * 0.5 * sizex +
+										0.5 * sizey * 0.5 * sizey +
+										0.5 * sizez * 0.5 * sizez);
+				break;
 			default:
 				update_entity_non_uniform_scale(go[i].entity, sizex, sizey, sizez);
 				break;
@@ -1862,13 +1870,13 @@ static int update_block(uint32_t id, uint32_t timestamp, double x, double y, dou
 		return 0;
 	}
 	switch (form) {
-	case BLOCK_FORM_SPHEROID:
+	case SHAPE_SPHERE:
 		e = add_entity(ecx, low_poly_sphere_mesh, x, y, z, BLOCK_COLOR);
 		break;
-	case BLOCK_FORM_BLOCK:
+	case SHAPE_CUBOID:
 		e = add_entity(ecx, unit_cube_mesh, x, y, z, BLOCK_COLOR);
 		break;
-	case BLOCK_FORM_CAPSULE:
+	case SHAPE_CAPSULE:
 		e = add_entity(ecx, cylinder_mesh, x, y, z, BLOCK_COLOR);
 		if (!e)
 			break;
@@ -1877,12 +1885,12 @@ static int update_block(uint32_t id, uint32_t timestamp, double x, double y, dou
 	if (!e)
 		return -1;
 	switch (form) {
-	case BLOCK_FORM_SPHEROID:
+	case SHAPE_SPHERE:
 		/* half the size for sphere because the radius is 1.0, diameter is 2.0 */
 		update_entity_non_uniform_scale(e, 0.5 * sizex, 0.5 * sizey, 0.5 * sizez);
 		break;
-	case BLOCK_FORM_BLOCK:
-	case BLOCK_FORM_CAPSULE:
+	case SHAPE_CUBOID:
+	case SHAPE_CAPSULE:
 	default:
 		update_entity_non_uniform_scale(e, sizex, sizey, sizez);
 		break;
@@ -1894,7 +1902,7 @@ static int update_block(uint32_t id, uint32_t timestamp, double x, double y, dou
 	i = add_generic_object(id, timestamp, x, y, z, 0.0, 0.0, 0.0, orientation, OBJTYPE_BLOCK, 1, e);
 	if (i < 0)
 		return i;
-	if (e && form == BLOCK_FORM_CAPSULE) {
+	if (e && form == SHAPE_CAPSULE) {
 		for (j = 0; j < 2; j++) {
 			go[i].tsd.block.capsule_sphere[j] =
 				add_entity(ecx, half_size_low_poly_sphere_mesh,
@@ -1908,9 +1916,25 @@ static int update_block(uint32_t id, uint32_t timestamp, double x, double y, dou
 			}
 		}
 	}
-	go[i].tsd.block.sx = sizex;
-	go[i].tsd.block.sy = sizey;
-	go[i].tsd.block.sz = sizez;
+	switch (go[i].tsd.block.shape.type) {
+	case SHAPE_CUBOID:
+		go[i].tsd.block.shape.cuboid.sx = sizex;
+		go[i].tsd.block.shape.cuboid.sy = sizey;
+		go[i].tsd.block.shape.cuboid.sz = sizez;
+		go[i].tsd.block.shape.overall_radius = sqrtf(0.5 * sizex * 0.5 * sizex +
+								0.5 * sizey * 0.5 * sizey +
+								0.5 * sizez * 0.5 * sizez);
+		break;
+	case SHAPE_CAPSULE:
+		go[i].tsd.block.shape.capsule.length = sizex;
+		go[i].tsd.block.shape.capsule.radius = sizey;
+		go[i].tsd.block.shape.overall_radius = 0.5 * sizex + sizey;
+		break;
+	case SHAPE_SPHERE:
+		go[i].tsd.block.shape.sphere.radius = sizex;
+		go[i].tsd.block.shape.overall_radius = sizex;
+		break;
+	}
 	go[i].tsd.block.health = health;
 	return 0;
 }
@@ -5617,14 +5641,14 @@ static void delete_object(uint32_t id)
 	remove_entity(ecx, go[i].entity);
 	if (go[i].type == OBJTYPE_TURRET && go[i].tsd.turret.turret_base_entity)
 		remove_entity(ecx, go[i].tsd.turret.turret_base_entity);
-	if (go[i].type == OBJTYPE_BLOCK && go[i].tsd.block.form == BLOCK_FORM_CAPSULE) {
+	if (go[i].type == OBJTYPE_BLOCK && go[i].tsd.block.shape.type == SHAPE_CAPSULE) {
 		if (go[i].tsd.block.capsule_sphere[0])
 			remove_entity(ecx, go[i].tsd.block.capsule_sphere[0]);
 		if (go[i].tsd.block.capsule_sphere[1])
 			remove_entity(ecx, go[i].tsd.block.capsule_sphere[1]);
 		go[i].tsd.block.capsule_sphere[0] = NULL;
 		go[i].tsd.block.capsule_sphere[1] = NULL;
-		go[i].tsd.block.form = 0;
+		go[i].tsd.block.shape.type = 0;
 	}
 	go[i].entity = NULL;
 	if (go[i].type == OBJTYPE_LASERBEAM || go[i].type == OBJTYPE_TRACTORBEAM) {

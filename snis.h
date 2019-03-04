@@ -26,6 +26,7 @@
 #include "docking_port.h"
 #include "space-part.h"
 #include "oriented_bounding_box.h"
+#include "shape_collision.h"
 
 #define DEFAULT_SOLAR_SYSTEM "default"
 #define SNIS_PROTOCOL_VERSION "SNIS031"
@@ -848,21 +849,15 @@ struct warpgate_data {
 
 struct block_data {
 	uint32_t parent_id;
-	double sx, sy, sz; /* scale in x, y, z */
+	struct shape shape;
 	union quat relative_orientation;
 	double dx, dy, dz; /* offset position from parent, used only server side */
-	double radius;
-	struct oriented_bounding_box obb;
 	uint32_t naughty_list[8];
 	uint32_t root_id;
 	union quat rotational_velocity;
 	uint8_t block_material_index; /* For now, 0 for big blocks, 1 for small blocks */
 	uint8_t health;
-	uint8_t form;
 	struct entity *capsule_sphere[2];
-#define BLOCK_FORM_BLOCK 0
-#define BLOCK_FORM_SPHEROID 1
-#define BLOCK_FORM_CAPSULE 2
 };
 
 struct turret_data {

@@ -508,16 +508,33 @@ void snis_debug_dump(char *cmd, struct snis_entity go[], int nstarbase_models,
 		t = "BLOCK";
 		printfn("TYPE: %s", t);
 		printfn("PARENT: %u", o->tsd.block.parent_id);
-		printfn("SCALE: %.2f %.2f %.2f",
-			o->tsd.block.sx, o->tsd.block.sy, o->tsd.block.sz);
+		switch (o->tsd.block.shape.type) {
+		case SHAPE_SPHERE:
+			printfn("SHAPE: SPHERE");
+			printfn("- RADIUS: %.2f", o->tsd.block.shape.sphere.radius);
+			break;
+		case SHAPE_CUBOID:
+			printfn("SHAPE: CUBOID");
+			printfn("- SCALE: %.2f %.2f %.2f",
+				o->tsd.block.shape.cuboid.sx, o->tsd.block.shape.cuboid.sy,
+				o->tsd.block.shape.cuboid.sz);
+			break;
+		case SHAPE_CAPSULE:
+			printfn("SHAPE: CAPSULE");
+			printfn("- LENGTH: %.2f", o->tsd.block.shape.capsule.length);
+			printfn("- RADIUS: %.2f", o->tsd.block.shape.capsule.radius);
+			break;
+		default:
+			printfn("SHAPE: UNKNOWN (%hhu)", o->tsd.block.shape.type);
+			break;
+		}
+		printfn("- OVERALL RADIUS: %.2f", o->tsd.block.shape.overall_radius);
 		printfn("OFFSET FROM PARENT: %.2f %.2f %.2f",
 			o->tsd.block.dx, o->tsd.block.dy, o->tsd.block.dz);
-		printfn("RADIUS: %.2f", o->tsd.block.radius);
 		printfn("ROOT ID: %u", o->tsd.block.root_id);
 		printfn("MATERIAL INDEX: %hhu",
 			o->tsd.block.block_material_index);
 		printfn("HEALTH: %hhu", o->tsd.block.health);
-		printfn("FORM: %hhu", o->tsd.block.form);
 		break;
 	case OBJTYPE_TURRET:
 		t = "TURRET";
