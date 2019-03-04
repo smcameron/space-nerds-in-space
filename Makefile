@@ -488,7 +488,7 @@ _SERVEROBJS=snis_server.o starbase-comms.o \
 		power-model.o quat.o vec4.o matrix.o snis_event_callback.o space-part.o fleet.o \
 		docking_port.o elastic_collision.o snis_nl.o spelled_numbers.o \
 		snis_server_tracker.o snis_bridge_update_packet.o solarsystem_config.o a_star.o \
-		key_value_parser.o nonuniform_random_sampler.o oriented_bounding_box.o \
+		key_value_parser.o nonuniform_random_sampler.o oriented_bounding_box.o shape_collision.o \
 		graph_dev_mesh_stub.o turret_aimer.o snis_hash.o snis_server_debug.o \
 		ship_registration.o
 SERVEROBJS=${COMMONOBJS} $(patsubst %,$(OD)/%,${_SERVEROBJS})
@@ -1021,6 +1021,9 @@ $(OD)/quat.o:	quat.c Makefile ${ODT}
 	$(Q)$(COMPILE)
 
 $(OD)/oriented_bounding_box.o:	oriented_bounding_box.c oriented_bounding_box.h ${ODT}
+	$(Q)$(COMPILE)
+
+$(OD)/shape_collision.o:	shape_collision.c shape_collision.h ${ODT}
 	$(Q)$(COMPILE)
 
 $(OD)/turret_aimer.o:	turret_aimer.c turret_aimer.h quat.h mathutils.h ${ODT}
