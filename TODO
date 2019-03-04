@@ -2,7 +2,7 @@ Too much to list, but here's a list anyway:
 
 * Sound
     More and better sound effects
-    Music
+    Music (why? Player can run their own music separately.)
 
 * Engineering screen
     make comms power do something
@@ -22,6 +22,15 @@ Too much to list, but here's a list anyway:
 	frustration without being fun, in the name of some quest for "making some kind
 	of sense." Maybe binary works/doesn't work based on power and range alone might
 	be preferable to message distortion?
+
+	There is now an optional antenna system (turned off by default).
+	For distant comms targets, comms only works if the antenna is pointed
+	at the target.  You can aim the target at coordinates, and it will attempt
+	to keep the antenna auto aimed at the target, however it can only aim the
+	antenna in a hemisphere towards the front of the ship.  Any distant comms
+	targets outside the hemisphere to the front of the ship cannot be communicated
+	with.  It's not clear that this is any fun.
+
 
     Some sliders set only a maximum, while others control power usage
 	this is confusing.  Figure something out to make it less confusing.
@@ -52,42 +61,13 @@ Too much to list, but here's a list anyway:
 	damage increases, a higher and higher fraction of characters is garbled.
 	Not very realistic, but might provide a workable degradation.
 	Other ideas?  Range limitations?
-    Allow submitting natural language queries to 'the computer' and
-	get responses verbally (text to speech) and in actions.  Ideally,
-	these could be activated via speech recognition as well. This is
-	done. There are undoubtedly lots of holes here, but the basic
-	concept is done.
-
-      For example:
-
-	Computer, set a course for starbase one.
-	(computer verbalizes: "setting course for starbase one, heading blah, mark blah."
-	and ship rotates to face sb-01)
-
-      More examples of commands which I'd like to work:
-
-	* Navigate to <destination>
-	* Set a course for <destination>
-	* Lower/raise/set shields (to <value>)
-	* engage docking system
-	* disengage docking system
-	* how far to <destination>
-	* range to <destination>
-	* Do we have enough fuel to reach <destination>
-	* calculate a course to <destination> (replies with heading and mark)
-	* damage/status report (replies with list of damaged systems in order from
-	  most damaged to least, eg: "Warp drive: 50%, Impulse drive: 70%, all
-	  other systems are within normal range."
-	* engage warp drive
-	* (set) warp factor <value>
-	* (set) impulse to <value> percent
+    Allow submitting natural language queries to 'the computer'
+	This is mostly done with speech recognition, even. There are doubtless things
+	the computer cannot understand, but it can already understand many things.
+    intercept chatter between enemy ships
+    ??? need to figure out what the hell the comms screen is good for.
 
 * Navigation screen
-	Allow easier navigation by coordinates so lua scripts can say: goto x,y,z
-	and it's possible for nav to reasonably follow such orders.
-	This is done. Science can set a waypoint at x,y,z, and nav can follow the
-	green arrow, or science can give Heading and Mark, and nav can set that
-	(amounts to the same thing as following the green arrow).
 
 * Weapons screen
      Improve joystick support.  Right now, weapons is probably unusable with a
@@ -96,8 +76,6 @@ Too much to list, but here's a list anyway:
 	damage from torpedoes. That is not how it should work.
 
 * Science station
-  Allow some sort of arbitrary info about objects or just in general
-  to be detected and fed to the game via lua. This is done. Via attach_science_text().
   * Allow scanning of planet surface
 
 * Add some kind of transporter control which interacts with science
@@ -113,6 +91,7 @@ Too much to list, but here's a list anyway:
 
 * write some kind of guide to hacking, to make it easier for others to
   contribute to this codebase.
+  Signficantly done, though incomplete. See doc/hacking-space-nerds-in-space.html
 
 * computer-controlled-ships
   loads of AI improvements and basic functionality
@@ -154,10 +133,6 @@ Too much to list, but here's a list anyway:
   Fade distant objects to black
 
 * comms screen:
-  need to be able to communicate with starbases -- request
-  various things of the starbase.   Partially done, but still needs work.
-  intercept chatter between enemy ships
-  ??? need to figure out what the hell the comms screen is good for.
 
 * Damage control screen:
   Make the various components of the systems less generic
@@ -179,7 +154,6 @@ Too much to list, but here's a list anyway:
   I think it is used by damcon, and by 2D demon screen though, so
   maybe not.
 * make tractor beam work again/better.
-* Currently, number keypad doesn't work for numbers.  It should work.
 
 LOBBY
 * Allow multi-homed snis_server to work.  Currently only one ip addr is known
@@ -197,6 +171,8 @@ NICE TO HAVE:
   instead of what we have now, which is just stuff randomly sprinkled around.
 
 * Make art assets live on server and be transmitted to clients on demand.
+  (Sorta kinda done. make update-assets grabs assets from spacenerdsinspace.com
+  but not on-demand.)
 
 * Flesh out warp core ejection mechanic
 
@@ -221,6 +197,7 @@ NICE TO HAVE:
   https://en.wikipedia.org/wiki/Shadow_mapping
 
 * Add a Real Time Strategy game into SNIS.
+  Partially done.  But a long way to go before it's reasonable.
 
   This will give COMMS station some things to do. I envision it to work
   something like this.
