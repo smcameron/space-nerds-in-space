@@ -28,6 +28,10 @@ pre{
 <h2 align=center>February, 2019</h2>
 <h2 align=center>Stephen M. Cameron</h2>
 
+<p>This document is meant to be a kind of road map for the code, explaining
+where various things are implemented and how the pieces fit together so that if
+you want to modify the game in some way, you'll have an easier time finding your
+way around the code.
 
 <h2>Contents</h2>
 <ol>
@@ -1697,6 +1701,145 @@ in a collision response. (See player_collision_detection() in snis_server.c)
 in elastic_collision.h and elastic_collision.c
 
 <h4><a name="snisserverplayershipmove">Player Ship movement</a></h4>
+
+<p>The player's ship movement is done in snis_server.c in player_move(), called
+from move_objects() via the "move" pointer:
+
+<pre>
+	go[i].move(&amp;go[i]);
+</pre>
+
+<p>Besides literally moving the player ship, many other things are done in player_move(),
+essentially everything that happens on each tick of the simulation related to the player's
+ship.
+
+The actual movement part is done via a few function calls:
+
+<pre>
+	update_player_orientation(o);
+	...
+	update_player_position_and_velocity(o);
+	...
+        damp_yaw_velocity(&amp;o-&gt;tsd.ship.yaw_velocity, orientation_damping);
+        damp_yaw_velocity(&amp;o-&gt;tsd.ship.pitch_velocity, orientation_damping);
+        damp_yaw_velocity(&amp;o-&gt;tsd.ship.roll_velocity, orientation_damping);
+	...
+        /* Damp velocity */
+        velocity_damping = player_velocity_damping +
+                (1.0 - player_velocity_damping) * o-&gt;tsd.ship.nav_damping_suppression;
+
+        if (fabs(o-&gt;tsd.ship.velocity) &lt; MIN_PLAYER_VELOCITY &amp;&amp;
+                        o-&gt;tsd.ship.nav_damping_suppression &lt; 0.05)
+                o-&gt;tsd.ship.velocity = 0.0;
+        else
+                o-&gt;tsd.ship.velocity *= velocity_damping;
+</pre>
+
+<p>update_player_orientation() implements both steering via the normal player's control inputs and
+also automatic steering by "the computer" (e.g. standard orbit, or navigation commands issued to the
+computer).  Normal player control inputs are handled at the end of this function:
+
+<pre>
+        /* Apply current rotational velocities... (player's input comes into play via this path) */
+        quat_apply_relative_yaw_pitch_roll(&amp;o-&gt;orientation,
+                        o-&gt;tsd.ship.yaw_velocity,
+                        o-&gt;tsd.ship.pitch_velocity,
+                        o-&gt;tsd.ship.roll_velocity);
+</pre>
+
+<p>quat_apply_relative_yaw_pitch_roll combines the specified yaw, pitch and roll velocity quaternions
+(which are relative to an assumed body that is facing down the positive X axis with positive Y being up.)
+into a single quaternion, and then this combined quaternion is transformed into the local orientation and
+then applied to the local orientation.
+
+<p>For "standard orbit", a desired location and orientation relative to the planet being orbited is
+calculated, and then the ship's position and orientation are morphed towards this desired location and
+orientation. To find this desired position and orientation, we find a vector P, from the center of the
+planet to our ship, and make it a standard length some amount larger than the planet's radius.
+Then project our ship's current velocity vector V to be parallel to the surface of the planet, and
+then scale it to some constant fraction of planet radius (2.5 degrees, say).  Then add V to P to
+produce D.  This is where we want to aim.  This gets us pointing in the right direction,
+but we still need the right orientation.  We want our "up" vector to be perpendicular to our desired
+velocity vector, but tangent to the planet's surface. The cross product of P and D gets us this desired
+"up" direction.
+
+<p>Computer steering, both for standard orbit, and for computer navigation (e.g. "Computer set a course
+for the nearest asteroid."), is accomplished by adjusting o-&gt;tsd.ship.computer_desired_orientation and
+o-&gt;tsd.ship.computer_steering_time_left.  As long as computer_steering_time_left is greater than zero,
+then the ship's orientation is adjusted towards the computer_desired_orientation by applying available
+maneuvering power. With each tick of the simulation, the computer_steering_time_left is decremented until
+it reaches zero. So to initiate computerized steering towards a target, a desired orientation facing the
+target is computed and stored in computer_desired_orientation, and computer_steering_time_left is set
+to a value sufficiently high to allow the change in orientation to complete before it reaches zero,
+typically COMPUTER_STEERING_TIME which as of this writing is 120, or 12 seconds.
+
+<p>update_player_position_and_velocity() in snis_server.c actually moves the player in
+a fairly straightforward way:
+
+<pre>
+        /* Apply player's thrust input from power model */
+        do_thrust(o);
+
+        /* Construct vector of desired velocity */
+        desired_velocity.v.x = o-&gt;tsd.ship.velocity;
+        desired_velocity.v.y = 0;
+        desired_velocity.v.z = 0;
+        quat_rot_vec_self(&amp;desired_velocity, &amp;o-&gt;orientation);
+
+        /* Make actual velocity move towards desired velocity */
+        o-&gt;vx = new_velocity(desired_velocity.v.x, o-&gt;vx);
+        o-&gt;vy = new_velocity(desired_velocity.v.y, o-&gt;vy);
+        o-&gt;vz = new_velocity(desired_velocity.v.z, o-&gt;vz);
+
+        /* Move ship */
+        set_object_location(o, o-&gt;x + o-&gt;vx, o-&gt;y + o-&gt;vy, o-&gt;z + o-&gt;vz);
+</pre>
+
+Collision detection for the player ship is done here as well:
+
+<pre>
+        space_partition_process(space_partition, o, o-&gt;x, o-&gt;z, o,
+                                player_collision_detection);
+</pre>
+
+<p>See the section on <a href="#snisservercollision">collision detection</a>, above.
+
+<h3><a name="snisservernpcship">NPC Ships</a></h3>
+<h4><a name="snisservernpcmove">Movement</a></h4>
+
+<p>NPC ship movement is done by ship_move() in snis_server.c, along with other
+things about the NPC ships.
+
+<p>NPC ships have a desired velocity towards which their actual velocity is moved.
+update_ship_position_and_velocity() and update_ship_orientation() ar called to
+update the NPC ship's position, velocity and orientation towards its desired
+position and orientation.  The orientation is simply set to an orientation which
+is facing in the direction of the current velocity. This area could definitely use
+some improvement, as no consideration is given to choosing a reasonable "up" direction.
+
+<h4><a name="snisservernpcai">NPC ship AI</a></h4>
+
+<p>The ai_brain() function in snis_server.c is where all the NPC ship's desired
+actions are computed. Each NPC ship has a small stack of union ai_data which
+control what it does.  At any given moment, the top element of the NPC ship's ai
+stack controls its actions. It may be attacking another ship, patroling a route,
+being a cop, being a fleet member or fleet leader, idling, being a mining bot,
+being a tow ship, and there are various RTS behaviors.  The ai_mode member of the
+struct ai_stack_entry structure discriminates among the elements of the ai_data
+union. There is a big switch statement in ai_brain() that calls an appropriate
+function for each of the various ai_mode values.  Each of these functions typically
+computes a desired velocity and orientation based on what they are trying to do.
+For example, ai_attack_mode_brain() calculates a desired location based on the position
+of the object being attacked, and adjusts a desired destination towards which
+update_ship_position_and_velocity() will move.  Note: this particular case of AI_MODE_ATTACK
+is not great, with specialized code in update_ship_position_and_velocity() and strange
+usage of o-&gt;tsd.ship.dox, of o-&gt;tsd.ship.doy, and of o-&gt;tsd.ship.doz. This
+area could be improved.  Most other ai functions rely on ai_ship_travel_towards() for
+steering and navigation. ai_ship_travel_towards has some code to avoid crashing
+into planets and to use the warp drive for longer transits.
+
+<h4><a name="snisservernpcfleet">NPC Fleets</a></h4>
+<h4><a name="snisserverhostile">Hostility matrix</a></h4>
 
 <h2><a name="snismultiverse">SNIS Multiverse</a></h2>
 
