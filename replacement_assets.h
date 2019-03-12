@@ -29,6 +29,7 @@ struct replacement_asset_entry {
 struct replacement_asset {
 	struct replacement_asset_entry *e;
 	char *asset_dir;
+	int nalloced;
 };
 
 /* read_replacement_assets() reads the specified file of asset replacements.

@@ -59,9 +59,11 @@ int replacement_asset_read(char *replacement_list_filename, char *asset_dir,
 	int ln = 0;
 	int n = 0;
 	int rc;
+	const int batchsize = 16;
 
 	replacement_asset->e = NULL;
 	replacement_asset->asset_dir = strdup(asset_dir);
+	replacement_asset->nalloced = 0;
 
 	f = fopen(replacement_list_filename, "r");
 	if (!f)
@@ -84,7 +86,12 @@ int replacement_asset_read(char *replacement_list_filename, char *asset_dir,
 			fprintf(stderr, "%s: syntax error at line %d\n", replacement_list_filename, ln);
 			continue;
 		}
-		replacement_asset->e = realloc(replacement_asset->e, sizeof(*replacement_asset->e) * (n + 1));
+		if (n >= replacement_asset->nalloced) {
+			replacement_asset->e = realloc(replacement_asset->e,
+					sizeof(*replacement_asset->e) * (n + batchsize));
+			memset(&replacement_asset->e[n], 0, batchsize * sizeof(*replacement_asset->e));
+			replacement_asset->nalloced += batchsize;
+		}
 		replacement_asset->e[n].old_filename = fixup_asset_dir(f1, replacement_asset);
 		replacement_asset->e[n].new_filename = fixup_asset_dir(f2, replacement_asset);
 		n++;
