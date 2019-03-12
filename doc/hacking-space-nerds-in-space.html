@@ -208,11 +208,14 @@ head) remains intact, and has held up pretty well.
 <li>snis_server should be "headless" and have no UI whatsoever.
 <li>snis_server should support multiple bridges
 <li>snis_server is authoritative (all meaningful state is within snis_server instances, none within snis_client)
-<li>clients should be able to attach to and detach from a bridge at will with no disruption. Possible to join or leave game at any time with no disruption to other players.
+<li>clients should be able to attach to and detach from a bridge at will with no disruption. It should be possible
+to join or leave game at any time with no disruption to other players.
 <li>If there is more than one instance of a particular station on a bridge, then all
 instances of that station on that bridge should effectively show exactly the same thing. (Excluding very minor differences,
 e.g. the flickering noise of engineering power levels is not identical from one station to another, but all <em>consequential</em>
-data should be identical.)
+data should be identical. There is
+<a href="https://github.com/smcameron/space-nerds-in-space/commit/7373459e4cb64944b90eacf1c864647bec60ebd2">one
+other significant exception</a>.)
 <li>The "main screen" should be able to mirror the display of any client on the same bridge so
 the captain can give Picard's typical order: "On screen!" (This is accomplished via the previous item).
 <li>Network traffic between processes takes the form of single byte "opcodes" each followed by its own
@@ -229,7 +232,7 @@ for Steve's fun.
 <p>ssgl_server is the lobby server for the game.  It is how the various pieces of the game find
 each other on the network. Each snis_server process registers itself with the ssgl_server informing
 it of the snis_server's IP address and port number. Likewise the snis_multiverse_process registers
-itself with the lobby server with it's IP address and port number. The snis_server instances consult
+itself with the lobby server with its IP address and port number. The snis_server instances consult
 the lobby server to find the IP address and port of the snis_multiverse server with which they then
 communicate directly. The snis_client processes consult with the lobby server to find the IP address
 and port of the snis_server instances, with which they may then communicate directly.
@@ -238,16 +241,17 @@ and port of the snis_server instances, with which they may then communicate dire
 
 <p>The snis_server processes each run a simulation of a single star system and all the planets, asteroids, NPC ships,
 black holes, star bases, and player ships (aka bridges), and so on within that star system. snis_client instances connect
-to a snis_server process and join (or create) bridge within that system.  All the snis_clients for the stations of any
+to a snis_server process and join (or create) a bridge within that system.  All the snis_clients for the stations of any
 one particular bridge connect to the same snis_server process, and multiple bridges may exist within a snis_server process.
 The snis_server simulation runs at a rate of 10Hz. That is, ten times a second, the snis_server process updates the positions
 and orientations of all objects that it is simulating (NPC ships, planets, asteroids, player ships, etc.) With each tick it
-also transmits this information to every connected client (more or less, I'm ignoring some details for now). snis_client process
-transmit requests to the snis_server for every player action.  For instance, if the navigator wishes to increase the impulse
-power to speed the ship up, this would occur as a request from the navigator's snis_client instance to the snis_server. All
-the communcations between snis_client and snis_server take the form of "op codes" (a single byte) followed by the operands
-for that particular opcode (which may be many bytes). See <a href="snis-protocol.html">snis-protocol.html</a> for a detail
-description of the opcodes.
+also transmits this information to every connected client (more or less, I'm ignoring some details for now). The snis_client
+processes transmit requests to the snis_server for every player action.  For instance, if the navigator wishes to increase
+the impulse power to speed the ship up, this would occur as a request from the navigator's snis_client instance to the
+snis_server, which would adjust the simulation, and then the results of that adjustment naturally get transmitted back to
+the all the relevant snis_client instances. All the communcations between snis_client and snis_server take the form of
+"op codes" (a single byte) followed by the operands for that particular opcode (which may be many bytes).
+See <a href="snis-protocol.html">snis-protocol.html</a> for a detailed description of the opcodes.
 
 <h4>snis_multiverse</h4>
 
@@ -257,7 +261,7 @@ everything about the ship: how much fuel it has, all the power and coolant setti
 the player has, and many many other things. If we want a player's ship to travel
 from one snis_server instance to another (from one star system to another) we have to capture all this state and transfer
 it from one snis_server instance to another.  This is what snis_multiverse allows.  Periodically, each snis_server transmits
-the state of each bridge it is currently simulting to snis_multiverse.  This state is then stored by snis_multiverse in a file.
+the state of each bridge it is currently simulating to snis_multiverse.  This state is then stored by snis_multiverse in a file.
 When a snis_client connects to a snis_server process and joins a bridge that wasn't previously present in this snis_server,
 snis_server can obtain the current state of this bridge from snis_multiverse. In this way, a new player ship appearing within
 snis_server can be made to have the same state as a ship which just left a different snis_server instance, giving the illusion
@@ -333,7 +337,7 @@ It is how the client and server know which object the other process is refering 
 On the client this controls the lifetime of e.g. sparks (which are not represented by the go[] array,
 but by the spark[] array.)
 <p><b>type</b> defines what kind of object this is (e.g. OBJTYPE_ASTEROID, OBJTYPE_SHIP, OBJTYPE_PLANET, OBJTYPE_STARBASE, etc. see snis.h)
-<p><b>timestamp</b> is used by the server to know when the last time this object changed was and if its new status needs to be sent to clients.
+<p><b>timestamp</b> is used by snis_server to know when the last time this object changed was and if its new status needs to be sent to clients.
 On the client it is not generally used (I think?) but updatetime[] is used in interpolating between positions and orientations during times
 between the server's 10Hz updates.
 <p><b>respawn_time</b>: used to know when to respawn a player's ship (this should not really be in *every* snis_entity.)
@@ -341,11 +345,11 @@ between the server's 10Hz updates.
 <p><b>move</b> is a pointer to the object's move function. This is generally the same for all objects of any given type.
 <p><b>sdata</b> sdata is short for "science data". The idea being that data in here is considered to have been obtained by
 the science scanner beam (even though it really isn't) and should be "forgotten" after awhile on the client.
-<p><b>orientation</b>a quaternion for the object's orientation in space.
+<p><b>orientation</b> a quaternion for the object's orientation in space.
 <p><b>updatetime[], r[], o[]</b> these are parallel arrays of update time, orientation and position that form the recent history of the object
 as updated by the server. These are used to interpolate the object's position and orientation at a rate faster than the server's update rate
 (30Hz vs 10Hz). See interpolate_generic_object() and interpolate_oriented_object() in snis_client.c
-<p><b>ai[];</b>This is a hack to allow the client to have some insight into NPC AI state for debugging, with a single character
+<p><b>ai[]</b>: This is a hack to allow the client to have some insight into NPC AI state for debugging, with a single character
 for each AI state, and an array of 6 to allow it to know the state in each frame of the NPC AI stack.
 <p><b>shading_planet</b> - If NULL, then the object is not within the shadow of a planet. If not null then it is a pointer to
 the planet's snis_entity; This is used only by snis_client to determine whether to shine sunlight on an object or not when
@@ -370,7 +374,8 @@ and is an important state variable used in connecting to ssgl_server and snis_se
 <p>to_server_queue is a queue of packed_buffers that will be transmitted to snis_server by
 the gameserver_writer() thread.  It must be protected by the to_server_queue_mutex.  There is
 also a to_server_queue_event_mutex which is used along with server_write_cond to control
-the gameserver_writer_thread() -- wake it up or kill it as needed.
+the gameserver_writer_thread() -- wake it up or kill it as needed.  All opcodes and operands
+from snis_client to snis_server pass through this queue.
 
 <h4>uiobjs</h4>
 
@@ -477,13 +482,13 @@ a warp gate is traversed, triggered by receipt of OPCODE_SWITCH_SERVER from the 
 connected snis_server instance. This snis_server switching business is one of the more complicated
 parts and could probably be simplified, somehow.
 
-<h4>key_press_cb, key_release_cb</h4>
+<h4>Keyboard callbacks: key_press_cb, key_release_cb</h4>
 
 <p>Called by gtk when a key press or release event occurs. Keyboard handling stuff is here. See also
 deal_with_keyboard() in snis_client.c which acts on information collected in the aforementioned
 event handling functions.
 
-<h4>main_da_button_press, main_da_button_release, main_da_motion_notify</h4>
+<h4>Mouse button callbacks: main_da_button_press, main_da_button_release, main_da_motion_notify</h4>
 
 <p>Called by gtk when there are mouse button press, release or motion events. See also deal_with_mouse()
 in snis_client.c which also acts on information collected in the aforementioned event handler functions.
@@ -492,7 +497,7 @@ in snis_client.c which also acts on information collected in the aforementioned 
 
 <h4><a name="snisclientlobbythread">snis_client lobby threads</a></h4>
 
-<h5>main lobby thread</h5>
+<h5>Main lobby thread</h5>
 
 <p>See connect_to_lobby_thread() in snis_client.c
 
@@ -500,21 +505,21 @@ in snis_client.c which also acts on information collected in the aforementioned 
 of running snis_server instances. This thread runs indefinitely.
 
 <p>The snis_client lobby thread is created when the player clicks the CONNECT TO LOBBY button
-on the network setup screen, or the IP address of a detected lobby server on the pull down
-menu of the network setup screen (see connect_to_lobby_button_pressed() in snis_client.c)
-which calls connect_to_lobby(), which creates the lobby thread running the function
-connect_to_lobby_thread() in snis_client.c.
+on the network setup screen, or when the player clicks on the IP address of a detected lobby
+server on the pull down menu of the network setup screen. (see connect_to_lobby_button_pressed()
+in snis_client.c)  This action triggers a call to connect_to_lobby(), which creates the lobby
+thread running the function connect_to_lobby_thread() in snis_client.c.
 
 <p>This thread connects to ssgl_server via ssgl_gameclient_connect_to_lobby() (see ssgl/ssgl.h
 and ssgl/ssgl_connect_to_lobby.c) and then enters a loop.  In the loop, it
 receives a list of game servers via ssgl_recv_game_servers() (see ssgl/ssgl.h) which
-it then copies to the lobby_game_server[] array under protection of a mutex. and then
+it then copies to the lobby_game_server[] array under protection of a mutex, and then
 sleeps for a bit. It exits the loop upon an error or if the program exits.
 
-<p>The lobby_game_server[] array is used elsewhere in another thread to display the list of
+<p>The lobby_game_server[] array is used by show_lobbyscreen() in another thread to display the list of
 snis_server instances to the user.
 
-<h5>lobby broadcast packet recieving thread</h5>
+<h5>Lobby broadcast packet receiving thread</h5>
 
 <p>So that the players do not need to know the IP address of the lobby server,
 the lobby server broadcasts UDP packets advertising its existence and port. Clients
@@ -524,12 +529,12 @@ two threads, one to receive these broadcast packets, and one to expire old lobby
 information (see below). Each incoming packet contains an IP address, a port, and
 a hostname. These are saved in an lobbylist[] (see ssgl_register_for_bcast_packet.c).
 
-<h5>lobby expiring thread</h5>
+<h5>Lobby expiring thread</h5>
 
 ssgl_register_for_bcast() creates a thread to notice when the internal list of lobby servers
 (lobbylist[]) has changed and for calling a notification function, passing this new information
 when such changes are detected.  Whenever the lobbylist[] array changes, the callback function
-provided to ssgl_register_for_bcast_packets is changed, and this new lobby data is passed.
+provided to ssgl_register_for_bcast_packets is called, and this new lobby data is passed.
 
 <p>For snis_client, this notification function is lobby_list_change_notification() in
 snis_client.c. It uses the information passed in to construct pull down menu entries
@@ -537,7 +542,7 @@ for the network setup screen.  In this way, when on the network setup screen, ho
 the mouse in the upper left hand corner of the screen brings down a menu containing all
 the lobby servers discovered via these broadcast packets.
 
-<h4><a name="snisclientconnectthread">snis_client connection thread</a></h4>
+<h4><a name="snisclientconnectthread">The snis_client connection thread</a></h4>
 
 <p>This thread is created when the user presses the CONNECT TO SERVER button next to one of the
 snis_server instances displayed on the lobby screen (see lobby_connect_to_server_button_pressed()
@@ -546,9 +551,10 @@ in snis_client.c)
 <p>The thread is created by connect_to_gameserver(), and the thread function is connect_to_gameserver_thread().
 
 <p>This thread connects to the selected snis_server instance, writes the SNIS_PROTOCOL_VERSION to this socket,
-then sends an OPCODE_UPDATE_PLAYER with some parameters to control whether this is requesting to create a new
-player ship, the requested client roles, the ship name and ship password and which warp gate number (or 0xff
-if no warp gate)
+then sends an OPCODE_UPDATE_PLAYER with some parameters to indicate whether this is a request to create a new
+player ship or to join an existing ship, the requested client roles, the ship name and ship password and which
+warp gate number if traversing from one snis_server to another (or 0xff when first joining the game when there
+is no warp gate).
 
 <p>This thread then creates two more threads, a reader and a writer thread for communicating with the
 connected snis_server instance.
@@ -562,7 +568,7 @@ an opcode indicating any such incompatibilites.)
 
 <p>This thread then exits.
 
-<h4><a name="snisclientreadwritethread">read and write from/to snis_server threads</a></h4>
+<h4><a name="snisclientreadwritethread">Read and Write from/to snis_server threads</a></h4>
 
 <p>See gameserver_reader() in snis_client.c and gameserver_writer() in snis_client.c
 
@@ -589,7 +595,7 @@ see many functions named send_blah_blah() which call
 packed_buffer_queue_add(&amp;to_server_queue, ...) -- that is how packets are added
 to the queue.
 
-<h4><a name="snisclienttexttospeechthread">text to speech thread</a></h4>
+<h4><a name="snisclienttexttospeechthread">Text to speech thread</a></h4>
 
 <p>This thread supports text-to-speech requests from snis_server to snis_client.
 
@@ -601,12 +607,14 @@ say.  The queue that text_to_speech_thread_fn() monitors is fed by text_to_speec
 which is called by process_natural_language_request() in snis_client.c, which is triggered by an opcode
 from the server, via gameserver_reader() in snis_client.c
 
-<h4><a name="snisclientphysiothread">physical i/o thread</a></h4>
+<h4><a name="snisclientphysiothread">Physical i/o thread</a></h4>
 
 <p>This thread is intended to support physical i/o to home-made controls. The idea is it monitors
-a socket (a special linux abstract socket address, see "The Linux Programming Interface", by Michael
-Kerrisk, Ch. 57, p. 1175-1176.) for data (see snis-device-io.c and snis-device-io.h) and then
-transforms this data into inputs into the game.
+a socket for data (see snis-device-io.c and snis-device-io.h) and then transforms this data into
+inputs into the game. One additional note: in this case, the socket is an AF_UNIX socket (so not
+a network socket) and it is using a special linux abstract socket address, see "The Linux
+Programming Interface", by Michael Kerrisk, Ch. 57, p. 1175-1176, and also see the output of
+"man 7 unix", under address type "abstract".
 
 <p>The main thread function for this thread is in snis_client.c, monitor_physical_io_devices(), which
 collects data from the socket and calls process_physical_device_io() which contains a big switch
@@ -624,7 +632,7 @@ program just reads opcodes from the keyboard, but in theory it could be modified
 a serial port connected to a home-made set of controls instead.
 
 
-<h4><a name="snisclientnlprocthread">natural language processing thread</a></h4>
+<h4><a name="snisclientnlprocthread">Natural language processing thread</a></h4>
 
 <p>This thread is responsible for monitoring the fifo /tmp/snis-natural-language-fifo for
 natural language text commands, and forwarding such commands to snis_server.
@@ -636,7 +644,7 @@ arg, which contains a struct input_fifo_thread_data, which contains a function p
 used to process data from the fifo.  In the case of this thread, that process_input points to
 send_natural_language_request_to_server(), which sends the commands to snis_server to be acted upon.
 
-<h4><a name="snisclientdemoncmdthread">demon command thread</a></h4>
+<h4><a name="snisclientdemoncmdthread">Demon command thread</a></h4>
 
 <p>This thread is responsible for monitoring the fifo /tmp/snis-demon-fifo for
 demon screen text commands, and forwarding such commands to snis_server.
@@ -648,7 +656,10 @@ arg, which contains a struct input_fifo_thread_data, which contains a function p
 used to process data from the fifo.  In the case of this thread, that process_input points to
 send_demon_text_command(), which sends the commands to snis_server to be acted upon.
 
-<h4><a name="snisclientmainthread">main thread</a></h4>
+<p>This can be used in conjunction with other software to for example
+<a href="https://github.com/smcameron/space-nerds-in-space/issues/193">allow demon commands to be triggered via a smartphone</a>.
+
+<h4><a name="snisclientmainthread">Main thread</a></h4>
 
 <p>See main() in snis_client.c, at the end of the file.
 
@@ -684,16 +695,63 @@ g_timeout_add as mentioned above.
 <p>There are two renderers, the primary OpenGL based renderer and the secondary gdk based
 renderer.  The gdk based render is a software renderer and is very limited in its abilities,
 and is not suitable for all stations.  The gdk renderer is only used by snis_limited_client,
-everything else uses the opengl renderer.
+(a binary built from snis_client.c, see the Makefile) everything else uses the opengl renderer.
 
 <p>entity.h and graph_dev.h define the interface to the renderer, with entity.h
 defining the higher level and common parts while graph_dev.h defines parts that have
 renderer specific parts.
 
-<p>graph_dev_gdk.c and graph_dev_opengl.c are the two implementations of this interface
-graph_dev.h defines, and entity.c contains the device independent part of the renderer.
+<p>graph_dev_gdk.c and graph_dev_opengl.c are the two specific implementations of this interface
+that graph_dev.h defines, and entity.c implements the device independent part of the renderer
+defined by entity.h.
 
 <p>Describing all the gory details of the renderer is more than I'm able to do here.
+
+<p>GLSL shaders are in share/snis/shader:
+
+<p align=center><table align=center, width=80%, border=1>
+<tr><td>alpha_by_normal.shader</td><td>Used by Demon screen</td></tr>
+<tr><td>atmosphere.frag</td><td>Renders planetary atmospheres</td></tr>
+<tr><td>atmosphere.vert</td><td>Renders planetary atmospheres</td></tr>
+<tr><td>color_by_w.frag</td><td>Used by the "trident" on the Nav screen</td></tr>
+<tr><td>color_by_w.vert</td><td>Used by the "trident" on the Nav screen</td></tr>
+<tr><td>fs-effect-copy.shader</td><td>For copying frame buffers (used by anti-aliasing)</td></tr>
+<tr><td>line-single-color.frag</td><td>shader for drawing lines</td></tr>
+<tr><td>line-single-color.vert</td><td>shader for drawing lines</td></tr>
+<tr><td>per_vertex_color.frag</td><td>Used for lots of 2D drawing (UI stuff)</td></tr>
+<tr><td>per_vertex_color.vert</td><td>Used for lots of 2D drawing (UI stuff)</td></tr>
+<tr><td>point_cloud.frag</td><td>Used for dotted lines on science LRS, SRS</td></tr>
+<tr><td>point_cloud.vert</td><td>Used for dotted lines on science LRS, SRS</td></tr>
+<tr><td>single_color.frag</td><td>Used for drawing lines for some debugging things (Normal lines)</td></tr>
+<tr><td>single_color.vert</td><td>Used for drawing lines for some debugging things (Normal lines)</td></tr>
+<tr><td>single-color-lit-per-pixel.frag</td><td>Not used</td></tr>
+<tr><td>single-color-lit-per-pixel.vert</td><td>Not used</td></tr>
+<tr><td>single-color-lit-per-vertex.frag</td><td>Used for untextured models</td></tr>
+<tr><td>single-color-lit-per-vertex.vert</td><td>Used for untextured models</td></tr>
+<tr><td>skybox.frag</td><td>Renders skybox</td></tr>
+<tr><td>skybox.vert</td><td>Renders skybox</td></tr>
+<tr><td>smaa-blend.shader</td><td>subpixel morphological anti-aliasing</td></tr>
+<tr><td>smaa-edge.shader</td><td>subpixel morphological anti-aliasing</td></tr>
+<tr><td>smaa-high.shader</td><td>subpixel morphological anti-aliasing</td></tr>
+<tr><td>SMAA.hlsl</td><td>subpixel morphological anti-aliasing</td></tr>
+<tr><td>smaa-neighborhood.shader</td><td>subpixel morphological anti-aliasing</td></tr>
+<tr><td>textured-and-lit-per-pixel.shader</td><td>Used for textured models with specular and optional emit and normal textures</td></tr>
+<tr><td>textured-and-lit-per-vertex.shader</td><td>Not used</td></tr>
+<tr><td>textured-cubemap-and-lit-per-pixel.shader</td><td>Used for rendering planets with and without normal maps</td></tr>
+<tr><td>textured-cubemap-and-lit-per-vertex.shader</td><td>Not used</td></tr>
+<tr><td>textured-cubemap-and-lit-with-annulus-shadow-per-pixel.shader</td><td>Used for rendering planets with ring shadows and with or without normal maps</td></tr>
+<tr><td>textured-cubemap-shield-per-pixel.shader</td><td>Renders shield effect</td></tr>
+<tr><td>textured-particle.frag</td><td>Renders particle effects (e.g. thrust plumes)</td></tr>
+<tr><td>textured-particle.vert</td><td>Renders particle effects (e.g. thrust plumes)</td></tr>
+<tr><td>textured.shader</td><td>Used for unlit textured models, e.g. Nebula</td></tr>
+<tr><td>textured-with-sphere-shadow-per-pixel.shader</td><td>Used to render planet rings</td></tr>
+<tr><td>wireframe_filled.frag</td><td>Used on e.g. Science details screen to render models, and when renderer in wireframe mode (ctrl-R)</td></tr>
+<tr><td>wireframe_filled.vert</td><td>Used on e.g. Science details screen to render models, and when renderer in wireframe mode (ctrl-R)</td></tr>
+<tr><td>wireframe_transparent.frag</td><td>Used when renderer in wireframe mode (press ctrl-R a few times)</td></tr>
+<tr><td>wireframe_transparent.vert</td><td>Used when renderer in wireframe mode (press ctrl-R a few times)</td></tr>
+<tr><td>wireframe-transparent-sphere-clip.frag</td><td>Used on Nav screen to render models.</td></tr>
+<tr><td>wireframe-transparent-sphere-clip.vert</td><td>Used on Nav screen to render models.</td></tr>
+</table>
 
 <p>If you're new to rendering, take a look at this link:
 <a href="http://www.kmjn.org/notes/3d_rendering_intro.html">http://www.kmjn.org/notes/3d_rendering_intro.html</a>
@@ -733,7 +791,7 @@ oolite's dat files)
 positions of the mesh and the orientation of the mesh.  Materials are how the renderer knows
 what shader to use for a given mesh.
 
-<p>shaders are read and compiled by functions in graph_dev_opengl.c, see graph_dev_setup().
+<p>Shaders are read and compiled by functions in graph_dev_opengl.c, see graph_dev_setup().
 
 <h4><a name="loadingmodels">Loading models</a></h4>
 
@@ -753,7 +811,7 @@ this thread.  TODO: figure these details out better.)
 <p>The typical sequence for using the renderer is:
 
 <ol>
-<li>set up an entity context, e.g:
+<li>set up an entity context, specifying maximum number of entities and child entities, e.g:
 <pre>
         instrumentecx = entity_context_new(5000, 1000);
 </pre>
@@ -793,9 +851,9 @@ Mainly this is choosing between "normal" rendering (FLATSHADING_RENDERER) and so
         render_entities(instrumentecx);
 </pre>
 <li>Clear out all of the entities from this context (if you are adding and removing them every frame, say):
-<li>
+<pre>
 	remove_all_entity(instrumentecx);
-</li>
+</pre>
 </ol>
 
 <p>TODO: Elaborate more on the renderer
@@ -809,13 +867,13 @@ gauges, sliders, and pull down menus.
 <p>Each of these has their own set of functions used to create them and modify
 and control their behavior. Additionally there are some functions which are
 generic and apply to all widget types or to lists of widgets in aggregate.
-These are defined by snis_ui_element.h and snis_ui_element.c
+These generic functions are defined by snis_ui_element.h and snis_ui_element.c
 
 <p>If there is a widget of type XXX, then there is likely a function called
 XXX_init() or create_XXX() which returns a pointer to an XXX.
 
 <p>Typically, there is a function to initialize all the widgets associated with
-a particulare screen, and store all those widget pointers into a structure.
+a particular screen, and store all those widget pointers into a structure.
 Additionally those widgets are added into a list of all UI objects (uiobjs)
 along with a tag indicating which screen those widgets belong to.
 
@@ -959,7 +1017,7 @@ show_demon_console() -- though it's just unhiding a text box widget.
 
 <h3><a name="kmjinput">Keyboard, Mouse and Joystick Input</a></h3>
 
-<p>Keyboard and mouse input are handedl by GTK. setup_gtk_window_and_drawing_area() in
+<p>Keyboard and mouse input are handled by GTK. setup_gtk_window_and_drawing_area() in
 snis.c hooks gtk events for key presses and key releases and mouse button presses and
 mouse motion to the following functions:
 
@@ -994,16 +1052,18 @@ snis_client.c.
 detected are configurable to trigger callback functions via
 set_joystick_button_fn() and set_joystick_axis_fn().  These are used
 in setup_joysticks() in snis_client.c to set callbacks for joystick
-axes and functions according to a joystick config file. The joystick
+axes and functions according to a joystick config file,
+share/snis/joystick_config.txt. The joystick
 config file is read via read_joystick_config() called from setup_joysticks()
 in snis_client.c.  read_joystick_config() is defined by joystick_config.h
 and joystick_config.c
 
 <h3><a name="audio">Audio</a></h3>
 
-<p>Audio is controlled via the audio library defined by wwvi_audio.h and wwvi_audio.c.
-This library can read and decode ogg vorbis files into memory for later playback.
-The wwvi_audio library can concurrently playback an mix many samples at once. The samples
+<p>Audio is controlled via the audio library defined by wwvi_audio.h and wwvi_audio.c,
+and ogg_to_pcm.c and ogg_to_pcm.h.
+The ogg_to_pcm library can read and decode ogg vorbis files into memory for later playback.
+The wwvi_audio library can concurrently playback and mix many samples at once. The samples
 must be 44.1Khz MONO samples however. It relies on the portaudio library to communicate
 with the audio hardware.
 
@@ -1013,7 +1073,7 @@ with the audio hardware.
         if (wwviaudio_initialize_portaudio() != 0)
                 bail_out_and_die();
 
-        You would probably use #defines or enums rather than bare ints...
+        /* You would probably use #defines or enums rather than bare ints... */
         wwviaudio_read_ogg_clip(1, "mysound1.ogg");
         wwviaudio_read_ogg_clip(2, "mysound2.ogg");
         wwviaudio_read_ogg_clip(3, "mysound3.ogg");
@@ -1023,7 +1083,7 @@ with the audio hardware.
 
         wwviaudio_play_music(4); // begins playing music in background, returns immediately
 
-        while (program isn not done) {
+        while (program is not done) {
                 do_stuff();
                 if (something happened)
                         wwviaudio_add_sound(1);  // plays in background returns immediately
@@ -1036,12 +1096,12 @@ with the audio hardware.
 </pre>
 
 
-<h3><a name="speechrecog">The Computer / Speech Recognition</a></h3>
+<h3><a name="speechrecog">"The Computer" / Speech Recognition</a></h3>
 
 <p>Pocketsphinx (running as a separate process) or some other speech recognition system
 can be used to talk to "the computer" onboard the ship. The output of the speech recognizer
 is fed into a fifo /tmp/snis-natural-language-fifo, where it is then processed as already
-described above.
+<a href="#snisclientnlprocthread">described above</a>.
 
 <p>For more details about how this works, see this set of slides:
 <a href="https://smcameron.github.io/space-nerds-in-space/snis-nl-slides/slideshow.html#1">Speech Recognition and Natural Language Processing in Space Nerds in Space</a>.  Note: that slide show will probably not work well on mobile devices.
@@ -1068,16 +1128,16 @@ process_update_solarsystem_location(), or initially from construct_starmap(), ca
 from main() in snis_client.c
 
 <p>When the player traverses a warp gate, (player_collision_detection in snis_server.c
-calls player_attemp_warpgate_jump() in snis_server.c) it checks to see if the player
+calls player_attempt_warpgate_jump() in snis_server.c) it checks to see if the player
 has bought a warp gate ticket, and if so, sends an opcode OPCODE_SWITCH_SERVER
 to all the snis_client instances for the bridge in question to switch to a new
 snis_server instance. This sets a Rube Goldbergian sequence of events in motion.
 
-<p>When a snis_client instance recieves OPCODE_SWITCH_SERVER, in gameserver_reader()
+<p>When a snis_client instance receives OPCODE_SWITCH_SERVER, in gameserver_reader()
 in snis_client.c, it reads the operands, which are the warp gate number and new
 server location (a string, the solarsystem name), and then
 stops the gameserver_writer() thread (this will cause the snis_server end its
-corresponding reeader thread) The snis_client() then deletes all objects (clears the go[] array)
+corresponding reader thread) The snis_client() then deletes all objects (clears the go[] array)
 and deletes all damcon objects, set a switched_server global variable to 1, and
 connected_to_gameserver global to 0, and the gameserver_reader thread returns (exits).
 
@@ -1179,7 +1239,7 @@ static struct bridge_data {
 					/* do_engage_warp_drive() */
 	union vec3 warpv;		/* warp vector. 1/50th of the distance of the warp in direction of warp */
 	int warptimeleft;		/* How many ticks left for warp travel? See maybe_do_player_warp() */
-	int comms_channel;		/* Current channel number comms will transmit/recieve on */
+	int comms_channel;		/* Current channel number comms will transmit/receive on */
 	struct npc_bot_state npcbot;	/* Context for NPC comms to maintain conversation */
 	int last_docking_permission_denied_time; /* rate limits "docking permission denied" messages */
 	uint32_t science_selection;	/* ID of currently selected item on science station */
@@ -1290,7 +1350,7 @@ is communicated to ssgl_server elsewhere (See below).
 <p>Threads to read and write to clients are started by service_connection() called
 from listener_thread_fn() as described above. The read thread function is per_client_read_thread()
 which is passed a pointer to the correct element of the client[] array. The write thread
-function is per_client_write_thread(), also passed the pointer to client[] element.
+function is per_client_write_thread(), also passed the pointer to the appropriate client[] element.
 
 <p>per_client_read_thread() enters an indefinite loop in which it calls process_instructions_from_client().
 process_instructions_from_client() reads an opcode from the client via c-&gt;socket,
@@ -1300,7 +1360,7 @@ whatever the opcode requires.)
 
 <p>per_client_write_thread() periodically transmits data to the client. It enters an indefinite
 loop then checks the current time and either sleeps until it is time to transmit data, or transmits
-data then sleeps (up to 1/40th of a second (25ms)) until the next time to transmit data. To
+data then sleeps (up to 1/40th of a second, or 25ms) until the next time to transmit data. To
 transmit the data, it calls queue_up_client_updates() followed by write_queued_updates_to_client().
 
 <p>queue_up_client_updates() loops through all the elements of the go[] array and queues up
@@ -1974,21 +2034,21 @@ the bridge (sends SNISMV_OPCODE_VERIFY_CREATE or SNISMV_OPCODE_VERIFY_EXISTS to 
 depending on whether the player intended to create a new ship, or join an existing ship).
 Along with these opcodes a password hash is supplied.
 
-<p>If verification has already been requested, but not yet recieved, update_multiverse()
+<p>If verification has already been requested, but not yet received, update_multiverse()
 does nothing.
 
 <p>If the ship is already verified by snis_multiverse, then a large buffer containing the
 entire ship's state is constructed via build_bridge_update_packet() (see snis_bridge_update_packet.h
 and snis_bridge_update_packet.c), and sent to snis_multiverse using SNISMV_OPCODE_UPDATE_BRIDGE.
 
-<p>When snis_multiverse recieves SNISMV_OPCODE_VERIFY_CREATE, (the player is requesting
+<p>When snis_multiverse receives SNISMV_OPCODE_VERIFY_CREATE, (the player is requesting
 to create a new ship) it calls verify_existence() with 0 for the 2nd parameter,
 should_already_exist. It then looks up the password hash to see if it already exists.
 If it does, then snis_multiverse sends SNISMV_VERIFICATION_RESPONSE_FAIL to snis_server
 along with the password hash.  If the entry does not yet exist, snis_multiverse sends
 SNISMV_VERIFICATION_RESPONSE_PASS along with the password has to snis_server.
 
-<p>When snis_multiverse recieves SNISMV_OPCODE_VERIFY_EXISTS, (the player is requesting
+<p>When snis_multiverse receives SNISMV_OPCODE_VERIFY_EXISTS, (the player is requesting
 to join an existing ship), it calls verify_existence with 1 for the 2nd parameter,
 should_already_exist. It then looks up the password hash to see if it already exists.
 If it does not exist, then snis_multiverse sends SNISMV_VERIFICATION_RESPONSE_FAIL
@@ -2005,7 +2065,7 @@ unpack_bridge_update_packet() (see snis_bridge_update_packet.c) and update's the
 current starsystem (it may have gone through a warp gate to a different star system). This
 data will later be written out to a file via checkpoint_data() in the main thread.
 
-<p>When snis_server recieves SNISMV_OPCODE_UPDATE_BRIDGE, it calls process_update_bridge() in
+<p>When snis_server receives SNISMV_OPCODE_UPDATE_BRIDGE, it calls process_update_bridge() in
 snis_server.c which saves the bridge's x, y, and z and reads in the packed bridge data and
 unpacks it into the struct snis_entity for that bridge, then restores the bridge's x, y, and
 z position. In this way the save state from snis_multiverse is transferred into the state
