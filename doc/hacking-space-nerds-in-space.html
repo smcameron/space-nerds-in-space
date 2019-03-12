@@ -154,10 +154,11 @@ way around the code.
 <ol>
 <li><a href="#dependencies">Prerequisites (dependencies)</a>
 </ol>
-<li><a href="utilities">Utilities</a>
+<li><a href="#utilities">Utilities</a>
 <ol>
 </ol>
-<li><a href="assets">Assets</a>
+<li><a href="#assets">Assets</a>
+<li><a href="#fileindex">Source File Index</a>
 <ol>
 </ol>
 </ol>
@@ -2217,4 +2218,203 @@ that clients may more easily find it.
 <h2><a name="utilities">Utilities</a></h2>
 
 <h2><a name="assets">Assets</a></h2>
+<h2><a name="fileindex">Source File Index</a></h2>
+<p align=center><table width=80%, border=1>
+<tr><td>arbitrary_spin.c, arbitrary_spin.h</td><td>Functions for computing predictable deterministic pseudorandom spins and orientations</td></tr>
+<tr><td>arraysize.h</td><td>Macro for computing the size of arrays</td></tr>
+<tr><td>a_star.c, a_star.h</td><td>A* pathfinding algorithm</td></tr>
+<tr><td>a_star_test.c</td><td>Test program for A* pathfinding algorithm</td></tr>
+<tr><td>bline.c, bline.h</td><td>Bresenham's line drawing algorithm with callback interface</td></tr>
+<tr><td>build_bug_on.h</td><td>Macro to enforce various assertions at compile time</td></tr>
+<tr><td>build_info.h</td><td>Automatically generated file containing hashes of source code</td></tr>
+<tr><td>check-endianness.c</td><td>Program to check endianess of build host used by gather_build_info script</td></tr>
+<tr><td>c-is-the-locale.c</td><td>Module to override set_locale() to enforce that the locale is "C".</td></tr>
+<tr><td>commodities.c, commodities.h</td><td>Functions to read and add to the list of commodities (things that can be cargo
+bought and sold at starbases) that the game knows about</td></tr>
+<tr><td>compat.h</td><td>Some (very few) things that differ from one OS to another</td></tr>
+<tr><td>container-of.h</td><td>Macro for obtaining the address of a structure given the address of a known member of that structure</td></tr>
+<tr><td>corporations.c, corporations.h</td><td>List of fictional corporations known to the game</td></tr>
+<tr><td>crater.c, crater.h</td><td>Functions to procedurally generate crater heightmaps, used by earthlike.</td></tr>
+<tr><td>damcon-robot-points.h</td><td>Point data used to draw damage control robot.</td></tr>
+<tr><td>device-io-sample-1.c</td><td>Example program for interfacing the game to custom control hardware.</td></tr>
+<tr><td>docking_port.c, docking_port.h</td><td>Structures and a function for reading docking port information defining positions
+and orientations of docking ports on various starbase models</td></tr>
+<tr><td>earthlike.c</td><td>Program to procedurally generate cubemap textures for earthlike and rocky planets</td></tr>
+<tr><td>elastic_collision.c, elastic_collision.h</td><td>Function which given positions, masses, and velocities of
+two colliding bodies, computes new positions and velocities of those objects assuming an elastic collision.</td></tr>
+<tr><td>entity.c, entity.h</td><td>Defines device independent data structures and functions related to renderable entities. This is a core part
+of the renderer</td></tr>
+<tr><td>entity_private.h</td><td>Defines a portion of renderer entity data structures that are private to the renderer and need not be known by
+code that is using the renderer</td></tr>
+<tr><td>fleet.c, fleet.h</td><td>Defines data structures and functions related to grouping NPC ships into fleets</td></tr>
+<tr><td>generate_skybox.c</td><td>Program to procedurally generate skybox cubemap textures</td></tr>
+<tr><td>graph_dev_gdk.c</td><td>GDK implementation of the interface defined by graph_dev.h. This is a core part of the
+software renderer used by the limited client.</td></tr>
+<tr><td>graph_dev.h</td><td>Interface of device dependent portion of the renderer (graph_dev_gdk and graph_dev_opengl implement this interface)</td></tr>
+<tr><td>graph_dev_mesh_stub.c, graph_dev_mesh_stub.h</td><td>Stub routines used by snis_server to satisfy requirements of mesh.c.  mesh.c calls some
+functions to initialize some things related to rendering, but since snis_server doesn't render, it doesn't need these things.  So for snis_server,
+they are stubbed out.</td></tr>
+<tr><td>graph_dev_opengl.c</td><td>OpenGL implementation of the interface defined by graph_dev.h, this is a core part of the renderer.</td></tr>
+<tr><td>infinite-taunt.c, infinite-taunt.h</td><td>Procedurally generates various bits of text (planet descriptions, NPC ship communications, ship names,
+planet names, etc.)</td></tr>
+<tr><td>joystick.c, joystick.h</td><td>Code to deal with joystick hardware, allows polling joysticks for state.</td></tr>
+<tr><td>joystick_config.c, joystick_config.h</td><td>Code for reading joystick config file and mapping joystick events to game controls</td></tr>
+<tr><td>key_value_parser.c, key_value_parser.h</td><td>Code for parsing text files of key value pairs into a predefined data structure</td></tr>
+<tr><td>liang-barsky.c, liang-barsky.h</td><td>Implementation of Liang-Barsky line clipping algorithm for clipping lines to a viewport</td></tr>
+<tr><td>material.c, material.h</td><td>Defines structures and functions to initialize those structures for communicating various material
+attributes to OpenGL shaders (unfortunately, it's not PBR though)</td></tr>
+<tr><td>mathutils.c, mathutils.h</td><td>Various math utility functions</td></tr>
+<tr><td>matrix.c, matrix.h</td><td>Various matrix functions</td></tr>
+<tr><td>mesh.c, mesh.h</td><td>Various 3D mesh related functions. Defines struct mesh, and functions to fabricate various
+meshes, and miscellaneous mesh related functions</td></tr>
+<tr><td>mesh_viewer.c</td><td>Program to view models with the same renderer the game uses.</td></tr>
+<tr><td>mikktspace/mikktspace.c, mikktspace.h</td><td>God-like code from Morten Mikkelsen to compute vertex tangent
+and bitangent vectors given a mesh with vertex normals and a uv mapping. Useful (required) for normal mapping.</td></tr>
+<tr><td>mtwist.c, mtwist.h</td><td>Mersenne Twister pseudorandom number generator implementation</td></tr>
+<tr><td>my_point.c, my_point.h</td><td>Defines a 2D point structure and some operations on it. Used for drawing some 2D shapes (e.g. the damage control robot,
+and some other things on the damage control screen)</td></tr>
+<tr><td>names.c, names.h</td><td>Code to procedurally generate names</td></tr>
+<tr><td>nebula_noise.c</td><td>(Unfinished) program to procedurally generate nebulas</td></tr>
+
+<tr><td>nonuniform_random_sampler.c, nonuniform_random_sampler.h</td><td>Code
+to define distributions of discrete items and relative probabilites and to
+sample (choose an item) from those distributions. For example, you could define
+a distribution with two items, a copper penny, and a solid gold coin with the
+former being 100 times more likely than the latter, and then sample from that
+distribution and get (approximately) 100 pennies for every gold coin.</td></tr>
+
+<tr><td>ogg_to_pcm.c, ogg_to_pcm.h</td><td>Functions to decode ogg-vorbis audio files</td></tr>
+<tr><td>opengl_cap.c, opengl_cap.h</td><td>Functions to query OpenGL about capabilities</td></tr>
+<tr><td>open-simplex-noise.c, open-simplex-noise.h</td><td>C implementation of Kurt Spencer's Open Simplex Noise</td></tr>
+<tr><td>oriented_bounding_box.c, oriented_bounding_box.h</td><td>Defines data structure for an oriented bounding box and a function to
+return the closest point on the surface of that box to a given point. Useful for collision detection.</td></tr>
+<tr><td>placeholder-part-points.h</td><td>2D drawing data for "parts" on the damage control screen</td></tr>
+<tr><td>placeholder-socket-points.h</td><td>2D drawing data for "sockets" on the damage control screen</td></tr>
+<tr><td>placeholder-system-points.h</td><td>2D drawing data for "systems" on the damage control screen</td></tr>
+<tr><td>planetary_atmosphere.c, planetary_atmosphere.h</td><td>Code for procedurally generating chemical compositions of planetary atmospheres</td></tr>
+<tr><td>png_utils.c, png_utils.h</td><td>Code for reading and writing PNG images (this should probably be replaced by some GTK stuff)</td></tr>
+<tr><td>power-model.c, power-model.h</td><td>Code to model the players' ship's systems as an electrical circuit</td></tr>
+<tr><td>print_ship_attributes.c</td><td>Program to print out ship attribute names and offsets (for debugging purposes).</td></tr>
+<tr><td>pronunciation.c, pronunciation.h</td><td>Code to fix up abbreviations like SB-00 and WG-01 to "starbase zero" and "warp gate one" so that
+text-to-speech systems can pronounce them reasonably.</td></tr>
+<tr><td>pthread_util.c, pthread.h</td><td>Utility function for creating threads and setting some attributes on them (e.g.
+thread name and whether they are detached or not).</td></tr>
+<tr><td>quat.c, quat.h</td><td>Utility code for vec2, vec3, and quaternion structures and for performing various mathematical
+operations on these structures.</td></tr>
+<tr><td>replacement_assets.c, replacement_assets.h</td><td>Code to allow replacing asset files at runtime with other, different asset files.
+This exists mainly to allow old assets in git to remain there, undisturbed, while still using newer different assets not in git.</td></tr>
+<tr><td>rootcheck.c, rootcheck.h</td><td>Code to check if we are running as root.  Nobody should be running the game as root.</td></tr>
+<tr><td>rts_unit_data.c, rts_unit_data.c</td><td>Code and data about units in the (unfinished) real time strategy game mode.</td></tr>
+<tr><td>shader.c, shader.h</td><td>Code to read, construct and compile OpenGL shaders from files.</td></tr>
+<tr><td>shape_collision.c, shape_collision.h</td><td>Code to perform closest point operation on cuboids, spheres,
+and capsules. Useful for collision detection.</td></tr>
+<tr><td>shield_strength.c, shield_strength.h</td><td>Code to probe a shield at a given wavelength for strength</td></tr>
+<tr><td>ship_registration.c, ship_registration.h</td><td>Implements a ship registry for NPC ships, allowing bounties to be set upon them.</td></tr>
+<tr><td>snis_alloc.c, snis_alloc.h</td><td>Implements an allocation pool from which objects of a constant size may be allocated an de-allocated.</td></tr>
+<tr><td>snis_asset_dir.c, snis_asset_dir.h</td><td>Common code used to allow overriding of the asset directory used by SNIS programs.</td></tr>
+<tr><td>snis_bin_dir.c, snis_bin_dir.h</td><td>Common code used to find the binary directory used by SNIS programs</td></tr>
+<tr><td>snis_bridge_update_packet.c, snis_bridge_update_packet.h</td><td>Defines the packet used to transfer bridge state between snis_server and snis_multiverse</td></tr>
+<tr><td>snis_button.c, snis_button.h</td><td>Code for button UI widget</td></tr>
+<tr><td>snis_cardinal_colors.h</td><td>Constants for some cardinal colors</td></tr>
+<tr><td>snis_client.c</td><td>The snis_client program.</td></tr>
+<tr><td>snis-culture.h</td><td>Defines the possible economy, government and tech-level descriptions for planets.</td></tr>
+<tr><td>snis_damcon_systems.c, snis_damcon_systems.h</td><td>Defines various attributes of things on the damage control screen</td></tr>
+<tr><td>snis_debug.c, snis_debug.h</td><td>Debug code to dump out various attributes of various things in the game on the demon console.</td></tr>
+<tr><td>snis-device-io.c, snis-device-io.h</td><td>Code to read in opcodes from a unix domain socket on the client intended to be used
+to support custom built hardware controls. Nothing actually uses this interface that I am aware of.</td></tr>
+<tr><td>snis_dmx.c, snis_dmx.h</td><td>Untested DMX lighting implementation. Needs work to integrate with the rest of the game.</td></tr>
+<tr><td>snis_entity_key_value_specification.h</td><td>A key-value specification for struct snis_entity defining a text name, type,
+and offset for fields within struct snis_entity. Used by snis_server to implement the Lua function to get ship attributes,
+and by snis_multiverse for saving and reading bridge state files.</td></tr>
+<tr><td>snis_event_callback.c, snis_event_callback.h</td><td>Allows callbacks to be created, scheduled and called. This is ultimately how Lua
+callbacks for events are implemented.</td></tr>
+<tr><td>snis_faction.c, snis_faction.h</td><td>Defines faction reading code, and code to extract faction attributes and hostility factors between factions.</td></tr>
+<tr><td>snis_fixup_gnome_key_screwups.h</td><td>Redefine some old GDK key names</td></tr>
+<tr><td>snis_font.c, snis_font.h</td><td>Defines line segments making up a font, and functions to operate on fonts</td></tr>
+<tr><td>snis_font_orig.c</td><td>Unused</td></tr>
+<tr><td>snis_gauge.c, snis_gauge.h</td><td>Gauge UI widget</td></tr>
+<tr><td>snis_graph.c, snis_graph.h</td><td>Defines many OpenGL drawing and graphics functions</td></tr>
+<tr><td>snis.h</td><td>Defines many types and constants, most notably struct snis_entity</td></tr>
+<tr><td>snis_hash.c, snis_hash.h</td><td>Defines hash functions used for passwords</td></tr>
+<tr><td>snis_keyboard.c, snis_keyboard.h</td><td>Defines key mapping and functions to read key mapping config file</td></tr>
+<tr><td>snis_label.c, snis_label.h</td><td>Label UI widget</td></tr>
+<tr><td>snis_limited_graph.c</td><td>Defines many GDK drawing and graphics functions</td></tr>
+<tr><td>snis_log.h</td><td>Defines some snis log file functions (in terms of ssgl log file functions) Not very heavily used.</td></tr>
+<tr><td>snis_marshal.c, snis_marshal.h</td><td>Defines a packed buffer structure and functions for packing
+or unpacking various data types into or out of such buffers</td></tr>
+<tr><td>snis_multiverse.c</td><td>snis_multiverse program</td></tr>
+<tr><td>snis_multiverse.h</td><td>Defines opcodes for communicating between snis_multiverse and snis_server.</td></tr>
+<tr><td>snis_nl.c, snis_nl.h</td><td>Zork-like natural language parser used to implement "the ship's computer"</td></tr>
+<tr><td>snis_opcode_def.c, snis_opcode_def.h</td><td>Defines the "syntax" of opcodes so that snis_client and snis_server may
+to some degree ensure that they are compatible with one another at run time. Helps detect version mismatches.</td></tr>
+<tr><td>snis_packet.h</td><td>Defines opcodes.  Note, many structs are defined in here that are not actually used
+anymore due to snis_marshal.c containing printf() like functions to pack buffers.  However it may be that the size
+of these structures is still relevant (e.g. sizeof(struct blah) maybe used as an allocation size, even though the
+struct blah itself is not used. Some care must be taken when modifying opcode protocols.</td></tr>
+<tr><td>snis_preferences.c, snis_preferences.h</td><td>Code to save and restore prior choices made on the network
+setup screen so the user doesn't have to repeatedly enter the same data over and over.</td></tr>
+<tr><td>snis_pull_down_menu.c, snis_pull_down_menu.h</td><td>Pull down menu UI widget</td></tr>
+<tr><td>snis_server.c</td><td>The snis_server program.</td></tr>
+<tr><td>snis_server_tracker.c, snis_server_tracker.h</td><td>Code to track presense of snis_server and snis_multiverse instances (by querying ssgl_server). This
+is used to maintain the state of the star map in snis_client, among other things.</td></tr>
+<tr><td>snis_ship_type.c, snis_ship_type.h</td><td>Code to read struct ship_type_entry data from a config file file</td></tr>
+<tr><td>snis_sliders.c, snis_sliders.h</td><td>Slider UI widget</td></tr>
+<tr><td>snis_socket_io.c, snis_socket_io.h</td><td>Code to read/write from sockets, handling errors</td></tr>
+<tr><td>snis_strip_chart.c, snis_strip_chart.h</td><td>Strip chart UI widget (e.g. for network stats, EMF graph on comms station)</td></tr>
+<tr><td>snis_test_audio.c</td><td>A program for debugging audio problems.</td></tr>
+<tr><td>snis_text_input.c, snis_text_input.h</td><td>Text input UI widget</td></tr>
+<tr><td>snis_text_window.c, snis_text_window.h</td><td>Text window UI widget</td></tr>
+<tr><td>snis_tweak.c, snis_tweak.h</td><td>Framework for allowing variables to be tweakable via the demon screen</td></tr>
+<tr><td>snis_typeface.c, snis_typeface.h</td><td>Various sizes of fonts</td></tr>
+<tr><td>snis_ui_element.c, snis_ui_element.h</td><td>Code for generically handling a variety of widgets, or lists of widgets,
+and associating widgets with display modes</td></tr>
+<tr><td>snis_version.h</td><td>#defines SNIS_VERSION</td></tr>
+<tr><td>solarsystem_config.c, solarsystem_config.h</td><td>Code for allocating, reading, and freeing solarsystem assets</td></tr>
+<tr><td>sounds.h</td><td>Defines constants for predefined sound effects</td></tr>
+<tr><td>space-part.c, space-part.h</td><td>space partitioning algorithm used for collision detection</td></tr>
+<tr><td>spelled_numbers.c, spelled_numbers.h</td><td>Code to convered spelled out numbers like "one hundred fifty" to numeric values, e.g. 150.
+This is used to process text coming from speech recognition systems (e.g. pocketsphinx).</td></tr>
+<tr><td>ssgl/ssgl_connect_to_lobby.c, ssgl_connect_to_lobby.h</td><td>Contains functions for game servers and clients to connect to the lobby</td></tr>
+<tr><td>ssgl/ssgl_gameclient_example.c</td><td>Example ssgl lobby gameclient client.</td></tr>
+<tr><td>ssgl/ssgl_gameserver_example.c</td><td>Example ssgl lobby gameserver client.</td></tr>
+<tr><td>ssgl/ssgl_get_gamelobby_port.c, ssgl_get_gameloby_port.h</td><td>Returns the game lobby port number</td></tr>
+<tr><td>ssgl/ssgl_get_primary_host_ip_addr.c</td><td>Returns the IP address of the current host (one that can route to 8.8.8.8)</td></tr>
+<tr><td>ssgl/ssgl.h</td><td>Main header file for ssgl</td></tr>
+<tr><td>ssgl/ssgl_log.c, ssgl_log.h</td><td>Logging functions for ssgl</td></tr>
+<tr><td>ssgl/ssgl_protocol_id.h</td><td>Some #defines for the ssgl protocol to prevent version mismatches</td></tr>
+<tr><td>ssgl/ssgl_recv_game_servers.c</td><td>Function to return a list of game servers from a lobby</td></tr>
+<tr><td>ssgl/ssgl_register_for_bcast_packet.c</td><td>Function to start a thread and register a callback to receive broadcast packets containing lobby server IP addrs and ports</td></tr>
+<tr><td>ssgl/ssgl_register_gameserver.c</td><td>Functions to register a game server with the lobby</td></tr>
+<tr><td>ssgl/ssgl_sanitize.c, ssgl_sanitize.h</td><td>Functions to sanitize data from ssgl clients</td></tr>
+<tr><td>ssgl/ssgl_server.c</td><td>The main ssgl_server program.</td></tr>
+<tr><td>ssgl/ssgl_sleep.c</td><td>Threadsafe sleep function</td></tr>
+<tr><td>ssgl/ssgl_socket_io.c, ssgl_socket_io.h</td><td>Code to read/write to sockets with error handling</td></tr>
+<tr><td>stacktrace.c, stacktrace.h</td><td>Code to obtain a stacktrace at the current execution point (for debugging).</td></tr>
+<tr><td>starbase-comms.c, starbase-comms.h</td><td>Procedurally generates starbase communications about attacks</td></tr>
+<tr><td>starbase_metadata.c, starbae_metadata.h</td><td>Code to related starbase snis_entities to starbase model files and docking port files</td></tr>
+<tr><td>starmap_adjacency.c, starmap_adjacency.h</td><td>Constructs and adjacency graph for starsystems based on proximity</td></tr>
+<tr><td>stl_parser.c, stl_parser.h</td><td>Code to read STL files, Wavefront OBJ files, and Oolite .dat files</td></tr>
+<tr><td>string-utils.c, string-utils.h</td><td>Various string utility functions</td></tr>
+<tr><td>termios2.h</td><td>termios2.h file from linux kernel.  This should be included by termios.h, but it is not always present.</td></tr>
+<tr><td>test_crater.c</td><td>Test program for crater.c code</td></tr>
+<tr><td>test-mtwist.c</td><td>Test program for mtwist.c code</td></tr>
+<tr><td>test_mtwist_float.c</td><td>Test program for mtwist.c code</td></tr>
+<tr><td>test-obj-parser.c</td><td>Test program for stl_parser.c code</td></tr>
+<tr><td>test-quat.c</td><td>Test program for quat.c code</td></tr>
+<tr><td>test_snis_dmx.c</td><td>Test program for snis_dmx.c code</td></tr>
+<tr><td>test_solarsystem_config.c</td><td>Test program for solarsystem_config.c code</td></tr>
+<tr><td>thrust_attachment.c, thrust_attachement.h</td><td>Code for reading thrust attachment data files (defining where thrusters are on models).</td></tr>
+<tr><td>triangle.h</td><td>Defines struct triangle</td></tr>
+<tr><td>turret_aimer.c, turret_aimer.h</td><td>Code to automatically aim and move a 3D turret</td></tr>
+<tr><td>ui_colors.c, ui_colors.h</td><td>Code to allow customization of UI colors</td></tr>
+<tr><td>util/cloud-mask-normalmap.c</td><td>Utility program to mask normalmaps with cloud maps</td></tr>
+<tr><td>util/generate_solarsystem_positions.c</td><td>Code to generate solarsystem positions such that a reasonable proximity based adjacency map will be produced.</td></tr>
+<tr><td>util/mask_clouds.c</td><td>Code create a cloud mask to composite clouds onto terrain textures for earthlike planets</td></tr>
+<tr><td>util/sample_image_colors.c</td><td>This program samples 4 points on an image, averages them and prints out the RGB value.
+The intended use is to sample the textures for gas giants to produce a reasonable
+color for the atmosphere effect.</td></tr>
+<tr><td>vec4.c, vec4.h</td><td>Defines union vec4 and some operations on them</td></tr>
+<tr><td>vertex.h</td><td>Defines struct vertex</td></tr>
+<tr><td>wwviaudio.c, wwviaudio.h</td><td>The main audio library used to mix and playback many concurrent audio streams, based on portaudio</td></tr>
+</table>
 </body>
