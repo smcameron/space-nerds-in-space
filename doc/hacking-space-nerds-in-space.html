@@ -146,9 +146,11 @@ way around the code.
 <li><a href="#mvdataxfer">Data transfer between snis_multiverse and snis_server</a>
 </ol>
 </ol>
-<li><a href="ssglserver">SSGL Server</a>
+<li><a href="#ssglserver">SSGL Server</a>
 <ol>
-<li>Overview
+<li><a href="#ssgloverview">SSGL Overview</a>
+<li><a href="#ssgldatastruct">SSGL Main data structures</a>
+<li><a href="#ssglserverthr">SSGL Server threads</a>
 </ol>
 <li><a href="buildsystem">Build System</a>
 <ol>
@@ -1498,7 +1500,7 @@ the next tick (10Hz) or does the following:
 	update_multiverse_bridge_count(currentTime);
 </pre>
 
-<p>move_objects loops through all the live go[] elements and calls their go[i]->&gt;move()
+<p>move_objects loops through all the live go[] elements and calls their go[i]-&gt;move()
 function, and for player ship objects (OBJTYPE_SHIP1), possibly queues the current
 bridge state to be sent to snis_multiverse. It may respawn dead player ships.
 Then it moves all the damage control entities on all the bridges. Then it handles
@@ -1900,7 +1902,109 @@ steering and navigation. ai_ship_travel_towards has some code to avoid crashing
 into planets and to use the warp drive for longer transits.
 
 <h4><a name="snisservernpcfleet">NPC Fleets</a></h4>
+
+<p>NPC ships may join or lead ad-hoc fleets. When an ship is is added into the
+universe via add_ship() in snis_server.c, it's tsd.ship.nai_entries value (the
+number of AI stack entries) is set to zero -- that is, it doesn't know what it's
+doing. When the ship_move() function is called for this ship, it will call
+ship_figure_out_what_to_do(), and at this point one of the things the ship might
+do is become a fleet leader or join an existing fleet. At this point it will have
+at the top of its AI stack AI_MODE_FLEET_LEADER or AI_MODE_FLEET_MEMBER. If it is
+a fleet leader, it will move in the same manner as an individual ship that is patrolling.
+If it is a fleet member, it will follow the fleet leader at a prescribed position in the
+fleet according to the fleet shape (see fleet.c and fleet.h).
+
 <h4><a name="snisserverhostile">Hostility matrix</a></h4>
+
+<p>NPC ships belong to factions. Factions are defined in a configuration file and
+read in via snis_read_factions().  See share/snis/factions.txt, and snis_faction.c and
+snis_faction.h.  There is a "hostility matrix" which defines the hostility
+level between each pair of factions. NPC ships compute a "danger vector" (see
+compute_danger_vectors() in snis_server.c) which is a kind of vector sum taking
+into account direction, distance and hostility of nearby ships, producing a vector
+pointing in a "safer" direction. When the NPC ship calculates a high enough threat
+level it will enter AI_MODE_FLEE, and beat a retreat in this "safer" direction.
+
+<h3><a name="snisservertweak">Tweakable Variables</a></h3>
+
+<p>There are many variables within snis_server (and also snis_client) which are
+tweakable via the demon screen.  There is a framework for making variables tweakable
+in snis_tweak.c and snis_tweak.h. There is a server_tweak[] variable that is an
+array of struct tweakable_var_descriptor's. Each of these descriptors contains a
+name, a description, a pointer to the variable, an indication of the variables type
+(integer or float) and a minumum, maximum, and default value.  Similarly snis_client
+has a client_tweak[] array. When a "set blah = value" command is typed on the client's
+demon screen, first it scans the client_tweak[] array for a matching variable name,
+and if found, sets the value if it is within the prescribed bounds (see set_clientside_variable()
+in snis_client.c).  If it is not found, the command is forwarded to snis_server, where
+the server_tweak[] variable is scanned for a match, and if found and the specified
+value is within bounds, the variable is set (see server_builtin_set() in snis_server.c).
+
+<h3><a name="snsiservernpccomms">NPC Comms (starbases, mining bot, etc)</a></h3>
+
+<p>NPC comms is a bit complicated.  Each bridge has an npc_bot state associated with it
+(npcbot in struct bridge_data in snis_server.c). The npc_bot state has an object_id
+(e.g. for the starbase or mining bot that the bridge is communicating with), a channel,
+a "parts_menu" integer, a struct npc_menu_item pointer, "current_menu", and an npc_special_bot_fn
+special_bot.
+
+<p>When you hail a starbase, your bridge's npc bot state object_id is set to the object
+ID of the starbase, and the channel is switched to a random channel and the current_menu
+pointer is set to starbase_main_menu, then generic_npc_bot() is called with an empty string
+as input, which causes it to transmit the menu on the specified comms channel, which makes
+it show up on the comms screen of the bridge. Subsequent comms transmissions from the
+bridge are sent to this generic_npc_bot(), where they are interpreted as menu choices.
+(see process_comms_transmission in snis_server.c, which calls send_to_npcbot(), which
+will send the text either to generic_npc_bot, or to the npc bot state's special_bot, if
+one has been assigned.  For simple menus, the generic_npc_bot will suffice, but for more
+specialized communications, special bot functions are used and the special_bot function
+pointer is used.
+
+<p>The basic idea is the npc_bot_state is used for the NPC to remember its place in the
+conversation between communications, and various specialized portions of the conversation
+are handled by specialized functions and changing the special_bot pointer, while simple
+menu trees can be handled by static menu structures and generic_npc_bot().
+
+<p>TODO: describe this better.
+
+<h3><a name="snisservernlproc">Natural Language Processing</a></h3>
+
+<p>"Natural language processing" if it may be called that, is used to implement
+the "ship's computer".  Commands may be typed in (preceded by "/computer ") on the
+comms screen, or if using pocketsphinx, speech recognition may feed commands in via
+a fifo. These commands are forwarded to snis_server. Commands come in via
+process_instructions_from_client, either via OPCODE_COMMS_TRANSMISSION or via
+OPCODE_NATURAL_LANGUAGE_REQUEST. For OPCODE_COMMS_TRANSMISSION, process_comms_transmission
+is called, which then calls process_meta_comms_packet(), which then calls meta_comms_computer(),
+which calls perform_natural_language_request(). OPCODE_NATURAL_LANGUAGE_REQUEST causes
+process_natural_language_request to be called, which calls perform_natural_language_request().
+
+<p>Perform_natural_language_request() calls snis_nl_parse_natural_language_request(), which
+does the actual work of parsing the text and calling the appropriate functions via callbacks
+set up earlier via init_natural_language_system() in snis_server.c. init_natural_language_system()
+calls init_dictionary() which sets up the majority of the system's vocabulary and sets up all the
+verb callbacks.
+
+<p>See <a href="https://smcameron.github.io/space-nerds-in-space/snis-nl-slides/slideshow.html#1">this
+set of slides about NLP in SNIS</a> for more information about how the parsing works. Use the arrow
+keys to navigate the slides.  The slides probably don't work very well on mobile.
+
+<h3><a name="snisserverrtsmode">RTS mode</a></h3>
+
+<p>TODO: this section
+
+<h3><a name="snisserverdamconai">Damage Control Robot AI</a></h3>
+
+<p>The damage control robot's AI is invoked by the damage control robot's move
+function, damcon_robot_move(), which calls damcon_robot_think().  The robot has
+a long term goal, and a short term goal. The short term goal generally involves
+moving towards the next waypoint along the way to the long term goal.  The long
+term goal involves figuring out the most critically damaged component in the system
+or if already carrying it, getting to the repair station.  See find_robot_goal() in
+snis_server.c. Then it computes a string of waypoints to that component by
+the a_star algorithm, and these waypoints become short term goals.  The nodes searched
+by the a_star algorithm are in a static array, damcon_waypoint_data[], defined in
+snis_server.c which is worth a look if you want to understand how the robot works.
 
 <h2><a name="snismultiverse">SNIS Multiverse</a></h2>
 
@@ -2073,7 +2177,7 @@ z position. In this way the save state from snis_multiverse is transferred into 
 within snis_server.
 
 <h2><a name="ssglserver">SSGL Server</a></h2>
-<h3>Overview</h3>
+<h3><a name="ssgloverview">SSGL Overview</a></h3>
 <p>SSGL ostensibly stands for "super simple game lobby", whether it's all that simple
 is another question. It provides a means for different processes within Space Nerds in
 Space to find one another. Although SSGL predates any knowledge I had of Google's BNS
@@ -2106,7 +2210,7 @@ as a server so that snis_servers may find it, and using ssgl_server to know what
 snis_server instances exist so that it may maintain an internal list of active snis_server
 instances for "autowrangling" (automatically starting and stopping) them.
 
-<h3>Main data structures</h3>
+<h3><a name="ssgldatastruct">SSGL Main data structures</a></h3>
 
 <p>From ssgl/ssgl.h:
 <pre>
@@ -2165,7 +2269,7 @@ in general, any one game client would only be interested in game servers for a p
 of game, but not in all game servers <em>regardless</em> of type of game.
 
 
-<h3>SSGL server threads</h3>
+<h3><a name="ssglserverthr">SSGL server threads</a></h3>
 
 <h4>SSGL server main thread</h4>
 
@@ -2218,6 +2322,13 @@ that clients may more easily find it.
 <h2><a name="utilities">Utilities</a></h2>
 
 <h2><a name="assets">Assets</a></h2>
+
+<p>Art assets are partially in git, in share/snis, and partially on spacenerdsinspace.com.
+You can download the additional assets via "make update-assets", or if you just want to see
+what <em>would</em> be downloaded without actually downloading it, "make check-assets".
+
+<p>TODO: fill in this section about how assets are managed, how to create assets, etc.
+
 <h2><a name="fileindex">Source File Index</a></h2>
 <p align=center><table width=80%, border=1>
 <tr><td>arbitrary_spin.c, arbitrary_spin.h</td><td>Functions for computing predictable deterministic pseudorandom spins and orientations</td></tr>
