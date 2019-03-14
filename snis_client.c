@@ -9703,6 +9703,87 @@ static void draw_sciplane_laserbeam(GtkWidget *w, GdkGC *gc, struct entity_conte
 	}
 }
 
+static int science_tooltip_text(struct science_data *sd, char *buffer, int buflen)
+{
+	struct snis_entity *o = sd->o;
+
+	if (sd->waypoint_index >= 0) {
+		snprintf(buffer, buflen, "WAYPOINT %02d", sd->waypoint_index);
+		return 1;
+	}
+	if (!o->sdata.science_data_known && o->type != OBJTYPE_PLANET && o->type != OBJTYPE_STARBASE)
+		return 0;
+
+	switch (o->type) {
+	case OBJTYPE_SHIP1:
+	case OBJTYPE_SHIP2:
+		snprintf(buffer, buflen, "SHIP, TYPE: %s, NAME:%s",
+				ship_type[o->sdata.subclass].class, o->sdata.name);
+		break;
+	case OBJTYPE_ASTEROID:
+		snprintf(buffer, buflen, "ASTEROID, NAME:%s", o->sdata.name);
+		break;
+	case OBJTYPE_STARBASE:
+		snprintf(buffer, buflen, "STAR BASE %s", o->sdata.name);
+		break;
+	case OBJTYPE_DEBRIS:
+	case OBJTYPE_CARGO_CONTAINER:
+		snprintf(buffer, buflen, "UNKNOWN");
+		break;
+	case OBJTYPE_SPARK:
+		snprintf(buffer, buflen, "UNKNOWN ENERGY");
+		break;
+	case OBJTYPE_TORPEDO:
+	case OBJTYPE_LASER:
+		snprintf(buffer, buflen, "HIGH ENERGY PLASMA");
+		break;
+	case OBJTYPE_EXPLOSION:
+		snprintf(buffer, buflen, "HIGH ENERGY");
+		break;
+	case OBJTYPE_NEBULA:
+		snprintf(buffer, buflen, "GAS/FINE PARTICULATE MATTER");
+		break;
+	case OBJTYPE_WORMHOLE:
+	case OBJTYPE_BLACK_HOLE:
+		snprintf(buffer, buflen, "SPACE-TIME ANOMALY");
+		break;
+	case OBJTYPE_SPACEMONSTER:
+		snprintf(buffer, buflen, "ORGANIC LIFE FORM");
+		break;
+	case OBJTYPE_PLANET: {
+			struct planet_data *p = &o->tsd.planet;
+			char *planet_type_str = solarsystem_assets->planet_type[p->solarsystem_planet_type];
+			snprintf(buffer, buflen, "PLANET, TYPE:%s, NAME:%s", planet_type_str, o->sdata.name);
+			uppercase(buffer);
+		}
+		break;
+	case OBJTYPE_DERELICT:
+	case OBJTYPE_DOCKING_PORT:
+	case OBJTYPE_BLOCK:
+	case OBJTYPE_TURRET:
+	case OBJTYPE_WARP_CORE:
+	case OBJTYPE_MISSILE:
+		snprintf(buffer, buflen, "METALLIC/INORGANIC MATTER");
+		break;
+	case OBJTYPE_TRACTORBEAM:
+	case OBJTYPE_WARP_EFFECT:
+	case OBJTYPE_LASERBEAM:
+	case OBJTYPE_SHIELD_EFFECT:
+	case OBJTYPE_CHAFF:
+		snprintf(buffer, buflen, "ENERGY");
+		break;
+	case OBJTYPE_WARPGATE:
+		snprintf(buffer, buflen, "WARP GATE %s", o->sdata.name);
+		break;
+	default:
+		snprintf(buffer, buflen, "UNKNOWN");
+		break;
+	}
+	return 1;
+}
+
+static void draw_tooltip(int mousex, int mousey, char *tooltip);
+
 static void draw_sciplane_display(GtkWidget *w, struct snis_entity *o, double range)
 {
 	static struct mesh *ring_mesh = 0;
@@ -9948,6 +10029,13 @@ static void draw_sciplane_display(GtkWidget *w, struct snis_entity *o, double ra
 		double bw, dist2, dist;
 		int selected_guy_still_visible = 0, prev_selected_guy_still_visible = 0;
 		int nebula_factor = 0;
+		int msx, msy;
+		int closest_guy = -1;
+		float closest_distance = -1;
+		float mouse_dist;
+
+		msx = sng_pixelx_to_screenx(mouse.x);
+		msy = sng_pixely_to_screeny(mouse.y);
 
 		pwr = o->tsd.ship.power_data.sensors.i;
 		/* Draw all the stuff */
@@ -10062,6 +10150,11 @@ static void draw_sciplane_display(GtkWidget *w, struct snis_entity *o, double ra
 			science_guy[nscience_guys].waypoint_index = -1;
 			science_guy[nscience_guys].sx = sx;
 			science_guy[nscience_guys].sy = sy;
+			mouse_dist = (msx - sx) * (msx - sx) + (msy - sy) * (msy - sy);
+			if (mouse_dist < closest_distance || closest_distance < 0) {
+				closest_distance = mouse_dist;
+				closest_guy = nscience_guys;
+			}
 			if (&go[i] == curr_science_guy) {
 				selected_guy_still_visible = 1;
 			}
@@ -10161,7 +10254,19 @@ static void draw_sciplane_display(GtkWidget *w, struct snis_entity *o, double ra
 			science_guy[nscience_guys].waypoint_index = i;
 			science_guy[nscience_guys].sx = sx;
 			science_guy[nscience_guys].sy = sy;
+			mouse_dist = (msx - sx) * (msx - sx) + (msy - sy) * (msy - sy);
+			if (mouse_dist < closest_distance || closest_distance < 0) {
+				closest_distance = mouse_dist;
+				closest_guy = nscience_guys;
+			}
 			nscience_guys++;
+		}
+
+		/* Draw tool-tip like help for thing nearest mouse pointer */
+		if (closest_guy >= 0 && closest_distance > 0 && closest_distance < 400) {
+			char scitooltip[100];
+			if (science_tooltip_text(&science_guy[closest_guy], scitooltip, sizeof(scitooltip) - 1))
+				draw_tooltip(mouse.x, mouse.y, scitooltip);
 		}
 
 		/* draw in the laserbeams */
@@ -10263,9 +10368,12 @@ static void add_scanner_beam_orange_slice(struct entity_context *ecx,
 	}
 }
 
-static void draw_science_3d_waypoints(struct snis_entity *o, double range)
+static void draw_science_3d_waypoints(struct snis_entity *o, double range, float *closest_distance, int *closest_guy)
 {
 	int i;
+	int msx = sng_pixelx_to_screenx(mouse.x);
+	int msy = sng_pixely_to_screeny(mouse.y);
+	float mouse_dist = -1.0;
 
 	sng_set_foreground(UI_COLOR(sci_waypoint));
 	for (i = 0; i < sci_ui.nwaypoints; i++) {
@@ -10284,6 +10392,11 @@ static void draw_science_3d_waypoints(struct snis_entity *o, double range)
 		science_guy[nscience_guys].waypoint_index = i;
 		science_guy[nscience_guys].sx = sx;
 		science_guy[nscience_guys].sy = sy;
+		mouse_dist = (msx - sx) * (msx - sx) + (msy - sy) * (msy - sy);
+		if (mouse_dist < *closest_distance || *closest_distance < 0) {
+			*closest_distance = mouse_dist;
+			*closest_guy = nscience_guys;
+		}
 		nscience_guys++;
 		if (i == curr_science_waypoint)
 			sng_draw_circle(0, sx, sy, 10);
@@ -10302,6 +10415,11 @@ static void draw_all_the_3d_science_guys(GtkWidget *w, struct snis_entity *o, do
 	union vec3 camera_pos = { { -screen_radius * 1.80, screen_radius * 0.85, 0} };
 	float camera_pos_len = vec3_magnitude(&camera_pos);
 	quat_rot_vec_self(&ship_up, &o->tsd.ship.sciball_orientation);
+	float closest_distance = -1;
+	int closest_guy = -1;
+	float mouse_dist;
+	int msx = sng_pixelx_to_screenx(mouse.x);
+	int msy = sng_pixely_to_screeny(mouse.y);
 
 	/* rotate camera to be behind my ship */
 	quat_rot_vec_self(&camera_pos, &o->tsd.ship.sciball_orientation);
@@ -10391,6 +10509,11 @@ static void draw_all_the_3d_science_guys(GtkWidget *w, struct snis_entity *o, do
 		science_guy[nscience_guys].waypoint_index = -1;
 		science_guy[nscience_guys].sx = x;
 		science_guy[nscience_guys].sy = y;
+		mouse_dist = (msx - x) * (msx - x) + (msy - y) * (msy - y);
+		if (mouse_dist < closest_distance || closest_distance < 0) {
+			closest_distance = mouse_dist;
+			closest_guy = nscience_guys;
+		}
 		if (&go[i] == curr_science_guy)
 			selected_guy_still_visible = 1;
 		nscience_guys++;
@@ -10399,8 +10522,16 @@ static void draw_all_the_3d_science_guys(GtkWidget *w, struct snis_entity *o, do
 		prev_science_guy = curr_science_guy;
 		curr_science_guy = NULL;
 	}
-	draw_science_3d_waypoints(o, range);
+	draw_science_3d_waypoints(o, range, &closest_distance, &closest_guy);
 	populate_science_pull_down_menu();
+
+	/* Draw tool-tip like help for thing nearest mouse pointer */
+	if (closest_guy >= 0 && closest_distance > 0 && closest_distance < 400) {
+		char scitooltip[100];
+		if (science_tooltip_text(&science_guy[closest_guy], scitooltip, sizeof(scitooltip) - 1))
+			draw_tooltip(mouse.x, mouse.y, scitooltip);
+	}
+
 	pthread_mutex_unlock(&universe_mutex);
 	sng_set_foreground(UI_COLOR(sci_ball_default_blip));
 	if (nebula_factor) {
