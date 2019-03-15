@@ -28,6 +28,7 @@
 
 #include "joystick_config.h"
 #include "string-utils.h"
+#include "arraysize.h"
 
 #define MAX_DEVICES 6
 #define MAX_BUTTONS 40
@@ -126,15 +127,67 @@ static int regex_match(char *regex_pattern, char *text)
 	return 0;
 }
 
+/* This function turns lines like "mode main" to "mode 0", "mode science" to "mode 4" */
+static void translate_mode_names(char *line)
+{
+	int i, rc, m;
+	char *s;
+	const struct mode_table_entry {
+		char *name;
+		int number;
+	} mode[] = {
+		{ "main", 0 },
+		{ "navigation", 1 },
+		{ "weapons", 2 },
+		{ "engineering", 3 },
+		{ "science", 4 },
+		{ "comms", 5 },
+		{ "demon", 6 },
+		{ "damcon", 7 },
+	};
+	char modename[255];
+	int len;
+	char *start;
+
+	/* Find the first word after "mode" */
+	rc = sscanf(line, " mode %s%*[^	 ]", modename);
+	if (rc != 1)
+		return;
+
+	/* Figure out which mode number it is... */
+	m = -1;
+	for (i = 0; i < ARRAYSIZE(mode); i++) {
+		if (strcmp(mode[i].name, modename) == 0) {
+			m = i;
+			break;
+		}
+	}
+	if (m < 0)
+		return;
+	s = strstr(line, mode[m].name);
+	if (!s)
+		return;
+
+	/* Replace the mode name with its number */
+	*s = mode[m].number + '0';
+	start = s + 1;
+	s = s + strlen(mode[m].name);
+	len = strlen(s);
+	memmove(start, s, len + 1);
+}
+
 static int parse_joystick_cfg_line(struct joystick_config *cfg, char *filename, char *line, int ln,
 	char *joysticks_found[], int njoysticks_found, int *current_device)
 {
 	int rc;
 	char device[1000];
-	int mode, axis, button, invert, deadzone;
+	int axis, button, invert, deadzone;
 	char function[1000];
 	joystick_axis_fn jaf;
 	joystick_button_fn jbf;
+	static int mode = -1;
+	int tmpmode;
+	unsigned char dummy;
 
 	rc = sscanf(line, "device: %s", device);
 	if (rc == 1) {
@@ -150,12 +203,33 @@ static int parse_joystick_cfg_line(struct joystick_config *cfg, char *filename, 
 		*current_device = -1;
 		return 0;
 	}
+	translate_mode_names(line);
+
+	/* Check for mode lines by themselves, %c is to check if we hit EOL */
+	rc = sscanf(line, " mode %d%c", &tmpmode, &dummy);
+	if (rc == 1 || (rc == 2 && dummy == '\n')) {
+		mode = tmpmode;
+		return 0;
+	}
+
 	invert = 1; /* not inverted */
 	rc = sscanf(line, " mode %d invert axis %d %s %d", &mode, &axis, function, &deadzone);
 	if (rc >= 3)
 		invert = -1; /* inverted */
 	else
 		rc = sscanf(line, " mode %d axis %d %s %d", &mode, &axis, function, &deadzone);
+
+	/* Maybe mode is implicit */
+	if (rc < 3 && mode >= 0) {
+		rc = sscanf(line, " invert axis %d %s %d", &axis, function, &deadzone);
+		if (rc >= 2)
+			invert = -1; /* inverted */
+		else
+			rc = sscanf(line, " axis %d %s %d", &axis, function, &deadzone);
+		if (rc >= 2)
+			rc++; /* plus 1 for the implicit "mode" */
+	}
+
 	if (rc >= 3) {
 #define DEFAULT_DEADZONE_VALUE 6000
 		if (rc < 4)
@@ -183,6 +257,14 @@ static int parse_joystick_cfg_line(struct joystick_config *cfg, char *filename, 
 		return 0;
 	}
 	rc = sscanf(line, " mode %d button %d %s", &mode, &button, function);
+
+	/* Maybe mode is implicit */
+	if (rc != 3 && mode >= 0) {
+		rc = sscanf(line, " button %d %s", &button, function);
+		if (rc >= 2)
+			rc++; /* plus 1 for implicit mode */
+	}
+
 	if (rc == 3) {
 		if (mode < 0 || mode >= MAX_MODES) {
 			fprintf(stderr, "%s:%d Bad mode %d (must be between 0 and %d)\n",
