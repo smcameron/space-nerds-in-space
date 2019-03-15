@@ -15853,6 +15853,21 @@ static void draw_science_location_indicator(struct snis_entity *o)
 	sng_abs_xy_draw_string(buf, NANO_FONT, txx(555), txy(10));
 }
  
+static void show_3d_science(GtkWidget *w, struct snis_entity *o, int current_zoom)
+{
+	int cx, cy, r;
+	double zoom;
+
+	cx = SCIENCE_SCOPE_CX;
+	cy = SCIENCE_SCOPE_CY;
+	r = SCIENCE_SCOPE_R;
+	zoom = (MAX_SCIENCE_SCREEN_RADIUS - MIN_SCIENCE_SCREEN_RADIUS) *
+			(current_zoom / 255.0) + MIN_SCIENCE_SCREEN_RADIUS;
+	sng_set_foreground(UI_COLOR(sci_ball_ring));
+	sng_draw_circle(0, cx, cy, r);
+	draw_all_the_3d_science_guys(w, o, zoom * 4.0, current_zoom * 4.0);
+}
+
 static void show_science(GtkWidget *w)
 {
 	struct snis_entity *o;
@@ -15879,39 +15894,17 @@ static void show_science(GtkWidget *w)
 		draw_science_waypoints(w);
 		break;
 	case SCI_DETAILS_MODE_DETAILS:
-	case SCI_DETAILS_MODE_THREED:
-	default:
 		draw_science_details(w, gc);
 		draw_science_data(w, o, curr_science_guy, curr_science_waypoint);
+		break;
+	case SCI_DETAILS_MODE_THREED:
+		show_3d_science(w, o, current_zoom);
+		draw_science_data(w, o, curr_science_guy, curr_science_waypoint);
+		break;
+	default: /* shouldn't happen */
+		draw_science_data(w, o, curr_science_guy, curr_science_waypoint);
+		break;
 	}
-	show_common_screen(w, "SCIENCE");
-}
-
-static void show_3d_science(GtkWidget *w)
-{
-	int /* rx, ry, rw, rh, */ cx, cy, r;
-	struct snis_entity *o;
-	double zoom;
-	static int current_zoom = 0;
-
-	if (!(o = find_my_ship()))
-		return;
-
-	snis_slider_set_input(sci_ui.scizoom, o->tsd.ship.scizoom/255.0 );
-
-	current_zoom = newzoom(current_zoom, o->tsd.ship.scizoom);
-
-	sng_set_foreground(UI_COLOR(sci_coords));
-	draw_science_location_indicator(o);
-	cx = SCIENCE_SCOPE_CX;
-	cy = SCIENCE_SCOPE_CY;
-	r = SCIENCE_SCOPE_R;
-	zoom = (MAX_SCIENCE_SCREEN_RADIUS - MIN_SCIENCE_SCREEN_RADIUS) *
-			(current_zoom / 255.0) + MIN_SCIENCE_SCREEN_RADIUS;
-	sng_set_foreground(UI_COLOR(sci_ball_ring));
-	sng_draw_circle(0, cx, cy, r);
-	draw_all_the_3d_science_guys(w, o, zoom * 4.0, current_zoom * 4.0);
-	draw_science_data(w, o, curr_science_guy, curr_science_waypoint);
 	show_common_screen(w, "SCIENCE");
 }
 
@@ -19424,10 +19417,7 @@ static int main_da_expose(GtkWidget *w, GdkEvent *event, gpointer p)
 		show_engineering(w);
 		break;
 	case DISPLAYMODE_SCIENCE:
-		if (sci_ui.details_mode == SCI_DETAILS_MODE_THREED)
-			show_3d_science(w);
-		else
-			show_science(w);
+		show_science(w);
 		break;
 	case DISPLAYMODE_COMMS:
 		show_comms(w);
