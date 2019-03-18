@@ -8,6 +8,77 @@
 #include "shader.h"
 #include "stacktrace.h"
 
+static void print_glsl_code_context(char *code[], int code_fragments, int lineno, int charno)
+{
+	int i, j;
+	int l = 1;
+	int c = 0;
+	int code_frag = 0;
+
+	i = 0;
+	while (1) {
+		/* Replace tabs with spaces so the arrows work out. */
+		if (code[code_frag][i] == '\t')
+			code[code_frag][i] = ' ';
+
+		if (code[code_frag][i] == '\0') {
+			code_frag++;
+			if (code_frag >= code_fragments)
+				break;
+			i = 0;
+		}
+		if (l >= lineno - 1 && l <= lineno + 1) {
+			if (c == 1)
+				fprintf(stderr, "%4d: ", l);
+			fprintf(stderr, "%c", code[code_frag][i]);
+			if (code[code_frag][i] == '\n' && l == lineno) {
+				fprintf(stderr, "    : ");
+				for (j = 0; j < charno - 1; j++)
+					fprintf(stderr, ".");
+				fprintf(stderr, "^\n");
+			}
+		}
+		if (code[code_frag][i] == '\n') {
+			c = 0;
+			l++;
+		}
+		c++;
+		if (l > lineno + 1)
+			break;
+		i++;
+	}
+}
+
+static void print_glsl_compile_error(char *error_message, char *shadercode[], int nshader_parts)
+{
+	int rc;
+	char *n, *e = error_message;
+	int lineno, charno, len;
+	char tmp[1024];
+	int highest_error = -1;
+
+	fprintf(stderr, "GLSL Error:\n");
+
+	lineno = 0;
+	while (e) {
+		n = strstr(e, "\n");
+		if (!n)
+			break;
+		len = n - e;
+		if (len > sizeof(tmp) - 1)
+			len = sizeof(tmp) - 1;
+		strncpy(tmp, e, len);
+		tmp[len] = '\0';
+		rc = sscanf(tmp, "%*d:%d(%d)", &lineno, &charno);
+		if (rc == 2 && lineno > highest_error) {
+			print_glsl_code_context(shadercode, nshader_parts, lineno, charno);
+			highest_error = lineno;
+		}
+		fprintf(stderr, "%s\n", tmp);
+		e = n + 1;
+	}
+}
+
 static char *read_file(const char *shader_directory, const char *filename)
 {
 	char fname[PATH_MAX];
@@ -141,7 +212,7 @@ GLuint load_concat_shaders(const char *shader_directory,
 			GLchar *error_message;
 			error_message = malloc(sizeof(GLchar) * info_log_length + 1);
 			glGetShaderInfoLog(vertex_shader_id, info_log_length, NULL, error_message);
-			printf("Error:\n%s\n", error_message);
+			print_glsl_compile_error(error_message, vertex_shader_code, nvertex_shader);
 			free(error_message);
 		} else {
 			printf("error: unknown\n");
@@ -165,7 +236,7 @@ GLuint load_concat_shaders(const char *shader_directory,
 			char *error_message;
 			error_message = malloc(sizeof(GLchar) * info_log_length + 1);
 			glGetShaderInfoLog(fragment_shader_id, info_log_length, NULL, &error_message[0]);
-			printf("Error:\n%s\n", error_message);
+			print_glsl_compile_error(error_message, fragment_shader_code, nfragment_shader);
 			free(error_message);
 		} else {
 			printf("error: unknown\n");
