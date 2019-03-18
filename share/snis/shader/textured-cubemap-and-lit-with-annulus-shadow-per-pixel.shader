@@ -18,7 +18,7 @@
 	Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 	Author:
-		Jeremy Van Grinsven
+		Jeremy Van Grinsven, Stephen M. Cameron
 */
 
 #if defined(INCLUDE_VS)
@@ -145,15 +145,39 @@
 			}
 		}
 #if defined(USE_NORMAL_MAP)
-		vec3 pixel_normal = tbn * normalize(textureCube(u_NormalMapTex, v_TexCoord).xyz * 2.0 - 1.0);
+		vec3 norm_sample = normalize(textureCube(u_NormalMapTex, v_TexCoord).xyz * 2.0 - 1.0);
+		vec3 pixel_normal = tbn * norm_sample;
 		float normal_map_shadow = max(0.0, dot(pixel_normal, light_dir));
 		float diffuse = max(shadow * normal_map_shadow, AMBIENT);
+
+		/* If the normal is straight up, and the color is mostly blue, consider it water,
+		 * which then has a specular component.
+		 */
+		vec3 straight_up = vec3(0.0, 0.0, 1.0);
+		float straight_up_normal = step(0.98, dot(norm_sample, straight_up));
+
+                // blinn phong half vector specular
+                vec3 view_dir = normalize(-v_Position);
+                vec3 half_dir = normalize(light_dir + view_dir);
+                float n_dot_h = max(0, clamp(dot(v_Normal, half_dir), 0.0, 1.0));
+		float SpecularPower = 512.0;
+		float SpecularIntensity = 0.9;
+                float spec = pow(n_dot_h, SpecularPower);
+		vec3 SpecularColor = vec3(1.0, 1.0, 0.7);
+
+                vec3 specular_color = straight_up_normal * SpecularColor * SpecularIntensity * spec;
 #else
 		/* make diffuse light atleast ambient */
 		float diffuse = max(direct * shadow, AMBIENT);
+		vec3 specular_color = vec3(0.0, 0.0, 0.0);
 #endif
 
+
 		gl_FragColor = textureCube(u_AlbedoTex, v_TexCoord);
+		vec3 blue = normalize(vec3(0.1, 0.3, 1.0));
+		float mostly_blue = smoothstep(0.75, 0.8, dot(blue, normalize(gl_FragColor.rgb)));
+		gl_FragColor.rgb += specular_color * mostly_blue;
+
 		gl_FragColor.rgb *= diffuse;
 
 		/* tint with alpha pre multiply */
