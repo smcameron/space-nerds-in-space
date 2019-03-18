@@ -357,6 +357,11 @@ NICE TO HAVE:
 * Replace god-awful libpng entirely with gtk stuff.  Gtk knows how to read png files already.
   E.g. use gdk_pixbuf_new_from_file(). See https://developer.gnome.org/gdk-pixbuf/stable/gdk-pixbuf-The-GdkPixbuf-Structure.html
   and https://developer.gnome.org/gdk-pixbuf/unstable/gdk-pixbuf-File-Loading.html#gdk-pixbuf-new-from-file
+  Actually, on looking into it, gtk uses libpng to read png files.  Jesus I am surprised nobody
+  has re-written libpng from scratch just to fix the horrible API it has (setjmp/longjmp as an
+  error handling API? Really?  On looking into it: https://libspng.org/ which is motivated to
+  provide a better API, but it uses fucking cmake, though it's available as a single .h and .c
+  file pair too. Also, lodepng is another alternate library.)
 
 * Replace texture reloading system based on file timestamp polling
   in graph_dev_opengl.c (e.g.  graph_dev_reload_changed_textures() and
