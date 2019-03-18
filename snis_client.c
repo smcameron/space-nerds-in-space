@@ -395,7 +395,8 @@ static struct mesh *torpedo_nav_mesh;
 static struct mesh *laser_mesh;
 static struct mesh *asteroid_mesh[NASTEROID_MODELS];
 static struct mesh *unit_cube_mesh;
-static struct mesh *sphere_mesh;
+static struct mesh *planet_sphere_mesh;
+static struct mesh *atmosphere_mesh;
 static struct mesh *low_poly_sphere_mesh;
 static struct mesh *half_size_low_poly_sphere_mesh;
 static struct mesh *planetary_ring_mesh;
@@ -2163,7 +2164,7 @@ static int update_planet(uint32_t id, uint32_t timestamp, double x, double y, do
 		}
 		fprintf(stderr, "zzz m = %d, has_atmosphere = %hhu, has ring = %d\n", m, has_atmosphere, hasring);
 
-		e = add_entity(ecx, sphere_mesh, x, y, z, PLANET_COLOR);
+		e = add_entity(ecx, planet_sphere_mesh, x, y, z, PLANET_COLOR);
 		if (e) {
 			update_entity_scale(e, r);
 			update_entity_material(e, &planet_material[m]);
@@ -2190,7 +2191,7 @@ static int update_planet(uint32_t id, uint32_t timestamp, double x, double y, do
 			return i;
 		go[i].tsd.planet.rotational_velocity = rotational_velocity;
 		if (has_atmosphere) {
-			atm = add_entity(ecx, sphere_mesh, 0.0f, 0.0f, 0.0f, WHITE);
+			atm = add_entity(ecx, atmosphere_mesh, 0.0f, 0.0f, 0.0f, WHITE);
 			go[i].tsd.planet.atmosphere = atm;
 			if (atm) {
 				update_entity_scale(atm, atm_scale);
@@ -3100,7 +3101,7 @@ static void add_shield_effect(struct snis_entity *o,
 	i = snis_object_pool_alloc_obj(sparkpool);
 	if (i < 0)
 		return;
-	e = add_entity(ecx, sphere_mesh, o->x, o->y, o->z, PARTICLE_COLOR);
+	e = add_entity(ecx, atmosphere_mesh, o->x, o->y, o->z, PARTICLE_COLOR);
 	if (e) {
 		set_render_style(e, RENDER_NORMAL);
 		update_entity_material(e, &shield_material);
@@ -3118,7 +3119,7 @@ static void add_shield_effect(struct snis_entity *o,
 	spark[i].alive = SHIELD_EFFECT_LIFETIME;
 	spark[i].move = shield_effect_move;
 	spark[i].entity = e;
-	atm = add_entity(ecx, sphere_mesh, 0, 0, 0, WHITE);
+	atm = add_entity(ecx, atmosphere_mesh, 0, 0, 0, WHITE);
 	if (atm && e) {
 		material_init_atmosphere(&spark[i].tsd.spark.atm_material);
 		spark[i].tsd.spark.atm_material.atmosphere.r = 0.5;
@@ -21189,7 +21190,8 @@ static void init_meshes()
 	mesh_scale(unit_cube_mesh, 0.5);
 	mesh_unit_cube_uv_map(unit_cube_mesh);
 
-	sphere_mesh = mesh_unit_spherified_cube(16);
+	atmosphere_mesh = mesh_unit_spherified_cube(16);
+	planet_sphere_mesh = mesh_unit_spherified_cube(64);
 	low_poly_sphere_mesh = snis_read_model(d, "uv_sphere.stl");
 	mesh_cylindrical_xy_uv_map(low_poly_sphere_mesh);
 	half_size_low_poly_sphere_mesh = mesh_duplicate(low_poly_sphere_mesh);

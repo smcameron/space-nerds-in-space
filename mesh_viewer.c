@@ -959,7 +959,7 @@ int main(int argc, char *argv[])
 		green_phaser_material.textured_particle.radius = 0.75;
 		green_phaser_material.textured_particle.time_base = 0.25;
 	} else if (planet_mode) {
-		target_mesh = mesh_unit_spherified_cube(16);
+		target_mesh = mesh_unit_spherified_cube(64);
 		atmosphere_mesh = mesh_unit_icosphere(icosahedron_subdivision);
 		material_init_textured_planet(&planet_material);
 		planet_material.textured_planet.texture_id = load_cubemap_textures(0, planetname);
