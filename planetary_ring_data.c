@@ -2,6 +2,8 @@
 
 #include "planetary_ring_data.h"
 #include "mtwist.h"
+#include "quat.h"
+#include "mathutils.h"
 
 void init_planetary_ring_data(struct planetary_ring_data ring_data[],
 				int nplanetary_rings, uint32_t mtwist_seed)
@@ -41,5 +43,31 @@ void init_planetary_ring_data(struct planetary_ring_data ring_data[],
 		ring_data[i].texture_v = x;
 	}
 	mtwist_free(mt);
+}
+
+int collides_with_planetary_ring(const union vec3 *object_position, const union vec3 *planet_position,
+				const union quat *planet_orientation, float planet_radius,
+				float ring_inner_radius, float ring_outer_radius)
+{
+	float d, dist_to_plane, inner, outer, dist;
+	union vec3 ring_normal;
+
+	inner = fmap(ring_inner_radius, 1.0, 4.0, 0.0, 1.0);
+	outer = fmap(ring_outer_radius, 1.0, 4.0, 0.0, 1.0);
+	dist = vec3_dist(object_position, planet_position) / planet_radius;
+	d = fmap(dist, 1.0, 4.0, 0.0, 1.0);
+
+	if (d < inner)
+		return 0;
+	if (d > outer) 
+		return 0;
+
+	ring_normal.v.x = 0.0;
+	ring_normal.v.y = 0.0;
+	ring_normal.v.z = 1.0;
+
+	quat_rot_vec_self(&ring_normal, planet_orientation);
+	dist_to_plane = fabsf(plane_to_point_dist(*planet_position, ring_normal, *object_position));
+	return (dist_to_plane < PLANETARY_RING_DAMAGE_DIST);
 }
 

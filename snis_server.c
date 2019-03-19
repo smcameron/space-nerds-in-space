@@ -118,6 +118,7 @@
 #include "replacement_assets.h"
 #include "snis_asset_dir.h"
 #include "shape_collision.h"
+#include "planetary_ring_data.h"
 
 #define CLIENT_UPDATE_PERIOD_NSECS 500000000
 #define MAXCLIENTS 100
@@ -455,6 +456,8 @@ static int nshiptypes;
 static struct starmap_entry starmap[MAXSTARMAPENTRIES];
 static int nstarmap_entries = 0;
 static int starmap_dirty = 0;
+
+static struct planetary_ring_data planetary_ring_data[NPLANETARY_RING_MATERIALS];
 
 static int safe_mode = 0; /* prevents enemies from attacking if set */
 
@@ -8233,6 +8236,36 @@ static void player_collision_detection(void *player, void *object)
 			send_packet_to_all_clients_on_a_bridge(o->id,
 				snis_opcode_pkt("b", OPCODE_ATMOSPHERIC_FRICTION),
 					ROLE_SOUNDSERVER | ROLE_NAVIGATION);
+		}
+
+		/* Check for collision with planetary ring */
+		if (t->tsd.planet.ring && (universe_timestamp & 0x7) == 0) {
+			union vec3 player_center, ring_center;
+			union quat orientation;
+			float radius, inner, outer;
+			const int index = t->tsd.planet.solarsystem_planet_type;
+
+			ring_center.v.x = t->x;
+			ring_center.v.y = t->y;
+			ring_center.v.z = t->z;
+
+			player_center.v.x = o->x;
+			player_center.v.y = o->y;
+			player_center.v.z = o->z;
+
+			orientation = random_orientation[t->id % NRANDOM_ORIENTATIONS];
+			radius = t->tsd.planet.radius;
+			inner = planetary_ring_data[index].inner_radius;
+			outer = planetary_ring_data[index].outer_radius;
+			if (collides_with_planetary_ring(&player_center, &ring_center, &orientation,
+								radius, inner, outer)) {
+				(void) add_explosion(o->x + o->vx * 2, o->y + o->vy * 2, o->z + o->vz * 2,
+					5, 5, 50, OBJTYPE_SPARK);
+				calculate_atmosphere_damage(o);
+				send_ship_damage_packet(o);
+				snis_queue_add_text_to_speech("high velocity micro-meteorites detected",
+						ROLE_TEXT_TO_SPEECH, o->id);
+			}
 		}
 		return;
 	}
@@ -27844,6 +27877,7 @@ int main(int argc, char *argv[])
 	set_random_seed(-1);
 	init_natural_language_system();
 	init_meshes();
+	init_planetary_ring_data(planetary_ring_data, NPLANETARY_RING_MATERIALS, PLANETARY_RING_MTWIST_SEED);
 
 	char commodity_path[PATH_MAX];
 	snprintf(commodity_path, sizeof(commodity_path), "%s/%s", asset_dir, "commodities.txt");
