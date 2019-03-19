@@ -167,6 +167,7 @@ static float bounty_chance = BOUNTY_CHANCE;
 static float chaff_speed = CHAFF_SPEED;
 static int chaff_count = CHAFF_COUNT;
 static float chaff_confuse_chance = CHAFF_CONFUSE_CHANCE;
+static int multiverse_debug = 0;
 
 /*
  * End of runtime adjustable globals
@@ -16764,6 +16765,10 @@ static struct tweakable_var_descriptor server_tweak[] = {
 		"LIKELYHOOD CHAFF WILL CONFUSE MISSILES",
 		&chaff_confuse_chance, 'f',
 		0.0, 1.0, CHAFF_CONFUSE_CHANCE, 0, 0, 0 },
+	{ "MULTIVERSE_DEBUG",
+		"MULTIVERSE_DEBUG FLAG 1 = ON, 0 = OFF",
+		&multiverse_debug, 'i',
+		0.0, 0.0, 0.0, 0, 1, 0 },
 	{ NULL, NULL, NULL, '\0', 0.0, 0.0, 0.0, 0, 0, 0 },
 };
 
@@ -22903,11 +22908,12 @@ static void update_multiverse(struct snis_entity *o)
 		return;
 	}
 
-	fprintf(stderr, "%s: update_multiverse: verified = '%s'\n", logprefix(),
-		bridgelist[bridge].verified == BRIDGE_UNVERIFIED ? "unverified" :
-		bridgelist[bridge].verified == BRIDGE_VERIFIED ? "verified" :
-		bridgelist[bridge].verified == BRIDGE_FAILED_VERIFICATION ? "failed verification" :
-		bridgelist[bridge].verified == BRIDGE_REFUSED ? "refused" : "unknown");
+	if (multiverse_debug)
+		fprintf(stderr, "%s: update_multiverse: verified = '%s'\n", logprefix(),
+			bridgelist[bridge].verified == BRIDGE_UNVERIFIED ? "unverified" :
+			bridgelist[bridge].verified == BRIDGE_VERIFIED ? "verified" :
+			bridgelist[bridge].verified == BRIDGE_FAILED_VERIFICATION ? "failed verification" :
+			bridgelist[bridge].verified == BRIDGE_REFUSED ? "refused" : "unknown");
 
 	/* Verify that this ship does not already exist if creation was requested, or
 	 * that it does already exist if creation was not requested.  Only do this once.
@@ -22916,7 +22922,8 @@ static void update_multiverse(struct snis_entity *o)
 		!bridgelist[bridge].requested_verification && multiverse_server->sock != -1) {
 		unsigned char opcode;
 
-		print_hash("requesting verification of hash ", bridgelist[bridge].pwdhash);
+		if (multiverse_debug)
+			print_hash("requesting verification of hash ", bridgelist[bridge].pwdhash);
 		pb = packed_buffer_allocate(PWDHASHLEN + 1);
 		if (bridgelist[bridge].requested_creation)
 			opcode = SNISMV_OPCODE_VERIFY_CREATE;
@@ -22928,16 +22935,20 @@ static void update_multiverse(struct snis_entity *o)
 		return;
 	} else {
 		char reason[100];
-		snprintf(reason, sizeof(reason), "Requested already: %s, socket status: %s",
-			bridgelist[bridge].requested_verification ? "yes" : "no",
-			multiverse_server->sock >= 0 ? "valid" : "invalid");
-		fprintf(stderr, "%s: not requesting verification: %s\n", logprefix(), reason);
+
+		if (multiverse_debug) {
+			snprintf(reason, sizeof(reason), "Requested already: %s, socket status: %s",
+				bridgelist[bridge].requested_verification ? "yes" : "no",
+				multiverse_server->sock >= 0 ? "valid" : "invalid");
+			fprintf(stderr, "%s: not requesting verification: %s\n", logprefix(), reason);
+		}
 	}
 
 	/* Skip updating multiverse server if the bridge isn't verified yet. */
 	if (bridgelist[bridge].verified != BRIDGE_VERIFIED) {
-		fprintf(stderr, "%s: bridge is not verified, not updating multiverse\n",
-			logprefix());
+		if (multiverse_debug)
+			fprintf(stderr, "%s: bridge is not verified, not updating multiverse\n",
+				logprefix());
 		return;
 	}
 
@@ -27270,8 +27281,9 @@ static void write_queued_packets_to_mvserver(struct multiverse_server_info *msi)
 			goto badserver;
 		}
 	} else {
-		fprintf(stderr, "%s: multiverse_writer awakened, but nothing to write.\n",
-			logprefix());
+		if (multiverse_debug)
+			fprintf(stderr, "%s: multiverse_writer awakened, but nothing to write.\n",
+				logprefix());
 	}
 	if (msi->have_packets_to_xmit)
 		msi->have_packets_to_xmit = 0;
@@ -27427,11 +27439,13 @@ static void *multiverse_reader(void *arg)
 		previous_opcode = last_opcode;
 		last_opcode = opcode;
 		opcode = 0x00;
-		fprintf(stderr, "%s: reading from multiverse sock = %d...\n",
-			logprefix(), msi->sock);
+		if (multiverse_debug)
+			fprintf(stderr, "%s: reading from multiverse sock = %d...\n",
+				logprefix(), msi->sock);
 		rc = snis_readsocket(msi->sock, &opcode, sizeof(opcode));
-		fprintf(stderr, "%s: read from multiverse, rc = %d, sock = %d\n",
-			logprefix(), rc, msi->sock);
+		if (multiverse_debug)
+			fprintf(stderr, "%s: read from multiverse, rc = %d, sock = %d\n",
+				logprefix(), rc, msi->sock);
 		if (rc != 0) {
 			fprintf(stderr, "snis_server multiverse_reader(): snis_readsocket returns %d, errno  %s\n",
 				rc, strerror(errno));
@@ -27455,9 +27469,11 @@ static void *multiverse_reader(void *arg)
 				goto protocol_error;
 			break;
 		case SNISMV_OPCODE_SHUTDOWN_SNIS_SERVER:
-			fprintf(stderr, "%s: multiverse requested snis_server shutdown. Shutting down now.\n",
-				logprefix());
-			fflush(stderr);
+			if (multiverse_debug) {
+				fprintf(stderr, "%s: multiverse requested snis_server shutdown. Shutting down now.\n",
+					logprefix());
+				fflush(stderr);
+			}
 			exit(0); /* Is this all we need to do? I think so... */
 			break;
 		default:
@@ -27491,8 +27507,9 @@ static void connect_to_multiverse(struct multiverse_server_info *msi, uint32_t i
 
 	assert(msi);
 
-	fprintf(stderr, "%s: connecting to multiverse %s %hhu.%hhu.%hhu.%hhu/%hu\n",
-		logprefix(), multiverse_server->location, x[0], x[1], x[2], x[3], port);
+	if (multiverse_debug)
+		fprintf(stderr, "%s: connecting to multiverse %s %hhu.%hhu.%hhu.%hhu/%hu\n",
+			logprefix(), multiverse_server->location, x[0], x[1], x[2], x[3], port);
 	char portstr[50];
 	char hoststr[50];
 	int flag = 1;
@@ -27529,20 +27546,24 @@ static void connect_to_multiverse(struct multiverse_server_info *msi, uint32_t i
 	if (rc)
 		fprintf(stderr, "setsockopt(TCP_NODELAY) failed.\n");
 	const int len = sizeof(SNIS_MULTIVERSE_VERSION) - 1;
-	fprintf(stderr, "%s: writing SNIS_MULTIVERSE_VERSION (len = %d)\n",
+	if (multiverse_debug)
+		fprintf(stderr, "%s: writing SNIS_MULTIVERSE_VERSION (len = %d)\n",
 			logprefix(), len);
 	rc = snis_writesocket(sock, SNIS_MULTIVERSE_VERSION, len);
-	fprintf(stderr, "%s: writesocket returned %d, sock = %d\n", logprefix(), rc, sock);
+	if (multiverse_debug)
+		fprintf(stderr, "%s: writesocket returned %d, sock = %d\n", logprefix(), rc, sock);
 	if (rc < 0) {
 		fprintf(stderr, "%s: snis_writesocket failed: %d (%d:%s)\n",
 				logprefix(), rc, errno, strerror(errno));
 		goto error;
 	}
 	memset(response, 0, sizeof(response));
-	fprintf(stderr, "%s: reading SNIS_MULTIVERSE_VERSION (len = %d, sock = %d)\n",
+	if (multiverse_debug)
+		fprintf(stderr, "%s: reading SNIS_MULTIVERSE_VERSION (len = %d, sock = %d)\n",
 			logprefix(), len, sock);
 	rc = snis_readsocket(sock, response, len);
-	fprintf(stderr, "%s: read socket returned %d (len = %d, sock = %d)\n",
+	if (multiverse_debug)
+		fprintf(stderr, "%s: read socket returned %d (len = %d, sock = %d)\n",
 			logprefix(), rc, len, sock);
 	if (rc != 0) {
 		fprintf(stderr, "%s: snis_readsocket failed: %d (%d:%s)\n",
@@ -27551,7 +27572,8 @@ static void connect_to_multiverse(struct multiverse_server_info *msi, uint32_t i
 		sock = -1;
 	}
 	response[len] = '\0';
-	fprintf(stderr, "%s: got SNIS_MULTIVERSE_VERSION:'%s'\n",
+	if (multiverse_debug)
+		fprintf(stderr, "%s: got SNIS_MULTIVERSE_VERSION:'%s'\n",
 			logprefix(), response);
 	if (strcmp(response, SNIS_MULTIVERSE_VERSION) != 0) {
 		fprintf(stderr, "%s: expected '%s' got '%s' from snis_multiverse\n",
@@ -27561,16 +27583,19 @@ static void connect_to_multiverse(struct multiverse_server_info *msi, uint32_t i
 
 	memset(starsystem_name, 0, sizeof(starsystem_name));
 	snprintf(starsystem_name, sizeof(starsystem_name) - 1, "%s", solarsystem_name);
-	fprintf(stderr, "%s: writing starsystem name %s to multiverse\n", logprefix(), starsystem_name);
+	if (multiverse_debug)
+		fprintf(stderr, "%s: writing starsystem name %s to multiverse\n", logprefix(), starsystem_name);
 	rc = snis_writesocket(sock, starsystem_name, SSGL_LOCATIONSIZE);
 	if (rc != 0) {
 		fprintf(stderr, "%s: failed to write starsystem name to snis_multiverse\n",
 			logprefix());
 	}
-	fprintf(stderr, "%s: write starsystem name %s to multiverse\n", logprefix(), starsystem_name);
+	if (multiverse_debug) {
+		fprintf(stderr, "%s: write starsystem name %s to multiverse\n", logprefix(), starsystem_name);
 
-	fprintf(stderr, "%s: connected to snis_multiverse (%hhu.%hhu.%hhu.%hhu/%hu on socket %d)\n",
-		logprefix(), x[0], x[1], x[2], x[3], port, sock);
+		fprintf(stderr, "%s: connected to snis_multiverse (%hhu.%hhu.%hhu.%hhu/%hu on socket %d)\n",
+			logprefix(), x[0], x[1], x[2], x[3], port, sock);
+	}
 
 	msi->sock = sock;
 	msi->ipaddr = ipaddr;
@@ -27583,20 +27608,24 @@ static void connect_to_multiverse(struct multiverse_server_info *msi, uint32_t i
 	pthread_mutex_init(&msi->event_mutex, NULL);
 	pthread_mutex_init(&msi->exit_mutex, NULL);
 	pthread_cond_init(&msi->write_cond, NULL);
-	fprintf(stderr, "%s: starting multiverse reader thread\n", logprefix());
+	if (multiverse_debug)
+		fprintf(stderr, "%s: starting multiverse reader thread\n", logprefix());
 	rc = create_thread(&msi->read_thread, multiverse_reader, msi, "sniss-mvrdr", 1);
 	if (rc) {
 		fprintf(stderr, "%s: Failed to create multiverse reader thread: %d '%s', '%s'\n",
 			logprefix(), rc, strerror(rc), strerror(errno));
 	}
-	fprintf(stderr, "%s: started multiverse reader thread\n", logprefix());
-	fprintf(stderr, "%s: starting multiverse writer thread\n", logprefix());
+	if (multiverse_debug) {
+		fprintf(stderr, "%s: started multiverse reader thread\n", logprefix());
+		fprintf(stderr, "%s: starting multiverse writer thread\n", logprefix());
+	}
 	rc = create_thread(&msi->write_thread, multiverse_writer, msi, "sniss-mvwrtr", 1);
 	if (rc) {
 		fprintf(stderr, "%s: Failed to create multiverse writer thread: %d '%s', '%s'\n",
 			logprefix(), rc, strerror(rc), strerror(errno));
 	}
-	fprintf(stderr, "%s: started multiverse writer thread\n", logprefix());
+	if (multiverse_debug)
+		fprintf(stderr, "%s: started multiverse writer thread\n", logprefix());
 	freeaddrinfo(mvserverinfo);
 	return;
 
@@ -27616,9 +27645,10 @@ static void disconnect_from_multiverse(struct multiverse_server_info *msi)
 
 	assert(multiverse_server);
 	x = (unsigned char *) &multiverse_server->ipaddr;
-	fprintf(stderr, "%s: disconnecting from multiverse %s %u.%u.%u.%u/%hu\n",
-		logprefix(), multiverse_server->location,
-		x[0], x[1], x[2], x[3], multiverse_server->port);
+	if (multiverse_debug)
+		fprintf(stderr, "%s: disconnecting from multiverse %s %u.%u.%u.%u/%hu\n",
+			logprefix(), multiverse_server->location,
+			x[0], x[1], x[2], x[3], multiverse_server->port);
 
 	/* Tell multiverse reader and writer threads to exit */
 	pthread_mutex_lock(&msi->exit_mutex);
