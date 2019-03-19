@@ -126,6 +126,7 @@
 #include "snis_asset_dir.h"
 #include "snis_bin_dir.h"
 #include "shape_collision.h"
+#include "planetary_ring_data.h"
 
 #define SHIP_COLOR CYAN
 #define STARBASE_COLOR RED
@@ -455,7 +456,6 @@ static struct material spacemonster_tentacle_material;
 static struct material spacemonster_material;
 static struct material warpgate_material;
 static struct material docking_port_material;
-#define NPLANETARY_RING_MATERIALS 256
 #define NPLANET_MATERIALS 256
 static int planetary_ring_texture_id = -1;
 static struct material planetary_ring_material[NPLANETARY_RING_MATERIALS];
@@ -19846,12 +19846,10 @@ static void init_thrust_material(struct material *thrust_material, char *image_f
 
 static int load_static_textures(void)
 {
-	struct mtwist_state *mt;
-
 	if (static_textures_loaded)
 		return 0;
 
-	mt = mtwist_init(178851064); /* Just using an arbitrary constant seed */
+	struct planetary_ring_data *ring_data;
 
 	material_init_textured_particle(&green_phaser_material);
 	green_phaser_material.textured_particle.texture_id = load_texture("textures/green-burst.png");
@@ -19900,37 +19898,18 @@ static int load_static_textures(void)
 
 	int i;
 	planetary_ring_texture_id = load_texture_no_mipmaps("textures/planetary-ring0.png");
-	for (i = 0; i < NPLANETARY_RING_MATERIALS; i++) {
+
+	ring_data = calloc(NPLANETARY_RING_MATERIALS, sizeof(*ring_data));
+	init_planetary_ring_data(ring_data, NPLANETARY_RING_MATERIALS, PLANETARY_RING_MTWIST_SEED);
+	for (i = 0; i < NPLANETARY_RING_MATERIALS; i++) { /* Copy ring data into material struct */
 		material_init_textured_planet_ring(&planetary_ring_material[i]);
 		planetary_ring_material[i].textured_planet_ring.texture_id = planetary_ring_texture_id;
-		planetary_ring_material[i].textured_planet_ring.alpha = 1.0;
-		planetary_ring_material[i].textured_planet_ring.texture_v = (float) i / 256.0f;
-		planetary_ring_material[i].textured_planet_ring.inner_radius =
-					MIN_RING_RADIUS +
-					2.0f * fabs(mtwist_float(mt) * mtwist_float(mt));
-		if (planetary_ring_material[i].textured_planet_ring.inner_radius < MIN_RING_RADIUS)
-			planetary_ring_material[i].textured_planet_ring.inner_radius = MIN_RING_RADIUS;
-		planetary_ring_material[i].textured_planet_ring.outer_radius =
-			planetary_ring_material[i].textured_planet_ring.inner_radius +
-				fabs(mtwist_float(mt)) * (MAX_RING_RADIUS + 0.5 -
-				planetary_ring_material[i].textured_planet_ring.inner_radius);
-		if (planetary_ring_material[i].textured_planet_ring.outer_radius > MAX_RING_RADIUS)
-			planetary_ring_material[i].textured_planet_ring.outer_radius = MAX_RING_RADIUS;
+		planetary_ring_material[i].textured_planet_ring.alpha = ring_data[i].alpha;
+		planetary_ring_material[i].textured_planet_ring.texture_v = ring_data[i].texture_v;
+		planetary_ring_material[i].textured_planet_ring.inner_radius = ring_data[i].inner_radius;
+		planetary_ring_material[i].textured_planet_ring.outer_radius = ring_data[i].outer_radius;
 	}
-	/* Because of the way that planet rings are chosen based on object id
-	 * and because of the way planets are generated and object ids are handed
-	 * out we want to scramble the order of 
-	 * planetary_ring_material[i].textured_planet_ring.texture_v
-	 * so that consecutively generated planets will not have rings that are
-	 * too similar.
-	 */
-	for (i = 0; i < NPLANETARY_RING_MATERIALS; i++) {
-		int n = ((int) (mtwist_float(mt) * 256 * 100)) % 256;
-		float x = planetary_ring_material[n].textured_planet_ring.texture_v;
-		planetary_ring_material[n].textured_planet_ring.texture_v =
-			planetary_ring_material[i].textured_planet_ring.texture_v;
-		planetary_ring_material[i].textured_planet_ring.texture_v = x;
-	}
+	free(ring_data);
 
 	material_init_atmosphere(&atmosphere_material);
 
@@ -20041,7 +20020,6 @@ static int load_static_textures(void)
 
 	static_textures_loaded = 1;
 
-	mtwist_free(mt);
 	return 1;
 }
 

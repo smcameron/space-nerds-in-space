@@ -479,7 +479,7 @@ _COMMONOBJS=mathutils.o snis_alloc.o snis_socket_io.o snis_marshal.o \
 		bline.o shield_strength.o stacktrace.o snis_ship_type.o \
 		snis_faction.o mtwist.o names.o infinite-taunt.o snis_damcon_systems.o \
 		string-utils.o c-is-the-locale.o starbase_metadata.o arbitrary_spin.o \
-		planetary_atmosphere.o mesh.o pthread_util.o \
+		planetary_atmosphere.o planetary_ring_data.o mesh.o pthread_util.o \
 		snis_opcode_def.o rts_unit_data.o commodities.o snis_tweak.o rootcheck.o \
 		corporations.o replacement_assets.o snis_asset_dir.o snis_bin_dir.o
 COMMONOBJS=$(patsubst %,$(OD)/%,${_COMMONOBJS}) mikktspace/mikktspace.o
@@ -1082,6 +1082,9 @@ test_pronunciation:	pronunciation.c Makefile
 	$(CC) -DTEST_PRONUNCIATION_FIXUP -o test_pronunciation pronunciation.c
 
 $(OD)/planetary_atmosphere.o:	planetary_atmosphere.c Makefile ${ODT}
+	$(Q)$(COMPILE)
+
+$(OD)/planetary_ring_data.o:	planetary_ring_data.c planetary_ring_data.h mtwist.h Makefile ${ODT}
 	$(Q)$(COMPILE)
 
 test_planetary_atmosphere:	planetary_atmosphere.c mtwist.o Makefile
