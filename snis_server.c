@@ -12317,7 +12317,7 @@ static int add_planet(double x, double y, double z, float radius, uint8_t securi
 	go[i].tsd.planet.economy = snis_randn(1000) % ARRAYSIZE(economy_name);
 	go[i].tsd.planet.tech_level = snis_randn(1000) % ARRAYSIZE(tech_level_name);
 	go[i].tsd.planet.description_seed = snis_rand();
-	go[i].tsd.planet.ring = snis_randn(100) < 50;
+	go[i].tsd.planet.ring = snis_randn(100) < 20;
 	if (type < 0) /* choose type randomly */
 		sst = (uint8_t) (go[i].id % solarsystem_assets->nplanet_textures);
 	else	/* choose a random instance of the given type */
