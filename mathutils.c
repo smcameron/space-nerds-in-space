@@ -525,3 +525,9 @@ int imin(int a, int b)
 		return a;
 	return b;
 }
+
+/* Map (scale and offset) value x from range (min1, max1) to range (min2, max2) */
+float fmap(float x, float min1, float max1, float min2, float max2)
+{
+	return min2 + (x - min1) * (max2 - min2) / (max1 - min1);
+}
