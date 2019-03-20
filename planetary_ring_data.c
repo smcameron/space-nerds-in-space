@@ -9,20 +9,24 @@ void init_planetary_ring_data(struct planetary_ring_data ring_data[],
 
 	int i;
 	struct mtwist_state *mt;
+	float r1, r2;
 
 	mt = mtwist_init(mtwist_seed);
 
 	for (i = 0; i < nplanetary_rings; i++) {
 		ring_data[i].alpha = 1.0;
 		ring_data[i].texture_v = (float) i / 256.0f;
-		ring_data[i].inner_radius = MIN_RING_RADIUS +
-					2.0f * fabs(mtwist_float(mt) * mtwist_float(mt));
-		if (ring_data[i].inner_radius < MIN_RING_RADIUS)
-			ring_data[i].inner_radius = MIN_RING_RADIUS;
-		ring_data[i].outer_radius = ring_data[i].inner_radius +
-				fabs(mtwist_float(mt)) * (MAX_RING_RADIUS + 0.5 - ring_data[i].inner_radius);
-		if (ring_data[i].outer_radius > MAX_RING_RADIUS)
-			ring_data[i].outer_radius = MAX_RING_RADIUS;
+
+		r1 = fabsf(mtwist_float(mt) * (MAX_RING_RADIUS - MIN_RING_RADIUS - 0.5)) + MIN_RING_RADIUS + 0.5;
+		r2 = fabsf(mtwist_float(mt) * (MAX_RING_RADIUS - MIN_RING_RADIUS - 0.5)) + MIN_RING_RADIUS + 0.5;
+
+		if (r1 > r2) {
+			ring_data[i].inner_radius = r2;
+			ring_data[i].outer_radius = r1;
+		} else {
+			ring_data[i].inner_radius = r1;
+			ring_data[i].outer_radius = r2;
+		}
 	}
 	/* Because of the way that planet rings are chosen based on object id
 	 * and because of the way planets are generated and object ids are handed
