@@ -85,6 +85,11 @@
 	uniform float u_ring_inner_radius;
 	uniform float u_ring_outer_radius;
 
+	float map(in float x, float min1, float max1, float min2, float max2)
+	{
+		return min2 + (x - min1) * (max2 - min2) / (max1 - min1);
+	}
+
 	/* Returns 1.0 if no intersect (not in shadow), 0.0 if intersect (in shadow) */
 	float sphere_ray_intersect(in vec4 sphere, in vec3 ray_pos, in vec3 ray_dir)
 	{
@@ -120,12 +125,12 @@
 		in_shadow = 1.0 - not_in_shadow;
 		shadow_tint = not_in_shadow * shadow_tint + in_shadow * shadow_color;
 
-		/*
-		 * 1.0 is MIN_RING_RADIUS, * see: ../../../material.h
-		 */
-		txcoord = v_TexCoord;
-		txcoord.x = max(0.0f, (u_ring_outer_radius * v_TexCoord.x - u_ring_inner_radius + 1.0) /
-						(u_ring_outer_radius - u_ring_inner_radius));
+		txcoord.y = v_TexCoord.y;
+		float inner, outer;
+
+		inner = map(u_ring_inner_radius, 1.0, 4.0, 0.0, 1.0);
+		outer = map(u_ring_outer_radius, 1.0, 4.0, 0.0, 1.0);
+		txcoord.x = max(0.0, min(1.0, map(v_TexCoord.x, inner, outer, 0.0, 1.0)));
 
                 // blinn phong half vector specular
                 vec3 view_dir = normalize(-v_Position);
