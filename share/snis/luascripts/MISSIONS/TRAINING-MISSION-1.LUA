@@ -1,4 +1,4 @@
-
+-- navigate a timed circuit
 -- This is a simple training mission script which requires the crew to 
 -- navigate a timed circuit around a rectangle of 4 starbases, docking
 -- at each one in turn.

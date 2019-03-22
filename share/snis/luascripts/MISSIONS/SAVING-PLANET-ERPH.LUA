@@ -1,7 +1,4 @@
-
---
--- SAVING PLANET ERPH
---
+-- save planet erph
 
 -- First, clear the board
 clear_all();

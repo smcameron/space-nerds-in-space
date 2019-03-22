@@ -1,3 +1,5 @@
+-- test docking player to starbase from Lua script
+
 clear_all();
 starbase = add_starbase(1000, 1000, 1000, 0);
 player_ids = get_player_ship_ids();

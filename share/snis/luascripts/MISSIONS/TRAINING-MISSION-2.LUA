@@ -1,4 +1,4 @@
-
+-- recover the wreck of the cor aureos
 -- First, clear the board
 clear_all();
 

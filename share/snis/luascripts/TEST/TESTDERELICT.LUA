@@ -1,3 +1,5 @@
+-- add derelict with ship's log near player ship
+
 clear_all();
 player_ids = get_player_ship_ids();
 if (player_ids[1]) then

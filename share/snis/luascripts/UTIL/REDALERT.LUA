@@ -1,4 +1,4 @@
-
+-- args = shipid, status -- set red alert status
 arg = { ... }
 
 shipid = tonumber(arg[2]);

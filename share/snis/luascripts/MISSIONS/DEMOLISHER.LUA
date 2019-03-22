@@ -1,4 +1,4 @@
-
+-- demolisher mission (work in progress)
 clear_all();
 
 -- find the player

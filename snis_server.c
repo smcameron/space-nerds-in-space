@@ -17199,21 +17199,57 @@ static int filter_lua_scripts_and_dirs(const struct dirent *d)
 	return 0;
 }
 
+/* Reads the first line of the file in luadir/subdir/filename and returns it
+ * if it begins with -- (-- is a lua comment), or "" if it doesn't.
+ */
+static void get_lua_script_help_string(char *luadir, char *subdir, char *filename, char *helpstring, int buflen)
+{
+	FILE *f;
+	char path[PATH_MAX], buf[256];
+	char *s;
+
+	if (buflen <= 0)
+		goto out;
+	snprintf(path, sizeof(path), "%s/%s/%s", luadir, subdir, filename);
+	f = fopen(path, "r");
+	if (!f) {
+		snprintf(helpstring, buflen, "%s", strerror(errno));
+		return;
+	}
+	s = fgets(buf, sizeof(buf), f);
+	if (!s) {
+		snprintf(helpstring, buflen, "%s", strerror(errno));
+		goto out;
+	}
+	uppercase(buf);
+	if (strncmp(buf, "-- ", 3) == 0) {
+		snprintf(helpstring, buflen, "%s", buf);
+		goto out;
+	}
+	strcpy(helpstring, "");
+out:
+	fclose(f);
+}
+
 static void list_lua_scripts(void)
 {
 	struct dirent **namelist;
 	int i, j, n;
+	char helpstring[256];
 
 	n = scandir(LUASCRIPTDIR, &namelist, filter_lua_scripts_and_dirs, alphasort);
 	if (n < 0) {
-		send_demon_console_msg("%s: %s\n", LUASCRIPTDIR, strerror(errno));
+		send_demon_console_msg("%s: %s\n", LUASCRIPTDIR, "", strerror(errno));
 		return;
 	}
 	send_demon_console_msg("LUA SCRIPTS:");
 
 	for (i = 0; i < n; i++) {
 		if (namelist[i]->d_type == DT_REG) { /* regular file? */
-			send_demon_console_msg("- %s", namelist[i]->d_name);
+			strcpy(helpstring, "");
+			get_lua_script_help_string(LUASCRIPTDIR, "", namelist[i]->d_name,
+							helpstring, sizeof(helpstring));
+			send_demon_console_msg("- %s %s", namelist[i]->d_name, helpstring);
 		} else if (namelist[i]->d_type == DT_DIR) { /* directory? */
 			struct dirent **subnamelist;
 			char path[PATH_MAX];
@@ -17231,7 +17267,11 @@ static void list_lua_scripts(void)
 					free(subnamelist[j]);
 					continue;
 				}
-				send_demon_console_msg("- %s/%s", namelist[i]->d_name, subnamelist[j]->d_name);
+				strcpy(helpstring, "");
+				get_lua_script_help_string(LUASCRIPTDIR, namelist[i]->d_name, subnamelist[j]->d_name,
+						helpstring, sizeof(helpstring));
+				send_demon_console_msg("- %s/%s %s", namelist[i]->d_name,
+								subnamelist[j]->d_name, helpstring);
 				free(subnamelist[j]);
 			}
 			free(subnamelist);

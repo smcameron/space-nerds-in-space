@@ -1,4 +1,4 @@
--- reset the specified bridge
+-- arg = player ship id -- reset the specified bridge
 
 arg = {...};
 player_ids = get_player_ship_ids();

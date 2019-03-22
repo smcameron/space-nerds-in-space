@@ -1,3 +1,4 @@
+-- test adding custom buttons from lua scripts
 
 player_ids = get_player_ship_ids();
 

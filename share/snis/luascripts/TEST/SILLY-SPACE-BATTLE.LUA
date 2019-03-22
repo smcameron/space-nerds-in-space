@@ -1,5 +1,4 @@
-
--- some constants...
+-- game enginge stress test, large battle of many ships
 
 neutral =  0;
 wallunni = 1;

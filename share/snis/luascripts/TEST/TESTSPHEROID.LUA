@@ -1,3 +1,4 @@
+-- collision detection with sphere, block, & capsule
 player_ids = get_player_ship_ids();
 if (player_ids[1]) then
 	x,y,z = get_object_location(player_ids[1]);

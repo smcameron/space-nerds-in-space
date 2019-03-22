@@ -1,4 +1,5 @@
-
+-- main menu for lua mission scripts
+clear_all();
 
 player_ids = get_player_ship_ids();
 

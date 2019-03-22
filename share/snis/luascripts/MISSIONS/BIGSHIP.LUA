@@ -1,4 +1,4 @@
-
+-- create a big ship near the player
 door_open = 0.0;
 door_vel = 0.05;
 e = -1;

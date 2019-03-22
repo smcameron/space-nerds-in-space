@@ -1,5 +1,4 @@
-
--- some constants...
+-- some collision detection tests
 
 neutral =  0;
 wallunni = 1;

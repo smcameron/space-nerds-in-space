@@ -1,3 +1,4 @@
+-- kali threatens the crew
 clear_all();
 
 first_attack_time = 1 * 600;

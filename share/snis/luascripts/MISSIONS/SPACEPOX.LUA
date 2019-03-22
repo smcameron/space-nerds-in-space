@@ -1,4 +1,4 @@
-
+-- a remote station suffers a spacepox outbreak
 --
 -- SPACE POX
 --

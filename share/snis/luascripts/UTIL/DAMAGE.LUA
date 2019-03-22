@@ -1,4 +1,4 @@
-
+-- damage the player
 -- find the player and damage him... I need to work on this script some more.
 
 player_ids = get_player_ship_ids();

@@ -1,3 +1,4 @@
+-- allow ship models to be inspected in game
 
 clear_all();
 

@@ -1,3 +1,4 @@
+-- test player_warp_travel_event
 
 function player_warp_travel_event(id, x1, y1, z1, x2, y2, z2, warpfactor)
 	print("TESTWARPEVENT: Player ", id, " warped from ",

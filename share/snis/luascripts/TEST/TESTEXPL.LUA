@@ -1,3 +1,5 @@
+-- test adding an explosion near player ship
+
 player_ids = get_player_ship_ids();
 if (player_ids[1]) then
 	x,y,z = get_object_location(player_ids[1]);

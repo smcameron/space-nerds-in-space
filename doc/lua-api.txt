@@ -65,6 +65,10 @@ TIPS ON DEBUGGING YOUR LUA SCRIPTS:
 		statements inside these "l_..." functions to see what they're doing or if theyr'e
 		getting called how you expect.  The output will be mixed in with snis_server output.
 
+	4. If the first line of your lua script is a comment (begins with "--"), then the "help"
+	   command on the demon screen will interpret this as help text and print it out next
+	   to the name of the script.
+
 Space Nerds In Space lua inteface:
 
 Locations in space nerds in space:
