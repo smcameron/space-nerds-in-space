@@ -839,6 +839,7 @@ static struct graph_dev_gl_textured_shader textured_cubemap_shield_shader;
 static struct graph_dev_gl_textured_shader textured_cubemap_lit_with_annulus_shadow_shader;
 static struct graph_dev_gl_textured_shader textured_cubemap_normal_mapped_lit_with_annulus_shadow_shader;
 static struct graph_dev_gl_textured_shader textured_cubemap_normal_mapped_lit_with_annulus_shadow_specular_shader;
+static struct graph_dev_gl_textured_shader textured_cubemap_normal_mapped_lit_specular_shader;
 static struct graph_dev_gl_textured_particle_shader textured_particle_shader;
 static struct graph_dev_gl_textured_shader alpha_by_normal_shader;
 static struct graph_dev_gl_textured_shader textured_alpha_by_normal_shader;
@@ -2370,10 +2371,15 @@ void graph_dev_draw_entity(struct entity_context *cx, struct entity *e, union ve
 					shadow_annulus.r2 = vec3_cwise_max(&e->scale) *
 									ring_outer_radius;
 				} else {
-					if (normalmap_id > 0)
-						tex_shader = &textured_cubemap_lit_normal_map_shader;
-					else
+					if (normalmap_id > 0) {
+						if (planet_specularity) {
+							tex_shader = &textured_cubemap_normal_mapped_lit_specular_shader;
+						} else {
+							tex_shader = &textured_cubemap_lit_normal_map_shader;
+						}
+					} else {
 						tex_shader = &textured_cubemap_lit_shader;
+					}
 				}
 				}
 				break;
@@ -3625,6 +3631,8 @@ int graph_dev_setup(const char *shader_dir)
 					&textured_cubemap_normal_mapped_lit_with_annulus_shadow_shader);
 	setup_textured_cubemap_shader("textured-cubemap-and-lit-with-annulus-shadow-per-pixel", 1, 1, 1,
 					&textured_cubemap_normal_mapped_lit_with_annulus_shadow_specular_shader);
+	setup_textured_cubemap_shader("textured-cubemap-and-lit-with-annulus-shadow-per-pixel", 1, 1, 0,
+					&textured_cubemap_normal_mapped_lit_specular_shader);
 	setup_textured_particle_shader(&textured_particle_shader);
 	setup_fs_effect_shader("fs-effect-copy", &fs_copy_shader);
 	setup_textured_shader("alpha_by_normal", UNIVERSAL_SHADER_HEADER, &alpha_by_normal_shader);
