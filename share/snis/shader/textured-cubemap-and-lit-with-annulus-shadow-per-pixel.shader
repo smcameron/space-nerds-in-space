@@ -173,7 +173,23 @@
 		float SpecularIntensity = 0.9;
                 float spec = pow(n_dot_h, SpecularPower);
 
-                vec3 specular_color = straight_up_normal * u_SunColor * SpecularIntensity * spec;
+		/* Because we are presuming that the specular reflection is due to reflecting off water,
+		 * the reflectance varies with the angle of incidence (from Encyclopedia Brittannica).
+		 * If the light is coming straight down on the water, most of it gets transmitted into
+		 * the water and very little is reflected, but if it's coming in at a glancing angle, then
+		 * most of it is reflected and very little is transmitted into the water.
+		 *
+		 * Sun's elevation angle (in degrees) 	90 	50 	40 	30 	20 	10 	5
+		 * reflectance (percent)	 	3 	3 	4 	6 	12 	27 	42
+		 * cos(angle)				0	.643	.766	.866	.939	.984	.996
+		 *
+		 * For now just hand wavy approximate this with a smoothstep on "direct", which is the cos(angle),
+		 * and also exaggerate the brightness a little for looks.  Not really accurate, just kind of a
+		 * hack that looks ok.
+		 */
+		float reflectance = min(1.0, smoothstep(0.0, 0.8, 1.0 - direct) * 1.2 + 0.1);
+
+		vec3 specular_color = straight_up_normal * reflectance * u_SunColor * SpecularIntensity * spec;
 #endif
 #else
 		/* make diffuse light atleast ambient */
