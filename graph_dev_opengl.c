@@ -66,6 +66,7 @@ static int draw_smaa = 0;
 static int draw_smaa_edge = 0;
 static int draw_smaa_blend = 0;
 static int draw_atmospheres = 1;
+static int planet_specularity = 1;
 static const char *default_shader_directory = "share/snis/shader";
 static char *shader_directory = NULL;
 
@@ -837,6 +838,7 @@ static struct graph_dev_gl_textured_shader textured_cubemap_lit_normal_map_shade
 static struct graph_dev_gl_textured_shader textured_cubemap_shield_shader;
 static struct graph_dev_gl_textured_shader textured_cubemap_lit_with_annulus_shadow_shader;
 static struct graph_dev_gl_textured_shader textured_cubemap_normal_mapped_lit_with_annulus_shadow_shader;
+static struct graph_dev_gl_textured_shader textured_cubemap_normal_mapped_lit_with_annulus_shadow_specular_shader;
 static struct graph_dev_gl_textured_particle_shader textured_particle_shader;
 static struct graph_dev_gl_textured_shader alpha_by_normal_shader;
 static struct graph_dev_gl_textured_shader textured_alpha_by_normal_shader;
@@ -2337,11 +2339,15 @@ void graph_dev_draw_entity(struct entity_context *cx, struct entity *e, union ve
 				normalmap_id = mt->normalmap_id;
 
 				if (mt->ring_material && mt->ring_material->type == MATERIAL_TEXTURED_PLANET_RING) {
-					if (normalmap_id <= 0)
+					if (normalmap_id <= 0) {
 						tex_shader = &textured_cubemap_lit_with_annulus_shadow_shader;
-					else
+					} else if (planet_specularity)  {
+						tex_shader =
+						&textured_cubemap_normal_mapped_lit_with_annulus_shadow_specular_shader;
+					} else {
 						tex_shader =
 							&textured_cubemap_normal_mapped_lit_with_annulus_shadow_shader;
+					}
 
 					struct material_textured_planet_ring *ring_mt =
 						&mt->ring_material->textured_planet_ring;
@@ -2969,7 +2975,7 @@ static void setup_textured_shader(const char *basename, const char *defines,
 }
 
 static void setup_textured_cubemap_shader(const char *basename, int use_normal_map,
-					struct graph_dev_gl_textured_shader *shader)
+				int use_specular, struct graph_dev_gl_textured_shader *shader)
 {
 	/* set all attributes to -1 */
 	memset(shader, 0xff, sizeof(*shader));
@@ -2977,12 +2983,14 @@ static void setup_textured_cubemap_shader(const char *basename, int use_normal_m
 	char vert_header[1024];
 	char frag_header[1024];
 
-	sprintf(vert_header, "%s\n%s\n%s\n",
+	sprintf(vert_header, "%s\n%s\n%s\n%s\n",
 		UNIVERSAL_SHADER_HEADER, "#define INCLUDE_VS 1\n",
-			use_normal_map ? "#define USE_NORMAL_MAP 1\n" : "\n");
-	sprintf(frag_header, "%s\n%s\n%s\n",
+			use_normal_map ? "#define USE_NORMAL_MAP 1\n" : "\n",
+			use_specular ? "#define USE_SPECULAR 1\n" : "\n");
+	sprintf(frag_header, "%s\n%s\n%s\n%s\n",
 		UNIVERSAL_SHADER_HEADER, "#define INCLUDE_FS 1\n",
-			use_normal_map ? "#define USE_NORMAL_MAP 1\n" : "\n");
+			use_normal_map ? "#define USE_NORMAL_MAP 1\n" : "\n",
+			use_specular ? "#define USE_SPECULAR 1\n" : "\n");
 
 	char shader_filename[PATH_MAX];
 	snprintf(shader_filename, sizeof(shader_filename), "%s.shader", basename);
@@ -3602,13 +3610,18 @@ int graph_dev_setup(const char *shader_dir)
 	setup_textured_shader("textured-and-lit-per-pixel", UNIVERSAL_SHADER_HEADER
 				"#define USE_NORMAL_MAP 1\n",
 				&textured_lit_normal_shader);
-	setup_textured_cubemap_shader("textured-cubemap-and-lit-per-pixel", 0, &textured_cubemap_lit_shader);
-	setup_textured_cubemap_shader("textured-cubemap-and-lit-per-pixel", 1, &textured_cubemap_lit_normal_map_shader);
-	setup_textured_cubemap_shader("textured-cubemap-shield-per-pixel", 0, &textured_cubemap_shield_shader);
-	setup_textured_cubemap_shader("textured-cubemap-and-lit-with-annulus-shadow-per-pixel", 0,
-		&textured_cubemap_lit_with_annulus_shadow_shader);
-	setup_textured_cubemap_shader("textured-cubemap-and-lit-with-annulus-shadow-per-pixel", 1,
-		&textured_cubemap_normal_mapped_lit_with_annulus_shadow_shader);
+	setup_textured_cubemap_shader("textured-cubemap-and-lit-per-pixel", 0, 0,
+					&textured_cubemap_lit_shader);
+	setup_textured_cubemap_shader("textured-cubemap-and-lit-per-pixel", 1, 0,
+					&textured_cubemap_lit_normal_map_shader);
+	setup_textured_cubemap_shader("textured-cubemap-shield-per-pixel", 0, 0,
+					&textured_cubemap_shield_shader);
+	setup_textured_cubemap_shader("textured-cubemap-and-lit-with-annulus-shadow-per-pixel", 0, 0,
+					&textured_cubemap_lit_with_annulus_shadow_shader);
+	setup_textured_cubemap_shader("textured-cubemap-and-lit-with-annulus-shadow-per-pixel", 1, 0,
+					&textured_cubemap_normal_mapped_lit_with_annulus_shadow_shader);
+	setup_textured_cubemap_shader("textured-cubemap-and-lit-with-annulus-shadow-per-pixel", 1, 1,
+					&textured_cubemap_normal_mapped_lit_with_annulus_shadow_specular_shader);
 	setup_textured_particle_shader(&textured_particle_shader);
 	setup_fs_effect_shader("fs-effect-copy", &fs_copy_shader);
 	setup_textured_shader("alpha_by_normal", UNIVERSAL_SHADER_HEADER, &alpha_by_normal_shader);
@@ -4072,9 +4085,9 @@ static void debug_menu_draw_item(char *item, int itemnumber, int grayed, int che
 void graph_dev_display_debug_menu_show()
 {
 	sng_set_foreground(BLACK);
-	graph_dev_draw_rectangle(1, 10, 30, 250 * sgc.x_scale, 225);
+	graph_dev_draw_rectangle(1, 10, 30, 370 * sgc.x_scale, 245);
 	sng_set_foreground(WHITE);
-	graph_dev_draw_rectangle(0, 10, 30, 250 * sgc.x_scale, 225);
+	graph_dev_draw_rectangle(0, 10, 30, 370 * sgc.x_scale, 245);
 
 	debug_menu_draw_item("VERTEX NORM/TAN/BITAN (RGB)", 0, 0, draw_normal_lines);
 	debug_menu_draw_item("BILLBOARD WIREFRAME", 1, 0, draw_billboard_wireframe);
@@ -4090,6 +4103,7 @@ void graph_dev_display_debug_menu_show()
 	debug_menu_draw_item("SMAA DEBUG EDGE", 8, !draw_smaa, draw_smaa_edge);
 	debug_menu_draw_item("SMAA DEBUG BLEND", 9, !draw_smaa, draw_smaa_blend);
 	debug_menu_draw_item("PLANETARY ATMOSPHERES", 10, 0, draw_atmospheres);
+	debug_menu_draw_item("PLANET SPECULARITY", 11, 0, planet_specularity);
 }
 
 static int selected_debug_item_checkbox(int n, int x, int y, int *toggle)
@@ -4137,6 +4151,8 @@ int graph_dev_graph_dev_debug_menu_click(int x, int y)
 		return 1;
 	}
 	if (selected_debug_item_checkbox(10, x, y, &draw_atmospheres))
+		return 1;
+	if (selected_debug_item_checkbox(11, x, y, &planet_specularity))
 		return 1;
 	return 0;
 }

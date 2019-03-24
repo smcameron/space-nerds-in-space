@@ -20,7 +20,6 @@
 	Author:
 		Jeremy Van Grinsven, Stephen M. Cameron
 */
-
 #if defined(INCLUDE_VS)
 	varying vec3 v_Position;
 	varying vec3 v_Normal;
@@ -160,24 +159,29 @@
                 vec3 view_dir = normalize(-v_Position);
                 vec3 half_dir = normalize(light_dir + view_dir);
                 float n_dot_h = max(0, clamp(dot(v_Normal, half_dir), 0.0, 1.0));
+#if defined(USE_SPECULAR)
 		float SpecularPower = 512.0;
 		float SpecularIntensity = 0.9;
                 float spec = pow(n_dot_h, SpecularPower);
 		vec3 SpecularColor = vec3(1.0, 1.0, 0.7);
 
                 vec3 specular_color = straight_up_normal * SpecularColor * SpecularIntensity * spec;
+#endif
 #else
 		/* make diffuse light atleast ambient */
 		float diffuse = max(direct * shadow, AMBIENT);
+#if defined(USE_SPECULAR)
 		vec3 specular_color = vec3(0.0, 0.0, 0.0);
+#endif
 #endif
 
 
 		gl_FragColor = textureCube(u_AlbedoTex, v_TexCoord);
+#if defined(USE_SPECULAR)
 		vec3 blue = normalize(vec3(0.1, 0.3, 1.0));
 		float mostly_blue = smoothstep(0.75, 0.8, dot(blue, normalize(gl_FragColor.rgb)));
 		gl_FragColor.rgb += specular_color * mostly_blue;
-
+#endif
 		gl_FragColor.rgb *= diffuse;
 
 		/* tint with alpha pre multiply */
