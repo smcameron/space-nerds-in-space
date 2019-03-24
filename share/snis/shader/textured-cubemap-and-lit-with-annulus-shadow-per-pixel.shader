@@ -186,8 +186,10 @@
 
 		gl_FragColor = textureCube(u_AlbedoTex, v_TexCoord);
 #if defined(USE_SPECULAR)
-		float mostly_blue = smoothstep(0.75, 0.8, dot(u_WaterColor, normalize(gl_FragColor.rgb)));
-		gl_FragColor.rgb += specular_color * mostly_blue;
+		vec3 white = vec3(1.0, 1.0, 1.0);
+		float not_clouds = 1.0 - smoothstep(0.8, 1.0, dot(gl_FragColor.rgb, white));
+		float mostly_blue = smoothstep(0.75, 0.8, dot(normalize(u_WaterColor), normalize(gl_FragColor.rgb)));
+		gl_FragColor.rgb += specular_color * mostly_blue * not_clouds;
 #endif
 		gl_FragColor.rgb *= diffuse;
 
