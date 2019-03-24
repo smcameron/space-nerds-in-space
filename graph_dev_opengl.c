@@ -743,6 +743,7 @@ struct graph_dev_gl_textured_shader {
 	GLint ring_outer_radius_id;
 	GLint invert; /* used by alpha_by_normal shader */
 	GLint in_shade;
+	GLint water_color; /* Used for specular calculations by planet shader */
 };
 
 struct clip_sphere_data {
@@ -2970,6 +2971,7 @@ static void setup_textured_shader(const char *basename, const char *defines,
 		glUniform1f(shader->specular_intensity_id, 0.2);
 	shader->invert = glGetUniformLocation(shader->program_id, "u_Invert");
 	shader->in_shade = glGetUniformLocation(shader->program_id, "u_in_shade");
+	shader->water_color = glGetUniformLocation(shader->program_id, "u_WaterColor");
 
 	shader->vertex_position_id = glGetAttribLocation(shader->program_id, "a_Position");
 	shader->vertex_normal_id = glGetAttribLocation(shader->program_id, "a_Normal");
@@ -3037,6 +3039,9 @@ static void setup_textured_cubemap_shader(const char *basename, int use_normal_m
 	shader->in_shade = glGetUniformLocation(shader->program_id, "u_in_shade");
 	if (shader->in_shade >= 0)
 		glUniform1f(shader->in_shade, 0.0);
+	shader->water_color = glGetUniformLocation(shader->program_id, "u_WaterColor");
+	if (shader->water_color >= 0)
+		glUniform3f(shader->water_color, 0.1, 0.3, 1.0); /* mostly blue */
 
 	/* Get a handle for our buffers */
 	shader->vertex_position_id = glGetAttribLocation(shader->program_id, "a_Position");

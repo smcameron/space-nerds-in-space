@@ -80,6 +80,9 @@
 #if defined(USE_NORMAL_MAP)
 	uniform samplerCube u_NormalMapTex;
 #endif
+#if defined USE_SPECULAR
+	uniform vec3 u_WaterColor; // Color of water used in specular calculations
+#endif
 
 #if defined(USE_ANNULUS_SHADOW)
 	uniform sampler2D u_AnnulusAlbedoTex;
@@ -183,8 +186,7 @@
 
 		gl_FragColor = textureCube(u_AlbedoTex, v_TexCoord);
 #if defined(USE_SPECULAR)
-		vec3 blue = normalize(vec3(0.1, 0.3, 1.0));
-		float mostly_blue = smoothstep(0.75, 0.8, dot(blue, normalize(gl_FragColor.rgb)));
+		float mostly_blue = smoothstep(0.75, 0.8, dot(u_WaterColor, normalize(gl_FragColor.rgb)));
 		gl_FragColor.rgb += specular_color * mostly_blue;
 #endif
 		gl_FragColor.rgb *= diffuse;
