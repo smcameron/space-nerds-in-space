@@ -197,6 +197,9 @@ void material_init_textured_planet(struct material *m)
 	m->billboard_type = MATERIAL_BILLBOARD_TYPE_NONE;
 	m->textured_planet.texture_id = 0;
 	m->textured_planet.ring_material = 0;
+	m->textured_planet.water_color_r = 0.1;
+	m->textured_planet.water_color_g = 0.33;
+	m->textured_planet.water_color_b = 1.0;
 }
 
 void material_init_textured_shield(struct material *m)

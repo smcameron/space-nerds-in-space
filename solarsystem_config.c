@@ -130,6 +130,7 @@ struct solarsystem_asset_spec *solarsystem_asset_spec_read(char *filename)
 			a->planet_type = malloc(sizeof(a->planet_type[0]) * PLANET_TYPE_COUNT_SHALL_BE);
 			memset(a->planet_type, 0, sizeof(a->planet_type[0]) * PLANET_TYPE_COUNT_SHALL_BE);
 			a->atmosphere_color = malloc(sizeof(a->atmosphere_color[0]) * PLANET_TYPE_COUNT_SHALL_BE);
+			a->water_color = malloc(sizeof(a->atmosphere_color[0]) * PLANET_TYPE_COUNT_SHALL_BE);
 			continue;
 		} else if (has_prefix("planet texture:", line)) {
 			if (a->nplanet_textures == 0) {
@@ -143,6 +144,9 @@ struct solarsystem_asset_spec *solarsystem_asset_spec_read(char *filename)
 			}
 			char word1[1000], word2[1000], word3[1000];
 			unsigned char r, g, b;
+			a->water_color[planet_textures_read].r = 25; /* default values for r,g,b water color */
+			a->water_color[planet_textures_read].g = 76; /* May be overridden later */
+			a->water_color[planet_textures_read].b = 255;
 			field = get_field(line);
 			rc = sscanf(field, "%s %s %s %hhu %hhu %hhu", word1, word2, word3, &r, &g, &b);
 			if (rc == 6) {
@@ -199,6 +203,22 @@ struct solarsystem_asset_spec *solarsystem_asset_spec_read(char *filename)
 				"%s:line %d: expected planet texture prefix, [ planet normal map prefix ], and planet type\n",
 				filename, ln);
 			goto bad_line;
+		} else if (has_prefix("water color:", line)) {
+			unsigned char r, g, b;
+			rc = sscanf(line, "water color: %hhu, %hhu, %hhu", &r, &g, &b);
+			if (rc != 3) {
+				fprintf(stderr, "%s:line %d: bad water color specification.\n", filename, ln);
+				goto bad_line;
+			}
+			if (planet_textures_read <= 0) {
+				fprintf(stderr, "%s:line %d: water color before 1st planet texture, skipping.\n",
+					filename, ln);
+				goto bad_line;
+			}
+			a->water_color[planet_textures_read - 1].r = r;
+			a->water_color[planet_textures_read - 1].r = g;
+			a->water_color[planet_textures_read - 1].r = b;
+			continue;
 		} else if (has_prefix("sun texture:", line)) {
 			if (a->sun_texture != NULL) {
 				fprintf(stderr, "%s:line %d: too many sun textures.\n", filename, ln);

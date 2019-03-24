@@ -1268,7 +1268,8 @@ static void graph_dev_raster_texture(struct graph_dev_gl_textured_shader *shader
 	GLuint emit_texture_number, GLuint normalmap_texture_number, struct shadow_sphere_data *shadow_sphere,
 	struct shadow_annulus_data *shadow_annulus, int do_cullface, int do_blend,
 	float ring_texture_v, float ring_inner_radius, float ring_outer_radius,
-	float specular_power, float specular_intensity, float emit_intensity, float invert, float in_shade)
+	float specular_power, float specular_intensity, float emit_intensity, float invert, float in_shade,
+	union vec3 *water_color)
 {
 	enable_3d_viewport();
 
@@ -1339,6 +1340,8 @@ static void graph_dev_raster_texture(struct graph_dev_gl_textured_shader *shader
 		glUniform1f(shader->invert, invert);
 	if (shader->in_shade >= 0)
 		glUniform1f(shader->in_shade, in_shade);
+	if (shader->water_color >= 0 && water_color)
+		glUniform3f(shader->water_color, water_color->v.x, water_color->v.y, water_color->v.z);
 
 	/* shadow sphere */
 	if (shader->shadow_sphere_id >= 0 && shadow_sphere)
@@ -1986,7 +1989,7 @@ static void graph_dev_draw_nebula(const struct mat44 *mat_mvp, const struct mat4
 
 		graph_dev_raster_texture(&textured_shader, &mat_mvp_local_r, &mat_mv_local_r, &mat_normal_local_r,
 			e->m, &mt->tint, alpha, eye_light_pos, mt->texture_id[i], 0, -1, 0, 0, 0, 1, 0.0f,
-				2.0f, 4.0f, 512.0, 0.2, 1.0, 0.0, 0.0);
+				2.0f, 4.0f, 512.0, 0.2, 1.0, 0.0, 0.0, NULL);
 
 		if (draw_billboard_wireframe) {
 			struct sng_color line_color = sng_get_color(WHITE);
@@ -2204,6 +2207,7 @@ void graph_dev_draw_entity(struct entity_context *cx, struct entity *e, union ve
 	float emit_intensity = 1.0;
 	float specular_intensity = 0.2;
 	float invert = 0.0;
+	union vec3 water_color;
 
 	draw_vertex_buffer_2d();
 
@@ -2248,6 +2252,11 @@ void graph_dev_draw_entity(struct entity_context *cx, struct entity *e, union ve
 		shadow_annulus.r2 = 0;
 		shadow_annulus.tint_color = sng_get_color(WHITE);
 		shadow_annulus.alpha = 1.0;
+
+		/* For planetary water specular calculations */
+		water_color.v.x = 0.0; /* These will be set by planet material */
+		water_color.v.y = 0.0;
+		water_color.v.z = 0.0;
 
 		struct graph_dev_gl_trans_wireframe_shader *wireframe_trans_shader = &trans_wireframe_shader;
 
@@ -2339,6 +2348,9 @@ void graph_dev_draw_entity(struct entity_context *cx, struct entity *e, union ve
 				struct material_textured_planet *mt = &e->material_ptr->textured_planet;
 				texture_id = mt->texture_id;
 				normalmap_id = mt->normalmap_id;
+				water_color.v.x = mt->water_color_r;
+				water_color.v.y = mt->water_color_g;
+				water_color.v.z = mt->water_color_b;
 
 				if (mt->ring_material && mt->ring_material->type == MATERIAL_TEXTURED_PLANET_RING) {
 					if (normalmap_id <= 0) {
@@ -2443,7 +2455,7 @@ void graph_dev_draw_entity(struct entity_context *cx, struct entity *e, union ve
 						do_cullface, do_blend, ring_texture_v,
 						ring_inner_radius, ring_outer_radius,
 						specular_power, specular_intensity, emit_intensity, invert,
-						e->in_shade);
+						e->in_shade, &water_color);
 				else if (atmosphere)
 					graph_dev_raster_atmosphere(mat_mvp, mat_mv, mat_normal,
 						e->m, &atmosphere_color, eye_light_pos, texture_alpha);

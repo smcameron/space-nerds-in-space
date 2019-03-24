@@ -122,6 +122,7 @@ struct material_textured_planet {
 	int texture_id;
 	int normalmap_id;
 	struct material *ring_material;
+	float water_color_r, water_color_g, water_color_b; /* for specular calculations */
 };
 
 struct material_textured_shield {

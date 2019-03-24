@@ -20070,6 +20070,9 @@ static int load_per_solarsystem_textures()
 				solarsystem_assets->planet_texture[i]);
 		material_init_textured_planet(&planet_material[i]);
 		planet_material[i].textured_planet.texture_id = load_cubemap_textures(0, path);
+		planet_material[i].textured_planet.water_color_r = (float) solarsystem_assets->water_color[i].r / 255.0;
+		planet_material[i].textured_planet.water_color_g = (float) solarsystem_assets->water_color[i].g / 255.0;
+		planet_material[i].textured_planet.water_color_b = (float) solarsystem_assets->water_color[i].b / 255.0;
 		if (i < NPLANET_MATERIALS / 2)
 			planet_material[i].textured_planet.ring_material =
 					&planetary_ring_material[i % NPLANETARY_RING_MATERIALS];
