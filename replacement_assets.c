@@ -70,13 +70,16 @@ int replacement_asset_read(char *replacement_list_filename, char *asset_dir,
 		return -1;
 
 	while (!feof(f)) {
+		line[0] = '\0';
 		l = fgets(line, sizeof(line), f);
 		if (!l)
 			break;
 		ln++;
-		if (strlen(line) == 0)
+		if (strlen(line) == 0) /* skip completely empty strings (shouldn't occur) */
 			continue;
 		line[strlen(line) - 1] = '\0';
+		if (strlen(line) == 0) /* skip blank lines */
+			continue;
 		if (line[0] == '#')
 			continue;
 		memset(f1, 0, sizeof(f1));
