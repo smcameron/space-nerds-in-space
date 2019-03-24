@@ -76,6 +76,8 @@ static struct graph_dev_gdk_context {
 	float half_width_3d, half_height_3d;
 } sgc;
 
+__attribute__((unused)) int graph_dev_planet_specularity = 0;
+
 /* nothing in here yet
 struct mesh_gtk_info {
 };
@@ -1005,12 +1007,12 @@ void graph_dev_expire_all_textures(void)
 	/* noop */
 }
 
-extern void graph_dev_expire_texture(char *filename)
+void graph_dev_expire_texture(char *filename)
 {
 	/* noop */
 }
 
-extern void graph_dev_expire_cubemap_texture(int is_inside,
+void graph_dev_expire_cubemap_texture(int is_inside,
 						const char *texture_filename_pos_x,
 						const char *texture_filename_neg_x,
 						const char *texture_filename_pos_y,

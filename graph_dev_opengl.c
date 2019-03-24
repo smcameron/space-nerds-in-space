@@ -66,7 +66,7 @@ static int draw_smaa = 0;
 static int draw_smaa_edge = 0;
 static int draw_smaa_blend = 0;
 static int draw_atmospheres = 1;
-static int planet_specularity = 1;
+int graph_dev_planet_specularity = 1;
 static const char *default_shader_directory = "share/snis/shader";
 static char *shader_directory = NULL;
 
@@ -2343,7 +2343,7 @@ void graph_dev_draw_entity(struct entity_context *cx, struct entity *e, union ve
 				if (mt->ring_material && mt->ring_material->type == MATERIAL_TEXTURED_PLANET_RING) {
 					if (normalmap_id <= 0) {
 						tex_shader = &textured_cubemap_lit_with_annulus_shadow_shader;
-					} else if (planet_specularity)  {
+					} else if (graph_dev_planet_specularity)  {
 						tex_shader =
 						&textured_cubemap_normal_mapped_lit_with_annulus_shadow_specular_shader;
 					} else {
@@ -2373,7 +2373,7 @@ void graph_dev_draw_entity(struct entity_context *cx, struct entity *e, union ve
 									ring_outer_radius;
 				} else {
 					if (normalmap_id > 0) {
-						if (planet_specularity) {
+						if (graph_dev_planet_specularity) {
 							tex_shader = &textured_cubemap_normal_mapped_lit_specular_shader;
 						} else {
 							tex_shader = &textured_cubemap_lit_normal_map_shader;
@@ -4119,7 +4119,7 @@ void graph_dev_display_debug_menu_show()
 	debug_menu_draw_item("SMAA DEBUG EDGE", 8, !draw_smaa, draw_smaa_edge);
 	debug_menu_draw_item("SMAA DEBUG BLEND", 9, !draw_smaa, draw_smaa_blend);
 	debug_menu_draw_item("PLANETARY ATMOSPHERES", 10, 0, draw_atmospheres);
-	debug_menu_draw_item("PLANET SPECULARITY", 11, 0, planet_specularity);
+	debug_menu_draw_item("PLANET SPECULARITY", 11, 0, graph_dev_planet_specularity);
 }
 
 static int selected_debug_item_checkbox(int n, int x, int y, int *toggle)
@@ -4168,7 +4168,7 @@ int graph_dev_graph_dev_debug_menu_click(int x, int y)
 	}
 	if (selected_debug_item_checkbox(10, x, y, &draw_atmospheres))
 		return 1;
-	if (selected_debug_item_checkbox(11, x, y, &planet_specularity))
+	if (selected_debug_item_checkbox(11, x, y, &graph_dev_planet_specularity))
 		return 1;
 	return 0;
 }

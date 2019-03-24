@@ -96,5 +96,7 @@ extern void graph_dev_setup_colors(void *gtk_widget, void *gdk_color_huex, int n
 /* graph_dev_grab_framebuffer only implemented for opengl backend */
 extern void graph_dev_grab_framebuffer(unsigned char **buffer, int *width, int *height);
 
+extern int graph_dev_planet_specularity; /* Set to 1 to enable, 0 to disable planet specularity */
+
 #endif
 

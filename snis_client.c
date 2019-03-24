@@ -16784,6 +16784,8 @@ static struct tweakable_var_descriptor client_tweak[] = {
 		&nav_has_computer_button, 'i', 0.0, 0.0, 0.0, 0, 1, 0 },
 	{ "PLANETS_SHADE_OTHER_OBJECTS", "0 OR 1 TO ENABLE/DISABLE PLANET SHADOWS ON OTHER OBJECTS",
 		&planets_shade_other_objects, 'i', 0.0, 0.0, 0.0, 0, 1, 1 },
+	{ "PLANET_SPECULARITY", "0 OR 1 TO ENABLE/DISABLE PLANET_SPECULARITY",
+		&graph_dev_planet_specularity, 'i', 0.0, 0.0, 0.0, 0, 1, 1 },
 	{ NULL, NULL, NULL, '\0', 0.0, 0.0, 0.0, 0, 0, 0 },
 };
 
@@ -17351,6 +17353,16 @@ static int demon_rocket_noise_checkbox(void *x)
 	return !suppress_rocket_noise;
 }
 
+static void demon_planet_water_specularity_pressed(void *x)
+{
+	graph_dev_planet_specularity = !graph_dev_planet_specularity;
+}
+
+static int demon_planet_water_specularity_checkbox(void *x)
+{
+	return graph_dev_planet_specularity;
+}
+
 static void demon_netstats_button_pressed(void *x)
 {
 	if (!demon_ui.netstats_active) {
@@ -17542,6 +17554,10 @@ static void init_demon_ui()
 			demon_rocket_noise_pressed, NULL);
 	pull_down_menu_set_checkbox_function(demon_ui.menu, "META", "ROCKET ENGINE NOISE",
 			demon_rocket_noise_checkbox, NULL);
+	pull_down_menu_add_row(demon_ui.menu, "META", "PLANET WATER SPECULARITY",
+			demon_planet_water_specularity_pressed, NULL);
+	pull_down_menu_set_checkbox_function(demon_ui.menu, "META", "PLANET WATER SPECULARITY",
+			demon_planet_water_specularity_checkbox, NULL);
 	pull_down_menu_add_column(demon_ui.menu, "ADD");
 	pull_down_menu_add_row(demon_ui.menu, "ADD", "SHIP", demon_ship_button_pressed, (void *)
 					(intptr_t) demon_ui.shiptype);
