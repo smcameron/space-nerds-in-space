@@ -36,6 +36,7 @@ struct solarsystem_asset_spec {
 	char **planet_type;
 	struct atmosphere_color_rgb *atmosphere_color;
 	struct atmosphere_color_rgb *water_color; /* for use in specular calculations */
+	struct atmosphere_color_rgb sun_color; /* for use in specular calculations */
 	double x, y, z; /* Location of solarsystem (separate coord sys from rest of objects) */
 	int spec_errors, spec_warnings;
 	int random_seed;

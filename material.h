@@ -123,6 +123,7 @@ struct material_textured_planet {
 	int normalmap_id;
 	struct material *ring_material;
 	float water_color_r, water_color_g, water_color_b; /* for specular calculations */
+	float sun_color_r, sun_color_g, sun_color_b; /* for specular calculations */
 };
 
 struct material_textured_shield {

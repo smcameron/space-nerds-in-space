@@ -82,6 +82,7 @@
 #endif
 #if defined USE_SPECULAR
 	uniform vec3 u_WaterColor; // Color of water used in specular calculations
+	uniform vec3 u_SunColor; // Color of sun used in specular calculations
 #endif
 
 #if defined(USE_ANNULUS_SHADOW)
@@ -171,15 +172,13 @@
 		float SpecularPower = 512.0;
 		float SpecularIntensity = 0.9;
                 float spec = pow(n_dot_h, SpecularPower);
-		vec3 SpecularColor = vec3(1.0, 1.0, 0.7);
 
-                vec3 specular_color = straight_up_normal * SpecularColor * SpecularIntensity * spec;
+                vec3 specular_color = straight_up_normal * u_SunColor * SpecularIntensity * spec;
 #endif
 #else
 		/* make diffuse light atleast ambient */
 		float diffuse = max(direct * shadow, AMBIENT);
 #if defined(USE_SPECULAR)
-		vec3 specular_color = vec3(0.0, 0.0, 0.0);
 #endif
 #endif
 

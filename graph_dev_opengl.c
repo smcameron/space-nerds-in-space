@@ -744,6 +744,7 @@ struct graph_dev_gl_textured_shader {
 	GLint invert; /* used by alpha_by_normal shader */
 	GLint in_shade;
 	GLint water_color; /* Used for specular calculations by planet shader */
+	GLint sun_color; /* Used for specular calculations by planet shader */
 };
 
 struct clip_sphere_data {
@@ -1269,7 +1270,7 @@ static void graph_dev_raster_texture(struct graph_dev_gl_textured_shader *shader
 	struct shadow_annulus_data *shadow_annulus, int do_cullface, int do_blend,
 	float ring_texture_v, float ring_inner_radius, float ring_outer_radius,
 	float specular_power, float specular_intensity, float emit_intensity, float invert, float in_shade,
-	union vec3 *water_color)
+	union vec3 *water_color, union vec3 *sun_color)
 {
 	enable_3d_viewport();
 
@@ -1342,6 +1343,8 @@ static void graph_dev_raster_texture(struct graph_dev_gl_textured_shader *shader
 		glUniform1f(shader->in_shade, in_shade);
 	if (shader->water_color >= 0 && water_color)
 		glUniform3f(shader->water_color, water_color->v.x, water_color->v.y, water_color->v.z);
+	if (shader->sun_color >= 0 && sun_color)
+		glUniform3f(shader->sun_color, sun_color->v.x, sun_color->v.y, sun_color->v.z);
 
 	/* shadow sphere */
 	if (shader->shadow_sphere_id >= 0 && shadow_sphere)
@@ -1989,7 +1992,7 @@ static void graph_dev_draw_nebula(const struct mat44 *mat_mvp, const struct mat4
 
 		graph_dev_raster_texture(&textured_shader, &mat_mvp_local_r, &mat_mv_local_r, &mat_normal_local_r,
 			e->m, &mt->tint, alpha, eye_light_pos, mt->texture_id[i], 0, -1, 0, 0, 0, 1, 0.0f,
-				2.0f, 4.0f, 512.0, 0.2, 1.0, 0.0, 0.0, NULL);
+				2.0f, 4.0f, 512.0, 0.2, 1.0, 0.0, 0.0, NULL, NULL);
 
 		if (draw_billboard_wireframe) {
 			struct sng_color line_color = sng_get_color(WHITE);
@@ -2208,6 +2211,7 @@ void graph_dev_draw_entity(struct entity_context *cx, struct entity *e, union ve
 	float specular_intensity = 0.2;
 	float invert = 0.0;
 	union vec3 water_color;
+	union vec3 sun_color;
 
 	draw_vertex_buffer_2d();
 
@@ -2257,6 +2261,9 @@ void graph_dev_draw_entity(struct entity_context *cx, struct entity *e, union ve
 		water_color.v.x = 0.0; /* These will be set by planet material */
 		water_color.v.y = 0.0;
 		water_color.v.z = 0.0;
+		sun_color.v.x = 0.0;
+		sun_color.v.y = 0.0;
+		sun_color.v.z = 0.0;
 
 		struct graph_dev_gl_trans_wireframe_shader *wireframe_trans_shader = &trans_wireframe_shader;
 
@@ -2351,6 +2358,9 @@ void graph_dev_draw_entity(struct entity_context *cx, struct entity *e, union ve
 				water_color.v.x = mt->water_color_r;
 				water_color.v.y = mt->water_color_g;
 				water_color.v.z = mt->water_color_b;
+				sun_color.v.x = mt->sun_color_r;
+				sun_color.v.y = mt->sun_color_g;
+				sun_color.v.z = mt->sun_color_b;
 
 				if (mt->ring_material && mt->ring_material->type == MATERIAL_TEXTURED_PLANET_RING) {
 					if (normalmap_id <= 0) {
@@ -2455,7 +2465,7 @@ void graph_dev_draw_entity(struct entity_context *cx, struct entity *e, union ve
 						do_cullface, do_blend, ring_texture_v,
 						ring_inner_radius, ring_outer_radius,
 						specular_power, specular_intensity, emit_intensity, invert,
-						e->in_shade, &water_color);
+						e->in_shade, &water_color, &sun_color);
 				else if (atmosphere)
 					graph_dev_raster_atmosphere(mat_mvp, mat_mv, mat_normal,
 						e->m, &atmosphere_color, eye_light_pos, texture_alpha);
@@ -2984,6 +2994,7 @@ static void setup_textured_shader(const char *basename, const char *defines,
 	shader->invert = glGetUniformLocation(shader->program_id, "u_Invert");
 	shader->in_shade = glGetUniformLocation(shader->program_id, "u_in_shade");
 	shader->water_color = glGetUniformLocation(shader->program_id, "u_WaterColor");
+	shader->sun_color = glGetUniformLocation(shader->program_id, "u_SunColor");
 
 	shader->vertex_position_id = glGetAttribLocation(shader->program_id, "a_Position");
 	shader->vertex_normal_id = glGetAttribLocation(shader->program_id, "a_Normal");
@@ -3054,6 +3065,9 @@ static void setup_textured_cubemap_shader(const char *basename, int use_normal_m
 	shader->water_color = glGetUniformLocation(shader->program_id, "u_WaterColor");
 	if (shader->water_color >= 0)
 		glUniform3f(shader->water_color, 0.1, 0.3, 1.0); /* mostly blue */
+	shader->sun_color = glGetUniformLocation(shader->program_id, "u_SunColor");
+	if (shader->sun_color >= 0)
+		glUniform3f(shader->sun_color, 1.0, 1.0, 0.7);
 
 	/* Get a handle for our buffers */
 	shader->vertex_position_id = glGetAttribLocation(shader->program_id, "a_Position");

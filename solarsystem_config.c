@@ -147,6 +147,9 @@ struct solarsystem_asset_spec *solarsystem_asset_spec_read(char *filename)
 			a->water_color[planet_textures_read].r = 25; /* default values for r,g,b water color */
 			a->water_color[planet_textures_read].g = 76; /* May be overridden later */
 			a->water_color[planet_textures_read].b = 255;
+			a->sun_color.r = 255;
+			a->sun_color.g = 255;
+			a->sun_color.b = 179;
 			field = get_field(line);
 			rc = sscanf(field, "%s %s %s %hhu %hhu %hhu", word1, word2, word3, &r, &g, &b);
 			if (rc == 6) {
@@ -218,6 +221,17 @@ struct solarsystem_asset_spec *solarsystem_asset_spec_read(char *filename)
 			a->water_color[planet_textures_read - 1].r = r;
 			a->water_color[planet_textures_read - 1].r = g;
 			a->water_color[planet_textures_read - 1].r = b;
+			continue;
+		} else if (has_prefix("sun color:", line)) {
+			unsigned char r, g, b;
+			rc = sscanf(line, "sun color: %hhu, %hhu, %hhu", &r, &g, &b);
+			if (rc != 3) {
+				fprintf(stderr, "%s:line %d: bad sun color specification.\n", filename, ln);
+				goto bad_line;
+			}
+			a->sun_color.r = r;
+			a->sun_color.g = g;
+			a->sun_color.b = b;
 			continue;
 		} else if (has_prefix("sun texture:", line)) {
 			if (a->sun_texture != NULL) {
