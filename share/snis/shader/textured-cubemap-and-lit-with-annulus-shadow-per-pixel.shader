@@ -81,6 +81,7 @@
 	uniform samplerCube u_NormalMapTex;
 #endif
 
+#if defined(USE_ANNULUS_SHADOW)
 	uniform sampler2D u_AnnulusAlbedoTex;
 	uniform vec3 u_AnnulusCenter; // center of disk in eye space
 	uniform vec3 u_AnnulusNormal; // disk plane normal in eye space
@@ -111,6 +112,7 @@
 		}
 		return false;
 	}
+#endif
 
 #if !defined(AMBIENT)
 	#define AMBIENT 0.1
@@ -120,7 +122,6 @@
 	{
 		/* Get a lighting direction vector from the light to the vertex. */
 		vec3 light_dir = normalize(u_LightPos - v_Position);
-		float ir = sqrt(u_AnnulusRadius.y);
 
 		/* Calculate the dot product of the light vector and vertex normal. If the normal and light vector are
 		   pointing in the same direction then it will get max illumination. */
@@ -128,11 +129,13 @@
 
 		float shadow = 1.0;
 
+#if defined(USE_ANNULUS_SHADOW)
 		float intersect_r_squared;
 		if (direct > AMBIENT && intersect_disc(u_AnnulusNormal, u_AnnulusCenter, u_AnnulusRadius.w /* r3^2 */,
 				v_Position, light_dir, intersect_r_squared))
 		{
 			if (intersect_r_squared > u_AnnulusRadius.y /* r1^2 */ ) {
+				float ir = sqrt(u_AnnulusRadius.y);
 				/* figure out a texture coord on the ring that samples from u=0 to 1, v is given */
 				float u = (sqrt(intersect_r_squared) - ir) /
 						(u_AnnulusRadius.z - ir);
@@ -143,6 +146,8 @@
 				shadow  = 1.0 - ring_color.a;
 			}
 		}
+#endif
+
 #if defined(USE_NORMAL_MAP)
 		vec3 norm_sample = normalize(textureCube(u_NormalMapTex, v_TexCoord).xyz * 2.0 - 1.0);
 		vec3 pixel_normal = tbn * norm_sample;

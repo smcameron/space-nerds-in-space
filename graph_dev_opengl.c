@@ -2975,7 +2975,8 @@ static void setup_textured_shader(const char *basename, const char *defines,
 }
 
 static void setup_textured_cubemap_shader(const char *basename, int use_normal_map,
-				int use_specular, struct graph_dev_gl_textured_shader *shader)
+				int use_specular, int use_annulus_shadow,
+				struct graph_dev_gl_textured_shader *shader)
 {
 	/* set all attributes to -1 */
 	memset(shader, 0xff, sizeof(*shader));
@@ -2983,14 +2984,16 @@ static void setup_textured_cubemap_shader(const char *basename, int use_normal_m
 	char vert_header[1024];
 	char frag_header[1024];
 
-	sprintf(vert_header, "%s\n%s\n%s\n%s\n",
+	sprintf(vert_header, "%s\n%s\n%s\n%s\n%s\n",
 		UNIVERSAL_SHADER_HEADER, "#define INCLUDE_VS 1\n",
 			use_normal_map ? "#define USE_NORMAL_MAP 1\n" : "\n",
-			use_specular ? "#define USE_SPECULAR 1\n" : "\n");
-	sprintf(frag_header, "%s\n%s\n%s\n%s\n",
+			use_specular ? "#define USE_SPECULAR 1\n" : "\n",
+			use_annulus_shadow ? "#define USE_ANNULUS_SHADOW 1\n" : "\n");
+	sprintf(frag_header, "%s\n%s\n%s\n%s\n%s\n",
 		UNIVERSAL_SHADER_HEADER, "#define INCLUDE_FS 1\n",
 			use_normal_map ? "#define USE_NORMAL_MAP 1\n" : "\n",
-			use_specular ? "#define USE_SPECULAR 1\n" : "\n");
+			use_specular ? "#define USE_SPECULAR 1\n" : "\n",
+			use_annulus_shadow ? "#define USE_ANNULUS_SHADOW 1\n" : "\n");
 
 	char shader_filename[PATH_MAX];
 	snprintf(shader_filename, sizeof(shader_filename), "%s.shader", basename);
@@ -3610,17 +3613,17 @@ int graph_dev_setup(const char *shader_dir)
 	setup_textured_shader("textured-and-lit-per-pixel", UNIVERSAL_SHADER_HEADER
 				"#define USE_NORMAL_MAP 1\n",
 				&textured_lit_normal_shader);
-	setup_textured_cubemap_shader("textured-cubemap-and-lit-per-pixel", 0, 0,
+	setup_textured_cubemap_shader("textured-cubemap-and-lit-with-annulus-shadow-per-pixel", 0, 0, 0,
 					&textured_cubemap_lit_shader);
-	setup_textured_cubemap_shader("textured-cubemap-and-lit-per-pixel", 1, 0,
+	setup_textured_cubemap_shader("textured-cubemap-and-lit-with-annulus-shadow-per-pixel", 1, 0, 0,
 					&textured_cubemap_lit_normal_map_shader);
-	setup_textured_cubemap_shader("textured-cubemap-shield-per-pixel", 0, 0,
+	setup_textured_cubemap_shader("textured-cubemap-shield-per-pixel", 0, 0, 0,
 					&textured_cubemap_shield_shader);
-	setup_textured_cubemap_shader("textured-cubemap-and-lit-with-annulus-shadow-per-pixel", 0, 0,
+	setup_textured_cubemap_shader("textured-cubemap-and-lit-with-annulus-shadow-per-pixel", 0, 0, 1,
 					&textured_cubemap_lit_with_annulus_shadow_shader);
-	setup_textured_cubemap_shader("textured-cubemap-and-lit-with-annulus-shadow-per-pixel", 1, 0,
+	setup_textured_cubemap_shader("textured-cubemap-and-lit-with-annulus-shadow-per-pixel", 1, 0, 1,
 					&textured_cubemap_normal_mapped_lit_with_annulus_shadow_shader);
-	setup_textured_cubemap_shader("textured-cubemap-and-lit-with-annulus-shadow-per-pixel", 1, 1,
+	setup_textured_cubemap_shader("textured-cubemap-and-lit-with-annulus-shadow-per-pixel", 1, 1, 1,
 					&textured_cubemap_normal_mapped_lit_with_annulus_shadow_specular_shader);
 	setup_textured_particle_shader(&textured_particle_shader);
 	setup_fs_effect_shader("fs-effect-copy", &fs_copy_shader);
