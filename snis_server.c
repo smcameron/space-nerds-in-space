@@ -402,6 +402,7 @@ static struct bridge_data {
 	int comms_channel;		/* Current channel number comms will transmit/recieve on */
 	struct npc_bot_state npcbot;	/* Context for NPC comms to maintain conversation */
 	int last_docking_permission_denied_time; /* rate limits "docking permission denied" messages */
+	uint32_t last_docked_time;		/* Last time docked, limits spurious docking magnet hint */
 	uint32_t science_selection;	/* ID of currently selected item on science station */
 	int current_displaymode;	/* what the main screen(s) of the bridge are currently showing, */
 					/* See process_role_onscreen() */
@@ -8168,9 +8169,17 @@ static void player_collision_detection(void *player, void *object)
 			scoop_up_cargo(o, t);
 			return;
 	}
-	if (t->type == OBJTYPE_DOCKING_PORT && dist2 < 50.0 * 50.0 &&
-		o->tsd.ship.docking_magnets) {
-		player_attempt_dock_with_starbase(t, o);
+	if (t->type == OBJTYPE_DOCKING_PORT && dist2 < 50.0 * 50.0) {
+		if (o->tsd.ship.docking_magnets) {
+			player_attempt_dock_with_starbase(t, o);
+		} else {
+			int bn = lookup_bridge_by_shipid(o->id);
+			/* Give docking magnets hint, but not if they just undocked */
+			if (bn >= 0 && universe_timestamp > bridgelist[bn].last_docked_time + 600)
+				snis_queue_add_text_to_speech(
+					"If you are attempting to dock perhaps you should turn on the docking magnets.",
+					ROLE_TEXT_TO_SPEECH, o->id);
+		}
 	}
 	if (t->type == OBJTYPE_WARPGATE && dist2 < 110.0 * 110.0) {
 		/* Warp gate is approximately a torus with major radius 92, minor radius 25.0. */
@@ -9248,9 +9257,14 @@ static void docking_port_move(struct snis_entity *o)
 		return;
 	quat_rot_vec_self(&offset, &o->orientation);
 	docker = &go[i];
-	if (!docker->tsd.ship.docking_magnets) {
+	if (!docker->tsd.ship.docking_magnets) { /* undocking happens here */
 		o->tsd.docking_port.docked_guy = (uint32_t) -1;
 		revoke_docking_permission(o, docker->id);
+		if (docker->type == OBJTYPE_SHIP1) {
+			int bn = lookup_bridge_by_shipid(docker->id);
+			if (bn >= 0)
+				bridgelist[bn].last_docked_time = universe_timestamp;
+		}
 	}
 	quat_slerp(&new_orientation, &docker->orientation, &o->orientation, slerp_rate);
 	docker->orientation = new_orientation;
