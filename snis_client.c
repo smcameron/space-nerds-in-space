@@ -285,6 +285,7 @@ static unsigned char camera_mode;
 static unsigned char nav_camera_mode;
 static unsigned char nav_has_computer_button = 0; /* tweakable */
 static unsigned char planets_shade_other_objects = 1; /* tweakable */
+static int main_nav_hybrid = 0; /* tweakable */
 
 /* "Scenic" camera for beauty shots. */
 static int external_camera_active = 0; /* tweakable */
@@ -16786,6 +16787,8 @@ static struct tweakable_var_descriptor client_tweak[] = {
 		&planets_shade_other_objects, 'i', 0.0, 0.0, 0.0, 0, 1, 1 },
 	{ "PLANET_SPECULARITY", "0 OR 1 TO ENABLE/DISABLE PLANET_SPECULARITY",
 		&graph_dev_planet_specularity, 'i', 0.0, 0.0, 0.0, 0, 1, 1 },
+	{ "MAIN_NAV_HYBRID", "0 OR 1 TO ENABLE/DISABLE MAINSCREEN/NAV HYBRID",
+		&main_nav_hybrid, 'i', 0.0, 0.0, 0.0, 0, 1, 0 },
 	{ NULL, NULL, NULL, '\0', 0.0, 0.0, 0.0, 0, 0, 0 },
 };
 
@@ -19425,6 +19428,8 @@ static int main_da_expose(GtkWidget *w, GdkEvent *event, gpointer p)
 		show_mainscreen(w);
 		break;
 	case DISPLAYMODE_NAVIGATION:
+		if (main_nav_hybrid)
+			show_mainscreen(w);
 		show_navigation(w);
 		break;
 	case DISPLAYMODE_WEAPONS:
