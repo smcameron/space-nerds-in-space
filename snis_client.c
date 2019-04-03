@@ -286,6 +286,7 @@ static unsigned char nav_camera_mode;
 static unsigned char nav_has_computer_button = 0; /* tweakable */
 static unsigned char planets_shade_other_objects = 1; /* tweakable */
 static int main_nav_hybrid = 0; /* tweakable */
+static float explosion_multiplier = 5.0; /* tweakable */
 
 /* "Scenic" camera for beauty shots. */
 static int external_camera_active = 0; /* tweakable */
@@ -3143,10 +3144,32 @@ static void do_explosion(uint32_t related_id, double x, double y, double z,
 				uint16_t nsparks, uint16_t velocity, int time,
 				uint8_t victim_type, uint8_t explosion_type)
 {
-	double zangle, angle, v, vx, vy, vz;
+	double angle;
+	float v, vx, vy, vz;
 	int i, debris_chance, color;
+	float spark_multiplier = 1;
 	union quat orientation;
 	union vec3 vel;
+	struct snis_entity *o;
+
+	/* If explosion is near the client, then make more sparks, if far, then fewer.
+	 * (If we just make all the explosions have large numbers of sparks, then we
+	 * would run out of entities.)
+	 */
+	o = find_my_ship();
+	if (o) {
+		float dist, dx, dy, dz;
+
+		dx = o->x - x;
+		dy = o->y - y;
+		dz = o->z - z;
+
+		dist = sqrt(dx * dx + dy * dy + dz * dz);
+		if (dist < XKNOWN_DIM / 20.0)
+			spark_multiplier = explosion_multiplier;
+		if (dist > XKNOWN_DIM / 5)
+			spark_multiplier = 0.2;
+	}
 
 	debris_chance = 50;
 	switch (victim_type) {
@@ -3214,16 +3237,14 @@ static void do_explosion(uint32_t related_id, double x, double y, double z,
 		break;
 	case EXPLOSION_TYPE_REGULAR:
 	default:
-		if (nsparks > 40) /* a big explosion, add one big freakin' stationary spark that fades quickly */
+		if (nsparks > 40) { /* a big explosion, add one big freakin' stationary spark that fades quickly */
 			add_spark(x, y, z, 0, 0, 0, 15, color, &spark_material, 0.8, 0, 250.0);
+			nsparks *= spark_multiplier;
+		}
 		for (i = 0; i < nsparks; i++) {
-			angle = ((double) snis_randn(360) * M_PI / 180.0);
-			zangle = ((double) snis_randn(360) * M_PI / 180.0);
 			v = snis_randn(velocity * 2) - velocity;
-			vx = v * cos(angle);
-			vy = v * cos(zangle);
-			vz = v * -sin(angle);
-			add_spark(x, y, z, vx, vy, vz, time, color, &spark_material, 0.95, debris_chance, 1.0);
+			random_point_on_sphere(v, &vx, &vy, &vz);
+			add_spark(x, y, z, vx, vy, vz, time, color, &spark_material, 0.98, debris_chance, 1.0);
 		}
 		break;
 	}
@@ -16789,6 +16810,8 @@ static struct tweakable_var_descriptor client_tweak[] = {
 		&graph_dev_planet_specularity, 'i', 0.0, 0.0, 0.0, 0, 1, 1 },
 	{ "MAIN_NAV_HYBRID", "0 OR 1 TO ENABLE/DISABLE MAINSCREEN/NAV HYBRID",
 		&main_nav_hybrid, 'i', 0.0, 0.0, 0.0, 0, 1, 0 },
+	{ "EXPLOSION_MULTIPLIER", "0.2 TO 5 TO MULIPLY SPARK COUNT OF NEARBY EXPLOSIONS",
+		&explosion_multiplier, 'f', 0.2, 5.0, 5.0, 0, 0, 0 },
 	{ NULL, NULL, NULL, '\0', 0.0, 0.0, 0.0, 0, 0, 0 },
 };
 
