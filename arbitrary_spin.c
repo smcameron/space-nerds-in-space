@@ -31,7 +31,7 @@ void compute_arbitrary_spin(float frame_rate_hz, double timestamp,
 
 	/* current rotation is universe timestamp * rotation per timestamp
 	   rotational_velocity is frame_rate_hz and universe is 1/10 sec */
-	a = a * frame_rate_hz / 10.0 * timestamp;
+	a = a * frame_rate_hz / (10.0 * frame_rate_hz / 30) * timestamp;
 
 	quat_init_axis(orientation, x, y, z, a);
 }

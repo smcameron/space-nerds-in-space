@@ -195,7 +195,9 @@ static float current_altitude = 1e20;
 #define snis_draw_rectangle DEFAULT_RECTANGLE_STYLE
 #define snis_bright_line DEFAULT_BRIGHT_LINE_STYLE
 #define snis_draw_arc DEFAULT_ARC_STYLE
+static const int max_frame_rate_hz = 60;
 static int frame_rate_hz = 30;
+static int use_60_fps = 0; /* tweakable, set this to 1, and game will run at 60 fps */
 static int red_alert_mode = 0;
 #define MAX_UPDATETIME_START_PAUSE 1.5
 #define MAX_UPDATETIME_INTERVAL 0.5
@@ -1341,9 +1343,9 @@ static int update_ship_sdata(uint32_t id, uint8_t subclass, char *name,
 	if (go[i].type != OBJTYPE_PLANET &&
 		go[i].type != OBJTYPE_STARBASE &&
 		go[i].type != OBJTYPE_BLACK_HOLE)
-		go[i].sdata.science_data_known = 30 * 10; /* only remember for ten secs. */
+		go[i].sdata.science_data_known = frame_rate_hz * 10; /* only remember for ten secs. */
 	else
-		go[i].sdata.science_data_known = 30 * 60; /* unless planet, starbase or black hole */
+		go[i].sdata.science_data_known = frame_rate_hz * 60; /* unless planet, starbase or black hole */
 		
 	return 0;
 }
@@ -2462,7 +2464,7 @@ static void move_sparks(void)
 static void spin_wormhole(double timestamp, struct snis_entity *o)
 {
 	/* -0.5 degree per frame */
-	float a = -0.5 * M_PI / 180.0;
+	float a = (frame_rate_hz / 30.0) * (-0.5 * M_PI / 180.0);
 
 	/* current rotation is universe timestamp * rotation per timestamp
 	   rotational_velocity is frame_rate_hz and universe is 1/10 sec */
@@ -4028,8 +4030,7 @@ static struct js_state jss[MAX_JOYSTICKS] = { { { 0 } } };
 static void deal_with_joysticks()
 {
 
-#define FRAME_RATE_HZ 30 
-	static const int joystick_throttle = (int) ((FRAME_RATE_HZ / 15.0) + 0.5);
+	int joystick_throttle = 3;
 	int i, j, rc;
 
 	if (!joystick_cfg)
@@ -4141,7 +4142,7 @@ static void deal_with_keyboard()
 	int h, v, z, r, t;
 	int sbh, sbv, sbr; /* sciball keys */
 
-	static const int keyboard_throttle = (int) ((FRAME_RATE_HZ / 15.0) + 0.5);
+	int keyboard_throttle = 3;
 	if (timer % keyboard_throttle != 0)
 		return;
 
@@ -4239,7 +4240,7 @@ static gint key_press_cb(GtkWidget* widget, GdkEventKey* event, gpointer data)
 	case key_invert_vertical:
 			if (control_key_pressed) {
 				vertical_controls_inverted *= -1;
-				vertical_controls_timer = FRAME_RATE_HZ;
+				vertical_controls_timer = frame_rate_hz;
 			}
 			return TRUE;
 	case key_mouse_mode:
@@ -4248,7 +4249,7 @@ static gint key_press_cb(GtkWidget* widget, GdkEventKey* event, gpointer data)
 					desired_mouse_ui_mode = MOUSE_MODE_FREE_MOUSE;
 				else
 					desired_mouse_ui_mode = MOUSE_MODE_CAPTURED_MOUSE;
-				mouse_mode_timer = FRAME_RATE_HZ;
+				mouse_mode_timer = frame_rate_hz;
 				return TRUE;
 			}
 			break;
@@ -4261,7 +4262,7 @@ static gint key_press_cb(GtkWidget* widget, GdkEventKey* event, gpointer data)
 			else
 				nfake_stars = 0;
 			ecx_fake_stars_initialized = 0;
-			fake_stars_timer = FRAME_RATE_HZ;
+			fake_stars_timer = frame_rate_hz;
 			return TRUE;
 	case key_toggle_frame_stats:
 			display_frame_stats = (display_frame_stats + 1) % 3;
@@ -4324,7 +4325,7 @@ static gint key_press_cb(GtkWidget* widget, GdkEventKey* event, gpointer data)
 				external_camera_velocity.v.x = 0.0;
 				external_camera_velocity.v.y = 0.0;
 				external_camera_velocity.v.z = 0.0;
-				external_camera_active_timer = FRAME_RATE_HZ;
+				external_camera_active_timer = frame_rate_hz;
 			}
 		}
 		break;
@@ -6185,7 +6186,7 @@ static int process_textscreen_op(void)
 		if (rc != 0)
 			return rc;
 		memcpy(textscreen, buffer, sizeof(textscreen));
-		textscreen_timer = timevalue * 30;
+		textscreen_timer = timevalue * frame_rate_hz;
 		break;
 	case OPCODE_TEXTSCREEN_MENU:
 		rc = read_and_unpack_buffer(buffer, "h", &length);
@@ -6291,7 +6292,7 @@ static int process_update_solarsystem_location(void)
 		starmap[i].x = x;
 		starmap[i].y = y;
 		starmap[i].z = z;
-		starmap[i].time_before_expiration = 30 * 10; /* 10 seconds */
+		starmap[i].time_before_expiration = frame_rate_hz * 10; /* 10 seconds */
 	}
 	if (!found) {
 		if (nstarmap_entries < MAXSTARMAPENTRIES) {
@@ -6300,7 +6301,7 @@ static int process_update_solarsystem_location(void)
 			starmap[i].x = x;
 			starmap[i].y = y;
 			starmap[i].z = z;
-			starmap[i].time_before_expiration = 30 * 10; /* 10 seconds */
+			starmap[i].time_before_expiration = frame_rate_hz * 10; /* 10 seconds */
 			nstarmap_entries++;
 		}
 	}
@@ -6501,7 +6502,7 @@ static void do_text_to_speech(char *text)
 	fixed_text = fix_pronunciation(text);
 
 	/* Suppress temporally proximate duplicate speech requests */
-	if (timer - last_time < FRAME_RATE_HZ * 6
+	if (timer - last_time < frame_rate_hz * 6
 		&& strncmp(fixed_text, last_speech, sizeof(last_speech) - 1) == 0) {
 		free(fixed_text);
 		return;
@@ -6669,7 +6670,7 @@ static int process_ship_damage_packet(int do_damage_limbo)
 	packed_buffer_extract_raw(&pb, (char *) &damage, sizeof(damage));
 	pthread_mutex_lock(&universe_mutex);
 	go[i].tsd.ship.damage = damage;
-	go[i].tsd.ship.flames_timer = 15 * 30; /* 15 secs of possible flames */
+	go[i].tsd.ship.flames_timer = 15 * frame_rate_hz; /* 15 secs of possible flames */
 	pthread_mutex_unlock(&universe_mutex);
 	if (id == my_ship_id && do_damage_limbo) {
 		damage_limbo_countdown = 2;
@@ -7278,7 +7279,7 @@ static int process_add_player_error(uint8_t *error)
 		snprintf(login_failed_msg, sizeof(login_failed_msg), "UNKNOWN ERROR");
 		break;
 	}
-	login_failed_timer = FRAME_RATE_HZ * 5;
+	login_failed_timer = frame_rate_hz * 5;
 	*error = err;
 	return 0;
 }
@@ -8298,7 +8299,7 @@ static void show_common_screen(GtkWidget *w, char *title)
 		sng_center_xy_draw_string(msg, SMALL_FONT, SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2);
 	} else {
 		if (external_camera_active_timer == 0 && !external_camera_active)
-			external_camera_active_timer = FRAME_RATE_HZ;
+			external_camera_active_timer = frame_rate_hz;
 	}
 	if (vertical_controls_timer) {
 		sng_set_foreground(UI_COLOR(special_options));
@@ -8366,7 +8367,7 @@ static int newzoom(int current_zoom, int desired_zoom)
 	if (current_zoom != desired_zoom) {
 		int delta;
 
-		delta = abs(desired_zoom - current_zoom) / 10;
+		delta = abs(desired_zoom - current_zoom) / (10 * (use_60_fps + 1));
 		if (delta <= 0)
 			delta = 1;
 		if (desired_zoom < current_zoom)
@@ -8881,11 +8882,11 @@ static void update_external_camera_position_and_orientation(struct snis_entity *
 		external_camera_position = desired_external_camera_position;
 	} else {
 		quat_nlerp(&external_camera_orientation, &external_camera_orientation,
-				&desired_external_camera_orientation, 0.15);
+				&desired_external_camera_orientation, 0.15 / (use_60_fps + 1));
 		vec3_add_self(&desired_external_camera_position, &external_camera_velocity);
 		vec3_mul_self(&external_camera_velocity, 0.95); /* Damping */
 		vec3_lerp(&external_camera_position, &external_camera_position,
-				&desired_external_camera_position, 0.15);
+				&desired_external_camera_position, 0.15 / (use_60_fps + 1));
 	}
 	*cam_orientation = external_camera_orientation;
 	*cam_pos = external_camera_position;
@@ -8946,7 +8947,7 @@ static void show_mainscreen(GtkWidget *w)
 					camera_orientation = desired_cam_orientation;
 				else
 					quat_nlerp(&camera_orientation, &camera_orientation,
-							&desired_cam_orientation, 0.08);
+							&desired_cam_orientation, 0.08 / (use_60_fps + 1));
 				break;
 			}
 		} else {
@@ -8974,7 +8975,7 @@ static void show_mainscreen(GtkWidget *w)
 		if (first_frame)
 			cam_offset = desired_cam_offset;
 		else
-			vec3_lerp(&cam_offset, &cam_offset, &desired_cam_offset, 0.15);
+			vec3_lerp(&cam_offset, &cam_offset, &desired_cam_offset, 0.15 / (use_60_fps + 1));
 
 		if (main_camera_shake > 0.05 && vp == o) {
 			float ryaw, rpitch;
@@ -9904,9 +9905,10 @@ static void draw_sciplane_display(GtkWidget *w, struct snis_entity *o, double ra
 		cam_range_fraction = desired_cam_range_fraction;
 		camera_lookat = desired_lookat;
 	} else {
-		quat_nlerp(&cam_orientation, &cam_orientation, desired_cam_orientation, 0.15);
-		vec3_lerp(&camera_lookat, &camera_lookat, &desired_lookat, 0.15);
-		cam_range_fraction = float_lerp(cam_range_fraction, desired_cam_range_fraction, 0.15);
+		quat_nlerp(&cam_orientation, &cam_orientation, desired_cam_orientation, 0.15 / (use_60_fps + 1));
+		vec3_lerp(&camera_lookat, &camera_lookat, &desired_lookat, 0.15 / (use_60_fps + 1));
+		cam_range_fraction = float_lerp(cam_range_fraction, desired_cam_range_fraction,
+							0.15 / (use_60_fps + 1));
 	}
 
 	union vec3 camera_pos = {{0, 0, cam_range_fraction * range}};
@@ -10845,7 +10847,7 @@ static double sample_ship_velocity(void)
 	lasty = o->y;
 	lastz = o->z;
 
-	dist = FRAME_RATE_HZ * dist3d(vx, vy, vz);
+	dist = frame_rate_hz * dist3d(vx, vy, vz);
 	if (dist > 10000)
 		dist = 0;
 	memmove(&lastdist[0], &lastdist[1], (VELOCITY_INDICATOR_SAMPLES - 1) * sizeof(lastdist[0]));
@@ -12357,7 +12359,7 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 	if (first_frame) {
 		quat_copy(&cam_orientation, &o->orientation);
 	} else {
-		quat_nlerp(&cam_orientation, &cam_orientation, &o->orientation, 0.1);
+		quat_nlerp(&cam_orientation, &cam_orientation, &o->orientation, 0.1 / (use_60_fps + 1));
 	}
 
 	union vec3 camera_up = {{0,1,0}};
@@ -15191,7 +15193,7 @@ static void science_button_held(int button, int x, int y)
 	x = sng_pixelx_to_screenx(x);
 	y = sng_pixely_to_screeny(y);
 
-	int traffic_throttle = (int) ((FRAME_RATE_HZ / 15.0) + 0.5);
+	int traffic_throttle = (int) ((frame_rate_hz / 15.0) + 0.5);
 
 	switch (button) {
 	case 2:
@@ -15549,7 +15551,7 @@ static void draw_science_data(GtkWidget *w, struct snis_entity *ship, struct sni
 	sng_abs_xy_draw_string(buffer, TINY_FONT, x, y);
 
 	if (o || waypoint_index != (uint32_t) -1) {
-		closing_rate = FRAME_RATE_HZ * (last_range - range);
+		closing_rate = frame_rate_hz * (last_range - range);
 		last_range = range;
 		snprintf(buffer, sizeof(buffer), "CLOSING RATE: %0.2lf", closing_rate);
 	} else {
@@ -16814,6 +16816,8 @@ static struct tweakable_var_descriptor client_tweak[] = {
 		&main_nav_hybrid, 'i', 0.0, 0.0, 0.0, 0, 1, 0 },
 	{ "EXPLOSION_MULTIPLIER", "0.2 TO 5 TO MULIPLY SPARK COUNT OF NEARBY EXPLOSIONS",
 		&explosion_multiplier, 'f', 0.2, 5.0, 5.0, 0, 0, 0 },
+	{ "USE_60_FPS", "0 OR 1 to USE 30 OR 60 FPS, RESPECTIVELY",
+		&use_60_fps, 'i', 0.0, 0.0, 0.0, 0, 1, 1 },
 	{ NULL, NULL, NULL, '\0', 0.0, 0.0, 0.0, 0, 0, 0 },
 };
 
@@ -19306,7 +19310,8 @@ static void draw_quit_screen(GtkWidget *w)
 
 static void do_display_frame_stats(const float frame_rates[], const float frame_times[], const int nframes)
 {
-#define ACCEPTABLE_FRAME_RATE (29.0)
+/* This works out to either 29 or 58 FPS */
+#define ACCEPTABLE_FRAME_RATE (frame_rate_hz - 1.0 - use_60_fps)
 	float avg_frame_rate = 0;
 	float avg_frame_time = 0;
 	int i;
@@ -19337,7 +19342,7 @@ static void do_display_frame_stats(const float frame_rates[], const float frame_
 static int main_da_expose(GtkWidget *w, GdkEvent *event, gpointer p)
 {
 	static double last_frame_time = 0;
-	static int how_long_to_wait = 30 * 4; /* 4 seconds */
+	static int how_long_to_wait = -1; /* 4 seconds */
 	static int frame_index = 0;
 	static float frame_rates[FRAME_INDEX_MAX];
 	static float frame_times[FRAME_INDEX_MAX];
@@ -19384,6 +19389,8 @@ static int main_da_expose(GtkWidget *w, GdkEvent *event, gpointer p)
 	if (displaymode < DISPLAYMODE_FONTTEST) {
 		if (!(o = find_my_ship())) {
 			char msg[100];
+			if (how_long_to_wait == -1)
+				how_long_to_wait = 4 * frame_rate_hz;
 			if (how_long_to_wait > 0) {
 				snprintf(msg, sizeof(msg) - 1,
 						"PREPARE FOR THE JUMP TO LIGHTSPEED, SPACE NERD");
@@ -19398,7 +19405,7 @@ static int main_da_expose(GtkWidget *w, GdkEvent *event, gpointer p)
 				draw_quit_screen(w);
 			goto end_of_drawing;
 		} else {
-			how_long_to_wait = 30 * 4; /* 4 seconds */
+			how_long_to_wait = frame_rate_hz * 4; /* 4 seconds */
 		}
 		if (o->alive <= 0 && displaymode != DISPLAYMODE_DEMON) {
 			red_alert_mode = 0;
@@ -19605,8 +19612,27 @@ static void notify_server_of_displaymode_change(void)
 gint advance_game(gpointer data)
 {
 	int time_to_switch_servers;
+	static int skip = 0;
 
-	timer++;
+	/* Bit of a hack to enable 60 fps.  advance game now gets called at 60Hz always, but
+	 * skip every other update if we want to run the game at 30Hz.
+	 * Also, we increment timer only every other frame when running at 60 fps because
+	 * there are many, many places where we assume that timer updates at 30Hz.
+	 */
+	if (!use_60_fps) {
+		if (skip) {
+			skip = !skip;
+			return TRUE;
+		}
+		frame_rate_hz = 30;
+		skip = !skip;
+		timer++;
+	} else {
+		frame_rate_hz = 60;
+		if (!skip)
+			timer++;
+		skip = !skip;
+	}
 
 	if (red_alert_mode && (role & ROLE_SOUNDSERVER)) {
 		if ((timer % 45) == 0 && (timer % (45 * 6)) < (45 * 3))
@@ -21903,7 +21929,7 @@ int main(int argc, char *argv[])
 	sng_set_context(GTK_WIDGET(main_da)->window, gc);
 	sng_set_foreground(WHITE);
 
-	timer_tag = g_timeout_add(1000 / frame_rate_hz, advance_game, NULL);
+	timer_tag = g_timeout_add(1000 / max_frame_rate_hz, advance_game, NULL);
 
 #ifndef GLIB_VERSION_2_32
 	/* this is only needed in glibc versions before 2.32 */
