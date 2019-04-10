@@ -50,7 +50,7 @@ int tweak_variable(struct tweakable_var_descriptor *tweak, int count, char *cmd,
 	int i;
 	uint8_t b;
 
-	rc = sscanf(cmd, "SET %s%*[ ]=%*[ ]%s", variable, valuestr);
+	rc = sscanf(cmd, "SET %[^= ]%*[ =]%[^= ]", variable, valuestr);
 	if (rc != 2) {
 		if (msg)
 			snprintf(msg, msgsize, "SET: INVALID SET COMMAND: %s", cmd);
