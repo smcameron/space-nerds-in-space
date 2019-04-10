@@ -2320,8 +2320,10 @@ static void nebula_move(struct snis_entity *o)
 	float x, y, z, a;
 	double ts = universe_timestamp();
 	float r;
-	float angle = (M_PI / 180.0) * ((unsigned int) (o->tsd.nebula.phase_angle * ts *
-			o->tsd.nebula.phase_speed) % 360);
+	const int degree_subdivisions = 16.0; /* make angular quantization less noticeable */
+	float angle = (M_PI / 180.0) * ((unsigned int) (o->tsd.nebula.phase_angle * ts * degree_subdivisions *
+			o->tsd.nebula.phase_speed) % (degree_subdivisions * 360));
+	angle /= (float) degree_subdivisions;
 	r = sin(angle) * o->tsd.nebula.r * 0.2 + o->tsd.nebula.r;
 	if (o->entity) {
 		x = o->tsd.nebula.avx;
