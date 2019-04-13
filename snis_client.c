@@ -8380,7 +8380,7 @@ static int newzoom(int current_zoom, int desired_zoom)
 	return current_zoom;
 }
 
-#define NEAR_CAMERA_PLANE 1.0
+#define NEAR_CAMERA_PLANE 5.0
 #ifndef WITHOUTOPENGL
 /* far plane is the whole universe */
 #define FAR_CAMERA_PLANE (XKNOWN_DIM)
