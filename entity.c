@@ -859,6 +859,7 @@ static void update_entity_child_state(struct entity *e)
 	e->orientation = orientation;
 }
 
+
 void render_entities(struct entity_context *cx)
 {
 	int i, j, n;
@@ -883,24 +884,21 @@ void render_entities(struct entity_context *cx)
 	}
 
 	/* do the draw in multiple decades depending on the dynamic range of near/far
-
-	   a good rule of thumb is to have far / near < 10000 on 24-bit depth buffer
-
-	   since I can't really figure out how to exactly calculate this I will just punt
-	   and figure that we will not be drawing past near * 10000 * 10000 so it can be done
-	   in two passes */
+	   a good rule of thumb is to have far / near < 10000 on 24-bit depth buffer */
+	float render_pass_boundary = cx->camera.near * 10000.0;
 	int n_passes;
 	struct frustum rendering_pass[2];
 
-	if (cx->camera.far / cx->camera.near < 10000) {
+	if (cx->camera.far / cx->camera.near < render_pass_boundary) {
 		n_passes = 1;
 		rendering_pass[0] = c->frustum;
 	} else {
 		n_passes = 2;
 		calculate_camera_transform_near_far(&cx->camera, &rendering_pass[0],
-			cx->camera.near * 10000, cx->camera.far);
+			cx->camera.near * render_pass_boundary, cx->camera.far);
 		calculate_camera_transform_near_far(&cx->camera, &rendering_pass[1],
-			cx->camera.near, cx->camera.near * 10010); /* render a little farther to cover seam */
+			cx->camera.near, cx->camera.near * render_pass_boundary + 10);
+			/* the + 10 is to render a little farther to cover seam */
 	}
 
 	int pass;
