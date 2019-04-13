@@ -113,23 +113,25 @@ static inline void packed_double_nbo(struct packed_double *pd)
 	a[7] = b[0];
 }
 
-#define PACKED_BUFFER_CHECK(pb) { \
-	if ((pb)->buffer_cursor > (pb)->buffer_size) { \
-		fprintf(stderr, "pb->buffer_cursor = %d, pb->buffer_size = %d\n", \
-			pb->buffer_cursor, pb->buffer_size); \
-		packed_buffer_print("sanity violation", pb); \
-		stacktrace("pb->buffer_cursor > pb->buffer_size\n"); \
-		assert((pb)->buffer_cursor <= (pb)->buffer_size); \
-	} \
+static void packed_buffer_check(struct packed_buffer *pb)
+{
+	if (pb->buffer_cursor > pb->buffer_size) {
+		fprintf(stderr, "pb->buffer_cursor = %d, pb->buffer_size = %d\n",
+			pb->buffer_cursor, pb->buffer_size);
+		packed_buffer_print("sanity violation", pb);
+		stacktrace("pb->buffer_cursor > pb->buffer_size\n");
+		assert((pb)->buffer_cursor <= (pb)->buffer_size);
+	}
 }
 
-#define PACKED_BUFFER_CHECK_ADD(pb, additional_bytes) { \
-	if ((pb)->buffer_cursor + (additional_bytes) > (pb)->buffer_size) { \
-		fprintf(stderr, "Buffer overflow: cursor = %d, additional bytes = %llu, buffer size = %d\n", \
-			pb->buffer_cursor, (unsigned long long) additional_bytes, pb->buffer_size); \
-		stacktrace(""); \
-		assert(0); \
-	} \
+static void packed_buffer_check_add(struct packed_buffer *pb, int additional_bytes)
+{
+	if (pb->buffer_cursor + (additional_bytes) > pb->buffer_size) {
+		fprintf(stderr, "Buffer overflow: cursor = %d, additional bytes = %llu, buffer size = %d\n",
+			pb->buffer_cursor, (unsigned long long) additional_bytes, pb->buffer_size);
+		stacktrace("");
+		assert(0);
+	}
 }
 
 /* Change a packed double to host byte order. */
@@ -141,12 +143,12 @@ static inline void packed_double_to_host(struct packed_double *pd)
 int packed_buffer_append_double(struct packed_buffer *pb, double value)
 {
 	struct packed_double pd;
-	PACKED_BUFFER_CHECK_ADD(pb, sizeof(pd));
+	packed_buffer_check_add(pb, sizeof(pd));
 	pack_double(value, &pd);
 	packed_double_nbo(&pd);
 	memcpy(&pb->buffer[pb->buffer_cursor], &pd, sizeof(pd));
 	pb->buffer_cursor += sizeof(pd);
-	PACKED_BUFFER_CHECK(pb);
+	packed_buffer_check(pb);
 	return 0;
 }
 
@@ -156,7 +158,7 @@ double packed_buffer_extract_double(struct packed_buffer *pb)
 
 	memcpy(&pd, &pb->buffer[pb->buffer_cursor], sizeof(pd));
 	pb->buffer_cursor += sizeof(pd);
-	PACKED_BUFFER_CHECK(pb);
+	packed_buffer_check(pb);
 	packed_double_to_host(&pd);
 	return unpack_double(&pd);	
 }
@@ -166,7 +168,7 @@ int packed_buffer_append_u16(struct packed_buffer *pb, uint16_t value)
 	value = htons(value);
 	memcpy(&pb->buffer[pb->buffer_cursor], &value, sizeof(value));
 	pb->buffer_cursor += sizeof(value);
-	PACKED_BUFFER_CHECK(pb);
+	packed_buffer_check(pb);
 	return 0;
 }
 
@@ -175,7 +177,7 @@ int packed_buffer_append_u8(struct packed_buffer *pb, uint8_t value)
 	uint8_t *c = (uint8_t *) &pb->buffer[pb->buffer_cursor];
 	*c = value;
 	pb->buffer_cursor += 1;
-	PACKED_BUFFER_CHECK(pb);
+	packed_buffer_check(pb);
 	return 0;
 }
 
@@ -184,7 +186,7 @@ int packed_buffer_append_u32(struct packed_buffer *pb, uint32_t value)
 	value = htonl(value);
 	memcpy(&pb->buffer[pb->buffer_cursor], &value, sizeof(value));
 	pb->buffer_cursor += sizeof(value);
-	PACKED_BUFFER_CHECK(pb);
+	packed_buffer_check(pb);
 	return 0;
 }
 
@@ -193,7 +195,7 @@ int packed_buffer_append_u64(struct packed_buffer *pb, uint64_t value)
 	value = cpu_to_be64(value);
 	memcpy(&pb->buffer[pb->buffer_cursor], &value, sizeof(value));
 	pb->buffer_cursor += sizeof(value);
-	PACKED_BUFFER_CHECK(pb);
+	packed_buffer_check(pb);
 	return 0;
 }
 
@@ -203,7 +205,7 @@ uint16_t packed_buffer_extract_u16(struct packed_buffer *pb)
 
 	memcpy(&value, &pb->buffer[pb->buffer_cursor], sizeof(value));
 	pb->buffer_cursor += sizeof(value);
-	PACKED_BUFFER_CHECK(pb);
+	packed_buffer_check(pb);
 	value = ntohs(value);
 	return value;
 }
@@ -212,7 +214,7 @@ uint8_t packed_buffer_extract_u8(struct packed_buffer *pb)
 {
 	uint8_t *c = (uint8_t *) &pb->buffer[pb->buffer_cursor];
 	pb->buffer_cursor += 1;
-	PACKED_BUFFER_CHECK(pb);
+	packed_buffer_check(pb);
 	return *c;
 }
 
@@ -222,7 +224,7 @@ uint32_t packed_buffer_extract_u32(struct packed_buffer *pb)
 
 	memcpy(&value, &pb->buffer[pb->buffer_cursor], sizeof(value));
 	pb->buffer_cursor += sizeof(value);
-	PACKED_BUFFER_CHECK(pb);
+	packed_buffer_check(pb);
 	value = ntohl(value);
 	return value;
 }
@@ -233,7 +235,7 @@ uint64_t packed_buffer_extract_u64(struct packed_buffer *pb)
 
 	memcpy(&value, &pb->buffer[pb->buffer_cursor], sizeof(value));
 	pb->buffer_cursor += sizeof(value);
-	PACKED_BUFFER_CHECK(pb);
+	packed_buffer_check(pb);
 	value = be64_to_cpu(value);
 	return value;
 }
@@ -242,14 +244,14 @@ int packed_buffer_append_string(struct packed_buffer *pb, unsigned char *str, un
 {
 	unsigned short belen;
 
-	PACKED_BUFFER_CHECK_ADD(pb, sizeof(unsigned short) + len);
+	packed_buffer_check_add(pb, sizeof(unsigned short) + len);
 	belen = htons(len);	
 	memcpy(&pb->buffer[pb->buffer_cursor], &belen, sizeof(belen));
 	pb->buffer_cursor += sizeof(belen);
-	PACKED_BUFFER_CHECK(pb);
+	packed_buffer_check(pb);
 	memcpy(&pb->buffer[pb->buffer_cursor], &str, len);
 	pb->buffer_cursor += len;
-	PACKED_BUFFER_CHECK(pb);
+	packed_buffer_check(pb);
 	return 0;
 }
 
@@ -262,10 +264,10 @@ int packed_buffer_extract_string(struct packed_buffer *pb, char *buffer, int buf
 	if (len < buflen)
 		buflen = len;
 	pb->buffer_cursor += sizeof(len);
-	PACKED_BUFFER_CHECK(pb);
+	packed_buffer_check(pb);
 	memcpy(buffer, &pb->buffer[pb->buffer_cursor], len > buflen ? buflen : len); 
 	pb->buffer_cursor += len;	
-	PACKED_BUFFER_CHECK(pb);
+	packed_buffer_check(pb);
 	return len > buflen ? buflen : len;
 }
 
@@ -273,7 +275,7 @@ int packed_buffer_append_raw(struct packed_buffer *pb, const char *buffer, unsig
 {
 	memcpy(&pb->buffer[pb->buffer_cursor], buffer, len);
 	pb->buffer_cursor += len;
-	PACKED_BUFFER_CHECK(pb);
+	packed_buffer_check(pb);
 	return 0;
 }
 
@@ -281,7 +283,7 @@ int packed_buffer_extract_raw(struct packed_buffer *pb, char *buffer, unsigned s
 {
 	memcpy(buffer, &pb->buffer[pb->buffer_cursor], len);
 	pb->buffer_cursor += len;
-	PACKED_BUFFER_CHECK(pb);
+	packed_buffer_check(pb);
 	return 0;
 }
 
@@ -350,7 +352,7 @@ struct packed_buffer *packed_buffer_queue_combine(struct packed_buffer_queue *pb
 			memcpy(&answer->buffer[answer->buffer_cursor],
 				i->buffer->buffer, i->buffer->buffer_cursor);
 			answer->buffer_cursor += i->buffer->buffer_cursor;
-			PACKED_BUFFER_CHECK(answer);
+			packed_buffer_check(answer);
 			packed_buffer_free(i->buffer);
 			pbq->head = i->next;
 			free(i);
@@ -543,12 +545,12 @@ int packed_buffer_append_quat(struct packed_buffer *pb, float q[])
 	int i;
 	int16_t v[4];
 
-	PACKED_BUFFER_CHECK_ADD(pb, sizeof(v));
+	packed_buffer_check_add(pb, sizeof(v));
 	for (i = 0; i < 4; i++)
 		v[i] = htons(Qtos16(q[i]));
 	memcpy(&pb->buffer[pb->buffer_cursor], v, sizeof(v));
 	pb->buffer_cursor += sizeof(v);
-	PACKED_BUFFER_CHECK(pb);
+	packed_buffer_check(pb);
 	return 0;
 }
 
@@ -562,7 +564,7 @@ void packed_buffer_extract_quat(struct packed_buffer *pb, float q[])
 		memcpy(&v, &pb->buffer[pb->buffer_cursor], sizeof(v));
 		q[i] = s16toQ(ntohs(v));
 		pb->buffer_cursor += sizeof(v);
-		PACKED_BUFFER_CHECK(pb);
+		packed_buffer_check(pb);
 	}
 }
 
