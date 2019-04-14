@@ -885,7 +885,7 @@ void render_entities(struct entity_context *cx)
 
 	/* do the draw in multiple decades depending on the dynamic range of near/far
 	   a good rule of thumb is to have far / near < 10000 on 24-bit depth buffer */
-	float render_pass_boundary = cx->camera.near * 2500.0;
+	float render_pass_boundary = cx->camera.near * 5000.0;
 	int n_passes;
 	struct frustum rendering_pass[2];
 
@@ -895,9 +895,9 @@ void render_entities(struct entity_context *cx)
 	} else {
 		n_passes = 2;
 		calculate_camera_transform_near_far(&cx->camera, &rendering_pass[0],
-			cx->camera.near * render_pass_boundary, cx->camera.far);
+							render_pass_boundary, cx->camera.far);
 		calculate_camera_transform_near_far(&cx->camera, &rendering_pass[1],
-			cx->camera.near, cx->camera.near * render_pass_boundary + render_pass_boundary / 1000.0);
+			cx->camera.near, render_pass_boundary + render_pass_boundary / 1000.0);
 			/* the additional 0.1% is to render a little farther to cover seam */
 	}
 
