@@ -8380,9 +8380,7 @@ static int newzoom(int current_zoom, int desired_zoom)
 	return current_zoom;
 }
 
-/* Weapons near plane needs to be small so as not to clip the guns */
-#define WEAPONS_NEAR_CAMERA_PLANE 1.6666
-#define NEAR_CAMERA_PLANE 8.0
+#define NEAR_CAMERA_PLANE 1.0
 #ifndef WITHOUTOPENGL
 /* far plane is the whole universe */
 #define FAR_CAMERA_PLANE (XKNOWN_DIM)
@@ -8664,7 +8662,7 @@ static void show_weapons_camera_view(GtkWidget *w)
 
 	camera_set_pos(ecx, cam_pos.v.x, cam_pos.v.y, cam_pos.v.z);
 	camera_set_orientation(ecx, &camera_orientation);
-	camera_set_parameters(ecx, WEAPONS_NEAR_CAMERA_PLANE * SHIP_MESH_SCALE, FAR_CAMERA_PLANE,
+	camera_set_parameters(ecx, NEAR_CAMERA_PLANE * SHIP_MESH_SCALE, FAR_CAMERA_PLANE,
 				SCREEN_WIDTH, SCREEN_HEIGHT, angle_of_view);
 	set_window_offset(ecx, 0, 0);
 	set_lighting(ecx, SUNX, SUNY, SUNZ);
