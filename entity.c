@@ -999,9 +999,10 @@ void render_entities(struct entity_context *cx)
 				float zdist = vec3_dot(&camera_to_entity, &camera_look);
 				if (zdist < 0)
 					continue; /* behind camera, ignore (should already be frustum culled). */
-
+				if (e->m->geometry_mode == MESH_GEOMETRY_POINTS) /* Ignore fake stars, etc. */
+					continue;
 				if (e->m->radius * max_scale >= 299999.0)
-					continue; /* Hack to ignore fake stars (r=INT_MAX) & warp tunnels (r=300000) */
+					continue; /* Hack to ignore warp tunnels (r=300000) */
 
 				/* Check each candidate boundary for intersection with this object */
 				for (k = 0; k < 3; k++)
