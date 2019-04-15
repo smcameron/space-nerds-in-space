@@ -862,7 +862,7 @@ static void update_entity_child_state(struct entity *e)
 
 void render_entities(struct entity_context *cx)
 {
-	int i, j, n;
+	int i, j, k, n;
 	struct camera_info *c = &cx->camera;
 
 	sng_set_3d_viewport(cx->window_offset_x, cx->window_offset_y, c->xvpixels, c->yvpixels);
@@ -883,11 +883,33 @@ void render_entities(struct entity_context *cx)
 		mesh_graph_dev_init(cx->fake_stars_mesh);
 	}
 
-	/* do the draw in multiple decades depending on the dynamic range of near/far
-	   a good rule of thumb is to have far / near < 10000 on 24-bit depth buffer */
-	float render_pass_boundary = cx->camera.near * 5000.0;
+	/* For better depth buffer precision do the draw in multiple (two) passes based on the
+	 * dynamic range of near/far, and clear the depth buffer between passes. A good rule of
+	 * thumb is to have far / near < 10000 on 24-bit depth buffer.  At the boundary between
+	 * passes a slight seam can become visible. To avoid this visible seam we should try to
+	 * avoid having the boundary between passes intersect any large objects.  To this end we
+	 * have 3 reasonable candidate boundary distances and choose the boundary distance which
+	 * intersects the fewest large objects.
+	 */
+	float boundary_candidate[3] = { /* distance candidates for the boundary between passes */
+		cx->camera.near * 4000.0,
+		cx->camera.near * 7000.0,
+		cx->camera.near * 10000.0,
+	};
+	int boundary_intersects[3] = { 0, 0, 0 }; /* Count of objects intersecting each boundary distance plane */
+	int last_candidate, candidate = 0;
+	float render_pass_boundary = boundary_candidate[0];
+	union vec3 camera_pos, camera_look, camera_to_entity;
 	int n_passes;
 	struct frustum rendering_pass[2];
+
+	camera_pos.v.x = cx->camera.x;
+	camera_pos.v.y = cx->camera.y;
+	camera_pos.v.z = cx->camera.z;
+	camera_look.v.x = cx->camera.lx - cx->camera.x;
+	camera_look.v.y = cx->camera.ly - cx->camera.y;
+	camera_look.v.z = cx->camera.lz - cx->camera.z;
+	vec3_normalize_self(&camera_look);
 
 	if (cx->camera.far / cx->camera.near < render_pass_boundary) {
 		n_passes = 1;
@@ -911,6 +933,12 @@ void render_entities(struct entity_context *cx)
 
 		cx->nnear_to_far_entity_depth = 0;
 		cx->nfar_to_near_entity_depth = 0;
+
+		if (pass == 0) {
+			boundary_intersects[0] = 0;
+			boundary_intersects[1] = 0;
+			boundary_intersects[2] = 0;
+		}
 
 		for (j = 0; j <= n; j++) {
 			if (!snis_object_pool_is_allocated(cx->entity_pool, j))
@@ -958,6 +986,47 @@ void render_entities(struct entity_context *cx)
 					cx->near_to_far_entity_depth[cx->nnear_to_far_entity_depth] = j;
 					cx->nnear_to_far_entity_depth++;
 					break;
+			}
+
+			/* For each boundary candidate, count large object intersections */
+			if (pass == 0 && n_passes > 1) {
+				if (e->m->radius * max_scale < 500)
+					continue; /* ignore small objects in choosing render pass boundary */
+				camera_to_entity.v.x = e->x - camera_pos.v.x;
+				camera_to_entity.v.y = e->y - camera_pos.v.y;
+				camera_to_entity.v.z = e->z - camera_pos.v.z;
+
+				float zdist = vec3_dot(&camera_to_entity, &camera_look);
+				if (zdist < 0)
+					continue; /* behind camera, ignore (should already be frustum culled). */
+
+				if (e->m->radius * max_scale >= 299999.0)
+					continue; /* Hack to ignore fake stars (r=INT_MAX) & warp tunnels (r=300000) */
+
+				/* Check each candidate boundary for intersection with this object */
+				for (k = 0; k < 3; k++)
+					if (fabsf(zdist - boundary_candidate[k]) < e->m->radius * max_scale)
+						boundary_intersects[k]++;
+			}
+		}
+
+		if (pass == 0 && n_passes > 1) {
+			/* Find the boundary candidate with the fewest large object intersections */
+			last_candidate = candidate;
+			candidate = 0;
+			if (boundary_intersects[1] < boundary_intersects[candidate])
+				candidate = 1;
+			if (boundary_intersects[2] < boundary_intersects[candidate])
+				candidate = 2;
+
+			if (last_candidate != candidate) {
+				/* Recalculate the camera transforms if the render pass boundary was changed
+				   to avoid some intersecting object */
+				render_pass_boundary = boundary_candidate[candidate];
+				calculate_camera_transform_near_far(&cx->camera, &rendering_pass[0],
+								render_pass_boundary, cx->camera.far);
+				calculate_camera_transform_near_far(&cx->camera, &rendering_pass[1],
+					cx->camera.near, render_pass_boundary + render_pass_boundary / 1000.0);
 			}
 		}
 
