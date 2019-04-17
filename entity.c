@@ -1015,10 +1015,17 @@ void render_entities(struct entity_context *cx)
 			/* Find the boundary candidate with the fewest large object intersections */
 			last_candidate = candidate;
 			candidate = 0;
-			if (boundary_intersects[1] < boundary_intersects[candidate])
-				candidate = 1;
-			if (boundary_intersects[2] < boundary_intersects[candidate])
-				candidate = 2;
+			if (boundary_intersects[candidate] != 0) {
+				/* Test for less than or *equal* so we choose the *farthest* among equals so
+				 * that any resulting artifacts are more likely to occupy less screen space
+				 * and be less obnoxious. With a little luck, it will even move it to a place
+				 * that is invisible, like the back side of a planet.
+				 */
+				if (boundary_intersects[1] <= boundary_intersects[candidate])
+					candidate = 1;
+				if (boundary_intersects[2] <= boundary_intersects[candidate])
+					candidate = 2;
+			}
 
 			if (last_candidate != candidate) {
 				/* Recalculate the camera transforms if the render pass boundary was changed
