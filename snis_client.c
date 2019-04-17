@@ -12670,12 +12670,14 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 					if (ring) {
 						update_entity_orientation(ring, &identity_quat);
 						update_entity_parent(instrumentecx, ring, contact);
+						update_entity_material(ring, &wireframe_material);
 					}
 					if (ring2) { /* Defeat backface culling by adding an upside down ring */
 						union quat upside_down;
 						quat_init_axis(&upside_down, 1, 0, 0, 180.0 * M_PI / 180.0);
 						update_entity_orientation(ring2, &upside_down);
 						update_entity_parent(instrumentecx, ring2, contact);
+						update_entity_material(ring2, &wireframe_material);
 					}
 				}
 			} else if (go[i].type == OBJTYPE_BLACK_HOLE) {
