@@ -28,12 +28,17 @@ void main()
 	// of scattered light.
 	float lightdot = dot(normalize(v_Normal), normalize(lightVector));
 
+	// Subtract some blue-green (opposite of orange)  as we get near the
+	// terminator to get a sunset effect.
+	float oranginess = pow(1.0 * abs(1.0 - abs(lightdot)), 16.0);
+	vec4 notorange = 0.5 * vec4(0.0, 0.5, 1.0, 0.7 * u_Alpha);
+
 	// As atmosphere thins out at edges, scattered light must fall off.
 	// Here is a super duper crude way to do that:
 	float attenuation = min((1.0 - eyedot), 0.25);
 	attenuation = 15.0 * attenuation * attenuation;
 
-	gl_FragColor = 2.1 * vec4(v_Color * attenuation * lightdot * eyedot2 * 0.7,
-					attenuation * lightdot * eyedot2 * 0.7 * u_Alpha);
+	gl_FragColor = 3.75 * vec4(v_Color * attenuation * lightdot * eyedot2 * 0.7,
+					attenuation * lightdot * eyedot2 * 0.7 * u_Alpha) - attenuation * oranginess * notorange;
 }
 
