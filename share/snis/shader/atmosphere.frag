@@ -30,8 +30,8 @@ void main()
 
 	// Subtract some blue-green (opposite of orange)  as we get near the
 	// terminator to get a sunset effect.
-	float oranginess = pow(1.0 * abs(1.0 - abs(lightdot)), 16.0);
-	vec4 notorange = 0.5 * vec4(0.0, 0.5, 1.0, 0.7 * u_Alpha);
+	float oranginess = pow(1.0 * abs(1.0 - abs(lightdot)), 12.0);
+	vec4 notorange = 0.5 * vec4(0.0, 0.4, 1.0, 0.7 * u_Alpha);
 
 	// As atmosphere thins out at edges, scattered light must fall off.
 	// Here is a super duper crude way to do that:
