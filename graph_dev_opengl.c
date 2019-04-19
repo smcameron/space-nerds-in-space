@@ -783,7 +783,7 @@ struct graph_dev_gl_textured_particle_shader {
 	GLint texture_id; /* param to vertex shader */
 };
 
-struct graph_dev_gl_fs_effect_shader {
+struct graph_dev_gl_fs_effect_shader { /* For full screen effect shaders */
 	GLuint program_id;
 	GLint mvp_matrix_id;
 	GLint vertex_position_id;
@@ -2571,7 +2571,7 @@ void graph_dev_draw_3d_line(struct entity_context *cx, const struct mat44 *mat_v
 	graph_dev_raster_line_mesh(&e, mat_vp, &m, &line_color);
 }
 
-static void graph_dev_raster_fs_effect(struct graph_dev_gl_fs_effect_shader *shader, GLuint texture0_id,
+static void graph_dev_raster_full_screen_effect(struct graph_dev_gl_fs_effect_shader *shader, GLuint texture0_id,
 	GLuint texture1_id, GLuint texture2_id, const struct sng_color *tint_color, float alpha)
 {
 	static const struct mat44 mat_identity = { { { 1, 0, 0, 0}, { 0, 1, 0, 0 }, { 0, 0, 1, 0}, { 0, 0, 0, 1} } };
@@ -2724,20 +2724,21 @@ void graph_dev_end_frame()
 			/* edge detect pass - render into edge_fbo */
 			glBindFramebuffer(GL_FRAMEBUFFER, smaa_effect.edge_target.fbo);
 			glClear(GL_COLOR_BUFFER_BIT);
-			graph_dev_raster_fs_effect(&smaa_effect.edge_shader, post_target0.color0_texture,
+			graph_dev_raster_full_screen_effect(&smaa_effect.edge_shader, post_target0.color0_texture,
 				0, 0, 0, 1);
 
 			/* blend pass - render into blend_fbo */
 			glBindFramebuffer(GL_FRAMEBUFFER, smaa_effect.blend_target.fbo);
 			glClear(GL_COLOR_BUFFER_BIT);
-			graph_dev_raster_fs_effect(&smaa_effect.blend_shader, smaa_effect.edge_target.color0_texture,
+			graph_dev_raster_full_screen_effect(&smaa_effect.blend_shader,
+				smaa_effect.edge_target.color0_texture,
 				smaa_effect.area_tex, smaa_effect.search_tex, 0, 1);
 
 			/* eighborhood pass - render to back buffer */
 			glBindFramebuffer(GL_FRAMEBUFFER, post_target1.fbo);
 			glClear(GL_COLOR_BUFFER_BIT);
-			graph_dev_raster_fs_effect(&smaa_effect.neighborhood_shader, post_target0.color0_texture,
-				smaa_effect.blend_target.color0_texture, 0, 0, 1);
+			graph_dev_raster_full_screen_effect(&smaa_effect.neighborhood_shader,
+				post_target0.color0_texture, smaa_effect.blend_target.color0_texture, 0, 0, 1);
 
 			if (draw_smaa_edge)
 				result_texture = smaa_effect.edge_target.color0_texture;
@@ -2750,7 +2751,7 @@ void graph_dev_end_frame()
 		}
 
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
-		graph_dev_raster_fs_effect(&fs_copy_shader, result_texture, 0, 0, 0, 1);
+		graph_dev_raster_full_screen_effect(&fs_copy_shader, result_texture, 0, 0, 0, 1);
 	}
 
 	if (render_target_2d.fbo != 0 && sgc.fbo_2d == render_target_2d.fbo) {
@@ -2759,7 +2760,7 @@ void graph_dev_end_frame()
 
 		glEnable(GL_BLEND);
 		BLEND_FUNC(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-		graph_dev_raster_fs_effect(&fs_copy_shader, render_target_2d.color0_texture, 0, 0, 0, 1);
+		graph_dev_raster_full_screen_effect(&fs_copy_shader, render_target_2d.color0_texture, 0, 0, 0, 1);
 		glDisable(GL_BLEND);
 	}
 }
