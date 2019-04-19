@@ -3291,7 +3291,7 @@ static void setup_textured_unit_quad(struct graph_dev_primitive *obj)
 		{ { { 1.0f, -1.0f, 0.0f } } },
 		{ { { 1.0f, 1.0f, 0.0f } } } };
 
-	static const struct vertex_triangle_buffer_data quat_vt_data[] = {
+	static const struct vertex_triangle_buffer_data quad_vt_data[] = {
 		{ .texture_coord = { { 0.0f, 0.0f } } },
 		{ .texture_coord = { { 1.0f, 1.0f } } },
 		{ .texture_coord = { { 0.0f, 1.0f } } },
@@ -3306,7 +3306,7 @@ static void setup_textured_unit_quad(struct graph_dev_primitive *obj)
 
 	glGenBuffers(1, &obj->triangle_vertex_buffer);
 	glBindBuffer(GL_ARRAY_BUFFER, obj->triangle_vertex_buffer);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(quat_vt_data), quat_vt_data, GL_STATIC_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(quad_vt_data), quad_vt_data, GL_STATIC_DRAW);
 
 	obj->nvertices = sizeof(quad_v_data)/sizeof(struct vertex_buffer_data);
 }
