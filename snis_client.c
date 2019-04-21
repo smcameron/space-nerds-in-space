@@ -441,6 +441,7 @@ static struct mesh *demon3d_axes_mesh = NULL;
 static struct mesh *cylinder_mesh;
 static struct entity *sun_entity = NULL;
 static int lens_flare_enabled = 1; /* tweakable */
+static float lens_flare_intensity = 0.5; /* tweakable */
 #ifndef WITHOUTOPENGL
 static struct entity *lens_flare_halo = NULL;
 static struct entity *anamorphic_flare = NULL;
@@ -8653,6 +8654,7 @@ static void show_lens_flare(struct snis_entity *o, union vec3 *camera_pos, union
 		update_entity_pos(lens_flare_halo, halopos.v.x, halopos.v.y, halopos.v.z);
 	if (lens_flare_halo) {
 		update_entity_scale(lens_flare_halo, 1.0);
+		lens_flare_halo_material.texture_mapped_unlit.alpha = 0.40 * lens_flare_intensity;
 		update_entity_material(lens_flare_halo, &lens_flare_halo_material);
 	}
 
@@ -8662,12 +8664,14 @@ static void show_lens_flare(struct snis_entity *o, union vec3 *camera_pos, union
 		update_entity_pos(anamorphic_flare, halopos.v.x, halopos.v.y, halopos.v.z);
 	if (anamorphic_flare) {
 		update_entity_non_uniform_scale(anamorphic_flare, 3.0, 0.05, 1.0);
+		anamorphic_flare_material.texture_mapped_unlit.alpha = 0.40 * lens_flare_intensity;
 		update_entity_material(anamorphic_flare, &anamorphic_flare_material);
 	}
 
 	quat_rot_vec_self(&cam_dir, camera_orientation);
 	facing_sun = 1.0 - fabsf(vec3_dot(&cam_dir, &to_sun));
-	lens_flare_ghost_material.texture_mapped_unlit.alpha = fmap(facing_sun, 0.0, 1.0, 0.05, 0.7);
+	lens_flare_ghost_material.texture_mapped_unlit.alpha = 2.0 * lens_flare_intensity *
+				fmap(facing_sun, 0.0, 1.0, 0.05, 0.7);
 
 	vec3_mul_self(&cam_dir, 0.5 * dist);
 	vec3_add(&ghost_nexus, camera_pos, &cam_dir);
@@ -16944,8 +16948,10 @@ static struct tweakable_var_descriptor client_tweak[] = {
 		&explosion_multiplier, 'f', 0.2, 5.0, 5.0, 0, 0, 0 },
 	{ "USE_60_FPS", "0 OR 1 to USE 30 OR 60 FPS, RESPECTIVELY",
 		&use_60_fps, 'i', 0.0, 0.0, 0.0, 0, 1, 1 },
-	{ "LENS_FLARE", "0 OR 1 to DISABLE OR ENABLE LENS FLARE EFFECT",
+	{ "LENS_FLARE", "0 OR 1 TO DISABLE OR ENABLE LENS FLARE EFFECT",
 		&lens_flare_enabled, 'i', 0.0, 0.0, 0.0, 0, 1, 1 },
+	{ "LENS_FLARE_INTENSITY", "0.0 TO 1.0 TO SET LENS FLARE INTENSITY",
+		&lens_flare_intensity, 'f', 0.0, 1.0, 0.5, 0, 0, 0 },
 	{ NULL, NULL, NULL, '\0', 0.0, 0.0, 0.0, 0, 0, 0 },
 };
 
