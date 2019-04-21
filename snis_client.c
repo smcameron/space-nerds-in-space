@@ -440,10 +440,11 @@ static struct mesh *nav_axes_mesh = NULL;
 static struct mesh *demon3d_axes_mesh = NULL;
 static struct mesh *cylinder_mesh;
 static struct entity *sun_entity = NULL;
+static int lens_flare_enabled = 1; /* tweakable */
+#ifndef WITHOUTOPENGL
 static struct entity *lens_flare_halo = NULL;
 static struct entity *anamorphic_flare = NULL;
 #define NLENS_FLARE_GHOSTS 10
-static int lens_flare_enabled = 1; /* tweakable */
 static struct entity *lens_flare_ghost[NLENS_FLARE_GHOSTS] = { 0 };
 static const float lens_flare_ghost_scale[NLENS_FLARE_GHOSTS] = {
 	0.3, 1.4, 0.2, 1.0, 1.7, 0.55, 0.30, 0.1, 0.2, 0.17,
@@ -451,6 +452,7 @@ static const float lens_flare_ghost_scale[NLENS_FLARE_GHOSTS] = {
 static const float lens_flare_ghost_displacement[NLENS_FLARE_GHOSTS] = {
 	0.3, 0.8, 0.7, 1.5, 1.2, 0.25, 0.8, 1.5, 0.65, 1.0,
 };
+#endif
 
 static struct mesh **ship_mesh_map;
 static struct mesh **derelict_mesh;
@@ -8615,6 +8617,7 @@ static void update_warp_tunnel(struct snis_entity *o, struct entity **warp_tunne
 
 static void show_lens_flare(struct snis_entity *o, union vec3 *camera_pos, union quat *camera_orientation)
 {
+#ifndef WITHOUTOPENGL
 	union vec3 halopos, to_sun;
 	union vec3 ghost_nexus, ghost_pos, ghost_offset;
 	union vec3 cam_dir = { { 1.0, 0.0, 0.0 } };
@@ -8689,10 +8692,12 @@ static void show_lens_flare(struct snis_entity *o, union vec3 *camera_pos, union
 			update_entity_material(lens_flare_ghost[i], &lens_flare_ghost_material);
 		}
 	}
+#endif
 }
 
 static void remove_lens_flare_entities(void)
 {
+#ifndef WITHOUTOPENGL
 	int i;
 
 	if (lens_flare_halo) {
@@ -8709,6 +8714,7 @@ static void remove_lens_flare_entities(void)
 			remove_entity(ecx, lens_flare_ghost[i]);
 			lens_flare_ghost[i] = NULL;
 		}
+#endif
 }
 
 static void show_weapons_camera_view(GtkWidget *w)
