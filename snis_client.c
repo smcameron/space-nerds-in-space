@@ -446,7 +446,7 @@ static struct entity *anamorphic_flare = NULL;
 static int lens_flare_enabled = 1; /* tweakable */
 static struct entity *lens_flare_ghost[NLENS_FLARE_GHOSTS] = { 0 };
 static const float lens_flare_ghost_scale[NLENS_FLARE_GHOSTS] = {
-	0.3, 1.4, 0.2, 1.0, 1.7, 0.25, 0.30, 0.1, 0.2, 0.17,
+	0.3, 1.4, 0.2, 1.0, 1.7, 0.55, 0.30, 0.1, 0.2, 0.17,
 };
 static const float lens_flare_ghost_displacement[NLENS_FLARE_GHOSTS] = {
 	0.3, 0.8, 0.7, 1.5, 1.2, 0.25, 0.8, 1.5, 0.65, 1.0,
@@ -8664,7 +8664,7 @@ static void show_lens_flare(struct snis_entity *o, union vec3 *camera_pos, union
 
 	quat_rot_vec_self(&cam_dir, camera_orientation);
 	facing_sun = 1.0 - fabsf(vec3_dot(&cam_dir, &to_sun));
-	lens_flare_ghost_material.texture_mapped_unlit.alpha = fmap(facing_sun, 0.0, 1.0, 0.03, 0.6);
+	lens_flare_ghost_material.texture_mapped_unlit.alpha = fmap(facing_sun, 0.0, 1.0, 0.05, 0.7);
 
 	vec3_mul_self(&cam_dir, 0.5 * dist);
 	vec3_add(&ghost_nexus, camera_pos, &cam_dir);
@@ -20224,7 +20224,7 @@ static int load_static_textures(void)
 	lens_flare_halo_material.billboard_type = MATERIAL_BILLBOARD_TYPE_SPHERICAL;
 	lens_flare_halo_material.texture_mapped_unlit.texture_id = load_texture("textures/lens_flare_halo.png");
 	lens_flare_halo_material.texture_mapped_unlit.do_blend = 1;
-	lens_flare_halo_material.texture_mapped_unlit.alpha = 0.10;
+	lens_flare_halo_material.texture_mapped_unlit.alpha = 0.20;
 	material_init_texture_mapped_unlit(&anamorphic_flare_material);
 	anamorphic_flare_material.billboard_type = MATERIAL_BILLBOARD_TYPE_SPHERICAL;
 	anamorphic_flare_material.texture_mapped_unlit.texture_id = load_texture("textures/anamorphic_flare.png");
