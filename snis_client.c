@@ -427,7 +427,7 @@ static struct mesh *heading_indicator_mesh;
 static struct mesh *cargo_container_mesh;
 static struct mesh *nebula_mesh;
 static struct mesh *sun_mesh;
-static struct mesh *black_hole_mesh;
+static struct mesh *unit_quad;
 static struct mesh *thrust_animation_mesh;
 static struct mesh *warpgate_mesh;
 static struct mesh *warp_core_mesh;
@@ -439,6 +439,18 @@ static union vec3 warp_tunnel_direction;
 static struct mesh *nav_axes_mesh = NULL;
 static struct mesh *demon3d_axes_mesh = NULL;
 static struct mesh *cylinder_mesh;
+static struct entity *sun_entity = NULL;
+static struct entity *lens_flare_halo = NULL;
+static struct entity *anamorphic_flare = NULL;
+#define NLENS_FLARE_GHOSTS 10
+static int lens_flare_enabled = 1; /* tweakable */
+static struct entity *lens_flare_ghost[NLENS_FLARE_GHOSTS] = { 0 };
+static const float lens_flare_ghost_scale[NLENS_FLARE_GHOSTS] = {
+	0.3, 1.4, 0.2, 1.0, 1.7, 0.25, 0.30, 0.1, 0.2, 0.17,
+};
+static const float lens_flare_ghost_displacement[NLENS_FLARE_GHOSTS] = {
+	0.3, 0.8, 0.7, 1.5, 1.2, 0.25, 0.8, 1.5, 0.65, 1.0,
+};
 
 static struct mesh **ship_mesh_map;
 static struct mesh **derelict_mesh;
@@ -456,6 +468,9 @@ static struct material blackhole_spark_material;
 static struct material laserflash_material;
 static struct material warp_effect_material;
 static struct material sun_material;
+static struct material lens_flare_ghost_material;
+static struct material lens_flare_halo_material;
+static struct material anamorphic_flare_material;
 static struct material black_hole_material;
 static struct material spacemonster_tentacle_material;
 static struct material spacemonster_material;
@@ -2111,7 +2126,7 @@ static int update_black_hole(uint32_t id, uint32_t timestamp, double x, double y
 
 	i = lookup_object_by_id(id);
 	if (i < 0) {
-		e = add_entity(ecx, black_hole_mesh, x, y, z, BLACK_HOLE_COLOR);
+		e = add_entity(ecx, unit_quad, x, y, z, BLACK_HOLE_COLOR);
 		if (e) {
 			update_entity_material(e, &black_hole_material);
 			update_entity_scale(e, 2.0 * r);
@@ -8598,6 +8613,103 @@ static void update_warp_tunnel(struct snis_entity *o, struct entity **warp_tunne
 	}
 }
 
+static void show_lens_flare(struct snis_entity *o, union vec3 *camera_pos, union quat *camera_orientation)
+{
+	union vec3 halopos, to_sun;
+	union vec3 ghost_nexus, ghost_pos, ghost_offset;
+	union vec3 cam_dir = { { 1.0, 0.0, 0.0 } };
+	union vec3 to_camera;
+	float dist, factor;
+	int i;
+	float facing_sun;
+
+	if (!lens_flare_enabled)
+		return;
+
+	if (o->shading_planet)
+		return;
+
+	if (!sun_entity)
+		return;
+
+	if (!entity_onscreen(sun_entity))
+		return;
+
+	halopos.v.x = SUNX - camera_pos->v.x;
+	halopos.v.y = SUNY - camera_pos->v.y;
+	halopos.v.z = SUNZ - camera_pos->v.z;
+	dist = vec3_magnitude(&halopos);
+	vec3_normalize_self(&halopos);
+	to_sun = halopos;
+	vec3_mul_self(&halopos, 3.0);
+	vec3_add_self(&halopos, camera_pos);
+
+	if (!lens_flare_halo)
+		lens_flare_halo = add_entity(ecx, unit_quad, halopos.v.x, halopos.v.y, halopos.v.z, WHITE);
+	else
+		update_entity_pos(lens_flare_halo, halopos.v.x, halopos.v.y, halopos.v.z);
+	if (lens_flare_halo) {
+		update_entity_scale(lens_flare_halo, 1.0);
+		update_entity_material(lens_flare_halo, &lens_flare_halo_material);
+	}
+
+	if (!anamorphic_flare)
+		anamorphic_flare = add_entity(ecx, unit_quad, halopos.v.x, halopos.v.y, halopos.v.z, WHITE);
+	else
+		update_entity_pos(anamorphic_flare, halopos.v.x, halopos.v.y, halopos.v.z);
+	if (anamorphic_flare) {
+		update_entity_non_uniform_scale(anamorphic_flare, 3.0, 0.05, 1.0);
+		update_entity_material(anamorphic_flare, &anamorphic_flare_material);
+	}
+
+	quat_rot_vec_self(&cam_dir, camera_orientation);
+	facing_sun = 1.0 - fabsf(vec3_dot(&cam_dir, &to_sun));
+	lens_flare_ghost_material.texture_mapped_unlit.alpha = fmap(facing_sun, 0.0, 1.0, 0.03, 0.6);
+
+	vec3_mul_self(&cam_dir, 0.5 * dist);
+	vec3_add(&ghost_nexus, camera_pos, &cam_dir);
+
+	factor = -1.0;
+	for (i = 0; i < NLENS_FLARE_GHOSTS; i++) {
+		ghost_pos = ghost_nexus;
+		ghost_offset.v.x = SUNX - ghost_nexus.v.x;
+		ghost_offset.v.y = SUNY - ghost_nexus.v.y;
+		ghost_offset.v.z = SUNZ - ghost_nexus.v.z;
+		vec3_mul_self(&ghost_offset, factor * lens_flare_ghost_displacement[i]);
+		factor += (2.0 / NLENS_FLARE_GHOSTS);
+		vec3_add_self(&ghost_pos, &ghost_offset);
+		vec3_sub(&to_camera, camera_pos, &ghost_pos);
+		vec3_normalize_self(&to_camera);
+		vec3_mul_self(&to_camera, -10.0);
+		vec3_add(&ghost_pos, camera_pos, &to_camera);
+
+		lens_flare_ghost[i] = add_entity(ecx, unit_quad, ghost_pos.v.x, ghost_pos.v.y, ghost_pos.v.z, WHITE);
+		if (lens_flare_ghost[i]) {
+			update_entity_scale(lens_flare_ghost[i], lens_flare_ghost_scale[i]);
+			update_entity_material(lens_flare_ghost[i], &lens_flare_ghost_material);
+		}
+	}
+}
+
+static void remove_lens_flare_entities(void)
+{
+	int i;
+
+	if (lens_flare_halo) {
+		remove_entity(ecx, lens_flare_halo);
+		lens_flare_halo = NULL;
+	}
+	if (anamorphic_flare) {
+		remove_entity(ecx, anamorphic_flare);
+		anamorphic_flare = NULL;
+	}
+
+	for (i = 0; i < NLENS_FLARE_GHOSTS; i++)
+		if (lens_flare_ghost[i]) {
+			remove_entity(ecx, lens_flare_ghost[i]);
+			lens_flare_ghost[i] = NULL;
+		}
+}
 
 static void show_weapons_camera_view(GtkWidget *w)
 {
@@ -8709,7 +8821,9 @@ static void show_weapons_camera_view(GtkWidget *w)
 		add_ship_thrust_entities(NULL, NULL, ecx, o->entity,
 				o->tsd.ship.shiptype, o->tsd.ship.power_data.impulse.i, 0);
 
+	show_lens_flare(o, &cam_pos, &camera_orientation); /* this will be using data from last frame */
 	render_entities(ecx);
+	remove_lens_flare_entities();
 
 	/* Show targeting aids */
 	for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
@@ -9016,7 +9130,9 @@ static void show_mainscreen(GtkWidget *w)
 	render_skybox(ecx);
 
 	pthread_mutex_lock(&universe_mutex);
+	show_lens_flare(o, &cam_pos, &camera_orientation); /* this will be using data from last frame */
 	render_entities(ecx);
+	remove_lens_flare_entities();
 
 	/* if we added the ship into the scene, remove it now */
 	if (player_ship) {
@@ -16822,6 +16938,8 @@ static struct tweakable_var_descriptor client_tweak[] = {
 		&explosion_multiplier, 'f', 0.2, 5.0, 5.0, 0, 0, 0 },
 	{ "USE_60_FPS", "0 OR 1 to USE 30 OR 60 FPS, RESPECTIVELY",
 		&use_60_fps, 'i', 0.0, 0.0, 0.0, 0, 1, 1 },
+	{ "LENS_FLARE", "0 OR 1 to DISABLE OR ENABLE LENS FLARE EFFECT",
+		&lens_flare_enabled, 'i', 0.0, 0.0, 0.0, 0, 1, 1 },
 	{ NULL, NULL, NULL, '\0', 0.0, 0.0, 0.0, 0, 0, 0 },
 };
 
@@ -19876,8 +19994,10 @@ static gint main_da_configure(GtkWidget *w, GdkEventConfigure *event)
 	static int static_exc_loaded = 0;
 	if (!static_exc_loaded) {
 		struct entity *e = add_entity(ecx, sun_mesh, SUNX, SUNY, SUNZ, WHITE);
-		if (e)
+		if (e) {
 			update_entity_material(e, &sun_material);
+			sun_entity = e;
+		}
 
 		static_exc_loaded = 1;
 	}
@@ -20094,6 +20214,22 @@ static int load_static_textures(void)
 		load_texture("textures/docking_port_texture.png");
 	docking_port_material.texture_mapped.emit_texture_id =
 		load_texture("textures/docking_port_emit.png");
+
+	material_init_texture_mapped_unlit(&lens_flare_ghost_material);
+	lens_flare_ghost_material.billboard_type = MATERIAL_BILLBOARD_TYPE_SPHERICAL;
+	lens_flare_ghost_material.texture_mapped_unlit.texture_id = load_texture("textures/lens_flare_ghost.png");
+	lens_flare_ghost_material.texture_mapped_unlit.do_blend = 1;
+	lens_flare_ghost_material.texture_mapped_unlit.alpha = 0.10;
+	material_init_texture_mapped_unlit(&lens_flare_halo_material);
+	lens_flare_halo_material.billboard_type = MATERIAL_BILLBOARD_TYPE_SPHERICAL;
+	lens_flare_halo_material.texture_mapped_unlit.texture_id = load_texture("textures/lens_flare_halo.png");
+	lens_flare_halo_material.texture_mapped_unlit.do_blend = 1;
+	lens_flare_halo_material.texture_mapped_unlit.alpha = 0.10;
+	material_init_texture_mapped_unlit(&anamorphic_flare_material);
+	anamorphic_flare_material.billboard_type = MATERIAL_BILLBOARD_TYPE_SPHERICAL;
+	anamorphic_flare_material.texture_mapped_unlit.texture_id = load_texture("textures/anamorphic_flare.png");
+	anamorphic_flare_material.texture_mapped_unlit.do_blend = 1;
+	anamorphic_flare_material.texture_mapped_unlit.alpha = 0.20;
 
 	static_textures_loaded = 1;
 
@@ -21354,7 +21490,7 @@ static void init_meshes()
 	docking_port_mesh[2] = snis_read_model(d, "tetrahedron.stl");
 	nebula_mesh = mesh_fabricate_billboard(2, 2);
 	sun_mesh = mesh_fabricate_billboard(30000, 30000);
-	black_hole_mesh = mesh_fabricate_billboard(1, 1);
+	unit_quad = mesh_fabricate_billboard(1, 1);
 	thrust_animation_mesh = init_thrust_mesh(70, 200, 1.3, 1);
 	warpgate_mesh = snis_read_model(d, "warpgate.stl");
 	mesh_cylindrical_yz_uv_map(warpgate_mesh);
