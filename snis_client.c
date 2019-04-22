@@ -451,7 +451,7 @@ static const float lens_flare_ghost_scale[NLENS_FLARE_GHOSTS] = {
 	0.3, 1.4, 0.2, 1.0, 1.7, 0.55, 0.30, 0.1, 0.2, 0.17,
 };
 static const float lens_flare_ghost_displacement[NLENS_FLARE_GHOSTS] = {
-	0.3, 0.8, 0.7, 1.5, 1.2, 0.25, 0.8, 1.5, 0.65, 1.0,
+	0.3, 0.8, 0.7, 0.5, 1.2, 0.25, 0.8, 1.5, 0.65, 0.4,
 };
 #endif
 
