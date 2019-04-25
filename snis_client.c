@@ -507,7 +507,6 @@ static struct material wormhole_material;
 #define NTHRUSTMATERIALS 5
 static struct material thrust_material[NTHRUSTMATERIALS];
 static struct material thrust_flare_material[NTHRUSTMATERIALS];
-static struct material atmosphere_material;
 static struct material block_material;
 static struct material small_block_material;
 
@@ -20121,8 +20120,6 @@ static int load_static_textures(void)
 		planetary_ring_material[i].textured_planet_ring.outer_radius = ring_data[i].outer_radius;
 	}
 	free(ring_data);
-
-	material_init_atmosphere(&atmosphere_material);
 
 	material_init_textured_shield(&shield_material);
 	shield_material.textured_shield.texture_id = load_cubemap_textures(0, "textures/shield-effect-");
