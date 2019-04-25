@@ -507,7 +507,8 @@ static int lookup_ship_by_hash(unsigned char *hash)
 		if (debuglevel > 0)
 			fprintf(stderr, "snis_multiverse: checking against '%s'\n", phash);
 		if (memcmp(ship[i].pwdhash, hash, PWDHASHLEN) == 0) {
-			fprintf(stderr, "snis_multiverse: match hash '%s'\n", phash);
+			if (debuglevel > 0)
+				fprintf(stderr, "snis_multiverse: match hash '%s'\n", phash);
 			return i;
 		}
 	}
