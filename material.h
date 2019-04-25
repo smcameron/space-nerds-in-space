@@ -132,6 +132,7 @@ struct material_textured_shield {
 
 struct material_atmosphere {
 	float r, g, b, scale;
+	struct material *ring_material;
 };
 
 struct material_wireframe_sphere_clip {

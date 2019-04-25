@@ -97,6 +97,7 @@ extern void graph_dev_setup_colors(void *gtk_widget, void *gdk_color_huex, int n
 extern void graph_dev_grab_framebuffer(unsigned char **buffer, int *width, int *height);
 
 extern int graph_dev_planet_specularity; /* Set to 1 to enable, 0 to disable planet specularity */
+extern int graph_dev_atmosphere_ring_shadows; /* Set to 1 to enable, 0 to disable atmosphere ring shadows */
 
 #endif
 

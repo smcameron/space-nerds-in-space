@@ -77,6 +77,7 @@ static struct graph_dev_gdk_context {
 } sgc;
 
 __attribute__((unused)) int graph_dev_planet_specularity = 0;
+__attribute__((unused)) int graph_dev_atmosphere_ring_shadows = 0;
 
 /* nothing in here yet
 struct mesh_gtk_info {

@@ -2222,9 +2222,15 @@ static int update_planet(uint32_t id, uint32_t timestamp, double x, double y, do
 				go[i].tsd.planet.atm_material.atmosphere.g = (float) atm_g / 255.0f;
 				go[i].tsd.planet.atm_material.atmosphere.b = (float) atm_b / 255.0f;
 				go[i].tsd.planet.atm_material.atmosphere.scale = (float) atm_scale;
+				if (hasring)
+					go[i].tsd.planet.atm_material.atmosphere.ring_material =
+						planet_material[m].textured_planet.ring_material;
+				else
+					go[i].tsd.planet.atm_material.atmosphere.ring_material = NULL;
 				update_entity_material(atm, &go[i].tsd.planet.atm_material);
 				update_entity_visibility(atm, 1);
 				update_entity_parent(ecx, atm, e);
+				update_entity_orientation(atm, &identity_quat);
 			}
 		} else {
 			go[i].tsd.planet.atmosphere = NULL;
@@ -16953,6 +16959,8 @@ static struct tweakable_var_descriptor client_tweak[] = {
 		&lens_flare_enabled, 'i', 0.0, 0.0, 0.0, 0, 1, 1 },
 	{ "LENS_FLARE_INTENSITY", "0.0 TO 1.0 TO SET LENS FLARE INTENSITY",
 		&lens_flare_intensity, 'f', 0.0, 1.0, 0.5, 0, 0, 0 },
+	{ "ATMOSPHERE_RING_SHADOWS", "0 OR 1 TO DISABLE OR ENABLE ATMOSPHERIC RING SHADOWS",
+		&graph_dev_atmosphere_ring_shadows, 'i', 0.0, 0.0, 0.0, 0, 1, 1 },
 	{ NULL, NULL, NULL, '\0', 0.0, 0.0, 0.0, 0, 0, 0 },
 };
 
@@ -21419,7 +21427,7 @@ static void init_meshes()
 	mesh_scale(unit_cube_mesh, 0.5);
 	mesh_unit_cube_uv_map(unit_cube_mesh);
 
-	atmosphere_mesh = mesh_unit_spherified_cube(16);
+	atmosphere_mesh = mesh_unit_spherified_cube(64);
 	planet_sphere_mesh = mesh_unit_spherified_cube(64);
 	low_poly_sphere_mesh = snis_read_model(d, "uv_sphere.stl");
 	mesh_cylindrical_xy_uv_map(low_poly_sphere_mesh);

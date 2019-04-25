@@ -67,6 +67,7 @@ static int draw_smaa_edge = 0;
 static int draw_smaa_blend = 0;
 static int draw_atmospheres = 1;
 int graph_dev_planet_specularity = 1;
+int graph_dev_atmosphere_ring_shadows = 1;
 static const char *default_shader_directory = "share/snis/shader";
 static char *shader_directory = NULL;
 
@@ -632,6 +633,12 @@ struct graph_dev_gl_atmosphere_shader {
 	GLint light_pos_id;
 	GLint color_id;
 	GLfloat alpha;
+	GLint shadow_annulus_texture_id;
+	GLint shadow_annulus_center_id;
+	GLint shadow_annulus_normal_id;
+	GLint shadow_annulus_radius_id;
+	GLint shadow_annulus_tint_color_id;
+	GLint ring_texture_v_id;
 };
 
 struct graph_dev_gl_filled_wireframe_shader {
@@ -820,6 +827,7 @@ struct graph_dev_smaa_effect {
 /* store all the shader parameters */
 static struct graph_dev_gl_single_color_lit_shader single_color_lit_shader;
 static struct graph_dev_gl_atmosphere_shader atmosphere_shader;
+static struct graph_dev_gl_atmosphere_shader atmosphere_with_annulus_shadow_shader;
 static struct graph_dev_gl_trans_wireframe_shader trans_wireframe_shader;
 static struct graph_dev_gl_trans_wireframe_shader trans_wireframe_with_clip_sphere_shader;
 static struct graph_dev_gl_filled_wireframe_shader filled_wireframe_shader;
@@ -1528,9 +1536,11 @@ static void graph_dev_raster_single_color_lit(const struct mat44 *mat_mvp, const
 
 static void graph_dev_raster_atmosphere(const struct mat44 *mat_mvp, const struct mat44 *mat_mv,
 	const struct mat33 *mat_normal,
-	struct mesh *m, struct sng_color *triangle_color, union vec3 *eye_light_pos, GLfloat alpha)
+	struct mesh *m, struct sng_color *triangle_color, union vec3 *eye_light_pos, GLfloat alpha,
+	struct shadow_annulus_data *shadow_annulus, float ring_texture_v)
 {
 	enable_3d_viewport();
+	struct graph_dev_gl_atmosphere_shader *shader;
 
 	if (!draw_atmospheres)
 		return;
@@ -1550,21 +1560,49 @@ static void graph_dev_raster_atmosphere(const struct mat44 *mat_mvp, const struc
 	if (draw_polygon_as_lines)
 		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
-	glUseProgram(atmosphere_shader.program_id);
+	if (ring_texture_v >= 0.0 && graph_dev_atmosphere_ring_shadows) {
+		/* Set up uniforms for ring shadow */
+		shader = &atmosphere_with_annulus_shadow_shader;
+		glUseProgram(shader->program_id);
+		if (shadow_annulus->texture_id >= 0 && shader->shadow_annulus_texture_id >= 0)
+			BIND_TEXTURE(GL_TEXTURE0, GL_TEXTURE_2D, shadow_annulus->texture_id);
 
-	glUniformMatrix4fv(atmosphere_shader.mv_matrix_id, 1, GL_FALSE, &mat_mv->m[0][0]);
-	glUniformMatrix4fv(atmosphere_shader.mvp_matrix_id, 1, GL_FALSE, &mat_mvp->m[0][0]);
-	glUniformMatrix3fv(atmosphere_shader.normal_matrix_id, 1, GL_FALSE, &mat_normal->m[0][0]);
+		glUniform4f(shader->shadow_annulus_tint_color_id, shadow_annulus->tint_color.red,
+			shadow_annulus->tint_color.green, shadow_annulus->tint_color.blue, shadow_annulus->alpha);
+		glUniform3f(shader->shadow_annulus_center_id, shadow_annulus->eye_pos.v.x,
+			shadow_annulus->eye_pos.v.y, shadow_annulus->eye_pos.v.z);
 
-	glUniform3f(atmosphere_shader.color_id, triangle_color->red,
-		triangle_color->green, triangle_color->blue);
-	glUniform3f(atmosphere_shader.light_pos_id, eye_light_pos->v.x, eye_light_pos->v.y, eye_light_pos->v.z);
-	glUniform1f(atmosphere_shader.alpha, alpha);
+		/* this only works if the ring has an identity quat for its child orientation */
+		/* ring disc is in x/y plane, so z is normal */
+		union vec3 annulus_normal = { { 0, 0, 1 } };
+		union vec3 eye_annulus_normal;
+		mat33_x_vec3(mat_normal, &annulus_normal, &eye_annulus_normal);
+		vec3_normalize_self(&eye_annulus_normal);
 
-	glEnableVertexAttribArray(atmosphere_shader.vertex_position_id);
+		glUniform3f(shader->shadow_annulus_normal_id, eye_annulus_normal.v.x,
+			eye_annulus_normal.v.y, eye_annulus_normal.v.z);
+
+		glUniform4f(shader->shadow_annulus_radius_id,
+			shadow_annulus->r1, shadow_annulus->r1 * shadow_annulus->r1,
+			shadow_annulus->r2, shadow_annulus->r2 * shadow_annulus->r2);
+
+	} else {
+		shader = &atmosphere_shader;
+		glUseProgram(shader->program_id);
+	}
+
+	glUniformMatrix4fv(shader->mv_matrix_id, 1, GL_FALSE, &mat_mv->m[0][0]);
+	glUniformMatrix4fv(shader->mvp_matrix_id, 1, GL_FALSE, &mat_mvp->m[0][0]);
+	glUniformMatrix3fv(shader->normal_matrix_id, 1, GL_FALSE, &mat_normal->m[0][0]);
+
+	glUniform3f(shader->color_id, triangle_color->red, triangle_color->green, triangle_color->blue);
+	glUniform3f(shader->light_pos_id, eye_light_pos->v.x, eye_light_pos->v.y, eye_light_pos->v.z);
+	glUniform1f(shader->alpha, alpha);
+
+	glEnableVertexAttribArray(shader->vertex_position_id);
 	glBindBuffer(GL_ARRAY_BUFFER, ptr->vertex_buffer);
 	glVertexAttribPointer(
-		atmosphere_shader.vertex_position_id, /* The attribute we want to configure */
+		shader->vertex_position_id,  /* The attribute we want to configure */
 		3,                           /* size */
 		GL_FLOAT,                    /* type */
 		GL_FALSE,                    /* normalized? */
@@ -1572,10 +1610,10 @@ static void graph_dev_raster_atmosphere(const struct mat44 *mat_mvp, const struc
 		(void *)offsetof(struct vertex_buffer_data, position.v.x) /* array buffer offset */
 	);
 
-	glEnableVertexAttribArray(atmosphere_shader.vertex_normal_id);
+	glEnableVertexAttribArray(shader->vertex_normal_id);
 	glBindBuffer(GL_ARRAY_BUFFER, ptr->triangle_vertex_buffer);
 	glVertexAttribPointer(
-		atmosphere_shader.vertex_normal_id,  /* The attribute we want to configure */
+		shader->vertex_normal_id,  /* The attribute we want to configure */
 		3,                            /* size */
 		GL_FLOAT,                     /* type */
 		GL_FALSE,                     /* normalized? */
@@ -1585,8 +1623,8 @@ static void graph_dev_raster_atmosphere(const struct mat44 *mat_mvp, const struc
 
 	glDrawArrays(GL_TRIANGLES, 0, m->ntriangles * 3);
 
-	glDisableVertexAttribArray(atmosphere_shader.vertex_position_id);
-	glDisableVertexAttribArray(atmosphere_shader.vertex_normal_id);
+	glDisableVertexAttribArray(shader->vertex_position_id);
+	glDisableVertexAttribArray(shader->vertex_normal_id);
 	glUseProgram(0);
 
 	glDisable(GL_DEPTH_TEST);
@@ -2315,8 +2353,39 @@ void graph_dev_draw_entity(struct entity_context *cx, struct entity *e, union ve
 				atmosphere_color.red = e->material_ptr->atmosphere.r;
 				atmosphere_color.green = e->material_ptr->atmosphere.g;
 				atmosphere_color.blue = e->material_ptr->atmosphere.b;
-				break;
+				struct material_atmosphere *mt = &e->material_ptr->atmosphere;
+				if (mt->ring_material && mt->ring_material->type == MATERIAL_TEXTURED_PLANET_RING) {
+					struct material_textured_planet_ring *ring_mt =
+						&mt->ring_material->textured_planet_ring;
+					ring_texture_v = ring_mt->texture_v;
+					ring_inner_radius = ring_mt->inner_radius;
+					ring_outer_radius = ring_mt->outer_radius;
+
+					shadow_annulus.texture_id = ring_mt->texture_id;
+					shadow_annulus.tint_color = ring_mt->tint;
+					shadow_annulus.alpha = ring_mt->alpha;
+
+					/* ring is at the center of our mesh */
+					union vec4 sphere_pos = { { 0, 0, 0, 1 } };
+					mat44_x_vec4_into_vec3(mat_mv, &sphere_pos, &shadow_annulus.eye_pos);
+
+					/* ring is the 2x to 3x of the planet scale, world space distance
+					   is the same in eye space as the view matrix does not scale */
+					shadow_annulus.r1 = vec3_cwise_max(&e->scale) * ring_inner_radius;
+					shadow_annulus.r2 = vec3_cwise_max(&e->scale) * ring_outer_radius;
+				} else {
+					/* signal absence of ring with these values */
+					ring_texture_v = -1.0;
+					shadow_annulus.texture_id = -1;
+					shadow_annulus.tint_color.red = 0;
+					shadow_annulus.tint_color.green = 0;
+					shadow_annulus.tint_color.blue = 0;
+					shadow_annulus.alpha = 0.0;
+					shadow_annulus.r1 = 0.0;
+					shadow_annulus.r2 = 0.0;
 				}
+				}
+				break;
 			case MATERIAL_ALPHA_BY_NORMAL: {
 				struct material_alpha_by_normal *mt = &e->material_ptr->alpha_by_normal;
 				texture_id = mt->texture_id;
@@ -2468,7 +2537,8 @@ void graph_dev_draw_entity(struct entity_context *cx, struct entity *e, union ve
 						e->in_shade, &water_color, &sun_color);
 				else if (atmosphere)
 					graph_dev_raster_atmosphere(mat_mvp, mat_mv, mat_normal,
-						e->m, &atmosphere_color, eye_light_pos, texture_alpha);
+						e->m, &atmosphere_color, eye_light_pos, texture_alpha,
+						&shadow_annulus, ring_texture_v);
 				else
 					graph_dev_raster_single_color_lit(mat_mvp, mat_mv, mat_normal,
 						e->m, &triangle_color, eye_light_pos, e->in_shade);
@@ -2920,11 +2990,13 @@ static void setup_single_color_lit_shader(struct graph_dev_gl_single_color_lit_s
 	shader->in_shade_id = glGetUniformLocation(shader->program_id, "u_in_shade");
 }
 
-static void setup_atmosphere_shader(struct graph_dev_gl_atmosphere_shader *shader)
+static void setup_atmosphere_shader(struct graph_dev_gl_atmosphere_shader *shader, int with_ring_shadow)
 {
 	/* Create and compile our GLSL program from the shaders */
 	shader->program_id = load_shaders(shader_directory,
 				"atmosphere.vert", "atmosphere.frag",
+				with_ring_shadow ?
+				UNIVERSAL_SHADER_HEADER "\n#define USE_ANNULUS_SHADOW 1\n" :
 				UNIVERSAL_SHADER_HEADER);
 
 	/* Get a handle for our "MVP" uniform */
@@ -2938,6 +3010,15 @@ static void setup_atmosphere_shader(struct graph_dev_gl_atmosphere_shader *shade
 	shader->vertex_normal_id = glGetAttribLocation(shader->program_id, "a_Normal");
 	shader->color_id = glGetUniformLocation(shader->program_id, "u_Color");
 	shader->alpha = glGetUniformLocation(shader->program_id, "u_Alpha");
+
+	if (with_ring_shadow) {
+		shader->shadow_annulus_texture_id = glGetUniformLocation(shader->program_id, "u_AnnulusAlbedoTex");
+		shader->shadow_annulus_center_id = glGetUniformLocation(shader->program_id, "u_AnnulusCenter");
+		shader->shadow_annulus_normal_id = glGetUniformLocation(shader->program_id, "u_AnnulusNormal");
+		shader->shadow_annulus_radius_id = glGetUniformLocation(shader->program_id, "u_AnnulusRadius");
+		shader->shadow_annulus_tint_color_id = glGetUniformLocation(shader->program_id, "u_AnnulusTintColor");
+		shader->ring_texture_v_id = glGetUniformLocation(shader->program_id, "u_ring_texture_v");
+	}
 }
 
 static void setup_textured_shader(const char *basename, const char *defines,
@@ -3628,7 +3709,8 @@ int graph_dev_setup(const char *shader_dir)
 	}
 
 	setup_single_color_lit_shader(&single_color_lit_shader);
-	setup_atmosphere_shader(&atmosphere_shader);
+	setup_atmosphere_shader(&atmosphere_shader, 0);
+	setup_atmosphere_shader(&atmosphere_with_annulus_shadow_shader, 1);
 	setup_trans_wireframe_shader("wireframe_transparent", &trans_wireframe_shader);
 	setup_trans_wireframe_shader("wireframe-transparent-sphere-clip", &trans_wireframe_with_clip_sphere_shader);
 	setup_filled_wireframe_shader(&filled_wireframe_shader);
