@@ -1996,7 +1996,7 @@ static void create_particle(float h, float r1, struct particle *particles, int i
 {
 	float angle, r;
 	particles[i].offset = fabs(snis_random_float());
-	particles[i].lifetime = fabs(snis_random_float());
+	particles[i].lifetime = 0.5 * fabs(snis_random_float()) + 0.5;
 	particles[i].decay = 0.1;
 
 	angle = snis_random_float() * M_PI * 2;
