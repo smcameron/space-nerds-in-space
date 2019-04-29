@@ -470,6 +470,7 @@ static struct replacement_asset replacement_assets;
 static int nebulalist[NNEBULA] = { 0 };
 
 static int ncommodities;
+static int nstandard_commodities;
 static int ncontraband;
 static struct commodity *commodity;
 
@@ -3013,7 +3014,8 @@ static int make_derelict(struct snis_entity *o)
 				(void) add_cargo_container(o->x, o->y, o->z,
 					o->vx + snis_random_float() * 2.0,
 					o->vy + snis_random_float() * 2.0,
-					o->vz + snis_random_float(), item, qty, 0);
+					o->vz + snis_random_float(), item, qty,
+					item > nstandard_commodities);
 		}
 	} else {
 		(void) add_cargo_container(o->x, o->y, o->z,
@@ -27942,6 +27944,7 @@ int main(int argc, char *argv[])
 	char commodity_path[PATH_MAX];
 	snprintf(commodity_path, sizeof(commodity_path), "%s/%s", asset_dir, "commodities.txt");
 	commodity = read_commodities(commodity_path, &ncommodities);
+	nstandard_commodities = ncommodities;
 
 	/* count possible contraband items */
 	ncontraband = 0;
