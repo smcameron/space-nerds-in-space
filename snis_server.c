@@ -169,6 +169,7 @@ static float chaff_speed = CHAFF_SPEED;
 static int chaff_count = CHAFF_COUNT;
 static float chaff_confuse_chance = CHAFF_CONFUSE_CHANCE;
 static int multiverse_debug = 0;
+static int suppress_starbase_complaints = 0;
 
 /*
  * End of runtime adjustable globals
@@ -9573,7 +9574,7 @@ static void starbase_move(struct snis_entity *o)
 	starbase_update_docking_ports(o);
 	then = o->tsd.starbase.last_time_called_for_help;
 	now = universe_timestamp;
-	if (o->tsd.starbase.under_attack &&
+	if (!suppress_starbase_complaints && o->tsd.starbase.under_attack &&
 		(then < now - 2000 || 
 		o->tsd.starbase.last_time_called_for_help == 0)) {
 		o->tsd.starbase.last_time_called_for_help = universe_timestamp;
@@ -16816,6 +16817,8 @@ static struct tweakable_var_descriptor server_tweak[] = {
 		"MULTIVERSE_DEBUG FLAG 1 = ON, 0 = OFF",
 		&multiverse_debug, 'i',
 		0.0, 0.0, 0.0, 0, 1, 0 },
+	{ "SUPPRESS_STARBASE_COMPLAINTS", "0 or 1, ENABLES OR SUPPRESSES STARBASE COMPLAINING",
+		&suppress_starbase_complaints, 'i', 0.0, 0.0, 0.0, 0, 1, 0 },
 	{ NULL, NULL, NULL, '\0', 0.0, 0.0, 0.0, 0, 0, 0 },
 };
 
