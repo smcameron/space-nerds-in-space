@@ -18949,11 +18949,11 @@ static int l_set_commodity_contents(lua_State *l)
 	if (i > snis_object_pool_highest_object(pool))
 		goto out;
 	o = &go[i];
-	if (o->type != OBJTYPE_SHIP1 && o->type != OBJTYPE_CARGO_CONTAINER)
+	if (o->type != OBJTYPE_SHIP1 && o->type != OBJTYPE_CARGO_CONTAINER && o->type != OBJTYPE_SHIP2)
 		goto out;
 	if (index < -1 || index >= ncommodities)
 		goto out;
-	if (o->type == OBJTYPE_SHIP1) {
+	if (o->type == OBJTYPE_SHIP1 || o->type == OBJTYPE_SHIP2) {
 		const double lua_cargo_bay = luaL_checknumber(l, 4);
 		int cargo_bay = (int) lua_cargo_bay;
 		if (cargo_bay < 0 || cargo_bay >= o->tsd.ship.ncargo_bays)
