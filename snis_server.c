@@ -3050,6 +3050,9 @@ static void process_potential_victim(void *context, void *entity)
 	if (!v->alive) /* skip the dead guys */
 		return;
 
+	if (o->sdata.faction == v->sdata.faction)
+		return; /* Don't attack own faction */
+
 	if (v->type == OBJTYPE_SHIP2) {
 		if (v->tsd.ship.ai[0].ai_mode == AI_MODE_COP)
 			return; /* skip cops */
