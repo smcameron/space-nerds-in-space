@@ -7359,7 +7359,9 @@ static int process_request_oneshot_sound(void)
 	 * processing opcodes from the server). But let's try this dumb way first to see if
 	 * it's a real problem.
 	 */
-	wwviaudio_add_one_shot_sound(path);
+	rc = wwviaudio_add_one_shot_sound(path);
+	if (rc < 0)
+		print_demon_console_color_msg(YELLOW, "FAILED TO PLAY %s", path);
 	return 0;
 }
 
