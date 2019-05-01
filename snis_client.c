@@ -210,6 +210,8 @@ static int joystick_fd[MAX_JOYSTICKS] = { -1 };
 static int njoysticks = 0;
 static struct joystick_descriptor *joysticks_found;
 static struct joystick_config *joystick_cfg = NULL;
+static int xjoystick_threshold = 23000; /* tweakable (Maybe this should be done via joystick_config.c instead) */
+static int yjoystick_threshold = 23000; /* tweakable (Maybe this should be done via joystick_config.c instead) */
 
 static int physical_io_socket = -1;
 static pthread_t physical_io_thread;
@@ -3947,10 +3949,9 @@ static void do_joystick_missile(__attribute__((unused)) void *x)
 
 static void do_joystick_pitch(__attribute__((unused)) void *x, int value)
 {
-#define YJOYSTICK_THRESHOLD 23000
-	if (value < -YJOYSTICK_THRESHOLD)
+	if (value < -yjoystick_threshold)
 		request_navigation_pitch_packet(PITCH_BACK);
-	else if (value > YJOYSTICK_THRESHOLD)
+	else if (value > yjoystick_threshold)
 		request_navigation_pitch_packet(PITCH_FORWARD);
 	else if (value < 0)
 		request_navigation_pitch_packet(PITCH_BACK + 2);
@@ -3960,18 +3961,17 @@ static void do_joystick_pitch(__attribute__((unused)) void *x, int value)
 
 static void do_joystick_damcon_pitch(__attribute__((unused)) void *x, int value)
 {
-	if (value < -YJOYSTICK_THRESHOLD)
+	if (value < -yjoystick_threshold)
 		robot_forward_button_pressed(NULL);
-	else if (value > YJOYSTICK_THRESHOLD)
+	else if (value > yjoystick_threshold)
 		robot_backward_button_pressed(NULL);
 }
 
 static void do_joystick_damcon_roll(__attribute__((unused)) void *x, int value)
 {
-#define XJOYSTICK_THRESHOLD 23000
-	if (value < -XJOYSTICK_THRESHOLD)
+	if (value < -xjoystick_threshold)
 		robot_left_button_pressed(NULL);
-	else if (value > XJOYSTICK_THRESHOLD)
+	else if (value > xjoystick_threshold)
 		robot_right_button_pressed(NULL);
 }
 
@@ -4001,9 +4001,9 @@ static void do_joystick_weapons_wavelength(__attribute__((unused)) void *x, int 
 
 static void do_joystick_weapons_pitch(__attribute__((unused)) void *x, int value)
 {
-	if (value < -YJOYSTICK_THRESHOLD)
+	if (value < -yjoystick_threshold)
 		request_weapons_manual_pitch_packet(PITCH_BACK);
-	else if (value > YJOYSTICK_THRESHOLD)
+	else if (value > yjoystick_threshold)
 		request_weapons_manual_pitch_packet(PITCH_FORWARD);
 	else if (value < 0)
 		request_weapons_manual_pitch_packet(PITCH_BACK + 2);
@@ -4014,9 +4014,9 @@ static void do_joystick_weapons_pitch(__attribute__((unused)) void *x, int value
 
 static void do_joystick_yaw(__attribute__((unused)) void *x, int value)
 {
-	if (value < -XJOYSTICK_THRESHOLD)
+	if (value < -xjoystick_threshold)
 		request_navigation_yaw_packet(YAW_LEFT);
-	else if (value > XJOYSTICK_THRESHOLD)
+	else if (value > xjoystick_threshold)
 		request_navigation_yaw_packet(YAW_RIGHT);
 	else if (value < 0)
 		request_navigation_yaw_packet(YAW_LEFT + 2);
@@ -4026,9 +4026,9 @@ static void do_joystick_yaw(__attribute__((unused)) void *x, int value)
 
 static void do_joystick_weapons_yaw(__attribute__((unused)) void *x, int value)
 {
-	if (value < -XJOYSTICK_THRESHOLD)
+	if (value < -xjoystick_threshold)
 		request_weapons_manual_yaw_packet(YAW_LEFT);
-	else if (value > XJOYSTICK_THRESHOLD)
+	else if (value > xjoystick_threshold)
 		request_weapons_manual_yaw_packet(YAW_RIGHT);
 	else if (value < 0)
 		request_weapons_manual_yaw_packet(YAW_LEFT + 2);
@@ -4039,9 +4039,9 @@ static void do_joystick_weapons_yaw(__attribute__((unused)) void *x, int value)
 
 static void do_joystick_roll(__attribute__((unused)) void *x, int value)
 {
-	if (value < -XJOYSTICK_THRESHOLD)
+	if (value < -xjoystick_threshold)
 		request_navigation_roll_packet(ROLL_RIGHT);
-	else if (value > XJOYSTICK_THRESHOLD)
+	else if (value > xjoystick_threshold)
 		request_navigation_roll_packet(ROLL_LEFT);
 	else if (value < 0)
 		request_navigation_roll_packet(ROLL_RIGHT + 2);
@@ -16963,6 +16963,10 @@ static struct tweakable_var_descriptor client_tweak[] = {
 		&lens_flare_intensity, 'f', 0.0, 1.0, 0.5, 0, 0, 0 },
 	{ "ATMOSPHERE_RING_SHADOWS", "0 OR 1 TO DISABLE OR ENABLE ATMOSPHERIC RING SHADOWS",
 		&graph_dev_atmosphere_ring_shadows, 'i', 0.0, 0.0, 0.0, 0, 1, 1 },
+	{ "XJOYSTICK_THRESHOLD", "0 TO 64000 - SETS BOUNDARY BETWEEN FINE AND COARSE",
+		&xjoystick_threshold, 'i', 0.0, 0.0, 0.0, 0, 64000, 23000 },
+	{ "YJOYSTICK_THRESHOLD", "0 TO 64000 - SETS BOUNDARY BETWEEN FINE AND COARSE",
+		&yjoystick_threshold, 'i', 0.0, 0.0, 0.0, 0, 64000, 23000 },
 	{ NULL, NULL, NULL, '\0', 0.0, 0.0, 0.0, 0, 0, 0 },
 };
 
