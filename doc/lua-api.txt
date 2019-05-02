@@ -183,8 +183,11 @@ EVENT TYPES in snis:
 		Arguments are the passenger number (0 - 80) and id of the starbase at which
 		the passenger was ejected.
 	"player-ejected-cargo-event"
-		Argument are the ship id, cargo container id, x, y, z, commodity index,
+		Arguments are the ship id, cargo container id, x, y, z, commodity index,
 		and quantity
+	"black-hole-consumed-object-event"
+		Arguments are the black hole ID, the object ID (but the object will no longer
+		exist, or will be a different object), and the object type.
 
 Functions which you may call from lua: 
 

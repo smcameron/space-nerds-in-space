@@ -1247,6 +1247,9 @@ static void black_hole_collision_detection(void *o1, void *o2)
 			(void) add_blackhole_explosion(black_hole->id,
 						black_hole->x, black_hole->y, black_hole->z,
 						500, 100, 100, object->type);
+			schedule_callback3(event_callback, &callback_schedule,
+					"black-hole-consumed-object-event", (double) black_hole->id,
+					(double) object->id, (double) object->type);
 			delete_from_clients_and_server(object);
 			return;
 		} else {
@@ -1255,6 +1258,9 @@ static void black_hole_collision_detection(void *o1, void *o2)
 			object->timestamp = universe_timestamp;
 			snis_queue_add_sound(EXPLOSION_SOUND,
 				ROLE_SOUNDSERVER, object->id);
+			schedule_callback3(event_callback, &callback_schedule,
+					"black-hole-consumed-object-event", (double) black_hole->id,
+					(double) object->id, (double) object->type);
 			schedule_callback(event_callback, &callback_schedule,
 					"player-death-callback", object->id);
 		}
