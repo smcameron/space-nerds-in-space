@@ -496,6 +496,7 @@ function bhg_listener(from, channel, message)
 			comms_channel_transmit(bhg_name, bhg_channel, "DO YOU REALLY THINK SO?");
 			bhg_state = 7;
 		end
+		return;
 	end;
 
 	if bhg_state == 7 then
