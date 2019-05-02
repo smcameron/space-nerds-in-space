@@ -418,7 +418,7 @@ end
 the_black_hole = -1;
 bhg_state = 0;
 bhg_channel = 123
-bhg_name = "MEGAMASS INDUSTRIES BHG 1.7";
+bhg_name = "BHG 1.7";
 function bhg_listener(from, channel, message)
 
 	-- Ignore our own transmissions
