@@ -14241,7 +14241,7 @@ static void meta_comms_channel(char *name, struct game_client *c, char *txt)
 
 static void meta_comms_eject(char *name, struct game_client *c, char *txt)
 {
-	int i, cargobay, rc, item;
+	int i, cargobay, rc, cc, item;
 	float qty;
 	struct snis_entity *ship;
 	const union vec3 up = { { 0.0f, 1.0f, 0.0f } };
@@ -14281,10 +14281,17 @@ static void meta_comms_eject(char *name, struct game_client *c, char *txt)
 	container_loc.v.y += ship->y;
 	container_loc.v.z += ship->z;
 
-	(void) add_cargo_container(container_loc.v.x, container_loc.v.y, container_loc.v.z,
+	rc = add_cargo_container(container_loc.v.x, container_loc.v.y, container_loc.v.z,
 				container_vel.v.x, container_vel.v.y, container_vel.v.z,
 				item, qty, 1);
+	if (rc >= 0)
+		cc = go[rc].id;
+	else
+		cc = -1;
 	send_comms_packet(NULL, name, bridgelist[c->bridge].comms_channel, "CARGO BAY %d EJECTED", cargobay);
+	schedule_callback7(event_callback, &callback_schedule,
+					"player-ejected-cargo-event", (double) ship->id, (double) cc,
+					ship->x, ship->y, ship->z, (double) item, (double) qty);
 	return;
 
 invalid_cargo_bay:
