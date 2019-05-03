@@ -40,7 +40,7 @@ show_menu(player_ids[1],
 		"SAVING PLANET ERPH\n" ..
 		"SPACE POX\n" ..
 		"ROYAL WEDDING\n" ..
-		"CUBO DE LA MUERTE\n",
+		"CUBO DE LA MUERTE\n" ..
 		"KALI\n" ..
 		"DEMOLISHER\n" ..
 		"REGENERATE UNIVERSE\n" ..

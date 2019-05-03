@@ -516,7 +516,7 @@ function bhg_listener(from, channel, message)
 			comms_channel_transmit(bhg_name, bhg_channel, "IN THAT CASE WE WON'T DO IT.  THANK YOU.");
 			bhg_state = 0;
 			return;
-		else if string.uppter(message) == "YES" then
+		else if string.upper(message) == "YES" then
 				comms_channel_transmit(bhg_name, bhg_channel, "OK.");
 				comms_channel_transmit(bhg_name, bhg_channel, "WHAT IS YOUR FAVORITE COLOR?");
 				bhg_state = 5;
