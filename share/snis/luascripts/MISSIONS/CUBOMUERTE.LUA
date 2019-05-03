@@ -286,6 +286,17 @@ audio_message = {
 	"sounds/admiral-thompson-msg-4.ogg",
 };
 
+function transmit_cubo_location(cookie)
+	x, y, z = get_object_location(cubo);
+	if x ~= nil then
+		comms_transmission(starbase[3], "THE LAST KNOWN LOCATION OF THE DEATH CUBE WAS");
+		comms_transmission(starbase[3], string.format("( %d , %d , %d )", x, y, z));
+	else
+		demon_print("LOCATION OF CUBO IS NOT KNOWN (THIS IS A BUG)");
+		comms_transmission(starbase[3], "THE LOCATION OF THE DEATH CUBE IS UNKNOWN");
+	end
+end
+
 function send_audio_message(to_ship_id, from_id, from_name, audio_message_number)
 	comms_transmission(from_id, "INCOMING AUDIO TRANSMISSION FROM");
 	comms_transmission(from_id, string.format("%s ( USE PLAY MESSAGE BUTTON )", from_who));
@@ -370,6 +381,7 @@ function player_docked_callback(player, sb)
 
 	already_docked_with_weapon = false; -- ensure the following msg happens only once.
 	register_timer_callback("scheduled_audio_message", 10 * secs, 2);
+	register_timer_callback("transmit_cubo_location", 15, 0);
 end
 
 function player_ejected_cargo_callback(ship_id, cargo_id, x, y, z, item, qty)
