@@ -319,7 +319,7 @@ end
 
 black_hole_generator = add_commodity("BLACK HOLE GENERATOR",
 		"UNIT", "BLACK HOLE GENERATOR", 100000.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
-BHG_cargo_container = -1;
+bhg_cargo_container = -1;
 
 function add_zarkon_fleet(x, y, z)
 	shipname = { "KRONBO", "BLANTO", "GURFON", "ZLERBA", "GORBOZ"};
@@ -398,7 +398,7 @@ function player_ejected_cargo_callback(ship_id, cargo_id, x, y, z, item, qty)
 	end
 
 	if item == black_hole_generator and qty > 0 then
-		BHG_cargo_container = cargo_id;
+		bhg_cargo_container = cargo_id;
 		set_object_velocity(cargo_id, 0, 0, 0);
 	end
 end
@@ -411,12 +411,12 @@ function check_bhg_position(cookie)
 	-- If the BHG cargo container is within 1000 units of the CUBO
 	-- give the player instructions about how to detonate the BHG.
 
-	if BHG_cargo_container < 0 then
+	if bhg_cargo_container < 0 then
 		-- BHG hasn't been ejected by player yet.
 		return;
 	end
 
-	d = object_distance(BHG_cargo_container, cubo);
+	d = object_distance(bhg_cargo_container, cubo);
 	if (d == nil) then
 		-- maybe the BHG has been ejected but then scooped up by the player
 		return;
@@ -436,16 +436,30 @@ bhg_name = "BHG 1.7";
 function bhg_countdown(count)
 	comms_channel_transmit(bhg_name, bhg_channel, string.format("T MINUS %d", count));
 	if count == 0 then
+		demon_print("BHG COUNTDOWN REACHED ZERO");
 		x, y, z = get_object_location(bhg_cargo_container);
+		if (x == nil) then
+			demon_print("BHG CC LOCATION IS NOT KNOWN");
+		else
+			demon_print("FOUND BHG CC LOCATION");
+		end
 		delete_object(bhg_cargo_container);
 		bhg_cargo_container = -1;
 		if x ~= nil then
+			demon_print("ADDING BLACKHOLE");
 			the_black_hole = add_black_hole("BHG", x, y, z, 1000);
+			if the_black_hole < 0 then
+				demon_print("FAILED TO CREATE BLACK HOLE");
+			else
+				demon_print("ADDED BLACKHOLE");
+			end
 			bhg_state = 0;
 			d = object_distance(the_black_hole, cubo);
 			if d < 3000 then
 				set_object_location(cubo, x + 1, y + 1, z + 1); -- should make the black hole eat the cubo
 			end
+		else
+			demon_print("NOT ADDING BLACKHOLE");
 		end
 	else
 		register_timer_callback("bhg_countdown", 10, count - 1);
@@ -463,7 +477,7 @@ function bhg_listener(from, channel, message)
 		return;
 	end;
 
-	if BHG_cargo_container == -1 then
+	if bhg_cargo_container == -1 then
 		comms_channel_transmit("", bhg_channel, "... no response ...");
 		return;
 	end;
