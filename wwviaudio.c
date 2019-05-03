@@ -242,7 +242,7 @@ static int patestCallback(__attribute__ ((unused)) const void *inputBuffer,
 				output += (float) audio_queue[j].sample[sample] / (float) (INT16_MAX);
 			}
 		}
-		*out++ = (float) output / 2.0;
+		*out++ = (float) output;
         }
 	for (i = 0; i < max_concurrent_sounds; i++) {
 		if (!audio_queue[i].active)
