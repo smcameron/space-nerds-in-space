@@ -512,11 +512,11 @@ function bhg_listener(from, channel, message)
 	end;
 
 	if bhg_state == 4 then
-		if message == "NO" then
+		if string.upper(message) == "NO" then
 			comms_channel_transmit(bhg_name, bhg_channel, "IN THAT CASE WE WON'T DO IT.  THANK YOU.");
 			bhg_state = 0;
 			return;
-		else if message == "YES" then
+		else if string.uppter(message) == "YES" then
 				comms_channel_transmit(bhg_name, bhg_channel, "OK.");
 				comms_channel_transmit(bhg_name, bhg_channel, "WHAT IS YOUR FAVORITE COLOR?");
 				bhg_state = 5;
@@ -547,7 +547,7 @@ function bhg_listener(from, channel, message)
 	end;
 
 	if bhg_state == 7 then
-		if message == "NO" or message == "YES" then
+		if string.upper(message) == "NO" or string.upper(message) == "YES" then
 			comms_channel_transmit(bhg_name, bhg_channel, "WELL I SUPPOSE I SHOULD GET ON WITH IT...");
 			comms_channel_transmit(bhg_name, bhg_channel, "GOODBYE, CRUEL WORLD...");
 			comms_channel_unlisten(bhg_name, bhg_channel);
