@@ -3024,7 +3024,7 @@ static int make_derelict(struct snis_entity *o)
 					o->vx + snis_random_float() * 2.0,
 					o->vy + snis_random_float() * 2.0,
 					o->vz + snis_random_float(), item, qty,
-					item > nstandard_commodities);
+					item >= nstandard_commodities);
 		}
 	} else {
 		(void) add_cargo_container(o->x, o->y, o->z,
