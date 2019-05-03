@@ -170,6 +170,7 @@ static int chaff_count = CHAFF_COUNT;
 static float chaff_confuse_chance = CHAFF_CONFUSE_CHANCE;
 static int multiverse_debug = 0;
 static int suppress_starbase_complaints = 0;
+static int player_invincibility = 0;
 
 /*
  * End of runtime adjustable globals
@@ -1252,7 +1253,7 @@ static void black_hole_collision_detection(void *o1, void *o2)
 					(double) object->id, (double) object->type);
 			delete_from_clients_and_server(object);
 			return;
-		} else {
+		} else if (!player_invincibility) {
 			object->alive = 0;
 			object->respawn_time = universe_timestamp + RESPAWN_TIME_SECS * 10;
 			object->timestamp = universe_timestamp;
@@ -2452,6 +2453,8 @@ static void calculate_torpedolike_damage(struct snis_entity *target, double weap
 	struct damcon_data *d = NULL;
 
 	if (target->type == OBJTYPE_SHIP1) {
+		if (player_invincibility)
+			return;
 		int bridge = lookup_bridge_by_shipid(target->id);
 
 		if (bridge < 0) {
@@ -7672,14 +7675,15 @@ static void do_temperature_computations(struct snis_entity *o)
 		bridgelist[b].warp_core_critical_timer--;
 		if (bridgelist[b].warp_core_critical_timer == 0) {
 			bridgelist[b].warp_core_critical = 0;
-			o->alive = 0;
-			o->tsd.ship.damage.shield_damage = 255;
-			o->timestamp = universe_timestamp;
-			o->respawn_time = universe_timestamp + RESPAWN_TIME_SECS * 10;
-			snis_queue_add_sound(EXPLOSION_SOUND,
-					ROLE_SOUNDSERVER, o->id);
-			schedule_callback(event_callback, &callback_schedule,
-				"player-death-callback", o->id);
+			if (!player_invincibility) {
+				o->alive = 0;
+				o->tsd.ship.damage.shield_damage = 255;
+				o->timestamp = universe_timestamp;
+				o->respawn_time = universe_timestamp + RESPAWN_TIME_SECS * 10;
+				schedule_callback(event_callback, &callback_schedule,
+					"player-death-callback", o->id);
+			}
+			snis_queue_add_sound(EXPLOSION_SOUND, ROLE_SOUNDSERVER, o->id);
 		}
 	}
 }
@@ -7719,6 +7723,9 @@ static int do_overheating_damage(struct snis_entity *o)
 	int damage_was_done = 0;
 	struct damcon_data *d;
 	int b;
+
+	if (player_invincibility)
+		return 0;
 
 	b = lookup_bridge_by_shipid(o->id);
 	d = &bridgelist[b].damcon;
@@ -8226,7 +8233,7 @@ static void player_collision_detection(void *player, void *object)
 			dist2 < SECURITY_RADIUS * SECURITY_RADIUS)
 			o->tsd.ship.in_secure_area = t->tsd.planet.security;
 
-		if (dist2 < surface_dist2)  {
+		if (dist2 < surface_dist2 && !player_invincibility)  {
 			/* crashed into planet */
 			o->alive = 0;
 			o->timestamp = universe_timestamp;
@@ -8759,6 +8766,9 @@ static int calc_sunburn_damage(struct snis_entity *o, struct damcon_data *d,
 {
 	float damage, old_value, new_value;
 	int system_number = system - (unsigned char *) &o->tsd.ship.damage;
+
+	if (player_invincibility)
+		return 0;
 
 	BUILD_ASSERT(sizeof(o->tsd.ship.damage) == DAMCON_SYSTEM_COUNT - 1);
 	if (system_number < 0 || system_number >= DAMCON_SYSTEM_COUNT - 1)
@@ -16867,6 +16877,8 @@ static struct tweakable_var_descriptor server_tweak[] = {
 		0.0, 0.0, 0.0, 0, 1, 0 },
 	{ "SUPPRESS_STARBASE_COMPLAINTS", "0 or 1, ENABLES OR SUPPRESSES STARBASE COMPLAINING",
 		&suppress_starbase_complaints, 'i', 0.0, 0.0, 0.0, 0, 1, 0 },
+	{ "INVINCIBILITY", "0 or 1, ENABLES OR SUPPRESSES PLAYER SHIP INVINCIBILITY",
+		&player_invincibility, 'i', 0.0, 0.0, 0.0, 0, 1, 0 },
 	{ NULL, NULL, NULL, '\0', 0.0, 0.0, 0.0, 0, 0, 0 },
 };
 
