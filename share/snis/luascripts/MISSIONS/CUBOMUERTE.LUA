@@ -299,7 +299,7 @@ end
 
 function send_audio_message(to_ship_id, from_id, from_name, audio_message_number)
 	comms_transmission(from_id, "INCOMING AUDIO TRANSMISSION FROM");
-	comms_transmission(from_id, string.format("%s ( USE PLAY MESSAGE BUTTON )", from_who));
+	comms_transmission(from_id, string.format("%s ( USE PLAY MESSAGE BUTTON )", from_name));
 	play_sound(to_ship_id, "sounds/quindar-intro.ogg");
 	last_message = audio_message_number;
 	set_custom_button_label(to_ship_id, 5, "PLAY MESSAGE");
