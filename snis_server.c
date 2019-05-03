@@ -12609,6 +12609,36 @@ static int l_set_red_alert_status(lua_State *l)
 	return 1;
 }
 
+static int l_destroy_ship(lua_State *l)
+{
+	const double lua_oid = luaL_checknumber(l, 1);
+	struct snis_entity *t;
+	int i;
+
+	pthread_mutex_lock(&universe_mutex);
+	i = lookup_by_id(lua_oid);
+	if (i < 0) {
+		pthread_mutex_unlock(&universe_mutex);
+		lua_pushnumber(l, -1.0);
+		send_demon_console_msg("DESTROY_SHIP: OBJECT NOT FOUND");
+		return 1;
+	}
+	t = &go[i];
+	if (t->type != OBJTYPE_SHIP2) {
+		pthread_mutex_unlock(&universe_mutex);
+		lua_pushnumber(l, -1.0);
+		send_demon_console_msg("DESTROY_SHIP: OBJECT NOT AN NPC SHIP");
+		return 1;
+	}
+	(void) add_explosion(t->x, t->y, t->z, 50, 150, 50, t->type);
+	make_derelict(t);
+	respawn_object(t);
+	delete_from_clients_and_server(t);
+	pthread_mutex_unlock(&universe_mutex);
+	lua_pushnumber(l, 0.0);
+	return 1;
+}
+
 static void add_black_holes(void)
 {
 	int i;
@@ -23301,6 +23331,7 @@ static void setup_lua(void)
 	add_lua_callable_fn(l_too_close_to_planet_or_sun, "too_close_to_planet_or_sun");
 	add_lua_callable_fn(l_play_sound, "play_sound");
 	add_lua_callable_fn(l_set_red_alert_status, "set_red_alert_status");
+	add_lua_callable_fn(l_destroy_ship, "destroy_ship");
 }
 
 static int run_initial_lua_scripts(void)
