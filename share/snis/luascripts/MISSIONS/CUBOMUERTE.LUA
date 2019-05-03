@@ -420,6 +420,26 @@ the_black_hole = -1;
 bhg_state = 0;
 bhg_channel = 123
 bhg_name = "BHG 1.7";
+
+function bhg_countdown(count)
+	comms_channel_transmit(bhg_name, bhg_channel, string.format("T MINUS %d", count));
+	if count == 0 then
+		x, y, z = get_object_location(bhg_cargo_container);
+		delete_object(bhg_cargo_container);
+		bhg_cargo_container = -1;
+		if x ~= nil then
+			the_black_hole = add_black_hole("BHG", x, y, z, 1000);
+			bhg_state = 0;
+			d = object_distance(the_black_hole, cubo);
+			if d < 3000 then
+				set_object_location(cubo, x + 1, y + 1, z + 1); -- should make the black hole eat the cubo
+			end
+		end
+	else
+		register_timer_callback("bhg_countdown", 10, count - 1);
+	end
+end
+
 function bhg_listener(from, channel, message)
 
 	-- Ignore our own transmissions
@@ -505,13 +525,8 @@ function bhg_listener(from, channel, message)
 			comms_channel_transmit(bhg_name, bhg_channel, "WELL I SUPPOSE I SHOULD GET ON WITH IT...");
 			comms_channel_transmit(bhg_name, bhg_channel, "GOODBYE, CRUEL WORLD...");
 			comms_channel_unlisten(bhg_name, bhg_channel);
-			x, y, z = get_object_location(bhg_cargo_container);
-			delete_object(bhg_cargo_container);
-			bhg_cargo_container = -1;
-			if x ~= nil then
-				the_black_hole = add_black_hole("BHG", x, y, z, 1000);
-				bhg_state = 0;
-			end
+			register_timer_callback("bhg_countdown", 10, 10);
+			bhg_state = 8;
 			return;
 		else
 			comms_channel_transmit(bhg_name, bhg_channel, "PLEASE ANSWER YES OR NO");
