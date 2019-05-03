@@ -387,6 +387,7 @@ function player_ejected_cargo_callback(ship_id, cargo_id, x, y, z, item, qty)
 
 	if item == black_hole_generator and qty > 0 then
 		BHG_cargo_container = cargo_id;
+		set_object_velocity(cargo_id, 0, 0, 0);
 	end
 end
 
