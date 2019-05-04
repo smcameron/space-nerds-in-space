@@ -456,7 +456,7 @@ function bhg_countdown(count)
 			bhg_state = 0;
 			d = object_distance(the_black_hole, cubo);
 			if d < 3000 then
-				set_object_location(cubo, x + 1, y + 1, z + 1); -- should make the black hole eat the cubo
+				move_object(cubo, x + 1, y + 1, z + 1); -- should make the black hole eat the cubo
 			end
 		else
 			demon_print("NOT ADDING BLACKHOLE");
