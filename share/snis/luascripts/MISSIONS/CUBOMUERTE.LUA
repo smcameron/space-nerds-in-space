@@ -381,7 +381,7 @@ function player_docked_callback(player, sb)
 
 	already_docked_with_weapon = false; -- ensure the following msg happens only once.
 	register_timer_callback("scheduled_audio_message", 10 * secs, 2);
-	register_timer_callback("transmit_cubo_location", 15, 0);
+	register_timer_callback("transmit_cubo_location", 15 * secs, 0);
 end
 
 function player_ejected_cargo_callback(ship_id, cargo_id, x, y, z, item, qty)
