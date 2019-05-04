@@ -447,7 +447,7 @@ function bhg_countdown(count)
 		bhg_cargo_container = -1;
 		if x ~= nil then
 			demon_print("ADDING BLACKHOLE");
-			the_black_hole = add_black_hole("BHG", x, y, z, 1000);
+			the_black_hole = add_black_hole("BHG", x, y, z, 3000);
 			if the_black_hole < 0 then
 				demon_print("FAILED TO CREATE BLACK HOLE");
 			else
