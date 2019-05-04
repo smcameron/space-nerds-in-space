@@ -27,7 +27,12 @@
 clear_all();
 
 secs = 10;
+minutes = secs * 60;
 cubo = -1;
+
+-- Once the player docks with starbase 2 while carrying the black hole generator
+-- how much time remains before elnox is destroyed?
+elnox_time_limit = 7 * minutes;
 
 function add_cubo_de_la_muerte(x, y, z)
   cubo = add_block(-1, x, y, z, 100, 100, 100, 1, 0, 0, 0, 0, 0);
@@ -286,6 +291,19 @@ audio_message = {
 	"sounds/admiral-thompson-msg-4.ogg",
 };
 
+function destroy_elnox(cookie)
+	cx, cy, cz = get_object_location(cubo);
+	ex, ey, ez = get_object_location(planet[2]);
+	nx = 0.8 * (ex - cx) + cx;
+	ny = 0.8 * (ey - cy) + cy;
+	nz = 0.8 * (ez - cz) + cz;
+	move_object(cubo, nx, ny, nz);
+	delete_object(planet[2]);
+	delete_object(starbase[3]);
+	add_explosion(ex, ey, ez, 150, 350, 250, 13); -- 13 is planet
+	text_to_speech(player_ids[1], "Elnox has been destroyed. You have failed the mission.");
+end
+
 function transmit_cubo_location(cookie)
 	x, y, z = get_object_location(planet[2]); -- LOCATION ELNOX
 	dx, dy, dz = random_point_on_sphere(200000);
@@ -295,6 +313,7 @@ function transmit_cubo_location(cookie)
 	move_object(cubo, x, y, z);
 	comms_transmission(starbase[3], "THE LAST KNOWN LOCATION OF THE DEATH CUBE WAS");
 	comms_transmission(starbase[3], string.format("( %d , %d , %d )", x, y, z));
+	register_timer_callback("destroy_elnox", elnox_time_limit, 0);
 end
 
 function send_audio_message(to_ship_id, from_id, from_name, audio_message_number)
