@@ -287,14 +287,14 @@ audio_message = {
 };
 
 function transmit_cubo_location(cookie)
-	x, y, z = get_object_location(cubo);
-	if x ~= nil then
-		comms_transmission(starbase[3], "THE LAST KNOWN LOCATION OF THE DEATH CUBE WAS");
-		comms_transmission(starbase[3], string.format("( %d , %d , %d )", x, y, z));
-	else
-		demon_print("LOCATION OF CUBO IS NOT KNOWN (THIS IS A BUG)");
-		comms_transmission(starbase[3], "THE LOCATION OF THE DEATH CUBE IS UNKNOWN");
-	end
+	x, y, z = get_object_location(planet[2]); -- LOCATION ELNOX
+	dx, dy, dz = random_point_on_sphere(200000);
+	x = x + dx;
+	y = y + dy;
+	z = z + dz;
+	move_object(cubo, x, y, z);
+	comms_transmission(starbase[3], "THE LAST KNOWN LOCATION OF THE DEATH CUBE WAS");
+	comms_transmission(starbase[3], string.format("( %d , %d , %d )", x, y, z));
 end
 
 function send_audio_message(to_ship_id, from_id, from_name, audio_message_number)
