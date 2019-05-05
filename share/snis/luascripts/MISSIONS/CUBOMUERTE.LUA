@@ -449,7 +449,8 @@ end
 
 the_black_hole = -1;
 bhg_state = 0;
-bhg_channel = 123
+bhg_channel = 666
+bhg_msg = "123"
 bhg_name = "BHG 1.7";
 
 function bhg_countdown(count)
@@ -501,7 +502,7 @@ function bhg_listener(from, channel, message)
 		return;
 	end;
 
-	if message == "666" then
+	if message == bhg_msg then
 		bhg_state = 1;
 	end;
 
