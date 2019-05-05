@@ -32,7 +32,7 @@ cubo = -1;
 
 -- Once the player docks with starbase 2 while carrying the black hole generator
 -- how much time remains before elnox is destroyed?
-elnox_time_limit = 7 * minutes;
+elnox_time_limit = 15 * minutes;
 
 function add_cubo_de_la_muerte(x, y, z)
   cubo = add_block(-1, x, y, z, 100, 100, 100, 1, 0, 0, 0, 0, 0);
