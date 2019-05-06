@@ -366,4 +366,15 @@ NICE TO HAVE:
 * Replace texture reloading system based on file timestamp polling
   in graph_dev_opengl.c (e.g.  graph_dev_reload_changed_textures() and
   graph_dev_reload_changed_cubemap_textures) with an inotify(7) based system.
+  Actually, only mesh_viewer uses this texture reloading system, so it's not
+  really a priority.
+
+* Allow snis_client to do the disk i/o part of reloading textures in another
+  thread.  Right now, when we're traversing a warp gate, it's loading a bunch
+  of per-solarsystem textures from the main thread, calling load_textures() from
+  main_da_expose(), which it has to do that from the main thread.  But the disk
+  i/o part could be done in another thread.  This would allow some transition
+  thing, like some kind of warp gate effect to be animated.  Right now, it doesn't
+  update the display at all once it calls load_textures() until load_textures()
+  returns -- which can take several seconds.
 
