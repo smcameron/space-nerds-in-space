@@ -17285,7 +17285,7 @@ static int filter_lua_scripts_and_dirs(const struct dirent *d)
  */
 static void get_lua_script_help_string(char *luadir, char *subdir, char *filename, char *helpstring, int buflen)
 {
-	FILE *f;
+	FILE *f = NULL;
 	char path[PATH_MAX], buf[256];
 	char *s;
 
@@ -17309,7 +17309,8 @@ static void get_lua_script_help_string(char *luadir, char *subdir, char *filenam
 	}
 	strcpy(helpstring, "");
 out:
-	fclose(f);
+	if (f)
+		fclose(f);
 }
 
 static void list_lua_scripts(void)
