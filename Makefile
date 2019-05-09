@@ -353,8 +353,6 @@ SHADERS=${SHADERSRCDIR}/atmosphere.frag \
 	${SHADERSRCDIR}/smaa-neighborhood.shader \
 	${SHADERSRCDIR}/textured-and-lit-per-pixel.shader \
 	${SHADERSRCDIR}/textured-and-lit-per-vertex.shader \
-	${SHADERSRCDIR}/textured-cubemap-and-lit-per-pixel.shader \
-	${SHADERSRCDIR}/textured-cubemap-and-lit-per-vertex.shader \
 	${SHADERSRCDIR}/textured-cubemap-shield-per-pixel.shader \
 	${SHADERSRCDIR}/textured-cubemap-and-lit-with-annulus-shadow-per-pixel.shader \
 	${SHADERSRCDIR}/textured-particle.frag \
