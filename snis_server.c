@@ -3696,8 +3696,12 @@ static void missile_move(struct snis_entity *o)
 	i = lookup_by_id(o->tsd.missile.target_id);
 	if (i >= 0) { /* our target is still around */
 		target = &go[i];
-		if (target->type == OBJTYPE_SHIP1)
+		if (target->type == OBJTYPE_SHIP1) {
+			if (target->tsd.ship.missile_lock_detected == 0)
+				snis_queue_add_text_to_speech("Missile lock detected.",
+					ROLE_TEXT_TO_SPEECH, target->id);
 			target->tsd.ship.missile_lock_detected = 10;
+		}
 
 		/* Calculate desired velocity */
 		to_target.v.x = target->x - o->x;
