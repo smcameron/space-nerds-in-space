@@ -1360,7 +1360,7 @@ static void graph_dev_raster_texture(struct graph_dev_gl_textured_shader *shader
 			shadow_sphere->eye_pos.v.z, shadow_sphere->r * shadow_sphere->r);
 
 	/* shadow annulus */
-	if (shader->shadow_annulus_texture_id >= 0 && shadow_annulus) {
+	if (shader->shadow_annulus_texture_id > 0 && shadow_annulus) {
 		BIND_TEXTURE(GL_TEXTURE1, GL_TEXTURE_2D, shadow_annulus->texture_id);
 
 		glUniform4f(shader->shadow_annulus_tint_color_id, shadow_annulus->tint_color.red,
@@ -1564,7 +1564,7 @@ static void graph_dev_raster_atmosphere(const struct mat44 *mat_mvp, const struc
 		/* Set up uniforms for ring shadow */
 		shader = &atmosphere_with_annulus_shadow_shader;
 		glUseProgram(shader->program_id);
-		if (shadow_annulus->texture_id >= 0 && shader->shadow_annulus_texture_id >= 0)
+		if (shadow_annulus->texture_id > 0 && shader->shadow_annulus_texture_id > 0)
 			BIND_TEXTURE(GL_TEXTURE0, GL_TEXTURE_2D, shadow_annulus->texture_id);
 
 		glUniform4f(shader->shadow_annulus_tint_color_id, shadow_annulus->tint_color.red,
@@ -2389,7 +2389,7 @@ void graph_dev_draw_entity(struct entity_context *cx, struct entity *e, union ve
 			case MATERIAL_ALPHA_BY_NORMAL: {
 				struct material_alpha_by_normal *mt = &e->material_ptr->alpha_by_normal;
 				texture_id = mt->texture_id;
-				if (mt->texture_id >= 0)
+				if (mt->texture_id > 0)
 					tex_shader = &textured_alpha_by_normal_shader;
 				else
 					tex_shader = &alpha_by_normal_shader;
