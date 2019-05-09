@@ -19902,7 +19902,11 @@ static uint32_t find_potential_missile_target(struct snis_entity *shooter)
 
 static void fire_missile(struct snis_entity *shooter, uint32_t target_id)
 {
-	snis_queue_add_sound(MISSILE_LAUNCH, ROLE_SOUNDSERVER, shooter->id);
+	if (shooter->type == OBJTYPE_SHIP1) {
+		snis_queue_add_sound(MISSILE_LAUNCH, ROLE_SOUNDSERVER, shooter->id);
+		snis_queue_add_text_to_speech("Missile away.",
+				ROLE_TEXT_TO_SPEECH, shooter->id);
+	}
 	add_missile(shooter->x, shooter->y, shooter->z, shooter->vx, shooter->vy, shooter->vz,
 			target_id, shooter->id);
 }
