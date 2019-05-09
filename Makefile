@@ -414,10 +414,15 @@ UPDATE_DESKTOP=update-desktop-database ${DESKTOPDIR} || :
 
 # -rdynamic is used by gcc for runtime stack traces (see stacktrace.c)
 # but clang complains about it.
-ifeq (${CC},clang)
-RDYNAMIC=
-else
+USING_CLANG=$(shell $(CC) --version | grep clang)
+ifeq (${USING_CLANG},)
+# not using clang
 RDYNAMIC=-rdynamic
+$(echo ${USING_CLANG})
+else
+# using clang
+RDYNAMIC=
+$(echo ${USING_CLANG})
 endif
 
 ifeq (${WITHAUDIO},yes)
