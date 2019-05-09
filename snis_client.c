@@ -4959,13 +4959,11 @@ static int process_update_ship_packet(uint8_t opcode)
 	o->tsd.ship.docking_magnets = docking_magnets;
 	o->tsd.ship.emf_detector = emf_detector;
 	/* FIXME: really update_emf_detector should get called every frame and passed o->tsd.ship.emf_detector. */
-	update_emf_detector(emf_detector);
 	o->tsd.ship.nav_mode = nav_mode;
 	o->tsd.ship.warp_core_status = warp_core_status;
 	global_rts_mode = rts_mode;
 	o->tsd.ship.rts_active_button = rts_active_button;
 	comms_setup_rts_buttons(rts_mode, o);
-	snis_button_set_label(nav_ui.starmap_button, nav_mode ? "NAV MODE" : "STARMAP");
 
 	update_orientation_history(o->tsd.ship.sciball_o, &sciball_orientation);
 	update_orientation_history(o->tsd.ship.weap_o, &weap_orientation);
@@ -4975,16 +4973,20 @@ static int process_update_ship_packet(uint8_t opcode)
 	o->tsd.ship.desired_hg_ant_aim.v.z = hgaz;
 	if (vec3_magnitude(&o->tsd.ship.desired_hg_ant_aim) > 0.001)
 		vec3_normalize_self(&o->tsd.ship.desired_hg_ant_aim);
-	if (!o->tsd.ship.reverse && reverse)
-		wwviaudio_add_sound(REVERSE_SOUND);
-	o->tsd.ship.reverse = reverse;
 	o->tsd.ship.exterior_lights = exterior_lights;
 	o->tsd.ship.alarms_silenced = alarms_silenced;
 	o->tsd.ship.missile_lock_detected = missile_lock_detected;
 	o->tsd.ship.trident = trident;
 	o->tsd.ship.wallet = (float) wallet;
 	o->tsd.ship.viewpoint_object = viewpoint_object;
-	snis_button_set_label(nav_ui.trident_button, trident ? "RELATIVE" : "ABSOLUTE");
+	if (my_ship_id == o->id) {
+		update_emf_detector(emf_detector);
+		snis_button_set_label(nav_ui.trident_button, trident ? "RELATIVE" : "ABSOLUTE");
+		snis_button_set_label(nav_ui.starmap_button, nav_mode ? "NAV MODE" : "STARMAP");
+		if (!o->tsd.ship.reverse && reverse)
+			wwviaudio_add_sound(REVERSE_SOUND);
+	}
+	o->tsd.ship.reverse = reverse;
 	o->tsd.ship.ai[0].u.attack.victim_id = victim_id;
 	rc = 0;
 out:
