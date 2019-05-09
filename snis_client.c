@@ -8687,7 +8687,7 @@ static void show_lens_flare(struct snis_entity *o, union vec3 *camera_pos, union
 
 	factor = -1.0;
 	for (i = 0; i < NLENS_FLARE_GHOSTS; i++) {
-		if (fabsf(factor - 0.0) < 0.01) /* Skip ghost at center of screen */
+		if (fabsf(factor) < 0.01) /* Skip ghost at center of screen */
 			factor += (2.0 / NLENS_FLARE_GHOSTS);
 		ghost_pos = ghost_nexus;
 		ghost_offset.v.x = SUNX - ghost_nexus.v.x;

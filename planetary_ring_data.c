@@ -19,8 +19,8 @@ void init_planetary_ring_data(struct planetary_ring_data ring_data[],
 		ring_data[i].alpha = 1.0;
 		ring_data[i].texture_v = (float) i / 256.0f;
 
-		r1 = fabsf(mtwist_float(mt) * (MAX_RING_RADIUS - MIN_RING_RADIUS - 0.5)) + MIN_RING_RADIUS + 0.5;
-		r2 = fabsf(mtwist_float(mt) * (MAX_RING_RADIUS - MIN_RING_RADIUS - 0.5)) + MIN_RING_RADIUS + 0.5;
+		r1 = fabsf(mtwist_float(mt) * (MAX_RING_RADIUS - MIN_RING_RADIUS - 0.5f)) + MIN_RING_RADIUS + 0.5f;
+		r2 = fabsf(mtwist_float(mt) * (MAX_RING_RADIUS - MIN_RING_RADIUS - 0.5f)) + MIN_RING_RADIUS + 0.5f;
 
 		if (r1 > r2) {
 			ring_data[i].inner_radius = r2;
