@@ -510,11 +510,12 @@ static void *broadcast_lobby_info(__attribute__((unused)) void *arg)
 
 	netmask = 0xa5a5a5a5; /* guess something excessively improbable */
 	for (a = ifaddr; a; a = a->ifa_next) {
+		uint32_t s;
 		if (a->ifa_addr == NULL)
 			continue;
 		if (a->ifa_addr->sa_family != AF_INET)
 			continue;
-		uint32_t s = ((struct sockaddr_in *) a->ifa_addr)->sin_addr.s_addr;
+		s = ((struct sockaddr_in *) a->ifa_addr)->sin_addr.s_addr;
 		bcast_addr = *(struct sockaddr_in *) a->ifa_addr;
 		ssgl_log(SSGL_INFO, "comparing ipaddr %08x to %08x\n", s, ipaddr);
 		if (s == ipaddr) {
