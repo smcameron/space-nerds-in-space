@@ -16926,6 +16926,11 @@ static uint32_t verify_role(uint32_t role)
 
 	if ((role & onscreen_roles) == 0)
 		role = role | ROLE_MAIN;
+
+	/* Enforce that if a client has ROLE_MAIN, it has all onscreen roles */
+	if (role & ROLE_MAIN)
+		role |= onscreen_roles;
+	
 	role = role | ROLE_DEMON; /* always have demon, otherwise you can get into trouble. */
 	return role;
 }
@@ -22565,7 +22570,7 @@ static int add_new_player(struct game_client *c)
 
 	c->bridge = lookup_bridge(app.shipname, app.password);
 	fprintf(stderr, "%s: c->bridge = %d\n", logprefix(), c->bridge);
-	c->role = app.role;
+	c->role = verify_role(app.role);
 	if (c->bridge == -1) { /* didn't find our bridge, make a new one. */
 		double x, z;
 		fprintf(stderr, "%s: didn't find bridge, make new one\n", logprefix());

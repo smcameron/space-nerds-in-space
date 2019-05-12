@@ -18769,6 +18769,17 @@ static void connect_to_lobby_button_pressed()
 	role |= (ROLE_TEXT_TO_SPEECH * !!net_setup_ui.role_text_to_speech_v);
 	if (role == 0)
 		role = ROLE_ALL;
+
+	/* If they select MAIN SCREEN role, then they need to get all the other stations too.
+	 * This is so that Ctrl-O (onscreen!) will work right.  There are some things which
+	 * are only transmitted from snis_server to snis_client if the client has the right role.
+	 * If the main screen is to be able to display every station, it will need all the
+	 * information for every role, so it must have every role.
+	 */
+	if (role & ROLE_MAIN)
+		role |= (ROLE_WEAPONS | ROLE_NAVIGATION | ROLE_ENGINEERING |
+			ROLE_DAMCON | ROLE_SCIENCE | ROLE_COMMS | ROLE_DEMON);
+
 	login_failed_timer = 0; /* turn off any old login failed messages */
 	connect_to_lobby();
 }
