@@ -260,7 +260,10 @@ TEXTUREFILES=${TEXTURESRCDIR}/AreaTex.h \
 	${TEXTURESRCDIR}/thrustviolet.png \
 	${TEXTURESRCDIR}/thrustyellow.png \
 	${TEXTURESRCDIR}/warpgate_emit.png \
-	${TEXTURESRCDIR}/warpgate_texture.png
+	${TEXTURESRCDIR}/warpgate_texture.png \
+	${TEXTURESRCDIR}/anamorphic_flare.png \
+	${TEXTURESRCDIR}/lens_flare_ghost.png \
+	${TEXTURESRCDIR}/lens_flare_halo.png
 
 LUASCRIPTDIR=${DATADIR}/luascripts
 LUASRCDIR=${ASSETSSRCDIR}/luascripts
