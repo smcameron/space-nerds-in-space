@@ -14228,8 +14228,19 @@ static void meta_comms_inventory(char *name, struct game_client *c, char *txt)
 		float qty;
 		char origin[20], dest[20];
 
-		if (ccc->item == -1) {
+		if (ccc->item == -1 || ccc->qty < 0.001) {
 			send_comms_packet(NULL, name, ch, "    CARGO BAY %d: ** EMPTY **", i);
+			/* If we somehow got a zero quantity but non-empty item, or non-zero or negative
+			 * quantity of "nothing", then empty the item. Suppress any "no tea" situation.
+			 * This should not happen, so log a message if it does.
+			 */
+			if (ccc->item != -1 || ccc->qty >= 0.001) {
+				fprintf(stderr,
+					"No tea detected and suppressed in cargo bay %d, ship id %d (q=%f,i=%d).\n",
+					i, ship->id, ccc->qty, ccc->item);
+				ccc->item = -1;
+				ccc->qty = 0.0;
+			}
 		} else {
 			char due_date[20];
 			itemname = commodity[ccc->item].name;
