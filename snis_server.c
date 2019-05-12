@@ -5369,7 +5369,7 @@ static void mining_bot_unload_one_ore(struct snis_entity *bot,
 		*ore = 0;
 		return;
 	}
-	quantity = ((float) *ore / 255.0) * 10;
+	quantity = ((float) *ore / 255.0) * 10; /* TODO: Will this make degenerate qty close to zero? */
 	if (parent->tsd.ship.cargo[cargo_bay].contents.item == -1) {
 		parent->tsd.ship.cargo[cargo_bay].contents.item = commodity_index;
 		parent->tsd.ship.cargo[cargo_bay].contents.qty = quantity; 
@@ -10351,7 +10351,7 @@ static int add_ship(int faction, int shiptype, int auto_respawn)
 	memset(go[i].tsd.ship.cargo, 0, sizeof(go[i].tsd.ship.cargo));
 	for (cb = 0; cb < go[i].tsd.ship.ncargo_bays; cb++) {
 		int item = commodity_sample();
-		float qty = (float) snis_randn(100);
+		float qty = (float) snis_randn(99) + 1;
 		go[i].tsd.ship.cargo[cb].contents.item = item;
 		go[i].tsd.ship.cargo[cb].contents.qty = qty;
 		if (snis_randn(10000) < 2000)
@@ -10889,7 +10889,7 @@ static int add_cargo_container(double x, double y, double z, double vx, double v
 	if (item < 0) {
 		/* TODO: something better for container contents */
 		item = commodity_sample();
-		qty = (float) snis_randn(100);
+		qty = (float) snis_randn(99) + 1;
 	}
 	go[i].tsd.cargo_container.contents.item = item;
 	go[i].tsd.cargo_container.contents.qty = qty;
@@ -11103,7 +11103,7 @@ static void init_starbase_market(struct snis_entity *o)
 			item = commodity_sample();
 		} while (mkt_item_already_present(mkt, i, item)); 
 		mkt[i].item = item;
-		mkt[i].qty = snis_randn(100); /* TODO: something better */
+		mkt[i].qty = snis_randn(99) + 1; /* TODO: something better */
 		mkt[i].refill_rate = (float) snis_randn(1000) / 1000.0; /* TODO: something better */
 		mkt[i].bid = o->tsd.starbase.bid_price[item];
 		mkt[i].ask = (float) 1.1 * mkt[i].bid;
@@ -19012,6 +19012,8 @@ static int l_set_commodity_contents(lua_State *l)
 	if (o->type != OBJTYPE_SHIP1 && o->type != OBJTYPE_CARGO_CONTAINER && o->type != OBJTYPE_SHIP2)
 		goto out;
 	if (index < -1 || index >= ncommodities)
+		goto out;
+	if (lua_quantity < 0.01)
 		goto out;
 	if (o->type == OBJTYPE_SHIP1 || o->type == OBJTYPE_SHIP2) {
 		const double lua_cargo_bay = luaL_checknumber(l, 4);
