@@ -8965,7 +8965,7 @@ static void check_science_selection(struct snis_entity *o)
 deselect:
 	bridgelist[bn].science_selection = (uint32_t) -1;
 	send_packet_to_all_clients_on_a_bridge(o->id, snis_opcode_pkt("bbw", OPCODE_SCI_SELECT_TARGET,
-		OPCODE_SCI_SELECT_TARGET_TYPE_OBJECT, (uint32_t) -1), ROLE_SCIENCE);
+		OPCODE_SCI_SELECT_TARGET_TYPE_OBJECT, (uint32_t) -1), ROLE_SCIENCE | ROLE_NAVIGATION | ROLE_WEAPONS);
 }
 
 static void aim_high_gain_antenna(struct snis_entity *o)
@@ -14046,7 +14046,7 @@ static void science_select_target(struct game_client *c, uint8_t selection_type,
 	/* just turn it around and fan it out to all the right places */
 	send_packet_to_all_clients_on_a_bridge(c->shipid,
 			snis_opcode_pkt("bbw", OPCODE_SCI_SELECT_TARGET, selection_type, id),
-			ROLE_SCIENCE);
+			ROLE_SCIENCE | ROLE_NAVIGATION | ROLE_WEAPONS);
 	/* remember sci selection for retargeting mining bot */
 	if (selection_type == OPCODE_SCI_SELECT_TARGET_TYPE_OBJECT) {
 		bridgelist[c->bridge].selected_waypoint = -1;
