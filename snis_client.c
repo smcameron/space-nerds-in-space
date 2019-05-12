@@ -15532,7 +15532,7 @@ static void draw_science_data(GtkWidget *w, struct snis_entity *ship, struct sni
 		snprintf(buffer, sizeof(buffer), "NAME: WAYPOINT-%02d", waypoint_index);
 		sng_abs_xy_draw_string(buffer, TINY_FONT, x, y);
 	} else {
-		snprintf(buffer, sizeof(buffer), "NAME: %s", o ? o->sdata.name : "");
+		snprintf(buffer, sizeof(buffer), "NAME: %s", o ? o->sdata.name : "NO SCAN TARGET SELECTED");
 		sng_abs_xy_draw_string(buffer, TINY_FONT, x, y);
 		if (o && (o->type == OBJTYPE_SHIP1 ||
 			o->type == OBJTYPE_SHIP2 ||
@@ -15816,44 +15816,54 @@ static void draw_science_details(GtkWidget *w, GdkGC *gc)
 	int i;
 
 	pull_down_menu_clear(sci_ui.menu);
-	if (!curr_science_guy || !curr_science_guy->entity)
+	if (!curr_science_guy) {
+		sng_center_xy_draw_string("NO SCAN TARGET SELECTED", TINY_FONT, txx(260), txy(300));
 		return;
+	}
+	if (!curr_science_guy->entity) {
+		/* This mostly should not happen. */
+		sng_center_xy_draw_string("SCAN TARGET NOT IDENTIFIABLE", TINY_FONT, txx(260), txy(300));
+		return;
+	}
 
 	set_renderer(sciecx, WIREFRAME_RENDERER | BLACK_TRIS);
+	m = NULL;
 	if (curr_science_guy->type == OBJTYPE_PLANET ||
 		curr_science_guy->type == OBJTYPE_BLACK_HOLE)
 		m = low_poly_sphere_mesh;
-	else
+	else if (curr_science_guy->entity)
 		m = entity_get_mesh(curr_science_guy->entity);
 	angle = (M_PI / 180.0) * (timer % 360);
-	if (curr_science_guy->type == OBJTYPE_STARBASE ||
-		curr_science_guy->type == OBJTYPE_PLANET ||
-		curr_science_guy->type == OBJTYPE_BLACK_HOLE) {
-		e = add_entity(sciecx, m, 0.0, -m->radius, m->radius * 0.2, UI_COLOR(sci_wireframe));
-		quat_init_axis(&orientation, 0.0, 0.0, 1.0, angle);
-	} else {
-		e = add_entity(sciecx, m, 0.0, m->radius * 0.2, -m->radius, UI_COLOR(sci_wireframe));
-		quat_init_axis(&orientation, 0.0, 1.0, 0.0, angle);
-		if (e && curr_science_guy->type == OBJTYPE_SPACEMONSTER)
-			sci_nav_add_tentacles(sciecx, curr_science_guy, e);
+	if (m) {
+		if (curr_science_guy->type == OBJTYPE_STARBASE ||
+			curr_science_guy->type == OBJTYPE_PLANET ||
+			curr_science_guy->type == OBJTYPE_BLACK_HOLE) {
+			e = add_entity(sciecx, m, 0.0, -m->radius, m->radius * 0.2, UI_COLOR(sci_wireframe));
+			quat_init_axis(&orientation, 0.0, 0.0, 1.0, angle);
+		} else {
+			e = add_entity(sciecx, m, 0.0, m->radius * 0.2, -m->radius, UI_COLOR(sci_wireframe));
+			quat_init_axis(&orientation, 0.0, 1.0, 0.0, angle);
+			if (e && curr_science_guy->type == OBJTYPE_SPACEMONSTER)
+				sci_nav_add_tentacles(sciecx, curr_science_guy, e);
+		}
+		if (e)
+			update_entity_orientation(e, &orientation);
+		if (curr_science_guy->type == OBJTYPE_STARBASE) {
+			camera_set_pos(sciecx, m->radius * 4, 0.0, m->radius * 2);
+			camera_assign_up_direction(sciecx, 0.0, 0.0, 1.0);
+		} else if (curr_science_guy->type == OBJTYPE_PLANET) {
+			camera_set_pos(sciecx, m->radius * 6, 0.0, m->radius * 2);
+			camera_assign_up_direction(sciecx, 0.0, 0.0, 1.0);
+		} else {
+			camera_assign_up_direction(sciecx, 0.0, 1.0, 0.0);
+			camera_set_pos(sciecx, -m->radius * 4, m->radius * 1, 0);
+		}
+		camera_look_at(sciecx, (float) 0, (float) 0, (float) m->radius / 2.0);
+		camera_set_parameters(sciecx, 0.5, 8000.0,
+					SCREEN_WIDTH, SCREEN_HEIGHT, ANGLE_OF_VIEW * M_PI / 180.0);
+		set_lighting(sciecx, -m->radius * 4, 0, m->radius);
+		render_entities(sciecx);
 	}
-	if (e)
-		update_entity_orientation(e, &orientation);
-	if (curr_science_guy->type == OBJTYPE_STARBASE) {
-		camera_set_pos(sciecx, m->radius * 4, 0.0, m->radius * 2);
-		camera_assign_up_direction(sciecx, 0.0, 0.0, 1.0);
-	} else if (curr_science_guy->type == OBJTYPE_PLANET) {
-		camera_set_pos(sciecx, m->radius * 6, 0.0, m->radius * 2);
-		camera_assign_up_direction(sciecx, 0.0, 0.0, 1.0);
-	} else {
-		camera_assign_up_direction(sciecx, 0.0, 1.0, 0.0);
-		camera_set_pos(sciecx, -m->radius * 4, m->radius * 1, 0);
-	}
-	camera_look_at(sciecx, (float) 0, (float) 0, (float) m->radius / 2.0);
-	camera_set_parameters(sciecx, 0.5, 8000.0,
-				SCREEN_WIDTH, SCREEN_HEIGHT, ANGLE_OF_VIEW * M_PI / 180.0);
-	set_lighting(sciecx, -m->radius * 4, 0, m->radius);
-	render_entities(sciecx);
 	if (e)
 		remove_entity(sciecx, e);
 
