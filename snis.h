@@ -381,7 +381,8 @@ struct ship_data {
 #define MAX_MISSILE_DELTAV 5
 #define MISSILE_EXPLOSION_DAMAGE_DISTANCE (200.0)
 #define MISSILE_EXPLOSION_WEAPONS_FACTOR (4.0)
-#define ENEMY_MISSILE_FIRE_CHANCE 20 /* out of 100 */
+#define MISSILE_NERF_FACTOR (0.2) /* Nerf missiles against player controlled ships */
+#define ENEMY_MISSILE_FIRE_CHANCE 10 /* out of 100.  Probably still needs tweaking. */
 #define ENEMY_LASER_FIRE_CHANCE 20 /* out of 100 */
 #define ENEMY_TORPEDO_FIRE_CHANCE 20 /* out of 100 */
 #define SPACEMONSTER_WEAPONS_FACTOR (1.0)

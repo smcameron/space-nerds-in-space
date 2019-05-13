@@ -1342,6 +1342,8 @@ static void calculate_warp_core_explosion_damage(struct snis_entity *target, dou
 
 static void calculate_missile_explosion_damage(struct snis_entity *target, double damage_factor)
 {
+	if (target->type == OBJTYPE_SHIP1) /* Nerf the missiles against player ships */
+		damage_factor = damage_factor * MISSILE_NERF_FACTOR;
 	calculate_torpedolike_damage(target, missile_damage_factor * damage_factor);
 }
 
@@ -3494,7 +3496,7 @@ static void missile_collision_detection(void *context, void *entity)
 		case OBJTYPE_SHIP1:
 		case OBJTYPE_SHIP2:
 			notify_the_cops(missile);
-			damage_factor = missile_explosion_damage_distance / (sqrt(dist2) + 1.0);
+			damage_factor = missile_explosion_damage_distance / (sqrt(dist2) + 3.0);
 			calculate_missile_explosion_damage(target, damage_factor);
 			send_ship_damage_packet(target);
 			if (target->type == OBJTYPE_SHIP2)
