@@ -251,10 +251,8 @@ if (debug) then
 	set_variable("MISSILE_FIRE_CHANCE", "0"); -- for debug
 else
 	number_of_rebels	= 4;
-	set_variable("MISSILE_FIRE_CHANCE", "5");
+	set_variable("MISSILE_FIRE_CHANCE", "2");
 end
-
-prince_crashing = true;
 
 ending1_triggered = false;
 
@@ -589,6 +587,7 @@ function prince_panic2()
 	if not check_prince_aboard() then
 		return;
 	end
+	prince_crashing = true;
 	comms_channel_transmit("Prince " .. prince_name, 0,	"PLEASE!");
 	comms_channel_transmit("Prince " .. prince_name, 0,	"PLEASE DONT'T DO THIS!");
 	prince_panic_crashing();
@@ -644,6 +643,7 @@ function ending1()
 	end
 	collect_player_cargo();
 	comms_transmission(queen_ship, "---");
+	set_passenger_location(prince,	wedding_starbase);
 	register_timer_callback("wedding_announcement", 50, 0);
 end
 
@@ -740,6 +740,7 @@ function ending2()
 	comms_transmission(secret_base.sb, "I can never thank you enough!");
 	comms_transmission(secret_base.sb, "BYE");
 	comms_transmission(secret_base.sb, "---");
+	set_passenger_location(prince,	secret_base.sb);
 	end_mission();
 end
 
