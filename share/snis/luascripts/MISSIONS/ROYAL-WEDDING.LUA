@@ -176,15 +176,15 @@ wedding_planet, wedding_starbase	= add_planet_plus_starbase(wedding_planet_name,
 
 set_planet_description(queen_planet,
 	"Planet of " .. queen_faction_name .. " people living under the reign of beloved Queen " .. queen_name .. ".\n" ..
-	"Her Majesty turned this planet into a healthy living place\n" ..
-	" and industrial success example.");
+	"Her Majesty transformed this planet into a healthy living place\n" ..
+	" and an exemplary prosperous industrial world.");
 set_planet_government(queen_planet, 3) -- set queen planet to dictatorship
 set_planet_tech_level(queen_planet, 5) -- space age
 set_planet_economy(queen_planet, 0) -- Rich Industrial
 
 set_planet_description(prince_planet,
-	"Small planet of farmers who quickly became\n" ..
-	" number 1 destination for " .. queen_faction_name .. " tourists\n" ..
+	"Small planet of farmers which quickly became the\n" ..
+	" number one destination for " .. queen_faction_name .. " tourists\n" ..
 	" thanks to its warm weather and beautiful nature.");
 set_planet_government(prince_planet, 7) -- set vacation planet to corporate state
 set_planet_tech_level(prince_planet, 3) -- Silicon age
@@ -317,7 +317,7 @@ function intro()
 		"ROYAL WEDDING\n" ..
 		"\nYou accepted a juicy contract from Queen " .. queen_name ..
 		"\n to tranport her son, Prince " .. prince_name ..
-		"\n to its wedding to Princess " .. princess_name .. " of the " .. princess_faction_name ..
+		"\n to his wedding to Princess " .. princess_name .. " of the " .. princess_faction_name ..
 		"\n in 2 hours on " .. wedding_planet_name ..
 		"\n along with materials for the wedding.");
 end
@@ -362,7 +362,7 @@ function queen_message()
 	comms_transmission(queen_ship, "By the time you get there he will be waiting");
 	comms_transmission(queen_ship, " at the orbiting station, SB-" .. prince_starbase_number .. ".");
 	comms_transmission(queen_ship, "His bodyguard will accompany him to ensure his safety.");
-	comms_transmission(queen_ship, "Supplies for the wedding have been docked in your");
+	comms_transmission(queen_ship, "Supplies for the wedding have been transported into your");
 	comms_transmission(queen_ship, " cargo bay, do not forget to deliver them as well.");
 	comms_transmission(queen_ship, "As agreed upon, you get $" .. pre_payment .. " now and $" .. post_payment);
 	update_player_wallet(player_ids[1], pre_payment);
@@ -477,7 +477,7 @@ function prince_remark2()
 	if not check_prince_aboard() then
 		return;
 	end
-	comms_channel_transmit("Prince " .. prince_name, 0,	"What happened there?");
+	comms_channel_transmit("Prince " .. prince_name, 0,	"What happened?");
 	comms_channel_transmit("Prince " .. prince_name, 0,	"Is this ship even cleared for flying?");
 	comms_channel_transmit("Prince " .. prince_name, 0,	bodyguard_name .. " was my best bodyguard,");
 	comms_channel_transmit("Prince " .. prince_name, 0,	" now I have to hire another!");
@@ -488,8 +488,11 @@ function prince_remark3()
 	if not check_prince_aboard() then
 		return;
 	end
-	comms_channel_transmit("Prince " .. prince_name, 0,	"How can they dare?");
-	comms_channel_transmit("Prince " .. prince_name, 0,	"Kill this vermin!");
+	-- It might be that the prince can say this before the players know what he is talking about.
+	-- Maybe we could use object-hit-event to trigger this some short time after the player is hit for
+	-- the first time.  However, object-hit-event might need to be expanded to include missiles.
+	comms_channel_transmit("Prince " .. prince_name, 0,	"How can they dare to attack us?");
+	comms_channel_transmit("Prince " .. prince_name, 0,	"Kill these vermin!");
 end
 
 function rebels_attack()
@@ -526,7 +529,7 @@ function maintain_rebel_focus()
 	if (continue == 1) then
 		register_timer_callback("maintain_rebel_focus", 20, 0);
 	else
-		comms_channel_transmit("Prince " .. prince_name, 0,	"Good ridance!");
+		comms_channel_transmit("Prince " .. prince_name, 0,	"Good riddance!");
 	end
 end
 
@@ -560,7 +563,7 @@ function prince_panic()
 	end
 	comms_channel_transmit("Prince " .. prince_name, 0,	"Please turn around!");
 	comms_channel_transmit("Prince " .. prince_name, 0,	"I do not want this wedding!");
-	comms_channel_transmit("Prince " .. prince_name, 0,	"My Mom is just doing this for more power!");
+	comms_channel_transmit("Prince " .. prince_name, 0,	"My mother is just doing this for more power!");
 	comms_channel_transmit("Prince " .. prince_name, 0,	"I thought setting the engine on fire would be enough!");
 	register_timer_callback("queen_impatience", 300, 0);
 	register_proximity_callback("prince_panic2", player_ids[1], wedding_starbase, 5500);
@@ -576,7 +579,7 @@ function queen_impatience(queen_wait)
 		queen_attack();
 	else
 		comms_transmission(queen_ship, "What are you waiting for?");
-		comms_transmission(queen_ship, "Dock to SB-" .. wedding_starbase_number .. " and disembark Prince " .. prince_name .."!");
+		comms_transmission(queen_ship, "Dock at SB-" .. wedding_starbase_number .. " and disembark Prince " .. prince_name .."!");
 		register_timer_callback("queen_impatience", 300, queen_wait + 1);
 	end
 end
@@ -587,23 +590,23 @@ function prince_panic2()
 	if not check_prince_aboard() then
 		return;
 	end
-	prince_crashing = true;
+	prince_smashing = true;
 	comms_channel_transmit("Prince " .. prince_name, 0,	"PLEASE!");
 	comms_channel_transmit("Prince " .. prince_name, 0,	"PLEASE DONT'T DO THIS!");
-	prince_panic_crashing();
+	prince_panic_smashing();
 	comms_channel_transmit("Technician", 0, "The prince is going crazy in here!");
-	comms_channel_transmit("Technician", 0, "He's crashing everything!");
+	comms_channel_transmit("Technician", 0, "He's smashing everything!");
 	comms_channel_transmit("Technician", 0, "Someone needs to stop him!");
 	set_custom_button_label(player_ids[1], 2, "RESTRAIN PRINCE");
 	enable_custom_button(player_ids[1], 2);
 	register_callback("custom-button-press-event", "restrain_prince");
 end
 
-function prince_panic_crashing()
+function prince_panic_smashing()
 	if not check_prince_aboard() then
 		return;
 	end
-	if (prince_crashing == false) then
+	if (prince_smashing == false) then
 		return;
 	end
 	systems	= {"shield", "impulse", "warp", "maneuvering", "phaser", "sensor", "comms", "tractor", "lifesupport"};
@@ -613,12 +616,12 @@ function prince_panic_crashing()
 		damage = 255;
 	end
 	set_player_damage(player_ids[1], system, damage);
-	register_timer_callback("prince_panic_crashing", 10, 0);
+	register_timer_callback("prince_panic_smashing", 10, 0);
 	play_sound(player_ids[1], "sounds/flak_hit.ogg");
 end
 
 function restrain_prince()
-	prince_crashing = false;
+	prince_smashing = false;
 	if check_prince_aboard() then
 		comms_channel_transmit("Security", 0, "The prince has been restrained");
 		text_to_speech(player_ids[1], "The prince has been restrained");
@@ -728,7 +731,7 @@ function secret_base_showsup()
 	add_explosion(secret_base.x, secret_base.y, secret_base.z, 1, 60, 30, 3, 0);
 	secret_base.sb = add_starbase(secret_base.x, secret_base.y, secret_base.z, secret_base.number);
 	comms_transmission(secret_base.sb, "Hello, friends!");
-	comms_transmission(secret_base.sb, "Please dock to the starbase");
+	comms_transmission(secret_base.sb, "Please dock at the starbase");
 end
 
 function ending2()
