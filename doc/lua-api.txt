@@ -403,9 +403,19 @@ get_player_damage(id, system); -- returns value of damage to player ship system.
 	The returned value is between 0 (no damage) and (255) max damage, inclusive. 
 	nil is returned on error (e.g. bad system, bad id, etc.)
 
+set_player_damage(id, system, value, f1, f2, f3)
 set_player_damage(id, system, value) -- sets the damage of the specified system of the
 		specified player.  Id is the id of the player ship, system is the name
 		of the system to damage (see get_player_damage() above.)
+		f1, f2, and f3 are optional parameters which if given represent how the
+		damage is to be distributed to the three components of the specified system.
+		They should be values between 0.0 and 1.0, and the three values should
+		sum to 1.0. Note that each component only has a 1/3 of the capacity for damage
+		of a given system, so that
+
+			set_player_damage(id, system, 255, 0.3333, 0.3333, 0.3333);
+
+		will completely damage all three components of system.
 
 load_skybox(ship_id, filenameprefix) -- loads a new skybox composed of six images for any clients
 	with specified ship id that have the role of main screen.  If filenameprefix is

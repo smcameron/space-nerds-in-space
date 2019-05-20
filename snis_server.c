@@ -2266,11 +2266,36 @@ static void instantly_repair_damcon_part(struct damcon_data *d, int system, int 
 	}
 }
 
-static void distribute_damage_to_damcon_system_parts(struct snis_entity *o,
-			struct damcon_data *d, int damage, int damcon_system)
+static void distribute_per_part_damage_among_parts(struct snis_entity *o,
+		struct damcon_data *d, int per_part_damage[], int damcon_system)
 {
 	int i, n, count;
 	struct snis_damcon_entity *p;
+
+	count = 0;
+	n = snis_object_pool_highest_object(d->pool);
+	for (i = 0; i <= n; i++) {
+		int new_damage;
+		p = &d->o[i];
+		if (p->type != DAMCON_TYPE_PART)
+			continue;
+		if (p->tsd.part.system != damcon_system)
+			continue;
+		new_damage = p->tsd.part.damage + per_part_damage[count];
+		if (new_damage > 255)
+			new_damage = 255;
+		p->tsd.part.damage = new_damage;
+		count++;
+		p->version++;
+		if (count == DAMCON_PARTS_PER_SYSTEM)
+			break;
+	}
+}
+
+static void distribute_damage_to_damcon_system_parts(struct snis_entity *o,
+			struct damcon_data *d, int damage, int damcon_system)
+{
+	int i;
 	int total_damage;
 	int per_part_damage[DAMCON_PARTS_PER_SYSTEM];
 
@@ -2302,25 +2327,27 @@ static void distribute_damage_to_damcon_system_parts(struct snis_entity *o,
 		per_part_damage[n] = tmp;
 	}
 
-	/* distribute the per-part-damage among the parts */
-	count = 0;
-	n = snis_object_pool_highest_object(d->pool);
-	for (i = 0; i <= n; i++) {
-		int new_damage;
-		p = &d->o[i];
-		if (p->type != DAMCON_TYPE_PART)
-			continue;
-		if (p->tsd.part.system != damcon_system)
-			continue;
-		new_damage = p->tsd.part.damage + per_part_damage[count];
-		if (new_damage > 255)
-			new_damage = 255;
-		p->tsd.part.damage = new_damage;
-		count++;
-		p->version++;
-		if (count == DAMCON_PARTS_PER_SYSTEM)
-			break;
-	}
+	distribute_per_part_damage_among_parts(o, d, per_part_damage, damcon_system);
+	return;
+}
+
+static void distribute_damage_to_damcon_system_parts_fractionally(struct snis_entity *o,
+			struct damcon_data *d, int damage, int damcon_system, double f[])
+{
+	int i;
+	int total_damage;
+	int per_part_damage[DAMCON_PARTS_PER_SYSTEM];
+
+	if (!d) /* OBJTYPE_SHIP2 don't have all the systems OBJTYPE_SHIP1 have */
+		return;
+
+	total_damage = damage * DAMCON_PARTS_PER_SYSTEM;
+
+	/* distribute total_damage into per_part_damage[] */
+	for (i = 0; i < DAMCON_PARTS_PER_SYSTEM - 1; i++)
+		per_part_damage[i] = (int) (total_damage * f[i]);
+
+	distribute_per_part_damage_among_parts(o, d, per_part_damage, damcon_system);
 	return;
 }
 
@@ -17799,11 +17826,19 @@ static int l_set_player_damage(lua_State *l)
 	const double id = luaL_checknumber(l, 1);
 	const char *system = luaL_checkstring(l, 2);
 	const double value = luaL_checknumber(l, 3);
+	double f[DAMCON_PARTS_PER_SYSTEM];
+	double ftotal;
 	uint32_t oid = (uint32_t) id;
 	uint8_t bvalue;
 	int i, b, damage_delta;
 	struct snis_entity *o;
 	int system_number;
+
+	ftotal = 0.0;
+	for (i = 0; i < DAMCON_PARTS_PER_SYSTEM; i++) {
+		f[i] = luaL_optnumber(l, i + 4, 0.0);
+		ftotal += f[i];
+	}
 
 	i = lookup_by_id(oid);
 	if (i < 0)
@@ -17881,10 +17916,16 @@ static int l_set_player_damage(lua_State *l)
 error:
 	lua_pushnil(l);
 	return 1;
+
 distribute_damage:
+
 	assert(b >= 0 && b < nbridges);
-	distribute_damage_to_damcon_system_parts(o, &bridgelist[b].damcon,
-			damage_delta, system_number);
+	if (fabs(ftotal) < 0.0001)
+		distribute_damage_to_damcon_system_parts(o, &bridgelist[b].damcon,
+				damage_delta, system_number);
+	else
+		distribute_damage_to_damcon_system_parts_fractionally(o, &bridgelist[b].damcon,
+				damage_delta, system_number, f);
 	lua_pushnumber(l, 0.0);
 	return 1;
 }
