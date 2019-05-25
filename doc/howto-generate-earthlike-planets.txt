@@ -57,6 +57,9 @@ This file describes how to generate earthlike planet cubemap textures.
    cloud imagery which it will treat as elevation data.  So the first thing to do is get some
    cloud imagery.  Go to images.google.com, and type in "satellite clouds", then click on
    "Search Tools" and select "Size" -> "Large".  Then find a picture of some clouds you like.
+   Another source of cloud imagery is https://epic.gsfc.nasa.gov/ which shows daylight views of Earth
+   from a satellite positioned between the sun and the earth.  Find a time with some nice clouds and
+   click the download link in green on the upper left side.
 
    Then open up the cloud image in the gimp.  Desaturate the image (make it shades of gray) and then
    use the Colors->Curves option to boost the contrast, esp. make the non-cloud areas black, and
