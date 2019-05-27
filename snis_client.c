@@ -3653,7 +3653,10 @@ static void draw_plane_radar(GtkWidget *w, struct snis_entity *o, union quat *ai
 		float sx = cx + r * cos(twist) * d * 0.98;
 		float sy = cy - r * sin(twist) * d * 0.98;
 
-		sng_set_foreground(UI_COLOR(weap_radar_blip));
+		if (dist < TORPEDO_VELOCITY * TORPEDO_LIFETIME)
+			sng_set_foreground(UI_COLOR(weap_in_range));
+		else
+			sng_set_foreground(UI_COLOR(weap_targeting));
 		snis_draw_line(sx, sy - 2, sx, sy + 2);
 		snis_draw_line(sx - 2, sy, sx + 2, sy);
 
