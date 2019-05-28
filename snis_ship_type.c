@@ -195,6 +195,7 @@ done_scanfing_line:
 		n++;
 	}
 	*count = n;
+	fclose(f);
 	return st;
 }
 
