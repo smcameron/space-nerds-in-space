@@ -103,6 +103,7 @@ int replacement_asset_read(char *replacement_list_filename, char *asset_dir,
 	replacement_asset->e[n].old_filename = NULL;
 	replacement_asset->e[n].new_filename = NULL;
 	n++;
+	fclose(f);
 	return n;
 }
 
