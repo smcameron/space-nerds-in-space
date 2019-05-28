@@ -1305,8 +1305,10 @@ static void start_snis_server(char *starsystem_name)
 	strcpy(upper_snis_server_location, snis_server_location);
 	uppercase(upper_snis_server_location);
 	bindir = get_snis_bin_dir();
-	snprintf(cmd, sizeof(cmd) - 1, "%s/snis_server -l %s -L %s -m %s -s %s &", bindir,
-				lobby, upper_snis_server_location, location, snis_server_location);
+	snprintf(cmd, sizeof(cmd) - 1,
+			"%s/snis_server -l %s -L %s -m %s -s %s > snis_server.%s.log 2>&1 &", bindir,
+			lobby, upper_snis_server_location, location, snis_server_location,
+			starsystem_name);
 
 	fprintf(stderr, "snis_multiverse: STARTING SNIS SERVER for %s\n", starsystem_name);
 	fprintf(stderr, "snis_multiverse: Executing cmd: %s\n", cmd);
