@@ -18816,6 +18816,24 @@ static void network_checkbox_pressed(void *x)
 	int *i = x;
 
 	*i = !*i;
+
+	/* If they select MAIN SCREEN role, then they need to get all the other stations too.
+	 * This is so that Ctrl-O (onscreen!) will work right.  There are some things which
+	 * are only transmitted from snis_server to snis_client if the client has the right role.
+	 * If the main screen is to be able to display every station, it will need all the
+	 * information for every role, so it must have every role. This is also enforced in
+	 * connect_to_lobby_button_pressed(), so if they select MAIN, then deselect some other
+	 * things, it will still work.
+	 */
+	if (i == &net_setup_ui.role_main_v && *i) {
+		net_setup_ui.role_nav_v = 1;
+		net_setup_ui.role_weap_v = 1;
+		net_setup_ui.role_eng_v = 1;
+		net_setup_ui.role_damcon_v = 1;
+		net_setup_ui.role_sci_v = 1;
+		net_setup_ui.role_comms_v = 1;
+		net_setup_ui.role_demon_v = 1;
+	}
 }
 
 static struct button *init_net_role_button(int x, int *y, char *txt, int *value)
