@@ -1076,10 +1076,11 @@ static void get_peer_name(int connection, char *buffer)
 	printf("put '%s' in buffer\n", buffer);
 }
 
+static char *logprefixstr = NULL;
+
 static char *logprefix(void)
 {
 	static char logprefixstrbuffer[100];
-	static char *logprefixstr = NULL;
 	if (logprefixstr != NULL)
 		return logprefixstr;
 	snprintf(logprefixstrbuffer, sizeof(logprefixstrbuffer), "%s(%s):", "snis_server", solarsystem_name);
@@ -27445,6 +27446,7 @@ static void process_options(int argc, char *argv[])
 			break;
 		case 's':
 			solarsystem_name = optarg;
+			logprefixstr = NULL; /* Force update by logprefix() */
 			break;
 		case 'n':
 			lobby_servernick = optarg;
@@ -27954,7 +27956,7 @@ static void servers_changed_cb(void *cookie)
 	uint16_t port = -1;
 	int found_multiverse_server = 0;
 
-	fprintf(stderr, "%s: servers_changed_cb\n", logprefix());
+	fprintf(stderr, "%s: servers_changed_cb, solarsystem_name = '%s'\n", logprefix(), solarsystem_name);
 	if (!multiverse_server) {
 		fprintf(stderr, "%s: multiverse_server not set\n", logprefix());
 		return;
