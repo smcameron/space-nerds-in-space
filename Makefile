@@ -1149,7 +1149,7 @@ mostly-clean:
 	${MANSRCDIR}/earthlike.1.gz  ${MANSRCDIR}/snis_client.6.gz  ${MANSRCDIR}/snis_server.6.gz  \
 	${MANSRCDIR}/snis_test_audio.1.gz
 	rm -f ${BIN}
-	rmdir bin
+	if [ -x bin ]; then rmdir bin; fi
 	rm -fr ${OD}
 	( cd ssgl && ${MAKE} clean )
 	( cd mikktspace && ${MAKE} clean )
