@@ -8283,6 +8283,7 @@ static void show_watermark(void)
 }
 
 static int blue_rectangle = 1; /* tweakable via console */
+static int station_label = 1; /* tweakable via console */
 
 static void show_common_screen(GtkWidget *w, char *title)
 {
@@ -8308,7 +8309,8 @@ static void show_common_screen(GtkWidget *w, char *title)
 		}
 	} else {
 		sng_set_foreground(title_color);
-		sng_abs_xy_draw_string(title, SMALL_FONT, txx(25), txy(LINEHEIGHT));
+		if (station_label)
+			sng_abs_xy_draw_string(title, SMALL_FONT, txx(25), txy(LINEHEIGHT));
 	}
 
 	if (blue_rectangle) {
@@ -16955,6 +16957,8 @@ static struct tweakable_var_descriptor client_tweak[] = {
 		0.0, 1.0, 1.0, 0, 1, 1 },
 	{ "BLUE_RECTANGLE", "0 OR 1 TO TURN OFF OR ON THE BLUE RECTANGLE, RESPECTIVELY",
 		&blue_rectangle, 'i', 0.0, 0.0, 0.0, 0, 1, 1 },
+	{ "STATION_LABEL", "0 OR 1 TO TURN OFF OR ON THE STATION LABELS, RESPECTIVELY",
+		&station_label, 'i', 0.0, 0.0, 0.0, 0, 1, 1 },
 	{ "EXTERNAL_CAMERA", "0 OR 1 TO TURN OFF OR ON THE EXTERNAL CAMERA, RESPECTIVELY",
 		&external_camera_active, 'i', 0.0, 0.0, 0.0, 0, 1, 0 },
 	{ "NAV_HAS_COMPUTER", "0 OR 1 TO ALLOW NAV TO HAVE COMPUTER ACCESS",
