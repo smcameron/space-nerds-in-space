@@ -2267,22 +2267,22 @@ extern int graph_dev_entity_render_order(struct entity_context *cx, struct entit
 		return GRAPH_DEV_RENDER_NEAR_TO_FAR;
 }
 
-void graph_dev_draw_entity(struct entity_context *cx, struct entity *e, union vec3 *eye_light_pos,
-	const struct entity_transform *transform)
+static void graph_dev_raster_triangle_mesh(struct entity_context *cx, struct entity *e,
+	union vec3 *eye_light_pos, const struct entity_transform *transform, struct sng_color *line_color)
 {
+	struct camera_info *c = &cx->camera;
 	struct raster_texture_params rtp = { 0 };
 	struct sng_color atmosphere_color = { 0 };
 	union vec3 water_color;
 	union vec3 sun_color;
 
-	draw_vertex_buffer_2d();
+	int filled_triangle = ((c->renderer & FLATSHADING_RENDERER) || (c->renderer & BLACK_TRIS))
+				&& !(e->render_style & RENDER_NO_FILL);
+	int outline_triangle = (c->renderer & WIREFRAME_RENDERER)
+				|| (e->render_style & RENDER_WIREFRAME);
 
-	struct sng_color line_color = sng_get_color(e->color);
-
-	if (e->material_ptr && e->material_ptr->type == MATERIAL_NEBULA) {
-		graph_dev_draw_nebula(&transform->mvp, &transform->mv, &transform->normal, e, eye_light_pos);
-		return;
-	}
+	int atmosphere = 0;
+	struct sng_color texture_tint = { 1.0, 1.0, 1.0 };
 
 	rtp.mat_mvp = &transform->mvp;
 	rtp.mat_mv = &transform->mv;
@@ -2298,309 +2298,309 @@ void graph_dev_draw_entity(struct entity_context *cx, struct entity *e, union ve
 	rtp.emit_intensity = 1.0;
 	rtp.emit_texture_number = 0;
 
+	/* for sphere shadows */
+	struct shadow_sphere_data shadow_sphere;
+	vec3_init(&shadow_sphere.eye_pos, 0, 0, 0);
+	shadow_sphere.r = 0;
+
+	/* for annulus shadows */
+	struct shadow_annulus_data shadow_annulus;
+	shadow_annulus.texture_id = 0;
+	vec3_init(&shadow_annulus.eye_pos, 0, 0, 0);
+	shadow_annulus.r1 = 0;
+	shadow_annulus.r2 = 0;
+	shadow_annulus.tint_color = sng_get_color(WHITE);
+	shadow_annulus.alpha = 1.0;
+
+	/* For planetary water specular calculations */
+	water_color.v.x = 0.0; /* These will be set by planet material */
+	water_color.v.y = 0.0;
+	water_color.v.z = 0.0;
+	sun_color.v.x = 0.0;
+	sun_color.v.y = 0.0;
+	sun_color.v.z = 0.0;
+
+	struct graph_dev_gl_trans_wireframe_shader *wireframe_trans_shader = &trans_wireframe_shader;
+
+	/* for clipping sphere (e.g. on NAV screen when sensor power is low) */
+	struct clip_sphere_data clip_sphere;
+	vec3_init(&clip_sphere.eye_pos, 0, 0, 0);
+	clip_sphere.r = 0;
+	clip_sphere.radius_fade = 0;
+
+	if (e->material_ptr) {
+		switch (e->material_ptr->type) {
+		case MATERIAL_TEXTURE_MAPPED: {
+			rtp.shader = &textured_lit_shader;
+
+			struct material_texture_mapped *mt = &e->material_ptr->texture_mapped;
+			rtp.texture_number = mt->texture_id;
+			rtp.emit_texture_number = mt->emit_texture_id;
+			rtp.specular_power = mt->specular_power;
+			rtp.specular_intensity = mt->specular_intensity;
+			rtp.emit_intensity = mt->emit_intensity * e->emit_intensity;
+			rtp.normalmap_id = mt->normalmap_id;
+
+			if (rtp.emit_texture_number > 0 && rtp.normalmap_id > 0)
+				rtp.shader = &textured_lit_emit_normal_shader;
+			else if (rtp.normalmap_id > 0)
+				rtp.shader = &textured_lit_normal_shader;
+			else if (rtp.emit_texture_number > 0)
+				rtp.shader = &textured_lit_emit_shader;
+			else
+				rtp.shader = &textured_lit_shader;
+			}
+			break;
+		case MATERIAL_TEXTURE_MAPPED_UNLIT: {
+			rtp.shader = &textured_shader;
+
+			struct material_texture_mapped_unlit *mt =
+					&e->material_ptr->texture_mapped_unlit;
+			rtp.texture_number = mt->texture_id;
+			rtp.do_cullface = mt->do_cullface;
+			rtp.do_blend = mt->do_blend;
+			rtp.alpha = mt->alpha;
+			texture_tint = mt->tint;
+			}
+			break;
+		case MATERIAL_ATMOSPHERE: {
+			rtp.do_blend = 1;
+			rtp.alpha = entity_get_alpha(e);
+			atmosphere = 1;
+			atmosphere_color.red = e->material_ptr->atmosphere.r;
+			atmosphere_color.green = e->material_ptr->atmosphere.g;
+			atmosphere_color.blue = e->material_ptr->atmosphere.b;
+			struct material_atmosphere *mt = &e->material_ptr->atmosphere;
+			if (mt->ring_material && mt->ring_material->type == MATERIAL_TEXTURED_PLANET_RING) {
+				struct material_textured_planet_ring *ring_mt =
+					&mt->ring_material->textured_planet_ring;
+				rtp.ring_texture_v = ring_mt->texture_v;
+				rtp.ring_inner_radius = ring_mt->inner_radius;
+				rtp.ring_outer_radius = ring_mt->outer_radius;
+
+				shadow_annulus.texture_id = ring_mt->texture_id;
+				shadow_annulus.tint_color = ring_mt->tint;
+				shadow_annulus.alpha = ring_mt->alpha;
+
+				/* ring is at the center of our mesh */
+				union vec4 sphere_pos = { { 0, 0, 0, 1 } };
+				mat44_x_vec4_into_vec3(rtp.mat_mv, &sphere_pos, &shadow_annulus.eye_pos);
+
+				/* ring is the 2x to 3x of the planet scale, world space distance
+				   is the same in eye space as the view matrix does not scale */
+				shadow_annulus.r1 = vec3_cwise_max(&e->scale) * rtp.ring_inner_radius;
+				shadow_annulus.r2 = vec3_cwise_max(&e->scale) * rtp.ring_outer_radius;
+			} else {
+				/* signal absence of ring with these values */
+				rtp.ring_texture_v = -1.0;
+				shadow_annulus.texture_id = -1;
+				shadow_annulus.tint_color.red = 0;
+				shadow_annulus.tint_color.green = 0;
+				shadow_annulus.tint_color.blue = 0;
+				shadow_annulus.alpha = 0.0;
+				shadow_annulus.r1 = 0.0;
+				shadow_annulus.r2 = 0.0;
+			}
+			}
+			break;
+		case MATERIAL_ALPHA_BY_NORMAL: {
+			struct material_alpha_by_normal *mt = &e->material_ptr->alpha_by_normal;
+			rtp.texture_number = mt->texture_id;
+			if (mt->texture_id > 0)
+				rtp.shader = &textured_alpha_by_normal_shader;
+			else
+				rtp.shader = &alpha_by_normal_shader;
+			rtp.do_blend = 1;
+			rtp.alpha = mt->alpha;
+			rtp.do_cullface = mt->do_cullface;
+			texture_tint = mt->tint;
+			rtp.invert = mt->invert;
+			break;
+			}
+		case MATERIAL_TEXTURE_CUBEMAP: {
+			rtp.shader = &textured_cubemap_lit_shader;
+
+			struct material_texture_cubemap *mt = &e->material_ptr->texture_cubemap;
+			rtp.texture_number = mt->texture_id;
+			rtp.do_cullface = mt->do_cullface;
+			rtp.do_blend = mt->do_blend;
+			rtp.alpha = mt->alpha;
+			texture_tint = mt->tint;
+			}
+			break;
+		case MATERIAL_TEXTURED_SHIELD: {
+			struct material_textured_shield *mt = &e->material_ptr->textured_shield;
+			rtp.texture_number = mt->texture_id;
+			rtp.shader = &textured_cubemap_shield_shader;
+			rtp.do_blend = 1;
+			rtp.alpha = entity_get_alpha(e);
+			rtp.do_cullface = 0;
+			}
+			break;
+		case MATERIAL_TEXTURED_PLANET: {
+			struct material_textured_planet *mt = &e->material_ptr->textured_planet;
+			rtp.texture_number = mt->texture_id;
+			rtp.normalmap_id = mt->normalmap_id;
+			water_color.v.x = mt->water_color_r;
+			water_color.v.y = mt->water_color_g;
+			water_color.v.z = mt->water_color_b;
+			sun_color.v.x = mt->sun_color_r;
+			sun_color.v.y = mt->sun_color_g;
+			sun_color.v.z = mt->sun_color_b;
+
+			if (mt->ring_material && mt->ring_material->type == MATERIAL_TEXTURED_PLANET_RING) {
+				if (rtp.normalmap_id <= 0) {
+					rtp.shader = &textured_cubemap_lit_with_annulus_shadow_shader;
+				} else if (graph_dev_planet_specularity)  {
+					rtp.shader =
+					&textured_cubemap_normal_mapped_lit_with_annulus_shadow_specular_shader;
+				} else {
+					rtp.shader =
+						&textured_cubemap_normal_mapped_lit_with_annulus_shadow_shader;
+				}
+
+				struct material_textured_planet_ring *ring_mt =
+					&mt->ring_material->textured_planet_ring;
+				rtp.ring_texture_v = ring_mt->texture_v;
+				rtp.ring_inner_radius = ring_mt->inner_radius;
+				rtp.ring_outer_radius = ring_mt->outer_radius;
+
+				shadow_annulus.texture_id = ring_mt->texture_id;
+				shadow_annulus.tint_color = ring_mt->tint;
+				shadow_annulus.alpha = ring_mt->alpha;
+
+				/* ring is at the center of our mesh */
+				union vec4 sphere_pos = { { 0, 0, 0, 1 } };
+				mat44_x_vec4_into_vec3(rtp.mat_mv, &sphere_pos, &shadow_annulus.eye_pos);
+
+				/* ring is the 2x to 3x of the planet scale, world space distance
+				   is the same in eye space as the view matrix does not scale */
+				shadow_annulus.r1 = vec3_cwise_max(&e->scale) *
+								rtp.ring_inner_radius;
+				shadow_annulus.r2 = vec3_cwise_max(&e->scale) *
+								rtp.ring_outer_radius;
+			} else {
+				if (rtp.normalmap_id > 0) {
+					if (graph_dev_planet_specularity) {
+						rtp.shader =
+							&textured_cubemap_normal_mapped_lit_specular_shader;
+					} else {
+						rtp.shader = &textured_cubemap_lit_normal_map_shader;
+					}
+				} else {
+					rtp.shader = &textured_cubemap_lit_shader;
+				}
+			}
+			}
+			break;
+		case MATERIAL_TEXTURED_PLANET_RING: {
+			rtp.shader = &textured_with_sphere_shadow_shader;
+
+			struct material_textured_planet_ring *mt =
+						&e->material_ptr->textured_planet_ring;
+			rtp.texture_number = mt->texture_id;
+			rtp.alpha = mt->alpha;
+			texture_tint = mt->tint;
+			rtp.do_blend = 1;
+			rtp.do_cullface = 0;
+			rtp.ring_texture_v = mt->texture_v;
+			rtp.ring_inner_radius = mt->inner_radius;
+			rtp.ring_outer_radius = mt->outer_radius;
+
+			/* planet is at the center of our mesh */
+			union vec4 sphere_pos = { { 0, 0, 0, 1 } };
+			mat44_x_vec4_into_vec3(rtp.mat_mv, &sphere_pos, &shadow_sphere.eye_pos);
+
+			/* planet is the size of the ring scale, world space distance
+			   is the same in eye space as the view matrix does not scale */
+			shadow_sphere.r = vec3_cwise_max(&e->scale);
+			}
+			break;
+		case MATERIAL_WIREFRAME_SPHERE_CLIP: {
+			wireframe_trans_shader = &trans_wireframe_with_clip_sphere_shader;
+
+			struct material_wireframe_sphere_clip *mt =
+				&e->material_ptr->wireframe_sphere_clip;
+
+			union vec4 clip_sphere_pos = VEC4_INITIALIZER;
+			if (mt->center)
+				vec4_init_vec3(&clip_sphere_pos, &mt->center->e_pos, 1);
+			mat44_x_vec4_into_vec3_dff(transform->v, &clip_sphere_pos, &clip_sphere.eye_pos);
+
+			clip_sphere.r = e->material_ptr->wireframe_sphere_clip.radius;
+			clip_sphere.radius_fade = e->material_ptr->wireframe_sphere_clip.radius_fade;
+			}
+			break;
+		}
+	}
+
+	if (filled_triangle) {
+		struct sng_color triangle_color;
+		if (cx->camera.renderer & BLACK_TRIS)
+			triangle_color = sng_get_color(BLACK);
+		else
+			triangle_color = sng_get_color(240 + GRAY + (NSHADESOFGRAY * e->shadecolor) + 10);
+
+		/* outline and filled */
+		if (outline_triangle) {
+			graph_dev_raster_filled_wireframe_mesh(rtp.mat_mvp, e->m, line_color, &triangle_color);
+		} else {
+			if (rtp.shader) {
+
+				rtp.m = e->m;
+				rtp.triangle_color = &texture_tint;
+				rtp.eye_light_pos = eye_light_pos;
+				rtp.shadow_sphere = &shadow_sphere;
+				rtp.shadow_annulus = &shadow_annulus;
+				rtp.in_shade = e->in_shade;
+				rtp.water_color = &water_color;
+				rtp.sun_color = &sun_color;
+
+				graph_dev_raster_texture(&rtp);
+			} else {
+				if (atmosphere)
+					graph_dev_raster_atmosphere(rtp.mat_mvp, rtp.mat_mv, rtp.mat_normal,
+						e->m, &atmosphere_color, eye_light_pos, rtp.alpha,
+						&shadow_annulus, rtp.ring_texture_v);
+				else
+					graph_dev_raster_single_color_lit(rtp.mat_mvp, rtp.mat_mv,
+						rtp.mat_normal, e->m, &triangle_color, eye_light_pos,
+						e->in_shade);
+			}
+		}
+	} else if (outline_triangle) {
+		graph_dev_raster_trans_wireframe_mesh(wireframe_trans_shader, rtp.mat_mvp, rtp.mat_mv,
+			rtp.mat_normal, e->m, line_color, &clip_sphere, 1);
+	}
+
+	if (draw_billboard_wireframe && e->material_ptr &&
+			e->material_ptr->billboard_type != MATERIAL_BILLBOARD_TYPE_NONE) {
+		struct sng_color white_color = sng_get_color(WHITE);
+		graph_dev_raster_trans_wireframe_mesh(0, rtp.mat_mvp, rtp.mat_mv,
+			rtp.mat_normal, e->m, &white_color, 0, 0);
+	}
+}
+
+void graph_dev_draw_entity(struct entity_context *cx, struct entity *e, union vec3 *eye_light_pos,
+	const struct entity_transform *transform)
+{
+
+	draw_vertex_buffer_2d();
+
+	struct sng_color line_color = sng_get_color(e->color);
+
+	if (e->material_ptr && e->material_ptr->type == MATERIAL_NEBULA) {
+		graph_dev_draw_nebula(&transform->mvp, &transform->mv, &transform->normal, e, eye_light_pos);
+		return;
+	}
+
 	switch (e->m->geometry_mode) {
 	case MESH_GEOMETRY_TRIANGLES:
-	{
-		/* TODO: This MESH_GEOMETRY_TRIANGLES case should probably be factored
-		 * out into its own function.
-		 */
-		struct camera_info *c = &cx->camera;
-
-		int filled_triangle = ((c->renderer & FLATSHADING_RENDERER) || (c->renderer & BLACK_TRIS))
-					&& !(e->render_style & RENDER_NO_FILL);
-		int outline_triangle = (c->renderer & WIREFRAME_RENDERER)
-					|| (e->render_style & RENDER_WIREFRAME);
-
-		int atmosphere = 0;
-		struct sng_color texture_tint = { 1.0, 1.0, 1.0 };
-
-		/* for sphere shadows */
-		struct shadow_sphere_data shadow_sphere;
-		vec3_init(&shadow_sphere.eye_pos, 0, 0, 0);
-		shadow_sphere.r = 0;
-
-		/* for annulus shadows */
-		struct shadow_annulus_data shadow_annulus;
-		shadow_annulus.texture_id = 0;
-		vec3_init(&shadow_annulus.eye_pos, 0, 0, 0);
-		shadow_annulus.r1 = 0;
-		shadow_annulus.r2 = 0;
-		shadow_annulus.tint_color = sng_get_color(WHITE);
-		shadow_annulus.alpha = 1.0;
-
-		/* For planetary water specular calculations */
-		water_color.v.x = 0.0; /* These will be set by planet material */
-		water_color.v.y = 0.0;
-		water_color.v.z = 0.0;
-		sun_color.v.x = 0.0;
-		sun_color.v.y = 0.0;
-		sun_color.v.z = 0.0;
-
-		struct graph_dev_gl_trans_wireframe_shader *wireframe_trans_shader = &trans_wireframe_shader;
-
-		/* for clipping sphere (e.g. on NAV screen when sensor power is low) */
-		struct clip_sphere_data clip_sphere;
-		vec3_init(&clip_sphere.eye_pos, 0, 0, 0);
-		clip_sphere.r = 0;
-		clip_sphere.radius_fade = 0;
-
-		if (e->material_ptr) {
-			switch (e->material_ptr->type) {
-			case MATERIAL_TEXTURE_MAPPED: {
-				rtp.shader = &textured_lit_shader;
-
-				struct material_texture_mapped *mt = &e->material_ptr->texture_mapped;
-				rtp.texture_number = mt->texture_id;
-				rtp.emit_texture_number = mt->emit_texture_id;
-				rtp.specular_power = mt->specular_power;
-				rtp.specular_intensity = mt->specular_intensity;
-				rtp.emit_intensity = mt->emit_intensity * e->emit_intensity;
-				rtp.normalmap_id = mt->normalmap_id;
-
-				if (rtp.emit_texture_number > 0 && rtp.normalmap_id > 0)
-					rtp.shader = &textured_lit_emit_normal_shader;
-				else if (rtp.normalmap_id > 0)
-					rtp.shader = &textured_lit_normal_shader;
-				else if (rtp.emit_texture_number > 0)
-					rtp.shader = &textured_lit_emit_shader;
-				else
-					rtp.shader = &textured_lit_shader;
-				}
-				break;
-			case MATERIAL_TEXTURE_MAPPED_UNLIT: {
-				rtp.shader = &textured_shader;
-
-				struct material_texture_mapped_unlit *mt =
-						&e->material_ptr->texture_mapped_unlit;
-				rtp.texture_number = mt->texture_id;
-				rtp.do_cullface = mt->do_cullface;
-				rtp.do_blend = mt->do_blend;
-				rtp.alpha = mt->alpha;
-				texture_tint = mt->tint;
-				}
-				break;
-			case MATERIAL_ATMOSPHERE: {
-				rtp.do_blend = 1;
-				rtp.alpha = entity_get_alpha(e);
-				atmosphere = 1;
-				atmosphere_color.red = e->material_ptr->atmosphere.r;
-				atmosphere_color.green = e->material_ptr->atmosphere.g;
-				atmosphere_color.blue = e->material_ptr->atmosphere.b;
-				struct material_atmosphere *mt = &e->material_ptr->atmosphere;
-				if (mt->ring_material && mt->ring_material->type == MATERIAL_TEXTURED_PLANET_RING) {
-					struct material_textured_planet_ring *ring_mt =
-						&mt->ring_material->textured_planet_ring;
-					rtp.ring_texture_v = ring_mt->texture_v;
-					rtp.ring_inner_radius = ring_mt->inner_radius;
-					rtp.ring_outer_radius = ring_mt->outer_radius;
-
-					shadow_annulus.texture_id = ring_mt->texture_id;
-					shadow_annulus.tint_color = ring_mt->tint;
-					shadow_annulus.alpha = ring_mt->alpha;
-
-					/* ring is at the center of our mesh */
-					union vec4 sphere_pos = { { 0, 0, 0, 1 } };
-					mat44_x_vec4_into_vec3(rtp.mat_mv, &sphere_pos, &shadow_annulus.eye_pos);
-
-					/* ring is the 2x to 3x of the planet scale, world space distance
-					   is the same in eye space as the view matrix does not scale */
-					shadow_annulus.r1 = vec3_cwise_max(&e->scale) * rtp.ring_inner_radius;
-					shadow_annulus.r2 = vec3_cwise_max(&e->scale) * rtp.ring_outer_radius;
-				} else {
-					/* signal absence of ring with these values */
-					rtp.ring_texture_v = -1.0;
-					shadow_annulus.texture_id = -1;
-					shadow_annulus.tint_color.red = 0;
-					shadow_annulus.tint_color.green = 0;
-					shadow_annulus.tint_color.blue = 0;
-					shadow_annulus.alpha = 0.0;
-					shadow_annulus.r1 = 0.0;
-					shadow_annulus.r2 = 0.0;
-				}
-				}
-				break;
-			case MATERIAL_ALPHA_BY_NORMAL: {
-				struct material_alpha_by_normal *mt = &e->material_ptr->alpha_by_normal;
-				rtp.texture_number = mt->texture_id;
-				if (mt->texture_id > 0)
-					rtp.shader = &textured_alpha_by_normal_shader;
-				else
-					rtp.shader = &alpha_by_normal_shader;
-				rtp.do_blend = 1;
-				rtp.alpha = mt->alpha;
-				rtp.do_cullface = mt->do_cullface;
-				texture_tint = mt->tint;
-				rtp.invert = mt->invert;
-				break;
-				}
-			case MATERIAL_TEXTURE_CUBEMAP: {
-				rtp.shader = &textured_cubemap_lit_shader;
-
-				struct material_texture_cubemap *mt = &e->material_ptr->texture_cubemap;
-				rtp.texture_number = mt->texture_id;
-				rtp.do_cullface = mt->do_cullface;
-				rtp.do_blend = mt->do_blend;
-				rtp.alpha = mt->alpha;
-				texture_tint = mt->tint;
-				}
-				break;
-			case MATERIAL_TEXTURED_SHIELD: {
-				struct material_textured_shield *mt = &e->material_ptr->textured_shield;
-				rtp.texture_number = mt->texture_id;
-				rtp.shader = &textured_cubemap_shield_shader;
-				rtp.do_blend = 1;
-				rtp.alpha = entity_get_alpha(e);
-				rtp.do_cullface = 0;
-				}
-				break;
-			case MATERIAL_TEXTURED_PLANET: {
-				struct material_textured_planet *mt = &e->material_ptr->textured_planet;
-				rtp.texture_number = mt->texture_id;
-				rtp.normalmap_id = mt->normalmap_id;
-				water_color.v.x = mt->water_color_r;
-				water_color.v.y = mt->water_color_g;
-				water_color.v.z = mt->water_color_b;
-				sun_color.v.x = mt->sun_color_r;
-				sun_color.v.y = mt->sun_color_g;
-				sun_color.v.z = mt->sun_color_b;
-
-				if (mt->ring_material && mt->ring_material->type == MATERIAL_TEXTURED_PLANET_RING) {
-					if (rtp.normalmap_id <= 0) {
-						rtp.shader = &textured_cubemap_lit_with_annulus_shadow_shader;
-					} else if (graph_dev_planet_specularity)  {
-						rtp.shader =
-						&textured_cubemap_normal_mapped_lit_with_annulus_shadow_specular_shader;
-					} else {
-						rtp.shader =
-							&textured_cubemap_normal_mapped_lit_with_annulus_shadow_shader;
-					}
-
-					struct material_textured_planet_ring *ring_mt =
-						&mt->ring_material->textured_planet_ring;
-					rtp.ring_texture_v = ring_mt->texture_v;
-					rtp.ring_inner_radius = ring_mt->inner_radius;
-					rtp.ring_outer_radius = ring_mt->outer_radius;
-
-					shadow_annulus.texture_id = ring_mt->texture_id;
-					shadow_annulus.tint_color = ring_mt->tint;
-					shadow_annulus.alpha = ring_mt->alpha;
-
-					/* ring is at the center of our mesh */
-					union vec4 sphere_pos = { { 0, 0, 0, 1 } };
-					mat44_x_vec4_into_vec3(rtp.mat_mv, &sphere_pos, &shadow_annulus.eye_pos);
-
-					/* ring is the 2x to 3x of the planet scale, world space distance
-					   is the same in eye space as the view matrix does not scale */
-					shadow_annulus.r1 = vec3_cwise_max(&e->scale) *
-									rtp.ring_inner_radius;
-					shadow_annulus.r2 = vec3_cwise_max(&e->scale) *
-									rtp.ring_outer_radius;
-				} else {
-					if (rtp.normalmap_id > 0) {
-						if (graph_dev_planet_specularity) {
-							rtp.shader =
-								&textured_cubemap_normal_mapped_lit_specular_shader;
-						} else {
-							rtp.shader = &textured_cubemap_lit_normal_map_shader;
-						}
-					} else {
-						rtp.shader = &textured_cubemap_lit_shader;
-					}
-				}
-				}
-				break;
-			case MATERIAL_TEXTURED_PLANET_RING: {
-				rtp.shader = &textured_with_sphere_shadow_shader;
-
-				struct material_textured_planet_ring *mt =
-							&e->material_ptr->textured_planet_ring;
-				rtp.texture_number = mt->texture_id;
-				rtp.alpha = mt->alpha;
-				texture_tint = mt->tint;
-				rtp.do_blend = 1;
-				rtp.do_cullface = 0;
-				rtp.ring_texture_v = mt->texture_v;
-				rtp.ring_inner_radius = mt->inner_radius;
-				rtp.ring_outer_radius = mt->outer_radius;
-
-				/* planet is at the center of our mesh */
-				union vec4 sphere_pos = { { 0, 0, 0, 1 } };
-				mat44_x_vec4_into_vec3(rtp.mat_mv, &sphere_pos, &shadow_sphere.eye_pos);
-
-				/* planet is the size of the ring scale, world space distance
-				   is the same in eye space as the view matrix does not scale */
-				shadow_sphere.r = vec3_cwise_max(&e->scale);
-				}
-				break;
-			case MATERIAL_WIREFRAME_SPHERE_CLIP: {
-				wireframe_trans_shader = &trans_wireframe_with_clip_sphere_shader;
-
-				struct material_wireframe_sphere_clip *mt =
-					&e->material_ptr->wireframe_sphere_clip;
-
-				union vec4 clip_sphere_pos = VEC4_INITIALIZER;
-				if (mt->center)
-					vec4_init_vec3(&clip_sphere_pos, &mt->center->e_pos, 1);
-				mat44_x_vec4_into_vec3_dff(transform->v, &clip_sphere_pos, &clip_sphere.eye_pos);
-
-				clip_sphere.r = e->material_ptr->wireframe_sphere_clip.radius;
-				clip_sphere.radius_fade = e->material_ptr->wireframe_sphere_clip.radius_fade;
-				}
-				break;
-			}
-		}
-
-		if (filled_triangle) {
-			struct sng_color triangle_color;
-			if (cx->camera.renderer & BLACK_TRIS)
-				triangle_color = sng_get_color(BLACK);
-			else
-				triangle_color = sng_get_color(240 + GRAY + (NSHADESOFGRAY * e->shadecolor) + 10);
-
-			/* outline and filled */
-			if (outline_triangle) {
-				graph_dev_raster_filled_wireframe_mesh(rtp.mat_mvp, e->m, &line_color, &triangle_color);
-			} else {
-				if (rtp.shader) {
-
-					rtp.m = e->m;
-					rtp.triangle_color = &texture_tint;
-					rtp.eye_light_pos = eye_light_pos;
-					rtp.shadow_sphere = &shadow_sphere;
-					rtp.shadow_annulus = &shadow_annulus;
-					rtp.in_shade = e->in_shade;
-					rtp.water_color = &water_color;
-					rtp.sun_color = &sun_color;
-
-					graph_dev_raster_texture(&rtp);
-				} else {
-					if (atmosphere)
-						graph_dev_raster_atmosphere(rtp.mat_mvp, rtp.mat_mv, rtp.mat_normal,
-							e->m, &atmosphere_color, eye_light_pos, rtp.alpha,
-							&shadow_annulus, rtp.ring_texture_v);
-					else
-						graph_dev_raster_single_color_lit(rtp.mat_mvp, rtp.mat_mv,
-							rtp.mat_normal, e->m, &triangle_color, eye_light_pos,
-							e->in_shade);
-				}
-			}
-		} else if (outline_triangle) {
-			graph_dev_raster_trans_wireframe_mesh(wireframe_trans_shader, rtp.mat_mvp, rtp.mat_mv,
-				rtp.mat_normal, e->m, &line_color, &clip_sphere, 1);
-		}
-
-		if (draw_billboard_wireframe && e->material_ptr &&
-				e->material_ptr->billboard_type != MATERIAL_BILLBOARD_TYPE_NONE) {
-			struct sng_color white_color = sng_get_color(WHITE);
-			graph_dev_raster_trans_wireframe_mesh(0, rtp.mat_mvp, rtp.mat_mv,
-				rtp.mat_normal, e->m, &white_color, 0, 0);
-		}
+		graph_dev_raster_triangle_mesh(cx, e, eye_light_pos, transform, &line_color);
 		break;
-	}
 	case MESH_GEOMETRY_LINES:
-		graph_dev_raster_line_mesh(e, rtp.mat_mvp, e->m, &line_color);
+		graph_dev_raster_line_mesh(e, &transform->mvp, e->m, &line_color);
 		break;
-
 	case MESH_GEOMETRY_POINTS: {
 			int do_blend = 0;
 			float alpha = 1.0;
@@ -2609,7 +2609,7 @@ void graph_dev_draw_entity(struct entity_context *cx, struct entity *e, union ve
 
 			shader = &point_cloud_shader;
 
-			graph_dev_raster_point_cloud_mesh(shader, rtp.mat_mvp, e->m, &line_color, alpha, point_size,
+			graph_dev_raster_point_cloud_mesh(shader, &transform->mvp, e->m, &line_color, alpha, point_size,
 				do_blend);
 		}
 		break;
