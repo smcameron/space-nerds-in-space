@@ -1271,32 +1271,55 @@ static void graph_dev_draw_normal_lines(const struct mat44 *mat_mvp, struct mesh
 	glDisable(GL_DEPTH_TEST);
 }
 
-static void graph_dev_raster_texture(struct graph_dev_gl_textured_shader *shader, const struct mat44 *mat_mvp,
-	const struct mat44 *mat_mv, const struct mat33 *mat_normal, struct mesh *m,
-	struct sng_color *triangle_color, float alpha, union vec3 *eye_light_pos, GLuint texture_number,
-	GLuint emit_texture_number, GLuint normalmap_texture_number, struct shadow_sphere_data *shadow_sphere,
-	struct shadow_annulus_data *shadow_annulus, int do_cullface, int do_blend,
-	float ring_texture_v, float ring_inner_radius, float ring_outer_radius,
-	float specular_power, float specular_intensity, float emit_intensity, float invert, float in_shade,
-	union vec3 *water_color, union vec3 *sun_color)
+struct raster_texture_params {
+	struct graph_dev_gl_textured_shader *shader;
+	const struct mat44 *mat_mvp;			/* model view projection matrix */
+	const struct mat44 *mat_mv;			/* model view matrix */
+	const struct mat33 *mat_normal;			/* Used to get normal vectors into eye space */
+	struct mesh *m;
+	struct sng_color *triangle_color;
+	float alpha;
+	union vec3 *eye_light_pos;			/* Position of light in eye (camera) space */
+	GLuint texture_number;
+	GLuint emit_texture_number;
+	GLuint normalmap_texture_number;
+	struct shadow_sphere_data *shadow_sphere;
+	struct shadow_annulus_data *shadow_annulus;
+	int do_cullface;
+	int do_blend;
+	float ring_texture_v;
+	float ring_inner_radius;
+	float ring_outer_radius;
+	float specular_power;
+	float specular_intensity;
+	float emit_intensity;
+	float invert;
+	float in_shade;
+	union vec3 *water_color;
+	union vec3 *sun_color;
+};
+
+static void graph_dev_raster_texture(struct raster_texture_params *p)
 {
+	const struct graph_dev_gl_textured_shader *shader = p->shader;
+
 	enable_3d_viewport();
 
-	if (!m->graph_ptr)
+	if (!p->m->graph_ptr)
 		return;
 
-	struct mesh_gl_info *ptr = m->graph_ptr;
+	struct mesh_gl_info *ptr = p->m->graph_ptr;
 
 	glEnable(GL_DEPTH_TEST);
 
-	if (do_cullface)
+	if (p->do_cullface)
 		glEnable(GL_CULL_FACE);
 	else
 		glDisable(GL_CULL_FACE);
 	if (draw_polygon_as_lines)
 		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
-	if (do_blend) {
+	if (p->do_blend) {
 		/* enable depth test but don't write to depth buffer */
 		glDepthMask(GL_FALSE);
 		glEnable(GL_BLEND);
@@ -1306,81 +1329,82 @@ static void graph_dev_raster_texture(struct graph_dev_gl_textured_shader *shader
 	glUseProgram(shader->program_id);
 
 	if (shader->texture_2d_id >= 0)
-		BIND_TEXTURE(GL_TEXTURE0, GL_TEXTURE_2D, texture_number);
+		BIND_TEXTURE(GL_TEXTURE0, GL_TEXTURE_2D, p->texture_number);
 	else if (shader->texture_cubemap_id >= 0)
-		BIND_TEXTURE(GL_TEXTURE0, GL_TEXTURE_CUBE_MAP, texture_number);
+		BIND_TEXTURE(GL_TEXTURE0, GL_TEXTURE_CUBE_MAP, p->texture_number);
 
 	if (shader->normalmap_cubemap_id >= 0)
-		BIND_TEXTURE(GL_TEXTURE3, GL_TEXTURE_CUBE_MAP, normalmap_texture_number);
+		BIND_TEXTURE(GL_TEXTURE3, GL_TEXTURE_CUBE_MAP, p->normalmap_texture_number);
 
 	if (shader->normalmap_id >= 0)
-		BIND_TEXTURE(GL_TEXTURE3, GL_TEXTURE_2D, normalmap_texture_number);
+		BIND_TEXTURE(GL_TEXTURE3, GL_TEXTURE_2D, p->normalmap_texture_number);
 
 	if (shader->emit_texture_2d_id >= 0)
-		BIND_TEXTURE(GL_TEXTURE1, GL_TEXTURE_2D, emit_texture_number);
+		BIND_TEXTURE(GL_TEXTURE1, GL_TEXTURE_2D, p->emit_texture_number);
 
 	if (shader->emit_intensity_id >= 0)
-		glUniform1f(shader->emit_intensity_id, emit_intensity);
+		glUniform1f(shader->emit_intensity_id, p->emit_intensity);
 
 	if (shader->light_pos_id >= 0)
-		glUniform3f(shader->light_pos_id, eye_light_pos->v.x, eye_light_pos->v.y, eye_light_pos->v.z);
+		glUniform3f(shader->light_pos_id, p->eye_light_pos->v.x, p->eye_light_pos->v.y, p->eye_light_pos->v.z);
 
-	glUniformMatrix4fv(shader->mvp_matrix_id, 1, GL_FALSE, &mat_mvp->m[0][0]);
+	glUniformMatrix4fv(shader->mvp_matrix_id, 1, GL_FALSE, &p->mat_mvp->m[0][0]);
 	if (shader->mv_matrix_id >= 0)
-		glUniformMatrix4fv(shader->mv_matrix_id, 1, GL_FALSE, &mat_mv->m[0][0]);
+		glUniformMatrix4fv(shader->mv_matrix_id, 1, GL_FALSE, &p->mat_mv->m[0][0]);
 	if (shader->normal_matrix_id >= 0)
-		glUniformMatrix3fv(shader->normal_matrix_id, 1, GL_FALSE, &mat_normal->m[0][0]);
+		glUniformMatrix3fv(shader->normal_matrix_id, 1, GL_FALSE, &p->mat_normal->m[0][0]);
 	if (shader->specular_power_id >= 0)
-		glUniform1f(shader->specular_power_id, specular_power);
+		glUniform1f(shader->specular_power_id, p->specular_power);
 	if (shader->specular_intensity_id >= 0)
-		glUniform1f(shader->specular_intensity_id, specular_intensity);
+		glUniform1f(shader->specular_intensity_id, p->specular_intensity);
 
-	glUniform4f(shader->tint_color_id, triangle_color->red,
-		triangle_color->green, triangle_color->blue, alpha);
+	glUniform4f(shader->tint_color_id, p->triangle_color->red,
+		p->triangle_color->green, p->triangle_color->blue, p->alpha);
 
 	/* Ring texture v value */
 	if (shader->ring_texture_v_id >= 0)
-		glUniform1f(shader->ring_texture_v_id, ring_texture_v);
+		glUniform1f(shader->ring_texture_v_id, p->ring_texture_v);
 	if (shader->ring_inner_radius_id >= 0)
-		glUniform1f(shader->ring_inner_radius_id, ring_inner_radius);
+		glUniform1f(shader->ring_inner_radius_id, p->ring_inner_radius);
 	if (shader->ring_outer_radius_id >= 0)
-		glUniform1f(shader->ring_outer_radius_id, ring_outer_radius);
+		glUniform1f(shader->ring_outer_radius_id, p->ring_outer_radius);
 	if (shader->invert >= 0)
-		glUniform1f(shader->invert, invert);
+		glUniform1f(shader->invert, p->invert);
 	if (shader->in_shade >= 0)
-		glUniform1f(shader->in_shade, in_shade);
-	if (shader->water_color >= 0 && water_color)
-		glUniform3f(shader->water_color, water_color->v.x, water_color->v.y, water_color->v.z);
-	if (shader->sun_color >= 0 && sun_color)
-		glUniform3f(shader->sun_color, sun_color->v.x, sun_color->v.y, sun_color->v.z);
+		glUniform1f(shader->in_shade, p->in_shade);
+	if (shader->water_color >= 0 && p->water_color)
+		glUniform3f(shader->water_color, p->water_color->v.x, p->water_color->v.y, p->water_color->v.z);
+	if (shader->sun_color >= 0 && p->sun_color)
+		glUniform3f(shader->sun_color, p->sun_color->v.x, p->sun_color->v.y, p->sun_color->v.z);
 
 	/* shadow sphere */
-	if (shader->shadow_sphere_id >= 0 && shadow_sphere)
-		glUniform4f(shader->shadow_sphere_id, shadow_sphere->eye_pos.v.x, shadow_sphere->eye_pos.v.y,
-			shadow_sphere->eye_pos.v.z, shadow_sphere->r * shadow_sphere->r);
+	if (shader->shadow_sphere_id >= 0 && p->shadow_sphere)
+		glUniform4f(shader->shadow_sphere_id, p->shadow_sphere->eye_pos.v.x, p->shadow_sphere->eye_pos.v.y,
+			p->shadow_sphere->eye_pos.v.z, p->shadow_sphere->r * p->shadow_sphere->r);
 
 	/* shadow annulus */
-	if (shader->shadow_annulus_texture_id > 0 && shadow_annulus) {
-		BIND_TEXTURE(GL_TEXTURE1, GL_TEXTURE_2D, shadow_annulus->texture_id);
+	if (shader->shadow_annulus_texture_id > 0 && p->shadow_annulus) {
+		BIND_TEXTURE(GL_TEXTURE1, GL_TEXTURE_2D, p->shadow_annulus->texture_id);
 
-		glUniform4f(shader->shadow_annulus_tint_color_id, shadow_annulus->tint_color.red,
-			shadow_annulus->tint_color.green, shadow_annulus->tint_color.blue, shadow_annulus->alpha);
-		glUniform3f(shader->shadow_annulus_center_id, shadow_annulus->eye_pos.v.x,
-			shadow_annulus->eye_pos.v.y, shadow_annulus->eye_pos.v.z);
+		glUniform4f(shader->shadow_annulus_tint_color_id, p->shadow_annulus->tint_color.red,
+			p->shadow_annulus->tint_color.green, p->shadow_annulus->tint_color.blue,
+			p->shadow_annulus->alpha);
+		glUniform3f(shader->shadow_annulus_center_id, p->shadow_annulus->eye_pos.v.x,
+			p->shadow_annulus->eye_pos.v.y, p->shadow_annulus->eye_pos.v.z);
 
 		/* this only works if the ring has an identity quat for its child orientation */
 		/* ring disc is in x/y plane, so z is normal */
 		union vec3 annulus_normal = { { 0, 0, 1 } };
 		union vec3 eye_annulus_normal;
-		mat33_x_vec3(mat_normal, &annulus_normal, &eye_annulus_normal);
+		mat33_x_vec3(p->mat_normal, &annulus_normal, &eye_annulus_normal);
 		vec3_normalize_self(&eye_annulus_normal);
 
 		glUniform3f(shader->shadow_annulus_normal_id, eye_annulus_normal.v.x,
 			eye_annulus_normal.v.y, eye_annulus_normal.v.z);
 
 		glUniform4f(shader->shadow_annulus_radius_id,
-			shadow_annulus->r1, shadow_annulus->r1 * shadow_annulus->r1,
-			shadow_annulus->r2, shadow_annulus->r2 * shadow_annulus->r2);
+			p->shadow_annulus->r1, p->shadow_annulus->r1 * p->shadow_annulus->r1,
+			p->shadow_annulus->r2, p->shadow_annulus->r2 * p->shadow_annulus->r2);
 	}
 
 	glEnableVertexAttribArray(shader->vertex_position_id);
@@ -1441,7 +1465,7 @@ static void graph_dev_raster_texture(struct graph_dev_gl_textured_shader *shader
 			(void *)offsetof(struct vertex_triangle_buffer_data, texture_coord.v.x));
 	}
 
-	glDrawArrays(GL_TRIANGLES, 0, m->ntriangles * 3);
+	glDrawArrays(GL_TRIANGLES, 0, p->m->ntriangles * 3);
 
 	glDisableVertexAttribArray(shader->vertex_position_id);
 	if (shader->vertex_normal_id >= 0)
@@ -1455,17 +1479,17 @@ static void graph_dev_raster_texture(struct graph_dev_gl_textured_shader *shader
 	glUseProgram(0);
 
 	glDisable(GL_DEPTH_TEST);
-	if (do_cullface)
+	if (p->do_cullface)
 		glDisable(GL_CULL_FACE);
 	if (draw_polygon_as_lines)
 		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-	if (do_blend) {
+	if (p->do_blend) {
 		glDepthMask(GL_TRUE);
 		glDisable(GL_BLEND);
 	}
 
 	if (draw_normal_lines) {
-		graph_dev_draw_normal_lines(mat_mvp, m, ptr);
+		graph_dev_draw_normal_lines(p->mat_mvp, p->m, ptr);
 	}
 }
 
@@ -1991,6 +2015,7 @@ static void graph_dev_draw_nebula(const struct mat44 *mat_mvp, const struct mat4
 	struct entity *e, union vec3 *eye_light_pos)
 {
 	struct material_nebula *mt = &e->material_ptr->nebula;
+	struct raster_texture_params rtp = { 0 };
 
 	/* transform model origin into camera space */
 	union vec4 ent_pos = { { 0.0, 0.0, 0.0, 1.0 } };
@@ -2028,9 +2053,17 @@ static void graph_dev_draw_nebula(const struct mat44 *mat_mvp, const struct mat4
 
 		float alpha = fabs(vec3_dot(&camera_normal, &camera_ent_vector)) * mt->alpha;
 
-		graph_dev_raster_texture(&textured_shader, &mat_mvp_local_r, &mat_mv_local_r, &mat_normal_local_r,
-			e->m, &mt->tint, alpha, eye_light_pos, mt->texture_id[i], 0, -1, 0, 0, 0, 1, 0.0f,
-				2.0f, 4.0f, 512.0, 0.2, 1.0, 0.0, 0.0, NULL, NULL);
+		/* Only setting parts that textured.shader actually uses, the rest zeroed above. */
+		rtp.shader = &textured_shader;
+		rtp.mat_mvp = &mat_mvp_local_r;
+		rtp.m = e->m;
+		rtp.triangle_color = &mt->tint;
+		rtp.alpha = alpha;
+		rtp.texture_number = mt->texture_id[i];
+		rtp.do_cullface = 0;
+		rtp.do_blend = 1;
+
+		graph_dev_raster_texture(&rtp);
 
 		if (draw_billboard_wireframe) {
 			struct sng_color line_color = sng_get_color(WHITE);
@@ -2527,21 +2560,46 @@ void graph_dev_draw_entity(struct entity_context *cx, struct entity *e, union ve
 			if (outline_triangle) {
 				graph_dev_raster_filled_wireframe_mesh(mat_mvp, e->m, &line_color, &triangle_color);
 			} else {
-				if (tex_shader)
-					graph_dev_raster_texture(tex_shader, mat_mvp, mat_mv, mat_normal, e->m,
-						&texture_tint, texture_alpha, eye_light_pos, texture_id,
-						emit_texture_id, normalmap_id, &shadow_sphere, &shadow_annulus,
-						do_cullface, do_blend, ring_texture_v,
-						ring_inner_radius, ring_outer_radius,
-						specular_power, specular_intensity, emit_intensity, invert,
-						e->in_shade, &water_color, &sun_color);
-				else if (atmosphere)
-					graph_dev_raster_atmosphere(mat_mvp, mat_mv, mat_normal,
-						e->m, &atmosphere_color, eye_light_pos, texture_alpha,
-						&shadow_annulus, ring_texture_v);
-				else
-					graph_dev_raster_single_color_lit(mat_mvp, mat_mv, mat_normal,
-						e->m, &triangle_color, eye_light_pos, e->in_shade);
+				if (tex_shader) {
+
+					struct raster_texture_params rtp;
+
+					rtp.shader = tex_shader;
+					rtp.mat_mvp = mat_mvp;
+					rtp.mat_mv = mat_mv;
+					rtp.mat_normal = mat_normal;
+					rtp.m = e->m;
+					rtp.triangle_color = &texture_tint;
+					rtp.alpha = texture_alpha;
+					rtp.eye_light_pos = eye_light_pos;
+					rtp.texture_number = texture_id;
+					rtp.emit_texture_number = emit_texture_id;
+					rtp.normalmap_texture_number = normalmap_id;
+					rtp.shadow_sphere = &shadow_sphere;
+					rtp.shadow_annulus = &shadow_annulus;
+					rtp.do_cullface = do_cullface;
+					rtp.do_blend = do_blend;
+					rtp.ring_texture_v = ring_texture_v;
+					rtp.ring_inner_radius = ring_inner_radius;
+					rtp.ring_outer_radius = ring_outer_radius;
+					rtp.specular_power = specular_power;
+					rtp.specular_intensity = specular_intensity;
+					rtp.emit_intensity = emit_intensity;
+					rtp.invert = invert;
+					rtp.in_shade = e->in_shade;
+					rtp.water_color = &water_color;
+					rtp.sun_color = &sun_color;
+
+					graph_dev_raster_texture(&rtp);
+				} else {
+					if (atmosphere)
+						graph_dev_raster_atmosphere(mat_mvp, mat_mv, mat_normal,
+							e->m, &atmosphere_color, eye_light_pos, texture_alpha,
+							&shadow_annulus, ring_texture_v);
+					else
+						graph_dev_raster_single_color_lit(mat_mvp, mat_mv, mat_normal,
+							e->m, &triangle_color, eye_light_pos, e->in_shade);
+				}
 			}
 		} else if (outline_triangle) {
 			graph_dev_raster_trans_wireframe_mesh(wireframe_trans_shader, mat_mvp, mat_mv,
