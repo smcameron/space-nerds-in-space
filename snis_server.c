@@ -9127,7 +9127,6 @@ static void player_move(struct snis_entity *o)
 	damp_yaw_velocity(&o->tsd.ship.yaw_velocity, orientation_damping);
 	damp_yaw_velocity(&o->tsd.ship.pitch_velocity, orientation_damping);
 	damp_yaw_velocity(&o->tsd.ship.roll_velocity, orientation_damping);
-	damp_yaw_velocity(&o->tsd.ship.gun_yaw_velocity, GUN_YAW_DAMPING);
 	damp_yaw_velocity(&o->tsd.ship.sci_yaw_velocity, SCI_YAW_DAMPING);
 	damp_yaw_velocity(&o->tsd.ship.sciball_yawvel, YAW_DAMPING);
 	damp_yaw_velocity(&o->tsd.ship.sciball_pitchvel, PITCH_DAMPING);
@@ -9270,7 +9269,6 @@ static void demon_ship_move(struct snis_entity *o)
 	damp_yaw_velocity(&o->tsd.ship.yaw_velocity, YAW_DAMPING);
 	damp_yaw_velocity(&o->tsd.ship.pitch_velocity, YAW_DAMPING);
 	damp_yaw_velocity(&o->tsd.ship.roll_velocity, YAW_DAMPING);
-	damp_yaw_velocity(&o->tsd.ship.gun_yaw_velocity, GUN_YAW_DAMPING);
 	damp_yaw_velocity(&o->tsd.ship.sci_yaw_velocity, SCI_YAW_DAMPING);
 
 	/* Damp velocity */
@@ -10118,7 +10116,6 @@ static void init_player(struct snis_entity *o, int clear_cargo_bay, float *charg
 	o->tsd.ship.yaw_velocity = 0.0;
 	o->tsd.ship.pitch_velocity = 0.0;
 	o->tsd.ship.roll_velocity = 0.0;
-	o->tsd.ship.gun_yaw_velocity = 0.0;
 	o->tsd.ship.velocity = 0.0;
 	o->tsd.ship.desired_velocity = 0.0;
 	o->tsd.ship.sci_beam_width = MAX_SCI_BW_YAW_VELOCITY;
@@ -22209,12 +22206,11 @@ static void send_update_ship_packet(struct game_client *c,
 	packed_buffer_append(pb, "bwwhSSS", opcode, o->id, o->timestamp, o->alive,
 			o->x, (int32_t) UNIVERSE_DIM, o->y, (int32_t) UNIVERSE_DIM,
 			o->z, (int32_t) UNIVERSE_DIM);
-	packed_buffer_append(pb, "RRRwwRRRbbbwwbbbbbbbbbbbbbbwQQQQSSSbbbbbbbbbbww",
+	packed_buffer_append(pb, "RRRwwRRbbbwwbbbbbbbbbbbbbbwQQQQSSSbbbbbbbbbbww",
 			o->tsd.ship.yaw_velocity,
 			o->tsd.ship.pitch_velocity,
 			o->tsd.ship.roll_velocity,
 			o->tsd.ship.torpedoes, o->tsd.ship.power,
-			o->tsd.ship.gun_yaw_velocity,
 			o->tsd.ship.sci_heading,
 			o->tsd.ship.sci_beam_width,
 			tloading, throttle, rpm, fuel, oxygen, o->tsd.ship.temp,

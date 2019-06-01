@@ -54,7 +54,6 @@ struct key_value_specification snis_entity_kvs[] = {
 	DOUBLE_TSDFIELD(pitch_velocity),
 	DOUBLE_TSDFIELD(roll_velocity),
 	DOUBLE_TSDFIELD(desired_velocity),
-	DOUBLE_TSDFIELD(gun_yaw_velocity),
 	DOUBLE_TSDFIELD(sci_heading),
 	DOUBLE_TSDFIELD(sci_beam_width),
 	DOUBLE_TSDFIELD(sci_yaw_velocity),

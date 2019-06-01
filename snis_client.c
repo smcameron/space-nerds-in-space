@@ -4854,7 +4854,7 @@ static int process_update_ship_packet(uint8_t opcode)
 	uint32_t id, timestamp, torpedoes, power;
 	uint32_t fuel, oxygen, victim_id, wallet, viewpoint_object;
 	double dx, dy, dz, dyawvel, dpitchvel, drollvel;
-	double dgunyawvel, dsheading, dbeamwidth;
+	double dsheading, dbeamwidth;
 	double hgax, hgay, hgaz; /* high gain antenna aim */
 	int rc;
 	int type = opcode == OPCODE_UPDATE_SHIP ? OBJTYPE_SHIP1 : OBJTYPE_SHIP2;
@@ -4878,12 +4878,11 @@ static int process_update_ship_packet(uint8_t opcode)
 	packed_buffer_extract(&pb, "wwhSSS", &id, &timestamp, &alive,
 				&dx, (int32_t) UNIVERSE_DIM, &dy, (int32_t) UNIVERSE_DIM,
 				&dz, (int32_t) UNIVERSE_DIM);
-	packed_buffer_extract(&pb, "RRRwwRRR",
+	packed_buffer_extract(&pb, "RRRwwRR",
 				&dyawvel,
 				&dpitchvel,
 				&drollvel,
 				&torpedoes, &power,
-				&dgunyawvel,
 				&dsheading,
 				&dbeamwidth);
 	packed_buffer_extract(&pb, "bbbwwbbbbbbbbbbbbbbwQQQQSSSbbbbbbbbbbww",
@@ -4933,7 +4932,6 @@ static int process_update_ship_packet(uint8_t opcode)
 	o->tsd.ship.roll_velocity = drollvel;
 	o->tsd.ship.torpedoes = torpedoes;
 	o->tsd.ship.power = power;
-	o->tsd.ship.gun_yaw_velocity = dgunyawvel;
 	o->tsd.ship.sci_heading = dsheading;
 	o->tsd.ship.sci_beam_width = dbeamwidth;
 	o->tsd.ship.torpedoes_loaded = tloaded;

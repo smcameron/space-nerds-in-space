@@ -29,7 +29,7 @@
 #include "shape_collision.h"
 
 #define DEFAULT_SOLAR_SYSTEM "default"
-#define SNIS_PROTOCOL_VERSION "SNIS031"
+#define SNIS_PROTOCOL_VERSION "SNIS032"
 #define COMMON_MTWIST_SEED 97872
 /* dimensions of the "known" universe */
 #define XKNOWN_DIM 600000.0
@@ -454,7 +454,6 @@ struct ship_data {
 #define GUN_YAW_INCREMENT (3.5 * PI / 180.0)
 #define GUN_YAW_INCREMENT_FINE (0.5 * PI / 180.0)
 #define GUN_YAW_DAMPING 0.1
-	double gun_yaw_velocity; /* we can probably get rid of this since weap_orientation exists */
 #define MAX_SCI_YAW_VELOCITY (15 * PI / 180.0)
 #define SCI_YAW_INCREMENT (3.5 * PI / 180.0)
 #define SCI_YAW_INCREMENT_FINE (0.5 * PI / 180.0)
