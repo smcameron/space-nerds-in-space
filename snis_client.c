@@ -4885,7 +4885,7 @@ static int process_update_ship_packet(uint8_t opcode)
 				&torpedoes, &power,
 				&dsheading,
 				&dbeamwidth);
-	packed_buffer_extract(&pb, "bbbwwbbbbbbbbbbbbbbwQQQQSSSbbbbbbbbbbww",
+	packed_buffer_extract(&pb, "bbbwwbbbbbbbbbbbbbbwQQQQSSSbB7bbww",
 			&tloading, &throttle, &rpm, &fuel, &oxygen, &temp,
 			&scizoom, &weapzoom, &navzoom, &mainzoom,
 			&warpdrive, &requested_warpdrive,
@@ -4895,8 +4895,9 @@ static int process_update_ship_packet(uint8_t opcode)
 			&hgax, (int32_t) 1000000,
 			&hgay, (int32_t) 1000000,
 			&hgaz, (int32_t) 1000000,
+			&emf_detector,
 			&in_secure_area,
-			&docking_magnets, &emf_detector, &nav_mode, &warp_core_status, &rts_mode,
+			&docking_magnets, &nav_mode, &warp_core_status, &rts_mode,
 			&exterior_lights, &alarms_silenced, &missile_lock_detected, &rts_active_button, &wallet,
 			&viewpoint_object);
 	tloaded = (tloading >> 4) & 0x0f;
@@ -4971,7 +4972,7 @@ static int process_update_ship_packet(uint8_t opcode)
 	o->tsd.ship.desired_hg_ant_aim.v.z = hgaz;
 	if (vec3_magnitude(&o->tsd.ship.desired_hg_ant_aim) > 0.001)
 		vec3_normalize_self(&o->tsd.ship.desired_hg_ant_aim);
-	o->tsd.ship.exterior_lights = exterior_lights;
+	o->tsd.ship.exterior_lights = exterior_lights ? 255 : 0; /* It is transmitted in a bit field */
 	o->tsd.ship.alarms_silenced = alarms_silenced;
 	o->tsd.ship.missile_lock_detected = missile_lock_detected;
 	o->tsd.ship.trident = trident;

@@ -301,14 +301,19 @@ struct update_ship_packet {
 	int16_t weap_orientation[4];
 	int16_t current_hg_ant_orientation[4]; /* high gain antenna orientation */
 	uint32_t desired_hg_ant_aim[3]; /* high gain antenna desired vec3 direction vector */
+	uint8_t emf_detector;
+#if 0
+	/* flag_bits contain the following fields packed 1 bit each */
+#error These fields are not meant to be compiled
 	uint8_t in_secure_area;
 	uint8_t docking_magnets;
-	uint8_t emf_detector;
 	uint8_t nav_mode;
 	uint8_t warp_core_status;
 	uint8_t rts_mode;
 	uint8_t exterior_lights;
 	uint8_t alarms_silenced;
+#endif
+	uint8_t flag_bits;
 	uint8_t missile_lock_detected;
 	uint8_t rts_active_button;
 	uint32_t wallet;
