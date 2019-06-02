@@ -52,6 +52,7 @@ GLOBAL void packed_buffer_free(struct packed_buffer *pb);
  * "Q" = 4 16-bit signed integer encoded floats representing a quaternion axis + angle
  * "R" = 32-bit signed integer encoded double radians representing an angle
  *       (-2 * M_PI <= angle <= 2 * M_PI must hold.)
+ * "Bx" = up to 8 bits, where x denotes how many bits (e.g. B1, B2, B3, B4, B5, B6, B7 or B8)
  */
 
 GLOBAL int packed_buffer_append(struct packed_buffer *pb, const char *format, ...);

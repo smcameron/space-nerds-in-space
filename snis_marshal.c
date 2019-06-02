@@ -570,7 +570,7 @@ void packed_buffer_extract_quat(struct packed_buffer *pb, float q[])
 
 int packed_buffer_append_va(struct packed_buffer *pb, const char *format, va_list ap)
 {
-	uint8_t b;
+	uint8_t b, bits;
 	uint16_t h;
 	uint32_t w;
 	uint64_t q;
@@ -579,7 +579,7 @@ int packed_buffer_append_va(struct packed_buffer *pb, const char *format, va_lis
 	char *r;
 	unsigned char *s;
 	unsigned short len;
-	int rc = 0;
+	int i, n, rc = 0;
 	double d;
 	float *quaternion;
 
@@ -637,6 +637,21 @@ int packed_buffer_append_va(struct packed_buffer *pb, const char *format, va_lis
 			quaternion = va_arg(ap, float *);
 			packed_buffer_append_quat(pb, quaternion);
 			break;
+		case 'B':
+			bits = 0;
+			n = *format++ - '0';
+			if (n > 8 || n < 1) {
+				fprintf(stderr, "Bad bitfield length in packed_buffer_append_va(): '%c'\n", n);
+				stacktrace("Bad bitfield length in packed_buffer_append_va");
+				n = 1;
+			}
+			for (i = 0; i < n; i++) {
+				b = (uint8_t) va_arg(ap, int);
+				b = !!b;
+				bits = (bits << 1) | b;
+			}
+			packed_buffer_append_u8(pb, bits);
+			break;
 		default:
 			rc = -EINVAL;
 			break;
@@ -657,6 +672,8 @@ int packed_buffer_append_va(struct packed_buffer *pb, const char *format, va_lis
  * "Q" = 4 16-bit signed integer encoded floats representing a quaternion axis + angle
  * "R" = 32-bit signed integer encoded double radians representing an angle
  *       (-2 * M_PI <= angle <= 2 * M_PI must hold.)
+ * "Bx" = Where ('1' <= x <= '8'). Up to 8 bits in 8 separate arguments to be
+ *  packed into/out of a single byte.
  */
 
 int packed_buffer_append(struct packed_buffer *pb, const char *format, ...)
@@ -676,6 +693,10 @@ int calculate_buffer_size(const char *format)
 
 	for (i = 0; format[i]; i++) {
 		switch (format[i]) {
+		case 'B':
+			i++; /* Skip length that follows 'B' */
+			size += 1;
+			break;
 		case 'b':
 			size += 1;
 			break;
@@ -730,6 +751,7 @@ struct packed_buffer *packed_buffer_new(const char *format, ...)
 int packed_buffer_extract_va(struct packed_buffer *pb, const char *format, va_list ap)
 {
 	uint8_t *b;
+	uint8_t bits;
 	uint16_t *h;
 	uint32_t *w;
 	uint64_t *q;
@@ -739,7 +761,7 @@ int packed_buffer_extract_va(struct packed_buffer *pb, const char *format, va_li
 	unsigned char *s;
 	unsigned short len;
 	int ilen;
-	int rc = 0;
+	int i, n, rc = 0;
 	double *d;
 	float *quaternion;
 
@@ -793,6 +815,21 @@ int packed_buffer_extract_va(struct packed_buffer *pb, const char *format, va_li
 		case 'Q':
 			quaternion = va_arg(ap, float *);
 			packed_buffer_extract_quat(pb, quaternion);
+			break;
+		case 'B':
+			bits = packed_buffer_extract_u8(pb);
+			n = *format++ - '0';
+			if (n > 8 || n < 1) {
+				fprintf(stderr, "Bad bitfield length in packed_buffer_extract_va(): '%c'\n", n);
+				stacktrace("Bad bitfield length in packed_buffer_extract_va()");
+				n = 1;
+			}
+			bits = bits << (8 - n);
+			for (i = 0; i < n; i++) {
+				b = va_arg(ap, uint8_t *);
+				*b = (bits & 0x80) >> 7;
+				bits = bits << 1;
+			}
 			break;
 		default:
 			rc = -EINVAL;
@@ -858,11 +895,76 @@ int packed_buffer_length(struct packed_buffer *pb)
 	return pb->buffer_cursor;
 }
 
-#ifdef TEST_MARSHALL
+#ifdef TEST_MARSHAL
+static void test_bit_fields(void)
+{
+	int i, j;
+	uint8_t b[8];
+	struct packed_buffer *pb;
+	int err_count = 0;
+
+	for (i = 0; i < 8; i++) {
+		memset(b, 0, sizeof(b));
+		b[i] = '1';
+		pb = packed_buffer_new("B8", b[0], b[1], b[2], b[3], b[4], b[5], b[6], b[7]);
+		pb->buffer_cursor = 0;
+		memset(b, 255, sizeof(b));
+		packed_buffer_extract(pb, "B8", &b[0], &b[1], &b[2], &b[3], &b[4], &b[5], &b[6], &b[7]);
+		for (j = 0; j < 8; j++) {
+			if (j == i) {
+				if (b[j] == 1)
+					continue;
+				fprintf(stderr, "B8 bit field failure, i = %d, j = %d, expected 1, got %d\n",
+						i, j, b[j]);
+				err_count++;
+			} else {
+				if (b[j] == 0)
+					continue;
+				fprintf(stderr, "B8 bit field failure, i = %d, j = %d, expected 0, got %d\n",
+						i, j, b[j]);
+				err_count++;
+			}
+		}
+		packed_buffer_free(pb);
+	}
+
+	/* Test some that don't use the entire byte. */
+	for (i = 0; i < 7; i++) {
+		memset(b, 0, sizeof(b));
+		b[i] = '1';
+		pb = packed_buffer_new("B7", b[0], b[1], b[2], b[3], b[4], b[5], b[6]);
+		pb->buffer_cursor = 0;
+		memset(b, 255, sizeof(b));
+		packed_buffer_extract(pb, "B7", &b[0], &b[1], &b[2], &b[3], &b[4], &b[5], &b[6]);
+		for (j = 0; j < 7; j++) {
+			if (j == i) {
+				if (b[j] == 1)
+					continue;
+				fprintf(stderr, "B7 bit field failure, i = %d, j = %d, expected 1, got %d\n",
+						i, j, b[j]);
+				err_count++;
+			} else {
+				if (b[j] == 0)
+					continue;
+				fprintf(stderr, "B7 bit field failure, i = %d, j = %d, expected 0, got %d\n",
+						i, j, b[j]);
+				err_count++;
+			}
+		}
+		packed_buffer_free(pb);
+	}
+
+	if (err_count == 0)
+		printf("Bit fields passed all tests\n");
+	else
+		fprintf(stderr, "Bit fields failed %d tests\n", err_count);
+}
+
 int main(int argc, char *argv[])
 {
 
 	float x;
+	int i, j;
 
 	for (x = -1.0; x <= 1.0; x += 0.0001) {
 		printf("Qtos32(%f) = %d\n", x, Qtos32(x));
@@ -877,6 +979,7 @@ int main(int argc, char *argv[])
 
 	double angle, outangle;
 	int32_t min_diff, max_diff, diff;
+	uint8_t b[8];
 	max_diff = -100000;
 	min_diff = 100000;
 	uint32_t last_value = 0x7fffffff;
@@ -898,6 +1001,8 @@ int main(int argc, char *argv[])
 		}
 		last_value = value;
 		/* printf("%lf --> %u\n", angle * 180.0 / M_PI, value);  */
+
+		/* Test radians */
 		pb = packed_buffer_new("R", angle);
 		pb->buffer_cursor = 0;
 		packed_buffer_extract(pb, "R", &outangle);
@@ -905,6 +1010,7 @@ int main(int argc, char *argv[])
 		error = fabs(outangle - angle);
 		if (error > max_error)
 			max_error = error;
+
 	}
 	printf("For radians conversions, max_diff = %d / %g deg, min_diff = %d / %g deg\n",
 		max_diff, angle_increment * 180.0 / M_PI, min_diff, angle_increment * 180.0 / M_PI);
@@ -912,6 +1018,9 @@ int main(int argc, char *argv[])
 	if (max_diff > 6 || min_diff < 5) { /* these limits determined empirically */
 		printf("Something's wrong with the radians conversions.\n");
 	}
+
+	/* Test bit fields */
+	test_bit_fields();
 	return 0;
 }
 #endif

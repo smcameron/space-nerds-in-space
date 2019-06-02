@@ -1118,6 +1118,9 @@ $(OD)/snis_hash.o:	snis_hash.c snis_hash.h Makefile ${ODT}
 test_snis_crypt:	snis_hash.c snis_hash.h
 	$(CC) -DTEST_SNIS_CRYPT -o test_snis_crypt snis_hash.c -lcrypt
 
+test_marshal:	snis_marshal.c snis_marshal.h stacktrace.o
+	$(CC) -DTEST_MARSHAL -o test_marshal stacktrace.o snis_marshal.c
+
 $(OD)/snis_nl.o:	snis_nl.c snis_nl.h Makefile ${ODT}
 	$(Q)$(COMPILE)
 
