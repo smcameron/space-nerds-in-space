@@ -29,7 +29,7 @@
 #include "shape_collision.h"
 
 #define DEFAULT_SOLAR_SYSTEM "default"
-#define SNIS_PROTOCOL_VERSION "SNIS033"
+#define SNIS_PROTOCOL_VERSION "SNIS034"
 #define COMMON_MTWIST_SEED 97872
 /* dimensions of the "known" universe */
 #define XKNOWN_DIM 600000.0
@@ -498,7 +498,6 @@ struct ship_data {
 	uint8_t navzoom;		/* navigation zoom */
 	uint8_t mainzoom;		/* main screen zoom */
 	uint8_t warpdrive;		/* warp drive setting on navigation screen */
-	uint8_t requested_warpdrive;	/* Not sure this is really used anymore */
 	uint8_t requested_shield;	/* Not sure this is really used anymore */
 	uint8_t missile_count;		/* How many missiles on board */
 	uint8_t phaser_wavelength;	/* wavelength of phaser weapon */

@@ -52,7 +52,7 @@ struct packed_buffer *build_bridge_update_packet(struct snis_entity *o, unsigned
 			o->x, (int32_t) UNIVERSE_DIM,
 			o->y, (int32_t) UNIVERSE_DIM,
 			o->z, (int32_t) UNIVERSE_DIM);
-	packed_buffer_append(pb, "RRRwwRRbbbwwbbbbbbbbbbbbbbwQQQbbwbbbb",
+	packed_buffer_append(pb, "RRRwwRRbbbwwbbbbbbbbbbbbbwQQQbbwbbbb",
 			o->tsd.ship.yaw_velocity,
 			o->tsd.ship.pitch_velocity,
 			o->tsd.ship.roll_velocity,
@@ -62,7 +62,7 @@ struct packed_buffer *build_bridge_update_packet(struct snis_entity *o, unsigned
 			tloading, throttle, rpm, fuel, oxygen, o->tsd.ship.temp,
 			o->tsd.ship.scizoom, o->tsd.ship.weapzoom, o->tsd.ship.navzoom,
 			o->tsd.ship.mainzoom,
-			o->tsd.ship.warpdrive, o->tsd.ship.requested_warpdrive,
+			o->tsd.ship.warpdrive,
 			o->tsd.ship.requested_shield,
 			o->tsd.ship.missile_count,
 			o->tsd.ship.phaser_charge, o->tsd.ship.phaser_wavelength,
@@ -95,7 +95,7 @@ void unpack_bridge_update_packet(struct snis_entity *o, struct packed_buffer *pb
 	double dx, dy, dz, dyawvel, dpitchvel, drollvel;
 	double dsheading, dbeamwidth;
 	uint8_t tloading, tloaded, throttle, rpm, temp, scizoom, weapzoom, navzoom,
-		mainzoom, warpdrive, requested_warpdrive,
+		mainzoom, warpdrive,
 		requested_shield, missile_count, phaser_charge, phaser_wavelength, shiptype,
 		reverse, trident, in_secure_area, docking_magnets, shield_strength,
 		shield_wavelength, shield_width, shield_depth, faction;
@@ -116,10 +116,10 @@ void unpack_bridge_update_packet(struct snis_entity *o, struct packed_buffer *pb
 				&torpedoes, &power,
 				&dsheading,
 				&dbeamwidth);
-	packed_buffer_extract(pb, "bbbwwbbbbbbbbbbbbbbwQQQbbwbbbb",
+	packed_buffer_extract(pb, "bbbwwbbbbbbbbbbbbbwQQQbbwbbbb",
 			&tloading, &throttle, &rpm, &fuel, &oxygen, &temp,
 			&scizoom, &weapzoom, &navzoom, &mainzoom,
-			&warpdrive, &requested_warpdrive,
+			&warpdrive,
 			&requested_shield, &missile_count, &phaser_charge, &phaser_wavelength, &shiptype,
 			&reverse, &trident, &victim_id, &orientation.vec[0],
 			&sciball_orientation.vec[0], &weap_orientation.vec[0], &in_secure_area,
@@ -173,7 +173,6 @@ void unpack_bridge_update_packet(struct snis_entity *o, struct packed_buffer *pb
 	o->tsd.ship.weapzoom = weapzoom;
 	o->tsd.ship.navzoom = navzoom;
 	o->tsd.ship.mainzoom = mainzoom;
-	o->tsd.ship.requested_warpdrive = requested_warpdrive;
 	o->tsd.ship.requested_shield = requested_shield;
 	o->tsd.ship.warpdrive = warpdrive;
 	o->tsd.ship.phaser_charge = phaser_charge;

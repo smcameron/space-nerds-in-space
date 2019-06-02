@@ -83,7 +83,6 @@ struct key_value_specification snis_entity_kvs[] = {
 	UINT8_TSDFIELD(scizoom),
 	UINT8_TSDFIELD(weapzoom),
 	UINT8_TSDFIELD(mainzoom),
-	UINT8_TSDFIELD(requested_warpdrive),
 	UINT8_TSDFIELD(requested_shield),
 	UINT8_TSDFIELD(phaser_wavelength),
 	UINT8_TSDFIELD(phaser_charge),
