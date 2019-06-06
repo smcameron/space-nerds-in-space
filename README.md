@@ -1,5 +1,6 @@
 
-Space Nerds In Space is an open source multiplayer networked spaceship bridge
+[Space Nerds In Space](https://smcameron.github.io/space-nerds-in-space/ "Space Nerds In Space website")
+is an open source multiplayer networked spaceship bridge
 simulator game inspired by another game called "Artemis Spaceship Bridge Simulator"
 It is still a work in progress, but it is substantially far along, and reasonably
 free of bugs as far as I know (the game should not crash, in other words.)
@@ -38,5 +39,10 @@ Bandwidth requirements are on the order of 100k/s per client.
 
 	https://smcameron.github.io/space-nerds-in-space/#multiplayerinstructions
 
-If you would like to help work on this project, see CONTRIBUTING.md
+If you would like to help work on this project, see [CONTRIBUTING.md](https://github.com/smcameron/space-nerds-in-space/blob/master/CONTRIBUTING.md).
+There is also a guide to the code here:
+[Hacking Space Nerds In Space](http://htmlpreview.github.io/?https://github.com/smcameron/space-nerds-in-space/blob/master/doc/hacking-space-nerds-in-space.html).
+Here is documentation for the
+[Lua scripting API](https://github.com/smcameron/space-nerds-in-space/blob/master/doc/lua-api.txt)
+intended to be used for creating "mission scripts".
 
