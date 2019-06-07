@@ -8125,6 +8125,7 @@ static char *credits_text[] = {
 	"ANDREW ROACH",
 	"BILL LEMMOND",
 	"BILLY",
+	"MARTIN HAUKELI",
 	"DAN HUNSAKER",
 	"EMMANOUIL KAPERNAROS",
 	"MCMic",
