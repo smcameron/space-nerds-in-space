@@ -12837,7 +12837,12 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 					entity_set_user_data(contact, &go[i]);
 				}
 			} else {
-				contact = add_entity(instrumentecx, m, go[i].x, go[i].y, go[i].z, UI_COLOR(nav_entity));
+				int color = UI_COLOR(nav_entity);
+				if (go[i].type == OBJTYPE_SHIP2)
+					color = UI_COLOR(nav_ship);
+				else if (go[i].type == OBJTYPE_ASTEROID)
+					color = UI_COLOR(nav_asteroid);
+				contact = add_entity(instrumentecx, m, go[i].x, go[i].y, go[i].z, color);
 				if (contact) {
 					set_render_style(contact, science_style);
 					entity_set_user_data(contact, &go[i]);
