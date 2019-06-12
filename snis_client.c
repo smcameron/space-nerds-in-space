@@ -1615,6 +1615,12 @@ static void laserbeam_move(struct snis_entity *o)
 	target_vector.v.z = target->z - origin->z + epsilon;
 	length = vec3_magnitude(&target_vector);
 
+	if (target->type == OBJTYPE_PLANET) { /* Account for the radius of the planet */
+		float adjusted_length = length - target->tsd.planet.radius;
+		vec3_mul_self(&target_vector, adjusted_length / length);
+		length = adjusted_length;
+	}
+
 	quat_from_u2v(&orientation, &right, &target_vector, &up); /* correct up vector? */
 	quat_normalize_self(&orientation);
 
@@ -9597,6 +9603,15 @@ static void draw_3d_laserbeam(GtkWidget *w, GdkGC *gc, struct entity_context *cx
 	union vec3 center = {{o->x, o->y, o->z}};
 	union vec3 vshooter = {{shooter->x, shooter->y, shooter->z}};
 	union vec3 vshootee = {{shootee->x, shootee->y, shootee->z}};
+
+	if (shootee->type == OBJTYPE_PLANET) { /* Account for the radius of the planet */
+		union vec3 shooter_to_shootee;
+		float len;
+		vec3_sub(&shooter_to_shootee, &vshootee, &vshooter);
+		len = vec3_magnitude(&shooter_to_shootee);
+		vec3_mul_self(&shooter_to_shootee, (len - shootee->tsd.planet.radius) / len);
+		vec3_add(&vshootee, &vshooter, &shooter_to_shootee);
+	}
 
 	union vec3 clip1, clip2;
 	rc = sphere_line_segment_intersection(&vshooter, &vshootee, &center, r, &clip1, &clip2);
