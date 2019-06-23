@@ -12804,7 +12804,7 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 				}
 			} else if (go[i].type == OBJTYPE_PLANET) {
 				contact = add_entity(instrumentecx, low_poly_sphere_mesh,
-							go[i].x, go[i].y, go[i].z, UI_COLOR(nav_entity));
+							go[i].x, go[i].y, go[i].z, UI_COLOR(nav_planet));
 				if (contact) {
 					set_render_style(contact, science_style);
 					entity_set_user_data(contact, &go[i]);
@@ -12812,10 +12812,10 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 				if (go[i].tsd.planet.ring) {
 					struct entity *ring =
 						add_entity(instrumentecx, nav_planetary_ring_mesh, 0, 0, 0,
-								UI_COLOR(nav_entity));
+								UI_COLOR(nav_planet));
 					struct entity *ring2 =
 						add_entity(instrumentecx, nav_planetary_ring_mesh, 0, 0, 0,
-								UI_COLOR(nav_entity));
+								UI_COLOR(nav_planet));
 					if (ring) {
 						update_entity_orientation(ring, &identity_quat);
 						update_entity_parent(instrumentecx, ring, contact);
@@ -12842,6 +12842,10 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 					color = UI_COLOR(nav_ship);
 				else if (go[i].type == OBJTYPE_ASTEROID)
 					color = UI_COLOR(nav_asteroid);
+				else if (go[i].type == OBJTYPE_STARBASE)
+					color = UI_COLOR(nav_starbase);
+				else if (go[i].type == OBJTYPE_WARPGATE)
+					color = UI_COLOR(nav_warpgate);
 				contact = add_entity(instrumentecx, m, go[i].x, go[i].y, go[i].z, color);
 				if (contact) {
 					set_render_style(contact, science_style);
