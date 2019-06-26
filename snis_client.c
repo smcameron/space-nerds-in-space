@@ -12735,16 +12735,12 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 	for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
 		if (!go[i].alive)
 			continue;
-
-		if (go[i].id == my_ship_id) {
+		if (go[i].id == my_ship_id)
 			continue;
-		}
-
 		if (go[i].type == OBJTYPE_LASERBEAM || go[i].type == OBJTYPE_TRACTORBEAM) {
 			draw_3d_laserbeam(w, gc, instrumentecx, o, &go[i], display_radius);
 			continue;
 		}
-
 		if (!go[i].entity)
 			continue;
 
@@ -12765,49 +12761,44 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 			continue;
 
 		struct entity *contact = 0;
+		struct mesh *m = entity_get_mesh(go[i].entity);
 
 		switch (go[i].type) {
 		case OBJTYPE_EXPLOSION:
 		case OBJTYPE_DERELICT:
+		case OBJTYPE_NEBULA:
 			break;
-		case OBJTYPE_WORMHOLE:
-		case OBJTYPE_LASER:
-		case OBJTYPE_TORPEDO:
-		case OBJTYPE_MISSILE:
-		case OBJTYPE_ASTEROID:
-		case OBJTYPE_PLANET:
-		case OBJTYPE_BLACK_HOLE:
-		case OBJTYPE_STARBASE:
-		case OBJTYPE_WARPGATE:
-		case OBJTYPE_SHIP2:
-		case OBJTYPE_CARGO_CONTAINER:
-		case OBJTYPE_SHIP1:
-		case OBJTYPE_WARP_CORE:
-		case OBJTYPE_SPACEMONSTER:
-		{
-			struct mesh *m = entity_get_mesh(go[i].entity);
-
-			if (go[i].type == OBJTYPE_TORPEDO) {
+		case OBJTYPE_TORPEDO: {
 				union quat orientation;
 				random_quat(&orientation); /* make torpedo flip around randomly */
 				contact = add_entity(instrumentecx, torpedo_nav_mesh, go[i].x, go[i].y, go[i].z,
 							(timer & 0x04) == 0 ? UI_COLOR(nav_torpedo) : BLACK);
-				update_entity_orientation(contact, &orientation);
-				if (contact)
+				if (contact) {
+					update_entity_orientation(contact, &orientation);
 					entity_set_user_data(contact, &go[i]); /* for debug */
-			} else if (go[i].type == OBJTYPE_LASER) {
+					update_entity_scale(contact, cam_pos_scale * entity_get_scale(go[i].entity));
+				}
+			}
+			break;
+		case OBJTYPE_LASER: {
 				contact = add_entity(instrumentecx, laserbeam_nav_mesh, go[i].x, go[i].y, go[i].z,
 					UI_COLOR(nav_laser));
 				if (contact) {
 					set_render_style(contact, science_style | RENDER_BRIGHT_LINE | RENDER_NO_FILL);
 					entity_set_user_data(contact, &go[i]); /* for debug */
+					update_entity_scale(contact, cam_pos_scale * entity_get_scale(go[i].entity));
+					update_entity_orientation(contact, entity_get_orientation(go[i].entity));
 				}
-			} else if (go[i].type == OBJTYPE_PLANET) {
+			}
+			break;
+		case OBJTYPE_PLANET: {
 				contact = add_entity(instrumentecx, low_poly_sphere_mesh,
 							go[i].x, go[i].y, go[i].z, UI_COLOR(nav_planet));
 				if (contact) {
 					set_render_style(contact, science_style);
 					entity_set_user_data(contact, &go[i]);
+					update_entity_scale(contact, entity_get_scale(go[i].entity));
+					update_entity_orientation(contact, entity_get_orientation(go[i].entity));
 				}
 				if (go[i].tsd.planet.ring) {
 					struct entity *ring =
@@ -12829,14 +12820,29 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 						update_entity_material(ring2, &wireframe_material);
 					}
 				}
-			} else if (go[i].type == OBJTYPE_BLACK_HOLE) {
+			}
+			break;
+		case OBJTYPE_BLACK_HOLE: {
 				contact = add_entity(instrumentecx, low_poly_sphere_mesh,
 							go[i].x, go[i].y, go[i].z, UI_COLOR(nav_entity));
 				if (contact) {
 					set_render_style(contact, science_style);
 					entity_set_user_data(contact, &go[i]);
+					update_entity_scale(contact, cam_pos_scale * entity_get_scale(go[i].entity));
+					update_entity_orientation(contact, entity_get_orientation(go[i].entity));
 				}
-			} else {
+			}
+			break;
+		case OBJTYPE_WORMHOLE:
+		case OBJTYPE_MISSILE:
+		case OBJTYPE_ASTEROID:
+		case OBJTYPE_STARBASE:
+		case OBJTYPE_WARPGATE:
+		case OBJTYPE_SHIP2:
+		case OBJTYPE_CARGO_CONTAINER:
+		case OBJTYPE_SHIP1:
+		case OBJTYPE_WARP_CORE:
+		case OBJTYPE_SPACEMONSTER: {
 				int color = UI_COLOR(nav_entity);
 				if (go[i].type == OBJTYPE_SHIP2)
 					color = UI_COLOR(nav_ship);
@@ -12850,6 +12856,8 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 				if (contact) {
 					set_render_style(contact, science_style);
 					entity_set_user_data(contact, &go[i]);
+					update_entity_scale(contact, cam_pos_scale * entity_get_scale(go[i].entity));
+					update_entity_orientation(contact, entity_get_orientation(go[i].entity));
 				}
 				/* Is it better to have monsters invisible on nav for the element of surprise? */
 				if (go[i].type == OBJTYPE_SPACEMONSTER)
@@ -12858,29 +12866,19 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 					update_entity_color(contact,
 							(timer & 0x04) == 0 ? UI_COLOR(nav_torpedo) : BLACK);
 			}
-			if (contact) {
-				if (go[i].type == OBJTYPE_PLANET)
-					update_entity_scale(contact, entity_get_scale(go[i].entity));
-				else
-					update_entity_scale(contact, cam_pos_scale * entity_get_scale(go[i].entity));
-				if (go[i].type != OBJTYPE_TORPEDO)
-					update_entity_orientation(contact, entity_get_orientation(go[i].entity));
-			}
 #if 0
 			if (o->tsd.ship.ai[0].u.attack.victim_id != -1 && go[i].id == o->tsd.ship.ai[0].u.attack.victim_id)
 				targeted_entity = contact;
 #endif
-			if (curr_science_guy == &go[i])
-				science_entity = contact;
 			break;
-		}
-		case OBJTYPE_NEBULA:
-			break;
-		}
+		} /* end switch */
 
 		if (contact) {
 			int draw_contact_offset_and_ring = 1;
 			float contact_scale = 1.0;
+
+			if (curr_science_guy == &go[i])
+				science_entity = contact;
 
 			update_entity_material(contact, &wireframe_material);
 
