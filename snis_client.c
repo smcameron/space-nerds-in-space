@@ -15872,7 +15872,8 @@ static void draw_science_details(GtkWidget *w, GdkGC *gc)
 		if (curr_science_guy->type == OBJTYPE_STARBASE) {
 			camera_set_pos(sciecx, m->radius * 4, 0.0, m->radius * 2);
 			camera_assign_up_direction(sciecx, 0.0, 0.0, 1.0);
-		} else if (curr_science_guy->type == OBJTYPE_PLANET) {
+		} else if (curr_science_guy->type == OBJTYPE_PLANET ||
+			curr_science_guy->type == OBJTYPE_BLACK_HOLE) {
 			camera_set_pos(sciecx, m->radius * 6, 0.0, m->radius * 2);
 			camera_assign_up_direction(sciecx, 0.0, 0.0, 1.0);
 		} else {
