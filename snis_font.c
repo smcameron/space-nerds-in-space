@@ -259,12 +259,12 @@ int snis_make_font(struct my_vect_obj ***font, float xscale, float yscale)
 {
 	struct my_vect_obj **v;
 
-	v = malloc(sizeof(**v) * 256);
+	v = malloc(sizeof(*v) * 256);
 	if (!v) {
 		if (v) free(v);
 		return -1;
 	}
-	memset(v, 0, sizeof(**v) * 256);
+	memset(v, 0, sizeof(*v) * 256);
 	v['A'] = prerender_glyph(glyph_A, xscale, yscale);
 	v['B'] = prerender_glyph(glyph_B, xscale, yscale);
 	v['C'] = prerender_glyph(glyph_C, xscale, yscale);
