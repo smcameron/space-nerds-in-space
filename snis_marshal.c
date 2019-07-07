@@ -653,8 +653,9 @@ int packed_buffer_append_va(struct packed_buffer *pb, const char *format, va_lis
 			packed_buffer_append_u8(pb, bits);
 			break;
 		default:
-			rc = -EINVAL;
-			break;
+			fprintf(stderr, "Bad format char in packed_buffer_append_va(): '%c'\n", *(format - 1));
+			stacktrace("Bad format string in packed_buffer_append_va()");
+			abort();
 		}
 	}
 	return rc;
