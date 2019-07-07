@@ -200,10 +200,12 @@ struct planetary_atmosphere_profile *planetary_atmosphere_profile_new(char *name
 	if (i < 0) {
 		struct planetary_atmosphere_profile **new_atmos_profile;
 		new_atmos_profile = realloc(atmos_profile, sizeof(*atmos_profile) * (natmos_profiles + 1));
-		if (new_atmos_profile)
+		if (new_atmos_profile) {
 			atmos_profile = new_atmos_profile;
-		else
+		} else {
+			free_profile(p);
 			return NULL;
+		}
 		atmos_profile[natmos_profiles] = p;
 		atmos_profile[natmos_profiles]->index = natmos_profiles;
 		natmos_profiles++;
