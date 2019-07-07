@@ -14687,10 +14687,17 @@ static void npc_menu_item_mining_bot_transport_ores(struct npc_menu_item *item,
 	miner = &go[i];
 	ai = &miner->tsd.ship.ai[0].u.mining_bot;
 	i = lookup_by_id(ai->parent_ship);
-	if (i < 0)
-		parent = NULL;
-	else
-		parent = &go[i];
+	if (i < 0) {
+		/* Can't find the parent, can't transport the ores to the parent.
+		 * Not sure if this can actually happen.  Maybe if all players disconnect
+		 * while mining bot is mining, then reconnect? Still not sure if we could
+		 * get in here though. Log it.
+		 */
+		fprintf(stderr, "%s: Could not find mining bot parent at %s:%d\n",
+			logprefix(), __FILE__, __LINE__);
+		return;
+	}
+	parent = &go[i];
 	if (ai->mode != MINING_MODE_STANDBY_TO_TRANSPORT_ORE) {
 		send_comms_packet(miner, npcname, channel,
 				"UNABLE TO OBTAIN COHERENT TRANSPORTER BEAM LOCK");
