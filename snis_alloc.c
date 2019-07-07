@@ -51,7 +51,7 @@ void snis_object_pool_setup(struct snis_object_pool **pool, int maxobjs)
 	p->maxobjs = maxobjs;
 	p->nbitblocks = ((maxobjs >> 5) + 1);  /* 5, 2^5 = 32, 32 bits per int. */
 	p->highest_object_number = -1;
-	p->free_obj_bitmap = malloc(sizeof(p->free_obj_bitmap) * p->nbitblocks);
+	p->free_obj_bitmap = malloc(sizeof(*p->free_obj_bitmap) * p->nbitblocks);
 	memset(p->free_obj_bitmap, 0, sizeof(*p->free_obj_bitmap) * p->nbitblocks);
 }
 
