@@ -343,6 +343,7 @@ struct mesh *init_circle_mesh(double x, double z, double r, int npoints, double 
 	my_mesh->graph_ptr = 0;
 
 	increment = angle / (float) npoints;
+	assert(npoints > 0);
 	for (i = 0; i <= npoints; i++) {
 		float a = i * increment;
 		my_mesh->v[my_mesh->nvertices].x = x + cos(a) * r;
