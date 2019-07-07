@@ -12665,15 +12665,6 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 		update_entity_orientation(e, &o->orientation);
 	}
 
-	double sector_size = XKNOWN_DIM / 10.0;
-	if (current_zoom > 100 ) {
-		/* turn on fine sector lines */
-		sector_size /= 10.0;
-	}
-
-	/* add the dynamic starts */
-	/* TODO */
-
 	/* draw some static in the region that we can't see because of sensor power */
 	if (screen_radius > visible_distance) {
 		union vec3 u, v;
