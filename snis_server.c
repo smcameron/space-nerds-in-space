@@ -5583,6 +5583,7 @@ static void ai_mining_mode_approach_asteroid(struct snis_entity *o, struct ai_mi
 		vy = 0.0;
 		vz = 0.0;
 		threshold = ship_type[o->tsd.ship.shiptype].max_speed * 10.0;
+		/* note: at this point, asteroid == NULL. */
 	}
 	float distance = dist3d(o->x - x, o->y - y, o->z - z);
 	if (my_speed < 0.1) {
@@ -5594,6 +5595,9 @@ static void ai_mining_mode_approach_asteroid(struct snis_entity *o, struct ai_mi
 	double dist2 = ai_ship_travel_towards(o, x + vx * time_to_travel,
 						y + vy * time_to_travel,
 						z + vz * time_to_travel);
+	if (!asteroid)
+		return;
+
 	dist2 = object_dist2(o, asteroid);
 	if (dist2 < threshold * threshold) {
 		b = lookup_bridge_by_shipid(ai->parent_ship);
