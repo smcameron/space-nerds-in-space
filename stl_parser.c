@@ -907,7 +907,7 @@ static void search_for_normalmap_file(char *filename, char *normalmapfile, int n
 	if (strcmp(&filename[n - 4], ".obj") == 0) {
 		snprintf(candidate, sizeof(candidate) - 1, "%s", filename);
 		candidate[n - 4] = '\0';
-		strncat(candidate, "-normalmap.png", sizeof(candidate) - 1);
+		strncat(candidate, "-normalmap.png", sizeof(candidate) - strlen(candidate) - 1);
 		candidate[sizeof(candidate) - 1] = '\0';
 		rc = stat(candidate, &statbuf);
 		if (rc == 0)
