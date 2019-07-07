@@ -517,7 +517,10 @@ static void fixup_triangle_vertex_ptrs(struct mesh *m, struct vertex *oldptr, st
 {
 	int i;
 
-	/* when you realloc() m->v, all the pointers in m->t need fixing up. */
+	/* When you realloc() m->v, all the pointers in m->t need fixing up.
+	 * Note, this is a bit gross, because oldptr is not actually a valid
+	 * pointer any more, but we're still using its value to do ptr arithmetic
+	 */
 	for (i = 0; i < m->ntriangles; i++) {
 		m->t[i].v[0] = newptr + (m->t[i].v[0] - oldptr);
 		m->t[i].v[1] = newptr + (m->t[i].v[1] - oldptr);
