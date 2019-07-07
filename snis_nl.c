@@ -183,11 +183,12 @@ static struct nl_token **tokenize(char *txt, int *nwords)
 	int i, count;
 	struct nl_token **word = NULL;
 	char *saveptr = NULL;
+	char *tmpstrptr = s;
 
 	count = 0;
 	do {
-		t = strtok_r(s, " ", &saveptr);
-		s = NULL;
+		t = strtok_r(tmpstrptr, " ", &saveptr);
+		tmpstrptr = NULL;
 		if (!t)
 			break;
 		w[count] = strdup(t);
