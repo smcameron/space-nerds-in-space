@@ -1349,6 +1349,6 @@ build_info.h: bin/check-endianness snis.h gather_build_info Makefile
 	$(Q)@./gather_build_info > build_info.h
 
 cppcheck:
-	cppcheck .
+	cppcheck --force .
 
 include Makefile.depend
