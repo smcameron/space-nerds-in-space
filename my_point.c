@@ -72,11 +72,10 @@ void spin_points(struct my_point_t *points, int npoints,
 	double angle;
 	double angle_inc;
 
-	*spun_points = (struct my_point_t *) 
-		malloc(sizeof(*spun_points) * npoints * nangles);
-	memset(*spun_points, 0, sizeof(*spun_points) * npoints * nangles);
+	*spun_points = malloc(sizeof(struct my_point_t) * npoints * nangles);
 	if (*spun_points == NULL)
 		return;
+	memset(*spun_points, 0, sizeof(struct my_point_t) * npoints * nangles);
 
 	angle_inc = (2.0 * M_PI) / (nangles);
 
