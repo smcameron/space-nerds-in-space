@@ -1966,23 +1966,24 @@ static float comms_transmission_strength(struct snis_entity *transmitter, struct
 				occluder.v.z = go[i].z;
 				radius = 1.3 * go[i].tsd.black_hole.radius;
 				blocking_factor = 1.0;
+				break;
 			default:
 				continue;
 			}
-			if (ray_intersects_sphere(&source, &ray_direction, &occluder, radius)) {
-				float to_occluder = object_dist(transmitter, &go[i]);
-				if (to_receiver > to_occluder) { /* occluder blocks transmission */
-					if (blocking_factor > max_blocking_factor)
-						max_blocking_factor = blocking_factor;
-				}
-			} else {
-				if (to_receiver > COMMS_LONG_DISTANCE_THRESHOLD) {
-					blocking_factor = blocking_factor +
-						(0.5 * blocking_factor * to_receiver /
-							(2.0 * COMMS_LONG_DISTANCE_THRESHOLD));
-					if (blocking_factor > max_blocking_factor)
-						max_blocking_factor = blocking_factor;
-				}
+		}
+		if (ray_intersects_sphere(&source, &ray_direction, &occluder, radius)) {
+			float to_occluder = object_dist(transmitter, &go[i]);
+			if (to_receiver > to_occluder) { /* occluder blocks transmission */
+				if (blocking_factor > max_blocking_factor)
+					max_blocking_factor = blocking_factor;
+			}
+		} else {
+			if (to_receiver > COMMS_LONG_DISTANCE_THRESHOLD) {
+				blocking_factor = blocking_factor +
+					(0.5 * blocking_factor * to_receiver /
+						(2.0 * COMMS_LONG_DISTANCE_THRESHOLD));
+				if (blocking_factor > max_blocking_factor)
+					max_blocking_factor = blocking_factor;
 			}
 		}
 	}
