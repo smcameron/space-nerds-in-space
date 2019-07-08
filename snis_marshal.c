@@ -292,12 +292,14 @@ struct packed_buffer * packed_buffer_allocate(int size)
 	struct packed_buffer *pb;
 	pb = malloc(sizeof(*pb));
 	memset(pb, 0, sizeof(*pb));	
-	if (size != 0) {
+	if (size > 0) {
 		pb->buffer = malloc(size);
 		memset(pb->buffer, 0, size);
 		pb->buffer_size = size;
-	} else
-		pb->buffer = NULL;
+	} else {
+		stacktrace("Bad buffer size in packed_buffer_allocate()");
+		abort();
+	}
 	return pb;
 }
 
