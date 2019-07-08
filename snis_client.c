@@ -6169,6 +6169,8 @@ static int process_comm_transmission(void)
 	if (rc != 0)
 		return rc;
 	rc = snis_readsocket(gameserver_sock, string, length);
+	if (rc != 0)
+		return rc;
 	string[79] = '\0';
 	string[length] = '\0';
 	text_window_add_text(comms_ui.tw, string);
