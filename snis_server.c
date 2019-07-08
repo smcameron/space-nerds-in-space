@@ -14480,8 +14480,10 @@ static void parts_buying_npc_bot(struct snis_entity *o, int bridge,
 	range2 = dist3dsqrd(ship->x - o->x, ship->y - o->y, ship->z - o->z);
 
 	rc = sscanf(msg, "%c", (char *) &sel);
-	if (rc != 1)
-		selection = -1;
+	if (rc != 1) {
+		npc_send_parts_menu(name, botstate);
+		return;
+	}
 	selection = sel;
 	if (selection == '0') {
 		botstate->special_bot = NULL;
