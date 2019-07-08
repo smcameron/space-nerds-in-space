@@ -1351,4 +1351,10 @@ build_info.h: bin/check-endianness snis.h gather_build_info Makefile
 cppcheck:
 	cppcheck --force .
 
+scan-build:
+	make mostly-clean
+	rm -fr /tmp/snis-scan-build-output
+	scan-build -o /tmp/snis-scan-build-output make CC=clang
+	xdg-open /tmp/snis-scan-build-output/*/index.html
+
 include Makefile.depend
