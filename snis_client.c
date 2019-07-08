@@ -2062,7 +2062,6 @@ static int update_warp_core(uint32_t id, uint32_t timestamp, double x, double y,
 		o = &go[i];
 		o->tsd.warp_core.rotational_velocity = random_spin[id % NRANDOM_SPINS];
 	} else {
-		o = &go[i];
 		update_generic_object(i, timestamp, x, y, z, 0, 0, 0, NULL, 1);
 	}
 	return 0;
@@ -7618,7 +7617,6 @@ static void *gameserver_reader(__attribute__((unused)) void *arg)
 			lobby_selected_server = -1;
 			close(gameserver_sock);
 			gameserver_sock = -1;
-			rc = 0;
 			connected_to_gameserver = 0;
 			return NULL;
 		case OPCODE_TEXTSCREEN_OP:
@@ -7704,7 +7702,6 @@ static void *gameserver_reader(__attribute__((unused)) void *arg)
 			lobby_selected_server = -1;
 			close(gameserver_sock);
 			gameserver_sock = -1;
-			rc = 0;
 			connected_to_gameserver = 0;
 			displaymode = DISPLAYMODE_NETWORK_SETUP;
 			return NULL;
@@ -11134,7 +11131,7 @@ static void do_phaser_wavelength(struct slider *s)
 
 static void wavelen_updown_button_pressed(int direction)
 {
-	uint8_t value = (uint8_t) (255.0 * sample_phaser_wavelength());
+	uint8_t value;
 	struct snis_entity *o;
 	int inc;
 
@@ -13511,7 +13508,6 @@ static void init_engineering_ui(void)
 			120.0 * 2.0 * M_PI / 180.0, UI_COLOR(eng_gauge_needle), color,
 			10, "O2", sample_oxygen);
 	gauge_set_fonts(eu->oxygen_gauge, PICO_FONT, PICO_FONT);
-	x += xinc;
 
 	int gx1 = SCREEN_WIDTH - eng_ui.gauge_radius * 5;
 	int gy1 = SCREEN_HEIGHT * 0.02;
@@ -20432,6 +20428,8 @@ static void load_textures(void)
 	int loaded_something;
 	loaded_something = load_static_textures();
 	loaded_something += load_per_solarsystem_textures();
+	(void) loaded_something; /* To suppress scan-build from complaining about dead stores */
+
 #ifndef WITHOUTOPENGL
 	if (loaded_something)
 		glFinish();

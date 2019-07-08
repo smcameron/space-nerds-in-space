@@ -211,7 +211,6 @@ static int patestCallback(__attribute__ ((unused)) const void *inputBuffer,
 	float *out = NULL;
 	float output;
 	out = (float*) outputBuffer;
-	count = 0;
 
 	if (audio_paused) {
 		/* output silence when paused and

@@ -669,6 +669,7 @@ static int obj_add_face(struct mesh *m, char *line, int *tris_alloced,
 	vvalid = 0;
 	tvalid = 0;
 	nvalid = 0;
+	(void) vvalid; /* To suppress scan-build complaining about dead stores. */
 
 	rc = sscanf(line, "f %d/%d/%d %d/%d/%d %d/%d/%d",
 			&v[0], &tv[0], &nv[0],

@@ -805,7 +805,6 @@ static void do_action(void *context, struct nl_parse_machine *p, struct nl_token
 					antecedent_noun_meaning = de;
 					antecedent_word = w;
 					antecedent_pos = POS_NOUN;
-				de = t->meaning[p->meaning[i]];
 				} else {
 					extra_data[w].number.value = 0.0;
 				}
@@ -907,7 +906,7 @@ static void nl_parse_machine_score(struct nl_parse_machine *p, int ntokens)
 
 static void nl_parse_machines_score(struct nl_parse_machine **list, int ntokens)
 {
-	struct nl_parse_machine *p = *list;
+	struct nl_parse_machine *p;
 
 	for (p = *list; p; p = p->next)
 		nl_parse_machine_score(p, ntokens);

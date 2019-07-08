@@ -864,7 +864,6 @@ static void service_connection(int connection)
 			pthread_mutex_unlock(&service_mutex);
 			shutdown(connection, SHUT_RDWR);
 			close(connection);
-			connection = -1;
 			return;
 		}
 	}
@@ -904,7 +903,6 @@ static void service_connection(int connection)
 
 	/* Wait for at least one of the threads to prevent premature reaping */
 	iterations = 0;
-	thread_count = 0;
 	do {
 		pthread_mutex_lock(&service_mutex);
 		thread_count = starsystem[i].refcount;

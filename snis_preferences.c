@@ -68,8 +68,7 @@ void snis_prefs_save_default_ship_name(char *name)
 	if (!homedir)
 		return;
 
-	int n = strlen(name);
-	n = strlen(name) + 1;
+	int n = strlen(name) + 1;
 	if (n > SHIPNAME_LEN - 1)
 		n = SHIPNAME_LEN - 1;
 	strncpy(default_ship_name, name, n);

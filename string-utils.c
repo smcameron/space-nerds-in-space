@@ -133,7 +133,6 @@ char *slurp_file(const char *path, int *bytes)
 	buffer = malloc(statbuf.st_size + 1);
 
 	count = 0;
-	bytesread = 0;
 	bytesleft = (int) statbuf.st_size;
 	do {
 		bytesread = read(fd, buffer + count, bytesleft);

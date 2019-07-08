@@ -12,8 +12,6 @@ unsigned short ssgl_get_gamelobby_port(char *proto)
 	unsigned short port;
 	int rc;
 
-	port = -1;
-
 	/* Find the gamelobby tcp port */
 	memset(&hints, 0, sizeof(hints));
 	hints.ai_family = AF_INET;

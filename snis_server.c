@@ -3591,8 +3591,6 @@ static void torpedo_collision_detection(void *context, void *entity)
 		o->alive = 0; /* hit!!!! */
 		schedule_callback2(event_callback, &callback_schedule,
 					"object-hit-event", t->id, (double) o->tsd.torpedo.ship_id);
-		impact_time = universe_timestamp;
-		impact_fractional_time = 0.0; /* TODO: something better? */
 		(void) add_explosion(closest_point.v.x, closest_point.v.y, closest_point.v.z, 50, 5, 5, t->type);
 		snis_queue_add_sound(DISTANT_TORPEDO_HIT_SOUND, ROLE_SOUNDSERVER, t->id);
 		block_add_to_naughty_list(t, o->tsd.torpedo.ship_id);
@@ -3868,17 +3866,14 @@ static void laser_collision_detection(void *context, void *entity)
 		dist2 = dist3dsqrd(o->x - closest_point.v.x, o->y - closest_point.v.y, o->z - closest_point.v.z);
 		if (dist2 > 0.5 * LASER_VELOCITY)
 			return;
-		o->alive = 0; /* hit!!!! */
+		o->alive = 0; /* hit!!!!, laser_move() will delete the laser. */
 		schedule_callback2(event_callback, &callback_schedule,
 					"object-hit-event", t->id, (double) o->tsd.laser.ship_id);
-		impact_time = universe_timestamp;
-		impact_fractional_time = 0.0; /* TODO: something better? */
 		(void) add_explosion(closest_point.v.x, closest_point.v.y, closest_point.v.z, 50, 5, 5, t->type);
 		snis_queue_add_sound(DISTANT_PHASER_HIT_SOUND, ROLE_SOUNDSERVER, t->id);
 		block_add_to_naughty_list(t, o->tsd.laser.ship_id);
 		calculate_laser_damage(t, o->tsd.laser.wavelength,
 			(float) o->tsd.laser.power * LASER_PROJECTILE_BOOST);
-		/* How does the laser get deleted? */
 		return;
 	}
 
@@ -4918,7 +4913,6 @@ static void ai_attack_mode_brain(struct snis_entity *o)
 	}
 	maxv = ship_type[o->tsd.ship.shiptype].max_speed;
 	v = lookup_entity_by_id(o->tsd.ship.ai[n].u.attack.victim_id);
-	firing_range = 0;
 	if (!v) {
 		ai_trace(o->id, "FAILED TO LOOKUP VICTIM %u", o->tsd.ship.ai[n].u.attack.victim_id);
 		return;
@@ -5593,13 +5587,13 @@ static void ai_mining_mode_approach_asteroid(struct snis_entity *o, struct ai_mi
 		time_to_travel = distance / my_speed;
 		set_ship_destination(o, x + vx * time_to_travel, y + vy * time_to_travel, z + vz * time_to_travel);
 	}
-	double dist2 = ai_ship_travel_towards(o, x + vx * time_to_travel,
+	(void) ai_ship_travel_towards(o, x + vx * time_to_travel,
 						y + vy * time_to_travel,
 						z + vz * time_to_travel);
 	if (!asteroid)
 		return;
 
-	dist2 = object_dist2(o, asteroid);
+	double dist2 = object_dist2(o, asteroid);
 	if (dist2 < threshold * threshold) {
 		b = lookup_bridge_by_shipid(ai->parent_ship);
 		if (b >= 0) {
@@ -5811,6 +5805,7 @@ static void ai_mining_mode_mine_asteroid(struct snis_entity *o, struct ai_mining
 			n = snis_randn(total); total -= n;
 			update_mineral_amount(&ai->uranium, n);
 			n = snis_randn(total); total -= n;
+			(void) total; /* To suppress scan-build complaining about dead stores */
 		}
 		if (chance < 80) {
 			add_mining_laserbeam(o->id, asteroid->id, MINING_LASER_DURATION);
@@ -5952,7 +5947,7 @@ static void ai_tow_ship_mode_brain(struct snis_entity *o)
 							ROLE_SOUNDSERVER, disabled_ship->id);
 			snis_queue_add_text_to_speech("Mantis tow ship has attached.",
 							ROLE_TEXT_TO_SPEECH, disabled_ship->id);
-			dist2 = ai_ship_travel_towards(o,
+			(void) ai_ship_travel_towards(o,
 				starbase_dispatcher->x, starbase_dispatcher->y, starbase_dispatcher->z);
 			ai_trace(o->id, "ATTACHED TO DISABLED SHIP %u", disabled_ship->id);
 			return;
@@ -6403,7 +6398,6 @@ static void ai_rts_guard_base(struct snis_entity *o)
 	/* Find the closest enemy headed for this base, and if he is close enough, attack him */
 	/* FIXME: Can we use the space partitioning here? */
 	closest = -1;
-	dist2 = -1;
 	found = -1;
 	for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
 		struct snis_entity *s = &go[i];
@@ -7348,7 +7342,6 @@ static void damcon_robot_think(struct snis_damcon_entity *o, struct damcon_data 
 			d->robot->tsd.robot.robot_state = DAMCON_ROBOT_DECIDE_LTG;
 			return;
 		}
-		part = &d->o[i];
 		damcon_robot_claw_object(d, socket, do_robot_pickup, damcon_part_sufficiently_repaired,
 					DAMCON_ROBOT_DECIDE_LTG);
 		break;
@@ -8837,7 +8830,6 @@ static int do_sunburn_damage(struct snis_entity *o)
 
 	sundist = dist3d(o->x - SUNX, o->y - SUNY, o->z - SUNZ);
 	if (sundist > SUN_DIST_LIMIT) {
-		sunburn = 0.0;
 		return 0;
 	} else {
 		sunburn = 1.0 - sundist / SUN_DIST_LIMIT;
@@ -24297,7 +24289,6 @@ static void nl_compute_npn(void *context, int argc, char *argv[], int pos[],
 
 	/* Find the first noun... it should be "course", or "distance". */
 
-	first_noun = -1;
 	first_noun = nl_find_next_word(argc, pos, POS_NOUN, 0);
 	if (first_noun < 0) /* didn't find first noun... */
 		goto no_understand;
@@ -27873,7 +27864,6 @@ error:
 	if (sock >= 0) {
 		shutdown(sock, SHUT_RDWR);
 		close(sock);
-		sock = -1;
 	}
 	freeaddrinfo(mvserverinfo);
 	return;

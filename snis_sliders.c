@@ -153,7 +153,7 @@ void snis_slider_draw(struct slider *s)
 {
 	double v;
 	float width, tx1;
-	int bar_color = UI_COLOR(slider_good);
+	int bar_color;
 	float ptr_height = s->height / 2.0;
 	float ptr_width = s->height / 3.0;
 
