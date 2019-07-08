@@ -13338,6 +13338,8 @@ static int process_console_op(void)
 			color = UI_COLOR(demon_default);
 		memset(buffer, 0, sizeof(buffer));
 		rc = snis_readsocket(gameserver_sock, buffer, sizeof(buffer));
+		if (rc != 0)
+			return rc;
 		buffer[DEMON_CONSOLE_MSG_MAX - 1] = '\0';
 		text_window_add_color_text(demon_ui.console, (char *) buffer, color);
 		break;
