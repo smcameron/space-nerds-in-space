@@ -10405,7 +10405,7 @@ static int add_ship(int faction, int shiptype, int auto_respawn)
 	if (faction >= 0 && faction < nfactions())
 		go[i].sdata.faction = faction;
 	if (shiptype == SHIP_CLASS_MANTIS) /* Ensure all Mantis tow ships are neutral faction */
-		faction = 0;
+		go[i].sdata.faction = 0;
 	ship_name(mt, go[i].sdata.name, sizeof(go[i].sdata.name));
 	uppercase(go[i].sdata.name);
 	go[i].tsd.ship.fuel = 0; /* TODO: maybe sandbox mode should consume fuel too? */
