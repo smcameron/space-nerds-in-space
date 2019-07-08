@@ -6672,6 +6672,8 @@ static int process_natural_language_request(void)
 		return -1;
 	memset(string, 0, sizeof(string));
 	rc = snis_readsocket(gameserver_sock, string, length);
+	if (rc)
+		return rc;
 	string[255] = '\0';
 	string[length] = '\0';
 	text_to_speech(string);
