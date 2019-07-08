@@ -40,6 +40,7 @@
 #include "snis_graph.h"
 #include "graph_dev.h"
 #include "material.h"
+#include "stacktrace.h"
 
 #define DEFINE_STL_FILE_GLOBALS
 #include "stl_parser.h"
@@ -779,12 +780,20 @@ static void compact_mesh_allocations(struct mesh *m)
 	struct texture_coord *newtex;
 
 	oldptr = m->v;
+	if (m->nvertices <= 0) {
+		stacktrace("compact_mesh_allocations() -- mesh with nvertices <= 0");
+		abort();
+	}
 	m->v = realloc(m->v, m->nvertices * sizeof(*m->v));
 	if (!m->v) {
 		m->v = oldptr;
 		return;
 	}
 	fixup_triangle_vertex_ptrs(m, oldptr, m->v);
+	if (m->ntriangles <= 0) {
+		stacktrace("compact_mesh_allocations() -- mesh with ntriangles <= 0");
+		abort();
+	}
 	newtri = realloc(m->t, m->ntriangles * sizeof(*m->t));
 	if (newtri)
 		m->t = newtri;
