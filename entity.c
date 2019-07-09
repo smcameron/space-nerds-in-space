@@ -157,7 +157,7 @@ void update_entity_parent(struct entity_context *cx, struct entity *child, struc
 
 	if (child->parent) {
 		/* remove this child out of the old parent child_entity_list */
-		int entity_child_index = parent->entity_child_index;
+		int entity_child_index = child->parent->entity_child_index;
 		struct entity_child *last_ec = 0;
 
 		while (entity_child_index >= 0) {
@@ -165,7 +165,7 @@ void update_entity_parent(struct entity_context *cx, struct entity *child, struc
 			if (this_ec->child_entity_index == child_index) {
 				/* we found the child, fix the list */
 				if (!last_ec) /* first link */
-					parent->entity_child_index = this_ec->next_entity_child_index;
+					child->parent->entity_child_index = this_ec->next_entity_child_index;
 				else
 					last_ec->next_entity_child_index = this_ec->next_entity_child_index;
 
