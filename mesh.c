@@ -713,11 +713,11 @@ void mesh_set_average_vertex_normals(struct mesh *m)
 			} else {
 				int fv = find_vertex(v, m->t[i].v[j], m->nvertices);
 				assert(fv >= 0);
-				vn[fv].x += normal.v.x;
-				vn[fv].y += normal.v.y;
-				vn[fv].z += normal.v.z;
-				vn[fv].w += 1.0;
-				m->t[i].v[j]->w += 1.0;
+				vn[fv].x += normal.v.x;	/* clang scan-build complains about garbage values */
+				vn[fv].y += normal.v.y;	/* in vn[fv]. I believe this is a false positive because */
+				vn[fv].z += normal.v.z;	/* the values will have been initialized by the "then" part */
+				vn[fv].w += 1.0;	/* of this "if" statement before we encounter them */
+				m->t[i].v[j]->w += 1.0;	/* again in the "else" part. -- smcameron, 2019-07-09. */
 			}
 		}
 	}
