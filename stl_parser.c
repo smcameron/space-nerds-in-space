@@ -1268,6 +1268,11 @@ struct mesh *read_oolite_dat_file(char *filename)
 				fprintf(stderr, "%s:%d:%s: bad texture line\n", filename, lineno, line);
 				goto error;
 			}
+			if (!m->tex) {
+				fprintf(stderr, "%s:%d:%s: texture mode, but no texture allocated (no NFACES line?)\n",
+					filename, lineno, line);
+				goto error;
+			}
 			/* Backwards?  Ok. */
 			m->tex[ntex * 3 + 2].u = u[0];
 			m->tex[ntex * 3 + 2].v = v[0];
