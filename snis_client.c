@@ -7837,8 +7837,16 @@ static void send_build_info_to_server(void)
 	char *buildinfo1 = strdup(BUILD_INFO_STRING1);
 	char *buildinfo2 = strdup(BUILD_INFO_STRING2);
 	struct packed_buffer *pb;
-	int len1 = strlen(buildinfo1);
-	int len2 = strlen(buildinfo2);
+	int len1, len2;
+
+	if (!buildinfo1 || !buildinfo2) { /* Shut clang scan-build's mouth about null ptrs */
+		fprintf(stderr, "Out of memory in send_build_info_to_server\n");
+		fflush(stderr);
+		abort(); /* If we're out of memory at this early point, there's no hope anyway. */
+	}
+
+	len1 = strlen(buildinfo1);
+	len2 = strlen(buildinfo2);
 
 	if (len1 > 255)
 		len1 = 255;
