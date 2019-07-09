@@ -15437,6 +15437,9 @@ static void warp_gate_ticket_buying_npc_bot(struct snis_entity *o, int bridge,
 	int len = strlen(solarsystem_name);
 	if (len > SSGL_LOCATIONSIZE)
 		len = SSGL_LOCATIONSIZE;
+	ssx = 0.0;
+	ssy = 0.0;
+	ssz = 0.0;
 	for (i = 0; i < nservers; i++) {
 		if (strncasecmp(gameserver[i].location, solarsystem_name, len) == 0) {
 			rc = sscanf(gameserver[i].game_instance, "%lf %lf %lf", &ssx, &ssy, &ssz);
