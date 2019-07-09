@@ -15336,11 +15336,11 @@ static void science_mouse_click_rotate(int x, int y)
 		pitchcount = 2;
 	if (yaw > 0)
 		yawval = YAW_LEFT;
-	if (yaw <= 0)
+	else
 		yawval = YAW_RIGHT;
 	if (pitch > 0)
 		pitchval = PITCH_FORWARD;
-	if (pitch <= 0)
+	else
 		pitchval = PITCH_BACK;
 	for (i = 0; i < yawcount; i++)
 		queue_to_server(snis_opcode_pkt("bb",
