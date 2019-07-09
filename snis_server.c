@@ -2348,7 +2348,7 @@ static void distribute_damage_to_damcon_system_parts_fractionally(struct snis_en
 	total_damage = damage * DAMCON_PARTS_PER_SYSTEM;
 
 	/* distribute total_damage into per_part_damage[] */
-	for (i = 0; i < DAMCON_PARTS_PER_SYSTEM - 1; i++)
+	for (i = 0; i < DAMCON_PARTS_PER_SYSTEM; i++)
 		per_part_damage[i] = (int) (total_damage * f[i]);
 
 	distribute_per_part_damage_among_parts(o, d, per_part_damage, damcon_system);
