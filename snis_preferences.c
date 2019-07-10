@@ -34,18 +34,13 @@
 
 static char default_ship_name[SHIPNAME_LEN];
 
-char *snis_prefs_read_default_ship_name(void)
+#define DEFAULT_SHIP_NAME_TXT "default_ship_name.txt"
+#define ROLE_DEFAULTS_TXT "role_defaults.txt"
+
+char *snis_prefs_read_default_ship_name(struct xdg_base_context *cx)
 {
-	int n, bytes;
-	char *homedir;
-	char path[PATH_MAX];
-
-	homedir = getenv("HOME");
-	if (!homedir)
-		return NULL;
-
-	snprintf(path, PATH_MAX, "%s/.space-nerds-in-space/default_ship_name.txt", homedir);
-	char *name = slurp_file(path, &bytes);
+	int n;
+	char *name = xdg_base_slurp_file(cx, DEFAULT_SHIP_NAME_TXT);
 	if (!name)
 		return NULL;
 	n = strlen(name);
@@ -57,69 +52,39 @@ char *snis_prefs_read_default_ship_name(void)
 	return default_ship_name;
 }
 
-void snis_prefs_save_default_ship_name(char *name)
+void snis_prefs_save_default_ship_name(struct xdg_base_context *cx, char *name)
 {
-	char *homedir;
-	char path[PATH_MAX];
-	char filename[PATH_MAX];
 	int rc, fd, bytes_to_write;
-
-	homedir = getenv("HOME");
-	if (!homedir)
-		return;
 
 	int n = strlen(name) + 1;
 	if (n > SHIPNAME_LEN - 1)
 		n = SHIPNAME_LEN - 1;
 	strncpy(default_ship_name, name, n);
 	default_ship_name[n] = '\0';
-	snprintf(path, PATH_MAX, "%s/.space-nerds-in-space", homedir);
-	rc = mkdir(path, 0755);
-	if (rc != 0 && errno != EEXIST) {
-		fprintf(stderr, "Failed to create directory %s: %s\n", path, strerror(errno));
-		return;
-	}
 
-	snprintf(filename, PATH_MAX, "%s/%s", path, "default_ship_name.txt");
-	fd = open(filename, O_CREAT | O_TRUNC | O_WRONLY, 0644);
+	fd = xdg_base_open_for_overwrite(cx, DEFAULT_SHIP_NAME_TXT);
 	if (fd < 0) {
-		fprintf(stderr, "Failed to open file %s: %s\n", filename, strerror(errno));
+		fprintf(stderr, "Failed to open file %s: %s\n", DEFAULT_SHIP_NAME_TXT, strerror(errno));
 		return;
 	}
 	bytes_to_write = n - 1;
 	rc = write(fd, default_ship_name, bytes_to_write);
 	if (rc != bytes_to_write) {
-		fprintf(stderr, "Failed to write to %s: %s\n", filename, strerror(errno));
+		fprintf(stderr, "Failed to write to %s: %s\n", DEFAULT_SHIP_NAME_TXT, strerror(errno));
 	}
 	fsync(fd);
 	close(fd);
 }
 
-void snis_prefs_save_checkbox_defaults(int role_main_v, int role_nav_v, int role_weap_v,
+void snis_prefs_save_checkbox_defaults(struct xdg_base_context *cx, int role_main_v, int role_nav_v, int role_weap_v,
 					int role_eng_v, int role_damcon_v, int role_sci_v,
 					int role_comms_v, int role_sound_v, int role_demon_v,
 					int role_text_to_speech_v, int create_ship_v, int join_ship_v)
 {
-	char *homedir;
-	char path[PATH_MAX];
-	char filename[PATH_MAX];
-	int rc;
-	FILE *f;
-
-	homedir = getenv("HOME");
-	if (!homedir)
-		return;
-	snprintf(path, PATH_MAX, "%s/.space-nerds-in-space", homedir);
-	rc = mkdir(path, 0755);
-	if (rc != 0 && errno != EEXIST) {
-		fprintf(stderr, "Failed to create directory %s: %s\n", path, strerror(errno));
-		return;
-	}
-	snprintf(filename, PATH_MAX, "%s/%s", path, "role_defaults.txt");
-	f = fopen(filename, "w");
+	FILE *f = xdg_base_fopen_for_write(cx, ROLE_DEFAULTS_TXT);
 	if (!f) {
 		fprintf(stderr, "%s:%d: Failed to open %s for write: %s. Not writing preference defaults.\n",
-			__FILE__, __LINE__, path, strerror(errno));
+			__FILE__, __LINE__, ROLE_DEFAULTS_TXT, strerror(errno));
 		return;
 	}
 	fprintf(f, "%d %d %d %d %d %d %d %d %d %d %d %d\n",
@@ -129,22 +94,15 @@ void snis_prefs_save_checkbox_defaults(int role_main_v, int role_nav_v, int role
 	fclose(f);
 }
 
-void snis_prefs_read_checkbox_defaults(int *role_main_v, int *role_nav_v, int *role_weap_v,
+void snis_prefs_read_checkbox_defaults(struct xdg_base_context *cx, int *role_main_v, int *role_nav_v, int *role_weap_v,
 					int *role_eng_v, int *role_damcon_v, int *role_sci_v,
 					int *role_comms_v, int *role_sound_v, int *role_demon_v,
 					int *role_text_to_speech_v, int *create_ship_v, int *join_ship_v)
 {
-	char *homedir;
-	char path[PATH_MAX];
 	int rc;
 	int value[12] = { 0 };
-	FILE *f;
 
-	homedir = getenv("HOME");
-	if (!homedir)
-		return;
-	snprintf(path, PATH_MAX, "%s/.space-nerds-in-space/role_defaults.txt", homedir);
-	f = fopen(path, "r");
+	FILE *f = xdg_base_fopen_for_read(cx, ROLE_DEFAULTS_TXT);
 	if (!f)
 		return;
 	rc = fscanf(f, "%d %d %d %d %d %d %d %d %d %d %d %d",

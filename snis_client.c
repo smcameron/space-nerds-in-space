@@ -127,6 +127,7 @@
 #include "snis_bin_dir.h"
 #include "shape_collision.h"
 #include "planetary_ring_data.h"
+#include "xdg_base_dir_spec.h"
 
 #define SHIP_COLOR CYAN
 #define STARBASE_COLOR RED
@@ -249,6 +250,8 @@ static struct ship_type_entry *ship_type;
 static int nshiptypes = 0;
 
 static uint32_t role = ROLE_ALL;
+
+static struct xdg_base_context *xdg_base_ctx = NULL;
 
 static char *password;
 static char *shipname;
@@ -7265,7 +7268,7 @@ static int process_client_id_packet(void)
 	printf("SET MY SHIP ID to %u\n", my_ship_id);
 	printf("Saving default shipname as '%s'\n", shipname);
 	/* shipname is set to net_setup_ui.shipname in connect_to_lobby_button_pressed() */
-	snis_prefs_save_default_ship_name(shipname);
+	snis_prefs_save_default_ship_name(xdg_base_ctx, shipname);
 
 	/* We turn this off for two reason.  1. You only do this once for a ship typically, so
 	 * saving it "turned on" as a preference doesn't make much sense. 2. If we create a new
@@ -7275,7 +7278,7 @@ static int process_client_id_packet(void)
 	 */
 	net_setup_ui.create_ship_v = 0;
 
-	snis_prefs_save_checkbox_defaults(net_setup_ui.role_main_v, net_setup_ui.role_nav_v,
+	snis_prefs_save_checkbox_defaults(xdg_base_ctx, net_setup_ui.role_main_v, net_setup_ui.role_nav_v,
 					net_setup_ui.role_weap_v, net_setup_ui.role_eng_v,
 					net_setup_ui.role_damcon_v, net_setup_ui.role_sci_v,
 					net_setup_ui.role_comms_v, net_setup_ui.role_sound_v,
@@ -18979,7 +18982,7 @@ static void init_net_setup_ui(void)
 	int active_button_color = UI_COLOR(network_setup_active);
 	int inactive_button_color = UI_COLOR(network_setup_inactive);
 
-	char *preferred_shipname = snis_prefs_read_default_ship_name();
+	char *preferred_shipname = snis_prefs_read_default_ship_name(xdg_base_ctx);
 
 	memset(net_setup_ui.lobbyname, 0, sizeof(net_setup_ui.lobbyname));
 	strcpy(net_setup_ui.lobbyname, "localhost");
@@ -19034,7 +19037,7 @@ static void init_net_setup_ui(void)
 	pull_down_menu_set_color(net_setup_ui.menu, active_button_color);
 	init_net_role_buttons(&net_setup_ui);
 	init_join_create_buttons(&net_setup_ui);
-	snis_prefs_read_checkbox_defaults(&net_setup_ui.role_main_v, &net_setup_ui.role_nav_v,
+	snis_prefs_read_checkbox_defaults(xdg_base_ctx, &net_setup_ui.role_main_v, &net_setup_ui.role_nav_v,
 					&net_setup_ui.role_weap_v, &net_setup_ui.role_eng_v,
 					&net_setup_ui.role_damcon_v,
 					&net_setup_ui.role_sci_v, &net_setup_ui.role_comms_v,
@@ -22096,6 +22099,7 @@ int main(int argc, char *argv[])
 	refuse_to_run_as_root("snis_client");
 	displaymode = DISPLAYMODE_NETWORK_SETUP;
 
+	xdg_base_ctx = xdg_base_context_new("space-nerds-in-space", ".space-nerds-in-space");
 	take_your_locale_and_shove_it();
 	ignore_sigpipe();
 	prevent_zombies();
