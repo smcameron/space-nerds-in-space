@@ -443,6 +443,10 @@ static void nl_parse_machine_list_remove(struct nl_parse_machine **list, struct 
 		return;
 
 	if (p == *list) {
+		/* clang scan-build seems to think "*list" can be a use-after-free bug,
+		 * but I think it just does not understand the link rejiggering that
+		 * happens after this "if" statement. -- smcameron 2019-07-11
+		 */
 		*list = (*list)->next;
 		if (*list)
 			(*list)->prev = NULL;
