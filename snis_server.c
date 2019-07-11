@@ -1073,7 +1073,6 @@ static void get_peer_name(int connection, char *buffer)
 		return;
 	}
 	sprintf(buffer, "%s:%hu", inet_ntoa(peer->sin_addr), ntohs(peer->sin_port));
-	printf("put '%s' in buffer\n", buffer);
 }
 
 static char *logprefixstr = NULL;
@@ -1088,7 +1087,7 @@ static char *logprefix(void)
 	return logprefixstr;
 }
 
-static void log_client_info(int level, int connection, char *info)
+static void log_client_info(__attribute__((unused)) int level, int connection, char *info)
 {
 	char client_ip[50];
 
@@ -1097,7 +1096,7 @@ static void log_client_info(int level, int connection, char *info)
 
 	memset(client_ip, 0, sizeof(client_ip));
 	get_peer_name(connection, client_ip);
-	snis_log(level, "%s: %s: %s", logprefix(), client_ip, info);
+	fprintf(stderr, "%s: %s: %s", logprefix(), client_ip, info);
 }
 
 static void delete_from_clients_and_server_helper(struct snis_entity *o, int take_client_lock);
@@ -21260,12 +21259,13 @@ static void *per_client_read_thread(void /* struct game_client */ *client)
 	client_lock();
 	get_client(c);
 	client_unlock();
+	log_client_info(SNIS_WARN, c->socket, "client reader thread processing opcodes\n");
 	while (1) {
 		process_instructions_from_client(c);
 		if (c->socket < 0)
 			break;
 	}
-	log_client_info(SNIS_INFO, c->socket, "client reader thread exiting\n");
+	log_client_info(SNIS_WARN, c->socket, "client reader thread exiting\n");
 	pthread_mutex_lock(&universe_mutex);
 	client_lock();
 	put_client(c);
@@ -21819,6 +21819,7 @@ static void *per_client_write_thread(__attribute__((unused)) void /* struct game
 	uint8_t no_write_count = 0;
 	double currentTime = time_now_double();
 	double nextTime = currentTime + delta;
+	log_client_info(SNIS_WARN, c->socket, "client writer thread sending opcodes\n");
 	while (1) {
 		if (c->socket < 0)
 			break;
@@ -21853,8 +21854,7 @@ static void *per_client_write_thread(__attribute__((unused)) void /* struct game
 			break;
 	}
 	if (disconnect_timer > 0.0) {
-		fprintf(stderr, "%s: disconnecting client for failed bridge verification\n",
-			logprefix());
+		log_client_info(SNIS_WARN, c->socket, "disconnecting client for failed bridge verification\n");
 		sleep_double(disconnect_timer);
 		shutdown(c->socket, SHUT_RDWR);
 		close(c->socket);
