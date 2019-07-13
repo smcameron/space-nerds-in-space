@@ -23277,6 +23277,7 @@ static void register_with_game_lobby(char *lobbyhost, int port,
 	char *servernick, char *gameinstance, char *location)
 {
 	struct ssgl_game_server gs;
+	struct in_addr ip;
 
 	memset(&gs, 0, sizeof(gs));
 	snis_log(SNIS_INFO, "port = %hu\n", port);
@@ -23291,8 +23292,8 @@ static void register_with_game_lobby(char *lobbyhost, int port,
 
 	if (ssgl_get_primary_host_ip_addr(&gs.ipaddr) != 0)
 		snis_log(SNIS_WARN, "Failed to get local ip address.\n");
-
-	snis_log(SNIS_INFO, "Registering game server\n");
+	ip.s_addr = gs.ipaddr;
+	fprintf(stderr, "%s: Registering IP/port as %s:%d\n", logprefix(), inet_ntoa(ip), port);
 	if (ssgl_register_gameserver(lobbyhost, &gs, &lobbythread, &nclients))
 		snis_log(SNIS_WARN, "Game server registration failed.\n");
 	else	

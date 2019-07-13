@@ -407,7 +407,6 @@ static void get_peer_name(int connection, char *buffer)
 		return;
 	}
 	sprintf(buffer, "%s:%hu", inet_ntoa(peer->sin_addr), ntohs(peer->sin_port));
-	printf("put '%s' in buffer\n", buffer);
 }
 
 static void log_client_info(int level, int connection, char *info)
@@ -419,7 +418,7 @@ static void log_client_info(int level, int connection, char *info)
 
 	memset(client_ip, 0, sizeof(client_ip));
 	get_peer_name(connection, client_ip);
-	snis_log(level, "snis_multiverse: connection from %s: %s",
+	fprintf(stderr, "snis_multiverse: connection from %s: %s",
 			client_ip, info);
 }
 
@@ -1484,6 +1483,7 @@ int main(int argc, char *argv[])
 	struct ssgl_game_server gameserver;
 	int i, rc;
 	pthread_t lobby_thread;
+	struct in_addr ip;
 
 	asset_dir = override_asset_dir();
 	refuse_to_run_as_root("snis_multiverse");
@@ -1512,7 +1512,9 @@ int main(int argc, char *argv[])
 	/* Set up the game server structure that we will send to the lobby server. */
 	memset(&gameserver, 0, sizeof(gameserver));
 	if (ssgl_get_primary_host_ip_addr(&gameserver.ipaddr) != 0)
-		snis_log(SNIS_WARN, "snis_multiverse: Failed to get local ip address.\n");
+		fprintf(stderr, "snis_multiverse: Failed to get local ip address.\n");
+	ip.s_addr = gameserver.ipaddr;
+	fprintf(stderr, "snis_multiverse: Starting to run on %s:%d\n", inet_ntoa(ip), listener_port);
 	gameserver.port = htons(listener_port);
 
 	snprintf(gameserver.server_nickname, sizeof(gameserver.server_nickname) - 1, "%s", nick);

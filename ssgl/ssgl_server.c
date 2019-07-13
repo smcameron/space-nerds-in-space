@@ -465,7 +465,7 @@ static void *broadcast_lobby_info(__attribute__((unused)) void *arg)
 	struct ifaddrs *ifaddr, *a;
 	struct sockaddr_in bcast_addr;
 	static char hostname[32] = { 0 };
-
+	struct in_addr ip;
 
 	if (hostname[0] == 0) {
 		rc = gethostname(hostname, sizeof(hostname) - 1);
@@ -483,6 +483,8 @@ static void *broadcast_lobby_info(__attribute__((unused)) void *arg)
 			strerror(errno));
 		return NULL;
 	}
+	ip.s_addr = ipaddr;
+	ssgl_log(SSGL_WARN, "broadcasting IP addr %s\n", inet_ntoa(ip));
 
 	/* Make ourselves a UDP datagram socket */
 	bcast = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
