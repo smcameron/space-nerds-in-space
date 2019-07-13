@@ -4779,6 +4779,20 @@ static void show_lobbyscreen(GtkWidget *w)
 			 
 			snprintf(msg, sizeof(msg), "%hhu.%hhu.%hhu.%hhu/%hu", x[0], x[1], x[2], x[3],
 					lobby_game_server[i].port);
+
+			/* Check if the IP address we have is bogus.  This can happen if
+			 * ssgl_get_primary_ip_addr() fails.
+			 */
+			if (x[0] == 0 && x[1] == 0 && x[2] == 0 && x[3] == 0) {
+				/* Bogus IP addr. Make it blink orange/red */
+				if (timer & 0x04)
+					sng_set_foreground(BLACK);
+				else
+					sng_set_foreground(ORANGERED);
+			} else {
+				sng_set_foreground(UI_COLOR(lobby_connecting));
+			}
+
 			sng_abs_xy_draw_string(msg, NANO_FONT, txx(30), txy(100) + i * LINEHEIGHT);
 			snprintf(msg, sizeof(msg), "%s", lobby_game_server[i].game_instance);
 			sng_abs_xy_draw_string(msg, NANO_FONT, txx(150), txy(100) + i * LINEHEIGHT);
