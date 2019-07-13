@@ -23,6 +23,41 @@ gamelobby	2419/udp
 .PP
 /etc/services -- to identify the gamelobby service port number
 .PP
+.SH ENVIRONMENT VARIABLES
+.PP
+SSGL_PRIMARY_IP_PROBE_ADDR
+.PP
+Address used to probe for the host's "primary" IP address. By default,
+this is 8.8.8.8.  Note: No packets are transmitted to this address.
+.PP
+ssgl_server and clients of ssgl_server need to know "the IP address" of the host
+they run on so they can communicate this to ssgl_lobby.  This is more complicated
+than it might at first seem, because a host may have multiple IP addresses, and
+the lobby host might be accessible via localhost, but telling the lobby that the
+IP address is 127.0.0.1 is not useful, so we need a way to get the "primary" IP
+address.  So we do that by constructing a datagram socket connected to 8.8.8.8,
+Google's DNS server (because it is a datagram socket, no packets are transmitted
+in forging this "connection"), then using getsockname(2) to figure out the IP address
+(network interface) that our host would use to transmit, if we did
+transmit (which we don't).  So far so good.
+.PP
+However, some people want to run on a private network that does not
+have any connection to the internet, or have a multi-homed host, and want
+to use an internal network interface rather than an external network.
+In such a case, connect(2) may fail (e.g. no route to 8.8.8.8),
+and ssgl_get_primary_host_ip_addr() returns 0.0.0.0, which is duly registered
+with the lobby, but is useless for actually connecting.  Or connect(2) may
+succeed, but use the "wrong" interface. So to accomodate
+such scenarios, a probe address other than 8.8.8.8 may be specified
+for use in determining the primary network interface, e.g. 192.168.1.1
+For example:
+.DI
+.nf
+
+    export SSGL_PRIMARY_IP_PROBE_ADDR=192.168.1.1
+
+.fi
+.DE
 .SH SEE ALSO
 snis_server(6), snis_client(6)
 .SH GOOD LUCK

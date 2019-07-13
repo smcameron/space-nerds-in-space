@@ -48,7 +48,8 @@ OTHER DEALINGS IN THE SOFTWARE.
 int ssgl_get_primary_host_ip_addr(uint32_t *ipaddr) 
 {
 
-	const char* kGoogleDnsIp = "8.8.8.8"; /* yeah, this could break some day... */
+	char *GoogleDnsIp = "8.8.8.8"; /* yeah, this could break some day... */
+	char *primary_ip_probe_addr;
 	uint16_t kDnsPort = 53;
 	struct sockaddr_in serv;
 	struct sockaddr_in name;
@@ -56,13 +57,18 @@ int ssgl_get_primary_host_ip_addr(uint32_t *ipaddr)
 	int sock, err;
 	/* char *p; */
 
+	primary_ip_probe_addr = getenv("SSGL_PRIMARY_IP_PROBE_ADDR");
+	if (!primary_ip_probe_addr)
+		primary_ip_probe_addr = GoogleDnsIp;
+	fprintf(stderr, "Probing for primary host IP addr via %s\n", primary_ip_probe_addr);
+
 	sock = socket(AF_INET, SOCK_DGRAM, 0);
 	if (sock < 0)
 		return sock;
 
 	memset(&serv, 0, sizeof(serv));
 	serv.sin_family = AF_INET;
-	serv.sin_addr.s_addr = inet_addr(kGoogleDnsIp);
+	serv.sin_addr.s_addr = inet_addr(primary_ip_probe_addr);
 	serv.sin_port = htons(kDnsPort);
 
 	err = connect(sock, (struct sockaddr *) &serv, sizeof(serv));
