@@ -327,7 +327,7 @@ float sng_abs_xy_draw_letter(struct my_vect_obj **font, unsigned char letter, fl
 	float minx, maxx, diff;
 
 	if (letter == ' ' || letter == '\n' || letter == '\t' || font[letter] == NULL)
-		return abs(font['Z']->p[0].x - font['Z']->p[1].x);
+		return abs(font['_']->p[0].x - font['_']->p[1].x);
 
 	minx = x + font[letter]->p[0].x;
 	maxx = minx;
@@ -353,7 +353,7 @@ float sng_abs_xy_draw_letter(struct my_vect_obj **font, unsigned char letter, fl
 	}
 	diff = fabs(maxx - minx);
 	/* if (diff == 0)
-		return (abs(font['Z']->p[0].x - font['Z']->p[1].x) / 4); */
+		return (abs(font['_']->p[0].x - font['_']->p[1].x) / 4); */
 	return diff; 
 }
 
@@ -376,7 +376,7 @@ float sng_abs_xz_draw_letter(struct my_vect_obj **font, unsigned char letter, fl
 	float minx, maxx, diff;
 
 	if (letter == ' ' || letter == '\n' || letter == '\t' || font[letter] == NULL)
-		return abs(font['Z']->p[0].x - font['Z']->p[1].x);
+		return abs(font['_']->p[0].x - font['_']->p[1].x);
 
 	minx = x + font[letter]->p[0].x;
 	maxx = minx;
@@ -407,7 +407,7 @@ float sng_abs_xz_draw_letter(struct my_vect_obj **font, unsigned char letter, fl
 	}
 	diff = fabs(maxx - minx);
 	/* if (diff == 0)
-		return (abs(font['Z']->p[0].x - font['Z']->p[1].x) / 4); */
+		return (abs(font['_']->p[0].x - font['_']->p[1].x) / 4); */
 	return diff;
 }
 
@@ -435,7 +435,7 @@ void sng_string_bounding_box(char *s, int font, float *bbx1, float *bby1, float 
 	for (i=0;s[i];i++) {
 		unsigned char letter = s[i];
 		if (letter == ' ' || letter == '\n' || letter == '\t' || fontobj[letter] == NULL) {
-			letter = 'Z';
+			letter = '_';
 		}
 
 		/* figure out the letter size based on the bouding box */
