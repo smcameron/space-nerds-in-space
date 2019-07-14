@@ -20,11 +20,11 @@ void snis_typefaces_init_with_scaling(float xscale, float yscale)
 	py = yscale * (float) font_scale[PICO_FONT];
 
 	/* Make the line segment lists from the stroke_t structures. */
-	snis_make_font(&gamefont[BIG_FONT], bx, by);
-	snis_make_font(&gamefont[SMALL_FONT], sx, sy);
-	snis_make_font(&gamefont[TINY_FONT], tx, ty);
-	snis_make_font(&gamefont[NANO_FONT], nx, ny);
-	snis_make_font(&gamefont[PICO_FONT], px, py);
+	snis_make_font(&gamefont[BIG_FONT], ascii_font, bx, by);
+	snis_make_font(&gamefont[SMALL_FONT], ascii_font, sx, sy);
+	snis_make_font(&gamefont[TINY_FONT], ascii_font, tx, ty);
+	snis_make_font(&gamefont[NANO_FONT], ascii_font, nx, ny);
+	snis_make_font(&gamefont[PICO_FONT], ascii_font, px, py);
 
 	font_lineheight[BIG_FONT] = snis_font_lineheight(by);
 	font_lineheight[SMALL_FONT] = snis_font_lineheight(sy);

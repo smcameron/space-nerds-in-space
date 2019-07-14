@@ -29,7 +29,10 @@
 #define GLOBAL extern
 #endif
 
-GLOBAL int snis_make_font(struct my_vect_obj ***font, float xscale, float yscale);
+struct font_def;
+extern struct font_def *ascii_font;
+
+GLOBAL int snis_make_font(struct my_vect_obj ***font, struct font_def *f, float xscale, float yscale);
 GLOBAL int snis_font_lineheight(float yscale);
 
 #undef GLOBAL

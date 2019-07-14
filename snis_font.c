@@ -61,102 +61,202 @@ The grid numbers can be decoded into (x,y) coords like:
 
 	instead, use decode_glyph[] to get x and y values -- see below
 ***************************/
-static stroke_t glyph_open_curly[] = { 2, 6, 11, 15, 21, 26, 32, 99 };
-static stroke_t glyph_close_curly[] = { 2, 8, 13, 19, 23, 28, 32, 99 };
-static stroke_t glyph_Z[] = { 0, 4, 20, 24, 99 };
-static stroke_t glyph_Y[] = { 0, 12, 22, LP, 12, 4, 99 };
-static stroke_t glyph_X[] = { 0, 23, LP, 20, 3, 99 };
-static stroke_t glyph_W[] = { 0, 21, 7, 23, 4, 99 };
-static stroke_t glyph_V[] = { 0, 22, 4, 99 };
-static stroke_t glyph_U[] = { 0, 15, 21, 23, 19, 4, 99 };
-static stroke_t glyph_T[] = { 0, 4, LP, 2, 22, 99 };
-static stroke_t glyph_S[] = { 9, 3, 1, 5, 11, 13, 19, 23, 21, 15, 99 };
-static stroke_t glyph_R[] = { 20, 0, 3, 9, 13, 10, LP, 13, 24, 99 };
-static stroke_t glyph_Q[] = { 1, 3, 9, 19, 23, 21, 15, 5, 1, LP, 18, 24, 99 };
-static stroke_t glyph_P[] = { 20, 0, 3, 9, 13, 10, 99 };
-static stroke_t glyph_O[] = { 1, 3, 9, 19, 23, 21, 15, 5, 1, 99 };
-static stroke_t glyph_N[] = { 20, 0, 23, 3, 99 };
-static stroke_t glyph_M[] = { 20, 0, 17, 4, 24, 99 };
-static stroke_t glyph_L[] = { 0, 20, 23, 99};
-static stroke_t glyph_K[] = { 0, 20, LP, 15, 3, LP, 12, 24, 99};
-static stroke_t glyph_J[] = { 3, 18, 22, 21, 15, 99}; 
-static stroke_t glyph_I[] = { 0, 2, LP, 1, 21, LP, 20, 22, 99 }; 
-static stroke_t glyph_H[] = { 0, 20, LP, 3, 23, LP, 10, 13, 99 };
-static stroke_t glyph_G[] = { 9, 3, 1, 5, 15, 21, 23, 19, 14, 12, 99 };
-static stroke_t glyph_F[] = { 20, 0, 3, LP, 10, 12, 99 };
-static stroke_t glyph_E[] = { 23, 20, 0, 3, LP, 10, 12, 99 };
-static stroke_t glyph_D[] = { 20, 0, 3, 9, 19, 23, 20, 99 };
-static stroke_t glyph_C[] = { 19, 23, 21, 15, 5, 1, 3, 9, 99 };
-static stroke_t glyph_B[] = { 20, 0, 3, 9, 13, 10, LP, 13, 19, 23, 20, 99 };
-static stroke_t glyph_A[] = { 20, 2, 24, LP, 11, 13, 99 };
-static stroke_t glyph_slash[] = { 20, 3, 99 };
-static stroke_t glyph_backslash[] = { 0, 23, 99 };
-static stroke_t glyph_pipe[] = { 2, 22, 99 };
-static stroke_t glyph_que[] = { 5, 1, 3, 9, 14, 17, 22, LP, 27, 32, 99 };
-static stroke_t glyph_bang[] = { 2, 22, LP, 27, 32, 99 };
-static stroke_t glyph_colon[] = { 6, 7, LP, 16, 17, 99 };
-static stroke_t glyph_leftparen[] = { 1, 5, 15, 21, 99 };
-static stroke_t glyph_rightparen[] = { 0, 6, 16, 20, 99 };
-static stroke_t glyph_space[] = { 99 };
-static stroke_t glyph_plus[] = { 2, 22, LP, 10, 14, 99 };
-static stroke_t glyph_dash[] = { 11, 13, 99 };
-static stroke_t glyph_0[] = { 1, 3, 9, 19, 23, 21, 15, 5, 1, LP, 8, 16, 99 };
-static stroke_t glyph_9[] = { 15, 21, 23, 19, 9, 3, 1, 5, 11, 13, 9, 99 };
-static stroke_t glyph_8[] = { 11, 5, 1, 3, 9, 13, 11, 15, 21, 23, 19, 13, 99 };
-static stroke_t glyph_7[] = { 0, 4, 12, 21, 99 };
-static stroke_t glyph_6[] = { 15, 11, 13, 19, 23, 21, 15, 5, 1, 3, 9, 99 };
-static stroke_t glyph_5[] = { 4, 0, 10, 13, 19, 23, 21, 15, 99 };
-static stroke_t glyph_4[] = { 23, 3, 15, 19, 99 };
-static stroke_t glyph_3[] = { 0, 4, 12, 13, 19, 23, 21, 15, 99 };
-static stroke_t glyph_2[] = { 5, 1, 3, 9, 20, 24, 99 };
-static stroke_t glyph_1[] = { 5, 1, 21, LP, 20, 22, 99 };
-static stroke_t glyph_comma[] = { 21, 25, 99 };
-static stroke_t glyph_period[] = { 20, 21, 99 };
-static stroke_t glyph_z[] = { 10, 13, 20, 23, 99};
-static stroke_t glyph_y[] = { 10, 21, LP, 12, 30, 99};
-static stroke_t glyph_x[] = { 10, 23, LP, 20, 13, 99 };
-static stroke_t glyph_w[] = { 10, 21, 12, 23, 14, 99 };
-static stroke_t glyph_v[] = { 10, 21, 12, 99 };
-static stroke_t glyph_u[] = { 10, 15, 21, 22, 18, 13, 23, 99 };
-static stroke_t glyph_t[] = { 6, 21, 22, LP, 10, 12, 99 };
-static stroke_t glyph_s[] = { 13, 10, 15, 18, 23, 20, 99 };
 
-static stroke_t glyph_a[] = { 10, 13, 23, 20, 15, 18, 99 };
-static stroke_t glyph_b[] = { 0, 20, 23, 13, 10, 99 };
-static stroke_t glyph_c[] = { 13, 10, 20, 23, 99 };
-static stroke_t glyph_d[] = { 3, 23, 20, 10, 13, 99 };
-static stroke_t glyph_e[] = { 15, 18, 13, 10, 20, 23, 99 };
-static stroke_t glyph_f[] = { 21, 1, 2, LP, 10, 12, 99 };
-static stroke_t glyph_g[] = { 25, 28, 33, 30, 10, 13, 23, 20, 99 };
-static stroke_t glyph_h[] = { 0, 20, LP, 10, 12, 18, 23, 99 };
-static stroke_t glyph_i[] = { 10, 20, 99};
-static stroke_t glyph_j[] = { 12, 27, 31, 30, 99 };
-static stroke_t glyph_k[] = { 0, 20, LP, 7, 15, LP, 11, 23, 99 };
-static stroke_t glyph_l[] = { 0, 20, 99 };
-static stroke_t glyph_m[] = { 20, 10, 11, 17, 22, 12, 13, 19, 24, 99 };
-static stroke_t glyph_n[] = { 20, 10, 11, 17, 22, 99 };
-static stroke_t glyph_o[] = { 10, 13, 23, 20, 10, 99 };
-static stroke_t glyph_p[] = { 30, 10, 13, 23, 20, 99 };
-static stroke_t glyph_q[] = { 33, 13, 10, 20, 23, 99 };
-static stroke_t glyph_r[] = { 10, 20, LP, 15, 11, 12, 18, 99 };
-static stroke_t glyph_apostrophe[] = { 2, 7, 99 };
-static stroke_t glyph_doublequote[] = { 1, 6, LP, 3, 8, 99 };
-static stroke_t glyph_asterisk[] = { 7, 17, LP, 11, 13, LP, 6, 18, LP, 16, 8, 99 };
-static stroke_t glyph_underscore[] = { 25, 29, 99 };
-static stroke_t glyph_hash[] = { 6, 21, LP, 8, 23, LP, 10, 14, LP, 15, 19, 99 }; 
-/* static stroke_t glyph_dollar[] = { 9, 3, 1, 5, 11, 13, 19, 23, 21, 15, LP, 2, 27, 99 }; */
-static stroke_t glyph_dollar[] = { 0, 3, 25, LP, 4, 26, 29, LP, 15, 19, LP, 10, 14, 99 };
-static stroke_t glyph_percent[] = { 4, 25, LP, 1, 5, 11, 7, 1, LP, 18, 22, 28, 24, 18, 99 };
-static stroke_t glyph_caret[] = { 6, 2, 8, 99 };
-static stroke_t glyph_ampersand[] = { 24, 6, 1, 2, 7, 15, 21, 23, 14, 99 };
-static stroke_t glyph_at[] = { 18, 8, 7, 11, 16, 18, 13, 19, 9, 3, 1, 5, 15, 21, 24, 99 };
-static stroke_t glyph_lessthan[] = { 4, 10, 24, 99 };
-static stroke_t glyph_greaterthan[] = { 0, 14, 20, 99 };
-static stroke_t glyph_rightbracket[] = { 2, 4, 24, 22, 99 }; 
-static stroke_t glyph_leftbracket[] = { 2, 0, 20, 22, 99 }; 
-static stroke_t glyph_semicolon[] = { 6, 7, LP, 16, 17, 22, 99 }; 
-static stroke_t glyph_tilde[] = { 5, 1, 7, 3, 4, 99 };
-static stroke_t glyph_equals[] = { 5, 9, LP, 15, 19, 99 };
+struct font_def {
+	stroke_t *glyph_open_curly;
+	stroke_t *glyph_close_curly;
+	stroke_t *glyph_Z;
+	stroke_t *glyph_Y;
+	stroke_t *glyph_X;
+	stroke_t *glyph_W;
+	stroke_t *glyph_V;
+	stroke_t *glyph_U;
+	stroke_t *glyph_T;
+	stroke_t *glyph_S;
+	stroke_t *glyph_R;
+	stroke_t *glyph_Q;
+	stroke_t *glyph_P;
+	stroke_t *glyph_O;
+	stroke_t *glyph_N;
+	stroke_t *glyph_M;
+	stroke_t *glyph_L;
+	stroke_t *glyph_K;
+	stroke_t *glyph_J;
+	stroke_t *glyph_I;
+	stroke_t *glyph_H;
+	stroke_t *glyph_G;
+	stroke_t *glyph_F;
+	stroke_t *glyph_E;
+	stroke_t *glyph_D;
+	stroke_t *glyph_C;
+	stroke_t *glyph_B;
+	stroke_t *glyph_A;
+	stroke_t *glyph_slash;
+	stroke_t *glyph_backslash;
+	stroke_t *glyph_pipe;
+	stroke_t *glyph_que;
+	stroke_t *glyph_bang;
+	stroke_t *glyph_colon;
+	stroke_t *glyph_leftparen;
+	stroke_t *glyph_rightparen;
+	stroke_t *glyph_space;
+	stroke_t *glyph_plus;
+	stroke_t *glyph_dash;
+	stroke_t *glyph_0;
+	stroke_t *glyph_9;
+	stroke_t *glyph_8;
+	stroke_t *glyph_7;
+	stroke_t *glyph_6;
+	stroke_t *glyph_5;
+	stroke_t *glyph_4;
+	stroke_t *glyph_3;
+	stroke_t *glyph_2;
+	stroke_t *glyph_1;
+	stroke_t *glyph_comma;
+	stroke_t *glyph_period;
+	stroke_t *glyph_z;
+	stroke_t *glyph_y;
+	stroke_t *glyph_x;
+	stroke_t *glyph_w;
+	stroke_t *glyph_v;
+	stroke_t *glyph_u;
+	stroke_t *glyph_t;
+	stroke_t *glyph_s;
+	stroke_t *glyph_a;
+	stroke_t *glyph_b;
+	stroke_t *glyph_c;
+	stroke_t *glyph_d;
+	stroke_t *glyph_e;
+	stroke_t *glyph_f;
+	stroke_t *glyph_g;
+	stroke_t *glyph_h;
+	stroke_t *glyph_i;
+	stroke_t *glyph_j;
+	stroke_t *glyph_k;
+	stroke_t *glyph_l;
+	stroke_t *glyph_m;
+	stroke_t *glyph_n;
+	stroke_t *glyph_o;
+	stroke_t *glyph_p;
+	stroke_t *glyph_q;
+	stroke_t *glyph_r;
+	stroke_t *glyph_apostrophe;
+	stroke_t *glyph_doublequote;
+	stroke_t *glyph_asterisk;
+	stroke_t *glyph_underscore;
+	stroke_t *glyph_hash;
+	stroke_t *glyph_dollar;
+	stroke_t *glyph_percent;
+	stroke_t *glyph_caret;
+	stroke_t *glyph_ampersand;
+	stroke_t *glyph_at;
+	stroke_t *glyph_lessthan;
+	stroke_t *glyph_greaterthan;
+	stroke_t *glyph_rightbracket;
+	stroke_t *glyph_leftbracket;
+	stroke_t *glyph_semicolon;
+	stroke_t *glyph_tilde;
+	stroke_t *glyph_equals;
+};
+
+static struct font_def ascii_font_def = {
+	.glyph_open_curly = (stroke_t []) { 2, 6, 11, 15, 21, 26, 32, 99 },
+	.glyph_close_curly = (stroke_t []) { 2, 8, 13, 19, 23, 28, 32, 99 },
+	.glyph_Z = (stroke_t []) { 0, 4, 20, 24, 99 },
+	.glyph_Y = (stroke_t []) { 0, 12, 22, LP, 12, 4, 99 },
+	.glyph_X = (stroke_t []) { 0, 23, LP, 20, 3, 99 },
+	.glyph_W = (stroke_t []) { 0, 21, 7, 23, 4, 99 },
+	.glyph_V = (stroke_t []) { 0, 22, 4, 99 },
+	.glyph_U = (stroke_t []) { 0, 15, 21, 23, 19, 4, 99 },
+	.glyph_T = (stroke_t []) { 0, 4, LP, 2, 22, 99 },
+	.glyph_S = (stroke_t []) { 9, 3, 1, 5, 11, 13, 19, 23, 21, 15, 99 },
+	.glyph_R = (stroke_t []) { 20, 0, 3, 9, 13, 10, LP, 13, 24, 99 },
+	.glyph_Q = (stroke_t []) { 1, 3, 9, 19, 23, 21, 15, 5, 1, LP, 18, 24, 99 },
+	.glyph_P = (stroke_t []) { 20, 0, 3, 9, 13, 10, 99 },
+	.glyph_O = (stroke_t []) { 1, 3, 9, 19, 23, 21, 15, 5, 1, 99 },
+	.glyph_N = (stroke_t []) { 20, 0, 23, 3, 99 },
+	.glyph_M = (stroke_t []) { 20, 0, 17, 4, 24, 99 },
+	.glyph_L = (stroke_t []) { 0, 20, 23, 99},
+	.glyph_K = (stroke_t []) { 0, 20, LP, 15, 3, LP, 12, 24, 99},
+	.glyph_J = (stroke_t []) { 3, 18, 22, 21, 15, 99},
+	.glyph_I = (stroke_t []) { 0, 2, LP, 1, 21, LP, 20, 22, 99 },
+	.glyph_H = (stroke_t []) { 0, 20, LP, 3, 23, LP, 10, 13, 99 },
+	.glyph_G = (stroke_t []) { 9, 3, 1, 5, 15, 21, 23, 19, 14, 12, 99 },
+	.glyph_F = (stroke_t []) { 20, 0, 3, LP, 10, 12, 99 },
+	.glyph_E = (stroke_t []) { 23, 20, 0, 3, LP, 10, 12, 99 },
+	.glyph_D = (stroke_t []) { 20, 0, 3, 9, 19, 23, 20, 99 },
+	.glyph_C = (stroke_t []) { 19, 23, 21, 15, 5, 1, 3, 9, 99 },
+	.glyph_B = (stroke_t []) { 20, 0, 3, 9, 13, 10, LP, 13, 19, 23, 20, 99 },
+	.glyph_A = (stroke_t []) { 20, 2, 24, LP, 11, 13, 99 },
+	.glyph_slash = (stroke_t []) { 20, 3, 99 },
+	.glyph_backslash = (stroke_t []) { 0, 23, 99 },
+	.glyph_pipe = (stroke_t []) { 2, 22, 99 },
+	.glyph_que = (stroke_t []) { 5, 1, 3, 9, 14, 17, 22, LP, 27, 32, 99 },
+	.glyph_bang = (stroke_t []) { 2, 22, LP, 27, 32, 99 },
+	.glyph_colon = (stroke_t []) { 6, 7, LP, 16, 17, 99 },
+	.glyph_leftparen = (stroke_t []) { 1, 5, 15, 21, 99 },
+	.glyph_rightparen = (stroke_t []) { 0, 6, 16, 20, 99 },
+	.glyph_space = (stroke_t []) { 99 },
+	.glyph_plus = (stroke_t []) { 2, 22, LP, 10, 14, 99 },
+	.glyph_dash = (stroke_t []) { 11, 13, 99 },
+	.glyph_0 = (stroke_t []) { 1, 3, 9, 19, 23, 21, 15, 5, 1, LP, 8, 16, 99 },
+	.glyph_9 = (stroke_t []) { 15, 21, 23, 19, 9, 3, 1, 5, 11, 13, 9, 99 },
+	.glyph_8 = (stroke_t []) { 11, 5, 1, 3, 9, 13, 11, 15, 21, 23, 19, 13, 99 },
+	.glyph_7 = (stroke_t []) { 0, 4, 12, 21, 99 },
+	.glyph_6 = (stroke_t []) { 15, 11, 13, 19, 23, 21, 15, 5, 1, 3, 9, 99 },
+	.glyph_5 = (stroke_t []) { 4, 0, 10, 13, 19, 23, 21, 15, 99 },
+	.glyph_4 = (stroke_t []) { 23, 3, 15, 19, 99 },
+	.glyph_3 = (stroke_t []) { 0, 4, 12, 13, 19, 23, 21, 15, 99 },
+	.glyph_2 = (stroke_t []) { 5, 1, 3, 9, 20, 24, 99 },
+	.glyph_1 = (stroke_t []) { 5, 1, 21, LP, 20, 22, 99 },
+	.glyph_comma = (stroke_t []) { 21, 25, 99 },
+	.glyph_period = (stroke_t []) { 20, 21, 99 },
+	.glyph_z = (stroke_t []) { 10, 13, 20, 23, 99},
+	.glyph_y = (stroke_t []) { 10, 21, LP, 12, 30, 99},
+	.glyph_x = (stroke_t []) { 10, 23, LP, 20, 13, 99 },
+	.glyph_w = (stroke_t []) { 10, 21, 12, 23, 14, 99 },
+	.glyph_v = (stroke_t []) { 10, 21, 12, 99 },
+	.glyph_u = (stroke_t []) { 10, 15, 21, 22, 18, 13, 23, 99 },
+	.glyph_t = (stroke_t []) { 6, 21, 22, LP, 10, 12, 99 },
+	.glyph_s = (stroke_t []) { 13, 10, 15, 18, 23, 20, 99 },
+	.glyph_a = (stroke_t []) { 10, 13, 23, 20, 15, 18, 99 },
+	.glyph_b = (stroke_t []) { 0, 20, 23, 13, 10, 99 },
+	.glyph_c = (stroke_t []) { 13, 10, 20, 23, 99 },
+	.glyph_d = (stroke_t []) { 3, 23, 20, 10, 13, 99 },
+	.glyph_e = (stroke_t []) { 15, 18, 13, 10, 20, 23, 99 },
+	.glyph_f = (stroke_t []) { 21, 1, 2, LP, 10, 12, 99 },
+	.glyph_g = (stroke_t []) { 25, 28, 33, 30, 10, 13, 23, 20, 99 },
+	.glyph_h = (stroke_t []) { 0, 20, LP, 10, 12, 18, 23, 99 },
+	.glyph_i = (stroke_t []) { 10, 20, 99},
+	.glyph_j = (stroke_t []) { 12, 27, 31, 30, 99 },
+	.glyph_k = (stroke_t []) { 0, 20, LP, 7, 15, LP, 11, 23, 99 },
+	.glyph_l = (stroke_t []) { 0, 20, 99 },
+	.glyph_m = (stroke_t []) { 20, 10, 11, 17, 22, 12, 13, 19, 24, 99 },
+	.glyph_n = (stroke_t []) { 20, 10, 11, 17, 22, 99 },
+	.glyph_o = (stroke_t []) { 10, 13, 23, 20, 10, 99 },
+	.glyph_p = (stroke_t []) { 30, 10, 13, 23, 20, 99 },
+	.glyph_q = (stroke_t []) { 33, 13, 10, 20, 23, 99 },
+	.glyph_r = (stroke_t []) { 10, 20, LP, 15, 11, 12, 18, 99 },
+	.glyph_apostrophe = (stroke_t []) { 2, 7, 99 },
+	.glyph_doublequote = (stroke_t []) { 1, 6, LP, 3, 8, 99 },
+	.glyph_asterisk = (stroke_t []) { 7, 17, LP, 11, 13, LP, 6, 18, LP, 16, 8, 99 },
+	.glyph_underscore = (stroke_t []) { 25, 29, 99 },
+	.glyph_hash = (stroke_t []) { 6, 21, LP, 8, 23, LP, 10, 14, LP, 15, 19, 99 },
+	.glyph_dollar = (stroke_t []) { 0, 3, 25, LP, 4, 26, 29, LP, 15, 19, LP, 10, 14, 99 },
+	.glyph_percent = (stroke_t []) { 4, 25, LP, 1, 5, 11, 7, 1, LP, 18, 22, 28, 24, 18, 99 },
+	.glyph_caret = (stroke_t []) { 6, 2, 8, 99 },
+	.glyph_ampersand = (stroke_t []) { 24, 6, 1, 2, 7, 15, 21, 23, 14, 99 },
+	.glyph_at = (stroke_t []) { 18, 8, 7, 11, 16, 18, 13, 19, 9, 3, 1, 5, 15, 21, 24, 99 },
+	.glyph_lessthan = (stroke_t []) { 4, 10, 24, 99 },
+	.glyph_greaterthan = (stroke_t []) { 0, 14, 20, 99 },
+	.glyph_rightbracket = (stroke_t []) { 2, 4, 24, 22, 99 },
+	.glyph_leftbracket = (stroke_t []) { 2, 0, 20, 22, 99 },
+	.glyph_semicolon = (stroke_t []) { 6, 7, LP, 16, 17, 22, 99 },
+	.glyph_tilde = (stroke_t []) { 5, 1, 7, 3, 4, 99 },
+	.glyph_equals = (stroke_t []) { 5, 9, LP, 15, 19, 99 },
+};
+
+struct font_def *ascii_font = &ascii_font_def;
 
 /* x and y offsets for decoding stroke_t's, above */
 static struct my_point_t decode_glyph[] = {
@@ -255,7 +355,7 @@ static struct my_vect_obj *prerender_glyph(stroke_t g[], float xscale, float ysc
  * prescaled sets of line segments that the drawing routines know
  * how to draw.
  */
-int snis_make_font(struct my_vect_obj ***font, float xscale, float yscale) 
+int snis_make_font(struct my_vect_obj ***font, struct font_def *f, float xscale, float yscale)
 {
 	struct my_vect_obj **v;
 
@@ -265,100 +365,100 @@ int snis_make_font(struct my_vect_obj ***font, float xscale, float yscale)
 		return -1;
 	}
 	memset(v, 0, sizeof(*v) * 256);
-	v['A'] = prerender_glyph(glyph_A, xscale, yscale);
-	v['B'] = prerender_glyph(glyph_B, xscale, yscale);
-	v['C'] = prerender_glyph(glyph_C, xscale, yscale);
-	v['D'] = prerender_glyph(glyph_D, xscale, yscale);
-	v['E'] = prerender_glyph(glyph_E, xscale, yscale);
-	v['F'] = prerender_glyph(glyph_F, xscale, yscale);
-	v['G'] = prerender_glyph(glyph_G, xscale, yscale);
-	v['H'] = prerender_glyph(glyph_H, xscale, yscale);
-	v['I'] = prerender_glyph(glyph_I, xscale, yscale);
-	v['J'] = prerender_glyph(glyph_J, xscale, yscale);
-	v['K'] = prerender_glyph(glyph_K, xscale, yscale);
-	v['L'] = prerender_glyph(glyph_L, xscale, yscale);
-	v['M'] = prerender_glyph(glyph_M, xscale, yscale);
-	v['N'] = prerender_glyph(glyph_N, xscale, yscale);
-	v['O'] = prerender_glyph(glyph_O, xscale, yscale);
-	v['P'] = prerender_glyph(glyph_P, xscale, yscale);
-	v['Q'] = prerender_glyph(glyph_Q, xscale, yscale);
-	v['R'] = prerender_glyph(glyph_R, xscale, yscale);
-	v['S'] = prerender_glyph(glyph_S, xscale, yscale);
-	v['T'] = prerender_glyph(glyph_T, xscale, yscale);
-	v['U'] = prerender_glyph(glyph_U, xscale, yscale);
-	v['V'] = prerender_glyph(glyph_V, xscale, yscale);
-	v['W'] = prerender_glyph(glyph_W, xscale, yscale);
-	v['X'] = prerender_glyph(glyph_X, xscale, yscale);
-	v['Y'] = prerender_glyph(glyph_Y, xscale, yscale);
-	v['Z'] = prerender_glyph(glyph_Z, xscale, yscale);
-	v['!'] = prerender_glyph(glyph_bang, xscale, yscale);
-	v['/'] = prerender_glyph(glyph_slash, xscale, yscale);
-	v['\\'] = prerender_glyph(glyph_backslash, xscale, yscale);
-	v['|'] = prerender_glyph(glyph_pipe, xscale, yscale);
-	v['?'] = prerender_glyph(glyph_que, xscale, yscale);
-	v[':'] = prerender_glyph(glyph_colon, xscale, yscale);
-	v['('] = prerender_glyph(glyph_leftparen, xscale, yscale);
-	v[')'] = prerender_glyph(glyph_rightparen, xscale, yscale);
-	v['a'] = prerender_glyph(glyph_a, xscale, yscale);
-	v[' '] = prerender_glyph(glyph_space, xscale, yscale);
-	v['b'] = prerender_glyph(glyph_b, xscale, yscale);
-	v['c'] = prerender_glyph(glyph_c, xscale, yscale);
-	v['d'] = prerender_glyph(glyph_d, xscale, yscale);
-	v['e'] = prerender_glyph(glyph_e, xscale, yscale);
-	v['f'] = prerender_glyph(glyph_f, xscale, yscale);
-	v['g'] = prerender_glyph(glyph_g, xscale, yscale);
-	v['h'] = prerender_glyph(glyph_h, xscale, yscale);
-	v['i'] = prerender_glyph(glyph_i, xscale, yscale);
-	v['j'] = prerender_glyph(glyph_j, xscale, yscale);
-	v['k'] = prerender_glyph(glyph_k, xscale, yscale);
-	v['l'] = prerender_glyph(glyph_l, xscale, yscale);
-	v['m'] = prerender_glyph(glyph_m, xscale, yscale);
-	v['n'] = prerender_glyph(glyph_n, xscale, yscale);
-	v['o'] = prerender_glyph(glyph_o, xscale, yscale);
-	v['p'] = prerender_glyph(glyph_p, xscale, yscale);
-	v['q'] = prerender_glyph(glyph_q, xscale, yscale);
-	v['r'] = prerender_glyph(glyph_r, xscale, yscale);
-	v['s'] = prerender_glyph(glyph_s, xscale, yscale);
-	v['t'] = prerender_glyph(glyph_t, xscale, yscale);
-	v['u'] = prerender_glyph(glyph_u, xscale, yscale);
-	v['v'] = prerender_glyph(glyph_v, xscale, yscale);
-	v['w'] = prerender_glyph(glyph_w, xscale, yscale);
-	v['x'] = prerender_glyph(glyph_x, xscale, yscale);
-	v['y'] = prerender_glyph(glyph_y, xscale, yscale);
-	v['z'] = prerender_glyph(glyph_z, xscale, yscale);
-	v['0'] = prerender_glyph(glyph_0, xscale, yscale);
-	v['1'] = prerender_glyph(glyph_1, xscale, yscale);
-	v['2'] = prerender_glyph(glyph_2, xscale, yscale);
-	v['3'] = prerender_glyph(glyph_3, xscale, yscale);
-	v['4'] = prerender_glyph(glyph_4, xscale, yscale);
-	v['5'] = prerender_glyph(glyph_5, xscale, yscale);
-	v['6'] = prerender_glyph(glyph_6, xscale, yscale);
-	v['7'] = prerender_glyph(glyph_7, xscale, yscale);
-	v['8'] = prerender_glyph(glyph_8, xscale, yscale);
-	v['9'] = prerender_glyph(glyph_9, xscale, yscale);
-	v['-'] = prerender_glyph(glyph_dash, xscale, yscale);
-	v['+'] = prerender_glyph(glyph_plus, xscale, yscale);
-	v[','] = prerender_glyph(glyph_comma, xscale, yscale);
-	v['.'] = prerender_glyph(glyph_period, xscale, yscale);
-	v['\''] = prerender_glyph(glyph_apostrophe, xscale, yscale);
-	v['\"'] = prerender_glyph(glyph_doublequote, xscale, yscale);
-	v['*'] = prerender_glyph(glyph_asterisk, xscale, yscale);
-	v['_'] = prerender_glyph(glyph_underscore, xscale, yscale);
-	v['#'] = prerender_glyph(glyph_hash, xscale, yscale); 
-	v['$'] = prerender_glyph(glyph_dollar, xscale, yscale);
-	v['%'] = prerender_glyph(glyph_percent, xscale, yscale);
-	v['^'] = prerender_glyph(glyph_caret, xscale, yscale);
-	v['&'] = prerender_glyph(glyph_ampersand, xscale, yscale);
-	v['@'] = prerender_glyph(glyph_at, xscale, yscale);
-	v['<'] = prerender_glyph(glyph_lessthan, xscale, yscale);
-	v['>'] = prerender_glyph(glyph_greaterthan, xscale, yscale);
-	v[']'] = prerender_glyph(glyph_rightbracket, xscale, yscale); 
-	v['['] = prerender_glyph(glyph_leftbracket, xscale, yscale); 
-	v[';'] = prerender_glyph(glyph_semicolon, xscale, yscale); 
-	v['~'] = prerender_glyph(glyph_tilde, xscale, yscale);
-	v['{'] = prerender_glyph(glyph_open_curly, xscale, yscale);
-	v['}'] = prerender_glyph(glyph_close_curly, xscale, yscale);
-	v['='] = prerender_glyph(glyph_equals, xscale, yscale);
+	v['A'] = prerender_glyph(f->glyph_A, xscale, yscale);
+	v['B'] = prerender_glyph(f->glyph_B, xscale, yscale);
+	v['C'] = prerender_glyph(f->glyph_C, xscale, yscale);
+	v['D'] = prerender_glyph(f->glyph_D, xscale, yscale);
+	v['E'] = prerender_glyph(f->glyph_E, xscale, yscale);
+	v['F'] = prerender_glyph(f->glyph_F, xscale, yscale);
+	v['G'] = prerender_glyph(f->glyph_G, xscale, yscale);
+	v['H'] = prerender_glyph(f->glyph_H, xscale, yscale);
+	v['I'] = prerender_glyph(f->glyph_I, xscale, yscale);
+	v['J'] = prerender_glyph(f->glyph_J, xscale, yscale);
+	v['K'] = prerender_glyph(f->glyph_K, xscale, yscale);
+	v['L'] = prerender_glyph(f->glyph_L, xscale, yscale);
+	v['M'] = prerender_glyph(f->glyph_M, xscale, yscale);
+	v['N'] = prerender_glyph(f->glyph_N, xscale, yscale);
+	v['O'] = prerender_glyph(f->glyph_O, xscale, yscale);
+	v['P'] = prerender_glyph(f->glyph_P, xscale, yscale);
+	v['Q'] = prerender_glyph(f->glyph_Q, xscale, yscale);
+	v['R'] = prerender_glyph(f->glyph_R, xscale, yscale);
+	v['S'] = prerender_glyph(f->glyph_S, xscale, yscale);
+	v['T'] = prerender_glyph(f->glyph_T, xscale, yscale);
+	v['U'] = prerender_glyph(f->glyph_U, xscale, yscale);
+	v['V'] = prerender_glyph(f->glyph_V, xscale, yscale);
+	v['W'] = prerender_glyph(f->glyph_W, xscale, yscale);
+	v['X'] = prerender_glyph(f->glyph_X, xscale, yscale);
+	v['Y'] = prerender_glyph(f->glyph_Y, xscale, yscale);
+	v['Z'] = prerender_glyph(f->glyph_Z, xscale, yscale);
+	v['!'] = prerender_glyph(f->glyph_bang, xscale, yscale);
+	v['/'] = prerender_glyph(f->glyph_slash, xscale, yscale);
+	v['\\'] = prerender_glyph(f->glyph_backslash, xscale, yscale);
+	v['|'] = prerender_glyph(f->glyph_pipe, xscale, yscale);
+	v['?'] = prerender_glyph(f->glyph_que, xscale, yscale);
+	v[':'] = prerender_glyph(f->glyph_colon, xscale, yscale);
+	v['('] = prerender_glyph(f->glyph_leftparen, xscale, yscale);
+	v[')'] = prerender_glyph(f->glyph_rightparen, xscale, yscale);
+	v['a'] = prerender_glyph(f->glyph_a, xscale, yscale);
+	v[' '] = prerender_glyph(f->glyph_space, xscale, yscale);
+	v['b'] = prerender_glyph(f->glyph_b, xscale, yscale);
+	v['c'] = prerender_glyph(f->glyph_c, xscale, yscale);
+	v['d'] = prerender_glyph(f->glyph_d, xscale, yscale);
+	v['e'] = prerender_glyph(f->glyph_e, xscale, yscale);
+	v['f'] = prerender_glyph(f->glyph_f, xscale, yscale);
+	v['g'] = prerender_glyph(f->glyph_g, xscale, yscale);
+	v['h'] = prerender_glyph(f->glyph_h, xscale, yscale);
+	v['i'] = prerender_glyph(f->glyph_i, xscale, yscale);
+	v['j'] = prerender_glyph(f->glyph_j, xscale, yscale);
+	v['k'] = prerender_glyph(f->glyph_k, xscale, yscale);
+	v['l'] = prerender_glyph(f->glyph_l, xscale, yscale);
+	v['m'] = prerender_glyph(f->glyph_m, xscale, yscale);
+	v['n'] = prerender_glyph(f->glyph_n, xscale, yscale);
+	v['o'] = prerender_glyph(f->glyph_o, xscale, yscale);
+	v['p'] = prerender_glyph(f->glyph_p, xscale, yscale);
+	v['q'] = prerender_glyph(f->glyph_q, xscale, yscale);
+	v['r'] = prerender_glyph(f->glyph_r, xscale, yscale);
+	v['s'] = prerender_glyph(f->glyph_s, xscale, yscale);
+	v['t'] = prerender_glyph(f->glyph_t, xscale, yscale);
+	v['u'] = prerender_glyph(f->glyph_u, xscale, yscale);
+	v['v'] = prerender_glyph(f->glyph_v, xscale, yscale);
+	v['w'] = prerender_glyph(f->glyph_w, xscale, yscale);
+	v['x'] = prerender_glyph(f->glyph_x, xscale, yscale);
+	v['y'] = prerender_glyph(f->glyph_y, xscale, yscale);
+	v['z'] = prerender_glyph(f->glyph_z, xscale, yscale);
+	v['0'] = prerender_glyph(f->glyph_0, xscale, yscale);
+	v['1'] = prerender_glyph(f->glyph_1, xscale, yscale);
+	v['2'] = prerender_glyph(f->glyph_2, xscale, yscale);
+	v['3'] = prerender_glyph(f->glyph_3, xscale, yscale);
+	v['4'] = prerender_glyph(f->glyph_4, xscale, yscale);
+	v['5'] = prerender_glyph(f->glyph_5, xscale, yscale);
+	v['6'] = prerender_glyph(f->glyph_6, xscale, yscale);
+	v['7'] = prerender_glyph(f->glyph_7, xscale, yscale);
+	v['8'] = prerender_glyph(f->glyph_8, xscale, yscale);
+	v['9'] = prerender_glyph(f->glyph_9, xscale, yscale);
+	v['-'] = prerender_glyph(f->glyph_dash, xscale, yscale);
+	v['+'] = prerender_glyph(f->glyph_plus, xscale, yscale);
+	v[','] = prerender_glyph(f->glyph_comma, xscale, yscale);
+	v['.'] = prerender_glyph(f->glyph_period, xscale, yscale);
+	v['\''] = prerender_glyph(f->glyph_apostrophe, xscale, yscale);
+	v['\"'] = prerender_glyph(f->glyph_doublequote, xscale, yscale);
+	v['*'] = prerender_glyph(f->glyph_asterisk, xscale, yscale);
+	v['_'] = prerender_glyph(f->glyph_underscore, xscale, yscale);
+	v['#'] = prerender_glyph(f->glyph_hash, xscale, yscale);
+	v['$'] = prerender_glyph(f->glyph_dollar, xscale, yscale);
+	v['%'] = prerender_glyph(f->glyph_percent, xscale, yscale);
+	v['^'] = prerender_glyph(f->glyph_caret, xscale, yscale);
+	v['&'] = prerender_glyph(f->glyph_ampersand, xscale, yscale);
+	v['@'] = prerender_glyph(f->glyph_at, xscale, yscale);
+	v['<'] = prerender_glyph(f->glyph_lessthan, xscale, yscale);
+	v['>'] = prerender_glyph(f->glyph_greaterthan, xscale, yscale);
+	v[']'] = prerender_glyph(f->glyph_rightbracket, xscale, yscale);
+	v['['] = prerender_glyph(f->glyph_leftbracket, xscale, yscale);
+	v[';'] = prerender_glyph(f->glyph_semicolon, xscale, yscale);
+	v['~'] = prerender_glyph(f->glyph_tilde, xscale, yscale);
+	v['{'] = prerender_glyph(f->glyph_open_curly, xscale, yscale);
+	v['}'] = prerender_glyph(f->glyph_close_curly, xscale, yscale);
+	v['='] = prerender_glyph(f->glyph_equals, xscale, yscale);
 
 	*font = v;
 	return 0;
