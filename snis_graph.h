@@ -103,5 +103,8 @@ SNG_GLOBAL int add_user_color(uint8_t r, uint8_t g, uint8_t b);
 SNG_GLOBAL float sng_pixelx_to_screenx(float x);
 SNG_GLOBAL float sng_pixely_to_screeny(float y);
 
+SNG_GLOBAL void sng_set_font_family(int family);
+SNG_GLOBAL int sng_get_font_family(void);
+
 #undef SNG_GLOBAL
 #endif

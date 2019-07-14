@@ -179,6 +179,7 @@ static int display_frame_stats = 0;
 static int quickstartmode = 0; /* allows auto connecting to first (only) lobby entry */
 static float turret_recoil_amount = 0.0f;
 static int global_rts_mode = 0;
+static int current_typeface = 0; /* tweakable */
 
 static int mtwist_seed = COMMON_MTWIST_SEED;
 static float current_altitude = 1e20;
@@ -17022,6 +17023,8 @@ static struct tweakable_var_descriptor client_tweak[] = {
 		&xjoystick_threshold, 'i', 0.0, 0.0, 0.0, 0, 64000, 23000 },
 	{ "YJOYSTICK_THRESHOLD", "0 TO 64000 - SETS BOUNDARY BETWEEN FINE AND COARSE",
 		&yjoystick_threshold, 'i', 0.0, 0.0, 0.0, 0, 64000, 23000 },
+	{ "CURRENT_TYPEFACE", "0 TO 1 - SETS CURRENT TYPEFACE",
+		&current_typeface, 'i', 0.0, 0.0, 0.0, 0, 1, 0 },
 	{ NULL, NULL, NULL, '\0', 0.0, 0.0, 0.0, 0, 0, 0 },
 };
 
@@ -19876,6 +19879,7 @@ gint advance_game(gpointer data)
 	deal_with_keyboard();
 	deal_with_mouse();
 	deal_with_physical_io_devices();
+	sng_set_font_family(current_typeface);
 
 	if (in_the_process_of_quitting) {
 		gdk_threads_enter();

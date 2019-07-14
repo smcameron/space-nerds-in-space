@@ -41,6 +41,7 @@ extern struct my_vect_obj **gamefont[];
 extern int font_scale[];
 extern int letter_spacing[];
 extern int font_lineheight[];
+static int sng_font_family = 1;
 
 struct snis_graph_viewport {
 	int x_offset, y_offset, width, height;
@@ -420,14 +421,15 @@ void sng_abs_xy_draw_string(char *s, int font, float x, float y)
 	float deltax = 0;
 
 	for (i=0;s[i];i++) {
-		dx = (letter_spacing[font]) + sng_abs_xy_draw_letter(gamefont[font], s[i], x + deltax, y);
+		dx = (letter_spacing[font]) + sng_abs_xy_draw_letter(gamefont[font + 5 * sng_font_family],
+			s[i], x + deltax, y);
 		deltax += dx;
 	}
 }
 
 void sng_string_bounding_box(char *s, int font, float *bbx1, float *bby1, float *bbx2, float *bby2)
 {
-	struct my_vect_obj **fontobj = gamefont[font];
+	struct my_vect_obj **fontobj = gamefont[font + 5 * sng_font_family];
 	int i;
 
 	*bbx1 = *bbx2 = *bby1 = *bby2 = 0;
@@ -463,7 +465,8 @@ void sng_center_xy_draw_string(char *s, int font, float x, float y)
 	float deltax = 0;
 
 	for (i=0;s[i];i++) {
-		dx = (letter_spacing[font]) + sng_abs_xy_draw_letter(gamefont[font], s[i], ox + deltax, oy);
+		dx = (letter_spacing[font]) + sng_abs_xy_draw_letter(gamefont[font + 5 * sng_font_family],
+			s[i], ox + deltax, oy);
 		deltax += dx;
 	}
 }
@@ -480,7 +483,8 @@ void sng_center_xz_draw_string(char *s, int font, float x, float y)
 	float deltax = 0;
 
 	for (i = 0; s[i]; i++) {
-		dx = (letter_spacing[font]) + sng_abs_xz_draw_letter(gamefont[font], s[i], ox + deltax, oy);
+		dx = (letter_spacing[font]) + sng_abs_xz_draw_letter(gamefont[font + 5 * sng_font_family],
+			s[i], ox + deltax, oy);
 		deltax += dx;
 	}
 }
@@ -499,12 +503,13 @@ void sng_abs_xy_draw_string_with_cursor(char *s, int font, float x, float y, int
 
 	for (i = 0; s[i]; i++) {
 		if (i == cursor_pos)
-			sng_abs_xy_draw_letter(gamefont[font], '_', x + deltax, y);
-		dx = (letter_spacing[font]) + sng_abs_xy_draw_letter(gamefont[font], s[i], x + deltax, y);
+			sng_abs_xy_draw_letter(gamefont[font + 5 * sng_font_family], '_', x + deltax, y);
+		dx = (letter_spacing[font]) + sng_abs_xy_draw_letter(gamefont[font + 5 * sng_font_family],
+			s[i], x + deltax, y);
 		deltax += dx;
 	}
 	if (i == cursor_pos)
-		sng_abs_xy_draw_letter(gamefont[font], '_', x + deltax, y);
+		sng_abs_xy_draw_letter(gamefont[font + 5 * sng_font_family], '_', x + deltax, y);
 }
 
 void sng_draw_point(float x, float y)
@@ -1072,4 +1077,14 @@ float sng_pixelx_to_screenx(float x)
 float sng_pixely_to_screeny(float y)
 {
 	return y / sgc.yscale;
+}
+
+void sng_set_font_family(int family)
+{
+	sng_font_family = (family % 2);
+}
+
+int sng_get_font_family(void)
+{
+	return sng_font_family;
 }

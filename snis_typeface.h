@@ -21,6 +21,8 @@
 #define NANO_LETTER_SPACING (2)
 #define PICO_LETTER_SPACING (1)
 
+#define NTYPEFACES (2) /* ascii and alien */
+
 /* for getting at the font scales and letter spacings, given  only font numbers */
 #ifdef SNIS_TYPEFACE_DECLARE_GLOBALS
 float font_scale[] = { BIG_FONT_SCALE, SMALL_FONT_SCALE, TINY_FONT_SCALE, NANO_FONT_SCALE, PICO_FONT_SCALE };
@@ -28,7 +30,7 @@ int letter_spacing[] = { BIG_LETTER_SPACING, SMALL_LETTER_SPACING, TINY_LETTER_S
 int font_lineheight[sizeof(font_scale) / sizeof(font_scale[0])];
 /* There are 4 home-made "fonts" in the game, all the same "typeface", but 
  * different sizes */
-struct my_vect_obj **gamefont[5];
+struct my_vect_obj **gamefont[5 * NTYPEFACES];
 #else
 extern int font_scale[];
 extern int letter_spacing[];
