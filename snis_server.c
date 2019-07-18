@@ -171,6 +171,7 @@ static float chaff_confuse_chance = CHAFF_CONFUSE_CHANCE;
 static int multiverse_debug = 0;
 static int suppress_starbase_complaints = 0;
 static int player_invincibility = 0;
+static int game_paused = 0;
 
 /*
  * End of runtime adjustable globals
@@ -16936,6 +16937,8 @@ static struct tweakable_var_descriptor server_tweak[] = {
 		&suppress_starbase_complaints, 'i', 0.0, 0.0, 0.0, 0, 1, 0 },
 	{ "INVINCIBILITY", "0 or 1, ENABLES OR SUPPRESSES PLAYER SHIP INVINCIBILITY",
 		&player_invincibility, 'i', 0.0, 0.0, 0.0, 0, 1, 0 },
+	{ "GAME_PAUSED", "0 or 1, 1 TO PAUSE, 0 to UNPAUSE (EXPERIMENTAL)",
+		&game_paused, 'i', 0.0, 0.0, 0.0, 0, 1, 0 },
 	{ NULL, NULL, NULL, '\0', 0.0, 0.0, 0.0, 0, 0, 0 },
 };
 
@@ -28163,6 +28166,12 @@ int main(int argc, char *argv[])
 	double nextTime = currentTime + delta;
 	universe_timestamp_absolute = currentTime;
 	while (1) {
+		if ((volatile int) game_paused) {
+			double this_time = time_now_double();
+			sleep_double(0.1);
+			update_multiverse_bridge_count(this_time);
+			continue;
+		}
 		currentTime = time_now_double();
 
 		if (currentTime - nextTime > maxTimeBehind) {
