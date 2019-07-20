@@ -20908,8 +20908,16 @@ static void process_instructions_from_client(struct game_client *c)
 
 	opcode = OPCODE_NOOP;
 	rc = snis_readsocket(c->socket, &opcode, sizeof(opcode));
-	if (rc != 0)
+	if (rc != 0) {
+		if (errno == 0) { /* Client has performed orderly shutdown */
+			fprintf(stderr, "%s: client on socket %d performed orderly shutdown\n",
+				logprefix(), c->socket);
+			goto orderly_client_shutdown;
+		}
+		fprintf(stderr, "%s: snis_readsocket() returned %d, errno = %s\n",
+			logprefix(), rc, strerror(errno));
 		goto protocol_error;
+	}
 
 	switch (opcode) {
 		case OPCODE_REQUEST_TORPEDO:
@@ -21243,11 +21251,13 @@ static void process_instructions_from_client(struct game_client *c)
 	return;
 
 protocol_error:
-	log_client_info(SNIS_ERROR, c->socket, "bad opcode protocol violation\n");
-	snis_log(SNIS_ERROR, "Protocol error in process_instructions_from_client, opcode = %hu\n", opcode);
-	snis_log(SNIS_ERROR, "Last successful opcode was %d (0x%hx)\n", last_successful_opcode,
+	fprintf(stderr, "%s: bad opcode, protocol violation on socket %d\n", logprefix(), c->socket);
+	fprintf(stderr, "%s: Protocol error in process_instructions_from_client, opcode = %hu\n",
+		logprefix(), opcode);
+	fprintf(stderr, "%s: Last successful opcode was %d (0x%hx)\n", logprefix(), last_successful_opcode,
 			last_successful_opcode);
 	snis_print_last_buffer("snis_server: ", c->socket);
+orderly_client_shutdown:
 	shutdown(c->socket, SHUT_RDWR);
 	close(c->socket);
 	c->socket = -1;
