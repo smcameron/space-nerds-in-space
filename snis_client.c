@@ -273,6 +273,7 @@ static struct entity_context *instrumentecx; /* Used by nav screen, sciplane scr
 static struct entity_context *tridentecx;
 static struct entity_context *sciballecx;
 static struct entity_context *network_setup_ecx;
+static int science_cam_timer = 0;
 
 static int suppress_rocket_noise = 0;
 static float rocket_noise_volume = 1.0;
@@ -6012,6 +6013,8 @@ static int process_sci_select_target_packet(void)
 		}
 		i = lookup_object_by_id(id);
 		if (i >= 0) {
+			if (curr_science_guy != &go[i])
+				science_cam_timer = 0; /* Make the model swoop in on the sci details screen */
 			curr_science_guy = &go[i];
 			curr_science_waypoint = (uint32_t) -1;
 			prev_science_waypoint = (uint32_t) -1;
@@ -15856,6 +15859,9 @@ static void draw_science_details(GtkWidget *w, GdkGC *gc)
 	int y, yinc = 20 * SCREEN_HEIGHT / 600;
 	int i;
 
+	if (science_cam_timer < 1000)
+		science_cam_timer += (int) (0.3 * (1000.0 - (float) science_cam_timer));
+
 	pull_down_menu_clear(sci_ui.menu);
 	if (!curr_science_guy) {
 		sng_center_xy_draw_string("NO SCAN TARGET SELECTED", TINY_FONT, txx(260), txy(300));
@@ -15890,15 +15896,15 @@ static void draw_science_details(GtkWidget *w, GdkGC *gc)
 		if (e)
 			update_entity_orientation(e, &orientation);
 		if (curr_science_guy->type == OBJTYPE_STARBASE) {
-			camera_set_pos(sciecx, m->radius * 4, 0.0, m->radius * 2);
+			camera_set_pos(sciecx, m->radius * 4, 1000 - science_cam_timer % 1000, m->radius * 2);
 			camera_assign_up_direction(sciecx, 0.0, 0.0, 1.0);
 		} else if (curr_science_guy->type == OBJTYPE_PLANET ||
 			curr_science_guy->type == OBJTYPE_BLACK_HOLE) {
-			camera_set_pos(sciecx, m->radius * 6, 0.0, m->radius * 2);
+			camera_set_pos(sciecx, m->radius * 6, 1000 - science_cam_timer % 1000, m->radius * 2);
 			camera_assign_up_direction(sciecx, 0.0, 0.0, 1.0);
 		} else {
 			camera_assign_up_direction(sciecx, 0.0, 1.0, 0.0);
-			camera_set_pos(sciecx, -m->radius * 4, m->radius * 1, 0);
+			camera_set_pos(sciecx, -m->radius * 4, m->radius * 1, 1000 - science_cam_timer % 1000);
 		}
 		camera_look_at(sciecx, (float) 0, (float) 0, (float) m->radius / 2.0);
 		camera_set_parameters(sciecx, 0.5, 8000.0,
