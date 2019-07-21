@@ -109,7 +109,7 @@ Good luck!
 <li><a href="new_bootable_media_instructions.html">Instructions for creating bootable media</a> (updated Apr 13, 2018, thanks to Justin Warwick.)
 <li><a href="#updateinstructions">Updating Space Nerds In Space</a>
 <li><a href="#speech-recognition">Talking to "The Computer" (how to set up speech recognition)</a>
-<li><a href="#troubleshooting">Troubleshooting (joysticks, audio, bridge verification, crashing)</a>
+<li><a href="#troubleshooting">Troubleshooting (joysticks, audio, bridge verification, crashing, network problems)</a>
 <li><a href="#luascripting">Lua Scripting</a>
 <li><a href="#misctopics">Miscellaneous development topics</a>
 <li><a href="https://github.com/smcameron/space-nerds-in-space/blob/master/CONTRIBUTING.md">Contributing - How can I help with Space Nerds In Space Development?</a>
@@ -1050,6 +1050,29 @@ for security reasons on the assumption that they normally are only using the rou
 to get to the internet, not to communicate amongst themselves.  For this reason,
 and for performance reasons, a <b>wired network switch or router is strongly
 preferred</b>.
+<p><b>Note:</b>  By default, the game assumes that the internet-facing network will be
+used. If you have a private network (the internet is inaccessible) or if your system is
+on multiple networks
+and you wish to use a network other than the default
+internet-facing network, special action will be required. Note also
+that it is not currently possible to play with a multi-network setup in which all the stations
+are not on the same network.  That is, you cannot host the lobby server and snis_server
+on a multi-networked system and expect clients to be able to connect via more than one
+network.  Currently, the lobby server and snis_server only server a single network, but you
+<em>can</em> choose which network.
+<p>If you wish to run the game on a network other than the default internet-facing
+network, do the following prior to running snis_launcher:
+<pre>
+	export SSGL_PRIMARY_IP_ADDR_PROBE=192.168.1.1
+</pre>
+Of course you should replace "192.168.1.1" with some address that is on your desired network. It is
+not required that a host be present at the address you specify, this address is
+merely used to probe the host's routing table to find out which interface to use.
+<p>If on the lobby screen, you see blinking red snis_server instances with IP addresses of 0.0.0.0
+this indicates that the snis_server instances were not able to determine a network interface
+to use.  Typically this means SSGL_PRIMARY_IP_ADDR_PROBE is not set, but should be (because the
+internet is inaccessible from your network), or is set to an invalid value, e.g. it is blank, or
+has a value which is not an IP address.
 </ol>
 <h2>Step 2.  Software Setup</h2>
 <ol>
@@ -1385,6 +1408,7 @@ will then feed them into the fifo.
 <li><a href="#audioproblems">Audio Problems</a>
 <li><a href="#openglversion">OpenGL versions</a>
 <li><a href="#crashing">The game is crashing!</a>
+<li><a href="#networkproblems">network problems</a>
 </ol>
 <hr>
 <ol>
@@ -2067,12 +2091,72 @@ Hmm, <cmd>e</cmd> is null, but was passed in here, so let's go up the stack agai
 So <cmd>o</cmd> seems to be a valid pointer, but <cmd>o-&gt;entity</cmd> is 0 (means NULL).
 So it seems we have an unexpected null pointer.
 </ol>
-<br>
-<br>
-<br>
-<br>
-<br>
-<li>TODO: Need to put more trouble shooting tips in here.
+<li><b><a name="networkproblems">Network Problems</a></b>
+<p>First make sure your computers can ping each other.  You can find out the IP
+address of your computer via <cmd>ifconfig -a</cmd> or <cmd>ip a</cmd>.
+<pre>
+capnkirk@enterprise ~ $ <hili>ifconfig</hili>
+enp3s0    Link encap:Ethernet  HWaddr 30:5a:3a:78:f9:d8
+          <hili>inet addr:192.168.1.157</hili>  Bcast:192.168.1.255  Mask:255.255.255.0
+          inet6 addr: fe80::29fe:4469:7af1:2fcb/64 Scope:Link
+          UP BROADCAST RUNNING MULTICAST  MTU:1500  Metric:1
+          RX packets:18743 errors:0 dropped:0 overruns:0 frame:0
+          TX packets:12293 errors:0 dropped:0 overruns:0 carrier:0
+          collisions:0 txqueuelen:1000
+          RX bytes:14826741 (14.8 MB)  TX bytes:2321884 (2.3 MB)
+
+lo        Link encap:Local Loopback
+          inet addr:127.0.0.1  Mask:255.0.0.0
+          inet6 addr: ::1/128 Scope:Host
+          UP LOOPBACK RUNNING  MTU:65536  Metric:1
+          RX packets:20 errors:0 dropped:0 overruns:0 frame:0
+          TX packets:20 errors:0 dropped:0 overruns:0 carrier:0
+          collisions:0 txqueuelen:1
+          RX bytes:2106 (2.1 KB)  TX bytes:2106 (2.1 KB)
+capnkirk@enterprise ~ $ <hili>ip a</hili>
+1: lo: &lt;LOOPBACK,UP,LOWER_UP&gt; mtu 65536 qdisc noqueue state UNKNOWN group default qlen 1
+    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+    inet 127.0.0.1/8 scope host lo
+       valid_lft forever preferred_lft forever
+    inet6 ::1/128 scope host
+       valid_lft forever preferred_lft forever
+2: enp3s0: &lt;BROADCAST,MULTICAST,UP,LOWER_UP&gt; mtu 1500 qdisc pfifo_fast state UP group default qlen 1000
+    link/ether 30:5a:3a:78:f9:d8 brd ff:ff:ff:ff:ff:ff
+    <hili>inet 192.168.1.157</hili>/24 brd 192.168.1.255 scope global dynamic enp3s0
+       valid_lft 85692sec preferred_lft 85692sec
+    inet6 fe80::29fe:4469:7af1:2fcb/64 scope link
+       valid_lft forever preferred_lft forever
+</pre>
+Here's what it looks like when the network is working:
+<pre>
+capnkirk@enterprise ~ $ <hili>ping 8.8.8.8</hili>
+PING 8.8.8.8 (8.8.8.8) 56(84) bytes of data.
+64 bytes from 8.8.8.8: icmp_seq=1 ttl=57 time=10.8 ms
+64 bytes from 8.8.8.8: icmp_seq=2 ttl=57 time=11.1 ms
+64 bytes from 8.8.8.8: icmp_seq=3 ttl=57 time=11.2 ms
+64 bytes from 8.8.8.8: icmp_seq=4 ttl=57 time=9.08 ms
+</pre>
+This is what it looks like if you can't ping:
+<pre>
+scameron@wombat ~ $ ping 192.168.1.99
+PING 192.168.1.99 (192.168.1.99) 56(84) bytes of data.
+From 192.168.1.157 icmp_seq=1 Destination Host Unreachable
+From 192.168.1.157 icmp_seq=2 Destination Host Unreachable
+From 192.168.1.157 icmp_seq=3 Destination Host Unreachable
+From 192.168.1.157 icmp_seq=4 Destination Host Unreachable
+</pre>
+<p>Try pinging 8.8.8.8, which is Google's DNS server. If you are trying
+to run SNIS on a private network without access to the internet (if you
+cannot successfully ping 8.8.8.8), and you
+are able to ping other machines on your network, then special action is
+required to make SNIS work.
+Let's say all the machines on your network have an IP address like
+192.168.1.xxx.  When you start snis_launcher, you should do it like so:
+<pre>
+	export SSGL_PRIMARY_IP_ADDR_PROBE=192.168.1.1
+	./snis_launcher
+</pre>
+<p>IPv6.  SNIS does not yet work with IPv6.  Feel free to send patches.
 </ol>
 <br>
 <br>
