@@ -15466,6 +15466,7 @@ static void draw_science_graph(GtkWidget *w, struct snis_entity *ship, struct sn
 	int dy1, dy2, bw, probes, dx, pwr;
 	int initial_noise;
 
+	sng_set_foreground(UI_COLOR(science_graph_grid));
 	snis_draw_rectangle(0, x1, y1, (x2 - x1), (y2 - y1));
 	snis_draw_dotted_hline(w->window, gc, x1, y1 + (y2 - y1) / 4, x2, 10);
 	snis_draw_dotted_hline(w->window, gc, x1, y1 + (y2 - y1) / 2, x2, 10);
