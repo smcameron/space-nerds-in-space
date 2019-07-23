@@ -23291,6 +23291,7 @@ static void register_with_game_lobby(char *lobbyhost, int port,
 {
 	struct ssgl_game_server gs;
 	struct in_addr ip;
+	char *v;
 
 	memset(&gs, 0, sizeof(gs));
 	snis_log(SNIS_INFO, "port = %hu\n", port);
@@ -23303,8 +23304,20 @@ static void register_with_game_lobby(char *lobbyhost, int port,
 	strncpy(gs.location, location, 19);
 	strcpy(gs.game_type, "SNIS");
 
-	if (ssgl_get_primary_host_ip_addr(&gs.ipaddr) != 0)
-		snis_log(SNIS_WARN, "Failed to get local ip address.\n");
+	if (ssgl_get_primary_host_ip_addr(&gs.ipaddr) != 0) {
+		snis_log(SNIS_WARN, "Failed to get local IP address.\n");
+		fprintf(stderr, "%s: Failed to get local IP address.\n", logprefix());
+		v = getenv("SSGL_PRIMARY_IP_PROBE_ADDR");
+		if (!v)
+			fprintf(stderr,
+				"%s: You may need to set SSGL_PRIMARY_IP_PROBE_ADDR environment variable\n",
+				logprefix());
+		else
+			fprintf(stderr,
+				"%s: You may have set SSGL_PRIMARY_IP_PROBE_ADDR incorrectly (currently '%s')\n",
+				logprefix(), v);
+		exit(1); /* No point in continuing, since we have no IP address to register with the lobby. */
+	}
 	ip.s_addr = gs.ipaddr;
 	fprintf(stderr, "%s: Registering IP/port as %s:%d\n", logprefix(), inet_ntoa(ip), port);
 	if (ssgl_register_gameserver(lobbyhost, &gs, &lobbythread, &nclients))
