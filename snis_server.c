@@ -22634,8 +22634,8 @@ static int add_new_player(struct game_client *c)
 		snis_log(SNIS_ERROR, "Bad ship name or password\n");
 		goto protocol_error;
 	}
-	fprintf(stderr, "%s: new client: sn='%s', pw='%s', create = %hhu\n",
-			logprefix(), app.shipname, app.password, app.new_ship);
+	fprintf(stderr, "%s: new client: sn='%s', create = %hhu\n",
+			logprefix(), app.shipname, app.new_ship);
 
 	c->bridge = lookup_bridge(app.shipname, app.password);
 	fprintf(stderr, "%s: c->bridge = %d\n", logprefix(), c->bridge);

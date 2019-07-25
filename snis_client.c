@@ -18675,7 +18675,7 @@ static void shipname_entered()
 
 static void password_entered()
 {
-	printf("password entered: %s\n", net_setup_ui.password);
+	printf("password entered\n");
 }
 
 static void start_lobbyserver_button_pressed()
@@ -18798,7 +18798,6 @@ static void connect_to_lobby_button_pressed()
 	/* These must be set to connect to the lobby... */
 	printf("lobbyname = '%s'\n", net_setup_ui.lobbyname);
 	printf("shipname = '%s'\n", net_setup_ui.shipname);
-	printf("password = '%s'\n", net_setup_ui.password);
 	if (strcmp(net_setup_ui.lobbyname, "") == 0 ||
 		strcmp(net_setup_ui.shipname, "") == 0 ||
 		strcmp(net_setup_ui.password, "") == 0)
