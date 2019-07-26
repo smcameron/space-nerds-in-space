@@ -1063,6 +1063,7 @@ static void get_peer_name(int connection, char *buffer)
 	int rc;
 
 	peer = (struct sockaddr_in *) &p;
+	memset(peer, 0, addrlen); /* Redundant, but shuts up clang scan-build. */
 
 	/* This seems to get the wrong info... not sure what's going wrong */
 	/* Get the game server's ip addr (don't trust what we were told.) */

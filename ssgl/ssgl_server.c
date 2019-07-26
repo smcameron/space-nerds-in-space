@@ -70,6 +70,7 @@ static void get_peer_name(int connection, char *buffer)
 	socklen_t addrlen;
 	int rc;
 
+	memset(&peer, 0, sizeof(peer));
 	/* Get the game server's ip addr (don't trust what we were told.) */
 	rc = getpeername(connection, (struct sockaddr * __restrict__) &peer, &addrlen); 
 	if (rc != 0) {
