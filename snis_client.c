@@ -6622,6 +6622,7 @@ static void *text_to_speech_thread_fn(__attribute__((unused)) void *arg)
 				free(entry->text);
 			}
 			free(entry);
+			entry = NULL;
 		}
 	} while (1);
 	return NULL;
