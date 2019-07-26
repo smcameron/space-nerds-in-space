@@ -514,33 +514,52 @@ error:
 	return NULL;
 }
 
-static void fixup_triangle_vertex_ptrs(struct mesh *m, struct vertex *oldptr, struct vertex *newptr)
+/* Before realloc, we need to convert internal ptrs to offsets so we can fix them up
+ * afterwards . We used to do this by saving the old value of the pointer we
+ * realloc'ed, then after the realloc, adjust the internal pointers by subtracting the
+ * old value and adding the new value, which worked (on x86, x86_64).  However, I think
+ * that using the old value in pointer arithmetic this way is technically undefined
+ * behavior (and clang scan-build considered it "use after free").  So as not to
+ * accidentally give the compiler a license to go crazy, we'll do it this way which
+ * avoids any (seemingly benign) use of a free'd pointer even though it's essentially
+ * twice as much work. */
+static void convert_triangle_vertex_ptrs_to_offsets(struct mesh *m)
 {
 	int i;
 
-	/* When you realloc() m->v, all the pointers in m->t need fixing up.
-	 * Note, this is a bit gross, because oldptr is not actually a valid
-	 * pointer any more, but we're still using its value to do ptr arithmetic
-	 */
 	for (i = 0; i < m->ntriangles; i++) {
-		m->t[i].v[0] = newptr + (m->t[i].v[0] - oldptr);
-		m->t[i].v[1] = newptr + (m->t[i].v[1] - oldptr);
-		m->t[i].v[2] = newptr + (m->t[i].v[2] - oldptr);
+		m->t[i].v[0] = (struct vertex *) (m->t[i].v[0] - m->v);
+		m->t[i].v[1] = (struct vertex *) (m->t[i].v[1] - m->v);
+		m->t[i].v[2] = (struct vertex *) (m->t[i].v[2] - m->v);
+	}
+}
+
+/* After realloc, we need to convert offsets back to internal ptrs */
+static void convert_triangle_vertex_offsets_to_ptrs(struct mesh *m)
+{
+	int i;
+
+	for (i = 0; i < m->ntriangles; i++) {
+		m->t[i].v[0] = (struct vertex *) (((intptr_t) m->t[i].v[0]) + m->v);
+		m->t[i].v[1] = (struct vertex *) (((intptr_t) m->t[i].v[1]) + m->v);
+		m->t[i].v[2] = (struct vertex *) (((intptr_t) m->t[i].v[2]) + m->v);
 	}
 }
 
 static int allocate_more_vertices(struct mesh *m, int *verts_alloced, int additional_verts)
 {
 	/* Get some more memory for vertices if needed */
-	struct vertex *oldptr = m->v;
 	struct vertex *newmem;
 
+	convert_triangle_vertex_ptrs_to_offsets(m); /* Convert internal ptrs to offsets before realloc */
 	*verts_alloced = *verts_alloced + additional_verts;
 	newmem = realloc(m->v, *verts_alloced * sizeof(*m->v));
-	if (!newmem)
+	if (!newmem) {
+		convert_triangle_vertex_offsets_to_ptrs(m); /* Convert offsets back to ptrs */
 		return -1;
+	}
 	m->v = newmem;
-	fixup_triangle_vertex_ptrs(m, oldptr, newmem);
+	convert_triangle_vertex_offsets_to_ptrs(m); /* Convert offsets back to ptrs */
 	return 0;
 }
 
@@ -776,21 +795,21 @@ process_it:
 
 static void compact_mesh_allocations(struct mesh *m)
 {
-	struct vertex *oldptr;
+	struct vertex *newptr;
 	struct triangle *newtri;
 	struct texture_coord *newtex;
 
-	oldptr = m->v;
 	if (m->nvertices <= 0) {
 		stacktrace("compact_mesh_allocations() -- mesh with nvertices <= 0");
 		abort();
 	}
-	m->v = realloc(m->v, m->nvertices * sizeof(*m->v));
-	if (!m->v) {
-		m->v = oldptr;
+	convert_triangle_vertex_ptrs_to_offsets(m); /* Convert internal ptrs to offsets before realloc */
+	newptr = realloc(m->v, m->nvertices * sizeof(*m->v));
+	if (!newptr) {
+		convert_triangle_vertex_offsets_to_ptrs(m); /* Convert offsets back to ptrs */
 		return;
 	}
-	fixup_triangle_vertex_ptrs(m, oldptr, m->v);
+	convert_triangle_vertex_offsets_to_ptrs(m); /* Convert offsets back to ptrs */
 	if (m->ntriangles <= 0) {
 		stacktrace("compact_mesh_allocations() -- mesh with ntriangles <= 0");
 		abort();
