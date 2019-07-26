@@ -16706,11 +16706,16 @@ static int process_enscript_command(struct game_client *c)
 
 static void server_builtin_clients(__attribute__((unused)) char *cmd)
 {
-	int i;
+	int i, rc;
 	char buf[80];
 	char *station;
+	struct sockaddr_in name;
+	socklen_t namelen;
+	uint16_t port;
+	uint32_t ip;
 
-	send_demon_console_msg("%10s %5s %5s %20s %8s", "CURRENT", "CLNT", "BRDG", "SHIP NAME", "ROLES");
+	send_demon_console_msg("%10s %5s %5s %20s %8s %20s",
+				"CURRENT", "CLNT", "BRDG", "SHIP NAME", "ROLES", "IP ADDR");
 	send_demon_console_msg("--------------------------------------------------------------");
 	for (i = 0; i < nclients; i++) {
 		struct game_client *c = &client[i];
@@ -16761,8 +16766,20 @@ static void server_builtin_clients(__attribute__((unused)) char *cmd)
 			station = "UNKNOWN";
 			break;
 		}
-		snprintf(buf, sizeof(buf), "%s %5d %5d %20s %08x", station, i, c->bridge,
-				bridgelist[c->bridge].shipname, c->role);
+		ip = 0;
+		port = 0;
+		if (c->socket >= 0) {
+			namelen = sizeof(name);
+			rc = getsockname(c->socket, &name, &namelen);
+			if (rc == 0) {
+				memcpy(&ip, &name.sin_addr, sizeof(ip));
+				ip = ntohl(ip);
+				port = ntohs(name.sin_port);
+			}
+		}
+		snprintf(buf, sizeof(buf), "%s %5d %5d %20s %08x %hhu.%hhu.%hhu.%hhu:%hu", station, i, c->bridge,
+				bridgelist[c->bridge].shipname, c->role,
+				(ip >> 24) & 0xff, (ip >> 16) & 0xff, (ip >> 8) & 0xff, ip & 0xff, port);
 		send_demon_console_msg(buf);
 	}
 }
