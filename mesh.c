@@ -200,6 +200,9 @@ static struct mesh *allocate_mesh_for_copy(int ntriangles, int nvertices, int nl
 {
 	struct mesh *copy;
 
+	assert(nvertices > 0);
+	assert(nlines > 0 || ntriangles > 0);
+
 	copy = malloc(sizeof(*copy));
 	if (!copy)
 		goto bail;
