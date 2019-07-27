@@ -522,15 +522,15 @@ error:
  * behavior (and clang scan-build considered it "use after free").  So as not to
  * accidentally give the compiler a license to go crazy, we'll do it this way which
  * avoids any (seemingly benign) use of a free'd pointer even though it's essentially
- * twice as much work. */
+ * twice as much work. Note, m->t[n].v[x] and m->t[n].offset[x] are anonymously union'ed */
 static void convert_triangle_vertex_ptrs_to_offsets(struct mesh *m)
 {
 	int i;
 
 	for (i = 0; i < m->ntriangles; i++) {
-		m->t[i].v[0] = (struct vertex *) (m->t[i].v[0] - m->v);
-		m->t[i].v[1] = (struct vertex *) (m->t[i].v[1] - m->v);
-		m->t[i].v[2] = (struct vertex *) (m->t[i].v[2] - m->v);
+		m->t[i].offset[0] = m->t[i].v[0] - m->v;
+		m->t[i].offset[1] = m->t[i].v[1] - m->v;
+		m->t[i].offset[2] = m->t[i].v[2] - m->v;
 	}
 }
 
@@ -540,9 +540,9 @@ static void convert_triangle_vertex_offsets_to_ptrs(struct mesh *m)
 	int i;
 
 	for (i = 0; i < m->ntriangles; i++) {
-		m->t[i].v[0] = (struct vertex *) (((intptr_t) m->t[i].v[0]) + m->v);
-		m->t[i].v[1] = (struct vertex *) (((intptr_t) m->t[i].v[1]) + m->v);
-		m->t[i].v[2] = (struct vertex *) (((intptr_t) m->t[i].v[2]) + m->v);
+		m->t[i].v[0] = m->v + m->t[i].offset[0];
+		m->t[i].v[1] = m->v + m->t[i].offset[1];
+		m->t[i].v[2] = m->v + m->t[i].offset[2];
 	}
 }
 
