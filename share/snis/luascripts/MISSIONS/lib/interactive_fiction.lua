@@ -86,18 +86,23 @@ function intfic.in_array(word, array)
 	return false
 end
 
+function intfic.write(str)
+	n = #intfic.output;
+	intfic.output[n + 1] = str;
+end
+
 function intfic.go_direction(direction)
 	if intfic.room[intfic.current_location][direction] == nil then
-		io.write(direction .. ": You can't go that way\n");
+		intfic.write(direction .. ": You can't go that way\n");
 		return;
 	end
 	if not intfic.in_array(direction, intfic.cardinal_directions) then
-		io.write(direction .. ": You can't go that way\n");
+		intfic.write(direction .. ": You can't go that way\n");
 		return;
 	end
 	destination = intfic.room[intfic.current_location][direction];
 	if intfic.room[destination] == nil then
-		io.write(direction .. ": I do not understand\n");
+		intfic.write(direction .. ": I do not understand\n");
 		return;
 	end
 	intfic.current_location = destination;
@@ -114,15 +119,15 @@ end
 
 function intfic.doinventory()
 	count = 0;
-	io.write("You are carrying:\n");
+	intfic.write("You are carrying:\n");
 	for i, v in pairs(intfic.objects) do
 		if v.location == "pocket" then
-			io.write("  " .. v.desc .. "\n");
+			intfic.write("  " .. v.desc .. "\n");
 			count = count + 1;
 		end
 	end
 	if (count == 0) then
-		io.write("  Nothing.\n");
+		intfic.write("  Nothing.\n");
 	end
 end
 
@@ -220,60 +225,60 @@ function intfic.take_object(entry)
 	-- entry is a table { "noun", object };
 
 	if entry[2] == nil then
-		io.write(entry[1] .. ": I don't know about that.\n");
+		intfic.write(entry[1] .. ": I don't know about that.\n");
 		return;
 	end
 	if entry[2].location == "pocket" then
-		io.write(entry[1] .. ": You already have that.\n");
+		intfic.write(entry[1] .. ": You already have that.\n");
 		return;
 	end
 	if not entry[2].location == intfic.current_location then
-		io.write(entry[1] .. ": I don't see that here.\n");
+		intfic.write(entry[1] .. ": I don't see that here.\n");
 		return;
 	end
 	if not entry[2].portable then
-		io.write(entry[1] .. ": I can't seem to take it.\n");
+		intfic.write(entry[1] .. ": I can't seem to take it.\n");
 		return;
 	end
 	entry[2].location = "pocket";
-	io.write(entry[1] .. ": Taken.\n");
+	intfic.write(entry[1] .. ": Taken.\n");
 end
 
 function intfic.drop_object(entry)
 	-- entry is a table { "noun", object };
 	if entry[2] == nil then
-		io.write(entry[1] .. ": I do not know what that is.\n");
+		intfic.write(entry[1] .. ": I do not know what that is.\n");
 		return;
 	end
 	if not entry[2].location == "pocket" then
-		io.write(entry[1] .. ": You don't have that.\n");
+		intfic.write(entry[1] .. ": You don't have that.\n");
 		return;
 	end
 	entry[2].location = intfic.current_location;
-	io.write(entry[1] .. ": Dropped.\n");
+	intfic.write(entry[1] .. ": Dropped.\n");
 end
 
 function intfic.examine_object(entry)
 	-- entry is a table { "noun", object };
 	if entry[2] == nil then
-		io.write(entry[1] .. ": I do not know what that is.\n");
+		intfic.write(entry[1] .. ": I do not know what that is.\n");
 		return;
 	end
 	if entry[2].location ~= "pocket" and entry[2].location ~= intfic.current_location then
-		io.write(entry[1] .. ": That is not here.\n");
+		intfic.write(entry[1] .. ": That is not here.\n");
 		return;
 	end
 	if entry[2].examine == nil then
-		io.write(entry[1] .. ": You do not see anything special about that.\n");
+		intfic.write(entry[1] .. ": You do not see anything special about that.\n");
 		return;
 	end
-	io.write(entry[1] .. ": " .. entry[2].examine .. "\n");
+	intfic.write(entry[1] .. ": " .. entry[2].examine .. "\n");
 end;
 
 function intfic.dotake(words)
 	totake = lookup_nouns_all_in_room(intfic.cdr(words));
 	if intfic.table_empty(totake) then
-		io.write("You need to tell me what to take.\n");
+		intfic.write("You need to tell me what to take.\n");
 		return;
 	end
 	intfic.map(intfic.take_object, totake);
@@ -282,7 +287,7 @@ end
 function intfic.dodrop(words)
 	todrop = lookup_nouns_all_holding(intfic.cdr(words));
 	if intfic.table_empty(todrop) then
-		io.write("You will need to tell me what to drop.\n");
+		intfic.write("You will need to tell me what to drop.\n");
 		return;
 	end
 	intfic.map(intfic.drop_object, todrop);
@@ -291,14 +296,14 @@ end
 function intfic.doexamine(words)
 	tox = lookup_nouns_all_holding_or_here(intfic.cdr(words));
 	if intfic.table_empty(tox) then
-		io.write("You will need to tell me what to examine.\n");
+		intfic.write("You will need to tell me what to examine.\n");
 		return;
 	end
 	intfic.map(intfic.examine_object, tox);
 end
 
 function intfic.not_implemented(w)
-	io.write(w[1], " is not yet implemented.\n");
+	intfic.write(w[1], " is not yet implemented.\n");
 end
 
 function intfic.execute_command(cmd)
@@ -307,14 +312,14 @@ function intfic.execute_command(cmd)
 	end
 	words = intfic.strsplit(cmd, " ,.;");
 	if intfic.verb[words[1]] == nil then
-		io.write("I don't understand what you mean by '" .. words[1] .. "'\n");
+		intfic.write("I don't understand what you mean by '" .. words[1] .. "'\n");
 		return;
 	end
 	intfic.verb[words[1]][1](words);
 end
 
 function intfic.dolisten()
-	io.write("You hear the faint hum of space machinery.\n");
+	intfic.write("You hear the faint hum of space machinery.\n");
 end
 
 function intfic.do_exit()
@@ -324,15 +329,15 @@ end
 function intfic.print_room_description(loc, obj)
 	local foundone = false
 	if not intfic.room[loc].visited then
-		io.write(intfic.room[loc].shortdesc .. "\n\n");
-		io.write(intfic.room[loc].desc .. "\n\n");
+		intfic.write(intfic.room[loc].shortdesc .. "\n\n");
+		intfic.write(intfic.room[loc].desc .. "\n\n");
 		for k, v in pairs(obj) do
 			if v.location == loc then
 				if not foundone then
-					io.write("You see:\n");
+					intfic.write("You see:\n");
 					foundone = true;
 				end
-				io.write("   " .. v.desc .. "\n");
+				intfic.write("   " .. v.desc .. "\n");
 			end
 		end
 	end
@@ -394,15 +399,37 @@ intfic.objects = {
 
 intfic.cardinal_directions = { "north", "northeast", "east", "southeast", "south", "southwest", "west", "northwest", "up", "down" };
 intfic.everything = { "all", "everything", };
+intfic.output = {};
 
-function intfic.gameloop()
-	while not intfic.time_to_quit do
-		intfic.print_room_description(intfic.current_location, intfic.objects)
-		io.write("> ");
-		command = io.read("*line");
-		intfic.execute_command(command);
-	end
+function intfic.get_output()
+	local tmp = table.concat(intfic.output);
+	intfic.output = {};
+	return tmp;
 end
 
-intfic.gameloop();
+function intfic.send_input(command)
+	intfic.execute_command(command);
+	intfic.print_room_description(intfic.current_location, intfic.objects)
+end
+
+-- This is the only function in here that uses io.write or io.read.
+-- Normally, you would not call this, but instead implement this in your
+-- mission script, and use comms functions instead of io.write and io.read.
+-- That is, hook player's comms input to intfic.send_input, and hook
+-- intfic.get_output() to comms output.
+function intfic.gameloop()
+	while not intfic.time_to_quit do
+		local out = intfic.get_output();
+		if out ~= nil then
+			io.write(out);
+		end
+		intfic.write("> ");
+		out = intfic.get_output();
+		if out ~= nil then
+			io.write(out);
+		end
+		command = io.read("*line");
+		intfic.send_input(command);
+	end
+end
 
