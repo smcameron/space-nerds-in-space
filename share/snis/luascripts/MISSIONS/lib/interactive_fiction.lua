@@ -93,11 +93,11 @@ end
 
 function intfic.go_direction(direction)
 	if intfic.room[intfic.current_location][direction] == nil then
-		intfic.write(direction .. ": You can't go that way\n");
+		intfic.write(direction .. ": I can't go that way\n");
 		return;
 	end
 	if not intfic.in_array(direction, intfic.cardinal_directions) then
-		intfic.write(direction .. ": You can't go that way\n");
+		intfic.write(direction .. ": I can't go that way\n");
 		return;
 	end
 	destination = intfic.room[intfic.current_location][direction];
@@ -119,7 +119,7 @@ end
 
 function intfic.doinventory()
 	count = 0;
-	intfic.write("You are carrying:\n");
+	intfic.write("I am carrying:\n");
 	for i, v in pairs(intfic.objects) do
 		if v.location == "pocket" then
 			intfic.write("  " .. v.desc .. "\n");
@@ -229,7 +229,7 @@ function intfic.take_object(entry)
 		return;
 	end
 	if entry[2].location == "pocket" then
-		intfic.write(entry[1] .. ": You already have that.\n");
+		intfic.write(entry[1] .. ": I already have that.\n");
 		return;
 	end
 	if not entry[2].location == intfic.current_location then
@@ -251,7 +251,7 @@ function intfic.drop_object(entry)
 		return;
 	end
 	if not entry[2].location == "pocket" then
-		intfic.write(entry[1] .. ": You don't have that.\n");
+		intfic.write(entry[1] .. ": I don't have that.\n");
 		return;
 	end
 	entry[2].location = intfic.current_location;
@@ -269,7 +269,7 @@ function intfic.examine_object(entry)
 		return;
 	end
 	if entry[2].examine == nil then
-		intfic.write(entry[1] .. ": You do not see anything special about that.\n");
+		intfic.write(entry[1] .. ": I do not see anything special about that.\n");
 		return;
 	end
 	intfic.write(entry[1] .. ": " .. entry[2].examine .. "\n");
@@ -319,7 +319,7 @@ function intfic.execute_command(cmd)
 end
 
 function intfic.dolisten()
-	intfic.write("You hear the faint hum of space machinery.\n");
+	intfic.write("I hear the faint hum of space machinery.\n");
 end
 
 function intfic.do_exit()
@@ -334,7 +334,7 @@ function intfic.print_room_description(loc, obj)
 		for k, v in pairs(obj) do
 			if v.location == loc then
 				if not foundone then
-					intfic.write("You see:\n");
+					intfic.write("I see:\n");
 					foundone = true;
 				end
 				intfic.write("   " .. v.desc .. "\n");
