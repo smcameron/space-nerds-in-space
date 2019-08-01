@@ -1,4 +1,4 @@
-package.path = package.path .. ";../MISSIONS/lib/?.lua";
+package.path = package.path .. ";share/snis/luascripts/MISSIONS/lib/?.lua";
 local intfic_package = require("interactive_fiction");
 
 intfic.current_location = "corridor";
@@ -71,4 +71,33 @@ intfic.objects = {
 	},
 };
 
-intfic.gameloop();
+function flush_output()
+	out = intfic.get_output();
+	if (out ~= nil) then
+		msgtab = intfic.strsplit(out, "\n");
+		for i,v in pairs(msgtab) do
+			comms_channel_transmit("ROBOT", 1234, "-- " .. string.upper(v));
+		end
+	end;
+	register_timer_callback("flush_output", 10, 0);
+end
+
+function robot_listen(from, channel, message)
+	if string.sub(message, 1, 3) == "-- " then
+		return;
+	end;
+	intfic.send_input(message);
+end
+
+local function setup_comms()
+	set_variable("SUPPRESS_STARBASE_COMPLAINTS", 1);
+	comms_channel_listen("ROBOT", 1234, "robot_listen");
+	register_timer_callback("flush_output", 10, 0);
+end
+
+if false then
+	intfic.gameloop();
+else
+	setup_comms();
+end;
+
