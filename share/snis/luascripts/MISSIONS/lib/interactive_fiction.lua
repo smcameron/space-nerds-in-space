@@ -91,7 +91,7 @@ function intfic.go_direction(direction)
 		io.write(direction .. ": You can't go that way\n");
 		return;
 	end
-	if not intfic.in_array(direction, intfic.canonical_directions) then
+	if not intfic.in_array(direction, intfic.cardinal_directions) then
 		io.write(direction .. ": You can't go that way\n");
 		return;
 	end
@@ -392,7 +392,7 @@ intfic.objects = {
 	nothing = { location = "nowhere", name = "nothing", desc = "nothing", portable = false };
 };
 
-intfic.canonical_directions = { "north", "northeast", "east", "southeast", "south", "southwest", "west", "northwest", "up", "down" };
+intfic.cardinal_directions = { "north", "northeast", "east", "southeast", "south", "southwest", "west", "northwest", "up", "down" };
 intfic.everything = { "all", "everything", };
 
 function intfic.gameloop()
