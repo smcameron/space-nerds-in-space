@@ -24,6 +24,7 @@ intfic = {};
 
 intfic.time_to_quit = false;
 intfic.current_location = "nowhere";
+intfic.last_location = "";
 
 function intfic.strsplit(inputstr, sep)
 	if sep == nil then
@@ -261,15 +262,15 @@ end
 function intfic.examine_object(entry)
 	-- entry is a table { "noun", object };
 	if entry[2] == nil then
-		intfic.write(entry[1] .. ": I do not know what that is.\n");
+		intfic.write("I don't know what the " .. entry[i] .. " is.\n");
 		return;
 	end
 	if entry[2].location ~= "pocket" and entry[2].location ~= intfic.current_location then
-		intfic.write(entry[1] .. ": That is not here.\n");
+		intfic.write("I don't see any " .. entry[1] .. ".\n");
 		return;
 	end
 	if entry[2].examine == nil then
-		intfic.write(entry[1] .. ": I do not see anything special about that.\n");
+		intfic.write("I don't see anything special about the " .. entry[1] .. ".\n");
 		return;
 	end
 	intfic.write(entry[1] .. ": " .. entry[2].examine .. "\n");
@@ -278,7 +279,7 @@ end;
 function intfic.dotake(words)
 	totake = lookup_nouns_all_in_room(intfic.cdr(words));
 	if intfic.table_empty(totake) then
-		intfic.write("You need to tell me what to take.\n");
+		intfic.write("Uh, say again?.\n");
 		return;
 	end
 	intfic.map(intfic.take_object, totake);
@@ -287,7 +288,7 @@ end
 function intfic.dodrop(words)
 	todrop = lookup_nouns_all_holding(intfic.cdr(words));
 	if intfic.table_empty(todrop) then
-		intfic.write("You will need to tell me what to drop.\n");
+		intfic.write("Uh, say again?\n");
 		return;
 	end
 	intfic.map(intfic.drop_object, todrop);
@@ -296,7 +297,7 @@ end
 function intfic.doexamine(words)
 	tox = lookup_nouns_all_holding_or_here(intfic.cdr(words));
 	if intfic.table_empty(tox) then
-		intfic.write("You will need to tell me what to examine.\n");
+		intfic.write("Uh, say again?\n");
 		return;
 	end
 	intfic.map(intfic.examine_object, tox);
@@ -319,7 +320,7 @@ function intfic.execute_command(cmd)
 end
 
 function intfic.dolisten()
-	intfic.write("I hear the faint hum of space machinery.\n");
+	intfic.write("Well, I can hear the humming sound of you know, all the space\nmachinery and stuff. Nothing else really.\n");
 end
 
 function intfic.do_exit()
@@ -328,8 +329,11 @@ end
 
 function intfic.print_room_description(loc, obj)
 	local foundone = false
-	if not intfic.room[loc].visited then
+	if intfic.last_location ~= intfic.current_location then
 		intfic.write(intfic.room[loc].shortdesc .. "\n\n");
+		intfic.last_location = intfic.current_location;
+	end
+	if not intfic.room[loc].visited then
 		intfic.write(intfic.room[loc].desc .. "\n\n");
 		for k, v in pairs(obj) do
 			if v.location == loc then

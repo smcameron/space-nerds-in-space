@@ -5,8 +5,8 @@ intfic.current_location = "corridor";
 intfic.cardinal_directions = { "fore", "starboard", "aft", "port", "up", "down" };
 intfic.room = {
 	corridor = {
-		shortdesc = "Corridor",
-		desc = "I am in a long corridor. To the fore is the bridge.\n" ..
+		shortdesc = "Ok, I am in the corridor",
+		desc = "To the fore is the bridge.\n" ..
 			"To the aft is the engine room. To port is a small\n" ..
 			"utility closet.",
 		fore = "bridge";
@@ -15,20 +15,20 @@ intfic.room = {
 		visited = false,
 	},
 	bridge = {
-		shortdesc = "Bridge",
-		desc = "I am on the bridge. To the aft is a corridor",
+		shortdesc = "Ok, I'm on the bridge",
+		desc = "To the aft is a corridor",
 		aft = "corridor",
 		visited = false,
 	},
 	engineroom = {
-		shortdesc = "Engine Room",
-		desc = "I am in the engine room. To fore is a corridor",
+		shortdesc = "Ok now I'm in the engine room",
+		desc = "To fore is a corridor",
 		fore = "corridor",
 		visited = false,
 	},
 	closet = {
-		shortdesc = "Utility Closet",
-		desc = "I am in the utility closet. A corridor is to starboard.",
+		shortdesc = "I'm in a utility closet",
+		desc = "A corridor is to starboard.",
 		starboard = "corridor",
 		visited = false,
 	},
@@ -44,30 +44,35 @@ intfic.objects = {
 		name = "mop",
 		desc = "a mop",
 		portable = true,
+		examine = "Um ... it's a mop? I mean... it's just a mop",
 	},
 	bucket = {
 		location = "closet",
 		name = "bucket",
 		desc = "a bucket",
 		portable = true,
+		examine = "Well, it's a plastic bucket.  It's got a handle.",
 	},
-	knife = {
+	coin = {
 		location = "pocket",
-		name = "knife",
-		desc = "a small pen knife",
+		name = "coin",
+		desc = "a coin",
 		portable = true,
+		examine = "It's just a $5 coin."
 	},
 	panel = {
 		location = "bridge",
 		name = "panel",
 		desc = "a large, complicated control panel",
 		portable = false,
+		examine = "Well, it's got lots of lights and switches and buttons and stuff.",
 	},
 	drive = {
 		location = "engineroom",
 		name = "drive",
 		desc = "a large dangerous looking warp drive",
 		portable = false,
+		examine = "Uh, it's covered in blinking lights and making a deep humming sound.",
 	},
 };
 
@@ -95,7 +100,7 @@ local function setup_comms()
 	register_timer_callback("flush_output", 10, 0);
 end
 
-if false then
+if true then
 	intfic.gameloop();
 else
 	setup_comms();
