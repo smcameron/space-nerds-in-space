@@ -100,7 +100,7 @@ local function setup_comms()
 	register_timer_callback("flush_output", 10, 0);
 end
 
-if true then
+if false then
 	intfic.gameloop();
 else
 	setup_comms();
