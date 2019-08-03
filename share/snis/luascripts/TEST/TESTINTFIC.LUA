@@ -56,6 +56,7 @@ intfic.objects = {
 	coin = {
 		location = "pocket",
 		name = "coin",
+		synonyms = { "money", "currency", "moolah" },
 		desc = "a coin",
 		portable = true,
 		examine = "It's just a $5 coin."

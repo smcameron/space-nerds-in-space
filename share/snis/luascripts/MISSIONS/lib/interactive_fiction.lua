@@ -195,8 +195,15 @@ function intfic.fixup_all_holding_or_here(objlist)
 end
 
 function intfic.lookup_noun(word)
-	if intfic.objects[word] ~= nil then
-		return { word, intfic.objects[word] };
+	for k, v in pairs(intfic.objects) do
+		if v.name == word then
+			return { word, v };
+		end
+		if v.synonyms ~= nil then
+			if intfic.in_array(word, v.synonyms) then
+				return { word, v };
+			end
+		end
 	end
 	return { word, nil };
 end
