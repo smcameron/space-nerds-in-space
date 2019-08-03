@@ -64,6 +64,37 @@ function intfic.merge_tables(a, b)
 	return a;
 end
 
+function intfic.format_table(tbl, indent)
+	if not indent then
+		indent = 0
+	end
+	if tbl == nil then
+		return "nil"
+	end
+	local toprint = string.rep(" ", indent) .. "{\r\n"
+	indent = indent + 2
+	for k, v in pairs(tbl) do
+		toprint = toprint .. string.rep(" ", indent)
+		if (type(k) == "number") then
+			toprint = toprint .. "[" .. k .. "] = "
+		elseif (type(k) == "string") then
+			toprint = toprint  .. k ..  "= "
+		end
+		if (type(v) == "number") then
+			toprint = toprint .. v .. ",\r\n"
+		elseif (type(v) == "string") then
+			toprint = toprint .. "\"" .. v .. "\",\r\n"
+		elseif (type(v) == "table") then
+			toprint = toprint .. intfic.format_table(v, indent + 2) .. ",\r\n"
+		else
+			toprint = toprint .. "\"" .. tostring(v) .. "\",\r\n"
+		end
+	end
+	toprint = toprint .. string.rep(" ", indent-2) .. "}"
+	return toprint
+end
+local fmttbl = intfic.format_table;
+
 function intfic.append_tables(a, b)
 	new_table = {}
 	i = 1;
@@ -156,6 +187,28 @@ function intfic.all_holding_or_here()
 	return intfic.append_tables(intfic.all_in_room(), intfic.all_holding());
 end
 
+-- nouns is a table of { { { word, object } .. }, { { word, object }, .. } }
+-- rooms is a list of room names { "pocket", "somewhere" },
+function intfic.disambiguate_noun_in_room(nouns, rooms)
+	answer = {};
+	for k, v in pairs(nouns) do
+		if v ~= nil then
+			if intfic.in_array(v[2].location, rooms) then
+				table.insert(answer, v);
+			end
+		end
+	end
+	return answer;
+end
+
+function intfic.disambiguate_nouns_in_room(nouns, rooms)
+	answer = {};
+	for k, v in pairs(nouns) do
+		table.insert(answer, intfic.disambiguate_noun_in_room(v, rooms));
+	end
+	return answer;
+end
+
 -- this is for handling the word "all".
 -- lookup_nouns will translate "all" to
 -- [ "all", None ].  We want to replace
@@ -195,17 +248,24 @@ function intfic.fixup_all_holding_or_here(objlist)
 end
 
 function intfic.lookup_noun(word)
+	local found = false;
+	local answer = { };
 	for k, v in pairs(intfic.objects) do
 		if v.name == word then
-			return { word, v };
+			table.insert(answer, { word, v });
+			found = true;
 		end
 		if v.synonyms ~= nil then
 			if intfic.in_array(word, v.synonyms) then
-				return { word, v };
+				table.insert(answer, { word, v });
+				found = true;
 			end
 		end
 	end
-	return { word, nil };
+	if not found then
+		table.insert(answer, { word, nil });
+	end
+	return answer;
 end
 
 function intfic.lookup_nouns(words)
@@ -285,6 +345,7 @@ end;
 
 function intfic.dotake(words)
 	totake = lookup_nouns_all_in_room(intfic.cdr(words));
+	totake = intfic.disambiguate_nouns_in_room(totake, { intfic.current_location });
 	if intfic.table_empty(totake) then
 		intfic.write("Uh, say again?.\n");
 		return;
@@ -294,6 +355,7 @@ end
 
 function intfic.dodrop(words)
 	todrop = lookup_nouns_all_holding(intfic.cdr(words));
+	todrop = intfic.disambiguate_nouns_in_room(todrop, { "pocket" });
 	if intfic.table_empty(todrop) then
 		intfic.write("Uh, say again?\n");
 		return;
@@ -303,6 +365,7 @@ end
 
 function intfic.doexamine(words)
 	tox = lookup_nouns_all_holding_or_here(intfic.cdr(words));
+	tox = intfic.disambiguate_nouns_in_room(tox, { "pocket", intfic.current_location });
 	if intfic.table_empty(tox) then
 		intfic.write("Uh, say again?\n");
 		return;

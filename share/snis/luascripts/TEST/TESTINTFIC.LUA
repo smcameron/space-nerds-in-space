@@ -61,6 +61,14 @@ intfic.objects = {
 		portable = true,
 		examine = "It's just a $5 coin."
 	},
+	coin2 = {
+		location = "bridge",
+		name = "coin",
+		synonyms = { "money", "currency", "moolah" },
+		desc = "a coin",
+		portable = true,
+		examine = "It's just a $5 coin."
+	},
 	panel = {
 		location = "bridge",
 		name = "panel",
