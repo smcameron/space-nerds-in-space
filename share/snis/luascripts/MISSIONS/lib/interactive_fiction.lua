@@ -262,7 +262,7 @@ end
 function intfic.examine_object(entry)
 	-- entry is a table { "noun", object };
 	if entry[2] == nil then
-		intfic.write("I don't know what the " .. entry[i] .. " is.\n");
+		intfic.write("I don't know what the " .. entry[1] .. " is.\n");
 		return;
 	end
 	if entry[2].location ~= "pocket" and entry[2].location ~= intfic.current_location then
