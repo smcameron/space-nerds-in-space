@@ -407,11 +407,13 @@ function intfic.print_room_description(loc, obj)
 		intfic.write(intfic.room[loc].desc .. "\n\n");
 		for k, v in pairs(obj) do
 			if v.location == loc then
-				if not foundone then
-					intfic.write("I see:\n");
-					foundone = true;
+				if v.suppress_itemizing == nil or not v.suppress_itemizing then
+					if not foundone then
+						intfic.write("I see:\n");
+						foundone = true;
+					end
+					intfic.write("   " .. v.desc .. "\n");
 				end
-				intfic.write("   " .. v.desc .. "\n");
 			end
 		end
 	end
