@@ -26,6 +26,37 @@ intfic.time_to_quit = false;
 intfic.current_location = "nowhere";
 intfic.last_location = "";
 
+function intfic.format_table(tbl, indent)
+	if not indent then
+		indent = 0
+	end
+	if tbl == nil then
+		return "nil"
+	end
+	local toprint = string.rep(" ", indent) .. "{\r\n"
+	indent = indent + 2
+	for k, v in pairs(tbl) do
+		toprint = toprint .. string.rep(" ", indent)
+		if (type(k) == "number") then
+			toprint = toprint .. "[" .. k .. "] = "
+		elseif (type(k) == "string") then
+			toprint = toprint  .. k ..  "= "
+		end
+		if (type(v) == "number") then
+			toprint = toprint .. v .. ",\r\n"
+		elseif (type(v) == "string") then
+			toprint = toprint .. "\"" .. v .. "\",\r\n"
+		elseif (type(v) == "table") then
+			toprint = toprint .. intfic.format_table(v, indent + 2) .. ",\r\n"
+		else
+			toprint = toprint .. "\"" .. tostring(v) .. "\",\r\n"
+		end
+	end
+	toprint = toprint .. string.rep(" ", indent-2) .. "}"
+	return toprint
+end
+local fmttbl = intfic.format_table;
+
 function intfic.strsplit(inputstr, sep)
 	if sep == nil then
 		sep = "%s";
@@ -63,37 +94,6 @@ function intfic.merge_tables(a, b)
 	end;
 	return a;
 end
-
-function intfic.format_table(tbl, indent)
-	if not indent then
-		indent = 0
-	end
-	if tbl == nil then
-		return "nil"
-	end
-	local toprint = string.rep(" ", indent) .. "{\r\n"
-	indent = indent + 2
-	for k, v in pairs(tbl) do
-		toprint = toprint .. string.rep(" ", indent)
-		if (type(k) == "number") then
-			toprint = toprint .. "[" .. k .. "] = "
-		elseif (type(k) == "string") then
-			toprint = toprint  .. k ..  "= "
-		end
-		if (type(v) == "number") then
-			toprint = toprint .. v .. ",\r\n"
-		elseif (type(v) == "string") then
-			toprint = toprint .. "\"" .. v .. "\",\r\n"
-		elseif (type(v) == "table") then
-			toprint = toprint .. intfic.format_table(v, indent + 2) .. ",\r\n"
-		else
-			toprint = toprint .. "\"" .. tostring(v) .. "\",\r\n"
-		end
-	end
-	toprint = toprint .. string.rep(" ", indent-2) .. "}"
-	return toprint
-end
-local fmttbl = intfic.format_table;
 
 function intfic.append_tables(a, b)
 	new_table = {}
