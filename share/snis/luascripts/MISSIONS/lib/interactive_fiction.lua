@@ -168,7 +168,7 @@ function intfic.all_in_locations(locations)
 	local stuff = {};
 	n = 1;
 	for i, v in pairs(intfic.objects) do
-		if intfic.in_array(v.location, locations) then
+		if intfic.in_array(v.location, locations) and not v.suppress_itemizing then
 			stuff[n] = i;
 			n = n + 1;
 		end
