@@ -96,7 +96,7 @@ function intfic.merge_tables(a, b)
 end
 
 function intfic.append_tables(a, b)
-	new_table = {}
+	local new_table = {}
 	i = 1;
 	for k, v in pairs(a) do
 		new_table[i] = v;
@@ -119,7 +119,7 @@ function intfic.in_array(word, array)
 end
 
 function intfic.write(str)
-	n = #intfic.output;
+	local n = #intfic.output;
 	intfic.output[n + 1] = str;
 end
 
@@ -150,7 +150,7 @@ function intfic.dolook()
 end
 
 function intfic.doinventory()
-	count = 0;
+	local count = 0;
 	intfic.write("I am carrying:\n");
 	for i, v in pairs(intfic.objects) do
 		if v.location == "pocket" then
@@ -179,7 +179,7 @@ end
 -- nouns is a table of { { { word, object } .. }, { { word, object }, .. } }
 -- rooms is a list of room names { "pocket", "somewhere" },
 function intfic.disambiguate_noun_in_room(nouns, rooms)
-	answer = {};
+	local answer = {};
 	for k, v in pairs(nouns) do
 		if v ~= nil then
 			if v[2] ~= nil then
@@ -195,7 +195,7 @@ function intfic.disambiguate_noun_in_room(nouns, rooms)
 end
 
 function intfic.disambiguate_nouns_in_room(nouns, rooms)
-	answer = {};
+	local answer = {};
 	for k, v in pairs(nouns) do
 		table.insert(answer, intfic.disambiguate_noun_in_room(v, rooms));
 	end
@@ -215,8 +215,8 @@ end
 -- correct fixup function.
 
 function intfic.fixup_all(objlist, locations)
-	foundall = false;
-	fixedup = {};
+	local foundall = false;
+	local fixedup = {};
 	for i, v in pairs(objlist) do
 		if intfic.in_array(v, intfic.everything) then
 			foundall = true;
@@ -250,7 +250,7 @@ function intfic.lookup_noun(word)
 end
 
 function intfic.lookup_nouns_all_in_locations(words, locations)
-	wordlist = intfic.fixup_all(words, locations);
+	local wordlist = intfic.fixup_all(words, locations);
 	return intfic.map(intfic.lookup_noun, wordlist);
 end
 
@@ -370,7 +370,7 @@ function intfic.close_object(entry)
 end
 
 function intfic.generic_doverb(verb_fn, words, locations)
-	direct_objs = intfic.lookup_nouns_all_in_locations(intfic.cdr(words), locations);
+	local direct_objs = intfic.lookup_nouns_all_in_locations(intfic.cdr(words), locations);
 	direct_objs = intfic.disambiguate_nouns_in_room(direct_objs, locations);
 	if intfic.table_empty(direct_objs) then
 		intfic.write("Uh, say again?.\n");
@@ -409,7 +409,7 @@ function intfic.execute_command(cmd)
 	if cmd == "" then
 		return
 	end
-	words = intfic.strsplit(cmd, " ,.;");
+	local words = intfic.strsplit(cmd, " ,.;");
 	if intfic.verb[words[1]] == nil then
 		intfic.write("I don't understand what you mean by '" .. words[1] .. "'\n");
 		return;
