@@ -163,28 +163,17 @@ function intfic.doinventory()
 	end
 end
 
-function intfic.all_in_location(loc)
-	stuff = {};
+-- return list of objects that are currently in the given list of locations
+function intfic.all_in_locations(locations)
+	local stuff = {};
 	n = 1;
 	for i, v in pairs(intfic.objects) do
-		if v.location == loc then
+		if intfic.in_array(v.location, locations) then
 			stuff[n] = i;
 			n = n + 1;
 		end
 	end
 	return stuff;
-end
-
-function intfic.all_in_room()
-	return intfic.all_in_location(intfic.current_location);
-end
-
-function intfic.all_holding()
-	return intfic.all_in_location("pocket");
-end
-
-function intfic.all_holding_or_here()
-	return intfic.append_tables(intfic.all_in_room(), intfic.all_holding());
 end
 
 -- nouns is a table of { { { word, object } .. }, { { word, object }, .. } }
@@ -215,7 +204,7 @@ end
 
 -- this is for handling the word "all".
 -- lookup_nouns will translate "all" to
--- [ "all", None ].  We want to replace
+-- { "all", nil }.  We want to replace
 -- that with the appropriate list of objects,
 -- The "appropriate" list is context sensitive.
 -- which for "drop", will be the list of objs
@@ -225,7 +214,7 @@ end
 -- Hence the fixupfunc, providing the context
 -- correct fixup function.
 
-function intfic.fixup_all(objlist, fixupfunc)
+function intfic.fixup_all(objlist, locations)
 	foundall = false;
 	fixedup = {};
 	for i, v in pairs(objlist) do
@@ -234,21 +223,9 @@ function intfic.fixup_all(objlist, fixupfunc)
 		end
 	end
 	if foundall then
-		return intfic.merge_tables(objlist, fixupfunc());
+		return intfic.merge_tables(objlist, intfic.all_in_locations(locations));
 	end
 	return objlist;
-end
-
-function intfic.fixup_all_in_room(objlist)
-	return intfic.fixup_all(objlist, intfic.all_in_room);
-end
-
-function intfic.fixup_all_holding(objlist)
-	return intfic.fixup_all(objlist, intfic.all_holding);
-end
-
-function intfic.fixup_all_holding_or_here(objlist)
-	return intfic.fixup_all(objlist, intfic.all_holding_or_here);
 end
 
 function intfic.lookup_noun(word)
@@ -272,25 +249,9 @@ function intfic.lookup_noun(word)
 	return answer;
 end
 
-function intfic.lookup_nouns(words)
-	return intfic.map(intfic.lookup_noun, words);
-end
-
-function intfic.lookup_nouns_fixup(words, fixupfunc)
-	wordlist = fixupfunc(words);
-	return intfic.lookup_nouns(wordlist);
-end
-
-function lookup_nouns_all_in_room(words)
-	return intfic.lookup_nouns_fixup(words, intfic.fixup_all_in_room);
-end
-
-function lookup_nouns_all_holding(words)
-	return intfic.lookup_nouns_fixup(words, intfic.fixup_all_holding);
-end
-
-function lookup_nouns_all_holding_or_here(words)
-	return intfic.lookup_nouns_fixup(words, intfic.fixup_all_holding_or_here);
+function intfic.lookup_nouns_all_in_locations(words, locations)
+	wordlist = intfic.fixup_all(words, locations);
+	return intfic.map(intfic.lookup_noun, wordlist);
 end
 
 function intfic.take_object(entry)
@@ -409,7 +370,7 @@ function intfic.close_object(entry)
 end
 
 function intfic.dotake(words)
-	totake = lookup_nouns_all_in_room(intfic.cdr(words));
+	totake = intfic.lookup_nouns_all_in_locations(intfic.cdr(words), { intfic.current_location });
 	totake = intfic.disambiguate_nouns_in_room(totake, { intfic.current_location });
 	if intfic.table_empty(totake) then
 		intfic.write("Uh, say again?.\n");
@@ -419,7 +380,7 @@ function intfic.dotake(words)
 end
 
 function intfic.dodrop(words)
-	todrop = lookup_nouns_all_holding(intfic.cdr(words));
+	todrop = intfic.lookup_nouns_all_in_locations(intfic.cdr(words), { "pocket" });
 	todrop = intfic.disambiguate_nouns_in_room(todrop, { "pocket" });
 	if intfic.table_empty(todrop) then
 		intfic.write("Uh, say again?\n");
@@ -429,7 +390,7 @@ function intfic.dodrop(words)
 end
 
 function intfic.doexamine(words)
-	tox = lookup_nouns_all_holding_or_here(intfic.cdr(words));
+	tox = intfic.lookup_nouns_all_in_locations(intfic.cdr(words), { "pocket", intfic.current_location });
 	tox = intfic.disambiguate_nouns_in_room(tox, { "pocket", intfic.current_location });
 	if intfic.table_empty(tox) then
 		intfic.write("Uh, say again?\n");
@@ -439,7 +400,7 @@ function intfic.doexamine(words)
 end
 
 function intfic.doopen(words)
-	toopen = lookup_nouns_all_holding_or_here(intfic.cdr(words));
+	toopen = intfic.lookup_nouns_all_in_locations(intfic.cdr(words), { "pocket", intfic.current_location });
 	toopen = intfic.disambiguate_nouns_in_room(toopen, { "pocket", intfic.current_location });
 	if intfic.table_empty(toopen) then
 		intfic.write("Uh, say again?\n");
@@ -449,7 +410,7 @@ function intfic.doopen(words)
 end
 
 function intfic.doclose(words)
-	toclose = lookup_nouns_all_holding_or_here(intfic.cdr(words));
+	toclose = intfic.lookup_nouns_all_in_locations(intfic.cdr(words), { "pocket", intfic.current_location });
 	toclose = intfic.disambiguate_nouns_in_room(toclose, { "pocket", intfic.current_location });
 	if intfic.table_empty(toclose) then
 		intfic.write("Uh, say again?\n");
