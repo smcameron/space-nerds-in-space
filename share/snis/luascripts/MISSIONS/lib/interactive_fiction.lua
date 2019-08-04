@@ -193,8 +193,12 @@ function intfic.disambiguate_noun_in_room(nouns, rooms)
 	answer = {};
 	for k, v in pairs(nouns) do
 		if v ~= nil then
-			if intfic.in_array(v[2].location, rooms) then
-				table.insert(answer, v);
+			if v[2] ~= nil then
+				if intfic.in_array(v[2].location, rooms) then
+					table.insert(answer, v);
+				end
+			else
+				table.insert(answer, { v[1], nil });
 			end
 		end
 	end
