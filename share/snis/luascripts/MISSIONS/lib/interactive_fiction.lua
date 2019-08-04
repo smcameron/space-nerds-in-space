@@ -369,56 +369,37 @@ function intfic.close_object(entry)
 	return;
 end
 
-function intfic.dotake(words)
-	totake = intfic.lookup_nouns_all_in_locations(intfic.cdr(words), { intfic.current_location });
-	totake = intfic.disambiguate_nouns_in_room(totake, { intfic.current_location });
-	if intfic.table_empty(totake) then
+function intfic.generic_doverb(verb_fn, words, locations)
+	direct_objs = intfic.lookup_nouns_all_in_locations(intfic.cdr(words), locations);
+	direct_objs = intfic.disambiguate_nouns_in_room(direct_objs, locations);
+	if intfic.table_empty(direct_objs) then
 		intfic.write("Uh, say again?.\n");
 		return;
 	end
-	intfic.map(intfic.take_object, totake);
+	for k, v in ipairs(direct_objs) do
+		intfic.map(verb_fn, v);
+	end
+end
+
+function intfic.dotake(words)
+	intfic.generic_doverb(intfic.take_object, words, { intfic.current_location });
 end
 
 function intfic.dodrop(words)
-	todrop = intfic.lookup_nouns_all_in_locations(intfic.cdr(words), { "pocket" });
-	todrop = intfic.disambiguate_nouns_in_room(todrop, { "pocket" });
-	if intfic.table_empty(todrop) then
-		intfic.write("Uh, say again?\n");
-		return;
-	end
-	intfic.map(intfic.drop_object, todrop);
+	intfic.generic_doverb(intfic.drop_object, words, { "pocket" });
 end
 
 function intfic.doexamine(words)
-	tox = intfic.lookup_nouns_all_in_locations(intfic.cdr(words), { "pocket", intfic.current_location });
-	tox = intfic.disambiguate_nouns_in_room(tox, { "pocket", intfic.current_location });
-	if intfic.table_empty(tox) then
-		intfic.write("Uh, say again?\n");
-		return;
-	end
-	intfic.map(intfic.examine_object, tox);
+	intfic.generic_doverb(intfic.examine_object, words, { "pocket", intfic.current_location });
 end
 
 function intfic.doopen(words)
-	toopen = intfic.lookup_nouns_all_in_locations(intfic.cdr(words), { "pocket", intfic.current_location });
-	toopen = intfic.disambiguate_nouns_in_room(toopen, { "pocket", intfic.current_location });
-	if intfic.table_empty(toopen) then
-		intfic.write("Uh, say again?\n");
-		return;
-	end
-	intfic.map(intfic.open_object, toopen);
+	intfic.generic_doverb(intfic.open_object, words, { "pocket", intfic.current_location });
 end
 
 function intfic.doclose(words)
-	toclose = intfic.lookup_nouns_all_in_locations(intfic.cdr(words), { "pocket", intfic.current_location });
-	toclose = intfic.disambiguate_nouns_in_room(toclose, { "pocket", intfic.current_location });
-	if intfic.table_empty(toclose) then
-		intfic.write("Uh, say again?\n");
-		return;
-	end
-	intfic.map(intfic.close_object, toclose);
+	intfic.generic_doverb(intfic.close_object, words, { "pocket", intfic.current_location });
 end
-
 
 function intfic.not_implemented(w)
 	intfic.write(w[1], " is not yet implemented.\n");
