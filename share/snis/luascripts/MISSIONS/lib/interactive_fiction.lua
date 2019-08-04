@@ -340,12 +340,73 @@ function intfic.examine_object(entry)
 		intfic.write("I don't see any " .. entry[1] .. ".\n");
 		return;
 	end
+	if entry[2].doorstatus ~= nil then
+		intfic.write("The " .. entry[2].desc .. " is " .. entry[2].doorstatus .. ".\n");
+	end
 	if entry[2].examine == nil then
 		intfic.write("I don't see anything special about the " .. entry[1] .. ".\n");
 		return;
 	end
 	intfic.write(entry[1] .. ": " .. entry[2].examine .. "\n");
 end;
+
+function intfic.open_object(entry)
+	-- entry is a table { "noun", object };
+	if entry[2] == nil then
+		intfic.write("I don't know what the " .. entry[1] .. " is.\n");
+		return;
+	end
+	if entry[2].location ~= "pocket" and entry[2].location ~= intfic.current_location then
+		intfic.write("I don't see any " .. entry[1] .. ".\n");
+		return;
+	end
+	if entry[2].doorstatus == nil then
+		intfic.write("I don't see how one could open the " .. entry[1] .. ".\n");
+		return;
+	end
+	if entry[2].doorstatus == "open" then
+		intfic.write("The " .. entry[1] .. " is already open.\n");
+		return;
+	end
+	-- connect the rooms and open the two halves of the door
+	local door1 = entry[2];
+	local door2 = intfic.objects[door1.complement_door];
+	intfic.room[door1.location][door1.doordirout] = door1.doorroom;
+	intfic.room[door2.location][door2.doordirout] = door2.doorroom;
+	door1.doorstatus = "open";
+	door2.doorstatus = "open";
+	intfic.write("Ok, I opened the " .. door1.desc .. ".\n");
+	return;
+end
+
+function intfic.close_object(entry)
+	-- entry is a table { "noun", object };
+	if entry[2] == nil then
+		intfic.write("I don't know what the " .. entry[1] .. " is.\n");
+		return;
+	end
+	if entry[2].location ~= "pocket" and entry[2].location ~= intfic.current_location then
+		intfic.write("I don't see any " .. entry[1] .. ".\n");
+		return;
+	end
+	if entry[2].doorstatus == nil then
+		intfic.write("I don't see how one could close the " .. entry[1] .. ".\n");
+		return;
+	end
+	if entry[2].doorstatus == "closed" then
+		intfic.write("The " .. entry[1] .. " is already closed.\n");
+		return;
+	end
+	-- close both halves of the door and disconnect the rooms
+	local door1 = entry[2];
+	local door2 = intfic.objects[door1.complement_door];
+	intfic.room[door1.location][door1.doordirout] = nil;
+	intfic.room[door2.location][door2.doordirout] = nil;
+	door1.doorstatus = "closed";
+	door2.doorstatus = "closed";
+	intfic.write("Ok, I closed the " .. entry[2].desc .. ".\n");
+	return;
+end
 
 function intfic.dotake(words)
 	totake = lookup_nouns_all_in_room(intfic.cdr(words));
@@ -376,6 +437,27 @@ function intfic.doexamine(words)
 	end
 	intfic.map(intfic.examine_object, tox);
 end
+
+function intfic.doopen(words)
+	toopen = lookup_nouns_all_holding_or_here(intfic.cdr(words));
+	toopen = intfic.disambiguate_nouns_in_room(toopen, { "pocket", intfic.current_location });
+	if intfic.table_empty(toopen) then
+		intfic.write("Uh, say again?\n");
+		return;
+	end
+	intfic.map(intfic.open_object, toopen);
+end
+
+function intfic.doclose(words)
+	toclose = lookup_nouns_all_holding_or_here(intfic.cdr(words));
+	toclose = intfic.disambiguate_nouns_in_room(toclose, { "pocket", intfic.current_location });
+	if intfic.table_empty(toclose) then
+		intfic.write("Uh, say again?\n");
+		return;
+	end
+	intfic.map(intfic.close_object, toclose);
+end
+
 
 function intfic.not_implemented(w)
 	intfic.write(w[1], " is not yet implemented.\n");
@@ -431,6 +513,8 @@ intfic.verb = {
 		drop = { intfic.dodrop },
 		look = { intfic.dolook },
 		examine = { intfic.doexamine },
+		open = { intfic.doopen },
+		close = { intfic.doclose },
 		x = { intfic.doexamine },
 		inventory = { intfic.doinventory },
 		i = { intfic.doinventory },

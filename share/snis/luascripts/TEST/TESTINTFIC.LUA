@@ -7,11 +7,11 @@ intfic.room = {
 	corridor = {
 		shortdesc = "Ok, I am in the corridor",
 		desc = "To the fore is the bridge.\n" ..
-			"To the aft is the engine room. To port is a small\n" ..
+			"To the aft is the engine room.\n" ..
+			"To port is the door of a small\n" ..
 			"utility closet.",
 		fore = "bridge";
 		aft = "engineroom",
-		port = "closet",
 		visited = false,
 	},
 	bridge = {
@@ -29,7 +29,6 @@ intfic.room = {
 	closet = {
 		shortdesc = "I'm in a utility closet",
 		desc = "A corridor is to starboard.",
-		starboard = "corridor",
 		visited = false,
 	},
 	pocket = {
@@ -82,6 +81,28 @@ intfic.objects = {
 		desc = "a large dangerous looking warp drive",
 		portable = false,
 		examine = "Uh, it's covered in blinking lights and making a deep humming sound.",
+	},
+	closet_door1 = {
+		location = "corridor",
+		name = "door",
+		desc = "closet door",
+		portable = false,
+		suppress_itemizing = true,
+		doorstatus = "closed",
+		doorroom = "closet",
+		doordirout = "port",
+		complement_door = "closet_door2"; -- doors are in pairs
+	},
+	closet_door2 = {
+		location = "closet",
+		name = "door",
+		desc = "closet door",
+		portable = false,
+		suppress_itemizing = true,
+		doorstatus = "closed",
+		doorroom = "corridor",
+		doordirout = "starboard",
+		complement_door = "closet_door1"; -- doors are in pairs
 	},
 };
 
