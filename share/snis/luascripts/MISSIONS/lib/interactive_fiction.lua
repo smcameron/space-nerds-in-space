@@ -26,6 +26,16 @@ intfic.time_to_quit = false;
 intfic.current_location = "nowhere";
 intfic.last_location = "";
 
+local function print_value(v, indent)
+	local toprint = "";
+	if (type(v) == "number") then
+		toprint = toprint .. v .. ",\r\n"
+	elseif (type(v) == "string") then
+		toprint = toprint .. "\"" .. v .. "\",\r\n"
+	end
+	return toprint;
+end
+
 function intfic.format_table(tbl, indent)
 	if not indent then
 		indent = 0
@@ -35,6 +45,10 @@ function intfic.format_table(tbl, indent)
 	end
 	local toprint = string.rep(" ", indent) .. "{\r\n"
 	indent = indent + 2
+	if type(tbl) ~= "table" then
+		toprint = toprint .. print_value(tbl) .. string.rep(" ", indent - 2) .. "\n";
+		return toprint
+	end
 	for k, v in pairs(tbl) do
 		toprint = toprint .. string.rep(" ", indent)
 		if (type(k) == "number") then
