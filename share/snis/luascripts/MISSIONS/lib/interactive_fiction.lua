@@ -204,6 +204,21 @@ function intfic.getlocation(o)
 	return o.location;
 end
 
+-- return true if o is "on" or "in" possible_container (recursively)
+function is_contained_in(o, possible_container)
+	if o.related_object == nil then
+		return false;
+	end
+	if o.related_object[2] == possible_container.unique_name then
+		return true;
+	end
+	container = intfic.objects[o.related_object[2]];
+	if not container.surface and not container.container then
+		return false;
+	end
+	return is_contained_in(container, possible_container);
+end
+
 function intfic.setlocation(o, location)
 	o.location = location;
 	if o.surface or o.container then
@@ -610,9 +625,13 @@ function intfic.doput(words)
 						if not v2[2].portable then
 							intfic.write("I can't seem to move the " .. v2[2].desc .. "\n");
 						else
-							v2[2].related_object = { "on", surface.unique_name };
-							intfic.setlocation(v2[2], surface.location);
-							intfic.write("Ok, I put the " .. v2[2].desc .. " on the " .. surface.name .. "\n");
+							if is_contained_in(surface, v2[2]) then
+								intfic.write(v2[2].name ..  ": Uh, we will need a higher dimensional universe first.\n");
+							else
+								v2[2].related_object = { "on", surface.unique_name };
+								intfic.setlocation(v2[2], surface.location);
+								intfic.write("Ok, I put the " .. v2[2].desc .. " on the " .. surface.name .. "\n");
+							end
 						end
 					else
 						intfic.write("I can't put the " .. v2[2].desc .. " on itself\n");
@@ -669,9 +688,13 @@ function intfic.doput(words)
 						if not v2[2].portable then
 							intfic.write("I can't seem to move the " .. v2[2].desc .. "\n");
 						else
-							v2[2].related_object = { "in", container.unique_name };
-							intfic.setlocation(v2[2], container.location);
-							intfic.write("Ok, I put the " .. v2[2].desc .. " in the " .. container.name .. "\n");
+							if is_contained_in(container, v2[2]) then
+								intfic.write(v2[2].name ..  ": Uh, we will need a higher dimensional universe first.\n");
+							else
+								v2[2].related_object = { "in", container.unique_name };
+								intfic.setlocation(v2[2], container.location);
+								intfic.write("Ok, I put the " .. v2[2].desc .. " in the " .. container.name .. "\n");
+							end
 						end
 					else
 						intfic.write("I can't put the " .. v2[2].desc .. " in itself\n");
