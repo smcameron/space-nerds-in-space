@@ -772,6 +772,7 @@ intfic.verb = {
 		get = { intfic.dotake },
 		drop = { intfic.dodrop },
 		look = { intfic.dolook },
+		l = { intfic.dolook },
 		examine = { intfic.doexamine },
 		open = { intfic.doopen },
 		close = { intfic.doclose },
