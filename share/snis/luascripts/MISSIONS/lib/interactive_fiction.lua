@@ -623,18 +623,18 @@ function intfic.doput(words)
 				if intfic.getlocation(v2[2]) == "pocket" or intfic.getlocation(v2[2]) == intfic.current_location then
 					if v2[2] ~= surface then -- can't put something on itself.
 						if not v2[2].portable then
-							intfic.write("I can't seem to move the " .. v2[2].desc .. "\n");
+							intfic.write("I can't seem to move the " .. v2[2].name .. "\n");
 						else
 							if is_contained_in(surface, v2[2]) then
 								intfic.write(v2[2].name ..  ": Uh, we will need a higher dimensional universe first.\n");
 							else
 								v2[2].related_object = { "on", surface.unique_name };
 								intfic.setlocation(v2[2], surface.location);
-								intfic.write("Ok, I put the " .. v2[2].desc .. " on the " .. surface.name .. "\n");
+								intfic.write("Ok, I put the " .. v2[2].name .. " on the " .. surface.name .. "\n");
 							end
 						end
 					else
-						intfic.write("I can't put the " .. v2[2].desc .. " on itself\n");
+						intfic.write("I can't put the " .. v2[2].name .. " on itself\n");
 					end
 				else
 					intfic.write(v2[2].name .. ": I don't see that here.\n");
@@ -686,18 +686,18 @@ function intfic.doput(words)
 				if intfic.getlocation(v2[2]) == "pocket" or intfic.getlocation(v2[2]) == intfic.current_location then
 					if v2[2] ~= surface then -- can't put something in itself.
 						if not v2[2].portable then
-							intfic.write("I can't seem to move the " .. v2[2].desc .. "\n");
+							intfic.write("I can't seem to move the " .. v2[2].name .. "\n");
 						else
 							if is_contained_in(container, v2[2]) then
 								intfic.write(v2[2].name ..  ": Uh, we will need a higher dimensional universe first.\n");
 							else
 								v2[2].related_object = { "in", container.unique_name };
 								intfic.setlocation(v2[2], container.location);
-								intfic.write("Ok, I put the " .. v2[2].desc .. " in the " .. container.name .. "\n");
+								intfic.write("Ok, I put the " .. v2[2].name .. " in the " .. container.name .. "\n");
 							end
 						end
 					else
-						intfic.write("I can't put the " .. v2[2].desc .. " in itself\n");
+						intfic.write("I can't put the " .. v2[2].name .. " in itself\n");
 					end
 				else
 					intfic.write(v2[2].name .. ": I don't see that here.\n");
