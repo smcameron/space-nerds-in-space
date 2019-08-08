@@ -82,6 +82,40 @@ function intfic.strsplit(inputstr, sep)
 	return new_array;
 end
 
+-- split_wordlist, given words ("a", "b", "c", "d", ... } and separatorwords {"b"}
+-- returns:
+-- { direct_objs = { "a", },
+--		 indirect_objs = { "c", "d" },
+--		 prep = "b"
+-- }
+function intfic.split_wordlist(words, separatorwords)
+	local found = false
+	local firstlist = {};
+	local secondlist = {};
+	local prep = "";
+	count = 1;
+	for k, v in pairs(words) do
+		if intfic.in_array(v, separatorwords) then
+			found = true;
+			count = 1;
+			prep = v;
+		else
+			if found then
+				secondlist[count] =  v;
+				count = count + 1;
+			else
+				firstlist[count] = v;
+				count = count + 1;
+			end
+		end
+	end
+	local answer = {};
+	answer.direct_objs = firstlist;
+	answer.prep = prep;
+	answer.indirect_objs = secondlist;
+	return answer;
+end
+
 function intfic.map(func, array)
 	local new_array = {};
 	for i, v in ipairs(array) do
@@ -163,12 +197,41 @@ function intfic.dolook()
 	intfic.print_room_description(intfic.current_location, intfic.objects);
 end
 
+function intfic.getlocation(o)
+	if o == nil then
+		return nil;
+	end
+	return o.location;
+end
+
+function intfic.setlocation(o, location)
+	o.location = location;
+	if o.surface or o.container then
+		intfic.set_related_object_locations(o);
+	end
+end
+
+function intfic.set_related_object_locations(o)
+	for k, v in pairs(intfic.objects) do
+		if v.related_object ~= nil then
+			if v.related_object[2] == o.unique_name then
+				intfic.setlocation(v, intfic.getlocation(o));
+			end
+		end
+	end
+end
+
 function intfic.doinventory()
 	local count = 0;
 	intfic.write("I am carrying:\n");
 	for i, v in pairs(intfic.objects) do
-		if v.location == "pocket" then
-			intfic.write("  " .. v.desc .. "\n");
+		if intfic.getlocation(v) == "pocket" then
+			if v.related_object ~= nil then
+				intfic.write("   " .. v.desc .. " (" .. v.related_object[1] .. " the " ..
+						intfic.objects[v.related_object[2]].name .. ")\n");
+			else
+				intfic.write("  " .. v.desc .. "\n");
+			end
 			count = count + 1;
 		end
 	end
@@ -182,7 +245,7 @@ function intfic.all_in_locations(locations)
 	local stuff = {};
 	n = 1;
 	for i, v in pairs(intfic.objects) do
-		if intfic.in_array(v.location, locations) and not v.suppress_itemizing then
+		if intfic.in_array(intfic.getlocation(v), locations) and not v.suppress_itemizing then
 			stuff[n] = intfic.objects[i].name;
 			n = n + 1;
 		end
@@ -194,25 +257,81 @@ end
 -- rooms is a list of room names { "pocket", "somewhere" },
 function intfic.disambiguate_noun_in_room(nouns, rooms)
 	local answer = {};
+	local count = 1;
 	for k, v in pairs(nouns) do
 		if v ~= nil then
 			if v[2] ~= nil then
-				if intfic.in_array(v[2].location, rooms) then
-					table.insert(answer, v);
+				if intfic.in_array(intfic.getlocation(v[2]), rooms) then
+					answer[count] = v;
+					count = count + 1;
+				else
+					answer[count] = { v[1], "not here" };
+					count = count + 1;
 				end
 			else
-				table.insert(answer, { v[1], nil });
+				answer[count] = { v[1], nil };
+				count = count + 1;
 			end
 		end
 	end
 	return answer;
 end
 
+-- We can end up with duplicate objects, e.g. maybe we have two coins, one of which is
+-- "here", and one which is not.  If we "take coin", we should take the one that is here
+-- and not complain that the one that isn't here, isn't here. This function removes
+-- duplicate entries that would cause such complaints.
+local function remove_duplicate_unfound_nouns(nouns)
+	local not_here = {};
+	local here = {};
+	count = 1;
+	for k, v in pairs(nouns) do
+		for k2, v2 in pairs(v) do
+			if v2[2] == "not here" then
+				if not_here[v2[1]] == nil then
+					not_here[v2[1]] = 1;
+				else
+					not_here[v2[1]] = not_here[v2[1]] + 1;
+				end
+			else
+				if here[v2[1]] == nil then
+					here[v2[1]] = 1;
+				else
+					here[v2[1]] = here[v2[1]] + 1;
+				end
+			end
+		end
+	end
+
+	local answer = {};
+	count = 1;
+
+	for k, v in pairs(nouns) do
+		for k2, v2 in pairs(v) do
+			if here[v2[1]] == nil and v2[2] == "not here" and not_here[v2[1]] ~= nil then
+				answer[count] = v2;
+				count = count + 1;
+				here[v2[1]] = nil;
+				not_here[v2[1]] = nil;
+			elseif here[v2[1]] ~= nil and v2[2] ~= "not here" then
+				answer[count] = v2;
+				count = count + 1;
+				here[v2[1]] = nil;
+				not_here[v2[1]] = nil;
+			end
+		end
+	end
+	return { answer };
+end
+
 function intfic.disambiguate_nouns_in_room(nouns, rooms)
 	local answer = {};
+	local count = 1;
 	for k, v in pairs(nouns) do
-		table.insert(answer, intfic.disambiguate_noun_in_room(v, rooms));
+		answer[count] = intfic.disambiguate_noun_in_room(v, rooms);
+		count = count + 1;
 	end
+	answer = remove_duplicate_unfound_nouns(answer);
 	return answer;
 end
 
@@ -249,8 +368,7 @@ function intfic.lookup_noun(word)
 		if v.name == word then
 			table.insert(answer, { word, v });
 			found = true;
-		end
-		if v.synonyms ~= nil then
+		elseif v.synonyms ~= nil then
 			if intfic.in_array(word, v.synonyms) then
 				table.insert(answer, { word, v });
 				found = true;
@@ -270,16 +388,20 @@ end
 
 function intfic.take_object(entry)
 	-- entry is a table { "noun", object };
-
+	if entry[2] == "not here" then
+		intfic.write(entry[1] .. ": I do not see that here.\n");
+		return;
+	end;
 	if entry[2] == nil then
 		intfic.write(entry[1] .. ": I don't know about that.\n");
 		return;
 	end
-	if entry[2].location == "pocket" then
+	local loc = intfic.getlocation(entry[2]);
+	if loc == "pocket" then
 		intfic.write(entry[1] .. ": I already have that.\n");
 		return;
 	end
-	if not entry[2].location == intfic.current_location then
+	if not loc == intfic.current_location then
 		intfic.write(entry[1] .. ": I don't see that here.\n");
 		return;
 	end
@@ -287,31 +409,40 @@ function intfic.take_object(entry)
 		intfic.write(entry[1] .. ": I can't seem to take it.\n");
 		return;
 	end
-	entry[2].location = "pocket";
+	intfic.setlocation(entry[2], "pocket");
+	entry[2].related_object = nil;
 	intfic.write(entry[1] .. ": Taken.\n");
 end
 
 function intfic.drop_object(entry)
 	-- entry is a table { "noun", object };
+	if entry[2] == "not here" then
+		intfic.write(entry[1] .. ": I don't see that around.\n");
+		return;
+	end
 	if entry[2] == nil then
 		intfic.write(entry[1] .. ": I do not know what that is.\n");
 		return;
 	end
-	if not entry[2].location == "pocket" then
+	if not intfic.getlocation(entry[2]) == "pocket" then
 		intfic.write(entry[1] .. ": I don't have that.\n");
 		return;
 	end
-	entry[2].location = intfic.current_location;
+	intfic.setlocation(entry[2], intfic.current_location);
 	intfic.write(entry[1] .. ": Dropped.\n");
 end
 
 function intfic.examine_object(entry)
 	-- entry is a table { "noun", object };
+	if entry[2] == "not here" then
+		intfic.write("I don't see the " .. entry[1] .. " here.\n");
+		return;
+	end
 	if entry[2] == nil then
 		intfic.write("I don't know what the " .. entry[1] .. " is.\n");
 		return;
 	end
-	if entry[2].location ~= "pocket" and entry[2].location ~= intfic.current_location then
+	if intfic.getlocation(entry[2]) ~= "pocket" and intfic.getlocation(entry[2]) ~= intfic.current_location then
 		intfic.write("I don't see any " .. entry[1] .. ".\n");
 		return;
 	end
@@ -327,11 +458,15 @@ end;
 
 function intfic.open_object(entry)
 	-- entry is a table { "noun", object };
+	if entry[2] == "not here" then
+		intfic.write("I don't see the " .. entry[1] .. " here.\n");
+		return;
+	end
 	if entry[2] == nil then
 		intfic.write("I don't know what the " .. entry[1] .. " is.\n");
 		return;
 	end
-	if entry[2].location ~= "pocket" and entry[2].location ~= intfic.current_location then
+	if intfic.getlocation(entry[2]) ~= "pocket" and intfic.getlocation(entry[2]) ~= intfic.current_location then
 		intfic.write("I don't see any " .. entry[1] .. ".\n");
 		return;
 	end
@@ -346,8 +481,10 @@ function intfic.open_object(entry)
 	-- connect the rooms and open the two halves of the door
 	local door1 = entry[2];
 	local door2 = intfic.objects[door1.complement_door];
-	intfic.room[door1.location][door1.doordirout] = door1.doorroom;
-	intfic.room[door2.location][door2.doordirout] = door2.doorroom;
+	local loc1 = intfic.getlocation(door1);
+	local loc2 = intfic.getlocation(door2);
+	intfic.room[loc1][door1.doordirout] = door1.doorroom;
+	intfic.room[loc2][door2.doordirout] = door2.doorroom;
 	door1.doorstatus = "open";
 	door2.doorstatus = "open";
 	intfic.write("Ok, I opened the " .. door1.desc .. ".\n");
@@ -356,11 +493,15 @@ end
 
 function intfic.close_object(entry)
 	-- entry is a table { "noun", object };
+	if entry[2] == "not here" then
+		intfic.write("I don't see the " .. entry[1] .. " here.\n");
+		return;
+	end
 	if entry[2] == nil then
 		intfic.write("I don't know what the " .. entry[1] .. " is.\n");
 		return;
 	end
-	if entry[2].location ~= "pocket" and entry[2].location ~= intfic.current_location then
+	if intfic.getlocation(entry[2]) ~= "pocket" and intfic.getlocation(entry[2]) ~= intfic.current_location then
 		intfic.write("I don't see any " .. entry[1] .. ".\n");
 		return;
 	end
@@ -375,8 +516,10 @@ function intfic.close_object(entry)
 	-- close both halves of the door and disconnect the rooms
 	local door1 = entry[2];
 	local door2 = intfic.objects[door1.complement_door];
-	intfic.room[door1.location][door1.doordirout] = nil;
-	intfic.room[door2.location][door2.doordirout] = nil;
+	local loc1 = intfic.getlocation(door1);
+	local loc2 = intfic.getlocation(door2);
+	intfic.room[loc1][door1.doordirout] = nil;
+	intfic.room[loc2][door2.doordirout] = nil;
 	door1.doorstatus = "closed";
 	door2.doorstatus = "closed";
 	intfic.write("Ok, I closed the " .. entry[2].desc .. ".\n");
@@ -411,12 +554,145 @@ function intfic.doopen(words)
 	intfic.generic_doverb(intfic.open_object, words, { "pocket", intfic.current_location });
 end
 
+function intfic.doput(words)
+
+	local putparams = intfic.split_wordlist(intfic.cdr(words), { "on", "in" });
+	local count = 0;
+
+	if not intfic.table_empty(intfic.cdr(putparams.indirect_objs)) then
+		-- there should be only one indirect object.
+		intfic.write("I don't understand quite what you mean.\n");
+		return;
+	end
+	if putparams.prep == "on" then
+		if intfic.table_empty(putparams.direct_objs) then
+			-- This is actually "wear", e.g. "put on coat".
+			intfic.not_implemented({ "put on (wear)"});
+			return;
+		end
+
+		local direct_objs = intfic.lookup_nouns_all_in_locations(putparams.direct_objs, { intfic.current_location, "pocket" });
+		local indirect_objs = intfic.lookup_nouns_all_in_locations(putparams.indirect_objs, { intfic.current_location, "pocket" });
+		local disam_direct_objs = intfic.disambiguate_nouns_in_room(direct_objs, { intfic.current_location, "pocket"});
+		local disam_indirect_objs = intfic.disambiguate_nouns_in_room(indirect_objs, { intfic.current_location, "pocket"});
+
+		count = 0;
+		local surface = {};
+		for k, v in pairs(disam_indirect_objs) do
+			for k2, v2 in pairs(v) do
+				if intfic.getlocation(v2[2]) ~= "pocket" and
+					intfic.getlocation(v2[2]) ~= intfic.current_location then
+					intfic.write("I do not see the " .. v2[1] .. " here.\n");
+					return;
+				end
+				if v2[2] == "not here" then
+					intfic.write("I do not see the " .. v2[1] .. " here.\n");
+					return;
+				end
+				count = count + 1;
+				if not v2[2].surface then
+					intfic.write("I don't see a way to put anything on the " .. v2[1] .. ".\n");
+					return;
+				end
+				surface = v2[2];
+			end
+		end
+
+		if count ~= 1 then
+			intfic.write("I'm not sure what you mean by that\n");
+			return;
+		end
+
+		for k, v in pairs(direct_objs) do
+			for k2, v2 in pairs(v) do
+				if intfic.getlocation(v2[2]) == "pocket" or intfic.getlocation(v2[2]) == intfic.current_location then
+					if v2[2] ~= surface then -- can't put something on itself.
+						if not v2[2].portable then
+							intfic.write("I can't seem to move the " .. v2[2].desc .. "\n");
+						else
+							v2[2].related_object = { "on", surface.unique_name };
+							intfic.setlocation(v2[2], surface.location);
+							intfic.write("Ok, I put the " .. v2[2].desc .. " on the " .. surface.name .. "\n");
+						end
+					else
+						intfic.write("I can't put the " .. v2[2].desc .. " on itself\n");
+					end
+				else
+					intfic.write(v2[2].name .. ": I don't see that here.\n");
+				end
+			end
+		end
+
+	elseif putparams.prep == "in" then
+		if intfic.table_empty(putparams.direct_objs) then
+			-- put in blah
+			intfic.write("I do not quite understand what you mean.\n");
+			return;
+		end
+
+		local direct_objs = intfic.lookup_nouns_all_in_locations(putparams.direct_objs, { intfic.current_location, "pocket" });
+		local indirect_objs = intfic.lookup_nouns_all_in_locations(putparams.indirect_objs, { intfic.current_location, "pocket" });
+		local disam_direct_objs = intfic.disambiguate_nouns_in_room(direct_objs, { intfic.current_location, "pocket"});
+		local disam_indirect_objs = intfic.disambiguate_nouns_in_room(indirect_objs, { intfic.current_location, "pocket"});
+
+		count = 0;
+		local container = {};
+		for k, v in pairs(disam_indirect_objs) do
+			for k2, v2 in pairs(v) do
+				if intfic.getlocation(v2[2]) ~= "pocket" and
+					intfic.getlocation(v2[2]) ~= intfic.current_location then
+					intfic.write("I do not see the " .. v2[1] .. " here.\n");
+					return;
+				end
+				if v2[2] == "not here" then
+					intfic.write("I do not see the " .. v2[1] .. " here.\n");
+					return;
+				end
+				count = count + 1;
+				if not v2[2].container then
+					intfic.write("I don't see a way to put anything in the " .. v2[1] .. ".\n");
+					return;
+				end
+				container = v2[2];
+			end
+		end
+
+		if count ~= 1 then
+			intfic.write("I'm not sure what you mean by that\n");
+			return;
+		end
+
+		for k, v in pairs(direct_objs) do
+			for k2, v2 in pairs(v) do
+				if intfic.getlocation(v2[2]) == "pocket" or intfic.getlocation(v2[2]) == intfic.current_location then
+					if v2[2] ~= surface then -- can't put something in itself.
+						if not v2[2].portable then
+							intfic.write("I can't seem to move the " .. v2[2].desc .. "\n");
+						else
+							v2[2].related_object = { "in", container.unique_name };
+							intfic.setlocation(v2[2], container.location);
+							intfic.write("Ok, I put the " .. v2[2].desc .. " in the " .. container.name .. "\n");
+						end
+					else
+						intfic.write("I can't put the " .. v2[2].desc .. " in itself\n");
+					end
+				else
+					intfic.write(v2[2].name .. ": I don't see that here.\n");
+				end
+			end
+		end
+
+	else
+		intfic.write("I do not understand what you mean.\n");
+	end
+end
+
 function intfic.doclose(words)
 	intfic.generic_doverb(intfic.close_object, words, { "pocket", intfic.current_location });
 end
 
 function intfic.not_implemented(w)
-	intfic.write(w[1], " is not yet implemented.\n");
+	intfic.write(w[1] .. " is not yet implemented.\n");
 end
 
 function intfic.execute_command(cmd)
@@ -448,13 +724,18 @@ function intfic.print_room_description(loc, obj)
 	if not intfic.room[loc].visited then
 		intfic.write(intfic.room[loc].desc .. "\n\n");
 		for k, v in pairs(obj) do
-			if v.location == loc then
+			if intfic.getlocation(v) == loc then
 				if v.suppress_itemizing == nil or not v.suppress_itemizing then
 					if not foundone then
 						intfic.write("I see:\n");
 						foundone = true;
 					end
-					intfic.write("   " .. v.desc .. "\n");
+					if v.related_object == nil then
+						intfic.write("   " .. v.desc .. "\n");
+					else
+						intfic.write("   " .. v.desc .. " (" .. v.related_object[1] .. " the " ..
+								intfic.objects[v.related_object[2]].name .. ")\n");
+					end
 				end
 			end
 		end
@@ -475,11 +756,13 @@ intfic.verb = {
 		inventory = { intfic.doinventory },
 		i = { intfic.doinventory },
 		listen = { intfic.dolisten },
+		put = { intfic.doput },
 		quit = { intfic.do_exit },
 };
 
 intfic.room = {
 	-- maintenance_room = {
+			-- unique_name = "maintenance_room"; -- must equal index into intfic.room
 			-- shortdesc = "Maintenance Room",
 			-- desc = "You are in the maintenance room.  The floor is covered\n" ..
 				-- "in some kind of grungy substance.  A control panel is on the\n" ..
@@ -488,6 +771,7 @@ intfic.room = {
 			-- visited = false,
 		-- },
 	-- corridor = {
+			-- unique_name = "corridor",
 			-- shortdesc = "Corridor",
    			-- desc = "You are in a corridor.  To the east is the bridge.  To the\n" ..
 				-- "west is the hold.  A doorway on the north side of the corridor\n" ..
@@ -496,11 +780,13 @@ intfic.room = {
 			-- visited = false,
 		-- },
 	-- pocket = {
+			-- unique_name = "pocket",
 			-- shortdesc = "pocket",
 			-- desc = "pocket",
 			-- visited = false,
 		-- },
 	nowhere = {
+		unique_name = "nowhere",
 		shortdesc = "nowhere",
 		desc = "nowhere",
 		visited = false,
@@ -510,7 +796,8 @@ intfic.room = {
 intfic.objects = {
 	-- knife = { location = "pocket", name = "knife", desc = "a small pocket knife", portable=true },
 	-- mop = { location = "maintenance_room", name = "mop", desc = "a mop", portable=true },
-	-- bucket = { location = "maintenance_room", name = "bucket", desc = "a bucket", portable=true },
+	-- bucket = { location = "maintenance_room", name = "bucket", desc = "a bucket", portable=true, container = true },
+	-- table = { location = "maintenance_room", name = "bucket", desc = "a bucket", portable=true, surface = true },
 	-- panel = { location = "maintenance_room", name = "panel", desc = "a control panel", portable=false },
 	-- substance = { location = "maintenance_room", name = "substance", desc = "some kind of grungy substance", portable=false,
 	--			examine = "the grungy substance looks extremely unpleasant.", },
