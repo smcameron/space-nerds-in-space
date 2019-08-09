@@ -72,6 +72,10 @@ end
 local fmttbl = intfic.format_table;
 
 function intfic.strsplit(inputstr, sep)
+
+	if inputstr == nil then
+		return nil;
+	end
 	if sep == nil then
 		sep = "%s";
 	end
@@ -719,10 +723,17 @@ function intfic.not_implemented(w)
 end
 
 function intfic.execute_command(cmd)
+	if cmd == nil then
+		return
+	end
 	if cmd == "" then
 		return
 	end
 	local words = intfic.strsplit(cmd, " ,.;");
+	if words == nil
+	then
+		return;
+	end
 	if intfic.verb[words[1]] == nil then
 		intfic.write("I don't understand what you mean by '" .. words[1] .. "'\n");
 		return;

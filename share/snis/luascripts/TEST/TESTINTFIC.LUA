@@ -1,6 +1,8 @@
 package.path = package.path .. ";share/snis/luascripts/MISSIONS/lib/?.lua";
 local intfic_package = require("interactive_fiction");
 
+arg = {...};
+
 intfic.current_location = "corridor";
 intfic.cardinal_directions = { "fore", "starboard", "aft", "port", "up", "down" };
 intfic.room = {
@@ -151,19 +153,31 @@ function flush_output()
 end
 
 function robot_listen(from, channel, message)
+	-- Robot should ignore its own output
 	if string.sub(message, 1, 3) == "-- " then
 		return;
 	end;
+	-- Robot should ignore its own hail message
+	hailmsg = string.find(message, "*** HAILING ON CHANNEL 1234 ***");
+	if hailmsg ~= nil then
+		return;
+	end
 	intfic.send_input(message);
 end
 
 local function setup_comms()
 	set_variable("SUPPRESS_STARBASE_COMPLAINTS", 1);
+        comms_channel_transmit("ROBOT", 0, ": *** HAILING ON CHANNEL 1234 ***");
 	comms_channel_listen("ROBOT", 1234, "robot_listen");
 	register_timer_callback("flush_output", 10, 0);
 end
 
-if true then
+-- Some lua 5.1 vs 5.2 differences around arg.  To run standalone, start it like:
+-- lua share/snis/lua/scripts/TEST/TESTINTFIC.LUA xxx yyy
+-- In lua 5.2, the yyy is arg[2].  In lua 5.1 xxx is argv[2] and arg[1] is TESTINTFIC
+-- To run from SNIS, just run TESTINTFIC from the demon screen with no args.
+--
+if arg[2] ~= nil then
 	intfic.gameloop();
 else
 	setup_comms();
