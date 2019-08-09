@@ -172,14 +172,9 @@ local function setup_comms()
 	register_timer_callback("flush_output", 10, 0);
 end
 
--- Some lua 5.1 vs 5.2 differences around arg.  To run standalone, start it like:
--- lua share/snis/lua/scripts/TEST/TESTINTFIC.LUA xxx yyy
--- In lua 5.2, the yyy is arg[2].  In lua 5.1 xxx is argv[2] and arg[1] is TESTINTFIC
--- To run from SNIS, just run TESTINTFIC from the demon screen with no args.
---
-if arg[2] ~= nil then
-	intfic.gameloop();
+if set_variable == nil then
+	intfic.gameloop(); -- standalone mode i/o via terminal
 else
-	setup_comms();
+	setup_comms(); -- input/output via SNIS comms
 end;
 
