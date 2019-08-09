@@ -104,8 +104,32 @@ intfic.objects = {
 		name = "panel",
 		desc = "a large, complicated control panel",
 		portable = false,
-		examine = "Well, it's got lots of lights and switches and buttons and stuff.",
+		examine = "Well, it's got a button and a switch on it.",
 		surface = true,
+	},
+	button = {
+			unique_name = "button1",
+			name = "button",
+			desc = "a button",
+			location = "bridge",
+			related_object = { "on", "panel" },
+			suppress_itemizing = true,
+			portable = false,
+			button_state = false,
+			last_button_state = false,
+			button = true,
+	},
+	switch = {
+			unique_name = "switch1",
+			name = "switch",
+			desc = "a switch",
+			location = "bridge",
+			related_object = { "on", "panel" },
+			suppress_itemizing = true,
+			portable = false,
+			button_state = false,
+			last_button_state = false,
+			button = true,
 	},
 	drive = {
 		unique_name = "drive",
@@ -170,6 +194,24 @@ local function setup_comms()
         comms_channel_transmit("ROBOT", 0, ": *** HAILING ON CHANNEL 1234 ***");
 	comms_channel_listen("ROBOT", 1234, "robot_listen");
 	register_timer_callback("flush_output", 10, 0);
+end
+
+function intfic.after_each_turn_hook()
+
+	-- Make the button a momentary switch
+	if intfic.objects["button"].button_state == true then
+		intfic.objects["button"].button_state = false; -- unpress the button
+		intfic.write("I hear a dull clunking sound in the distance.\n");
+	end
+
+	-- Make the toggle switch alternate
+	if intfic.objects["switch"].button_state and not intfic.objects["switch"].last_button_state then
+		intfic.objects["switch"].last_button_state = true;
+		intfic.write("A loud buzzer sounds 3 times in quick succession.\n");
+	elseif not intfic.objects["switch"].button_state and intfic.objects["switch"].last_button_state then
+		intfic.objects["switch"].last_button_state = false;
+		intfic.write("A faint whirring I hadn't previously noticed has now stopped.\n");
+	end
 end
 
 if set_variable == nil then

@@ -25,6 +25,7 @@ intfic = {};
 intfic.time_to_quit = false;
 intfic.current_location = "nowhere";
 intfic.last_location = "";
+intfic.after_each_turn_hook = nil;
 
 local function print_value(v, indent)
 	local toprint = "";
@@ -472,7 +473,15 @@ function intfic.examine_object(entry)
 		intfic.write("The " .. entry[2].desc .. " is " .. entry[2].doorstatus .. ".\n");
 	end
 	if entry[2].examine == nil then
-		intfic.write("I don't see anything special about the " .. entry[1] .. ".\n");
+		if entry[2].button then
+			if entry[2].button_state then
+				intfic.write("The " .. entry[2].name .. " is activated.\n");
+			else
+				intfic.write("The " .. entry[2].name .. " is deactivated.\n");
+			end
+		else
+			intfic.write("I don't see anything special about the " .. entry[1] .. ".\n");
+		end
 		return;
 	end
 	intfic.write(entry[1] .. ": " .. entry[2].examine .. "\n");
@@ -546,6 +555,27 @@ function intfic.close_object(entry)
 	door2.doorstatus = "closed";
 	intfic.write("Ok, I closed the " .. entry[2].desc .. ".\n");
 	return;
+end
+
+function intfic.push_object(entry)
+	-- entry is a table { "noun", object };
+	if entry[2] == "not here" then
+		intfic.write("I don't see the " .. entry[1] .. " here.\n");
+		return;
+	end
+	if entry[2] == nil then
+		intfic.write("I don't know what the " .. entry[1] .. " is.\n");
+		return;
+	end
+	if intfic.getlocation(entry[2]) ~= "pocket" and intfic.getlocation(entry[2]) ~= intfic.current_location then
+		intfic.write("I don't see any " .. entry[1] .. ".\n");
+		return;
+	end
+	if entry[2].button == nil or not entry[2].button then
+		intfic.write("Pushing the " .. entry[2].name .. " does not seem to do anything.\n");
+		return;
+	end
+	entry[2].button_state = not entry[2].button_state;
 end
 
 function intfic.generic_doverb(verb_fn, words, locations)
@@ -717,6 +747,10 @@ function intfic.doput(words)
 	end
 end
 
+function intfic.dopush(words)
+	intfic.generic_doverb(intfic.push_object, words, { "pocket", intfic.current_location });
+end
+
 function intfic.doclose(words)
 	intfic.generic_doverb(intfic.close_object, words, { "pocket", intfic.current_location });
 end
@@ -795,6 +829,9 @@ intfic.verb = {
 		i = { intfic.doinventory },
 		listen = { intfic.dolisten },
 		put = { intfic.doput },
+		press = { intfic.dopush },
+		push = { intfic.dopush },
+		flip = { intfic.dopush },
 		quit = { intfic.do_exit },
 };
 
@@ -855,6 +892,9 @@ end
 function intfic.send_input(command)
 	intfic.execute_command(command);
 	intfic.print_room_description(intfic.current_location, intfic.objects)
+	if intfic.after_each_turn_hook ~= nil then
+		intfic.after_each_turn_hook();
+	end
 end
 
 -- This is the only function in here that uses io.write or io.read.
