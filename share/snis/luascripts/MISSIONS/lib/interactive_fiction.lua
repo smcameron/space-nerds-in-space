@@ -210,6 +210,9 @@ end
 
 -- return true if o is "on" or "in" possible_container (recursively)
 function is_contained_in(o, possible_container)
+	if o == possible_container then
+		return true;
+	end
 	if o.related_object == nil then
 		return false;
 	end
