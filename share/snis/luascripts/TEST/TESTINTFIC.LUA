@@ -225,6 +225,41 @@ function intfic.extra_help()
 	intfic.write("\n");
 end
 
+local function dogofore()
+	intfic.send_input("go fore");
+end
+
+local function dogoaft()
+	intfic.send_input("go aft");
+end
+
+local function dogoport()
+	intfic.send_input("go port");
+end
+
+local function dogostarboard()
+	intfic.send_input("go starboard");
+end
+
+local function dogoup()
+	intfic.send_input("go up");
+end
+
+local function dogodown()
+	intfic.send_input("go down");
+end
+
+function setup_directional_shortcuts()
+	intfic.verb["p"] = { dogoport };
+	intfic.verb["s"] = { dogostarboard };
+	intfic.verb["f"] = { dogofore };
+	intfic.verb["a"] = { dogoaft };
+	intfic.verb["u"] = { dogoup };
+	intfic.verb["d"] = { dogodown };
+end
+
+setup_directional_shortcuts();
+
 if set_variable == nil then
 	intfic.gameloop(); -- standalone mode i/o via terminal
 else
