@@ -214,6 +214,17 @@ function intfic.after_each_turn_hook()
 	end
 end
 
+function intfic.extra_help()
+	intfic.write("\n");
+	intfic.write("Cardinal directions are: starboard, port, fore\n");
+	intfic.write("aft, up and down.  Move by typing, e.g. go port\n");
+	intfic.write("You can shorten movement commands to single\n");
+	intfic.write("letters: s, p, f, a, u, d.  Additionally you can\n");
+	intfic.write("use l, i, and x to mean look, inventory, and examine\n");
+	intfic.write("respectively.\n");
+	intfic.write("\n");
+end
+
 if set_variable == nil then
 	intfic.gameloop(); -- standalone mode i/o via terminal
 else

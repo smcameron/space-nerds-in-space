@@ -26,6 +26,7 @@ intfic.time_to_quit = false;
 intfic.current_location = "nowhere";
 intfic.last_location = "";
 intfic.after_each_turn_hook = nil;
+intfic.extra_help = nil;
 
 local function print_value(v, indent)
 	local toprint = "";
@@ -751,6 +752,16 @@ function intfic.dopush(words)
 	intfic.generic_doverb(intfic.push_object, words, { "pocket", intfic.current_location });
 end
 
+function intfic.dohelp(words)
+	intfic.write("I know the following verbs:\n");
+	intfic.write("go, take, get, drop, look, examine\n");
+	intfic.write("open, close, inventory, listen, put\n");
+	intfic.write("press, push, flip, help\n");
+	if intfic.extra_help ~= nil then
+		intfic.extra_help();
+	end
+end
+
 function intfic.doclose(words)
 	intfic.generic_doverb(intfic.close_object, words, { "pocket", intfic.current_location });
 end
@@ -832,6 +843,7 @@ intfic.verb = {
 		press = { intfic.dopush },
 		push = { intfic.dopush },
 		flip = { intfic.dopush },
+		help = { intfic.dohelp },
 		quit = { intfic.do_exit },
 };
 
