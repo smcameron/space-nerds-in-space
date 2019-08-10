@@ -666,9 +666,20 @@ function intfic.doput(words)
 							if is_contained_in(surface, v2[2]) then
 								intfic.write(v2[2].name ..  ": Uh, we will need a higher dimensional universe first.\n");
 							else
-								v2[2].related_object = { "on", surface.unique_name };
-								intfic.setlocation(v2[2], surface.location);
-								intfic.write("Ok, I put the " .. v2[2].name .. " on the " .. surface.name .. "\n");
+								local object_ok = false;
+								if surface.container_restrictions ~= nil then
+									object_ok = intfic.in_array(v2[2].unique_name,
+										surface.container_restrictions);
+								else
+									object_ok = true;
+								end
+								if object_ok then
+									v2[2].related_object = { "on", surface.unique_name };
+									intfic.setlocation(v2[2], surface.location);
+									intfic.write("Ok, I put the " .. v2[2].name .. " on the " .. surface.name .. "\n");
+								else
+									intfic.write("I can't put the " .. v2[2].name .. " on the " .. surface.name .. "\n");
+								end
 							end
 						end
 					else
@@ -729,9 +740,20 @@ function intfic.doput(words)
 							if is_contained_in(container, v2[2]) then
 								intfic.write(v2[2].name ..  ": Uh, we will need a higher dimensional universe first.\n");
 							else
-								v2[2].related_object = { "in", container.unique_name };
-								intfic.setlocation(v2[2], container.location);
-								intfic.write("Ok, I put the " .. v2[2].name .. " in the " .. container.name .. "\n");
+								local object_ok = false;
+								if container.container_restrictions ~= nil then
+									object_ok = intfic.in_array(v2[2].unique_name,
+										container.container_restrictions);
+								else
+									object_ok = true;
+								end
+								if object_ok then
+									v2[2].related_object = { "in", container.unique_name };
+									intfic.setlocation(v2[2], container.location);
+									intfic.write("Ok, I put the " .. v2[2].name .. " in the " .. container.name .. "\n");
+								else
+									intfic.write("I can't put the " .. v2[2].name .. " in the " .. container.name .. "\n");
+								end
 							end
 						end
 					else
