@@ -422,10 +422,12 @@ function intfic.take_object(entry)
 	end
 	local loc = intfic.getlocation(entry[2]);
 	if loc == "pocket" then
-		intfic.write(entry[1] .. ": I already have that.\n");
-		return;
+		if entry[2].related_object == nil then
+			intfic.write(entry[1] .. ": I already have that.\n");
+			return;
+		end;
 	end
-	if not loc == intfic.current_location then
+	if not loc == intfic.current_location and not loc == "pocket" then
 		intfic.write(entry[1] .. ": I don't see that here.\n");
 		return;
 	end
@@ -615,7 +617,7 @@ function intfic.generic_doverb(verb_fn, words, locations)
 end
 
 function intfic.dotake(words)
-	intfic.generic_doverb(intfic.take_object, words, { intfic.current_location });
+	intfic.generic_doverb(intfic.take_object, words, { intfic.current_location, "pocket" });
 end
 
 function intfic.dodrop(words)
