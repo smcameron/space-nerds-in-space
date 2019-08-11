@@ -607,6 +607,33 @@ function intfic.doopen(words)
 	intfic.generic_doverb(intfic.open_object, words, { "pocket", intfic.current_location });
 end
 
+function intfic.count_items_in_container(container, preposition)
+	local count = 0;
+	for k, v in pairs(intfic.objects) do
+		if v.related_object ~= nil and v.related_object[1] == preposition and
+			v.related_object[2] == container.unique_name then
+			count = count + 1;
+		end
+	end
+	return count;
+end
+
+function intfic.container_full(container, preposition)
+	local limit = 100;
+	if preposition == "on" then
+		limit = container.surface_limit
+		if limit == nil then
+			return false;
+		end
+	elseif preposition == "in" then
+		limit = container.container_limit
+		if limit == nil then
+			return false;
+		end
+	end
+	return intfic.count_items_in_container(container, preposition) >= limit;
+end
+
 function intfic.doput(words)
 
 	local putparams = intfic.split_wordlist(intfic.cdr(words), { "on", "in" });
@@ -674,9 +701,13 @@ function intfic.doput(words)
 									object_ok = true;
 								end
 								if object_ok then
-									v2[2].related_object = { "on", surface.unique_name };
-									intfic.setlocation(v2[2], surface.location);
-									intfic.write("Ok, I put the " .. v2[2].name .. " on the " .. surface.name .. "\n");
+									if intfic.container_full(surface, "on") then
+										intfic.write("The " .. surface.name .. " is too full\n");
+									else 
+										v2[2].related_object = { "on", surface.unique_name };
+										intfic.setlocation(v2[2], surface.location);
+										intfic.write("Ok, I put the " .. v2[2].name .. " on the " .. surface.name .. "\n");
+									end
 								else
 									intfic.write("I can't put the " .. v2[2].name .. " on the " .. surface.name .. "\n");
 								end
@@ -748,9 +779,13 @@ function intfic.doput(words)
 									object_ok = true;
 								end
 								if object_ok then
-									v2[2].related_object = { "in", container.unique_name };
-									intfic.setlocation(v2[2], container.location);
-									intfic.write("Ok, I put the " .. v2[2].name .. " in the " .. container.name .. "\n");
+									if intfic.container_full(container, "in") then
+										intfic.write("The " .. container.name .. " is too full\n");
+									else
+										v2[2].related_object = { "in", container.unique_name };
+										intfic.setlocation(v2[2], container.location);
+										intfic.write("Ok, I put the " .. v2[2].name .. " in the " .. container.name .. "\n");
+									end
 								else
 									intfic.write("I can't put the " .. v2[2].name .. " in the " .. container.name .. "\n");
 								end
