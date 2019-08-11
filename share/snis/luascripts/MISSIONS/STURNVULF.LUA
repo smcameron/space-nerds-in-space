@@ -4,6 +4,8 @@ local intfic_package = require("interactive_fiction");
 arg = {...};
 
 previous_location = nil;
+first_time_panel_open = true;
+first_time_taking_card = true;
 
 intfic.current_location = "outside_airlock";
 intfic.cardinal_directions = { "fore", "starboard", "aft", "port", "up", "down" };
@@ -60,7 +62,50 @@ intfic.objects = {
 		portable = false,
 		container = true,
 		container_restrictions = { "card" },
-		examine = "It looks like you could put a card into the slot\n",
+		examine = "It looks like you could put a card into the slot.\n" ..
+			"There is a small panel above the slot.",
+	},
+	clip = {
+		unique_name = "clip",
+		location = "nowhere",
+		name = "clip",
+		desc = "a small metal clip",
+		suppress_itemizing = true,
+		portable = true,
+		examine = "It's a small metal clip once used to hold an ID card",
+	},
+	fuse_holder = {
+		unique_name = "fuse_holder",
+		name = "holder",
+		location = "nowhere",
+		desc = "a fuse holder",
+		suppress_itemizing = false,
+		portable = false,
+		container = true,
+		container_restrictions = { "fuse", "clip" },
+		container_limit = 1, -- can only hold one thing at a time
+	},
+	fuse = {
+		unique_name = "fuse",
+		name = "fuse",
+		location = "nowhere",
+		desc = "a burned out fuse",
+		suppress_itemizing = false,
+		portable = true,
+		related_object = { "in" , "fuse_holder" },
+		examine = "The fuse is burned out.",
+	},
+	fuse_panel = {
+		unique_name = "fuse_panel",
+		name = "panel",
+		desc = "a small panel",
+		location = "outside_airlock",
+		suppress_itemizing = true,
+		portable = false,
+                doorstatus = "closed",
+                doorroom = nil,
+                doordirout = nil,
+                complement_door = nil; -- doors (usually) are in pairs
 	},
 	slot2 = {
 		unique_name = "slot2",
@@ -184,6 +229,10 @@ end
 
 function intfic.after_each_turn_hook()
 
+	-- the airlock only works if the metal clip is in the fuse holder
+	local airlock_is_working = intfic.objects["clip"].related_object ~= nil and
+			intfic.objects["clip"].related_object[2] == "fuse_holder";
+
 	-- Make the ID card open the outer airlock door when put into the slot
 	if intfic.objects["card"].location == "outside_airlock" and
 		intfic.objects["card"].related_object ~= nil and
@@ -191,8 +240,13 @@ function intfic.after_each_turn_hook()
 			-- put the card in the player's pocket
 			intfic.objects["card"].location = "pocket";
 			intfic.objects["card"].related_object = nil;
-			open_outer_airlock_door();
-			intfic.write("The outer airlock door opens. I retain the ID card.\n");
+			if airlock_is_working then
+				open_outer_airlock_door();
+				intfic.write("The outer airlock door opens.\n");
+			else
+				intfic.write("Nothing happens.\n");
+			end
+			intfic.write("I retain the ID card.\n");
 	end
 
 	-- Make the ID card open the inner airlock door when put into the slot
@@ -202,48 +256,62 @@ function intfic.after_each_turn_hook()
 			-- put the card in the player's pocket
 			intfic.objects["card"].location = "pocket";
 			intfic.objects["card"].related_object = nil;
-			open_inner_airlock_door();
-			intfic.write("The inner airlock door opens. I retain the ID card.\n");
+			if airlock_is_working then
+				open_inner_airlock_door();
+				intfic.write("The inner airlock door opens.\n");
+			else
+				intfic.write("Nothing happens.\n");
+			end
+			intfic.write("I retain the ID card.\n");
 	end
 
 	-- Make the button a momentary switch that opens or closes the outer airlock door
 	if intfic.objects["button"].button_state == true then
 		intfic.objects["button"].button_state = false; -- unpress the button
-		if intfic.room["outside_airlock"].aft == nil then
-			if intfic.room["corridor1"].fore ~= nil then
-				intfic.write("The inner airlock door closes\n");
-				close_inner_airlock_door();
+		if airlock_is_working then
+			if intfic.room["outside_airlock"].aft == nil then
+				if intfic.room["corridor1"].fore ~= nil then
+					intfic.write("The inner airlock door closes\n");
+					close_inner_airlock_door();
+				end
+				open_outer_airlock_door();
+				intfic.write("The outer airlock door opens\n");
+			else
+				close_outer_airlock_door();
+				intfic.write("The outer airlock door closes\n");
 			end
-			open_outer_airlock_door();
-			intfic.write("The outer airlock door opens\n");
 		else
-			close_outer_airlock_door();
-			intfic.write("The outer airlock door closes\n");
+			intfic.write("Nothing happens.\n");
 		end
 	end
 
 	-- Make the switch a momentary switch that opens or closes the outer airlock door
 	if intfic.objects["switch"].button_state == true then
 		intfic.objects["switch"].button_state = false; -- unpress the button
-		if intfic.room["corridor1"].fore == nil then
-			if intfic.room["outside_airlock"].aft ~= nil then
-				intfic.write("The outer airlock door closes\n");
-				close_outer_airlock_door();
+
+		if airlock_is_working then
+			if intfic.room["corridor1"].fore == nil then
+				if intfic.room["outside_airlock"].aft ~= nil then
+					intfic.write("The outer airlock door closes\n");
+					close_outer_airlock_door();
+				end
+				open_inner_airlock_door();
+				intfic.write("The inner airlock door opens\n");
+			else
+				close_inner_airlock_door();
+				intfic.write("The inner airlock door closes\n");
 			end
-			open_inner_airlock_door();
-			intfic.write("The inner airlock door opens\n");
 		else
-			close_inner_airlock_door();
-			intfic.write("The inner airlock door closes\n");
+			intfic.write("Nothing happens.\n");
 		end
 	end
 
 	-- If you leave the airlock, the door should close behind you
 	if previous_location == "airlock" then
-		if intfic.current_location == "outside_airlock" then
+		if intfic.current_location == "outside_airlock" and airlock_is_working then
 			close_outer_airlock_door();
 			intfic.write("The outer airlock door closes behind you\n");
-		elseif intfic.current_location == "corridor1" then
+		elseif intfic.current_location == "corridor1" and airlock_is_working then
 			close_inner_airlock_door();
 			intfic.write("The inner airlock door closes behind you\n");
 		end
@@ -256,6 +324,38 @@ function intfic.after_each_turn_hook()
 		intfic.objects["card"].suppress_itemizing = false;
 	end
 
+	-- If they pick up the id card, draw attention to the metal clip
+	if intfic.getlocation(intfic.objects["card"]) == "pocket" and
+		intfic.objects["clip"].suppress_itemizing and
+		(intfic.objects["card"].related_object == nil or
+		intfic.objects["card"].related_object[2] ~= "body") then
+		intfic.write("As I grabbed the ID card, a small metal clip fell off it.\n");
+		intfic.objects["clip"].suppress_itemizing = false;
+		intfic.setlocation(intfic.objects["clip"], "outside_airlock");
+	end
+
+	-- When opening/closing the panel outside the airlock, move the fuse holder in/out of scene
+	if intfic.objects["fuse_panel"].doorstatus == "open" then
+		-- First time opening panel, remark on the fuse situation
+		if first_time_panel_open then
+			intfic.write("Opening the panel reveals a fuse in a holder.\n");
+			first_time_panel_open = false;
+		end
+		intfic.setlocation(intfic.objects["fuse_holder"], "outside_airlock");
+	else
+		intfic.setlocation(intfic.objects["fuse_holder"], "nowhere");
+	end
+
+	if airlock_is_working then
+		intfic.objects["slot"].desc = "a slot in the wall emitting a faint blue glow.";
+		intfic.objects["slot"].examine = "A faint blue glow emanates from the slot\n" ..
+			"It looks like you could put a card into the slot.\n" ..
+			"There is a small panel above the slot.";
+	else
+		intfic.objects["slot"].desc = "a slot in the wall";
+		intfic.objects["slot"].examine = "It looks like you could put a card into the slot.\n" ..
+			"There is a small panel above the slot.";
+	end
 	previous_location = intfic.current_location;
 end
 
