@@ -512,14 +512,28 @@ function intfic.open_object(entry)
 	end
 	-- connect the rooms and open the two halves of the door
 	local door1 = entry[2];
-	local door2 = intfic.objects[door1.complement_door];
+	local door2 = nil;
+	if door1.complement_door ~= nil then
+		door2 = intfic.objects[door1.complement_door];
+	end
 	local loc1 = intfic.getlocation(door1);
-	local loc2 = intfic.getlocation(door2);
-	intfic.room[loc1][door1.doordirout] = door1.doorroom;
-	intfic.room[loc2][door2.doordirout] = door2.doorroom;
-	door1.doorstatus = "open";
-	door2.doorstatus = "open";
-	intfic.write("Ok, I opened the " .. door1.desc .. ".\n");
+	local loc2 = nil;
+	if door2 ~= nil then
+		intfic.getlocation(door2);
+	end
+	if door1 ~= nil and door1.doordirout ~= nil and door1.doorroom ~= nil then
+		intfic.room[loc1][door1.doordirout] = door1.doorroom;
+	end
+	if door2 ~= nil and door2.doordirout ~= nil and door2.doorroom then
+		intfic.room[loc2][door2.doordirout] = door2.doorroom;
+	end
+	if door1 ~= nil then
+		door1.doorstatus = "open";
+		intfic.write("Ok, I opened the " .. door1.desc .. ".\n");
+	end
+	if door2 ~= nil then
+		door2.doorstatus = "open";
+	end
 	return;
 end
 
@@ -549,11 +563,20 @@ function intfic.close_object(entry)
 	local door1 = entry[2];
 	local door2 = intfic.objects[door1.complement_door];
 	local loc1 = intfic.getlocation(door1);
-	local loc2 = intfic.getlocation(door2);
-	intfic.room[loc1][door1.doordirout] = nil;
-	intfic.room[loc2][door2.doordirout] = nil;
+	local loc2 = nil;
+	if door2 ~= nil then
+		loc2 = intfic.getlocation(door2);
+	end
+	if door1.doordirout ~= nil then
+		intfic.room[loc1][door1.doordirout] = nil;
+	end
+	if loc2 ~= nil and door2 ~= nil and door2.doordirout ~= nil then
+		intfic.room[loc2][door2.doordirout] = nil;
+	end
 	door1.doorstatus = "closed";
-	door2.doorstatus = "closed";
+	if door2 ~= nil then
+		door2.doorstatus = "closed";
+	end
 	intfic.write("Ok, I closed the " .. entry[2].desc .. ".\n");
 	return;
 end
