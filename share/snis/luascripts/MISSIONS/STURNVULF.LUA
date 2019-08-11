@@ -12,10 +12,10 @@ intfic.cardinal_directions = { "fore", "starboard", "aft", "port", "up", "down" 
 intfic.room = {
 	outside_airlock = {
 		unique_name = "outside_airlock",
-		shortdesc = "Ok, I am outside the airlock",
+		shortdesc = "Ok, I am outside the airlock of the STURNVULF.",
 		desc = "To aft is the the airlock, and to fore,\n" ..
 			"the blackness of space\n" ..
-			"There is a slot in the wall next to the door",
+			"There is a slot in the wall next to the airlock door",
 		aft = nil,
 		visited = false,
 	},
@@ -30,11 +30,49 @@ intfic.room = {
 	corridor1 = {
 		unique_name = "corridor1",
 		shortdesc = "Ok, I am in a corridor",
-		desc = "I am in a corridor. To fore is the airlock.\n" ..
-			"There is a slot on the wall next to the airlock.",
-		fore = nil,
+		desc = "I am in a corridor. To fore is the vestibule\n" ..
+			"A staircase leads up, and another staircase\n" ..
+			"leads down.",
+		fore = "vestibule",
+		up = "corridor3",
+		down = "corridor2",
 		visited = false,
-	};
+	},
+	corridor2 = {
+		unique_name = "corridor2",
+		shortdesc = "Ok, I am in a corridor",
+		desc = "I am in a corridor at the bottom of a staircase.\n" ..
+			"The corridor continues fore and aft.\n",
+		up = "corridor1",
+		fore = nil,
+		aft = nil,
+	},
+	corridor3 = {
+		unique_name = "corridor3",
+		shortdesc = "Ok, I am in a corridor",
+		desc = "I am in a corridor at the top of a staircase.\n" ..
+			"The corridor continues fore and aft.\n",
+		down = "corridor1",
+		fore = "bridge",
+		aft = nil,
+	},
+	bridge = {
+		unique_name = "bridge",
+		shortdesc = "Ok, I'm on the bridge.",
+		desc = "I'm on the bridge of the STURNVULF. It's chaos here.\n" ..
+			"The main viewscreen is black.  All the consoles have\n" ..
+			"been scorched and melted by blasters. Nobody is here but me.",
+		aft = "corridor3",
+	},
+	vestibule = {
+		unique_name = "vestibule",
+		shortdesc = "Ok, I am in the vestibule",
+		desc = "I am in the vestibule used to prepare for spacewalks. " ..
+			"To fore is the airlock. To aft is a corridor.\n" ..
+			"There is a slot on the wall next to the airlock door.",
+		aft = "corridor1",
+		visited = false,
+	},
 	pocket = {
 		unique_name = "pocket",
 		shortdesc = "pocket",
@@ -47,6 +85,7 @@ intfic.objects = {
 		unique_name = "card",
 		location = "nowhere",
 		name = "card",
+		synonyms = { "id", "keycard", "badge" },
 		desc = "an ID card",
 		portable = true,
 		examine = "It an ID card for Ensign Mallory",
@@ -109,7 +148,7 @@ intfic.objects = {
 	},
 	slot2 = {
 		unique_name = "slot2",
-		location = "corridor1",
+		location = "vestibule",
 		name = "slot",
 		desc = "a slot in the wall",
 		suppress_itemizing = true,
@@ -146,6 +185,7 @@ intfic.objects = {
 		location = "outside_airlock",
 		portable = false,
 		suppress_itemizing = true,
+		synonyms = { "airlock" },
 		name = "door",
 	},
 	airlock_door2 = {
@@ -153,14 +193,61 @@ intfic.objects = {
 		location = "airlock",
 		portable = false,
 		suppress_itemizing = true,
+		synonyms = { "airlock" },
 		name = "door",
 	},
 	airlock_door3 = {
 		unique_name = "airlock_door3",
+		location = "vestibule",
+		portable = false,
+		suppress_itemizing = true,
+		synonyms = { "airlock" },
+		name = "door",
+	},
+	staircase1 = {
+		unique_name = "staircase1",
+		name = "staircase",
 		location = "corridor1",
 		portable = false,
 		suppress_itemizing = true,
-		name = "door",
+		synonyms = { "stairs" },
+	},
+	bench = {
+		unique_name = "bench",
+		name = "bench",
+		synonyms = { "seat", },
+		desc = "a bench",
+		location = "vestibule",
+		portable = false,
+	},
+	locker = {
+		unique_name = "locker",
+		name = "locker",
+		desc = "a locker",
+		container = true,
+		location = "vestibule",
+		portable = false,
+	},
+	spacesuit = {
+		unique_name = "spacesuit",
+		name = "spacesuit",
+		synonyms = { "suit" },
+		desc = "a spacesuit",
+		container = true,
+		location = "vestibule",
+		portable = true,
+		related_object = { "in", "locker" },
+	},
+	console = {
+		unique_name = "console",
+		name = "console",
+		synonyms = { "consoles", "station", "stations" },
+		desc = "a console",
+		surface = true,
+		location = "bridge",
+		portable = false,
+		examine = "The consoles are burned and melted almost beyond recognition",
+		suppress_itemizing = true,
 	},
 };
 
@@ -206,13 +293,13 @@ function open_outer_airlock_door()
 end
 
 function close_inner_airlock_door()
-	intfic.room["corridor1"].fore = nil;
+	intfic.room["vestibule"].fore = nil;
 	intfic.room["airlock"].aft = nil;
 end
 
 function open_inner_airlock_door()
-	intfic.room["corridor1"].fore = "airlock";
-	intfic.room["airlock"].aft = "corridor1";
+	intfic.room["vestibule"].fore = "airlock";
+	intfic.room["airlock"].aft = "vestibule";
 end
 
 function intfic.after_each_turn_hook()
@@ -238,7 +325,7 @@ function intfic.after_each_turn_hook()
 	end
 
 	-- Make the ID card open the inner airlock door when put into the slot
-	if intfic.objects["card"].location == "corridor1" and
+	if intfic.objects["card"].location == "vestibule" and
 		intfic.objects["card"].related_object ~= nil and
 		intfic.objects["card"].related_object[2] == "slot2" then
 			-- put the card in the player's pocket
@@ -258,7 +345,7 @@ function intfic.after_each_turn_hook()
 		intfic.objects["button"].button_state = false; -- unpress the button
 		if airlock_is_working then
 			if intfic.room["outside_airlock"].aft == nil then
-				if intfic.room["corridor1"].fore ~= nil then
+				if intfic.room["vestibule"].fore ~= nil then
 					intfic.write("The inner airlock door closes\n");
 					close_inner_airlock_door();
 				end
@@ -267,7 +354,7 @@ function intfic.after_each_turn_hook()
 			else
 				close_outer_airlock_door();
 				intfic.write("The outer airlock door closes\n");
-				if intfic.room["corridor1"].fore == nil then
+				if intfic.room["vestibule"].fore == nil then
 					intfic.write("The inner airlock door opens\n");
 					open_inner_airlock_door();
 				end
@@ -281,17 +368,17 @@ function intfic.after_each_turn_hook()
 	if previous_location == "airlock" then
 		if intfic.current_location == "outside_airlock" and airlock_is_working then
 			close_outer_airlock_door();
-			intfic.write("The outer airlock door closes behind you\n");
-		elseif intfic.current_location == "corridor1" and airlock_is_working then
+			intfic.write("The outer airlock door closed behind me.\n");
+		elseif intfic.current_location == "vestibule" and airlock_is_working then
 			close_inner_airlock_door();
-			intfic.write("The inner airlock door closes behind you\n");
+			intfic.write("The inner airlock door closed behind me.\n");
 		end
 	end
 
 	-- If they pick up Ensign Mallory, draw attention to the ID card
 	if intfic.objects["body"].location == "pocket" and
 		intfic.objects["card"].suppress_itemizing then
-		intfic.write("You notice an ID card on the body.\n");
+		intfic.write("I notice an ID card on the body.\n");
 		intfic.objects["card"].suppress_itemizing = false;
 	end
 
@@ -365,6 +452,10 @@ local function dogodown()
 	intfic.send_input("go down");
 end
 
+local function dowear()
+	intfic.write("I am robot of non-humanoid form.\nThere are no clothes that would fit me.\n");
+end
+
 function setup_directional_shortcuts()
 	intfic.verb["p"] = { dogoport };
 	intfic.verb["s"] = { dogostarboard };
@@ -372,6 +463,7 @@ function setup_directional_shortcuts()
 	intfic.verb["a"] = { dogoaft };
 	intfic.verb["u"] = { dogoup };
 	intfic.verb["d"] = { dogodown };
+	intfic.verb["wear"] = { dowear };
 end
 
 setup_directional_shortcuts();
