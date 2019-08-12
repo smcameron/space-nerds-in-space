@@ -137,9 +137,9 @@ intfic.objects = {
 	fuse_panel = {
 		unique_name = "fuse_panel",
 		name = "panel",
-		desc = "a small panel",
+		desc = "small panel",
 		location = "outside_airlock",
-		suppress_itemizing = true,
+		suppress_itemizing = true, -- dynamically manipulated by after_each_turn_hook fn.
 		portable = false,
                 doorstatus = "closed",
                 doorroom = nil,
@@ -399,8 +399,10 @@ function intfic.after_each_turn_hook()
 			intfic.write("Opening the panel reveals a fuse in a holder.\n");
 			first_time_panel_open = false;
 		end
+		intfic.objects["fuse_panel"].suppress_itemizing = false;
 		intfic.setlocation(intfic.objects["fuse_holder"], "outside_airlock");
 	else
+		intfic.objects["fuse_panel"].suppress_itemizing = true;
 		intfic.setlocation(intfic.objects["fuse_holder"], "nowhere");
 	end
 
