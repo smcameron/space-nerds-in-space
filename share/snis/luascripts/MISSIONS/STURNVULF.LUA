@@ -22,7 +22,7 @@ intfic.room = {
 	airlock = {
 		unique_name = "airlock",
 		shortdesc = "Ok, I am in the airlock",
-		desc = "There is a button and a switch on the wall.\n" ..
+		desc = "There is a button on the wall.\n" ..
 			"To fore is the outer door.  To aft, the inner door\n",
 		fore = nil,
 		visited = false,
@@ -139,19 +139,7 @@ intfic.objects = {
 			button_state = false,
 			last_button_state = false,
 			button = true,
-			examine = "The button is labeled OUTER DOOR\n",
-	},
-	switch = {
-			unique_name = "switch1",
-			name = "switch",
-			desc = "a switch",
-			location = "airlock",
-			suppress_itemizing = true,
-			portable = false,
-			button_state = false,
-			last_button_state = false,
-			button = true,
-			examine = "The switch is labeled INNER DOOR\n",
+			examine = "The button is labeled CYCLE AIRLOCK\n",
 	},
 	airlock_door1 = {
 		unique_name = "airlock_door1",
@@ -279,27 +267,10 @@ function intfic.after_each_turn_hook()
 			else
 				close_outer_airlock_door();
 				intfic.write("The outer airlock door closes\n");
-			end
-		else
-			intfic.write("Nothing happens.\n");
-		end
-	end
-
-	-- Make the switch a momentary switch that opens or closes the outer airlock door
-	if intfic.objects["switch"].button_state == true then
-		intfic.objects["switch"].button_state = false; -- unpress the button
-
-		if airlock_is_working then
-			if intfic.room["corridor1"].fore == nil then
-				if intfic.room["outside_airlock"].aft ~= nil then
-					intfic.write("The outer airlock door closes\n");
-					close_outer_airlock_door();
+				if intfic.room["corridor1"].fore == nil then
+					intfic.write("The inner airlock door opens\n");
+					open_inner_airlock_door();
 				end
-				open_inner_airlock_door();
-				intfic.write("The inner airlock door opens\n");
-			else
-				close_inner_airlock_door();
-				intfic.write("The inner airlock door closes\n");
 			end
 		else
 			intfic.write("Nothing happens.\n");
