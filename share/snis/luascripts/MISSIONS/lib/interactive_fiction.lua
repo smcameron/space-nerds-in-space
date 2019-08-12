@@ -659,6 +659,126 @@ function intfic.container_full(container, preposition)
 	return intfic.count_items_in_container(container, preposition) >= limit;
 end
 
+-- find the indirect object of put or output why it cannot be found
+-- That is, given a list of (hopefully one) candidate objects, compare it to the state of
+-- the game and return the object if it is reachable and suitable for putting or else
+-- explain why it is not reachable/suitable and return  nil.
+local function find_indirect_object_of_put(disam_indirect_objs, preposition)
+	local count = 0;
+	local indirect_object = {};
+	for k, v in pairs(disam_indirect_objs) do
+		for k2, v2 in pairs(v) do
+			if intfic.getlocation(v2[2]) ~= "pocket" and
+				intfic.getlocation(v2[2]) ~= intfic.current_location then
+				intfic.write("I do not see the " .. v2[1] .. " here.\n");
+				return nil;
+			end
+			if v2[2] == "not here" then
+				intfic.write("I do not see the " .. v2[1] .. " here.\n");
+				return nil;
+			end
+			count = count + 1;
+			if preposition == "on" then
+				if not v2[2].surface then
+					intfic.write("I don't see a way to put anything " ..
+						preposition .. " the " .. v2[1] .. ".\n");
+					return nil;
+				end
+			elseif preposition == "in" then
+				if not v2[2].container then
+					intfic.write("I don't see a way to put anything " ..
+						preposition .. " the " .. v2[1] .. ".\n");
+					return nil;
+				end
+			else
+				intfic.write("I don't see a way to put anything " ..
+					preposition .. " the " .. v2[1] .. ".\n");
+				return nil;
+			end
+			indirect_object = v2[2];
+		end
+	end
+
+	if count ~= 1 then
+		intfic.write("I'm not sure what you mean by that\n");
+		return nil;
+	end
+	return indirect_object;
+end
+
+-- put "obj" in or on "indirect_object" or output the reason why not
+-- obj is the object to put
+-- preposition is "in" or "on"
+-- indirect_object is the object in/on which obj is to be put
+local function do_put_obj_on_indirect_obj_helper(obj, preposition, indirect_object)
+	if intfic.getlocation(obj) ~= "pocket" and intfic.getlocation(obj) ~= intfic.current_location then
+		intfic.write(obj.name .. ": I don't see that here.\n");
+		return;
+	end
+	if obj == indirect_object then -- can't put something on itself.
+		intfic.write("I can't put the " .. obj.name .. " " .. preposition .. " itself\n");
+		return;
+	end
+	if not obj.portable then
+		intfic.write("I can't seem to move the " .. obj.name .. "\n");
+		return;
+	end
+	if is_contained_in(indirect_object, obj) then
+		intfic.write(obj.name ..  ": Uh, we will need a higher dimensional universe first.\n");
+		return;
+	end;
+	local object_ok = true;
+	if indirect_object.container_restrictions ~= nil then
+		object_ok = intfic.in_array(obj.unique_name,
+			indirect_object.container_restrictions);
+	end
+	if not object_ok then
+		intfic.write("I can't put the " .. obj.name .. " " .. preposition ..
+				" the " .. indirect_object.name .. "\n");
+		return;
+	end
+	if intfic.container_full(indirect_object, preposition) then
+		intfic.write("The " .. indirect_object.name .. " is too full\n");
+		return;
+	end
+	obj.related_object = { preposition, indirect_object.unique_name };
+	intfic.setlocation(obj, indirect_object.location);
+	intfic.write("Ok, I put the " .. obj.name .. " " .. preposition ..
+		" the " .. indirect_object.name .. "\n");
+end
+
+-- put direct objects in/on indirect object
+-- direct_objs is a table of tables, each inner table contains an object name
+-- in [1], and the object itself in [2].
+-- Best to print("direct_objs = " .. fmttbl(direct_objcs)); to see it.
+-- indirect_object is the object in/on which direct objects should be put
+local function do_put_action_on_direct_objs(direct_objs, preposition, indirect_object)
+	for k, v in pairs(direct_objs) do
+		for k2, v2 in pairs(v) do
+			do_put_obj_on_indirect_obj_helper(v2[2], preposition, indirect_object)
+		end
+	end
+end
+
+-- The common part of "put" verb among "put x on y" and "put x in y"
+-- putparams is a table like:
+-- { direct_objs = { "noun1", "noun2", "noun3", ... },
+--   prep = "on", -- or "in"
+--   indirect_objs =  { "noun1", "noun2", ... }, -- Normally, this will contain ONE noun. 
+-- }
+local function doput_common(putparams)
+	local direct_objs = intfic.lookup_nouns_all_in_locations(putparams.direct_objs, { intfic.current_location, "pocket" });
+	local indirect_objs = intfic.lookup_nouns_all_in_locations(putparams.indirect_objs, { intfic.current_location, "pocket" });
+	local disam_direct_objs = intfic.disambiguate_nouns_in_room(direct_objs, { intfic.current_location, "pocket"});
+	local disam_indirect_objs = intfic.disambiguate_nouns_in_room(indirect_objs, { intfic.current_location, "pocket"});
+
+	local indirect_object = find_indirect_object_of_put(disam_indirect_objs, putparams.prep);
+	if indirect_object == nil then
+		return;
+	end
+	do_put_action_on_direct_objs(direct_objs, putparams.prep, indirect_object);
+end
+
 function intfic.doput(words)
 
 	local putparams = intfic.split_wordlist(intfic.cdr(words), { "on", "in" });
@@ -675,156 +795,14 @@ function intfic.doput(words)
 			intfic.not_implemented({ "put on (wear)"});
 			return;
 		end
-
-		local direct_objs = intfic.lookup_nouns_all_in_locations(putparams.direct_objs, { intfic.current_location, "pocket" });
-		local indirect_objs = intfic.lookup_nouns_all_in_locations(putparams.indirect_objs, { intfic.current_location, "pocket" });
-		local disam_direct_objs = intfic.disambiguate_nouns_in_room(direct_objs, { intfic.current_location, "pocket"});
-		local disam_indirect_objs = intfic.disambiguate_nouns_in_room(indirect_objs, { intfic.current_location, "pocket"});
-
-		count = 0;
-		local surface = {};
-		for k, v in pairs(disam_indirect_objs) do
-			for k2, v2 in pairs(v) do
-				if intfic.getlocation(v2[2]) ~= "pocket" and
-					intfic.getlocation(v2[2]) ~= intfic.current_location then
-					intfic.write("I do not see the " .. v2[1] .. " here.\n");
-					return;
-				end
-				if v2[2] == "not here" then
-					intfic.write("I do not see the " .. v2[1] .. " here.\n");
-					return;
-				end
-				count = count + 1;
-				if not v2[2].surface then
-					intfic.write("I don't see a way to put anything on the " .. v2[1] .. ".\n");
-					return;
-				end
-				surface = v2[2];
-			end
-		end
-
-		if count ~= 1 then
-			intfic.write("I'm not sure what you mean by that\n");
-			return;
-		end
-
-		for k, v in pairs(direct_objs) do
-			for k2, v2 in pairs(v) do
-				if intfic.getlocation(v2[2]) == "pocket" or intfic.getlocation(v2[2]) == intfic.current_location then
-					if v2[2] ~= surface then -- can't put something on itself.
-						if not v2[2].portable then
-							intfic.write("I can't seem to move the " .. v2[2].name .. "\n");
-						else
-							if is_contained_in(surface, v2[2]) then
-								intfic.write(v2[2].name ..  ": Uh, we will need a higher dimensional universe first.\n");
-							else
-								local object_ok = false;
-								if surface.container_restrictions ~= nil then
-									object_ok = intfic.in_array(v2[2].unique_name,
-										surface.container_restrictions);
-								else
-									object_ok = true;
-								end
-								if object_ok then
-									if intfic.container_full(surface, "on") then
-										intfic.write("The " .. surface.name .. " is too full\n");
-									else 
-										v2[2].related_object = { "on", surface.unique_name };
-										intfic.setlocation(v2[2], surface.location);
-										intfic.write("Ok, I put the " .. v2[2].name .. " on the " .. surface.name .. "\n");
-									end
-								else
-									intfic.write("I can't put the " .. v2[2].name .. " on the " .. surface.name .. "\n");
-								end
-							end
-						end
-					else
-						intfic.write("I can't put the " .. v2[2].name .. " on itself\n");
-					end
-				else
-					intfic.write(v2[2].name .. ": I don't see that here.\n");
-				end
-			end
-		end
-
+		doput_common(putparams);
 	elseif putparams.prep == "in" then
 		if intfic.table_empty(putparams.direct_objs) then
 			-- put in blah
 			intfic.write("I do not quite understand what you mean.\n");
 			return;
 		end
-
-		local direct_objs = intfic.lookup_nouns_all_in_locations(putparams.direct_objs, { intfic.current_location, "pocket" });
-		local indirect_objs = intfic.lookup_nouns_all_in_locations(putparams.indirect_objs, { intfic.current_location, "pocket" });
-		local disam_direct_objs = intfic.disambiguate_nouns_in_room(direct_objs, { intfic.current_location, "pocket"});
-		local disam_indirect_objs = intfic.disambiguate_nouns_in_room(indirect_objs, { intfic.current_location, "pocket"});
-
-		count = 0;
-		local container = {};
-		for k, v in pairs(disam_indirect_objs) do
-			for k2, v2 in pairs(v) do
-				if intfic.getlocation(v2[2]) ~= "pocket" and
-					intfic.getlocation(v2[2]) ~= intfic.current_location then
-					intfic.write("I do not see the " .. v2[1] .. " here.\n");
-					return;
-				end
-				if v2[2] == "not here" then
-					intfic.write("I do not see the " .. v2[1] .. " here.\n");
-					return;
-				end
-				count = count + 1;
-				if not v2[2].container then
-					intfic.write("I don't see a way to put anything in the " .. v2[1] .. ".\n");
-					return;
-				end
-				container = v2[2];
-			end
-		end
-
-		if count ~= 1 then
-			intfic.write("I'm not sure what you mean by that\n");
-			return;
-		end
-
-		for k, v in pairs(direct_objs) do
-			for k2, v2 in pairs(v) do
-				if intfic.getlocation(v2[2]) == "pocket" or intfic.getlocation(v2[2]) == intfic.current_location then
-					if v2[2] ~= surface then -- can't put something in itself.
-						if not v2[2].portable then
-							intfic.write("I can't seem to move the " .. v2[2].name .. "\n");
-						else
-							if is_contained_in(container, v2[2]) then
-								intfic.write(v2[2].name ..  ": Uh, we will need a higher dimensional universe first.\n");
-							else
-								local object_ok = false;
-								if container.container_restrictions ~= nil then
-									object_ok = intfic.in_array(v2[2].unique_name,
-										container.container_restrictions);
-								else
-									object_ok = true;
-								end
-								if object_ok then
-									if intfic.container_full(container, "in") then
-										intfic.write("The " .. container.name .. " is too full\n");
-									else
-										v2[2].related_object = { "in", container.unique_name };
-										intfic.setlocation(v2[2], container.location);
-										intfic.write("Ok, I put the " .. v2[2].name .. " in the " .. container.name .. "\n");
-									end
-								else
-									intfic.write("I can't put the " .. v2[2].name .. " in the " .. container.name .. "\n");
-								end
-							end
-						end
-					else
-						intfic.write("I can't put the " .. v2[2].name .. " in itself\n");
-					end
-				else
-					intfic.write(v2[2].name .. ": I don't see that here.\n");
-				end
-			end
-		end
-
+		doput_common(putparams);
 	else
 		intfic.write("I do not understand what you mean.\n");
 	end
