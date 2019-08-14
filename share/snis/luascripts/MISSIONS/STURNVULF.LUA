@@ -7,6 +7,25 @@ previous_location = nil;
 first_time_panel_open = true;
 first_time_taking_card = true;
 num_lifeforms_aboard_ship = 5;
+zarkon = nil;
+
+if random_point_on_sphere ~= nil then
+	-- Choose a location for the STURNVULF
+	svx, svy, svz = random_point_on_sphere(200000);
+	svx = svx + 300000;
+	svy = svy + 0;
+	svz = svz + 300000;
+	math.randomseed(os.time());
+	robot_channel = math.floor(math.random() * 950.0 + 50.0);
+else
+	-- Choose a location for the STURNVULF
+	svx = 354000;
+	svy = 232000;
+	svz = 10000;
+	-- Choose a random channel for the ROBOT COMMS
+	robot_channel = 1234;
+end
+
 
 local function examine_body(entry)
 	-- entry is { "noun", object },
@@ -36,8 +55,15 @@ local function examine_quadcorder(entry)
 	end
 end
 
+local function examine_magazine(entry)
+
+	intfic.write("The torpedo magazine is very large and heavy.\n");
+	intfic.write("There are " .. tostring(intfic.objects["torpedo_magazine"].torpedo_count) ..
+			" torpedoes in the magazine.\n");
+end
+
 intfic.current_location = "outside_airlock";
-intfic.current_location = "corridor3";
+intfic.current_location = "torpedo_bay";
 intfic.cardinal_directions = { "fore", "starboard", "aft", "port", "up", "down" };
 intfic.room = {
 	outside_airlock = {
@@ -80,8 +106,33 @@ intfic.room = {
 		port = "doctors_quarters",
 		starboard = "engineers_quarters",
 		port = "doctors_quarters",
-		fore = nil,
-		aft = nil,
+		fore = "torpedo_bay",
+		aft = "transporter_room",
+	},
+	transporter_room = {
+		unique_name = "transporter_room",
+		shortdesc = "Ok, I am in the transporter room.",
+		desc = "I am in the transporter room.  There is a console\n" ..
+			"here on one end of the room and the transporter chamber\n" ..
+			"is to port.",
+		fore = "corridor2",
+		port = "transporter",
+	},
+	transporter = {
+		unique_name = "transporter",
+		shortdesc = "Ok, I'm in the transporter chamber.",
+		desc = "I'm in the transporter.  Something is wrong here.\n" ..
+			"The walls of the transporter are burned and black and\n" ..
+			"there is black goop all over the walls and floor.\n",
+		starboard = "transporter_room",
+	},
+	torpedo_bay = {
+		unique_name = "torpedo_bay",
+		shortdesc = "Ok, I am in the torpedo bay",
+		desc = "I am in the torpedo bay.  There is a large console here.\n" ..
+			"There is a large robot arm for loading the torpedoes and\n" ..
+			"a large drum magazine containing torpedoes\n",
+		aft = "corridor2",
 	},
 	corridor3 = {
 		unique_name = "corridor3",
@@ -178,7 +229,7 @@ intfic.room = {
 	engineering = {
 		unique_name = "engineering",
 		shortdesc = "I am in engineering",
-		desc = "I am in engineering.\n" ..
+		desc = "There is a large engineering console here.\n" ..
 			"To port is an open ventilation duct\n" ..
 			"To fore is a bulkhead with a door\n",
 		port = "duct4",
@@ -486,7 +537,7 @@ intfic.objects = {
 	captain_jameson = {
 		unique_name = "captain_jameson",
 		name = "captain",
-		desc = "Captain Jameson",
+		desc = "CAPTAIN JAMESON",
 		synonyms = { "jameson" },
 		location = "bridge",
 		related_object = {"on", "bridge_floor" },
@@ -543,7 +594,7 @@ intfic.objects = {
 	engineer_bob = {
 		unique_name = "engineer_bob",
 		name = "engineer",
-		desc = "Engineer Robert Bobberson",
+		desc = "ENGINEER ROBERT BOBBERSON",
 		synonyms = { "engineer", "robert", "bob", "bobberson" },
 		location = "engineering",
 		portable = true,
@@ -563,6 +614,180 @@ intfic.objects = {
 		portable = false,
 		surface = true,
 	},
+	circuit_board = {
+		unique_name = "circuit_board",
+		name = "circuit",
+		synonyms = { "board", "pcb", "badge", },
+		desc = "a small circuit board",
+		location = "engineering",
+		portable = true,
+		related_object = { "on", "eng_floor" },
+		examine = "There are burn marks where there should be a resistor",
+		surface = true,
+		container_restrictions = { "resistor" },
+	},
+	resistor = {
+		unique_name = "resistor",
+		name = "resistor",
+		desc = "a 1M ohm resistor",
+		location = "engineers_quarters",
+		related_object = { "on", "desk3" },
+		portable = true,
+		examine = "The resistor looks alright.",
+	},
+	soldering_iron = {
+		unique_name = "soldering_iron",
+		name = "iron",
+		synonyms = { "soldering" },
+		desc = "a soldering iron",
+		location = "engineers_quarters",
+		portable = true,
+		related_object = { "on", "desk3" },
+	},
+	eng_console = {
+		unique_name = "eng_console",
+		name = "console",
+		desc = "the engineering console",
+		location = "engineering",
+		portable = false,
+		surface = true,
+		examine = "There is a small panel on the back of the console",
+	},
+	eng_console_panel = {
+		unique_name = "eng_console_panel",
+		name = "panel",
+		desc = "a small panel on the back of the console",
+		portable = false,
+		location = "engineering",
+		related_object = { "on", "eng_console" },
+		suppress_itemizing = true,
+                doorstatus = "closed",
+                doorroom = nil,
+                doordirout = nil,
+                complement_door = nil; -- doors (usually) are in pairs
+	},
+	eng_console_slot = {
+		unique_name = "eng_console_slot",
+		name = "slot",
+		desc = "a circuit board slot",
+		location = "nowhere",
+		related_object = nil,
+		container = true,
+		container_restrictions = { "circuit_board", },
+		portable = false,
+	},
+	goo1 = {
+		unique_name = "goo1",
+		name = "goo",
+		desc = "some kind of gooey slimy substance is on the walls of the duct",
+		synonyms = { "goop", "slime", "ooze", "snot", "ectoplasm", "substance" },
+		portable = false,
+		location = "duct1",
+		examine = "The goo is slimy and unpleasant.",
+	},
+	goo2 = {
+		unique_name = "goo1",
+		name = "goo",
+		desc = "some kind of gooey slimy substance is on the walls of the duct",
+		synonyms = { "goop", "slime", "ooze", "snot", "ectoplasm", "substance" },
+		portable = false,
+		location = "duct2",
+		examine = "The goo is unpleasant and slimy.",
+	},
+	goo3 = {
+		unique_name = "goo1",
+		name = "goo",
+		desc = "some kind of gooey slimy substance is on the walls of the duct",
+		synonyms = { "goop", "slime", "ooze", "snot", "ectoplasm", "substance" },
+		portable = false,
+		location = "duct3",
+		examine = "The goo is icky and emanates an odor.",
+	},
+	goo4 = {
+		unique_name = "goo1",
+		name = "goo",
+		desc = "some kind of gooey slimy substance is on the walls of the duct",
+		synonyms = { "goop", "slime", "ooze", "snot", "ectoplasm", "substance" },
+		portable = false,
+		location = "duct4",
+		examine = "The goo is slimy and disgusting.",
+	},
+	goo5 = {
+		unique_name = "goo5",
+		name = "goop",
+		desc = "some kind of black goop all over the transporter chamber",
+		synonyms = { "goo", "slime", "ooze", "snot", "ectoplasm", "substance", },
+		portable = false,
+		location = "transporter",
+		examine = "The goop is black and viscous and foul smelling.\n",
+	},
+	transporter_console = {
+		unique_name = "transporter_console",
+		name = "console",
+		desc = "a large transporter console",
+		location = "transporter_room",
+		portable = false,
+		examine = "The transporter console has a large lever on it."
+	},
+	transporter_lever = {
+		unique_name = "transporter_lever",
+		name = "lever",
+		button = true,
+		button_state = false,
+		last_button_state = false,
+		location = "transporter_room",
+		related_object = { "on", "transporter_console" },
+		suppress_itemizing = true,
+	},
+	torpedo_console = {
+		unique_name = "torpedo_console",
+		name = "console",
+		desc = "a large torpedo console",
+		location = "torpedo_bay",
+		portable = false,
+		examine = "The torpedo console has a large switch on it.",
+		surface = true,
+	},
+	torpedo_magazine = {
+		unique_name = "torpedo_magazine",
+		name = "magazine",
+		desc = "a very large drum magazine full of torpedoes",
+		synonyms = { "torpedoes", "drum" },
+		examine = { examine_magazine },
+		portable = false,
+		location = "torpedo_bay",
+		torpedo_count = 3;
+	},
+	torpedo_robot = {
+		unique_name = "torpedo robot",
+		name = "robot",
+		synonyms = { "arm", "loader", "loading", },
+		desc = "A large robot arm for loading torpedoes",
+		location = "torpedo_bay",
+		portable = false,
+		examine = "The torpedo loading arm looks big and dangerous.",
+	},
+	torpedo_switch = {
+		unique_name = "torpedo_switch",
+		name = "switch",
+		desc = "a switch",
+		location = "torpedo_bay",
+		portable = false,
+		related_object = { "on", "torpedo_console" },
+		suppress_itemizing = true,
+		button = true,
+		button_state = false,
+		last_button_state = false,
+	},
+	tube_door = {
+		unique_name = "door",
+		name = "door",
+		synonyms = { "tube", },
+		desc = "a torpedo tube door",
+		location = "torpedo_bay",
+		suppress_itemizing = true,
+		portable = false,
+	},
 };
 
 function flush_output()
@@ -570,7 +795,7 @@ function flush_output()
 	if (out ~= nil) then
 		msgtab = intfic.strsplit(out, "\n");
 		for i,v in pairs(msgtab) do
-			comms_channel_transmit("ROBOT", 1234, "-- " .. string.upper(v));
+			comms_channel_transmit("ROBOT", robot_channel, "-- " .. string.upper(v));
 		end
 	end;
 	register_timer_callback("flush_output", 10, 0);
@@ -586,13 +811,22 @@ function robot_listen(from, channel, message)
 	if hailmsg ~= nil then
 		return;
 	end
-	intfic.send_input(message);
+	if object_distance ~= nil then
+		distance = object_distance(sturnvulf, player_ids[1]);
+			if (distance <= 8000) then
+				intfic.send_input(message);
+			else
+				intfic.write("I'm sorry, your signal is breaking up, say again?\n");
+			end
+	else
+		intfic.send_input(message);
+	end
 end
 
 local function setup_comms()
 	set_variable("SUPPRESS_STARBASE_COMPLAINTS", 1);
-        comms_channel_transmit("ROBOT", 0, ": *** HAILING ON CHANNEL 1234 ***");
-	comms_channel_listen("ROBOT", 1234, "robot_listen");
+        -- comms_channel_transmit("ROBOT", 0, ": *** HAILING ON CHANNEL 1234 ***");
+	comms_channel_listen("ROBOT", robot_channel, "robot_listen");
 	register_timer_callback("flush_output", 10, 0);
 end
 
@@ -760,6 +994,65 @@ function intfic.after_each_turn_hook()
 			end
 		end
 	end
+
+	-- if they open the panel on the eng console, make the board slot visible
+	if intfic.objects["eng_console_panel"].doorstatus == "open" then
+		intfic.objects["eng_console_panel"].suppress_itemizing = false;
+		intfic.setlocation(intfic.objects["eng_console_slot"], "engineering");
+		intfic.objects["eng_console_slot"].related_object = { "on", "eng_console" };
+	else
+		intfic.objects["eng_console_panel"].suppress_itemizing = true;
+		intfic.setlocation(intfic.objects["eng_console_slot"], "nowhere");
+		intfic.objects["eng_console_slot"].related_object = nil;
+	end
+
+	-- if they put the resistor on the circuit board, change the circuit board description
+	if intfic.getlocation(intfic.objects["resistor"]) == intfic.getlocation(intfic.objects["circuit_board"]) and
+		intfic.objects["resistor"].related_object ~= nil and
+		intfic.objects["resistor"].related_object[1] == "on" and
+		intfic.objects["resistor"].related_object[2] == "circuit_board" then
+		intfic.objects["circuit_board"].examine = "The circuit board looks OK.";
+	else
+		intfic.objects["circuit_board"].examine =
+			"There are burn marks where there should be a resistor";
+	end
+
+	-- load a torpedo when they press the torpedo switch
+	if intfic.objects["torpedo_switch"].button_state then
+		if intfic.objects["torpedo_magazine"].torpedo_count <= 0 then
+			intfic.write("The giant magazine rotates 1/10th of a circle.\n");
+			intfic.write("The robot arm whirls around grabbing at\n");
+			intfic.write("where normally it would find a torpedo,\n");
+			intfic.write("but the magazine is empty.\n");
+			intfic.write("The torpedo tube door opens with a hiss.\n");
+			intfic.write("The robot arm swings towards the tube and\n");
+			intfic.write("then back to its resting position and the\n");
+			intfic.write("tube door slams shut. There is a violent shudder\n");
+			intfic.write("and if there were anything in the tube it\n");
+			intfic.write("would have been blasted into space.\n");
+		else
+			intfic.write("The giant magazine rotates 1/10th of a circle.\n");
+			intfic.write("The robot arm whirls around and grabs\n");
+			intfic.write("a torpedo from the magazine.\n");
+			intfic.write("The torpedo tube door opens with a hiss.\n");
+			intfic.write("The robot arm swings towards the tube and\n");
+			intfic.write("deposits the massive torpedo into the tube.\n");
+			intfic.write("The robot arm then swings back to its resting position\n");
+			intfic.write("and the tube door slams shut.\n");
+			intfic.write("With a violent shudder, the torpedo is fired off\n");
+			intfic.write("into space.\n");
+			intfic.objects["torpedo_magazine"].torpedo_count =
+				intfic.objects["torpedo_magazine"].torpedo_count - 1;
+			if get_object_location ~= nil then
+				x, y, z = get_object_location(sturnvulf);
+				if x ~= nil then
+					-- actually fire a torpedo
+					add_torpedo(x, y, z, 0, 90, 0, sturnvulf);
+				end
+			end
+		end
+		intfic.objects["torpedo_switch"].button_state = false;
+	end
 	previous_location = intfic.current_location;
 end
 
@@ -850,6 +1143,43 @@ function setup_custom_words()
 end
 
 setup_custom_words();
+zarkon_timer = 0;
+
+function maintain_zarkon_focus()
+	if zarkon ~= nil then
+		x, y, z = get_object_location(zarkon);
+		if x ~= nil then
+			ai_push_attack(zarkon, player_ids[1]);
+		else
+			zarkon = nil;
+		end
+	end
+	register_timer_callback("maintain_zarkon_focus", 150, 0);
+end
+
+function add_zarkons(cookie)
+	dist = object_distance(sturnvulf, player_ids[1]);
+	if dist > 15000 then
+		register_timer_callback("add_zarkons", 300, 0);
+		return;
+	end
+	if zarkon == nil then
+		zarkon_timer = zarkon_timer - 1;
+		if zarkon_timer > 0 then
+			register_timer_callback("add_zarkons", 300, 0);
+			return;
+		end
+		local x, y, z = random_point_on_sphere(5000);
+		px, py, pz = get_object_location(player_ids[1]);
+		x = x + px;
+		y = y + py;
+		z = z + pz;
+		zarkon = add_ship(generate_ship_name(), x, y, z, 12, 3, 0);
+		ai_push_attack(zarkon, player_ids[1]);
+		zarkon_timer = 1 + math.floor(math.random() * 3);
+	end	
+	register_timer_callback("add_zarkons", 300, 0);
+end
 
 function setup_solarsystem()
 	clear_all();
@@ -1014,12 +1344,66 @@ function setup_solarsystem()
 	if (player_ids[1]) then
 		dock_player_to_starbase(player_ids[1], starbase[1]);
 	end
+	sturnvulf = add_ship("STURNVULF", svx, svy, svz, 13, 0, 0);
+	velnoxa = add_derelict("VELNOXA", svx, svy + 1000, svz - 5000, 17, 0);
+	set_object_velocity(velnoxa, 0, 0, 0);
+	ai_push_catatonic(sturnvulf); -- Make the ship just sit there doing nothing.
+	add_zarkons(0);
+
+
+	-- Add a bunch of cargo containers around the STURNVULF
+	cargo_container = {};
+	macguffin = add_commodity("WEAPONS COMPONENTS", "PIECES", "UNKNOWN METALS", 1000.0, 0.5, 1.0, 0.0, 0.0, 0.0, 0.0);
+	for cc = 1,8 do
+		local ccx, ccy, ccz = random_point_on_sphere(2000, 2000, 2000);
+		ccx = ccx + svx;
+		ccy = ccy + svy;
+		ccz = ccz + svz;
+		cargo_container[cc] = add_cargo_container(ccx, ccy, ccz, 0, 0, 0);
+		set_commodity_contents(cargo_container[cc], macguffin, 100.0);
+	end
+end
+
+function introduction(cookie)
+	comms_transmission(starbase[1], "HELLO");
+	comms_transmission(starbase[1], "WE HAVE A MISSION FOR YOU");
+	comms_transmission(starbase[1], "");
+	comms_transmission(starbase[1], "THE SHIP STURNVULF WAS SECRETLY TRANSPORTING");
+	comms_transmission(starbase[1], "WEAPONS PARTS WHEN WE BELIEVE IT WAS INTERCEPTED");
+	comms_transmission(starbase[1], "BY ZARKONS AND DISABLED");
+	comms_transmission(starbase[1], "");
+	comms_transmission(starbase[1], "WE HAVE REASON TO BELIEVE THERE ARE CREWMEMBERS STILL");
+	comms_transmission(starbase[1], "ABOARD THE SHIP IN NEED OF RESCUE");
+	comms_transmission(starbase[1], "");
+	comms_transmission(starbase[1], "ADDITIONALLY, THE STURVULF EJECTED THE CONTRABAND");
+	comms_transmission(starbase[1], "IT WAS CARRYING BEFORE IT WAS DISABLED IN AN ATTEMPT");
+	comms_transmission(starbase[1], "TO THROW OFF THE ZARKONS.  WE WOULD LIKE YOU TO RECOVER");
+	comms_transmission(starbase[1], "THIS CARGO AS WELL AS ANY SURVIVORS STILL ON THE STURNVULF");
+	comms_transmission(starbase[1], "BEWARE OF ZARKON DISRUPTORS IN THE AREA.");
+	comms_transmission(starbase[1], "");
+	comms_transmission(starbase[1], "THE SHIP VELNOXA WAS SENT TO INVESTIGATE BUT WAS");
+	comms_transmission(starbase[1], "DESTROYED, WE THINK BY THE ZARKONS, BUT NOT BEFORE");
+	comms_transmission(starbase[1], "IT LANDED A RESCUE ROBOT ABOARD THE STURNVULF WITH");
+	comms_transmission(starbase[1], "A NUMBER OF TRANSPORTER TAGS");
+	comms_transmission(starbase[1], "");
+	comms_transmission(starbase[1], "THE RESCUE ROBOT LANDED ON THE STURNVULF BY THE VELNOXA");
+	comms_transmission(starbase[1], "WAS LISTENING FOR INSTRUCTIONS ON CHANNEL " .. tostring(robot_channel));
+	comms_transmission(starbase[1], "AND SHOULD STILL BE LISTENING.  HOWEVER, YOU MUST BE CLOSE");
+	comms_transmission(starbase[1], "TO THE STURNVULF TO COMMUNICATE SUCCESSFULLY WITH IT.");
+	comms_transmission(starbase[1], "");
+	comms_transmission(starbase[1], "THE LAST KNOWN POSITION STURNVULF WAS:");
+	comms_transmission(starbase[1], "X = " .. tostring(math.floor(svx / 1000) * 1000));
+	comms_transmission(starbase[1], "Y = " .. tostring(math.floor(svy / 1000) * 1000));
+	comms_transmission(starbase[1], "Z = " .. tostring(math.floor(svz / 1000) * 1000));
+	comms_transmission(starbase[1], "");
+	comms_transmission(starbase[1], "GOOD LUCK");
+	setup_comms(); -- input/output via SNIS comms
 end
 
 if set_variable == nil then
 	intfic.gameloop(); -- standalone mode i/o via terminal
 else
 	setup_solarsystem();
-	setup_comms(); -- input/output via SNIS comms
+	register_timer_callback("introduction", 300, 0);
 end;
 
