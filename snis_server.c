@@ -12685,6 +12685,33 @@ static int l_destroy_ship(lua_State *l)
 	return 1;
 }
 
+static int l_add_torpedo(lua_State *l)
+{
+	const double x = luaL_checknumber(l, 1);
+	const double y = luaL_checknumber(l, 2);
+	const double z = luaL_checknumber(l, 3);
+	const double vx = luaL_checknumber(l, 4);
+	const double vy = luaL_checknumber(l, 5);
+	const double vz = luaL_checknumber(l, 6);
+	const double id = luaL_checknumber(l, 7);
+	uint32_t iid;
+	int i;
+
+	iid = (uint32_t) id;
+	pthread_mutex_lock(&universe_mutex);
+	i = lookup_by_id(iid);
+	if (i < 0) {
+		pthread_mutex_unlock(&universe_mutex);
+		lua_pushnumber(l, -1.0);
+		send_demon_console_msg("ADD_TORPEDO: OBJECT NOT FOUND");
+		return 1;
+	}
+	i = add_torpedo(x, y, z, vx, vy, vz, iid);
+	pthread_mutex_unlock(&universe_mutex);
+	lua_pushnumber(l, (double) i);
+	return 1;
+}
+
 static void add_black_holes(void)
 {
 	int i;
@@ -23474,6 +23501,7 @@ static void setup_lua(void)
 	add_lua_callable_fn(l_play_sound, "play_sound");
 	add_lua_callable_fn(l_set_red_alert_status, "set_red_alert_status");
 	add_lua_callable_fn(l_destroy_ship, "destroy_ship");
+	add_lua_callable_fn(l_add_torpedo, "add_torpedo");
 }
 
 static int run_initial_lua_scripts(void)
