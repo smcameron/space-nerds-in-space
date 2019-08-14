@@ -521,7 +521,7 @@ function intfic.open_object(entry)
 	local loc1 = intfic.getlocation(door1);
 	local loc2 = nil;
 	if door2 ~= nil then
-		intfic.getlocation(door2);
+		loc2 = intfic.getlocation(door2);
 	end
 	if door1 ~= nil and door1.doordirout ~= nil and door1.doorroom ~= nil then
 		intfic.room[loc1][door1.doordirout] = door1.doorroom;
