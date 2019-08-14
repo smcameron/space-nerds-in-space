@@ -6,6 +6,7 @@ arg = {...};
 previous_location = nil;
 first_time_panel_open = true;
 first_time_taking_card = true;
+num_lifeforms_aboard_ship = 3;
 
 local function examine_body(entry)
 	-- entry is { "noun", object },
@@ -22,7 +23,21 @@ local function examine_body(entry)
 	end	
 end
 
+local function examine_quadcorder(entry)
+	-- entry is { "noun", object },
+
+	local buttonobj = intfic.objects["quadcorder_button"];
+
+	if buttonobj.button_state == false then
+		intfic.write("The quadcorder is off\n");
+	else
+		intfic.write("The quadcorder shows that there are\n");
+		intfic.write(tostring(num_lifeforms_aboard_ship) .. " lifeforms aboard the STURNVULF\n");
+	end
+end
+
 intfic.current_location = "outside_airlock";
+intfic.current_location = "corridor3";
 intfic.cardinal_directions = { "fore", "starboard", "aft", "port", "up", "down" };
 intfic.room = {
 	outside_airlock = {
@@ -57,8 +72,13 @@ intfic.room = {
 		unique_name = "corridor2",
 		shortdesc = "Ok, I am in a corridor",
 		desc = "I am in a corridor at the bottom of a staircase.\n" ..
-			"The corridor continues fore and aft.\n",
+			"The corridor continues fore and aft.\n" ..
+			"To starboard is the Engineer's quarters,\n" ..
+			"and to port is the Doctor's quarters.\n",
 		up = "corridor1",
+		port = "doctors_quarters",
+		starboard = "engineers_quarters",
+		port = "doctors_quarters",
 		fore = nil,
 		aft = nil,
 	},
@@ -66,17 +86,47 @@ intfic.room = {
 		unique_name = "corridor3",
 		shortdesc = "Ok, I am in a corridor",
 		desc = "I am in a corridor at the top of a staircase.\n" ..
-			"The corridor continues fore and aft.\n",
+			"The corridor continues fore and aft.\n" ..
+			"To port is the captain's quarters.\n" ..
+			"To starboard is the first mate's quarters.\n",
 		down = "corridor1",
 		fore = "bridge",
+		port = "captains_quarters",
+		starboard = "first_mates_quarters",
 		aft = nil,
+	},
+	captains_quarters = {
+		unique_name = "captains_quarters",
+		shortdesc = "Ok, I am in the captain's quarters.\n",
+		desc = "I am in the captain's quarters.\n",
+		starboard = "corridor3",
+	},
+	first_mates_quarters = {
+		unique_name = "first_mates_quarters",
+		shortdesc = "Ok, I am in the first mate's quarters.\n",
+		desc = "I am in the first mate's quarters.\n" ..
+			"A gentle breeze comes from a large ventilation\n" ..
+			"duct on the aft wall.\n",
+		port = "corridor3",
+	},
+	doctors_quarters = {
+		unique_name = "doctors_quarters",
+		shortdesc = "Ok, I am in the doctor's quarters.\n",
+		desc = "I am in the doctor's quarters.\n",
+		starboard = "corridor2",
+	},
+	engineers_quarters = {
+		unique_name = "engineers_quarters",
+		shortdesc = "Ok, I am in the engineer's quarters.\n",
+		desc = "I am in the engineer's quarters.\n",
+		port = "corridor2",
 	},
 	bridge = {
 		unique_name = "bridge",
 		shortdesc = "Ok, I'm on the bridge.",
 		desc = "I'm on the bridge of the STURNVULF. It's chaos here.\n" ..
 			"The main viewscreen is black.  All the consoles have\n" ..
-			"been scorched and melted by blasters. Nobody is here but me.",
+			"been scorched and melted by blasters.",
 		aft = "corridor3",
 	},
 	vestibule = {
@@ -264,6 +314,160 @@ intfic.objects = {
 		examine = "The consoles are burned and melted almost beyond recognition",
 		suppress_itemizing = true,
 	},
+	desk1 = {
+		unique_name = "desk1",
+		name = "desk",
+		desc = "a desk",
+		surface = true,
+		location = "captains_quarters",
+		portable = false,
+	},
+	bed1 = {
+		unique_name = "bed1",
+		name = "bed",
+		desc = "a bed",
+		surface = true,
+		location = "captains_quarters",
+		portable = false,
+	},
+	chair1 = {
+		unique_name = "chair1",
+		name = "chair",
+		desc = "a chair",
+		surface = true,
+		location = "captains_quarters",
+		portable = false,
+	},
+	desk2 = {
+		unique_name = "desk2",
+		name = "desk",
+		desc = "a desk",
+		surface = true,
+		location = "first_mates_quarters",
+		portable = false,
+	},
+	bed2 = {
+		unique_name = "bed2",
+		name = "bed",
+		desc = "a bed",
+		surface = true,
+		location = "first_mates_quarters",
+		portable = false,
+	},
+	chair2 = {
+		unique_name = "chair2",
+		name = "chair",
+		desc = "a chair",
+		surface = true,
+		location = "first_mates_quarters",
+		portable = false,
+	},
+	desk3 = {
+		unique_name = "desk3",
+		name = "desk",
+		desc = "a desk",
+		surface = true,
+		location = "engineers_quarters",
+		portable = false,
+	},
+	desk4 = {
+		unique_name = "desk4",
+		name = "desk",
+		desc = "a desk",
+		surface = true,
+		location = "doctors_quarters",
+		portable = false,
+	},
+	duct = {
+		unique_name = "duct",
+		name = "duct",
+		desc = "a ventilation duct on the aft wall",
+		synonyms = { "ventilation" },
+		location = "first_mates_quarters",
+		suppress_itemizing = true,
+		portable = false,
+		examine = "The ventilation duct is covered by a grate",
+	},
+	grate = {
+		unique_name = "grate",
+		name = "grate",
+		desc = "a grate",
+		location = "first_mates_quarters",
+		suppress_itemizing = true,
+		portable = false,
+		examine = "The grate is screwed into the wall.",
+	},
+	screws = {
+		unique_name = "screws",
+		name = "screws",
+		desc = "screws",
+		synonym = "screw",
+		location = "first_mates_quarters",
+		suppress_itemizing = true,
+		portable = false,
+	},
+	screwdriver = {
+		unique_name = "screwdriver",
+		name = "screwdriver",
+		desc = "a screwdriver",
+		location = "engineers_quarters",
+		related_object = { "on", "desk3" },
+		portable = true,
+	},
+	quadcorder = {
+		unique_name = "quadcorder",
+		name = "quadcorder",
+		desc = "a quadcorder",
+		location = "doctors_quarters",
+		related_object = { "on", "desk4" },
+		portable = true,
+		examine = { examine_quadcorder },
+		surface = true;
+		container_restrictions = { "quadcorder_button" },
+	},
+	quadcorder_button = {
+		unique_name = "quadcorder_button",
+		name = "button",
+		desc = "a button",
+		location = "doctors_quarters",
+		related_object = { "on", "quadcorder" },
+		portable = false,
+		button = true,
+		button_state = false,
+		last_button_state = false,
+		suppress_itemizing = true,
+	},
+	captain_jameson = {
+		unique_name = "captain_jameson",
+		name = "captain",
+		desc = "Captain Jameson",
+		synonyms = { "jameson" },
+		location = "bridge",
+		related_object = {"on", "bridge_floor" },
+		portable = true,
+		examine = "Captain Jameson is unconscious, but alive.", 
+		surface = true,
+		container_restrictions = { "transporter_tag", "card" },
+	},
+	bridge_floor = {
+		unique_name = "bridge_floor",
+		name = "floor",
+		desc = "floor",
+		synonyms = { "ground" },
+		location = "bridge",
+		suppress_itemizing = true,
+		portable = false,
+		surface = true,
+	},
+	transporter_tag = {
+		unique_name = "transporter_tag",
+		name = "tag",
+		desc = "a number of transporter tags",
+		synonyms = { "transporter" },
+		portable = true,
+		location = "pocket",
+		related_object = nil,
+	},
 };
 
 function flush_output()
@@ -315,6 +519,18 @@ end
 function open_inner_airlock_door()
 	intfic.room["vestibule"].fore = "airlock";
 	intfic.room["airlock"].aft = "vestibule";
+end
+
+local function lifeform_tagged(lifeform)
+	-- TODO: notify SCIENCE that a lifeform is tagged for transport.
+	-- TODO: add passenger to player ship
+	if lifeform == "captain_jameson" then
+		intfic.write("Captain Jameson dematerializes as\nhe is beamed off the STURNVULF\n");
+		intfic.objects["transporter_tag"].location = "pocket";
+		intfic.objects["transporter_tag"].related_object = nil;
+		intfic.objects["captain_jameson"].location = "nowhere";
+		num_lifeforms_aboard_ship = num_lifeforms_aboard_ship - 1;
+	end
 end
 
 function intfic.after_each_turn_hook()
@@ -431,6 +647,15 @@ function intfic.after_each_turn_hook()
 		intfic.objects["slot"].examine = "It looks like you could put a card into the slot.\n" ..
 			"There is a small panel above the slot.";
 	end
+
+	-- Transport any tagged lifeforms
+	if intfic.objects["transporter_tag"].related_object ~= nil then
+		if intfic.objects["transporter_tag"].related_object[1] == "on" then 
+			if intfic.objects["transporter_tag"].related_object[2] == "captain_jameson" then
+				lifeform_tagged("captain_jameson");
+			end
+		end
+	end
 	previous_location = intfic.current_location;
 end
 
@@ -473,7 +698,42 @@ local function dowear()
 	intfic.write("I am robot of non-humanoid form.\nThere are no clothes that would fit me.\n");
 end
 
-function setup_directional_shortcuts()
+local function unscrew_object(entry)
+	-- entry is a table { "noun", object };
+	if entry[2] == "not here" then
+		intfic.write(entry[1] .. ": I do not see that here.\n");
+		return;
+	end;
+	if entry[2] == nil then
+		intfic.write(entry[1] .. ": I don't know about that.\n");
+		return;
+	end
+	if entry[2] ~= intfic.objects["screws"] and entry[2] ~= intfic.objects["grate"] then
+		intfic.write(entry[1] .. ": I'm not sure how to unscrew that.\n");
+		return;
+	end
+	if intfic.objects["screws"].portable then
+		intfic.write("The screws are already unscrewed.\n");
+		return;
+	end
+	if intfic.getlocation(intfic.objects["screwdriver"]) ~= "pocket" then
+		intfic.write(entry[1] .. ": I will need a screwdriver.\n");
+			return;
+	end
+	intfic.setlocation(intfic.objects["screws"], "pocket");
+	intfic.objects["screws"].portable = true;
+	intfic.objects["grate"].suppress_itemizing = false;
+	intfic.objects["grate"].portable = true;
+	intfic.write(entry[1] .. ": Ok, I unscrewed the grate.\n");
+	intfic.objects["duct"].suppress_itemizing = false;
+	intfic.objects["duct"].desc = "an open ventilation duct on the aft wall.";
+end
+
+local function dounscrew(words)
+	intfic.generic_doverb(unscrew_object, words, { intfic.current_location, "pocket" });
+end
+
+function setup_custom_words()
 	intfic.verb["p"] = { dogoport };
 	intfic.verb["s"] = { dogostarboard };
 	intfic.verb["f"] = { dogofore };
@@ -481,10 +741,10 @@ function setup_directional_shortcuts()
 	intfic.verb["u"] = { dogoup };
 	intfic.verb["d"] = { dogodown };
 	intfic.verb["wear"] = { dowear };
+	intfic.verb["unscrew"] = { dounscrew };
 end
 
-setup_directional_shortcuts();
-
+setup_custom_words();
 
 function setup_solarsystem()
 	clear_all();
