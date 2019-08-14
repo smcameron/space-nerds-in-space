@@ -7,6 +7,21 @@ previous_location = nil;
 first_time_panel_open = true;
 first_time_taking_card = true;
 
+local function examine_body(entry)
+	-- entry is { "noun", object },
+
+	local cardobj = intfic.objects["card"];
+	local bodyobj = intfic.objects["body"];
+
+	intfic.write("The body is frozen solid.\n");
+	if cardobj.location == "nowhere" then 
+		intfic.write("There is an ID card on the body.\n");
+		cardobj.location = bodyobj.location;
+		cardobj.suppress_itemizing = false;
+		cardobj.related_object = { "on", "body" };
+	end	
+end
+
 intfic.current_location = "outside_airlock";
 intfic.cardinal_directions = { "fore", "starboard", "aft", "port", "up", "down" };
 intfic.room = {
@@ -166,7 +181,7 @@ intfic.objects = {
 		surface = true,
 		synonyms = { "ensign", "mallory", "corpse", "carcass", "cadaver" },
 		container_restrictions = { "card" },
-		examine = "The body is frozen solid.",
+		examine = { examine_body },
 	},
 	button = {
 			unique_name = "button1",
