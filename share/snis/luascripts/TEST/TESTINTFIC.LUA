@@ -44,6 +44,10 @@ intfic.room = {
 	},
 };
 
+local function bucket_examine(entry)
+	intfic.write("Well, it's a bucket\n");
+end
+
 intfic.objects = {
 	mop = {
 		unique_name = "mop",
@@ -59,7 +63,7 @@ intfic.objects = {
 		name = "bucket",
 		desc = "a bucket",
 		portable = true,
-		examine = "Well, it's a plastic bucket.  It's got a handle.",
+		examine = { bucket_examine },
 		container = true,
 	},
 	pail = {

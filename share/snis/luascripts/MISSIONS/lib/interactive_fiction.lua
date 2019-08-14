@@ -487,7 +487,11 @@ function intfic.examine_object(entry)
 		end
 		return;
 	end
-	intfic.write(entry[1] .. ": " .. entry[2].examine .. "\n");
+	if type(entry[2].examine) == "string" then
+		intfic.write(entry[1] .. ": " .. entry[2].examine .. "\n");
+	else
+		entry[2].examine[1](entry[2]);
+	end
 end;
 
 function intfic.open_object(entry)
