@@ -16680,8 +16680,10 @@ static int process_enscript_command(struct game_client *c)
 		return rc;
 	txt[len] = '\0';
 
-	if (!lua_enscript_enabled)
+	if (!lua_enscript_enabled) {
+		send_demon_console_msg("ENSCRIPT IS DISABLED ON THIS SERVER");
 		return 0;
+	}
 
 	/* TODO: Send this client side instead of storing server side. */
 #define LUASCRIPTDIR STRPREFIX(PREFIX) "/share/snis/luascripts"
