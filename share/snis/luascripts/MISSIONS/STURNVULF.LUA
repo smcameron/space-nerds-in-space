@@ -6,7 +6,7 @@ arg = {...};
 previous_location = nil;
 first_time_panel_open = true;
 first_time_taking_card = true;
-num_lifeforms_aboard_ship = 3;
+num_lifeforms_aboard_ship = 5;
 
 local function examine_body(entry)
 	-- entry is { "noun", object },
@@ -62,7 +62,8 @@ intfic.room = {
 		shortdesc = "Ok, I am in a corridor",
 		desc = "I am in a corridor. To fore is the vestibule\n" ..
 			"A staircase leads up, and another staircase\n" ..
-			"leads down.",
+			"leads down. To aft is a bulkhead with a door\n" ..
+			"marked ENGINEERING.",
 		fore = "vestibule",
 		up = "corridor3",
 		down = "corridor2",
@@ -136,6 +137,51 @@ intfic.room = {
 			"To fore is the airlock. To aft is a corridor.\n" ..
 			"There is a slot on the wall next to the airlock door.",
 		aft = "corridor1",
+		visited = false,
+	},
+	duct1 = {
+		unique_name = "duct1",
+		shortdesc = "Ok, I am in the ventilation duct",
+		desc = "To fore is the first mate's quarters\n" ..
+			"To aft is more duct\n",
+		aft = "duct2",
+		fore = "first_mates_quarters",
+		visited = false,
+	},
+	duct2 = {
+		unique_name = "duct2",
+		shortdesc = "Ok, I am in the ventilation duct",
+		desc = "To fore is more duct, and to aft is more duct\n" ..
+			"and the duct branches off to starboard as well.",
+		fore = "duct1",
+		aft = "duct3",
+		starboard = "duct4",
+		visited = false,
+	},
+	duct3 = {
+		unique_name = "duct3",
+		shortdesc = "Ok, I am in the ventilation duct",
+		desc = "To fore is more duct, further progress aft is\n" ..
+			"blocked by a large fan.",
+		fore = "duct2",
+		visited = false,
+	},
+	duct4 = {
+		unique_name = "duct4",
+		shortdesc = "Ok, I am in the ventilation duct",
+		desc = "To starboard the duct opens into a room.\n" ..
+			"To port is more duct.\n",
+		port = "duct2",
+		starboard = "engineering",
+		visited = false,
+	},
+	engineering = {
+		unique_name = "engineering",
+		shortdesc = "I am in engineering",
+		desc = "I am in engineering.\n" ..
+			"To port is an open ventilation duct\n" ..
+			"To fore is a bulkhead with a door\n",
+		port = "duct4",
 		visited = false,
 	},
 	pocket = {
@@ -448,6 +494,7 @@ intfic.objects = {
 		examine = "Captain Jameson is unconscious, but alive.", 
 		surface = true,
 		container_restrictions = { "transporter_tag", "card" },
+		passenger_number = 0;
 	},
 	bridge_floor = {
 		unique_name = "bridge_floor",
@@ -467,6 +514,54 @@ intfic.objects = {
 		portable = true,
 		location = "pocket",
 		related_object = nil,
+	},
+	eng_door = {
+		unique_name = "eng_door",
+		name = "door",
+		desc = "door to engineering",
+		synonyms = { "engineering" },
+		portable = false,
+		location = "corridor1",
+		examine = "The door appears to be welded shut",
+		suppress_itemizing = true,
+	},
+	eng_bulkhead = {
+		unique_name = "eng_bulkhead",
+		name = "bulkhead",
+		desc = "a bulkhead",
+		location = "corridor1",
+		portable = false,
+		suppress_itemizing = true,
+	},
+	large_fan = {
+		unique_name = "large_fan",
+		name = "fan",
+		desc = "a large, slowly spinning fan.",
+		location = "duct3",
+		portable = false,
+	},
+	engineer_bob = {
+		unique_name = "engineer_bob",
+		name = "engineer",
+		desc = "Engineer Robert Bobberson",
+		synonyms = { "engineer", "robert", "bob", "bobberson" },
+		location = "engineering",
+		portable = true,
+		examine = "Engineer Bobberson is unconscious, but alive.",
+		surface = true,
+		container_restrictions = { "transporter_tag", "card" },
+		related_object = { "on", "eng_floor" },
+		passenger_number = 1;
+	},
+	eng_floor = {
+		unique_name = "eng_floor",
+		name = "floor",
+		desc = "floor",
+		synonyms = { "ground" },
+		location = "engineering",
+		suppress_itemizing = true,
+		portable = false,
+		surface = true,
 	},
 };
 
@@ -523,13 +618,20 @@ end
 
 local function lifeform_tagged(lifeform)
 	-- TODO: notify SCIENCE that a lifeform is tagged for transport.
-	-- TODO: add passenger to player ship
-	if lifeform == "captain_jameson" then
-		intfic.write("Captain Jameson dematerializes as\nhe is beamed off the STURNVULF\n");
+	if lifeform == "captain_jameson" or lifeform == "engineer_bob" then
+		intfic.write(intfic.objects[lifeform].desc .. " dematerializes as\nhe is beamed off the STURNVULF\n");
 		intfic.objects["transporter_tag"].location = "pocket";
 		intfic.objects["transporter_tag"].related_object = nil;
-		intfic.objects["captain_jameson"].location = "nowhere";
+		intfic.objects[lifeform].location = "nowhere";
 		num_lifeforms_aboard_ship = num_lifeforms_aboard_ship - 1;
+
+		-- add passenger to player ship
+		if (create_passenger ~= nil) then
+			create_passenger(intfic.objects[lifeform].passenger_number,
+						intfic.objects[lifeform].desc,
+						starbase[1], starbase[1], 1000.0);
+			set_passenger_location(intfic.objects[lifeform].passenger_number, player_ids[1]);
+		end
 	end
 end
 
@@ -653,6 +755,8 @@ function intfic.after_each_turn_hook()
 		if intfic.objects["transporter_tag"].related_object[1] == "on" then 
 			if intfic.objects["transporter_tag"].related_object[2] == "captain_jameson" then
 				lifeform_tagged("captain_jameson");
+			elseif intfic.objects["transporter_tag"].related_object[2] == "engineer_bob" then
+				lifeform_tagged("engineer_bob");
 			end
 		end
 	end
@@ -727,6 +831,7 @@ local function unscrew_object(entry)
 	intfic.write(entry[1] .. ": Ok, I unscrewed the grate.\n");
 	intfic.objects["duct"].suppress_itemizing = false;
 	intfic.objects["duct"].desc = "an open ventilation duct on the aft wall.";
+	intfic.room["first_mates_quarters"].aft = "duct1";
 end
 
 local function dounscrew(words)
