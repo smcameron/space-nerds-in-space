@@ -929,6 +929,21 @@ add_torpedo(x, y, z, vx, vy, vz, firing_ship_id)
 	Adds a torpedo at (x, y, z) with velocity (vx, vy, vz) fired from
 	ship firing_ship_id.
 
+INTERACTIVE FICTION:
+
+There is a Lua library to help with creating Zork-like interactive fiction missions controlled by
+COMMS in share/snis/luascripts/MISSIONS/lib/interactive-fiction.lua  You can see a simple example of
+using this library in share/snis/luascripts/TEST/TESTINTFIC.LUA and a more complicated example in
+share/snis/luascripts/MISSIONS/STURNVULF.LUA  You can run these from the command line, e.g:
+
+	lua share/snis/luascripts/TEST/TESTINTFIC.LUA
+
+Or from the demon screen
+
+If you run them from the console, the parts of the scripts which interact with SNIS will obviously
+not run, but the interactive fiction portion will still work. TODO: Document this interactive-fiction
+library better.
+
 NOTE: Your lua scripts must not sleep, call any function which blocks, or require excessive
 long running calculations (nothing more than a few hundredths of a second) because the lua
 scripts are called from the main thread and if the scripts block, the entire game will block.
