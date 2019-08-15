@@ -770,7 +770,11 @@ end
 local function do_put_action_on_direct_objs(direct_objs, preposition, indirect_object)
 	for k, v in pairs(direct_objs) do
 		for k2, v2 in pairs(v) do
-			do_put_obj_on_indirect_obj_helper(v2[2], preposition, indirect_object)
+			if v2[2] ~= nil then
+				do_put_obj_on_indirect_obj_helper(v2[2], preposition, indirect_object)
+			else
+				intfic.write(v2[1] .. ": I don't know about that.\n");
+			end
 		end
 	end
 end
