@@ -8,6 +8,9 @@ first_time_panel_open = true;
 first_time_taking_card = true;
 num_lifeforms_aboard_ship = 5;
 zarkon = nil;
+intfic.current_location = "outside_airlock";
+-- intfic.current_location = "engineering";
+intfic.cardinal_directions = { "fore", "starboard", "aft", "port", "up", "down" };
 
 if random_point_on_sphere ~= nil then
 	-- Choose a location for the STURNVULF
@@ -26,7 +29,6 @@ else
 	robot_channel = 1234;
 end
 
-
 local function examine_body(entry)
 	-- entry is { "noun", object },
 
@@ -34,12 +36,12 @@ local function examine_body(entry)
 	local bodyobj = intfic.objects["body"];
 
 	intfic.write("The body is frozen solid.\n");
-	if cardobj.location == "nowhere" then 
+	if cardobj.location == "nowhere" then
 		intfic.write("There is an ID card on the body.\n");
 		cardobj.location = bodyobj.location;
 		cardobj.suppress_itemizing = false;
 		cardobj.related_object = { "on", "body" };
-	end	
+	end
 end
 
 local function examine_quadcorder(entry)
@@ -55,6 +57,44 @@ local function examine_quadcorder(entry)
 	end
 end
 
+local function weapons_active()
+	if intfic.objects["resistor"].related_object ~= nil and
+		intfic.objects["resistor"].related_object[2] == "circuit_board" and
+		intfic.objects["circuit_board"].related_object ~= nil and
+		intfic.objects["circuit_board"].related_object[2] == "eng_console_slot" and
+		intfic.objects["eng_console_switch"].button_state == true then
+		return true;
+	end
+	return false;
+end
+
+local function examine_eng_console(entry)
+	if intfic.objects["resistor"].related_object ~= nil and
+		intfic.objects["resistor"].related_object[2] == "circuit_board" and
+		intfic.objects["circuit_board"].related_object ~= nil and
+		intfic.objects["circuit_board"].related_object[2] == "eng_console_slot" then
+		intfic.write("There are many blinking lights on the console\n");
+	else
+		intfic.write("All of the lights on the console are dark\n");
+	end
+	intfic.write("There is a small panel on the back of the console\n");
+	intfic.write("There is a large switch marked WEAPONS on the console\n");
+	if weapons_active() then
+		intfic.write("and next to it is a flashing label: WEAPONS ARMED\n");
+	end
+end
+
+local function examine_eng_lights(entry)
+	if intfic.objects["resistor"].related_object ~= nil and
+		intfic.objects["resistor"].related_object[2] == "circuit_board" and
+		intfic.objects["circuit_board"].related_object ~= nil and
+		intfic.objects["circuit_board"].related_object[2] == "eng_console_slot" then
+		intfic.write("The lights are blinking\n");
+	else
+		intfic.write("All of the lights on the console are dark\n");
+	end
+end
+
 local function examine_magazine(entry)
 
 	intfic.write("The torpedo magazine is very large and heavy.\n");
@@ -62,9 +102,6 @@ local function examine_magazine(entry)
 			" torpedoes in the magazine.\n");
 end
 
-intfic.current_location = "outside_airlock";
-intfic.current_location = "torpedo_bay";
-intfic.cardinal_directions = { "fore", "starboard", "aft", "port", "up", "down" };
 intfic.room = {
 	outside_airlock = {
 		unique_name = "outside_airlock",
@@ -419,6 +456,20 @@ intfic.objects = {
 		location = "captains_quarters",
 		portable = false,
 	},
+	captains_log = {
+		unique_name = "captains_log",
+		name = "log",
+		synonyms = { "captains", "book", "logbook", },
+		location = "captains_quarters",
+		portable = true,
+		desc = "the captain's log",
+		examine = "The last entry reads:\n" ..
+			"The zarkons have boarded our ship and installed a bomb\n" ..
+			"in engineering. So far we are unable to defuse it.\n" ..
+			"I think they may have also drugged the ventilation system\n" ..
+			"as many of the crew have inexplicably fallen unconcious\n" ..
+			"I think they mean to leave us for dead and blow up the ship\n";
+	},
 	bed1 = {
 		unique_name = "bed1",
 		name = "bed",
@@ -542,10 +593,36 @@ intfic.objects = {
 		location = "bridge",
 		related_object = {"on", "bridge_floor" },
 		portable = true,
-		examine = "Captain Jameson is unconscious, but alive.", 
+		examine = "Captain Jameson is unconscious, but alive.",
 		surface = true,
 		container_restrictions = { "transporter_tag", "card" },
 		passenger_number = 0;
+	},
+	commander_klon = {
+		unique_name = "commander_klon",
+		name = "commander",
+		desc = "COMMANDER KLON",
+		synonyms = { "klon" },
+		location = "transporter_room",
+		related_object = {"on", "transporter_room_floor" },
+		portable = true,
+		examine = "Commander Klon is unconscious, but alive.",
+		surface = true,
+		container_restrictions = { "transporter_tag", "card" },
+		passenger_number = 2;
+	},
+	doctor_nork = {
+		unique_name = "doctor_nork",
+		name = "doctor",
+		desc = "DOCTOR NORK",
+		synonyms = { "nork" },
+		location = "torpedo_bay",
+		related_object = {"on", "torpedo_bay_floor" },
+		portable = true,
+		examine = "Doctor Nork is unconscious, but alive.",
+		surface = true,
+		container_restrictions = { "transporter_tag", "card" },
+		passenger_number = 3;
 	},
 	bridge_floor = {
 		unique_name = "bridge_floor",
@@ -614,6 +691,26 @@ intfic.objects = {
 		portable = false,
 		surface = true,
 	},
+	transport_room_floor = {
+		unique_name = "transporter_room_floor",
+		name = "floor",
+		desc = "floor",
+		synonyms = { "ground" },
+		location = "transporter_room",
+		suppress_itemizing = true,
+		portable = false,
+		surface = true,
+	},
+	torpedo_bay_floor = {
+		unique_name = "torpedo_bay_floor",
+		name = "floor",
+		desc = "floor",
+		synonyms = { "ground" },
+		location = "torpedo_bay",
+		suppress_itemizing = true,
+		portable = false,
+		surface = true,
+	},
 	circuit_board = {
 		unique_name = "circuit_board",
 		name = "circuit",
@@ -651,7 +748,7 @@ intfic.objects = {
 		location = "engineering",
 		portable = false,
 		surface = true,
-		examine = "There is a small panel on the back of the console",
+		examine = { examine_eng_console },
 	},
 	eng_console_panel = {
 		unique_name = "eng_console_panel",
@@ -675,6 +772,28 @@ intfic.objects = {
 		container = true,
 		container_restrictions = { "circuit_board", },
 		portable = false,
+	},
+	eng_console_switch = {
+		unique_name = "eng_console_switch",
+		name = "switch",
+		desc = "a large switch",
+		location = "engineering",
+		related_object = { "on", "eng_console" },
+		button = true,
+		button_state = false,
+		portable = false,
+		suppress_itemizing = true,
+	},
+	eng_console_lights = {
+		unique_name = "eng_console_lights",
+		name = "lights",
+		synonyms = { "light" },
+		desc = "some lights",
+		location = "engineering",
+		related_object = { "on", "eng_console" },
+		portable = false,
+		suppress_itemizing = true,
+		examine = { examine_eng_lights },
 	},
 	goo1 = {
 		unique_name = "goo1",
@@ -788,6 +907,15 @@ intfic.objects = {
 		suppress_itemizing = true,
 		portable = false,
 	},
+	bomb = {
+		unique_name = "bomb",
+		name = "bomb",
+		synonyms = { "explosive", "device" },
+		desc = "a large device that looks suspiciously bomb-like",
+		location = "engineering",
+		portable = false,
+		examine = "The bomb is a hopeless nest of wires far\ntoo dangerous to mess with."
+	},
 };
 
 function flush_output()
@@ -852,7 +980,8 @@ end
 
 local function lifeform_tagged(lifeform)
 	-- TODO: notify SCIENCE that a lifeform is tagged for transport.
-	if lifeform == "captain_jameson" or lifeform == "engineer_bob" then
+	if lifeform == "captain_jameson" or lifeform == "engineer_bob" or
+		lifeform == "doctor_nork" or lifeform == "commander_klon" then
 		intfic.write(intfic.objects[lifeform].desc .. " dematerializes as\nhe is beamed off the STURNVULF\n");
 		intfic.objects["transporter_tag"].location = "pocket";
 		intfic.objects["transporter_tag"].related_object = nil;
@@ -986,7 +1115,7 @@ function intfic.after_each_turn_hook()
 
 	-- Transport any tagged lifeforms
 	if intfic.objects["transporter_tag"].related_object ~= nil then
-		if intfic.objects["transporter_tag"].related_object[1] == "on" then 
+		if intfic.objects["transporter_tag"].related_object[1] == "on" then
 			if intfic.objects["transporter_tag"].related_object[2] == "captain_jameson" then
 				lifeform_tagged("captain_jameson");
 			elseif intfic.objects["transporter_tag"].related_object[2] == "engineer_bob" then
@@ -1019,40 +1148,44 @@ function intfic.after_each_turn_hook()
 
 	-- load a torpedo when they press the torpedo switch
 	if intfic.objects["torpedo_switch"].button_state then
-		if intfic.objects["torpedo_magazine"].torpedo_count <= 0 then
-			intfic.write("The giant magazine rotates 1/10th of a circle.\n");
-			intfic.write("The robot arm whirls around grabbing at\n");
-			intfic.write("where normally it would find a torpedo,\n");
-			intfic.write("but the magazine is empty.\n");
-			intfic.write("The torpedo tube door opens with a hiss.\n");
-			intfic.write("The robot arm swings towards the tube and\n");
-			intfic.write("then back to its resting position and the\n");
-			intfic.write("tube door slams shut. There is a violent shudder\n");
-			intfic.write("and if there were anything in the tube it\n");
-			intfic.write("would have been blasted into space.\n");
-		else
-			intfic.write("The giant magazine rotates 1/10th of a circle.\n");
-			intfic.write("The robot arm whirls around and grabs\n");
-			intfic.write("a torpedo from the magazine.\n");
-			intfic.write("The torpedo tube door opens with a hiss.\n");
-			intfic.write("The robot arm swings towards the tube and\n");
-			intfic.write("deposits the massive torpedo into the tube.\n");
-			intfic.write("The robot arm then swings back to its resting position\n");
-			intfic.write("and the tube door slams shut.\n");
-			intfic.write("With a violent shudder, the torpedo is fired off\n");
-			intfic.write("into space.\n");
-			intfic.objects["torpedo_magazine"].torpedo_count =
-				intfic.objects["torpedo_magazine"].torpedo_count - 1;
-			if get_object_location ~= nil then
-				x, y, z = get_object_location(sturnvulf);
-				if x ~= nil then
-					-- actually fire a torpedo
-					add_torpedo(x, y, z, 0, 90, 0, sturnvulf);
+		if weapons_active() then
+			if intfic.objects["torpedo_magazine"].torpedo_count <= 0 then
+				intfic.write("The giant magazine rotates 1/10th of a circle.\n");
+				intfic.write("The robot arm whirls around grabbing at\n");
+				intfic.write("where normally it would find a torpedo,\n");
+				intfic.write("but the magazine is empty.\n");
+				intfic.write("The torpedo tube door opens with a hiss.\n");
+				intfic.write("The robot arm swings towards the tube and\n");
+				intfic.write("then back to its resting position and the\n");
+				intfic.write("tube door slams shut. There is a violent shudder\n");
+				intfic.write("and if there were anything in the tube it\n");
+				intfic.write("would have been blasted into space.\n");
+			else
+				intfic.write("The giant magazine rotates 1/10th of a circle.\n");
+				intfic.write("The robot arm whirls around and grabs\n");
+				intfic.write("a torpedo from the magazine.\n");
+				intfic.write("The torpedo tube door opens with a hiss.\n");
+				intfic.write("The robot arm swings towards the tube and\n");
+				intfic.write("deposits the massive torpedo into the tube.\n");
+				intfic.write("The robot arm then swings back to its resting position\n");
+				intfic.write("and the tube door slams shut.\n");
+				intfic.write("With a violent shudder, the torpedo is fired off\n");
+				intfic.write("into space.\n");
+				intfic.objects["torpedo_magazine"].torpedo_count =
+					intfic.objects["torpedo_magazine"].torpedo_count - 1;
+				if get_object_location ~= nil then
+					x, y, z = get_object_location(sturnvulf);
+					if x ~= nil then
+						-- actually fire a torpedo
+						add_torpedo(x, y, z, 0, 90, 0, sturnvulf);
+					end
 				end
 			end
+		else
+			intfic.write("Nothing happens.\n");
 		end
-		intfic.objects["torpedo_switch"].button_state = false;
 	end
+	intfic.objects["torpedo_switch"].button_state = false;
 	previous_location = intfic.current_location;
 end
 
@@ -1177,7 +1310,7 @@ function add_zarkons(cookie)
 		zarkon = add_ship(generate_ship_name(), x, y, z, 12, 3, 0);
 		ai_push_attack(zarkon, player_ids[1]);
 		zarkon_timer = 1 + math.floor(math.random() * 3);
-	end	
+	end
 	register_timer_callback("add_zarkons", 300, 0);
 end
 
