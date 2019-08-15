@@ -73,6 +73,17 @@ function intfic.format_table(tbl, indent)
 end
 local fmttbl = intfic.format_table;
 
+function intfic.dprnt(words)
+	for k, v in pairs(intfic.cdr(words)) do
+		local var = _G[v];
+		if var == nil then
+			intfic.write(v .. ": unknown identifer\n");
+		else
+			intfic.write(v .. " = " .. fmttbl(var));
+		end
+	end
+end
+
 function intfic.strsplit(inputstr, sep)
 
 	if inputstr == nil then
@@ -846,6 +857,9 @@ function intfic.execute_command(cmd)
 	then
 		return;
 	end
+	if words[1] == "dprnt" then
+		words = intfic.strsplit(cmd, " ");
+	end
 	if intfic.verb[words[1]] == nil then
 		intfic.write("I don't understand what you mean by '" .. words[1] .. "'\n");
 		return;
@@ -909,6 +923,7 @@ intfic.verb = {
 		flip = { intfic.dopush },
 		help = { intfic.dohelp },
 		quit = { intfic.do_exit },
+		dprnt = { intfic.dprnt },
 };
 
 intfic.room = {
