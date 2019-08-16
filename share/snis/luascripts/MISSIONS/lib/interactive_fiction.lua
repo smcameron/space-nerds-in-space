@@ -528,6 +528,11 @@ function intfic.open_object(entry)
 		intfic.write("The " .. entry[1] .. " is already open.\n");
 		return;
 	end
+	-- check if the door only allows opening from one side (this is a bit hacky)
+	if entry[2].no_open_from_this_side ~= nil then
+		intfic.write("The " .. entry[1] .. " is locked from the other side.\n");
+		return;
+	end
 	-- connect the rooms and open the two halves of the door
 	local door1 = entry[2];
 	local door2 = nil;
