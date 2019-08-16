@@ -11,11 +11,13 @@ zarkon = nil;
 intfic.current_location = "outside_airlock";
 intfic.cardinal_directions = { "fore", "starboard", "aft", "port", "up", "down" };
 intfic.tag_just_placed = false;
+special_cargo_container = {};
 intfic.cargo_container_asteroid = 1;
 intfic.ccasteroidx = 0;
 intfic.ccasteroidy = 0;
 intfic.ccasteroidz = 0;
 intfic.ccasteroidname = "Unknown";
+intfic.bomb_disarmed = false;
 
 if random_point_on_sphere ~= nil then
 	-- Choose a location for the STURNVULF
@@ -1523,53 +1525,116 @@ function setup_solarsystem()
 	cca = asteroid[intfic.cargo_container_asteroid];
 	intfic.ccasteroidname = get_object_name(cca);
 	intfic.ccasteroidx, intfic.ccasteroidy, intfic.ccasteroidz = get_object_location(cca);
-	cargo_container = {};
+	special_cargo_container = {};
 	macguffin = add_commodity("WEAPONS COMPONENTS", "PIECES", "UNKNOWN METALS", 1000.0, 0.5, 1.0, 0.0, 0.0, 0.0, 0.0);
 	for cc = 1,8 do
 		local ccx, ccy, ccz = random_point_on_sphere(2000, 2000, 2000);
 		ccx = ccx + intfic.ccasteroidx;
 		ccy = ccy + intfic.ccasteroidy;
 		ccz = ccz + intfic.ccasteroidz;
-		cargo_container[cc] = add_cargo_container(ccx, ccy, ccz, 0, 0, 0);
-		set_commodity_contents(cargo_container[cc], macguffin, 100.0);
+		special_cargo_container[cc] = add_cargo_container(ccx, ccy, ccz, 0, 0, 0);
+		set_commodity_contents(special_cargo_container[cc], macguffin, 100.0);
 	end
 end
 
+function player_docked(id, station)
+	if station == starbase[2] then
+		local weapons = 0;
+		local passengers = 0;
+		for i = 0,7 do
+			local cargoitem = "cargo[" .. tostring(i) .. "].contents.item";
+			local cargoqty = "cargo[" .. tostring(i) .. "].contents.qty";
+			attr = get_ship_attribute(player_ids[i], cargoitem);
+			qty = get_ship_attribute(player_ids[i], cargoqty);
+			if attr >= 0 then
+				local name = get_commodity_name(attr);
+				if name == "WEAPONS COMPONENTS" then
+					weapons = weapons + qty;
+				end
+			end
+		end
+
+		local candidates = { "captain_jameson", "engineer_bob", "commander_klon", "doctor_nork" };
+		for k, v in pairs(candidates) do
+			if intfic.getlocation(intfic.objects[v]) == "nowhere" then
+				passengers = passengers + 1;
+			end
+		end
+
+		if weapons == 0 and passengers == 0 then
+			register_callback("player-docked-event", "player_docked");
+			return;
+		end
+
+		local passenger_msg = "";
+		if passengers == 4 then
+			passenger_msg = "Congratulations, you rescued all the passengers.\n";
+		else
+			passenger_msg = "You rescued " .. tostring(passengers) .. " out of 4 passengers.\n";
+		end
+
+		local weapons_msg = "";
+		if weapons == 800 then
+			weapons_msg = "Congratulations, you recovered all the weapons\ncomponents.";
+		else
+			weapons_msg = "You recovered " .. tostring(weapons) ..
+				" out of 800 weapons components.\n";
+		end
+		comms_transmission(starbase[2], passengers_msg);
+		comms_transmission(starbase[2], weapons_msg);
+		text_to_speech(player_ids[1], passengers_msg);
+		text_to_speech(player_ids[1], weapons_msg);
+
+		if intfic.bomb_disarmed then
+			bomb_msg = "Congratulations, you disarmed the bomb.\n";
+		else
+			bomb_msg = "You failed to disarm the bomb aboard the STURMVULF.\n";
+		end
+		comms_transmission(starbase[2], bomb_msg);
+		text_to_speech(player_ids[1], bomb_msg);
+	end
+	register_callback("player-docked-event", "player_docked");
+end
+
 function introduction(cookie)
-	comms_transmission(starbase[1], "HELLO");
-	comms_transmission(starbase[1], "WE HAVE A MISSION FOR YOU");
-	comms_transmission(starbase[1], "");
-	comms_transmission(starbase[1], "THE SHIP STURNVULF WAS SECRETLY TRANSPORTING");
-	comms_transmission(starbase[1], "WEAPONS PARTS WHEN WE BELIEVE IT WAS INTERCEPTED");
-	comms_transmission(starbase[1], "BY ZARKONS AND DISABLED");
-	comms_transmission(starbase[1], "");
-	comms_transmission(starbase[1], "WE HAVE REASON TO BELIEVE THERE ARE CREWMEMBERS STILL");
-	comms_transmission(starbase[1], "ABOARD THE SHIP IN NEED OF RESCUE");
-	comms_transmission(starbase[1], "");
-	comms_transmission(starbase[1], "ADDITIONALLY, THE STURVULF EJECTED THE CONTRABAND");
-	comms_transmission(starbase[1], "IT WAS CARRYING BEFORE IT WAS DISABLED IN AN ATTEMPT");
-	comms_transmission(starbase[1], "TO THROW OFF THE ZARKONS.  WE WOULD LIKE YOU TO RECOVER");
-	comms_transmission(starbase[1], "THIS CARGO AS WELL AS ANY SURVIVORS STILL ON THE STURNVULF");
-	comms_transmission(starbase[1], "BEWARE OF ZARKON DISRUPTORS IN THE AREA.");
-	comms_transmission(starbase[1], "");
-	comms_transmission(starbase[1], "THE SHIP VELNOXA WAS SENT TO INVESTIGATE BUT WAS");
-	comms_transmission(starbase[1], "DESTROYED, WE THINK BY THE ZARKONS, BUT NOT BEFORE");
-	comms_transmission(starbase[1], "IT LANDED A RESCUE ROBOT ABOARD THE STURNVULF WITH");
-	comms_transmission(starbase[1], "A TRANSPORTER TAG WHICH MAY BE PLACED ON ANY SURVIVORS");
-	comms_transmission(starbase[1], "TO ENABLE YOUR TRANSPORTER TO OBTAIN A GOOD LOCK DESPITE");
-	comms_transmission(starbase[1], "ANY ADVERSE CONDITIONS ABOARD THE STURNVULF.");
-	comms_transmission(starbase[1], "");
-	comms_transmission(starbase[1], "THE RESCUE ROBOT LANDED ON THE STURNVULF BY THE VELNOXA");
-	comms_transmission(starbase[1], "WAS LISTENING FOR INSTRUCTIONS ON CHANNEL " .. tostring(robot_channel));
-	comms_transmission(starbase[1], "AND SHOULD STILL BE LISTENING.  HOWEVER, YOU MUST BE CLOSE");
-	comms_transmission(starbase[1], "TO THE STURNVULF TO COMMUNICATE SUCCESSFULLY WITH IT.");
-	comms_transmission(starbase[1], "");
-	comms_transmission(starbase[1], "THE LAST KNOWN POSITION STURNVULF WAS:");
-	comms_transmission(starbase[1], "X = " .. tostring(math.floor(svx / 1000) * 1000));
-	comms_transmission(starbase[1], "Y = " .. tostring(math.floor(svy / 1000) * 1000));
-	comms_transmission(starbase[1], "Z = " .. tostring(math.floor(svz / 1000) * 1000));
-	comms_transmission(starbase[1], "");
-	comms_transmission(starbase[1], "GOOD LUCK");
+	comms_transmission(starbase[2], "HELLO");
+	comms_transmission(starbase[2], "WE HAVE A MISSION FOR YOU");
+	comms_transmission(starbase[2], "");
+	comms_transmission(starbase[2], "THE SHIP STURNVULF WAS SECRETLY TRANSPORTING");
+	comms_transmission(starbase[2], "WEAPONS PARTS WHEN WE BELIEVE IT WAS INTERCEPTED");
+	comms_transmission(starbase[2], "BY ZARKONS AND DISABLED");
+	comms_transmission(starbase[2], "");
+	comms_transmission(starbase[2], "WE HAVE REASON TO BELIEVE THERE ARE CREWMEMBERS STILL");
+	comms_transmission(starbase[2], "ABOARD THE SHIP IN NEED OF RESCUE");
+	comms_transmission(starbase[2], "");
+	comms_transmission(starbase[2], "ADDITIONALLY, THE STURVULF EJECTED THE CONTRABAND");
+	comms_transmission(starbase[2], "IT WAS CARRYING BEFORE IT WAS DISABLED IN AN ATTEMPT");
+	comms_transmission(starbase[2], "TO THROW OFF THE ZARKONS.  WE WOULD LIKE YOU TO RECOVER");
+	comms_transmission(starbase[2], "THIS CARGO AS WELL AS ANY SURVIVORS STILL ON THE STURNVULF");
+	comms_transmission(starbase[2], "BEWARE OF ZARKON DISRUPTORS IN THE AREA.");
+	comms_transmission(starbase[2], "");
+	comms_transmission(starbase[2], "THE SHIP VELNOXA WAS SENT TO INVESTIGATE BUT WAS");
+	comms_transmission(starbase[2], "DESTROYED, WE THINK BY THE ZARKONS, BUT NOT BEFORE");
+	comms_transmission(starbase[2], "IT LANDED A RESCUE ROBOT ABOARD THE STURNVULF WITH");
+	comms_transmission(starbase[2], "A TRANSPORTER TAG WHICH MAY BE PLACED ON ANY SURVIVORS");
+	comms_transmission(starbase[2], "TO ENABLE YOUR TRANSPORTER TO OBTAIN A GOOD LOCK DESPITE");
+	comms_transmission(starbase[2], "ANY ADVERSE CONDITIONS ABOARD THE STURNVULF.");
+	comms_transmission(starbase[2], "");
+	comms_transmission(starbase[2], "THE RESCUE ROBOT LANDED ON THE STURNVULF BY THE VELNOXA");
+	comms_transmission(starbase[2], "WAS LISTENING FOR INSTRUCTIONS ON CHANNEL " .. tostring(robot_channel));
+	comms_transmission(starbase[2], "AND SHOULD STILL BE LISTENING.  HOWEVER, YOU MUST BE CLOSE");
+	comms_transmission(starbase[2], "TO THE STURNVULF TO COMMUNICATE SUCCESSFULLY WITH IT.");
+	comms_transmission(starbase[2], "");
+	comms_transmission(starbase[2], "THE LAST KNOWN POSITION STURNVULF WAS:");
+	comms_transmission(starbase[2], "X = " .. tostring(math.floor(svx / 1000) * 1000));
+	comms_transmission(starbase[2], "Y = " .. tostring(math.floor(svy / 1000) * 1000));
+	comms_transmission(starbase[2], "Z = " .. tostring(math.floor(svz / 1000) * 1000));
+	comms_transmission(starbase[2], "");
+	comms_transmission(starbase[2], "YOUR MISSION IS TO RESCUE ANY SURVIVORS ABOARD THE\n");
+	comms_transmission(starbase[2], "STURNVULF AND RECOVER THE CARGO OF WEAPONS COMPONENTS\n");
+	comms_transmission(starbase[2], "AND RETURN THEM BOTH TO SB-01.  IT IS ALSO IMPORTANT\n");
+	comms_transmission(starbase[2], "THAT THE STURNVULF ITSELF NOT BE DESTROYED.\n");
+	comms_transmission(starbase[2], "GOOD LUCK");
 	setup_custom_buttons();
 	setup_comms(); -- input/output via SNIS comms
 end
@@ -1579,5 +1644,6 @@ if set_variable == nil then
 else
 	setup_solarsystem();
 	register_timer_callback("introduction", 300, 0);
+	register_callback("player-docked-event", "player_docked");
 end;
 
