@@ -10159,7 +10159,7 @@ static void init_player(struct snis_entity *o, int clear_cargo_bay, float *charg
 	o->tsd.ship.shiptype = SHIP_CLASS_WOMBAT; 
 	o->tsd.ship.damage_data_dirty = 1;
 	o->tsd.ship.ncargo_bays = 8;
-	o->tsd.ship.passenger_berths = 2;
+	o->tsd.ship.passenger_berths = PASSENGER_BERTHS;
 	o->tsd.ship.mining_bots = 1;
 	o->tsd.ship.emf_detector = 0;
 	o->tsd.ship.nav_mode = NAV_MODE_NORMAL;

@@ -1087,6 +1087,7 @@ struct damcon_data {
 #define FICTIONAL_DATE(timestamp) (FICTIONAL_CLOCK_START + (timestamp) / 1000.0)
 
 #define MAX_PASSENGERS (NBASES * 5)
+#define PASSENGER_BERTHS 8
 struct passenger_data {
 	char name[50];
 	uint32_t location, destination;
