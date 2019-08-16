@@ -1089,6 +1089,8 @@ function science_custom_button_pressed()
 			end
 			num_lifeforms_aboard_ship = num_lifeforms_aboard_ship - 1;
 		end
+	else
+		text_to_speech(player_ids[1], "Transporter unable to obtain lock");
 	end
 end
 
