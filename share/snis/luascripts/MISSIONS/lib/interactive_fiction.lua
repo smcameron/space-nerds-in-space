@@ -634,6 +634,9 @@ function intfic.push_object(entry)
 		return;
 	end
 	entry[2].button_state = not entry[2].button_state;
+	if entry[2].button_fn ~= nil then
+		entry[2].button_fn(entry[2]);
+	end
 end
 
 function intfic.generic_doverb(verb_fn, words, locations)
