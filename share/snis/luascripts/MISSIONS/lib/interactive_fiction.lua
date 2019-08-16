@@ -951,6 +951,7 @@ intfic.verb = {
 		press = { intfic.dopush },
 		push = { intfic.dopush },
 		flip = { intfic.dopush },
+		throw = { intfic.dopush },
 		help = { intfic.dohelp },
 		quit = { intfic.do_exit },
 		dprnt = { intfic.dprnt },
