@@ -1466,26 +1466,30 @@ function maintain_zarkon_focus()
 end
 
 function add_zarkons(cookie)
+	demon_print("Add zarkons!");
 	dist = object_distance(sturnvulf, player_ids[1]);
 	if dist > 15000 then
+		demon_print("Distance too great!");
 		register_timer_callback("add_zarkons", 300, 0);
 		return;
 	end
-	if zarkon == nil then
-		zarkon_timer = zarkon_timer - 1;
-		if zarkon_timer > 0 then
-			register_timer_callback("add_zarkons", 300, 0);
-			return;
-		end
-		local x, y, z = random_point_on_sphere(5000);
-		px, py, pz = get_object_location(player_ids[1]);
-		x = x + px;
-		y = y + py;
-		z = z + pz;
-		zarkon = add_ship(generate_ship_name(), x, y, z, 12, 3, 0);
-		ai_push_attack(zarkon, player_ids[1]);
-		zarkon_timer = 1 + math.floor(math.random() * 3);
+
+	zarkon_timer = zarkon_timer - 1;
+	if zarkon_timer > 0 then
+		demon_print("timer not expired: " .. tostring(zarkon_timer));
+		register_timer_callback("add_zarkons", 300, 0);
+		return;
 	end
+
+	demon_print("Adding a zarkon!");
+	local x, y, z = random_point_on_sphere(5000);
+	px, py, pz = get_object_location(player_ids[1]);
+	x = x + px;
+	y = y + py;
+	z = z + pz;
+	zarkon = add_ship(generate_ship_name(), x, y, z, 12, 3, 0);
+	ai_push_attack(zarkon, player_ids[1]);
+	zarkon_timer = 2 + math.floor(math.random() * 3);
 	register_timer_callback("add_zarkons", 300, 0);
 end
 
