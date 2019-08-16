@@ -752,6 +752,16 @@ intfic.objects = {
 		portable = false,
 		surface = true,
 	},
+	dolly = {
+		unique_name = "dolly",
+		name = "dolly",
+		desc = "a dolly",
+		synonyms = { "hand", "truck" },
+		location = "transporter_room",
+		portable = true,
+		surface = true,
+		examine = "The dolly is just a normal hand truck.",
+	},
 	torpedo_bay_floor = {
 		unique_name = "torpedo_bay_floor",
 		name = "floor",
@@ -965,8 +975,10 @@ intfic.objects = {
 		synonyms = { "explosive", "device" },
 		desc = "a large device that looks suspiciously bomb-like",
 		location = "engineering",
-		portable = false,
-		examine = "The bomb is a hopeless nest of wires far\ntoo dangerous to mess with."
+		portable = true,
+		examine = "The bomb large, a little smaller than a torpedo.\n" ..
+			"It is a hopeless nest of wires far\n" ..
+			"too dangerous to mess with."
 	},
 };
 
@@ -1266,6 +1278,24 @@ function intfic.after_each_turn_hook()
 			intfic.write("Nothing happens.\n");
 		end
 	end
+
+	-- if the player picks up the bomb, make them drop it immediately
+	-- unless they use the dolly.
+	if intfic.objects["bomb"].location == "pocket" and
+		(intfic.objects["bomb"].related_object == nil or
+		intfic.objects["bomb"].related_object[2] ~= "dolly") then
+		intfic.write("The bomb is too heavy and you immediately set\n");
+		intfic.write("it back down.\n");
+		intfic.objects["bomb"].location = intfic.current_location;
+	end
+	-- silently fix mischief like putting the bomb in/or on something that is
+	-- not the dolly.
+	if intfic.objects["bomb"].related_object ~= nil and
+		intfic.objects["bomb"].related_object[2] ~= "dolly" then
+			intfic.objects["bomb"].location =
+				intfic.getlocation(intfic.objects["bomb"]);
+	end
+
 	intfic.objects["torpedo_switch"].button_state = false;
 	previous_location = intfic.current_location;
 end
