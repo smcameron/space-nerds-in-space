@@ -57,7 +57,7 @@ local function examine_quadcorder(entry)
 	local buttonobj = intfic.objects["quadcorder_button"];
 
 	if buttonobj.button_state == false then
-		intfic.write("The quadcorder is off\n");
+		intfic.write("The quadcorder is off.  There is a button on the quadcorder.\n");
 	else
 		intfic.write("The quadcorder shows that there are\n");
 		intfic.write(tostring(num_lifeforms_aboard_ship) .. " lifeforms aboard the STURNVULF\n");
@@ -588,6 +588,7 @@ intfic.objects = {
 	quadcorder = {
 		unique_name = "quadcorder",
 		name = "quadcorder",
+		synonyms = { "quad", "corder" },
 		desc = "a quadcorder",
 		location = "doctors_quarters",
 		related_object = { "on", "desk4" },
