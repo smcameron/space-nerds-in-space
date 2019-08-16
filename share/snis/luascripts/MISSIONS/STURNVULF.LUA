@@ -9,8 +9,8 @@ first_time_taking_card = true;
 num_lifeforms_aboard_ship = 5;
 zarkon = nil;
 intfic.current_location = "outside_airlock";
--- intfic.current_location = "engineering";
 intfic.cardinal_directions = { "fore", "starboard", "aft", "port", "up", "down" };
+intfic.tag_just_placed = false;
 
 if random_point_on_sphere ~= nil then
 	-- Choose a location for the STURNVULF
@@ -637,7 +637,7 @@ intfic.objects = {
 	transporter_tag = {
 		unique_name = "transporter_tag",
 		name = "tag",
-		desc = "a number of transporter tags",
+		desc = "a transporter tag",
 		synonyms = { "transporter" },
 		portable = true,
 		location = "pocket",
@@ -951,6 +951,24 @@ function robot_listen(from, channel, message)
 	end
 end
 
+function custom_button_press(shipid, button)
+	if shipid ~= player_ids[1] then
+		register_callback("custom-button-press-event", "custom_button_press");
+		return;
+	end
+	if button == 4 then
+		-- science
+		science_custom_button_pressed();
+	end
+	register_callback("custom-button-press-event", "custom_button_press");
+end
+
+local function setup_custom_buttons()
+	set_custom_button_label(player_ids[1], 4, "TRANSPORTER");
+	enable_custom_button(player_ids[1], 4);
+	register_callback("custom-button-press-event", "custom_button_press");
+end
+
 local function setup_comms()
 	set_variable("SUPPRESS_STARBASE_COMPLAINTS", 1);
         -- comms_channel_transmit("ROBOT", 0, ": *** HAILING ON CHANNEL 1234 ***");
@@ -978,22 +996,32 @@ function open_inner_airlock_door()
 	intfic.room["airlock"].aft = "vestibule";
 end
 
-local function lifeform_tagged(lifeform)
-	-- TODO: notify SCIENCE that a lifeform is tagged for transport.
-	if lifeform == "captain_jameson" or lifeform == "engineer_bob" or
-		lifeform == "doctor_nork" or lifeform == "commander_klon" then
-		intfic.write(intfic.objects[lifeform].desc .. " dematerializes as\nhe is beamed off the STURNVULF\n");
-		intfic.objects["transporter_tag"].location = "pocket";
-		intfic.objects["transporter_tag"].related_object = nil;
-		intfic.objects[lifeform].location = "nowhere";
-		num_lifeforms_aboard_ship = num_lifeforms_aboard_ship - 1;
+function science_custom_button_pressed()
+	candidates = { "captain_jameson", "engineer_bob", "commander_klon", "doctor_nork" };
 
-		-- add passenger to player ship
-		if (create_passenger ~= nil) then
-			create_passenger(intfic.objects[lifeform].passenger_number,
-						intfic.objects[lifeform].desc,
-						starbase[1], starbase[1], 1000.0);
-			set_passenger_location(intfic.objects[lifeform].passenger_number, player_ids[1]);
+	if intfic.objects["transporter_tag"].related_object ~= nil then
+		local passenger = intfic.objects["transporter_tag"].related_object[2];
+		-- if transporter tag is on a potential passenger
+		if intfic.in_array(passenger, candidates) then
+			-- get rid of the passenger
+			intfic.objects[passenger].location = "nowhere";
+			-- drop the tag on the floor whereever it is
+			intfic.objects["transporter_tag"].related_object = nil;
+			intfic.tag_just_placed = false;
+			intfic.write(intfic.objects[passenger].desc ..
+					" dematerializes as\nhe is beamed off the STURNVULF\n");
+			intfic.write(intfic.objects["transporter_tag"].desc ..
+					" remains here.\n");
+			-- create the passenger on the player ship
+			if (create_passenger ~= nil) then
+				create_passenger(intfic.objects[passenger].passenger_number,
+							intfic.objects[passenger].desc,
+							starbase[1], starbase[1], 1000.0);
+				set_passenger_location(intfic.objects[passenger].passenger_number, player_ids[1]);
+				play_sound(player_ids[1], "sounds/transporter-sound.ogg");
+				text_to_speech(player_ids[1], intfic.objects[passenger].desc .. " has just beamed aboard");
+			end
+			num_lifeforms_aboard_ship = num_lifeforms_aboard_ship - 1;
 		end
 	end
 end
@@ -1113,14 +1141,15 @@ function intfic.after_each_turn_hook()
 			"There is a small panel above the slot.";
 	end
 
-	-- Transport any tagged lifeforms
+	-- Transport any tagged lifeforms if we are playing standalone without SNIS
 	if intfic.objects["transporter_tag"].related_object ~= nil then
-		if intfic.objects["transporter_tag"].related_object[1] == "on" then
-			if intfic.objects["transporter_tag"].related_object[2] == "captain_jameson" then
-				lifeform_tagged("captain_jameson");
-			elseif intfic.objects["transporter_tag"].related_object[2] == "engineer_bob" then
-				lifeform_tagged("engineer_bob");
-			end
+		if player_ids == nil then
+			science_custom_button_pressed();
+		else
+			if not intfic.tag_just_placed then
+				intfic.tag_just_placed = true;
+				intfic.write("One to beam up!");
+			end;
 		end
 	end
 
@@ -1517,7 +1546,9 @@ function introduction(cookie)
 	comms_transmission(starbase[1], "THE SHIP VELNOXA WAS SENT TO INVESTIGATE BUT WAS");
 	comms_transmission(starbase[1], "DESTROYED, WE THINK BY THE ZARKONS, BUT NOT BEFORE");
 	comms_transmission(starbase[1], "IT LANDED A RESCUE ROBOT ABOARD THE STURNVULF WITH");
-	comms_transmission(starbase[1], "A NUMBER OF TRANSPORTER TAGS");
+	comms_transmission(starbase[1], "A TRANSPORTER TAG WHICH MAY BE PLACED ON ANY SURVIVORS");
+	comms_transmission(starbase[1], "TO ENABLE YOUR TRANSPORTER TO OBTAIN A GOOD LOCK DESPITE");
+	comms_transmission(starbase[1], "ANY ADVERSE CONDITIONS ABOARD THE STURNVULF.");
 	comms_transmission(starbase[1], "");
 	comms_transmission(starbase[1], "THE RESCUE ROBOT LANDED ON THE STURNVULF BY THE VELNOXA");
 	comms_transmission(starbase[1], "WAS LISTENING FOR INSTRUCTIONS ON CHANNEL " .. tostring(robot_channel));
@@ -1530,6 +1561,7 @@ function introduction(cookie)
 	comms_transmission(starbase[1], "Z = " .. tostring(math.floor(svz / 1000) * 1000));
 	comms_transmission(starbase[1], "");
 	comms_transmission(starbase[1], "GOOD LUCK");
+	setup_custom_buttons();
 	setup_comms(); -- input/output via SNIS comms
 end
 
