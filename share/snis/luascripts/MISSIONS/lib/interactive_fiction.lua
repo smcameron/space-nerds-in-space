@@ -916,6 +916,17 @@ function intfic.print_room_description(loc, obj)
 				end
 			end
 		end
+		intfic.write("Obvious exits:\n");
+		local dircount = 0;
+		for k, v in pairs(intfic.cardinal_directions) do
+			if intfic.room[loc][v] ~= nil then
+				intfic.write("  " .. v .. "\n");
+				dircount = dircount + 1;
+			end
+		end
+		if dircount == 0 then
+			intfic.write("  None\n");
+		end
 	end
 	intfic.room[loc].visited = true;
 end
