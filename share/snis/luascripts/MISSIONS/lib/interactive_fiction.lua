@@ -241,7 +241,8 @@ end
 
 function intfic.setlocation(o, location)
 	o.location = location;
-	if o.surface or o.container then
+	if (o.surface ~= nil and o.surface) or
+		(o.container ~= nil and o.container) then
 		intfic.set_related_object_locations(o);
 	end
 end
