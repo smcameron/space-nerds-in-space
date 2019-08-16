@@ -11,6 +11,11 @@ zarkon = nil;
 intfic.current_location = "outside_airlock";
 intfic.cardinal_directions = { "fore", "starboard", "aft", "port", "up", "down" };
 intfic.tag_just_placed = false;
+intfic.cargo_container_asteroid = 1;
+intfic.ccasteroidx = 0;
+intfic.ccasteroidy = 0;
+intfic.ccasteroidz = 0;
+intfic.ccasteroidname = "Unknown";
 
 if random_point_on_sphere ~= nil then
 	-- Choose a location for the STURNVULF
@@ -55,6 +60,27 @@ local function examine_quadcorder(entry)
 		intfic.write("The quadcorder shows that there are\n");
 		intfic.write(tostring(num_lifeforms_aboard_ship) .. " lifeforms aboard the STURNVULF\n");
 	end
+end
+
+local function examine_captains_log(entry)
+	local x = math.floor(intfic.ccasteroidx / 1000.0) * 1000;
+	local y = math.floor(intfic.ccasteroidy / 1000.0) * 1000;
+	local z = math.floor(intfic.ccasteroidz / 1000.0) * 1000;
+
+	intfic.write("The last entry reads:\n" ..
+		"The zarkons have boarded our ship and installed a bomb\n" ..
+		"in engineering. So far we are unable to defuse it.\n" ..
+		"I think they may have also drugged the ventilation system\n" ..
+		"as many of the crew have inexplicably fallen unconcious.\n" ..
+		"I think they mean to leave us for dead and blow up the ship.\n" ..
+		"Before the Zarkons boarded, we were able to hide the weapons\n" ..
+		"components near the asteroid " .. intfic.ccasteroidname .. ".\n" ..
+		"The coordinates are approximately:\n" ..
+		"  X = " .. tostring(x) .. "\n" ..
+		"  Y = " .. tostring(y) .. "\n" ..
+		"  Z = " .. tostring(z) .. "\n" ..
+		"Although there were reports of space monsters in the area,\n" ..
+		"we did not encounter any.\n");
 end
 
 local function weapons_active()
@@ -463,12 +489,7 @@ intfic.objects = {
 		location = "captains_quarters",
 		portable = true,
 		desc = "the captain's log",
-		examine = "The last entry reads:\n" ..
-			"The zarkons have boarded our ship and installed a bomb\n" ..
-			"in engineering. So far we are unable to defuse it.\n" ..
-			"I think they may have also drugged the ventilation system\n" ..
-			"as many of the crew have inexplicably fallen unconcious\n" ..
-			"I think they mean to leave us for dead and blow up the ship\n";
+		examine = { examine_captains_log },
 	},
 	bed1 = {
 		unique_name = "bed1",
@@ -1343,6 +1364,14 @@ function add_zarkons(cookie)
 	register_timer_callback("add_zarkons", 300, 0);
 end
 
+local function table_count(table)
+	local count = 0;
+	for k, v in pairs(table) do
+		count = count + 1;
+	end
+	return count;
+end
+
 function setup_solarsystem()
 	clear_all();
 	set_variable("MISSILE_FIRE_CHANCE", "0");
@@ -1482,14 +1511,21 @@ function setup_solarsystem()
 	add_zarkons(0);
 
 
-	-- Add a bunch of cargo containers around the STURNVULF
+	-- Add a bunch of cargo containers around a random asteroid
+	intfic.cargo_container_asteroid = math.floor(math.random() * table_count(asteroid)) + 1;
+	if asteroid[intfic.cargo_container_asteroid] == nil then
+		intfic.cargo_container_asteroid = 1; -- should not happen
+	end
+	cca = asteroid[intfic.cargo_container_asteroid];
+	intfic.ccasteroidname = get_object_name(cca);
+	intfic.ccasteroidx, intfic.ccasteroidy, intfic.ccasteroidz = get_object_location(cca);
 	cargo_container = {};
 	macguffin = add_commodity("WEAPONS COMPONENTS", "PIECES", "UNKNOWN METALS", 1000.0, 0.5, 1.0, 0.0, 0.0, 0.0, 0.0);
 	for cc = 1,8 do
 		local ccx, ccy, ccz = random_point_on_sphere(2000, 2000, 2000);
-		ccx = ccx + svx;
-		ccy = ccy + svy;
-		ccz = ccz + svz;
+		ccx = ccx + intfic.ccasteroidx;
+		ccy = ccy + intfic.ccasteroidy;
+		ccz = ccz + intfic.ccasteroidz;
 		cargo_container[cc] = add_cargo_container(ccx, ccy, ccz, 0, 0, 0);
 		set_commodity_contents(cargo_container[cc], macguffin, 100.0);
 	end
