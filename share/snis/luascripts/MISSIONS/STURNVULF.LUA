@@ -749,6 +749,7 @@ intfic.objects = {
 	resistor = {
 		unique_name = "resistor",
 		name = "resistor",
+		synonyms = { "resister" },
 		desc = "a 1M ohm resistor",
 		location = "engineers_quarters",
 		related_object = { "on", "desk3" },
