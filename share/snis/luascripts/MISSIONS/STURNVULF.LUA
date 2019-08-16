@@ -1494,15 +1494,19 @@ function setup_solarsystem()
 	nebula[18] = add_nebula("", 63825.445652, 0.000000, 318900.011628, 3432.000000);
 
 	-- set all asteroid speeds to 0 to keep them from moving.
-
 	for k, v in ipairs(asteroid) do
 		set_asteroid_speed(v, 0.0);
 	end
 
+	-- set initial NPC ships to faction 0 (neutral) to keep them docile
+	for k, v in ipairs(ship) do
+		set_faction(v, 0);
+	end;
+
 	player_ids = get_player_ship_ids();
 	-- set player 1 location
 	if (player_ids[1]) then
-		dock_player_to_starbase(player_ids[1], starbase[1]);
+		dock_player_to_starbase(player_ids[1], starbase[2]);
 	end
 	sturnvulf = add_ship("STURNVULF", svx, svy, svz, 13, 0, 0);
 	velnoxa = add_derelict("VELNOXA", svx, svy + 1000, svz - 5000, 17, 0);
