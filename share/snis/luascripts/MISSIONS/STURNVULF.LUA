@@ -85,6 +85,15 @@ local function examine_captains_log(entry)
 		"we did not encounter any.\n");
 end
 
+local function quadcorder_button_fn(quad)
+	if quad.button_state then
+		intfic.write("The quadcorder turns on.\n");
+		examine_quadcorder(nil); -- dubious to pass a nil here.
+	else
+		intfic.write("The quadcorder turns off.\n");
+	end
+end
+
 local function weapons_active()
 	if intfic.objects["resistor"].related_object ~= nil and
 		intfic.objects["resistor"].related_object[2] == "circuit_board" and
@@ -95,6 +104,23 @@ local function weapons_active()
 	end
 	return false;
 end
+
+local function eng_console_switch_fn(swtch)
+	local switch_ready = intfic.objects["resistor"].related_object ~= nil and
+		intfic.objects["resistor"].related_object[2] == "circuit_board" and
+		intfic.objects["circuit_board"].related_object ~= nil and
+		intfic.objects["circuit_board"].related_object[2] == "eng_console_slot";
+	if swtch.button_state and switch_ready then
+		intfic.write("The lights on the engineering console begin blinking.\n");
+	else
+		if switch_ready then
+			intfic.write("The lights on the engineering console go dark.\n");
+		else
+			intfic.write("Nothing happens.\n");
+		end
+	end
+end
+
 
 local function examine_eng_console(entry)
 	if intfic.objects["resistor"].related_object ~= nil and
@@ -611,6 +637,7 @@ intfic.objects = {
 		button_state = false,
 		last_button_state = false,
 		suppress_itemizing = true,
+		button_fn = quadcorder_button_fn;
 	},
 	captain_jameson = {
 		unique_name = "captain_jameson",
@@ -847,6 +874,7 @@ intfic.objects = {
 		button_state = false,
 		portable = false,
 		suppress_itemizing = true,
+		button_fn = eng_console_switch_fn,
 	},
 	eng_console_lights = {
 		unique_name = "eng_console_lights",
