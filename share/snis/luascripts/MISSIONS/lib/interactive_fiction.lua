@@ -985,7 +985,7 @@ function intfic.get_output()
 end
 
 function intfic.send_input(command)
-	intfic.execute_command(command);
+	intfic.execute_command(string.lower(command));
 	intfic.print_room_description(intfic.current_location, intfic.objects)
 	if intfic.after_each_turn_hook ~= nil then
 		intfic.after_each_turn_hook();
