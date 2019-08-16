@@ -935,11 +935,24 @@ intfic.objects = {
 		unique_name = "torpedo_magazine",
 		name = "magazine",
 		desc = "a very large drum magazine full of torpedoes",
-		synonyms = { "torpedoes", "drum" },
+		synonyms = { "drum" },
 		examine = { examine_magazine },
 		portable = false,
 		location = "torpedo_bay",
 		torpedo_count = 3;
+		container = true,
+		container_restrictions = { "bomb" },
+	},
+	torpedoes = {
+		unique_name = "torpedoes",
+		name = "torpedoes",
+		synonyms = { "torpedo" },
+		desc = "torpedoes",
+		portable = false,
+		related_object = { "in", "magazine" },
+		examine = "The torpedoes are far too heavy to move",
+		location = "torpedo_bay",
+		suppress_itemizing = true,
 	},
 	torpedo_robot = {
 		unique_name = "torpedo robot",
@@ -1247,16 +1260,35 @@ function intfic.after_each_turn_hook()
 	if intfic.objects["torpedo_switch"].button_state then
 		if weapons_active() then
 			if intfic.objects["torpedo_magazine"].torpedo_count <= 0 then
-				intfic.write("The giant magazine rotates 1/10th of a circle.\n");
-				intfic.write("The robot arm whirls around grabbing at\n");
-				intfic.write("where normally it would find a torpedo,\n");
-				intfic.write("but the magazine is empty.\n");
-				intfic.write("The torpedo tube door opens with a hiss.\n");
-				intfic.write("The robot arm swings towards the tube and\n");
-				intfic.write("then back to its resting position and the\n");
-				intfic.write("tube door slams shut. There is a violent shudder\n");
-				intfic.write("and if there were anything in the tube it\n");
-				intfic.write("would have been blasted into space.\n");
+				if intfic.objects["bomb"].related_object ~= nil and
+					intfic.objects["bomb"].related_object[2] == "torpedo_magazine" then
+					intfic.write("The giant magazine rotates 1/10th of a circle.\n");
+					intfic.write("The robot arm whirls around grabbing at\n");
+					intfic.write("where normally it would find a torpedo,\n");
+					intfic.write("but the magazine contains the bomb.\n");
+					intfic.write("The torpedo tube door opens with a hiss.\n");
+					intfic.write("The robot arm swings towards the tube and\n");
+					intfic.write("deposits the bomb into the tube.\n");
+					intfic.write("tube door slams shut. There is a violent shudder\n");
+					intfic.write("and the bomb is fired off into space.\n");
+					intfic.objects["bomb"].related_object = nil;
+					intfic.setlocation(intfic.objects["bomb"], "nowhere");
+					intfic.bomb_disarmed = true;
+					if add_explosion ~= nil then
+						add_explosion(svx, svy + 3000, svz, 150, 350, 250, 13, 1);
+					end
+				else
+					intfic.write("The giant magazine rotates 1/10th of a circle.\n");
+					intfic.write("The robot arm whirls around grabbing at\n");
+					intfic.write("where normally it would find a torpedo,\n");
+					intfic.write("but the magazine is empty.\n");
+					intfic.write("The torpedo tube door opens with a hiss.\n");
+					intfic.write("The robot arm swings towards the tube and\n");
+					intfic.write("then back to its resting position and the\n");
+					intfic.write("tube door slams shut. There is a violent shudder\n");
+					intfic.write("and if there were anything in the tube it\n");
+					intfic.write("would have been blasted into space.\n");
+				end
 			else
 				intfic.write("The giant magazine rotates 1/10th of a circle.\n");
 				intfic.write("The robot arm whirls around and grabs\n");
