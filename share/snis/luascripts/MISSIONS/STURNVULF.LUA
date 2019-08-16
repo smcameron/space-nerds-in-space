@@ -263,6 +263,7 @@ intfic.room = {
 		aft = "duct2",
 		fore = "first_mates_quarters",
 		visited = false,
+		forbidden_objects = { "bomb" },
 	},
 	duct2 = {
 		unique_name = "duct2",
@@ -290,6 +291,7 @@ intfic.room = {
 		port = "duct2",
 		starboard = "engineering",
 		visited = false,
+		forbidden_objects = { "bomb" },
 	},
 	engineering = {
 		unique_name = "engineering",

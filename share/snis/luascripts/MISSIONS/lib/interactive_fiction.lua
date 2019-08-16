@@ -202,7 +202,18 @@ function intfic.go_direction(direction)
 		intfic.write(direction .. ": I do not understand\n");
 		return;
 	end
-	intfic.current_location = destination;
+	local forbidden = false;
+	if intfic.room[destination].forbidden_objects ~= nil then
+		for k, v in pairs(intfic.room[destination].forbidden_objects) do
+			if intfic.getlocation(intfic.objects[v]) == "pocket" then
+				intfic.write(v .. ": it won't fit in here.\n");
+				forbidden = true;
+			end
+		end
+	end
+	if not forbidden then
+		intfic.current_location = destination;
+	end
 end
 
 function intfic.dogo(words)
