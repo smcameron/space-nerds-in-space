@@ -849,6 +849,18 @@ function intfic.not_implemented(w)
 	intfic.write(w[1] .. " is not yet implemented.\n");
 end
 
+function intfic.ignore_some_words(words)
+	answer = {};
+	count = 1;
+	for k, v in ipairs(words) do
+		if not intfic.in_array(v, intfic.ignore_words) then
+			answer[count] = v;
+			count = count + 1;
+		end
+	end
+	return answer;
+end
+
 function intfic.execute_command(cmd)
 	if cmd == nil then
 		return
@@ -868,7 +880,7 @@ function intfic.execute_command(cmd)
 		intfic.write("I don't understand what you mean by '" .. words[1] .. "'\n");
 		return;
 	end
-	intfic.verb[words[1]][1](words);
+	intfic.verb[words[1]][1](intfic.ignore_some_words(words));
 end
 
 function intfic.dolisten()
@@ -906,6 +918,8 @@ function intfic.print_room_description(loc, obj)
 	end
 	intfic.room[loc].visited = true;
 end
+
+intfic.ignore_words = { "a", "an", "the", "please" };
 
 intfic.verb = {
 		go = { intfic.dogo },
