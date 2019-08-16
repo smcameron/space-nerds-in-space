@@ -714,7 +714,7 @@ intfic.objects = {
 		portable = false,
 		surface = true,
 	},
-	transport_room_floor = {
+	transporter_room_floor = {
 		unique_name = "transporter_room_floor",
 		name = "floor",
 		desc = "floor",
