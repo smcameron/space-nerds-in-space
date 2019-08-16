@@ -552,6 +552,7 @@ intfic.objects = {
 	duct = {
 		unique_name = "duct",
 		name = "duct",
+		synonyms = { "vent" },
 		desc = "a ventilation duct on the aft wall",
 		synonyms = { "ventilation" },
 		location = "first_mates_quarters",
