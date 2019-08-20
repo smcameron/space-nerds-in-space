@@ -1,0 +1,220 @@
+
+This file documents the features of the lua library in
+share/snis/luascripts/MISSIONS/lib/interactive-fiction.lua
+
+Some simple interactive fiction support is provided by this
+library.
+
+For a detailed example, see share/snis/luascripts/MISSIONS/STURNVULF.LUA
+For a simpler example, see share/snis/luascripts/TEST/TESTINTFIC.LUA
+
+Include the library via:
+
+package.path = package.path .. ";share/snis/luascripts/MISSIONS/lib/?.lua";
+local intfic_package = require("interactive_fiction");
+
+To use it, you need to set up the "intfic" table.  First, create
+the cardinal directions, for example:
+
+	intfic.cardinal_directions = { "fore", "starboard", "aft", "port", "up", "down" };
+
+or:
+
+	intfic.cardinal_directions = { "north", "northeast", "east", "southeast", "south",
+					"southwest", "west", "northwest", "up", "down" };
+
+Next create some rooms:
+
+intfic.room = {
+	corridor = {
+		unique_name = "corridor",
+		shortdesc = "Ok, I am in the corridor",
+		desc = "To the fore is the bridge.\n" ..
+			"To the aft is the engine room.\n" ..
+			"To port is the door of a small\n" ..
+			"utility closet.",
+		fore = "bridge";
+		aft = "engineroom",
+		visited = false,
+	},
+
+	... etc ...
+
+	pocket = { -- make sure there is a room for the player's pocket
+		unique_name = "pocket",
+		shortdesc = "pocket",
+		desc = "pocket",
+	},
+};
+
+room fields:
+
+	unique_name: a string which can be used as an index to intfic.room[] to access the room.
+	shortdesc: a short description string
+	desc: a longer description string
+	visited: boolean, initially set to false.
+	forbidden_objects: (optional) a table of strings listing the room's forbidden objects.
+			That is, objects which if carried will prevent the player from entering
+			the room.
+	directional fields: These fields have names which are cardinal directions, and are strings
+		which are the unique_name of another room which you reach if you travel in the
+		named direction.  For example:
+
+		north = "throne_room",
+
+You can add more fields and use them yourself, but the above are the ones known
+by interactive-fiction.lua
+
+Next create some objects:
+
+intfic.objects = {
+	card = {
+		unique_name = "card",
+		location = "nowhere",
+		name = "card",
+		synonyms = { "id", "keycard", "badge" },
+		desc = "an ID card",
+		portable = true,
+		examine = "It an ID card for Ensign Mallory",
+		related_object = { "on", "body" },
+		suppress_itemizing = true,
+	},
+	... etc. ...
+};
+
+objects fields:
+
+	unique_name: unique name of the object which can be used as an index
+			into intfic.objects[]
+	location: string, name of the room the object is in
+	name: string name of the object which the player can use to refer to the object
+	synonyms: table of strings that are synonyms for the object
+	desc: string description of the object
+	portable: boolean, indicates if the object may be carried by the player
+	examine: string to print when examining the object, or a table containing a function
+			to call to print a string when examining the object.
+	related_object: table containing two strings.  The first string is either "in", or "on",
+			and the second is the unique_name of the object which this object is
+			"in" or "on".  Nil indicates the object is not "in" or "on" anything.
+	suppress_itemizing: boolean, if true suppresses listing the object in the default list
+			of objects.  Useful for things incidentally mentioned or accessible to
+			the player but not the type of thing which would be naturally remarked
+			upon (e.g. the "floor".)
+	container: boolean, optional. true indicates that the object is a container into which
+			other objects may be placed
+	surface: boolean, optional. true indicates the object is a surface onto which other
+			objects may be placed
+	container_restrictions: table of strings that are unique_names of of objects which may
+			be placed "in" or "on" the object. (e.g. only a card may be put "in" a
+			"card_slot")
+	doorstatus: optional string, either "open", or "closed". Only used if object is a door
+	doordirout: string: direction of door
+	doorroom: string, unique_name of room door connects to.
+	complement_door: unique_name of object representing the other side of the door.
+		(doors are pairs of objects, one in each of the rooms connected by the door.
+		each door object has complementary doorroom, doordirout, and complement_door
+		fields.)
+	no_open_from_this_side: boolean, if true, can prevent door from being opened from this side.
+	button: optional boolean, true if the object is a button (may be "pressed" or "pushed")
+	button_state: boolean, whether the button is currently activated or not
+	button_fn: (optional) function to call when button is pressed
+
+You can add more fields and use them yourself, but the above are the ones known
+by interactive-fiction.lua
+
+If you need more than the verbs provided, you can add to the intfic.verb table:
+
+	intfic.verb["myverb"] = { do_myverb, };
+
+where "do_myverb" is a function to call when "myverb" is entered.
+The function will be passed a table of strings that are the command
+entered. For example, you can set up abbreviations for moving in
+common directions:
+
+	intfic.verb["p"] = { dogoport };
+	intfic.verb["s"] = { dogostarboard };
+	intfic.verb["f"] = { dogofore };
+	intfic.verb["a"] = { dogoaft };
+	intfic.verb["u"] = { dogoup };
+	intfic.verb["d"] = { dogodown };
+
+	local function dogoport()
+		intfic.send_input("go port");
+	end
+
+	... etc. ...
+
+Create a function that is called after each of the player's moves to check
+various conditions and advance the story:
+
+function intfic.after_each_turn_hook()
+
+	-- put checks in here to see where objects are and see if the player
+	-- has done anything interesting.  E.g.:
+
+	-- Make the ID card open the outer airlock door when put into the slot
+	if intfic.objects["card"].location == "outside_airlock" and
+		intfic.objects["card"].related_object ~= nil and
+		intfic.objects["card"].related_object[2] == "slot" then
+			-- put the card in the player's pocket
+			intfic.objects["card"].location = "pocket";
+			intfic.objects["card"].related_object = nil;
+			if airlock_is_working then
+				open_outer_airlock_door();
+				intfic.write("The outer airlock door opens.\n");
+			else
+				intfic.write("Nothing happens.\n");
+			end
+			intfic.write("I retain the ID card.\n");
+		end
+	end
+end
+
+
+If you just want to run via the terminal, call intfic.gameloop()
+to get player input and interpret it, etc.
+
+	intfic.time_to_quit = false;
+	intfic.current_location = "unique_name of room where you want the player to start";
+	intfic.gameloop();
+
+If you want to run via COMMS:
+
+intfic.time_to_quit = false;
+intfic.current_location = "unique_name of room where you want the player to start";
+
+-- Get output from interactive fiction and send it to COMMS
+function flush_output()
+	out = intfic.get_output();
+	if (out ~= nil) then
+		msgtab = intfic.strsplit(out, "\n");
+		for i,v in pairs(msgtab) do
+			comms_channel_transmit("ROBOT", robot_channel, "-- " .. string.upper(v));
+		end
+	end;
+	register_timer_callback("flush_output", 10, 0);
+end
+
+-- Set up to listen from COMMS and flush output to COMMS
+local function setup_comms()
+	set_variable("SUPPRESS_STARBASE_COMPLAINTS", 1);
+	-- comms_channel_transmit("ROBOT", 0, ": *** HAILING ON CHANNEL 1234 ***");
+	comms_channel_listen("ROBOT", robot_channel, "robot_listen");
+	register_timer_callback("flush_output", 10, 0);
+end
+
+-- Listen for input from COMMS, and send it to interactive fiction
+-- library to be interpreted after filtering out our own output.
+function robot_listen(from, channel, message)
+	-- Robot should ignore its own output
+	if string.sub(message, 1, 3) == "-- " then
+		return;
+	end;
+	-- Robot should ignore its own hail message
+	hailmsg = string.find(message, "*** HAILING ON CHANNEL 1234 ***");
+	if hailmsg ~= nil then
+		return;
+	end
+	intfic.send_input(message);
+end
+
