@@ -5,6 +5,10 @@
 <font face="Helvetica">
 <title>Space Nerds In Space - A Multi-player Networked Starship Bridge Simulator</title>
 <style type="text/css">
+.boxed{
+  border: 1px solid #7fafff ;
+}
+.tab { margin-left: 40px; }
 body{
 	margin:40px auto;
 	max-width:1200px;
@@ -231,6 +235,29 @@ apt-get install libpocketsphinx1;
 
 <p>The above list may be incomplete, and these are the package names on mint 17.3 / ubuntu,
 so may be different on RPM based systems.
+
+<p class="tab">
+<div class="boxed">
+<p class="tab">NOTE: problems building on SuSE Leap 15.1. The following problems/solutions have
+been conveyed to me regarding SuSE Leap 15.1. This information is not very complete or
+accurate, but it is the best I have for now.  Please feel free to send me
+improvements to these instructions.
+See <a href="https://github.com/smcameron/space-nerds-in-space/issues/222">
+Bug 222</a>.
+<ol>
+<li>Need to install pkg-config and pkg-config_files.
+<li>Need to set pkg-config-path environment variable
+<li>All references to lua 5.2 in the Makefile need to be changed to lua 5.3.
+Note, we only compiled snis_client (via "make bin/snis_client") which shouldn't
+need lua at all. I don't know if the differences between lua 5.3 and lua 5.2 are
+significant enough to break things. I normally use lua 5.2 on my systems.
+<a href="http://www.lua.org/manual/5.3/readme.html#changes">Changes to Lua 5.3</a>
+-- at a quick glance I didn't see anything that I think will
+be problematic.
+</ol>
+</p>
+</div>
+</p>
 
 <h2>Step 2: Download the Source Code</h2>
 
