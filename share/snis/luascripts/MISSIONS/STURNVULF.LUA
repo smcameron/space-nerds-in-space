@@ -1047,12 +1047,19 @@ function robot_listen(from, channel, message)
 		return;
 	end
 	if object_distance ~= nil then
+		if sturnvulf == nil then
+			demon_print("sturnvulf is nil! (2)");
+		end
 		distance = object_distance(sturnvulf, player_ids[1]);
-			if (distance <= 8000) then
-				intfic.send_input(message);
-			else
-				intfic.write("I'm sorry, your signal is breaking up, say again?\n");
-			end
+		if distance == nil then
+			demon_print("distance to sturnvulf is nil! (2)");
+			intfic.write("... no response ...\n");
+		end
+		if distance <= 8000 then
+			intfic.send_input(message);
+		else
+			intfic.write("I'm sorry, your signal is breaking up, say again?\n");
+		end
 	else
 		intfic.send_input(message);
 	end
@@ -1467,6 +1474,9 @@ end
 
 function add_zarkons(cookie)
 	demon_print("Add zarkons!");
+	if sturnvulf == nil then
+		demon_print("sturnvulf is nil!");
+	end
 	dist = object_distance(sturnvulf, player_ids[1]);
 	if dist == nil then
 		demon_print("distance to sturnvulf is nil!");
