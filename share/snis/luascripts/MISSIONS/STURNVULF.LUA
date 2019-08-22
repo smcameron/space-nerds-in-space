@@ -1671,8 +1671,8 @@ function player_docked(id, station)
 		for i = 0,7 do
 			local cargoitem = "cargo[" .. tostring(i) .. "].contents.item";
 			local cargoqty = "cargo[" .. tostring(i) .. "].contents.qty";
-			attr = get_ship_attribute(player_ids[i], cargoitem);
-			qty = get_ship_attribute(player_ids[i], cargoqty);
+			attr = get_ship_attribute(player_ids[1], cargoitem);
+			qty = get_ship_attribute(player_ids[1], cargoqty);
 			if attr >= 0 then
 				local name = get_commodity_name(attr);
 				if name == "WEAPONS COMPONENTS" then
