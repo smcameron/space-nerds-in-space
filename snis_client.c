@@ -12674,12 +12674,13 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 		}
 
 		/* heading arrow head */
-		union vec3 ind_pos = {{screen_radius,0,0}};
+		union vec3 ind_pos = { {screen_radius * nav_camera_pos_factor * 0.75, 0, 0} };
 		quat_rot_vec_self(&ind_pos, &ind_orientation);
 		vec3_add_self(&ind_pos, &ship_pos);
 		e = add_entity(instrumentecx, heading_indicator_mesh, ind_pos.v.x, ind_pos.v.y, ind_pos.v.z, color);
 		if (e) {
-			update_entity_scale(e, heading_indicator_mesh->radius*screen_radius/100.0);
+			update_entity_scale(e, heading_indicator_mesh->radius *
+						(screen_radius / 100.0) * nav_camera_pos_factor * 0.75);
 			update_entity_orientation(e, &ind_orientation);
 			set_render_style(e, RENDER_NORMAL);
 			entity_set_user_data(e, &arrow_label[i]);
@@ -12687,7 +12688,7 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 		}
 
 		/* heading arrow tail */
-		ind_pos.v.x = screen_radius * 0.65;
+		ind_pos.v.x = screen_radius * 0.65 * nav_camera_pos_factor * 0.75;
 		ind_pos.v.y = 0.0;
 		ind_pos.v.z = 0.0;
 		quat_rot_vec_self(&ind_pos, &ind_orientation);
@@ -12695,7 +12696,8 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 		e = add_entity(instrumentecx, heading_indicator_tail_mesh,
 					ind_pos.v.x, ind_pos.v.y, ind_pos.v.z, color);
 		if (e) {
-			update_entity_scale(e, heading_indicator_tail_mesh->radius*screen_radius/100.0);
+			update_entity_scale(e, heading_indicator_tail_mesh->radius *
+							(screen_radius / 100.0) * nav_camera_pos_factor * 0.75);
 			update_entity_orientation(e, &ind_orientation);
 			set_render_style(e, RENDER_NORMAL);
 			draw_nav_contact_offset_and_ring(o, &ship_pos, &ship_normal, e, &ind_pos);
@@ -12704,7 +12706,7 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 		/* heading arrow shaft */
 		e = add_entity(instrumentecx, heading_ind_line_mesh, o->x, o->y, o->z, color);
 		if (e) {
-			update_entity_scale(e, screen_radius);
+			update_entity_scale(e, screen_radius * nav_camera_pos_factor * 0.75);
 			update_entity_orientation(e, &ind_orientation);
 		}
 	}
