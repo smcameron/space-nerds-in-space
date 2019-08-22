@@ -696,6 +696,17 @@ ${BIN}:
 		touch ${BIN}  ; \
 	fi
 
+# Rule to prevent common error of trying to "make foo" instead of "make bin/foo"
+BINARY_NAMES=snis_client snis_server snis_limited_client snis_multiverse nebula_noise \
+	generate_skybox ssgl_server lsssgl snis_text_to_speech.sh mesh_viewer earthlike \
+	infinite-taunt names stl_parser test_key_value_parser test-matrix test-space-partition \
+	test-marshal test-quat test-fleet test-mtwist device-io-sample-1 test-nonuniform-random-sampler \
+	test-commodities test-obj-parser test_solarsystem_config test_crater print_ship_attributes \
+	test_snis_dmx snis_test_audio check-endianness
+${BINARY_NAMES}:
+	@echo "You probably meant: make bin/$@" 1>&2
+	@/bin/false
+
 update-assets:
 	@util/snis_update_assets.sh
 
