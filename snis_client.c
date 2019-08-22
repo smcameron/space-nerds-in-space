@@ -431,6 +431,7 @@ static struct mesh *phaser_mesh;
 static struct mesh *laserbeam_nav_mesh;
 static struct mesh *ship_icon_mesh;
 static struct mesh *heading_indicator_mesh;
+static struct mesh *heading_indicator_tail_mesh;
 static struct mesh *cargo_container_mesh;
 static struct mesh *nebula_mesh;
 static struct mesh *sun_mesh;
@@ -12682,9 +12683,25 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 			update_entity_orientation(e, &ind_orientation);
 			set_render_style(e, RENDER_NORMAL);
 			entity_set_user_data(e, &arrow_label[i]);
+			draw_nav_contact_offset_and_ring(o, &ship_pos, &ship_normal, e, &ind_pos);
 		}
 
 		/* heading arrow tail */
+		ind_pos.v.x = screen_radius * 0.65;
+		ind_pos.v.y = 0.0;
+		ind_pos.v.z = 0.0;
+		quat_rot_vec_self(&ind_pos, &ind_orientation);
+		vec3_add_self(&ind_pos, &ship_pos);
+		e = add_entity(instrumentecx, heading_indicator_tail_mesh,
+					ind_pos.v.x, ind_pos.v.y, ind_pos.v.z, color);
+		if (e) {
+			update_entity_scale(e, heading_indicator_tail_mesh->radius*screen_radius/100.0);
+			update_entity_orientation(e, &ind_orientation);
+			set_render_style(e, RENDER_NORMAL);
+			draw_nav_contact_offset_and_ring(o, &ship_pos, &ship_normal, e, &ind_pos);
+		}
+
+		/* heading arrow shaft */
 		e = add_entity(instrumentecx, heading_ind_line_mesh, o->x, o->y, o->z, color);
 		if (e) {
 			update_entity_scale(e, screen_radius);
@@ -21607,6 +21624,7 @@ static void init_meshes()
 #endif
 	ship_icon_mesh = snis_read_model(d, "ship-icon.stl");
 	heading_indicator_mesh = snis_read_model(d, "heading_indicator.stl");
+	heading_indicator_tail_mesh = snis_read_model(d, "heading_indicator_tail.stl");
 	cargo_container_mesh = snis_read_model(d, "cargocontainer/cargocontainer.obj");
 	docking_port_mesh[0] = snis_read_model(d, "docking_port.stl");
 	mesh_cylindrical_yz_uv_map(docking_port_mesh[0]);

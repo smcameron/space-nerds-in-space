@@ -601,6 +601,7 @@ MODELS=${MD}/freighter.stl \
 	${MD}/long-triangular-prism.stl \
 	${MD}/ship-icon.stl \
 	${MD}/heading_indicator.stl \
+	${MD}/heading_indicator_tail.stl \
 	${MD}/axis.stl \
 	${MD}/scrambler.stl \
 	${MD}/swordfish.stl \
