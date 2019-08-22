@@ -19,6 +19,14 @@ intfic.ccasteroidz = 0;
 intfic.ccasteroidname = "Unknown";
 intfic.bomb_disarmed = false;
 
+local function dbgout(s)
+	if demon_print ~= nil then
+		demon_print(s);
+	else
+		intfic.write(s);
+	end
+end
+
 if random_point_on_sphere ~= nil then
 	-- Choose a location for the STURNVULF
 	svx, svy, svz = random_point_on_sphere(200000);
@@ -1048,11 +1056,11 @@ function robot_listen(from, channel, message)
 	end
 	if object_distance ~= nil then
 		if sturnvulf == nil then
-			demon_print("sturnvulf is nil! (2)");
+			dbgout("sturnvulf is nil! (2)");
 		end
 		distance = object_distance(sturnvulf, player_ids[1]);
 		if distance == nil then
-			demon_print("distance to sturnvulf is nil! (2)");
+			dbgout("distance to sturnvulf is nil! (2)");
 			intfic.write("... no response ...\n");
 		end
 		if distance <= 8000 then
@@ -1473,30 +1481,30 @@ function maintain_zarkon_focus()
 end
 
 function add_zarkons(cookie)
-	demon_print("Add zarkons!");
+	dbgout("Add zarkons!");
 	if sturnvulf == nil then
-		demon_print("sturnvulf is nil!");
+		dbgout("sturnvulf is nil!");
 	end
 	dist = object_distance(sturnvulf, player_ids[1]);
 	if dist == nil then
-		demon_print("distance to sturnvulf is nil!");
+		dbgout("distance to sturnvulf is nil!");
 		register_timer_callback("add_zarkons", 300, 0);
 		return;
 	end
 	if dist > 15000 then
-		demon_print("Distance too great!");
+		dbgout("Distance too great!");
 		register_timer_callback("add_zarkons", 300, 0);
 		return;
 	end
 
 	zarkon_timer = zarkon_timer - 1;
 	if zarkon_timer > 0 then
-		demon_print("timer not expired: " .. tostring(zarkon_timer));
+		dbgout("timer not expired: " .. tostring(zarkon_timer));
 		register_timer_callback("add_zarkons", 300, 0);
 		return;
 	end
 
-	demon_print("Adding a zarkon!");
+	dbgout("Adding a zarkon!");
 	local x, y, z = random_point_on_sphere(5000);
 	px, py, pz = get_object_location(player_ids[1]);
 	x = x + px;
