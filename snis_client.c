@@ -12470,7 +12470,6 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 	static struct mesh *ring_mesh = 0;
 	static struct mesh *radar_ring_mesh[8] = { 0 };
 	static struct mesh *heading_ind_line_mesh = 0;
-	static struct mesh *forward_line_mesh = 0;
 	static int current_zoom = 0;
 	/* struct entity *targeted_entity = NULL; */
 	struct entity *science_entity = NULL;
@@ -12486,7 +12485,6 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 		radar_ring_mesh[6] = init_radar_circle_xz_plane_mesh(0, 0, 0.1, 18, 0.05);
 		radar_ring_mesh[7] = init_radar_circle_xz_plane_mesh(0, 0, 0.05, 0, 0.05);
 		heading_ind_line_mesh = init_line_mesh(0.7, 0, 0, 1, 0, 0);
-		forward_line_mesh = init_line_mesh(1, 0, 0, 0.5, 0, 0);
 	}
 
 	struct snis_entity *o;
@@ -12624,21 +12622,25 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 	}
 
 	const int vector_color[] = {
+		UI_COLOR(nav_heading_vector),
 		UI_COLOR(nav_weapon_vector),
 		UI_COLOR(nav_science_vector),
 		UI_COLOR(nav_comms_curr_vector),
 		UI_COLOR(nav_comms_desired_vector),
 	};
-	char *arrow_label[] = { "WEAP", "SCI", "COMMS", "COMMS" };
-	for (i = 0; i < 4; ++i) {
+	char *arrow_label[] = { "HEAD", "WEAP", "SCI", "COMMS", "COMMS" };
+	for (i = 0; i < 5; ++i) {
 		int color = vector_color[i];
 
 		union quat ind_orientation;
 		switch (i) {
 		case 0:
+			ind_orientation = o->orientation;
+			break;
+		case 1:
 			quat_mul(&ind_orientation, &o->orientation, &o->tsd.ship.weap_orientation);
 			break;
-		case 1: {
+		case 2: {
 			union vec3 up = { { 0, 1, 0 } };
 			union vec3 xaxis = { { 1, 0, 0 } };
 
@@ -12658,12 +12660,12 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 			}
 			}
 			break;
-		case 2:
+		case 3:
 			if (vec3_magnitude(&o->tsd.ship.desired_hg_ant_aim) < 0.01)
 				continue; /* antenna aiming is disabled */
 			ind_orientation = o->tsd.ship.current_hg_ant_orientation;
 			break;
-		case 3:
+		case 4:
 		default: {
 			union vec3 r = { { 1.0, 0.0, 0.0 } };
 			if (vec3_magnitude(&o->tsd.ship.desired_hg_ant_aim) < 0.01)
@@ -12709,13 +12711,6 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 			update_entity_scale(e, screen_radius * nav_camera_pos_factor * 0.75);
 			update_entity_orientation(e, &ind_orientation);
 		}
-	}
-
-	/* ship forward vector */
-	e = add_entity(instrumentecx, forward_line_mesh, o->x, o->y, o->z, UI_COLOR(nav_forward_vector));
-	if (e) {
-		update_entity_scale(e, screen_radius);
-		update_entity_orientation(e, &o->orientation);
 	}
 
 	/* draw some static in the region that we can't see because of sensor power */
