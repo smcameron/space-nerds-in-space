@@ -1468,6 +1468,11 @@ end
 function add_zarkons(cookie)
 	demon_print("Add zarkons!");
 	dist = object_distance(sturnvulf, player_ids[1]);
+	if dist == nil then
+		demon_print("distance to sturnvulf is nil!");
+		register_timer_callback("add_zarkons", 300, 0);
+		return;
+	end
 	if dist > 15000 then
 		demon_print("Distance too great!");
 		register_timer_callback("add_zarkons", 300, 0);
