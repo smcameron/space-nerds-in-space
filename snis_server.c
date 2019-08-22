@@ -7974,7 +7974,7 @@ static int starbase_expecting_docker(struct snis_entity *starbase, uint32_t dock
 	return 0;
 }
 
-static void init_player(struct snis_entity *o, int clear_cargo_bay, float *charges);
+static void init_player(struct snis_entity *o, int reset_ship, float *charges);
 static void do_docking_action(struct snis_entity *ship, struct snis_entity *starbase,
 			struct bridge_data *b, char *npcname)
 {
@@ -10099,7 +10099,24 @@ static void repair_damcon_systems(struct snis_entity *o)
 static void update_passenger(int i, int nstarbases);
 static int count_starbases(void);
 
-static void init_player(struct snis_entity *o, int clear_cargo_bay, float *charges)
+/* init_player()
+ * o is the player ship
+ *
+ * reset_ship is 1 if we are resetting the ship (e.g. at
+ *   the beginning of a game) and 0 if we do not want to reset the ship (e.g. we
+ *   are just docking at a starbase.  Resetting the ship means the following
+ *   additional actions are taken (as compared to just docking with a starbase):
+ *
+ *   1. Clearing any ship_id_chips the player has collected.
+ *   2. Clearing any custom buttons lua scripts might have created.
+ *   3. Clearing the ship's cargo bay.
+ *   4. Resetting the ship's wallet to a default value.
+ *   5. Clearing any passengers off the ship.
+ *
+ * *charges is an "out" parameter indicating the fees charged for repairs and
+ *  restocking
+ */
+static void init_player(struct snis_entity *o, int reset_ship, float *charges)
 {
 	int i;
 	int b;
@@ -10175,18 +10192,20 @@ static void init_player(struct snis_entity *o, int clear_cargo_bay, float *charg
 		strcpy(bridgelist[b].last_text_to_speech, "");
 		bridgelist[b].text_to_speech_volume = 0.33;
 		bridgelist[b].text_to_speech_volume_timestamp = universe_timestamp;
-		bridgelist[b].active_custom_buttons = 0;
-		memset(bridgelist[b].custom_button_text, 0, sizeof(bridgelist[b].custom_button_text));
-		if (clear_cargo_bay) {
+		if (reset_ship) {
+			/* Clear ship id chips */
 			memset(bridgelist[b].ship_id_chip, 0, sizeof(bridgelist[b].ship_id_chip));
 			bridgelist[b].nship_id_chips = 0;
+			/* Clear any custom buttons a Lua script might have created */
+			bridgelist[b].active_custom_buttons = 0;
+			memset(bridgelist[b].custom_button_text, 0, sizeof(bridgelist[b].custom_button_text));
 		}
 	}
 	quat_init_axis(&o->tsd.ship.computer_desired_orientation, 0, 1, 0, 0);
 	o->tsd.ship.computer_steering_time_left = 0;
-	if (clear_cargo_bay) {
+	if (reset_ship) {
 		int nstarbases = count_starbases();
-		/* The clear_cargo_bay param is a stopgap until real docking code
+		/* The reset_ship param is a stopgap until real docking code
 		 * is done.
 		 */
 		for (i = 0; i < o->tsd.ship.ncargo_bays; i++) {
