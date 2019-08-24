@@ -224,10 +224,8 @@ struct spcontext {
 	struct thingy *t;
 };
 
-static void callback(void *context, void *whatever)
+static void callback(__attribute__((unused)) void *context, __attribute__((unused)) void *whatever)
 {
-	struct spcontext *sp = context;
-
 	printf("callback called\n");
 }
 
