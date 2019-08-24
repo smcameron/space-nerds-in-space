@@ -1512,7 +1512,7 @@ function add_zarkons(cookie)
 	z = z + pz;
 	zarkon = add_ship(generate_ship_name(), x, y, z, 12, 3, 0);
 	ai_push_attack(zarkon, player_ids[1]);
-	zarkon_timer = 2 + math.floor(math.random() * 3);
+	zarkon_timer = 5 + math.floor(math.random() * 5);
 	register_timer_callback("add_zarkons", 300, 0);
 end
 
