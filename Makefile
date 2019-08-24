@@ -1178,7 +1178,7 @@ mostly-clean:
 	( cd mikktspace && ${MAKE} clean )
 
 bin/test-marshal:	snis_marshal.c ${OD}/stacktrace.o Makefile ${BIN}
-	$(CC) -DTEST_MARSHALL -o test-marshal snis_marshal.c ${OD}/stacktrace.o
+	$(CC) -DTEST_MARSHAL -o bin/test-marshal snis_marshal.c ${OD}/stacktrace.o
 
 bin/test-quat:	test-quat.c ${OD}/quat.o ${OD}/matrix.o ${OD}/mathutils.o ${OD}/mtwist.o Makefile ${BIN}
 	$(CC) -Wall -Wextra --pedantic -o test-quat test-quat.c ${OD}/quat.o ${OD}/matrix.o ${OD}/mathutils.o ${OD}/mtwist.o -lm
