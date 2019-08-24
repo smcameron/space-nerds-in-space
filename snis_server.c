@@ -16856,7 +16856,7 @@ static struct tweakable_var_descriptor server_tweak[] = {
 	{ "INITIAL_MISSILE_COUNT",
 		"NUMBER OF MISSILES PLAYERS MAY HAVE",
 		&initial_missile_count, 'i', 0, 100, INITIAL_MISSILE_COUNT,
-		0.0, 100.0, INITIAL_MISSILE_COUNT },
+		0.0, 255.0, INITIAL_MISSILE_COUNT },
 	{ "MAX_PLAYER_VELOCITY",
 		"MAXIMUM VELOCITY PLAYER MAY TRAVEL USING IMPULSE POWER",
 		&max_player_velocity, 'f', 20.0, 20000.0, MAX_PLAYER_VELOCITY, 0, 0, 0},

@@ -1527,6 +1527,7 @@ end
 function setup_solarsystem()
 	clear_all();
 	set_variable("MISSILE_FIRE_CHANCE", "0");
+	set_variable("INITIAL_MISSILE_COUNT", "255"); -- give player lots of missiles
 	planet = {};
 	planet[1] = add_planet("BACHU", 61667.011707, 65406.588868, 478750.311434, 6326.000000, 0);
 	starbase = {};
@@ -1658,6 +1659,7 @@ function setup_solarsystem()
 	player_ids = get_player_ship_ids();
 	-- set player 1 location
 	if (player_ids[1]) then
+		reset_player_ship(player_ids[1]);
 		dock_player_to_starbase(player_ids[1], starbase[2]);
 	end
 	sturnvulf = add_ship("STURNVULF", svx, svy, svz, 13, 0, 0);
