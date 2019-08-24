@@ -1571,6 +1571,11 @@ function setup_solarsystem()
 	ship[28] = add_ship("BULOB", 476667.107824, 10577.073772, 476251.827471, 10, 1, 1);
 	ship[29] = add_ship("INAT", 57157.286326, 123631.816616, 183215.725203, 12, 3, 1);
 	ship[30] = add_ship("NELESP", 256970.240355, 3936.408034, 68992.433398, 16, 0, 1);
+	ship[31] = add_ship("VISTA ASTERION", 254970.240355, 7936.408034, 68992.433398, 22, 0, 1); -- mantis
+	ship[31] = add_ship("CEPHEID VOID", 236970.240355, 4936.408034, 65992.433398, 22, 0, 1); -- mantis
+	ship[31] = add_ship("GALASSIA DEMON", 255970.240355, 9936.408034, 67992.433398, 22, 0, 1); -- mantis
+	ship[31] = add_ship("LUMIERE HARBINGER", 236970.240355, 4936.408034, 68992.433398, 22, 0, 1); -- mantis
+	ship[31] = add_ship("PROTON NIGHT", 257970.240355, 4536.408034, 67992.433398, 22, 0, 1); -- mantis
 	asteroid = {};
 	asteroid[1] = add_asteroid(144589.162425, 0.000000, 327373.456506);
 	asteroid[2] = add_asteroid(146804.882431, 0.000000, 317055.886180);
