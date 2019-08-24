@@ -114,6 +114,9 @@ Too much to list, but here's a list anyway:
 * starbase behavior
   Allow suppressing default behavior of crying about getting attacked
   all the time and spamming the comms screen.
+    DONE: Lua scripts can now do:
+    set_variable("SUPPRESS_STARBASE_COMPLAINTS", 1);
+    or it can be done via the DEMON screen.
 
 * anomalies, macguffins etc. need to be implemented
 * Possibly have some way of having special commodities.
@@ -137,6 +140,10 @@ Too much to list, but here's a list anyway:
 * Damage control screen:
   Make the various components of the systems less generic
   Make damage control a bit less useless
+  Add "hull integrity" as a thing.  Right now, when shields get to zero,
+    the ship explodes.  Really, hull damage and shield damage should be
+    separate things, and hull damage should be the thing that blows the
+    ship up, not shield damage.
 
 * Need sound for wormhole travel
 * I think the universe needs to be bigger, you can see too far out
