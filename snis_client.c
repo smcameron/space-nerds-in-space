@@ -17500,6 +17500,24 @@ static void demon_mission_button_pressed(void *x)
 	send_lua_script_packet_to_server(scriptname);
 }
 
+static void demon_utility_button_pressed(void *x)
+{
+	char *scriptname = (char *) x;
+	char command[256];
+
+	if (strncmp(x, "RESETBRIDGE", 11) == 0) {
+		struct snis_entity *o;
+
+		o = find_my_ship();
+		if (!o) {
+			return;
+		}
+		snprintf(command, sizeof(command), "RESETBRIDGE %u", o->id);
+		scriptname = command;
+	}
+	send_lua_script_packet_to_server(scriptname);
+}
+
 static void demon_delete_button_pressed(void *x)
 {
 	int i;
@@ -17856,6 +17874,25 @@ static void init_demon_ui()
 	pull_down_menu_add_row(demon_ui.menu, "CAPTAIN", "TOGGLE CAPTAIN ON/OFF", demon_captain_button_pressed, NULL);
 	pull_down_menu_add_row(demon_ui.menu, "CAPTAIN", "FIRE TORPEDO", demon_torpedo_button_pressed, NULL);
 	pull_down_menu_add_row(demon_ui.menu, "CAPTAIN", "FIRE PHASER", demon_phaser_button_pressed, NULL);
+
+	pull_down_menu_add_column(demon_ui.menu, "UTILITY");
+	pull_down_menu_add_row(demon_ui.menu, "UTILITY", "CLEAR ALL",
+						demon_utility_button_pressed, "CLEAR_ALL");
+	pull_down_menu_add_row(demon_ui.menu, "UTILITY", "MANUAL ANTENNA AIMING",
+						demon_utility_button_pressed, "ENABLE_ANTENNA");
+	pull_down_menu_add_row(demon_ui.menu, "UTILITY", "AUTO ANTENNA AIMING",
+						demon_utility_button_pressed, "DISABLE_ANTENNA");
+	pull_down_menu_add_row(demon_ui.menu, "UTILITY", "PLAYER SPEED BOOST",
+						demon_utility_button_pressed, "PLAYER_SPEED_BOOST");
+	pull_down_menu_add_row(demon_ui.menu, "UTILITY", "PLAYER SPEED NORMAL",
+						demon_utility_button_pressed, "PLAYER_SPEED_DEFAULT");
+	pull_down_menu_add_row(demon_ui.menu, "UTILITY", "RED ALERT",
+						demon_utility_button_pressed, "REDALERT");
+	pull_down_menu_add_row(demon_ui.menu, "UTILITY", "HEAL PLAYER SHIP",
+						demon_utility_button_pressed, "RESETBRIDGE");
+	pull_down_menu_add_row(demon_ui.menu, "UTILITY", "REGENERATE SOLARSYSTEM",
+						demon_utility_button_pressed, "REGENERATE");
+
 	pull_down_menu_add_column(demon_ui.menu, "MISSIONS");
 	pull_down_menu_add_row(demon_ui.menu, "MISSIONS", "TRAINING MISSION 1",
 						demon_mission_button_pressed, "TRAINING-MISSION-1");
@@ -17873,8 +17910,7 @@ static void init_demon_ui()
 						demon_mission_button_pressed, "KALI");
 	pull_down_menu_add_row(demon_ui.menu, "MISSIONS", "DEMOLISHER",
 						demon_mission_button_pressed, "DEMOLISHER");
-	pull_down_menu_add_row(demon_ui.menu, "MISSIONS", "REGENERATE UNIVERSE",
-						demon_mission_button_pressed, "REGENERATE");
+
 	demon_ui.console = text_window_init(txx(100), txy(10), SCREEN_WIDTH - txx(110), 500, 45,
 						UI_COLOR(demon_default));
 	text_window_blank_background(demon_ui.console, 1);
