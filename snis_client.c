@@ -17493,6 +17493,13 @@ static void demon_captain_button_pressed(void *x)
 	demon_modebutton_pressed(DEMON_BUTTON_CAPTAINMODE);
 }
 
+static void demon_mission_button_pressed(void *x)
+{
+	char *scriptname = (char *) x;
+
+	send_lua_script_packet_to_server(scriptname);
+}
+
 static void demon_delete_button_pressed(void *x)
 {
 	int i;
@@ -17849,6 +17856,25 @@ static void init_demon_ui()
 	pull_down_menu_add_row(demon_ui.menu, "CAPTAIN", "TOGGLE CAPTAIN ON/OFF", demon_captain_button_pressed, NULL);
 	pull_down_menu_add_row(demon_ui.menu, "CAPTAIN", "FIRE TORPEDO", demon_torpedo_button_pressed, NULL);
 	pull_down_menu_add_row(demon_ui.menu, "CAPTAIN", "FIRE PHASER", demon_phaser_button_pressed, NULL);
+	pull_down_menu_add_column(demon_ui.menu, "MISSIONS");
+	pull_down_menu_add_row(demon_ui.menu, "MISSIONS", "TRAINING MISSION 1",
+						demon_mission_button_pressed, "TRAINING-MISSION-1");
+	pull_down_menu_add_row(demon_ui.menu, "MISSIONS", "SAVING PLANET ERPH",
+						demon_mission_button_pressed, "SAVING-PLANET-ERPH");
+	pull_down_menu_add_row(demon_ui.menu, "MISSIONS", "SPACE POX",
+						demon_mission_button_pressed, "SPACEPOX");
+	pull_down_menu_add_row(demon_ui.menu, "MISSIONS", "ROYAL WEDDING",
+						demon_mission_button_pressed, "ROYAL-WEDDING");
+	pull_down_menu_add_row(demon_ui.menu, "MISSIONS", "CUBO DE LA MUERTE",
+						demon_mission_button_pressed, "CUBOMUERTE");
+	pull_down_menu_add_row(demon_ui.menu, "MISSIONS", "RESCUE OF THE STURNVULF",
+						demon_mission_button_pressed, "STURNVULF");
+	pull_down_menu_add_row(demon_ui.menu, "MISSIONS", "KALI",
+						demon_mission_button_pressed, "KALI");
+	pull_down_menu_add_row(demon_ui.menu, "MISSIONS", "DEMOLISHER",
+						demon_mission_button_pressed, "DEMOLISHER");
+	pull_down_menu_add_row(demon_ui.menu, "MISSIONS", "REGENERATE UNIVERSE",
+						demon_mission_button_pressed, "REGENERATE");
 	demon_ui.console = text_window_init(txx(100), txy(10), SCREEN_WIDTH - txx(110), 500, 45,
 						UI_COLOR(demon_default));
 	text_window_blank_background(demon_ui.console, 1);
