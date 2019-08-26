@@ -23553,14 +23553,19 @@ static void print_lua_error_message(char *error_context, char *lua_command)
 {
 	char error_msg[1000];
 
-	snprintf(error_msg, sizeof(error_msg) - 1, "%s %s", error_context, lua_command);
+	if (lua_command)
+		snprintf(error_msg, sizeof(error_msg) - 1, "%s %s", error_context, lua_command);
+	else
+		snprintf(error_msg, sizeof(error_msg) - 1, "%s", error_context);
 	fprintf(stderr, "%s", error_msg);
 	send_demon_console_color_msg(YELLOW, "%s", error_msg);
 
-	snprintf(error_msg, sizeof(error_msg) - 1, "LUA: %s",
-		lua_tostring(lua_state, -1));
-	fprintf(stderr, "%s", error_msg);
-	send_demon_console_color_msg(YELLOW, "%s", error_msg);
+	if (lua_command) {
+		snprintf(error_msg, sizeof(error_msg) - 1, "LUA: %s",
+			lua_tostring(lua_state, -1));
+		fprintf(stderr, "%s", error_msg);
+		send_demon_console_color_msg(YELLOW, "%s", error_msg);
+	}
 }
 
 /* Parse a lua command into tokens.  Input is lua_command, output is arg[],
