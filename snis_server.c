@@ -172,6 +172,8 @@ static int multiverse_debug = 0;
 static int suppress_starbase_complaints = 0;
 static int player_invincibility = 0;
 static int game_paused = 0;
+#define DEFAULT_LUA_INSTRUCTION_COUNT_LIMIT 100000
+static int lua_instruction_count_limit = DEFAULT_LUA_INSTRUCTION_COUNT_LIMIT;
 
 /*
  * End of runtime adjustable globals
@@ -781,12 +783,20 @@ static void free_timer_events(struct timer_event **e)
 	*e = NULL;
 }
 
+static void runaway_lua_script_detected(lua_State *lstate, __attribute__((unused)) lua_Debug *arg)
+{
+	luaL_error(lstate, "RUNAWAY LUA SCRIPT DETECTED");
+}
+
 static void send_demon_console_msg(const char *fmt, ...);
 static void send_demon_console_color_msg(uint8_t color, const char *fmt, ...);
 
 static int do_lua_pcall(char *function_name, lua_State *l, int nargs, int nresults, int errfunc)
 {
 	int rc;
+
+	if (lua_instruction_count_limit > 0)
+		lua_sethook(lua_state, runaway_lua_script_detected, LUA_MASKCOUNT, lua_instruction_count_limit);
 
 	rc = lua_pcall(l, nargs, nresults, errfunc);
 	if (rc) {
@@ -798,6 +808,9 @@ static int do_lua_pcall(char *function_name, lua_State *l, int nargs, int nresul
 		stacktrace("do_lua_pcall");
 		fflush(stderr);
 	}
+	if (lua_instruction_count_limit > 0)
+		lua_sethook(lua_state, runaway_lua_script_detected, LUA_MASKCOUNT, 0);
+
 	return rc;
 }
 
@@ -17005,6 +17018,8 @@ static struct tweakable_var_descriptor server_tweak[] = {
 		&player_invincibility, 'i', 0.0, 0.0, 0.0, 0, 1, 0 },
 	{ "GAME_PAUSED", "0 or 1, 1 TO PAUSE, 0 to UNPAUSE (EXPERIMENTAL)",
 		&game_paused, 'i', 0.0, 0.0, 0.0, 0, 1, 0 },
+	{ "LUA_INSTRUCTION_LIMIT", "USED TO DETECT RUNAWAY LUA SCRIPTS",
+		&lua_instruction_count_limit, 'i', 0.0, 0.0, 0.0, 0, 1000000, DEFAULT_LUA_INSTRUCTION_COUNT_LIMIT },
 	{ NULL, NULL, NULL, '\0', 0.0, 0.0, 0.0, 0, 0, 0 },
 };
 
@@ -23673,9 +23688,16 @@ static void process_lua_commands(void)
 		for (int i = 0; i < nargs; i++) /* Push the args. */
 			lua_pushstring(lua_state, arg[i]);
 
+		if (lua_instruction_count_limit > 0)
+			lua_sethook(lua_state, runaway_lua_script_detected, LUA_MASKCOUNT, lua_instruction_count_limit);
+
 		rc = lua_pcall(lua_state, nargs, 0, 0); /* Call the script */
 		if (rc)
 			print_lua_error_message("ERROR IN SCRIPT", arg[0]);
+
+		if (lua_instruction_count_limit > 0)
+			lua_sethook(lua_state, runaway_lua_script_detected, LUA_MASKCOUNT, 0);
+
 		free_lua_command_tokens(arg, nargs, ARRAYSIZE(arg));
 		pthread_mutex_lock(&universe_mutex);
 	}
