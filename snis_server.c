@@ -20953,8 +20953,8 @@ static int process_request_mining_bot(struct game_client *c)
 static int process_demon_fire_phaser(struct game_client *c)
 {
 	struct snis_entity *o;
+	union vec3 vel;
 	unsigned char buffer[10];
-	double vx, vz;
 	uint32_t oid;
 	int i, rc;
 
@@ -20970,10 +20970,11 @@ static int process_demon_fire_phaser(struct game_client *c)
 	o = &go[i];
 	if (o->type != OBJTYPE_SHIP2)
 		goto out;
-
-	vx = LASER_VELOCITY * cos(o->heading);
-	vz = LASER_VELOCITY * -sin(o->heading);
-	add_laser(o->x, 0.0, o->z, vx, 0.0, vz, NULL, o->id);
+	vel.v.x = LASER_VELOCITY;
+	vel.v.y = 0;
+	vel.v.z = 0;
+	quat_rot_vec_self(&vel, &o->orientation);
+	add_laser(o->x, o->y, o->z, vel.v.x, vel.v.y, vel.v.z, NULL, o->id);
 	o->tsd.ship.phaser_charge = 0;
 out:
 	pthread_mutex_unlock(&universe_mutex);
