@@ -4208,7 +4208,7 @@ static void deal_with_keyboard()
 		r = -1;
 	if (kbstate.pressed[keythrust])
 		t = 1;
-	if (h || v || r)
+	if (h || v || r || t)
 		do_dirkey(h, v, r, t);
 	if (kbstate.pressed[key_page_up])
 		do_pageup();
