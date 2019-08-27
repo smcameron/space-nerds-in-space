@@ -3434,7 +3434,7 @@ static struct mouse_state {
 
 static void request_demon_rot_packet(uint32_t oid, uint8_t kind, uint8_t amount)
 {
-	queue_to_server(snis_opcode_pkt("bbwb", OPCODE_DEMON_ROT, kind, oid, amount));
+	queue_to_server(snis_opcode_subcode_pkt("bbwb", OPCODE_DEMON_ROT, kind, oid, amount));
 }
 
 static void request_demon_thrust_packet(uint32_t oid, uint8_t thrust)

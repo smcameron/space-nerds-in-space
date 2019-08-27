@@ -200,9 +200,9 @@ int snis_opcode_def_init(void)
 	rc |= init_opcode_def(OPCODE_DEMON_FIRE_PHASER, "bw");
 	rc |= init_opcode_def(OPCODE_DEMON_POSSESS, "bw");
 	rc |= init_opcode_def(OPCODE_DEMON_DISPOSSESS, "bw");
-	rc |= init_opcode_subcode_def(OPCODE_DEMON_ROT, OPCODE_DEMON_ROT_YAW, "bwb");
-	rc |= init_opcode_subcode_def(OPCODE_DEMON_ROT, OPCODE_DEMON_ROT_PITCH, "bwb");
-	rc |= init_opcode_subcode_def(OPCODE_DEMON_ROT, OPCODE_DEMON_ROT_ROLL, "bwb");
+	rc |= init_opcode_subcode_def(OPCODE_DEMON_ROT, OPCODE_DEMON_ROT_YAW, "bbwb");
+	rc |= init_opcode_subcode_def(OPCODE_DEMON_ROT, OPCODE_DEMON_ROT_PITCH, "bbwb");
+	rc |= init_opcode_subcode_def(OPCODE_DEMON_ROT, OPCODE_DEMON_ROT_ROLL, "bbwb");
 	rc |= init_opcode_def(OPCODE_DEMON_THRUST, "bwb");
 	rc |= init_opcode_def(OPCODE_DEMON_MOVE_OBJECT, "bwSSSQ");
 	rc |= init_opcode_def(OPCODE_INITIATE_WARP, "bb");
