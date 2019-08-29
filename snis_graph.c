@@ -420,9 +420,14 @@ void sng_abs_xy_draw_string(char *s, int font, float x, float y)
 	int i, dx;	
 	float deltax = 0;
 
-	for (i=0;s[i];i++) {
+	for (i = 0; s[i]; i++) {
 		dx = (letter_spacing[font]) + sng_abs_xy_draw_letter(gamefont[font + 5 * sng_font_family],
 			s[i], x + deltax, y);
+		if (s[i] == '\n') {
+			deltax = 0;
+			dx = 0;
+			y += font_lineheight[font];
+		}
 		deltax += dx;
 	}
 }
@@ -431,24 +436,39 @@ void sng_string_bounding_box(char *s, int font, float *bbx1, float *bby1, float 
 {
 	struct my_vect_obj **fontobj = gamefont[font + 5 * sng_font_family];
 	int i;
+	float extra_vert_space = 0;
+	float max_x_extent;
 
-	*bbx1 = *bbx2 = *bby1 = *bby2 = 0;
+	max_x_extent = 0;
+	*bbx2 = *bby1 = *bby2 = 0;
 
-	for (i=0;s[i];i++) {
+	for (i = 0; s[i]; i++) {
 		unsigned char letter = s[i];
+		if (letter == '\n') {
+			extra_vert_space += font_lineheight[font];
+			*bbx2 = 0;
+			continue;
+		}
 		if (letter == ' ' || letter == '\n' || letter == '\t' || fontobj[letter] == NULL) {
 			letter = '_';
 		}
 
-		/* figure out the letter size based on the bouding box */
+		/* figure out the letter size based on the bounding box */
 		*bbx2 += fontobj[letter]->bbx2 - fontobj[letter]->bbx1;
+		if (i != 0)
+			*bbx2 += letter_spacing[font]; /* add between character space */
+		if (*bbx2 > max_x_extent)
+			max_x_extent = *bbx2;
 
-		/* add between character space */
-		if (i!=0) *bbx2 += letter_spacing[font];
-
-		if (i==0 || fontobj[letter]->bby1 < *bby1) *bby1=fontobj[letter]->bby1;
-		if (i==0 || fontobj[letter]->bby2 > *bby2) *bby2=fontobj[letter]->bby2;
+		if (i == 0 || fontobj[letter]->bby1 < *bby1)
+			*bby1 = fontobj[letter]->bby1;
+		if (i == 0 || fontobj[letter]->bby2 > *bby2)
+			*bby2 = fontobj[letter]->bby2;
 	}
+	*bbx1 = 0;
+	if (*bbx2 < max_x_extent)
+		*bbx2 = max_x_extent;
+	*bby2 += extra_vert_space;
 }
 
 /* Used for floating labels in the game. */
