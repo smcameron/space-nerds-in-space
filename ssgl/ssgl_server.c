@@ -569,6 +569,21 @@ static void start_broadcast_lobby_info_thread(struct broadcast_lobby_thread_info
 	}
 }
 
+static int find_ip_address(void)
+{
+	uint32_t ipaddr = 0;
+	struct in_addr ip;
+
+	if (ssgl_get_primary_host_ip_addr(&ipaddr) == 0) {
+		ip.s_addr = ipaddr;
+		fprintf(stdout, "%s\n", inet_ntoa(ip));
+		return 0;
+	} else {
+		fprintf(stderr, "Unable to find IP address\n");
+		return -1;
+	}
+}
+
 int main(int argc, char *argv[])
 {
 	int rendezvous, connection, rc;
@@ -578,6 +593,9 @@ int main(int argc, char *argv[])
 	int on;
 	const char daemon_failed[] = "daemon(3) failed, exiting.\n";
 	struct broadcast_lobby_thread_info ports;
+
+	if (argc > 1 && strcmp(argv[1], "--find-ip-address") == 0)
+		exit(find_ip_address());
 
 	if (daemon(1, 0) != 0) {
 		if (write(2, daemon_failed, sizeof(daemon_failed)) != sizeof(daemon_failed))
