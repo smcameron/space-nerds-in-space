@@ -267,6 +267,21 @@ check_for_bad_lockfiles()
 	done
 }
 
+check_for_ip_address()
+{
+	ipaddr=$(${SSGL_SERVER} --find-ip-address 2>/dev/null)
+	if [ "$ipaddr" = "" -o "$ipaddr" = "0.0.0.0" ]
+	then
+		echo "Failed to find primary IP address." 1>&2
+		echo "You might need to set SSGL_PRIMARY_IP_PROBE_ADDR" 1>&2
+		echo "If you are on a LAN with an IP address like 192.168.1.10" 1>&2
+		echo "try 'export SSGL_PRIMARY_IP_PROBE_ADDR=192.168.1.10'" 1>&2
+		exit 1
+	fi
+}
+
+check_for_ip_address
+
 while [ "1" = "1" ]
 do
 	echo
