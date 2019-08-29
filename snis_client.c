@@ -11701,13 +11701,13 @@ static void init_nav_ui(void)
 	ui_add_slider(nav_ui.navzoom_slider, DISPLAYMODE_NAVIGATION, "NAVIGATION ZOOM CONTROL");
 	ui_add_slider(nav_ui.throttle_slider, DISPLAYMODE_NAVIGATION, "IMPULSE DRIVE THROTTLE CONTROL");
 	ui_add_button(nav_ui.engage_warp_button, DISPLAYMODE_NAVIGATION,
-				"ACTIVATE THE WARP DRIVE");
+				"ACTIVATE THE WARP DRIVE\nAT THE CURRENT INSTANTANEOUS\nPOWER LEVEL");
 	ui_add_button(nav_ui.docking_magnets_button, DISPLAYMODE_NAVIGATION,
 				"TOGGLE THE DOCKING MAGNETS ON OR OFF");
 	ui_add_button(nav_ui.standard_orbit_button, DISPLAYMODE_NAVIGATION,
-				"ENTER OR LEAVE STANDARD ORBIT AROUND NEARBY PLANET");
+				"ENTER OR LEAVE STANDARD ORBIT\nAROUND THE NEAREST PLANET");
 	ui_add_button(nav_ui.starmap_button, DISPLAYMODE_NAVIGATION,
-				"SWITCH BETWEEN NAVIGATION AND STAR MAP");
+				"SWITCH BETWEEN NAVIGATION\nAND STAR MAP SCREENS");
 	ui_add_button(nav_ui.lights_button, DISPLAYMODE_NAVIGATION,
 				"TOGGLE EXTERIOR LIGHTS ON/OFF");
 	ui_add_button(nav_ui.custom_button, DISPLAYMODE_NAVIGATION, "CUSTOM BUTTON");
