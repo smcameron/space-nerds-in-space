@@ -65,7 +65,7 @@ start_multiverse()
 		fi
 		echo "Created ./snisdb for snis_multiverse" 1>&2
 	fi
-	./bin/snis_multiverse -a -l localhost -n nickname -L narnia -e karado
+	./bin/snis_multiverse -a -l localhost -n nickname -L narnia -e "$SNIS_SOLARSYSTEM"
 	echo "snis_multiverse died, status was $?" 1>&2
 }
 
