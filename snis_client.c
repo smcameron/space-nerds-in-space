@@ -17745,6 +17745,11 @@ static struct demon_screen_menu_text *read_menu_file(char *menu_file)
 		mm->menu_text[mm->count] = strdup(menu_text);
 		mm->script[mm->count] = strdup(script);
 		mm->count++;
+		if (mm->count == MAX_MISSION_MENU_ITEMS) {
+			fprintf(stderr, "Demon screen menu %s max item count reached at '%s'\n",
+				filename, line);
+			break;
+		}
 	} while (1);
 	fclose(f);
 	return mm;
