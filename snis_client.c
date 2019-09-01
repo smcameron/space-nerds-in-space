@@ -17694,7 +17694,7 @@ static int demon_console_checkbox(void *x)
 	return demon_ui.console_active;
 }
 
-struct mission_menu {
+struct demon_screen_menu_text {
 #define MAX_MISSION_MENU_ITEMS 50
 	int count;
 	char *menu_text[MAX_MISSION_MENU_ITEMS], *script[MAX_MISSION_MENU_ITEMS];
@@ -17705,7 +17705,7 @@ struct mission_menu {
  * The first field is the menu text, and the
  * second field is the lua script to run.
  */
-static struct mission_menu *read_missions_menu(void)
+static struct demon_screen_menu_text *read_menu_file(char *menu_file)
 {
 	char fname[PATH_MAX + 1];
 	char *filename;
@@ -17716,11 +17716,11 @@ static struct mission_menu *read_missions_menu(void)
 	FILE *f;
 	int rc;
 
-	struct mission_menu *mm = malloc(sizeof(*mm));
+	struct demon_screen_menu_text *mm = malloc(sizeof(*mm));
 	mm->count = 0;
 	memset(mm, 0, sizeof(*mm));
 
-	snprintf(fname, sizeof(fname), "%s/luascripts/MISSIONS/missions_menu.txt", asset_dir);
+	snprintf(fname, sizeof(fname), "%s/luascripts/%s", asset_dir, menu_file);
 	filename = replacement_asset_lookup(fname, &replacement_assets);
 	f = fopen(filename, "r");
 	if (!f) {
@@ -17753,7 +17753,7 @@ static struct mission_menu *read_missions_menu(void)
 static void init_demon_ui()
 {
 	int i, x, y, dy, n;
-	struct mission_menu *mm;
+	struct demon_screen_menu_text *missions, *utility;
 
 	demon_ui.ux1 = 0;
 	demon_ui.uy1 = 0;
@@ -17934,30 +17934,17 @@ static void init_demon_ui()
 	pull_down_menu_add_row(demon_ui.menu, "CAPTAIN", "FIRE TORPEDO", demon_torpedo_button_pressed, NULL);
 	pull_down_menu_add_row(demon_ui.menu, "CAPTAIN", "FIRE PHASER", demon_phaser_button_pressed, NULL);
 
+	utility = read_menu_file("UTIL/utility_menu.txt");
 	pull_down_menu_add_column(demon_ui.menu, "UTILITY");
-	pull_down_menu_add_row(demon_ui.menu, "UTILITY", "CLEAR ALL",
-						demon_utility_button_pressed, "CLEAR_ALL");
-	pull_down_menu_add_row(demon_ui.menu, "UTILITY", "MANUAL ANTENNA AIMING",
-						demon_utility_button_pressed, "ENABLE_ANTENNA");
-	pull_down_menu_add_row(demon_ui.menu, "UTILITY", "AUTO ANTENNA AIMING",
-						demon_utility_button_pressed, "DISABLE_ANTENNA");
-	pull_down_menu_add_row(demon_ui.menu, "UTILITY", "PLAYER SPEED BOOST",
-						demon_utility_button_pressed, "PLAYER_SPEED_BOOST");
-	pull_down_menu_add_row(demon_ui.menu, "UTILITY", "PLAYER SPEED NORMAL",
-						demon_utility_button_pressed, "PLAYER_SPEED_DEFAULT");
-	pull_down_menu_add_row(demon_ui.menu, "UTILITY", "RED ALERT",
-						demon_utility_button_pressed, "REDALERT");
-	pull_down_menu_add_row(demon_ui.menu, "UTILITY", "HEAL PLAYER SHIP",
-						demon_utility_button_pressed, "RESETBRIDGE");
-	pull_down_menu_add_row(demon_ui.menu, "UTILITY", "REGENERATE SOLARSYSTEM",
-						demon_utility_button_pressed, "REGENERATE");
+	for (i = 0; i < utility->count; i++)
+		pull_down_menu_add_row(demon_ui.menu, "UTILITY", utility->menu_text[i],
+					demon_utility_button_pressed, utility->script[i]);
 
-	mm = read_missions_menu();
+	missions = read_menu_file("MISSIONS/missions_menu.txt");
 	pull_down_menu_add_column(demon_ui.menu, "MISSIONS");
-	fprintf(stderr, "mm->count = %d\n", mm->count);
-	for (i = 0; i < mm->count; i++) {
-		pull_down_menu_add_row(demon_ui.menu, "MISSIONS", mm->menu_text[i],
-					demon_mission_button_pressed, mm->script[i]);
+	for (i = 0; i < missions->count; i++) {
+		pull_down_menu_add_row(demon_ui.menu, "MISSIONS", missions->menu_text[i],
+					demon_mission_button_pressed, missions->script[i]);
 		/* We never deallocate the missions menu, mm->script[x] is a cookie passed
 		 * into pull_down_menu_add_row(), which is passed along to demon_mission_button_pressed(),
 		 * and so it must stick around.

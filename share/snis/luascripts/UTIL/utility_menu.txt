@@ -1,0 +1,14 @@
+# This file defines the UTILITY menu on the demon screen
+# Each line has two fields, separated by a comma
+# The first field is what to display in the menu
+# The second field is the name of the corresponding script
+#
+CLEAR ALL, CLEAR_ALL
+MANUAL ANTENNA AIMING, ENABLE_ANTENNA
+AUTO ANTENNA AIMING, DISABLE_ANTENNA
+PLAYER SPEED BOOST, PLAYER_SPEED_BOOST
+PLAYER SPEED NORMAL, PLAYER_SPEED_DEFAULT
+RED ALERT, REDALERT
+HEAL PLAYER SHIP, RESETBRIDGE
+REGENERATE SOLARSYSTEM, REGENERATE
+
