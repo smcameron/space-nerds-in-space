@@ -17499,6 +17499,7 @@ static void demon_mission_button_pressed(void *x)
 {
 	char *scriptname = (char *) x;
 
+	fprintf(stderr, "send_lua_script_packet_to_server(%s)\n", scriptname);
 	send_lua_script_packet_to_server(scriptname);
 }
 
@@ -17694,9 +17695,67 @@ static int demon_console_checkbox(void *x)
 	return demon_ui.console_active;
 }
 
+struct mission_menu {
+#define MAX_MISSION_MENU_ITEMS 50
+	int count;
+	char *menu_text[MAX_MISSION_MENU_ITEMS], *script[MAX_MISSION_MENU_ITEMS];
+};
+
+/* Read share/snis/luascripts/MISSSIONS/missions_menu.txt
+ * Each line contains two fields separated by a comma.
+ * The first field is the menu text, and the
+ * second field is the lua script to run.
+ */
+static struct mission_menu *read_missions_menu(void)
+{
+	char fname[PATH_MAX + 1];
+	char *filename;
+	char line[256];
+	char menu_text[256];
+	char script[256];
+	char *l;
+	FILE *f;
+	int rc;
+
+	struct mission_menu *mm = malloc(sizeof(*mm));
+	mm->count = 0;
+	memset(mm, 0, sizeof(*mm));
+
+	snprintf(fname, sizeof(fname), "%s/luascripts/MISSIONS/missions_menu.txt", asset_dir);
+	filename = replacement_asset_lookup(fname, &replacement_assets);
+	f = fopen(filename, "r");
+	if (!f) {
+		free(mm);
+		return NULL;
+	}
+	do {
+		l = fgets(line, 255, f);
+		if (!l)
+			break;
+		trim_whitespace(line);
+		clean_spaces(line);
+		if (strcmp(line, "") == 0) /* skip blank lines */
+			continue;
+		if (line[0] == '#')
+			continue; /* skip comments */
+		rc = sscanf(line, "%[^,]%*[, ]%[^,\n]", menu_text, script);
+		if (rc != 2) {
+			fprintf(stderr, "Bad line in %s: %s\n", filename, line);
+			continue;
+		}
+		fprintf(stderr, "menu_text = '%s', script = '%s'\n", menu_text, script);
+		mm->menu_text[mm->count] = strdup(menu_text);
+		mm->script[mm->count] = strdup(script);
+		mm->count++;
+	} while (1);
+	fclose(f);
+	return mm;
+}
+
 static void init_demon_ui()
 {
 	int i, x, y, dy, n;
+	struct mission_menu *mm;
 
 	demon_ui.ux1 = 0;
 	demon_ui.uy1 = 0;
@@ -17895,23 +17954,18 @@ static void init_demon_ui()
 	pull_down_menu_add_row(demon_ui.menu, "UTILITY", "REGENERATE SOLARSYSTEM",
 						demon_utility_button_pressed, "REGENERATE");
 
+	mm = read_missions_menu();
 	pull_down_menu_add_column(demon_ui.menu, "MISSIONS");
-	pull_down_menu_add_row(demon_ui.menu, "MISSIONS", "TRAINING MISSION 1",
-						demon_mission_button_pressed, "TRAINING-MISSION-1");
-	pull_down_menu_add_row(demon_ui.menu, "MISSIONS", "SAVING PLANET ERPH",
-						demon_mission_button_pressed, "SAVING-PLANET-ERPH");
-	pull_down_menu_add_row(demon_ui.menu, "MISSIONS", "SPACE POX",
-						demon_mission_button_pressed, "SPACEPOX");
-	pull_down_menu_add_row(demon_ui.menu, "MISSIONS", "ROYAL WEDDING",
-						demon_mission_button_pressed, "ROYAL-WEDDING");
-	pull_down_menu_add_row(demon_ui.menu, "MISSIONS", "CUBO DE LA MUERTE",
-						demon_mission_button_pressed, "CUBOMUERTE");
-	pull_down_menu_add_row(demon_ui.menu, "MISSIONS", "RESCUE OF THE STURNVULF",
-						demon_mission_button_pressed, "STURNVULF");
-	pull_down_menu_add_row(demon_ui.menu, "MISSIONS", "KALI",
-						demon_mission_button_pressed, "KALI");
-	pull_down_menu_add_row(demon_ui.menu, "MISSIONS", "DEMOLISHER",
-						demon_mission_button_pressed, "DEMOLISHER");
+	fprintf(stderr, "mm->count = %d\n", mm->count);
+	for (i = 0; i < mm->count; i++) {
+		fprintf(stderr, "menu item: '%s' '%s'\n", mm->menu_text[i], mm->script[i]);
+		pull_down_menu_add_row(demon_ui.menu, "MISSIONS", mm->menu_text[i],
+					demon_mission_button_pressed, mm->script[i]);
+		/* We never deallocate the missions menu, mm->script[x] is a cookie passed
+		 * into pull_down_menu_add_row(), which is passed along to demon_mission_button_pressed(),
+		 * and so it must stick around.
+		 */
+	}
 
 	demon_ui.console = text_window_init(txx(100), txy(10), SCREEN_WIDTH - txx(110), 500, 45,
 						UI_COLOR(demon_default));

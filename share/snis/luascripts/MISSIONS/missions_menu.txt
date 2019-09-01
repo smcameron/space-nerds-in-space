@@ -1,0 +1,14 @@
+# This file defines the MISSIONS menu on the demon screen
+# Each line has two fields, separated by a comma
+# The first field is what to display in the menu
+# The second field is the name of the corresponding script
+#
+TRAINING MISSION 1, TRAINING-MISSION-1
+SAVING PLANET ERPH, SAVING-PLANET-ERPH
+SPACE POX, SPACEPOX
+ROYAL WEDDING, ROYAL-WEDDING
+CUBO DE LA MUERTE, CUBOMUERTE
+RESCUE OF THE STURNVULF, STURNVULF
+KALI, KALI
+DEMOLISHER, DEMOLISHER
+
