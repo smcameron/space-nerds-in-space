@@ -17499,7 +17499,6 @@ static void demon_mission_button_pressed(void *x)
 {
 	char *scriptname = (char *) x;
 
-	fprintf(stderr, "send_lua_script_packet_to_server(%s)\n", scriptname);
 	send_lua_script_packet_to_server(scriptname);
 }
 
@@ -17743,7 +17742,6 @@ static struct mission_menu *read_missions_menu(void)
 			fprintf(stderr, "Bad line in %s: %s\n", filename, line);
 			continue;
 		}
-		fprintf(stderr, "menu_text = '%s', script = '%s'\n", menu_text, script);
 		mm->menu_text[mm->count] = strdup(menu_text);
 		mm->script[mm->count] = strdup(script);
 		mm->count++;
@@ -17958,7 +17956,6 @@ static void init_demon_ui()
 	pull_down_menu_add_column(demon_ui.menu, "MISSIONS");
 	fprintf(stderr, "mm->count = %d\n", mm->count);
 	for (i = 0; i < mm->count; i++) {
-		fprintf(stderr, "menu item: '%s' '%s'\n", mm->menu_text[i], mm->script[i]);
 		pull_down_menu_add_row(demon_ui.menu, "MISSIONS", mm->menu_text[i],
 					demon_mission_button_pressed, mm->script[i]);
 		/* We never deallocate the missions menu, mm->script[x] is a cookie passed
