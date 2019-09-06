@@ -17466,7 +17466,7 @@ static void list_lua_scripts(void)
 		send_demon_console_msg("%s: %s\n", LUASCRIPTDIR, "", strerror(errno));
 		return;
 	}
-	send_demon_console_msg("LUA SCRIPTS:");
+	send_demon_console_color_msg(WHITE, "LUA SCRIPTS:");
 
 	for (i = 0; i < n; i++) {
 		if (namelist[i]->d_type == DT_REG) { /* regular file? */
@@ -17509,9 +17509,9 @@ static void server_builtin_help(char *cmd)
 {
 	int i;
 
-	send_demon_console_msg("SERVER BUILTIN COMMANDS:");
+	send_demon_console_color_msg(WHITE, "SERVER BUILTIN COMMANDS:");
 	for (i = 0; i < ARRAYSIZE(server_builtin) - 1; i++)
-		send_demon_console_msg("  %10s %s", server_builtin[i].cmd, server_builtin[i].description);
+		send_demon_console_msg("- %s -- %s", server_builtin[i].cmd, server_builtin[i].description);
 	list_lua_scripts();
 }
 

@@ -16860,7 +16860,7 @@ static struct demon_cmd_def {
 	{ "SAFEMODE", "TOGGLES SAFE MODE (prevents enemies from attacking)" },
 	{ "HELP", "PRINT THIS HELP INFORMATION" },
 	{ "ENSCRIPT", "SAVE (PARTIALLY) UNIVERSE STATE TO LUA SCRIPT" },
-	{ "TTS", "USE TEXT-TO-SPEECH TO SPEAK SOMETHING TO SPECIFIED SHIP. E.G.: TTS SHIPNAME: HELLO" },
+	{ "TTS", "TEXT-TO-SPEECH TO SPECIFIED SHIP. E.G.: TTS SHIPNAME: HELLO" },
 	{ "RTSMODE-ON", "ENABLE REAL TIME STRATEGY MODE" },
 	{ "RTSMODE-OFF", "DISABLE REAL TIME STRATEGY MODE" },
 	{ "CONSOLE", "TOGGLE DEMON CONSOLE ON/OFF" },
@@ -16895,9 +16895,10 @@ static void add_demon_cmd_help_to_console(struct demon_cmd_def cmd[], int nitems
 	int i;
 	char buffer[100];
 
+	print_demon_console_color_msg(WHITE, "CLIENT COMMANDS");
 	for (i = 0; i < nitems; i++) {
-		snprintf(buffer, sizeof(buffer), "%15s %s", cmd[i].verb, cmd[i].help);
-		text_window_add_text(demon_ui.console, buffer);
+		snprintf(buffer, sizeof(buffer), "- %s -- %s", cmd[i].verb, cmd[i].help);
+		print_demon_console_msg(buffer);
 	}
 }
 
@@ -17371,8 +17372,6 @@ static void send_demon_text_command(char *command)
 	if (rc) {
 		text_window_add_text(demon_ui.console, demon_ui.error_msg);
 		printf("Error msg: %s\n", demon_ui.error_msg);
-	} else {
-		printf("Command is ok\n");
 	}
 }
 
