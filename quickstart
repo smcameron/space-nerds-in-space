@@ -1,5 +1,16 @@
 #!/bin/sh
 
+echo
+echo
+echo Note: The quickstart script is superseded by snis_launcher.
+echo Please consider using snis_launcher to start SNIS instead of
+echo using quickstart.  I do not use quickstart much, so it is more
+echo likely to contain bugs than snis_launcher.
+echo
+echo -- steve
+echo
+echo
+
 if [ "$(id -u)" = "0" ]
 then
 	echo "You are root. Do not run this script as root." 1>&2
