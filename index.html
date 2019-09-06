@@ -351,10 +351,39 @@ as you will be missing some additional solarsystem assets. As a non-root user:
 <p>Type (as a non-root user):
 <blockquote>
 <pre>
-	./quickstart
+    $ ./snis_launcher 
+
+         Welcome to Space Nerds In Space
+
+    ------------------------------------------------------------
+    No SNIS processes are currently running.
+    ------------------------------------------------------------
+
+       1. Launch SNIS lobby server
+	    The lobby server allows clients to find servers
+	    There should be one lobby server total.
+       2. Launch SNIS multiverse server
+	    The multiverse server stores player ship data
+	    There should be one multiverse server total
+       3. Launch SNIS server
+	    There should be one snis server per solarsystem.
+	    There should be at least one instance of snis_server.
+       4. Launch SNIS client process
+	    There should be one snis client process per player
+	    plus one more per ship for the main screen.
+       5. Launch limited SNIS client process (no Open GL required).
+       6. Stop all SNIS processes
+       7. Stop all SNIS clients
+       8. Stop all SNIS servers
+       9. Check for asset updates
+       10. Enter Lobby Host IP addr (currently localhost)
+       0. Quit
+       Choose [0-10]: _
 </pre>
+<p>Choose option 1, then option 2, then option 3, then option 4 (taking defaults for
+any questions you might be asked.)
 </blockquote>
-<p>Note: This will run both the "server" and the "client" on your machine.
+<p>
 After awhile, you should see a screen that looks something like this:
 <p align=center><img src="network-setup.jpg", width=85%>
 
@@ -396,7 +425,7 @@ better than most.
 </ul>
 <p>To quit the game, press ESC and confirm using arrow keys and ENTER.
 Note, this only quits your client process.
-You can re-join the server (via "./quickjoin" script)
+You can re-join the server (via "./snis_launcher" script option 4)
 It still leaves several processes running, the snis_server, the lobby process
 and snis_multiverse.  To kill all of them, run the "./killem" script.
 <h3><a name="navcontrols">NAVIGATION SCREEN</a></h3>
