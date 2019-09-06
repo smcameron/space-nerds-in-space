@@ -290,7 +290,7 @@ do
 	show_snis_processes
 	print_main_menu
 	check_for_bad_lockfiles
-	echo -n "   Choose [0-7]: "
+	echo -n "   Choose [0-10]: "
 	read x
 
 	case "$x" in
