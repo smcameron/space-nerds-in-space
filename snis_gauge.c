@@ -64,7 +64,7 @@ struct gauge *gauge_init(int x, int y, int r, double r1, double r2,
 	return g;
 }
 
-void draw_gauge_needle(
+static void draw_gauge_needle(
 		float x, float y, float r, double a)
 {
 	int x1, y1, x2, y2, x3, y3, x4, y4;
