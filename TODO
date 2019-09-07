@@ -77,6 +77,11 @@ Too much to list, but here's a list anyway:
 
 * Science station
   * Allow scanning of planet surface
+  * Currently the science beam scans in the XZ plane, rotating about the
+    Y-axis, in world cooordinates.  The orientation of the ship has no
+    effect on science.  This seems weird.  However, given the weirdness of
+    the current SRS with the "3D projected onto 2D while preserving distance"
+    thing that we've got, I'm not sure fixing this is a good idea.
 
 * Add some kind of transporter control which interacts with science
   scanning of planet surface/scanning of ships to allow beaming up/down
