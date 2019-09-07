@@ -15486,7 +15486,11 @@ static void warp_gate_ticket_buying_npc_bot(struct snis_entity *o, int bridge,
 	sb = &go[i];
 
 	if (server_tracker_get_server_list(server_tracker, &gameserver, &nservers) != 0
-		|| nservers <= 0) {
+		|| nservers <= 1) {
+		/*
+		 * nservers <= 1 rather than <= 0 because if there's only 1 server,
+		 * then we must already be in it, and there's no place else for us to go.
+		 */
 		send_comms_packet(sb, name, ch, "NO WARP-GATE TICKETS AVAILABLE\n");
 		return;
 	}
@@ -15537,6 +15541,8 @@ static void warp_gate_ticket_buying_npc_bot(struct snis_entity *o, int bridge,
 			}
 		}
 	}
+	if (nsslist == 0)
+		send_comms_packet(sb, name, ch, "NO WARP-GATE TICKETS AVAILABLE\n");
 	send_comms_packet(sb, name, ch, "------------------\n");
 	send_comms_packet(sb, name, ch, "  0: PREVIOUS MENU\n");
 	rc = sscanf(msg, "%d", &selection);
