@@ -1597,7 +1597,6 @@ static void graph_dev_raster_atmosphere(const struct mat44 *mat_mvp, const struc
 			shadow_annulus->tint_color.green, shadow_annulus->tint_color.blue, shadow_annulus->alpha);
 		glUniform3f(shader->shadow_annulus_center_id, shadow_annulus->eye_pos.v.x,
 			shadow_annulus->eye_pos.v.y, shadow_annulus->eye_pos.v.z);
-		glUniform1f(shader->atmosphere_brightness_id, atmosphere_brightness);
 
 		/* this only works if the ring has an identity quat for its child orientation */
 		/* ring disc is in x/y plane, so z is normal */
@@ -1618,6 +1617,7 @@ static void graph_dev_raster_atmosphere(const struct mat44 *mat_mvp, const struc
 		glUseProgram(shader->program_id);
 	}
 
+	glUniform1f(shader->atmosphere_brightness_id, atmosphere_brightness);
 	glUniformMatrix4fv(shader->mv_matrix_id, 1, GL_FALSE, &mat_mv->m[0][0]);
 	glUniformMatrix4fv(shader->mvp_matrix_id, 1, GL_FALSE, &mat_mvp->m[0][0]);
 	glUniformMatrix3fv(shader->normal_matrix_id, 1, GL_FALSE, &mat_normal->m[0][0]);
