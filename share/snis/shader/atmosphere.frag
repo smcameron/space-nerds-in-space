@@ -1,6 +1,7 @@
 
 uniform vec3 u_LightPos;       // The position of the light in eye space.
 uniform float u_Alpha;		// Relative alpha, 0.0 - 1.0.
+uniform float u_atmosphere_brightness; // 0.0 - 1.0, default 0.5  Brightness of atmosphere
 
 varying vec3 v_Position;       // Interpolated position for this fragment.
 varying vec3 v_Color;          // This is the color from the vertex shader interpolated across the triangle per fragment
@@ -64,7 +65,7 @@ void main()
 	// Dot product of surface normal with light vector is how much light is
 	// reflected, combine (mulitply) this with eyedot to get a crude approximation
 	// of scattered light.
-	float lightdot = dot(normalize(v_Normal), normalize(lightVector));
+	float lightdot = u_atmosphere_brightness * dot(normalize(v_Normal), normalize(lightVector));
 
 	// Subtract some blue-green (opposite of orange)  as we get near the
 	// terminator to get a sunset effect.

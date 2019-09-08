@@ -488,6 +488,7 @@ static struct material spacemonster_tentacle_material;
 static struct material spacemonster_material;
 static struct material warpgate_material;
 static struct material docking_port_material;
+static float atmosphere_brightness = 0.5; /* tweakable */
 #define NPLANET_MATERIALS 256
 static int planetary_ring_texture_id = -1;
 static struct material planetary_ring_material[NPLANETARY_RING_MATERIALS];
@@ -2237,6 +2238,7 @@ static int update_planet(uint32_t id, uint32_t timestamp, double x, double y, do
 				go[i].tsd.planet.atm_material.atmosphere.g = (float) atm_g / 255.0f;
 				go[i].tsd.planet.atm_material.atmosphere.b = (float) atm_b / 255.0f;
 				go[i].tsd.planet.atm_material.atmosphere.scale = (float) atm_scale;
+				go[i].tsd.planet.atm_material.atmosphere.brightness = &atmosphere_brightness;
 				if (hasring)
 					go[i].tsd.planet.atm_material.atmosphere.ring_material =
 						planet_material[m].textured_planet.ring_material;
@@ -3170,6 +3172,7 @@ static void add_shield_effect(struct snis_entity *o,
 		spark[i].tsd.spark.atm_material.atmosphere.g = 1.0;
 		spark[i].tsd.spark.atm_material.atmosphere.b = 1.0;
 		spark[i].tsd.spark.atm_material.atmosphere.scale = 1.05;
+		spark[i].tsd.spark.atm_material.atmosphere.brightness = &atmosphere_brightness;
 		update_entity_material(atm, &spark[i].tsd.spark.atm_material);
 		entity_update_alpha(atm, 0.5);
 		update_entity_scale(atm, 1.05);
@@ -17078,6 +17081,8 @@ static struct tweakable_var_descriptor client_tweak[] = {
 		&current_typeface, 'i', 0.0, 0.0, 0.0, 0, 1, 0 },
 	{ "IMPULSE_CAMERA_SHAKE", "0.0 TO 2.0 - AMOUNT OF CAMERA SHAKE AT HIGH IMPULSE POWER",
 		&impulse_camera_shake, 'f', 0.0, 2.0, 1.0, 0, 0, 0 },
+	{ "ATMOSPHERE_BRIGHTNESS", "0.0 TO 1.0, DEFAULT 0.5 - BRIGHTNESS OF ATMOSPHERES",
+		&atmosphere_brightness, 'f', 0.0, 1.0, 0.5, 0, 0, 0 },
 	{ NULL, NULL, NULL, '\0', 0.0, 0.0, 0.0, 0, 0, 0 },
 };
 

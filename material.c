@@ -220,6 +220,7 @@ void material_init_atmosphere(struct material *m)
 	m->atmosphere.g = 0.6f;
 	m->atmosphere.b = 1.0f;
 	m->atmosphere.scale = 1.03f;
+	m->atmosphere.brightness = NULL;
 }
 
 void material_init_alpha_by_normal(struct material *m)
