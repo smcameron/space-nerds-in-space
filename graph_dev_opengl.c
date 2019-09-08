@@ -2372,7 +2372,7 @@ static void graph_dev_raster_triangle_mesh(struct entity_context *cx, struct ent
 			if (e->material_ptr->atmosphere.brightness)
 				rtp.atmosphere_brightness = *e->material_ptr->atmosphere.brightness;
 			else
-				rtp.atmosphere_brightness = 1.0;
+				rtp.atmosphere_brightness = 0.5;
 			atmosphere = 1;
 			atmosphere_color.red = e->material_ptr->atmosphere.r;
 			atmosphere_color.green = e->material_ptr->atmosphere.g;
