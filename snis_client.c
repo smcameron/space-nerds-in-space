@@ -13843,8 +13843,6 @@ static void draw_tooltip(int mousex, int mousey, char *tooltip)
 	width = fabsf(bbx2 - bbx1) + 20;
 	height = fabsf(bby2 - bby1) + 20;
 
-	fprintf(stderr, "x = %d, y = %d, width = %f, height = %f\n", x, y, width, height);
-
 	if (x + width > SCREEN_WIDTH)
 		x = SCREEN_WIDTH - width;
 	if (x < 0)
