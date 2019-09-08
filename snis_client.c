@@ -1024,6 +1024,7 @@ static struct navigation_ui {
 	struct button *computer_button;
 	struct button *starmap_button;
 	struct button *lights_button;
+	struct button *camera_pos_button;
 	struct button *custom_button;
 	int gauge_radius;
 	struct snis_text_input_box *computer_input;
@@ -11582,6 +11583,11 @@ static void nav_computer_button_pressed(__attribute__((unused)) void *s)
 	ui_unhide_widget(nav_ui.computer_input);
 }
 
+static void nav_camera_pos_button_pressed(__attribute__((unused)) void *s)
+{
+	do_nav_camera_mode();
+}
+
 int nav_ui_docking_magnets_active(__attribute__((unused)) void *notused)
 {
 	struct snis_entity *o;
@@ -11697,6 +11703,9 @@ static void init_nav_ui(void)
 					UI_COLOR(nav_warning), TINY_FONT, nav_ui.input, 80, &timer, NULL, NULL);
 	snis_text_input_box_set_return(nav_ui.computer_input, nav_computer_data_entered);
 	snis_text_input_box_set_dynamic_width(nav_ui.computer_input, txx(100), txx(550));
+	nav_ui.camera_pos_button = snis_button_init(txx(4), txy(210), -1, -1, "CAM POS", button_color,
+			NANO_FONT, nav_camera_pos_button_pressed, NULL);
+	snis_button_set_sound(nav_ui.camera_pos_button, UISND10);
 	ui_add_slider(nav_ui.warp_slider, DISPLAYMODE_NAVIGATION, "WARP DRIVER POWER CONTROL");
 	ui_add_slider(nav_ui.navzoom_slider, DISPLAYMODE_NAVIGATION, "NAVIGATION ZOOM CONTROL");
 	ui_add_slider(nav_ui.throttle_slider, DISPLAYMODE_NAVIGATION, "IMPULSE DRIVE THROTTLE CONTROL");
@@ -11719,6 +11728,8 @@ static void init_nav_ui(void)
 	ui_add_gauge(nav_ui.speedometer, DISPLAYMODE_NAVIGATION);
 	ui_add_button(nav_ui.computer_button, DISPLAYMODE_NAVIGATION,
 				"ACTIVATE THE COMPUTER");
+	ui_add_button(nav_ui.camera_pos_button, DISPLAYMODE_NAVIGATION,
+				"CHANGE CAMERA POSITION (SHORTCUT BACKQUOTE KEY)");
 	ui_add_text_input_box(nav_ui.computer_input, DISPLAYMODE_NAVIGATION);
 	ui_hide_widget(nav_ui.computer_input);
 	instrumentecx = entity_context_new(5000, 1000);
