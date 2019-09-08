@@ -290,6 +290,7 @@ static volatile int displaymode = DISPLAYMODE_LOBBYSCREEN;
 static volatile int helpmode = 0;
 static volatile float weapons_camera_shake = 0.0f; 
 static volatile float main_camera_shake = 0.0f;
+static float impulse_camera_shake = 1.0; /* tweakable */
 static unsigned char camera_mode;
 static unsigned char nav_camera_mode;
 static unsigned char nav_has_computer_button = 0; /* tweakable */
@@ -9071,6 +9072,8 @@ static void update_external_camera_position_and_orientation(struct snis_entity *
 	*cam_pos = external_camera_position;
 }
 
+static double sample_power_data_impulse_current(void);
+
 static void show_mainscreen(GtkWidget *w)
 {
 	const float min_angle_of_view = 5.0 * M_PI / 180.0;
@@ -9084,6 +9087,7 @@ static void show_mainscreen(GtkWidget *w)
 	union vec3 cam_pos;
 	struct snis_entity *vp;
 	struct entity *player_ship = 0;
+	double impulse_power;
 
 	if (!(o = find_my_ship()))
 		return;
@@ -9155,6 +9159,14 @@ static void show_mainscreen(GtkWidget *w)
 			cam_offset = desired_cam_offset;
 		else
 			vec3_lerp(&cam_offset, &cam_offset, &desired_cam_offset, 0.15 / (use_60_fps + 1));
+
+		/* If impulse power is really cooking, add in some screen shake */
+		impulse_power = sample_power_data_impulse_current();
+		if (impulse_power > 220.0) {
+			float new_camera_shake = impulse_camera_shake * 0.25 * (impulse_power - 220.0) / 35.0;
+			if (new_camera_shake > main_camera_shake)
+				main_camera_shake = new_camera_shake;
+		}
 
 		if (main_camera_shake > 0.05 && vp == o) {
 			float ryaw, rpitch;
@@ -17064,6 +17076,8 @@ static struct tweakable_var_descriptor client_tweak[] = {
 		&yjoystick_threshold, 'i', 0.0, 0.0, 0.0, 0, 64000, 23000 },
 	{ "CURRENT_TYPEFACE", "0 TO 1 - SETS CURRENT TYPEFACE",
 		&current_typeface, 'i', 0.0, 0.0, 0.0, 0, 1, 0 },
+	{ "IMPULSE_CAMERA_SHAKE", "0.0 TO 2.0 - AMOUNT OF CAMERA SHAKE AT HIGH IMPULSE POWER",
+		&impulse_camera_shake, 'f', 0.0, 2.0, 1.0, 0, 0, 0 },
 	{ NULL, NULL, NULL, '\0', 0.0, 0.0, 0.0, 0, 0, 0 },
 };
 
