@@ -263,6 +263,7 @@ static uint32_t my_home_planet_oid = UNKNOWN_ID;
 
 static int real_screen_width;
 static int real_screen_height;
+static int suppress_hyperspace_noise = 0;	/* tweakable */
 static int warp_limbo_countdown = 0;
 static int warp_field_error = 0;
 static int damage_limbo_countdown = 0;
@@ -275,8 +276,8 @@ static struct entity_context *sciballecx;
 static struct entity_context *network_setup_ecx;
 static int science_cam_timer = 0;
 
-static int suppress_rocket_noise = 0;
-static float rocket_noise_volume = 1.0;
+static int suppress_rocket_noise = 0;		/* tweakable */
+static float rocket_noise_volume = 1.0;		/* tweakable */
 static int ecx_fake_stars_initialized = 0;
 static int nfake_stars = 0;
 static volatile int fake_stars_timer = 0;
@@ -5231,7 +5232,9 @@ static int process_warp_limbo_packet(void)
 	rc = read_and_unpack_buffer(buffer, "h", &value);
 	if (rc != 0)
 		return rc;
-	if (value >= 0 && value <= 40 * frame_rate_hz)
+	if (suppress_hyperspace_noise)
+		warp_limbo_countdown = 0;
+	else if (value >= 0 && value <= 40 * frame_rate_hz)
 		warp_limbo_countdown = value;
 	return 0;
 } 
@@ -17081,6 +17084,8 @@ static struct tweakable_var_descriptor client_tweak[] = {
 		&impulse_camera_shake, 'f', 0.0, 2.0, 1.0, 0, 0, 0 },
 	{ "ATMOSPHERE_BRIGHTNESS", "0.0 TO 1.0, DEFAULT 0.5 - BRIGHTNESS OF ATMOSPHERES",
 		&atmosphere_brightness, 'f', 0.0, 1.0, 0.5, 0, 0, 0 },
+	{ "SUPPRESS_HYPERSPACE_NOISE", "0 OR 1 - SUPPRESS THE NOISE ON TERMINALS DURING HYPERSPACE",
+		&suppress_hyperspace_noise, 'i', 0.0, 0.0, 0.0, 0, 1, 0 },
 	{ NULL, NULL, NULL, '\0', 0.0, 0.0, 0.0, 0, 0, 0 },
 };
 
