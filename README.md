@@ -50,6 +50,8 @@ intended to be used for creating "mission scripts".
 BUILD INSTRUCTIONS
 ==================
 
+[Here is a long, boring video demonstrating how to install](https://www.youtube.com/watch?v=tCokfUtZOqw)
+
 These instructions are a duplicate of what is found here:
 https://smcameron.github.io/space-nerds-in-space/#buildinstructions
 
