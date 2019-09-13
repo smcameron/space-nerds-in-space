@@ -103,7 +103,7 @@ If you want to try the optional pocketsphinx based local speech recognition, you
 
 The above list may be incomplete, and these are the package names on mint 17.3 / ubuntu, so may be different on RPM based systems.
 
-NOTE: problems building on SuSE Leap 15.1. The following problems/solutions have been conveyed to me regarding SuSE Leap 15.1. This information is not very complete or accurate, but it is the best I have for now. Please feel free to send me improvements to these instructions. See Bug 222.
+NOTE: problems building on SuSE Leap 15.1. The following problems/solutions have been conveyed to me regarding SuSE Leap 15.1. This information is not very complete or accurate, but it is the best I have for now. Please feel free to send me improvements to these instructions. See [Bug 222](https://github.com/smcameron/space-nerds-in-space/issues/222).
 
 * Need to install pkg-config and pkg-config_files.
 * Need to set pkg-config-path environment variable
@@ -118,7 +118,7 @@ NOTE: Do NOT perform these steps as root!
 
 To get the source code, there are three methods:
 
-    If you are a registered github user, type (as a non-root user):
+If you are a registered github user, type (as a non-root user):
 
 
 ```
@@ -126,7 +126,7 @@ To get the source code, there are three methods:
 ```
 
 
-    If not a registered github user, you can still use git with https. Type (as a non-root user):
+If not a registered github user, you can still use git with https. Type (as a non-root user):
 
 
 ```
@@ -134,10 +134,10 @@ To get the source code, there are three methods:
 ```
 
 
-    Finally, you can just download a snapshot zipfile without using git at all:
-        https://github.com/smcameron/space-nerds-in-space/archive/master.zip
+Finally, you can just download a snapshot zipfile without using git at all:
+https://github.com/smcameron/space-nerds-in-space/archive/master.zip
 
-    After downloading the zip file, you must unpack the zip file. Type (as a non-root user):
+After downloading the zip file, you must unpack the zip file. Type (as a non-root user):
 
 ```
         unzip space-nerds-in-space-master.zip
@@ -173,7 +173,7 @@ If you have problems building the code, it likely means there is some missing de
 
 You can also file a bug report if you think you have discovered a problem with the build process, or the instructions here. I believe you will need a github account to file a bug report.
 
-    [Click here to file a bug report](https://github.com/smcameron/space-nerds-in-space/issues).
+[Click here to file a bug report](https://github.com/smcameron/space-nerds-in-space/issues).
 
 Step 4: build openscad models (optional)
 ----------------------------------------
@@ -231,5 +231,5 @@ Type (as a non-root user):
            Choose [0-10]: _
 ```
 
-    Choose option 1, then option 2, then option 3, then option 4 (taking defaults for any questions you might be asked.)
+Choose option 1, then option 2, then option 3, then option 4 (taking defaults for any questions you might be asked.)
 
