@@ -174,6 +174,10 @@ static int player_invincibility = 0;
 static int game_paused = 0;
 #define DEFAULT_LUA_INSTRUCTION_COUNT_LIMIT 100000
 static int lua_instruction_count_limit = DEFAULT_LUA_INSTRUCTION_COUNT_LIMIT;
+static float bandwidth_throttle_distance = (XKNOWN_DIM / 3); /* How far before object */
+						/* updates may be throttled. tweakable */
+static int distant_update_period = 20; /* Distant objects are updated only after */
+				       /* this many ticks. tweakable */
 
 /*
  * End of runtime adjustable globals
@@ -17026,6 +17030,11 @@ static struct tweakable_var_descriptor server_tweak[] = {
 		&game_paused, 'i', 0.0, 0.0, 0.0, 0, 1, 0 },
 	{ "LUA_INSTRUCTION_LIMIT", "USED TO DETECT RUNAWAY LUA SCRIPTS",
 		&lua_instruction_count_limit, 'i', 0.0, 0.0, 0.0, 0, 1000000, DEFAULT_LUA_INSTRUCTION_COUNT_LIMIT },
+	{ "BANDWIDTH_THROTTLE_DISTANCE", "DISTANCE AT WHICH UPDATES MAY BE DROPPED TO CONTROL BANDWIDTH",
+		&bandwidth_throttle_distance, 'f',
+			(float) XKNOWN_DIM / 4.0f, (float) XKNOWN_DIM, (float) XKNOWN_DIM / 3.0f, 0, 0, 0 },
+	{ "DISTANT_UPDATE_PERIOD", "HOW MANY TICKS BEFORE UPDATING DISTANT OBJECTS",
+		&distant_update_period, 'i', 0.0, 0.0, 0.0, 1, 40, 20},
 	{ NULL, NULL, NULL, '\0', 0.0, 0.0, 0.0, 0, 0, 0 },
 };
 
@@ -21626,12 +21635,11 @@ static int too_far_away_to_care(struct game_client *c, struct snis_entity *o)
 {
 	struct snis_entity *ship = &go[c->ship_index];
 	double dx, dz, dist;
-	const double threshold = (XKNOWN_DIM / 2) * (XKNOWN_DIM / 2);
 
 	dx = (ship->x - o->x);
 	dz = (ship->z - o->z);
 	dist = (dx * dx) + (dz * dz);
-	return (dist > threshold);
+	return (dist > (bandwidth_throttle_distance * bandwidth_throttle_distance));
 }
 
 static void queue_latency_check(struct game_client *c)
@@ -21812,8 +21820,6 @@ static void queue_up_client_custom_buttons(struct game_client *c)
 				b->custom_button_text[i][14]));
 }
 
-#define GO_TOO_FAR_UPDATE_PER_NTICKS 7
-
 static void queue_up_client_updates(struct game_client *c)
 {
 	int i;
@@ -21831,7 +21837,7 @@ static void queue_up_client_updates(struct game_client *c)
 				continue;
 
 			if (too_far_away_to_care(c, &go[i]) &&
-				(universe_timestamp + i) % GO_TOO_FAR_UPDATE_PER_NTICKS != 0) {
+				(universe_timestamp + i) % distant_update_period != 0) {
 
 				gather_opcode_not_sent_stats(&go[i]);
 				continue;
