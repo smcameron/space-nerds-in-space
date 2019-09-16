@@ -333,7 +333,7 @@ An authoritative list of opcodes may be found in snis_packet.h
 <tr><td>OPCODE_REQUEST_MANUAL_LASER</td><td>197</td></tr>
 <tr><td>OPCODE_REQUEST_WEAPONS_YAW_PITCH</td><td>198</td></tr>
 <tr><td>OPCODE_UPDATE_COOLANT_DATA</td><td>199</td></tr>
-<tr><td>not used</td><td>200</td></tr>
+<tr><td>OPCODE_UPDATE_ASTEROID_MINERALS</td><td>200</td></tr>
 <tr><td>not used</td><td>201</td></tr>
 <tr><td>not used</td><td>202</td></tr>
 <tr><td>not used</td><td>203</td></tr>
@@ -500,10 +500,6 @@ An authoritative list of opcodes may be found in snis_packet.h
 <tr><td>13</td><td>S</td><td>x</td><td>UNIVERSE_DIM</td></tr>
 <tr><td>17</td><td>S</td><td>y</td><td>UNIVERSE_DIM</td></tr>
 <tr><td>21</td><td>S</td><td>z</td><td>UNIVERSE_DIM</td></tr>
-<tr><td>33</td><td>b</td><td>carbon</td></tr>
-<tr><td>33</td><td>b</td><td>nickel/iron</td></tr>
-<tr><td>33</td><td>b</td><td>silicates</td></tr>
-<tr><td>33</td><td>b</td><td>precious metals</td></tr>
 </table>
 
 <h4>108 Request Yaw</h4> (Client to Server)
@@ -1769,6 +1765,17 @@ Coolant is modelled in the same way as power. See opcode 160.
 <tr><td>12</td><td>b</td><td>sensors temperature</td></tr>
 <tr><td>13</td><td>b</td><td>comms temperature</td></tr>
 <tr><td>14</td><td>b</td><td>tractor temperature</td></tr>
+</table>
+
+<h4>200 UPDATE ASTEROID MINERALS</h4> (Server to Client)
+<p align=center><table border=1, width=60%>
+<tr><td>Offset</td><td>Data Type</td><td>Value</td><td>Scale</td></tr>
+<tr><td>0</td><td>b</td><td>200</td></tr>
+<tr><td>1</td><td>w</td><td>Object ID</td></tr>
+<tr><td>33</td><td>b</td><td>carbon</td></tr>
+<tr><td>33</td><td>b</td><td>nickel/iron</td></tr>
+<tr><td>33</td><td>b</td><td>silicates</td></tr>
+<tr><td>33</td><td>b</td><td>precious metals</td></tr>
 </table>
 
 <h4>208 Silent Update Damage</h4> (Client to Server)

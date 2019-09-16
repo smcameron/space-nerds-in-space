@@ -177,7 +177,7 @@
 #define OPCODE_REQUEST_MANUAL_LASER	197
 #define OPCODE_REQUEST_WEAPONS_YAW_PITCH 198
 #define OPCODE_UPDATE_COOLANT_DATA	199
-/* UNUSED OPCODE 200 */
+#define OPCODE_UPDATE_ASTEROID_MINERALS 200
 /* UNUSED OPCODE 201 */
 /* UNUSED OPCODE 202 */
 /* UNUSED OPCODE 203 */
@@ -364,6 +364,11 @@ struct update_asteroid_packet {
 	uint32_t id;
 	uint32_t timestamp;
 	uint32_t x, y, z;
+};
+
+struct update_asteroid_minerals_packet {
+	uint8_t opcode;
+	uint32_t id;
 	uint8_t carbon, nickel, silicates, precious_metals;
 };
 

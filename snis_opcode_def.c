@@ -76,7 +76,8 @@ int snis_opcode_def_init(void)
 	rc |= init_opcode_def(OPCODE_UPDATE_MISSILE, "bwwSSSQ");
 	rc |= init_opcode_def(OPCODE_UPDATE_PLAYER, "n/a");
 	rc |= init_opcode_def(OPCODE_ID_CLIENT_SHIP, "bw");
-	rc |= init_opcode_def(OPCODE_UPDATE_ASTEROID, "bwwSSSbbbb");
+	rc |= init_opcode_def(OPCODE_UPDATE_ASTEROID, "bwwSSS");
+	rc |= init_opcode_def(OPCODE_UPDATE_ASTEROID_MINERALS, "bwbbbb");
 	rc |= init_opcode_def(OPCODE_UPDATE_WARP_CORE, "bwwSSS");
 	rc |= init_opcode_def(OPCODE_DEMON_RTSMODE, "bb");
 	rc |= init_opcode_subcode_def(OPCODE_RTS_FUNC, OPCODE_RTS_FUNC_COMMS_BUTTON, "bbb");

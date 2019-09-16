@@ -2002,8 +2002,7 @@ static int update_turret(uint32_t id, uint32_t timestamp, double x, double y, do
 	return 0;
 }
 
-static int update_asteroid(uint32_t id, uint32_t timestamp, double x, double y, double z,
-	uint8_t carbon, uint8_t nickeliron, uint8_t silicates, uint8_t preciousmetals)
+static int update_asteroid(uint32_t id, uint32_t timestamp, double x, double y, double z)
 {
 	int i, k, m, s;
 	struct entity *e;
@@ -2039,9 +2038,21 @@ static int update_asteroid(uint32_t id, uint32_t timestamp, double x, double y, 
 		quat_init_axis_v(&rotational_velocity, &axis, angle);
 		o->tsd.asteroid.rotational_velocity = rotational_velocity;
 	} else {
-		o = &go[i];
 		update_generic_object(i, timestamp, x, y, z, 0, 0, 0, NULL, 1);
 	}
+	return 0;
+}
+
+static int update_asteroid_minerals(uint32_t id, uint8_t carbon, uint8_t nickeliron,
+					uint8_t silicates, uint8_t preciousmetals)
+{
+	int i;
+	struct snis_entity *o;
+
+	i = lookup_object_by_id(id);
+	if (i < 0)
+		return 0;
+	o = &go[i];
 	o->tsd.asteroid.carbon = carbon;
 	o->tsd.asteroid.nickeliron = nickeliron;
 	o->tsd.asteroid.silicates = silicates;
@@ -6843,22 +6854,37 @@ static int process_update_asteroid_packet(void)
 	uint32_t id, timestamp;
 	double dx, dy, dz;
 	int rc;
-	uint8_t carbon, nickeliron, silicates, preciousmetals;
 
 	assert(sizeof(buffer) > sizeof(struct update_asteroid_packet) - sizeof(uint8_t));
-	rc = read_and_unpack_buffer(buffer, "wwSSSbbbb", &id, &timestamp,
+	rc = read_and_unpack_buffer(buffer, "wwSSS", &id, &timestamp,
 			&dx, (int32_t) UNIVERSE_DIM,
 			&dy,(int32_t) UNIVERSE_DIM,
-			&dz, (int32_t) UNIVERSE_DIM,
+			&dz, (int32_t) UNIVERSE_DIM);
+	if (rc != 0)
+		return rc;
+	pthread_mutex_lock(&universe_mutex);
+	rc = update_asteroid(id, timestamp, dx, dy, dz);
+	pthread_mutex_unlock(&universe_mutex);
+	return (rc < 0);
+}
+
+static int process_update_asteroid_minerals_packet(void)
+{
+	unsigned char buffer[100];
+	uint32_t id;
+	int rc;
+	uint8_t carbon, nickeliron, silicates, preciousmetals;
+
+	assert(sizeof(buffer) > sizeof(struct update_asteroid_minerals_packet) - sizeof(uint8_t));
+	rc = read_and_unpack_buffer(buffer, "wbbbb", &id,
 			&carbon, &nickeliron, &silicates, &preciousmetals);
 	if (rc != 0)
 		return rc;
 	pthread_mutex_lock(&universe_mutex);
-	rc = update_asteroid(id, timestamp, dx, dy, dz,
-				carbon, nickeliron, silicates, preciousmetals);
+	rc = update_asteroid_minerals(id, carbon, nickeliron, silicates, preciousmetals);
 	pthread_mutex_unlock(&universe_mutex);
 	return (rc < 0);
-} 
+}
 
 static int process_update_warp_core_packet(void)
 {
@@ -7462,6 +7488,9 @@ static void *gameserver_reader(__attribute__((unused)) void *arg)
 			break;
 		case OPCODE_UPDATE_ASTEROID:
 			rc = process_update_asteroid_packet();
+			break;
+		case OPCODE_UPDATE_ASTEROID_MINERALS:
+			rc = process_update_asteroid_minerals_packet();
 			break;
 		case OPCODE_UPDATE_WARP_CORE:
 			rc = process_update_warp_core_packet();

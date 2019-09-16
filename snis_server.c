@@ -21453,6 +21453,8 @@ static void send_econ_update_ship_packet(struct game_client *c,
 	struct snis_entity *o);
 static void send_update_asteroid_packet(struct game_client *c,
 	struct snis_entity *o);
+static void send_update_asteroid_minerals_packet(struct game_client *c,
+	struct snis_entity *o);
 static void send_update_docking_port_packet(struct game_client *c,
 	struct snis_entity *o);
 static void send_update_block_packet(struct game_client *c,
@@ -21525,6 +21527,9 @@ static void queue_up_client_object_update(struct game_client *c, struct snis_ent
 		break;
 	case OBJTYPE_ASTEROID:
 		send_update_asteroid_packet(c, o);
+		/* The asteroid minerals rarely change, so send them only once every 64 ticks, or every 6.4 seconds */
+		if (((o->id + universe_timestamp) & 0x3f) == 0)
+			send_update_asteroid_minerals_packet(c, o);
 		break;
 	case OBJTYPE_CARGO_CONTAINER:
 		send_update_cargo_container_packet(c, o);
@@ -22400,10 +22405,16 @@ static void send_update_damcon_part_packet(struct game_client *c,
 static void send_update_asteroid_packet(struct game_client *c,
 	struct snis_entity *o)
 {
-	pb_queue_to_client(c, snis_opcode_pkt("bwwSSSbbbb", OPCODE_UPDATE_ASTEROID, o->id, o->timestamp,
+	pb_queue_to_client(c, snis_opcode_pkt("bwwSSS", OPCODE_UPDATE_ASTEROID, o->id, o->timestamp,
 					o->x, (int32_t) UNIVERSE_DIM,
 					o->y, (int32_t) UNIVERSE_DIM,
-					o->z, (int32_t) UNIVERSE_DIM,
+					o->z, (int32_t) UNIVERSE_DIM));
+}
+
+static void send_update_asteroid_minerals_packet(struct game_client *c,
+	struct snis_entity *o)
+{
+	pb_queue_to_client(c, snis_opcode_pkt("bwbbbb", OPCODE_UPDATE_ASTEROID_MINERALS, o->id,
 					o->tsd.asteroid.carbon,
 					o->tsd.asteroid.nickeliron,
 					o->tsd.asteroid.silicates,
