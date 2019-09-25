@@ -4637,7 +4637,14 @@ static void update_ship_orientation(struct snis_entity *o)
 	union vec3 up = { { 0.0f, 1.0f, 0.0f } };
 	union vec3 current = { { o->vx, o->vy, o->vz } };
 
-	if (fabs(o->vx) < 0.001 && fabs(o->vy) < 0.001 && fabs(o->vz) < 0.001)
+	/* The value 0.05 is a bit finicky here.  Smaller values (e.g. 0.01) causes
+	 * ships to "wiggle" when moving very slowly near their destinations.
+	 * Higher values (0.1) causes ships to be unable to hit their destinations,
+	 * and instead wander around them. 0.05 was determined empirically to be
+	 * reduce wiggling and let ships hit their destinations reasonably well.
+	 * Kind of gross though.
+	 */
+	if (fabs(o->vx) < 0.05 && fabs(o->vy) < 0.05 && fabs(o->vz) < 0.05)
 		return;
 
 	quat_from_u2v(&o->orientation, &right, &current, &up);
