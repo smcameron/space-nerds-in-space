@@ -457,8 +457,8 @@ struct ship_data {
 #define SCI_YAW_DAMPING 0.45
 	double sci_heading; /* Angle short range science beam is aiming, radians */
 #define MAX_SCI_BW_YAW_VELOCITY (85 * PI / 180.0)
-#define SCI_BW_YAW_INCREMENT (1 * PI / 180.0)
-#define SCI_BW_YAW_INCREMENT_FINE (0.2 * PI / 180.0)
+#define SCI_BW_YAW_INCREMENT (5 * PI / 180.0)
+#define SCI_BW_YAW_INCREMENT_FINE (1 * PI / 180.0)
 #define SCI_BW_YAW_DAMPING 0.45
 #define MIN_SCI_BEAM_WIDTH (5 * PI / 180.0)
 #define MAX_SCIENCE_SCREEN_RADIUS (XKNOWN_DIM / 3.0)
