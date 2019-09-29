@@ -462,7 +462,7 @@ struct ship_data {
 #define SCI_BW_YAW_DAMPING 0.45
 #define MIN_SCI_BEAM_WIDTH (5 * PI / 180.0)
 #define MAX_SCIENCE_SCREEN_RADIUS (XKNOWN_DIM / 3.0)
-#define MIN_SCIENCE_SCREEN_RADIUS (XKNOWN_DIM / 45.0)
+#define MIN_SCIENCE_SCREEN_RADIUS (XKNOWN_DIM / 60.0)
 #define SCIENCE_SHORT_RANGE (0.08 * XKNOWN_DIM)
 	double sci_beam_width;		/* width of short range science beam in radians */
 	double sci_yaw_velocity;	/* radians / tick */
