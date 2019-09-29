@@ -3174,7 +3174,7 @@ static int find_nearest_victim(struct snis_entity *o)
 	return info.victim_id;
 }
 
-static union vec3 pick_random_patrol_destination(struct snis_entity *ship)
+static struct snis_entity *pick_random_patrol_destination(struct snis_entity *ship, union vec3 *dest)
 {
 	union vec3 v;
 	struct snis_entity *o;
@@ -3186,8 +3186,10 @@ static union vec3 pick_random_patrol_destination(struct snis_entity *ship)
 		i = snis_randn(snis_object_pool_highest_object(pool));
 		o = &go[i];
 		count++;
-		if (count > 1000)
+		if (count > 1000) {
+			o = NULL;
 			break;
+		}
 		if (!o->alive)
 			continue;
 		if (o->type != OBJTYPE_PLANET && o->type != OBJTYPE_STARBASE)
@@ -3209,20 +3211,24 @@ static union vec3 pick_random_patrol_destination(struct snis_entity *ship)
 		v.v.x = ship->x + (float) snis_randn(XKNOWN_DIM / 3);
 		v.v.y = ship->y + (float) snis_randn(YKNOWN_DIM / 3);
 		v.v.z = ship->z + (float) snis_randn(ZKNOWN_DIM / 3);
+		o = NULL;
 	}
-	return v;
+	*dest = v;
+	return o;
 }
 
 static void setup_patrol_route(struct snis_entity *o)
 {
 	int n, npoints, i;
 	struct ai_patrol_data *patrol;
+	struct snis_entity *p[MAX_PATROL_POINTS];
+	union vec3 v[MAX_PATROL_POINTS];
 
 	n = o->tsd.ship.nai_entries;
 	o->tsd.ship.nai_entries = n + 1;
 	o->tsd.ship.ai[n].ai_mode = AI_MODE_PATROL;
 
-	npoints = (snis_randn(100) % 4) + 2;
+	npoints = (snis_randn(100) % 3) + 3;
 	assert(npoints > 1 && npoints <= MAX_PATROL_POINTS);
 	patrol = &o->tsd.ship.ai[n].u.patrol;
 	patrol->npoints = npoints;
@@ -3231,7 +3237,25 @@ static void setup_patrol_route(struct snis_entity *o)
 	/* FIXME: ensure no duplicate points and order in some sane way */
 	ai_trace(o->id, "SET UP PATROL ROUTE");
 	for (i = 0; i < npoints; i++) {
-		patrol->p[i] = pick_random_patrol_destination(o);
+		memset(&v[i], 0, sizeof(v[i]));
+		int duplicate;
+		do {
+			int j;
+			p[i] = pick_random_patrol_destination(o, &v[i]);
+			if (i == 0) /* First pick cannot be a duplicate */
+				break;
+			/* check to see if we've already picked this destination */
+			duplicate = 0;
+			for (j = 0; j < i; j++) {
+				if (p[j] == p[i]) {
+					duplicate = 1;
+					break;
+				}
+			}
+		} while (duplicate);
+	}
+	for (i = 0; i < npoints; i++) {
+		patrol->p[i] = v[i];
 		ai_trace(o->id, "- %.2f, %.2f, %.2f", patrol->p[i].v.x, patrol->p[i].v.y, patrol->p[i].v.z);
 	}
 	set_ship_destination(o, patrol->p[0].v.x, patrol->p[0].v.y, patrol->p[0].v.z);
