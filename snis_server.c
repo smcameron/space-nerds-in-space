@@ -192,6 +192,9 @@ static float yaw_fine_adjust_factor = 1.0;
 static float roll_fine_adjust_factor = 1.0;
 static float pitch_fine_adjust_factor = 1.0;
 
+static float sci_bw_yaw_increment = SCI_BW_YAW_INCREMENT;
+static float sci_bw_yaw_increment_fine = SCI_BW_YAW_INCREMENT_FINE;
+
 /*
  * End of runtime adjustable globals
  */
@@ -13764,8 +13767,8 @@ static void do_sci_bw_yaw(struct game_client *c, int yaw)
 	struct snis_entity *ship = &go[c->ship_index];
 
 	do_generic_axis_rot(&ship->tsd.ship.sci_beam_width, yaw,
-			MAX_SCI_BW_YAW_VELOCITY, SCI_BW_YAW_INCREMENT,
-			SCI_BW_YAW_INCREMENT_FINE);
+			MAX_SCI_BW_YAW_VELOCITY, sci_bw_yaw_increment,
+			sci_bw_yaw_increment_fine);
 	ship->tsd.ship.sci_beam_width = fabs(ship->tsd.ship.sci_beam_width);
 	if (ship->tsd.ship.sci_beam_width < MIN_SCI_BEAM_WIDTH)
 		ship->tsd.ship.sci_beam_width = MIN_SCI_BEAM_WIDTH;
@@ -17164,6 +17167,12 @@ static struct tweakable_var_descriptor server_tweak[] = {
 		&steering_adjust_factor, 'f', 0.0, 3.0, 1.0, 0, 0, 0},
 	{ "STEERING_FINE_ADJUST_FACTOR", "ADJUST SPEED OF FINE STEERING INPUT",
 		&steering_fine_adjust_factor, 'f', 0.0, 3.0, 0.5, 0, 0, 0},
+	{ "SCI_BW_YAW_INCREMENT", "SCIENCE BEAM YAW INCREMENT IN RADIANS",
+		&sci_bw_yaw_increment, 'f', 0.5 * M_PI / 180.0, 30 * M_PI / 180.0,
+		SCI_BW_YAW_INCREMENT, 0, 0, 0 },
+	{ "SCI_BW_YAW_INCREMENT_FINE", "FINE SCIENCE BEAM YAW INCREMENT IN RADIANS",
+		&sci_bw_yaw_increment, 'f', 0.001 * M_PI / 180.0, 10 * M_PI / 180.0,
+		SCI_BW_YAW_INCREMENT_FINE, 0, 0, 0 },
 	{ NULL, NULL, NULL, '\0', 0.0, 0.0, 0.0, 0, 0, 0 },
 };
 
