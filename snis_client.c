@@ -15631,6 +15631,8 @@ static void draw_science_data(GtkWidget *w, struct snis_entity *ship, struct sni
 	static double lastz = 0.0;
 	static double lastvel = 0.0;
 	static double closing_rate = 0.0;
+	static int eta_mins = 0;
+	static int eta_secs = 0;
 	static double last_range = 1.0;
 
 	yinc = 22 * SCREEN_HEIGHT / 600;
@@ -15811,6 +15813,16 @@ static void draw_science_data(GtkWidget *w, struct snis_entity *ship, struct sni
 		snprintf(buffer, sizeof(buffer), "CLOSING RATE: %0.2lf", closing_rate);
 	} else {
 		snprintf(buffer, sizeof(buffer), "CLOSING RATE:");
+	}
+	y += yinc;
+	sng_abs_xy_draw_string(buffer, TINY_FONT, x, y);
+
+	if ((o || waypoint_index != (uint32_t) -1) && closing_rate > 0.001) {
+		eta_mins = (int) (round(range) / round(closing_rate)) / 60;
+		eta_secs = (int) (round(range) / round(closing_rate)) % 60;
+		snprintf(buffer, sizeof(buffer), "ETA: %i MINS %i SECS", eta_mins, eta_secs);
+	} else {
+		snprintf(buffer, sizeof(buffer), "ETA:");
 	}
 	y += yinc;
 	sng_abs_xy_draw_string(buffer, TINY_FONT, x, y);
