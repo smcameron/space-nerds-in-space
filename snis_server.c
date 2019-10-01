@@ -10391,7 +10391,8 @@ finished:
 	o->alive = 1;
 }
 
-static int add_player(double x, double z, double vx, double vz, double heading, uint8_t warpgate_number)
+static int add_player(double x, double z, double vx, double vz, double heading,
+			uint8_t warpgate_number, uint8_t requested_faction)
 {
 	int i;
 
@@ -10399,6 +10400,8 @@ static int add_player(double x, double z, double vx, double vz, double heading, 
 	if (i < 0)
 		return i;
 	respawn_player(&go[i], warpgate_number);
+	if (requested_faction < nfactions())
+		go[i].sdata.faction = requested_faction;
 	return i;
 }
 
@@ -22786,7 +22789,7 @@ static int add_new_player(struct game_client *c)
 			if (dist3d(x - SUNX, 0, z - SUNZ) > SUN_DIST_LIMIT)
 				break;
 		}
-		c->ship_index = add_player(x, z, 0.0, 0.0, M_PI / 2.0, app.warpgate_number);
+		c->ship_index = add_player(x, z, 0.0, 0.0, M_PI / 2.0, app.warpgate_number, app.requested_faction);
 		c->shipid = go[c->ship_index].id;
 		strcpy(go[c->ship_index].sdata.name, (const char * restrict) app.shipname);
 		memset(&bridgelist[nbridges], 0, sizeof(bridgelist[nbridges]));

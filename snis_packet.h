@@ -551,6 +551,7 @@ struct add_player_packet {
 	uint8_t opcode;
 	uint8_t new_ship;
 	uint8_t warpgate_number;
+	uint8_t requested_faction;
 	uint32_t role;
 #define SHIPNAME_LEN 20
 	unsigned char shipname[SHIPNAME_LEN];

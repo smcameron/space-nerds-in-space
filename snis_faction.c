@@ -12,8 +12,6 @@
 
 #undef DEFINE_FACTION_GLOBALS
 
-#define MAX_FACTIONS 20
-
 struct faction {
 	char *name;
 	union vec3 center;

@@ -8,6 +8,7 @@
 #endif
 
 #define FACTION_HOSTILITY_THRESHOLD 0.25f
+#define MAX_FACTIONS (8)
 
 GLOBAL int snis_read_factions(char *filename);
 GLOBAL void snis_free_factions(void);

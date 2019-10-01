@@ -7288,6 +7288,7 @@ static struct network_setup_ui {
 	struct button *role_text_to_speech;
 	struct button *join_ship_checkbox;
 	struct button *create_ship_checkbox;
+	struct button *faction_checkbox[MAX_FACTIONS];
 	struct button *support_button;
 	struct button *website_button;
 	struct button *forum_button;
@@ -7304,10 +7305,12 @@ static struct network_setup_ui {
 	int role_text_to_speech_v;
 	int create_ship_v;
 	int join_ship_v;
+	int faction_checkbox_v[MAX_FACTIONS];
 	char lobbyname[60];
 	char solarsystem[60];
 	char shipname[SHIPNAME_LEN];
 	char password[PASSWORD_LEN];
+	int selected_faction;
 } net_setup_ui;
 
 static int process_client_id_packet(void)
@@ -8039,6 +8042,7 @@ static void *connect_to_gameserver_thread(__attribute__((unused)) void *arg)
 	app.opcode = OPCODE_UPDATE_PLAYER;
 	app.new_ship = net_setup_ui.create_ship_v;
 	app.warpgate_number = (uint8_t) switch_warp_gate_number;
+	app.requested_faction = (uint8_t) net_setup_ui.selected_faction;
 	switch_warp_gate_number = -1;
 	app.role = htonl(role);
 	strncpy((char *) app.shipname, shipname, 19);
@@ -19084,7 +19088,7 @@ static void init_net_role_buttons(struct network_setup_ui *nsu)
 {
 	int x, y;
 
-	x = txx(520);
+	x = txx(620);
 	y = txy(345);
 
 	nsu->role_main_v = 0;
@@ -19131,13 +19135,35 @@ static void init_net_role_buttons(struct network_setup_ui *nsu)
 			"WHETHER THIS TERMINAL SHOULD ACT AS TEXT TO SPEECH SERVER");
 }
 
+static void hide_faction_checkboxes(struct network_setup_ui *nsu)
+{
+	int i;
+
+	for (i = 0; i < MAX_FACTIONS; i++)
+		if (nsu->faction_checkbox[i])
+			ui_hide_widget(nsu->faction_checkbox[i]);
+}
+
+static void unhide_faction_checkboxes(struct network_setup_ui *nsu)
+{
+	int i;
+
+	for (i = 0; i < MAX_FACTIONS; i++)
+		if (nsu->faction_checkbox[i])
+			ui_unhide_widget(nsu->faction_checkbox[i]);
+}
+
 /* This gets called when the create ship checkbox button is pressed */
 static void create_ship_checkbox_cb(void *cookie)
 {
 	struct network_setup_ui *nsu = cookie;
 	nsu->create_ship_v = !nsu->create_ship_v;
-	if (nsu->create_ship_v) /* If create ship is set, unset join ship */
+	if (nsu->create_ship_v) { /* If create ship is set, unset join ship */
 		nsu->join_ship_v = 0;
+		unhide_faction_checkboxes(nsu);
+	} else {
+		hide_faction_checkboxes(nsu);
+	}
 }
 
 /* This returns the current value of the create ship checkbox */
@@ -19155,6 +19181,7 @@ static void join_ship_checkbox_cb(void *cookie)
 	nsu->join_ship_v = !nsu->join_ship_v;
 	if (nsu->join_ship_v) /* if join ship is is set, unset create ship */
 		nsu->create_ship_v = 0;
+	hide_faction_checkboxes(nsu);
 }
 
 /* This returns the current value of join ship checkbox */
@@ -19164,11 +19191,37 @@ static int join_ship_checkbox(void *cookie)
 	return nsu->join_ship_v;
 }
 
+/* This gets called when one of the faction checkboxes is pressed */
+static void faction_checkbox_cb(void *cookie)
+{
+	int i = (int) (intptr_t) cookie;
+	if (i < 0 || i >= MAX_FACTIONS)
+		return;
+	if (net_setup_ui.faction_checkbox_v[i]) {
+		net_setup_ui.faction_checkbox_v[i] = 0;
+		net_setup_ui.selected_faction = -1;
+	} else {
+		/* memset everything to zero, then the chosen one to 1 (radio button behavior) */
+		memset(net_setup_ui.faction_checkbox_v, 0, sizeof(net_setup_ui.faction_checkbox_v));
+		net_setup_ui.faction_checkbox_v[i] = 1;
+		net_setup_ui.selected_faction = i;
+	}
+}
+
+/* This returns the current value of the faction checkboxes from the network setup screen */
+static int faction_checkbox(void *cookie)
+{
+	int i = (int) (intptr_t) cookie;
+	if (i < 0 || i >= MAX_FACTIONS)
+		return 0;
+	return net_setup_ui.faction_checkbox_v[i];
+}
+
 static void init_join_create_buttons(struct network_setup_ui *nsu)
 {
 	nsu->create_ship_v = 1;
 	nsu->join_ship_v = 0;
-	int x = txx(350);
+	int x = txx(150);
 	int y = txy(400);
 	nsu->create_ship_checkbox = init_net_checkbox_button(x, &y,
 						"CREATE SHIP", create_ship_checkbox_cb,
@@ -19179,6 +19232,26 @@ static void init_join_create_buttons(struct network_setup_ui *nsu)
 			"SELECT THIS IF YOU WISH TO CREATE A NEW SHIP FOR THE FIRST TIME");
 	ui_add_button(nsu->join_ship_checkbox, DISPLAYMODE_NETWORK_SETUP,
 			"SELECT THIS IF YOU WISH TO JOIN A SHIP ALREADY IN PLAY");
+}
+
+static void init_faction_buttons(struct network_setup_ui *nsu)
+{
+	int i, n;
+	int x = txx(450);
+	int y = txy(400);
+
+	memset(nsu->faction_checkbox, 0, sizeof(nsu->faction_checkbox));
+	memset(nsu->faction_checkbox_v, 0, sizeof(nsu->faction_checkbox_v));
+	nsu->selected_faction = -1;
+	n = nfactions();
+	if (n > MAX_FACTIONS)
+		n = MAX_FACTIONS;
+	for (i = 0; i < n;  i++) {
+		nsu->faction_checkbox[i] = init_net_checkbox_button(x, &y, faction_name(i),
+					faction_checkbox_cb, (void *) (intptr_t) i, faction_checkbox);
+		ui_add_button(nsu->faction_checkbox[i], DISPLAYMODE_NETWORK_SETUP, "");
+	}
+	hide_faction_checkboxes(nsu);
 }
 
 static void ui_add_text_input_box(struct snis_text_input_box *t, int active_displaymode);
@@ -19246,6 +19319,7 @@ static void init_net_setup_ui(void)
 	pull_down_menu_set_color(net_setup_ui.menu, active_button_color);
 	init_net_role_buttons(&net_setup_ui);
 	init_join_create_buttons(&net_setup_ui);
+	init_faction_buttons(&net_setup_ui);
 	snis_prefs_read_checkbox_defaults(xdg_base_ctx, &net_setup_ui.role_main_v, &net_setup_ui.role_nav_v,
 					&net_setup_ui.role_weap_v, &net_setup_ui.role_eng_v,
 					&net_setup_ui.role_damcon_v,
