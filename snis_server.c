@@ -10273,6 +10273,7 @@ static void init_player(struct snis_entity *o, int reset_ship, float *charges)
 		for (i = 0; i < MAX_PASSENGERS; i++)
 			if (passenger[i].location == o->id)
 				update_passenger(i, nstarbases);
+		o->tsd.ship.lifeform_count = 5; /* because there are 5 stations: nav, weap, eng+damcon, sci, comms */
 	}
 	o->tsd.ship.viewpoint_object = o->id;
 	quat_init_axis(&o->tsd.ship.sciball_orientation, 1, 0, 0, 0);
@@ -15121,6 +15122,7 @@ static void starbase_passenger_boarding_npc_bot(struct snis_entity *sb, int brid
 	for (i = 0; i < npassengers; i++)
 		if (passenger[i].location == ship->id)
 			already_aboard++;
+	ship->tsd.ship.lifeform_count = 5 + already_aboard;
 
 	if (strcmp(command, "") == 0 || strcmp(command, "?") == 0) {
 		send_comms_packet(sb, npcname, ch, " TRAVELERS SEEKING PASSAGE\n");
@@ -15176,6 +15178,7 @@ static void starbase_passenger_boarding_npc_bot(struct snis_entity *sb, int brid
 					send_comms_packet(sb, npcname, ch,
 						" BOARDING PASSENGER %s\n", passenger[i].name);
 					passenger[i].location = bridgelist[bridge].shipid;
+					ship->tsd.ship.lifeform_count++;
 					break;
 				}
 			}
@@ -15227,6 +15230,7 @@ static void npc_menu_item_eject_passengers(struct npc_menu_item *item,
 					passenger[i].name);
 			/* Player is fined for ejecting passengers */
 			ship->tsd.ship.wallet -= passenger[i].fare;
+			ship->tsd.ship.lifeform_count--;
 			/* passenger ejected, ceases to be a passenger, replace with new one */
 			update_passenger(i, nstarbases);
 			schedule_callback2(event_callback, &callback_schedule,
@@ -15264,6 +15268,7 @@ static void npc_menu_item_disembark_passengers(struct npc_menu_item *item,
 			send_comms_packet(sb, npcname, ch, "  PASSENGER %s DISEMBARKED\n",
 					passenger[i].name);
 			ship->tsd.ship.wallet += passenger[i].fare;
+			ship->tsd.ship.lifeform_count--;
 			/* passenger disembarks, ceases to be a passenger, replace with new one */
 			update_passenger(i, nstarbases);
 			schedule_callback2(event_callback, &callback_schedule,
