@@ -16093,9 +16093,11 @@ static void draw_science_details(GtkWidget *w, GdkGC *gc)
 		sng_abs_xy_draw_string(buf, TINY_FONT, 10, y);
 		y += yinc;
 	}
-	if (curr_science_guy->type == OBJTYPE_SHIP2) {
+	if (curr_science_guy->type == OBJTYPE_SHIP2 || curr_science_guy->type == OBJTYPE_SHIP1) {
 		struct ship_data *s = &curr_science_guy->tsd.ship;
-		if (!ship_type[s->shiptype].has_lasers && !ship_type[s->shiptype].has_torpedoes)
+		if (curr_science_guy->type == OBJTYPE_SHIP1)
+			snprintf(buf, sizeof(buf), "WEAPONRY: TORPEDOES, BLASTERS AND MISSILES");
+		else if (!ship_type[s->shiptype].has_lasers && !ship_type[s->shiptype].has_torpedoes)
 			snprintf(buf, sizeof(buf), "WEAPONRY: NONE");
 		else if (ship_type[s->shiptype].has_lasers && ship_type[s->shiptype].has_torpedoes)
 			snprintf(buf, sizeof(buf), "WEAPONRY: TORPEDOES AND LASERS");
@@ -16108,7 +16110,7 @@ static void draw_science_details(GtkWidget *w, GdkGC *gc)
 
 		for (i = 0; i < ship_type[s->shiptype].ncargo_bays; i++) {
 			struct cargo_container_contents *cbc = &s->cargo[i].contents;
-			if (cbc->item < 0)
+			if (cbc->item < 0 || cbc->qty <= 0.0)
 				continue;
 			if (i == 0) {
 				snprintf(buf, sizeof(buf), "PROBABLE CARGO:");
