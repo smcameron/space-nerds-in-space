@@ -10320,9 +10320,6 @@ static void draw_sciplane_display(GtkWidget *w, struct snis_entity *o, double ra
 			if (!go[i].alive)
 				continue;
 
-			if (go[i].id == my_ship_id)
-				continue; /* skip drawing yourself. */
-
 			if (go[i].type == OBJTYPE_LASERBEAM || go[i].type == OBJTYPE_TRACTORBEAM) {
 				laserbeams[nlaserbeams] = &go[i];
 				nlaserbeams++;
@@ -10381,7 +10378,8 @@ static void draw_sciplane_display(GtkWidget *w, struct snis_entity *o, double ra
 			float sx, sy;
 			if (!transform_point(instrumentecx, display_pos.v.x, display_pos.v.y, display_pos.v.z,
 						&sx, &sy)) {
-				snis_draw_science_guy(w, gc, &go[i], sx, sy, dist, bw, pwr, range,
+				if (go[i].id != my_ship_id) /* We already drew ourself */
+					snis_draw_science_guy(w, gc, &go[i], sx, sy, dist, bw, pwr, range,
 								&go[i] == curr_science_guy, nebula_factor);
 			}
 
