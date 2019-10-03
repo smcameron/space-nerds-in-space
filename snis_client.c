@@ -17835,7 +17835,7 @@ static void init_demon_ui()
 	demon_ui.selectmode = 0;
 	demon_ui.captain_of = -1;
 	demon_ui.follow_id = -1;
-	demon_ui.use_3d = 0;
+	demon_ui.use_3d = 1;
 	demon_ui.console_active = 0;
 	demon_ui.render_style = DEMON_UI_RENDER_STYLE_WIREFRAME;
 	strcpy(demon_ui.error_msg, "");
@@ -18069,8 +18069,8 @@ static void init_demon_ui()
 			"TOGGLE DEBUGGING CONSOLE ON/OFF");
 	ui_add_text_window(demon_ui.console, DISPLAYMODE_DEMON);
 	ui_add_pull_down_menu(demon_ui.menu, DISPLAYMODE_DEMON); /* needs to be last */
-	ui_hide_widget(demon_ui.demon_move_button);
-	ui_hide_widget(demon_ui.demon_scale_button);
+	ui_unhide_widget(demon_ui.demon_move_button);
+	ui_unhide_widget(demon_ui.demon_scale_button);
 	ui_add_text_input_box(demon_ui.demon_input, DISPLAYMODE_DEMON);
 	ui_add_scaling_strip_chart(demon_ui.bytes_recd_strip_chart, DISPLAYMODE_DEMON);
 	ui_add_scaling_strip_chart(demon_ui.bytes_sent_strip_chart, DISPLAYMODE_DEMON);
