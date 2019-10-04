@@ -178,6 +178,7 @@ static float bandwidth_throttle_distance = (XKNOWN_DIM / 3); /* How far before o
 						/* updates may be throttled. tweakable */
 static int distant_update_period = 20; /* Distant objects are updated only after */
 				       /* this many ticks. tweakable */
+static int docking_by_faction = 0;
 
 /*
  * End of runtime adjustable globals
@@ -11662,6 +11663,7 @@ static int add_starbase(double x, double y, double z,
 	go[i].tsd.starbase.time_left_to_build = 0;
 	go[i].tsd.starbase.build_unit_type = 255;
 	go[i].tsd.starbase.starbase_number = n;
+	go[i].tsd.starbase.factions_allowed = ALL_FACTIONS_ALLOWED;
 	fabricate_prices(&go[i]);
 	init_starbase_market(&go[i]);
 	snprintf(go[i].sdata.name, sizeof(go[i].sdata.name), "SB-%02d", n);
@@ -15464,6 +15466,13 @@ static void npc_menu_item_travel_advisory(struct npc_menu_item *item,
 		send_comms_packet(sb, npcname, ch, " TRAVELERS TAKE NOTICE OF PROHIBITED ITEMS:");
 		send_comms_packet(sb, npcname, ch, "    %s", commodity[contraband].name);
 	}
+	if (docking_by_faction && !rts_mode) {
+		for (i = 0; i < nfactions(); i++) {
+			if ((sb->tsd.starbase.factions_allowed & (1 << i)) == 0)
+				send_comms_packet(sb, npcname, ch, " NOTICE - THE %s ARE NOT WELCOME HERE",
+					faction_name(i));
+		}
+	}
 	send_comms_packet(sb, npcname, ch, "");
 	send_comms_packet(sb, npcname, ch, " ENJOY YOUR VISIT!");
 	send_comms_packet(sb, npcname, ch, "-----------------------------------------------------");
@@ -15491,6 +15500,13 @@ static void npc_menu_item_request_dock(struct npc_menu_item *item,
 	if (i < 0)
 		return;
 	sb = &go[i];
+	if (docking_by_faction && !rts_mode) {
+		if ((sb->tsd.starbase.factions_allowed & (1 << o->sdata.faction)) == 0) {
+			send_comms_packet(sb, npcname, ch, "%s, SORRY, WE DO NOT DEAL WITH THE %s.\n", b->shipname,
+						faction_name(o->sdata.faction));
+			return;
+		}
+	}
 	if (rts_mode) {
 		/* Do not grant permission to dock to enemy faction in RTS mode */
 		if (sb->sdata.faction != 255 && sb->sdata.faction != o->sdata.faction) {
@@ -15506,6 +15522,13 @@ static void npc_menu_item_request_dock(struct npc_menu_item *item,
 	if (o->sdata.shield_strength > 15) {
 		send_comms_packet(sb, npcname, ch, "%s, YOU MUST LOWER SHIELDS FIRST.\n", b->shipname);
 		return;
+	}
+	if (docking_by_faction && !rts_mode) {
+		if ((sb->tsd.starbase.factions_allowed & (1 << o->sdata.faction)) == 0) {
+			send_comms_packet(sb, npcname, ch, "%s, SORRY, WE DO NOT DEAL WITH THE %s.\n", b->shipname,
+						faction_name(o->sdata.faction));
+			return;
+		}
 	}
 	starbase_grant_docker_permission(sb, o, b, npcname, ch);
 }
@@ -17074,6 +17097,8 @@ static struct tweakable_var_descriptor server_tweak[] = {
 			(float) XKNOWN_DIM / 4.0f, (float) XKNOWN_DIM, (float) XKNOWN_DIM / 3.0f, 0, 0, 0 },
 	{ "DISTANT_UPDATE_PERIOD", "HOW MANY TICKS BEFORE UPDATING DISTANT OBJECTS",
 		&distant_update_period, 'i', 0.0, 0.0, 0.0, 1, 40, 20},
+	{ "DOCKING_BY_FACTION", "1 - STARBASES DISCRIMINATE BY FACTION, 0 - THEY DO NOT",
+		&docking_by_faction, 'i', 0.0, 0.0, 0.0, 0, 1, 0},
 	{ NULL, NULL, NULL, '\0', 0.0, 0.0, 0.0, 0, 0, 0 },
 };
 

@@ -639,6 +639,9 @@ struct starbase_data {
 	uint8_t occupant[4]; /* factions of occupants. occupant[3] defines who controls the starbase */
 	uint32_t time_left_to_build;
 	uint8_t build_unit_type;
+	uint8_t factions_allowed; /* Bit field, 1 means faction can dock, 0 cannot dock */
+				  /* Only in effect if docking_by_faction != 0 && !rts_mode */
+#define ALL_FACTIONS_ALLOWED (0xff)
 };
 
 struct nebula_data {
