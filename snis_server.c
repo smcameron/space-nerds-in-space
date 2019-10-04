@@ -12785,6 +12785,36 @@ static int l_add_torpedo(lua_State *l)
 	return 1;
 }
 
+static int l_set_starbase_factions_allowed(lua_State *l)
+{
+	const double sbid = luaL_checknumber(l, 1);
+	const double factionmask = luaL_checknumber(l, 2);
+	uint8_t factions_allowed = (uint8_t) factionmask;
+	uint32_t starbase_id = (uint32_t) sbid;
+	struct snis_entity *sb;
+	int i;
+
+	pthread_mutex_lock(&universe_mutex);
+	i = lookup_by_id(starbase_id);
+	if (i < 0) {
+		pthread_mutex_unlock(&universe_mutex);
+		lua_pushnumber(l, -1.0);
+		send_demon_console_msg("SET_STARBASE_FACTIONS_ALLOWED: STARBASE NOT FOUND");
+		return 1;
+	}
+	sb = &go[i];
+	if (sb->type != OBJTYPE_STARBASE) {
+		pthread_mutex_unlock(&universe_mutex);
+		lua_pushnumber(l, -1.0);
+		send_demon_console_msg("SET_STARBASE_FACTIONS_ALLOWED: OBJECT IS WRONG TYPE");
+		return 1;
+	}
+	sb->tsd.starbase.factions_allowed = factions_allowed;
+	pthread_mutex_unlock(&universe_mutex);
+	lua_pushnumber(l, 0.0);
+	return 1;
+}
+
 static void add_black_holes(void)
 {
 	int i;
@@ -23624,6 +23654,7 @@ static void setup_lua(void)
 	add_lua_callable_fn(l_set_red_alert_status, "set_red_alert_status");
 	add_lua_callable_fn(l_destroy_ship, "destroy_ship");
 	add_lua_callable_fn(l_add_torpedo, "add_torpedo");
+	add_lua_callable_fn(l_set_starbase_factions_allowed, "set_starbase_factions_allowed");
 }
 
 static int run_initial_lua_scripts(void)

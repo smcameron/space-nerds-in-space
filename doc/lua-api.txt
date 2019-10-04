@@ -929,6 +929,13 @@ add_torpedo(x, y, z, vx, vy, vz, firing_ship_id)
 	Adds a torpedo at (x, y, z) with velocity (vx, vy, vz) fired from
 	ship firing_ship_id.
 
+set_starbase_factions_allowed(starbase_id, faction_mask)
+	Sets the faction mask for the given starbase.  The faction mask is
+	a bit field, with each bit indicating whether a particular faction is
+	permitted to dock.  The faction mask is only honored if the server side
+	tweakable variable "docking_by_faction" is non-zero (e.g. via
+	set_variable("docking_by_faction", 1);)
+
 INTERACTIVE FICTION:
 
 There is a Lua library to help with creating Zork-like interactive fiction missions controlled by
