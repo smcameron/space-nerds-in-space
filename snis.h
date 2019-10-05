@@ -88,8 +88,6 @@
 #define NBASES (NPLANETS + 10)
 #define COMMODITIES_PER_BASE 10
 
-#define MAXPLAYERS 10
-
 #define OBJTYPE_SHIP1 9 /* players */
 #define OBJTYPE_SHIP2 1 /* computer controlled ships */
 #define OBJTYPE_ASTEROID 2
