@@ -74,8 +74,8 @@ void snis_strip_chart_draw(struct strip_chart *sc)
 		x2 = (w * i) / sc->history_size + ox;
 		y2 = oy + h * (255.0 - sc->history[index]) / 255.0;
 		sng_current_draw_line(x1, y1, x2, y2);
-		sng_abs_xy_draw_string(sc->label, sc->font, ox, oy + h + snis_font_lineheight(sc->font));
 	}
+	sng_abs_xy_draw_string(sc->label, sc->font, ox, oy + h + snis_font_lineheight(sc->font));
 	if (sc->warning_on) {
 		sng_set_foreground(sc->warn_color);
 		sng_abs_xy_draw_string(sc->warning_msg, sc->font, ox + 10, oy + 0.5 * h);
@@ -163,8 +163,8 @@ void snis_scaling_strip_chart_draw(struct scaling_strip_chart *sc)
 		x2 = (w * i) / sc->history_size + ox;
 		y2 = oy + h * (sc->top - sc->history[index] + sc->bottom) / (sc->top - sc->bottom);
 		sng_current_draw_line(x1, y1, x2, y2);
-		sng_abs_xy_draw_string(sc->label, sc->font, ox, oy + h + snis_font_lineheight(sc->font));
 	}
+	sng_abs_xy_draw_string(sc->label, sc->font, ox, oy + h + snis_font_lineheight(sc->font));
 	sng_abs_xy_draw_string(toplabel, sc->font, ox + w, oy);
 	sng_abs_xy_draw_string(bottomlabel, sc->font, ox + w, oy + h);
 	if (sc->warning_on) {
