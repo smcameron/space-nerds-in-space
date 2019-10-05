@@ -179,6 +179,8 @@ static float bandwidth_throttle_distance = (XKNOWN_DIM / 3); /* How far before o
 static int distant_update_period = 20; /* Distant objects are updated only after */
 				       /* this many ticks. tweakable */
 static int docking_by_faction = 0;
+static int npc_ship_count = 250; /* tweakable.  Used by universe regeneration */
+static int asteroid_count = 200; /* tweakable.  Used by universe regeneration */
 
 /*
  * End of runtime adjustable globals
@@ -12276,7 +12278,7 @@ static void add_asteroids(void)
 		cx = ((double) snis_randn(1000)) * XKNOWN_DIM / 1000.0;
 		cy = ((double) snis_randn(1000) - 500.0) * YKNOWN_DIM / 1000.0;
 		cz = ((double) snis_randn(1000)) * ZKNOWN_DIM / 1000.0;
-		for (j = 0; j < NASTEROIDS / NASTEROID_CLUSTERS; j++) {
+		for (j = 0; j < asteroid_count / NASTEROID_CLUSTERS; j++) {
 			a = (double) snis_randn(360) * M_PI / 180.0;
 			a2 = (double) snis_randn(360) * M_PI / 180.0;
 			r = snis_randn(ASTEROID_CLUSTER_RADIUS);
@@ -12979,7 +12981,7 @@ static void add_eships(void)
 {
 	int i;
 
-	for (i = 0; i < NESHIPS; i++)
+	for (i = 0; i < npc_ship_count; i++)
 		add_ship(i % nfactions(), snis_randn(nshiptypes), 1);
 }
 
@@ -17129,6 +17131,10 @@ static struct tweakable_var_descriptor server_tweak[] = {
 		&distant_update_period, 'i', 0.0, 0.0, 0.0, 1, 40, 20},
 	{ "DOCKING_BY_FACTION", "1 - STARBASES DISCRIMINATE BY FACTION, 0 - THEY DO NOT",
 		&docking_by_faction, 'i', 0.0, 0.0, 0.0, 0, 1, 0},
+	{ "NPC_SHIP_COUNT", "NUMBER OF NPC SHIPS TO GENERATE",
+		&npc_ship_count, 'i', 0.0, 0.0, 0.0, 0, 300, 250},
+	{ "ASTEROID_COUNT", "NUMBER OF ASTEROIDS TO GENERATE",
+		&asteroid_count, 'i', 0.0, 0.0, 0.0, 0, 300, 200},
 	{ NULL, NULL, NULL, '\0', 0.0, 0.0, 0.0, 0, 0, 0 },
 };
 
