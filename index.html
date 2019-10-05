@@ -2128,6 +2128,8 @@ So <cmd>o</cmd> seems to be a valid pointer, but <cmd>o-&gt;entity</cmd> is 0 (m
 So it seems we have an unexpected null pointer.
 </ol>
 <li><b><a name="networkproblems">Network Problems</a></b>
+<ul>
+<li><b>Connectivity problems</b>
 <p>First make sure your computers can ping each other.  You can find out the IP
 address of your computer via <cmd>ifconfig -a</cmd> or <cmd>ip a</cmd>.
 <pre>
@@ -2193,6 +2195,41 @@ Let's say all the machines on your network have an IP address like
 	./snis_launcher
 </pre>
 <p>IPv6.  SNIS does not yet work with IPv6.  Feel free to send patches.
+<li><b>Latency and Bandwidth related problems</b>
+<p>Space Nerds in Space is designed to be run on a LAN, not over the internet. Generally
+on a LAN, you shouldn't have too much trouble, provided you have a <em>wired</em> network
+and not a <em>wireless</em> network.
+<p>You can monitor graphs of bandwidth usage and latency on the DEMON screen (press the NET STATS
+button).
+<p>That being said, there are several variables that are tweakable via the DEMON screen
+which you can use to reduce the bandwidth requirements and potentially improve latency.
+(note: use the "vars" command on the DEMON screen to see a list of tweakable variables and
+their minimum, maximum, and default values).
+<ol>
+<li>BANDWIDTH_THROTTLE_DISTANCE: this is the distance below which updated values may not be
+transmitted to player consoles. Far away objects do not need to have super accurate values
+reflected in player consoles, so not updating them when they are far away saves bandwidth.
+Reducing this distance to the minimum will save the most bandwidth at the cost that some
+things may move around a bit weirdly, esp. at high zoom levels.
+<li>DISTANT_UPDATE_PERIOD: For distant objects, updates are throttled and sent only so often.
+This value controls how often. By default, it is every 2 seconds (20 ticks). Increasing this
+value to the maximum will save more bandwidth by sending updates for distant objects even less
+frequently.
+<li>NPC_SHIP_COUNT: This is the number of NPC ships generated when the universe is generated.
+By default it is 250. Reducing this drastically (e.g. say to 20) will drastically reduce bandwidth
+requirements. This only has an effect when generating the universe, so after setting this, use
+the REGENERATE command to regenerate a new universe.
+<li>ASTEROID_COUNT: This is the number of asteroids generated when the universe is generated.
+By default it is 200. Reducing this drastically (e.g. say to 20) will drastically reduce bandwidth
+requirements. This only has an effect when generating the universe, so after setting this, use
+the REGENERATE command to regenerate a new universe.
+</ol>
+Note, adjusting ASTEROID_COUNT and NPC_SHIP_COUNT generally will not help when running Lua scripted
+scenarios as such scenarios typically do not use the procedural generation code used by the REGENERATE command
+when populating the universe but instead typically use their own custom code or a pre-set
+configuration when populating the initial conditions.
+</ul>
+<p>
 </ol>
 <br>
 <br>
