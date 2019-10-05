@@ -182,6 +182,16 @@ static int docking_by_faction = 0;
 static int npc_ship_count = 250; /* tweakable.  Used by universe regeneration */
 static int asteroid_count = 200; /* tweakable.  Used by universe regeneration */
 
+/* Tweakable values for player ship steering speeds */
+static float steering_adjust_factor = 1.0;  /* steering adjust factors applies to roll, pitch and yaw */
+static float steering_fine_adjust_factor = 0.5;
+static float yaw_adjust_factor = 1.0;
+static float roll_adjust_factor = 1.0;
+static float pitch_adjust_factor = 1.0;
+static float yaw_fine_adjust_factor = 1.0;
+static float roll_fine_adjust_factor = 1.0;
+static float pitch_fine_adjust_factor = 1.0;
+
 /*
  * End of runtime adjustable globals
  */
@@ -13625,7 +13635,8 @@ static void do_yaw(struct game_client *c, int yaw)
 
 	ship->tsd.ship.computer_steering_time_left = 0; /* cancel any computer steering in progress */
 	do_generic_axis_rot(&ship->tsd.ship.yaw_velocity, yaw, max_yaw_velocity,
-			YAW_INCREMENT, YAW_INCREMENT_FINE);
+			YAW_INCREMENT * yaw_adjust_factor * steering_adjust_factor,
+			YAW_INCREMENT_FINE * yaw_fine_adjust_factor * steering_fine_adjust_factor);
 }
 
 static void do_pitch(struct game_client *c, int pitch)
@@ -13636,7 +13647,8 @@ static void do_pitch(struct game_client *c, int pitch)
 
 	ship->tsd.ship.computer_steering_time_left = 0; /* cancel any computer steering in progress */
 	do_generic_axis_rot(&ship->tsd.ship.pitch_velocity, pitch, max_pitch_velocity,
-			PITCH_INCREMENT, PITCH_INCREMENT_FINE);
+			PITCH_INCREMENT * pitch_adjust_factor * steering_adjust_factor,
+			PITCH_INCREMENT_FINE * pitch_fine_adjust_factor * steering_fine_adjust_factor);
 }
 
 static void do_roll(struct game_client *c, int roll)
@@ -13647,7 +13659,8 @@ static void do_roll(struct game_client *c, int roll)
 
 	ship->tsd.ship.computer_steering_time_left = 0; /* cancel any computer steering in progress */
 	do_generic_axis_rot(&ship->tsd.ship.roll_velocity, roll, max_roll_velocity,
-			ROLL_INCREMENT, ROLL_INCREMENT_FINE);
+			ROLL_INCREMENT * roll_adjust_factor * steering_adjust_factor,
+			ROLL_INCREMENT_FINE * roll_fine_adjust_factor * steering_fine_adjust_factor);
 }
 
 static void do_sciball_yaw(struct game_client *c, int yaw)
@@ -17135,6 +17148,22 @@ static struct tweakable_var_descriptor server_tweak[] = {
 		&npc_ship_count, 'i', 0.0, 0.0, 0.0, 0, 300, 250},
 	{ "ASTEROID_COUNT", "NUMBER OF ASTEROIDS TO GENERATE",
 		&asteroid_count, 'i', 0.0, 0.0, 0.0, 0, 300, 200},
+	{ "ROLL_ADJUST_FACTOR", "ADJUST SPEED OF ROLL INPUT",
+		&roll_adjust_factor, 'f', 0.0, 3.0, 1.0, 0, 0, 0},
+	{ "YAW_ADJUST_FACTOR", "ADJUST SPEED OF YAW INPUT",
+		&yaw_adjust_factor, 'f', 0.0, 3.0, 1.0, 0, 0, 0},
+	{ "PITCH_ADJUST_FACTOR", "ADJUST SPEED OF PITCH INPUT",
+		&pitch_adjust_factor, 'f', 0.0, 3.0, 1.0, 0, 0, 0},
+	{ "ROLL_FINE_ADJUST_FACTOR", "ADJUST SPEED OF FINE ROLL INPUT",
+		&roll_fine_adjust_factor, 'f', 0.0, 3.0, 1.0, 0, 0, 0},
+	{ "YAW_FINE_ADJUST_FACTOR", "ADJUST SPEED OF FINE YAW INPUT",
+		&yaw_fine_adjust_factor, 'f', 0.0, 3.0, 1.0, 0, 0, 0},
+	{ "PITCH_FINE_ADJUST_FACTOR", "ADJUST SPEED OF FINE PITCH INPUT",
+		&pitch_fine_adjust_factor, 'f', 0.0, 3.0, 1.0, 0, 0, 0},
+	{ "STEERING_ADJUST_FACTOR", "ADJUST SPEED OF STEERING INPUT",
+		&steering_adjust_factor, 'f', 0.0, 3.0, 1.0, 0, 0, 0},
+	{ "STEERING_FINE_ADJUST_FACTOR", "ADJUST SPEED OF FINE STEERING INPUT",
+		&steering_fine_adjust_factor, 'f', 0.0, 3.0, 0.5, 0, 0, 0},
 	{ NULL, NULL, NULL, '\0', 0.0, 0.0, 0.0, 0, 0, 0 },
 };
 
