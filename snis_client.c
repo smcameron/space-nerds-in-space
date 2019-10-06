@@ -12024,13 +12024,13 @@ static void draw_nav_idiot_lights(GtkWidget *w, GdkGC *gc, struct snis_entity *s
 	/* idiot lights for low power of various systems */
 	const int low_power_threshold = 10;
 	sng_set_foreground(UI_COLOR(nav_warning));
-	if (ship->tsd.ship.power_data.sensors.i < low_power_threshold) {
+	if (ship->tsd.ship.power_data.sensors.i < low_power_threshold && (timer & 0x08)) {
 		sng_center_xy_draw_string("LOW SENSOR POWER", NANO_FONT, SCREEN_WIDTH / 2, txy(65));
 	}
-	if (ship->tsd.ship.power_data.maneuvering.i < low_power_threshold) {
+	if (ship->tsd.ship.power_data.maneuvering.i < low_power_threshold && (timer & 0x08)) {
 		sng_center_xy_draw_string("LOW MANEUVERING POWER", NANO_FONT, SCREEN_WIDTH / 2, txy(80));
 	}
-	if (ship->tsd.ship.power_data.impulse.r2 < low_power_threshold) {
+	if (ship->tsd.ship.power_data.impulse.r2 < low_power_threshold && (timer & 0x08)) {
 		sng_center_xy_draw_string("LOW IMPULSE POWER", NANO_FONT, SCREEN_WIDTH / 2, txy(95));
 	}
 	if (ship->tsd.ship.warp_core_status == WARP_CORE_STATUS_EJECTED) {
