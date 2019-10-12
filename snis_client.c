@@ -3472,7 +3472,6 @@ static struct demon_ui {
 	int nselected;
 #define MAX_DEMON_SELECTABLE 256
 	uint32_t selected_id[MAX_DEMON_SELECTABLE];
-	struct button *demon_exec_button;
 	struct button *demon_home_button;
 	struct button *demon_ship_button;
 	struct button *demon_starbase_button;
@@ -17842,13 +17841,11 @@ static void init_demon_ui()
 	demon_ui.render_style = DEMON_UI_RENDER_STYLE_WIREFRAME;
 	strcpy(demon_ui.error_msg, "");
 	memset(demon_ui.selected_id, 0, sizeof(demon_ui.selected_id));
-	demon_ui.demon_input = snis_text_input_box_init(txx(10), txy(520), txy(30), txx(550),
+	demon_ui.demon_input = snis_text_input_box_init(txx(10), txy(550), txy(30), txx(550),
 					UI_COLOR(demon_input), TINY_FONT,
 					demon_ui.input, 50, &timer, NULL, NULL);
 	snis_text_input_box_set_dynamic_width(demon_ui.demon_input, txx(100), txx(550));
 	snis_text_input_box_set_return(demon_ui.demon_input, demon_exec_button_pressed);
-	demon_ui.demon_exec_button = snis_button_init(txx(10), txy(555), -1, -1,
-			"EXECUTE", UI_COLOR(demon_input), TINY_FONT, demon_exec_button_pressed, NULL);
 	x = txx(3);
 	y = txy(60);
 	dy = txy(22);
@@ -18023,14 +18020,12 @@ static void init_demon_ui()
 		 */
 	}
 
-	demon_ui.console = text_window_init(txx(100), txy(10), SCREEN_WIDTH - txx(110), 500, 45,
+	demon_ui.console = text_window_init(txx(100), txy(10), SCREEN_WIDTH - txx(110), 500, 47,
 						UI_COLOR(demon_default));
 	text_window_blank_background(demon_ui.console, 1);
 	text_window_set_background_alpha(demon_ui.console, 0.75);
 	text_window_set_font(demon_ui.console, PICO_FONT);
 	text_window_slow_printing_effect(demon_ui.console, 0);
-	ui_add_button(demon_ui.demon_exec_button, DISPLAYMODE_DEMON,
-			"EXECUTE THE ENTERED COMMAND");
 	ui_add_button(demon_ui.demon_home_button, DISPLAYMODE_DEMON,
 			"RETURN VIEWPORT TO HOME POSITION AND ORIENTATION");
 	ui_add_button(demon_ui.demon_ship_button, DISPLAYMODE_DEMON,
