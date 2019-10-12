@@ -17845,7 +17845,7 @@ static void init_demon_ui()
 	snis_text_input_box_set_dynamic_width(demon_ui.demon_input, txx(100), txx(550));
 	snis_text_input_box_set_return(demon_ui.demon_input, demon_exec_button_pressed);
 	x = txx(3);
-	y = txy(60);
+	y = txy(148);
 	dy = txy(22);
 	n = 0;
 	demon_ui.demon_home_button = snis_button_init(x, y + dy * n++, txx(70), txy(20),
