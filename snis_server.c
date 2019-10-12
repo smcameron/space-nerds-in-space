@@ -17510,9 +17510,12 @@ static void server_builtin_ai_trace(char *cmd)
 			}
 		}
 	} else {
-		if (ai_trace_id != (uint32_t) -1)
+		if (ai_trace_id != (uint32_t) -1) {
 			send_demon_console_msg("DISABLED AI TRACING FOR %u", ai_trace_id);
-		ai_trace_id = (uint32_t) -1;
+			ai_trace_id = (uint32_t) -1;
+		} else {
+			send_demon_console_msg("USAGE: AITRACE SHIP-ID");
+		}
 	}
 }
 
