@@ -3488,8 +3488,6 @@ static struct demon_ui {
 	struct button *demon_2d3d_button;
 	struct button *demon_move_button;
 	struct button *demon_scale_button;
-	struct button *demon_netstats_button;
-	struct button *demon_render_style_button;
 	struct button *demon_console_button;
 	struct snis_text_input_box *demon_input;
 	struct scaling_strip_chart *bytes_recd_strip_chart;
@@ -17917,20 +17915,6 @@ static void init_demon_ui()
 			snis_button_generic_checkbox_function,
 			&demon_ui.exaggerated_scale_active);
 	snis_button_set_sound(demon_ui.demon_scale_button, UISND15);
-	demon_ui.demon_netstats_button = snis_button_init(x, y + dy * n++, txx(70), txy(20),
-			"NET STATS", UI_COLOR(demon_deselected_button),
-			NANO_FONT, demon_netstats_button_pressed, NULL);
-	snis_button_set_checkbox_function(demon_ui.demon_netstats_button,
-			snis_button_generic_checkbox_function,
-			&demon_ui.netstats_active);
-	snis_button_set_sound(demon_ui.demon_netstats_button, UISND14);
-	demon_ui.demon_render_style_button = snis_button_init(x, y + dy * n++, txx(70), txy(20),
-			"RENDER STYLE", UI_COLOR(demon_deselected_button),
-			NANO_FONT, demon_render_style_pressed, NULL);
-	snis_button_set_checkbox_function(demon_ui.demon_render_style_button,
-			snis_button_generic_checkbox_function,
-			&demon_ui.render_style);
-	snis_button_set_sound(demon_ui.demon_render_style_button, UISND14);
 	demon_ui.demon_console_button = snis_button_init(x, y + dy * n++, txx(70), txy(20),
 			"CONSOLE", UI_COLOR(demon_deselected_button),
 			NANO_FONT, demon_console_pressed, NULL);
@@ -18058,10 +18042,6 @@ static void init_demon_ui()
 			"MOVE SELECTED ITEMS TO YOUR CURRENT LOCATION");
 	ui_add_button(demon_ui.demon_scale_button, DISPLAYMODE_DEMON,
 			"TOGGLE BETWEEN NORMAL AND EXAGGERATED SCALES");
-	ui_add_button(demon_ui.demon_netstats_button, DISPLAYMODE_DEMON,
-			"DISPLAY GRAPHS OF NETWORK STATISTICS");
-	ui_add_button(demon_ui.demon_render_style_button, DISPLAYMODE_DEMON,
-			"TOGGLE RENDERING STYLE BETWEEN WIREFRAME AND SEMI-TRANSPARENT");
 	ui_add_button(demon_ui.demon_console_button, DISPLAYMODE_DEMON,
 			"TOGGLE DEBUGGING CONSOLE ON/OFF");
 	ui_add_text_window(demon_ui.console, DISPLAYMODE_DEMON);
