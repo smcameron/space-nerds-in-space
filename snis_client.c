@@ -16203,6 +16203,10 @@ static void show_science(GtkWidget *w)
 		draw_science_data(w, o, curr_science_guy, curr_science_waypoint);
 		break;
 	}
+	if (o->tsd.ship.power_data.sensors.i < idiot_light_threshold && (timer & 0x08)) {
+		sng_set_foreground(UI_COLOR(sci_warning));
+		sng_center_xy_draw_string("LOW SENSOR POWER", NANO_FONT, SCREEN_WIDTH / 2, txy(27));
+	}
 	show_common_screen(w, "SCIENCE");
 }
 
