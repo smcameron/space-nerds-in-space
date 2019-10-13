@@ -189,6 +189,7 @@ struct ui_color_map {
 
 	struct ui_color_entry main_sci_selection;
 	struct ui_color_entry main_text;
+	struct ui_color_entry main_warning;
 
 	struct ui_color_entry demon_default;
 	struct ui_color_entry demon_default_dead;
@@ -380,6 +381,7 @@ struct ui_color_map_accessor {
 
 	.u.map.main_sci_selection	= { GREEN_FIXUP,	"main-sci-selection" },
 	.u.map.main_text		= { GREEN_FIXUP,	"main-text" },
+	.u.map.main_warning		= { RED,		"main-warning" },
 
 	.u.map.demon_default		= { GREEN_FIXUP,	"demon-default" },
 	.u.map.demon_default_dead	= { RED,		"demon-default-dead" },

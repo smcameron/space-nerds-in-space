@@ -9110,6 +9110,25 @@ static void update_external_camera_position_and_orientation(struct snis_entity *
 	*cam_pos = external_camera_position;
 }
 
+static void draw_nav_main_idiot_lights(GtkWidget *w, GdkGC *gc, struct snis_entity *ship, int color)
+{
+	/* idiot lights for low power of various systems */
+	const int low_power_threshold = 10;
+	sng_set_foreground(color);
+	if (ship->tsd.ship.power_data.sensors.i < low_power_threshold && (timer & 0x08))
+		sng_center_xy_draw_string("LOW SENSOR POWER", NANO_FONT, SCREEN_WIDTH / 2, txy(65));
+	if (ship->tsd.ship.power_data.maneuvering.i < low_power_threshold && (timer & 0x08))
+		sng_center_xy_draw_string("LOW MANEUVERING POWER", NANO_FONT, SCREEN_WIDTH / 2, txy(80));
+	if (ship->tsd.ship.power_data.impulse.r2 < low_power_threshold && (timer & 0x08))
+		sng_center_xy_draw_string("LOW IMPULSE POWER", NANO_FONT, SCREEN_WIDTH / 2, txy(95));
+	if (ship->tsd.ship.warp_core_status == WARP_CORE_STATUS_EJECTED)
+		sng_center_xy_draw_string("WARP CORE EJECTED", NANO_FONT, SCREEN_WIDTH / 2, txy(110));
+	if (displaymode == DISPLAYMODE_NAVIGATION && ship->tsd.ship.power_data.warp.r2 < low_power_threshold)
+		sng_center_xy_draw_string("LOW WARP POWER", NANO_FONT,
+				SCREEN_WIDTH - txx(1.2 * nav_ui.gauge_radius + 10), /* should match gauge x */
+				txy(nav_ui.gauge_radius * 2 + 20));
+}
+
 static double sample_power_data_impulse_current(void);
 
 static void show_mainscreen(GtkWidget *w)
@@ -9273,6 +9292,7 @@ static void show_mainscreen(GtkWidget *w)
 		show_gunsight(w);
 	if (vp == o)
 		draw_main_screen_text(w, gc);
+	draw_nav_main_idiot_lights(w, gc, o, UI_COLOR(main_warning));
 	pthread_mutex_unlock(&universe_mutex);
 	if (vp == o)
 		show_common_screen(w, "");
@@ -12016,30 +12036,6 @@ static void draw_orientation_trident(GtkWidget *w, GdkGC *gc, struct snis_entity
 static void draw_science_graph(GtkWidget *w, struct snis_entity *ship, struct snis_entity *o,
 		int x1, int y1, int x2, int y2);
 
-static void draw_nav_idiot_lights(GtkWidget *w, GdkGC *gc, struct snis_entity *ship)
-{
-	/* idiot lights for low power of various systems */
-	const int low_power_threshold = 10;
-	sng_set_foreground(UI_COLOR(nav_warning));
-	if (ship->tsd.ship.power_data.sensors.i < low_power_threshold && (timer & 0x08)) {
-		sng_center_xy_draw_string("LOW SENSOR POWER", NANO_FONT, SCREEN_WIDTH / 2, txy(65));
-	}
-	if (ship->tsd.ship.power_data.maneuvering.i < low_power_threshold && (timer & 0x08)) {
-		sng_center_xy_draw_string("LOW MANEUVERING POWER", NANO_FONT, SCREEN_WIDTH / 2, txy(80));
-	}
-	if (ship->tsd.ship.power_data.impulse.r2 < low_power_threshold && (timer & 0x08)) {
-		sng_center_xy_draw_string("LOW IMPULSE POWER", NANO_FONT, SCREEN_WIDTH / 2, txy(95));
-	}
-	if (ship->tsd.ship.warp_core_status == WARP_CORE_STATUS_EJECTED) {
-		sng_center_xy_draw_string("WARP CORE EJECTED", NANO_FONT, SCREEN_WIDTH / 2, txy(110));
-	}
-	if (ship->tsd.ship.power_data.warp.r2 < low_power_threshold) {
-		sng_center_xy_draw_string("LOW WARP POWER", NANO_FONT,
-				SCREEN_WIDTH - txx(1.2 * nav_ui.gauge_radius + 10), /* should match gauge x */
-				txy(nav_ui.gauge_radius * 2 + 20));
-	}
-}
-
 static void draw_3d_nav_starmap(GtkWidget *w, GdkGC *gc)
 {
 	int i, j, k, our_ss = -1;
@@ -13171,7 +13167,7 @@ static void show_navigation(GtkWidget *w)
 
 	quat_to_euler(&ypr, &o->orientation);	
 	sng_set_foreground(UI_COLOR(nav_text));
-	draw_nav_idiot_lights(w, gc, o);
+	draw_nav_main_idiot_lights(w, gc, o, UI_COLOR(nav_warning));
 	draw_orientation_trident(w, gc, o, txx(31), txy(111), txx(31));
 	switch (o->tsd.ship.nav_mode) {
 	case NAV_MODE_STARMAP:
