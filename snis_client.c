@@ -183,6 +183,7 @@ static int current_typeface = 0; /* tweakable */
 
 static int mtwist_seed = COMMON_MTWIST_SEED;
 static float current_altitude = 1e20;
+static int idiot_light_threshold = 10; /* tweakable */
 
 /* I can switch out the line drawing function with these macros */
 /* in case I come across something faster than gdk_draw_line */
@@ -8996,9 +8997,8 @@ static void show_weapons_camera_view(GtkWidget *w)
 	}
 
 	/* idiot lights for low power */
-	const int low_power_threshold = 10;
 	sng_set_foreground(UI_COLOR(weap_warning));
-	if (o->tsd.ship.power_data.phasers.i < low_power_threshold) {
+	if (o->tsd.ship.power_data.phasers.i < idiot_light_threshold) {
 		sng_center_xy_draw_string("LOW PHASER POWER", NANO_FONT,
 				0.5 * SCREEN_WIDTH, 65 * SCREEN_HEIGHT / 600);
 	}
@@ -9113,17 +9113,16 @@ static void update_external_camera_position_and_orientation(struct snis_entity *
 static void draw_nav_main_idiot_lights(GtkWidget *w, GdkGC *gc, struct snis_entity *ship, int color)
 {
 	/* idiot lights for low power of various systems */
-	const int low_power_threshold = 10;
-	sng_set_foreground(color);
-	if (ship->tsd.ship.power_data.sensors.i < low_power_threshold && (timer & 0x08))
+	sng_set_foreground(UI_COLOR(nav_warning));
+	if (ship->tsd.ship.power_data.sensors.i < idiot_light_threshold && (timer & 0x08))
 		sng_center_xy_draw_string("LOW SENSOR POWER", NANO_FONT, SCREEN_WIDTH / 2, txy(65));
-	if (ship->tsd.ship.power_data.maneuvering.i < low_power_threshold && (timer & 0x08))
+	if (ship->tsd.ship.power_data.maneuvering.i < idiot_light_threshold && (timer & 0x08))
 		sng_center_xy_draw_string("LOW MANEUVERING POWER", NANO_FONT, SCREEN_WIDTH / 2, txy(80));
-	if (ship->tsd.ship.power_data.impulse.r2 < low_power_threshold && (timer & 0x08))
+	if (ship->tsd.ship.power_data.impulse.r2 < idiot_light_threshold && (timer & 0x08))
 		sng_center_xy_draw_string("LOW IMPULSE POWER", NANO_FONT, SCREEN_WIDTH / 2, txy(95));
 	if (ship->tsd.ship.warp_core_status == WARP_CORE_STATUS_EJECTED)
 		sng_center_xy_draw_string("WARP CORE EJECTED", NANO_FONT, SCREEN_WIDTH / 2, txy(110));
-	if (displaymode == DISPLAYMODE_NAVIGATION && ship->tsd.ship.power_data.warp.r2 < low_power_threshold)
+	if (displaymode == DISPLAYMODE_NAVIGATION && ship->tsd.ship.power_data.warp.r2 < idiot_light_threshold)
 		sng_center_xy_draw_string("LOW WARP POWER", NANO_FONT,
 				SCREEN_WIDTH - txx(1.2 * nav_ui.gauge_radius + 10), /* should match gauge x */
 				txy(nav_ui.gauge_radius * 2 + 20));
@@ -13997,7 +13996,6 @@ static void show_engineering(GtkWidget *w)
 	}
 
 	/* idiot lights for low power of various systems */
-	const int low_power_threshold = 10;
 
 	float sc_x, sc_y, sc_length, sc_height;
 	snis_slider_get_location(eng_ui.shield_control_slider, &sc_x, &sc_y, &sc_length, &sc_height);
@@ -14007,12 +14005,10 @@ static void show_engineering(GtkWidget *w)
 
 
 	sng_set_foreground(UI_COLOR(eng_warning));
-	if (o->tsd.ship.power_data.shields.r2 < low_power_threshold) {
+	if (o->tsd.ship.power_data.shields.r2 < idiot_light_threshold)
 		sng_center_xy_draw_string("LOW SHIELD POWER", NANO_FONT, sc_x_center, sc_y_center);
-	}
-	else if (o->tsd.ship.power_data.shields.i < low_power_threshold) {
+	else if (o->tsd.ship.power_data.shields.i < idiot_light_threshold)
 		sng_center_xy_draw_string("SHIELDS ARE OFF", NANO_FONT, sc_x_center, sc_y_center);
-	}
 
 	if (o->tsd.ship.fuel < UINT32_MAX * 0.1) { /* 10% */
 		float fg_x, fg_y, fg_r;
@@ -17114,6 +17110,8 @@ static struct tweakable_var_descriptor client_tweak[] = {
 		&atmosphere_brightness, 'f', 0.0, 1.0, 0.5, 0, 0, 0 },
 	{ "SUPPRESS_HYPERSPACE_NOISE", "0 OR 1 - SUPPRESS THE NOISE ON TERMINALS DURING HYPERSPACE",
 		&suppress_hyperspace_noise, 'i', 0.0, 0.0, 0.0, 0, 1, 0 },
+	{ "IDIOT_LIGHT_THRESHOLD", "0 - 255 - POWER LEVEL BELOW WHICH IDIOT LIGHTS COME ON",
+		&idiot_light_threshold, 'i', 0.0, 0.0, 0.0, 0, 255, 10 },
 	{ NULL, NULL, NULL, '\0', 0.0, 0.0, 0.0, 0, 0, 0 },
 };
 
