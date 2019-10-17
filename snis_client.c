@@ -184,6 +184,7 @@ static int current_typeface = 0; /* tweakable */
 static int mtwist_seed = COMMON_MTWIST_SEED;
 static float current_altitude = 1e20;
 static int idiot_light_threshold = 10; /* tweakable */
+static int dejitter_science_details = 1; /* Tweakable. 1 means de-jitter science details, 0 means don't */
 
 /* I can switch out the line drawing function with these macros */
 /* in case I come across something faster than gdk_draw_line */
@@ -15624,16 +15625,23 @@ static void draw_science_data(GtkWidget *w, struct snis_entity *ship, struct sni
 	char buffer[40];
 	char buffer2[40];
 	int x, y, gx1, gy1, gx2, gy2, yinc;
-	double dx, dy, dz, range;
+	double dx, dy, dz;
+	static double bearing = 0.0;
+	static double mark = 0.0;
 	char *the_faction;
 	static double lastx = 0.0;
 	static double lasty = 0.0;
 	static double lastz = 0.0;
 	static double lastvel = 0.0;
 	static double closing_rate = 0.0;
+	static double dejittered_closing_rate = 0.0;
 	static int eta_mins = 0;
 	static int eta_secs = 0;
+	static double range = 0.0;
 	static double last_range = 1.0;
+	static double dejittered_range = 0.0;
+	static double velocity = 0.0;
+	int update_display = ((timer & 0x0f) == 0 || !dejitter_science_details);
 
 	yinc = 22 * SCREEN_HEIGHT / 600;
 
@@ -15761,7 +15769,9 @@ static void draw_science_data(GtkWidget *w, struct snis_entity *ship, struct sni
 		if (v > 3000)
 			v = 0;
 		lastvel = v;
-		snprintf(buffer, sizeof(buffer), "VELOCITY: %0.1lf", v);
+		if (update_display)
+			velocity = v;
+		snprintf(buffer, sizeof(buffer), "VELOCITY: %0.1lf", velocity);
 	} else {
 		snprintf(buffer, sizeof(buffer), "VELOCITY: 0.0");
 	}
@@ -15782,10 +15792,11 @@ static void draw_science_data(GtkWidget *w, struct snis_entity *ship, struct sni
 		union quat q_to_o;
 		union vec3 dir_forward = {{1, 0, 0}};
 		union vec3 dir_to_o = {{dx, dy, dz}};
-		quat_from_u2v(&q_to_o, &dir_forward, &dir_to_o, 0);
 
-		double bearing=0, mark=0;
-		to_snis_heading_mark(&q_to_o, &bearing, &mark);
+		if (update_display) {
+			quat_from_u2v(&q_to_o, &dir_forward, &dir_to_o, 0);
+			to_snis_heading_mark(&q_to_o, &bearing, &mark);
+		}
 
 		snprintf(buffer,  sizeof(buffer), "BEARING: %0.1lf", radians_to_degrees(bearing));
 		snprintf(buffer2, sizeof(buffer2), "MARK: %0.1lf", radians_to_degrees(mark));
@@ -15800,7 +15811,9 @@ static void draw_science_data(GtkWidget *w, struct snis_entity *ship, struct sni
 
 	if (o || waypoint_index != (uint32_t) -1) {
 		range = dist3d(dx, dy, dz);
-		snprintf(buffer, sizeof(buffer), "RANGE: %8.2lf", range);
+		if (update_display)
+			dejittered_range = range;
+		snprintf(buffer, sizeof(buffer), "RANGE: %8.2lf", dejittered_range);
 	} else {
 		snprintf(buffer, sizeof(buffer), "RANGE:");
 	}
@@ -15810,7 +15823,9 @@ static void draw_science_data(GtkWidget *w, struct snis_entity *ship, struct sni
 	if (o || waypoint_index != (uint32_t) -1) {
 		closing_rate = frame_rate_hz * (last_range - range);
 		last_range = range;
-		snprintf(buffer, sizeof(buffer), "CLOSING RATE: %0.2lf", closing_rate);
+		if (update_display)
+			dejittered_closing_rate = closing_rate;
+		snprintf(buffer, sizeof(buffer), "CLOSING RATE: %0.2lf", dejittered_closing_rate);
 	} else {
 		snprintf(buffer, sizeof(buffer), "CLOSING RATE:");
 	}
@@ -15818,8 +15833,10 @@ static void draw_science_data(GtkWidget *w, struct snis_entity *ship, struct sni
 	sng_abs_xy_draw_string(buffer, TINY_FONT, x, y);
 
 	if ((o || waypoint_index != (uint32_t) -1) && closing_rate > 0.001) {
-		eta_mins = (int) (round(range) / round(closing_rate)) / 60;
-		eta_secs = (int) (round(range) / round(closing_rate)) % 60;
+		if (update_display) {
+			eta_mins = (int) (round(range) / round(closing_rate)) / 60;
+			eta_secs = (int) (round(range) / round(closing_rate)) % 60;
+		}
 		snprintf(buffer, sizeof(buffer), "ETA: %i MINS %i SECS", eta_mins, eta_secs);
 	} else {
 		snprintf(buffer, sizeof(buffer), "ETA:");
@@ -17128,6 +17145,8 @@ static struct tweakable_var_descriptor client_tweak[] = {
 		&suppress_hyperspace_noise, 'i', 0.0, 0.0, 0.0, 0, 1, 0 },
 	{ "IDIOT_LIGHT_THRESHOLD", "0 - 255 - POWER LEVEL BELOW WHICH IDIOT LIGHTS COME ON",
 		&idiot_light_threshold, 'i', 0.0, 0.0, 0.0, 0, 255, 10 },
+	{ "DEJITTER_SCIENCE", "0 or 1 - 1 == DEJITTER SCIENCE VALUES, 0 == DO NOT DEJITTER",
+		&dejitter_science_details, 'i', 0.0, 0.0, 0.0, 0, 1, 1 },
 	{ NULL, NULL, NULL, '\0', 0.0, 0.0, 0.0, 0, 0, 0 },
 };
 
