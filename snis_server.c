@@ -194,6 +194,7 @@ static float pitch_fine_adjust_factor = 1.0;
 
 static float sci_bw_yaw_increment = SCI_BW_YAW_INCREMENT;
 static float sci_bw_yaw_increment_fine = SCI_BW_YAW_INCREMENT_FINE;
+static int player_respawn_time = RESPAWN_TIME_SECS; /* Number of seconds player spends dead before being respawned */
 
 /*
  * End of runtime adjustable globals
@@ -1290,7 +1291,7 @@ static void black_hole_collision_detection(void *o1, void *o2)
 			return;
 		} else if (!player_invincibility) {
 			object->alive = 0;
-			object->respawn_time = universe_timestamp + RESPAWN_TIME_SECS * 10;
+			object->respawn_time = universe_timestamp + player_respawn_time * 10;
 			object->timestamp = universe_timestamp;
 			snis_queue_add_sound(EXPLOSION_SOUND,
 				ROLE_SOUNDSERVER, object->id);
@@ -2564,7 +2565,7 @@ static void calculate_torpedolike_damage(struct snis_entity *target, double weap
 
 	if (target->tsd.ship.damage.shield_damage == 255) {
 		target->timestamp = universe_timestamp;
-		target->respawn_time = universe_timestamp + RESPAWN_TIME_SECS * 10;
+		target->respawn_time = universe_timestamp + player_respawn_time * 10;
 		target->alive = 0;
 	}
 }
@@ -2629,7 +2630,7 @@ static void calculate_laser_damage(struct snis_entity *o, uint8_t wavelength, fl
 	}
 	if (o->tsd.ship.damage.shield_damage == 255) {
 		o->timestamp = universe_timestamp;
-		o->respawn_time = universe_timestamp + RESPAWN_TIME_SECS * 10;
+		o->respawn_time = universe_timestamp + player_respawn_time * 10;
 		o->alive = 0;
 	}
 }
@@ -7776,7 +7777,7 @@ static void do_temperature_computations(struct snis_entity *o)
 				o->alive = 0;
 				o->tsd.ship.damage.shield_damage = 255;
 				o->timestamp = universe_timestamp;
-				o->respawn_time = universe_timestamp + RESPAWN_TIME_SECS * 10;
+				o->respawn_time = universe_timestamp + player_respawn_time * 10;
 				schedule_callback(event_callback, &callback_schedule,
 					"player-death-callback", o->id);
 			}
@@ -8334,7 +8335,7 @@ static void player_collision_detection(void *player, void *object)
 			/* crashed into planet */
 			o->alive = 0;
 			o->timestamp = universe_timestamp;
-			o->respawn_time = universe_timestamp + RESPAWN_TIME_SECS * 10;
+			o->respawn_time = universe_timestamp + player_respawn_time * 10;
 			send_ship_damage_packet(o);
 			snis_queue_add_sound(EXPLOSION_SOUND,
 					ROLE_SOUNDSERVER, o->id);
@@ -8919,7 +8920,7 @@ static int do_sunburn_damage(struct snis_entity *o)
 		o->alive = 0;
 		o->tsd.ship.damage.shield_damage = 255;
 		o->timestamp = universe_timestamp;
-		o->respawn_time = universe_timestamp + RESPAWN_TIME_SECS * 10;
+		o->respawn_time = universe_timestamp + player_respawn_time * 10;
 		snis_queue_add_sound(EXPLOSION_SOUND,
 				ROLE_SOUNDSERVER, o->id);
 		schedule_callback(event_callback, &callback_schedule,
@@ -9289,7 +9290,7 @@ static void player_move(struct snis_entity *o)
 	if (o->tsd.ship.oxygen == 0) {
 		o->alive = 0;
 		o->timestamp = universe_timestamp;
-		o->respawn_time = universe_timestamp + RESPAWN_TIME_SECS * 10;
+		o->respawn_time = universe_timestamp + player_respawn_time * 10;
 		send_ship_damage_packet(o);
 	}
 
@@ -17173,6 +17174,8 @@ static struct tweakable_var_descriptor server_tweak[] = {
 	{ "SCI_BW_YAW_INCREMENT_FINE", "FINE SCIENCE BEAM YAW INCREMENT IN RADIANS",
 		&sci_bw_yaw_increment, 'f', 0.001 * M_PI / 180.0, 10 * M_PI / 180.0,
 		SCI_BW_YAW_INCREMENT_FINE, 0, 0, 0 },
+	{ "PLAYER_RESPAWN_TIME", "SECONDS PLAYER SPENDS DEAD BEFORE RESPAWNING",
+		&player_respawn_time, 'i', 0.0, 0.0, 0.0, 0, 255, RESPAWN_TIME_SECS },
 	{ NULL, NULL, NULL, '\0', 0.0, 0.0, 0.0, 0, 0, 0 },
 };
 
