@@ -117,6 +117,9 @@
 #define OPCODE_UPDATE_RESPAWN_TIME 141
 #define OPCODE_UPDATE_NETSTATS 142
 #define OPCODE_COMMS_TRANSMISSION 143
+#define   OPCODE_COMMS_PLAINTEXT 0
+#define   OPCODE_COMMS_ENCIPHERED 1
+#define   OPCODE_COMMS_KEY_GUESS 2
 #define OPCODE_WARP_LIMBO	144	
 #define OPCODE_DEMON_COMMAND 145
 #define OPCODE_UPDATE_NEBULA		146
@@ -646,6 +649,7 @@ struct netstats_packet {
 
 struct comms_transmission_packet {
 	uint8_t opcode;
+	uint8_t enciphered;
 	uint8_t length;
 	uint32_t id;
 };

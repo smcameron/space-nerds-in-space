@@ -2107,7 +2107,8 @@ static struct packed_buffer *distort_comms_message(struct packed_buffer *pb, flo
 	buffer = (unsigned char *) pbc->buffer;
 	length = packed_buffer_length(pbc);
 	/* Clobber some of the message */
-	for (i = 2; i < length; i++)
+	/* 3 to skip opcode, enciphered and length (see struct comms_transmission_packet) */
+	for (i = 3; i < length; i++)
 		if (snis_randn(1000) < distortion)
 			buffer[i] = '*'; /* clobber it */
 	return pbc;
@@ -16409,7 +16410,7 @@ static int process_comms_transmission(struct game_client *c, int use_real_name)
 	unsigned char buffer[sizeof(struct comms_transmission_packet)];
 	char txt[256];
 	int rc, i;
-	uint8_t len;
+	uint8_t len, enciphered;
 	uint32_t id;
 	char name[30];
 
@@ -16417,7 +16418,7 @@ static int process_comms_transmission(struct game_client *c, int use_real_name)
 	 * fix distort_comms_message in snis_server.c too.
 	 */
 
-	rc = read_and_unpack_buffer(c, buffer, "bw", &len, &id);
+	rc = read_and_unpack_buffer(c, buffer, "bbw", &enciphered, &len, &id);
 	if (rc)
 		return rc;
 	rc = snis_readsocket(c->socket, txt, len);
@@ -22393,7 +22394,8 @@ static void send_comms_packet(struct snis_entity *transmitter, char *sender, uin
 	va_end(arg_ptr);
 	snprintf(tmpbuf, sizeof(tmpbuf) - 1, "%s | %s", sender, tmpbuf2);
 	pb = packed_buffer_allocate(sizeof(struct comms_transmission_packet) + 100);
-	packed_buffer_append(pb, "bb", OPCODE_COMMS_TRANSMISSION, (uint8_t) strlen(tmpbuf) + 1);
+	packed_buffer_append(pb, "bbb", OPCODE_COMMS_TRANSMISSION, OPCODE_COMMS_PLAINTEXT,
+				(uint8_t) strlen(tmpbuf) + 1);
 	packed_buffer_append_raw(pb, tmpbuf, strlen(tmpbuf) + 1);
 	if (channel == 0)
 		send_comms_packet_to_all_clients(transmitter, pb, ROLE_ALL);

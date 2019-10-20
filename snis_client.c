@@ -6198,7 +6198,7 @@ static int process_comm_transmission(void)
 {
 	unsigned char buffer[sizeof(struct comms_transmission_packet) + 100];
 	char string[256];
-	uint8_t length;
+	uint8_t length, enciphered;
 	int rc, n;
 	uint32_t comms_channel;
 	const char *channel_change_pattern = COMMS_CHANNEL_CHANGE_MSG " %u";
@@ -6207,7 +6207,7 @@ static int process_comm_transmission(void)
 	/* REMINDER: If the format of OPCODE_COMMS_TRANSMISSION ever changes, you need to
 	 * fix distort_comms_message in snis_server.c too.
 	 */
-	rc = read_and_unpack_buffer(buffer, "b", &length);
+	rc = read_and_unpack_buffer(buffer, "bb", &enciphered, &length);
 	if (rc != 0)
 		return rc;
 	rc = snis_readsocket(gameserver_sock, string, length);
@@ -14674,7 +14674,7 @@ static void send_comms_packet_to_server(char *msg, uint8_t opcode, uint32_t id)
 	uint8_t len = strlen(msg);
 
 	pb = packed_buffer_allocate(sizeof(struct comms_transmission_packet) + len);
-	packed_buffer_append(pb, "bbw", opcode, len, id);
+	packed_buffer_append(pb, "bbbw", opcode, OPCODE_COMMS_PLAINTEXT, len, id);
 	packed_buffer_append_raw(pb, msg, (unsigned short) len);
 	packed_buffer_queue_add(&to_server_queue, pb, &to_server_queue_mutex);
 	wakeup_gameserver_writer();
