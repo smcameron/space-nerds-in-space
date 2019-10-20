@@ -131,6 +131,7 @@ int snis_opcode_def_init(void)
 			OPCODE_ADJUST_CONTROL_MANEUVERING_PWR, "bbwb");
 	rc |= init_opcode_subcode_def(OPCODE_ADJUST_CONTROL_INPUT,
 			OPCODE_ADJUST_CONTROL_TRACTOR_PWR, "bbwb");
+	rc |= init_opcode_def(OPCODE_COMMS_CRYPTO, "bb");
 	rc |= init_opcode_subcode_def(OPCODE_ADJUST_CONTROL_INPUT,
 			OPCODE_ADJUST_CONTROL_LIFESUPPORT_PWR, "bbwb");
 	rc |= init_opcode_subcode_def(OPCODE_ADJUST_CONTROL_INPUT,

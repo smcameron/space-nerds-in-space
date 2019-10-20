@@ -10167,6 +10167,12 @@ static void repair_damcon_systems(struct snis_entity *o)
 static void update_passenger(int i, int nstarbases);
 static int count_starbases(void);
 
+#define ENCMSG "GPVS TDPSF BOE TFWFO ZFBST BHP PVS GBUIFST " \
+	"CSPVHIU GPSUI PO UIJT DPOUJOFOU, B OFX OBUJPO, " \
+	"DPODFJWFE JO MJCFSUZ, BOE EFEJDBUFE UP UIF " \
+	"QSPQPTJUJPO UIBU BMM NFO BSF DSFBUFE FRVBM."
+
+
 /* init_player()
  * o is the player ship
  *
@@ -10271,6 +10277,7 @@ static void init_player(struct snis_entity *o, int reset_ship, float *charges)
 			memset(bridgelist[b].cipher_key, '_', sizeof(bridgelist[b].cipher_key));
 			memset(bridgelist[b].guessed_key, '_', sizeof(bridgelist[b].guessed_key));
 			memset(bridgelist[b].enciphered_message, 0, sizeof(bridgelist[b].enciphered_message));
+			snprintf(bridgelist[b].enciphered_message, 255, ENCMSG);
 		}
 	}
 	quat_init_axis(&o->tsd.ship.computer_desired_orientation, 0, 1, 0, 0);
@@ -16431,21 +16438,32 @@ static int process_comms_transmission(struct game_client *c, int use_real_name)
 	if (rc)
 		return rc;
 	txt[len] = '\0';
-	if (use_real_name) {
-		snprintf(name, sizeof(name), "%s: ", bridgelist[c->bridge].shipname);
-	} else {
-		i = lookup_by_id(id);
-		if (i < 0)
+	switch (enciphered) {
+	case OPCODE_COMMS_PLAINTEXT:
+		if (use_real_name) {
+			snprintf(name, sizeof(name), "%s: ", bridgelist[c->bridge].shipname);
+		} else {
+			i = lookup_by_id(id);
+			if (i < 0)
+				return 0;
+			snprintf(name, sizeof(name), "%s: ", go[i].sdata.name);
+		}
+		if (txt[0] == '/') {
+			process_meta_comms_packet(name, c, txt);
 			return 0;
-		snprintf(name, sizeof(name), "%s: ", go[i].sdata.name);
+		}
+		send_comms_packet(&go[c->ship_index], name, bridgelist[c->bridge].comms_channel, "%s", txt);
+		if (bridgelist[c->bridge].npcbot.channel == bridgelist[c->bridge].comms_channel)
+			send_to_npcbot(c->bridge, name, txt);
+		break;
+	case OPCODE_COMMS_KEY_GUESS:
+		if (len != 26)
+			return -1;
+		memcpy(bridgelist[c->bridge].guessed_key, txt, 26);
+		break;
+	default:
+		return -1;
 	}
-	if (txt[0] == '/') {
-		process_meta_comms_packet(name, c, txt);
-		return 0;
-	}
-	send_comms_packet(&go[c->ship_index], name, bridgelist[c->bridge].comms_channel, "%s", txt);
-	if (bridgelist[c->bridge].npcbot.channel == bridgelist[c->bridge].comms_channel)
-		send_to_npcbot(c->bridge, name, txt);
 	return 0;
 }
 
@@ -18905,6 +18923,27 @@ static int process_client_config(struct game_client *c)
 		fprintf(stderr, "snis_server: OPCODE_CLIENT_CONFIG subcode is unknown value%hhu\n", subcode);
 		return -1;
 	}
+	return 0;
+}
+
+static int process_comms_crypto(struct game_client *c)
+{
+	int i, rc;
+	unsigned char new_mode;
+	unsigned char buffer[10];
+	struct snis_entity *o;
+
+	rc = read_and_unpack_buffer(c, buffer, "b", &new_mode);
+	if (rc)
+		return rc;
+	new_mode = !!new_mode;
+	if (c->ship_index < 0) /* shouldn't happen */
+		return 0;
+	i = lookup_by_id(c->shipid);
+	if (i < 0)
+		return 0;
+	o = &go[i];
+	o->tsd.ship.comms_crypto_mode = new_mode;
 	return 0;
 }
 
@@ -21492,6 +21531,11 @@ static void process_instructions_from_client(struct game_client *c)
 			if (rc)
 				goto protocol_error;
 			break;
+		case OPCODE_COMMS_CRYPTO:
+			rc = process_comms_crypto(c);
+			if (rc)
+				goto protocol_error;
+			break;
 		default:
 			goto protocol_error;
 	}
@@ -22505,7 +22549,7 @@ static void send_update_ship_packet(struct game_client *c,
 	packed_buffer_append(pb, "bwwhSSS", opcode, o->id, o->timestamp, o->alive,
 			o->x, (int32_t) UNIVERSE_DIM, o->y, (int32_t) UNIVERSE_DIM,
 			o->z, (int32_t) UNIVERSE_DIM);
-	packed_buffer_append(pb, "RRRwwRRbbbwwbbbbbbbbbbbbwQQQQSSSbB7bbww",
+	packed_buffer_append(pb, "RRRwwRRbbbwwbbbbbbbbbbbbwQQQQSSSbB8bbww",
 			o->tsd.ship.yaw_velocity,
 			o->tsd.ship.pitch_velocity,
 			o->tsd.ship.roll_velocity,
@@ -22537,6 +22581,7 @@ static void send_update_ship_packet(struct game_client *c,
 			o->tsd.ship.exterior_lights,
 			o->tsd.ship.alarms_silenced,
 			o->tsd.ship.missile_lock_detected,
+			o->tsd.ship.comms_crypto_mode,
 			o->tsd.ship.rts_active_button,
 			wallet, o->tsd.ship.viewpoint_object);
 	pb_queue_to_client(c, pb);
@@ -22958,6 +23003,7 @@ static int add_new_player(struct game_client *c)
 		memset(bridgelist[nbridges].cipher_key, '_', sizeof(bridgelist[nbridges].cipher_key));
 		memset(bridgelist[nbridges].guessed_key, '_', sizeof(bridgelist[nbridges].guessed_key));
 		memset(bridgelist[nbridges].enciphered_message, 0, sizeof(bridgelist[nbridges].enciphered_message));
+		snprintf(bridgelist[nbridges].enciphered_message, 255, ENCMSG);
 		strcpy(bridgelist[nbridges].last_text_to_speech, "");
 		bridgelist[nbridges].text_to_speech_volume = 0.33;
 		bridgelist[nbridges].text_to_speech_volume_timestamp = universe_timestamp;

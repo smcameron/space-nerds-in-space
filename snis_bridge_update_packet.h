@@ -29,7 +29,7 @@
 #include "snis_marshal.h"
 #include "snis_multiverse.h"
 
-#define UPDATE_BRIDGE_PACKET_SIZE 237
+#define UPDATE_BRIDGE_PACKET_SIZE 238
 
 struct packed_buffer *build_bridge_update_packet(struct snis_entity *o, unsigned char *pwdhash);
 void unpack_bridge_update_packet(struct snis_entity *o, struct packed_buffer *pb);

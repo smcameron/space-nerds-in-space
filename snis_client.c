@@ -107,6 +107,7 @@
 #include "planetary_atmosphere.h"
 #include "rts_unit_data.h"
 #include "commodities.h"
+#include "scipher.h"
 
 #include "vertex.h"
 #include "triangle.h"
@@ -248,6 +249,9 @@ static char textscreen[1024] = { 0 };
 #define NUM_USER_MENU_BUTTONS 10
 static struct button *user_menu_button[NUM_USER_MENU_BUTTONS];
 static uint8_t active_custom_buttons;
+
+static char enciphered_text[512] = { 0 };
+static char cipher_key[26] = { 0 };
 
 static struct ship_type_entry *ship_type;
 static int nshiptypes = 0;
@@ -4907,7 +4911,7 @@ static int process_update_ship_packet(uint8_t opcode)
 		missile_count, phaser_charge, phaser_wavelength, shiptype,
 		reverse, trident, in_secure_area, docking_magnets, emf_detector,
 		nav_mode, warp_core_status, rts_mode, exterior_lights, alarms_silenced,
-		missile_lock_detected, rts_active_button;
+		missile_lock_detected, rts_active_button, comms_crypto_mode;
 	union quat orientation, sciball_orientation, weap_orientation, hg_ant_orientation;
 	union euler ypr;
 	struct entity *e;
@@ -4929,7 +4933,7 @@ static int process_update_ship_packet(uint8_t opcode)
 				&torpedoes, &power,
 				&dsheading,
 				&dbeamwidth);
-	packed_buffer_extract(&pb, "bbbwwbbbbbbbbbbbbwQQQQSSSbB7bbww",
+	packed_buffer_extract(&pb, "bbbwwbbbbbbbbbbbbwQQQQSSSbB8bbww",
 			&tloading, &throttle, &rpm, &fuel, &oxygen, &temp,
 			&scizoom, &weapzoom, &navzoom, &mainzoom,
 			&warpdrive,
@@ -4942,7 +4946,8 @@ static int process_update_ship_packet(uint8_t opcode)
 			&emf_detector,
 			&in_secure_area,
 			&docking_magnets, &nav_mode, &warp_core_status, &rts_mode,
-			&exterior_lights, &alarms_silenced, &missile_lock_detected, &rts_active_button, &wallet,
+			&exterior_lights, &alarms_silenced, &missile_lock_detected,
+			&comms_crypto_mode, &rts_active_button, &wallet,
 			&viewpoint_object);
 	tloaded = (tloading >> 4) & 0x0f;
 	tloading = tloading & 0x0f;
@@ -5029,6 +5034,7 @@ static int process_update_ship_packet(uint8_t opcode)
 	}
 	o->tsd.ship.reverse = reverse;
 	o->tsd.ship.ai[0].u.attack.victim_id = victim_id;
+	o->tsd.ship.comms_crypto_mode = comms_crypto_mode;
 	rc = 0;
 out:
 	pthread_mutex_unlock(&universe_mutex);
@@ -6129,6 +6135,7 @@ static struct comms_ui {
 	struct button *sci_onscreen_button;
 	struct button *main_onscreen_button;
 	struct button *custom_button;
+	struct button *cryptanalysis_button;
 	struct button *comms_transmit_button;
 	struct button *red_alert_button;
 	struct button *hail_mining_bot_button;
@@ -6145,6 +6152,9 @@ static struct comms_ui {
 	struct button *eject_button;
 	struct button *help_button;
 	struct button *about_button;
+	struct button *crypto_reset;
+	struct snis_text_input_box *crypt_alpha[26];
+	char crypt_alpha_text[26][3];
 #define FLEET_BUTTON_COLS 9
 #define FLEET_BUTTON_ROWS 10
 	struct button *fleet_unit_button[FLEET_BUTTON_COLS][FLEET_BUTTON_ROWS];
@@ -6199,7 +6209,7 @@ static int process_comm_transmission(void)
 	unsigned char buffer[sizeof(struct comms_transmission_packet) + 100];
 	char string[256];
 	uint8_t length, enciphered;
-	int rc, n;
+	int i, j, rc, n;
 	uint32_t comms_channel;
 	const char *channel_change_pattern = COMMS_CHANNEL_CHANGE_MSG " %u";
 	char *channel_change_msg;
@@ -6240,11 +6250,34 @@ static int process_comm_transmission(void)
 	case OPCODE_COMMS_UPDATE_ENCIPHERED:
 		string[255] = '\0';
 		string[length] = '\0';
+		memcpy(enciphered_text, string, length + 1);
 		break;
 	case OPCODE_COMMS_KEY_GUESS:
 		string[26] = '\0';
 		if (length != 26)
 			return -1; /* protocol error */
+		for (i = 0; i < 26; i++) {
+			char contents[3];
+			if (string[i] >= 'A' && string[i] <= 'Z') {
+				if (cipher_key[i] == string[i])
+					continue;
+				/* Clear out any box that already has these contents */
+				for (j = 0; j < 26; j++) {
+					if (comms_ui.crypt_alpha_text[j][0] == i + 'A') {
+						contents[0] = '_';
+						contents[1] = '\0';
+						contents[2] = '\0';
+						snis_text_input_box_set_contents(comms_ui.crypt_alpha[j], contents);
+					}
+				}
+				/* Set the correct box to these contents */
+				contents[0] = i + 'A';
+				contents[1] = '\0';
+				contents[2] = '\0';
+				snis_text_input_box_set_contents(comms_ui.crypt_alpha[string[i] - 'A'], contents);
+			}
+		}
+		memcpy(cipher_key, string, 26);
 		break;
 	default:
 		return -1; /* protocol error */
@@ -14664,6 +14697,15 @@ static void comms_about_button_pressed(__attribute__((unused)) void *x)
 	return;
 }
 
+static void comms_cryptanalysis_button_pressed(__attribute__((unused)) void *x)
+{
+	struct snis_entity *o;
+
+	if (!(o = find_my_ship()))
+		return;
+	queue_to_server(snis_opcode_pkt("bb", OPCODE_COMMS_CRYPTO, !o->tsd.ship.comms_crypto_mode));
+}
+
 static void comms_screen_red_alert_pressed(void *x)
 {
 	unsigned char new_alert_mode;
@@ -14875,6 +14917,56 @@ static void comms_input_entered()
 	printf("comms input entered\n");
 }
 
+static void send_updated_cipher_key_to_server(void)
+{
+	struct packed_buffer *pb;
+
+	/* Send the updated key guess to the server */
+	pb = packed_buffer_allocate(sizeof(struct comms_transmission_packet) + 26);
+	packed_buffer_append(pb, "bbbw", OPCODE_COMMS_TRANSMISSION, OPCODE_COMMS_KEY_GUESS, (uint8_t) 26, my_ship_id);
+	packed_buffer_append_raw(pb, cipher_key, 26);
+	queue_to_server(pb);
+}
+
+static void crypto_reset_button_pressed(void *x)
+{
+	int i;
+
+	memset(cipher_key, '_', 26);
+	send_updated_cipher_key_to_server();
+	for (i = 0; i < 26; i++)
+		snis_text_input_box_set_contents(comms_ui.crypt_alpha[i], "_");
+}
+
+static void crypt_alpha_input_entered(void *x)
+{
+	int letter = (intptr_t) x;
+	char value;
+	int i;
+
+	if (letter < 0 || letter > 25)
+		return;
+
+	value = toupper(comms_ui.crypt_alpha_text[letter][0]);
+	if ((value < 'A' || value > 'Z') && value != '_')
+		return;
+	/* If anything is mapped to this value, clear it now */
+	for (i = 0; i < 26; i++) {
+		if (cipher_key[i] == letter + 'A')
+			cipher_key[i] = '_';
+		if (toupper(comms_ui.crypt_alpha_text[i][0]) == value)
+			snis_text_input_box_set_contents(comms_ui.crypt_alpha[i], "_");
+	}
+	if (value >= 'A' && value <= 'Z') {
+		char v[3];
+		v[0] = value;
+		v[1] = '\0';
+		cipher_key[value - 'A'] = letter + 'A';
+		snis_text_input_box_set_contents(comms_ui.crypt_alpha[letter],  v);
+	}
+	send_updated_cipher_key_to_server();
+}
+
 static void disable_comms_rts_unit_ordering_buttons(void)
 {
 	int i;
@@ -14927,6 +15019,7 @@ static void init_comms_ui(void)
 	int button_color = UI_COLOR(comms_button);
 	int text_color = UI_COLOR(comms_text);
 	int red_alert_color = UI_COLOR(comms_red_alert);
+	float crypt_alphax, crypt_alphay;
 
 	comms_ui.comms_onscreen_button = snis_button_init(x, y, bw, bh, "COMMS", button_color,
 			NANO_FONT, comms_screen_button_pressed, (void *) 0);
@@ -14988,6 +15081,10 @@ static void init_comms_ui(void)
 	comms_ui.about_button = snis_button_init(x, y, bw, bh, "/ABOUT", button_color,
 			NANO_FONT, comms_about_button_pressed, (void *) 0);
 	snis_button_set_sound(comms_ui.about_button, UISND15);
+	x += bw;
+	comms_ui.cryptanalysis_button = snis_button_init(x, y, bw, bh, "CRYPTO", button_color,
+			NANO_FONT, comms_cryptanalysis_button_pressed, (void *) 0);
+	snis_button_set_sound(comms_ui.cryptanalysis_button, UISND16);
 
 	x = SCREEN_WIDTH - txx(150);
 	y = SCREEN_HEIGHT - 60;
@@ -15087,6 +15184,31 @@ static void init_comms_ui(void)
 	snis_slider_set_label_font(comms_ui.our_base_health, PICO_FONT);
 	snis_slider_set_label_font(comms_ui.enemy_base_health, PICO_FONT);
 
+	crypt_alphax = txx(20);
+	crypt_alphay = txy(450);
+	for (i = 0; i < 26; i++) {
+		memset(&comms_ui.crypt_alpha_text[i][0], 0, 3);
+		comms_ui.crypt_alpha[i] = snis_text_input_box_init(
+					crypt_alphax, crypt_alphay, txy(30), txx(30),
+					text_color, TINY_FONT,
+					&comms_ui.crypt_alpha_text[i][0], 3, &timer,
+					crypt_alpha_input_entered, (void *) (intptr_t) i);
+		snis_text_input_box_set_return(comms_ui.crypt_alpha[i],
+					crypt_alpha_input_entered);
+		crypt_alphax += txx((751 - 20) / 13.0);
+		if (crypt_alphax >= txx(750)) {
+			crypt_alphax = txx(20);
+			crypt_alphay += txy(70);
+		}
+	}
+
+
+	x = txx(700);
+	y = txy(570);
+	comms_ui.crypto_reset = snis_button_init(x, y, bw, bh, "RESET", button_color,
+			NANO_FONT, crypto_reset_button_pressed, (void *) 1);
+	snis_button_set_sound(comms_ui.crypto_reset, UISND10);
+
 	ui_add_text_window(comms_ui.tw, DISPLAYMODE_COMMS);
 	ui_add_button(comms_ui.comms_onscreen_button, DISPLAYMODE_COMMS,
 			"PROJECT COMMS SCREEN ON THE MAIN VIEW");
@@ -15118,6 +15240,8 @@ static void init_comms_ui(void)
 			"SHOW HELP SCREEN FOR COMMS TERMINAL");
 	ui_add_button(comms_ui.about_button, DISPLAYMODE_COMMS,
 			"SHOW VERSION INFO ABOUT SPACE NERDS IN SPACE");
+	ui_add_button(comms_ui.cryptanalysis_button, DISPLAYMODE_COMMS,
+			"CRYPTANALYSIS OF ENCRYPTED MESSAGES");
 	ui_add_button(comms_ui.red_alert_button, DISPLAYMODE_COMMS,
 			"ACTIVATE RED ALERT ALARM");
 	ui_add_button(comms_ui.hail_mining_bot_button, DISPLAYMODE_COMMS,
@@ -15130,6 +15254,8 @@ static void init_comms_ui(void)
 			"TRANSMIT ORDERS TO FLEET");
 	ui_add_button(comms_ui.rts_main_planet_button, DISPLAYMODE_COMMS,
 			"TRANSMIT ORDERS TO HOME PLANET");
+	ui_add_button(comms_ui.crypto_reset, DISPLAYMODE_COMMS,
+			"RESET CRYPTO KEY");
 	for (i = 0; i < NUM_RTS_BASES; i++) {
 		ui_add_button(comms_ui.rts_starbase_button[i], DISPLAYMODE_COMMS,
 				"TRANSMIT ORDERS TO STARBASE");
@@ -15150,6 +15276,9 @@ static void init_comms_ui(void)
 	ui_add_slider(comms_ui.our_base_health, DISPLAYMODE_COMMS, "OUR MAIN BASE HEALTH");
 	ui_add_slider(comms_ui.enemy_base_health, DISPLAYMODE_COMMS, "ENEMY MAIN BASE HEALTH");
 	ui_add_strip_chart(comms_ui.emf_strip_chart, DISPLAYMODE_COMMS);
+
+	for (i = 0; i < 26; i++)
+		ui_add_text_input_box(comms_ui.crypt_alpha[i], DISPLAYMODE_COMMS);
 	comms_ui.channel = 0;
 }
 
@@ -15227,7 +15356,7 @@ static void comms_setup_rts_buttons(int activate, struct snis_entity *player_shi
 	int set_planet_spinner = 0;
 	int checked_command = -1;
 
-	if (!activate) {
+	if (!activate || player_ship->tsd.ship.comms_crypto_mode) {
 		comms_deactivate_rts_buttons();
 		return;
 	}
@@ -16259,6 +16388,128 @@ static void show_science(GtkWidget *w)
 	show_common_screen(w, "SCIENCE");
 }
 
+static void update_comms_ui_visibility(struct snis_entity *o)
+{
+	int i;
+
+	if (o->tsd.ship.comms_crypto_mode) {
+		/* RTS button visibility is handled via comms_setup_rts_buttons(); */
+		/* custom button visibility is handled in process_custom_button(); */
+		ui_hide_widget(comms_ui.tw);
+		ui_hide_widget(comms_ui.comms_onscreen_button);
+		ui_hide_widget(comms_ui.nav_onscreen_button);
+		ui_hide_widget(comms_ui.weap_onscreen_button);
+		ui_hide_widget(comms_ui.eng_onscreen_button);
+		ui_hide_widget(comms_ui.damcon_onscreen_button);
+		ui_hide_widget(comms_ui.sci_onscreen_button);
+		ui_hide_widget(comms_ui.main_onscreen_button);
+		ui_unhide_widget(comms_ui.cryptanalysis_button);
+		ui_hide_widget(comms_ui.comms_transmit_button);
+		ui_hide_widget(comms_ui.red_alert_button);
+		ui_hide_widget(comms_ui.hail_mining_bot_button);
+		ui_hide_widget(comms_ui.mainscreen_comms);
+		ui_hide_widget(comms_ui.hail_button);
+		ui_hide_widget(comms_ui.channel_button);
+		ui_hide_widget(comms_ui.manifest_button);
+		ui_hide_widget(comms_ui.computer_button);
+		ui_hide_widget(comms_ui.eject_button);
+		ui_hide_widget(comms_ui.help_button);
+		ui_hide_widget(comms_ui.about_button);
+		ui_hide_widget(comms_ui.comms_input);
+		ui_hide_widget(comms_ui.mainzoom_slider);
+
+		ui_unhide_widget(comms_ui.crypto_reset);
+		for (i = 0; i < 26; i++)
+			ui_unhide_widget(comms_ui.crypt_alpha[i]);
+	} else {
+		/* RTS button visibility is handled via comms_setup_rts_buttons(); */
+		/* custom button visibility is handled in process_custom_button(); */
+		ui_unhide_widget(comms_ui.tw);
+		ui_unhide_widget(comms_ui.comms_onscreen_button);
+		ui_unhide_widget(comms_ui.nav_onscreen_button);
+		ui_unhide_widget(comms_ui.weap_onscreen_button);
+		ui_unhide_widget(comms_ui.eng_onscreen_button);
+		ui_unhide_widget(comms_ui.damcon_onscreen_button);
+		ui_unhide_widget(comms_ui.sci_onscreen_button);
+		ui_unhide_widget(comms_ui.main_onscreen_button);
+		ui_unhide_widget(comms_ui.cryptanalysis_button);
+		ui_unhide_widget(comms_ui.comms_transmit_button);
+		ui_unhide_widget(comms_ui.red_alert_button);
+		ui_unhide_widget(comms_ui.hail_mining_bot_button);
+		ui_unhide_widget(comms_ui.mainscreen_comms);
+		ui_unhide_widget(comms_ui.hail_button);
+		ui_unhide_widget(comms_ui.channel_button);
+		ui_unhide_widget(comms_ui.manifest_button);
+		ui_unhide_widget(comms_ui.computer_button);
+		ui_unhide_widget(comms_ui.eject_button);
+		ui_unhide_widget(comms_ui.help_button);
+		ui_unhide_widget(comms_ui.about_button);
+		ui_unhide_widget(comms_ui.comms_input);
+		ui_unhide_widget(comms_ui.mainzoom_slider);
+		for (i = 0; i < 26; i++)
+			ui_hide_widget(comms_ui.crypt_alpha[i]);
+		ui_hide_widget(comms_ui.crypto_reset);
+	}
+}
+
+static void show_comms_cryptanalysis(struct snis_entity *o)
+{
+	int i, len;
+	float x, y, dx;
+	struct scipher_key *key = NULL;
+	float crypt_alphax, crypt_alphay;
+
+	if (!o->tsd.ship.comms_crypto_mode)
+		return;
+
+	y = txy(100);
+	x = txx(10);
+	dx = txx(12);
+
+	key = scipher_make_key(cipher_key);
+
+	len = strlen(enciphered_text);
+	if (len == 0) {
+		sng_center_xy_draw_string("NO ENCRYPTED MESSAGES AVAILABLE", TINY_FONT, 400, 300);
+		return;
+	}
+	for (i = 0; i < len; i++) {
+		char ciphertext[2];
+		char plaintext[2];
+		ciphertext[0] = toupper(enciphered_text[i]);
+		ciphertext[1] = '\0';
+		plaintext[0] = scipher_decipher_char(ciphertext[0], key);
+		plaintext[1] = '\0';
+		sng_set_foreground(UI_COLOR(comms_text));
+		sng_abs_xy_draw_string(ciphertext, TINY_FONT, x, y);
+		sng_set_foreground(UI_COLOR(comms_plaintext));
+		sng_abs_xy_draw_string(plaintext, TINY_FONT, x, y + dx * 1.5);
+		x = x + dx;
+		if (x > txx(780)) {
+			x = txx(10);
+			y = y + dx * 4;
+		}
+	}
+	scipher_key_free(key);
+
+	sng_set_foreground(UI_COLOR(comms_text));
+	crypt_alphax = txx(20);
+	crypt_alphay = txy(435);
+	for (i = 0; i < 26; i++) {
+		char label[2];
+		label[0] = i + 'A';
+		label[1] = '\0';
+		sng_abs_xy_draw_string(label, TINY_FONT, crypt_alphax, crypt_alphay);
+		crypt_alphax += txx((751 - 20) / 13.0);
+		if (crypt_alphax >= txx(750)) {
+			crypt_alphax = txx(20);
+			crypt_alphay += txy(70);
+		}
+	}
+
+	sng_abs_xy_draw_string("E T A O N I R S H", TINY_FONT, txx(10), txy(580));
+}
+
 static void show_comms(GtkWidget *w)
 {
 	struct snis_entity *o;
@@ -16267,28 +16518,37 @@ static void show_comms(GtkWidget *w)
 	if (!(o = find_my_ship()))
 		return;
 
+	update_comms_ui_visibility(o); /* switches between cryptanalysis and normal mode */
+
+	show_comms_cryptanalysis(o);
+
 	float shield_ind_x_center = txx(710);
 	float shield_ind_y_center = txy(495);
 
-	if (o->sdata.shield_strength < 15) {
-		sng_set_foreground(UI_COLOR(comms_warning));
-		sng_center_xy_draw_string("SHIELDS ARE DOWN", NANO_FONT, shield_ind_x_center, shield_ind_y_center);
-	} else {
-		sng_set_foreground(UI_COLOR(comms_good_status));
-		char buf[80];
-		snprintf(buf, sizeof(buf), "SHIELDS ARE %d%%", (int)(o->sdata.shield_strength / 2.55));
-		sng_center_xy_draw_string(buf, NANO_FONT, shield_ind_x_center, shield_ind_y_center);
+	if (!o->tsd.ship.comms_crypto_mode) {
+		if (o->sdata.shield_strength < 15) {
+			sng_set_foreground(UI_COLOR(comms_warning));
+			sng_center_xy_draw_string("SHIELDS ARE DOWN", NANO_FONT,
+							shield_ind_x_center, shield_ind_y_center);
+		} else {
+			sng_set_foreground(UI_COLOR(comms_good_status));
+			char buf[80];
+			snprintf(buf, sizeof(buf), "SHIELDS ARE %d%%", (int)(o->sdata.shield_strength / 2.55));
+			sng_center_xy_draw_string(buf, NANO_FONT, shield_ind_x_center, shield_ind_y_center);
+		}
 	}
 	sng_set_foreground(UI_COLOR(comms_text));
 	format_date(current_date, sizeof(current_date), universe_timestamp());
 	snprintf(comms_buffer, sizeof(comms_buffer), "TIME: %s", current_date);
 	sng_abs_xy_draw_string(comms_buffer, TINY_FONT, txx(25), txy(55));
-	if (global_rts_mode) {
+	if (global_rts_mode && !o->tsd.ship.comms_crypto_mode) {
 		snprintf(comms_buffer, sizeof(comms_buffer), "FUNDS: $%6.0f", o->tsd.ship.wallet);
 		sng_abs_xy_draw_string(comms_buffer, TINY_FONT, txx(625), txy(350));
 	}
-	snprintf(comms_buffer, sizeof(comms_buffer), "CHANNEL: %u", comms_ui.channel);
-	sng_center_xy_draw_string(comms_buffer, NANO_FONT, shield_ind_x_center, shield_ind_y_center - txy(15));
+	if (!o->tsd.ship.comms_crypto_mode) {
+		snprintf(comms_buffer, sizeof(comms_buffer), "CHANNEL: %u", comms_ui.channel);
+		sng_center_xy_draw_string(comms_buffer, NANO_FONT, shield_ind_x_center, shield_ind_y_center - txy(15));
+	}
 	if (global_rts_mode) {
 		if (o->tsd.ship.rts_active_button != 255) {
 			snis_draw_rectangle(0, txx(10), txy(350), SCREEN_WIDTH - txx(200), txy(150));

@@ -183,6 +183,7 @@ struct ui_color_map {
 	struct ui_color_entry comms_button;
 	struct ui_color_entry comms_slider;
 	struct ui_color_entry comms_text;
+	struct ui_color_entry comms_plaintext;
 	struct ui_color_entry comms_red_alert;
 	struct ui_color_entry comms_warning;
 	struct ui_color_entry comms_neutral;
@@ -375,7 +376,8 @@ struct ui_color_map_accessor {
 
 	.u.map.comms_button		= { GREEN_FIXUP,	"comms-button" },
 	.u.map.comms_slider		= { GREEN_FIXUP,	"comms-slider" },
-	.u.map.comms_text		= { GREEN_FIXUP,	"comms-button" },
+	.u.map.comms_text		= { GREEN_FIXUP,	"comms-text" },
+	.u.map.comms_plaintext		= { WHITE,		"comms-plaintext" },
 	.u.map.comms_red_alert		= { RED,		"comms-red-alert" },
 	.u.map.comms_warning		= { RED,		"comms-warning" },
 	.u.map.comms_neutral		= { DARKGREEN,		"comms-neutral" },

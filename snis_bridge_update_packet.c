@@ -52,7 +52,7 @@ struct packed_buffer *build_bridge_update_packet(struct snis_entity *o, unsigned
 			o->x, (int32_t) UNIVERSE_DIM,
 			o->y, (int32_t) UNIVERSE_DIM,
 			o->z, (int32_t) UNIVERSE_DIM);
-	packed_buffer_append(pb, "RRRwwRRbbbwwbbbbbbbbbbbbwQQQbbwbbbb",
+	packed_buffer_append(pb, "RRRwwRRbbbwwbbbbbbbbbbbbbwQQQbbwbbbb",
 			o->tsd.ship.yaw_velocity,
 			o->tsd.ship.pitch_velocity,
 			o->tsd.ship.roll_velocity,
@@ -67,6 +67,7 @@ struct packed_buffer *build_bridge_update_packet(struct snis_entity *o, unsigned
 			o->tsd.ship.phaser_charge, o->tsd.ship.phaser_wavelength,
 			o->tsd.ship.shiptype,
 			o->tsd.ship.reverse, o->tsd.ship.trident,
+			o->tsd.ship.comms_crypto_mode,
 			o->tsd.ship.ai[0].u.attack.victim_id,
 			&o->orientation.vec[0],
 			&o->tsd.ship.sciball_orientation.vec[0],
@@ -103,6 +104,7 @@ void unpack_bridge_update_packet(struct snis_entity *o, struct packed_buffer *pb
 	unsigned char name[sizeof(o->sdata.name)];
 	int32_t iwallet;
 	uint8_t warp_core_status, exterior_lights, alarms_silenced, missile_lock_detected;
+	uint8_t comms_crypto_mode;
 	struct power_model_data power_data, coolant_data;
 
 	packed_buffer_extract(pb, "hSSS", &alive,
@@ -115,12 +117,12 @@ void unpack_bridge_update_packet(struct snis_entity *o, struct packed_buffer *pb
 				&torpedoes, &power,
 				&dsheading,
 				&dbeamwidth);
-	packed_buffer_extract(pb, "bbbwwbbbbbbbbbbbbwQQQbbwbbbb",
+	packed_buffer_extract(pb, "bbbwwbbbbbbbbbbbbbwQQQbbwbbbb",
 			&tloading, &throttle, &rpm, &fuel, &oxygen, &temp,
 			&scizoom, &weapzoom, &navzoom, &mainzoom,
 			&warpdrive,
 			&missile_count, &phaser_charge, &phaser_wavelength, &shiptype,
-			&reverse, &trident, &victim_id, &orientation.vec[0],
+			&reverse, &trident, &comms_crypto_mode, &victim_id, &orientation.vec[0],
 			&sciball_orientation.vec[0], &weap_orientation.vec[0], &in_secure_area,
 			&docking_magnets, (uint32_t *) &iwallet, &warp_core_status, &exterior_lights,
 			&alarms_silenced, &missile_lock_detected);
@@ -205,6 +207,7 @@ void unpack_bridge_update_packet(struct snis_entity *o, struct packed_buffer *pb
 	o->tsd.ship.exterior_lights = exterior_lights;
 	o->tsd.ship.alarms_silenced = alarms_silenced;
 	o->tsd.ship.missile_lock_detected = missile_lock_detected;
+	o->tsd.ship.comms_crypto_mode = comms_crypto_mode;
 }
 
 

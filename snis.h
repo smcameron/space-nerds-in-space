@@ -29,7 +29,7 @@
 #include "shape_collision.h"
 
 #define DEFAULT_SOLAR_SYSTEM "default"
-#define SNIS_PROTOCOL_VERSION "SNIS040"
+#define SNIS_PROTOCOL_VERSION "SNIS041"
 #define COMMON_MTWIST_SEED 97872
 /* dimensions of the "known" universe */
 #define XKNOWN_DIM 600000.0
@@ -568,6 +568,7 @@ struct ship_data {
 	uint32_t home_planet;	/* ID of planet NPC ships originate from */
 	int flames_timer;	/* how many ticks before damaged NPC ship stops emitting flames. */
 	uint8_t docking_magnets;	/* 1 = magnets engaged, 0 magnets disengaged */
+	uint8_t comms_crypto_mode;	/* 1 = comms crypto screen is on, 0 = normal comms */
 	uint8_t passenger_berths;	/* count of passenger berths */
 	uint8_t mining_bots;		/* count of mining bots */
 	uint32_t orbiting_object_id;	/* Object ID of planet when in "standard orbit" */
