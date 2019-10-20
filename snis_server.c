@@ -459,6 +459,8 @@ static struct bridge_data {
 #define MAX_SHIP_ID_CHIPS 5
 	uint32_t ship_id_chip[MAX_SHIP_ID_CHIPS]; /* The ship ID chips players on this bridge have collected */
 	int nship_id_chips;		/* Count of ship ID chips, number of ship_id_chip[] entries that are valid */
+	char enciphered_message[256];
+	char cipher_key[26], guessed_key[26];
 } bridgelist[MAXCLIENTS];
 static int nbridges = 0;		/* Number of elements present in bridgelist[] */
 
@@ -10178,6 +10180,7 @@ static int count_starbases(void);
  *   3. Clearing the ship's cargo bay.
  *   4. Resetting the ship's wallet to a default value.
  *   5. Clearing any passengers off the ship.
+ *   6. Clearing any enciphered message and cipher keys
  *
  * *charges is an "out" parameter indicating the fees charged for repairs and
  *  restocking
@@ -10265,6 +10268,9 @@ static void init_player(struct snis_entity *o, int reset_ship, float *charges)
 			/* Clear any custom buttons a Lua script might have created */
 			bridgelist[b].active_custom_buttons = 0;
 			memset(bridgelist[b].custom_button_text, 0, sizeof(bridgelist[b].custom_button_text));
+			memset(bridgelist[b].cipher_key, '_', sizeof(bridgelist[b].cipher_key));
+			memset(bridgelist[b].guessed_key, '_', sizeof(bridgelist[b].guessed_key));
+			memset(bridgelist[b].enciphered_message, 0, sizeof(bridgelist[b].enciphered_message));
 		}
 	}
 	quat_init_axis(&o->tsd.ship.computer_desired_orientation, 0, 1, 0, 0);
@@ -21965,6 +21971,31 @@ static void queue_up_client_custom_buttons(struct game_client *c)
 				b->custom_button_text[i][14]));
 }
 
+static void queue_up_client_cipher_update(struct game_client *c)
+{
+	struct bridge_data *b;
+	struct packed_buffer *pb;
+
+	if (c->bridge < 0 && c->bridge >= nbridges)
+		return;
+	b  = &bridgelist[c->bridge];
+	if ((universe_timestamp % 10) != 0) /* Update at 1 Hz */
+		return;
+
+	/* Send the current enciphered message for this bridge */
+	pb = packed_buffer_allocate(sizeof(struct comms_transmission_packet) + 255);
+	packed_buffer_append(pb, "bbb", OPCODE_COMMS_TRANSMISSION, OPCODE_COMMS_UPDATE_ENCIPHERED,
+				(uint8_t) strlen(b->enciphered_message) + 1);
+	packed_buffer_append_raw(pb, b->enciphered_message, strlen(b->enciphered_message) + 1);
+	pb_queue_to_client(c, pb);
+
+	/* Send the current key guess for this bridge */
+	pb = packed_buffer_allocate(sizeof(struct comms_transmission_packet) + 26);
+	packed_buffer_append(pb, "bbb", OPCODE_COMMS_TRANSMISSION, OPCODE_COMMS_KEY_GUESS, (uint8_t) 26);
+	packed_buffer_append_raw(pb, b->guessed_key, 26);
+	pb_queue_to_client(c, pb);
+}
+
 static void queue_up_client_updates(struct game_client *c)
 {
 	int i;
@@ -22000,6 +22031,7 @@ static void queue_up_client_updates(struct game_client *c)
 		queue_up_client_rts_update(c);
 		queue_up_client_volume_update(c);
 		queue_up_client_custom_buttons(c);
+		queue_up_client_cipher_update(c);
 		queue_latency_check(c);
 		/* printf("queued up %d updates for client\n", count); */
 
@@ -22923,6 +22955,9 @@ static int add_new_player(struct game_client *c)
 		bridgelist[nbridges].warp_core_critical = 0;
 		bridgelist[nbridges].active_custom_buttons = 0;
 		memset(bridgelist[nbridges].custom_button_text, 0, sizeof(bridgelist[nbridges].custom_button_text));
+		memset(bridgelist[nbridges].cipher_key, '_', sizeof(bridgelist[nbridges].cipher_key));
+		memset(bridgelist[nbridges].guessed_key, '_', sizeof(bridgelist[nbridges].guessed_key));
+		memset(bridgelist[nbridges].enciphered_message, 0, sizeof(bridgelist[nbridges].enciphered_message));
 		strcpy(bridgelist[nbridges].last_text_to_speech, "");
 		bridgelist[nbridges].text_to_speech_volume = 0.33;
 		bridgelist[nbridges].text_to_speech_volume_timestamp = universe_timestamp;

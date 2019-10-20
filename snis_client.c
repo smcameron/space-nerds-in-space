@@ -6213,21 +6213,41 @@ static int process_comm_transmission(void)
 	rc = snis_readsocket(gameserver_sock, string, length);
 	if (rc != 0)
 		return rc;
-	string[79] = '\0';
-	string[length] = '\0';
-	text_window_add_text(comms_ui.tw, string);
-	main_screen_add_text(string);
-	if (strstr(string, ": *** HAILING "))
-		wwviaudio_add_sound(COMMS_HAIL_SOUND);
-	/* This is a little hoaky.  The client doesn't actually know which
-	 * channel comms is on, that's 100% server side.  But we can snoop
-	 * channel change messages so we can have a channel indicator.
-	 */
-	channel_change_msg = strstr(string, COMMS_CHANNEL_CHANGE_MSG);
-	if (channel_change_msg) {
-		n = sscanf(channel_change_msg, channel_change_pattern, &comms_channel);
-		if (n == 1)
-			comms_ui.channel = comms_channel;
+
+	switch (enciphered) {
+	case OPCODE_COMMS_PLAINTEXT:
+		string[79] = '\0';
+		string[length] = '\0';
+		text_window_add_text(comms_ui.tw, string);
+		main_screen_add_text(string);
+		if (strstr(string, ": *** HAILING "))
+			wwviaudio_add_sound(COMMS_HAIL_SOUND);
+		/* This is a little hoaky.  The client doesn't actually know which
+		 * channel comms is on, that's 100% server side.  But we can snoop
+		 * channel change messages so we can have a channel indicator.
+		 */
+		channel_change_msg = strstr(string, COMMS_CHANNEL_CHANGE_MSG);
+		if (channel_change_msg) {
+			n = sscanf(channel_change_msg, channel_change_pattern, &comms_channel);
+			if (n == 1)
+				comms_ui.channel = comms_channel;
+		}
+		break;
+	case OPCODE_COMMS_ENCIPHERED:
+		string[255] = '\0';
+		string[length] = '\0';
+		break;
+	case OPCODE_COMMS_UPDATE_ENCIPHERED:
+		string[255] = '\0';
+		string[length] = '\0';
+		break;
+	case OPCODE_COMMS_KEY_GUESS:
+		string[26] = '\0';
+		if (length != 26)
+			return -1; /* protocol error */
+		break;
+	default:
+		return -1; /* protocol error */
 	}
 	return 0;
 }
