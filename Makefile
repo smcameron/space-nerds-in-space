@@ -1157,6 +1157,12 @@ snis_nl:	snis_nl.o ${OD}/string-utils.o ${OD}/spelled_numbers.o
 $(OD)/spelled_numbers.o:	spelled_numbers.c spelled_numbers.h Makefile ${ODT}
 	$(Q)$(COMPILE)
 
+$(OD)/scipher.o:	scipher.c scipher.h mathutils.h
+	$(Q)$(COMPILE)
+
+test_scipher:	scipher.c scipher.h mathutils.o mtwist.o
+	$(CC) -g -fsanitize=address -DTEST_SCIPHER -o test_scipher scipher.c mathutils.o mtwist.o -lm
+
 spelled_numbers:	spelled_numbers.c
 	$(CC) -g -DSPELLED_NUMBERS_TEST_CASE -o spelled_numbers spelled_numbers.c
 
@@ -1175,7 +1181,7 @@ mostly-clean:
 	bin/test-quat bin/test-fleet bin/test-mtwist bin/snis-device-io-sample-1 bin/check-endianness \
 	${OD}/*.o ${ODT} bin/test-matrix  bin/test_solarsystem_config  bin/test-space-partition \
 	bin/device-io-sample-1 bin/print_ship_attributes bin/snis_test_audio bin/test_crater \
-	bin/test_key_value_parser bin/test_snis_dmx \
+	bin/test_key_value_parser bin/test_snis_dmx test_scipher \
 	${MANSRCDIR}/earthlike.1.gz  ${MANSRCDIR}/snis_client.6.gz  ${MANSRCDIR}/snis_server.6.gz  \
 	${MANSRCDIR}/snis_test_audio.1.gz
 	rm -f ${BIN}
