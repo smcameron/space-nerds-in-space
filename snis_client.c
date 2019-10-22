@@ -252,6 +252,8 @@ static uint8_t active_custom_buttons;
 
 static char enciphered_text[512] = { 0 };
 static char cipher_key[26] = { 0 };
+static int cipher_freq[26] = { 0 }; /* Frequency count for each letter of the alphabet in the enciphered message */
+static char cipher_alpha_by_freq[27]; /* Letters of enciphered message sorted by frequency, null terminated */
 
 static struct ship_type_entry *ship_type;
 static int nshiptypes = 0;
@@ -6203,6 +6205,34 @@ static void do_pagedown(void)
 	}
 }
 
+static int cipher_freq_compare(const void *a, const void *b)
+{
+	char x, y;
+	int f1, f2;
+
+	x = *(char *) a;
+	y = *(char *) b;
+
+	if (x < 'A' || x > 'Z' || y < 'A' || y > 'Z')
+		return 0;
+	f1 = cipher_freq[x - 'A'];
+	f2 = cipher_freq[y - 'A'];
+	return f2 - f1;
+}
+
+/* Sort the letters of the enciphered message by frequency */
+static void sort_cipher_alpha_by_freq(int cipher_freq[], char cipher_alpha_by_freq[])
+{
+	int i;
+
+	fprintf(stderr, "Sorting...\n");
+
+	for (i = 0; i < 26; i++)
+		fprintf(stderr, "Freq[%d] = %d\n", i, cipher_freq[i]);
+	memcpy(cipher_alpha_by_freq, "ABCDEFGHIJKLMNOPQRSTUVWXYZ", 27);
+	qsort(cipher_alpha_by_freq, 26, 1, cipher_freq_compare);
+}
+
 static void main_screen_add_text(char *msg);
 static int process_comm_transmission(void)
 {
@@ -6251,6 +6281,13 @@ static int process_comm_transmission(void)
 		string[255] = '\0';
 		string[length] = '\0';
 		memcpy(enciphered_text, string, length + 1);
+		memset(cipher_freq, 0, sizeof(cipher_freq));
+		for (i = 0; enciphered_text[i]; i++) {
+			int c = toupper(enciphered_text[i]);
+			if (c >= 'A' && c <= 'Z')
+				cipher_freq[c - 'A']++;
+		}
+		sort_cipher_alpha_by_freq(cipher_freq, cipher_alpha_by_freq);
 		break;
 	case OPCODE_COMMS_KEY_GUESS:
 		string[26] = '\0';
@@ -15185,7 +15222,7 @@ static void init_comms_ui(void)
 	snis_slider_set_label_font(comms_ui.enemy_base_health, PICO_FONT);
 
 	crypt_alphax = txx(20);
-	crypt_alphay = txy(450);
+	crypt_alphay = txy(430);
 	for (i = 0; i < 26; i++) {
 		memset(&comms_ui.crypt_alpha_text[i][0], 0, 3);
 		comms_ui.crypt_alpha[i] = snis_text_input_box_init(
@@ -16494,7 +16531,7 @@ static void show_comms_cryptanalysis(struct snis_entity *o)
 
 	sng_set_foreground(UI_COLOR(comms_text));
 	crypt_alphax = txx(20);
-	crypt_alphay = txy(435);
+	crypt_alphay = txy(415);
 	for (i = 0; i < 26; i++) {
 		char label[2];
 		label[0] = i + 'A';
@@ -16507,7 +16544,20 @@ static void show_comms_cryptanalysis(struct snis_entity *o)
 		}
 	}
 
-	sng_abs_xy_draw_string("E T A O N I R S H", TINY_FONT, txx(10), txy(580));
+	for (i = 0; i < 26; i++) {
+		char letter[2];
+		letter[0] = cipher_alpha_by_freq[i];
+		letter[1] = '\0';
+		sng_abs_xy_draw_string(letter, TINY_FONT, txx(10 + txx(10) * i), txy(565));
+	}
+
+	char english_freq[] = "ETAONIRSH";
+	for (i = 0; english_freq[i]; i++) {
+		char letter[2];
+		letter[0] = english_freq[i];
+		letter[1] = '\0';
+		sng_abs_xy_draw_string(letter, TINY_FONT, txx(10 + txx(10) * i), txy(585));
+	}
 }
 
 static void show_comms(GtkWidget *w)
