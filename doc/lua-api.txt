@@ -313,6 +313,9 @@ comms_transmission(object_id, transmission); -- causes the object to transmit th
 	specified transmission via comms on channel 0.  Note: you may prefer to
 	use comms_channel_transmit() instead.  See below.
 
+comms_enciphered_transmission(object_id, transmission, cipher_key)
+	-- sends an enciphered transmission (see generate_cipher_key, below).
+
 comms_channel_listen(name, channel, callback)
 
 	Note: if you transmit on a channel you are listening to, you will recieve your
@@ -362,6 +365,11 @@ comms_channel_transmit(name, channel, text)
 	Example:
 
 	comms_channel_transmit("Bob", 10, "Hi from Bob!");
+
+comms_channel_enciphered_transmission(name, channel, text, key)
+
+	Same as comms_channel_transmit, but enciphered (see generate_cipher_key, below).
+	NOTE: THIS FUNCTION IS NOT YET IMPLEMENTED.
 
 text_to_speech(player_ship_id, text_to_speak); -- causes player ship to use text to speech to
 	say the specified text.
@@ -935,6 +943,16 @@ set_starbase_factions_allowed(starbase_id, faction_mask)
 	permitted to dock.  The faction mask is only honored if the server side
 	tweakable variable "docking_by_faction" is non-zero (e.g. via
 	set_variable("docking_by_faction", 1);)
+
+generate_cipher_key()
+
+	returns a 26 character simple substitution cipher key (See scipher.h).
+
+encipher_string(string, cipher_key)
+
+	Given a string and a cipher key (from e.g. generate_cipher_key()).
+	returns an enciphered string.
+	NOTE: THIS IS NOT YET IMPLEMENTED.
 
 INTERACTIVE FICTION:
 

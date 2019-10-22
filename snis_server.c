@@ -119,6 +119,7 @@
 #include "snis_asset_dir.h"
 #include "shape_collision.h"
 #include "planetary_ring_data.h"
+#include "scipher.h"
 
 #define CLIENT_UPDATE_PERIOD_NSECS 500000000
 #define MAXCLIENTS 100
@@ -17949,17 +17950,62 @@ static int l_comms_transmission(lua_State *l)
 	if (i < 0)
 		goto error;
 	transmitter = &go[i];
-	switch (transmitter->type) {
-	case OBJTYPE_STARBASE:
-		send_comms_packet(transmitter, transmitter->sdata.name, 0, "%s", transmission);
-		break;
-	default:
-		send_comms_packet(transmitter, transmitter->sdata.name, 0, "%s", transmission);
-		break;
-	}
+	send_comms_packet(transmitter, transmitter->sdata.name, 0, "%s", transmission);
 error:
 	pthread_mutex_unlock(&universe_mutex);
 	return 0;
+}
+
+static void send_comms_enciphered_packet(struct snis_entity *transmitter, char *sender,
+						uint32_t channel, const char *format, ...);
+static int l_comms_enciphered_transmission(lua_State *l)
+{
+	int i;
+	const double transmitter_id = luaL_checknumber(l, 1);
+	const char *transmission = luaL_checkstring(l, 2);
+	const char *cipher_key = luaL_checkstring(l, 3);
+	char *ck, *tr;
+	struct snis_entity *transmitter;
+	struct scipher_key *key;
+	char *ciphertext;
+
+	pthread_mutex_lock(&universe_mutex);
+	i = lookup_by_id(transmitter_id);
+	if (i < 0)
+		goto error;
+	transmitter = &go[i];
+	if (strlen(cipher_key) != 26)
+		goto error;
+	ck = strdup(cipher_key);
+	key = scipher_make_key(ck);
+	ciphertext = strdup(transmission);
+	tr = strdup(transmission);
+	scipher_encipher(tr, ciphertext, strlen(transmission) + 1, key);
+	free(tr);
+	send_comms_enciphered_packet(transmitter, transmitter->sdata.name, 0, "%s", ciphertext);
+	/* We also need to update bridgelist[x].enciphered_message and key for all x */
+	for (i = 0; i < nbridges; i++) {
+		snprintf(bridgelist[i].enciphered_message, sizeof(bridgelist[i].enciphered_message), "%s",
+				ciphertext);
+		memcpy(bridgelist[i].cipher_key, ck, 26);
+	}
+	free(ck);
+	scipher_key_free(key);
+error:
+	pthread_mutex_unlock(&universe_mutex);
+	return 0;
+}
+
+static int l_generate_cipher_key(lua_State *l)
+{
+	struct scipher_key *k;
+	char keystring[27];
+
+	k = scipher_make_key(NULL);
+	scipher_key_to_string(k, keystring);
+	keystring[26] = '\0';
+	lua_pushstring(l, keystring);
+	return 1;
 }
 
 static int l_comms_channel_transmit(lua_State *l)
@@ -22481,6 +22527,34 @@ static void send_comms_packet(struct snis_entity *transmitter, char *sender, uin
 	queue_comms_to_lua_channels(sender, channel, tmpbuf2);
 }
 
+/* Note: be careful when using this that no part of format comes from the user. in that case, use: "%s", userstring */
+static void send_comms_enciphered_packet(struct snis_entity *transmitter,
+						char *sender, uint32_t channel, const char *format, ...)
+{
+	struct packed_buffer *pb;
+	char tmpbuf[100], tmpbuf2[100];
+	va_list arg_ptr;
+
+	/* REMINDER: If the format of OPCODE_COMMS_TRANSMISSION ever changes, you need to
+	 * fix distort_comms_message in snis_server.c too.
+	 */
+
+	va_start(arg_ptr, format);
+	vsnprintf(tmpbuf2, sizeof(tmpbuf2) - 1, format, arg_ptr);
+	va_end(arg_ptr);
+	snprintf(tmpbuf, sizeof(tmpbuf) - 1, "%s | %s", sender, tmpbuf2);
+	pb = packed_buffer_allocate(sizeof(struct comms_transmission_packet) + 100);
+	packed_buffer_append(pb, "bbb", OPCODE_COMMS_TRANSMISSION, OPCODE_COMMS_ENCIPHERED,
+				(uint8_t) strlen(tmpbuf) + 1);
+	packed_buffer_append_raw(pb, tmpbuf, strlen(tmpbuf) + 1);
+	if (channel == 0)
+		send_comms_packet_to_all_clients(transmitter, pb, ROLE_ALL);
+	else
+		send_comms_packet_to_all_bridges_on_channel(transmitter, channel, pb, ROLE_ALL);
+	/* Send comms to any lua scripts that are listening */
+	queue_comms_to_lua_channels(sender, channel, tmpbuf2);
+}
+
 static void send_respawn_time(struct game_client *c,
 	struct snis_entity *o)
 {
@@ -23724,6 +23798,7 @@ static void setup_lua(void)
 	add_lua_callable_fn(l_register_callback, "register_callback");
 	add_lua_callable_fn(l_register_timer_callback, "register_timer_callback");
 	add_lua_callable_fn(l_comms_transmission, "comms_transmission");
+	add_lua_callable_fn(l_comms_enciphered_transmission, "comms_enciphered_transmission");
 	add_lua_callable_fn(l_get_object_name, "get_object_name");
 	add_lua_callable_fn(l_get_player_damage, "get_player_damage");
 	add_lua_callable_fn(l_set_player_damage, "set_player_damage");
@@ -23788,6 +23863,7 @@ static void setup_lua(void)
 	add_lua_callable_fn(l_destroy_ship, "destroy_ship");
 	add_lua_callable_fn(l_add_torpedo, "add_torpedo");
 	add_lua_callable_fn(l_set_starbase_factions_allowed, "set_starbase_factions_allowed");
+	add_lua_callable_fn(l_generate_cipher_key, "generate_cipher_key");
 }
 
 static int run_initial_lua_scripts(void)
