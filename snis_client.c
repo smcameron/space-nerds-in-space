@@ -6239,10 +6239,12 @@ static int process_comm_transmission(void)
 	unsigned char buffer[sizeof(struct comms_transmission_packet) + 100];
 	char string[256];
 	uint8_t length, enciphered;
-	int i, j, rc, n;
+	int i, e, j, rc, n;
 	uint32_t comms_channel;
 	const char *channel_change_pattern = COMMS_CHANNEL_CHANGE_MSG " %u";
 	char *channel_change_msg;
+	char enc_msg[80];
+	const int linewidth = 75;
 
 	/* REMINDER: If the format of OPCODE_COMMS_TRANSMISSION ever changes, you need to
 	 * fix distort_comms_message in snis_server.c too.
@@ -6274,8 +6276,24 @@ static int process_comm_transmission(void)
 		}
 		break;
 	case OPCODE_COMMS_ENCIPHERED:
+		text_window_add_color_text(comms_ui.tw, "ENCRYPTED MESSAGE RECIEVED", UI_COLOR(comms_encrypted));
 		string[255] = '\0';
 		string[length] = '\0';
+		enc_msg[0] = '\0';
+		e = 0;
+		for (i = 0; string[i]; i++) {
+			e = i % linewidth;
+			enc_msg[e] = string[i];
+			if (e == linewidth - 1) {
+				enc_msg[e + 1] = '\0';
+				text_window_add_color_text(comms_ui.tw, enc_msg, UI_COLOR(comms_encrypted));
+			}
+		}
+		if (e != linewidth - 1) {
+			enc_msg[e + 1] = '\0';
+			text_window_add_color_text(comms_ui.tw, enc_msg, UI_COLOR(comms_encrypted));
+		}
+		text_window_add_color_text(comms_ui.tw, "[ - - - ]", UI_COLOR(comms_encrypted));
 		break;
 	case OPCODE_COMMS_UPDATE_ENCIPHERED:
 		string[255] = '\0';
