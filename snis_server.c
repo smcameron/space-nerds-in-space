@@ -10168,11 +10168,6 @@ static void repair_damcon_systems(struct snis_entity *o)
 static void update_passenger(int i, int nstarbases);
 static int count_starbases(void);
 
-#define ENCMSG "GPVS TDPSF BOE TFWFO ZFBST BHP PVS GBUIFST " \
-	"CSPVHIU GPSUI PO UIJT DPOUJOFOU, B OFX OBUJPO, " \
-	"DPODFJWFE JO MJCFSUZ, BOE EFEJDBUFE UP UIF " \
-	"QSPQPTJUJPO UIBU BMM NFO BSF DSFBUFE FRVBM."
-
 
 /* init_player()
  * o is the player ship
@@ -10278,7 +10273,6 @@ static void init_player(struct snis_entity *o, int reset_ship, float *charges)
 			memset(bridgelist[b].cipher_key, '_', sizeof(bridgelist[b].cipher_key));
 			memset(bridgelist[b].guessed_key, '_', sizeof(bridgelist[b].guessed_key));
 			memset(bridgelist[b].enciphered_message, 0, sizeof(bridgelist[b].enciphered_message));
-			snprintf(bridgelist[b].enciphered_message, 255, ENCMSG);
 		}
 	}
 	quat_init_axis(&o->tsd.ship.computer_desired_orientation, 0, 1, 0, 0);
@@ -23077,7 +23071,6 @@ static int add_new_player(struct game_client *c)
 		memset(bridgelist[nbridges].cipher_key, '_', sizeof(bridgelist[nbridges].cipher_key));
 		memset(bridgelist[nbridges].guessed_key, '_', sizeof(bridgelist[nbridges].guessed_key));
 		memset(bridgelist[nbridges].enciphered_message, 0, sizeof(bridgelist[nbridges].enciphered_message));
-		snprintf(bridgelist[nbridges].enciphered_message, 255, ENCMSG);
 		strcpy(bridgelist[nbridges].last_text_to_speech, "");
 		bridgelist[nbridges].text_to_speech_volume = 0.33;
 		bridgelist[nbridges].text_to_speech_volume_timestamp = universe_timestamp;
