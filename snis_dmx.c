@@ -143,7 +143,7 @@ static void *dmx_writer_thread(void *arg)
 		dmx_packet[1] = NULL_START_BYTE;
 		bytes_left = sizeof(dmx_packet);
 		do {
-			rc = write(t->fd, dmx_packet, sizeof(dmx_packet));
+			rc = write(t->fd, dmx_packet + sizeof(dmx_packet) - bytes_left, bytes_left);
 			if (rc >= 0) {
 				bytes_left -= rc;
 			} else if (rc == -1 && errno == EINTR) {
