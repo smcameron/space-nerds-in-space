@@ -40,7 +40,7 @@ int snis_dmx_start_main_thread(char *device);
 int snis_dmx_add_light(int handle, int size);
 
 /* Functions for setting light levels */
-int snis_dmx_set_rgb(int handle, int number, uint8_t r, uint8_t b, uint8_t g);
+int snis_dmx_set_rgb(int handle, int number, uint8_t r, uint8_t g, uint8_t b);
 int snis_dmx_set_u8_level(int handle, int number, uint8_t level);
 int snis_dmx_set_be16_level(int handle, int number, uint16_t level);
 
