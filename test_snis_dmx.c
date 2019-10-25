@@ -13,6 +13,8 @@ void usage(void)
 	fprintf(stderr, "       blink once every two seconds twenty times.\n");
 }
 
+#define NLIGHTS 128
+
 int main(int argc, char *argv[])
 {
 	int i, j, dmx;
@@ -27,17 +29,17 @@ int main(int argc, char *argv[])
 			argv[1], errno ? strerror(errno) : "Unknown error");
 		return 1;
 	}
-	for (i = 0; i < 512; i++)
-		snis_dmx_add_light(dmx, 1);
+	for (i = 0; i < NLIGHTS; i++)
+		snis_dmx_add_light(dmx, 4);
 
 	for (i = 0; i < 20; i++) {
 		/* Turn on every possible light */
-		for (j = 0; j < 512; j++)
-			snis_dmx_set_u8_level(dmx, j, 255);
+		for (j = 0; j < NLIGHTS; j++)
+			snis_dmx_set_rgb(dmx, j, 100, 100, 100);
 		sleep(1);
 		/* Turn off every possible light */
-		for (j = 0; j < 512; j++)
-			snis_dmx_set_u8_level(dmx, j, 0);
+		for (j = 0; j < NLIGHTS; j++)
+			snis_dmx_set_rgb(dmx, j, 0, 0, 0);
 		sleep(1);
 	}
 	snis_dmx_close_device(dmx);

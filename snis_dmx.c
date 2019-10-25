@@ -38,11 +38,11 @@
 
 #define MAX_DMX_DEVICE_CHAINS 10 /* Number of serial ports connected to DMX device chains */
 #define DMX_BAUD_RATE 250000	 /* This is what the standard says, so you can't really change this. */
-#define DMX_PACKET_SIZE 514	 /* Mark after break, plus NULL START plus 512 bytes of data */
+#define DMX_PACKET_SIZE 512
 #define MARK_AFTER_BREAK (0xff)
 #define NULL_START_BYTE (0x00)
-#define SERIAL_BREAK_LENGTH_MS 10 /* Send BREAK for this many ms before sending next packet */
-#define SLEEP_MS_BETWEEN_PACKETS 1 /* Wait this many ms after break sent before sending packet */
+#define SERIAL_BREAK_LENGTH_MS 80 /* Send BREAK for this many ms before sending next packet */
+#define SLEEP_MS_BETWEEN_PACKETS 100 /* Wait this many ms after break sent before sending packet */
 
 struct dmx_light {
 	int16_t byte; /* Which byte in the DMX packet does this light start in? */
@@ -109,11 +109,30 @@ int snis_dmx_close_device(int handle)
 	return 0;
 }
 
+static int send_dmx_data(int fd, uint8_t *data, int bytes_to_send)
+{
+	int rc, bytes_left = bytes_to_send;
+	do {
+		rc = write(fd, data + bytes_to_send - bytes_left, bytes_left);
+		if (rc >= 0) {
+			bytes_left -= rc;
+		} else if (rc == -1 && errno == EINTR) {
+			continue;
+		} else {
+			/* Some error on the file descriptor */
+			return -1;
+		}
+	} while (bytes_left > 0);
+	return 0;
+}
+
 static void *dmx_writer_thread(void *arg)
 {
 	struct per_thread_data *t = arg;
 	uint8_t dmx_packet[sizeof(t->dmx_packet)];
-	int bytes_left, rc;
+	/* This entec start code was cribbed from EmptyEpsilon code */
+	uint8_t entec_start_code[] = { 0x7E, 0x06, 512 & 0xff, 512 >> 8, 0x00 };
+	uint8_t entec_end_code[] = { 0xE7 };
 
 	do {
 		/* Lock, copy and unlock, so that we don't block in write() while holding the lock */
@@ -136,23 +155,12 @@ static void *dmx_writer_thread(void *arg)
 		 * 0xff for the MARK AFTER BREAK, then our data, then maybe that... should
 		 * do it? Maybe?
 		 */
-		tcsendbreak(t->fd, SERIAL_BREAK_LENGTH_MS); /* some small ms of break, this is not super portable */
+		// tcsendbreak(t->fd, SERIAL_BREAK_LENGTH_MS); /* some small ms of break, this is not super portable */
 
 		/* Write packet to device */
-		dmx_packet[0] = MARK_AFTER_BREAK;
-		dmx_packet[1] = NULL_START_BYTE;
-		bytes_left = sizeof(dmx_packet);
-		do {
-			rc = write(t->fd, dmx_packet + sizeof(dmx_packet) - bytes_left, bytes_left);
-			if (rc >= 0) {
-				bytes_left -= rc;
-			} else if (rc == -1 && errno == EINTR) {
-				continue;
-			} else {
-				/* Some error on the file descriptor */
-				return NULL;
-			}
-		} while (bytes_left > 0);
+		send_dmx_data(t->fd, entec_start_code, sizeof(entec_start_code));
+		send_dmx_data(t->fd, dmx_packet, sizeof(dmx_packet));
+		send_dmx_data(t->fd, entec_end_code, sizeof(entec_end_code));
 		thread_safe_msleep(SLEEP_MS_BETWEEN_PACKETS);
 	} while (1);
 }
@@ -173,7 +181,7 @@ static int setup_serial_port(int fd, char *device)
 	rc = ioctl(fd, TCGETS2, &options);
 	if (rc) {
 		fprintf(stderr, "snis_dmx: ioctl TCGETS2 failed: %s\n", strerror(errno));
-		return rc;
+		/* Just continue.  Lixada USB to dmx dongle gives "inappropriate ioctl for device." */
 	}
 
 	/* Set baud rate to 250000 (DMX_BAUD_RATE) */
@@ -198,20 +206,20 @@ static int setup_serial_port(int fd, char *device)
 	rc = ioctl(fd, TCSETS2, &options);
 	if (rc) {
 		fprintf(stderr, "ioctl TCSETS2 failed: %s\n", strerror(errno));
-		return rc;
+		/* Just continue.  Lixada USB to dmx dongle gives "inappropriate ioctl for device." */
 	}
 	/* Check to see if our baud rate took */
 	memset(&options, 0, sizeof(options));
 	rc = ioctl(fd, TCGETS2, &options);
 	if (rc) {
 		fprintf(stderr, "ioctl TCGETS2 failed: %s\n", strerror(errno));
-		return rc;
+		/* Just continue.  Lixada USB to dmx dongle gives "inappropriate ioctl for device." */
 	}
+#if 0
 	if (options.c_ispeed != DMX_BAUD_RATE) {
 		fprintf(stderr,
 			"snis_dmx: Failed to set input to %d baud on %s, currently set to %d baud.\n",
 			DMX_BAUD_RATE, device, options.c_ispeed);
-		rc = -1;
 	}
 	if (options.c_ospeed != DMX_BAUD_RATE) {
 		fprintf(stderr,
@@ -219,6 +227,8 @@ static int setup_serial_port(int fd, char *device)
 			DMX_BAUD_RATE, device, options.c_ospeed);
 		rc = -1;
 	}
+#endif
+	rc = 0;
 	return rc;
 }
 
@@ -331,14 +341,15 @@ int snis_dmx_set_rgb(int handle, int number, uint8_t r, uint8_t g, uint8_t b)
 		return -1;
 	t = &thread_data[handle];
 	pthread_mutex_lock(&mutex);
-	if (!t->thread_in_use || t->fd < 0 || number >= t->nlights || t->light[number].size != 3)
+	if (!t->thread_in_use || t->fd < 0 || number >= t->nlights || t->light[number].size != 4)
 		goto error;
-	offset = t->light[number].byte + 2; /* +2 to account for MARK AFTER BREAK and NULL START byte */
+	offset = t->light[number].byte;
 	if (offset < 0 || offset >= sizeof(t->dmx_packet))
 		goto error;
 	t->dmx_packet[offset] = r;
 	t->dmx_packet[offset + 1] = g;
 	t->dmx_packet[offset + 2] = b;
+	t->dmx_packet[offset + 3] = 0;
 	pthread_mutex_unlock(&mutex);
 	return 0;
 error:
@@ -359,7 +370,7 @@ int snis_dmx_set_u8_level(int handle, int number, uint8_t level)
 	pthread_mutex_lock(&mutex);
 	if (!t->thread_in_use || t->fd < 0 || number >= t->nlights || t->light[number].size != 1)
 		goto error;
-	offset = t->light[number].byte + 2; /* +2 to account for MARK AFTER BREAK and NULL START byte */
+	offset = t->light[number].byte;
 	if (offset < 0 || offset >= sizeof(t->dmx_packet))
 		goto error;
 	t->dmx_packet[offset] = level;
@@ -387,7 +398,7 @@ int snis_dmx_set_be16_level(int handle, int number, uint16_t level)
 	pthread_mutex_lock(&mutex);
 	if (!t->thread_in_use || t->fd < 0 || number >= t->nlights || t->light[number].size != 2)
 		goto error;
-	offset = t->light[number].byte + 2; /* +2 to account for MARK AFTER BREAK and NULL START byte */
+	offset = t->light[number].byte;
 	if (offset < 0 || offset >= sizeof(t->dmx_packet))
 		goto error;
 	/* Convert native CPU endian u16 to big endian u16 */
