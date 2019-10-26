@@ -151,8 +151,14 @@ static void snis_slider_draw_vertical(struct slider *s)
 	if (!s->clicked)
 		sng_set_foreground(s->color);
 
-	if (s->clicked)
+	if (s->clicked) {
 		snis_slider_draw_vertical_arrow(s, ty1);
+		if (slider_mouse_y && (s->timer & 0x04) == 0 &&
+			snis_slider_mouse_inside(s, *slider_mouse_x, *slider_mouse_y)) {
+			ty1 = sng_pixely_to_screeny(*slider_mouse_y);
+			snis_slider_draw_vertical_arrow(s, ty1);
+		}
+	}
 	/* sng_abs_xy_draw_string(s->label, s->font, s->x + s->length + 5, s->y + 2 * s->height / 3);  */
 } 
 
@@ -215,8 +221,14 @@ void snis_slider_draw(struct slider *s)
 
 	tx1 = (s->input * s->length) + s->x;
 
-	if (s->clicked)
+	if (s->clicked) {
 		snis_slider_draw_arrow(s, tx1);
+		if (slider_mouse_x && (s->timer & 0x04) == 0 &&
+			snis_slider_mouse_inside(s, *slider_mouse_x, *slider_mouse_y)) {
+			tx1 = sng_pixelx_to_screenx(*slider_mouse_x);
+			snis_slider_draw_arrow(s, tx1);
+		}
+	}
 	sng_abs_xy_draw_string(s->label, s->font,
 				s->x + s->length + 5.0, s->y + 2.0 * s->height / 3.0);
 }

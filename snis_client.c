@@ -22841,6 +22841,8 @@ int main(int argc, char *argv[])
 	setup_text_to_speech_thread();
 	ecx = entity_context_new(5000, 5000);
 
+	snis_slider_mouse_position_query(&mouse.x, &mouse.y);
+
 	ssgl_register_for_bcast_packets(lobby_list_change_notification); /* must happen after init_net_setup_ui() */
 	snis_protocol_debugging(1);
 
