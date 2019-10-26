@@ -129,7 +129,6 @@ static void snis_slider_draw_vertical(struct slider *s)
 		f = 0.0f;
 	}
 
-	s->timer++;
 	v = s->sample();
 	s->value = (v - s->r1) / (s->r2 - s->r1);
 	if (s->value == 0)
