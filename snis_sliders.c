@@ -14,6 +14,9 @@
 #include "snis_sliders.h"
 #undef SLIDERS_DEFINE_GLOBALS
 
+static int *slider_mouse_x = NULL;
+static int *slider_mouse_y = NULL;
+
 struct slider {
 	float x, y, length, height;
 	int color;
@@ -337,3 +340,10 @@ void snis_slider_get_location(struct slider *s, float *x, float *y, float *lengt
 	*length = s->length;
 	*height = s->height;
 }
+
+void snis_slider_mouse_position_query(int *x, int *y) /* Allows sliders to query mouse position */
+{
+	slider_mouse_x = x;
+	slider_mouse_y = y;
+}
+

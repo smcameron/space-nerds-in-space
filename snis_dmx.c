@@ -349,7 +349,7 @@ int snis_dmx_set_rgb(int handle, int number, uint8_t r, uint8_t g, uint8_t b)
 	t->dmx_packet[offset] = r;
 	t->dmx_packet[offset + 1] = g;
 	t->dmx_packet[offset + 2] = b;
-	t->dmx_packet[offset + 3] = 0;
+	t->dmx_packet[offset + 3] = 255;
 	pthread_mutex_unlock(&mutex);
 	return 0;
 error:
