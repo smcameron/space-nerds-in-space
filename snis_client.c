@@ -16597,7 +16597,7 @@ static void show_comms(GtkWidget *w)
 	show_comms_cryptanalysis(o);
 
 	float shield_ind_x_center = txx(710);
-	float shield_ind_y_center = txy(495);
+	float shield_ind_y_center = txy(485);
 
 	if (!o->tsd.ship.comms_crypto_mode) {
 		if (o->sdata.shield_strength < 15) {
