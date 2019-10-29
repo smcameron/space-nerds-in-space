@@ -2841,8 +2841,12 @@ sub process {
 			my ($s, $c) = ($stat, $cond);
 
 			if ($c =~ /\bif\s*\(.*[^<>!=]=[^=].*/s) {
-				ERROR("ASSIGN_IN_IF",
-				      "do not use assignment in if condition\n" . $herecurr);
+				# special exception for "if (!(o = find_my_ship())) ..."
+				# as this is extremely common in snis_client.c
+				if ($line !~ /![(]o = find_my_ship[(][)][)]/) {
+					ERROR("ASSIGN_IN_IF",
+					      "do not use assignment in if condition\n" . $herecurr);
+				}
 			}
 
 			# Find out what is on the end of the line after the
