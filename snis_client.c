@@ -15143,16 +15143,22 @@ static void init_comms_ui(void)
 
 	x = SCREEN_WIDTH - txx(150);
 	y = SCREEN_HEIGHT - 60;
-	comms_ui.mainscreen_comms = snis_button_init(x, y, -1, bh, "MAIN SCREEN", button_color,
+	comms_ui.mainscreen_comms = snis_button_init(x, y, txx(80), bh, "MAIN SCREEN", button_color,
 			NANO_FONT, comms_main_screen_pressed, NULL);
+	snis_button_set_checkbox_function(comms_ui.mainscreen_comms,
+					snis_button_generic_checkbox_function,
+					&main_screen_text.comms_on_mainscreen);
 	snis_button_set_sound(comms_ui.mainscreen_comms, UISND17);
 	y -= bh + 4;
-	comms_ui.hail_mining_bot_button = snis_button_init(x, y, -1, bh, "MINING BOT", button_color,
+	comms_ui.hail_mining_bot_button = snis_button_init(x, y, txx(80), bh, "MINING BOT", button_color,
 			NANO_FONT, comms_hail_mining_bot_pressed, NULL);
 	snis_button_set_sound(comms_ui.hail_mining_bot_button, UISND16);
 	y -= bh + 4;
-	comms_ui.red_alert_button = snis_button_init(x, y, -1, bh, "RED ALERT", red_alert_color,
+	comms_ui.red_alert_button = snis_button_init(x, y, txx(80), bh, "RED ALERT", red_alert_color,
 			NANO_FONT, comms_screen_red_alert_pressed, NULL);
+	snis_button_set_checkbox_function(comms_ui.red_alert_button,
+					snis_button_generic_checkbox_function,
+					&red_alert_mode);
 	snis_button_set_sound(comms_ui.red_alert_button, UISND16);
 
 	comms_ui.tw = text_window_init(txx(10), txy(70), SCREEN_WIDTH - txx(20), 300, 27, text_color);
