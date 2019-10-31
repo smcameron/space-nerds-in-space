@@ -421,7 +421,6 @@ struct ship_data {
 
 	uint32_t power;		/* Not sure this is *really* used anymore since the power model went in */
 	double velocity;	/* current speed of the ship */
-#define STANDARD_ORBIT_RADIUS_FACTOR (1.1)
 #define MIN_PLAYER_VELOCITY (0.1)
 #define MAX_PLAYER_VELOCITY (30.0)
 #define MAX_REVERSE_PLAYER_VELOCITY (5.0)

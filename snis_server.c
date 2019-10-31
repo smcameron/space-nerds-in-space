@@ -193,6 +193,8 @@ static float yaw_fine_adjust_factor = 1.0;
 static float roll_fine_adjust_factor = 1.0;
 static float pitch_fine_adjust_factor = 1.0;
 
+static float standard_orbit = 1.1; /* From starfleet technical manual, 1.376, but 1.1 looks better */
+
 static float sci_bw_yaw_increment = SCI_BW_YAW_INCREMENT;
 static float sci_bw_yaw_increment_fine = SCI_BW_YAW_INCREMENT_FINE;
 static int player_respawn_time = RESPAWN_TIME_SECS; /* Number of seconds player spends dead before being respawned */
@@ -8530,13 +8532,13 @@ static void update_player_orientation(struct snis_entity *o)
 			p.v.y = o->y - planet->y;
 			p.v.z = o->z - planet->z;
 			vec3_normalize_self(&p);
-			vec3_mul_self(&p, planet->tsd.planet.radius * STANDARD_ORBIT_RADIUS_FACTOR);
+			vec3_mul_self(&p, planet->tsd.planet.radius * standard_orbit);
 			d.v.x = o->vx;
 			d.v.y = o->vy;
 			d.v.z = o->vz;
 			vec3_add_self(&d, &p);
 			vec3_normalize_self(&d);
-			vec3_mul_self(&d, planet->tsd.planet.radius * STANDARD_ORBIT_RADIUS_FACTOR);
+			vec3_mul_self(&d, planet->tsd.planet.radius * standard_orbit);
 			vec3_sub_self(&d, &p);
 			vec3_normalize_self(&d);
 			vec3_mul_self(&d, planet->tsd.planet.radius * 2.5 / M_PI); /* 2.5 degrees */
@@ -17196,6 +17198,8 @@ static struct tweakable_var_descriptor server_tweak[] = {
 		SCI_BW_YAW_INCREMENT_FINE, 0, 0, 0 },
 	{ "PLAYER_RESPAWN_TIME", "SECONDS PLAYER SPENDS DEAD BEFORE RESPAWNING",
 		&player_respawn_time, 'i', 0.0, 0.0, 0.0, 0, 255, RESPAWN_TIME_SECS },
+	{ "STANDARD_ORBIT", "RADIUS MULTIPLIER FOR STANDARD ORBIT ALTITUDE",
+		&standard_orbit, 'f', 1.1, 2.95, 1.1, 0, 0, 0},
 	{ NULL, NULL, NULL, '\0', 0.0, 0.0, 0.0, 0, 0, 0 },
 };
 
@@ -20549,12 +20553,12 @@ static void toggle_standard_orbit(struct game_client *c, struct snis_entity *shi
 	dy = planet->y - ship->y;
 	dz = planet->z - ship->z;
 	d = sqrt(dx * dx + dy * dy + dz * dz);
-	if (d > planet->tsd.planet.radius * STANDARD_ORBIT_RADIUS_FACTOR * 3.00) {
+	if (d > planet->tsd.planet.radius * standard_orbit * 3.00) {
 		pthread_mutex_unlock(&universe_mutex);
 		snis_queue_add_text_to_speech("We are too far from a planet to enter standard orbit",
 					ROLE_TEXT_TO_SPEECH, c->shipid);
 		printf("radius = %lf, d = %lf, limit = %lf\n", planet->tsd.planet.radius, d,
-			planet->tsd.planet.radius * STANDARD_ORBIT_RADIUS_FACTOR);
+			planet->tsd.planet.radius * standard_orbit);
 		return;
 	}
 	ship->tsd.ship.orbiting_object_id = planet->id;
