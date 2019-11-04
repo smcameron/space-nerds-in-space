@@ -638,6 +638,13 @@ struct starbase_data {
 	uint8_t factions_allowed; /* Bit field, 1 means faction can dock, 0 cannot dock */
 				  /* Only in effect if docking_by_faction != 0 && !rts_mode */
 #define ALL_FACTIONS_ALLOWED (0xff)
+#ifdef SNIS_SERVER_DATA
+	/* Data to allow starbases to orbit planets */
+	float altitude;		/* Distance from planet center */
+	union vec3 orbital_axis;	/* Axis of rotation about planet */
+	float orbital_angle;		/* position in orbit, radians */
+	float orbital_velocity;		/* Rate of orbit, radians / tick */
+#endif
 };
 
 struct nebula_data {

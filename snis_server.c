@@ -198,6 +198,9 @@ static float standard_orbit = 1.1; /* From starfleet technical manual, 1.376, bu
 static float sci_bw_yaw_increment = SCI_BW_YAW_INCREMENT;
 static float sci_bw_yaw_increment_fine = SCI_BW_YAW_INCREMENT_FINE;
 static int player_respawn_time = RESPAWN_TIME_SECS; /* Number of seconds player spends dead before being respawned */
+static int starbases_orbit = 0; /* 1 means starbases can orbit planets, 0 means starbases are stationary and just hover */
+				/* Currently starbases_orbit == 1 kind of breaks the patrol code of NPC ships */
+				/* because they do not notice that the starbases move. */
 
 /*
  * End of runtime adjustable globals
@@ -9370,8 +9373,8 @@ static void docking_port_move(struct snis_entity *o)
 	union vec3 offset = { { -25, 0, 0 } };
 	union quat new_orientation;
 	double ox, oy, oz, dx, dy, dz;
-	const float motion_damping_factor = 0.1;
-	const float slerp_rate = 0.05;
+	const float motion_damping_factor = 0.5;
+	const float slerp_rate = 0.1;
 
 	if (o->tsd.docking_port.docked_guy == (uint32_t) -1)
 		return;
@@ -9681,6 +9684,45 @@ static uint32_t docking_port_resident(uint32_t docking_port_id)
 	return go[i].tsd.docking_port.docked_guy;
 }
 
+static void orbit_starbase(struct snis_entity *o)
+{
+	int i;
+	struct snis_entity *p;
+	union vec3 pos, *orbit;
+	union quat q;
+
+	if (!starbases_orbit)
+		return;
+	if (o->tsd.starbase.associated_planet_id == -1)
+		return;
+	i = lookup_by_id(o->tsd.starbase.associated_planet_id);
+	if (i < 0) {
+		o->tsd.starbase.associated_planet_id = -1;
+		return;
+	}
+	p = &go[i];
+	if (p->type != OBJTYPE_PLANET) {
+		/* This can happen if a planet gets destroyed and another object re-uses the ID. */
+		o->tsd.starbase.associated_planet_id = -1;
+		return;
+	}
+	/* Compute the new position in the orbit */
+	pos.v.x = 1.0;
+	pos.v.y = 0.0;
+	pos.v.z = 0.0;
+	orbit = &o->tsd.starbase.orbital_axis;
+	quat_init_axis(&q, orbit->v.x, orbit->v.y, orbit->v.z, o->tsd.starbase.orbital_angle);
+	quat_rot_vec_self(&pos, &q);
+	vec3_mul_self(&pos, o->tsd.starbase.altitude);
+	o->x = p->x + pos.v.x;
+	o->y = p->y + pos.v.y;
+	o->z = p->z + pos.v.z;
+	o->tsd.starbase.orbital_angle += o->tsd.starbase.orbital_velocity;
+	/* Wrap the orbital angle around to 0 at 2PI */
+	if (o->tsd.starbase.orbital_angle >= 2 * M_PI)
+		o->tsd.starbase.orbital_angle -= 2 * M_PI;
+}
+
 static void starbase_move(struct snis_entity *o)
 {
 	char location[50];
@@ -9693,6 +9735,7 @@ static void starbase_move(struct snis_entity *o)
 		mt = mtwist_init(mtwist_seed);
 
 	spin_starbase(o);
+	orbit_starbase(o);
 	starbase_update_docking_ports(o);
 	then = o->tsd.starbase.last_time_called_for_help;
 	now = universe_timestamp;
@@ -11663,6 +11706,36 @@ static int add_docking_port(int parent_id, int portnumber)
 	return i;
 }
 
+static void setup_randomized_starbase_orbit(struct snis_entity *o)
+{
+	int i;
+	struct snis_entity *p;
+	float x, y, z;
+
+	/* Initialized everything regardless of whether there's an associated planet */
+	random_point_on_sphere(1.0, &x, &y, &z);
+	o->tsd.starbase.orbital_axis.v.x = x;
+	o->tsd.starbase.orbital_axis.v.y = y;
+	o->tsd.starbase.orbital_axis.v.z = z;
+	o->tsd.starbase.altitude = 0;
+	o->tsd.starbase.orbital_angle = snis_randn(360) * M_PI / 180.0;
+	o->tsd.starbase.orbital_velocity = 0.05 * (M_PI / 180.0);
+	if (o->tsd.starbase.associated_planet_id == -1)
+		return;
+	i = lookup_by_id(o->tsd.starbase.associated_planet_id);
+	if (i < 0) {
+		o->tsd.starbase.associated_planet_id = -1;
+		return;
+	}
+	p = &go[i];
+
+	/* Modify the angular velocity so that the speed is more or less constant
+	 * regardless of altitude
+	 */
+	o->tsd.starbase.altitude = p->tsd.planet.radius * 1.3 + 800.0f + snis_randn(1400);
+	o->tsd.starbase.orbital_velocity = o->tsd.starbase.orbital_velocity * 10000.0 / o->tsd.starbase.altitude;
+}
+
 static int add_starbase(double x, double y, double z,
 			double vx, double vz, double heading, int n, uint32_t assoc_planet_id)
 {
@@ -11711,6 +11784,7 @@ static int add_starbase(double x, double y, double z,
 			go[i].tsd.starbase.expected_docker_timer[j] = 0;
 		}
 	}
+	setup_randomized_starbase_orbit(&go[i]);
 	return i;
 }
 
@@ -17200,6 +17274,8 @@ static struct tweakable_var_descriptor server_tweak[] = {
 		&player_respawn_time, 'i', 0.0, 0.0, 0.0, 0, 255, RESPAWN_TIME_SECS },
 	{ "STANDARD_ORBIT", "RADIUS MULTIPLIER FOR STANDARD ORBIT ALTITUDE",
 		&standard_orbit, 'f', 1.1, 2.95, 1.1, 0, 0, 0},
+	{ "STARBASES_ORBIT", "0 or 1, starbases are stationary - 0, or may orbit planets - 1",
+		&starbases_orbit, 'i', 0.0, 0.0, 0.0, 0, 1, 0},
 	{ NULL, NULL, NULL, '\0', 0.0, 0.0, 0.0, 0, 0, 0 },
 };
 
