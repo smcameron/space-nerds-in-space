@@ -2215,6 +2215,7 @@ static void ai_trace(uint32_t id, char *format, ...)
 	buf[sizeof(buf) - 1] = '\0';
 	if (strcmp(buf, last_buf) == 0) /* suppress duplicate messages */
 		return;
+	/* fprintf(stderr, "%s\n", buf); */
 	strcpy(last_buf, buf);
 	pb = packed_buffer_allocate(3 + sizeof(buf));
 	packed_buffer_append(pb, "bbb", OPCODE_CONSOLE_OP, OPCODE_CONSOLE_SUBCMD_ADD_TEXT, 255);
@@ -5324,6 +5325,8 @@ static int has_arrived_at_destination(struct snis_entity *o, float dist2)
 		return 0;
 	max_speed = ship_type[o->tsd.ship.shiptype].max_speed;
 	arrival_dist2 = (max_speed * 10.0) * (max_speed * 10.0);
+	if (arrival_dist2 < 100 * 100)
+		arrival_dist2 = 100 * 100;
 	return dist2 < arrival_dist2;
 }
 
@@ -5356,7 +5359,7 @@ static float ai_ship_travel_towards(struct snis_entity *o,
 			planetv.v.x = planet->x;
 			planetv.v.y = planet->y;
 			planetv.v.z = planet->z;
-			ai_trace(o->id, "AVOIDING PLANET");
+			ai_trace(o->id, "AVOIDING PLANET D=%f < %f", planet_distance, 2.0 * planet->tsd.planet.radius);
 
 			/*
 			 * Find vector from planet to ship, and from planet to
@@ -5380,12 +5383,14 @@ static float ai_ship_travel_towards(struct snis_entity *o,
 			 * the quaternion to the new angle. */
 			angle = 0.05f * 2.0f * acosf(ship_to_dest.v.w);
 			ship_to_dest.v.w = cos(0.5f * angle);
+			ai_trace(o->id, "AVOIDING PLANET ANGLE = %f DEG", angle * 180.0 / M_PI);
 
 			/* Find our new intermediate destination, 5% along our great circle. */
 			quat_rot_vec_self(&planet_to_ship, &ship_to_dest);
 			destx = planet->x + planet_to_ship.v.x;
 			desty = planet->y + planet_to_ship.v.y;
 			destz = planet->z + planet_to_ship.v.z;
+			ai_trace(o->id, "AVOIDING PLANET - NEW DEST = %f, %f, %f", destx, desty, destz);
 		}
 	}
 
@@ -6145,6 +6150,7 @@ static void ai_cop_mode_brain(struct snis_entity *o)
 	int d;
 
 	d = patrol->dest;
+	ai_trace(o->id, "TO PATROL POINT %d\n", d);
 
 	double dist2 = ai_ship_travel_towards(o,
 				patrol->p[d].v.x, patrol->p[d].v.y, patrol->p[d].v.z);
@@ -6590,6 +6596,8 @@ static void ai_brain(struct snis_entity *o)
 {
 	int n;
 
+	ai_trace(o->id, "TOP OF AI BRAIN FOR %u", o->id);
+
 	n = o->tsd.ship.nai_entries - 1;
 	if (n < 0) {
 		ship_figure_out_what_to_do(o);
@@ -6740,6 +6748,7 @@ static void ship_collision_avoidance(void *context, void *entity)
 	if (obstacle->type == OBJTYPE_PLANET) {
 		if (d < obstacle->tsd.planet.radius * obstacle->tsd.planet.radius) {
 			o->alive = 0;
+			ai_trace(o->id, "SHIP HAS COLLIDED WITH PLANET");
 			return;
 		}
 		d -= (obstacle->tsd.planet.radius * 1.3 * obstacle->tsd.planet.radius * 1.3);
@@ -6777,6 +6786,7 @@ static void ship_collision_avoidance(void *context, void *entity)
 		o->tsd.ship.braking_factor = 1.0 - 1.0 / 2;
 	else
 		o->tsd.ship.braking_factor = 1.0 - 1.0 / d; 
+	ai_trace(o->id, "COMPUTING BRAKING FORCE %f\n", o->tsd.ship.braking_factor);
 
 	/* Compute a steering force */
 	o->tsd.ship.steering_adjustment.v.x = o->x - obstacle->x;
@@ -6787,6 +6797,10 @@ static void ship_collision_avoidance(void *context, void *entity)
 	if (steering_magnitude > 10.0)
 		steering_magnitude = 10.0;
 	vec3_mul_self(&o->tsd.ship.steering_adjustment, steering_magnitude);
+	ai_trace(o->id, "STEERING FORCE %f, %f, %f\n",
+			o->tsd.ship.steering_adjustment.v.x,
+			o->tsd.ship.steering_adjustment.v.y,
+			o->tsd.ship.steering_adjustment.v.z);
 }
 
 static void ship_move(struct snis_entity *o)
@@ -6850,13 +6864,6 @@ static void ship_move(struct snis_entity *o)
 				o->tsd.ship.fuel -= rts_unit_type(unit_type)->fuel_consumption_unit;
 		}
 	}
-
-	/* Adjust velocity towards desired velocity */
-	o->tsd.ship.velocity = o->tsd.ship.velocity +
-			(o->tsd.ship.desired_velocity - o->tsd.ship.velocity) * 0.1;
-	if (fabs(o->tsd.ship.velocity - o->tsd.ship.desired_velocity) < 0.1)
-		o->tsd.ship.velocity = o->tsd.ship.desired_velocity;
-
 	update_ship_position_and_velocity(o);
 	update_ship_orientation(o);
 	update_towed_ship(o);
@@ -8759,6 +8766,13 @@ static void update_ship_position_and_velocity(struct snis_entity *o)
 	struct snis_entity *v;
 	int n, mode;
 
+	/* Adjust velocity towards desired velocity */
+	o->tsd.ship.velocity = o->tsd.ship.velocity +
+			(o->tsd.ship.desired_velocity - o->tsd.ship.velocity) * 0.1;
+	if (fabs(o->tsd.ship.velocity - o->tsd.ship.desired_velocity) < 0.1)
+		o->tsd.ship.velocity = o->tsd.ship.desired_velocity;
+	ai_trace(o->id, "V = %f, DV = %f", o->tsd.ship.velocity, o->tsd.ship.desired_velocity);
+
 	if (o->tsd.ship.nai_entries == 0)
 		ship_figure_out_what_to_do(o);
 	n = o->tsd.ship.nai_entries - 1;
@@ -8791,27 +8805,40 @@ static void update_ship_position_and_velocity(struct snis_entity *o)
 	}
 
 	o->tsd.ship.dist = vec3_magnitude(&dest);
+	ai_trace(o->id, "DIST TO DEST = %f", o->tsd.ship.dist);
 
-	if (o->tsd.ship.dist > 20.0) { /* If this is too tight, ships wiggle around too much */
+#if 1
+	vec3_normalize(&destn, &dest);
+#else
+	if (o->tsd.ship.dist > 100.0) { /* If this is too tight, ships wiggle around too much */
 		vec3_normalize(&destn, &dest);
 	} else {
 		destn.v.x = 0.0f;
 		destn.v.y = 0.0f;
 		destn.v.z = 0.0f;
 		o->tsd.ship.desired_velocity = 0;
+		ai_trace(o->id, "DV = 0 (ARRIVAL)");
 	}
+#endif
 
 	/* Construct vector of desired velocity */
 	desired_velocity.v.x = destn.v.x * o->tsd.ship.desired_velocity;
 	desired_velocity.v.y = destn.v.y * o->tsd.ship.desired_velocity;
 	desired_velocity.v.z = destn.v.z * o->tsd.ship.desired_velocity;
+	ai_trace(o->id, "DV XYZ = %f, %f, %f", desired_velocity.v.x, desired_velocity.v.y, desired_velocity.v.z);
 
 	/* apply braking and steering adjustments */
 	vec3_mul_self(&desired_velocity, o->tsd.ship.braking_factor);
+	ai_trace(o->id, "AFTER BRAKE DV = %f, %f, %f",
+			desired_velocity.v.x, desired_velocity.v.y, desired_velocity.v.z);
 	vec3_add_self(&desired_velocity, &o->tsd.ship.steering_adjustment);
+	ai_trace(o->id, "AFTER STEER DV = %f, %f, %f",
+			desired_velocity.v.x, desired_velocity.v.y, desired_velocity.v.z);
 
 	/* Make the ship execute nice turns instead of stopping and quickly reversing */
 	temper_velocity_change(&desired_velocity, o->vx, o->vy, o->vz);
+	ai_trace(o->id, "AFTER TEMPER DV = %f, %f, %f",
+			desired_velocity.v.x, desired_velocity.v.y, desired_velocity.v.z);
 
 	union vec3 curvel = { { o->vx, o->vy, o->vz } };
 	float dot = vec3_dot(&curvel, &desired_velocity);
@@ -8828,6 +8855,8 @@ static void update_ship_position_and_velocity(struct snis_entity *o)
 	o->vy = new_velocity(desired_velocity.v.y, o->vy);
 	o->vz = new_velocity(desired_velocity.v.z, o->vz);
 
+	ai_trace(o->id, "NEW VEL = %f, %f, %f", o->vx, o->vy, o->vz);
+
 	/* Move ship */
 	set_object_location(o, o->x + o->vx, o->y + o->vy, o->z + o->vz);
 	/* FIXME: some kind of collision detection needed here... */
@@ -8838,6 +8867,7 @@ static void update_ship_position_and_velocity(struct snis_entity *o)
 		o->vy *= 0.8;
 		o->vz *= 0.8;
 		o->tsd.ship.desired_velocity = 0;
+		ai_trace(o->id, "HANGOUT BRAKING");
 	}
 }
 
@@ -17285,6 +17315,8 @@ static struct tweakable_var_descriptor server_tweak[] = {
 		&standard_orbit, 'f', 1.1, 2.95, 1.1, 0, 0, 0},
 	{ "STARBASES_ORBIT", "0 or 1, starbases are stationary - 0, or may orbit planets - 1",
 		&starbases_orbit, 'i', 0.0, 0.0, 0.0, 0, 1, 0},
+	{ "AI_TRACE_ID", "AI TRACE ID",
+		&ai_trace_id, 'i', 0.0, 0.0, 0.0, INT_MIN, INT_MAX, -1},
 	{ NULL, NULL, NULL, '\0', 0.0, 0.0, 0.0, 0, 0, 0 },
 };
 
