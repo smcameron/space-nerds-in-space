@@ -6223,12 +6223,6 @@ static int cipher_freq_compare(const void *a, const void *b)
 /* Sort the letters of the enciphered message by frequency */
 static void sort_cipher_alpha_by_freq(int cipher_freq[], char cipher_alpha_by_freq[])
 {
-	int i;
-
-	fprintf(stderr, "Sorting...\n");
-
-	for (i = 0; i < 26; i++)
-		fprintf(stderr, "Freq[%d] = %d\n", i, cipher_freq[i]);
 	memcpy(cipher_alpha_by_freq, "ABCDEFGHIJKLMNOPQRSTUVWXYZ", 27);
 	qsort(cipher_alpha_by_freq, 26, 1, cipher_freq_compare);
 }
