@@ -6115,9 +6115,12 @@ static void ai_patrol_mode_brain(struct snis_entity *o)
 	ai_trace(o->id, "PATROL DIST TO DEST = %.2f", sqrt(dist2));
 
 	if (has_arrived_at_destination(o, dist2)) {
+		/* Advance to the next patrol destination */
 		ai_trace(o->id, "PATROL ARRIVED AT DEST");
 		patrol->dest = (patrol->dest + 1) % patrol->npoints;
-		/* hang out here awhile... */
+		d = patrol->dest;
+		set_ship_destination(o, patrol->p[d].v.x, patrol->p[d].v.y, patrol->p[d].v.z);
+		/* But first hang out here awhile... */
 		n = o->tsd.ship.nai_entries;
 		if (n < MAX_AI_STACK_ENTRIES) {
 			ai_trace(o->id, "PATROL -> HANGOUT");
@@ -6129,6 +6132,7 @@ static void ai_patrol_mode_brain(struct snis_entity *o)
 			d = patrol->dest;
 			ai_trace(o->id, "PATROL ADVANCE TO NEXT DEST %d", d);
 			set_ship_destination(o, patrol->p[d].v.x, patrol->p[d].v.y, patrol->p[d].v.z);
+			o->tsd.ship.desired_velocity = ship_type[o->tsd.ship.shiptype].max_speed;
 		}
 	}
 	check_for_nearby_targets(o);
@@ -6147,8 +6151,12 @@ static void ai_cop_mode_brain(struct snis_entity *o)
 	ai_trace(o->id, "COP MODE DIST TO DEST = %.2f", sqrt(dist2));
 
 	if (has_arrived_at_destination(o, dist2)) {
+		/* Advance to the next patrol destination */
+		ai_trace(o->id, "COP MODE ARRIVED AT DEST");
 		patrol->dest = (patrol->dest + 1) % patrol->npoints;
-		/* hang out here awhile... */
+		d = patrol->dest;
+		set_ship_destination(o, patrol->p[d].v.x, patrol->p[d].v.y, patrol->p[d].v.z);
+		/* But first hang out here awhile... */
 		n = o->tsd.ship.nai_entries;
 		if (n < MAX_AI_STACK_ENTRIES) {
 			ai_trace(o->id, "COP -> HANGOUT");
@@ -6160,6 +6168,7 @@ static void ai_cop_mode_brain(struct snis_entity *o)
 			d = patrol->dest;
 			ai_trace(o->id, "COP ADVANCE TO NEXT DEST %d", d);
 			set_ship_destination(o, patrol->p[d].v.x, patrol->p[d].v.y, patrol->p[d].v.z);
+			o->tsd.ship.desired_velocity = ship_type[o->tsd.ship.shiptype].max_speed;
 		}
 	}
 }
@@ -8793,9 +8802,9 @@ static void update_ship_position_and_velocity(struct snis_entity *o)
 	}
 
 	/* Construct vector of desired velocity */
-	desired_velocity.v.x = destn.v.x * o->tsd.ship.velocity; 
-	desired_velocity.v.y = destn.v.y * o->tsd.ship.velocity;
-	desired_velocity.v.z = destn.v.z * o->tsd.ship.velocity;
+	desired_velocity.v.x = destn.v.x * o->tsd.ship.desired_velocity;
+	desired_velocity.v.y = destn.v.y * o->tsd.ship.desired_velocity;
+	desired_velocity.v.z = destn.v.z * o->tsd.ship.desired_velocity;
 
 	/* apply braking and steering adjustments */
 	vec3_mul_self(&desired_velocity, o->tsd.ship.braking_factor);
