@@ -124,6 +124,7 @@ way around the code.
 <li><a href="#snisservernpcship">NPC Ships</a>
 <ol>
 <li><a href="#snisservernpcmove">Movement</a>
+<li><a href="#npcdebugging">Debugging NPC ship AI</a>
 <li><a href="#snisservernpcai">NPC ship AI</a>
 <li><a href="#snisservernpcfleet">NPC Fleets</a>
 <li><a href="#snisserverhostile">Hostility matrix</a>
@@ -1905,6 +1906,36 @@ usage of o-&gt;tsd.ship.dox, of o-&gt;tsd.ship.doy, and of o-&gt;tsd.ship.doz. T
 area could be improved.  Most other ai functions rely on ai_ship_travel_towards() for
 steering and navigation. ai_ship_travel_towards has some code to avoid crashing
 into planets and to use the warp drive for longer transits.
+
+<h4><a name="npcdebugging">Debugging NPC ship AI</a></h4>
+
+<p>Debugging NPC ship AI is difficult.  Typically, you might spot an NPC ship exhibiting
+some weird behavior, and the task is to figure out what it thinks it is doing, and why it
+is misbehaving and how to make it behave more sensibly.  Since there
+are a large number of NPC ships, simply adding print statements into the code is not very
+helpful. I have found the following techniques to help.
+
+<ol>
+<li>When you spot some weird behavior, try to locate the NPC ship on the DEMON screen.
+<li>Select the ship using the middle mouse button. From this you can obtain its ID.
+For this example, let's suppose the ID is 100.
+<li>Activate the console on the DEMON screen.
+<li>Use the "follow 100" command on the DEMON screen to follow the ship visually.
+(Use "follow" without specifying an ID to unfollow the ship when you're done).
+<li>Turn off EXAG SCALE.
+<li>Use the "aitrace 100" command on the DEMON screen to try to figure out what the NPC
+ship thinks it's doing by observing what is printed on the console. ("aitrace" with no ID
+will turn off AI tracing.)
+<li>You can add calls to ai_trace() into the code if you need to.  You can also
+modify the ai_trace() function in snis_server.c to log the ai_trace output to the
+log file in case you need to record it for later analysis.
+</ol>
+
+Finding an NPC ship exhibiting the strange behavior can be a problem. Some
+problems are "emergent", where at any given instant in time what the NPC ship
+is doing might make some kind of sense, but the cumulative effect of what it
+does over time may not make sense (e.g. circling around or doing a figure 8
+around a waypoint.)
 
 <h4><a name="snisservernpcfleet">NPC Fleets</a></h4>
 
