@@ -17702,6 +17702,34 @@ static void server_builtin_ai_trace(char *cmd)
 	}
 }
 
+static void server_builtin_ai_pop(char *cmd)
+{
+	uint32_t id;
+	int rc;
+	int i;
+
+	rc = sscanf(cmd, "%*s %u", &id);
+	if (rc != 1) {
+		send_demon_console_msg("AIPOP - BAD ID SPECIFIED");
+		return;
+	}
+	pthread_mutex_lock(&universe_mutex);
+	i = lookup_by_id(id);
+	if (i < 0) {
+		pthread_mutex_unlock(&universe_mutex);
+		send_demon_console_msg("AIPOP - %d NOT FOUND", id);
+		return;
+	}
+	if (go[i].type != OBJTYPE_SHIP2) {
+		pthread_mutex_unlock(&universe_mutex);
+		send_demon_console_msg("AIPOP - %d IS NOT AN NPC SHIP", id);
+		return;
+	}
+	pop_ai_stack(&go[i]);
+	send_demon_console_msg("AIPOP - POPPED AI STACK OF %d", id);
+	pthread_mutex_unlock(&universe_mutex);
+}
+
 static struct server_builtin_cmd {
 	char *cmd;
 	char *description;
@@ -17721,6 +17749,7 @@ static struct server_builtin_cmd {
 	{ "FIND", "FIND AN OBJECT BY NAME", server_builtin_find, },
 	{ "F", "FIND AN OBJECT BY NAME", server_builtin_find, },
 	{ "AITRACE", "DEBUG TRACE NPC SHIP AI", server_builtin_ai_trace, },
+	{ "AIPOP", "POP TOP ITEM OFF AI STACK", server_builtin_ai_pop, },
 	{ "HELP", "LIST SERVER BUILTIN COMMANDS", server_builtin_help, },
 };
 
