@@ -2865,6 +2865,45 @@ static uint32_t choose_ship_home_planet(void)
 	return (uint32_t) -1;
 }
 
+static void set_patrol_waypoint_destination(struct snis_entity *o, int patrol_point)
+{
+	int n = o->tsd.ship.nai_entries - 1;
+	struct ai_cop_data *cpatrol;
+	struct ai_patrol_data *patrol;
+
+	assert(patrol_point >= 0);
+	assert(n >= 0);
+	assert(o->type == OBJTYPE_SHIP2);
+
+	switch (o->tsd.ship.ai[n].ai_mode) {
+	case AI_MODE_COP:
+		cpatrol = &o->tsd.ship.ai[n].u.cop;
+		if (patrol_point < cpatrol->npoints) {
+			cpatrol->dest = patrol_point;
+			set_ship_destination(o,
+				cpatrol->p[patrol_point].v.x,
+				cpatrol->p[patrol_point].v.y,
+				cpatrol->p[patrol_point].v.z);
+			o->tsd.ship.desired_velocity = ship_type[o->tsd.ship.shiptype].max_speed;
+		}
+		break;
+	case AI_MODE_PATROL:
+	case AI_MODE_FLEET_LEADER:
+		patrol = &o->tsd.ship.ai[n].u.patrol;
+		if (patrol_point < patrol->npoints) {
+			patrol->dest = patrol_point;
+			set_ship_destination(o,
+				patrol->p[patrol_point].v.x,
+				patrol->p[patrol_point].v.y,
+				patrol->p[patrol_point].v.z);
+			o->tsd.ship.desired_velocity = ship_type[o->tsd.ship.shiptype].max_speed;
+		}
+		break;
+	default:
+		break;
+	}
+}
+
 static void push_cop_mode(struct snis_entity *cop)
 {
 	int i, npoints;
@@ -2912,7 +2951,7 @@ static void push_cop_mode(struct snis_entity *cop)
 		quat_rot_vec(&patrol->p[i], &v, &q);
 		vec3_add_self(&patrol->p[i], &home_planet);
 	}
-	set_ship_destination(cop, patrol->p[0].v.x, patrol->p[0].v.y, patrol->p[0].v.z);
+	set_patrol_waypoint_destination(cop, 0);
 }
 
 static void push_catatonic_mode(struct snis_entity *ship)
@@ -3285,7 +3324,7 @@ static void setup_patrol_route(struct snis_entity *o)
 		patrol->p[i] = v[i];
 		ai_trace(o->id, "- %.2f, %.2f, %.2f", patrol->p[i].v.x, patrol->p[i].v.y, patrol->p[i].v.z);
 	}
-	set_ship_destination(o, patrol->p[0].v.x, patrol->p[0].v.y, patrol->p[0].v.z);
+	set_patrol_waypoint_destination(o, 0);
 }
 
 static void ship_figure_out_what_to_do(struct snis_entity *o)
@@ -6125,9 +6164,7 @@ static void ai_patrol_mode_brain(struct snis_entity *o)
 	if (has_arrived_at_destination(o, dist2)) {
 		/* Advance to the next patrol destination */
 		ai_trace(o->id, "PATROL ARRIVED AT DEST");
-		patrol->dest = (patrol->dest + 1) % patrol->npoints;
-		d = patrol->dest;
-		set_ship_destination(o, patrol->p[d].v.x, patrol->p[d].v.y, patrol->p[d].v.z);
+		set_patrol_waypoint_destination(o, (patrol->dest + 1) % patrol->npoints);
 		/* But first hang out here awhile... */
 		n = o->tsd.ship.nai_entries;
 		if (n < MAX_AI_STACK_ENTRIES) {
@@ -6136,11 +6173,6 @@ static void ai_patrol_mode_brain(struct snis_entity *o)
 			o->tsd.ship.ai[n].u.hangout.time_to_go = 100 + snis_randn(100);
 			o->tsd.ship.desired_velocity = 0;
 			o->tsd.ship.nai_entries++;
-		} else {
-			d = patrol->dest;
-			ai_trace(o->id, "PATROL ADVANCE TO NEXT DEST %d", d);
-			set_ship_destination(o, patrol->p[d].v.x, patrol->p[d].v.y, patrol->p[d].v.z);
-			o->tsd.ship.desired_velocity = ship_type[o->tsd.ship.shiptype].max_speed;
 		}
 	}
 	check_for_nearby_targets(o);
@@ -6162,9 +6194,7 @@ static void ai_cop_mode_brain(struct snis_entity *o)
 	if (has_arrived_at_destination(o, dist2)) {
 		/* Advance to the next patrol destination */
 		ai_trace(o->id, "COP MODE ARRIVED AT DEST");
-		patrol->dest = (patrol->dest + 1) % patrol->npoints;
-		d = patrol->dest;
-		set_ship_destination(o, patrol->p[d].v.x, patrol->p[d].v.y, patrol->p[d].v.z);
+		set_patrol_waypoint_destination(o, (patrol->dest + 1) % patrol->npoints);
 		/* But first hang out here awhile... */
 		n = o->tsd.ship.nai_entries;
 		if (n < MAX_AI_STACK_ENTRIES) {
@@ -6173,11 +6203,6 @@ static void ai_cop_mode_brain(struct snis_entity *o)
 			o->tsd.ship.ai[n].u.hangout.time_to_go = 100 + snis_randn(100);
 			o->tsd.ship.desired_velocity = 0;
 			o->tsd.ship.nai_entries++;
-		} else {
-			d = patrol->dest;
-			ai_trace(o->id, "COP ADVANCE TO NEXT DEST %d", d);
-			set_ship_destination(o, patrol->p[d].v.x, patrol->p[d].v.y, patrol->p[d].v.z);
-			o->tsd.ship.desired_velocity = ship_type[o->tsd.ship.shiptype].max_speed;
 		}
 	}
 }
@@ -17989,6 +18014,7 @@ static int l_ai_push_patrol(lua_State *l)
 	}
 	o->tsd.ship.ai[n].u.patrol.npoints = p;
 	o->tsd.ship.nai_entries++;
+	set_patrol_waypoint_destination(o, 0);
 
 	pthread_mutex_unlock(&universe_mutex);
 	lua_pushnumber(l, 0.0);
