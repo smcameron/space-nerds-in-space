@@ -3396,6 +3396,8 @@ static void ship_figure_out_what_to_do(struct snis_entity *o)
 static void pop_ai_stack(struct snis_entity *o)
 {
 	int n;
+	struct ai_patrol_data *patrol;
+	struct ai_cop_data *cpatrol;
 
 	n = o->tsd.ship.nai_entries;
 	if (n <= 0) {
@@ -3404,11 +3406,26 @@ static void pop_ai_stack(struct snis_entity *o)
 	}
 	o->tsd.ship.nai_entries--;
 	n = o->tsd.ship.nai_entries - 1;
-	if (o->tsd.ship.ai[n].ai_mode == AI_MODE_ATTACK)
+	switch (o->tsd.ship.ai[n].ai_mode) {
+	case AI_MODE_ATTACK:
 		calculate_attack_vector(o, MIN_COMBAT_ATTACK_DIST,
 						MAX_COMBAT_ATTACK_DIST);
-	if (o->tsd.ship.ai[n].ai_mode == AI_MODE_TOW_SHIP)
+		break;
+	case AI_MODE_TOW_SHIP:
 		o->tsd.ship.ai[n].u.tow_ship.ship_connected = 0;
+		break;
+	case AI_MODE_PATROL:
+	case AI_MODE_FLEET_LEADER:
+		patrol = &o->tsd.ship.ai[n].u.patrol;
+		set_patrol_waypoint_destination(o, patrol->dest);
+		break;
+	case AI_MODE_COP:
+		cpatrol = &o->tsd.ship.ai[n].u.cop;
+		set_patrol_waypoint_destination(o, cpatrol->dest);
+		break;
+	default:
+		break;
+	}
 }
 
 static void pop_ai_attack_mode(struct snis_entity *o)
