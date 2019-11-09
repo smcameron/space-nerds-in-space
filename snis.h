@@ -233,12 +233,14 @@ struct ai_patrol_data {
 #define MAX_PATROL_POINTS 5
 	uint8_t npoints;
 	uint8_t dest;
+	uint8_t oneshot;
 	union vec3 p[MAX_PATROL_POINTS];
 };
 
 struct ai_cop_data {
 	uint8_t npoints;
 	uint8_t dest;
+	uint8_t oneshot;
 	union vec3 p[MAX_PATROL_POINTS];
 };
 

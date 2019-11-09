@@ -2942,6 +2942,7 @@ static void push_cop_mode(struct snis_entity *cop)
 	patrol = &cop->tsd.ship.ai[0].u.cop;
 	patrol->npoints = npoints;
 	patrol->dest = 0;
+	patrol->oneshot = 0;
 
 	random_quat(&q);
 
@@ -3299,6 +3300,7 @@ static void setup_patrol_route(struct snis_entity *o)
 	patrol = &o->tsd.ship.ai[n].u.patrol;
 	patrol->npoints = npoints;
 	patrol->dest = 0;
+	patrol->oneshot = 0;
 
 	/* FIXME: ensure no duplicate points and order in some sane way */
 	ai_trace(o->id, "SET UP PATROL ROUTE");
@@ -5389,6 +5391,73 @@ static int has_arrived_at_destination(struct snis_entity *o, float dist2)
 	return dist2 < arrival_dist2;
 }
 
+/* Push a oneshot patrol route to get from startv to endv while avoiding the planet */
+static void push_planet_avoidance_route(struct snis_entity *o,
+		union vec3 *startv, union vec3 *endv, struct snis_entity *planet)
+{
+	int i, n;
+	union vec3 p, p2s, p2e, v, v2;
+	float r1, r2, dr, r, x, y, z;
+	struct ai_patrol_data *patrol;
+	union quat rotation;
+	float angle;
+
+	n = o->tsd.ship.nai_entries;
+	if (n >= MAX_AI_STACK_ENTRIES)
+		return; /* FIXME: what can we do here? */
+
+	p.v.x = planet->x;
+	p.v.y = planet->y;
+	p.v.z = planet->z;
+
+	/* planet to ship vector */
+	p2s.v.x = o->x - p.v.x;
+	p2s.v.y = o->y - p.v.y;
+	p2s.v.z = o->z - p.v.z;
+	r1 = vec3_magnitude(&p2s);
+	if (r1 > planet->tsd.planet.radius + 1400)
+		r1 = planet->tsd.planet.radius + 1400;
+	vec3_normalize_self(&p2s);
+
+	/* planet to end of route vector */
+	p2e.v.x = endv->v.x - p.v.x;
+	p2e.v.y = endv->v.y - p.v.y;
+	p2e.v.z = endv->v.z - p.v.z;
+	r2 = vec3_magnitude(&p2e);
+	if (r2 > planet->tsd.planet.radius + 1400)
+		r2 = planet->tsd.planet.radius + 1400;
+	vec3_normalize_self(&p2e);
+
+	/* Figure a quaternion to rotate an arc around the planet from start to end */
+	quat_from_u2v(&rotation, &p2s, &p2e, NULL);
+	quat_to_axis(&rotation, &x, &y, &z, &angle);
+
+	/* Divide the rotation into MAX_PATROL_POINTS smaller rotations */
+	angle = angle / (float) MAX_PATROL_POINTS;
+	quat_init_axis(&rotation, x, y, z, angle);
+
+	/* Figure out how much to change the radius each step */
+	dr = (r2 - r1) / (float) MAX_PATROL_POINTS;
+
+	/* Set up the new oneshot patrol route */
+	patrol = &o->tsd.ship.ai[n].u.patrol;
+	patrol->oneshot = 1;
+	patrol->npoints = MAX_PATROL_POINTS;
+	v = p2s; /* Start at the ship */
+	r = r1;
+	for (i = 0; i < MAX_PATROL_POINTS; i++) {
+		vec3_normalize_self(&v);
+		quat_rot_vec_self(&v, &rotation);	/* rotate v around the planet a bit */
+		r = r + dr;		/* Change the radius a bit */
+		vec3_mul(&v2, &v, r);	/* v2 = v scaled by radius */
+		vec3_add_self(&v2, &p);	/* Add in the planet position */
+		patrol->p[i] = v2;	/* Add waypoint to the patrol route */
+	}
+	o->tsd.ship.ai[n].ai_mode = AI_MODE_PATROL;
+	o->tsd.ship.nai_entries++;	/* push new oneshot patrol route onto AI stack */
+	set_patrol_waypoint_destination(o, 0);
+}
+
 static float ai_ship_travel_towards(struct snis_entity *o,
 		float destx, float desty, float destz)
 {
@@ -5406,54 +5475,15 @@ static float ai_ship_travel_towards(struct snis_entity *o,
 	endv.v.y = desty;
 	endv.v.z = destz;
 
+	double dist2 = dist3dsqrd(o->x - destx, o->y - desty, o->z - destz);
+
 	/* Check if there's a planet in the way and try to avoid it. */
 	planet = planet_between_points(&startv, &endv);
 	if (planet) {
-		/* Don't bother trying to avoid the planet unless it is close */
-		double planet_distance = object_dist(planet, o);
-		if (planet_distance < 2.0 * planet->tsd.planet.radius) {
-			union vec3 planetv, planet_to_dest, planet_to_ship;
-			union quat ship_to_dest;
-			double angle;
-			planetv.v.x = planet->x;
-			planetv.v.y = planet->y;
-			planetv.v.z = planet->z;
-			ai_trace(o->id, "AVOIDING PLANET D=%f < %f", planet_distance, 2.0 * planet->tsd.planet.radius);
-
-			/*
-			 * Find vector from planet to ship, and from planet to
-			 * destination and quaterion to rotate between these.
-			 * vectors.
-			 */
-			vec3_sub(&planet_to_dest, &endv, &planetv);
-			vec3_sub(&planet_to_ship, &startv, &planetv);
-			vec3_normalize_self(&planet_to_dest);
-			vec3_normalize_self(&planet_to_ship);
-			quat_from_u2v(&ship_to_dest, &planet_to_ship, &planet_to_dest, NULL);
-
-			/* Find a path along the great circle around planet from ship
-			 * to destination at 1.5 * radius of planet.  First dest point
-			 * on this path is (say) 5% around the curve from where the ship
-			 * is now.
-			 */
-			vec3_mul_self(&planet_to_ship, planet->tsd.planet.radius * 1.5);
-
-			/* Find the 5% of the angle of the quaternion, and change
-			 * the quaternion to the new angle. */
-			angle = 0.05f * 2.0f * acosf(ship_to_dest.v.w);
-			ship_to_dest.v.w = cos(0.5f * angle);
-			ai_trace(o->id, "AVOIDING PLANET ANGLE = %f DEG", angle * 180.0 / M_PI);
-
-			/* Find our new intermediate destination, 5% along our great circle. */
-			quat_rot_vec_self(&planet_to_ship, &ship_to_dest);
-			destx = planet->x + planet_to_ship.v.x;
-			desty = planet->y + planet_to_ship.v.y;
-			destz = planet->z + planet_to_ship.v.z;
-			ai_trace(o->id, "AVOIDING PLANET - NEW DEST = %f, %f, %f", destx, desty, destz);
-		}
+		push_planet_avoidance_route(o, &startv, &endv, planet);
+		return dist2;
 	}
 
-	double dist2 = dist3dsqrd(o->x - destx, o->y - desty, o->z - destz);
 	if (dist2 > 2000.0 * 2000.0) {
 		/* TODO: give ships some variety in movement? */
 
@@ -6176,11 +6206,17 @@ static void ai_patrol_mode_brain(struct snis_entity *o)
 	d = patrol->dest;
 	double dist2 = ai_ship_travel_towards(o,
 			patrol->p[d].v.x, patrol->p[d].v.y, patrol->p[d].v.z);
-	ai_trace(o->id, "PATROL DIST TO DEST = %.2f", sqrt(dist2));
+	ai_trace(o->id, "PATROL DIST TO DEST = %.2f, WP = %d, ONESHOT = %d",
+				sqrt(dist2), patrol->dest, patrol->oneshot);
 
 	if (has_arrived_at_destination(o, dist2)) {
 		/* Advance to the next patrol destination */
 		ai_trace(o->id, "PATROL ARRIVED AT DEST");
+		if (patrol->dest + 1 == patrol->npoints && patrol->oneshot) {
+			pop_ai_stack(o);
+			ai_trace(o->id, "POPPED ONESHOT PATROL ROUTE");
+			return;
+		}
 		set_patrol_waypoint_destination(o, (patrol->dest + 1) % patrol->npoints);
 		/* But first hang out here awhile... */
 		n = o->tsd.ship.nai_entries;
@@ -6206,11 +6242,17 @@ static void ai_cop_mode_brain(struct snis_entity *o)
 
 	double dist2 = ai_ship_travel_towards(o,
 				patrol->p[d].v.x, patrol->p[d].v.y, patrol->p[d].v.z);
-	ai_trace(o->id, "COP MODE DIST TO DEST = %.2f", sqrt(dist2));
+	ai_trace(o->id, "COP MODE DIST TO DEST = %.2f WP = %d ONESHOT = %d",
+				sqrt(dist2), patrol->dest, patrol->oneshot);
 
 	if (has_arrived_at_destination(o, dist2)) {
 		/* Advance to the next patrol destination */
 		ai_trace(o->id, "COP MODE ARRIVED AT DEST");
+		if (patrol->dest + 1 == patrol->npoints && patrol->oneshot) {
+			pop_ai_stack(o);
+			ai_trace(o->id, "COP POPPED ONESHOT PATROL ROUTE");
+			return;
+		}
 		set_patrol_waypoint_destination(o, (patrol->dest + 1) % patrol->npoints);
 		/* But first hang out here awhile... */
 		n = o->tsd.ship.nai_entries;
@@ -18059,6 +18101,7 @@ static int l_ai_push_patrol(lua_State *l)
 			break;
 	}
 	o->tsd.ship.ai[n].u.patrol.npoints = p;
+	o->tsd.ship.ai[n].u.patrol.oneshot = 0;
 	o->tsd.ship.nai_entries++;
 	set_patrol_waypoint_destination(o, 0);
 
