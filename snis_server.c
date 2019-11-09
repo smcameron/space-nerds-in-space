@@ -8722,41 +8722,50 @@ static float new_velocity(float desired_velocity, float current_velocity)
  * execute a nice turn. So we limit the desired change of angle to no more than
  * 45 degrees by just capping such desires.
  */
-static void temper_velocity_change(union vec3 *desired_velocity, float vx, float vy, float vz)
+static void temper_velocity_change(struct snis_entity *o, union vec3 *desired_velocity)
 {
-	union vec3 current_velocity, cross, newv1, newv2;
+	union vec3 current_direction, dv, cross, newv1, newv2;
 	union quat rotation1, rotation2;
 	float dot, d1, d2;
 
 	if (vec3_magnitude(desired_velocity) < 0.01)
 		return;
-	current_velocity.v.x = vx;
-	current_velocity.v.y = vy;
-	current_velocity.v.z = vz;
-	if (vec3_magnitude(&current_velocity) < 0.01)
-		return;
-	dot = vec3_dot(&current_velocity, desired_velocity);
+
+	/* Use orientation rather than velocity, as velocity might be close to zero. */
+	current_direction.v.x = 1.0;
+	current_direction.v.y = 0.0;
+	current_direction.v.z = 0.0;
+	quat_rot_vec_self(&current_direction, &o->orientation);
+
+	vec3_normalize_self(&current_direction);
+	vec3_normalize(&dv, desired_velocity);
+	dot = vec3_dot(&current_direction, &dv);
 	if (dot >= cos(45.0 * M_PI / 180.0)) /* Angle of turn is less than +/- 45 degrees */
 		return;
 	/* Angle of turn is more than +/- 45 degrees */
 	/* Find a vector perpendicular to current and desired velocities */
-	vec3_cross(&cross, &current_velocity, desired_velocity);
+	vec3_cross(&cross, &current_direction, &dv);
 	if (vec3_magnitude(&cross) < 0.001) /* Avoid NaNs when normalizing */
 		return;
 	vec3_normalize_self(&cross);
 	/* Try plus and minus 45 degrees */
 	quat_init_axis_v(&rotation1, &cross, 45.0 * M_PI / 180.0);
 	quat_init_axis_v(&rotation2, &cross, -45.0 * M_PI / 180.0);
-	quat_rot_vec(&newv1, &current_velocity, &rotation1);
-	quat_rot_vec(&newv2, &current_velocity, &rotation2);
+	quat_rot_vec(&newv1, &current_direction, &rotation1);
+	quat_rot_vec(&newv2, &current_direction, &rotation2);
 	/* Find the cos(angles) between our +/- 45 degree vectors and desired velocity */
 	d1 = vec3_dot(&newv1, desired_velocity);
 	d2 = vec3_dot(&newv2, desired_velocity);
 	/* Figure out which one is the smallest angle */
-	if (d1 > d2) /* d1 is the larger cos == smaller angle */
+	if (d1 > d2) { /* d1 is the larger cos == smaller angle */
+		vec3_normalize_self(&newv1);
+		vec3_mul_self(&newv1, vec3_magnitude(desired_velocity));
 		*desired_velocity = newv1;
-	else /* d2 is the larger cos == smaller angle */
+	} else { /* d2 is the larger cos == smaller angle */
+		vec3_normalize_self(&newv1);
+		vec3_mul_self(&newv1, vec3_magnitude(desired_velocity));
 		*desired_velocity = newv2;
+	}
 }
 
 static void update_ship_position_and_velocity(struct snis_entity *o)
@@ -8836,7 +8845,7 @@ static void update_ship_position_and_velocity(struct snis_entity *o)
 			desired_velocity.v.x, desired_velocity.v.y, desired_velocity.v.z);
 
 	/* Make the ship execute nice turns instead of stopping and quickly reversing */
-	temper_velocity_change(&desired_velocity, o->vx, o->vy, o->vz);
+	temper_velocity_change(o, &desired_velocity);
 	ai_trace(o->id, "AFTER TEMPER DV = %f, %f, %f",
 			desired_velocity.v.x, desired_velocity.v.y, desired_velocity.v.z);
 
