@@ -3299,6 +3299,7 @@ static void setup_patrol_route(struct snis_entity *o)
 	assert(npoints > 1 && npoints <= MAX_PATROL_POINTS);
 	patrol = &o->tsd.ship.ai[n].u.patrol;
 	patrol->npoints = npoints;
+	patrol->max_hangout_time = 255;
 	patrol->dest = 0;
 	patrol->oneshot = 0;
 
@@ -5443,6 +5444,7 @@ static void push_planet_avoidance_route(struct snis_entity *o,
 	patrol = &o->tsd.ship.ai[n].u.patrol;
 	patrol->oneshot = 1;
 	patrol->npoints = MAX_PATROL_POINTS;
+	patrol->max_hangout_time = 1; /* do not pause between waypoints */
 	v = p2s; /* Start at the ship */
 	r = r1;
 	for (i = 0; i < MAX_PATROL_POINTS; i++) {
@@ -6224,6 +6226,8 @@ static void ai_patrol_mode_brain(struct snis_entity *o)
 			ai_trace(o->id, "PATROL -> HANGOUT");
 			o->tsd.ship.ai[n].ai_mode = AI_MODE_HANGOUT;
 			o->tsd.ship.ai[n].u.hangout.time_to_go = 100 + snis_randn(100);
+			if (o->tsd.ship.ai[n].u.hangout.time_to_go > patrol->max_hangout_time)
+				o->tsd.ship.ai[n].u.hangout.time_to_go = patrol->max_hangout_time;
 			o->tsd.ship.desired_velocity = 0;
 			o->tsd.ship.nai_entries++;
 		}
@@ -6260,6 +6264,8 @@ static void ai_cop_mode_brain(struct snis_entity *o)
 			ai_trace(o->id, "COP -> HANGOUT");
 			o->tsd.ship.ai[n].ai_mode = AI_MODE_HANGOUT;
 			o->tsd.ship.ai[n].u.hangout.time_to_go = 100 + snis_randn(100);
+			if (o->tsd.ship.ai[n].u.hangout.time_to_go > patrol->max_hangout_time)
+				o->tsd.ship.ai[n].u.hangout.time_to_go = patrol->max_hangout_time;
 			o->tsd.ship.desired_velocity = 0;
 			o->tsd.ship.nai_entries++;
 		}

@@ -234,6 +234,7 @@ struct ai_patrol_data {
 	uint8_t npoints;
 	uint8_t dest;
 	uint8_t oneshot;
+	uint8_t max_hangout_time;
 	union vec3 p[MAX_PATROL_POINTS];
 };
 
@@ -241,6 +242,7 @@ struct ai_cop_data {
 	uint8_t npoints;
 	uint8_t dest;
 	uint8_t oneshot;
+	uint8_t max_hangout_time;
 	union vec3 p[MAX_PATROL_POINTS];
 };
 
