@@ -6745,16 +6745,9 @@ static void ship_collision_avoidance(void *context, void *entity)
 	/* hmm, server has no idea about meshes... */
 	d = dist3dsqrd(o->x - obstacle->x, o->y - obstacle->y, o->z - obstacle->z);
 
-	if (obstacle->type == OBJTYPE_PLANET) {
-		if (d < obstacle->tsd.planet.radius * obstacle->tsd.planet.radius) {
-			o->alive = 0;
-			ai_trace(o->id, "SHIP HAS COLLIDED WITH PLANET");
-			return;
-		}
-		d -= (obstacle->tsd.planet.radius * 1.3 * obstacle->tsd.planet.radius * 1.3);
-		if (d <= 0.0)
-			d = 1.0;
-	}
+	if (obstacle->type == OBJTYPE_PLANET)
+		return; /* Do not use steering forces to avoid planets.  That is done elsewhere */
+
 	if (obstacle->type == OBJTYPE_SPACEMONSTER) {
 		if (d < spacemonster_collision_radius * spacemonster_collision_radius) {
 			calculate_torpedolike_damage(o, spacemonster_damage_factor);
