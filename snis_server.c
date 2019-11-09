@@ -3376,6 +3376,9 @@ static void pop_ai_attack_mode(struct snis_entity *o)
 {
 	int n;
 
+	if (o->type != OBJTYPE_SHIP2) /* Could be a starbase, calling in here from torpedo collision detection */
+		return;
+
 	n = o->tsd.ship.nai_entries;
 	if (n <= 0) {
 		ship_figure_out_what_to_do(o);
