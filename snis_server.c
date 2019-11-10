@@ -5402,6 +5402,8 @@ static void push_planet_avoidance_route(struct snis_entity *o,
 	struct ai_patrol_data *patrol;
 	union quat rotation;
 	float angle;
+	const float min_altitude = 1000;
+	const float max_altitude = 3000;
 
 	n = o->tsd.ship.nai_entries;
 	if (n >= MAX_AI_STACK_ENTRIES)
@@ -5416,8 +5418,10 @@ static void push_planet_avoidance_route(struct snis_entity *o,
 	p2s.v.y = o->y - p.v.y;
 	p2s.v.z = o->z - p.v.z;
 	r1 = vec3_magnitude(&p2s);
-	if (r1 > planet->tsd.planet.radius + 1400)
-		r1 = planet->tsd.planet.radius + 1400;
+	if (r1 > planet->tsd.planet.radius + max_altitude)
+		r1 = planet->tsd.planet.radius + max_altitude;
+	if (r1 < planet->tsd.planet.radius + min_altitude)
+		r1 = planet->tsd.planet.radius + min_altitude;
 	vec3_normalize_self(&p2s);
 
 	/* planet to end of route vector */
@@ -5425,8 +5429,10 @@ static void push_planet_avoidance_route(struct snis_entity *o,
 	p2e.v.y = endv->v.y - p.v.y;
 	p2e.v.z = endv->v.z - p.v.z;
 	r2 = vec3_magnitude(&p2e);
-	if (r2 > planet->tsd.planet.radius + 1400)
-		r2 = planet->tsd.planet.radius + 1400;
+	if (r2 > planet->tsd.planet.radius + max_altitude)
+		r1 = planet->tsd.planet.radius + max_altitude;
+	if (r2 < planet->tsd.planet.radius + min_altitude)
+		r1 = planet->tsd.planet.radius + min_altitude;
 	vec3_normalize_self(&p2e);
 
 	/* Figure a quaternion to rotate an arc around the planet from start to end */
