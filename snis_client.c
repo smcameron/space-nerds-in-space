@@ -11607,7 +11607,8 @@ static void init_weapons_ui(void)
 	const int wlsh = 0.025 * SCREEN_HEIGHT;
 	weapons.phaser_bank_gauge = gauge_init(phx, phy, r, 0.0, 100.0, -120.0 * M_PI / 180.0,
 			120.0 * 2.0 * M_PI / 180.0, UI_COLOR(weap_gauge_needle), UI_COLOR(weap_gauge),
-			10, "CHARGE", sample_phasercharge);
+			10, "CHARGEx10", sample_phasercharge);
+	gauge_set_multiplier(weapons.phaser_bank_gauge, 10.0);
 	gauge_set_fonts(weapons.phaser_bank_gauge, PICO_FONT, PICO_FONT);
 	gauge_add_needle(weapons.phaser_bank_gauge, sample_phaser_power, UI_COLOR(weap_gauge_needle));
 	gauge_fill_background(weapons.phaser_bank_gauge, BLACK, 0.75);
