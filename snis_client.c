@@ -15818,12 +15818,12 @@ static void draw_science_graph(GtkWidget *w, struct snis_entity *ship, struct sn
 	}
 skip_data:
 	sng_set_foreground(UI_COLOR(science_data_label));
-	sng_abs_xy_draw_string("10", NANO_FONT, x1, y2 + 10);
-	sng_abs_xy_draw_string("20", NANO_FONT, x1 + (x2 - x1) / 4 - 10, y2 + 10);
-	sng_abs_xy_draw_string("30", NANO_FONT, x1 + 2 * (x2 - x1) / 4 - 10, y2 + 10);
-	sng_abs_xy_draw_string("40", NANO_FONT, x1 + 3 * (x2 - x1) / 4 - 10, y2 + 10);
-	sng_abs_xy_draw_string("50", NANO_FONT, x1 + 4 * (x2 - x1) / 4 - 20, y2 + 10);
-	sng_abs_xy_draw_string("Shield Profile (nm)", NANO_FONT, x1 + (x2 - x1) / 4 - 10, y2 + 30);
+	sng_abs_xy_draw_string("10", NANO_FONT, x1, y2 + txy(10));
+	sng_abs_xy_draw_string("20", NANO_FONT, x1 + (x2 - x1) / 4 - 10, y2 + txy(10));
+	sng_abs_xy_draw_string("30", NANO_FONT, x1 + 2 * (x2 - x1) / 4 - 10, y2 + txy(10));
+	sng_abs_xy_draw_string("40", NANO_FONT, x1 + 3 * (x2 - x1) / 4 - 10, y2 + txy(10));
+	sng_abs_xy_draw_string("50", NANO_FONT, x1 + 4 * (x2 - x1) / 4 - 20, y2 + txy(10));
+	sng_abs_xy_draw_string("SHIELD PROFILE (NM)", NANO_FONT, x1 + (x2 - x1) / 4 - 10, y2 + txy(20));
 }
 
 static void draw_science_data(GtkWidget *w, struct snis_entity *ship, struct snis_entity *o, int waypoint_index)
