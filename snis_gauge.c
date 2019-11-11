@@ -23,6 +23,7 @@ struct gauge {
 	char title[16]; 
 	int bg_color;
 	float bg_alpha;
+	float multiplier;
 };
 
 void gauge_add_needle(struct gauge *g, gauge_monitor_function sample, int color)
@@ -60,6 +61,7 @@ struct gauge *gauge_init(int x, int y, int r, double r1, double r2,
 	g->title[sizeof(g->title) - 1] = '\0';
 	g->sample2 = NULL;
 	g->bg_color = -1;
+	g->multiplier = 1.0;
 
 	return g;
 }
@@ -128,7 +130,7 @@ void gauge_draw(struct gauge *g)
 		y2 = (y2 + g->y);
 		y3 = (y3 + g->y);
 		sng_current_draw_line(x1, y1, x2, y2);
-		sprintf(buf2, "%1.0lf", v);
+		sprintf(buf2, "%1.0lf", v / g->multiplier);
 		v += inc;
 		sng_center_xy_draw_string(buf2, g->dial_font, x3, y3);
 	}
@@ -169,7 +171,8 @@ void gauge_set_fonts(struct gauge *g, int dial_font, int label_font)
 	g->label_font = label_font;
 }
 
-/*
- * end gauge related functions/types
- */
+void gauge_set_multiplier(struct gauge *g, float multiplier)
+{
+	g->multiplier = multiplier;
+}
 

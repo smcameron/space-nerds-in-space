@@ -11814,7 +11814,8 @@ static void init_nav_ui(void)
 				txy(nav_ui.gauge_radius + 16),
 				txx(nav_ui.gauge_radius), 0.0, 1000.0, -120.0 * M_PI / 180.0,
 				120.0 * 2.0 * M_PI / 180.0, needle_color, gauge_color,
-				10, "VEL", sample_ship_velocity);
+				10, "VELx10", sample_ship_velocity);
+	gauge_set_multiplier(nav_ui.speedometer, 10.0);
 	gauge_set_fonts(nav_ui.speedometer, PICO_FONT, PICO_FONT);
 	y = 3 * button_y_spacing;
 	nav_ui.engage_warp_button = snis_button_init(SCREEN_WIDTH - txx(nav_ui.gauge_radius * 2.2 + 10),

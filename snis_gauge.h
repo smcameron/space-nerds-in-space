@@ -45,4 +45,9 @@ GLOBAL void gauge_free(struct gauge *g); /* Frees gauge resources */
 /* Get location and radius of a gauge */
 GLOBAL void gauge_get_location(struct gauge *g, float *x, float *y, float *r);
 
+/* Set multiplier for gauge marks.  Example: a tachometer would have a multipler of
+ * 1000 so that 1 means 1000, 2 means 2000, etc.
+ */
+GLOBAL void gauge_set_multiplier(struct gauge *g, float multiplier);
+
 #endif
