@@ -176,3 +176,14 @@ void gauge_set_multiplier(struct gauge *g, float multiplier)
 	g->multiplier = multiplier;
 }
 
+/* Returns true if (physical_x, physical_y) is inside the gauge.  Used for tooltips. */
+int gauge_inside(struct gauge *g, int physical_x, int physical_y)
+{
+	int x, y, dx, dy;
+	x = sng_pixelx_to_screenx(physical_x);
+	y = sng_pixely_to_screeny(physical_y);
+	dx = x - g->x;
+	dy = y - g->y;
+	return dx * dx + dy * dy < g->r * g->r;
+}
+

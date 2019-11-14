@@ -395,6 +395,7 @@ static ui_element_button_press_function ui_text_window_button_press = (ui_elemen
 					text_window_button_press;
 static ui_element_inside_function ui_button_inside = (ui_element_inside_function)
 					snis_button_inside;
+static ui_element_inside_function ui_gauge_inside = (ui_element_inside_function) gauge_inside;
 static ui_element_inside_function ui_pull_down_menu_inside =
 	(ui_element_inside_function) pull_down_menu_inside;
 static ui_element_inside_function ui_slider_inside = (ui_element_inside_function)
@@ -11548,7 +11549,7 @@ static void ui_add_gauge(struct gauge *g, int active_displaymode)
 {
 	struct ui_element *uie;
 
-	uie = ui_element_init(g, ui_gauge_draw, NULL, NULL,
+	uie = ui_element_init(g, ui_gauge_draw, NULL, ui_gauge_inside,
 						active_displaymode, &displaymode);
 	ui_element_list_add_element(&uiobjs, uie); 
 }
