@@ -11627,6 +11627,8 @@ static void init_weapons_ui(void)
 	snis_button_set_sound(nav_ui.custom_button, UISND21);
 	ui_add_slider(weapons.wavelen_slider, DISPLAYMODE_WEAPONS, "PHASER WAVELENGTH CONTROL");
 	ui_add_gauge(weapons.phaser_bank_gauge, DISPLAYMODE_WEAPONS);
+	ui_set_widget_tooltip(weapons.phaser_bank_gauge,
+				"LARGE ARROW SHOWS CURRENT PHASER CHARGE\nSMALL ARROW SHOWS PHASER RECHARGE RATE");
 	ui_add_gauge(weapons.phaser_wavelength, DISPLAYMODE_WEAPONS);
 	ui_add_button(weapons.custom_button, DISPLAYMODE_WEAPONS, "CUSTOM BUTTON");
 }
