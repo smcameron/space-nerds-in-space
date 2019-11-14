@@ -11628,8 +11628,14 @@ static void init_weapons_ui(void)
 	ui_add_slider(weapons.wavelen_slider, DISPLAYMODE_WEAPONS, "PHASER WAVELENGTH CONTROL");
 	ui_add_gauge(weapons.phaser_bank_gauge, DISPLAYMODE_WEAPONS);
 	ui_set_widget_tooltip(weapons.phaser_bank_gauge,
-				"LARGE ARROW SHOWS CURRENT PHASER CHARGE\nSMALL ARROW SHOWS PHASER RECHARGE RATE");
+				"PHASER CHARGE INDICATOR\n"
+				"LARGE NEEDLE INDICATES CURRENT PHASER CHARGE\n"
+				"SMALL NEEDLE INDICATES PHASER RECHARGE RATE");
 	ui_add_gauge(weapons.phaser_wavelength, DISPLAYMODE_WEAPONS);
+	ui_set_widget_tooltip(weapons.phaser_wavelength,
+				"PHASER WAVELENGTH INDICATOR\n"
+				"MATCH PHASER WAVELENGTH TO\n"
+				"TARGET SHIELD GENERATOR WAVELENGTH");
 	ui_add_button(weapons.custom_button, DISPLAYMODE_WEAPONS, "CUSTOM BUTTON");
 }
 
@@ -11901,7 +11907,12 @@ static void init_nav_ui(void)
 	ui_add_button(nav_ui.trident_button, DISPLAYMODE_NAVIGATION,
 				"TOGGLE ABSOLUTE OR RELATIVE ORIENTATION");
 	ui_add_gauge(nav_ui.warp_gauge, DISPLAYMODE_NAVIGATION);
+	ui_set_widget_tooltip(nav_ui.warp_gauge,
+			"CURRENT WARP CHARGE INDICATOR\n"
+			"ENGAGE WARP WHEN INDICATOR\n"
+			"SHOWS DESIRED WARP CHARGE");
 	ui_add_gauge(nav_ui.speedometer, DISPLAYMODE_NAVIGATION);
+	ui_set_widget_tooltip(nav_ui.speedometer, "CURRENT SPEED INDICATOR");
 	ui_add_button(nav_ui.computer_button, DISPLAYMODE_NAVIGATION,
 				"ACTIVATE THE COMPUTER");
 	ui_add_button(nav_ui.camera_pos_button, DISPLAYMODE_NAVIGATION,
@@ -13864,10 +13875,25 @@ static void init_engineering_ui(void)
 	ui_add_slider(eu->lifesupport_coolant_slider, dm, "LIFE SUPPORT SYSTEM COOLANT CONTROL");
 	ui_add_slider(eu->shield_control_slider, dm, "SHIELD POWER CONTROL");
 	ui_add_gauge(eu->amp_gauge, dm);
+	ui_set_widget_tooltip(eu->amp_gauge, "CURRENT INDICATOR\n"
+				"INDICATES AMOUNT OF CURRENT\n"
+				"FLOWING FROM POWER SOURCE");
 	ui_add_gauge(eu->voltage_gauge, dm);
+	ui_set_widget_tooltip(eu->voltage_gauge, "VOLTAGE INDICATOR\n"
+				"INDICATES AMOUNT OF VOLTAGE\n"
+				"ACROSS POWER SOURCE TERMINALS");
 	ui_add_gauge(eu->fuel_gauge, dm);
+	ui_set_widget_tooltip(eu->fuel_gauge, "FUEL INDICATOR\n"
+				"INDICATES AMOUNT OF\n"
+				"FUEL REMAINING");
 	ui_add_gauge(eu->temp_gauge, dm);
+	ui_set_widget_tooltip(eu->temp_gauge, "TEMPERATURE INDICATOR\n"
+				"INDICATES TEMPERATURE\n"
+				"OF POWER SOURCE");
 	ui_add_gauge(eu->oxygen_gauge, dm);
+	ui_set_widget_tooltip(eu->oxygen_gauge, "OXYGEN INDICATOR\n"
+				"INDICATES AMOUNT OF OXYGEN\n"
+				"REMAINING UNTIL DANGEROUSLY LOW");
 	ui_add_button(eu->damcon_button, dm, "SWITCH TO THE DAMAGE CONTROL SCREEN");
 	ui_add_button(eu->preset1_button, dm, "SELECT ENGINEERING PRESET 1 - NORMAL MODE");
 	ui_add_button(eu->preset2_button, dm, "SELECT ENGINEERING PRESET 2 - QUIESCENT MODE");
