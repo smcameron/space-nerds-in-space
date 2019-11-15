@@ -19525,82 +19525,112 @@ static int l_get_ship_attribute(lua_State *l)
 	uint32_t oid;
 	int i;
 	void *base_address[1];
+	char errmsg[100] = { 0 };
 
 	oid = (uint32_t) lua_oid;
 	attribute = lua_tostring(lua_state, 2);
 	pthread_mutex_lock(&universe_mutex);
 	i = lookup_by_id(oid);
-	if (i < 0)
+	if (i < 0) {
+		snprintf(errmsg, sizeof(errmsg), "FAILED TO FIND ID %d\n", oid);
 		goto error;
+	}
 	o = &go[i];
-	if (o->type != OBJTYPE_SHIP1 && o->type != OBJTYPE_SHIP2)
+	if (o->type != OBJTYPE_SHIP1 && o->type != OBJTYPE_SHIP2) {
+		snprintf(errmsg, sizeof(errmsg), "ID %d IS NOT A SHIP\n", oid);
 		goto error;
+	}
 	base_address[0] = o;
 	kvs = lookup_key_entry(snis_entity_kvs, attribute);
-	if (!kvs)
+	if (!kvs) {
+		snprintf(errmsg, sizeof(errmsg), "FAILED TO FIND ATTRIBUTE %s\n", attribute);
 		goto error;
+	}
 	switch (kvs->type) {
 	case KVS_STRING:
 		str = (char *) o + kvs->address_offset;
 		lua_pushstring(l, str);
+		send_demon_console_msg(errmsg);
 		break;
 	case KVS_UINT64:
-		if (key_value_get_value(kvs, attribute, base_address, &ui64, sizeof(ui64)) != sizeof(ui64))
+		if (key_value_get_value(kvs, attribute, base_address, &ui64, sizeof(ui64)) != sizeof(ui64)) {
+			snprintf(errmsg, sizeof(errmsg), "FAILED TO GET UINT64 VALUE FOR %s\n", attribute);
 			goto error;
+		}
 		lua_pushnumber(l, (double) ui64);
 		break;
 	case KVS_UINT32:
-		if (key_value_get_value(kvs, attribute, base_address, &ui32, sizeof(ui32)) != sizeof(ui32))
+		if (key_value_get_value(kvs, attribute, base_address, &ui32, sizeof(ui32)) != sizeof(ui32)) {
+			snprintf(errmsg, sizeof(errmsg), "FAILED TO GET UINT32 VALUE FOR %s\n", attribute);
 			goto error;
+		}
 		lua_pushnumber(l, (double) ui32);
 		break;
 	case KVS_UINT16:
-		if (key_value_get_value(kvs, attribute, base_address, &ui16, sizeof(ui16)) != sizeof(ui16))
+		if (key_value_get_value(kvs, attribute, base_address, &ui16, sizeof(ui16)) != sizeof(ui16)) {
+			snprintf(errmsg, sizeof(errmsg), "FAILED TO GET UINT16 VALUE FOR %s\n", attribute);
 			goto error;
+		}
 		lua_pushnumber(l, (double) ui16);
 		break;
 	case KVS_UINT8:
-		if (key_value_get_value(kvs, attribute, base_address, &ui8, sizeof(ui16)) != sizeof(ui8))
+		if (key_value_get_value(kvs, attribute, base_address, &ui8, sizeof(ui16)) != sizeof(ui8)) {
+			snprintf(errmsg, sizeof(errmsg), "FAILED TO GET UINT8 VALUE FOR %s\n", attribute);
 			goto error;
+		}
 		lua_pushnumber(l, (double) ui8);
 		break;
 	case KVS_INT64:
-		if (key_value_get_value(kvs, attribute, base_address, &i64, sizeof(i64)) != sizeof(i64))
+		if (key_value_get_value(kvs, attribute, base_address, &i64, sizeof(i64)) != sizeof(i64)) {
+			snprintf(errmsg, sizeof(errmsg), "FAILED TO GET INT64 VALUE FOR %s\n", attribute);
 			goto error;
+		}
 		lua_pushnumber(l, (double) i64);
 		break;
 	case KVS_INT32:
-		if (key_value_get_value(kvs, attribute, base_address, &i32, sizeof(i32)) != sizeof(i32))
+		if (key_value_get_value(kvs, attribute, base_address, &i32, sizeof(i32)) != sizeof(i32)) {
+			snprintf(errmsg, sizeof(errmsg), "FAILED TO GET INT32 VALUE FOR %s\n", attribute);
 			goto error;
+		}
 		lua_pushnumber(l, (double) i32);
 		break;
 	case KVS_INT16:
-		if (key_value_get_value(kvs, attribute, base_address, &i16, sizeof(i16)) != sizeof(i16))
+		if (key_value_get_value(kvs, attribute, base_address, &i16, sizeof(i16)) != sizeof(i16)) {
+			snprintf(errmsg, sizeof(errmsg), "FAILED TO GET INT16 VALUE FOR %s\n", attribute);
 			goto error;
+		}
 		lua_pushnumber(l, (double) i16);
 		break;
 	case KVS_INT8:
-		if (key_value_get_value(kvs, attribute, base_address, &i8, sizeof(i8)) != sizeof(i8))
+		if (key_value_get_value(kvs, attribute, base_address, &i8, sizeof(i8)) != sizeof(i8)) {
+			snprintf(errmsg, sizeof(errmsg), "FAILED TO GET INT8 VALUE FOR %s\n", attribute);
 			goto error;
+		}
 		lua_pushnumber(l, (double) i8);
 		break;
 	case KVS_DOUBLE:
-		if (key_value_get_value(kvs, attribute, base_address, &dbl, sizeof(dbl)) != sizeof(dbl))
+		if (key_value_get_value(kvs, attribute, base_address, &dbl, sizeof(dbl)) != sizeof(dbl)) {
+			snprintf(errmsg, sizeof(errmsg), "FAILED TO GET DOUBLE VALUE FOR %s\n", attribute);
 			goto error;
+		}
 		lua_pushnumber(l, dbl);
 		break;
 	case KVS_FLOAT:
-		if (key_value_get_value(kvs, attribute, base_address, &flt, sizeof(flt)) != sizeof(flt))
+		if (key_value_get_value(kvs, attribute, base_address, &flt, sizeof(flt)) != sizeof(flt)) {
+			snprintf(errmsg, sizeof(errmsg), "FAILED TO GET FLOAT VALUE FOR %s\n", attribute);
 			goto error;
+		}
 		lua_pushnumber(l, (double) flt);
 		break;
 	default:
+		snprintf(errmsg, sizeof(errmsg), "UNKNOWN DATA TYPE %d\n", kvs->type);
 		goto error;
 	}
 	pthread_mutex_unlock(&universe_mutex);
 	return 1;
 error:
 	pthread_mutex_unlock(&universe_mutex);
+	send_demon_console_msg(errmsg);
 	lua_pushnil(lua_state);
 	return 1;
 }
