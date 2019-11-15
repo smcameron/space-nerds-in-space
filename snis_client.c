@@ -14628,7 +14628,7 @@ static void init_science_ui(void)
 	pull_down_menu_add_column(sci_ui.menu, "SCIENCE");
 
 	ui_add_slider(sci_ui.scizoom, DISPLAYMODE_SCIENCE, "SCIENCE SCOPE ZOOM CONTROL");
-	ui_add_slider(sci_ui.scipower, DISPLAYMODE_SCIENCE, "SCANNING BEAM POWER CONTROL");
+	ui_add_slider(sci_ui.scipower, DISPLAYMODE_SCIENCE, "SCANNING BEAM POWER INDICATOR");
 	ui_add_button(sci_ui.details_button, DISPLAYMODE_SCIENCE, "VIEW DETAILS ABOUT SELECTED TARGET");
 	ui_add_button(sci_ui.launch_mining_bot_button, DISPLAYMODE_SCIENCE,
 			"LAUNCH THE MINING ROBOT TOWARDS SELECTED TARGET");
