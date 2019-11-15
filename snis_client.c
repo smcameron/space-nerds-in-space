@@ -14002,7 +14002,7 @@ static void draw_tooltip(int mousex, int mousey, char *tooltip)
 	x = sng_pixelx_to_screenx(mousex);
 	y = sng_pixely_to_screeny(mousey);
 
-	sng_string_bounding_box(tooltip, NANO_FONT, &bbx1, &bby1, &bbx2, &bby2);
+	sng_string_bounding_box(tooltip, PICO_FONT, &bbx1, &bby1, &bbx2, &bby2);
 	width = fabsf(bbx2 - bbx1) + 20;
 	height = fabsf(bby2 - bby1) + 20;
 
@@ -14018,7 +14018,7 @@ static void draw_tooltip(int mousex, int mousey, char *tooltip)
 	snis_draw_rectangle(1, x, y, width, height);
 	sng_set_foreground(UI_COLOR(tooltip));
 	snis_draw_rectangle(0, x, y, width, height);
-	sng_abs_xy_draw_string(tooltip, NANO_FONT, x + txx(3), y + txy(12));
+	sng_abs_xy_draw_string(tooltip, PICO_FONT, x + txx(3), y + txy(12));
 }
 
 static void show_engineering_damage_report(GtkWidget *w, int subsystem)
