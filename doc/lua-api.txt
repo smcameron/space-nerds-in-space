@@ -93,6 +93,8 @@ FACTIONS in snis:
         3 "Zarkon",
         4 "Vekkazi",
 
+	(See get_faction_name() function, below)
+
 SHIPTYPES in snis:
 
 	SHIP_CLASS_CRUISER 0
@@ -953,6 +955,9 @@ encipher_string(string, cipher_key)
 	Given a string and a cipher key (from e.g. generate_cipher_key()).
 	returns an enciphered string.
 	NOTE: THIS IS NOT YET IMPLEMENTED.
+
+get_faction_name(faction_number)
+	returns the name of the given faction, or nil, if faction_number is out of range
 
 INTERACTIVE FICTION:
 

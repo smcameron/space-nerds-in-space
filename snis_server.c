@@ -18255,6 +18255,18 @@ static int l_generate_cipher_key(lua_State *l)
 	return 1;
 }
 
+static int l_get_faction_name(lua_State *l)
+{
+	int f = luaL_checknumber(l, 1);
+
+	if (f < 0 || f >= nfactions()) {
+		lua_pushnil(l);
+		return 1;
+	}
+	lua_pushstring(l, faction_name(f));
+	return 1;
+}
+
 static int l_comms_channel_transmit(lua_State *l)
 {
 	const char *name = luaL_checkstring(l, 1);
@@ -24140,6 +24152,7 @@ static void setup_lua(void)
 	add_lua_callable_fn(l_add_torpedo, "add_torpedo");
 	add_lua_callable_fn(l_set_starbase_factions_allowed, "set_starbase_factions_allowed");
 	add_lua_callable_fn(l_generate_cipher_key, "generate_cipher_key");
+	add_lua_callable_fn(l_get_faction_name, "get_faction_name");
 }
 
 static int run_initial_lua_scripts(void)
