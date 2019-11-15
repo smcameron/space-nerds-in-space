@@ -17578,6 +17578,46 @@ static void client_demon_follow(char *cmd)
 	print_demon_console_msg("FOLLOWING ID %u", id);
 }
 
+/* Replace "$sel" in demon commands with the list of IDs in the current selection
+ * and return in a newly allocated string.
+ */
+static char *expand_demon_selection_string(char *input)
+{
+	char *sel;
+	char buffer[1000];
+	char number[20];
+	int i, l, n;
+	char *newinput;
+
+	sel = strcasestr(input, "$sel");
+	if (!sel)
+		return strdup(input);
+	if (demon_ui.nselected <= 0) {
+		print_demon_console_color_msg(YELLOW, "NO CURRENT SELECTION");
+		return strdup(input);
+	}
+	strcpy(buffer, "");
+
+
+	for (i = 0; i < demon_ui.nselected; i++) {
+		sprintf(number, "%d", demon_ui.selected_id[i]);
+		l = strlen(buffer);
+		n = sizeof(buffer) - l - 2;
+		if (n <= 0)
+			break;
+		strncat(buffer, number, n);
+		strncat(buffer, " ", n - 1);
+	}
+	buffer[999] = '\0';
+	newinput = calloc(strlen(input) + strlen(buffer), 1);
+	strncpy(newinput, input, sel - input);
+	newinput[sel - input] = '\0';
+	strncat(newinput, buffer, sizeof(buffer));
+	l = strlen(newinput);
+	strncat(newinput, sel + 4, strlen(input) + strlen(buffer) - l - 1);
+	return newinput;
+}
+
 static int construct_demon_command(char *input,
 		struct demon_cmd_packet **cmd, char *errmsg)
 {
@@ -17587,6 +17627,7 @@ static int construct_demon_command(char *input,
 	struct packed_buffer *pb;
 	int idcount;
 	char *original = NULL;
+	char *copy = NULL;
 	char console_text[255];
 	int rc;
 
@@ -17594,6 +17635,11 @@ static int construct_demon_command(char *input,
 	snprintf(console_text, sizeof(console_text), "> %s", input);
 	text_window_add_color_text(demon_ui.console, console_text, CYAN);
 	uppercase(input);
+	input = expand_demon_selection_string(input);
+	if (!input) {
+		print_demon_console_color_msg(YELLOW, "NO CURRENT SELECTION");
+		goto error;
+	}
 	saveptr = NULL;
 	s = strtok_r(input, DEMON_CMD_DELIM, &saveptr);
 	if (s == NULL) {
@@ -17774,7 +17820,7 @@ static int construct_demon_command(char *input,
 			uppercase(original);
 			switch (set_clientside_variable(original)) {
 			case TWEAK_UNKNOWN_VARIABLE:
-				send_lua_script_packet_to_server(original); /* Try it on server */
+				send_lua_script_packet_to_server(copy); /* Try it on server */
 				break;
 			default:
 				break;
@@ -17794,25 +17840,33 @@ static int construct_demon_command(char *input,
 			break;
 		case 21: /* client side dump object */
 			uppercase(original);
-			client_side_dump(original);
+			copy = expand_demon_selection_string(original);
+			client_side_dump(copy);
+			free(copy);
 			break;
 		case 22: /* FOLLOW object */
 			uppercase(original);
-			client_demon_follow(original);
+			copy = expand_demon_selection_string(original);
+			client_demon_follow(copy);
+			free(copy);
 			break;
 		default: /* unknown, maybe it's a builtin server command or a lua script */
 			uppercase(original);
-			send_lua_script_packet_to_server(original);
+			copy = expand_demon_selection_string(original);
+			send_lua_script_packet_to_server(copy);
+			free(copy);
 			break;
 	}
 	if (original)
 		free(original);
+	free(input);
 	return 0;
 
 error:
 	
 	if (original)
 		free(original);
+	free(input);
 	return -1;
 }
 
