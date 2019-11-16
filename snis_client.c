@@ -52,6 +52,7 @@
 #include <netinet/tcp.h>
 #include <netinet/in.h>
 #include <getopt.h>
+#include <fenv.h>
 
 #include "arraysize.h"
 #include "build_bug_on.h"
@@ -159,6 +160,9 @@ static int requested_aspect_x = -1;
 static int requested_aspect_y = -1;
 static int screen_offset_x = 0;
 static int screen_offset_y = 0;
+
+/* Set to 1 by command line option "--trap-nans" (or "-t").  Will abort when NaNs are produced. */
+static int trap_nans = 0;
 
 /* helper function to transform from 800x600 original coord system */
 static inline int txx(int x) { return x * SCREEN_WIDTH / 800; }
@@ -22552,6 +22556,7 @@ static struct option long_options[] = {
 	{ "weapons", no_argument, NULL, 'W' },
 	{ "solarsystem", required_argument, NULL, '*'},
 	{ "joystick", required_argument, NULL, 'j'},
+	{ "trap-nans", no_argument, NULL, 't'},
 	{ 0, 0, 0, 0 },
 };
 
@@ -22564,7 +22569,7 @@ static void process_options(int argc, char *argv[])
 	y = -1;
 	while (1) {
 		int option_index;
-		c = getopt_long(argc, argv, "AaCEfj:Ll:Nn:Mm:p:P:qr:Ss:vW*:", long_options, &option_index);
+		c = getopt_long(argc, argv, "AaCEfj:Ll:Nn:Mm:p:P:qr:Ss:tvW*:", long_options, &option_index);
 		if (c == -1)
 			break;
 		switch (c) {
@@ -22669,6 +22674,9 @@ static void process_options(int argc, char *argv[])
 			if (!optarg)
 				usage();
 			solarsystem_name = optarg;
+			break;
+		case 't':
+			trap_nans = 1;
 			break;
 		default:
 			usage();
@@ -22855,6 +22863,10 @@ int main(int argc, char *argv[])
 	prevent_zombies();
 	set_random_seed();
 	process_options(argc, argv);
+
+	if (trap_nans)
+		feenableexcept(FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW);
+
 	check_lobby_serverhost_options();
 	asset_dir = override_asset_dir();
 	setup_sound();

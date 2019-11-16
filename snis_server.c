@@ -51,6 +51,7 @@
 #include <locale.h>
 #include <dirent.h>
 #include <signal.h>
+#include <fenv.h>
 
 #include "arraysize.h"
 #include "container-of.h"
@@ -205,6 +206,8 @@ static int starbases_orbit = 0; /* 1 means starbases can orbit planets, 0 means 
 /*
  * End of runtime adjustable globals
  */
+
+static int trap_nans = 0;
 
 static uint32_t ai_trace_id = (uint32_t) -1;
 
@@ -28099,6 +28102,7 @@ static struct option long_options[] = {
 	{ "multiverse", required_argument, NULL, 'm' },
 	{ "solarsystem", required_argument, NULL, 's' },
 	{ "version", no_argument, NULL, 'v' },
+	{ "trap-nans", no_argument, NULL, 't' },
 	{ 0, 0, 0, 0 },
 };
 
@@ -28173,7 +28177,7 @@ static void process_options(int argc, char *argv[])
 
 	while (1) {
 		int option_index;
-		c = getopt_long(argc, argv, "ehi:L:l:m:n:s:v", long_options, &option_index);
+		c = getopt_long(argc, argv, "ehi:L:l:m:n:s:tv", long_options, &option_index);
 		if (c == -1)
 			break;
 		switch (c) {
@@ -28217,6 +28221,9 @@ static void process_options(int argc, char *argv[])
 			printf("%s\n", BUILD_INFO_STRING1);
 			printf("%s\n", BUILD_INFO_STRING2);
 			exit(0);
+			break;
+		case 't':
+			trap_nans = 1;
 			break;
 		}
 	}
@@ -28828,6 +28835,8 @@ int main(int argc, char *argv[])
 	take_your_locale_and_shove_it();
 
 	process_options(argc, argv);
+	if (trap_nans)
+		feenableexcept(FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW);
 
 	asset_dir = override_asset_dir();
 	read_replacement_assets(&replacement_assets, asset_dir);

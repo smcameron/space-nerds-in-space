@@ -26,6 +26,8 @@ LOBBYHOST=localhost
 # ASPECT_RATIO="4:3"
 # ASPECT_RATIO="16:10"
 # ASPECT_RATIO="16:9"
+TRAP_NANS=
+# TRAP_NANS=--trap-nans
 
 ENABLE_ENSCRIPT=
 # ENABLE_ENSCRIPT=--enable-enscript
@@ -201,7 +203,7 @@ start_snis_server()
 	get_solarsystem_name
 	echo "Using solar system $SOLARSYSTEM_NAME"
 	SS1="$SOLARSYSTEM_NAME"
-	${SNIS_SERVER} -l "${LOBBYHOST}" -L $(uppercase "$SS1") -m narnia -s "$SS1" ${ENABLE_ENSCRIPT} > snis_server_log.txt 2>&1 &
+	${SNIS_SERVER} -l "${LOBBYHOST}" -L $(uppercase "$SS1") -m narnia -s "$SS1" ${ENABLE_ENSCRIPT} ${TRAP_NANS} > snis_server_log.txt 2>&1 &
 	sleep 2.5
 }
 
@@ -211,7 +213,7 @@ start_snis_client()
 	echo "Starting snis_client"
 	echo
 	CLIENT="$1"
-	${CLIENT} --lobbyhost "${LOBBYHOST}" $ASPECT_RATIO_ARG --fullscreen > snis_client_log.txt 2>&1 &
+	${CLIENT} --lobbyhost "${LOBBYHOST}" $ASPECT_RATIO_ARG --fullscreen ${TRAP_NANS} > snis_client_log.txt 2>&1 &
 	sleep 1
 	# --starship "$shipname" --pw "$password" $@
 }
