@@ -8903,6 +8903,12 @@ static void update_ship_position_and_velocity(struct snis_entity *o)
 		dest.v.x = o->tsd.ship.dox - o->x;
 		dest.v.y = o->tsd.ship.doy - o->y;
 		dest.v.z = o->tsd.ship.doz - o->z;
+		if (vec3_magnitude(&dest) < 0.1) {
+			dest.v.x = 0.05;
+			dest.v.y = 0.0;
+			dest.v.z = 0.0;
+			quat_rot_vec_self(&dest, &o->orientation);
+		}
 	}
 
 	o->tsd.ship.dist = vec3_magnitude(&dest);
