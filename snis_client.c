@@ -18176,6 +18176,12 @@ static void demon_planet_water_specularity_pressed(void *x)
 	graph_dev_planet_specularity = !graph_dev_planet_specularity;
 }
 
+static void demon_enscript_solarsystem_pressed(void *x)
+{
+	send_enscript_packet_to_server("ENSCRIPTED_SOLARSYSTEM.LUA");
+	print_demon_console_msg("SAVING TO ENSCRIPTED_SOLARSYSTEM.LUA IF ENABLED ON SERVER");
+}
+
 static int demon_planet_water_specularity_checkbox(void *x)
 {
 	return graph_dev_planet_specularity;
@@ -18422,6 +18428,8 @@ static void init_demon_ui()
 			demon_planet_water_specularity_pressed, NULL);
 	pull_down_menu_set_checkbox_function(demon_ui.menu, "META", "PLANET WATER SPECULARITY",
 			demon_planet_water_specularity_checkbox, NULL);
+	pull_down_menu_add_row(demon_ui.menu, "META", "ENSCRIPT SOLARSYSTEM",
+			demon_enscript_solarsystem_pressed, NULL);
 	pull_down_menu_add_column(demon_ui.menu, "ADD");
 	pull_down_menu_add_row(demon_ui.menu, "ADD", "SHIP", demon_ship_button_pressed, (void *)
 					(intptr_t) demon_ui.shiptype);
