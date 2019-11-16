@@ -1083,6 +1083,17 @@ fixit:
 
 static void set_object_location(struct snis_entity *o, double x, double y, double z)
 {
+	/* NaNs in NPC ship navigation have been enough of a problem that we should
+	 * just always monitor for them.
+	 */
+	if (isnan(o->x) || isnan(o->y) || isnan(o->z)) {
+		send_demon_console_color_msg(ORANGERED,
+			"NaN DETECTED AT %s:%d:SET_OBJECT_LOCATION() x,y,z = %lf,%lf,%lf!",
+			__FILE__, __LINE__, x, y, z);
+		fprintf(stderr,
+			"NaN DETECTED AT %s:%d:SET_OBJECT_LOCATION() x,y,z = %lf,%lf,%lf!\n",
+			__FILE__, __LINE__, x, y, z);
+	}
 	o->x = x;
 	o->y = y;
 	o->z = z;
