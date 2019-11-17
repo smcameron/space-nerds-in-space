@@ -111,6 +111,8 @@ static void calculate_triangle_normal(struct triangle *t)
 	v2.v.y = t->v[2]->y - t->v[1]->y;
 	v2.v.z = t->v[2]->z - t->v[1]->z;
 	vec3_cross(&v3, &v1, &v2);
+	if (vec3_magnitude(&v3) < 1e-20)
+		vec3_init(&v3, 1, 0, 0); /* Make sure normalizing won't produce NaNs */
 	vec3_normalize_self(&v3);
 	t->n.x = v3.v.x;
 	t->n.y = v3.v.y;
