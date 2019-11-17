@@ -390,15 +390,22 @@ void process_vertex_normals(struct mesh *m, float sharp_edge_angle, struct verte
 					/* figure out the angle between this vertex and the other two on the triangle */
 					float dot = 0;
 					if (this_v == t->v[0]) {
-						dot = vec3_dot(vec3_normalize_self(vec3_sub(&tv1, &v0, &v1)),
-								vec3_normalize_self(vec3_sub(&tv2, &v0, &v2)));
+						vec3_sub(&tv1, &v0, &v1);
+						vec3_sub(&tv2, &v0, &v2);
 					} else if (this_v == t->v[1]) {
-						dot = vec3_dot(vec3_normalize_self(vec3_sub(&tv1, &v1, &v0)),
-								vec3_normalize_self(vec3_sub(&tv2, &v1, &v2)));
+						vec3_sub(&tv1, &v1, &v0);
+						vec3_sub(&tv2, &v1, &v2);
 					} else if (this_v == t->v[2]) {
-						dot = vec3_dot(vec3_normalize_self(vec3_sub(&tv1, &v2, &v0)),
-								vec3_normalize_self(vec3_sub(&tv2, &v2, &v1)));
+						vec3_sub(&tv1, &v2, &v0);
+						vec3_sub(&tv2, &v2, &v1);
 					}
+					if (vec3_magnitude(&tv1) < 1e-20)
+						vec3_init(&tv1, 1, 0, 0); /* Avoid NaN when normalizing */
+					if (vec3_magnitude(&tv2) < 1e-20)
+						vec3_init(&tv2, 1, 0, 0); /* Avoid NaN when normalizing */
+					vec3_normalize_self(&tv1);
+					vec3_normalize_self(&tv2);
+					dot = vec3_dot(&tv1, &tv2);
 					if (dot < 0.0)
 						dot = 0.0;
 					if (dot > 1.0)
