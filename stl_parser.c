@@ -386,6 +386,8 @@ void process_vertex_normals(struct mesh *m, float sharp_edge_angle, struct verte
 					vec3_cross(&cross_p, vec3_sub(&tv1, &v1, &v0), vec3_sub(&tv2, &v2, &v0));
 					float area = 0.5 * vec3_magnitude(&cross_p);
 					vec3_mul_self(&tnormal, area);
+					if (area < 1e-20)
+						continue;
 #endif
 					/* figure out the angle between this vertex and the other two on the triangle */
 					float dot = 0;
@@ -411,11 +413,22 @@ void process_vertex_normals(struct mesh *m, float sharp_edge_angle, struct verte
 					if (dot > 1.0)
 						dot = 1.0;
 					float angle = acos(dot);
+					if (angle < 1e-20)
+						continue;
 
 					vec3_mul_self(&tnormal, angle);
 
 					vec3_add_self(&vnormal, &tnormal);
 				}
+			}
+			/* If we got through the above loop without any contributions from
+			 * neighboring triangles, just use the triangle normal for the
+			 * vertex normal.
+			 */
+			if (vnormal.v.x == 0 && vnormal.v.y == 0 && vnormal.v.z == 0) {
+				vnormal.v.x = m->t[tri_index].n.x;
+				vnormal.v.y = m->t[tri_index].n.y;
+				vnormal.v.z = m->t[tri_index].n.z;
 			}
 			vec3_normalize_self(&vnormal);
 
