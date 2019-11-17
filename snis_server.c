@@ -6895,6 +6895,8 @@ static void ship_collision_avoidance(void *context, void *entity)
 	o->tsd.ship.steering_adjustment.v.x = o->x - obstacle->x;
 	o->tsd.ship.steering_adjustment.v.y = o->y - obstacle->y;
 	o->tsd.ship.steering_adjustment.v.z = o->z - obstacle->z;
+	if (vec3_magnitude(&o->tsd.ship.steering_adjustment) <= 0.0001)
+		return; /* Otherwise, the normalization will get you NaNs. */
 	vec3_normalize_self(&o->tsd.ship.steering_adjustment);
 	steering_magnitude = 800.0 / d;
 	if (steering_magnitude > 10.0)
