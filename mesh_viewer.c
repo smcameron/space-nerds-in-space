@@ -610,7 +610,10 @@ static void draw_screen()
 
 		sng_set_foreground(WHITE);
 		char stat_buffer[30];
-		sprintf(stat_buffer, "fps %5.2f", 1.0/avg_frame_rate);
+		if (avg_frame_rate != 0)
+			sprintf(stat_buffer, "fps %5.2f", 1.0 / avg_frame_rate);
+		else
+			sprintf(stat_buffer, "fps ?????.??");
 		sng_abs_xy_draw_string(stat_buffer, NANO_FONT, 2, 10);
 		sprintf(stat_buffer, "t %0.2f ms", avg_frame_time * 1000.0);
 		sng_abs_xy_draw_string(stat_buffer, NANO_FONT, 92, 10);
