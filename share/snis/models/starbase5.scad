@@ -16,7 +16,7 @@ module spoke(angle)
 				rotate(a = 90, v = [1,0,0])
 					translate(v = [0,0,-1])
 						cylinder(h = 2, r1 = 4.5, r2 = 4.5, $fn=20, center = true);
-				sphere(r = 4);
+				sphere(r = 4, $fn=20);
 			}
 			translate(v = [0, 14, 0]) {
 				rotate(a = 90, v = [1,0,0])
@@ -32,6 +32,7 @@ module spoke(angle)
 }
 
 scale(v = [2.0, 2.0, 2.0]) {
+	union() {
 	difference() {
 		union() {
 			cylinder(h = 5, r1 = 30, r2 = 35, center = true);
@@ -65,6 +66,7 @@ scale(v = [2.0, 2.0, 2.0]) {
 	spoke(0);
 	spoke(360 / 3);
 	spoke(-360 / 3);
+	}
 }
 
 use <imposter_docking_port.scad>;
