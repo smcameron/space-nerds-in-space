@@ -515,11 +515,12 @@ static union vec3 compute_triangle_normal(struct triangle *t)
 	v2.v.z = t->v[2]->z - t->v[1]->z;
 
 	vec3_cross(&cross, &v1, &v2);
-	vec3_normalize_self(&cross);
 
-	/* make sure we always have a valid normal */
-	if (isnan(cross.v.x) || isnan(cross.v.y) || isnan(cross.v.z))
+	/* make sure we always have a valid normal, not NaNs */
+	if (vec3_magnitude(&cross) < 1e-20)
 		vec3_init(&cross, 0, 1, 0);
+	else
+		vec3_normalize_self(&cross);
 
 	return cross;
 }
