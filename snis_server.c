@@ -7608,8 +7608,8 @@ static void damcon_robot_move(struct snis_damcon_entity *o, struct damcon_data *
 				diff -= 2.0 * M_PI;
 		}
 
-		/* Slower you're going, quicker you can turn */
-		max_heading_change = (max_damcon_robot_velocity / fabs(o->velocity)) * 6.0 * M_PI / 180.0;
+		/* Slower you're going, quicker you can turn.  The "+ 0.01" is to avoid divide by zero. */
+		max_heading_change = (max_damcon_robot_velocity / (fabs(o->velocity) + 0.01)) * 6.0 * M_PI / 180.0;
 		if (fabs(diff) > max_heading_change)
 			diff = max_heading_change * diff / fabs(diff);
 
