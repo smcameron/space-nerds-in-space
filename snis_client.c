@@ -2811,12 +2811,12 @@ static void move_object(double timestamp, struct snis_entity *o, interpolate_upd
 	/* calculate where to interpolate to between from and to */
 	double t;
 	if (o->updatetime[to_index] != o->updatetime[from_index])
-		/* Should not happen, but I've seen it a handful of times at start-up
-		 * leading to (temporary) NaNs in object positions.
-		 */
 		t = (target_time - o->updatetime[from_index]) /
 			(o->updatetime[to_index] - o->updatetime[from_index]);
 	else
+		/* Should not happen, but I've seen it a handful of times at start-up
+		 * leading to (temporary) NaNs in object positions.
+		 */
 		t = 0;
 	interp_func(timestamp, o, visible, from_index, to_index, t);
 }
