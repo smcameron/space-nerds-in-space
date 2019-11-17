@@ -353,7 +353,7 @@ void process_vertex_normals(struct mesh *m, float sharp_edge_angle, struct verte
 		union vec3 this_tnormal = { { this_t->n.x, this_t->n.y, this_t->n.z } };
 
 		for (vert_index = 0; vert_index < 3; vert_index++) {
-			union vec3 vnormal = { { 1, 0, 0} }; /* not 0,0,0 in case triangle has no owner, it happens. */
+			union vec3 vnormal = { { 0, 0, 0} };
 
 			struct vertex *this_v = this_t->v[vert_index];
 
