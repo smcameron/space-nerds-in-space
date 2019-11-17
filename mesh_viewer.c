@@ -15,6 +15,7 @@
 #include <getopt.h>
 #include <locale.h>
 #include <GL/glew.h>
+#include <fenv.h>
 
 #include "mtwist.h"
 #include "vertex.h"
@@ -67,6 +68,7 @@ static char *turret_model = NULL;
 static char *turret_base_model = NULL;
 union quat autorotation; 
 static int icosahedron_subdivision = 4;
+static int trap_nans = 0;
 #define LASER_VELOCITY 200.0
 
 static int display_frame_stats = 1;
@@ -756,6 +758,7 @@ static struct option long_options[] = {
 	{ "turret", required_argument, NULL, 'T' },
 	{ "alphabynormal", no_argument, NULL, 'A' },
 	{ "diffuse", required_argument, NULL, 'd' },
+	{ "trap-nans", no_argument, NULL, 'f' },
 	{ 0, 0, 0, 0 },
 };
 
@@ -766,7 +769,7 @@ static void process_options(int argc, char *argv[])
 	while (1) {
 		int option_index;
 
-		c = getopt_long(argc, argv, "IAB:T:bc:d:C:Y:Z:e:hi:m:n:p:s:t:", long_options, &option_index);
+		c = getopt_long(argc, argv, "IAB:T:bc:d:fC:Y:Z:e:hi:m:n:p:s:t:", long_options, &option_index);
 		if (c < 0) {
 			break;
 		}
@@ -839,6 +842,9 @@ static void process_options(int argc, char *argv[])
 		case 's':
 			skyboxfile = optarg;
 			break;
+		case 'f':
+			trap_nans = 1;
+			break;
 		default:
 			fprintf(stderr, "%s: Unknown option.\n", program);
 			usage(program);
@@ -860,6 +866,9 @@ int main(int argc, char *argv[])
 		usage(program);
 
 	process_options(argc, argv);
+	if (trap_nans)
+		feenableexcept(FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW);
+
 	filename = modelfile;
 	if (!filename && !(planet_mode || burst_rod_mode || thrust_mode || turret_mode))
 		usage(program);
