@@ -2973,9 +2973,9 @@ static void update_shading_planet(struct snis_entity *o)
 	p1.v.x = o->x;
 	p1.v.y = o->y;
 	p1.v.z = o->z;
-	p1.v.x = SUNX;
-	p1.v.y = SUNY;
-	p1.v.z = SUNZ;
+	p2.v.x = SUNX;
+	p2.v.y = SUNY;
+	p2.v.z = SUNZ;
 	o->shading_planet = planet_between_points(&p1, &p2);
 	if (o->entity)
 		entity_set_in_shade(o->entity, (float) 0.9 * (o->shading_planet != NULL) + 0.1);
