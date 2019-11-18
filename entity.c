@@ -967,7 +967,7 @@ void render_entities(struct entity_context *cx)
 			e->dist3dsqrd = dist3dsqrd(c->x - e->x, c->y - e->y, c->z - e->z);
 
 			/* only cull stuff that is too small on flat shader */
-			if (c->renderer & FLATSHADING_RENDERER) {
+			if (c->renderer & FLATSHADING_RENDERER && e->dist3dsqrd != 0) {
 				/* cull objects that are too small to draw based on approx screen size
 				   http://stackoverflow.com/questions/3717226/radius-of-projected-sphere */
 				float approx_pixel_size = c->yvpixels * e->m->radius * max_scale /
