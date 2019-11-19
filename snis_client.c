@@ -1668,7 +1668,7 @@ static void laserbeam_move(struct snis_entity *o)
 		update_entity_pos(o->entity, x, y, z);
 		update_entity_orientation(o->entity, &orientation);
 		update_entity_material(o->entity, o->tsd.laserbeam.material);
-		update_entity_non_uniform_scale(o->entity, length, 5.0 + snis_randn(20), 0.0);
+		update_entity_non_uniform_scale(o->entity, length, 5.0 + snis_randn(20), 0.001);
 	}
 
 	if (o->tsd.laserbeam.laserflash_entity) {
