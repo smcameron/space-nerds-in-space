@@ -529,6 +529,14 @@ static void render_entity(struct entity_context *cx, struct frustum *f, struct e
 	if (e->sx >=0 && e->sy >= 0)
 		e->onscreen = 1;
 
+	/* Do not render entities with scale of zero. Doing so will lead to infinities
+	 * in the model normal matrix, besides being pointless.
+	 */
+	if (e->scale.v.x == 0 && e->scale.v.y == 0 && e->scale.v.z == 0) {
+		e->onscreen = 0;
+		return;
+	}
+
 	struct entity_transform transform;
 	calculate_model_matrices(&cx->camera, f, e, &transform);
 
