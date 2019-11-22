@@ -3011,9 +3011,12 @@ static void push_attack_mode(struct snis_entity *attacker, uint32_t victim_id, i
 				go[i].tsd.ship.ai[0].ai_mode == AI_MODE_COP)
 				return; /* Don't attack the cops */
 		}
+		/* If we're in a secure area ... */
 		if (attacker->tsd.ship.in_secure_area || go[i].tsd.ship.in_secure_area) {
-			/* TODO: something better */
-			return;
+			/* And we're an NPC and not a cop ... */
+			if (attacker->type != OBJTYPE_SHIP2 || attacker->tsd.ship.ai[0].ai_mode != AI_MODE_COP)
+				/* TODO: something better */
+				return; /* Do not attack in secure area (unless cop). */
 		}
 	}
 
