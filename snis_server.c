@@ -3529,11 +3529,16 @@ static void notify_a_cop(void *context, void *entity)
 	}
 }
 
-static void notify_the_cops(struct snis_entity *weapon)
+static void notify_the_cops(struct snis_entity *weapon, struct snis_entity *target)
 {
 	uint32_t perp_id;
 	int perp_index;
 	struct snis_entity *perp;
+
+	if (target->type == OBJTYPE_SHIP2 && target->tsd.ship.ai[0].ai_mode == AI_MODE_COP) {
+		/* If the target is a cop, it's already notified. */
+		return;
+	}
 
 	switch (weapon->type) {
 	case OBJTYPE_TORPEDO:
@@ -3644,7 +3649,7 @@ static void missile_collision_detection(void *context, void *entity)
 			break;
 		case OBJTYPE_SHIP1:
 		case OBJTYPE_SHIP2:
-			notify_the_cops(missile);
+			notify_the_cops(missile, target);
 			damage_factor = missile_explosion_damage_distance / (sqrt(dist2) + 3.0);
 			calculate_missile_explosion_damage(target, damage_factor);
 			send_ship_damage_packet(target);
@@ -3778,7 +3783,7 @@ static void torpedo_collision_detection(void *context, void *entity)
 	impact_time = universe_timestamp;
 	impact_fractional_time = (double) delta_t;
 
-	notify_the_cops(o);
+	notify_the_cops(o, entity);
 
 	if (t->type == OBJTYPE_STARBASE) {
 		t->tsd.starbase.under_attack = 1;
@@ -4053,7 +4058,7 @@ static void laser_collision_detection(void *context, void *entity)
 		
 	/* hit!!!! */
 	o->alive = 0;
-	notify_the_cops(o);
+	notify_the_cops(o, entity);
 	schedule_callback2(event_callback, &callback_schedule,
 				"object-hit-event", t->id, o->tsd.laser.ship_id);
 
@@ -12189,7 +12194,7 @@ static void laserbeam_move(struct snis_entity *o)
 		target->tsd.starbase.under_attack = 1;
 		add_starbase_attacker(target, o->tsd.laserbeam.origin);
 		calculate_laser_starbase_damage(target, o->tsd.laserbeam.wavelength);
-		notify_the_cops(o);
+		notify_the_cops(o, target);
 	}
 
 	if (ttype == OBJTYPE_SHIP1 || ttype == OBJTYPE_SHIP2) {
@@ -12197,7 +12202,7 @@ static void laserbeam_move(struct snis_entity *o)
 					(float) o->tsd.laserbeam.power);
 		send_ship_damage_packet(target);
 		attack_your_attacker(target, lookup_entity_by_id(o->tsd.laserbeam.origin));
-		notify_the_cops(o);
+		notify_the_cops(o, target);
 	}
 
 	if (ttype == OBJTYPE_TURRET) {
