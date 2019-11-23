@@ -283,7 +283,7 @@ static int write_bridge_info(FILE *f, struct bridge_info *b)
 {
 	void *base_address[] = { &b->entity, b };
 
-	fprintf(f, "starsystem:%s", b->starsystem_name);
+	fprintf(f, "starsystem:%s\n", b->starsystem_name);
 	return key_value_write_lines(f, snis_entity_kvs, base_address);
 }
 
