@@ -146,6 +146,8 @@ static float atmosphere_damage_factor = ATMOSPHERE_DAMAGE_FACTOR;
 static float missile_damage_factor = MISSILE_EXPLOSION_WEAPONS_FACTOR;
 static float spacemonster_damage_factor = SPACEMONSTER_WEAPONS_FACTOR;
 static float warp_core_damage_factor = WARP_CORE_EXPLOSION_WEAPONS_FACTOR;
+static int limit_warp_near_planets = 1;
+static float warp_limit_dist_factor = 1.5;
 static float threat_level_flee_threshold = THREAT_LEVEL_FLEE_THRESHOLD;
 static float max_spacemonster_accel = MAX_SPACEMONSTER_ACCEL;
 static float max_spacemonster_velocity = MAX_SPACEMONSTER_VELOCITY;
@@ -4961,6 +4963,51 @@ static int too_many_cops_around(struct snis_entity *o)
 	return o->tsd.ship.in_secure_area;
 }
 
+struct warp_inhibition {
+	int inhibit;
+	union vec3 ship_pos;
+};
+
+static void calculate_planet_warp_inhibition(void *context, void *entity)
+{
+	struct warp_inhibition *wi = context;
+	struct snis_entity *gravity_source = entity;
+	float dist2, limit, radius;
+
+	if (wi->inhibit) /* We already know it's inhibited? */
+		return;
+	switch (gravity_source->type) {
+	case OBJTYPE_PLANET:
+		radius = gravity_source->tsd.planet.radius;
+		break;
+	case OBJTYPE_BLACK_HOLE:
+		radius = gravity_source->tsd.black_hole.radius;
+		break;
+	default:
+		return;
+	}
+	limit = warp_limit_dist_factor * radius;
+	limit = limit * limit;
+	dist2 = dist3dsqrd(gravity_source->x - wi->ship_pos.v.x,
+			gravity_source->y - wi->ship_pos.v.y,
+			gravity_source->z - wi->ship_pos.v.z);
+	if (dist2 < limit)
+		wi->inhibit = 1;
+}
+
+static int warp_inhibited_by_planet(struct snis_entity *ship)
+{
+	struct warp_inhibition wi;
+	if (!limit_warp_near_planets)
+		return 0;
+	wi.inhibit = 0;
+	wi.ship_pos.v.x = ship->x;
+	wi.ship_pos.v.y = ship->y;
+	wi.ship_pos.v.z = ship->z;
+	space_partition_process(space_partition, ship, ship->x, ship->z, &wi, calculate_planet_warp_inhibition);
+	return wi.inhibit;
+}
+
 static void fire_missile(struct snis_entity *shooter, uint32_t target_id);
 
 /* o is ai controled entity doing the weapons firing
@@ -5530,7 +5577,8 @@ static float ai_ship_travel_towards(struct snis_entity *o,
 			set_ship_destination(o, destx, desty, destz);
 		}
 		/* sometimes just warp if it's too far... */
-		if (snis_randn(warproll) < ship_type[o->tsd.ship.shiptype].warpchance) {
+		if (snis_randn(warproll) < ship_type[o->tsd.ship.shiptype].warpchance
+			&& !warp_inhibited_by_planet(o)) {
 			if (rts_mode) {
 				/* RTS mode has constraints on warping, because warping without
 				 * connstraints means that spatial proximity doesn't matter wrt
@@ -17448,6 +17496,10 @@ static struct tweakable_var_descriptor server_tweak[] = {
 		&starbases_orbit, 'i', 0.0, 0.0, 0.0, 0, 1, 0},
 	{ "AI_TRACE_ID", "AI TRACE ID",
 		&ai_trace_id, 'i', 0.0, 0.0, 0.0, INT_MIN, INT_MAX, -1},
+	{ "LIMIT_WARP_NEAR_PLANETS", "LIMITS WARPING NEAR PLANETS OR BLACK HOLES",
+		&limit_warp_near_planets, 'i', 0.0, 0.0, 0.0, 0, 1, 1},
+	{ "WARP_LIMIT_DIST_FACTOR", "MULTIPLE OF RADIUS YOU MUST BE FROM GRAVITY SOURCE TO WARP",
+		&warp_limit_dist_factor, 'f', 1.0, 1000000.0, 1.5, 0, 0, 0},
 	{ NULL, NULL, NULL, '\0', 0.0, 0.0, 0.0, 0, 0, 0 },
 };
 
