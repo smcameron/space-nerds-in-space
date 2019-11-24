@@ -7394,7 +7394,6 @@ static int process_update_chaff_packet(void)
 static struct network_setup_ui {
 	struct button *connect_to_lobby;
 	struct snis_text_input_box *lobbyservername;
-	struct snis_text_input_box *solarsystemname;
 	struct snis_text_input_box *shipname_box;
 	struct snis_text_input_box *password_box;
 	struct button *role_main;
@@ -19318,11 +19317,6 @@ static void lobby_hostname_entered()
 	printf("lobby hostname entered: %s\n", net_setup_ui.lobbyname);
 }
 
-static void gameserver_hostname_entered()
-{
-	printf("game server hostname entered: %s\n", net_setup_ui.solarsystem);
-}
-
 static void shipname_entered()
 {
 	printf("shipname entered: %s\n", net_setup_ui.shipname);
@@ -19636,13 +19630,7 @@ static void init_net_setup_ui(void)
 		snis_text_input_box_init(left, y, txy(30), txx(750), input_color, TINY_FONT,
 					net_setup_ui.lobbyname, 50, &timer,
 					lobby_hostname_entered, NULL);
-	y += yinc * 3;
-	net_setup_ui.solarsystemname =
-		snis_text_input_box_init(left, y, txy(30), txx(750), input_color, TINY_FONT,
-					net_setup_ui.solarsystem, sizeof(net_setup_ui.solarsystem) - 1, &timer,
-					gameserver_hostname_entered, NULL);
-	snis_text_input_box_set_contents(net_setup_ui.solarsystemname, "DEFAULT2");
-	y += yinc * 3;
+	y += yinc * 6;
 	net_setup_ui.shipname_box =
 		snis_text_input_box_init(txx(150), y, txy(30), txx(250), input_color, TINY_FONT,
 					net_setup_ui.shipname, sizeof(net_setup_ui.shipname) - 1, &timer,
@@ -19695,7 +19683,6 @@ static void init_net_setup_ui(void)
 
 	/* note: the order of these is important for TAB key focus advance */
 	ui_add_text_input_box(net_setup_ui.lobbyservername, DISPLAYMODE_NETWORK_SETUP);
-	ui_add_text_input_box(net_setup_ui.solarsystemname, DISPLAYMODE_NETWORK_SETUP);
 	ui_add_text_input_box(net_setup_ui.shipname_box, DISPLAYMODE_NETWORK_SETUP);
 	ui_add_text_input_box(net_setup_ui.password_box, DISPLAYMODE_NETWORK_SETUP);
 	ui_add_pull_down_menu(net_setup_ui.menu, DISPLAYMODE_NETWORK_SETUP); /* needs to be last */
@@ -19720,7 +19707,6 @@ static void show_network_setup(GtkWidget *w)
 	snprintf(button_label, sizeof(button_label), "ENTER LOBBY %s", net_setup_ui.lobbyname);
 	snis_button_set_label(net_setup_ui.connect_to_lobby, button_label);
 	sng_abs_xy_draw_string(msg, TINY_FONT, txx(25), txy(130));
-	sng_abs_xy_draw_string("SOLARSYSTEM NAME", TINY_FONT, txx(25), txy(280));
 	sng_abs_xy_draw_string("SHIP NAME", TINY_FONT, txx(20), txy(470));
 	sng_abs_xy_draw_string("PASSWORD", TINY_FONT, txx(20), txy(520));
 	sng_abs_xy_draw_string("NOTE: THE \"PASSWORD\" IS NOT CRYPTOGRAPHICALLY SECURE", NANO_FONT, txx(20), txy(540));
