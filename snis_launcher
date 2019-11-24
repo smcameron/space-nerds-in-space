@@ -7,7 +7,7 @@ then
 fi
 
 # Hack this in for now
-PREFIX=./
+PREFIX=.
 
 BINDIR=${PREFIX}/bin
 if [ "$SNIS_ASSET_DIR" = "" ]
