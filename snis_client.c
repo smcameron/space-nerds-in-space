@@ -7392,7 +7392,6 @@ static int process_update_chaff_packet(void)
 }
 
 static struct network_setup_ui {
-	struct button *start_gameserver;
 	struct button *connect_to_lobby;
 	struct snis_text_input_box *lobbyservername;
 	struct snis_text_input_box *solarsystemname;
@@ -19345,60 +19344,6 @@ static void sanitize_string(char *s)
 			s[i] = 'x';
 }
 
-static void start_gameserver_button_pressed()
-{
-	char command[PATH_MAX];
-	char *bindir;
-	pid_t child;
-	const char errorstr[] = "Failed to exec snis_server.\n";
-	char *uppersolarsys, *lowersolarsys;
-
-	/* FIXME this is probably not too cool. */
-	sanitize_string(net_setup_ui.solarsystem);
-	sanitize_string(net_setup_ui.lobbyname);
-
-	uppersolarsys = strdup(net_setup_ui.solarsystem);
-	lowersolarsys = strdup(net_setup_ui.solarsystem);
-	uppercase(uppersolarsys);
-	lowercase(lowersolarsys);
-
-	/* These must be set in order to start the game server. */
-	if (strcmp(net_setup_ui.solarsystem, "") == 0 ||
-		strcmp(net_setup_ui.lobbyname, "") == 0)
-		return;
-
-	bindir = get_snis_bin_dir();
-
-	memset(command, 0, sizeof(command));
-	printf("start game server button pressed.\n");
-
-	snprintf(command, sizeof(command), "%s/snis_server", bindir);
-	child = fork();
-	if (child < 0) {
-		fprintf(stderr, "Failed to fork SNIS game server process: %s\n", strerror(errno));
-		return;
-	}
-	if (child == 0) { /* This is the child process */
-		execl(command, "snis_server", "-l", net_setup_ui.lobbyname, "-L",
-				uppersolarsys, "--enable-enscript",
-				"-m", "narnia", "-s", lowersolarsys, NULL);
-		/*
-		 * if execl returns at all, there was an error, and btw, be careful, very
-		 * limited stuff that we can safely call, similar to limitations of signal
-		 * handlers.  E.g. fprintf is not safe to call here, and exit(3) is not safe,
-		 * but write(2) and _exit(2) are ok.   Compiler with -O3 warns if I ignore
-		 * return value of write(2) though there's not much I can do with it.
-		 * Casting return value to void does not prevent the warning.
-		 */
-		if (write(2, errorstr, sizeof(errorstr)) != sizeof(errorstr))
-			_exit(-2);
-		else
-			_exit(-1);
-	}
-	free(uppersolarsys);
-	free(lowersolarsys);
-}
-
 static void connect_to_lobby_button_pressed()
 {
 	printf("snis_client: connect to lobby pressed\n");
@@ -19697,12 +19642,7 @@ static void init_net_setup_ui(void)
 					net_setup_ui.solarsystem, sizeof(net_setup_ui.solarsystem) - 1, &timer,
 					gameserver_hostname_entered, NULL);
 	snis_text_input_box_set_contents(net_setup_ui.solarsystemname, "DEFAULT2");
-	y += yinc;
-	net_setup_ui.start_gameserver = 
-		snis_button_init(left, y, -1, -1, "START GAME SERVER",
-			inactive_button_color,
-			TINY_FONT, start_gameserver_button_pressed, NULL);
-	y += yinc * 2;
+	y += yinc * 3;
 	net_setup_ui.shipname_box =
 		snis_text_input_box_init(txx(150), y, txy(30), txx(250), input_color, TINY_FONT,
 					net_setup_ui.shipname, sizeof(net_setup_ui.shipname) - 1, &timer,
@@ -19744,8 +19684,6 @@ static void init_net_setup_ui(void)
 		snis_text_input_box_set_contents(net_setup_ui.shipname_box, preferred_shipname);
 		net_setup_ui.create_ship_v = 0;
 	}
-	ui_add_button(net_setup_ui.start_gameserver, DISPLAYMODE_NETWORK_SETUP,
-			"START THE GAME SERVER PROCESS");
 	ui_add_button(net_setup_ui.connect_to_lobby, DISPLAYMODE_NETWORK_SETUP,
 			"CONNECT TO THE LOBBY SERVER");
 	ui_add_button(net_setup_ui.website_button, DISPLAYMODE_NETWORK_SETUP,
@@ -19789,11 +19727,6 @@ static void show_network_setup(GtkWidget *w)
 
 	sanitize_string(net_setup_ui.solarsystem);
 	sanitize_string(net_setup_ui.lobbyname);
-	if (strcmp(net_setup_ui.solarsystem, "") != 0 &&
-		strcmp(net_setup_ui.lobbyname, "") != 0)
-		snis_button_set_color(net_setup_ui.start_gameserver, UI_COLOR(network_setup_active));
-	else
-		snis_button_set_color(net_setup_ui.start_gameserver, UI_COLOR(network_setup_inactive));
 
 	if (strcmp(net_setup_ui.shipname, "") != 0 &&
 		strcmp(net_setup_ui.password, "") != 0) {
