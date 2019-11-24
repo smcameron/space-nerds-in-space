@@ -17841,7 +17841,7 @@ static int construct_demon_command(char *input,
 			uppercase(original);
 			switch (set_clientside_variable(original)) {
 			case TWEAK_UNKNOWN_VARIABLE:
-				send_lua_script_packet_to_server(copy); /* Try it on server */
+				send_lua_script_packet_to_server(original); /* Try it on server */
 				break;
 			default:
 				break;
