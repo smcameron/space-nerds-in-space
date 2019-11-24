@@ -10571,7 +10571,6 @@ static void draw_sciplane_display(GtkWidget *w, struct snis_entity *o, double ra
 			}
 			nscience_guys++;
 		}
-		populate_science_pull_down_menu();
 
 		if (prev_science_guy && !selected_guy_still_visible && prev_selected_guy_still_visible) {
 			/* If we moved the beam off our guy, and back on, select him again. */
@@ -10931,7 +10930,6 @@ static void draw_all_the_3d_science_guys(GtkWidget *w, struct snis_entity *o, do
 		curr_science_guy = NULL;
 	}
 	draw_science_3d_waypoints(o, range, &closest_distance, &closest_guy);
-	populate_science_pull_down_menu();
 
 	/* Draw tool-tip like help for thing nearest mouse pointer */
 	if (closest_guy >= 0 && closest_distance > 0 && closest_distance < 400) {
@@ -16218,7 +16216,6 @@ static void draw_science_details(GtkWidget *w, GdkGC *gc)
 	if (science_cam_timer < 1000)
 		science_cam_timer += (int) (0.3 * (1000.0 - (float) science_cam_timer));
 
-	pull_down_menu_clear(sci_ui.menu);
 	if (!curr_science_guy) {
 		sng_center_xy_draw_string("NO SCAN TARGET SELECTED", TINY_FONT, txx(260), txy(300));
 		return;
@@ -16493,6 +16490,7 @@ static void show_science(GtkWidget *w)
 		sng_set_foreground(UI_COLOR(sci_warning));
 		sng_center_xy_draw_string("LOW SENSOR POWER", NANO_FONT, SCREEN_WIDTH / 2, txy(27));
 	}
+	populate_science_pull_down_menu();
 	show_common_screen(w, "SCIENCE");
 }
 
