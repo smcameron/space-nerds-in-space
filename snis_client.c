@@ -7392,7 +7392,6 @@ static int process_update_chaff_packet(void)
 }
 
 static struct network_setup_ui {
-	struct button *start_lobbyserver;
 	struct button *start_gameserver;
 	struct button *connect_to_lobby;
 	struct snis_text_input_box *lobbyservername;
@@ -19335,55 +19334,6 @@ static void password_entered()
 	printf("password entered\n");
 }
 
-static void start_lobbyserver_button_pressed()
-{
-	char *bindir;
-	char cmd[PATH_MAX];
-	struct stat statbuf;
-	int rc;
-	pid_t child;
-	const char errorstr[] = "Failed to exec ssgl_server.\n";
-
-	bindir = get_snis_bin_dir();
-
-	/* test that snisbindir is actually a directory. */
-	rc = stat(bindir, &statbuf);
-	if (rc < 0) {
-		fprintf(stderr, "Cannot stat %s: %s\n", bindir, strerror(errno));
-		return;
-	}
-	if (!S_ISDIR(statbuf.st_mode)) {
-		fprintf(stderr, "%s is not a directory.\n", bindir);
-		return;
-	}
-
-	printf("start lobby server button pressed.\n");
-	snprintf(cmd, sizeof(cmd), "%s/ssgl_server", bindir);
-
-	child = fork();
-	if (child < 0) {
-		fprintf(stderr, "Failed to fork lobby server process: %s\n", strerror(errno));
-		return;
-	}
-	if (child == 0) { /* This is the child process */
-		printf("execl'ing %s\n", cmd);
-		fflush(stdout);
-		execl(cmd,  "ssgl_server", NULL);
-		/*
-		 * if execl returns at all, there was an error, and btw, be careful, very
-		 * limited stuff that we can safely call, similar to limitations of signal
-		 * handlers.  E.g. fprintf is not safe to call here, and exit(3) is not safe,
-		 * but write(2) and _exit(2) are ok.   Compiler with -O3 warns if I ignore
-		 * return value of write(2) though there's not much I can do with it.
-		 * Casting return value to void does not prevent the warning.
-		 */
-		if (write(2, errorstr, sizeof(errorstr)) != sizeof(errorstr))
-			_exit(-2);
-		else
-			_exit(-1);
-	}
-}
-
 static void sanitize_string(char *s)
 {
 	int i, len;
@@ -19741,11 +19691,7 @@ static void init_net_setup_ui(void)
 		snis_text_input_box_init(left, y, txy(30), txx(750), input_color, TINY_FONT,
 					net_setup_ui.lobbyname, 50, &timer,
 					lobby_hostname_entered, NULL);
-	y += yinc;
-	net_setup_ui.start_lobbyserver =	
-		snis_button_init(left, y, -1, -1, "START LOBBY SERVER",
-			active_button_color, TINY_FONT, start_lobbyserver_button_pressed, NULL);
-	y += yinc * 2;
+	y += yinc * 3;
 	net_setup_ui.solarsystemname =
 		snis_text_input_box_init(left, y, txy(30), txx(750), input_color, TINY_FONT,
 					net_setup_ui.solarsystem, sizeof(net_setup_ui.solarsystem) - 1, &timer,
@@ -19798,8 +19744,6 @@ static void init_net_setup_ui(void)
 		snis_text_input_box_set_contents(net_setup_ui.shipname_box, preferred_shipname);
 		net_setup_ui.create_ship_v = 0;
 	}
-	ui_add_button(net_setup_ui.start_lobbyserver, DISPLAYMODE_NETWORK_SETUP,
-			"START THE LOBBY SERVER PROCESS");
 	ui_add_button(net_setup_ui.start_gameserver, DISPLAYMODE_NETWORK_SETUP,
 			"START THE GAME SERVER PROCESS");
 	ui_add_button(net_setup_ui.connect_to_lobby, DISPLAYMODE_NETWORK_SETUP,
