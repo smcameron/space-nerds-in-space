@@ -95,17 +95,28 @@ kill_processes()
 
 check_for_binary()
 {
-	if [ ! -x "$1" ]
+	binary="$1"
+	if [ ! -x "$binary" ]
 	then
-		echo "Failed to find binary executable $1, aborting." 1>&2
-		echo "You may need to run \"make\"" 1>&2
-		exit 1
+		echo 1>&2
+		echo 1>&2
+		echo "snis_launcher: Failed to find binary executable $1, aborting." 1>&2
+		echo "snis_launcher: You may need to run \"make\"" 1>&2
+		echo 1>&2
+		echo 1>&2
+		sleep 1
+		return 1
 	fi
+	return 0
 }
 
 start_snis_lobby()
 {
 	check_for_binary "${SSGL_SERVER}"
+	if [ "$?" != "0" ]
+	then
+		return
+	fi
 	if [ "${LOBBYHOST}" != "localhost" ]
 	then
 		echo
@@ -133,6 +144,10 @@ start_snis_multiverse()
 	local exempt=
 
 	check_for_binary "${SNIS_MULTIVERSE}"
+	if [ "$?" != "0" ]
+	then
+		return
+	fi
 	echo -n "Autowrangle snis_servers (y/n, default = y)?"
 	read x
 	if [ "$x" != "n" ]
@@ -211,6 +226,10 @@ uppercase()
 start_snis_server()
 {
 	check_for_binary "${SNIS_SERVER}"
+	if [ "$?" != "0" ]
+	then
+		return
+	fi
 	echo
 	echo "Starting snis_server"
 	echo
@@ -224,6 +243,10 @@ start_snis_server()
 start_snis_client()
 {
 	check_for_binary "${SNIS_CLIENT}"
+	if [ "$?" != "0" ]
+	then
+		return
+	fi
 	echo
 	echo "Starting snis_client"
 	echo
@@ -287,6 +310,10 @@ check_for_bad_lockfiles()
 check_for_ip_address()
 {
 	check_for_binary "${SSGL_SERVER}"
+	if [ "$?" != "0" ]
+	then
+		exit 1
+	fi
 	ipaddr=$(${SSGL_SERVER} --find-ip-address 2>/dev/null)
 	if [ "$ipaddr" = "" -o "$ipaddr" = "0.0.0.0" ]
 	then
