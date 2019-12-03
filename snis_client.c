@@ -2512,6 +2512,9 @@ static void spark_move(struct snis_entity *o)
 	float scale;
 
 	set_object_location(o, o->x + o->vx, o->y + o->vy, o->z + o->vz);
+	scale = entity_get_scale(o->entity) * o->tsd.spark.shrink_factor;
+	if (scale < 0.01)
+		o->alive = 0;
 	if (o->alive)
 		o->alive--;
 	if (o->alive == 0) {
@@ -2526,12 +2529,10 @@ static void spark_move(struct snis_entity *o)
 		snis_object_pool_free_object(sparkpool, spark_index(o));
 		return;
 	}
-
 	/* Apply incremental rotation */
 	quat_mul(&orientation, &o->tsd.spark.rotational_velocity, entity_get_orientation(o->entity));
 	update_entity_orientation(o->entity, &orientation);
-	scale = entity_get_scale(o->entity);
-	update_entity_scale(o->entity, scale * o->tsd.spark.shrink_factor);
+	update_entity_scale(o->entity, scale);
 	update_entity_pos(o->entity, o->x, o->y, o->z);
 }
 
