@@ -1579,51 +1579,6 @@ static int update_laser(uint32_t id, uint32_t timestamp, uint8_t power, double x
 	return 0;
 }
 
-static __attribute__((unused)) struct mesh *init_sector_mesh(int extra_extent)
-{
-	int nlines = (2 * extra_extent + 2) * (2 * extra_extent + 2) * 4;
-        struct mesh *my_mesh = malloc(sizeof(*my_mesh));
-
-	my_mesh->geometry_mode = MESH_GEOMETRY_LINES;
-	my_mesh->nvertices = 0;
-	my_mesh->ntriangles = 0;
-	my_mesh->nlines = 0;
-	my_mesh->t = 0;
-	my_mesh->v = malloc(sizeof(*my_mesh->v) * nlines * 2);
-	my_mesh->l = malloc(sizeof(*my_mesh->l) * nlines);
-	my_mesh->radius = sqrt((extra_extent + 1) * 2);
-
-	int i, j;
-	for (i = -1 - extra_extent; i < 1 + extra_extent; ++i) {
-		for (j = -1 -extra_extent; j < 1 + extra_extent; ++j) {
-
-			/* line left */
-			mesh_add_point(my_mesh, i,  0, j);
-			mesh_add_point(my_mesh, i + 1, 0, j);
-			mesh_add_line_last_2(my_mesh, MESH_LINE_DOTTED);
-
-			/* line bottom */
-			mesh_add_point(my_mesh, i, 0, j);
-			mesh_add_point(my_mesh, i, 0, j + 1);
-			mesh_add_line_last_2(my_mesh, MESH_LINE_DOTTED);
-
-			if (j == extra_extent) {
-				/* line right */
-				mesh_add_point(my_mesh, i, 0, j + 1);
-				mesh_add_point(my_mesh, i + 1, 0, j + 1);
-				mesh_add_line_last_2(my_mesh, MESH_LINE_DOTTED);
-			}
-			if (i == extra_extent) {
-				/* line top */
-				mesh_add_point(my_mesh, i + 1, 0, j);
-				mesh_add_point(my_mesh, i + 1, 0, j + 1);
-				mesh_add_line_last_2(my_mesh, MESH_LINE_DOTTED);
-			}
-		}
-	}
-	return my_mesh;
-}
-
 static void laserbeam_move(struct snis_entity *o)
 {
 	int oid, tid;
