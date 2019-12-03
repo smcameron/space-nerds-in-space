@@ -2463,8 +2463,9 @@ static void warp_effect_move(struct snis_entity *o)
 		scale = ((sin(t) + 1.0) / 2.0) * WARP_EFFECT_MAX_SIZE;
 		update_entity_scale(o->entity, scale);
 	}
-	o->alive--;
-	if (o->alive <= 0) {
+	if (o->alive)
+		o->alive--;
+	if (o->alive == 0) {
 		remove_entity(ecx, o->entity);
 		snis_object_pool_free_object(sparkpool, spark_index(o));
 	}
@@ -2484,14 +2485,15 @@ static void shield_effect_move(struct snis_entity *o)
 		o->vy = go[i].vy;
 		o->vz = go[i].vz;
 	}
-	o->alive--;
+	if (o->alive)
+		o->alive--;
 	if (o->entity) {
 		entity_update_alpha(o->entity, entity_get_alpha(o->entity) * 0.9);
 		update_entity_pos(o->entity, o->x, o->y, o->z);
 	}
 	if (o->tsd.spark.shield_entity) /* don't update shield_entity pos because parent is o->entity */
 		entity_update_alpha(o->tsd.spark.shield_entity, entity_get_alpha(o->tsd.spark.shield_entity) * 0.88);
-	if (o->alive <= 0) {
+	if (o->alive == 0) {
 		if (o->entity) {
 			remove_entity(ecx, o->entity);
 			o->entity = NULL;
@@ -2510,8 +2512,9 @@ static void spark_move(struct snis_entity *o)
 	float scale;
 
 	set_object_location(o, o->x + o->vx, o->y + o->vy, o->z + o->vz);
-	o->alive--;
-	if (o->alive <= 0) {
+	if (o->alive)
+		o->alive--;
+	if (o->alive == 0) {
 		if (o->entity) {
 			remove_entity(ecx, o->entity);
 			o->entity = NULL;
@@ -20239,7 +20242,7 @@ static int main_da_expose(GtkWidget *w, GdkEvent *event, gpointer p)
 		} else {
 			how_long_to_wait = frame_rate_hz * 4; /* 4 seconds */
 		}
-		if (o->alive <= 0 && displaymode != DISPLAYMODE_DEMON) {
+		if (o->alive == 0 && displaymode != DISPLAYMODE_DEMON) {
 			red_alert_mode = 0;
 			show_death_screen(w);
 			if (in_the_process_of_quitting)
@@ -20390,7 +20393,7 @@ static void maybe_play_rocket_sample(void)
 		return;
 	volume = sample_power_data_impulse_current() / 255.0;
 	if (o) {
-		if (o->alive <= 0) /* ship is dead, do not make rocket noises */
+		if (o->alive == 0) /* ship is dead, do not make rocket noises */
 			return;
 		thruster_volume = (fabs(o->tsd.ship.yaw_velocity) / MAX_YAW_VELOCITY +
 					fabs(o->tsd.ship.pitch_velocity) / MAX_PITCH_VELOCITY +

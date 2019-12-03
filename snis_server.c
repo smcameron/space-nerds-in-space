@@ -1517,7 +1517,8 @@ static void cargo_container_move(struct snis_entity *o)
 	o->timestamp = universe_timestamp;
 	if (o->tsd.cargo_container.persistent)
 		return;
-	o->alive--;
+	if (o->alive)
+		o->alive--;
 	if (o->alive == 0)
 		delete_from_clients_and_server(o);
 }
@@ -10081,9 +10082,9 @@ static void warpgate_move(struct snis_entity *o)
 
 static void explosion_move(struct snis_entity *o)
 {
-	if (o->alive > 0)
+	if (o->alive)
 		o->alive--;
-	if (o->alive <= 0)
+	if (o->alive == 0)
 		delete_from_clients_and_server(o);
 }
 
@@ -10091,10 +10092,10 @@ static void chaff_move(struct snis_entity *o)
 {
 	set_object_location(o, o->x + o->vx, o->y + o->vy, o->z + o->vz);
 	o->timestamp = universe_timestamp;
-	if (o->alive > 0)
+	if (o->alive)
 		o->alive--;
 	/* TODO collide with missiles */
-	if (o->alive <= 0)
+	if (o->alive == 0)
 		delete_from_clients_and_server(o);
 }
 
@@ -12302,7 +12303,7 @@ static void tractorbeam_move(struct snis_entity *o)
 	struct mat41 to_object, nto_object, desired_object_loc, tractor_vec, tractor_velocity;
 	double dist;
 
-	if (o->alive <= 0) {
+	if (o->alive == 0) {
 		delete_from_clients_and_server(o);
 		return;
 	}
