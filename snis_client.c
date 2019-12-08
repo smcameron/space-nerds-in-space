@@ -210,6 +210,7 @@ static int use_60_fps = 0; /* tweakable, set this to 1, and game will run at 60 
 static int red_alert_mode = 0;
 #define MAX_UPDATETIME_START_PAUSE 1.5
 #define MAX_UPDATETIME_INTERVAL 0.5
+static int echo_computer_to_comms = 1; /* tweakable */
 
 static char *asset_dir;
 
@@ -6671,6 +6672,22 @@ static void do_text_to_speech(char *text)
 	snprintf(command, sizeof(command), "export SNIS_TTS_VOLUME=%1.2f; %s/snis_text_to_speech.sh '%s'",
 				text_to_speech_volume, bindir, fixed_text);
 	free(fixed_text);
+	if (echo_computer_to_comms) {
+		char tx[80];
+		int chars_left, len;
+
+		len = chars_left  = strlen(text);
+		uppercase(text);
+
+		text_window_add_color_text(comms_ui.tw, "COMPUTER:", UI_COLOR(comms_computer_output));
+		while (chars_left > 0) {
+			strncpy(tx, "- ", 3);
+			strncat(tx, text + len - chars_left, 77);
+			tx[79] = '\0';
+			text_window_add_color_text(comms_ui.tw, tx, UI_COLOR(comms_computer_output));
+			chars_left -= strlen(tx) + 2;
+		}
+	}
 	rc = system(command);
 	if (rc != 0 && errno != ECHILD)  { /* we have ignored SIGCHLD, so we get ECHILD here */
 		fprintf(stderr, "Shell command '%s' returned %d, errno = %d (%s)\n",
@@ -17502,6 +17519,8 @@ static struct tweakable_var_descriptor client_tweak[] = {
 		&idiot_light_threshold, 'i', 0.0, 0.0, 0.0, 0, 255, 10 },
 	{ "DEJITTER_SCIENCE", "0 or 1 - 1 == DEJITTER SCIENCE VALUES, 0 == DO NOT DEJITTER",
 		&dejitter_science_details, 'i', 0.0, 0.0, 0.0, 0, 1, 1 },
+	{ "ECHO_COMPUTER_TO_COMMS", "0 or 1, true or false",
+		&echo_computer_to_comms, 'i', 0.0, 0.0, 0.0, 0, 1, 1 },
 	{ NULL, NULL, NULL, '\0', 0.0, 0.0, 0.0, 0, 0, 0 },
 };
 

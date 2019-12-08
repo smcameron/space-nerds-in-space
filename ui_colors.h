@@ -189,6 +189,7 @@ struct ui_color_map {
 	struct ui_color_entry comms_neutral;
 	struct ui_color_entry comms_good_status;
 	struct ui_color_entry comms_encrypted;
+	struct ui_color_entry comms_computer_output;
 
 	struct ui_color_entry main_sci_selection;
 	struct ui_color_entry main_text;
@@ -384,6 +385,7 @@ struct ui_color_map_accessor {
 	.u.map.comms_neutral		= { DARKGREEN,		"comms-neutral" },
 	.u.map.comms_good_status	= { LIMEGREEN,		"comms-good-status" },
 	.u.map.comms_encrypted		= { CYAN_FIXUP,		"comms-encrypted" },
+	.u.map.comms_computer_output	= { AMBER,		"comms-computer-output" },
 
 	.u.map.main_sci_selection	= { GREEN_FIXUP,	"main-sci-selection" },
 	.u.map.main_text		= { GREEN_FIXUP,	"main-text" },
