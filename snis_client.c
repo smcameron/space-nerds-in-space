@@ -6685,7 +6685,7 @@ static void do_text_to_speech(char *text)
 			strncat(tx, text + len - chars_left, 77);
 			tx[79] = '\0';
 			text_window_add_color_text(comms_ui.tw, tx, UI_COLOR(comms_computer_output));
-			chars_left -= strlen(tx) + 2;
+			chars_left -= strlen(tx) - 2;
 		}
 	}
 	rc = system(command);
