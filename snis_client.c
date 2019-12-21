@@ -14075,6 +14075,11 @@ static void show_engineering(GtkWidget *w)
 	struct snis_entity *o;
 	int gx1, gy1, gx2, gy2;
 	static int alarms_were_active = 0;
+	static double fuel_consumption_rate, fuel_time_left;
+	static double last_fuel_time;
+	static double last_fuel_value;
+	double fuel_rate_per_sec, fuel_secs, fuel_mins;
+	double fuel_time;
 
 	if (!(o = find_my_ship()))
 		return;
@@ -14178,6 +14183,34 @@ static void show_engineering(GtkWidget *w)
 	if (o->sdata.shield_strength < 15) {
 		sng_set_foreground(UI_COLOR(eng_warning));
 		sng_center_xy_draw_string("SHIELDS ARE DOWN", TINY_FONT, (gx1 + gx2) / 2.0, gy1 + (gy2 - gy1) / 3.0);
+	}
+
+	/* Fuel consumption rate and time remaining until empty indicators */
+	if ((timer % 30) == 0) { /* Only calculate once per second to smooth it out */
+		fuel_time = (universe_timestamp() - last_fuel_time);
+		if (fuel_time != 0) {
+			fuel_consumption_rate = (last_fuel_value - o->tsd.ship.fuel) / fuel_time;
+			fprintf(stderr, "fuel_consumption_rate = %f\n", fuel_consumption_rate);
+			if (fuel_consumption_rate != 0) {
+				fuel_time_left = o->tsd.ship.fuel / fuel_consumption_rate;
+				fprintf(stderr, "time_left = %f\n", fuel_time_left);
+			}
+		}
+		last_fuel_value = o->tsd.ship.fuel;
+		last_fuel_time = universe_timestamp();
+	}
+	if (fuel_consumption_rate > 0) {
+		char buffer[100];
+		fuel_rate_per_sec = 100000.0 * (fuel_consumption_rate  * UNIVERSE_TICKS_PER_SECOND) / (double) UINT_MAX;
+		snprintf(buffer, sizeof(buffer), "FUEL/SEC: %.2f", fuel_rate_per_sec);
+		sng_set_foreground(UI_COLOR(eng_warning));
+		sng_abs_xy_draw_string(buffer, PICO_FONT, txx(350), txy(192));
+
+		fuel_mins = floor(fuel_time_left / (60 * UNIVERSE_TICKS_PER_SECOND));
+		fuel_secs = (fuel_time_left - (fuel_mins * 60 * UNIVERSE_TICKS_PER_SECOND)) / UNIVERSE_TICKS_PER_SECOND;
+
+		snprintf(buffer, sizeof(buffer), "TIME TO EMPTY %.0f:%02.0f", fuel_mins, fuel_secs);
+		sng_abs_xy_draw_string(buffer, PICO_FONT, txx(350), txy(192) + font_lineheight[PICO_FONT]);
 	}
 
 	show_common_screen(w, "ENGINEERING");
