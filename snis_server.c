@@ -8472,9 +8472,14 @@ static void player_collision_detection(void *player, void *object)
 	}
 
 	dist2 = object_dist2(o, t);
-	if (t->type == OBJTYPE_CARGO_CONTAINER && dist2 < 150.0 * 150.0) {
+	if (t->type == OBJTYPE_CARGO_CONTAINER) {
+		if (dist2 < 150.0 * 150.0) {
 			scoop_up_cargo(o, t);
 			return;
+		}
+		/* Prevent nearby cargo containers from disappearing */
+		if (dist2 < SCIENCE_SHORT_RANGE * SCIENCE_SHORT_RANGE)
+			t->alive = CARGO_CONTAINER_LIFETIME;
 	}
 	if (t->type == OBJTYPE_DOCKING_PORT && dist2 < 50.0 * 50.0) {
 		if (o->tsd.ship.docking_magnets) {
