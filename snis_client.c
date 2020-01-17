@@ -21658,6 +21658,9 @@ static void process_physical_device_io(unsigned short opcode, unsigned short val
 	case DEVIO_OPCODE_ENG_SILENCE_ALARMS:
 		silence_alarms_pressed((void *) 0);
 		break;
+	case DEVIO_OPCODE_ENG_CHAFF:
+		eng_deploy_chaff_button_pressed((void *) 0);
+		break;
 	case DEVIO_OPCODE_NAV_YAW_LEFT:
 		navigation_dirkey(-1, 0, 0);
 		break;
