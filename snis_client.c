@@ -18432,31 +18432,45 @@ static void init_demon_ui()
 				"LATENCY (ms)", "", UI_COLOR(science_graph_plot_strong),
 				UI_COLOR(common_red_alert), 200000.0, NANO_FONT, NETSTATS_SAMPLES);
 	demon_ui.menu = create_pull_down_menu(NANO_FONT, SCREEN_WIDTH);
+	pull_down_menu_set_tooltip_drawing_function(demon_ui.menu, draw_tooltip);
 	pull_down_menu_set_gravity(demon_ui.menu, 1);
 	pull_down_menu_set_color(demon_ui.menu, UI_COLOR(demon_deselected_button));
 	pull_down_menu_set_background_alpha(demon_ui.menu, 0.75);
 	pull_down_menu_add_column(demon_ui.menu, "META");
 	pull_down_menu_add_row(demon_ui.menu, "META", "HOME", demon_home_button_pressed, NULL);
+	pull_down_menu_add_tooltip(demon_ui.menu, "META", "HOME",
+						"RETURN VIEWPORT TO HOME POSITION AND ORIENTATION");
 	pull_down_menu_add_row(demon_ui.menu, "META", "2D/3D", demon_2d3d_button_pressed, NULL);
 	/* TODO: make this netstats work */
+	pull_down_menu_add_tooltip(demon_ui.menu, "META", "2D/3D",
+						"TOGGLE BETWEEN 2D AND 3D RENDERING OF SOLAR SYSTEM");
 	pull_down_menu_add_row(demon_ui.menu, "META", "NET STATS", demon_netstats_button_pressed, NULL);
 	pull_down_menu_set_checkbox_function(demon_ui.menu, "META", "NET STATS", demon_netstats_checkbox, NULL);
+	pull_down_menu_add_tooltip(demon_ui.menu, "META", "NET STATS", "SHOW A GRAPH OF NETWORK STATISTICS");
 	pull_down_menu_add_row(demon_ui.menu, "META", "EXAG SCALE", demon_scale_button_pressed, NULL);
 	pull_down_menu_set_checkbox_function(demon_ui.menu, "META", "EXAG SCALE", demon_scale_checkbox, NULL);
+	pull_down_menu_add_tooltip(demon_ui.menu, "META", "EXAG SCALE", "TOGGLE ON/OFF EXAGGERATED SCALING OF OBJECTS");
 	pull_down_menu_add_row(demon_ui.menu, "META", "RENDER STYLE", demon_render_style_pressed, NULL);
 	pull_down_menu_set_checkbox_function(demon_ui.menu, "META", "RENDER STYLE", demon_render_style_checkbox, NULL);
+	pull_down_menu_add_tooltip(demon_ui.menu, "META", "RENDER STYLE", "CYCLE BETWEEN DIFFERENT RENDERING STYLES");
 	pull_down_menu_add_row(demon_ui.menu, "META", "CONSOLE", demon_console_pressed, NULL);
 	pull_down_menu_set_checkbox_function(demon_ui.menu, "META", "CONSOLE", demon_console_checkbox, NULL);
+	pull_down_menu_add_tooltip(demon_ui.menu, "META", "CONSOLE", "TOGGLE DEBUGGING CONSOLE ON/OFF");
 	pull_down_menu_add_row(demon_ui.menu, "META", "ROCKET ENGINE NOISE",
 			demon_rocket_noise_pressed, NULL);
 	pull_down_menu_set_checkbox_function(demon_ui.menu, "META", "ROCKET ENGINE NOISE",
 			demon_rocket_noise_checkbox, NULL);
+	pull_down_menu_add_tooltip(demon_ui.menu, "META", "ROCKET ENGINE NOISE", "TOGGLE ROCKET ENGINE NOISE ON/OFF");
 	pull_down_menu_add_row(demon_ui.menu, "META", "PLANET WATER SPECULARITY",
 			demon_planet_water_specularity_pressed, NULL);
 	pull_down_menu_set_checkbox_function(demon_ui.menu, "META", "PLANET WATER SPECULARITY",
 			demon_planet_water_specularity_checkbox, NULL);
+	pull_down_menu_add_tooltip(demon_ui.menu, "META", "PLANET WATER SPECULARITY",
+						"TOGGLE RENDERING OF WATER SPECULARITY ON PLANETS ON/OFF");
 	pull_down_menu_add_row(demon_ui.menu, "META", "ENSCRIPT SOLARSYSTEM",
 			demon_enscript_solarsystem_pressed, NULL);
+	pull_down_menu_add_tooltip(demon_ui.menu, "META", "ENSCRIPT SOLARSYSTEM",
+						"SAVE STATE OF MOST OBJECTS TO A LUA SCRIPT");
 	pull_down_menu_add_column(demon_ui.menu, "ADD");
 	pull_down_menu_add_row(demon_ui.menu, "ADD", "SHIP", demon_ship_button_pressed, (void *)
 					(intptr_t) demon_ui.shiptype);
