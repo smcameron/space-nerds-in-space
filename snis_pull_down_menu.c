@@ -15,7 +15,11 @@ struct pull_down_menu_item {
 	void *cookie;
 	int (*checkbox_function)(void *);
 	void *checkbox_cookie;
+	char *tooltip;
+	int tooltip_timer;
 };
+
+#define PDM_TOOLTIP_DELAY (30) /* 1 second */
 
 struct pull_down_menu_column {
 	int width;
@@ -34,6 +38,7 @@ struct pull_down_menu {
 	pthread_mutex_t mutex;
 	float alpha;
 	int gravity;
+	pull_down_menu_tooltip_drawing_function tooltip_draw;
 };
 
 static int pull_down_menu_inside_col(struct pull_down_menu *m, int x, int col,
@@ -100,7 +105,7 @@ int pull_down_menu_inside(struct pull_down_menu *m, int physical_x, int physical
 
 void pull_down_menu_update_mouse_pos(struct pull_down_menu *m, int physical_x, int physical_y)
 {
-	int i, x, sy, start, end, inc, new_col = -1;
+	int i, x, sy, start, end, inc, new_col = -1, new_row = -1;
 
 	m->current_physical_x = physical_x;
 	m->current_physical_y = physical_y;
@@ -127,10 +132,20 @@ void pull_down_menu_update_mouse_pos(struct pull_down_menu *m, int physical_x, i
 	}
 	if (new_col >= 0 && new_col < m->ncols) {
 		sy = sng_pixely_to_screeny(physical_y);
-		if (sy > 0 && sy < m->col[new_col]->nrows * (font_lineheight[m->font] + 6))
-			m->current_row = sy / (font_lineheight[m->font] + 6);
+		if (sy > 0 && sy < m->col[new_col]->nrows * (font_lineheight[m->font] + 6)) {
+			new_row = sy / (font_lineheight[m->font] + 6);
+		}
+	}
+	/* Adjust tooltip timer for the previous current row */
+	if (new_col == m->current_col && new_row == m->current_row) {
+		if (m->current_row >= 0 && m->current_col >= 0) {
+			/* Current item has not changed, decrement tooltip timer */
+			if (m->col[m->current_col]->item[m->current_row].tooltip_timer > 0)
+				m->col[m->current_col]->item[m->current_row].tooltip_timer--;
+		}
 	}
 	m->current_col = new_col;
+	m->current_row = new_row;
 }
 
 struct pull_down_menu *create_pull_down_menu(int font, int screen_width)
@@ -151,6 +166,7 @@ struct pull_down_menu *create_pull_down_menu(int font, int screen_width)
 	pthread_mutex_init(&m->mutex, NULL);
 	m->alpha = -1; /* no alpha */
 	m->gravity = 0;
+	m->tooltip_draw = NULL;
 	return m;
 }
 
@@ -220,7 +236,27 @@ static void draw_menu_col(struct pull_down_menu *m, int col, float x, float y, i
 		if (i == current_row && is_open)
 			sng_abs_xy_draw_string(r->name, font, x + 5 + cbw, y - 1);
 		y = y + 6;
+		/* Reset tooltip delays for non-current items */
+		if ((i != current_row || !is_open) && r->tooltip)
+			r->tooltip_timer = PDM_TOOLTIP_DELAY;
 	}
+}
+
+static void pull_down_menu_draw_current_tooltip(struct pull_down_menu *m)
+{
+	struct pull_down_menu_item *r;
+
+	if (!m->tooltip_draw)
+		return;
+	if (m->current_col < 0)
+		return;
+	if (m->current_row < 0)
+		return;
+	r = &m->col[m->current_col]->item[m->current_row];
+	if (r->tooltip_timer > 0)
+		return; /* Don't draw the tooltip until they hover for a bit. */
+	if (r->tooltip)
+		m->tooltip_draw(m->current_physical_x, m->current_physical_y, r->tooltip);
 }
 
 void pull_down_menu_draw(struct pull_down_menu *m)
@@ -251,6 +287,7 @@ void pull_down_menu_draw(struct pull_down_menu *m)
 		if (!m->gravity)
 			x += m->col[i]->width;
 	}
+	pull_down_menu_draw_current_tooltip(m);
 	pthread_mutex_unlock(&m->mutex);
 }
 
@@ -322,6 +359,7 @@ static int pull_down_menu_add_row_internal(struct pull_down_menu *m,
 		r->checkbox_function = NULL;
 		r->checkbox_cookie = NULL;
 		r->cookie = cookie;
+		r->tooltip = NULL;
 		c->nrows++;
 		c->width = 0; /* So it will get recalculated */
 		if (lock)
@@ -430,6 +468,10 @@ static void pull_down_menu_clear_internal(struct pull_down_menu *m, int lock)
 					free(m->col[i]->item[j].name);
 					m->col[i]->item[j].name = NULL;
 				}
+				if (m->col[i]->item[j].tooltip) {
+					free(m->col[i]->item[j].tooltip);
+					m->col[i]->item[j].tooltip = NULL;
+				}
 			}
 			free(m->col[i]);
 			m->col[i] = NULL;
@@ -472,6 +514,8 @@ void pull_down_menu_copy(struct pull_down_menu *dest, struct pull_down_menu *src
 								r->name, r->func, r->cookie, 0);
 				dest->col[i]->item[j].checkbox_function = r->checkbox_function;
 				dest->col[i]->item[j].checkbox_cookie = r->checkbox_cookie;
+				if (r->tooltip)
+					dest->col[i]->item[j].tooltip = strdup(r->tooltip);
 			}
 		} else {
 			dest->col[i] = NULL;
@@ -489,4 +533,24 @@ void pull_down_menu_set_gravity(struct pull_down_menu *pdm, int right)
 		pdm->x = pdm->screen_width;
 	else
 		pdm->x = 10;
+}
+
+void pull_down_menu_set_tooltip_drawing_function(struct pull_down_menu *pdm, pull_down_menu_tooltip_drawing_function f)
+{
+	pdm->tooltip_draw = f;
+}
+
+int pull_down_menu_add_tooltip(struct pull_down_menu *pdm, char *column, char *row, char *tooltip)
+{
+	struct pull_down_menu_item *item;
+
+	pthread_mutex_lock(&pdm->mutex);
+	item = find_menu_item(pdm, column, row);
+	if (item) {
+		item->tooltip = strdup(tooltip);
+		pthread_mutex_unlock(&pdm->mutex);
+		return 0;
+	}
+	pthread_mutex_unlock(&pdm->mutex);
+	return 1;
 }

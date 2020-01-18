@@ -6,6 +6,8 @@ struct pull_down_menu;
 #define MAX_PULL_DOWN_COLUMNS 10
 #define MAX_PULL_DOWN_ROWS_PER_COLUMN 30
 
+typedef void (*pull_down_menu_tooltip_drawing_function)(int x, int y, char *tooltip);
+
 struct pull_down_menu *create_pull_down_menu(int font, int screen_width);
 void pull_down_menu_draw(struct pull_down_menu *pdm);
 int pull_down_menu_add_column(struct pull_down_menu *pdm, char *column);
@@ -20,5 +22,8 @@ void pull_down_menu_set_checkbox_function(struct pull_down_menu *pdm, char *colu
 void pull_down_menu_clear(struct pull_down_menu *pdm);
 void pull_down_menu_copy(struct pull_down_menu *dest, struct pull_down_menu *src);
 void pull_down_menu_set_gravity(struct pull_down_menu *pdm, int right); /* 0 means left, 1 means right */
+void pull_down_menu_set_tooltip_drawing_function(struct pull_down_menu *pdm, pull_down_menu_tooltip_drawing_function f);
+int pull_down_menu_add_tooltip(struct pull_down_menu *pdm, char *column, char *row, char *tooltip);
+
 
 #endif
