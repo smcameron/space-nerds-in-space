@@ -18258,12 +18258,14 @@ struct demon_screen_menu_text {
 #define MAX_MISSION_MENU_ITEMS 50
 	int count;
 	char *menu_text[MAX_MISSION_MENU_ITEMS], *script[MAX_MISSION_MENU_ITEMS];
+	char *tooltip[MAX_MISSION_MENU_ITEMS];
 };
 
 /* Read share/snis/luascripts/MISSSIONS/missions_menu.txt
- * Each line contains two fields separated by a comma.
+ * Each line contains three fields separated by a comma.
  * The first field is the menu text, and the
- * second field is the lua script to run.
+ * The second field is the lua script to run.
+ * The third optional field is the tooltip text for the menu item.
  */
 static struct demon_screen_menu_text *read_menu_file(char *menu_file)
 {
@@ -18272,6 +18274,7 @@ static struct demon_screen_menu_text *read_menu_file(char *menu_file)
 	char line[256];
 	char menu_text[256];
 	char script[256];
+	char tooltip[256];
 	char *l;
 	FILE *f;
 	int rc;
@@ -18297,13 +18300,20 @@ static struct demon_screen_menu_text *read_menu_file(char *menu_file)
 			continue;
 		if (line[0] == '#')
 			continue; /* skip comments */
-		rc = sscanf(line, "%[^,]%*[, ]%[^,\n]", menu_text, script);
-		if (rc != 2) {
-			fprintf(stderr, "Bad line in %s: %s\n", filename, line);
-			continue;
+		rc = sscanf(line, "%[^,]%*[, ]%[^,]%*[, ]%[^,\n]", menu_text, script, tooltip);
+		if (rc != 3) {
+			rc = sscanf(line, "%[^,]%*[, ]%[^,\n]", menu_text, script);
+			if (rc != 2) {
+				fprintf(stderr, "Bad line in %s: %s\n", filename, line);
+				continue;
+			}
 		}
 		mm->menu_text[mm->count] = strdup(menu_text);
 		mm->script[mm->count] = strdup(script);
+		if (rc == 3)
+			mm->tooltip[mm->count] = strdup(tooltip);
+		else
+			mm->tooltip[mm->count] = NULL;
 		mm->count++;
 		if (mm->count == MAX_MISSION_MENU_ITEMS) {
 			fprintf(stderr, "Demon screen menu %s max item count reached at '%s'\n",
@@ -18501,9 +18511,13 @@ static void init_demon_ui()
 
 	utility = read_menu_file("UTIL/utility_menu.txt");
 	pull_down_menu_add_column(demon_ui.menu, "UTILITY");
-	for (i = 0; i < utility->count; i++)
+	for (i = 0; i < utility->count; i++) {
 		pull_down_menu_add_row(demon_ui.menu, "UTILITY", utility->menu_text[i],
 					demon_utility_button_pressed, utility->script[i]);
+		if (utility->tooltip[i])
+			pull_down_menu_add_tooltip(demon_ui.menu, "UTILITY",
+							utility->menu_text[i], utility->tooltip[i]);
+	}
 
 	missions = read_menu_file("MISSIONS/missions_menu.txt");
 	pull_down_menu_add_column(demon_ui.menu, "MISSIONS");
@@ -18514,6 +18528,9 @@ static void init_demon_ui()
 		 * into pull_down_menu_add_row(), which is passed along to demon_mission_button_pressed(),
 		 * and so it must stick around.
 		 */
+		if (missions->tooltip[i])
+			pull_down_menu_add_tooltip(demon_ui.menu, "MISSIONS",
+							missions->menu_text[i], missions->tooltip[i]);
 	}
 
 	demon_ui.console = text_window_init(txx(100), txy(10), SCREEN_WIDTH - txx(110), 500, 47,
