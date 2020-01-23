@@ -37,7 +37,7 @@ struct snis_device_io_connection {
 
 void snis_device_io_shutdown(struct snis_device_io_connection *con)
 {
-	memset(con, 0, sizeof(con));
+	memset(con, 0, sizeof(*con));
 	free(con);
 }
 
