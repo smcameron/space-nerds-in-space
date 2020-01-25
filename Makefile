@@ -570,7 +570,7 @@ MULTIVERSELIBS=-Lssgl -lssglclient ${LRTLIB} -ldl -lm -lcrypt
 
 
 BINPROGS=bin/ssgl_server bin/snis_server bin/snis_client bin/snis_limited_client bin/snis_text_to_speech.sh \
-		bin/snis_multiverse bin/lsssgl
+		bin/snis_multiverse bin/lsssgl bin/snis_arduino
 UTILPROGS=util/mask_clouds util/cloud-mask-normalmap bin/mesh_viewer util/sample_image_colors \
 		util/generate_solarsystem_positions bin/nebula_noise bin/generate_skybox bin/earthlike
 
@@ -1208,6 +1208,10 @@ $(OD)/snis-device-io.o:	snis-device-io.h snis-device-io.c Makefile ${ODT}
 bin/device-io-sample-1:	device-io-sample-1.c ${OD}/snis-device-io.o ${BIN}
 	$(CC) -Wall -Wextra --pedantic -pthread -o bin/device-io-sample-1 ${OD}/snis-device-io.o \
 			device-io-sample-1.c
+
+bin/snis_arduino: snis_arduino.c ${OD}/snis-device-io.o ${BIN}
+	$(CC) -Wall -Wextra --pedantic -pthread -o bin/snis_arduino ${OD}/snis-device-io.o \
+			snis_arduino.c
 
 $(OD)/nonuniform_random_sampler.o:	nonuniform_random_sampler.c nonuniform_random_sampler.h ${ODT}
 	$(Q)$(COMPILE)
