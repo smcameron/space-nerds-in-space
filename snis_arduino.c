@@ -113,17 +113,20 @@ int main(int argc, char *argv[])
 	do {
 		memset(buffer, 0, sizeof(buffer));
 		errno = 0;
-		/* I would sort of expect this to block if there's no data from the
-		 * Arduino, but it doesn't. It just returns eof. */
 		s = fgets(buffer, sizeof(buffer), d);
 		if (!s) {
-			if (errno != 0) {
-				fprintf(stderr, "snis_arduino: Error on device %s: %s\n",
-					device, strerror(errno));
-			} else {
+			switch (errno) {
+			case 0:
+				/* I would sort of expect fgets() to block if there's no data from the
+				 * Arduino, but it doesn't, it just returns eof. */
 				usleep(100000); /* Wait a few milliseconds and try again */
 				continue;
+			case EINTR:
+				continue;
+			default:
+				break;
 			}
+			fprintf(stderr, "snis_arduino: Error on device %s: %s\n", device, strerror(errno));
 			goto bailout;
 		}
 		interpret_command(buffer, snis_client);
