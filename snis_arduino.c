@@ -66,16 +66,30 @@ static void interpret_command(char *command, __attribute__ ((unused)) struct sni
 	int rc;
 	int input_channel, input_value;
 	unsigned short opcode, value;
+	char console_char;
 
 	fprintf(stderr, "snis_arduino: interpreting command: %s", command);
 
-	rc = sscanf(command, "#%d=%d\n", &input_channel, &input_value);
-	if (rc != 2)
+	/* NEWCSD = Nav, Eng, Weap, Comms, Science, Demon */
+	rc = sscanf(command, "%[#NEWCSD]%d=%d\n", &console_char, &input_channel, &input_value);
+	if (rc != 3)
 		return;
 	fprintf(stderr, "Sending command %d,%d\n", input_channel, input_value);
 
 	if (input_channel >= 0 && (unsigned int) input_channel < ARRAYSIZE(input_eng_opcode)) {
-		opcode = input_eng_opcode[input_channel];
+		static unsigned short *opcode_arr = NULL;
+		switch (console_char) {
+		case 'E': /* Engineering */
+			opcode_arr = &input_eng_opcode[0];
+			break;
+		default:
+			break;
+		}
+		if (!opcode_arr) {
+			fprintf(stderr, "snis_arduino: Unknown console char: %c\n", console_char);
+			return;
+		}
+		opcode = opcode_arr[input_channel];
 		value = (unsigned short) (64 * input_value);
 		rc = snis_device_io_send(snis_client, opcode, value);
 		if (rc) {
