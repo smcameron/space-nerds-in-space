@@ -1388,35 +1388,36 @@ static char *random_word(struct mtwist_state *mt, char *w[], int nwords)
 	return w[x];
 }
 
-static char *you(struct mtwist_state *mt)
-{
-	return random_word(mt, You, ARRAYSIZE(You));
+#define SELECT_WORD_FN(word, wordarray) \
+static char *word(struct mtwist_state *mt) \
+{ \
+	return random_word(mt, wordarray, ARRAYSIZE(wordarray)); \
 }
 
-static char *action(struct mtwist_state *mt)
-{
-	return random_word(mt, Action, ARRAYSIZE(Action));
-}
-
-static char *like(struct mtwist_state *mt)
-{
-	return random_word(mt, Like, ARRAYSIZE(Like));
-}
-
-static char *adjective(struct mtwist_state *mt)
-{
-	return random_word(mt, Adjective, ARRAYSIZE(Adjective));
-}
-
-static char *beast(struct mtwist_state *mt)
-{
-	return random_word(mt, Beast, ARRAYSIZE(Beast));
-}
-
-static char *nationality(struct mtwist_state *mt)
-{
-	return random_word(mt, Nationality, ARRAYSIZE(Nationality));
-}
+SELECT_WORD_FN(you, You)
+SELECT_WORD_FN(action, Action)
+SELECT_WORD_FN(like, Like)
+SELECT_WORD_FN(adjective, Adjective)
+SELECT_WORD_FN(beast, Beast)
+SELECT_WORD_FN(nationality, Nationality)
+SELECT_WORD_FN(are, Are)
+SELECT_WORD_FN(bad_thing, Bad_thing)
+SELECT_WORD_FN(known_for, Known_For)
+SELECT_WORD_FN(exceptional, Exceptional)
+SELECT_WORD_FN(terrible, Terrible)
+SELECT_WORD_FN(avoid, Avoid)
+SELECT_WORD_FN(producing, Producing)
+SELECT_WORD_FN(product, Product)
+SELECT_WORD_FN(culture, Culture)
+SELECT_WORD_FN(planet, Planet)
+SELECT_WORD_FN(bring_your, Bring_Your)
+SELECT_WORD_FN(traveling_accessory, Traveling_Accessory)
+SELECT_WORD_FN(be_advised, Be_advised)
+SELECT_WORD_FN(cease_fire, Cease_fire)
+SELECT_WORD_FN(get_lost, Get_lost)
+SELECT_WORD_FN(you_will_be, You_will_be)
+SELECT_WORD_FN(destroyed, Destroyed)
+SELECT_WORD_FN(character_title, Title)
 
 static char *qnationality(struct mtwist_state *mt)
 {
@@ -1426,16 +1427,6 @@ static char *qnationality(struct mtwist_state *mt)
 		return nationality(mt);
 	else
 		return nothing;
-}
-
-static char *are(struct mtwist_state *m)
-{
-	return random_word(m, Are, ARRAYSIZE(Are));
-}
-
-static char *bad_thing(struct mtwist_state *mt)
-{
-	return random_word(mt, Bad_thing, ARRAYSIZE(Bad_thing));
 }
 
 void infinite_taunt0(struct mtwist_state *mt, char *buffer, int buflen)
@@ -1483,46 +1474,6 @@ void infinite_taunt(struct mtwist_state *mt, char *buffer, int buflen)
 	}
 }
 
-static char *known_for(struct mtwist_state *mt)
-{
-	return random_word(mt, Known_For, ARRAYSIZE(Known_For));
-}
-
-static char *exceptional(struct mtwist_state *mt)
-{
-	return random_word(mt, Exceptional, ARRAYSIZE(Exceptional));
-}
-
-static char *terrible(struct mtwist_state *mt)
-{
-	return random_word(mt, Terrible, ARRAYSIZE(Terrible));
-}
-
-static char *avoid(struct mtwist_state *mt)
-{
-	return random_word(mt, Avoid, ARRAYSIZE(Avoid));
-}
-
-static char *producing(struct mtwist_state *mt)
-{
-	return random_word(mt, Producing, ARRAYSIZE(Producing));
-}
-
-static char *product(struct mtwist_state *mt)
-{
-	return random_word(mt, Product, ARRAYSIZE(Product));
-}
-
-static char *culture(struct mtwist_state *mt)
-{
-	return random_word(mt, Culture, ARRAYSIZE(Culture));
-}
-
-static char *planet(struct mtwist_state *mt)
-{
-	return random_word(mt, Planet, ARRAYSIZE(Planet));
-}
-
 static char *climate(struct mtwist_state *mt, enum planet_type ptype)
 {
 	switch (ptype) {
@@ -1536,17 +1487,6 @@ static char *climate(struct mtwist_state *mt, enum planet_type ptype)
 		break;
 	}
 	return random_word(mt, Climate, ARRAYSIZE(Climate));
-}
-
-static char *bring_your(struct mtwist_state *mt)
-{
-	return random_word(mt, Bring_Your, ARRAYSIZE(Bring_Your));
-}
-
-static char *traveling_accessory(struct mtwist_state *mt)
-{
-	return random_word(mt, Traveling_Accessory,
-				ARRAYSIZE(Traveling_Accessory));
 }
 
 static void break_lines(char *buffer, int line_len)
@@ -1564,36 +1504,6 @@ static void break_lines(char *buffer, int line_len)
 		}
 		so_far++;
 	}
-}
-
-static char *be_advised(struct mtwist_state *mt)
-{
-	return random_word(mt, Be_advised, ARRAYSIZE(Be_advised));
-}
-
-static char *cease_fire(struct mtwist_state *mt)
-{
-	return random_word(mt, Cease_fire, ARRAYSIZE(Cease_fire));
-}
-
-static char *get_lost(struct mtwist_state *mt)
-{
-	return random_word(mt, Get_lost, ARRAYSIZE(Get_lost));
-}
-
-static char *you_will_be(struct mtwist_state *mt)
-{
-	return random_word(mt, You_will_be, ARRAYSIZE(You_will_be));
-}
-
-static char *destroyed(struct mtwist_state *mt)
-{
-	return random_word(mt, Destroyed, ARRAYSIZE(Destroyed));
-}
-
-static char *character_title(struct mtwist_state *mt)
-{
-	return random_word(mt, Title, ARRAYSIZE(Title));
 }
 
 static char *post_nominal_letters(struct mtwist_state *mt)
