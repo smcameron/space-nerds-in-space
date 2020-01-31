@@ -737,6 +737,81 @@ static char *Bring_Your[] = {
 	"Under no circumstances forget to bring your",
 };
 
+static char *Beautiful[] = {
+	"beautiful",
+	"gorgeous",
+	"very pretty",
+	"amazing looking",
+	"stunning",
+	"striking",
+};
+
+static char *Gas_Giant[] = {
+	"gas giant",
+	"gaseous world",
+	"gas planet",
+	"world",
+	"giant",
+	"huge world",
+	"giant planet",
+};
+
+static char *Rocky_Planet[] = {
+	"rocky planet",
+	"rocky world",
+	"mountainous planet",
+	"cratered world",
+	"cratered planet",
+	"pockmarked world",
+	"rock",
+	"sphere",
+	"planet",
+	"planet",
+	"planet",
+	"world",
+};
+
+static char *Barren[] = {
+	"barren",
+	"lifeless",
+	"sterile",
+	"desert",
+	"bleak",
+	"dead",
+	"forlorn",
+	"godforsaken",
+	"empty",
+	"infertile",
+	"parched",
+	"arid",
+	"desolate",
+	"empty",
+	"bare",
+	"cold",
+	"fierce",
+};
+
+static char *Uninhabitable[] = {
+	"uninhabitable",
+	"not inhabitable",
+	"extremely unwelcoming",
+	"severe and harsh",
+};
+
+static char *However[] = {
+	"however",
+	"but",
+	"although",
+	"yet nevertheless",
+	"but even so",
+	"yet nonetheless",
+	"but in spite of that",
+	"yet still",
+	"but just the same",
+	"yet all the same",
+	"but despite this",
+};
+
 static char *Planet[] = {
 	"planet",
 	"system",
@@ -1418,6 +1493,12 @@ SELECT_WORD_FN(get_lost, Get_lost)
 SELECT_WORD_FN(you_will_be, You_will_be)
 SELECT_WORD_FN(destroyed, Destroyed)
 SELECT_WORD_FN(character_title, Title)
+SELECT_WORD_FN(beautiful, Beautiful)
+SELECT_WORD_FN(gas_giant, Gas_Giant)
+SELECT_WORD_FN(uninhabitable, Uninhabitable)
+SELECT_WORD_FN(however, However)
+SELECT_WORD_FN(rocky_planet, Rocky_Planet)
+SELECT_WORD_FN(barren, Barren)
 
 static char *qnationality(struct mtwist_state *mt)
 {
@@ -1521,14 +1602,33 @@ void planet_description(struct mtwist_state *mt, char *buffer, int buflen,
 
 	strcpy(do_avoid, avoid(mt));
 	do_avoid[0] = toupper(do_avoid[0]);
-
-	snprintf(buffer, buflen, "This %s %s %s %s %s %s %s and %s %s %s %s. %s the %s %s.  %s %s.\n",
-		climate(mt, ptype), planet(mt), known_for(mt), producing(mt),
-			exceptional(mt), qnationality(mt), product(mt),
-			known_for(mt), exceptional(mt), qnationality(mt),
-			culture(mt),
-			do_avoid, terrible(mt), product(mt),
-			bring_your(mt), traveling_accessory(mt));
+	switch (ptype) {
+	case planet_type_rocky:
+		snprintf(buffer, buflen,
+			"This %s %s is %s %s there is an orbiting starbase which %s %s %s %s %s and %s %s %s %s. %s the %s %s. %s %s.\n",
+			barren(mt), rocky_planet(mt), uninhabitable(mt), however(mt), known_for(mt),
+			producing(mt), exceptional(mt), qnationality(mt), product(mt), known_for(mt),
+			exceptional(mt), qnationality(mt), culture(mt),
+			do_avoid, terrible(mt), product(mt), bring_your(mt), traveling_accessory(mt));
+		break;
+	case planet_type_gas_giant:
+		snprintf(buffer, buflen,
+			"This %s %s is %s %s there is an orbiting starbase which %s %s %s %s %s and %s %s %s %s. %s the %s %s. %s %s.\n",
+			beautiful(mt), gas_giant(mt), uninhabitable(mt), however(mt), known_for(mt),
+			producing(mt), exceptional(mt), qnationality(mt), product(mt), known_for(mt),
+			exceptional(mt), qnationality(mt), culture(mt),
+			do_avoid, terrible(mt), product(mt), bring_your(mt), traveling_accessory(mt));
+		break;
+	case planet_type_earthlike:
+		snprintf(buffer, buflen, "This %s %s %s %s %s %s %s and %s %s %s %s. %s the %s %s.  %s %s.\n",
+			climate(mt, ptype), planet(mt), known_for(mt), producing(mt),
+				exceptional(mt), qnationality(mt), product(mt),
+				known_for(mt), exceptional(mt), qnationality(mt),
+				culture(mt),
+				do_avoid, terrible(mt), product(mt),
+				bring_your(mt), traveling_accessory(mt));
+		break;
+	}
 	break_lines(buffer, line_len);
 }
 
