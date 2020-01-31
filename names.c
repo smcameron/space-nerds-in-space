@@ -20,6 +20,11 @@ static char *consonant[] = {
 	"t", "v", "x", "z", "ph", "sh", "th", "sp", "st",
 };
 
+static char *ending[] = {
+	"on", "ino", "ion", "an", "ach", "tar", "ron", "o", "son", "berg",
+	"ton", "ides", "ski", "nova", "petra", "aster", "ius", "ipha", "ian"
+};
+
 static char *pattern[] = {
 	"vcvc",
 	"cvcvc",
@@ -28,6 +33,25 @@ static char *pattern[] = {
 	"cvc",
 	"cvv",
 	"cvcvv",
+	"vccvv",
+	"vccvvc",
+	"cvccvvc",
+	"cvvccvc",
+	"cvvccvc",
+	"cvvccvc",
+	"vcvcd",
+	"cvcvcd",
+	"cvcvd",
+	"vcvd",
+	"cvcd",
+	"cvvd",
+	"cvcvvd",
+	"vccvvd",
+	"vccvvcd",
+	"cvccvvcd",
+	"cvvccvcd",
+	"cvvccvcd",
+	"cvvccvcd",
 };
 
 static void append_stuff(struct mtwist_state *mt, char *s, char *a[], int asize)
@@ -51,8 +75,10 @@ char *random_name(struct mtwist_state *mt)
 	for (i = pattern[p]; *i; i++) {
 		if (*i == 'v')
 			append_stuff(mt, result, vowel, ARRAYSIZE(vowel));
-		else
+		else if (*i == 'c')
 			append_stuff(mt, result, consonant, ARRAYSIZE(consonant));
+		else
+			append_stuff(mt, result, ending, ARRAYSIZE(ending));
 		/* printf("zzz result = %s, pattern = %s, *i = %c\n", result, pattern[p], *i); */
 	}
 	for (i = result; *i; i++)
