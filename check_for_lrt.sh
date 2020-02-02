@@ -26,7 +26,7 @@ qecho()
 {
 	if [ "$quiet" = "0" ]
 	then
-		echo $*
+		echo "$@"
 	fi
 }
 
@@ -43,10 +43,10 @@ else
 	if [ "$?" = "0" ]
 	then
 		qecho "... OK with -lrt"
-		echo "-lrt"
+		printf "-lrt"
 	else
 		qecho "... not OK with or without -lrt"
-		echo "-lrt"
+		printf "-lrt"
 	fi
 fi
 

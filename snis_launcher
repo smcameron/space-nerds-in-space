@@ -19,7 +19,6 @@ SNIS_CLIENT=${BINDIR}/snis_client
 SNIS_LIMITED_CLIENT=${BINDIR}/snis_limited_client
 SNIS_MULTIVERSE=${BINDIR}/snis_multiverse
 SSGL_SERVER=${BINDIR}/ssgl_server
-LSSSGL=${BINDIR}/lsssgl
 ASPECT_RATIO="${ASPECT_RATIO:-}"
 LOBBYHOST=localhost
 # ASPECT_RATIO="5:4"
@@ -148,7 +147,7 @@ start_snis_multiverse()
 	then
 		return
 	fi
-	echo -n "Autowrangle snis_servers (y/n, default = y)?"
+	printf "Autowrangle snis_servers (y/n, default = y)?"
 	read x
 	if [ "$x" != "n" ]
 	then
@@ -185,7 +184,7 @@ start_snis_multiverse()
 
 get_solarsystem_name()
 {
-	while [ "1" = "1" ]
+	while true
 	do
 		default="$SOLARSYSTEM_NAME"
 		dname="."
@@ -197,13 +196,13 @@ get_solarsystem_name()
 			name=$(basename "$dname")
 			echo "   $name"
 		done
-		echo -n "Enter the name of the solarsystem (default = $default): "
+		printf "Enter the name of the solarsystem (default = %s): " "$default"
 		read ssname;
 		if [ "$ssname" = "" ]
 		then
 			ssname="$default"
 		fi
-		if [ ! -f "${SNIS_ASSET_DIR}/solarsystems"/"$ssname"/assets.txt ]
+		if [ ! -f "${SNIS_ASSET_DIR}/solarsystems/$ssname"/assets.txt ]
 		then
 			echo "Invalid choice: $ssname"
 		else
@@ -220,7 +219,7 @@ get_solarsystem_name()
 
 uppercase()
 {
-	echo "$1" | tr '[a-z]' '[A-Z]'
+	echo "$1" | tr '[:lower:]' '[:upper:]'
 }
 
 start_snis_server()
@@ -236,7 +235,7 @@ start_snis_server()
 	get_solarsystem_name
 	echo "Using solar system $SOLARSYSTEM_NAME"
 	SS1="$SOLARSYSTEM_NAME"
-	${SNIS_SERVER} -l "${LOBBYHOST}" -L $(uppercase "$SS1") -m narnia -s "$SS1" ${ENABLE_ENSCRIPT} ${TRAP_NANS} > snis_server_log.txt 2>&1 &
+	${SNIS_SERVER} -l "${LOBBYHOST}" -L "$(uppercase \"$SS1\")" -m narnia -s "$SS1" ${ENABLE_ENSCRIPT} ${TRAP_NANS} > snis_server_log.txt 2>&1 &
 	sleep 2.5
 }
 
@@ -258,18 +257,18 @@ start_snis_client()
 
 enter_lobby_host()
 {
-	echo -n "Enter lobby host: "
+	printf -n "Enter lobby host: "
 	read x
 	export LOBBYHOST="$x"
 }
 
 reformat_processes()
 {
-	awk ' \
-		/ssgl_server/ { printf("%20s -- %s\n", "LOBBY SERVER", $0); next; } \
-		/snis_client/ { printf("%20s -- %s\n", "SNIS CLIENT", $0); next; } \
-		/snis_server/ { printf("%20s -- %s\n", "SNIS SERVER", $0); next; } \
-		/snis_multiverse/ { printf("%20s -- %s\n", "MULTIVERSE SERVER", $0); next; } \
+	awk '
+		/ssgl_server/ { printf("%20s -- %s\n", "LOBBY SERVER", $0); next; }
+		/snis_client/ { printf("%20s -- %s\n", "SNIS CLIENT", $0); next; }
+		/snis_server/ { printf("%20s -- %s\n", "SNIS SERVER", $0); next; }
+		/snis_multiverse/ { printf("%20s -- %s\n", "MULTIVERSE SERVER", $0); next; }
 		{ printf("%20s -- %s\n", "UNKNOWN", $0); next; }'
 }
 
@@ -296,7 +295,7 @@ check_for_bad_lockfiles()
 			continue;
 		fi
 		instancename=$(echo "$x" | sed -e 's/.*[.]//')
-		ps aux | grep snis_server | grep "[-]L $instancename[ ]" > /dev/null 2>&1
+		ps aux | egrep snis_server | grep "[-]L $instancename[ ]" > /dev/null 2>&1
 		if [ "$?" = "1" ]
 		then
 			echo 1>&2
@@ -327,7 +326,7 @@ check_for_ip_address()
 
 check_for_ip_address
 
-while [ "1" = "1" ]
+while true
 do
 	echo
 	echo "     Welcome to Space Nerds In Space"
@@ -335,7 +334,7 @@ do
 	show_snis_processes
 	print_main_menu
 	check_for_bad_lockfiles
-	echo -n "   Choose [0-10]: "
+	printf "   Choose [0-10]: "
 	read x
 
 	case "$x" in

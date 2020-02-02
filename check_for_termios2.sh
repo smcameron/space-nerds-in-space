@@ -14,7 +14,7 @@ int main(int argc, char *argv[])
 }
 EOF
 
-echo -n "  CHECKING for struct termios2" 1>&2
+printf "  CHECKING for struct termios2" 1>&2
 gcc -c "${TMPFILE}".c > /dev/null 2>&1
 if [ "$?" = "0" ]
 then
