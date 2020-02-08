@@ -307,3 +307,24 @@ device:usb-Saitek_Cyborg_X-joystick
    button 4 missile
    button 11 weapons-wavelength-up
    button 12 weapons-wavelength-down
+# Defender Cobra R4
+device:usb-0079_Generic_USB_Joystick-joystick
+ mode main
+   axis 4 roll
+   axis 1 pitch
+   axis 0 yaw
+ mode navigation
+   axis 4 roll
+   axis 1 pitch
+   axis 0 yaw
+   axis 3 throttle 0
+   button 4 nav-nudge-zoom-up
+   button 6 nav-nudge-zoom-down
+ mode weapons
+   axis 0 weapons-yaw
+   axis 1 weapons-pitch
+   axis 2 weapons-yaw
+   axis 3 weapons-wavelength 0
+   button 0 phaser
+   button 1 torpedo
+   button 2 missile
