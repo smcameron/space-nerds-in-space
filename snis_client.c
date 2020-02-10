@@ -14190,11 +14190,8 @@ static void show_engineering(GtkWidget *w)
 		fuel_time = (universe_timestamp() - last_fuel_time);
 		if (fuel_time != 0) {
 			fuel_consumption_rate = (last_fuel_value - o->tsd.ship.fuel) / fuel_time;
-			fprintf(stderr, "fuel_consumption_rate = %f\n", fuel_consumption_rate);
-			if (fuel_consumption_rate != 0) {
+			if (fuel_consumption_rate != 0)
 				fuel_time_left = o->tsd.ship.fuel / fuel_consumption_rate;
-				fprintf(stderr, "time_left = %f\n", fuel_time_left);
-			}
 		}
 		last_fuel_value = o->tsd.ship.fuel;
 		last_fuel_time = universe_timestamp();
