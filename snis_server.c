@@ -5256,7 +5256,7 @@ static void ai_avoid_missile_brain(struct snis_entity *o)
 	quat_rot_vec_self(&dir, &missile->orientation);
 	/* Convert 90 degree rotation to missile's local coordinate system */
 	quat_init_axis(&turn90, 0.0, 1.0, 0.0, 0.5 * M_PI);
-	quat_conjugate(&localturn90, &turn90, &o->orientation);
+	quat_conjugate(&localturn90, &turn90, &missile->orientation);
 	/* Turn vector 90 degrees to get desired direction of travel to evade missile */
 	quat_rot_vec_self(&dir, &localturn90);
 	vec3_mul_self(&dir, 1000.0);
