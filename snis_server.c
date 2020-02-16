@@ -165,6 +165,7 @@ static int enemy_torpedo_fire_interval = ENEMY_TORPEDO_FIRE_INTERVAL;
 static int enemy_missile_fire_interval = ENEMY_MISSILE_FIRE_INTERVAL;
 static float missile_proximity_distance = MISSILE_PROXIMITY_DISTANCE;
 static float chaff_proximity_distance = CHAFF_PROXIMITY_DISTANCE;
+static int chaff_cooldown_time = CHAFF_COOLDOWN_TIME;
 static float missile_explosion_damage_distance = MISSILE_EXPLOSION_DAMAGE_DISTANCE;
 static float spacemonster_flee_dist = SPACEMONSTER_FLEE_DIST;
 static float spacemonster_aggro_radius = SPACEMONSTER_AGGRO_RADIUS;
@@ -474,6 +475,7 @@ static struct bridge_data {
 	int nship_id_chips;		/* Count of ship ID chips, number of ship_id_chip[] entries that are valid */
 	char enciphered_message[256];
 	char cipher_key[26], guessed_key[26];
+	int chaff_cooldown;
 } bridgelist[MAXCLIENTS];
 static int nbridges = 0;		/* Number of elements present in bridgelist[] */
 
@@ -9407,6 +9409,14 @@ static void aim_high_gain_antenna(struct snis_entity *o)
 	}
 }
 
+static void update_chaff_cooldown_timer(struct snis_entity *o)
+{
+	/* Decrement chaff cooldown timer */
+	int bn = lookup_bridge_by_shipid(o->id);
+	if (bn >= 0 && bridgelist[bn].chaff_cooldown > 0)
+		bridgelist[bn].chaff_cooldown--;
+}
+
 static void player_move(struct snis_entity *o)
 {
 	int i, desired_rpm, desired_temp, diff;
@@ -9602,6 +9612,8 @@ static void player_move(struct snis_entity *o)
 					RTS_WALLET_REFRESH_MINIMUM;
 	}
 	check_science_selection(o);
+
+	update_chaff_cooldown_timer(o);
 
 	/* Missiles will set this to 10, here we decrement, and if no missiles are around, it will hit zero soon. */
 	if (o->tsd.ship.missile_lock_detected > 0)
@@ -10602,6 +10614,7 @@ static void init_player(struct snis_entity *o, int reset_ship, float *charges)
 			memset(bridgelist[b].cipher_key, '_', sizeof(bridgelist[b].cipher_key));
 			memset(bridgelist[b].guessed_key, '_', sizeof(bridgelist[b].guessed_key));
 			memset(bridgelist[b].enciphered_message, 0, sizeof(bridgelist[b].enciphered_message));
+			bridgelist[b].chaff_cooldown = 0;
 		}
 	}
 	quat_init_axis(&o->tsd.ship.computer_desired_orientation, 0, 1, 0, 0);
@@ -17480,6 +17493,9 @@ static struct tweakable_var_descriptor server_tweak[] = {
 		"MINIMUM DISTANCE BETWEEN MISSILE AND CHAFF FOR MISSILE TO GET CONFUSED",
 		&chaff_proximity_distance, 'f',
 		0.0, 2000.0, CHAFF_PROXIMITY_DISTANCE, 0, 0, 0 },
+	{ "CHAFF_COOLDOWN_TIME",
+		"MINIMUM 10ths OF SECONDS BETWEEN CHAFF DEPLOYMENTS",
+		&chaff_cooldown_time, 'i', 0.0, 0.0, 0.0, 0, 1000, CHAFF_COOLDOWN_TIME },
 	{ "MISSILE_EXPLOSION_DAMAGE_DISTANCE",
 		"DAMAGE FACTOR PER UNIT DISTANCE",
 		&missile_explosion_damage_distance, 'f',
@@ -20807,11 +20823,18 @@ static int process_adjust_control_deploy_chaff(struct game_client *c, uint32_t i
 		pthread_mutex_unlock(&universe_mutex);
 		return -1;
 	}
+	if (c->bridge < 0 || bridgelist[c->bridge].chaff_cooldown > 0) {
+		snis_queue_add_sound(LASER_FAILURE, ROLE_SOUNDSERVER, c->shipid);
+		pthread_mutex_unlock(&universe_mutex);
+		return 0;
+	}
 	if (i != c->ship_index)
 		snis_log(SNIS_ERROR, "i != ship index at %s:%d\n", __FILE__, __LINE__);
 	o = &go[i];
 	for (i = 0; i < chaff_count; i++)
 		(void) add_chaff(o->x, o->y, o->z);
+	if (c->bridge >= 0)
+		bridgelist[c->bridge].chaff_cooldown = chaff_cooldown_time;
 	pthread_mutex_unlock(&universe_mutex);
 	return 0;
 }
