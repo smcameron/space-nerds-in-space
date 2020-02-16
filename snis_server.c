@@ -355,7 +355,7 @@ static struct npc_menu_item cargo_and_passengers_menu[] = {
 	{ "SELL CARGO", 0, 0, npc_menu_item_sell_cargo },
 	{ "BOARD PASSENGERS", 0, 0, npc_menu_item_board_passengers },
 	{ "DISEMBARK PASSENGERS", 0, 0, npc_menu_item_disembark_passengers },
-	{ "EJECT PASSENGERS", 0, 0, npc_menu_item_eject_passengers },
+	{ "EJECT PASSENGERS (FINES APPLY)", 0, 0, npc_menu_item_eject_passengers },
 	{ "COLLECT BOUNTIES", 0, 0, npc_menu_item_collect_bounties },
 	{ 0, 0, 0, 0 }, /* mark end of menu items */
 };
@@ -15651,6 +15651,8 @@ static void npc_menu_item_eject_passengers(struct npc_menu_item *item,
 		if (passenger[i].location == b->shipid && passenger[i].destination == sb->id) {
 			send_comms_packet(sb, npcname, ch, "  PASSENGER %s DISEMBARKED\n",
 					passenger[i].name);
+			send_comms_packet(sb, npcname, ch, "  YOU COLLECT $%d FARE FOR SAFE PASSAGE OF %s\n",
+						passenger[i].fare, passenger[i].name);
 			ship->tsd.ship.wallet += passenger[i].fare;
 			/* passenger disembarks, ceases to be a passenger, replace with new one */
 			update_passenger(i, nstarbases);
@@ -15662,6 +15664,8 @@ static void npc_menu_item_eject_passengers(struct npc_menu_item *item,
 			send_comms_packet(sb, npcname, ch, "  PASSENGER %s EJECTED\n",
 					passenger[i].name);
 			/* Player is fined for ejecting passengers */
+			send_comms_packet(sb, npcname, ch, "  YOU ARE FINED $%d FOR EJECTING %s\n",
+						passenger[i].fare, passenger[i].name);
 			ship->tsd.ship.wallet -= passenger[i].fare;
 			ship->tsd.ship.lifeform_count--;
 			/* passenger ejected, ceases to be a passenger, replace with new one */
