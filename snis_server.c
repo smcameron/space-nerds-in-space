@@ -3080,6 +3080,20 @@ static void push_attack_mode(struct snis_entity *attacker, uint32_t victim_id, i
 	}
 }
 
+static void push_avoid_missile(struct snis_entity *ship, struct snis_entity *missile)
+{
+	int n;
+	n = ship->tsd.ship.nai_entries;
+	if (n >= MAX_AI_STACK_ENTRIES)
+		return;
+	if (n > 0 && ship->tsd.ship.ai[n - 1].ai_mode == AI_MODE_AVOID_MISSILE)
+		return;
+	ship->tsd.ship.ai[n].ai_mode = AI_MODE_AVOID_MISSILE;
+	ship->tsd.ship.ai[n].u.avoid_missile.id = missile->id;
+	ship->tsd.ship.nai_entries++;
+	return;
+}
+
 static void attack_your_attacker(struct snis_entity *attackee, struct snis_entity *attacker)
 {
 	if (!attacker)
@@ -3887,7 +3901,10 @@ static void missile_move(struct snis_entity *o)
 	i = lookup_by_id(o->tsd.missile.target_id);
 	if (i >= 0) { /* our target is still around */
 		target = &go[i];
-		if (target->type == OBJTYPE_SHIP1) {
+		if (target->type == OBJTYPE_SHIP2) {
+			target->tsd.ship.missile_lock_detected = 10;
+			push_avoid_missile(target, o);
+		} else if (target->type == OBJTYPE_SHIP1) {
 			if (target->tsd.ship.missile_lock_detected == 0)
 				snis_queue_add_text_to_speech("Missile lock detected.",
 					ROLE_TEXT_TO_SPEECH, target->id);
@@ -5215,6 +5232,40 @@ static void ai_attack_mode_brain(struct snis_entity *o)
 	}
 	if (notacop && o->sdata.faction != 0)
 		check_for_nearby_targets(o);
+}
+
+static float ai_ship_travel_towards(struct snis_entity *o,
+		float destx, float desty, float destz);
+static int add_chaff(double x, double y, double z);
+static void ai_avoid_missile_brain(struct snis_entity *o)
+{
+	int i, n;
+	struct snis_entity *missile;
+	n = o->tsd.ship.nai_entries - 1;
+	union quat turn90, localturn90;
+	union vec3 dir = { { 1.0, 0.0, 0.0 } };
+
+	i = lookup_by_id(o->tsd.ship.ai[n].u.avoid_missile.id);
+	if (i < 0) {
+		pop_ai_stack(o);
+		return;
+	}
+	missile = &go[i];
+
+	/* Get the direction of the missile's travel */
+	quat_rot_vec_self(&dir, &missile->orientation);
+	/* Convert 90 degree rotation to missile's local coordinate system */
+	quat_init_axis(&turn90, 0.0, 1.0, 0.0, 0.5 * M_PI);
+	quat_conjugate(&localturn90, &turn90, &o->orientation);
+	/* Turn vector 90 degrees to get desired direction of travel to evade missile */
+	quat_rot_vec_self(&dir, &localturn90);
+	vec3_mul_self(&dir, 1000.0);
+	dir.v.x += o->x;
+	dir.v.y += o->y;
+	dir.v.z += o->z;
+	(void) ai_ship_travel_towards(o, dir.v.x, dir.v.y, dir.v.z);
+	if (snis_randn(1000) < 250)
+		(void) add_chaff(o->x, o->y, o->z);
 }
 
 struct danger_info {
@@ -6796,6 +6847,9 @@ static void ai_brain(struct snis_entity *o)
 	switch (o->tsd.ship.ai[n].ai_mode) {
 	case AI_MODE_ATTACK:
 		ai_attack_mode_brain(o);
+		break;
+	case AI_MODE_AVOID_MISSILE:
+		ai_avoid_missile_brain(o);
 		break;
 	case AI_MODE_FLEE:
 		ai_flee_mode_brain(o);

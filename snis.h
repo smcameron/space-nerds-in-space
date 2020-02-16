@@ -183,6 +183,7 @@ struct damcon_data;
 #define AI_MODE_MINING_BOT 9
 #define AI_MODE_TOW_SHIP 10
 #define AI_MODE_CATATONIC 11
+#define AI_MODE_AVOID_MISSILE 12
 /* NOTE: These RTS modes must be contiguous and match the order in rts_unit_data.c order_data[] */
 #define AI_MODE_RTS_FIRST_COMMAND 111
 #define AI_MODE_RTS_STANDBY 111
@@ -227,6 +228,10 @@ static const char * const ai_mode_name[] = {
 
 struct ai_attack_data {
 	int32_t victim_id;
+};
+
+struct ai_avoid_missile_data {
+	uint32_t id; /* Id of pursing missile */
 };
 
 struct ai_patrol_data {
@@ -327,6 +332,7 @@ struct ai_rts_resupply {
 
 union ai_data {
 	struct ai_attack_data attack;
+	struct ai_avoid_missile_data avoid_missile;
 	struct ai_patrol_data patrol;
 	struct ai_cop_data cop;
 	struct ai_fleet_data fleet;
@@ -690,7 +696,7 @@ struct explosion_data {
 
 #define CHAFF_COUNT (10)
 #define CHAFF_SPEED (50.0)
-#define CHAFF_CONFUSE_CHANCE (0.05) /* 5 percent chance evaluated at 10Hz per chaff */
+#define CHAFF_CONFUSE_CHANCE (0.2) /* 20 percent chance evaluated at 10Hz per chaff */
 struct chaff_data {
 	uint16_t unused;
 };
