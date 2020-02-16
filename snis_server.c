@@ -164,6 +164,7 @@ static int enemy_laser_fire_interval = ENEMY_LASER_FIRE_INTERVAL;
 static int enemy_torpedo_fire_interval = ENEMY_TORPEDO_FIRE_INTERVAL;
 static int enemy_missile_fire_interval = ENEMY_MISSILE_FIRE_INTERVAL;
 static float missile_proximity_distance = MISSILE_PROXIMITY_DISTANCE;
+static float chaff_proximity_distance = CHAFF_PROXIMITY_DISTANCE;
 static float missile_explosion_damage_distance = MISSILE_EXPLOSION_DAMAGE_DISTANCE;
 static float spacemonster_flee_dist = SPACEMONSTER_FLEE_DIST;
 static float spacemonster_aggro_radius = SPACEMONSTER_AGGRO_RADIUS;
@@ -3645,6 +3646,10 @@ static void missile_collision_detection(void *context, void *entity)
 		return;
 
 	dist2 = object_dist2(missile, target);
+	if (dist2 < chaff_proximity_distance * chaff_proximity_distance && target->type == OBJTYPE_CHAFF) {
+		if (snis_randn(1000) < 1000.0 * chaff_confuse_chance)
+			missile->tsd.missile.target_id = target->id;
+	}
 	if (dist2 < missile_proximity_distance * missile_proximity_distance) {
 		switch (target->type) {
 		case OBJTYPE_CHAFF:
@@ -17417,6 +17422,10 @@ static struct tweakable_var_descriptor server_tweak[] = {
 		"MINIMUM DISTANCE BETWEEN MISSILE AND TARGET TO DETONATE",
 		&missile_proximity_distance, 'f',
 		0.0, 2000.0, MISSILE_PROXIMITY_DISTANCE, 0, 0, 0 },
+	{ "CHAFF_PROXIMITY_DISTANCE",
+		"MINIMUM DISTANCE BETWEEN MISSILE AND CHAFF FOR MISSILE TO GET CONFUSED",
+		&chaff_proximity_distance, 'f',
+		0.0, 2000.0, CHAFF_PROXIMITY_DISTANCE, 0, 0, 0 },
 	{ "MISSILE_EXPLOSION_DAMAGE_DISTANCE",
 		"DAMAGE FACTOR PER UNIT DISTANCE",
 		&missile_explosion_damage_distance, 'f',

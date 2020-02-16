@@ -388,6 +388,7 @@ struct ship_data {
 #define SPACEMONSTER_WEAPONS_FACTOR (1.0)
 #define TORPEDO_DETONATE_DIST2 (150 * 150)
 #define MISSILE_PROXIMITY_DISTANCE (75.0)
+#define CHAFF_PROXIMITY_DISTANCE (250.0)
 #define INITIAL_TORPEDO_COUNT 10
 #define INITIAL_MISSILE_COUNT 5
 #define LASER_LIFETIME 15
@@ -689,7 +690,7 @@ struct explosion_data {
 
 #define CHAFF_COUNT (10)
 #define CHAFF_SPEED (50.0)
-#define CHAFF_CONFUSE_CHANCE (0.01) /* 1 percent chance evaluated at 10Hz per chaff */
+#define CHAFF_CONFUSE_CHANCE (0.05) /* 5 percent chance evaluated at 10Hz per chaff */
 struct chaff_data {
 	uint16_t unused;
 };
