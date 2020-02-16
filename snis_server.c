@@ -130,6 +130,7 @@
  * See server_builtin_set(), and server_builtin_vars();
  */
 static int initial_missile_count = INITIAL_MISSILE_COUNT;
+static float missile_max_velocity = DEFAULT_MISSILE_VELOCITY;
 
 	/* TODO: adjusting the following player velocity related variables to
 	 * allow high player velocities can cause spurious warp tunnel entities
@@ -3897,17 +3898,17 @@ static void missile_move(struct snis_entity *o)
 		target_v.v.y = target->vy;
 		target_v.v.z = target->vz;
 
-		flight_time = vec3_magnitude(&to_target) / MISSILE_VELOCITY;
+		flight_time = vec3_magnitude(&to_target) / missile_max_velocity;
 		vec3_mul_self(&target_v, flight_time);
 		vec3_add_self(&to_target, &target_v);
 		vec3_normalize_self(&to_target);
-		vec3_mul(&desired_v, &to_target, MISSILE_VELOCITY);
+		vec3_mul(&desired_v, &to_target, missile_max_velocity);
 	} else { /* our target is gone, just keep going straight */
 		desired_v.v.x = o->vx;
 		desired_v.v.y = o->vy;
 		desired_v.v.z = o->vz;
 		vec3_normalize_self(&desired_v);
-		vec3_mul_self(&desired_v, MISSILE_VELOCITY);
+		vec3_mul_self(&desired_v, missile_max_velocity);
 	}
 
 	/* Update velocity towards desired velocity */
@@ -17311,6 +17312,9 @@ static struct tweakable_var_descriptor server_tweak[] = {
 		"NUMBER OF MISSILES PLAYERS MAY HAVE",
 		&initial_missile_count, 'i', 0, 100, INITIAL_MISSILE_COUNT,
 		0.0, 255.0, INITIAL_MISSILE_COUNT },
+	{ "MISSILE_MAX_VELOCITY",
+		"MAXIMUM VELOCITY OF MISSILES", /* used as denominator so min cannot be zero */
+		&missile_max_velocity, 'f', 5.0, 1000.0, DEFAULT_MISSILE_VELOCITY, 0, 0, 0 },
 	{ "MAX_PLAYER_VELOCITY",
 		"MAXIMUM VELOCITY PLAYER MAY TRAVEL USING IMPULSE POWER",
 		&max_player_velocity, 'f', 20.0, 20000.0, MAX_PLAYER_VELOCITY, 0, 0, 0},

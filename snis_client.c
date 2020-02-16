@@ -1483,7 +1483,7 @@ static int update_missile(uint32_t id, uint32_t timestamp, double x, double y, d
 
 		int j;
 		float v = sqrt(vx * vx + vy * vy + vz * vz);
-		int throttle = (int) (180.0 * v / (float) MISSILE_VELOCITY);
+		int throttle = (int) (180.0 * v / (float) DEFAULT_MISSILE_VELOCITY);
 		float thrust_size = clampf(throttle / 36.0, 0.1, 5.0);
 
 		update_generic_object(i, timestamp, x, y, z, 0.0, 0.0, 0.0, orientation, 1);
