@@ -3663,8 +3663,21 @@ static void missile_collision_detection(void *context, void *entity)
 
 	dist2 = object_dist2(missile, target);
 	if (dist2 < chaff_proximity_distance * chaff_proximity_distance && target->type == OBJTYPE_CHAFF) {
-		if (snis_randn(1000) < 1000.0 * chaff_confuse_chance)
+		if (snis_randn(1000) < 1000.0 * chaff_confuse_chance) {
+			/* Missile is confused by chaff. Let the ship that was evading this missile
+			 * stop doing that. */
+			int i = lookup_by_id(missile->tsd.missile.target_id);
+			if (i >= 0) {
+				struct snis_entity *o = &go[i];
+				if (o->alive && o->type == OBJTYPE_SHIP2) {
+					int n = o->tsd.ship.nai_entries;
+					if (n > 0 && o->tsd.ship.ai[n - 1].ai_mode == AI_MODE_AVOID_MISSILE)
+						pop_ai_stack(o);
+				}
+			}
+			/* Missile is now chasing the chaff */
 			missile->tsd.missile.target_id = target->id;
+		}
 	}
 	if (dist2 < missile_proximity_distance * missile_proximity_distance) {
 		switch (target->type) {
