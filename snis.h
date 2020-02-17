@@ -382,6 +382,7 @@ struct ship_data {
 #define TORPEDO_VELOCITY (90.0)
 #define TORPEDO_WEAPONS_FACTOR (3.0)
 #define MISSILE_TARGET_DIST (TORPEDO_VELOCITY * TORPEDO_LIFETIME)
+#define LASERBEAM_MISSILE_CHANCE (200) /* Chance out of 1000 that laserbeam destroys missile */
 #define DEFAULT_MISSILE_VELOCITY (50.0)
 #define MISSILE_LIFETIME 120
 #define MAX_MISSILE_DELTAV 5

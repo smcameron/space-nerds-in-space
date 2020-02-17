@@ -156,6 +156,7 @@ static int torpedo_lifetime = TORPEDO_LIFETIME;
 static int missile_lifetime = MISSILE_LIFETIME;
 static float torpedo_velocity = TORPEDO_VELOCITY;
 static float missile_target_dist = MISSILE_TARGET_DIST;
+static float laserbeam_missile_chance = LASERBEAM_MISSILE_CHANCE;
 static float max_missile_deltav = MAX_MISSILE_DELTAV;
 static float enemy_missile_fire_chance = ENEMY_MISSILE_FIRE_CHANCE;
 static float enemy_laser_fire_chance = ENEMY_LASER_FIRE_CHANCE;
@@ -5285,6 +5286,8 @@ static void ai_avoid_missile_brain(struct snis_entity *o)
 	(void) ai_ship_travel_towards(o, dir.v.x, dir.v.y, dir.v.z);
 	if (snis_randn(1000) < 250)
 		(void) add_chaff(o->x, o->y, o->z);
+	if (snis_randn(1000) < 50)
+		add_laserbeam(o->id, missile->id, LASERBEAM_DURATION);
 }
 
 struct danger_info {
@@ -12360,6 +12363,10 @@ static void laserbeam_move(struct snis_entity *o)
 	case OBJTYPE_ASTEROID:
 		target->alive = 0;
 		break;
+	case OBJTYPE_MISSILE:
+		if (snis_randn(1000) < laserbeam_missile_chance)
+			target->alive = 0;
+		break;
 	case OBJTYPE_SPACEMONSTER:
 		calculate_laser_damage(target, o->tsd.laserbeam.wavelength,
 					(float) o->tsd.laserbeam.power);
@@ -17481,6 +17488,9 @@ static struct tweakable_var_descriptor server_tweak[] = {
 		"HOW CLOSE TARGET MUST BE FOR MISSILE TO BE FIREABLE",
 		&missile_target_dist, 'f',
 		0.0, MISSILE_TARGET_DIST * 10.0, MISSILE_TARGET_DIST, 0, 0, 0 },
+	{ "LASERBEAM_MISSILE_CHANCE",
+		"CHANCE OUT OF 1000 THAT LASERBEAM DESTROYS MISSILE",
+		&laserbeam_missile_chance, 'i', 0.0, 0.0, 0.0, 0, 1000, LASERBEAM_MISSILE_CHANCE },
 	{ "MAX_MISSILE_DELTAV",
 		"MAX ACCELERATION OF MISSILES",
 		&max_missile_deltav, 'f',
