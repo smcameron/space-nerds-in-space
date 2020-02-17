@@ -3482,9 +3482,13 @@ static void pop_ai_attack_mode(struct snis_entity *o)
 		return;
 	}
 	n--;
+	if (n < 0)
+		return;
 	if (o->tsd.ship.ai[n].ai_mode == AI_MODE_ATTACK)
 		o->tsd.ship.nai_entries--;
 	n--;
+	if (n < 0)
+		return;
 	if (o->tsd.ship.ai[n].ai_mode == AI_MODE_ATTACK)
 		calculate_attack_vector(o, MIN_COMBAT_ATTACK_DIST,
 						MAX_COMBAT_ATTACK_DIST);
