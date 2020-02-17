@@ -12329,36 +12329,39 @@ static void laserbeam_move(struct snis_entity *o)
 	target = &go[tid];
 	origin = &go[oid];
 	ttype = target->type;
-	
-	if (ttype == OBJTYPE_STARBASE) {
+
+	switch (ttype) {
+	case OBJTYPE_STARBASE:
 		target->tsd.starbase.under_attack = 1;
 		add_starbase_attacker(target, o->tsd.laserbeam.origin);
 		calculate_laser_starbase_damage(target, o->tsd.laserbeam.wavelength);
 		notify_the_cops(o, target);
-	}
-
-	if (ttype == OBJTYPE_SHIP1 || ttype == OBJTYPE_SHIP2) {
+		break;
+	case OBJTYPE_SHIP1: /* Fall thru */
+	case OBJTYPE_SHIP2:
 		calculate_laser_damage(target, o->tsd.laserbeam.wavelength,
 					(float) o->tsd.laserbeam.power);
 		send_ship_damage_packet(target);
 		attack_your_attacker(target, lookup_entity_by_id(o->tsd.laserbeam.origin));
 		notify_the_cops(o, target);
-	}
-
-	if (ttype == OBJTYPE_TURRET) {
+		break;
+	case OBJTYPE_TURRET:
 		calculate_laser_damage(target, o->tsd.laserbeam.wavelength,
 					(float) o->tsd.laserbeam.power);
-	}
-
-	if (rts_mode && ttype == OBJTYPE_PLANET)
-		inflict_rts_main_base_laser_damage(o, target);
-
-	if (ttype == OBJTYPE_ASTEROID)
+		break;
+	case OBJTYPE_PLANET:
+		if (rts_mode)
+			inflict_rts_main_base_laser_damage(o, target);
+		break;
+	case OBJTYPE_ASTEROID:
 		target->alive = 0;
-
-	if (ttype == OBJTYPE_SPACEMONSTER) {
+		break;
+	case OBJTYPE_SPACEMONSTER:
 		calculate_laser_damage(target, o->tsd.laserbeam.wavelength,
 					(float) o->tsd.laserbeam.power);
+		break;
+	default:
+		break;
 	}
 
 	if (!target->alive) {
