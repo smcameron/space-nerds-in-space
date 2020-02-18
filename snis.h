@@ -382,7 +382,7 @@ struct ship_data {
 #define TORPEDO_VELOCITY (90.0)
 #define TORPEDO_WEAPONS_FACTOR (3.0)
 #define MISSILE_TARGET_DIST (TORPEDO_VELOCITY * TORPEDO_LIFETIME)
-#define LASERBEAM_MISSILE_CHANCE (200) /* Chance out of 1000 that laserbeam destroys missile */
+#define LASERBEAM_MISSILE_CHANCE (100) /* Chance out of 1000 that laserbeam destroys missile any given tick of server clock */
 #define DEFAULT_MISSILE_VELOCITY (50.0)
 #define MISSILE_LIFETIME 120
 #define MAX_MISSILE_DELTAV 5
@@ -699,7 +699,7 @@ struct explosion_data {
 
 #define CHAFF_COUNT (10)
 #define CHAFF_SPEED (50.0)
-#define CHAFF_CONFUSE_CHANCE (0.2) /* 20 percent chance evaluated at 10Hz per chaff */
+#define CHAFF_CONFUSE_CHANCE (0.10) /* 10 percent chance evaluated at 10Hz per chaff */
 struct chaff_data {
 	uint16_t unused;
 };
