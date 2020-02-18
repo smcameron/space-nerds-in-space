@@ -12314,8 +12314,8 @@ static void laserbeam_move(struct snis_entity *o)
 	if (o->tsd.laserbeam.mining_laser) /* don't deal damage from mining laser */
 		return;
 
-	/* only deal laser damage every other tick */
-	if (universe_timestamp & 0x01)
+	/* only deal laser damage every 4th tick */
+	if ((universe_timestamp & 0x011) != 0x011)
 		return;
 
 	tid = lookup_by_id(o->tsd.laserbeam.target);
