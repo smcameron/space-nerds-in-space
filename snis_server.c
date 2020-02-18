@@ -24656,6 +24656,9 @@ static void update_multiverse_bridge_count(double current_time)
 	if (current_time - last_time < 5.0)
 		return;
 
+	if (!multiverse_server)
+		return;
+
 	bridge_count = nbridges;
 	queue_to_multiverse(multiverse_server, packed_buffer_new("bw",
 				SNISMV_OPCODE_UPDATE_BRIDGE_COUNT, bridge_count));
