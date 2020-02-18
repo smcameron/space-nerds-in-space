@@ -397,6 +397,7 @@ struct ship_data {
 #define MISSILE_PROXIMITY_DISTANCE (75.0)
 #define CHAFF_PROXIMITY_DISTANCE (250.0)
 #define CHAFF_COOLDOWN_TIME (15.0) /* in 10ths of seconds */
+#define MISSILE_COUNTERMEASURE_DELAY 20 /* in 10ths of seconds */
 #define INITIAL_TORPEDO_COUNT 10
 #define INITIAL_MISSILE_COUNT 5
 #define LASER_LIFETIME 15

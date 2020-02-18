@@ -167,6 +167,7 @@ static int enemy_missile_fire_interval = ENEMY_MISSILE_FIRE_INTERVAL;
 static float missile_proximity_distance = MISSILE_PROXIMITY_DISTANCE;
 static float chaff_proximity_distance = CHAFF_PROXIMITY_DISTANCE;
 static int chaff_cooldown_time = CHAFF_COOLDOWN_TIME;
+static int missile_countermeasure_delay = MISSILE_COUNTERMEASURE_DELAY;
 static float missile_explosion_damage_distance = MISSILE_EXPLOSION_DAMAGE_DISTANCE;
 static float spacemonster_flee_dist = SPACEMONSTER_FLEE_DIST;
 static float spacemonster_aggro_radius = SPACEMONSTER_AGGRO_RADIUS;
@@ -3923,7 +3924,9 @@ static void missile_move(struct snis_entity *o)
 		target = &go[i];
 		if (target->type == OBJTYPE_SHIP2) {
 			target->tsd.ship.missile_lock_detected = 10;
-			push_avoid_missile(target, o);
+			/* NPCs don't notice missiles instantly. */
+			if (o->alive < missile_lifetime - missile_countermeasure_delay)
+				push_avoid_missile(target, o);
 		} else if (target->type == OBJTYPE_SHIP1) {
 			if (target->tsd.ship.missile_lock_detected == 0)
 				snis_queue_add_text_to_speech("Missile lock detected.",
@@ -17534,6 +17537,9 @@ static struct tweakable_var_descriptor server_tweak[] = {
 		"DAMAGE FACTOR PER UNIT DISTANCE",
 		&missile_explosion_damage_distance, 'f',
 		0.0, 2000.0, MISSILE_EXPLOSION_DAMAGE_DISTANCE, 0, 0, 0 },
+	{ "MISSILE_COUNTERMEASURE_DELAY",
+		"HOW MANY 10ths secs missiles can move before NPCS deploy countermeasures",
+		&missile_countermeasure_delay, 'i', 0.0, 0.0, 0.0, 0, 1000, MISSILE_COUNTERMEASURE_DELAY },
 	{ "SPACEMONSTER_FLEE_DIST",
 		"SPACE MONSTER FLEE DISTANCE",
 		&spacemonster_flee_dist, 'f',
