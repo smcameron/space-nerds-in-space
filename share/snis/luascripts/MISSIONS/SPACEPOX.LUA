@@ -48,12 +48,12 @@ dreadknight = 18;
 
 -- find the player and move him where we want him to start.
 player_ids = get_player_ship_ids();
-player_name = "Unknown Player"
 if (player_ids[1]) then
-    move_object(player_ids[1], startx, starty, startz);
-    player_name = get_object_name(player_ids[1]);
-    reset_player_ship(player_ids[1]);
-    set_faction(player_ids[1], 0); -- set player faction to neutral so only zarkons fight
+	for i, player_id in ipairs(player_ids) do
+		move_object(player_id, startx, starty, startz + (i * 100));
+		reset_player_ship(player_id);
+		set_faction(player_id, 0); -- set player faction to neutral so only zarkons fight
+	end
 end
 
 -- Create our macguffin -- a derelict and a cargo container of spacepox vaccine
@@ -147,13 +147,17 @@ function create_asteroid_field(number_of_asteroids, x, y, z, radius)
 	end
 end
 
+function mission_update(text)
+	for i, player_id in ipairs(player_ids) do
+		show_timed_text(player_id, 10, "SPACEPOX\n" .. text);
+		text_to_speech(player_id, text);
+	end
+end
+
 function all_hands_lost()
-	show_timed_text(player_ids[1], 10, "SPACEPOX\n" ..
+	mission_update(
 		"ALL HANDS ABOARD " .. station .. " ORBITING " .. bonxname .. "\n" ..
 		"WERE LOST TO SPACE POX\n");
-	text_to_speech(player_ids[1],
-		"All hands aboard " .. station .. " orbiting " .. bonxname ..
-		" were lost to space pox.");
 end
 
 function you_brought_the_vaccine()
@@ -161,18 +165,17 @@ function you_brought_the_vaccine()
 	if survivors <= 0 then
 		all_hands_lost();
 	else
-		show_timed_text(player_ids[1], 10, "SPACEPOX\n" ..
+		mission_update(
 			"YOU HAVE SAVED " .. 100.0 * (survivors / 8.0) .. " PERCENT OF\n" ..
 			"THE CREWMEMBERS FROM THE SPACE POX\n");
-		text_to_speech(player_ids[1],
-			"You have saved " .. 100.0 * (survivors / 8.0) .. " percent of " ..
-			"the crewmembers from the space pox.");
 	end
 end
 
 function wheres_the_vaccine()
 	if (survivors > 0) then
-		text_to_speech(player_ids[1], "Incoming transmission from Icarus station");
+		for i, player_id in ipairs(player_ids) do
+			text_to_speech(player_id, "Incoming transmission from Icarus station");
+		end
 		comms_transmission(bonx_starbase, "------------------");
 		comms_transmission(bonx_starbase, "WHAT ARE YOU DOING HERE WITHOUT THE VACCINE?");
 		comms_transmission(bonx_starbase, "PLEASE GO OUT AND FIND THE SPACEPOX VACCINE");
@@ -209,7 +212,7 @@ end
 function player_docked_callback(player_id, station_id)
 	print("player docked callback player: " .. player_id .. ", station: " .. station_id .. " vs. " .. bonx_starbase);
 	if station_id == bonx_starbase then
-		if player_has_vaccine(player_ids[1]) then
+		if player_has_vaccine(player_id) then
 			print("you brought the vaccine");
 			register_timer_callback("you_brought_the_vaccine", 50, 0);
 		else
@@ -221,11 +224,13 @@ end
 
 -- Function to introduce the mission
 function intro()
-	show_timed_text(player_ids[1], 10,
-		"SPACEPOX\n" ..
-		"CAN YOU SAVE THE CREW OF " .. station .. "\n" ..
-		"STATION BEFORE THEY ALL SUCCUMB\n" ..
-		"TO THE DREADED SPACE POX?\n");
+	for i, player_id in ipairs(player_ids) do
+		show_timed_text(player_id, 10,
+			"SPACEPOX\n" ..
+			"CAN YOU SAVE THE CREW OF " .. station .. "\n" ..
+			"STATION BEFORE THEY ALL SUCCUMB\n" ..
+			"TO THE DREADED SPACE POX?\n");
+	end
 end
 
 
@@ -235,7 +240,9 @@ function distress_call(rank, firstname, lastname, predecessor, died)
 	if vaccine_delivered then -- nothing to complain about
 		return;
 	end
-	text_to_speech(player_ids[1], "Incoming transmission from Icarus station");
+	for i, player_id in ipairs(player_ids) do
+		text_to_speech(player_id, "Incoming transmission from Icarus station");
+	end
 	comms_transmission(bonx_starbase, "------------------");
 	comms_transmission(bonx_starbase, "THIS IS " .. rank .. " " .. firstname .. " " .. lastname);
 	comms_transmission(bonx_starbase, "ABOARD " .. station .. " ORBITING " .. bonxname);
@@ -252,7 +259,10 @@ end
 
 -- First distress call from ICARUS station
 function distress_call1()
-	text_to_speech(player_ids[1], "Incoming transmission from Icarus station");
+	for i, player_id in ipairs(player_ids) do
+		text_to_speech(player_id, "Incoming transmission from Icarus station");
+		print("Incoming 1");
+	end
 	comms_transmission(bonx_starbase, "------------------");
 	comms_transmission(bonx_starbase, "THIS IS ADMIRAL ASTON PIERCE");
 	comms_transmission(bonx_starbase, "ABOARD " .. station .. " ORBITING " .. bonxname);
@@ -331,37 +341,40 @@ function maintain_zarkon_focus()
 	register_timer_callback("maintain_zarkon_focus", 20, 0);
 end
 
-function send_in_the_zarkons()
+function send_in_the_zarkons(player_id)
 	print("Sending in the zarkons");
-	px,py,pz = get_object_location(player_ids[1]);
+	px,py,pz = get_object_location(player_id);
 	zx = px + math.random(4000) - 2000;
 	zy = py + math.random(4000) - 2000;
 	zz = pz + math.random(4000) - 2000;
 	for i = 1, number_of_zarkons do
 		zarkon_ship[i] = add_ship(shipname[i], zx, zy, zz, dreadknight, zarkon, 0);
-		ai_push_attack(zarkon_ship[i], player_ids[1]);
+		ai_push_attack(zarkon_ship[i], player_id);
 		zy = zy + 250;
 	end
-	text_to_speech(player_ids[1], "Warning, Zarkon scanning beam has been detected.");
+	text_to_speech(player_id, "Warning, Zarkon scanning beam has been detected.");
 	-- Mess up the player's warp drive to make it harder to run away
-	set_player_damage(player_ids[1], "warp", 255); -- 3 times because of the way
-	set_player_damage(player_ids[1], "warp", 255); -- damage is distributed
-	set_player_damage(player_ids[1], "warp", 255);
+	set_player_damage(player_id, "warp", 255); -- 3 times because of the way
+	set_player_damage(player_id, "warp", 255); -- damage is distributed
+	set_player_damage(player_id, "warp", 255);
 	register_timer_callback("maintain_zarkon_focus", 20, 0);
 end
 
 -- check to see if the space vaccine has been acquired and if so send in the zarkons
 function check_for_zarkon_attack()
 	print("checking for zarkon attack");
-	if not player_has_vaccine(player_ids[1]) then
-		print("No zarkon attack this time");
-		-- player doesn't have vaccine, check for zarkon attack again in a little while
-		register_timer_callback("check_for_zarkon_attack", zarkon_check_interval, 0);
-		return;
+	for i, player_id in ipairs(player_ids) do
+		if player_has_vaccine(player_id) then
+			-- player has vaccine, send in the zarkons
+			send_in_the_zarkons(player_id);
+			-- do not register the callback to check for zarkon attack again
+			return;
+		end
 	end
-	-- player has vaccine, send in the zarkons
-	send_in_the_zarkons();
-	-- do not register the callback to check for zarkon attack again
+	
+	print("No zarkon attack this time");
+	-- player doesn't have vaccine, check for zarkon attack again in a little while
+	register_timer_callback("check_for_zarkon_attack", zarkon_check_interval, 0);
 end
 
 function add_a_bunch_of_neutral_ships()
