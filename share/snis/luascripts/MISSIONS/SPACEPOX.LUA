@@ -190,7 +190,6 @@ end
 -- check if the player has the spacepox vaccine in one of the cargo bays
 function player_has_vaccine(player)
 	ncargo_bays = get_ship_attribute(player, "ncargo_bays");
-	print("ncargo bays = " .. ncargo_bays);
 	if ncargo_bays == nil then
 		return false;
 	end
@@ -198,11 +197,8 @@ function player_has_vaccine(player)
 		return false;
 	end
 	for i = 0, ncargo_bays - 1, 1 do
-		print("getting cargo bay '" .. string.format("cargo[%d[.contents.item", i));
 		cargo = get_ship_attribute(player, string.format("cargo[%d].contents.item", i));
-		print("cargo[" .. i .. "] = " .. cargo .. " vs. vaccine = " .. spacepox_vaccine);
 		if (cargo == spacepox_vaccine) then
-			print("MATCH");
 			return true;
 		end
 	end
@@ -211,13 +207,12 @@ end
 
 -- Function gets called when player docks at a starbase
 function player_docked_callback(player_id, station_id)
-	print("player docked callback player: " .. player_id .. ", station: " .. station_id .. " vs. " .. bonx_starbase);
 	if station_id == bonx_starbase then
 		if player_has_vaccine(player_id) then
-			print("you brought the vaccine");
+			demon_print("A player has brought the vaccine");
 			register_timer_callback("you_brought_the_vaccine", 50, 0);
 		else
-			print("you did not bring the vaccine");
+			demon_print("Player did not bring the vaccine");
 			register_timer_callback("wheres_the_vaccine", 50, 0);
 		end
 	 end
@@ -345,7 +340,7 @@ function maintain_zarkon_focus()
 end
 
 function send_in_the_zarkons(player_id)
-	print("Sending in the zarkons");
+	demon_print("Sending in the zarkons");
 	px,py,pz = get_object_location(player_id);
 	zx = px + math.random(4000) - 2000;
 	zy = py + math.random(4000) - 2000;
@@ -365,7 +360,6 @@ end
 
 -- check to see if the space vaccine has been acquired and if so send in the zarkons
 function check_for_zarkon_attack()
-	print("checking for zarkon attack");
 	for i, player_id in ipairs(player_ids) do
 		if player_has_vaccine(player_id) then
 			-- player has vaccine, send in the zarkons
@@ -375,8 +369,6 @@ function check_for_zarkon_attack()
 			return;
 		end
 	end
-	
-	print("No zarkon attack this time");
 	-- player doesn't have vaccine, check for zarkon attack again in a little while
 	register_timer_callback("check_for_zarkon_attack", zarkon_check_interval, 0);
 end
