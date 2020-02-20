@@ -20,6 +20,7 @@ clear_all();
 startx = 101000;
 starty = 6000;
 startz = 0;
+player_with_vaccine = nil
 
 -- how many survivors on the station
 survivors = 8;
@@ -335,8 +336,10 @@ function distress_call8()
 end
 
 function maintain_zarkon_focus()
-	for i = 1, number_of_zarkons do
-		ai_push_attack(zarkon_ship[i], player_ids[1]);
+	if (player_with_vaccine ~= nil) then
+		for i = 1, number_of_zarkons do
+			ai_push_attack(zarkon_ship[i], player_with_vaccine);
+		end
 	end
 	register_timer_callback("maintain_zarkon_focus", 20, 0);
 end
@@ -367,6 +370,7 @@ function check_for_zarkon_attack()
 		if player_has_vaccine(player_id) then
 			-- player has vaccine, send in the zarkons
 			send_in_the_zarkons(player_id);
+			player_with_vaccine = player_id;
 			-- do not register the callback to check for zarkon attack again
 			return;
 		end
