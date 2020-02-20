@@ -93,7 +93,7 @@ static void save_payload(struct ssgl_lobby_descriptor *p)
 static void *broadcast_recv_thread(__attribute__((unused)) void *arg)
 {
 
-	int rc, bcast;
+	int rc, bcast, on;
 	struct ssgl_lobby_descriptor payload;
 	struct sockaddr_in bcast_addr;
 	struct sockaddr remote_addr;
@@ -112,6 +112,10 @@ static void *broadcast_recv_thread(__attribute__((unused)) void *arg)
 	bcast_addr.sin_family = AF_INET;
 	bcast_addr.sin_addr.s_addr = INADDR_ANY;
 	bcast_addr.sin_port = udp_port;
+
+	/* Allow multiple snis_clients on the same host to recieve broadcast packets from ssgl */
+	on = 1;
+	setsockopt(bcast, SOL_SOCKET, SO_REUSEADDR, (const char *) &on, sizeof(on));
 
 	rc = bind(bcast, (struct sockaddr *) &bcast_addr, sizeof(bcast_addr));
 	if (rc < 0) {
