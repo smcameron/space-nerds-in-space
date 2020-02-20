@@ -15734,6 +15734,8 @@ static void npc_menu_item_disembark_passengers(struct npc_menu_item *item,
 		if (passenger[i].location == b->shipid && passenger[i].destination == sb->id) {
 			send_comms_packet(sb, npcname, ch, "  PASSENGER %s DISEMBARKED\n",
 					passenger[i].name);
+			send_comms_packet(sb, npcname, ch, "  YOU COLLECT $%d FARE FOR SAFE PASSAGE OF %s\n",
+						passenger[i].fare, passenger[i].name);
 			ship->tsd.ship.wallet += passenger[i].fare;
 			ship->tsd.ship.lifeform_count--;
 			/* passenger disembarks, ceases to be a passenger, replace with new one */
