@@ -122,6 +122,13 @@ double callback_schedule_entry_param(struct callback_schedule_entry *e, int para
 void register_event_callback(const char *event, const char *callback,
 				struct event_callback_entry **map);
 
+/* looks up up the given event in *map, and deletes the specified callback for that
+ * event.  IF the event isn't found, or does not have the specified callback, no
+ * action is taken.
+ */
+void unregister_event_callback(const char *event, const char *callback,
+				struct event_callback_entry **map);
+
 /* Looks up the event in map, and returns the list of callbacks associated
  * with that event in the map.
  */
@@ -132,5 +139,8 @@ void free_event_callbacks(struct event_callback_entry **map);
 
 /* literally returns e->next, useful for iterating through a callback schedule */
 struct callback_schedule_entry *next_scheduled_callback(struct callback_schedule_entry *e);
+
+/* Prints the list of registered callback/event tuples */
+void print_registered_callbacks(struct event_callback_entry *map);
 
 #endif

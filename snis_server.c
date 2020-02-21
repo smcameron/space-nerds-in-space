@@ -18347,6 +18347,12 @@ static double register_lua_callback(const char *event, const char *callback)
 	return 0.0;
 }
 
+static double unregister_lua_callback(const char *event, const char *callback)
+{
+	unregister_event_callback(event, callback, &event_callback);
+	return 0.0;
+}
+
 static int l_register_callback(lua_State *l)
 {
 	const char *event = luaL_checkstring(l, 1);
@@ -18358,6 +18364,27 @@ static int l_register_callback(lua_State *l)
 	pthread_mutex_unlock(&universe_mutex);
 	lua_pushnumber(l, rc);
 	return 1;
+}
+
+static int l_unregister_callback(lua_State *l)
+{
+	const char *event = luaL_checkstring(l, 1);
+	const char *callback = luaL_checkstring(l, 2);
+	double rc;
+
+	pthread_mutex_lock(&universe_mutex);
+	rc = unregister_lua_callback(event, callback);
+	pthread_mutex_unlock(&universe_mutex);
+	lua_pushnumber(l, rc);
+	return 1;
+}
+
+static int l_print_registered_callbacks(lua_State *l)
+{
+	pthread_mutex_lock(&universe_mutex);
+	print_registered_callbacks(event_callback);
+	pthread_mutex_unlock(&universe_mutex);
+	return 0;
 }
 
 static int l_register_proximity_callback(lua_State *l)
@@ -24303,6 +24330,8 @@ static void setup_lua(void)
 	add_lua_callable_fn(l_set_object_relative_position, "set_object_relative_position");
 	add_lua_callable_fn(l_delete_object, "delete_object");
 	add_lua_callable_fn(l_register_callback, "register_callback");
+	add_lua_callable_fn(l_unregister_callback, "unregister_callback");
+	add_lua_callable_fn(l_print_registered_callbacks, "print_registered_callbacks");
 	add_lua_callable_fn(l_register_timer_callback, "register_timer_callback");
 	add_lua_callable_fn(l_comms_transmission, "comms_transmission");
 	add_lua_callable_fn(l_comms_enciphered_transmission, "comms_enciphered_transmission");

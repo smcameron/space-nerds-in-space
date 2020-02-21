@@ -376,11 +376,19 @@ comms_channel_enciphered_transmission(name, channel, text, key)
 text_to_speech(player_ship_id, text_to_speak); -- causes player ship to use text to speech to
 	say the specified text.
 
-register_callback(event, callback); -- event is a string, the name of the event you wish
-	to register a callback for, and	callback is a string, the name of the lua function
-	you want to get called when that event occurs.  The arguments passed to the lua
-	function and return values from the lua function depend on the event (see events,
-	above.)
+register_callback(event_name, callback_name); -- event_name is a string, the name of the event
+	you wish to register a callback for, and	callback_name is a string, the name of
+	the lua function you want to get called when that event occurs.  The arguments passed
+	to the lua function and return values from the lua function depend on the event (see
+	events, above.)
+
+unregister_callback(event_name, callback_name); -- event_name is a string and callback_name
+	are strings, the names of the event and Lua function pair that you wish to
+	disassociate.  If such a pair is registered, it will be unregistered.  If such a
+	pair is not registered, no action occurs.
+
+print_registered_callbacks(); -- print out a list of currently registered callbacks
+	registered via register_callback();
 
 get_object_name(object_id); -- returns string name of specified object
 

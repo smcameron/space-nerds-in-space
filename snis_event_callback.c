@@ -19,6 +19,7 @@
 	Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
 
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -188,6 +189,42 @@ static void add_callback(struct event_callback_entry *e, const char *callback)
 	e->callback[e->ncallbacks++] = strdup(callback);
 }
 
+static void delete_callback(struct event_callback_entry *prev, struct event_callback_entry *e,
+				const char *callback, struct event_callback_entry **map)
+{
+	int i, j;
+
+	for (i = 0; i < e->ncallbacks; i++) {
+		if (e->callback[i] && strcmp(e->callback[i], callback) == 0) {
+			/* Delete the callbacke entry from the map entry */
+			free(e->callback[i]);
+			for (j = i + 1; j < e->ncallbacks; j++)
+				e->callback[j - 1] = e->callback[j];
+			e->callback[e->ncallbacks - 1] = NULL;
+			e->ncallbacks--;
+			break;
+		}
+	}
+	/* If this map entry has zero callbacks, delete it. */
+	if (e->ncallbacks == 0) {
+		if (prev == NULL) { /* We deleted the first entry */
+			if (e->next == NULL) { /* We deleted the only entry. */
+				free(e);
+				*map = NULL;
+				return;
+			}
+			*map = e->next;
+			free(e);
+			return;
+		} else {
+			/* We deleted an entry from the middle, or the last entry. */
+			prev->next = e->next;
+			free(e);
+			return;
+		}
+	}
+}
+
 /* looks up up the given event in *map, and creates a new callback for that
  * event and adds the new callback to that event.  IF the event isn't found,
  * it's added to map, with the new callback.
@@ -210,6 +247,28 @@ void register_event_callback(const char *event, const char *callback,
 		last = i;
 	} 
 	last->next = init_new_event_callback(event, callback);
+}
+
+/* looks up up the given event in *map, and deletes the specified callback for that
+ * event.  If the event isn't found, or doesn't have an entry for the specified
+ * callback, no action is taken.
+ */
+void unregister_event_callback(const char *event, const char *callback,
+				struct event_callback_entry **map)
+{
+	struct event_callback_entry *i, *prev;
+
+	if (!*map)
+		return;
+
+	prev = NULL;
+	for (i = *map; i != NULL; i = i->next) {
+		if (strcmp(event, i->event) == 0) {
+			delete_callback(prev, i, callback, map);
+			return;
+		}
+		prev = i;
+	}
 }
 
 /* Looks up the event in map, and returns the list of callbacks associated
@@ -277,3 +336,13 @@ char *callback_name(struct callback_schedule_entry *e)
 	return strdup(e->callback);
 }
 
+void print_registered_callbacks(struct event_callback_entry *map)
+{
+	struct event_callback_entry *i;
+	int j;
+
+	for (i = map; i != NULL; i = i->next)
+		for (j = 0; j < MAXCALLBACKS; j++)
+			if (i->callback[j])
+				printf("%s %s\n", i->event, i->callback[j]);
+}
