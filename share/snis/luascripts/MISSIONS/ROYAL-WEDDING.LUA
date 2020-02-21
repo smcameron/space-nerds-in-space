@@ -627,7 +627,7 @@ function restrain_prince()
 		text_to_speech(player_ids[1], "The prince has been restrained");
 	end
 	disable_custom_button(player_ids[1], 2);
-	register_callback("custom-button-press-event", "");
+	unregister_callback("custom-button-press-event", "restrain_prince");
 end
 
 function ending1()
@@ -750,8 +750,8 @@ end
 function end_mission()
 	set_faction(player_ids[1], 0); -- Set player faction to neutral
 	comms_channel_transmit("MCMic", 0, "-- END OF ROYAL-WEDDING MISSION - CONGRATULATIONS! --");
-	register_callback("player-docked-event", "");
-	register_callback("object-death-event", "");
+	unregister_callback("player-docked-event", "player_docked_callback");
+	unregister_callback("object-death-event", "object_death_callback");
 end
 
 -- Initial setup
