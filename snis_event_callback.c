@@ -176,8 +176,15 @@ static struct event_callback_entry *init_new_event_callback(const char *event, c
 /* Adds a callback to an list of callbacks associated with an event (max 3) */
 static void add_callback(struct event_callback_entry *e, const char *callback)
 {
+	int i;
+
 	if (e->ncallbacks >= MAXCALLBACKS)
 		return;
+
+	for (i = 0; i < MAXCALLBACKS; i++)
+		if (e->callback[i] && strcmp(e->callback[i], callback) == 0)
+			return; /* Already registered this event/callback tuple */
+
 	e->callback[e->ncallbacks++] = strdup(callback);
 }
 
