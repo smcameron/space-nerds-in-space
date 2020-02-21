@@ -221,7 +221,6 @@ static uint32_t ai_trace_id = (uint32_t) -1;
 static uint32_t mtwist_seed = COMMON_MTWIST_SEED;
 
 static int lua_enscript_enabled = 0;
-static char *initial_lua_script = "initialize.lua";
 
 static struct network_stats netstats;
 static int faction_population[5];
@@ -24375,32 +24374,6 @@ static void setup_lua(void)
 	add_lua_callable_fn(l_get_faction_name, "get_faction_name");
 }
 
-static int run_initial_lua_scripts(void)
-{
-	int rc;
-	struct stat statbuf;
-	char scriptname[PATH_MAX];
-
-	snprintf(scriptname, sizeof(scriptname) - 1,
-			"%s/%s", LUASCRIPTDIR, initial_lua_script);
-	rc = stat(scriptname, &statbuf);
-	if (rc != 0)
-		return rc;
-	rc = luaL_dofile(lua_state, scriptname);
-	if (rc) {
-		char errmsg[1000];
-		snprintf(errmsg, sizeof(errmsg) - 1, "ERROR IN SCRIPT %s", initial_lua_script);
-		send_demon_console_color_msg(YELLOW, "%s", errmsg);
-		fprintf(stderr, "%s\n", errmsg);
-
-		snprintf(errmsg, sizeof(errmsg) - 1, "LUA: %s",
-			lua_tostring(lua_state, -1));
-		send_demon_console_color_msg(YELLOW, "%s", errmsg);
-		fprintf(stderr, "%s\n", errmsg);
-	}
-	return rc;
-}
-
 static void print_lua_error_message(char *error_context, char *lua_command)
 {
 	char error_msg[1000];
@@ -28295,7 +28268,6 @@ static void init_natural_language_system(void)
 
 static struct option long_options[] = {
 	{ "enable-enscript", no_argument, NULL, 'e' },
-	{ "initscript", required_argument, NULL, 'i' },
 	{ "help", no_argument, NULL, 'h' },
 	{ "lobbyhost", required_argument, NULL, 'l' },
 	{ "servernick", required_argument, NULL, 'n' },
@@ -28378,7 +28350,7 @@ static void process_options(int argc, char *argv[])
 
 	while (1) {
 		int option_index;
-		c = getopt_long(argc, argv, "ehi:L:l:m:n:s:tv", long_options, &option_index);
+		c = getopt_long(argc, argv, "ehL:l:m:n:s:tv", long_options, &option_index);
 		if (c == -1)
 			break;
 		switch (c) {
@@ -28386,9 +28358,6 @@ static void process_options(int argc, char *argv[])
 			lua_enscript_enabled = 1;
 			fprintf(stderr, "WARNING: lua enscript enabled!\n");
 			fprintf(stderr, "THIS PERMITS USERS TO CREATE FILES ON THE SERVER\n");
-			break;
-		case 'i':
-			initial_lua_script = optarg;
 			break;
 		case 'h':
 			usage();
@@ -29096,7 +29065,6 @@ int main(int argc, char *argv[])
 			offsetof(struct snis_entity, partition));
 
 	make_universe();
-	run_initial_lua_scripts();
 	port = start_listener_thread();
 
 	ignore_sigpipe();	
