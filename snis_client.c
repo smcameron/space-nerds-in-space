@@ -311,6 +311,7 @@ static unsigned char nav_has_computer_button = 0; /* tweakable */
 static unsigned char planets_shade_other_objects = 1; /* tweakable */
 static int main_nav_hybrid = 0; /* tweakable */
 static float explosion_multiplier = 5.0; /* tweakable */
+static float main_view_azimuth_angle = 0.0; /* tweakable */
 
 /* "Scenic" camera for beauty shots. */
 static int external_camera_active = 0; /* tweakable */
@@ -9229,6 +9230,16 @@ static void draw_nav_main_idiot_lights(GtkWidget *w, GdkGC *gc, struct snis_enti
 
 static double sample_power_data_impulse_current(void);
 
+static void adjust_main_view_azimuth_angle(union quat *cam_orientation)
+{
+	union quat az;
+	if (main_view_azimuth_angle == 0.0)
+		return;
+
+	quat_init_axis(&az, 0.0, 1.0, 0.0, main_view_azimuth_angle * M_PI / 180.0);
+	quat_mul_self(cam_orientation, &az);
+}
+
 static void show_mainscreen(GtkWidget *w)
 {
 	const float min_angle_of_view = 5.0 * M_PI / 180.0;
@@ -9277,10 +9288,13 @@ static void show_mainscreen(GtkWidget *w)
 			case 0:
 				camera_orientation = vp->orientation;
 				desired_cam_orientation = camera_orientation;
+				adjust_main_view_azimuth_angle(&desired_cam_orientation);
+				camera_orientation = desired_cam_orientation;
 				break;
 			case 1:
 			case 2:
 				desired_cam_orientation = vp->orientation;
+				adjust_main_view_azimuth_angle(&desired_cam_orientation);
 				if (first_frame)
 					camera_orientation = desired_cam_orientation;
 				else
@@ -17525,6 +17539,8 @@ static struct tweakable_var_descriptor client_tweak[] = {
 		&main_nav_hybrid, 'i', 0.0, 0.0, 0.0, 0, 1, 0 },
 	{ "EXPLOSION_MULTIPLIER", "0.2 TO 5 TO MULIPLY SPARK COUNT OF NEARBY EXPLOSIONS",
 		&explosion_multiplier, 'f', 0.2, 5.0, 5.0, 0, 0, 0 },
+	{ "MAIN_VIEW_AZIMUTH_ANGLE", "-180 TO 180 DEGREES",
+		&main_view_azimuth_angle, 'f', -180.0, 180.0, 0.0, 0, 0, 0 },
 	{ "USE_60_FPS", "0 OR 1 to USE 30 OR 60 FPS, RESPECTIVELY",
 		&use_60_fps, 'i', 0.0, 0.0, 0.0, 0, 1, 1 },
 	{ "LENS_FLARE", "0 OR 1 TO DISABLE OR ENABLE LENS FLARE EFFECT",
