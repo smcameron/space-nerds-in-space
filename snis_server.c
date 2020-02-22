@@ -2465,16 +2465,16 @@ static void player_update_shield_wavelength_width_depth(struct snis_entity *play
 }
 
 static int roll_damage(struct snis_entity *o, struct damcon_data *d, 
-			double weapons_factor, double shield_strength, uint8_t system,
+			double weapons_factor, double shield_strength, uint8_t current_system_damage,
 			int damcon_system)
 {
 	int damage = (weapons_factor * (double) (20 + snis_randn(40)) * (1.2 - shield_strength));
-	if (damage + system > 255)
-		damage = 255 - system;
+	if (damage + current_system_damage > 255)
+		damage = 255 - current_system_damage;
 
 	distribute_damage_to_damcon_system_parts(o, d, damage, damcon_system);
 	
-	return damage + system;
+	return damage + current_system_damage;
 }
 
 static void calculate_turret_damage(struct snis_entity *o)
