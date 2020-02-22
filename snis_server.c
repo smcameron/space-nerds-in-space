@@ -209,6 +209,10 @@ static int player_respawn_time = RESPAWN_TIME_SECS; /* Number of seconds player 
 static int starbases_orbit = 0; /* 1 means starbases can orbit planets, 0 means starbases are stationary and just hover */
 				/* Currently starbases_orbit == 1 kind of breaks the patrol code of NPC ships */
 				/* because they do not notice that the starbases move. */
+#define DEFAULT_NPC_SYSTEM_TARGETING 0
+#define DEFAULT_NPC_SYSTEM_TARGETING_INTERVAL 300
+static int npc_system_targeting = DEFAULT_NPC_SYSTEM_TARGETING;
+static int npc_system_targeting_interval = DEFAULT_NPC_SYSTEM_TARGETING_INTERVAL;
 
 /*
  * End of runtime adjustable globals
@@ -1403,17 +1407,18 @@ static void asteroid_move(struct snis_entity *o)
 				&o->tsd.asteroid.rotational_velocity);
 }
 
-static void calculate_torpedolike_damage(struct snis_entity *target, double weapons_factor);
+static void calculate_torpedolike_damage(struct snis_entity *target, double weapons_factor, uint8_t targeted_system);
 static void calculate_warp_core_explosion_damage(struct snis_entity *target, double damage_factor)
 {
-	calculate_torpedolike_damage(target, warp_core_damage_factor * damage_factor);
+	calculate_torpedolike_damage(target, warp_core_damage_factor * damage_factor, TARGET_ALL_SYSTEMS);
 }
 
-static void calculate_missile_explosion_damage(struct snis_entity *target, double damage_factor)
+static void calculate_missile_explosion_damage(struct snis_entity *target,
+						double damage_factor, uint8_t targeted_system)
 {
 	if (target->type == OBJTYPE_SHIP1) /* Nerf the missiles against player ships */
 		damage_factor = damage_factor * MISSILE_NERF_FACTOR;
-	calculate_torpedolike_damage(target, missile_damage_factor * damage_factor);
+	calculate_torpedolike_damage(target, missile_damage_factor * damage_factor, targeted_system);
 }
 
 static void send_ship_damage_packet(struct snis_entity *o);
@@ -2549,7 +2554,7 @@ static void calculate_block_damage(struct snis_entity *o)
 	/* Doesn't die, just breaks away... */
 }
 
-static void calculate_torpedolike_damage(struct snis_entity *target, double weapons_factor)
+static void calculate_torpedolike_damage(struct snis_entity *target, double weapons_factor, uint8_t targeted_system)
 {
 	double ss;
 	const double twp = weapons_factor * (target->type == OBJTYPE_SHIP1 ? 0.333 : 1.0);
@@ -2581,24 +2586,66 @@ static void calculate_torpedolike_damage(struct snis_entity *target, double weap
 				target->sdata.shield_depth,
 				target->sdata.shield_wavelength);
 
-	target->tsd.ship.damage.shield_damage = roll_damage(target, d, twp, ss,
-			target->tsd.ship.damage.shield_damage, DAMCON_TYPE_SHIELDSYSTEM);
-	target->tsd.ship.damage.impulse_damage = roll_damage(target, d, twp, ss,
-			target->tsd.ship.damage.impulse_damage, DAMCON_TYPE_IMPULSE);
-	target->tsd.ship.damage.warp_damage = roll_damage(target, d, twp, ss,
-			target->tsd.ship.damage.warp_damage, DAMCON_TYPE_WARPDRIVE);
-	target->tsd.ship.damage.maneuvering_damage = roll_damage(target, d, twp, ss,
-			target->tsd.ship.damage.maneuvering_damage, DAMCON_TYPE_MANEUVERING);
-	target->tsd.ship.damage.phaser_banks_damage = roll_damage(target, d, twp, ss,
-			target->tsd.ship.damage.phaser_banks_damage, DAMCON_TYPE_PHASERBANK);
-	target->tsd.ship.damage.sensors_damage = roll_damage(target, d, twp, ss,
-			target->tsd.ship.damage.sensors_damage, DAMCON_TYPE_SENSORARRAY);
-	target->tsd.ship.damage.comms_damage = roll_damage(target, d, twp, ss,
-			target->tsd.ship.damage.comms_damage, DAMCON_TYPE_COMMUNICATIONS);
-	target->tsd.ship.damage.tractor_damage = roll_damage(target, d, twp, ss,
-			target->tsd.ship.damage.tractor_damage, DAMCON_TYPE_TRACTORSYSTEM);
-	target->tsd.ship.damage.lifesupport_damage = roll_damage(target, d, twp, ss,
-			target->tsd.ship.damage.lifesupport_damage, DAMCON_TYPE_LIFESUPPORTSYSTEM);
+	if (targeted_system >= 0 && targeted_system < NUM_POWER_MODEL_SYSTEMS) {
+		switch (targeted_system) {
+		case DAMCON_TYPE_SHIELDSYSTEM:
+			target->tsd.ship.damage.shield_damage = roll_damage(target, d, 3 * twp, ss,
+					target->tsd.ship.damage.shield_damage, DAMCON_TYPE_SHIELDSYSTEM);
+			break;
+		case DAMCON_TYPE_IMPULSE:
+			target->tsd.ship.damage.impulse_damage = roll_damage(target, d, 3 * twp, ss,
+					target->tsd.ship.damage.impulse_damage, DAMCON_TYPE_IMPULSE);
+			break;
+		case DAMCON_TYPE_WARPDRIVE:
+			target->tsd.ship.damage.warp_damage = roll_damage(target, d, 3 * twp, ss,
+					target->tsd.ship.damage.warp_damage, DAMCON_TYPE_WARPDRIVE);
+			break;
+		case DAMCON_TYPE_MANEUVERING:
+			target->tsd.ship.damage.maneuvering_damage = roll_damage(target, d, 3 * twp, ss,
+					target->tsd.ship.damage.maneuvering_damage, DAMCON_TYPE_MANEUVERING);
+			break;
+		case DAMCON_TYPE_PHASERBANK:
+			target->tsd.ship.damage.phaser_banks_damage = roll_damage(target, d, 3 * twp, ss,
+					target->tsd.ship.damage.phaser_banks_damage, DAMCON_TYPE_PHASERBANK);
+			break;
+		case DAMCON_TYPE_SENSORARRAY:
+			target->tsd.ship.damage.sensors_damage = roll_damage(target, d, 3 * twp, ss,
+					target->tsd.ship.damage.sensors_damage, DAMCON_TYPE_SENSORARRAY);
+			break;
+		case DAMCON_TYPE_COMMUNICATIONS:
+			target->tsd.ship.damage.comms_damage = roll_damage(target, d, 3 * twp, ss,
+					target->tsd.ship.damage.comms_damage, DAMCON_TYPE_COMMUNICATIONS);
+			break;
+		case DAMCON_TYPE_TRACTORSYSTEM:
+			target->tsd.ship.damage.tractor_damage = roll_damage(target, d, 3 * twp, ss,
+					target->tsd.ship.damage.tractor_damage, DAMCON_TYPE_TRACTORSYSTEM);
+			break;
+		case DAMCON_TYPE_LIFESUPPORTSYSTEM:
+			target->tsd.ship.damage.lifesupport_damage = roll_damage(target, d, 3 * twp, ss,
+					target->tsd.ship.damage.lifesupport_damage, DAMCON_TYPE_LIFESUPPORTSYSTEM);
+			break;
+		}
+	} else {
+		/* Target all systems */
+		target->tsd.ship.damage.shield_damage = roll_damage(target, d, twp, ss,
+				target->tsd.ship.damage.shield_damage, DAMCON_TYPE_SHIELDSYSTEM);
+		target->tsd.ship.damage.impulse_damage = roll_damage(target, d, twp, ss,
+				target->tsd.ship.damage.impulse_damage, DAMCON_TYPE_IMPULSE);
+		target->tsd.ship.damage.warp_damage = roll_damage(target, d, twp, ss,
+				target->tsd.ship.damage.warp_damage, DAMCON_TYPE_WARPDRIVE);
+		target->tsd.ship.damage.maneuvering_damage = roll_damage(target, d, twp, ss,
+				target->tsd.ship.damage.maneuvering_damage, DAMCON_TYPE_MANEUVERING);
+		target->tsd.ship.damage.phaser_banks_damage = roll_damage(target, d, twp, ss,
+				target->tsd.ship.damage.phaser_banks_damage, DAMCON_TYPE_PHASERBANK);
+		target->tsd.ship.damage.sensors_damage = roll_damage(target, d, twp, ss,
+				target->tsd.ship.damage.sensors_damage, DAMCON_TYPE_SENSORARRAY);
+		target->tsd.ship.damage.comms_damage = roll_damage(target, d, twp, ss,
+				target->tsd.ship.damage.comms_damage, DAMCON_TYPE_COMMUNICATIONS);
+		target->tsd.ship.damage.tractor_damage = roll_damage(target, d, twp, ss,
+				target->tsd.ship.damage.tractor_damage, DAMCON_TYPE_TRACTORSYSTEM);
+		target->tsd.ship.damage.lifesupport_damage = roll_damage(target, d, twp, ss,
+				target->tsd.ship.damage.lifesupport_damage, DAMCON_TYPE_LIFESUPPORTSYSTEM);
+	}
 
 	if (target->tsd.ship.damage.shield_damage == 255) {
 		target->timestamp = universe_timestamp;
@@ -2607,17 +2654,17 @@ static void calculate_torpedolike_damage(struct snis_entity *target, double weap
 	}
 }
 
-static void calculate_torpedo_damage(struct snis_entity *target)
+static void calculate_torpedo_damage(struct snis_entity *target, uint8_t targeted_system)
 {
-	calculate_torpedolike_damage(target, torpedo_damage_factor);
+	calculate_torpedolike_damage(target, torpedo_damage_factor, targeted_system);
 }
 
 static void calculate_atmosphere_damage(struct snis_entity *target)
 {
-	calculate_torpedolike_damage(target, atmosphere_damage_factor);
+	calculate_torpedolike_damage(target, atmosphere_damage_factor, TARGET_ALL_SYSTEMS);
 }
 
-static void calculate_laser_damage(struct snis_entity *o, uint8_t wavelength, float power)
+static void calculate_laser_damage(struct snis_entity *o, uint8_t wavelength, float power, uint8_t targeted_system)
 {
 	int b, i;
 	unsigned char *x = (unsigned char *) &o->tsd.ship.damage;
@@ -2650,6 +2697,10 @@ static void calculate_laser_damage(struct snis_entity *o, uint8_t wavelength, fl
 				o->sdata.shield_wavelength);
 
 	for (i = 0; i < sizeof(o->tsd.ship.damage); i++) {
+
+		if (i != targeted_system && targeted_system != TARGET_ALL_SYSTEMS)
+			continue;
+
 		damage = ((float) (snis_randn(LASER_DAMAGE_MAX) + 1) * (1 - ss) * power_factor);
 
 		/* if damage will get rounded down to nothing bump it up to 1.0 */
@@ -3699,7 +3750,7 @@ static void missile_collision_detection(void *context, void *entity)
 		case OBJTYPE_SHIP2:
 			notify_the_cops(missile, target);
 			damage_factor = missile_explosion_damage_distance / (sqrt(dist2) + 3.0);
-			calculate_missile_explosion_damage(target, damage_factor);
+			calculate_missile_explosion_damage(target, damage_factor, missile->tsd.missile.targeted_system);
 			send_ship_damage_packet(target);
 			if (target->type == OBJTYPE_SHIP2)
 				attack_your_attacker(target, lookup_entity_by_id(missile->tsd.missile.origin));
@@ -3795,7 +3846,7 @@ static void torpedo_collision_detection(void *context, void *entity)
 		(void) add_explosion(closest_point.v.x, closest_point.v.y, closest_point.v.z, 50, 5, 5, t->type);
 		snis_queue_add_sound(DISTANT_TORPEDO_HIT_SOUND, ROLE_SOUNDSERVER, t->id);
 		block_add_to_naughty_list(t, o->tsd.torpedo.ship_id);
-		calculate_torpedo_damage(t);
+		calculate_torpedo_damage(t, o->tsd.torpedo.targeted_system);
 		return;
 	}
 
@@ -3847,7 +3898,7 @@ static void torpedo_collision_detection(void *context, void *entity)
 		if (t->type != OBJTYPE_SHIP1 ||
 			t->tsd.ship.damage.maneuvering_damage > 150)
 			do_collision_impulse(t, o);
-		calculate_torpedo_damage(t);
+		calculate_torpedo_damage(t, o->tsd.torpedo.targeted_system);
 		send_ship_damage_packet(t);
 		send_detonate_packet(t, ix, iy, iz, impact_time, impact_fractional_time);
 		attack_your_attacker(t, lookup_entity_by_id(o->tsd.torpedo.ship_id));
@@ -3855,10 +3906,10 @@ static void torpedo_collision_detection(void *context, void *entity)
 		if (t->alive)
 			t->alive--;
 	} else if (t->type == OBJTYPE_TURRET) {
-		calculate_torpedo_damage(t);
+		calculate_torpedo_damage(t, o->tsd.torpedo.targeted_system);
 	} else if (t->type == OBJTYPE_SPACEMONSTER) {
 		spacemonster_set_antagonist(t, o->tsd.torpedo.ship_id);
-		calculate_torpedo_damage(t);
+		calculate_torpedo_damage(t, o->tsd.torpedo.targeted_system);
 	}
 
 	if (!t->alive) {
@@ -4079,7 +4130,7 @@ static void laser_collision_detection(void *context, void *entity)
 		snis_queue_add_sound(DISTANT_PHASER_HIT_SOUND, ROLE_SOUNDSERVER, t->id);
 		block_add_to_naughty_list(t, o->tsd.laser.ship_id);
 		calculate_laser_damage(t, o->tsd.laser.wavelength,
-			(float) o->tsd.laser.power * LASER_PROJECTILE_BOOST);
+			(float) o->tsd.laser.power * LASER_PROJECTILE_BOOST, o->tsd.laser.targeted_system);
 		return;
 	}
 
@@ -4126,7 +4177,7 @@ static void laser_collision_detection(void *context, void *entity)
 
 	if (t->type == OBJTYPE_SHIP1 || t->type == OBJTYPE_SHIP2) {
 		calculate_laser_damage(t, o->tsd.laser.wavelength,
-			(float) o->tsd.laser.power * LASER_PROJECTILE_BOOST);
+			(float) o->tsd.laser.power * LASER_PROJECTILE_BOOST, o->tsd.laser.targeted_system);
 		send_ship_damage_packet(t);
 		attack_your_attacker(t, lookup_entity_by_id(o->tsd.laser.ship_id));
 		send_detonate_packet(t, ix, iy, iz, impact_time, impact_fractional_time);
@@ -4134,7 +4185,7 @@ static void laser_collision_detection(void *context, void *entity)
 
 	if (t->type == OBJTYPE_TURRET) {
 		calculate_laser_damage(t, o->tsd.laser.wavelength,
-			(float) o->tsd.laser.power * LASER_PROJECTILE_BOOST);
+			(float) o->tsd.laser.power * LASER_PROJECTILE_BOOST, o->tsd.laser.targeted_system);
 	}
 
 	if (t->type == OBJTYPE_ASTEROID || t->type == OBJTYPE_TORPEDO ||
@@ -4144,7 +4195,7 @@ static void laser_collision_detection(void *context, void *entity)
 
 	if (t->type == OBJTYPE_SPACEMONSTER) {
 		calculate_laser_damage(t, o->tsd.laser.wavelength,
-			(float) o->tsd.laser.power * LASER_PROJECTILE_BOOST);
+			(float) o->tsd.laser.power * LASER_PROJECTILE_BOOST, o->tsd.laser.targeted_system);
 		spacemonster_set_antagonist(t, o->id);
 	}
 
@@ -4249,10 +4300,10 @@ static void calculate_torpedo_velocities(double ox, double oy, double oz,
 }
 
 static int add_torpedo(double x, double y, double z,
-		double vx, double vy, double vz, uint32_t ship_id);
+		double vx, double vy, double vz, uint32_t ship_id, uint8_t targeted_system);
 static int add_laser(double x, double y, double z,
 		double vx, double vy, double vz, union quat *orientation,
-		uint32_t ship_id);
+		uint32_t ship_id, uint8_t targeted_system);
 static uint8_t update_phaser_banks(int current, int rate, int max);
 
 static void ship_choose_new_attack_victim(struct snis_entity *o)
@@ -4901,7 +4952,7 @@ static void update_towed_ship(struct snis_entity *o)
 }
 
 static void update_ship_position_and_velocity(struct snis_entity *o);
-static int add_laserbeam(uint32_t origin, uint32_t target, int alive);
+static int add_laserbeam(uint32_t origin, uint32_t target, int alive, uint8_t targeted_system);
 
 static void check_for_nearby_targets(struct snis_entity *o)
 {
@@ -5059,7 +5110,7 @@ static int warp_inhibited_by_planet(struct snis_entity *ship)
 	return wi.inhibit;
 }
 
-static void fire_missile(struct snis_entity *shooter, uint32_t target_id);
+static void fire_missile(struct snis_entity *shooter, uint32_t target_id, uint8_t targeted_system);
 
 /* o is ai controled entity doing the weapons firing
  * v is the victim object being fired upon
@@ -5089,7 +5140,7 @@ static void ai_maybe_fire_weapon(struct snis_entity *o, struct snis_entity *v, i
 				tx, ty, tz, torpedo_velocity, &vx, &vy, &vz);
 
 			ai_trace(o->id, "FIRING TORPEDO AT %u", v->id);
-			add_torpedo(o->x, o->y, o->z, vx, vy, vz, o->id);
+			add_torpedo(o->x, o->y, o->z, vx, vy, vz, o->id, o->tsd.ship.targeted_system);
 			o->tsd.ship.torpedoes--;
 			/* FIXME: how do the torpedoes refill? */
 			o->tsd.ship.next_torpedo_time = universe_timestamp +
@@ -5104,7 +5155,7 @@ static void ai_maybe_fire_weapon(struct snis_entity *o, struct snis_entity *v, i
 				o->tsd.ship.next_laser_time = universe_timestamp +
 					enemy_laser_fire_interval;
 				ai_trace(o->id, "FIRING LASERBEAM AT %u", v->id);
-				add_laserbeam(o->id, v->id, LASERBEAM_DURATION);
+				add_laserbeam(o->id, v->id, LASERBEAM_DURATION, o->tsd.ship.targeted_system);
 				check_for_incoming_fire(v);
 			}
 		} else {
@@ -5116,7 +5167,7 @@ static void ai_maybe_fire_weapon(struct snis_entity *o, struct snis_entity *v, i
 					o->tsd.ship.next_missile_time = universe_timestamp +
 						enemy_missile_fire_interval;
 					ai_trace(o->id, "FIRING MISSILE AT %u", v->id);
-					fire_missile(o, v->id);
+					fire_missile(o, v->id, o->tsd.ship.targeted_system);
 					check_for_incoming_fire(v);
 				}
 			}
@@ -5294,7 +5345,7 @@ static void ai_avoid_missile_brain(struct snis_entity *o)
 	if (snis_randn(1000) < 250)
 		(void) add_chaff(o->x, o->y, o->z);
 	if (snis_randn(1000) < 50)
-		add_laserbeam(o->id, missile->id, LASERBEAM_DURATION);
+		add_laserbeam(o->id, missile->id, LASERBEAM_DURATION, TARGET_ALL_SYSTEMS);
 }
 
 struct danger_info {
@@ -7009,7 +7060,7 @@ static void ship_collision_avoidance(void *context, void *entity)
 
 	if (obstacle->type == OBJTYPE_SPACEMONSTER) {
 		if (d < spacemonster_collision_radius * spacemonster_collision_radius) {
-			calculate_torpedolike_damage(o, spacemonster_damage_factor);
+			calculate_torpedolike_damage(o, spacemonster_damage_factor, TARGET_ALL_SYSTEMS);
 			do_collision_impulse(o, obstacle);
 			attack_your_attacker(o, obstacle);
 		}
@@ -7055,6 +7106,24 @@ static void ship_collision_avoidance(void *context, void *entity)
 			o->tsd.ship.steering_adjustment.v.x,
 			o->tsd.ship.steering_adjustment.v.y,
 			o->tsd.ship.steering_adjustment.v.z);
+}
+
+static void ship_choose_enemy_system_to_target(struct snis_entity *o)
+{
+	uint8_t old = o->tsd.ship.targeted_system;
+
+	if (!npc_system_targeting) {
+		o->tsd.ship.targeted_system = TARGET_ALL_SYSTEMS;
+		return;
+	}
+
+	if (o->tsd.ship.ai[0].ai_mode == AI_MODE_COP) {
+		o->tsd.ship.targeted_system = DAMCON_TYPE_SHIELDSYSTEM; /* Cops always beat down your shields. */
+		return;
+	}
+	o->tsd.ship.targeted_system = snis_randn(10000) % NUM_POWER_MODEL_SYSTEMS;
+	ai_trace(o->id, "TARGET ENEMY SYSTEM = %hhu (was %hhu)\n",
+		o->tsd.ship.targeted_system, old);
 }
 
 static void ship_move(struct snis_entity *o)
@@ -7122,6 +7191,10 @@ static void ship_move(struct snis_entity *o)
 	update_ship_orientation(o);
 	update_towed_ship(o);
 	o->timestamp = universe_timestamp;
+
+	/* Every once in awhile (about every 25.6 secs) change which ship system we like to target */
+	if ((universe_timestamp + o->id) % npc_system_targeting_interval == 0)
+		ship_choose_enemy_system_to_target(o);
 
 	o->tsd.ship.phaser_charge = update_phaser_banks(o->tsd.ship.phaser_charge, 200, 100);
 	if (o->sdata.shield_strength > (255 - o->tsd.ship.damage.shield_damage))
@@ -9835,9 +9908,9 @@ static void turret_fire(struct snis_entity *o)
 	quat_rot_vec_self(&pos_left, &o->orientation);
 
 	add_laser(o->x, o->y, o->z,
-		vel.v.x, vel.v.y, vel.v.z, &o->orientation, o->id);
+		vel.v.x, vel.v.y, vel.v.z, &o->orientation, o->id, TARGET_ALL_SYSTEMS);
 	add_laser(o->x + pos_left.v.x, o->y + pos_left.v.y, o->z + pos_left.v.z,
-		vel.v.x, vel.v.y, vel.v.z, &o->orientation, o->id);
+		vel.v.x, vel.v.y, vel.v.z, &o->orientation, o->id, TARGET_ALL_SYSTEMS);
 	o->tsd.turret.fire_countdown = o->tsd.turret.fire_countdown_reset_value;
 }
 
@@ -10103,7 +10176,7 @@ static void starbase_move(struct snis_entity *o)
 			ty = a->y + (a->vy * flight_time);
 			calculate_torpedo_velocities(o->x, o->y, o->z,
 				tx, ty, tz, torpedo_velocity, &vx, &vy, &vz);
-			add_torpedo(o->x, o->y, o->z, vx, vy, vz, o->id);
+			add_torpedo(o->x, o->y, o->z, vx, vy, vz, o->id, TARGET_ALL_SYSTEMS);
 			o->tsd.starbase.next_torpedo_time = universe_timestamp +
 					STARBASE_TORPEDO_FIRE_INTERVAL;
 			fired_at_player = a->type == OBJTYPE_SHIP1;
@@ -10111,7 +10184,7 @@ static void starbase_move(struct snis_entity *o)
 		if (snis_randn(100) < 30 &&
 			o->tsd.starbase.next_laser_time <= universe_timestamp) {
 			/* fire laser */
-			add_laserbeam(o->id, a->id, LASERBEAM_DURATION);
+			add_laserbeam(o->id, a->id, LASERBEAM_DURATION, TARGET_ALL_SYSTEMS);
 			o->tsd.starbase.next_laser_time = universe_timestamp +
 					STARBASE_LASER_FIRE_INTERVAL;
 			fired_at_player |= (a->type == OBJTYPE_SHIP1);
@@ -10862,6 +10935,7 @@ static int add_ship(int faction, int shiptype, int auto_respawn)
 	go[i].tsd.ship.desired_hg_ant_aim.v.x = 1;
 	go[i].tsd.ship.desired_hg_ant_aim.v.y = 0;
 	go[i].tsd.ship.desired_hg_ant_aim.v.z = 0;
+	ship_choose_enemy_system_to_target(&go[i]);
 
 	if (go[i].tsd.ship.shiptype == SHIP_CLASS_ENFORCER) {
 		snprintf(registration, sizeof(registration) - 1, "EXEMPT - GOVERNMENT SPACECRAFT");
@@ -12265,7 +12339,7 @@ static int lookup_by_damcon_id(struct damcon_data *d, int id)
 
 static int add_laser(double x, double y, double z,
 		double vx, double vy, double vz, union quat *orientation,
-		uint32_t ship_id)
+		uint32_t ship_id, uint8_t targeted_system)
 {
 	int i, s;
 
@@ -12275,6 +12349,7 @@ static int add_laser(double x, double y, double z,
 	go[i].move = laser_move;
 	go[i].alive = LASER_LIFETIME;
 	go[i].tsd.laser.ship_id = ship_id;
+	go[i].tsd.laser.targeted_system = targeted_system;
 	s = lookup_by_id(ship_id);
 	if (go[s].type == OBJTYPE_SHIP1 || go[s].type == OBJTYPE_SHIP2) {
 		go[i].tsd.laser.power = go[s].tsd.ship.phaser_charge;
@@ -12344,14 +12419,14 @@ static void laserbeam_move(struct snis_entity *o)
 	case OBJTYPE_SHIP1: /* Fall thru */
 	case OBJTYPE_SHIP2:
 		calculate_laser_damage(target, o->tsd.laserbeam.wavelength,
-					(float) o->tsd.laserbeam.power);
+					(float) o->tsd.laserbeam.power, o->tsd.laserbeam.targeted_system);
 		send_ship_damage_packet(target);
 		attack_your_attacker(target, lookup_entity_by_id(o->tsd.laserbeam.origin));
 		notify_the_cops(o, target);
 		break;
 	case OBJTYPE_TURRET:
 		calculate_laser_damage(target, o->tsd.laserbeam.wavelength,
-					(float) o->tsd.laserbeam.power);
+					(float) o->tsd.laserbeam.power, o->tsd.laserbeam.targeted_system);
 		break;
 	case OBJTYPE_PLANET:
 		if (rts_mode)
@@ -12366,7 +12441,7 @@ static void laserbeam_move(struct snis_entity *o)
 		break;
 	case OBJTYPE_SPACEMONSTER:
 		calculate_laser_damage(target, o->tsd.laserbeam.wavelength,
-					(float) o->tsd.laserbeam.power);
+					(float) o->tsd.laserbeam.power, o->tsd.laserbeam.targeted_system);
 		break;
 	default:
 		break;
@@ -12462,7 +12537,7 @@ static void tractorbeam_move(struct snis_entity *o)
 	return;
 }
 
-static int add_laserbeam(uint32_t origin, uint32_t target, int alive)
+static int add_laserbeam(uint32_t origin, uint32_t target, int alive, uint8_t targeted_system)
 {
 	int i, s, ti, oi;
 	struct snis_entity *o, *t;
@@ -12480,6 +12555,7 @@ static int add_laserbeam(uint32_t origin, uint32_t target, int alive)
 	go[s].tsd.ship.phaser_charge = 0;
 	go[i].tsd.laserbeam.wavelength = go[s].tsd.ship.phaser_wavelength;
 	go[i].tsd.laserbeam.mining_laser = 0;
+	go[i].tsd.laserbeam.targeted_system = targeted_system;
 	ti = lookup_by_id(target);
 	if (ti < 0)
 		return i;
@@ -12507,7 +12583,7 @@ static int add_laserbeam(uint32_t origin, uint32_t target, int alive)
 static int add_mining_laserbeam(uint32_t origin, uint32_t target, int alive)
 {
 	int i;
-	i = add_laserbeam(origin, target, alive);
+	i = add_laserbeam(origin, target, alive, TARGET_ALL_SYSTEMS);
 	if (i >= 0)
 		go[i].tsd.laserbeam.mining_laser = 1;
 	return i;
@@ -12533,7 +12609,8 @@ static int add_tractorbeam(struct snis_entity *origin, uint32_t target, int aliv
 	return i;
 }
 
-static int add_torpedo(double x, double y, double z, double vx, double vy, double vz, uint32_t ship_id)
+static int add_torpedo(double x, double y, double z, double vx, double vy, double vz,
+			uint32_t ship_id, uint8_t targeted_system)
 {
 	int i;
 	i = add_generic_object(x, y, z, vx, vy, vz, 0.0, OBJTYPE_TORPEDO);
@@ -12542,11 +12619,12 @@ static int add_torpedo(double x, double y, double z, double vx, double vy, doubl
 	go[i].move = torpedo_move;
 	go[i].alive = torpedo_lifetime;
 	go[i].tsd.torpedo.ship_id = ship_id;
+	go[i].tsd.torpedo.targeted_system = targeted_system;
 	return i;
 }
 
 static int add_missile(double x, double y, double z, double vx, double vy, double vz,
-			uint32_t target_id, uint32_t origin_id)
+			uint32_t target_id, uint32_t origin_id, uint8_t targeted_system)
 {
 	int i;
 	i = add_generic_object(x, y, z, vx, vy, vz, 0.0, OBJTYPE_MISSILE);
@@ -12556,6 +12634,7 @@ static int add_missile(double x, double y, double z, double vx, double vy, doubl
 	go[i].alive = missile_lifetime;
 	go[i].tsd.missile.target_id = target_id;
 	go[i].tsd.missile.origin = origin_id;
+	go[i].tsd.missile.targeted_system = targeted_system;
 	return i;
 }
 
@@ -13201,7 +13280,7 @@ static int l_add_torpedo(lua_State *l)
 		send_demon_console_msg("ADD_TORPEDO: OBJECT NOT FOUND");
 		return 1;
 	}
-	i = add_torpedo(x, y, z, vx, vy, vz, iid);
+	i = add_torpedo(x, y, z, vx, vy, vz, iid, TARGET_ALL_SYSTEMS);
 	pthread_mutex_unlock(&universe_mutex);
 	lua_pushnumber(l, (double) i);
 	return 1;
@@ -17625,6 +17704,10 @@ static struct tweakable_var_descriptor server_tweak[] = {
 		&limit_warp_near_planets, 'i', 0.0, 0.0, 0.0, 0, 1, 1},
 	{ "WARP_LIMIT_DIST_FACTOR", "MULTIPLE OF RADIUS YOU MUST BE FROM GRAVITY SOURCE TO WARP",
 		&warp_limit_dist_factor, 'f', 1.0, 1000000.0, 1.5, 0, 0, 0},
+	{ "NPC_SYSTEM_TARGETING", "IF 1 NPCS TARGET PARTICULAR SYSTEMS FOR DAMAGE",
+		&npc_system_targeting, 'i', 0.0, 0.0, 0.0, 0, 1, DEFAULT_NPC_SYSTEM_TARGETING },
+	{ "NPC_SYSTEM_TARGETING_INTERVAL", "10ths OF SECS BETWEEN NPCS SWITCHING SYSTEM TO TARGET",
+		&npc_system_targeting, 'i', 0.0, 0.0, 0.0, 0, 5000, DEFAULT_NPC_SYSTEM_TARGETING_INTERVAL },
 	{ NULL, NULL, NULL, '\0', 0.0, 0.0, 0.0, 0, 0, 0 },
 };
 
@@ -20182,7 +20265,7 @@ static int l_fire_missile(lua_State *l)
 	s = lookup_by_id((uint32_t) sid);
 	t = lookup_by_id((uint32_t) tid);
 	if (s >= 0 && t >= 0)
-		fire_missile(&go[s], go[t].id);
+		fire_missile(&go[s], go[t].id, TARGET_ALL_SYSTEMS);
 	pthread_mutex_unlock(&universe_mutex);
 	return 0;
 }
@@ -20833,7 +20916,7 @@ static uint32_t find_potential_missile_target(struct snis_entity *shooter)
 	return go[best].id;
 }
 
-static void fire_missile(struct snis_entity *shooter, uint32_t target_id)
+static void fire_missile(struct snis_entity *shooter, uint32_t target_id, uint8_t targeted_system)
 {
 	if (shooter->type == OBJTYPE_SHIP1) {
 		snis_queue_add_sound(MISSILE_LAUNCH, ROLE_SOUNDSERVER, shooter->id);
@@ -20841,7 +20924,7 @@ static void fire_missile(struct snis_entity *shooter, uint32_t target_id)
 				ROLE_TEXT_TO_SPEECH, shooter->id);
 	}
 	add_missile(shooter->x, shooter->y, shooter->z, shooter->vx, shooter->vy, shooter->vz,
-			target_id, shooter->id);
+			target_id, shooter->id, targeted_system);
 }
 
 static int process_adjust_control_fire_missile(struct game_client *c, uint32_t id)
@@ -20864,7 +20947,7 @@ static int process_adjust_control_fire_missile(struct game_client *c, uint32_t i
 	target_id = find_potential_missile_target(o);
 	if (target_id == (uint32_t) -1)
 		goto missile_fail;
-	fire_missile(o, target_id);
+	fire_missile(o, target_id, TARGET_ALL_SYSTEMS);
 	o->tsd.ship.missile_count--;
 	pthread_mutex_unlock(&universe_mutex);
 	return 0;
@@ -21491,7 +21574,7 @@ static int process_request_torpedo(struct game_client *c)
 	velocity.v.z += ship->vz;
 
 	add_torpedo(ship->x, ship->y, ship->z,
-			velocity.v.x, velocity.v.y, velocity.v.z, ship->id);
+			velocity.v.x, velocity.v.y, velocity.v.z, ship->id, TARGET_ALL_SYSTEMS);
 	ship->tsd.ship.torpedoes_loaded--;
 	snis_queue_add_sound(LASER_FIRE_SOUND, ROLE_SOUNDSERVER, ship->id);
 	pthread_mutex_unlock(&universe_mutex);
@@ -21529,7 +21612,7 @@ static int process_demon_fire_torpedo(struct game_client *c)
 	tv.v.x += o->vx;
 	tv.v.y += o->vy;
 	tv.v.z += o->vz;
-	add_torpedo(o->x, o->y, o->z, tv.v.x, tv.v.y, tv.v.z, o->id);
+	add_torpedo(o->x, o->y, o->z, tv.v.x, tv.v.y, tv.v.z, o->id, TARGET_ALL_SYSTEMS);
 out:
 	pthread_mutex_unlock(&universe_mutex);
 
@@ -21584,7 +21667,7 @@ static int process_request_laser(struct game_client *c)
 		goto laserfail;
 
 	tid = ship->tsd.ship.ai[0].u.attack.victim_id;
-	add_laserbeam(ship->id, tid, LASERBEAM_DURATION);
+	add_laserbeam(ship->id, tid, LASERBEAM_DURATION, TARGET_ALL_SYSTEMS);
 	snis_queue_add_sound(LASER_FIRE_SOUND, ROLE_SOUNDSERVER, ship->id);
 	pthread_mutex_unlock(&universe_mutex);
 	return 0;
@@ -21634,10 +21717,10 @@ static int process_request_manual_laser(struct game_client *c)
 
 	add_laser(right_bolt.v.x, right_bolt.v.y, right_bolt.v.z,
 			velocity.v.x, velocity.v.y, velocity.v.z,
-			&orientation, ship->id);
+			&orientation, ship->id, TARGET_ALL_SYSTEMS);
 	add_laser(left_bolt.v.x, left_bolt.v.y, left_bolt.v.z,
 			velocity.v.x, velocity.v.y, velocity.v.z,
-			&orientation, ship->id);
+			&orientation, ship->id, TARGET_ALL_SYSTEMS);
 	ship->tsd.ship.phaser_charge = 0;
 	snis_queue_add_sound(LASER_FIRE_SOUND, ROLE_SOUNDSERVER, ship->id);
 	pthread_mutex_unlock(&universe_mutex);
@@ -21851,7 +21934,7 @@ static int process_demon_fire_phaser(struct game_client *c)
 	vel.v.y = 0;
 	vel.v.z = 0;
 	quat_rot_vec_self(&vel, &o->orientation);
-	add_laser(o->x, o->y, o->z, vel.v.x, vel.v.y, vel.v.z, NULL, o->id);
+	add_laser(o->x, o->y, o->z, vel.v.x, vel.v.y, vel.v.z, NULL, o->id, TARGET_ALL_SYSTEMS);
 	o->tsd.ship.phaser_charge = 0;
 out:
 	pthread_mutex_unlock(&universe_mutex);

@@ -163,6 +163,8 @@ struct ship_damage_data {
 	uint8_t lifesupport_damage;
 };
 
+#define NUM_POWER_MODEL_SYSTEMS (sizeof(struct ship_damage_data))
+
 struct command_data {
 	uint8_t command;
 	double x, z;
@@ -614,6 +616,10 @@ struct ship_data {
 #define COMMS_TRANSMISSION_STRENGTH_THRESHOLD (0.3)
 /* For distances longer than COMMS_LONG_DISTANCE_THRESHOLD comms may not work perfectly. */
 #define COMMS_LONG_DISTANCE_THRESHOLD (XKNOWN_DIM / 2.0)
+#ifdef SNIS_SERVER_DATA
+	/* Which system (weapons, shields, warp drive, etc.) of player ships to target damage on */
+	uint8_t targeted_system;
+#endif
 };
 
 #define MIN_COMBAT_ATTACK_DIST 200
@@ -684,11 +690,18 @@ struct laser_data {
 	uint8_t wavelength;
 	uint32_t ship_id;
 	union vec3 birth_r;
+#ifdef SNIS_SERVER_DATA
+	uint8_t targeted_system;
+#define TARGET_ALL_SYSTEMS 0xff
+#endif
 };
 
 struct torpedo_data {
 	uint32_t power;
 	uint32_t ship_id;
+#ifdef SNIS_SERVER_DATA
+	uint8_t targeted_system;
+#endif
 };
 
 struct explosion_data {
@@ -806,6 +819,9 @@ struct laserbeam_data {
 	uint8_t power;
 	uint8_t wavelength;
 	uint8_t mining_laser;
+#ifdef SNIS_SERVER_DATA
+	uint8_t targeted_system;
+#endif
 };
 
 #define MIN_BLACK_HOLE_RADIUS 500.0
@@ -822,6 +838,9 @@ struct missile_data {
 	uint32_t target_id;
 	uint32_t origin;
 	struct entity *thrust_entity[2]; /* one for exhaust jet, one for exhaust flare */
+#ifdef SNIS_SERVER_DATA
+	uint8_t targeted_system;
+#endif
 };
 
 struct planet_data {
