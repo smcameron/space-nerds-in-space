@@ -9284,17 +9284,14 @@ static void show_mainscreen(GtkWidget *w)
 
 	if (!external_camera_active) {
 		if (o->tsd.ship.view_mode == MAINSCREEN_VIEW_MODE_NORMAL) {
+			desired_cam_orientation = vp->orientation;
+			adjust_main_view_azimuth_angle(&desired_cam_orientation);
 			switch (camera_mode) {
 			case 0:
-				camera_orientation = vp->orientation;
-				desired_cam_orientation = camera_orientation;
-				adjust_main_view_azimuth_angle(&desired_cam_orientation);
 				camera_orientation = desired_cam_orientation;
 				break;
 			case 1:
 			case 2:
-				desired_cam_orientation = vp->orientation;
-				adjust_main_view_azimuth_angle(&desired_cam_orientation);
 				if (first_frame)
 					camera_orientation = desired_cam_orientation;
 				else
