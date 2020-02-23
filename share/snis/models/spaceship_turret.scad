@@ -18,12 +18,12 @@ module mount()
 }
 
 union() {
-	translate([0,0,-1.4]) {
+	translate([0,0,-1.5]) {
 		rotate([0,90,0])
 			gunbarrel();
 		mount();
 	}
-	translate([0,0,1.4]) {
+	translate([0,0,1.5]) {
 		rotate([0,90,0])
 			gunbarrel();
 		rotate([180,0,0])

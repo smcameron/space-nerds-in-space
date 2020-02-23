@@ -21509,8 +21509,8 @@ static int process_request_manual_laser(struct game_client *c)
 	struct snis_entity *ship = &go[c->ship_index];
 	union vec3 forwardvec = { { LASER_VELOCITY, 0.0f, 0.0f } };
 	union vec3 turret_pos = { { -4.0f * SHIP_MESH_SCALE, 5.45 * SHIP_MESH_SCALE, 0.0f } };
-	union vec3 barrel_r_offset = { { 4.0f * SHIP_MESH_SCALE, 0.0f, 1.4f * SHIP_MESH_SCALE } };
-	union vec3 barrel_l_offset = { { 4.0f * SHIP_MESH_SCALE, 0.0f, -1.4f * SHIP_MESH_SCALE } };
+	union vec3 barrel_r_offset = { { 4.0f * SHIP_MESH_SCALE, 0.0f, 1.5f * SHIP_MESH_SCALE } };
+	union vec3 barrel_l_offset = { { 4.0f * SHIP_MESH_SCALE, 0.0f, -1.5f * SHIP_MESH_SCALE } };
 	union vec3 velocity;
 	union quat orientation;
 
