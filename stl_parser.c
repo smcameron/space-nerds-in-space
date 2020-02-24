@@ -416,8 +416,29 @@ void process_vertex_normals(struct mesh *m, float sharp_edge_angle, struct verte
 					if (angle < 1e-20)
 						continue;
 
+					/* Multiplying by an angle here is pretty weird.  I asked Jeremy about it,
+					 * and he provided this link:
+					 *
+					 * https://gamedev.stackexchange.com/questions/8408/best-way-to-compute-vertex-normals-from-a-triangles-list/8410#8410
+					 *
+					 *   "If you want to compute vertex normals, you should weight triangle
+					 *    contribution by angle. But you can use naive solution and just sum
+					 *    all normals from all faces around vertex."
+					 *
+					 * Basically, the idea is that to figure a vertex normal, you
+					 * combine the normals of the surrounding triangles. But each
+					 * triangle should not contribute the same amount.  Instead
+					 * their contributions should be weighted by the angle the
+					 * triangle forms at that vertex, so that triangles with a
+					 * large angle contribute a lot, while triangles with a small
+					 * angle should contribute less.  So we see that there is no
+					 * real "correct" answer to how to compute vertex normals,
+					 * as the entire concept of vertex normals is a compromise,
+					 * and what is "best" is subjective and also depends on the
+					 * model, and what is best in one case will not necessarily
+					 * be best in another.
+					 */
 					vec3_mul_self(&tnormal, angle);
-
 					vec3_add_self(&vnormal, &tnormal);
 				}
 			}
