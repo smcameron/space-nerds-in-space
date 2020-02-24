@@ -49,6 +49,7 @@ persisted in a simple database by snis_multiverse.
 #include <limits.h>
 #include <dirent.h>
 #include <getopt.h>
+#include <signal.h>
 
 #include "build_bug_on.h"
 #include "snis_marshal.h"
@@ -126,6 +127,62 @@ static int starmap_adjacency[MAXSTARMAPENTRIES][MAX_STARMAP_ADJACENCIES];
 static int autowrangle = 0;
 
 static struct replacement_asset replacement_assets;
+
+static char snis_multiverse_lockfile[PATH_MAX] = { 0 };
+
+/* Clean up the lock file on SIGTERM.
+ * TODO: figure out how to share this lockfile related code with the very similar but
+ * slightly different code in snis_server.c
+ */
+static void sigterm_handler(int sig, siginfo_t *siginfo, void *context)
+{
+	static const char buffer[] = "snis_multiverse: Received SIGTERM, exiting.\n";
+	int rc;
+
+	if (snis_multiverse_lockfile[0] != '\0')
+		(void) rmdir(snis_multiverse_lockfile);
+	/* Need to check return value of write() here even though we can't do
+	 * anything with that info at this point, otherwise the compiler complains
+	 * if we just ignore write() return value.
+	 */
+	rc = write(2, buffer, sizeof(buffer));  /* We're assuming 2 is still hooked to stderr */
+	if (rc < 0)
+		exit(2);
+	exit(1);
+}
+
+static void catch_sigterm(void)
+{
+	struct sigaction action;
+
+	memset(&action, 0, sizeof(action));
+	action.sa_sigaction = &sigterm_handler;
+	action.sa_flags = SA_SIGINFO;
+	if (sigaction(SIGTERM, &action, NULL) < 0)
+		fprintf(stderr, "%s: Failed to register SIGTERM handler.\n", "snis_multiverse");
+}
+
+static void cleanup_lockfile(void)
+{
+	if (snis_multiverse_lockfile[0] != '\0')
+		(void) rmdir(snis_multiverse_lockfile);
+}
+
+static void create_lock_or_die(void)
+{
+	int rc;
+
+	snprintf(snis_multiverse_lockfile, sizeof(snis_multiverse_lockfile) - 1, "/tmp/snis_multiverse_lock");
+	catch_sigterm();
+	rc = mkdir(snis_multiverse_lockfile, 0755);
+	if (rc != 0) {
+		fprintf(stderr, "%s: Failed to create lockdir %s, exiting.\n",
+				"snis_multiverse", snis_multiverse_lockfile);
+		exit(1);
+	}
+	atexit(cleanup_lockfile);
+	fprintf(stderr, "%s: Created lockfile %s, proceeding.\n", "snis_multiverse", snis_multiverse_lockfile);
+}
 
 #define INCLUDE_BRIDGE_INFO_FIELDS 1
 #include "snis_entity_key_value_specification.h"
@@ -1493,6 +1550,7 @@ int main(int argc, char *argv[])
 
 	asset_dir = override_asset_dir();
 	refuse_to_run_as_root("snis_multiverse");
+	create_lock_or_die();
 	parse_options(argc, argv, &lobby, &nick, &location);
 	read_replacement_assets(&replacement_assets, asset_dir);
 	construct_starmap();
