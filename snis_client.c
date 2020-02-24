@@ -11011,6 +11011,26 @@ static void do_adjust_control_input(struct slider *s, uint8_t subcode)
 	transmit_adjust_control_input(value, subcode);
 }
 
+static void transmit_apply_preset(uint8_t preset)
+{
+	struct snis_entity *o = find_my_ship();
+
+	if (!o)
+		return;
+	queue_to_server(snis_opcode_pkt("bwb", OPCODE_APPLY_ENGINEERING_PRESET,
+					o->id, preset));
+}
+
+static void transmit_save_preset(uint8_t preset)
+{
+	struct snis_entity *o = find_my_ship();
+
+	if (!o)
+		return;
+	queue_to_server(snis_opcode_pkt("bwb", OPCODE_SAVE_ENGINEERING_PRESET,
+					o->id, preset));
+}
+
 static void do_adjust_byte_value(uint8_t value,  uint8_t opcode)
 {
 	struct snis_entity *o;
@@ -13411,8 +13431,8 @@ static struct engineering_ui {
 	struct gauge *temp_gauge;
 	struct gauge *oxygen_gauge;
 	struct button *damcon_button;
-	struct button *preset1_button;
-	struct button *preset2_button;
+	struct button *preset_buttons[ENG_PRESET_NUMBER];
+	struct button *preset_save_button;
 	struct button *silence_alarms;
 	struct button *deploy_chaff;
 	struct button *custom_button;
@@ -13457,6 +13477,7 @@ static struct engineering_ui {
 	struct slider *lifesupport_temperature;
 
 	int selected_subsystem;
+	int selected_preset;
 	int gauge_radius;
 } eng_ui;
 
@@ -13636,58 +13657,30 @@ static void eng_deploy_chaff_button_pressed(void *x)
 	transmit_adjust_control_input(0, OPCODE_ADJUST_CONTROL_DEPLOY_CHAFF);
 }
 
-static void preset1_button_pressed(void *x)
+static void preset_button_pressed(void *button_ptr_ptr)
 {
-	/* a "normal" preset, note only one poke has sound to avoid noise */
-	snis_slider_poke_input(eng_ui.shield_slider, 0.95, 1);
-	snis_slider_poke_input(eng_ui.shield_coolant_slider, 1.0, 0);
-	snis_slider_poke_input(eng_ui.maneuvering_slider, 0.95, 0);
-	snis_slider_poke_input(eng_ui.maneuvering_coolant_slider, 1.0, 0);
-	snis_slider_poke_input(eng_ui.warp_slider, 0.0, 0);
-	snis_slider_poke_input(eng_ui.warp_coolant_slider, 0.0, 0);
-	snis_slider_poke_input(eng_ui.impulse_slider, 0.95, 0);
-	snis_slider_poke_input(eng_ui.impulse_coolant_slider, 1.0, 0);
-	snis_slider_poke_input(eng_ui.sensors_slider, 0.95, 0);
-	snis_slider_poke_input(eng_ui.sensors_coolant_slider, 1.0, 0);
-	snis_slider_poke_input(eng_ui.comm_slider, 0.0, 0);
-	snis_slider_poke_input(eng_ui.comm_coolant_slider, 0.0, 0);
-	snis_slider_poke_input(eng_ui.phaserbanks_slider, 0.95, 0);
-	snis_slider_poke_input(eng_ui.phaserbanks_coolant_slider, 1.0, 0);
-	snis_slider_poke_input(eng_ui.tractor_slider, 0.0, 0);
-	snis_slider_poke_input(eng_ui.tractor_coolant_slider, 0.0, 0);
-	snis_slider_poke_input(eng_ui.lifesupport_slider, 0.95, 0);
-	snis_slider_poke_input(eng_ui.lifesupport_coolant_slider, 1.0, 0);
-	snis_slider_poke_input(eng_ui.tractor_coolant_slider, 0.0, 0);
-	snis_slider_poke_input(eng_ui.shield_control_slider, 1.0, 0);
+	struct button **button = button_ptr_ptr;
+	int selection;
+
+	if (*button) {
+		selection = button - &eng_ui.preset_buttons[0];
+		if ((selection >= 0) && (selection < ENG_PRESET_NUMBER)) {
+			transmit_apply_preset((uint8_t) selection);
+			snis_button_set_color(eng_ui.preset_buttons[eng_ui.selected_preset], UI_COLOR(eng_button));
+			snis_button_set_color(eng_ui.preset_buttons[selection], UI_COLOR(eng_selected_button));
+			eng_ui.selected_preset = selection;
+		}
+	}
 }
 
-static void preset2_button_pressed(void *x)
+static void preset_save_button_pressed(void *x)
 {
-	/* an "all stop" preset, note only one poke has sound to avoid noise */
-	snis_slider_poke_input(eng_ui.shield_slider, 0.0, 1);
-	snis_slider_poke_input(eng_ui.shield_coolant_slider, 0.3, 0);
-	snis_slider_poke_input(eng_ui.maneuvering_slider, 0.0, 0);
-	snis_slider_poke_input(eng_ui.maneuvering_coolant_slider, 0.3, 0);
-	snis_slider_poke_input(eng_ui.warp_slider, 0.0, 0);
-	snis_slider_poke_input(eng_ui.warp_coolant_slider, 0.3, 0);
-	snis_slider_poke_input(eng_ui.impulse_slider, 0.0, 0);
-	snis_slider_poke_input(eng_ui.impulse_coolant_slider, 0.3, 0);
-	snis_slider_poke_input(eng_ui.sensors_slider, 0.0, 0);
-	snis_slider_poke_input(eng_ui.sensors_coolant_slider, 0.3, 0);
-	snis_slider_poke_input(eng_ui.comm_slider, 0.0, 0);
-	snis_slider_poke_input(eng_ui.comm_coolant_slider, 0.3, 0);
-	snis_slider_poke_input(eng_ui.phaserbanks_slider, 0.0, 0);
-	snis_slider_poke_input(eng_ui.phaserbanks_coolant_slider, 0.3, 0);
-	snis_slider_poke_input(eng_ui.tractor_slider, 0.0, 0);
-	snis_slider_poke_input(eng_ui.tractor_coolant_slider, 0.3, 0);
-	snis_slider_poke_input(eng_ui.lifesupport_slider, 0.95, 0);
-	snis_slider_poke_input(eng_ui.lifesupport_coolant_slider, 1.0, 0);
-	snis_slider_poke_input(eng_ui.shield_control_slider, 0.0, 0);
+	transmit_save_preset(eng_ui.selected_preset);
 }
 
 static void init_engineering_ui(void)
 {
-	int x, y, r, xinc, yinc;
+	int i, x, y, r, xinc, yinc;
 	int dm = DISPLAYMODE_ENGINEERING;
 	int color = UI_COLOR(eng_gauge);
 	const int ccolor = UI_COLOR(eng_coolant_meter); /* coolant color */
@@ -13699,6 +13692,7 @@ static void init_engineering_ui(void)
 	const int coolantsliderlen = 0.1875 * SCREEN_WIDTH;
 	const int s2x = 0.4375 * SCREEN_WIDTH; /* x start of 2nd bank of sliders */
 	struct engineering_ui *eu = &eng_ui;
+	char preset_txt[80];
 
 	r = SCREEN_WIDTH / 16;
 	eng_ui.gauge_radius = r;
@@ -13746,17 +13740,20 @@ static void init_engineering_ui(void)
 
 	y += eng_ui.gauge_radius + txy(30);
 	color = UI_COLOR(eng_button);
-	eu->preset1_button = snis_button_init(txx(20),
-						y, -1, -1, "1",
-						color, NANO_FONT, preset1_button_pressed, (void *) 0);
-	snis_button_set_sound(eu->preset1_button, UISND12);
-	eu->preset2_button = snis_button_init(snis_button_get_x(eu->preset1_button) +
-						snis_button_get_width(eu->preset1_button) + txx(5),
-						y, -1, -1, "2",
-						color, NANO_FONT, preset2_button_pressed, (void *) 0);
-	snis_button_set_sound(eu->preset2_button, UISND12);
-	eu->silence_alarms = snis_button_init(snis_button_get_x(eu->preset2_button) +
-						snis_button_get_width(eu->preset2_button) + txx(5),
+	x = txx(20);
+	for (i = 0; i < ENG_PRESET_NUMBER; ++i) {
+		snprintf(preset_txt, 2, "%d", i + 1);
+		eu->preset_buttons[i] = snis_button_init(x, y, -1, -1, preset_txt, color, NANO_FONT,
+						preset_button_pressed, &eu->preset_buttons[i]);
+		snis_button_set_sound(eu->preset_buttons[i], UISND12);
+		x += snis_button_get_width(eu->preset_buttons[i]) + txx(5);
+	}
+	eu->preset_save_button = snis_button_init(snis_button_get_x(eu->preset_buttons[ENG_PRESET_NUMBER-1]) +
+						snis_button_get_width(eu->preset_buttons[ENG_PRESET_NUMBER-1]) + txx(5),
+						y, -1, -1, "SAVE",
+						color, NANO_FONT, preset_save_button_pressed, (void *) 0);
+	eu->silence_alarms = snis_button_init(snis_button_get_x(eu->preset_save_button) +
+						snis_button_get_width(eu->preset_save_button) + txx(5),
 						y, -1, -1, "UNSILENCE ALARMS",
 						color, NANO_FONT, silence_alarms_pressed, (void *) 0);
 	snis_button_set_sound(eu->silence_alarms, UISND13);
@@ -13897,8 +13894,11 @@ static void init_engineering_ui(void)
 				"INDICATES AMOUNT OF OXYGEN\n"
 				"REMAINING UNTIL DANGEROUSLY LOW");
 	ui_add_button(eu->damcon_button, dm, "SWITCH TO THE DAMAGE CONTROL SCREEN");
-	ui_add_button(eu->preset1_button, dm, "SELECT ENGINEERING PRESET 1 - NORMAL MODE");
-	ui_add_button(eu->preset2_button, dm, "SELECT ENGINEERING PRESET 2 - QUIESCENT MODE");
+	for (i = 0; i < ENG_PRESET_NUMBER; ++i) {
+		snprintf(preset_txt, 30, "SELECT ENGINEERING PRESET %d", i + 1);
+		ui_add_button(eu->preset_buttons[i], dm, preset_txt);
+	}
+	ui_add_button(eu->preset_save_button, dm, "SAVE CURRENT VALUES IN THE ACTIVE PRESET");
 	ui_add_button(eu->silence_alarms, dm, "SILENCE/UNSILENCE ENGINEERING SYSTEM ALARMS");
 	ui_add_button(eu->custom_button, dm, "CUSTOM BUTTON");
 	ui_add_button(eu->deploy_chaff, dm, "DEPLOY CHAFF");
@@ -21687,10 +21687,10 @@ static void process_physical_device_io(unsigned short opcode, unsigned short val
 		snis_slider_poke_input(eng_ui.shield_control_slider, d, 1);
 		break;
 	case DEVIO_OPCODE_ENG_PRESET1_BUTTON:
-		preset1_button_pressed((void *) 0);
+		preset_button_pressed(&eng_ui.preset_buttons[0]);
 		break;
 	case DEVIO_OPCODE_ENG_PRESET2_BUTTON:
-		preset2_button_pressed((void *) 0);
+		preset_button_pressed(&eng_ui.preset_buttons[1]);
 		break;
 	case DEVIO_OPCODE_ENG_DAMAGE_CTRL:
 		damcon_button_pressed((void *) 0);

@@ -281,6 +281,8 @@ int snis_opcode_def_init(void)
 	rc |= init_opcode_subcode_def(OPCODE_CONSOLE_OP, OPCODE_CONSOLE_SUBCMD_ADD_TEXT, "n/a");
 	rc |= init_opcode_subcode_def(OPCODE_CLIENT_CONFIG, OPCODE_CLIENT_NOTIFY_CURRENT_STATION, "bbb");
 	rc |= init_opcode_subcode_def(OPCODE_CLIENT_CONFIG, OPCODE_CLIENT_SET_PERMITTED_ROLES, "bbw");
+	rc |= init_opcode_def(OPCODE_SAVE_ENGINEERING_PRESET, "bwb");
+	rc |= init_opcode_def(OPCODE_APPLY_ENGINEERING_PRESET, "bwb");
 	rc |= init_opcode_def(OPCODE_NOOP, "b");
 	return rc;
 }

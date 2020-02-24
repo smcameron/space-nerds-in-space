@@ -123,6 +123,7 @@ struct ui_color_map {
 	struct ui_color_entry eng_coolant_meter; /* not used */
 	struct ui_color_entry eng_temperature;
 	struct ui_color_entry eng_button;
+	struct ui_color_entry eng_selected_button;
 	struct ui_color_entry eng_warning;
 	struct ui_color_entry eng_science_graph;
 	struct ui_color_entry eng_good_status;
@@ -319,6 +320,7 @@ struct ui_color_map_accessor {
 	.u.map.eng_coolant_meter	= { BLUE_FIXUP,		"eng-coolant-meter" },
 	.u.map.eng_temperature		= { AMBER,		"eng-temperature" },
 	.u.map.eng_button		= { AMBER,		"eng-button" },
+	.u.map.eng_selected_button	= { WHITE,		"eng-selected-button" },
 	.u.map.eng_warning		= { RED,		"eng-warning" },
 	.u.map.eng_science_graph	= { AMBER,		"eng-science-graph" },
 	.u.map.eng_good_status		= { GREEN_FIXUP,	"eng-good-status" },
