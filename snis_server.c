@@ -10350,10 +10350,9 @@ static void init_power_model(struct snis_entity *o)
 	struct power_model_data *pd;
 	struct power_device *d;
 
-/*
 	if (o->tsd.ship.power_model)
 		free_power_model(o->tsd.ship.power_model);
-*/
+
 	memset(&o->tsd.ship.power_data, 0, sizeof(o->tsd.ship.power_data));
 
 	pm = new_power_model(MAX_CURRENT, MAX_VOLTAGE, INTERNAL_RESIST);
@@ -10430,10 +10429,9 @@ static void init_coolant_model(struct snis_entity *o)
 	struct power_model_data *pd;
 	struct power_device *d;
 
-/*
-	if (o->tsd.ship.power_model)
-		free_power_model(o->tsd.ship.power_model);
-*/
+	if (o->tsd.ship.coolant_model)
+		free_power_model(o->tsd.ship.coolant_model);
+
 	memset(&o->tsd.ship.coolant_data, 0, sizeof(o->tsd.ship.coolant_data));
 
 	pm = new_power_model(MAX_COOLANT, MAX_VOLTAGE, INTERNAL_RESIST);
