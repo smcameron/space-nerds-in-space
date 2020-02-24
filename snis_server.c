@@ -23655,6 +23655,53 @@ static void send_update_spacemonster_packet(struct game_client *c,
 					o->tsd.spacemonster.tentacle_size));
 }
 
+static void fill_default_presets(int bridgeid)
+{
+	int preset;
+
+	for (preset = 0; preset < ENG_PRESET_NUMBER; ++preset) {
+		/* Set all presets to lifesupport only */
+		bridgelist[bridgeid].persistent_bridge_data.engineering_preset[preset][0]	= 0;
+		bridgelist[bridgeid].persistent_bridge_data.engineering_preset[preset][1]	= 0;
+		bridgelist[bridgeid].persistent_bridge_data.engineering_preset[preset][2]	= 0;
+		bridgelist[bridgeid].persistent_bridge_data.engineering_preset[preset][3]	= 0;
+		bridgelist[bridgeid].persistent_bridge_data.engineering_preset[preset][4]	= 0;
+		bridgelist[bridgeid].persistent_bridge_data.engineering_preset[preset][5]	= 0;
+		bridgelist[bridgeid].persistent_bridge_data.engineering_preset[preset][6]	= 0;
+		bridgelist[bridgeid].persistent_bridge_data.engineering_preset[preset][7]	= 0;
+		bridgelist[bridgeid].persistent_bridge_data.engineering_preset[preset][8]	= 230; /* lifesupport power */
+		bridgelist[bridgeid].persistent_bridge_data.engineering_preset[preset][9]	= 0;
+		bridgelist[bridgeid].persistent_bridge_data.engineering_preset[preset][10]	= 0;
+		bridgelist[bridgeid].persistent_bridge_data.engineering_preset[preset][11]	= 0;
+		bridgelist[bridgeid].persistent_bridge_data.engineering_preset[preset][12]	= 0;
+		bridgelist[bridgeid].persistent_bridge_data.engineering_preset[preset][13]	= 0;
+		bridgelist[bridgeid].persistent_bridge_data.engineering_preset[preset][14]	= 0;
+		bridgelist[bridgeid].persistent_bridge_data.engineering_preset[preset][15]	= 0;
+		bridgelist[bridgeid].persistent_bridge_data.engineering_preset[preset][16]	= 0;
+		bridgelist[bridgeid].persistent_bridge_data.engineering_preset[preset][17]	= 255; /* lifesupport coolant */
+	}
+	/* Default preset in 2 */
+	bridgelist[bridgeid].persistent_bridge_data.engineering_preset[1][0]	= 230;	/* maneuvering */
+	bridgelist[bridgeid].persistent_bridge_data.engineering_preset[1][1]	= 0;	/* warp */
+	bridgelist[bridgeid].persistent_bridge_data.engineering_preset[1][2]	= 230;	/* impulse */
+	bridgelist[bridgeid].persistent_bridge_data.engineering_preset[1][3]	= 230;	/* sensors */
+	bridgelist[bridgeid].persistent_bridge_data.engineering_preset[1][4]	= 0;	/* comms */
+	bridgelist[bridgeid].persistent_bridge_data.engineering_preset[1][5]	= 230;	/* phasers */
+	bridgelist[bridgeid].persistent_bridge_data.engineering_preset[1][6]	= 230;	/* shields */
+	bridgelist[bridgeid].persistent_bridge_data.engineering_preset[1][7]	= 0;	/* tractor */
+	bridgelist[bridgeid].persistent_bridge_data.engineering_preset[1][8]	= 230;	/* lifesupport power */
+
+	bridgelist[bridgeid].persistent_bridge_data.engineering_preset[1][9]	= 255;	/* maneuvering */
+	bridgelist[bridgeid].persistent_bridge_data.engineering_preset[1][10]	= 0;	/* warp */
+	bridgelist[bridgeid].persistent_bridge_data.engineering_preset[1][11]	= 255;	/* impulse */
+	bridgelist[bridgeid].persistent_bridge_data.engineering_preset[1][12]	= 255;	/* sensors */
+	bridgelist[bridgeid].persistent_bridge_data.engineering_preset[1][13]	= 0;	/* comms */
+	bridgelist[bridgeid].persistent_bridge_data.engineering_preset[1][14]	= 255;	/* phasers */
+	bridgelist[bridgeid].persistent_bridge_data.engineering_preset[1][15]	= 255;	/* shields */
+	bridgelist[bridgeid].persistent_bridge_data.engineering_preset[1][16]	= 0;	/* tractor */
+	bridgelist[bridgeid].persistent_bridge_data.engineering_preset[1][17]	= 255;	/* lifesupport coolant */
+}
+
 static int add_new_player(struct game_client *c)
 {
 	int rc;
@@ -23725,6 +23772,7 @@ static int add_new_player(struct game_client *c)
 		bridgelist[nbridges].text_to_speech_volume = 0.33;
 		bridgelist[nbridges].text_to_speech_volume_timestamp = universe_timestamp;
 		clear_bridge_waypoints(nbridges);
+		fill_default_presets(nbridges);
 		c->bridge = nbridges;
 		populate_damcon_arena(&bridgelist[c->bridge].damcon);
 	
