@@ -13356,7 +13356,7 @@ static void damcon_custom_button_pressed(void *x)
 
 static void init_damcon_ui(void)
 {
-	damcon_ui.engineering_button = snis_button_init(txx(630), txy(550), txx(140), txy(25),
+	damcon_ui.engineering_button = snis_button_init(txx(630), txy(550), -1, txy(25),
 			"ENGINEERING", UI_COLOR(damcon_button),
 			NANO_FONT, main_engineering_button_pressed, (void *) 0);
 	snis_button_set_sound(damcon_ui.engineering_button, UISND11);
@@ -13755,15 +13755,14 @@ static void init_engineering_ui(void)
 						y, -1, -1, "2",
 						color, NANO_FONT, preset2_button_pressed, (void *) 0);
 	snis_button_set_sound(eu->preset2_button, UISND12);
-	eu->damcon_button = snis_button_init(snis_button_get_x(eu->preset2_button) +
+	eu->silence_alarms = snis_button_init(snis_button_get_x(eu->preset2_button) +
 						snis_button_get_width(eu->preset2_button) + txx(5),
-						y, -1, -1, "DAMAGE CONTROL",
-						color, NANO_FONT, damcon_button_pressed, (void *) 0);
-	eu->silence_alarms = snis_button_init(snis_button_get_x(eu->damcon_button) +
-						snis_button_get_width(eu->damcon_button) + txx(5),
 						y, -1, -1, "UNSILENCE ALARMS",
 						color, NANO_FONT, silence_alarms_pressed, (void *) 0);
 	snis_button_set_sound(eu->silence_alarms, UISND13);
+	eu->damcon_button = snis_button_init(txx(630), txy(550), -1, txy(25),
+						"DAMAGE CONTROL", color,
+						NANO_FONT, damcon_button_pressed, (void *) 0);
 	eu->custom_button = snis_button_init(snis_button_get_x(eu->silence_alarms) +
 						snis_button_get_width(eu->silence_alarms) + txx(5),
 						y, -1, -1, "CUSTOM BUTTON",
