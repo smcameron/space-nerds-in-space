@@ -3019,7 +3019,11 @@ void graph_dev_draw_arc(int filled, float x, float y, float width, float height,
 
 static void setup_single_color_lit_shader(struct graph_dev_gl_single_color_lit_shader *shader)
 {
-	/* Create and compile our GLSL program from the shaders */
+	/* Create and compile our GLSL program from the shaders. You can use
+	 * single-color-lit-per-pixel.* shaders here as a drop in replacement,
+	 * for the -per-vertex shaders, but it does not look significantly
+	 * different and it is a bit more expensive.
+	 */
 	shader->program_id = load_shaders(shader_directory,
 				"single-color-lit-per-vertex.vert",
 				"single-color-lit-per-vertex.frag",

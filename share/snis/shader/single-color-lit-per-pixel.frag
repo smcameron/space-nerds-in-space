@@ -1,6 +1,6 @@
 
 uniform vec3 u_LightPos;       // The position of the light in eye space.
-uniform int u_in_full_shade;  // 0 means not full shade, 1 means full shade
+uniform int u_in_shade;        // 0 means not full shade, 1 means full shade
 
 varying vec3 v_Position;       // Interpolated position for this fragment.
 varying vec3 v_Color;          // This is the color from the vertex shader interpolated across the triangle per fragment
@@ -20,7 +20,7 @@ void main()
 	float dot = dot(v_Normal, lightVector);
 
 	// mimic the original snis software render lighting
-	dot = (1.0 - u_in_full_shadow) * ((dot + 1.0) / 2.0);
+	dot = (1.0 - u_in_shade) * ((dot + 1.0) / 2.0);
 
 	// ambient light
 	float diffuse = max(dot, AMBIENT);

@@ -3,7 +3,7 @@ uniform mat4 u_MVPMatrix;      // A constant representing the combined model/vie
 uniform mat4 u_MVMatrix;       // A constant representing the combined model/view matrix.
 uniform mat3 u_NormalMatrix;
 uniform vec3 u_Color;          // Per-object color information we will pass in.
-uniform int u_in_full_shade;
+uniform int u_in_shade;
 
 attribute vec4 a_Position;     // Per-vertex position information we will pass in.
 attribute vec3 a_Normal;       // Per-vertex normal information we will pass in.
