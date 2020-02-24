@@ -13669,6 +13669,7 @@ static void preset_button_pressed(void *button_ptr_ptr)
 			snis_button_set_color(eng_ui.preset_buttons[eng_ui.selected_preset], UI_COLOR(eng_button));
 			snis_button_set_color(eng_ui.preset_buttons[selection], UI_COLOR(eng_selected_button));
 			eng_ui.selected_preset = selection;
+			snis_button_enable(eng_ui.preset_save_button);
 		}
 	}
 }
@@ -13752,6 +13753,7 @@ static void init_engineering_ui(void)
 						snis_button_get_width(eu->preset_buttons[ENG_PRESET_NUMBER-1]) + txx(5),
 						y, -1, -1, "SAVE",
 						color, NANO_FONT, preset_save_button_pressed, (void *) 0);
+	snis_button_disable(eu->preset_save_button);
 	eu->silence_alarms = snis_button_init(snis_button_get_x(eu->preset_save_button) +
 						snis_button_get_width(eu->preset_save_button) + txx(5),
 						y, -1, -1, "UNSILENCE ALARMS",
