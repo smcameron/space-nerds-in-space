@@ -521,7 +521,7 @@ static int update_bridge(struct starsystem_info *ss)
 {
 	unsigned char pwdhash[PWDHASHLEN];
 	int i, rc;
-	unsigned char buffer[250];
+	unsigned char buffer[358];
 	struct packed_buffer pb;
 	struct snis_entity *o;
 

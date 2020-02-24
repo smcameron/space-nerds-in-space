@@ -21009,6 +21009,96 @@ static int process_adjust_control_input(struct game_client *c)
 	return 0;
 }
 
+static int process_save_engineering_preset(struct game_client *c)
+{
+	int rc;
+	uint32_t id;
+	unsigned char preset;
+	unsigned char buffer[10];
+
+	rc = read_and_unpack_buffer(c, buffer, "wb", &id, &preset);
+	if (rc)
+		return rc;
+
+	int i;
+
+	pthread_mutex_lock(&universe_mutex);
+	i = lookup_by_id(id);
+	if (i < 0) {
+		pthread_mutex_unlock(&universe_mutex);
+		return -1;
+	}
+	if (i != c->ship_index)
+		snis_log(SNIS_ERROR, "i != ship index at %s:%d\n", __FILE__, __LINE__);
+
+	go[i].tsd.ship.power_data.maneuvering.p[preset]		= go[i].tsd.ship.power_data.maneuvering.r2;
+	go[i].tsd.ship.power_data.tractor.p[preset]		= go[i].tsd.ship.power_data.tractor.r2;
+	go[i].tsd.ship.power_data.lifesupport.p[preset]		= go[i].tsd.ship.power_data.lifesupport.r2;
+	go[i].tsd.ship.power_data.shields.p[preset]		= go[i].tsd.ship.power_data.shields.r2;
+	go[i].tsd.ship.power_data.impulse.p[preset]		= go[i].tsd.ship.power_data.impulse.r2;
+	go[i].tsd.ship.power_data.warp.p[preset]		= go[i].tsd.ship.power_data.warp.r2;
+	go[i].tsd.ship.power_data.sensors.p[preset]		= go[i].tsd.ship.power_data.sensors.r2;
+	go[i].tsd.ship.power_data.phasers.p[preset]		= go[i].tsd.ship.power_data.phasers.r2;
+	go[i].tsd.ship.power_data.comms.p[preset]		= go[i].tsd.ship.power_data.comms.r2;
+	go[i].tsd.ship.coolant_data.maneuvering.p[preset]	= go[i].tsd.ship.coolant_data.maneuvering.r2;
+	go[i].tsd.ship.coolant_data.tractor.p[preset]		= go[i].tsd.ship.coolant_data.tractor.r2;
+	go[i].tsd.ship.coolant_data.lifesupport.p[preset]	= go[i].tsd.ship.coolant_data.lifesupport.r2;
+	go[i].tsd.ship.coolant_data.shields.p[preset]		= go[i].tsd.ship.coolant_data.shields.r2;
+	go[i].tsd.ship.coolant_data.impulse.p[preset]		= go[i].tsd.ship.coolant_data.impulse.r2;
+	go[i].tsd.ship.coolant_data.warp.p[preset]		= go[i].tsd.ship.coolant_data.warp.r2;
+	go[i].tsd.ship.coolant_data.sensors.p[preset]		= go[i].tsd.ship.coolant_data.sensors.r2;
+	go[i].tsd.ship.coolant_data.phasers.p[preset]		= go[i].tsd.ship.coolant_data.phasers.r2;
+	go[i].tsd.ship.coolant_data.comms.p[preset]		= go[i].tsd.ship.coolant_data.comms.r2;
+
+	pthread_mutex_unlock(&universe_mutex);
+	return 0;
+}
+
+static int process_apply_engineering_preset(struct game_client *c)
+{
+	int rc;
+	uint32_t id;
+	unsigned char preset;
+	unsigned char buffer[10];
+
+	rc = read_and_unpack_buffer(c, buffer, "wb", &id, &preset);
+	if (rc)
+		return rc;
+
+	int i;
+
+	pthread_mutex_lock(&universe_mutex);
+	i = lookup_by_id(id);
+	if (i < 0) {
+		pthread_mutex_unlock(&universe_mutex);
+		return -1;
+	}
+	if (i != c->ship_index)
+		snis_log(SNIS_ERROR, "i != ship index at %s:%d\n", __FILE__, __LINE__);
+
+	go[i].tsd.ship.power_data.maneuvering.r2	= go[i].tsd.ship.power_data.maneuvering.p[preset];
+	go[i].tsd.ship.power_data.tractor.r2		= go[i].tsd.ship.power_data.tractor.p[preset];
+	go[i].tsd.ship.power_data.lifesupport.r2	= go[i].tsd.ship.power_data.lifesupport.p[preset];
+	go[i].tsd.ship.power_data.shields.r2		= go[i].tsd.ship.power_data.shields.p[preset];
+	go[i].tsd.ship.power_data.impulse.r2		= go[i].tsd.ship.power_data.impulse.p[preset];
+	go[i].tsd.ship.power_data.warp.r2		= go[i].tsd.ship.power_data.warp.p[preset];
+	go[i].tsd.ship.power_data.sensors.r2		= go[i].tsd.ship.power_data.sensors.p[preset];
+	go[i].tsd.ship.power_data.phasers.r2		= go[i].tsd.ship.power_data.phasers.p[preset];
+	go[i].tsd.ship.power_data.comms.r2		= go[i].tsd.ship.power_data.comms.p[preset];
+	go[i].tsd.ship.coolant_data.maneuvering.r2	= go[i].tsd.ship.coolant_data.maneuvering.p[preset];
+	go[i].tsd.ship.coolant_data.tractor.r2		= go[i].tsd.ship.coolant_data.tractor.p[preset];
+	go[i].tsd.ship.coolant_data.lifesupport.r2	= go[i].tsd.ship.coolant_data.lifesupport.p[preset];
+	go[i].tsd.ship.coolant_data.shields.r2		= go[i].tsd.ship.coolant_data.shields.p[preset];
+	go[i].tsd.ship.coolant_data.impulse.r2		= go[i].tsd.ship.coolant_data.impulse.p[preset];
+	go[i].tsd.ship.coolant_data.warp.r2		= go[i].tsd.ship.coolant_data.warp.p[preset];
+	go[i].tsd.ship.coolant_data.sensors.r2		= go[i].tsd.ship.coolant_data.sensors.p[preset];
+	go[i].tsd.ship.coolant_data.phasers.r2		= go[i].tsd.ship.coolant_data.phasers.p[preset];
+	go[i].tsd.ship.coolant_data.comms.r2		= go[i].tsd.ship.coolant_data.comms.p[preset];
+
+	pthread_mutex_unlock(&universe_mutex);
+	return 0;
+}
+
 static void send_initiate_warp_packet(struct game_client *c, int enough_oomph)
 {
 	send_packet_to_all_clients_on_a_bridge(c->shipid,
@@ -21883,6 +21973,16 @@ static void process_instructions_from_client(struct game_client *c)
 			break;
 		case OPCODE_ADJUST_CONTROL_INPUT:
 			rc = process_adjust_control_input(c);
+			if (rc)
+				goto protocol_error;
+			break;
+		case OPCODE_SAVE_ENGINEERING_PRESET:
+			rc = process_save_engineering_preset(c);
+			if (rc)
+				goto protocol_error;
+			break;
+		case OPCODE_APPLY_ENGINEERING_PRESET:
+			rc = process_apply_engineering_preset(c);
 			if (rc)
 				goto protocol_error;
 			break;
@@ -28520,7 +28620,7 @@ static int process_update_bridge(struct multiverse_server_info *msi)
 {
 	unsigned char pwdhash[PWDHASHLEN];
 	int i, rc;
-	unsigned char buffer[250];
+	unsigned char buffer[358];
 	struct packed_buffer pb;
 	struct snis_entity *o;
 	double x, y, z;
