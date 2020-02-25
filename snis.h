@@ -127,6 +127,10 @@
 #define MAX_COOLANT 10 
 #define MAX_VOLTAGE 1000000.0
 #define INTERNAL_RESIST 0.000001
+
+/* If ENG_PRESET_NUMBER changes to something other than 6, then you need
+ * to update snis_entity_key_value_specification.h
+ */
 #define ENG_PRESET_NUMBER 6
 
 struct power_model_device {
