@@ -21704,11 +21704,12 @@ static void process_physical_device_io(unsigned short opcode, unsigned short val
 	case DEVIO_OPCODE_ENG_SHIELD_LEVEL:
 		snis_slider_poke_input(eng_ui.shield_control_slider, d, 1);
 		break;
-	case DEVIO_OPCODE_ENG_PRESET1_BUTTON:
-		preset_button_pressed(&eng_ui.preset_buttons[0]);
+	case DEVIO_OPCODE_ENG_PRESET:
+		if ((value >= 0) && (value < ENG_PRESET_NUMBER))
+			snis_button_trigger_button(eng_ui.preset_buttons[value]);
 		break;
-	case DEVIO_OPCODE_ENG_PRESET2_BUTTON:
-		preset_button_pressed(&eng_ui.preset_buttons[1]);
+	case DEVIO_OPCODE_ENG_PRESET_SAVE:
+		snis_button_trigger_button(eng_ui.preset_save_button);
 		break;
 	case DEVIO_OPCODE_ENG_DAMAGE_CTRL:
 		damcon_button_pressed((void *) 0);
