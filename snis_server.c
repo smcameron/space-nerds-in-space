@@ -10594,16 +10594,6 @@ static void init_player(struct snis_entity *o, int reset_ship, float *charges)
 	o->tsd.ship.phaser_wavelength = 0;
 	o->tsd.ship.nai_entries = 0;
 	memset(o->tsd.ship.ai, 0, sizeof(o->tsd.ship.ai));
-	o->tsd.ship.power_data.shields.r1 = 0;
-	o->tsd.ship.power_data.phasers.r1 = 0;
-	o->tsd.ship.power_data.sensors.r1 = 0;
-	o->tsd.ship.power_data.comms.r1 = 0;
-	o->tsd.ship.power_data.warp.r1 = 0;
-	o->tsd.ship.power_data.maneuvering.r1 = 0;
-	o->tsd.ship.power_data.impulse.r1 = 0;
-	o->tsd.ship.power_data.tractor.r1 = 0;
-	o->tsd.ship.power_data.lifesupport.r1 = 230; /* don't turn off the air */
-	o->tsd.ship.coolant_data.lifesupport.r1 = 255;
 	o->tsd.ship.warp_time = -1;
 	o->tsd.ship.scibeam_range = 0;
 	o->tsd.ship.scibeam_a1 = 0;
@@ -10675,6 +10665,8 @@ static void init_player(struct snis_entity *o, int reset_ship, float *charges)
 	memset(&o->tsd.ship.temperature_data, 0, sizeof(o->tsd.ship.temperature_data));
 	init_power_model(o);
 	init_coolant_model(o);
+	o->tsd.ship.power_data.lifesupport.r2	= 230; /* don't turn off the air */
+	o->tsd.ship.coolant_data.lifesupport.r2	= 255;
 	repair_damcon_systems(o);
 	if (charges) {
 		o->tsd.ship.wallet -= money;
