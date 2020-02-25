@@ -125,6 +125,7 @@ struct ui_color_map {
 	struct ui_color_entry eng_button;
 	struct ui_color_entry eng_selected_button;
 	struct ui_color_entry eng_warning;
+	struct ui_color_entry eng_disabled;
 	struct ui_color_entry eng_science_graph;
 	struct ui_color_entry eng_good_status;
 	struct ui_color_entry eng_caution_status;
@@ -322,6 +323,7 @@ struct ui_color_map_accessor {
 	.u.map.eng_button		= { AMBER,		"eng-button" },
 	.u.map.eng_selected_button	= { WHITE,		"eng-selected-button" },
 	.u.map.eng_warning		= { RED,		"eng-warning" },
+	.u.map.eng_disabled		= { RED,		"eng-disabled" },
 	.u.map.eng_science_graph	= { AMBER,		"eng-science-graph" },
 	.u.map.eng_good_status		= { GREEN_FIXUP,	"eng-good-status" },
 	.u.map.eng_caution_status	= { YELLOW,		"eng-caution-status" },

@@ -13754,6 +13754,7 @@ static void init_engineering_ui(void)
 						y, -1, -1, "SAVE",
 						color, NANO_FONT, preset_save_button_pressed, (void *) 0);
 	snis_button_disable(eu->preset_save_button);
+	snis_button_set_disabled_color(eu->preset_save_button, UI_COLOR(eng_disabled));
 	eu->silence_alarms = snis_button_init(snis_button_get_x(eu->preset_save_button) +
 						snis_button_get_width(eu->preset_save_button) + txx(5),
 						y, -1, -1, "UNSILENCE ALARMS",
