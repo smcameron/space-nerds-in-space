@@ -29,7 +29,7 @@
 #include "shape_collision.h"
 
 #define DEFAULT_SOLAR_SYSTEM "default"
-#define SNIS_PROTOCOL_VERSION "SNIS042"
+#define SNIS_PROTOCOL_VERSION "SNIS043"
 #define COMMON_MTWIST_SEED 97872
 /* dimensions of the "known" universe */
 #define XKNOWN_DIM 600000.0
@@ -127,15 +127,10 @@
 #define MAX_COOLANT 10 
 #define MAX_VOLTAGE 1000000.0
 #define INTERNAL_RESIST 0.000001
-
-/* If ENG_PRESET_NUMBER changes to something other than 6, then you need
- * to update snis_entity_key_value_specification.h
- */
 #define ENG_PRESET_NUMBER 6
 
 struct power_model_device {
 	uint8_t r1, r2, r3, i;
-	uint8_t p[ENG_PRESET_NUMBER];
 };
 
 /* This thing must contain only endian clean data -- single byte values only */

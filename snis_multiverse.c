@@ -112,6 +112,12 @@ static struct bridge_info {
 	int32_t initialized;			/* Have we unpacked data from snis server for this bridge? */
 	struct snis_entity entity;		/* used to hold some of the bridge state */
 	char starsystem_name[SSGL_LOCATIONSIZE];/* Current location of this bridge */
+
+	/* persistent_bridge_data contains per-bridge data which is not
+	 * present in snis_entity, e.g. engineering presets.
+	 * See snis_bridge_update_packet.h. */
+	struct persistent_bridge_data persistent_bridge_data;
+
 } ship[MAX_BRIDGES];
 int nbridges = 0;
 
@@ -339,11 +345,6 @@ static void sync_dir(char *path)
 static int write_bridge_info(FILE *f, struct bridge_info *b)
 {
 	void *base_address[] = { &b->entity, b };
-
-	/* snis_entity_key_value_specification.h assumes there are 6 presets in
-	 * an array with elements 0-5. If that is not the case, we detect it here.
-	 */
-	BUILD_ASSERT(ENG_PRESET_NUMBER == 6);
 
 	fprintf(f, "starsystem:%s\n", b->starsystem_name);
 	return key_value_write_lines(f, snis_entity_kvs, base_address);
@@ -622,7 +623,7 @@ static int update_bridge(struct starsystem_info *ss)
 	}
 
 	packed_buffer_init(&pb, buffer, bytes_to_read);
-	unpack_bridge_update_packet(o, &pb);
+	unpack_bridge_update_packet(o, &ship[i].persistent_bridge_data, &pb);
 	ship[i].initialized = 1;
 
 	/* Update the ship's starsystem */
@@ -647,7 +648,8 @@ static int create_new_ship(unsigned char pwdhash[PWDHASHLEN])
 	return 0;
 }
 
-static void send_bridge_update_to_snis_server(struct starsystem_info *ss, unsigned char *pwdhash)
+static void send_bridge_update_to_snis_server(struct starsystem_info *ss,
+				struct persistent_bridge_data *bd, unsigned char *pwdhash)
 {
 	int i;
 	struct packed_buffer *pb;
@@ -662,7 +664,7 @@ static void send_bridge_update_to_snis_server(struct starsystem_info *ss, unsign
 	o = &ship[i].entity;
 
 	/* Update the ship */
-	pb = build_bridge_update_packet(o, pwdhash);
+	pb = build_bridge_update_packet(o, bd, pwdhash);
 	if (packed_buffer_length(pb) != UPDATE_BRIDGE_PACKET_SIZE) {
 		fprintf(stderr, "snis_multiverse: bridge packet size is wrong (actual: %d, nominal: %d)\n",
 			packed_buffer_length(pb), UPDATE_BRIDGE_PACKET_SIZE);
@@ -681,6 +683,7 @@ static int verify_existence(struct starsystem_info *ss, int should_already_exist
 	unsigned char pass;
 	unsigned char printable_hash[PWDHASHLEN * 2 + 1];
 	int send_update = 0;
+	struct persistent_bridge_data *bd = NULL;
 
 	fprintf(stderr, "snis_multiverse: verify_existence 1: should %salready exist\n",
 			should_already_exist ? "" : "not ");
@@ -709,6 +712,7 @@ static int verify_existence(struct starsystem_info *ss, int should_already_exist
 		if (should_already_exist) {
 			fprintf(stderr, "snis_multiverse: hash %s exists, as expected.\n", printable_hash);
 			pass = SNISMV_VERIFICATION_RESPONSE_PASS;
+			bd = &ship[i].persistent_bridge_data;
 			send_update = 1;
 		} else {
 			fprintf(stderr, "snis_multiverse: hash %s exists, but should not.\n", printable_hash);
@@ -723,7 +727,7 @@ static int verify_existence(struct starsystem_info *ss, int should_already_exist
 	packed_buffer_queue_add(&ss->write_queue, pb, &ss->write_queue_mutex);
 
 	if (send_update)
-		send_bridge_update_to_snis_server(ss, pwdhash);
+		send_bridge_update_to_snis_server(ss, bd, pwdhash);
 
 	return 0;
 }

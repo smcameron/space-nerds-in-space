@@ -25,7 +25,8 @@
 
 #define PWDHASHLEN 34
 
-struct packed_buffer *build_bridge_update_packet(struct snis_entity *o, unsigned char *pwdhash)
+struct packed_buffer *build_bridge_update_packet(struct snis_entity *o,
+			struct persistent_bridge_data *bd, unsigned char *pwdhash)
 {
 	struct packed_buffer *pb;
 	uint32_t fuel, oxygen;
@@ -34,7 +35,8 @@ struct packed_buffer *build_bridge_update_packet(struct snis_entity *o, unsigned
 
 	pb = packed_buffer_allocate(64 + sizeof(struct update_ship_packet) +
 					sizeof(struct power_model_data) +
-					sizeof(struct power_model_data));
+					sizeof(struct power_model_data) +
+					sizeof(struct persistent_bridge_data));
 	if (!pb)
 		return pb;
 	packed_buffer_append(pb, "br", SNISMV_OPCODE_UPDATE_BRIDGE, pwdhash, (uint16_t) PWDHASHLEN);
@@ -84,10 +86,11 @@ struct packed_buffer *build_bridge_update_packet(struct snis_entity *o, unsigned
 		o->sdata.faction, o->sdata.name, (unsigned short) sizeof(o->sdata.name));
 	packed_buffer_append(pb, "r", &o->tsd.ship.power_data, (uint16_t) sizeof(o->tsd.ship.power_data));
 	packed_buffer_append(pb, "r", &o->tsd.ship.coolant_data, (uint16_t) sizeof(o->tsd.ship.power_data));
+	packed_buffer_append(pb, "r", bd, (uint16_t) sizeof(*bd));
 	return pb;
 }
 
-void unpack_bridge_update_packet(struct snis_entity *o, struct packed_buffer *pb)
+void unpack_bridge_update_packet(struct snis_entity *o, struct persistent_bridge_data *bd, struct packed_buffer *pb)
 {
 	uint16_t alive;
 	uint32_t torpedoes, power;
@@ -130,6 +133,7 @@ void unpack_bridge_update_packet(struct snis_entity *o, struct packed_buffer *pb
 			&faction, name, (uint16_t) sizeof(name));
 	packed_buffer_extract(pb, "r", &power_data, (uint16_t) sizeof(struct power_model_data));
 	packed_buffer_extract(pb, "r", &coolant_data, (int) sizeof(struct power_model_data));
+	packed_buffer_extract(pb, "r", bd, (int) sizeof(*bd));
 	tloaded = (tloading >> 4) & 0x0f;
 	tloading = tloading & 0x0f;
 	quat_to_euler(&ypr, &orientation);

@@ -31,7 +31,17 @@
 
 #define UPDATE_BRIDGE_PACKET_SIZE 346
 
-struct packed_buffer *build_bridge_update_packet(struct snis_entity *o, unsigned char *pwdhash);
-void unpack_bridge_update_packet(struct snis_entity *o, struct packed_buffer *pb);
+/* struct persistent_bridge_data contains per bridge data that snis_multiverse needs to
+ * save/restore but which is not present in struct snis_entity.
+ */
+
+struct persistent_bridge_data {
+	/* 6 sets of engineering presets for 9 systems each with power and coolant */
+	uint8_t engineering_preset[ENG_PRESET_NUMBER][18];
+};
+
+struct packed_buffer *build_bridge_update_packet(struct snis_entity *o,
+				struct persistent_bridge_data *bd, unsigned char *pwdhash);
+void unpack_bridge_update_packet(struct snis_entity *o, struct persistent_bridge_data *bd, struct packed_buffer *pb);
 
 #endif

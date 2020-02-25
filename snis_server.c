@@ -477,6 +477,11 @@ static struct bridge_data {
 	char enciphered_message[256];
 	char cipher_key[26], guessed_key[26];
 	int chaff_cooldown;
+	/* persistent_bridge_data contains per-bridge data which is saved/restored by snis_multiverse
+	 * but which is not present within snis_entity. (e.g. engineering preset data).
+	 * See snis_bridge_update_packet.h.
+	 */
+	struct persistent_bridge_data persistent_bridge_data;
 } bridgelist[MAXCLIENTS];
 static int nbridges = 0;		/* Number of elements present in bridgelist[] */
 
@@ -21013,6 +21018,7 @@ static int process_save_engineering_preset(struct game_client *c)
 	uint32_t id;
 	unsigned char preset;
 	unsigned char buffer[10];
+	struct persistent_bridge_data *bd;
 
 	rc = read_and_unpack_buffer(c, buffer, "wb", &id, &preset);
 	if (rc)
@@ -21029,24 +21035,26 @@ static int process_save_engineering_preset(struct game_client *c)
 	if (i != c->ship_index)
 		snis_log(SNIS_ERROR, "i != ship index at %s:%d\n", __FILE__, __LINE__);
 
-	go[i].tsd.ship.power_data.maneuvering.p[preset]		= go[i].tsd.ship.power_data.maneuvering.r2;
-	go[i].tsd.ship.power_data.tractor.p[preset]		= go[i].tsd.ship.power_data.tractor.r2;
-	go[i].tsd.ship.power_data.lifesupport.p[preset]		= go[i].tsd.ship.power_data.lifesupport.r2;
-	go[i].tsd.ship.power_data.shields.p[preset]		= go[i].tsd.ship.power_data.shields.r2;
-	go[i].tsd.ship.power_data.impulse.p[preset]		= go[i].tsd.ship.power_data.impulse.r2;
-	go[i].tsd.ship.power_data.warp.p[preset]		= go[i].tsd.ship.power_data.warp.r2;
-	go[i].tsd.ship.power_data.sensors.p[preset]		= go[i].tsd.ship.power_data.sensors.r2;
-	go[i].tsd.ship.power_data.phasers.p[preset]		= go[i].tsd.ship.power_data.phasers.r2;
-	go[i].tsd.ship.power_data.comms.p[preset]		= go[i].tsd.ship.power_data.comms.r2;
-	go[i].tsd.ship.coolant_data.maneuvering.p[preset]	= go[i].tsd.ship.coolant_data.maneuvering.r2;
-	go[i].tsd.ship.coolant_data.tractor.p[preset]		= go[i].tsd.ship.coolant_data.tractor.r2;
-	go[i].tsd.ship.coolant_data.lifesupport.p[preset]	= go[i].tsd.ship.coolant_data.lifesupport.r2;
-	go[i].tsd.ship.coolant_data.shields.p[preset]		= go[i].tsd.ship.coolant_data.shields.r2;
-	go[i].tsd.ship.coolant_data.impulse.p[preset]		= go[i].tsd.ship.coolant_data.impulse.r2;
-	go[i].tsd.ship.coolant_data.warp.p[preset]		= go[i].tsd.ship.coolant_data.warp.r2;
-	go[i].tsd.ship.coolant_data.sensors.p[preset]		= go[i].tsd.ship.coolant_data.sensors.r2;
-	go[i].tsd.ship.coolant_data.phasers.p[preset]		= go[i].tsd.ship.coolant_data.phasers.r2;
-	go[i].tsd.ship.coolant_data.comms.p[preset]		= go[i].tsd.ship.coolant_data.comms.r2;
+	bd = &bridgelist[c->bridge].persistent_bridge_data;
+
+	bd->engineering_preset[preset][0] = go[i].tsd.ship.power_data.maneuvering.r2;
+	bd->engineering_preset[preset][1] = go[i].tsd.ship.power_data.warp.r2;
+	bd->engineering_preset[preset][2] = go[i].tsd.ship.power_data.impulse.r2;
+	bd->engineering_preset[preset][3] = go[i].tsd.ship.power_data.sensors.r2;
+	bd->engineering_preset[preset][4] = go[i].tsd.ship.power_data.comms.r2;
+	bd->engineering_preset[preset][5] = go[i].tsd.ship.power_data.phasers.r2;
+	bd->engineering_preset[preset][6] = go[i].tsd.ship.power_data.shields.r2;
+	bd->engineering_preset[preset][7] = go[i].tsd.ship.power_data.tractor.r2;
+	bd->engineering_preset[preset][8] = go[i].tsd.ship.power_data.lifesupport.r2;
+	bd->engineering_preset[preset][9] = go[i].tsd.ship.coolant_data.maneuvering.r2;
+	bd->engineering_preset[preset][10] = go[i].tsd.ship.coolant_data.warp.r2;
+	bd->engineering_preset[preset][11] = go[i].tsd.ship.coolant_data.impulse.r2;
+	bd->engineering_preset[preset][12] = go[i].tsd.ship.coolant_data.sensors.r2;
+	bd->engineering_preset[preset][13] = go[i].tsd.ship.coolant_data.comms.r2;
+	bd->engineering_preset[preset][14] = go[i].tsd.ship.coolant_data.phasers.r2;
+	bd->engineering_preset[preset][15] = go[i].tsd.ship.coolant_data.shields.r2;
+	bd->engineering_preset[preset][16] = go[i].tsd.ship.coolant_data.tractor.r2;
+	bd->engineering_preset[preset][17] = go[i].tsd.ship.coolant_data.lifesupport.r2;
 
 	pthread_mutex_unlock(&universe_mutex);
 	return 0;
@@ -21058,6 +21066,7 @@ static int process_apply_engineering_preset(struct game_client *c)
 	uint32_t id;
 	unsigned char preset;
 	unsigned char buffer[10];
+	struct persistent_bridge_data *bd;
 
 	rc = read_and_unpack_buffer(c, buffer, "wb", &id, &preset);
 	if (rc)
@@ -21074,24 +21083,26 @@ static int process_apply_engineering_preset(struct game_client *c)
 	if (i != c->ship_index)
 		snis_log(SNIS_ERROR, "i != ship index at %s:%d\n", __FILE__, __LINE__);
 
-	go[i].tsd.ship.power_data.maneuvering.r2	= go[i].tsd.ship.power_data.maneuvering.p[preset];
-	go[i].tsd.ship.power_data.tractor.r2		= go[i].tsd.ship.power_data.tractor.p[preset];
-	go[i].tsd.ship.power_data.lifesupport.r2	= go[i].tsd.ship.power_data.lifesupport.p[preset];
-	go[i].tsd.ship.power_data.shields.r2		= go[i].tsd.ship.power_data.shields.p[preset];
-	go[i].tsd.ship.power_data.impulse.r2		= go[i].tsd.ship.power_data.impulse.p[preset];
-	go[i].tsd.ship.power_data.warp.r2		= go[i].tsd.ship.power_data.warp.p[preset];
-	go[i].tsd.ship.power_data.sensors.r2		= go[i].tsd.ship.power_data.sensors.p[preset];
-	go[i].tsd.ship.power_data.phasers.r2		= go[i].tsd.ship.power_data.phasers.p[preset];
-	go[i].tsd.ship.power_data.comms.r2		= go[i].tsd.ship.power_data.comms.p[preset];
-	go[i].tsd.ship.coolant_data.maneuvering.r2	= go[i].tsd.ship.coolant_data.maneuvering.p[preset];
-	go[i].tsd.ship.coolant_data.tractor.r2		= go[i].tsd.ship.coolant_data.tractor.p[preset];
-	go[i].tsd.ship.coolant_data.lifesupport.r2	= go[i].tsd.ship.coolant_data.lifesupport.p[preset];
-	go[i].tsd.ship.coolant_data.shields.r2		= go[i].tsd.ship.coolant_data.shields.p[preset];
-	go[i].tsd.ship.coolant_data.impulse.r2		= go[i].tsd.ship.coolant_data.impulse.p[preset];
-	go[i].tsd.ship.coolant_data.warp.r2		= go[i].tsd.ship.coolant_data.warp.p[preset];
-	go[i].tsd.ship.coolant_data.sensors.r2		= go[i].tsd.ship.coolant_data.sensors.p[preset];
-	go[i].tsd.ship.coolant_data.phasers.r2		= go[i].tsd.ship.coolant_data.phasers.p[preset];
-	go[i].tsd.ship.coolant_data.comms.r2		= go[i].tsd.ship.coolant_data.comms.p[preset];
+	bd = &bridgelist[c->bridge].persistent_bridge_data;
+
+	go[i].tsd.ship.power_data.maneuvering.r2	= bd->engineering_preset[preset][0];
+	go[i].tsd.ship.power_data.warp.r2		= bd->engineering_preset[preset][1];
+	go[i].tsd.ship.power_data.impulse.r2		= bd->engineering_preset[preset][2];
+	go[i].tsd.ship.power_data.sensors.r2		= bd->engineering_preset[preset][3];
+	go[i].tsd.ship.power_data.comms.r2		= bd->engineering_preset[preset][4];
+	go[i].tsd.ship.power_data.phasers.r2		= bd->engineering_preset[preset][5];
+	go[i].tsd.ship.power_data.shields.r2		= bd->engineering_preset[preset][6];
+	go[i].tsd.ship.power_data.tractor.r2		= bd->engineering_preset[preset][7];
+	go[i].tsd.ship.power_data.lifesupport.r2	= bd->engineering_preset[preset][8];
+	go[i].tsd.ship.coolant_data.maneuvering.r2	= bd->engineering_preset[preset][9];
+	go[i].tsd.ship.coolant_data.warp.r2		= bd->engineering_preset[preset][10];
+	go[i].tsd.ship.coolant_data.impulse.r2		= bd->engineering_preset[preset][11];
+	go[i].tsd.ship.coolant_data.sensors.r2		= bd->engineering_preset[preset][12];
+	go[i].tsd.ship.coolant_data.comms.r2		= bd->engineering_preset[preset][13];
+	go[i].tsd.ship.coolant_data.phasers.r2		= bd->engineering_preset[preset][14];
+	go[i].tsd.ship.coolant_data.shields.r2		= bd->engineering_preset[preset][15];
+	go[i].tsd.ship.coolant_data.tractor.r2		= bd->engineering_preset[preset][16];
+	go[i].tsd.ship.coolant_data.lifesupport.r2	= bd->engineering_preset[preset][17];
 
 	pthread_mutex_unlock(&universe_mutex);
 	return 0;
@@ -24237,7 +24248,7 @@ static void update_multiverse(struct snis_entity *o)
 	}
 
 	/* Update the ship */
-	pb = build_bridge_update_packet(o, bridgelist[bridge].pwdhash);
+	pb = build_bridge_update_packet(o, &bridgelist[bridge].persistent_bridge_data, bridgelist[bridge].pwdhash);
 	if (packed_buffer_length(pb) != UPDATE_BRIDGE_PACKET_SIZE) {
 		fprintf(stderr, "snis_multiverse: bridge packet size is wrong (actual: %d, nominal: %d)\n",
 			packed_buffer_length(pb), UPDATE_BRIDGE_PACKET_SIZE);
@@ -28666,7 +28677,7 @@ static int process_update_bridge(struct multiverse_server_info *msi)
 		memset(o->tsd.ship.damcon, 0, sizeof(*o->tsd.ship.damcon));
 	}
 	packed_buffer_init(&pb, buffer, bytes_to_read);
-	unpack_bridge_update_packet(o, &pb);
+	unpack_bridge_update_packet(o, &bridgelist[i].persistent_bridge_data, &pb);
 
 	/* Restore position... */
 	fprintf(stderr, "%s: update would set position to %lf,%lf,%lf\n",
