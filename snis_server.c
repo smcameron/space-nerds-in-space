@@ -8313,7 +8313,9 @@ static int starbase_expecting_docker(struct snis_entity *starbase, uint32_t dock
 	return 0;
 }
 
-static void init_player(struct snis_entity *o, int reset_ship, float *charges);
+static void init_player(struct snis_entity *o, int reset_flags, float *charges);
+#define INIT_PLAYER_RESET_SHIP (1 << 0)
+#define INIT_PLAYER_CLEAR_ENGINEERING_PRESETS (1 << 1)
 static void do_docking_action(struct snis_entity *ship, struct snis_entity *starbase,
 			struct bridge_data *b, char *npcname)
 {
@@ -10524,35 +10526,83 @@ static void repair_damcon_systems(struct snis_entity *o)
 		p->version++;
 	}
 	o->tsd.ship.damage_data_dirty = 1;
-}	
+}
+
+static void restore_engineering_presets(struct snis_entity *player_ship,
+			struct power_model_data *old_power, struct power_model_data *old_coolant)
+{
+	memcpy(player_ship->tsd.ship.power_data.maneuvering.p, old_power->maneuvering.p,
+			sizeof(player_ship->tsd.ship.power_data.warp.p));
+	memcpy(player_ship->tsd.ship.power_data.warp.p, old_power->warp.p,
+			sizeof(player_ship->tsd.ship.power_data.impulse.p));
+	memcpy(player_ship->tsd.ship.power_data.impulse.p, old_power->impulse.p,
+			sizeof(player_ship->tsd.ship.power_data.impulse.p));
+	memcpy(player_ship->tsd.ship.power_data.sensors.p, old_power->sensors.p,
+			sizeof(player_ship->tsd.ship.power_data.sensors.p));
+	memcpy(player_ship->tsd.ship.power_data.comms.p, old_power->comms.p,
+			sizeof(player_ship->tsd.ship.power_data.comms.p));
+	memcpy(player_ship->tsd.ship.power_data.phasers.p, old_power->phasers.p,
+			sizeof(player_ship->tsd.ship.power_data.phasers.p));
+	memcpy(player_ship->tsd.ship.power_data.shields.p, old_power->shields.p,
+			sizeof(player_ship->tsd.ship.power_data.shields.p));
+	memcpy(player_ship->tsd.ship.power_data.tractor.p, old_power->tractor.p,
+			sizeof(player_ship->tsd.ship.power_data.tractor.p));
+	memcpy(player_ship->tsd.ship.power_data.lifesupport.p, old_power->lifesupport.p,
+			sizeof(player_ship->tsd.ship.power_data.lifesupport.p));
+
+	memcpy(player_ship->tsd.ship.coolant_data.maneuvering.p, old_coolant->maneuvering.p,
+			sizeof(player_ship->tsd.ship.coolant_data.warp.p));
+	memcpy(player_ship->tsd.ship.coolant_data.warp.p, old_coolant->warp.p,
+			sizeof(player_ship->tsd.ship.coolant_data.impulse.p));
+	memcpy(player_ship->tsd.ship.coolant_data.impulse.p, old_coolant->impulse.p,
+			sizeof(player_ship->tsd.ship.coolant_data.impulse.p));
+	memcpy(player_ship->tsd.ship.coolant_data.sensors.p, old_coolant->sensors.p,
+			sizeof(player_ship->tsd.ship.coolant_data.sensors.p));
+	memcpy(player_ship->tsd.ship.coolant_data.comms.p, old_coolant->comms.p,
+			sizeof(player_ship->tsd.ship.coolant_data.comms.p));
+	memcpy(player_ship->tsd.ship.coolant_data.phasers.p, old_coolant->phasers.p,
+			sizeof(player_ship->tsd.ship.coolant_data.phasers.p));
+	memcpy(player_ship->tsd.ship.coolant_data.shields.p, old_coolant->shields.p,
+			sizeof(player_ship->tsd.ship.coolant_data.shields.p));
+	memcpy(player_ship->tsd.ship.coolant_data.tractor.p, old_coolant->tractor.p,
+			sizeof(player_ship->tsd.ship.coolant_data.tractor.p));
+	memcpy(player_ship->tsd.ship.coolant_data.lifesupport.p, old_coolant->lifesupport.p,
+			sizeof(player_ship->tsd.ship.coolant_data.lifesupport.p));
+}
 	
 static void update_passenger(int i, int nstarbases);
 static int count_starbases(void);
 
-
 /* init_player()
  * o is the player ship
  *
- * reset_ship is 1 if we are resetting the ship (e.g. at
- *   the beginning of a game) and 0 if we do not want to reset the ship (e.g. we
- *   are just docking at a starbase.  Resetting the ship means the following
- *   additional actions are taken (as compared to just docking with a starbase):
+ * reset_flags:
+ *   bit 0 (INIT_PLAYER_RESET_SHIP) is set if we are resetting the ship (e.g. at
+ *      the beginning of a game) and 0 if we do not want to reset the ship (e.g. we
+ *      are just docking at a starbase.  Resetting the ship means the following
+ *      additional actions are taken (as compared to just docking with a starbase):
  *
- *   1. Clearing any ship_id_chips the player has collected.
- *   2. Clearing any custom buttons lua scripts might have created.
- *   3. Clearing the ship's cargo bay.
- *   4. Resetting the ship's wallet to a default value.
- *   5. Clearing any passengers off the ship.
- *   6. Clearing any enciphered message and cipher keys
+ *      1. Clearing any ship_id_chips the player has collected.
+ *      2. Clearing any custom buttons lua scripts might have created.
+ *      3. Clearing the ship's cargo bay.
+ *      4. Resetting the ship's wallet to a default value.
+ *      5. Clearing any passengers off the ship.
+ *      6. Clearing any enciphered message and cipher keys
+ *
+ *  bit 1 (INIT_PLAYER_CLEAR_ENGINEERING_PRESETS) is set when we first create a ship
+ *      to initialize the engineering presets. If not set, then enginerring
+ *      presets will be preserved across init_player()
+ *
  *
  * *charges is an "out" parameter indicating the fees charged for repairs and
  *  restocking
  */
-static void init_player(struct snis_entity *o, int reset_ship, float *charges)
+static void init_player(struct snis_entity *o, int reset_flags, float *charges)
 {
 	int i;
 	int b;
 	float money = 0.0;
+	struct power_model_data old_power, old_coolant;
 
 #define TORPEDO_UNIT_COST 50.0f
 #define FUEL_UNIT_COST (1500.0f / (float) UINT32_MAX)
@@ -10589,6 +10639,8 @@ static void init_player(struct snis_entity *o, int reset_ship, float *charges)
 	o->tsd.ship.phaser_wavelength = 0;
 	o->tsd.ship.nai_entries = 0;
 	memset(o->tsd.ship.ai, 0, sizeof(o->tsd.ship.ai));
+#if 0
+	/* These all get reset anyway by init_power_model(), below. */
 	o->tsd.ship.power_data.shields.r1 = 0;
 	o->tsd.ship.power_data.phasers.r1 = 0;
 	o->tsd.ship.power_data.sensors.r1 = 0;
@@ -10599,6 +10651,7 @@ static void init_player(struct snis_entity *o, int reset_ship, float *charges)
 	o->tsd.ship.power_data.tractor.r1 = 0;
 	o->tsd.ship.power_data.lifesupport.r1 = 230; /* don't turn off the air */
 	o->tsd.ship.coolant_data.lifesupport.r1 = 255;
+#endif
 	o->tsd.ship.warp_time = -1;
 	o->tsd.ship.scibeam_range = 0;
 	o->tsd.ship.scibeam_a1 = 0;
@@ -10624,7 +10677,7 @@ static void init_player(struct snis_entity *o, int reset_ship, float *charges)
 		strcpy(bridgelist[b].last_text_to_speech, "");
 		bridgelist[b].text_to_speech_volume = 0.33;
 		bridgelist[b].text_to_speech_volume_timestamp = universe_timestamp;
-		if (reset_ship) {
+		if (reset_flags & INIT_PLAYER_RESET_SHIP) {
 			/* Clear ship id chips */
 			memset(bridgelist[b].ship_id_chip, 0, sizeof(bridgelist[b].ship_id_chip));
 			bridgelist[b].nship_id_chips = 0;
@@ -10639,9 +10692,9 @@ static void init_player(struct snis_entity *o, int reset_ship, float *charges)
 	}
 	quat_init_axis(&o->tsd.ship.computer_desired_orientation, 0, 1, 0, 0);
 	o->tsd.ship.computer_steering_time_left = 0;
-	if (reset_ship) {
+	if (reset_flags & INIT_PLAYER_RESET_SHIP) {
 		int nstarbases = count_starbases();
-		/* The reset_ship param is a stopgap until real docking code
+		/* The INIT_PLAYER_RESET_SHIP param is a stopgap until real docking code
 		 * is done.
 		 */
 		for (i = 0; i < o->tsd.ship.ncargo_bays; i++) {
@@ -10668,8 +10721,19 @@ static void init_player(struct snis_entity *o, int reset_ship, float *charges)
 	quat_init_axis(&o->tsd.ship.weap_orientation, 1, 0, 0, 0);
 	memset(&o->tsd.ship.damage, 0, sizeof(o->tsd.ship.damage));
 	memset(&o->tsd.ship.temperature_data, 0, sizeof(o->tsd.ship.temperature_data));
+
+	if (!(reset_flags & INIT_PLAYER_CLEAR_ENGINEERING_PRESETS)) {
+		/* preserve the engineering presets */
+		old_power = o->tsd.ship.power_data;
+		old_coolant = o->tsd.ship.coolant_data;
+	}
+
 	init_power_model(o);
 	init_coolant_model(o);
+
+	if (!(reset_flags & INIT_PLAYER_CLEAR_ENGINEERING_PRESETS))
+		restore_engineering_presets(o, &old_power, &old_coolant);
+
 	repair_damcon_systems(o);
 	if (charges) {
 		o->tsd.ship.wallet -= money;
@@ -10688,7 +10752,7 @@ static void clear_bridge_waypoints(int bridge)
 	set_waypoints_dirty_all_clients_on_bridge(bridgelist[bridge].shipid, 1);
 }
 
-static void respawn_player(struct snis_entity *o, uint8_t warpgate_number)
+static void respawn_player(struct snis_entity *o, uint8_t warpgate_number, int reset_flags)
 {
 	int b, i, found;
 	double x, y, z, a1, a2, rf;
@@ -10764,7 +10828,7 @@ finished:
 	snprintf(o->tsd.ship.mining_bot_name, sizeof(o->tsd.ship.mining_bot_name),
 			"MNR-%s", mining_bot_name);
 	quat_init_axis(&o->orientation, 0, 1, 0, o->heading);
-	init_player(o, 1, NULL);
+	init_player(o, reset_flags, NULL);
 	if (warpgate_number != (uint8_t) -1) { /* Give player a little boost out of the warp gate */
 		union vec3 boost;
 
@@ -10788,7 +10852,8 @@ static int add_player(double x, double z, double vx, double vz, double heading,
 	i = add_generic_object(x, 0.0, z, vx, 0.0, vz, heading, OBJTYPE_SHIP1);
 	if (i < 0)
 		return i;
-	respawn_player(&go[i], warpgate_number);
+	respawn_player(&go[i], warpgate_number,
+			INIT_PLAYER_RESET_SHIP | INIT_PLAYER_CLEAR_ENGINEERING_PRESETS);
 	if (requested_faction < nfactions())
 		go[i].sdata.faction = requested_faction;
 	return i;
@@ -19084,7 +19149,7 @@ static void reset_player_ship(struct snis_entity *o)
 {
 	int b;
 
-	init_player(o, 1, NULL);
+	init_player(o, INIT_PLAYER_RESET_SHIP, NULL);
 	b = lookup_bridge_by_shipid(o->id);
 	if (b >= 0)
 		clear_bridge_waypoints(b);
@@ -24285,7 +24350,7 @@ static void move_objects(double absolute_time, int discontinuity)
 				int b = lookup_bridge_by_shipid(go[i].id);
 				if (b != -1) {
 					if (universe_timestamp >= go[i].respawn_time) {
-						respawn_player(&go[i], (uint8_t) -1);
+						respawn_player(&go[i], (uint8_t) -1, INIT_PLAYER_RESET_SHIP);
 						schedule_callback(event_callback, &callback_schedule,
 							"player-respawn-event", (double) go[i].id);
 						send_ship_damage_packet(&go[i]);
