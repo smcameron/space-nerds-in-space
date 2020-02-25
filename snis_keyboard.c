@@ -204,6 +204,12 @@ char *keyactionstring[] = {
 	"key_robot_gripper",
 	"key_demon_console",
 	"key_toggle_external_camera",
+	"key_eng_preset_1",
+	"key_eng_preset_2",
+	"key_eng_preset_3",
+	"key_eng_preset_4",
+	"key_eng_preset_5",
+	"key_eng_preset_6",
 };
 
 void zero_keymaps(void)
@@ -244,7 +250,7 @@ void init_keymap(void)
 	const unsigned short all = 0x03fff; /* all 14 displaymodes */
 	const unsigned short nav = 1 << DISPLAYMODE_NAVIGATION;
 	const unsigned short weap = 1 << DISPLAYMODE_WEAPONS;
-	/* const unsigned short eng = 1 << DISPLAYMODE_ENGINEERING; */
+	const unsigned short eng = 1 << DISPLAYMODE_ENGINEERING;
 	const unsigned short damcon = 1 << DISPLAYMODE_DAMCON;
 	const unsigned short sci = 1 << DISPLAYMODE_SCIENCE;
 	const unsigned short comms = 1 << DISPLAYMODE_COMMS;
@@ -346,6 +352,19 @@ void init_keymap(void)
 	ffmapkey(all, GDK_F11, keyfullscreen);
 	ffmapkey(all, GDK_Page_Down, key_page_down);
 	ffmapkey(all, GDK_Page_Up, key_page_up);
+
+	mapkey(eng, GDK_1, key_eng_preset_1);
+	mapkey(eng, GDK_2, key_eng_preset_2);
+	mapkey(eng, GDK_3, key_eng_preset_3);
+	mapkey(eng, GDK_4, key_eng_preset_4);
+	mapkey(eng, GDK_5, key_eng_preset_5);
+	mapkey(eng, GDK_6, key_eng_preset_6);
+	ffmapkey(eng, GDK_KP_1, key_eng_preset_1);
+	ffmapkey(eng, GDK_KP_2, key_eng_preset_2);
+	ffmapkey(eng, GDK_KP_3, key_eng_preset_3);
+	ffmapkey(eng, GDK_KP_4, key_eng_preset_4);
+	ffmapkey(eng, GDK_KP_5, key_eng_preset_5);
+	ffmapkey(eng, GDK_KP_6, key_eng_preset_6);
 }
 
 int remapkey(char *stations, char *keyname, char *actionname)

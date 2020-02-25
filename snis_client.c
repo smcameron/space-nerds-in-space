@@ -4183,6 +4183,63 @@ static void sci_sciplane_pressed(void *x);
 static void sci_waypoints_pressed(void *x);
 static void sci_details_pressed(void *x);
 
+static struct engineering_ui {
+	struct gauge *fuel_gauge;
+	struct gauge *amp_gauge;
+	struct gauge *voltage_gauge;
+	struct gauge *temp_gauge;
+	struct gauge *oxygen_gauge;
+	struct button *damcon_button;
+	struct button *preset_buttons[ENG_PRESET_NUMBER];
+	struct button *preset_save_button;
+	struct button *silence_alarms;
+	struct button *deploy_chaff;
+	struct button *custom_button;
+	struct slider *shield_slider;
+	struct slider *shield_coolant_slider;
+	struct slider *maneuvering_slider;
+	struct slider *maneuvering_coolant_slider;
+	struct slider *warp_slider;
+	struct slider *warp_coolant_slider;
+	struct slider *impulse_slider;
+	struct slider *impulse_coolant_slider;
+	struct slider *sensors_slider;
+	struct slider *sensors_coolant_slider;
+	struct slider *comm_slider;
+	struct slider *comm_coolant_slider;
+	struct slider *phaserbanks_slider;
+	struct slider *phaserbanks_coolant_slider;
+	struct slider *tractor_slider;
+	struct slider *tractor_coolant_slider;
+	struct slider *lifesupport_slider;
+	struct slider *lifesupport_coolant_slider;
+	struct slider *shield_control_slider;
+
+	struct slider *shield_damage;
+	struct slider *impulse_damage;
+	struct slider *warp_damage;
+	struct slider *maneuvering_damage;
+	struct slider *phaser_banks_damage;
+	struct slider *sensors_damage;
+	struct slider *comms_damage;
+	struct slider *tractor_damage;
+	struct slider *lifesupport_damage;
+
+	struct slider *shield_temperature;
+	struct slider *impulse_temperature;
+	struct slider *warp_temperature;
+	struct slider *maneuvering_temperature;
+	struct slider *phaser_banks_temperature;
+	struct slider *sensors_temperature;
+	struct slider *comms_temperature;
+	struct slider *tractor_temperature;
+	struct slider *lifesupport_temperature;
+
+	int selected_subsystem;
+	int selected_preset;
+	int gauge_radius;
+} eng_ui;
+
 static void deal_with_keyboard()
 {
 	int h, v, z, r, t;
@@ -4258,6 +4315,21 @@ static void deal_with_keyboard()
 
 	if (sbh || sbv || sbr)
 		do_sciball_dirkey(sbh, sbv, sbr);
+
+	if (displaymode == DISPLAYMODE_ENGINEERING) {
+		if (kbstate.pressed[key_eng_preset_1])
+			snis_button_trigger_button(eng_ui.preset_buttons[0]);
+		if (kbstate.pressed[key_eng_preset_2])
+			snis_button_trigger_button(eng_ui.preset_buttons[1]);
+		if (kbstate.pressed[key_eng_preset_3])
+			snis_button_trigger_button(eng_ui.preset_buttons[2]);
+		if (kbstate.pressed[key_eng_preset_4])
+			snis_button_trigger_button(eng_ui.preset_buttons[3]);
+		if (kbstate.pressed[key_eng_preset_5])
+			snis_button_trigger_button(eng_ui.preset_buttons[4]);
+		if (kbstate.pressed[key_eng_preset_6])
+			snis_button_trigger_button(eng_ui.preset_buttons[5]);
+	}
 }
 
 static gint key_press_cb(GtkWidget* widget, GdkEventKey* event, gpointer data)
@@ -13423,63 +13495,6 @@ static void init_damcon_ui(void)
 	ui_add_label(damcon_ui.robot_controls, DISPLAYMODE_DAMCON);
 	ui_add_button(damcon_ui.eject_warp_core_button, DISPLAYMODE_DAMCON, "EJECT THE WARP CORE");
 }
-
-static struct engineering_ui {
-	struct gauge *fuel_gauge;
-	struct gauge *amp_gauge;
-	struct gauge *voltage_gauge;
-	struct gauge *temp_gauge;
-	struct gauge *oxygen_gauge;
-	struct button *damcon_button;
-	struct button *preset_buttons[ENG_PRESET_NUMBER];
-	struct button *preset_save_button;
-	struct button *silence_alarms;
-	struct button *deploy_chaff;
-	struct button *custom_button;
-	struct slider *shield_slider;
-	struct slider *shield_coolant_slider;
-	struct slider *maneuvering_slider;
-	struct slider *maneuvering_coolant_slider;
-	struct slider *warp_slider;
-	struct slider *warp_coolant_slider;
-	struct slider *impulse_slider;
-	struct slider *impulse_coolant_slider;
-	struct slider *sensors_slider;
-	struct slider *sensors_coolant_slider;
-	struct slider *comm_slider;
-	struct slider *comm_coolant_slider;
-	struct slider *phaserbanks_slider;
-	struct slider *phaserbanks_coolant_slider;
-	struct slider *tractor_slider;
-	struct slider *tractor_coolant_slider;
-	struct slider *lifesupport_slider;
-	struct slider *lifesupport_coolant_slider;
-	struct slider *shield_control_slider;
-
-	struct slider *shield_damage;
-	struct slider *impulse_damage;
-	struct slider *warp_damage;
-	struct slider *maneuvering_damage;
-	struct slider *phaser_banks_damage;
-	struct slider *sensors_damage;
-	struct slider *comms_damage;
-	struct slider *tractor_damage;
-	struct slider *lifesupport_damage;
-
-	struct slider *shield_temperature;
-	struct slider *impulse_temperature;
-	struct slider *warp_temperature;
-	struct slider *maneuvering_temperature;
-	struct slider *phaser_banks_temperature;
-	struct slider *sensors_temperature;
-	struct slider *comms_temperature;
-	struct slider *tractor_temperature;
-	struct slider *lifesupport_temperature;
-
-	int selected_subsystem;
-	int selected_preset;
-	int gauge_radius;
-} eng_ui;
 
 static int process_custom_button(void)
 {
