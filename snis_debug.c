@@ -149,7 +149,7 @@ void snis_debug_dump(char *cmd, struct snis_entity go[], int nstarbase_models,
 		printfn("SHIELD DAMAGE: %u", o->tsd.ship.damage.shield_damage);
 		printfn("THREAT LEVEL = %.2f", o->tsd.ship.threat_level);
 #ifdef SNIS_SERVER_DATA
-		printfn("TARGETING SYSTEM = %hhu", o->tsd.ship.target_enemy_system);
+		printfn("TARGETING SYSTEM = %hhu", o->tsd.ship.targeted_system);
 #endif
 		printfn("- AI STACK");
 		for (i = 0; i < o->tsd.ship.nai_entries; i++) {
