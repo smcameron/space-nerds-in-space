@@ -17707,7 +17707,7 @@ static struct tweakable_var_descriptor server_tweak[] = {
 	{ "NPC_SYSTEM_TARGETING", "IF 1 NPCS TARGET PARTICULAR SYSTEMS FOR DAMAGE",
 		&npc_system_targeting, 'i', 0.0, 0.0, 0.0, 0, 1, DEFAULT_NPC_SYSTEM_TARGETING },
 	{ "NPC_SYSTEM_TARGETING_INTERVAL", "10ths OF SECS BETWEEN NPCS SWITCHING SYSTEM TO TARGET",
-		&npc_system_targeting, 'i', 0.0, 0.0, 0.0, 0, 5000, DEFAULT_NPC_SYSTEM_TARGETING_INTERVAL },
+		&npc_system_targeting_interval, 'i', 0.0, 0.0, 0.0, 1, 5000, DEFAULT_NPC_SYSTEM_TARGETING_INTERVAL },
 	{ NULL, NULL, NULL, '\0', 0.0, 0.0, 0.0, 0, 0, 0 },
 };
 
