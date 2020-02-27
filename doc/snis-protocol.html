@@ -250,7 +250,7 @@ An authoritative list of opcodes may be found in snis_packet.h
 <tr><td>OPCODE_PLAY_SOUND</td><td>	114</td></tr>
 <tr><td>OPCODE_REQUEST_SCIYAW</td><td>	115</td></tr>
 <tr><td>OPCODE_REQUEST_SCIBEAMWIDTH</td><td>	116</td></tr>
-<tr><td>OPCODE_UPDATE_SHIP2 (not used)</td><td>		117</td></tr>
+<tr><td><em>not used</em></td><td>		117</td></tr>
 <tr><td>OPCODE_ECON_UPDATE_SHIP</td><td>	118</td></tr>
 <tr><td><em>not used</em></td><td> 119</td></tr>
 <tr><td>OPCODE_SHIP_SDATA</td><td>	120</td></tr>
@@ -604,9 +604,6 @@ been deleted, and the client should therefore delete their copy.
 <tr><td>0</td><td>b</td><td>116</td></tr>
 <tr><td>1</td><td>b</td><td>Beam width code</td></tr>
 </table>
-
-<h4>117 Update Ship 2</h4> Not used, snis_client currently treats it
-the same as Update Ship 100, but nothing transmits opcode 117.
 
 <h4>118 Econ Update Ship</h4> (Server to Client)
 

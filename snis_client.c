@@ -7637,8 +7637,6 @@ static void *gameserver_reader(__attribute__((unused)) void *arg)
 		/* printf("got opcode %hhu\n", opcode); */
 		switch (opcode)	{
 		case OPCODE_UPDATE_SHIP:
-		case OPCODE_UPDATE_SHIP2:
-			/* printf("processing update ship...\n"); */
 			rc = process_update_ship_packet(opcode);
 			break;
 		case OPCODE_UPDATE_POWER_DATA:
