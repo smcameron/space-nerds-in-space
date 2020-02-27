@@ -2625,6 +2625,9 @@ static void calculate_torpedolike_damage(struct snis_entity *target, double weap
 					target->tsd.ship.damage.lifesupport_damage, DAMCON_TYPE_LIFESUPPORTSYSTEM);
 			break;
 		}
+		/* Also target shields ... otherwise the ship can live almost indefinitely. */
+		target->tsd.ship.damage.shield_damage = roll_damage(target, d, twp, ss,
+				target->tsd.ship.damage.shield_damage, DAMCON_TYPE_SHIELDSYSTEM);
 	} else {
 		/* Target all systems */
 		target->tsd.ship.damage.shield_damage = roll_damage(target, d, twp, ss,
