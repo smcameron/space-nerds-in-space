@@ -312,6 +312,7 @@ static unsigned char planets_shade_other_objects = 1; /* tweakable */
 static int main_nav_hybrid = 0; /* tweakable */
 static float explosion_multiplier = 5.0; /* tweakable */
 static float main_view_azimuth_angle = 0.0; /* tweakable */
+static float weapons_azimuth_angle = 0.0; /* tweakable */
 
 /* "Scenic" camera for beauty shots. */
 static int external_camera_active = 0; /* tweakable */
@@ -8984,6 +8985,23 @@ static void remove_lens_flare_entities(void)
 #endif
 }
 
+static void adjust_weapons_azimuth_angle(union quat *cam_orientation)
+{
+	union quat az;
+	if (weapons_azimuth_angle == 0.0) {
+		ui_unhide_widget(weapons.wavelen_slider);
+		ui_unhide_widget(weapons.phaser_wavelength);
+		ui_unhide_widget(weapons.phaser_bank_gauge);
+		return;
+	}
+	ui_hide_widget(weapons.wavelen_slider);
+	ui_hide_widget(weapons.phaser_wavelength);
+	ui_hide_widget(weapons.phaser_bank_gauge);
+
+	quat_init_axis(&az, 0.0, 1.0, 0.0, weapons_azimuth_angle * M_PI / 180.0);
+	quat_mul_self(cam_orientation, &az);
+}
+
 static void show_weapons_camera_view(GtkWidget *w)
 {
 	const float min_angle_of_view = 5.0 * M_PI / 180.0;
@@ -8992,7 +9010,7 @@ static void show_weapons_camera_view(GtkWidget *w)
 	float angle_of_view;
 	struct snis_entity *o;
 	float cx, cy, cz;
-	union quat camera_orientation;
+	union quat camera_orientation, adjusted_cam_orientation;
 	union vec3 recoil = { { -1.0f, 0.0f, 0.0f } };
 	char buf[20];
 	int i;
@@ -9023,6 +9041,8 @@ static void show_weapons_camera_view(GtkWidget *w)
 	cz = o->z;
 
 	quat_mul(&camera_orientation, &o->orientation, &o->tsd.ship.weap_orientation);
+	adjusted_cam_orientation = camera_orientation;
+	adjust_weapons_azimuth_angle(&adjusted_cam_orientation);
 
 	union vec3 turret_pos = {
 		{ -4 * SHIP_MESH_SCALE, 5.45 * SHIP_MESH_SCALE, 0 * SHIP_MESH_SCALE },
@@ -9031,7 +9051,7 @@ static void show_weapons_camera_view(GtkWidget *w)
 	vec3_add_c_self(&turret_pos, cx, cy, cz);
 
 	union vec3 view_offset = { {0, 0.75 * SHIP_MESH_SCALE, 0} };
-	quat_rot_vec_self(&view_offset, &camera_orientation);
+	quat_rot_vec_self(&view_offset, &adjusted_cam_orientation);
 
 	union vec3 cam_pos = turret_pos;
 	vec3_add_self(&cam_pos, &view_offset);
@@ -9041,12 +9061,12 @@ static void show_weapons_camera_view(GtkWidget *w)
 
 		ryaw = weapons_camera_shake * ((snis_randn(100) - 50) * 0.025f) * M_PI / 180.0;
 		rpitch = weapons_camera_shake * ((snis_randn(100) - 50) * 0.025f) * M_PI / 180.0;
-		quat_apply_relative_yaw_pitch(&camera_orientation, ryaw, rpitch);
+		quat_apply_relative_yaw_pitch(&adjusted_cam_orientation, ryaw, rpitch);
 		weapons_camera_shake = 0.7f * weapons_camera_shake;
 	}
 
 	camera_set_pos(ecx, cam_pos.v.x, cam_pos.v.y, cam_pos.v.z);
-	camera_set_orientation(ecx, &camera_orientation);
+	camera_set_orientation(ecx, &adjusted_cam_orientation);
 	camera_set_parameters(ecx, NEAR_CAMERA_PLANE * SHIP_MESH_SCALE, FAR_CAMERA_PLANE,
 				SCREEN_WIDTH, SCREEN_HEIGHT, angle_of_view);
 	set_window_offset(ecx, 0, 0);
@@ -9094,34 +9114,36 @@ static void show_weapons_camera_view(GtkWidget *w)
 		add_ship_thrust_entities(NULL, NULL, ecx, o->entity,
 				o->tsd.ship.shiptype, o->tsd.ship.power_data.impulse.i, 0);
 
-	show_lens_flare(o, &cam_pos, &camera_orientation); /* this will be using data from last frame */
+	show_lens_flare(o, &cam_pos, &adjusted_cam_orientation); /* this will be using data from last frame */
 	render_entities(ecx);
 	remove_lens_flare_entities();
 
 	/* Show targeting aids */
-	for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
-		struct snis_entity *target = &go[i];
+	if (weapons_azimuth_angle == 0) {
+		for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
+			struct snis_entity *target = &go[i];
 
-		if (target->alive && (target->type == OBJTYPE_SHIP2 || target->type == OBJTYPE_SHIP1)) {
-			if (target->entity && entity_onscreen(target->entity)) {
-				float sx, sy, dist, ex, ey, ez;
-				entity_get_pos(target->entity, &ex, &ey, &ez);
-				dist = dist3d(o->x - ex, o->y - ey, o->z - ez);
-				entity_get_screen_coords(target->entity, &sx, &sy);
-				/* BUG: TORPEDO_VELOCITY and TORPEDO_LIFETIME are server-side tweakable
-				 * on the demon console, but if tweaked, the client will have no knowledge
-				 * of this tweaking, so this next condition will be incorrect.
-				 */
-				if (dist < TORPEDO_VELOCITY * TORPEDO_LIFETIME) {
-					char msg[20];
-					draw_targeting_indicator(w, gc, sx, sy, UI_COLOR(weap_in_range),
-								0, 0.5, 1.5f);
-					snprintf(msg, sizeof(msg), "%.0f", dist);
-					sng_set_foreground(UI_COLOR(weap_in_range));
-					sng_abs_xy_draw_string(msg, PICO_FONT, sx + txx(10), sy);
-				} else {
-					draw_targeting_indicator(w, gc, sx, sy, UI_COLOR(weap_targeting),
-								0, 0.5, 1.5f);
+			if (target->alive && (target->type == OBJTYPE_SHIP2 || target->type == OBJTYPE_SHIP1)) {
+				if (target->entity && entity_onscreen(target->entity)) {
+					float sx, sy, dist, ex, ey, ez;
+					entity_get_pos(target->entity, &ex, &ey, &ez);
+					dist = dist3d(o->x - ex, o->y - ey, o->z - ez);
+					entity_get_screen_coords(target->entity, &sx, &sy);
+					/* BUG: TORPEDO_VELOCITY and TORPEDO_LIFETIME are server-side tweakable
+					 * on the demon console, but if tweaked, the client will have no knowledge
+					 * of this tweaking, so this next condition will be incorrect.
+					 */
+					if (dist < TORPEDO_VELOCITY * TORPEDO_LIFETIME) {
+						char msg[20];
+						draw_targeting_indicator(w, gc, sx, sy, UI_COLOR(weap_in_range),
+									0, 0.5, 1.5f);
+						snprintf(msg, sizeof(msg), "%.0f", dist);
+						sng_set_foreground(UI_COLOR(weap_in_range));
+						sng_abs_xy_draw_string(msg, PICO_FONT, sx + txx(10), sy);
+					} else {
+						draw_targeting_indicator(w, gc, sx, sy, UI_COLOR(weap_targeting),
+									0, 0.5, 1.5f);
+					}
 				}
 			}
 		}
@@ -9136,53 +9158,55 @@ static void show_weapons_camera_view(GtkWidget *w)
 	o->entity = NULL;
 
 	/* range is the same as max zoom on old weapons */
-	draw_plane_radar(w, o, &camera_orientation, 0.5 * SCREEN_WIDTH, 0.8333 * SCREEN_HEIGHT,
-				0.125 * SCREEN_HEIGHT, XKNOWN_DIM * 0.02);
+	if (weapons_azimuth_angle == 0.0) {
+		draw_plane_radar(w, o, &camera_orientation, 0.5 * SCREEN_WIDTH, 0.8333 * SCREEN_HEIGHT,
+					0.125 * SCREEN_HEIGHT, XKNOWN_DIM * 0.02);
 
-	/* Draw science selector indicator on main screen */
-	if (curr_science_guy) {
-		float sx, sy;
+		/* Draw science selector indicator on main screen */
+		if (curr_science_guy) {
+			float sx, sy;
 
-		if (curr_science_guy->alive && curr_science_guy->entity &&
-			entity_onscreen(curr_science_guy->entity)) {
-			entity_get_screen_coords(curr_science_guy->entity, &sx, &sy);
-			draw_targeting_indicator(w, gc, sx, sy, UI_COLOR(weap_sci_selection), 0, 1.0f, 2.0f);
+			if (curr_science_guy->alive && curr_science_guy->entity &&
+				entity_onscreen(curr_science_guy->entity)) {
+				entity_get_screen_coords(curr_science_guy->entity, &sx, &sy);
+				draw_targeting_indicator(w, gc, sx, sy, UI_COLOR(weap_sci_selection), 0, 1.0f, 2.0f);
+			}
 		}
-	}
 
-	/* show torpedo count */
-	if (!o->tsd.ship.torpedoes_loading || (timer & 0x4)) {
-		if (o->tsd.ship.torpedoes_loading)
-			sng_set_foreground(UI_COLOR(weap_torpedoes_loading));
-		else
-			sng_set_foreground(UI_COLOR(weap_torpedoes_loaded));
-		snprintf(buf, sizeof(buf), "TORP: %03d", o->tsd.ship.torpedoes +
-					o->tsd.ship.torpedoes_loading +
-					o->tsd.ship.torpedoes_loaded);
-		sng_abs_xy_draw_string(buf, NANO_FONT, 570 * SCREEN_WIDTH / 800,
-					SCREEN_HEIGHT - 15 * SCREEN_HEIGHT / 600);
-		snprintf(buf, sizeof(buf), "MISSILES: %03d", o->tsd.ship.missile_count);
-		sng_abs_xy_draw_string(buf, NANO_FONT, 700 * SCREEN_WIDTH / 800,
-					SCREEN_HEIGHT - 15 * SCREEN_HEIGHT / 600);
-	}
+		/* show torpedo count */
+		if (!o->tsd.ship.torpedoes_loading || (timer & 0x4)) {
+			if (o->tsd.ship.torpedoes_loading)
+				sng_set_foreground(UI_COLOR(weap_torpedoes_loading));
+			else
+				sng_set_foreground(UI_COLOR(weap_torpedoes_loaded));
+			snprintf(buf, sizeof(buf), "TORP: %03d", o->tsd.ship.torpedoes +
+						o->tsd.ship.torpedoes_loading +
+						o->tsd.ship.torpedoes_loaded);
+			sng_abs_xy_draw_string(buf, NANO_FONT, 570 * SCREEN_WIDTH / 800,
+						SCREEN_HEIGHT - 15 * SCREEN_HEIGHT / 600);
+			snprintf(buf, sizeof(buf), "MISSILES: %03d", o->tsd.ship.missile_count);
+			sng_abs_xy_draw_string(buf, NANO_FONT, 700 * SCREEN_WIDTH / 800,
+						SCREEN_HEIGHT - 15 * SCREEN_HEIGHT / 600);
+		}
 
-	/* idiot lights for low power */
-	sng_set_foreground(UI_COLOR(weap_warning));
-	if (o->tsd.ship.power_data.phasers.i < idiot_light_threshold) {
-		sng_center_xy_draw_string("LOW PHASER POWER", NANO_FONT,
-				0.5 * SCREEN_WIDTH, 65 * SCREEN_HEIGHT / 600);
-	}
-
-	/* show security indicator */
-	if (o->tsd.ship.in_secure_area && timer & 0x08) {
+		/* idiot lights for low power */
 		sng_set_foreground(UI_COLOR(weap_warning));
-		sng_center_xy_draw_string("HIGH SECURITY", NANO_FONT,
-			0.5 * SCREEN_WIDTH, 5 * SCREEN_HEIGHT / 6);
-		sng_center_xy_draw_string("AREA", NANO_FONT, 0.5 * SCREEN_WIDTH,
-				516 * SCREEN_HEIGHT / 600);
-	}
+		if (o->tsd.ship.power_data.phasers.i < idiot_light_threshold) {
+			sng_center_xy_draw_string("LOW PHASER POWER", NANO_FONT,
+					0.5 * SCREEN_WIDTH, 65 * SCREEN_HEIGHT / 600);
+		}
 
-	show_gunsight(w);
+		/* show security indicator */
+		if (o->tsd.ship.in_secure_area && timer & 0x08) {
+			sng_set_foreground(UI_COLOR(weap_warning));
+			sng_center_xy_draw_string("HIGH SECURITY", NANO_FONT,
+				0.5 * SCREEN_WIDTH, 5 * SCREEN_HEIGHT / 6);
+			sng_center_xy_draw_string("AREA", NANO_FONT, 0.5 * SCREEN_WIDTH,
+					516 * SCREEN_HEIGHT / 600);
+		}
+
+		show_gunsight(w);
+	}
 	pthread_mutex_unlock(&universe_mutex);
 }
 
@@ -17553,6 +17577,8 @@ static struct tweakable_var_descriptor client_tweak[] = {
 		&explosion_multiplier, 'f', 0.2, 5.0, 5.0, 0, 0, 0 },
 	{ "MAIN_VIEW_AZIMUTH_ANGLE", "-180 TO 180 DEGREES",
 		&main_view_azimuth_angle, 'f', -180.0, 180.0, 0.0, 0, 0, 0 },
+	{ "WEAPONS_AZIMUTH_ANGLE", "-180 TO 180 DEGREES",
+		&weapons_azimuth_angle, 'f', -180.0, 180.0, 0.0, 0, 0, 0 },
 	{ "USE_60_FPS", "0 OR 1 to USE 30 OR 60 FPS, RESPECTIVELY",
 		&use_60_fps, 'i', 0.0, 0.0, 0.0, 0, 1, 1 },
 	{ "LENS_FLARE", "0 OR 1 TO DISABLE OR ENABLE LENS FLARE EFFECT",
