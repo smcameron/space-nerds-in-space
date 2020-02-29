@@ -22,7 +22,10 @@ struct pull_down_menu_item {
 #define PDM_TOOLTIP_DELAY (30) /* 1 second */
 
 struct pull_down_menu_column {
+	int title_width;
+	int title_x;
 	int width;
+	int menu_x;
 	int nrows;
 	struct pull_down_menu_item item[MAX_PULL_DOWN_ROWS_PER_COLUMN];
 };
@@ -41,8 +44,26 @@ struct pull_down_menu {
 	pull_down_menu_tooltip_drawing_function tooltip_draw;
 };
 
-static int pull_down_menu_inside_col(struct pull_down_menu *m, int x, int col,
-			int physical_x, int physical_y, int is_open)
+static int pull_down_menu_inside_title(struct pull_down_menu *m, int col,
+			int physical_x, int physical_y)
+{
+	int sx, sy;
+
+	sx = sng_pixelx_to_screenx(physical_x);
+	sy = sng_pixely_to_screeny(physical_y);
+
+	if (sx < m->col[col]->title_x)
+		return 0;
+	if (sx > m->col[col]->title_x + m->col[col]->title_width)
+		return 0;
+
+	if (sy >= 0 && sy < (font_lineheight[m->font] + 6))
+		return 1;
+	return 0;
+}
+
+static int pull_down_menu_inside_col(struct pull_down_menu *m, int col,
+			int physical_x, int physical_y)
 {
 	int limit;
 	int sx, sy;
@@ -50,14 +71,11 @@ static int pull_down_menu_inside_col(struct pull_down_menu *m, int x, int col,
 	sx = sng_pixelx_to_screenx(physical_x);
 	sy = sng_pixely_to_screeny(physical_y);
 
-	if (is_open)
-		limit = m->col[col]->nrows;
-	else
-		limit = 1;
+	limit = m->col[col]->nrows;
 
-	if (sx < x)
+	if (sx < m->col[col]->menu_x)
 		return 0;
-	if (sx > x + m->col[col]->width)
+	if (sx > m->col[col]->menu_x + m->col[col]->width)
 		return 0;
 
 	if (sy >= 0 && sy < limit * (font_lineheight[m->font] + 6))
@@ -67,31 +85,33 @@ static int pull_down_menu_inside_col(struct pull_down_menu *m, int x, int col,
 
 static int pull_down_menu_inside_internal(struct pull_down_menu *m, int physical_x, int physical_y, int lock)
 {
-	int i, x, start, end, inc;
+	int i, start, end, inc;
 
 	if (lock)
 		pthread_mutex_lock(&m->mutex);
 	if (m->gravity) {
-		x = m->screen_width;
 		start = m->ncols - 1;
 		end = -1;
 		inc = -1;
 	} else {
-		x = 0;
 		start = 0;
 		end = m->ncols;
 		inc = 1;
 	}
 	for (i = start; i != end; i += inc) {
-		if (m->gravity)
-			x -= m->col[i]->width;
-		if (pull_down_menu_inside_col(m, x, i, physical_x, physical_y, i == m->current_col)) {
+		if (pull_down_menu_inside_title(m, i, physical_x, physical_y)) {
+			if (lock)
+				pthread_mutex_unlock(&m->mutex);
+			m->current_col = i;
+			return 1;
+		}
+	}
+	if (m->current_col != -1) {
+		if (pull_down_menu_inside_col(m, m->current_col, physical_x, physical_y)) {
 			if (lock)
 				pthread_mutex_unlock(&m->mutex);
 			return 1;
 		}
-		if (!m->gravity)
-			x += m->col[i]->width;
 	}
 	if (lock)
 		pthread_mutex_unlock(&m->mutex);
@@ -105,39 +125,39 @@ int pull_down_menu_inside(struct pull_down_menu *m, int physical_x, int physical
 
 void pull_down_menu_update_mouse_pos(struct pull_down_menu *m, int physical_x, int physical_y)
 {
-	int i, x, sy, start, end, inc, new_col = -1, new_row = -1;
+	int i, sy, start, end, inc, new_row = -1;
+	int old_col = m->current_col;
+	int new_col = m->current_col;
 
 	m->current_physical_x = physical_x;
 	m->current_physical_y = physical_y;
 	if (m->gravity) {
-		x = m->screen_width;
 		start = m->ncols - 1;
 		end = -1;
 		inc = -1;
 	} else {
-		x = 0;
 		start = 0;
 		end = m->ncols;
 		inc = 1;
 	}
 	for (i = start; i != end; i += inc) {
-		if (m->gravity)
-			x -= m->col[i]->width;
-		if (pull_down_menu_inside_col(m, x, i, physical_x, physical_y, i == m->current_col)) {
+		if (pull_down_menu_inside_title(m, i, physical_x, physical_y)) {
 			new_col = i;
+			m->current_col = i;
 			break;
 		}
-		if (!m->gravity)
-			x += m->col[i]->width;
 	}
-	if (new_col >= 0 && new_col < m->ncols) {
+	if (m->current_col != -1) {
 		sy = sng_pixely_to_screeny(physical_y);
-		if (sy > 0 && sy < m->col[new_col]->nrows * (font_lineheight[m->font] + 6)) {
+		if (sy >= 0 && sy <= m->col[m->current_col]->nrows * (font_lineheight[m->font] + 6)) {
 			new_row = sy / (font_lineheight[m->font] + 6);
+		} else {
+			new_row = -1;
+			new_col = -1;
 		}
 	}
 	/* Adjust tooltip timer for the previous current row */
-	if (new_col == m->current_col && new_row == m->current_row) {
+	if (new_col == old_col && new_row == m->current_row) {
 		if (m->current_row >= 0 && m->current_col >= 0) {
 			/* Current item has not changed, decrement tooltip timer */
 			if (m->col[m->current_col]->item[m->current_row].tooltip_timer > 0)
@@ -179,6 +199,8 @@ static void update_menu_column_width(struct pull_down_menu_column *c, int font)
 		return;
 	for (i = 0; i < c->nrows; i++) {
 		sng_string_bounding_box(c->item[i].name, font, &x1, &y1, &x2, &y2);
+		if (i == 0)
+			c->title_width = 20 + fabsf(x2 - x1) + 10 + 20 * (c->item[i].checkbox_function != NULL);
 		if (fabsf(x2 - x1) + 10 + 20 * (c->item[i].checkbox_function != NULL) > c->width)
 			c->width = fabsf(x2 - x1) + 10 + 20 * (c->item[i].checkbox_function != NULL);
 	}
@@ -187,17 +209,48 @@ static void update_menu_column_width(struct pull_down_menu_column *c, int font)
 static void update_menu_widths(struct pull_down_menu *m)
 {
 	int i;
+	int title_x, menu_x;
+	int start, end, inc;
 
 	for (i = 0; i < m->ncols; i++)
 		update_menu_column_width(m->col[i], m->font);
+	/* Update menu column positions */
+	if (m->gravity) {
+		start = m->ncols - 1;
+		end = -1;
+		inc = -1;
+		title_x = m->screen_width;
+		menu_x = m->screen_width;
+	} else {
+		start = 0;
+		end = m->ncols;
+		inc = 1;
+		title_x = 0;
+		menu_x = 0;
+	}
+	for (i = start; i != end; i += inc) {
+		if (m->gravity) {
+			title_x = title_x + inc * m->col[i]->title_width;
+			menu_x = title_x;
+		}
+		if (m->screen_width - menu_x < m->col[i]->width)
+			menu_x = m->screen_width - m->col[i]->width;
+		m->col[i]->title_x = title_x;
+		m->col[i]->menu_x = menu_x;
+		if (!m->gravity) {
+			title_x = title_x + inc * m->col[i]->title_width;
+			menu_x = title_x;
+		}
+	}
 }
 
-static void draw_menu_col(struct pull_down_menu *m, int col, float x, float y, int current_row, int font, int is_open)
+static void draw_menu_col(struct pull_down_menu *m, int col, float y, int current_row, int font)
 {
 	int i, limit, cb, cbw;
 	struct pull_down_menu_column *c = m->col[col];
+	int x, width;
 
-	if (is_open)
+	if (col == m->current_col)
 		limit = c->nrows;
 	else
 		limit = 1;
@@ -211,14 +264,21 @@ static void draw_menu_col(struct pull_down_menu *m, int col, float x, float y, i
 			cb = 0;
 			cbw = 0;
 		}
+		if (i == 0) {
+			width = c->title_width;
+			x = c->title_x;
+		} else {
+			width = c->width;
+			x = c->menu_x;
+		}
 		sng_set_foreground_alpha(BLACK, m->alpha);
-		sng_current_draw_rectangle(1, x, y, c->width, font_lineheight[font] + 6);
+		sng_current_draw_rectangle(1, x, y, width, font_lineheight[font] + 6);
 		sng_set_foreground(m->color);
 		sng_current_draw_line(x, y, x, y + font_lineheight[font] + 6);
-		sng_current_draw_line(x + c->width, y, x + c->width, y + font_lineheight[font] + 6);
+		sng_current_draw_line(x + width, y, x + width, y + font_lineheight[font] + 6);
 		if (i == 0 || i == limit - 1)
 			sng_current_draw_line(x, y + font_lineheight[font] + 6,
-				x + c->width, y + font_lineheight[font] + 6);
+				x + width, y + font_lineheight[font] + 6);
 		if (cbw) {
 			float x1, y1, x2, y2;
 			x1 = x + 5;
@@ -233,11 +293,11 @@ static void draw_menu_col(struct pull_down_menu *m, int col, float x, float y, i
 		}
 		y = y + font_lineheight[font];
 		sng_abs_xy_draw_string(r->name, font, x + 4 + cbw, y - 2);
-		if (i == current_row && is_open)
+		if (i == current_row && col == m->current_col)
 			sng_abs_xy_draw_string(r->name, font, x + 5 + cbw, y - 1);
 		y = y + 6;
 		/* Reset tooltip delays for non-current items */
-		if ((i != current_row || !is_open) && r->tooltip)
+		if ((i != current_row || col != m->current_col) && r->tooltip)
 			r->tooltip_timer = PDM_TOOLTIP_DELAY;
 	}
 }
@@ -261,7 +321,7 @@ static void pull_down_menu_draw_current_tooltip(struct pull_down_menu *m)
 
 void pull_down_menu_draw(struct pull_down_menu *m)
 {
-	int i, x, start, end, inc;
+	int i, start, end, inc;
 
 	pthread_mutex_lock(&m->mutex);
 	update_menu_widths(m);
@@ -269,7 +329,6 @@ void pull_down_menu_draw(struct pull_down_menu *m)
 		pthread_mutex_unlock(&m->mutex);
 		return;
 	}
-	x = m->x;
 	if (m->gravity) {
 		start = m->ncols - 1;
 		end = -1;
@@ -279,14 +338,8 @@ void pull_down_menu_draw(struct pull_down_menu *m)
 		end = m->ncols;
 		inc = 1;
 	}
-
-	for (i = start; i != end; i += inc) {
-		if (m->gravity)
-			x -= m->col[i]->width;
-		draw_menu_col(m, i, x, m->y, m->current_row, m->font, m->current_col == i);
-		if (!m->gravity)
-			x += m->col[i]->width;
-	}
+	for (i = start; i != end; i += inc)
+		draw_menu_col(m, i, m->y, m->current_row, m->font);
 	pull_down_menu_draw_current_tooltip(m);
 	pthread_mutex_unlock(&m->mutex);
 }
