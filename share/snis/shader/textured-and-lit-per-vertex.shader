@@ -7,7 +7,7 @@
 	uniform mat4 u_MVMatrix;   // A constant representing the combined model/view matrix.
 	uniform mat3 u_NormalMatrix;
 	uniform vec3 u_LightPos;   // The position of the light in eye space.
-	uniform flaot u_Ambient;
+	uniform float u_Ambient;
 
 	attribute vec4 a_Position; // Per-vertex position information we will pass in.
 	attribute vec3 a_Normal;   // Per-vertex normal information we will pass in.
