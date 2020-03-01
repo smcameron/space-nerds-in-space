@@ -77,6 +77,8 @@
 	uniform samplerCube u_AlbedoTex;
 	uniform vec4 u_TintColor;
 	uniform vec3 u_LightPos;   // The position of the light in eye space.
+	uniform float u_Ambient;
+
 #if defined(USE_NORMAL_MAP)
 	uniform samplerCube u_NormalMapTex;
 #endif
@@ -118,10 +120,6 @@
 	}
 #endif
 
-#if !defined(AMBIENT)
-	#define AMBIENT 0.1
-#endif
-
 	void main()
 	{
 		/* Get a lighting direction vector from the light to the vertex. */
@@ -135,7 +133,7 @@
 
 #if defined(USE_ANNULUS_SHADOW)
 		float intersect_r_squared;
-		if (direct > AMBIENT && intersect_disc(u_AnnulusNormal, u_AnnulusCenter, u_AnnulusRadius.w /* r3^2 */,
+		if (direct > u_Ambient && intersect_disc(u_AnnulusNormal, u_AnnulusCenter, u_AnnulusRadius.w /* r3^2 */,
 				v_Position, light_dir, intersect_r_squared))
 		{
 			if (intersect_r_squared > u_AnnulusRadius.y /* r1^2 */ ) {
@@ -156,7 +154,7 @@
 		vec3 norm_sample = normalize(textureCube(u_NormalMapTex, v_TexCoord).xyz * 2.0 - 1.0);
 		vec3 pixel_normal = tbn * norm_sample;
 		float normal_map_shadow = max(0.0, dot(pixel_normal, light_dir));
-		float diffuse = max(shadow * normal_map_shadow, AMBIENT);
+		float diffuse = max(shadow * normal_map_shadow, u_Ambient);
 
 		/* If the normal is straight up, and the color is mostly blue, consider it water,
 		 * which then has a specular component.
@@ -193,7 +191,7 @@
 #endif
 #else
 		/* make diffuse light atleast ambient */
-		float diffuse = max(direct * shadow, AMBIENT);
+		float diffuse = max(direct * shadow, u_Ambient);
 #if defined(USE_SPECULAR)
 #endif
 #endif

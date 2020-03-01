@@ -211,6 +211,7 @@ static int red_alert_mode = 0;
 #define MAX_UPDATETIME_START_PAUSE 1.5
 #define MAX_UPDATETIME_INTERVAL 0.5
 static int echo_computer_to_comms = 1; /* tweakable */
+static float ambient_light = 0.05;
 
 static char *asset_dir;
 
@@ -9071,6 +9072,7 @@ static void show_weapons_camera_view(GtkWidget *w)
 				SCREEN_WIDTH, SCREEN_HEIGHT, angle_of_view);
 	set_window_offset(ecx, 0, 0);
 	set_lighting(ecx, SUNX, SUNY, SUNZ);
+	set_ambient_light(ecx, ambient_light);
 	calculate_camera_transform(ecx);
 
 	sng_set_foreground(GREEN);
@@ -9454,6 +9456,7 @@ static void show_mainscreen(GtkWidget *w)
 				SCREEN_WIDTH, SCREEN_HEIGHT, angle_of_view);
 	set_window_offset(ecx, 0, 0);
 	set_lighting(ecx, SUNX, SUNY, SUNZ);
+	set_ambient_light(ecx, ambient_light);
 	calculate_camera_transform(ecx);
 
 	sng_set_foreground(GREEN);
@@ -17605,6 +17608,8 @@ static struct tweakable_var_descriptor client_tweak[] = {
 		&dejitter_science_details, 'i', 0.0, 0.0, 0.0, 0, 1, 1 },
 	{ "ECHO_COMPUTER_TO_COMMS", "0 or 1, true or false",
 		&echo_computer_to_comms, 'i', 0.0, 0.0, 0.0, 0, 1, 1 },
+	{ "AMBIENT_LIGHT", "0.0 to 1.1 - AMBIENT LIGHT",
+		&ambient_light, 'f', 0.0, 1.0, 0.05, 0, 0, 0 },
 	{ NULL, NULL, NULL, '\0', 0.0, 0.0, 0.0, 0, 0, 0 },
 };
 

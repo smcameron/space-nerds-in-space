@@ -7,14 +7,11 @@
 	uniform mat4 u_MVMatrix;   // A constant representing the combined model/view matrix.
 	uniform mat3 u_NormalMatrix;
 	uniform vec3 u_LightPos;   // The position of the light in eye space.
+	uniform flaot u_Ambient;
 
 	attribute vec4 a_Position; // Per-vertex position information we will pass in.
 	attribute vec3 a_Normal;   // Per-vertex normal information we will pass in.
 	attribute vec2 a_TexCoord; // Per-vertex texture coord we will pass in.
-
-#if !defined(AMBIENT)
-#define AMBIENT 0.1
-#endif
 
 	void main()
 	{
@@ -29,7 +26,7 @@
 
 		// Calculate the dot product of the light vector and vertex normal. If the normal and light vector are
 		// pointing in the same direction then it will get max illumination.
-		float diffuse = max(AMBIENT, dot(normal, light_dir));
+		float diffuse = max(u_Ambient, dot(normal, light_dir));
 
 		// Multiply the color by the illumination level. It will be interpolated across the triangle.
 		v_LightColor = vec3(diffuse);

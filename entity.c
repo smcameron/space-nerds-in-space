@@ -1246,6 +1246,11 @@ void set_lighting(struct entity_context *cx, double x, double y, double z)
 	cx->light.m[3] = 1;
 }
 
+void set_ambient_light(struct entity_context *cx, float ambient)
+{
+	cx->ambient = ambient;
+}
+
 struct mesh *entity_get_mesh(struct entity *e)
 {
 	return e->m;

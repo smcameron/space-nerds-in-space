@@ -21,10 +21,6 @@
 		Jeremy Van Grinsven
 */
 
-#if !defined(AMBIENT)
-#define AMBIENT 0.1
-#endif
-
 
 #if defined(INCLUDE_VS)
 	varying vec3 v_Position;

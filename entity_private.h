@@ -93,6 +93,7 @@ struct entity_context {
 	float fakestars_radius;
 	struct mat41 light;
 	float window_offset_x, window_offset_y;
+	float ambient;
 #ifdef WITH_ILDA_SUPPORT
 	int framenumber;
 	FILE *f;

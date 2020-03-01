@@ -7,10 +7,6 @@ varying vec3 v_Position;       // Interpolated position for this fragment.
 varying vec3 v_Color;          // This is the color from the vertex shader interpolated across the triangle per fragment
 varying vec3 v_Normal;         // Interpolated normal for this fragment.
 
-#if !defined(AMBIENT)
-#define AMBIENT 0.01
-#endif
-
 float map(in float x, float min1, float max1, float min2, float max2)
 {
 	return min2 + (x - min1) * (max2 - min2) / (max1 - min1);

@@ -25,10 +25,8 @@
 #include "opengl_cap.h"
 
 #define OPENGL_VERSION_STRING "#version 120\n"
-#define AMBIENT_LIGHT_DEFINE "#define AMBIENT 0.05\n"
 #define UNIVERSAL_SHADER_HEADER \
-	OPENGL_VERSION_STRING \
-	AMBIENT_LIGHT_DEFINE
+	OPENGL_VERSION_STRING
 
 #define TEX_RELOAD_DELAY 1.0
 #define CUBEMAP_TEX_RELOAD_DELAY 10.0
@@ -621,6 +619,7 @@ struct graph_dev_gl_single_color_lit_shader {
 	GLint light_pos_id;
 	GLint color_id;
 	GLint in_shade_id;
+	GLint ambient_id;
 };
 
 struct graph_dev_gl_atmosphere_shader {
@@ -737,6 +736,7 @@ struct graph_dev_gl_textured_shader {
 	GLint light_pos_id;
 	GLint specular_power_id;
 	GLint specular_intensity_id;
+	GLint ambient_id;
 
 	GLint shadow_sphere_id;
 
@@ -1293,6 +1293,7 @@ struct raster_texture_params {
 	float ring_outer_radius;
 	float specular_power;
 	float specular_intensity;
+	float ambient;
 	float emit_intensity;
 	float invert;
 	float in_shade;
@@ -1337,6 +1338,9 @@ static void graph_dev_raster_texture(struct raster_texture_params *p)
 
 	if (shader->normalmap_cubemap_id >= 0)
 		BIND_TEXTURE(GL_TEXTURE3, GL_TEXTURE_CUBE_MAP, p->normalmap_id);
+
+	if (shader->ambient_id >= 0)
+		glUniform1f(shader->ambient_id, p->ambient);
 
 	if (shader->normalmap_id >= 0)
 		BIND_TEXTURE(GL_TEXTURE3, GL_TEXTURE_2D, p->normalmap_id);
@@ -1497,7 +1501,7 @@ static void graph_dev_raster_texture(struct raster_texture_params *p)
 
 static void graph_dev_raster_single_color_lit(const struct mat44 *mat_mvp, const struct mat44 *mat_mv,
 	const struct mat33 *mat_normal, struct mesh *m, struct sng_color *triangle_color, union vec3 *eye_light_pos,
-	float in_shade)
+	float in_shade, float ambient)
 {
 	enable_3d_viewport();
 
@@ -1521,6 +1525,7 @@ static void graph_dev_raster_single_color_lit(const struct mat44 *mat_mvp, const
 		triangle_color->green, triangle_color->blue);
 	glUniform3f(single_color_lit_shader.light_pos_id, eye_light_pos->v.x, eye_light_pos->v.y, eye_light_pos->v.z);
 	glUniform1f(single_color_lit_shader.in_shade_id, in_shade);
+	glUniform1f(single_color_lit_shader.ambient_id, ambient);
 
 	glEnableVertexAttribArray(single_color_lit_shader.vertex_position_id);
 	glBindBuffer(GL_ARRAY_BUFFER, ptr->vertex_buffer);
@@ -2065,6 +2070,7 @@ static void graph_dev_draw_nebula(const struct mat44 *mat_mvp, const struct mat4
 		rtp.texture_number = mt->texture_id[i];
 		rtp.do_cullface = 0;
 		rtp.do_blend = 1;
+		rtp.ambient = 0.1;
 
 		graph_dev_raster_texture(&rtp);
 
@@ -2562,6 +2568,7 @@ static void graph_dev_raster_triangle_mesh(struct entity_context *cx, struct ent
 				rtp.in_shade = e->in_shade;
 				rtp.water_color = &water_color;
 				rtp.sun_color = &sun_color;
+				rtp.ambient = cx->ambient;
 
 				graph_dev_raster_texture(&rtp);
 			} else {
@@ -2572,7 +2579,7 @@ static void graph_dev_raster_triangle_mesh(struct entity_context *cx, struct ent
 				else
 					graph_dev_raster_single_color_lit(rtp.mat_mvp, rtp.mat_mv,
 						rtp.mat_normal, e->m, &triangle_color, eye_light_pos,
-						e->in_shade);
+						e->in_shade, cx->ambient);
 			}
 		}
 	} else if (outline_triangle) {
@@ -3040,6 +3047,7 @@ static void setup_single_color_lit_shader(struct graph_dev_gl_single_color_lit_s
 	shader->vertex_normal_id = glGetAttribLocation(shader->program_id, "a_Normal");
 	shader->color_id = glGetUniformLocation(shader->program_id, "u_Color");
 	shader->in_shade_id = glGetUniformLocation(shader->program_id, "u_in_shade");
+	shader->ambient_id = glGetUniformLocation(shader->program_id, "u_Ambient");
 }
 
 static void setup_atmosphere_shader(struct graph_dev_gl_atmosphere_shader *shader, int with_ring_shadow)
@@ -3138,6 +3146,7 @@ static void setup_textured_shader(const char *basename, const char *defines,
 	shader->texture_coord_id = glGetAttribLocation(shader->program_id, "a_TexCoord");
 
 	shader->shadow_sphere_id = glGetUniformLocation(shader->program_id, "u_Sphere");
+	shader->ambient_id = glGetUniformLocation(shader->program_id, "u_Ambient");
 }
 
 static void setup_textured_cubemap_shader(const char *basename, int use_normal_map,
@@ -3216,6 +3225,7 @@ static void setup_textured_cubemap_shader(const char *basename, int use_normal_m
 	shader->shadow_annulus_normal_id = glGetUniformLocation(shader->program_id, "u_AnnulusNormal");
 	shader->shadow_annulus_radius_id = glGetUniformLocation(shader->program_id, "u_AnnulusRadius");
 	shader->shadow_annulus_tint_color_id = glGetUniformLocation(shader->program_id, "u_AnnulusTintColor");
+	shader->ambient_id = glGetUniformLocation(shader->program_id, "u_Ambient");
 }
 
 static void setup_filled_wireframe_shader(struct graph_dev_gl_filled_wireframe_shader *shader)

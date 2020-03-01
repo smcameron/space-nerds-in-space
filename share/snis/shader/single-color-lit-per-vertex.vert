@@ -6,6 +6,7 @@ uniform vec3 u_Color;      // Per-object color information we will pass in.
 uniform float u_in_shade;  // 1.0 means in full shade.  0.0 means not in shade.
 			   // This is used for macro shading of whole objects
 			   // e.g. a ship shaded by a planet
+uniform float u_Ambient;   // Ambient light, 0.1 is ok value
 
 uniform vec3 u_LightPos;   // The position of the light in eye space.
 
@@ -13,10 +14,6 @@ attribute vec4 a_Position; // Per-vertex position information we will pass in.
 attribute vec3 a_Normal;   // Per-vertex normal information we will pass in.
 
 varying vec3 v_Color;      // This will be passed into the fragment shader.
-
-#if !defined(AMBIENT)
-#define AMBIENT 0.1
-#endif
 
 void main()                // The entry point for our vertex shader.
 {
@@ -37,7 +34,7 @@ void main()                // The entry point for our vertex shader.
 	/* dot = (dot + 1.0) / 2.0; */
 
 	// ambient
-	float diffuse = max(dot, AMBIENT);
+	float diffuse = max(dot, u_Ambient);
 
 	// Multiply the color by the illumination level. It will be interpolated across the triangle.
 	v_Color = u_Color * diffuse;
