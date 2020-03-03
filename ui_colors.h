@@ -160,6 +160,7 @@ struct ui_color_map {
 	struct ui_color_entry sci_ball_beam;
 	struct ui_color_entry sci_ball_default_blip;
 	struct ui_color_entry sci_ball_ship;
+	struct ui_color_entry sci_ball_player;
 	struct ui_color_entry sci_ball_asteroid;
 	struct ui_color_entry sci_ball_derelict;
 	struct ui_color_entry sci_ball_planet;
@@ -358,6 +359,7 @@ struct ui_color_map_accessor {
 	.u.map.sci_ball_beam		= { CYAN_FIXUP,		"sci-ball-beam" },
 	.u.map.sci_ball_default_blip	= { GREEN_FIXUP,	"sci-ball-default-blip" },
 	.u.map.sci_ball_ship		= { LIMEGREEN,		"sci-ball-ship" },
+	.u.map.sci_ball_player		= { DARKGREEN,		"sci-ball-ship" },
 	.u.map.sci_ball_asteroid	= { AMBER,		"sci-ball-asteroid" },
 	.u.map.sci_ball_derelict	= { ORANGERED,		"sci-ball-derelict" },
 	.u.map.sci_ball_planet		= { BLUE_FIXUP,		"sci-ball-planet" },

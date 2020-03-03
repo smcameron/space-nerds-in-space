@@ -10935,6 +10935,46 @@ static void draw_all_the_3d_science_guys(GtkWidget *w, struct snis_entity *o, do
 
 	add_scanner_beam_orange_slice(sciballecx, o, screen_radius, UI_COLOR(sci_ball_beam));
 
+	/* Draw player ship and axes */
+	{
+		union vec3 vx = { { 1.0, 0.0, 0.0 } };
+		union vec3 vy = { { 0.0, 1.0, 0.0 } };
+		union vec3 vz = { { 0.0, 0.0, 1.0 } };
+		float sx, sy;
+		struct entity *e;
+		quat_rot_vec_self(&vx, &o->orientation);
+		quat_rot_vec_self(&vy, &o->orientation);
+		quat_rot_vec_self(&vz, &o->orientation);
+		vec3_mul_self(&vx, screen_radius * 0.8);
+		vec3_mul_self(&vy, screen_radius * 0.8);
+		vec3_mul_self(&vz, screen_radius * 0.8);
+		sng_set_foreground(UI_COLOR(sci_ball_player));
+		snis_draw_3d_line(w, gc, sciballecx, o->x - vx.v.x, o->y - vx.v.y, o->z - vx.v.z,
+							o->x + vx.v.x, o->y + vx.v.y, o->z + vx.v.z);
+		snis_draw_3d_line(w, gc, sciballecx, o->x - vy.v.x, o->y - vy.v.y, o->z - vy.v.z,
+							o->x + vy.v.x, o->y + vy.v.y, o->z + vy.v.z);
+		snis_draw_3d_line(w, gc, sciballecx, o->x - vz.v.x, o->y - vz.v.y, o->z - vz.v.z,
+							o->x + vz.v.x, o->y + vz.v.y, o->z + vz.v.z);
+
+		e = add_entity(sciballecx, ship_mesh_map[o->tsd.ship.shiptype], o->x, o->y, o->z,
+				UI_COLOR(sci_ball_player));
+		update_entity_orientation(e, &o->orientation);
+		update_entity_scale(e, screen_radius * 0.01);
+
+		transform_point(sciballecx, o->x - vx.v.x, o->y - vx.v.y, o->z - vx.v.z, &sx, &sy);
+		sng_abs_xy_draw_string("AFT", PICO_FONT, sx, sy);
+		transform_point(sciballecx, o->x + vx.v.x, o->y + vx.v.y, o->z + vx.v.z, &sx, &sy);
+		sng_abs_xy_draw_string("FORE", PICO_FONT, sx, sy);
+		transform_point(sciballecx, o->x - vy.v.x, o->y - vy.v.y, o->z - vy.v.z, &sx, &sy);
+		sng_abs_xy_draw_string("DOWN", PICO_FONT, sx, sy);
+		transform_point(sciballecx, o->x + vy.v.x, o->y + vy.v.y, o->z + vy.v.z, &sx, &sy);
+		sng_abs_xy_draw_string("UP", PICO_FONT, sx, sy);
+		transform_point(sciballecx, o->x - vz.v.x, o->y - vz.v.y, o->z - vz.v.z, &sx, &sy);
+		sng_abs_xy_draw_string("PORT", PICO_FONT, sx, sy);
+		transform_point(sciballecx, o->x + vz.v.x, o->y + vz.v.y, o->z + vz.v.z, &sx, &sy);
+		sng_abs_xy_draw_string("STBD", PICO_FONT, sx, sy);
+	}
+
 	cx = SCIENCE_SCOPE_CX;
 	cy = SCIENCE_SCOPE_CY;
 	r = SCIENCE_SCOPE_R;
