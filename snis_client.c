@@ -13757,6 +13757,19 @@ static void preset_button_pressed(void *button_ptr_ptr)
 	}
 }
 
+static void preset_button_long_pressed(void *preset)
+{
+	int selection;
+
+	if (!preset)
+		return;
+	selection = (struct button **) preset - &eng_ui.preset_buttons[0];
+	if (selection < 0 || selection >= ARRAYSIZE(eng_ui.preset_buttons))
+		return;
+	transmit_save_preset(selection);
+	preset_button_pressed(preset);
+}
+
 static void preset_save_button_pressed(void *x)
 {
 	transmit_save_preset(eng_ui.selected_preset);
@@ -13830,6 +13843,8 @@ static void init_engineering_ui(void)
 		eu->preset_buttons[i] = snis_button_init(x, y, -1, -1, preset_txt, color, NANO_FONT,
 						preset_button_pressed, &eu->preset_buttons[i]);
 		snis_button_set_sound(eu->preset_buttons[i], UISND12);
+		snis_button_set_long_press_function(eu->preset_buttons[i],
+						preset_button_long_pressed, &eu->preset_buttons[i]);
 		x += snis_button_get_width(eu->preset_buttons[i]) + txx(5);
 	}
 	eu->preset_save_button = snis_button_init(snis_button_get_x(eu->preset_buttons[ENG_PRESET_NUMBER-1]) +
