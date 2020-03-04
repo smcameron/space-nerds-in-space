@@ -26,8 +26,15 @@ GLOBAL void snis_button_draw(struct button *b);
 /* Triggers the button if x and y are inside the button and the button is enabled */
 GLOBAL int snis_button_button_release(struct button *b, int x, int y);
 
+/* Note, the button's actions are not triggered on press, but on release.
+ * The press function is used to start a timer to know if a long press occurs
+ */
+GLOBAL int snis_button_button_press(struct button *b, int x, int y);
+
 /* Calls the button's callback function button_release() and plays any associated sound */
 GLOBAL int snis_button_trigger_button(struct button *b);
+/* Calls the button's callback function long_press_button_release() and plays any associated sound */
+GLOBAL int snis_button_trigger_long_press(struct button *b);
 
 GLOBAL void snis_button_set_color(struct button *b, int color); /* Sets the color of the button */
 GLOBAL int snis_button_get_color(struct button *b); /* Returns the color of the button */
@@ -39,6 +46,9 @@ GLOBAL int snis_button_get_color(struct button *b); /* Returns the color of the 
  */
 GLOBAL void snis_button_set_checkbox_function(struct button *b,
 		int (*checkbox_function)(void *), void *cookie);
+GLOBAL void snis_button_set_long_press_function(struct button *b,
+		button_function long_press, void *cookie);
+
 GLOBAL void snis_button_set_label(struct button *b, char *label); /* Sets button label */
 GLOBAL int snis_button_get_x(struct button *b); /* These 4 functions get x, y, width, height */
 GLOBAL int snis_button_get_y(struct button *b);

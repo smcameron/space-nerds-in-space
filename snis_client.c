@@ -376,6 +376,8 @@ static struct ui_element_list *uiobjs = NULL;
 static ui_element_drawing_function ui_slider_draw = (ui_element_drawing_function) snis_slider_draw;
 static ui_element_button_release_function ui_slider_button_release =
 		(ui_element_button_release_function) snis_slider_button_press;
+static ui_element_button_release_function ui_button_button_press =
+		(ui_element_button_release_function) snis_button_button_press;
 
 static ui_element_drawing_function ui_button_draw = (ui_element_drawing_function) snis_button_draw;
 static ui_element_drawing_function ui_strip_chart_draw =
@@ -11643,6 +11645,7 @@ static void ui_add_button(struct button *b, int active_displaymode, char *toolti
 	uie = ui_element_init(b, ui_button_draw, ui_button_button_release, ui_button_inside,
 						active_displaymode, &displaymode);
 	ui_element_set_tooltip(uie, tooltip);
+	ui_element_set_button_press_function(uie, ui_button_button_press);
 	ui_element_list_add_element(&uiobjs, uie); 
 }
 
@@ -21217,6 +21220,7 @@ static int main_da_button_press(GtkWidget *w, GdkEventButton *event,
 		default:
 			break;
 	}
+	ui_element_list_button_press(uiobjs, event->x, event->y);
 	return TRUE;
 }
 

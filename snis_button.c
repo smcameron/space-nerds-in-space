@@ -20,9 +20,12 @@ struct button {
 	int color;
 	int disabled_color;
 	int font;
+	int long_press_timer;
 	int (*checkbox_function)(void *);
 	void *checkbox_cookie;
-	button_function button_release;
+	void *long_press_cookie;
+	button_function button_release; /* Called when the user presses then releases the button. */
+	button_function long_press_button_release; /* Called when the user presses holds then release button */
 	int button_sound;
 	void *cookie;
 	unsigned char button_press_feedback_counter;
@@ -67,9 +70,11 @@ struct button *snis_button_init(int x, int y, int width, int height,
 	b->cookie = cookie;
 	b->checkbox_function = NULL;
 	b->checkbox_cookie = NULL;
+	b->long_press_button_release = NULL;
 	b->button_press_feedback_counter = 0;
 	b->button_sound = default_button_sound;
 	b->enabled = 1;
+	b->long_press_timer = 0;
 	if (b->width < 0 || b->height < 0)
 		snis_button_compute_dimensions(b);
 	return b;
@@ -149,6 +154,8 @@ void snis_button_draw(struct button *b)
 	}
 	if (b->button_press_feedback_counter)
 		b->button_press_feedback_counter--;
+	if (b->long_press_timer > 0)
+		b->long_press_timer--;
 }
 
 int snis_button_trigger_button(struct button *b)
@@ -157,6 +164,18 @@ int snis_button_trigger_button(struct button *b)
 		wwviaudio_add_sound(b->button_sound);
 	if (b->button_release)
 		b->button_release(b->cookie);
+	b->long_press_timer = 0;
+	b->button_press_feedback_counter = 5;
+	return 1;
+}
+
+int snis_button_trigger_long_press(struct button *b)
+{
+	if (b->button_sound != -1)
+		wwviaudio_add_sound(b->button_sound);
+	if (b->long_press_button_release)
+		b->long_press_button_release(b->long_press_cookie);
+	b->long_press_timer = 0;
 	b->button_press_feedback_counter = 5;
 	return 1;
 }
@@ -167,7 +186,20 @@ int snis_button_button_release(struct button *b, int x, int y)
 		return 0;
 	if (!b->enabled)
 		return 0;
-	return snis_button_trigger_button(b);
+	if (b->long_press_timer == 0 && b->long_press_button_release)
+		return snis_button_trigger_long_press(b);
+	else
+		return snis_button_trigger_button(b);
+}
+
+int snis_button_button_press(struct button *b, int x, int y)
+{
+	if (!snis_button_inside(b, x, y))
+		return 0;
+	if (!b->enabled)
+		return 0;
+	b->long_press_timer = 30; /* assuming button is drawn at 30Hz, 1 second */
+	return 1;
 }
 
 void snis_button_set_color(struct button *b, int color)
@@ -230,6 +262,12 @@ void snis_button_set_checkbox_function(struct button *b, int (*checkbox_function
 {
 	b->checkbox_function = checkbox_function;
 	b->checkbox_cookie = cookie;
+}
+
+void snis_button_set_long_press_function(struct button *b, button_function long_press_function, void *cookie)
+{
+	b->long_press_button_release = long_press_function;
+	b->long_press_cookie = cookie;
 }
 
 /* This is meant for use as a checkbox function for checkboxes that modify/reflect a simple int */

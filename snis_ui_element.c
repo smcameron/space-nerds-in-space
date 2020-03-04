@@ -12,6 +12,7 @@ struct ui_element {
 	volatile int *displaymode;
 	ui_element_drawing_function draw;
 	ui_element_button_release_function button_release;
+	ui_element_button_release_function button_press;
 	ui_element_set_focus_function set_focus;
 	int has_focus;
 	ui_element_keypress_function keypress_fn, keyrelease_fn;
@@ -41,6 +42,7 @@ struct ui_element *ui_element_init(void *element,
 	e->element = element;
 	e->draw = draw;
 	e->button_release = button_release;
+	e->button_press = NULL;
 	e->inside_fn = inside_fn;
 	e->active_displaymode = active_displaymode;
 	e->displaymode = displaymode;
@@ -196,6 +198,39 @@ void ui_element_list_button_release(struct ui_element_list *list, int x, int y)
 	}
 }
 
+/* Note button press doesn't set the UI element focus, release does that.
+ * The main purpose of press is to start a timer in the button so it can
+ * distinguish a long-press from a normal press.
+ */
+void ui_element_list_button_press(struct ui_element_list *list, int x, int y)
+{
+	int hit;
+	struct ui_element *e;
+	struct ui_element_list *i;
+
+	for (i = list; i != NULL; i = i->next) {
+		e = i->element;
+		if (e->button_press && e->active_displaymode == *e->displaymode && !e->hidden) {
+			/* If we have the inside_fn, use it so that we can set the focus before
+			 * triggering the button action in case the button action wants to set the
+			 * focus, otherwise, if we set the focus afterwards, it will undo the
+			 * button action's focus setting.
+			 */
+			if (e->inside_fn) {
+				hit = e->inside_fn(e->element, x, y);
+				if (hit) {
+					(void) e->button_press(e->element, x, y);
+					break;
+				}
+			} else {
+				hit = e->button_press(e->element, x, y);
+				if (hit)
+					break;
+			}
+		}
+	}
+}
+
 void ui_element_set_focus_callback(struct ui_element *e,
 					ui_element_set_focus_function set_focus)
 {
@@ -342,4 +377,9 @@ void ui_set_tooltip_drawing_function(ui_tooltip_drawing_function f)
 void ui_set_update_mouse_pos_callback(struct ui_element *e, ui_update_mouse_pos_function f)
 {
 	e->update_mouse_pos = f;
+}
+
+void ui_element_set_button_press_function(struct ui_element *e, ui_element_button_release_function button_press)
+{
+	e->button_press = button_press;
 }

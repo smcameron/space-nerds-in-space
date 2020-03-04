@@ -33,6 +33,7 @@ GLOBAL void ui_element_list_free(struct ui_element_list *list);
 GLOBAL void ui_element_list_draw(struct ui_element_list *list);
 GLOBAL void ui_element_list_maybe_draw_tooltips(struct ui_element_list *list, int mousex, int mousey);
 GLOBAL void ui_element_list_button_release(struct ui_element_list *list, int x, int y);
+GLOBAL void ui_element_list_button_press(struct ui_element_list *list, int x, int y);
 GLOBAL void ui_element_set_focus_callback(struct ui_element *e,
 						ui_element_set_focus_function set_focus);
 GLOBAL void ui_set_focus(struct ui_element_list *list, struct ui_element *e, int has_focus);
@@ -50,6 +51,7 @@ GLOBAL void ui_element_unhide(struct ui_element *e);
 GLOBAL void ui_element_set_displaymode(struct ui_element *e, int displaymode);
 GLOBAL struct ui_element *widget_to_ui_element(struct ui_element_list *list, void *widget);
 GLOBAL void ui_set_tooltip_drawing_function(ui_tooltip_drawing_function f);
+GLOBAL void ui_element_set_button_press_function(struct ui_element *e, ui_element_button_release_function button_press);
 
 #undef GLOBAL
 #endif
