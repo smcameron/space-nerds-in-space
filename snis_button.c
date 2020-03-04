@@ -22,7 +22,7 @@ struct button {
 	int font;
 	int (*checkbox_function)(void *);
 	void *checkbox_cookie;
-	button_function bf;
+	button_function button_release;
 	int button_sound;
 	void *cookie;
 	unsigned char button_press_feedback_counter;
@@ -48,7 +48,7 @@ static void snis_button_compute_dimensions(struct button *b)
 }
 
 struct button *snis_button_init(int x, int y, int width, int height,
-			char *label, int color, int font, button_function bf,
+			char *label, int color, int font, button_function button_release,
 			void *cookie)
 {
 	struct button *b;
@@ -63,7 +63,7 @@ struct button *snis_button_init(int x, int y, int width, int height,
 	b->color = color;
 	b->disabled_color = color;
 	b->font = font;
-	b->bf = bf;
+	b->button_release = button_release;
 	b->cookie = cookie;
 	b->checkbox_function = NULL;
 	b->checkbox_cookie = NULL;
@@ -155,13 +155,13 @@ int snis_button_trigger_button(struct button *b)
 {
 	if (b->button_sound != -1)
 		wwviaudio_add_sound(b->button_sound);
-	if (b->bf)
-		b->bf(b->cookie);
+	if (b->button_release)
+		b->button_release(b->cookie);
 	b->button_press_feedback_counter = 5;
 	return 1;
 }
 
-int snis_button_button_press(struct button *b, int x, int y)
+int snis_button_button_release(struct button *b, int x, int y)
 {
 	if (!snis_button_inside(b, x, y))
 		return 0;

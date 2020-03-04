@@ -374,8 +374,8 @@ static struct replacement_asset replacement_assets;
 
 static struct ui_element_list *uiobjs = NULL;
 static ui_element_drawing_function ui_slider_draw = (ui_element_drawing_function) snis_slider_draw;
-static ui_element_button_press_function ui_slider_button_press =
-		(ui_element_button_press_function) snis_slider_button_press;
+static ui_element_button_release_function ui_slider_button_release =
+		(ui_element_button_release_function) snis_slider_button_press;
 
 static ui_element_drawing_function ui_button_draw = (ui_element_drawing_function) snis_button_draw;
 static ui_element_drawing_function ui_strip_chart_draw =
@@ -383,10 +383,10 @@ static ui_element_drawing_function ui_strip_chart_draw =
 static ui_element_drawing_function ui_scaling_strip_chart_draw =
 		(ui_element_drawing_function) snis_scaling_strip_chart_draw;
 static ui_element_drawing_function ui_label_draw = (ui_element_drawing_function) snis_label_draw;
-static ui_element_button_press_function ui_button_button_press =
-		(ui_element_button_press_function) snis_button_button_press;
-static ui_element_button_press_function ui_pull_down_menu_button_press =
-	(ui_element_button_press_function) pull_down_menu_button_press;
+static ui_element_button_release_function ui_button_button_release =
+		(ui_element_button_release_function) snis_button_button_release;
+static ui_element_button_release_function ui_pull_down_menu_button_release =
+	(ui_element_button_release_function) pull_down_menu_button_press;
 static ui_element_drawing_function ui_gauge_draw = (ui_element_drawing_function) gauge_draw;
 static ui_element_drawing_function ui_text_window_draw = (ui_element_drawing_function) text_window_draw;
 static ui_element_drawing_function ui_text_input_draw = (ui_element_drawing_function)
@@ -395,11 +395,11 @@ static ui_element_drawing_function ui_pull_down_menu_draw =
 		(ui_element_drawing_function) pull_down_menu_draw;
 static ui_element_set_focus_function ui_text_input_box_set_focus = (ui_element_set_focus_function)
 					snis_text_input_box_set_focus;
-static ui_element_button_press_function ui_text_input_button_press = (ui_element_button_press_function)
+static ui_element_button_release_function ui_text_input_button_release = (ui_element_button_release_function)
 					snis_text_input_box_button_press;
 static ui_element_keypress_function ui_text_input_keypress = (ui_element_keypress_function)
 					snis_text_input_box_keypress;
-static ui_element_button_press_function ui_text_window_button_press = (ui_element_button_press_function)
+static ui_element_button_release_function ui_text_window_button_release = (ui_element_button_release_function)
 					text_window_button_press;
 static ui_element_inside_function ui_button_inside = (ui_element_inside_function)
 					snis_button_inside;
@@ -11630,7 +11630,7 @@ static void ui_add_slider(struct slider *s, int active_displaymode, char *toolti
 {
 	struct ui_element *uie;
 
-	uie = ui_element_init(s, ui_slider_draw, ui_slider_button_press, ui_slider_inside,
+	uie = ui_element_init(s, ui_slider_draw, ui_slider_button_release, ui_slider_inside,
 						active_displaymode, &displaymode);
 	ui_element_set_tooltip(uie, tooltip);
 	ui_element_list_add_element(&uiobjs, uie); 
@@ -11640,7 +11640,7 @@ static void ui_add_button(struct button *b, int active_displaymode, char *toolti
 {
 	struct ui_element *uie;
 
-	uie = ui_element_init(b, ui_button_draw, ui_button_button_press, ui_button_inside,
+	uie = ui_element_init(b, ui_button_draw, ui_button_button_release, ui_button_inside,
 						active_displaymode, &displaymode);
 	ui_element_set_tooltip(uie, tooltip);
 	ui_element_list_add_element(&uiobjs, uie); 
@@ -11650,7 +11650,7 @@ static void ui_add_pull_down_menu(struct pull_down_menu *pdm, int active_display
 {
 	struct ui_element *uie;
 
-	uie = ui_element_init(pdm, ui_pull_down_menu_draw, ui_pull_down_menu_button_press,
+	uie = ui_element_init(pdm, ui_pull_down_menu_draw, ui_pull_down_menu_button_release,
 				ui_pull_down_menu_inside, active_display_mode, &displaymode);
 	ui_element_set_tooltip(uie, "");
 	ui_set_update_mouse_pos_callback(uie, (ui_update_mouse_pos_function)
@@ -11718,7 +11718,7 @@ static void ui_add_text_window(struct text_window *tw, int active_displaymode)
 {
 	struct ui_element *uie;
 
-	uie = ui_element_init(tw, ui_text_window_draw, ui_text_window_button_press, NULL,
+	uie = ui_element_init(tw, ui_text_window_draw, ui_text_window_button_release, NULL,
 						active_displaymode, &displaymode);
 	ui_element_list_add_element(&uiobjs, uie); 
 }
@@ -11727,7 +11727,7 @@ static void ui_add_text_input_box(struct snis_text_input_box *t, int active_disp
 {
 	struct ui_element *uie;
 
-	uie = ui_element_init(t, ui_text_input_draw, ui_text_input_button_press, NULL,
+	uie = ui_element_init(t, ui_text_input_draw, ui_text_input_button_release, NULL,
 						active_displaymode, &displaymode);
 	ui_element_set_focus_callback(uie, ui_text_input_box_set_focus);
 	ui_element_get_keystrokes(uie, ui_text_input_keypress, NULL);
@@ -21277,7 +21277,7 @@ static int main_da_button_release(GtkWidget *w, GdkEventButton *event,
 	default:
 		break;
 	}
-	ui_element_list_button_press(uiobjs, event->x, event->y);
+	ui_element_list_button_release(uiobjs, event->x, event->y);
 	return TRUE;
 }
 

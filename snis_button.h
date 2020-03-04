@@ -14,19 +14,19 @@ struct button;
 /* Returns a new button with
  * position at x, y, and the given width and height, with the given label,
  * color, and font.
- * When the button is pressed, the button_function bf() will be called and
+ * When the button is released, the button_function button_release() will be called and
  * passed the cooking pointer value.
  */
 GLOBAL struct button *snis_button_init(int x, int y, int width, int height, char *label,
-			int color, int font, button_function bf, void *cookie);
+			int color, int font, button_function button_release, void *cookie);
 
 /* Draws the specified button */
 GLOBAL void snis_button_draw(struct button *b);
 
 /* Triggers the button if x and y are inside the button and the button is enabled */
-GLOBAL int snis_button_button_press(struct button *b, int x, int y);
+GLOBAL int snis_button_button_release(struct button *b, int x, int y);
 
-/* Calls the button's callback function bf() and plays any associated sound */
+/* Calls the button's callback function button_release() and plays any associated sound */
 GLOBAL int snis_button_trigger_button(struct button *b);
 
 GLOBAL void snis_button_set_color(struct button *b, int color); /* Sets the color of the button */
