@@ -13789,7 +13789,7 @@ static void init_engineering_ui(void)
 	const int coolantsliderlen = 0.1875 * SCREEN_WIDTH;
 	const int s2x = 0.4375 * SCREEN_WIDTH; /* x start of 2nd bank of sliders */
 	struct engineering_ui *eu = &eng_ui;
-	char preset_txt[80];
+	char preset_txt[100];
 
 	r = SCREEN_WIDTH / 16;
 	eng_ui.gauge_radius = r;
@@ -13996,7 +13996,9 @@ static void init_engineering_ui(void)
 				"REMAINING UNTIL DANGEROUSLY LOW");
 	ui_add_button(eu->damcon_button, dm, "SWITCH TO THE DAMAGE CONTROL SCREEN");
 	for (i = 0; i < ENG_PRESET_NUMBER; ++i) {
-		snprintf(preset_txt, 30, "SELECT ENGINEERING PRESET %d", i + 1);
+		snprintf(preset_txt, sizeof(preset_txt), "SELECT ENGINEERING PRESET %d\n"
+			"PRESS AND HOLD FOR 1 SECOND TO SAVE\n"
+			"CURRENT VALUES IN THIS PRESET", i + 1);
 		ui_add_button(eu->preset_buttons[i], dm, preset_txt);
 	}
 	ui_add_button(eu->preset_save_button, dm, "SAVE CURRENT VALUES IN THE ACTIVE PRESET");
