@@ -15961,8 +15961,7 @@ static void npc_menu_item_travel_advisory(struct npc_menu_item *item,
 {
 	uint32_t plid, ch = botstate->channel;
 	struct snis_entity *sb, *pl = NULL;
-	char *name;
-	int i;
+	int i, j;
 	uint16_t contraband = -1;
 
 	if (ch == (uint32_t) -1)
@@ -15979,29 +15978,48 @@ static void npc_menu_item_travel_advisory(struct npc_menu_item *item,
 		i = lookup_by_id(plid);
 		if (i >= 0) {
 			pl = &go[i];
-			name = pl->sdata.name;
 			contraband = pl->tsd.planet.contraband;
-		} else {
-			name = sb->sdata.name;
 		}
-	} else {
-		name = sb->sdata.name;
 	}
 
 	if (pl) {
-		/* TODO: fill in all this crap */
-		send_comms_packet(sb, npcname, ch, " TRAVEL ADVISORY FOR %s", name);
+		struct planetary_atmosphere_profile *atm =
+			planetary_atmosphere_by_index(pl->tsd.planet.atmosphere_type);
+		send_comms_packet(sb, npcname, ch, " TRAVEL ADVISORY FOR %s", pl->sdata.name);
 		send_comms_packet(sb, npcname, ch, "-----------------------------------------------------");
 		send_comms_packet(sb, npcname, ch, " WELCOME TO STARBASE %s, IN ORBIT", sb->sdata.name);
-		send_comms_packet(sb, npcname, ch, " AROUND THE BEAUTIFUL PLANET %s.", name);
+		send_comms_packet(sb, npcname, ch, " AROUND THE BEAUTIFUL PLANET %s,", pl->sdata.name);
+		send_comms_packet(sb, npcname, ch, " UNDER %s CONTROL.", faction_name(sb->sdata.faction));
 		send_comms_packet(sb, npcname, ch, "");
-		send_comms_packet(sb, npcname, ch, " PLANETARY SURFACE TEMP: -15 - 103");
-		send_comms_packet(sb, npcname, ch, " PLANETARY SURFACE WIND SPEED: 0 - 203");
+		send_comms_packet(sb, npcname, ch, " PLANETARY SURFACE TEMP: %.0f K", atm->temperature);
+		send_comms_packet(sb, npcname, ch, " PLANETARY SURFACE PRESSURE: %.0f Pa", atm->pressure);
+		send_comms_packet(sb, npcname, ch, "");
+
+		i = nl_find_nearest_object_of_type(pl->id, OBJTYPE_PLANET);
+		if (i >= 0) {
+			send_comms_packet(sb, npcname, ch, " NEAREST PLANET: %s", go[i].sdata.name);
+			send_comms_packet(sb, npcname, ch, " ");
+		}
+		/* If the nearest planet to the nearest warpgate is our planet, advertise it */
+		i = nl_find_nearest_object_of_type(pl->id, OBJTYPE_WARPGATE);
+		if (i >= 0) {
+			j = nl_find_nearest_object_of_type(go[i].id, OBJTYPE_PLANET);
+			if ((j >= 0) && (go[j].id == pl->id)) {
+				send_comms_packet(sb, npcname, ch, " WARPGATE AVAILABLE: %s", go[i].sdata.name);
+				send_comms_packet(sb, npcname, ch, " ");
+			}
+		}
 	} else {
-		send_comms_packet(sb, npcname, ch, " TRAVEL ADVISORY FOR STARBASE %s", name);
+		send_comms_packet(sb, npcname, ch, " TRAVEL ADVISORY FOR STARBASE %s", sb->sdata.name);
 		send_comms_packet(sb, npcname, ch, "-----------------------------------------------------");
-		send_comms_packet(sb, npcname, ch, " WELCOME TO STARBASE %s, IN DEEP SPACE", sb->sdata.name);
+		send_comms_packet(sb, npcname, ch, " WELCOME TO STARBASE %s, IN DEEP SPACE,", sb->sdata.name);
+		send_comms_packet(sb, npcname, ch, " UNDER %s CONTROL.", faction_name(sb->sdata.faction));
 		send_comms_packet(sb, npcname, ch, "");
+		i = nl_find_nearest_object_of_type(sb->id, OBJTYPE_PLANET);
+		if (i >= 0) {
+			send_comms_packet(sb, npcname, ch, " NEAREST PLANET: %s", go[i].sdata.name);
+			send_comms_packet(sb, npcname, ch, " ");
+		}
 	}
 	send_comms_packet(sb, npcname, ch, " SPACE WEATHER ADVISORY: ALL CLEAR");
 	send_comms_packet(sb, npcname, ch, "");
