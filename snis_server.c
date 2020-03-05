@@ -25310,6 +25310,8 @@ static int nl_find_nearest_object_of_type(uint32_t id, int objtype)
 			continue;
 		if (!go[i].alive)
 			continue;
+		if (go[i].id == id)
+			continue;
 		x = go[i].x - o->x;
 		y = go[i].y - o->y;
 		z = go[i].z - o->z;
