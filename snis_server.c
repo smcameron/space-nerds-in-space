@@ -25114,6 +25114,7 @@ static void init_synonyms(void)
 	snis_nl_add_synonym("anticlockwise", "counterclockwise");
 	snis_nl_add_synonym("star base", "starbase");
 	snis_nl_add_synonym("warp gate", "gate");
+	snis_nl_add_synonym("warpgate", "gate");
 	snis_nl_add_synonym("far away is it", "far");
 	snis_nl_add_synonym("far away is", "far");
 	snis_nl_add_synonym("far away", "far");
