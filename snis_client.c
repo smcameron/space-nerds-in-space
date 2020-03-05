@@ -16004,6 +16004,7 @@ static void draw_science_data(GtkWidget *w, struct snis_entity *ship, struct sni
 	static double lastvel = 0.0;
 	static double closing_rate = 0.0;
 	static double dejittered_closing_rate = 0.0;
+	static double last_closing_rate = 0.0;
 	static int eta_mins = 0;
 	static int eta_secs = 0;
 	static double range = 0.0;
@@ -16181,7 +16182,7 @@ static void draw_science_data(GtkWidget *w, struct snis_entity *ship, struct sni
 	if (o || waypoint_index != (uint32_t) -1) {
 		range = dist3d(dx, dy, dz);
 		if (update_display)
-			dejittered_range = range;
+			dejittered_range = (range + last_range / 2); /* avg of last 2 for some hysteresis */
 		snprintf(buffer, sizeof(buffer), "RANGE: %8.2lf", dejittered_range);
 	} else {
 		snprintf(buffer, sizeof(buffer), "RANGE:");
@@ -16190,8 +16191,10 @@ static void draw_science_data(GtkWidget *w, struct snis_entity *ship, struct sni
 	sng_abs_xy_draw_string(buffer, TINY_FONT, x, y);
 
 	if (o || waypoint_index != (uint32_t) -1) {
-		closing_rate = frame_rate_hz * (last_range - range);
+		/* closing rate is avg of last 2 for hysteresis */
+		closing_rate = (frame_rate_hz * (last_range - range) + last_closing_rate) / 2.0;
 		last_range = range;
+		last_closing_rate = closing_rate;
 		if (update_display)
 			dejittered_closing_rate = closing_rate;
 		snprintf(buffer, sizeof(buffer), "CLOSING RATE: %0.2lf", dejittered_closing_rate);
@@ -16201,10 +16204,15 @@ static void draw_science_data(GtkWidget *w, struct snis_entity *ship, struct sni
 	y += yinc;
 	sng_abs_xy_draw_string(buffer, TINY_FONT, x, y);
 
-	if ((o || waypoint_index != (uint32_t) -1) && closing_rate > 0.001) {
+	/* Mininum closing rate of 2.0 is somewhat arbitrary, but very low values
+	 * will cause strange ETA results seen e.g. while orbiting a planet with
+	 * science targeting the planet. If you're not closing > 2.0 we assume
+	 * you're not actually trying to get there.
+	 */
+	if ((o || waypoint_index != (uint32_t) -1) && dejittered_closing_rate > 2.0) {
 		if (update_display) {
-			eta_mins = (int) (round(range) / round(closing_rate)) / 60;
-			eta_secs = (int) (round(range) / round(closing_rate)) % 60;
+			eta_mins = (int) (round(dejittered_range) / round(dejittered_closing_rate)) / 60;
+			eta_secs = (int) (round(dejittered_range) / round(dejittered_closing_rate)) % 60;
 		}
 		snprintf(buffer, sizeof(buffer), "ETA: %i MINS %i SECS", eta_mins, eta_secs);
 	} else {
