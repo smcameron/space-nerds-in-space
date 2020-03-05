@@ -15990,6 +15990,7 @@ static void npc_menu_item_travel_advisory(struct npc_menu_item *item,
 		send_comms_packet(sb, npcname, ch, " WELCOME TO STARBASE %s, IN ORBIT", sb->sdata.name);
 		send_comms_packet(sb, npcname, ch, " AROUND THE BEAUTIFUL PLANET %s,", pl->sdata.name);
 		send_comms_packet(sb, npcname, ch, " UNDER %s CONTROL.", faction_name(sb->sdata.faction));
+		send_comms_packet(sb, npcname, ch, " COORDINATES: %.0lf, %.0lf, %.0lf", sb->x, sb->y, sb->z);
 		send_comms_packet(sb, npcname, ch, "");
 		send_comms_packet(sb, npcname, ch, " PLANETARY SURFACE TEMP: %.0f K", atm->temperature);
 		send_comms_packet(sb, npcname, ch, " PLANETARY SURFACE PRESSURE: %.0f Pa", atm->pressure);
@@ -15997,7 +15998,7 @@ static void npc_menu_item_travel_advisory(struct npc_menu_item *item,
 
 		i = nl_find_nearest_object_of_type(pl->id, OBJTYPE_PLANET);
 		if (i >= 0) {
-			send_comms_packet(sb, npcname, ch, " NEAREST PLANET: %s", go[i].sdata.name);
+			send_comms_packet(sb, npcname, ch, " NEXT NEAREST PLANET: %s", go[i].sdata.name);
 			send_comms_packet(sb, npcname, ch, " ");
 		}
 		/* If the nearest planet to the nearest warpgate is our planet, advertise it */
@@ -16014,10 +16015,11 @@ static void npc_menu_item_travel_advisory(struct npc_menu_item *item,
 		send_comms_packet(sb, npcname, ch, "-----------------------------------------------------");
 		send_comms_packet(sb, npcname, ch, " WELCOME TO STARBASE %s, IN DEEP SPACE,", sb->sdata.name);
 		send_comms_packet(sb, npcname, ch, " UNDER %s CONTROL.", faction_name(sb->sdata.faction));
+		send_comms_packet(sb, npcname, ch, " COORDINATES: %.0lf, %.0lf, %.0lf", sb->x, sb->y, sb->z);
 		send_comms_packet(sb, npcname, ch, "");
 		i = nl_find_nearest_object_of_type(sb->id, OBJTYPE_PLANET);
 		if (i >= 0) {
-			send_comms_packet(sb, npcname, ch, " NEAREST PLANET: %s", go[i].sdata.name);
+			send_comms_packet(sb, npcname, ch, " NEXT NEAREST PLANET: %s", go[i].sdata.name);
 			send_comms_packet(sb, npcname, ch, " ");
 		}
 	}
