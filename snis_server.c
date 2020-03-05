@@ -16100,7 +16100,10 @@ static void warp_gate_ticket_buying_npc_bot(struct snis_entity *o, int bridge,
 		 * nservers <= 1 rather than <= 0 because if there's only 1 server,
 		 * then we must already be in it, and there's no place else for us to go.
 		 */
-		send_comms_packet(sb, name, ch, "NO WARP-GATE TICKETS AVAILABLE\n");
+		send_comms_packet(sb, name, ch, "SORRY, NO WARP-GATE TICKETS AVAILABLE\n");
+		if (gameserver)
+			free(gameserver);
+		bridgelist[bridge].npcbot.special_bot = NULL; /* deactivate warpgate ticket bot */
 		return;
 	}
 	send_comms_packet(sb, name, ch, "WARP-GATE TICKETS:\n");
