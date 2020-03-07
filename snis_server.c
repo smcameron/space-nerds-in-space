@@ -13035,6 +13035,7 @@ static int add_planet(double x, double y, double z, float radius, uint8_t securi
 	go[i].tsd.planet.atmosphere_g = solarsystem_assets->atmosphere_color[sst].g;
 	go[i].tsd.planet.atmosphere_b = solarsystem_assets->atmosphere_color[sst].b;
 	go[i].tsd.planet.atmosphere_scale = 1.02;
+	go[i].tsd.planet.atmosphere_brightness = solarsystem_assets->atmosphere_brightness[sst];
 
 	return i;
 }
@@ -23518,7 +23519,7 @@ static void send_update_planet_packet(struct game_client *c,
 	else
 		ring = 1.0;
 
-	pb_queue_to_client(c, snis_opcode_pkt("bwwSSSSwbbbbhbbbSbhbbwb", OPCODE_UPDATE_PLANET, o->id, o->timestamp,
+	pb_queue_to_client(c, snis_opcode_pkt("bwwSSSSwbbbbhbbbSSbhbbwb", OPCODE_UPDATE_PLANET, o->id, o->timestamp,
 					o->x, (int32_t) UNIVERSE_DIM,
 					o->y, (int32_t) UNIVERSE_DIM,
 					o->z, (int32_t) UNIVERSE_DIM,
@@ -23533,6 +23534,7 @@ static void send_update_planet_packet(struct game_client *c,
 					o->tsd.planet.atmosphere_g,
 					o->tsd.planet.atmosphere_b,
 					o->tsd.planet.atmosphere_scale, (int32_t) UNIVERSE_DIM,
+					o->tsd.planet.atmosphere_brightness, (int32_t) UNIVERSE_DIM,
 					o->tsd.planet.has_atmosphere,
 					o->tsd.planet.atmosphere_type,
 					o->tsd.planet.solarsystem_planet_type,

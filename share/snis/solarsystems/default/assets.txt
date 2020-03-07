@@ -3,11 +3,17 @@ random seed: 31415927
 
 planet texture count: 6
 planet texture: ../../textures/planet-texture0- no-normal-map gas-giant
+atmosphere_brightness: 0.5
 planet texture: ../../textures/planet-texture1- no-normal-map gas-giant
+atmosphere_brightness: 0.5
 planet texture: ../../textures/planet-texture2- no-normal-map gas-giant
+atmosphere_brightness: 0.5
 planet texture: ../../textures/planet-texture3- no-normal-map gas-giant
+atmosphere_brightness: 0.5
 planet texture: ../../textures/planet-texture4- no-normal-map earthlike
+atmosphere_brightness: 1.0
 planet texture: ../../textures/planet-texture4- no-normal-map earthlike
+atmosphere_brightness: 1.0
 
 sun texture: ../../textures/sun.png
 

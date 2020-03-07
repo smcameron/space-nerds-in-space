@@ -131,7 +131,7 @@ struct material_textured_shield {
 };
 
 struct material_atmosphere {
-	float r, g, b, scale, *brightness;
+	float r, g, b, scale, *brightness, brightness_modifier;
 	struct material *ring_material;
 };
 

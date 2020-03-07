@@ -29,7 +29,7 @@
 #include "shape_collision.h"
 
 #define DEFAULT_SOLAR_SYSTEM "default"
-#define SNIS_PROTOCOL_VERSION "SNIS044"
+#define SNIS_PROTOCOL_VERSION "SNIS045"
 #define COMMON_MTWIST_SEED 97872
 /* dimensions of the "known" universe */
 #define XKNOWN_DIM 600000.0
@@ -873,6 +873,7 @@ struct planet_data {
 	uint8_t atmosphere_r, atmosphere_g, atmosphere_b;
 	uint16_t atmosphere_type;
 	double atmosphere_scale;
+	double atmosphere_brightness;
 	uint16_t contraband;
 	struct entity *atmosphere;
 	struct material atm_material;

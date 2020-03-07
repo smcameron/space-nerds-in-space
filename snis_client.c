@@ -508,7 +508,7 @@ static struct material spacemonster_tentacle_material;
 static struct material spacemonster_material;
 static struct material warpgate_material;
 static struct material docking_port_material;
-static float atmosphere_brightness = 0.5; /* tweakable */
+static float atmosphere_brightness = 1.0; /* tweakable */
 #define NPLANET_MATERIALS 256
 static int planetary_ring_texture_id = -1;
 static struct material planetary_ring_material[NPLANETARY_RING_MATERIALS];
@@ -2173,6 +2173,7 @@ static int update_planet(uint32_t id, uint32_t timestamp, double x, double y, do
 				uint8_t atm_g,
 				uint8_t atm_b,
 				double atm_scale,
+				double atm_brightness,
 				uint8_t has_atmosphere,
 				uint16_t atmosphere_type,
 				uint8_t solarsystem_planet_type,
@@ -2237,7 +2238,9 @@ static int update_planet(uint32_t id, uint32_t timestamp, double x, double y, do
 				go[i].tsd.planet.atm_material.atmosphere.g = (float) atm_g / 255.0f;
 				go[i].tsd.planet.atm_material.atmosphere.b = (float) atm_b / 255.0f;
 				go[i].tsd.planet.atm_material.atmosphere.scale = (float) atm_scale;
+				go[i].tsd.planet.atm_material.atmosphere.scale = (float) atm_scale;
 				go[i].tsd.planet.atm_material.atmosphere.brightness = &atmosphere_brightness;
+				go[i].tsd.planet.atm_material.atmosphere.brightness_modifier = atm_brightness;
 				if (hasring)
 					go[i].tsd.planet.atm_material.atmosphere.ring_material =
 						planet_material[m].textured_planet.ring_material;
@@ -2267,6 +2270,8 @@ static int update_planet(uint32_t id, uint32_t timestamp, double x, double y, do
 	go[i].tsd.planet.atmosphere_g = atm_g;
 	go[i].tsd.planet.atmosphere_b = atm_b;
 	go[i].tsd.planet.atmosphere_scale = atm_scale;
+	go[i].tsd.planet.atmosphere_brightness = atm_brightness;
+	go[i].tsd.planet.atm_material.atmosphere.brightness_modifier = atm_brightness;
 	go[i].tsd.planet.has_atmosphere = has_atmosphere;
 	go[i].tsd.planet.atmosphere_type = atmosphere_type;
 	go[i].tsd.planet.solarsystem_planet_type = solarsystem_planet_type;
@@ -7216,7 +7221,7 @@ static int process_update_planet_packet(void)
 {
 	unsigned char buffer[100];
 	uint32_t id, timestamp;
-	double dr, dx, dy, dz, atm_scale;
+	double dr, dx, dy, dz, atm_scale, atm_brightness;
 	uint8_t government, tech_level, economy, security, atm_r, atm_g, atm_b;
 	uint8_t has_atmosphere, solarsystem_planet_type, build_unit_type;
 	uint8_t ring_selector;
@@ -7227,13 +7232,14 @@ static int process_update_planet_packet(void)
 	int rc;
 
 	assert(sizeof(buffer) > sizeof(struct update_asteroid_packet) - sizeof(uint8_t));
-	rc = read_and_unpack_buffer(buffer, "wwSSSSwbbbbhbbbSbhbbwb", &id, &timestamp,
+	rc = read_and_unpack_buffer(buffer, "wwSSSSwbbbbhbbbSSbhbbwb", &id, &timestamp,
 			&dx, (int32_t) UNIVERSE_DIM,
 			&dy,(int32_t) UNIVERSE_DIM,
 			&dz, (int32_t) UNIVERSE_DIM,
 			&dr, (int32_t) UNIVERSE_DIM,
 			&dseed, &government, &tech_level, &economy, &security,
 			&contraband, &atm_r, &atm_b, &atm_g, &atm_scale, (int32_t) UNIVERSE_DIM,
+			&atm_brightness, (int32_t) UNIVERSE_DIM,
 			&has_atmosphere, &atmosphere_type, &solarsystem_planet_type, &ring_selector,
 			&time_left_to_build, &build_unit_type);
 	if (rc != 0)
@@ -7245,7 +7251,7 @@ static int process_update_planet_packet(void)
 	pthread_mutex_lock(&universe_mutex);
 	rc = update_planet(id, timestamp, dx, dy, dz, dr, government, tech_level,
 				economy, dseed, hasring, security, contraband,
-				atm_r, atm_b, atm_g, atm_scale, has_atmosphere,
+				atm_r, atm_b, atm_g, atm_scale, atm_brightness, has_atmosphere,
 				atmosphere_type, solarsystem_planet_type, ring_selector,
 				time_left_to_build, build_unit_type);
 	pthread_mutex_unlock(&universe_mutex);
@@ -17667,7 +17673,7 @@ static struct tweakable_var_descriptor client_tweak[] = {
 	{ "IMPULSE_CAMERA_SHAKE", "0.0 TO 2.0 - AMOUNT OF CAMERA SHAKE AT HIGH IMPULSE POWER",
 		&impulse_camera_shake, 'f', 0.0, 2.0, 1.0, 0, 0, 0 },
 	{ "ATMOSPHERE_BRIGHTNESS", "0.0 TO 1.0, DEFAULT 0.5 - BRIGHTNESS OF ATMOSPHERES",
-		&atmosphere_brightness, 'f', 0.0, 1.0, 0.5, 0, 0, 0 },
+		&atmosphere_brightness, 'f', 0.0, 1.0, 1.0, 0, 0, 0 },
 	{ "SUPPRESS_HYPERSPACE_NOISE", "0 OR 1 - SUPPRESS THE NOISE ON TERMINALS DURING HYPERSPACE",
 		&suppress_hyperspace_noise, 'i', 0.0, 0.0, 0.0, 0, 1, 0 },
 	{ "IDIOT_LIGHT_THRESHOLD", "0 - 255 - POWER LEVEL BELOW WHICH IDIOT LIGHTS COME ON",

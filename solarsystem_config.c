@@ -75,8 +75,11 @@ struct solarsystem_asset_spec *solarsystem_asset_spec_read(char *filename)
 	char *field, *l, line[1000];
 	int rc, ln = 0;
 	int planet_textures_read = 0;
+	int atmosphere_brightnesses_read = 0;
+	int atmosphere_brightnesses_expected = 0;
 	int planet_textures_expected = 0;
 	int got_position = 0;
+	int i;
 
 	f = fopen(filename, "r");
 	if (!f) {
@@ -117,6 +120,7 @@ struct solarsystem_asset_spec *solarsystem_asset_spec_read(char *filename)
 				a->spec_warnings++;
 			}
 			planet_textures_expected = value;
+			atmosphere_brightnesses_expected = value;
 			if (a->planet_texture != NULL || a->nplanet_textures != 0) {
 				fprintf(stderr, "%s:line %d: multiple planet texture counts encountered, ignoring\n",
 						filename, ln);
@@ -131,6 +135,10 @@ struct solarsystem_asset_spec *solarsystem_asset_spec_read(char *filename)
 			memset(a->planet_type, 0, sizeof(a->planet_type[0]) * PLANET_TYPE_COUNT_SHALL_BE);
 			a->atmosphere_color = malloc(sizeof(a->atmosphere_color[0]) * PLANET_TYPE_COUNT_SHALL_BE);
 			a->water_color = malloc(sizeof(a->atmosphere_color[0]) * PLANET_TYPE_COUNT_SHALL_BE);
+			a->atmosphere_brightness = malloc(sizeof(a->atmosphere_brightness[0]) *
+								PLANET_TYPE_COUNT_SHALL_BE);
+			for (i = 0; i < PLANET_TYPE_COUNT_SHALL_BE; i++)
+				a->atmosphere_brightness[i] = 0.5;  /* Default */
 			continue;
 		} else if (has_prefix("planet texture:", line)) {
 			if (a->nplanet_textures == 0) {
@@ -206,6 +214,32 @@ struct solarsystem_asset_spec *solarsystem_asset_spec_read(char *filename)
 				"%s:line %d: expected planet texture prefix, [ planet normal map prefix ], and planet type\n",
 				filename, ln);
 			goto bad_line;
+		} else if (has_prefix("atmosphere brightness:", line)) {
+			float value;
+			if (a->nplanet_textures == 0) {
+				fprintf(stderr,
+					"%s:line %d: found atmosphere brightness before planet texture count.\n",
+						filename, ln);
+				goto bad_line;
+			}
+			if (atmosphere_brightnesses_read >= a->nplanet_textures) {
+				fprintf(stderr, "%s:line %d: Too many atmosphere brightnesses\n", filename, ln);
+				goto bad_line;
+			}
+			field = get_field(line);
+			rc = sscanf(field, "%f", &value);
+			if (rc != 1) {
+				fprintf(stderr, "%s:line %d: bad atmosphere brightness specification.\n", filename, ln);
+				goto bad_line;
+			}
+			if (value < 0.0 || value > 1.0) {
+				fprintf(stderr, "%s:line %d: atmosphere brightness must be between 0.0 and 1.0.\n",
+					filename, ln);
+				goto bad_line;
+			}
+			a->atmosphere_brightness[atmosphere_brightnesses_read] = value;
+			atmosphere_brightnesses_read++;
+			continue;
 		} else if (has_prefix("water color:", line)) {
 			unsigned char r, g, b;
 			rc = sscanf(line, "water color: %hhu, %hhu, %hhu", &r, &g, &b);
@@ -295,8 +329,14 @@ bad_line:
 		a->spec_errors++;
 	}
 
+	if (atmosphere_brightnesses_read < atmosphere_brightnesses_expected) {
+		fprintf(stderr, "%s: expected %d atmosphere brightnesses, but only found %d.\n",
+			filename, atmosphere_brightnesses_expected, atmosphere_brightnesses_read);
+		a->spec_errors++;
+	}
+
 	if (planet_textures_read < PLANET_TYPE_COUNT_SHALL_BE) {
-		int i, n;
+		int n;
 		fprintf(stderr, "solar system asset file is short %d planet types, padding with duplicates\n",
 			PLANET_TYPE_COUNT_SHALL_BE - planet_textures_read);
 		a->spec_warnings++;

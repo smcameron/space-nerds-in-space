@@ -34,6 +34,7 @@ struct solarsystem_asset_spec {
 	char **planet_texture;
 	char **planet_normalmap;
 	char **planet_type;
+	float *atmosphere_brightness; /* array of atmosphere brightnesses for planets between 0 and 1 */
 	struct atmosphere_color_rgb *atmosphere_color;
 	struct atmosphere_color_rgb *water_color; /* for use in specular calculations */
 	struct atmosphere_color_rgb sun_color; /* for use in specular calculations */
