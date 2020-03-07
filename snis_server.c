@@ -15964,6 +15964,7 @@ static void npc_menu_item_travel_advisory(struct npc_menu_item *item,
 	struct snis_entity *sb, *pl = NULL;
 	int i, j;
 	uint16_t contraband = -1;
+	char buffer[100];
 
 	if (ch == (uint32_t) -1)
 		return;
@@ -15989,7 +15990,12 @@ static void npc_menu_item_travel_advisory(struct npc_menu_item *item,
 		send_comms_packet(sb, npcname, ch, " TRAVEL ADVISORY FOR %s", pl->sdata.name);
 		send_comms_packet(sb, npcname, ch, "-----------------------------------------------------");
 		send_comms_packet(sb, npcname, ch, " WELCOME TO STARBASE %s, IN ORBIT", sb->sdata.name);
-		send_comms_packet(sb, npcname, ch, " AROUND THE BEAUTIFUL PLANET %s,", pl->sdata.name);
+		snprintf(buffer, sizeof(buffer), " AROUND THE BEAUTIFUL %s%s PLANET %s,",
+					pl->tsd.planet.ring ? "RINGED " : "",
+					solarsystem_assets->planet_type[pl->tsd.planet.solarsystem_planet_type],
+					pl->sdata.name);
+		uppercase(buffer);
+		send_comms_packet(sb, npcname, ch, buffer);
 		send_comms_packet(sb, npcname, ch, " UNDER %s CONTROL.", faction_name(sb->sdata.faction));
 		send_comms_packet(sb, npcname, ch, " COORDINATES: %.0lf, %.0lf, %.0lf", sb->x, sb->y, sb->z);
 		send_comms_packet(sb, npcname, ch, "");
