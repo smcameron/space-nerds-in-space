@@ -21157,6 +21157,7 @@ static int process_save_engineering_preset(struct game_client *c)
 	bd->engineering_preset[preset][16] = go[i].tsd.ship.coolant_data.tractor.r2;
 	bd->engineering_preset[preset][17] = go[i].tsd.ship.coolant_data.lifesupport.r2;
 
+	queue_add_text_to_speech(c, "Engineering settings saved.");
 	pthread_mutex_unlock(&universe_mutex);
 	return 0;
 }
