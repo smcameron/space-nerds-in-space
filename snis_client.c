@@ -7423,13 +7423,23 @@ static int update_chaff(uint32_t id, uint32_t timestamp, double x, double y, dou
 		if (i < 0)
 			return i;
 		o = &go[i];
+		o->tsd.chaff.time_left = CHAFF_LIFETIME;
 		o->entity = add_entity(ecx, particle_mesh, x, y, z, PARTICLE_COLOR);
 		if (o->entity) {
 			update_entity_material(o->entity, &chaff_material);
 			update_entity_scale(o->entity, 5.0);
 		}
+	} else {
+		o = &go[i];
 	}
 	update_generic_object(i, timestamp, x, y, z, 0, 0, 0, NULL, 1);
+
+	/* Make the chaff fade out when it gets near the end of its life */
+	if (o->tsd.chaff.time_left > 0)
+		o->tsd.chaff.time_left--;
+	if (o->tsd.chaff.time_left < 6 && o->tsd.chaff.time_left > 0)
+		update_entity_scale(o->entity, 5.0 / (6.0 - o->tsd.chaff.time_left));
+
 	return 0;
 }
 

@@ -717,9 +717,10 @@ struct explosion_data {
 
 #define CHAFF_COUNT (10)
 #define CHAFF_SPEED (50.0)
+#define CHAFF_LIFETIME (30) /* 10ths of secs */
 #define CHAFF_CONFUSE_CHANCE (0.10) /* 10 percent chance evaluated at 10Hz per chaff */
 struct chaff_data {
-	uint16_t unused;
+	uint16_t time_left;
 };
 
 struct spark_data {

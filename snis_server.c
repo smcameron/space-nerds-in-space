@@ -12268,7 +12268,7 @@ static int add_chaff(double x, double y, double z)
 	go[i].vy = vy;
 	go[i].vz = vz;
 	go[i].move = chaff_move;
-	go[i].alive = 30;
+	go[i].alive = CHAFF_LIFETIME;
 	return i;
 }
 
