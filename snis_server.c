@@ -9537,7 +9537,16 @@ static void player_move(struct snis_entity *o)
 	}
 	if (o->tsd.ship.fuel < FUEL_CONSUMPTION_UNIT * 30 * 60 &&
 		(universe_timestamp % (20 * 5)) == 15) {
-		snis_queue_add_sound(FUEL_LEVELS_CRITICAL, ROLE_SOUNDSERVER, o->id);
+
+		/* Note: The other engineering alarms are client-side.  This means when you silence
+		 * them and then later all the alarm conditions go away (no alarms are firing) the
+		 * alarms are auto-unsilenced.  We can't do that easily here with the low fuel alarm
+		 * since it is server side, so we just don't.  This means that if other alarms are
+		 * firing, you silence alarms, and then those other alarm conditions stop firing, then
+		 * the low-fuel alarm will come back on. Oh well, not that big a deal.
+		 */
+		if (!o->tsd.ship.alarms_silenced)
+			snis_queue_add_sound(FUEL_LEVELS_CRITICAL, ROLE_SOUNDSERVER, o->id);
 
 		/* auto-refuel in safe mode */
 		if (safe_mode) {
