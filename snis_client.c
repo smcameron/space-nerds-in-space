@@ -9954,14 +9954,12 @@ static void draw_3d_laserbeam(GtkWidget *w, GdkGC *gc, struct entity_context *cx
 	}
 }
 
-static void __attribute__((unused)) snis_draw_3d_dotted_line(GtkWidget *w, GdkGC *gc,
-				struct entity_context *cx,
+static void snis_draw_3d_dotted_line(struct entity_context *cx,
 				float x1, float y1, float z1, float x2, float y2, float z2 )
 {
 	float sx1, sy1, sx2, sy2;
-	if (!transform_line(cx, x1, y1, z1, x2, y2, z2, &sx1, &sy1, &sx2, &sy2)) {
+	if (!transform_line(cx, x1, y1, z1, x2, y2, z2, &sx1, &sy1, &sx2, &sy2))
 		sng_draw_dotted_line(sx1, sy1, sx2, sy2);
-	}
 }
 
 static void snis_draw_3d_line(GtkWidget *w, GdkGC *gc, struct entity_context *cx,
@@ -18924,6 +18922,29 @@ static void show_demon_2d(GtkWidget *w)
 	demon_cmd_help(w);
 }
 
+static void demon_draw_ship_patrol_route(int npoints, union vec3 p[])
+{
+	int i, j, a, b;
+	union vec3 v1, v2;
+
+	for (i = 0; i < npoints; i++) {
+		j = (i + 1) % npoints;
+		vec3_sub(&v1, &p[j], &p[i]);
+		v2 = v1;
+		a = timer & 0xf;
+		b = (timer + 1) & 0xf;
+		vec3_mul_self(&v1, a / 16.0);
+		vec3_mul_self(&v2, b / 16.0);
+		vec3_add_self(&v1, &p[i]);
+		vec3_add_self(&v2, &p[i]);
+		snis_draw_3d_dotted_line(instrumentecx,
+			p[i].v.x, p[i].v.y, p[i].v.z, p[j].v.x, p[j].v.y, p[j].v.z);
+		if (a < b)
+			snis_draw_3d_line(NULL, NULL, instrumentecx,
+				v1.v.x, v1.v.y, v1.v.z, v2.v.x, v2.v.y, v2.v.z);
+	}
+}
+
 static void show_demon_3d(GtkWidget *w)
 {
 	char buffer[100];
@@ -19271,6 +19292,11 @@ static void show_demon_3d(GtkWidget *w)
 			oidstrx += txx(10);
 			oidstry -= txy(20);
 			sng_abs_xy_draw_string(oidstr, PICO_FONT, oidstrx, oidstry);
+
+			sng_set_foreground(RED);
+			if (o->type == OBJTYPE_SHIP2)
+				demon_draw_ship_patrol_route(o->tsd.ship.ai[1].u.patrol.npoints,
+						o->tsd.ship.ai[1].u.patrol.p);
 		}
 	}
 
