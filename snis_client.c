@@ -3462,6 +3462,9 @@ static void request_demon_thrust_packet(uint32_t oid, uint8_t thrust)
 }
 
 static struct demon_ui {
+	/* (ux1, uy1), (ux2, uy2) are the universe (x,z) coordinates that correspond to
+	 * the upper left and lower right corners of the screen.
+	 */
 	float ux1, uy1, ux2, uy2;
 	double selectedx, selectedz;
 	double press_mousex, press_mousey;
@@ -3535,12 +3538,12 @@ static struct demon_ui {
 static void home_demon_camera(void)
 {
 	union vec3 right = { { 1.0f, 0.0f, 0.0f } };
-	const float homex = XKNOWN_DIM / 2.0;
+	const float homex = 0;
 	const float homey = YKNOWN_DIM * 7.0;
-	const float homez = ZKNOWN_DIM / 2.0;
+	const float homez = 0;
 	const union vec3 camera_pos = { { homex, homey, homez, } };
 	union vec3 up = { { 0.0, 1.0, 0.0, } };
-	union vec3 camera_lookat = { { XKNOWN_DIM / 2.0, YKNOWN_DIM / 2.0, ZKNOWN_DIM / 2.0 } };
+	union vec3 camera_lookat = { { 0, 0, 0 } };
 	vec3_sub_self(&camera_lookat, &camera_pos);
 
 	demon_ui.desired_camera_pos = camera_pos;
@@ -16910,12 +16913,12 @@ static void toggle_demon_safe_mode(void)
 
 static int ux_to_usersx(double ux, float x1, float x2)
 {
-	return ((ux - x1) / (x2 - x1)) * SCREEN_WIDTH;
+	return (((ux + 0.5 * XKNOWN_DIM) - x1) / (x2 - x1)) * SCREEN_WIDTH;
 }
 
 static int uz_to_usersy(double uz, float y1, float y2)
 {
-	return ((uz - y1) / (y2 - y1)) * SCREEN_HEIGHT * ASPECT_RATIO;
+	return (((uz + 0.5 * XKNOWN_DIM) - y1) / (y2 - y1)) * SCREEN_HEIGHT * ASPECT_RATIO;
 }
 
 static int ur_to_usersr(double ur, float x1, float x2)
@@ -16935,12 +16938,12 @@ static double user_mousey_to_uz(double y, float y1, float y2)
 
 static int ux_to_demonsx(double ux)
 {
-	return ux_to_usersx(ux, demon_ui.ux1, demon_ui.ux2);
+	return (ux - demon_ui.ux1) / (demon_ui.ux2 - demon_ui.ux1) * SCREEN_WIDTH;
 }
 
 static int uz_to_demonsy(double uz)
 {
-	return uz_to_usersy(uz, demon_ui.uy1, demon_ui.uy2);
+	return (uz - demon_ui.uy1) / (demon_ui.uy2 - demon_ui.uy1) * SCREEN_HEIGHT * ASPECT_RATIO;
 }
 
 static double demon_mousex_to_ux(double x)
@@ -17157,8 +17160,8 @@ static void demon_select_and_act(double sx1, double sy1,
 
 		if (!o->alive)
 			continue;
-		sx = ux_to_demonsx(o->x);
-		sy = uz_to_demonsy(o->z);
+		sx = ux_to_demonsx(o->x + 0.5 * XKNOWN_DIM);
+		sy = uz_to_demonsy(o->z + 0.5 * ZKNOWN_DIM);
 		if (!between(sx1, sx2, sx) || !between(sy1, sy2, sy))
 			continue;
 		if (dtest(o->id)) {
@@ -18824,15 +18827,15 @@ static void show_2d_universe_grid(GtkWidget *w, float x1, float y1, float x2, fl
 	for (x = 0; x <= 10; x++) {
 		int sx1, sy1, sy2;
 
-		sx1 = ux_to_usersx(ix * x, x1, x2);
+		sx1 = ux_to_usersx(ix * x - 0.5 * XKNOWN_DIM, x1, x2);
 		if (sx1 < 0 || sx1 > SCREEN_WIDTH)
 			continue;
-		sy1 = uz_to_usersy(0.0, y1, y2);
+		sy1 = uz_to_usersy(0.0 - 0.5 * XKNOWN_DIM, y1, y2);
 		if (sy1 < 0)
 			sy1 = 0;
 		if (sy1 > SCREEN_HEIGHT)
 			continue;
-		sy2 = uz_to_usersy(ZKNOWN_DIM, y1, y2);
+		sy2 = uz_to_usersy(ZKNOWN_DIM - 0.5 * XKNOWN_DIM, y1, y2);
 		if (sy2 > SCREEN_HEIGHT)
 			sy2 = SCREEN_HEIGHT;
 		if (sy2 < 0)
@@ -18844,15 +18847,15 @@ static void show_2d_universe_grid(GtkWidget *w, float x1, float y1, float x2, fl
 	for (y = 0; y <= 10; y++) {
 		int sx1, sy1, sx2;
 
-		sy1 = uz_to_usersy(iy * y, y1, y2);
+		sy1 = uz_to_usersy(iy * y - 0.5 * XKNOWN_DIM, y1, y2);
 		if (sy1 < 0 || sy1 > SCREEN_HEIGHT)
 			continue;
-		sx1 = ux_to_usersx(0.0, x1, x2);
+		sx1 = ux_to_usersx(0.0 - 0.5 * XKNOWN_DIM, x1, x2);
 		if (sx1 < 0)
 			sx1 = 0;
 		if (sx1 > SCREEN_WIDTH)
 			continue;
-		sx2 = ux_to_usersx(XKNOWN_DIM, x1, x2);
+		sx2 = ux_to_usersx(XKNOWN_DIM - 0.5 * XKNOWN_DIM, x1, x2);
 		if (sx2 > SCREEN_WIDTH)
 			sx2 = SCREEN_WIDTH;
 		if (sx2 < 0)
@@ -18867,8 +18870,8 @@ static void show_2d_universe_grid(GtkWidget *w, float x1, float y1, float x2, fl
 			int tx, ty;
 
 			snprintf(label, sizeof(label), "%c%d", letters[y], x);
-			tx = ux_to_usersx(x * ix, x1, x2);
-			ty = uz_to_usersy(y * iy, y1, y2);
+			tx = ux_to_usersx(x * ix - 0.5 * XKNOWN_DIM, x1, x2);
+			ty = uz_to_usersy(y * iy - 0.5 * XKNOWN_DIM, y1, y2);
 			sng_abs_xy_draw_string(label, NANO_FONT,
 				tx + xoffset,ty + yoffset);
 		}
@@ -19078,11 +19081,11 @@ static void show_demon_3d(GtkWidget *w)
 
 	/* Setup 3d universe grid */
 	for (i = 0; i < 10; i++) {
-		float x = i * XKNOWN_DIM / 10.0;
+		float x = (i * XKNOWN_DIM / 10.0) - XKNOWN_DIM / 2.0 + (XKNOWN_DIM / 20.0);
 		for (j = 0; j < 10; j++) {
-			float y = (j * XKNOWN_DIM / 10.0) - XKNOWN_DIM / 2.0;
+			float y = (j * XKNOWN_DIM / 10.0) - XKNOWN_DIM / 2.0 + (XKNOWN_DIM / 20.0);
 			for (k = 0; k < 10; k++) {
-				float z = k * XKNOWN_DIM / 10.0;
+				float z = (k * XKNOWN_DIM / 10.0) - XKNOWN_DIM / 2.0 + (XKNOWN_DIM / 20.0);
 				(void) add_entity(instrumentecx, demon3d_axes_mesh, x, y, z, UI_COLOR(demon_default));
 			}
 		}

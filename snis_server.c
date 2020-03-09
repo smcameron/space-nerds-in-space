@@ -561,8 +561,8 @@ static uint8_t rts_mode = 0;
 static int rts_finish_timer = -1;
 
 static union vec3 rts_main_planet_pos[] = { /* Positions of main RTS planets */
-	{ { 120000, -XKNOWN_DIM / 2 + 120000, 120000 } },
-	{ { XKNOWN_DIM - 120000, XKNOWN_DIM / 2 - 120000, XKNOWN_DIM - 120000 } },
+	{ { 120000, -XKNOWN_DIM + 120000, 120000 } },
+	{ { XKNOWN_DIM - 120000, XKNOWN_DIM - 120000, XKNOWN_DIM - 120000 } },
 };
 
 static struct rts_main_planet {
@@ -1097,7 +1097,9 @@ static void normalize_coords(struct snis_entity *o)
 		goto fixit;
 	return;
 fixit:
-	set_object_location(o, snis_randn(XKNOWN_DIM), snis_randn(YKNOWN_DIM), snis_randn(ZKNOWN_DIM));
+	set_object_location(o, snis_randn(XKNOWN_DIM) - XKNOWN_DIM / 2.0,
+				snis_randn(YKNOWN_DIM) - YKNOWN_DIM / 2.0,
+				snis_randn(ZKNOWN_DIM) - ZKNOWN_DIM / 2.0);
 }
 
 static void set_object_location(struct snis_entity *o, double x, double y, double z)
@@ -1392,9 +1394,9 @@ static void asteroid_move(struct snis_entity *o)
 		union vec3 from_center, dir, dirn;
 		union vec3 up = { { 0.0f, 1.0f, 0.0f } };
 
-		from_center.v.x = o->x - XKNOWN_DIM / 2.0f;
-		from_center.v.y = o->y - YKNOWN_DIM / 2.0f;
-		from_center.v.z = o->z - ZKNOWN_DIM / 2.0f;
+		from_center.v.x = o->x - 0;
+		from_center.v.y = o->y - 0;
+		from_center.v.z = o->z - 0;
 
 		vec3_cross(&dir, &from_center, &up);
 		vec3_normalize(&dirn, &dir);
@@ -1568,8 +1570,7 @@ static void derelict_move(struct snis_entity *o)
 	/* Cull distant derelicts so they don't overpopulate the server */
 	if (o->alive == 1 &&
 		(universe_timestamp & 0x03f) == (o->id & 0x03f)) { /* throttle computation */
-		float dist = dist3d(o->x - XKNOWN_DIM / 2.0,
-					o->y - YKNOWN_DIM / 2.0, o->z - ZKNOWN_DIM / 2.0);
+		float dist = dist3d(o->x - 0, o->y - 0, o->z - 0);
 		if (dist > (1.15 * XKNOWN_DIM / 2.0)) {
 			o->alive = 0;
 			delete_from_clients_and_server(o);
@@ -10878,9 +10879,9 @@ static int add_player(double x, double z, double vx, double vz, double heading,
 
 static void random_object_coordinates_yrange(double *x, double *y, double *z, int yrange)
 {
-	*x = ((double) snis_randn(1000)) * XKNOWN_DIM / 1000.0;
-	*y = ((double) snis_randn(yrange) - 0.5 * yrange) * YKNOWN_DIM / 1000.0;
-	*z = ((double) snis_randn(1000)) * ZKNOWN_DIM / 1000.0;
+	*x = (((double) snis_randn(1000)) * XKNOWN_DIM / 1000.0) - XKNOWN_DIM / 2.0;
+	*y = (((double) snis_randn(yrange) - 0.5 * yrange) * YKNOWN_DIM / 1000.0) - YKNOWN_DIM / 2.0;
+	*z = (((double) snis_randn(1000)) * ZKNOWN_DIM / 1000.0) - ZKNOWN_DIM / 2.0;
 }
 
 static uint32_t nth_starbase(int n);
@@ -19254,9 +19255,6 @@ static void setup_rtsmode_battlefield(void)
 	/* Create a number of bases in a sphere around the main star */
 	for (i = 0; i < NUM_RTS_BASES; i++) {
 		random_point_on_sphere(XKNOWN_DIM * 0.35, &x, &y, &z);
-		x += XKNOWN_DIM / 2;
-		/* y doesn't need adjusting */
-		z += ZKNOWN_DIM / 2;
 		rc = add_starbase(x, y, z, 0, 0, 0, i, (uint32_t) -1);
 		if (rc < 0)
 			continue;
