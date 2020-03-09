@@ -9971,6 +9971,32 @@ static void snis_draw_3d_line(GtkWidget *w, GdkGC *gc, struct entity_context *cx
 	}
 }
 
+static void snis_draw_3d_moving_line(struct entity_context *cx,
+			float x1, float y1, float z1, float x2, float y2, float z2)
+{
+	int a, b;
+	union vec3 v1, v2;
+
+	snis_draw_3d_dotted_line(cx, x1, y1, z1, x2, y2, z2);
+	v1.v.x = x2 - x1;
+	v1.v.y = y2 - y1;
+	v1.v.z = z2 - z1;
+	v2 = v1;
+	a = timer & 0xf;
+	b = (timer + 1) & 0xf;
+	vec3_mul_self(&v1, a / 16.0);
+	vec3_mul_self(&v2, b / 16.0);
+	v1.v.x += x1;
+	v1.v.y += y1;
+	v1.v.z += z1;
+	v2.v.x += x1;
+	v2.v.y += y1;
+	v2.v.z += z1;
+	if (a < b)
+		snis_draw_3d_line(NULL, NULL, instrumentecx,
+			v1.v.x, v1.v.y, v1.v.z, v2.v.x, v2.v.y, v2.v.z);
+}
+
 static void snis_draw_3d_string(struct entity_context *cx, char *string, int font, float x, float y, float z)
 {
 	float sx, sy;
@@ -18924,24 +18950,12 @@ static void show_demon_2d(GtkWidget *w)
 
 static void demon_draw_ship_patrol_route(int npoints, union vec3 p[])
 {
-	int i, j, a, b;
-	union vec3 v1, v2;
+	int i, j;
 
 	for (i = 0; i < npoints; i++) {
 		j = (i + 1) % npoints;
-		vec3_sub(&v1, &p[j], &p[i]);
-		v2 = v1;
-		a = timer & 0xf;
-		b = (timer + 1) & 0xf;
-		vec3_mul_self(&v1, a / 16.0);
-		vec3_mul_self(&v2, b / 16.0);
-		vec3_add_self(&v1, &p[i]);
-		vec3_add_self(&v2, &p[i]);
-		snis_draw_3d_dotted_line(instrumentecx,
+		snis_draw_3d_moving_line(instrumentecx,
 			p[i].v.x, p[i].v.y, p[i].v.z, p[j].v.x, p[j].v.y, p[j].v.z);
-		if (a < b)
-			snis_draw_3d_line(NULL, NULL, instrumentecx,
-				v1.v.x, v1.v.y, v1.v.z, v2.v.x, v2.v.y, v2.v.z);
 	}
 }
 
