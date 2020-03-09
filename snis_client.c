@@ -19308,9 +19308,19 @@ static void show_demon_3d(GtkWidget *w)
 			sng_abs_xy_draw_string(oidstr, PICO_FONT, oidstrx, oidstry);
 
 			sng_set_foreground(RED);
-			if (o->type == OBJTYPE_SHIP2)
+			if (o->type == OBJTYPE_SHIP2) {
 				demon_draw_ship_patrol_route(o->tsd.ship.ai[1].u.patrol.npoints,
 						o->tsd.ship.ai[1].u.patrol.p);
+
+				if (o->tsd.ship.ai[0].u.attack.victim_id != -1) {
+					int vi = lookup_object_by_id(o->tsd.ship.ai[0].u.attack.victim_id);
+					if (vi >= 0) {
+						sng_set_foreground(YELLOW);
+						snis_draw_3d_moving_line(instrumentecx,
+							o->x, o->y, o->z, go[vi].x, go[vi].y, go[vi].z);
+					}
+				}
+			}
 		}
 	}
 
