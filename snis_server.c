@@ -10867,6 +10867,13 @@ static int add_player(double x, double z, double vx, double vz, double heading,
 	return i;
 }
 
+static void random_object_coordinates_yrange(double *x, double *y, double *z, int yrange)
+{
+	*x = ((double) snis_randn(1000)) * XKNOWN_DIM / 1000.0;
+	*y = ((double) snis_randn(yrange) - 0.5 * yrange) * YKNOWN_DIM / 1000.0;
+	*z = ((double) snis_randn(1000)) * ZKNOWN_DIM / 1000.0;
+}
+
 static uint32_t nth_starbase(int n);
 static int commodity_sample(void);
 static int add_ship(int faction, int shiptype, int auto_respawn)
@@ -10880,9 +10887,7 @@ static int add_ship(int faction, int shiptype, int auto_respawn)
 		mt = mtwist_init(mtwist_seed);
 
 	for (i = 0; i < 100; i++) {
-		x = ((double) snis_randn(1000)) * XKNOWN_DIM / 1000.0;
-		y = (double) snis_randn(700) - 350;
-		z = ((double) snis_randn(1000)) * ZKNOWN_DIM / 1000.0;
+		random_object_coordinates_yrange(&x, &y, &z, 700);
 		if (dist3d(x - SUNX, y - SUNY, z - SUNZ) > SUN_DIST_LIMIT)
 			break;
 	}
@@ -12669,16 +12674,12 @@ static void add_starbases(void)
 			if (!found)  {
 				/* If we get here, it's a bug... */
 				printf("Nonfatal bug at %s:%d\n", __FILE__, __LINE__);
-				x = ((double) snis_randn(1000)) * XKNOWN_DIM / 1000.0;
-				y = ((double) snis_randn(1000) - 500.0) * YKNOWN_DIM / 1000.0;
-				z = ((double) snis_randn(1000)) * ZKNOWN_DIM / 1000.0;
+				random_object_coordinates_yrange(&x, &y, &z, 1000);
 				assoc_planet_id = (uint32_t) -1;
 			}
 		} else {
-			x = ((double) snis_randn(1000)) * XKNOWN_DIM / 1000.0;
-			y = ((double) snis_randn(1000) - 500.0) * YKNOWN_DIM / 1000.0;
-			z = ((double) snis_randn(1000)) * ZKNOWN_DIM / 1000.0;
-				assoc_planet_id = (uint32_t) -1;
+			random_object_coordinates_yrange(&x, &y, &z, 1000);
+			assoc_planet_id = (uint32_t) -1;
 		}
 		add_starbase(x, y, z, 0.0, 0.0, 0.0, i, assoc_planet_id);
 	}
@@ -12708,9 +12709,10 @@ static void add_nebulae(void)
 		random_point_on_sphere(1.0, &d.v.x, &d.v.y, &d.v.z);
 		count = 0;
 		do {
-			ix[i] = x = ((double) snis_randn(1000)) * XKNOWN_DIM / 1000.0;
-			iy[i] = y = ((double) snis_randn(1000) - 500.0) * YKNOWN_DIM / 1000.0;
-			iz[i] = z = ((double) snis_randn(1000)) * ZKNOWN_DIM / 1000.0;
+			random_object_coordinates_yrange(&x, &y, &z, 1000);
+			ix[i] = x;
+			iy[i] = y;
+			iz[i] = z;
 			count++;
 		} while (nebula_too_close(ix, iy, iz, i) && count < 100);
 		for (j = 0; j < NEBULAS_PER_CLUSTER; j++) {
@@ -12777,9 +12779,7 @@ static void add_asteroids(void)
 	double x, y, z, cx, cy, cz, a, a2, r;
 
 	for (i = 0; i < NASTEROID_CLUSTERS; i++) {
-		cx = ((double) snis_randn(1000)) * XKNOWN_DIM / 1000.0;
-		cy = ((double) snis_randn(1000) - 500.0) * YKNOWN_DIM / 1000.0;
-		cz = ((double) snis_randn(1000)) * ZKNOWN_DIM / 1000.0;
+		random_object_coordinates_yrange(&cx, &cy, &cz, 1000);
 		for (j = 0; j < asteroid_count / NASTEROID_CLUSTERS; j++) {
 			a = (double) snis_randn(360) * M_PI / 180.0;
 			a2 = (double) snis_randn(360) * M_PI / 180.0;
@@ -13326,9 +13326,7 @@ static void add_black_holes(void)
 	double x, y, z, radius;
 
 	for (i = 0; i < NBLACK_HOLES; i++) {
-		x = ((double) snis_randn(1000)) * XKNOWN_DIM / 1000.0;
-		y = ((double) snis_randn(2000) - 1000.0) * YKNOWN_DIM / 1000.0;
-		z = ((double) snis_randn(1000)) * ZKNOWN_DIM / 1000.0;
+		random_object_coordinates_yrange(&x, &y, &z, 2000);
 		radius = (float) snis_randn(MAX_BLACK_HOLE_RADIUS - MIN_BLACK_HOLE_RADIUS) +
 						MIN_BLACK_HOLE_RADIUS;
 		add_black_hole(x, y, z, radius);
@@ -13345,9 +13343,7 @@ static void add_planets(void)
 	for (i = 0; i < NPLANETS; i++) {
 		count = 0;
 		do {
-			x = ((double) snis_randn(1000)) * XKNOWN_DIM / 1000.0;
-			y = ((double) snis_randn(2000) - 1000.0) * YKNOWN_DIM / 1000.0;
-			z = ((double) snis_randn(1000)) * ZKNOWN_DIM / 1000.0;
+			random_object_coordinates_yrange(&x, &y, &z, 2000);
 			count++;
 			if (count > 100)
 				limit *= 0.95;
@@ -13409,12 +13405,8 @@ static void add_wormholes(void)
 
 	for (i = 0; i < NWORMHOLE_PAIRS; i++) {
 		do {
-			x1 = ((double) snis_randn(1000)) * XKNOWN_DIM / 1000.0;
-			y1 = ((double) snis_randn(1000) - 500) * YKNOWN_DIM / 1000.0;
-			z1 = ((double) snis_randn(1000)) * ZKNOWN_DIM / 1000.0;
-			x2 = ((double) snis_randn(1000)) * XKNOWN_DIM / 1000.0;
-			y2 = ((double) snis_randn(1000) - 500) * YKNOWN_DIM / 1000.0;
-			z2 = ((double) snis_randn(1000)) * ZKNOWN_DIM / 1000.0;
+			random_object_coordinates_yrange(&x1, &y1, &z1, 1000);
+			random_object_coordinates_yrange(&x2, &y2, &z2, 1000);
 		} while (dist3dsqrd(x1 - x2, y1 - y2, z1 - z2) <
 				(XKNOWN_DIM / 2.0) * (XKNOWN_DIM / 2.0));
 		add_wormhole_pair(&id1, &id2, x1, y1, z1, x2, y2, z2);
@@ -13471,9 +13463,7 @@ static void add_warpgates(void)
 		if (!found)  {
 			/* If we get here, it's a bug... */
 			printf("Nonfatal bug at %s:%d\n", __FILE__, __LINE__);
-			x = ((double) snis_randn(1000)) * XKNOWN_DIM / 1000.0;
-			y = ((double) snis_randn(1000) - 500.0) * YKNOWN_DIM / 1000.0;
-			z = ((double) snis_randn(1000)) * ZKNOWN_DIM / 1000.0;
+			random_object_coordinates_yrange(&x, &y, &z, 1000);
 			assoc_planet_id = (uint32_t) -1;
 		}
 		add_warpgate(x, y, z, 0.0, 0.0, 0.0, i, assoc_planet_id);
@@ -13524,9 +13514,7 @@ static void add_spacemonsters(void)
 	double x, y, z;
 
 	for (i = 0; i < NSPACEMONSTERS; i++) {
-		x = ((double) snis_randn(1000)) * XKNOWN_DIM / 1000.0;
-		y = ((double) snis_randn(1000) - 500.0) * YKNOWN_DIM / 1000.0;
-		z = ((double) snis_randn(1000)) * ZKNOWN_DIM / 1000.0;
+		random_object_coordinates_yrange(&x, &y, &z, 1000);
 		add_spacemonster(x, y, z);
 	}
 }
