@@ -13,13 +13,16 @@
 -- are liable to get you unless you make a quick getaway, but
 -- your warp drive will probably not help you.
 
+adjx = -300000;
+adjz = -300000;
+
 -- First, clear the board
 clear_all();
 
 -- Where the player starts
-startx = 101000;
+startx = 101000 + adjx;
 starty = 6000;
-startz = 0;
+startz = 0 + adjz;
 player_with_vaccine = nil
 
 -- how many survivors on the station
@@ -34,9 +37,9 @@ vaccine_delivered = false;
 -- Interval between distress calls from ICARUS station is 120 seconds
 distress_call_interval = 10 * 120;
 
-derelictx = 512070 + math.random(40000) - 20000;
+derelictx = 512070 + math.random(40000) - 20000 + adjx;
 derelicty = -127000 + math.random(40000) - 20000;
-derelictz = 257030 + math.random(40000) - 20000;
+derelictz = 257030 + math.random(40000) - 20000 + adjz;
 
 -- Faction values (must match share/snis/factions.txt)
 zarkon = 3;
@@ -65,28 +68,28 @@ set_object_velocity(derelict, 0, 0, 0);
 cargocontainer = add_cargo_container(derelictx + 150, derelicty + 190, derelictz + 500, 0, 0, 0);
 set_commodity_contents(cargocontainer, spacepox_vaccine, 100);
 
-x = 2900;
+x = 2900 + adjx;
 y = 12000;
-z = 290000;
+z = 290000 + adjz;
 
 -- locations and radii of our planets:
 
-tobbraxx = 250000 + math.random(30000);
+tobbraxx = 250000 + math.random(30000) + adjx;
 tobbraxy = 12000 + math.random(30000);
-tobbraxz = 352000 + math.random(30000);
+tobbraxz = 352000 + math.random(30000) + adjz;
 tobbraxr = 5100
 
-scybonx = 22900 + math.random(30000);
+scybonx = 22900 + math.random(30000) + adjx;
 scybony = 15000 + math.random(30000);
-scybonz = 12000 + math.random(30000);
+scybonz = 12000 + math.random(30000) + adjz;
 scybonr = 4900
 
 -- Name and location of station and planets affected by SPACE POX
 station = "ICARUS STATION"
 bonxname = "BONX"
-bonxx = derelictx + math.random(200000) - 100000;
+bonxx = derelictx + math.random(200000) - 100000 + adjx;
 bonxy = derelicty + math.random(200000) - 100000;
-bonxz = derelictz + math.random(200000) - 100000;
+bonxz = derelictz + math.random(200000) - 100000 + adjz;
 bonxr = 6100
 
 -- Function to create a planet and an accompanying starbase
