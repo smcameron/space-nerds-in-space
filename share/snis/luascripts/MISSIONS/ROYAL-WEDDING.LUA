@@ -8,6 +8,8 @@
 
 arg = {...};
 
+adjx = -300000;
+adjz = -300000;
 
 if ((#arg >= 2) and (tonumber(arg[2]) == 1)) then
 	debug = true;
@@ -107,18 +109,18 @@ end
 -- Queen planet is at the center of queen_faction influence sphere
 -- Schaazbaut
 -- 150000 0 150000
-qx = 150000 + math.random(1000);
+qx = 150000 + math.random(1000) + adjx;
 qy = 0 + math.random(1000);
-qz = 150000 + math.random(1000);
+qz = 150000 + math.random(1000) + adjz;
 qt = gasgiant;
 qr = 8000; -- Huge empire planet
 
 -- Wedding planet is near the center of princess_faction influence sphere
 -- Vekkazi
 -- 300000 0 0
-wx = 300000 - math.random(20000);
+wx = 300000 - math.random(20000) + adjx;
 wy = math.random(20000);
-wz = math.random(20000);
+wz = math.random(20000) + adjz;
 wt = earthlike;
 wr = 4000;
 
@@ -215,9 +217,9 @@ wedding_cargo = {
 }
 
 -- Add in some nebulas
-nx = 2900;
+nx = 2900 + adjx;
 ny = 12000;
-nz = 290000;
+nz = 290000 + adjz;
 n1 = add_nebula("INSANITY-MAJORIS", nx + 5000, ny - 100, nz - 1500, 5000);
 n2 = add_nebula("INSANITY-MINORIS", nx + 500, ny - 200, nz - 3000, 3000);
 n3 = add_nebula("INSANITY", nx + 8000, ny - 700, nz - 2500, 2000);
@@ -328,9 +330,9 @@ function add_random_planets(nplanets)
 	for i = 1, nplanets do
 		count = 0;
 		repeat
-			x = math.random(0, XKNOWN_DIM);
+			x = math.random(0, XKNOWN_DIM) + adjx;
 			y = math.random(-YKNOWN_DIM, YKNOWN_DIM);
-			z = math.random(0, ZKNOWN_DIM);
+			z = math.random(0, ZKNOWN_DIM) + adjz;
 			count = count + 1;
 		until ((count > 100) or (not too_close_to_planet_or_sun(x, y, z, limit)));
 		r = math.random(5000, 7000);
