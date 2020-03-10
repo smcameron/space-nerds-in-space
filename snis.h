@@ -114,7 +114,7 @@
 #define OBJTYPE_WARP_CORE 24
 #define OBJTYPE_BLACK_HOLE 25
 #define OBJTYPE_MISSILE 26
-#define OBJTYPE_CHAFF 27
+#define OBJTYPE_FLARE 27
 
 #define SHIELD_EFFECT_LIFETIME 60
 
@@ -402,8 +402,8 @@ struct ship_data {
 #define SPACEMONSTER_WEAPONS_FACTOR (1.0)
 #define TORPEDO_DETONATE_DIST2 (150 * 150)
 #define MISSILE_PROXIMITY_DISTANCE (75.0)
-#define CHAFF_PROXIMITY_DISTANCE (250.0)
-#define CHAFF_COOLDOWN_TIME (15.0) /* in 10ths of seconds */
+#define FLARE_PROXIMITY_DISTANCE (250.0)
+#define FLARE_COOLDOWN_TIME (15.0) /* in 10ths of seconds */
 #define MISSILE_COUNTERMEASURE_DELAY 20 /* in 10ths of seconds */
 #define INITIAL_TORPEDO_COUNT 10
 #define INITIAL_MISSILE_COUNT 5
@@ -715,11 +715,11 @@ struct explosion_data {
 #define EXPLOSION_TYPE_BLACKHOLE 1
 };
 
-#define CHAFF_COUNT (10)
-#define CHAFF_SPEED (50.0)
-#define CHAFF_LIFETIME (30) /* 10ths of secs */
-#define CHAFF_CONFUSE_CHANCE (0.10) /* 10 percent chance evaluated at 10Hz per chaff */
-struct chaff_data {
+#define FLARE_COUNT (10)
+#define FLARE_SPEED (50.0)
+#define FLARE_LIFETIME (30) /* 10ths of secs */
+#define FLARE_CONFUSE_CHANCE (0.10) /* 10 percent chance evaluated at 10Hz per flare */
+struct flare_data {
 	uint16_t time_left;
 };
 
@@ -934,7 +934,7 @@ union type_specific_data {
 	struct torpedo_data torpedo;
 	struct starbase_data starbase;
 	struct explosion_data explosion;
-	struct chaff_data chaff;
+	struct flare_data flare;
 	struct nebula_data nebula;
 	struct spark_data spark;
 	struct asteroid_data asteroid;

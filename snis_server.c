@@ -165,8 +165,8 @@ static int enemy_laser_fire_interval = ENEMY_LASER_FIRE_INTERVAL;
 static int enemy_torpedo_fire_interval = ENEMY_TORPEDO_FIRE_INTERVAL;
 static int enemy_missile_fire_interval = ENEMY_MISSILE_FIRE_INTERVAL;
 static float missile_proximity_distance = MISSILE_PROXIMITY_DISTANCE;
-static float chaff_proximity_distance = CHAFF_PROXIMITY_DISTANCE;
-static int chaff_cooldown_time = CHAFF_COOLDOWN_TIME;
+static float flare_proximity_distance = FLARE_PROXIMITY_DISTANCE;
+static int flare_cooldown_time = FLARE_COOLDOWN_TIME;
 static int missile_countermeasure_delay = MISSILE_COUNTERMEASURE_DELAY;
 static float missile_explosion_damage_distance = MISSILE_EXPLOSION_DAMAGE_DISTANCE;
 static float spacemonster_flee_dist = SPACEMONSTER_FLEE_DIST;
@@ -174,9 +174,9 @@ static float spacemonster_aggro_radius = SPACEMONSTER_AGGRO_RADIUS;
 static float spacemonster_collision_radius = SPACEMONSTER_COLLISION_RADIUS;
 static float cargo_container_max_velocity = CARGO_CONTAINER_MAX_VELOCITY;
 static float bounty_chance = BOUNTY_CHANCE;
-static float chaff_speed = CHAFF_SPEED;
-static int chaff_count = CHAFF_COUNT;
-static float chaff_confuse_chance = CHAFF_CONFUSE_CHANCE;
+static float flare_speed = FLARE_SPEED;
+static int flare_count = FLARE_COUNT;
+static float flare_confuse_chance = FLARE_CONFUSE_CHANCE;
 static int multiverse_debug = 0;
 static int suppress_starbase_complaints = 0;
 static int player_invincibility = 0;
@@ -480,7 +480,7 @@ static struct bridge_data {
 	int nship_id_chips;		/* Count of ship ID chips, number of ship_id_chip[] entries that are valid */
 	char enciphered_message[256];
 	char cipher_key[26], guessed_key[26];
-	int chaff_cooldown;
+	int flare_cooldown;
 	/* persistent_bridge_data contains per-bridge data which is saved/restored by snis_multiverse
 	 * but which is not present within snis_entity. (e.g. engineering preset data).
 	 * See snis_bridge_update_packet.h.
@@ -3722,13 +3722,13 @@ static void missile_collision_detection(void *context, void *entity)
 
 	if (missile == target)
 		return;
-	if (missile->tsd.missile.target_id != target->id && target->type != OBJTYPE_CHAFF)
+	if (missile->tsd.missile.target_id != target->id && target->type != OBJTYPE_FLARE)
 		return;
 
 	dist2 = object_dist2(missile, target);
-	if (dist2 < chaff_proximity_distance * chaff_proximity_distance && target->type == OBJTYPE_CHAFF) {
-		if (snis_randn(1000) < 1000.0 * chaff_confuse_chance) {
-			/* Missile is confused by chaff. Let the ship that was evading this missile
+	if (dist2 < flare_proximity_distance * flare_proximity_distance && target->type == OBJTYPE_FLARE) {
+		if (snis_randn(1000) < 1000.0 * flare_confuse_chance) {
+			/* Missile is confused by flare. Let the ship that was evading this missile
 			 * stop doing that. */
 			int i = lookup_by_id(missile->tsd.missile.target_id);
 			if (i >= 0) {
@@ -3739,14 +3739,14 @@ static void missile_collision_detection(void *context, void *entity)
 						pop_ai_stack(o);
 				}
 			}
-			/* Missile is now chasing the chaff */
+			/* Missile is now chasing the flare */
 			missile->tsd.missile.target_id = target->id;
 		}
 	}
 	if (dist2 < missile_proximity_distance * missile_proximity_distance) {
 		switch (target->type) {
-		case OBJTYPE_CHAFF:
-			if (snis_randn(1000) < 1000.0 * chaff_confuse_chance)
+		case OBJTYPE_FLARE:
+			if (snis_randn(1000) < 1000.0 * flare_confuse_chance)
 				missile->tsd.missile.target_id = target->id;
 			break;
 		case OBJTYPE_SHIP1:
@@ -5317,7 +5317,7 @@ static void ai_attack_mode_brain(struct snis_entity *o)
 
 static float ai_ship_travel_towards(struct snis_entity *o,
 		float destx, float desty, float destz);
-static int add_chaff(double x, double y, double z);
+static int add_flare(double x, double y, double z);
 static void ai_avoid_missile_brain(struct snis_entity *o)
 {
 	int i, n;
@@ -5346,7 +5346,7 @@ static void ai_avoid_missile_brain(struct snis_entity *o)
 	dir.v.z += o->z;
 	(void) ai_ship_travel_towards(o, dir.v.x, dir.v.y, dir.v.z);
 	if (snis_randn(1000) < 250)
-		(void) add_chaff(o->x, o->y, o->z);
+		(void) add_flare(o->x, o->y, o->z);
 	if (snis_randn(1000) < 50)
 		add_laserbeam(o->id, missile->id, LASERBEAM_DURATION, TARGET_ALL_SYSTEMS);
 }
@@ -8613,7 +8613,7 @@ static void player_collision_detection(void *player, void *object)
 	case OBJTYPE_WORMHOLE:
 	case OBJTYPE_STARBASE:
 	case OBJTYPE_WARP_CORE:
-	case OBJTYPE_CHAFF:
+	case OBJTYPE_FLARE:
 		return;
 	default:
 		break;
@@ -9512,12 +9512,12 @@ static void aim_high_gain_antenna(struct snis_entity *o)
 	}
 }
 
-static void update_chaff_cooldown_timer(struct snis_entity *o)
+static void update_flare_cooldown_timer(struct snis_entity *o)
 {
-	/* Decrement chaff cooldown timer */
+	/* Decrement flare cooldown timer */
 	int bn = lookup_bridge_by_shipid(o->id);
-	if (bn >= 0 && bridgelist[bn].chaff_cooldown > 0)
-		bridgelist[bn].chaff_cooldown--;
+	if (bn >= 0 && bridgelist[bn].flare_cooldown > 0)
+		bridgelist[bn].flare_cooldown--;
 }
 
 static void player_move(struct snis_entity *o)
@@ -9725,7 +9725,7 @@ static void player_move(struct snis_entity *o)
 	}
 	check_science_selection(o);
 
-	update_chaff_cooldown_timer(o);
+	update_flare_cooldown_timer(o);
 
 	/* Missiles will set this to 10, here we decrement, and if no missiles are around, it will hit zero soon. */
 	if (o->tsd.ship.missile_lock_detected > 0)
@@ -10277,7 +10277,7 @@ static void explosion_move(struct snis_entity *o)
 		delete_from_clients_and_server(o);
 }
 
-static void chaff_move(struct snis_entity *o)
+static void flare_move(struct snis_entity *o)
 {
 	set_object_location(o, o->x + o->vx, o->y + o->vy, o->z + o->vz);
 	o->timestamp = universe_timestamp;
@@ -10714,7 +10714,7 @@ static void init_player(struct snis_entity *o, int reset_ship, float *charges)
 			memset(bridgelist[b].cipher_key, '_', sizeof(bridgelist[b].cipher_key));
 			memset(bridgelist[b].guessed_key, '_', sizeof(bridgelist[b].guessed_key));
 			memset(bridgelist[b].enciphered_message, 0, sizeof(bridgelist[b].enciphered_message));
-			bridgelist[b].chaff_cooldown = 0;
+			bridgelist[b].flare_cooldown = 0;
 		}
 	}
 	quat_init_axis(&o->tsd.ship.computer_desired_orientation, 0, 1, 0, 0);
@@ -12269,20 +12269,20 @@ static int add_blackhole_explosion(uint32_t black_hole, double x, double y, doub
 					EXPLOSION_TYPE_BLACKHOLE);
 }
 
-static int add_chaff(double x, double y, double z)
+static int add_flare(double x, double y, double z)
 {
 	int i;
 	float vx, vy, vz;
 
-	random_point_on_sphere(1.0 * chaff_speed, &vx, &vy, &vz);
-	i = add_generic_object(x, y, z, 0, 0, 0, 0, OBJTYPE_CHAFF);
+	random_point_on_sphere(1.0 * flare_speed, &vx, &vy, &vz);
+	i = add_generic_object(x, y, z, 0, 0, 0, 0, OBJTYPE_FLARE);
 	if (i < 0)
 		return i;
 	go[i].vx = vx;
 	go[i].vy = vy;
 	go[i].vz = vz;
-	go[i].move = chaff_move;
-	go[i].alive = CHAFF_LIFETIME;
+	go[i].move = flare_move;
+	go[i].alive = FLARE_LIFETIME;
 	return i;
 }
 
@@ -17631,13 +17631,13 @@ static struct tweakable_var_descriptor server_tweak[] = {
 		"MINIMUM DISTANCE BETWEEN MISSILE AND TARGET TO DETONATE",
 		&missile_proximity_distance, 'f',
 		0.0, 2000.0, MISSILE_PROXIMITY_DISTANCE, 0, 0, 0 },
-	{ "CHAFF_PROXIMITY_DISTANCE",
-		"MINIMUM DISTANCE BETWEEN MISSILE AND CHAFF FOR MISSILE TO GET CONFUSED",
-		&chaff_proximity_distance, 'f',
-		0.0, 2000.0, CHAFF_PROXIMITY_DISTANCE, 0, 0, 0 },
-	{ "CHAFF_COOLDOWN_TIME",
-		"MINIMUM 10ths OF SECONDS BETWEEN CHAFF DEPLOYMENTS",
-		&chaff_cooldown_time, 'i', 0.0, 0.0, 0.0, 0, 1000, CHAFF_COOLDOWN_TIME },
+	{ "FLARE_PROXIMITY_DISTANCE",
+		"MINIMUM DISTANCE BETWEEN MISSILE AND FLARE FOR MISSILE TO GET CONFUSED",
+		&flare_proximity_distance, 'f',
+		0.0, 2000.0, FLARE_PROXIMITY_DISTANCE, 0, 0, 0 },
+	{ "FLARE_COOLDOWN_TIME",
+		"MINIMUM 10ths OF SECONDS BETWEEN FLARE DEPLOYMENTS",
+		&flare_cooldown_time, 'i', 0.0, 0.0, 0.0, 0, 1000, FLARE_COOLDOWN_TIME },
 	{ "MISSILE_EXPLOSION_DAMAGE_DISTANCE",
 		"DAMAGE FACTOR PER UNIT DISTANCE",
 		&missile_explosion_damage_distance, 'f',
@@ -17665,18 +17665,18 @@ static struct tweakable_var_descriptor server_tweak[] = {
 		"CHANCE THAT A NEWLY ADDED SHIP WILL HAVE A BOUNTY ON IT",
 		&bounty_chance, 'f',
 		0.0, 1.0, BOUNTY_CHANCE, 0, 0, 0 },
-	{ "CHAFF_SPEED",
-		"SPEED OF CHAFF PARTICLES",
-		&chaff_speed, 'f',
-		10.0, 500.0, CHAFF_SPEED, 0, 0, 0 },
-	{ "CHAFF_COUNT",
-		"NUMBER OF CHAFF PARTICLES TO DEPLOY",
-		&chaff_count, 'i',
-		0.0, 0.0, 0.0, 1, 25, CHAFF_COUNT },
-	{ "CHAFF_CONFUSE_CHANCE",
-		"LIKELYHOOD CHAFF WILL CONFUSE MISSILES",
-		&chaff_confuse_chance, 'f',
-		0.0, 1.0, CHAFF_CONFUSE_CHANCE, 0, 0, 0 },
+	{ "FLARE_SPEED",
+		"SPEED OF FLARE PARTICLES",
+		&flare_speed, 'f',
+		10.0, 500.0, FLARE_SPEED, 0, 0, 0 },
+	{ "FLARE_COUNT",
+		"NUMBER OF FLARE PARTICLES TO DEPLOY",
+		&flare_count, 'i',
+		0.0, 0.0, 0.0, 1, 25, FLARE_COUNT },
+	{ "FLARE_CONFUSE_CHANCE",
+		"LIKELYHOOD FLARE WILL CONFUSE MISSILES",
+		&flare_confuse_chance, 'f',
+		0.0, 1.0, FLARE_CONFUSE_CHANCE, 0, 0, 0 },
 	{ "MULTIVERSE_DEBUG",
 		"MULTIVERSE_DEBUG FLAG 1 = ON, 0 = OFF",
 		&multiverse_debug, 'i',
@@ -20988,7 +20988,7 @@ missile_fail:
 	return 0;
 }
 
-static int process_adjust_control_deploy_chaff(struct game_client *c, uint32_t id)
+static int process_adjust_control_deploy_flare(struct game_client *c, uint32_t id)
 {
 	int i;
 	struct snis_entity *o;
@@ -20999,7 +20999,7 @@ static int process_adjust_control_deploy_chaff(struct game_client *c, uint32_t i
 		pthread_mutex_unlock(&universe_mutex);
 		return -1;
 	}
-	if (c->bridge < 0 || bridgelist[c->bridge].chaff_cooldown > 0) {
+	if (c->bridge < 0 || bridgelist[c->bridge].flare_cooldown > 0) {
 		snis_queue_add_sound(LASER_FAILURE, ROLE_SOUNDSERVER, c->shipid);
 		pthread_mutex_unlock(&universe_mutex);
 		return 0;
@@ -21007,10 +21007,10 @@ static int process_adjust_control_deploy_chaff(struct game_client *c, uint32_t i
 	if (i != c->ship_index)
 		snis_log(SNIS_ERROR, "i != ship index at %s:%d\n", __FILE__, __LINE__);
 	o = &go[i];
-	for (i = 0; i < chaff_count; i++)
-		(void) add_chaff(o->x, o->y, o->z);
+	for (i = 0; i < flare_count; i++)
+		(void) add_flare(o->x, o->y, o->z);
 	if (c->bridge >= 0)
-		bridgelist[c->bridge].chaff_cooldown = chaff_cooldown_time;
+		bridgelist[c->bridge].flare_cooldown = flare_cooldown_time;
 	pthread_mutex_unlock(&universe_mutex);
 	return 0;
 }
@@ -21109,8 +21109,8 @@ static int process_adjust_control_input(struct game_client *c)
 			offsetof(struct snis_entity, tsd.ship.alarms_silenced), v, no_limit);
 	case OPCODE_ADJUST_CONTROL_FIRE_MISSILE:
 		return process_adjust_control_fire_missile(c, id);
-	case OPCODE_ADJUST_CONTROL_DEPLOY_CHAFF:
-		return process_adjust_control_deploy_chaff(c, id);
+	case OPCODE_ADJUST_CONTROL_DEPLOY_FLARE:
+		return process_adjust_control_deploy_flare(c, id);
 	default:
 		return -1;
 	}
@@ -22477,7 +22477,7 @@ static void send_update_warpgate_packet(struct game_client *c,
 	struct snis_entity *o);
 static void send_update_explosion_packet(struct game_client *c,
 	struct snis_entity *o);
-static void send_update_chaff_packet(struct game_client *c,
+static void send_update_flare_packet(struct game_client *c,
 	struct snis_entity *o);
 static void send_update_torpedo_packet(struct game_client *c,
 	struct snis_entity *o);
@@ -22558,8 +22558,8 @@ static void queue_up_client_object_update(struct game_client *c, struct snis_ent
 	case OBJTYPE_EXPLOSION:
 		send_update_explosion_packet(c, o);
 		break;
-	case OBJTYPE_CHAFF:
-		send_update_chaff_packet(c, o);
+	case OBJTYPE_FLARE:
+		send_update_flare_packet(c, o);
 		break;
 	case OBJTYPE_DEBRIS:
 		break;
@@ -23615,10 +23615,10 @@ static void send_update_explosion_packet(struct game_client *c,
 				o->tsd.explosion.explosion_type));
 }
 
-static void send_update_chaff_packet(struct game_client *c,
+static void send_update_flare_packet(struct game_client *c,
 	struct snis_entity *o)
 {
-	pb_queue_to_client(c, snis_opcode_pkt("bwwSSS", OPCODE_UPDATE_CHAFF, o->id, o->timestamp,
+	pb_queue_to_client(c, snis_opcode_pkt("bwwSSS", OPCODE_UPDATE_FLARE, o->id, o->timestamp,
 				o->x, (int32_t) UNIVERSE_DIM, o->y, (int32_t) UNIVERSE_DIM,
 				o->z, (int32_t) UNIVERSE_DIM));
 }

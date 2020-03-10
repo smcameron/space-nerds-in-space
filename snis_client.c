@@ -495,7 +495,7 @@ static struct material red_laser_material;
 static struct material blue_tractor_material;
 static struct material green_phaser_material;
 static struct material spark_material;
-static struct material chaff_material;
+static struct material flare_material;
 static struct material blackhole_spark_material;
 static struct material laserflash_material;
 static struct material warp_effect_material;
@@ -3039,7 +3039,7 @@ static void move_objects(void)
 		case OBJTYPE_TRACTORBEAM:
 			o->move(o);
 			break;
-		case OBJTYPE_CHAFF:
+		case OBJTYPE_FLARE:
 			move_object(timestamp, o, &interpolate_generic_object);
 			break;
 		case OBJTYPE_NEBULA:
@@ -3640,7 +3640,7 @@ static void draw_plane_radar(GtkWidget *w, struct snis_entity *o, union quat *ai
 			go[i].type != OBJTYPE_WARPGATE &&
 			go[i].type != OBJTYPE_ASTEROID &&
 			go[i].type != OBJTYPE_SPACEMONSTER &&
-			go[i].type != OBJTYPE_CHAFF &&
+			go[i].type != OBJTYPE_FLARE &&
 			go[i].type != OBJTYPE_CARGO_CONTAINER)
 		{
 			continue;
@@ -4202,7 +4202,7 @@ static struct engineering_ui {
 	struct button *preset_buttons[ENG_PRESET_NUMBER];
 	struct button *preset_save_button;
 	struct button *silence_alarms;
-	struct button *deploy_chaff;
+	struct button *deploy_flare;
 	struct button *custom_button;
 	struct slider *shield_slider;
 	struct slider *shield_coolant_slider;
@@ -7411,7 +7411,7 @@ static int process_update_explosion_packet(void)
 	return (rc < 0);
 }
 
-static int update_chaff(uint32_t id, uint32_t timestamp, double x, double y, double z)
+static int update_flare(uint32_t id, uint32_t timestamp, double x, double y, double z)
 {
 	int i;
 	struct snis_entity *o;
@@ -7419,14 +7419,14 @@ static int update_chaff(uint32_t id, uint32_t timestamp, double x, double y, dou
 	i = lookup_object_by_id(id);
 	if (i < 0) {
 		i = add_generic_object(id, timestamp, x, y, z, 0.0, 0.0, 0.0,
-					&identity_quat, OBJTYPE_CHAFF, 1, NULL);
+					&identity_quat, OBJTYPE_FLARE, 1, NULL);
 		if (i < 0)
 			return i;
 		o = &go[i];
-		o->tsd.chaff.time_left = CHAFF_LIFETIME;
+		o->tsd.flare.time_left = FLARE_LIFETIME;
 		o->entity = add_entity(ecx, particle_mesh, x, y, z, PARTICLE_COLOR);
 		if (o->entity) {
-			update_entity_material(o->entity, &chaff_material);
+			update_entity_material(o->entity, &flare_material);
 			update_entity_scale(o->entity, 5.0);
 		}
 	} else {
@@ -7434,18 +7434,18 @@ static int update_chaff(uint32_t id, uint32_t timestamp, double x, double y, dou
 	}
 	update_generic_object(i, timestamp, x, y, z, 0, 0, 0, NULL, 1);
 
-	/* Make the chaff fade out when it gets near the end of its life */
-	if (o->tsd.chaff.time_left > 0)
-		o->tsd.chaff.time_left--;
-	if (o->tsd.chaff.time_left < 6 && o->tsd.chaff.time_left > 0)
-		update_entity_scale(o->entity, 5.0 / (6.0 - o->tsd.chaff.time_left));
+	/* Make the flare fade out when it gets near the end of its life */
+	if (o->tsd.flare.time_left > 0)
+		o->tsd.flare.time_left--;
+	if (o->tsd.flare.time_left < 6 && o->tsd.flare.time_left > 0)
+		update_entity_scale(o->entity, 5.0 / (6.0 - o->tsd.flare.time_left));
 
 	return 0;
 }
 
-static int process_update_chaff_packet(void)
+static int process_update_flare_packet(void)
 {
-	unsigned char buffer[sizeof(struct update_chaff_packet)];
+	unsigned char buffer[sizeof(struct update_flare_packet)];
 	uint32_t id, timestamp;
 	double vx, vy, vz;
 	int rc;
@@ -7455,7 +7455,7 @@ static int process_update_chaff_packet(void)
 	if (rc != 0)
 		return rc;
 	pthread_mutex_lock(&universe_mutex);
-	rc = update_chaff(id, timestamp, vx, vy, vz);
+	rc = update_flare(id, timestamp, vx, vy, vz);
 	pthread_mutex_unlock(&universe_mutex);
 	return rc < 0;
 }
@@ -7733,8 +7733,8 @@ static void *gameserver_reader(__attribute__((unused)) void *arg)
 		case OPCODE_UPDATE_EXPLOSION:
 			rc = process_update_explosion_packet();
 			break;
-		case OPCODE_UPDATE_CHAFF:
-			rc = process_update_chaff_packet();
+		case OPCODE_UPDATE_FLARE:
+			rc = process_update_flare_packet();
 			break;
 		case OPCODE_UPDATE_LASER:
 			rc = process_update_laser_packet();
@@ -10301,7 +10301,7 @@ static int science_tooltip_text(struct science_data *sd, char *buffer, int bufle
 	case OBJTYPE_WARP_EFFECT:
 	case OBJTYPE_LASERBEAM:
 	case OBJTYPE_SHIELD_EFFECT:
-	case OBJTYPE_CHAFF:
+	case OBJTYPE_FLARE:
 		snprintf(buffer, buflen, "ENERGY");
 		break;
 	case OBJTYPE_WARPGATE:
@@ -10622,7 +10622,7 @@ static void draw_sciplane_display(GtkWidget *w, struct snis_entity *o, double ra
 			int draw_popout_arc = 0;
 
 			if (go[i].type == OBJTYPE_LASER || go[i].type == OBJTYPE_TORPEDO ||
-				go[i].type == OBJTYPE_MISSILE || go[i].type == OBJTYPE_CHAFF) {
+				go[i].type == OBJTYPE_MISSILE || go[i].type == OBJTYPE_FLARE) {
 				/* set projectile tween value to be the same as the popout if they pass in popout area */
 				tween = selected_guy_tween;
 				draw_popout_arc = 0;
@@ -13775,9 +13775,9 @@ static void eng_custom_button_pressed(void *x)
 	queue_to_server(snis_opcode_pkt("bb", OPCODE_CUSTOM_BUTTON, OPCODE_CUSTOM_BUTTON_SUBCMD_ENG));
 }
 
-static void eng_deploy_chaff_button_pressed(void *x)
+static void eng_deploy_flare_button_pressed(void *x)
 {
-	transmit_adjust_control_input(0, OPCODE_ADJUST_CONTROL_DEPLOY_CHAFF);
+	transmit_adjust_control_input(0, OPCODE_ADJUST_CONTROL_DEPLOY_FLARE);
 }
 
 static void preset_button_pressed(void *button_ptr_ptr)
@@ -13906,11 +13906,11 @@ static void init_engineering_ui(void)
 						y, -1, -1, "CUSTOM BUTTON",
 						color, NANO_FONT, eng_custom_button_pressed, (void *) 0);
 	snis_button_set_sound(eu->custom_button, UISND14);
-	eu->deploy_chaff = snis_button_init(snis_button_get_x(eu->custom_button) +
+	eu->deploy_flare = snis_button_init(snis_button_get_x(eu->custom_button) +
 						snis_button_get_width(eu->custom_button) + txx(5),
-						y, -1, -1, "DEPLOY CHAFF",
-						color, NANO_FONT, eng_deploy_chaff_button_pressed, (void *) 0);
-	snis_button_set_sound(eu->deploy_chaff, UISND14);
+						y, -1, -1, "DEPLOY FLARE",
+						color, NANO_FONT, eng_deploy_flare_button_pressed, (void *) 0);
+	snis_button_set_sound(eu->deploy_flare, UISND14);
 	color = UI_COLOR(eng_power_meter);
 	eu->shield_slider = snis_slider_init(20, y += yinc, powersliderlen, sh, color,
 				"PWR SHIELDS", "0", "100", 0.0, 255.0,
@@ -14044,7 +14044,7 @@ static void init_engineering_ui(void)
 	ui_add_button(eu->preset_save_button, dm, "SAVE CURRENT VALUES IN THE ACTIVE PRESET");
 	ui_add_button(eu->silence_alarms, dm, "SILENCE/UNSILENCE ENGINEERING SYSTEM ALARMS");
 	ui_add_button(eu->custom_button, dm, "CUSTOM BUTTON");
-	ui_add_button(eu->deploy_chaff, dm, "DEPLOY CHAFF");
+	ui_add_button(eu->deploy_flare, dm, "DEPLOY ANTI-MISSILE FLARE");
 
 	y = eng_ui.gauge_radius * 2 + txy(50) + txy(30);
 	eu->shield_damage = snis_slider_init(s2x, y += yinc, sw, sh, color, "SHIELD STATUS", "0", "100",
@@ -19184,7 +19184,7 @@ static void show_demon_3d(GtkWidget *w)
 			color = BLUE;
 			material = &blue_material;
 			break;
-		case OBJTYPE_CHAFF:
+		case OBJTYPE_FLARE:
 			color = YELLOW;
 			material = &yellow_material;
 			break;
@@ -19240,7 +19240,7 @@ static void show_demon_3d(GtkWidget *w)
 				update_entity_material(e, &blue_material);
 			}
 			break;
-		case OBJTYPE_CHAFF:
+		case OBJTYPE_FLARE:
 			e = add_entity(instrumentecx, torpedo_nav_mesh, o->x, o->y, o->z, color);
 			if (e) {
 				update_entity_scale(e,  demon_ui.exaggerated_scale * scale +
@@ -21041,10 +21041,10 @@ static int load_static_textures(void)
 	spark_material.texture_mapped_unlit.texture_id = load_texture("textures/spark-texture.png");
 	spark_material.texture_mapped_unlit.do_blend = 1;
 
-	material_init_texture_mapped_unlit(&chaff_material);
-	chaff_material.billboard_type = MATERIAL_BILLBOARD_TYPE_SPHERICAL;
-	chaff_material.texture_mapped_unlit.texture_id = load_texture("textures/spark-texture.png");
-	chaff_material.texture_mapped_unlit.do_blend = 1;
+	material_init_texture_mapped_unlit(&flare_material);
+	flare_material.billboard_type = MATERIAL_BILLBOARD_TYPE_SPHERICAL;
+	flare_material.texture_mapped_unlit.texture_id = load_texture("textures/spark-texture.png");
+	flare_material.texture_mapped_unlit.do_blend = 1;
 
 	material_init_texture_mapped_unlit(&blackhole_spark_material);
 	blackhole_spark_material.billboard_type = MATERIAL_BILLBOARD_TYPE_SPHERICAL;
@@ -21906,8 +21906,8 @@ static void process_physical_device_io(unsigned short opcode, unsigned short val
 	case DEVIO_OPCODE_ENG_SILENCE_ALARMS:
 		silence_alarms_pressed((void *) 0);
 		break;
-	case DEVIO_OPCODE_ENG_CHAFF:
-		eng_deploy_chaff_button_pressed((void *) 0);
+	case DEVIO_OPCODE_ENG_FLARE:
+		eng_deploy_flare_button_pressed((void *) 0);
 		break;
 	case DEVIO_OPCODE_NAV_YAW_LEFT:
 		navigation_dirkey(-1, 0, 0);

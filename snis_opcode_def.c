@@ -99,7 +99,7 @@ int snis_opcode_def_init(void)
 	rc |= init_opcode_def(OPCODE_REQUEST_TORPEDO, "b");
 	rc |= init_opcode_def(OPCODE_DELETE_OBJECT, "bw");
 	rc |= init_opcode_def(OPCODE_UPDATE_EXPLOSION, "bwwwSSShhhbb");
-	rc |= init_opcode_def(OPCODE_UPDATE_CHAFF, "bwwSSS");
+	rc |= init_opcode_def(OPCODE_UPDATE_FLARE, "bwwSSS");
 	rc |= init_opcode_def(OPCODE_PLAY_SOUND, "bh");
 	rc |= init_opcode_def(OPCODE_REQUEST_SCIYAW, "bb");
 	rc |= init_opcode_def(OPCODE_REQUEST_SCIBEAMWIDTH, "bb");
@@ -170,7 +170,7 @@ int snis_opcode_def_init(void)
 	rc |= init_opcode_subcode_def(OPCODE_ADJUST_CONTROL_INPUT,
 			OPCODE_ADJUST_CONTROL_FIRE_MISSILE, "bbwb");
 	rc |= init_opcode_subcode_def(OPCODE_ADJUST_CONTROL_INPUT,
-			OPCODE_ADJUST_CONTROL_DEPLOY_CHAFF, "bbwb");
+			OPCODE_ADJUST_CONTROL_DEPLOY_FLARE, "bbwb");
 	/* rc |= init_opcode_def(OPCODE_UPDATE_PLANET_DESCRIPTION, "bwhr"); */
 	rc |= init_opcode_def(OPCODE_UPDATE_RESPAWN_TIME, "bb");
 	rc |= init_opcode_def(OPCODE_UPDATE_NETSTATS, "bqqwwwwwwwww");
