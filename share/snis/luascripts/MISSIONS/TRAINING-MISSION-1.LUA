@@ -4,21 +4,24 @@
 -- at each one in turn.
 --
 
+adjx = -300000;
+adjz = -300000;
+
 -- First, clear the board
 clear_all();
 
 start_time = 0;
 
 -- make 4 starbases in a big rectangle
-sb1 = add_starbase(1000.0, 10000, 1000.0, 1);
-sb2 = add_starbase(150000.0, -2000, 100.0, 2);
-sb3 = add_starbase(190000.0, 10000, 70000.0, 3);
-n1 = add_nebula("insanity", 190000.0, 14000, 70500, 3000);
-n2 = add_nebula("insanity", 191500.0, 15000, 73500, 5000);
-n3 = add_nebula("insanity", 193000.0, 18000, 77500, 9000);
-sb4 = add_starbase(100.0, -2500, 90000.0, 4);
-p1 = add_planet("PHARII", 191000, 10000, 85000, 12000); 
-wh1, wh2 = add_wormhole_pair(150000.0, -2000, 1100.0, 190000.0, 10000, 68000.0);
+sb1 = add_starbase(adjx + 1000.0, 10000, adjz + 1000.0, 1);
+sb2 = add_starbase(adjx + 150000.0, -2000, adjz + 100.0, 2);
+sb3 = add_starbase(adjx + 190000.0, 10000, adjz + 70000.0, 3);
+n1 = add_nebula("insanity", adjx + 190000.0, 14000, adjz + 70500, 3000);
+n2 = add_nebula("insanity", adjx + 191500.0, 15000, adjz + 73500, 5000);
+n3 = add_nebula("insanity", adjx + 193000.0, 18000, adjz + 77500, 9000);
+sb4 = add_starbase(adjx + 100.0, -2500, adjz + 90000.0, 4);
+p1 = add_planet("PHARII", adjx + 191000, 10000, adjz + 85000, 12000);
+wh1, wh2 = add_wormhole_pair(adjx + 150000.0, -2000, adjz + 1100.0, adjx + 190000.0, 10000, adjz + 68000.0);
 
 -- get the names of the starbases.
 sb1_name = get_object_name(sb1);
@@ -36,7 +39,7 @@ player_ids = get_player_ship_ids();
 reset_player_ship(player_ids[1]);
 player_name = "Unknown Player"
 if (player_ids[1]) then
-    move_object(player_ids[1], 25000, 0, 25000);
+    move_object(player_ids[1], adjx + 25000, 0, adjz + 25000);
     player_name = get_object_name(player_ids[1]);
 end
 
