@@ -4,7 +4,10 @@
 clear_all();
 set_variable("MISSILE_FIRE_CHANCE", "0");
 
-startx = 1000;
+adjx = -300000;
+adjz = -300000;
+
+startx = 1000 + adjx;
 starty = -6000;
 
 zarkon = 3;
@@ -19,28 +22,28 @@ city = 1
 player_ids = get_player_ship_ids();
 player_name = "Unknown Player"
 if (player_ids[1]) then
-    move_object(player_ids[1], startx, starty, 0);
+    move_object(player_ids[1], startx, starty, 0 + adjz);
     player_name = get_object_name(player_ids[1]);
     reset_player_ship(player_ids[1]);
 end
 
-x = 2900;
+x = 2900 + adjx;
 y = 12000;
-z = 290000;
+z = 290000 + adjz;
 
-zarkx = 250000;
+zarkx = 250000 + adjx;
 zarky = -12000;
-zarkz = 52000 
+zarkz = 52000 + adjz;
 
 erphx = x;
 erphy = y - 15000;
 erphz = z - 12000;
 
-nowwhat = add_planet("NOWWHAT", 3000, 3000, 2000, 5000);
+nowwhat = add_planet("NOWWHAT", 3000 + adjx, 3000, 2000 + adjz, 5000);
 nwsbx,nwsby,nwsbz = random_point_on_sphere(7000);
-nwsbx = nwsbx + 3000;
+nwsbx = nwsbx + 3000 + adjx;
 nwsby = nwsby + 3000;
-nwsbz = nwsbz + 2000;
+nwsbz = nwsbz + 2000 + adjz;
 nowwhat_starbase = add_starbase(nwsbx, nwsby, nwsbz, 1);
 
 erph = add_planet("ERPH", erphx, erphy, erphz, 3000);
