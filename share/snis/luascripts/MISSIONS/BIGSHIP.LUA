@@ -34,10 +34,10 @@ function big_ship(x, y, z, s)
 	add_block(e, s * 0, s * 30, s * 6, s * 100, s * 40, s * 5, 1, 0, 0, -17 * math.pi / 180.0, t, block);
 
 	-- Four corner capsules
-	add_block(e, s * 50, s * 20, s * 0, s * 30, s * 15, s * 15, 1, 0, 0, 0, t, capsule);
-	add_block(e, s * -50, s * 20, s * 0, s * 30, s * 15, s * 15, 1, 0, 0, 0, t, capsule);
-	add_block(e, s * 50, s * -20, s * 0, s * 30, s * 15, s * 15, 1, 0, 0, 0, t, capsule);
-	add_block(e, s * -50, s * -20, s * 0, s * 30, s * 15, s * 15, 1, 0, 0, 0, t, capsule);
+	add_block(e, s * 50, s * 20, s * 0, s * 30, 0.5 * s * 15, 0.5 * s * 15, 1, 0, 0, 0, t, capsule);
+	add_block(e, s * -50, s * 20, s * 0, s * 30, 0.5 * s * 15, 0.5 * s * 15, 1, 0, 0, 0, t, capsule);
+	add_block(e, s * 50, s * -20, s * 0, s * 30, 0.5 * s * 15, 0.5 * s * 15, 1, 0, 0, 0, t, capsule);
+	add_block(e, s * -50, s * -20, s * 0, s * 30, 0.5 * s * 15, 0.5 * s * 15, 1, 0, 0, 0, t, capsule);
 
 	-- back wall
 	add_block(e, s * -45, s * 0, s * 0, s * 20, s * 35, s * 15, 0, 1, 0, math.pi, t, block);
@@ -45,14 +45,14 @@ function big_ship(x, y, z, s)
 	add_block(e, s * 45, s * 0, s * 0, s * 20, s * 35, s * 15, 0, 1, 0, math.pi, t, block);
 
 	-- Three front capsules
-	add_block(e, s * 35, s * 30, s * 0, s * 180, s * 20, s * 20, 1, 0, 0, 0.25 * math.pi, t, capsule);
-	add_block(e, s * 35, s * -30, s * 0, s * 180, s * 20, s * 20, 1, 0, 0, 0.25 * math.pi, t, capsule);
-	add_block(e, s * 0, s * -50, s * 0, s * 120, s * 10, s * 10, 1, 0, 0, 0.25 * math.pi, t, capsule);
+	add_block(e, s * 35, s * 30, s * 0, s * 180, 0.5 * s * 20, 0.5 * s * 20, 1, 0, 0, 0.25 * math.pi, t, capsule);
+	add_block(e, s * 35, s * -30, s * 0, s * 180, 0.5 * s * 20, 0.5 * s * 20, 1, 0, 0, 0.25 * math.pi, t, capsule);
+	add_block(e, s * 0, s * -50, s * 0, s * 120, 0.5 * s * 10, 0.5 * s * 10, 1, 0, 0, 0.25 * math.pi, t, capsule);
 
-	add_block(e, s * 0, s * 50, s * 0, s * 120, s * 10, s * 10, 1, 0, 0, 0.25 * math.pi, t, capsule);
+	add_block(e, s * 0, s * 50, s * 0, s * 120, 0.5 * s * 10, 0.5 * s * 10, 1, 0, 0, 0.25 * math.pi, t, capsule);
 	add_block(e, s * 110, s * 0, s * 0, s * 20, s * 70, s * 5, 1, 0, 0, 0, t, block);
 
-	add_block(e, s * 120, s * 0, s * 0, s * 80, s * 30, s * 30, 1, 0, 0, 0, t, capsule);
+	add_block(e, s * 120, s * 0, s * 0, s * 80, 0.5 * s * 30, 0.5 * s * 30, 1, 0, 0, 0, t, capsule);
 
 	add_block(e, s * -35, s * -30, s * 10, s * 40, s * 3, s * 20, 1, 0, 0, 20.0 * math.pi / 180.0, t, block);
 	add_block(e, s * -45, s * -30, s * 10, s * 20, s * 2, s * 40, 1, 0, 0, 20.0 * math.pi / 180.0, t, block);
