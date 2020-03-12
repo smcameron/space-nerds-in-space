@@ -319,6 +319,15 @@ static void calculate_model_matrices(struct camera_info *c, struct frustum *f, s
 				vec3_cross(&up, &look, &right);
 				vec3_normalize_self(&up);
 
+				if (e->material_ptr->rotate_randomly) {
+					/* Rotate randomly about normal. */
+					union quat rotation;
+					float angle = (snis_randn(1000) % 360) * M_PI / 180.0;
+					quat_init_axis(&rotation, look.v.x, look.v.y, look.v.z, angle);
+					quat_rot_vec_self(&up, &rotation);
+					quat_rot_vec_self(&right, &rotation);
+				}
+
 				/* a rotation matrix to align with up, right, and look unit vectors
 				   r.x r.y r.z 0
 				   u.x u.y u.z 0

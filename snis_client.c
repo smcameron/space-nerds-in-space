@@ -21035,31 +21035,37 @@ static int load_static_textures(void)
 
 	material_init_texture_mapped_unlit(&red_torpedo_material);
 	red_torpedo_material.billboard_type = MATERIAL_BILLBOARD_TYPE_SPHERICAL;
+	red_torpedo_material.rotate_randomly = 1;
 	red_torpedo_material.texture_mapped_unlit.texture_id = load_texture("textures/red-torpedo-texture.png");
 	red_torpedo_material.texture_mapped_unlit.do_blend = 1;
 
 	material_init_texture_mapped_unlit(&spark_material);
 	spark_material.billboard_type = MATERIAL_BILLBOARD_TYPE_SPHERICAL;
+	spark_material.rotate_randomly = 1;
 	spark_material.texture_mapped_unlit.texture_id = load_texture("textures/spark-texture.png");
 	spark_material.texture_mapped_unlit.do_blend = 1;
 
 	material_init_texture_mapped_unlit(&flare_material);
 	flare_material.billboard_type = MATERIAL_BILLBOARD_TYPE_SPHERICAL;
+	flare_material.rotate_randomly = 1;
 	flare_material.texture_mapped_unlit.texture_id = load_texture("textures/spark-texture.png");
 	flare_material.texture_mapped_unlit.do_blend = 1;
 
 	material_init_texture_mapped_unlit(&blackhole_spark_material);
 	blackhole_spark_material.billboard_type = MATERIAL_BILLBOARD_TYPE_SPHERICAL;
+	blackhole_spark_material.rotate_randomly = 1;
 	blackhole_spark_material.texture_mapped_unlit.texture_id = load_texture("textures/green-spark.png");
 	blackhole_spark_material.texture_mapped_unlit.do_blend = 1;
 
 	material_init_texture_mapped_unlit(&laserflash_material);
 	laserflash_material.billboard_type = MATERIAL_BILLBOARD_TYPE_SPHERICAL;
+	laserflash_material.rotate_randomly = 1;
 	laserflash_material.texture_mapped_unlit.texture_id = load_texture("textures/laserflash.png");
 	laserflash_material.texture_mapped_unlit.do_blend = 1;
 
 	material_init_texture_mapped_unlit(&warp_effect_material);
 	warp_effect_material.billboard_type = MATERIAL_BILLBOARD_TYPE_SPHERICAL;
+	warp_effect_material.rotate_randomly = 1;
 	warp_effect_material.texture_mapped_unlit.texture_id = load_texture("textures/warp-effect.png");
 	warp_effect_material.texture_mapped_unlit.do_blend = 1;
 
@@ -21109,6 +21115,7 @@ static int load_static_textures(void)
 
 	material_init_texture_mapped_unlit(&thrust_flare_material[0]);
 	thrust_flare_material[0].billboard_type = MATERIAL_BILLBOARD_TYPE_SPHERICAL;
+	thrust_flare_material[0].rotate_randomly = 1;
 	thrust_flare_material[0].texture_mapped_unlit.texture_id = load_texture("textures/thrust_flare.png");
 	thrust_flare_material[0].texture_mapped_unlit.do_blend = 1;
 

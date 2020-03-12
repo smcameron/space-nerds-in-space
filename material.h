@@ -158,6 +158,7 @@ struct material {
 	};
 	int type;
 	int billboard_type;
+	int rotate_randomly; /* If true, will rotate spherical billboards randomly about axis to camera */
 };
 
 extern void material_init_texture_mapped(struct material *m);

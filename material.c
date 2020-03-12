@@ -59,6 +59,7 @@ int material_nebula_read_from_file(const char *asset_dir, const char *filename,
 
 	nebula->type = MATERIAL_NEBULA;
 	nebula->billboard_type = MATERIAL_BILLBOARD_TYPE_NONE;
+	nebula->rotate_randomly = 0;
 	sprintf(full_filename, "%s/materials/%s", asset_dir, filename);
 
 	f = fopen(full_filename, "r");
@@ -145,6 +146,7 @@ void material_init_texture_mapped(struct material *m)
 	m->texture_mapped.emit_intensity = 1.0;
 	m->texture_mapped.specular_power = 512.0;
 	m->texture_mapped.specular_intensity = 0.2;
+	m->rotate_randomly = 0;
 }
 
 void material_init_texture_mapped_unlit(struct material *m)
@@ -156,6 +158,7 @@ void material_init_texture_mapped_unlit(struct material *m)
 	m->texture_mapped_unlit.do_blend = 0;
 	m->texture_mapped_unlit.alpha = 1.0;
 	m->texture_mapped_unlit.tint = sng_get_color(WHITE);
+	m->rotate_randomly = 0;
 }
 
 void material_init_texture_cubemap(struct material *m)
@@ -167,6 +170,7 @@ void material_init_texture_cubemap(struct material *m)
 	m->texture_cubemap.do_blend = 0;
 	m->texture_cubemap.alpha = 1.0;
 	m->texture_cubemap.tint = sng_get_color(WHITE);
+	m->rotate_randomly = 0;
 }
 
 void material_init_nebula(struct material *m)
@@ -180,6 +184,7 @@ void material_init_nebula(struct material *m)
 	}
 	m->nebula.alpha = 1.0;
 	m->nebula.tint = sng_get_color(WHITE);
+	m->rotate_randomly = 0;
 }
 
 void material_init_textured_particle(struct material *m)
@@ -189,6 +194,7 @@ void material_init_textured_particle(struct material *m)
 	m->textured_particle.texture_id = 0;
 	m->textured_particle.radius = 1.0;
 	m->textured_particle.time_base = 1.0;
+	m->rotate_randomly = 0;
 }
 
 void material_init_textured_planet(struct material *m)
@@ -203,6 +209,7 @@ void material_init_textured_planet(struct material *m)
 	m->textured_planet.sun_color_r = 1.0;
 	m->textured_planet.sun_color_g = 1.0;
 	m->textured_planet.sun_color_b = 0.7;
+	m->rotate_randomly = 0;
 }
 
 void material_init_textured_shield(struct material *m)
@@ -210,6 +217,7 @@ void material_init_textured_shield(struct material *m)
 	m->type = MATERIAL_TEXTURED_SHIELD;
 	m->billboard_type = MATERIAL_BILLBOARD_TYPE_NONE;
 	m->textured_shield.texture_id = 0;
+	m->rotate_randomly = 0;
 }
 
 void material_init_atmosphere(struct material *m)
@@ -221,6 +229,7 @@ void material_init_atmosphere(struct material *m)
 	m->atmosphere.b = 1.0f;
 	m->atmosphere.scale = 1.03f;
 	m->atmosphere.brightness = NULL;
+	m->rotate_randomly = 0;
 }
 
 void material_init_alpha_by_normal(struct material *m)
@@ -233,6 +242,7 @@ void material_init_alpha_by_normal(struct material *m)
 	m->alpha_by_normal.invert = 0;
 	m->alpha_by_normal.alpha = 1.0;
 	m->alpha_by_normal.tint = sng_get_color(WHITE);
+	m->rotate_randomly = 0;
 }
 
 void material_init_textured_planet_ring(struct material *m)
@@ -243,6 +253,7 @@ void material_init_textured_planet_ring(struct material *m)
 	m->textured_planet_ring.alpha = 1.0;
 	m->textured_planet_ring.texture_v = 0.0f;
 	m->textured_planet_ring.tint = sng_get_color(WHITE);
+	m->rotate_randomly = 0;
 }
 
 void material_init_wireframe_sphere_clip(struct material *m)
@@ -252,4 +263,5 @@ void material_init_wireframe_sphere_clip(struct material *m)
 	m->wireframe_sphere_clip.center = 0;
 	m->wireframe_sphere_clip.radius = 0;
 	m->wireframe_sphere_clip.radius_fade = 0;
+	m->rotate_randomly = 0;
 }
