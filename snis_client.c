@@ -1589,6 +1589,7 @@ static void laserbeam_move(struct snis_entity *o)
 {
 	int oid, tid;
 	struct snis_entity *origin, *target;
+	union vec3 offset;
 	union vec3 right = { { 1.0f, 0.0f, 0.0f } };
 	union vec3 up = { { 0.0f, 0.1f, 0.0f } } ;
 	union vec3 target_vector;
@@ -1607,9 +1608,24 @@ static void laserbeam_move(struct snis_entity *o)
 	origin = &go[oid];
 	target = &go[tid];
 
-	target_vector.v.x = target->x - origin->x + epsilon;
-	target_vector.v.y = target->y - origin->y + epsilon;
-	target_vector.v.z = target->z - origin->z + epsilon;
+	if (o->type == OBJTYPE_TRACTORBEAM) {
+#define TRACTORBEAM_OFFSET (-3.0 * SHIP_MESH_SCALE);
+		offset.v.x = TRACTORBEAM_OFFSET;
+		offset.v.y = TRACTORBEAM_OFFSET;
+		offset.v.z = 0;
+		quat_rot_vec_self(&offset, &origin->orientation);
+		offset.v.x += origin->x;
+		offset.v.y += origin->y;
+		offset.v.z += origin->z;
+	} else {
+		offset.v.x = origin->x;
+		offset.v.y = origin->y;
+		offset.v.z = origin->z;
+	}
+	/* The + (o->id & 0x7) -4 is to offset consistently from the camera, +1, +2 so they aren't all 0. */
+	target_vector.v.x = target->x - offset.v.x + (o->id & 0x7) - 4;
+	target_vector.v.y = target->y - offset.v.y + ((o->id + 1) & 0x7) - 4;
+	target_vector.v.z = target->z - offset.v.z + ((o->id + 2) & 0x7) - 4;
 	length = vec3_magnitude(&target_vector);
 
 	if (target->type == OBJTYPE_PLANET) { /* Account for the radius of the planet */
@@ -1621,9 +1637,9 @@ static void laserbeam_move(struct snis_entity *o)
 	quat_from_u2v(&orientation, &right, &target_vector, &up); /* correct up vector? */
 	quat_normalize_self(&orientation);
 
-	x = origin->x + 0.5 * target_vector.v.x;
-	y = origin->y + 0.5 * target_vector.v.y;
-	z = origin->z + 0.5 * target_vector.v.z;
+	x = offset.v.x + 0.5 * target_vector.v.x;
+	y = offset.v.y + 0.5 * target_vector.v.y;
+	z = offset.v.z + 0.5 * target_vector.v.z;
 
 	if (o->entity) {
 		update_entity_pos(o->entity, x, y, z);
@@ -1646,6 +1662,7 @@ static void init_laserbeam_data(struct snis_entity *o)
 	struct laserbeam_data *ld = &o->tsd.laserbeam;
 	int color;
 	struct snis_entity *shooter, *target;
+	union vec3 offset;
 
 	shooter = lookup_entity_by_id(ld->origin);
 	target = lookup_entity_by_id(ld->target);
@@ -1656,7 +1673,13 @@ static void init_laserbeam_data(struct snis_entity *o)
 	if (o->type == OBJTYPE_TRACTORBEAM) {
 		color = TRACTORBEAM_COLOR;
 		o->tsd.laserbeam.laserflash_entity = NULL;
+		offset.v.x = TRACTORBEAM_OFFSET;
+		offset.v.y = TRACTORBEAM_OFFSET;
+		offset.v.z = 0;
 	} else {
+		offset.v.x = 0;
+		offset.v.y = 0;
+		offset.v.z = 0;
 		if (shooter)
 			color = (shooter->type == OBJTYPE_SHIP2) ?
 				NPC_LASER_COLOR : PLAYER_LASER_COLOR;
@@ -1672,9 +1695,13 @@ static void init_laserbeam_data(struct snis_entity *o)
 						0.01 * (snis_randn(50) + 50.0));
 		}
 	}
-	set_object_location(o, shooter->x + (target->x - shooter->x) / 2.0,
-				shooter->y + (target->y - shooter->y) / 2.0,
-				shooter->z + (target->z - shooter->z) / 2.0);
+	quat_rot_vec_self(&offset, &shooter->orientation);
+	offset.v.x += shooter->x;
+	offset.v.y += shooter->y;
+	offset.v.z += shooter->z;
+	set_object_location(o, (target->x - offset.v.x) / 2.0,
+				(target->y - offset.v.y) / 2.0,
+				(target->z - offset.v.z) / 2.0);
 
 	o->entity = add_entity(ecx, laserbeam_mesh, o->x, o->y, o->z, color);
 	if (o->entity)
