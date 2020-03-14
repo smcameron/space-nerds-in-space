@@ -16404,19 +16404,20 @@ static void draw_science_details(GtkWidget *w, GdkGC *gc)
 	char buf[100];
 	float angle;
 	union quat orientation;
-	int y, yinc = 20 * SCREEN_HEIGHT / 600;
+	int y, yinc = 15 * SCREEN_HEIGHT / 600;
 	int i;
+	int sdf = NANO_FONT;
 
 	if (science_cam_timer < 1000)
 		science_cam_timer += (int) (0.3 * (1000.0 - (float) science_cam_timer));
 
 	if (!curr_science_guy) {
-		sng_center_xy_draw_string("NO SCAN TARGET SELECTED", TINY_FONT, txx(260), txy(300));
+		sng_center_xy_draw_string("NO SCAN TARGET SELECTED", sdf, txx(260), txy(300));
 		return;
 	}
 	if (!curr_science_guy->entity) {
 		/* This mostly should not happen. */
-		sng_center_xy_draw_string("SCAN TARGET NOT IDENTIFIABLE", TINY_FONT, txx(260), txy(300));
+		sng_center_xy_draw_string("SCAN TARGET NOT IDENTIFIABLE", sdf, txx(260), txy(300));
 		return;
 	}
 
@@ -16462,7 +16463,7 @@ static void draw_science_details(GtkWidget *w, GdkGC *gc)
 	if (e)
 		remove_entity(sciecx, e);
 
-	y = SCREEN_HEIGHT - 240 * SCREEN_HEIGHT / 600;
+	y = SCREEN_HEIGHT - 200 * SCREEN_HEIGHT / 600;
 	if (curr_science_guy->type == OBJTYPE_SHIP1 ||
 		curr_science_guy->type == OBJTYPE_SHIP2) {
 		snprintf(buf, sizeof(buf), "LIFEFORMS: %d", curr_science_guy->tsd.ship.lifeform_count);
@@ -16475,7 +16476,7 @@ static void draw_science_details(GtkWidget *w, GdkGC *gc)
 	}
 	sng_set_foreground(UI_COLOR(sci_details_text));
 	if (buf[0])
-		sng_abs_xy_draw_string(buf, TINY_FONT, 10, y);
+		sng_abs_xy_draw_string(buf, sdf, 10, y);
 	y += yinc;
 	if (curr_science_guy->type == OBJTYPE_PLANET) {
 		static uint32_t last = 0xffffffff;
@@ -16496,7 +16497,7 @@ static void draw_science_details(GtkWidget *w, GdkGC *gc)
 		pt = planet_type_from_string(planet_type_str);
 		snprintf(buf, sizeof(buf), "MASS: %.2f EU / DIAM: %.2f EU",
 				planetary_mass(p->radius, pt), planetary_diameter(p->radius, pt));
-		sng_abs_xy_draw_string(buf, TINY_FONT, 10, y);
+		sng_abs_xy_draw_string(buf, sdf, 10, y);
 		y += yinc;
 
 		if (p->custom_description) {
@@ -16513,13 +16514,13 @@ static void draw_science_details(GtkWidget *w, GdkGC *gc)
 				planet_desc[i] = toupper(planet_desc[i]);
 		}
 		snprintf(buf, sizeof(buf), "GOVERNMENT: %s", government_name[p->government]);
-		sng_abs_xy_draw_string(buf, TINY_FONT, 10, y);
+		sng_abs_xy_draw_string(buf, sdf, 10, y);
 		y += yinc;
 		snprintf(buf, sizeof(buf), "TECH LEVEL: %s", tech_level_name[p->tech_level]);
-		sng_abs_xy_draw_string(buf, TINY_FONT, 10, y);
+		sng_abs_xy_draw_string(buf, sdf, 10, y);
 		y += yinc;
 		snprintf(buf, sizeof(buf), "ECONOMY: %s", economy_name[p->economy]);
-		sng_abs_xy_draw_string(buf, TINY_FONT, 10, y);
+		sng_abs_xy_draw_string(buf, sdf, 10, y);
 		y += yinc;
 		switch (p->security) {
 		case 0:
@@ -16535,7 +16536,7 @@ static void draw_science_details(GtkWidget *w, GdkGC *gc)
 			strcpy(buf, "SECURITY: UNKNOWN");
 			break;
 		}
-		sng_abs_xy_draw_string(buf, TINY_FONT, 10, y);
+		sng_abs_xy_draw_string(buf, sdf, 10, y);
 		y += yinc;
 
 		/* break planet_desc into multiple lines */
@@ -16544,7 +16545,7 @@ static void draw_science_details(GtkWidget *w, GdkGC *gc)
 		for (i = 0; i <= len; i++) {
 			if (planet_desc[i] == '\n' || planet_desc[i] == '\0') {
 				tmpbuf[j] = '\0';
-				sng_abs_xy_draw_string(tmpbuf, NANO_FONT, 10, y);
+				sng_abs_xy_draw_string(tmpbuf, sdf, 10, y);
 				y += 15 * SCREEN_HEIGHT / 600;
 				j = 0;
 			} else {
@@ -16556,16 +16557,16 @@ static void draw_science_details(GtkWidget *w, GdkGC *gc)
 	if (curr_science_guy->type == OBJTYPE_ASTEROID) {
 		struct asteroid_data *a = &curr_science_guy->tsd.asteroid;
 		snprintf(buf, sizeof(buf), "%3.0f%% CARBONACEOUS", 100.0 * a->carbon / 255.0);
-		sng_abs_xy_draw_string(buf, TINY_FONT, 10, y);
+		sng_abs_xy_draw_string(buf, sdf, 10, y);
 		y += yinc;
 		snprintf(buf, sizeof(buf), "%3.0f%% SILICATES", 100.0 * a->silicates / 255.0);
-		sng_abs_xy_draw_string(buf, TINY_FONT, 10, y);
+		sng_abs_xy_draw_string(buf, sdf, 10, y);
 		y += yinc;
 		snprintf(buf, sizeof(buf), "%3.0f%% NICKEL/IRON", 100.0 * a->nickeliron / 255.0);
-		sng_abs_xy_draw_string(buf, TINY_FONT, 10, y);
+		sng_abs_xy_draw_string(buf, sdf, 10, y);
 		y += yinc;
 		snprintf(buf, sizeof(buf), "%3.0f%% PRECIOUS METALS", 100.0 * a->preciousmetals / 255.0);
-		sng_abs_xy_draw_string(buf, TINY_FONT, 10, y);
+		sng_abs_xy_draw_string(buf, sdf, 10, y);
 		y += yinc;
 	}
 	if (curr_science_guy->type == OBJTYPE_SHIP2 || curr_science_guy->type == OBJTYPE_SHIP1) {
@@ -16580,11 +16581,11 @@ static void draw_science_details(GtkWidget *w, GdkGC *gc)
 			snprintf(buf, sizeof(buf), "WEAPONRY: LASERS");
 		else
 			snprintf(buf, sizeof(buf), "WEAPONRY: TORPEDOES");
-		sng_abs_xy_draw_string(buf, TINY_FONT, 10, y);
+		sng_abs_xy_draw_string(buf, sdf, 10, y);
 		y += yinc;
 
 		snprintf(buf, sizeof(buf), "MASS: %.1f MT", ship_type[s->shiptype].mass_kg / 1000.0);
-		sng_abs_xy_draw_string(buf, TINY_FONT, 10, y);
+		sng_abs_xy_draw_string(buf, sdf, 10, y);
 		y += yinc;
 
 		for (i = 0; i < ship_type[s->shiptype].ncargo_bays; i++) {
@@ -16593,29 +16594,29 @@ static void draw_science_details(GtkWidget *w, GdkGC *gc)
 				continue;
 			if (i == 0) {
 				snprintf(buf, sizeof(buf), "PROBABLE CARGO:");
-				sng_abs_xy_draw_string(buf, TINY_FONT, 10, y);
+				sng_abs_xy_draw_string(buf, sdf, 10, y);
 				y += yinc;
 			}
 			if (cbc->item >= 0 && cbc->item < ncommodities) {
 				snprintf(buf, sizeof(buf), "- %4.2f %s %s", cbc->qty,
 					commodity[cbc->item].unit, commodity[cbc->item].scans_as);
-				sng_abs_xy_draw_string(buf, TINY_FONT, 10, y);
+				sng_abs_xy_draw_string(buf, sdf, 10, y);
 			} else {
-				sng_abs_xy_draw_string("UNKNOWN", TINY_FONT, 10, y);
+				sng_abs_xy_draw_string("UNKNOWN", sdf, 10, y);
 			}
 			y += yinc;
 		}
 	} else if (curr_science_guy->type == OBJTYPE_CARGO_CONTAINER) {
 		struct cargo_container_contents *ccc = &curr_science_guy->tsd.cargo_container.contents;
 		snprintf(buf, sizeof(buf), "PROBABLE CONTENTS:");
-		sng_abs_xy_draw_string(buf, TINY_FONT, 10, y);
+		sng_abs_xy_draw_string(buf, sdf, 10, y);
 		y += yinc;
 		if (ccc->item >= 0 && ccc->item < ncommodities) {
 			snprintf(buf, sizeof(buf), "- %4.2f %s %s", ccc->qty,
 				commodity[ccc->item].unit, commodity[ccc->item].scans_as);
-			sng_abs_xy_draw_string(buf, TINY_FONT, 10, y);
+			sng_abs_xy_draw_string(buf, sdf, 10, y);
 		} else {
-			sng_abs_xy_draw_string("UNKNOWN", TINY_FONT, 10, y);
+			sng_abs_xy_draw_string("UNKNOWN", sdf, 10, y);
 		}
 	}
 }
