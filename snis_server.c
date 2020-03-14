@@ -12495,8 +12495,9 @@ static void tractorbeam_move(struct snis_entity *o)
 {
 	int tid, oid;
 	struct snis_entity *target, *origin;
-	struct mat41 to_object, nto_object, desired_object_loc, tractor_vec, tractor_velocity;
+	union vec3 to_object, nto_object, desired_object_loc, tractor_vec, tractor_velocity, tractorer_velocity;
 	double dist;
+	float authority, inauthority;
 
 	if (o->alive == 0) {
 		delete_from_clients_and_server(o);
@@ -12523,34 +12524,85 @@ static void tractorbeam_move(struct snis_entity *o)
 	}
 
 	/* Make unit vector pointing to object */
-	to_object.m[0] = target->x - origin->x;
-	to_object.m[1] = target->y - origin->y;
-	to_object.m[2] = target->z - origin->z;
-	to_object.m[3] = 1.0;
+	to_object.v.x = target->x - origin->x;
+	to_object.v.y = target->y - origin->y;
+	to_object.v.z = target->z - origin->z;
 
 	/* Find desired location of object */
 	nto_object = to_object;
-	nto_object.m[2] = 0.0;
-	normalize_vector(&nto_object, &nto_object);
-	mat41_scale(&nto_object, TRACTOR_BEAM_IDEAL_DIST, &desired_object_loc);
+	vec3_normalize_self(&nto_object);
+	vec3_mul(&desired_object_loc, &nto_object, TRACTOR_BEAM_IDEAL_DIST);
 
 	/* Find vector from current object position towards desired position */ 
-	tractor_vec.m[0] = desired_object_loc.m[0] - to_object.m[0];
-	tractor_vec.m[1] = desired_object_loc.m[1] - to_object.m[1];
-	tractor_vec.m[2] = desired_object_loc.m[2] - to_object.m[2];
-	tractor_vec.m[3] = 1.0;
+	vec3_sub(&tractor_vec, &desired_object_loc, &to_object);
 
-	/* Find how much velocity to impart to tractored object */
-	dist = hypot3d(tractor_vec.m[0], tractor_vec.m[1], tractor_vec.m[2]);
+	/* Find how much authority we have over the tractored object */
+	switch (target->type) {
+	case OBJTYPE_PLANET:
+	case OBJTYPE_WARPGATE:
+	case OBJTYPE_BLACK_HOLE:
+	case OBJTYPE_STARBASE:
+		authority = 0.0;
+		inauthority = 0.5;
+		break;
+	case OBJTYPE_ASTEROID:
+		authority = 0.05; /* TODO: mass calculation. */
+		inauthority = 0.95; /* TODO: mass calculation. */
+		break;
+	case OBJTYPE_SHIP2:
+		authority = ship_type[origin->tsd.ship.shiptype].relative_mass /
+				ship_type[target->tsd.ship.shiptype].relative_mass;
+		inauthority = 1.0 - authority;
+		break;
+	case OBJTYPE_WARP_CORE:
+	case OBJTYPE_MISSILE:
+	case OBJTYPE_CARGO_CONTAINER:
+		authority = 0.95;
+		inauthority = 0.05;
+		break;
+	case OBJTYPE_DERELICT:
+		authority = ship_type[origin->tsd.derelict.shiptype].relative_mass /
+				ship_type[target->tsd.derelict.shiptype].relative_mass;
+		inauthority = 1.0 - authority;
+		break;
+	case OBJTYPE_SPACEMONSTER:
+		authority = 0.8;
+		inauthority = 0.2;
+		break;
+	default:
+		authority = 0.0;
+		inauthority = 0.0;
+		return;
+	}
+	authority = authority * ((float) origin->tsd.ship.power_data.tractor.i / 255.0);
+	inauthority = inauthority * ((float) origin->tsd.ship.power_data.tractor.i / 255.0);
+	authority *= 3.0; /* empirically tweaked */
+	inauthority *= 3.0; /* empirically tweaked */
+
+	/* Find how much velocity to impart to tractored object and tractorer */
+	dist = vec3_magnitude(&tractor_vec);
 	if (dist > MAX_TRACTOR_VELOCITY)
 		dist = MAX_TRACTOR_VELOCITY;
-	normalize_vector(&tractor_vec, &tractor_vec);
-	mat41_scale(&tractor_vec, dist, &tractor_velocity);
+	vec3_normalize_self(&tractor_vec);
+	vec3_mul(&tractor_velocity, &tractor_vec, dist * authority);
+	vec3_mul(&tractorer_velocity, &tractor_vec, -dist * inauthority);
 
 	/* move tractored object */
-	target->vx += tractor_velocity.m[0];
-	target->vy += tractor_velocity.m[1];
-	target->vz += tractor_velocity.m[2];
+	target->vx += tractor_velocity.v.x;
+	target->vy += tractor_velocity.v.y;
+	target->vz += tractor_velocity.v.z;
+
+	/* Move tractorer */
+	origin->vx += tractorer_velocity.v.x;
+	origin->vy += tractorer_velocity.v.y;
+	origin->vz += tractorer_velocity.v.z;
+
+	target->x += target->vx;
+	target->y += target->vy;
+	target->z += target->vz;
+	origin->x += origin->vx;
+	origin->y += origin->vy;
+	origin->z += origin->vz;
 
 	return;
 }
