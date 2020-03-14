@@ -46,6 +46,8 @@ struct ship_type_entry {
 	int rts_unit_type;
 	float extra_scaling;
 	uint8_t manufacturer; /* index into corporations in corporations.c */
+	float relative_mass;
+	float mass_kg;
 };
 
 struct ship_type_entry *snis_read_ship_types(char *filename, int *count);

@@ -31,6 +31,7 @@ struct ship_type_entry *snis_read_ship_types(char *filename, int *count)
 	float rot[4];
 	int expected_count;
 	int has_lasers, has_torpedoes, has_missiles;
+	float relative_mass;
 
 	nalloced = 30;
 	st = malloc(sizeof(*st) * nalloced);
@@ -60,24 +61,24 @@ struct ship_type_entry *snis_read_ship_types(char *filename, int *count)
 			continue; /* skip blank lines */
 
 		scancount = sscanf(line,
-			"%s %s %s %lf %d %d %d %d %d %d %d %f %[xyzs] %f %[xyzs] %f %[xyzs] %f %[xyzs] %f\n",
+			"%s %s %s %lf %d %d %d %d %d %d %d %f %f %[xyzs] %f %[xyzs] %f %[xyzs] %f %[xyzs] %f\n",
 				class, model_file, thrust_attach,
 				&toughness, &integer, &warpchance, &crew_max, &ncargo_bays,
-				&has_lasers, &has_torpedoes, &has_missiles, &extra_scaling,
+				&has_lasers, &has_torpedoes, &has_missiles, &extra_scaling, &relative_mass,
 				&axis[0], &rot[0],
 				&axis[1], &rot[1],
 				&axis[2], &rot[2],
 				&axis[3], &rot[3]);
-		expected_count = 20;
+		expected_count = 21;
 		if (scancount == expected_count) {
 			nrots = 4;
 			goto done_scanfing_line;
 		}
 		expected_count -= 2;
-		scancount = sscanf(line, "%s %s %s %lf %d %d %d %d %d %d %d %f %[xyzs] %f %[xyzs] %f %[xyzs] %f\n",
+		scancount = sscanf(line, "%s %s %s %lf %d %d %d %d %d %d %d %f %f %[xyzs] %f %[xyzs] %f %[xyzs] %f\n",
 				class, model_file, thrust_attach,
 				&toughness, &integer, &warpchance, &crew_max, &ncargo_bays,
-				&has_lasers, &has_torpedoes, &has_missiles, &extra_scaling,
+				&has_lasers, &has_torpedoes, &has_missiles, &extra_scaling, &relative_mass,
 				&axis[0], &rot[0],
 				&axis[1], &rot[1],
 				&axis[2], &rot[2]);
@@ -86,30 +87,30 @@ struct ship_type_entry *snis_read_ship_types(char *filename, int *count)
 			goto done_scanfing_line;
 		}
 		expected_count -= 2;
-		scancount = sscanf(line, "%s %s %s %lf %d %d %d %d %d %d %d %f %[xyzs] %f %[xyzs] %f\n",
+		scancount = sscanf(line, "%s %s %s %lf %d %d %d %d %d %d %d %f %f %[xyzs] %f %[xyzs] %f\n",
 				class, model_file, thrust_attach,
 				&toughness, &integer, &warpchance, &crew_max, &ncargo_bays,
-				&has_lasers, &has_torpedoes, &has_missiles, &extra_scaling,
+				&has_lasers, &has_torpedoes, &has_missiles, &extra_scaling, &relative_mass,
 				&axis[0], &rot[0], &axis[1], &rot[1]);
 		if (scancount == expected_count) {
 			nrots = 2;
 			goto done_scanfing_line;
 		}
 		expected_count -= 2;
-		scancount = sscanf(line, "%s %s %s %lf %d %d %d %d %d %d %d %f %[xyzs] %f\n",
+		scancount = sscanf(line, "%s %s %s %lf %d %d %d %d %d %d %d %f %f %[xyzs] %f\n",
 				class, model_file, thrust_attach,
 				&toughness, &integer, &warpchance, &crew_max, &ncargo_bays,
-				&has_lasers, &has_torpedoes, &has_missiles, &extra_scaling,
+				&has_lasers, &has_torpedoes, &has_missiles, &extra_scaling, &relative_mass,
 				&axis[0], &rot[0]);
 		if (scancount == expected_count) {
 			nrots = 1;
 			goto done_scanfing_line;
 		}
 		expected_count -= 2;
-		scancount = sscanf(line, "%s %s %s %lf %d %d %d %d %d %d %d %f\n", class, model_file,
+		scancount = sscanf(line, "%s %s %s %lf %d %d %d %d %d %d %d %f %f\n", class, model_file,
 					thrust_attach, &toughness, &integer, &warpchance,
 					&crew_max, &ncargo_bays,
-					&has_lasers, &has_torpedoes, &has_missiles, &extra_scaling);
+					&has_lasers, &has_torpedoes, &has_missiles, &extra_scaling, &relative_mass);
 		if (scancount != expected_count) {
 			fprintf(stderr, "Error at line %d in %s: '%s'\n",
 				linecount, filename, line);
@@ -181,6 +182,8 @@ done_scanfing_line:
 		st[n].has_torpedoes = has_torpedoes;
 		st[n].has_missiles = has_missiles;
 		st[n].extra_scaling = extra_scaling;
+		st[n].relative_mass = relative_mass;
+		st[n].mass_kg = relative_mass * 330000.0; /* max takeoff weight of 747 in kg */
 
 		st[n].nrotations = nrots;
 		for (i = 0; i < nrots; i++) {
