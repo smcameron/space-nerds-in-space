@@ -11536,7 +11536,7 @@ static int add_asteroid(double x, double y, double z, double vx, double vz, doub
 	go[i].vz = snis_random_float() * ASTEROID_SPEED * 2.0 - ASTEROID_SPEED;
 	go[i].tsd.asteroid.v = velocity;
 	go[i].alive = snis_randn(10) + 5;
-	go[i].orientation = random_spin[go[i].id % NRANDOM_ORIENTATIONS];
+	go[i].orientation = random_spin[go[i].id % NRANDOM_SPINS];
 	go[i].tsd.asteroid.rotational_velocity = random_spin[go[i].id % NRANDOM_SPINS];
 
 	/* FIXME: make these distributions better */
@@ -11578,7 +11578,7 @@ static int add_warp_core(double x, double y, double z,
 	go[i].tsd.warp_core.countdown_timer = countdown_timer;
 	go[i].tsd.warp_core.ship_id = ship_id;
 	go[i].alive = 1;
-	go[i].orientation = random_spin[go[i].id % NRANDOM_ORIENTATIONS];
+	go[i].orientation = random_spin[go[i].id % NRANDOM_SPINS];
 	go[i].tsd.warp_core.rotational_velocity = random_spin[go[i].id % NRANDOM_SPINS];
 	return i;
 }
