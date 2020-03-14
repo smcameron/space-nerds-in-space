@@ -129,6 +129,7 @@
 #include "snis_bin_dir.h"
 #include "shape_collision.h"
 #include "planetary_ring_data.h"
+#include "planetary_properties.h"
 #include "xdg_base_dir_spec.h"
 
 #define SHIP_COLOR CYAN
@@ -16461,7 +16462,7 @@ static void draw_science_details(GtkWidget *w, GdkGC *gc)
 	if (e)
 		remove_entity(sciecx, e);
 
-	y = SCREEN_HEIGHT - 200 * SCREEN_HEIGHT / 600;
+	y = SCREEN_HEIGHT - 240 * SCREEN_HEIGHT / 600;
 	if (curr_science_guy->type == OBJTYPE_SHIP1 ||
 		curr_science_guy->type == OBJTYPE_SHIP2) {
 		snprintf(buf, sizeof(buf), "LIFEFORMS: %d", curr_science_guy->tsd.ship.lifeform_count);
@@ -16483,12 +16484,20 @@ static void draw_science_details(GtkWidget *w, GdkGC *gc)
 		char tmpbuf[60];
 		int i, len, j;
 		char *planet_type_str;
+		enum planet_type pt;
 		struct planetary_atmosphere_profile *atm =
 			planetary_atmosphere_by_index(curr_science_guy->tsd.planet.atmosphere_type);
 
 		science_details_draw_atmosphere_data(w, gc, atm);
 
 		struct planet_data *p = &curr_science_guy->tsd.planet;
+
+		planet_type_str = solarsystem_assets->planet_type[p->solarsystem_planet_type];
+		pt = planet_type_from_string(planet_type_str);
+		snprintf(buf, sizeof(buf), "MASS: %.2f EU / DIAM: %.2f EU",
+				planetary_mass(p->radius, pt), planetary_diameter(p->radius, pt));
+		sng_abs_xy_draw_string(buf, TINY_FONT, 10, y);
+		y += yinc;
 
 		if (p->custom_description) {
 			strncpy(planet_desc, p->custom_description, 255);
@@ -16497,8 +16506,7 @@ static void draw_science_details(GtkWidget *w, GdkGC *gc)
 				planet_desc[i] = toupper(planet_desc[i]);
 		} else if (p->description_seed != last) {
 			mt = mtwist_init(p->description_seed);
-			planet_type_str = solarsystem_assets->planet_type[p->solarsystem_planet_type];
-			planet_description(mt, planet_desc, 500, 40, planet_type_from_string(planet_type_str));
+			planet_description(mt, planet_desc, 500, 40, pt);
 			last = p->description_seed;
 			mtwist_free(mt);
 			for (i = 0; planet_desc[i] != '\0'; i++)

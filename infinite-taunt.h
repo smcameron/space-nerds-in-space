@@ -1,6 +1,8 @@
 #ifndef INFINITE_TAUNT_H__
 #define INFINITE_TAUNT_H__
 
+#include "mtwist.h"
+
 enum planet_type {
 	planet_type_rocky,
 	planet_type_earthlike,

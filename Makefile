@@ -502,7 +502,8 @@ _COMMONOBJS=mathutils.o snis_alloc.o snis_socket_io.o snis_marshal.o \
 		string-utils.o c-is-the-locale.o starbase_metadata.o arbitrary_spin.o \
 		planetary_atmosphere.o planetary_ring_data.o mesh.o pthread_util.o \
 		snis_opcode_def.o rts_unit_data.o commodities.o snis_tweak.o rootcheck.o \
-		corporations.o replacement_assets.o snis_asset_dir.o snis_bin_dir.o scipher.o
+		corporations.o replacement_assets.o snis_asset_dir.o snis_bin_dir.o scipher.o \
+		planetary_properties.o
 COMMONOBJS=$(patsubst %,$(OD)/%,${_COMMONOBJS}) mikktspace/mikktspace.o
 
 _SERVEROBJS=snis_server.o starbase-comms.o \
@@ -828,6 +829,9 @@ $(OD)/wwviaudio.o:    wwviaudio.c Makefile ${ODT}
 	$(Q)$(VORBISCOMPILE)
 
 $(OD)/shield_strength.o:	shield_strength.c Makefile ${ODT}
+	$(Q)$(COMPILE)
+
+$(OD)/planetary_properties.o:	planetary_properties.c planetary_properties.h Makefile ${ODT}
 	$(Q)$(COMPILE)
 
 $(OD)/snis_server.o:	snis_server.c Makefile build_info.h ${DOCKING_PORT_FILES} ${ODT}
