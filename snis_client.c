@@ -16373,9 +16373,9 @@ static void science_details_draw_atmosphere_data(GtkWidget *w, GdkGC *gc,
 
 	sng_abs_xy_draw_string("ATMOSPHERIC DATA:", TINY_FONT, 10, y); y += yinc;
 	yinc = 15 * SCREEN_HEIGHT / 600;
-	snprintf(buf, sizeof(buf), "%30s: %.0f Pa", "PRESSURE:", atm->pressure);
+	snprintf(buf, sizeof(buf), "%30s: %.0f Pa", "PRESSURE", atm->pressure);
 	sng_abs_xy_draw_string(buf, NANO_FONT, 10, y); y += yinc;
-	snprintf(buf, sizeof(buf), "%30s: %.0f K / %.0f C / %.0f F", "TEMPERATURE:",
+	snprintf(buf, sizeof(buf), "%30s: %.0f K / %.0f C / %.0f F", "TEMPERATURE",
 		atm->temperature, atm->temperature - 273.15, atm->temperature * 9.0 / 5.0 - 459.67);
 	sng_abs_xy_draw_string(buf, NANO_FONT, 10, y); y += yinc;
 	for (i = 0; i < atm->nmajor; i++) {
