@@ -22,6 +22,8 @@
         Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
 
+#include "mtwist.h"
+
 #define PI (3.14159265)
 
 #ifndef DEFINE_MATHUTILS_GLOBALS
