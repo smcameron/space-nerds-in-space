@@ -24,6 +24,8 @@
 struct entity {
 	int visible;
 	struct mesh *m;
+	struct mesh *low_poly;
+	struct mesh *high_poly;
 	float x, y, z; /* world coords */
 	float cx, cy, cz; /* camera coords */
 	unsigned char onscreen; /* if screen coords are valid */
@@ -94,6 +96,11 @@ struct entity_context {
 	struct mat41 light;
 	float window_offset_x, window_offset_y;
 	float ambient;
+
+	/* Screen size of model at which we switch between lo/hi poly models, if available */
+	/* Possibly this threshold should be per mesh, rather than per entity context. */
+	float hi_lo_poly_pixel_threshold;
+
 #ifdef WITH_ILDA_SUPPORT
 	int framenumber;
 	FILE *f;

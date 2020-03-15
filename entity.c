@@ -78,6 +78,8 @@ struct entity *add_entity(struct entity_context *cx,
 	cx->entity_list[n].visible = 1;
 	cx->entity_list[n].e_visible = 1;
 	cx->entity_list[n].m = m;
+	cx->entity_list[n].high_poly = m;
+	cx->entity_list[n].low_poly = m;
 	cx->entity_list[n].x = x;
 	cx->entity_list[n].y = y;
 	cx->entity_list[n].z = z;
@@ -983,15 +985,19 @@ void render_entities(struct entity_context *cx)
 
 			e->dist3dsqrd = dist3dsqrd(c->x - e->x, c->y - e->y, c->z - e->z);
 
-			/* only cull stuff that is too small on flat shader */
-			if (c->renderer & FLATSHADING_RENDERER && e->dist3dsqrd != 0) {
-				/* cull objects that are too small to draw based on approx screen size
-				   http://stackoverflow.com/questions/3717226/radius-of-projected-sphere */
-				float approx_pixel_size = c->yvpixels * e->m->radius * max_scale /
-					tan(cx->camera.angle_of_view * 0.5) / sqrt(e->dist3dsqrd);
-				if (approx_pixel_size < 2.0)
-					continue;
-			}
+			/* See: http://stackoverflow.com/questions/3717226/radius-of-projected-sphere */
+			float approx_pixel_size = c->yvpixels * e->m->radius * max_scale /
+				tan(cx->camera.angle_of_view * 0.5) / sqrt(e->dist3dsqrd);
+
+			/* only cull stuff entirely that is too small on flat shader */
+			if (c->renderer & FLATSHADING_RENDERER && e->dist3dsqrd != 0 && approx_pixel_size < 2.0)
+				continue;
+
+			/* Choose low or high poly mesh based on on-screen size */
+			if (approx_pixel_size < cx->hi_lo_poly_pixel_threshold)
+				e->m = e->low_poly;
+			else
+				e->m = e->high_poly;
 
 			int render_order = graph_dev_entity_render_order(cx, e);
 			switch (render_order) {
@@ -1171,6 +1177,7 @@ struct entity_context *entity_context_new(int maxobjs, int maxchildren)
 	camera_assign_up_direction(cx, 0.0, 1.0, 0.0);
 	set_window_offset(cx, 0.0, 0.0);
 	cx->nfakestars = 0;
+	cx->hi_lo_poly_pixel_threshold = 100.0;
 	return cx;
 }
 
@@ -1268,6 +1275,16 @@ struct mesh *entity_get_mesh(struct entity *e)
 void entity_set_mesh(struct entity *e, struct mesh *m)
 {
 	e->m = m;
+}
+
+struct mesh *entity_get_low_poly_mesh(struct entity *e)
+{
+	return e->low_poly;
+}
+
+void entity_set_low_poly_mesh(struct entity *e, struct mesh *m)
+{
+	e->low_poly = m;
 }
 
 int get_entity_count(struct entity_context *cx)
@@ -1489,5 +1506,10 @@ float entity_get_in_shade(struct entity *e)
 void entity_set_in_shade(struct entity *e, float in_shade)
 {
 	e->in_shade = in_shade;
+}
+
+void entity_context_set_hi_lo_poly_pixel_threshold(struct entity_context *cx, float pixel_threshold)
+{
+	cx->hi_lo_poly_pixel_threshold = pixel_threshold;
 }
 

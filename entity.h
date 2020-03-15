@@ -51,6 +51,8 @@ GLOBAL void update_entity_shadecolor(struct entity *e, int color);
 GLOBAL void update_entity_visibility(struct entity *e, int visible);
 GLOBAL struct mesh *entity_get_mesh(struct entity *e);
 GLOBAL void entity_set_mesh(struct entity *e, struct mesh *m);
+GLOBAL struct mesh *entity_get_low_poly_mesh(struct entity *e);
+GLOBAL void entity_set_low_poly_mesh(struct entity *e, struct mesh *m);
 GLOBAL void render_entities(struct entity_context *cx);
 GLOBAL void render_line(struct entity_context *cx, float x1, float y1, float z1, float x2, float y2, float z2);
 GLOBAL void render_skybox(struct entity_context *cx);
@@ -106,5 +108,6 @@ GLOBAL void entity_update_emit_intensity(struct entity *e, float intensity);
 GLOBAL float entity_get_emit_intensity(struct entity *e);
 GLOBAL float entity_get_in_shade(struct entity *e);
 GLOBAL void entity_set_in_shade(struct entity *e, float in_shade);
+GLOBAL void entity_context_set_hi_lo_poly_pixel_threshold(struct entity_context *cx, float pixel_threshold);
 
 #endif	
