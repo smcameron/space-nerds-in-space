@@ -1923,6 +1923,8 @@ struct mesh *mesh_fabricate_planetary_ring(float ir, float or, int nvertices)
 	struct mesh *m;
 	int i;
 
+	assert((nvertices % 2) == 0);
+
 	m = malloc(sizeof(*m));
 	if (!m)
 		return m;
