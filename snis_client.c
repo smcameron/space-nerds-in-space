@@ -16711,6 +16711,14 @@ static void show_science(GtkWidget *w)
 		sng_set_foreground(UI_COLOR(sci_warning));
 		sng_center_xy_draw_string("LOW SENSOR POWER", NANO_FONT, SCREEN_WIDTH / 2, txy(27));
 	}
+	if (o->tsd.ship.power_data.tractor.i < idiot_light_threshold && (timer & 0x08)) {
+		int x, y;
+
+		x = snis_button_get_x(sci_ui.tractor_button);
+		y = snis_button_get_y(sci_ui.tractor_button);
+		sng_set_foreground(UI_COLOR(sci_warning));
+		sng_abs_xy_draw_string("LOW TRACTOR POWER", NANO_FONT, x, y - 20);
+	}
 	populate_science_pull_down_menu();
 	show_common_screen(w, "SCIENCE");
 }
