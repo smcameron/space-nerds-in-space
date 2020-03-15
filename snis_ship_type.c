@@ -322,3 +322,29 @@ void setup_rts_unit_type_to_ship_type_map(struct ship_type_entry *st, int count)
 			}
 }
 
+#ifdef TEST_SNIS_SHIP_TYPE
+
+static void usage(void)
+{
+	fprintf(stderr, "Usage: test_snis_ship_types ship_types.txt\n");
+	exit(1);
+}
+
+int main(int argc, char *argv[])
+{
+	struct ship_type_entry *ste;
+	int count = 0;
+
+	if (argc < 2)
+		usage();
+
+	ste = snis_read_ship_types(argv[1], &count);
+	if (!ste) {
+		fprintf(stderr, "snis_read_ship_types(\"%s\") returned NULL!\n", argv[1]);
+		exit(1);
+	}
+	fprintf(stderr, "Read %d ship types\n", count);
+	return 0;
+}
+#endif
+

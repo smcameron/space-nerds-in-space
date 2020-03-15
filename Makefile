@@ -804,6 +804,9 @@ $(OD)/stacktrace.o:   stacktrace.c Makefile ${ODT}
 $(OD)/snis_ship_type.o:   snis_ship_type.c snis_ship_type.h corporations.h Makefile ${ODT}
 	$(Q)$(COMPILE)
 
+bin/test_snis_ship_type: snis_ship_type.c snis_ship_type.h ${OD}/string-utils.o ${OD}/corporations.o ${OD}/rts_unit_data.o
+	$(CC) ${MYCFLAGS} -DTEST_SNIS_SHIP_TYPE -o bin/test_snis_ship_type snis_ship_type.c ${OD}/string-utils.o ${OD}/corporations.o ${OD}/rts_unit_data.o
+
 $(OD)/snis_faction.o:   snis_faction.c string-utils.h Makefile ${ODT}
 	$(Q)$(COMPILE)
 
