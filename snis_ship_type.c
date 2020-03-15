@@ -168,6 +168,7 @@ struct ship_type_entry *snis_read_ship_types(char *filename, int *count)
 			axis[2] = '\0';
 			axis[3] = '\0';
 			nrots = 0;
+			continue;
 		} else if (has_prefix("class:", line)) {
 			strncpy(class, get_field(line), sizeof(class) - 1);
 		} else if (has_prefix("model file:", line)) {
@@ -293,6 +294,8 @@ struct ship_type_entry *snis_read_ship_types(char *filename, int *count)
 			 */
 			st[n].manufacturer = (n % num_spacecraft_manufacturers()) + 1;
 			n++;
+		} else {
+			fprintf(stderr, "Error at line %d in %s: '%s'\n", linecount, filename, line);
 		}
 	}
 	*count = n;
