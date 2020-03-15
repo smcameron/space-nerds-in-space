@@ -429,10 +429,13 @@ static struct mesh *laser_mesh;
 static struct mesh *asteroid_mesh[NASTEROID_MODELS];
 static struct mesh *unit_cube_mesh;
 static struct mesh *planet_sphere_mesh;
+static struct mesh *planet_sphere_lp_mesh; /* low poly version */
 static struct mesh *atmosphere_mesh;
+static struct mesh *atmosphere_lp_mesh; /* low poly version */
 static struct mesh *low_poly_sphere_mesh;
 static struct mesh *cylindrically_mapped_sphere_mesh;
 static struct mesh *planetary_ring_mesh;
+static struct mesh *planetary_ring_lp_mesh; /* low poly version */
 static struct mesh *nav_planetary_ring_mesh;
 static struct mesh **starbase_mesh;
 static int nstarbase_models = -1;
@@ -472,6 +475,7 @@ static struct mesh *cylinder_mesh;
 static struct entity *sun_entity = NULL;
 static int lens_flare_enabled = 1; /* tweakable */
 static float lens_flare_intensity = 0.5; /* tweakable */
+static float low_poly_threshold = 200.0; /* tweakable */
 #ifndef WITHOUTOPENGL
 static struct entity *lens_flare_halo = NULL;
 static struct entity *anamorphic_flare = NULL;
@@ -2232,6 +2236,7 @@ static int update_planet(uint32_t id, uint32_t timestamp, double x, double y, do
 		if (e) {
 			update_entity_scale(e, r);
 			update_entity_material(e, &planet_material[m]);
+			entity_set_low_poly_mesh(e, planet_sphere_lp_mesh);
 		}
 
 
@@ -2247,6 +2252,7 @@ static int update_planet(uint32_t id, uint32_t timestamp, double x, double y, do
 
 				/* child ring will inherit position and scale from planet */
 				update_entity_parent(ecx, ring, e);
+				entity_set_low_poly_mesh(ring, planetary_ring_lp_mesh);
 			}
 		}
 		i = add_generic_object(id, timestamp, x, y, z, 0.0, 0.0, 0.0,
@@ -2277,6 +2283,7 @@ static int update_planet(uint32_t id, uint32_t timestamp, double x, double y, do
 				update_entity_visibility(atm, 1);
 				update_entity_parent(ecx, atm, e);
 				update_entity_orientation(atm, &identity_quat);
+				entity_set_low_poly_mesh(atm, atmosphere_lp_mesh);
 			}
 		} else {
 			go[i].tsd.planet.atmosphere = NULL;
@@ -4752,6 +4759,7 @@ static void show_rotating_wombat(void)
 	set_renderer(network_setup_ecx, FLATSHADING_RENDERER | WIREFRAME_RENDERER | BLACK_TRIS);
 	camera_set_parameters(network_setup_ecx, near, far, SCREEN_WIDTH, SCREEN_HEIGHT, angle_of_view);
 	calculate_camera_transform(network_setup_ecx);
+	entity_context_set_hi_lo_poly_pixel_threshold(network_setup_ecx, low_poly_threshold);
 	wombat = add_entity(network_setup_ecx, ship_mesh_map[SHIP_CLASS_WOMBAT], 0.0, 0.0, 0.0, DARKGREEN);
 	quat_init_axis(&orientation, 0, 1, 0, (timer % 360) * M_PI / 180);
 	update_entity_orientation(wombat, &orientation);
@@ -9122,6 +9130,7 @@ static void show_weapons_camera_view(GtkWidget *w)
 	set_lighting(ecx, SUNX, SUNY, SUNZ);
 	set_ambient_light(ecx, ambient_light);
 	calculate_camera_transform(ecx);
+	entity_context_set_hi_lo_poly_pixel_threshold(ecx, low_poly_threshold);
 
 	sng_set_foreground(GREEN);
 	if (!ecx_fake_stars_initialized) {
@@ -9506,6 +9515,7 @@ static void show_mainscreen(GtkWidget *w)
 	set_lighting(ecx, SUNX, SUNY, SUNZ);
 	set_ambient_light(ecx, ambient_light);
 	calculate_camera_transform(ecx);
+	entity_context_set_hi_lo_poly_pixel_threshold(ecx, low_poly_threshold);
 
 	sng_set_foreground(GREEN);
 	if (!ecx_fake_stars_initialized) {
@@ -10465,6 +10475,7 @@ static void draw_sciplane_display(GtkWidget *w, struct snis_entity *o, double ra
 				SCREEN_WIDTH, SCREEN_HEIGHT, fovy);
 	set_window_offset(instrumentecx, 0, 0);
 	calculate_camera_transform(instrumentecx);
+	entity_context_set_hi_lo_poly_pixel_threshold(instrumentecx, low_poly_threshold);
 
 	e = add_entity(instrumentecx, ring_mesh, o->x, o->y, o->z, UI_COLOR(sci_plane_ring));
 	if (e)
@@ -10994,6 +11005,7 @@ static void draw_all_the_3d_science_guys(GtkWidget *w, struct snis_entity *o, do
 	set_window_offset(sciballecx, SCIENCE_SCOPE_CX - (SCIENCE_SCOPE_W * 0.95) / 2.0,
 				SCIENCE_SCOPE_CY - (SCIENCE_SCOPE_W * 0.95) / 2.0);
 	calculate_camera_transform(sciballecx);
+	entity_context_set_hi_lo_poly_pixel_threshold(sciballecx, low_poly_threshold);
 
 	/* Add basis rings */
 	for (i = 1; i <= 3; i++) {
@@ -12270,6 +12282,7 @@ static void draw_orientation_trident(GtkWidget *w, GdkGC *gc, struct snis_entity
         set_renderer(tridentecx, WIREFRAME_RENDERER);
 	camera_set_parameters(tridentecx, dist_to_cam-1.0, dist_to_cam+1.0,
 				2.0 * rr * ASPECT_RATIO, 2.0 * rr, fovy);
+	entity_context_set_hi_lo_poly_pixel_threshold(tridentecx, low_poly_threshold);
 	set_window_offset(tridentecx, rx - rr * ASPECT_RATIO, ry - rr);
 
 	/* figure out the camera positions */
@@ -12466,6 +12479,7 @@ static void draw_3d_nav_starmap(GtkWidget *w, GdkGC *gc)
 	camera_set_parameters(instrumentecx, near, far,
 				SCREEN_WIDTH, SCREEN_HEIGHT, angle_of_view * M_PI / 180.0);
 	calculate_camera_transform(instrumentecx);
+	entity_context_set_hi_lo_poly_pixel_threshold(instrumentecx, low_poly_threshold);
 
 	/* Add star entities to the instrumentecx... */
 	for (i = 0; i < nstarmap_entries; i++) {
@@ -13014,6 +13028,7 @@ static void draw_3d_nav_display(GtkWidget *w, GdkGC *gc)
 	camera_set_parameters(instrumentecx, 1.0, camera_pos_len+screen_radius*2,
 				SCREEN_WIDTH, SCREEN_HEIGHT, ANGLE_OF_VIEW * M_PI / 180.0);
 	calculate_camera_transform(instrumentecx);
+	entity_context_set_hi_lo_poly_pixel_threshold(instrumentecx, low_poly_threshold);
 
 	int in_nebula = 0;
 	int i;
@@ -17760,6 +17775,8 @@ static struct tweakable_var_descriptor client_tweak[] = {
 		&echo_computer_to_comms, 'i', 0.0, 0.0, 0.0, 0, 1, 1 },
 	{ "AMBIENT_LIGHT", "0.0 to 1.1 - AMBIENT LIGHT",
 		&ambient_light, 'f', 0.0, 1.0, 0.05, 0, 0, 0 },
+	{ "LOW_POLY_THRESHOLD", "THRESHOLD SIZE IN PIXELS AT WHICH LOW/HIGH POLY MESHES ARE CHOSEN",
+		&low_poly_threshold, 'f', 0.0, 10000.0, 200.0, 0, 0, 0 },
 	{ NULL, NULL, NULL, '\0', 0.0, 0.0, 0.0, 0, 0, 0 },
 };
 
@@ -19140,6 +19157,7 @@ static void show_demon_3d(GtkWidget *w)
 	camera_set_parameters(instrumentecx, 10.0, XKNOWN_DIM * 2.0, SCREEN_WIDTH, SCREEN_HEIGHT, angle_of_view);
 	set_window_offset(instrumentecx, 0, 0);
 	calculate_camera_transform(instrumentecx);
+	entity_context_set_hi_lo_poly_pixel_threshold(instrumentecx, low_poly_threshold);
 
 	pthread_mutex_lock(&universe_mutex);
 
@@ -22431,7 +22449,9 @@ static void init_meshes()
 	mesh_unit_cube_uv_map(unit_cube_mesh);
 
 	atmosphere_mesh = mesh_unit_spherified_cube(64);
+	atmosphere_lp_mesh = mesh_unit_spherified_cube(8);
 	planet_sphere_mesh = mesh_unit_spherified_cube(64);
+	planet_sphere_lp_mesh = mesh_unit_spherified_cube(8);
 	low_poly_sphere_mesh = snis_read_model(d, "uv_sphere.stl");
 	mesh_cylindrical_xy_uv_map(low_poly_sphere_mesh);
 	cylindrically_mapped_sphere_mesh = mesh_duplicate(low_poly_sphere_mesh);
@@ -22442,6 +22462,7 @@ static void init_meshes()
 	demon3d_axes_mesh = mesh_fabricate_axes();
 	mesh_scale(demon3d_axes_mesh, 0.002 * XKNOWN_DIM);
 	planetary_ring_mesh = mesh_fabricate_planetary_ring(MIN_RING_RADIUS, MAX_RING_RADIUS, 360);
+	planetary_ring_lp_mesh = mesh_fabricate_planetary_ring(MIN_RING_RADIUS, MAX_RING_RADIUS, 64);
 	nav_planetary_ring_mesh = mesh_fabricate_planetary_ring(MIN_RING_RADIUS * 1.5, MAX_RING_RADIUS * 0.75, 36);
 
 	for (i = 0; i < nstarbase_models; i++) {
