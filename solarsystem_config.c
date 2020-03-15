@@ -34,19 +34,6 @@ static void free_string_ptr(char **x)
 	}
 }
 
-static char *get_field(char *line)
-{
-	char *i;
-
-	for (i = line; *i != '\0' && *i != ':';)
-		i++;
-	if (*i == ':') {
-		i++;
-		return skip_leading_whitespace(i);
-	}
-	return i;
-}
-
 static void sanity_check(char *filename, struct solarsystem_asset_spec *ss)
 {
 	int i;

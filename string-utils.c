@@ -228,3 +228,20 @@ void format_function_pointer(char *buffer, void (*function_pointer)(void))
 	}
 }
 
+/* Given a string of the form "xxxxx : yyyyy", return "yyyyy"
+ * Basically, return the part of the string after the colon,
+ * skipping any leading whitespace after the colon.  This does
+ * not allocate, it returns a pointer inside the given string.
+ */
+char *get_field(char *line)
+{
+	char *i;
+
+	for (i = line; *i != '\0' && *i != ':';)
+		i++;
+	if (*i == ':') {
+		i++;
+		return skip_leading_whitespace(i);
+	}
+	return i;
+}
