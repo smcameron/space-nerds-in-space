@@ -58,19 +58,19 @@ ship type {
 	relative mass: 2.0
 }
 
-ship_type {
+ship type {
 	class: FREIGHTER
 	model file: freighter.stl
 	thrust attach: -
 	toughness: 0.2
 	max speed: 800
-	warp_chance: 3
+	warp chance: 3
 	crew max: 10
 	cargo bays: 8
 	has lasers: 1
 	has missiles: 0
 	has torpedoes: 0
-	extra scaling 1.0
+	extra scaling: 1.0
 	relative mass: 1.1
 }
 
@@ -83,9 +83,9 @@ ship type {
 	warp chance: 5
 	crew max: 10
 	cargo bays: 1
-	has_lasers: 1
-	has torpedoes 0
-	has missiles 0
+	has lasers: 1
+	has torpedoes: 0
+	has missiles: 0
 	extra scaling: 1.0
 	relative mass: 9.5
 }
@@ -132,8 +132,8 @@ ship type {
 	crew max: 10
 	cargo bays: 3
 	has lasers: 1
-	has torpedoes 1
-	has missiles 1
+	has torpedoes: 1
+	has missiles: 1
 	extra scaling: 1.0
 	relative mass: 1.2
 }
@@ -148,8 +148,8 @@ ship type {
 	crew max: 3
 	cargo bays: 2
 	has lasers: 1
-	has torpedoes 0
-	has missiles 0
+	has torpedoes: 0
+	has missiles: 0
 	extra scaling: 1.0
 	relative mass: 0.2
 }
