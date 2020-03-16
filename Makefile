@@ -804,7 +804,7 @@ $(OD)/stacktrace.o:   stacktrace.c Makefile ${ODT}
 $(OD)/snis_ship_type.o:   snis_ship_type.c snis_ship_type.h corporations.h Makefile ${ODT}
 	$(Q)$(COMPILE)
 
-bin/test_snis_ship_type: snis_ship_type.c snis_ship_type.h ${OD}/string-utils.o ${OD}/corporations.o ${OD}/rts_unit_data.o
+bin/test_snis_ship_type: snis_ship_type.c snis_ship_type.h ${OD}/string-utils.o ${OD}/corporations.o ${OD}/rts_unit_data.o ${BIN}
 	$(CC) ${MYCFLAGS} -DTEST_SNIS_SHIP_TYPE -o bin/test_snis_ship_type snis_ship_type.c ${OD}/string-utils.o ${OD}/corporations.o ${OD}/rts_unit_data.o
 
 $(OD)/snis_faction.o:   snis_faction.c string-utils.h Makefile ${ODT}
@@ -1194,7 +1194,7 @@ mostly-clean:
 	bin/test-quat bin/test-fleet bin/test-mtwist bin/snis-device-io-sample-1 bin/check-endianness \
 	${OD}/*.o ${ODT} bin/test-matrix  bin/test_solarsystem_config  bin/test-space-partition \
 	bin/device-io-sample-1 bin/print_ship_attributes bin/snis_test_audio bin/test_crater \
-	bin/test_key_value_parser bin/test_snis_dmx test_scipher \
+	bin/test_key_value_parser bin/test_snis_dmx test_scipher bin/test_snis_ship_type \
 	${MANSRCDIR}/earthlike.1.gz  ${MANSRCDIR}/snis_client.6.gz  ${MANSRCDIR}/snis_server.6.gz  \
 	${MANSRCDIR}/snis_test_audio.1.gz
 	rm -f ${BIN}
