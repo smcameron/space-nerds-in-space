@@ -21,6 +21,18 @@
         Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
 
+#ifdef SNIS_SERVER_DATA
+#ifdef SNIS_CLIENT_DATA
+#error "Both SNIS_SERVER_DATA and SNIS_CLIENT_DATA are defined"
+#endif
+#endif
+
+#ifndef SNIS_SERVER_DATA
+#ifndef SNIS_CLIENT_DATA
+#error "Neither SNIS_SERVER_DATA nor SNIS_CLIENT_DATA are defined"
+#endif
+#endif
+
 #include "mesh.h"
 #include "material.h"
 #include "docking_port.h"

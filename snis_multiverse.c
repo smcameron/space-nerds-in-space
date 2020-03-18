@@ -57,6 +57,7 @@ persisted in a simple database by snis_multiverse.
 #include "ssgl/ssgl.h"
 #include "snis_log.h"
 #include "snis_socket_io.h"
+#define SNIS_SERVER_DATA 1
 #include "snis.h"
 #include "mathutils.h"
 #include "snis_packet.h"

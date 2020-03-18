@@ -2,6 +2,7 @@
 #include <sys/time.h>
 
 #include "quat.h"
+#define SNIS_SERVER_DATA 1
 #include "snis.h"
 #include "key_value_parser.h"
 

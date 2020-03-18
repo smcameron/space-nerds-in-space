@@ -4,6 +4,7 @@
 #include "ssgl/ssgl.h"
 #include "vec4.h"
 #include "quat.h"
+#define SNIS_SERVER_DATA 1
 #include "snis.h"
 
 #define MAXSTARMAPENTRIES 1000 /* max number of solar systems */

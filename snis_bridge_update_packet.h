@@ -24,6 +24,7 @@
 #include <stdint.h>
 
 #include "quat.h"
+#define SNIS_SERVER_DATA 1
 #include "snis.h"
 #include "snis_packet.h"
 #include "snis_marshal.h"
