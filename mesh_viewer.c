@@ -73,6 +73,23 @@ static int trap_nans = 0;
 
 static int display_frame_stats = 1;
 
+static struct mesh *target_mesh;
+static struct mesh *turret_base_mesh;
+static struct mesh *atmosphere_mesh;
+static struct mesh *light_mesh;
+static struct material planet_material;
+static struct material green_phaser_material;
+static struct material thrust_material;
+static struct material atmosphere_material;
+static struct material cyl_albedo;
+static struct material diffuse_material;
+static struct material alpha_by_normal;
+static int planet_mode = 0;
+static int cubemap_mode = 0;
+static int burst_rod_mode = 0;
+static int thrust_mode = 0;
+static int turret_mode = 0;
+
 /* Color depth in bits of our window. */
 static int bpp;
 
@@ -196,6 +213,22 @@ static void take_periodic_snapshot(void)
 	take_snapshot();
 }
 
+static void distort_the_mesh(int distort)
+{
+	static struct mesh *undistorted = NULL;
+
+	if (!undistorted) {
+		undistorted = mesh_duplicate(target_mesh);
+	} else {
+		mesh_free(target_mesh);
+		target_mesh = mesh_duplicate(undistorted);
+	}
+	if (distort)
+		mesh_distort(target_mesh, 0.15);
+	mesh_set_average_vertex_normals(target_mesh);
+	mesh_graph_dev_init(target_mesh);
+}
+
 static void handle_key_down(SDL_keysym *keysym)
 {
 	switch (keysym->sym) {
@@ -238,6 +271,12 @@ static void handle_key_down(SDL_keysym *keysym)
 	case SDLK_PLUS:
 	case SDLK_KP_PLUS:
 		adjust_spinning(1.1);
+		break;
+	case SDLK_d:
+		distort_the_mesh(1);
+		break;
+	case SDLK_u:
+		distort_the_mesh(0);
 		break;
 	default:
 		break;
@@ -437,24 +476,6 @@ static void process_events()
 	}
 
 }
-
-
-static struct mesh *target_mesh;
-static struct mesh *turret_base_mesh;
-static struct mesh *atmosphere_mesh;
-static struct mesh *light_mesh;
-static struct material planet_material;
-static struct material green_phaser_material;
-static struct material thrust_material;
-static struct material atmosphere_material;
-static struct material cyl_albedo;
-static struct material diffuse_material;
-static struct material alpha_by_normal;
-static int planet_mode = 0;
-static int cubemap_mode = 0;
-static int burst_rod_mode = 0;
-static int thrust_mode = 0;
-static int turret_mode = 0;
 
 static void check_modes(void)
 {
