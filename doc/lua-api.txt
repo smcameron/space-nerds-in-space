@@ -319,6 +319,17 @@ comms_enciphered_transmission(object_id, transmission, cipher_key)
 	-- sends an enciphered transmission (see generate_cipher_key, below).
 
 comms_channel_listen(name, channel, callback)
+	name is the name of the entity listening (this was intended to allow the player
+	to hail your listening endpoint by this name, but this was never implemented.)
+	The same name should be used when you eventually call comms_channel_unlisten().
+	channel is the channel number you want to listen on.
+	callback is the name of the function to call when a transmission occurs on
+	the specified channel.  This function should accept 3 parameters, "from",
+	"channel", and "message".  The "from" parameter is the name of who sent the
+	transmission, channel is the channel number (multiple comms_channel_listen()
+	calls can target the same receiving function), and "message" is whatever the
+	message string that was transmitted.
+
 
 	Note: if you transmit on a channel you are listening to, you will recieve your
 	own transmissions, so you must be prepared to ignore them.
@@ -724,14 +735,14 @@ attach_science_text(id, text)
 
 add_explosion(x, y, z, v, nsparks, time, victim_type, explosion_type);
 	Adds an explosion into the simulation with (nsparks) sparks, traveling at
-	velocity related to (v), lasting (time) ticks (30th sec). Victim type
-	should be a small integer (see the #defines for OBJTYPE_... in snis.h:
-	Typically use OBJTYPE_SHIP2 (1) or the type of the thing which is exploding,
-	if there is such a thing (see below). victim_type is used to decide whether
-	or not there should be debris mixed in with the sparks. explosion_type should
-	be 0 (regular explosion) or 1 (black hole explosion). The former has orange
-	sparks and is spherical in shape, the latter has greenish sparks and is much
-	larger and has a non-spherical shape.
+	velocity related to (v), lasting (time) ticks (30th sec). The explosion is
+	purely cosmetic. Victim type should be a small integer (see the
+	#defines for OBJTYPE_... in snis.h: Typically use OBJTYPE_SHIP2 (1) or the type
+	of the thing which is exploding, if there is such a thing (see below).
+	victim_type is used to decide whether or not there should be debris mixed in
+	with the sparks. explosion_type should be 0 (regular explosion) or 1 (black
+	hole explosion). The former has orange sparks and is spherical in shape, the
+	latter has greenish sparks and is much larger and has a non-spherical shape.
 
 	snis.h:#define OBJTYPE_SHIP1 9 /* players */
 	snis.h:#define OBJTYPE_SHIP2 1 /* computer controlled ships */
