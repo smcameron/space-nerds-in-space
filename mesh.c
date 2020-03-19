@@ -77,7 +77,12 @@ void mesh_distort_helper(struct mesh *m, float distortion, struct osn_context *o
 		r2 = fmap(r, minr, maxr, 0.0, 3.0);
 		vec3_normalize_self(&v);
 		vec3_mul_self(&v, r2);
-		noise = open_simplex_noise3(osn, v.v.x + offset, v.v.y + offset, v.v.z + offset);
+		v.v.x += offset;
+		v.v.y += offset;
+		v.v.z += offset;
+		noise = open_simplex_noise3(osn, v.v.x, v.v.y, v.v.z) +
+			0.5 * open_simplex_noise3(osn, 2.0 * v.v.x, 2.0 * v.v.y, 2.0 * v.v.z) +
+			0.25 * open_simplex_noise3(osn, 4.0 * v.v.x, 4.0 * v.v.y, 4.0 * v.v.z);
 
 		v.v.x = m->v[i].x;
 		v.v.y = m->v[i].y;
