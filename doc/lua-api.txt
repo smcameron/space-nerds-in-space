@@ -328,7 +328,7 @@ comms_channel_listen(name, channel, callback)
 		   print("Message: ", message)
 		end
 
-		comms_channel_listen("Bob", "transmission_received", 10);
+		comms_channel_listen("Bob", 10, "transmission_received");
 
 	Beware of something like the following:
 
@@ -337,7 +337,7 @@ comms_channel_listen(name, channel, callback)
 		   print("Message: ", message)
 		   comms_channel_transmit("Bob", channel, "Hello!"); -- THIS IS A PROBLEM
 		end
-		comms_channel_listen("Bob", "transmission_received", 10);
+		comms_channel_listen("Bob", 10, "transmission_received");
 
 	When you receive on a channel, you will transmit on the same channel, and then
 	you will receive your own transmission, to which you will respond, which you will
@@ -788,7 +788,7 @@ set_custom_button_label(player_id, screen, label)
 	"screen" is an integer between 0 and 5 inclusive, corresponding to:
 		0 - NAV
 		1 - WEAPONS
-		2 - ENGINERRING
+		2 - ENGINEERING
 		3 - DAMAGE CONTROL
 		4 - SCIENCE
 		5 - COMMS
@@ -941,7 +941,8 @@ set_red_alert_status(ship_id, status) -- sets the red-alert status for the speci
 destroy_ship(ship_id)
 	Explodes the given ship creating a derelict and ejecting any cargo contained in
 	the ship. Useful for testing scenarios that involve the player destroying a ship,
-	emulating sabotage of ships, etc.
+	emulating sabotage of ships, etc. This function is for destroying NPC ships only,
+	not player ships.
 
 add_torpedo(x, y, z, vx, vy, vz, firing_ship_id)
 	Adds a torpedo at (x, y, z) with velocity (vx, vy, vz) fired from
