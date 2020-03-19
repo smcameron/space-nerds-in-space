@@ -32,6 +32,7 @@
 #include "build_info.h"
 #include "png_utils.h"
 #include "turret_aimer.h"
+#include "open-simplex-noise.h"
 
 #define FOV (30.0 * M_PI / 180.0)
 #define FPS 60
@@ -216,6 +217,10 @@ static void take_periodic_snapshot(void)
 static void distort_the_mesh(int distort)
 {
 	static struct mesh *undistorted = NULL;
+	static struct osn_context *osn = NULL;
+
+	if (!osn)
+		open_simplex_noise(7737422399LL, &osn);
 
 	if (!undistorted) {
 		undistorted = mesh_duplicate(target_mesh);
@@ -224,7 +229,7 @@ static void distort_the_mesh(int distort)
 		target_mesh = mesh_duplicate(undistorted);
 	}
 	if (distort)
-		mesh_distort(target_mesh, 0.15);
+		mesh_distort(target_mesh, 0.25, osn);
 	mesh_set_average_vertex_normals(target_mesh);
 	mesh_graph_dev_init(target_mesh);
 }

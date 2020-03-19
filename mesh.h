@@ -36,6 +36,7 @@
 #define MESH_LINE_DOTTED (1<<2)
 
 #include "snis_graph.h"
+#include "open-simplex-noise.h"
 
 struct mesh_line
 {
@@ -68,7 +69,7 @@ struct mesh {
 
 GLOBAL float mesh_compute_radius(struct mesh *m);
 GLOBAL float mesh_compute_nonuniform_scaled_radius(struct mesh *m, double sx, double sy, double sz);
-GLOBAL void mesh_distort(struct mesh *m, float distortion);
+GLOBAL void mesh_distort(struct mesh *m, float distortion, struct osn_context *osn);
 GLOBAL void mesh_derelict(struct mesh *m, float distortion);
 GLOBAL struct mesh *mesh_duplicate(struct mesh *original);
 GLOBAL void mesh_scale(struct mesh *m, float scale);
@@ -104,7 +105,7 @@ GLOBAL void mesh_cylindrical_xy_uv_map(struct mesh *m);
 GLOBAL void mesh_cylindrical_xz_uv_map(struct mesh *m);
 GLOBAL void mesh_unit_cube_uv_map(struct mesh *m);
 GLOBAL void mesh_map_xy_to_uv(struct mesh *m);
-GLOBAL void mesh_distort_and_random_uv_map(struct mesh *m, float distortion);
+GLOBAL void mesh_distort_and_random_uv_map(struct mesh *m, float distortion, struct osn_context *osn);
 GLOBAL struct mesh *mesh_fabricate_planetary_ring(float ir, float or, int nvertices);
 GLOBAL struct mesh *init_thrust_mesh(int streaks, double h, double r1, double r2);
 GLOBAL struct mesh *init_burst_rod_mesh(int streaks, double h, double r1, double r2);

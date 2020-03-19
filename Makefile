@@ -503,7 +503,7 @@ _COMMONOBJS=mathutils.o snis_alloc.o snis_socket_io.o snis_marshal.o \
 		planetary_atmosphere.o planetary_ring_data.o mesh.o pthread_util.o \
 		snis_opcode_def.o rts_unit_data.o commodities.o snis_tweak.o rootcheck.o \
 		corporations.o replacement_assets.o snis_asset_dir.o snis_bin_dir.o scipher.o \
-		planetary_properties.o
+		planetary_properties.o open-simplex-noise.o
 COMMONOBJS=$(patsubst %,$(OD)/%,${_COMMONOBJS}) mikktspace/mikktspace.o
 
 _SERVEROBJS=snis_server.o starbase-comms.o \
@@ -542,7 +542,7 @@ _SDLCLIENTOBJS=shader.o graph_dev_opengl.o opengl_cap.o snis_graph.o mesh_viewer
 				png_utils.o turret_aimer.o quat.o mathutils.o mesh.o \
 				mtwist.o material.o entity.o snis_alloc.o matrix.o stacktrace.o stl_parser.o \
 				snis_typeface.o snis_font.o string-utils.o ui_colors.o liang-barsky.o \
-				bline.o vec4.o
+				bline.o vec4.o open-simplex-noise.o
 SDLCLIENTOBJS=$(patsubst %,$(OD)/%,${_SDLCLIENTOBJS}) mikktspace/mikktspace.o
 
 _NEBULANOISEOBJS=nebula_noise.o open-simplex-noise.o png_utils.o
@@ -789,7 +789,7 @@ solarsystem_config_test: solarsystem_config.c ${OD}/string-utils.o ${ODT}
 $(OD)/my_point.o:   my_point.c Makefile ${ODT}
 	$(Q)$(COMPILE)
 
-$(OD)/mesh.o:   mesh.c mikktspace/mikktspace.h Makefile ${ODT}
+$(OD)/mesh.o:   mesh.c mikktspace/mikktspace.h open-simplex-noise.h Makefile ${ODT}
 	$(Q)$(COMPILE)
 
 $(OD)/pthread_util.o:	pthread_util.c pthread_util.h ${ODT}
@@ -1044,10 +1044,11 @@ $(OD)/snis_bin_dir.o:	snis_bin_dir.c snis_bin_dir.h ${ODT}
 $(OD)/stl_parser.o:	stl_parser.c Makefile ${ODT}
 	$(Q)$(COMPILE)
 
-bin/stl_parser:	stl_parser.c $(OD)/matrix.o $(OD)/mesh.o $(OD)/mathutils.o $(OD)/quat.o $(OD)/mtwist.o mikktspace/mikktspace.o \
+bin/stl_parser:	stl_parser.c $(OD)/matrix.o $(OD)/mesh.o $(OD)/mathutils.o $(OD)/quat.o $(OD)/mtwist.o \
+		$(OD)/open-simplex-noise.o mikktspace/mikktspace.o \
 		$(OD)/string-utils.o Makefile ${BIN}
 	$(CC) -DTEST_STL_PARSER ${MYCFLAGS} ${GTKCFLAGS} -o bin/stl_parser stl_parser.c ${OD}/matrix.o ${OD}/mesh.o ${OD}/mathutils.o \
-		${OD}/quat.o ${OD}/mtwist.o mikktspace/mikktspace.o ${OD}/string-utils.o -lm $(LDFLAGS)
+		${OD}/quat.o ${OD}/mtwist.o mikktspace/mikktspace.o ${OD}/string-utils.o ${OD}/open-simplex-noise.o -lm $(LDFLAGS)
 
 $(OD)/entity.o:	entity.c Makefile ${ODT}
 	$(Q)$(GTKCOMPILE)
@@ -1237,8 +1238,10 @@ bin/test-commodities:	${OD}/commodities.o Makefile ${OD}/string-utils.o ${BIN}
 	$(CC) -DTESTCOMMODITIES=1 -O3 -c commodities.c -o ${OD}/test-commodities.o
 	$(CC) -DTESTCOMMODITIES=1 -o bin/test-commodities ${OD}/string-utils.o ${OD}/test-commodities.o
 
-bin/test-obj-parser:	test-obj-parser.c mikktspace/mikktspace.o ${OD}/string-utils.o ${OD}/stl_parser.o ${OD}/mesh.o ${OD}/mtwist.o ${OD}/mathutils.o ${OD}/matrix.o ${OD}/quat.o Makefile ${BIN}
-	$(CC) -o bin/test-obj-parser mikktspace/mikktspace.o ${OD}/string-utils.o ${OD}/stl_parser.o ${OD}/mtwist.o ${OD}/mathutils.o ${OD}/matrix.o ${OD}/mesh.o ${OD}/quat.o -lm test-obj-parser.c
+bin/test-obj-parser:	test-obj-parser.c mikktspace/mikktspace.o ${OD}/string-utils.o ${OD}/stl_parser.o ${OD}/mesh.o \
+		${OD}/mtwist.o ${OD}/mathutils.o ${OD}/matrix.o ${OD}/quat.o ${OD}/open-simplex-noise.o Makefile ${BIN}
+	$(CC) -o bin/test-obj-parser mikktspace/mikktspace.o ${OD}/string-utils.o ${OD}/stl_parser.o ${OD}/mtwist.o \
+		${OD}/mathutils.o ${OD}/matrix.o ${OD}/mesh.o ${OD}/quat.o ${OD}/open-simplex-noise.o -lm test-obj-parser.c
 
 test:	bin/test-matrix bin/test-space-partition bin/test-marshal bin/test-quat bin/test-fleet bin/test-mtwist bin/test-commodities bin/test_solarsystem_config
 	/bin/true	# Prevent make from running "$(CC) test.o".

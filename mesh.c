@@ -14,6 +14,7 @@
 #include "material.h"
 #include "quat.h"
 #include "mikktspace/mikktspace.h"
+#include "open-simplex-noise.h"
 
 #define DEFINE_MESH_GLOBALS 1
 #include "mesh.h"
@@ -45,17 +46,45 @@ float mesh_compute_nonuniform_scaled_radius(struct mesh *m, double sx, double sy
 	return max_radius;
 }
 
-void mesh_distort_helper(struct mesh *m, float distortion)
+void mesh_distort_helper(struct mesh *m, float distortion, struct osn_context *osn)
 {
 	int i;
+	float offset, minr, maxr, r, r2;
+	minr = -1;
+	maxr = -1;
+	float noise;
 
 	for (i = 0; i < m->nvertices; i++) {
-		float n = 2.0 * (0.001 * snis_randn(1000) - 0.5);
 		union vec3 v;
 		v.v.x = m->v[i].x;
 		v.v.y = m->v[i].y;
 		v.v.z = m->v[i].z;
-		vec3_mul_self(&v, 1.0 + n * distortion);
+		r = vec3_magnitude(&v);
+		if (minr < 0.0 || r < minr)
+			minr = r;
+		if (maxr < r)
+			maxr = r;
+	}
+
+	offset = (float) snis_randn(3000) / 1000.0;
+
+	for (i = 0; i < m->nvertices; i++) {
+		union vec3 v;
+		v.v.x = m->v[i].x;
+		v.v.y = m->v[i].y;
+		v.v.z = m->v[i].z;
+		r = vec3_magnitude(&v);
+		r2 = fmap(r, minr, maxr, 0.0, 3.0);
+		vec3_normalize_self(&v);
+		vec3_mul_self(&v, r2);
+		noise = open_simplex_noise3(osn, v.v.x + offset, v.v.y + offset, v.v.z + offset);
+
+		v.v.x = m->v[i].x;
+		v.v.y = m->v[i].y;
+		v.v.z = m->v[i].z;
+		r = r + r * noise * distortion;
+		vec3_normalize_self(&v);
+		vec3_mul_self(&v, r);
 		m->v[i].x = v.v.x;
 		m->v[i].y = v.v.y;
 		m->v[i].z = v.v.z;
@@ -134,15 +163,15 @@ void mesh_set_reasonable_tangents_and_bitangents(struct mesh *m)
 	}
 }
 
-void mesh_distort(struct mesh *m, float distortion)
+void mesh_distort(struct mesh *m, float distortion, struct osn_context *osn)
 {
-	mesh_distort_helper(m, distortion);
+	mesh_distort_helper(m, distortion, osn);
 	mesh_graph_dev_init(m);
 }
 
-void mesh_distort_and_random_uv_map(struct mesh *m, float distortion)
+void mesh_distort_and_random_uv_map(struct mesh *m, float distortion, struct osn_context *osn)
 {
-	mesh_distort_helper(m, distortion);
+	mesh_distort_helper(m, distortion, osn);
 	mesh_random_uv_map(m);
 	mesh_graph_dev_init(m);
 }

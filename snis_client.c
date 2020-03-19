@@ -131,6 +131,7 @@
 #include "planetary_ring_data.h"
 #include "planetary_properties.h"
 #include "xdg_base_dir_spec.h"
+#include "open-simplex-noise.h"
 
 #define SHIP_COLOR CYAN
 #define STARBASE_COLOR RED
@@ -22408,6 +22409,7 @@ static void init_meshes()
 	char *d = asset_dir;
 	struct mtwist_state *mt; 
 	char missile_thrust_attachment_path[PATH_MAX];
+	struct osn_context *osn;
 
 	mt = mtwist_init(mtwist_seed);
 	if (!mt) {
@@ -22438,6 +22440,7 @@ static void init_meshes()
 #endif
 	laser_mesh = snis_read_model(d, "laser.stl");
 
+	open_simplex_noise(77374223LL, &osn);
 	for (i = 0; i < NASTEROID_MODELS; i++) {
 		char filename[100];
 
@@ -22447,7 +22450,7 @@ static void init_meshes()
 			snprintf(filename, sizeof(filename), "asteroid%d.stl", i + 1);
 		printf("reading '%s'\n", filename);
 		asteroid_mesh[i] = snis_read_model(d, filename);
-		mesh_distort(asteroid_mesh[i], 0.15);
+		mesh_distort(asteroid_mesh[i], 0.25, osn);
 		mesh_set_average_vertex_normals(asteroid_mesh[i]);
 		mesh_graph_dev_init(asteroid_mesh[i]);
 	}
@@ -22512,7 +22515,7 @@ static void init_meshes()
 	wormhole_mesh = snis_read_model(d, "wormhole.stl");
 	mesh_map_xy_to_uv(wormhole_mesh);
 #ifdef WITHOUTOPENGL
-	mesh_distort(wormhole_mesh, 0.15);
+	mesh_distort(wormhole_mesh, 0.25, osn);
 	wormhole_mesh->geometry_mode = MESH_GEOMETRY_POINTS;
 #else
 	mesh_scale(wormhole_mesh, 3.0f);
@@ -22550,6 +22553,7 @@ static void init_meshes()
 	cylinder_mesh = snis_read_model(d, "cylinder.stl");
 	mesh_cylindrical_yz_uv_map(cylinder_mesh);
 
+	open_simplex_noise_free(osn);
 	mtwist_free(mt);
 }
 
