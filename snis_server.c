@@ -173,6 +173,7 @@ static float spacemonster_flee_dist = SPACEMONSTER_FLEE_DIST;
 static float spacemonster_aggro_radius = SPACEMONSTER_AGGRO_RADIUS;
 static float spacemonster_collision_radius = SPACEMONSTER_COLLISION_RADIUS;
 static float cargo_container_max_velocity = CARGO_CONTAINER_MAX_VELOCITY;
+static float cargo_container_pickup_distance = 20.0;
 static float bounty_chance = BOUNTY_CHANCE;
 static float flare_speed = FLARE_SPEED;
 static int flare_count = FLARE_COUNT;
@@ -8639,7 +8640,7 @@ static void player_collision_detection(void *player, void *object)
 
 	dist2 = object_dist2(o, t);
 	if (t->type == OBJTYPE_CARGO_CONTAINER) {
-		if (dist2 < 150.0 * 150.0) {
+		if (dist2 < cargo_container_pickup_distance * cargo_container_pickup_distance) {
 			scoop_up_cargo(o, t);
 			return;
 		}
@@ -17714,6 +17715,8 @@ static struct tweakable_var_descriptor server_tweak[] = {
 		"CARGO CONTAINER MAX VELOCITY",
 		&cargo_container_max_velocity, 'f',
 		0.0, MAX_PLAYER_VELOCITY * 10.0, CARGO_CONTAINER_MAX_VELOCITY, 0, 0, 0 },
+	{ "CARGO_CONTAINER_PICKUP_DISTANCE", "CARGO CONTAINER MINIMUM PICKUP DISTANCE",
+		&cargo_container_pickup_distance, 'f', 0.0, 1000.0, 20.0, 0, 0, 0 },
 	{ "BOUNTY_CHANCE",
 		"CHANCE THAT A NEWLY ADDED SHIP WILL HAVE A BOUNTY ON IT",
 		&bounty_chance, 'f',
