@@ -8841,7 +8841,8 @@ static void player_collision_detection(void *player, void *object)
 		proximity_dist2 *= STARBASE_SCALE_FACTOR;
 		crash_dist2 *= STARBASE_SCALE_FACTOR;
 	}
-	if (t->type != OBJTYPE_DOCKING_PORT && dist2 < proximity_dist2 && (universe_timestamp & 0x7) == 0) {
+	if (t->type != OBJTYPE_DOCKING_PORT && t->type != OBJTYPE_CARGO_CONTAINER &&
+		dist2 < proximity_dist2 && (universe_timestamp & 0x7) == 0) {
 		do_collision_impulse(o, t);
 		send_packet_to_all_clients_on_a_bridge(o->id, 
 			snis_opcode_pkt("b", OPCODE_PROXIMITY_ALERT),
