@@ -542,7 +542,7 @@ _SDLCLIENTOBJS=shader.o graph_dev_opengl.o opengl_cap.o snis_graph.o mesh_viewer
 				png_utils.o turret_aimer.o quat.o mathutils.o mesh.o \
 				mtwist.o material.o entity.o snis_alloc.o matrix.o stacktrace.o stl_parser.o \
 				snis_typeface.o snis_font.o string-utils.o ui_colors.o liang-barsky.o \
-				bline.o vec4.o open-simplex-noise.o
+				bline.o vec4.o open-simplex-noise.o replacement_assets.o
 SDLCLIENTOBJS=$(patsubst %,$(OD)/%,${_SDLCLIENTOBJS}) mikktspace/mikktspace.o
 
 _NEBULANOISEOBJS=nebula_noise.o open-simplex-noise.o png_utils.o

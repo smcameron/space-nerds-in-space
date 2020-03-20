@@ -33,6 +33,7 @@
 #include "png_utils.h"
 #include "turret_aimer.h"
 #include "open-simplex-noise.h"
+#include "replacement_assets.h"
 
 #define FOV (30.0 * M_PI / 180.0)
 #define FPS 60
@@ -90,15 +91,24 @@ static int cubemap_mode = 0;
 static int burst_rod_mode = 0;
 static int thrust_mode = 0;
 static int turret_mode = 0;
+static char *replacement_assets_file = NULL;
+static struct replacement_asset replacement_asset = { 0 };
 
 /* Color depth in bits of our window. */
 static int bpp;
 
-static struct mesh *snis_read_model(char *filename)
+static char *maybe_replace_asset(char *asset)
+{
+	return replacement_asset_lookup(asset, &replacement_asset);
+}
+
+static struct mesh *snis_read_model(char *path)
 {
 	float minx, miny, minz, maxx, maxy, maxz;
 	struct mesh *m;
+	char *filename;
 
+	filename = maybe_replace_asset(path);
 	m = read_mesh(filename);
 	if (!m) {
 		fprintf(stderr, "mesh_viewer: bad mesh file '%s'\n", filename);
@@ -714,10 +724,15 @@ static unsigned int load_cubemap_textures(int is_inside, char *filenameprefix)
 	char filename[6][PATH_MAX + 1];
 
 	for (i = 0; i < 6; i++)
-		sprintf(filename[i], "%s/%s%d.png", ".", filenameprefix, i);
+		sprintf(filename[i], "%s%d.png", filenameprefix, i);
 
-	return graph_dev_load_cubemap_texture(is_inside, filename[1], filename[3], filename[4],
-					filename[5], filename[0], filename[2]);
+	return graph_dev_load_cubemap_texture(is_inside,
+			maybe_replace_asset(filename[1]),
+			maybe_replace_asset(filename[3]),
+			maybe_replace_asset(filename[4]),
+			maybe_replace_asset(filename[5]),
+			maybe_replace_asset(filename[0]),
+			maybe_replace_asset(filename[2]));
 }
 
 static void setup_skybox(char *skybox_prefix)
@@ -734,8 +749,12 @@ static void setup_skybox(char *skybox_prefix)
 			sprintf(filename[i], "%s%d.png", skyboxfile, i);
 	}
 
-	graph_dev_load_skybox_texture(filename[3], filename[1], filename[4],
-					filename[5], filename[0], filename[2]);
+	graph_dev_load_skybox_texture(maybe_replace_asset(filename[3]),
+					maybe_replace_asset(filename[1]),
+					maybe_replace_asset(filename[4]),
+					maybe_replace_asset(filename[5]),
+					maybe_replace_asset(filename[0]),
+					maybe_replace_asset(filename[2]));
 }
 
 __attribute__((noreturn)) void usage(char *program)
@@ -743,6 +762,7 @@ __attribute__((noreturn)) void usage(char *program)
 	fprintf(stderr, "Usage:\n");
 	fprintf(stderr, "%s -p <planet-texture> [ -i icosohedrion-subdivision] [ -n <normal-map-texture> ]\n",
 			program);
+	fprintf(stderr, "           [ -r replacement_assets.txt ]\n");
 	fprintf(stderr, " %s -m <mesh-file> [ -c cubemap-texture- ]\n", program);
 	fprintf(stderr, " %s --burstrod\n", program);
 	fprintf(stderr, " %s --thrust <image-file>\n", program);
@@ -785,6 +805,7 @@ static struct option long_options[] = {
 	{ "alphabynormal", no_argument, NULL, 'A' },
 	{ "diffuse", required_argument, NULL, 'd' },
 	{ "trap-nans", no_argument, NULL, 'f' },
+	{ "replacement-assets", required_argument, NULL, 'r' },
 	{ 0, 0, 0, 0 },
 };
 
@@ -795,7 +816,7 @@ static void process_options(int argc, char *argv[])
 	while (1) {
 		int option_index;
 
-		c = getopt_long(argc, argv, "IAB:T:bc:d:fC:Y:Z:e:hi:m:n:p:s:t:", long_options, &option_index);
+		c = getopt_long(argc, argv, "IAB:T:bc:d:fC:Y:Z:e:hi:m:n:p:r:s:t:", long_options, &option_index);
 		if (c < 0) {
 			break;
 		}
@@ -871,6 +892,9 @@ static void process_options(int argc, char *argv[])
 		case 'f':
 			trap_nans = 1;
 			break;
+		case 'r':
+			replacement_assets_file = optarg;
+			break;
 		default:
 			fprintf(stderr, "%s: Unknown option.\n", program);
 			usage(program);
@@ -884,6 +908,7 @@ int main(int argc, char *argv[])
 {
 	char *filename;
 	struct stat statbuf;
+	int rc;
 
 	setlocale(LC_ALL, "C");
 	program = argc >= 0 ? argv[0] : "mesh_viewer";
@@ -894,6 +919,14 @@ int main(int argc, char *argv[])
 	process_options(argc, argv);
 	if (trap_nans)
 		feenableexcept(FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW);
+	if (replacement_assets_file) {
+		rc = replacement_asset_read(replacement_assets_file, "share/snis", &replacement_asset);
+		if (rc < 0) {
+			fprintf(stderr, "Failed to read replacement assets file %s\n", replacement_assets_file);
+			return -1;
+		}
+		stl_parser_set_asset_replacement_function(maybe_replace_asset);
+	}
 
 	filename = modelfile;
 	if (!filename && !(planet_mode || burst_rod_mode || thrust_mode || turret_mode))
@@ -993,7 +1026,7 @@ int main(int argc, char *argv[])
 		atmosphere_mesh = NULL;
 		material_init_textured_particle(&green_phaser_material);
 		green_phaser_material.textured_particle.texture_id =
-			graph_dev_load_texture("share/snis/textures/green-burst.png");
+			graph_dev_load_texture(maybe_replace_asset("share/snis/textures/green-burst.png"));
 		green_phaser_material.textured_particle.radius = 0.75;
 		green_phaser_material.textured_particle.time_base = 0.25;
 	} else if (planet_mode) {
@@ -1011,7 +1044,8 @@ int main(int argc, char *argv[])
 		target_mesh = snis_read_model(filename);
 		atmosphere_mesh = NULL;
 		material_init_textured_planet(&planet_material);
-		planet_material.textured_planet.texture_id = load_cubemap_textures(0, cubemapname);
+		planet_material.textured_planet.texture_id = load_cubemap_textures(0,
+					replacement_asset_lookup(cubemapname, &replacement_asset));
 		planet_material.textured_planet.ring_material = 0;
 		if (normalmapname)
 			planet_material.textured_planet.normalmap_id = load_cubemap_textures(0, normalmapname);
@@ -1020,7 +1054,7 @@ int main(int argc, char *argv[])
 	} else if (thrust_mode) {
 		target_mesh = init_thrust_mesh(70, 200, 1.3, 1);
 		material_init_textured_particle(&thrust_material);
-		thrust_material.textured_particle.texture_id = graph_dev_load_texture(thrustfile);
+		thrust_material.textured_particle.texture_id = graph_dev_load_texture(maybe_replace_asset(thrustfile));
 		thrust_material.textured_particle.radius = 1.5;
 		thrust_material.textured_particle.time_base = 0.1;
 	} else if (turret_mode) {
@@ -1038,9 +1072,11 @@ int main(int argc, char *argv[])
 				mesh_cylindrical_xy_uv_map(target_mesh);
 			mesh_set_mikktspace_tangents_and_bitangents(target_mesh);
 			material_init_texture_mapped(&cyl_albedo);
-			cyl_albedo.texture_mapped.texture_id = graph_dev_load_texture(cylinder_albedo);
+			cyl_albedo.texture_mapped.texture_id =
+				graph_dev_load_texture(maybe_replace_asset(cylinder_albedo));
 			if (normalmapname && cyl_albedo.texture_mapped.normalmap_id <= 0)
-				cyl_albedo.texture_mapped.normalmap_id = graph_dev_load_texture(normalmapname);
+				cyl_albedo.texture_mapped.normalmap_id =
+					graph_dev_load_texture(maybe_replace_asset(normalmapname));
 		}
 		if (cylinder_emit && cylinder_albedo) {
 			if (cylindrical_axis == 0)
@@ -1050,9 +1086,11 @@ int main(int argc, char *argv[])
 			else
 				mesh_cylindrical_xy_uv_map(target_mesh);
 			mesh_set_mikktspace_tangents_and_bitangents(target_mesh);
-			cyl_albedo.texture_mapped.emit_texture_id = graph_dev_load_texture(cylinder_emit);
+			cyl_albedo.texture_mapped.emit_texture_id =
+				graph_dev_load_texture(maybe_replace_asset(cylinder_emit));
 			if (normalmapname && cyl_albedo.texture_mapped.normalmap_id <= 0)
-				cyl_albedo.texture_mapped.normalmap_id = graph_dev_load_texture(normalmapname);
+				cyl_albedo.texture_mapped.normalmap_id =
+					graph_dev_load_texture(maybe_replace_asset(normalmapname));
 		}
 		if (use_alpha_by_normal) {
 			material_init_alpha_by_normal(&alpha_by_normal);
@@ -1064,9 +1102,11 @@ int main(int argc, char *argv[])
 		}
 		if (diffusename) {
 			material_init_texture_mapped(&diffuse_material);
-			diffuse_material.texture_mapped.texture_id = graph_dev_load_texture(diffusename);
+			diffuse_material.texture_mapped.texture_id =
+				graph_dev_load_texture(maybe_replace_asset(diffusename));
 			if (normalmapname)
-				diffuse_material.texture_mapped.normalmap_id = graph_dev_load_texture(normalmapname);
+				diffuse_material.texture_mapped.normalmap_id =
+					graph_dev_load_texture(maybe_replace_asset(normalmapname));
 		}
 		atmosphere_mesh = NULL;
 	}
@@ -1080,7 +1120,8 @@ int main(int argc, char *argv[])
 	struct material light_material;
 	material_init_texture_mapped_unlit(&light_material);
 	light_material.billboard_type = MATERIAL_BILLBOARD_TYPE_SCREEN;
-	light_material.texture_mapped_unlit.texture_id = graph_dev_load_texture("share/snis/textures/sun.png");
+	light_material.texture_mapped_unlit.texture_id =
+			graph_dev_load_texture(maybe_replace_asset("share/snis/textures/sun.png"));
 	light_material.texture_mapped_unlit.do_blend = 1;
 
 	light_mesh->material = &light_material;
