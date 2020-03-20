@@ -28,6 +28,27 @@
 #define UNIVERSAL_SHADER_HEADER \
 	OPENGL_VERSION_STRING
 
+/*
+ * Filmic tonemapping cribbed from oolite:
+ *
+ * 	gamma correction
+ * 	using Jim Hejl's filmic tonemapping and gamma correction approximation.
+ * 	Normally this would require HDR, but I think it works extremely well in Oolite.
+ * 	Formula taken from https://www.gdcvault.com/play/1012351/Uncharted-2-HDR
+ * 	jump to 27:40 in the video. Note the pow 1.0/2.2 is baked into these numbers
+ *
+ * Perhaps that it normally requires HDR is the reason it doesn't seem to look so
+ * great in SNIS.
+ */
+#define FILMIC_TONEMAPPING \
+	"uniform float u_FilmicTonemapping;\n" \
+	"vec4 filmic_tonemap(vec4 color) {\n" \
+	"	float dont_tonemap = 1.0 - u_FilmicTonemapping;\n" \
+	"	vec4 x = max(vec4(0.0), color - 0.004);\n" \
+	"	x = (x * (6.2 * x + 0.5)) / (x * (6.2 * x + 1.7) + 0.06);\n" \
+	"	return dont_tonemap * color + u_FilmicTonemapping * x;\n" \
+	"}\n\n"
+
 #define TEX_RELOAD_DELAY 1.0
 #define CUBEMAP_TEX_RELOAD_DELAY 10.0
 #define MAX_LOADED_TEXTURES 80
@@ -64,6 +85,7 @@ static int draw_smaa = 0;
 static int draw_smaa_edge = 0;
 static int draw_smaa_blend = 0;
 static int draw_atmospheres = 1;
+static int filmic_tonemapping = 0;
 int graph_dev_planet_specularity = 1;
 int graph_dev_atmosphere_ring_shadows = 1;
 static const char *default_shader_directory = "share/snis/shader";
@@ -620,6 +642,7 @@ struct graph_dev_gl_single_color_lit_shader {
 	GLint color_id;
 	GLint in_shade_id;
 	GLint ambient_id;
+	GLint filmic_tonemapping_id;
 };
 
 struct graph_dev_gl_atmosphere_shader {
@@ -639,6 +662,7 @@ struct graph_dev_gl_atmosphere_shader {
 	GLint shadow_annulus_tint_color_id;
 	GLint ring_texture_v_id;
 	GLint atmosphere_brightness_id;
+	GLint filmic_tonemapping_id;
 };
 
 struct graph_dev_gl_filled_wireframe_shader {
@@ -737,6 +761,7 @@ struct graph_dev_gl_textured_shader {
 	GLint specular_power_id;
 	GLint specular_intensity_id;
 	GLint ambient_id;
+	GLint filmic_tonemapping_id;
 
 	GLint shadow_sphere_id;
 
@@ -789,6 +814,7 @@ struct graph_dev_gl_textured_particle_shader {
 	GLint end_tint_color_id;
 	GLint end_apm_id;
 	GLint texture_id; /* param to vertex shader */
+	GLint filmic_tonemapping_id;
 };
 
 struct graph_dev_gl_fs_effect_shader { /* For full screen effect shaders */
@@ -1341,6 +1367,8 @@ static void graph_dev_raster_texture(struct raster_texture_params *p)
 
 	if (shader->ambient_id >= 0)
 		glUniform1f(shader->ambient_id, p->ambient);
+	if (shader->filmic_tonemapping_id >= 0)
+		glUniform1f(shader->filmic_tonemapping_id, (float) filmic_tonemapping);
 
 	if (shader->normalmap_id >= 0)
 		BIND_TEXTURE(GL_TEXTURE3, GL_TEXTURE_2D, p->normalmap_id);
@@ -1526,6 +1554,7 @@ static void graph_dev_raster_single_color_lit(const struct mat44 *mat_mvp, const
 	glUniform3f(single_color_lit_shader.light_pos_id, eye_light_pos->v.x, eye_light_pos->v.y, eye_light_pos->v.z);
 	glUniform1f(single_color_lit_shader.in_shade_id, in_shade);
 	glUniform1f(single_color_lit_shader.ambient_id, ambient);
+	glUniform1f(single_color_lit_shader.filmic_tonemapping_id, (float) filmic_tonemapping);
 
 	glEnableVertexAttribArray(single_color_lit_shader.vertex_position_id);
 	glBindBuffer(GL_ARRAY_BUFFER, ptr->vertex_buffer);
@@ -1630,6 +1659,7 @@ static void graph_dev_raster_atmosphere(const struct mat44 *mat_mvp, const struc
 	glUniform3f(shader->color_id, triangle_color->red, triangle_color->green, triangle_color->blue);
 	glUniform3f(shader->light_pos_id, eye_light_pos->v.x, eye_light_pos->v.y, eye_light_pos->v.z);
 	glUniform1f(shader->alpha, alpha);
+	glUniform1f(shader->filmic_tonemapping_id, (float) filmic_tonemapping);
 
 	glEnableVertexAttribArray(shader->vertex_position_id);
 	glBindBuffer(GL_ARRAY_BUFFER, ptr->vertex_buffer);
@@ -2140,6 +2170,7 @@ static void graph_dev_raster_particle_animation(const struct entity_context *cx,
 	glUniform1f(textured_particle_shader.time_id, anim_time);
 
 	glUniform1f(textured_particle_shader.radius_id, particle_radius);
+	glUniform1f(textured_particle_shader.filmic_tonemapping_id, (float) filmic_tonemapping);
 
 	BIND_TEXTURE(GL_TEXTURE0, GL_TEXTURE_2D, texture_number);
 
@@ -3036,7 +3067,7 @@ static void setup_single_color_lit_shader(struct graph_dev_gl_single_color_lit_s
 	shader->program_id = load_shaders(shader_directory,
 				"single-color-lit-per-vertex.vert",
 				"single-color-lit-per-vertex.frag",
-				UNIVERSAL_SHADER_HEADER);
+				UNIVERSAL_SHADER_HEADER FILMIC_TONEMAPPING);
 
 	/* Get a handle for our "MVP" uniform */
 	shader->mvp_matrix_id = glGetUniformLocation(shader->program_id, "u_MVPMatrix");
@@ -3050,6 +3081,7 @@ static void setup_single_color_lit_shader(struct graph_dev_gl_single_color_lit_s
 	shader->color_id = glGetUniformLocation(shader->program_id, "u_Color");
 	shader->in_shade_id = glGetUniformLocation(shader->program_id, "u_in_shade");
 	shader->ambient_id = glGetUniformLocation(shader->program_id, "u_Ambient");
+	shader->filmic_tonemapping_id = glGetUniformLocation(shader->program_id, "u_FilmicTonemapping");
 }
 
 static void setup_atmosphere_shader(struct graph_dev_gl_atmosphere_shader *shader, int with_ring_shadow)
@@ -3058,8 +3090,8 @@ static void setup_atmosphere_shader(struct graph_dev_gl_atmosphere_shader *shade
 	shader->program_id = load_shaders(shader_directory,
 				"atmosphere.vert", "atmosphere.frag",
 				with_ring_shadow ?
-				UNIVERSAL_SHADER_HEADER "\n#define USE_ANNULUS_SHADOW 1\n" :
-				UNIVERSAL_SHADER_HEADER);
+				UNIVERSAL_SHADER_HEADER FILMIC_TONEMAPPING "\n#define USE_ANNULUS_SHADOW 1\n" :
+				UNIVERSAL_SHADER_HEADER FILMIC_TONEMAPPING);
 
 	/* Get a handle for our "MVP" uniform */
 	shader->mvp_matrix_id = glGetUniformLocation(shader->program_id, "u_MVPMatrix");
@@ -3073,6 +3105,7 @@ static void setup_atmosphere_shader(struct graph_dev_gl_atmosphere_shader *shade
 	shader->vertex_normal_id = glGetAttribLocation(shader->program_id, "a_Normal");
 	shader->color_id = glGetUniformLocation(shader->program_id, "u_Color");
 	shader->alpha = glGetUniformLocation(shader->program_id, "u_Alpha");
+	shader->filmic_tonemapping_id = glGetUniformLocation(shader->program_id, "u_FilmicTonemapping");
 
 	if (with_ring_shadow) {
 		shader->shadow_annulus_texture_id = glGetUniformLocation(shader->program_id, "u_AnnulusAlbedoTex");
@@ -3149,6 +3182,7 @@ static void setup_textured_shader(const char *basename, const char *defines,
 
 	shader->shadow_sphere_id = glGetUniformLocation(shader->program_id, "u_Sphere");
 	shader->ambient_id = glGetUniformLocation(shader->program_id, "u_Ambient");
+	shader->filmic_tonemapping_id = glGetUniformLocation(shader->program_id, "u_FilmicTonemapping");
 }
 
 static void setup_textured_cubemap_shader(const char *basename, int use_normal_map,
@@ -3167,7 +3201,7 @@ static void setup_textured_cubemap_shader(const char *basename, int use_normal_m
 			use_specular ? "#define USE_SPECULAR 1\n" : "\n",
 			use_annulus_shadow ? "#define USE_ANNULUS_SHADOW 1\n" : "\n");
 	sprintf(frag_header, "%s\n%s\n%s\n%s\n%s\n",
-		UNIVERSAL_SHADER_HEADER, "#define INCLUDE_FS 1\n",
+		UNIVERSAL_SHADER_HEADER FILMIC_TONEMAPPING, "#define INCLUDE_FS 1\n",
 			use_normal_map ? "#define USE_NORMAL_MAP 1\n" : "\n",
 			use_specular ? "#define USE_SPECULAR 1\n" : "\n",
 			use_annulus_shadow ? "#define USE_ANNULUS_SHADOW 1\n" : "\n");
@@ -3228,6 +3262,7 @@ static void setup_textured_cubemap_shader(const char *basename, int use_normal_m
 	shader->shadow_annulus_radius_id = glGetUniformLocation(shader->program_id, "u_AnnulusRadius");
 	shader->shadow_annulus_tint_color_id = glGetUniformLocation(shader->program_id, "u_AnnulusTintColor");
 	shader->ambient_id = glGetUniformLocation(shader->program_id, "u_Ambient");
+	shader->filmic_tonemapping_id = glGetUniformLocation(shader->program_id, "u_FilmicTonemapping");
 }
 
 static void setup_filled_wireframe_shader(struct graph_dev_gl_filled_wireframe_shader *shader)
@@ -3463,7 +3498,7 @@ static void setup_textured_particle_shader(struct graph_dev_gl_textured_particle
 	/* Create and compile our GLSL program from the shaders */
 	shader->program_id = load_shaders(shader_directory,
 				"textured-particle.vert", "textured-particle.frag",
-				UNIVERSAL_SHADER_HEADER);
+				UNIVERSAL_SHADER_HEADER FILMIC_TONEMAPPING);
 	glUseProgram(shader->program_id);
 
 	shader->mvp_matrix_id = glGetUniformLocation(shader->program_id, "u_MVPMatrix");
@@ -3472,6 +3507,7 @@ static void setup_textured_particle_shader(struct graph_dev_gl_textured_particle
 	shader->time_id = glGetUniformLocation(shader->program_id, "u_Time");
 	shader->radius_id = glGetUniformLocation(shader->program_id, "u_Radius");
 	shader->texture_id = glGetUniformLocation(shader->program_id, "u_AlbedoTex");
+	shader->filmic_tonemapping_id = glGetUniformLocation(shader->program_id, "u_FilmicTonemapping");
 	glUniform1i(shader->texture_id, 0);
 
 	shader->multi_one_id = glGetAttribLocation(shader->program_id, "a_MultiOne");
@@ -3785,17 +3821,19 @@ int graph_dev_setup(const char *shader_dir)
 	setup_point_cloud_shader("point_cloud", &point_cloud_shader);
 	setup_color_by_w_shader(&color_by_w_shader);
 	setup_skybox_shader(&skybox_shader);
-	setup_textured_shader("textured", UNIVERSAL_SHADER_HEADER, &textured_shader);
-	setup_textured_shader("textured-with-sphere-shadow-per-pixel", UNIVERSAL_SHADER_HEADER,
+	setup_textured_shader("textured", UNIVERSAL_SHADER_HEADER FILMIC_TONEMAPPING, &textured_shader);
+	setup_textured_shader("textured-with-sphere-shadow-per-pixel", UNIVERSAL_SHADER_HEADER FILMIC_TONEMAPPING,
 				&textured_with_sphere_shadow_shader);
-	setup_textured_shader("textured-and-lit-per-pixel", UNIVERSAL_SHADER_HEADER, &textured_lit_shader);
-	setup_textured_shader("textured-and-lit-per-pixel", UNIVERSAL_SHADER_HEADER "#define USE_EMIT_MAP",
+	setup_textured_shader("textured-and-lit-per-pixel",
+				UNIVERSAL_SHADER_HEADER FILMIC_TONEMAPPING, &textured_lit_shader);
+	setup_textured_shader("textured-and-lit-per-pixel",
+				UNIVERSAL_SHADER_HEADER FILMIC_TONEMAPPING "#define USE_EMIT_MAP",
 				&textured_lit_emit_shader);
-	setup_textured_shader("textured-and-lit-per-pixel", UNIVERSAL_SHADER_HEADER
+	setup_textured_shader("textured-and-lit-per-pixel", UNIVERSAL_SHADER_HEADER FILMIC_TONEMAPPING
 				"#define USE_EMIT_MAP\n"
 				"#define USE_NORMAL_MAP 1\n",
 				&textured_lit_emit_normal_shader);
-	setup_textured_shader("textured-and-lit-per-pixel", UNIVERSAL_SHADER_HEADER
+	setup_textured_shader("textured-and-lit-per-pixel", UNIVERSAL_SHADER_HEADER FILMIC_TONEMAPPING
 				"#define USE_NORMAL_MAP 1\n",
 				&textured_lit_normal_shader);
 	setup_textured_cubemap_shader("textured-cubemap-and-lit-with-annulus-shadow-per-pixel", 0, 0, 0,
@@ -4275,9 +4313,9 @@ static void debug_menu_draw_item(char *item, int itemnumber, int grayed, int che
 void graph_dev_display_debug_menu_show()
 {
 	sng_set_foreground(BLACK);
-	graph_dev_draw_rectangle(1, 10, 30, 370 * sgc.x_scale, 245);
+	graph_dev_draw_rectangle(1, 10, 30, 370 * sgc.x_scale, 265);
 	sng_set_foreground(WHITE);
-	graph_dev_draw_rectangle(0, 10, 30, 370 * sgc.x_scale, 245);
+	graph_dev_draw_rectangle(0, 10, 30, 370 * sgc.x_scale, 265);
 
 	debug_menu_draw_item("VERTEX NORM/TAN/BITAN (RGB)", 0, 0, draw_normal_lines);
 	debug_menu_draw_item("BILLBOARD WIREFRAME", 1, 0, draw_billboard_wireframe);
@@ -4296,6 +4334,7 @@ void graph_dev_display_debug_menu_show()
 	debug_menu_draw_item("SMAA DEBUG BLEND", 9, !draw_smaa, draw_smaa_blend);
 	debug_menu_draw_item("PLANETARY ATMOSPHERES", 10, 0, draw_atmospheres);
 	debug_menu_draw_item("PLANET SPECULARITY", 11, 0, graph_dev_planet_specularity);
+	debug_menu_draw_item("FILMIC TONEMAPPING", 12, 0, filmic_tonemapping);
 }
 
 static int selected_debug_item_checkbox(int n, int x, int y, int *toggle)
@@ -4353,6 +4392,8 @@ int graph_dev_graph_dev_debug_menu_click(int x, int y)
 	if (selected_debug_item_checkbox(10, x, y, &draw_atmospheres))
 		return 1;
 	if (selected_debug_item_checkbox(11, x, y, &graph_dev_planet_specularity))
+		return 1;
+	if (selected_debug_item_checkbox(12, x, y, &filmic_tonemapping))
 		return 1;
 	return 0;
 }

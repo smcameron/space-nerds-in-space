@@ -136,6 +136,7 @@ uniform float u_SpecularIntensity; /* between 0 and 1, 1 is very shiny, 0 is fla
 		/* tint with alpha pre multiply */
 		gl_FragColor.rgb *= u_TintColor.rgb;
 		gl_FragColor *= u_TintColor.a;
+		gl_FragColor = filmic_tonemap(gl_FragColor);
 	}
 #endif
 

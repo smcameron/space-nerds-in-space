@@ -24,5 +24,6 @@ void main()
 
 	// Multiply the color by the diffuse illumination level to get final output color.
 	gl_FragColor = vec4(v_Color * diffuse, 1.0);
+	gl_FragColor = filmic_tonemap(gl_FragColor);
 }
 

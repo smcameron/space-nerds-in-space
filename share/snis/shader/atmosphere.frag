@@ -101,5 +101,6 @@ void main()
 	/* fragcolor.a = min(fragcolor.a, smoothstep(0.7, 1.0, ring_shadow) * ring_shadow); */ /* atmosphere becomes more transparent in shadow */
 	fragcolor.rgb *= map(ring_shadow, 0.0, 1.0, 0.8, 1.0);
 	gl_FragColor = fragcolor;
+	gl_FragColor = filmic_tonemap(gl_FragColor);
 }
 

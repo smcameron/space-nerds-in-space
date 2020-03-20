@@ -209,6 +209,7 @@
 		/* tint with alpha pre multiply */
 		gl_FragColor.rgb *= u_TintColor.rgb;
 		gl_FragColor *= u_TintColor.a;
+		gl_FragColor = filmic_tonemap(gl_FragColor);
 	}
 #endif
 

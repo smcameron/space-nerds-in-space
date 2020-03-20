@@ -6,6 +6,6 @@ varying vec4 v_TintColor;
 
 void main()
 {
-	gl_FragColor = v_TintColor * texture2D(u_AlbedoTex, v_TexCoord);
+	gl_FragColor = filmic_tonemap(v_TintColor * texture2D(u_AlbedoTex, v_TexCoord));
 }
 
