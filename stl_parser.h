@@ -32,5 +32,10 @@ GLOBAL struct mesh *read_stl_file(char *file);
 GLOBAL struct mesh *read_obj_file(char *file);
 GLOBAL void free_mesh(struct mesh *m);
 
+typedef char * (*asset_replacement_function)(char *asset);
+
+GLOBAL void stl_parser_set_asset_replacement_function(asset_replacement_function fn);
+
+
 #undef GLOBAL
 #endif

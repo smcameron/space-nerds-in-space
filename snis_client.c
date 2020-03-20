@@ -23060,6 +23060,11 @@ static void read_replacement_assets(struct replacement_asset *r, char *asset_dir
 		fprintf(stderr, "%s: Warning:  %s\n", p, strerror(errno));
 }
 
+static char *stl_parser_asset_replacer(char *path)
+{
+	return replacement_asset_lookup(path, &replacement_assets);
+}
+
 int main(int argc, char *argv[])
 {
 	GtkWidget *vbox;
@@ -23091,6 +23096,7 @@ int main(int argc, char *argv[])
 	damconscreeny = NULL;
 
 	read_replacement_assets(&replacement_assets, asset_dir);
+	stl_parser_set_asset_replacement_function(stl_parser_asset_replacer);
 
 	char commodity_path[PATH_MAX];
 	snprintf(commodity_path, sizeof(commodity_path), "%s/%s", asset_dir, "commodities.txt");

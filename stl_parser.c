@@ -490,7 +490,19 @@ static void check_triangle_vertices(struct mesh *m)
 	}
 }
 
-struct mesh *read_stl_file(char *file)
+static char *default_asset_replacement_function(char *s)
+{
+	return s;
+}
+
+static asset_replacement_function maybe_replace_asset = default_asset_replacement_function;
+
+void stl_parser_set_asset_replacement_function(asset_replacement_function fn)
+{
+	maybe_replace_asset = fn;
+}
+
+struct mesh *read_stl_file(char *filename)
 {
 	FILE *f;
 	char *s;
@@ -499,7 +511,9 @@ struct mesh *read_stl_file(char *file)
 	int linecount = 0;
 	struct mesh *my_mesh;
 	int i;
+	char *file;
 
+	file = maybe_replace_asset(filename);
 	f = fopen(file, "r");
 	if (!f)
 		return NULL;
@@ -870,6 +884,7 @@ static void parse_mtllib(char *parentfilename, char *mtllib_line, char *tfile,
 {
 	char fname[PATH_MAX];
 	char fname2[PATH_MAX];
+	char *fn3;
 	char texturefile[PATH_MAX];
 	char *dname, *s;
 	char ln[500];
@@ -888,11 +903,11 @@ static void parse_mtllib(char *parentfilename, char *mtllib_line, char *tfile,
 		return;
 	}
 	snprintf(fname2, sizeof(fname2), "%s/%s", dname, fname);
-	printf("Opening %s\n", fname2);
-	f = fopen(fname2, "r");
+	fn3 = maybe_replace_asset(fname2);
+	f = fopen(fn3, "r");
 	if (!f) {
 		free(dname);
-		fprintf(stderr, "Failed to open '%s': %s\n", fname2, strerror(errno));
+		fprintf(stderr, "Failed to open '%s': %s\n", fn3, strerror(errno));
 		return;
 	}
 
@@ -915,13 +930,13 @@ static void parse_mtllib(char *parentfilename, char *mtllib_line, char *tfile,
 			rc = sscanf(ln, "map_Kd %s", texturefile);
 			if (rc != 1)
 				continue;
-			snprintf(tfile, tfilelen, "%s/%s", dname, texturefile);
+			snprintf(tfile, tfilelen, "%s%s", dname, texturefile);
 		}
 		if (!efile[0] && strncmp(ln, "map_Ke ", 7) == 0) {
 			rc = sscanf(ln, "map_Ke %s", texturefile);
 			if (rc != 1)
 				continue;
-			snprintf(efile, efilelen, "%s/%s", dname, texturefile);
+			snprintf(efile, efilelen, "%s%s", dname, texturefile);
 		}
 		/* This is a non-standard extension to obj... wavefront obj doesn't support
 		 * normal maps, only bump maps, which the latter are fairly useless.
@@ -930,7 +945,7 @@ static void parse_mtllib(char *parentfilename, char *mtllib_line, char *tfile,
 			rc = sscanf(ln, "norm %s", texturefile);
 			if (rc != 1)
 				continue;
-			snprintf(nfile, nfilelen, "%s/%s", dname, texturefile);
+			snprintf(nfile, nfilelen, "%s%s", dname, texturefile);
 		}
 	}
 out:
@@ -990,7 +1005,7 @@ static void search_for_normalmap_file(char *filename, char *normalmapfile, int n
 	}
 }
 
-struct mesh *read_obj_file(char *filename)
+struct mesh *read_obj_file(char *file_name)
 {
 	FILE *f;
 	char *s;
@@ -1014,6 +1029,7 @@ struct mesh *read_obj_file(char *filename)
 	struct vertex *vn = NULL;
 	struct triangle *ft = NULL;
 	struct vertex_owner *owners;
+	char *filename = maybe_replace_asset(file_name);
 
 	f = fopen(filename, "r");
 	if (!f)
@@ -1078,13 +1094,15 @@ struct mesh *read_obj_file(char *filename)
 
 				mtl = malloc(sizeof(*mtl));
 				material_init_texture_mapped(mtl);
-				mtl->texture_mapped.texture_id = graph_dev_load_texture(tfile);
+				mtl->texture_mapped.texture_id = graph_dev_load_texture(maybe_replace_asset(tfile));
 				if (strcmp(efile, "") != 0)
-					mtl->texture_mapped.emit_texture_id = graph_dev_load_texture(efile);
+					mtl->texture_mapped.emit_texture_id =
+						graph_dev_load_texture(maybe_replace_asset(efile));
 				if (strcmp(nfile, "") == 0)
 					search_for_normalmap_file(filename, nfile, sizeof(nfile));
 				if (strcmp(nfile, "") != 0) {
-					mtl->texture_mapped.normalmap_id = graph_dev_load_texture(nfile);
+					mtl->texture_mapped.normalmap_id =
+						graph_dev_load_texture(maybe_replace_asset(nfile));
 				}
 				m->material = mtl;
 			}
@@ -1130,7 +1148,7 @@ flame_out:
 	return NULL;
 }
 
-struct mesh *read_oolite_dat_file(char *filename)
+struct mesh *read_oolite_dat_file(char *file_name)
 {
 	FILE *f;
 	char *s;
@@ -1145,6 +1163,7 @@ struct mesh *read_oolite_dat_file(char *filename)
 	int mode = -1;
 	int nfaces = 0;
 	int ntex = 0;
+	char *filename = maybe_replace_asset(file_name);
 
 	f = fopen(filename, "r");
 	if (!f)
