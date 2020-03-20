@@ -19312,6 +19312,8 @@ static void show_demon_3d(GtkWidget *w)
 					update_entity_parent(instrumentecx, ring2, e);
 				}
 			}
+			transform_point(instrumentecx, o->x, o->y, o->z, &sx, &sy);
+			sng_abs_xy_draw_string(label, NANO_FONT, sx + 10, sy - 10);
 			break;
 		case OBJTYPE_BLACK_HOLE:
 			e = add_entity(instrumentecx, low_poly_sphere_mesh,  o->x, o->y, o->z, color);
@@ -19373,8 +19375,7 @@ static void show_demon_3d(GtkWidget *w)
 				union vec3 opos = { { o->x, o->y, o->z } };
 				union vec3 dist;
 				vec3_sub(&dist, &opos, &demon_ui.camera_pos);
-				if (o->type == OBJTYPE_PLANET || o->type == OBJTYPE_STARBASE ||
-					vec3_magnitude(&dist) < XKNOWN_DIM / 10.0) {
+				if (o->type == OBJTYPE_STARBASE || vec3_magnitude(&dist) < XKNOWN_DIM / 10.0) {
 					transform_point(instrumentecx, o->x, o->y, o->z, &sx, &sy);
 					sng_abs_xy_draw_string(label, NANO_FONT, sx + 10, sy - 10);
 				}
