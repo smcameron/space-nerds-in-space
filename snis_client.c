@@ -19159,7 +19159,12 @@ static void show_demon_3d(GtkWidget *w)
 			float y = (j * XKNOWN_DIM / 10.0) - XKNOWN_DIM / 2.0 + (XKNOWN_DIM / 20.0);
 			for (k = 0; k < 10; k++) {
 				float z = (k * XKNOWN_DIM / 10.0) - XKNOWN_DIM / 2.0 + (XKNOWN_DIM / 20.0);
-				(void) add_entity(instrumentecx, demon3d_axes_mesh, x, y, z, UI_COLOR(demon_default));
+				struct entity *e;
+				e = add_entity(instrumentecx, demon3d_axes_mesh, x, y, z, UI_COLOR(demon_axes));
+				if (((i == 9 || i == 0) + (j == 9 || j == 0) + (k == 9 || k == 0)) == 3) {
+					update_entity_scale(e, 3.0);
+					update_entity_color(e, UI_COLOR(demon_default));
+				}
 			}
 		}
 	}

@@ -200,6 +200,7 @@ struct ui_color_map {
 
 	struct ui_color_entry demon_default;
 	struct ui_color_entry demon_default_dead;
+	struct ui_color_entry demon_axes;
 	struct ui_color_entry demon_group_text;
 	struct ui_color_entry demon_asteroid;
 	struct ui_color_entry demon_planet;
@@ -399,6 +400,7 @@ struct ui_color_map_accessor {
 
 	.u.map.demon_default		= { GREEN_FIXUP,	"demon-default" },
 	.u.map.demon_default_dead	= { RED,		"demon-default-dead" },
+	.u.map.demon_axes		= { DARKGREEN,		"demon-axes" },
 	.u.map.demon_group_text		= { GREEN_FIXUP,	"demon-group-text" },
 	.u.map.demon_asteroid		= { AMBER,		"demon-asteroid" },
 	.u.map.demon_planet		= { GREEN_FIXUP,	"demon-planet" },
