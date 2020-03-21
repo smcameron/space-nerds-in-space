@@ -1014,6 +1014,7 @@ int main(int argc, char *argv[])
 	sng_setup_colors(0, NULL);
 
 	snis_typefaces_init();
+	sng_set_font_family(0);
 	graph_dev_setup("share/snis/shader");
 	setup_skybox("orange-haze");
 
