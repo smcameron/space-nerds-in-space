@@ -61,7 +61,7 @@ void main()
 	// Dot product of surface normal with light vector is how much light is
 	// reflected, combine (mulitply) this with eyedot to get a crude approximation
 	// of scattered light.
-	float lightdot = u_atmosphere_brightness * dot(normalize(v_Normal), normalize(lightVector));
+	float lightdot = dot(normalize(v_Normal), normalize(lightVector));
 
 	// Subtract some blue-green (opposite of orange)  as we get near the
 	// terminator to get a sunset effect.
@@ -95,8 +95,9 @@ void main()
 	}
 #endif
 
-	vec4 fragcolor = 3.75 * vec4(v_Color * attenuation * lightdot * eyedot2 * 0.7,
-					attenuation * lightdot * eyedot2 * 0.7 * u_Alpha) - attenuation * oranginess * notorange;
+	vec4 fragcolor = 3.75 * vec4(v_Color * attenuation * u_atmosphere_brightness * lightdot * eyedot2 * 0.7,
+					attenuation * u_atmosphere_brightness * lightdot * eyedot2 * 0.7 * u_Alpha) -
+					u_atmosphere_brightness * attenuation * oranginess * notorange;
 	/* This transparency just doesn't seem to work like I want it to. */
 	/* fragcolor.a = min(fragcolor.a, smoothstep(0.7, 1.0, ring_shadow) * ring_shadow); */ /* atmosphere becomes more transparent in shadow */
 	fragcolor.rgb *= map(ring_shadow, 0.0, 1.0, 0.8, 1.0);
