@@ -44,9 +44,9 @@
 	"uniform float u_FilmicTonemapping;\n" \
 	"vec4 filmic_tonemap(vec4 color) {\n" \
 	"	float dont_tonemap = 1.0 - u_FilmicTonemapping;\n" \
-	"	vec4 x = max(vec4(0.0), color - 0.004);\n" \
+	"	vec3 x = max(vec3(0.0), color.rgb - 0.004);\n" \
 	"	x = (x * (6.2 * x + 0.5)) / (x * (6.2 * x + 1.7) + 0.06);\n" \
-	"	return dont_tonemap * color + u_FilmicTonemapping * x;\n" \
+	"	return dont_tonemap * color + vec4(u_FilmicTonemapping * x, color.a);\n" \
 	"}\n\n"
 
 #define TEX_RELOAD_DELAY 1.0
