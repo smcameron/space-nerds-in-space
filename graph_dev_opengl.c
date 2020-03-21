@@ -3397,7 +3397,7 @@ static void setup_skybox_shader(struct graph_dev_gl_skybox_shader *shader)
 {
 	/* Create and compile our GLSL program from the shaders */
 	shader->program_id = load_shaders(shader_directory, "skybox.vert", "skybox.frag",
-						UNIVERSAL_SHADER_HEADER);
+						UNIVERSAL_SHADER_HEADER FILMIC_TONEMAPPING);
 	glUseProgram(shader->program_id);
 
 	/* Get a handle for our "MVP" uniform */
