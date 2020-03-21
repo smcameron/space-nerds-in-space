@@ -29,12 +29,12 @@
 #include "material.h"
 #include "graph_dev.h"
 
-static unsigned int load_texture(const char *asset_dir, char *filename)
+static unsigned int load_texture(const char *asset_dir, char *filename, int linear_colorspace)
 {
 	char fname[PATH_MAX + 1];
 
 	sprintf(fname, "%s/textures/%s", asset_dir, filename);
-	return graph_dev_load_texture(fname);
+	return graph_dev_load_texture(fname, linear_colorspace);
 }
 
 static const char *gnu_basename(const char *path)
@@ -76,7 +76,7 @@ int material_nebula_read_from_file(const char *asset_dir, const char *filename,
 			fclose(f);
 			return -1;
 		}
-		mt->texture_id[i] = load_texture(asset_dir, texture_filename);
+		mt->texture_id[i] = load_texture(asset_dir, texture_filename, 0);
 
 		rc = fscanf(f, "orientation %f %f %f %f\n", &mt->orientation[i].q.q0, &mt->orientation[i].q.q1,
 			&mt->orientation[i].q.q2, &mt->orientation[i].q.q3);

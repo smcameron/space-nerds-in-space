@@ -948,6 +948,7 @@ int graph_dev_load_skybox_texture(
 
 unsigned int graph_dev_load_cubemap_texture(
 	int is_inside,
+	int linear_color_space,
 	const char *texture_filename_pos_x,
 	const char *texture_filename_neg_x,
 	const char *texture_filename_pos_y,
@@ -959,13 +960,13 @@ unsigned int graph_dev_load_cubemap_texture(
 	return (unsigned int) -1;
 }
 
-unsigned int graph_dev_load_texture(const char *filename)
+unsigned int graph_dev_load_texture(const char *filename, int linear_colorspace)
 {
 	/* no laserbolt texture with gdk rendering */
 	return (unsigned int) -1;
 }
 
-unsigned int graph_dev_load_texture_no_mipmaps(const char *filename)
+unsigned int graph_dev_load_texture_no_mipmaps(const char *filename, int linear_colorspace)
 {
 	return (unsigned int) -1;
 }

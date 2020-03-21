@@ -213,7 +213,7 @@ static int red_alert_mode = 0;
 #define MAX_UPDATETIME_START_PAUSE 1.5
 #define MAX_UPDATETIME_INTERVAL 0.5
 static int echo_computer_to_comms = 1; /* tweakable */
-static float ambient_light = 0.05;
+static float ambient_light = 0.015;
 
 static char *asset_dir;
 
@@ -17790,7 +17790,7 @@ static struct tweakable_var_descriptor client_tweak[] = {
 	{ "ECHO_COMPUTER_TO_COMMS", "0 or 1, true or false",
 		&echo_computer_to_comms, 'i', 0.0, 0.0, 0.0, 0, 1, 1 },
 	{ "AMBIENT_LIGHT", "0.0 to 1.1 - AMBIENT LIGHT",
-		&ambient_light, 'f', 0.0, 1.0, 0.05, 0, 0, 0 },
+		&ambient_light, 'f', 0.0, 1.0, 0.015, 0, 0, 0 },
 	{ "LOW_POLY_THRESHOLD", "THRESHOLD SIZE IN PIXELS AT WHICH LOW/HIGH POLY MESHES ARE CHOSEN",
 		&low_poly_threshold, 'f', 0.0, 10000.0, 200.0, 0, 0, 0 },
 	{ NULL, NULL, NULL, '\0', 0.0, 0.0, 0.0, 0, 0, 0 },
@@ -20856,23 +20856,24 @@ gint advance_game(gpointer data)
 	return TRUE;
 }
 
-static unsigned int load_texture(char *filename)
+static unsigned int load_texture(char *filename, int linear_colorspace)
 {
 	char fname[PATH_MAX + 1];
 
 	snprintf(fname, sizeof(fname), "%s/%s", asset_dir, filename);
-	return graph_dev_load_texture(replacement_asset_lookup(fname, &replacement_assets));
+	return graph_dev_load_texture(replacement_asset_lookup(fname, &replacement_assets), linear_colorspace);
 }
 
-static unsigned int load_texture_no_mipmaps(char *filename)
+static unsigned int load_texture_no_mipmaps(char *filename, int linear_colorspace)
 {
 	char fname[PATH_MAX + 1];
 
 	snprintf(fname, sizeof(fname), "%s/%s", asset_dir, filename);
-	return graph_dev_load_texture_no_mipmaps(replacement_asset_lookup(fname, &replacement_assets));
+	return graph_dev_load_texture_no_mipmaps(replacement_asset_lookup(fname,
+				&replacement_assets), linear_colorspace);
 }
 
-static unsigned int load_cubemap_textures(int is_inside, char *filenameprefix)
+static unsigned int load_cubemap_textures(int is_inside, char *filenameprefix, int linear_colorspace)
 {
 	/*
 	 * SNIS wants skybox textures in six files named like this:
@@ -20908,7 +20909,8 @@ static unsigned int load_cubemap_textures(int is_inside, char *filenameprefix)
 		snprintf(fname, sizeof(fname), "%s/%s%d.png", asset_dir, filenameprefix, i);
 		strcpy(filename[i], replacement_asset_lookup(fname, &replacement_assets));
 	}
-	return graph_dev_load_cubemap_texture(is_inside, filename[1], filename[3], filename[4],
+	return graph_dev_load_cubemap_texture(is_inside, linear_colorspace,
+					filename[1], filename[3], filename[4],
 					filename[5], filename[0], filename[2]);
 }
 
@@ -21086,7 +21088,7 @@ static struct mesh **allocate_starbase_mesh_ptrs(int nstarbase_meshes)
 static void init_thrust_material(struct material *thrust_material, char *image_filename)
 {
 	material_init_textured_particle(thrust_material);
-	thrust_material->textured_particle.texture_id = load_texture(image_filename);
+	thrust_material->textured_particle.texture_id = load_texture(image_filename, 0);
 	thrust_material->textured_particle.radius = 1.5;
 	thrust_material->textured_particle.time_base = 0.1;
 }
@@ -21099,58 +21101,58 @@ static int load_static_textures(void)
 	struct planetary_ring_data *ring_data;
 
 	material_init_textured_particle(&green_phaser_material);
-	green_phaser_material.textured_particle.texture_id = load_texture("textures/green-burst.png");
+	green_phaser_material.textured_particle.texture_id = load_texture("textures/green-burst.png", 0);
 	green_phaser_material.textured_particle.radius = 0.75;
 	green_phaser_material.textured_particle.time_base = 0.25;
 
 	material_init_texture_mapped_unlit(&red_laser_material);
 	red_laser_material.billboard_type = MATERIAL_BILLBOARD_TYPE_AXIS;
-	red_laser_material.texture_mapped_unlit.texture_id = load_texture("textures/red-laser-texture.png");
+	red_laser_material.texture_mapped_unlit.texture_id = load_texture("textures/red-laser-texture.png", 0);
 	red_laser_material.texture_mapped_unlit.do_blend = 1;
 
 	material_init_texture_mapped_unlit(&blue_tractor_material);
 	blue_tractor_material.billboard_type = MATERIAL_BILLBOARD_TYPE_AXIS;
-	blue_tractor_material.texture_mapped_unlit.texture_id = load_texture("textures/blue-tractor-texture.png");
+	blue_tractor_material.texture_mapped_unlit.texture_id = load_texture("textures/blue-tractor-texture.png", 0);
 	blue_tractor_material.texture_mapped_unlit.do_blend = 1;
 
 	material_init_texture_mapped_unlit(&red_torpedo_material);
 	red_torpedo_material.billboard_type = MATERIAL_BILLBOARD_TYPE_SPHERICAL;
 	red_torpedo_material.rotate_randomly = 1;
-	red_torpedo_material.texture_mapped_unlit.texture_id = load_texture("textures/red-torpedo-texture.png");
+	red_torpedo_material.texture_mapped_unlit.texture_id = load_texture("textures/red-torpedo-texture.png", 0);
 	red_torpedo_material.texture_mapped_unlit.do_blend = 1;
 
 	material_init_texture_mapped_unlit(&spark_material);
 	spark_material.billboard_type = MATERIAL_BILLBOARD_TYPE_SPHERICAL;
 	spark_material.rotate_randomly = 1;
-	spark_material.texture_mapped_unlit.texture_id = load_texture("textures/spark-texture.png");
+	spark_material.texture_mapped_unlit.texture_id = load_texture("textures/spark-texture.png", 0);
 	spark_material.texture_mapped_unlit.do_blend = 1;
 
 	material_init_texture_mapped_unlit(&flare_material);
 	flare_material.billboard_type = MATERIAL_BILLBOARD_TYPE_SPHERICAL;
 	flare_material.rotate_randomly = 1;
-	flare_material.texture_mapped_unlit.texture_id = load_texture("textures/spark-texture.png");
+	flare_material.texture_mapped_unlit.texture_id = load_texture("textures/spark-texture.png", 0);
 	flare_material.texture_mapped_unlit.do_blend = 1;
 
 	material_init_texture_mapped_unlit(&blackhole_spark_material);
 	blackhole_spark_material.billboard_type = MATERIAL_BILLBOARD_TYPE_SPHERICAL;
 	blackhole_spark_material.rotate_randomly = 1;
-	blackhole_spark_material.texture_mapped_unlit.texture_id = load_texture("textures/green-spark.png");
+	blackhole_spark_material.texture_mapped_unlit.texture_id = load_texture("textures/green-spark.png", 0);
 	blackhole_spark_material.texture_mapped_unlit.do_blend = 1;
 
 	material_init_texture_mapped_unlit(&laserflash_material);
 	laserflash_material.billboard_type = MATERIAL_BILLBOARD_TYPE_SPHERICAL;
 	laserflash_material.rotate_randomly = 1;
-	laserflash_material.texture_mapped_unlit.texture_id = load_texture("textures/laserflash.png");
+	laserflash_material.texture_mapped_unlit.texture_id = load_texture("textures/laserflash.png", 0);
 	laserflash_material.texture_mapped_unlit.do_blend = 1;
 
 	material_init_texture_mapped_unlit(&warp_effect_material);
 	warp_effect_material.billboard_type = MATERIAL_BILLBOARD_TYPE_SPHERICAL;
 	warp_effect_material.rotate_randomly = 1;
-	warp_effect_material.texture_mapped_unlit.texture_id = load_texture("textures/warp-effect.png");
+	warp_effect_material.texture_mapped_unlit.texture_id = load_texture("textures/warp-effect.png", 0);
 	warp_effect_material.texture_mapped_unlit.do_blend = 1;
 
 	int i;
-	planetary_ring_texture_id = load_texture_no_mipmaps("textures/planetary-ring0.png");
+	planetary_ring_texture_id = load_texture_no_mipmaps("textures/planetary-ring0.png", 0);
 
 	ring_data = calloc(NPLANETARY_RING_MATERIALS, sizeof(*ring_data));
 	init_planetary_ring_data(ring_data, NPLANETARY_RING_MATERIALS, PLANETARY_RING_MTWIST_SEED);
@@ -21165,7 +21167,7 @@ static int load_static_textures(void)
 	free(ring_data);
 
 	material_init_textured_shield(&shield_material);
-	shield_material.textured_shield.texture_id = load_cubemap_textures(0, "textures/shield-effect-");
+	shield_material.textured_shield.texture_id = load_cubemap_textures(0, "textures/shield-effect-", 0);
 
 	for (i = 0; i < NNEBULA_MATERIALS; i++) {
 		char filename[20];
@@ -21176,12 +21178,12 @@ static int load_static_textures(void)
 	}
 
 	material_init_texture_cubemap(&asteroid_material[0]);
-	asteroid_material[0].texture_cubemap.texture_id = load_cubemap_textures(0, "textures/asteroid1-");
+	asteroid_material[0].texture_cubemap.texture_id = load_cubemap_textures(0, "textures/asteroid1-", 0);
 	material_init_texture_cubemap(&asteroid_material[1]);
-	asteroid_material[1].texture_cubemap.texture_id = load_cubemap_textures(0, "textures/asteroid2-");
+	asteroid_material[1].texture_cubemap.texture_id = load_cubemap_textures(0, "textures/asteroid2-", 0);
 
 	material_init_texture_mapped_unlit(&wormhole_material);
-	wormhole_material.texture_mapped_unlit.texture_id = load_texture("textures/wormhole.png");
+	wormhole_material.texture_mapped_unlit.texture_id = load_texture("textures/wormhole.png", 0);
 	wormhole_material.texture_mapped_unlit.do_cullface = 0;
 	wormhole_material.texture_mapped_unlit.do_blend = 1;
 	wormhole_material.texture_mapped_unlit.tint = sng_get_color(MAGENTA);
@@ -21196,7 +21198,7 @@ static int load_static_textures(void)
 	material_init_texture_mapped_unlit(&thrust_flare_material[0]);
 	thrust_flare_material[0].billboard_type = MATERIAL_BILLBOARD_TYPE_SPHERICAL;
 	thrust_flare_material[0].rotate_randomly = 1;
-	thrust_flare_material[0].texture_mapped_unlit.texture_id = load_texture("textures/thrust_flare.png");
+	thrust_flare_material[0].texture_mapped_unlit.texture_id = load_texture("textures/thrust_flare.png", 0);
 	thrust_flare_material[0].texture_mapped_unlit.do_blend = 1;
 
 	thrust_flare_material[1] = thrust_flare_material[0];
@@ -21225,64 +21227,64 @@ static int load_static_textures(void)
 	thrust_flare_material[4].texture_mapped_unlit.tint.green = 0.8;
 
 	material_init_texture_mapped_unlit(&warp_tunnel_material);
-	warp_tunnel_material.texture_mapped_unlit.texture_id = load_texture("textures/warp-tunnel.png");
+	warp_tunnel_material.texture_mapped_unlit.texture_id = load_texture("textures/warp-tunnel.png", 0);
 	warp_tunnel_material.texture_mapped_unlit.do_cullface = 0;
 	warp_tunnel_material.texture_mapped_unlit.do_blend = 1;
 	warp_tunnel_material.texture_mapped_unlit.alpha = 0.25;
 
 	material_init_texture_mapped(&block_material);
-	block_material.texture_mapped.texture_id = load_texture("textures/spaceplate.png");
-	block_material.texture_mapped.emit_texture_id = load_texture("textures/spaceplateemit.png");
+	block_material.texture_mapped.texture_id = load_texture("textures/spaceplate.png", 0);
+	block_material.texture_mapped.emit_texture_id = load_texture("textures/spaceplateemit.png", 0);
 	material_init_texture_mapped(&small_block_material);
-	small_block_material.texture_mapped.texture_id = load_texture("textures/spaceplate_small.png");
-	small_block_material.texture_mapped.emit_texture_id = load_texture("textures/spaceplate_small_emit.png");
+	small_block_material.texture_mapped.texture_id = load_texture("textures/spaceplate_small.png", 0);
+	small_block_material.texture_mapped.emit_texture_id = load_texture("textures/spaceplate_small_emit.png", 0);
 
 	material_init_texture_mapped_unlit(&black_hole_material);
 	black_hole_material.billboard_type = MATERIAL_BILLBOARD_TYPE_SPHERICAL;
-	black_hole_material.texture_mapped_unlit.texture_id = load_texture("textures/black_hole.png");
+	black_hole_material.texture_mapped_unlit.texture_id = load_texture("textures/black_hole.png", 0);
 	black_hole_material.texture_mapped_unlit.do_blend = 1;
 	black_hole_material.texture_mapped_unlit.do_cullface = 0;
 	black_hole_material.texture_mapped_unlit.alpha = 1.0;
 
 	material_init_texture_mapped(&spacemonster_tentacle_material);
 	spacemonster_tentacle_material.texture_mapped.texture_id =
-		load_texture("textures/spacemonster_tentacle_texture.png");
+		load_texture("textures/spacemonster_tentacle_texture.png", 0);
 	spacemonster_tentacle_material.texture_mapped.emit_texture_id =
-		load_texture("textures/spacemonster_tentacle_emit.png");
+		load_texture("textures/spacemonster_tentacle_emit.png", 0);
 
 	material_init_texture_mapped(&missile_material);
 	missile_material.texture_mapped.texture_id =
-		load_texture("textures/missile_texture.png");
+		load_texture("textures/missile_texture.png", 0);
 
 	material_init_texture_mapped(&spacemonster_material);
 	spacemonster_material.texture_mapped.texture_id =
-		load_texture("textures/spacemonster_texture.png");
+		load_texture("textures/spacemonster_texture.png", 0);
 	spacemonster_material.texture_mapped.emit_texture_id =
-		load_texture("textures/spacemonster_emit.png");
+		load_texture("textures/spacemonster_emit.png", 0);
 	material_init_texture_mapped(&warpgate_material);
 	warpgate_material.texture_mapped.texture_id =
-		load_texture("textures/warpgate_texture.png");
+		load_texture("textures/warpgate_texture.png", 0);
 	warpgate_material.texture_mapped.emit_texture_id =
-		load_texture("textures/warpgate_emit.png");
+		load_texture("textures/warpgate_emit.png", 0);
 	material_init_texture_mapped(&docking_port_material);
 	docking_port_material.texture_mapped.texture_id =
-		load_texture("textures/docking_port_texture.png");
+		load_texture("textures/docking_port_texture.png", 0);
 	docking_port_material.texture_mapped.emit_texture_id =
-		load_texture("textures/docking_port_emit.png");
+		load_texture("textures/docking_port_emit.png", 0);
 
 	material_init_texture_mapped_unlit(&lens_flare_ghost_material);
 	lens_flare_ghost_material.billboard_type = MATERIAL_BILLBOARD_TYPE_SPHERICAL;
-	lens_flare_ghost_material.texture_mapped_unlit.texture_id = load_texture("textures/lens_flare_ghost.png");
+	lens_flare_ghost_material.texture_mapped_unlit.texture_id = load_texture("textures/lens_flare_ghost.png", 0);
 	lens_flare_ghost_material.texture_mapped_unlit.do_blend = 1;
 	lens_flare_ghost_material.texture_mapped_unlit.alpha = 0.10;
 	material_init_texture_mapped_unlit(&lens_flare_halo_material);
 	lens_flare_halo_material.billboard_type = MATERIAL_BILLBOARD_TYPE_SPHERICAL;
-	lens_flare_halo_material.texture_mapped_unlit.texture_id = load_texture("textures/lens_flare_halo.png");
+	lens_flare_halo_material.texture_mapped_unlit.texture_id = load_texture("textures/lens_flare_halo.png", 0);
 	lens_flare_halo_material.texture_mapped_unlit.do_blend = 1;
 	lens_flare_halo_material.texture_mapped_unlit.alpha = 0.20;
 	material_init_texture_mapped_unlit(&anamorphic_flare_material);
 	anamorphic_flare_material.billboard_type = MATERIAL_BILLBOARD_TYPE_SPHERICAL;
-	anamorphic_flare_material.texture_mapped_unlit.texture_id = load_texture("textures/anamorphic_flare.png");
+	anamorphic_flare_material.texture_mapped_unlit.texture_id = load_texture("textures/anamorphic_flare.png", 0);
 	anamorphic_flare_material.texture_mapped_unlit.do_blend = 1;
 	anamorphic_flare_material.texture_mapped_unlit.alpha = 0.20;
 
@@ -21313,14 +21315,14 @@ static int load_per_solarsystem_textures()
 	material_init_texture_mapped_unlit(&sun_material);
 	sun_material.billboard_type = MATERIAL_BILLBOARD_TYPE_SPHERICAL;
 	snprintf(path, sizeof(path), "solarsystems/%s/%s", solarsystem_name, solarsystem_assets->sun_texture);
-	sun_material.texture_mapped_unlit.texture_id = load_texture(path);
+	sun_material.texture_mapped_unlit.texture_id = load_texture(path, 0);
 	sun_material.texture_mapped_unlit.do_blend = 1;
 
 	for (i = 0; i < solarsystem_assets->nplanet_textures; i++) {
 		snprintf(path, sizeof(path), "solarsystems/%s/%s", solarsystem_name,
 				solarsystem_assets->planet_texture[i]);
 		material_init_textured_planet(&planet_material[i]);
-		planet_material[i].textured_planet.texture_id = load_cubemap_textures(0, path);
+		planet_material[i].textured_planet.texture_id = load_cubemap_textures(0, path, 0);
 		planet_material[i].textured_planet.water_color_r = (float) solarsystem_assets->water_color[i].r / 255.0;
 		planet_material[i].textured_planet.water_color_g = (float) solarsystem_assets->water_color[i].g / 255.0;
 		planet_material[i].textured_planet.water_color_b = (float) solarsystem_assets->water_color[i].b / 255.0;
@@ -21337,7 +21339,7 @@ static int load_per_solarsystem_textures()
 		} else {
 			snprintf(path, sizeof(path), "solarsystems/%s/%s", solarsystem_name,
 					solarsystem_assets->planet_normalmap[i]);
-			planet_material[i].textured_planet.normalmap_id = load_cubemap_textures(0, path);
+			planet_material[i].textured_planet.normalmap_id = load_cubemap_textures(0, path, 1);
 		}
 	}
 	j = 0;
