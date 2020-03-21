@@ -55,7 +55,7 @@ void main()
 	// how much atmosphere you are looking through, and thus an extremely
 	// crude approximation of how much scattered light you would see
 	// assuming uniform illumination.
-	float eyedot = (1.0 - abs(dot(normalize(v_Normal), normalize(v_Position))));
+	float eyedot = max(0.0, (1.0 - abs(dot(normalize(v_Normal), normalize(v_Position)))));
 	float eyedot2 = eyedot * eyedot;
 
 	// Dot product of surface normal with light vector is how much light is
@@ -95,7 +95,7 @@ void main()
 	}
 #endif
 
-	vec4 fragcolor = 3.75 * vec4(v_Color * attenuation * u_atmosphere_brightness * lightdot * eyedot2 * 0.7,
+	vec4 fragcolor = 1.25 * vec4(v_Color * attenuation * u_atmosphere_brightness * lightdot * eyedot2 * 0.7,
 					attenuation * u_atmosphere_brightness * lightdot * eyedot2 * 0.7 * u_Alpha) -
 					u_atmosphere_brightness * attenuation * oranginess * notorange;
 	/* This transparency just doesn't seem to work like I want it to. */

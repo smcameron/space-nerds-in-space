@@ -224,8 +224,8 @@ void material_init_atmosphere(struct material *m)
 {
 	m->type = MATERIAL_ATMOSPHERE;
 	m->billboard_type = MATERIAL_BILLBOARD_TYPE_NONE;
-	m->atmosphere.r = 0.6f;
-	m->atmosphere.g = 0.6f;
+	m->atmosphere.r = 81.0f / 255.0f;
+	m->atmosphere.g = 81.0f / 255.0f;
 	m->atmosphere.b = 1.0f;
 	m->atmosphere.scale = 1.03f;
 	m->atmosphere.brightness = NULL;

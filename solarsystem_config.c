@@ -173,8 +173,8 @@ struct solarsystem_asset_spec *solarsystem_asset_spec_read(char *filename)
 				a->planet_texture[planet_textures_read] = strdup(word1);
 				a->planet_normalmap[planet_textures_read] = strdup(word2);
 				a->planet_type[planet_textures_read] = strdup(word3);
-				a->atmosphere_color[planet_textures_read].r = 153;
-				a->atmosphere_color[planet_textures_read].g = 153;
+				a->atmosphere_color[planet_textures_read].r = 81;
+				a->atmosphere_color[planet_textures_read].g = 81;
 				a->atmosphere_color[planet_textures_read].b = 255;
 				planet_textures_read++;
 				continue;
@@ -184,8 +184,8 @@ struct solarsystem_asset_spec *solarsystem_asset_spec_read(char *filename)
 				a->planet_texture[planet_textures_read] = strdup(word1);
 				a->planet_normalmap[planet_textures_read] = strdup("no-normal-map");
 				a->planet_type[planet_textures_read] = strdup(word2);
-				a->atmosphere_color[planet_textures_read].r = 153;
-				a->atmosphere_color[planet_textures_read].g = 153;
+				a->atmosphere_color[planet_textures_read].r = 81;
+				a->atmosphere_color[planet_textures_read].g = 81;
 				a->atmosphere_color[planet_textures_read].b = 255;
 				planet_textures_read++;
 				fprintf(stderr,
