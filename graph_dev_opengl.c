@@ -726,6 +726,7 @@ struct graph_dev_gl_skybox_shader {
 	GLint vertex_id;
 	GLint texture_id;
 	GLuint cube_texture_id;
+	GLint filmic_tonemapping_id;
 };
 
 struct graph_dev_gl_color_by_w_shader {
@@ -3403,6 +3404,7 @@ static void setup_skybox_shader(struct graph_dev_gl_skybox_shader *shader)
 	/* Get a handle for our "MVP" uniform */
 	shader->mvp_id = glGetUniformLocation(shader->program_id, "MVP");
 	shader->texture_id = glGetUniformLocation(shader->program_id, "texture");
+	shader->filmic_tonemapping_id = glGetUniformLocation(shader->program_id, "u_FilmicTonemapping");
 	glUniform1i(shader->texture_id, 0);
 
 	/* Get a handle for our buffers */
@@ -4273,6 +4275,8 @@ void graph_dev_draw_skybox(struct entity_context *cx, const struct mat44 *mat_vp
 	BIND_TEXTURE(GL_TEXTURE0, GL_TEXTURE_CUBE_MAP, skybox_shader.cube_texture_id);
 
 	glUniformMatrix4fv(skybox_shader.mvp_id, 1, GL_FALSE, &mat_vp->m[0][0]);
+	if (skybox_shader.filmic_tonemapping_id >= 0)
+		glUniform1f(skybox_shader.filmic_tonemapping_id, (float) filmic_tonemapping);
 
 	glEnableVertexAttribArray(skybox_shader.vertex_id);
 	glBindBuffer(GL_ARRAY_BUFFER, cubemap_cube.vertex_buffer);
