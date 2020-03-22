@@ -1025,3 +1025,7 @@ void graph_dev_expire_cubemap_texture(int is_inside,
 	/* noop */
 }
 
+void graph_dev_reload_all_shaders(void)
+{
+	/* noop */
+}

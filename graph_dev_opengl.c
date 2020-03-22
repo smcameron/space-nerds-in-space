@@ -626,7 +626,20 @@ void mesh_graph_dev_init(struct mesh *m)
 	}
 }
 
+struct graph_dev_gl_shader_metadata {
+	GLuint *program_id;
+};
+
+static void maybe_unload_shader(struct graph_dev_gl_shader_metadata *meta, GLuint *program_id)
+{
+	if (meta->program_id && *meta->program_id != -1) /* Shader is currently loaded? */
+		glDeleteProgram(*meta->program_id); /* Unload shader */
+	meta->program_id = program_id;
+	*meta->program_id = -1;
+}
+
 struct graph_dev_gl_vertex_color_shader {
+	struct graph_dev_gl_shader_metadata meta;
 	GLuint program_id;
 	GLint mvp_matrix_id;
 	GLint vertex_position_id;
@@ -634,6 +647,7 @@ struct graph_dev_gl_vertex_color_shader {
 };
 
 struct graph_dev_gl_single_color_lit_shader {
+	struct graph_dev_gl_shader_metadata meta;
 	GLuint program_id;
 	GLint mvp_matrix_id;
 	GLint mv_matrix_id;
@@ -648,6 +662,7 @@ struct graph_dev_gl_single_color_lit_shader {
 };
 
 struct graph_dev_gl_atmosphere_shader {
+	struct graph_dev_gl_shader_metadata meta;
 	GLuint program_id;
 	GLint mvp_matrix_id;
 	GLint mv_matrix_id;
@@ -668,6 +683,7 @@ struct graph_dev_gl_atmosphere_shader {
 };
 
 struct graph_dev_gl_filled_wireframe_shader {
+	struct graph_dev_gl_shader_metadata meta;
 	GLuint program_id;
 	GLint viewport_id;
 	GLint mvp_matrix_id;
@@ -681,6 +697,7 @@ struct graph_dev_gl_filled_wireframe_shader {
 };
 
 struct graph_dev_gl_trans_wireframe_shader {
+	struct graph_dev_gl_shader_metadata meta;
 	GLuint program_id;
 	GLint mvp_matrix_id;
 	GLint mv_matrix_id;
@@ -694,6 +711,7 @@ struct graph_dev_gl_trans_wireframe_shader {
 };
 
 struct graph_dev_gl_single_color_shader {
+	struct graph_dev_gl_shader_metadata meta;
 	GLuint program_id;
 	GLint mvp_matrix_id;
 	GLint vertex_position_id;
@@ -701,6 +719,7 @@ struct graph_dev_gl_single_color_shader {
 };
 
 struct graph_dev_gl_line_single_color_shader {
+	struct graph_dev_gl_shader_metadata meta;
 	GLuint program_id;
 	GLint mvp_matrix_id;
 	GLint viewport_id;
@@ -714,6 +733,7 @@ struct graph_dev_gl_line_single_color_shader {
 };
 
 struct graph_dev_gl_point_cloud_shader {
+	struct graph_dev_gl_shader_metadata meta;
 	GLuint program_id;
 	GLint mvp_matrix_id;
 	GLint vertex_position_id;
@@ -723,6 +743,7 @@ struct graph_dev_gl_point_cloud_shader {
 };
 
 struct graph_dev_gl_skybox_shader {
+	struct graph_dev_gl_shader_metadata meta;
 	GLuint program_id;
 	GLint mvp_id;
 	GLint vertex_id;
@@ -732,6 +753,7 @@ struct graph_dev_gl_skybox_shader {
 };
 
 struct graph_dev_gl_color_by_w_shader {
+	struct graph_dev_gl_shader_metadata meta;
 	GLuint program_id;
 	GLint mvp_id;
 	GLint position_id;
@@ -744,6 +766,7 @@ struct graph_dev_gl_color_by_w_shader {
 };
 
 struct graph_dev_gl_textured_shader {
+	struct graph_dev_gl_shader_metadata meta;
 	GLuint program_id;
 	GLint mvp_matrix_id;
 	GLint mv_matrix_id;
@@ -803,6 +826,7 @@ struct shadow_annulus_data {
 };
 
 struct graph_dev_gl_textured_particle_shader {
+	struct graph_dev_gl_shader_metadata meta;
 	GLuint program_id;
 	GLint mvp_matrix_id;
 	GLint camera_up_vec_id;
@@ -821,6 +845,7 @@ struct graph_dev_gl_textured_particle_shader {
 };
 
 struct graph_dev_gl_fs_effect_shader { /* For full screen effect shaders */
+	struct graph_dev_gl_shader_metadata meta;
 	GLuint program_id;
 	GLint mvp_matrix_id;
 	GLint vertex_position_id;
@@ -3062,6 +3087,9 @@ void graph_dev_draw_arc(int filled, float x, float y, float width, float height,
 
 static void setup_single_color_lit_shader(struct graph_dev_gl_single_color_lit_shader *shader)
 {
+
+	maybe_unload_shader(&shader->meta, &shader->program_id);
+
 	/* Create and compile our GLSL program from the shaders. You can use
 	 * single-color-lit-per-pixel.* shaders here as a drop in replacement,
 	 * for the -per-vertex shaders, but it does not look significantly
@@ -3089,6 +3117,8 @@ static void setup_single_color_lit_shader(struct graph_dev_gl_single_color_lit_s
 
 static void setup_atmosphere_shader(struct graph_dev_gl_atmosphere_shader *shader, int with_ring_shadow)
 {
+
+	maybe_unload_shader(&shader->meta, &shader->program_id);
 	/* Create and compile our GLSL program from the shaders */
 	shader->program_id = load_shaders(shader_directory,
 				"atmosphere.vert", "atmosphere.frag",
@@ -3123,8 +3153,9 @@ static void setup_atmosphere_shader(struct graph_dev_gl_atmosphere_shader *shade
 static void setup_textured_shader(const char *basename, const char *defines,
 	struct graph_dev_gl_textured_shader *shader)
 {
-	/* set all attributes to -1 */
-	memset(shader, 0xff, sizeof(*shader));
+	maybe_unload_shader(&shader->meta, &shader->program_id);
+	memset(shader, 0xff, sizeof(*shader)); /* set all attributes to -1 */
+	shader->meta.program_id = &shader->program_id; /* Work around what that memset just did. */
 
 	char vert_header[512];
 	snprintf(vert_header, sizeof(vert_header), "%s\n#define INCLUDE_VS 1\n", defines);
@@ -3192,8 +3223,9 @@ static void setup_textured_cubemap_shader(const char *basename, int use_normal_m
 				int use_specular, int use_annulus_shadow,
 				struct graph_dev_gl_textured_shader *shader)
 {
-	/* set all attributes to -1 */
-	memset(shader, 0xff, sizeof(*shader));
+	maybe_unload_shader(&shader->meta, &shader->program_id);
+	memset(shader, 0xff, sizeof(*shader)); /* set all attributes to -1 */
+	shader->meta.program_id = &shader->program_id; /* Work around what that memset just did. */
 
 	char vert_header[1024];
 	char frag_header[1024];
@@ -3270,6 +3302,7 @@ static void setup_textured_cubemap_shader(const char *basename, int use_normal_m
 
 static void setup_filled_wireframe_shader(struct graph_dev_gl_filled_wireframe_shader *shader)
 {
+	maybe_unload_shader(&shader->meta, &shader->program_id);
 	/* Create and compile our GLSL program from the shaders */
 	shader->program_id = load_shaders(shader_directory,
 					"wireframe_filled.vert", "wireframe_filled.frag",
@@ -3295,6 +3328,7 @@ static void setup_trans_wireframe_shader(const char *basename, struct graph_dev_
 	snprintf(vert_filename, sizeof(vert_filename), "%s.vert", basename);
 	snprintf(frag_filename, sizeof(frag_filename), "%s.frag", basename);
 
+	maybe_unload_shader(&shader->meta, &shader->program_id);
 	/* Create and compile our GLSL program from the shaders */
 	shader->program_id = load_shaders(shader_directory, vert_filename, frag_filename,
 						UNIVERSAL_SHADER_HEADER);
@@ -3311,6 +3345,7 @@ static void setup_trans_wireframe_shader(const char *basename, struct graph_dev_
 
 static void setup_single_color_shader(struct graph_dev_gl_single_color_shader *shader)
 {
+	maybe_unload_shader(&shader->meta, &shader->program_id);
 	/* Create and compile our GLSL program from the shaders */
 	shader->program_id = load_shaders(shader_directory,
 				"single_color.vert", "single_color.frag",
@@ -3326,6 +3361,7 @@ static void setup_single_color_shader(struct graph_dev_gl_single_color_shader *s
 
 static void setup_vertex_color_shader(struct graph_dev_gl_vertex_color_shader *shader)
 {
+	maybe_unload_shader(&shader->meta, &shader->program_id);
 	shader->program_id = load_shaders(shader_directory,
 				"per_vertex_color.vert", "per_vertex_color.frag",
 				UNIVERSAL_SHADER_HEADER);
@@ -3338,6 +3374,7 @@ static void setup_vertex_color_shader(struct graph_dev_gl_vertex_color_shader *s
 
 static void setup_line_single_color_shader(struct graph_dev_gl_line_single_color_shader *shader)
 {
+	maybe_unload_shader(&shader->meta, &shader->program_id);
 	/* Create and compile our GLSL program from the shaders */
 	shader->program_id = load_shaders(shader_directory,
 				"line-single-color.vert", "line-single-color.frag",
@@ -3362,6 +3399,7 @@ static void setup_point_cloud_shader(const char *basename, struct graph_dev_gl_p
 	snprintf(vert_filename, sizeof(vert_filename), "%s.vert", basename);
 	snprintf(frag_filename, sizeof(frag_filename), "%s.frag", basename);
 
+	maybe_unload_shader(&shader->meta, &shader->program_id);
 	/* Create and compile our GLSL program from the shaders */
 	shader->program_id = load_shaders(shader_directory, vert_filename, frag_filename,
 				UNIVERSAL_SHADER_HEADER);
@@ -3378,6 +3416,7 @@ static void setup_point_cloud_shader(const char *basename, struct graph_dev_gl_p
 
 static void setup_color_by_w_shader(struct graph_dev_gl_color_by_w_shader *shader)
 {
+	maybe_unload_shader(&shader->meta, &shader->program_id);
 	/* Create and compile our GLSL program from the shaders */
 	shader->program_id = load_shaders(shader_directory, "color_by_w.vert", "color_by_w.frag",
 					UNIVERSAL_SHADER_HEADER);
@@ -3398,6 +3437,7 @@ static void setup_color_by_w_shader(struct graph_dev_gl_color_by_w_shader *shade
 
 static void setup_skybox_shader(struct graph_dev_gl_skybox_shader *shader)
 {
+	maybe_unload_shader(&shader->meta, &shader->program_id);
 	/* Create and compile our GLSL program from the shaders */
 	shader->program_id = load_shaders(shader_directory, "skybox.vert", "skybox.frag",
 						UNIVERSAL_SHADER_HEADER FILMIC_TONEMAPPING);
@@ -3499,6 +3539,7 @@ static void setup_textured_unit_quad(struct graph_dev_primitive *obj)
 
 static void setup_textured_particle_shader(struct graph_dev_gl_textured_particle_shader *shader)
 {
+	maybe_unload_shader(&shader->meta, &shader->program_id);
 	/* Create and compile our GLSL program from the shaders */
 	shader->program_id = load_shaders(shader_directory,
 				"textured-particle.vert", "textured-particle.frag",
@@ -3539,6 +3580,7 @@ static void setup_fs_effect_shader(const char *basename,
 
 	const char *filenames[] = { shader_filename };
 
+	maybe_unload_shader(&shader->meta, &shader->program_id);
 	shader->program_id = load_concat_shaders(shader_directory, vert_header, 1, filenames,
 		frag_header, 1, filenames);
 	glUseProgram(shader->program_id);
@@ -3589,6 +3631,7 @@ static void setup_smaa_effect_shader(const char *basename, struct graph_dev_gl_f
 
 	const char *filenames[] = { "smaa-high.shader", "SMAA.hlsl", shader_filename };
 
+	maybe_unload_shader(&shader->meta, &shader->program_id);
 	shader->program_id = load_concat_shaders(shader_directory,
 				vert_header, 3, filenames, frag_header, 3, filenames);
 
@@ -3733,7 +3776,7 @@ static void setup_3d()
 	sgc.vp_height = 0;
 }
 
-static void reload_all_shaders(void)
+void graph_dev_reload_all_shaders(void)
 {
 	setup_single_color_lit_shader(&single_color_lit_shader);
 	setup_atmosphere_shader(&atmosphere_shader, 0);
@@ -3866,7 +3909,7 @@ int graph_dev_setup(const char *shader_dir)
 			post_target1.color0_texture, 0);
 	}
 
-	reload_all_shaders();
+	graph_dev_reload_all_shaders();
 
 	/* after all the shaders are loaded */
 	setup_cubemap_cube(&cubemap_cube);

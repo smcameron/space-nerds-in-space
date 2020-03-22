@@ -163,6 +163,8 @@ static int requested_aspect_y = -1;
 static int screen_offset_x = 0;
 static int screen_offset_y = 0;
 
+static int reload_shaders = 0; /* Flag to trigger reloading of glsl shaders in main render loop */
+
 /* Set to 1 by command line option "--trap-nans" (or "-t").  Will abort when NaNs are produced. */
 static int trap_nans = 0;
 
@@ -4574,6 +4576,9 @@ static gint key_press_cb(GtkWidget* widget, GdkEventKey* event, gpointer data)
 			displaymode = DISPLAYMODE_DEMON;
 			wwviaudio_add_sound(CHANGESCREEN_SOUND);
 		}
+		break;
+	case keyf10:
+		reload_shaders = 1;
 		break;
 	case keyonscreen:
 		if (control_key_pressed)
@@ -17589,6 +17594,7 @@ static struct demon_cmd_def {
 	{ "DESCRIBE", "DESCRIBE A TWEAKABLE VARIABLE" },
 	{ "CDUMP", "DUMP CLIENT-SIDE OBJECT" },
 	{ "FOLLOW", "FOLLOW AN OBJECT" },
+	{ "RELOAD_SHADERS", "RELOAD ALL GLSL SHADERS" },
 	/* Note: Server builtin command help isn't here, it's in the server code,
 	 * elicited by a call to "send_lua_script_packet_to_server("HELP")"
 	 */
@@ -18115,6 +18121,9 @@ static int construct_demon_command(char *input,
 			copy = expand_demon_selection_string(original);
 			client_demon_follow(copy);
 			free(copy);
+			break;
+		case 23: /* RELOAD_SHADERS */
+			reload_shaders = 1;
 			break;
 		default: /* unknown, maybe it's a builtin server command or a lua script */
 			uppercase(original);
@@ -20510,6 +20519,15 @@ static void do_display_frame_stats(const float frame_rates[], const float frame_
 		graph_dev_display_debug_menu_show();
 }
 
+static void maybe_reload_shaders(void)
+{
+	if (!reload_shaders)
+		return;
+	fprintf(stderr, "Reloading shaders\n");
+	graph_dev_reload_all_shaders();
+	reload_shaders = 0;
+}
+
 static int main_da_expose(GtkWidget *w, GdkEvent *event, gpointer p)
 {
 	static double last_frame_time = 0;
@@ -20527,6 +20545,7 @@ static int main_da_expose(GtkWidget *w, GdkEvent *event, gpointer p)
 
 	make_science_forget_stuff();
 
+	maybe_reload_shaders();
 	load_textures();
 
 #ifndef WITHOUTOPENGL
