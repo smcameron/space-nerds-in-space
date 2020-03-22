@@ -93,6 +93,7 @@ static int thrust_mode = 0;
 static int turret_mode = 0;
 static char *replacement_assets_file = NULL;
 static struct replacement_asset replacement_asset = { 0 };
+static int reload_shaders = 0;
 
 /* Color depth in bits of our window. */
 static int bpp;
@@ -249,6 +250,9 @@ static void handle_key_down(SDL_keysym *keysym)
 	switch (keysym->sym) {
 	case SDLK_F1:
 		helpmode = !helpmode;
+		break;
+	case SDLK_F10:
+		reload_shaders = 1;
 		break;
 	case SDLK_ESCAPE:
 		quit(0);
@@ -1152,6 +1156,10 @@ int main(int argc, char *argv[])
 			if (frame % FPS == 0) {
 				graph_dev_reload_changed_textures();
 				graph_dev_reload_changed_cubemap_textures();
+			}
+			if (reload_shaders) {
+				graph_dev_reload_all_shaders();
+				reload_shaders = 0;
 			}
 			frame++;
 		} else {
