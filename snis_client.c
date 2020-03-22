@@ -514,7 +514,7 @@ static struct material spacemonster_tentacle_material;
 static struct material spacemonster_material;
 static struct material warpgate_material;
 static struct material docking_port_material;
-static float atmosphere_brightness = 1.0; /* tweakable */
+static float atmosphere_brightness = 0.5; /* tweakable */
 #define NPLANET_MATERIALS 256
 static int planetary_ring_texture_id = -1;
 static struct material planetary_ring_material[NPLANETARY_RING_MATERIALS];
@@ -17780,7 +17780,7 @@ static struct tweakable_var_descriptor client_tweak[] = {
 	{ "IMPULSE_CAMERA_SHAKE", "0.0 TO 2.0 - AMOUNT OF CAMERA SHAKE AT HIGH IMPULSE POWER",
 		&impulse_camera_shake, 'f', 0.0, 2.0, 1.0, 0, 0, 0 },
 	{ "ATMOSPHERE_BRIGHTNESS", "0.0 TO 1.0, DEFAULT 0.5 - BRIGHTNESS OF ATMOSPHERES",
-		&atmosphere_brightness, 'f', 0.0, 1.0, 1.0, 0, 0, 0 },
+		&atmosphere_brightness, 'f', 0.0, 1.0, 0.5, 0, 0, 0 },
 	{ "SUPPRESS_HYPERSPACE_NOISE", "0 OR 1 - SUPPRESS THE NOISE ON TERMINALS DURING HYPERSPACE",
 		&suppress_hyperspace_noise, 'i', 0.0, 0.0, 0.0, 0, 1, 0 },
 	{ "IDIOT_LIGHT_THRESHOLD", "0 - 255 - POWER LEVEL BELOW WHICH IDIOT LIGHTS COME ON",
