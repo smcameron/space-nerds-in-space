@@ -3733,6 +3733,59 @@ static void setup_3d()
 	sgc.vp_height = 0;
 }
 
+static void reload_all_shaders(void)
+{
+	setup_single_color_lit_shader(&single_color_lit_shader);
+	setup_atmosphere_shader(&atmosphere_shader, 0);
+	setup_atmosphere_shader(&atmosphere_with_annulus_shadow_shader, 1);
+	setup_trans_wireframe_shader("wireframe_transparent", &trans_wireframe_shader);
+	setup_trans_wireframe_shader("wireframe-transparent-sphere-clip", &trans_wireframe_with_clip_sphere_shader);
+	setup_filled_wireframe_shader(&filled_wireframe_shader);
+	setup_single_color_shader(&single_color_shader);
+	setup_vertex_color_shader(&vertex_color_shader);
+	setup_line_single_color_shader(&line_single_color_shader);
+	setup_point_cloud_shader("point_cloud", &point_cloud_shader);
+	setup_color_by_w_shader(&color_by_w_shader);
+	setup_skybox_shader(&skybox_shader);
+	setup_textured_shader("textured", UNIVERSAL_SHADER_HEADER FILMIC_TONEMAPPING, &textured_shader);
+	setup_textured_shader("textured-with-sphere-shadow-per-pixel", UNIVERSAL_SHADER_HEADER FILMIC_TONEMAPPING,
+				&textured_with_sphere_shadow_shader);
+	setup_textured_shader("textured-and-lit-per-pixel",
+				UNIVERSAL_SHADER_HEADER FILMIC_TONEMAPPING, &textured_lit_shader);
+	setup_textured_shader("textured-and-lit-per-pixel",
+				UNIVERSAL_SHADER_HEADER FILMIC_TONEMAPPING "#define USE_EMIT_MAP",
+				&textured_lit_emit_shader);
+	setup_textured_shader("textured-and-lit-per-pixel", UNIVERSAL_SHADER_HEADER FILMIC_TONEMAPPING
+				"#define USE_EMIT_MAP\n"
+				"#define USE_NORMAL_MAP 1\n",
+				&textured_lit_emit_normal_shader);
+	setup_textured_shader("textured-and-lit-per-pixel", UNIVERSAL_SHADER_HEADER FILMIC_TONEMAPPING
+				"#define USE_NORMAL_MAP 1\n",
+				&textured_lit_normal_shader);
+	setup_textured_cubemap_shader("textured-cubemap-and-lit-with-annulus-shadow-per-pixel", 0, 0, 0,
+					&textured_cubemap_lit_shader);
+	setup_textured_cubemap_shader("textured-cubemap-and-lit-with-annulus-shadow-per-pixel", 1, 0, 0,
+					&textured_cubemap_lit_normal_map_shader);
+	setup_textured_cubemap_shader("textured-cubemap-shield-per-pixel", 0, 0, 0,
+					&textured_cubemap_shield_shader);
+	setup_textured_cubemap_shader("textured-cubemap-and-lit-with-annulus-shadow-per-pixel", 0, 0, 1,
+					&textured_cubemap_lit_with_annulus_shadow_shader);
+	setup_textured_cubemap_shader("textured-cubemap-and-lit-with-annulus-shadow-per-pixel", 1, 0, 1,
+					&textured_cubemap_normal_mapped_lit_with_annulus_shadow_shader);
+	setup_textured_cubemap_shader("textured-cubemap-and-lit-with-annulus-shadow-per-pixel", 1, 1, 1,
+					&textured_cubemap_normal_mapped_lit_with_annulus_shadow_specular_shader);
+	setup_textured_cubemap_shader("textured-cubemap-and-lit-with-annulus-shadow-per-pixel", 1, 1, 0,
+					&textured_cubemap_normal_mapped_lit_specular_shader);
+	setup_textured_particle_shader(&textured_particle_shader);
+	setup_fs_effect_shader("fs-effect-copy", &fs_copy_shader);
+	setup_textured_shader("alpha_by_normal", UNIVERSAL_SHADER_HEADER, &alpha_by_normal_shader);
+	setup_textured_shader("alpha_by_normal", UNIVERSAL_SHADER_HEADER "#define TEXTURED_ALPHA_BY_NORMAL",
+				&textured_alpha_by_normal_shader);
+
+	if (fbo_render_to_texture_supported())
+		setup_smaa_effect(&smaa_effect);
+}
+
 int graph_dev_setup(const char *shader_dir)
 {
 	glewExperimental = GL_TRUE; /* OSX apparently needs glewExperimental */
@@ -3813,60 +3866,12 @@ int graph_dev_setup(const char *shader_dir)
 			post_target1.color0_texture, 0);
 	}
 
-	setup_single_color_lit_shader(&single_color_lit_shader);
-	setup_atmosphere_shader(&atmosphere_shader, 0);
-	setup_atmosphere_shader(&atmosphere_with_annulus_shadow_shader, 1);
-	setup_trans_wireframe_shader("wireframe_transparent", &trans_wireframe_shader);
-	setup_trans_wireframe_shader("wireframe-transparent-sphere-clip", &trans_wireframe_with_clip_sphere_shader);
-	setup_filled_wireframe_shader(&filled_wireframe_shader);
-	setup_single_color_shader(&single_color_shader);
-	setup_vertex_color_shader(&vertex_color_shader);
-	setup_line_single_color_shader(&line_single_color_shader);
-	setup_point_cloud_shader("point_cloud", &point_cloud_shader);
-	setup_color_by_w_shader(&color_by_w_shader);
-	setup_skybox_shader(&skybox_shader);
-	setup_textured_shader("textured", UNIVERSAL_SHADER_HEADER FILMIC_TONEMAPPING, &textured_shader);
-	setup_textured_shader("textured-with-sphere-shadow-per-pixel", UNIVERSAL_SHADER_HEADER FILMIC_TONEMAPPING,
-				&textured_with_sphere_shadow_shader);
-	setup_textured_shader("textured-and-lit-per-pixel",
-				UNIVERSAL_SHADER_HEADER FILMIC_TONEMAPPING, &textured_lit_shader);
-	setup_textured_shader("textured-and-lit-per-pixel",
-				UNIVERSAL_SHADER_HEADER FILMIC_TONEMAPPING "#define USE_EMIT_MAP",
-				&textured_lit_emit_shader);
-	setup_textured_shader("textured-and-lit-per-pixel", UNIVERSAL_SHADER_HEADER FILMIC_TONEMAPPING
-				"#define USE_EMIT_MAP\n"
-				"#define USE_NORMAL_MAP 1\n",
-				&textured_lit_emit_normal_shader);
-	setup_textured_shader("textured-and-lit-per-pixel", UNIVERSAL_SHADER_HEADER FILMIC_TONEMAPPING
-				"#define USE_NORMAL_MAP 1\n",
-				&textured_lit_normal_shader);
-	setup_textured_cubemap_shader("textured-cubemap-and-lit-with-annulus-shadow-per-pixel", 0, 0, 0,
-					&textured_cubemap_lit_shader);
-	setup_textured_cubemap_shader("textured-cubemap-and-lit-with-annulus-shadow-per-pixel", 1, 0, 0,
-					&textured_cubemap_lit_normal_map_shader);
-	setup_textured_cubemap_shader("textured-cubemap-shield-per-pixel", 0, 0, 0,
-					&textured_cubemap_shield_shader);
-	setup_textured_cubemap_shader("textured-cubemap-and-lit-with-annulus-shadow-per-pixel", 0, 0, 1,
-					&textured_cubemap_lit_with_annulus_shadow_shader);
-	setup_textured_cubemap_shader("textured-cubemap-and-lit-with-annulus-shadow-per-pixel", 1, 0, 1,
-					&textured_cubemap_normal_mapped_lit_with_annulus_shadow_shader);
-	setup_textured_cubemap_shader("textured-cubemap-and-lit-with-annulus-shadow-per-pixel", 1, 1, 1,
-					&textured_cubemap_normal_mapped_lit_with_annulus_shadow_specular_shader);
-	setup_textured_cubemap_shader("textured-cubemap-and-lit-with-annulus-shadow-per-pixel", 1, 1, 0,
-					&textured_cubemap_normal_mapped_lit_specular_shader);
-	setup_textured_particle_shader(&textured_particle_shader);
-	setup_fs_effect_shader("fs-effect-copy", &fs_copy_shader);
-	setup_textured_shader("alpha_by_normal", UNIVERSAL_SHADER_HEADER, &alpha_by_normal_shader);
-	setup_textured_shader("alpha_by_normal", UNIVERSAL_SHADER_HEADER "#define TEXTURED_ALPHA_BY_NORMAL",
-				&textured_alpha_by_normal_shader);
+	reload_all_shaders();
 
-	if (fbo_render_to_texture_supported())
-		setup_smaa_effect(&smaa_effect);
-
+	/* after all the shaders are loaded */
 	setup_cubemap_cube(&cubemap_cube);
 	setup_textured_unit_quad(&textured_unit_quad);
 
-	/* after all the shaders are loaded */
 	setup_2d();
 	setup_3d();
 
