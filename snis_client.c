@@ -475,7 +475,7 @@ static struct mesh *demon3d_axes_mesh = NULL;
 static struct mesh *cylinder_mesh;
 static struct entity *sun_entity = NULL;
 static int lens_flare_enabled = 1; /* tweakable */
-static float lens_flare_intensity = 0.5; /* tweakable */
+static float lens_flare_intensity = 0.15; /* tweakable */
 static float low_poly_threshold = 200.0; /* tweakable */
 #ifndef WITHOUTOPENGL
 static struct entity *lens_flare_halo = NULL;
@@ -17768,7 +17768,7 @@ static struct tweakable_var_descriptor client_tweak[] = {
 	{ "LENS_FLARE", "0 OR 1 TO DISABLE OR ENABLE LENS FLARE EFFECT",
 		&lens_flare_enabled, 'i', 0.0, 0.0, 0.0, 0, 1, 1 },
 	{ "LENS_FLARE_INTENSITY", "0.0 TO 1.0 TO SET LENS FLARE INTENSITY",
-		&lens_flare_intensity, 'f', 0.0, 1.0, 0.5, 0, 0, 0 },
+		&lens_flare_intensity, 'f', 0.0, 1.0, 0.15, 0, 0, 0 },
 	{ "ATMOSPHERE_RING_SHADOWS", "0 OR 1 TO DISABLE OR ENABLE ATMOSPHERIC RING SHADOWS",
 		&graph_dev_atmosphere_ring_shadows, 'i', 0.0, 0.0, 0.0, 0, 1, 1 },
 	{ "XJOYSTICK_THRESHOLD", "0 TO 64000 - SETS BOUNDARY BETWEEN FINE AND COARSE",
