@@ -3203,7 +3203,7 @@ static void add_shield_effect(struct snis_entity *o,
 		update_entity_scale(e, radius);
 		update_entity_orientation(e, orientation);
 		update_entity_visibility(e, 1);
-		entity_update_alpha(e, 0.5);
+		entity_update_alpha(e, 0.25);
 	}
 	memset(&spark[i], 0, sizeof(spark[i]));
 	set_object_location(&spark[i], o->x, o->y, o->z);
@@ -3223,7 +3223,7 @@ static void add_shield_effect(struct snis_entity *o,
 		spark[i].tsd.spark.atm_material.atmosphere.scale = 1.05;
 		spark[i].tsd.spark.atm_material.atmosphere.brightness = &atmosphere_brightness;
 		update_entity_material(atm, &spark[i].tsd.spark.atm_material);
-		entity_update_alpha(atm, 0.5);
+		entity_update_alpha(atm, 0.25);
 		update_entity_scale(atm, 1.05);
 		update_entity_visibility(atm, 1);
 		update_entity_parent(ecx, atm, e);
@@ -21186,7 +21186,7 @@ static int load_static_textures(void)
 	free(ring_data);
 
 	material_init_textured_shield(&shield_material);
-	shield_material.textured_shield.texture_id = load_cubemap_textures(0, "textures/shield-effect-", 0);
+	shield_material.textured_shield.texture_id = load_cubemap_textures(0, "textures/shield-effect-", 1);
 
 	for (i = 0; i < NNEBULA_MATERIALS; i++) {
 		char filename[20];
