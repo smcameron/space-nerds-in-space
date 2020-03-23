@@ -76,7 +76,7 @@ int material_nebula_read_from_file(const char *asset_dir, const char *filename,
 			fclose(f);
 			return -1;
 		}
-		mt->texture_id[i] = load_texture(asset_dir, texture_filename, 0);
+		mt->texture_id[i] = load_texture(asset_dir, texture_filename, 1);
 
 		rc = fscanf(f, "orientation %f %f %f %f\n", &mt->orientation[i].q.q0, &mt->orientation[i].q.q1,
 			&mt->orientation[i].q.q2, &mt->orientation[i].q.q3);
