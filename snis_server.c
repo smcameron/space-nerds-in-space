@@ -13055,6 +13055,9 @@ static int choose_planet_texture_of_type(int planet_type)
 static int add_planet(double x, double y, double z, float radius, uint8_t security, int type)
 {
 	int i, sst, minr, maxr;
+	union quat orientation, ninety, axial_tilt;
+	union vec3 axis;
+	float angle;
 
 	i = add_generic_object(x, y, z, 0, 0, 0, 0, OBJTYPE_PLANET);
 	if (i < 0)
@@ -13065,6 +13068,20 @@ static int add_planet(double x, double y, double z, float radius, uint8_t securi
 		else
 			go[i].y = (double) snis_randn(70) - 35;
 	}
+
+	/* Align planet orientation to solarsystem orientation */
+	quat_init_axis(&ninety, 1, 0, 0, 0.5 * M_PI); /* 90 degree rotation about x axis due */
+							/* to planet texture orientations. */
+	quat_mul(&orientation, &solarsystem_orientation, &ninety);
+
+	/* Perturb orientation up to + or - 45 degrees about a random axis for axial tilt */
+	/* This is less than it might seem like because the axis may be somewhat aligned */
+	/* with the solarsystem axis, and that portion does not show up as axial tilt. */
+	random_point_on_sphere(1.0, &axis.v.x, &axis.v.y, &axis.v.z);
+	angle = M_PI * 0.1 * (snis_randn(900) - 450) / 180.0;
+	quat_init_axis_v(&axial_tilt, &axis, angle);
+	quat_mul(&go[i].orientation, &axial_tilt, &orientation);
+
 	go[i].sdata.shield_strength = 0;
 	go[i].sdata.shield_wavelength = 0;
 	go[i].sdata.shield_width = 0;
@@ -23607,10 +23624,11 @@ static void send_update_planet_packet(struct game_client *c,
 	else
 		ring = 1.0;
 
-	pb_queue_to_client(c, snis_opcode_pkt("bwwSSSSwbbbbhbbbSSbhbbwb", OPCODE_UPDATE_PLANET, o->id, o->timestamp,
+	pb_queue_to_client(c, snis_opcode_pkt("bwwSSSQSwbbbbhbbbSSbhbbwb", OPCODE_UPDATE_PLANET, o->id, o->timestamp,
 					o->x, (int32_t) UNIVERSE_DIM,
 					o->y, (int32_t) UNIVERSE_DIM,
 					o->z, (int32_t) UNIVERSE_DIM,
+					&o->orientation,
 					ring * (double) o->tsd.planet.radius, (int32_t) UNIVERSE_DIM,
 					o->tsd.planet.description_seed,
 					o->tsd.planet.government,

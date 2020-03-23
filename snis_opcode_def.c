@@ -192,7 +192,7 @@ int snis_opcode_def_init(void)
 	/* rc |= init_opcode_def(OPCODE_REQUEST_ONESHOT_SOUND, "bhr"); */
 	rc |= init_opcode_def(OPCODE_REQUEST_REDALERT, "bb");
 	rc |= init_opcode_def(OPCODE_UPDATE_POWER_DATA, "n/a");
-	rc |= init_opcode_def(OPCODE_UPDATE_PLANET, "bwwSSSSwbbbbhbbbSSbhbbwb");
+	rc |= init_opcode_def(OPCODE_UPDATE_PLANET, "bwwSSSQSwbbbbhbbbSSbhbbwb");
 	rc |= init_opcode_def(OPCODE_UPDATE_BLACK_HOLE, "bwwSSSS");
 	/* rc |= init_opcode_def(OPCODE_UPDATE_SCI_TEXT, "bwhr"); */
 	rc |= init_opcode_def(OPCODE_CREATE_ITEM, "bbSSSbb");

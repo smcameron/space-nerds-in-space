@@ -2200,7 +2200,8 @@ static int update_black_hole(uint32_t id, uint32_t timestamp, double x, double y
 	return 0;
 }
 
-static int update_planet(uint32_t id, uint32_t timestamp, double x, double y, double z, double r, uint8_t government,
+static int update_planet(uint32_t id, uint32_t timestamp, double x, double y, double z,
+				union quat *orientation, double r, uint8_t government,
 				uint8_t tech_level, uint8_t economy, uint32_t dseed, int hasring,
 				uint8_t security, uint16_t contraband,
 				uint8_t atm_r,
@@ -2217,13 +2218,10 @@ static int update_planet(uint32_t id, uint32_t timestamp, double x, double y, do
 {
 	int i, m;
 	struct entity *e, *atm, *ring;
-	union quat orientation;
 	union quat rotational_velocity;
 
 	i = lookup_object_by_id(id);
 	if (i < 0) {
-		/* Orientation should be consistent across clients because planets don't move */
-		orientation = random_orientation[id % NRANDOM_ORIENTATIONS];
 		quat_init_axis(&rotational_velocity, 0.0, 0.0, 1.0, 0.03 * M_PI / 180.0);
 
 		/* each planet texture has other versions with a variation of the ring materials */
@@ -2259,7 +2257,7 @@ static int update_planet(uint32_t id, uint32_t timestamp, double x, double y, do
 			}
 		}
 		i = add_generic_object(id, timestamp, x, y, z, 0.0, 0.0, 0.0,
-					&orientation, OBJTYPE_PLANET, 1, e);
+					orientation, OBJTYPE_PLANET, 1, e);
 		if (i < 0)
 			return i;
 		go[i].tsd.planet.rotational_velocity = rotational_velocity;
@@ -7266,6 +7264,7 @@ static int process_update_planet_packet(void)
 {
 	unsigned char buffer[100];
 	uint32_t id, timestamp;
+	union quat orientation;
 	double dr, dx, dy, dz, atm_scale, atm_brightness;
 	uint8_t government, tech_level, economy, security, atm_r, atm_g, atm_b;
 	uint8_t has_atmosphere, solarsystem_planet_type, build_unit_type;
@@ -7277,10 +7276,11 @@ static int process_update_planet_packet(void)
 	int rc;
 
 	assert(sizeof(buffer) > sizeof(struct update_asteroid_packet) - sizeof(uint8_t));
-	rc = read_and_unpack_buffer(buffer, "wwSSSSwbbbbhbbbSSbhbbwb", &id, &timestamp,
+	rc = read_and_unpack_buffer(buffer, "wwSSSQSwbbbbhbbbSSbhbbwb", &id, &timestamp,
 			&dx, (int32_t) UNIVERSE_DIM,
 			&dy,(int32_t) UNIVERSE_DIM,
 			&dz, (int32_t) UNIVERSE_DIM,
+			&orientation,
 			&dr, (int32_t) UNIVERSE_DIM,
 			&dseed, &government, &tech_level, &economy, &security,
 			&contraband, &atm_r, &atm_b, &atm_g, &atm_scale, (int32_t) UNIVERSE_DIM,
@@ -7294,7 +7294,7 @@ static int process_update_planet_packet(void)
 	if (hasring)
 		dr = -dr;
 	pthread_mutex_lock(&universe_mutex);
-	rc = update_planet(id, timestamp, dx, dy, dz, dr, government, tech_level,
+	rc = update_planet(id, timestamp, dx, dy, dz, &orientation, dr, government, tech_level,
 				economy, dseed, hasring, security, contraband,
 				atm_r, atm_b, atm_g, atm_scale, atm_brightness, has_atmosphere,
 				atmosphere_type, solarsystem_planet_type, ring_selector,
