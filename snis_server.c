@@ -257,6 +257,7 @@ static struct multiverse_server_info {
 
 static char *solarsystem_name = DEFAULT_SOLAR_SYSTEM;
 static struct solarsystem_asset_spec *solarsystem_assets = NULL;
+static union quat solarsystem_orientation = IDENTITY_QUAT_INITIALIZER;
 
 /* This is used by l_show_menu and process_textscreen_op for user
  * definable menus from lua.
@@ -1399,6 +1400,7 @@ static void asteroid_move(struct snis_entity *o)
 		from_center.v.y = o->y - 0;
 		from_center.v.z = o->z - 0;
 
+		quat_rot_vec_self(&up, &solarsystem_orientation);
 		vec3_cross(&dir, &from_center, &up);
 		vec3_normalize(&dirn, &dir);
 		vec3_mul(&dir, &dirn, ASTEROID_SPEED);
@@ -10881,9 +10883,17 @@ static int add_player(double x, double z, double vx, double vz, double heading,
 
 static void random_object_coordinates_yrange(double *x, double *y, double *z, int yrange)
 {
-	*x = (((double) snis_randn(1000)) * XKNOWN_DIM / 1000.0) - XKNOWN_DIM / 2.0;
-	*y = (((double) snis_randn(yrange) - 0.5 * yrange) * YKNOWN_DIM / 1000.0) - YKNOWN_DIM / 2.0;
-	*z = (((double) snis_randn(1000)) * ZKNOWN_DIM / 1000.0) - ZKNOWN_DIM / 2.0;
+	union vec3 p;
+
+	p.v.x = (((double) snis_randn(1000)) * XKNOWN_DIM / 1000.0) - XKNOWN_DIM / 2.0;
+	p.v.y = (((double) snis_randn(yrange) - 0.5 * yrange) * YKNOWN_DIM / 1000.0) - YKNOWN_DIM / 2.0;
+	p.v.z = (((double) snis_randn(1000)) * ZKNOWN_DIM / 1000.0) - ZKNOWN_DIM / 2.0;
+
+	quat_rot_vec_self(&p, &solarsystem_orientation);
+
+	*x = p.v.x;
+	*y = p.v.y;
+	*z = p.v.z;
 }
 
 static uint32_t nth_starbase(int n);
@@ -13692,6 +13702,24 @@ static void set_random_seed(int new_seed)
 	mtwist_seed = (uint32_t) i;
 }
 
+/* Solarsystems have a central axis about which everything is
+ * placed, based on the presumed rotating accretion disk from
+ * which most things in a solarsystem formed.  The axis of rotation
+ * is what you get if you rotate vec3(0, 1, 0) by
+ * solarsystem_orientation.
+ */
+static union quat choose_solarsystem_orientation(void)
+{
+	int i, len, total;
+
+	/* Choose orientation based on name of solarsystem */
+	total = 0;
+	len = strlen(solarsystem_name);
+	for (i = 0; i < len; i++)
+		total += solarsystem_name[i];
+	return random_orientation[total % NRANDOM_ORIENTATIONS];
+}
+
 static void populate_universe(void)
 {
 	if (solarsystem_assets->random_seed != -1)
@@ -13700,6 +13728,9 @@ static void populate_universe(void)
 	if (ship_registry.entry)
 		free_ship_registry(&ship_registry);
 	ship_registry_init(&ship_registry);
+
+	solarsystem_orientation = choose_solarsystem_orientation();
+
 	add_nebulae(); /* do nebula first */
 	add_asteroids();
 	add_planets();
