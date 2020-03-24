@@ -1280,7 +1280,7 @@ static void add_ship_thrust_entities(struct entity *thrust_entity[], int *nthrus
 		const int thrust_material_index);
 
 static int update_econ_ship(uint32_t id, uint32_t timestamp, double x, double y, double z,
-			union quat *orientation, uint16_t alive, uint32_t victim_id,
+			union quat *orientation, uint32_t victim_id,
 			uint8_t shiptype, uint8_t ai[], double threat_level,
 			uint8_t npoints, union vec3 *patrol, uint8_t faction, uint8_t rts_order)
 {
@@ -1300,7 +1300,7 @@ static int update_econ_ship(uint32_t id, uint32_t timestamp, double x, double y,
 		vx = 0.0;
 		vy = 0.0;
 		vz = 0.0;
-		i = add_generic_object(id, timestamp, x, y, z, vx, vy, vz, orientation, OBJTYPE_SHIP2, alive, e);
+		i = add_generic_object(id, timestamp, x, y, z, vx, vy, vz, orientation, OBJTYPE_SHIP2, 1, e);
 		if (i < 0) {
 			if (e)
 				remove_entity(ecx, e);
@@ -1322,7 +1322,7 @@ static int update_econ_ship(uint32_t id, uint32_t timestamp, double x, double y,
 					(float) ship_type[shiptype].max_speed);
 		float thrust_size = clampf(throttle / 36.0, 0.1, 5.0);
 
-		update_generic_object(i, timestamp, x, y, z, vx, vy, vz, orientation, alive);
+		update_generic_object(i, timestamp, x, y, z, vx, vy, vz, orientation, 1);
 
 		for (j = 0; j < go[i].tsd.ship.nthrust_ports; j++) {
 			struct thrust_attachment_point *ap = ship_thrust_attachment_point(shiptype);
@@ -5256,7 +5256,6 @@ static int process_mainscreen_view_mode(void)
 static int process_update_econ_ship_packet(uint8_t opcode)
 {
 	unsigned char buffer[200];
-	uint16_t alive;
 	uint32_t id, timestamp, victim_id;
 	uint8_t faction;
 	double dx, dy, dz, px, py, pz;
@@ -5267,7 +5266,7 @@ static int process_update_econ_ship_packet(uint8_t opcode)
 	int rc;
 
 	assert(sizeof(buffer) > sizeof(struct update_econ_ship_packet) - sizeof(uint8_t));
-	rc = read_and_unpack_buffer(buffer, "wwhSSSQwbbb", &id, &timestamp, &alive,
+	rc = read_and_unpack_buffer(buffer, "wwSSSQwbbb", &id, &timestamp,
 				&dx, (int32_t) UNIVERSE_DIM, &dy, (int32_t) UNIVERSE_DIM, 
 				&dz, (int32_t) UNIVERSE_DIM,
 				&orientation,
@@ -5305,7 +5304,7 @@ static int process_update_econ_ship_packet(uint8_t opcode)
 
 done:
 	pthread_mutex_lock(&universe_mutex);
-	rc = update_econ_ship(id, timestamp, dx, dy, dz, &orientation, alive, victim_id,
+	rc = update_econ_ship(id, timestamp, dx, dy, dz, &orientation, victim_id,
 				shiptype, ai, threat_level, npoints, patrol, faction, rts_order);
 	pthread_mutex_unlock(&universe_mutex);
 	return (rc < 0);

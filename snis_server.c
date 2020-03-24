@@ -23254,8 +23254,8 @@ static void send_econ_update_ship_packet(struct game_client *c,
 			}
 		}
 	}
-	pb_queue_to_client(c, packed_buffer_new("bwwhSSSQwbbb", opcode,
-			o->id, o->timestamp, o->alive, o->x, (int32_t) UNIVERSE_DIM,
+	pb_queue_to_client(c, packed_buffer_new("bwwSSSQwbbb", opcode,
+			o->id, o->timestamp, o->x, (int32_t) UNIVERSE_DIM,
 			o->y, (int32_t) UNIVERSE_DIM, o->z, (int32_t) UNIVERSE_DIM,
 			&o->orientation, victim_id, o->tsd.ship.shiptype, o->sdata.faction, rts_order));
 
