@@ -821,8 +821,11 @@ fire_missile(shooter_id, target_id)
 	If either shooter id or target id do not match an existing object,
 	then nothing happens. Nothing is returned.
 
-regenerate_universe()
+regenerate_universe(random_seed)
 	Regenerates the universe as is done at the start of the game.
+	If random seed is -1, then the current random seed is re-used.
+	If random_seed is not -1, then this value is used as the new
+	random seed.
 
 set_variable(variable_name, new_value)
 	Allows setting runtime adjustable variables. You can also set these

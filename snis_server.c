@@ -13761,10 +13761,12 @@ static void make_universe(void)
 	pthread_mutex_unlock(&universe_mutex);
 }
 
-static void regenerate_universe(void)
+static void regenerate_universe(int random_seed)
 {
 	disable_rts_mode();
 	pthread_mutex_lock(&universe_mutex);
+	if (random_seed != -1)
+		solarsystem_assets->random_seed = random_seed;
 	populate_universe();
 	pthread_mutex_unlock(&universe_mutex);
 	send_demon_console_msg("UNIVERSE REGENERATED");
@@ -20445,10 +20447,11 @@ static int l_fire_missile(lua_State *l)
 	return 0;
 }
 
-static void regenerate_universe(void);
+static void regenerate_universe(int random_seed);
 static int l_regenerate_universe(lua_State *l)
 {
-	regenerate_universe();
+	const double random_seed = luaL_checknumber(l, 1);
+	regenerate_universe((int) random_seed);
 	return 0;
 }
 
