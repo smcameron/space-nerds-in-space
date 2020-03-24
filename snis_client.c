@@ -13760,7 +13760,7 @@ static int process_console_op(void)
 		if (rc != 0)
 			return rc;
 		buffer[DEMON_CONSOLE_MSG_MAX - 1] = '\0';
-		text_window_add_color_text(demon_ui.console, (char *) buffer, color);
+		print_demon_console_color_msg(color, "%s", buffer);
 		break;
 	default:
 		return -1;
@@ -17813,7 +17813,7 @@ static int set_clientside_variable(char *cmd)
 	case TWEAK_UNKNOWN_VARIABLE:
 		break; /* Suppress message, try it on the server */
 	default:
-		text_window_add_text(demon_ui.console, msg);
+		print_demon_console_msg("%s", msg);
 		break;
 	}
 	return rc;
@@ -17900,12 +17900,10 @@ static int construct_demon_command(char *input,
 	int idcount;
 	char *original = NULL;
 	char *copy = NULL;
-	char console_text[255];
 	int rc;
 
 	original = strdup(input); /* save lowercase version for text to speech */
-	snprintf(console_text, sizeof(console_text), "> %s", input);
-	text_window_add_color_text(demon_ui.console, console_text, CYAN);
+	print_demon_console_color_msg(CYAN, "> %s", input);
 	uppercase(input);
 	input = expand_demon_selection_string(input);
 	if (!input) {
@@ -18172,10 +18170,8 @@ static void send_demon_text_command(char *command)
 	clear_empty_demon_variables();
 	strcpy(demon_ui.error_msg, "");
 	rc = construct_demon_command(command, &demon_cmd, demon_ui.error_msg);
-	if (rc) {
-		text_window_add_text(demon_ui.console, demon_ui.error_msg);
-		printf("Error msg: %s\n", demon_ui.error_msg);
-	}
+	if (rc)
+		print_demon_console_msg(demon_ui.error_msg);
 }
 
 static void demon_exec_button_pressed(void *x)
