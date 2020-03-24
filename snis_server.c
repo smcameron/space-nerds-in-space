@@ -270,7 +270,9 @@ static struct opcode_stat {
 	uint64_t bytes;
 	uint64_t count_not_sent;
 } write_opcode_stats[256];
+static int prev_collect_opcode_stats = 0;
 static int collect_opcode_stats = 0;
+static double opcode_stats_start_time;
 
 struct npc_bot_state;
 struct npc_menu_item;
@@ -18238,24 +18240,35 @@ static void server_builtin_dump_opcode_stats(__attribute__((unused)) char *cmd)
 
 	struct opcode_stat *data = write_opcode_stats;
 	struct opcode_stat s[256];
+	double elapsed_time;
+	uint64_t total_bytes;
 
 	if (!collect_opcode_stats) {
-		send_demon_console_msg("NO OPCODE STATS COLLECTED, SET OPCODE_STATS=1 FIRST.");
+		send_demon_console_msg("OPCODE STATS NOT CURRENT.  THIS IS OLD DATA.");
 		return;
 	}
+
+	elapsed_time = time_now_double() - opcode_stats_start_time;
 
 	memcpy(s, data, sizeof(s));
 	qsort(s, 256, sizeof(s[0]), compare_opcode_stats);
 
+	total_bytes = 0;
+	for (i = 0; i < 256; i++)
+		total_bytes += s[i].bytes;
+
 	send_demon_console_msg("\n");
-	send_demon_console_msg("%3s  %10s %15s %9s %10s %15s",
-		"Op", "Count", "total bytes", "bytes/op", "not sent", "saved bytes");
+	send_demon_console_msg("Elapsed time: %10.2f seconds\n", elapsed_time);
+	send_demon_console_msg("%3s  %10s %7s %4s %8s %7s %6s",
+		"Op", "Count", "kb", "b/op", "omitkb", "b/w", "frac");
 	for (i = 0; i < 20; i++)
 		if (s[i].count != 0)
-			send_demon_console_msg("%3hu: %10llu %15llu %9llu %10llu %15llu",
-				s[i].opcode, s[i].count, s[i].bytes, s[i].bytes / s[i].count,
-				s[i].count_not_sent,
-				s[i].count_not_sent * s[i].bytes / s[i].count);
+			send_demon_console_msg("%3hu: %10llu %7.0fk %4llu %7.0fk %4.1fk %3.1f%%",
+				s[i].opcode, s[i].count, (double) s[i].bytes / 1024.0,
+				s[i].bytes / s[i].count,
+				(s[i].count_not_sent * s[i].bytes / s[i].count) / 1024.0,
+				(double) (s[i].bytes / elapsed_time) / 1024.0,
+				100.0 * (double) s[i].bytes / (double) total_bytes);
 		else
 			send_demon_console_msg("%3hu: %20llu %20llu %20s",
 				s[i].opcode, s[i].count, s[i].bytes, "n/a");
@@ -24493,12 +24506,25 @@ static void update_multiverse(struct snis_entity *o)
 	queue_to_multiverse(multiverse_server, pb);
 }
 
+static void check_opcode_stats()
+{
+	if (prev_collect_opcode_stats == collect_opcode_stats)
+		return;
+	prev_collect_opcode_stats = collect_opcode_stats;
+	if (collect_opcode_stats) {
+		/* Opcode stats checking was just turned on */
+		opcode_stats_start_time = time_now_double();
+		memset(write_opcode_stats, 0, sizeof(write_opcode_stats));
+	}
+}
+
 static void move_objects(double absolute_time, int discontinuity)
 {
 	int i;
 	struct lua_comms_transmission *lua_comms_transmission_queue_copy = NULL;
 
 	pthread_mutex_lock(&universe_mutex);
+	check_opcode_stats();
 	memset(faction_population, 0, sizeof(faction_population));
 	netstats.nobjects = 0;
 	netstats.nships = 0;
