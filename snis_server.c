@@ -264,18 +264,13 @@ static union quat solarsystem_orientation = IDENTITY_QUAT_INITIALIZER;
  */
 static char *current_user_menu_callback = NULL;
 
-#define GATHER_OPCODE_STATS 0
-
-#if GATHER_OPCODE_STATS
-
 static struct opcode_stat {
 	uint8_t opcode;
 	uint64_t count;
 	uint64_t bytes;
 	uint64_t count_not_sent;
 } write_opcode_stats[256];
-
-#endif
+static int collect_opcode_stats = 0;
 
 struct npc_bot_state;
 struct npc_menu_item;
@@ -1638,11 +1633,13 @@ static void wormhole_move(struct snis_entity *o)
 				wormhole_collision_detection);
 }
 
-#if GATHER_OPCODE_STATS
 static void gather_opcode_stats(struct packed_buffer *pb)
 {
 	int length;
 	uint8_t opcode;
+
+	if (!collect_opcode_stats)
+		return;
 
 	/* assumption, first byte is opcode. */
 	memcpy(&opcode, pb->buffer, sizeof(opcode));
@@ -1655,6 +1652,9 @@ static void gather_opcode_stats(struct packed_buffer *pb)
 static void gather_opcode_not_sent_stats(struct snis_entity *o)
 {
 	int opcode[4] = { -1, -1, -1, -1 };
+
+	if (!collect_opcode_stats)
+		return;
 
 	switch (o->type) {
 	case OBJTYPE_SHIP1:
@@ -1721,10 +1721,6 @@ static void gather_opcode_not_sent_stats(struct snis_entity *o)
 		if (opcode[i] > 0)
 			write_opcode_stats[opcode[i]].count_not_sent++;
 }
-#else
-#define gather_opcode_stats(x)
-#define gather_opcode_not_sent_stats(x)
-#endif
 
 static inline void pb_queue_to_client(struct game_client *c, struct packed_buffer *pb)
 {
@@ -14717,17 +14713,17 @@ static void send_update_sdata_packets(struct game_client *c, struct snis_entity 
 		return;
 	ship = &go[i];
 	if (save_sdata_bandwidth() && o != &go[c->ship_index]) {
-#if GATHER_OPCODE_STATS
-		write_opcode_stats[OPCODE_SHIP_SDATA].count_not_sent++;
-		write_opcode_stats[OPCODE_UPDATE_SHIP_CARGO_INFO].count_not_sent++;
-#endif
+		if (collect_opcode_stats) {
+			write_opcode_stats[OPCODE_SHIP_SDATA].count_not_sent++;
+			write_opcode_stats[OPCODE_UPDATE_SHIP_CARGO_INFO].count_not_sent++;
+		}
 		return;
 	}
 	if (!should_send_sdata(c, ship, o)) {
-#if GATHER_OPCODE_STATS
-		write_opcode_stats[OPCODE_SHIP_SDATA].count_not_sent++;
-		write_opcode_stats[OPCODE_UPDATE_SHIP_CARGO_INFO].count_not_sent++;
-#endif
+		if (collect_opcode_stats) {
+			write_opcode_stats[OPCODE_SHIP_SDATA].count_not_sent++;
+			write_opcode_stats[OPCODE_UPDATE_SHIP_CARGO_INFO].count_not_sent++;
+		}
 		return;
 	}
 	pack_and_send_ship_sdata_packet(c, o);
@@ -17843,6 +17839,8 @@ static struct tweakable_var_descriptor server_tweak[] = {
 		&npc_system_targeting, 'i', 0.0, 0.0, 0.0, 0, 1, DEFAULT_NPC_SYSTEM_TARGETING },
 	{ "NPC_SYSTEM_TARGETING_INTERVAL", "10ths OF SECS BETWEEN NPCS SWITCHING SYSTEM TO TARGET",
 		&npc_system_targeting_interval, 'i', 0.0, 0.0, 0.0, 1, 5000, DEFAULT_NPC_SYSTEM_TARGETING_INTERVAL },
+	{ "OPCODE_STATS", "COLLECT NETWORK STATS BY OPCODE",
+		&collect_opcode_stats, 'i', 0.0, 0.0, 0.0, 0, 1, 0 },
 	{ NULL, NULL, NULL, '\0', 0.0, 0.0, 0.0, 0, 0, 0 },
 };
 
@@ -18226,6 +18224,44 @@ static void server_builtin_ai_pop(char *cmd)
 	pthread_mutex_unlock(&universe_mutex);
 }
 
+static int compare_opcode_stats(const void *a, const void *b)
+{
+	const struct opcode_stat *A = a;
+	const struct opcode_stat *B = b;
+
+	return B->bytes - A->bytes;
+}
+
+static void server_builtin_dump_opcode_stats(__attribute__((unused)) char *cmd)
+{
+	int i;
+
+	struct opcode_stat *data = write_opcode_stats;
+	struct opcode_stat s[256];
+
+	if (!collect_opcode_stats) {
+		send_demon_console_msg("NO OPCODE STATS COLLECTED, SET OPCODE_STATS=1 FIRST.");
+		return;
+	}
+
+	memcpy(s, data, sizeof(s));
+	qsort(s, 256, sizeof(s[0]), compare_opcode_stats);
+
+	send_demon_console_msg("\n");
+	send_demon_console_msg("%3s  %10s %15s %9s %10s %15s",
+		"Op", "Count", "total bytes", "bytes/op", "not sent", "saved bytes");
+	for (i = 0; i < 20; i++)
+		if (s[i].count != 0)
+			send_demon_console_msg("%3hu: %10llu %15llu %9llu %10llu %15llu",
+				s[i].opcode, s[i].count, s[i].bytes, s[i].bytes / s[i].count,
+				s[i].count_not_sent,
+				s[i].count_not_sent * s[i].bytes / s[i].count);
+		else
+			send_demon_console_msg("%3hu: %20llu %20llu %20s",
+				s[i].opcode, s[i].count, s[i].bytes, "n/a");
+	send_demon_console_msg("\n");
+}
+
 static struct server_builtin_cmd {
 	char *cmd;
 	char *description;
@@ -18246,6 +18282,7 @@ static struct server_builtin_cmd {
 	{ "F", "FIND AN OBJECT BY NAME", server_builtin_find, },
 	{ "AITRACE", "DEBUG TRACE NPC SHIP AI", server_builtin_ai_trace, },
 	{ "AIPOP", "POP TOP ITEM OFF AI STACK", server_builtin_ai_pop, },
+	{ "DUMP_OPCODE_STATS", "DUMP OPCODE STATS", server_builtin_dump_opcode_stats, },
 	{ "HELP", "LIST SERVER BUILTIN COMMANDS", server_builtin_help, },
 };
 
@@ -24399,45 +24436,6 @@ static void move_damcon_entities(void)
 		move_damcon_entities_on_bridge(i);
 }
 
-#if GATHER_OPCODE_STATS
-static int compare_opcode_stats(const void *a, const void *b)
-{
-	const struct opcode_stat *A = a;
-	const struct opcode_stat *B = b;
-
-	return B->bytes - A->bytes;
-}
-
-static void dump_opcode_stats(struct opcode_stat *data)
-{
-	int i;
-
-	struct opcode_stat s[256];
-
-	if ((universe_timestamp % 50) != 0)
-		return;
-
-	memcpy(s, data, sizeof(s));
-	qsort(s, 256, sizeof(s[0]), compare_opcode_stats);
-
-	printf("\n");
-	printf("%3s  %10s %15s %9s %10s %15s\n",
-		"Op", "Count", "total bytes", "bytes/op", "not sent", "saved bytes");
-	for (i = 0; i < 20; i++)
-		if (s[i].count != 0)
-			printf("%3hu: %10llu %15llu %9llu %10llu %15llu\n",
-				s[i].opcode, s[i].count, s[i].bytes, s[i].bytes / s[i].count,
-				s[i].count_not_sent,
-				s[i].count_not_sent * s[i].bytes / s[i].count);
-		else
-			printf("%3hu: %20llu %20llu %20s\n",
-				s[i].opcode, s[i].count, s[i].bytes, "n/a");
-	printf("\n");
-}
-#else
-#define dump_opcode_stats(x)
-#endif
-
 static void wakeup_multiverse_writer(struct multiverse_server_info *msi);
 static void queue_to_multiverse(struct multiverse_server_info *msi, struct packed_buffer *pb)
 {
@@ -24535,7 +24533,6 @@ static void move_objects(double absolute_time, int discontinuity)
 			client[i].request_universe_timestamp = UPDATE_UNIVERSE_TIMESTAMP_COUNT;
 	}
 
-	dump_opcode_stats(write_opcode_stats);
 	for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
 		if (go[i].alive) {
 			go[i].move(&go[i]);
