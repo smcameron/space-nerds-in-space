@@ -2896,13 +2896,13 @@ static void update_warp_field_error(void)
 		warp_field_error--;
 }
 
-static void warpgate_blink_lights(struct snis_entity *o)
+static void warpgate_blink_lights(void)
 {
 	warpgate_material.texture_mapped.emit_intensity =
 		cos(((float) (timer & 0x1f) / 32.0) * 0.5 * M_PI);
 }
 
-static void docking_port_blink_lights(struct snis_entity *o)
+static void docking_port_blink_lights(void)
 {
 	docking_port_material.texture_mapped.emit_intensity =
 		cos(((float) (timer & 0x0f) / 16.0) * 0.5 * M_PI);
@@ -3016,12 +3016,10 @@ static void move_objects(void)
 			break;
 		case OBJTYPE_DOCKING_PORT:
 			move_object(timestamp, o, &interpolate_oriented_object);
-			docking_port_blink_lights(o);
 			update_shading_planet(o);
 			break;
 		case OBJTYPE_WARPGATE:
 			move_object(timestamp, o, &interpolate_oriented_object);
-			warpgate_blink_lights(o);
 			update_shading_planet(o);
 			break;
 		case OBJTYPE_SPACEMONSTER:
@@ -3094,6 +3092,8 @@ static void move_objects(void)
 			break;
 		}
 	}
+	docking_port_blink_lights();
+	warpgate_blink_lights();
 }
 
 static void add_spark(double x, double y, double z, double vx, double vy, double vz, int time, int color,
