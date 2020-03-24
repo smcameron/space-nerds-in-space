@@ -22613,6 +22613,8 @@ static void send_update_turret_packet(struct game_client *c,
 	struct snis_entity *o);
 static void send_update_cargo_container_packet(struct game_client *c,
 	struct snis_entity *o);
+static void send_update_cargo_container_position(struct game_client *c,
+	struct snis_entity *o);
 static void send_update_derelict_packet(struct game_client *c,
 	struct snis_entity *o);
 static void send_update_black_hole_packet(struct game_client *c,
@@ -22682,7 +22684,11 @@ static void queue_up_client_object_update(struct game_client *c, struct snis_ent
 			send_update_asteroid_minerals_packet(c, o);
 		break;
 	case OBJTYPE_CARGO_CONTAINER:
-		send_update_cargo_container_packet(c, o);
+		/* The cargo container contents rarely change, so send them only once every 6.4 seconds */
+		if (((o->id + universe_timestamp) & 0x3f) == 0)
+			send_update_cargo_container_packet(c, o);
+		else
+			send_update_cargo_container_position(c, o);
 		break;
 	case OBJTYPE_DERELICT:
 		send_update_derelict_packet(c, o);
@@ -23633,6 +23639,16 @@ static void send_update_cargo_container_packet(struct game_client *c,
 					o->z, (int32_t) UNIVERSE_DIM,
 					(uint32_t) o->tsd.cargo_container.contents.item,
 					o->tsd.cargo_container.contents.qty, (int32_t) 1000000));
+}
+
+/* send_update_cargo_container_position omits the cargo container contents to save bandwidth */
+static void send_update_cargo_container_position(struct game_client *c,
+	struct snis_entity *o)
+{
+	pb_queue_to_client(c, snis_opcode_pkt("bwwSSS", OPCODE_UPDATE_CARGO_CONTAINER_POSITION, o->id, o->timestamp,
+					o->x, (int32_t) UNIVERSE_DIM,
+					o->y, (int32_t) UNIVERSE_DIM,
+					o->z, (int32_t) UNIVERSE_DIM));
 }
 
 static void send_update_derelict_packet(struct game_client *c,

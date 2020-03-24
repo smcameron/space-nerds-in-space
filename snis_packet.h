@@ -203,7 +203,7 @@
 #define OPCODE_SCI_ALIGN_TO_SHIP		219
 #define OPCODE_NAV_TRIDENT_MODE			220
 #define OPCODE_ATMOSPHERIC_FRICTION		221
-/* unused 222 */
+#define OPCODE_UPDATE_CARGO_CONTAINER_POSITION	222
 #define OPCODE_DOCKING_MAGNETS			223
 #define OPCODE_CYCLE_NAV_POINT_OF_VIEW		224
 #define OPCODE_REQUEST_MINING_BOT		225
@@ -392,6 +392,13 @@ struct update_cargo_container_packet {
 	uint32_t x, y, z;
 	uint32_t item;
 	uint32_t qty;
+};
+
+struct update_cargo_container_position {
+	uint8_t opcode;
+	uint32_t id;
+	uint32_t timestamp;
+	uint32_t x, y, z;
 };
 
 struct update_wormhole_packet {
