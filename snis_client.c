@@ -1402,7 +1402,8 @@ static int update_ship_sdata(uint32_t id, uint8_t subclass, char *name,
 	go[i].sdata.shield_width = shield_width;
 	go[i].sdata.shield_depth = shield_depth;
 	go[i].sdata.faction = faction;
-	strcpy(go[i].sdata.name, name);
+	if (strcmp(name, "-") != 0)
+		strcpy(go[i].sdata.name, name);
 	if (go[i].type == OBJTYPE_SHIP1 || go[i].type == OBJTYPE_SHIP2)
 		go[i].tsd.ship.lifeform_count = lifeform_count;
 	if (go[i].type == OBJTYPE_STARBASE)
@@ -5931,6 +5932,26 @@ static int process_ship_sdata_packet(void)
 	return 0;
 }
 
+static int process_ship_sdata_without_name(void)
+{
+	unsigned char buffer[50];
+	uint32_t id;
+	uint8_t subclass, shstrength, shwavelength, shwidth,
+		shdepth, faction, lifeform_count;
+	int rc;
+
+	assert(sizeof(buffer) > sizeof(struct ship_sdata_without_name_packet) - sizeof(uint8_t));
+	rc = snis_readsocket(gameserver_sock, buffer, sizeof(struct ship_sdata_without_name_packet) - sizeof(uint8_t));
+	if (rc != 0)
+		return rc;
+	packed_buffer_unpack_raw(buffer, sizeof(buffer), "wbbbbbbb", &id, &subclass, &shstrength, &shwavelength,
+			&shwidth, &shdepth, &faction, &lifeform_count);
+	pthread_mutex_lock(&universe_mutex);
+	update_ship_sdata(id, subclass, "-", shstrength, shwavelength, shwidth, shdepth, faction, lifeform_count);
+	pthread_mutex_unlock(&universe_mutex);
+	return 0;
+}
+
 static int process_update_ship_cargo_info(void)
 {
 	uint32_t id, item;
@@ -7803,6 +7824,9 @@ static void *gameserver_reader(__attribute__((unused)) void *arg)
 			break;
 		case OPCODE_SHIP_SDATA:
 			rc = process_ship_sdata_packet();
+			break;
+		case OPCODE_SHIP_SDATA_WITHOUT_NAME:
+			rc = process_ship_sdata_without_name();
 			break;
 		case OPCODE_ROLE_ONSCREEN:
 			rc = process_role_onscreen_packet();
@@ -9934,25 +9958,30 @@ static void populate_science_pull_down_menu(void)
 		if (o && o->sdata.science_data_known) {
 			switch (o->type) {
 			case OBJTYPE_PLANET:
-				pull_down_menu_add_row(sci_ui.menu, "PLANETS", o->sdata.name,
+				pull_down_menu_add_row(sci_ui.menu, "PLANETS",
+						o->sdata.name[0] == '\0' ? "UNKNOWN" : o->sdata.name,
 						science_menu_selection, (void *) (intptr_t) o->id);
 				break;
 			case OBJTYPE_WARPGATE:
-				pull_down_menu_add_row(sci_ui.menu, "WARPGATES", o->sdata.name,
+				pull_down_menu_add_row(sci_ui.menu, "WARPGATES",
+						o->sdata.name[0] == '\0' ? "UNKNOWN" : o->sdata.name,
 						science_menu_selection, (void *) (intptr_t) o->id);
 				break;
 			case OBJTYPE_STARBASE:
-				pull_down_menu_add_row(sci_ui.menu, "STARBASES", o->sdata.name,
+				pull_down_menu_add_row(sci_ui.menu, "STARBASES",
+						o->sdata.name[0] == '\0' ? "UNKNOWN" : o->sdata.name,
 						science_menu_selection, (void *) (intptr_t) o->id);
 				break;
 			case OBJTYPE_SHIP1:
 			case OBJTYPE_SHIP2:
 			case OBJTYPE_DERELICT:
-				pull_down_menu_add_row(sci_ui.menu, "SHIPS", o->sdata.name,
+				pull_down_menu_add_row(sci_ui.menu, "SHIPS",
+						o->sdata.name[0] == '\0' ? "UNKNOWN" : o->sdata.name,
 						science_menu_selection, (void *) (intptr_t) o->id);
 				break;
 			case OBJTYPE_ASTEROID:
-				pull_down_menu_add_row(sci_ui.menu, "ASTEROIDS", o->sdata.name,
+				pull_down_menu_add_row(sci_ui.menu, "ASTEROIDS",
+						o->sdata.name[0] == '\0' ? "UNKNOWN" : o->sdata.name,
 						science_menu_selection, (void *) (intptr_t) o->id);
 				break;
 			default:

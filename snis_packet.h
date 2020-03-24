@@ -41,7 +41,7 @@
 #define OPCODE_PLAY_SOUND	114
 #define OPCODE_REQUEST_SCIYAW	115
 #define OPCODE_REQUEST_SCIBEAMWIDTH	116
-/* UNUSED OPCODE 117 */
+#define OPCODE_SHIP_SDATA_WITHOUT_NAME	117
 #define OPCODE_ECON_UPDATE_SHIP	118
 #define OPCODE_SHIP_SDATA	120
 #define OPCODE_LOAD_TORPEDO	121
@@ -335,6 +335,18 @@ struct ship_sdata_packet {
 	uint8_t faction;
 	uint8_t lifeform_count;
 	char name[NAMESIZE];
+};
+
+struct ship_sdata_without_name_packet {
+	uint8_t opcode;
+	uint32_t id;
+	uint8_t subclass; /* freighter, destroyer, etc. */
+	uint8_t shield_strength;
+	uint8_t shield_wavelength;
+	uint8_t shield_width;
+	uint8_t shield_depth;
+	uint8_t faction;
+	uint8_t lifeform_count;
 };
 
 struct request_ship_sdata_packet {

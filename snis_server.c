@@ -14553,7 +14553,7 @@ static int process_request_robot_cmd(struct game_client *c)
 	return 0;
 }
 
-static void send_ship_sdata_packet(struct game_client *c, struct ship_sdata_packet *sip);
+static void send_ship_sdata_packet(struct game_client *c, struct ship_sdata_packet *sip, int type);
 static void pack_and_send_ship_sdata_packet(struct game_client *c, struct snis_entity *o)
 {
 	struct ship_sdata_packet p; 
@@ -14577,7 +14577,7 @@ static void pack_and_send_ship_sdata_packet(struct game_client *c, struct snis_e
 		p.lifeform_count = o->tsd.starbase.lifeform_count;
 	else
 		p.lifeform_count = 0;
-	send_ship_sdata_packet(c, &p);
+	send_ship_sdata_packet(c, &p, o->type);
 }
 
 static void send_update_ship_cargo_info(struct game_client *c, struct snis_entity *o)
@@ -14624,7 +14624,7 @@ static void send_update_ship_cargo_info(struct game_client *c, struct snis_entit
 static int save_sdata_bandwidth(void)
 {
 	/* TODO: something clever here. */
-	if (snis_randn(100) > 25)
+	if (snis_randn(100) > 50)
 		return 1;
 	return 0;
 }
@@ -23318,10 +23318,26 @@ static void send_econ_update_ship_packet(struct game_client *c,
 	pb_queue_to_client(c, pb);
 }
 
-static void send_ship_sdata_packet(struct game_client *c, struct ship_sdata_packet *sip)
+static void send_ship_sdata_packet(struct game_client *c, struct ship_sdata_packet *sip, int type)
 {
 	struct packed_buffer *pb;
 
+	switch (type) {
+	case OBJTYPE_SHIP2:
+	case OBJTYPE_STARBASE:
+	case OBJTYPE_ASTEROID:
+		if (((sip->id + universe_timestamp) & 0x1f) == 0) {
+			pb = packed_buffer_allocate(sizeof(struct ship_sdata_without_name_packet));
+			packed_buffer_append(pb, "bwbbbbbbb", OPCODE_SHIP_SDATA_WITHOUT_NAME, sip->id, sip->subclass,
+				sip->shield_strength, sip->shield_wavelength, sip->shield_width, sip->shield_depth,
+				sip->faction, sip->lifeform_count);
+			pb_queue_to_client(c, pb);
+			return;
+		}
+		break;
+	default:
+		break;
+	}
 	pb = packed_buffer_allocate(sizeof(struct ship_sdata_packet));
 	packed_buffer_append(pb, "bwbbbbbbbr", OPCODE_SHIP_SDATA, sip->id, sip->subclass,
 		sip->shield_strength, sip->shield_wavelength, sip->shield_width, sip->shield_depth,
