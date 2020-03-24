@@ -5266,22 +5266,23 @@ static int process_update_econ_ship_packet(uint8_t opcode)
 	int rc;
 
 	assert(sizeof(buffer) > sizeof(struct update_econ_ship_packet) - sizeof(uint8_t));
-	rc = read_and_unpack_buffer(buffer, "wwSSSQwbbb", &id, &timestamp,
+	rc = read_and_unpack_buffer(buffer, "wwSSSQbbb", &id, &timestamp,
 				&dx, (int32_t) UNIVERSE_DIM, &dy, (int32_t) UNIVERSE_DIM, 
 				&dz, (int32_t) UNIVERSE_DIM,
 				&orientation,
-				&victim_id, &shiptype, &faction, &rts_order);
+				&shiptype, &faction, &rts_order);
 	if (rc != 0)
 		return rc;
 	if (opcode != OPCODE_ECON_UPDATE_SHIP_DEBUG_AI) {
 		memset(ai, 0, 5);
 		npoints = 0;
 		threat_level = 0.0;
+		victim_id = (uint32_t) -1;
 		goto done;
 	}
 	BUILD_ASSERT(MAX_AI_STACK_ENTRIES == 5);
-	rc = read_and_unpack_buffer(buffer, "bbbbbSb",
-			&ai[0], &ai[1], &ai[2], &ai[3], &ai[4],
+	rc = read_and_unpack_buffer(buffer, "wbbbbbSb",
+			&victim_id, &ai[0], &ai[1], &ai[2], &ai[3], &ai[4],
 			&threat_level, (int32_t) UNIVERSE_DIM, &npoints);
 	if (rc != 0)
 		return rc;

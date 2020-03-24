@@ -23254,10 +23254,10 @@ static void send_econ_update_ship_packet(struct game_client *c,
 			}
 		}
 	}
-	pb_queue_to_client(c, packed_buffer_new("bwwSSSQwbbb", opcode,
+	pb_queue_to_client(c, packed_buffer_new("bwwSSSQbbb", opcode,
 			o->id, o->timestamp, o->x, (int32_t) UNIVERSE_DIM,
 			o->y, (int32_t) UNIVERSE_DIM, o->z, (int32_t) UNIVERSE_DIM,
-			&o->orientation, victim_id, o->tsd.ship.shiptype, o->sdata.faction, rts_order));
+			&o->orientation, o->tsd.ship.shiptype, o->sdata.faction, rts_order));
 
 	if (!c->debug_ai)
 		return;
@@ -23289,7 +23289,7 @@ static void send_econ_update_ship_packet(struct game_client *c,
 		return;
 
 	BUILD_ASSERT(MAX_AI_STACK_ENTRIES == 5);
-	packed_buffer_append(pb, "bbbbbSb",
+	packed_buffer_append(pb, "wbbbbbSb", victim_id,
 			ai[0], ai[1], ai[2], ai[3], ai[4],
 			(double) o->tsd.ship.threat_level, (int32_t) UNIVERSE_DIM, npoints);
 
