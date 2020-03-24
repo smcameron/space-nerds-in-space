@@ -13725,14 +13725,7 @@ static void set_random_seed(int new_seed)
  */
 static union quat choose_solarsystem_orientation(void)
 {
-	int i, len, total;
-
-	/* Choose orientation based on name of solarsystem */
-	total = 0;
-	len = strlen(solarsystem_name);
-	for (i = 0; i < len; i++)
-		total += solarsystem_name[i];
-	return random_orientation[total % NRANDOM_ORIENTATIONS];
+	return random_orientation[snis_randn(10000) % NRANDOM_ORIENTATIONS];
 }
 
 static void populate_universe(void)
