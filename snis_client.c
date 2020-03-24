@@ -3569,6 +3569,7 @@ static struct demon_ui {
 	int exaggerated_scale_active;
 	int netstats_active;
 	int console_active;
+	int log_console;
 } demon_ui;
 
 static void home_demon_camera(void)
@@ -17719,6 +17720,20 @@ static void set_demon_group(int n)
 	dg->nids = count;
 }
 
+static void print_demon_console_msg_helper(char *buffer, int color)
+{
+	if (color >= 0)
+		text_window_add_color_text(demon_ui.console, buffer, color);
+	else
+		text_window_add_text(demon_ui.console, buffer);
+	if (demon_ui.log_console) {
+		int n = strlen(buffer);
+		if (n >= 1 && buffer[n - 1] == '\n')
+			buffer[n - 1] = '\0'; /* prevent doubling newlines */
+		fprintf(stderr, "%s\n", buffer);
+	}
+}
+
 static void print_demon_console_msg(const char *fmt, ...)
 {
 	va_list arg_ptr;
@@ -17727,7 +17742,7 @@ static void print_demon_console_msg(const char *fmt, ...)
 	va_start(arg_ptr, fmt);
 	vsnprintf(buffer, sizeof(buffer) - 1, fmt, arg_ptr);
 	va_end(arg_ptr);
-	text_window_add_text(demon_ui.console, buffer);
+	print_demon_console_msg_helper(buffer, -1);
 }
 
 static void print_demon_console_color_msg(int color, const char *fmt, ...)
@@ -17738,9 +17753,8 @@ static void print_demon_console_color_msg(int color, const char *fmt, ...)
 	va_start(arg_ptr, fmt);
 	vsnprintf(buffer, sizeof(buffer) - 1, fmt, arg_ptr);
 	va_end(arg_ptr);
-	text_window_add_color_text(demon_ui.console, buffer, color);
+	print_demon_console_msg_helper(buffer, color);
 }
-
 
 static struct tweakable_var_descriptor client_tweak[] = {
 	{ "TTS_VOLUME", "TEXT TO SPEECH VOLUME", &text_to_speech_volume, 'f',
@@ -17799,6 +17813,8 @@ static struct tweakable_var_descriptor client_tweak[] = {
 		&ambient_light, 'f', 0.0, 1.0, 0.015, 0, 0, 0 },
 	{ "LOW_POLY_THRESHOLD", "THRESHOLD SIZE IN PIXELS AT WHICH LOW/HIGH POLY MESHES ARE CHOSEN",
 		&low_poly_threshold, 'f', 0.0, 10000.0, 200.0, 0, 0, 0 },
+	{ "LOG_CONSOLE", "LOG CONSOLE OUTPUT TO STDERR IF 1",
+		&demon_ui.log_console, 'i', 0.0, 0.0, 0.0, 0, 1, 0 },
 	{ NULL, NULL, NULL, '\0', 0.0, 0.0, 0.0, 0, 0, 0 },
 };
 
@@ -18586,6 +18602,7 @@ static void init_demon_ui()
 	demon_ui.follow_id = -1;
 	demon_ui.use_3d = 1;
 	demon_ui.console_active = 0;
+	demon_ui.log_console = 0;
 	demon_ui.render_style = DEMON_UI_RENDER_STYLE_WIREFRAME;
 	strcpy(demon_ui.error_msg, "");
 	memset(demon_ui.selected_id, 0, sizeof(demon_ui.selected_id));
