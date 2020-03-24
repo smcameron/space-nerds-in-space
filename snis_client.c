@@ -1844,41 +1844,6 @@ static int update_spacemonster(uint32_t id, uint32_t timestamp, double x, double
 	return 0;
 }
 
-static int update_docking_port(uint32_t id, uint32_t timestamp, double scale,
-		double x, double y, double z, union quat *orientation, uint8_t model)
-{
-	int i;
-	struct entity *e;
-
-	i = lookup_object_by_id(id);
-	if (i < 0) {
-		if (model < 0) {
-			fprintf(stderr, "Bad model number %d at %s:%d\n",
-			model, __FILE__, __LINE__);
-			model = -model;
-		}
-		if (model >= nstarbase_models) {
-			fprintf(stderr, "Bad model number %d at %s:%d\n",
-			model, __FILE__, __LINE__);
-			model = model % nstarbase_models;
-		}
-		int docking_port_model = docking_port_info[model]->docking_port_model;
-		docking_port_model %= NDOCKING_PORT_STYLES;
-		e = add_entity(ecx, docking_port_mesh[docking_port_model], x, y, z, SHIP_COLOR);
-		if (e) {
-			update_entity_scale(e, scale);
-			update_entity_material(e, &docking_port_material);
-		}
-		i = add_generic_object(id, timestamp, x, y, z, 0, 0, 0,
-				orientation, OBJTYPE_DOCKING_PORT, 1, e);
-		if (i < 0)
-			return i;
-	} else
-		update_generic_object(i, timestamp, x, y, z, 0, 0, 0, orientation, 1);
-	go[i].tsd.docking_port.model = model;
-	return 0;
-}
-
 static int update_block(uint32_t id, uint32_t timestamp, double x, double y, double z,
 		double sizex, double sizey, double sizez, union quat *orientation,
 		uint8_t block_material_index, uint8_t health, uint8_t form)
@@ -2341,6 +2306,32 @@ static int update_wormhole(uint32_t id, uint32_t timestamp, double x, double y, 
 	return 0;
 }
 
+static void add_docking_ports_to_starbase(struct snis_entity *sb)
+{
+	struct docking_port_attachment_point *dp;
+	int i, m, starbase_type = (sb->id % nstarbase_models);
+
+	dp = docking_port_info[starbase_type];
+	if (!dp)
+		return;
+	m = dp->docking_port_model;
+	if (m == DOCKING_PORT_INVISIBLE_MODEL)
+		return;
+
+	for (i = 0; i < dp->nports; i++) {
+		struct entity *e;
+		union vec3 pos = dp->port[i].pos;
+		int m = dp->docking_port_model;
+		e = add_entity(ecx, docking_port_mesh[m], pos.v.x, pos.v.y, pos.v.z, SHIP_COLOR);
+		if (!e)
+			continue;
+		update_entity_parent(ecx, e, sb->entity);
+		update_entity_orientation(e, &dp->port[i].orientation);
+		update_entity_scale(e, dp->port[i].scale);
+		update_entity_material(e, &docking_port_material);
+	}
+}
+
 static int update_starbase(uint32_t id, uint32_t timestamp, double x, double y, double z,
 	union quat *orientation, uint8_t occupant[4], uint32_t time_left_to_build, uint8_t build_unit_type,
 	uint8_t starbase_number)
@@ -2354,8 +2345,12 @@ static int update_starbase(uint32_t id, uint32_t timestamp, double x, double y, 
 		e = add_entity(ecx, starbase_mesh[m], x, y, z, STARBASE_COLOR);
 		i = add_generic_object(id, timestamp, x, y, z, 0.0, 0.0, 0.0,
 					orientation, OBJTYPE_STARBASE, 1, e);
-		if (i < 0)
+		if (i < 0) {
+			if (e)
+				remove_entity(ecx, e);
 			return i;
+		}
+		add_docking_ports_to_starbase(&go[i]);
 	} else {
 		update_generic_object(i, timestamp, x, y, z, 0.0, 0.0, 0.0, orientation, 1);
 	}
@@ -3014,10 +3009,6 @@ static void move_objects(void)
 			move_object(timestamp, o, &interpolate_oriented_object);
 			update_shading_planet(o);
 			break;
-		case OBJTYPE_DOCKING_PORT:
-			move_object(timestamp, o, &interpolate_oriented_object);
-			update_shading_planet(o);
-			break;
 		case OBJTYPE_WARPGATE:
 			move_object(timestamp, o, &interpolate_oriented_object);
 			update_shading_planet(o);
@@ -3088,6 +3079,11 @@ static void move_objects(void)
 			move_object(timestamp, o, &interpolate_generic_object);
 			o->move(o);
 			break;
+		case OBJTYPE_DOCKING_PORT:
+			/* Fallthru.  We do not expect docking port objects on the client.
+			 * Docking ports exist on the client only as entities attached to
+			 * starbases.
+			 */
 		default:
 			break;
 		}
@@ -6998,29 +6994,6 @@ static int process_switch_server(void)
 	return 0;
 }
 
-static int process_update_docking_port_packet(void)
-{
-	unsigned char buffer[100];
-	uint32_t id, timestamp;
-	double dx, dy, dz, scale;
-	union quat orientation;
-	int rc;
-	uint8_t model;
-
-	rc = read_and_unpack_buffer(buffer, "wwSSSSQb", &id, &timestamp,
-			&scale, (int32_t) 1000,
-			&dx, (int32_t) UNIVERSE_DIM,
-			&dy, (int32_t) UNIVERSE_DIM,
-			&dz, (int32_t) UNIVERSE_DIM,
-			&orientation, &model);
-	if (rc != 0)
-		return rc;
-	pthread_mutex_lock(&universe_mutex);
-	rc = update_docking_port(id, timestamp, scale, dx, dy, dz, &orientation, model);
-	pthread_mutex_unlock(&universe_mutex);
-	return (rc < 0);
-}
-
 static int process_update_block_packet(void)
 {
 	unsigned char buffer[100];
@@ -7730,9 +7703,6 @@ static void *gameserver_reader(__attribute__((unused)) void *arg)
 			break;
 		case OPCODE_UPDATE_WARP_CORE:
 			rc = process_update_warp_core_packet();
-			break;
-		case OPCODE_UPDATE_DOCKING_PORT:
-			rc = process_update_docking_port_packet();
 			break;
 		case OPCODE_UPDATE_BLOCK:
 			rc = process_update_block_packet();
@@ -10338,7 +10308,6 @@ static int science_tooltip_text(struct science_data *sd, char *buffer, int bufle
 		}
 		break;
 	case OBJTYPE_DERELICT:
-	case OBJTYPE_DOCKING_PORT:
 	case OBJTYPE_BLOCK:
 	case OBJTYPE_TURRET:
 	case OBJTYPE_WARP_CORE:
@@ -10355,6 +10324,7 @@ static int science_tooltip_text(struct science_data *sd, char *buffer, int bufle
 	case OBJTYPE_WARPGATE:
 		snprintf(buffer, buflen, "WARP GATE %s", o->sdata.name);
 		break;
+	case OBJTYPE_DOCKING_PORT: /* we don't have docking port objects, on the client they exist only as entities */
 	default:
 		snprintf(buffer, buflen, "UNKNOWN");
 		break;
@@ -22588,7 +22558,10 @@ static void init_meshes()
 	mesh_cylindrical_yz_uv_map(docking_port_mesh[0]);
 	docking_port_mesh[1] = snis_read_model(d, "docking_port2.stl");
 	mesh_cylindrical_yz_uv_map(docking_port_mesh[1]);
-	docking_port_mesh[2] = snis_read_model(d, "tetrahedron.stl");
+	/* model 2 is the "invisible" docking port for starbases that have their docking ports
+	 * integrated into the starbase model (e.g. starbase/starbase.obj).
+	 */
+	docking_port_mesh[DOCKING_PORT_INVISIBLE_MODEL] = snis_read_model(d, "tetrahedron.stl");
 	nebula_mesh = mesh_fabricate_billboard(2, 2);
 	sun_mesh = mesh_fabricate_billboard(30000, 30000);
 	unit_quad = mesh_fabricate_billboard(1, 1);

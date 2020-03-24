@@ -8,6 +8,7 @@
 struct docking_port_attachment_point {
 	int nports;
 	int docking_port_model;
+#define DOCKING_PORT_INVISIBLE_MODEL 2
 	struct docking_port {
 		float scale;
 		union vec3 pos;

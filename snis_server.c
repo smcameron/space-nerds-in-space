@@ -22594,8 +22594,6 @@ static void send_update_asteroid_packet(struct game_client *c,
 	struct snis_entity *o);
 static void send_update_asteroid_minerals_packet(struct game_client *c,
 	struct snis_entity *o);
-static void send_update_docking_port_packet(struct game_client *c,
-	struct snis_entity *o);
 static void send_update_block_packet(struct game_client *c,
 	struct snis_entity *o);
 static void send_update_turret_packet(struct game_client *c,
@@ -22722,9 +22720,6 @@ static void queue_up_client_object_update(struct game_client *c, struct snis_ent
 	case OBJTYPE_TRACTORBEAM:
 		send_update_tractorbeam_packet(c, o);
 		break;
-	case OBJTYPE_DOCKING_PORT:
-		send_update_docking_port_packet(c, o);
-		break;
 	case OBJTYPE_BLOCK:
 		send_update_block_packet(c, o);
 		break;
@@ -22734,6 +22729,8 @@ static void queue_up_client_object_update(struct game_client *c, struct snis_ent
 	case OBJTYPE_WARP_CORE:
 		send_update_warp_core(c, o);
 		break;
+	case OBJTYPE_DOCKING_PORT:
+		/* fall through (client already knows the docking port info based on the starbase info) */
 	default:
 		break;
 	}
@@ -23807,24 +23804,6 @@ static void send_update_tractorbeam_packet(struct game_client *c,
 	pb_queue_to_client(c, snis_opcode_pkt("bwwww", OPCODE_UPDATE_TRACTORBEAM,
 					o->id, o->timestamp, o->tsd.laserbeam.origin,
 					o->tsd.laserbeam.target));
-}
-
-static void send_update_docking_port_packet(struct game_client *c,
-	struct snis_entity *o)
-{
-	double scale;
-	int model = o->tsd.docking_port.model;
-	int port = o->tsd.docking_port.portnumber;
-
-	scale = docking_port_info[model]->port[port].scale;
-	pb_queue_to_client(c, snis_opcode_pkt("bwwSSSSQb", OPCODE_UPDATE_DOCKING_PORT,
-					o->id, o->timestamp,
-					scale, (int32_t) 1000,
-					o->x, (int32_t) UNIVERSE_DIM,
-					o->y, (int32_t) UNIVERSE_DIM,
-					o->z, (int32_t) UNIVERSE_DIM,
-					&o->orientation,
-					o->tsd.docking_port.model));
 }
 
 static void send_update_block_packet(struct game_client *c,

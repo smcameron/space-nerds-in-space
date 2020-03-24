@@ -247,7 +247,6 @@ int snis_opcode_def_init(void)
 	rc |= init_opcode_def(OPCODE_SCI_ALIGN_TO_SHIP, "b");
 	rc |= init_opcode_def(OPCODE_NAV_TRIDENT_MODE, "bwb");
 	rc |= init_opcode_def(OPCODE_ATMOSPHERIC_FRICTION, "b");
-	rc |= init_opcode_def(OPCODE_UPDATE_DOCKING_PORT, "bwwSSSSQb");
 	rc |= init_opcode_def(OPCODE_DOCKING_MAGNETS, "bwb");
 	rc |= init_opcode_def(OPCODE_CYCLE_NAV_POINT_OF_VIEW, "bb");
 	rc |= init_opcode_def(OPCODE_REQUEST_MINING_BOT, "bw");
