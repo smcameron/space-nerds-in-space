@@ -834,6 +834,9 @@ $(OD)/wwviaudio.o:    wwviaudio.c Makefile ${ODT}
 wwviaudio_basic_test:	wwviaudio.c wwviaudio.h ${OGGOBJ}
 	$(CC) ${MYCFLAGS} -DWWVIAUDIO_BASIC_TEST -DDATADIR=\".\" -o wwviaudio_basic_test wwviaudio.c ${OGGOBJ} ${SNDLIBS}
 
+wwviaudio_recording_test:	wwviaudio.c wwviaudio.h ${OGGOBJ}
+	$(CC) ${MYCFLAGS} -DWWVIAUDIO_RECORDING_TEST -DDATADIR=\".\" -o wwviaudio_recording_test wwviaudio.c ${OGGOBJ} ${SNDLIBS}
+
 $(OD)/shield_strength.o:	shield_strength.c Makefile ${ODT}
 	$(Q)$(COMPILE)
 

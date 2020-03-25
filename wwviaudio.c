@@ -815,3 +815,61 @@ int main(int argc, char *argv[])
 	return rc;
 }
 #endif
+
+#ifdef WWVIAUDIO_RECORDING_TEST
+
+#include <stdio.h>
+#include <stdlib.h>
+
+int16_t audio2[441000];
+int nsamples2;
+
+void recording_callback(void *cookie, int16_t *buffer, int nsamples)
+{
+	printf("recording callback, nsamples = %d\n", nsamples);
+	memcpy(audio2, buffer, nsamples);
+	nsamples2 = nsamples;
+	printf("Saved recorded audio to buffer n = %d\n", nsamples);
+}
+
+int main(int argc, char *argv[])
+{
+	int16_t audio[441000];
+	double average;
+	int16_t max, val;
+	int i, rc;
+
+	printf("wwviaudio recording test\n");
+	rc = wwviaudio_initialize_portaudio(10, 10);
+	if (rc != 0) {
+		wwviaudio_stop_portaudio();
+		return rc;
+	}
+	memset(audio2, 0, sizeof(audio2));
+	nsamples2 = 0;
+	printf("Recording 10 secs of audio...\n");
+	rc = wwviaudio_start_audio_capture(audio, 441000, recording_callback, NULL);
+	printf("Recording started, sleeping, rc = .%d\n", rc);
+	sleep(11);
+
+	max = 0;
+	average = 0.0;
+	for (i = 0; i < nsamples2; i++) {
+		val = audio2[i];
+		if (val < 0)
+			val = -val;
+		if (val > max)
+			max = val;
+		average += val;
+	}
+	average = average / (double) nsamples2;
+	printf("max = %d, average = %f, nsamples2 = %d\n", max, average, nsamples2);
+
+	rc = wwviaudio_add_one_shot_pcm_data(audio2, nsamples2, NULL, NULL);
+	printf("Playing back recorded audio (nsamples2=%d) rc = %d\n", nsamples2, rc);
+	sleep(11);
+	printf("Finished playing back recorded audio, rc = %d.\n", rc);
+	wwviaudio_stop_portaudio();
+	return rc;
+}
+#endif
