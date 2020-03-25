@@ -151,6 +151,12 @@ GLOBAL int wwviaudio_add_one_shot_sound(char *filename);
 GLOBAL int wwviaudio_add_one_shot_pcm_data(int16_t *samples, int nsamples,
 				void (*callback)(void *), void *cookie);
 
+/* Add to the end of single audio chain that is playing (if not empty).
+ * This is for e.g. voice chat. The callback function is called with cookie
+ * as a parameter, useful for e.g. freeing the used audio buffer.
+ */
+GLOBAL void wwviaudio_append_to_audio_chain(int16_t *samples, int nsamples,
+		void (*callback)(void *), void *cookie);
 
 /* Begin playing a segment of a sound at "begin" until "end" at "volume" (all between 0.0 and 1.0).
  * Upon reaching "end", call "callback" with "cookie" as a parameter.

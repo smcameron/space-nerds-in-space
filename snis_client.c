@@ -132,6 +132,7 @@
 #include "planetary_properties.h"
 #include "xdg_base_dir_spec.h"
 #include "open-simplex-noise.h"
+#include "snis_voice_chat.h"
 
 #define SHIP_COLOR CYAN
 #define STARBASE_COLOR RED
@@ -835,7 +836,6 @@ static double quat_to_heading(const union quat *q)
 	return atan2(-v.v.z, v.v.x);
 }
 
-static void print_demon_console_msg(const char *fmt, ...);
 static void print_demon_console_color_msg(int color, const char *fmt, ...);
 static void set_object_location(struct snis_entity *o, double x, double y, double z)
 {
@@ -3381,7 +3381,7 @@ static void scale_points(struct my_point_t *points, int npoints,
 
 static void wakeup_gameserver_writer(void);
 
-static void queue_to_server(struct packed_buffer *pb)
+void queue_to_server(struct packed_buffer *pb)
 {
 	if (!pb) {
 		stacktrace("snis_client: NULL packed_buffer in queue_to_server()");
@@ -4397,6 +4397,12 @@ static gint key_press_cb(GtkWidget* widget, GdkEventKey* event, gpointer data)
 		return TRUE;
 	}
 
+	if (event->keyval == GDK_F12) {
+		if (control_key_pressed)
+			voice_chat_start_recording(VOICE_CHAT_DESTINATION_ALL, 0);
+		else
+			voice_chat_start_recording(VOICE_CHAT_DESTINATION_CREW, 0);
+	}
 #if 0
 	printf("event->keyval = 0x%08x, GDK_z = %08x, GDK_space = %08x\n", event->keyval, GDK_z, GDK_space);
 #endif
@@ -4640,6 +4646,9 @@ static gint key_release_cb(GtkWidget* widget, GdkEventKey* event, gpointer data)
 		ka = ffkeymap[displaymode][event->keyval & 0x00ff];
 	if (ka > 0 && ka < NKEYSTATES)
 		kbstate.pressed[ka] = 0;
+
+	if (event->keyval == GDK_F12)
+		voice_chat_stop_recording();
 
 	return FALSE;
 }
@@ -7687,6 +7696,30 @@ static int process_request_oneshot_sound(void)
 	return 0;
 }
 
+static int process_opus_audio_data(void)
+{
+	int rc;
+	uint8_t buffer[4008];
+	uint8_t destination;
+	uint32_t radio_channel;
+	uint16_t datalen;
+
+	rc = read_and_unpack_buffer(buffer, "bwh",
+			&destination, &radio_channel, &datalen);
+	if (rc)
+		return rc;
+	if (datalen > 4000) {
+		fprintf(stderr, "%s: Unexpected opus audio data length of %u\n",
+				"snis_client", datalen);
+		return -1;
+	}
+	rc = snis_readsocket(gameserver_sock, buffer, datalen);
+	if (rc)
+		return rc;
+	voice_chat_play_opus_packet(buffer, datalen);
+	return 0;
+}
+
 static int process_custom_button(void);
 static int process_console_op(void);
 static int process_client_config(void);
@@ -7994,6 +8027,11 @@ static void *gameserver_reader(__attribute__((unused)) void *arg)
 			break;
 		case OPCODE_REQUEST_ONESHOT_SOUND:
 			rc = process_request_oneshot_sound();
+			if (rc)
+				goto protocol_error;
+			break;
+		case OPCODE_OPUS_AUDIO_DATA:
+			rc = process_opus_audio_data();
 			if (rc)
 				goto protocol_error;
 			break;
@@ -17763,7 +17801,7 @@ static void print_demon_console_msg_helper(char *buffer, int color)
 	}
 }
 
-static void print_demon_console_msg(const char *fmt, ...)
+void print_demon_console_msg(const char *fmt, ...)
 {
 	va_list arg_ptr;
 	char buffer[256];
@@ -23255,6 +23293,7 @@ int main(int argc, char *argv[])
 	setup_natural_language_fifo();
 	setup_demon_fifo();
 	setup_text_to_speech_thread();
+	voice_chat_setup_threads();
 	ecx = entity_context_new(5000, 5000);
 
 	snis_slider_mouse_position_query(&mouse.x, &mouse.y);

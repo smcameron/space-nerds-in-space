@@ -522,7 +522,7 @@ _COMMONCLIENTOBJS= snis_ui_element.o snis_font.o snis_text_input.o \
 	snis_strip_chart.o material.o stl_parser.o entity.o matrix.o my_point.o liang-barsky.o joystick.o \
 	quat.o vec4.o thrust_attachment.o docking_port.o ui_colors.o snis_keyboard.o solarsystem_config.o \
 	pronunciation.o snis_preferences.o snis_pull_down_menu.o snis_client_debug.o starmap_adjacency.o \
-	shape_collision.o oriented_bounding_box.o xdg_base_dir_spec.o
+	shape_collision.o oriented_bounding_box.o xdg_base_dir_spec.o snis_voice_chat.o
 COMMONCLIENTOBJS=${COMMONOBJS} ${OGGOBJ} ${SNDOBJS} $(patsubst %,$(OD)/%,${_COMMONCLIENTOBJS}) 
 
 _CLIENTOBJS= shader.o graph_dev_opengl.o opengl_cap.o snis_graph.o snis_client.o joystick_config.o
@@ -642,9 +642,13 @@ VORBISFLAGS:=$(subst -I,-isystem ,$(shell $(PKG_CONFIG) --cflags vorbisfile))
 ifeq (${WITHVOICECHAT},yes)
 LIBOPUS=-L. -lopus
 OPUSARCHIVE=libopus.a
+VCHAT=-DWITHVOICECHAT=1
+OPUSINCLUDE=-I./opus-1.3.1/include
 else
 LIBOPUS=
 OPUSARCHIVE=
+VCHAT=
+OPUSINCLUDE=
 endif
 
 ifeq (${V},1)
@@ -665,7 +669,7 @@ SNISSERVERDBGCOMPILE=$(ECHO) '  COMPILE' $< && $(CC) -DSNIS_SERVER_DATA ${MYCFLA
 SNISCLIENTDBGCOMPILE=$(ECHO) '  COMPILE' $< && $(CC) -DSNIS_CLIENT_DATA ${MYCFLAGS} ${LUACFLAGS} -c -o $(OD)/snis_client_debug.o $<
 
 CLIENTLINK=$(ECHO) '  LINK' $@ && $(CC) ${MYCFLAGS} ${SNDFLAGS} -o $@ ${GTKCFLAGS} ${GLEXTCFLAGS} ${CLIENTOBJS} ${GTKLDFLAGS} ${GLEXTLDFLAGS} ${LIBS} ${SNDLIBS} $(LDFLAGS) ${LIBOPUS}
-LIMCLIENTLINK=$(ECHO) '  LINK' $@ && $(CC) ${MYCFLAGS} ${SNDFLAGS} -o $@ ${GTKCFLAGS} ${LIMCLIENTOBJS} ${GLEXTLDFLAGS} ${LIBS} ${SNDLIBS} $(LDFLAGS)
+LIMCLIENTLINK=$(ECHO) '  LINK' $@ && $(CC) ${MYCFLAGS} ${SNDFLAGS} -o $@ ${GTKCFLAGS} ${LIMCLIENTOBJS} ${GLEXTLDFLAGS} ${LIBS} ${SNDLIBS} $(LDFLAGS) ${LIBOPUS}
 SDLCLIENTLINK=$(ECHO) '  LINK' $@ && $(CC) ${MYCFLAGS} ${SNDFLAGS} -o $@ ${SDLCFLAGS} ${SDLCLIENTOBJS} ${SDLLIBS} ${LIBS} ${SNDLIBS} $(LDFLAGS)
 SERVERLINK=$(ECHO) '  LINK' $@ && $(CC) ${MYCFLAGS} -o $@ ${SERVEROBJS} ${SERVERLIBS} $(LDFLAGS)
 MULTIVERSELINK=$(ECHO) '  LINK' $@ && $(CC) ${MYCFLAGS} -o $@ ${MULTIVERSEOBJS} ${MULTIVERSELIBS} $(LDFLAGS)
@@ -856,11 +860,11 @@ $(OD)/snis_server_tracker.o:	snis_server_tracker.c snis_server_tracker.h pthread
 	$(Q)$(COMPILE)
 
 $(OD)/snis_client.o:	snis_client.c Makefile build_info.h ui_colors.h ${ODT}
-	$(Q)$(GLEXTCOMPILE)
+	$(Q)$(GLEXTCOMPILE) ${VCHAT}
 
 $(OD)/snis_limited_client.o:	snis_client.c Makefile build_info.h ${ODT}
 	@echo -n "  (limited client) "
-	$(Q)$(LIMCOMPILE)
+	$(Q)$(LIMCOMPILE) ${VCHAT}
 
 $(OD)/mesh_viewer.o:	mesh_viewer.c Makefile build_info.h ${ODT}
 	$(Q)$(SDLCOMPILE)
@@ -1038,6 +1042,9 @@ $(OD)/matrix.o:	matrix.c Makefile ${ODT}
 
 $(OD)/starmap_adjacency.o:	starmap_adjacency.c starmap_adjacency.h $(OD)/quat.o $(OD)/vec4.o ${ODT}
 	$(Q)$(COMPILE)
+
+$(OD)/snis_voice_chat.o:	snis_voice_chat.c snis_voice_chat.h pthread_util.h wwviaudio.h ${OPUSARCHIVE}
+	$(Q)$(COMPILE) ${VCHAT} ${OPUSINCLUDE}
 
 $(OD)/replacement_assets.o:	replacement_assets.c replacement_assets.h ${ODT}
 	$(Q)$(COMPILE)
@@ -1421,6 +1428,7 @@ scan-build:
 	scan-build -o /tmp/snis-scan-build-output make CC=clang
 	xdg-open /tmp/snis-scan-build-output/*/index.html
 
+# opus stuff for voice chat
 opus-1.3.1.tar.gz:
 	wget https://archive.mozilla.org/pub/opus/opus-1.3.1.tar.gz
 

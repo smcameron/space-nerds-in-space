@@ -38,7 +38,9 @@
 #include "portaudio.h"
 #include "ogg_to_pcm.h"
 
-#define FRAMES_PER_BUFFER  (1024)
+/* This must be one of 120, 240, 480, 960, 1920, and 2880, at least until
+ * I write the code to resample 44100hz data to a rate opus supports */
+#define FRAMES_PER_BUFFER  (1920)
 
 static PaStream *stream = NULL;
 static int audio_paused = 0;
@@ -53,6 +55,7 @@ static int allocated_sound_clips = 0;
 static int one_shot_busy = 0;
 static pthread_mutex_t one_shot_mutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t recording_mutex = PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t audio_chain_mutex = PTHREAD_MUTEX_INITIALIZER;
 static int busy_recording = 0;
 
 /* Pause all audio output, output silence. */
@@ -122,9 +125,12 @@ struct audio_queue_entry {
 	float delta_volume;
 	void (*callback)(void *cookie);
 	void *cookie;
+	void *next;
 };
 
 static struct audio_queue_entry *audio_queue = NULL;
+static struct audio_queue_entry *audio_chain_head = NULL;
+static struct audio_queue_entry *audio_chain_tail = NULL;
 
 int wwviaudio_read_ogg_clip_into_allocated_buffer(char *filename, int16_t **sample, int *nsamples)
 {
@@ -229,9 +235,10 @@ static int wwviaudio_mixer_loop(__attribute__ ((unused)) const void *inputBuffer
 	}
 
 	for (i = 0; i < framesPerBuffer; i++) {
+		struct audio_queue_entry *q;
 		output = 0.0;
 		for (j = 0; j < max_concurrent_sounds; j++) {
-			struct audio_queue_entry *q = &audio_queue[j];
+			q = &audio_queue[j];
 			if (!q->active || q->sample == NULL)
 				continue;
 			sample = i + q->pos;
@@ -242,6 +249,27 @@ static int wwviaudio_mixer_loop(__attribute__ ((unused)) const void *inputBuffer
 				q->volume += q->delta_volume;
 			} else if (j == WWVIAUDIO_MUSIC_SLOT && music_playing) {
 				output += (float) q->sample[sample] / (float) (INT16_MAX);
+			}
+		}
+		/* Now mix in any audio chain... */
+		pthread_mutex_lock(&audio_chain_mutex);
+		q = audio_chain_head;
+		pthread_mutex_unlock(&audio_chain_mutex);
+		if (q && q->active && q->sample) {
+			if (q && q->pos >= q->nsamples) {
+				struct audio_queue_entry *oldq = q;
+				pthread_mutex_lock(&audio_chain_mutex);
+				audio_chain_head = q->next; /* Advance to next piece of the chain */
+				q = audio_chain_head;
+				pthread_mutex_unlock(&audio_chain_mutex);
+				if (oldq->callback)
+					oldq->callback(oldq->cookie);
+				free(oldq);
+			}
+			if (q) {
+				output += (float) q->sample[q->pos] * q->volume / (float) (INT16_MAX);
+				q->volume += q->delta_volume;
+				q->pos++;
 			}
 		}
 		*out++ = (float) output;
@@ -427,6 +455,7 @@ static int wwviaudio_add_sound_segment_to_slot(int which_sound, int which_slot, 
 		audio_queue[which_slot].cookie = cookie;
 		audio_queue[which_slot].volume = initial_volume;
 		audio_queue[which_slot].delta_volume = (target_volume - initial_volume) / (stop - start);
+		audio_queue[which_slot].next = NULL;
 		/* would like to put a memory barrier here. */
 		audio_queue[which_slot].active = 1;
 		return which_slot;
@@ -442,6 +471,7 @@ static int wwviaudio_add_sound_segment_to_slot(int which_sound, int which_slot, 
 			audio_queue[i].cookie = cookie;
 			audio_queue[i].volume = initial_volume;
 			audio_queue[i].delta_volume = (target_volume - initial_volume) / (stop - start);
+			audio_queue[i].next = NULL;
 			audio_queue[i].active = 1;
 			break;
 		}
@@ -669,6 +699,7 @@ int wwviaudio_start_audio_capture(int16_t *buffer, int nsamples,
 {
 	PaStreamParameters params;
 	PaError rc = paNoError;
+	static PaDeviceIndex default_input = -1;
 
 	pthread_mutex_lock(&recording_mutex);
 	if (busy_recording) {
@@ -678,13 +709,16 @@ int wwviaudio_start_audio_capture(int16_t *buffer, int nsamples,
 	busy_recording = 1;
 	pthread_mutex_unlock(&recording_mutex);
 
-	params.device = Pa_GetDefaultInputDevice();
-	if (params.device == paNoDevice) {
-		fprintf(stderr, "No default input audio device\n");
-		busy_recording = 0;
-		pthread_mutex_unlock(&recording_mutex);
-		return -1;
+	if (default_input == -1) {
+		default_input = Pa_GetDefaultInputDevice();
+		if (default_input == paNoDevice) {
+			fprintf(stderr, "No default input audio device\n");
+			busy_recording = 0;
+			pthread_mutex_unlock(&recording_mutex);
+			return -1;
+		}
 	}
+	params.device = default_input;
 	params.channelCount = 1;
 	params.sampleFormat = paInt16;
 	params.suggestedLatency = Pa_GetDeviceInfo(params.device)->defaultLowInputLatency;
@@ -698,7 +732,7 @@ int wwviaudio_start_audio_capture(int16_t *buffer, int nsamples,
 	record_data.stop_recording = 0;
 	record_data.stream = NULL;
 
-	rc = Pa_OpenStream(&record_data.stream, &params, NULL, 44100, FRAMES_PER_BUFFER, paClipOff,
+	rc = Pa_OpenStream(&record_data.stream, &params, NULL, WWVIAUDIO_SAMPLE_RATE, FRAMES_PER_BUFFER, paClipOff,
 				wwviaudio_record_cb, &record_data);
 	if (rc != paNoError)
 		goto error;
@@ -721,7 +755,7 @@ int wwviaudio_stop_audio_capture()
 	if (!record_data.stream)
 		return 0;
 	while ((rc = Pa_IsStreamActive(record_data.stream)) == 1) {
-		Pa_Sleep(100);
+		Pa_Sleep(1);
 	}
 	if (rc < 0)
 		goto error;
@@ -731,6 +765,34 @@ int wwviaudio_stop_audio_capture()
 	return 0;
 error:
 	return -1;
+}
+
+void wwviaudio_append_to_audio_chain(int16_t *samples, int nsamples, void (*callback)(void *), void *cookie)
+{
+	struct audio_queue_entry *entry = malloc(sizeof(*entry));
+
+	entry->active = 1;
+	entry->pos = 0;
+	entry->nsamples = nsamples;
+	entry->pos = 0;
+	entry->sample = samples;
+	entry->nsamples = nsamples;
+	entry->callback = callback;
+	entry->cookie = cookie;
+	entry->volume = 1.0;
+	entry->delta_volume = 0.0;
+	entry->next = NULL;
+
+	pthread_mutex_lock(&audio_chain_mutex);
+	if (!audio_chain_head) {
+		audio_chain_head = entry;
+		audio_chain_tail = entry;
+		pthread_mutex_unlock(&audio_chain_mutex);
+		return;
+	}
+	audio_chain_tail->next = entry;
+	audio_chain_tail = entry;
+	pthread_mutex_unlock(&audio_chain_mutex);
 }
 
 #else /* stubs only... */
@@ -758,6 +820,7 @@ void wwviaudio_cancel_sound(int queue_entry) { return; }
 void wwviaudio_cancel_all_sounds() { return; }
 int wwviaudio_set_sound_device(int device) { return 0; }
 void wwviaudio_list_devices(void) {}
+void wwviaudio_append_to_audio_chain(int16_t *samples, int nsamples) {}
 
 #endif
 

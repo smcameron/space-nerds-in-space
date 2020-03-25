@@ -121,6 +121,7 @@
 #include "shape_collision.h"
 #include "planetary_ring_data.h"
 #include "scipher.h"
+#include "snis_voice_chat.h"
 
 #define CLIENT_UPDATE_PERIOD_NSECS 500000000
 #define MAXCLIENTS 100
@@ -2006,7 +2007,6 @@ static void send_packet_to_all_clients_on_a_bridge_except(uint32_t shipid, struc
 			if (skip)
 				continue;
 		}
-
 		pbc = packed_buffer_copy(pb);
 		pb_queue_to_client(c, pbc);
 	}
@@ -2256,7 +2256,7 @@ static void send_packet_to_requestor_plus_role_on_a_bridge(struct game_client *r
 	client_unlock();
 }
 
-__attribute__((unused)) static void send_packet_to_all_clients_except(struct packed_buffer *pb, uint32_t roles, struct except_clients *except)
+static void send_packet_to_all_clients_except(struct packed_buffer *pb, uint32_t roles, struct except_clients *except)
 {
 	send_packet_to_all_clients_on_a_bridge_except(ANY_SHIP_ID, pb, roles, except);
 }
@@ -20046,6 +20046,52 @@ static int process_comms_crypto(struct game_client *c)
 	return 0;
 }
 
+static int process_opus_audio_data(struct game_client *c)
+{
+	int rc;
+	uint8_t buffer[4008];
+	uint8_t destination;
+	uint32_t radio_channel;
+	uint16_t datalen;
+	struct packed_buffer *pb;
+	struct except_clients except;
+
+	rc = read_and_unpack_buffer(c, buffer, "bwh",
+			&destination, &radio_channel, &datalen);
+	if (rc)
+		return rc;
+	if (datalen > 4000) {
+		fprintf(stderr, "%s: Unexpected opus audio data length of %hu\n",
+				logprefix(), datalen);
+		return -1;
+	}
+	rc = snis_readsocket(c->socket, buffer, datalen);
+	if (rc)
+		return rc;
+	pb = packed_buffer_allocate(8 + datalen);
+	packed_buffer_append(pb, "bbwhr", OPCODE_OPUS_AUDIO_DATA,
+				destination, radio_channel, datalen, buffer, datalen);
+
+	/* Don't send a client's own audio back at him. */
+	except.nclients = 1;
+	except.client[0] = c - &client[0];
+	except.shipid[0] = c->shipid;
+
+	switch (destination) {
+	case VOICE_CHAT_DESTINATION_CREW:
+		send_packet_to_all_clients_on_a_bridge_except(c->shipid, pb, ROLE_ALL, &except);
+		break;
+	case VOICE_CHAT_DESTINATION_ALL:
+	case VOICE_CHAT_DESTINATION_CHANNEL: /* TODO: implement radio channels */
+		send_packet_to_all_clients_except(pb, ROLE_ALL, &except);
+		break;
+	default:
+		fprintf(stderr, "Unexpected destination code %hhu in opus audio packet\n", destination);
+		return -1;
+	}
+	return 0;
+}
+
 static int process_toggle_demon_ai_debug_mode(struct game_client *c)
 {
 	c->debug_ai = !c->debug_ai;
@@ -22777,6 +22823,11 @@ static void process_instructions_from_client(struct game_client *c)
 			break;
 		case OPCODE_COMMS_CRYPTO:
 			rc = process_comms_crypto(c);
+			if (rc)
+				goto protocol_error;
+			break;
+		case OPCODE_OPUS_AUDIO_DATA:
+			rc = process_opus_audio_data(c);
 			if (rc)
 				goto protocol_error;
 			break;
