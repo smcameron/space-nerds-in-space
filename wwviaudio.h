@@ -132,6 +132,19 @@ GLOBAL /* channel */ int wwviaudio_add_sound(int sound_number);
  */
 GLOBAL int wwviaudio_add_one_shot_sound(char *filename);
 
+/* Play one-shot sound from pcm data in samples, nsamples. When sound finishes
+ * callback will be called, passing the cookie along.
+ * You can stream audio data to be played by making each callback submit
+ * more data to play.
+ *
+ * Returns 0 on success, -1 means previous sound is still playing.
+ * Shares an audio slot with wwviaudio_add_one_shot_sound, above, so the
+ * the two may not play sounds concurrently.
+ */
+GLOBAL int wwviaudio_add_one_shot_pcm_data(int16_t *samples, int nsamples,
+				void (*callback)(void *), void *cookie);
+
+
 /* Begin playing a segment of a sound at "begin" until "end" at "volume" (all between 0.0 and 1.0).
  * Upon reaching "end", call "callback" with "cookie" as a parameter.
  */
