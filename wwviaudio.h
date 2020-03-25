@@ -184,6 +184,11 @@ GLOBAL void wwviaudio_cancel_all_sounds(void);
 /* List available devices */
 GLOBAL void wwviaudio_list_devices(void);
 
+GLOBAL int wwviaudio_start_audio_capture(int16_t *buffer, int nsamples,
+	void (*callback)(void *, int16_t *, int), void *cookie);
+
+GLOBAL int wwviaudio_stop_audio_capture();
+
 /*
 	Example usage, something along these lines:
 

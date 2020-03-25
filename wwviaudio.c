@@ -52,6 +52,8 @@ static int max_sound_clips = 0;
 static int allocated_sound_clips = 0;
 static int one_shot_busy = 0;
 static pthread_mutex_t one_shot_mutex = PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t recording_mutex = PTHREAD_MUTEX_INITIALIZER;
+static int busy_recording = 0;
 
 /* Pause all audio output, output silence. */
 void wwviaudio_pause_audio(void)
@@ -626,6 +628,111 @@ void wwviaudio_list_devices(void)
 		}
 		printf("%d: %s\n", i, devinfo->name);
 	}
+}
+
+static struct wwviaudio_record_data {
+	PaStream *stream;
+	void *cookie;
+	void (*callback)(void *, int16_t *, int);
+	int16_t *sample;
+	int pos;
+	int total_samples;
+	int stop_recording;
+} record_data;
+
+static int wwviaudio_record_cb(const void *input_buffer,
+		__attribute__((unused)) void *outputBuffer,
+		unsigned long frames_per_buffer,
+		const PaStreamCallbackTimeInfo *time_info,
+		PaStreamCallbackFlags status_flags,
+		void *dataptr)
+{
+	struct wwviaudio_record_data *d = dataptr;
+	int left = d->total_samples - d->pos;
+	int count = left < frames_per_buffer ?  left : frames_per_buffer;
+	if (!input_buffer)
+		memset(&d->sample[d->pos], 0, sizeof(int16_t) * count);
+	else
+		memcpy(&d->sample[d->pos], input_buffer, sizeof(int16_t) * count);
+	d->pos += count;
+
+	if (d->pos >= d->total_samples) {
+		if (d->callback)
+			d->callback(d->cookie, d->sample, d->total_samples);
+		d->pos = 0; /* Start over */
+		if (d->stop_recording)
+			return paComplete;
+	}
+	return paContinue;
+}
+
+int wwviaudio_start_audio_capture(int16_t *buffer, int nsamples,
+				void (*callback)(void *, int16_t *, int), void *cookie)
+{
+	PaStreamParameters params;
+	PaError rc = paNoError;
+
+	pthread_mutex_lock(&recording_mutex);
+	if (busy_recording) {
+		pthread_mutex_unlock(&recording_mutex);
+		return -1;
+	}
+	busy_recording = 1;
+	pthread_mutex_unlock(&recording_mutex);
+
+	params.device = Pa_GetDefaultInputDevice();
+	if (params.device == paNoDevice) {
+		fprintf(stderr, "No default input audio device\n");
+		busy_recording = 0;
+		pthread_mutex_unlock(&recording_mutex);
+		return -1;
+	}
+	params.channelCount = 1;
+	params.sampleFormat = paInt16;
+	params.suggestedLatency = Pa_GetDeviceInfo(params.device)->defaultLowInputLatency;
+	params.hostApiSpecificStreamInfo = NULL;
+
+	record_data.sample = buffer;
+	record_data.pos = 0;
+	record_data.total_samples = nsamples;
+	record_data.cookie = cookie;
+	record_data.callback = callback;
+	record_data.stop_recording = 0;
+	record_data.stream = NULL;
+
+	rc = Pa_OpenStream(&record_data.stream, &params, NULL, 44100, FRAMES_PER_BUFFER, paClipOff,
+				wwviaudio_record_cb, &record_data);
+	if (rc != paNoError)
+		goto error;
+	rc = Pa_StartStream(record_data.stream);
+	if (rc != paNoError)
+		goto error;
+	return 0;
+error:
+	return -1;
+}
+
+int wwviaudio_stop_audio_capture()
+{
+	PaError rc = paNoError;
+
+	pthread_mutex_lock(&recording_mutex);
+	busy_recording = 0;
+	pthread_mutex_unlock(&recording_mutex);
+	record_data.stop_recording = 1;
+	if (!record_data.stream)
+		return 0;
+	while ((rc = Pa_IsStreamActive(record_data.stream)) == 1) {
+		Pa_Sleep(100);
+	}
+	if (rc < 0)
+		goto error;
+	rc = Pa_CloseStream(record_data.stream);
+	if (rc != paNoError)
+		goto error;
+	return 0;
+error:
+	return -1;
 }
 
 #else /* stubs only... */
