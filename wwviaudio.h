@@ -75,6 +75,13 @@ GLOBAL void wwviaudio_stop_portaudio(void);
  *             Audio data functions
  */
 
+/* Read and decode an ogg vorbis audio file into a newly allocated buffer
+ * 0 is returned on success, -1 otherwise.
+ * Audio files should be 44100Hz, MONO.
+ * sample[] will contain the data, *nsamples the number of samples in sample[].
+ */
+GLOBAL int wwviaudio_read_ogg_clip_into_allocated_buffer(char *filename, int16_t **sample, int *nsamples);
+
 /* Read and decode an ogg vorbis audio file into a numbered buffer
  * The sound_number parameter is used later with wwviaudio_play_music and
  * wwviaudio_add_sound.  0 is returned on success, -1 otherwise.

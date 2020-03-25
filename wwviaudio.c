@@ -124,7 +124,7 @@ struct audio_queue_entry {
 
 static struct audio_queue_entry *audio_queue = NULL;
 
-static int wwviaudio_read_ogg_clip_internal(int clipnum, char *filename)
+int wwviaudio_read_ogg_clip_into_allocated_buffer(char *filename, int16_t **sample, int *nsamples)
 {
 	uint64_t nframes;
 	char filebuf[PATH_MAX + 1];
@@ -132,9 +132,6 @@ static int wwviaudio_read_ogg_clip_internal(int clipnum, char *filename)
 	int samplesize, sample_rate;
 	int nchannels;
 	int rc;
-
-	if (clipnum >= allocated_sound_clips || clipnum < 0)
-		return -1;
 
 #ifndef __WIN32__
 	snprintf(filebuf, PATH_MAX, "%s/%s", DATADIR, filename);
@@ -161,13 +158,9 @@ static int wwviaudio_read_ogg_clip_internal(int clipnum, char *filename)
 	printf("sections = %d\n", sfinfo.sections);
 	printf("seekable = %d\n", sfinfo.seekable);
 */
-	if (clip[clipnum].sample != NULL)
-		/* overwriting a previously read clip... */
-		free(clip[clipnum].sample);
-
-	rc = ogg_to_pcm(filebuf, &clip[clipnum].sample, &samplesize,
+	rc = ogg_to_pcm(filebuf, sample, &samplesize,
 		&sample_rate, &nchannels, &nframes);
-	if (clip[clipnum].sample == NULL) {
+	if (*sample == NULL) {
 		printf("Can't get memory for sound data for %"PRIu64" frames in %s\n",
 			nframes, filebuf);
 		goto error;
@@ -179,13 +172,25 @@ static int wwviaudio_read_ogg_clip_internal(int clipnum, char *filename)
 		goto error;
 	}
 
-	clip[clipnum].nsamples = (int) nframes;
-	if (clip[clipnum].nsamples < 0)
-		clip[clipnum].nsamples = 0;
+	*nsamples = (int) nframes;
+	if (*nsamples < 0)
+		*nsamples = 0;
 
 	return 0;
 error:
 	return -1;
+}
+
+static int wwviaudio_read_ogg_clip_internal(int clipnum, char *filename)
+{
+	if (clipnum >= allocated_sound_clips || clipnum < 0)
+		return -1;
+
+	if (clip[clipnum].sample != NULL) /* overwriting a previously read clip...? */
+		free(clip[clipnum].sample);
+
+	return wwviaudio_read_ogg_clip_into_allocated_buffer(filename, &clip[clipnum].sample,
+					&clip[clipnum].nsamples);
 }
 
 int wwviaudio_read_ogg_clip(int clipnum, char *filename)
