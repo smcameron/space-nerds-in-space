@@ -23296,7 +23296,7 @@ static void send_econ_update_ship_packet(struct game_client *c,
 		v = o->tsd.ship.ai[n].u.cop.p;
 	}
 
-	pb = packed_buffer_allocate(6 + sizeof(uint32_t) + sizeof(uint32_t) * 3 * npoints);
+	pb = packed_buffer_allocate(4 + 6 + sizeof(uint32_t) + sizeof(uint32_t) * 3 * npoints);
 	if (!pb)
 		return;
 
