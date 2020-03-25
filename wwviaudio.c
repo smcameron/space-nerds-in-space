@@ -199,7 +199,7 @@ int wwviaudio_read_ogg_clip(int clipnum, char *filename)
 ** It may called at interrupt level on some machines so don't do anything
 ** that could mess up the system like calling malloc() or free().
 */
-static int patestCallback(__attribute__ ((unused)) const void *inputBuffer,
+static int wwviaudio_mixer_loop(__attribute__ ((unused)) const void *inputBuffer,
 	void *outputBuffer,
 	unsigned long framesPerBuffer,
 	__attribute__ ((unused)) const PaStreamCallbackTimeInfo* timeInfo,
@@ -225,31 +225,31 @@ static int patestCallback(__attribute__ ((unused)) const void *inputBuffer,
 		output = 0.0;
 		count = 0;
 		for (j = 0; j < max_concurrent_sounds; j++) {
-			if (!audio_queue[j].active ||
-				audio_queue[j].sample == NULL)
+			struct audio_queue_entry *q = &audio_queue[j];
+			if (!q->active || q->sample == NULL)
 				continue;
-			sample = i + audio_queue[j].pos;
+			sample = i + q->pos;
 			count++;
-			if (sample >= audio_queue[j].nsamples)
+			if (sample >= q->nsamples)
 				continue;
 			if (j != WWVIAUDIO_MUSIC_SLOT && sound_effects_on) {
-				output += (float) audio_queue[j].sample[sample] *
-					audio_queue[j].volume * 0.5 / (float) (INT16_MAX);
-				audio_queue[j].volume += audio_queue[j].delta_volume;
+				output += (float) q->sample[sample] * q->volume * 0.5 / (float) (INT16_MAX);
+				q->volume += q->delta_volume;
 			} else if (j == WWVIAUDIO_MUSIC_SLOT && music_playing) {
-				output += (float) audio_queue[j].sample[sample] / (float) (INT16_MAX);
+				output += (float) q->sample[sample] / (float) (INT16_MAX);
 			}
 		}
 		*out++ = (float) output;
         }
 	for (i = 0; i < max_concurrent_sounds; i++) {
-		if (!audio_queue[i].active)
+		struct audio_queue_entry *q = &audio_queue[i];
+		if (!q->active)
 			continue;
-		audio_queue[i].pos += framesPerBuffer;
-		if (audio_queue[i].pos >= audio_queue[i].nsamples) {
-			audio_queue[i].active = 0;
-			if (audio_queue[i].callback)
-				audio_queue[i].callback(audio_queue[i].cookie);
+		q->pos += framesPerBuffer;
+		if (q->pos >= q->nsamples) {
+			q->active = 0;
+			if (q->callback)
+				q->callback(q->cookie);
 		}
 	}
 	return 0; /* we're never finished */
@@ -340,7 +340,7 @@ int wwviaudio_initialize_portaudio(int maximum_concurrent_sounds, int maximum_so
 		NULL,         /* no input */
 		&outparams, WWVIAUDIO_SAMPLE_RATE, FRAMES_PER_BUFFER,
 		paNoFlag, /* paClipOff, */   /* we won't output out of range samples so don't bother clipping them */
-		patestCallback, NULL /* cookie */);
+		wwviaudio_mixer_loop, NULL /* cookie */);
 	if (rc != paNoError)
 		goto error;
 	if ((rc = Pa_StartStream(stream)) != paNoError)
