@@ -831,6 +831,9 @@ $(OD)/bline.o:	bline.c Makefile ${ODT}
 $(OD)/wwviaudio.o:    wwviaudio.c Makefile ${ODT}
 	$(Q)$(VORBISCOMPILE)
 
+wwviaudio_basic_test:	wwviaudio.c wwviaudio.h ${OGGOBJ}
+	$(CC) ${MYCFLAGS} -DWWVIAUDIO_BASIC_TEST -DDATADIR=\".\" -o wwviaudio_basic_test wwviaudio.c ${OGGOBJ} ${SNDLIBS}
+
 $(OD)/shield_strength.o:	shield_strength.c Makefile ${ODT}
 	$(Q)$(COMPILE)
 
@@ -1195,7 +1198,7 @@ mostly-clean:
 	bin/test-quat bin/test-fleet bin/test-mtwist bin/snis-device-io-sample-1 bin/check-endianness \
 	${OD}/*.o ${ODT} bin/test-matrix  bin/test_solarsystem_config  bin/test-space-partition \
 	bin/device-io-sample-1 bin/print_ship_attributes bin/snis_test_audio bin/test_crater \
-	bin/test_key_value_parser bin/test_snis_dmx test_scipher bin/test_snis_ship_type \
+	bin/test_key_value_parser bin/test_snis_dmx test_scipher bin/test_snis_ship_type wwviaudio_basic_test \
 	${MANSRCDIR}/earthlike.1.gz  ${MANSRCDIR}/snis_client.6.gz  ${MANSRCDIR}/snis_server.6.gz  \
 	${MANSRCDIR}/snis_test_audio.1.gz
 	rm -f ${BIN}

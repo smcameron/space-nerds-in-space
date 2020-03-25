@@ -655,3 +655,56 @@ int wwviaudio_set_sound_device(int device) { return 0; }
 void wwviaudio_list_devices(void) {}
 
 #endif
+
+#ifdef WWVIAUDIO_BASIC_TEST
+
+#include <stdio.h>
+#include <stdlib.h>
+
+struct cb_data {
+	int16_t *audio;
+	int position;
+	int nsamples;
+};
+
+void my_callback(void *cookie)
+{
+	int count;
+	struct cb_data *d = cookie;
+
+	if (d->position >= d->nsamples)
+		return;
+	count = 4096;
+	if (count > d->nsamples - d->position)
+		count = d->nsamples - d->position;
+	wwviaudio_add_one_shot_pcm_data(&d->audio[d->position], count, my_callback, cookie);
+	d->position += count;
+}
+
+int main(int argc, char *argv[])
+{
+	int16_t *audio;
+	int rc, nsamples;
+	struct cb_data c;
+
+	if (argc < 2) {
+		fprintf(stderr, "usage: wwviaudio_basic_test file.ogg\n");
+		exit(1);
+	}
+	printf("wwviaudio basic test, reading ogg file %s\n", argv[1]);
+	rc = wwviaudio_initialize_portaudio(10, 10);
+	rc = wwviaudio_read_ogg_clip_into_allocated_buffer(argv[1], &audio, &nsamples);
+	if (rc != 0) {
+		wwviaudio_stop_portaudio();
+		return rc;
+	}
+	c.audio = audio;
+	c.nsamples = nsamples;
+	c.position = 0;
+	my_callback(&c);
+
+	sleep(10);
+	wwviaudio_stop_portaudio();
+	return rc;
+}
+#endif
