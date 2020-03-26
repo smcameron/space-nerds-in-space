@@ -517,11 +517,12 @@ int wwviaudio_add_one_shot_pcm_data(int16_t *samples, int nsamples,
 		pthread_mutex_unlock(&one_shot_mutex);
 		return -1;
 	}
+	one_shot_busy = 1;
+	pthread_mutex_unlock(&one_shot_mutex);
 
 	c = malloc(sizeof(*c));
 	c->callback = callback;
 	c->cookie = cookie;
-	one_shot_busy = 1;
 	s = &clip[allocated_sound_clips - 1];
 	if (s->sample)
 		free(s->sample);
@@ -530,7 +531,6 @@ int wwviaudio_add_one_shot_pcm_data(int16_t *samples, int nsamples,
 	s->sample = malloc(sizeof(int16_t) * nsamples);
 	memcpy(s->sample, samples, sizeof(int16_t) * nsamples);
 	s->active = 1;
-	pthread_mutex_unlock(&one_shot_mutex);
 	return wwviaudio_add_sound_segment_to_slot(allocated_sound_clips - 1, WWVIAUDIO_ANY_SLOT,
 				1.0, 1.0, 0.0, 1.0, one_shot_sound_cb, c);
 }
