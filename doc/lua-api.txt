@@ -982,6 +982,21 @@ encipher_string(string, cipher_key)
 get_faction_name(faction_number)
 	returns the name of the given faction, or nil, if faction_number is out of range
 
+computer_command(player_ship_id, computer_command)
+	player_ship_id is the id of a player controlled ship.
+	computer_command is a string that you wish to be executed on
+	the ship's computer, much as if it were typed in from COMMS.
+
+	Note: Normally, for computer commands issued from a terminal,
+	the computer's voice will go back to that terminal. For lua
+	scripted computer commands, there is no terminal. So one must
+	be chosen. The preference is to choose a terminal supporting
+	the text to speech role, sound server role, and main screen
+	role.  There is no "correct" answer though. If no suitable
+	terminal can be found, then it will choose an unsuitable
+	terminal, and you may not hear whatever the computer
+	might say in response to your command.
+
 INTERACTIVE FICTION:
 
 There is a Lua library to help with creating Zork-like interactive fiction missions controlled by

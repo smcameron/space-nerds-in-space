@@ -18794,6 +18794,77 @@ static int l_get_faction_name(lua_State *l)
 	return 1;
 }
 
+/* Weight the suitability of clients for lua triggered computer command
+ * by what roles they have. prefer TTS + SOUND SERVER + MAIN SCREEN.
+ */
+static int score_client_for_computer_command(struct game_client *c)
+{
+	return !!(c->role & ROLE_TEXT_TO_SPEECH) * 4 +
+			!!(c->role & ROLE_SOUNDSERVER) * 2 +
+			!!(c->role & ROLE_MAIN);
+}
+
+/* Normally, we know the client that requested a computer command. But this
+ * command is coming from a lua script, so there's no "correct" client.
+ * We have to find a client attached to this ship so the computer's voice will
+ * have someplace to go.  Prefer a client with both main screen and text
+ * to speech roles, weighting text to speech more heavily.
+ */
+static struct game_client *find_client_for_lua_computer_command(int index)
+{
+	struct game_client *c = NULL;
+	int i;
+
+	client_lock();
+	for (i = 0; i < nclients; i++) {
+		int role_score1, role_score2;
+		if (client[i].shipid == go[index].id) {
+			if (!c)
+				c = &client[i];
+			role_score1 = score_client_for_computer_command(c);
+			role_score2 = score_client_for_computer_command(&client[i]);
+			if (role_score2 > role_score1)
+				c = &client[i];
+		}
+	}
+	client_unlock();
+	return c;
+}
+
+static int l_computer_command(lua_State *l)
+{
+	const double id = luaL_checknumber(l, 1);
+	const char *command = luaL_checkstring(l, 2);
+	char *vcmd;
+	int i;
+	struct game_client *c = NULL;
+
+	pthread_mutex_lock(&universe_mutex);
+	i = lookup_by_id(id);
+	if (i < 0) {
+		pthread_mutex_unlock(&universe_mutex);
+		send_demon_console_color_msg(YELLOW, "computer_command: Bad ship id %.0f", id);
+		return 0;
+	}
+	if (go[i].type != OBJTYPE_SHIP1)  {
+		pthread_mutex_unlock(&universe_mutex);
+		send_demon_console_color_msg(YELLOW, "computer_command: object not player ship: %.0f", id);
+		return 0;
+	}
+	/* Have to have a client so the computer's voice will have a place to go. */
+	c = find_client_for_lua_computer_command(i);
+	pthread_mutex_unlock(&universe_mutex);
+	if (c) {
+		vcmd = strdup(command); /* because of const */
+		perform_natural_language_request(c, vcmd);
+		free(vcmd);
+	} else {
+		send_demon_console_color_msg(YELLOW,
+			"computer_command: No client for player ship: %.0f", id);
+	}
+	return 0;
+}
+
 static int l_comms_channel_transmit(lua_State *l)
 {
 	const char *name = luaL_checkstring(l, 1);
@@ -24829,6 +24900,7 @@ static void setup_lua(void)
 	add_lua_callable_fn(l_set_starbase_factions_allowed, "set_starbase_factions_allowed");
 	add_lua_callable_fn(l_generate_cipher_key, "generate_cipher_key");
 	add_lua_callable_fn(l_get_faction_name, "get_faction_name");
+	add_lua_callable_fn(l_computer_command, "computer_command");
 }
 
 static void print_lua_error_message(char *error_context, char *lua_command)
