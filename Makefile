@@ -1,3 +1,6 @@
+# To compile with voice chat, WITHVOICECHAT=yes,
+# for no voice chat, make WITHVOICECHAT=no
+WITHVOICECHAT=yes
 PKG_CONFIG?=pkg-config
 
 # use "make OSX=1" for mac
@@ -636,6 +639,14 @@ GTKLDFLAGS:=$(shell $(PKG_CONFIG) --libs gtk+-2.0) $(shell $(PKG_CONFIG) --libs 
 GLEXTLDFLAGS:=$(shell $(PKG_CONFIG) --libs gtkglext-1.0)
 VORBISFLAGS:=$(subst -I,-isystem ,$(shell $(PKG_CONFIG) --cflags vorbisfile))
 
+ifeq (${WITHVOICECHAT},yes)
+LIBOPUS=-L. -lopus
+OPUSARCHIVE=libopus.a
+else
+LIBOPUS=
+OPUSARCHIVE=
+endif
+
 ifeq (${V},1)
 Q=
 ECHO=echo
@@ -653,7 +664,7 @@ SDLCOMPILE=$(ECHO) '  COMPILE' $< && $(CC) ${MYCFLAGS} ${SDLCFLAGS} ${GLEWCFLAGS
 SNISSERVERDBGCOMPILE=$(ECHO) '  COMPILE' $< && $(CC) -DSNIS_SERVER_DATA ${MYCFLAGS} ${LUACFLAGS} -c -o $(OD)/snis_server_debug.o $<
 SNISCLIENTDBGCOMPILE=$(ECHO) '  COMPILE' $< && $(CC) -DSNIS_CLIENT_DATA ${MYCFLAGS} ${LUACFLAGS} -c -o $(OD)/snis_client_debug.o $<
 
-CLIENTLINK=$(ECHO) '  LINK' $@ && $(CC) ${MYCFLAGS} ${SNDFLAGS} -o $@ ${GTKCFLAGS} ${GLEXTCFLAGS} ${CLIENTOBJS} ${GTKLDFLAGS} ${GLEXTLDFLAGS} ${LIBS} ${SNDLIBS} $(LDFLAGS)
+CLIENTLINK=$(ECHO) '  LINK' $@ && $(CC) ${MYCFLAGS} ${SNDFLAGS} -o $@ ${GTKCFLAGS} ${GLEXTCFLAGS} ${CLIENTOBJS} ${GTKLDFLAGS} ${GLEXTLDFLAGS} ${LIBS} ${SNDLIBS} $(LDFLAGS) ${LIBOPUS}
 LIMCLIENTLINK=$(ECHO) '  LINK' $@ && $(CC) ${MYCFLAGS} ${SNDFLAGS} -o $@ ${GTKCFLAGS} ${LIMCLIENTOBJS} ${GLEXTLDFLAGS} ${LIBS} ${SNDLIBS} $(LDFLAGS)
 SDLCLIENTLINK=$(ECHO) '  LINK' $@ && $(CC) ${MYCFLAGS} ${SNDFLAGS} -o $@ ${SDLCFLAGS} ${SDLCLIENTOBJS} ${SDLLIBS} ${LIBS} ${SNDLIBS} $(LDFLAGS)
 SERVERLINK=$(ECHO) '  LINK' $@ && $(CC) ${MYCFLAGS} -o $@ ${SERVEROBJS} ${SERVERLIBS} $(LDFLAGS)
@@ -929,7 +940,7 @@ $(OD)/snis_damcon_systems.o:	snis_damcon_systems.c Makefile ${ODT}
 bin/snis_server:	${SERVEROBJS} ${SSGL} Makefile ${BIN}
 	$(Q)$(SERVERLINK)
 
-bin/snis_client:	${CLIENTOBJS} ${SSGL} Makefile ${BIN}
+bin/snis_client:	${CLIENTOBJS} ${SSGL} Makefile ${BIN} ${OPUSARCHIVE}
 	$(Q)$(CLIENTLINK)
 
 bin/snis_multiverse:	${MULTIVERSEOBJS} ${SSGL} Makefile ${BIN}
@@ -1195,6 +1206,8 @@ mostly-clean:
 	${MANSRCDIR}/earthlike.1.gz  ${MANSRCDIR}/snis_client.6.gz  ${MANSRCDIR}/snis_server.6.gz  \
 	${MANSRCDIR}/snis_test_audio.1.gz
 	rm -f ${BIN}
+	rm -fr opus-1.3.1
+	rm -f libopus.a
 	if [ -x bin ]; then rmdir bin; fi
 	rm -fr ${OD}
 	( cd ssgl && ${MAKE} clean )
@@ -1379,6 +1392,7 @@ uninstall:
 
 clean:	mostly-clean
 	rm -f ${MODELS} test_marshal test_crater
+	rm -f opus-1.3.1.tar.gz
 
 depend:
 	rm -f Makefile.depend
@@ -1406,5 +1420,14 @@ scan-build:
 	rm -fr /tmp/snis-scan-build-output
 	scan-build -o /tmp/snis-scan-build-output make CC=clang
 	xdg-open /tmp/snis-scan-build-output/*/index.html
+
+opus-1.3.1.tar.gz:
+	wget https://archive.mozilla.org/pub/opus/opus-1.3.1.tar.gz
+
+opus-1.3.1:	opus-1.3.1.tar.gz
+	tar xzf opus-1.3.1.tar.gz
+
+libopus.a:	opus-1.3.1
+	(cd opus-1.3.1 && ./configure && make && cp ./.libs/libopus.a ..)
 
 include Makefile.depend
