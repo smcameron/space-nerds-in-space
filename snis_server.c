@@ -18865,6 +18865,47 @@ static int l_computer_command(lua_State *l)
 	return 0;
 }
 
+static int l_issue_docking_clearance(lua_State *l)
+{
+	const double starbase_id = luaL_checknumber(l, 1);
+	const double ship_id = luaL_checknumber(l, 2);
+	const char *npcname = luaL_checkstring(l, 3);
+	const double channel = luaL_checknumber(l, 4);
+	struct snis_entity *starbase, *ship;
+	int i, b;
+	char *name;
+
+	pthread_mutex_lock(&universe_mutex);
+	i = lookup_by_id(starbase_id);
+	if (i < 0) {
+		pthread_mutex_unlock(&universe_mutex);
+		send_demon_console_color_msg(YELLOW,
+			"issue_docking_clearance: Bad starbase ID %.0f", starbase_id);
+		return 0;
+	}
+	starbase = &go[i];
+	i = lookup_by_id(ship_id);
+	if (i < 0) {
+		pthread_mutex_unlock(&universe_mutex);
+		send_demon_console_color_msg(YELLOW,
+			"issue_docking_clearance: Bad ship ID %.0f", ship_id);
+		return 0;
+	}
+	ship = &go[i];
+	b = lookup_bridge_by_shipid(ship->id);
+	if (b < 0) {
+		pthread_mutex_unlock(&universe_mutex);
+		send_demon_console_color_msg(YELLOW,
+			"issue_docking_clearance: No bridge for ship ID %d", ship->id);
+		return 0;
+	}
+	pthread_mutex_unlock(&universe_mutex);
+	name = strdup(npcname); /* Because of const */
+	starbase_grant_docker_permission(starbase, ship, &bridgelist[b], name, (int) channel);
+	free(name);
+	return 0;
+}
+
 static int l_comms_channel_transmit(lua_State *l)
 {
 	const char *name = luaL_checkstring(l, 1);
@@ -24901,6 +24942,7 @@ static void setup_lua(void)
 	add_lua_callable_fn(l_generate_cipher_key, "generate_cipher_key");
 	add_lua_callable_fn(l_get_faction_name, "get_faction_name");
 	add_lua_callable_fn(l_computer_command, "computer_command");
+	add_lua_callable_fn(l_issue_docking_clearance, "issue_docking_clearance");
 }
 
 static void print_lua_error_message(char *error_context, char *lua_command)

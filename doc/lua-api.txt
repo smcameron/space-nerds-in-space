@@ -997,6 +997,13 @@ computer_command(player_ship_id, computer_command)
 	terminal, and you may not hear whatever the computer
 	might say in response to your command.
 
+issue_docking_clearance(starbase_id, ship_id, starbase_name, comms_channel)
+	grants the player ship identified by ship_id (number) permission to dock at the
+	starbase identified by starbase_id(number) . starbase_name (string) is used
+	in comms transmissions to tell the player permission to dock has been granted,
+	and comms_channel is the channel on which this information is transmitted
+	(if unsure, use 0 for channel).
+
 INTERACTIVE FICTION:
 
 There is a Lua library to help with creating Zork-like interactive fiction missions controlled by
