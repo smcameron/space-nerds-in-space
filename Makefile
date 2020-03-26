@@ -1,7 +1,3 @@
-# To compile withaudio, WITHAUDIO=yes,
-# for no audio support, change to WITHAUDIO=no,
-WITHAUDIO=yes
-# WITHAUDIO=no
 PKG_CONFIG?=pkg-config
 
 # use "make OSX=1" for mac
@@ -442,17 +438,10 @@ RDYNAMIC=
 $(echo ${USING_CLANG})
 endif
 
-ifeq (${WITHAUDIO},yes)
 SNDLIBS:=$(shell $(PKG_CONFIG) --libs portaudio-2.0 vorbisfile)
 SNDFLAGS:=-DWITHAUDIOSUPPORT $(shell $(PKG_CONFIG) --cflags portaudio-2.0) -DDATADIR=\"${DATADIR}\"
 _OGGOBJ=ogg_to_pcm.o
 _SNDOBJS=wwviaudio.o
-else
-SNDLIBS=
-SNDFLAGS=-DWWVIAUDIO_STUBS_ONLY
-_OGGOBJ=
-_SNDOBJS=wwviaudio.o
-endif
 
 ifeq (${E},1)
 STOP_ON_WARN=-Werror
