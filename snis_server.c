@@ -1964,10 +1964,16 @@ static void delete_from_clients_and_server(struct snis_entity *o)
 	delete_from_clients_and_server_helper(o, 1);
 }
 
+struct except_clients {
+	int client[MAXCLIENTS];
+	int shipid[MAXCLIENTS];
+	int nclients;
+};
+
 #define ANY_SHIP_ID (0xffffffff)
-static void send_packet_to_all_clients_on_a_bridge(uint32_t shipid, struct packed_buffer *pb, uint32_t roles)
+static void send_packet_to_all_clients_on_a_bridge_except(uint32_t shipid, struct packed_buffer *pb, uint32_t roles, struct except_clients *exceptions)
 {
-	int i;
+	int i, j;
 
 	client_lock();
 	for (i = 0; i < nclients; i++) {
@@ -1983,11 +1989,30 @@ static void send_packet_to_all_clients_on_a_bridge(uint32_t shipid, struct packe
 		if (!(c->role & roles))
 			continue;
 
+		if (exceptions) {
+			int skip = 0;
+			for (j = 0; j < exceptions->nclients; j++) {
+				if (exceptions->shipid[j] != shipid)
+					continue;
+				if (exceptions->client[j] == i) {
+					skip = 1;
+					break;
+				}
+			}
+			if (skip)
+				continue;
+		}
+
 		pbc = packed_buffer_copy(pb);
 		pb_queue_to_client(c, pbc);
 	}
 	packed_buffer_free(pb);
 	client_unlock();
+}
+
+static void send_packet_to_all_clients_on_a_bridge(uint32_t shipid, struct packed_buffer *pb, uint32_t roles)
+{
+	send_packet_to_all_clients_on_a_bridge_except(shipid, pb, roles, NULL);
 }
 
 static float comms_transmission_strength(struct snis_entity *transmitter, struct snis_entity *receiver)
@@ -2227,9 +2252,14 @@ static void send_packet_to_requestor_plus_role_on_a_bridge(struct game_client *r
 	client_unlock();
 }
 
+__attribute__((unused)) static void send_packet_to_all_clients_except(struct packed_buffer *pb, uint32_t roles, struct except_clients *except)
+{
+	send_packet_to_all_clients_on_a_bridge_except(ANY_SHIP_ID, pb, roles, except);
+}
+
 static void send_packet_to_all_clients(struct packed_buffer *pb, uint32_t roles)
 {
-	send_packet_to_all_clients_on_a_bridge(ANY_SHIP_ID, pb, roles);
+	send_packet_to_all_clients_on_a_bridge_except(ANY_SHIP_ID, pb, roles, NULL);
 }
 
 static void ai_trace(uint32_t id, char *format, ...)
