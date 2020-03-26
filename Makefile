@@ -2,6 +2,7 @@
 # for no audio support, change to WITHAUDIO=no,
 WITHAUDIO=yes
 # WITHAUDIO=no
+PKG_CONFIG?=pkg-config
 
 # use "make OSX=1" for mac
 OSX=0
@@ -442,8 +443,8 @@ $(echo ${USING_CLANG})
 endif
 
 ifeq (${WITHAUDIO},yes)
-SNDLIBS:=$(shell pkg-config --libs portaudio-2.0 vorbisfile)
-SNDFLAGS:=-DWITHAUDIOSUPPORT $(shell pkg-config --cflags portaudio-2.0) -DDATADIR=\"${DATADIR}\"
+SNDLIBS:=$(shell $(PKG_CONFIG) --libs portaudio-2.0 vorbisfile)
+SNDFLAGS:=-DWITHAUDIOSUPPORT $(shell $(PKG_CONFIG) --cflags portaudio-2.0) -DDATADIR=\"${DATADIR}\"
 _OGGOBJ=ogg_to_pcm.o
 _SNDOBJS=wwviaudio.o
 else
@@ -479,22 +480,22 @@ ifeq (${OSX},0)
 # Arch pkg-config seems to be broken for lua5.2, so we have
 # this "... || echo" hack thing.
 #
-LUALIBS:=$(shell pkg-config --libs lua5.2 --silence-errors || pkg-config --libs lua52 --silence-errors || pkg-config --libs lua --silence-errors || echo '-llua5.2')
-LUACFLAGS:=$(shell pkg-config --cflags lua5.2 --silence-errors || pkg-config --cflags lua52 --silence-errors || pkg-config --cflags lua --silence-errors || echo '')
+LUALIBS:=$(shell $(PKG_CONFIG) --libs lua5.2 --silence-errors || $(PKG_CONFIG) --libs lua52 --silence-errors || $(PKG_CONFIG) --libs lua --silence-errors || echo '-llua5.2')
+LUACFLAGS:=$(shell $(PKG_CONFIG) --cflags lua5.2 --silence-errors || $(PKG_CONFIG) --cflags lua52 --silence-errors || $(PKG_CONFIG) --cflags lua --silence-errors || echo '')
 else
 # OSX needs to do it this way (what is the point of pkgconfig if they all do it differently?)
-LUALIBS:=$(shell pkg-config --libs lua)
-LUACFLAGS:=$(shell pkg-config --cflags lua)
+LUALIBS:=$(shell $(PKG_CONFIG) --libs lua)
+LUACFLAGS:=$(shell $(PKG_CONFIG) --cflags lua)
 endif
 
-PNGLIBS:=$(shell pkg-config --libs libpng)
-PNGCFLAGS:=$(shell pkg-config --cflags libpng)
+PNGLIBS:=$(shell $(PKG_CONFIG) --libs libpng)
+PNGCFLAGS:=$(shell $(PKG_CONFIG) --cflags libpng)
 
-SDLLIBS:=$(shell pkg-config sdl --libs)
-SDLCFLAGS:=$(shell pkg-config sdl --cflags)
+SDLLIBS:=$(shell $(PKG_CONFIG) sdl --libs)
+SDLCFLAGS:=$(shell $(PKG_CONFIG) sdl --cflags)
 
-GLEWLIBS:=$(shell pkg-config --libs-only-l glew)
-GLEWCFLAGS:=$(shell pkg-config --cflags glew)
+GLEWLIBS:=$(shell $(PKG_CONFIG) --libs-only-l glew)
+GLEWCFLAGS:=$(shell $(PKG_CONFIG) --cflags glew)
 
 _COMMONOBJS=mathutils.o snis_alloc.o snis_socket_io.o snis_marshal.o \
 		bline.o shield_strength.o stacktrace.o snis_ship_type.o \
@@ -640,11 +641,11 @@ MODELS=${MD}/freighter.stl \
 MYCFLAGS=-DPREFIX=${PREFIX} ${DEBUGFLAG} ${PROFILEFLAG} ${OPTIMIZEFLAG}\
 	--pedantic -Wall ${STOP_ON_WARN} -pthread -std=gnu99 ${RDYNAMIC} \
 	-Wno-extended-offsetof -Wno-gnu-folding-constant $(CFLAGS) -Wvla
-GTKCFLAGS:=$(subst -I,-isystem ,$(shell pkg-config --cflags gtk+-2.0))
-GLEXTCFLAGS:=$(subst -I,-isystem ,$(shell pkg-config --cflags gtkglext-1.0)) ${PNGCFLAGS}
-GTKLDFLAGS:=$(shell pkg-config --libs gtk+-2.0) $(shell pkg-config --libs gthread-2.0)
-GLEXTLDFLAGS:=$(shell pkg-config --libs gtkglext-1.0)
-VORBISFLAGS:=$(subst -I,-isystem ,$(shell pkg-config --cflags vorbisfile))
+GTKCFLAGS:=$(subst -I,-isystem ,$(shell $(PKG_CONFIG) --cflags gtk+-2.0))
+GLEXTCFLAGS:=$(subst -I,-isystem ,$(shell $(PKG_CONFIG) --cflags gtkglext-1.0)) ${PNGCFLAGS}
+GTKLDFLAGS:=$(shell $(PKG_CONFIG) --libs gtk+-2.0) $(shell $(PKG_CONFIG) --libs gthread-2.0)
+GLEXTLDFLAGS:=$(shell $(PKG_CONFIG) --libs gtkglext-1.0)
+VORBISFLAGS:=$(subst -I,-isystem ,$(shell $(PKG_CONFIG) --cflags vorbisfile))
 
 ifeq (${V},1)
 Q=
