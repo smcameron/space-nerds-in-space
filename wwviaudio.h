@@ -28,7 +28,7 @@
 #endif
 
 #define WWVIAUDIO_MUSIC_SLOT (0)
-#define WWVIAUDIO_SAMPLE_RATE   (44100)
+#define WWVIAUDIO_SAMPLE_RATE   (48000)
 #define WWVIAUDIO_ANY_SLOT (-1)
 
 /*
