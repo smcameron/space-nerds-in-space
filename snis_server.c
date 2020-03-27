@@ -1992,12 +1992,13 @@ static void send_packet_to_all_clients_on_a_bridge_except(uint32_t shipid, struc
 		if (exceptions) {
 			int skip = 0;
 			for (j = 0; j < exceptions->nclients; j++) {
-				if (exceptions->shipid[j] != shipid)
+				if (exceptions->client[j] != i)
 					continue;
-				if (exceptions->client[j] == i) {
-					skip = 1;
-					break;
-				}
+				if (exceptions->shipid[j] != shipid && shipid != ANY_SHIP_ID)
+					continue;
+				send_demon_console_msg("SRV EXCEPTING %d/%d\n", shipid, i);
+				skip = 1;
+				break;
 			}
 			if (skip)
 				continue;
