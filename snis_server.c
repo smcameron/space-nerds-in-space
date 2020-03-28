@@ -15318,8 +15318,10 @@ static void starbase_registration_query_npc_bot(struct snis_entity *o, int bridg
 	uint32_t channel = bridgelist[bridge].npcbot.channel;
 	int lsn, rc, selection, found;
 
+	pthread_mutex_lock(&universe_mutex);
 	i = lookup_by_id(bridgelist[bridge].shipid);
 	if (i < 0) {
+		pthread_mutex_unlock(&universe_mutex);
 		printf("Non fatal error at %s:%s:%d\n",
 			__FILE__, __func__, __LINE__);
 		return;
@@ -15333,6 +15335,7 @@ static void starbase_registration_query_npc_bot(struct snis_entity *o, int bridg
 	rc = sscanf(msg, "%d", &selection);
 	if (rc != 1) {
 		selection = -1;
+		pthread_mutex_unlock(&universe_mutex);
 		send_comms_packet(o, n, channel,
 			" ENTER REGISTRATION ID (Q to quit) ");
 		return;
@@ -15342,6 +15345,7 @@ static void starbase_registration_query_npc_bot(struct snis_entity *o, int bridg
 	if (i < 0) {
 		i = lookup_by_registration(selection);
 		if (i < 0) {
+			pthread_mutex_unlock(&universe_mutex);
 			send_comms_packet(o, n, channel, "NO SUCH REGISTRATION FOUND");
 			return;
 		}
@@ -15350,6 +15354,7 @@ static void starbase_registration_query_npc_bot(struct snis_entity *o, int bridg
 		go[i].type != OBJTYPE_SHIP2 &&
 		go[i].type != OBJTYPE_DERELICT) {
 		send_comms_packet(o, n, channel, "NO SUCH REGISTRATION FOUND");
+		pthread_mutex_unlock(&universe_mutex);
 		return;
 	}
 	send_comms_packet(o, n, channel, "REGISTRATION ID - %d", selection);
@@ -15408,6 +15413,7 @@ static void starbase_registration_query_npc_bot(struct snis_entity *o, int bridg
 		}
 		i++;
 	}
+	pthread_mutex_unlock(&universe_mutex);
 }
 
 static void npc_menu_item_query_ship_registration(struct npc_menu_item *item,
