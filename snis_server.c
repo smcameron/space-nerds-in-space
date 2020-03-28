@@ -7094,8 +7094,13 @@ static void ship_collision_avoidance(void *context, void *entity)
 	/* hmm, server has no idea about meshes... */
 	d = dist3dsqrd(o->x - obstacle->x, o->y - obstacle->y, o->z - obstacle->z);
 
-	if (obstacle->type == OBJTYPE_PLANET)
+	if (obstacle->type == OBJTYPE_PLANET) {
+		o->tsd.ship.last_seen_near = obstacle->id;
 		return; /* Do not use steering forces to avoid planets.  That is done elsewhere */
+	}
+
+	if (obstacle->type == OBJTYPE_STARBASE)
+		o->tsd.ship.last_seen_near = obstacle->id;
 
 	if (obstacle->type == OBJTYPE_SPACEMONSTER) {
 		if (d < spacemonster_collision_radius * spacemonster_collision_radius) {
@@ -10997,6 +11002,7 @@ static int add_ship(int faction, int shiptype, int auto_respawn)
 	go[i].tsd.ship.desired_hg_ant_aim.v.x = 1;
 	go[i].tsd.ship.desired_hg_ant_aim.v.y = 0;
 	go[i].tsd.ship.desired_hg_ant_aim.v.z = 0;
+	go[i].tsd.ship.last_seen_near = (uint32_t) -1;
 	ship_choose_enemy_system_to_target(&go[i]);
 
 	if (go[i].tsd.ship.shiptype == SHIP_CLASS_ENFORCER) {
@@ -15310,7 +15316,7 @@ static void starbase_registration_query_npc_bot(struct snis_entity *o, int bridg
 	int i, c;
 	char *n = o->sdata.name;
 	uint32_t channel = bridgelist[bridge].npcbot.channel;
-	int rc, selection;
+	int lsn, rc, selection, found;
 
 	i = lookup_by_id(bridgelist[bridge].shipid);
 	if (i < 0) {
@@ -15351,10 +15357,24 @@ static void starbase_registration_query_npc_bot(struct snis_entity *o, int bridg
 	send_comms_packet(o, n, channel, "MAKE - %s",
 			corporation_get_name(ship_type[go[i].tsd.ship.shiptype].manufacturer));
 	send_comms_packet(o, n, channel, "MODEL - %s", ship_type[go[i].tsd.ship.shiptype].class);
+	found = -1;
 	for (i = 0; i >= 0;) {
 		i = ship_registry_get_next_entry(&ship_registry, selection, i);
-		if (i < 0)
+		if (i < 0) {
+			if (found < 0)
+				break;
+			c = lookup_by_id(found);
+			if (c < 0)
+				break;
+			if (lookup_by_id(go[c].tsd.ship.last_seen_near) == (uint32_t) -1)
+				break;
+			lsn = lookup_by_id(go[c].tsd.ship.last_seen_near);
+			if (lsn < 0)
+				break;
+			send_comms_packet(o, n, channel, "LAST SEEN NEAR - %s\n", go[lsn].sdata.name);
 			break;
+		}
+		found = ship_registry.entry[i].id;
 		switch (ship_registry.entry[i].type) {
 		case SHIP_REG_TYPE_OWNER:
 			send_comms_packet(o, n, channel, "OWNER - %s",

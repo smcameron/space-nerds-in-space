@@ -631,6 +631,7 @@ struct ship_data {
 #ifdef SNIS_SERVER_DATA
 	/* Which system (weapons, shields, warp drive, etc.) of player ships to target damage on */
 	uint8_t targeted_system;
+	uint32_t last_seen_near;
 #endif
 };
 
