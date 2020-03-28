@@ -27,6 +27,15 @@
 #include "docking_port.h"
 #include "starbase_metadata.h"
 #include "string-utils.h"
+#include "arraysize.h"
+
+static char *starbase_model_names[] = {
+	"S-CLASS SPACE STATION",
+	"SPACE CASTLE",
+	"SPACE HABITAT",
+	"SPACE BUNGALOW",
+	"COSMOTEL",
+};
 
 int read_starbase_model_metadata(char *asset_dir, char *filename, int *nstarbase_models,
 		struct starbase_file_metadata **starbase_metadata)
@@ -183,3 +192,9 @@ struct docking_port_attachment_point **read_docking_port_info(
 	return d;
 }
 
+char *starbase_model_name(int id)
+{
+	if (id < 0)
+		return NULL;
+	return starbase_model_names[id % ARRAYSIZE(starbase_model_names)];
+}

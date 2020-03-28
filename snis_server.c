@@ -12196,6 +12196,7 @@ static int add_starbase(double x, double y, double z,
 			double vx, double vz, double heading, int n, uint32_t assoc_planet_id)
 {
 	int i, j, model;
+	char registration[100];
 
 	i = add_generic_object(x, y, z, vx, 0.0, vz, heading, OBJTYPE_STARBASE);
 	if (i < 0)
@@ -12241,6 +12242,11 @@ static int add_starbase(double x, double y, double z,
 		}
 	}
 	setup_randomized_starbase_orbit(&go[i]);
+	snprintf(registration, sizeof(registration) - 1, "SPACE STATION");
+	ship_registry_add_owner(&ship_registry, go[i].id,
+			go[i].id % num_spacecraft_manufacturers() + 1);
+	ship_registry_add_entry(&ship_registry, go[i].id, SHIP_REG_TYPE_REGISTRATION, registration);
+
 	return i;
 }
 
@@ -15352,16 +15358,23 @@ static void starbase_registration_query_npc_bot(struct snis_entity *o, int bridg
 	}
 	if (go[i].type != OBJTYPE_SHIP1 &&
 		go[i].type != OBJTYPE_SHIP2 &&
-		go[i].type != OBJTYPE_DERELICT) {
+		go[i].type != OBJTYPE_DERELICT &&
+		go[i].type != OBJTYPE_STARBASE) {
 		send_comms_packet(o, n, channel, "NO SUCH REGISTRATION FOUND");
 		pthread_mutex_unlock(&universe_mutex);
 		return;
 	}
 	send_comms_packet(o, n, channel, "REGISTRATION ID - %d", selection);
 	send_comms_packet(o, n, channel, "NAME - %s", go[i].sdata.name);
-	send_comms_packet(o, n, channel, "MAKE - %s",
-			corporation_get_name(ship_type[go[i].tsd.ship.shiptype].manufacturer));
-	send_comms_packet(o, n, channel, "MODEL - %s", ship_type[go[i].tsd.ship.shiptype].class);
+	if (o->type == OBJTYPE_STARBASE) {
+		send_comms_packet(o, n, channel, "MAKE - %s",
+				corporation_get_name(go[i].id % num_spacecraft_manufacturers() + 1));
+		send_comms_packet(o, n, channel, "MODEL - %s", starbase_model_name(go[i].id));
+	} else {
+		send_comms_packet(o, n, channel, "MODEL - %s", ship_type[go[i].tsd.ship.shiptype].class);
+		send_comms_packet(o, n, channel, "MAKE - %s",
+				corporation_get_name(ship_type[go[i].tsd.ship.shiptype].manufacturer));
+	}
 	found = -1;
 	for (i = 0; i >= 0;) {
 		i = ship_registry_get_next_entry(&ship_registry, selection, i);
@@ -15372,6 +15385,8 @@ static void starbase_registration_query_npc_bot(struct snis_entity *o, int bridg
 			if (c < 0)
 				break;
 			if (lookup_by_id(go[c].tsd.ship.last_seen_near) == (uint32_t) -1)
+				break;
+			if (go[c].type != OBJTYPE_SHIP2)
 				break;
 			lsn = lookup_by_id(go[c].tsd.ship.last_seen_near);
 			if (lsn < 0)
@@ -16156,10 +16171,17 @@ static void npc_menu_item_list_bounties(struct npc_menu_item *item,
 			send_comms_packet(starbase, n, channel, "-----------------------");
 			send_comms_packet(starbase, n, channel, "REGISTRATION ID - %d", go[ship].id);
 			send_comms_packet(starbase, n, channel, "NAME - %s", go[ship].sdata.name);
-			send_comms_packet(starbase, n, channel, "MAKE - %s",
-				corporation_get_name(ship_type[go[ship].tsd.ship.shiptype].manufacturer));
-			send_comms_packet(starbase, n, channel, "MODEL - %s",
-					ship_type[go[ship].tsd.ship.shiptype].class);
+			if (go[ship].type == OBJTYPE_STARBASE) {
+				send_comms_packet(starbase, n, channel, "MAKE - %s",
+					corporation_get_name(go[ship].id % num_spacecraft_manufacturers() + 1));
+				send_comms_packet(starbase, n, channel, "MODEL - %s",
+						starbase_model_name(go[ship].id));
+			} else {
+				send_comms_packet(starbase, n, channel, "MAKE - %s",
+					corporation_get_name(ship_type[go[ship].tsd.ship.shiptype].manufacturer));
+				send_comms_packet(starbase, n, channel, "MODEL - %s",
+						ship_type[go[ship].tsd.ship.shiptype].class);
+			}
 			send_comms_packet(starbase, n, channel, "WANTED FOR - %s", ship_registry.entry[i].entry);
 				int p = lookup_by_id(go[sb].tsd.starbase.associated_planet_id);
 				if (p >= 0 && go[ship].tsd.starbase.associated_planet_id != (uint32_t) -1)

@@ -35,5 +35,11 @@ struct docking_port_attachment_point **read_docking_port_info(
 		struct starbase_file_metadata starbase_metadata[], int n,
 		float starbase_scale_factor);
 
+/* This returns the model name like "mustang" is the model name
+ * of the car Ford makes. It does not return the name of the file
+ * containing the mesh data.
+ */
+char *starbase_model_name(int id);
+
 #endif
 
