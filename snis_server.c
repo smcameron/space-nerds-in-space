@@ -302,6 +302,8 @@ static void npc_menu_item_eject_passengers(struct npc_menu_item *item,
 				char *npcname, struct npc_bot_state *botstate);
 static void npc_menu_item_collect_bounties(struct npc_menu_item *item,
 				char *npcname, struct npc_bot_state *botstate);
+static void npc_menu_item_list_bounties(struct npc_menu_item *item,
+				char *npcname, struct npc_bot_state *botstate);
 static void npc_menu_item_sign_off(struct npc_menu_item *item,
 				char *npcname, struct npc_bot_state *botstate);
 static void npc_menu_item_buy_parts(struct npc_menu_item *item,
@@ -360,6 +362,7 @@ static struct npc_menu_item cargo_and_passengers_menu[] = {
 	{ "BOARD PASSENGERS", 0, 0, npc_menu_item_board_passengers },
 	{ "DISEMBARK PASSENGERS", 0, 0, npc_menu_item_disembark_passengers },
 	{ "EJECT PASSENGERS (FINES APPLY)", 0, 0, npc_menu_item_eject_passengers },
+	{ "LIST BOUNTIES", 0, 0, npc_menu_item_list_bounties },
 	{ "COLLECT BOUNTIES", 0, 0, npc_menu_item_collect_bounties },
 	{ 0, 0, 0, 0 }, /* mark end of menu items */
 };
@@ -15370,7 +15373,8 @@ static void starbase_registration_query_npc_bot(struct snis_entity *o, int bridg
 						ship_registry.entry[i].bounty,
 						c < 0 ? "UNKNOWN" : go[c].sdata.name, go[p].sdata.name);
 				else
-					send_comms_packet(o, n, channel, "BOUNTY - $%.0f COLLECTIBLE AT %s",
+					send_comms_packet(o, n, channel,
+						"BOUNTY - $%.0f COLLECTIBLE AT %s IN DEEP SPACE",
 						ship_registry.entry[i].bounty,
 						c < 0 ? "UNKNOWN" : go[c].sdata.name);
 			}
@@ -16079,6 +16083,79 @@ static void npc_menu_item_collect_bounties(struct npc_menu_item *item,
 	b->nship_id_chips = count;
 	send_comms_packet(sb, npcname, ch, " THANK YOU FOR YOUR SERVICE", total);
 	pthread_mutex_unlock(&universe_mutex);
+}
+
+static void npc_menu_item_list_bounties(struct npc_menu_item *item,
+					char *npcname, struct npc_bot_state *botstate)
+{
+
+	struct snis_entity *starbase;
+	struct bridge_data *b = container_of(botstate, struct bridge_data, npcbot);
+	uint32_t channel = b->npcbot.channel;
+	int i, sb, ship;
+	int count;
+	char *n = npcname;
+
+	pthread_mutex_lock(&universe_mutex);
+
+	/* Find the starbase */
+	i = lookup_by_id(botstate->object_id);
+	if (i < 0) {
+		printf("nonfatal bug in %s at %s:%d\n", __func__, __FILE__, __LINE__);
+		pthread_mutex_unlock(&universe_mutex);
+		return;
+	}
+	starbase = &go[i];
+
+	count = 0;
+	send_comms_packet(starbase, n, channel, "LIST OF BOUNTIES OFFERED");
+	for (i = 0; i < ship_registry.nentries; i++) {
+		switch (ship_registry.entry[i].type) {
+		case SHIP_REG_TYPE_OWNER:
+		case SHIP_REG_TYPE_REGISTRATION:
+		case SHIP_REG_TYPE_CAPTAIN:
+		case SHIP_REG_TYPE_COMMENT:
+			continue;
+		case SHIP_REG_TYPE_BOUNTY:
+			sb = lookup_by_id(ship_registry.entry[i].bounty_collection_site);
+			if (sb < 0)
+				break;
+			if (go[sb].type != OBJTYPE_STARBASE || !go[sb].alive)
+				break;
+			ship = lookup_by_id(ship_registry.entry[i].id);
+			if (ship < 0)
+				break;
+			if (go[ship].type != OBJTYPE_SHIP2 && go[ship].type != OBJTYPE_DERELICT)
+				break;
+			send_comms_packet(starbase, n, channel, "-----------------------");
+			send_comms_packet(starbase, n, channel, "REGISTRATION ID - %d", go[ship].id);
+			send_comms_packet(starbase, n, channel, "NAME - %s", go[ship].sdata.name);
+			send_comms_packet(starbase, n, channel, "MAKE - %s",
+				corporation_get_name(ship_type[go[ship].tsd.ship.shiptype].manufacturer));
+			send_comms_packet(starbase, n, channel, "MODEL - %s",
+					ship_type[go[ship].tsd.ship.shiptype].class);
+			send_comms_packet(starbase, n, channel, "WANTED FOR - %s", ship_registry.entry[i].entry);
+				int p = lookup_by_id(go[sb].tsd.starbase.associated_planet_id);
+				if (p >= 0 && go[ship].tsd.starbase.associated_planet_id != (uint32_t) -1)
+					send_comms_packet(starbase, n, channel,
+								"BOUNTY - $%.0f COLLECTIBLE AT %s ORBITING %s",
+						ship_registry.entry[i].bounty,
+						sb < 0 ? "UNKNOWN" : go[sb].sdata.name, go[p].sdata.name);
+				else
+					send_comms_packet(starbase, n, channel,
+								"BOUNTY - $%.0f COLLECTIBLE AT %s IN DEEP SPACE",
+						ship_registry.entry[i].bounty,
+						sb < 0 ? "UNKNOWN" : go[sb].sdata.name);
+			count++;
+			break;
+		default:
+			break;
+		}
+	}
+	pthread_mutex_unlock(&universe_mutex);
+	send_comms_packet(starbase, n, channel, "-----------------------");
+	send_comms_packet(starbase, npcname, channel, " %d RECORDS FOUND", count);
+	send_comms_packet(starbase, npcname, channel, "", count);
 }
 
 static void npc_menu_item_travel_advisory(struct npc_menu_item *item,
