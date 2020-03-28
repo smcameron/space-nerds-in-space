@@ -362,6 +362,7 @@ static struct npc_menu_item cargo_and_passengers_menu[] = {
 	{ "BOARD PASSENGERS", 0, 0, npc_menu_item_board_passengers },
 	{ "DISEMBARK PASSENGERS", 0, 0, npc_menu_item_disembark_passengers },
 	{ "EJECT PASSENGERS (FINES APPLY)", 0, 0, npc_menu_item_eject_passengers },
+	{ "QUERY SHIP REGISTRATIONS", 0, 0, npc_menu_item_query_ship_registration },
 	{ "LIST BOUNTIES", 0, 0, npc_menu_item_list_bounties },
 	{ "COLLECT BOUNTIES", 0, 0, npc_menu_item_collect_bounties },
 	{ 0, 0, 0, 0 }, /* mark end of menu items */
@@ -374,7 +375,6 @@ static struct npc_menu_item starbase_main_menu[] = {
 	{ "REQUEST TOWING SERVICE", 0, 0, npc_menu_item_towing_service },
 	{ "REPAIRS AND FUEL", 0, repairs_and_fuel_menu, 0 },
 	{ "CARGO PASSENGERS AND BOUNTIES", 0, cargo_and_passengers_menu, 0 },
-	{ "QUERY SHIP REGISTRATIONS", 0, 0, npc_menu_item_query_ship_registration },
 	{ "LOCAL TRAVEL ADVISORY", 0, 0, npc_menu_item_travel_advisory },
 	{ "SIGN OFF", 0, 0, npc_menu_item_sign_off },
 	{ 0, 0, 0, 0 }, /* mark end of menu items */
