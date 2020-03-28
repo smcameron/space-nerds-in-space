@@ -15336,11 +15336,31 @@ static void starbase_registration_query_npc_bot(struct snis_entity *o, int bridg
 	if (strcasecmp(msg, "Q") == 0) {
 		bridgelist[bridge].npcbot.special_bot = NULL; /* deactivate cargo buying bot */
 		send_to_npcbot(bridge, name, ""); /* poke generic bot so he says something */
+		pthread_mutex_unlock(&universe_mutex);
+		send_comms_packet(o, n, channel,
+			" ENTER REGISTRATION ID (Q to quit) ");
+		return;
 	}
 
 	rc = sscanf(msg, "%d", &selection);
 	if (rc != 1) {
+		/* Try searching by name... */
 		selection = -1;
+		if (strcmp(msg, "") != 0 && strcasecmp(msg, "Q") != 0) {
+			for (i = 0; i < ship_registry.nentries; i++) {
+				if (ship_registry.entry[i].type != SHIP_REG_TYPE_REGISTRATION)
+					continue;
+				c = lookup_by_id(ship_registry.entry[i].id);
+				if (c < 0)
+					continue;
+				if (go[c].type != OBJTYPE_STARBASE && go[i].type != OBJTYPE_SHIP1 &&
+							go[i].type != OBJTYPE_SHIP2)
+					continue;
+				if (strncasecmp(msg, go[c].sdata.name, strlen(msg)) != 0)
+					continue;
+				send_comms_packet(o, n, channel, "%d - %s\n", go[c].id, go[c].sdata.name);
+			}
+		}
 		pthread_mutex_unlock(&universe_mutex);
 		send_comms_packet(o, n, channel,
 			" ENTER REGISTRATION ID (Q to quit) ");
