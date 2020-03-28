@@ -15622,6 +15622,7 @@ static void init_comms_ui(void)
 	for (i = 0; i < 26; i++)
 		ui_add_text_input_box(comms_ui.crypt_alpha[i], DISPLAYMODE_COMMS);
 	comms_ui.channel = 0;
+	ui_set_widget_focus(uiobjs, comms_ui.comms_input);
 }
 
 static void comms_activate_rts_buttons(struct snis_entity *player_ship)
