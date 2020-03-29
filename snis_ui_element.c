@@ -159,7 +159,8 @@ void ui_set_focus(struct ui_element_list *list, struct ui_element *e, int has_fo
 		if (list->element == e) {
 			e->set_focus(e->element, has_focus);
 			e->has_focus = has_focus;
-		} else {
+		} else if (list->element->active_displaymode == e->active_displaymode) {
+			/* clear focus of other ui elements in the same displaymode */
 			list->element->set_focus(list->element->element, 0);
 			list->element->has_focus = 0;
 		}
