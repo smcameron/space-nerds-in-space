@@ -16823,6 +16823,7 @@ static void update_comms_ui_visibility(struct snis_entity *o)
 		for (i = 0; i < 26; i++)
 			ui_hide_widget(comms_ui.crypt_alpha[i]);
 		ui_hide_widget(comms_ui.crypto_reset);
+		ui_set_widget_focus(uiobjs, comms_ui.comms_input);
 	}
 }
 
