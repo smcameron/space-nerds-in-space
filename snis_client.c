@@ -9215,6 +9215,8 @@ static void show_weapons_camera_view(GtkWidget *w)
 				continue;
 			if (!target->entity || !entity_onscreen(target->entity))
 				continue;
+			if (!entity_onscreen(target->entity))
+				continue;
 			entity_get_pos(target->entity, &ex, &ey, &ez);
 			dist = dist3d(o->x - ex, o->y - ey, o->z - ez);
 			entity_get_screen_coords(target->entity, &sx, &sy);
@@ -12565,6 +12567,8 @@ static void draw_3d_nav_starmap(GtkWidget *w, GdkGC *gc)
 
 		e = get_entity(instrumentecx, i);
 		if (!e)
+			continue;
+		if (!entity_onscreen(e))
 			continue;
 		s = entity_get_user_data(e);
 		if (!s)
@@ -19430,7 +19434,7 @@ static void show_demon_3d(GtkWidget *w)
 		default:
 			break;
 		}
-		if (selected && e) {
+		if (selected && e && entity_onscreen(e)) {
 			entity_get_screen_coords(e, &oidstrx, &oidstry);
 			oidstrx += txx(10);
 			oidstry -= txy(20);
