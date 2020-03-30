@@ -9208,29 +9208,28 @@ static void show_weapons_camera_view(GtkWidget *w)
 	if (weapons_azimuth_angle == 0) {
 		for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
 			struct snis_entity *target = &go[i];
-
-			if (target->alive && (target->type == OBJTYPE_SHIP2 || target->type == OBJTYPE_SHIP1)) {
-				if (target->entity && entity_onscreen(target->entity)) {
-					float sx, sy, dist, ex, ey, ez;
-					entity_get_pos(target->entity, &ex, &ey, &ez);
-					dist = dist3d(o->x - ex, o->y - ey, o->z - ez);
-					entity_get_screen_coords(target->entity, &sx, &sy);
-					/* BUG: TORPEDO_VELOCITY and TORPEDO_LIFETIME are server-side tweakable
-					 * on the demon console, but if tweaked, the client will have no knowledge
-					 * of this tweaking, so this next condition will be incorrect.
-					 */
-					if (dist < TORPEDO_VELOCITY * TORPEDO_LIFETIME) {
-						char msg[20];
-						draw_targeting_indicator(w, gc, sx, sy, UI_COLOR(weap_in_range),
-									0, 0.5, 1.5f);
-						snprintf(msg, sizeof(msg), "%.0f", dist);
-						sng_set_foreground(UI_COLOR(weap_in_range));
-						sng_abs_xy_draw_string(msg, PICO_FONT, sx + txx(10), sy);
-					} else {
-						draw_targeting_indicator(w, gc, sx, sy, UI_COLOR(weap_targeting),
-									0, 0.5, 1.5f);
-					}
-				}
+			float sx, sy, dist, ex, ey, ez;
+			if (!target->alive)
+				continue;
+			if (target->type != OBJTYPE_SHIP2 && target->type == OBJTYPE_SHIP1)
+				continue;
+			if (!target->entity || !entity_onscreen(target->entity))
+				continue;
+			entity_get_pos(target->entity, &ex, &ey, &ez);
+			dist = dist3d(o->x - ex, o->y - ey, o->z - ez);
+			entity_get_screen_coords(target->entity, &sx, &sy);
+			/* BUG: TORPEDO_VELOCITY and TORPEDO_LIFETIME are server-side tweakable
+			 * on the demon console, but if tweaked, the client will have no knowledge
+			 * of this tweaking, so this next condition will be incorrect.
+			 */
+			if (dist < TORPEDO_VELOCITY * TORPEDO_LIFETIME) {
+				char msg[20];
+				draw_targeting_indicator(w, gc, sx, sy, UI_COLOR(weap_in_range), 0, 0.5, 1.5f);
+				snprintf(msg, sizeof(msg), "%.0f", dist);
+				sng_set_foreground(UI_COLOR(weap_in_range));
+				sng_abs_xy_draw_string(msg, PICO_FONT, sx + txx(10), sy);
+			} else {
+				draw_targeting_indicator(w, gc, sx, sy, UI_COLOR(weap_targeting), 0, 0.5, 1.5f);
 			}
 		}
 	}
