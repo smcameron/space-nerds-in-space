@@ -21883,6 +21883,9 @@ static void read_sound_clips(void)
 	read_ogg_clip(ROCKET_SAMPLE, d, "atlas_rocket_sample.ogg");
 	read_ogg_clip(THRUSTER_SAMPLE, d, "maneuvering_thruster.ogg");
 	read_ogg_clip(MISSILE_LAUNCH, d, "missile_launch.ogg");
+	read_ogg_clip(TOO_FAR_AWAY, d, "too-far-away.ogg");
+	read_ogg_clip(LOWER_SHIELDS_HIT_LIGHTS, d, "lower-shields-and-hit-lights.ogg");
+	read_ogg_clip(CLEAR_TO_DEPART, d, "wombat-clear-to-depart.ogg");
 	printf("Done.\n");
 }
 

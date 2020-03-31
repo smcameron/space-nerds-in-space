@@ -9289,14 +9289,10 @@ static void update_player_position_and_velocity(struct snis_entity *o)
 	o->tsd.ship.in_secure_area = 0;  /* player_collision_detection fills this in. */
 	space_partition_process(space_partition, o, o->x, o->z, o,
 				player_collision_detection);
-	if (o->tsd.ship.in_secure_area == 0 && previous_security > 0) {
-		/* snis_queue_add_sound(LEAVING_SECURE_AREA, ROLE_SOUNDSERVER, o->id); */
-		snis_queue_add_text_to_speech("Leaving high security area.", ROLE_TEXT_TO_SPEECH, o->id);
-	}
-	if (o->tsd.ship.in_secure_area > 0 && previous_security == 0) {
-		/* snis_queue_add_sound(ENTERING_SECURE_AREA, ROLE_SOUNDSERVER, o->id); */
-		snis_queue_add_text_to_speech("Entering high security area.", ROLE_TEXT_TO_SPEECH, o->id);
-	}
+	if (o->tsd.ship.in_secure_area == 0 && previous_security > 0)
+		snis_queue_add_sound(LEAVING_SECURE_AREA, ROLE_COMMS, o->id);
+	if (o->tsd.ship.in_secure_area > 0 && previous_security == 0)
+		snis_queue_add_sound(ENTERING_SECURE_AREA, ROLE_COMMS, o->id);
 }
 
 static int calc_sunburn_damage(struct snis_entity *o, struct damcon_data *d,
@@ -9838,8 +9834,10 @@ static void docking_port_move(struct snis_entity *o)
 		revoke_docking_permission(o, docker->id);
 		if (docker->type == OBJTYPE_SHIP1) {
 			int bn = lookup_bridge_by_shipid(docker->id);
-			if (bn >= 0)
+			if (bn >= 0) {
 				bridgelist[bn].last_docked_time = universe_timestamp;
+				snis_queue_add_sound(CLEAR_TO_DEPART, ROLE_COMMS, docker->id);
+			}
 		}
 	}
 	quat_slerp(&new_orientation, &docker->orientation, &o->orientation, slerp_rate);
@@ -16347,6 +16345,7 @@ static void npc_menu_item_request_dock(struct npc_menu_item *item,
 	sb = &go[i];
 	if (docking_by_faction && !rts_mode) {
 		if ((sb->tsd.starbase.factions_allowed & (1 << o->sdata.faction)) == 0) {
+			snis_queue_add_sound(PERMISSION_TO_DOCK_DENIED, ROLE_COMMS, b->shipid);
 			send_comms_packet(sb, npcname, ch, "%s, SORRY, WE DO NOT DEAL WITH THE %s.\n", b->shipname,
 						faction_name(o->sdata.faction));
 			return;
@@ -16356,20 +16355,24 @@ static void npc_menu_item_request_dock(struct npc_menu_item *item,
 		/* Do not grant permission to dock to enemy faction in RTS mode */
 		if (sb->sdata.faction != 255 && sb->sdata.faction != o->sdata.faction) {
 			send_comms_packet(sb, npcname, ch, "%s, PERMISSION DENIED, ENEMY SCUM!\n", b->shipname);
+			snis_queue_add_sound(PERMISSION_TO_DOCK_DENIED, ROLE_COMMS, b->shipid);
 			return;
 		}
 	}
 	dist = object_dist(sb, o);
 	if (dist > STARBASE_DOCKING_PERM_DIST) {
 		send_comms_packet(sb, npcname, ch, "%s, YOU ARE TOO FAR AWAY (%lf).\n", b->shipname, dist);
+		snis_queue_add_sound(TOO_FAR_AWAY, ROLE_COMMS, b->shipid);
 		return;
 	}
 	if (o->sdata.shield_strength > 15) {
 		send_comms_packet(sb, npcname, ch, "%s, YOU MUST LOWER SHIELDS FIRST.\n", b->shipname);
+		snis_queue_add_sound(LOWER_SHIELDS_HIT_LIGHTS, ROLE_COMMS, b->shipid);
 		return;
 	}
 	if (docking_by_faction && !rts_mode) {
 		if ((sb->tsd.starbase.factions_allowed & (1 << o->sdata.faction)) == 0) {
+			snis_queue_add_sound(PERMISSION_TO_DOCK_DENIED, ROLE_COMMS, b->shipid);
 			send_comms_packet(sb, npcname, ch, "%s, SORRY, WE DO NOT DEAL WITH THE %s.\n", b->shipname,
 						faction_name(o->sdata.faction));
 			return;
