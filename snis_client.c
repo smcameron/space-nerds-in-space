@@ -7499,7 +7499,7 @@ static int update_flare(uint32_t id, uint32_t timestamp, double x, double y, dou
 	/* Make the flare fade out when it gets near the end of its life */
 	if (o->tsd.flare.time_left > 0)
 		o->tsd.flare.time_left--;
-	if (o->tsd.flare.time_left < 6 && o->tsd.flare.time_left > 0)
+	if (o->tsd.flare.time_left < 6 && o->tsd.flare.time_left > 0 && o->entity)
 		update_entity_scale(o->entity, 5.0 / (6.0 - o->tsd.flare.time_left));
 
 	return 0;
