@@ -9211,7 +9211,7 @@ static void show_weapons_camera_view(GtkWidget *w)
 			float sx, sy, dist, ex, ey, ez;
 			if (!target->alive)
 				continue;
-			if (target->type != OBJTYPE_SHIP2 && target->type == OBJTYPE_SHIP1)
+			if (target->type != OBJTYPE_SHIP2 && target->type != OBJTYPE_SHIP1)
 				continue;
 			if (!target->entity || !entity_onscreen(target->entity))
 				continue;
