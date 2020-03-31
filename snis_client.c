@@ -18779,6 +18779,7 @@ static void init_demon_ui()
 	pull_down_menu_add_row(demon_ui.menu, "ADD", "BLACK HOLE", demon_black_hole_button_pressed, NULL);
 	pull_down_menu_add_row(demon_ui.menu, "ADD", "ASTEROID", demon_asteroid_button_pressed, NULL);
 	pull_down_menu_add_row(demon_ui.menu, "ADD", "SPACE MONSTER", demon_spacemonster_button_pressed, NULL);
+	pull_down_menu_add_row(demon_ui.menu, "ADD", "NEBULA", demon_nebula_button_pressed, NULL);
 	pull_down_menu_add_column(demon_ui.menu, "SHIP");
 	for (i = 0; i < nshiptypes; i++)
 		pull_down_menu_add_row(demon_ui.menu, "SHIP", ship_type[i].class,
