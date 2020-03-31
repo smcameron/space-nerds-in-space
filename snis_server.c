@@ -13039,9 +13039,15 @@ static int choose_contraband(void)
 	return -1;
 }
 
-static int has_atmosphere(int i)
+static int has_atmosphere(struct snis_entity *planet)
 {
-	return (strcmp(solarsystem_assets->planet_type[i], "rocky") != 0);
+	int t = planet->tsd.planet.solarsystem_planet_type;
+
+	if (strcmp(solarsystem_assets->planet_type[t], "rocky") != 0)
+		return 1;
+	if (planet->tsd.planet.radius > MIN_ROCKY_RADIUS + 0.5 * (MAX_ROCKY_RADIUS - MIN_ROCKY_RADIUS))
+		return 1;
+	return 0;
 }
 
 static int select_atmospheric_profile(struct snis_entity *planet)
@@ -13161,7 +13167,7 @@ static int add_planet(double x, double y, double z, float radius, uint8_t securi
 	if (radius < minr || radius > maxr)
 		radius = (float) snis_randn(maxr - minr) + minr;
 	go[i].tsd.planet.radius = radius;
-	go[i].tsd.planet.has_atmosphere = has_atmosphere(go[i].tsd.planet.solarsystem_planet_type);
+	go[i].tsd.planet.has_atmosphere = has_atmosphere(&go[i]);
 	go[i].tsd.planet.atmosphere_type = select_atmospheric_profile(&go[i]);
 	go[i].tsd.planet.ring_selector = snis_randn(256);
 	go[i].tsd.planet.security = security;
