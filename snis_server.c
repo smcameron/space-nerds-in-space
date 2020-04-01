@@ -1999,7 +1999,6 @@ static void send_packet_to_all_clients_on_a_bridge_except(uint32_t shipid, struc
 					continue;
 				if (exceptions->shipid[j] != shipid && shipid != ANY_SHIP_ID)
 					continue;
-				send_demon_console_msg("SRV EXCEPTING %d/%d\n", shipid, i);
 				skip = 1;
 				break;
 			}
