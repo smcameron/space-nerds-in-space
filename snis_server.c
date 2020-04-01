@@ -10801,6 +10801,8 @@ static void init_player(struct snis_entity *o, int reset_ship, float *charges)
 	o->tsd.ship.desired_hg_ant_aim.v.x = 1.0;
 	o->tsd.ship.desired_hg_ant_aim.v.y = 0.0;
 	o->tsd.ship.desired_hg_ant_aim.v.z = 0.0;
+	/* Fill in .tsd.ship.in_secure_area with correct value. */
+	space_partition_process(space_partition, o, o->x, o->z, o, player_collision_detection);
 }
 
 static void clear_bridge_waypoints(int bridge)
@@ -10851,12 +10853,10 @@ static void respawn_player(struct snis_entity *o, uint8_t warpgate_number)
 		y = f->y + sin(a1) * f->tsd.planet.radius * rf;
 		z = f->z + sin(a2) * f->tsd.planet.radius * rf;
 		set_object_location(o, x, y, z);
-		o->tsd.ship.in_secure_area = 1;
 		printf("found!\n");
 		found = 1;
 		break;
 	}
-
 	if (!found) { /* It's a lonely universe.  Roll the dice. */
 		double x, y, z;
 		for (int i = 0; i < 100; i++) {
@@ -10867,8 +10867,9 @@ static void respawn_player(struct snis_entity *o, uint8_t warpgate_number)
 				break;
 		}
 		set_object_location(o, x, y, z);
-		o->tsd.ship.in_secure_area = 0;
 	}
+	/* Fill in .tsd.ship.in_secure_area with correct value. */
+	space_partition_process(space_partition, o, o->x, o->z, o, player_collision_detection);
 
 finished:
 	b = lookup_bridge_by_shipid(o->id);
