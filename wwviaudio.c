@@ -214,7 +214,7 @@ static int wwviaudio_mixer_loop(__attribute__ ((unused)) const void *inputBuffer
 	__attribute__ ((unused)) void *userData )
 {
 	unsigned int i, j;
-	int sample, count;
+	int sample;
 	float *out = NULL;
 	float output;
 	out = (float*) outputBuffer;
@@ -230,13 +230,11 @@ static int wwviaudio_mixer_loop(__attribute__ ((unused)) const void *inputBuffer
 
 	for (i = 0; i < framesPerBuffer; i++) {
 		output = 0.0;
-		count = 0;
 		for (j = 0; j < max_concurrent_sounds; j++) {
 			struct audio_queue_entry *q = &audio_queue[j];
 			if (!q->active || q->sample == NULL)
 				continue;
 			sample = i + q->pos;
-			count++;
 			if (sample >= q->nsamples)
 				continue;
 			if (j != WWVIAUDIO_MUSIC_SLOT && sound_effects_on) {
