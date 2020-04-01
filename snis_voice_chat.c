@@ -41,6 +41,9 @@
 #define OPUS_PACKET_SIZE 4000
 #define SWAP_BYTES 0
 
+static volatile int recording_level;
+static volatile int playback_level;
+
 static pthread_t voice_chat_encoding_thread;
 static pthread_t voice_chat_decoding_thread;
 static int recording_audio = 0;
@@ -136,6 +139,21 @@ static void free_audio_buffer(void *x)
 	struct audio_buffer *b = x;
 	if (b)
 		free(b);
+}
+
+static int get_max_level(struct audio_buffer *b)
+{
+	int i, max_level;
+
+	max_level = 0;
+	for (i = 0; i < b->nsamples; i++) {
+		int16_t rl = b->audio_buffer[i];
+		if (rl < 0)
+			rl = -rl;
+		if (rl > max_level)
+			max_level = rl;
+	}
+	return max_level;
 }
 
 static void transmit_opus_packet_to_server(uint8_t *opus_packet, int packet_len,
@@ -254,6 +272,7 @@ static void *voice_chat_decode_thread_fn(void *arg)
 		for (int i = 0; i < len; i++)
 			b->audio_buffer[i] = ntohs(b->audio_buffer[i]);
 #endif
+		playback_level = get_max_level(b);
 		wwviaudio_append_to_audio_chain(b->audio_buffer, len, free_audio_buffer, b);
 	}
 quit:
@@ -297,6 +316,10 @@ static void recording_callback(void *cookie, int16_t *buffer, int nsamples)
 	if (nsamples != VC_BUFFER_SIZE)
 		return;
 	recording_buffer.nsamples = nsamples;
+	if (recording_audio)
+		recording_level = get_max_level(&recording_buffer);
+	else
+		recording_level = 0;
 	pthread_mutex_lock(&outgoing.mutex);
 	enqueue_audio_data(&outgoing, recording_buffer.audio_buffer, recording_buffer.nsamples,
 			recording_buffer.destination, recording_buffer.snis_radio_channel);
@@ -328,6 +351,16 @@ void voice_chat_play_opus_packet(uint8_t *opus_buffer, int buflen)
 	pthread_mutex_unlock(&incoming.mutex);
 }
 
+int voice_chat_recording_level(void)
+{
+	return recording_level;
+}
+
+int voice_chat_playback_level(void)
+{
+	return playback_level;
+}
+
 #else
 #include <stdio.h>
 #include <stdint.h>
@@ -349,6 +382,16 @@ void voice_chat_stop_threads(void)
 
 void voice_chat_play_opus_packet(uint8_t *opus_buffer, int buflen)
 {
+}
+
+int voice_chat_recording_level(void)
+{
+	return 0;
+}
+
+int voice_chat_playback_level(void)
+{
+	return 0;
 }
 #endif
 

@@ -195,6 +195,7 @@ static int mtwist_seed = COMMON_MTWIST_SEED;
 static float current_altitude = 1e20;
 static int idiot_light_threshold = 10; /* tweakable */
 static int dejitter_science_details = 1; /* Tweakable. 1 means de-jitter science details, 0 means don't */
+static int monitor_voice_chat = 0;
 
 /* I can switch out the line drawing function with these macros */
 /* in case I come across something faster than gdk_draw_line */
@@ -8663,6 +8664,7 @@ static void show_common_screen(GtkWidget *w, char *title)
 	int title_color;
 	int border_color;
 	struct snis_entity *o;
+	int rl, pbl;
 
 	o = find_my_ship();
 
@@ -8753,6 +8755,28 @@ static void show_common_screen(GtkWidget *w, char *title)
 		show_textscreen(w);
 	if (watermark_active)
 		show_watermark();
+
+	if (monitor_voice_chat) {
+		int i;
+		rl = voice_chat_recording_level();
+		pbl = voice_chat_playback_level();
+
+		for (i = 0; i < 32; i++)
+			if ((rl >> i) == 0)
+				break;
+		rl = i * SCREEN_WIDTH / (2 * 32);
+		for (i = 0; i < 32; i++)
+			if ((pbl >> i) == 0)
+				break;
+		pbl = i * SCREEN_WIDTH / (2 * 32);
+
+		sng_set_foreground(RED);
+		snis_draw_rectangle(0, 0, 10, SCREEN_WIDTH / 2, 14);
+		snis_draw_rectangle(1, 0, 10, rl, 14);
+		sng_set_foreground(GREEN);
+		snis_draw_rectangle(0, 0, 27, SCREEN_WIDTH / 2, 14);
+		snis_draw_rectangle(1, 0, 27, pbl, 14);
+	}
 }
 
 #define ANGLE_OF_VIEW (45)
@@ -17882,6 +17906,9 @@ static struct tweakable_var_descriptor client_tweak[] = {
 		&low_poly_threshold, 'f', 0.0, 10000.0, 200.0, 0, 0, 0 },
 	{ "LOG_CONSOLE", "LOG CONSOLE OUTPUT TO STDERR IF 1",
 		&demon_ui.log_console, 'i', 0.0, 0.0, 0.0, 0, 1, 0 },
+	{ "MONITOR_VOICE_CHAT", "1 - DISPLAY MONITOR OF VOICE CHAT 0 - DO NOT",
+		&monitor_voice_chat, 'i', 0.0, 0.0, 0.0, 0, 1, 0 },
+
 	{ NULL, NULL, NULL, '\0', 0.0, 0.0, 0.0, 0, 0, 0 },
 };
 
