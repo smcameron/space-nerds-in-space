@@ -490,6 +490,7 @@ static struct bridge_data {
 	struct persistent_bridge_data persistent_bridge_data;
 } bridgelist[MAXCLIENTS];
 static int nbridges = 0;		/* Number of elements present in bridgelist[] */
+static int announce_players = 0; /* Announce new players via TTS? */
 
 static pthread_mutex_t universe_mutex = PTHREAD_MUTEX_INITIALIZER; /* main mutex to protect go[] array */
 
@@ -18023,6 +18024,8 @@ static struct tweakable_var_descriptor server_tweak[] = {
 		&npc_system_targeting_interval, 'i', 0.0, 0.0, 0.0, 1, 5000, DEFAULT_NPC_SYSTEM_TARGETING_INTERVAL },
 	{ "OPCODE_STATS", "COLLECT NETWORK STATS BY OPCODE",
 		&collect_opcode_stats, 'i', 0.0, 0.0, 0.0, 0, 1, 0 },
+	{ "ANNOUNCE_PLAYERS", "ANNOUNCE NEW PLAYERS VIA TEXT TO SPEECH",
+		&announce_players, 'i', 0.0, 0.0, 0.0, 0, 1, 0 },
 	{ NULL, NULL, NULL, '\0', 0.0, 0.0, 0.0, 0, 0, 0 },
 };
 
@@ -24481,12 +24484,18 @@ static void service_connection(int connection)
 
 	if (client_count == 1) {
 		/* snis_queue_add_global_sound(STARSHIP_JOINED); */
-		snis_queue_add_global_text_to_speech("star ship has joined");
+		if (announce_players)
+			snis_queue_add_global_text_to_speech("star ship has joined");
+		send_demon_console_msg("NEW BRIDGE JOINED %d, SHIP %d\n",
+			bridgenum, bridgelist[bridgenum].shipid);
 	} else {
 		/* snis_queue_add_sound(CREWMEMBER_JOINED, ROLE_ALL,
 					bridgelist[bridgenum].shipid); */
-		snis_queue_add_text_to_speech("crew member has joined.", ROLE_TEXT_TO_SPEECH,
+		if (announce_players)
+			snis_queue_add_text_to_speech("crew member has joined.", ROLE_TEXT_TO_SPEECH,
 					bridgelist[bridgenum].shipid);
+		send_demon_console_msg("CREW MEMBER JOINED BRIDGE %d, SHIP %d\n",
+			bridgenum, bridgelist[bridgenum].shipid);
 	}
 
 	/* Wait for at least one of the threads to prevent premature reaping */
