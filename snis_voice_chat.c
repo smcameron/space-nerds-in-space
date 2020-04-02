@@ -56,6 +56,7 @@ static struct audio_buffer {
 	struct audio_buffer *next, *prev;
 	uint32_t snis_radio_channel;
 	uint8_t destination; /* VOICE_CHAT_DESTINATION_CREW, _ALL, or _CHANNEL */
+	int audio_chain;
 } recording_buffer;
 
 struct audio_queue {
@@ -102,15 +103,17 @@ static void enqueue_audio_data(struct audio_queue *q,
 	b->nsamples = nsamples;
 	b->destination = destination;
 	b->snis_radio_channel = channel;
+	b->audio_chain = -1;
 	enqueue_audio_buffer(q, b);
 }
 
 /* Must hold q->mutex */
-static void enqueue_opus_audio(struct audio_queue *q, uint8_t *opus_buffer, int nopus_bytes)
+static void enqueue_opus_audio(struct audio_queue *q, uint8_t *opus_buffer, int nopus_bytes, int audio_chain)
 {
 	struct audio_buffer *b = calloc(1, sizeof(*b));
 	memcpy(b->opus_buffer, opus_buffer, sizeof(b->opus_buffer[0]) * nopus_bytes);
 	b->nopus_bytes = nopus_bytes;
+	b->audio_chain = audio_chain;
 	enqueue_audio_buffer(q, b);
 }
 
@@ -162,9 +165,9 @@ static void transmit_opus_packet_to_server(uint8_t *opus_packet, int packet_len,
 	struct packed_buffer *pb;
 	uint16_t len = (uint16_t) packet_len;
 
-	pb = packed_buffer_allocate(8 + packet_len);
-	packed_buffer_append(pb, "bbwhr", OPCODE_OPUS_AUDIO_DATA,
-				destination, snis_radio_channel, len, opus_packet, len);
+	pb = packed_buffer_allocate(10 + packet_len);
+	packed_buffer_append(pb, "bhbwhr", OPCODE_OPUS_AUDIO_DATA,
+				-1, destination, snis_radio_channel, len, opus_packet, len);
 	queue_to_server(pb);
 }
 
@@ -229,14 +232,18 @@ static void *voice_chat_decode_thread_fn(void *arg)
 {
 	struct audio_queue *q = arg;
 	struct audio_buffer *b;
-	int len, rc;
-	OpusDecoder *opus_decoder;
+	int i, len, rc;
+	OpusDecoder *opus_decoder[WWVIAUDIO_CHAIN_COUNT] = { 0 };
 
-	/* Set up opus decoder */
-	opus_decoder = opus_decoder_create(SAMPLE_RATE, CHANNELS, &rc);
-	if (rc < 0) {
-		fprintf(stderr, "Failed to create Opus decoder: %s\n", opus_strerror(rc));
-		return NULL;
+	/* Set up opus decoder for each possible VOIP stream */
+
+	for (i = 0; i < WWVIAUDIO_CHAIN_COUNT; i++) {
+		opus_decoder[i] = opus_decoder_create(SAMPLE_RATE, CHANNELS, &rc);
+		if (rc < 0) {
+			opus_decoder[i] = NULL;
+			fprintf(stderr, "Failed to create Opus decoder: %s\n", opus_strerror(rc));
+			goto quit;
+		}
 	}
 
 	while (1) {
@@ -258,7 +265,8 @@ static void *voice_chat_decode_thread_fn(void *arg)
 		pthread_mutex_unlock(&q->mutex);
 
 		/* decode audio buffer */
-		len = opus_decode(opus_decoder, b->opus_buffer, b->nopus_bytes, b->audio_buffer, VC_BUFFER_SIZE, 0);
+		i = b->audio_chain;
+		len = opus_decode(opus_decoder[i], b->opus_buffer, b->nopus_bytes, b->audio_buffer, VC_BUFFER_SIZE, 0);
 		if (len < 0) {
 			fprintf(stderr, "opus_decode failed\n");
 			goto quit;
@@ -273,11 +281,13 @@ static void *voice_chat_decode_thread_fn(void *arg)
 			b->audio_buffer[i] = ntohs(b->audio_buffer[i]);
 #endif
 		playback_level = get_max_level(b);
-		wwviaudio_append_to_audio_chain(b->audio_buffer, len, free_audio_buffer, b);
+		wwviaudio_append_to_audio_chain(b->audio_buffer, len, b->audio_chain, free_audio_buffer, b);
 	}
 quit:
-	if (opus_decoder)
-		opus_decoder_destroy(opus_decoder);
+	for (i = 0; i < WWVIAUDIO_CHAIN_COUNT; i++) {
+		if (opus_decoder[i])
+			opus_decoder_destroy(opus_decoder[i]);
+	}
 	return NULL;
 }
 
@@ -286,6 +296,7 @@ void voice_chat_setup_threads(void)
 	int rc;
 
 	printf("voice_chat: setup threads\n");
+
 	audio_queue_init(&incoming);
 	audio_queue_init(&outgoing);
 
@@ -342,12 +353,14 @@ void voice_chat_stop_recording(void)
 	wwviaudio_stop_audio_capture();
 }
 
-void voice_chat_play_opus_packet(uint8_t *opus_buffer, int buflen)
+void voice_chat_play_opus_packet(uint8_t *opus_buffer, int buflen, int audio_chain)
 {
 	if (buflen > VC_BUFFER_SIZE)
 		buflen = VC_BUFFER_SIZE;
+	if (audio_chain < 0 || audio_chain >= WWVIAUDIO_CHAIN_COUNT)
+		return;
 	pthread_mutex_lock(&incoming.mutex);
-	enqueue_opus_audio(&incoming, opus_buffer, buflen);
+	enqueue_opus_audio(&incoming, opus_buffer, buflen, audio_chain);
 	pthread_mutex_unlock(&incoming.mutex);
 }
 
@@ -360,7 +373,6 @@ int voice_chat_playback_level(void)
 {
 	return playback_level;
 }
-
 #else
 #include <stdio.h>
 #include <stdint.h>

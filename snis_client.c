@@ -196,6 +196,8 @@ static float current_altitude = 1e20;
 static int idiot_light_threshold = 10; /* tweakable */
 static int dejitter_science_details = 1; /* Tweakable. 1 means de-jitter science details, 0 means don't */
 static int monitor_voice_chat = 0;
+static int have_talking_stick = 0;
+static pthread_mutex_t voip_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 /* I can switch out the line drawing function with these macros */
 /* in case I come across something faster than gdk_draw_line */
@@ -4380,6 +4382,19 @@ static void deal_with_keyboard()
 	}
 }
 
+static void request_talking_stick(void)
+{
+	queue_to_server(snis_opcode_subcode_pkt("bb", OPCODE_TALKING_STICK, OPCODE_TALKING_STICK_REQUEST));
+}
+
+static void release_talking_stick(void)
+{
+	queue_to_server(snis_opcode_subcode_pkt("bb", OPCODE_TALKING_STICK, OPCODE_TALKING_STICK_RELEASE));
+	pthread_mutex_lock(&voip_mutex);
+	have_talking_stick = 0;
+	pthread_mutex_unlock(&voip_mutex);
+}
+
 static gint key_press_cb(GtkWidget* widget, GdkEventKey* event, gpointer data)
 {
 	enum keyaction ka;
@@ -4399,6 +4414,15 @@ static gint key_press_cb(GtkWidget* widget, GdkEventKey* event, gpointer data)
 	}
 
 	if (event->keyval == GDK_F12) {
+		pthread_mutex_lock(&voip_mutex);
+			if (!have_talking_stick) {
+				pthread_mutex_unlock(&voip_mutex);
+				request_talking_stick();
+			} else {
+				pthread_mutex_unlock(&voip_mutex);
+			}
+		/* We transmit regardless of whether we have a talking stick.
+		 * If we do not have it, snis_server will drop our messages */
 		if (control_key_pressed)
 			voice_chat_start_recording(VOICE_CHAT_DESTINATION_ALL, 0);
 		else
@@ -4648,8 +4672,11 @@ static gint key_release_cb(GtkWidget* widget, GdkEventKey* event, gpointer data)
 	if (ka > 0 && ka < NKEYSTATES)
 		kbstate.pressed[ka] = 0;
 
-	if (event->keyval == GDK_F12)
+	if (event->keyval == GDK_F12) {
 		voice_chat_stop_recording();
+		/* We release even if we don't have, snis_server will know the real deal. */
+		release_talking_stick();
+	}
 
 	return FALSE;
 }
@@ -7701,12 +7728,13 @@ static int process_opus_audio_data(void)
 {
 	int rc;
 	uint8_t buffer[4008];
+	uint16_t audio_chain;
 	uint8_t destination;
 	uint32_t radio_channel;
 	uint16_t datalen;
 
-	rc = read_and_unpack_buffer(buffer, "bwh",
-			&destination, &radio_channel, &datalen);
+	rc = read_and_unpack_buffer(buffer, "bhwh",
+			&audio_chain, &destination, &radio_channel, &datalen);
 	if (rc)
 		return rc;
 	if (datalen > 4000) {
@@ -7717,7 +7745,31 @@ static int process_opus_audio_data(void)
 	rc = snis_readsocket(gameserver_sock, buffer, datalen);
 	if (rc)
 		return rc;
-	voice_chat_play_opus_packet(buffer, datalen);
+	if (audio_chain < WWVIAUDIO_CHAIN_COUNT)
+		voice_chat_play_opus_packet(buffer, datalen, audio_chain);
+	return 0;
+}
+
+static int process_talking_stick(void)
+{
+	uint8_t buffer[10];
+	uint8_t subcode;
+	int rc;
+
+	rc = read_and_unpack_buffer(buffer, "b", &subcode);
+	if (rc)
+		return rc;
+	switch (subcode) {
+	case OPCODE_TALKING_STICK_GRANT:
+		pthread_mutex_lock(&voip_mutex);
+		have_talking_stick = 1;
+		pthread_mutex_unlock(&voip_mutex);
+		break;
+	default:
+		fprintf(stderr, "%s: Unexpected OPCODE_TALKING_STICK subcode %hhu\n",
+				"snis_client", subcode);
+		return -1;
+	}
 	return 0;
 }
 
@@ -8033,6 +8085,11 @@ static void *gameserver_reader(__attribute__((unused)) void *arg)
 			break;
 		case OPCODE_OPUS_AUDIO_DATA:
 			rc = process_opus_audio_data();
+			if (rc)
+				goto protocol_error;
+			break;
+		case OPCODE_TALKING_STICK:
+			rc = process_talking_stick();
 			if (rc)
 				goto protocol_error;
 			break;

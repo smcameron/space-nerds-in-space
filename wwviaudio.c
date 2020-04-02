@@ -55,7 +55,7 @@ static int allocated_sound_clips = 0;
 static int one_shot_busy = 0;
 static pthread_mutex_t one_shot_mutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t recording_mutex = PTHREAD_MUTEX_INITIALIZER;
-static pthread_mutex_t audio_chain_mutex = PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t audio_chain_mutex[WWVIAUDIO_CHAIN_COUNT];
 static int busy_recording = 0;
 
 /* Pause all audio output, output silence. */
@@ -129,8 +129,8 @@ struct audio_queue_entry {
 };
 
 static struct audio_queue_entry *audio_queue = NULL;
-static struct audio_queue_entry *audio_chain_head = NULL;
-static struct audio_queue_entry *audio_chain_tail = NULL;
+static struct audio_queue_entry *audio_chain_head[WWVIAUDIO_CHAIN_COUNT] = { 0 };
+static struct audio_queue_entry *audio_chain_tail[WWVIAUDIO_CHAIN_COUNT] = { 0 };
 
 int wwviaudio_read_ogg_clip_into_allocated_buffer(char *filename, int16_t **sample, int *nsamples)
 {
@@ -252,24 +252,26 @@ static int wwviaudio_mixer_loop(__attribute__ ((unused)) const void *inputBuffer
 			}
 		}
 		/* Now mix in any audio chain... */
-		pthread_mutex_lock(&audio_chain_mutex);
-		q = audio_chain_head;
-		pthread_mutex_unlock(&audio_chain_mutex);
-		if (q && q->active && q->sample) {
-			if (q && q->pos >= q->nsamples) {
-				struct audio_queue_entry *oldq = q;
-				pthread_mutex_lock(&audio_chain_mutex);
-				audio_chain_head = q->next; /* Advance to next piece of the chain */
-				q = audio_chain_head;
-				pthread_mutex_unlock(&audio_chain_mutex);
-				if (oldq->callback)
-					oldq->callback(oldq->cookie);
-				free(oldq);
-			}
-			if (q) {
-				output += (float) q->sample[q->pos] * q->volume / (float) (INT16_MAX);
-				q->volume += q->delta_volume;
-				q->pos++;
+		for (j = 0; j < WWVIAUDIO_CHAIN_COUNT; j++) {
+			pthread_mutex_lock(&audio_chain_mutex[j]);
+			q = audio_chain_head[j];
+			pthread_mutex_unlock(&audio_chain_mutex[j]);
+			if (q && q->active && q->sample) {
+				if (q && q->pos >= q->nsamples) {
+					struct audio_queue_entry *oldq = q;
+					pthread_mutex_lock(&audio_chain_mutex[j]);
+					audio_chain_head[j] = q->next; /* Advance to next piece of the chain */
+					q = audio_chain_head[j];
+					pthread_mutex_unlock(&audio_chain_mutex[j]);
+					if (oldq->callback)
+						oldq->callback(oldq->cookie);
+					free(oldq);
+				}
+				if (q) {
+					output += (float) q->sample[q->pos] * q->volume / (float) (INT16_MAX);
+					q->volume += q->delta_volume;
+					q->pos++;
+				}
 			}
 		}
 		*out++ = (float) output;
@@ -309,9 +311,13 @@ int wwviaudio_initialize_portaudio(int maximum_concurrent_sounds, int maximum_so
 	PaStreamParameters outparams;
 	PaError rc;
 	PaDeviceIndex device_count;
+	int i;
 
 	if (maximum_concurrent_sounds < 0)
 		return -1;
+
+	for (i = 0; i < WWVIAUDIO_CHAIN_COUNT; i++)
+		pthread_mutex_init(&audio_chain_mutex[i], NULL);
 
 	max_concurrent_sounds = (unsigned int) maximum_concurrent_sounds;
 	max_sound_clips = maximum_sound_clips;
@@ -767,9 +773,12 @@ error:
 	return -1;
 }
 
-void wwviaudio_append_to_audio_chain(int16_t *samples, int nsamples, void (*callback)(void *), void *cookie)
+void wwviaudio_append_to_audio_chain(int16_t *samples, int nsamples, int chain, void (*callback)(void *), void *cookie)
 {
 	struct audio_queue_entry *entry = malloc(sizeof(*entry));
+
+	if (chain < 0 || chain >= WWVIAUDIO_CHAIN_COUNT)
+		return;
 
 	entry->active = 1;
 	entry->pos = 0;
@@ -783,16 +792,16 @@ void wwviaudio_append_to_audio_chain(int16_t *samples, int nsamples, void (*call
 	entry->delta_volume = 0.0;
 	entry->next = NULL;
 
-	pthread_mutex_lock(&audio_chain_mutex);
-	if (!audio_chain_head) {
-		audio_chain_head = entry;
-		audio_chain_tail = entry;
-		pthread_mutex_unlock(&audio_chain_mutex);
+	pthread_mutex_lock(&audio_chain_mutex[chain]);
+	if (!audio_chain_head[chain]) {
+		audio_chain_head[chain] = entry;
+		audio_chain_tail[chain] = entry;
+		pthread_mutex_unlock(&audio_chain_mutex[chain]);
 		return;
 	}
-	audio_chain_tail->next = entry;
-	audio_chain_tail = entry;
-	pthread_mutex_unlock(&audio_chain_mutex);
+	audio_chain_tail[chain]->next = entry;
+	audio_chain_tail[chain] = entry;
+	pthread_mutex_unlock(&audio_chain_mutex[chain]);
 }
 
 #else /* stubs only... */

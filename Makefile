@@ -505,7 +505,7 @@ _SERVEROBJS=snis_server.o starbase-comms.o \
 		snis_server_tracker.o snis_bridge_update_packet.o solarsystem_config.o a_star.o \
 		key_value_parser.o nonuniform_random_sampler.o oriented_bounding_box.o shape_collision.o \
 		graph_dev_mesh_stub.o turret_aimer.o snis_hash.o snis_server_debug.o \
-		ship_registration.o
+		ship_registration.o talking_stick.o
 SERVEROBJS=${COMMONOBJS} $(patsubst %,$(OD)/%,${_SERVEROBJS})
 
 _MULTIVERSEOBJS=snis_multiverse.o snis_marshal.o snis_socket_io.o mathutils.o mtwist.o stacktrace.o \
@@ -1104,6 +1104,9 @@ $(OD)/mtwist.o:	mtwist.c Makefile ${ODT}
 	$(Q)$(COMPILE)
 
 $(OD)/elastic_collision.o:	elastic_collision.c elastic_collision.h Makefile ${ODT}
+	$(Q)$(COMPILE)
+
+$(OD)/talking_stick.o:	talking_stick.c talking_stick.h Makefile ${ODT}
 	$(Q)$(COMPILE)
 
 $(OD)/fleet.o:	fleet.c Makefile ${ODT}

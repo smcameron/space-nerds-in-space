@@ -78,6 +78,9 @@ int snis_opcode_def_init(void)
 	rc |= init_opcode_def(OPCODE_ID_CLIENT_SHIP, "bw");
 	rc |= init_opcode_def(OPCODE_UPDATE_ASTEROID, "bwwSSS");
 	rc |= init_opcode_def(OPCODE_UPDATE_ASTEROID_MINERALS, "bwbbbb");
+	rc |= init_opcode_subcode_def(OPCODE_TALKING_STICK, OPCODE_TALKING_STICK_REQUEST, "bb");
+	rc |= init_opcode_subcode_def(OPCODE_TALKING_STICK, OPCODE_TALKING_STICK_GRANT, "bb");
+	rc |= init_opcode_subcode_def(OPCODE_TALKING_STICK, OPCODE_TALKING_STICK_RELEASE, "bb");
 	rc |= init_opcode_def(OPCODE_UPDATE_WARP_CORE, "bwwSSS");
 	rc |= init_opcode_def(OPCODE_DEMON_RTSMODE, "bb");
 	rc |= init_opcode_subcode_def(OPCODE_RTS_FUNC, OPCODE_RTS_FUNC_COMMS_BUTTON, "bbb");
@@ -222,8 +225,8 @@ int snis_opcode_def_init(void)
 	rc |= init_opcode_def(OPCODE_LOAD_SKYBOX, "n/a");
 	rc |= init_opcode_def(OPCODE_ROBOT_AUTO_MANUAL, "bb");
 	rc |= init_opcode_def(OPCODE_ADD_WARP_EFFECT, "bwSSSSSS");
-	/* rc |= init_opcode_def(OPCODE_OPUS_AUDIO_DATA, "bbwhr"); */
-			/* ^^^ opcode, destination, channel, bytecount, audio data */
+	/* rc |= init_opcode_def(OPCODE_OPUS_AUDIO_DATA, "bhbwhr"); */
+			/* ^^^ opcode, audio chain, destination, channel, bytecount, audio data */
 	rc |= init_opcode_def(OPCODE_REQUEST_PITCH, "bb");
 	rc |= init_opcode_def(OPCODE_REQUEST_ROLL, "bb");
 	rc |= init_opcode_def(OPCODE_REQUEST_SCIBALL_YAW, "bb");

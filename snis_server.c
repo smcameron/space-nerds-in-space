@@ -122,9 +122,12 @@
 #include "planetary_ring_data.h"
 #include "scipher.h"
 #include "snis_voice_chat.h"
+#include "talking_stick.h"
+#include "wwviaudio.h" /* Just for WWVIAUDIO_CHAIN_COUNT */
 
 #define CLIENT_UPDATE_PERIOD_NSECS 500000000
 #define MAXCLIENTS 100
+#define NTALKING_STICKS (WWVIAUDIO_CHAIN_COUNT)
 
 /*
  * The following globals are adjustable at runtime via the demon console.
@@ -427,6 +430,8 @@ static struct game_client {
 	uint8_t current_station; /* what station (displaymode) client is currently on. Mostly the server doesn't */
 				/* need to know this, but uses it for demon serverside builtin commands "clients" */
 				/* "lockroles", and "rotateroles" */
+	int16_t talking_stick;	/* Which audio chain VOIP transmissions from this client should use. */
+				/* -1 if none assigned */
 #define COMPUTE_AVERAGE_TO_CLIENT_BUFFER_SIZE 0
 #if COMPUTE_AVERAGE_TO_CLIENT_BUFFER_SIZE
 	uint64_t write_sum;	/* Statistics about data written to client */
@@ -706,6 +711,8 @@ static void put_client(struct game_client *c)
 	c->refcount--;
 	fprintf(stderr, "snis_server: client refcount = %d\n", c->refcount);
 	if (c->refcount == 0) {
+		if (c->talking_stick != NO_TALKING_STICK)
+			talking_stick_release(c->talking_stick);
 		if (c->bridge >= 0 && c->bridge < nbridges) {
 			bridgelist[c->bridge].nclients--;
 			fprintf(stderr, "snis_server: client count of bridge %d = %d\n", c->bridge, bridgelist[c->bridge].nclients);
@@ -20050,14 +20057,16 @@ static int process_opus_audio_data(struct game_client *c)
 {
 	int rc;
 	uint8_t buffer[4008];
+	uint16_t ignored;
+	int16_t audio_chain;
 	uint8_t destination;
 	uint32_t radio_channel;
 	uint16_t datalen;
 	struct packed_buffer *pb;
 	struct except_clients except;
 
-	rc = read_and_unpack_buffer(c, buffer, "bwh",
-			&destination, &radio_channel, &datalen);
+	rc = read_and_unpack_buffer(c, buffer, "hbwh",
+			&ignored, &destination, &radio_channel, &datalen);
 	if (rc)
 		return rc;
 	if (datalen > 4000) {
@@ -20068,9 +20077,22 @@ static int process_opus_audio_data(struct game_client *c)
 	rc = snis_readsocket(c->socket, buffer, datalen);
 	if (rc)
 		return rc;
-	pb = packed_buffer_allocate(8 + datalen);
-	packed_buffer_append(pb, "bbwhr", OPCODE_OPUS_AUDIO_DATA,
-				destination, radio_channel, datalen, buffer, datalen);
+
+	pthread_mutex_lock(&universe_mutex);
+	client_lock();
+	if (c->talking_stick == NO_TALKING_STICK) {
+		/* Client does not have talking stick. */
+		client_unlock();
+		pthread_mutex_unlock(&universe_mutex);
+		return 0;
+	}
+	/* Ignore audio chain from client, it put 255 there anyway 'cause it doesn't know */
+	audio_chain = c->talking_stick;
+	client_unlock();
+	pthread_mutex_unlock(&universe_mutex);
+	pb = packed_buffer_allocate(10 + datalen);
+	packed_buffer_append(pb, "bhbwhr", OPCODE_OPUS_AUDIO_DATA,
+				(uint16_t) audio_chain, destination, radio_channel, datalen, buffer, datalen);
 
 	/* Don't send a client's own audio back at him. */
 	except.nclients = 1;
@@ -20087,6 +20109,46 @@ static int process_opus_audio_data(struct game_client *c)
 		break;
 	default:
 		fprintf(stderr, "Unexpected destination code %hhu in opus audio packet\n", destination);
+		return -1;
+	}
+	return 0;
+}
+
+static int process_talking_stick(struct game_client *c)
+{
+	int rc;
+	uint8_t subcode;
+	unsigned char buffer[20];
+	int16_t ts;
+
+	rc = read_and_unpack_buffer(c, buffer, "b", &subcode);
+	if (rc)
+		return rc;
+	switch (subcode) {
+	case OPCODE_TALKING_STICK_REQUEST:
+		pthread_mutex_lock(&universe_mutex);
+		client_lock();
+		if (c->talking_stick == NO_TALKING_STICK)
+			c->talking_stick = talking_stick_get();
+			ts = c->talking_stick;
+		client_unlock();
+		pthread_mutex_unlock(&universe_mutex);
+		if (ts > 0)
+			pb_queue_to_client(c, snis_opcode_subcode_pkt("bb",
+				OPCODE_TALKING_STICK, OPCODE_TALKING_STICK_GRANT));
+		break;
+	case OPCODE_TALKING_STICK_RELEASE:
+		pthread_mutex_lock(&universe_mutex);
+		client_lock();
+		if (c->talking_stick != NO_TALKING_STICK)
+			talking_stick_release(c->talking_stick);
+			c->talking_stick = NO_TALKING_STICK;
+		client_unlock();
+		pthread_mutex_unlock(&universe_mutex);
+		break;
+	default:
+		fprintf(stderr, "%s: bad OPCODE_TALKING_STICK subcode %hhu in request from client\n",
+				logprefix(), subcode);
 		return -1;
 	}
 	return 0;
@@ -22831,6 +22893,11 @@ static void process_instructions_from_client(struct game_client *c)
 			if (rc)
 				goto protocol_error;
 			break;
+		case OPCODE_TALKING_STICK:
+			rc = process_talking_stick(c);
+			if (rc)
+				goto protocol_error;
+			break;
 		default:
 			goto protocol_error;
 	}
@@ -24491,6 +24558,7 @@ static void service_connection(int connection)
 	client[i].socket = connection;
 	client[i].timestamp = 0;  /* newborn client, needs everything */
 	client[i].current_station = 255; /* unknown */
+	client[i].talking_stick = NO_TALKING_STICK; /* No VOIP channel assigned */
 
 	log_client_info(SNIS_INFO, connection, "add new player\n");
 
@@ -29844,6 +29912,7 @@ int main(int argc, char *argv[])
 	snis_protocol_debugging(1);
 	snis_debug_dump_set_label("SERVER");
 	snis_opcode_def_init();
+	talking_stick_setup(NTALKING_STICKS);
 
 	memset(&thirtieth_second, 0, sizeof(thirtieth_second));
 	thirtieth_second.tv_nsec = 33333333; /* 1/30th second */

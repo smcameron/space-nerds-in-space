@@ -15,9 +15,9 @@ extern void ssgl_msleep(int milliseconds); /* Defined in ssgl/ssgl_sleep.c */
 
 void voice_chat_setup_threads(void);
 void voice_chat_stop_threads(void);
-void voice_chat_start_recording(uint8_t destination, uint32_t channel);
+void voice_chat_start_recording(uint8_t destination, uint32_t user_channel /* not the voip channel */);
 void voice_chat_stop_recording(void);
-void voice_chat_play_opus_packet(uint8_t *buffer, int buflen);
+void voice_chat_play_opus_packet(uint8_t *buffer, int buflen, int audio_chain);
 int voice_chat_recording_level();
 int voice_chat_playback_level();
 

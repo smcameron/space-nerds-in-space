@@ -30,6 +30,7 @@
 #define WWVIAUDIO_MUSIC_SLOT (0)
 #define WWVIAUDIO_SAMPLE_RATE   (48000)
 #define WWVIAUDIO_ANY_SLOT (-1)
+#define WWVIAUDIO_CHAIN_COUNT 4
 
 /*
  *             Configuration functions.
@@ -154,8 +155,11 @@ GLOBAL int wwviaudio_add_one_shot_pcm_data(int16_t *samples, int nsamples,
 /* Add to the end of single audio chain that is playing (if not empty).
  * This is for e.g. voice chat. The callback function is called with cookie
  * as a parameter, useful for e.g. freeing the used audio buffer.
+ * The chain parameter specifies which of the channels for VOIP should
+ * be used. There are WWVIAUDIO_CHAIN_COUNT such channels starting with 0
+ * and incrementing by 1 up to WWVIAUDIO_CHAIN_COUNT - 1.
  */
-GLOBAL void wwviaudio_append_to_audio_chain(int16_t *samples, int nsamples,
+GLOBAL void wwviaudio_append_to_audio_chain(int16_t *samples, int nsamples, int chain,
 		void (*callback)(void *), void *cookie);
 
 /* Begin playing a segment of a sound at "begin" until "end" at "volume" (all between 0.0 and 1.0).
