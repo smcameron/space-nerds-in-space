@@ -34,6 +34,7 @@
 #include "snis.h"
 #include "snis_packet.h"
 #include "snis_marshal.h"
+#include "arraysize.h"
 
 #define VC_BUFFER_SIZE 1920 /* This has to equal FRAMES_PER_BUFFER in wwviaudio.c */
 #define SAMPLE_RATE 48000
@@ -234,6 +235,8 @@ static void *voice_chat_decode_thread_fn(void *arg)
 	struct audio_buffer *b;
 	int i, len, rc;
 	OpusDecoder *opus_decoder[WWVIAUDIO_CHAIN_COUNT] = { 0 };
+	unsigned int mcc, difference, last_mixer_cycle_count[WWVIAUDIO_CHAIN_COUNT] = { 0 };
+	static int16_t short_silence[2400] = { 0 }; /* 100ms of silence */
 
 	/* Set up opus decoder for each possible VOIP stream */
 
@@ -281,6 +284,23 @@ static void *voice_chat_decode_thread_fn(void *arg)
 			b->audio_buffer[i] = ntohs(b->audio_buffer[i]);
 #endif
 		playback_level = get_max_level(b);
+
+		/* If it's been a couple seconds since we've seen data on this chain then
+		 * inject 100ms of silence ahead of the data to put the mixer 100ms behind
+		 * it so that if there's jitter or some space between subsequent packets,
+		 * there's a little bit of slack before the mixer runs out.
+		 */
+		mcc = wwviaudio_get_mixer_cycle_count();
+		difference = mcc - last_mixer_cycle_count[b->audio_chain];
+		if (difference > (4 * 48000) / VC_BUFFER_SIZE && difference < (unsigned int) 0xfffff000)  {
+			/* > about 4 seconds at VC_BUFFER_SIZE samples per mixer cycle */
+			/* < 0xfffff000 to avoid hiccup at mcc wraparound */
+			wwviaudio_append_to_audio_chain(short_silence, ARRAYSIZE(short_silence),
+							b->audio_chain, NULL, NULL);
+		}
+		last_mixer_cycle_count[b->audio_chain] = mcc;
+
+		/* Let the mixer have the data */
 		wwviaudio_append_to_audio_chain(b->audio_buffer, len, b->audio_chain, free_audio_buffer, b);
 	}
 quit:

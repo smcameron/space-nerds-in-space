@@ -57,6 +57,7 @@ static pthread_mutex_t one_shot_mutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t recording_mutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t audio_chain_mutex[WWVIAUDIO_CHAIN_COUNT];
 static int busy_recording = 0;
+static unsigned int mixer_cycle_count = 0;
 
 /* Pause all audio output, output silence. */
 void wwviaudio_pause_audio(void)
@@ -234,6 +235,8 @@ static int wwviaudio_mixer_loop(__attribute__ ((unused)) const void *inputBuffer
 		return 0;
 	}
 
+	mixer_cycle_count++;
+
 	for (i = 0; i < framesPerBuffer; i++) {
 		struct audio_queue_entry *q;
 		output = 0.0;
@@ -289,7 +292,6 @@ static int wwviaudio_mixer_loop(__attribute__ ((unused)) const void *inputBuffer
 	}
 	return 0; /* we're never finished */
 }
-
 
 static void decode_paerror(PaError rc)
 {
@@ -773,6 +775,10 @@ error:
 	return -1;
 }
 
+unsigned int wwviaudio_get_mixer_cycle_count(void) {
+	return mixer_cycle_count;
+}
+
 void wwviaudio_append_to_audio_chain(int16_t *samples, int nsamples, int chain, void (*callback)(void *), void *cookie)
 {
 	struct audio_queue_entry *entry = malloc(sizeof(*entry));
@@ -830,6 +836,7 @@ void wwviaudio_cancel_all_sounds() { return; }
 int wwviaudio_set_sound_device(int device) { return 0; }
 void wwviaudio_list_devices(void) {}
 void wwviaudio_append_to_audio_chain(int16_t *samples, int nsamples) {}
+int wwviaudio_get_mixer_cycle_count(void) { return 0; }
 
 #endif
 

@@ -199,6 +199,8 @@ GLOBAL int wwviaudio_start_audio_capture(int16_t *buffer, int nsamples,
 
 GLOBAL int wwviaudio_stop_audio_capture();
 
+GLOBAL unsigned int wwviaudio_get_mixer_cycle_count();
+
 /*
 	Example usage, something along these lines:
 
