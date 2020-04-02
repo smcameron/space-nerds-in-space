@@ -20086,7 +20086,7 @@ static int process_opus_audio_data(struct game_client *c)
 		pthread_mutex_unlock(&universe_mutex);
 		return 0;
 	}
-	/* Ignore audio chain from client, it put 255 there anyway 'cause it doesn't know */
+	/* Ignore audio chain from client, it put NO_TALKING_STICK there anyway 'cause it doesn't know */
 	audio_chain = c->talking_stick;
 	client_unlock();
 	pthread_mutex_unlock(&universe_mutex);
@@ -20130,19 +20130,20 @@ static int process_talking_stick(struct game_client *c)
 		client_lock();
 		if (c->talking_stick == NO_TALKING_STICK)
 			c->talking_stick = talking_stick_get();
-			ts = c->talking_stick;
+		ts = c->talking_stick;
 		client_unlock();
 		pthread_mutex_unlock(&universe_mutex);
-		if (ts > 0)
+		if (ts >= 0)
 			pb_queue_to_client(c, snis_opcode_subcode_pkt("bb",
 				OPCODE_TALKING_STICK, OPCODE_TALKING_STICK_GRANT));
 		break;
 	case OPCODE_TALKING_STICK_RELEASE:
 		pthread_mutex_lock(&universe_mutex);
 		client_lock();
-		if (c->talking_stick != NO_TALKING_STICK)
+		if (c->talking_stick != NO_TALKING_STICK) {
 			talking_stick_release(c->talking_stick);
 			c->talking_stick = NO_TALKING_STICK;
+		}
 		client_unlock();
 		pthread_mutex_unlock(&universe_mutex);
 		break;
