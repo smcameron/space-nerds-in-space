@@ -2668,9 +2668,17 @@ sub process {
 					 $op eq '%')
 				{
 					if ($ctx =~ /Wx[^WCE]|[^WCE]xW/) {
-						ERROR("SPACING",
-						      "need consistent spacing around '$op' $at\n" .
-							$hereptr);
+						if ($op eq '*') {
+							ERROR("SPACING",
+							      "need consistent spacing around '$op' $at\n" .
+								$hereptr . "\n" .
+								"NOTE: This is specific to multiplication.\n" .
+								"constructs like 'SomeTypeDef *some_ptr_var' are false positives here.\n");
+						} else {
+							ERROR("SPACING",
+							      "need consistent spacing around '$op' $at\n" .
+								$hereptr );
+						}
 					}
 
 				# A colon needs no spaces before when it is
