@@ -13,11 +13,13 @@ just those needed to build snis_server.
   sudo apt-get install pkg-config;
   sudo apt-get install liblua5.2-dev;
 
-  make snis_server
+  git clone https://github.com/smcameron/space-nerds-in-space.git
+
+  make bin/snis_server
 
 You will have to open up the firewall to allow your port:
 
-  MYPORT=10007 # or some port of your choosing
+  export MYPORT=10007 # or some port of your choosing
   sudo ufw allow ${MYPORT}
 
 (Later, when you no longer want this allowance, "ufw status numbered", and then
@@ -31,9 +33,9 @@ Then run the server
 
 To connect to it with snis_client without a lobby, run on your local machine:
 
-./bin/snis_client --nolobby --serverhost myipaddr --serverport myport --starship myship --pw myshippw
+  ./bin/snis_client --nolobby --serverhost serveripaddr --serverport myport --starship myship --pw myshippw
 
-Replace myipaddr with the IP addr of the server host, myport with the port snis_server is running
+Replace serveripaddr with the IP addr of the server host, myport with the port snis_server is running
 on, and myship and myshippw with your ship name and ship password.
 
 Note, you must specify the ip address, not the hostname. (It seems getaddrinfo() doesn't work
