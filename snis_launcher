@@ -289,21 +289,21 @@ start_snis_client()
 
 enter_lobby_host()
 {
-	printf -n "Enter lobby host: "
+	printf "Enter lobby host: "
 	read x
 	export LOBBYHOST="$x"
 }
 
 enter_lobby_port()
 {
-	printf -n "Enter lobby port: "
+	printf "Enter lobby port: "
 	read x
 	export SSGL_PORT="$x"
 }
 
 enter_snis_server_port_range()
 {
-	printf -n "Enter SNIS server port range (min:max): "
+	printf "Enter SNIS server port range (min:max): "
 	read x
 	export SNIS_SERVER_PORT_RANGE="$x"
 }
