@@ -46,10 +46,14 @@ Let's say they are not open.  Ok, so you need to open them on your cloud system:
 
 Don't forget to delete these rules you added when you're done playing (see below).
 
-Starting the SNIS processes
----------------------------
-
 Run snis_launcher on your cloud system:
+
+---- NOTE: Here's a shortcut: You can do:
+----
+---- export SSGL_PORT=20201
+---- export SNIS_SERVER_PORT_RANGE=20000:20050
+----
+---- and then skip ahead to the section about starting snis processes on the cloud machine
 
 $ ./snis_launcher
 
@@ -82,7 +86,6 @@ No SNIS processes are currently running.
 
 Choose 10, "Options".
 
-
      Space Nerds In Space Options
 
 ------------------------------------------------------------
@@ -114,6 +117,12 @@ No SNIS processes are currently running.
 
 
 Then choose 0 to return to the main menu.
+
+
+Starting SNIS processes on the cloud machine
+--------------------------------------------
+
+If you took the shortcut mentioned above, then run ./snis_launcher now.
 
 Then choose 1, 2, and 3 to start ssgl_server, snis_multiverse, and snis_server.
 For snis_multiverse (for now) choose "n" for the autowrangle question.) I had
