@@ -4951,7 +4951,7 @@ static void show_lobbyscreen(GtkWidget *w)
 			}
 			 
 			snprintf(msg, sizeof(msg), "%hhu.%hhu.%hhu.%hhu/%hu", x[0], x[1], x[2], x[3],
-					lobby_game_server[i].port);
+					ntohs(lobby_game_server[i].port));
 
 			/* Check if the IP address we have is bogus.  This can happen if
 			 * ssgl_get_primary_ip_addr() fails.
