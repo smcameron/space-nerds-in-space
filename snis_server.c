@@ -504,6 +504,8 @@ static pthread_mutex_t listener_mutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_cond_t listener_started;
 static int listener_port = -1;
 static int default_snis_server_port = -1; /* -1 means choose a random port */
+static int snis_server_port_min = 49151; /* see http://www.iana.org/assignments/port-numbers */
+static int snis_server_port_max = 65335;
 static pthread_t lobbythread;
 static struct server_tracker *server_tracker;
 static int snis_log_level = 2;
@@ -24662,6 +24664,7 @@ static void *listener_thread_fn(__attribute__((unused)) void *unused)
 	int s;
 	char portstr[20];
 	char *snis_server_port_var;
+	char *port_range;
 
         snis_log(SNIS_INFO, "snis_server starting\n");
 	snis_server_port_var = getenv("SNISSERVERPORT");
@@ -24676,6 +24679,20 @@ static void *listener_thread_fn(__attribute__((unused)) void *unused)
 		}
 	}
 
+	port_range = getenv("SNIS_SERVER_PORT_RANGE");
+	if (port_range) {
+		int rc, min, max;
+
+		rc = sscanf(port_range, "%d:%d", &min, &max);
+		if (rc != 2 || max < min || min < 1024 || min > 65535 || max > 65535) {
+			fprintf(stderr, "Bad SNIS_SERVER_PORT_RANGE, using defaults %d:%d\n",
+				snis_server_port_min, snis_server_port_max);
+		} else {
+			snis_server_port_min = min;
+			snis_server_port_max = max;
+		}
+	}
+
 	/* Bind "rendezvous" socket to a random port to listen for connections.
 	 * unless SNISSERVERPORT is defined, in which case, try to use that.
 	 */
@@ -24683,10 +24700,15 @@ static void *listener_thread_fn(__attribute__((unused)) void *unused)
 
 		/* 
 		 * choose a random port in the "Dynamic and/or Private" range
-		 * see http://www.iana.org/assignments/port-numbers
+		 * see http://www.iana.org/assignments/port-numbers or in another
+		 * range if SNIS_SERVER_PORT_RANGE is set.
 		 */
 		if (default_snis_server_port == -1)
-			port = snis_randn(65335 - 49152) + 49151;
+			/* TODO: figure out how to ensure snis_server instance port numbers
+			 * do not collide with each other.
+			 */
+			port = (snis_randn(INT_MAX) % (snis_server_port_max - snis_server_port_min)) +
+					snis_server_port_min;
 		else
 			port = default_snis_server_port;
 		snis_log(SNIS_INFO, "Trying port %d\n", port);

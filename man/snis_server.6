@@ -78,6 +78,13 @@ snis_server is using via e.g. examining output of "netstat -na").
 SNIS_ASSET_DIR can cause the program to use a different directory to read
 various assets (models, sounds, etc.) from a different directory allowing
 easy substitution of all art assets.   Default is to use share/snis.
+.PP
+SNIS_SERVER_PORT_RANGE can cause the program to choose random ports in
+the specified range MIN:MAX where MIN must be greater than 1024 and MAX
+must be less than or equal to 65335.  This can be useful for restricting
+the range of port numbers to those which a firewall configuration might
+permit.  Default values are a minimum of 49151 and a maximum of 65335.
+See http://www.iana.org/assignments/port-numbers
 .SH SEE ALSO
 .PP
 snis_client(6), ssgl_server(6), snis_multiverse(6)
