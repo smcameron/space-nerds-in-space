@@ -95,7 +95,7 @@ No SNIS processes are currently running.
 
 Choose 2 and enter your preferred lobby port number (must match your firewall rules).
 
-Enter lobby port: 10201
+Enter lobby port: 20201
 
 Then choose 3 and enter your preferred snis server port range (must match your firewall rules):
 
@@ -107,7 +107,7 @@ Enter SNIS server port range (min:max): 20000:20050
 No SNIS processes are currently running.
 ------------------------------------------------------------
     1. Enter Lobby Host IP addr (currently localhost)
-    2. Enter Lobby Host Port number (currently 10201)
+    2. Enter Lobby Host Port number (currently 20201)
     3. Enter SNIS server port range MIN:MAX (currently 20000:20050)
     0. Return to main menu
    Choose [0-3]:
