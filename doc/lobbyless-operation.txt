@@ -20,6 +20,9 @@ You will have to open up the firewall to allow your port:
   MYPORT=10007 # or some port of your choosing
   sudo ufw allow ${MYPORT}
 
+(Later, when you no longer want this allowance, "ufw status numbered", and then
+"ufw delete xx" where xx is the number of the rule to delete.)
+
 Then run the server
 
   export SNISSERVERNOLOBBY=1 # suppress lobby
