@@ -60,13 +60,15 @@ static int ssgl_connect_to_lobby(char *ssgl_hostname, int client)
 	struct addrinfo *lobbyserverinfo, *i;
 	struct addrinfo hints;
 	int lobby_sock;
+	unsigned short tcp_port;
 
+	tcp_port = ssgl_get_gamelobby_port("tcp");
 	memset(&hints, 0, sizeof hints);
 	hints.ai_family = AF_INET;
 	hints.ai_socktype = SOCK_STREAM;
 	hints.ai_flags = AI_PASSIVE;
 	hints.ai_protocol = IPPROTO_TCP;
-	rc = getaddrinfo(ssgl_hostname, GAMELOBBY_SERVICE_NAME, &hints, &lobbyserverinfo);
+	rc = getaddrinfo(ssgl_hostname, NULL, &hints, &lobbyserverinfo);
 	if (rc) {
 		hints.ai_flags |= AI_NUMERICSERV;
 		rc = getaddrinfo(ssgl_hostname, GAMELOBBY_SERVICE_NUMBER_AS_STRING,
@@ -77,6 +79,8 @@ static int ssgl_connect_to_lobby(char *ssgl_hostname, int client)
 
 	for (i = lobbyserverinfo; i != NULL; i = i->ai_next) {
 		if (i->ai_family == AF_INET) {
+			struct sockaddr_in *s = (struct sockaddr_in *) lobbyserverinfo->ai_addr;
+			s->sin_port = tcp_port;
 			break;
 		}
 	}

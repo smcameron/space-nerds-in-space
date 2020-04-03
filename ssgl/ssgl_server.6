@@ -25,6 +25,14 @@ gamelobby	2419/udp
 .PP
 .SH ENVIRONMENT VARIABLES
 .PP
+SSGL_PORT
+.PP
+Allows overriding the default port.  By default the gamelobby port
+will be looked up via getaddrinfo(), and if that fails, it will fall
+back to using 2419/tcp and 2419/udp.  However if SSGL_PORT is set to
+a numeric decimal port number, that will be used for tcp and udp port
+numbers instead.
+.PP
 SSGL_PRIMARY_IP_PROBE_ADDR
 .PP
 Address used to probe for the host's "primary" IP address. By default,

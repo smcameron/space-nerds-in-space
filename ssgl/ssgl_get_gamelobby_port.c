@@ -1,3 +1,5 @@
+#include <stdio.h>
+#include <stdlib.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netdb.h>
@@ -9,8 +11,19 @@ unsigned short ssgl_get_gamelobby_port(char *proto)
 {
 	struct addrinfo hints;
 	struct addrinfo *lobbyserverinfo;
-	unsigned short port;
 	int rc;
+	unsigned short port = -1;
+	char *override_port;
+
+	/* Allow overriding the port */
+	override_port = getenv("SSGL_PORT");
+	if (override_port) {
+		rc = sscanf(override_port, "%hu", &port);
+		if (rc == 1) {
+			port = htons(port);
+			return port;
+		}
+	}
 
 	/* Find the gamelobby tcp port */
 	memset(&hints, 0, sizeof(hints));
