@@ -1,0 +1,166 @@
+
+Note: Space Nerds in Space is designed to run as a LAN game. It might not
+work very well over the internet.  However, if you insist, here are some hints.
+
+Building
+--------
+
+Building is done in the usual way, except you do not need to build snis_client
+on your cloud server (you will only need to build snis_client on your local
+machines.)  This also means you do not need many of the dependencies that
+snis_client requires to build.  You should only need:
+
+  sudo apt-get install build-essential;
+  sudo apt-get install pkg-config;
+  sudo apt-get install liblua5.2-dev;
+
+  git clone https://github.com/smcameron/space-nerds-in-space.git
+
+  make bin/snis_server bin/snis_multiverse bin/ssgl_server
+
+You will probably see some complaining about pkg-config this and that. As long as
+those 3 binaries build ok, it's probably nothing to worry about. It's just hunting
+around for things needed for snis_client, which you're not building.
+
+Firewall configuration and port stuff
+-------------------------------------
+
+ssgl_server (the lobby process) usually listens on port 2419. You can either
+open that port on your firewall or choose another port.
+
+snis_server port numbers are chosen dynamically.  You can restrict the range
+of ports from which the random port numbers will be chosen. This means you
+won't have to open up a huge range of port numbers on your firewall.
+
+Lets say you want to run ssgl_server on port 10201, and you want snis_server
+to run in the range 20000-20050.
+
+First, make sure those ports are open on your firewall on your cloud system.
+
+	sudo ufw status numbered
+
+Let's say they are not open.  Ok, so you need to open them on your cloud system:
+
+	sudo ufw allow 10201
+	sudo ufw allow 10000:10050/tcp
+
+Don't forget to delete these rules you added when you're done playing (see below).
+
+Starting the SNIS processes
+---------------------------
+
+Run snis_launcher on your cloud system:
+
+$ ./snis_launcher
+
+     Welcome to Space Nerds In Space
+
+------------------------------------------------------------
+No SNIS processes are currently running.
+------------------------------------------------------------
+
+   1. Launch SNIS lobby server
+	The lobby server allows clients to find servers
+	There should be one lobby server total.
+   2. Launch SNIS multiverse server
+	The multiverse server stores player ship data
+	There should be one multiverse server total
+   3. Launch SNIS server
+	There should be one snis server per solarsystem.
+	There should be at least one instance of snis_server.
+   4. Launch SNIS client process
+	There should be one snis client process per player
+	plus one more per ship for the main screen.
+   5. Launch limited SNIS client process (no Open GL required).
+   6. Stop all SNIS processes
+   7. Stop all SNIS clients
+   8. Stop all SNIS servers
+   9. Check for asset updates
+   10. Options
+   0. Quit
+   Choose [0-10]:
+
+Choose 10, "Options".
+
+
+     Space Nerds In Space Options
+
+------------------------------------------------------------
+No SNIS processes are currently running.
+------------------------------------------------------------
+    1. Enter Lobby Host IP addr (currently localhost)
+    2. Enter Lobby Host Port number (currently not set, will default to gamelobby/2419)
+    3. Enter SNIS server port range MIN:MAX (currently not set, will default to IANA dynamic port range)
+    0. Return to main menu
+
+Choose 2 and enter your preferred lobby port number (must match your firewall rules).
+
+Enter lobby port: 10201
+
+Then choose 3 and enter your preferred snis server port range (must match your firewall rules):
+
+Enter SNIS server port range (min:max): 10000:10050
+
+     Space Nerds In Space Options
+
+------------------------------------------------------------
+No SNIS processes are currently running.
+------------------------------------------------------------
+    1. Enter Lobby Host IP addr (currently localhost)
+    2. Enter Lobby Host Port number (currently 10201)
+    3. Enter SNIS server port range MIN:MAX (currently 10000:10050)
+    0. Return to main menu
+   Choose [0-3]:
+
+
+Then choose 0 to return to the main menu.
+
+Then choose 1, 2, and 3 to start ssgl_server, snis_multiverse, and snis_server.
+For snis_multiverse (for now) choose "n" for the autowrangle question.) I had
+some trouble when I tried using this due to the OOM killer killing snis_server
+instances.  You can try 'y' if you want, but it might not work well.
+
+That's it for the server.
+
+On the local machine to run the client:
+---------------------------------------
+
+1. run snis_launcher
+
+2. Choose options
+
+3. Select 2, Enter Lobby Host Port number and enter your preferred lobby port number.
+
+4. Select 0, return to main menu
+
+5. Select 4, to start snis_client
+
+6. Enter the host name or IP address of your cloud machine in the network setup UI.
+
+7. Enter your ship name and password (make them up now if you've never done this before).
+
+8. The first time, make sure 'CREATE SHIP' is checked. Subsequent times, if you are using
+   the same ship name and password, make sure 'CREATE SHIP' is not checked.
+
+9. Hit the "Connect to ... " button at the bottom of the screen.
+
+10. You should then be able to select your snis server instance and connect.
+
+
+Deleting firewall rules when you're done
+----------------------------------------
+
+Once you're done, delete the rules you added to your firewall configuration.
+
+	sudo ufw status numbered
+
+(it will show you a numbered list of rules.)
+
+	sudo ufw delete (rule-number)
+
+Note: Delete the rules in reverse order because it will re-number the rules after
+each deletion. It will ask you to confirm each rule deletion. Be very careful that
+you are deleting the rule you mean to delete and not some other rule. If you delete
+for example the rule that allows your ssh session to exist, you will have a bad time.
+
+
