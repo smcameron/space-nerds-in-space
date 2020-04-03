@@ -35,9 +35,6 @@ To connect to it with snis_client without a lobby, run on your local machine:
 
   ./bin/snis_client --nolobby --serverhost serveripaddr --serverport myport --starship myship --pw myshippw
 
-Replace serveripaddr with the IP addr of the server host, myport with the port snis_server is running
-on, and myship and myshippw with your ship name and ship password.
-
-Note, you must specify the ip address, not the hostname. (It seems getaddrinfo() doesn't work
-with the hostname?  I need to look into why that doesn't work, I think it should.)
+Replace serveripaddr with the IP addr or host name of the server host, and myport with the port
+snis_server is running on, and myship and myshippw with your ship name and ship password.
 

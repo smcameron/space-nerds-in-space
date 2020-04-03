@@ -8304,6 +8304,8 @@ static void *connect_to_gameserver_thread(__attribute__((unused)) void *arg)
 	int rc;
 	struct addrinfo *gameserverinfo, *i;
 	struct addrinfo hints;
+	int host_is_numeric, a, b, c, d;
+	int port_is_numeric, p;
 #if 0
 	void *addr;
 	char *ipver; 
@@ -8329,10 +8331,18 @@ static void *connect_to_gameserver_thread(__attribute__((unused)) void *arg)
 	strncpy(connecting_to_server_msg, "CONNECTING TO SERVER...",
 		sizeof(connecting_to_server_msg) - 1);
 
+	/* Check if the hoststr is numeric... */
+	rc = sscanf(hoststr, "%d.%d.%d.%d", &a, &b, &c, &d);
+	host_is_numeric = (rc == 4);
+	/* Check if the portstr is numeric */
+	rc = sscanf(portstr, "%d", &p);
+	port_is_numeric = (rc == 1);
+
 	memset(&hints, 0, sizeof hints);
 	hints.ai_family = AF_INET;
 	hints.ai_socktype = SOCK_STREAM;
-	hints.ai_flags = AI_PASSIVE | AI_NUMERICSERV | AI_NUMERICHOST;
+	hints.ai_flags = AI_PASSIVE |
+			(AI_NUMERICSERV * port_is_numeric) | (AI_NUMERICHOST * host_is_numeric);
 	rc = getaddrinfo(hoststr, portstr, &hints, &gameserverinfo);
 	if (rc) {
 		fprintf(stderr, "snis_client: Failed looking up %s:%s: %s\n",
