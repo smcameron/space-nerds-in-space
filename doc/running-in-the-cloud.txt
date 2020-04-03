@@ -32,7 +32,7 @@ snis_server port numbers are chosen dynamically.  You can restrict the range
 of ports from which the random port numbers will be chosen. This means you
 won't have to open up a huge range of port numbers on your firewall.
 
-Lets say you want to run ssgl_server on port 10201, and you want snis_server
+Lets say you want to run ssgl_server on port 20201, and you want snis_server
 to run in the range 20000-20050.
 
 First, make sure those ports are open on your firewall on your cloud system.
@@ -41,8 +41,8 @@ First, make sure those ports are open on your firewall on your cloud system.
 
 Let's say they are not open.  Ok, so you need to open them on your cloud system:
 
-	sudo ufw allow 10201
-	sudo ufw allow 10000:10050/tcp
+	sudo ufw allow 20201
+	sudo ufw allow 20000:20050/tcp
 
 Don't forget to delete these rules you added when you're done playing (see below).
 
@@ -99,7 +99,7 @@ Enter lobby port: 10201
 
 Then choose 3 and enter your preferred snis server port range (must match your firewall rules):
 
-Enter SNIS server port range (min:max): 10000:10050
+Enter SNIS server port range (min:max): 20000:20050
 
      Space Nerds In Space Options
 
@@ -108,7 +108,7 @@ No SNIS processes are currently running.
 ------------------------------------------------------------
     1. Enter Lobby Host IP addr (currently localhost)
     2. Enter Lobby Host Port number (currently 10201)
-    3. Enter SNIS server port range MIN:MAX (currently 10000:10050)
+    3. Enter SNIS server port range MIN:MAX (currently 20000:20050)
     0. Return to main menu
    Choose [0-3]:
 
