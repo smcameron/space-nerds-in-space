@@ -72,8 +72,40 @@ cat << EOF 1>&2
    7. Stop all SNIS clients
    8. Stop all SNIS servers
    9. Check for asset updates
-   10. Enter Lobby Host IP addr (currently $LOBBYHOST)
+   10. Options 
    0. Quit
+EOF
+}
+
+show_current_ssgl_port()
+{
+	if [ "$SSGL_PORT" = "" ]
+	then
+		echo -n "currently not set, will default to gamelobby/2419"
+		unset SSGL_PORT
+	else
+		echo -n "currently $SSGL_PORT"
+	fi
+}
+
+show_current_snis_port_range()
+{
+	if [ "$SNIS_SERVER_PORT_RANGE" = "" ]
+	then
+		echo -n "currently not set, will default to IANA dynamic port range"
+		unset SNIS_SERVER_PORT_RANGE
+	else
+		echo -n "currently $SNIS_SERVER_PORT_RANGE"
+	fi
+}
+
+print_options_menu()
+{
+cat << EOF 1>&2
+    1. Enter Lobby Host IP addr (currently $LOBBYHOST)
+    2. Enter Lobby Host Port number ($(show_current_ssgl_port))
+    3. Enter SNIS server port range MIN:MAX ($(show_current_snis_port_range))
+    0. Return to main menu
 EOF
 }
 
@@ -262,6 +294,20 @@ enter_lobby_host()
 	export LOBBYHOST="$x"
 }
 
+enter_lobby_port()
+{
+	printf -n "Enter lobby port: "
+	read x
+	export SSGL_PORT="$x"
+}
+
+enter_snis_server_port_range()
+{
+	printf -n "Enter SNIS server port range (min:max): "
+	read x
+	export SNIS_SERVER_PORT_RANGE="$x"
+}
+
 reformat_processes()
 {
 	awk '
@@ -334,6 +380,36 @@ spot_check_for_assets()
 	fi
 }
 
+choose_options()
+{
+	while true
+	do
+		echo
+		echo "     Space Nerds In Space Options"
+		echo
+		show_snis_processes
+		print_options_menu
+		check_for_bad_lockfiles
+		printf "   Choose [0-3]: "
+		read x
+
+		case "$x" in
+		0)
+			return
+		;;
+		1)
+			enter_lobby_host
+		;;
+		2)
+			enter_lobby_port
+		;;
+		3)
+			enter_snis_server_port_range
+		;;
+		esac
+	done
+}
+
 check_for_ip_address
 spot_check_for_assets
 
@@ -375,7 +451,7 @@ do
 		;;
 	9) util/snis_update_assets.sh --dry-run
 		;;
-	10) enter_lobby_host
+	10) choose_options
 		;;
 	*) echo "Invalid choice."
 	        ;;
