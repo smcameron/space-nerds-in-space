@@ -228,6 +228,19 @@ so may be different on RPM based systems.
 
 <p class="tab">
 <div class="boxed">
+<p class="tab">NOTE: Later, the Makefile will download the Opus library source (
+https://archive.mozilla.org/pub/opus/opus-1.3.1.tar.gz).  This library is used
+for the voice chat feature. If you intend to build on a machine which does not
+have internet access, or for whatever reason do not want the makefile to download
+this library at build time, you can download it yourself beforehand. Or you can
+modify the Makefile and change "WITHVOICECHAT=yes" at the top of the file to
+"WITHVOICECHAT=no" and it will not download this library (and you won't have the
+voice chat feature.)
+</p>
+</div>
+
+<p class="tab">
+<div class="boxed">
 <p class="tab">NOTE: problems building on SuSE Leap 15.1. The following problems/solutions have
 been conveyed to me regarding SuSE Leap 15.1. This information is not very complete or
 accurate, but it is the best I have for now.  Please feel free to send me
@@ -248,6 +261,8 @@ be problematic.
 </p>
 </div>
 </p>
+
+
 
 <h2>Step 2: Download the Source Code</h2>
 
@@ -286,6 +301,7 @@ cd space-nerds-in-space-master
 directory for the game ("space-nerds-in-space" if you
 got the source using git, or "space-nerds-in-space-master" if you
 downloaded the zip file), and type (as a non-root user):
+
 <pre><blockquote>
 make
 </blockquote></pre>
@@ -1366,6 +1382,11 @@ console (e.g. if you mean for this to be the NAVIGATION station, press F2).
 </ul>
 </ol>
 <p>That's it for the bridge station setup.  Repeat for each station.
+<p>To use the voice chat feature, you can press and hold F12 and whatever
+your microphone records will be transmitted to the other terminals on your
+ship.  If you press and hold ctrl-F12, then whatever your microphone records
+will be transmitted to all other terminals on all ships in the current
+snis_server instance.
 <hr>
 <h1><a name="updateinstructions">Updating Space Nerds In Space</a></h1>
 <p>Suppose you have set up Space Nerds In Space previously but development has
@@ -1461,6 +1482,7 @@ will then feed them into the fifo.
 <li><a href="#openglversion">OpenGL versions</a>
 <li><a href="#crashing">The game is crashing!</a>
 <li><a href="#networkproblems">network problems</a>
+<li><a href="#internetplay">Playing over the internet</a>
 </ol>
 <hr>
 <ol>
@@ -2245,6 +2267,23 @@ scenarios as such scenarios typically do not use the procedural generation code 
 when populating the universe but instead typically use their own custom code or a pre-set
 configuration when populating the initial conditions.
 </ul>
+<p>
+<li><b><a name="internetplay">Playing over the internet</a></b>
+<p>Space Nerds in Space was designed to be played on a LAN, not over the internet.
+I do not recommend playing over the internet.  Be aware that the protocol is not
+encrypted in any way and is not secure.
+<p>Some people insist on attempting it anyway.
+<p>You can control the port that the lobby server runs on via the environment
+variable via the "Options" menu item of the snis_launcher script or via the
+environment variable SSGL_PORT.  For snis_client, the lobby port number may be
+entered via the "Options" menu of the snis_launcher script, via the SSGL_PORT
+environment variable, or via the UI on the network setup screen.
+<p>You can control the range of ports which snis_server will use via the "Options"
+menu of the snis_launcher script or via the environment variable
+SNIS_SERVER_PORT_RANGE, e.g. "export SNIS_SERVER_PORT_RANGE=32000:32100". You
+might want to do this to limit what ports you need to open up on your firewall.
+<p>See <a href="https://github.com/smcameron/space-nerds-in-space/blob/master/doc/running-in-the-cloud.txt">doc/running-in-the-cloud.txt</a>
+for more information.
 <p>
 </ol>
 <br>
