@@ -172,4 +172,7 @@ each deletion. It will ask you to confirm each rule deletion. Be very careful th
 you are deleting the rule you mean to delete and not some other rule. If you delete
 for example the rule that allows your ssh session to exist, you will have a bad time.
 
+Also pay attention to v4 and v6 rules, because "ufw allow 20000" will likely add *two*
+rules, one for v4 and one for v6 and you almost certainly want to delete them both.
+
 
