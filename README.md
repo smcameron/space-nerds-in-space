@@ -21,8 +21,9 @@ Features:
   large universe of solar systems.
 * Dock at starbases to repair your ship, buy/sell various commodities,
   sell mined ore, obtain warp gate tickets, etc.
-* And of course, fly around and shoot stuff.
 * Lua scripting API for mission scenarios.
+* Voice chat
+* And of course, fly around and shoot stuff.
 
 Note: This game is meant to be played on a LAN with all players in the same room.
 Bandwidth requirements are on the order of 100k/s per client.
