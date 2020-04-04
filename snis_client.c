@@ -366,6 +366,8 @@ static int gameserver_sock = -1;
 static int lobby_count = 0;
 static char lobbyerror[200];
 static char *lobbyhost = "localhost";
+static int lobbyport = -1;
+static int use_default_lobby_port = 1;
 static char *serverhost = NULL;
 static int serverport = -1;
 static int monitorid = -1;
@@ -645,11 +647,11 @@ static void synchronous_update_lobby_info(void)
 	/* Loop, trying to connect to the lobby server... */
 	strcpy(lobbyerror, "");
 	while (1 && lobby_count < MAX_LOBBY_TRIES) {
-		fprintf(stderr, "snis_client: synchronous connecting to lobby\n");
-		sock = ssgl_gameclient_connect_to_lobby(lobbyhost);
+		fprintf(stderr, "snis_client: synchronous connecting to lobby %s:%d\n", lobbyhost, lobbyport);
+		sock = ssgl_gameclient_connect_to_lobby_port(lobbyhost, lobbyport);
 		lobby_count++;
 		if (sock >= 0) {
-			printf("snis_client: synchronous connected to lobby\n");
+			printf("snis_client: synchronous connected to lobby %s:%d\n", lobbyhost, lobbyport);
 			break;
 		}
 		if (errno)
@@ -729,11 +731,11 @@ try_again:
 	/* Loop, trying to connect to the lobby server... */
 	strcpy(lobbyerror, "");
 	while (1 && lobby_count < MAX_LOBBY_TRIES && displaymode == DISPLAYMODE_LOBBYSCREEN) {
-		printf("snis_client: connecting to lobby\n");
-		sock = ssgl_gameclient_connect_to_lobby(lobbyhost);
+		printf("snis_client: connecting to lobby %s:%d\n", lobbyhost, lobbyport);
+		sock = ssgl_gameclient_connect_to_lobby_port(lobbyhost, lobbyport);
 		lobby_count++;
 		if (sock >= 0) {
-			printf("snis_client: Connected to lobby\n");
+			printf("snis_client: Connected to lobby %s:%d\n", lobbyhost, lobbyport);
 			lobby_socket = sock;
 			break;
 		}
@@ -4849,18 +4851,20 @@ static void show_lobbyscreen(GtkWidget *w)
 	show_rotating_wombat();
 	sng_set_foreground(UI_COLOR(lobby_connecting));
 	if (lobby_socket == -1 && switched_server2 == -1) {
-		sng_abs_xy_draw_string("Space Nerds", BIG_FONT, txx(80), txy(200));
-		sng_abs_xy_draw_string("In Space", BIG_FONT, txx(180), txy(320));
-		sng_abs_xy_draw_string("Copyright (C) 2010 Stephen M. Cameron", NANO_FONT,
+		sng_set_foreground(WHITE);
+		sng_abs_xy_draw_string("SPACE NERDS IN SPACE", BIG_FONT, txx(20), txy(200));
+		sng_abs_xy_draw_string("COPYRIGHT (C) 2020 STEPHEN M. CAMERON, ET AL.", PICO_FONT,
 			txx(255), txy(550));
 		if (lobby_count >= MAX_LOBBY_TRIES)
-			snprintf(msg, sizeof(msg), "Giving up on lobby... tried %d times.",
-				lobby_count);
+			snprintf(msg, sizeof(msg), "GIVING UP ON LOBBY %s:%d -- TRIED %d TIMES.",
+				lobbyhost, lobbyport, lobby_count);
 		else
-			snprintf(msg, sizeof(msg), "Connecting to lobby... tried %d times.",
-				lobby_count);
+			snprintf(msg, sizeof(msg), "CONNECTING TO LOBBY %s:%d... TRIED %d TIMES.",
+				lobbyhost, lobbyport, lobby_count);
 		sng_abs_xy_draw_string(msg, SMALL_FONT, txx(100), txy(400));
+		sng_set_foreground(RED);
 		sng_abs_xy_draw_string(lobbyerror, NANO_FONT, txx(100), txy(430));
+		sng_set_foreground(WHITE);
 	} else {
 
 		/* Switch server rigamarole */
@@ -7562,8 +7566,10 @@ static int process_update_flare_packet(void)
 static struct network_setup_ui {
 	struct button *connect_to_lobby;
 	struct snis_text_input_box *lobbyservername;
+	struct snis_text_input_box *lobbyport;
 	struct snis_text_input_box *shipname_box;
 	struct snis_text_input_box *password_box;
+	struct button *default_lobby_port_checkbox;
 	struct button *role_main;
 	struct button *role_nav;
 	struct button *role_weap;
@@ -7595,6 +7601,7 @@ static struct network_setup_ui {
 	int join_ship_v;
 	int faction_checkbox_v[MAX_FACTIONS];
 	char lobbyname[60];
+	char lobbyportstr[10];
 	char solarsystem[60];
 	char shipname[SHIPNAME_LEN];
 	char password[PASSWORD_LEN];
@@ -11994,6 +12001,7 @@ static void init_lobby_ui()
 			"CONNECT TO THE SELECTED SERVER");
 	snis_button_set_sound(lobby_ui.lobby_cancel_button, UISND3);
 	snis_button_set_sound(lobby_ui.lobby_connect_to_server_button, UISND4);
+	ui_hide_widget(lobby_ui.lobby_connect_to_server_button);
 }
 
 static double sample_phaser_wavelength(void);
@@ -19838,6 +19846,8 @@ static void sanitize_string(char *s)
 
 static void connect_to_lobby_button_pressed()
 {
+	int rc;
+
 	printf("snis_client: connect to lobby pressed\n");
 	/* These must be set to connect to the lobby... */
 	printf("lobbyname = '%s'\n", net_setup_ui.lobbyname);
@@ -19850,6 +19860,9 @@ static void connect_to_lobby_button_pressed()
 	printf("snis_client: connecting to lobby...\n");
 	displaymode = DISPLAYMODE_LOBBYSCREEN;
 	lobbyhost = net_setup_ui.lobbyname;
+	rc = sscanf(net_setup_ui.lobbyportstr, "%d", &lobbyport);
+	if (rc != 1 || use_default_lobby_port)
+		lobbyport = -1; /* let ssgl use default 2419 or $SSGL_PORT if set */
 	shipname = net_setup_ui.shipname;
 	password = net_setup_ui.password;
 	role = 0;
@@ -19905,6 +19918,18 @@ static struct button *init_net_checkbox_button(int x, int *y, char *txt,
 	snis_button_set_checkbox_function(b, checkbox_function, cookie);
 	*y = *y + txy(18);
 	return b;
+}
+
+static void use_default_lobby_port_checkbox_pressed(void *x)
+{
+	int *i = x;
+
+	*i = !*i;
+
+	if (*i)
+		ui_hide_widget(net_setup_ui.lobbyport);
+	else
+		ui_unhide_widget(net_setup_ui.lobbyport);
 }
 
 static void network_checkbox_pressed(void *x)
@@ -20153,6 +20178,14 @@ static void init_net_setup_ui(void)
 		snis_text_input_box_init(left, y, txy(30), txx(750), input_color, TINY_FONT,
 					net_setup_ui.lobbyname, 50, &timer,
 					lobby_hostname_entered, NULL);
+	net_setup_ui.default_lobby_port_checkbox = snis_button_init(left, y + yinc, txx(140), txy(18),
+					"USE DEFAULT LOBBY PORT", UI_COLOR(network_setup_role), NANO_FONT,
+					use_default_lobby_port_checkbox_pressed, &use_default_lobby_port);
+	snis_button_set_checkbox_function(net_setup_ui.default_lobby_port_checkbox,
+					snis_button_generic_checkbox_function, &use_default_lobby_port);
+	net_setup_ui.lobbyport =
+		snis_text_input_box_init(left, y + yinc * 2, txy(30), txx(100), input_color, TINY_FONT,
+					net_setup_ui.lobbyportstr, 9, &timer, NULL, NULL);
 	y += yinc * 6;
 	net_setup_ui.shipname_box =
 		snis_text_input_box_init(txx(150), y, txy(30), txx(250), input_color, TINY_FONT,
@@ -20195,6 +20228,8 @@ static void init_net_setup_ui(void)
 		snis_text_input_box_set_contents(net_setup_ui.shipname_box, preferred_shipname);
 		net_setup_ui.create_ship_v = 0;
 	}
+	ui_add_button(net_setup_ui.default_lobby_port_checkbox, DISPLAYMODE_NETWORK_SETUP,
+			"USE THE DEFAULT LOBBY PORT OR IF UNCHECKED SPECIFY A PORT");
 	ui_add_button(net_setup_ui.connect_to_lobby, DISPLAYMODE_NETWORK_SETUP,
 			"CONNECT TO THE LOBBY SERVER");
 	ui_add_button(net_setup_ui.website_button, DISPLAYMODE_NETWORK_SETUP,
@@ -20206,21 +20241,22 @@ static void init_net_setup_ui(void)
 
 	/* note: the order of these is important for TAB key focus advance */
 	ui_add_text_input_box(net_setup_ui.lobbyservername, DISPLAYMODE_NETWORK_SETUP);
+	ui_add_text_input_box(net_setup_ui.lobbyport, DISPLAYMODE_NETWORK_SETUP);
 	ui_add_text_input_box(net_setup_ui.shipname_box, DISPLAYMODE_NETWORK_SETUP);
 	ui_add_text_input_box(net_setup_ui.password_box, DISPLAYMODE_NETWORK_SETUP);
 	ui_add_pull_down_menu(net_setup_ui.menu, DISPLAYMODE_NETWORK_SETUP); /* needs to be last */
+	ui_hide_widget(net_setup_ui.lobbyport);
 } 
 
 static void show_network_setup(GtkWidget *w)
 {
-	char msg[255], button_label[100];
+	char button_label[100];
 
 	show_common_screen(w, "SPACE NERDS IN SPACE");
 	show_rotating_wombat();
 
 	sng_set_foreground(UI_COLOR(network_setup_text));
 	sng_abs_xy_draw_string("NETWORK SETUP", SMALL_FONT, txx(25), txy(10 + LINEHEIGHT * 2));
-	snprintf(msg, sizeof(msg), "LOBBY SERVER NAME OR IP ADDRESS");
 	/* If manual and auto-detected lobbies are the same, hide the manual button. */
 	if (strcmp(net_setup_ui.lobbyname, "") != 0)
 		ui_unhide_widget(net_setup_ui.connect_to_lobby);
@@ -20229,7 +20265,9 @@ static void show_network_setup(GtkWidget *w)
 
 	snprintf(button_label, sizeof(button_label), "ENTER LOBBY %s", net_setup_ui.lobbyname);
 	snis_button_set_label(net_setup_ui.connect_to_lobby, button_label);
-	sng_abs_xy_draw_string(msg, TINY_FONT, txx(25), txy(130));
+	sng_abs_xy_draw_string("LOBBY SERVER NAME OR IP ADDRESS", TINY_FONT, txx(25), txy(130));
+	if (!use_default_lobby_port)
+		sng_abs_xy_draw_string("LOBBY PORT", TINY_FONT, txx(25), txy(240));
 	sng_abs_xy_draw_string("SHIP NAME", TINY_FONT, txx(20), txy(470));
 	sng_abs_xy_draw_string("PASSWORD", TINY_FONT, txx(20), txy(520));
 	sng_abs_xy_draw_string("NOTE: THE \"PASSWORD\" IS NOT CRYPTOGRAPHICALLY SECURE", NANO_FONT, txx(20), txy(540));
