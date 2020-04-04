@@ -66,7 +66,9 @@ struct ssgl_lobby_descriptor {
 #define GLOBAL extern
 #endif
 
-GLOBAL int ssgl_gameclient_connect_to_lobby(char *hostname);
+GLOBAL int ssgl_gameclient_connect_to_lobby(char *hostname); /* uses $SSGL_PORT or gamelobby port */
+/* If 0 < port <= 65535, port will be used, else $SSGL_PORT, else default gamelobby port */
+GLOBAL int ssgl_gameclient_connect_to_lobby_port(char *hostname, int port);
 GLOBAL int ssgl_register_gameserver(char *lobbyhost, struct ssgl_game_server *gameserver,
 	pthread_t *lobby_thread, int *nconnections);
 GLOBAL int ssgl_recv_game_servers(int sock,

@@ -35,8 +35,15 @@ OTHER DEALINGS IN THE SOFTWARE.
 #endif
 
 GLOBAL int ssgl_connect_to_lobby(char *ssgl_hostname);
+
 GLOBAL int ssgl_gameserver_connect_to_lobby(char *ssgl_hostname);
 GLOBAL int ssgl_gameclient_connect_to_lobby(char *ssgl_hostname);
+
+/* If port is <= 0 or port is > 65535, then the default gamelobby port, or $SSGL_PORT
+ * will be used. Otherwise the specified port will be used.  The port is in host byte
+ * order here. */
+GLOBAL int ssgl_gameserver_connect_to_lobby_port(char *ssgl_hostname, int port);
+GLOBAL int ssgl_gameclient_connect_to_lobby_port(char *ssgl_hostname, int port);
 
 #undef GLOBAL
 #endif

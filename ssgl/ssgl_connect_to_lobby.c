@@ -54,7 +54,7 @@ static int send_protocol_id_to_lobby(int lobbysock, int client)
 	return rc;
 }
 
-static int ssgl_connect_to_lobby(char *ssgl_hostname, int client)
+static int ssgl_connect_to_lobby(char *ssgl_hostname, int client, int specific_port)
 {
 	int rc;
 	struct addrinfo *lobbyserverinfo, *i;
@@ -62,7 +62,10 @@ static int ssgl_connect_to_lobby(char *ssgl_hostname, int client)
 	int lobby_sock;
 	unsigned short tcp_port;
 
-	tcp_port = ssgl_get_gamelobby_port("tcp");
+	if (specific_port > 0 && specific_port <= 65535)
+		tcp_port = htons((unsigned short) specific_port);
+	else
+		tcp_port = ssgl_get_gamelobby_port("tcp");
 	memset(&hints, 0, sizeof hints);
 	hints.ai_family = AF_INET;
 	hints.ai_socktype = SOCK_STREAM;
@@ -106,12 +109,23 @@ static int ssgl_connect_to_lobby(char *ssgl_hostname, int client)
 	return lobby_sock;	
 }
 
+int ssgl_gameserver_connect_to_lobby_port(char *ssgl_hostname, int port)
+{
+	return ssgl_connect_to_lobby(ssgl_hostname, 0, port);
+}
+
+int ssgl_gameclient_connect_to_lobby_port(char *ssgl_hostname, int port)
+{
+	return ssgl_connect_to_lobby(ssgl_hostname, 1, port);
+}
+
 int ssgl_gameserver_connect_to_lobby(char *ssgl_hostname)
 {
-	return ssgl_connect_to_lobby(ssgl_hostname, 0);
+	return ssgl_connect_to_lobby(ssgl_hostname, 0, -1);
 }
 
 int ssgl_gameclient_connect_to_lobby(char *ssgl_hostname)
 {
-	return ssgl_connect_to_lobby(ssgl_hostname, 1);
+	return ssgl_connect_to_lobby(ssgl_hostname, 1, -1);
 }
+
