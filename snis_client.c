@@ -198,6 +198,8 @@ static int dejitter_science_details = 1; /* Tweakable. 1 means de-jitter science
 static int monitor_voice_chat = 0;
 static int have_talking_stick = 0;
 static pthread_mutex_t voip_mutex = PTHREAD_MUTEX_INITIALIZER;
+static float compressor_threshold = 0.5; /* tweakable */
+static float compressor_limit = 0.7; /* tweakable */
 
 /* I can switch out the line drawing function with these macros */
 /* in case I come across something faster than gdk_draw_line */
@@ -17983,7 +17985,10 @@ static struct tweakable_var_descriptor client_tweak[] = {
 		&demon_ui.log_console, 'i', 0.0, 0.0, 0.0, 0, 1, 0 },
 	{ "MONITOR_VOICE_CHAT", "1 - DISPLAY MONITOR OF VOICE CHAT 0 - DO NOT",
 		&monitor_voice_chat, 'i', 0.0, 0.0, 0.0, 0, 1, 0 },
-
+	{ "COMPRESSOR_THRESHOLD", "AUDIO DYNAMIC RANGE COMPRESSOR THRESHOLD",
+		&compressor_threshold, 'f', 0.01, 0.99, 0.5, 0, 0, 0 },
+	{ "COMPRESSOR_LIMIT", "AUDIO DYNAMIC RANGE COMPRESSOR LIMIT",
+		&compressor_limit, 'f', 0.1, 0.99, 0.98, 0, 0, 0 },
 	{ NULL, NULL, NULL, '\0', 0.0, 0.0, 0.0, 0, 0, 0 },
 };
 
@@ -21012,6 +21017,20 @@ static void notify_server_of_displaymode_change(void)
 	old_displaymode = displaymode;
 }
 
+static void adjust_audio_dynamic_range_compression(void)
+{
+	static float old_threshold = -1.0;
+	static float old_limit = -1.0;
+
+	if (old_threshold != compressor_threshold || old_limit != compressor_limit) {
+		if (compressor_limit < compressor_threshold)
+			compressor_limit = compressor_threshold;
+		old_threshold = compressor_threshold;
+		old_limit = compressor_limit;
+		wwviaudio_set_compressor_params(compressor_threshold, compressor_limit);
+	}
+}
+
 gint advance_game(gpointer data)
 {
 	int time_to_switch_servers;
@@ -21047,6 +21066,7 @@ gint advance_game(gpointer data)
 	deal_with_mouse();
 	deal_with_physical_io_devices();
 	sng_set_font_family(current_typeface);
+	adjust_audio_dynamic_range_compression();
 
 	if (in_the_process_of_quitting) {
 		gdk_threads_enter();
