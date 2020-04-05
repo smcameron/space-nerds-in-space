@@ -198,8 +198,15 @@ static int dejitter_science_details = 1; /* Tweakable. 1 means de-jitter science
 static int monitor_voice_chat = 0;
 static int have_talking_stick = 0;
 static pthread_mutex_t voip_mutex = PTHREAD_MUTEX_INITIALIZER;
+
+/* Dynamic range compression settings.  By default don't do much to regular
+ * audio, but smash the crap out of the VOIP channels to make things more audible
+ * and help with people speaking off-mic or with crappy mics or weak pre-amps.
+ */
 static float compressor_threshold = 0.5; /* tweakable */
-static float compressor_limit = 0.7; /* tweakable */
+static float compressor_limit = 0.98; /* tweakable */
+static float voip_compressor_threshold = 0.2; /* tweakable */
+static float voip_compressor_limit = 0.3; /* tweakable */
 
 /* I can switch out the line drawing function with these macros */
 /* in case I come across something faster than gdk_draw_line */
@@ -17989,6 +17996,10 @@ static struct tweakable_var_descriptor client_tweak[] = {
 		&compressor_threshold, 'f', 0.01, 0.99, 0.5, 0, 0, 0 },
 	{ "COMPRESSOR_LIMIT", "AUDIO DYNAMIC RANGE COMPRESSOR LIMIT",
 		&compressor_limit, 'f', 0.1, 0.99, 0.98, 0, 0, 0 },
+	{ "VOIP_COMPRESSOR_THRESHOLD", "AUDIO DYNAMIC RANGE VOIP_COMPRESSOR THRESHOLD",
+		&voip_compressor_threshold, 'f', 0.01, 0.99, 0.3, 0, 0, 0 },
+	{ "VOIP_COMPRESSOR_LIMIT", "AUDIO DYNAMIC RANGE VOIP_COMPRESSOR LIMIT",
+		&voip_compressor_limit, 'f', 0.1, 0.99, 0.7, 0, 0, 0 },
 	{ NULL, NULL, NULL, '\0', 0.0, 0.0, 0.0, 0, 0, 0 },
 };
 
@@ -21021,6 +21032,8 @@ static void adjust_audio_dynamic_range_compression(void)
 {
 	static float old_threshold = -1.0;
 	static float old_limit = -1.0;
+	static float old_voip_threshold = -1.0;
+	static float old_voip_limit = -1.0;
 
 	if (old_threshold != compressor_threshold || old_limit != compressor_limit) {
 		if (compressor_limit < compressor_threshold)
@@ -21028,6 +21041,13 @@ static void adjust_audio_dynamic_range_compression(void)
 		old_threshold = compressor_threshold;
 		old_limit = compressor_limit;
 		wwviaudio_set_compressor_params(compressor_threshold, compressor_limit);
+	}
+	if (old_voip_threshold != voip_compressor_threshold || old_voip_limit != voip_compressor_limit) {
+		if (voip_compressor_limit < voip_compressor_threshold)
+			voip_compressor_limit = voip_compressor_threshold;
+		old_voip_threshold = voip_compressor_threshold;
+		old_voip_limit = voip_compressor_limit;
+		wwviaudio_set_voip_compressor_params(voip_compressor_threshold, voip_compressor_limit);
 	}
 }
 

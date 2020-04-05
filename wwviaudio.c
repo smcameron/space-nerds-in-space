@@ -63,6 +63,8 @@ static int busy_recording = 0;
 static unsigned int mixer_cycle_count = 0;
 static float compressor_threshold = 0.5;
 static float compressor_limit = 0.98; /* By default, do almost nothing */
+static float voip_compressor_threshold = 0.3;
+static float voip_compressor_limit = 0.7;
 
 /* Pause all audio output, output silence. */
 void wwviaudio_pause_audio(void)
@@ -245,6 +247,8 @@ static int wwviaudio_mixer_loop(__attribute__ ((unused)) const void *inputBuffer
 	out = (float*) outputBuffer;
 	const float climit = compressor_limit;
 	const float cthreshold = compressor_threshold;
+	const float vclimit = voip_compressor_limit;
+	const float vcthreshold = voip_compressor_threshold;
 
 	if (audio_paused) {
 		/* output silence when paused and
@@ -292,7 +296,7 @@ static int wwviaudio_mixer_loop(__attribute__ ((unused)) const void *inputBuffer
 				}
 				if (q) {
 					float value = (float) q->sample[q->pos] * q->volume / (float) (INT16_MAX);
-					output += compress_dyn_range(value, cthreshold, climit);
+					output += compress_dyn_range(value, vcthreshold, vclimit);
 					q->volume += q->delta_volume;
 					q->pos++;
 				}
@@ -837,6 +841,12 @@ void wwviaudio_set_compressor_params(float threshold, float limit)
 	compressor_limit = limit;
 }
 
+void wwviaudio_set_voip_compressor_params(float threshold, float limit)
+{
+	voip_compressor_threshold = threshold;
+	voip_compressor_limit = limit;
+}
+
 #else /* stubs only... */
 
 int wwviaudio_initialize_portaudio() { return 0; }
@@ -865,6 +875,7 @@ void wwviaudio_list_devices(void) {}
 void wwviaudio_append_to_audio_chain(int16_t *samples, int nsamples) {}
 int wwviaudio_get_mixer_cycle_count(void) { return 0; }
 void wwviaudio_set_compressor_params(float threshold, float limit) {}
+void wwviaudio_set_voip_compressor_params(float threshold, float limit) {}
 
 #endif
 
