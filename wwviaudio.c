@@ -30,6 +30,9 @@
 #include <string.h>
 #include <stdlib.h>
 #include <pthread.h>
+#include <math.h>
+
+#include "mathutils.h"
 
 #define WWVIAUDIO_DEFINE_GLOBALS
 #include "wwviaudio.h"
@@ -58,6 +61,8 @@ static pthread_mutex_t recording_mutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t audio_chain_mutex[WWVIAUDIO_CHAIN_COUNT];
 static int busy_recording = 0;
 static unsigned int mixer_cycle_count = 0;
+static float compressor_threshold = 0.5;
+static float compressor_limit = 0.98; /* By default, do almost nothing */
 
 /* Pause all audio output, output silence. */
 void wwviaudio_pause_audio(void)
@@ -209,6 +214,19 @@ int wwviaudio_read_ogg_clip(int clipnum, char *filename)
 	return wwviaudio_read_ogg_clip_internal(clipnum, filename);
 }
 
+static float compress_dyn_range(float v, const float threshold, const float limit)
+{
+	float gain = 0.98f / limit;
+	if (v < 0.0f)
+		gain = -gain;
+	v = fabsf(v);
+	if (v < threshold)
+		return gain * v;
+	if (v < 0.97)
+		return gain * fmap(v, threshold, 0.97, threshold, limit);
+	return gain * fmap(v, 0.97, 1000.0, limit, limit); /* brick wall */
+}
+
 /* This routine will be called by the PortAudio engine when audio is needed.
 ** It may called at interrupt level on some machines so don't do anything
 ** that could mess up the system like calling malloc() or free().
@@ -225,6 +243,8 @@ static int wwviaudio_mixer_loop(__attribute__ ((unused)) const void *inputBuffer
 	float *out = NULL;
 	float output;
 	out = (float*) outputBuffer;
+	const float climit = compressor_limit;
+	const float cthreshold = compressor_threshold;
 
 	if (audio_paused) {
 		/* output silence when paused and
@@ -271,13 +291,14 @@ static int wwviaudio_mixer_loop(__attribute__ ((unused)) const void *inputBuffer
 					free(oldq);
 				}
 				if (q) {
-					output += (float) q->sample[q->pos] * q->volume / (float) (INT16_MAX);
+					float value = (float) q->sample[q->pos] * q->volume / (float) (INT16_MAX);
+					output += compress_dyn_range(value, cthreshold, climit);
 					q->volume += q->delta_volume;
 					q->pos++;
 				}
 			}
 		}
-		*out++ = (float) output;
+		*out++ = compress_dyn_range((float) output, cthreshold, climit);
         }
 	for (i = 0; i < max_concurrent_sounds; i++) {
 		struct audio_queue_entry *q = &audio_queue[i];
@@ -810,6 +831,12 @@ void wwviaudio_append_to_audio_chain(int16_t *samples, int nsamples, int chain, 
 	pthread_mutex_unlock(&audio_chain_mutex[chain]);
 }
 
+void wwviaudio_set_compressor_params(float threshold, float limit)
+{
+	compressor_threshold = threshold;
+	compressor_limit = limit;
+}
+
 #else /* stubs only... */
 
 int wwviaudio_initialize_portaudio() { return 0; }
@@ -837,6 +864,7 @@ int wwviaudio_set_sound_device(int device) { return 0; }
 void wwviaudio_list_devices(void) {}
 void wwviaudio_append_to_audio_chain(int16_t *samples, int nsamples) {}
 int wwviaudio_get_mixer_cycle_count(void) { return 0; }
+void wwviaudio_set_compressor_params(float threshold, float limit) {}
 
 #endif
 

@@ -201,6 +201,8 @@ GLOBAL int wwviaudio_stop_audio_capture();
 
 GLOBAL unsigned int wwviaudio_get_mixer_cycle_count();
 
+GLOBAL void wwviaudio_set_compressor_params(float threshold, float limit);
+
 /*
 	Example usage, something along these lines:
 

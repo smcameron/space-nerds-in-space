@@ -134,4 +134,5 @@ int imin(int a, int b);
 /* Map (scale and offset) value x from range (min1, max1) to range (min2, max2) */
 float fmap(float x, float min1, float max1, float min2, float max2);
 
+#undef GLOBAL
 #endif
