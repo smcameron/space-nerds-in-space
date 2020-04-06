@@ -22749,9 +22749,14 @@ static void init_meshes()
 	mesh_scale(unit_cube_mesh, 0.5);
 	mesh_unit_cube_uv_map(unit_cube_mesh);
 
+#ifndef WITHOUTOPENGL
 	atmosphere_mesh = mesh_unit_spherified_cube(64);
-	atmosphere_lp_mesh = mesh_unit_spherified_cube(8);
 	planet_sphere_mesh = mesh_unit_spherified_cube(64);
+#else
+	atmosphere_mesh = mesh_unit_spherified_cube(16);
+	planet_sphere_mesh = mesh_unit_spherified_cube(16);
+#endif
+	atmosphere_lp_mesh = mesh_unit_spherified_cube(8);
 	planet_sphere_lp_mesh = mesh_unit_spherified_cube(8);
 	low_poly_sphere_mesh = snis_read_model(d, "uv_sphere.stl");
 	mesh_cylindrical_xy_uv_map(low_poly_sphere_mesh);
