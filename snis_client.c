@@ -208,6 +208,9 @@ static float compressor_limit = 0.98; /* tweakable */
 static float voip_compressor_threshold = 0.2; /* tweakable */
 static float voip_compressor_limit = 0.3; /* tweakable */
 
+/* color tone mapping gain.  1.185 means white is pretty damn white. Lower values make white darker */
+static float tonemapping_gain = 1.10; /* tweakable */
+
 /* I can switch out the line drawing function with these macros */
 /* in case I come across something faster than gdk_draw_line */
 #define DEFAULT_LINE_STYLE sng_current_draw_line
@@ -18000,6 +18003,8 @@ static struct tweakable_var_descriptor client_tweak[] = {
 		&voip_compressor_threshold, 'f', 0.01, 0.99, 0.3, 0, 0, 0 },
 	{ "VOIP_COMPRESSOR_LIMIT", "AUDIO DYNAMIC RANGE VOIP_COMPRESSOR LIMIT",
 		&voip_compressor_limit, 'f', 0.1, 0.99, 0.7, 0, 0, 0 },
+	{ "TONEMAPPING_GAIN", "COLOR TONEMAPPING GAIN",
+		&tonemapping_gain, 'f', 0.0, 1.19, 1.185, 0, 0, 0 },
 	{ NULL, NULL, NULL, '\0', 0.0, 0.0, 0.0, 0, 0, 0 },
 };
 
@@ -21051,6 +21056,16 @@ static void adjust_audio_dynamic_range_compression(void)
 	}
 }
 
+static void adjust_tonemapping_gain(void)
+{
+	static float old_tonemapping_gain = -1;
+
+	if (old_tonemapping_gain == tonemapping_gain)
+		return;
+	old_tonemapping_gain = tonemapping_gain;
+	graph_dev_set_tonemapping_gain(tonemapping_gain);
+}
+
 gint advance_game(gpointer data)
 {
 	int time_to_switch_servers;
@@ -21087,6 +21102,7 @@ gint advance_game(gpointer data)
 	deal_with_physical_io_devices();
 	sng_set_font_family(current_typeface);
 	adjust_audio_dynamic_range_compression();
+	adjust_tonemapping_gain();
 
 	if (in_the_process_of_quitting) {
 		gdk_threads_enter();

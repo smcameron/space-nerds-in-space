@@ -1029,3 +1029,6 @@ void graph_dev_reload_all_shaders(void)
 {
 	/* noop */
 }
+
+void graph_dev_set_tonemapping_gain(float tmg) { }
+
