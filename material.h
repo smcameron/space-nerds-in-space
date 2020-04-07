@@ -41,6 +41,7 @@ struct entity;
 #define MATERIAL_TEXTURED_SHIELD 12
 #define MATERIAL_ATMOSPHERE 13
 #define MATERIAL_ALPHA_BY_NORMAL 14
+#define MATERIAL_PLANETARY_LIGHTNING 15
 
 #define MATERIAL_BILLBOARD_TYPE_NONE 0
 #define MATERIAL_BILLBOARD_TYPE_SCREEN 1
@@ -109,6 +110,11 @@ struct material_textured_particle {
 	float time_base;
 };
 
+struct material_planetary_lightning {
+	int texture_id;
+	float u1, v1, width;
+};
+
 struct material_textured_planet_ring {
 	int texture_id;
 	float alpha;
@@ -155,6 +161,7 @@ struct material {
 		struct material_wireframe_sphere_clip wireframe_sphere_clip;
 		struct material_atmosphere atmosphere;
 		struct material_alpha_by_normal alpha_by_normal;
+		struct material_planetary_lightning planetary_lightning;
 	};
 	int type;
 	int billboard_type;
@@ -172,6 +179,7 @@ extern void material_init_textured_planet_ring(struct material *m);
 extern void material_init_wireframe_sphere_clip(struct material *m);
 extern void material_init_atmosphere(struct material *m);
 extern void material_init_alpha_by_normal(struct material *m);
+extern void material_init_planetary_lightning(struct material *m);
 
 extern int material_nebula_read_from_file(const char *asset_dir, const char *filename,
 						struct material *nebula);

@@ -265,3 +265,11 @@ void material_init_wireframe_sphere_clip(struct material *m)
 	m->wireframe_sphere_clip.radius_fade = 0;
 	m->rotate_randomly = 0;
 }
+
+void material_init_planetary_lightning(struct material *m)
+{
+	m->type = MATERIAL_PLANETARY_LIGHTNING;
+	m->billboard_type = MATERIAL_BILLBOARD_TYPE_NONE;
+	m->planetary_lightning.texture_id = 0;
+	m->rotate_randomly = 0;
+}

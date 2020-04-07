@@ -941,20 +941,20 @@ bail:
  *               .-- x
  *    -x <--     V     ---> +x
  * +y       0         1
- * ^   (0,1) +-------+ (1,1)
+ * ^ (u1,v2) +-------+ (u2,v2)
  * |         |\      |
  * |         | \     |
  *           |  \    |
  * y ------> |   \   |
  *           |    \  |
  * |         |     \ |
- * |   (0,0) |      \| (1,0)
+ * | (u1,v1) |      \| (u2,v1)
  * v       3 +-------+ 2
  * -y
  *          normal = +z
  */
 
-struct mesh *mesh_fabricate_billboard(float width, float height)
+struct mesh *mesh_fabricate_billboard_with_uv_map(float width, float height, float u1, float v1, float u2, float v2)
 {
 	struct mesh *m;
 
@@ -997,13 +997,13 @@ struct mesh *mesh_fabricate_billboard(float width, float height)
 	m->t[0].v[1] = &m->v[2];
 	m->t[0].v[2] = &m->v[1];
 	m->t[0].flag = TRIANGLE_0_1_COPLANAR;
-	mesh_set_triangle_texture_coords(m, 0, 0.0f, 1.0f, 1.0f, 0.0f, 1.0f, 1.0f);
+	mesh_set_triangle_texture_coords(m, 0, u1, v2, u2, v1, u2, v2);
 
 	m->t[1].v[0] = &m->v[0];
 	m->t[1].v[1] = &m->v[3];
 	m->t[1].v[2] = &m->v[2];
 	m->t[1].flag = TRIANGLE_0_2_COPLANAR;
-	mesh_set_triangle_texture_coords(m, 1, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f, 0.0f);
+	mesh_set_triangle_texture_coords(m, 1, u1, v2, u1, v1, u2, v1);
 
 	m->radius = mesh_compute_radius(m);
 	mesh_set_flat_shading_vertex_normals(m);
@@ -1014,6 +1014,29 @@ struct mesh *mesh_fabricate_billboard(float width, float height)
 bail:
 	mesh_free(m);
 	return NULL;
+}
+
+/* mesh_fabricate_billboard() makes a billboard:
+ *   quad is centered on 0,0 and texture coords are 0,0 in lower left per opengl convention
+ *               .-- x
+ *    -x <--     V     ---> +x
+ * +y       0         1
+ * ^   (0,1) +-------+ (1,1)
+ * |         |\      |
+ * |         | \     |
+ *           |  \    |
+ * y ------> |   \   |
+ *           |    \  |
+ * |         |     \ |
+ * |   (0,0) |      \| (1,0)
+ * v       3 +-------+ 2
+ * -y
+ *          normal = +z
+ */
+
+struct mesh *mesh_fabricate_billboard(float width, float height)
+{
+	return mesh_fabricate_billboard_with_uv_map(width, height, 0.0, 0.0, 1.0, 1.0);
 }
 
 static void normalize_sphere(struct mesh *m)

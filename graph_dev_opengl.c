@@ -810,6 +810,8 @@ struct graph_dev_gl_textured_shader {
 	GLint in_shade;
 	GLint water_color; /* Used for specular calculations by planet shader */
 	GLint sun_color; /* Used for specular calculations by planet shader */
+	GLint u1v1; /* Used by planetary lightning shader */
+	GLint texture_width; /* Used by planetary lightning shader */
 };
 
 struct clip_sphere_data {
@@ -900,6 +902,7 @@ static struct graph_dev_gl_point_cloud_shader point_cloud_shader;
 static struct graph_dev_gl_skybox_shader skybox_shader;
 static struct graph_dev_gl_color_by_w_shader color_by_w_shader;
 static struct graph_dev_gl_textured_shader textured_shader;
+static struct graph_dev_gl_textured_shader planetary_lightning_shader;
 static struct graph_dev_gl_textured_shader textured_with_sphere_shadow_shader;
 static struct graph_dev_gl_textured_shader textured_lit_shader;
 static struct graph_dev_gl_textured_shader textured_lit_emit_shader;
@@ -1361,6 +1364,8 @@ struct raster_texture_params {
 	float atmosphere_brightness;
 	union vec3 *water_color;
 	union vec3 *sun_color;
+	float u1, v1;
+	float width;
 };
 
 static void graph_dev_raster_texture(struct raster_texture_params *p)
@@ -1447,6 +1452,10 @@ static void graph_dev_raster_texture(struct raster_texture_params *p)
 		glUniform3f(shader->water_color, p->water_color->v.x, p->water_color->v.y, p->water_color->v.z);
 	if (shader->sun_color >= 0 && p->sun_color)
 		glUniform3f(shader->sun_color, p->sun_color->v.x, p->sun_color->v.y, p->sun_color->v.z);
+	if (shader->u1v1 >= 0)
+		glUniform2f(shader->u1v1, p->u1, p->v1);
+	if (shader->texture_width >= 0)
+		glUniform1f(shader->texture_width, p->width);
 
 	/* shadow sphere */
 	if (shader->shadow_sphere_id >= 0 && p->shadow_sphere)
@@ -2331,6 +2340,7 @@ extern int graph_dev_entity_render_order(struct entity_context *cx, struct entit
 	case MATERIAL_TEXTURED_PLANET_RING:
 	case MATERIAL_TEXTURED_SHIELD:
 	case MATERIAL_ALPHA_BY_NORMAL:
+	case MATERIAL_PLANETARY_LIGHTNING:
 		does_blending = 1;
 		break;
 	case MATERIAL_TEXTURE_MAPPED_UNLIT:
@@ -2429,6 +2439,21 @@ static void graph_dev_raster_triangle_mesh(struct entity_context *cx, struct ent
 				rtp.shader = &textured_lit_emit_shader;
 			else
 				rtp.shader = &textured_lit_shader;
+			}
+			break;
+		case MATERIAL_PLANETARY_LIGHTNING: {
+			rtp.shader = &planetary_lightning_shader;
+
+			struct material_planetary_lightning *mt = &e->material_ptr->planetary_lightning;
+			rtp.u1 = mt->u1;
+			rtp.v1 = mt->v1;
+			rtp.width = mt->width;
+			rtp.texture_number = mt->texture_id;
+			rtp.do_cullface = 1;
+			rtp.do_blend = 1;
+			rtp.alpha = 1.0;
+			rtp.emit_texture_number = 0;
+			rtp.normalmap_id = 0;
 			}
 			break;
 		case MATERIAL_TEXTURE_MAPPED_UNLIT: {
@@ -3221,6 +3246,8 @@ static void setup_textured_shader(const char *basename, const char *defines,
 	shader->in_shade = glGetUniformLocation(shader->program_id, "u_in_shade");
 	shader->water_color = glGetUniformLocation(shader->program_id, "u_WaterColor");
 	shader->sun_color = glGetUniformLocation(shader->program_id, "u_SunColor");
+	shader->u1v1 = glGetUniformLocation(shader->program_id, "u_u1v1");
+	shader->texture_width = glGetUniformLocation(shader->program_id, "u_width");
 
 	shader->vertex_position_id = glGetAttribLocation(shader->program_id, "a_Position");
 	shader->vertex_normal_id = glGetAttribLocation(shader->program_id, "a_Normal");
@@ -3842,6 +3869,7 @@ void graph_dev_reload_all_shaders(void)
 	setup_textured_shader("alpha_by_normal", UNIVERSAL_SHADER_HEADER, &alpha_by_normal_shader);
 	setup_textured_shader("alpha_by_normal", UNIVERSAL_SHADER_HEADER "#define TEXTURED_ALPHA_BY_NORMAL",
 				&textured_alpha_by_normal_shader);
+	setup_textured_shader("planetary-lightning", UNIVERSAL_SHADER_HEADER, &planetary_lightning_shader);
 
 	if (fbo_render_to_texture_supported())
 		setup_smaa_effect(&smaa_effect);

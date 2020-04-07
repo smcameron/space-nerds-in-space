@@ -493,6 +493,9 @@ static union vec3 warp_tunnel_direction;
 static struct mesh *nav_axes_mesh = NULL;
 static struct mesh *demon3d_axes_mesh = NULL;
 static struct mesh *cylinder_mesh;
+#define NLIGHTNINGS 20
+static int planetary_lightning = 1; /* tweakable */
+static struct mesh *planetary_lightning_mesh[NLIGHTNINGS] = { 0 };
 static struct entity *sun_entity = NULL;
 static int lens_flare_enabled = 1; /* tweakable */
 static float lens_flare_intensity = 0.15; /* tweakable */
@@ -565,6 +568,7 @@ static struct material thrust_material[NTHRUSTMATERIALS];
 static struct material thrust_flare_material[NTHRUSTMATERIALS];
 static struct material block_material;
 static struct material small_block_material;
+static struct material planetary_lightning_material[NLIGHTNINGS];
 
 #ifdef WITHOUTOPENGL
 static const int wormhole_render_style = RENDER_SPARKLE;
@@ -2185,6 +2189,18 @@ static int update_black_hole(uint32_t id, uint32_t timestamp, double x, double y
 	return 0;
 }
 
+static void add_planetary_lightning(struct snis_entity *planet);
+static void planet_move(struct snis_entity *planet)
+{
+	if (!planetary_lightning)
+		return;
+	if (!planet->tsd.planet.atmosphere)
+		return;
+	if (snis_randn(1000) > 100)
+		return;
+	add_planetary_lightning(planet);
+}
+
 static int update_planet(uint32_t id, uint32_t timestamp, double x, double y, double z,
 				union quat *orientation, double r, uint8_t government,
 				uint8_t tech_level, uint8_t economy, uint32_t dseed, int hasring,
@@ -2299,9 +2315,9 @@ static int update_planet(uint32_t id, uint32_t timestamp, double x, double y, do
 	go[i].tsd.planet.ring = hasring;
 	go[i].tsd.planet.time_left_to_build = time_left_to_build;
 	go[i].tsd.planet.build_unit_type = build_unit_type;
+	go[i].move = planet_move;
 	return 0;
 }
-
 
 static int update_wormhole(uint32_t id, uint32_t timestamp, double x, double y, double z)
 {
@@ -2520,6 +2536,26 @@ static void shield_effect_move(struct snis_entity *o)
 		}
 		snis_object_pool_free_object(sparkpool, spark_index(o));
 	}
+}
+
+static void planetary_lightning_move(struct snis_entity *o)
+{
+	if (o->alive > 1) {
+		/* Make the lightning flicker */
+		if (o->entity && snis_randn(1000) < 100)
+			update_entity_visibility(o->entity, 1);
+		else
+			update_entity_visibility(o->entity, 0);
+		o->alive--;
+		return;
+	}
+	o->alive = 0;
+	if (o->entity) {
+		remove_entity(ecx, o->entity);
+		o->entity = NULL;
+	}
+	snis_object_pool_free_object(sparkpool, spark_index(o));
+	return;
 }
 
 static void spark_move(struct snis_entity *o)
@@ -3094,6 +3130,7 @@ static void move_objects(void)
 		case OBJTYPE_PLANET:
 			move_object(timestamp, o, &interpolate_oriented_object);
 			spin_planet(timestamp, o);
+			o->move(o);
 			break;
 		case OBJTYPE_SHIELD_EFFECT:
 			move_object(timestamp, o, &interpolate_generic_object);
@@ -3156,6 +3193,36 @@ static void add_spark(double x, double y, double z, double vx, double vy, double
 	spark[i].type = OBJTYPE_SPARK;
 	spark[i].alive = time + snis_randn(time);
 	spark[i].move = spark_move;
+	spark[i].entity = e;
+	return;
+}
+
+static void add_planetary_lightning(struct snis_entity *planet)
+{
+	int i;
+	union vec3 p, xaxis = { { 0.0, 0.0, 1.0 } };
+	union quat orientation;
+	struct entity *e;
+
+	i = snis_object_pool_alloc_obj(sparkpool);
+	if (i < 0)
+		return;
+	random_point_on_sphere(planet->tsd.planet.radius * 1.005, &p.v.x, &p.v.y, &p.v.z);
+	quat_from_u2v(&orientation, &xaxis, &p, NULL);
+	p.v.x += planet->x;
+	p.v.y += planet->y;
+	p.v.z += planet->z;
+	e = add_entity(ecx, planetary_lightning_mesh[i % NLIGHTNINGS], p.v.x, p.v.y, p.v.z, WHITE);
+	if (!e) {
+		snis_object_pool_free_object(sparkpool, i);
+		return;
+	}
+	update_entity_orientation(e, &orientation);
+	update_entity_material(e, &planetary_lightning_material[i % NLIGHTNINGS]);
+	update_entity_scale(e, 500.0 * planet->tsd.planet.radius / MAX_PLANET_RADIUS);
+	spark[i].type = OBJTYPE_PLANETARY_LIGHTNING;
+	spark[i].alive = snis_randn(10) + 10;
+	spark[i].move = planetary_lightning_move;
 	spark[i].entity = e;
 	return;
 }
@@ -18005,6 +18072,8 @@ static struct tweakable_var_descriptor client_tweak[] = {
 		&voip_compressor_limit, 'f', 0.1, 0.99, 0.7, 0, 0, 0 },
 	{ "TONEMAPPING_GAIN", "COLOR TONEMAPPING GAIN",
 		&tonemapping_gain, 'f', 0.0, 1.19, 1.185, 0, 0, 0 },
+	{ "PLANETARY_LIGHTNING", "PLANETARY LIGHTNING ACTIVE 0 - 1",
+		&planetary_lightning, 'i', 0.0, 0.0, 0.0, 0, 1, 1 },
 	{ NULL, NULL, NULL, '\0', 0.0, 0.0, 0.0, 0, 0, 0 },
 };
 
@@ -21268,6 +21337,19 @@ static void expire_skybox_texture(char *filenameprefix)
 					filename[5], filename[0], filename[2]);
 }
 
+static void set_planetary_lightning_material_uv_coords(void)
+{
+	int i;
+
+	for (i = 0; i < NLIGHTNINGS; i++) {
+		/* Extract uv coords from meshes */
+		struct material *m = &planetary_lightning_material[i];
+		m->planetary_lightning.u1 = planetary_lightning_mesh[i]->tex[0].u;
+		m->planetary_lightning.v1 = planetary_lightning_mesh[i]->tex[1].v;
+		m->planetary_lightning.width = 0.25;
+	}
+}
+
 static void init_meshes();
 
 /* call back for configure_event (for window resize) */
@@ -21330,6 +21412,7 @@ static gint main_da_configure(GtkWidget *w, GdkEventConfigure *event)
 		init_meshes();
 		meshes_loaded = 1;
 	}
+	set_planetary_lightning_material_uv_coords();
 
 	static int static_exc_loaded = 0;
 	if (!static_exc_loaded) {
@@ -21575,6 +21658,16 @@ static int load_static_textures(void)
 	anamorphic_flare_material.texture_mapped_unlit.texture_id = load_texture("textures/anamorphic_flare.png", 0);
 	anamorphic_flare_material.texture_mapped_unlit.do_blend = 1;
 	anamorphic_flare_material.texture_mapped_unlit.alpha = 0.20;
+	for (i = 0; i < NLIGHTNINGS; i++) {
+		struct material *m = &planetary_lightning_material[i];
+		material_init_planetary_lightning(m);
+		if (i == 0)
+			m->planetary_lightning.texture_id =
+				load_texture("textures/planetary-lightning-texture.png", 1);
+		else /* They all share the stame texture */
+			m->planetary_lightning.texture_id =
+				planetary_lightning_material[0].planetary_lightning.texture_id;
+	}
 
 	static_textures_loaded = 1;
 
@@ -22866,6 +22959,16 @@ static void init_meshes()
 	mesh_cylindrical_yz_uv_map(warp_core_mesh);
 	cylinder_mesh = snis_read_model(d, "cylinder.stl");
 	mesh_cylindrical_yz_uv_map(cylinder_mesh);
+
+	for (i = 0; i < NLIGHTNINGS; i++) {
+		float u1, v1, u2, v2;
+
+		u1 = mtwist_float(mt) * 0.75;
+		u2 = u1 + 0.25;
+		v1 = mtwist_float(mt) * 0.75;
+		v2 = v1 + 0.25;
+		planetary_lightning_mesh[i] = mesh_fabricate_billboard_with_uv_map(1.0, 1.0, u1, v1, u2, v2);
+	}
 
 	open_simplex_noise_free(osn);
 	mtwist_free(mt);
