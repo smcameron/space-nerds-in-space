@@ -3219,7 +3219,7 @@ static void add_planetary_lightning(struct snis_entity *planet)
 	}
 	update_entity_orientation(e, &orientation);
 	update_entity_material(e, &planetary_lightning_material[i % NLIGHTNINGS]);
-	update_entity_scale(e, 500.0 * planet->tsd.planet.radius / MAX_PLANET_RADIUS);
+	update_entity_scale(e, (500.0 + snis_randn(300)) * planet->tsd.planet.radius / MAX_PLANET_RADIUS);
 	spark[i].type = OBJTYPE_SPARK;
 	spark[i].alive = snis_randn(10) + 10;
 	spark[i].move = planetary_lightning_move;
