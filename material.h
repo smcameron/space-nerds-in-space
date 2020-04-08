@@ -42,6 +42,7 @@ struct entity;
 #define MATERIAL_ATMOSPHERE 13
 #define MATERIAL_ALPHA_BY_NORMAL 14
 #define MATERIAL_PLANETARY_LIGHTNING 15
+#define MATERIAL_WARP_GATE_EFFECT 16
 
 #define MATERIAL_BILLBOARD_TYPE_NONE 0
 #define MATERIAL_BILLBOARD_TYPE_SCREEN 1
@@ -147,6 +148,11 @@ struct material_wireframe_sphere_clip {
 	float radius_fade;
 };
 
+struct material_warp_gate_effect {
+	int texture_id;
+	float u1, u2;  /* For scrolling texture */
+};
+
 struct material {
 	__extension__ union {
 		struct material_color_by_w color_by_w;
@@ -162,6 +168,7 @@ struct material {
 		struct material_atmosphere atmosphere;
 		struct material_alpha_by_normal alpha_by_normal;
 		struct material_planetary_lightning planetary_lightning;
+		struct material_warp_gate_effect warp_gate_effect;
 	};
 	int type;
 	int billboard_type;
@@ -180,6 +187,7 @@ extern void material_init_wireframe_sphere_clip(struct material *m);
 extern void material_init_atmosphere(struct material *m);
 extern void material_init_alpha_by_normal(struct material *m);
 extern void material_init_planetary_lightning(struct material *m);
+extern void material_init_warp_gate_effect(struct material *m);
 
 extern int material_nebula_read_from_file(const char *asset_dir, const char *filename,
 						struct material *nebula);

@@ -901,6 +901,9 @@ struct warpgate_data {
 #define WARPGATE_MAJOR_RADIUS 92
 #define WARPGATE_MINOR_RADIUS 25
 	uint32_t warpgate_number;
+#ifdef SNIS_CLIENT_DATA
+	struct entity *warp_gate_effect; /* Used for the effect in center of warp gate */
+#endif
 };
 
 struct block_data {

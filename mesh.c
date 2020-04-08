@@ -936,6 +936,80 @@ bail:
 	return NULL;
 }
 
+/* mesh_fabricate_disc fabricates a disc with the given radius and
+ * nslices pie slices.  It is uv mapped such that the center is at
+ * u1 = 0, and the outer edge at u = 1.0.  Used for warp gate effect.
+ */
+struct mesh *mesh_fabricate_disc(float radius, int nslices)
+{
+	struct mesh *m;
+	int i;
+	float angle, da;
+	float inner_radius = 0.00 * radius;
+
+	if (nslices < 4)
+		return NULL;
+
+	m = calloc(1, sizeof(*m));
+	if (!m)
+		return m;
+	m->ntriangles = 2 * nslices;
+	m->nvertices = 2 * nslices;
+
+	m->t = calloc(m->ntriangles, sizeof(*m->t));
+	if (!m->t)
+		goto bail;
+	m->v = calloc(m->nvertices, sizeof(*m->v));
+	if (!m->v)
+		goto bail;
+	m->tex = calloc(m->ntriangles * 3, sizeof(*m->tex));
+	if (!m->tex)
+		goto bail;
+	m->l = NULL;
+
+	da = 2.0 * M_PI / nslices;
+	angle = 0.0;
+
+	/* Set up the vertices */
+	for (i = 0; i < nslices; i++) {
+		int v = i * 2;
+		m->v[v].x = 0.0;
+		m->v[v].y = -radius * sin(angle);
+		m->v[v].z = radius * cos(angle);
+		m->v[v + 1].x = 0.0;
+		m->v[v + 1].y = -inner_radius * sin(angle);
+		m->v[v + 1].z = inner_radius * cos(angle);
+		angle += da;
+	}
+	/* Set up the triangles */
+	for (i = 0; i < nslices; i++) {
+		float a1, a2;
+		int t = i * 2;
+		a1 = 0.0;
+		a2 = 1.0;
+		m->t[t].v[0] = &m->v[t]; /* outer */
+		m->t[t].v[1] = &m->v[t + 1]; /* inner */
+		m->t[t].v[2] = &m->v[(t + 2) % (nslices * 2)]; /* next outer */
+		m->t[t].flag = TRIANGLE_0_1_COPLANAR;
+		mesh_set_triangle_texture_coords(m, t, 0.0, a1, 1.0, a1, 0.0, a2);
+
+		m->t[t + 1].v[0] = &m->v[(t + 2) % (nslices * 2)]; /* next outer */
+		m->t[t + 1].v[1] = &m->v[t + 1]; /* inner */
+		m->t[t + 1].v[2] = &m->v[(t + 3) % (nslices * 2)]; /* next inner */
+		m->t[t + 1].flag = TRIANGLE_0_2_COPLANAR;
+		mesh_set_triangle_texture_coords(m, t + 1, 0.0, a2, 1.0, a1, 1.0, a2);
+	}
+
+	m->radius = mesh_compute_radius(m);
+	mesh_set_flat_shading_vertex_normals(m);
+	mesh_graph_dev_init(m);
+
+	return m;
+bail:
+	mesh_free(m);
+	return NULL;
+}
+
 /* mesh_fabricate_billboard() makes a billboard:
  *   quad is centered on 0,0 and texture coords are 0,0 in lower left per opengl convention
  *               .-- x

@@ -273,3 +273,13 @@ void material_init_planetary_lightning(struct material *m)
 	m->planetary_lightning.texture_id = 0;
 	m->rotate_randomly = 0;
 }
+
+void material_init_warp_gate_effect(struct material *m)
+{
+	m->type = MATERIAL_WARP_GATE_EFFECT;
+	m->billboard_type = MATERIAL_BILLBOARD_TYPE_NONE;
+	m->warp_gate_effect.texture_id = 0;
+	m->warp_gate_effect.u1 = 0.0;
+	m->warp_gate_effect.u2 = 0.01;
+	m->rotate_randomly = 0;
+}

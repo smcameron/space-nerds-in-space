@@ -484,6 +484,7 @@ static struct mesh *sun_mesh;
 static struct mesh *unit_quad;
 static struct mesh *thrust_animation_mesh;
 static struct mesh *warpgate_mesh;
+static struct mesh *warpgate_effect_mesh;
 static struct mesh *warp_core_mesh;
 #define NDOCKING_PORT_STYLES 3
 static struct mesh *docking_port_mesh[NDOCKING_PORT_STYLES];
@@ -536,6 +537,7 @@ static struct material black_hole_material;
 static struct material spacemonster_tentacle_material;
 static struct material spacemonster_material;
 static struct material warpgate_material;
+static struct material warpgate_effect_material;
 static struct material docking_port_material;
 static float atmosphere_brightness = 0.5; /* tweakable */
 #define NPLANET_MATERIALS 256
@@ -2404,7 +2406,7 @@ static int update_warpgate(uint32_t id, uint32_t timestamp, double x, double y, 
 	union quat *orientation)
 {
 	int i;
-	struct entity *e;
+	struct entity *e, *wge;
 
 	i = lookup_object_by_id(id);
 	if (i < 0) {
@@ -2417,6 +2419,13 @@ static int update_warpgate(uint32_t id, uint32_t timestamp, double x, double y, 
 				remove_entity(ecx, e);
 				return i;
 			}
+			wge = add_entity(ecx, warpgate_effect_mesh, 0, 0, 0, WARPGATE_COLOR);
+			if (wge) {
+				update_entity_parent(ecx, wge, e);
+				update_entity_scale(wge, warpgate_mesh->radius * 0.6);
+				update_entity_material(wge, &warpgate_effect_material);
+			}
+			go[i].tsd.warpgate.warp_gate_effect = wge;
 		}
 	} else {
 		update_generic_object(i, timestamp, x, y, z, 0.0, 0.0, 0.0, orientation, 1);
@@ -2949,8 +2958,17 @@ static void update_warp_field_error(void)
 
 static void warpgate_blink_lights(void)
 {
+	float u1, u2;
 	warpgate_material.texture_mapped.emit_intensity =
 		cos(((float) (timer & 0x1f) / 32.0) * 0.5 * M_PI);
+
+	/* Scroll through the warp gate effect texture */
+	u1 = (float) (timer & 0x0ff) / (float) 0x0ff;
+	u2 = u1 + 0.1;
+	if (u2 > 1.0)
+		u2 = u2 - 1.0;
+	warpgate_effect_material.warp_gate_effect.u1 = u1;
+	warpgate_effect_material.warp_gate_effect.u2 = u2;
 }
 
 static void docking_port_blink_lights(void)
@@ -21637,6 +21655,9 @@ static int load_static_textures(void)
 		load_texture("textures/warpgate_texture.png", 0);
 	warpgate_material.texture_mapped.emit_texture_id =
 		load_texture("textures/warpgate_emit.png", 0);
+	material_init_warp_gate_effect(&warpgate_effect_material);
+	warpgate_effect_material.warp_gate_effect.texture_id =
+		warp_tunnel_material.texture_mapped_unlit.texture_id; /* share this texture */
 	material_init_texture_mapped(&docking_port_material);
 	docking_port_material.texture_mapped.texture_id =
 		load_texture("textures/docking_port_texture.png", 0);
@@ -22955,6 +22976,7 @@ static void init_meshes()
 	thrust_animation_mesh = init_thrust_mesh(70, 200, 1.3, 1);
 	warpgate_mesh = snis_read_model(d, "warpgate.stl");
 	mesh_cylindrical_yz_uv_map(warpgate_mesh);
+	warpgate_effect_mesh = mesh_fabricate_disc(1.0, 32);
 	warp_core_mesh = snis_read_model(d, "warp-core.stl");
 	mesh_cylindrical_yz_uv_map(warp_core_mesh);
 	cylinder_mesh = snis_read_model(d, "cylinder.stl");

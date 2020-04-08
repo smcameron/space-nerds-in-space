@@ -903,6 +903,7 @@ static struct graph_dev_gl_skybox_shader skybox_shader;
 static struct graph_dev_gl_color_by_w_shader color_by_w_shader;
 static struct graph_dev_gl_textured_shader textured_shader;
 static struct graph_dev_gl_textured_shader planetary_lightning_shader;
+static struct graph_dev_gl_textured_shader warp_gate_effect_shader;
 static struct graph_dev_gl_textured_shader textured_with_sphere_shadow_shader;
 static struct graph_dev_gl_textured_shader textured_lit_shader;
 static struct graph_dev_gl_textured_shader textured_lit_emit_shader;
@@ -2341,6 +2342,7 @@ extern int graph_dev_entity_render_order(struct entity_context *cx, struct entit
 	case MATERIAL_TEXTURED_SHIELD:
 	case MATERIAL_ALPHA_BY_NORMAL:
 	case MATERIAL_PLANETARY_LIGHTNING:
+	case MATERIAL_WARP_GATE_EFFECT:
 		does_blending = 1;
 		break;
 	case MATERIAL_TEXTURE_MAPPED_UNLIT:
@@ -2454,6 +2456,19 @@ static void graph_dev_raster_triangle_mesh(struct entity_context *cx, struct ent
 			rtp.alpha = 1.0;
 			rtp.emit_texture_number = 0;
 			rtp.normalmap_id = 0;
+			}
+			break;
+		case MATERIAL_WARP_GATE_EFFECT: {
+			rtp.shader = &warp_gate_effect_shader;
+
+			struct material_warp_gate_effect *mt =
+					&e->material_ptr->warp_gate_effect;
+			rtp.texture_number = mt->texture_id;
+			rtp.u1 = mt->u1;
+			rtp.v1 = mt->u2;
+			rtp.do_cullface = 0;
+			rtp.do_blend = 1;
+			rtp.alpha = 1.0;
 			}
 			break;
 		case MATERIAL_TEXTURE_MAPPED_UNLIT: {
@@ -3870,6 +3885,7 @@ void graph_dev_reload_all_shaders(void)
 	setup_textured_shader("alpha_by_normal", UNIVERSAL_SHADER_HEADER "#define TEXTURED_ALPHA_BY_NORMAL",
 				&textured_alpha_by_normal_shader);
 	setup_textured_shader("planetary-lightning", UNIVERSAL_SHADER_HEADER, &planetary_lightning_shader);
+	setup_textured_shader("warp-gate-effect", UNIVERSAL_SHADER_HEADER FILMIC_TONEMAPPING, &warp_gate_effect_shader);
 
 	if (fbo_render_to_texture_supported())
 		setup_smaa_effect(&smaa_effect);
