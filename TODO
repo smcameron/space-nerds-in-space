@@ -46,6 +46,9 @@ Too much to list, but here's a list anyway:
     Starbase comm stuff -- mostly done, there are undoubtedly more things that could
 	be added. Probably need a way to shut off annoying messages about being attacked
 	constantly for scenarios.
+
+	Might be nice to have audio comms radio chatter when near a starbase.
+
     Enemy ship comm monitoring -- Right now there is no enemy comms to monitor. Seems
 	like there should be something for comms to do here though. Do not have any very
 	good ideas about how it should work though.
@@ -110,10 +113,19 @@ Too much to list, but here's a list anyway:
     more difficult or easier to destroy.
   * Allow ship to ship docking?
   * There are still cases where ships get into strange "flipping" states, maybe while trying
-    to traverse around planets.
+    to traverse around planets. (This is mostly fixed, and was due to NaNs mostly).
+  * There should be some kind of pirate ships, where the pirates contact the player via
+    Comms and demand cargo be ejected, fight if not, etc. or maybe do this after damaging
+    the player "enough". Maybe use specialized weapon to disable warp.  Details of how to make
+    this work seem elusive, and how to make it so that all such encounters do not seem "samey"
+    is unclear.  Maybe different ruses to lure in the player (e.g. various forms of distress
+    calls) which brings us to...
+  * There should be actual distress calls from NPC ships that the player can help
+    out with, e.g. perhaps towing a ship to a starbase, picking up personnel in
+    need of medical attention and taking them to a starbase, bringing fuel, etc.
 
 * Add proximity mines
-* Add missiles of some kind
+* Add missiles of some kind (Done.  Although they are kind of too powerful.)
 * Add Lua controllable macguffins of some kind
 
 * starbase behavior
@@ -139,6 +151,11 @@ Too much to list, but here's a list anyway:
 
 * 3D out the window view
   Fade distant objects to black
+  Implement shadow mapping (very very hard.)
+	  http://www.opengl-tutorial.org/intermediate-tutorials/tutorial-16-shadow-mapping/
+	  https://gamedev.stackexchange.com/questions/73851/how-do-i-fit-the-camera-frustum-inside-directional-light-space
+	  https://en.wikipedia.org/wiki/Shadow_mapping
+  Implement PBR (very very hard).
 
 * comms screen:
 
@@ -182,6 +199,12 @@ NICE TO HAVE:
   realism.   Also, have planets orbiting stars, stations orbiting planets, etc,
   instead of what we have now, which is just stuff randomly sprinkled around.
 
+* (This might be a bad idea) Allow solarsystems to have real-time procedurally
+  generated planet and skybox textures (this would be hard, and not as good as the
+  offline generated textures). This would enable the autowrangling of snis_multiverse
+  to produce the illusion of a really huge galaxy with hundreds or thousands of
+  star systems.
+
 * Make art assets live on server and be transmitted to clients on demand.
   (Sorta kinda done. make update-assets grabs assets from spacenerdsinspace.com
   but not on-demand.)
@@ -203,13 +226,9 @@ NICE TO HAVE:
 * Make black hole shader better.  Right now it's just a billboard with a
   fuzzy black disc on it.
 
-* Allow for shadowing in the renderer. These may be relevant:
-  http://www.opengl-tutorial.org/intermediate-tutorials/tutorial-16-shadow-mapping/
-  https://gamedev.stackexchange.com/questions/73851/how-do-i-fit-the-camera-frustum-inside-directional-light-space
-  https://en.wikipedia.org/wiki/Shadow_mapping
-
 * Add a Real Time Strategy game into SNIS.
   Partially done.  But a long way to go before it's reasonable.
+  (This was probably a bad idea.)
 
   This will give COMMS station some things to do. I envision it to work
   something like this.
@@ -354,11 +373,6 @@ NICE TO HAVE:
   fopen_and_fetch(), and these would attempt a local [f]open(), and if that doesn't
   work, fetch the file, then re-do the [f]open(). That way client installation should
   be simpler, and scenarios could get their files distributed on-demand.
-
-* Consider having NPC ships engage in piracy, esp. enemy ships when they have
-  inflicted some amount of damage, perhaps they hold off and demand player eject
-  cargo or make payment instead of killing them. Maybe use some specialized weapon
-  to disable warp and impulse on player ship (temporarily? Stasis field?)
 
 * The client currently knows many demon screen commands and many of them are implemented
   with custom opcodes sent to the server. Recently, server-side builtin demon commands
