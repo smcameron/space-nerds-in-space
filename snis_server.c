@@ -1770,14 +1770,45 @@ static void respawn_object(struct snis_entity *o)
 {
 	int i;
 	uint32_t hp;
+	int count;
+	int found = -1;
+	const int n = snis_object_pool_highest_object(pool);
 
 	switch (o->type) {
 		case OBJTYPE_SHIP2:
 			if (!o->tsd.ship.auto_respawn)
 				break;
-			if (o->tsd.ship.ai[0].ai_mode != AI_MODE_COP)
-				add_ship(lowest_faction, snis_randn(nshiptypes), 1);
-			else {
+			if (o->tsd.ship.ai[0].ai_mode != AI_MODE_COP) {
+				/* Find a warp gate to spawn from */
+				count = snis_randn(NWARPGATES);
+				for (i = 0; i < n; i++) {
+					if (go[i].type != OBJTYPE_WARPGATE || !go[i].alive)
+						continue;
+					count--;
+					found = i;
+					if (count != 0)
+						continue;
+					break;
+				}
+				i = add_ship(lowest_faction, snis_randn(nshiptypes), 1);
+				if (i < 0)
+					break;
+				o = &go[i];
+				if (found >= 0) { /* Spawn at warp gate */
+					union vec3 axis, vel;
+					random_point_on_sphere(1.0, &axis.v.x, &axis.v.y, &axis.v.z);
+					quat_init_axis_v(&o->orientation, &axis, 10.0f * M_PI / 180.0);
+					vel.v.x = 100.0;
+					vel.v.y = 0.0;
+					vel.v.z = 0.0;
+					quat_rot_vec_self(&vel, &o->orientation);
+					o->vx = vel.v.x;
+					o->vy = vel.v.y;
+					o->vz = vel.v.z;
+					set_object_location(o, go[found].x, go[found].y, go[found].z);
+				}
+				remove_from_attack_lists(o->id);
+			} else {
 				/* respawn cops as cops */
 				hp = o->tsd.ship.home_planet;
 				i = add_ship(o->sdata.faction, SHIP_CLASS_ENFORCER, 1);
@@ -1786,7 +1817,7 @@ static void respawn_object(struct snis_entity *o)
 				o = &go[i];
 				o->tsd.ship.home_planet = hp;
 				push_cop_mode(o);
-				break;
+				remove_from_attack_lists(o->id);
 			}
 			break;
 		case OBJTYPE_ASTEROID:
