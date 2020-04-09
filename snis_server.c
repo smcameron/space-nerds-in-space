@@ -23897,6 +23897,9 @@ static void send_econ_update_ship_packet(struct game_client *c,
 		if (o->tsd.ship.ai[n].ai_mode == AI_MODE_ATTACK) {
 			victim_id = o->tsd.ship.ai[n].u.attack.victim_id;
 		}
+		if (o->tsd.ship.ai[n].ai_mode == AI_MODE_CHASE_CARGO) {
+			victim_id = o->tsd.ship.ai[n].u.chase_cargo.cargo;
+		}
 	}
 
 	if (c->debug_ai) {
@@ -23939,6 +23942,9 @@ static void send_econ_update_ship_packet(struct game_client *c,
 				break;
 			case AI_MODE_CATATONIC:
 				ai[i] = 'K';
+				break;
+			case AI_MODE_CHASE_CARGO:
+				ai[i] = 'c';
 				break;
 			default:
 				ai[i] = '?';
