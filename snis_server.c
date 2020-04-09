@@ -11018,6 +11018,7 @@ static int commodity_sample(void);
 static int add_ship(int faction, int shiptype, int auto_respawn)
 {
 	int i, cb;
+	int cargo_count = 1;
 	double x, y, z, heading;
 	static struct mtwist_state *mt = NULL;
 	char registration[100];
@@ -11057,7 +11058,12 @@ static int add_ship(int faction, int shiptype, int auto_respawn)
 	go[i].tsd.ship.steering_adjustment.v.z = 0.0;
 	go[i].tsd.ship.ncargo_bays = ship_type[shiptype].ncargo_bays;
 	memset(go[i].tsd.ship.cargo, 0, sizeof(go[i].tsd.ship.cargo));
-	for (cb = 0; cb < go[i].tsd.ship.ncargo_bays; cb++) {
+	/* Set all cargo bays empty */
+	for (cb = 0; cb < go[i].tsd.ship.ncargo_bays; cb++)
+			go[i].tsd.ship.cargo[cb].contents.item = -1; /* empty */
+	/* Fill some but not all cargo bays. Leave some empty so ships can scavenge floating cargo */
+	cargo_count = snis_randn(go[i].tsd.ship.ncargo_bays);
+	for (cb = 0; cb < cargo_count; cb++) {
 		int item = commodity_sample();
 		float qty = (float) snis_randn(99) + 1;
 		go[i].tsd.ship.cargo[cb].contents.item = item;
