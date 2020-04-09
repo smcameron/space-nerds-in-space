@@ -1768,63 +1768,93 @@ static void queue_delete_oid(struct game_client *c, uint32_t oid)
 static void push_cop_mode(struct snis_entity *cop);
 static void respawn_object(struct snis_entity *o)
 {
-	int i;
+	int i, j;
 	uint32_t hp;
-	int count;
-	int found = -1;
+	int nmatching_warpgates, ignore_faction;
 	const int n = snis_object_pool_highest_object(pool);
+	int warpgate[NWARPGATES];
+	int nwarpgates;
+	union vec3 axis, vel;
 
 	switch (o->type) {
-		case OBJTYPE_SHIP2:
-			if (!o->tsd.ship.auto_respawn)
+	case OBJTYPE_SHIP2:
+		if (!o->tsd.ship.auto_respawn)
+			break;
+		if (o->tsd.ship.ai[0].ai_mode == AI_MODE_COP) {
+			/* respawn cops as cops */
+			hp = o->tsd.ship.home_planet;
+			i = add_ship(o->sdata.faction, SHIP_CLASS_ENFORCER, 1);
+			if (i < 0)
 				break;
-			if (o->tsd.ship.ai[0].ai_mode != AI_MODE_COP) {
-				/* Find a warp gate to spawn from */
-				count = snis_randn(NWARPGATES);
-				for (i = 0; i < n; i++) {
-					if (go[i].type != OBJTYPE_WARPGATE || !go[i].alive)
-						continue;
-					count--;
-					found = i;
-					if (count != 0)
-						continue;
-					break;
-				}
-				i = add_ship(lowest_faction, snis_randn(nshiptypes), 1);
-				if (i < 0)
-					break;
-				o = &go[i];
-				if (found >= 0) { /* Spawn at warp gate */
-					union vec3 axis, vel;
-					random_point_on_sphere(1.0, &axis.v.x, &axis.v.y, &axis.v.z);
-					quat_init_axis_v(&o->orientation, &axis, 10.0f * M_PI / 180.0);
-					vel.v.x = 100.0;
-					vel.v.y = 0.0;
-					vel.v.z = 0.0;
-					quat_rot_vec_self(&vel, &o->orientation);
-					o->vx = vel.v.x;
-					o->vy = vel.v.y;
-					o->vz = vel.v.z;
-					set_object_location(o, go[found].x, go[found].y, go[found].z);
-				}
-				remove_from_attack_lists(o->id);
-			} else {
-				/* respawn cops as cops */
-				hp = o->tsd.ship.home_planet;
-				i = add_ship(o->sdata.faction, SHIP_CLASS_ENFORCER, 1);
-				if (i < 0)
-					break;
-				o = &go[i];
-				o->tsd.ship.home_planet = hp;
-				push_cop_mode(o);
-				remove_from_attack_lists(o->id);
+			o = &go[i];
+			o->tsd.ship.home_planet = hp;
+			push_cop_mode(o);
+			remove_from_attack_lists(o->id);
+			break;
+		} /* else, not a cop, */
+
+		i = add_ship(lowest_faction, snis_randn(nshiptypes), 1);
+		if (i < 0)
+			break;
+		o = &go[i];
+		remove_from_attack_lists(o->id);
+
+		/* Find all the warpgates */
+		nwarpgates = 0;
+		for (i = 0; i < n; i++) {
+			if (go[i].type != OBJTYPE_WARPGATE || !go[i].alive)
+				continue;
+			warpgate[nwarpgates] = i;
+			nwarpgates++;
+		}
+		if (nwarpgates <= 0)
+			break;
+		ignore_faction = (snis_randn(1000) > 950); /* Ignore faction 5% of the time */
+		/* Spawn at warp gate */
+		random_point_on_sphere(1.0, &axis.v.x, &axis.v.y, &axis.v.z);
+		quat_init_axis_v(&o->orientation, &axis, 10.0f * M_PI / 180.0);
+		vel.v.x = 100.0;
+		vel.v.y = 0.0;
+		vel.v.z = 0.0;
+		quat_rot_vec_self(&vel, &o->orientation);
+		o->vx = vel.v.x;
+		o->vy = vel.v.y;
+		o->vz = vel.v.z;
+		/* Choose a random warp gate, ignoring faction as a start */
+		int wg = warpgate[snis_randn(1000) % nwarpgates];
+		if (ignore_faction) {
+			set_object_location(o, go[wg].x, go[wg].y, go[wg].z);
+			break;
+		}
+		/* Try to find a warpgate with matching faction */
+		/* How many warpgates match the faction? */
+		nmatching_warpgates = 0;
+		for (j = 0; j < nwarpgates; j++) {
+			int tmp;
+			if (o->sdata.faction != go[warpgate[j]].sdata.faction)
+				continue;
+			/* Move the matching warpgates to the front of warpgate[] array */
+			if (j == nmatching_warpgates) {
+				nmatching_warpgates++;
+				continue;
 			}
-			break;
-		case OBJTYPE_ASTEROID:
-			/* TODO: respawn asteroids */
-			break;
-		default:
-			break;
+			tmp = warpgate[nmatching_warpgates];
+			warpgate[nmatching_warpgates] = warpgate[j];
+			warpgate[j] = tmp;
+			nmatching_warpgates++;
+		}
+		if (nmatching_warpgates > 0) {
+			/* Choose a random warpgate with matching faction */
+			int choice = snis_randn(1000) % nmatching_warpgates;
+			wg = warpgate[choice];
+		}
+		set_object_location(o, go[wg].x, go[wg].y, go[wg].z);
+		break;
+	case OBJTYPE_ASTEROID:
+		/* TODO: respawn asteroids */
+		break;
+	default:
+		break;
 	}
 	return;
 }
