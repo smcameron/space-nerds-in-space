@@ -13618,7 +13618,7 @@ static int add_warpgate(double x, double y, double z,
 
 static void add_warpgates(void)
 {
-	int i, j;
+	int i, j, k, planet_index;
 	double x, y, z;
 	uint32_t assoc_planet_id;
 
@@ -13637,6 +13637,7 @@ static void add_warpgates(void)
 				z = go[j].z + dz;
 				found = 1;
 				assoc_planet_id = go[j].id;
+				planet_index = j;
 				break;
 			}
 		}
@@ -13645,8 +13646,14 @@ static void add_warpgates(void)
 			printf("Nonfatal bug at %s:%d\n", __FILE__, __LINE__);
 			random_object_coordinates_yrange(&x, &y, &z, 1000);
 			assoc_planet_id = (uint32_t) -1;
+			planet_index = -1;
 		}
-		add_warpgate(x, y, z, 0.0, 0.0, 0.0, i, assoc_planet_id);
+		k = add_warpgate(x, y, z, 0.0, 0.0, 0.0, i, assoc_planet_id);
+		if (k > 0) {
+			/* Set the faction of the warp gate to match the planet */
+			if (found && planet_index > 0)
+				go[k].sdata.faction = go[planet_index].sdata.faction;
+		}
 	}
 }
 
