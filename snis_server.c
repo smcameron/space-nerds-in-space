@@ -6454,6 +6454,59 @@ static void ai_tow_ship_mode_brain(struct snis_entity *o)
 	}
 }
 
+static void ai_chase_cargo_mode_brain(struct snis_entity *o)
+{
+	int nai, i;
+	struct ai_chase_cargo_data *ai;
+	union vec3 intercept, here;
+	double dist;
+	struct snis_entity *cargo;
+	float time;
+
+	nai = o->tsd.ship.nai_entries - 1;
+	if (nai < 0)
+		return;
+	if (o->tsd.ship.ai[nai].ai_mode != AI_MODE_CHASE_CARGO)
+		return;
+	ai = &o->tsd.ship.ai[nai].u.chase_cargo;
+	i = lookup_by_id(ai->cargo);
+	if (i < 0) {
+		pop_ai_stack(o);
+		ai_trace(o->id, "POPPED AI CHASE CARGO - NOT EXIST");
+		return;
+	}
+	cargo = &go[i];
+	if (cargo->type != OBJTYPE_CARGO_CONTAINER || !cargo->alive) {
+		pop_ai_stack(o);
+		ai_trace(o->id, "POPPED AI CHASE CARGO - WRONG TYPE OR DEAD");
+		return;
+	}
+	dist = object_dist(o, cargo);
+	/* A little more than the limit so we don't flip/flop between chasing and not. */
+	if (dist > 1.05 * CARGO_CONTAINER_CHASE_DIST) {
+		pop_ai_stack(o);
+		ai_trace(o->id, "POPPED AI CHASE CARGO - TOO FAR");
+		return;
+	}
+	/* Calculate approximately where cargo will be by the time we could get to it */
+	time = (dist / ship_type[o->tsd.ship.shiptype].max_speed);
+	here.v.x = o->x;
+	here.v.y = o->y;
+	here.v.z = o->z;
+	intercept.v.x = cargo->x + cargo->vx * time;
+	intercept.v.y = cargo->y + cargo->vy * time;
+	intercept.v.z = cargo->z + cargo->vz * time;
+
+	if (planet_between_points(&here, &intercept)) {
+		pop_ai_stack(o);
+		ai_trace(o->id, "POPPED AI CHASE CARGO - PLANET IN THE WAY");
+		return;
+	}
+
+	/* Drive towards the intercept point */
+	dist = ai_ship_travel_towards(o, intercept.v.x, intercept.v.y, intercept.v.z);
+}
+
 static void mining_bot_move_towed_cargo(struct snis_entity *o)
 {
 	int i, n = o->tsd.ship.nai_entries - 1;
@@ -7085,6 +7138,9 @@ static void ai_brain(struct snis_entity *o)
 	case AI_MODE_TOW_SHIP:
 		ai_tow_ship_mode_brain(o);
 		break;
+	case AI_MODE_CHASE_CARGO:
+		ai_chase_cargo_mode_brain(o);
+		break;
 	case AI_MODE_RTS_OUT_OF_FUEL:
 		ai_trace(o->id, "RTS MODE OUT OF FUEL");
 		o->vx = 0;
@@ -7140,6 +7196,105 @@ static void ship_security_avoidance(void *context, void *entity)
 	ship->tsd.ship.in_secure_area = 1;
 }
 
+static int find_empty_cargo_bay(struct snis_entity *ship)
+{
+	int i, empty_bay = -1;
+
+	for (i = 0; i < ship->tsd.ship.ncargo_bays; i++) {
+		if (ship->tsd.ship.cargo[i].contents.item == -1) {
+			empty_bay = i;
+			break;
+		}
+	}
+	return empty_bay;
+}
+
+static void ship_pickup_cargo(struct snis_entity *ship, struct snis_entity *cargo, int empty_bay)
+{
+	ship->tsd.ship.cargo[empty_bay].contents = cargo->tsd.cargo_container.contents;
+	ship->tsd.ship.cargo[empty_bay].paid = 0.0f;
+	ship->tsd.ship.cargo[empty_bay].origin = -1;
+	ship->tsd.ship.cargo[empty_bay].dest = -1;
+	ship->tsd.ship.cargo[empty_bay].due_date = -1;
+	ai_trace(ship->id, "PICKED UP CARGO %u", cargo->id);
+	cargo->alive = 0;
+	delete_from_clients_and_server(cargo);
+}
+
+static void push_ai_mode_chase_cargo(struct snis_entity *ship, struct snis_entity *cargo)
+{
+	int nai = ship->tsd.ship.nai_entries;
+
+	if (nai >= MAX_AI_STACK_ENTRIES)
+		return;
+
+	ai_trace(ship->id, "PUSH CHASE CARGO ID %u", cargo->id);
+	ship->tsd.ship.ai[nai].ai_mode = AI_MODE_CHASE_CARGO;
+	ship->tsd.ship.ai[nai].u.chase_cargo.cargo = cargo->id;
+	ship->tsd.ship.nai_entries++;
+}
+
+static void maybe_chase_cargo_container(struct snis_entity *ship, struct snis_entity *cargo, float distsqrd)
+{
+	int nai, empty_bay;
+	union vec3 cargo_vel;
+	float v, time;
+	union vec3 here, there;
+
+	nai = ship->tsd.ship.nai_entries - 1;
+	if (nai < 0)
+		return;
+
+	if (ship->tsd.ship.ai[nai].ai_mode == AI_MODE_CHASE_CARGO) { /* already chasing cargo? */
+		if (distsqrd < CARGO_CONTAINER_NPC_PICKUP_DIST * CARGO_CONTAINER_NPC_PICKUP_DIST) {
+			/* Pickup the cargo container */
+			empty_bay = find_empty_cargo_bay(ship);
+			if (empty_bay < 0) {
+				ai_trace(ship->id, "POPPED CHASE CARGO - CAUGHT CARGO BUT NO EMPTY BAY");
+				pop_ai_stack(ship);
+				return;
+			}
+			ai_trace(ship->id, "POPPED CHASE CARGO - CAUGHT CARGO", cargo->id);
+			ship_pickup_cargo(ship, cargo, empty_bay);
+			pop_ai_stack(ship);
+		}
+		return;
+	}
+
+	if (ship->tsd.ship.ai[nai].ai_mode != AI_MODE_PATROL)
+		return; /* If we're doing something other than patrol, then ignore cargo containers */
+
+	/* Check if we have any empty cargo bays */
+	empty_bay = find_empty_cargo_bay(ship);
+	if (empty_bay == -1)
+		return; /* No empty cargo bay, do not change behavior */
+
+	if (distsqrd > CARGO_CONTAINER_CHASE_DIST * CARGO_CONTAINER_CHASE_DIST)
+		return; /* If it's too far away, don't chase it */
+
+	/* Check if cargo container is moving too fast to catch */
+	cargo_vel.v.x = cargo->vx;
+	cargo_vel.v.y = cargo->vy;
+	cargo_vel.v.z = cargo->vz;
+	v = vec3_magnitude(&cargo_vel);
+	if (v > 0.7 * ship_type[ship->tsd.ship.shiptype].max_speed)
+		return; /* Cargo container is moving too fast to catch */
+
+	/* Check if there's a planet between here and there */
+	time = sqrtf(distsqrd) / ship_type[ship->tsd.ship.shiptype].max_speed;
+	here.v.x = ship->x;
+	here.v.y = ship->y;
+	here.v.z = ship->z;
+	there.v.x = cargo->x + time * cargo->vx;
+	there.v.y = cargo->y + time * cargo->vy;
+	there.v.z = cargo->z + time * cargo->vz;
+	if (planet_between_points(&here, &there))
+		return;
+
+	push_ai_mode_chase_cargo(ship, cargo);
+	return;
+}
+
 struct collision_avoidance_context {
 	struct snis_entity *o;
 	double closest_dist2;
@@ -7179,6 +7334,9 @@ static void ship_collision_avoidance(void *context, void *entity)
 		}
 		return; /* Do not use steering forces to avoid planets.  That is done elsewhere */
 	}
+
+	if (obstacle->type == OBJTYPE_CARGO_CONTAINER)
+		maybe_chase_cargo_container(o, obstacle, d);
 
 	if (obstacle->type == OBJTYPE_STARBASE)
 		o->tsd.ship.last_seen_near = obstacle->id;

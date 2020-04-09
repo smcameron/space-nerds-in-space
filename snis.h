@@ -203,6 +203,7 @@ struct damcon_data;
 #define AI_MODE_TOW_SHIP 10
 #define AI_MODE_CATATONIC 11
 #define AI_MODE_AVOID_MISSILE 12
+#define AI_MODE_CHASE_CARGO 13
 /* NOTE: These RTS modes must be contiguous and match the order in rts_unit_data.c order_data[] */
 #define AI_MODE_RTS_FIRST_COMMAND 111
 #define AI_MODE_RTS_STANDBY 111
@@ -319,6 +320,12 @@ struct ai_tow_ship_data {
 	int ship_connected;
 };
 
+struct ai_chase_cargo_data {
+#define CARGO_CONTAINER_CHASE_DIST (5000.0)
+#define CARGO_CONTAINER_NPC_PICKUP_DIST (150)
+	uint32_t cargo;
+};
+
 struct ai_rts_standby_data {
 	uint8_t not_used;
 };
@@ -359,6 +366,7 @@ union ai_data {
 	struct ai_flee_data flee;
 	struct ai_mining_bot_data mining_bot;
 	struct ai_tow_ship_data tow_ship;
+	struct ai_chase_cargo_data chase_cargo;
 	struct ai_rts_standby_data standby;
 	struct ai_rts_atk_near_enemy_data atk_near_enemy;
 	struct ai_rts_occupy_base_data occupy_base;
