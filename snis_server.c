@@ -218,6 +218,7 @@ static int starbases_orbit = 0; /* 1 means starbases can orbit planets, 0 means 
 #define DEFAULT_NPC_SYSTEM_TARGETING_INTERVAL 300
 static int npc_system_targeting = DEFAULT_NPC_SYSTEM_TARGETING;
 static int npc_system_targeting_interval = DEFAULT_NPC_SYSTEM_TARGETING_INTERVAL;
+static float respawn_warpgate_chance = 0.66; /* probability respawning ships will use a warpgate to respawn */
 
 /*
  * End of runtime adjustable globals
@@ -1770,7 +1771,7 @@ static void respawn_object(struct snis_entity *o)
 {
 	int i, j;
 	uint32_t hp;
-	int nmatching_warpgates, ignore_faction;
+	int nmatching_warpgates, ignore_faction, skip_warpgate;
 	const int n = snis_object_pool_highest_object(pool);
 	int warpgate[NWARPGATES];
 	int nwarpgates;
@@ -1798,6 +1799,10 @@ static void respawn_object(struct snis_entity *o)
 			break;
 		o = &go[i];
 		remove_from_attack_lists(o->id);
+
+		skip_warpgate = (snis_randn(1000) > 1000 * respawn_warpgate_chance);
+		if (skip_warpgate)
+			break;
 
 		/* Find all the warpgates */
 		nwarpgates = 0;
@@ -18103,6 +18108,8 @@ static struct tweakable_var_descriptor server_tweak[] = {
 		&collect_opcode_stats, 'i', 0.0, 0.0, 0.0, 0, 1, 0 },
 	{ "ANNOUNCE_PLAYERS", "ANNOUNCE NEW PLAYERS VIA TEXT TO SPEECH",
 		&announce_players, 'i', 0.0, 0.0, 0.0, 0, 1, 0 },
+	{ "RESPAWN_WARPGATE_CHANCE", "PROBABILITY RESPAWNING SHIPS APPEAR AT WARPGATE",
+		&respawn_warpgate_chance, 'f', 0.0, 1.0, 0.66, 0, 0, 0 },
 	{ NULL, NULL, NULL, '\0', 0.0, 0.0, 0.0, 0, 0, 0 },
 };
 
