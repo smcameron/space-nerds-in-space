@@ -177,6 +177,7 @@ static float spacemonster_flee_dist = SPACEMONSTER_FLEE_DIST;
 static float spacemonster_aggro_radius = SPACEMONSTER_AGGRO_RADIUS;
 static float spacemonster_collision_radius = SPACEMONSTER_COLLISION_RADIUS;
 static float cargo_container_max_velocity = CARGO_CONTAINER_MAX_VELOCITY;
+static int debug_npc_cargo_chasing = 0;
 static float cargo_container_pickup_distance = 20.0;
 static float bounty_chance = BOUNTY_CHANCE;
 static float flare_speed = FLARE_SPEED;
@@ -6472,12 +6473,16 @@ static void ai_chase_cargo_mode_brain(struct snis_entity *o)
 	i = lookup_by_id(ai->cargo);
 	if (i < 0) {
 		pop_ai_stack(o);
+		if (debug_npc_cargo_chasing)
+			send_demon_console_msg("%u POPPED AI CHASE CARGO - NOT EXIST", o->id);
 		ai_trace(o->id, "POPPED AI CHASE CARGO - NOT EXIST");
 		return;
 	}
 	cargo = &go[i];
 	if (cargo->type != OBJTYPE_CARGO_CONTAINER || !cargo->alive) {
 		pop_ai_stack(o);
+		if (debug_npc_cargo_chasing)
+			send_demon_console_msg("%u POPPED AI CHASE CARGO - WRONG TYPE OR DEAD", o->id);
 		ai_trace(o->id, "POPPED AI CHASE CARGO - WRONG TYPE OR DEAD");
 		return;
 	}
@@ -6485,6 +6490,8 @@ static void ai_chase_cargo_mode_brain(struct snis_entity *o)
 	/* A little more than the limit so we don't flip/flop between chasing and not. */
 	if (dist > 1.05 * CARGO_CONTAINER_CHASE_DIST) {
 		pop_ai_stack(o);
+		if (debug_npc_cargo_chasing)
+			send_demon_console_msg("%u POPPED AI CHASE CARGO - TOO FAR", o->id);
 		ai_trace(o->id, "POPPED AI CHASE CARGO - TOO FAR");
 		return;
 	}
@@ -6505,6 +6512,7 @@ static void ai_chase_cargo_mode_brain(struct snis_entity *o)
 
 	/* Drive towards the intercept point */
 	dist = ai_ship_travel_towards(o, intercept.v.x, intercept.v.y, intercept.v.z);
+	ai_trace(o->id, "CHASING CARGO %u, dist = %f\n", cargo->id, dist);
 }
 
 static void mining_bot_move_towed_cargo(struct snis_entity *o)
@@ -7255,6 +7263,8 @@ static void maybe_chase_cargo_container(struct snis_entity *ship, struct snis_en
 				return;
 			}
 			ai_trace(ship->id, "POPPED CHASE CARGO - CAUGHT CARGO", cargo->id);
+			if (debug_npc_cargo_chasing)
+				send_demon_console_msg("%u CAUGHT CARGO %u", ship->id, cargo->id);
 			ship_pickup_cargo(ship, cargo, empty_bay);
 			pop_ai_stack(ship);
 		}
@@ -7292,6 +7302,8 @@ static void maybe_chase_cargo_container(struct snis_entity *ship, struct snis_en
 		return;
 
 	push_ai_mode_chase_cargo(ship, cargo);
+	if (debug_npc_cargo_chasing)
+		send_demon_console_msg("SHIP %u CHASING CARGO", ship->id);
 	return;
 }
 
@@ -18280,6 +18292,8 @@ static struct tweakable_var_descriptor server_tweak[] = {
 		&announce_players, 'i', 0.0, 0.0, 0.0, 0, 1, 0 },
 	{ "RESPAWN_WARPGATE_CHANCE", "PROBABILITY RESPAWNING SHIPS APPEAR AT WARPGATE",
 		&respawn_warpgate_chance, 'f', 0.0, 1.0, 0.66, 0, 0, 0 },
+	{ "DEBUG_CARGO_CHASING", "0 - 1 - ENABLE/DISABLE DEBUGGING OF NPC CARGO CHASING",
+		&debug_npc_cargo_chasing, 'i', 0.0, 0.0, 0.0, 0, 1, 0 },
 	{ NULL, NULL, NULL, '\0', 0.0, 0.0, 0.0, 0, 0, 0 },
 };
 
