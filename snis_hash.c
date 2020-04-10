@@ -135,8 +135,8 @@ int snis_crypt(unsigned char *shipname, unsigned char *password,
 	memcpy(buffer, shipname, strlen((char *) shipname));
 	memcpy(buffer + 20, password, strlen((char *) password));
 
-	data.initialized = 0;
 #ifndef __APPLE__
+	data.initialized = 0;
 	password = (unsigned char *) crypt_r((char *) buffer, (char *) salt, &data);
 #else
 	/* Apple doesn't have crypt_r(), use crypt() instead. */

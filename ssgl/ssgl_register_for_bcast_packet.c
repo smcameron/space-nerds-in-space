@@ -152,8 +152,9 @@ int ssgl_register_for_bcast_packets(void (*lobby_change_notify)(struct ssgl_lobb
 			strerror(errno));
 		return -1;
 	}
+#ifndef __APPLE__
 	pthread_setname_np(bcast_recv_thread, "ssgl_bcastrx");
-
+#endif
 	pthread_attr_init(&attr);
 	pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
 	rc = pthread_create(&lobby_expiration_thread, &attr, expire_lobbies, NULL);
@@ -163,7 +164,9 @@ int ssgl_register_for_bcast_packets(void (*lobby_change_notify)(struct ssgl_lobb
 			strerror(errno));
 		return -1;
 	}
+#ifndef __APPLE__
 	pthread_setname_np(lobby_expiration_thread, "ssgl_lbbyexp");
+#endif
 	notification_fn = lobby_change_notify;
 	return 0;
 }

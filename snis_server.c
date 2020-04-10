@@ -30245,9 +30245,11 @@ int main(int argc, char *argv[])
 	take_your_locale_and_shove_it();
 
 	process_options(argc, argv);
+
+#ifndef __APPLE__
 	if (trap_nans)
 		feenableexcept(FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW);
-
+#endif 
 	asset_dir = override_asset_dir();
 	read_replacement_assets(&replacement_assets, asset_dir);
 	set_random_seed(-1);

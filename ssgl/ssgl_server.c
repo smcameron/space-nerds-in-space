@@ -262,8 +262,9 @@ static void *expire_game_servers(__attribute__((unused)) void *arg)
 {
 	int i, j;
 	struct timeval tv;
-
+#ifndef __APPLE__
 	pthread_setname_np(expiry_thread, "ssgl-expiry");
+#endif
 	ssgl_log(SSGL_INFO, "ssgl_server: game server expiration thread started.\n");
 	while (1) { /* TODO, replace this with some condition... */
 		(void) gettimeofday(&tv, NULL);
@@ -381,8 +382,9 @@ static void *service_thread(void *arg)
 
 	char threadname[16];
 	snprintf(threadname, sizeof(threadname), "ssglcon-%d", connection);
+#ifndef __APPLE__
 	pthread_setname_np(threadinfo->thread, threadname);
-
+#endif
 	/* Get the SSGL protocol version number from connection
 	 * and make sure it's a version we understand.
 	 */

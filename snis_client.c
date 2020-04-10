@@ -164,6 +164,8 @@ static int requested_aspect_y = -1;
 static int screen_offset_x = 0;
 static int screen_offset_y = 0;
 
+static int da_configured = 0;
+
 static int reload_shaders = 0; /* Flag to trigger reloading of glsl shaders in main render loop */
 
 /* Set to 1 by command line option "--trap-nans" (or "-t").  Will abort when NaNs are produced. */
@@ -20859,6 +20861,14 @@ static int main_da_expose(GtkWidget *w, GdkEvent *event, gpointer p)
 	int player_lost_rts;
 	int player_won_rts;
 	int i;
+	/* If main_da_configure has not been called when gc != null, then return immediately.
+	 * Otherwise, OpenGL will not have been initialized and snis_client will segfault because
+	 * the OpenGL functions won't have been properly initialized. da_configured will be set
+	 * to 1 when main_da_configure executes with a non-null gc.
+	 */
+	if (!da_configured) {
+		return 0;
+	}
 
 	double start_time = time_now_double();
 
@@ -21380,7 +21390,7 @@ static gint main_da_configure(GtkWidget *w, GdkEventConfigure *event)
 	/* the show generates a configure... chicken and egg.  And we can't */
 	/* proceed without gc != NULL...  but, it's ok, because 1st time thru */
 	/* we already sort of know the drawing area/window size. */
- 
+
 	if (gc == NULL)
 		return TRUE;
 
@@ -21443,6 +21453,8 @@ static gint main_da_configure(GtkWidget *w, GdkEventConfigure *event)
 		static_exc_loaded = 1;
 	}
 
+	/* Indicate that the da has been configured fully (with a non-null gc) */
+	da_configured = 1;
 	return TRUE;
 }
 
@@ -23511,10 +23523,10 @@ int main(int argc, char *argv[])
 	prevent_zombies();
 	set_random_seed();
 	process_options(argc, argv);
-
+#ifndef __APPLE__
 	if (trap_nans)
 		feenableexcept(FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW);
-
+#endif
 	check_lobby_serverhost_options();
 	asset_dir = override_asset_dir();
 	setup_sound();

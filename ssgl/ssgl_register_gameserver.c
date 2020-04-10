@@ -67,8 +67,9 @@ static void *update_lobby_thread(void *arg)
 	thread = a->thread;
 
 	free(arg);
-
+#ifndef __APPLE__
 	pthread_setname_np(*thread, "ssgl-lobby");
+#endif
 	while (1) {
 		lobbysock = ssgl_gameserver_connect_to_lobby(lobbyhost);
 		if (lobbysock < 0) {
