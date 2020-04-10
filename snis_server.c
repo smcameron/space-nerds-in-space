@@ -294,7 +294,7 @@ static void npc_menu_item_warp_gate_tickets(struct npc_menu_item *item,
 				char *npcname, struct npc_bot_state *botstate);
 static void npc_menu_item_towing_service(struct npc_menu_item *item,
 				char *npcname, struct npc_bot_state *botstate);
-static void npc_menu_item_buy_cargo(struct npc_menu_item *item,
+static void npc_menu_item_choose_cargo_category(struct npc_menu_item *item,
 				char *npcname, struct npc_bot_state *botstate);
 static void npc_menu_item_sell_cargo(struct npc_menu_item *item,
 				char *npcname, struct npc_bot_state *botstate);
@@ -340,6 +340,7 @@ struct npc_bot_state {
 	uint32_t object_id;
 	uint32_t channel;
 	int parts_menu;
+	int cargo_category;
 	struct npc_menu_item *current_menu;
 	npc_special_bot_fn special_bot; /* for special case interactions, non-standard menus, etc. */
 };
@@ -363,7 +364,7 @@ static struct npc_menu_item repairs_and_fuel_menu[] = {
 static struct npc_menu_item cargo_and_passengers_menu[] = {
 	/* by convention, first element is menu title */
 	{ "CARGO PASSENGERS AND BOUNTIES", 0, 0, 0 },
-	{ "BUY CARGO", 0, 0, npc_menu_item_buy_cargo },
+	{ "BUY CARGO", 0, 0, npc_menu_item_choose_cargo_category },
 	{ "SELL CARGO", 0, 0, npc_menu_item_sell_cargo },
 	{ "BOARD PASSENGERS", 0, 0, npc_menu_item_board_passengers },
 	{ "DISEMBARK PASSENGERS", 0, 0, npc_menu_item_disembark_passengers },
@@ -11979,11 +11980,11 @@ static void init_starbase_market(struct snis_entity *o)
 	o->tsd.starbase.mkt = NULL;
 	if (ncommodities == 0)
 		return;
-	mkt = malloc(sizeof(*mkt) * COMMODITIES_PER_BASE);
+	mkt = malloc(sizeof(*mkt) * ncommodities);
 	o->tsd.starbase.mkt = mkt;
 	if (!mkt)
 		return;
-	for (i = 0; i < COMMODITIES_PER_BASE; i++) {
+	for (i = 0; i < ncommodities; i++) {
 		int item;
 		do {
 			item = commodity_sample();
@@ -15741,6 +15742,8 @@ static void npc_menu_item_query_ship_registration(struct npc_menu_item *item,
 	botstate->special_bot(&go[i], bridge, (char *) b->shipname, "");
 }
 
+static void starbase_cargo_category_choosing_npc_bot(struct snis_entity *o, int bridge,
+						char *name, char *msg);
 static void starbase_cargo_buying_npc_bot(struct snis_entity *o, int bridge,
 						char *name, char *msg);
 static void starbase_cargo_selling_npc_bot(struct snis_entity *o, int bridge,
@@ -16087,10 +16090,25 @@ static void npc_menu_item_mining_bot_status_report(struct npc_menu_item *item,
 	send_comms_packet(miner, npcname, channel, "--- END STATUS REPORT ---");
 }
 
-static void npc_menu_item_buy_cargo(struct npc_menu_item *item,
+static void npc_menu_item_choose_cargo_category(struct npc_menu_item *item,
 					char *npcname, struct npc_bot_state *botstate)
 {
-	npc_menu_item_buysell_cargo(item, npcname, botstate, 1);
+	struct bridge_data *b;
+	int i, bridge;
+
+	i = lookup_by_id(botstate->object_id);
+	if (i < 0) {
+		printf("nonfatal bug in %s at %s:%d\n", __func__, __FILE__, __LINE__);
+		return;
+	}
+
+	/* find our bridge... */
+	b = container_of(botstate, struct bridge_data, npcbot);
+	bridge = b - bridgelist;
+
+	/* poke the special bot to make it say something. */
+	botstate->special_bot = starbase_cargo_category_choosing_npc_bot;
+	botstate->special_bot(&go[i], bridge, (char *) b->shipname, "");
 }
 
 static void npc_menu_item_sell_cargo(struct npc_menu_item *item,
@@ -16896,16 +16914,59 @@ static void send_npc_menu(struct snis_entity *transmitter, char *npcname,  int b
 	send_comms_packet(transmitter, npcname, channel, "-----------------------------------------------------");
 }
 
+static void starbase_cargo_category_choosing_npc_bot(struct snis_entity *o, int bridge,
+		char *name, char *msg)
+{
+	int i;
+	char *n = o->sdata.name;
+	struct marketplace_data *mkt = o->tsd.starbase.mkt;
+	uint32_t channel = bridgelist[bridge].npcbot.channel;
+	int rc, selection;
+	struct npc_bot_state *botstate = &bridgelist[bridge].npcbot;
+
+	i = lookup_by_id(bridgelist[bridge].shipid);
+	if (i < 0) {
+		printf("Non fatal error at %s:%s:%d\n",
+			__FILE__, __func__, __LINE__);
+		return;
+	}
+	if (!mkt)
+		return;
+	rc = sscanf(msg, "%d", &selection);
+	if (rc != 1)
+		selection = -1;
+
+	if (selection == -1) {
+		send_comms_packet(o, n, channel, "----------------------------");
+		send_comms_packet(o, n, channel, "    BUYING CARGO - CHOOSE A CATEGORY");
+		for (i = 0; i < ncommodity_categories(); i++)
+			send_comms_packet(o, n, channel, "     %d: %s", i + 1, commodity_category_description(i));
+		send_comms_packet(o, n, channel, "     0: PREVIOUS MENU");
+		send_comms_packet(o, n, channel, "----------------------------");
+	}
+	if (selection > 0 && selection <= ncommodity_categories()) {
+		botstate->cargo_category = selection - 1;
+		bridgelist[bridge].npcbot.special_bot = starbase_cargo_buying_npc_bot;
+		send_to_npcbot(bridge, name, ""); /* poke bot so he says something */
+	}
+	if (selection == 0) {
+		bridgelist[bridge].npcbot.special_bot = NULL; /* deactivate cargo category selection bot */
+		send_to_npcbot(bridge, name, ""); /* poke generic bot so he says something */
+	}
+}
+
 static void starbase_cargo_buyingselling_npc_bot(struct snis_entity *o, int bridge,
 		char *name, char *msg, int buy)
 {
-	int i;
+	int i, j;
 	char *n = o->sdata.name;
 	struct snis_entity *ship;
 	struct marketplace_data *mkt = o->tsd.starbase.mkt;
 	uint32_t channel = bridgelist[bridge].npcbot.channel;
 	int rc, selection;
 	float range2, profitloss;
+	struct npc_bot_state *botstate = &bridgelist[bridge].npcbot;
+	int buy_choice;
 
 	i = lookup_by_id(bridgelist[bridge].shipid);
 	if (i < 0) {
@@ -16964,18 +17025,35 @@ static void starbase_cargo_buyingselling_npc_bot(struct snis_entity *o, int brid
 
 			/* check buy order is in range */
 			x = toupper(x);
-			if (x < 'A' || x >= 'A' + COMMODITIES_PER_BASE) {
+			if (x < 'A' || x >= 'Z') {
+				send_comms_packet(o, n, channel, " INVALID BUY ORDER");
+				return;
+			}
+
+			/* See if choice is valid */
+			j = 0;
+			buy_choice = -1;
+			for (i = 0; i < ncommodities; i++) {
+				if (commodity[mkt[i].item].category != botstate->cargo_category)
+					continue;
+				if (x == j + 'A') {
+					buy_choice = i;
+					break;
+				}
+				j++;
+			}
+			if (buy_choice < 0) {
 				send_comms_packet(o, n, channel, " INVALID BUY ORDER");
 				return;
 			}
 
 			/* check qty */
-			if (q <= 0 || q > mkt[x - 'A'].qty) {
+			if (q <= 0 || q > mkt[buy_choice].qty) {
 				send_comms_packet(o, n, channel, " INVALID BUY ORDER");
 				return;
 			}
 
-			ask = mkt[x - 'A'].ask;
+			ask = mkt[buy_choice].ask;
 			/* check fundage */
 			if (q * ask > ship->tsd.ship.wallet) {
 				send_comms_packet(o, n, channel, " INSUFFICIENT FUNDS");
@@ -16983,12 +17061,12 @@ static void starbase_cargo_buyingselling_npc_bot(struct snis_entity *o, int brid
 			}
 			ship->tsd.ship.wallet -= q * ask;
 			ship->tsd.ship.cargo[empty_bay].paid = ask;
-			ship->tsd.ship.cargo[empty_bay].contents.item = mkt[x - 'A'].item;
+			ship->tsd.ship.cargo[empty_bay].contents.item = mkt[buy_choice].item;
 			ship->tsd.ship.cargo[empty_bay].contents.qty = q;
 			ship->tsd.ship.cargo[empty_bay].origin = o->tsd.starbase.associated_planet_id;
 			ship->tsd.ship.cargo[empty_bay].dest = -1;
 			ship->tsd.ship.cargo[empty_bay].due_date = -1;
-			mkt[x - 'A'].qty -= q;
+			mkt[buy_choice].qty -= q;
 			send_comms_packet(o, n, channel, " EXECUTING BUY ORDER %d %c", q, x);
 			snis_queue_add_sound(TRANSPORTER_SOUND,
 					ROLE_SOUNDSERVER, ship->id);
@@ -17072,15 +17150,19 @@ static void starbase_cargo_buyingselling_npc_bot(struct snis_entity *o, int brid
 		if (buy) {
 			send_comms_packet(o, n, channel,
 				"   QTY  UNIT ITEM   BID/UNIT     ASK/UNIT    ITEM");
-			for (i = 0; i < COMMODITIES_PER_BASE; i++) {
+			j = 0;
+			for (i = 0; i < ncommodities; i++) {
 				float bid, ask, qty;
 				char *itemname = commodity[mkt[i].item].name;
 				char *unit = commodity[mkt[i].item].unit;
+				if (commodity[mkt[i].item].category != botstate->cargo_category)
+					continue;
 				bid = mkt[i].bid;
 				ask = mkt[i].ask;
 				qty = mkt[i].qty;
 				send_comms_packet(o, n, channel, " %c: %4.2f %s %s -- $%4.2f  $%4.2f\n",
-					i + 'A', qty, unit, itemname, bid, ask);
+					j + 'A', qty, unit, itemname, bid, ask);
+				j++;
 			}
 		} else {
 			send_comms_packet(o, n, channel,
@@ -17115,8 +17197,11 @@ static void starbase_cargo_buyingselling_npc_bot(struct snis_entity *o, int brid
 		send_comms_packet(o, n, channel, "----------------------------");
 	}
 	if (selection == 0) {
-		bridgelist[bridge].npcbot.special_bot = NULL; /* deactivate cargo buying bot */
-		send_to_npcbot(bridge, name, ""); /* poke generic bot so he says something */
+		if (buy)
+			bridgelist[bridge].npcbot.special_bot = starbase_cargo_category_choosing_npc_bot;
+		else
+			bridgelist[bridge].npcbot.special_bot = NULL;
+		send_to_npcbot(bridge, name, ""); /* poke bot so he says something */
 	}
 }
 
@@ -20900,20 +20985,21 @@ out:
 
 static int l_add_commodity(lua_State *l)
 {
-	const char *name = luaL_checkstring(l, 1);
-	const char *units = luaL_checkstring(l, 2);
-	const char *scans_as = luaL_checkstring(l, 3);
-	const double base_price = luaL_checknumber(l, 4);
-	const double volatility = luaL_checknumber(l, 5);
-	const double legality = luaL_checknumber(l, 6);
-	const double econ_sensitivity = luaL_checknumber(l, 7);
-	const double govt_sensitivity = luaL_checknumber(l, 8);
-	const double tech_sensitivity = luaL_checknumber(l, 9);
-	const double odds = luaL_checknumber(l, 10);
+	const char *category = luaL_checkstring(l, 1);
+	const char *name = luaL_checkstring(l, 2);
+	const char *units = luaL_checkstring(l, 3);
+	const char *scans_as = luaL_checkstring(l, 4);
+	const double base_price = luaL_checknumber(l, 5);
+	const double volatility = luaL_checknumber(l, 6);
+	const double legality = luaL_checknumber(l, 7);
+	const double econ_sensitivity = luaL_checknumber(l, 8);
+	const double govt_sensitivity = luaL_checknumber(l, 9);
+	const double tech_sensitivity = luaL_checknumber(l, 10);
+	const double odds = luaL_checknumber(l, 11);
 	int iodds = odds;
 
 	int n = add_commodity(&commodity, &ncommodities,
-		name, units, scans_as, base_price, volatility, legality,
+		category, name, units, scans_as, base_price, volatility, legality,
 		econ_sensitivity, govt_sensitivity, tech_sensitivity, iodds);
 	lua_pushnumber(l, (double) n);
 	return 1;

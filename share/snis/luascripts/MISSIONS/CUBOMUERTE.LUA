@@ -343,7 +343,7 @@ function play_message_button_pressed(ship_id, screen)
 	play_sound(ship_id, audio_message[last_message]);
 end
 
-black_hole_generator = add_commodity("BLACK HOLE GENERATOR",
+black_hole_generator = add_commodity("ELECTRONICS", "BLACK HOLE GENERATOR",
 		"UNIT", "BLACK HOLE GENERATOR", 100000.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
 bhg_cargo_container = -1;
 

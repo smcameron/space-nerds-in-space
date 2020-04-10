@@ -98,7 +98,6 @@
 #define ATMOSPHERE_TYPE_GEN_SEED 31415927
 #define MIN_PLANET_SEPARATION (UNIVERSE_DIM / 10.0)
 #define NBASES (NPLANETS + 10)
-#define COMMODITIES_PER_BASE 10
 
 #define OBJTYPE_SHIP1 9 /* players */
 #define OBJTYPE_SHIP2 1 /* computer controlled ships */

@@ -61,7 +61,7 @@ if (player_ids[1]) then
 end
 
 -- Create our macguffin -- a derelict and a cargo container of spacepox vaccine
-spacepox_vaccine = add_commodity("SPACEPOX VACCINE", "MEGADOSES", "ORGANIC MATTER",
+spacepox_vaccine = add_commodity("DRUGS", "SPACEPOX VACCINE", "MEGADOSES", "ORGANIC MATTER",
 					100.0, 02, 1.0, 0.1, 0.1, 0.7, 0.0);
 derelict = add_derelict("LUNAE ORTUS", derelictx, derelicty, derelictz, dragonhawk, vekkazi);
 set_object_velocity(derelict, 0, 0, 0);

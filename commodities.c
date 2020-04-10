@@ -28,6 +28,60 @@
 #include "string-utils.h"
 #include "nonuniform_random_sampler.h"
 
+#define MAXCATEGORIES 26
+#define MAXCOMMODITIES_PER_CATEGORY 26
+static char *category[MAXCATEGORIES];
+static char *category_description[MAXCATEGORIES];
+static int ncategories = 0;
+
+static int lookup_category(const char *c)
+{
+	int i;
+
+	for (i = 0; i < ncategories; i++)
+		if (strcmp(category[i], c) == 0)
+			return i;
+	return -1;
+}
+
+static int add_category(char *c)
+{
+	int len = strlen(c);
+	char *n;
+	char *comma;
+
+	n = strchr(c, ':');
+	if (!n) {
+		fprintf(stderr, "Bad category, expected colon: '%s'\n", c);
+		return -1;
+	}
+	if ((n - c) >= len) {
+		fprintf(stderr, "Bad category, expected category name: '%s'\n", c);
+		return -1;
+	}
+	comma = strchr(n, ',');
+	if (!comma) {
+		fprintf(stderr, "Bad category, expected comma and description: '%s'\n", c);
+		return -1;
+	}
+	if ((comma - c) >= len - 2) {
+		fprintf(stderr, "Bad category, expected category description: '%s'\n", c);
+		return -1;
+	}
+	*comma = '\0';
+	if (ncategories >= MAXCATEGORIES) {
+		fprintf(stderr, "Too many categories, dropping '%s'\n", n + 1);
+		return -1;
+	}
+	category[ncategories] = strdup(n + 1);
+	category_description[ncategories] = strdup(comma + 1);
+	uppercase(category[ncategories]);
+	uppercase(category_description[ncategories]);
+	clean_spaces(category_description[ncategories]);
+	ncategories++;
+	return ncategories - 1;
+}
+
 static int parse_error(char *filename, char *line, int ln, char *bad_word)
 {
 	if (bad_word)
@@ -101,8 +155,29 @@ static int parse_line(char *filename, char *line, int ln, struct commodity *c)
 	if (strcmp(line, "") == 0)
 		return 1;
 
-	/* Name */
+	if (strncmp(line, "category:", 9) == 0) {
+		rc = add_category(line);
+		if (rc < 0)
+			return -1;
+		return 1;
+	}
+
+	/* Category */
 	x = strtok_r(line, ",", &saveptr);
+	if (!x)
+		return parse_error(filename, line, ln, NULL);
+	strnzcpy(word, x, sizeof(word));
+	clean_spaces(word);
+	uppercase(word);
+	rc = lookup_category(word);
+	if (rc < 0) {
+		fprintf(stderr, "Bad category: '%s'\n", word);
+		return parse_error(filename, line, ln, NULL);
+	}
+	c->category = rc;
+
+	/* Name */
+	x = strtok_r(NULL, ",", &saveptr);
 	if (!x)
 		return parse_error(filename, line, ln, NULL);
 	strnzcpy(word, x, sizeof(word));
@@ -168,6 +243,27 @@ static int parse_line(char *filename, char *line, int ln, struct commodity *c)
 	return 0;
 }
 
+static void sanity_test_commodities(struct commodity *commodity, int ncommodities)
+{
+	int i;
+	int count[MAXCATEGORIES] = { 0 };
+
+	for (i = 0; i < ncommodities; i++) {
+		if (commodity[i].category < 0 || commodity[i].category >= ncategories) {
+			fprintf(stderr, "Commodity '%s' has bad category\n", commodity[i].name);
+			continue;
+		}
+		count[commodity[i].category]++;
+	}
+
+	for (i = 0; i < ncategories; i++) {
+		if (count[i] > MAXCOMMODITIES_PER_CATEGORY) {
+			fprintf(stderr, "Category %s has too many commodities %d (max %d)\n",
+				category[i], count[i], MAXCOMMODITIES_PER_CATEGORY);
+		}
+	}
+}
+
 #define MAX_COMMODITIES 100
 
 struct commodity *read_commodities(char *filename, int *ncommodities)
@@ -213,6 +309,7 @@ struct commodity *read_commodities(char *filename, int *ncommodities)
 	}
 	*ncommodities = n;
 	fclose(f);
+	sanity_test_commodities(clist, *ncommodities);
 	return clist;
 }
 
@@ -238,19 +335,21 @@ float commodity_calculate_price(struct commodity *c,
 	return price;
 }
 
-int add_commodity(struct commodity **c, int *ncommodities, const char *name, const char *unit,
+int add_commodity(struct commodity **c, int *ncommodities, const char *category, const char *name, const char *unit,
 			const char *scans_as, float base_price, float volatility, float legality,
 			float econ_sensitivity, float govt_sensitivity, float tech_sensitivity, int odds)
 {
 	struct commodity *newc;
 	int n = *ncommodities + 1;
 
+	/* TODO: Batch reallocs instead of doing it every single time. */
 	newc = realloc(*c, n * sizeof(newc[0]));
 	if (!newc)
 		return -1;
 	*c = newc;
 	newc = &(*c)[n - 1];
 
+	newc->category = lookup_category(category);
 	strnzcpy(newc->name, name, sizeof(newc->name));
 	strnzcpy(newc->unit, unit, sizeof(newc->unit));
 	strnzcpy(newc->scans_as, scans_as, sizeof(newc->scans_as));
@@ -263,6 +362,25 @@ int add_commodity(struct commodity **c, int *ncommodities, const char *name, con
 	newc->odds = odds;
 	*ncommodities = n;
 	return n - 1;
+}
+
+const char *commodity_category(int cat)
+{
+	if (cat < 0 || cat >= ncategories)
+		return NULL;
+	return category[cat];
+}
+
+const char *commodity_category_description(int cat)
+{
+	if (cat < 0 || cat >= ncategories)
+		return NULL;
+	return category_description[cat];
+}
+
+const int ncommodity_categories(void)
+{
+	return ncategories;
 }
 
 #ifdef TESTCOMMODITIES
