@@ -461,7 +461,12 @@ OPTIMIZEFLAG=
 endif
 
 ifeq (${P},1)
-PROFILEFLAG=-pg
+ifeq ($(OSX), 1)
+    PROFILEFLAG=-lprofiler
+else
+    PROFILEFLAG=-pg
+endif
+
 OPTIMIZEFLAG=-O3
 DEBUGFLAG=
 else
@@ -488,6 +493,12 @@ SDLCFLAGS:=$(shell $(PKG_CONFIG) sdl --cflags)
 
 GLEWLIBS:=$(shell $(PKG_CONFIG) --libs-only-l glew)
 GLEWCFLAGS:=$(shell $(PKG_CONFIG) --cflags glew)
+
+ifeq ($(OSX), 0)
+	CRYPTLIBS:=-lcrypt
+else
+	CRYPTLIBS:=""
+endif
 
 _COMMONOBJS=mathutils.o snis_alloc.o snis_socket_io.o snis_marshal.o \
 		bline.o shield_strength.o stacktrace.o snis_ship_type.o \
@@ -547,10 +558,10 @@ GENERATE_SKYBOX_OBJS=$(patsubst %,$(OD)/%,${_GENERATE_SKYBOX_OBJS})
 GENERATE_SKYBOX_LIBS=-lm ${PNGLIBS}
 
 SSGL=ssgl/libssglclient.a
-LIBS=-lGL -Lssgl -lssglclient -ldl -lm ${LUALIBS} ${PNGLIBS} ${GLEWLIBS} -lcrypt
-SERVERLIBS=-Lssgl -lssglclient ${LRTLIB} -ldl -lm ${LUALIBS} -lcrypt
+LIBS=-Lssgl -lssglclient -ldl -lm ${LUALIBS} ${PNGLIBS} ${GLEWLIBS} 
+SERVERLIBS=-Lssgl -lssglclient ${LRTLIB} -ldl -lm ${LUALIBS} ${CRYPTLIBS}
 MULTIVERSELIBS=-Lssgl -lssglclient ${LRTLIB} -ldl -lm
-MULTIVERSELIBS=-Lssgl -lssglclient ${LRTLIB} -ldl -lm -lcrypt
+MULTIVERSELIBS=-Lssgl -lssglclient ${LRTLIB} -ldl -lm ${CRYPTLIBS}
 #
 # NOTE: if you get
 #
@@ -1174,7 +1185,7 @@ $(OD)/snis_hash.o:	snis_hash.c snis_hash.h Makefile ${ODT}
 	$(Q)$(COMPILE)
 
 test_snis_crypt:	snis_hash.c snis_hash.h
-	$(CC) -DTEST_SNIS_CRYPT -o test_snis_crypt snis_hash.c -lcrypt
+	$(CC) -DTEST_SNIS_CRYPT -o test_snis_crypt snis_hash.c ${CRYPTLIBS}
 
 test_marshal:	snis_marshal.c snis_marshal.h stacktrace.o
 	$(CC) -DTEST_MARSHAL -o test_marshal stacktrace.o snis_marshal.c

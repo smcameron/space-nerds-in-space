@@ -30,6 +30,10 @@ OTHER DEALINGS IN THE SOFTWARE.
 #include <pthread.h>
 #include <stdint.h>
 
+#ifdef __APPLE__
+#define pthread_setname_np(a, b)
+#endif
+
 #define GAMELOBBY_SERVICE_NUMBER 2914
 #define GAMELOBBY_SERVICE_NAME "gamelobby"
 #define GAMELOBBY_SERVICE_NUMBER_AS_STRING "2914"
