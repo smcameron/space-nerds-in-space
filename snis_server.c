@@ -11990,11 +11990,16 @@ static void init_starbase_market(struct snis_entity *o)
 			item = commodity_sample();
 		} while (mkt_item_already_present(mkt, i, item)); 
 		mkt[i].item = item;
-		mkt[i].qty = snis_randn(99) + 1; /* TODO: something better */
+		/* $25-$30k worth of each thing on hand */
+		mkt[i].qty = round((25000 + snis_randn(5000)) / o->tsd.starbase.bid_price[item]);
 		mkt[i].refill_rate = (float) snis_randn(1000) / 1000.0; /* TODO: something better */
 		mkt[i].bid = o->tsd.starbase.bid_price[item];
 		mkt[i].ask = (float) 1.1 * mkt[i].bid;
 	}
+	/* Zero out quantities of half the stuff */
+	for (i = 0; i < ncommodities; i++)
+		if (snis_randn(10000) < 5000)
+			mkt[i].qty = 0.0;
 }
 
 static void fabricate_prices(struct snis_entity *starbase)
