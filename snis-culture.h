@@ -34,25 +34,25 @@ static char *economy_name[] = {
 };
 
 static char *government_name[] = {
-	"Anarchy",
-	"Feudal",
-	"Multi-Governmental",
-	"Dictatorship",
-	"Communist",
-	"Confederacy",
-	"Democracy",
 	"Corporate State",
+	"Democracy",
+	"Confederacy",
+	"Communist",
+	"Dictatorship",
+	"Multi-Governmental",
+	"Feudal",
+	"Anarchy",
 };
 
 /* need to think of something better here... */
 static __attribute__((unused)) char *tech_level_name[] = {
-	"stone age",
-	"iron age",
-	"steel age",
-	"silicon age",
-	"positronic age",
-	"space age",
 	"interstellar age",
+	"space age",
+	"positronic age",
+	"silicon age",
+	"steel age",
+	"iron age",
+	"stone age",
 };
 
 #endif

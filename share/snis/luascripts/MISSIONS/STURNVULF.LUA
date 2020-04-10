@@ -1695,7 +1695,7 @@ function setup_solarsystem()
 	intfic.ccasteroidname = get_object_name(cca);
 	intfic.ccasteroidx, intfic.ccasteroidy, intfic.ccasteroidz = get_object_location(cca);
 	special_cargo_container = {};
-	macguffin = add_commodity("ELECTRONICS", "WEAPONS COMPONENTS", "PIECES", "UNKNOWN METALS", 1000.0, 0.5, 1.0, 0.0, 0.0, 0.0, 0.0);
+	macguffin = add_commodity("ELECTRONICS", "WEAPONS COMPONENTS", "PIECES", "UNKNOWN METALS", 1000.0, 0.5, 1.0, 0.0);
 	for cc = 1,8 do
 		local ccx, ccy, ccz = random_point_on_sphere(2000, 2000, 2000);
 		ccx = ccx + intfic.ccasteroidx;

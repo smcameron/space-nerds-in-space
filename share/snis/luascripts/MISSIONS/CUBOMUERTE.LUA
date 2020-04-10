@@ -344,7 +344,7 @@ function play_message_button_pressed(ship_id, screen)
 end
 
 black_hole_generator = add_commodity("ELECTRONICS", "BLACK HOLE GENERATOR",
-		"UNIT", "BLACK HOLE GENERATOR", 100000.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
+		"UNIT", "BLACK HOLE GENERATOR", 100000.0, 0.0, 0.0, 0.0);
 bhg_cargo_container = -1;
 
 function add_zarkon_fleet(x, y, z)

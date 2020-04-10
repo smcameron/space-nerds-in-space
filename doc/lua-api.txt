@@ -630,9 +630,7 @@ set_commodity_contents(object_id, commodity_index, quantity, cargo_bay_number) -
 	set_commodity_contents(player_ids[1], n, 100.0, 0);
 	set_commodity_contents(my_container, n, 100.0);
 
-add_commodity(category, name, unit, scans_as, base_price, volatility, legality,
-		econ_sensitivity, govt_sensitivity, tech_sensitivity,
-		odds);
+add_commodity(category, name, unit, scans_as, base_price, volatility, legality, odds);
   Adds a new commodity to the predefined set of commodities.  This is useful for
   custom scenarios to create special "macguffins".   If the odds are set to zero, then
   the game will never randomly generate the item, and it is up to the script to place
@@ -642,7 +640,7 @@ add_commodity(category, name, unit, scans_as, base_price, volatility, legality,
   Example:
 
 	macguffin = add_commodity("electronics", "flux capacity", "gigawatts",
-			"tachyon flux" 100.0, 0.5, 1.0, 0.0, 0.0, 0.0, 0.0);
+			"tachyon flux" 100.0, 0.5, 1.0, 0.0);
 	my_container = add_cargo_container(1000, 1000, 1000, 0, 0, 0);
 	player_ids = get_player_ship_ids();
 	n = lookup_commodity("gold ore");

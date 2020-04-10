@@ -28,11 +28,16 @@
 #include "string-utils.h"
 #include "nonuniform_random_sampler.h"
 
+#define DEBUG_COMMODITIES 0
+
 #define MAXCATEGORIES 26
 #define MAXCOMMODITIES_PER_CATEGORY 26
 static char *category[MAXCATEGORIES];
 static char *category_description[MAXCATEGORIES];
 static int ncategories = 0;
+static float category_econ_sensitivity[MAXCATEGORIES];
+static float category_govt_sensitivity[MAXCATEGORIES];
+static float category_tech_sensitivity[MAXCATEGORIES];
 
 static int lookup_category(const char *c)
 {
@@ -46,38 +51,29 @@ static int lookup_category(const char *c)
 
 static int add_category(char *c)
 {
-	int len = strlen(c);
-	char *n;
-	char *comma;
+	char name[100];
+	char desc[100];
+	float e, g, t;
+	int rc;
 
-	n = strchr(c, ':');
-	if (!n) {
-		fprintf(stderr, "Bad category, expected colon: '%s'\n", c);
-		return -1;
-	}
-	if ((n - c) >= len) {
-		fprintf(stderr, "Bad category, expected category name: '%s'\n", c);
-		return -1;
-	}
-	comma = strchr(n, ',');
-	if (!comma) {
-		fprintf(stderr, "Bad category, expected comma and description: '%s'\n", c);
-		return -1;
-	}
-	if ((comma - c) >= len - 2) {
-		fprintf(stderr, "Bad category, expected category description: '%s'\n", c);
-		return -1;
-	}
-	*comma = '\0';
 	if (ncategories >= MAXCATEGORIES) {
-		fprintf(stderr, "Too many categories, dropping '%s'\n", n + 1);
+		fprintf(stderr, "Too many categories, dropping '%s'\n", c);
 		return -1;
 	}
-	category[ncategories] = strdup(n + 1);
-	category_description[ncategories] = strdup(comma + 1);
+	rc = sscanf(c, "category: %[a-zA-Z ], %[a-zA-Z ], %f, %f, %f", name, desc, &e, &g, &t);
+	if (rc != 5) {
+		fprintf(stderr, "Bad category: '%s'\n", c);
+		return -1;
+	}
+	category[ncategories] = strdup(name);
+	category_description[ncategories] = strdup(desc);
 	uppercase(category[ncategories]);
 	uppercase(category_description[ncategories]);
 	clean_spaces(category_description[ncategories]);
+	clean_spaces(category[ncategories]);
+	category_econ_sensitivity[ncategories] = e;
+	category_govt_sensitivity[ncategories] = g;
+	category_tech_sensitivity[ncategories] = t;
 	ncategories++;
 	return ncategories - 1;
 }
@@ -138,9 +134,6 @@ static void sanity_check_commodity_values(char *filename, int ln, struct commodi
 	sanity_check_float(filename, ln, "base_price", c->base_price, 0.0, 1e6);
 	sanity_check_float(filename, ln, "volatility", c->volatility, 0.0, 1.0);
 	sanity_check_float(filename, ln, "legality", c->volatility, 0.0, 1.0);
-	sanity_check_float(filename, ln, "econ sensitivity", c->econ_sensitivity, 0.0, 1.0);
-	sanity_check_float(filename, ln, "govt sensitivity", c->govt_sensitivity, 0.0, 1.0);
-	sanity_check_float(filename, ln, "tech sensitivity", c->tech_sensitivity, 0.0, 1.0);
 }
 
 static int parse_line(char *filename, char *line, int ln, struct commodity *c)
@@ -159,6 +152,12 @@ static int parse_line(char *filename, char *line, int ln, struct commodity *c)
 		rc = add_category(line);
 		if (rc < 0)
 			return -1;
+		sanity_check_float(filename, ln, "econ sensitivity",
+					category_econ_sensitivity[ncategories - 1], -1.0, 1.0);
+		sanity_check_float(filename, ln, "govt sensitivity",
+					category_govt_sensitivity[ncategories - 1], -1.0, 1.0);
+		sanity_check_float(filename, ln, "tech sensitivity",
+					category_tech_sensitivity[ncategories - 1], -1.0, 1.0);
 		return 1;
 	}
 
@@ -225,15 +224,6 @@ static int parse_line(char *filename, char *line, int ln, struct commodity *c)
 	if (rc)
 		return rc;
 	rc = parse_float_field(filename, line, ln, &c->legality, &saveptr);
-	if (rc)
-		return rc;
-	rc = parse_float_field(filename, line, ln, &c->econ_sensitivity, &saveptr);
-	if (rc)
-		return rc;
-	rc = parse_float_field(filename, line, ln, &c->govt_sensitivity, &saveptr);
-	if (rc)
-		return rc;
-	rc = parse_float_field(filename, line, ln, &c->tech_sensitivity, &saveptr);
 	if (rc)
 		return rc;
 	rc = parse_int_field(filename, line, ln, &c->odds, &saveptr);
@@ -321,23 +311,48 @@ float commodity_calculate_price(struct commodity *c,
 		float economy, float tech_level, float government)
 {
 	float econ_price_factor, tech_level_factor, government_factor, price;
+	float es, gs, ts;
 
-	econ_price_factor = 2.0f * (economy - 0.5f) * c->econ_sensitivity;
-	tech_level_factor = 2.0f * (tech_level - 0.5f) * c->tech_sensitivity;
-	government_factor = 2.0f * (government - 0.5f) * c->govt_sensitivity;
+	es = category_econ_sensitivity[c->category];
+	gs = category_govt_sensitivity[c->category];
+	ts = category_tech_sensitivity[c->category];
+
+#if DEBUG_COMMODITIES
+	printf("es = %f, gs = %f, ts = %f\n", es, gs, ts);
+	printf("econ = %f, govt = %f, tech = %f\n", economy, government, tech_level);
+#endif
+
+	/* Scale to between -1.0 and +1.0 range */
+	economy = -2.0f * (economy - 0.5f);
+	government = -2.0f * (government - 0.5f);
+	tech_level = -2.0f * (tech_level - 0.5f);
+
+	/* economy: +1 means Rich Industrial, -1 means poor agricultural */
+	/* government: +1 means Corporate State, -1 means Anarchy */
+	/* Tech level: +1 means interstellar age, -1 means stone age */
+
+	econ_price_factor = economy * es;
+	government_factor = government * gs;
+	tech_level_factor = tech_level * ts;
+#if DEBUG_COMMODITIES
+	printf("ef = %f, gf = %f, tf = %f\n", econ_price_factor, government_factor, tech_level_factor);
+#endif
 
 	price = c->base_price +
 		c->base_price * econ_price_factor +
-		c->base_price * tech_level_factor +
-		c->base_price * government_factor;
+		c->base_price * government_factor +
+		c->base_price * tech_level_factor;
+#if DEBUG_COMMODITIES
+	printf("bp = %f + e(%f), + g(%f) + t(%f) = %f\n",
+			c->base_price, econ_price_factor, government_factor, tech_level_factor, price);
+#endif
 
 	/* TODO: add some random variability, but not enough to swamp. */
 	return price;
 }
 
 int add_commodity(struct commodity **c, int *ncommodities, const char *category, const char *name, const char *unit,
-			const char *scans_as, float base_price, float volatility, float legality,
-			float econ_sensitivity, float govt_sensitivity, float tech_sensitivity, int odds)
+			const char *scans_as, float base_price, float volatility, float legality, int odds)
 {
 	struct commodity *newc;
 	int n = *ncommodities + 1;
@@ -356,9 +371,6 @@ int add_commodity(struct commodity **c, int *ncommodities, const char *category,
 	newc->base_price = base_price;
 	newc->volatility = volatility;
 	newc->legality = legality;
-	newc->econ_sensitivity = econ_sensitivity;
-	newc->govt_sensitivity = govt_sensitivity;
-	newc->tech_sensitivity = tech_sensitivity;
 	newc->odds = odds;
 	*ncommodities = n;
 	return n - 1;
@@ -385,12 +397,21 @@ const int ncommodity_categories(void)
 
 #ifdef TESTCOMMODITIES
 
-static void test_price(struct commodity *c, float e, float g, float t)
+#include "arraysize.h"
+#include "snis-culture.h"
+
+static int test_price(struct commodity *c, float e, float g, float t)
 {
 	float p;
 
 	p = commodity_calculate_price(c, e, t, g);
+	if (p < 0.0) {
+		fprintf(stderr, "NEGATIVE PRICE %s %s %s %0.2f %0.2f %0.2f %3.2f\n",
+			c->name, c->unit, c->scans_as, e, t, g, p);
+		return 1;
+	}
 	printf("%s %s %s %0.2f %0.2f %0.2f %3.2f\n", c->name, c->unit, c->scans_as, e, t, g, p);
+	return 0;
 }
 
 int main(int argc, char *argv[])
@@ -398,6 +419,7 @@ int main(int argc, char *argv[])
 	struct commodity *c;
 	float e, g, t;
 	int i, ncommodities;
+	int sum = 0;
 
 	if (argc < 2) {
 		fprintf(stderr, "usage: test-commodities commodities-file\n");
@@ -413,7 +435,34 @@ int main(int argc, char *argv[])
 		for (e = 0.0; e <= 1.0; e += 0.1)
 			for (g = 0.0; g <= 1.0; g += 0.1)
 				for (t = 0.0; t <= 1.0; t += 0.1)
-					test_price(&c[i], e, g, t);
-	return 0;
+					sum += test_price(&c[i], e, g, t);
+
+	for (i = 0; i < ncategories; i++) {
+		int j;
+		struct commodity c;
+		c.category = i;
+		c.base_price = 1.0;
+		for (j = 0; j < ARRAYSIZE(economy_name); j++) {
+			e = (float) j / (float) ARRAYSIZE(economy_name);
+			printf("%s that normally costs $1.00 would cost %f in economy %s\n",
+					category[i], commodity_calculate_price(&c, e, 0.5, 0.5), economy_name[j]);
+		}
+		printf("------------------------\n");
+		for (j = 0; j < ARRAYSIZE(government_name); j++) {
+			g = (float) j / (float) ARRAYSIZE(government_name);
+			printf("%s that normally costs $1.00 would cost %f in government %s\n",
+					category[i], commodity_calculate_price(&c, 0.5, g, 0.5), government_name[j]);
+		}
+		printf("------------------------\n");
+		for (j = 0; j < ARRAYSIZE(tech_level_name); j++) {
+			t = (float) j / (float) ARRAYSIZE(tech_level_name);
+			printf("%s that normally costs $1.00 would cost %f in tech level %s\n",
+					category[i], commodity_calculate_price(&c, 0.5, 0.5, t), tech_level_name[j]);
+		}
+		printf("========================\n");
+	}
+	if (sum)
+		printf("%d price failures\n", sum);
+	return sum;
 }
 #endif
