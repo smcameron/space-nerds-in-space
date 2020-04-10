@@ -11994,7 +11994,7 @@ static void init_starbase_market(struct snis_entity *o)
 		mkt[i].qty = round((25000 + snis_randn(5000)) / o->tsd.starbase.bid_price[item]);
 		mkt[i].refill_rate = (float) snis_randn(1000) / 1000.0; /* TODO: something better */
 		mkt[i].bid = o->tsd.starbase.bid_price[item];
-		mkt[i].ask = (float) 1.1 * mkt[i].bid;
+		mkt[i].ask = (float) 1.05 * mkt[i].bid;
 	}
 	/* Zero out quantities of half the stuff */
 	for (i = 0; i < ncommodities; i++)
