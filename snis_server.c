@@ -17041,6 +17041,8 @@ static void starbase_cargo_buyingselling_npc_bot(struct snis_entity *o, int brid
 			for (i = 0; i < ncommodities; i++) {
 				if (commodity[mkt[i].item].category != botstate->cargo_category)
 					continue;
+				if (mkt[i].qty == 0.0) /* skip out-of-stock stuff */
+					continue;
 				if (x == j + 'A') {
 					buy_choice = i;
 					break;
@@ -17161,6 +17163,8 @@ static void starbase_cargo_buyingselling_npc_bot(struct snis_entity *o, int brid
 				char *itemname = commodity[mkt[i].item].name;
 				char *unit = commodity[mkt[i].item].unit;
 				if (commodity[mkt[i].item].category != botstate->cargo_category)
+					continue;
+				if (mkt[i].qty == 0.0) /* skip out-of-stock stuff */
 					continue;
 				bid = mkt[i].bid;
 				ask = mkt[i].ask;
