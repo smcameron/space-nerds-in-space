@@ -33,10 +33,13 @@ struct pthread_osx_trampoline_args {
 
 void *pthread_osx_trampoline(void *args) {
 	printf("Trampoline executed!\n");
-	struct pthread_osx_trampoline_args *t_args = (struct pthread_osx_trampoline_args *) args;
-	pthread_setname_np(t_args->thread_name);
+    struct pthread_osx_trampoline_args *t_args = args;
+	const char *thread_name = t_args->thread_name;
+    void *thread_args = t_args->thread_args;
+    pthread_setname_np(thread_name);
 	printf("Thread name: %s\n", t_args->thread_name);
-	t_args->thread_start(t_args->thread_args);
+	t_args->thread_start(thread_args);
+    free(args);
 }
 
 int create_thread(pthread_t *thread,  void *(*start_routine) (void *), void *arg, char *name, int detached)
@@ -61,8 +64,6 @@ thread will be running. */
 #ifndef __APPLE__
 		rc = pthread_create(thread, &attr, start_routine, arg);
 #else
-		//FIXME: This could be a potential memory leak. Not  sure if
-		//we can free t_args immediately without messing up threading.
 		t_args = malloc(sizeof(struct pthread_osx_trampoline_args));
 		t_args->thread_name = name;
 		t_args->thread_start = start_routine;
