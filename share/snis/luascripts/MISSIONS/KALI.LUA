@@ -339,7 +339,7 @@ ship[25] = add_adjusted_ship("ALTO CERBERUS", 493526.817183, -5346.606139, 36773
 ship[26] = add_adjusted_ship("STARLINK FESTU", 353236.899500, -2700.641421, 91513.186709, 0, 2, 1);
 attacker = add_adjusted_ship("SILENT SCORPION", 1000, 1000, 1000, 18, 3, 0);
 
-macguffin = add_commodity("ELECTRONICS", "SEX ROBOTS", "UNITS", "SEX ROBOTS", 10000.0, 0.1, 0.2, 0.5, 0.8, 0.3, 0);
+macguffin = add_commodity("ELECTRONICS", "SEX ROBOTS", "UNITS", "SEX ROBOTS", 10000.0, 0.1, 0.2, 0);
 container = add_cargo_container(adjx + 499673, 0, adjz + 509549);
 set_object_velocity(container, 0, 0, 0);
 set_commodity_contents(container, macguffin, 50);

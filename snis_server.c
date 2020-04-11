@@ -11890,16 +11890,6 @@ static int add_warp_core(double x, double y, double z,
 	return i;
 }
 
-static int mkt_item_already_present(struct marketplace_data *mkt, int nitems, int item)
-{
-	int i;
-
-	for (i = 0; i < nitems; i++)
-		if (mkt[i].item == item)
-			return 1;
-	return 0;
-}
-
 static int commodity_sample(void)
 {
 	static struct nonuniform_sample_distribution *d = NULL;
@@ -11965,9 +11955,9 @@ static float calculate_commodity_price(struct snis_entity *planet, int item)
 					(float) ARRAYSIZE(government_name);
 	} else {
 		/* Deep space starbases will be in top 10% of everything, let's say */
-		economy = 1.0 - snis_randn(100) / 1000;
-		tech_level = 1.0 - snis_randn(100) / 1000;
-		government = 1.0 - snis_randn(100) / 1000;
+		economy = 1.0f - (float) snis_randn(100) / 1000.0f;
+		tech_level = 1.0f - (float) snis_randn(100) / 1000.0f;
+		government = 1.0f - (float) snis_randn(100) / 1000.0f;
 	}
 	return commodity_calculate_price(&commodity[item], economy, tech_level, government);
 }
@@ -11985,16 +11975,12 @@ static void init_starbase_market(struct snis_entity *o)
 	if (!mkt)
 		return;
 	for (i = 0; i < ncommodities; i++) {
-		int item;
-		do {
-			item = commodity_sample();
-		} while (mkt_item_already_present(mkt, i, item)); 
-		mkt[i].item = item;
+		mkt[i].item = i;
 		/* $25-$30k worth of each thing on hand */
-		mkt[i].qty = round((25000 + snis_randn(5000)) / o->tsd.starbase.bid_price[item]);
+		mkt[i].qty = round((25000 + snis_randn(5000)) / o->tsd.starbase.bid_price[i]);
 		mkt[i].refill_rate = (float) snis_randn(1000) / 1000.0; /* TODO: something better */
-		mkt[i].bid = o->tsd.starbase.bid_price[item];
-		mkt[i].ask = (float) 1.1 * mkt[i].bid;
+		mkt[i].bid = o->tsd.starbase.bid_price[i];
+		mkt[i].ask = (float) 1.05 * mkt[i].bid;
 	}
 	/* Zero out quantities of half the stuff */
 	for (i = 0; i < ncommodities; i++)
@@ -21001,15 +20987,11 @@ static int l_add_commodity(lua_State *l)
 	const double base_price = luaL_checknumber(l, 5);
 	const double volatility = luaL_checknumber(l, 6);
 	const double legality = luaL_checknumber(l, 7);
-	const double econ_sensitivity = luaL_checknumber(l, 8);
-	const double govt_sensitivity = luaL_checknumber(l, 9);
-	const double tech_sensitivity = luaL_checknumber(l, 10);
-	const double odds = luaL_checknumber(l, 11);
+	const double odds = luaL_checknumber(l, 8);
 	int iodds = odds;
 
 	int n = add_commodity(&commodity, &ncommodities,
-		category, name, units, scans_as, base_price, volatility, legality,
-		econ_sensitivity, govt_sensitivity, tech_sensitivity, iodds);
+		category, name, units, scans_as, base_price, volatility, legality, iodds);
 	lua_pushnumber(l, (double) n);
 	return 1;
 }
@@ -30249,7 +30231,7 @@ int main(int argc, char *argv[])
 #ifndef __APPLE__
 	if (trap_nans)
 		feenableexcept(FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW);
-#endif 
+#endif
 	asset_dir = override_asset_dir();
 	read_replacement_assets(&replacement_assets, asset_dir);
 	set_random_seed(-1);

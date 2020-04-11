@@ -29,9 +29,6 @@ struct commodity {
 	float base_price;
 	float volatility;
 	float legality;
-	float econ_sensitivity;
-	float govt_sensitivity;
-	float tech_sensitivity;
 
 	/* odds: relative odds that this commodity will appear.  The probability that
 	 * a commodity will appear is its odds / (sum of all the odds).  This allows
@@ -51,8 +48,7 @@ float commodity_calculate_price(struct commodity *c,
 		float economy, float tech_level, float government);
 
 int add_commodity(struct commodity **c, int *ncommodities, const char *category, const char *name, const char *unit,
-			const char *scans_as, float base_price, float volatility, float legality,
-			float econ_sensitivity, float govt_sensitivity, float tech_sensitivity, int odds);
+			const char *scans_as, float base_price, float volatility, float legality, int odds);
 
 const char *commodity_category(int cat);
 const char *commodity_category_description(int cat);
