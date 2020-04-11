@@ -40,18 +40,18 @@ struct pthread_setname_trampoline_args {
 void *pthread_setname_trampoline(void *args)
 {
 	struct pthread_setname_trampoline_args *t_args = args;
-	const char *thread_name = t_args->thread_name;
-	void *thread_args = t_args->thread_args;
 	void *rc;
 
+	if (t_args->thread_name) {
 #ifdef __APPLE__
-	pthread_setname_np(thread_name);
+		pthread_setname_np(t_args->thread_name);
 #else
 #ifdef _GNU_SOURCE
-	pthread_setname_np(*t_args->thread, thread_name);
+		pthread_setname_np(*t_args->thread, t_args->thread_name);
 #endif
 #endif
-	rc = t_args->thread_start(thread_args);
+	}
+	rc = t_args->thread_start(t_args->thread_args);
 	free(args);
 	return rc;
 }
