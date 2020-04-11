@@ -11890,16 +11890,6 @@ static int add_warp_core(double x, double y, double z,
 	return i;
 }
 
-static int mkt_item_already_present(struct marketplace_data *mkt, int nitems, int item)
-{
-	int i;
-
-	for (i = 0; i < nitems; i++)
-		if (mkt[i].item == item)
-			return 1;
-	return 0;
-}
-
 static int commodity_sample(void)
 {
 	static struct nonuniform_sample_distribution *d = NULL;
@@ -11985,15 +11975,11 @@ static void init_starbase_market(struct snis_entity *o)
 	if (!mkt)
 		return;
 	for (i = 0; i < ncommodities; i++) {
-		int item;
-		do {
-			item = commodity_sample();
-		} while (mkt_item_already_present(mkt, i, item)); 
-		mkt[i].item = item;
+		mkt[i].item = i;
 		/* $25-$30k worth of each thing on hand */
-		mkt[i].qty = round((25000 + snis_randn(5000)) / o->tsd.starbase.bid_price[item]);
+		mkt[i].qty = round((25000 + snis_randn(5000)) / o->tsd.starbase.bid_price[i]);
 		mkt[i].refill_rate = (float) snis_randn(1000) / 1000.0; /* TODO: something better */
-		mkt[i].bid = o->tsd.starbase.bid_price[item];
+		mkt[i].bid = o->tsd.starbase.bid_price[i];
 		mkt[i].ask = (float) 1.05 * mkt[i].bid;
 	}
 	/* Zero out quantities of half the stuff */
