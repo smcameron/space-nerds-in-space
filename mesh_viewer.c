@@ -1,9 +1,3 @@
-
-#ifdef __APPLE__
-#include <SDL.h>
-#else
-#include <SDL/SDL.h>
-#endif
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
@@ -15,7 +9,13 @@
 #include <getopt.h>
 #include <locale.h>
 #include <GL/glew.h>
+
+#ifdef __APPLE__
+#include <SDL2.h>
+#else
 #include <fenv.h>
+#include <SDL2/SDL.h>
+#endif
 
 #include "mtwist.h"
 #include "vertex.h"
@@ -94,9 +94,6 @@ static int turret_mode = 0;
 static char *replacement_assets_file = NULL;
 static struct replacement_asset replacement_asset = { 0 };
 static int reload_shaders = 0;
-
-/* Color depth in bits of our window. */
-static int bpp;
 
 static char *maybe_replace_asset(char *asset)
 {
@@ -187,7 +184,8 @@ static void quit(int code)
 }
 
 static int helpmode;
-static SDL_Surface *screen;
+static SDL_Window *screen;
+static SDL_Renderer *renderer;
 
 static void adjust_spinning(float speed_factor)
 {
@@ -245,8 +243,10 @@ static void distort_the_mesh(int distort)
 	mesh_graph_dev_init(target_mesh);
 }
 
-static void handle_key_down(SDL_keysym *keysym)
+static void handle_key_down(SDL_Keysym *keysym)
 {
+	static int fullscreen = 0;
+
 	switch (keysym->sym) {
 	case SDLK_F1:
 		helpmode = !helpmode;
@@ -258,7 +258,8 @@ static void handle_key_down(SDL_keysym *keysym)
 		quit(0);
 		break;
 	case SDLK_F11:
-		SDL_WM_ToggleFullScreen(screen);
+		fullscreen = !fullscreen;
+		SDL_SetWindowFullscreen(screen, fullscreen * SDL_WINDOW_FULLSCREEN_DESKTOP);
 		break;
 	case SDLK_PAUSE:
 		display_frame_stats = (display_frame_stats + 1) % 3;
@@ -383,7 +384,7 @@ static int main_da_button_press(int button, int x, int y)
 		/* start drag */
 		isDragging = 1;
 
-		SDLMod mod = SDL_GetModState();
+		SDL_Keymod mod = SDL_GetModState();
 		isDraggingLight = mod & (KMOD_LCTRL | KMOD_RCTRL);
 
 		last = -1.0f;
@@ -443,10 +444,6 @@ static int sdl_button_to_int(int sdl_button)
 		return 2;
 	case SDL_BUTTON_RIGHT:
 		return 3;
-	case SDL_BUTTON_WHEELUP:
-		return 4;
-	case SDL_BUTTON_WHEELDOWN:
-		return 5;
 	}
 	return 0;
 }
@@ -468,13 +465,21 @@ static void process_events()
 			/* Handle quit requests (like Ctrl-c). */
 			quit(0);
 			break;
-		case SDL_VIDEORESIZE:
-			real_screen_width = event.resize.w;
-			real_screen_height = event.resize.h;
+		case SDL_WINDOWEVENT:
+			if (event.window.event == SDL_WINDOWEVENT_RESIZED) {
+				real_screen_width = event.window.data1;
+				real_screen_height = event.window.data2;
 
-			screen = SDL_SetVideoMode(real_screen_width, real_screen_height,
-					bpp, SDL_OPENGL | SDL_RESIZABLE);
-			sng_set_screen_size(real_screen_width, real_screen_height);
+				SDL_SetWindowSize(screen, real_screen_width, real_screen_height);
+				sng_set_screen_size(real_screen_width, real_screen_height);
+			}
+			break;
+		case SDL_MOUSEWHEEL: {
+				if (event.wheel.y > 0)
+					main_da_button_release(4, event.button.x, event.button.y);
+				else if (event.wheel.y < 0)
+					main_da_button_release(5, event.button.x, event.button.y);
+			}
 			break;
 		case SDL_MOUSEBUTTONDOWN: {
 				int button = sdl_button_to_int(event.button.button);
@@ -677,7 +682,7 @@ static void draw_screen()
 	 * from the application drawing on areas of the
 	 * screen that are being updated at the same time.
 	 */
-	SDL_GL_SwapBuffers();
+	SDL_GL_SwapWindow(screen);
 
 	if (display_frame_stats > 0) {
 		double end_time = time_now_double();
@@ -921,8 +926,11 @@ int main(int argc, char *argv[])
 		usage(program);
 
 	process_options(argc, argv);
+#ifndef __APPLE__
+	/* For some reason, with sdl2, feenenablexcept() is not declared. (sdl1 is fine) */
 	if (trap_nans)
 		feenableexcept(FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW);
+#endif
 	if (replacement_assets_file) {
 		rc = replacement_asset_read(replacement_assets_file, "share/snis", &replacement_asset);
 		if (rc < 0) {
@@ -944,73 +952,20 @@ int main(int argc, char *argv[])
 	if (thrust_mode && !thrustfile)
 		usage(program);
 
-	/* Information about the current video settings. */
-	const SDL_VideoInfo *info = NULL;
-
 	/* First, initialize SDL's video subsystem. */
 	if (SDL_Init(SDL_INIT_VIDEO) < 0) {
 		/* Failed, exit. */
-		fprintf(stderr, "Video initialization failed: %s\n", SDL_GetError());
+		fprintf(stderr, "SDL_Init failed: %s\n", SDL_GetError());
 		quit(1);
 	}
 
-	/* Let's get some video information. */
-	info = SDL_GetVideoInfo();
-
-	if (!info) {
-		/* This should probably never happen. */
-		fprintf(stderr, "Video query failed: %s\n", SDL_GetError());
-		quit(1);
-	}
-
-	/*
-	 * Set our width/height to 640/480 (you would
-	 * of course let the user decide this in a normal
-	 * app). We get the bpp we will request from
-	 * the display. On X11, VidMode can't change
-	 * resolution, so this is probably being overly
-	 * safe. Under Win32, ChangeDisplaySettings
-	 * can change the bpp.
-	 */
-	bpp = info->vfmt->BitsPerPixel;
-
-	/*
-	 * Now, we want to setup our requested
-	 * window attributes for our OpenGL window.
-	 * We want *at least* 5 bits of red, green
-	 * and blue. We also want at least a 16-bit
-	 * depth buffer.
-	 *
-	 * The last thing we do is request a double
-	 * buffered window. '1' turns on double
-	 * buffering, '0' turns it off.
-	 *
-	 * Note that we do not use SDL_DOUBLEBUF in
-	 * the flags to SDL_SetVideoMode. That does
-	 * not affect the GL attribute state, only
-	 * the standard 2D blitting setup.
-	 */
-	SDL_GL_SetAttribute(SDL_GL_RED_SIZE, 5);
-	SDL_GL_SetAttribute(SDL_GL_GREEN_SIZE, 5);
-	SDL_GL_SetAttribute(SDL_GL_BLUE_SIZE, 5);
-	SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 16);
-	SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
-	SDL_GL_SetAttribute(SDL_GL_SWAP_CONTROL, 1); /* vsync */
-	SDL_GL_SetAttribute(SDL_GL_MULTISAMPLEBUFFERS, 0);
-	SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, 0);
-
-	/* start again so we can get a fresh new gl context for our window */
-	if (SDL_Init(SDL_INIT_VIDEO) < 0) {
-		/* Failed, exit. */
-		fprintf(stderr, "Second video initialization failed: %s\n", SDL_GetError());
-		quit(1);
-	}
-
-	screen = SDL_SetVideoMode(SCREEN_WIDTH, SCREEN_HEIGHT, bpp, SDL_OPENGL | SDL_RESIZABLE);
+	screen = SDL_CreateWindow("Mesh Viewer", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
+			SCREEN_WIDTH, SCREEN_HEIGHT, SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
 	if (!screen) {
-		fprintf(stderr, "Video mode set failed: %s\n", SDL_GetError());
+		fprintf(stderr, "SDL_CreateWindow failed: %s\n", SDL_GetError());
 		quit(1);
 	}
+	renderer = SDL_CreateRenderer(screen, -1, SDL_RENDERER_ACCELERATED);
 
 	real_screen_width = SCREEN_WIDTH;
 	real_screen_height = SCREEN_HEIGHT;

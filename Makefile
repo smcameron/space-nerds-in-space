@@ -488,8 +488,8 @@ endif
 PNGLIBS:=$(shell $(PKG_CONFIG) --libs libpng)
 PNGCFLAGS:=$(shell $(PKG_CONFIG) --cflags libpng)
 
-SDLLIBS:=$(shell $(PKG_CONFIG) sdl --libs)
-SDLCFLAGS:=$(shell $(PKG_CONFIG) sdl --cflags)
+SDLLIBS:=$(shell $(PKG_CONFIG) sdl2 --libs)
+SDLCFLAGS:=$(shell $(PKG_CONFIG) sdl2 --cflags)
 
 GLEWLIBS:=$(shell $(PKG_CONFIG) --libs-only-l glew)
 GLEWCFLAGS:=$(shell $(PKG_CONFIG) --cflags glew)
