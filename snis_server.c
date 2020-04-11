@@ -30249,7 +30249,7 @@ int main(int argc, char *argv[])
 #ifndef __APPLE__
 	if (trap_nans)
 		feenableexcept(FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW);
-#endif  
+#endif
 	asset_dir = override_asset_dir();
 	read_replacement_assets(&replacement_assets, asset_dir);
 	set_random_seed(-1);

@@ -32,15 +32,17 @@ struct pthread_osx_trampoline_args {
 };
 
 #ifdef __APPLE__
-void *pthread_osx_trampoline(void *args) {
+void *pthread_osx_trampoline(void *args)
+{
 	printf("Trampoline executed!\n");
-    struct pthread_osx_trampoline_args *t_args = args;
+	struct pthread_osx_trampoline_args *t_args = args;
 	const char *thread_name = t_args->thread_name;
-    void *thread_args = t_args->thread_args;
-    pthread_setname_np(thread_name);
+	void *thread_args = t_args->thread_args;
+
+	pthread_setname_np(thread_name);
 	printf("Thread name: %s\n", t_args->thread_name);
 	t_args->thread_start(thread_args);
-    free(args);
+	free(args);
 }
 #endif
 
@@ -61,10 +63,11 @@ int create_thread(pthread_t *thread,  void *(*start_routine) (void *), void *arg
 	if (detached) {
 		pthread_attr_init(&attr);
 		pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
-/* On MacOS X we can only set a threads name from inside that thread.
-Because of this, if we're compiling for OS X, we have pthread_create
-specify a trampoline function that calls the actual routine that the 
-thread will be running. */
+		/* On MacOS X we can only set a threads name from inside that thread.
+		 * Because of this, if we're compiling for OS X, we have pthread_create
+		 * specify a trampoline function that calls the actual routine that the
+		 * thread will be running.
+		 */
 #ifndef __APPLE__
 		rc = pthread_create(thread, &attr, start_routine, arg);
 #else
