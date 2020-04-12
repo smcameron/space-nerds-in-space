@@ -1,13 +1,12 @@
+#include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
 #include <errno.h>
 #include <string.h>
-#include <gtk/gtk.h>
 #include <inttypes.h>
 #include <errno.h>
 #include <string.h>
 #ifndef WITHOUTOPENGL
-#include <gtk/gtkgl.h>
 #include <GL/glew.h>
 #include <png.h>
 #endif
@@ -29,7 +28,7 @@
 
 #define TOTAL_COLORS (NCOLORS + NSPARKCOLORS + NRAINBOWCOLORS + NSHADESOFGRAY * (NSHADECOLORS + 1) + \
 	(NGRADIENTS * NTOTAL_GRADIENT_SHADES) + MAX_USER_COLORS)
-GdkColor huex[TOTAL_COLORS];
+struct graph_dev_color huex[TOTAL_COLORS];
 
 /* first index of user colors: Note this will break if user colors
  * aren't at the end of the huex array
@@ -539,7 +538,7 @@ void sng_draw_point(float x, float y)
 
 /* from http://stackoverflow.com/a/6930407
 0 <= h < 360, 0 <= s <= 1, , 0 <= v <= 1 */
-static void hsv2rgb(double h, double s, double v, GdkColor* rgb)
+static void hsv2rgb(double h, double s, double v, struct graph_dev_color* rgb)
 {
     double      hh, p, q, t, ff;
     long        i;

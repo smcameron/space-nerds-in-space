@@ -21,7 +21,7 @@
 
 #include <stdio.h>
 #include <string.h>
-#include <gtk/gtk.h>
+#include <limits.h>
 
 #include "mtwist.h"
 #include "quat.h"

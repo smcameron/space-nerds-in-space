@@ -1,11 +1,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <gtk/gtk.h>
 #include <GL/glew.h>
 #include <math.h>
 #include <assert.h>
 #include <sys/stat.h>
+#include <limits.h>
 
 #include "shader.h"
 #include "vertex.h"
@@ -942,7 +942,7 @@ static struct graph_dev_primitive textured_unit_quad;
 static struct graph_dev_gl_context {
 	int screen_x, screen_y;
 	float x_scale, y_scale;
-	GdkColor *hue; /* current color */
+	struct graph_dev_color *hue; /* current color */
 	int alpha_blend;
 	float alpha;
 	GLuint fbo_current;
@@ -1263,7 +1263,7 @@ static void make_room_in_vertex_buffer_2d(int nvertices)
 	}
 }
 
-static void add_vertex_2d(float x, float y, GdkColor* color, GLubyte alpha, GLenum mode)
+static void add_vertex_2d(float x, float y, struct graph_dev_color *color, GLubyte alpha, GLenum mode)
 {
 	struct vertex_color_buffer_data *vertex = &sgc.vertex_data_2d[sgc.nvertex_2d];
 

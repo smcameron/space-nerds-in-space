@@ -1,6 +1,5 @@
 #include <stdlib.h>
 #include <string.h>
-#include <gtk/gtk.h>
 #include <math.h>
 
 #include "snis_font.h"

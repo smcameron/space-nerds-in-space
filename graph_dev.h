@@ -22,6 +22,8 @@
 #ifndef INCLUDE_graph_device_H
 #define INCLUDE_graph_device_H
 
+#include <stdint.h>
+
 struct mesh;
 struct entity_context;
 struct entity;
@@ -29,6 +31,13 @@ struct entity_transform;
 union vec3;
 struct mat44;
 struct mat33;
+
+struct graph_dev_color { /* This exactly mimics GdkColor */
+	uint32_t pixel;
+	uint16_t red;
+	uint16_t green;
+	uint16_t blue;
+};
 
 extern int graph_dev_setup(const char *shader_dir);
 extern void graph_dev_reload_all_shaders(void);

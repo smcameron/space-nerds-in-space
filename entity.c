@@ -24,8 +24,8 @@
 #include <stdio.h>
 #include <string.h>
 #include <math.h>
-#include <gtk/gtk.h>
 #include <stdlib.h>
+#include <limits.h>
 
 #include "mtwist.h"
 #include "mathutils.h"
