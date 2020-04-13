@@ -516,7 +516,7 @@ _SERVEROBJS=snis_server.o starbase-comms.o \
 		snis_server_tracker.o snis_bridge_update_packet.o solarsystem_config.o a_star.o \
 		key_value_parser.o nonuniform_random_sampler.o oriented_bounding_box.o shape_collision.o \
 		graph_dev_mesh_stub.o turret_aimer.o snis_hash.o snis_server_debug.o \
-		ship_registration.o talking_stick.o
+		ship_registration.o talking_stick.o transport_contract.o
 SERVEROBJS=${COMMONOBJS} $(patsubst %,$(OD)/%,${_SERVEROBJS})
 
 _MULTIVERSEOBJS=snis_multiverse.o snis_marshal.o snis_socket_io.o mathutils.o mtwist.o stacktrace.o \
@@ -1120,6 +1120,15 @@ $(OD)/elastic_collision.o:	elastic_collision.c elastic_collision.h Makefile ${OD
 $(OD)/talking_stick.o:	talking_stick.c talking_stick.h Makefile ${ODT}
 	$(Q)$(COMPILE)
 
+$(OD)/transport_contract.o:	transport_contract.c transport_contract.h Makefile ${ODT}
+	$(Q)$(COMPILE)
+
+bin/test_transport_contract:	transport_contract.c transport_contract.h ${OD}/commodities.o \
+				${OD}/names.o ${OD}/mtwist.o ${OD}/string-utils.o ${OD}/infinite-taunt.o \
+				${ODT} ${BIN}
+	$(CC) -g -DTEST_TRANSPORT_CONTRACT=1 -o bin/test_transport_contract transport_contract.c \
+			${OD}/commodities.o ${OD}/names.o ${OD}/mtwist.o ${OD}/string-utils.o ${OD}/infinite-taunt.o
+
 $(OD)/fleet.o:	fleet.c Makefile ${ODT}
 	$(Q)$(COMPILE)
 
@@ -1225,7 +1234,7 @@ mostly-clean:
 	bin/device-io-sample-1 bin/print_ship_attributes bin/snis_test_audio bin/test_crater \
 	bin/test_key_value_parser bin/test_snis_dmx test_scipher bin/test_snis_ship_type wwviaudio_basic_test \
 	${MANSRCDIR}/earthlike.1.gz  ${MANSRCDIR}/snis_client.6.gz  ${MANSRCDIR}/snis_server.6.gz  \
-	${MANSRCDIR}/snis_test_audio.1.gz
+	${MANSRCDIR}/snis_test_audio.1.gz bin/test_transport_contract
 	rm -f ${BIN}
 	rm -fr opus-1.3.1
 	rm -f libopus.a
