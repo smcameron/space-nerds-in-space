@@ -61,6 +61,9 @@ way around the code.
 <li><a href="#snisclientnlprocthread">natural language processing thread</a>
 <li><a href="#snisclientdemoncmdthread">demon command thread</a>
 <li><a href="#snisclientmainthread">Main thread</a>
+<li><a href="#snisclientmainthread">Main thread</a>
+<li><a href="#snisclientvoicechatdecodethread">Voice Chat Decoding thread</a>
+<li><a href="#snisclientvoicechatencodethread">Voice Chat Encoding thread</a>
 </ol>
 <li><a href="#rendering">Rendering</a>
 <ol>
@@ -96,6 +99,7 @@ way around the code.
 <li><a href="#audio">Audio</a>
 <li><a href="#speechrecog">The Computer / Speech Recognition</a>
 <li><a href="#starmap">Star Map / Warp gate traversal</a>
+<li><a href="#voicechat">Voice Chat</a>
 </ol>
 <li><a href="#snisserver">SNIS Server</a>
 <ol>
@@ -694,6 +698,21 @@ This is the main gtk event loop.  This function does not return until the progra
 advance_game is called at a rate of 30Hz from within gtk_main() because we set it up to do so with
 g_timeout_add as mentioned above.
 
+<h4><a name="snisclientvoicechatdecodethread">Voice Chat decoding thread</a></h4>
+
+<p>See voice_chat_decode_thread_fn() in snis_voice_chat.c.  This thread pulls
+Opus encoded audio packets off a queue, decodes them, and  appends them to a
+chain of audio that the mixing code plays back.  See the section below about
+<a href="#voicechat">voice chat</a>.
+
+<h4><a name="snisclientvoicechatencodethread">Voice Chat encoding thread</a></h4>
+
+<p>See voice_chat_encode_thread_fn() in snis_voice_chat.c.  This thread pulls
+fixed size PCM audio data off a queue, encodes via libopus, and transmits them
+to snis_server to be forwarded to other clients. See the section below about
+<a href="#voicechat">voice chat</a>.
+
+
 <h3><a name="rendering">Rendering</a></h3>
 
 <p>There are two renderers, the primary OpenGL based renderer and the secondary gdk based
@@ -1167,6 +1186,305 @@ already loaded before continuing.  If not, then it checks if it's in a new solar
 and if so, calls reload_per_solarsystem_textures(). This marks the old solarsystem textures
 as "expired". then sets per_solarsystem_textures_loaded = 0, and then the next time
 through the new textures will be loaded and the old ones will be discarded.
+
+<h3><a name="voicechat">Voice Chat</a></h3>
+
+<p>Space Nerds in Space has a voice chat feature in which the user can press F12
+and the microphone will be recorded until F12 is no longer pressed, and the audio
+will be compressed and sent to the server where it will be forwarded to the other
+clients of the bridge and decompressed and played on those players' stations.
+
+<p>For voice chat, I needed more than just the simple playback of preloaded sounds
+that was implemented up to this point.
+
+<ul>
+<li>We need to make sure the number of concurrent streams sent to a client from
+from the server does not exceed the number of streams the client can handle.
+<li>We need the ability to record sound, and receive a stream of audio data
+from the microphone as a series of callbacks.
+<li>We need the ability to compress these packets and send them to my server
+process. For this I used libopus.
+<li>We need the server to forward these packets to destination clients, keeping
+in mind that there might be multiple clients streaming audio to the server, and
+these would need to be then fanned back out to the destination clients. The
+streams would need to be kept separate though, because the decompressor is
+stateful, and you can’t combine multiple streams of packets and send them
+through a single decompressor instance. They each need their own decompressor.
+<li>At the clients, we need to receive the audio data streams from the server
+and decompress them, and queue them up for the mixer to chew on.
+</ul>
+
+<p>To ensure that clients never receive more streams of audio than they can
+handle, a token system is used.
+
+<ul>
+<li><a href="https://github.com/smcameron/space-nerds-in-space/blob/master/talking_stick.h">talking_stick.h</a>
+<li><a href="https://github.com/smcameron/space-nerds-in-space/blob/master/talking_stick.c">talking_stick.c</a>
+</ul>
+
+<p>There is one token for each audio channel the clients are able to handle
+(nominally, there are 4 of them.) Just before clients begin recording and
+transmitting audio data to the server, they request a token from the server.
+They then transmit to the server (whether or not they eventually get the token)
+knowing that if they don’t get a token, the server will just drop their
+packets. The server has a fixed number of token which it assigns to the clients
+as they ask for them until they are all in use. If the server receives any
+audio packets from clients which it knows do not have a token, it just drops
+those packets. In this way, the server never transmits more streams of audio
+than the clients can handle.
+
+<p><h4>Recording audio</h4>
+
+<p>Recording is triggered by a keypress event, and terminated by a key release
+event, as it is a “push to talk” system. Pressing the key requests a token from
+the server (but doesn’t wait for it to be given) and starts the recording
+process, which sets up a portaudio thread reading from the microphone and
+periodically calling back a function passing along the PCM audio data that was
+recorded 1920 samples at a time (at a sampling rate of 48000 Hz). (I chose 1920
+and 48kHz because these are reasonable values supported by libopus. This did
+mean I had to resample my existing audio files from 44.1kHz to 48kHz.)
+
+<p>We transmit without waiting for the token from the server so that the
+instant the token is given (before the client even receives it) the server may
+begin accepting audio packets from the client. Also it’s easier to code as we
+do not need to write any code to wait for the token.
+
+<p>The code for that looks like this:
+<pre>
+        if (event-&gt;keyval == GDK_F12) { /* F12 key pressed? */
+                pthread_mutex_lock(&amp;voip_mutex);
+                        if (!have_talking_stick) {
+                                pthread_mutex_unlock(&amp;voip_mutex);
+                                request_talking_stick();
+                        } else {
+                                pthread_mutex_unlock(&amp;voip_mutex);
+                        }
+                /* We transmit regardless of whether we have a talking stick.
+                 * If we do not have it, snis_server will drop our messages */
+                if (control_key_pressed)
+                        voice_chat_start_recording(VOICE_CHAT_DESTINATION_ALL, 0);
+                else
+                        voice_chat_start_recording(VOICE_CHAT_DESTINATION_CREW, 0);
+        }
+</pre>
+
+<p>voice_chat_start_recording() ultimately starts up a portaudio thread to
+begin recording data and calling the recording_callback function described
+below.
+
+<p>This recording callback function cannot directly just compress and transmit
+the data to the server, as it might conceivably fall behind the recording
+process if say, writing to the network socket blocks or is slow. So it puts the
+data into an “outgoing” queue and returns. It looks like this:
+<pre>
+static void recording_callback(void *cookie, int16_t *buffer, int nsamples)
+{
+        if (nsamples != VC_BUFFER_SIZE)
+                return;
+        recording_buffer.nsamples = nsamples;
+        if (recording_audio)
+                recording_level = get_max_level(&amp;recording_buffer);
+        else
+                recording_level = 0;
+        pthread_mutex_lock(&amp;outgoing.mutex);
+        enqueue_audio_data(&amp;outgoing, recording_buffer.audio_buffer, recording_buffer.nsamples,
+                        recording_buffer.destination, recording_buffer.snis_radio_channel);
+        pthread_mutex_unlock(&amp;outgoing.mutex);
+}
+</pre>
+
+<p>When the “transmit” key is released, the portaudio recording thread is
+stopped, and if the client is in possession of any token, it is released to the
+server where it may then be handed out again to whichever client asks for a
+token.
+<pre>
+        if (event-&gt;keyval == GDK_F12) {
+                voice_chat_stop_recording(); /* This shuts down the portaudio thread that was recording. */
+                /* We release even if we don't have, snis_server will know the real deal. */
+                release_talking_stick();
+        }
+</pre>
+
+<p><h4>Compressing audio</h4>
+
+<p>There is then another thread that consumes audio data from this outgoing
+queue, compresses it with libopus, then sends it on to the server. The meat of
+that function looks like this:
+<pre>
+        while (1) {
+
+                /* Get an audio buffer from the queue */
+                pthread_mutex_lock(&amp;q-&gt;mutex);
+                b = dequeue_audio_buffer(q);
+                if (!b) {
+                        rc = pthread_cond_wait(&amp;q-&gt;event_cond, &amp;q-&gt;mutex);
+                        if (q-&gt;time_to_stop) {
+                                pthread_mutex_unlock(&amp;q-&gt;mutex);
+                                goto quit;
+                        }
+                        pthread_mutex_unlock(&amp;q-&gt;mutex);
+                        if (rc != 0)
+                                fprintf(stderr, "pthread_cond_wait failed %s:%d.\n", __FILE__, __LINE__);
+                        continue;
+                }
+                pthread_mutex_unlock(&amp;q-&gt;mutex);
+/* ... */
+                /* Encode audio buffer */
+                len = opus_encode(encoder, b-&gt;audio_buffer, VC_BUFFER_SIZE, b-&gt;opus_buffer, OPUS_PACKET_SIZE);
+                if (len &lt; 0) { /* Error */
+                        fprintf(stderr, "opus_encode failed: %s\n", opus_strerror(len));
+                        goto quit;
+                }
+
+                /* Transmit audio buffer to server */
+                transmit_opus_packet_to_server(b-&gt;opus_buffer, len, b-&gt;destination, b-&gt;snis_radio_channel);
+                free(b);
+        }
+</pre>
+<p>The function that does the compression is opus_encode(), and
+transmit_opus_packet_to_server() transmits the compressed audio to the server.
+
+<p><h4>Receiving and routing the audio on the Server</h4>
+
+<p>When the server receives a packet of compressed audio from a client, it
+knows which client it came from (because of which socket it came in on and
+which thread is monitoring that socket), and which token, if any that client
+currently possesses (because if the client has a token, it’s because the server
+gave the client the token and remembers which one, or if it didn’t give it
+one).
+
+<p>If the client does not have a token, the packet is dropped. If it does have
+a token, then this token determines which of the 4 audio channels this data
+belongs to, and the data is fanned out to the destination clients along with
+the token number. The client which sent the data is generally excluded from
+receiving its own audio data back, as there’s no point in repeating back to
+them what they just said but with a slight delay.
+
+<p>That code looks like this:
+<pre>
+        pthread_mutex_lock(&amp;universe_mutex);
+        client_lock();
+        if (c-&gt;talking_stick == NO_TALKING_STICK) {
+                /* Client does not have talking stick. */
+                client_unlock();
+                pthread_mutex_unlock(&amp;universe_mutex);
+                return 0;
+        }
+        /* Ignore audio chain from client, it put NO_TALKING_STICK there anyway 'cause it doesn't know */
+        audio_chain = c-&gt;talking_stick;
+        client_unlock();
+        pthread_mutex_unlock(&amp;universe_mutex);
+        pb = packed_buffer_allocate(10 + datalen);
+        packed_buffer_append(pb, "bhbwhr", OPCODE_OPUS_AUDIO_DATA,
+                                (uint16_t) audio_chain, destination, radio_channel, datalen, buffer, datalen);
+
+        /* Don't send a client's own audio back at him. */
+        except.nclients = 1;
+        except.client[0] = c - &amp;client[0];
+        except.shipid[0] = c-&gt;shipid;
+
+        switch (destination) {
+        case VOICE_CHAT_DESTINATION_CREW:
+                send_packet_to_all_clients_on_a_bridge_except(c-&gt;shipid, pb, ROLE_ALL, &amp;except);
+                break;
+        case VOICE_CHAT_DESTINATION_ALL:
+        case VOICE_CHAT_DESTINATION_CHANNEL: /* TODO: implement radio channels */
+                send_packet_to_all_clients_except(pb, ROLE_ALL, &amp;except);
+                break;
+        default:
+                fprintf(stderr, "Unexpected destination code %hhu in opus audio packet\n", destination);
+                return -1;
+        }
+</pre>
+
+<p><h4>Decompressing and playing back data</h4>
+
+<p>When the client receives audio data, it is put into an “incoming” queue. The
+data is accompanied by a token number.
+<pre>
+void voice_chat_play_opus_packet(uint8_t *opus_buffer, int buflen, int audio_chain)
+{
+        if (buflen &gt; VC_BUFFER_SIZE)
+                buflen = VC_BUFFER_SIZE;
+        if (audio_chain &lt; 0 || audio_chain &gt; WWVIAUDIO_CHAIN_COUNT)
+                return;
+        pthread_mutex_lock(&amp;incoming.mutex);
+        enqueue_opus_audio(&amp;incoming, opus_buffer, buflen, audio_chain);
+        pthread_mutex_unlock(&amp;incoming.mutex);
+}
+</pre>
+
+<p>The “incoming” queue is consumed by a thread for decoding the audio packets.
+The thread uses the token number for each audio packet to determine which of
+the 4 opus decoders (decompressors) is used to decompress the data. The opus
+decoders are stateful, and their state depends on previously decoded packets,
+so it is important not to interleave packets from different clients into a
+decoder.
+
+<p>Once the data is decompressed, it is appended to one of the 4 chains of VOIP
+audio data the mixer consumes according to the token number.
+
+<p>The meat of that code looks like this:
+<pre>
+        while (1) {
+
+                /* Get an audio buffer from the queue */
+                pthread_mutex_lock(&amp;q-&gt;mutex);
+                b = dequeue_audio_buffer(q);
+                if (!b) {
+                        rc = pthread_cond_wait(&amp;q-&gt;event_cond, &amp;q-&gt;mutex);
+                        if (q-&gt;time_to_stop) {
+                                pthread_mutex_unlock(&amp;q-&gt;mutex);
+                                goto quit;
+                        }
+                        pthread_mutex_unlock(&amp;q-&gt;mutex);
+                        if (rc != 0)
+                                fprintf(stderr, "pthread_cond_wait failed %s:%d.\n", __FILE__, __LINE__);
+                        continue;
+                }
+                pthread_mutex_unlock(&amp;q-&gt;mutex);
+
+                /* decode audio buffer */
+                i = b-&gt;audio_chain;
+                len = opus_decode(opus_decoder[i], b-&gt;opus_buffer, b-&gt;nopus_bytes, b-&gt;audio_buffer, VC_BUFFER_SIZE, 0);
+                if (len &lt; 0) {
+                        fprintf(stderr, "opus_decode failed\n");
+                        goto quit;
+                }
+/* ... */
+                playback_level = get_max_level(b);
+
+                /* If it's been a couple seconds since we've seen data on this chain then
+                 * inject 100ms of silence ahead of the data to put the mixer 100ms behind
+                 * it so that if there's jitter or some space between subsequent packets,
+                 * there's a little bit of slack before the mixer runs out.
+                 */
+                mcc = wwviaudio_get_mixer_cycle_count();
+                difference = mcc - last_mixer_cycle_count[b-&gt;audio_chain];
+                if (difference &gt; (4 * 48000) / VC_BUFFER_SIZE &amp;&amp; difference &lt; (unsigned int) 0xfffff000)  {
+                        /* &gt; about 4 seconds at VC_BUFFER_SIZE samples per mixer cycle */
+                        /* &lt; 0xfffff000 to avoid hiccup at mcc wraparound */
+                        wwviaudio_append_to_audio_chain(short_silence, ARRAYSIZE(short_silence),
+                                                        b-&gt;audio_chain, NULL, NULL);
+                }
+                last_mixer_cycle_count[b-&gt;audio_chain] = mcc;
+
+                /* Let the mixer have the data */
+                wwviaudio_append_to_audio_chain(b-&gt;audio_buffer, len, b-&gt;audio_chain, free_audio_buffer, b);
+        }
+</pre>
+<p><h4>Mixing the audio</h4>
+
+<p>The mixer mixes several (about 10-20) channels of data dedicated for
+preloaded sound effects and 4 channels of VOIP data. The VOIP data is in the
+form of a linked list. When one chunk of audio data is consumed the mixer calls
+a callback function associated with that data (typically used to free the
+buffers containing the data) and then the mixer moves on to the next chunk in
+the linked list. Data may be appended to the list at any time by the thread
+doing decompression of audio data incoming from the network.
+
+<p>The mixer function is quite complex, but it’s <a href="https://github.com/smcameron/space-nerds-in-space/blob/master/wwviaudio.c#L236">here</a>.
+
 
 <h2><a name="snisserver">SNIS Server</a></h2>
 <h3><a name="snisserveroverview">Overview<a/></h3>
