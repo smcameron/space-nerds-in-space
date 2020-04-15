@@ -124,6 +124,7 @@
 #include "snis_voice_chat.h"
 #include "talking_stick.h"
 #include "wwviaudio.h" /* Just for WWVIAUDIO_CHAIN_COUNT */
+#include "transport_contract.h"
 
 #define CLIENT_UPDATE_PERIOD_NSECS 500000000
 #define MAXCLIENTS 100
@@ -242,6 +243,8 @@ static struct starbase_file_metadata *starbase_metadata;
 static struct docking_port_attachment_point **docking_port_info;
 static struct passenger_data passenger[MAX_PASSENGERS];
 static int npassengers;
+static struct transport_contract *transport_contract[MAX_TRANSPORT_CONTRACTS] = { 0 };
+static int ntransport_contracts = 0;
 
 static struct multiverse_server_info {
 	int sock;			/* Socket to the snis_multiverse process */
@@ -324,6 +327,12 @@ static void npc_menu_item_mining_bot_retarget(struct npc_menu_item *item,
 				char *npcname, struct npc_bot_state *botstate);
 static void npc_menu_item_mining_bot_cam(struct npc_menu_item *item,
 				char *npcname, struct npc_bot_state *botstate);
+static void npc_menu_item_view_contracts(struct npc_menu_item *item,
+				char *npcname, struct npc_bot_state *botstate);
+static void npc_menu_item_deliver_contract_cargo(struct npc_menu_item *item,
+				char *npcname, struct npc_bot_state *botstate);
+static void npc_menu_item_pickup_contract_cargo(struct npc_menu_item *item,
+				char *npcname, struct npc_bot_state *botstate);
 static void send_to_npcbot(int bridge, char *name, char *msg);
 
 typedef void (*npc_special_bot_fn)(struct snis_entity *o, int bridge, char *name, char *msg);
@@ -361,11 +370,21 @@ static struct npc_menu_item repairs_and_fuel_menu[] = {
 	{ 0, 0, 0, 0 }, /* mark end of menu items */
 };
 
+static struct npc_menu_item transport_contracts_menu[] = {
+	/* by convention, first element is menu title */
+	{ "TRANSPORT CONTRACTS", 0, 0, 0 },
+	{ "VIEW AVAILABLE TRANSPORT CONTRACTS", 0, 0, npc_menu_item_view_contracts },
+	{ "DELIVER CONTRACTED CARGO", 0, 0, npc_menu_item_deliver_contract_cargo },
+	{ "PICK UP CONTRACTED CARGO", 0, 0, npc_menu_item_pickup_contract_cargo },
+	{ 0, 0, 0, 0 }, /* mark end of menu items */
+};
+
 static struct npc_menu_item cargo_and_passengers_menu[] = {
 	/* by convention, first element is menu title */
 	{ "CARGO PASSENGERS AND BOUNTIES", 0, 0, 0 },
 	{ "BUY CARGO", 0, 0, npc_menu_item_choose_cargo_category },
 	{ "SELL CARGO", 0, 0, npc_menu_item_sell_cargo },
+	{ "TRANSPORT CONTRACTS", 0, transport_contracts_menu, 0 },
 	{ "BOARD PASSENGERS", 0, 0, npc_menu_item_board_passengers },
 	{ "DISEMBARK PASSENGERS", 0, 0, npc_menu_item_disembark_passengers },
 	{ "EJECT PASSENGERS (FINES APPLY)", 0, 0, npc_menu_item_eject_passengers },
@@ -492,6 +511,9 @@ static struct bridge_data {
 	char enciphered_message[256];
 	char cipher_key[26], guessed_key[26];
 	int flare_cooldown;
+#define MAX_PLAYER_CONTRACTS 8
+	struct transport_contract *contract[MAX_PLAYER_CONTRACTS];
+	int ncontracts;
 	/* persistent_bridge_data contains per-bridge data which is saved/restored by snis_multiverse
 	 * but which is not present within snis_entity. (e.g. engineering preset data).
 	 * See snis_bridge_update_packet.h.
@@ -1866,6 +1888,40 @@ static void respawn_object(struct snis_entity *o)
 	return;
 }
 
+/* When a starbase is removed, any contracts that refer to that starbase
+ * need to be modified.
+ */
+static void modify_transport_contracts(uint32_t location_id)
+{
+	int i;
+
+	for (i = 0; i < ntransport_contracts; i++) {
+		if (transport_contract[i]->origin == location_id) {
+			if (transport_contract[i]->assigned_to == (uint32_t) -1) {
+				/* Replace this contract with a new one. */
+				free_transport_contract(transport_contract[i]);
+				transport_contract[i] =
+					create_transport_contract(universe_timestamp, commodity, ncommodities);
+				continue;
+			} else {
+				transport_contract[i]->origin = (uint32_t) -1;
+			}
+		}
+		if (transport_contract[i]->destination == location_id) {
+			if (transport_contract[i]->assigned_to == (uint32_t) -1) {
+				/* Replace this contract with a new one. */
+				free_transport_contract(transport_contract[i]);
+				transport_contract[i] =
+					create_transport_contract(universe_timestamp, commodity, ncommodities);
+				continue;
+			} else {
+				/* The cargo now belongs to the player */
+				transport_contract[i]->destination = (uint32_t) -1;
+			}
+		}
+	}
+}
+
 static void delete_object(struct snis_entity *o)
 {
 	remove_space_partition_entry(space_partition, &o->partition);
@@ -1878,8 +1934,11 @@ static void delete_object(struct snis_entity *o)
 	if (o->type == OBJTYPE_SHIP1 || o->type == OBJTYPE_DERELICT)
 		ship_registry_delete_ship_entries(&ship_registry, o->id);
 	/* If a starbase gets killed, any bounties registered for it should get wiped out */
-	if (o->type == OBJTYPE_STARBASE)
+	if (o->type == OBJTYPE_STARBASE) {
 		ship_registry_delete_bounty_entries_by_site(&ship_registry, o->id);
+		remove_transport_contract_shipping_location(o->id);
+		modify_transport_contracts(o->id);
+	}
 
 	if (o->type == OBJTYPE_DERELICT && o->tsd.derelict.ships_log) {
 		free(o->tsd.derelict.ships_log);
@@ -2891,6 +2950,25 @@ static void inflict_rts_main_base_damage(struct snis_entity *o, struct snis_enti
 			break;
 		}
 	}
+}
+
+static void update_transport_contracts(void)
+{
+	int i;
+
+	if ((universe_timestamp % 600) == 0) { /* once per minute */
+		for (i = 0; i < ntransport_contracts; i++) {
+			int timeleft = transport_contract[i]->due_date - universe_timestamp;
+			if (timeleft < 700 * 4) /* if less than a bit more than 3 minutes */
+				/* Give it 3 - 4 more minutes */
+				transport_contract[i]->due_date += 600 * 3 + snis_randn(600);
+		}
+	}
+	if (ntransport_contracts >= MAX_TRANSPORT_CONTRACTS)
+		return;
+	transport_contract[ntransport_contracts] =
+			create_transport_contract(universe_timestamp, commodity, ncommodities);
+	ntransport_contracts++;
 }
 
 static void disable_rts_mode(void);
@@ -12494,6 +12572,7 @@ static int add_starbase(double x, double y, double z,
 	ship_registry_add_owner(&ship_registry, go[i].id,
 			go[i].id % num_spacecraft_manufacturers() + 1);
 	ship_registry_add_entry(&ship_registry, go[i].id, SHIP_REG_TYPE_REGISTRATION, registration);
+	add_transport_contract_shipping_location(go[i].id);
 
 	return i;
 }
@@ -15241,8 +15320,14 @@ static void get_location_name(int id, char *buffer, int bufsize)
 
 static void format_date(char *buf, int bufsize, double date)
 {
+
+	int mins, secs;
+
+	mins = (int) (round(date - universe_timestamp) / 10.0) / 60;
+	secs = (int) (round(date - universe_timestamp) / 10.0) % 60;
+
 	buf[bufsize - 1] = '\0';
-	snprintf(buf, bufsize, "%-8.1f", FICTIONAL_DATE(date));
+	snprintf(buf, bufsize, "%d:%02d", mins, secs);
 }
 
 static void format_due_date(char *buf, int bufsize, double date)
@@ -15339,6 +15424,37 @@ static void meta_comms_inventory(char *name, struct game_client *c, char *txt)
 		for (i = 0; i < bridgelist[c->bridge].nship_id_chips; i++)
 			send_comms_packet(NULL, name, ch, " SHIP ID CHIP REGISTERED AS %u",
 						bridgelist[c->bridge].ship_id_chip[i]);
+	}
+	if (bridgelist[c->bridge].ncontracts > 0) {
+		struct bridge_data *b = &bridgelist[c->bridge];
+		send_comms_packet(NULL, name, ch, " TRANSPORT CONTRACTS CURRENTLY IN FORCE:");
+		for (i = 0; i < bridgelist[c->bridge].ncontracts; i++) {
+			char due_date[20];
+			char *dn, *on;
+			int d, o;
+			d = lookup_by_id(b->contract[i]->destination);
+			dn = (d < 0) ?  "UNKNOWN" : go[d].sdata.name;
+			o = lookup_by_id(b->contract[i]->origin);
+			on = (o < 0) ?  "UNKNOWN" : go[o].sdata.name;
+			send_comms_packet(NULL, name, ch, " ---------------------");
+			send_comms_packet(NULL, name, ch, " CONTRACT ID: %u", b->contract[i]->contract_id);
+			send_comms_packet(NULL, name, ch, " ASSIGNED TO: %s", b->shipname);
+			format_due_date(due_date, sizeof(due_date), (double) b->contract[i]->due_date);
+			send_comms_packet(NULL, name, ch, " DUE DATE: %s", due_date);
+			send_comms_packet(NULL, name, ch, " RECIPIENT: %s", b->contract[i]->recipient);
+			send_comms_packet(NULL, name, ch, " DESTINATION: %s", dn);
+			send_comms_packet(NULL, name, ch, " SHIPPER: %s", b->contract[i]->shipper);
+			send_comms_packet(NULL, name, ch, " ORIGIN: %s", on);
+			send_comms_packet(NULL, name, ch, " SHIPPING FEE: $%.0f", b->contract[i]->shipping_fee);
+			send_comms_packet(NULL, name, ch, " CARGO: %.1f %s %s", b->contract[i]->qty,
+						commodity[b->contract[i]->item].unit,
+						commodity[b->contract[i]->item].name);
+			send_comms_packet(NULL, name, ch, " CARGO VALUE: $%.0f\n", b->contract[i]->cargo_value);
+			send_comms_packet(NULL, name, ch, " STATUS: %s",
+				b->contract[i]->loaded ? "IN TRANSIT" : "READY FOR PICKUP");
+		}
+	} else {
+		send_comms_packet(NULL, name, ch, " NO TRANSPORT CONTRACTS CURRENTLY IN FORCE");
 	}
 	send_comms_packet(NULL, name, ch, " --------------------------------------");
 }
@@ -16106,6 +16222,322 @@ static void npc_menu_item_sell_cargo(struct npc_menu_item *item,
 					char *npcname, struct npc_bot_state *botstate)
 {
 	npc_menu_item_buysell_cargo(item, npcname, botstate, 0);
+}
+
+static void starbase_view_transport_contracts_bot(struct snis_entity *sb, int bridge,
+						char *name, char *command)
+{
+	struct npc_bot_state *botstate = &bridgelist[bridge].npcbot;
+	uint32_t ch = botstate->channel;
+	char *npcname = sb->sdata.name;
+	int i, j, d, selection;
+	struct snis_entity *ship;
+	int letter;
+
+	if (!command)
+		return;
+
+	i = lookup_by_id(bridgelist[bridge].shipid);
+	if (i < 0) {
+		fprintf(stderr, "BUG: can't find ship id at %s:%d\n", __FILE__, __LINE__);
+		return;
+	}
+	ship = &go[i];
+	if (command[0] == '0') {
+		botstate->special_bot = NULL;
+		send_to_npcbot(bridge, name, ""); /* poke generic bot so he says something */
+		return;
+	}
+	letter = toupper(command[0]);
+	selection = -1;
+	if (letter >= 'A' && letter <= 'Z') {
+		j = 'A';
+		for (i = 0; i < ntransport_contracts; i++) {
+			struct transport_contract *tc = transport_contract[i];
+			if (tc->origin != sb->id)
+				continue;
+			d = lookup_by_id(tc->destination);
+			if (d < 0)
+				continue;
+			if (j == letter) {
+				selection = i;
+				break;
+			}
+			j++;
+		}
+	}
+	if (selection >= 0) {
+		struct bridge_data *b = container_of(botstate, struct bridge_data, npcbot);
+
+		if (b->ncontracts >= MAX_PLAYER_CONTRACTS) {
+			send_comms_packet(sb, npcname, ch,
+				" SORRY, YOU MAY NOT ACCEPT MORE THAN %d CONCURRENT CONTRACTS",
+				MAX_PLAYER_CONTRACTS);
+			return;
+		}
+		b->contract[b->ncontracts] = duplicate_transport_contract(transport_contract[selection]);
+		b->contract[b->ncontracts]->assigned_to = ship->id;
+		b->ncontracts++;
+		delete_transport_contract(transport_contract, &ntransport_contracts, selection);
+		send_comms_packet(sb, npcname, ch,
+			" THANK YOU FOR ACCEPTING THIS SHIPPING CONTRACT");
+		return;
+	}
+
+	/* print out a menu of all the contracts we could accept */
+	send_comms_packet(sb, npcname, ch, " AVAILABLE TRANSPORT CONTRACTS\n");
+	send_comms_packet(sb, npcname, ch, " -----------------------------\n");
+	j = 'A';
+	for (i = 0; i < ntransport_contracts; i++) {
+		struct transport_contract *tc = transport_contract[i];
+		struct commodity *c;
+		char due_date[20];
+		if (tc->origin != sb->id)
+			continue;
+		d = lookup_by_id(tc->destination);
+		if (d < 0)
+			continue;
+		c = &commodity[tc->item];
+		format_due_date(due_date, sizeof(due_date), tc->due_date);
+		send_comms_packet(sb, npcname, ch, " %c $%.0f DELIVER %.1f %s %s TO %s WITHIN %s",
+			j, tc->shipping_fee, tc->qty, c->unit, c->name, go[d].sdata.name, due_date);
+		if (j == 'Z')
+			break;
+		j++;
+	}
+	send_comms_packet(sb, npcname, ch, " 0 PREVIOUS MENU");
+	send_comms_packet(sb, npcname, ch, " -----------------------------\n");
+	send_comms_packet(sb, npcname, ch, " SELECT A CONTRACT\n");
+}
+
+static void starbase_pickup_contract_cargo_bot(struct snis_entity *sb, int bridge,
+						char *name, char *command)
+{
+	struct npc_bot_state *botstate = &bridgelist[bridge].npcbot;
+	uint32_t ch = botstate->channel;
+	char *npcname = sb->sdata.name;
+	int i, selection;
+	struct snis_entity *ship;
+	int count, letter, player_is_docked;
+	struct bridge_data *b = &bridgelist[bridge];
+
+	if (!command)
+		return;
+
+	i = lookup_by_id(bridgelist[bridge].shipid);
+	if (i < 0) {
+		fprintf(stderr, "BUG: can't find ship id at %s:%d\n", __FILE__, __LINE__);
+		return;
+	}
+	ship = &go[i];
+	if (command[0] == '0') {
+		botstate->special_bot = NULL;
+		send_to_npcbot(bridge, name, ""); /* poke generic bot so he says something */
+		return;
+	}
+	player_is_docked = ship_is_docked(ship->id, sb);
+	if (!player_is_docked) {
+		send_comms_packet(sb, npcname, ch, " YOU WILL NEED TO DOCK BEFORE YOU CAN PICK UP CARGO");
+		return;
+	}
+	letter = toupper(command[0]);
+	selection = -1;
+	if (letter >= 'A' && letter <= 'Z') {
+		count = 0;
+		for (i = 0; i < b->ncontracts; i++) {
+			struct transport_contract *tc = b->contract[i];
+
+			if (tc->loaded == 0 && tc->origin == sb->id) {
+				if (count == letter - 'A') {
+					selection = i;
+					break;
+				}
+				count++;
+			}
+		}
+		if (selection != -1) {
+			struct transport_contract *tc = b->contract[selection];
+			int bay = find_empty_cargo_bay(ship);
+			if (bay < 0) {
+				send_comms_packet(sb, npcname, ch, " YOU HAVE NO EMPTY CARGO BAYS");
+				return;
+			}
+			ship->tsd.ship.cargo[bay].contents.item = tc->item;
+			ship->tsd.ship.cargo[bay].contents.qty = tc->qty;
+			ship->tsd.ship.cargo[bay].origin = tc->origin;
+			ship->tsd.ship.cargo[bay].dest = tc->destination;
+			ship->tsd.ship.cargo[bay].due_date = tc->due_date;
+			tc->loaded = bay + 1;
+			snis_queue_add_sound(TRANSPORTER_SOUND, ROLE_SOUNDSERVER, ship->id);
+			send_comms_packet(sb, npcname, ch, " CARGO LOADED FOR CONTRACT %u", tc->contract_id);
+			return;
+		}
+	}
+	if (selection == -1) {
+		count = 0;
+		for (i = 0; i < b->ncontracts; i++) {
+			struct transport_contract *tc = b->contract[i];
+			struct commodity *c = &commodity[tc->item];
+			int d = lookup_by_id(tc->destination);
+			char due_date[20];
+
+			if (tc->loaded == 0 && tc->origin == sb->id) {
+				if (count == 0)
+					send_comms_packet(sb, npcname, ch, " YOUR CONTRACTS");
+				format_due_date(due_date, sizeof(due_date), (double) tc->due_date);
+				send_comms_packet(sb, npcname, ch, " %c $%.0f DELIVER %.1f %s %s TO %s WITHIN %s",
+					count + 'A', tc->shipping_fee, tc->qty, c->unit, c->name,
+					d >= 0 ? go[d].sdata.name : "UNKNOWN", due_date);
+				count++;
+			}
+		}
+		if (count == 0) {
+			send_comms_packet(sb, npcname, ch,
+				" YOU HAVE NO TRANSPORT CONTRACTS ORIGINATING AT THIS LOCATION");
+		}
+		send_comms_packet(sb, npcname, ch, " 0 PREVIOUS MENU");
+	}
+}
+
+static void starbase_deliver_contract_cargo_bot(struct snis_entity *sb, int bridge,
+						char *name, char *command)
+{
+	struct npc_bot_state *botstate = &bridgelist[bridge].npcbot;
+	uint32_t ch = botstate->channel;
+	char *npcname = sb->sdata.name;
+	int i, selection;
+	struct snis_entity *ship;
+	int count, letter, player_is_docked;
+	struct bridge_data *b = &bridgelist[bridge];
+
+	if (!command)
+		return;
+
+	i = lookup_by_id(bridgelist[bridge].shipid);
+	if (i < 0) {
+		fprintf(stderr, "BUG: can't find ship id at %s:%d\n", __FILE__, __LINE__);
+		return;
+	}
+	ship = &go[i];
+	if (command[0] == '0') {
+		botstate->special_bot = NULL;
+		send_to_npcbot(bridge, name, ""); /* poke generic bot so he says something */
+		return;
+	}
+	player_is_docked = ship_is_docked(ship->id, sb);
+	if (!player_is_docked) {
+		send_comms_packet(sb, npcname, ch, " YOU WILL NEED TO DOCK BEFORE YOU CAN DELIVER CARGO");
+		return;
+	}
+	letter = toupper(command[0]);
+	selection = -1;
+	if (letter >= 'A' && letter <= 'Z') {
+		count = 0;
+		for (i = 0; i < b->ncontracts; i++) {
+			struct transport_contract *tc = b->contract[i];
+
+			if (tc->loaded != 0 && tc->destination == sb->id) {
+				if (count == letter - 'A') {
+					selection = i;
+					break;
+				}
+				count++;
+			}
+		}
+		if (selection != -1) {
+			struct transport_contract *tc = b->contract[selection];
+			int bay = tc->loaded - 1;
+			assert(bay >= 0 && bay < ship->tsd.ship.ncargo_bays);
+			ship->tsd.ship.cargo[bay].contents.item = -1;
+			ship->tsd.ship.cargo[bay].contents.qty = 0;
+			ship->tsd.ship.cargo[bay].origin = -1;
+			ship->tsd.ship.cargo[bay].dest = -1;
+			ship->tsd.ship.cargo[bay].due_date = -1;
+			snis_queue_add_sound(TRANSPORTER_SOUND, ROLE_SOUNDSERVER, ship->id);
+			send_comms_packet(sb, npcname, ch,
+				" CARGO DELIVERED AND CONTRACT %u COMPLETED", tc->contract_id);
+			ship->tsd.ship.wallet += tc->shipping_fee;
+			delete_transport_contract(b->contract, &b->ncontracts, selection);
+			/* TODO check the due date on the contract. */
+			return;
+		}
+	}
+	if (selection == -1) {
+		count = 0;
+		for (i = 0; i < b->ncontracts; i++) {
+			struct transport_contract *tc = b->contract[i];
+			struct commodity *c = &commodity[tc->item];
+			int d = lookup_by_id(tc->destination);
+			char due_date[20];
+
+			if (tc->loaded != 0 && tc->destination == sb->id) {
+				if (count == 0)
+					send_comms_packet(sb, npcname, ch, " YOUR CONTRACTS");
+				format_due_date(due_date, sizeof(due_date), (double) tc->due_date);
+				send_comms_packet(sb, npcname, ch, " %c $%.0f DELIVER %.1f %s %s TO %s WITHIN %s",
+					count + 'A', tc->shipping_fee, tc->qty, c->unit, c->name,
+					d >= 0 ? go[d].sdata.name : "UNKNOWN", due_date);
+				count++;
+			}
+		}
+		if (count == 0) {
+			send_comms_packet(sb, npcname, ch,
+				" YOU HAVE NO TRANSPORT CONTRACTS DELIVERING TO THIS LOCATION");
+		}
+		send_comms_packet(sb, npcname, ch, " 0 PREVIOUS MENU");
+	}
+}
+
+static void npc_menu_item_transport_contracts(struct npc_menu_item *item,
+					char *npcname, struct npc_bot_state *botstate, int choice)
+{
+	struct bridge_data *b;
+	int i, bridge;
+
+	i = lookup_by_id(botstate->object_id);
+	if (i < 0) {
+		printf("nonfatal bug in %s at %s:%d\n", __func__, __FILE__, __LINE__);
+		return;
+	}
+
+	/* find our bridge... */
+	b = container_of(botstate, struct bridge_data, npcbot);
+	bridge = b - bridgelist;
+
+	/* poke the special bot to make it say something. */
+	switch (choice) {
+	case 0:
+		botstate->special_bot = starbase_view_transport_contracts_bot;
+		break;
+	case 1:
+		botstate->special_bot = starbase_deliver_contract_cargo_bot;
+		break;
+	case 2:
+		botstate->special_bot = starbase_pickup_contract_cargo_bot;
+		break;
+	default:
+		botstate->special_bot = NULL;
+		break;
+	}
+	send_to_npcbot(bridge, npcname, ""); /* poke bot so he says something */
+}
+
+static void npc_menu_item_view_contracts(struct npc_menu_item *item,
+					char *npcname, struct npc_bot_state *botstate)
+{
+	npc_menu_item_transport_contracts(item, npcname, botstate, 0);
+}
+
+static void npc_menu_item_deliver_contract_cargo(struct npc_menu_item *item,
+					char *npcname, struct npc_bot_state *botstate)
+{
+	npc_menu_item_transport_contracts(item, npcname, botstate, 1);
+}
+
+static void npc_menu_item_pickup_contract_cargo(struct npc_menu_item *item,
+					char *npcname, struct npc_bot_state *botstate)
+{
+	npc_menu_item_transport_contracts(item, npcname, botstate, 2);
 }
 
 static void starbase_passenger_boarding_npc_bot(struct snis_entity *sb, int bridge,
@@ -24802,6 +25234,8 @@ static int add_new_player(struct game_client *c)
 		strcpy(bridgelist[nbridges].last_text_to_speech, "");
 		bridgelist[nbridges].text_to_speech_volume = 0.33;
 		bridgelist[nbridges].text_to_speech_volume_timestamp = universe_timestamp;
+		memset(bridgelist[nbridges].contract, 0, sizeof(bridgelist[nbridges].contract));
+		bridgelist[nbridges].ncontracts = 0;
 		clear_bridge_waypoints(nbridges);
 		fill_default_presets(nbridges);
 		c->bridge = nbridges;
@@ -30350,6 +30784,7 @@ int main(int argc, char *argv[])
 		}
 		simulate_slow_server(0);
 		check_rts_finish_condition();
+		update_transport_contracts();
 	}
 	space_partition_free(space_partition);
 	lua_teardown();

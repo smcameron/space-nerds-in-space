@@ -1155,6 +1155,7 @@ struct damcon_data {
 #define FICTIONAL_CLOCK_START (4273.0)
 #define FICTIONAL_DATE(timestamp) (FICTIONAL_CLOCK_START + (timestamp) / 1000.0)
 
+#define MAX_TRANSPORT_CONTRACTS 100
 #define MAX_PASSENGERS (NBASES * 5)
 #define PASSENGER_BERTHS 8
 struct passenger_data {
