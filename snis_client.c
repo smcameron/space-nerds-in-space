@@ -18094,6 +18094,8 @@ static struct tweakable_var_descriptor client_tweak[] = {
 		&tonemapping_gain, 'f', 0.0, 1.19, 1.185, 0, 0, 0 },
 	{ "PLANETARY_LIGHTNING", "PLANETARY LIGHTNING ACTIVE 0 - 1",
 		&planetary_lightning, 'i', 0.0, 0.0, 0.0, 0, 1, 1 },
+	{ "DISPLAY_FRAME_STATS", "DISPLAY FRAME RATE EVEN IF AT ACCEPTABLE LEVELS",
+		&display_frame_stats, 'i', 0.0, 0.0, 0.0, 0, 1, 0 },
 	{ NULL, NULL, NULL, '\0', 0.0, 0.0, 0.0, 0, 0, 0 },
 };
 
