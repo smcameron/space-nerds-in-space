@@ -11966,8 +11966,7 @@ static void ui_add_slider(struct slider *s, int active_displaymode, char *toolti
 {
 	struct ui_element *uie;
 
-	uie = ui_element_init(s, ui_slider_draw, ui_slider_button_release, ui_slider_inside,
-						active_displaymode, &displaymode);
+	uie = ui_element_init(s, ui_slider_draw, ui_slider_button_release, ui_slider_inside, active_displaymode);
 	ui_element_set_tooltip(uie, tooltip);
 	ui_element_list_add_element(&uiobjs, uie); 
 }
@@ -11976,8 +11975,7 @@ static void ui_add_button(struct button *b, int active_displaymode, char *toolti
 {
 	struct ui_element *uie;
 
-	uie = ui_element_init(b, ui_button_draw, ui_button_button_release, ui_button_inside,
-						active_displaymode, &displaymode);
+	uie = ui_element_init(b, ui_button_draw, ui_button_button_release, ui_button_inside, active_displaymode);
 	ui_element_set_tooltip(uie, tooltip);
 	ui_element_set_button_press_function(uie, ui_button_button_press);
 	ui_element_list_add_element(&uiobjs, uie); 
@@ -11988,7 +11986,7 @@ static void ui_add_pull_down_menu(struct pull_down_menu *pdm, int active_display
 	struct ui_element *uie;
 
 	uie = ui_element_init(pdm, ui_pull_down_menu_draw, ui_pull_down_menu_button_release,
-				ui_pull_down_menu_inside, active_display_mode, &displaymode);
+				ui_pull_down_menu_inside, active_display_mode);
 	ui_element_set_tooltip(uie, "");
 	ui_set_update_mouse_pos_callback(uie, (ui_update_mouse_pos_function)
 						pull_down_menu_update_mouse_pos);
@@ -11999,8 +11997,7 @@ static void ui_add_strip_chart(struct strip_chart *sc, int active_displaymode)
 {
 	struct ui_element *uie;
 
-	uie = ui_element_init(sc, ui_strip_chart_draw, NULL, NULL,
-		active_displaymode, &displaymode);
+	uie = ui_element_init(sc, ui_strip_chart_draw, NULL, NULL, active_displaymode);
 	ui_element_list_add_element(&uiobjs, uie);
 }
 
@@ -12008,8 +12005,7 @@ static void ui_add_scaling_strip_chart(struct scaling_strip_chart *sc, int activ
 {
 	struct ui_element *uie;
 
-	uie = ui_element_init(sc, ui_scaling_strip_chart_draw, NULL, NULL,
-		active_displaymode, &displaymode);
+	uie = ui_element_init(sc, ui_scaling_strip_chart_draw, NULL, NULL, active_displaymode);
 	ui_element_list_add_element(&uiobjs, uie);
 }
 
@@ -12037,8 +12033,7 @@ static void ui_add_label(struct label *l, int active_displaymode)
 {
 	struct ui_element *uie;
 
-	uie = ui_element_init(l, ui_label_draw, NULL, NULL,
-						active_displaymode, &displaymode);
+	uie = ui_element_init(l, ui_label_draw, NULL, NULL, active_displaymode);
 	ui_element_list_add_element(&uiobjs, uie); 
 }
 
@@ -12046,8 +12041,7 @@ static void ui_add_gauge(struct gauge *g, int active_displaymode)
 {
 	struct ui_element *uie;
 
-	uie = ui_element_init(g, ui_gauge_draw, NULL, ui_gauge_inside,
-						active_displaymode, &displaymode);
+	uie = ui_element_init(g, ui_gauge_draw, NULL, ui_gauge_inside, active_displaymode);
 	ui_element_list_add_element(&uiobjs, uie); 
 }
 
@@ -12055,8 +12049,7 @@ static void ui_add_text_window(struct text_window *tw, int active_displaymode)
 {
 	struct ui_element *uie;
 
-	uie = ui_element_init(tw, ui_text_window_draw, ui_text_window_button_release, NULL,
-						active_displaymode, &displaymode);
+	uie = ui_element_init(tw, ui_text_window_draw, ui_text_window_button_release, NULL, active_displaymode);
 	ui_element_list_add_element(&uiobjs, uie); 
 }
 
@@ -12064,8 +12057,7 @@ static void ui_add_text_input_box(struct snis_text_input_box *t, int active_disp
 {
 	struct ui_element *uie;
 
-	uie = ui_element_init(t, ui_text_input_draw, ui_text_input_button_release, NULL,
-						active_displaymode, &displaymode);
+	uie = ui_element_init(t, ui_text_input_draw, ui_text_input_button_release, NULL, active_displaymode);
 	ui_element_set_focus_callback(uie, ui_text_input_box_set_focus);
 	ui_element_get_keystrokes(uie, ui_text_input_keypress, NULL);
 	ui_element_list_add_element(&uiobjs, uie); 
@@ -19916,8 +19908,8 @@ static void show_warp_limbo_screen(void)
 	} else {
 		if (displaymode == DISPLAYMODE_WEAPONS) {
 			show_manual_weapons();
-			ui_element_list_draw(uiobjs);
-			ui_element_list_maybe_draw_tooltips(uiobjs, mouse.x, mouse.y);
+			ui_element_list_draw(uiobjs, displaymode);
+			ui_element_list_maybe_draw_tooltips(uiobjs, mouse.x, mouse.y, displaymode);
 		} else {
 			show_warp_hash_screen();
 		}
@@ -20998,8 +20990,8 @@ static int main_da_expose(SDL_Window *window)
 		show_fonttest();
 		break;
 	}
-	ui_element_list_draw(uiobjs);
-	ui_element_list_maybe_draw_tooltips(uiobjs, mouse.x, mouse.y);
+	ui_element_list_draw(uiobjs, displaymode);
+	ui_element_list_maybe_draw_tooltips(uiobjs, mouse.x, mouse.y, displaymode);
 
 	/* this has to come after ui_element_list_draw() to avoid getting clobbered */
 	if (displaymode == DISPLAYMODE_ENGINEERING)
@@ -21757,7 +21749,7 @@ static int main_da_button_press(SDL_MouseButtonEvent *event)
 		default:
 			break;
 	}
-	ui_element_list_button_press(uiobjs, event->x, event->y);
+	ui_element_list_button_press(uiobjs, event->x, event->y, displaymode);
 	return TRUE;
 }
 
@@ -21818,7 +21810,7 @@ static int main_da_button_release(SDL_MouseButtonEvent *event)
 	default:
 		break;
 	}
-	ui_element_list_button_release(uiobjs, event->x, event->y);
+	ui_element_list_button_release(uiobjs, event->x, event->y, displaymode);
 	return TRUE;
 }
 
@@ -23391,7 +23383,7 @@ static void process_events(SDL_Window *window)
 	/* Grab all the events off the queue. */
 	while (SDL_PollEvent(&event)) {
 
-		if (ui_element_list_event(uiobjs, &event))
+		if (ui_element_list_event(uiobjs, &event, displaymode))
 			break;
 
 		switch (event.type) {
