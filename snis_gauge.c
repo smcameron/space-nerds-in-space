@@ -66,7 +66,7 @@ struct gauge *gauge_init(int x, int y, int r, double r1, double r2,
 	return g;
 }
 
-static void draw_gauge_needle(
+static void draw_gauge_needle(int wn,
 		float x, float y, float r, double a)
 {
 	int x1, y1, x2, y2, x3, y3, x4, y4;
@@ -80,10 +80,10 @@ static void draw_gauge_needle(
 	x4 = r *  sin(a - M_PI / 2.0) * 0.05 + x;
 	y4 = r * -cos(a - M_PI / 2.0) * 0.05 + y;
 
-	sng_current_draw_line(x1, y1, x3, y3);
-	sng_current_draw_line(x3, y3, x2, y2);
-	sng_current_draw_line(x2, y2, x4, y4);
-	sng_current_draw_line(x4, y4, x1, y1);
+	sng_current_draw_line(wn, x1, y1, x3, y3);
+	sng_current_draw_line(wn, x3, y3, x2, y2);
+	sng_current_draw_line(wn, x2, y2, x4, y4);
+	sng_current_draw_line(wn, x4, y4, x1, y1);
 }
 
 void gauge_fill_background(struct gauge *g, int bg, float alpha)
@@ -92,7 +92,7 @@ void gauge_fill_background(struct gauge *g, int bg, float alpha)
 	g->bg_alpha = alpha;
 }
 
-void gauge_draw(struct gauge *g)
+void gauge_draw(int wn, struct gauge *g)
 {
 	int i;
 	double a, ai;
@@ -102,11 +102,11 @@ void gauge_draw(struct gauge *g)
 	char buffer[10], buf2[10];
 
 	if (g->bg_color >= 0) {
-		sng_set_foreground_alpha(g->bg_color, g->bg_alpha);
-		sng_draw_circle(1, g->x, g->y, g->r);
+		sng_set_foreground_alpha(wn, g->bg_color, g->bg_alpha);
+		sng_draw_circle(wn, 1, g->x, g->y, g->r);
 	}
-	sng_set_foreground(g->dial_color);
-	sng_draw_circle(0, g->x, g->y, g->r);
+	sng_set_foreground(wn, g->dial_color);
+	sng_draw_circle(wn, 0, g->x, g->y, g->r);
 
 	ai = g->angular_range / g->ndivs;
 	normalize_angle(&ai);
@@ -129,26 +129,26 @@ void gauge_draw(struct gauge *g)
 		y1 = (y1 + g->y);
 		y2 = (y2 + g->y);
 		y3 = (y3 + g->y);
-		sng_current_draw_line(x1, y1, x2, y2);
+		sng_current_draw_line(wn, x1, y1, x2, y2);
 		sprintf(buf2, "%1.0lf", v / g->multiplier);
 		v += inc;
-		sng_center_xy_draw_string(buf2, g->dial_font, x3, y3);
+		sng_center_xy_draw_string(wn, buf2, g->dial_font, x3, y3);
 	}
-	sng_center_xy_draw_string(g->title, g->label_font,
+	sng_center_xy_draw_string(wn, g->title, g->label_font,
 			g->x, (g->y + (g->r * 0.5)));
 	value = g->sample();
 	sprintf(buffer, "%4.2lf", value);
-	sng_center_xy_draw_string(buffer, g->label_font,
+	sng_center_xy_draw_string(wn, buffer, g->label_font,
 			g->x, (g->y + (g->r * 0.5)) + 15);
 
 	a = ((value - g->r1) / (g->r2 - g->r1))	* g->angular_range + g->start_angle;
-	sng_set_foreground(g->needle_color);
-	draw_gauge_needle(g->x, g->y, g->r, a);
+	sng_set_foreground(wn, g->needle_color);
+	draw_gauge_needle(wn, g->x, g->y, g->r, a);
 
 	if (g->sample2) {
 		a = ((g->sample2() - g->r1) / (g->r2 - g->r1)) * g->angular_range + g->start_angle;
-		sng_set_foreground(g->needle_color2);
-		draw_gauge_needle(g->x, g->y, g->r * 0.8, a);
+		sng_set_foreground(wn, g->needle_color2);
+		draw_gauge_needle(wn, g->x, g->y, g->r * 0.8, a);
 	}
 }
 
@@ -177,11 +177,11 @@ void gauge_set_multiplier(struct gauge *g, float multiplier)
 }
 
 /* Returns true if (physical_x, physical_y) is inside the gauge.  Used for tooltips. */
-int gauge_inside(struct gauge *g, int physical_x, int physical_y)
+int gauge_inside(int wn, struct gauge *g, int physical_x, int physical_y)
 {
 	int x, y, dx, dy;
-	x = sng_pixelx_to_screenx(physical_x);
-	y = sng_pixely_to_screeny(physical_y);
+	x = sng_pixelx_to_screenx(wn, physical_x);
+	y = sng_pixely_to_screeny(wn, physical_y);
 	dx = x - g->x;
 	dy = y - g->y;
 	return dx * dx + dy * dy < g->r * g->r;

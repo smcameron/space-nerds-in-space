@@ -17,7 +17,7 @@ struct label;
  */
 GLOBAL struct label *snis_label_init(int x, int y, char *label,
 					int color, int font);
-GLOBAL void snis_label_draw(struct label *l); /* draw the label */
+GLOBAL void snis_label_draw(int wn, struct label *l); /* draw the label */
 GLOBAL void snis_label_set_color(struct label *l, int color); /* Set the color of a label */
 
 #undef GLOBAL

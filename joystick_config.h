@@ -108,7 +108,7 @@
  */
 
 struct joystick_config;
-typedef void (*joystick_button_fn)(void *x);
+typedef void (*joystick_button_fn)(int wn, void *x);
 typedef void (*joystick_axis_fn)(void *x, int value);
 
 /* Call this to get a new, empty joystick config. */

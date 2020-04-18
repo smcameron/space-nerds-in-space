@@ -30,7 +30,7 @@ GLOBAL struct slider *snis_slider_init(float x, float y, float length, float hei
 
 /* Sets a slider to be drawn vertically or horizontally if v is non-zero or zero respectively */
 GLOBAL void snis_slider_set_vertical(struct slider *s, int v);
-GLOBAL void snis_slider_draw(struct slider *s); /* draws a slider */
+GLOBAL void snis_slider_draw(int wn, struct slider *s); /* draws a slider */
 
 /* Gets the current value of a slider, between 0 and 1 */
 GLOBAL double snis_slider_get_value(struct slider *s);
@@ -42,7 +42,7 @@ GLOBAL double snis_slider_get_input(struct slider *s);
  * Also, if 1, set the input value of the slider and call the slider's clicked()
  * function if it is not null.
  */
-GLOBAL int snis_slider_button_press(struct slider *s, int x, int y);
+GLOBAL int snis_slider_button_press(int wn, struct slider *s, int x, int y);
 
 /* Set an associated sound with the slider */
 GLOBAL void snis_slider_set_sound(int sound);
@@ -89,7 +89,7 @@ GLOBAL void snis_slider_set_label_font(struct slider *s, int font);
 GLOBAL void snis_slider_set_fuzz(struct slider *s, int fuzz);
 
 /* Returns true if the mouse is inside the slider. Used for tooltips */
-GLOBAL int snis_slider_mouse_inside(struct slider *s, int x, int y);
+GLOBAL int snis_slider_mouse_inside(int wn, struct slider *s, int x, int y);
 
 /* Returns the position and dimensions of a slider in x, y, length and height */
 GLOBAL void snis_slider_get_location(struct slider *s, float *x, float *y, float *length, float *height);

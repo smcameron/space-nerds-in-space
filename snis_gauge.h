@@ -39,7 +39,7 @@ GLOBAL void gauge_set_fonts(struct gauge *g, int dial_font, int label_font);
 /* Fills the gauge background with the color bg, with opaqueness alpha */
 GLOBAL void gauge_fill_background(struct gauge *g, int bg, float alpha);
 
-GLOBAL void gauge_draw(struct gauge *g); /* draws the gauge */
+GLOBAL void gauge_draw(int wn, struct gauge *g); /* draws the gauge */
 GLOBAL void gauge_free(struct gauge *g); /* Frees gauge resources */
 
 /* Get location and radius of a gauge */
@@ -51,6 +51,6 @@ GLOBAL void gauge_get_location(struct gauge *g, float *x, float *y, float *r);
 GLOBAL void gauge_set_multiplier(struct gauge *g, float multiplier);
 
 /* Returns true if (physical_x, physical_y) is inside the gauge.  Used for tooltips. */
-GLOBAL int gauge_inside(struct gauge *g, int physical_x, int physical_y);
+GLOBAL int gauge_inside(int wn, struct gauge *g, int physical_x, int physical_y);
 
 #endif

@@ -352,7 +352,7 @@ void joystick_button(struct joystick_config *cfg, void *context, int mode, int d
 	if (button < 0 || button >= MAX_BUTTONS)
 		return;
 	if (cfg->button[mode][device][button])
-		cfg->button[mode][device][button](context);
+		cfg->button[mode][device][button](0, context);
 }
 
 void joystick_axis(struct joystick_config *cfg, void *context, int mode, int device, int axis, int value)

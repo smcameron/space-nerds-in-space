@@ -939,18 +939,25 @@ static struct graph_dev_primitive textured_unit_quad;
 #define BUFFERED_VERTICES_2D 2000
 #define VERTEX_BUFFER_2D_SIZE (BUFFERED_VERTICES_2D*sizeof(struct vertex_color_buffer_data))
 
-static struct graph_dev_gl_context {
+#define MAXWINDOWS 2
+static struct graph_dev_window_context {
 	int screen_x, screen_y;
 	float x_scale, y_scale;
 	struct graph_dev_color *hue; /* current color */
 	int alpha_blend;
 	float alpha;
-	GLuint fbo_current;
 
 	int active_vp; /* 0=none, 1=2d, 2=3d */
 	int vp_x_3d, vp_y_3d, vp_width_3d, vp_height_3d;
-	GLuint fbo_2d;
 	struct mat44 ortho_2d_mvp;
+
+	GLint vp_x, vp_y;
+	GLsizei vp_width, vp_height;
+} sgwc[MAXWINDOWS];
+
+static struct graph_dev_gl_context {
+	GLuint fbo_current;
+
 
 	int nvertex_2d;
 	GLbyte vertex_type_2d[BUFFERED_VERTICES_2D];
@@ -959,12 +966,11 @@ static struct graph_dev_gl_context {
 
 	struct mesh_gl_info gl_info_3d_line;
 	GLuint fbo_3d;
+	GLuint fbo_2d;
 	int texture_unit_active;
 	GLuint texture_unit_bind[4];
 	GLenum src_blend_func;
 	GLenum dest_blend_func;
-	GLint vp_x, vp_y;
-	GLsizei vp_width, vp_height;
 } sgc;
 
 #define BIND_TEXTURE(tex_unit, tex_type, tex_id) \
@@ -989,14 +995,15 @@ static struct graph_dev_gl_context {
 		} \
 	} while (0)
 
-#define VIEWPORT(x, y, width, height) \
+#define VIEWPORT(wn, x, y, width, height) \
 	do { \
-		if (sgc.vp_x != x || sgc.vp_y != y || sgc.vp_width != width || sgc.vp_height != height) { \
+		if (sgwc[wn].vp_x != x || sgwc[wn].vp_y != y || \
+				sgwc[wn].vp_width != width || sgwc[wn].vp_height != height) { \
 			glViewport(x, y, width, height); \
-			sgc.vp_x = x; \
-			sgc.vp_y = y; \
-			sgc.vp_width = width; \
-			sgc.vp_height = height; \
+			sgwc[wn].vp_x = x; \
+			sgwc[wn].vp_y = y; \
+			sgwc[wn].vp_width = width; \
+			sgwc[wn].vp_height = height; \
 		} \
 	} while (0)
 
@@ -1035,19 +1042,20 @@ static void print_framebuffer_error()
 	}
 }
 
-static void resize_fbo_if_needed(struct fbo_target *target)
+static void resize_fbo_if_needed(int wn, struct fbo_target *target)
 {
-	if (target->width != sgc.screen_x || target->height != sgc.screen_y) {
+	if (target->width != sgwc[wn].screen_x || target->height != sgwc[wn].screen_y) {
 		/* need to resize the fbo attachments */
 		if (target->color0_texture > 0) {
 			glBindTexture(GL_TEXTURE_2D, target->color0_texture);
 			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8,
-				sgc.screen_x, sgc.screen_y, 0, GL_RGB, GL_UNSIGNED_BYTE, 0);
+				sgwc[wn].screen_x, sgwc[wn].screen_y, 0, GL_RGB, GL_UNSIGNED_BYTE, 0);
 		}
 
 		if (target->depth_buffer > 0) {
 			glBindRenderbuffer(GL_RENDERBUFFER, target->depth_buffer);
-			glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, sgc.screen_x, sgc.screen_y);
+			glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT,
+						sgwc[wn].screen_x, sgwc[wn].screen_y);
 		}
 
 		glBindFramebuffer(GL_DRAW_FRAMEBUFFER, target->fbo);
@@ -1057,58 +1065,58 @@ static void resize_fbo_if_needed(struct fbo_target *target)
 			print_framebuffer_error();
 		}
 
-		target->width = sgc.screen_x;
-		target->height = sgc.screen_y;
+		target->width = sgwc[wn].screen_x;
+		target->height = sgwc[wn].screen_y;
 	}
 }
 
-void graph_dev_set_screen_size(int width, int height)
+void graph_dev_set_screen_size(int wn, int width, int height)
 {
-	sgc.active_vp = 0;
-	sgc.screen_x = width;
-	sgc.screen_y = height;
+	sgwc[wn].active_vp = 0;
+	sgwc[wn].screen_x = width;
+	sgwc[wn].screen_y = height;
 }
 
-void graph_dev_set_extent_scale(float x_scale, float y_scale)
+void graph_dev_set_extent_scale(int wn, float x_scale, float y_scale)
 {
-	sgc.x_scale = x_scale;
-	sgc.y_scale = y_scale;
+	sgwc[wn].x_scale = x_scale;
+	sgwc[wn].y_scale = y_scale;
 }
 
-void graph_dev_set_3d_viewport(int x_offset, int y_offset, int width, int height)
+void graph_dev_set_3d_viewport(int wn, int x_offset, int y_offset, int width, int height)
 {
-	sgc.active_vp = 0;
-	sgc.vp_x_3d = x_offset;
-	sgc.vp_y_3d = sgc.screen_y - height - y_offset;
-	sgc.vp_width_3d = width;
-	sgc.vp_height_3d = height;
+	sgwc[wn].active_vp = 0;
+	sgwc[wn].vp_x_3d = x_offset;
+	sgwc[wn].vp_y_3d = sgwc[wn].screen_y - height - y_offset;
+	sgwc[wn].vp_width_3d = width;
+	sgwc[wn].vp_height_3d = height;
 }
 
-static void enable_2d_viewport()
+static void enable_2d_viewport(int wn)
 {
-	if (sgc.active_vp != 1) {
+	if (sgwc[wn].active_vp != 1) {
 		/* 2d viewport is entire screen */
-		VIEWPORT(0, 0, sgc.screen_x, sgc.screen_y);
+		VIEWPORT(wn, 0, 0, sgwc[wn].screen_x, sgwc[wn].screen_y);
 
-		float left = 0, right = sgc.screen_x, bottom = 0, top = sgc.screen_y;
+		float left = 0, right = sgwc[wn].screen_x, bottom = 0, top = sgwc[wn].screen_y;
 		float near = -1, far = 1;
 
-		sgc.ortho_2d_mvp.m[0][0] = 2.0 / (right - left);
-		sgc.ortho_2d_mvp.m[0][1] = 0;
-		sgc.ortho_2d_mvp.m[0][2] = 0;
-		sgc.ortho_2d_mvp.m[0][3] = 0;
-		sgc.ortho_2d_mvp.m[1][0] = 0;
-		sgc.ortho_2d_mvp.m[1][1] = 2.0 / (top - bottom);
-		sgc.ortho_2d_mvp.m[1][2] = 0;
-		sgc.ortho_2d_mvp.m[1][3] = 0;
-		sgc.ortho_2d_mvp.m[2][0] = 0;
-		sgc.ortho_2d_mvp.m[2][1] = 0;
-		sgc.ortho_2d_mvp.m[2][2] = -2.0 / (far - near);
-		sgc.ortho_2d_mvp.m[2][3] = 0;
-		sgc.ortho_2d_mvp.m[3][0] = -(right + left) / (right - left);
-		sgc.ortho_2d_mvp.m[3][1] = -(top + bottom) / (top - bottom);
-		sgc.ortho_2d_mvp.m[3][2] = -(far + near) / (far - near);
-		sgc.ortho_2d_mvp.m[3][3] = 1;
+		sgwc[wn].ortho_2d_mvp.m[0][0] = 2.0 / (right - left);
+		sgwc[wn].ortho_2d_mvp.m[0][1] = 0;
+		sgwc[wn].ortho_2d_mvp.m[0][2] = 0;
+		sgwc[wn].ortho_2d_mvp.m[0][3] = 0;
+		sgwc[wn].ortho_2d_mvp.m[1][0] = 0;
+		sgwc[wn].ortho_2d_mvp.m[1][1] = 2.0 / (top - bottom);
+		sgwc[wn].ortho_2d_mvp.m[1][2] = 0;
+		sgwc[wn].ortho_2d_mvp.m[1][3] = 0;
+		sgwc[wn].ortho_2d_mvp.m[2][0] = 0;
+		sgwc[wn].ortho_2d_mvp.m[2][1] = 0;
+		sgwc[wn].ortho_2d_mvp.m[2][2] = -2.0 / (far - near);
+		sgwc[wn].ortho_2d_mvp.m[2][3] = 0;
+		sgwc[wn].ortho_2d_mvp.m[3][0] = -(right + left) / (right - left);
+		sgwc[wn].ortho_2d_mvp.m[3][1] = -(top + bottom) / (top - bottom);
+		sgwc[wn].ortho_2d_mvp.m[3][2] = -(far + near) / (far - near);
+		sgwc[wn].ortho_2d_mvp.m[3][3] = 1;
 
 		if (sgc.fbo_2d > 0) {
 			if (sgc.fbo_current != sgc.fbo_2d) {
@@ -1121,14 +1129,14 @@ static void enable_2d_viewport()
 			sgc.fbo_current = 0;
 		}
 
-		sgc.active_vp = 1;
+		sgwc[wn].active_vp = 1;
 	}
 }
 
-static void enable_3d_viewport()
+static void enable_3d_viewport(int wn)
 {
-	if (sgc.active_vp != 2) {
-		VIEWPORT(sgc.vp_x_3d, sgc.vp_y_3d, sgc.vp_width_3d, sgc.vp_height_3d);
+	if (sgwc[wn].active_vp != 2) {
+		VIEWPORT(wn, sgwc[wn].vp_x_3d, sgwc[wn].vp_y_3d, sgwc[wn].vp_width_3d, sgwc[wn].vp_height_3d);
 
 		if (sgc.fbo_3d > 0) {
 			if (sgc.fbo_current != sgc.fbo_3d) {
@@ -1141,20 +1149,20 @@ static void enable_3d_viewport()
 			sgc.fbo_current = 0;
 		}
 
-		sgc.active_vp = 2;
+		sgwc[wn].active_vp = 2;
 	}
 }
 
 
-void graph_dev_set_color(void *gdk_color, float a)
+void graph_dev_set_color(int wn, void *gdk_color, float a)
 {
-	sgc.hue = gdk_color;
+	sgwc[wn].hue = gdk_color;
 
 	if (a >= 0) {
-		sgc.alpha_blend = 1;
-		sgc.alpha = a;
+		sgwc[wn].alpha_blend = 1;
+		sgwc[wn].alpha = a;
 	} else {
-		sgc.alpha_blend = 0;
+		sgwc[wn].alpha_blend = 0;
 	}
 }
 
@@ -1168,11 +1176,11 @@ void graph_dev_setup_colors(void *gtk_widget, void *gdk_color_huex, int nhuex)
 	/* noop */
 }
 
-static void draw_vertex_buffer_2d()
+static void draw_vertex_buffer_2d(int wn)
 {
 	if (sgc.nvertex_2d > 0) {
 		/* printf("start draw_vertex_buffer_2d %d\n", sgc.nvertex_2d); */
-		enable_2d_viewport();
+		enable_2d_viewport(wn);
 
 		/* transfer into opengl buffer */
 		glBindBuffer(GL_ARRAY_BUFFER, sgc.vertex_buffer_2d);
@@ -1181,7 +1189,7 @@ static void draw_vertex_buffer_2d()
 
 		glUseProgram(vertex_color_shader.program_id);
 
-		glUniformMatrix4fv(vertex_color_shader.mvp_matrix_id, 1, GL_FALSE, &sgc.ortho_2d_mvp.m[0][0]);
+		glUniformMatrix4fv(vertex_color_shader.mvp_matrix_id, 1, GL_FALSE, &sgwc[wn].ortho_2d_mvp.m[0][0]);
 
 		/* load x,y vertex position */
 		glEnableVertexAttribArray(vertex_color_shader.vertex_position_id);
@@ -1255,21 +1263,21 @@ static void draw_vertex_buffer_2d()
 	}
 }
 
-static void make_room_in_vertex_buffer_2d(int nvertices)
+static void make_room_in_vertex_buffer_2d(int wn, int nvertices)
 {
 	if (sgc.nvertex_2d + nvertices > BUFFERED_VERTICES_2D) {
 		/* buffer needs to be emptied to fit next batch */
-		draw_vertex_buffer_2d();
+		draw_vertex_buffer_2d(wn);
 	}
 }
 
-static void add_vertex_2d(float x, float y, struct graph_dev_color *color, GLubyte alpha, GLenum mode)
+static void add_vertex_2d(int wn, float x, float y, struct graph_dev_color *color, GLubyte alpha, GLenum mode)
 {
 	struct vertex_color_buffer_data *vertex = &sgc.vertex_data_2d[sgc.nvertex_2d];
 
 	/* setup the vertex and color */
 	vertex->position[0] = x;
-	vertex->position[1] = sgc.screen_y - y;
+	vertex->position[1] = sgwc[wn].screen_y - y;
 
 	vertex->color[0] = color->red >> 8;
 	vertex->color[1] = color->green >> 8;
@@ -1369,11 +1377,11 @@ struct raster_texture_params {
 	float width;
 };
 
-static void graph_dev_raster_texture(struct raster_texture_params *p)
+static void graph_dev_raster_texture(int wn, struct raster_texture_params *p)
 {
 	const struct graph_dev_gl_textured_shader *shader = p->shader;
 
-	enable_3d_viewport();
+	enable_3d_viewport(wn);
 
 	if (!p->m->graph_ptr)
 		return;
@@ -1574,11 +1582,11 @@ static void graph_dev_raster_texture(struct raster_texture_params *p)
 	}
 }
 
-static void graph_dev_raster_single_color_lit(const struct mat44 *mat_mvp, const struct mat44 *mat_mv,
+static void graph_dev_raster_single_color_lit(int wn, const struct mat44 *mat_mvp, const struct mat44 *mat_mv,
 	const struct mat33 *mat_normal, struct mesh *m, struct sng_color *triangle_color, union vec3 *eye_light_pos,
 	float in_shade, float ambient)
 {
-	enable_3d_viewport();
+	enable_3d_viewport(wn);
 
 	if (!m->graph_ptr)
 		return;
@@ -1642,12 +1650,12 @@ static void graph_dev_raster_single_color_lit(const struct mat44 *mat_mvp, const
 	}
 }
 
-static void graph_dev_raster_atmosphere(const struct mat44 *mat_mvp, const struct mat44 *mat_mv,
+static void graph_dev_raster_atmosphere(int wn, const struct mat44 *mat_mvp, const struct mat44 *mat_mv,
 	const struct mat33 *mat_normal,
 	struct mesh *m, struct sng_color *triangle_color, union vec3 *eye_light_pos, GLfloat alpha,
 	struct shadow_annulus_data *shadow_annulus, float ring_texture_v, float atmosphere_brightness)
 {
-	enable_3d_viewport();
+	enable_3d_viewport(wn);
 	struct graph_dev_gl_atmosphere_shader *shader;
 
 	if (!draw_atmospheres)
@@ -1749,10 +1757,10 @@ static void graph_dev_raster_atmosphere(const struct mat44 *mat_mvp, const struc
 	}
 }
 
-static void graph_dev_raster_filled_wireframe_mesh(const struct mat44 *mat_mvp, struct mesh *m,
+static void graph_dev_raster_filled_wireframe_mesh(int wn, const struct mat44 *mat_mvp, struct mesh *m,
 	struct sng_color *line_color, struct sng_color *triangle_color)
 {
-	enable_3d_viewport();
+	enable_3d_viewport(wn);
 
 	if (!m->graph_ptr)
 		return;
@@ -1764,7 +1772,7 @@ static void graph_dev_raster_filled_wireframe_mesh(const struct mat44 *mat_mvp, 
 
 	glUseProgram(filled_wireframe_shader.program_id);
 
-	glUniform2f(filled_wireframe_shader.viewport_id, sgc.vp_width_3d, sgc.vp_height_3d);
+	glUniform2f(filled_wireframe_shader.viewport_id, sgwc[wn].vp_width_3d, sgwc[wn].vp_height_3d);
 	glUniformMatrix4fv(filled_wireframe_shader.mvp_matrix_id, 1, GL_FALSE, &mat_mvp->m[0][0]);
 
 	glUniform3f(filled_wireframe_shader.line_color_id, line_color->red,
@@ -1840,12 +1848,12 @@ static void graph_dev_raster_filled_wireframe_mesh(const struct mat44 *mat_mvp, 
 	}
 }
 
-static void graph_dev_raster_trans_wireframe_mesh(struct graph_dev_gl_trans_wireframe_shader *shader,
+static void graph_dev_raster_trans_wireframe_mesh(int wn, struct graph_dev_gl_trans_wireframe_shader *shader,
 		const struct mat44 *mat_mvp, const struct mat44 *mat_mv,
 		const struct mat33 *mat_normal, struct mesh *m, struct sng_color *line_color,
 		struct clip_sphere_data *clip_sphere, int do_cullface)
 {
-	enable_3d_viewport();
+	enable_3d_viewport(wn);
 
 	if (!m->graph_ptr)
 		return;
@@ -1932,10 +1940,10 @@ static void graph_dev_raster_trans_wireframe_mesh(struct graph_dev_gl_trans_wire
 	}
 }
 
-static void graph_dev_raster_line_mesh(struct entity *e, const struct mat44 *mat_mvp, struct mesh *m,
+static void graph_dev_raster_line_mesh(int wn, struct entity *e, const struct mat44 *mat_mvp, struct mesh *m,
 					struct sng_color *line_color)
 {
-	enable_3d_viewport();
+	enable_3d_viewport(wn);
 
 	if (!m->graph_ptr)
 		return;
@@ -1973,7 +1981,7 @@ static void graph_dev_raster_line_mesh(struct entity *e, const struct mat44 *mat
 		glUseProgram(line_single_color_shader.program_id);
 
 		glUniformMatrix4fv(line_single_color_shader.mvp_matrix_id, 1, GL_FALSE, &mat_mvp->m[0][0]);
-		glUniform2f(line_single_color_shader.viewport_id, sgc.vp_width_3d, sgc.vp_height_3d);
+		glUniform2f(line_single_color_shader.viewport_id, sgwc[wn].vp_width_3d, sgwc[wn].vp_height_3d);
 
 		glUniform1f(line_single_color_shader.dot_size_id, 2.0);
 		glUniform1f(line_single_color_shader.dot_pitch_id, 5.0);
@@ -2041,11 +2049,11 @@ static void graph_dev_raster_line_mesh(struct entity *e, const struct mat44 *mat
 	glDisable(GL_DEPTH_TEST);
 }
 
-void graph_dev_raster_point_cloud_mesh(struct graph_dev_gl_point_cloud_shader *shader,
+void graph_dev_raster_point_cloud_mesh(int wn, struct graph_dev_gl_point_cloud_shader *shader,
 	const struct mat44 *mat_mvp, struct mesh *m, struct sng_color *point_color, float alpha, float pointSize,
 	int do_blend)
 {
-	enable_3d_viewport();
+	enable_3d_viewport(wn);
 
 	if (!m->graph_ptr)
 		return;
@@ -2098,7 +2106,7 @@ void graph_dev_raster_point_cloud_mesh(struct graph_dev_gl_point_cloud_shader *s
 	}
 }
 
-static void graph_dev_draw_nebula(const struct mat44 *mat_mvp, const struct mat44 *mat_mv,
+static void graph_dev_draw_nebula(int wn, const struct mat44 *mat_mvp, const struct mat44 *mat_mv,
 	struct entity *e, union vec3 *eye_light_pos)
 {
 	struct material_nebula *mt = &e->material_ptr->nebula;
@@ -2151,22 +2159,22 @@ static void graph_dev_draw_nebula(const struct mat44 *mat_mvp, const struct mat4
 		rtp.do_blend = 1;
 		rtp.ambient = 0.1;
 
-		graph_dev_raster_texture(&rtp);
+		graph_dev_raster_texture(wn, &rtp);
 
 		if (draw_billboard_wireframe) {
 			struct sng_color line_color = sng_get_color(WHITE);
-			graph_dev_raster_trans_wireframe_mesh(0, &mat_mvp_local_r, &mat_mv_local_r,
+			graph_dev_raster_trans_wireframe_mesh(wn, 0, &mat_mvp_local_r, &mat_mv_local_r,
 				&mat_normal_local_r, e->m, &line_color, 0, 0);
 		}
 	}
 
 }
 
-static void graph_dev_raster_particle_animation(const struct entity_context *cx, struct entity *e,
+static void graph_dev_raster_particle_animation(int wn, const struct entity_context *cx, struct entity *e,
 	const struct entity_transform *transform, GLuint texture_number,
 	float particle_radius, float time_base)
 {
-	enable_3d_viewport();
+	enable_3d_viewport(wn);
 
 	if (!e->m->graph_ptr)
 		return;
@@ -2321,10 +2329,10 @@ static void graph_dev_raster_particle_animation(const struct entity_context *cx,
 
 	if (draw_billboard_wireframe) {
 		struct sng_color white = sng_get_color(WHITE);
-		graph_dev_raster_line_mesh(e, &transform->mvp, e->m, &white);
+		graph_dev_raster_line_mesh(wn, e, &transform->mvp, e->m, &white);
 
 		struct sng_color red = sng_get_color(RED);
-		graph_dev_raster_point_cloud_mesh(&point_cloud_shader, &transform->mvp, e->m, &red, 1.0, 3.0, 0);
+		graph_dev_raster_point_cloud_mesh(wn, &point_cloud_shader, &transform->mvp, e->m, &red, 1.0, 3.0, 0);
 	}
 }
 
@@ -2359,7 +2367,7 @@ extern int graph_dev_entity_render_order(struct entity_context *cx, struct entit
 		return GRAPH_DEV_RENDER_NEAR_TO_FAR;
 }
 
-static void graph_dev_raster_triangle_mesh(struct entity_context *cx, struct entity *e,
+static void graph_dev_raster_triangle_mesh(int wn, struct entity_context *cx, struct entity *e,
 	union vec3 *eye_light_pos, const struct entity_transform *transform, struct sng_color *line_color)
 {
 	struct camera_info *c = &cx->camera;
@@ -2669,7 +2677,7 @@ static void graph_dev_raster_triangle_mesh(struct entity_context *cx, struct ent
 
 		/* outline and filled */
 		if (outline_triangle) {
-			graph_dev_raster_filled_wireframe_mesh(rtp.mat_mvp, e->m, line_color, &triangle_color);
+			graph_dev_raster_filled_wireframe_mesh(wn, rtp.mat_mvp, e->m, line_color, &triangle_color);
 		} else {
 			if (rtp.shader) {
 
@@ -2683,50 +2691,50 @@ static void graph_dev_raster_triangle_mesh(struct entity_context *cx, struct ent
 				rtp.sun_color = &sun_color;
 				rtp.ambient = cx->ambient;
 
-				graph_dev_raster_texture(&rtp);
+				graph_dev_raster_texture(wn, &rtp);
 			} else {
 				if (atmosphere)
-					graph_dev_raster_atmosphere(rtp.mat_mvp, rtp.mat_mv, rtp.mat_normal,
+					graph_dev_raster_atmosphere(wn, rtp.mat_mvp, rtp.mat_mv, rtp.mat_normal,
 						e->m, &atmosphere_color, eye_light_pos, rtp.alpha,
 						&shadow_annulus, rtp.ring_texture_v, rtp.atmosphere_brightness);
 				else
-					graph_dev_raster_single_color_lit(rtp.mat_mvp, rtp.mat_mv,
+					graph_dev_raster_single_color_lit(wn, rtp.mat_mvp, rtp.mat_mv,
 						rtp.mat_normal, e->m, &triangle_color, eye_light_pos,
 						e->in_shade, cx->ambient);
 			}
 		}
 	} else if (outline_triangle) {
-		graph_dev_raster_trans_wireframe_mesh(wireframe_trans_shader, rtp.mat_mvp, rtp.mat_mv,
+		graph_dev_raster_trans_wireframe_mesh(wn, wireframe_trans_shader, rtp.mat_mvp, rtp.mat_mv,
 			rtp.mat_normal, e->m, line_color, &clip_sphere, 1);
 	}
 
 	if (draw_billboard_wireframe && e->material_ptr &&
 			e->material_ptr->billboard_type != MATERIAL_BILLBOARD_TYPE_NONE) {
 		struct sng_color white_color = sng_get_color(WHITE);
-		graph_dev_raster_trans_wireframe_mesh(0, rtp.mat_mvp, rtp.mat_mv,
+		graph_dev_raster_trans_wireframe_mesh(wn, 0, rtp.mat_mvp, rtp.mat_mv,
 			rtp.mat_normal, e->m, &white_color, 0, 0);
 	}
 }
 
-void graph_dev_draw_entity(struct entity_context *cx, struct entity *e, union vec3 *eye_light_pos,
+void graph_dev_draw_entity(int wn, struct entity_context *cx, struct entity *e, union vec3 *eye_light_pos,
 	const struct entity_transform *transform)
 {
 
-	draw_vertex_buffer_2d();
+	draw_vertex_buffer_2d(wn);
 
 	struct sng_color line_color = sng_get_color(e->color);
 
 	if (e->material_ptr && e->material_ptr->type == MATERIAL_NEBULA) {
-		graph_dev_draw_nebula(&transform->mvp, &transform->mv, e, eye_light_pos);
+		graph_dev_draw_nebula(wn, &transform->mvp, &transform->mv, e, eye_light_pos);
 		return;
 	}
 
 	switch (e->m->geometry_mode) {
 	case MESH_GEOMETRY_TRIANGLES:
-		graph_dev_raster_triangle_mesh(cx, e, eye_light_pos, transform, &line_color);
+		graph_dev_raster_triangle_mesh(wn, cx, e, eye_light_pos, transform, &line_color);
 		break;
 	case MESH_GEOMETRY_LINES:
-		graph_dev_raster_line_mesh(e, &transform->mvp, e->m, &line_color);
+		graph_dev_raster_line_mesh(wn, e, &transform->mvp, e->m, &line_color);
 		break;
 	case MESH_GEOMETRY_POINTS: {
 			int do_blend = 0;
@@ -2736,15 +2744,15 @@ void graph_dev_draw_entity(struct entity_context *cx, struct entity *e, union ve
 
 			shader = &point_cloud_shader;
 
-			graph_dev_raster_point_cloud_mesh(shader, &transform->mvp, e->m, &line_color, alpha, point_size,
-				do_blend);
+			graph_dev_raster_point_cloud_mesh(wn, shader, &transform->mvp, e->m,
+					&line_color, alpha, point_size, do_blend);
 		}
 		break;
 	case MESH_GEOMETRY_PARTICLE_ANIMATION:
 		if (e->material_ptr && e->material_ptr->type == MATERIAL_TEXTURED_PARTICLE) {
 			struct material_textured_particle *mt = &e->material_ptr->textured_particle;
 
-			graph_dev_raster_particle_animation(cx, e, transform, mt->texture_id,
+			graph_dev_raster_particle_animation(wn, cx, e, transform, mt->texture_id,
 				mt->radius * vec3_cwise_min(&e->scale), mt->time_base);
 		}
 		break;
@@ -2753,12 +2761,12 @@ void graph_dev_draw_entity(struct entity_context *cx, struct entity *e, union ve
 
 /* This implementation is ok for drawing a few times, but the performance
    will really suck as lines per frame goes up */
-void graph_dev_draw_3d_line(struct entity_context *cx, const struct mat44 *mat_vp, const struct mat44 *mat_v,
+void graph_dev_draw_3d_line(int wn, struct entity_context *cx, const struct mat44 *mat_vp, const struct mat44 *mat_v,
 	float x1, float y1, float z1, float x2, float y2, float z2)
 {
-	draw_vertex_buffer_2d();
+	draw_vertex_buffer_2d(wn);
 
-	enable_3d_viewport();
+	enable_3d_viewport(wn);
 
 	/* setup fake line entity to render this */
 	struct vertex_buffer_data g_v_buffer_data[2];
@@ -2805,12 +2813,13 @@ void graph_dev_draw_3d_line(struct entity_context *cx, const struct mat44 *mat_v
 	e.material_ptr = 0;
 	e.m = &m;
 
-	struct sng_color line_color = sng_get_foreground();
-	graph_dev_raster_line_mesh(&e, mat_vp, &m, &line_color);
+	struct sng_color line_color = sng_get_foreground(wn);
+	graph_dev_raster_line_mesh(wn, &e, mat_vp, &m, &line_color);
 }
 
-static void graph_dev_raster_full_screen_effect(struct graph_dev_gl_fs_effect_shader *shader, GLuint texture0_id,
-	GLuint texture1_id, GLuint texture2_id, const struct sng_color *tint_color, float alpha)
+static void graph_dev_raster_full_screen_effect(int wn, struct graph_dev_gl_fs_effect_shader *shader,
+		GLuint texture0_id, GLuint texture1_id, GLuint texture2_id,
+		const struct sng_color *tint_color, float alpha)
 {
 	static const struct mat44 mat_identity = { { { 1, 0, 0, 0}, { 0, 1, 0, 0 }, { 0, 0, 1, 0}, { 0, 0, 0, 1} } };
 
@@ -2829,8 +2838,8 @@ static void graph_dev_raster_full_screen_effect(struct graph_dev_gl_fs_effect_sh
 	}
 
 	glUniformMatrix4fv(shader->mvp_matrix_id, 1, GL_FALSE, &mat_identity.m[0][0]);
-	glUniform4f(shader->viewport_id, 1.0 / sgc.screen_x, 1.0 / sgc.screen_y,
-		sgc.screen_x, sgc.screen_y);
+	glUniform4f(shader->viewport_id, 1.0 / sgwc[wn].screen_x, 1.0 / sgwc[wn].screen_y,
+		sgwc[wn].screen_x, sgwc[wn].screen_y);
 
 	if (shader->tint_color_id > 0) {
 		if (tint_color)
@@ -2869,14 +2878,14 @@ static void graph_dev_raster_full_screen_effect(struct graph_dev_gl_fs_effect_sh
 	glUseProgram(0);
 }
 
-void graph_dev_start_frame()
+void graph_dev_start_frame(int wn)
 {
 	/* reset viewport to whole screen */
-	sgc.active_vp = 0;
-	VIEWPORT(0, 0, sgc.screen_x, sgc.screen_y);
+	sgwc[wn].active_vp = 0;
+	VIEWPORT(wn, 0, 0, sgwc[wn].screen_x, sgwc[wn].screen_y);
 
 	if (draw_render_to_texture && render_target_2d.fbo > 0) {
-		resize_fbo_if_needed(&render_target_2d);
+		resize_fbo_if_needed(wn, &render_target_2d);
 		sgc.fbo_2d = render_target_2d.fbo;
 		glBindFramebuffer(GL_FRAMEBUFFER, render_target_2d.fbo);
 		glClear(GL_COLOR_BUFFER_BIT);
@@ -2892,22 +2901,23 @@ void graph_dev_start_frame()
 		glBindFramebuffer(GL_FRAMEBUFFER, msaa.fbo);
 		sgc.fbo_3d = msaa.fbo;
 
-		if (msaa.width != sgc.screen_x || msaa.height != sgc.screen_y || msaa.samples != draw_msaa_samples) {
+		if (msaa.width != sgwc[wn].screen_x || msaa.height != sgwc[wn].screen_y ||
+						msaa.samples != draw_msaa_samples) {
 			/* need to rebuild the fbo attachments */
 			glBindRenderbuffer(GL_RENDERBUFFER, msaa.color0_buffer);
 			glRenderbufferStorageMultisample(GL_RENDERBUFFER, draw_msaa_samples, GL_RGBA8,
-				sgc.screen_x, sgc.screen_y);
+				sgwc[wn].screen_x, sgwc[wn].screen_y);
 			glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_RENDERBUFFER,
 				msaa.color0_buffer);
 
 			glBindRenderbuffer(GL_RENDERBUFFER, msaa.depth_buffer);
 			glRenderbufferStorageMultisample(GL_RENDERBUFFER, draw_msaa_samples, GL_DEPTH_COMPONENT,
-				sgc.screen_x, sgc.screen_y);
+				sgwc[wn].screen_x, sgwc[wn].screen_y);
 			glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER,
 				msaa.depth_buffer);
 
-			msaa.width = sgc.screen_x;
-			msaa.height = sgc.screen_y;
+			msaa.width = sgwc[wn].screen_x;
+			msaa.height = sgwc[wn].screen_y;
 			msaa.samples = draw_msaa_samples;
 
 			GLenum status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
@@ -2918,7 +2928,7 @@ void graph_dev_start_frame()
 
 	} else if (draw_render_to_texture && post_target0.fbo > 0) {
 
-		resize_fbo_if_needed(&post_target0);
+		resize_fbo_if_needed(wn, &post_target0);
 
 		glBindFramebuffer(GL_FRAMEBUFFER, post_target0.fbo);
 		sgc.fbo_3d = post_target0.fbo;
@@ -2933,19 +2943,19 @@ void graph_dev_start_frame()
 	sgc.fbo_current = sgc.fbo_3d;
 }
 
-void graph_dev_end_frame()
+void graph_dev_end_frame(int wn)
 {
 	/* printf("end frame\n"); */
-	draw_vertex_buffer_2d();
+	draw_vertex_buffer_2d(wn);
 
 	/* reset viewport to whole screen for final effects */
-	VIEWPORT(0, 0, sgc.screen_x, sgc.screen_y);
+	VIEWPORT(wn, 0, 0, sgwc[wn].screen_x, sgwc[wn].screen_y);
 
 	if (msaa.fbo != 0 && sgc.fbo_3d == msaa.fbo) {
 		glBindFramebuffer(GL_READ_FRAMEBUFFER, msaa.fbo);
 		glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
 		glBlitFramebuffer(0, 0, msaa.width, msaa.height, 0, 0,
-			sgc.screen_x, sgc.screen_y, GL_COLOR_BUFFER_BIT, GL_NEAREST);
+			sgwc[wn].screen_x, sgwc[wn].screen_y, GL_COLOR_BUFFER_BIT, GL_NEAREST);
 
 		glDisable(GL_MULTISAMPLE);
 
@@ -2955,27 +2965,27 @@ void graph_dev_end_frame()
 		if (draw_smaa) {
 			/* do the multi stage smaa process:
 				render to texture -> edge_fbo -> blend_fbo -> screen back buffer */
-			resize_fbo_if_needed(&smaa_effect.edge_target);
-			resize_fbo_if_needed(&smaa_effect.blend_target);
-			resize_fbo_if_needed(&post_target1);
+			resize_fbo_if_needed(wn, &smaa_effect.edge_target);
+			resize_fbo_if_needed(wn, &smaa_effect.blend_target);
+			resize_fbo_if_needed(wn, &post_target1);
 
 			/* edge detect pass - render into edge_fbo */
 			glBindFramebuffer(GL_FRAMEBUFFER, smaa_effect.edge_target.fbo);
 			glClear(GL_COLOR_BUFFER_BIT);
-			graph_dev_raster_full_screen_effect(&smaa_effect.edge_shader, post_target0.color0_texture,
+			graph_dev_raster_full_screen_effect(wn, &smaa_effect.edge_shader, post_target0.color0_texture,
 				0, 0, 0, 1);
 
 			/* blend pass - render into blend_fbo */
 			glBindFramebuffer(GL_FRAMEBUFFER, smaa_effect.blend_target.fbo);
 			glClear(GL_COLOR_BUFFER_BIT);
-			graph_dev_raster_full_screen_effect(&smaa_effect.blend_shader,
+			graph_dev_raster_full_screen_effect(wn, &smaa_effect.blend_shader,
 				smaa_effect.edge_target.color0_texture,
 				smaa_effect.area_tex, smaa_effect.search_tex, 0, 1);
 
-			/* eighborhood pass - render to back buffer */
+			/* neighborhood pass - render to back buffer */
 			glBindFramebuffer(GL_FRAMEBUFFER, post_target1.fbo);
 			glClear(GL_COLOR_BUFFER_BIT);
-			graph_dev_raster_full_screen_effect(&smaa_effect.neighborhood_shader,
+			graph_dev_raster_full_screen_effect(wn, &smaa_effect.neighborhood_shader,
 				post_target0.color0_texture, smaa_effect.blend_target.color0_texture, 0, 0, 1);
 
 			if (draw_smaa_edge)
@@ -2989,7 +2999,7 @@ void graph_dev_end_frame()
 		}
 
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
-		graph_dev_raster_full_screen_effect(&fs_copy_shader, result_texture, 0, 0, 0, 1);
+		graph_dev_raster_full_screen_effect(wn, &fs_copy_shader, result_texture, 0, 0, 0, 1);
 	}
 
 	if (render_target_2d.fbo != 0 && sgc.fbo_2d == render_target_2d.fbo) {
@@ -2998,7 +3008,7 @@ void graph_dev_end_frame()
 
 		glEnable(GL_BLEND);
 		BLEND_FUNC(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-		graph_dev_raster_full_screen_effect(&fs_copy_shader, render_target_2d.color0_texture, 0, 0, 0, 1);
+		graph_dev_raster_full_screen_effect(wn, &fs_copy_shader, render_target_2d.color0_texture, 0, 0, 0, 1);
 		glDisable(GL_BLEND);
 	}
 }
@@ -3008,15 +3018,15 @@ void graph_dev_clear_depth_bit()
 	glClear(GL_DEPTH_BUFFER_BIT);
 }
 
-void graph_dev_draw_line(float x1, float y1, float x2, float y2)
+void graph_dev_draw_line(int wn, float x1, float y1, float x2, float y2)
 {
-	make_room_in_vertex_buffer_2d(2);
+	make_room_in_vertex_buffer_2d(wn, 2);
 
-	add_vertex_2d(x1, y1, sgc.hue, 255, GL_LINES);
-	add_vertex_2d(x2, y2, sgc.hue, 255, GL_LINES);
+	add_vertex_2d(wn, x1, y1, sgwc[wn].hue, 255, GL_LINES);
+	add_vertex_2d(wn, x2, y2, sgwc[wn].hue, 255, GL_LINES);
 }
 
-void graph_dev_draw_rectangle(int filled, float x, float y, float width, float height)
+void graph_dev_draw_rectangle(int wn, int filled, float x, float y, float width, float height)
 {
 	int x2, y2;
 	GLubyte alpha = 255;
@@ -3024,13 +3034,13 @@ void graph_dev_draw_rectangle(int filled, float x, float y, float width, float h
 	x2 = x + width;
 	y2 = y + height;
 
-	if (sgc.alpha_blend) {
+	if (sgwc[wn].alpha_blend) {
 		/* must empty the vertex buffer to draw this primitive with blending */
-		draw_vertex_buffer_2d();
+		draw_vertex_buffer_2d(wn);
 
 		glEnable(GL_BLEND);
 		BLEND_FUNC(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-		alpha = 255 * sgc.alpha;
+		alpha = 255 * sgwc[wn].alpha;
 	}
 
 	if (filled ) {
@@ -3044,44 +3054,44 @@ void graph_dev_draw_rectangle(int filled, float x, float y, float width, float h
 		  2 ------- 3
 		*/
 
-		make_room_in_vertex_buffer_2d(6);
+		make_room_in_vertex_buffer_2d(wn, 6);
 
 		/* triangle 1 = 0, 3, 1 */
-		add_vertex_2d(x, y, sgc.hue, alpha, GL_TRIANGLES);
-		add_vertex_2d(x2, y2, sgc.hue, alpha, GL_TRIANGLES);
-		add_vertex_2d(x2, y, sgc.hue, alpha, GL_TRIANGLES);
+		add_vertex_2d(wn, x, y, sgwc[wn].hue, alpha, GL_TRIANGLES);
+		add_vertex_2d(wn, x2, y2, sgwc[wn].hue, alpha, GL_TRIANGLES);
+		add_vertex_2d(wn, x2, y, sgwc[wn].hue, alpha, GL_TRIANGLES);
 
 		/* triangle 2 = 0, 2, 3 */
-		add_vertex_2d(x, y, sgc.hue, alpha, GL_TRIANGLES);
-		add_vertex_2d(x, y2, sgc.hue, alpha, GL_TRIANGLES);
-		add_vertex_2d(x2, y2, sgc.hue, alpha, GL_TRIANGLES);
+		add_vertex_2d(wn, x, y, sgwc[wn].hue, alpha, GL_TRIANGLES);
+		add_vertex_2d(wn, x, y2, sgwc[wn].hue, alpha, GL_TRIANGLES);
+		add_vertex_2d(wn, x2, y2, sgwc[wn].hue, alpha, GL_TRIANGLES);
 	} else {
 		/* not filled */
-		make_room_in_vertex_buffer_2d(5);
+		make_room_in_vertex_buffer_2d(wn, 5);
 
-		add_vertex_2d(x, y, sgc.hue, alpha, GL_LINE_STRIP);
-		add_vertex_2d(x2, y, sgc.hue, alpha, GL_LINE_STRIP);
-		add_vertex_2d(x2, y2, sgc.hue, alpha, GL_LINE_STRIP);
-		add_vertex_2d(x, y2, sgc.hue, alpha, GL_LINE_STRIP);
-		add_vertex_2d(x, y, sgc.hue, alpha, -1 /* primitive end */);
+		add_vertex_2d(wn, x, y, sgwc[wn].hue, alpha, GL_LINE_STRIP);
+		add_vertex_2d(wn, x2, y, sgwc[wn].hue, alpha, GL_LINE_STRIP);
+		add_vertex_2d(wn, x2, y2, sgwc[wn].hue, alpha, GL_LINE_STRIP);
+		add_vertex_2d(wn, x, y2, sgwc[wn].hue, alpha, GL_LINE_STRIP);
+		add_vertex_2d(wn, x, y, sgwc[wn].hue, alpha, -1 /* primitive end */);
 	}
 
-	if (sgc.alpha_blend) {
+	if (sgwc[wn].alpha_blend) {
 		/* must draw the vertex buffer to complete the blending */
-		draw_vertex_buffer_2d();
+		draw_vertex_buffer_2d(wn);
 
 		glDisable(GL_BLEND);
 	}
 }
 
-void graph_dev_draw_point(float x, float y)
+void graph_dev_draw_point(int wn, float x, float y)
 {
-	make_room_in_vertex_buffer_2d(1);
+	make_room_in_vertex_buffer_2d(wn, 1);
 
-	add_vertex_2d(x, y, sgc.hue, 255, GL_POINTS);
+	add_vertex_2d(wn, x, y, sgwc[wn].hue, 255, GL_POINTS);
 }
 
-void graph_dev_draw_arc(int filled, float x, float y, float width, float height, float angle1, float angle2)
+void graph_dev_draw_arc(int wn, int filled, float x, float y, float width, float height, float angle1, float angle2)
 {
 	float max_angle_delta = 2.0 * M_PI / 180.0; /*some ratio to height and width? */
 	float rx = width/2.0;
@@ -3096,19 +3106,19 @@ void graph_dev_draw_arc(int filled, float x, float y, float width, float height,
 
 	GLubyte alpha = 255;
 
-	if (sgc.alpha_blend) {
+	if (sgwc[wn].alpha_blend) {
 		/* must empty the vertex buffer to draw this primitive with blending */
-		draw_vertex_buffer_2d();
+		draw_vertex_buffer_2d(wn);
 
 		glEnable(GL_BLEND);
 		BLEND_FUNC(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-		alpha = 255 * sgc.alpha;
+		alpha = 255 * sgwc[wn].alpha;
 	}
 
 	if (filled)
-		make_room_in_vertex_buffer_2d(segments * 3);
+		make_room_in_vertex_buffer_2d(wn, segments * 3);
 	else
-		make_room_in_vertex_buffer_2d(segments + 1);
+		make_room_in_vertex_buffer_2d(wn, segments + 1);
 
 	float x1 = 0, y1 = 0;
 	for (i = 0; i <= segments; i++) {
@@ -3118,20 +3128,20 @@ void graph_dev_draw_arc(int filled, float x, float y, float width, float height,
 
 		if (!filled || i > 0) {
 			if (filled) {
-				add_vertex_2d(x2, y2, sgc.hue, alpha, GL_TRIANGLES);
-				add_vertex_2d(x1, y1, sgc.hue, alpha, GL_TRIANGLES);
-				add_vertex_2d(cx, cy, sgc.hue, alpha, GL_TRIANGLES);
+				add_vertex_2d(wn, x2, y2, sgwc[wn].hue, alpha, GL_TRIANGLES);
+				add_vertex_2d(wn, x1, y1, sgwc[wn].hue, alpha, GL_TRIANGLES);
+				add_vertex_2d(wn, cx, cy, sgwc[wn].hue, alpha, GL_TRIANGLES);
 			} else {
-				add_vertex_2d(x2, y2, sgc.hue, alpha, (i != segments ? GL_LINE_STRIP : -1));
+				add_vertex_2d(wn, x2, y2, sgwc[wn].hue, alpha, (i != segments ? GL_LINE_STRIP : -1));
 			}
 		}
 		x1 = x2;
 		y1 = y2;
 	}
 
-	if (sgc.alpha_blend) {
+	if (sgwc[wn].alpha_blend) {
 		/* must draw the vertex buffer to complete the blending */
-		draw_vertex_buffer_2d();
+		draw_vertex_buffer_2d(wn);
 
 		glDisable(GL_BLEND);
 	}
@@ -3787,7 +3797,7 @@ static void setup_smaa_effect(struct graph_dev_smaa_effect *effect)
 		effect->blend_target.color0_texture, 0);
 }
 
-static void setup_2d()
+static void setup_2d(int wn)
 {
 	memset(&render_target_2d, 0, sizeof(render_target_2d));
 
@@ -3814,7 +3824,7 @@ static void setup_2d()
 	}
 }
 
-static void setup_3d()
+static void setup_3d(int wn)
 {
 	sgc.gl_info_3d_line.nlines = 0;
 
@@ -3830,10 +3840,10 @@ static void setup_3d()
 	memset(sgc.texture_unit_bind, 0, sizeof(sgc.texture_unit_bind));
 	sgc.src_blend_func = GL_ONE;
 	sgc.dest_blend_func = GL_ZERO;
-	sgc.vp_x = 0;
-	sgc.vp_y = 0;
-	sgc.vp_width = 0;
-	sgc.vp_height = 0;
+	sgwc[wn].vp_x = 0;
+	sgwc[wn].vp_y = 0;
+	sgwc[wn].vp_width = 0;
+	sgwc[wn].vp_height = 0;
 }
 
 void graph_dev_reload_all_shaders(void)
@@ -3893,6 +3903,8 @@ void graph_dev_reload_all_shaders(void)
 
 int graph_dev_setup(const char *shader_dir)
 {
+	int i;
+
 	glewExperimental = GL_TRUE; /* OSX apparently needs glewExperimental */
 
 	if (glewInit() != GLEW_OK) {
@@ -3977,8 +3989,10 @@ int graph_dev_setup(const char *shader_dir)
 	setup_cubemap_cube(&cubemap_cube);
 	setup_textured_unit_quad(&textured_unit_quad);
 
-	setup_2d();
-	setup_3d();
+	for (i = 0; i < MAXWINDOWS; i++) {
+		setup_2d(i);
+		setup_3d(i);
+	}
 
 	return 0;
 }
@@ -4396,11 +4410,11 @@ int graph_dev_load_skybox_texture(
 	return -1;
 }
 
-void graph_dev_draw_skybox(struct entity_context *cx, const struct mat44 *mat_vp)
+void graph_dev_draw_skybox(int wn, struct entity_context *cx, const struct mat44 *mat_vp)
 {
-	draw_vertex_buffer_2d();
+	draw_vertex_buffer_2d(wn);
 
-	enable_3d_viewport();
+	enable_3d_viewport(wn);
 
 	glDepthMask(GL_FALSE);
 	glDisable(GL_DEPTH_TEST);
@@ -4436,47 +4450,47 @@ void graph_dev_draw_skybox(struct entity_context *cx, const struct mat44 *mat_vp
 	glEnable(GL_CULL_FACE);
 }
 
-static void debug_menu_draw_item(char *item, int itemnumber, int grayed, int checked)
+static void debug_menu_draw_item(int wn, char *item, int itemnumber, int grayed, int checked)
 {
 	int x = 15;
 	int y = 35 + itemnumber * 20;
 
 	if (grayed)
-		sng_set_foreground(GRAY75);
+		sng_set_foreground(wn, GRAY75);
 	else
-		sng_set_foreground(WHITE);
+		sng_set_foreground(wn, WHITE);
 
-	graph_dev_draw_rectangle(0, x, y, 15, 15);
+	graph_dev_draw_rectangle(wn, 0, x, y, 15, 15);
 	if (checked)
-		graph_dev_draw_rectangle(1, x + 2, y + 2, 11, 11);
-	sng_abs_xy_draw_string(item, NANO_FONT, (x + 20) / sgc.x_scale, (y + 10) / sgc.y_scale);
+		graph_dev_draw_rectangle(wn, 1, x + 2, y + 2, 11, 11);
+	sng_abs_xy_draw_string(wn, item, NANO_FONT, (x + 20) / sgwc[wn].x_scale, (y + 10) / sgwc[wn].y_scale);
 }
 
-void graph_dev_display_debug_menu_show()
+void graph_dev_display_debug_menu_show(int wn)
 {
-	sng_set_foreground(BLACK);
-	graph_dev_draw_rectangle(1, 10, 30, 370 * sgc.x_scale, 265);
-	sng_set_foreground(WHITE);
-	graph_dev_draw_rectangle(0, 10, 30, 370 * sgc.x_scale, 265);
+	sng_set_foreground(wn, BLACK);
+	graph_dev_draw_rectangle(wn, 1, 10, 30, 370 * sgwc[wn].x_scale, 265);
+	sng_set_foreground(wn, WHITE);
+	graph_dev_draw_rectangle(wn, 0, 10, 30, 370 * sgwc[wn].x_scale, 265);
 
-	debug_menu_draw_item("VERTEX NORM/TAN/BITAN (RGB)", 0, 0, draw_normal_lines);
-	debug_menu_draw_item("BILLBOARD WIREFRAME", 1, 0, draw_billboard_wireframe);
-	debug_menu_draw_item("POLYGON AS LINE", 2, 0, draw_polygon_as_lines);
-	debug_menu_draw_item("NO MSAA", 3, 0, draw_msaa_samples == 0);
+	debug_menu_draw_item(wn, "VERTEX NORM/TAN/BITAN (RGB)", 0, 0, draw_normal_lines);
+	debug_menu_draw_item(wn, "BILLBOARD WIREFRAME", 1, 0, draw_billboard_wireframe);
+	debug_menu_draw_item(wn, "POLYGON AS LINE", 2, 0, draw_polygon_as_lines);
+	debug_menu_draw_item(wn, "NO MSAA", 3, 0, draw_msaa_samples == 0);
 
 	int max_samples = msaa_max_samples();
-	debug_menu_draw_item("2x MSAA", 4, max_samples < 2 || !draw_render_to_texture,
+	debug_menu_draw_item(wn, "2x MSAA", 4, max_samples < 2 || !draw_render_to_texture,
 				draw_msaa_samples == 2 && draw_render_to_texture);
-	debug_menu_draw_item("4x MSAA", 5, max_samples < 4 || !draw_render_to_texture,
+	debug_menu_draw_item(wn, "4x MSAA", 5, max_samples < 4 || !draw_render_to_texture,
 				draw_msaa_samples == 4 && draw_render_to_texture);
-	debug_menu_draw_item("RENDER TO TEXTURE", 6, draw_msaa_samples > 0, draw_render_to_texture);
-	debug_menu_draw_item("SMAA", 7, !draw_render_to_texture,
+	debug_menu_draw_item(wn, "RENDER TO TEXTURE", 6, draw_msaa_samples > 0, draw_render_to_texture);
+	debug_menu_draw_item(wn, "SMAA", 7, !draw_render_to_texture,
 									draw_smaa);
-	debug_menu_draw_item("SMAA DEBUG EDGE", 8, !draw_smaa, draw_smaa_edge);
-	debug_menu_draw_item("SMAA DEBUG BLEND", 9, !draw_smaa, draw_smaa_blend);
-	debug_menu_draw_item("PLANETARY ATMOSPHERES", 10, 0, draw_atmospheres);
-	debug_menu_draw_item("PLANET SPECULARITY", 11, 0, graph_dev_planet_specularity);
-	debug_menu_draw_item("FILMIC TONEMAPPING", 12, 0, filmic_tonemapping);
+	debug_menu_draw_item(wn, "SMAA DEBUG EDGE", 8, !draw_smaa, draw_smaa_edge);
+	debug_menu_draw_item(wn, "SMAA DEBUG BLEND", 9, !draw_smaa, draw_smaa_blend);
+	debug_menu_draw_item(wn, "PLANETARY ATMOSPHERES", 10, 0, draw_atmospheres);
+	debug_menu_draw_item(wn, "PLANET SPECULARITY", 11, 0, graph_dev_planet_specularity);
+	debug_menu_draw_item(wn, "FILMIC TONEMAPPING", 12, 0, filmic_tonemapping);
 }
 
 static int selected_debug_item_checkbox(int n, int x, int y, int *toggle)
@@ -4540,12 +4554,12 @@ int graph_dev_graph_dev_debug_menu_click(int x, int y)
 	return 0;
 }
 
-void graph_dev_grab_framebuffer(unsigned char **buffer, int *width, int *height)
+void graph_dev_grab_framebuffer(int wn, unsigned char **buffer, int *width, int *height)
 {
-	*buffer = malloc(4 * sgc.screen_x * sgc.screen_y);
-	*width = sgc.screen_x;
-	*height = sgc.screen_y;
-	glReadPixels(0, 0, sgc.screen_x, sgc.screen_y,
+	*buffer = malloc(4 * sgwc[wn].screen_x * sgwc[wn].screen_y);
+	*width = sgwc[wn].screen_x;
+	*height = sgwc[wn].screen_y;
+	glReadPixels(0, 0, sgwc[wn].screen_x, sgwc[wn].screen_y,
 			GL_RGBA, GL_UNSIGNED_BYTE, *buffer);
 }
 
