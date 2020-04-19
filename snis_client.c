@@ -20880,11 +20880,11 @@ static void maybe_reload_shaders(void)
 
 static int main_da_expose(int wn)
 {
-	static double last_frame_time = 0;
-	static int how_long_to_wait = -1; /* 4 seconds */
-	static int frame_index = 0;
-	static float frame_rates[FRAME_INDEX_MAX];
-	static float frame_times[FRAME_INDEX_MAX];
+	static double last_frame_time[MAXWINDOWS] = { 0 };
+	__extension__ static int how_long_to_wait[MAXWINDOWS] = { [0 ... MAXWINDOWS - 1] = -1 }; /* 4 seconds */
+	static int frame_index[MAXWINDOWS] = { 0 };
+	static float frame_rates[MAXWINDOWS][FRAME_INDEX_MAX];
+	static float frame_times[MAXWINDOWS][FRAME_INDEX_MAX];
 	int player_lost_rts;
 	int player_won_rts;
 	int i;
@@ -20933,14 +20933,14 @@ static int main_da_expose(int wn)
 	if (displaymode[wn] < DISPLAYMODE_FONTTEST) {
 		if (!(o = find_my_ship())) {
 			char msg[100];
-			if (how_long_to_wait == -1)
-				how_long_to_wait = 4 * frame_rate_hz;
-			if (how_long_to_wait > 0) {
+			if (how_long_to_wait[wn] == -1)
+				how_long_to_wait[wn] = 4 * frame_rate_hz;
+			if (how_long_to_wait[wn] > 0) {
 				snprintf(msg, sizeof(msg) - 1,
 						"PREPARE FOR THE JUMP TO LIGHTSPEED, SPACE NERD");
-				how_long_to_wait--;
+				how_long_to_wait[wn]--;
 			}
-			if (how_long_to_wait == 0) {
+			if (how_long_to_wait[wn] == 0) {
 				snprintf(msg, sizeof(msg) - 1,
 						"ERROR: CANNOT FIND POINTER TO PLAYER SHIP, SORRY!");
 			}
@@ -20949,7 +20949,7 @@ static int main_da_expose(int wn)
 				draw_quit_screen(wn);
 			goto end_of_drawing;
 		} else {
-			how_long_to_wait = frame_rate_hz * 4; /* 4 seconds */
+			how_long_to_wait[wn] = frame_rate_hz * 4; /* 4 seconds */
 		}
 		if (o->alive == 0 && displaymode[wn] != DISPLAYMODE_DEMON) {
 			red_alert_mode = 0;
@@ -21042,7 +21042,7 @@ static int main_da_expose(int wn)
 	if (in_the_process_of_quitting)
 		draw_quit_screen(wn);
 
-	do_display_frame_stats(wn, frame_rates, frame_times, FRAME_INDEX_MAX);
+	do_display_frame_stats(wn, frame_rates[wn], frame_times[wn], FRAME_INDEX_MAX);
 
 end_of_drawing:
 
@@ -21052,10 +21052,10 @@ end_of_drawing:
 
 	double end_time = time_now_double();
 
-	frame_rates[frame_index] = start_time - last_frame_time;
-	frame_times[frame_index] = end_time - start_time;
-	frame_index = (frame_index + 1) % FRAME_INDEX_MAX;
-	last_frame_time = start_time;
+	frame_rates[wn][frame_index[wn]] = start_time - last_frame_time[wn];
+	frame_times[wn][frame_index[wn]] = end_time - start_time;
+	frame_index[wn] = (frame_index[wn] + 1) % FRAME_INDEX_MAX;
+	last_frame_time[wn] = start_time;
 
 	return 0;
 }
