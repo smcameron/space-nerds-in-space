@@ -18061,7 +18061,7 @@ static struct tweakable_var_descriptor client_tweak[] = {
 	{ "YJOYSTICK_THRESHOLD", "0 TO 64000 - SETS BOUNDARY BETWEEN FINE AND COARSE",
 		&yjoystick_threshold, 'i', 0.0, 0.0, 0.0, 0, 64000, 23000 },
 	{ "CURRENT_TYPEFACE", "0 TO 1 - SETS CURRENT TYPEFACE",
-		&current_typeface, 'i', 0.0, 0.0, 0.0, 0, 1, 0 },
+		&current_typeface, 'i', 0.0, 0.0, 0.0, 0, 2, 0 },
 	{ "IMPULSE_CAMERA_SHAKE", "0.0 TO 2.0 - AMOUNT OF CAMERA SHAKE AT HIGH IMPULSE POWER",
 		&impulse_camera_shake, 'f', 0.0, 2.0, 1.0, 0, 0, 0 },
 	{ "ATMOSPHERE_BRIGHTNESS", "0.0 TO 1.0, DEFAULT 0.5 - BRIGHTNESS OF ATMOSPHERES",

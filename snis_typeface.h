@@ -17,11 +17,11 @@
 /* spacing of letters between the fonts, pixels */
 #define BIG_LETTER_SPACING (10)
 #define SMALL_LETTER_SPACING (5)
-#define TINY_LETTER_SPACING (3)
-#define NANO_LETTER_SPACING (2)
-#define PICO_LETTER_SPACING (1)
+#define TINY_LETTER_SPACING (5)
+#define NANO_LETTER_SPACING (4)
+#define PICO_LETTER_SPACING (2)
 
-#define NTYPEFACES (2) /* ascii and alien */
+#define NTYPEFACES (3) /* ascii, alien, and ascii_smallcaps */
 
 /* for getting at the font scales and letter spacings, given  only font numbers */
 #ifdef SNIS_TYPEFACE_DECLARE_GLOBALS
