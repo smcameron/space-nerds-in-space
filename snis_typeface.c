@@ -32,6 +32,12 @@ void snis_typefaces_init_with_scaling(float xscale, float yscale)
 	snis_make_font(&gamefont[5 + NANO_FONT], alien_font, nx, ny);
 	snis_make_font(&gamefont[5 + PICO_FONT], alien_font, px, py);
 
+	snis_make_font(&gamefont[10 + BIG_FONT], ascii_smallcaps_font, bx, by);
+	snis_make_font(&gamefont[10 + SMALL_FONT], ascii_smallcaps_font, sx, sy);
+	snis_make_font(&gamefont[10 + TINY_FONT], ascii_smallcaps_font, tx, ty);
+	snis_make_font(&gamefont[10 + NANO_FONT], ascii_smallcaps_font, nx, ny);
+	snis_make_font(&gamefont[10 + PICO_FONT], ascii_smallcaps_font, px, py);
+
 	font_lineheight[BIG_FONT] = snis_font_lineheight(by);
 	font_lineheight[SMALL_FONT] = snis_font_lineheight(sy);
 	font_lineheight[TINY_FONT] = snis_font_lineheight(ty);

@@ -1100,7 +1100,7 @@ float sng_pixely_to_screeny(float y)
 
 void sng_set_font_family(int family)
 {
-	sng_font_family = (family % 2);
+	sng_font_family = (family % 3);
 }
 
 int sng_get_font_family(void)
