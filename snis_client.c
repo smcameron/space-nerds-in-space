@@ -131,6 +131,7 @@
 #include "xdg_base_dir_spec.h"
 #include "open-simplex-noise.h"
 #include "snis_voice_chat.h"
+#include "snis_xwindows_hacks.h"
 
 #define SHIP_COLOR CYAN
 #define STARBASE_COLOR RED
@@ -23526,6 +23527,8 @@ int main(int argc, char *argv[])
 	SDL_GLContext gl_context = SDL_GL_CreateContext(window);
 	(void) gl_context;
 	setup_screen_parameters(window);
+	SDL_SetWindowSize(window, SCREEN_WIDTH, SCREEN_HEIGHT);
+	constrain_aspect_ratio_via_xlib(window, SCREEN_WIDTH, SCREEN_HEIGHT);
 	init_colors();
 	sng_set_foreground(WHITE);
 	snis_typefaces_init_with_scaling((float) SCREEN_WIDTH / 1050.0, (float) SCREEN_HEIGHT / 500.0);
