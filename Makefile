@@ -1,6 +1,7 @@
 # To compile with voice chat, WITHVOICECHAT=yes,
 # for no voice chat, make WITHVOICECHAT=no
 WITHVOICECHAT=yes
+USE_SNIS_XWINDOWS_HACKS=1
 PKG_CONFIG?=pkg-config
 
 # use "make OSX=1" for mac
@@ -536,7 +537,7 @@ _COMMONCLIENTOBJS= snis_ui_element.o snis_font.o snis_text_input.o \
 	shape_collision.o oriented_bounding_box.o xdg_base_dir_spec.o snis_voice_chat.o
 COMMONCLIENTOBJS=${COMMONOBJS} ${OGGOBJ} ${SNDOBJS} $(patsubst %,$(OD)/%,${_COMMONCLIENTOBJS}) 
 
-_CLIENTOBJS= shader.o graph_dev_opengl.o opengl_cap.o snis_graph.o snis_client.o joystick_config.o
+_CLIENTOBJS= shader.o graph_dev_opengl.o opengl_cap.o snis_graph.o snis_client.o joystick_config.o snis_xwindows_hacks.o
 CLIENTOBJS=${COMMONCLIENTOBJS} $(patsubst %,$(OD)/%,${_CLIENTOBJS})
 
 _LIMCLIENTOBJS=graph_dev_gdk.o snis_limited_graph.o snis_limited_client.o joystick_config.o
@@ -556,6 +557,8 @@ NEBULANOISELIBS=-lm ${PNGLIBS}
 _GENERATE_SKYBOX_OBJS=generate_skybox.o open-simplex-noise.o png_utils.o mathutils.o quat.o mtwist.o
 GENERATE_SKYBOX_OBJS=$(patsubst %,$(OD)/%,${_GENERATE_SKYBOX_OBJS})
 GENERATE_SKYBOX_LIBS=-lm ${PNGLIBS}
+X11LIBS=$(shell $(PKG_CONFIG) --libs x11)
+X11CFLAGS=$(shell $(PKG_CONFIG) --cflags x11)
 
 SSGL=ssgl/libssglclient.a
 LIBS=-Lssgl -lssglclient -ldl -lm ${PNGLIBS} ${GLEWLIBS}
@@ -643,7 +646,8 @@ MODELS=${MD}/freighter.stl \
 
 MYCFLAGS=-DPREFIX=${PREFIX} ${DEBUGFLAG} ${PROFILEFLAG} ${OPTIMIZEFLAG}\
 	--pedantic -Wall ${STOP_ON_WARN} -pthread -std=gnu99 ${RDYNAMIC} \
-	-Wno-extended-offsetof -Wno-gnu-folding-constant $(CFLAGS) -Wvla
+	-Wno-extended-offsetof -Wno-gnu-folding-constant $(CFLAGS) -Wvla \
+	-DUSE_SNIS_XWINDOWS_HACKS=${USE_SNIS_XWINDOWS_HACKS}
 GTKCFLAGS:=$(subst -I,-isystem ,$(shell $(PKG_CONFIG) --cflags gtk+-2.0))
 GTKLDFLAGS:=$(shell $(PKG_CONFIG) --libs gtk+-2.0) $(shell $(PKG_CONFIG) --libs gthread-2.0)
 VORBISFLAGS:=$(subst -I,-isystem ,$(shell $(PKG_CONFIG) --cflags vorbisfile))
@@ -671,13 +675,13 @@ endif
 COMPILE=$(ECHO) '  COMPILE' $< && $(CC) ${MYCFLAGS} ${LUACFLAGS} -c -o $@ $<
 LIMCOMPILE=$(ECHO) '  COMPILE' $< && $(CC) -DWITHOUTOPENGL=1 ${MYCFLAGS} ${GTKCFLAGS} -c -o $@ $<
 VORBISCOMPILE=$(ECHO) '  COMPILE' $< && $(CC) ${MYCFLAGS} ${VORBISFLAGS} ${SNDFLAGS} -c -o $@ $<
-SDLCOMPILE=$(ECHO) '  COMPILE' $< && $(CC) ${MYCFLAGS} ${SDLCFLAGS} -c -o $@ $<
+SDLCOMPILE=$(ECHO) '  COMPILE' $< && $(CC) ${MYCFLAGS} ${SDLCFLAGS} ${X11CFLAGS} -c -o $@ $<
 SNISSERVERDBGCOMPILE=$(ECHO) '  COMPILE' $< && $(CC) -DSNIS_SERVER_DATA ${MYCFLAGS} ${LUACFLAGS} -c -o $(OD)/snis_server_debug.o $<
 SNISCLIENTDBGCOMPILE=$(ECHO) '  COMPILE' $< && $(CC) -DSNIS_CLIENT_DATA ${MYCFLAGS} ${LUACFLAGS} -c -o $(OD)/snis_client_debug.o $<
 
-CLIENTLINK=$(ECHO) '  LINK' $@ && $(CC) ${MYCFLAGS} ${SNDFLAGS} -o $@ ${SDLCFLAGS} ${CLIENTOBJS} ${SDLLIBS} ${LIBS} ${SNDLIBS} $(LDFLAGS) ${LIBOPUS}
+CLIENTLINK=$(ECHO) '  LINK' $@ && $(CC) ${MYCFLAGS} ${SNDFLAGS} -o $@ ${X11LIBS} ${SDLCFLAGS} ${CLIENTOBJS} ${SDLLIBS} ${LIBS} ${SNDLIBS} $(LDFLAGS) ${LIBOPUS} ${X11LIBS}
 LIMCLIENTLINK=$(ECHO) '  LINK' $@ && $(CC) ${MYCFLAGS} ${SNDFLAGS} -o $@ ${LIMCLIENTOBJS} ${SDLLIBS} ${LIBS} ${SNDLIBS} $(LDFLAGS) ${LIBOPUS}
-SDLCLIENTLINK=$(ECHO) '  LINK' $@ && $(CC) ${MYCFLAGS} ${SNDFLAGS} -o $@ ${SDLCFLAGS} ${SDLCLIENTOBJS} ${SDLLIBS} ${LIBS} ${SNDLIBS} $(LDFLAGS)
+SDLCLIENTLINK=$(ECHO) '  LINK' $@ && $(CC) ${MYCFLAGS} ${SNDFLAGS} -o $@ ${SDLCFLAGS} ${SDLCLIENTOBJS} ${SDLLIBS} ${LIBS} ${SNDLIBS} $(LDFLAGS) ${X11LIBS}
 SERVERLINK=$(ECHO) '  LINK' $@ && $(CC) ${MYCFLAGS} -o $@ ${SERVEROBJS} ${SERVERLIBS} $(LDFLAGS)
 MULTIVERSELINK=$(ECHO) '  LINK' $@ && $(CC) ${MYCFLAGS} -o $@ ${MULTIVERSEOBJS} ${MULTIVERSELIBS} $(LDFLAGS)
 NEBULANOISELINK=$(ECHO) '  LINK' $@ && $(CC) ${MYCFLAGS} -o $@ ${NEBULANOISEOBJS} ${NEBULANOISELIBS} $(LDFLAGS)
@@ -1148,6 +1152,9 @@ $(OD)/snis_tweak.o: snis_tweak.c snis_tweak.h Makefile ${ODT}
 
 $(OD)/snis_client_debug.o: snis_debug.c snis_debug.h Makefile ${ODT}
 	$(Q)$(SNISCLIENTDBGCOMPILE)
+
+$(OD)/snis_xwindows_hacks.o:	snis_xwindows_hacks.c snis_xwindows_hacks.h Makefile ${ODT}
+	$(Q)$(COMPILE)
 
 $(OD)/snis_server_debug.o: snis_debug.c snis_debug.h Makefile ${ODT}
 	$(Q)$(SNISSERVERDBGCOMPILE)
