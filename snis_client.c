@@ -292,7 +292,7 @@ static uint32_t my_ship_id = UNKNOWN_ID;
 static uint32_t my_ship_oid = UNKNOWN_ID;
 static uint32_t my_home_planet_oid = UNKNOWN_ID;
 #define MAXWINDOWS 2
-static int nwindows = 2;
+static int nwindows = 1;
 static int real_screen_width[MAXWINDOWS];
 static int real_screen_height[MAXWINDOWS];
 static SDL_Window *window[MAXWINDOWS];
@@ -21777,7 +21777,7 @@ static int find_window_number(uint32_t windowID)
 	for (i = 0; i < nwindows; i++)
 		if (windowID == SDL_GetWindowID(window[i]))
 			return i;
-	return 0;
+	return -1;
 }
 
 static int main_da_button_press(int wn, SDL_MouseButtonEvent *event)
@@ -21812,7 +21812,7 @@ static int main_da_button_release(int wn, SDL_MouseButtonEvent *event)
 	mouse.button[event->button - 1].release_x = event->x;
 	mouse.button[event->button - 1].release_y = event->y;
 	mouse.windowID = event->windowID;
-	mouse.wn = find_window_number(event->windowID);
+	mouse.wn = wn;
 
 	if (display_frame_stats) {
 		if (graph_dev_graph_dev_debug_menu_click(event->x, event->y))
@@ -21909,7 +21909,7 @@ static int main_da_motion_notify(int wn, SDL_MouseMotionEvent *event)
 	mouse.x = event->x;
 	mouse.y = event->y;
 	mouse.windowID = event->windowID;
-	mouse.wn = find_window_number(event->windowID);
+	mouse.wn = wn;
 	if (current_mouse_ui_mode == MOUSE_MODE_CAPTURED_MOUSE) {
 		int cx, cy;
 
@@ -23449,10 +23449,12 @@ static int sdl_event_to_window_number(SDL_Event *event)
 		return find_window_number(event->motion.windowID);
 	case SDL_MOUSEWHEEL:
 		return find_window_number(event->wheel.windowID);
+	case SDL_TEXTINPUT:
+		return find_window_number(event->text.windowID);
 	default:
 		break;
 	}
-	return 0;
+	return -1;
 }
 
 static void process_events(void)
@@ -23471,7 +23473,7 @@ static void process_events(void)
 		}
 
 		wn = sdl_event_to_window_number(&event);
-		if (wn >= nwindows)
+		if (wn < 0 || wn >= nwindows)
 			continue;
 
 		/* See if any UI elements want to consume this event. */
@@ -23480,21 +23482,18 @@ static void process_events(void)
 
 		switch (event.type) {
 		case SDL_KEYDOWN:
-			wn = find_window_number(event.key.windowID);
 			key_press_cb(wn, &event.key.keysym);
 			break;
 		case SDL_KEYUP:
-			wn = find_window_number(event.key.windowID);
 			key_release_cb(wn, &event.key.keysym);
 			break;
-		case SDL_WINDOWEVENT: {
-				switch (event.window.event) {
-				case SDL_WINDOWEVENT_RESIZED:
-					SDL_GL_GetDrawableSize(window[wn],
-						&real_screen_width[wn], &real_screen_height[wn]);
-					sng_set_screen_size(wn, real_screen_width[wn], real_screen_height[wn]);
-					break;
-				}
+		case SDL_WINDOWEVENT:
+			switch (event.window.event) {
+			case SDL_WINDOWEVENT_RESIZED:
+				SDL_GL_GetDrawableSize(window[wn],
+					&real_screen_width[wn], &real_screen_height[wn]);
+				sng_set_screen_size(wn, real_screen_width[wn], real_screen_height[wn]);
+				break;
 			}
 			break;
 		case SDL_MOUSEBUTTONDOWN:
@@ -23508,11 +23507,6 @@ static void process_events(void)
 			break;
 		case SDL_MOUSEWHEEL:
 			main_da_scroll(wn, &event.wheel);
-			break;
-		case SDL_QUIT:
-			/* Handle quit requests (like SIGTERM). */
-			in_the_process_of_quitting = 1;
-			final_quit_selection = 1;
 			break;
 		default:
 			break;
@@ -23637,16 +23631,17 @@ int main(int argc, char *argv[])
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 0);
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
 
-	window[0] = SDL_CreateWindow("Space Nerds in Space",
-		SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
-		720, 576, SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
-	if (!window[0]) {
-		fprintf(stderr, "Could not create window: %s\n", SDL_GetError());
-		exit(1);
+	for (i = 0; i < nwindows; i++) {
+		char buffer[100];
+		snprintf(buffer, sizeof(buffer), "Space Nerds in Space Window #%d", i);
+		window[i] = SDL_CreateWindow(buffer,
+			SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
+			720, 576, SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
+		if (!window[i]) {
+			fprintf(stderr, "Could not create window %d: %s\n", i, SDL_GetError());
+			exit(1);
+		}
 	}
-	window[1] = SDL_CreateWindow("Space Nerds in Space - MAIN VIEW",
-		SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
-		720, 576, SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
 	SDL_GLContext gl_context;
 	gl_context = SDL_GL_CreateContext(window[0]);
 	SDL_GL_MakeCurrent(window[0], gl_context);
@@ -23718,7 +23713,6 @@ int main(int argc, char *argv[])
 
 		if (currentTime >= nextTime) { /* 60 Hz stuff */
 			nextTime += delta[1];
-			SDL_GL_MakeCurrent(window[mouse.wn], gl_context);
 			process_events();
 			advance_game();
 			if (final_quit_selection)
