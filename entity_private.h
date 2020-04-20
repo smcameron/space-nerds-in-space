@@ -21,6 +21,7 @@
 #ifndef ENTITY_PRIVATE_H__
 #define ENTITY_PRIVATE_H__
 
+#define MAXWINDOWS 2
 struct entity {
 	int visible;
 	struct mesh *m;
@@ -28,8 +29,8 @@ struct entity {
 	struct mesh *high_poly;
 	float x, y, z; /* world coords */
 	float cx, cy, cz; /* camera coords */
-	unsigned char onscreen; /* if screen coords are valid */
-	float sx, sy; /* screen coords */
+	unsigned char onscreen[MAXWINDOWS]; /* if screen coords are valid */
+	float sx[MAXWINDOWS], sy[MAXWINDOWS]; /* screen coords */
 	union vec3 scale;
 	float dist3dsqrd;
 	float emit_intensity; /* Range 0.0 - 1.0. Multiplied with material emit intensity. */
@@ -88,13 +89,13 @@ struct entity_context {
 	int *far_to_near_entity_depth; /* array [maxobjs] */
 	int nnear_to_far_entity_depth;
 	int *near_to_far_entity_depth; /* array [maxobjs] */
-	struct camera_info camera;
+	struct camera_info camera[MAXWINDOWS];
 	struct entity *fake_stars;
 	struct mesh *fake_stars_mesh;
 	int nfakestars; /* = 0; */
 	float fakestars_radius;
-	struct mat41 light;
-	float window_offset_x, window_offset_y;
+	struct mat41 light[MAXWINDOWS];
+	float window_offset_x[MAXWINDOWS], window_offset_y[MAXWINDOWS];
 	float ambient;
 
 	/* Screen size of model at which we switch between lo/hi poly models, if available */

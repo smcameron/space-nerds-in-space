@@ -250,18 +250,17 @@ struct material *entity_get_material(struct entity *e)
 	return e->material_ptr;
 }
 
-static inline float wx_screen(struct entity_context *cx, float wx)
+static inline float wx_screen(int wn, struct entity_context *cx, float wx)
 {
-	struct camera_info *c = &cx->camera;
-	return (wx * c->xvpixels / 2) + c->xvpixels / 2 + cx->window_offset_x;
+	struct camera_info *c = &cx->camera[wn];
+	return (wx * c->xvpixels / 2) + c->xvpixels / 2 + cx->window_offset_x[wn];
 }
 
-static inline float wy_screen(struct entity_context *cx, float wy)
+static inline float wy_screen(int wn, struct entity_context *cx, float wy)
 {
-	struct camera_info *c = &cx->camera;
-	return (-wy * c->yvpixels / 2) + c->yvpixels / 2 + cx->window_offset_y;
+	struct camera_info *c = &cx->camera[wn];
+	return (-wy * c->yvpixels / 2) + c->yvpixels / 2 + cx->window_offset_y[wn];
 }
-
 
 static void calculate_model_matrices(struct camera_info *c, struct frustum *f, struct entity *e,
 	struct entity_transform *transform)
@@ -462,7 +461,7 @@ int transform_vertices(const struct mat44 *matrix, struct vertex *v, int len)
 	return total_clip_flag > 0;
 }
 
-int transform_line(struct entity_context *cx, float x1, float y1, float z1, float x2, float y2, float z2,
+int transform_line(int wn, struct entity_context *cx, float x1, float y1, float z1, float x2, float y2, float z2,
 			float *sx1, float *sy1, float *sx2, float *sy2)
 {
 	struct vertex v[2] = {
@@ -471,7 +470,7 @@ int transform_line(struct entity_context *cx, float x1, float y1, float z1, floa
 
 	/* there is no model transform on a point */
 	struct mat44 mat_vp;
-	mat44_convert_df(&cx->camera.frustum.vp_matrix, &mat_vp);
+	mat44_convert_df(&cx->camera[wn].frustum.vp_matrix, &mat_vp);
 
 	if (transform_vertices(&mat_vp, &v[0], 2)) {
 		/* both ends outside frustum */
@@ -496,15 +495,15 @@ int transform_line(struct entity_context *cx, float x1, float y1, float z1, floa
 	v[1].wy /= v[1].ww;
 
 	/* convert to screen coordinates */
-	*sx1 = wx_screen(cx, v[0].wx);
-	*sy1 = wy_screen(cx, v[0].wy);
-	*sx2 = wx_screen(cx, v[1].wx);
-	*sy2 = wy_screen(cx, v[1].wy);
+	*sx1 = wx_screen(wn, cx, v[0].wx);
+	*sy1 = wy_screen(wn, cx, v[0].wy);
+	*sx2 = wx_screen(wn, cx, v[1].wx);
+	*sy2 = wy_screen(wn, cx, v[1].wy);
 	return 0;
 
 }
 
-static int transform_point_in_frustum(struct entity_context *cx, struct frustum *f,
+static int transform_point_in_frustum(int wn, struct entity_context *cx, struct frustum *f,
 	float x, float y, float z, float *sx, float *sy)
 {
 	struct vertex v = {x, y, z, 1};
@@ -522,53 +521,53 @@ static int transform_point_in_frustum(struct entity_context *cx, struct frustum 
 	v.wx /= v.ww;
 	v.wy /= v.ww;
 
-	*sx = wx_screen(cx, v.wx);
-	*sy = wy_screen(cx, v.wy);
+	*sx = wx_screen(wn, cx, v.wx);
+	*sy = wy_screen(wn, cx, v.wy);
 	return 0;
 }
 
-int transform_point(struct entity_context *cx, float x, float y, float z, float *sx, float *sy)
+int transform_point(int wn, struct entity_context *cx, float x, float y, float z, float *sx, float *sy)
 {
-	return transform_point_in_frustum(cx, &cx->camera.frustum, x, y, z, sx, sy);
+	return transform_point_in_frustum(wn, cx, &cx->camera[wn].frustum, x, y, z, sx, sy);
 }
 
 static void render_entity(int wn, struct entity_context *cx, struct frustum *f,
 				struct entity *e, union vec3 *camera_light_pos)
 {
 	/* calculate screen coords of entity as a whole */
-	transform_point_in_frustum(cx, f, e->x, e->y, e->z, &e->sx, &e->sy);
+	transform_point_in_frustum(wn, cx, f, e->x, e->y, e->z, &e->sx[wn], &e->sy[wn]);
 
-	if (e->sx >=0 && e->sy >= 0)
-		e->onscreen = 1;
+	if (e->sx[wn] >=0 && e->sy[wn] >= 0)
+		e->onscreen[wn] = 1;
 
 	/* Do not render entities with scale of zero. Doing so will lead to infinities
 	 * in the model normal matrix, besides being pointless.
 	 */
 	if (e->scale.v.x == 0 && e->scale.v.y == 0 && e->scale.v.z == 0) {
-		e->onscreen = 0;
+		e->onscreen[wn] = 0;
 		return;
 	}
 
 	struct entity_transform transform;
-	calculate_model_matrices(&cx->camera, f, e, &transform);
+	calculate_model_matrices(&cx->camera[wn], f, e, &transform);
 
 	graph_dev_draw_entity(wn, cx, e, camera_light_pos, &transform);
 }
 
 void render_line(int wn, struct entity_context *cx, float x1, float y1, float z1, float x2, float y2, float z2)
 {
-	calculate_camera_transform(cx);
+	calculate_camera_transform(wn, cx);
 
 	struct mat44 mat_vp, mat_v;
-	mat44_convert_df(&cx->camera.frustum.vp_matrix, &mat_vp);
-	mat44_convert_df(&cx->camera.frustum.v_matrix, &mat_v);
+	mat44_convert_df(&cx->camera[wn].frustum.vp_matrix, &mat_vp);
+	mat44_convert_df(&cx->camera[wn].frustum.v_matrix, &mat_v);
 
 	graph_dev_draw_3d_line(wn, cx, &mat_vp, &mat_v, x1, y1, z1, x2, y2, z2);
 }
 
 void render_skybox(int wn, struct entity_context *cx)
 {
-	graph_dev_draw_skybox(wn, cx, &cx->camera.frustum.vp_matrix_no_translate);
+	graph_dev_draw_skybox(wn, cx, &cx->camera[wn].frustum.vp_matrix_no_translate);
 }
 
 #if defined(__APPLE__)  || defined(__FreeBSD__)
@@ -845,13 +844,14 @@ static void calculate_camera_transform_near_far(struct camera_info *c, struct fr
 	extract_frustum_planes(f);
 }
 
-void calculate_camera_transform(struct entity_context *cx)
+void calculate_camera_transform(int wn, struct entity_context *cx)
 {
 	/* calculate for the entire frustum */
-	calculate_camera_transform_near_far(&cx->camera, &cx->camera.frustum, cx->camera.near, cx->camera.far);
+	calculate_camera_transform_near_far(&cx->camera[wn], &cx->camera[wn].frustum,
+						cx->camera[wn].near, cx->camera[wn].far);
 }
 
-static void reposition_fake_star(struct entity_context *cx, struct vertex *fs, float radius);
+static void reposition_fake_star(int wn, struct entity_context *cx, struct vertex *fs, float radius);
 
 static void update_entity_child_state(struct entity *e)
 {
@@ -883,11 +883,11 @@ static void update_entity_child_state(struct entity *e)
 void render_entities(int wn, struct entity_context *cx)
 {
 	int i, j, k, n;
-	struct camera_info *c = &cx->camera;
+	struct camera_info *c = &cx->camera[wn];
 
-	sng_set_3d_viewport(wn, cx->window_offset_x, cx->window_offset_y, c->xvpixels, c->yvpixels);
+	sng_set_3d_viewport(wn, cx->window_offset_x[wn], cx->window_offset_y[wn], c->xvpixels, c->yvpixels);
 
-	calculate_camera_transform(cx);
+	calculate_camera_transform(wn, cx);
 
 	/* see if the fake stars have wandered outside of our immediate area */
 	if (cx->nfakestars > 0) {
@@ -898,7 +898,7 @@ void render_entities(int wn, struct entity_context *cx)
 			float dist2 = dist3dsqrd(c->x - fs->x, c->y - fs->y, c->z - fs->z);
 
 			if (dist2 > r2)
-				reposition_fake_star(cx, fs, cx->fakestars_radius);
+				reposition_fake_star(wn, cx, fs, cx->fakestars_radius);
 		}
 		mesh_graph_dev_init(cx->fake_stars_mesh);
 	}
@@ -912,9 +912,9 @@ void render_entities(int wn, struct entity_context *cx)
 	 * intersects the fewest large objects.
 	 */
 	float boundary_candidate[3] = { /* distance candidates for the boundary between passes */
-		cx->camera.near * 4000.0,
-		cx->camera.near * 7000.0,
-		cx->camera.near * 10000.0,
+		cx->camera[wn].near * 4000.0,
+		cx->camera[wn].near * 7000.0,
+		cx->camera[wn].near * 10000.0,
 	};
 	int boundary_intersects[3] = { 0, 0, 0 }; /* Count of objects intersecting each boundary distance plane */
 	int last_candidate, candidate = 0;
@@ -923,23 +923,22 @@ void render_entities(int wn, struct entity_context *cx)
 	int n_passes;
 	struct frustum rendering_pass[2];
 
-	camera_pos.v.x = cx->camera.x;
-	camera_pos.v.y = cx->camera.y;
-	camera_pos.v.z = cx->camera.z;
-	camera_look.v.x = cx->camera.lx - cx->camera.x;
-	camera_look.v.y = cx->camera.ly - cx->camera.y;
-	camera_look.v.z = cx->camera.lz - cx->camera.z;
+	camera_pos.v.x = c->x;
+	camera_pos.v.y = c->y;
+	camera_pos.v.z = c->z;
+	camera_look.v.x = c->lx - c->x;
+	camera_look.v.y = c->ly - c->y;
+	camera_look.v.z = c->lz - c->z;
 	vec3_normalize_self(&camera_look);
 
-	if (cx->camera.far / cx->camera.near < render_pass_boundary) {
+	if (c->far / c->near < render_pass_boundary) {
 		n_passes = 1;
 		rendering_pass[0] = c->frustum;
 	} else {
 		n_passes = 2;
-		calculate_camera_transform_near_far(&cx->camera, &rendering_pass[0],
-							render_pass_boundary, cx->camera.far);
-		calculate_camera_transform_near_far(&cx->camera, &rendering_pass[1],
-			cx->camera.near, render_pass_boundary + render_pass_boundary / 1000.0);
+		calculate_camera_transform_near_far(c, &rendering_pass[0], render_pass_boundary, c->far);
+		calculate_camera_transform_near_far(c, &rendering_pass[1],
+			c->near, render_pass_boundary + render_pass_boundary / 1000.0);
 			/* the additional 0.1% is to render a little farther to cover seam */
 	}
 
@@ -972,7 +971,7 @@ void render_entities(int wn, struct entity_context *cx)
 			/* clear on the first pass and accumulate the state */
 			if (pass == 0) {
 				update_entity_child_state(e);
-				e->onscreen = 0;
+				e->onscreen[wn] = 0;
 			}
 
 			if (!e->visible)
@@ -988,7 +987,7 @@ void render_entities(int wn, struct entity_context *cx)
 
 			/* See: http://stackoverflow.com/questions/3717226/radius-of-projected-sphere */
 			float approx_pixel_size = c->yvpixels * e->m->radius * max_scale /
-				tan(cx->camera.angle_of_view * 0.5) / sqrt(e->dist3dsqrd);
+				tan(c->angle_of_view * 0.5) / sqrt(e->dist3dsqrd);
 
 			/* only cull stuff entirely that is too small on flat shader */
 			if (c->renderer & FLATSHADING_RENDERER && e->dist3dsqrd != 0 && approx_pixel_size < 2.0)
@@ -1055,10 +1054,10 @@ void render_entities(int wn, struct entity_context *cx)
 				/* Recalculate the camera transforms if the render pass boundary was changed
 				   to avoid some intersecting object */
 				render_pass_boundary = boundary_candidate[candidate];
-				calculate_camera_transform_near_far(&cx->camera, &rendering_pass[0],
-								render_pass_boundary, cx->camera.far);
-				calculate_camera_transform_near_far(&cx->camera, &rendering_pass[1],
-					cx->camera.near, render_pass_boundary + render_pass_boundary / 1000.0);
+				calculate_camera_transform_near_far(c, &rendering_pass[0],
+								render_pass_boundary, c->far);
+				calculate_camera_transform_near_far(c, &rendering_pass[1],
+					c->near, render_pass_boundary + render_pass_boundary / 1000.0);
 			}
 		}
 
@@ -1071,7 +1070,7 @@ void render_entities(int wn, struct entity_context *cx)
 
 			/* find the position of our light in camera space */
 			struct mat41 camera_light_pos;
-			mat44_x_mat41_dff(&f->v_matrix, &cx->light, &camera_light_pos);
+			mat44_x_mat41_dff(&f->v_matrix, &cx->light[wn], &camera_light_pos);
 
 			/* render the sorted entities */
 
@@ -1092,71 +1091,72 @@ void render_entities(int wn, struct entity_context *cx)
 	}
 }
 
-void camera_set_pos(struct entity_context *cx, float x, float y, float z)
+void camera_set_pos(int wn, struct entity_context *cx, float x, float y, float z)
 {
-	cx->camera.x = x;
-	cx->camera.y = y;
-	cx->camera.z = z;
+	cx->camera[wn].x = x;
+	cx->camera[wn].y = y;
+	cx->camera[wn].z = z;
 }
 
-void camera_get_pos(struct entity_context *cx, float *x, float *y, float *z)
+void camera_get_pos(int wn, struct entity_context *cx, float *x, float *y, float *z)
 {
-	*x = cx->camera.x;
-	*y = cx->camera.y;
-	*z = cx->camera.z;
+	*x = cx->camera[wn].x;
+	*y = cx->camera[wn].y;
+	*z = cx->camera[wn].z;
 }
 
-void camera_look_at(struct entity_context *cx, float x, float y, float z)
+void camera_look_at(int wn, struct entity_context *cx, float x, float y, float z)
 {
-	cx->camera.lx = x;
-	cx->camera.ly = y;
-	cx->camera.lz = z;
+	cx->camera[wn].lx = x;
+	cx->camera[wn].ly = y;
+	cx->camera[wn].lz = z;
 }
 
-void camera_get_look_at(struct entity_context *cx, float *x, float *y, float *z)
+void camera_get_look_at(int wn, struct entity_context *cx, float *x, float *y, float *z)
 {
-	*x = cx->camera.lx;
-	*y = cx->camera.ly;
-	*z = cx->camera.lz;
+	*x = cx->camera[wn].lx;
+	*y = cx->camera[wn].ly;
+	*z = cx->camera[wn].lz;
 }
 
-void camera_assign_up_direction(struct entity_context *cx, float x, float y, float z)
+void camera_assign_up_direction(int wn, struct entity_context *cx, float x, float y, float z)
 {
-	cx->camera.ux = x;
-	cx->camera.uy = y;
-	cx->camera.uz = z;
+	cx->camera[wn].ux = x;
+	cx->camera[wn].uy = y;
+	cx->camera[wn].uz = z;
 }
 
-void camera_get_up_direction(struct entity_context *cx, float *x, float *y, float *z)
+void camera_get_up_direction(int wn, struct entity_context *cx, float *x, float *y, float *z)
 {
-	*x = cx->camera.ux;
-	*y = cx->camera.uy;
-	*z = cx->camera.uz;
+	*x = cx->camera[wn].ux;
+	*y = cx->camera[wn].uy;
+	*z = cx->camera[wn].uz;
 }
 
-void camera_set_parameters(struct entity_context *cx, float near, float far,
+void camera_set_parameters(int wn, struct entity_context *cx, float near, float far,
 				int xvpixels, int yvpixels, float angle_of_view)
 {
-	cx->camera.near = near;
-	cx->camera.far = far;
-	cx->camera.xvpixels = xvpixels;
-	cx->camera.yvpixels = yvpixels;
-	cx->camera.angle_of_view = angle_of_view;
+	cx->camera[wn].near = near;
+	cx->camera[wn].far = far;
+	cx->camera[wn].xvpixels = xvpixels;
+	cx->camera[wn].yvpixels = yvpixels;
+	cx->camera[wn].angle_of_view = angle_of_view;
 }
 
-void camera_get_parameters(struct entity_context *cx, float *near, float *far,
+void camera_get_parameters(int wn, struct entity_context *cx, float *near, float *far,
 				int *xvpixels, int *yvpixels, float *angle_of_view)
 {
-	*near = cx->camera.near;
-	*far = cx->camera.far;
-	*xvpixels = cx->camera.xvpixels;
-	*yvpixels = cx->camera.yvpixels;
-	*angle_of_view = cx->camera.angle_of_view;
+	*near = cx->camera[wn].near;
+	*far = cx->camera[wn].far;
+	*xvpixels = cx->camera[wn].xvpixels;
+	*yvpixels = cx->camera[wn].yvpixels;
+	*angle_of_view = cx->camera[wn].angle_of_view;
 }
 
 struct entity_context *entity_context_new(int maxobjs, int maxchildren)
 {
 	struct entity_context *cx;
+	int i;
 
 	cx = malloc(sizeof(*cx));
 
@@ -1173,10 +1173,12 @@ struct entity_context *entity_context_new(int maxobjs, int maxchildren)
 	memset(cx->entity_child_list, 0, sizeof(cx->entity_child_list[0]) * maxchildren);
 	snis_object_pool_setup(&cx->entity_child_pool, maxchildren);
 	cx->maxchildren = maxchildren;
-	set_renderer(cx, FLATSHADING_RENDERER);
-	set_lighting(cx, 0, 0, 0);
-	camera_assign_up_direction(cx, 0.0, 1.0, 0.0);
-	set_window_offset(cx, 0.0, 0.0);
+	for (i = 0; i < MAXWINDOWS; i++) {
+		set_renderer(i, cx, FLATSHADING_RENDERER);
+		set_lighting(i, cx, 0, 0, 0);
+		camera_assign_up_direction(i, cx, 0.0, 1.0, 0.0);
+		set_window_offset(i, cx, 0.0, 0.0);
+	}
 	cx->nfakestars = 0;
 	cx->hi_lo_poly_pixel_threshold = 100.0;
 	return cx;
@@ -1191,18 +1193,18 @@ void entity_context_free(struct entity_context *cx)
 }
 
 /* Re-position a star randomly on the surface of sphere of given radius */
-static void reposition_fake_star(struct entity_context *cx, struct vertex *fs, float radius)
+static void reposition_fake_star(int wn, struct entity_context *cx, struct vertex *fs, float radius)
 {
 	/* I tried "on" sphere here, but I like the look of "in" better. */
 	float dist3dsqrd;
 	random_point_in_sphere(radius, &fs->x, &fs->y, &fs->z, &dist3dsqrd);
-	fs->x += cx->camera.x;
-	fs->y += cx->camera.y;
-	fs->z += cx->camera.z;
+	fs->x += cx->camera[wn].x;
+	fs->y += cx->camera[wn].y;
+	fs->z += cx->camera[wn].z;
 }
 
 /* fill a sphere of specified radius with randomly placed stars */
-void entity_init_fake_stars(struct entity_context *cx, int nstars, float radius)
+void entity_init_fake_stars(int wn, struct entity_context *cx, int nstars, float radius)
 {
 	int i;
 	if (cx->nfakestars > 0)
@@ -1220,7 +1222,7 @@ void entity_init_fake_stars(struct entity_context *cx, int nstars, float radius)
 	cx->fake_stars_mesh->radius = INT_MAX;
 
 	for (i = 0; i < nstars; i++) {
-		reposition_fake_star(cx, &cx->fake_stars_mesh->v[i], radius);
+		reposition_fake_star(wn, cx, &cx->fake_stars_mesh->v[i], radius);
 	}
 	mesh_graph_dev_init(cx->fake_stars_mesh);
 
@@ -1239,14 +1241,14 @@ void entity_free_fake_stars(struct entity_context *cx)
 	cx->fake_stars_mesh = 0;
 }
 
-void set_renderer(struct entity_context *cx, int renderer)
+void set_renderer(int wn, struct entity_context *cx, int renderer)
 {
-	cx->camera.renderer = renderer;
+	cx->camera[wn].renderer = renderer;
 }
 
-int get_renderer(struct entity_context *cx)
+int get_renderer(int wn, struct entity_context *cx)
 {
-	return cx->camera.renderer;
+	return cx->camera[wn].renderer;
 }
 
 void set_render_style(struct entity *e, int render_style)
@@ -1255,12 +1257,12 @@ void set_render_style(struct entity *e, int render_style)
 		e->render_style = render_style;
 }
 
-void set_lighting(struct entity_context *cx, double x, double y, double z)
+void set_lighting(int wn, struct entity_context *cx, double x, double y, double z)
 {
-	cx->light.m[0] = x;
-	cx->light.m[1] = y;
-	cx->light.m[2] = z;
-	cx->light.m[3] = 1;
+	cx->light[wn].m[0] = x;
+	cx->light[wn].m[1] = y;
+	cx->light[wn].m[2] = z;
+	cx->light[wn].m[3] = 1;
 }
 
 void set_ambient_light(struct entity_context *cx, float ambient)
@@ -1298,10 +1300,10 @@ struct entity *get_entity(struct entity_context *cx, int n)
 	return &cx->entity_list[n];
 }
 
-void entity_get_screen_coords(struct entity *e, float *x, float *y)
+void entity_get_screen_coords(int wn, struct entity *e, float *x, float *y)
 {
-	*x = e->sx;
-	*y = e->sy;
+	*x = e->sx[wn];
+	*y = e->sy[wn];
 }
 
 void entity_set_user_data(struct entity *e, void *user_data)
@@ -1314,7 +1316,7 @@ void *entity_get_user_data(struct entity *e)
 	return e->user_data;
 }
 
-void camera_set_orientation(struct entity_context *cx, union quat *q)
+void camera_set_orientation(int wn, struct entity_context *cx, union quat *q)
 {
 	union vec3 look, up;
 
@@ -1328,10 +1330,10 @@ void camera_set_orientation(struct entity_context *cx, union quat *q)
 	quat_rot_vec_self(&look, q);
 	quat_rot_vec_self(&up, q);
 
-	camera_look_at(cx, cx->camera.x + look.v.x * 256,
-			cx->camera.y + look.v.y * 256,
-			cx->camera.z + look.v.z * 256);
-	camera_assign_up_direction(cx, up.v.x, up.v.y, up.v.z);
+	camera_look_at(wn, cx, cx->camera[wn].x + look.v.x * 256,
+			cx->camera[wn].y + look.v.y * 256,
+			cx->camera[wn].z + look.v.z * 256);
+	camera_assign_up_direction(wn, cx, up.v.x, up.v.y, up.v.z);
 }
 
 union quat *entity_get_orientation(struct entity *e)
@@ -1346,25 +1348,25 @@ void entity_get_pos(struct entity *e, float *x, float *y, float *z)
 	*z = e->z;
 }
 
-struct mat44d get_camera_v_transform(struct entity_context *cx)
+struct mat44d get_camera_v_transform(int wn, struct entity_context *cx)
 {
-	return cx->camera.frustum.v_matrix;
+	return cx->camera[wn].frustum.v_matrix;
 }
 
-struct mat44d get_camera_vp_transform(struct entity_context *cx)
+struct mat44d get_camera_vp_transform(int wn, struct entity_context *cx)
 {
-	return cx->camera.frustum.vp_matrix;
+	return cx->camera[wn].frustum.vp_matrix;
 }
 
-void set_window_offset(struct entity_context *cx, float x, float y)
+void set_window_offset(int wn, struct entity_context *cx, float x, float y)
 {
-	cx->window_offset_x = x;
-	cx->window_offset_y = y;
+	cx->window_offset_x[wn] = x;
+	cx->window_offset_y[wn] = y;
 }
 
-int entity_onscreen(struct entity *e)
+int entity_onscreen(int wn, struct entity *e)
 {
-	return (int) e->onscreen;
+	return (int) e->onscreen[wn];
 }
 
 /* clipping triangles to frustum taken from
