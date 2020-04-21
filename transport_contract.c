@@ -33,9 +33,11 @@ void remove_transport_contract_shipping_location(uint32_t loc)
 				break;
 			}
 		}
-		if (count > 0)
+		if (count > 0) {
 			for (j = i; j < nshipping_locations - 1; j++)
 				shipping_location[j] = shipping_location[j + 1];
+			nshipping_locations--;
+		}
 	} while (count > 0);
 }
 
