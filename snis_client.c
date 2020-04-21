@@ -18183,9 +18183,8 @@ static char *expand_demon_selection_string(char *input)
 	newinput = calloc(strlen(input) + strlen(buffer), 1);
 	strncpy(newinput, input, sel - input);
 	newinput[sel - input] = '\0';
-	strncat(newinput, buffer, sizeof(buffer));
-	l = strlen(newinput);
-	strncat(newinput, sel + 4, strlen(input) + strlen(buffer) - l - 1);
+	strncat(newinput, buffer, sizeof(newinput) - strlen(newinput) - 1);
+	strncat(newinput, sel + 4, sizeof(newinput) - strlen(newinput) - 1);
 	return newinput;
 }
 
