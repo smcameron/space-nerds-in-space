@@ -806,11 +806,12 @@ unsigned int wwviaudio_get_mixer_cycle_count(void) {
 
 void wwviaudio_append_to_audio_chain(int16_t *samples, int nsamples, int chain, void (*callback)(void *), void *cookie)
 {
-	struct audio_queue_entry *entry = malloc(sizeof(*entry));
+	struct audio_queue_entry *entry;
 
 	if (chain < 0 || chain >= WWVIAUDIO_CHAIN_COUNT)
 		return;
 
+	entry = malloc(sizeof(*entry));
 	entry->active = 1;
 	entry->pos = 0;
 	entry->nsamples = nsamples;
