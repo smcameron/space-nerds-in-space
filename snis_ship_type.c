@@ -93,7 +93,7 @@ struct ship_type_entry *snis_read_ship_types(char *filename, int *count)
 	float rot[4];
 	int has_lasers, has_torpedoes, has_missiles;
 	float relative_mass;
-	int errorcount;
+	int errorcount = 0;
 
 	nalloced = 30;
 	st = malloc(sizeof(*st) * nalloced);
