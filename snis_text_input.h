@@ -7,6 +7,8 @@
 #define GLOBAL extern
 #endif
 
+#include <SDL.h>
+
 struct snis_text_input_box;
 typedef void (*snis_text_input_box_callback)(void *cookie);
 
@@ -39,8 +41,8 @@ GLOBAL int snis_text_input_box_button_press(struct snis_text_input_box *t, int x
 
 /* Pass keypress and keyrelease events into the text box. Currently only keypress events
  * do anything. Both return 0 always. */
-GLOBAL int snis_text_input_box_keypress(struct snis_text_input_box *t, GdkEventKey *event);
-GLOBAL int snis_text_input_box_keyrelease(struct snis_text_input_box *t, GdkEventKey *event);
+GLOBAL int snis_text_input_box_keypress(struct snis_text_input_box *t, SDL_Event *event);
+GLOBAL int snis_text_input_box_keyrelease(struct snis_text_input_box *t, SDL_Event *event);
 
 /* Zero out the buffer associated with the text box */
 GLOBAL void snis_text_input_box_zero(struct snis_text_input_box *t);

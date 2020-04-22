@@ -1,13 +1,15 @@
 #ifndef SNIS_UI_ELEMENT_H__
 #define SNIS_UI_ELEMENT_H__
 
+#include <SDL.h>
+
 struct ui_element;
 struct ui_element_list;
 
 typedef void (*ui_element_drawing_function)(void *);
 typedef int (*ui_element_button_release_function)(void *element, int x, int y);
 typedef void (*ui_element_set_focus_function)(void *element, int has_focus);
-typedef int (*ui_element_keypress_function)(void *element, GdkEventKey *event);
+typedef int (*ui_element_keypress_function)(void *element, SDL_Event *event);
 typedef int (*ui_element_inside_function)(void *element, int physical_x, int physical_y);
 typedef void (*ui_tooltip_drawing_function)(int x, int y, char *tooltip);
 typedef void (*ui_update_mouse_pos_function)(void *element, int physical_x, int physical_y);
@@ -44,8 +46,9 @@ GLOBAL void ui_element_get_keystrokes(struct ui_element *e,
 				ui_element_keypress_function keyrelease_fn);
 GLOBAL void ui_element_set_tooltip(struct ui_element *e, char *tooltip);
 
-GLOBAL void ui_element_list_keypress(struct ui_element_list *list, GdkEventKey *event);
-GLOBAL void ui_element_list_keyrelease(struct ui_element_list *list, GdkEventKey *event);
+GLOBAL int ui_element_list_keypress(struct ui_element_list *list, SDL_Event *event);
+GLOBAL int ui_element_list_keyrelease(struct ui_element_list *list, SDL_Event *event);
+GLOBAL int ui_element_list_event(struct ui_element_list *list, SDL_Event *event);
 GLOBAL void ui_element_hide(struct ui_element *e);
 GLOBAL void ui_element_unhide(struct ui_element *e);
 GLOBAL void ui_element_set_displaymode(struct ui_element *e, int displaymode);

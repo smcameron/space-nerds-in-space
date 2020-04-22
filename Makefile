@@ -581,7 +581,7 @@ MULTIVERSELIBS=-Lssgl -lssglclient ${LRTLIB} -ldl -lm ${CRYPTLIBS}
 #
 
 
-BINPROGS=bin/ssgl_server bin/snis_server bin/snis_client bin/snis_limited_client bin/snis_text_to_speech.sh \
+BINPROGS=bin/ssgl_server bin/snis_server bin/snis_client bin/snis_text_to_speech.sh \
 		bin/snis_multiverse bin/lsssgl bin/snis_arduino
 UTILPROGS=util/mask_clouds util/cloud-mask-normalmap bin/mesh_viewer util/sample_image_colors \
 		util/generate_solarsystem_positions bin/nebula_noise bin/generate_skybox bin/earthlike
@@ -645,9 +645,7 @@ MYCFLAGS=-DPREFIX=${PREFIX} ${DEBUGFLAG} ${PROFILEFLAG} ${OPTIMIZEFLAG}\
 	--pedantic -Wall ${STOP_ON_WARN} -pthread -std=gnu99 ${RDYNAMIC} \
 	-Wno-extended-offsetof -Wno-gnu-folding-constant $(CFLAGS) -Wvla
 GTKCFLAGS:=$(subst -I,-isystem ,$(shell $(PKG_CONFIG) --cflags gtk+-2.0))
-GLEXTCFLAGS:=$(subst -I,-isystem ,$(shell $(PKG_CONFIG) --cflags gtkglext-1.0)) ${PNGCFLAGS}
 GTKLDFLAGS:=$(shell $(PKG_CONFIG) --libs gtk+-2.0) $(shell $(PKG_CONFIG) --libs gthread-2.0)
-GLEXTLDFLAGS:=$(shell $(PKG_CONFIG) --libs gtkglext-1.0)
 VORBISFLAGS:=$(subst -I,-isystem ,$(shell $(PKG_CONFIG) --cflags vorbisfile))
 
 ifeq (${WITHVOICECHAT},yes)
@@ -671,16 +669,14 @@ ECHO=echo
 endif
 
 COMPILE=$(ECHO) '  COMPILE' $< && $(CC) ${MYCFLAGS} ${LUACFLAGS} -c -o $@ $<
-GTKCOMPILE=$(ECHO) '  COMPILE' $< && $(CC) ${MYCFLAGS} ${GTKCFLAGS} -c -o $@ $<
 LIMCOMPILE=$(ECHO) '  COMPILE' $< && $(CC) -DWITHOUTOPENGL=1 ${MYCFLAGS} ${GTKCFLAGS} -c -o $@ $<
-GLEXTCOMPILE=$(ECHO) '  COMPILE' $< && $(CC) ${MYCFLAGS} ${GTKCFLAGS} ${GLEXTCFLAGS} -c -o $@ $<
 VORBISCOMPILE=$(ECHO) '  COMPILE' $< && $(CC) ${MYCFLAGS} ${VORBISFLAGS} ${SNDFLAGS} -c -o $@ $<
-SDLCOMPILE=$(ECHO) '  COMPILE' $< && $(CC) ${MYCFLAGS} ${SDLCFLAGS} ${GLEWCFLAGS} -c -o $@ $<
+SDLCOMPILE=$(ECHO) '  COMPILE' $< && $(CC) ${MYCFLAGS} ${SDLCFLAGS} -c -o $@ $<
 SNISSERVERDBGCOMPILE=$(ECHO) '  COMPILE' $< && $(CC) -DSNIS_SERVER_DATA ${MYCFLAGS} ${LUACFLAGS} -c -o $(OD)/snis_server_debug.o $<
 SNISCLIENTDBGCOMPILE=$(ECHO) '  COMPILE' $< && $(CC) -DSNIS_CLIENT_DATA ${MYCFLAGS} ${LUACFLAGS} -c -o $(OD)/snis_client_debug.o $<
 
-CLIENTLINK=$(ECHO) '  LINK' $@ && $(CC) ${MYCFLAGS} ${SNDFLAGS} -o $@ ${GTKCFLAGS} ${GLEXTCFLAGS} ${CLIENTOBJS} ${GTKLDFLAGS} ${GLEXTLDFLAGS} ${LIBS} ${SNDLIBS} $(LDFLAGS) ${LIBOPUS}
-LIMCLIENTLINK=$(ECHO) '  LINK' $@ && $(CC) ${MYCFLAGS} ${SNDFLAGS} -o $@ ${GTKCFLAGS} ${LIMCLIENTOBJS} ${GLEXTLDFLAGS} ${LIBS} ${SNDLIBS} $(LDFLAGS) ${LIBOPUS}
+CLIENTLINK=$(ECHO) '  LINK' $@ && $(CC) ${MYCFLAGS} ${SNDFLAGS} -o $@ ${SDLCFLAGS} ${CLIENTOBJS} ${SDLLIBS} ${LIBS} ${SNDLIBS} $(LDFLAGS) ${LIBOPUS}
+LIMCLIENTLINK=$(ECHO) '  LINK' $@ && $(CC) ${MYCFLAGS} ${SNDFLAGS} -o $@ ${LIMCLIENTOBJS} ${SDLLIBS} ${LIBS} ${SNDLIBS} $(LDFLAGS) ${LIBOPUS}
 SDLCLIENTLINK=$(ECHO) '  LINK' $@ && $(CC) ${MYCFLAGS} ${SNDFLAGS} -o $@ ${SDLCFLAGS} ${SDLCLIENTOBJS} ${SDLLIBS} ${LIBS} ${SNDLIBS} $(LDFLAGS)
 SERVERLINK=$(ECHO) '  LINK' $@ && $(CC) ${MYCFLAGS} -o $@ ${SERVEROBJS} ${SERVERLIBS} $(LDFLAGS)
 MULTIVERSELINK=$(ECHO) '  LINK' $@ && $(CC) ${MYCFLAGS} -o $@ ${MULTIVERSEOBJS} ${MULTIVERSELIBS} $(LDFLAGS)
@@ -704,7 +700,7 @@ _CMNMOBJS=png_utils.o
 CMNMOBJS=$(patsubst %,$(OD)/%, ${_CMNMOBJS})
 CMNMLINK=$(ECHO) '  LINK' $@ && $(CC) ${MYCFLAGS} -o $@ ${GTKCFLAGS} util/cloud-mask-normalmap.o ${CMNMOBJS} ${CMNMLIBS} $(LDFLAGS)
 
-all:	bin/.t ${COMMONOBJS} ${SERVEROBJS} ${MULTIVERSEOBJS} ${CLIENTOBJS} ${LIMCLIENTOBJS} ${BINPROGS} ${SCAD_PARAMS_FILES} ${DOCKING_PORT_FILES}
+all:	bin/.t ${COMMONOBJS} ${SERVEROBJS} ${MULTIVERSEOBJS} ${CLIENTOBJS} ${BINPROGS} ${SCAD_PARAMS_FILES} ${DOCKING_PORT_FILES}
 
 models:	${MODELS}
 
@@ -755,19 +751,19 @@ $(OD)/rootcheck.o:	rootcheck.c rootcheck.h Makefile ${ODT}
 	$(Q)$(COMPILE)
 
 $(OD)/graph_dev_opengl.o : graph_dev_opengl.c Makefile ${ODT}
-	$(Q)$(GLEXTCOMPILE)
+	$(Q)$(SDLCOMPILE)
 
 $(OD)/opengl_cap.o : opengl_cap.c Makefile ${ODT}
-	$(Q)$(GLEXTCOMPILE)
+	$(Q)$(SDLCOMPILE)
 
 $(OD)/graph_dev_gdk.o : graph_dev_gdk.c Makefile ${ODT}
-	$(Q)$(GTKCOMPILE)
+	$(Q)$(SDLCOMPILE)
 
 $(OD)/graph_dev_mesh_stub.o:	graph_dev_mesh_stub.c graph_dev_mesh_stub.h ${ODT}
 	$(Q)$(COMPILE)
 
 $(OD)/material.o : material.c Makefile ${ODT}
-	$(Q)$(GTKCOMPILE)
+	$(Q)$(SDLCOMPILE)
 
 $(OD)/shader.o : shader.c Makefile ${ODT}
 	$(Q)$(COMPILE)
@@ -791,7 +787,7 @@ $(OD)/ui_colors.o:	ui_colors.c ui_colors.h snis_graph.h Makefile ${ODT}
 	$(Q)$(COMPILE)
 
 $(OD)/snis_keyboard.o:	snis_keyboard.c snis_keyboard.h ${OD}/string-utils.o Makefile ${ODT}
-	$(Q)$(GTKCOMPILE)
+	$(Q)$(SDLCOMPILE)
 
 $(OD)/snis_preferences.o:	snis_preferences.c snis_preferences.h string-utils.h snis_packet.h ${ODT}
 	$(Q)$(COMPILE)
@@ -871,7 +867,7 @@ $(OD)/snis_server_tracker.o:	snis_server_tracker.c snis_server_tracker.h pthread
 	$(Q)$(COMPILE)
 
 $(OD)/snis_client.o:	snis_client.c Makefile build_info.h ui_colors.h ${ODT}
-	$(Q)$(GLEXTCOMPILE) ${VCHAT}
+	$(Q)$(SDLCOMPILE) ${VCHAT}
 
 $(OD)/snis_limited_client.o:	snis_client.c Makefile build_info.h ${ODT}
 	@echo -n "  (limited client) "
@@ -1010,7 +1006,7 @@ $(OD)/snis_limited_graph.o:	snis_graph.c Makefile ${ODT}
 	$(Q)$(LIMCOMPILE)
 
 $(OD)/snis_graph.o:	snis_graph.c Makefile ${ODT}
-	$(Q)$(GLEXTCOMPILE)
+	$(Q)$(SDLCOMPILE)
 
 $(OD)/ship_registration.o:	ship_registration.c ship_registration.h Makefile ${ODT}
 	$(Q)$(COMPILE)
@@ -1019,34 +1015,34 @@ $(OD)/corporations.o:	corporations.c corporations.h Makefile ${ODT}
 	$(Q)$(COMPILE)
 
 $(OD)/snis_typeface.o:	snis_typeface.c Makefile ${ODT}
-	$(Q)$(GTKCOMPILE)
+	$(Q)$(SDLCOMPILE)
 
 $(OD)/snis_gauge.o:	snis_gauge.c Makefile ${ODT}
-	$(Q)$(GTKCOMPILE)
+	$(Q)$(SDLCOMPILE)
 
 $(OD)/snis_button.o:	snis_button.c Makefile ${ODT}
-	$(Q)$(GTKCOMPILE)
+	$(Q)$(SDLCOMPILE)
 
 $(OD)/snis_pull_down_menu.o:	snis_pull_down_menu.c snis_pull_down_menu.h Makefile ${ODT}
-	$(Q)$(GTKCOMPILE)
+	$(Q)$(SDLCOMPILE)
 
 $(OD)/snis_strip_chart.o:	snis_strip_chart.c Makefile ${ODT}
-	$(Q)$(GTKCOMPILE)
+	$(Q)$(SDLCOMPILE)
 
 $(OD)/snis_label.o:	snis_label.c Makefile ${ODT}
-	$(Q)$(GTKCOMPILE)
+	$(Q)$(SDLCOMPILE)
 
 $(OD)/snis_sliders.o:	snis_sliders.c snis_sliders.h ui_colors.h Makefile ${ODT}
-	$(Q)$(GTKCOMPILE)
+	$(Q)$(SDLCOMPILE)
 
 $(OD)/snis_text_window.o:	snis_text_window.c Makefile ${ODT}
-	$(Q)$(GTKCOMPILE)
+	$(Q)$(SDLCOMPILE)
 
 $(OD)/snis_ui_element.o:	snis_ui_element.c Makefile ${ODT}
-	$(Q)$(GTKCOMPILE)
+	$(Q)$(SDLCOMPILE)
 
 $(OD)/snis_text_input.o:	snis_text_input.c Makefile ${ODT}
-	$(Q)$(GTKCOMPILE)
+	$(Q)$(SDLCOMPILE)
 
 $(OD)/matrix.o:	matrix.c Makefile ${ODT}
 	$(Q)$(COMPILE)
@@ -1076,7 +1072,7 @@ bin/stl_parser:	stl_parser.c $(OD)/matrix.o $(OD)/mesh.o $(OD)/mathutils.o $(OD)
 		${OD}/quat.o ${OD}/mtwist.o mikktspace/mikktspace.o ${OD}/string-utils.o ${OD}/open-simplex-noise.o -lm $(LDFLAGS)
 
 $(OD)/entity.o:	entity.c Makefile ${ODT}
-	$(Q)$(GTKCOMPILE)
+	$(Q)$(SDLCOMPILE)
 
 $(OD)/names.o:	names.c Makefile ${ODT}
 	$(Q)$(COMPILE)

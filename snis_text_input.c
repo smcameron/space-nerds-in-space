@@ -1,7 +1,5 @@
 #include <stdlib.h>
 #include <string.h>
-#include <gtk/gtk.h>
-#include <gdk/gdkkeysyms.h>
 
 #include "snis_font.h"
 #include "snis_typeface.h"
@@ -106,6 +104,12 @@ void snis_text_input_box_draw(struct snis_text_input_box *t)
 void snis_text_input_box_set_focus(struct snis_text_input_box *t, int has_focus)
 {
 	t->has_focus = has_focus;
+	if (has_focus) {
+		/* TODO SDL2 SDL_SetTextInputRect(SDL_Rect* rect) */
+		SDL_StartTextInput();
+	} else {
+		SDL_StopTextInput();
+	}
 }
 
 int snis_text_input_box_button_press(struct snis_text_input_box *t, int x, int y)
@@ -168,80 +172,81 @@ static void do_leftarrow(struct snis_text_input_box *t)
 		t->cursor_pos--;
 }
 
-int snis_text_input_box_keypress(struct snis_text_input_box *t, GdkEventKey *event)
+int snis_text_input_box_keypress(struct snis_text_input_box *t, SDL_Event *event)
 {
-	char c;
-	int currentlen;
-	if (event->type != GDK_KEY_PRESS)
-		return 0;
-
-	/* Allow the numpad to work */
-	if (event->keyval >= 0x0ffb0 && event->keyval <= 0x0ffb9) /* Numbers on numpad */
-		event->keyval = event->keyval - 0x0ffb0 + '0';
-	else if (event->keyval == 0x0ffae) /* '.' on numpad */
-		event->keyval = '.';
-	else if (event->keyval == 0x0ff8d) /* 'enter' on numpad */
-		event->keyval = GDK_KEY_Return;
-	else if (event->keyval == 0x0ffab) /* '+' on numpad */
-		event->keyval = '+';
-	else if (event->keyval == 0x0ffad) /* '-' on numpad */
-		event->keyval = '-';
-	else if (event->keyval == 0x0ffaa) /* '*' on numpad */
-		event->keyval = '*';
-	else if (event->keyval == 0x0ffaf) /* '/' on numpad */
-		event->keyval = '/';
-
-	if ((event->keyval & ~0x7f) != 0) {
-#include "snis_fixup_gnome_key_screwups.h"
-		switch (event->keyval) {
-			case GDK_KEY_BackSpace:
-				do_backspace(t);
-				break;
-			case GDK_KEY_Delete:
-				do_delete(t);
-				break;
-			case GDK_KEY_Right:
-				do_rightarrow(t);
-				break;
-			case GDK_KEY_Left:
-				do_leftarrow(t);
-				break;
-			case GDK_KEY_Return:
-				if (t->return_function)
-					t->return_function(t->cookie);
-				break;
-			default:
-				break;	
+	switch (event->type) {
+	case SDL_KEYDOWN:
+		/* TODO verify Numpad numbers still work with SDL */
+		switch (event->key.keysym.sym) {
+		case SDLK_BACKSPACE:
+		case SDLK_KP_BACKSPACE:
+			do_backspace(t);
+			return 1;
+		case SDLK_DELETE:
+			do_delete(t);
+			return 1;
+		case SDLK_RIGHT:
+			do_rightarrow(t);
+			return 1;
+		case SDLK_LEFT:
+			do_leftarrow(t);
+			return 1;
+		case SDLK_RETURN:
+			if (t->return_function) {
+				t->return_function(t->cookie);
+				return 1;
+			}
+			break;
+		default:
+			break;
 		}
 		return 0;
-	}
-	c = (event->keyval & 0x7f);
-	currentlen = strlen(t->buffer);
-	if (currentlen == t->cursor_pos) {
-		t->buffer[t->cursor_pos + 1] = '\0';	
-		t->buffer[t->cursor_pos] = c;
-		if (t->cursor_pos < t->buflen - 1)
-			t->cursor_pos++;
-	} else {
-		if (currentlen < t->buflen - 2) {
-			if (currentlen - t->cursor_pos >= 0) {
-				memmove(&t->buffer[t->cursor_pos + 1], &t->buffer[t->cursor_pos],
-					currentlen - t->cursor_pos);
+	case SDL_KEYUP:
+		switch (event->key.keysym.sym) {
+		case SDLK_KP_BACKSPACE:
+		case SDLK_BACKSPACE:
+		case SDLK_DELETE:
+		case SDLK_RIGHT:
+		case SDLK_LEFT:
+		case SDLK_RETURN:
+			return 1;
+		}
+		break;
+	case SDL_TEXTINPUT:
+		{
+			char c = event->text.text[0];
+			int currentlen = strlen(t->buffer);
+			if (currentlen == t->cursor_pos) {
+				t->buffer[t->cursor_pos + 1] = '\0';
 				t->buffer[t->cursor_pos] = c;
-				t->cursor_pos++;
+				if (t->cursor_pos < t->buflen - 1)
+					t->cursor_pos++;
+				return 1;
 			} else {
-				fprintf(stderr,
-					"Bug detected at %s:%d, currentlen = %d, t->cursor_pos = %d, "
-					"expected t->cursor_pos <= currentlen, but it isn't.\n",
-					__FILE__, __LINE__, currentlen, t->cursor_pos);
-				t->cursor_pos = currentlen; /* Fix this anomalous condition */
+				if (currentlen < t->buflen - 2) {
+					if (currentlen - t->cursor_pos >= 0) {
+						memmove(&t->buffer[t->cursor_pos + 1], &t->buffer[t->cursor_pos],
+							currentlen - t->cursor_pos);
+						t->buffer[t->cursor_pos] = c;
+						t->cursor_pos++;
+						return 1;
+					} else {
+						fprintf(stderr,
+							"Bug detected at %s:%d, currentlen = %d, t->cursor_pos = %d, "
+							"expected t->cursor_pos <= currentlen, but it isn't.\n",
+							__FILE__, __LINE__, currentlen, t->cursor_pos);
+						t->cursor_pos = currentlen; /* Fix this anomalous condition */
+						return 1;
+					}
+				}
 			}
 		}
+		break;
 	}
 	return 0;
 }
 
-int snis_text_input_box_keyrelease(struct snis_text_input_box *t, GdkEventKey *event)
+int snis_text_input_box_keyrelease(struct snis_text_input_box *t, SDL_Event *event)
 {
 	return 0;
 }
