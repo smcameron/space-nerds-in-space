@@ -168,6 +168,21 @@ void ui_set_focus(struct ui_element_list *list, struct ui_element *e, int has_fo
 	e->has_focus = 1;
 }
 
+
+void ui_element_list_clear_focus(struct ui_element_list *list)
+{
+	struct ui_element *e;
+
+	for (; list != NULL; list = list->next) {
+		e = list->element;
+		if (e->has_focus) {
+			e->has_focus = 0;
+			if (e->set_focus)
+				e->set_focus(e->element, 0);
+		}
+	}
+}
+
 void ui_element_list_button_release(struct ui_element_list *list, int x, int y)
 {
 	int hit;
