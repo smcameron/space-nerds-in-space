@@ -44,11 +44,20 @@
 #include <netinet/in.h>
 #include <getopt.h>
 #include <signal.h>
+
 #ifdef __APPLE__
 #include <SDL2.h>
 #else
 #include <fenv.h>
 #include <SDL2/SDL.h>
+#endif
+
+#ifdef __linux
+/* This is for constraining the aspect ratio of the window since SDL2 left us to die. */
+#include <X11/Xlib.h>
+#include <X11/Xutil.h>
+#include <X11/Xos.h>
+#include <SDL2/SDL_syswm.h> /* for SDL_GetWindowWMInfo() */
 #endif
 
 #include "opengl_cap.h"
@@ -22952,6 +22961,49 @@ static void take_your_locale_and_shove_it(void)
 	setlocale(LC_ALL, "C");
 }
 
+static void constrain_aspect_ratio_via_xlib(SDL_Window *window, int w, int h)
+{
+#ifdef __linux
+	SDL_SysWMinfo info;
+	Display *display;
+	Window xwindow;
+	long supplied_return;
+	XSizeHints *hints;
+	Status s;
+
+	SDL_VERSION(&info.version);
+	if (!SDL_GetWindowWMInfo(window, &info)) {
+		fprintf(stderr, "SDL_GetWindowWMInfo failed.\n");
+		return;
+	}
+
+	if (info.subsystem != SDL_SYSWM_X11) {
+		fprintf(stderr, "Apparently not X11, no aspect ratio constraining for you!\n");
+		return;
+	}
+	display = info.info.x11.display;
+	xwindow = info.info.x11.window;
+	hints = XAllocSizeHints();
+	if (!hints) {
+		fprintf(stderr, "Failed to allocate size hints\n");
+		return;
+	}
+	s = XGetWMSizeHints(display, xwindow, hints, &supplied_return, XA_WM_SIZE_HINTS);
+	if (s) {
+		fprintf(stderr, "XGetWMSizeHints failed\n");
+		XFree(hints);
+		return;
+	}
+	hints->min_aspect.x = SCREEN_WIDTH;
+	hints->min_aspect.y = SCREEN_HEIGHT;
+	hints->max_aspect.x = SCREEN_WIDTH;
+	hints->max_aspect.y = SCREEN_HEIGHT;
+	hints->flags = PAspect;
+	XSetWMNormalHints(display, xwindow, hints);
+	XFree(hints);
+#endif
+}
+
 static void figure_aspect_ratio(SDL_Window *window, int requested_x, int requested_y,
 				int *x, int *y)
 {
@@ -23512,6 +23564,9 @@ int main(int argc, char *argv[])
 	SDL_GLContext gl_context = SDL_GL_CreateContext(window);
 	(void) gl_context;
 	setup_screen_parameters(window);
+	SDL_SetWindowSize(window, SCREEN_WIDTH, SCREEN_HEIGHT);
+	constrain_aspect_ratio_via_xlib(window, SCREEN_WIDTH, SCREEN_HEIGHT);
+
 	init_colors();
 	sng_set_foreground(WHITE);
 	snis_typefaces_init_with_scaling((float) SCREEN_WIDTH / 1050.0, (float) SCREEN_HEIGHT / 500.0);
