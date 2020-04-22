@@ -11,7 +11,7 @@
 
 struct pull_down_menu_item {
 	char *name;
-	void (*func)(void *);
+	void (*func)(int, void *);
 	void *cookie;
 	int (*checkbox_function)(void *);
 	void *checkbox_cookie;
@@ -44,13 +44,13 @@ struct pull_down_menu {
 	pull_down_menu_tooltip_drawing_function tooltip_draw;
 };
 
-static int pull_down_menu_inside_title(struct pull_down_menu *m, int col,
+static int pull_down_menu_inside_title(int wn, struct pull_down_menu *m, int col,
 			int physical_x, int physical_y)
 {
 	int sx, sy;
 
-	sx = sng_pixelx_to_screenx(physical_x);
-	sy = sng_pixely_to_screeny(physical_y);
+	sx = sng_pixelx_to_screenx(wn, physical_x);
+	sy = sng_pixely_to_screeny(wn, physical_y);
 
 	if (sx < m->col[col]->title_x)
 		return 0;
@@ -62,14 +62,14 @@ static int pull_down_menu_inside_title(struct pull_down_menu *m, int col,
 	return 0;
 }
 
-static int pull_down_menu_inside_col(struct pull_down_menu *m, int col,
+static int pull_down_menu_inside_col(int wn, struct pull_down_menu *m, int col,
 			int physical_x, int physical_y)
 {
 	int limit;
 	int sx, sy;
 
-	sx = sng_pixelx_to_screenx(physical_x);
-	sy = sng_pixely_to_screeny(physical_y);
+	sx = sng_pixelx_to_screenx(wn, physical_x);
+	sy = sng_pixely_to_screeny(wn, physical_y);
 
 	limit = m->col[col]->nrows;
 
@@ -83,7 +83,7 @@ static int pull_down_menu_inside_col(struct pull_down_menu *m, int col,
 	return 0;
 }
 
-static int pull_down_menu_inside_internal(struct pull_down_menu *m, int physical_x, int physical_y, int lock)
+static int pull_down_menu_inside_internal(int wn, struct pull_down_menu *m, int physical_x, int physical_y, int lock)
 {
 	int i, start, end, inc;
 
@@ -99,7 +99,7 @@ static int pull_down_menu_inside_internal(struct pull_down_menu *m, int physical
 		inc = 1;
 	}
 	for (i = start; i != end; i += inc) {
-		if (pull_down_menu_inside_title(m, i, physical_x, physical_y)) {
+		if (pull_down_menu_inside_title(wn, m, i, physical_x, physical_y)) {
 			if (lock)
 				pthread_mutex_unlock(&m->mutex);
 			m->current_col = i;
@@ -107,7 +107,7 @@ static int pull_down_menu_inside_internal(struct pull_down_menu *m, int physical
 		}
 	}
 	if (m->current_col != -1) {
-		if (pull_down_menu_inside_col(m, m->current_col, physical_x, physical_y)) {
+		if (pull_down_menu_inside_col(wn, m, m->current_col, physical_x, physical_y)) {
 			if (lock)
 				pthread_mutex_unlock(&m->mutex);
 			return 1;
@@ -118,12 +118,12 @@ static int pull_down_menu_inside_internal(struct pull_down_menu *m, int physical
 	return 0;
 }
 
-int pull_down_menu_inside(struct pull_down_menu *m, int physical_x, int physical_y)
+int pull_down_menu_inside(int wn, struct pull_down_menu *m, int physical_x, int physical_y)
 {
-	return pull_down_menu_inside_internal(m, physical_x, physical_y, 1);
+	return pull_down_menu_inside_internal(wn, m, physical_x, physical_y, 1);
 }
 
-void pull_down_menu_update_mouse_pos(struct pull_down_menu *m, int physical_x, int physical_y)
+void pull_down_menu_update_mouse_pos(int wn, struct pull_down_menu *m, int physical_x, int physical_y)
 {
 	int i, sy, start, end, inc, new_row = -1;
 	int old_col = m->current_col;
@@ -141,14 +141,14 @@ void pull_down_menu_update_mouse_pos(struct pull_down_menu *m, int physical_x, i
 		inc = 1;
 	}
 	for (i = start; i != end; i += inc) {
-		if (pull_down_menu_inside_title(m, i, physical_x, physical_y)) {
+		if (pull_down_menu_inside_title(wn, m, i, physical_x, physical_y)) {
 			new_col = i;
 			m->current_col = i;
 			break;
 		}
 	}
 	if (m->current_col != -1) {
-		sy = sng_pixely_to_screeny(physical_y);
+		sy = sng_pixely_to_screeny(wn, physical_y);
 		if (sy >= 0 && sy <= m->col[m->current_col]->nrows * (font_lineheight[m->font] + 6)) {
 			new_row = sy / (font_lineheight[m->font] + 6);
 		} else {
@@ -244,7 +244,7 @@ static void update_menu_widths(struct pull_down_menu *m)
 	}
 }
 
-static void draw_menu_col(struct pull_down_menu *m, int col, float y, int current_row, int font)
+static void draw_menu_col(int wn, struct pull_down_menu *m, int col, float y, int current_row, int font)
 {
 	int i, limit, cb, cbw;
 	struct pull_down_menu_column *c = m->col[col];
@@ -271,13 +271,13 @@ static void draw_menu_col(struct pull_down_menu *m, int col, float y, int curren
 			width = c->width;
 			x = c->menu_x;
 		}
-		sng_set_foreground_alpha(BLACK, m->alpha);
-		sng_current_draw_rectangle(1, x, y, width, font_lineheight[font] + 6);
-		sng_set_foreground(m->color);
-		sng_current_draw_line(x, y, x, y + font_lineheight[font] + 6);
-		sng_current_draw_line(x + width, y, x + width, y + font_lineheight[font] + 6);
+		sng_set_foreground_alpha(wn, BLACK, m->alpha);
+		sng_current_draw_rectangle(wn, 1, x, y, width, font_lineheight[font] + 6);
+		sng_set_foreground(wn, m->color);
+		sng_current_draw_line(wn, x, y, x, y + font_lineheight[font] + 6);
+		sng_current_draw_line(wn, x + width, y, x + width, y + font_lineheight[font] + 6);
 		if (i == 0 || i == limit - 1)
-			sng_current_draw_line(x, y + font_lineheight[font] + 6,
+			sng_current_draw_line(wn, x, y + font_lineheight[font] + 6,
 				x + width, y + font_lineheight[font] + 6);
 		if (cbw) {
 			float x1, y1, x2, y2;
@@ -285,16 +285,16 @@ static void draw_menu_col(struct pull_down_menu *m, int col, float y, int curren
 			x2 = x1 + 16;
 			y1 = y + 8;
 			y2 = y1 + 16;
-			sng_current_draw_rectangle(0, x1, y1, 16, 16);
+			sng_current_draw_rectangle(wn, 0, x1, y1, 16, 16);
 			if (cb) {
-				sng_current_draw_line(x1, y1, x2, y2);
-				sng_current_draw_line(x1, y2, x2, y1);
+				sng_current_draw_line(wn, x1, y1, x2, y2);
+				sng_current_draw_line(wn, x1, y2, x2, y1);
 			}
 		}
 		y = y + font_lineheight[font];
-		sng_abs_xy_draw_string(r->name, font, x + 4 + cbw, y - 2);
+		sng_abs_xy_draw_string(wn, r->name, font, x + 4 + cbw, y - 2);
 		if (i == current_row && col == m->current_col)
-			sng_abs_xy_draw_string(r->name, font, x + 5 + cbw, y - 1);
+			sng_abs_xy_draw_string(wn, r->name, font, x + 5 + cbw, y - 1);
 		y = y + 6;
 		/* Reset tooltip delays for non-current items */
 		if ((i != current_row || col != m->current_col) && r->tooltip)
@@ -302,7 +302,7 @@ static void draw_menu_col(struct pull_down_menu *m, int col, float y, int curren
 	}
 }
 
-static void pull_down_menu_draw_current_tooltip(struct pull_down_menu *m)
+static void pull_down_menu_draw_current_tooltip(int wn, struct pull_down_menu *m)
 {
 	struct pull_down_menu_item *r;
 
@@ -316,16 +316,16 @@ static void pull_down_menu_draw_current_tooltip(struct pull_down_menu *m)
 	if (r->tooltip_timer > 0)
 		return; /* Don't draw the tooltip until they hover for a bit. */
 	if (r->tooltip)
-		m->tooltip_draw(m->current_physical_x, m->current_physical_y, r->tooltip);
+		m->tooltip_draw(wn, m->current_physical_x, m->current_physical_y, r->tooltip);
 }
 
-void pull_down_menu_draw(struct pull_down_menu *m)
+void pull_down_menu_draw(int wn, struct pull_down_menu *m)
 {
 	int i, start, end, inc;
 
 	pthread_mutex_lock(&m->mutex);
 	update_menu_widths(m);
-	if (!pull_down_menu_inside_internal(m, m->current_physical_x, m->current_physical_y, 0)) {
+	if (!pull_down_menu_inside_internal(wn, m, m->current_physical_x, m->current_physical_y, 0)) {
 		pthread_mutex_unlock(&m->mutex);
 		return;
 	}
@@ -339,8 +339,8 @@ void pull_down_menu_draw(struct pull_down_menu *m)
 		inc = 1;
 	}
 	for (i = start; i != end; i += inc)
-		draw_menu_col(m, i, m->y, m->current_row, m->font);
-	pull_down_menu_draw_current_tooltip(m);
+		draw_menu_col(wn, m, i, m->y, m->current_row, m->font);
+	pull_down_menu_draw_current_tooltip(wn, m);
 	pthread_mutex_unlock(&m->mutex);
 }
 
@@ -383,7 +383,7 @@ int pull_down_menu_add_column(struct pull_down_menu *m, char *column)
 }
 
 static int pull_down_menu_add_row_internal(struct pull_down_menu *m,
-			char *column, char *row, void (*func)(void *), void *cookie, int lock)
+			char *column, char *row, void (*func)(int, void *), void *cookie, int lock)
 {
 	int i;
 	if (!m)
@@ -424,12 +424,12 @@ static int pull_down_menu_add_row_internal(struct pull_down_menu *m,
 	return -1;
 }
 
-int pull_down_menu_add_row(struct pull_down_menu *m, char *column, char *row, void (*func)(void *), void *cookie)
+int pull_down_menu_add_row(struct pull_down_menu *m, char *column, char *row, void (*func)(int, void *), void *cookie)
 {
 	return pull_down_menu_add_row_internal(m, column, row, func, cookie, 1);
 }
 
-int pull_down_menu_button_press(struct pull_down_menu *m, int x, int y)
+int pull_down_menu_button_press(int wn, struct pull_down_menu *m, int x, int y)
 {
 	struct pull_down_menu_item *row;
 
@@ -440,7 +440,7 @@ int pull_down_menu_button_press(struct pull_down_menu *m, int x, int y)
 		m->current_row >= 0 && m->current_row < m->col[m->current_col]->nrows) {
 			row = &m->col[m->current_col]->item[m->current_row];
 			if (row->func)
-				row->func(row->cookie);
+				row->func(wn, row->cookie);
 			m->current_row = -1; /* deselect it */
 			m->current_col = -1;
 	}

@@ -299,9 +299,12 @@ static char *shipname;
 static uint32_t my_ship_id = UNKNOWN_ID;
 static uint32_t my_ship_oid = UNKNOWN_ID;
 static uint32_t my_home_planet_oid = UNKNOWN_ID;
+#define MAXWINDOWS 2
+static int nwindows = 2;
+static int real_screen_width[MAXWINDOWS];
+static int real_screen_height[MAXWINDOWS];
+static SDL_Window *window[MAXWINDOWS];
 
-static int real_screen_width;
-static int real_screen_height;
 static int suppress_hyperspace_noise = 0;	/* tweakable */
 static int warp_limbo_countdown = 0;
 static int warp_field_error = 0;
@@ -326,7 +329,7 @@ static int watermark_active = 0;
 static volatile int login_failed_timer = 0;
 static char login_failed_msg[100] = { 0 };
 
-static volatile int displaymode = DISPLAYMODE_LOBBYSCREEN;
+static volatile int displaymode[MAXWINDOWS];
 static volatile int helpmode = 0;
 static volatile float weapons_camera_shake = 0.0f; 
 static volatile float main_camera_shake = 0.0f;
@@ -633,9 +636,9 @@ static void to_snis_heading_mark(const union quat *q, double *heading, double *m
 	*heading = game_angle_to_math_angle(*heading);
 }
 
-static void set_default_clip_window(void)
+static void set_default_clip_window(int wn)
 {
-	sng_set_clip_window(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+	sng_set_clip_window(wn, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
 }
 
 static double universe_timestamp()
@@ -741,6 +744,14 @@ handle_error:
 	return;
 }
 
+static void set_all_displaymode(int new_disp_mode)
+{
+	int i;
+
+	for (i = 0; i < nwindows; i++)
+		displaymode[i] = new_disp_mode;
+}
+
 static void *connect_to_lobby_thread(__attribute__((unused)) void *arg)
 {
 	int i, sock = -1, rc, game_server_count;
@@ -753,7 +764,7 @@ try_again:
 	printf("Trying to connect to lobby.\n");
 	/* Loop, trying to connect to the lobby server... */
 	strcpy(lobbyerror, "");
-	while (1 && lobby_count < MAX_LOBBY_TRIES && displaymode == DISPLAYMODE_LOBBYSCREEN) {
+	while (1 && lobby_count < MAX_LOBBY_TRIES && displaymode[0] == DISPLAYMODE_LOBBYSCREEN) {
 		printf("snis_client: connecting to lobby %s:%d\n", lobbyhost, lobbyport);
 		sock = ssgl_gameclient_connect_to_lobby_port(lobbyhost, lobbyport);
 		lobby_count++;
@@ -772,7 +783,7 @@ try_again:
 	}
 
 	if (lobby_socket < 0) {
-		displaymode = DISPLAYMODE_NETWORK_SETUP;
+		set_all_displaymode(DISPLAYMODE_NETWORK_SETUP);
 		lobby_count = 0;
 		goto outta_here;
 	}
@@ -1436,7 +1447,7 @@ static int update_ship_sdata(uint32_t id, uint8_t subclass, char *name,
 		go[i].tsd.ship.lifeform_count = lifeform_count;
 	if (go[i].type == OBJTYPE_STARBASE)
 		go[i].tsd.starbase.lifeform_count = lifeform_count;
-	if (!go[i].sdata.science_data_known && displaymode == DISPLAYMODE_SCIENCE)
+	if (!go[i].sdata.science_data_known && displaymode[0] == DISPLAYMODE_SCIENCE)
 		wwviaudio_add_sound(SCIENCE_PROBE_SOUND);
 	if (go[i].type != OBJTYPE_PLANET &&
 		go[i].type != OBJTYPE_STARBASE &&
@@ -3590,6 +3601,8 @@ static struct mouse_state {
 	int x, y;
 	int deltax, deltay; /* for captured mouse on weapons screen */
 	struct mouse_button_state button[3];
+	int wn;
+	uint32_t windowID;
 } mouse;
 
 static void request_demon_rot_packet(uint32_t oid, uint8_t kind, uint8_t amount)
@@ -3747,20 +3760,20 @@ static struct weapons_ui {
 	struct button *custom_button;
 } weapons;
 
-static void draw_plane_radar(struct snis_entity *o, union quat *aim, float cx, float cy, float r, float range)
+static void draw_plane_radar(int wn, struct snis_entity *o, union quat *aim, float cx, float cy, float r, float range)
 {
 	int i;
 
 	/* draw background overlay */
-	sng_set_foreground_alpha(BLACK, 0.75);
-	sng_draw_circle(1, cx, cy, r);
-	sng_set_foreground(UI_COLOR(weap_radar));
-	sng_draw_circle(0, cx, cy, r);
+	sng_set_foreground_alpha(wn, BLACK, 0.75);
+	sng_draw_circle(wn, 1, cx, cy, r);
+	sng_set_foreground(wn, UI_COLOR(weap_radar));
+	sng_draw_circle(wn, 0, cx, cy, r);
 	for (i=0; i<4; i++) {
 		float angle = i * M_PI / 2.0 + M_PI / 4.0;
-		snis_draw_line(cx + cos(angle) * r, cy - sin(angle) * r,
+		snis_draw_line(wn, cx + cos(angle) * r, cy - sin(angle) * r,
 				cx + 0.5 * cos(angle) * r, cy - 0.5 * sin(angle) * r);
-		snis_draw_arc(0, cx-0.5*r, cy-0.5*r, r, r, angle - M_PI/8.0, angle + M_PI/8.0);
+		snis_draw_arc(wn, 0, cx-0.5*r, cy-0.5*r, r, r, angle - M_PI/8.0, angle + M_PI/8.0);
 	}
 
 	if ((timer & 0x07) < 4)
@@ -3816,15 +3829,15 @@ static void draw_plane_radar(struct snis_entity *o, union quat *aim, float cx, f
 		float sy = cy - r * sin(twist) * d * 0.98;
 
 		if (dist < TORPEDO_VELOCITY * TORPEDO_LIFETIME)
-			sng_set_foreground(UI_COLOR(weap_in_range));
+			sng_set_foreground(wn, UI_COLOR(weap_in_range));
 		else
-			sng_set_foreground(UI_COLOR(weap_targeting));
-		snis_draw_line(sx, sy - 2, sx, sy + 2);
-		snis_draw_line(sx - 2, sy, sx + 2, sy);
+			sng_set_foreground(wn, UI_COLOR(weap_targeting));
+		snis_draw_line(wn, sx, sy - 2, sx, sy + 2);
+		snis_draw_line(wn, sx - 2, sy, sx + 2, sy);
 
 		if (curr_science_guy == &go[i]) {
-			sng_set_foreground(UI_COLOR(weap_sci_selection));
-			snis_draw_rectangle(0, sx-2, sy-2, 4, 4);
+			sng_set_foreground(wn, UI_COLOR(weap_sci_selection));
+			snis_draw_rectangle(wn, 0, sx-2, sy-2, 4, 4);
 		}
 	}
 }
@@ -3914,7 +3927,7 @@ static void do_view_mode_change()
 static void comms_dirkey(int h, int v);
 static inline int nav_ui_computer_active(void);
 
-static void do_dirkey(int h, int v, int r, int t)
+static void do_dirkey(int wn, int h, int v, int r, int t)
 {
 	v = v * vertical_controls_inverted;
 
@@ -3926,7 +3939,7 @@ static void do_dirkey(int h, int v, int r, int t)
 		return;
 	}
 
-	switch (displaymode) {
+	switch (displaymode[wn]) {
 		case DISPLAYMODE_MAINSCREEN:
 			if (external_camera_active) {
 				external_camera_dirkey(h, v, r);
@@ -3959,14 +3972,14 @@ static void do_dirkey(int h, int v, int r, int t)
 	return;
 }
 
-static void do_sciball_dirkey(int h, int v, int r)
+static void do_sciball_dirkey(int wn, int h, int v, int r)
 {
 	uint8_t value;
 	int fine = 2 * control_key_pressed;
 
 	v = v * vertical_controls_inverted;
 
-	switch (displaymode) {
+	switch (displaymode[wn]) {
 		case DISPLAYMODE_SCIENCE:
 			if (!h && !v && !r)
 				return;
@@ -4004,7 +4017,7 @@ static void do_torpedo(void)
 }
 
 static void transmit_adjust_control_input(uint8_t value,  uint8_t subcode);
-static void fire_missile_button_pressed(__attribute__((unused)) void *notused)
+static void fire_missile_button_pressed(int wn, __attribute__((unused)) void *notused)
 {
 	transmit_adjust_control_input(1, OPCODE_ADJUST_CONTROL_FIRE_MISSILE);
 }
@@ -4017,9 +4030,9 @@ static void do_mainscreen_camera_mode()
 		(unsigned char) (camera_mode + 1) % 3));
 }
 
-static void do_nav_camera_mode()
+static void do_nav_camera_mode(int wn)
 {
-	if (displaymode != DISPLAYMODE_NAVIGATION)
+	if (displaymode[wn] != DISPLAYMODE_NAVIGATION)
 		return;
 	queue_to_server(snis_opcode_pkt("bb", OPCODE_CYCLE_NAV_POINT_OF_VIEW,
 		(unsigned char) (nav_camera_mode + 1) % 5));
@@ -4030,96 +4043,96 @@ static void do_laser(void)
 	queue_to_server(snis_opcode_pkt("b", OPCODE_REQUEST_MANUAL_LASER));
 }
 
-static void robot_gripper_button_pressed(void *x);
-static void robot_backward_button_pressed(void *x);
-static void robot_forward_button_pressed(void *x);
-static void robot_left_button_pressed(void *x);
-static void robot_right_button_pressed(void *x);
-static void robot_auto_button_pressed(void *x);
-static void robot_manual_button_pressed(void *x);
-static void fire_phaser_button_pressed(__attribute__((unused)) void *notused);
-static void fire_torpedo_button_pressed(__attribute__((unused)) void *notused);
-static void fire_missile_button_pressed(__attribute__((unused)) void *notused);
-static void load_torpedo_button_pressed();
+static void robot_gripper_button_pressed(int wn, void *x);
+static void robot_backward_button_pressed(int wn, void *x);
+static void robot_forward_button_pressed(int wn, void *x);
+static void robot_left_button_pressed(int wn, void *x);
+static void robot_right_button_pressed(int wn, void *x);
+static void robot_auto_button_pressed(int wn, void *x);
+static void robot_manual_button_pressed(int wn, void *x);
+static void fire_phaser_button_pressed(int wn, __attribute__((unused)) void *notused);
+static void fire_torpedo_button_pressed(int wn, __attribute__((unused)) void *notused);
+static void fire_missile_button_pressed(int wn, __attribute__((unused)) void *notused);
+static void load_torpedo_button_pressed(int wn, void *notused);
 
-static void do_joystick_engage_warp(__attribute__((unused)) void *notused)
+static void do_joystick_engage_warp(int wn, __attribute__((unused)) void *notused)
 {
-	snis_button_trigger_button(nav_ui.engage_warp_button);
+	snis_button_trigger_button(wn, nav_ui.engage_warp_button);
 }
 
-static void do_joystick_standard_orbit(__attribute__((unused)) void *notused)
+static void do_joystick_standard_orbit(int wn, __attribute__((unused)) void *notused)
 {
-	snis_button_trigger_button(nav_ui.standard_orbit_button);
+	snis_button_trigger_button(wn, nav_ui.standard_orbit_button);
 }
 
-static void do_joystick_docking_magnets(__attribute__((unused)) void *notused)
+static void do_joystick_docking_magnets(int wn, __attribute__((unused)) void *notused)
 {
-	snis_button_trigger_button(nav_ui.docking_magnets_button);
+	snis_button_trigger_button(wn, nav_ui.docking_magnets_button);
 }
 
-static void do_joystick_lights(__attribute__((unused)) void *notused)
+static void do_joystick_lights(int wn, __attribute__((unused)) void *notused)
 {
-	snis_button_trigger_button(nav_ui.lights_button);
+	snis_button_trigger_button(wn, nav_ui.lights_button);
 }
 
-static void do_joystick_attitude_indicator(__attribute__((unused)) void *notused)
+static void do_joystick_attitude_indicator(int wn, __attribute__((unused)) void *notused)
 {
-	snis_button_trigger_button(nav_ui.trident_button);
+	snis_button_trigger_button(wn, nav_ui.trident_button);
 }
 
-static void do_joystick_starmap(__attribute__((unused)) void *notused)
+static void do_joystick_starmap(int wn, __attribute__((unused)) void *notused)
 {
-	snis_button_trigger_button(nav_ui.starmap_button);
+	snis_button_trigger_button(wn, nav_ui.starmap_button);
 }
 
-static void do_joystick_reverse(__attribute__((unused)) void *notused)
+static void do_joystick_reverse(int wn, __attribute__((unused)) void *notused)
 {
-	snis_button_trigger_button(nav_ui.reverse_button);
+	snis_button_trigger_button(wn, nav_ui.reverse_button);
 }
 
-static void do_joystick_nudge_warp_up(__attribute__((unused)) void *notused)
+static void do_joystick_nudge_warp_up(int wn, __attribute__((unused)) void *notused)
 {
 	snis_slider_nudge(nav_ui.warp_slider, 0.05, 0);
 }
 
-static void do_joystick_nudge_warp_down(__attribute__((unused)) void *notused)
+static void do_joystick_nudge_warp_down(int wn, __attribute__((unused)) void *notused)
 {
 	snis_slider_nudge(nav_ui.warp_slider, -0.05, 0);
 }
 
-static void do_joystick_nav_nudge_zoom_down(__attribute__((unused)) void *notused)
+static void do_joystick_nav_nudge_zoom_down(int wn, __attribute__((unused)) void *notused)
 {
 	snis_slider_nudge(nav_ui.navzoom_slider, -0.05, 0);
 }
 
-static void do_joystick_nav_change_pov(__attribute__((unused)) void *notused)
+static void do_joystick_nav_change_pov(int wn, __attribute__((unused)) void *notused)
 {
-	do_nav_camera_mode();
+	do_nav_camera_mode(0);
 }
 
-static void do_joystick_nav_nudge_zoom_up(__attribute__((unused)) void *notused)
+static void do_joystick_nav_nudge_zoom_up(int wn, __attribute__((unused)) void *notused)
 {
 	snis_slider_nudge(nav_ui.navzoom_slider, 0.05, 0);
 }
 
-static void do_joystick_weapons_wavelength_up(__attribute__((unused)) void *notused)
+static void do_joystick_weapons_wavelength_up(int wn, __attribute__((unused)) void *notused)
 {
 	snis_slider_nudge(weapons.wavelen_slider, 0.05, 0);
 }
 
-static void do_joystick_weapons_wavelength_down(__attribute__((unused)) void *notused)
+static void do_joystick_weapons_wavelength_down(int wn, __attribute__((unused)) void *notused)
 {
 	snis_slider_nudge(weapons.wavelen_slider, -0.05, 0);
 }
 
-static void do_joystick_torpedo(__attribute__((unused)) void *x)
+static void do_joystick_torpedo(int wn, __attribute__((unused)) void *x)
 {
-	fire_torpedo_button_pressed(NULL);
+	fire_torpedo_button_pressed(wn, NULL);
 }
 
-static void do_joystick_missile(__attribute__((unused)) void *x)
+static void do_joystick_missile(int wn, __attribute__((unused)) void *x)
 {
-	fire_missile_button_pressed(NULL);
+	fire_missile_button_pressed(wn, NULL);
 }
 
 static void do_joystick_pitch(__attribute__((unused)) void *x, int value)
@@ -4137,17 +4150,17 @@ static void do_joystick_pitch(__attribute__((unused)) void *x, int value)
 static void do_joystick_damcon_pitch(__attribute__((unused)) void *x, int value)
 {
 	if (value < -yjoystick_threshold)
-		robot_forward_button_pressed(NULL);
+		robot_forward_button_pressed(0, NULL);
 	else if (value > yjoystick_threshold)
-		robot_backward_button_pressed(NULL);
+		robot_backward_button_pressed(0, NULL);
 }
 
 static void do_joystick_damcon_roll(__attribute__((unused)) void *x, int value)
 {
 	if (value < -xjoystick_threshold)
-		robot_left_button_pressed(NULL);
+		robot_left_button_pressed(0, NULL);
 	else if (value > xjoystick_threshold)
-		robot_right_button_pressed(NULL);
+		robot_right_button_pressed(0, NULL);
 }
 
 static void do_joystick_axis_to_slider(struct slider *s, int value)
@@ -4247,16 +4260,16 @@ static void deal_with_joysticks()
 			continue;
 
 		/* If not on screen which uses joystick, ignore stick */
-		if (displaymode != DISPLAYMODE_DAMCON &&
-			displaymode != DISPLAYMODE_WEAPONS &&
-			displaymode != DISPLAYMODE_NAVIGATION &&
-			displaymode != DISPLAYMODE_MAINSCREEN)
+		if (displaymode[0] != DISPLAYMODE_DAMCON &&
+			displaymode[0] != DISPLAYMODE_WEAPONS &&
+			displaymode[0] != DISPLAYMODE_NAVIGATION &&
+			displaymode[0] != DISPLAYMODE_MAINSCREEN)
 			continue;
 
 		/* Fire off joystick button callbacks registered via set_joystick_button_fn() */
 		for (i = 0; i < ARRAYSIZE(jss[j].button); i++)
 			if (jss[j].button[i] == 1)
-				joystick_button(joystick_cfg, NULL, displaymode, j, i);
+				joystick_button(joystick_cfg, NULL, displaymode[0], j, i);
 
 		/* Throttle back the joystick axis input rate to avoid flooding network */
 		if (timer % joystick_throttle != 0)
@@ -4264,7 +4277,7 @@ static void deal_with_joysticks()
 
 		/* Fire off joystick axis callbacks registered via set_joystick_axis_fn() */
 		for (i = 0; i < ARRAYSIZE(jss[j].axis); i++)
-			joystick_axis(joystick_cfg, NULL, displaymode, j, i, jss[j].axis[i]);
+			joystick_axis(joystick_cfg, NULL, displaymode[0], j, i, jss[j].axis[i]);
 	}
 }
 
@@ -4295,7 +4308,7 @@ static void deal_with_mouse()
 }
 
 static void do_adjust_byte_value(uint8_t value,  uint8_t opcode);
-static void do_zoom(int z)
+static void do_zoom(int wn, int z)
 {
 	int newval;
 	struct snis_entity *o;
@@ -4303,7 +4316,7 @@ static void do_zoom(int z)
 	if (!(o = find_my_ship()))
 		return;
 
-	switch (displaymode) {
+	switch (displaymode[wn]) {
 	case DISPLAYMODE_WEAPONS:
 		wavelen_updown_button_pressed(z);
 		break;
@@ -4328,14 +4341,14 @@ static void do_zoom(int z)
 	}
 }
 
-static void do_pageup(void);
-static void do_pagedown(void);
-static void sci_mining_bot_pressed(void *x);
-static void sci_tractor_pressed(void *x);
-static void sci_threed_pressed(void *x);
-static void sci_sciplane_pressed(void *x);
-static void sci_waypoints_pressed(void *x);
-static void sci_details_pressed(void *x);
+static void do_pageup(int wn);
+static void do_pagedown(int wn);
+static void sci_mining_bot_pressed(int wn, void *x);
+static void sci_tractor_pressed(int wn, void *x);
+static void sci_threed_pressed(int wn, void *x);
+static void sci_sciplane_pressed(int wn, void *x);
+static void sci_waypoints_pressed(int wn, void *x);
+static void sci_details_pressed(int wn, void *x);
 
 static struct engineering_ui {
 	struct gauge *fuel_gauge;
@@ -4394,7 +4407,7 @@ static struct engineering_ui {
 	int gauge_radius;
 } eng_ui;
 
-static void deal_with_keyboard()
+static void deal_with_keyboard(void)
 {
 	int h, v, z, r, t;
 	int sbh, sbv, sbr; /* sciball keys */
@@ -4427,18 +4440,18 @@ static void deal_with_keyboard()
 	if (kbstate.pressed[keythrust])
 		t = 1;
 	if (h || v || r || t)
-		do_dirkey(h, v, r, t);
+		do_dirkey(0, h, v, r, t);
 	if (kbstate.pressed[key_page_up])
-		do_pageup();
+		do_pageup(0);
 	if (kbstate.pressed[key_page_down])
-		do_pagedown();
+		do_pagedown(0);
 
 	if (kbstate.pressed[keyzoom])
 		z = 10;
 	if (kbstate.pressed[keyunzoom])
 		z = -10;
 	if (z)
-		do_zoom(z);
+		do_zoom(0, z);
 
 	if (kbstate.pressed[keysciball_rollleft])
 		sbr = -1;
@@ -4452,37 +4465,37 @@ static void deal_with_keyboard()
 		sbh = -1;
 	if (kbstate.pressed[keysciball_yawright])
 		sbh = +1;
-	if (displaymode == DISPLAYMODE_SCIENCE) {
+	if (displaymode[0] == DISPLAYMODE_SCIENCE) {
 		if (kbstate.pressed[key_sci_mining_bot])
-			sci_mining_bot_pressed(NULL);
+			sci_mining_bot_pressed(0, NULL);
 		if (kbstate.pressed[key_sci_tractor_beam])
-			sci_tractor_pressed(NULL);
+			sci_tractor_pressed(0, NULL);
 		if (kbstate.pressed[key_sci_lrs])
-			sci_threed_pressed(NULL);
+			sci_threed_pressed(0, NULL);
 		if (kbstate.pressed[key_sci_srs])
-			sci_sciplane_pressed(NULL);
+			sci_sciplane_pressed(0, NULL);
 		if (kbstate.pressed[key_sci_waypoints])
-			sci_waypoints_pressed(NULL);
+			sci_waypoints_pressed(0, NULL);
 		if (kbstate.pressed[key_sci_details])
-			sci_details_pressed(NULL);
+			sci_details_pressed(0, NULL);
 	}
 
 	if (sbh || sbv || sbr)
-		do_sciball_dirkey(sbh, sbv, sbr);
+		do_sciball_dirkey(0, sbh, sbv, sbr);
 
-	if (displaymode == DISPLAYMODE_ENGINEERING) {
+	if (displaymode[0] == DISPLAYMODE_ENGINEERING) {
 		if (kbstate.pressed[key_eng_preset_1])
-			snis_button_trigger_button(eng_ui.preset_buttons[0]);
+			snis_button_trigger_button(0, eng_ui.preset_buttons[0]);
 		if (kbstate.pressed[key_eng_preset_2])
-			snis_button_trigger_button(eng_ui.preset_buttons[1]);
+			snis_button_trigger_button(0, eng_ui.preset_buttons[1]);
 		if (kbstate.pressed[key_eng_preset_3])
-			snis_button_trigger_button(eng_ui.preset_buttons[2]);
+			snis_button_trigger_button(0, eng_ui.preset_buttons[2]);
 		if (kbstate.pressed[key_eng_preset_4])
-			snis_button_trigger_button(eng_ui.preset_buttons[3]);
+			snis_button_trigger_button(0, eng_ui.preset_buttons[3]);
 		if (kbstate.pressed[key_eng_preset_5])
-			snis_button_trigger_button(eng_ui.preset_buttons[4]);
+			snis_button_trigger_button(0, eng_ui.preset_buttons[4]);
 		if (kbstate.pressed[key_eng_preset_6])
-			snis_button_trigger_button(eng_ui.preset_buttons[5]);
+			snis_button_trigger_button(0, eng_ui.preset_buttons[5]);
 	}
 }
 
@@ -4499,14 +4512,15 @@ static void release_talking_stick(void)
 	pthread_mutex_unlock(&voip_mutex);
 }
 
-static int key_press_cb(SDL_Window *window, SDL_Keysym *keysym)
+static int key_press_cb(int wn, SDL_Keysym *keysym)
 {
 	enum keyaction ka;
+	int dm = displaymode[wn];
 
 	if (keysym->sym >= SDLK_SCANCODE_MASK)
-		ka = ffkeymap[displaymode][keysym->sym & 0xff];
+		ka = ffkeymap[dm][keysym->sym & 0xff];
 	else
-		ka = keymap[displaymode][keysym->sym];
+		ka = keymap[dm][keysym->sym];
 	if (ka > 0 && ka < NKEYSTATES)
 		kbstate.pressed[ka] = 1;
 
@@ -4549,7 +4563,7 @@ static int key_press_cb(SDL_Window *window, SDL_Keysym *keysym)
 			}
 			break;
 	case key_sci_mining_bot:
-			sci_mining_bot_pressed((void *) 0);
+			sci_mining_bot_pressed(0, (void *) 0);
 			break;
 	case key_toggle_space_dust:
 			if (nfake_stars == 0)
@@ -4564,11 +4578,11 @@ static int key_press_cb(SDL_Window *window, SDL_Keysym *keysym)
 			return TRUE;
         case keyfullscreen: {
 			if (fullscreen) {
-				SDL_SetWindowFullscreen(window, 0);
+				SDL_SetWindowFullscreen(window[wn], 0);
 				fullscreen = 0;
 				/* configure_event takes care of resizing drawing area, etc. */
 			} else {
-				SDL_SetWindowFullscreen(window, SDL_WINDOW_FULLSCREEN_DESKTOP);
+				SDL_SetWindowFullscreen(window[wn], SDL_WINDOW_FULLSCREEN_DESKTOP);
 				fullscreen = 1;
 				/* configure_event takes care of resizing drawing area, etc. */
 			}
@@ -4584,10 +4598,10 @@ static int key_press_cb(SDL_Window *window, SDL_Keysym *keysym)
 				current_quit_selection = 0;
 			break;
 	case keytorpedo:
-		fire_torpedo_button_pressed(NULL);
+		fire_torpedo_button_pressed(wn, NULL);
 		break;
 	case key_weap_fire_missile:
-		fire_missile_button_pressed(NULL);
+		fire_missile_button_pressed(wn, NULL);
 		break;
 	case keyphaser:
 		if (in_the_process_of_quitting) {
@@ -4605,7 +4619,7 @@ static int key_press_cb(SDL_Window *window, SDL_Keysym *keysym)
 				in_the_process_of_quitting = 0;
 			break;
 		}
-		robot_gripper_button_pressed(NULL);
+		robot_gripper_button_pressed(wn, NULL);
 		break;
 	case key_space:
 		if (in_the_process_of_quitting) {
@@ -4614,7 +4628,7 @@ static int key_press_cb(SDL_Window *window, SDL_Keysym *keysym)
 				in_the_process_of_quitting = 0;
 			break;
 		}
-		if (displaymode == DISPLAYMODE_MAINSCREEN) {
+		if (dm == DISPLAYMODE_MAINSCREEN) {
 			if (external_camera_active) {
 				external_camera_mode = (external_camera_mode + 1) % num_external_camera_modes;
 				external_camera_velocity.v.x = 0.0;
@@ -4625,83 +4639,83 @@ static int key_press_cb(SDL_Window *window, SDL_Keysym *keysym)
 		}
 		break;
 	case key_camera_mode:
-		if (displaymode == DISPLAYMODE_MAINSCREEN)
+		if (dm == DISPLAYMODE_MAINSCREEN)
 			do_mainscreen_camera_mode();
-		else if (displaymode == DISPLAYMODE_NAVIGATION && !nav_ui_computer_active())
-			do_nav_camera_mode();
+		else if (dm == DISPLAYMODE_NAVIGATION && !nav_ui_computer_active())
+			do_nav_camera_mode(wn);
 		break;
 	case keyf1:
 		helpmode = !helpmode;
 		break;
 	case keyf2:
 		helpmode = 0;
-		if (displaymode >= DISPLAYMODE_FONTTEST)
+		if (dm >= DISPLAYMODE_FONTTEST)
 			break;
 		if (role & ROLE_NAVIGATION) {
-			displaymode = DISPLAYMODE_NAVIGATION;
+			displaymode[wn] = DISPLAYMODE_NAVIGATION;
 			wwviaudio_add_sound(CHANGESCREEN_SOUND);
 		}
 		break;
 	case keyf3:
 		helpmode = 0;
-		if (displaymode >= DISPLAYMODE_FONTTEST)
+		if (dm >= DISPLAYMODE_FONTTEST)
 			break;
 		if (role & ROLE_WEAPONS) {
-			displaymode = DISPLAYMODE_WEAPONS;
+			displaymode[wn] = DISPLAYMODE_WEAPONS;
 			wwviaudio_add_sound(CHANGESCREEN_SOUND);
 		}
 		break;
 	case keyf4:
 		helpmode = 0;
-		if (displaymode >= DISPLAYMODE_FONTTEST)
+		if (displaymode[wn] >= DISPLAYMODE_FONTTEST)
 			break;
 		if (role & ROLE_ENGINEERING) {
-			displaymode = DISPLAYMODE_ENGINEERING;
+			displaymode[wn] = DISPLAYMODE_ENGINEERING;
 			wwviaudio_add_sound(CHANGESCREEN_SOUND);
 		}
 		break;
 	case keyf5:
 		helpmode = 0;
-		if (displaymode >= DISPLAYMODE_FONTTEST)
+		if (displaymode[wn] >= DISPLAYMODE_FONTTEST)
 			break;
 		if (role & ROLE_DAMCON) {
-			displaymode = DISPLAYMODE_DAMCON;
+			displaymode[wn] = DISPLAYMODE_DAMCON;
 			wwviaudio_add_sound(CHANGESCREEN_SOUND);
 		}
 		break;
 	case keyf6:
 		helpmode = 0;
-		if (displaymode >= DISPLAYMODE_FONTTEST)
+		if (dm >= DISPLAYMODE_FONTTEST)
 			break;
 		if (role & ROLE_SCIENCE) {
-			displaymode = DISPLAYMODE_SCIENCE;
+			displaymode[wn] = DISPLAYMODE_SCIENCE;
 			wwviaudio_add_sound(CHANGESCREEN_SOUND);
 		}
 		break;
 	case keyf7:
 		helpmode = 0;
-		if (displaymode >= DISPLAYMODE_FONTTEST)
+		if (dm >= DISPLAYMODE_FONTTEST)
 			break;
 		if (role & ROLE_COMMS) {
-			displaymode = DISPLAYMODE_COMMS;
+			displaymode[wn] = DISPLAYMODE_COMMS;
 			wwviaudio_add_sound(CHANGESCREEN_SOUND);
 		}
 		break;
 	case keyf8:
 		helpmode = 0;
-		if (displaymode >= DISPLAYMODE_FONTTEST)
+		if (dm >= DISPLAYMODE_FONTTEST)
 			break;
 		if (role & ROLE_MAIN) {
-			displaymode = DISPLAYMODE_MAINSCREEN;
+			displaymode[wn] = DISPLAYMODE_MAINSCREEN;
 			wwviaudio_add_sound(CHANGESCREEN_SOUND);
 		}
 		break;
 	case keyf9:
 		helpmode = 0;
-		if (displaymode >= DISPLAYMODE_FONTTEST)
+		if (dm >= DISPLAYMODE_FONTTEST)
 			break;
 		if (role & ROLE_DEMON) {
-			displaymode = DISPLAYMODE_DEMON;
+			displaymode[wn] = DISPLAYMODE_DEMON;
 			wwviaudio_add_sound(CHANGESCREEN_SOUND);
 		}
 		break;
@@ -4710,7 +4724,7 @@ static int key_press_cb(SDL_Window *window, SDL_Keysym *keysym)
 		break;
 	case keyonscreen:
 		if (control_key_pressed)
-			do_onscreen((uint8_t) displaymode & 0xff);
+			do_onscreen((uint8_t) dm & 0xff);
 		break;
 	case keyviewmode:
 		/* Toggle main screen between "normal" and "weapons" view */
@@ -4752,14 +4766,15 @@ static int key_press_cb(SDL_Window *window, SDL_Keysym *keysym)
 	return FALSE;
 }
 
-static int key_release_cb(SDL_Window *window, SDL_Keysym *keysym)
+static int key_release_cb(int wn, SDL_Keysym *keysym)
 {
 	enum keyaction ka;
+	int dm = displaymode[wn];
 
 	if (keysym->sym >= SDLK_SCANCODE_MASK)
-		ka = ffkeymap[displaymode][keysym->sym & 0x00ff];
+		ka = ffkeymap[dm][keysym->sym & 0x00ff];
         else
-		ka = keymap[displaymode][keysym->sym];
+		ka = keymap[dm][keysym->sym];
 	if (ka > 0 && ka < NKEYSTATES)
 		kbstate.pressed[ka] = 0;
 
@@ -4776,30 +4791,30 @@ static int key_release_cb(SDL_Window *window, SDL_Keysym *keysym)
 /**********************************/
 
 
-static void show_fonttest(void)
+static void show_fonttest(int wn)
 {
-	sng_abs_xy_draw_string("A B C D E F G H I J K L M", SMALL_FONT, 30, 30);
-	sng_abs_xy_draw_string("N O P Q R S T U V W X Y Z", SMALL_FONT, 30, 60);
-	sng_abs_xy_draw_string("a b c d e f g h i j k l m", SMALL_FONT, 30, 90);
-	sng_abs_xy_draw_string("n o p q r s t u v w x y z", SMALL_FONT, 30, 120);
-	sng_abs_xy_draw_string("0 1 2 3 4 5 6 7 8 9 ! , .", SMALL_FONT, 30, 150);
-	sng_abs_xy_draw_string("? | - = * / \\ + ( ) \" ' _", SMALL_FONT, 30, 180);
+	sng_abs_xy_draw_string(wn, "A B C D E F G H I J K L M", SMALL_FONT, 30, 30);
+	sng_abs_xy_draw_string(wn, "N O P Q R S T U V W X Y Z", SMALL_FONT, 30, 60);
+	sng_abs_xy_draw_string(wn, "a b c d e f g h i j k l m", SMALL_FONT, 30, 90);
+	sng_abs_xy_draw_string(wn, "n o p q r s t u v w x y z", SMALL_FONT, 30, 120);
+	sng_abs_xy_draw_string(wn, "0 1 2 3 4 5 6 7 8 9 ! , .", SMALL_FONT, 30, 150);
+	sng_abs_xy_draw_string(wn, "? | - = * / \\ + ( ) \" ' _", SMALL_FONT, 30, 180);
 
-	sng_abs_xy_draw_string("The Quick Fox Jumps Over The Lazy Brown Dog.", SMALL_FONT, 30, 210);
-	sng_abs_xy_draw_string("The Quick Fox Jumps Over The Lazy Brown Dog.", BIG_FONT, 30, 280);
-	sng_abs_xy_draw_string("The Quick Fox Jumps Over The Lazy Brown Dog.", TINY_FONT, 30, 350);
-	sng_abs_xy_draw_string("The quick fox jumps over the lazy brown dog.", NANO_FONT, 30, 380);
-	sng_abs_xy_draw_string("THE QUICK FOX JUMPS OVER THE LAZY BROWN DOG.", TINY_FONT, 30, 410);
-	sng_abs_xy_draw_string("Well now, what have we here?  James Bond!", NANO_FONT, 30, 425);
-	sng_abs_xy_draw_string("The quick fox jumps over the lazy brown dog.", SMALL_FONT, 30, 450);
-	sng_abs_xy_draw_string("Copyright (C) 2010 Stephen M. Cameron 0123456789", TINY_FONT, 30, 480);
+	sng_abs_xy_draw_string(wn, "The Quick Fox Jumps Over The Lazy Brown Dog.", SMALL_FONT, 30, 210);
+	sng_abs_xy_draw_string(wn, "The Quick Fox Jumps Over The Lazy Brown Dog.", BIG_FONT, 30, 280);
+	sng_abs_xy_draw_string(wn, "The Quick Fox Jumps Over The Lazy Brown Dog.", TINY_FONT, 30, 350);
+	sng_abs_xy_draw_string(wn, "The quick fox jumps over the lazy brown dog.", NANO_FONT, 30, 380);
+	sng_abs_xy_draw_string(wn, "THE QUICK FOX JUMPS OVER THE LAZY BROWN DOG.", TINY_FONT, 30, 410);
+	sng_abs_xy_draw_string(wn, "Well now, what have we here?  James Bond!", NANO_FONT, 30, 425);
+	sng_abs_xy_draw_string(wn, "The quick fox jumps over the lazy brown dog.", SMALL_FONT, 30, 450);
+	sng_abs_xy_draw_string(wn, "Copyright (C) 2010 Stephen M. Cameron 0123456789", TINY_FONT, 30, 480);
 }
 
-static void show_introscreen(void)
+static void show_introscreen(int wn)
 {
-	sng_abs_xy_draw_string("Space Nerds", BIG_FONT, txx(80), txy(200));
-	sng_abs_xy_draw_string("In Space", BIG_FONT, txx(180), txy(320));
-	sng_abs_xy_draw_string("Copyright (C) 2010 Stephen M. Cameron", NANO_FONT, txx(255), txy(550));
+	sng_abs_xy_draw_string(wn, "Space Nerds", BIG_FONT, txx(80), txy(200));
+	sng_abs_xy_draw_string(wn, "In Space", BIG_FONT, txx(180), txy(320));
+	sng_abs_xy_draw_string(wn, "Copyright (C) 2010 Stephen M. Cameron", NANO_FONT, txx(255), txy(550));
 }
 
 static int lobbylast1clickx = -1;
@@ -4810,17 +4825,17 @@ static struct lobby_ui {
 	struct button *lobby_connect_to_server_button;
 } lobby_ui;
 
-static void lobby_connect_to_server_button_pressed()
+static void lobby_connect_to_server_button_pressed(int wn, void *x)
 {
 	printf("lobby connect to server button pressed\n");
 	if (lobby_selected_server != -1)
-		displaymode = DISPLAYMODE_CONNECTING;
+		set_all_displaymode(DISPLAYMODE_CONNECTING);
 }
 
-static void lobby_cancel_button_pressed()
+static void lobby_cancel_button_pressed(int wn, void *x)
 {
 	printf("lobby cancel button pressed\n");
-	displaymode = DISPLAYMODE_NETWORK_SETUP;
+	set_all_displaymode(DISPLAYMODE_NETWORK_SETUP);
 	lobby_selected_server = -1;
 	lobby_count = 0;
 	if (lobby_socket >= 0) {
@@ -4869,9 +4884,9 @@ static void ui_set_widget_tooltip(void *widget, char *tooltip)
 	ui_element_set_tooltip(uie, tooltip);
 }
 
-static void show_common_screen(char *title);
+static void show_common_screen(int wn, char *title);
 
-static void show_rotating_wombat(void)
+static void show_rotating_wombat(int wn)
 {
 	const float angle_of_view = 70.0 * M_PI / 180.0;
 	const float near = 1.0;
@@ -4899,7 +4914,7 @@ static void show_rotating_wombat(void)
 	turret = add_entity(network_setup_ecx, ship_turret_mesh, -1.5, 3.0, 0.0, DARKGREEN);
 	update_entity_parent(network_setup_ecx, turret_base, wombat);
 	update_entity_parent(network_setup_ecx, turret, wombat);
-	render_entities(network_setup_ecx);
+	render_entities(wn, network_setup_ecx);
 	remove_all_entity(network_setup_ecx);
 }
 
@@ -4920,7 +4935,8 @@ static void we_lost_snis_server(void)
 	quickstartmode = 0;
 	delete_all_objects();
 	clear_damcon_pool();
-	displaymode = DISPLAYMODE_NETWORK_SETUP;
+
+	set_all_displaymode(DISPLAYMODE_NETWORK_SETUP);
 	if (lobby_socket != -1)
 		close(lobby_socket);
 	lobby_socket = -1;
@@ -4929,20 +4945,20 @@ static void we_lost_snis_server(void)
 	synchronous_update_lobby_info(); /* lobby info might be old, so let's update it. */
 }
 
-static void show_lobbyscreen(void)
+static void show_lobbyscreen(int wn)
 {
 	char msg[100];
 	int i, protocol_mismatch;
 #define STARTLINE 100
 #define LINEHEIGHT 30
 
-	show_common_screen("");
-	show_rotating_wombat();
-	sng_set_foreground(UI_COLOR(lobby_connecting));
+	show_common_screen(wn, "");
+	show_rotating_wombat(wn);
+	sng_set_foreground(wn, UI_COLOR(lobby_connecting));
 	if (lobby_socket == -1 && switched_server2 == -1) {
-		sng_set_foreground(WHITE);
-		sng_abs_xy_draw_string("SPACE NERDS IN SPACE", BIG_FONT, txx(20), txy(200));
-		sng_abs_xy_draw_string("COPYRIGHT (C) 2020 STEPHEN M. CAMERON, ET AL.", PICO_FONT,
+		sng_set_foreground(wn, WHITE);
+		sng_abs_xy_draw_string(wn, "SPACE NERDS IN SPACE", BIG_FONT, txx(20), txy(200));
+		sng_abs_xy_draw_string(wn, "COPYRIGHT (C) 2020 STEPHEN M. CAMERON, ET AL.", PICO_FONT,
 			txx(255), txy(550));
 		if (lobby_count >= MAX_LOBBY_TRIES)
 			snprintf(msg, sizeof(msg), "GIVING UP ON LOBBY %s:%d -- TRIED %d TIMES.",
@@ -4950,10 +4966,10 @@ static void show_lobbyscreen(void)
 		else
 			snprintf(msg, sizeof(msg), "CONNECTING TO LOBBY %s:%d... TRIED %d TIMES.",
 				lobbyhost, lobbyport, lobby_count);
-		sng_abs_xy_draw_string(msg, SMALL_FONT, txx(100), txy(400));
-		sng_set_foreground(RED);
-		sng_abs_xy_draw_string(lobbyerror, NANO_FONT, txx(100), txy(430));
-		sng_set_foreground(WHITE);
+		sng_abs_xy_draw_string(wn, msg, SMALL_FONT, txx(100), txy(400));
+		sng_set_foreground(wn, RED);
+		sng_abs_xy_draw_string(wn, lobbyerror, NANO_FONT, txx(100), txy(430));
+		sng_set_foreground(wn, WHITE);
 	} else {
 
 		/* Switch server rigamarole */
@@ -4982,7 +4998,7 @@ static void show_lobbyscreen(void)
 				} while (lobby_selected_server == -1 && count < 3);
 				if (lobby_selected_server != -1) {
 					switched_server2 = -1;
-					displaymode = DISPLAYMODE_CONNECTING;
+					set_all_displaymode(DISPLAYMODE_CONNECTING);
 				} else {
 					/* We got lost, we can't find the server we're supposed to warp to. */
 					pthread_mutex_unlock(&to_server_queue_event_mutex);
@@ -4991,37 +5007,37 @@ static void show_lobbyscreen(void)
 				}
 			}
 			pthread_mutex_unlock(&to_server_queue_event_mutex);
-			if (displaymode == DISPLAYMODE_CONNECTING)
+			if (displaymode[0] == DISPLAYMODE_CONNECTING)
 				return;
 		}
 
 		if (lobby_selected_server != -1 && quickstartmode) {
-			displaymode = DISPLAYMODE_CONNECTING;
+			set_all_displaymode(DISPLAYMODE_CONNECTING);
 			return;
 		}
 
 		lobby_selected_server = -1;
-		sng_center_xy_draw_string("SPACE NERDS IN SPACE LOBBY", TINY_FONT, txx(400), LINEHEIGHT);
-		sng_center_xy_draw_string("SELECT A SERVER", NANO_FONT, txx(400), LINEHEIGHT * 2);
+		sng_center_xy_draw_string(wn, "SPACE NERDS IN SPACE LOBBY", TINY_FONT, txx(400), LINEHEIGHT);
+		sng_center_xy_draw_string(wn, "SELECT A SERVER", NANO_FONT, txx(400), LINEHEIGHT * 2);
 		snprintf(msg, sizeof(msg), "CLIENT PROTOCOL VERSION IS %s", SNIS_PROTOCOL_VERSION);
-		sng_center_xy_draw_string(msg, NANO_FONT, txx(400), LINEHEIGHT * 3);
+		sng_center_xy_draw_string(wn, msg, NANO_FONT, txx(400), LINEHEIGHT * 3);
 
 		/* Draw column headings */
 		i = -1;
-		sng_set_foreground(UI_COLOR(lobby_server_heading));
+		sng_set_foreground(wn, UI_COLOR(lobby_server_heading));
 		snprintf(msg, sizeof(msg), "IP ADDRESS/PORT");
-		sng_abs_xy_draw_string(msg, NANO_FONT, txx(30), txy(100) + i * LINEHEIGHT);
+		sng_abs_xy_draw_string(wn, msg, NANO_FONT, txx(30), txy(100) + i * LINEHEIGHT);
 		snprintf(msg, sizeof(msg), "GAME INSTANCE");
-		sng_abs_xy_draw_string(msg, NANO_FONT, txx(150), txy(100) + i * LINEHEIGHT);
+		sng_abs_xy_draw_string(wn, msg, NANO_FONT, txx(150), txy(100) + i * LINEHEIGHT);
 		snprintf(msg, sizeof(msg), "PROTOCOL");
-		sng_abs_xy_draw_string(msg, NANO_FONT, txx(350), txy(100) + i * LINEHEIGHT);
+		sng_abs_xy_draw_string(wn, msg, NANO_FONT, txx(350), txy(100) + i * LINEHEIGHT);
 		snprintf(msg, sizeof(msg), "LOCATION");
-		sng_abs_xy_draw_string(msg, NANO_FONT, txx(450), txy(100) + i * LINEHEIGHT);
+		sng_abs_xy_draw_string(wn, msg, NANO_FONT, txx(450), txy(100) + i * LINEHEIGHT);
 		snprintf(msg, sizeof(msg), "CONNECTIONS");
-		sng_abs_xy_draw_string(msg, NANO_FONT, txx(550), txy(100) + i * LINEHEIGHT);
+		sng_abs_xy_draw_string(wn, msg, NANO_FONT, txx(550), txy(100) + i * LINEHEIGHT);
 
 		/* Draw server info */
-		sng_set_foreground(UI_COLOR(lobby_connecting));
+		sng_set_foreground(wn, UI_COLOR(lobby_connecting));
 		pthread_mutex_lock(&lobby_data_mutex);
 		for (i = 0; i < ngameservers; i++) {
 			unsigned char *x = (unsigned char *) 
@@ -5030,14 +5046,14 @@ static void show_lobbyscreen(void)
 				lobbylast1clicky > txy(100) + (-0.5 + i) * LINEHEIGHT &&
 				lobbylast1clicky < txy(100) + (0.5 + i) * LINEHEIGHT) {
 				lobby_selected_server = i;
-				sng_set_foreground(UI_COLOR(lobby_selected_server));
-				snis_draw_rectangle(0, txx(25), txy(100) + (-0.5 + i) * LINEHEIGHT,
+				sng_set_foreground(wn, UI_COLOR(lobby_selected_server));
+				snis_draw_rectangle(wn, 0, txx(25), txy(100) + (-0.5 + i) * LINEHEIGHT,
 					txx(600), LINEHEIGHT);
 				snis_button_set_position(lobby_ui.lobby_connect_to_server_button,
 					txx(650), (int) (txy(100) + (-0.5 + i) * LINEHEIGHT));
 				ui_unhide_widget(lobby_ui.lobby_connect_to_server_button);
 			} else
-				sng_set_foreground(UI_COLOR(lobby_connecting));
+				sng_set_foreground(wn, UI_COLOR(lobby_connecting));
 
 			if (quickstartmode) {
 				lobby_selected_server = 0;
@@ -5052,29 +5068,29 @@ static void show_lobbyscreen(void)
 			if (x[0] == 0 && x[1] == 0 && x[2] == 0 && x[3] == 0) {
 				/* Bogus IP addr. Make it blink orange/red */
 				if (timer & 0x04)
-					sng_set_foreground(BLACK);
+					sng_set_foreground(wn, BLACK);
 				else
-					sng_set_foreground(ORANGERED);
+					sng_set_foreground(wn, ORANGERED);
 			} else {
-				sng_set_foreground(UI_COLOR(lobby_connecting));
+				sng_set_foreground(wn, UI_COLOR(lobby_connecting));
 			}
 
-			sng_abs_xy_draw_string(msg, NANO_FONT, txx(30), txy(100) + i * LINEHEIGHT);
+			sng_abs_xy_draw_string(wn, msg, NANO_FONT, txx(30), txy(100) + i * LINEHEIGHT);
 			snprintf(msg, sizeof(msg), "%s", lobby_game_server[i].game_instance);
-			sng_abs_xy_draw_string(msg, NANO_FONT, txx(150), txy(100) + i * LINEHEIGHT);
+			sng_abs_xy_draw_string(wn, msg, NANO_FONT, txx(150), txy(100) + i * LINEHEIGHT);
 			protocol_mismatch = strncmp(lobby_game_server[i].protocol_version, SNIS_PROTOCOL_VERSION,
 							sizeof(lobby_game_server[i].protocol_version)) != 0;
 			if (timer & 0x04 || !protocol_mismatch) {
 				if (protocol_mismatch)
-					sng_set_foreground(ORANGERED);
+					sng_set_foreground(wn, ORANGERED);
 				snprintf(msg, sizeof(msg), "%s", lobby_game_server[i].protocol_version);
-				sng_abs_xy_draw_string(msg, NANO_FONT, txx(350), txy(100) + i * LINEHEIGHT);
+				sng_abs_xy_draw_string(wn, msg, NANO_FONT, txx(350), txy(100) + i * LINEHEIGHT);
 			}
-			sng_set_foreground(UI_COLOR(lobby_connecting));
+			sng_set_foreground(wn, UI_COLOR(lobby_connecting));
 			snprintf(msg, sizeof(msg), "%s", lobby_game_server[i].location);
-			sng_abs_xy_draw_string(msg, NANO_FONT, txx(450), txy(100) + i * LINEHEIGHT);
+			sng_abs_xy_draw_string(wn, msg, NANO_FONT, txx(450), txy(100) + i * LINEHEIGHT);
 			snprintf(msg, sizeof(msg), "%d", lobby_game_server[i].nconnections);
-			sng_abs_xy_draw_string(msg, NANO_FONT, txx(550), txy(100) + i * LINEHEIGHT);
+			sng_abs_xy_draw_string(wn, msg, NANO_FONT, txx(550), txy(100) + i * LINEHEIGHT);
 		}
 		pthread_mutex_unlock(&lobby_data_mutex);
 		if (lobby_selected_server != -1)
@@ -6126,7 +6142,7 @@ static int process_role_onscreen_packet(void)
 {
 	unsigned char buffer[sizeof(struct role_onscreen_packet)];
 	uint8_t new_displaymode;
-	int rc;
+	int i, rc;
 
 	rc = read_and_unpack_buffer(buffer, "b", &new_displaymode);
 	if (rc != 0)
@@ -6142,10 +6158,17 @@ static int process_role_onscreen_packet(void)
 		return 0;
 	}
 
-	if (displaymode == new_displaymode) {
-		wwviaudio_add_sound(OFFSCREEN_SOUND);
-		displaymode = DISPLAYMODE_MAINSCREEN;
-		return 0;
+	if (nwindows == 1) {
+		if (displaymode[0] == new_displaymode) {
+			wwviaudio_add_sound(OFFSCREEN_SOUND);
+			displaymode[0] = DISPLAYMODE_MAINSCREEN;
+			return 0;
+		}
+	} else {
+		for (i = 1; i < nwindows; i++) {
+			if (displaymode[i] == new_displaymode)
+				displaymode[i] = DISPLAYMODE_MAINSCREEN;
+		}
 	}
 	switch (new_displaymode) {
 	case DISPLAYMODE_MAINSCREEN:
@@ -6155,8 +6178,15 @@ static int process_role_onscreen_packet(void)
 	case DISPLAYMODE_DAMCON:
 	case DISPLAYMODE_SCIENCE:
 	case DISPLAYMODE_COMMS:
-		wwviaudio_add_sound(ONSCREEN_SOUND);
-		displaymode = new_displaymode;
+		if (nwindows == 1) {
+			wwviaudio_add_sound(ONSCREEN_SOUND);
+			displaymode[0] = new_displaymode;
+		} else {
+			for (i = 1; i < nwindows; i++) {
+				if (displaymode[i] != new_displaymode)
+					displaymode[i] = new_displaymode;
+			}
+		}
 		break;
 	default:
 		printf("Got unexpected displaymode 0x%08x from server\n",
@@ -6440,9 +6470,9 @@ static void comms_dirkey(int h, int v)
 		text_window_scroll_down(comms_ui.tw);
 }
 
-static void do_pageup(void)
+static void do_pageup(int wn)
 {
-	switch (displaymode) {
+	switch (displaymode[wn]) {
 	case DISPLAYMODE_COMMS:
 		text_window_page_up(comms_ui.tw);
 		break;
@@ -6451,9 +6481,9 @@ static void do_pageup(void)
 	}
 }
 
-static void do_pagedown(void)
+static void do_pagedown(int wn)
 {
-	switch (displaymode) {
+	switch (displaymode[wn]) {
 	case DISPLAYMODE_COMMS:
 		text_window_page_down(comms_ui.tw);
 		break;
@@ -8213,7 +8243,7 @@ static void *gameserver_reader(__attribute__((unused)) void *arg)
 			close(gameserver_sock);
 			gameserver_sock = -1;
 			connected_to_gameserver = 0;
-			displaymode = DISPLAYMODE_NETWORK_SETUP;
+			set_all_displaymode(DISPLAYMODE_NETWORK_SETUP);
 			return NULL;
 		}
 		successful_opcodes++;
@@ -8485,9 +8515,9 @@ static void *connect_to_gameserver_thread(__attribute__((unused)) void *arg)
 		goto error;
 	}
 
-	displaymode = DISPLAYMODE_CONNECTED;
+	set_all_displaymode(DISPLAYMODE_CONNECTED);
 	done_with_lobby = 1;
-	displaymode = role_to_displaymode(role);
+	set_all_displaymode(role_to_displaymode(role));
 
 	/* Should probably submit this through the packed buffer queue...
 	 * but, this works.
@@ -8568,30 +8598,30 @@ static int connect_to_gameserver(int selected_server)
 	return 0;
 }
 
-static void show_connecting_screen(void)
+static void show_connecting_screen(int wn)
 {
 	if (strcmp(connecting_to_server_msg, "") == 0)
 		strncpy(connecting_to_server_msg, "CONNECTING TO SERVER...",
 			sizeof(connecting_to_server_msg) - 1);
-	sng_set_foreground(UI_COLOR(lobby_connecting));
-	sng_abs_xy_draw_string(connecting_to_server_msg, SMALL_FONT, txx(100), txy(300) + LINEHEIGHT);
+	sng_set_foreground(wn, UI_COLOR(lobby_connecting));
+	sng_abs_xy_draw_string(wn, connecting_to_server_msg, SMALL_FONT, txx(100), txy(300) + LINEHEIGHT);
 	if (!connected_to_gameserver) {
 		connected_to_gameserver = 1;
 		(void) connect_to_gameserver(lobby_selected_server);
 	}
 }
 
-static void show_connected_screen(void)
+static void show_connected_screen(int wn)
 {
-	sng_set_foreground(UI_COLOR(lobby_connecting));
-	sng_abs_xy_draw_string("CONNECTED TO SERVER", SMALL_FONT, txx(100), txy(300) + LINEHEIGHT);
-	sng_abs_xy_draw_string("DOWNLOADING GAME DATA", SMALL_FONT, txx(100), txy(300) + LINEHEIGHT * 3);
+	sng_set_foreground(wn, UI_COLOR(lobby_connecting));
+	sng_abs_xy_draw_string(wn, "CONNECTED TO SERVER", SMALL_FONT, txx(100), txy(300) + LINEHEIGHT);
+	sng_abs_xy_draw_string(wn, "DOWNLOADING GAME DATA", SMALL_FONT, txx(100), txy(300) + LINEHEIGHT * 3);
 }
 
-static void show_info_message(char *msg)
+static void show_info_message(int wn, char *msg)
 {
-	sng_set_foreground(UI_COLOR(lobby_connecting));
-	sng_abs_xy_draw_string(msg, SMALL_FONT, txx(100), txy(300) + LINEHEIGHT * 3);
+	sng_set_foreground(wn, UI_COLOR(lobby_connecting));
+	sng_abs_xy_draw_string(wn, msg, SMALL_FONT, txx(100), txy(300) + LINEHEIGHT * 3);
 }
 
 static char *credits_text[] = {
@@ -8672,7 +8702,7 @@ static char *credits_text[] = {
 	"",
 };
 
-static void draw_credits_screen(int lines, char *crawl[])
+static void draw_credits_screen(int wn, int lines, char *crawl[])
 {
 	static float z = 1200;
 	int i;
@@ -8683,14 +8713,14 @@ static void draw_credits_screen(int lines, char *crawl[])
 		credits_screen_active = 0;
 	}
 
-	sng_set_foreground(UI_COLOR(damcon_part));
+	sng_set_foreground(wn, UI_COLOR(damcon_part));
 	for (i = 0; i < lines; i++) {
-			sng_center_xz_draw_string(crawl[i],
+			sng_center_xz_draw_string(wn, crawl[i],
 					SMALL_FONT, SCREEN_WIDTH / 2, i * txy(40) + z);
 	}
 }
 
-static void textscreen_dismiss_button_pressed(void *button_ptr_ptr)
+static void textscreen_dismiss_button_pressed(int wn, void *button_ptr_ptr)
 {
 	struct button **button = button_ptr_ptr;
 	textscreen_timer = 0;
@@ -8698,7 +8728,7 @@ static void textscreen_dismiss_button_pressed(void *button_ptr_ptr)
 		ui_hide_widget(*button);
 }
 
-static void textscreen_menu_button_pressed(void *button_ptr_ptr)
+static void textscreen_menu_button_pressed(int wn, void *button_ptr_ptr)
 {
 	struct button **button = button_ptr_ptr;
 	int i, selection;
@@ -8718,14 +8748,14 @@ static void textscreen_menu_button_pressed(void *button_ptr_ptr)
 }
 
 static void ui_add_button(struct button *b, int active_displaymode, char *tooltip);
-static void show_textscreen(void)
+static void show_textscreen(int wn)
 {
 	int i;
 	static struct button *dismiss_button = NULL;
 	char *saveptr = NULL;
 	int menucount = 0;
 
-	if (displaymode != DISPLAYMODE_MAINSCREEN)
+	if (displaymode[wn] != DISPLAYMODE_MAINSCREEN)
 		return;
 
 	if (!dismiss_button) {
@@ -8745,7 +8775,7 @@ static void show_textscreen(void)
 	else
 		ui_unhide_widget(dismiss_button);
 	/* make it show on the current screen, whatever it is */
-	ui_set_widget_displaymode(dismiss_button, displaymode);
+	ui_set_widget_displaymode(dismiss_button, displaymode[wn]);
 
 	if (user_defined_menu_active) {
 		menucount = strchrcount(textscreen, '\n') - 1;
@@ -8756,13 +8786,13 @@ static void show_textscreen(void)
 				ui_unhide_widget(user_menu_button[i]);
 			else
 				ui_hide_widget(user_menu_button[i]);
-			ui_set_widget_displaymode(user_menu_button[i], displaymode);
+			ui_set_widget_displaymode(user_menu_button[i], displaymode[wn]);
 		}
 	}
 
 	char tmp_textscreen[sizeof(textscreen)];
 
-	switch (displaymode) {
+	switch (displaymode[wn]) {
 	case DISPLAYMODE_MAINSCREEN:
 	case DISPLAYMODE_NAVIGATION:
 	case DISPLAYMODE_WEAPONS:
@@ -8785,25 +8815,25 @@ static void show_textscreen(void)
 	char *line;
 	int y = 100;
 
-	sng_set_foreground(BLACK);
-	snis_draw_rectangle(1, txx(50), txy(50),
+	sng_set_foreground(wn, BLACK);
+	snis_draw_rectangle(wn, 1, txx(50), txy(50),
 			SCREEN_WIDTH - txx(100), SCREEN_HEIGHT - txy(100));
-	sng_set_foreground(RED);
-	snis_draw_rectangle(FALSE, txx(50), txy(50),
+	sng_set_foreground(wn, RED);
+	snis_draw_rectangle(wn, FALSE, txx(50), txy(50),
 			SCREEN_WIDTH - txx(100), SCREEN_HEIGHT - txy(100));
-	sng_set_foreground(WHITE);
+	sng_set_foreground(wn, WHITE);
 
 	line = strtok_r(tmp_textscreen, "\n", &saveptr);
 	if (!line) {
 		textscreen_timer = 0;
 		return;
 	}
-	sng_center_xy_draw_string(line, BIG_FONT, SCREEN_WIDTH / 2, txy(y)); y += txy(35);
+	sng_center_xy_draw_string(wn, line, BIG_FONT, SCREEN_WIDTH / 2, txy(y)); y += txy(35);
 
 	i = 0;
 	while ((line = strtok_r(NULL, "\n", &saveptr))) {
 		if (!user_defined_menu_active) {
-			sng_abs_xy_draw_string(line, SMALL_FONT, txx(60), txy(y));
+			sng_abs_xy_draw_string(wn, line, SMALL_FONT, txx(60), txy(y));
 			y += txy(20);
 		} else {
 			if (i < menucount) {
@@ -8815,16 +8845,16 @@ static void show_textscreen(void)
 	}
 }
 
-static void show_watermark(void)
+static void show_watermark(int wn)
 {
-	sng_set_foreground(YELLOW);
-	sng_abs_xy_draw_string(BUILD_INFO_STRING3, NANO_FONT, txx(25), txy(590));
+	sng_set_foreground(wn, YELLOW);
+	sng_abs_xy_draw_string(wn, BUILD_INFO_STRING3, NANO_FONT, txx(25), txy(590));
 }
 
 static int blue_rectangle = 1; /* tweakable via console */
 static int station_label = 1; /* tweakable via console */
 
-static void show_common_screen(char *title)
+static void show_common_screen(int wn, char *title)
 {
 	int title_color;
 	int border_color;
@@ -8844,82 +8874,82 @@ static void show_common_screen(char *title)
 	/* Low oxygen warning is common on all screens */
 	if (o && o->tsd.ship.oxygen < UINT32_MAX * 0.1) { /* 10% */
 		if (timer & 0x04) {
-			sng_set_foreground(UI_COLOR(common_red_alert));
-			sng_abs_xy_draw_string("LOW OXYGEN WARNING", SMALL_FONT, txx(25), txy(LINEHEIGHT));
+			sng_set_foreground(wn, UI_COLOR(common_red_alert));
+			sng_abs_xy_draw_string(wn, "LOW OXYGEN WARNING", SMALL_FONT, txx(25), txy(LINEHEIGHT));
 		}
 	} else {
-		sng_set_foreground(title_color);
+		sng_set_foreground(wn, title_color);
 		if (station_label)
-			sng_abs_xy_draw_string(title, SMALL_FONT, txx(25), txy(LINEHEIGHT));
+			sng_abs_xy_draw_string(wn, title, SMALL_FONT, txx(25), txy(LINEHEIGHT));
 	}
 
 	if (blue_rectangle) {
-		sng_set_foreground(border_color);
-		snis_draw_line(1, 1, SCREEN_WIDTH, 0);
-		snis_draw_line(SCREEN_WIDTH - 1, 1, SCREEN_WIDTH - 1, SCREEN_HEIGHT - 1);
-		snis_draw_line(SCREEN_WIDTH - 1, SCREEN_HEIGHT - 1, 1, SCREEN_HEIGHT - 1);
-		snis_draw_line(1, 1, 1, SCREEN_HEIGHT - 1);
+		sng_set_foreground(wn, border_color);
+		snis_draw_line(wn, 1, 1, SCREEN_WIDTH, 0);
+		snis_draw_line(wn, SCREEN_WIDTH - 1, 1, SCREEN_WIDTH - 1, SCREEN_HEIGHT - 1);
+		snis_draw_line(wn, SCREEN_WIDTH - 1, SCREEN_HEIGHT - 1, 1, SCREEN_HEIGHT - 1);
+		snis_draw_line(wn, 1, 1, 1, SCREEN_HEIGHT - 1);
 	}
 
 	if (external_camera_active_timer > 0 && external_camera_active) {
 		char msg[100];
-		sng_set_foreground(UI_COLOR(special_options));
+		sng_set_foreground(wn, UI_COLOR(special_options));
 		external_camera_active_timer--;
 		snprintf(msg, sizeof(msg), "EXTERNAL CAMERA MODE %d (%s)", external_camera_mode,
 				external_camera_mode_name[external_camera_mode]);
-		sng_center_xy_draw_string(msg, SMALL_FONT, SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2);
+		sng_center_xy_draw_string(wn, msg, SMALL_FONT, SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2);
 	} else {
 		if (external_camera_active_timer == 0 && !external_camera_active)
 			external_camera_active_timer = frame_rate_hz;
 	}
 	if (vertical_controls_timer) {
-		sng_set_foreground(UI_COLOR(special_options));
+		sng_set_foreground(wn, UI_COLOR(special_options));
 		vertical_controls_timer--;
 		if (vertical_controls_inverted > 0)
-			sng_center_xy_draw_string("VERTICAL CONTROLS NORMAL",
+			sng_center_xy_draw_string(wn, "VERTICAL CONTROLS NORMAL",
 					SMALL_FONT, SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2);
 		else
-			sng_center_xy_draw_string("VERTICAL CONTROLS INVERTED",
+			sng_center_xy_draw_string(wn, "VERTICAL CONTROLS INVERTED",
 					SMALL_FONT, SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2);
 	}
 	if (mouse_mode_timer) {
-		sng_set_foreground(UI_COLOR(special_options));
+		sng_set_foreground(wn, UI_COLOR(special_options));
 		mouse_mode_timer--;
 		if (current_mouse_ui_mode == MOUSE_MODE_FREE_MOUSE)
-			sng_center_xy_draw_string("MOUSE MODE = NORMAL",
+			sng_center_xy_draw_string(wn, "MOUSE MODE = NORMAL",
 					SMALL_FONT, SCREEN_WIDTH / 2, SCREEN_HEIGHT / 3);
 		else
-			sng_center_xy_draw_string("MOUSE MODE = CAPTURED",
+			sng_center_xy_draw_string(wn, "MOUSE MODE = CAPTURED",
 					SMALL_FONT, SCREEN_WIDTH / 2, SCREEN_HEIGHT / 3);
 	}
 	if (fake_stars_timer) {
-		sng_set_foreground(UI_COLOR(special_options));
+		sng_set_foreground(wn, UI_COLOR(special_options));
 		fake_stars_timer--;
 		if (nfake_stars > 0)
-			sng_center_xy_draw_string("SPACE DUST ENABLED",
+			sng_center_xy_draw_string(wn, "SPACE DUST ENABLED",
 					SMALL_FONT, SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2);
 		else
-			sng_center_xy_draw_string("SPACE DUST DISABLED",
+			sng_center_xy_draw_string(wn, "SPACE DUST DISABLED",
 					SMALL_FONT, SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2);
 	}
 	if (credits_screen_active)
-		draw_credits_screen(ARRAYSIZE(credits_text), credits_text);
+		draw_credits_screen(wn, ARRAYSIZE(credits_text), credits_text);
 	if (login_failed_timer) {
-		sng_set_foreground(UI_COLOR(special_options));
+		sng_set_foreground(wn, UI_COLOR(special_options));
 		login_failed_timer--;
-		sng_center_xy_draw_string(login_failed_msg, SMALL_FONT,
+		sng_center_xy_draw_string(wn, login_failed_msg, SMALL_FONT,
 						SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2);
 		if (login_failed_timer <= 0) {
 			/* We failed verfication, so quickstart didn't work, so turn it off. */
 			quickstartmode = 0;
-			displaymode = DISPLAYMODE_LOBBYSCREEN;
+			set_all_displaymode(DISPLAYMODE_LOBBYSCREEN);
 			done_with_lobby = 0;
 		}
 	}
 	if (textscreen_timer > 0 || user_defined_menu_active)
-		show_textscreen();
+		show_textscreen(wn);
 	if (watermark_active)
-		show_watermark();
+		show_watermark(wn);
 
 	if (monitor_voice_chat) {
 		int i;
@@ -8935,12 +8965,12 @@ static void show_common_screen(char *title)
 				break;
 		pbl = i * SCREEN_WIDTH / (2 * 32);
 
-		sng_set_foreground(RED);
-		snis_draw_rectangle(0, 0, 10, SCREEN_WIDTH / 2, 14);
-		snis_draw_rectangle(1, 0, 10, rl, 14);
-		sng_set_foreground(GREEN);
-		snis_draw_rectangle(0, 0, 27, SCREEN_WIDTH / 2, 14);
-		snis_draw_rectangle(1, 0, 27, pbl, 14);
+		sng_set_foreground(wn, RED);
+		snis_draw_rectangle(wn, 0, 0, 10, SCREEN_WIDTH / 2, 14);
+		snis_draw_rectangle(wn, 1, 0, 10, rl, 14);
+		sng_set_foreground(wn, GREEN);
+		snis_draw_rectangle(wn, 0, 0, 27, SCREEN_WIDTH / 2, 14);
+		snis_draw_rectangle(wn, 1, 0, 27, pbl, 14);
 	}
 }
 
@@ -8980,7 +9010,7 @@ static int newzoom(int current_zoom, int desired_zoom)
 #define FAR_CAMERA_PLANE (XKNOWN_DIM/10.0)
 #endif
 
-static void show_gunsight(void)
+static void show_gunsight(int wn)
 {
 	int x1, y1, x2, y2, cx, cy;
 
@@ -8991,11 +9021,11 @@ static void show_gunsight(void)
 	y1 = cy - 50;
 	y2 = cy + 50;
 
-	sng_set_foreground(UI_COLOR(weap_gunsight));
-	snis_draw_line(x1, cy, x1 + 25, cy);
-	snis_draw_line(x2 - 25, cy, x2, cy);
-	snis_draw_line(cx, y1, cx, y1 + 25);
-	snis_draw_line(cx, y2 - 25, cx, y2);
+	sng_set_foreground(wn, UI_COLOR(weap_gunsight));
+	snis_draw_line(wn, x1, cy, x1 + 25, cy);
+	snis_draw_line(wn, x2 - 25, cy, x2, cy);
+	snis_draw_line(wn, cx, y1, cx, y1 + 25);
+	snis_draw_line(wn, cx, y2 - 25, cx, y2);
 }
 
 static void main_screen_add_text(char *msg)
@@ -9004,7 +9034,7 @@ static void main_screen_add_text(char *msg)
 	strncpy(main_screen_text.text[main_screen_text.last], msg, 99);
 }
 
-static void draw_main_screen_text(void)
+static void draw_main_screen_text(int wn)
 {
 	int first, i;
 	const int comms_lines = MAINSCREEN_COMMS_LINES;
@@ -9014,20 +9044,20 @@ static void draw_main_screen_text(void)
 
 	first = (main_screen_text.last + 1) % comms_lines;
 
-	sng_set_foreground(UI_COLOR(main_text));
+	sng_set_foreground(wn, UI_COLOR(main_text));
 	for (i = 0; i < comms_lines; i++) {
-		sng_abs_xy_draw_string(main_screen_text.text[first],
+		sng_abs_xy_draw_string(wn, main_screen_text.text[first],
 				NANO_FONT, 10, SCREEN_HEIGHT - (comms_lines - i) * 18 - 10);
 		first = (first + 1) % comms_lines;
 	}
 }
 
-static void draw_targeting_indicator(int x, int y, int color,
+static void draw_targeting_indicator(int wn, int x, int y, int color,
 					int ring, float scale, float ratio)
 {
 	int i;
 
-	sng_set_foreground(color);
+	sng_set_foreground(wn, color);
 	for (i = 0; i < 4; i++) {
 		int x1, y1, x2, y2;
 		double angle;
@@ -9046,12 +9076,12 @@ static void draw_targeting_indicator(int x, int y, int color,
 		x2 = x + ratio * dx;
 		y2 = y + ratio * dy;
 		/* snis_draw_line(x1, y1, x2, y2); */
-		snis_draw_line(x2 - ddx, y2 - ddy, x2 + ddx, y2 + ddy);
-		snis_draw_line(x2 - ddx, y2 - ddy, x1, y1);
-		snis_draw_line(x1, y1, x2 + ddx, y2 + ddy);
-		if (ring)
-			sng_draw_circle(0, x, y, 33);
+		snis_draw_line(wn, x2 - ddx, y2 - ddy, x2 + ddx, y2 + ddy);
+		snis_draw_line(wn, x2 - ddx, y2 - ddy, x1, y1);
+		snis_draw_line(wn, x1, y1, x2 + ddx, y2 + ddy);
 	}
+	if (ring)
+		sng_draw_circle(wn, 0, x, y, 33);
 }
 
 static void add_thrust_entities(struct entity *thrust_entity[],
@@ -9313,7 +9343,7 @@ static void adjust_weapons_azimuth_angle(union quat *cam_orientation)
 	quat_mul_self(cam_orientation, &az);
 }
 
-static void show_weapons_camera_view(void)
+static void show_weapons_camera_view(int wn)
 {
 	const float min_angle_of_view = 5.0 * M_PI / 180.0;
 	const float max_angle_of_view = ANGLE_OF_VIEW * M_PI / 180.0;
@@ -9386,13 +9416,13 @@ static void show_weapons_camera_view(void)
 	calculate_camera_transform(ecx);
 	entity_context_set_hi_lo_poly_pixel_threshold(ecx, low_poly_threshold);
 
-	sng_set_foreground(GREEN);
+	sng_set_foreground(wn, GREEN);
 	if (!ecx_fake_stars_initialized) {
 		ecx_fake_stars_initialized = 1;
 		entity_init_fake_stars(ecx, nfake_stars, 300.0f * 10.0f);
 	}
 
-	render_skybox(ecx);
+	render_skybox(wn, ecx);
 
 	pthread_mutex_lock(&universe_mutex);
 
@@ -9428,7 +9458,7 @@ static void show_weapons_camera_view(void)
 				o->tsd.ship.shiptype, o->tsd.ship.power_data.impulse.i, 0);
 
 	show_lens_flare(o, &cam_pos, &adjusted_cam_orientation); /* this will be using data from last frame */
-	render_entities(ecx);
+	render_entities(wn, ecx);
 	remove_lens_flare_entities();
 
 	/* Show targeting aids */
@@ -9453,12 +9483,12 @@ static void show_weapons_camera_view(void)
 			 */
 			if (dist < TORPEDO_VELOCITY * TORPEDO_LIFETIME) {
 				char msg[20];
-				draw_targeting_indicator(sx, sy, UI_COLOR(weap_in_range), 0, 0.5, 1.5f);
+				draw_targeting_indicator(wn, sx, sy, UI_COLOR(weap_in_range), 0, 0.5, 1.5f);
 				snprintf(msg, sizeof(msg), "%.0f", dist);
-				sng_set_foreground(UI_COLOR(weap_in_range));
-				sng_abs_xy_draw_string(msg, PICO_FONT, sx + txx(10), sy);
+				sng_set_foreground(wn, UI_COLOR(weap_in_range));
+				sng_abs_xy_draw_string(wn, msg, PICO_FONT, sx + txx(10), sy);
 			} else {
-				draw_targeting_indicator(sx, sy, UI_COLOR(weap_targeting), 0, 0.5, 1.5f);
+				draw_targeting_indicator(wn, sx, sy, UI_COLOR(weap_targeting), 0, 0.5, 1.5f);
 			}
 		}
 	}
@@ -9473,7 +9503,7 @@ static void show_weapons_camera_view(void)
 
 	/* range is the same as max zoom on old weapons */
 	if (weapons_azimuth_angle == 0.0) {
-		draw_plane_radar(o, &camera_orientation, 0.5 * SCREEN_WIDTH, 0.8333 * SCREEN_HEIGHT,
+		draw_plane_radar(wn, o, &camera_orientation, 0.5 * SCREEN_WIDTH, 0.8333 * SCREEN_HEIGHT,
 					0.125 * SCREEN_HEIGHT, XKNOWN_DIM * 0.02);
 
 		/* Draw science selector indicator on main screen */
@@ -9483,43 +9513,43 @@ static void show_weapons_camera_view(void)
 			if (curr_science_guy->alive && curr_science_guy->entity &&
 				entity_onscreen(curr_science_guy->entity)) {
 				entity_get_screen_coords(curr_science_guy->entity, &sx, &sy);
-				draw_targeting_indicator(sx, sy, UI_COLOR(weap_sci_selection), 0, 1.0f, 2.0f);
+				draw_targeting_indicator(wn, sx, sy, UI_COLOR(weap_sci_selection), 0, 1.0f, 2.0f);
 			}
 		}
 
 		/* show torpedo count */
 		if (!o->tsd.ship.torpedoes_loading || (timer & 0x4)) {
 			if (o->tsd.ship.torpedoes_loading)
-				sng_set_foreground(UI_COLOR(weap_torpedoes_loading));
+				sng_set_foreground(wn, UI_COLOR(weap_torpedoes_loading));
 			else
-				sng_set_foreground(UI_COLOR(weap_torpedoes_loaded));
+				sng_set_foreground(wn, UI_COLOR(weap_torpedoes_loaded));
 			snprintf(buf, sizeof(buf), "TORP: %03d", o->tsd.ship.torpedoes +
 						o->tsd.ship.torpedoes_loading +
 						o->tsd.ship.torpedoes_loaded);
-			sng_abs_xy_draw_string(buf, NANO_FONT, 570 * SCREEN_WIDTH / 800,
+			sng_abs_xy_draw_string(wn, buf, NANO_FONT, 570 * SCREEN_WIDTH / 800,
 						SCREEN_HEIGHT - 15 * SCREEN_HEIGHT / 600);
 			snprintf(buf, sizeof(buf), "MISSILES: %03d", o->tsd.ship.missile_count);
-			sng_abs_xy_draw_string(buf, NANO_FONT, 700 * SCREEN_WIDTH / 800,
+			sng_abs_xy_draw_string(wn, buf, NANO_FONT, 700 * SCREEN_WIDTH / 800,
 						SCREEN_HEIGHT - 15 * SCREEN_HEIGHT / 600);
 		}
 
 		/* idiot lights for low power */
-		sng_set_foreground(UI_COLOR(weap_warning));
+		sng_set_foreground(wn, UI_COLOR(weap_warning));
 		if (o->tsd.ship.power_data.phasers.i < idiot_light_threshold) {
-			sng_center_xy_draw_string("LOW PHASER POWER", NANO_FONT,
+			sng_center_xy_draw_string(wn, "LOW PHASER POWER", NANO_FONT,
 					0.5 * SCREEN_WIDTH, 65 * SCREEN_HEIGHT / 600);
 		}
 
 		/* show security indicator */
 		if (o->tsd.ship.in_secure_area && timer & 0x08) {
-			sng_set_foreground(UI_COLOR(weap_warning));
-			sng_center_xy_draw_string("HIGH SECURITY", NANO_FONT,
+			sng_set_foreground(wn, UI_COLOR(weap_warning));
+			sng_center_xy_draw_string(wn, "HIGH SECURITY", NANO_FONT,
 				0.5 * SCREEN_WIDTH, 5 * SCREEN_HEIGHT / 6);
-			sng_center_xy_draw_string("AREA", NANO_FONT, 0.5 * SCREEN_WIDTH,
+			sng_center_xy_draw_string(wn, "AREA", NANO_FONT, 0.5 * SCREEN_WIDTH,
 					516 * SCREEN_HEIGHT / 600);
 		}
 
-		show_gunsight();
+		show_gunsight(wn);
 	}
 	pthread_mutex_unlock(&universe_mutex);
 }
@@ -9618,20 +9648,20 @@ static void update_external_camera_position_and_orientation(struct snis_entity *
 	*cam_pos = external_camera_position;
 }
 
-static void draw_nav_main_idiot_lights(struct snis_entity *ship, int color)
+static void draw_nav_main_idiot_lights(int wn, struct snis_entity *ship, int color, int displaymode)
 {
 	/* idiot lights for low power of various systems */
-	sng_set_foreground(UI_COLOR(nav_warning));
+	sng_set_foreground(wn, UI_COLOR(nav_warning));
 	if (ship->tsd.ship.power_data.sensors.i < idiot_light_threshold && (timer & 0x08))
-		sng_center_xy_draw_string("LOW SENSOR POWER", NANO_FONT, SCREEN_WIDTH / 2, txy(65));
+		sng_center_xy_draw_string(wn, "LOW SENSOR POWER", NANO_FONT, SCREEN_WIDTH / 2, txy(65));
 	if (ship->tsd.ship.power_data.maneuvering.i < idiot_light_threshold && (timer & 0x08))
-		sng_center_xy_draw_string("LOW MANEUVERING POWER", NANO_FONT, SCREEN_WIDTH / 2, txy(80));
+		sng_center_xy_draw_string(wn, "LOW MANEUVERING POWER", NANO_FONT, SCREEN_WIDTH / 2, txy(80));
 	if (ship->tsd.ship.power_data.impulse.r2 < idiot_light_threshold && (timer & 0x08))
-		sng_center_xy_draw_string("LOW IMPULSE POWER", NANO_FONT, SCREEN_WIDTH / 2, txy(95));
+		sng_center_xy_draw_string(wn, "LOW IMPULSE POWER", NANO_FONT, SCREEN_WIDTH / 2, txy(95));
 	if (ship->tsd.ship.warp_core_status == WARP_CORE_STATUS_EJECTED)
-		sng_center_xy_draw_string("WARP CORE EJECTED", NANO_FONT, SCREEN_WIDTH / 2, txy(110));
+		sng_center_xy_draw_string(wn, "WARP CORE EJECTED", NANO_FONT, SCREEN_WIDTH / 2, txy(110));
 	if (displaymode == DISPLAYMODE_NAVIGATION && ship->tsd.ship.power_data.warp.r2 < idiot_light_threshold)
-		sng_center_xy_draw_string("LOW WARP POWER", NANO_FONT,
+		sng_center_xy_draw_string(wn, "LOW WARP POWER", NANO_FONT,
 				SCREEN_WIDTH - txx(1.2 * nav_ui.gauge_radius + 10), /* should match gauge x */
 				txy(nav_ui.gauge_radius * 2 + 20));
 }
@@ -9648,7 +9678,7 @@ static void adjust_main_view_azimuth_angle(union quat *cam_orientation)
 	quat_mul_self(cam_orientation, &az);
 }
 
-static void show_mainscreen(void)
+static void show_mainscreen(int wn)
 {
 	const float min_angle_of_view = 5.0 * M_PI / 180.0;
 	const float max_angle_of_view = ANGLE_OF_VIEW * M_PI / 180.0;
@@ -9772,17 +9802,17 @@ static void show_mainscreen(void)
 	calculate_camera_transform(ecx);
 	entity_context_set_hi_lo_poly_pixel_threshold(ecx, low_poly_threshold);
 
-	sng_set_foreground(GREEN);
+	sng_set_foreground(wn, GREEN);
 	if (!ecx_fake_stars_initialized) {
 		ecx_fake_stars_initialized = 1;
 		entity_init_fake_stars(ecx, nfake_stars, 300.0f * 10.0f);
 	}
 
-	render_skybox(ecx);
+	render_skybox(wn, ecx);
 
 	pthread_mutex_lock(&universe_mutex);
 	show_lens_flare(o, &cam_pos, &camera_orientation); /* this will be using data from last frame */
-	render_entities(ecx);
+	render_entities(wn, ecx);
 	remove_lens_flare_entities();
 
 	/* if we added the ship into the scene, remove it now */
@@ -9797,26 +9827,26 @@ static void show_mainscreen(void)
 		if (curr_science_guy->alive && curr_science_guy->entity &&
 			entity_onscreen(curr_science_guy->entity)) {
 			entity_get_screen_coords(curr_science_guy->entity, &sx, &sy);
-			draw_targeting_indicator(sx, sy, UI_COLOR(main_sci_selection), 0, 1.0f, 2.0f);
+			draw_targeting_indicator(wn, sx, sy, UI_COLOR(main_sci_selection), 0, 1.0f, 2.0f);
 		}
 	}
 
 	if (current_altitude < 2000 && !external_camera_active) {
 		char buf[25];
 		snprintf(buf, sizeof(buf), "ALTITUDE: %5.1f", current_altitude);
-		sng_abs_xy_draw_string(buf, NANO_FONT, txx(20), txy(20));
+		sng_abs_xy_draw_string(wn, buf, NANO_FONT, txx(20), txy(20));
 	}
 
 	if (o->tsd.ship.view_mode == MAINSCREEN_VIEW_MODE_WEAPONS)
-		show_gunsight();
+		show_gunsight(wn);
 	if (vp == o)
-		draw_main_screen_text();
-	draw_nav_main_idiot_lights(o, UI_COLOR(main_warning));
+		draw_main_screen_text(wn);
+	draw_nav_main_idiot_lights(wn, o, UI_COLOR(main_warning), DISPLAYMODE_MAINSCREEN);
 	pthread_mutex_unlock(&universe_mutex);
 	if (vp == o)
-		show_common_screen("");
+		show_common_screen(wn, "");
 	else
-		show_common_screen("REMOTE CAMERA FEED");
+		show_common_screen(wn, "REMOTE CAMERA FEED");
 }
 
 /* position and dimensions of science scope */
@@ -9828,8 +9858,8 @@ static void show_mainscreen(void)
 #define SCIENCE_SCOPE_CX (SCIENCE_SCOPE_X + SCIENCE_SCOPE_R)
 #define SCIENCE_SCOPE_CY (SCIENCE_SCOPE_Y + SCIENCE_SCOPE_R)
 
-static void snis_draw_arrow(int x, int y, int r, double heading, double scale);
-static void snis_draw_science_guy(struct snis_entity *o,
+static void snis_draw_arrow(int wn, int x, int y, int r, double heading, double scale);
+static void snis_draw_science_guy(int wn, struct snis_entity *o,
 					float x, float y, double dist, int bw, int pwr,
 					double range, int selected,
 					int nebula_factor)
@@ -9851,73 +9881,73 @@ static void snis_draw_science_guy(struct snis_entity *o,
 		dr += 200;
 	}
 
-	sng_set_foreground(UI_COLOR(sci_ball_default_blip));
+	sng_set_foreground(wn, UI_COLOR(sci_ball_default_blip));
 	if (!o->sdata.science_data_known) {
 		for (i = 0; i < 10; i++) {
 			da = snis_randn(360) * M_PI / 180.0;
 			tx = (int) ((double) x + sin(da) * (double) snis_randn(dr));
 			ty = (int) ((double) y + cos(da) * (double) snis_randn(dr)); 
 
-			sng_draw_point(tx, ty);
+			sng_draw_point(wn, tx, ty);
 		}
 	} else {
 		switch(o->type) {
 		case OBJTYPE_SHIP2:
 		case OBJTYPE_SHIP1:
-			sng_set_foreground(UI_COLOR(sci_ball_ship));
+			sng_set_foreground(wn, UI_COLOR(sci_ball_ship));
 			break;
 		case OBJTYPE_WARPGATE:
-			sng_set_foreground(UI_COLOR(sci_ball_warpgate));
+			sng_set_foreground(wn, UI_COLOR(sci_ball_warpgate));
 			break;
 		case OBJTYPE_STARBASE:
-			sng_set_foreground(UI_COLOR(sci_ball_starbase));
+			sng_set_foreground(wn, UI_COLOR(sci_ball_starbase));
 			break;
 		case OBJTYPE_ASTEROID:
-			sng_set_foreground(UI_COLOR(sci_ball_asteroid));
+			sng_set_foreground(wn, UI_COLOR(sci_ball_asteroid));
 			break;
 		case OBJTYPE_DERELICT:
-			sng_set_foreground(UI_COLOR(sci_ball_derelict));
+			sng_set_foreground(wn, UI_COLOR(sci_ball_derelict));
 			break;
 		case OBJTYPE_PLANET:
-			sng_set_foreground(UI_COLOR(sci_ball_planet));
+			sng_set_foreground(wn, UI_COLOR(sci_ball_planet));
 			break;
 		case OBJTYPE_BLACK_HOLE:
-			sng_set_foreground(UI_COLOR(sci_ball_black_hole));
+			sng_set_foreground(wn, UI_COLOR(sci_ball_black_hole));
 			break;
 		case OBJTYPE_TORPEDO:
-			sng_set_foreground(UI_COLOR(sci_ball_energy));
+			sng_set_foreground(wn, UI_COLOR(sci_ball_energy));
 			break;
 		case OBJTYPE_MISSILE:
-			sng_set_foreground(UI_COLOR(sci_ball_energy));
+			sng_set_foreground(wn, UI_COLOR(sci_ball_energy));
 			break;
 		case OBJTYPE_LASER:
-			sng_set_foreground(UI_COLOR(sci_ball_energy));
+			sng_set_foreground(wn, UI_COLOR(sci_ball_energy));
 			break;
 		case OBJTYPE_SPACEMONSTER:
-			sng_set_foreground(UI_COLOR(sci_ball_monster));
+			sng_set_foreground(wn, UI_COLOR(sci_ball_monster));
 			break;
 		case OBJTYPE_SPARK:
 		case OBJTYPE_EXPLOSION:
 		default:
-			sng_set_foreground(UI_COLOR(sci_ball_default_blip));
+			sng_set_foreground(wn, UI_COLOR(sci_ball_default_blip));
 		}
 		if (o->type == OBJTYPE_SHIP2 || o->type == OBJTYPE_SHIP1) {
-			snis_draw_arrow(x, y, SCIENCE_SCOPE_R / 2, o->heading, 0.3);
+			snis_draw_arrow(wn, x, y, SCIENCE_SCOPE_R / 2, o->heading, 0.3);
 		} else if (o->type == OBJTYPE_PLANET) {
-			sng_draw_circle(0, x, y, 20);
+			sng_draw_circle(wn, 0, x, y, 20);
 		} else {
-			snis_draw_line(x - 1, y, x + 1, y);
-			snis_draw_line(x, y - 1, x, y + 1);
+			snis_draw_line(wn, x - 1, y, x + 1, y);
+			snis_draw_line(wn, x, y - 1, x, y + 1);
 		}
 	}
 
 	if (selected)
-		sng_draw_circle(0, x, y, 10 + timer % 4);
+		sng_draw_circle(wn, 0, x, y, 10 + timer % 4);
 	
 	if (o->sdata.science_data_known) {
 		switch (o->type) {
 		case OBJTYPE_SHIP2:
-			sng_set_foreground(UI_COLOR(sci_ball_ship));
+			sng_set_foreground(wn, UI_COLOR(sci_ball_ship));
 			if (global_rts_mode) {
 				int unit_type;
 				char *unit_type_name;
@@ -9931,36 +9961,36 @@ static void snis_draw_science_guy(struct snis_entity *o,
 			}
 			break;
 		case OBJTYPE_SHIP1:
-			sng_set_foreground(UI_COLOR(sci_ball_ship));
+			sng_set_foreground(wn, UI_COLOR(sci_ball_ship));
 			snprintf(buffer, sizeof(buffer), "%s %s\n", o->sdata.name,
 					ship_type[o->sdata.subclass].class); 
 			break;
 		case OBJTYPE_WARPGATE:
-			sng_set_foreground(UI_COLOR(sci_ball_warpgate));
+			sng_set_foreground(wn, UI_COLOR(sci_ball_warpgate));
 			snprintf(buffer, sizeof(buffer), "%s %s\n", "WG",  o->sdata.name);
 			break;
 		case OBJTYPE_STARBASE:
-			sng_set_foreground(UI_COLOR(sci_ball_starbase));
+			sng_set_foreground(wn, UI_COLOR(sci_ball_starbase));
 			snprintf(buffer, sizeof(buffer), "%s %s\n", "SB",  o->sdata.name);
 			break;
 		case OBJTYPE_ASTEROID:
-			sng_set_foreground(UI_COLOR(sci_ball_asteroid));
+			sng_set_foreground(wn, UI_COLOR(sci_ball_asteroid));
 			snprintf(buffer, sizeof(buffer), "%s %s\n", "A",  o->sdata.name);
 			break;
 		case OBJTYPE_DERELICT:
-			sng_set_foreground(UI_COLOR(sci_ball_derelict));
+			sng_set_foreground(wn, UI_COLOR(sci_ball_derelict));
 			snprintf(buffer, sizeof(buffer), "%s %s\n", "D",  "???");
 			break;
 		case OBJTYPE_BLACK_HOLE:
-			sng_set_foreground(UI_COLOR(sci_ball_black_hole));
+			sng_set_foreground(wn, UI_COLOR(sci_ball_black_hole));
 			snprintf(buffer, sizeof(buffer), "%s %s\n", "B",  o->sdata.name);
 			break;
 		case OBJTYPE_SPACEMONSTER:
-			sng_set_foreground(UI_COLOR(sci_ball_monster));
+			sng_set_foreground(wn, UI_COLOR(sci_ball_monster));
 			snprintf(buffer, sizeof(buffer), "%s\n", o->sdata.name);
 			break;
 		case OBJTYPE_PLANET:
-			sng_set_foreground(UI_COLOR(sci_ball_planet));
+			sng_set_foreground(wn, UI_COLOR(sci_ball_planet));
 			snprintf(buffer, sizeof(buffer), "%s %s\n", "P",  o->sdata.name);
 			break;
 		case OBJTYPE_TORPEDO:
@@ -9968,19 +9998,19 @@ static void snis_draw_science_guy(struct snis_entity *o,
 		case OBJTYPE_SPARK:
 		case OBJTYPE_EXPLOSION:
 		case OBJTYPE_LASER:
-			sng_set_foreground(UI_COLOR(sci_ball_energy));
+			sng_set_foreground(wn, UI_COLOR(sci_ball_energy));
 			strcpy(buffer, "");
 			break;
 		default:
-			sng_set_foreground(UI_COLOR(sci_ball_default_blip));
+			sng_set_foreground(wn, UI_COLOR(sci_ball_default_blip));
 			snprintf(buffer, sizeof(buffer), "%s %s\n", "?", o->sdata.name);
 			break;
 		}
-		sng_abs_xy_draw_string(buffer, PICO_FONT, x + 8, y - 8);
+		sng_abs_xy_draw_string(wn, buffer, PICO_FONT, x + 8, y - 8);
 	}
 }
 
-static void snis_draw_3d_science_guy(struct snis_entity *o,
+static void snis_draw_3d_science_guy(int wn, struct snis_entity *o,
 					int *x, int *y, double dist, int bw, int pwr,
 					double range, int selected, double scale,
 					int nebula_factor)
@@ -10011,7 +10041,7 @@ static void snis_draw_3d_science_guy(struct snis_entity *o,
 	r = hypot(sx - SCIENCE_SCOPE_CX, sy - SCIENCE_SCOPE_CY);
 	if (r >= SCIENCE_SCOPE_R)
 		return;
-	sng_set_foreground(UI_COLOR(sci_ball_default_blip));
+	sng_set_foreground(wn, UI_COLOR(sci_ball_default_blip));
 	if (!o->sdata.science_data_known) {
 		for (i = 0; i < 10; i++) {
 			da = snis_randn(360) * M_PI / 180.0;
@@ -10024,29 +10054,29 @@ static void snis_draw_3d_science_guy(struct snis_entity *o,
 			r = hypot(sx - SCIENCE_SCOPE_CX, sy - SCIENCE_SCOPE_CY);
 			if (r >= SCIENCE_SCOPE_R)
 				continue;
-			sng_draw_point(sx, sy);
+			sng_draw_point(wn, sx, sy);
 		}
 	} else {
 		switch(o->type) {
 		case OBJTYPE_SHIP2:
 		case OBJTYPE_SHIP1:
-			sng_set_foreground(UI_COLOR(sci_ball_ship));
+			sng_set_foreground(wn, UI_COLOR(sci_ball_ship));
 			break;
 		case OBJTYPE_WARPGATE:
-			sng_set_foreground(UI_COLOR(sci_ball_warpgate));
+			sng_set_foreground(wn, UI_COLOR(sci_ball_warpgate));
 			break;
 		case OBJTYPE_STARBASE:
-			sng_set_foreground(UI_COLOR(sci_ball_starbase));
+			sng_set_foreground(wn, UI_COLOR(sci_ball_starbase));
 			break;
 		case OBJTYPE_ASTEROID:
 		case OBJTYPE_DERELICT:
-			sng_set_foreground(UI_COLOR(sci_ball_asteroid));
+			sng_set_foreground(wn, UI_COLOR(sci_ball_asteroid));
 			break;
 		case OBJTYPE_BLACK_HOLE:
-			sng_set_foreground(UI_COLOR(sci_ball_black_hole));
+			sng_set_foreground(wn, UI_COLOR(sci_ball_black_hole));
 			break;
 		case OBJTYPE_PLANET:
-			sng_set_foreground(UI_COLOR(sci_ball_planet));
+			sng_set_foreground(wn, UI_COLOR(sci_ball_planet));
 			break;
 		case OBJTYPE_TORPEDO:
 		case OBJTYPE_MISSILE:
@@ -10054,7 +10084,7 @@ static void snis_draw_3d_science_guy(struct snis_entity *o,
 		case OBJTYPE_EXPLOSION:
 		case OBJTYPE_LASER:
 		default:
-			sng_set_foreground(UI_COLOR(sci_ball_energy));
+			sng_set_foreground(wn, UI_COLOR(sci_ball_energy));
 		}
 		if (o->type == OBJTYPE_SHIP2 || o->type == OBJTYPE_SHIP1) {
 			e = add_entity(sciballecx, ship_icon_mesh, o->x, o->y, o->z, UI_COLOR(sci_ball_ship));
@@ -10063,42 +10093,42 @@ static void snis_draw_3d_science_guy(struct snis_entity *o,
 				update_entity_orientation(e, &o->orientation);
 			}
 		} else {
-			snis_draw_line(*x - 1, *y, *x + 1, *y);
-			snis_draw_line(*x, *y - 1, *x, *y + 1);
+			snis_draw_line(wn, *x - 1, *y, *x + 1, *y);
+			snis_draw_line(wn, *x, *y - 1, *x, *y + 1);
 		}
 	}
 	if (selected)
-		sng_draw_circle(0, sx, sy, 10);
+		sng_draw_circle(wn, 0, sx, sy, 10);
 
 	if (o->sdata.science_data_known) {
 		switch (o->type) {
 		case OBJTYPE_SHIP2:
 		case OBJTYPE_SHIP1:
-			sng_set_foreground(UI_COLOR(sci_ball_ship));
+			sng_set_foreground(wn, UI_COLOR(sci_ball_ship));
 			snprintf(buffer, sizeof(buffer), "%s %s\n", o->sdata.name,
 				ship_type[o->sdata.subclass].class); 
 			break;
 		case OBJTYPE_WARPGATE:
-			sng_set_foreground(UI_COLOR(sci_ball_warpgate));
+			sng_set_foreground(wn, UI_COLOR(sci_ball_warpgate));
 			snprintf(buffer, sizeof(buffer), "%s %s\n", "SB",  o->sdata.name);
 		case OBJTYPE_STARBASE:
-			sng_set_foreground(UI_COLOR(sci_ball_starbase));
+			sng_set_foreground(wn, UI_COLOR(sci_ball_starbase));
 			snprintf(buffer, sizeof(buffer), "%s %s\n", "SB",  o->sdata.name);
 			break;
 		case OBJTYPE_ASTEROID:
-			sng_set_foreground(UI_COLOR(sci_ball_asteroid));
+			sng_set_foreground(wn, UI_COLOR(sci_ball_asteroid));
 			snprintf(buffer, sizeof(buffer), "%s %s\n", "A",  o->sdata.name);
 			break;
 		case OBJTYPE_DERELICT:
-			sng_set_foreground(UI_COLOR(sci_ball_asteroid));
+			sng_set_foreground(wn, UI_COLOR(sci_ball_asteroid));
 			snprintf(buffer, sizeof(buffer), "%s %s\n", "A",  "???");
 			break;
 		case OBJTYPE_BLACK_HOLE:
-			sng_set_foreground(UI_COLOR(sci_ball_black_hole));
+			sng_set_foreground(wn, UI_COLOR(sci_ball_black_hole));
 			snprintf(buffer, sizeof(buffer), "%s %s\n", "B",  o->sdata.name);
 			break;
 		case OBJTYPE_PLANET:
-			sng_set_foreground(UI_COLOR(sci_ball_planet));
+			sng_set_foreground(wn, UI_COLOR(sci_ball_planet));
 			snprintf(buffer, sizeof(buffer), "%s %s\n", "P",  o->sdata.name);
 			break;
 		case OBJTYPE_TORPEDO:
@@ -10106,20 +10136,20 @@ static void snis_draw_3d_science_guy(struct snis_entity *o,
 		case OBJTYPE_SPARK:
 		case OBJTYPE_EXPLOSION:
 		case OBJTYPE_LASER:
-			sng_set_foreground(UI_COLOR(sci_ball_energy));
+			sng_set_foreground(wn, UI_COLOR(sci_ball_energy));
 			strcpy(buffer, "");
 			break;
 		default:
-			sng_set_foreground(UI_COLOR(sci_ball_default_blip));
+			sng_set_foreground(wn, UI_COLOR(sci_ball_default_blip));
 			snprintf(buffer, sizeof(buffer), "%s %s\n", "?", o->sdata.name);
 			break;
 		}
-		sng_abs_xy_draw_string(buffer, PICO_FONT, *x + 8, *y - 8);
+		sng_abs_xy_draw_string(wn, buffer, PICO_FONT, *x + 8, *y - 8);
 	}
 }
 
 
-static void snis_draw_arrow(int x, int y, int r, double heading, double scale)
+static void snis_draw_arrow(int wn, int x, int y, int r, double heading, double scale)
 {
 	int nx, ny, tx1, ty1, tx2, ty2;
 
@@ -10127,16 +10157,16 @@ static void snis_draw_arrow(int x, int y, int r, double heading, double scale)
 #define SHIP_SCALE_DOWN 15.0
 	nx = cos(heading) * scale * r / SHIP_SCALE_DOWN;
 	ny = -sin(heading) * scale * r / SHIP_SCALE_DOWN;
-	snis_draw_line(x, y, x + nx, y + ny);
+	snis_draw_line(wn, x, y, x + nx, y + ny);
 	tx1 = cos(heading + PI / 2.0) * scale * r / (SHIP_SCALE_DOWN * 2.0) - nx / 2.0;
 	ty1 = -sin(heading + PI / 2.0) * scale * r / (SHIP_SCALE_DOWN * 2.0) - ny / 2.0;
-	snis_draw_line(x, y, x + tx1, y + ty1);
+	snis_draw_line(wn, x, y, x + tx1, y + ty1);
 	tx2 = cos(heading - PI / 2.0) * scale * r / (SHIP_SCALE_DOWN * 2.0) - nx / 2.0;
 	ty2 = -sin(heading - PI / 2.0) * scale * r / (SHIP_SCALE_DOWN * 2.0) - ny / 2.0;
-	snis_draw_line(x, y, x + tx2, y + ty2);
-	snis_draw_line(x + nx, y + ny, x + tx1, y + ty1);
-	snis_draw_line(x + tx1, y + ty1, x + tx2, y + ty2);
-	snis_draw_line(x + tx2, y + ty2, x + nx, y + ny);
+	snis_draw_line(wn, x, y, x + tx2, y + ty2);
+	snis_draw_line(wn, x + nx, y + ny, x + tx1, y + ty1);
+	snis_draw_line(wn, x + tx1, y + ty1, x + tx2, y + ty2);
+	snis_draw_line(wn, x + tx2, y + ty2, x + nx, y + ny);
 }
 
 /* this science_guy[] array is used for mouse clicking. */
@@ -10148,7 +10178,7 @@ struct science_data {
 static struct science_data science_guy[MAXGAMEOBJS] = { {0}, };
 static int nscience_guys = 0;
 
-static void science_menu_selection(void *x)
+static void science_menu_selection(int wn, void *x)
 {
 	intptr_t id = (intptr_t) x;
 	struct snis_entity *selected;
@@ -10217,7 +10247,8 @@ static void populate_science_pull_down_menu(void)
 	}
 }
 
-static void draw_3d_laserbeam(struct entity_context *cx, struct snis_entity *o, struct snis_entity *laserbeam, double r)
+static void draw_3d_laserbeam(int wn, struct entity_context *cx, struct snis_entity *o,
+				struct snis_entity *laserbeam, double r)
 {
 	int rc;
 	struct snis_entity *shooter, *shootee;
@@ -10248,34 +10279,34 @@ static void draw_3d_laserbeam(struct entity_context *cx, struct snis_entity *o, 
 		return;
 	float sx1, sy1, sx2, sy2;
 	if (!transform_line(cx, clip1.v.x, clip1.v.y, clip1.v.z, clip2.v.x, clip2.v.y, clip2.v.z, &sx1, &sy1, &sx2, &sy2)) {
-		sng_draw_laser_line(sx1, sy1, sx2, sy2, UI_COLOR(nav_laser));
+		sng_draw_laser_line(wn, sx1, sy1, sx2, sy2, UI_COLOR(nav_laser));
 	}
 }
 
-static void snis_draw_3d_dotted_line(struct entity_context *cx,
+static void snis_draw_3d_dotted_line(int wn, struct entity_context *cx,
 				float x1, float y1, float z1, float x2, float y2, float z2 )
 {
 	float sx1, sy1, sx2, sy2;
 	if (!transform_line(cx, x1, y1, z1, x2, y2, z2, &sx1, &sy1, &sx2, &sy2))
-		sng_draw_dotted_line(sx1, sy1, sx2, sy2);
+		sng_draw_dotted_line(wn, sx1, sy1, sx2, sy2);
 }
 
-static void snis_draw_3d_line(struct entity_context *cx,
+static void snis_draw_3d_line(int wn, struct entity_context *cx,
 				float x1, float y1, float z1, float x2, float y2, float z2 )
 {
 	float sx1, sy1, sx2, sy2;
 	if (!transform_line(cx, x1, y1, z1, x2, y2, z2, &sx1, &sy1, &sx2, &sy2)) {
-		snis_draw_line(sx1, sy1, sx2, sy2);
+		snis_draw_line(wn, sx1, sy1, sx2, sy2);
 	}
 }
 
-static void snis_draw_3d_moving_line(struct entity_context *cx,
+static void snis_draw_3d_moving_line(int wn, struct entity_context *cx,
 			float x1, float y1, float z1, float x2, float y2, float z2)
 {
 	int a, b;
 	union vec3 v1, v2;
 
-	snis_draw_3d_dotted_line(cx, x1, y1, z1, x2, y2, z2);
+	snis_draw_3d_dotted_line(wn, cx, x1, y1, z1, x2, y2, z2);
 	v1.v.x = x2 - x1;
 	v1.v.y = y2 - y1;
 	v1.v.z = z2 - z1;
@@ -10291,19 +10322,19 @@ static void snis_draw_3d_moving_line(struct entity_context *cx,
 	v2.v.y += y1;
 	v2.v.z += z1;
 	if (a < b)
-		snis_draw_3d_line(instrumentecx, v1.v.x, v1.v.y, v1.v.z, v2.v.x, v2.v.y, v2.v.z);
+		snis_draw_3d_line(wn, instrumentecx, v1.v.x, v1.v.y, v1.v.z, v2.v.x, v2.v.y, v2.v.z);
 }
 
-static void snis_draw_3d_string(struct entity_context *cx, char *string, int font, float x, float y, float z)
+static void snis_draw_3d_string(int wn, struct entity_context *cx, char *string, int font, float x, float y, float z)
 {
 	float sx, sy;
 
 	transform_point(cx, x, y, z, &sx, &sy);
 	if (sx >= 0 && sy >= 0)
-		sng_abs_xy_draw_string(string, font, sx, sy);
+		sng_abs_xy_draw_string(wn, string, font, sx, sy);
 }
 
-static void draw_3d_mark_arc(struct entity_context *ecx,
+static void draw_3d_mark_arc(int wn, struct entity_context *ecx,
 			const union vec3 *center, float r, float heading, float mark)
 {
 	/* break arc into max 5 degree segments */
@@ -10317,7 +10348,7 @@ static void draw_3d_mark_arc(struct entity_context *ecx,
 		vec3_add_self(&p2, center);
 
 		if (i != 0) {
-			snis_draw_3d_line(ecx, p1.v.x, p1.v.y, p1.v.z, p2.v.x, p2.v.y, p2.v.z);
+			snis_draw_3d_line(wn, ecx, p1.v.x, p1.v.y, p1.v.z, p2.v.x, p2.v.y, p2.v.z);
 		}
 		p1 = p2;
 	}
@@ -10453,7 +10484,7 @@ static void tween_add_or_update(struct tween_map *map, char active, uint32_t id,
 
 static struct tween_map *sciplane_tween = 0;
 
-static void draw_sciplane_laserbeam(struct entity_context *cx, struct snis_entity *o,
+static void draw_sciplane_laserbeam(int wn, struct entity_context *cx, struct snis_entity *o,
 					struct snis_entity *laserbeam, double r)
 {
 	int i, rc, color;
@@ -10529,7 +10560,7 @@ static void draw_sciplane_laserbeam(struct entity_context *cx, struct snis_entit
 		return;
 	float sx1, sy1, sx2, sy2;
 	if (!transform_line(cx, clip1.v.x, clip1.v.y, clip1.v.z, clip2.v.x, clip2.v.y, clip2.v.z, &sx1, &sy1, &sx2, &sy2)) {
-		sng_draw_laser_line(sx1, sy1, sx2, sy2, color);
+		sng_draw_laser_line(wn, sx1, sy1, sx2, sy2, color);
 	}
 }
 
@@ -10612,9 +10643,9 @@ static int science_tooltip_text(struct science_data *sd, char *buffer, int bufle
 	return 1;
 }
 
-static void draw_tooltip(int mousex, int mousey, char *tooltip);
+static void draw_tooltip(int wn, int mousex, int mousey, char *tooltip);
 
-static void draw_sciplane_display(struct snis_entity *o, double range)
+static void draw_sciplane_display(int wn, struct snis_entity *o, double range)
 {
 	static struct mesh *ring_mesh = 0;
 	static struct mesh *heading_ind_line_mesh = 0;
@@ -10778,7 +10809,7 @@ static void draw_sciplane_display(struct snis_entity *o, double range)
 	}
 
 	/* heading labels */
-	sng_set_foreground(UI_COLOR(sci_details_text));
+	sng_set_foreground(wn, UI_COLOR(sci_details_text));
 	{
 		int font = NANO_FONT;
 		char buf[10];
@@ -10801,12 +10832,12 @@ static void draw_sciplane_display(struct snis_entity *o, double range)
 
 			float sx1, sy1, sx2, sy2, sx3, sy3;
 			if (!transform_line(instrumentecx, x1, o->y, z1, x2, o->y, z2, &sx1, &sy1, &sx2, &sy2)) {
-				sng_draw_dotted_line(sx1, sy1, sx2, sy2);
+				sng_draw_dotted_line(wn, sx1, sy1, sx2, sy2);
 			}
 			if (!transform_point(instrumentecx, x3, o->y, z3, &sx3, &sy3)) {
 				snprintf(buf, sizeof(buf), "%d",
 					(int) math_angle_to_game_angle_degrees(i * 360.0/slices));
-				sng_center_xy_draw_string(buf, font, sx3, sy3);
+				sng_center_xy_draw_string(wn, buf, font, sx3, sy3);
 			}
 		}
 	}
@@ -10818,7 +10849,7 @@ static void draw_sciplane_display(struct snis_entity *o, double range)
 		float beam_width = fabs(o->tsd.ship.sci_beam_width);
 		float jitter_offset = ((timer % 3) - 1) * M_PI / 180.0;
 		float scanner_offset = (((timer % 16) / 15.0)) * beam_width;
-		sng_set_foreground(UI_COLOR(sci_plane_beam));
+		sng_set_foreground(wn, UI_COLOR(sci_plane_beam));
 
 		/* One side of the beam... */
 		tx1 = o->x + cos(heading - beam_width / 2 - jitter_offset) * range * 0.05;
@@ -10826,7 +10857,7 @@ static void draw_sciplane_display(struct snis_entity *o, double range)
 		tx2 = o->x + cos(heading - beam_width / 2 - jitter_offset) * range;
 		tz2 = o->z - sin(heading - beam_width / 2 - jitter_offset) * range;
 		if (!transform_line(instrumentecx, tx1, o->y, tz1, tx2, o->y, tz2, &sx1, &sy1, &sx2, &sy2))
-			sng_draw_electric_line(sx1, sy1, sx2, sy2);
+			sng_draw_electric_line(wn, sx1, sy1, sx2, sy2);
 
 		/* Central scanning beam... */
 		tx1 = o->x + cos(heading - beam_width / 2 + scanner_offset) * range * 0.05;
@@ -10834,7 +10865,7 @@ static void draw_sciplane_display(struct snis_entity *o, double range)
 		tx2 = o->x + cos(heading - beam_width / 2 + scanner_offset) * range;
 		tz2 = o->z - sin(heading - beam_width / 2 + scanner_offset) * range;
 		if (!transform_line(instrumentecx, tx1, o->y, tz1, tx2, o->y, tz2, &sx1, &sy1, &sx2, &sy2))
-			sng_draw_electric_line(sx1, sy1, sx2, sy2);
+			sng_draw_electric_line(wn, sx1, sy1, sx2, sy2);
 
 		/* The other side of the beam */
 		tx1 = o->x + cos(heading + beam_width / 2 + jitter_offset) * range * 0.05;
@@ -10842,7 +10873,7 @@ static void draw_sciplane_display(struct snis_entity *o, double range)
 		tx2 = o->x + cos(heading + beam_width / 2 + jitter_offset) * range;
 		tz2 = o->z - sin(heading + beam_width / 2 + jitter_offset) * range;
 		if (!transform_line(instrumentecx, tx1, o->y, tz1, tx2, o->y, tz2, &sx1, &sy1, &sx2, &sy2))
-			sng_draw_electric_line(sx1, sy1, sx2, sy2);
+			sng_draw_electric_line(wn, sx1, sy1, sx2, sy2);
 	}
 
 	/* add my ship */
@@ -10853,7 +10884,7 @@ static void draw_sciplane_display(struct snis_entity *o, double range)
 		update_entity_orientation(e, &o->orientation);
 	}
 
-	render_entities(instrumentecx);
+	render_entities(wn, instrumentecx);
 
 	/* draw all the rest onto the 3d scene */
 	{
@@ -10866,15 +10897,15 @@ static void draw_sciplane_display(struct snis_entity *o, double range)
 		float closest_distance = -1;
 		float mouse_dist;
 
-		msx = sng_pixelx_to_screenx(mouse.x);
-		msy = sng_pixely_to_screeny(mouse.y);
+		msx = sng_pixelx_to_screenx(wn, mouse.x);
+		msy = sng_pixely_to_screeny(wn, mouse.y);
 
 		pwr = o->tsd.ship.power_data.sensors.i;
 		/* Draw all the stuff */
 
 		bw = o->tsd.ship.sci_beam_width * 180.0 / M_PI;
 
-		sng_set_foreground(UI_COLOR(sci_plane_default));
+		sng_set_foreground(wn, UI_COLOR(sci_plane_default));
 		pthread_mutex_lock(&universe_mutex);
 
 		static int nlaserbeams = 0;
@@ -10937,15 +10968,15 @@ static void draw_sciplane_display(struct snis_entity *o, double range)
 
 			if ( draw_popout_arc && tween > 0 ) {
 				/* show the flyout arc */
-				sng_set_foreground(UI_COLOR(sci_plane_popout_arc));
-				draw_3d_mark_arc(instrumentecx, &ship_pos, dist, heading, mark * tween * 0.9);
+				sng_set_foreground(wn, UI_COLOR(sci_plane_popout_arc));
+				draw_3d_mark_arc(wn, instrumentecx, &ship_pos, dist, heading, mark * tween * 0.9);
 			}
 
 			float sx, sy;
 			if (!transform_point(instrumentecx, display_pos.v.x, display_pos.v.y, display_pos.v.z,
 						&sx, &sy)) {
 				if (go[i].id != my_ship_id) /* We already drew ourself */
-					snis_draw_science_guy(&go[i], sx, sy, dist, bw, pwr, range,
+					snis_draw_science_guy(wn, &go[i], sx, sy, dist, bw, pwr, range,
 								&go[i] == curr_science_guy, nebula_factor);
 			}
 
@@ -11034,8 +11065,8 @@ static void draw_sciplane_display(struct snis_entity *o, double range)
 			vec3_add_self(&display_pos, &ship_pos);
 
 			if (draw_popout_arc && tween > 0) { /* show the flyout arc */
-				sng_set_foreground(UI_COLOR(sci_plane_popout_arc));
-				draw_3d_mark_arc(instrumentecx, &ship_pos, dist, heading, mark * tween * 0.9);
+				sng_set_foreground(wn, UI_COLOR(sci_plane_popout_arc));
+				draw_3d_mark_arc(wn, instrumentecx, &ship_pos, dist, heading, mark * tween * 0.9);
 			}
 
 			float sx, sy;
@@ -11043,13 +11074,13 @@ static void draw_sciplane_display(struct snis_entity *o, double range)
 						&sx, &sy)) {
 				char buf[20];
 
-				sng_set_foreground(UI_COLOR(sci_waypoint));
-				snis_draw_line(sx - 10, sy, sx + 10, sy);
-				snis_draw_line(sx, sy - 10, sx, sy + 10);
+				sng_set_foreground(wn, UI_COLOR(sci_waypoint));
+				snis_draw_line(wn, sx - 10, sy, sx + 10, sy);
+				snis_draw_line(wn, sx, sy - 10, sx, sy + 10);
 				snprintf(buf, sizeof(buf), "WP-%02d", i);
-				sng_abs_xy_draw_string(buf, PICO_FONT, sx + 10, sy - 10);
+				sng_abs_xy_draw_string(wn, buf, PICO_FONT, sx + 10, sy - 10);
 				if (i == curr_science_waypoint)
-					sng_draw_circle(0, sx, sy, 10);
+					sng_draw_circle(wn, 0, sx, sy, 10);
 			}
 
 			if (selected_guy_popout) {
@@ -11095,12 +11126,12 @@ static void draw_sciplane_display(struct snis_entity *o, double range)
 		if (closest_guy >= 0 && closest_distance > 0 && closest_distance < 400) {
 			char scitooltip[100];
 			if (science_tooltip_text(&science_guy[closest_guy], scitooltip, sizeof(scitooltip) - 1))
-				draw_tooltip(mouse.x, mouse.y, scitooltip);
+				draw_tooltip(wn, mouse.x, mouse.y, scitooltip);
 		}
 
 		/* draw in the laserbeams */
 		for (i = 0; i < nlaserbeams; i++) {
-			draw_sciplane_laserbeam(instrumentecx, o, laserbeams[i], range);
+			draw_sciplane_laserbeam(wn, instrumentecx, o, laserbeams[i], range);
 		}
 
 		pthread_mutex_unlock(&universe_mutex);
@@ -11125,7 +11156,7 @@ static void draw_sciplane_display(struct snis_entity *o, double range)
 
 				float sx1, sy1, sx2, sy2;
 				if (!transform_line(instrumentecx, x1, y1, z1, x2, y2, z2, &sx1, &sy1, &sx2, &sy2)) {
-					snis_draw_line(sx1, sy1, sx2, sy2);
+					snis_draw_line(wn, sx1, sy1, sx2, sy2);
 				}
 			}
 		}
@@ -11197,14 +11228,15 @@ static void add_scanner_beam_orange_slice(struct entity_context *ecx,
 	}
 }
 
-static void draw_science_3d_waypoints(struct snis_entity *o, double range, float *closest_distance, int *closest_guy)
+static void draw_science_3d_waypoints(int wn, struct snis_entity *o, double range,
+					float *closest_distance, int *closest_guy)
 {
 	int i;
-	int msx = sng_pixelx_to_screenx(mouse.x);
-	int msy = sng_pixely_to_screeny(mouse.y);
+	int msx = sng_pixelx_to_screenx(wn, mouse.x);
+	int msy = sng_pixely_to_screeny(wn, mouse.y);
 	float mouse_dist = -1.0;
 
-	sng_set_foreground(UI_COLOR(sci_waypoint));
+	sng_set_foreground(wn, UI_COLOR(sci_waypoint));
 	for (i = 0; i < sci_ui.nwaypoints; i++) {
 		double *wp = &sci_ui.waypoint[i][0];
 		float sx, sy;
@@ -11212,10 +11244,10 @@ static void draw_science_3d_waypoints(struct snis_entity *o, double range, float
 		if (dist3d(wp[0] - o->x, wp[1] - o->y, wp[2] - o->z) >= range)
 			continue;
 		transform_point(sciballecx, wp[0], wp[1], wp[2], &sx, &sy);
-		snis_draw_line(sx - 10, sy, sx + 10, sy);
-		snis_draw_line(sx, sy - 10, sx, sy + 10);
+		snis_draw_line(wn, sx - 10, sy, sx + 10, sy);
+		snis_draw_line(wn, sx, sy - 10, sx, sy + 10);
 		snprintf(buf, sizeof(buf), "WP-%02d", i);
-		sng_abs_xy_draw_string(buf, PICO_FONT, sx + 10, sy - 10);
+		sng_abs_xy_draw_string(wn, buf, PICO_FONT, sx + 10, sy - 10);
 		/* cache screen coords for mouse picking */
 		science_guy[nscience_guys].o = NULL;
 		science_guy[nscience_guys].waypoint_index = i;
@@ -11228,11 +11260,11 @@ static void draw_science_3d_waypoints(struct snis_entity *o, double range, float
 		}
 		nscience_guys++;
 		if (i == curr_science_waypoint)
-			sng_draw_circle(0, sx, sy, 10);
+			sng_draw_circle(wn, 0, sx, sy, 10);
 	}
 }
 
-static void draw_all_the_3d_science_guys(struct snis_entity *o, double range, double current_zoom)
+static void draw_all_the_3d_science_guys(int wn, struct snis_entity *o, double range, double current_zoom)
 {
 	int i, x, y, cx, cy, r, bw, pwr;
 	double tx, ty, dist2, dist;
@@ -11247,8 +11279,8 @@ static void draw_all_the_3d_science_guys(struct snis_entity *o, double range, do
 	float closest_distance = -1;
 	int closest_guy = -1;
 	float mouse_dist;
-	int msx = sng_pixelx_to_screenx(mouse.x);
-	int msy = sng_pixely_to_screeny(mouse.y);
+	int msx = sng_pixelx_to_screenx(wn, mouse.x);
+	int msy = sng_pixely_to_screeny(wn, mouse.y);
 
 	/* rotate camera to be behind my ship */
 	quat_rot_vec_self(&camera_pos, &o->tsd.ship.sciball_orientation);
@@ -11290,12 +11322,12 @@ static void draw_all_the_3d_science_guys(struct snis_entity *o, double range, do
 		vec3_mul_self(&vx, screen_radius * 0.8);
 		vec3_mul_self(&vy, screen_radius * 0.8);
 		vec3_mul_self(&vz, screen_radius * 0.8);
-		sng_set_foreground(UI_COLOR(sci_ball_player));
-		snis_draw_3d_line(sciballecx, o->x - vx.v.x, o->y - vx.v.y, o->z - vx.v.z,
+		sng_set_foreground(wn, UI_COLOR(sci_ball_player));
+		snis_draw_3d_line(wn, sciballecx, o->x - vx.v.x, o->y - vx.v.y, o->z - vx.v.z,
 							o->x + vx.v.x, o->y + vx.v.y, o->z + vx.v.z);
-		snis_draw_3d_line(sciballecx, o->x - vy.v.x, o->y - vy.v.y, o->z - vy.v.z,
+		snis_draw_3d_line(wn, sciballecx, o->x - vy.v.x, o->y - vy.v.y, o->z - vy.v.z,
 							o->x + vy.v.x, o->y + vy.v.y, o->z + vy.v.z);
-		snis_draw_3d_line(sciballecx, o->x - vz.v.x, o->y - vz.v.y, o->z - vz.v.z,
+		snis_draw_3d_line(wn, sciballecx, o->x - vz.v.x, o->y - vz.v.y, o->z - vz.v.z,
 							o->x + vz.v.x, o->y + vz.v.y, o->z + vz.v.z);
 
 		e = add_entity(sciballecx, ship_mesh_map[o->tsd.ship.shiptype], o->x, o->y, o->z,
@@ -11304,17 +11336,17 @@ static void draw_all_the_3d_science_guys(struct snis_entity *o, double range, do
 		update_entity_scale(e, screen_radius * 0.01);
 
 		transform_point(sciballecx, o->x - vx.v.x, o->y - vx.v.y, o->z - vx.v.z, &sx, &sy);
-		sng_abs_xy_draw_string("AFT", PICO_FONT, sx, sy);
+		sng_abs_xy_draw_string(wn, "AFT", PICO_FONT, sx, sy);
 		transform_point(sciballecx, o->x + vx.v.x, o->y + vx.v.y, o->z + vx.v.z, &sx, &sy);
-		sng_abs_xy_draw_string("FORE", PICO_FONT, sx, sy);
+		sng_abs_xy_draw_string(wn, "FORE", PICO_FONT, sx, sy);
 		transform_point(sciballecx, o->x - vy.v.x, o->y - vy.v.y, o->z - vy.v.z, &sx, &sy);
-		sng_abs_xy_draw_string("DOWN", PICO_FONT, sx, sy);
+		sng_abs_xy_draw_string(wn, "DOWN", PICO_FONT, sx, sy);
 		transform_point(sciballecx, o->x + vy.v.x, o->y + vy.v.y, o->z + vy.v.z, &sx, &sy);
-		sng_abs_xy_draw_string("UP", PICO_FONT, sx, sy);
+		sng_abs_xy_draw_string(wn, "UP", PICO_FONT, sx, sy);
 		transform_point(sciballecx, o->x - vz.v.x, o->y - vz.v.y, o->z - vz.v.z, &sx, &sy);
-		sng_abs_xy_draw_string("PORT", PICO_FONT, sx, sy);
+		sng_abs_xy_draw_string(wn, "PORT", PICO_FONT, sx, sy);
 		transform_point(sciballecx, o->x + vz.v.x, o->y + vz.v.y, o->z + vz.v.z, &sx, &sy);
-		sng_abs_xy_draw_string("STBD", PICO_FONT, sx, sy);
+		sng_abs_xy_draw_string(wn, "STBD", PICO_FONT, sx, sy);
 	}
 
 	cx = SCIENCE_SCOPE_CX;
@@ -11323,7 +11355,7 @@ static void draw_all_the_3d_science_guys(struct snis_entity *o, double range, do
 	pwr = o->tsd.ship.power_data.sensors.i;
 	/* Draw all the stuff */
 
-	sng_set_foreground(UI_COLOR(sci_ball_default_blip));
+	sng_set_foreground(wn, UI_COLOR(sci_ball_default_blip));
 	pthread_mutex_lock(&universe_mutex);
 	nscience_guys = 0;
 	for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
@@ -11371,7 +11403,7 @@ static void draw_all_the_3d_science_guys(struct snis_entity *o, double range, do
 					go[i].type == OBJTYPE_WARPGATE ||
 					go[i].type == OBJTYPE_STARBASE ||
 					go[i].type == OBJTYPE_BLACK_HOLE)
-			snis_draw_3d_science_guy(&go[i], &x, &y, dist, bw, pwr, range,
+			snis_draw_3d_science_guy(wn, &go[i], &x, &y, dist, bw, pwr, range,
 				&go[i] == curr_science_guy, 100.0 * current_zoom / 255.0, nebula_factor);
 
 		/* cache screen coords for mouse picking */
@@ -11392,17 +11424,17 @@ static void draw_all_the_3d_science_guys(struct snis_entity *o, double range, do
 		prev_science_guy = curr_science_guy;
 		curr_science_guy = NULL;
 	}
-	draw_science_3d_waypoints(o, range, &closest_distance, &closest_guy);
+	draw_science_3d_waypoints(wn, o, range, &closest_distance, &closest_guy);
 
 	/* Draw tool-tip like help for thing nearest mouse pointer */
 	if (closest_guy >= 0 && closest_distance > 0 && closest_distance < 400) {
 		char scitooltip[100];
 		if (science_tooltip_text(&science_guy[closest_guy], scitooltip, sizeof(scitooltip) - 1))
-			draw_tooltip(mouse.x, mouse.y, scitooltip);
+			draw_tooltip(wn, mouse.x, mouse.y, scitooltip);
 	}
 
 	pthread_mutex_unlock(&universe_mutex);
-	sng_set_foreground(UI_COLOR(sci_ball_default_blip));
+	sng_set_foreground(wn, UI_COLOR(sci_ball_default_blip));
 	if (nebula_factor) {
 		for (i = 0; i < 300; i++) {
 			double angle;
@@ -11413,39 +11445,39 @@ static void draw_all_the_3d_science_guys(struct snis_entity *o, double range, do
 			radius = 1.0 - (radius * radius * radius);
 			radius = radius * SCIENCE_SCOPE_R;
 			radius = radius - ((range / MAX_SCIENCE_SCREEN_RADIUS)  * (snis_randn(50) / 75.0) * r);
-			snis_draw_line(
+			snis_draw_line(wn,
 				cx + cos(angle) * r,
 				cy + sin(angle) * r,
 				cx + cos(angle) * radius,
 				cy + sin(angle) * radius);
 		}
 	}
-	render_entities(sciballecx);
+	render_entities(wn, sciballecx);
 	remove_all_entity(sciballecx);
 }
 
-static void snis_draw_dotted_hline(int x1, int y1, int x2, int dots)
+static void snis_draw_dotted_hline(int wn, int x1, int y1, int x2, int dots)
 {
 	int i;
 
 	for (i = x1; i <= x2; i += dots)
-		sng_draw_point(i, y1);
+		sng_draw_point(wn, i, y1);
 }
 
-static void snis_draw_dotted_vline(int x1, int y1, int y2, int dots)
+static void snis_draw_dotted_vline(int wn, int x1, int y1, int y2, int dots)
 {
 	int i;
 
 	if (y2 > y1) {
 		for (i = y1; i <= y2; i += dots)
-			sng_draw_point(x1, i);
+			sng_draw_point(wn, x1, i);
 	} else { 
 		for (i = y2; i <= y1; i += dots)
-			sng_draw_point(x1, i);
+			sng_draw_point(wn, x1, i);
 	}
 }
 
-static void load_torpedo_button_pressed()
+static void load_torpedo_button_pressed(int wn, void *x)
 {
 	struct snis_entity *o;
 
@@ -11460,15 +11492,15 @@ static void load_torpedo_button_pressed()
 	queue_to_server(snis_opcode_pkt("b", OPCODE_LOAD_TORPEDO));
 }
 
-static void fire_phaser_button_pressed(__attribute__((unused)) void *notused)
+static void fire_phaser_button_pressed(int wn, __attribute__((unused)) void *notused)
 {
 	do_laser();
 }
 
-static void fire_torpedo_button_pressed(__attribute__((unused)) void *notused)
+static void fire_torpedo_button_pressed(int wn, __attribute__((unused)) void *notused)
 {
 	do_torpedo();
-	load_torpedo_button_pressed();
+	load_torpedo_button_pressed(wn, NULL);
 }
 
 static void transmit_adjust_control_input(uint8_t value,  uint8_t subcode)
@@ -11908,28 +11940,28 @@ CREATE_TEMPERATURE_SAMPLER_FUNC(comms) /* sample_comms_temperature defined here 
 CREATE_TEMPERATURE_SAMPLER_FUNC(tractor) /* sample_tractor_temperature defined here */
 CREATE_TEMPERATURE_SAMPLER_FUNC(lifesupport) /* sample_lifesupport_temperature defined here */
 
-static void engage_warp_button_pressed(__attribute__((unused)) void *cookie)
+static void engage_warp_button_pressed(int wn, __attribute__((unused)) void *cookie)
 {
 	do_adjust_byte_value(0,  OPCODE_ENGAGE_WARP);
 	warp_field_error = 3 * PLAYER_WARP_SPINUP_TIME; /* 3x since client clock is 30hz, server's is 10hz */
 }
 
-static void docking_magnets_button_pressed(__attribute__((unused)) void *cookie)
+static void docking_magnets_button_pressed(int wn, __attribute__((unused)) void *cookie)
 {
 	do_adjust_byte_value(0,  OPCODE_DOCKING_MAGNETS);
 }
 
-static void standard_orbit_button_pressed(__attribute__((unused)) void *cookie)
+static void standard_orbit_button_pressed(int wn, __attribute__((unused)) void *cookie)
 {
 	do_adjust_byte_value(0, OPCODE_REQUEST_STANDARD_ORBIT);
 }
 
-static void nav_starmap_button_pressed(__attribute__((unused)) void *cookie)
+static void nav_starmap_button_pressed(int wn, __attribute__((unused)) void *cookie)
 {
 	do_adjust_byte_value(0, OPCODE_REQUEST_STARMAP);
 }
 
-static void nav_lights_button_pressed(__attribute__((unused)) void *cookie)
+static void nav_lights_button_pressed(int wn, __attribute__((unused)) void *cookie)
 {
 	struct snis_entity *o;
 
@@ -11942,12 +11974,12 @@ static void nav_lights_button_pressed(__attribute__((unused)) void *cookie)
 		transmit_adjust_control_input((uint8_t) 0, OPCODE_ADJUST_CONTROL_EXTERIOR_LIGHTS);
 }
 
-static void nav_custom_button_pressed(__attribute__((unused)) void *cookie)
+static void nav_custom_button_pressed(int wn, __attribute__((unused)) void *cookie)
 {
 	queue_to_server(snis_opcode_pkt("bb", OPCODE_CUSTOM_BUTTON, OPCODE_CUSTOM_BUTTON_SUBCMD_NAV));
 }
 
-static void reverse_button_pressed(__attribute__((unused)) void *s)
+static void reverse_button_pressed(int wn, __attribute__((unused)) void *s)
 {
 	struct snis_entity *o;
 
@@ -11958,7 +11990,7 @@ static void reverse_button_pressed(__attribute__((unused)) void *s)
 	do_adjust_byte_value(!o->tsd.ship.reverse,  OPCODE_REQUEST_REVERSE);
 }
 
-static void trident_button_pressed(__attribute__((unused)) void *s)
+static void trident_button_pressed(int wn, __attribute__((unused)) void *s)
 {
 	struct snis_entity *o;
 	if (!(o = find_my_ship()))
@@ -12085,7 +12117,7 @@ static void init_lobby_ui()
 
 static double sample_phaser_wavelength(void);
 
-static void weapons_custom_button_pressed(__attribute__((unused)) void *x)
+static void weapons_custom_button_pressed(int wn, __attribute__((unused)) void *x)
 {
 	queue_to_server(snis_opcode_pkt("bb", OPCODE_CUSTOM_BUTTON, OPCODE_CUSTOM_BUTTON_SUBCMD_WEAPONS));
 }
@@ -12133,7 +12165,7 @@ static void init_weapons_ui(void)
 	ui_add_button(weapons.custom_button, DISPLAYMODE_WEAPONS, "CUSTOM BUTTON");
 }
 
-static void show_death_screen(void)
+static void show_death_screen(int wn)
 {
 	char buf[100];
 
@@ -12143,49 +12175,49 @@ static void show_death_screen(void)
 	if (!o)
 		return;
 
-	sng_set_foreground(UI_COLOR(death_text));
+	sng_set_foreground(wn, UI_COLOR(death_text));
 
 	if (o->tsd.ship.oxygen < 10) {
 		snprintf(buf, sizeof(buf), "YOUR CREW HAS DIED");
-		sng_abs_xy_draw_string(buf, BIG_FONT, txx(20), txy(150));
+		sng_abs_xy_draw_string(wn, buf, BIG_FONT, txx(20), txy(150));
 		snprintf(buf, sizeof(buf), "BY ASPHYXIATION");
-		sng_abs_xy_draw_string(buf, BIG_FONT, txx(20), txy(250));
+		sng_abs_xy_draw_string(wn, buf, BIG_FONT, txx(20), txy(250));
 		snprintf(buf, sizeof(buf), "RESPAWNING IN %d SECONDS", o->respawn_time);
-		sng_abs_xy_draw_string(buf, TINY_FONT, txx(20), txy(500));
+		sng_abs_xy_draw_string(wn, buf, TINY_FONT, txx(20), txy(500));
 	} else {
 		snprintf(buf, sizeof(buf), "YOUR SHIP");
-		sng_abs_xy_draw_string(buf, BIG_FONT, txx(20), txy(150));
+		sng_abs_xy_draw_string(wn, buf, BIG_FONT, txx(20), txy(150));
 		snprintf(buf, sizeof(buf), "HAS BEEN");
-		sng_abs_xy_draw_string(buf, BIG_FONT, txx(20), txy(250));
+		sng_abs_xy_draw_string(wn, buf, BIG_FONT, txx(20), txy(250));
 		snprintf(buf, sizeof(buf), "BLOWN TO");
-		sng_abs_xy_draw_string(buf, BIG_FONT, txx(20), txy(350));
+		sng_abs_xy_draw_string(wn, buf, BIG_FONT, txx(20), txy(350));
 		snprintf(buf, sizeof(buf), "SMITHEREENS");
-		sng_abs_xy_draw_string(buf, BIG_FONT, txx(20), txy(450));
+		sng_abs_xy_draw_string(wn, buf, BIG_FONT, txx(20), txy(450));
 		snprintf(buf, sizeof(buf), "RESPAWNING IN %d SECONDS", o->respawn_time);
-		sng_abs_xy_draw_string(buf, TINY_FONT, txx(20), txy(500));
+		sng_abs_xy_draw_string(wn, buf, TINY_FONT, txx(20), txy(500));
 	}
 }
 
-static void show_rts_loss_screen(void)
+static void show_rts_loss_screen(int wn)
 {
 	char buf[100];
 
-	sng_set_foreground(UI_COLOR(death_text));
+	sng_set_foreground(wn, UI_COLOR(death_text));
 	snprintf(buf, sizeof(buf), "YOU HAVE");
-	sng_abs_xy_draw_string(buf, BIG_FONT, txx(20), txy(150));
+	sng_abs_xy_draw_string(wn, buf, BIG_FONT, txx(20), txy(150));
 	snprintf(buf, sizeof(buf), "BEEN DEFEATED...");
-	sng_abs_xy_draw_string(buf, BIG_FONT, txx(20), txy(250));
+	sng_abs_xy_draw_string(wn, buf, BIG_FONT, txx(20), txy(250));
 }
 
-static void show_rts_win_screen(void)
+static void show_rts_win_screen(int wn)
 {
 	char buf[100];
 
-	sng_set_foreground(UI_COLOR(death_text));
+	sng_set_foreground(wn, UI_COLOR(death_text));
 	snprintf(buf, sizeof(buf), "YOU HAVE DEFEATED");
-	sng_abs_xy_draw_string(buf, BIG_FONT, txx(20), txy(150));
+	sng_abs_xy_draw_string(wn, buf, BIG_FONT, txx(20), txy(150));
 	snprintf(buf, sizeof(buf), "THE ENEMY...");
-	sng_abs_xy_draw_string(buf, BIG_FONT, txx(20), txy(250));
+	sng_abs_xy_draw_string(wn, buf, BIG_FONT, txx(20), txy(250));
 }
 
 void set_cursor(int cursor_type)
@@ -12209,10 +12241,10 @@ void set_normal_cursor(void)
 	/* SDL TODO set_cursor(window, GDK_ARROW); */
 }
 
-static void maybe_grab_or_ungrab_mouse()
+static void maybe_grab_or_ungrab_mouse(int wn)
 {
 	/* If we are not on the weapons screen, free the mouse if not already free. */
-	if (displaymode != DISPLAYMODE_WEAPONS) {
+	if (displaymode[wn] != DISPLAYMODE_WEAPONS) {
 		if (current_mouse_ui_mode != MOUSE_MODE_FREE_MOUSE) {
 			current_mouse_ui_mode = MOUSE_MODE_FREE_MOUSE;
 #if 0
@@ -12241,14 +12273,14 @@ static void maybe_grab_or_ungrab_mouse()
 	current_mouse_ui_mode = desired_mouse_ui_mode;
 }
 
-static void show_manual_weapons(void)
+static void show_manual_weapons(int wn)
 {
-	show_weapons_camera_view();
-	show_common_screen("WEAPONS");
+	show_weapons_camera_view(wn);
+	show_common_screen(wn, "WEAPONS");
 }
 
 static void send_natural_language_request_to_server(char *msg);
-static void nav_computer_data_entered(void *x)
+static void nav_computer_data_entered(int wn, void *x)
 {
 	trim_whitespace(nav_ui.input);
 	clean_spaces(nav_ui.input);
@@ -12262,19 +12294,19 @@ static void nav_computer_data_entered(void *x)
 
 static double sample_warpdrive(void);
 
-static void nav_computer_button_pressed(__attribute__((unused)) void *s)
+static void nav_computer_button_pressed(int wn, __attribute__((unused)) void *s)
 {
 	nav_ui.computer_active = 1;
 	ui_hide_widget(nav_ui.computer_button);
 	ui_unhide_widget(nav_ui.computer_input);
 }
 
-static void nav_camera_pos_button_pressed(__attribute__((unused)) void *s)
+static void nav_camera_pos_button_pressed(int wn, __attribute__((unused)) void *s)
 {
-	do_nav_camera_mode();
+	do_nav_camera_mode(0);
 }
 
-int nav_ui_docking_magnets_active(__attribute__((unused)) void *notused)
+int nav_ui_docking_magnets_active(int wn, __attribute__((unused)) void *notused)
 {
 	struct snis_entity *o;
 
@@ -12284,7 +12316,7 @@ int nav_ui_docking_magnets_active(__attribute__((unused)) void *notused)
 	return o->tsd.ship.docking_magnets;
 }
 
-int nav_ui_lights_active(__attribute__((unused)) void *notused)
+int nav_ui_lights_active(int wn, __attribute__((unused)) void *notused)
 {
 	struct snis_entity *o;
 
@@ -12450,7 +12482,7 @@ static float roll_rate_indicator_x(double angle, float rx, float rr)
 	return angular_rate_indicator_xy(angle, rx, rr, MAX_ROLL_VELOCITY, 1.0);
 }
 
-static void draw_pitch_rate_indicator(struct snis_entity *o, float rx, float ry, float rr)
+static void draw_pitch_rate_indicator(int wn, struct snis_entity *o, float rx, float ry, float rr)
 {
 	int i;
 	float iy;
@@ -12459,20 +12491,20 @@ static void draw_pitch_rate_indicator(struct snis_entity *o, float rx, float ry,
 
 	for (i = -5; i <= 5; i++) { /* Draw pitch indicator tick marks */
 		iy = pitch_rate_indicator_y(i * M_PI / 180.0, ry, rr);
-		snis_draw_line(rx + rr * 1.02, iy, rx + rr * 1.1, iy);
+		snis_draw_line(wn, rx + rr * 1.02, iy, rx + rr * 1.1, iy);
 	}
 
 	iy = pitch_rate_indicator_y(o->tsd.ship.pitch_velocity, ry, rr);
 	iy = (iy + last_iy) / 2.0; /* give the indicator some hysteresis */
 	last_iy = iy;
-	snis_draw_line(rx + rr * 1.1, iy, rx + rr * 1.3, iy - rr * 0.1);
-	snis_draw_line(rx + rr * 1.1, iy, rx + rr * 1.3, iy + rr * 0.1);
-	snis_draw_line(rx + rr * 1.3, iy - rr * 0.1, rx + rr * 1.3, iy + rr * 0.1);
+	snis_draw_line(wn, rx + rr * 1.1, iy, rx + rr * 1.3, iy - rr * 0.1);
+	snis_draw_line(wn, rx + rr * 1.1, iy, rx + rr * 1.3, iy + rr * 0.1);
+	snis_draw_line(wn, rx + rr * 1.3, iy - rr * 0.1, rx + rr * 1.3, iy + rr * 0.1);
 	snprintf(buffer, sizeof(buffer), "%3.1f", o->tsd.ship.pitch_velocity * 1800.0 / M_PI);
-	sng_abs_xy_draw_string(buffer, PICO_FONT, rx + rr * 1.4, iy);
+	sng_abs_xy_draw_string(wn, buffer, PICO_FONT, rx + rr * 1.4, iy);
 }
 
-static void draw_yaw_rate_indicator(struct snis_entity *o, float rx, float ry, float rr)
+static void draw_yaw_rate_indicator(int wn, struct snis_entity *o, float rx, float ry, float rr)
 {
 	int i;
 	float ix;
@@ -12481,19 +12513,19 @@ static void draw_yaw_rate_indicator(struct snis_entity *o, float rx, float ry, f
 
 	for (i = -5; i <= 5; i++) { /* Draw Yaw indicator tick marks */
 		ix = yaw_rate_indicator_x(i * M_PI / 180.0, rx, rr);
-		snis_draw_line(ix, ry + rr * 1.02, ix, ry + rr * 1.1);
+		snis_draw_line(wn, ix, ry + rr * 1.02, ix, ry + rr * 1.1);
 	}
 	ix = yaw_rate_indicator_x(o->tsd.ship.yaw_velocity, rx, rr);
 	ix = (ix + last_ix) / 2.0; /* give the indicator some hysteresis */
 	last_ix = ix;
-	snis_draw_line(ix, ry + rr * 1.1, ix - rr * 0.1, ry + rr * 1.3);
-	snis_draw_line(ix, ry + rr * 1.1, ix + rr * 0.1, ry + rr * 1.3);
-	snis_draw_line(ix - rr * 0.1, ry + rr * 1.3, ix + rr * 0.1, ry + rr * 1.3);
+	snis_draw_line(wn, ix, ry + rr * 1.1, ix - rr * 0.1, ry + rr * 1.3);
+	snis_draw_line(wn, ix, ry + rr * 1.1, ix + rr * 0.1, ry + rr * 1.3);
+	snis_draw_line(wn, ix - rr * 0.1, ry + rr * 1.3, ix + rr * 0.1, ry + rr * 1.3);
 	snprintf(buffer, sizeof(buffer), "%3.1f", o->tsd.ship.yaw_velocity * 1800.0 / M_PI);
-	sng_abs_xy_draw_string(buffer, PICO_FONT, ix + rr * 0.4, ry + rr * 1.25);
+	sng_abs_xy_draw_string(wn, buffer, PICO_FONT, ix + rr * 0.4, ry + rr * 1.25);
 }
 
-static void draw_roll_rate_indicator(struct snis_entity *o, float rx, float ry, float rr)
+static void draw_roll_rate_indicator(int wn, struct snis_entity *o, float rx, float ry, float rr)
 {
 	int i;
 	float ix;
@@ -12502,19 +12534,19 @@ static void draw_roll_rate_indicator(struct snis_entity *o, float rx, float ry, 
 
 	for (i = -5; i <= 5; i++) { /* Draw Roll indicator tick marks */
 		ix = roll_rate_indicator_x(i * M_PI / 180.0, rx, rr);
-		snis_draw_line(ix, ry - rr * 1.02, ix, ry - rr * 1.1);
+		snis_draw_line(wn, ix, ry - rr * 1.02, ix, ry - rr * 1.1);
 	}
 	ix = roll_rate_indicator_x(o->tsd.ship.roll_velocity, rx, rr);
 	ix = (ix + last_ix) / 2.0; /* give the indicator some hysteresis */
 	last_ix = ix;
-	snis_draw_line(ix, ry - rr * 1.1, ix - rr * 0.1, ry - rr * 1.3);
-	snis_draw_line(ix, ry - rr * 1.1, ix + rr * 0.1, ry - rr * 1.3);
-	snis_draw_line(ix - rr * 0.1, ry - rr * 1.3, ix + rr * 0.1, ry - rr * 1.3);
+	snis_draw_line(wn, ix, ry - rr * 1.1, ix - rr * 0.1, ry - rr * 1.3);
+	snis_draw_line(wn, ix, ry - rr * 1.1, ix + rr * 0.1, ry - rr * 1.3);
+	snis_draw_line(wn, ix - rr * 0.1, ry - rr * 1.3, ix + rr * 0.1, ry - rr * 1.3);
 	snprintf(buffer, sizeof(buffer), "%3.1f", o->tsd.ship.roll_velocity * 1800.0 / M_PI);
-	sng_abs_xy_draw_string(buffer, PICO_FONT, ix + rr * 0.4, ry - rr * 1.25);
+	sng_abs_xy_draw_string(wn, buffer, PICO_FONT, ix + rr * 0.4, ry - rr * 1.25);
 }
 
-static void draw_orientation_trident(struct snis_entity *o, float rx, float ry, float rr)
+static void draw_orientation_trident(int wn, struct snis_entity *o, float rx, float ry, float rr)
 {
 	static struct mesh *xz_ring_mesh = 0;
 	int relative_mode = o->tsd.ship.trident;
@@ -12638,7 +12670,7 @@ static void draw_orientation_trident(struct snis_entity *o, float rx, float ry, 
 		update_entity_scale(e, 0.15 / heading_indicator_mesh->radius);
 	}
 
-	render_entities(tridentecx);
+	render_entities(wn, tridentecx);
 	remove_all_entity(tridentecx);
 
 	/* FIXME: These indicators use the yaw/pitch/roll velocities transmitted from
@@ -12646,10 +12678,10 @@ static void draw_orientation_trident(struct snis_entity *o, float rx, float ry, 
 	 * seemingly (from player's point of view) imprecise. It would probably be a
 	 * lot smoother to sample the interpolated orientation quaternions instead.
 	 */
-	sng_set_foreground(UI_COLOR(nav_gauge_needle));
-	draw_pitch_rate_indicator(o, rx, ry, rr);
-	draw_yaw_rate_indicator(o, rx, ry, rr);
-	draw_roll_rate_indicator(o, rx, ry, rr);
+	sng_set_foreground(wn, UI_COLOR(nav_gauge_needle));
+	draw_pitch_rate_indicator(wn, o, rx, ry, rr);
+	draw_yaw_rate_indicator(wn, o, rx, ry, rr);
+	draw_roll_rate_indicator(wn, o, rx, ry, rr);
 
 }
 
@@ -12658,10 +12690,10 @@ static void draw_orientation_trident(struct snis_entity *o, float rx, float ry, 
 #define NAV_DATA_W ((SCREEN_WIDTH - 5) - NAV_DATA_X)
 #define NAV_DATA_H 270 
 
-static void draw_science_graph(struct snis_entity *ship, struct snis_entity *o,
+static void draw_science_graph(int wn, struct snis_entity *ship, struct snis_entity *o,
 		int x1, int y1, int x2, int y2);
 
-static void draw_3d_nav_starmap(void)
+static void draw_3d_nav_starmap(int wn)
 {
 	int i, j, k, our_ss = -1;
 	double ox, oy, oz;
@@ -12776,17 +12808,17 @@ static void draw_3d_nav_starmap(void)
 			y2 = starmap[n].y - oy;
 			z2 = starmap[n].z - oz;
 			if (n == our_ss || i == our_ss)
-				sng_set_foreground(UI_COLOR(starmap_warp_lane));
+				sng_set_foreground(wn, UI_COLOR(starmap_warp_lane));
 			else
-				sng_set_foreground(UI_COLOR(starmap_far_warp_lane));
-			snis_draw_3d_line(instrumentecx, x1, y1, z1, x2, y2, z2);
+				sng_set_foreground(wn, UI_COLOR(starmap_far_warp_lane));
+			snis_draw_3d_line(wn, instrumentecx, x1, y1, z1, x2, y2, z2);
 		}
 	}
 
-	render_entities(instrumentecx);
+	render_entities(wn, instrumentecx);
 
 	/* Draw labels on stars... */
-	sng_set_foreground(UI_COLOR(nav_entity_label));
+	sng_set_foreground(wn, UI_COLOR(nav_entity_label));
 	for (i = 0; i <= get_entity_count(instrumentecx); i++) {
 		float sx, sy;
 		char buffer[100];
@@ -12802,7 +12834,7 @@ static void draw_3d_nav_starmap(void)
 			continue;
 		entity_get_screen_coords(e, &sx, &sy);
 		snprintf(buffer, sizeof(buffer), "%s", s->name);
-		sng_abs_xy_draw_string(buffer, NANO_FONT, sx + 10, sy - 15);
+		sng_abs_xy_draw_string(wn, buffer, NANO_FONT, sx + 10, sy - 15);
 	}
 	pthread_mutex_unlock(&universe_mutex);
 	remove_all_entity(instrumentecx);
@@ -12930,7 +12962,7 @@ static void draw_attitude_indicator_mark_ring(struct snis_entity *player_ship,
 	}
 }
 
-static void draw_attitude_indicator_reticles(struct snis_entity *o,
+static void draw_attitude_indicator_reticles(int wn, struct snis_entity *o,
 			union vec3 *ship_normal, float screen_radius)
 {
 	int i, m;
@@ -12992,7 +13024,7 @@ static void draw_attitude_indicator_reticles(struct snis_entity *o,
 			v6.v.x = -wide * screen_radius;
 			v7.v.y = wide * screen_radius;
 			v8.v.y = -wide * screen_radius;
-			sng_set_foreground(UI_COLOR(nav_gauge_needle));
+			sng_set_foreground(wn, UI_COLOR(nav_gauge_needle));
 			if ((i % 90) == 0)
 				draw_numbers = 0;
 			else
@@ -13004,7 +13036,7 @@ static void draw_attitude_indicator_reticles(struct snis_entity *o,
 			v6.v.x = -narrow * screen_radius;
 			v7.v.y = narrow * screen_radius;
 			v8.v.y = -narrow * screen_radius;
-			sng_set_foreground(UI_COLOR(nav_ring));
+			sng_set_foreground(wn, UI_COLOR(nav_ring));
 			draw_numbers = 0;
 		}
 		angle = M_PI * i / 180.0;
@@ -13040,7 +13072,7 @@ static void draw_attitude_indicator_reticles(struct snis_entity *o,
 		}
 		if (fabs((float) m - 180.0 * display_mark / M_PI) < 2.5) {
 			/* Change the color of tick mark if it is close enough to display_mark. */
-			sng_set_foreground(UI_COLOR(nav_heading_ring));
+			sng_set_foreground(wn, UI_COLOR(nav_heading_ring));
 		}
 		/* if i < 0, we don't try to draw the mark precisely the way we do for heading because:
 		 * 1. TBH it's a pain in the ass to do it because there isn't just 1, there are 4,
@@ -13049,10 +13081,10 @@ static void draw_attitude_indicator_reticles(struct snis_entity *o,
 		 * Instead, we just change the color of the nearest tick mark (above).
 		 */
 		if (i >= 0) { /* Skip special case when i == -5 */
-			snis_draw_3d_line(instrumentecx,
+			snis_draw_3d_line(wn, instrumentecx,
 					v3.v.x, v3.v.y, v3.v.z, v4.v.x, v4.v.y, v4.v.z);
 			if (draw_numbers && dot >= 0)
-				snis_draw_3d_string(instrumentecx, buffer, NANO_FONT, v3.v.x, v3.v.y, v3.v.z);
+				snis_draw_3d_string(wn, instrumentecx, buffer, NANO_FONT, v3.v.x, v3.v.y, v3.v.z);
 
 			quat_init_axis(&q1, 1, 0, 0, angle);
 			quat_rot_vec(&v3, &v5, &q1);
@@ -13067,10 +13099,10 @@ static void draw_attitude_indicator_reticles(struct snis_entity *o,
 			v4.v.y += o->y - ship_normal->v.y;
 			v4.v.z += o->z - ship_normal->v.z;
 
-			snis_draw_3d_line(instrumentecx,
+			snis_draw_3d_line(wn, instrumentecx,
 				v3.v.x, v3.v.y, v3.v.z, v4.v.x, v4.v.y, v4.v.z);
 			if (draw_numbers && dot > 0)
-				snis_draw_3d_string(instrumentecx, buffer, NANO_FONT, v3.v.x, v3.v.y, v3.v.z);
+				snis_draw_3d_string(wn, instrumentecx, buffer, NANO_FONT, v3.v.x, v3.v.y, v3.v.z);
 		}
 
 		/* This one, rotating about y axis, is the "heading" */
@@ -13091,15 +13123,15 @@ static void draw_attitude_indicator_reticles(struct snis_entity *o,
 		v4.v.y += o->y - ship_normal->v.y;
 		v4.v.z += o->z - ship_normal->v.z;
 
-		sng_set_foreground(UI_COLOR(nav_heading_ring));
+		sng_set_foreground(wn, UI_COLOR(nav_heading_ring));
 		if (i > 0)
 			snprintf(buffer, sizeof(buffer), "%d", (360 + 90 - i) % 360);
 		else
 			snprintf(buffer, sizeof(buffer), "%d", (int) (360 + 90 - 180.0 * angle / M_PI) % 360);
-		snis_draw_3d_line(instrumentecx,
+		snis_draw_3d_line(wn, instrumentecx,
 				v3.v.x, v3.v.y, v3.v.z, v4.v.x, v4.v.y, v4.v.z);
 		if (draw_numbers && dot >= 0)
-			snis_draw_3d_string(instrumentecx, buffer, NANO_FONT, v3.v.x, v3.v.y, v3.v.z);
+			snis_draw_3d_string(wn, instrumentecx, buffer, NANO_FONT, v3.v.x, v3.v.y, v3.v.z);
 	}
 }
 
@@ -13148,7 +13180,7 @@ static void sci_nav_add_tentacles(struct entity_context *ctx, struct snis_entity
 	}
 }
 
-static void draw_3d_nav_display(void)
+static void draw_3d_nav_display(int wn)
 {
 	static struct mesh *ring_mesh = 0;
 	static struct mesh *radar_ring_mesh[8] = { 0 };
@@ -13295,7 +13327,7 @@ static void draw_3d_nav_display(void)
 	int in_nebula = 0;
 	int i;
 
-	draw_attitude_indicator_reticles(o, &ship_normal, screen_radius);
+	draw_attitude_indicator_reticles(wn, o, &ship_normal, screen_radius);
 	for (i = 0; i < radar_ring_count; ++i) {
 		e = add_entity(instrumentecx, radar_ring_mesh[i], o->x - ship_normal.v.x, o->y - ship_normal.v.y,
 			o->z - ship_normal.v.z, UI_COLOR(nav_ring));
@@ -13406,14 +13438,14 @@ static void draw_3d_nav_display(void)
 		int specs = 500 * (screen_radius * screen_radius -
 				visible_distance * visible_distance) / (screen_radius * screen_radius);
 
-		sng_set_foreground(UI_COLOR(nav_static) < 0 ? GRAY + 192 : UI_COLOR(nav_static));
+		sng_set_foreground(wn, UI_COLOR(nav_static) < 0 ? GRAY + 192 : UI_COLOR(nav_static));
 		for (i=0; i<specs; i++) {
 			union vec3 point;
 			random_point_in_3d_annulus(visible_distance, screen_radius, &ship_pos, &u, &v, &point);
 
 			float sx, sy;
 			if (!transform_point(instrumentecx, point.v.x, point.v.y, point.v.z, &sx, &sy)) {
-				sng_draw_point(sx, sy);
+				sng_draw_point(wn, sx, sy);
 			}
 		}
 	}
@@ -13462,7 +13494,7 @@ static void draw_3d_nav_display(void)
 		if (go[i].id == my_ship_id)
 			continue;
 		if (go[i].type == OBJTYPE_LASERBEAM || go[i].type == OBJTYPE_TRACTORBEAM) {
-			draw_3d_laserbeam(instrumentecx, o, &go[i], display_radius);
+			draw_3d_laserbeam(wn, instrumentecx, o, &go[i], display_radius);
 			continue;
 		}
 		if (!go[i].entity)
@@ -13665,10 +13697,10 @@ static void draw_3d_nav_display(void)
 	}
 
 	draw_3d_nav_waypoints(o, &ship_pos, &ship_normal, display_radius, current_zoom, science_style);
-	render_entities(instrumentecx);
+	render_entities(wn, instrumentecx);
 
 	/* Draw labels on objects and waypoints */
-	sng_set_foreground(UI_COLOR(nav_entity_label));
+	sng_set_foreground(wn, UI_COLOR(nav_entity_label));
 	for (i = 0; i <= get_entity_count(instrumentecx); i++) {
 		float sx, sy;
 		char buffer[100];
@@ -13700,17 +13732,17 @@ static void draw_3d_nav_display(void)
 			waypoint_diff = waypoint_diff / 3;
 			entity_get_screen_coords(e, &sx, &sy);
 			snprintf(buffer, sizeof(buffer), "WAYPOINT-%02d", waypoint_diff);
-			sng_abs_xy_draw_string(buffer, NANO_FONT, sx + 10, sy - 15);
+			sng_abs_xy_draw_string(wn, buffer, NANO_FONT, sx + 10, sy - 15);
 		} else if (arrow_label_diff >= 0 && arrow_label_diff < 4) { /* Arrow head */
 			entity_get_screen_coords(e, &sx, &sy);
 			snprintf(buffer, sizeof(buffer), "%s", *arrowlabel);
-			sng_abs_xy_draw_string(buffer, NANO_FONT, sx + 10, sy - 15);
+			sng_abs_xy_draw_string(wn, buffer, NANO_FONT, sx + 10, sy - 15);
 		} else {
 			/* It is not a waypoint */
 			entity_get_screen_coords(e, &sx, &sy);
 			if (o->sdata.science_data_known) {
 				snprintf(buffer, sizeof(buffer), "%s", o->sdata.name);
-				sng_abs_xy_draw_string(buffer, NANO_FONT, sx + 10, sy - 15);
+				sng_abs_xy_draw_string(wn, buffer, NANO_FONT, sx + 10, sy - 15);
 			}
 		}
 	}
@@ -13728,7 +13760,7 @@ static void draw_3d_nav_display(void)
 		float sx, sy;
 
 		entity_get_screen_coords(science_entity, &sx, &sy);
-		draw_targeting_indicator(sx, sy, UI_COLOR(nav_science_select), 0, 1.0f, 2.0f);
+		draw_targeting_indicator(wn, sx, sy, UI_COLOR(nav_science_select), 0, 1.0f, 2.0f);
 	}
 
 	/* Draw warp field error indicator */
@@ -13736,9 +13768,9 @@ static void draw_3d_nav_display(void)
 		char buf[64];
 		float error_fraction = warp_field_error / (3.0 * PLAYER_WARP_SPINUP_TIME);
 		float jitter = 0.2 * error_fraction * (snis_randn(100) - 50);
-		sng_set_foreground(UI_COLOR(nav_entity_label));
+		sng_set_foreground(wn, UI_COLOR(nav_entity_label));
 		snprintf(buf, sizeof(buf), "WARP FIELD ERROR: %3.2f%%", error_fraction * 100.0 + jitter);
-		sng_abs_xy_draw_string(buf, NANO_FONT, txx(540), txy(130));
+		sng_abs_xy_draw_string(wn, buf, NANO_FONT, txx(540), txy(130));
 	}
 
 	pthread_mutex_unlock(&universe_mutex);
@@ -13748,12 +13780,12 @@ static void draw_3d_nav_display(void)
 	if (current_altitude < MAX_PLANET_RADIUS * 1.5) {
 		char buf[25];
 		snprintf(buf, sizeof(buf), "ALTITUDE: %5.1f", current_altitude);
-		sng_abs_xy_draw_string(buf, NANO_FONT, txx(290), txy(15));
+		sng_abs_xy_draw_string(wn, buf, NANO_FONT, txx(290), txy(15));
 	}
 
 }
 
-static void show_navigation(void)
+static void show_navigation(int wn)
 {
 	char buf[100];
 	struct snis_entity *o;
@@ -13761,7 +13793,7 @@ static void show_navigation(void)
 	static int current_zoom = 0;
 	union euler ypr;
 
-	sng_set_foreground(UI_COLOR(nav_text));
+	sng_set_foreground(wn, UI_COLOR(nav_text));
 
 	if (!(o = find_my_ship()))
 		return;
@@ -13779,84 +13811,84 @@ static void show_navigation(void)
 
 	current_zoom = newzoom(current_zoom, o->tsd.ship.navzoom);
 	snprintf(buf, sizeof(buf), "POSITION:");
-	sng_abs_xy_draw_string(buf, NANO_FONT, txx(75), txy(15));
+	sng_abs_xy_draw_string(wn, buf, NANO_FONT, txx(75), txy(15));
 	snprintf(buf, sizeof(buf), "(%5.2lf,", o->x);
-	sng_abs_xy_draw_string(buf, NANO_FONT, txx(120), txy(15));
+	sng_abs_xy_draw_string(wn, buf, NANO_FONT, txx(120), txy(15));
 	snprintf(buf, sizeof(buf), "%5.2lf,", o->y);
-	sng_abs_xy_draw_string(buf, NANO_FONT, txx(175), txy(15));
+	sng_abs_xy_draw_string(wn, buf, NANO_FONT, txx(175), txy(15));
 	snprintf(buf, sizeof(buf), "%5.2lf)", o->z);
-	sng_abs_xy_draw_string(buf, NANO_FONT, txx(230), txy(15));
+	sng_abs_xy_draw_string(wn, buf, NANO_FONT, txx(230), txy(15));
 
 	double display_mark;
 	to_snis_heading_mark(&o->orientation, &display_heading, &display_mark);
 	snprintf(buf, sizeof(buf), "HEADING: %3.1lf", radians_to_degrees(display_heading));
-	sng_abs_xy_draw_string(buf, NANO_FONT, txx(5), txy(190));
+	sng_abs_xy_draw_string(wn, buf, NANO_FONT, txx(5), txy(190));
 	snprintf(buf, sizeof(buf), "MARK: %3.1lf", radians_to_degrees(display_mark));
-	sng_abs_xy_draw_string(buf, NANO_FONT, txx(5), txy(202));
+	sng_abs_xy_draw_string(wn, buf, NANO_FONT, txx(5), txy(202));
 
 	quat_to_euler(&ypr, &o->orientation);	
-	sng_set_foreground(UI_COLOR(nav_text));
-	draw_nav_main_idiot_lights(o, UI_COLOR(nav_warning));
-	draw_orientation_trident(o, txx(31), txy(111), txx(31));
+	sng_set_foreground(wn, UI_COLOR(nav_text));
+	draw_nav_main_idiot_lights(wn, o, UI_COLOR(nav_warning), DISPLAYMODE_NAVIGATION);
+	draw_orientation_trident(wn, o, txx(31), txy(111), txx(31));
 	switch (o->tsd.ship.nav_mode) {
 	case NAV_MODE_STARMAP:
-		draw_3d_nav_starmap();
+		draw_3d_nav_starmap(wn);
 		break;
 	case NAV_MODE_NORMAL:
 	default:
-		draw_3d_nav_display();
+		draw_3d_nav_display(wn);
 		break;
 	}
-	show_common_screen("NAV");
+	show_common_screen(wn, "NAV");
 }
 
-static void main_engineering_button_pressed(void *x)
+static void main_engineering_button_pressed(int wn, void *x)
 {
-	displaymode = DISPLAYMODE_ENGINEERING;
+	displaymode[0] = DISPLAYMODE_ENGINEERING;
 }
 
-static void robot_forward_button_pressed(void *x)
+static void robot_forward_button_pressed(int wn, void *x)
 {
 	damcon_dirkey(0, -1);
 }
 
-static void robot_backward_button_pressed(void *x)
+static void robot_backward_button_pressed(int wn, void *x)
 {
 	damcon_dirkey(0, 1);
 }
 
-static void robot_left_button_pressed(void *x)
+static void robot_left_button_pressed(int wn, void *x)
 {
 	damcon_dirkey(-1, 0);
 }
 
-static void robot_right_button_pressed(void *x)
+static void robot_right_button_pressed(int wn, void *x)
 {
 	damcon_dirkey(1, 0);
 }
 
-static void robot_gripper_button_pressed(void *x)
+static void robot_gripper_button_pressed(int wn, void *x)
 {
 	queue_to_server(snis_opcode_pkt("b", OPCODE_REQUEST_ROBOT_GRIPPER));
 }
 
-static void robot_auto_button_pressed(void *x)
+static void robot_auto_button_pressed(int wn, void *x)
 {
 	queue_to_server(snis_opcode_pkt("bb", OPCODE_ROBOT_AUTO_MANUAL, DAMCON_ROBOT_FULLY_AUTONOMOUS));
 }
 
-static void robot_manual_button_pressed(void *x)
+static void robot_manual_button_pressed(int wn, void *x)
 {
 	queue_to_server(snis_opcode_pkt("bb", OPCODE_ROBOT_AUTO_MANUAL, DAMCON_ROBOT_MANUAL_MODE));
 }
 
-static void eject_warp_core_button_pressed(void *x)
+static void eject_warp_core_button_pressed(int wn, void *x)
 {
 	queue_to_server(snis_opcode_pkt("b", OPCODE_EJECT_WARP_CORE));
 	return;
 }
 
-static void damcon_custom_button_pressed(void *x)
+static void damcon_custom_button_pressed(int wn, void *x)
 {
 	queue_to_server(snis_opcode_pkt("bb", OPCODE_CUSTOM_BUTTON, OPCODE_CUSTOM_BUTTON_SUBCMD_DAMCON));
 }
@@ -14023,11 +14055,11 @@ static int process_console_op(void)
 	return 0;
 }
 
-static void enforce_displaymode_matches_roles(void)
+static void enforce_displaymode_matches_roles(int wn)
 {
 	int i, newdisplaymode;
 
-	if ((1 << displaymode) & role)
+	if ((1 << displaymode[wn]) & role)
 		return;
 
 	newdisplaymode = ROLE_MAIN;
@@ -14037,12 +14069,12 @@ static void enforce_displaymode_matches_roles(void)
 			break;
 		}
 	}
-	displaymode = newdisplaymode;
+	displaymode[wn] = newdisplaymode;
 }
 
 static int process_client_config(void)
 {
-	int rc;
+	int i, rc;
 	uint8_t subcmd, buffer[10];
 	uint32_t permitted_roles;
 
@@ -14055,7 +14087,8 @@ static int process_client_config(void)
 		if (rc != 0)
 			return rc;
 		role = permitted_roles;
-		enforce_displaymode_matches_roles();
+		for (i = 0; i < nwindows; i++)
+			enforce_displaymode_matches_roles(i);
 		break;
 	default:
 		return -1;
@@ -14063,12 +14096,12 @@ static int process_client_config(void)
 	return 0;
 }
 
-static void damcon_button_pressed(void *x)
+static void damcon_button_pressed(int wn, void *x)
 {
-	displaymode = DISPLAYMODE_DAMCON;
+	displaymode[0] = DISPLAYMODE_DAMCON;
 }
 
-static void silence_alarms_pressed(void *x)
+static void silence_alarms_pressed(int wn, void *x)
 {
 	struct snis_entity *o = find_my_ship();
 	if (!o)
@@ -14077,17 +14110,17 @@ static void silence_alarms_pressed(void *x)
 		OPCODE_ADJUST_CONTROL_SILENCE_ALARMS);
 }
 
-static void eng_custom_button_pressed(void *x)
+static void eng_custom_button_pressed(int wn, void *x)
 {
 	queue_to_server(snis_opcode_pkt("bb", OPCODE_CUSTOM_BUTTON, OPCODE_CUSTOM_BUTTON_SUBCMD_ENG));
 }
 
-static void eng_deploy_flare_button_pressed(void *x)
+static void eng_deploy_flare_button_pressed(int wn, void *x)
 {
 	transmit_adjust_control_input(0, OPCODE_ADJUST_CONTROL_DEPLOY_FLARE);
 }
 
-static void preset_button_pressed(void *button_ptr_ptr)
+static void preset_button_pressed(int wn, void *button_ptr_ptr)
 {
 	struct button **button = button_ptr_ptr;
 	int selection;
@@ -14104,7 +14137,7 @@ static void preset_button_pressed(void *button_ptr_ptr)
 	}
 }
 
-static void preset_button_long_pressed(void *preset)
+static void preset_button_long_pressed(int wn, void *preset)
 {
 	int selection;
 
@@ -14114,10 +14147,10 @@ static void preset_button_long_pressed(void *preset)
 	if (selection < 0 || selection >= ARRAYSIZE(eng_ui.preset_buttons))
 		return;
 	transmit_save_preset(selection);
-	preset_button_pressed(preset);
+	preset_button_pressed(wn, preset);
 }
 
-static void preset_save_button_pressed(void *x)
+static void preset_save_button_pressed(int wn, void *x)
 {
 	transmit_save_preset(eng_ui.selected_preset);
 }
@@ -14446,13 +14479,13 @@ static void init_engineering_ui(void)
 	ui_add_slider(eu->lifesupport_temperature, dm, NULL);
 }
 
-static void draw_tooltip(int mousex, int mousey, char *tooltip)
+static void draw_tooltip(int wn, int mousex, int mousey, char *tooltip)
 {
 	float bbx1, bby1, bbx2, bby2, width, height;
 	int x, y;
 
-	x = sng_pixelx_to_screenx(mousex);
-	y = sng_pixely_to_screeny(mousey);
+	x = sng_pixelx_to_screenx(wn, mousex);
+	y = sng_pixely_to_screeny(wn, mousey);
 
 	sng_string_bounding_box(tooltip, PICO_FONT, &bbx1, &bby1, &bbx2, &bby2);
 	width = fabsf(bbx2 - bbx1) + 20;
@@ -14466,14 +14499,14 @@ static void draw_tooltip(int mousex, int mousey, char *tooltip)
 	if (y + height > SCREEN_HEIGHT)
 		y = SCREEN_HEIGHT - height;
 
-	sng_set_foreground(BLACK);
-	snis_draw_rectangle(1, x, y, width, height);
-	sng_set_foreground(UI_COLOR(tooltip));
-	snis_draw_rectangle(0, x, y, width, height);
-	sng_abs_xy_draw_string(tooltip, PICO_FONT, x + txx(3), y + txy(12));
+	sng_set_foreground(wn, BLACK);
+	snis_draw_rectangle(wn, 1, x, y, width, height);
+	sng_set_foreground(wn, UI_COLOR(tooltip));
+	snis_draw_rectangle(wn, 0, x, y, width, height);
+	sng_abs_xy_draw_string(wn, tooltip, PICO_FONT, x + txx(3), y + txy(12));
 }
 
-static void show_engineering_damage_report(int subsystem)
+static void show_engineering_damage_report(int wn, int subsystem)
 {
 	struct snis_damcon_entity *o;
 	int i, x, y, count;
@@ -14489,10 +14522,10 @@ static void show_engineering_damage_report(int subsystem)
 	y = 0.3333 * SCREEN_HEIGHT + sysmap[subsystem] * 0.06666 * SCREEN_HEIGHT;
 	x = 0.375 * SCREEN_WIDTH;
 
-	sng_set_foreground(BLACK);
-	snis_draw_rectangle(1, x - 5, y - 5, 0.55 * SCREEN_WIDTH, 0.10833 * SCREEN_HEIGHT);
-	sng_set_foreground(UI_COLOR(eng_temperature));
-	snis_draw_rectangle(0, x - 5, y - 5, 0.55 * SCREEN_WIDTH, 0.10833 * SCREEN_HEIGHT);
+	sng_set_foreground(wn, BLACK);
+	snis_draw_rectangle(wn, 1, x - 5, y - 5, 0.55 * SCREEN_WIDTH, 0.10833 * SCREEN_HEIGHT);
+	sng_set_foreground(wn, UI_COLOR(eng_temperature));
+	snis_draw_rectangle(wn, 0, x - 5, y - 5, 0.55 * SCREEN_WIDTH, 0.10833 * SCREEN_HEIGHT);
 	count = 0;
 	for (i = 0; i <= snis_object_pool_highest_object(damcon_pool); i++) {
 		o = &dco[i];
@@ -14501,15 +14534,15 @@ static void show_engineering_damage_report(int subsystem)
 		if (o->tsd.part.system != subsystem)
 			continue;
 		if ((float) o->tsd.part.damage > 0.75f * 255.0f)
-			sng_set_foreground(UI_COLOR(eng_warning_status));
+			sng_set_foreground(wn, UI_COLOR(eng_warning_status));
 		else if ((float) o->tsd.part.damage > 0.5f * 255.0f)
-			sng_set_foreground(UI_COLOR(eng_caution_status));
+			sng_set_foreground(wn, UI_COLOR(eng_caution_status));
 		else
-			sng_set_foreground(UI_COLOR(eng_good_status));
+			sng_set_foreground(wn, UI_COLOR(eng_good_status));
 		snprintf(msg, sizeof(msg), "%3.2f%%: %s",
 			(1.0f - (float) o->tsd.part.damage / 255.0f) * 100.0f,
 			damcon_part_name(o->tsd.part.system, o->tsd.part.part));
-		sng_abs_xy_draw_string(msg, NANO_FONT, x + 10, y + 10);
+		sng_abs_xy_draw_string(wn, msg, NANO_FONT, x + 10, y + 10);
 		y = y + 20;
 		count++;
 		if (count >= DAMCON_PARTS_PER_SYSTEM)
@@ -14530,7 +14563,7 @@ static int engineering_warnings_active()
 		snis_slider_alarm_triggered(eng_ui.lifesupport_damage);
 }
 
-static void show_engineering(void)
+static void show_engineering(int wn)
 {
 	struct snis_entity *o;
 	int gx1, gy1, gx2, gy2;
@@ -14596,11 +14629,11 @@ static void show_engineering(void)
 	float sc_y_center = sc_y + sc_height / 2.0;
 
 
-	sng_set_foreground(UI_COLOR(eng_warning));
+	sng_set_foreground(wn, UI_COLOR(eng_warning));
 	if (o->tsd.ship.power_data.shields.r2 < idiot_light_threshold)
-		sng_center_xy_draw_string("LOW SHIELD POWER", NANO_FONT, sc_x_center, sc_y_center);
+		sng_center_xy_draw_string(wn, "LOW SHIELD POWER", NANO_FONT, sc_x_center, sc_y_center);
 	else if (o->tsd.ship.power_data.shields.i < idiot_light_threshold)
-		sng_center_xy_draw_string("SHIELDS ARE OFF", NANO_FONT, sc_x_center, sc_y_center);
+		sng_center_xy_draw_string(wn, "SHIELDS ARE OFF", NANO_FONT, sc_x_center, sc_y_center);
 
 	if (o->tsd.ship.fuel < UINT32_MAX * 0.1) { /* 10% */
 		float fg_x, fg_y, fg_r;
@@ -14609,11 +14642,11 @@ static void show_engineering(void)
 		float fg_x_center = fg_x;
 		float fg_y_center = fg_y - fg_r * 1.25;
 
-		sng_set_foreground(UI_COLOR(eng_warning));
+		sng_set_foreground(wn, UI_COLOR(eng_warning));
 		if (o->tsd.ship.fuel < UINT32_MAX * 0.01) { /* 1% */
-			sng_center_xy_draw_string("OUT Of FUEL", NANO_FONT, fg_x_center, fg_y_center);
+			sng_center_xy_draw_string(wn, "OUT Of FUEL", NANO_FONT, fg_x_center, fg_y_center);
 		} else {
-			sng_center_xy_draw_string("LOW FUEL", NANO_FONT, fg_x_center, fg_y_center);
+			sng_center_xy_draw_string(wn, "LOW FUEL", NANO_FONT, fg_x_center, fg_y_center);
 		}
 	}
 
@@ -14624,11 +14657,11 @@ static void show_engineering(void)
 		float o2_x_center = o2_x;
 		float o2_y_center = o2_y - o2_r * 1.25;
 
-		sng_set_foreground(UI_COLOR(eng_warning));
+		sng_set_foreground(wn, UI_COLOR(eng_warning));
 		if (o->tsd.ship.oxygen < UINT32_MAX * 0.01) { /* 1% */
-			sng_center_xy_draw_string("OUT Of OXYGEN", NANO_FONT, o2_x_center, o2_y_center);
+			sng_center_xy_draw_string(wn, "OUT Of OXYGEN", NANO_FONT, o2_x_center, o2_y_center);
 		} else {
-			sng_center_xy_draw_string("LOW OXYGEN", NANO_FONT, o2_x_center, o2_y_center);
+			sng_center_xy_draw_string(wn, "LOW OXYGEN", NANO_FONT, o2_x_center, o2_y_center);
 		}
 	}
 
@@ -14637,12 +14670,13 @@ static void show_engineering(void)
 	gy1 = SCREEN_HEIGHT * 0.02;
 	gx2 = SCREEN_WIDTH * 0.98;
 	gy2 = gy1 + eng_ui.gauge_radius * 2.5;
-	sng_set_foreground(UI_COLOR(eng_science_graph));
-	draw_science_graph(o, o, gx1, gy1, gx2, gy2);
+	sng_set_foreground(wn, UI_COLOR(eng_science_graph));
+	draw_science_graph(wn, o, o, gx1, gy1, gx2, gy2);
 
 	if (o->sdata.shield_strength < 15) {
-		sng_set_foreground(UI_COLOR(eng_warning));
-		sng_center_xy_draw_string("SHIELDS ARE DOWN", TINY_FONT, (gx1 + gx2) / 2.0, gy1 + (gy2 - gy1) / 3.0);
+		sng_set_foreground(wn, UI_COLOR(eng_warning));
+		sng_center_xy_draw_string(wn, "SHIELDS ARE DOWN",
+				TINY_FONT, (gx1 + gx2) / 2.0, gy1 + (gy2 - gy1) / 3.0);
 	}
 
 	/* Fuel consumption rate and time remaining until empty indicators */
@@ -14660,17 +14694,17 @@ static void show_engineering(void)
 		char buffer[100];
 		fuel_rate_per_sec = 100000.0 * (fuel_consumption_rate  * UNIVERSE_TICKS_PER_SECOND) / (double) UINT_MAX;
 		snprintf(buffer, sizeof(buffer), "FUEL/SEC: %.2f", fuel_rate_per_sec);
-		sng_set_foreground(UI_COLOR(eng_warning));
-		sng_abs_xy_draw_string(buffer, PICO_FONT, txx(350), txy(192));
+		sng_set_foreground(wn, UI_COLOR(eng_warning));
+		sng_abs_xy_draw_string(wn, buffer, PICO_FONT, txx(350), txy(192));
 
 		fuel_mins = floor(fuel_time_left / (60 * UNIVERSE_TICKS_PER_SECOND));
 		fuel_secs = (fuel_time_left - (fuel_mins * 60 * UNIVERSE_TICKS_PER_SECOND)) / UNIVERSE_TICKS_PER_SECOND;
 
 		snprintf(buffer, sizeof(buffer), "TIME TO EMPTY %.0f:%02.0f", fuel_mins, fuel_secs);
-		sng_abs_xy_draw_string(buffer, PICO_FONT, txx(350), txy(192) + font_lineheight[PICO_FONT]);
+		sng_abs_xy_draw_string(wn, buffer, PICO_FONT, txx(350), txy(192) + font_lineheight[PICO_FONT]);
 	}
 
-	show_common_screen("ENGINEERING");
+	show_common_screen(wn, "ENGINEERING");
 }
 
 #if 0
@@ -14721,16 +14755,16 @@ static int on_damcon_screen(struct snis_damcon_entity *o, struct my_vect_obj *v)
 	return 1;
 }
 
-static void draw_damcon_arena_borders(void)
+static void draw_damcon_arena_borders(int wn)
 {
 	int y1, x1;
 
-	sng_set_foreground(UI_COLOR(damcon_arena_border));
+	sng_set_foreground(wn, UI_COLOR(damcon_arena_border));
 	/* top border */
 	y1 = damcony_to_screeny(-DAMCONYDIM / 2.0);
 	if (y1 >= damconscreeny0 &&
 		y1 <= damconscreeny0 + damconscreenydim) {
-		snis_draw_line(damconscreenx0, y1,
+		snis_draw_line(wn, damconscreenx0, y1,
 				damconscreenx0 + damconscreenxdim, y1);
 	}
 
@@ -14738,7 +14772,7 @@ static void draw_damcon_arena_borders(void)
 	y1 = damcony_to_screeny(DAMCONYDIM / 2.0);
 	if (y1 >= damconscreeny0 &&
 		y1 <= damconscreeny0  + damconscreenydim) {
-		snis_draw_line(damconscreenx0, y1,
+		snis_draw_line(wn, damconscreenx0, y1,
 				damconscreenx0 + damconscreenxdim, y1);
 	}
 
@@ -14746,7 +14780,7 @@ static void draw_damcon_arena_borders(void)
 	x1 = damconx_to_screenx(-DAMCONXDIM / 2.0);
 	if (x1 > damconscreenx0 &&
 		x1 < damconscreenx0 + damconscreenxdim) {
-		snis_draw_line(x1, damconscreeny0,
+		snis_draw_line(wn, x1, damconscreeny0,
 				x1, damconscreeny0 + damconscreenydim);
 	}
 
@@ -14754,23 +14788,23 @@ static void draw_damcon_arena_borders(void)
 	x1 = damconx_to_screenx(DAMCONXDIM / 2.0);
 	if (x1 > damconscreenx0 &&
 		x1 < damconscreenx0 + damconscreenxdim) {
-		snis_draw_line(x1, damconscreeny0,
+		snis_draw_line(wn, x1, damconscreeny0,
 				x1, damconscreeny0 + damconscreenydim);
 	}
 }
 
-static void draw_damcon_robot(struct snis_damcon_entity *o)
+static void draw_damcon_robot(int wn, struct snis_damcon_entity *o)
 {
 	int x, y;
 	int byteangle = (int) (o->heading * 128.0 / M_PI);
 
 	x = o->x + damconscreenx0 + damconscreenxdim / 2.0 - *damconscreenx;
 	y = o->y + damconscreeny0 + damconscreenydim / 2.0 - *damconscreeny;
-	sng_set_foreground(UI_COLOR(damcon_robot));
-	sng_draw_vect_obj(&damcon_robot_spun[byteangle], x, y);
+	sng_set_foreground(wn, UI_COLOR(damcon_robot));
+	sng_draw_vect_obj(wn, &damcon_robot_spun[byteangle], x, y);
 }
 
-static void draw_damcon_system(struct snis_damcon_entity *o)
+static void draw_damcon_system(int wn, struct snis_damcon_entity *o)
 {
 	int x, y;
 
@@ -14779,13 +14813,13 @@ static void draw_damcon_system(struct snis_damcon_entity *o)
 	
 	x = damconx_to_screenx(o->x);
 	y = damcony_to_screeny(o->y);
-	sng_set_foreground(UI_COLOR(damcon_system));
-	sng_draw_vect_obj(&placeholder_system, x, y);
-	sng_abs_xy_draw_string(damcon_system_name(o->type),
+	sng_set_foreground(wn, UI_COLOR(damcon_system));
+	sng_draw_vect_obj(wn, &placeholder_system, x, y);
+	sng_abs_xy_draw_string(wn, damcon_system_name(o->type),
 				NANO_FONT, x + 75, y);
 }
 
-static void draw_damcon_socket_or_part(struct snis_damcon_entity *o, int color)
+static void draw_damcon_socket_or_part(int wn, struct snis_damcon_entity *o, int color)
 {
 	int x, y;
 	char msg[20];
@@ -14795,20 +14829,20 @@ static void draw_damcon_socket_or_part(struct snis_damcon_entity *o, int color)
 	x = damconx_to_screenx(o->x);
 	y = damcony_to_screeny(o->y);
 	snprintf(msg, sizeof(msg), "%d %d", o->tsd.socket.system, o->tsd.socket.part);
-	sng_set_foreground(color);
-	sng_draw_vect_obj(&placeholder_socket, x, y);
-	sng_abs_xy_draw_string(msg, NANO_FONT, x - 10, y);
+	sng_set_foreground(wn, color);
+	sng_draw_vect_obj(wn, &placeholder_socket, x, y);
+	sng_abs_xy_draw_string(wn, msg, NANO_FONT, x - 10, y);
 }
 
-static void draw_damcon_socket(struct snis_damcon_entity *o)
+static void draw_damcon_socket(int wn, struct snis_damcon_entity *o)
 {
 	if (o->tsd.socket.contents_id == DAMCON_SOCKET_EMPTY)
-		draw_damcon_socket_or_part(o, UI_COLOR(damcon_socket));
+		draw_damcon_socket_or_part(wn, o, UI_COLOR(damcon_socket));
 }
 
 
 static struct snis_damcon_entity *damcon_robot_entity = NULL;
-static void draw_damcon_part(struct snis_damcon_entity *o)
+static void draw_damcon_part(int wn, struct snis_damcon_entity *o)
 {
 	int x, y;
 	char msg[80];
@@ -14831,39 +14865,39 @@ static void draw_damcon_part(struct snis_damcon_entity *o)
 			o->tsd.part.damage == 255 ? " (BADLY DAMAGED)" : "");
 	else
 		strcpy(msg, "");
-	sng_set_foreground(UI_COLOR(damcon_part));
-	sng_draw_vect_obj(&placeholder_part_spun[byteangle], x, y);
-	sng_center_xy_draw_string(msg, NANO_FONT, x,
+	sng_set_foreground(wn, UI_COLOR(damcon_part));
+	sng_draw_vect_obj(wn, &placeholder_part_spun[byteangle], x, y);
+	sng_center_xy_draw_string(wn, msg, NANO_FONT, x,
 			y - 15 - (o->tsd.part.part % 2) * 15);
 	if (o->tsd.part.damage < 0.30 * 255.0)
-		sng_set_foreground(UI_COLOR(damcon_good));
+		sng_set_foreground(wn, UI_COLOR(damcon_good));
 	else if (o->tsd.part.damage < 0.75 * 255.0)
-		sng_set_foreground(UI_COLOR(damcon_caution));
+		sng_set_foreground(wn, UI_COLOR(damcon_caution));
 	else {
 		if ((timer & 0x8) == 0) /* make red bar blink */
 			return;
-		sng_set_foreground(UI_COLOR(damcon_warning));
+		sng_set_foreground(wn, UI_COLOR(damcon_warning));
 	}
-	snis_draw_rectangle(0, x - 30, y + 10, 60, 6);
-	snis_draw_rectangle(1, x - 30, y + 10,
+	snis_draw_rectangle(wn, 0, x - 30, y + 10, 60, 6);
+	snis_draw_rectangle(wn, 1, x - 30, y + 10,
 			60.0 * (255 - o->tsd.part.damage) / 255.0, 6);
 }
 
-static void draw_damcon_waypoint(struct snis_damcon_entity *o)
+static void draw_damcon_waypoint(int wn, struct snis_damcon_entity *o)
 {
 	int x, y;
 
-	sng_set_foreground(UI_COLOR(damcon_part));
+	sng_set_foreground(wn, UI_COLOR(damcon_part));
 	x = damconx_to_screenx(o->x);
 	y = damcony_to_screeny(o->y);
-	snis_draw_rectangle(0, x - 4, y - 4, 8, 8);
+	snis_draw_rectangle(wn, 0, x - 4, y - 4, 8, 8);
 }
 
-static void draw_damcon_object(struct snis_damcon_entity *o)
+static void draw_damcon_object(int wn, struct snis_damcon_entity *o)
 {
 	switch (o->type) {
 	case DAMCON_TYPE_ROBOT:
-		draw_damcon_robot(o);
+		draw_damcon_robot(wn, o);
 		damcon_robot_entity = o;
 		break;
 	case DAMCON_TYPE_WARPDRIVE:
@@ -14876,97 +14910,97 @@ static void draw_damcon_object(struct snis_damcon_entity *o)
 	case DAMCON_TYPE_TRACTORSYSTEM:
 	case DAMCON_TYPE_LIFESUPPORTSYSTEM:
 	case DAMCON_TYPE_REPAIR_STATION:
-		draw_damcon_system(o);
+		draw_damcon_system(wn, o);
 		break;
 	case DAMCON_TYPE_SOCKET:
-		draw_damcon_socket(o);
+		draw_damcon_socket(wn, o);
 		break;
 	case DAMCON_TYPE_PART:
-		draw_damcon_part(o);
+		draw_damcon_part(wn, o);
 		break;
 	case DAMCON_TYPE_WAYPOINT:
-		draw_damcon_waypoint(o);
+		draw_damcon_waypoint(wn, o);
 		break;
 	default:
 		break;
 	}
 }
 
-static void show_damcon(void)
+static void show_damcon(int wn)
 {
 	int i;
 
-	sng_set_foreground(UI_COLOR(damcon_wall));
-	snis_draw_rectangle(0, damconscreenx0, damconscreeny0, damconscreenxdim, damconscreenydim);
+	sng_set_foreground(wn, UI_COLOR(damcon_wall));
+	snis_draw_rectangle(wn, 0, damconscreenx0, damconscreeny0, damconscreenxdim, damconscreenydim);
 
 	/* clip to damcon screen */
-	sng_set_clip_window(damconscreenx0, damconscreeny0,
+	sng_set_clip_window(wn, damconscreenx0, damconscreeny0,
 			damconscreenx0 + damconscreenxdim,
 			damconscreeny0 + damconscreenydim);
 
 	/* draw all the stuff on the damcon screen */
 	for (i = 0; i <= snis_object_pool_highest_object(damcon_pool); i++)
-		draw_damcon_object(&dco[i]);
-	draw_damcon_arena_borders();
+		draw_damcon_object(wn, &dco[i]);
+	draw_damcon_arena_borders(wn);
 
 	/* restore clipping back to whole window */
-	set_default_clip_window();
-	show_common_screen("DAMAGE CONTROL");
+	set_default_clip_window(wn);
+	show_common_screen(wn, "DAMAGE CONTROL");
 }
 
-static void sci_details_pressed(void *x)
+static void sci_details_pressed(int wn, void *x)
 {
 	queue_to_server(snis_opcode_pkt("bb", OPCODE_SCI_DETAILS,
 		(unsigned char) SCI_DETAILS_MODE_DETAILS));
 }
 
-static void sci_waypoints_pressed(void *x)
+static void sci_waypoints_pressed(int wn, void *x)
 {
 	queue_to_server(snis_opcode_pkt("bb", OPCODE_SCI_DETAILS,
 		(unsigned char) SCI_DETAILS_MODE_WAYPOINTS));
 }
 
-static void sci_align_to_ship_pressed(void *x)
+static void sci_align_to_ship_pressed(int wn, void *x)
 {
 	queue_to_server(snis_opcode_pkt("b", OPCODE_SCI_ALIGN_TO_SHIP));
 }
 
-static void sci_threed_pressed(void *x)
+static void sci_threed_pressed(int wn, void *x)
 {
 	queue_to_server(snis_opcode_pkt("bb", OPCODE_SCI_DETAILS,
 		(unsigned char) SCI_DETAILS_MODE_THREED));
 }
 
-static void sci_sciplane_pressed(void *x)
+static void sci_sciplane_pressed(int wn, void *x)
 {
 	queue_to_server(snis_opcode_pkt("bb", OPCODE_SCI_DETAILS,
 		(unsigned char) SCI_DETAILS_MODE_SCIPLANE));
 }
 
-static void sci_tractor_pressed(void *x)
+static void sci_tractor_pressed(int wn, void *x)
 {
 	uint32_t id = curr_science_guy ? curr_science_guy->id : (uint32_t) 0xffffffff;
 	queue_to_server(snis_opcode_pkt("bw", OPCODE_REQUEST_TRACTORBEAM, id));
 	sci_ui.low_tractor_power_timer = 3 * frame_rate_hz;
 }
 
-static void sci_mining_bot_pressed(void *x)
+static void sci_mining_bot_pressed(int wn, void *x)
 {
 	uint32_t id = curr_science_guy ? curr_science_guy->id : (uint32_t) 0xffffffff;
 	queue_to_server(snis_opcode_pkt("bw", OPCODE_REQUEST_MINING_BOT, id));
 }
 
-static void sci_custom_button_pressed(__attribute__((unused)) void *x)
+static void sci_custom_button_pressed(int wn, __attribute__((unused)) void *x)
 {
 	queue_to_server(snis_opcode_pkt("bb", OPCODE_CUSTOM_BUTTON, OPCODE_CUSTOM_BUTTON_SUBCMD_SCIENCE));
 }
 
-static void science_waypoint_entered(void *cookie)
+static void science_waypoint_entered(int wn, void *cookie)
 {
 	return;
 }
 
-static void science_clear_waypoint_pressed(void *cookie)
+static void science_clear_waypoint_pressed(int wn, void *cookie)
 {
 	struct button **b = cookie;
 	int index = b - &sci_ui.clear_waypoint_button[0];
@@ -14976,7 +15010,7 @@ static void science_clear_waypoint_pressed(void *cookie)
 						(uint8_t) index));
 }
 
-static void science_select_waypoint_pressed(void *cookie)
+static void science_select_waypoint_pressed(int wn, void *cookie)
 {
 	struct button **b = cookie;
 	int index = b - &sci_ui.select_waypoint_button[0];
@@ -14987,7 +15021,7 @@ static void science_select_waypoint_pressed(void *cookie)
 					(uint32_t) index);
 }
 
-static void science_add_current_pos_pressed(void *cookie)
+static void science_add_current_pos_pressed(int wn, void *cookie)
 {
 	struct snis_entity *o = find_my_ship();
 	if (!o)
@@ -14999,7 +15033,7 @@ static void science_add_current_pos_pressed(void *cookie)
 						o->z, (int32_t) UNIVERSE_DIM));
 }
 
-static void science_add_waypoint_pressed(void *cookie)
+static void science_add_waypoint_pressed(int wn, void *cookie)
 {
 	int rc;
 	double x, y, z;
@@ -15179,7 +15213,7 @@ static void init_science_ui(void)
 	ui_add_pull_down_menu(sci_ui.menu, DISPLAYMODE_SCIENCE); /* needs to be last */
 }
 
-static void comms_screen_button_pressed(void *x)
+static void comms_screen_button_pressed(int wn, void *x)
 {
 	unsigned long screen = (unsigned long) x;
 
@@ -15204,66 +15238,66 @@ static void comms_screen_button_pressed(void *x)
 	return;
 }
 
-static void comms_custom_button_pressed(__attribute__((unused)) void *x)
+static void comms_custom_button_pressed(int wn, __attribute__((unused)) void *x)
 {
 	queue_to_server(snis_opcode_pkt("bb", OPCODE_CUSTOM_BUTTON, OPCODE_CUSTOM_BUTTON_SUBCMD_COMMS));
 }
 
-static void comms_hail_button_pressed(__attribute__((unused)) void *x)
+static void comms_hail_button_pressed(int wn, __attribute__((unused)) void *x)
 {
 	snis_text_input_box_set_contents(comms_ui.comms_input, "/HAIL ");
 	ui_set_widget_focus(uiobjs, comms_ui.comms_input);
 	return;
 }
 
-static void comms_channel_button_pressed(__attribute__((unused)) void *x)
+static void comms_channel_button_pressed(int wn, __attribute__((unused)) void *x)
 {
 	snis_text_input_box_set_contents(comms_ui.comms_input, "/CHANNEL ");
 	ui_set_widget_focus(uiobjs, comms_ui.comms_input);
 	return;
 }
 
-static void comms_transmit_button_pressed(void *x);
+static void comms_transmit_button_pressed(int wn, void *x);
 
-static void comms_manifest_button_pressed(__attribute__((unused)) void *x)
+static void comms_manifest_button_pressed(int wn, __attribute__((unused)) void *x)
 {
 	snis_text_input_box_set_contents(comms_ui.comms_input, "/MANIFEST");
 	ui_set_widget_focus(uiobjs, comms_ui.comms_input);
-	comms_transmit_button_pressed(NULL);
+	comms_transmit_button_pressed(wn, NULL);
 	return;
 }
 
-static void comms_computer_button_pressed(__attribute__((unused)) void *x)
+static void comms_computer_button_pressed(int wn, __attribute__((unused)) void *x)
 {
 	snis_text_input_box_set_contents(comms_ui.comms_input, "/COMPUTER ");
 	ui_set_widget_focus(uiobjs, comms_ui.comms_input);
 	return;
 }
 
-static void comms_eject_button_pressed(__attribute__((unused)) void *x)
+static void comms_eject_button_pressed(int wn, __attribute__((unused)) void *x)
 {
 	snis_text_input_box_set_contents(comms_ui.comms_input, "/EJECT ");
 	ui_set_widget_focus(uiobjs, comms_ui.comms_input);
 	return;
 }
 
-static void comms_help_button_pressed(__attribute__((unused)) void *x)
+static void comms_help_button_pressed(int wn, __attribute__((unused)) void *x)
 {
 	snis_text_input_box_set_contents(comms_ui.comms_input, "/HELP");
 	ui_set_widget_focus(uiobjs, comms_ui.comms_input);
-	comms_transmit_button_pressed(NULL);
+	comms_transmit_button_pressed(wn, NULL);
 	return;
 }
 
-static void comms_about_button_pressed(__attribute__((unused)) void *x)
+static void comms_about_button_pressed(int wn, __attribute__((unused)) void *x)
 {
 	snis_text_input_box_set_contents(comms_ui.comms_input, "/ABOUT");
-	comms_transmit_button_pressed(NULL);
+	comms_transmit_button_pressed(wn, NULL);
 	ui_set_widget_focus(uiobjs, comms_ui.comms_input);
 	return;
 }
 
-static void comms_cryptanalysis_button_pressed(__attribute__((unused)) void *x)
+static void comms_cryptanalysis_button_pressed(int wn, __attribute__((unused)) void *x)
 {
 	struct snis_entity *o;
 
@@ -15272,7 +15306,7 @@ static void comms_cryptanalysis_button_pressed(__attribute__((unused)) void *x)
 	queue_to_server(snis_opcode_pkt("bb", OPCODE_COMMS_CRYPTO, !o->tsd.ship.comms_crypto_mode));
 }
 
-static void comms_screen_red_alert_pressed(void *x)
+static void comms_screen_red_alert_pressed(int wn, void *x)
 {
 	unsigned char new_alert_mode;
 
@@ -15280,15 +15314,15 @@ static void comms_screen_red_alert_pressed(void *x)
 	queue_to_server(snis_opcode_pkt("bb", OPCODE_REQUEST_REDALERT, new_alert_mode));
 }
 
-static void comms_hail_mining_bot_pressed(__attribute__((unused)) void *x)
+static void comms_hail_mining_bot_pressed(int wn, __attribute__((unused)) void *x)
 {
 	snis_text_input_box_set_contents(comms_ui.comms_input, "/HAIL MINING-BOT");
-	comms_transmit_button_pressed(NULL);
+	comms_transmit_button_pressed(wn, NULL);
 	ui_set_widget_focus(uiobjs, comms_ui.comms_input);
 	return;
 }
 
-static void comms_main_screen_pressed(void *x)
+static void comms_main_screen_pressed(int wn, void *x)
 {
 	unsigned char new_comms_mode;
 
@@ -15369,7 +15403,7 @@ static void send_normal_comms_packet_to_server(char *msg)
 	send_comms_packet_to_server(msg, OPCODE_COMMS_TRANSMISSION, my_ship_id);
 }
 
-static void comms_transmit_button_pressed(void *x)
+static void comms_transmit_button_pressed(int wn, void *x)
 {
 	if (strlen(comms_ui.input) == 0)
 		return;
@@ -15377,14 +15411,14 @@ static void comms_transmit_button_pressed(void *x)
 	snis_text_input_box_zero(comms_ui.comms_input);
 }
 
-static void comms_rts_button_pressed(void *x)
+static void comms_rts_button_pressed(int wn, void *x)
 {
 	uint8_t rts_button_number = (uint8_t) (((intptr_t) x) & 0x0ff);
 	queue_to_server(snis_opcode_subcode_pkt("bbb", OPCODE_RTS_FUNC,
 			OPCODE_RTS_FUNC_COMMS_BUTTON, rts_button_number));
 }
 
-static void comms_rts_build_unit_button_pressed(void *x)
+static void comms_rts_build_unit_button_pressed(int wn, void *x)
 {
 	struct snis_entity *o, *builder;
 	uint8_t rts_build_unit_button_number = (uint8_t) (((intptr_t) x) & 0x0ff);
@@ -15452,7 +15486,7 @@ static void comms_rts_build_unit_button_pressed(void *x)
 	}
 }
 
-static void comms_rts_order_command_button_pressed(void *x)
+static void comms_rts_order_command_button_pressed(int wn, void *x)
 {
 	int i;
 	uint8_t rts_command_number = (uint8_t) (((intptr_t) x) & 0x0ff);
@@ -15472,7 +15506,7 @@ static void comms_rts_order_command_button_pressed(void *x)
 	}
 }
 
-static int comms_rts_order_checkbox(void *x)
+static int comms_rts_order_checkbox(int wn, void *x)
 {
 	int *fleet_order_checkbox = x;
 	return *fleet_order_checkbox;
@@ -15494,7 +15528,7 @@ static void send_updated_cipher_key_to_server(void)
 	queue_to_server(pb);
 }
 
-static void crypto_reset_button_pressed(void *x)
+static void crypto_reset_button_pressed(int wn, void *x)
 {
 	int i;
 
@@ -15504,7 +15538,7 @@ static void crypto_reset_button_pressed(void *x)
 		snis_text_input_box_set_contents(comms_ui.crypt_alpha[i], "_");
 }
 
-static void crypt_alpha_input_entered(void *x)
+static void crypt_alpha_input_entered(int wn, void *x)
 {
 	int letter = (intptr_t) x;
 	char value;
@@ -15549,7 +15583,7 @@ static void enable_comms_rts_unit_ordering_buttons(void)
 		snis_button_enable(comms_ui.rts_order_unit_button[i]);
 }
 
-static void comms_fleet_ship_button_pressed(__attribute__((unused)) void *x)
+static void comms_fleet_ship_button_pressed(int wn, __attribute__((unused)) void *x)
 {
 	int i;
 	uint8_t command;
@@ -16167,8 +16201,8 @@ static void science_mouse_click_rotate(int x, int y)
 
 static void science_button_held(int button, int x, int y)
 {
-	x = sng_pixelx_to_screenx(x);
-	y = sng_pixely_to_screeny(y);
+	x = sng_pixelx_to_screenx(0, x);
+	y = sng_pixely_to_screeny(0, y);
 
 	int traffic_throttle = (int) ((frame_rate_hz / 15.0) + 0.5);
 
@@ -16195,8 +16229,8 @@ static void science_button_release(int button, int x, int y)
 	int waypoint_selected = -1;
 	int near_enough_to_fail = 0;
 
-	x = sng_pixelx_to_screenx(x);
-	y = sng_pixely_to_screeny(y);
+	x = sng_pixelx_to_screenx(0, x);
+	y = sng_pixely_to_screeny(0, y);
 	if (button == 3) {
 		science_mouse_click_rotate(x, y);
 		return;
@@ -16250,7 +16284,7 @@ static void science_button_release(int button, int x, int y)
 #define SCIENCE_DATA_W (SCREEN_WIDTH - (20 * SCREEN_WIDTH / 800) - SCIENCE_DATA_X)
 #define SCIENCE_DATA_H (SCREEN_HEIGHT - (40 * SCREEN_HEIGHT / 600) - SCIENCE_DATA_Y)
 
-static void draw_science_graph(struct snis_entity *ship, struct snis_entity *o,
+static void draw_science_graph(int wn, struct snis_entity *ship, struct snis_entity *o,
 		int x1, int y1, int x2, int y2)
 {
 	int i, x;
@@ -16258,18 +16292,18 @@ static void draw_science_graph(struct snis_entity *ship, struct snis_entity *o,
 	int dy1, dy2, bw, probes, dx, pwr;
 	int initial_noise;
 
-	sng_set_foreground(UI_COLOR(science_graph_grid));
-	snis_draw_rectangle(0, x1, y1, (x2 - x1), (y2 - y1));
-	snis_draw_dotted_hline(x1, y1 + (y2 - y1) / 4, x2, 10);
-	snis_draw_dotted_hline(x1, y1 + (y2 - y1) / 2, x2, 10);
-	snis_draw_dotted_hline(x1, y1 + 3 * (y2 - y1) / 4, x2, 10);
+	sng_set_foreground(wn, UI_COLOR(science_graph_grid));
+	snis_draw_rectangle(wn, 0, x1, y1, (x2 - x1), (y2 - y1));
+	snis_draw_dotted_hline(wn, x1, y1 + (y2 - y1) / 4, x2, 10);
+	snis_draw_dotted_hline(wn, x1, y1 + (y2 - y1) / 2, x2, 10);
+	snis_draw_dotted_hline(wn, x1, y1 + 3 * (y2 - y1) / 4, x2, 10);
 
 	x = x1 + (x2 - x1) / 4; 
-	snis_draw_dotted_vline(x, y1, y2, 10);
+	snis_draw_dotted_vline(wn, x, y1, y2, 10);
 	x += (x2 - x1) / 4; 
-	snis_draw_dotted_vline(x, y1, y2, 10);
+	snis_draw_dotted_vline(wn, x, y1, y2, 10);
 	x += (x2 - x1) / 4; 
-	snis_draw_dotted_vline(x, y1, y2, 10);
+	snis_draw_dotted_vline(wn, x, y1, y2, 10);
 	
 	if (o) {
 		if (o != ship) {
@@ -16282,9 +16316,9 @@ static void draw_science_graph(struct snis_entity *ship, struct snis_entity *o,
 			pwr = 255; /* never any trouble scanning our own ship */
 		}
 
-		sng_set_foreground(UI_COLOR(science_graph_plot_strong));
+		sng_set_foreground(wn, UI_COLOR(science_graph_plot_strong));
 		if (o->sdata.shield_strength < 64) {
-			sng_set_foreground(UI_COLOR(science_graph_plot_weak));
+			sng_set_foreground(wn, UI_COLOR(science_graph_plot_weak));
 			if ((timer & 0x07) < 4)
 				goto skip_data;
 		}
@@ -16329,20 +16363,20 @@ static void draw_science_graph(struct snis_entity *ship, struct snis_entity *o,
 			if (x > x2)
 				sx = x2;
 
-			snis_draw_dotted_vline(sx, sy1, sy2, 4);
+			snis_draw_dotted_vline(wn, sx, sy1, sy2, 4);
 		}
 	}
 skip_data:
-	sng_set_foreground(UI_COLOR(science_data_label));
-	sng_abs_xy_draw_string("10", NANO_FONT, x1, y2 + txy(10));
-	sng_abs_xy_draw_string("20", NANO_FONT, x1 + (x2 - x1) / 4 - 10, y2 + txy(10));
-	sng_abs_xy_draw_string("30", NANO_FONT, x1 + 2 * (x2 - x1) / 4 - 10, y2 + txy(10));
-	sng_abs_xy_draw_string("40", NANO_FONT, x1 + 3 * (x2 - x1) / 4 - 10, y2 + txy(10));
-	sng_abs_xy_draw_string("50", NANO_FONT, x1 + 4 * (x2 - x1) / 4 - 20, y2 + txy(10));
-	sng_abs_xy_draw_string("SHIELD PROFILE (NM)", NANO_FONT, x1 + (x2 - x1) / 4 - 10, y2 + txy(20));
+	sng_set_foreground(wn, UI_COLOR(science_data_label));
+	sng_abs_xy_draw_string(wn, "10", NANO_FONT, x1, y2 + txy(10));
+	sng_abs_xy_draw_string(wn, "20", NANO_FONT, x1 + (x2 - x1) / 4 - 10, y2 + txy(10));
+	sng_abs_xy_draw_string(wn, "30", NANO_FONT, x1 + 2 * (x2 - x1) / 4 - 10, y2 + txy(10));
+	sng_abs_xy_draw_string(wn, "40", NANO_FONT, x1 + 3 * (x2 - x1) / 4 - 10, y2 + txy(10));
+	sng_abs_xy_draw_string(wn, "50", NANO_FONT, x1 + 4 * (x2 - x1) / 4 - 20, y2 + txy(10));
+	sng_abs_xy_draw_string(wn, "SHIELD PROFILE (NM)", NANO_FONT, x1 + (x2 - x1) / 4 - 10, y2 + txy(20));
 }
 
-static void draw_science_data(struct snis_entity *ship, struct snis_entity *o, int waypoint_index)
+static void draw_science_data(int wn, struct snis_entity *ship, struct snis_entity *o, int waypoint_index)
 {
 	char buffer[40];
 	char buffer2[40];
@@ -16372,15 +16406,15 @@ static void draw_science_data(struct snis_entity *ship, struct snis_entity *o, i
 		return;
 	x = SCIENCE_DATA_X + 10 * SCREEN_WIDTH / 800;
 	y = SCIENCE_DATA_Y + 15 * SCREEN_HEIGHT / 600;
-	sng_set_foreground(UI_COLOR(sci_wireframe));
-	snis_draw_rectangle(0, SCIENCE_DATA_X, SCIENCE_DATA_Y,
+	sng_set_foreground(wn, UI_COLOR(sci_wireframe));
+	snis_draw_rectangle(wn, 0, SCIENCE_DATA_X, SCIENCE_DATA_Y,
 					SCIENCE_DATA_W, SCIENCE_DATA_H);
 	if (waypoint_index != (uint32_t) -1)  {
 		snprintf(buffer, sizeof(buffer), "NAME: WAYPOINT-%02d", waypoint_index);
-		sng_abs_xy_draw_string(buffer, TINY_FONT, x, y);
+		sng_abs_xy_draw_string(wn, buffer, TINY_FONT, x, y);
 	} else {
 		snprintf(buffer, sizeof(buffer), "NAME: %s", o ? o->sdata.name : "NO SCAN TARGET SELECTED");
-		sng_abs_xy_draw_string(buffer, TINY_FONT, x, y);
+		sng_abs_xy_draw_string(wn, buffer, TINY_FONT, x, y);
 		if (o && (o->type == OBJTYPE_SHIP1 ||
 			o->type == OBJTYPE_SHIP2 ||
 			o->type == OBJTYPE_WARPGATE ||
@@ -16392,13 +16426,13 @@ static void draw_science_data(struct snis_entity *ship, struct snis_entity *o, i
 				o->sdata.faction < nfactions() ?
 					faction_name(o->sdata.faction) : "UNKNOWN" : "UNKNOWN";
 			snprintf(buffer, sizeof(buffer), "ORIG: %s", the_faction);
-			sng_abs_xy_draw_string(buffer, TINY_FONT, x, y);
+			sng_abs_xy_draw_string(wn, buffer, TINY_FONT, x, y);
 			y += yinc;
 			if (o->type != OBJTYPE_DERELICT)
 				snprintf(buffer, sizeof(buffer), "REGISTRATION: %d", o->id);
 			else
 				snprintf(buffer, sizeof(buffer), "REGISTRATION: %d", o->tsd.derelict.orig_ship_id);
-			sng_abs_xy_draw_string(buffer, TINY_FONT, x, y);
+			sng_abs_xy_draw_string(wn, buffer, TINY_FONT, x, y);
 		}
 	}
 
@@ -16451,7 +16485,7 @@ static void draw_science_data(struct snis_entity *ship, struct snis_entity *o, i
 		snprintf(buffer, sizeof(buffer), "TYPE:");
 	}
 	y += yinc;
-	sng_abs_xy_draw_string(buffer, TINY_FONT, x, y);
+	sng_abs_xy_draw_string(wn, buffer, TINY_FONT, x, y);
 
 	if (o)
 		snprintf(buffer, sizeof(buffer), "X: %0.2lf", o->x);
@@ -16460,7 +16494,7 @@ static void draw_science_data(struct snis_entity *ship, struct snis_entity *o, i
 	else
 		snprintf(buffer, sizeof(buffer), "X:");
 	y += yinc;
-	sng_abs_xy_draw_string(buffer, TINY_FONT, x, y);
+	sng_abs_xy_draw_string(wn, buffer, TINY_FONT, x, y);
 
 	if (o)
 		snprintf(buffer, sizeof(buffer), "Y: %0.2lf", o->y);
@@ -16469,7 +16503,7 @@ static void draw_science_data(struct snis_entity *ship, struct snis_entity *o, i
 	else
 		snprintf(buffer, sizeof(buffer), "Y:");
 	y += yinc;
-	sng_abs_xy_draw_string(buffer, TINY_FONT, x, y);
+	sng_abs_xy_draw_string(wn, buffer, TINY_FONT, x, y);
 
 	if (o)
 		snprintf(buffer, sizeof(buffer), "Z: %0.2lf", o->z);
@@ -16478,7 +16512,7 @@ static void draw_science_data(struct snis_entity *ship, struct snis_entity *o, i
 	else
 		snprintf(buffer, sizeof(buffer), "Z:");
 	y += yinc;
-	sng_abs_xy_draw_string(buffer, TINY_FONT, x, y);
+	sng_abs_xy_draw_string(wn, buffer, TINY_FONT, x, y);
 
 	if (o) {
 		double vx = o->x - lastx;
@@ -16499,7 +16533,7 @@ static void draw_science_data(struct snis_entity *ship, struct snis_entity *o, i
 		snprintf(buffer, sizeof(buffer), "VELOCITY: 0.0");
 	}
 	y += yinc;
-	sng_abs_xy_draw_string(buffer, TINY_FONT, x, y);
+	sng_abs_xy_draw_string(wn, buffer, TINY_FONT, x, y);
 
 	if (o || waypoint_index != (uint32_t) -1) {
 		if (o) {
@@ -16528,9 +16562,9 @@ static void draw_science_data(struct snis_entity *ship, struct snis_entity *o, i
 		snprintf(buffer2, sizeof(buffer2), "MARK:");
 	}
 	y += yinc;
-	sng_abs_xy_draw_string(buffer, TINY_FONT, x, y);
+	sng_abs_xy_draw_string(wn, buffer, TINY_FONT, x, y);
 	y += yinc;
-	sng_abs_xy_draw_string(buffer2, TINY_FONT, x, y);
+	sng_abs_xy_draw_string(wn, buffer2, TINY_FONT, x, y);
 
 	if (o || waypoint_index != (uint32_t) -1) {
 		range = dist3d(dx, dy, dz);
@@ -16541,7 +16575,7 @@ static void draw_science_data(struct snis_entity *ship, struct snis_entity *o, i
 		snprintf(buffer, sizeof(buffer), "RANGE:");
 	}
 	y += yinc;
-	sng_abs_xy_draw_string(buffer, TINY_FONT, x, y);
+	sng_abs_xy_draw_string(wn, buffer, TINY_FONT, x, y);
 
 	if (o || waypoint_index != (uint32_t) -1) {
 		/* closing rate is avg of last 2 for hysteresis */
@@ -16555,7 +16589,7 @@ static void draw_science_data(struct snis_entity *ship, struct snis_entity *o, i
 		snprintf(buffer, sizeof(buffer), "CLOSING RATE:");
 	}
 	y += yinc;
-	sng_abs_xy_draw_string(buffer, TINY_FONT, x, y);
+	sng_abs_xy_draw_string(wn, buffer, TINY_FONT, x, y);
 
 	/* Mininum closing rate of 2.0 is somewhat arbitrary, but very low values
 	 * will cause strange ETA results seen e.g. while orbiting a planet with
@@ -16572,7 +16606,7 @@ static void draw_science_data(struct snis_entity *ship, struct snis_entity *o, i
 		snprintf(buffer, sizeof(buffer), "ETA:");
 	}
 	y += yinc;
-	sng_abs_xy_draw_string(buffer, TINY_FONT, x, y);
+	sng_abs_xy_draw_string(wn, buffer, TINY_FONT, x, y);
 
 	if (o || waypoint_index != (uint32_t) -1) {
 		snprintf(buffer, sizeof(buffer), "WARP FACTOR: %2.2lf", 10.0 * range / (XKNOWN_DIM / 2.0));
@@ -16580,21 +16614,21 @@ static void draw_science_data(struct snis_entity *ship, struct snis_entity *o, i
 		snprintf(buffer, sizeof(buffer), "WARP FACTOR:");
 	}
 	y += yinc;
-	sng_abs_xy_draw_string(buffer, TINY_FONT, x, y);
+	sng_abs_xy_draw_string(wn, buffer, TINY_FONT, x, y);
 
 	gx1 = x;
 	gy1 = y + 20 * SCREEN_HEIGHT / 600;
 	gx2 = SCIENCE_DATA_X + SCIENCE_DATA_W - 10 * SCREEN_WIDTH / 800;
 	gy2 = SCIENCE_DATA_Y + SCIENCE_DATA_H - 40 * SCREEN_HEIGHT / 600;
-	draw_science_graph(ship, o, gx1, gy1, gx2, gy2);
+	draw_science_graph(wn, ship, o, gx1, gy1, gx2, gy2);
 
 	if (o && o->sdata.science_text) {
-		sng_set_foreground(UI_COLOR(science_annotation));
-		sng_abs_xy_draw_string(o->sdata.science_text, PICO_FONT, txx(20), txy(300));
+		sng_set_foreground(wn, UI_COLOR(science_annotation));
+		sng_abs_xy_draw_string(wn, o->sdata.science_text, PICO_FONT, txx(20), txy(300));
 	}
 }
 
-static void draw_science_waypoints(void)
+static void draw_science_waypoints(int wn)
 {
 	char buffer[100];
 	int i;
@@ -16610,61 +16644,61 @@ static void draw_science_waypoints(void)
 		ui_hide_widget(sci_ui.clear_waypoint_button[i]);
 		ui_hide_widget(sci_ui.select_waypoint_button[i]);
 	}
-	sng_set_foreground(UI_COLOR(sci_wireframe));
+	sng_set_foreground(wn, UI_COLOR(sci_wireframe));
 
 	x = snis_text_input_box_get_x(sci_ui.waypoint_input[0]);
 	y = snis_text_input_box_get_y(sci_ui.waypoint_input[0]) - font_lineheight[NANO_FONT];
-	sng_abs_xy_draw_string("X", NANO_FONT, x, y);
+	sng_abs_xy_draw_string(wn, "X", NANO_FONT, x, y);
 	x = snis_text_input_box_get_x(sci_ui.waypoint_input[1]);
 	y = snis_text_input_box_get_y(sci_ui.waypoint_input[1]) - font_lineheight[NANO_FONT];
-	sng_abs_xy_draw_string("Y", NANO_FONT, x, y);
+	sng_abs_xy_draw_string(wn, "Y", NANO_FONT, x, y);
 	x = snis_text_input_box_get_x(sci_ui.waypoint_input[2]);
 	y = snis_text_input_box_get_y(sci_ui.waypoint_input[2]) - font_lineheight[NANO_FONT];
-	sng_abs_xy_draw_string("Z", NANO_FONT, x, y);
+	sng_abs_xy_draw_string(wn, "Z", NANO_FONT, x, y);
 
-	sng_abs_xy_draw_string("WAYPOINT", NANO_FONT, txx(100), txy(180));
-	sng_abs_xy_draw_string("X", NANO_FONT, txx(250), txy(180));
-	sng_abs_xy_draw_string("Y", NANO_FONT, txx(350), txy(180));
-	sng_abs_xy_draw_string("Z", NANO_FONT, txx(450), txy(180));
+	sng_abs_xy_draw_string(wn, "WAYPOINT", NANO_FONT, txx(100), txy(180));
+	sng_abs_xy_draw_string(wn, "X", NANO_FONT, txx(250), txy(180));
+	sng_abs_xy_draw_string(wn, "Y", NANO_FONT, txx(350), txy(180));
+	sng_abs_xy_draw_string(wn, "Z", NANO_FONT, txx(450), txy(180));
 	for (i = 0; i < sci_ui.nwaypoints; i++) {
 		if (i != curr_science_waypoint)
-			sng_set_foreground(UI_COLOR(sci_wireframe));
+			sng_set_foreground(wn, UI_COLOR(sci_wireframe));
 		else
-			sng_set_foreground(UI_COLOR(sci_selected_waypoint));
+			sng_set_foreground(wn, UI_COLOR(sci_selected_waypoint));
 		snprintf(buffer, sizeof(buffer), "WP-%02d", i);
-		sng_abs_xy_draw_string(buffer, NANO_FONT, txx(100), txy(210 + i * 25));
+		sng_abs_xy_draw_string(wn, buffer, NANO_FONT, txx(100), txy(210 + i * 25));
 		snprintf(buffer, sizeof(buffer), "%10.1lf", sci_ui.waypoint[i][0]);
-		sng_abs_xy_draw_string(buffer, NANO_FONT, txx(200), txy(210 + i * 25));
+		sng_abs_xy_draw_string(wn, buffer, NANO_FONT, txx(200), txy(210 + i * 25));
 		snprintf(buffer, sizeof(buffer), "%10.1lf", sci_ui.waypoint[i][1]);
-		sng_abs_xy_draw_string(buffer, NANO_FONT, txx(300), txy(210 + i * 25));
+		sng_abs_xy_draw_string(wn, buffer, NANO_FONT, txx(300), txy(210 + i * 25));
 		snprintf(buffer, sizeof(buffer), "%10.1lf", sci_ui.waypoint[i][2]);
-		sng_abs_xy_draw_string(buffer, NANO_FONT, txx(400), txy(210 + i * 25));
+		sng_abs_xy_draw_string(wn, buffer, NANO_FONT, txx(400), txy(210 + i * 25));
 	}
-	sng_set_foreground(UI_COLOR(sci_wireframe));
-	snis_draw_rectangle(0, txx(5), txy(70), txx(760), txy(480));
+	sng_set_foreground(wn, UI_COLOR(sci_wireframe));
+	snis_draw_rectangle(wn, 0, txx(5), txy(70), txx(760), txy(480));
 }
 
-static void science_details_draw_atmosphere_data(struct planetary_atmosphere_profile *atm)
+static void science_details_draw_atmosphere_data(int wn, struct planetary_atmosphere_profile *atm)
 {
 	int i;
 	int y, yinc = 20 * SCREEN_HEIGHT / 600;
 	y = yinc * 4;
 	char buf[100], compound_name[100];
 
-	sng_abs_xy_draw_string("ATMOSPHERIC DATA:", TINY_FONT, 10, y); y += yinc;
+	sng_abs_xy_draw_string(wn, "ATMOSPHERIC DATA:", TINY_FONT, 10, y); y += yinc;
 	yinc = 15 * SCREEN_HEIGHT / 600;
 	snprintf(buf, sizeof(buf), "%30s: %.0f Pa", "PRESSURE", atm->pressure);
-	sng_abs_xy_draw_string(buf, NANO_FONT, 10, y); y += yinc;
+	sng_abs_xy_draw_string(wn, buf, NANO_FONT, 10, y); y += yinc;
 	snprintf(buf, sizeof(buf), "%30s: %.0f K / %.0f C / %.0f F", "TEMPERATURE",
 		atm->temperature, atm->temperature - 273.15, atm->temperature * 9.0 / 5.0 - 459.67);
-	sng_abs_xy_draw_string(buf, NANO_FONT, 10, y); y += yinc;
+	sng_abs_xy_draw_string(wn, buf, NANO_FONT, 10, y); y += yinc;
 	for (i = 0; i < atm->nmajor; i++) {
 		int compound = atm->major_compound[i];
 		char *name = atmospheric_compound[compound].name;
 		char *symbol = atmospheric_compound[compound].symbol;
 		snprintf(compound_name, sizeof(compound_name), "%s (%s)", name, symbol);
 		snprintf(buf, sizeof(buf), "%30s: %3.2f%%\n", compound_name, atm->major_fraction[i] * 100.0);
-		sng_abs_xy_draw_string(buf, NANO_FONT, 10, y); y += yinc;
+		sng_abs_xy_draw_string(wn, buf, NANO_FONT, 10, y); y += yinc;
 	}
 
 	for (i = 0; i < atm->nminor; i++) {
@@ -16673,11 +16707,11 @@ static void science_details_draw_atmosphere_data(struct planetary_atmosphere_pro
 		char *symbol = atmospheric_compound[compound].symbol;
 		snprintf(compound_name, sizeof(compound_name), "%s (%s)", name, symbol);
 		snprintf(buf, sizeof(buf), "%30s: %4.2f ppm\n", compound_name, atm->minor_ppm[i]);
-		sng_abs_xy_draw_string(buf, NANO_FONT, 10, y); y += yinc;
+		sng_abs_xy_draw_string(wn, buf, NANO_FONT, 10, y); y += yinc;
 	}
 }
 
-static void draw_science_details(void)
+static void draw_science_details(int wn)
 {
 	struct entity *e = NULL;
 	struct mesh *m;
@@ -16692,12 +16726,12 @@ static void draw_science_details(void)
 		science_cam_timer += (int) (0.3 * (1000.0 - (float) science_cam_timer));
 
 	if (!curr_science_guy) {
-		sng_center_xy_draw_string("NO SCAN TARGET SELECTED", sdf, txx(260), txy(300));
+		sng_center_xy_draw_string(wn, "NO SCAN TARGET SELECTED", sdf, txx(260), txy(300));
 		return;
 	}
 	if (!curr_science_guy->entity) {
 		/* This mostly should not happen. */
-		sng_center_xy_draw_string("SCAN TARGET NOT IDENTIFIABLE", sdf, txx(260), txy(300));
+		sng_center_xy_draw_string(wn, "SCAN TARGET NOT IDENTIFIABLE", sdf, txx(260), txy(300));
 		return;
 	}
 
@@ -16738,7 +16772,7 @@ static void draw_science_details(void)
 		camera_set_parameters(sciecx, 0.5, 8000.0,
 					SCREEN_WIDTH, SCREEN_HEIGHT, ANGLE_OF_VIEW * M_PI / 180.0);
 		set_lighting(sciecx, -m->radius * 4, 0, m->radius);
-		render_entities(sciecx);
+		render_entities(wn, sciecx);
 	}
 	if (e)
 		remove_entity(sciecx, e);
@@ -16754,9 +16788,9 @@ static void draw_science_details(void)
 			buf[0] = '\0';
 		}
 	}
-	sng_set_foreground(UI_COLOR(sci_details_text));
+	sng_set_foreground(wn, UI_COLOR(sci_details_text));
 	if (buf[0])
-		sng_abs_xy_draw_string(buf, sdf, 10, y);
+		sng_abs_xy_draw_string(wn, buf, sdf, 10, y);
 	y += yinc;
 	if (curr_science_guy->type == OBJTYPE_PLANET) {
 		static uint32_t last = 0xffffffff;
@@ -16769,7 +16803,7 @@ static void draw_science_details(void)
 		struct planetary_atmosphere_profile *atm =
 			planetary_atmosphere_by_index(curr_science_guy->tsd.planet.atmosphere_type);
 
-		science_details_draw_atmosphere_data(atm);
+		science_details_draw_atmosphere_data(wn, atm);
 
 		struct planet_data *p = &curr_science_guy->tsd.planet;
 
@@ -16777,7 +16811,7 @@ static void draw_science_details(void)
 		pt = planet_type_from_string(planet_type_str);
 		snprintf(buf, sizeof(buf), "MASS: %.2f EU / DIAM: %.2f EU",
 				planetary_mass(p->radius, pt), planetary_diameter(p->radius, pt));
-		sng_abs_xy_draw_string(buf, sdf, 10, y);
+		sng_abs_xy_draw_string(wn, buf, sdf, 10, y);
 		y += yinc;
 
 		if (p->custom_description) {
@@ -16794,13 +16828,13 @@ static void draw_science_details(void)
 				planet_desc[i] = toupper(planet_desc[i]);
 		}
 		snprintf(buf, sizeof(buf), "GOVERNMENT: %s", government_name[p->government]);
-		sng_abs_xy_draw_string(buf, sdf, 10, y);
+		sng_abs_xy_draw_string(wn, buf, sdf, 10, y);
 		y += yinc;
 		snprintf(buf, sizeof(buf), "TECH LEVEL: %s", tech_level_name[p->tech_level]);
-		sng_abs_xy_draw_string(buf, sdf, 10, y);
+		sng_abs_xy_draw_string(wn, buf, sdf, 10, y);
 		y += yinc;
 		snprintf(buf, sizeof(buf), "ECONOMY: %s", economy_name[p->economy]);
-		sng_abs_xy_draw_string(buf, sdf, 10, y);
+		sng_abs_xy_draw_string(wn, buf, sdf, 10, y);
 		y += yinc;
 		switch (p->security) {
 		case 0:
@@ -16816,7 +16850,7 @@ static void draw_science_details(void)
 			strcpy(buf, "SECURITY: UNKNOWN");
 			break;
 		}
-		sng_abs_xy_draw_string(buf, sdf, 10, y);
+		sng_abs_xy_draw_string(wn, buf, sdf, 10, y);
 		y += yinc;
 
 		/* break planet_desc into multiple lines */
@@ -16825,7 +16859,7 @@ static void draw_science_details(void)
 		for (i = 0; i <= len; i++) {
 			if (planet_desc[i] == '\n' || planet_desc[i] == '\0') {
 				tmpbuf[j] = '\0';
-				sng_abs_xy_draw_string(tmpbuf, sdf, 10, y);
+				sng_abs_xy_draw_string(wn, tmpbuf, sdf, 10, y);
 				y += 15 * SCREEN_HEIGHT / 600;
 				j = 0;
 			} else {
@@ -16837,16 +16871,16 @@ static void draw_science_details(void)
 	if (curr_science_guy->type == OBJTYPE_ASTEROID) {
 		struct asteroid_data *a = &curr_science_guy->tsd.asteroid;
 		snprintf(buf, sizeof(buf), "%3.0f%% CARBONACEOUS", 100.0 * a->carbon / 255.0);
-		sng_abs_xy_draw_string(buf, sdf, 10, y);
+		sng_abs_xy_draw_string(wn, buf, sdf, 10, y);
 		y += yinc;
 		snprintf(buf, sizeof(buf), "%3.0f%% SILICATES", 100.0 * a->silicates / 255.0);
-		sng_abs_xy_draw_string(buf, sdf, 10, y);
+		sng_abs_xy_draw_string(wn, buf, sdf, 10, y);
 		y += yinc;
 		snprintf(buf, sizeof(buf), "%3.0f%% NICKEL/IRON", 100.0 * a->nickeliron / 255.0);
-		sng_abs_xy_draw_string(buf, sdf, 10, y);
+		sng_abs_xy_draw_string(wn, buf, sdf, 10, y);
 		y += yinc;
 		snprintf(buf, sizeof(buf), "%3.0f%% PRECIOUS METALS", 100.0 * a->preciousmetals / 255.0);
-		sng_abs_xy_draw_string(buf, sdf, 10, y);
+		sng_abs_xy_draw_string(wn, buf, sdf, 10, y);
 		y += yinc;
 	}
 	if (curr_science_guy->type == OBJTYPE_SHIP2 || curr_science_guy->type == OBJTYPE_SHIP1) {
@@ -16861,11 +16895,11 @@ static void draw_science_details(void)
 			snprintf(buf, sizeof(buf), "WEAPONRY: LASERS");
 		else
 			snprintf(buf, sizeof(buf), "WEAPONRY: TORPEDOES");
-		sng_abs_xy_draw_string(buf, sdf, 10, y);
+		sng_abs_xy_draw_string(wn, buf, sdf, 10, y);
 		y += yinc;
 
 		snprintf(buf, sizeof(buf), "MASS: %.1f MT", ship_type[s->shiptype].mass_kg / 1000.0);
-		sng_abs_xy_draw_string(buf, sdf, 10, y);
+		sng_abs_xy_draw_string(wn, buf, sdf, 10, y);
 		y += yinc;
 
 		for (i = 0; i < ship_type[s->shiptype].ncargo_bays; i++) {
@@ -16874,34 +16908,34 @@ static void draw_science_details(void)
 				continue;
 			if (i == 0) {
 				snprintf(buf, sizeof(buf), "PROBABLE CARGO:");
-				sng_abs_xy_draw_string(buf, sdf, 10, y);
+				sng_abs_xy_draw_string(wn, buf, sdf, 10, y);
 				y += yinc;
 			}
 			if (cbc->item >= 0 && cbc->item < ncommodities) {
 				snprintf(buf, sizeof(buf), "- %4.2f %s %s", cbc->qty,
 					commodity[cbc->item].unit, commodity[cbc->item].scans_as);
-				sng_abs_xy_draw_string(buf, sdf, 10, y);
+				sng_abs_xy_draw_string(wn, buf, sdf, 10, y);
 			} else {
-				sng_abs_xy_draw_string("UNKNOWN", sdf, 10, y);
+				sng_abs_xy_draw_string(wn, "UNKNOWN", sdf, 10, y);
 			}
 			y += yinc;
 		}
 	} else if (curr_science_guy->type == OBJTYPE_CARGO_CONTAINER) {
 		struct cargo_container_contents *ccc = &curr_science_guy->tsd.cargo_container.contents;
 		snprintf(buf, sizeof(buf), "PROBABLE CONTENTS:");
-		sng_abs_xy_draw_string(buf, sdf, 10, y);
+		sng_abs_xy_draw_string(wn, buf, sdf, 10, y);
 		y += yinc;
 		if (ccc->item >= 0 && ccc->item < ncommodities) {
 			snprintf(buf, sizeof(buf), "- %4.2f %s %s", ccc->qty,
 				commodity[ccc->item].unit, commodity[ccc->item].scans_as);
-			sng_abs_xy_draw_string(buf, sdf, 10, y);
+			sng_abs_xy_draw_string(wn, buf, sdf, 10, y);
 		} else {
-			sng_abs_xy_draw_string("UNKNOWN", sdf, 10, y);
+			sng_abs_xy_draw_string(wn, "UNKNOWN", sdf, 10, y);
 		}
 	}
 }
 
-static void draw_science_location_indicator(struct snis_entity *o)
+static void draw_science_location_indicator(int wn, struct snis_entity *o)
 {
 	char ssname[12], buf[80];
 
@@ -16909,18 +16943,18 @@ static void draw_science_location_indicator(struct snis_entity *o)
 	ssname[11] = '\0';
 	uppercase(ssname);
 	snprintf(buf, sizeof(buf), "%s SYSTEM", ssname);
-	sng_abs_xy_draw_string(buf, NANO_FONT, txx(200), txy(10));
+	sng_abs_xy_draw_string(wn, buf, NANO_FONT, txx(200), txy(10));
 	snprintf(buf, sizeof(buf), "POSITION:");
-	sng_abs_xy_draw_string(buf, NANO_FONT, txx(360), txy(10));
+	sng_abs_xy_draw_string(wn, buf, NANO_FONT, txx(360), txy(10));
 	snprintf(buf, sizeof(buf), "X: %5.2lf,", o->x);
-	sng_abs_xy_draw_string(buf, NANO_FONT, txx(415), txy(10));
+	sng_abs_xy_draw_string(wn, buf, NANO_FONT, txx(415), txy(10));
 	snprintf(buf, sizeof(buf), "Y: %5.2lf,", o->y);
-	sng_abs_xy_draw_string(buf, NANO_FONT, txx(480), txy(10));
+	sng_abs_xy_draw_string(wn, buf, NANO_FONT, txx(480), txy(10));
 	snprintf(buf, sizeof(buf), "Z: %5.2lf", o->z);
-	sng_abs_xy_draw_string(buf, NANO_FONT, txx(555), txy(10));
+	sng_abs_xy_draw_string(wn, buf, NANO_FONT, txx(555), txy(10));
 }
  
-static void show_3d_science(struct snis_entity *o, int current_zoom)
+static void show_3d_science(int wn, struct snis_entity *o, int current_zoom)
 {
 	int cx, cy, r;
 	double zoom;
@@ -16930,12 +16964,12 @@ static void show_3d_science(struct snis_entity *o, int current_zoom)
 	r = SCIENCE_SCOPE_R;
 	zoom = (MAX_SCIENCE_SCREEN_RADIUS - MIN_SCIENCE_SCREEN_RADIUS) *
 			(current_zoom / 255.0) + MIN_SCIENCE_SCREEN_RADIUS;
-	sng_set_foreground(UI_COLOR(sci_ball_ring));
-	sng_draw_circle(0, cx, cy, r);
-	draw_all_the_3d_science_guys(o, zoom * 4.0, current_zoom * 4.0);
+	sng_set_foreground(wn, UI_COLOR(sci_ball_ring));
+	sng_draw_circle(wn, 0, cx, cy, r);
+	draw_all_the_3d_science_guys(wn, o, zoom * 4.0, current_zoom * 4.0);
 }
 
-static void show_science(void)
+static void show_science(int wn)
 {
 	struct snis_entity *o;
 	double zoom;
@@ -16948,33 +16982,33 @@ static void show_science(void)
 
 	current_zoom = newzoom(current_zoom, o->tsd.ship.scizoom);
 
-	sng_set_foreground(UI_COLOR(sci_coords));
-	draw_science_location_indicator(o);
+	sng_set_foreground(wn, UI_COLOR(sci_coords));
+	draw_science_location_indicator(wn, o);
 	zoom = (MAX_SCIENCE_SCREEN_RADIUS - MIN_SCIENCE_SCREEN_RADIUS) *
 			(current_zoom / 255.0) + MIN_SCIENCE_SCREEN_RADIUS;
-	sng_set_foreground(DARKGREEN); /* zzzz check this */
+	sng_set_foreground(wn, DARKGREEN); /* zzzz check this */
 	switch (sci_ui.details_mode) {
 	case SCI_DETAILS_MODE_SCIPLANE:
-		draw_sciplane_display(o, zoom);
+		draw_sciplane_display(wn, o, zoom);
 		break;
 	case SCI_DETAILS_MODE_WAYPOINTS:
-		draw_science_waypoints();
+		draw_science_waypoints(wn);
 		break;
 	case SCI_DETAILS_MODE_DETAILS:
-		draw_science_details();
-		draw_science_data(o, curr_science_guy, curr_science_waypoint);
+		draw_science_details(wn);
+		draw_science_data(wn, o, curr_science_guy, curr_science_waypoint);
 		break;
 	case SCI_DETAILS_MODE_THREED:
-		show_3d_science(o, current_zoom);
-		draw_science_data(o, curr_science_guy, curr_science_waypoint);
+		show_3d_science(wn, o, current_zoom);
+		draw_science_data(wn, o, curr_science_guy, curr_science_waypoint);
 		break;
 	default: /* shouldn't happen */
-		draw_science_data(o, curr_science_guy, curr_science_waypoint);
+		draw_science_data(wn, o, curr_science_guy, curr_science_waypoint);
 		break;
 	}
 	if (o->tsd.ship.power_data.sensors.i < idiot_light_threshold && (timer & 0x08)) {
-		sng_set_foreground(UI_COLOR(sci_warning));
-		sng_center_xy_draw_string("LOW SENSOR POWER", NANO_FONT, SCREEN_WIDTH / 2, txy(27));
+		sng_set_foreground(wn, UI_COLOR(sci_warning));
+		sng_center_xy_draw_string(wn, "LOW SENSOR POWER", NANO_FONT, SCREEN_WIDTH / 2, txy(27));
 	}
 	if (sci_ui.low_tractor_power_timer > 0) {
 		if (o->tsd.ship.power_data.tractor.i < idiot_light_threshold && (timer & 0x08)) {
@@ -16982,13 +17016,13 @@ static void show_science(void)
 
 			x = snis_button_get_x(sci_ui.tractor_button);
 			y = snis_button_get_y(sci_ui.tractor_button);
-			sng_set_foreground(UI_COLOR(sci_warning));
-			sng_abs_xy_draw_string("LOW TRACTOR POWER", NANO_FONT, x, y - 20);
+			sng_set_foreground(wn, UI_COLOR(sci_warning));
+			sng_abs_xy_draw_string(wn, "LOW TRACTOR POWER", NANO_FONT, x, y - 20);
 		}
 		sci_ui.low_tractor_power_timer--;
 	}
 	populate_science_pull_down_menu();
-	show_common_screen("SCIENCE");
+	show_common_screen(wn, "SCIENCE");
 }
 
 static void update_comms_ui_visibility(struct snis_entity *o)
@@ -17056,7 +17090,7 @@ static void update_comms_ui_visibility(struct snis_entity *o)
 	}
 }
 
-static void show_comms_cryptanalysis(struct snis_entity *o)
+static void show_comms_cryptanalysis(int wn, struct snis_entity *o)
 {
 	int i, len;
 	float x, y, dx;
@@ -17074,7 +17108,7 @@ static void show_comms_cryptanalysis(struct snis_entity *o)
 
 	len = strlen(enciphered_text);
 	if (len == 0) {
-		sng_center_xy_draw_string("NO ENCRYPTED MESSAGES AVAILABLE", TINY_FONT, 400, 300);
+		sng_center_xy_draw_string(wn, "NO ENCRYPTED MESSAGES AVAILABLE", TINY_FONT, 400, 300);
 		return;
 	}
 	for (i = 0; i < len; i++) {
@@ -17084,10 +17118,10 @@ static void show_comms_cryptanalysis(struct snis_entity *o)
 		ciphertext[1] = '\0';
 		plaintext[0] = scipher_decipher_char(ciphertext[0], key);
 		plaintext[1] = '\0';
-		sng_set_foreground(UI_COLOR(comms_text));
-		sng_abs_xy_draw_string(ciphertext, TINY_FONT, x, y);
-		sng_set_foreground(UI_COLOR(comms_plaintext));
-		sng_abs_xy_draw_string(plaintext, TINY_FONT, x, y + dx * 1.5);
+		sng_set_foreground(wn, UI_COLOR(comms_text));
+		sng_abs_xy_draw_string(wn, ciphertext, TINY_FONT, x, y);
+		sng_set_foreground(wn, UI_COLOR(comms_plaintext));
+		sng_abs_xy_draw_string(wn, plaintext, TINY_FONT, x, y + dx * 1.5);
 		x = x + dx;
 		if (x > txx(780)) {
 			x = txx(10);
@@ -17096,14 +17130,14 @@ static void show_comms_cryptanalysis(struct snis_entity *o)
 	}
 	scipher_key_free(key);
 
-	sng_set_foreground(UI_COLOR(comms_text));
+	sng_set_foreground(wn, UI_COLOR(comms_text));
 	crypt_alphax = txx(20);
 	crypt_alphay = txy(415);
 	for (i = 0; i < 26; i++) {
 		char label[2];
 		label[0] = i + 'A';
 		label[1] = '\0';
-		sng_abs_xy_draw_string(label, TINY_FONT, crypt_alphax, crypt_alphay);
+		sng_abs_xy_draw_string(wn, label, TINY_FONT, crypt_alphax, crypt_alphay);
 		crypt_alphax += txx((751 - 20) / 13.0);
 		if (crypt_alphax >= txx(750)) {
 			crypt_alphax = txx(20);
@@ -17115,7 +17149,7 @@ static void show_comms_cryptanalysis(struct snis_entity *o)
 		char letter[2];
 		letter[0] = cipher_alpha_by_freq[i];
 		letter[1] = '\0';
-		sng_abs_xy_draw_string(letter, TINY_FONT, txx(10 + txx(10) * i), txy(565));
+		sng_abs_xy_draw_string(wn, letter, TINY_FONT, txx(10 + txx(10) * i), txy(565));
 	}
 
 	char english_freq[] = "ETAONIRSH";
@@ -17123,11 +17157,11 @@ static void show_comms_cryptanalysis(struct snis_entity *o)
 		char letter[2];
 		letter[0] = english_freq[i];
 		letter[1] = '\0';
-		sng_abs_xy_draw_string(letter, TINY_FONT, txx(10 + txx(10) * i), txy(585));
+		sng_abs_xy_draw_string(wn, letter, TINY_FONT, txx(10 + txx(10) * i), txy(585));
 	}
 }
 
-static void show_comms(void)
+static void show_comms(int wn)
 {
 	struct snis_entity *o;
 	char current_date[32], comms_buffer[100];
@@ -17137,38 +17171,39 @@ static void show_comms(void)
 
 	update_comms_ui_visibility(o); /* switches between cryptanalysis and normal mode */
 
-	show_comms_cryptanalysis(o);
+	show_comms_cryptanalysis(wn, o);
 
 	float shield_ind_x_center = txx(710);
 	float shield_ind_y_center = txy(485);
 
 	if (!o->tsd.ship.comms_crypto_mode) {
 		if (o->sdata.shield_strength < 15) {
-			sng_set_foreground(UI_COLOR(comms_warning));
-			sng_center_xy_draw_string("SHIELDS ARE DOWN", NANO_FONT,
+			sng_set_foreground(wn, UI_COLOR(comms_warning));
+			sng_center_xy_draw_string(wn, "SHIELDS ARE DOWN", NANO_FONT,
 							shield_ind_x_center, shield_ind_y_center);
 		} else {
-			sng_set_foreground(UI_COLOR(comms_good_status));
+			sng_set_foreground(wn, UI_COLOR(comms_good_status));
 			char buf[80];
 			snprintf(buf, sizeof(buf), "SHIELDS ARE %d%%", (int)(o->sdata.shield_strength / 2.55));
-			sng_center_xy_draw_string(buf, NANO_FONT, shield_ind_x_center, shield_ind_y_center);
+			sng_center_xy_draw_string(wn, buf, NANO_FONT, shield_ind_x_center, shield_ind_y_center);
 		}
 	}
-	sng_set_foreground(UI_COLOR(comms_text));
+	sng_set_foreground(wn, UI_COLOR(comms_text));
 	format_date(current_date, sizeof(current_date), universe_timestamp());
 	snprintf(comms_buffer, sizeof(comms_buffer), "TIME: %s", current_date);
-	sng_abs_xy_draw_string(comms_buffer, TINY_FONT, txx(25), txy(55));
+	sng_abs_xy_draw_string(wn, comms_buffer, TINY_FONT, txx(25), txy(55));
 	if (global_rts_mode && !o->tsd.ship.comms_crypto_mode) {
 		snprintf(comms_buffer, sizeof(comms_buffer), "FUNDS: $%6.0f", o->tsd.ship.wallet);
-		sng_abs_xy_draw_string(comms_buffer, TINY_FONT, txx(625), txy(350));
+		sng_abs_xy_draw_string(wn, comms_buffer, TINY_FONT, txx(625), txy(350));
 	}
 	if (!o->tsd.ship.comms_crypto_mode) {
 		snprintf(comms_buffer, sizeof(comms_buffer), "CHANNEL: %u", comms_ui.channel);
-		sng_center_xy_draw_string(comms_buffer, NANO_FONT, shield_ind_x_center, shield_ind_y_center - txy(15));
+		sng_center_xy_draw_string(wn, comms_buffer, NANO_FONT,
+					shield_ind_x_center, shield_ind_y_center - txy(15));
 	}
 	if (global_rts_mode) {
 		if (o->tsd.ship.rts_active_button != 255) {
-			snis_draw_rectangle(0, txx(10), txy(350), SCREEN_WIDTH - txx(200), txy(150));
+			snis_draw_rectangle(wn, 0, txx(10), txy(350), SCREEN_WIDTH - txx(200), txy(150));
 			if (o->tsd.ship.rts_active_button < NUM_RTS_BASES) {
 				struct snis_entity *starbase = rts_find_my_starbase(o->tsd.ship.rts_active_button);
 				if (starbase && starbase->tsd.starbase.time_left_to_build != 0) {
@@ -17183,7 +17218,7 @@ static void show_comms(void)
 						"STARBASE %02d", o->tsd.ship.rts_active_button);
 					enable_comms_rts_unit_ordering_buttons();
 				}
-				sng_abs_xy_draw_string(comms_buffer, TINY_FONT, txx(22), txy(365));
+				sng_abs_xy_draw_string(wn, comms_buffer, TINY_FONT, txx(22), txy(365));
 			} else if (o->tsd.ship.rts_active_button == RTS_HOME_PLANET_BUTTON) {
 				struct snis_entity *home_planet = rts_find_my_home_planet();
 				if (home_planet && home_planet->tsd.planet.time_left_to_build != 0) {
@@ -17198,20 +17233,20 @@ static void show_comms(void)
 						o->sdata.faction, home_planet ? home_planet->sdata.faction : 255);
 					enable_comms_rts_unit_ordering_buttons();
 				}
-				sng_abs_xy_draw_string(comms_buffer, TINY_FONT, txx(22), txy(365));
+				sng_abs_xy_draw_string(wn, comms_buffer, TINY_FONT, txx(22), txy(365));
 			} else if (o->tsd.ship.rts_active_button == RTS_FLEET_BUTTON) {
 				snprintf(comms_buffer, sizeof(comms_buffer), "FLEET");
-				sng_abs_xy_draw_string(comms_buffer, TINY_FONT, txx(22), txy(365));
+				sng_abs_xy_draw_string(wn, comms_buffer, TINY_FONT, txx(22), txy(365));
 			}
 		}
 	}
 	if (o->tsd.ship.missile_lock_detected && timer & 0x08) {
-		sng_set_foreground(BLACK);
-		snis_draw_rectangle(1, txx(100), txy(125), txx(SCREEN_WIDTH - 100), txy(175));
-		sng_set_foreground(UI_COLOR(common_red_alert));
-		sng_center_xy_draw_string("MISSILE LOCK DETECTED", SMALL_FONT, txx(400), txy(150));
+		sng_set_foreground(wn, BLACK);
+		snis_draw_rectangle(wn, 1, txx(100), txy(125), txx(SCREEN_WIDTH - 100), txy(175));
+		sng_set_foreground(wn, UI_COLOR(common_red_alert));
+		sng_center_xy_draw_string(wn, "MISSILE LOCK DETECTED", SMALL_FONT, txx(400), txy(150));
 	}
-	show_common_screen("COMMS");
+	show_common_screen(wn, "COMMS");
 }
 
 static void send_demon_comms_packet_to_server(char *msg)
@@ -17258,14 +17293,14 @@ static int ur_to_usersr(double ur, float x1, float x2)
 	return (ur * SCREEN_WIDTH) / (x2 - x1);
 }
 
-static double user_mousex_to_ux(double x, float x1, float x2)
+static double user_mousex_to_ux(int window, double x, float x1, float x2)
 {
-	return x1 + (x / real_screen_width) * (x2 - x1);
+	return x1 + (x / real_screen_width[window]) * (x2 - x1);
 }
 
-static double user_mousey_to_uz(double y, float y1, float y2)
+static double user_mousey_to_uz(int window, double y, float y1, float y2)
 {
-	return y1 + (y / real_screen_height) * (y2 - y1) / ASPECT_RATIO;
+	return y1 + (y / real_screen_height[window]) * (y2 - y1) / ASPECT_RATIO;
 }
 
 static int ux_to_demonsx(double ux)
@@ -17278,32 +17313,32 @@ static int uz_to_demonsy(double uz)
 	return (uz - demon_ui.uy1) / (demon_ui.uy2 - demon_ui.uy1) * SCREEN_HEIGHT * ASPECT_RATIO;
 }
 
-static double demon_mousex_to_ux(double x)
+static double demon_mousex_to_ux(int window, double x)
 {
-	return user_mousex_to_ux(x, demon_ui.ux1, demon_ui.ux2);
+	return user_mousex_to_ux(window, x, demon_ui.ux1, demon_ui.ux2);
 }
 
-static double demon_mousey_to_uz(double y)
+static double demon_mousey_to_uz(int window, double y)
 {
-	return user_mousey_to_uz(y, demon_ui.uy1, demon_ui.uy2);
+	return user_mousey_to_uz(window, y, demon_ui.uy1, demon_ui.uy2);
 }
 
-static double weapons_mousex_to_yaw(double x)
+static double weapons_mousex_to_yaw(int window, double x)
 {
 	double scaledx;
 	double angle;
 
-	scaledx = (0.9 * real_screen_width - x) / (real_screen_width * 0.8);
+	scaledx = (0.9 * real_screen_width[window] - x) / (real_screen_width[window] * 0.8);
 	angle = scaledx * 2 * M_PI + M_PI; 
 	normalize_angle(&angle);
 	return angle;
 }
 
-static double weapons_mousey_to_pitch(double y)
+static double weapons_mousey_to_pitch(int window, double y)
 {
 	double scaledy;
 
-	scaledy = (real_screen_height - y) / (1.005 * real_screen_height);
+	scaledy = (real_screen_height[window] - y) / (1.005 * real_screen_height[window]);
 	if (scaledy > 1.0f)
 		scaledy = 1.0f;
 	else
@@ -17389,12 +17424,12 @@ static void demon_select_none(void)
 	demon_ui.nselected = 0;
 }
 
-static void demon_button_press(int button, double x, double y)
+static void demon_button_press(int window, int button, double x, double y)
 {
 	/* must be right mouse button so as not to conflict with 'EXECUTE' button. */
 	if (demon_ui.use_3d) {
-		demon_ui.press_mousex = sng_pixelx_to_screenx(x);
-		demon_ui.press_mousey = sng_pixely_to_screeny(y);
+		demon_ui.press_mousex = sng_pixelx_to_screenx(window, x);
+		demon_ui.press_mousey = sng_pixely_to_screeny(window, y);
 		switch (button) {
 		case 2:
 			demon_ui.button2_pressed = 1;
@@ -17407,10 +17442,10 @@ static void demon_button_press(int button, double x, double y)
 		}
 	} else {
 		if (button == 3) {
-			demon_ui.ix = demon_mousex_to_ux(x);
-			demon_ui.iz = demon_mousey_to_uz(y);
-			demon_ui.ix2 = demon_mousex_to_ux(x);
-			demon_ui.iz2 = demon_mousey_to_uz(y);
+			demon_ui.ix = demon_mousex_to_ux(window, x);
+			demon_ui.iz = demon_mousey_to_uz(window, y);
+			demon_ui.ix2 = demon_mousex_to_ux(window, x);
+			demon_ui.iz2 = demon_mousey_to_uz(window, y);
 			demon_ui.selectmode = 1;
 		}
 		if (button == 2) {
@@ -17425,7 +17460,7 @@ static inline int between(double a, double b, double v)
 	return ((a <= v && v <= b) || (b <= v && v <= a));
 }
 
-static void demon_button_create_item(double x, double y, double z)
+static void demon_button_create_item(int window, double x, double y, double z)
 {
 	double ux, uy, uz;
 	uint8_t item_type, data1, data2;
@@ -17435,8 +17470,8 @@ static void demon_button_create_item(double x, double y, double z)
 		uy = y;
 		uz = z;
 	} else {
-		ux = demon_mousex_to_ux(x);
-		uz = demon_mousey_to_uz(z);
+		ux = demon_mousex_to_ux(window, x);
+		uz = demon_mousey_to_uz(window, z);
 		uy = y;
 	}
 
@@ -17523,7 +17558,7 @@ static void demon_button3_release_3d(int button, double x, double y)
 	demon_ui.button3_released = 1;
 }
 
-static void demon_button3_release(int button, double x, double y)
+static void demon_button3_release(int window, int button, double x, double y)
 {
 	int nselected;
 	double ox, oy;
@@ -17532,7 +17567,7 @@ static void demon_button3_release(int button, double x, double y)
 	/* If the item creation buttons selected, create item... */ 
 	if (demon_ui.buttonmode > DEMON_BUTTON_NOMODE &&
 		demon_ui.buttonmode < DEMON_BUTTON_DELETE) {
-		demon_button_create_item(x, 0.0, y);
+		demon_button_create_item(window, x, 0.0, y);
 		return;
 	}
 
@@ -17544,8 +17579,8 @@ static void demon_button3_release(int button, double x, double y)
 
 	ox = x;
 	oy = y;
-	x = x * SCREEN_WIDTH / real_screen_width;
-	y = y * SCREEN_HEIGHT / real_screen_height;
+	x = x * SCREEN_WIDTH / real_screen_width[window];
+	y = y * SCREEN_HEIGHT / real_screen_height[window];
 
 	sx1 = ux_to_demonsx(demon_ui.ix);
 	sy1 = uz_to_demonsy(demon_ui.iz);
@@ -17563,13 +17598,13 @@ static void demon_button3_release(int button, double x, double y)
 			demon_id_selected,
 			demon_deselect, demon_select, &nselected); 
 		if (nselected == 0) {
-			demon_ui.selectedx = demon_mousex_to_ux(ox);
-			demon_ui.selectedz = demon_mousey_to_uz(oy);
+			demon_ui.selectedx = demon_mousex_to_ux(window, ox);
+			demon_ui.selectedz = demon_mousey_to_uz(window, oy);
 		}
 	}
 }
 
-static void demon_button2_release(int button, double x, double y)
+static void demon_button2_release(int window, int button, double x, double y)
 {
 	int i;
 	double dx, dy, dz;
@@ -17578,9 +17613,9 @@ static void demon_button2_release(int button, double x, double y)
 		return;
 
 	/* Moving objects... */
-	dx = demon_mousex_to_ux(x) - demon_mousex_to_ux(demon_ui.move_from_x);
+	dx = demon_mousex_to_ux(window, x) - demon_mousex_to_ux(window, demon_ui.move_from_x);
 	dy = 0.0;
-	dz = demon_mousey_to_uz(y) - demon_mousey_to_uz(demon_ui.move_from_y);
+	dz = demon_mousey_to_uz(window, y) - demon_mousey_to_uz(window, demon_ui.move_from_y);
 	
 	pthread_mutex_lock(&universe_mutex);
 	for (i = 0; i < demon_ui.nselected; i++) {
@@ -17596,17 +17631,17 @@ static void demon_button2_release(int button, double x, double y)
 	pthread_mutex_unlock(&universe_mutex);
 }
 
-static void demon_button_release(int button, double x, double y)
+static void demon_button_release(int wn, int button, double x, double y)
 {
 	if (demon_ui.use_3d) {
 		switch (button) {
 		case 2:
 			demon_button2_release_3d(button,
-				sng_pixelx_to_screenx(x), sng_pixely_to_screeny(y));
+				sng_pixelx_to_screenx(wn, x), sng_pixely_to_screeny(wn, y));
 			break;
 		case 3:
 			demon_button3_release_3d(button,
-				sng_pixelx_to_screenx(x), sng_pixely_to_screeny(y));
+				sng_pixelx_to_screenx(wn, x), sng_pixely_to_screeny(wn, y));
 			break;
 		default:
 			break;
@@ -17615,34 +17650,34 @@ static void demon_button_release(int button, double x, double y)
 	}
 	switch (button) {
 	case 2:
-		demon_button2_release(button, x, y);
+		demon_button2_release(wn, button, x, y);
 		return;
 	case 3:
-		demon_button3_release(button, x, y);
+		demon_button3_release(wn, button, x, y);
 		return;
 	default:
 		return;
 	}
 }
 
-static void do_damcon_button_release(int button, double x, double y)
+static void do_damcon_button_release(int wn, int button, double x, double y)
 {
 	switch (button) {
 	case 3:
-		robot_gripper_button_pressed(NULL);
+		robot_gripper_button_pressed(wn, NULL);
 		break;
 	default:
 		break;
 	}
 }
 
-static void debug_draw_ship_patrol_route(uint8_t npoints, union vec3 patrol[],
+static void debug_draw_ship_patrol_route(int wn, uint8_t npoints, union vec3 patrol[],
 	float ux1, float uy1, float ux2, float uy2)
 {
 	union vec3 *v1, *v2;
 	float x1, y1, x2, y2;
 
-	sng_set_foreground(UI_COLOR(demon_patrol_route));
+	sng_set_foreground(wn, UI_COLOR(demon_patrol_route));
 	for (int i = 1; i <= npoints; i++) {
 		v1 = &patrol[i - 1];
 		v2 = &patrol[i % npoints];
@@ -17651,29 +17686,29 @@ static void debug_draw_ship_patrol_route(uint8_t npoints, union vec3 patrol[],
 		y1 = (float) uz_to_usersy((double) v1->v.z, uy1, uy2);
 		x2 = (float) ux_to_usersx((double) v2->v.x, ux1, ux2);
 		y2 = (float) uz_to_usersy((double) v2->v.z, uy1, uy2);
-		sng_draw_dotted_line(x1, y1, x2, y2);
+		sng_draw_dotted_line(wn, x1, y1, x2, y2);
 	}
 }
 
-static void draw_selection_marker(int x1, int y1, int x2, int y2, int offset, uint32_t oid)
+static void draw_selection_marker(int wn, int x1, int y1, int x2, int y2, int offset, uint32_t oid)
 {
 	const int w = 3;
 	char oidstr[12];
 	offset += (4 - ((timer >> 1) % 4));
 
-	snis_draw_line(x1 - offset, y1 - offset, x1 - offset + w, y1 - offset);
-	snis_draw_line(x1 - offset, y1 - offset, x1 - offset, y1 - offset + w);
-	snis_draw_line(x2 + offset, y1 - offset, x2 + offset - w, y1 - offset);
-	snis_draw_line(x2 + offset, y1 - offset, x2 + offset, y1 - offset + w);
-	snis_draw_line(x1 - offset, y2 + offset - w, x1 - offset, y2 + offset);
-	snis_draw_line(x1 - offset, y2 + offset, x1 - offset + w, y2 + offset);
-	snis_draw_line(x2 + offset, y2 + offset - w, x2 + offset, y2 + offset);
-	snis_draw_line(x2 + offset - w, y2 + offset, x2 + offset, y2 + offset);
+	snis_draw_line(wn, x1 - offset, y1 - offset, x1 - offset + w, y1 - offset);
+	snis_draw_line(wn, x1 - offset, y1 - offset, x1 - offset, y1 - offset + w);
+	snis_draw_line(wn, x2 + offset, y1 - offset, x2 + offset - w, y1 - offset);
+	snis_draw_line(wn, x2 + offset, y1 - offset, x2 + offset, y1 - offset + w);
+	snis_draw_line(wn, x1 - offset, y2 + offset - w, x1 - offset, y2 + offset);
+	snis_draw_line(wn, x1 - offset, y2 + offset, x1 - offset + w, y2 + offset);
+	snis_draw_line(wn, x2 + offset, y2 + offset - w, x2 + offset, y2 + offset);
+	snis_draw_line(wn, x2 + offset - w, y2 + offset, x2 + offset, y2 + offset);
 	snprintf(oidstr, sizeof(oidstr) - 1, "%u", oid);
-	sng_abs_xy_draw_string(oidstr, PICO_FONT, x1 + 8, y1 - 8);
+	sng_abs_xy_draw_string(wn, oidstr, PICO_FONT, x1 + 8, y1 - 8);
 }
 
-static void debug_draw_object(struct snis_entity *o,
+static void debug_draw_object(int wn, struct snis_entity *o,
 			float ux1, float uy1, float ux2, float uy2)
 {
 	int x, y, x1, y1, x2, y2, vx, vy, r;
@@ -17703,7 +17738,7 @@ static void debug_draw_object(struct snis_entity *o,
 
 	switch (o->type) {
 	case OBJTYPE_SHIP1:
-		sng_set_foreground(UI_COLOR(demon_self));
+		sng_set_foreground(wn, UI_COLOR(demon_self));
 		if ((timer & 0x02) && !demon_id_selected(o->id))
 			goto done_drawing_item;
 		break;
@@ -17711,10 +17746,10 @@ static void debug_draw_object(struct snis_entity *o,
 
 #define FACTION_COLORS 8
 		if (o->sdata.science_data_known)
-			sng_set_foreground((o->sdata.faction % FACTION_COLORS) + 2);
+			sng_set_foreground(wn, (o->sdata.faction % FACTION_COLORS) + 2);
 		else
-			sng_set_foreground(1); /* unknown faction */
-		sng_set_foreground((o->sdata.faction % FACTION_COLORS) + 2);
+			sng_set_foreground(wn, 1); /* unknown faction */
+		sng_set_foreground(wn, (o->sdata.faction % FACTION_COLORS) + 2);
 
 		if (o->tsd.ship.ai[0].u.attack.victim_id != -1) {
 			int vi = lookup_object_by_id(o->tsd.ship.ai[0].u.attack.victim_id);
@@ -17726,95 +17761,95 @@ static void debug_draw_object(struct snis_entity *o,
 		}
 		break;
 	case OBJTYPE_ASTEROID:
-		sng_set_foreground(UI_COLOR(demon_asteroid));
+		sng_set_foreground(wn, UI_COLOR(demon_asteroid));
 		break;
 	case OBJTYPE_DERELICT:
-		sng_set_foreground(UI_COLOR(demon_derelict));
+		sng_set_foreground(wn, UI_COLOR(demon_derelict));
 		break;
 	case OBJTYPE_NEBULA:
-		sng_set_foreground(UI_COLOR(demon_nebula));
-		sng_draw_circle(0, x, y,
+		sng_set_foreground(wn, UI_COLOR(demon_nebula));
+		sng_draw_circle(wn, 0, x, y,
 			ur_to_usersr(o->tsd.nebula.r, ux1, ux2));
 		break;
 	case OBJTYPE_STARBASE:
-		sng_set_foreground(UI_COLOR(demon_starbase));
-		sng_draw_circle(0, x, y, 5);
+		sng_set_foreground(wn, UI_COLOR(demon_starbase));
+		sng_draw_circle(wn, 0, x, y, 5);
 		break;
 	case OBJTYPE_BLACK_HOLE:
-		sng_set_foreground(UI_COLOR(demon_black_hole));
+		sng_set_foreground(wn, UI_COLOR(demon_black_hole));
 		r = ur_to_usersr(o->tsd.black_hole.radius, ux1, ux2);
-		sng_draw_circle(0, x, y, r > 5 ? r : 5);
+		sng_draw_circle(wn, 0, x, y, r > 5 ? r : 5);
 		break;
 	case OBJTYPE_PLANET:
-		sng_set_foreground(UI_COLOR(demon_planet));
+		sng_set_foreground(wn, UI_COLOR(demon_planet));
 		r = ur_to_usersr(o->tsd.planet.radius, ux1, ux2);
-		sng_draw_circle(0, x, y, r > 5 ? r : 5);
+		sng_draw_circle(wn, 0, x, y, r > 5 ? r : 5);
 		break;
 	case OBJTYPE_WORMHOLE:
-		sng_set_foreground(UI_COLOR(demon_wormhole));
-		sng_draw_circle(0, x, y, 5);
+		sng_set_foreground(wn, UI_COLOR(demon_wormhole));
+		sng_draw_circle(wn, 0, x, y, 5);
 		break;
 	case OBJTYPE_SPACEMONSTER:
-		sng_set_foreground(UI_COLOR(demon_spacemonster));
-		snis_draw_arrow(x, y, SCIENCE_SCOPE_R, o->heading, 0.4);
-		sng_abs_xy_draw_string("M", PICO_FONT,
+		sng_set_foreground(wn, UI_COLOR(demon_spacemonster));
+		snis_draw_arrow(wn, x, y, SCIENCE_SCOPE_R, o->heading, 0.4);
+		sng_abs_xy_draw_string(wn, "M", PICO_FONT,
 			x - cos(o->heading) * txx(8), y + sin(o->heading) * txy(8));
 		break;
 	default:
-		sng_set_foreground(UI_COLOR(demon_default));
+		sng_set_foreground(wn, UI_COLOR(demon_default));
 	}
 	if (tardy)
-		sng_set_foreground(timer & 0x04 ? WHITE : BLACK);
+		sng_set_foreground(wn, timer & 0x04 ? WHITE : BLACK);
 
-	snis_draw_line(x1, y1, x2, y2);
-	snis_draw_line(x1, y2, x2, y1);
+	snis_draw_line(wn, x1, y1, x2, y2);
+	snis_draw_line(wn, x1, y2, x2, y1);
 	if (demon_id_selected(o->id)) {
-		draw_selection_marker(x1, y1, x2, y2, 6, o->id);
+		draw_selection_marker(wn, x1, y1, x2, y2, 6, o->id);
 		if (o->type == OBJTYPE_SHIP1 || o->type == OBJTYPE_SHIP2) {
-			snis_draw_arrow(x, y, SCIENCE_SCOPE_R, o->heading, 0.4);
+			snis_draw_arrow(wn, x, y, SCIENCE_SCOPE_R, o->heading, 0.4);
 		}
 		if (o->type == OBJTYPE_SHIP2 && (timer & 0x04))
-			debug_draw_ship_patrol_route(o->tsd.ship.ai[1].u.patrol.npoints,
+			debug_draw_ship_patrol_route(wn, o->tsd.ship.ai[1].u.patrol.npoints,
 						o->tsd.ship.ai[1].u.patrol.p,
 						ux1, uy1, ux2, uy2);
 	} else {
 		if (o->type == OBJTYPE_SHIP1 || o->type == OBJTYPE_SHIP2) {
-			snis_draw_arrow(x, y, SCIENCE_SCOPE_R, o->heading, 0.4);
+			snis_draw_arrow(wn, x, y, SCIENCE_SCOPE_R, o->heading, 0.4);
 		}
 	}
 
 	if (o->type == OBJTYPE_SHIP1 || o->type == OBJTYPE_SHIP2) {
 		float threat_level, toughness;
-		sng_abs_xy_draw_string(o->sdata.name, NANO_FONT,
+		sng_abs_xy_draw_string(wn, o->sdata.name, NANO_FONT,
 					x + xoffset, y + yoffset);
-		sng_abs_xy_draw_string(o->ai, NANO_FONT,
+		sng_abs_xy_draw_string(wn, o->ai, NANO_FONT,
 					x + xoffset, y + yoffset + 10);
 		if (o->tsd.ship.threat_level != 0.0) {
 			toughness = (255.0 - o->tsd.ship.damage.shield_damage) / 255.0;
 			threat_level = o->tsd.ship.threat_level / (toughness + 0.001);
 			snprintf(buffer, sizeof(buffer), "TL: %.1f", threat_level);
-			sng_abs_xy_draw_string(buffer, NANO_FONT, x + xoffset, y + yoffset + 20);
+			sng_abs_xy_draw_string(wn, buffer, NANO_FONT, x + xoffset, y + yoffset + 20);
 		}
 		if (o->type == OBJTYPE_SHIP1 && !(timer & 0x02)) {
-			sng_set_foreground(MAGENTA);
-			sng_draw_circle(0, x, y, txx(20));
+			sng_set_foreground(wn, MAGENTA);
+			sng_draw_circle(wn, 0, x, y, txx(20));
 		}
 	}
 	if (v) {
-		sng_set_foreground(UI_COLOR(demon_victim_vector));
-		sng_draw_dotted_line(x, y, vx, vy);
+		sng_set_foreground(wn, UI_COLOR(demon_victim_vector));
+		sng_draw_dotted_line(wn, x, y, vx, vy);
 	}
 
 	if ((o->type == OBJTYPE_SHIP2 || o->type == OBJTYPE_STARBASE) &&
 			go_index(o) == demon_ui.captain_of) {
-		sng_set_foreground(UI_COLOR(demon_starbase));
-		sng_draw_circle(0, x, y, 10 + (timer % 10));
+		sng_set_foreground(wn, UI_COLOR(demon_starbase));
+		sng_draw_circle(wn, 0, x, y, 10 + (timer % 10));
 	}
 	
 done_drawing_item:
 
-	sng_set_foreground(UI_COLOR(demon_default));
-	sng_abs_xy_draw_string(demon_ui.error_msg, NANO_FONT, 20, 570);
+	sng_set_foreground(wn, UI_COLOR(demon_default));
+	sng_abs_xy_draw_string(wn, demon_ui.error_msg, NANO_FONT, 20, 570);
 	return;
 }
 
@@ -17858,17 +17893,17 @@ static struct demon_cmd_def {
 static int demon_help_mode = 0;
 #define DEMON_CMD_DELIM " ,"
 
-static void show_cmd_help(struct demon_cmd_def cmd[], int nitems)
+static void show_cmd_help(int wn, struct demon_cmd_def cmd[], int nitems)
 {
 	int i;
 	char buffer[100];
 
-	sng_set_foreground(UI_COLOR(help_text));
+	sng_set_foreground(wn, UI_COLOR(help_text));
 	for (i = 0; i < nitems; i++) {
 		snprintf(buffer, sizeof(buffer), "%s", cmd[i].verb);
-		sng_abs_xy_draw_string(buffer, PICO_FONT, txx(85), txy(i * 15 + 60));
+		sng_abs_xy_draw_string(wn, buffer, PICO_FONT, txx(85), txy(i * 15 + 60));
 		snprintf(buffer, sizeof(buffer), "%s", cmd[i].help);
-		sng_abs_xy_draw_string(buffer, PICO_FONT, txx(170), txy(i * 15 + 60));
+		sng_abs_xy_draw_string(wn, buffer, PICO_FONT, txx(170), txy(i * 15 + 60));
 	}
 }
 
@@ -17884,11 +17919,11 @@ static void add_demon_cmd_help_to_console(struct demon_cmd_def cmd[], int nitems
 	}
 }
 
-static void demon_cmd_help(void)
+static void demon_cmd_help(int wn)
 {
 	if (!demon_help_mode)
 		return;
-	show_cmd_help(demon_cmd, ARRAYSIZE(demon_cmd));
+	show_cmd_help(wn, demon_cmd, ARRAYSIZE(demon_cmd));
 }
 
 static struct demon_group {
@@ -18460,7 +18495,7 @@ static void send_demon_text_command(char *command)
 		print_demon_console_msg(demon_ui.error_msg);
 }
 
-static void demon_exec_button_pressed(void *x)
+static void demon_exec_button_pressed(int wn, void *x)
 {
 	send_demon_text_command(demon_ui.input);
 	snis_text_input_box_zero(demon_ui.demon_input);
@@ -18490,7 +18525,7 @@ static void set_demon_button_colors()
 		demon_ui.buttonmode == DEMON_BUTTON_CAPTAINMODE ? selected : deselected);
 }
 
-static void demon_button_create_item_3d(int button_mode)
+static void demon_button_create_item_3d(int window, int button_mode)
 {
 	union vec3 pos = { { 1.0, 0.0, 0.0 } };
 	float distance = demon_ui.exaggerated_scale * XKNOWN_DIM * 0.005 +
@@ -18501,13 +18536,13 @@ static void demon_button_create_item_3d(int button_mode)
 	vec3_add_self(&pos, &demon_ui.camera_pos);
 	demon_ui.buttonmode = button_mode;
 	set_demon_button_colors();
-	demon_button_create_item((double) pos.v.x, (double) pos.v.y, (double) pos.v.z);
+	demon_button_create_item(window, (double) pos.v.x, (double) pos.v.y, (double) pos.v.z);
 }
 
 static void demon_modebutton_pressed(int whichmode)
 {
 	if (demon_ui.use_3d && whichmode != DEMON_BUTTON_CAPTAINMODE) {
-		demon_button_create_item_3d(whichmode);
+		demon_button_create_item_3d(0, whichmode);
 	} else {
 		if (demon_ui.buttonmode == whichmode)
 			demon_ui.buttonmode = DEMON_BUTTON_NOMODE;
@@ -18517,7 +18552,7 @@ static void demon_modebutton_pressed(int whichmode)
 	}
 }
 
-static void demon_home_button_pressed(void *x)
+static void demon_home_button_pressed(int wn, void *x)
 {
 	if (demon_ui.use_3d) {
 		home_demon_camera();
@@ -18529,7 +18564,7 @@ static void demon_home_button_pressed(void *x)
 	}
 }
 
-static void demon_ship_button_pressed(void *x)
+static void demon_ship_button_pressed(int wn, void *x)
 {
 	uint8_t data = (uint8_t) (((intptr_t) x) & 0x0ff);
 	if (data == 255)
@@ -18538,55 +18573,55 @@ static void demon_ship_button_pressed(void *x)
 	demon_modebutton_pressed(DEMON_BUTTON_SHIPMODE);
 }
 
-static void demon_faction_button_pressed(void *x)
+static void demon_faction_button_pressed(int wn, void *x)
 {
 	int faction = (int) ((intptr_t) x);
 	demon_ui.faction = faction % (nfactions() + 1);
 }
 
-static void demon_starbase_button_pressed(void *x)
+static void demon_starbase_button_pressed(int wn, void *x)
 {
 	demon_modebutton_pressed(DEMON_BUTTON_STARBASEMODE);
 }
 
-static void demon_planet_button_pressed(void *x)
+static void demon_planet_button_pressed(int wn, void *x)
 {
 	demon_modebutton_pressed(DEMON_BUTTON_PLANETMODE);
 }
 
-static void demon_black_hole_button_pressed(void *x)
+static void demon_black_hole_button_pressed(int wn, void *x)
 {
 	demon_modebutton_pressed(DEMON_BUTTON_BLACKHOLEMODE);
 }
 
-static void demon_asteroid_button_pressed(void *x)
+static void demon_asteroid_button_pressed(int wn, void *x)
 {
 	demon_modebutton_pressed(DEMON_BUTTON_ASTEROIDMODE);
 }
 
-static void demon_nebula_button_pressed(void *x)
+static void demon_nebula_button_pressed(int wn, void *x)
 {
 	demon_modebutton_pressed(DEMON_BUTTON_NEBULAMODE);
 }
 
-static void demon_spacemonster_button_pressed(void *x)
+static void demon_spacemonster_button_pressed(int wn, void *x)
 {
 	demon_modebutton_pressed(DEMON_BUTTON_SPACEMONSTERMODE);
 }
 
-static void demon_captain_button_pressed(void *x)
+static void demon_captain_button_pressed(int wn, void *x)
 {
 	demon_modebutton_pressed(DEMON_BUTTON_CAPTAINMODE);
 }
 
-static void demon_mission_button_pressed(void *x)
+static void demon_mission_button_pressed(int wn, void *x)
 {
 	char *scriptname = (char *) x;
 
 	send_lua_script_packet_to_server(scriptname);
 }
 
-static void demon_utility_button_pressed(void *x)
+static void demon_utility_button_pressed(int wn, void *x)
 {
 	char *scriptname = (char *) x;
 	char command[256];
@@ -18604,7 +18639,7 @@ static void demon_utility_button_pressed(void *x)
 	send_lua_script_packet_to_server(scriptname);
 }
 
-static void demon_delete_button_pressed(void *x)
+static void demon_delete_button_pressed(int wn, void *x)
 {
 	int i;
 
@@ -18616,12 +18651,12 @@ static void demon_delete_button_pressed(void *x)
 	pthread_mutex_unlock(&universe_mutex);
 }
 
-static void demon_select_none_button_pressed(void *x)
+static void demon_select_none_button_pressed(int wn, void *x)
 {
 	demon_select_none();
 }
 
-static void demon_torpedo_button_pressed(void *x)
+static void demon_torpedo_button_pressed(int wn, void *x)
 {
 	if (demon_ui.captain_of < 0)
 		return;
@@ -18631,7 +18666,7 @@ static void demon_torpedo_button_pressed(void *x)
 				go[demon_ui.captain_of].id));
 }
 
-static void demon_phaser_button_pressed(void *x)
+static void demon_phaser_button_pressed(int wn, void *x)
 {
 	if (demon_ui.captain_of < 0)
 		return;
@@ -18641,7 +18676,7 @@ static void demon_phaser_button_pressed(void *x)
 				go[demon_ui.captain_of].id));
 }
 
-static void demon_2d3d_button_pressed(void *x)
+static void demon_2d3d_button_pressed(int wn, void *x)
 {
 	demon_ui.use_3d = !demon_ui.use_3d;
 	if (demon_ui.use_3d) {
@@ -18653,7 +18688,7 @@ static void demon_2d3d_button_pressed(void *x)
 	}
 }
 
-static void demon_move_button_pressed(void *x)
+static void demon_move_button_pressed(int wn, void *x)
 {
 	double avgx, avgy, avgz, dx, dy, dz;
 	int i, count;
@@ -18702,7 +18737,7 @@ static void demon_move_button_pressed(void *x)
 	}
 }
 
-static void demon_scale_button_pressed(void *x)
+static void demon_scale_button_pressed(int wn, void *x)
 {
 	if (demon_ui.desired_exaggerated_scale > 0.0) {
 		demon_ui.desired_exaggerated_scale = 0.0;
@@ -18718,7 +18753,7 @@ static int demon_scale_checkbox(void *x)
 	return demon_ui.exaggerated_scale_active;
 }
 
-static void demon_rocket_noise_pressed(void *x)
+static void demon_rocket_noise_pressed(int wn, void *x)
 {
 	suppress_rocket_noise = !suppress_rocket_noise;
 }
@@ -18728,12 +18763,12 @@ static int demon_rocket_noise_checkbox(void *x)
 	return !suppress_rocket_noise;
 }
 
-static void demon_planet_water_specularity_pressed(void *x)
+static void demon_planet_water_specularity_pressed(int wn, void *x)
 {
 	graph_dev_planet_specularity = !graph_dev_planet_specularity;
 }
 
-static void demon_enscript_solarsystem_pressed(void *x)
+static void demon_enscript_solarsystem_pressed(int wn, void *x)
 {
 	send_enscript_packet_to_server("ENSCRIPTED_SOLARSYSTEM.LUA");
 	print_demon_console_msg("SAVING TO ENSCRIPTED_SOLARSYSTEM.LUA IF ENABLED ON SERVER");
@@ -18744,7 +18779,7 @@ static int demon_planet_water_specularity_checkbox(void *x)
 	return graph_dev_planet_specularity;
 }
 
-static void demon_netstats_button_pressed(void *x)
+static void demon_netstats_button_pressed(int wn, void *x)
 {
 	if (!demon_ui.netstats_active) {
 		ui_unhide_widget(demon_ui.bytes_sent_strip_chart);
@@ -18764,7 +18799,7 @@ static int demon_netstats_checkbox(void *x)
 	return demon_ui.netstats_active;
 }
 
-static void demon_render_style_pressed(void *x)
+static void demon_render_style_pressed(int wn, void *x)
 {
 	demon_ui.render_style = !demon_ui.render_style;
 }
@@ -18774,7 +18809,7 @@ static int demon_render_style_checkbox(void *x)
 	return demon_ui.render_style;
 }
 
-static void demon_console_pressed(void *x)
+static void demon_console_pressed(int wn, void *x)
 {
 	demon_ui.console_active = !demon_ui.console_active;
 }
@@ -19127,7 +19162,8 @@ static void init_demon_ui()
 	snis_debug_dump_set_label("CLIENT");
 }
 
-static void calculate_new_2d_zoom(int direction /* 1 = up, 0 = down */, double x, double y, double zoom_amount,
+static void calculate_new_2d_zoom(int window, int direction /* 1 = up, 0 = down */,
+	double x, double y, double zoom_amount,
 	float *ux1, float *uy1, float *ux2, float *uy2)
 {
 	double nx1, nx2, ny1, ny2, mux, muy;
@@ -19137,8 +19173,8 @@ static void calculate_new_2d_zoom(int direction /* 1 = up, 0 = down */, double x
 		zoom_factor = 1.0 - zoom_amount;
 	else
 		zoom_factor = 1.0 + zoom_amount;
-	mux = x * (*ux2 - *ux1) / (double) real_screen_width;
-	muy = y * (*uy2 - *uy1) / (double) real_screen_height;
+	mux = x * (*ux2 - *ux1) / (double) real_screen_width[window];
+	muy = y * (*uy2 - *uy1) / (double) real_screen_height[window];
 	mux += *ux1;
 	muy += *uy1;
 	nx1 = mux - zoom_factor * (mux - *ux1);
@@ -19151,9 +19187,9 @@ static void calculate_new_2d_zoom(int direction /* 1 = up, 0 = down */, double x
 	*uy2 = ny2;
 }
 
-static void calculate_new_demon_zoom(int direction, double x, double y)
+static void calculate_new_demon_zoom(int window, int direction, double x, double y)
 {
-	calculate_new_2d_zoom(direction, x, y, 0.05,
+	calculate_new_2d_zoom(window, direction, x, y, 0.05,
 			&demon_ui.ux1, &demon_ui.uy1, &demon_ui.ux2, &demon_ui.uy2);
 }
 
@@ -19171,17 +19207,17 @@ static void demon_3d_scroll(int direction /* 1 = up, 0 = down */, double x, doub
 	vec3_add(&demon_ui.desired_camera_pos, &demon_ui.camera_pos, &delta);
 }
 
-static void show_demon_groups(void)
+static void show_demon_groups(int wn)
 {
 	int i;
-	sng_set_foreground(UI_COLOR(demon_group_text));
+	sng_set_foreground(wn, UI_COLOR(demon_group_text));
 
 	for (i = 0; i < ndemon_groups; i++)
-		sng_abs_xy_draw_string(demon_group[i].name,
+		sng_abs_xy_draw_string(wn, demon_group[i].name,
 			NANO_FONT, SCREEN_WIDTH - 50, i * 18 + 40);
 }
 
-static void show_2d_universe_grid(float x1, float y1, float x2, float y2)
+static void show_2d_universe_grid(int wn, float x1, float y1, float x2, float y2)
 {
 	int x, y;
 	double ix, iy;
@@ -19207,7 +19243,7 @@ static void show_2d_universe_grid(float x1, float y1, float x2, float y2)
 			sy2 = SCREEN_HEIGHT;
 		if (sy2 < 0)
 			continue;
-		snis_draw_dotted_vline(sx1, sy1, sy2, 5);
+		snis_draw_dotted_vline(wn, sx1, sy1, sy2, 5);
 	}
 
 	iy = ZKNOWN_DIM / 10.0;
@@ -19227,7 +19263,7 @@ static void show_2d_universe_grid(float x1, float y1, float x2, float y2)
 			sx2 = SCREEN_WIDTH;
 		if (sx2 < 0)
 			continue;
-		snis_draw_dotted_hline(sx1, sy1, sx2, 5);
+		snis_draw_dotted_hline(wn, sx1, sy1, sx2, 5);
 	}
 
 	ix = XKNOWN_DIM / 10;
@@ -19239,21 +19275,21 @@ static void show_2d_universe_grid(float x1, float y1, float x2, float y2)
 			snprintf(label, sizeof(label), "%c%d", letters[y], x);
 			tx = ux_to_usersx(x * ix - 0.5 * XKNOWN_DIM, x1, x2);
 			ty = uz_to_usersy(y * iy - 0.5 * XKNOWN_DIM, y1, y2);
-			sng_abs_xy_draw_string(label, NANO_FONT,
+			sng_abs_xy_draw_string(wn, label, NANO_FONT,
 				tx + xoffset,ty + yoffset);
 		}
 }
 
-static void draw_2d_small_cross(float x, float y, int color, int blink)
+static void draw_2d_small_cross(int wn, float x, float y, int color, int blink)
 {
 	if (!blink || timer & 0x02) {
-		sng_set_foreground(color);
-		snis_draw_line(x - 3, y, x + 3, y);
-		snis_draw_line(x, y - 3, x, y + 3);
+		sng_set_foreground(wn, color);
+		snis_draw_line(wn, x - 3, y, x + 3, y);
+		snis_draw_line(wn, x, y - 3, x, y + 3);
 	}
 }
 
-static void show_demon_2d(void)
+static void show_demon_2d(int wn)
 {
 	int i;
 	char buffer[100];
@@ -19264,25 +19300,25 @@ static void show_demon_2d(void)
 		return;
 
 	if (o->alive > 0)
-		sng_set_foreground(UI_COLOR(demon_default));
+		sng_set_foreground(wn, UI_COLOR(demon_default));
 	else
-		sng_set_foreground(UI_COLOR(demon_default_dead));
+		sng_set_foreground(wn, UI_COLOR(demon_default_dead));
 
-	show_2d_universe_grid(demon_ui.ux1, demon_ui.uy1, demon_ui.ux2, demon_ui.uy2);
+	show_2d_universe_grid(wn, demon_ui.ux1, demon_ui.uy1, demon_ui.ux2, demon_ui.uy2);
 
 	pthread_mutex_lock(&universe_mutex);
 
 	for (i = 0; i <= snis_object_pool_highest_object(pool); i++)
-		debug_draw_object(&go[i], demon_ui.ux1, demon_ui.uy1,
+		debug_draw_object(wn, &go[i], demon_ui.ux1, demon_ui.uy1,
 					demon_ui.ux2, demon_ui.uy2);
 	for (i = 0; i <= snis_object_pool_highest_object(sparkpool); i++)
-		debug_draw_object(&spark[i], demon_ui.ux1, demon_ui.uy1,
+		debug_draw_object(wn, &spark[i], demon_ui.ux1, demon_ui.uy1,
 					demon_ui.ux2, demon_ui.uy2);
 	pthread_mutex_unlock(&universe_mutex);
-	draw_2d_small_cross(ux_to_usersx(demon_ui.selectedx, demon_ui.ux1, demon_ui.ux2),
+	draw_2d_small_cross(wn, ux_to_usersx(demon_ui.selectedx, demon_ui.ux1, demon_ui.ux2),
 				uz_to_usersy(demon_ui.selectedz, demon_ui.uy1, demon_ui.uy2),
 				UI_COLOR(demon_cross), 1);
-	sng_set_foreground(UI_COLOR(demon_default));
+	sng_set_foreground(wn, UI_COLOR(demon_default));
 	if (netstats.elapsed_seconds == 0)
 		snprintf(buffer, sizeof(buffer), "Waiting for data");
 	else 
@@ -19298,7 +19334,7 @@ static void show_demon_2d(void)
 			netstats.faction_population[2],
 			netstats.faction_population[3],
 			netstats.faction_population[4]);
-	sng_abs_xy_draw_string(buffer, NANO_FONT, 10, SCREEN_HEIGHT - 10);
+	sng_abs_xy_draw_string(wn, buffer, NANO_FONT, 10, SCREEN_HEIGHT - 10);
 
 	if (demon_ui.selectmode) {
 		int x1, y1, x2, y2;
@@ -19307,28 +19343,28 @@ static void show_demon_2d(void)
 		y1 = uz_to_demonsy(demon_ui.iz);
 		x2 = ux_to_demonsx(demon_ui.ix2);
 		y2 = uz_to_demonsy(demon_ui.iz2);
-		sng_set_foreground(UI_COLOR(demon_selection_box));
-		sng_draw_dotted_line(x1, y1, x2, y1);
-		sng_draw_dotted_line(x1, y2, x2, y2);
-		sng_draw_dotted_line(x1, y1, x1, y2);
-		sng_draw_dotted_line(x2, y1, x2, y2);
+		sng_set_foreground(wn, UI_COLOR(demon_selection_box));
+		sng_draw_dotted_line(wn, x1, y1, x2, y1);
+		sng_draw_dotted_line(wn, x1, y2, x2, y2);
+		sng_draw_dotted_line(wn, x1, y1, x1, y2);
+		sng_draw_dotted_line(wn, x2, y1, x2, y2);
 	}
-	show_demon_groups();
-	demon_cmd_help();
+	show_demon_groups(wn);
+	demon_cmd_help(wn);
 }
 
-static void demon_draw_ship_patrol_route(int npoints, union vec3 p[])
+static void demon_draw_ship_patrol_route(int wn, int npoints, union vec3 p[])
 {
 	int i, j;
 
 	for (i = 0; i < npoints; i++) {
 		j = (i + 1) % npoints;
-		snis_draw_3d_moving_line(instrumentecx,
+		snis_draw_3d_moving_line(wn, instrumentecx,
 			p[i].v.x, p[i].v.y, p[i].v.z, p[j].v.x, p[j].v.y, p[j].v.z);
 	}
 }
 
-static void show_demon_3d(void)
+static void show_demon_3d(int wn)
 {
 	char buffer[100];
 	int i, j, k;
@@ -19429,9 +19465,9 @@ static void show_demon_3d(void)
 	}
 
 	if (my_ship->alive > 0)
-		sng_set_foreground(UI_COLOR(demon_default));
+		sng_set_foreground(wn, UI_COLOR(demon_default));
 	else
-		sng_set_foreground(UI_COLOR(demon_default_dead));
+		sng_set_foreground(wn, UI_COLOR(demon_default_dead));
 
 	/* Move camera towards desired position */
 	vec3_sub(&camera_pos_delta, &demon_ui.desired_camera_pos, &demon_ui.camera_pos);
@@ -19607,7 +19643,7 @@ static void show_demon_3d(void)
 				}
 			}
 			transform_point(instrumentecx, o->x, o->y, o->z, &sx, &sy);
-			sng_abs_xy_draw_string(label, NANO_FONT, sx + 10, sy - 10);
+			sng_abs_xy_draw_string(wn, label, NANO_FONT, sx + 10, sy - 10);
 			break;
 		case OBJTYPE_BLACK_HOLE:
 			e = add_entity(instrumentecx, low_poly_sphere_mesh,  o->x, o->y, o->z, color);
@@ -19671,7 +19707,7 @@ static void show_demon_3d(void)
 				vec3_sub(&dist, &opos, &demon_ui.camera_pos);
 				if (o->type == OBJTYPE_STARBASE || vec3_magnitude(&dist) < XKNOWN_DIM / 10.0) {
 					transform_point(instrumentecx, o->x, o->y, o->z, &sx, &sy);
-					sng_abs_xy_draw_string(label, NANO_FONT, sx + 10, sy - 10);
+					sng_abs_xy_draw_string(wn, label, NANO_FONT, sx + 10, sy - 10);
 				}
 			}
 		default:
@@ -19681,18 +19717,18 @@ static void show_demon_3d(void)
 			entity_get_screen_coords(e, &oidstrx, &oidstry);
 			oidstrx += txx(10);
 			oidstry -= txy(20);
-			sng_abs_xy_draw_string(oidstr, PICO_FONT, oidstrx, oidstry);
+			sng_abs_xy_draw_string(wn, oidstr, PICO_FONT, oidstrx, oidstry);
 
-			sng_set_foreground(RED);
+			sng_set_foreground(wn, RED);
 			if (o->type == OBJTYPE_SHIP2) {
-				demon_draw_ship_patrol_route(o->tsd.ship.ai[1].u.patrol.npoints,
+				demon_draw_ship_patrol_route(wn, o->tsd.ship.ai[1].u.patrol.npoints,
 						o->tsd.ship.ai[1].u.patrol.p);
 
 				if (o->tsd.ship.ai[0].u.attack.victim_id != -1) {
 					int vi = lookup_object_by_id(o->tsd.ship.ai[0].u.attack.victim_id);
 					if (vi >= 0) {
-						sng_set_foreground(YELLOW);
-						snis_draw_3d_moving_line(instrumentecx,
+						sng_set_foreground(wn, YELLOW);
+						snis_draw_3d_moving_line(wn, instrumentecx,
 							o->x, o->y, o->z, go[vi].x, go[vi].y, go[vi].z);
 					}
 				}
@@ -19706,7 +19742,7 @@ static void show_demon_3d(void)
 
 		demon_ui.button3_released = 0;
 		for (i = 0; i <= get_entity_count(instrumentecx); i++) {
-			const double threshold = real_screen_width * 0.005;
+			const double threshold = real_screen_width[wn] * 0.005;
 			float sx, sy;
 			union vec3 epos, dpos, backoff;
 			struct entity *e;
@@ -19758,9 +19794,9 @@ static void show_demon_3d(void)
 			union vec3 right = { { 1.0, 0.0, 0.0 } };
 			union quat rotation, local_rotation;
 
-			turn.v.z = demon_ui.release_mousex - real_screen_width / 2.0;
-			turn.v.y = -demon_ui.release_mousey + real_screen_height / 2.0;
-			turn.v.x = real_screen_width / 2.0;
+			turn.v.z = demon_ui.release_mousex - real_screen_width[wn] / 2.0;
+			turn.v.y = -demon_ui.release_mousey + real_screen_height[wn] / 2.0;
+			turn.v.x = real_screen_width[wn] / 2.0;
 
 			quat_from_u2v(&rotation, &right, &turn, NULL);
 			quat_conjugate(&local_rotation, &rotation, &demon_ui.camera_orientation);
@@ -19778,7 +19814,7 @@ static void show_demon_3d(void)
 
 		demon_ui.button2_released = 0;
 		for (i = 0; i <= get_entity_count(instrumentecx); i++) {
-			const double threshold = real_screen_width * 0.02;
+			const double threshold = real_screen_width[wn] * 0.02;
 			float sx, sy, dx, dy;
 			struct entity *e;
 
@@ -19808,7 +19844,7 @@ static void show_demon_3d(void)
 		}
 	}
 	pthread_mutex_unlock(&universe_mutex);
-	render_entities(instrumentecx);
+	render_entities(wn, instrumentecx);
 	pthread_mutex_lock(&universe_mutex);
 	for (i = 0; i <= get_entity_count(instrumentecx); i++) {
 		float sx, sy;
@@ -19823,16 +19859,16 @@ static void show_demon_3d(void)
 			continue;
 		if (o->type == OBJTYPE_SHIP1) {
 			entity_get_screen_coords(e, &sx, &sy);
-			sng_set_foreground(MAGENTA);
-			sng_draw_circle(0, sx, sy, txx(20));
+			sng_set_foreground(wn, MAGENTA);
+			sng_draw_circle(wn, 0, sx, sy, txx(20));
 			/* TODO: figure out why this sdata.name seems to be empty. */
-			sng_abs_xy_draw_string(o->sdata.name, NANO_FONT, sx + txx(5), sy - txy(5));
+			sng_abs_xy_draw_string(wn, o->sdata.name, NANO_FONT, sx + txx(5), sy - txy(5));
 		}
 	}
 	pthread_mutex_unlock(&universe_mutex);
 
 
-	sng_set_foreground(UI_COLOR(demon_default));
+	sng_set_foreground(wn, UI_COLOR(demon_default));
 	if (netstats.elapsed_seconds == 0)
 		snprintf(buffer, sizeof(buffer), "Waiting for data");
 	else
@@ -19848,14 +19884,14 @@ static void show_demon_3d(void)
 			netstats.faction_population[2],
 			netstats.faction_population[3],
 			netstats.faction_population[4]);
-	sng_abs_xy_draw_string(buffer, NANO_FONT, 10, SCREEN_HEIGHT - 10);
+	sng_abs_xy_draw_string(wn, buffer, NANO_FONT, 10, SCREEN_HEIGHT - 10);
 
-	show_demon_groups();
-	demon_cmd_help();
+	show_demon_groups(wn);
+	demon_cmd_help(wn);
 	remove_all_entity(instrumentecx);
 }
 
-static void show_demon_console(void)
+static void show_demon_console(int wn)
 {
 	if (demon_ui.console_active)
 		ui_unhide_widget(demon_ui.console);
@@ -19863,59 +19899,59 @@ static void show_demon_console(void)
 		ui_hide_widget(demon_ui.console);
 }
 
-static void show_demon(void)
+static void show_demon(int wn)
 {
 	char label[100];
 	if (demon_ui.use_3d)
-		show_demon_3d();
+		show_demon_3d(wn);
 	else
-		show_demon_2d();
+		show_demon_2d(wn);
 	if (demon_ui.captain_of != -1) {
-		sng_set_foreground(WHITE);
-		sng_center_xy_draw_string("CAPTAIN MODE", SMALL_FONT, SCREEN_WIDTH / 2, txy(20));
+		sng_set_foreground(wn, WHITE);
+		sng_center_xy_draw_string(wn, "CAPTAIN MODE", SMALL_FONT, SCREEN_WIDTH / 2, txy(20));
 	}
 	if (demon_ui.shiptype >= 0 && demon_ui.shiptype < nshiptypes)
 		snprintf(label, sizeof(label), "SHIP TYPE = %s",
 				ship_type[demon_ui.shiptype].class);
 	else
 		snprintf(label, sizeof(label), "SHIP TYPE = RANDOM");
-	sng_abs_xy_draw_string(label, PICO_FONT, SCREEN_WIDTH - txx(100), txy(20));
+	sng_abs_xy_draw_string(wn, label, PICO_FONT, SCREEN_WIDTH - txx(100), txy(20));
 	if (demon_ui.faction >= 0 && demon_ui.faction < nfactions())
 		snprintf(label, sizeof(label), "FACTION = %s", faction_name(demon_ui.faction % nfactions()));
 	else
 		snprintf(label, sizeof(label), "FACTION = RANDOM");
-	sng_abs_xy_draw_string(label, PICO_FONT, SCREEN_WIDTH - txx(100), txy(40));
-	show_demon_console();
-	show_common_screen("DEMON");
+	sng_abs_xy_draw_string(wn, label, PICO_FONT, SCREEN_WIDTH - txx(100), txy(40));
+	show_demon_console(wn);
+	show_common_screen(wn, "DEMON");
 }
 
-static void show_warp_hash_screen(void)
+static void show_warp_hash_screen(int wn)
 {
 	int i;
 	int y1, y2;
 
-	sng_set_foreground(UI_COLOR(warp_hash));
+	sng_set_foreground(wn, UI_COLOR(warp_hash));
 
 	for (i = 0; i < 100; i++) {
 		// x1 = snis_randn(SCREEN_WIDTH);
 		// x2 = snis_randn(SCREEN_WIDTH);
 		y1 = snis_randn(SCREEN_HEIGHT + 50);
 		y2 = y1 - 50; // snis_randn(SCREEN_HEIGHT);
-		snis_draw_line(0, y1, SCREEN_WIDTH, y2);
+		snis_draw_line(wn, 0, y1, SCREEN_WIDTH, y2);
 	}
 }
 
-static void show_warp_limbo_screen(void)
+static void show_warp_limbo_screen(int wn)
 {
-	if (displaymode == DISPLAYMODE_MAINSCREEN) {
-		show_mainscreen();
+	if (displaymode[wn] == DISPLAYMODE_MAINSCREEN) {
+		show_mainscreen(wn);
 	} else {
-		if (displaymode == DISPLAYMODE_WEAPONS) {
-			show_manual_weapons();
-			ui_element_list_draw(uiobjs, displaymode);
-			ui_element_list_maybe_draw_tooltips(uiobjs, mouse.x, mouse.y, displaymode);
+		if (displaymode[wn] == DISPLAYMODE_WEAPONS) {
+			show_manual_weapons(wn);
+			ui_element_list_draw(wn, uiobjs, displaymode[wn]);
+			ui_element_list_maybe_draw_tooltips(wn, uiobjs, mouse.x, mouse.y, displaymode[wn]);
 		} else {
-			show_warp_hash_screen();
+			show_warp_hash_screen(wn);
 		}
 	}
 }
@@ -19960,7 +19996,7 @@ static void connect_to_lobby_button_pressed()
 		return;
 
 	printf("snis_client: connecting to lobby...\n");
-	displaymode = DISPLAYMODE_LOBBYSCREEN;
+	set_all_displaymode(DISPLAYMODE_LOBBYSCREEN);
 	lobbyhost = net_setup_ui.lobbyname;
 	rc = sscanf(net_setup_ui.lobbyportstr, "%d", &lobbyport);
 	if (rc != 1 || use_default_lobby_port)
@@ -19995,7 +20031,7 @@ static void connect_to_lobby_button_pressed()
 	connect_to_lobby();
 }
 
-static void browser_button_pressed(void *v)
+static void browser_button_pressed(int wn, void *v)
 {
 	int rc;
 	char *site = v;
@@ -20012,7 +20048,7 @@ static void browser_button_pressed(void *v)
 }
 
 static struct button *init_net_checkbox_button(int x, int *y, char *txt,
-			button_function bf, void *cookie, int (*checkbox_function)(void *))
+			button_function bf, void *cookie, int (*checkbox_function)(int, void *))
 {
 	struct button *b;
 	b = snis_button_init(x, *y, txx(140), txy(18), txt, UI_COLOR(network_setup_role),
@@ -20022,7 +20058,7 @@ static struct button *init_net_checkbox_button(int x, int *y, char *txt,
 	return b;
 }
 
-static void use_default_lobby_port_checkbox_pressed(void *x)
+static void use_default_lobby_port_checkbox_pressed(int wn, void *x)
 {
 	int *i = x;
 
@@ -20034,7 +20070,7 @@ static void use_default_lobby_port_checkbox_pressed(void *x)
 		ui_unhide_widget(net_setup_ui.lobbyport);
 }
 
-static void network_checkbox_pressed(void *x)
+static void network_checkbox_pressed(int wn, void *x)
 {
 	int *i = x;
 
@@ -20160,7 +20196,7 @@ static void unhide_faction_checkboxes(struct network_setup_ui *nsu)
 }
 
 /* This gets called when the create ship checkbox button is pressed */
-static void create_ship_checkbox_cb(void *cookie)
+static void create_ship_checkbox_cb(int wn, void *cookie)
 {
 	struct network_setup_ui *nsu = cookie;
 	nsu->create_ship_v = !nsu->create_ship_v;
@@ -20173,14 +20209,14 @@ static void create_ship_checkbox_cb(void *cookie)
 }
 
 /* This returns the current value of the create ship checkbox */
-static int create_ship_checkbox(void *cookie)
+static int create_ship_checkbox(int wn, void *cookie)
 {
 	struct network_setup_ui *nsu = cookie;
 	return nsu->create_ship_v;
 }
 
 /* This gets called when the join ship checkbox is pressed */
-static void join_ship_checkbox_cb(void *cookie)
+static void join_ship_checkbox_cb(int wn, void *cookie)
 {
 	/* If join-ship selected, make sure create-ship is turned off. */
 	struct network_setup_ui *nsu = cookie;
@@ -20191,14 +20227,14 @@ static void join_ship_checkbox_cb(void *cookie)
 }
 
 /* This returns the current value of join ship checkbox */
-static int join_ship_checkbox(void *cookie)
+static int join_ship_checkbox(int wn, void *cookie)
 {
 	struct network_setup_ui *nsu = cookie;
 	return nsu->join_ship_v;
 }
 
 /* This gets called when one of the faction checkboxes is pressed */
-static void faction_checkbox_cb(void *cookie)
+static void faction_checkbox_cb(int wn, void *cookie)
 {
 	int i = (int) (intptr_t) cookie;
 	if (i < 0 || i >= MAX_FACTIONS)
@@ -20215,7 +20251,7 @@ static void faction_checkbox_cb(void *cookie)
 }
 
 /* This returns the current value of the faction checkboxes from the network setup screen */
-static int faction_checkbox(void *cookie)
+static int faction_checkbox(int wn, void *cookie)
 {
 	int i = (int) (intptr_t) cookie;
 	if (i < 0 || i >= MAX_FACTIONS)
@@ -20350,15 +20386,15 @@ static void init_net_setup_ui(void)
 	ui_hide_widget(net_setup_ui.lobbyport);
 } 
 
-static void show_network_setup(void)
+static void show_network_setup(int wn)
 {
 	char button_label[100];
 
-	show_common_screen("SPACE NERDS IN SPACE");
-	show_rotating_wombat();
+	show_common_screen(wn, "SPACE NERDS IN SPACE");
+	show_rotating_wombat(wn);
 
-	sng_set_foreground(UI_COLOR(network_setup_text));
-	sng_abs_xy_draw_string("NETWORK SETUP", SMALL_FONT, txx(25), txy(10 + LINEHEIGHT * 2));
+	sng_set_foreground(wn, UI_COLOR(network_setup_text));
+	sng_abs_xy_draw_string(wn, "NETWORK SETUP", SMALL_FONT, txx(25), txy(10 + LINEHEIGHT * 2));
 	/* If manual and auto-detected lobbies are the same, hide the manual button. */
 	if (strcmp(net_setup_ui.lobbyname, "") != 0)
 		ui_unhide_widget(net_setup_ui.connect_to_lobby);
@@ -20367,12 +20403,13 @@ static void show_network_setup(void)
 
 	snprintf(button_label, sizeof(button_label), "ENTER LOBBY %s", net_setup_ui.lobbyname);
 	snis_button_set_label(net_setup_ui.connect_to_lobby, button_label);
-	sng_abs_xy_draw_string("LOBBY SERVER NAME OR IP ADDRESS", TINY_FONT, txx(25), txy(130));
+	sng_abs_xy_draw_string(wn, "LOBBY SERVER NAME OR IP ADDRESS", TINY_FONT, txx(25), txy(130));
 	if (!use_default_lobby_port)
-		sng_abs_xy_draw_string("LOBBY PORT", TINY_FONT, txx(25), txy(240));
-	sng_abs_xy_draw_string("SHIP NAME", TINY_FONT, txx(20), txy(470));
-	sng_abs_xy_draw_string("PASSWORD", TINY_FONT, txx(20), txy(520));
-	sng_abs_xy_draw_string("NOTE: THE \"PASSWORD\" IS NOT CRYPTOGRAPHICALLY SECURE", NANO_FONT, txx(20), txy(540));
+		sng_abs_xy_draw_string(wn, "LOBBY PORT", TINY_FONT, txx(25), txy(240));
+	sng_abs_xy_draw_string(wn, "SHIP NAME", TINY_FONT, txx(20), txy(470));
+	sng_abs_xy_draw_string(wn, "PASSWORD", TINY_FONT, txx(20), txy(520));
+	sng_abs_xy_draw_string(wn,
+		"NOTE: THE \"PASSWORD\" IS NOT CRYPTOGRAPHICALLY SECURE", NANO_FONT, txx(20), txy(540));
 
 	sanitize_string(net_setup_ui.solarsystem);
 	sanitize_string(net_setup_ui.lobbyname);
@@ -20416,7 +20453,7 @@ static void make_science_forget_stuff(void)
 	pthread_mutex_unlock(&universe_mutex);
 }
 
-static int main_da_scroll(SDL_Window *window, SDL_MouseWheelEvent *e)
+static int main_da_scroll(int wn, SDL_MouseWheelEvent *e)
 {
 	struct snis_entity *o;
 	int16_t newval = 0;
@@ -20427,7 +20464,7 @@ static int main_da_scroll(SDL_Window *window, SDL_MouseWheelEvent *e)
 
 	if (!(o = find_my_ship()))
 		return 0;
-	switch (displaymode) {
+	switch (displaymode[wn]) {
 	case DISPLAYMODE_SCIENCE:
 		if (e->y > 0) /* up */
 			newval = o->tsd.ship.scizoom -
@@ -20452,25 +20489,25 @@ static int main_da_scroll(SDL_Window *window, SDL_MouseWheelEvent *e)
 		if (demon_ui.use_3d)
 			demon_3d_scroll(e->y > 0, mouse.x, mouse.y);
 		else
-			calculate_new_demon_zoom(e->y > 0, mouse.x, mouse.y);
+			calculate_new_demon_zoom(wn, e->y > 0, mouse.x, mouse.y);
 		return 0;
 	case DISPLAYMODE_NAVIGATION:
 		if (e->y > 0)
-			do_zoom(10);
+			do_zoom(wn, 10);
 		if (e->y < 0)
-			do_zoom(-10);
+			do_zoom(wn, -10);
 		return 0;
 	case DISPLAYMODE_WEAPONS:
 		if (e->y > 0)
-			do_zoom(10);
+			do_zoom(wn, 10);
 		if (e->y < 0)
-			do_zoom(-10);
+			do_zoom(wn, -10);
 		return 0;
 	case DISPLAYMODE_MAINSCREEN:
 		if (e->y > 0)
-			do_zoom(10);
+			do_zoom(wn, 10);
 		if (e->y < 0)
-			do_zoom(-10);
+			do_zoom(wn, -10);
 		return 0;
 	case DISPLAYMODE_COMMS:
 		if (e->y > 0)
@@ -20710,7 +20747,7 @@ static char *help_text[] = {
 	"\nPRESS ESC OR F1 AGAIN TO EXIT HELP\n",
 };
 
-static void draw_help_text(char *text)
+static void draw_help_text(int wn, char *text)
 {
 	int line = 0;
 	int i, y = 70;
@@ -20724,7 +20761,7 @@ static void draw_help_text(char *text)
 		if (text[i] == '\n' || text[i] == '\0') {
 			if (line >= 0 && line < 40) {
 				buffer[buflen] = '\0';
-				sng_abs_xy_draw_string(buffer, NANO_FONT, 60, y);
+				sng_abs_xy_draw_string(wn, buffer, NANO_FONT, 60, y);
 				y += font_lineheight[NANO_FONT];
 				strcpy(buffer, "");
 				buflen = 0;
@@ -20742,19 +20779,19 @@ static void draw_help_text(char *text)
 	} while (1);
 }
 
-static void draw_help_screen(void)
+static void draw_help_screen(int wn)
 {
-	sng_set_foreground(BLACK);
-	snis_draw_rectangle(1, 50, 50, SCREEN_WIDTH - 100, SCREEN_HEIGHT - 100);
-	sng_set_foreground(UI_COLOR(help_text));
-	snis_draw_rectangle(0, 50, 50, SCREEN_WIDTH - 100, SCREEN_HEIGHT - 100);
-	if (displaymode < 0 || displaymode >= ARRAYSIZE(help_text)) {
+	sng_set_foreground(wn, BLACK);
+	snis_draw_rectangle(wn, 1, 50, 50, SCREEN_WIDTH - 100, SCREEN_HEIGHT - 100);
+	sng_set_foreground(wn, UI_COLOR(help_text));
+	snis_draw_rectangle(wn, 0, 50, 50, SCREEN_WIDTH - 100, SCREEN_HEIGHT - 100);
+	if (displaymode[wn] < 0 || displaymode[wn] >= ARRAYSIZE(help_text)) {
 		char msg[100];
-		snprintf(msg, sizeof(msg), "\nUNKNOWN SCREEN %d, NO HELP AVAILABLE\n", displaymode);
-		draw_help_text(msg);
+		snprintf(msg, sizeof(msg), "\nUNKNOWN SCREEN %d, NO HELP AVAILABLE\n", displaymode[wn]);
+		draw_help_text(wn, msg);
 		return;
 	}
-	draw_help_text(help_text[displaymode]);
+	draw_help_text(wn, help_text[displaymode[wn]]);
 }
 
 #define QUIT_BUTTON_WIDTH (200 * SCREEN_WIDTH / 800)
@@ -20763,46 +20800,47 @@ static void draw_help_screen(void)
 #define QUIT_BUTTON_Y (420 * SCREEN_HEIGHT / 600)
 #define NOQUIT_BUTTON_X (480 * SCREEN_WIDTH / 800)
 
-static void draw_quit_screen(void)
+static void draw_quit_screen(int wn)
 {
 	int x;
 	static int quittimer = 0;
 
-	quittimer++;
+	if (wn == 0)
+		quittimer++;
 
-	sng_set_foreground(BLACK);
-	snis_draw_rectangle(1, txx(100), txy(100),
+	sng_set_foreground(wn, BLACK);
+	snis_draw_rectangle(wn, 1, txx(100), txy(100),
 			SCREEN_WIDTH - txx(200), SCREEN_HEIGHT - txy(200));
-	sng_set_foreground(UI_COLOR(quit_border));
-	snis_draw_rectangle(FALSE, txx(100), txy(100),
+	sng_set_foreground(wn, UI_COLOR(quit_border));
+	snis_draw_rectangle(wn, FALSE, txx(100), txy(100),
 			SCREEN_WIDTH - txx(200), SCREEN_HEIGHT - txy(200));
-	sng_set_foreground(UI_COLOR(quit_text));
-	sng_abs_xy_draw_string("Quit?", BIG_FONT, txx(300), txy(280));
+	sng_set_foreground(wn, UI_COLOR(quit_text));
+	sng_abs_xy_draw_string(wn, "Quit?", BIG_FONT, txx(300), txy(280));
 
 	if (current_quit_selection == 1) {
 		x = QUIT_BUTTON_X;
-		sng_set_foreground(UI_COLOR(quit_selection));
+		sng_set_foreground(wn, UI_COLOR(quit_selection));
 	} else {
 		x = NOQUIT_BUTTON_X;
-		sng_set_foreground(UI_COLOR(quit_unselected));
+		sng_set_foreground(wn, UI_COLOR(quit_unselected));
 	}
-	sng_abs_xy_draw_string("Quit Now", SMALL_FONT, txx(150), txy(450));
+	sng_abs_xy_draw_string(wn, "Quit Now", SMALL_FONT, txx(150), txy(450));
 	if (current_quit_selection == 0)
-		sng_set_foreground(UI_COLOR(quit_selection));
+		sng_set_foreground(wn, UI_COLOR(quit_selection));
 	else
-		sng_set_foreground(UI_COLOR(quit_unselected));
-	sng_abs_xy_draw_string("Don't Quit", SMALL_FONT, txx(500), txy(450));
+		sng_set_foreground(wn, UI_COLOR(quit_unselected));
+	sng_abs_xy_draw_string(wn, "Don't Quit", SMALL_FONT, txx(500), txy(450));
 
 	if ((quittimer & 0x04)) {
-		sng_set_foreground(UI_COLOR(quit_selection));
-		snis_draw_rectangle(FALSE, x, QUIT_BUTTON_Y,
+		sng_set_foreground(wn, UI_COLOR(quit_selection));
+		snis_draw_rectangle(wn, FALSE, x, QUIT_BUTTON_Y,
 			QUIT_BUTTON_WIDTH, QUIT_BUTTON_HEIGHT);
 	}
 }
 
 #define FRAME_INDEX_MAX 10
 
-static void do_display_frame_stats(const float frame_rates[], const float frame_times[], const int nframes)
+static void do_display_frame_stats(int wn, const float frame_rates[], const float frame_times[], const int nframes)
 {
 /* This works out to either 29 or 58 FPS */
 #define ACCEPTABLE_FRAME_RATE (frame_rate_hz - 1.0 - use_60_fps)
@@ -20818,16 +20856,16 @@ static void do_display_frame_stats(const float frame_rates[], const float frame_
 
 	if (display_frame_stats > 0 || avg_frame_rate > 1.0 / ACCEPTABLE_FRAME_RATE) {
 		if (avg_frame_rate <= 1.0 / ACCEPTABLE_FRAME_RATE)
-			sng_set_foreground(WHITE);
+			sng_set_foreground(wn, WHITE);
 		else
-			sng_set_foreground(ORANGERED);
+			sng_set_foreground(wn, ORANGERED);
 		char stat_buffer[30];
 		snprintf(stat_buffer, sizeof(stat_buffer), "FPS %5.2f", 1.0 / avg_frame_rate);
-		sng_abs_xy_draw_string(stat_buffer, NANO_FONT, txx(2), txy(10));
+		sng_abs_xy_draw_string(wn, stat_buffer, NANO_FONT, txx(2), txy(10));
 		snprintf(stat_buffer, sizeof(stat_buffer), "T %0.2f ms", avg_frame_time * 1000.0);
-		sng_abs_xy_draw_string(stat_buffer, NANO_FONT, txx(92), txy(10));
+		sng_abs_xy_draw_string(wn, stat_buffer, NANO_FONT, txx(92), txy(10));
 		snprintf(stat_buffer, sizeof(stat_buffer), "%8.0f", universe_timestamp());
-		sng_abs_xy_draw_string(stat_buffer, NANO_FONT, SCREEN_WIDTH-85, 10);
+		sng_abs_xy_draw_string(wn, stat_buffer, NANO_FONT, SCREEN_WIDTH-85, 10);
 	}
 	if (display_frame_stats > 1)
 		graph_dev_display_debug_menu_show();
@@ -20842,7 +20880,7 @@ static void maybe_reload_shaders(void)
 	reload_shaders = 0;
 }
 
-static int main_da_expose(SDL_Window *window)
+static int main_da_expose(int wn)
 {
 	static double last_frame_time = 0;
 	static int how_long_to_wait = -1; /* 4 seconds */
@@ -20874,27 +20912,27 @@ static int main_da_expose(SDL_Window *window)
 
 	load_textures();
 
-	graph_dev_start_frame();
+	graph_dev_start_frame(wn);
 
-	sng_set_foreground(WHITE);
+	sng_set_foreground(wn, WHITE);
 	
 	/* show_mouse_debug(); */
 
 	if (warp_limbo_countdown) {
 		warp_limbo_countdown--;
 		if (in_the_process_of_quitting)
-			draw_quit_screen();
-		show_warp_limbo_screen();
+			draw_quit_screen(wn);
+		show_warp_limbo_screen(wn);
 		goto end_of_drawing;
 	} else if (damage_limbo_countdown) {
-		show_warp_hash_screen();
+		show_warp_hash_screen(wn);
 		damage_limbo_countdown--;
 		if (in_the_process_of_quitting)
-			draw_quit_screen();
+			draw_quit_screen(wn);
 		goto end_of_drawing;
 	}
 
-	if (displaymode < DISPLAYMODE_FONTTEST) {
+	if (displaymode[wn] < DISPLAYMODE_FONTTEST) {
 		if (!(o = find_my_ship())) {
 			char msg[100];
 			if (how_long_to_wait == -1)
@@ -20908,18 +20946,18 @@ static int main_da_expose(SDL_Window *window)
 				snprintf(msg, sizeof(msg) - 1,
 						"ERROR: CANNOT FIND POINTER TO PLAYER SHIP, SORRY!");
 			}
-			show_info_message(msg);
+			show_info_message(wn, msg);
 			if (in_the_process_of_quitting)
-				draw_quit_screen();
+				draw_quit_screen(wn);
 			goto end_of_drawing;
 		} else {
 			how_long_to_wait = frame_rate_hz * 4; /* 4 seconds */
 		}
-		if (o->alive == 0 && displaymode != DISPLAYMODE_DEMON) {
+		if (o->alive == 0 && displaymode[wn] != DISPLAYMODE_DEMON) {
 			red_alert_mode = 0;
-			show_death_screen();
+			show_death_screen(wn);
 			if (in_the_process_of_quitting)
-				draw_quit_screen();
+				draw_quit_screen(wn);
 			goto end_of_drawing;
 		}
 		if (global_rts_mode) {
@@ -20936,83 +20974,83 @@ static int main_da_expose(SDL_Window *window)
 			if (player_lost_rts)
 				player_won_rts = 0;
 			if (player_lost_rts) {
-				show_rts_loss_screen();
+				show_rts_loss_screen(wn);
 				goto end_of_drawing;
 			} else if (player_won_rts) {
-				show_rts_win_screen();
+				show_rts_win_screen(wn);
 				goto end_of_drawing;
 			}
 		}
 	}
-	maybe_grab_or_ungrab_mouse();
-	switch (displaymode) {
+	maybe_grab_or_ungrab_mouse(wn);
+	switch (displaymode[wn]) {
 	case DISPLAYMODE_FONTTEST:
-		show_fonttest();
+		show_fonttest(wn);
 		break;
 	case DISPLAYMODE_INTROSCREEN:
-		show_introscreen();
+		show_introscreen(wn);
 		break;
 	case DISPLAYMODE_LOBBYSCREEN:
-		show_lobbyscreen();
+		show_lobbyscreen(wn);
 		break;
 	case DISPLAYMODE_CONNECTING:
-		show_connecting_screen();
+		show_connecting_screen(wn);
 		break;
 	case DISPLAYMODE_CONNECTED:
-		show_connected_screen();
+		show_connected_screen(wn);
 		break;
 	case DISPLAYMODE_MAINSCREEN:
-		show_mainscreen();
+		show_mainscreen(wn);
 		break;
 	case DISPLAYMODE_NAVIGATION:
 		if (main_nav_hybrid)
-			show_mainscreen();
-		show_navigation();
+			show_mainscreen(wn);
+		show_navigation(wn);
 		break;
 	case DISPLAYMODE_WEAPONS:
-		show_manual_weapons();
+		show_manual_weapons(wn);
 		break;
 	case DISPLAYMODE_ENGINEERING:
-		show_engineering();
+		show_engineering(wn);
 		break;
 	case DISPLAYMODE_SCIENCE:
-		show_science();
+		show_science(wn);
 		break;
 	case DISPLAYMODE_COMMS:
-		show_comms();
+		show_comms(wn);
 		break;
 	case DISPLAYMODE_DEMON:
-		show_demon();
+		show_demon(wn);
 		break;
 	case DISPLAYMODE_DAMCON:
-		show_damcon();
+		show_damcon(wn);
 		break;
 	case DISPLAYMODE_NETWORK_SETUP:
-		show_network_setup();
+		show_network_setup(wn);
 		break;
 	default:
-		show_fonttest();
+		show_fonttest(wn);
 		break;
 	}
-	ui_element_list_draw(uiobjs, displaymode);
-	ui_element_list_maybe_draw_tooltips(uiobjs, mouse.x, mouse.y, displaymode);
+	ui_element_list_draw(wn, uiobjs, displaymode[wn]);
+	ui_element_list_maybe_draw_tooltips(wn, uiobjs, mouse.x, mouse.y, displaymode[wn]);
 
 	/* this has to come after ui_element_list_draw() to avoid getting clobbered */
-	if (displaymode == DISPLAYMODE_ENGINEERING)
-		show_engineering_damage_report(eng_ui.selected_subsystem);
+	if (displaymode[wn] == DISPLAYMODE_ENGINEERING)
+		show_engineering_damage_report(wn, eng_ui.selected_subsystem);
 
 	if (helpmode)
-		draw_help_screen();
+		draw_help_screen(wn);
 	if (in_the_process_of_quitting)
-		draw_quit_screen();
+		draw_quit_screen(wn);
 
-	do_display_frame_stats(frame_rates, frame_times, FRAME_INDEX_MAX);
+	do_display_frame_stats(wn, frame_rates, frame_times, FRAME_INDEX_MAX);
 
 end_of_drawing:
 
-	graph_dev_end_frame();
+	graph_dev_end_frame(wn);
 	glFinish();
-	SDL_GL_SwapWindow(window);
+	SDL_GL_SwapWindow(window[wn]);
 
 	double end_time = time_now_double();
 
@@ -21088,11 +21126,11 @@ static void maybe_play_rocket_sample(void)
 static void notify_server_of_displaymode_change(void)
 {
 	static int old_displaymode = -1;
-	if (displaymode == old_displaymode)
+	if (displaymode[0] == old_displaymode)
 		return;
 	queue_to_server(snis_opcode_subcode_pkt("bbb", OPCODE_CLIENT_CONFIG,
-			OPCODE_CLIENT_NOTIFY_CURRENT_STATION, (uint8_t) displaymode));
-	old_displaymode = displaymode;
+			OPCODE_CLIENT_NOTIFY_CURRENT_STATION, (uint8_t) displaymode[0]));
+	old_displaymode = displaymode[0];
 }
 
 static void adjust_audio_dynamic_range_compression(void)
@@ -21185,7 +21223,7 @@ int advance_game(void)
 		/* this is a hack */
 		switched_server2 = switched_server;
 		switched_server = -1;
-		displaymode = DISPLAYMODE_LOBBYSCREEN;
+		set_all_displaymode(DISPLAYMODE_LOBBYSCREEN);
 	}
 	pthread_mutex_unlock(&to_server_queue_event_mutex);
 	maybe_play_rocket_sample();
@@ -21333,10 +21371,10 @@ static void set_planetary_lightning_material_uv_coords(void)
 static void init_meshes();
 
 /* call back for configure_event (for window resize) */
-static int main_da_configure(SDL_Window *window)
+static int main_da_configure(int wn)
 {
-	SDL_GL_GetDrawableSize(window, &real_screen_width, &real_screen_height);
-	sng_set_screen_size(real_screen_width, real_screen_height);
+	SDL_GL_GetDrawableSize(window[wn], &real_screen_width[wn], &real_screen_height[wn]);
+	sng_set_screen_size(wn, real_screen_width[wn], real_screen_height[wn]);
 
 	static int gl_is_setup = 0;
 	if (!gl_is_setup) {
@@ -21736,7 +21774,17 @@ static void load_textures(void)
 #endif
 }
 
-static int main_da_button_press(SDL_MouseButtonEvent *event)
+static int find_window_number(uint32_t windowID)
+{
+	int i;
+
+	for (i = 0; i < nwindows; i++)
+		if (windowID == SDL_GetWindowID(window[i]))
+			return i;
+	return 0;
+}
+
+static int main_da_button_press(int wn, SDL_MouseButtonEvent *event)
 {
 	if (event->button < 1 || event->button > 3)
 		return TRUE;
@@ -21745,19 +21793,21 @@ static int main_da_button_press(SDL_MouseButtonEvent *event)
 	gettimeofday(&mouse.button[event->button - 1].time_pressed, NULL);
 	mouse.button[event->button - 1].press_x = event->x;
 	mouse.button[event->button - 1].press_y = event->y;
+	mouse.windowID = event->windowID;
+	mouse.wn = wn;
 
-	switch (displaymode) {
+	switch (displaymode[wn]) {
 		case DISPLAYMODE_DEMON:
-			demon_button_press(event->button, event->x, event->y);
+			demon_button_press(mouse.wn, event->button, event->x, event->y);
 			break;
 		default:
 			break;
 	}
-	ui_element_list_button_press(uiobjs, event->x, event->y, displaymode);
+	ui_element_list_button_press(mouse.wn, uiobjs, event->x, event->y, displaymode[wn]);
 	return TRUE;
 }
 
-static int main_da_button_release(SDL_MouseButtonEvent *event)
+static int main_da_button_release(int wn, SDL_MouseButtonEvent *event)
 {
 	if (event->button < 1 || event->button > 3)
 		return TRUE;
@@ -21765,6 +21815,8 @@ static int main_da_button_release(SDL_MouseButtonEvent *event)
 	mouse.button[event->button - 1].state = MOUSE_BUTTON_RELEASED;
 	mouse.button[event->button - 1].release_x = event->x;
 	mouse.button[event->button - 1].release_y = event->y;
+	mouse.windowID = event->windowID;
+	mouse.wn = find_window_number(event->windowID);
 
 	if (display_frame_stats) {
 		if (graph_dev_graph_dev_debug_menu_click(event->x, event->y))
@@ -21772,8 +21824,8 @@ static int main_da_button_release(SDL_MouseButtonEvent *event)
 	}
 
 	if (in_the_process_of_quitting) {
-		int sx = sng_pixelx_to_screenx(event->x);
-		int sy = sng_pixely_to_screeny(event->y);
+		int sx = sng_pixelx_to_screenx(wn, event->x);
+		int sy = sng_pixely_to_screeny(wn, event->y);
 		if (sx > QUIT_BUTTON_X && sx < QUIT_BUTTON_X + QUIT_BUTTON_WIDTH &&
 			sy > QUIT_BUTTON_Y && sy < QUIT_BUTTON_Y + QUIT_BUTTON_HEIGHT) {
 			final_quit_selection = 1;
@@ -21787,32 +21839,32 @@ static int main_da_button_release(SDL_MouseButtonEvent *event)
 		return TRUE;
 	}
 
-	switch (displaymode) {
+	switch (displaymode[wn]) {
 	case DISPLAYMODE_LOBBYSCREEN:
-		lobbylast1clickx = sng_pixelx_to_screenx(event->x);
-		lobbylast1clicky = sng_pixely_to_screeny(event->y);
+		lobbylast1clickx = sng_pixelx_to_screenx(mouse.wn, event->x);
+		lobbylast1clicky = sng_pixely_to_screeny(mouse.wn, event->y);
 		break;
 	case DISPLAYMODE_SCIENCE:
 		science_button_release(event->button, event->x, event->y);
 		break;
 	case DISPLAYMODE_DEMON:
-		demon_button_release(event->button, event->x, event->y);
+		demon_button_release(mouse.wn, event->button, event->x, event->y);
 		break;
 	case DISPLAYMODE_WEAPONS:
 		if (event->button == 1)
 			do_laser();
 		else if (event->button == 3)
-			fire_torpedo_button_pressed(NULL);
+			fire_torpedo_button_pressed(mouse.wn, NULL);
 		else if ((event->button == 2) || (event->button == 4))
-			fire_missile_button_pressed(NULL);
+			fire_missile_button_pressed(mouse.wn, NULL);
 		break;
 	case DISPLAYMODE_DAMCON:
-		do_damcon_button_release(event->button, event->x, event->y);
+		do_damcon_button_release(mouse.wn, event->button, event->x, event->y);
 		break;
 	default:
 		break;
 	}
-	ui_element_list_button_release(uiobjs, event->x, event->y, displaymode);
+	ui_element_list_button_release(mouse.wn, uiobjs, event->x, event->y, displaymode[wn]);
 	return TRUE;
 }
 
@@ -21836,7 +21888,7 @@ static int mouse_button_held(int button)
 	sx = (int) mouse.x;
 	sy = (int) mouse.y;
 
-	switch (displaymode) {
+	switch (displaymode[mouse.wn]) {
 	case DISPLAYMODE_SCIENCE:
 		science_button_held(button, sx, sy);
 		break;
@@ -21846,7 +21898,7 @@ static int mouse_button_held(int button)
 	return TRUE;
 }
 
-static int main_da_motion_notify(SDL_Window *window, SDL_MouseMotionEvent *event)
+static int main_da_motion_notify(int wn, SDL_MouseMotionEvent *event)
 {
 	float pitch, yaw;
 	float smoothx, smoothy;
@@ -21854,17 +21906,19 @@ static int main_da_motion_notify(SDL_Window *window, SDL_MouseMotionEvent *event
 	int window_origin_x, window_origin_y;
 
 	/* Find window origin in real screen coords */
-	SDL_GetWindowPosition(window, &window_origin_x, &window_origin_y);
+	SDL_GetWindowPosition(window[wn], &window_origin_x, &window_origin_y);
 
 	mouse.x = event->x;
 	mouse.y = event->y;
+	mouse.windowID = event->windowID;
+	mouse.wn = find_window_number(event->windowID);
 	if (current_mouse_ui_mode == MOUSE_MODE_CAPTURED_MOUSE) {
 		int cx, cy;
 
 
 		/* Find center of window in real screen coords */
-		cx = window_origin_x + real_screen_width / 2;
-		cy = window_origin_y + real_screen_height / 2;
+		cx = window_origin_x + real_screen_width[wn] / 2;
+		cy = window_origin_y + real_screen_height[wn] / 2;
 
 		/* If the mouse is at the center of the screen, then do nothing,
 		 * as this is due to events from us warping to the center of the screen.
@@ -21879,25 +21933,25 @@ static int main_da_motion_notify(SDL_Window *window, SDL_MouseMotionEvent *event
 		/* If the mouse is not at the center of the screen, then record the
 		 * delta from the center and warp it to the center of the screen,
 		 */
-		mouse.deltax = event->x - real_screen_width / 2;
-		mouse.deltay = event->y - real_screen_height / 2;
+		mouse.deltax = event->x - real_screen_width[wn] / 2;
+		mouse.deltay = event->y - real_screen_height[wn] / 2;
 #if 0
 		/* I suspect this might have trouble with multi-monitor setups */
 		TODO SDL gdk_display_warp_pointer(gdk_display_get_default(), gdk_screen_get_default(), cx, cy);
 #endif
 	}
 
-	switch (displaymode) {
+	switch (displaymode[mouse.wn]) {
 	case DISPLAYMODE_DEMON:
-		demon_ui.ix2 = demon_mousex_to_ux(event->x);
-		demon_ui.iz2 = demon_mousey_to_uz(event->y);
+		demon_ui.ix2 = demon_mousex_to_ux(wn, event->x);
+		demon_ui.iz2 = demon_mousey_to_uz(wn, event->y);
 		break;
 	case DISPLAYMODE_WEAPONS:
 		/* FIXME: throttle this network traffic */
 		if (current_mouse_ui_mode == MOUSE_MODE_FREE_MOUSE) {
 			smooth_mousexy(event->x, event->y, &smoothx, &smoothy);
-			yaw = weapons_mousex_to_yaw(smoothx);
-			pitch = weapons_mousey_to_pitch(smoothy);
+			yaw = weapons_mousex_to_yaw(wn, smoothx);
+			pitch = weapons_mousey_to_pitch(wn, smoothy);
 			queue_to_server(snis_opcode_pkt("bRR", OPCODE_REQUEST_WEAPONS_YAW_PITCH,
 						yaw, pitch));
 		} else { /* Captured mouse */
@@ -21925,23 +21979,23 @@ static int main_da_motion_notify(SDL_Window *window, SDL_MouseMotionEvent *event
 	case DISPLAYMODE_ENGINEERING:
 		sx = (int) event->x;
 		sy = (int) event->y;
-		if (snis_slider_mouse_inside(eng_ui.shield_damage, sx, sy))
+		if (snis_slider_mouse_inside(mouse.wn, eng_ui.shield_damage, sx, sy))
 			eng_ui.selected_subsystem = 0;
-		else if (snis_slider_mouse_inside(eng_ui.impulse_damage, sx, sy))
+		else if (snis_slider_mouse_inside(mouse.wn, eng_ui.impulse_damage, sx, sy))
 			eng_ui.selected_subsystem = 1;
-		else if (snis_slider_mouse_inside(eng_ui.warp_damage, sx, sy))
+		else if (snis_slider_mouse_inside(mouse.wn, eng_ui.warp_damage, sx, sy))
 			eng_ui.selected_subsystem = 2;
-		else if (snis_slider_mouse_inside(eng_ui.maneuvering_damage, sx, sy))
+		else if (snis_slider_mouse_inside(mouse.wn, eng_ui.maneuvering_damage, sx, sy))
 			eng_ui.selected_subsystem = 3;
-		else if (snis_slider_mouse_inside(eng_ui.phaser_banks_damage, sx, sy))
+		else if (snis_slider_mouse_inside(mouse.wn, eng_ui.phaser_banks_damage, sx, sy))
 			eng_ui.selected_subsystem = 4;
-		else if (snis_slider_mouse_inside(eng_ui.sensors_damage, sx, sy))
+		else if (snis_slider_mouse_inside(mouse.wn, eng_ui.sensors_damage, sx, sy))
 			eng_ui.selected_subsystem = 5;
-		else if (snis_slider_mouse_inside(eng_ui.comms_damage, sx, sy))
+		else if (snis_slider_mouse_inside(mouse.wn, eng_ui.comms_damage, sx, sy))
 			eng_ui.selected_subsystem = 6;
-		else if (snis_slider_mouse_inside(eng_ui.tractor_damage, sx, sy))
+		else if (snis_slider_mouse_inside(mouse.wn, eng_ui.tractor_damage, sx, sy))
 			eng_ui.selected_subsystem = 7;
-		else if (snis_slider_mouse_inside(eng_ui.lifesupport_damage, sx, sy))
+		else if (snis_slider_mouse_inside(mouse.wn, eng_ui.lifesupport_damage, sx, sy))
 			eng_ui.selected_subsystem = 8;
 		else
 			eng_ui.selected_subsystem = -1;
@@ -22291,19 +22345,19 @@ static void process_physical_device_io(unsigned short opcode, unsigned short val
 		break;
 	case DEVIO_OPCODE_ENG_PRESET:
 		if ((value >= 0) && (value < ENG_PRESET_NUMBER))
-			snis_button_trigger_button(eng_ui.preset_buttons[value]);
+			snis_button_trigger_button(0, eng_ui.preset_buttons[value]);
 		break;
 	case DEVIO_OPCODE_ENG_PRESET_SAVE:
-		snis_button_trigger_button(eng_ui.preset_save_button);
+		snis_button_trigger_button(0, eng_ui.preset_save_button);
 		break;
 	case DEVIO_OPCODE_ENG_DAMAGE_CTRL:
-		damcon_button_pressed((void *) 0);
+		damcon_button_pressed(0, (void *) 0);
 		break;
 	case DEVIO_OPCODE_ENG_SILENCE_ALARMS:
-		silence_alarms_pressed((void *) 0);
+		silence_alarms_pressed(0, (void *) 0);
 		break;
 	case DEVIO_OPCODE_ENG_FLARE:
-		eng_deploy_flare_button_pressed((void *) 0);
+		eng_deploy_flare_button_pressed(0, (void *) 0);
 		break;
 	case DEVIO_OPCODE_NAV_YAW_LEFT:
 		navigation_dirkey(-1, 0, 0);
@@ -22324,7 +22378,7 @@ static void process_physical_device_io(unsigned short opcode, unsigned short val
 		navigation_dirkey(0, 0, 1);
 		break;
 	case DEVIO_OPCODE_NAV_REVERSE:
-		reverse_button_pressed((void *) 0);
+		reverse_button_pressed(0, (void *) 0);
 		break;
 	case DEVIO_OPCODE_NAV_ZOOM:
 		snis_slider_poke_input(nav_ui.navzoom_slider, d, 1);
@@ -22333,19 +22387,19 @@ static void process_physical_device_io(unsigned short opcode, unsigned short val
 		snis_slider_poke_input(nav_ui.warp_slider, d, 1);
 		break;
 	case DEVIO_OPCODE_NAV_WARP_ENGAGE:
-		engage_warp_button_pressed((void *) 0);
+		engage_warp_button_pressed(0, (void *) 0);
 		break;
 	case DEVIO_OPCODE_NAV_DOCKING_MAGNETS:
-		docking_magnets_button_pressed((void *) 0);
+		docking_magnets_button_pressed(0, (void *) 0);
 		break;
 	case DEVIO_OPCODE_NAV_STANDARD_ORBIT:
-		standard_orbit_button_pressed((void *) 0);
+		standard_orbit_button_pressed(0, (void *) 0);
 		break;
 	case DEVIO_OPCODE_NAV_STARMAP:
-		nav_starmap_button_pressed((void *) 0);
+		nav_starmap_button_pressed(0, (void *) 0);
 		break;
 	case DEVIO_OPCODE_NAV_LIGHTS:
-		nav_lights_button_pressed((void *) 0);
+		nav_lights_button_pressed(0, (void *) 0);
 		break;
 	case DEVIO_OPCODE_NAV_THROTTLE:
 		snis_slider_poke_input(nav_ui.throttle_slider, d, 1);
@@ -22363,111 +22417,111 @@ static void process_physical_device_io(unsigned short opcode, unsigned short val
 		weapons_dirkey(0, 1);
 		break;
 	case DEVIO_OPCODE_WEAPONS_FIRE_PHASERS:
-		fire_phaser_button_pressed(NULL);
+		fire_phaser_button_pressed(0, NULL);
 		break;
 	case DEVIO_OPCODE_WEAPONS_FIRE_TORPEDO:
-		fire_torpedo_button_pressed(NULL);
+		fire_torpedo_button_pressed(0, NULL);
 		break;
 	case DEVIO_OPCODE_WEAPONS_FIRE_MISSILE:
-		fire_missile_button_pressed(NULL);
+		fire_missile_button_pressed(0, NULL);
 		break;
 	case DEVIO_OPCODE_WEAPONS_WAVELENGTH:
 		snis_slider_poke_input(weapons.wavelen_slider, d, 1);
 		break;
 	case DEVIO_OPCODE_DMGCTRL_LEFT:
-		robot_left_button_pressed((void *) 0);
+		robot_left_button_pressed(0, (void *) 0);
 		break;
 	case DEVIO_OPCODE_DMGCTRL_RIGHT:
-		robot_right_button_pressed((void *) 0);
+		robot_right_button_pressed(0, (void *) 0);
 		break;
 	case DEVIO_OPCODE_DMGCTRL_FORWARD:
-		robot_forward_button_pressed((void *) 0);
+		robot_forward_button_pressed(0, (void *) 0);
 		break;
 	case DEVIO_OPCODE_DMGCTRL_BACKWARD:
-		robot_backward_button_pressed((void *) 0);
+		robot_backward_button_pressed(0, (void *) 0);
 		break;
 	case DEVIO_OPCODE_DMGCTRL_GRIPPER:
-		robot_gripper_button_pressed((void *) 0);
+		robot_gripper_button_pressed(0, (void *) 0);
 		break;
 	case DEVIO_OPCODE_DMGCTRL_AUTO:
-		robot_auto_button_pressed((void *) 0);
+		robot_auto_button_pressed(0, (void *) 0);
 		break;
 	case DEVIO_OPCODE_DMGCTRL_MANUAL:
-		robot_manual_button_pressed((void *) 0);
+		robot_manual_button_pressed(0, (void *) 0);
 		break;
 	case DEVIO_OPCODE_DMGCTRL_ENGINEERING:
-		main_engineering_button_pressed((void *) 0);
+		main_engineering_button_pressed(0, (void *) 0);
 		break;
 	case DEVIO_OPCODE_DMGCTRL_EJECT_WARP_CORE_BUTTON:
-		eject_warp_core_button_pressed((void *) 0);
+		eject_warp_core_button_pressed(0, (void *) 0);
 		break;
 	case DEVIO_OPCODE_SCIENCE_RANGE:
 		snis_slider_poke_input(sci_ui.scizoom, d, 1);
 		break;
 	case DEVIO_OPCODE_SCIENCE_TRACTOR:
-		sci_tractor_pressed((void *) 0);
+		sci_tractor_pressed(0, (void *) 0);
 		break;
 	case DEVIO_OPCODE_SCIENCE_LAUNCH_MINING_BOT:
-		sci_mining_bot_pressed((void *) 0);
+		sci_mining_bot_pressed(0, (void *) 0);
 		break;
 	case DEVIO_OPCODE_SCIENCE_SRS:
-		sci_sciplane_pressed((void *) 0);
+		sci_sciplane_pressed(0, (void *) 0);
 		break;
 	case DEVIO_OPCODE_SCIENCE_ALIGN_TO_SHIP:
-		sci_align_to_ship_pressed((void *) 0);
+		sci_align_to_ship_pressed(0, (void *) 0);
 		break;
 	case DEVIO_OPCODE_SCIENCE_LRS:
-		sci_threed_pressed((void *) 0);
+		sci_threed_pressed(0, (void *) 0);
 		break;
 	case DEVIO_OPCODE_SCIENCE_DETAILS:
-		sci_details_pressed((void *) 0);
+		sci_details_pressed(0, (void *) 0);
 		break;
 	case DEVIO_OPCODE_SCIENCE_WAYPOINTS:
-		sci_waypoints_pressed((void *) 0);
+		sci_waypoints_pressed(0, (void *) 0);
 		break;
 	case DEVIO_OPCODE_SELECT_WAYPOINT:
 		if (value >= 0 && value < sci_ui.nwaypoints && value < MAXWAYPOINTS)
-			science_select_waypoint_pressed(&sci_ui.select_waypoint_button[value]);
+			science_select_waypoint_pressed(0, &sci_ui.select_waypoint_button[value]);
 		break;
 	case DEVIO_OPCODE_CURRPOS_WAYPOINT:
-		science_add_current_pos_pressed(NULL);
+		science_add_current_pos_pressed(0, NULL);
 		break;
 	case DEVIO_OPCODE_CLEAR_WAYPOINT:
 		if (value >= 0 && value < sci_ui.nwaypoints && value < MAXWAYPOINTS)
-			science_clear_waypoint_pressed(&sci_ui.clear_waypoint_button[value]);
+			science_clear_waypoint_pressed(0, &sci_ui.clear_waypoint_button[value]);
 		break;
 	case DEVIO_OPCODE_COMMS_COMMS_ONSCREEN:
-		comms_screen_button_pressed((void *) 0);
+		comms_screen_button_pressed(0, (void *) 0);
 		break;
 	case DEVIO_OPCODE_COMMS_NAV_ONSCREEN:
-		comms_screen_button_pressed((void *) 1);
+		comms_screen_button_pressed(0, (void *) 1);
 		break;
 	case DEVIO_OPCODE_COMMS_WEAP_ONSCREEN:
-		comms_screen_button_pressed((void *) 2);
+		comms_screen_button_pressed(0, (void *) 2);
 		break;
 	case DEVIO_OPCODE_COMMS_ENG_ONSCREEN:
-		comms_screen_button_pressed((void *) 3);
+		comms_screen_button_pressed(0, (void *) 3);
 		break;
 	case DEVIO_OPCODE_COMMS_DAMCON_ONSCREEN:
-		comms_screen_button_pressed((void *) 4);
+		comms_screen_button_pressed(0, (void *) 4);
 		break;
 	case DEVIO_OPCODE_COMMS_SCI_ONSCREEN:
-		comms_screen_button_pressed((void *) 5);
+		comms_screen_button_pressed(0, (void *) 5);
 		break;
 	case DEVIO_OPCODE_COMMS_MAIN_ONSCREEN:
-		comms_screen_button_pressed((void *) 6);
+		comms_screen_button_pressed(0, (void *) 6);
 		break;
 	case DEVIO_OPCODE_COMMS_TRANSMIT:
-		comms_transmit_button_pressed(NULL);
+		comms_transmit_button_pressed(0, NULL);
 		break;
 	case DEVIO_OPCODE_COMMS_RED_ALERT:
-		comms_screen_red_alert_pressed(NULL);
+		comms_screen_red_alert_pressed(0, NULL);
 		break;
 	case DEVIO_OPCODE_COMMS_HAIL_MINING_BOT:
-		comms_hail_mining_bot_pressed(NULL);
+		comms_hail_mining_bot_pressed(0, NULL);
 		break;
 	case DEVIO_OPCODE_COMMS_MAINSCREEN_COMMS:
-		comms_main_screen_pressed(NULL);
+		comms_main_screen_pressed(0, NULL);
 		break;
 	case DEVIO_OPCODE_COMMS_MAINZOOM:
 		snis_slider_poke_input(comms_ui.mainzoom_slider, d, 1);
@@ -22961,7 +23015,7 @@ static void take_your_locale_and_shove_it(void)
 	setlocale(LC_ALL, "C");
 }
 
-static void constrain_aspect_ratio_via_xlib(SDL_Window *window, int w, int h)
+static void constrain_aspect_ratio_via_xlib(int wn, int w, int h)
 {
 #ifdef __linux
 	SDL_SysWMinfo info;
@@ -22972,7 +23026,7 @@ static void constrain_aspect_ratio_via_xlib(SDL_Window *window, int w, int h)
 	Status s;
 
 	SDL_VERSION(&info.version);
-	if (!SDL_GetWindowWMInfo(window, &info)) {
+	if (!SDL_GetWindowWMInfo(window[wn], &info)) {
 		fprintf(stderr, "SDL_GetWindowWMInfo failed.\n");
 		return;
 	}
@@ -23004,12 +23058,12 @@ static void constrain_aspect_ratio_via_xlib(SDL_Window *window, int w, int h)
 #endif
 }
 
-static void figure_aspect_ratio(SDL_Window *window, int requested_x, int requested_y,
+static void figure_aspect_ratio(int wn, int requested_x, int requested_y,
 				int *x, int *y)
 {
-	SDL_GL_GetDrawableSize(window, &real_screen_width, &real_screen_height);
-	*x = real_screen_width;
-	*y = real_screen_height;
+	SDL_GL_GetDrawableSize(window[wn], &real_screen_width[wn], &real_screen_height[wn]);
+	*x = real_screen_width[wn];
+	*y = real_screen_height[wn];
 	screen_offset_x = 0;
 	screen_offset_y = 0;
 
@@ -23266,21 +23320,21 @@ static void setup_ship_mesh_maps(void)
 	memset(derelict_mesh, 0, sizeof(*derelict_mesh) * nshiptypes);
 }
 
-static void setup_screen_parameters(SDL_Window *window)
+static void setup_screen_parameters(int wn)
 {
-	figure_aspect_ratio(window, requested_aspect_x, requested_aspect_y,
+	figure_aspect_ratio(wn, requested_aspect_x, requested_aspect_y,
 				&SCREEN_WIDTH, &SCREEN_HEIGHT);
 	if (requested_aspect_x >= 0 || requested_aspect_y >= 0)
 		fullscreen = 0; /* can't request aspect ratio AND fullscreen */
-	real_screen_width = SCREEN_WIDTH;
-	real_screen_height = SCREEN_HEIGHT;
+	real_screen_width[wn] = SCREEN_WIDTH;
+	real_screen_height[wn] = SCREEN_HEIGHT;
 
 	damconscreenxdim = 600 * SCREEN_WIDTH / 800;
 	damconscreenydim = 500 * SCREEN_HEIGHT / 600;
 	damconscreenx0 = 20 * SCREEN_WIDTH / 800;
 	damconscreeny0 = 80 * SCREEN_HEIGHT / 600;
-	sng_set_extent_size(SCREEN_WIDTH, SCREEN_HEIGHT);
-	sng_set_screen_size(real_screen_width, real_screen_height);
+	sng_set_extent_size(wn, SCREEN_WIDTH, SCREEN_HEIGHT);
+	sng_set_screen_size(wn, real_screen_width[wn], real_screen_height[wn]);
 }
 
 #if 0
@@ -23337,7 +23391,7 @@ static void setup_gtk_window_and_drawing_area(GtkWidget **window, GtkWidget **vb
 }
 #endif
 
-static void lobby_chosen(void *x)
+static void lobby_chosen(int wn, void *x)
 {
 	uint32_t ipaddr = (uint32_t) (intptr_t) x;
 	char msg[100];
@@ -23393,13 +23447,13 @@ static void maybe_connect_to_lobby(void)
 	if (avoid_lobby) {
 		done_with_lobby = 1;
 		lobby_socket = -1;
-		displaymode = DISPLAYMODE_CONNECTING;
+		set_all_displaymode(DISPLAYMODE_CONNECTING);
 		return;
 	}
-	if (displaymode != DISPLAYMODE_NETWORK_SETUP || quickstartmode) {
+	if (displaymode[0] != DISPLAYMODE_NETWORK_SETUP || quickstartmode) {
 			connect_to_lobby();
 			if (quickstartmode)
-				displaymode = DISPLAYMODE_LOBBYSCREEN;
+				set_all_displaymode(DISPLAYMODE_LOBBYSCREEN);
 	}
 }
 
@@ -23420,51 +23474,87 @@ static char *stl_parser_asset_replacer(char *path)
 	return replacement_asset_lookup(path, &replacement_assets);
 }
 
-static void process_events(SDL_Window *window)
+static int sdl_event_to_window_number(SDL_Event *event)
 {
-	/* Our SDL event placeholder. */
+	switch (event->type) {
+	case SDL_KEYDOWN:
+	case SDL_KEYUP:
+		return find_window_number(event->key.windowID);
+	case SDL_WINDOWEVENT:
+		return find_window_number(event->window.windowID);
+	case SDL_MOUSEBUTTONDOWN:
+	case SDL_MOUSEBUTTONUP:
+		return find_window_number(event->button.windowID);
+	case SDL_MOUSEMOTION:
+		return find_window_number(event->motion.windowID);
+	case SDL_MOUSEWHEEL:
+		return find_window_number(event->wheel.windowID);
+	default:
+		break;
+	}
+	return 0;
+}
+
+static void process_events(void)
+{
+	int wn;
 	SDL_Event event;
 
 	/* Grab all the events off the queue. */
 	while (SDL_PollEvent(&event)) {
 
-		if (ui_element_list_event(uiobjs, &event, displaymode))
-			break;
-
-		switch (event.type) {
-		case SDL_KEYDOWN:
-			key_press_cb(window, &event.key.keysym);
-			break;
-		case SDL_KEYUP:
-			key_release_cb(window, &event.key.keysym);
-			break;
-		case SDL_QUIT:
-			/* Handle quit requests (like Ctrl-c). */
+		if (event.type == SDL_QUIT) {
+			/* Handle quit requests (like SIGTERM). */
 			in_the_process_of_quitting = 1;
 			final_quit_selection = 1;
 			break;
+		}
 
+		wn = sdl_event_to_window_number(&event);
+		if (wn >= nwindows)
+			continue;
+
+		/* See if any UI elements want to consume this event. */
+		if (ui_element_list_event(wn, uiobjs, &event, displaymode[wn]))
+			continue;
+
+		switch (event.type) {
+		case SDL_KEYDOWN:
+			wn = find_window_number(event.key.windowID);
+			key_press_cb(wn, &event.key.keysym);
+			break;
+		case SDL_KEYUP:
+			wn = find_window_number(event.key.windowID);
+			key_release_cb(wn, &event.key.keysym);
+			break;
 		case SDL_WINDOWEVENT: {
 				switch (event.window.event) {
 				case SDL_WINDOWEVENT_RESIZED:
-					SDL_GL_GetDrawableSize(window, &real_screen_width, &real_screen_height);
-					sng_set_screen_size(real_screen_width, real_screen_height);
+					SDL_GL_GetDrawableSize(window[wn],
+						&real_screen_width[wn], &real_screen_height[wn]);
+					sng_set_screen_size(wn, real_screen_width[wn], real_screen_height[wn]);
 					break;
 				}
 			}
 			break;
-
 		case SDL_MOUSEBUTTONDOWN:
-			main_da_button_press(&event.button);
+			main_da_button_press(wn, &event.button);
 			break;
 		case SDL_MOUSEBUTTONUP:
-			main_da_button_release(&event.button);
+			main_da_button_release(wn, &event.button);
 			break;
 		case SDL_MOUSEMOTION:
-			main_da_motion_notify(window, &event.motion);
+			main_da_motion_notify(wn, &event.motion);
 			break;
 		case SDL_MOUSEWHEEL:
-			main_da_scroll(window, &event.wheel);
+			main_da_scroll(wn, &event.wheel);
+			break;
+		case SDL_QUIT:
+			/* Handle quit requests (like SIGTERM). */
+			in_the_process_of_quitting = 1;
+			final_quit_selection = 1;
+			break;
+		default:
 			break;
 		}
 	}
@@ -23472,8 +23562,11 @@ static void process_events(SDL_Window *window)
 
 int main(int argc, char *argv[])
 {
+	int i;
 	refuse_to_run_as_root("snis_client");
-	displaymode = DISPLAYMODE_NETWORK_SETUP;
+
+	for (i = 0; i < MAXWINDOWS; i++)
+		displaymode[i] = DISPLAYMODE_NETWORK_SETUP;
 
 	xdg_base_ctx = xdg_base_context_new("space-nerds-in-space", ".space-nerds-in-space");
 	take_your_locale_and_shove_it();
@@ -23554,21 +23647,32 @@ int main(int argc, char *argv[])
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 0);
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
 
-	SDL_Window *window = SDL_CreateWindow("SNIS",
+	window[0] = SDL_CreateWindow("Space Nerds in Space",
 		SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
 		720, 576, SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
-	if (!window) {
+	if (!window[0]) {
 		fprintf(stderr, "Could not create window: %s\n", SDL_GetError());
 		exit(1);
 	}
-	SDL_GLContext gl_context = SDL_GL_CreateContext(window);
-	(void) gl_context;
-	setup_screen_parameters(window);
-	SDL_SetWindowSize(window, SCREEN_WIDTH, SCREEN_HEIGHT);
-	constrain_aspect_ratio_via_xlib(window, SCREEN_WIDTH, SCREEN_HEIGHT);
+	window[1] = SDL_CreateWindow("Space Nerds in Space - MAIN VIEW",
+		SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
+		720, 576, SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
+	SDL_GLContext gl_context;
+	gl_context = SDL_GL_CreateContext(window[0]);
+	SDL_GL_MakeCurrent(window[0], gl_context);
 
+	(void) gl_context;
+
+	for (i = 0; i < nwindows; i++) {
+		setup_screen_parameters(i);
+		SDL_SetWindowSize(window[i], SCREEN_WIDTH, SCREEN_HEIGHT);
+		constrain_aspect_ratio_via_xlib(i, SCREEN_WIDTH, SCREEN_HEIGHT);
+		SDL_GL_MakeCurrent(window[i], gl_context);
+	}
 	init_colors();
-	sng_set_foreground(WHITE);
+	for (i = 0; i < nwindows; i++)
+		sng_set_foreground(i, WHITE);
+
 	snis_typefaces_init_with_scaling((float) SCREEN_WIDTH / 1050.0, (float) SCREEN_HEIGHT / 500.0);
 
 	gettimeofday(&start_time, NULL);
@@ -23599,11 +23703,15 @@ int main(int argc, char *argv[])
 	ssgl_register_for_bcast_packets(lobby_list_change_notification); /* must happen after init_net_setup_ui() */
 	snis_protocol_debugging(1);
 
-	set_default_clip_window();
-
+#if 0
 	if (fullscreen)
-		SDL_SetWindowFullscreen(window, SDL_WINDOW_FULLSCREEN_DESKTOP);
-	main_da_configure(window);
+		SDL_SetWindowFullscreen(window[0], SDL_WINDOW_FULLSCREEN_DESKTOP);
+#endif
+	for (i = 0; i < nwindows; i++) {
+		set_default_clip_window(i);
+		SDL_GL_MakeCurrent(window[i], gl_context);
+		main_da_configure(i);
+	}
 
 	const double maxTimeBehind = 0.5;
 	double delta[2] = { 1.0 / 30.0, 1.0 / 60.0 };
@@ -23619,7 +23727,8 @@ int main(int argc, char *argv[])
 
 		if (currentTime >= nextTime) { /* 60 Hz stuff */
 			nextTime += delta[1];
-			process_events(window);
+			SDL_GL_MakeCurrent(window[mouse.wn], gl_context);
+			process_events();
 			advance_game();
 			if (final_quit_selection)
 				break;
@@ -23629,7 +23738,10 @@ int main(int argc, char *argv[])
 				sleep_double(timeToSleep);
 		}
 		if (currentTime >= nextDrawTime) { /* 60 or 30 Hz, depending on use_60_fps */
-			main_da_expose(window); /* Draw the screen. */
+			for (i = 0; i < nwindows; i++) {
+				SDL_GL_MakeCurrent(window[i], gl_context);
+				main_da_expose(i); /* Draw the window. */
+			}
 			nextDrawTime += delta[use_60_fps];
 			nframes++;
 		}

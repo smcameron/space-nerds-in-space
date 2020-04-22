@@ -30,10 +30,10 @@ struct label *snis_label_init(int x, int y,
 	return l;
 }
 
-void snis_label_draw(struct label *l)
+void snis_label_draw(int wn, struct label *l)
 {
-	sng_set_foreground(l->color);
-	sng_abs_xy_draw_string(l->label, l->font, l->x, l->y);
+	sng_set_foreground(wn, l->color);
+	sng_abs_xy_draw_string(wn, l->label, l->font, l->x, l->y);
 }
 
 void snis_label_set_color(struct label *l, int color)

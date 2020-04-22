@@ -52,12 +52,12 @@ struct snis_text_input_box *snis_text_input_box_init(int x, int y,
 	return t;
 }
 
-void snis_text_input_box_draw(struct snis_text_input_box *t)
+void snis_text_input_box_draw(int wn, struct snis_text_input_box *t)
 {
 	static int twice_cursor_width = 0;
 	int cursor_on = t->has_focus && (*t->timer & 0x04);
 
-	sng_set_foreground(t->color);
+	sng_set_foreground(wn, t->color);
 
 	if (twice_cursor_width == 0) {
 		float x1, y1, x2, y2;
@@ -92,11 +92,11 @@ void snis_text_input_box_draw(struct snis_text_input_box *t)
 		else
 			t->width += delta;
 	}
-	sng_current_draw_rectangle(0, t->x, t->y, t->width, t->height);
+	sng_current_draw_rectangle(wn, 0, t->x, t->y, t->width, t->height);
 	if (t->has_focus)
-		sng_current_draw_rectangle(0, t->x - 1, t->y - 1,
+		sng_current_draw_rectangle(wn, 0, t->x - 1, t->y - 1,
 						t->width + 2, t->height + 2);
-	sng_abs_xy_draw_string_with_cursor(t->buffer, t->font,
+	sng_abs_xy_draw_string_with_cursor(wn, t->buffer, t->font,
 				t->x + 4, t->y + font_lineheight[t->font],
 				t->cursor_pos, cursor_on);
 }
@@ -112,12 +112,12 @@ void snis_text_input_box_set_focus(struct snis_text_input_box *t, int has_focus)
 	}
 }
 
-int snis_text_input_box_button_press(struct snis_text_input_box *t, int x, int y)
+int snis_text_input_box_button_press(int wn, struct snis_text_input_box *t, int x, int y)
 {
 	int hit;
 
-	x = sng_pixelx_to_screenx(x);
-	y = sng_pixely_to_screeny(y);
+	x = sng_pixelx_to_screenx(wn, x);
+	y = sng_pixely_to_screeny(wn, y);
 	if (x < t->x || x > t->x + t->width ||
                 y < t->y || y > t->y + t->height)
                 hit = 0;
@@ -172,7 +172,7 @@ static void do_leftarrow(struct snis_text_input_box *t)
 		t->cursor_pos--;
 }
 
-int snis_text_input_box_keypress(struct snis_text_input_box *t, SDL_Event *event)
+int snis_text_input_box_keypress(int wn, struct snis_text_input_box *t, SDL_Event *event)
 {
 	switch (event->type) {
 	case SDL_KEYDOWN:
@@ -193,7 +193,7 @@ int snis_text_input_box_keypress(struct snis_text_input_box *t, SDL_Event *event
 			return 1;
 		case SDLK_RETURN:
 			if (t->return_function) {
-				t->return_function(t->cookie);
+				t->return_function(wn, t->cookie);
 				return 1;
 			}
 			break;

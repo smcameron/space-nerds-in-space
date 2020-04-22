@@ -98,23 +98,23 @@ int snis_slider_alarm_triggered(struct slider *s)
 	return (v >= 90.0);
 }
 
-static void snis_slider_draw_vertical_arrow(struct slider *s, int y)
+static void snis_slider_draw_vertical_arrow(int wn, struct slider *s, int y)
 {
 	int ptr_height = s->height / 2;
 	int ptr_width = s->height / 3;
 
-	sng_current_draw_line(s->x, y, s->x - ptr_height, y - ptr_width);
-	sng_current_draw_line(s->x - ptr_height, y - ptr_width, s->x - ptr_height, y + ptr_width);
-	sng_current_draw_line(s->x - ptr_height, y + ptr_width, s->x, y);
+	sng_current_draw_line(wn, s->x, y, s->x - ptr_height, y - ptr_width);
+	sng_current_draw_line(wn, s->x - ptr_height, y - ptr_width, s->x - ptr_height, y + ptr_width);
+	sng_current_draw_line(wn, s->x - ptr_height, y + ptr_width, s->x, y);
 
-	sng_current_draw_line(s->x + s->height, y, s->x + ptr_height + s->height, y - ptr_width);
-	sng_current_draw_line(s->x + ptr_height + s->height, y - ptr_width,
+	sng_current_draw_line(wn, s->x + s->height, y, s->x + ptr_height + s->height, y - ptr_width);
+	sng_current_draw_line(wn, s->x + ptr_height + s->height, y - ptr_width,
 		s->x + ptr_height + s->height, y + ptr_width);
-	sng_current_draw_line(s->x + ptr_height + s->height, y + ptr_width,
+	sng_current_draw_line(wn, s->x + ptr_height + s->height, y + ptr_width,
 		s->x + s->height, y);
 }
 
-static void snis_slider_draw_vertical(struct slider *s)
+static void snis_slider_draw_vertical(int wn, struct slider *s)
 {
 	double v;
 	int height, ty1;
@@ -135,8 +135,8 @@ static void snis_slider_draw_vertical(struct slider *s)
 	v = s->sample();
 	ty1 = (int) (s->y + s->length - s->input * s->length);
 	bar_color = choose_barcolor(s, v);
-	sng_set_foreground(s->color);
-	sng_current_draw_rectangle(0, s->x, s->y, s->height, s->length);
+	sng_set_foreground(wn, s->color);
+	sng_current_draw_rectangle(wn, 0, s->x, s->y, s->height, s->length);
 	height = s->value * s->length - 1;
 	height += f;
 	if (height < 0)
@@ -144,41 +144,41 @@ static void snis_slider_draw_vertical(struct slider *s)
 	if (height > s->length - 1)
 		height = s->length - 1;
 	if (!s->clicked)
-		sng_set_foreground(bar_color);
-	sng_current_draw_rectangle(1, s->x + 1, s->y + s->length - height,
+		sng_set_foreground(wn, bar_color);
+	sng_current_draw_rectangle(wn, 1, s->x + 1, s->y + s->length - height,
 					s->height - 2, height);
 	if (!s->clicked)
-		sng_set_foreground(s->color);
+		sng_set_foreground(wn, s->color);
 
 	if (s->clicked) {
-		snis_slider_draw_vertical_arrow(s, ty1);
+		snis_slider_draw_vertical_arrow(wn, s, ty1);
 		if (slider_mouse_y && (s->timer & 0x04) == 0 &&
-			snis_slider_mouse_inside(s, *slider_mouse_x, *slider_mouse_y)) {
-			ty1 = sng_pixely_to_screeny(*slider_mouse_y);
-			snis_slider_draw_vertical_arrow(s, ty1);
+			snis_slider_mouse_inside(wn, s, *slider_mouse_x, *slider_mouse_y)) {
+			ty1 = sng_pixely_to_screeny(wn, *slider_mouse_y);
+			snis_slider_draw_vertical_arrow(wn, s, ty1);
 		}
 	}
 	/* sng_abs_xy_draw_string(s->label, s->font, s->x + s->length + 5, s->y + 2 * s->height / 3);  */
 } 
 
-static void snis_slider_draw_arrow(struct slider *s, int x)
+static void snis_slider_draw_arrow(int wn, struct slider *s, int x)
 {
 	float ptr_height = s->height / 2.0;
 	float ptr_width = s->height / 3.0;
 
-	sng_current_draw_line(x, s->y, x - ptr_width, s->y - ptr_height);
-	sng_current_draw_line(x, s->y, x + ptr_width, s->y - ptr_height);
-	sng_current_draw_line(x - ptr_width, s->y - ptr_height,
+	sng_current_draw_line(wn, x, s->y, x - ptr_width, s->y - ptr_height);
+	sng_current_draw_line(wn, x, s->y, x + ptr_width, s->y - ptr_height);
+	sng_current_draw_line(wn, x - ptr_width, s->y - ptr_height,
 					x + ptr_width, s->y - ptr_height);
-	sng_current_draw_line(x, s->y + s->height,
+	sng_current_draw_line(wn, x, s->y + s->height,
 			x - ptr_width, s->y + s->height + ptr_height);
-	sng_current_draw_line(x, s->y + s->height,
+	sng_current_draw_line(wn, x, s->y + s->height,
 			x + ptr_width, s->y + s->height + ptr_height);
-	sng_current_draw_line(x - ptr_width, s->y + s->height + ptr_height,
+	sng_current_draw_line(wn, x - ptr_width, s->y + s->height + ptr_height,
 			x + ptr_width, s->y + s->height + ptr_height);
 }
 
-void snis_slider_draw(struct slider *s)
+void snis_slider_draw(int wn, struct slider *s)
 {
 	double v;
 	float width, tx1;
@@ -186,7 +186,7 @@ void snis_slider_draw(struct slider *s)
 
 	s->timer++;
 	if (s->vertical) {
-		snis_slider_draw_vertical(s);
+		snis_slider_draw_vertical(wn, s);
 		return;
 	}
 	float f;
@@ -204,8 +204,8 @@ void snis_slider_draw(struct slider *s)
 		f = 0.0f; /* no fuzz if no power */
 	v = s->sample();
 	bar_color = choose_barcolor(s, v);
-	sng_set_foreground(s->color);
-	sng_current_draw_rectangle(0, s->x, s->y, s->length, s->height);
+	sng_set_foreground(wn, s->color);
+	sng_current_draw_rectangle(wn, 0, s->x, s->y, s->length, s->height);
 	width = s->value * (s->length - 2.0);
 	width = width + f;
 	if (width < 0.0)
@@ -213,22 +213,22 @@ void snis_slider_draw(struct slider *s)
 	if (width > s->length - 2.0)
 		width = s->length - 2.0;
 	if (!s->clicked)
-		sng_set_foreground(bar_color);
-	sng_current_draw_rectangle(1, s->x + 1.0, s->y + 1.0, width, s->height - 2.0);
+		sng_set_foreground(wn, bar_color);
+	sng_current_draw_rectangle(wn, 1, s->x + 1.0, s->y + 1.0, width, s->height - 2.0);
 	if (!s->clicked)
-		sng_set_foreground(s->color);
+		sng_set_foreground(wn, s->color);
 
 	tx1 = (s->input * s->length) + s->x;
 
 	if (s->clicked) {
-		snis_slider_draw_arrow(s, tx1);
+		snis_slider_draw_arrow(wn, s, tx1);
 		if (slider_mouse_x && (s->timer & 0x04) == 0 &&
-			snis_slider_mouse_inside(s, *slider_mouse_x, *slider_mouse_y)) {
-			tx1 = sng_pixelx_to_screenx(*slider_mouse_x);
-			snis_slider_draw_arrow(s, tx1);
+			snis_slider_mouse_inside(wn, s, *slider_mouse_x, *slider_mouse_y)) {
+			tx1 = sng_pixelx_to_screenx(wn, *slider_mouse_x);
+			snis_slider_draw_arrow(wn, s, tx1);
 		}
 	}
-	sng_abs_xy_draw_string(s->label, s->font,
+	sng_abs_xy_draw_string(wn, s->label, s->font,
 				s->x + s->length + 5.0, s->y + 2.0 * s->height / 3.0);
 }
 
@@ -242,10 +242,10 @@ double snis_slider_get_input(struct slider *s)
 	return s->input;
 }
 
-static int snis_slider_button_press_vertical(struct slider *s, int x, int y)
+static int snis_slider_button_press_vertical(int wn, struct slider *s, int x, int y)
 {
-	x = sng_pixelx_to_screenx(x);
-	y = sng_pixely_to_screeny(y);
+	x = sng_pixelx_to_screenx(wn, x);
+	y = sng_pixely_to_screeny(wn, y);
 	if (x < s->x || x > s->x + s->height || 
 		y < s->y - 5 || y > s->y + s->length + 5)
 			return 0;
@@ -263,12 +263,12 @@ static int snis_slider_button_press_vertical(struct slider *s, int x, int y)
 	return 1;
 }
 
-int snis_slider_button_press(struct slider *s, int x, int y)
+int snis_slider_button_press(int wn, struct slider *s, int x, int y)
 {
 	if (s->vertical)
-		return snis_slider_button_press_vertical(s, x, y);
-	x = sng_pixelx_to_screenx(x);
-	y = sng_pixely_to_screeny(y);
+		return snis_slider_button_press_vertical(wn, s, x, y);
+	x = sng_pixelx_to_screenx(wn, x);
+	y = sng_pixely_to_screeny(wn, y);
 	if (x < s->x - 5 || x > s->x + s->length + 5 || 
 		y < s->y || y > s->y + s->height)
 			return 0;
@@ -335,20 +335,20 @@ void snis_slider_set_fuzz(struct slider *s, int fuzz)
 	s->fuzz = fuzz & 0x0ff;
 }
 
-static int snis_slider_mouse_inside_vertical(struct slider *s, int x, int y)
+static int snis_slider_mouse_inside_vertical(int wn, struct slider *s, int x, int y)
 {
-	x = sng_pixelx_to_screenx(x);
-	y = sng_pixely_to_screeny(y);
+	x = sng_pixelx_to_screenx(wn, x);
+	y = sng_pixely_to_screeny(wn, y);
 	return !(x < s->x || x > s->x + s->height ||
 		y < s->y - 5 || y > s->y + s->length + 5);
 }
 
-int snis_slider_mouse_inside(struct slider *s, int x, int y)
+int snis_slider_mouse_inside(int wn, struct slider *s, int x, int y)
 {
 	if (s->vertical)
-		return snis_slider_mouse_inside_vertical(s, x, y);
-	x = sng_pixelx_to_screenx(x);
-	y = sng_pixely_to_screeny(y);
+		return snis_slider_mouse_inside_vertical(wn, s, x, y);
+	x = sng_pixelx_to_screenx(wn, x);
+	y = sng_pixely_to_screeny(wn, y);
 	return !(x < s->x - 5 || x > s->x + s->length + 5 ||
 		y < s->y || y > s->y + s->height);
 }

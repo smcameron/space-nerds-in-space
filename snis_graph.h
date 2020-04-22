@@ -40,6 +40,7 @@ extern int nuser_colors;
 struct my_vect_obj;
 
 struct sng_dotted_plot_func_context {
+	int wn;
         int i;
 };
 
@@ -58,8 +59,8 @@ extern void sng_current_draw_rectangle(int wn, int filled, float x, float y, flo
 extern void sng_current_draw_bright_line(int wn, float x1, float y1, float x2, float y2, int color);
 extern void sng_current_draw_arc(int wn, int filled, float x, float y, float width, float height, float angle1, float angle2);
 
-SNG_GLOBAL void sng_dotted_line_plot_func(int wn, int x, int y, void *context);
-SNG_GLOBAL void sng_electric_line_plot_func(int wn, int x, int y, void *context);
+SNG_GLOBAL void sng_dotted_line_plot_func(int x, int y, void *context);
+SNG_GLOBAL void sng_electric_line_plot_func(int x, int y, void *context);
 SNG_GLOBAL void sng_draw_dotted_line(int wn, float x1, float y1, float x2, float y2);
 SNG_GLOBAL void sng_draw_electric_line(int wn, float x1, float y1, float x2, float y2);
 
@@ -76,7 +77,7 @@ SNG_GLOBAL void sng_draw_point(int wn, float x, float y);
 SNG_GLOBAL void sng_setup_colors(void *w, char *user_color_file);
 SNG_GLOBAL void sng_set_foreground(int wn, int c);
 SNG_GLOBAL void sng_set_foreground_alpha(int wn, int c, float a);
-SNG_GLOBAL struct sng_color sng_get_foreground(int wn, );
+SNG_GLOBAL struct sng_color sng_get_foreground(int wn);
 SNG_GLOBAL struct sng_color sng_get_color(int c);
 SNG_GLOBAL void sng_set_context(void *gdk_drawable, void *gdk_gc);
 SNG_GLOBAL void sng_draw_circle(int wn, int filled, float x, float y, float r);

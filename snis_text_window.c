@@ -107,20 +107,20 @@ void text_window_set_font(struct text_window *tw, int font)
 	tw->h = tw->lineheight * tw->visible_lines + 10;
 }
 
-void text_window_draw(struct text_window *tw)
+void text_window_draw(int wn, struct text_window *tw)
 {
 	int i, j;
 	int thumb_top, thumb_bottom, twec;
 
 	if (tw->do_blank) {
-		sng_set_foreground_alpha(BLACK, tw->alpha);
-		sng_current_draw_rectangle(1, tw->x, tw->y, tw->w, tw->h);
+		sng_set_foreground_alpha(wn, BLACK, tw->alpha);
+		sng_current_draw_rectangle(wn, 1, tw->x, tw->y, tw->w, tw->h);
 	}
-	sng_set_foreground(tw->color);
+	sng_set_foreground(wn, tw->color);
 	/* draw outer rectangle */
-	sng_current_draw_rectangle(0, tw->x, tw->y, tw->w, tw->h);
+	sng_current_draw_rectangle(wn, 0, tw->x, tw->y, tw->w, tw->h);
 	/* draw scroll bar */
-	sng_current_draw_rectangle(0, tw->x + tw->w - 15, tw->y + 5, 10, tw->h - 10);
+	sng_current_draw_rectangle(wn, 0, tw->x + tw->w - 15, tw->y + 5, 10, tw->h - 10);
 
 	twec = text_window_entry_count(tw);
 	if (twec == 0) {
@@ -146,10 +146,10 @@ void text_window_draw(struct text_window *tw)
 			thumb_bottom = tw->y + tw->h - 10;
 			
 	}
-	sng_current_draw_rectangle(0,
+	sng_current_draw_rectangle(wn, 0,
 			tw->x + tw->w - 13, tw->thumb_pos - tw->lineheight / 2,
 			6, tw->lineheight);
-	sng_current_draw_rectangle(0,
+	sng_current_draw_rectangle(wn, 0,
 			tw->x + tw->w - 11, thumb_top,
 			2, thumb_bottom - thumb_top);
 
@@ -159,9 +159,9 @@ void text_window_draw(struct text_window *tw)
 		i = (i + 1) % tw->total_lines) {
 			int len = strlen(tw->text[i]);
 
-			sng_set_foreground(tw->textcolor[i]);
+			sng_set_foreground(wn, tw->textcolor[i]);
 			if (!tw->print_slowly || i != tw->last_entry -1) {
-				sng_abs_xy_draw_string(tw->text[i], tw->font, tw->x + 10,
+				sng_abs_xy_draw_string(wn, tw->text[i], tw->font, tw->x + 10,
 						tw->y + j * tw->lineheight + tw->lineheight);
 			} else {
 				char tmpbuf[100];	
@@ -181,7 +181,7 @@ void text_window_draw(struct text_window *tw)
 					if (((*textwindow_timer >> 2) & 0x01) == 0) 
 						strcat(tmpbuf, "_");
 				}
-				sng_abs_xy_draw_string(tmpbuf, tw->font, tw->x + 10,
+				sng_abs_xy_draw_string(wn, tmpbuf, tw->font, tw->x + 10,
 						tw->y + j * tw->lineheight + tw->lineheight);
 			}
 			j++;
@@ -255,12 +255,12 @@ void text_window_page_down(struct text_window *tw)
 		text_window_scroll_down(tw);
 }
 
-int text_window_button_press(struct text_window *tw, int x, int y)
+int text_window_button_press(int wn, struct text_window *tw, int x, int y)
 {
 	int i, left, right, top, bottom;
 
-	x = sng_pixelx_to_screenx(x);
-	y = sng_pixelx_to_screenx(y);
+	x = sng_pixelx_to_screenx(wn, x);
+	y = sng_pixelx_to_screenx(wn, y);
 
 	left = tw->x + tw->w - 15;
 	right = tw->x + tw->w - 5;

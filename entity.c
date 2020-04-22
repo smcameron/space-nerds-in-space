@@ -532,7 +532,8 @@ int transform_point(struct entity_context *cx, float x, float y, float z, float 
 	return transform_point_in_frustum(cx, &cx->camera.frustum, x, y, z, sx, sy);
 }
 
-static void render_entity(struct entity_context *cx, struct frustum *f, struct entity *e, union vec3 *camera_light_pos)
+static void render_entity(int wn, struct entity_context *cx, struct frustum *f,
+				struct entity *e, union vec3 *camera_light_pos)
 {
 	/* calculate screen coords of entity as a whole */
 	transform_point_in_frustum(cx, f, e->x, e->y, e->z, &e->sx, &e->sy);
@@ -551,10 +552,10 @@ static void render_entity(struct entity_context *cx, struct frustum *f, struct e
 	struct entity_transform transform;
 	calculate_model_matrices(&cx->camera, f, e, &transform);
 
-	graph_dev_draw_entity(cx, e, camera_light_pos, &transform);
+	graph_dev_draw_entity(wn, cx, e, camera_light_pos, &transform);
 }
 
-void render_line(struct entity_context *cx, float x1, float y1, float z1, float x2, float y2, float z2)
+void render_line(int wn, struct entity_context *cx, float x1, float y1, float z1, float x2, float y2, float z2)
 {
 	calculate_camera_transform(cx);
 
@@ -562,12 +563,12 @@ void render_line(struct entity_context *cx, float x1, float y1, float z1, float 
 	mat44_convert_df(&cx->camera.frustum.vp_matrix, &mat_vp);
 	mat44_convert_df(&cx->camera.frustum.v_matrix, &mat_v);
 
-	graph_dev_draw_3d_line(cx, &mat_vp, &mat_v, x1, y1, z1, x2, y2, z2);
+	graph_dev_draw_3d_line(wn, cx, &mat_vp, &mat_v, x1, y1, z1, x2, y2, z2);
 }
 
-void render_skybox(struct entity_context *cx)
+void render_skybox(int wn, struct entity_context *cx)
 {
-	graph_dev_draw_skybox(cx, &cx->camera.frustum.vp_matrix_no_translate);
+	graph_dev_draw_skybox(wn, cx, &cx->camera.frustum.vp_matrix_no_translate);
 }
 
 #if defined(__APPLE__)  || defined(__FreeBSD__)
@@ -879,12 +880,12 @@ static void update_entity_child_state(struct entity *e)
 }
 
 
-void render_entities(struct entity_context *cx)
+void render_entities(int wn, struct entity_context *cx)
 {
 	int i, j, k, n;
 	struct camera_info *c = &cx->camera;
 
-	sng_set_3d_viewport(cx->window_offset_x, cx->window_offset_y, c->xvpixels, c->yvpixels);
+	sng_set_3d_viewport(wn, cx->window_offset_x, cx->window_offset_y, c->xvpixels, c->yvpixels);
 
 	calculate_camera_transform(cx);
 
@@ -1078,14 +1079,14 @@ void render_entities(struct entity_context *cx)
 			for (j = 0; j < cx->nnear_to_far_entity_depth; j++) {
 				struct entity *e = &cx->entity_list[cx->near_to_far_entity_depth[j]];
 				if (e)
-					render_entity(cx, f, e, (union vec3 *)&camera_light_pos.m[0]);
+					render_entity(wn, cx, f, e, (union vec3 *)&camera_light_pos.m[0]);
 			}
 
 			/* then far to near, usually blended geometry and software renderer */
 			for (j = 0; j < cx->nfar_to_near_entity_depth; j++) {
 				struct entity *e = &cx->entity_list[cx->far_to_near_entity_depth[j]];
 				if (e)
-					render_entity(cx, f, e, (union vec3 *)&camera_light_pos.m[0]);
+					render_entity(wn, cx, f, e, (union vec3 *)&camera_light_pos.m[0]);
 			}
 		}
 	}

@@ -86,9 +86,9 @@ void sng_set_screen_size(int wn, int width, int height)
 		sgc[wn].yscale = sgc[wn].xscale;
 
 	sgc[wn].has_scale = 1;
-	graph_dev_set_extent_scale(sgc[wn].xscale, sgc[wn].yscale);
+	graph_dev_set_extent_scale(wn, sgc[wn].xscale, sgc[wn].yscale);
 	/* update the viewport in graph_dev as they are in screen coords */
-	graph_dev_set_3d_viewport(sgc[wn].vp_3d.x_offset * sgc[wn].xscale, sgc[wn].vp_3d.y_offset * sgc[wn].yscale,
+	graph_dev_set_3d_viewport(wn, sgc[wn].vp_3d.x_offset * sgc[wn].xscale, sgc[wn].vp_3d.y_offset * sgc[wn].yscale,
 					sgc[wn].vp_3d.width * sgc[wn].xscale, sgc[wn].vp_3d.height * sgc[wn].yscale);
 }
 
@@ -99,8 +99,8 @@ void sng_set_3d_viewport(int wn, int x_offset, int y_offset, int width, int heig
 	sgc[wn].vp_3d.width = width;
 	sgc[wn].vp_3d.height = height;
 
-	graph_dev_set_3d_viewport(wn, x_offset * sgc.xscale, y_offset * sgc.yscale,
-					width * sgc.xscale, height * sgc.yscale);
+	graph_dev_set_3d_viewport(wn, x_offset * sgc[wn].xscale, y_offset * sgc[wn].yscale,
+					width * sgc[wn].xscale, height * sgc[wn].yscale);
 }
 
 void sng_set_scale(int wn, float xscale, float yscale)
@@ -109,7 +109,7 @@ void sng_set_scale(int wn, float xscale, float yscale)
 	sgc[wn].yscale = yscale;
 }
 
-void sng_set_clip_window(wn, int x1, int y1, int x2, int y2)
+void sng_set_clip_window(int wn, int x1, int y1, int x2, int y2)
 {
 	sgc[wn].c.x1 = x1;
 	sgc[wn].c.y1 = y1;
@@ -117,7 +117,7 @@ void sng_set_clip_window(wn, int x1, int y1, int x2, int y2)
 	sgc[wn].c.y2 = y2;
 }
 
-void sng_current_draw_line(wn, float x1, float y1, float x2, float y2)
+void sng_current_draw_line(int wn, float x1, float y1, float x2, float y2)
 {
 	if (!clip_line(&sgc[wn].c, &x1, &y1, &x2, &y2))
 		return;
@@ -185,7 +185,7 @@ void sng_current_draw_rectangle(int wn, int filled, float x, float y, float widt
 		width * sgc[wn].xscale, height * sgc[wn].yscale);
 }
 
-void sng_current_draw_bright_line(wn, float x1, float y1, float x2, float y2, int color)
+void sng_current_draw_bright_line(int wn, float x1, float y1, float x2, float y2, int color)
 {
 	float sx1, sy1, sx2, sy2, dx, dy;
 
@@ -205,16 +205,16 @@ void sng_current_draw_bright_line(wn, float x1, float y1, float x2, float y2, in
 	sy1 = y1 * sgc[wn].yscale;	
 	sy2 = y2 * sgc[wn].yscale;	
 
-	sng_set_foreground(WHITE);	
-	graph_dev_draw_line(sx1, sy1, sx2, sy2);
-	sng_set_foreground(color);
-	graph_dev_draw_line(sx1 - dx, sy1 - dy, sx2 - dx, sy2 - dy);
-	graph_dev_draw_line(sx1 + dx, sy1 + dy, sx2 + dx, sy2 + dy);
+	sng_set_foreground(wn, WHITE);
+	graph_dev_draw_line(wn, sx1, sy1, sx2, sy2);
+	sng_set_foreground(wn, color);
+	graph_dev_draw_line(wn, sx1 - dx, sy1 - dy, sx2 - dx, sy2 - dy);
+	graph_dev_draw_line(wn, sx1 + dx, sy1 + dy, sx2 + dx, sy2 + dy);
 }
 
 void sng_current_draw_arc(int wn, int filled, float x, float y, float width, float height, float angle1, float angle2)
 {
-	graph_dev_draw_arc(filled, x * sgc[wn].xscale, y * sgc[wn].yscale, width * sgc[wn].xscale,
+	graph_dev_draw_arc(wn, filled, x * sgc[wn].xscale, y * sgc[wn].yscale, width * sgc[wn].xscale,
 				height * sgc[wn].yscale, angle1, angle2);
 }
 
@@ -225,22 +225,24 @@ void sng_dotted_line_plot_func(int x, int y, void *context)
 	c->i = (c->i + 1) % 10;
 	if (c->i != 0)
 		return;
-	graph_dev_draw_point(x, y);
+	graph_dev_draw_point(c->wn, x, y);
 }
 
 void sng_electric_line_plot_func(int x, int y, void *context)
 {
+	struct sng_dotted_plot_func_context *c = context;
+
 	if (snis_randn(100) < 10)
-		graph_dev_draw_point(x, y);
+		graph_dev_draw_point(c->wn, x, y);
 }
 
-static void sng_bright_electric_line_plot_func(int wn, int x, int y, void *context)
+static void sng_bright_electric_line_plot_func(int x, int y, void *context)
 {
 	struct sng_dotted_plot_func_context *c = context;
 
 	if (snis_randn(100) < 20) {
-		sng_set_foreground(wn, c->i);
-		graph_dev_draw_point(wn, x, y);
+		sng_set_foreground(c->wn, c->i);
+		graph_dev_draw_point(c->wn, x, y);
 	}
 }
 
@@ -249,6 +251,7 @@ void sng_draw_dotted_line(int wn, float x1, float y1, float x2, float y2)
 	struct sng_dotted_plot_func_context context;
 
 	context.i = 0;
+	context.wn = wn;
 
 	if (!clip_line(&sgc[wn].c, &x1, &y1, &x2, &y2))
 		return;
@@ -262,6 +265,7 @@ void sng_draw_electric_line(int wn, float x1, float y1, float x2, float y2)
 	struct sng_dotted_plot_func_context context;
 
 	context.i = 0;
+	context.wn = wn;
 
 	if (!clip_line(&sgc[wn].c, &x1, &y1, &x2, &y2))
 		return;
@@ -275,6 +279,7 @@ static void sng_draw_bright_white_electric_line(int wn, float x1, float y1, floa
 	struct sng_dotted_plot_func_context context;
 
 	context.i = color;
+	context.wn = wn;
 
 	if (!clip_line(&sgc[wn].c, &x1, &y1, &x2, &y2))
 		return;
@@ -298,13 +303,13 @@ void sng_draw_laser_line(int wn, float x1, float y1, float x2, float y2, int col
 	if (!clip_line(&sgc[wn].c, &x1, &y1, &x2, &y2))
 		return;
 
-	sng_draw_bright_white_electric_line(x1, y1, x2, y2, color);
-	sng_set_foreground(color);
-	sng_draw_electric_line(x1 - dx, y1 - dy, x2 - dx, y2 - dy);
-	sng_draw_electric_line(x1 + dx, y1 + dy, x2 + dx, y2 + dy);
+	sng_draw_bright_white_electric_line(wn, x1, y1, x2, y2, color);
+	sng_set_foreground(wn, color);
+	sng_draw_electric_line(wn, x1 - dx, y1 - dy, x2 - dx, y2 - dy);
+	sng_draw_electric_line(wn, x1 + dx, y1 + dy, x2 + dx, y2 + dy);
 }
 
-void sng_draw_vect_obj(struct my_vect_obj *v, float x, float y)
+void sng_draw_vect_obj(int wn, struct my_vect_obj *v, float x, float y)
 {
 	int i;
 	float x1, y1, x2, y2;
@@ -316,12 +321,12 @@ void sng_draw_vect_obj(struct my_vect_obj *v, float x, float y)
 		y1 = y + v->p[i].y;
 		x2 = x + v->p[i + 1].x;
 		y2 = y + v->p[i + 1].y;
-		sng_current_draw_line(x1, y1, x2, y2);
+		sng_current_draw_line(wn, x1, y1, x2, y2);
 	}
 }
 
 /* Draws a letter in the given font at an absolute x,y coords on the screen. */
-float sng_abs_xy_draw_letter(struct my_vect_obj **font, unsigned char letter, float x, float y)
+float sng_abs_xy_draw_letter(int wn, struct my_vect_obj **font, unsigned char letter, float x, float y)
 {
 	int i;
 	float x1, y1, x2, y2;
@@ -350,7 +355,7 @@ float sng_abs_xy_draw_letter(struct my_vect_obj **font, unsigned char letter, fl
 			maxx = x2;
 		
 		if (x1 > 0 && x2 > 0)
-			sng_current_draw_line(x1, y1, x2, y2);
+			sng_current_draw_line(wn, x1, y1, x2, y2);
 	}
 	diff = fabs(maxx - minx);
 	/* if (diff == 0)
@@ -398,10 +403,10 @@ float sng_abs_xz_draw_letter(int wn, struct my_vect_obj **font, unsigned char le
 		if (x2 > maxx)
 			maxx = x2;
 
-		x1 = crawl3d_transform_x(x1, y1);
-		y1 = crawl3d_transform_y(y1);
-		x2 = crawl3d_transform_x(x2, y2);
-		y2 = crawl3d_transform_y(y2);
+		x1 = crawl3d_transform_x(wn, x1, y1);
+		y1 = crawl3d_transform_y(wn, y1);
+		x2 = crawl3d_transform_x(wn, x2, y2);
+		y2 = crawl3d_transform_y(wn, y2);
 
 		if (x1 > 0 && x2 > 0 && y1 > 0 && y2 > 0)
 			sng_current_draw_line(wn, x1, y1, x2, y2);
@@ -532,7 +537,7 @@ void sng_abs_xy_draw_string_with_cursor(int wn, char *s, int font, float x, floa
 		sng_abs_xy_draw_letter(wn, gamefont[font + 5 * sng_font_family], '_', x + deltax, y);
 }
 
-void sng_draw_point(wn, float x, float y)
+void sng_draw_point(int wn, float x, float y)
 {
 	graph_dev_draw_point(wn, x * sgc[wn].xscale, y * sgc[wn].yscale);
 }

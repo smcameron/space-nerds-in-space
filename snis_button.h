@@ -7,7 +7,7 @@
 #define GLOBAL extern
 #endif
 
-typedef void (*button_function)(void *cookie);
+typedef void (*button_function)(int wn, void *cookie);
 
 struct button;
 
@@ -21,20 +21,20 @@ GLOBAL struct button *snis_button_init(int x, int y, int width, int height, char
 			int color, int font, button_function button_release, void *cookie);
 
 /* Draws the specified button */
-GLOBAL void snis_button_draw(struct button *b);
+GLOBAL void snis_button_draw(int wn, struct button *b);
 
 /* Triggers the button if x and y are inside the button and the button is enabled */
-GLOBAL int snis_button_button_release(struct button *b, int x, int y);
+GLOBAL int snis_button_button_release(int wn, struct button *b, int x, int y);
 
 /* Note, the button's actions are not triggered on press, but on release.
  * The press function is used to start a timer to know if a long press occurs
  */
-GLOBAL int snis_button_button_press(struct button *b, int x, int y);
+GLOBAL int snis_button_button_press(int wn, struct button *b, int x, int y);
 
 /* Calls the button's callback function button_release() and plays any associated sound */
-GLOBAL int snis_button_trigger_button(struct button *b);
+GLOBAL int snis_button_trigger_button(int wn, struct button *b);
 /* Calls the button's callback function long_press_button_release() and plays any associated sound */
-GLOBAL int snis_button_trigger_long_press(struct button *b);
+GLOBAL int snis_button_trigger_long_press(int wn, struct button *b);
 
 GLOBAL void snis_button_set_color(struct button *b, int color); /* Sets the color of the button */
 GLOBAL int snis_button_get_color(struct button *b); /* Returns the color of the button */
@@ -45,7 +45,7 @@ GLOBAL int snis_button_get_color(struct button *b); /* Returns the color of the 
  * will be checked.
  */
 GLOBAL void snis_button_set_checkbox_function(struct button *b,
-		int (*checkbox_function)(void *), void *cookie);
+		int (*checkbox_function)(int, void *), void *cookie);
 GLOBAL void snis_button_set_long_press_function(struct button *b,
 		button_function long_press, void *cookie);
 
@@ -63,7 +63,7 @@ GLOBAL void snis_button_set_sound(struct button *b, int sound);
 GLOBAL void snis_button_set_default_sound(int sound);
 
 /* Returns 1 if x,y are inside the button, 0 otherwise */
-GLOBAL int snis_button_inside(struct button *b, int x, int y);
+GLOBAL int snis_button_inside(int wn, struct button *b, int x, int y);
 
 /* Makes a button unpressable, and possibly draws it in a different color */
 GLOBAL void snis_button_disable(struct button *b);
@@ -88,7 +88,7 @@ GLOBAL void snis_button_set_cookie(struct button *b, void *cookie);
  * this one is provided. It's meant to be passed to
  * snis_button_set_checkbox_function() as the 2nd param.
  */
-GLOBAL int snis_button_generic_checkbox_function(void *x);
+GLOBAL int snis_button_generic_checkbox_function(int wn, void *x);
 
 #undef GLOBAL
 #endif
