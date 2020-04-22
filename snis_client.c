@@ -23562,38 +23562,29 @@ int main(int argc, char *argv[])
 	double delta[2] = { 1.0 / 30.0, 1.0 / 60.0 };
 
 	double currentTime = time_now_double();
-	double nextTime = currentTime + delta[use_60_fps];
+	double nextTime = currentTime + delta[1];
+	double nextDrawTime = currentTime + delta[use_60_fps];
 	while (1) {
 		currentTime = time_now_double();
 
 		if (currentTime - nextTime > maxTimeBehind)
 			nextTime = currentTime;
 
-		if (currentTime >= nextTime) {
-			nextTime += delta[use_60_fps];
-
+		if (currentTime >= nextTime) { /* 60 Hz stuff */
+			nextTime += delta[1];
 			process_events(window);
-
 			advance_game();
-
-			/* Draw the screen. */
-			main_da_expose(window);
-
-#if 0
-			/* TODO: Do this via inotify */
-			if (nframes % (use_60_fps ? 60 : 30) == 0) {
-				graph_dev_reload_changed_textures();
-				graph_dev_reload_changed_cubemap_textures();
-			}
-#endif
-			nframes++;
-
 			if (final_quit_selection)
 				break;
 		} else {
 			double timeToSleep = nextTime - currentTime;
 			if (timeToSleep > 0)
 				sleep_double(timeToSleep);
+		}
+		if (currentTime >= nextDrawTime) { /* 60 or 30 Hz, depending on use_60_fps */
+			main_da_expose(window); /* Draw the screen. */
+			nextDrawTime += delta[use_60_fps];
+			nframes++;
 		}
 	}
 
