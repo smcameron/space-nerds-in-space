@@ -23433,11 +23433,41 @@ static void process_events(SDL_Window *window)
 	}
 }
 
+static void enable_sdl_fullscreen_sanity(void)
+{
+	/* If SDL_VIDEO_MINIMIZE_ON_FOCUS_LOSS isn't set to zero,
+	 * fullscreen window behavior is *insane* by default.
+	 *
+	 * Alt-tab and Alt-left-arrow and Alt-right-arrow will *minimize*
+	 * the window, pushing it to the bottom of the stack, so when you
+	 * alt-tab again, and expect the window to re-appear, it doesn't.
+	 * Instead, a different window appears, and you have to alt-tab a
+	 * zillion times through all your windows until you finally get to
+	 * the bottom where your minimized fullscreen window sits, idiotically.
+	 *
+	 * Let's make sanity the default.  The last parameter of setenv()
+	 * says do not overwrite the value if it is already set. This will
+	 * allow for any completely insane individuals who somehow prefer
+	 * this idiotc behavior to still have it.  But they will not get
+	 * it by default.
+	 */
+
+	char *v = getenv("SDL_VIDEO_MINIMIZE_ON_FOCUS_LOSS");
+	if (v && strncmp(v, "1", 1) == 0) {
+		fprintf(stderr, "Wow, you have SDL_VIDEO_MINIMIZE_ON_FOCUS_LOSS set to 1!\n");
+		fprintf(stderr, "I highly recommend you set it to zero. But it's your sanity\n");
+		fprintf(stderr, "at stake, not mine, so whatever. Let's proceed anyway.\n");
+	}
+	setenv("SDL_VIDEO_MINIMIZE_ON_FOCUS_LOSS", "0", 0);	/* Final 0 means don't override user's prefs */
+								/* I am Very tempted to set it to 1. */
+}
+
 int main(int argc, char *argv[])
 {
 	refuse_to_run_as_root("snis_client");
 	displaymode = DISPLAYMODE_NETWORK_SETUP;
 
+	enable_sdl_fullscreen_sanity();
 	xdg_base_ctx = xdg_base_context_new("space-nerds-in-space", ".space-nerds-in-space");
 	take_your_locale_and_shove_it();
 	ignore_sigpipe();
