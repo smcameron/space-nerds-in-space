@@ -953,15 +953,15 @@ static struct graph_dev_window_context {
 
 	GLint vp_x, vp_y;
 	GLsizei vp_width, vp_height;
+
+	int nvertex_2d;
+	GLbyte vertex_type_2d[BUFFERED_VERTICES_2D];
+	struct vertex_color_buffer_data vertex_data_2d[BUFFERED_VERTICES_2D];
 } sgwc[MAXWINDOWS];
 
 static struct graph_dev_gl_context {
 	GLuint fbo_current;
 
-
-	int nvertex_2d;
-	GLbyte vertex_type_2d[BUFFERED_VERTICES_2D];
-	struct vertex_color_buffer_data vertex_data_2d[BUFFERED_VERTICES_2D];
 	GLuint vertex_buffer_2d;
 
 	struct mesh_gl_info gl_info_3d_line;
@@ -1178,14 +1178,14 @@ void graph_dev_setup_colors(void *gtk_widget, void *gdk_color_huex, int nhuex)
 
 static void draw_vertex_buffer_2d(int wn)
 {
-	if (sgc.nvertex_2d > 0) {
-		/* printf("start draw_vertex_buffer_2d %d\n", sgc.nvertex_2d); */
+	if (sgwc[wn].nvertex_2d > 0) {
+		/* printf("start draw_vertex_buffer_2d %d\n", sgwc[wn].nvertex_2d); */
 		enable_2d_viewport(wn);
 
 		/* transfer into opengl buffer */
 		glBindBuffer(GL_ARRAY_BUFFER, sgc.vertex_buffer_2d);
-		glBufferSubData(GL_ARRAY_BUFFER, 0, sgc.nvertex_2d * sizeof(struct vertex_color_buffer_data),
-			sgc.vertex_data_2d);
+		glBufferSubData(GL_ARRAY_BUFFER, 0, sgwc[wn].nvertex_2d * sizeof(struct vertex_color_buffer_data),
+			sgwc[wn].vertex_data_2d);
 
 		glUseProgram(vertex_color_shader.program_id);
 
@@ -1217,14 +1217,14 @@ static void draw_vertex_buffer_2d(int wn)
 
 		int i;
 		GLint start = 0;
-		GLbyte mode = sgc.vertex_type_2d[0];
+		GLbyte mode = sgwc[wn].vertex_type_2d[0];
 
-		for (i = 0; i < sgc.nvertex_2d; i++) {
-			if (mode != sgc.vertex_type_2d[i]) {
+		for (i = 0; i < sgwc[wn].nvertex_2d; i++) {
+			if (mode != sgwc[wn].vertex_type_2d[i]) {
 				GLsizei count;
 
 				/* primitive terminate */
-				if (sgc.vertex_type_2d[i] == -1)
+				if (sgwc[wn].vertex_type_2d[i] == -1)
 					count = i - start + 1; /* we include this vertex in draw */
 				else
 					count = i - start;
@@ -1236,13 +1236,13 @@ static void draw_vertex_buffer_2d(int wn)
 				/* printf("glDrawArrays 1 mode=%d start=%d count=%d\n", mode, start, count); */
 
 				start = start + count;
-				if (start < sgc.nvertex_2d) {
-					mode = sgc.vertex_type_2d[start];
+				if (start < sgwc[wn].nvertex_2d) {
+					mode = sgwc[wn].vertex_type_2d[start];
 				}
 			}
 		}
-		if (start < sgc.nvertex_2d) {
-			GLsizei count = sgc.nvertex_2d - start;
+		if (start < sgwc[wn].nvertex_2d) {
+			GLsizei count = sgwc[wn].nvertex_2d - start;
 
 			assert(mode != GL_LINES || count % 2 == 0);
 			assert(mode != GL_TRIANGLES || count % 3 == 0);
@@ -1251,7 +1251,7 @@ static void draw_vertex_buffer_2d(int wn)
 			/* printf("glDrawArrays 2 mode=%d start=%d count=%d\n", mode, start, i - start); */
 		}
 
-		sgc.nvertex_2d = 0;
+		sgwc[wn].nvertex_2d = 0;
 
 		glDisableVertexAttribArray(vertex_color_shader.vertex_position_id);
 		glDisableVertexAttribArray(vertex_color_shader.vertex_color_id);
@@ -1265,7 +1265,7 @@ static void draw_vertex_buffer_2d(int wn)
 
 static void make_room_in_vertex_buffer_2d(int wn, int nvertices)
 {
-	if (sgc.nvertex_2d + nvertices > BUFFERED_VERTICES_2D) {
+	if (sgwc[wn].nvertex_2d + nvertices > BUFFERED_VERTICES_2D) {
 		/* buffer needs to be emptied to fit next batch */
 		draw_vertex_buffer_2d(wn);
 	}
@@ -1273,7 +1273,7 @@ static void make_room_in_vertex_buffer_2d(int wn, int nvertices)
 
 static void add_vertex_2d(int wn, float x, float y, struct graph_dev_color *color, GLubyte alpha, GLenum mode)
 {
-	struct vertex_color_buffer_data *vertex = &sgc.vertex_data_2d[sgc.nvertex_2d];
+	struct vertex_color_buffer_data *vertex = &sgwc[wn].vertex_data_2d[sgwc[wn].nvertex_2d];
 
 	/* setup the vertex and color */
 	vertex->position[0] = x;
@@ -1284,9 +1284,9 @@ static void add_vertex_2d(int wn, float x, float y, struct graph_dev_color *colo
 	vertex->color[2] = color->blue >> 8;
 	vertex->color[3] = alpha;
 
-	sgc.vertex_type_2d[sgc.nvertex_2d] = mode;
+	sgwc[wn].vertex_type_2d[sgwc[wn].nvertex_2d] = mode;
 
-	sgc.nvertex_2d += 1;
+	sgwc[wn].nvertex_2d += 1;
 }
 
 static void graph_dev_draw_normal_lines(const struct mat44 *mat_mvp, struct mesh *m, struct mesh_gl_info *ptr)
@@ -3805,7 +3805,7 @@ static void setup_2d(int wn)
 	glBindBuffer(GL_ARRAY_BUFFER, sgc.vertex_buffer_2d);
 	glBufferData(GL_ARRAY_BUFFER, VERTEX_BUFFER_2D_SIZE, 0, GL_STREAM_DRAW);
 
-	sgc.nvertex_2d = 0;
+	sgwc[wn].nvertex_2d = 0;
 
 	/* render 2d to seperate fbo if supported */
 	if (fbo_render_to_texture_supported()) {
