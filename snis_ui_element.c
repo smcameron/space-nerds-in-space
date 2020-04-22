@@ -7,7 +7,6 @@
 struct ui_element {
 	void *element;
 	int active_displaymode;
-	volatile int *displaymode;
 	ui_element_drawing_function draw;
 	ui_element_button_release_function button_release;
 	ui_element_button_release_function button_press;
@@ -32,7 +31,7 @@ struct ui_element *ui_element_init(void *element,
 			ui_element_drawing_function draw,
 			ui_element_button_release_function button_release,
 			ui_element_inside_function inside_fn,
-			int active_displaymode, volatile int *displaymode)
+			int active_displaymode)
 {
 	struct ui_element *e;
 
@@ -43,7 +42,6 @@ struct ui_element *ui_element_init(void *element,
 	e->button_press = NULL;
 	e->inside_fn = inside_fn;
 	e->active_displaymode = active_displaymode;
-	e->displaymode = displaymode;
 	e->set_focus = NULL;
 	e->has_focus = 0;
 	e->keypress_fn = NULL;	
@@ -115,20 +113,20 @@ void ui_element_list_free(struct ui_element_list *list)
 	ui_element_list_free(n);
 }
 
-void ui_element_list_draw(struct ui_element_list *list)
+void ui_element_list_draw(struct ui_element_list *list, int current_displaymode)
 {
 	for (; list != NULL; list = list->next) {
 		struct ui_element *e = list->element;
-		if (e->draw && e->active_displaymode == *e->displaymode && !e->hidden)
+		if (e->draw && e->active_displaymode == current_displaymode && !e->hidden)
 			e->draw(e->element);
 	}
 }
 
-void ui_element_list_maybe_draw_tooltips(struct ui_element_list *list, int mousex, int mousey)
+void ui_element_list_maybe_draw_tooltips(struct ui_element_list *list, int mousex, int mousey, int current_displaymode)
 {
 	for (; list != NULL; list = list->next) {
 		struct ui_element *e = list->element;
-		if (e->draw && e->active_displaymode == *e->displaymode && !e->hidden)
+		if (e->draw && e->active_displaymode == current_displaymode && !e->hidden)
 			ui_element_maybe_draw_tooltip(e, mousex, mousey);
 	}
 }
@@ -168,7 +166,7 @@ void ui_set_focus(struct ui_element_list *list, struct ui_element *e, int has_fo
 	e->has_focus = 1;
 }
 
-void ui_element_list_button_release(struct ui_element_list *list, int x, int y)
+void ui_element_list_button_release(struct ui_element_list *list, int x, int y, int current_displaymode)
 {
 	int hit;
 	struct ui_element *e;
@@ -176,7 +174,7 @@ void ui_element_list_button_release(struct ui_element_list *list, int x, int y)
 
 	for (i = list; i != NULL; i = i->next) {
 		e = i->element;
-		if (e->button_release && e->active_displaymode == *e->displaymode && !e->hidden) {
+		if (e->button_release && e->active_displaymode == current_displaymode && !e->hidden) {
 			/* If we have the inside_fn, use it so that we can set the focus before
 			 * triggering the button action in case the button action wants to set the
 			 * focus, otherwise, if we set the focus afterwards, it will undo the
@@ -204,7 +202,7 @@ void ui_element_list_button_release(struct ui_element_list *list, int x, int y)
  * The main purpose of press is to start a timer in the button so it can
  * distinguish a long-press from a normal press.
  */
-void ui_element_list_button_press(struct ui_element_list *list, int x, int y)
+void ui_element_list_button_press(struct ui_element_list *list, int x, int y, int current_displaymode)
 {
 	int hit;
 	struct ui_element *e;
@@ -212,7 +210,7 @@ void ui_element_list_button_press(struct ui_element_list *list, int x, int y)
 
 	for (i = list; i != NULL; i = i->next) {
 		e = i->element;
-		if (e->button_press && e->active_displaymode == *e->displaymode && !e->hidden) {
+		if (e->button_press && e->active_displaymode == current_displaymode && !e->hidden) {
 			/* If we have the inside_fn, use it so that we can set the focus before
 			 * triggering the button action in case the button action wants to set the
 			 * focus, otherwise, if we set the focus afterwards, it will undo the
@@ -250,7 +248,7 @@ void ui_element_set_displaymode(struct ui_element *e, int displaymode)
 	e->active_displaymode = displaymode;
 }
 
-static void advance_focus(struct ui_element_list *list)
+static void advance_focus(struct ui_element_list *list, int current_displaymode)
 {
 	struct ui_element_list *i;
 	int found = 0;
@@ -259,14 +257,14 @@ static void advance_focus(struct ui_element_list *list)
 	for (i = list; i; i = i->next) {
 		struct ui_element *e = i->element;
 		if (e->set_focus && e->has_focus &&
-				e->active_displaymode == *e->displaymode) {
+				e->active_displaymode == current_displaymode) {
 			e->has_focus = 0;
 			e->set_focus(e->element, 0);
 			found = 1;
 			continue;
 		}
 		if (found) {
-			if (e->active_displaymode == *e->displaymode &&
+			if (e->active_displaymode == current_displaymode &&
 				e->set_focus && !e->hidden) {
 				e->has_focus = 1;
 				e->set_focus(e->element, 1);
@@ -283,7 +281,7 @@ static void advance_focus(struct ui_element_list *list)
 	/* Start from the beginning of the list */
 	for (i = list; i; i = i->next) {
 		struct ui_element *e = i->element;
-		if (e->active_displaymode == *e->displaymode && e->set_focus && !e->hidden) {
+		if (e->active_displaymode == current_displaymode && e->set_focus && !e->hidden) {
 			e->has_focus = 1;
 			e->set_focus(e->element, 1);
 			break;
@@ -291,7 +289,7 @@ static void advance_focus(struct ui_element_list *list)
 	}
 }
 
-int ui_element_list_keypress(struct ui_element_list *list, SDL_Event *event)
+int ui_element_list_keypress(struct ui_element_list *list, SDL_Event *event, int current_displaymode)
 {
 	struct ui_element_list *i;
 
@@ -299,7 +297,7 @@ int ui_element_list_keypress(struct ui_element_list *list, SDL_Event *event)
 		switch (event->key.keysym.sym) {
 		case SDLK_TAB:
 		case SDLK_KP_TAB:
-			advance_focus(list);
+			advance_focus(list, current_displaymode);
 			return 1;
 		default:
 			break;
@@ -311,7 +309,7 @@ int ui_element_list_keypress(struct ui_element_list *list, SDL_Event *event)
 			continue;
 		if (!i->element->keypress_fn)
 			continue;
-		if (*i->element->displaymode != i->element->active_displaymode)
+		if (current_displaymode != i->element->active_displaymode)
 			continue;
 		if (i->element->hidden)
 			continue;
@@ -320,7 +318,7 @@ int ui_element_list_keypress(struct ui_element_list *list, SDL_Event *event)
 	return 0;
 }
 
-int ui_element_list_keyrelease(struct ui_element_list *list, SDL_Event *event)
+int ui_element_list_keyrelease(struct ui_element_list *list, SDL_Event *event, int current_displaymode)
 {
 	struct ui_element_list *i;
 
@@ -329,7 +327,7 @@ int ui_element_list_keyrelease(struct ui_element_list *list, SDL_Event *event)
 			continue;
 		if (!i->element->keyrelease_fn)
 			continue;
-		if (*i->element->displaymode != i->element->active_displaymode)
+		if (current_displaymode != i->element->active_displaymode)
 			continue;
 		if (!i->element->hidden)
 			continue;
@@ -339,14 +337,14 @@ int ui_element_list_keyrelease(struct ui_element_list *list, SDL_Event *event)
 	return 0;
 }
 
-int ui_element_list_event(struct ui_element_list *list, SDL_Event *event)
+int ui_element_list_event(struct ui_element_list *list, SDL_Event *event, int current_displaymode)
 {
 	switch (event->type) {
 	case SDL_KEYDOWN:
 	case SDL_TEXTINPUT:
-		return ui_element_list_keypress(list, event);
+		return ui_element_list_keypress(list, event, current_displaymode);
 	case SDL_KEYUP:
-		return ui_element_list_keyrelease(list, event);
+		return ui_element_list_keyrelease(list, event, current_displaymode);
 	default:
 		return 0;
 	}
