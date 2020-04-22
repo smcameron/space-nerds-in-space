@@ -4555,11 +4555,11 @@ static int key_press_cb(SDL_Window *window, SDL_Keysym *keysym)
 			return TRUE;
         case keyfullscreen: {
 			if (fullscreen) {
-				/* SDL TODO gtk_window_unfullscreen(GTK_WINDOW(window)); */
+				SDL_SetWindowFullscreen(window, 0);
 				fullscreen = 0;
 				/* configure_event takes care of resizing drawing area, etc. */
 			} else {
-				/* SDL TODO gtk_window_fullscreen(GTK_WINDOW(window)); */
+				SDL_SetWindowFullscreen(window, SDL_WINDOW_FULLSCREEN_DESKTOP);
 				fullscreen = 1;
 				/* configure_event takes care of resizing drawing area, etc. */
 			}
@@ -19126,21 +19126,16 @@ static void init_demon_ui()
 	snis_debug_dump_set_label("CLIENT");
 }
 
-static void calculate_new_2d_zoom(int direction, double x, double y, double zoom_amount,
+static void calculate_new_2d_zoom(int direction /* 1 = up, 0 = down */, double x, double y, double zoom_amount,
 	float *ux1, float *uy1, float *ux2, float *uy2)
 {
 	double nx1, nx2, ny1, ny2, mux, muy;
 	double zoom_factor;
 
-#if 0
-	/* TODO SDL */
-	if (direction == GDK_SCROLL_UP)
+	if (direction)
 		zoom_factor = 1.0 - zoom_amount;
 	else
 		zoom_factor = 1.0 + zoom_amount;
-#else
-	zoom_factor = 1.0;
-#endif
 	mux = x * (*ux2 - *ux1) / (double) real_screen_width;
 	muy = y * (*uy2 - *uy1) / (double) real_screen_height;
 	mux += *ux1;
@@ -19161,7 +19156,7 @@ static void calculate_new_demon_zoom(int direction, double x, double y)
 			&demon_ui.ux1, &demon_ui.uy1, &demon_ui.ux2, &demon_ui.uy2);
 }
 
-static void demon_3d_scroll(int direction, double x, double y)
+static void demon_3d_scroll(int direction /* 1 = up, 0 = down */, double x, double y)
 {
 	union vec3 delta = { { 0 } };
 	float scroll_factor;
@@ -19169,12 +19164,8 @@ static void demon_3d_scroll(int direction, double x, double y)
 	scroll_factor = (demon_ui.exaggerated_scale * XKNOWN_DIM * 0.02) +
 			(1.0 - demon_ui.exaggerated_scale) * XKNOWN_DIM * 0.001;
 
-#if 0
-	delta.v.x = direction == GDK_SCROLL_UP ? scroll_factor : -scroll_factor;
-#else
-	/* TODO SDL */
-	delta.v.x = scroll_factor;
-#endif
+	delta.v.x = direction ? scroll_factor : -scroll_factor;
+
 	quat_rot_vec_self(&delta, &demon_ui.camera_orientation);
 	vec3_add(&demon_ui.desired_camera_pos, &demon_ui.camera_pos, &delta);
 }
@@ -20424,10 +20415,8 @@ static void make_science_forget_stuff(void)
 	pthread_mutex_unlock(&universe_mutex);
 }
 
-static int main_da_scroll(int direction)
+static int main_da_scroll(SDL_Window *window, SDL_MouseWheelEvent *e)
 {
-#if 0
-	struct _GdkEventScroll *e = (struct _GdkEventScroll *) event;
 	struct snis_entity *o;
 	int16_t newval = 0;
 	/* Science zoom scroll sensitivity table */
@@ -20439,10 +20428,10 @@ static int main_da_scroll(int direction)
 		return 0;
 	switch (displaymode) {
 	case DISPLAYMODE_SCIENCE:
-		if (e->direction == GDK_SCROLL_UP)
+		if (e->y > 0) /* up */
 			newval = o->tsd.ship.scizoom -
 				(int) table_interp(o->tsd.ship.scizoom, szx, szy, ARRAYSIZE(szx));
-		if (e->direction == GDK_SCROLL_DOWN)
+		if (e->y < 0) /* down */
 			newval = o->tsd.ship.scizoom +
 				(int) table_interp(o->tsd.ship.scizoom, szx, szy, ARRAYSIZE(szx));
 		if (newval < 0)
@@ -20453,47 +20442,44 @@ static int main_da_scroll(int direction)
 		return 0;
 	case DISPLAYMODE_DEMON:
 		if (demon_ui.console_active) {
-			if (e->direction == 0)
+			if (e->y > 0)
 				text_window_scroll_up(demon_ui.console);
-			else if (e->direction > 0)
+			else if (e->y < 0)
 				text_window_scroll_down(demon_ui.console);
 			return 0;
 		}
 		if (demon_ui.use_3d)
-			demon_3d_scroll(e->direction, e->x, e->y);
+			demon_3d_scroll(e->y > 0, mouse.x, mouse.y);
 		else
-			calculate_new_demon_zoom(e->direction, e->x, e->y);
+			calculate_new_demon_zoom(e->y > 0, mouse.x, mouse.y);
 		return 0;
 	case DISPLAYMODE_NAVIGATION:
-		if (e->direction == GDK_SCROLL_UP)
+		if (e->y > 0)
 			do_zoom(10);
-		if (e->direction == GDK_SCROLL_DOWN)
+		if (e->y < 0)
 			do_zoom(-10);
 		return 0;
 	case DISPLAYMODE_WEAPONS:
-		if (e->direction == GDK_SCROLL_UP)
+		if (e->y > 0)
 			do_zoom(10);
-		if (e->direction == GDK_SCROLL_DOWN)
+		if (e->y < 0)
 			do_zoom(-10);
 		return 0;
 	case DISPLAYMODE_MAINSCREEN:
-		if (e->direction == GDK_SCROLL_UP)
+		if (e->y > 0)
 			do_zoom(10);
-		if (e->direction == GDK_SCROLL_DOWN)
+		if (e->y < 0)
 			do_zoom(-10);
 		return 0;
 	case DISPLAYMODE_COMMS:
-		if (e->direction == GDK_SCROLL_UP)
+		if (e->y > 0)
 			comms_dirkey(0, -1);
-		if (e->direction == GDK_SCROLL_DOWN)
+		if (e->y < 0)
 			comms_dirkey(0, 1);
 		return 0;
 	default:
 		return 0;
 	}
-#else
-	/* SDL TODO */
-#endif
 	return 0;
 }
 
@@ -21859,22 +21845,21 @@ static int mouse_button_held(int button)
 	return TRUE;
 }
 
-static int main_da_motion_notify(void)
+static int main_da_motion_notify(SDL_Window *window, SDL_MouseMotionEvent *event)
 {
-#if 0
-	/* SDL TODO */
 	float pitch, yaw;
 	float smoothx, smoothy;
 	int sx, sy;
+	int window_origin_x, window_origin_y;
+
+	/* Find window origin in real screen coords */
+	SDL_GetWindowPosition(window, &window_origin_x, &window_origin_y);
 
 	mouse.x = event->x;
 	mouse.y = event->y;
 	if (current_mouse_ui_mode == MOUSE_MODE_CAPTURED_MOUSE) {
-		int cx, cy, window_origin_x, window_origin_y;
+		int cx, cy;
 
-		/* Find window origin in real screen coords */
-		window_origin_x = event->x_root - event->x;
-		window_origin_y = event->y_root - event->y;
 
 		/* Find center of window in real screen coords */
 		cx = window_origin_x + real_screen_width / 2;
@@ -21883,7 +21868,7 @@ static int main_da_motion_notify(void)
 		/* If the mouse is at the center of the screen, then do nothing,
 		 * as this is due to events from us warping to the center of the screen.
 		 */
-		if (event->x_root == cx && event->y_root == cy) {
+		if (event->x + window_origin_x == cx && event->y + window_origin_y == cy) {
 			mouse.deltax = 0;
 			mouse.deltay = 0;
 			mouse.x = event->x;
@@ -21895,8 +21880,10 @@ static int main_da_motion_notify(void)
 		 */
 		mouse.deltax = event->x - real_screen_width / 2;
 		mouse.deltay = event->y - real_screen_height / 2;
+#if 0
 		/* I suspect this might have trouble with multi-monitor setups */
-		gdk_display_warp_pointer(gdk_display_get_default(), gdk_screen_get_default(), cx, cy);
+		TODO SDL gdk_display_warp_pointer(gdk_display_get_default(), gdk_screen_get_default(), cx, cy);
+#endif
 	}
 
 	switch (displaymode) {
@@ -21961,7 +21948,6 @@ static int main_da_motion_notify(void)
 	default:
 		break;
 	}
-#endif
 	return TRUE;
 }
 
@@ -22982,23 +22968,17 @@ static void figure_aspect_ratio(SDL_Window *window, int requested_x, int request
 	*y = real_screen_height;
 	screen_offset_x = 0;
 	screen_offset_y = 0;
-#if 0
-	/* SDL TODO */
-	int sw, sh, monitors;
-	GdkScreen *s;
-	GdkRectangle bounds;
 
-	s = gdk_screen_get_default();
-	if (!s)
+	int sw, sh, monitors;
+	SDL_Rect bounds;
+
+	monitors = SDL_GetNumVideoDisplays();
+	if (monitors < 0)
 		return;
 
-	monitors = gdk_screen_get_n_monitors(s);
-	if (monitorid == -1 || monitorid >= monitors)
-		monitorid = gdk_screen_get_primary_monitor(s);
-
-	gdk_screen_get_monitor_geometry(s, monitorid, &bounds);
-	sw = bounds.width;
-	sh = bounds.height;
+	SDL_GetDisplayBounds(0, &bounds);
+	sw = bounds.w;
+	sh = bounds.h;
 	screen_offset_x = bounds.x;
 	screen_offset_y = bounds.y;
 
@@ -23029,7 +23009,6 @@ static void figure_aspect_ratio(SDL_Window *window, int requested_x, int request
 			*x = sw;
 		}
 	}
-#endif
 }
 
 static void init_colors(void)
@@ -23245,15 +23224,8 @@ static void setup_ship_mesh_maps(void)
 
 static void setup_screen_parameters(SDL_Window *window)
 {
-#if 0
-	TODO SDL
-	GdkScreen *s;
-
-	s = gdk_screen_get_default();
-	if (s)
-#endif
-		figure_aspect_ratio(window, requested_aspect_x, requested_aspect_y,
-					&SCREEN_WIDTH, &SCREEN_HEIGHT);
+	figure_aspect_ratio(window, requested_aspect_x, requested_aspect_y,
+				&SCREEN_WIDTH, &SCREEN_HEIGHT);
 	if (requested_aspect_x >= 0 || requested_aspect_y >= 0)
 		fullscreen = 0; /* can't request aspect ratio AND fullscreen */
 	real_screen_width = SCREEN_WIDTH;
@@ -23445,13 +23417,10 @@ static void process_events(SDL_Window *window)
 			main_da_button_release(&event.button);
 			break;
 		case SDL_MOUSEMOTION:
-			/* TODO SDL2 main_da_motion_notify(event.motion.x, event.motion.y); */
+			main_da_motion_notify(window, &event.motion);
 			break;
 		case SDL_MOUSEWHEEL:
-			if (event.wheel.y < 0)
-				main_da_scroll(1);
-			else
-				main_da_scroll(0);
+			main_da_scroll(window, &event.wheel);
 			break;
 		}
 	}
@@ -23513,8 +23482,12 @@ int main(int argc, char *argv[])
 	docking_port_info = read_docking_port_info(starbase_metadata, nstarbase_models,
 							STARBASE_SCALE_FACTOR);
 	maybe_connect_to_lobby();
-	if (SDL_Init(SDL_INIT_EVERYTHING) != 0) {
-		fprintf(stderr, "Unable to initialize SDL:  %s\n", SDL_GetError());
+	if (SDL_Init(SDL_INIT_VIDEO) != 0) {
+		fprintf(stderr, "Unable to initialize SDL (Video):  %s\n", SDL_GetError());
+		return 1;
+	}
+	if (SDL_Init(SDL_INIT_EVENTS) != 0) {
+		fprintf(stderr, "Unable to initialize SDL (Events):  %s\n", SDL_GetError());
 		return 1;
 	}
 	atexit(SDL_Quit);
@@ -23581,11 +23554,8 @@ int main(int argc, char *argv[])
 
 	set_default_clip_window();
 
-#if 0
-	/* TODO SDL */
 	if (fullscreen)
-		gtk_window_fullscreen(GTK_WINDOW(window));
-#endif
+		SDL_SetWindowFullscreen(window, SDL_WINDOW_FULLSCREEN_DESKTOP);
 	main_da_configure(window);
 
 	const double maxTimeBehind = 0.5;
