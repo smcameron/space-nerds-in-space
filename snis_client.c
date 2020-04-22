@@ -4573,6 +4573,10 @@ static int key_press_cb(SDL_Window *window, SDL_Keysym *keysym)
 			in_the_process_of_quitting = !in_the_process_of_quitting;
 			if (!in_the_process_of_quitting)
 				current_quit_selection = 0;
+			else {
+				/* Clear focus from text widgets so they don't eat the keystrokes */
+				ui_element_list_clear_focus(uiobjs);
+			}
 			break;
 	case keytorpedo:
 		fire_torpedo_button_pressed(NULL);
@@ -21777,6 +21781,8 @@ static int main_da_button_release(SDL_MouseButtonEvent *event)
 			sy > QUIT_BUTTON_Y && sy < QUIT_BUTTON_Y + QUIT_BUTTON_HEIGHT) {
 			final_quit_selection = 1;
 			in_the_process_of_quitting = 1;
+			/* Clear focus from text widgets so they don't eat the keystrokes */
+			ui_element_list_clear_focus(uiobjs);
 		}
 		if (sx > NOQUIT_BUTTON_X && sx < NOQUIT_BUTTON_X + QUIT_BUTTON_WIDTH &&
 			sy > QUIT_BUTTON_Y && sy < QUIT_BUTTON_Y + QUIT_BUTTON_HEIGHT) {
