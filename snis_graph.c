@@ -46,6 +46,7 @@ struct snis_graph_viewport {
 	int x_offset, y_offset, width, height;
 };
 
+#define MAXWINDOWS 2
 static struct snis_graph_context {
 	float xscale, yscale;
 	struct liang_barsky_clip_window c;
@@ -56,78 +57,78 @@ static struct snis_graph_context {
 
 	int has_scale;
 	int has_viewport;
-} sgc;
+} sgc[MAXWINDOWS];
 
 /* size of the extent we draw to with the drawing commands */
-void sng_set_extent_size(int width, int height)
+void sng_set_extent_size(int wn, int width, int height)
 {
-	sgc.extent_width = width;
-	sgc.extent_height = height;
+	sgc[wn].extent_width = width;
+	sgc[wn].extent_height = height;
 }
 
 /* pixel size of the target screen */
-void sng_set_screen_size(int width, int height)
+void sng_set_screen_size(int wn, int width, int height)
 {
-	sgc.screen_width = width;
-	sgc.screen_height = height;
-	graph_dev_set_screen_size(width, height);
+	sgc[wn].screen_width = width;
+	sgc[wn].screen_height = height;
+	graph_dev_set_screen_size(wn, width, height);
 
-	sgc.xscale = (float)sgc.screen_width / (float)sgc.extent_width;
-	sgc.yscale = (float)sgc.screen_height / (float)sgc.extent_height;
+	sgc[wn].xscale = (float) sgc[wn].screen_width / (float) sgc[wn].extent_width;
+	sgc[wn].yscale = (float) sgc[wn].screen_height / (float) sgc[wn].extent_height;
 
 	/* sgc.has_scale = (sgc.screen_width != sgc.extent_width || sgc.screen_height != sgc.extent_height); */
 
 	
 	/* hack in fixed aspect ratio for now */
-	if (sgc.yscale < sgc.xscale)
-		sgc.xscale = sgc.yscale;
+	if (sgc[wn].yscale < sgc[wn].xscale)
+		sgc[wn].xscale = sgc[wn].yscale;
 	else
-		sgc.yscale = sgc.xscale;
+		sgc[wn].yscale = sgc[wn].xscale;
 
-	sgc.has_scale = 1;
-	graph_dev_set_extent_scale(sgc.xscale, sgc.yscale);
+	sgc[wn].has_scale = 1;
+	graph_dev_set_extent_scale(sgc[wn].xscale, sgc[wn].yscale);
 	/* update the viewport in graph_dev as they are in screen coords */
-	graph_dev_set_3d_viewport(sgc.vp_3d.x_offset * sgc.xscale, sgc.vp_3d.y_offset * sgc.yscale,
-					sgc.vp_3d.width * sgc.xscale, sgc.vp_3d.height * sgc.yscale);
+	graph_dev_set_3d_viewport(sgc[wn].vp_3d.x_offset * sgc[wn].xscale, sgc[wn].vp_3d.y_offset * sgc[wn].yscale,
+					sgc[wn].vp_3d.width * sgc[wn].xscale, sgc[wn].vp_3d.height * sgc[wn].yscale);
 }
 
-void sng_set_3d_viewport(int x_offset, int y_offset, int width, int height)
+void sng_set_3d_viewport(int wn, int x_offset, int y_offset, int width, int height)
 {
-	sgc.vp_3d.x_offset = x_offset;
-	sgc.vp_3d.y_offset = y_offset;
-	sgc.vp_3d.width = width;
-	sgc.vp_3d.height = height;
+	sgc[wn].vp_3d.x_offset = x_offset;
+	sgc[wn].vp_3d.y_offset = y_offset;
+	sgc[wn].vp_3d.width = width;
+	sgc[wn].vp_3d.height = height;
 
-	graph_dev_set_3d_viewport(x_offset * sgc.xscale, y_offset * sgc.yscale,
+	graph_dev_set_3d_viewport(wn, x_offset * sgc.xscale, y_offset * sgc.yscale,
 					width * sgc.xscale, height * sgc.yscale);
 }
 
-void sng_set_scale(float xscale, float yscale)
+void sng_set_scale(int wn, float xscale, float yscale)
 {
-	sgc.xscale = xscale;
-	sgc.yscale = yscale;
+	sgc[wn].xscale = xscale;
+	sgc[wn].yscale = yscale;
 }
 
-void sng_set_clip_window(int x1, int y1, int x2, int y2)
+void sng_set_clip_window(wn, int x1, int y1, int x2, int y2)
 {
-	sgc.c.x1 = x1;
-	sgc.c.y1 = y1;
-	sgc.c.x2 = x2;
-	sgc.c.y2 = y2;
+	sgc[wn].c.x1 = x1;
+	sgc[wn].c.y1 = y1;
+	sgc[wn].c.x2 = x2;
+	sgc[wn].c.y2 = y2;
 }
 
-void sng_current_draw_line(float x1, float y1, float x2, float y2)
+void sng_current_draw_line(wn, float x1, float y1, float x2, float y2)
 {
-	if (!clip_line(&sgc.c, &x1, &y1, &x2, &y2))
+	if (!clip_line(&sgc[wn].c, &x1, &y1, &x2, &y2))
 		return;
-	graph_dev_draw_line(x1 * sgc.xscale, y1 * sgc.yscale, x2 * sgc.xscale, y2 * sgc.yscale);
+	graph_dev_draw_line(wn, x1 * sgc[wn].xscale, y1 * sgc[wn].yscale, x2 * sgc[wn].xscale, y2 * sgc[wn].yscale);
 }
 
-void sng_current_draw_thick_line(float x1, float y1, float x2, float y2)
+void sng_current_draw_thick_line(int wn, float x1, float y1, float x2, float y2)
 {
 	float sx1, sy1, sx2, sy2, dx, dy;
 
-	if (!clip_line(&sgc.c, &x1, &y1, &x2, &y2))
+	if (!clip_line(&sgc[wn].c, &x1, &y1, &x2, &y2))
 		return;
 
 	if (fabs(x1 - x2) > fabs(y1 - y2)) {
@@ -137,54 +138,54 @@ void sng_current_draw_thick_line(float x1, float y1, float x2, float y2)
 		dx = 1;
 		dy = 0;
 	}
-	sx1 = x1 * sgc.xscale;
-	sx2 = x2 * sgc.xscale;
-	sy1 = y1 * sgc.yscale;	
-	sy2 = y2 * sgc.yscale;	
+	sx1 = x1 * sgc[wn].xscale;
+	sx2 = x2 * sgc[wn].xscale;
+	sy1 = y1 * sgc[wn].yscale;	
+	sy2 = y2 * sgc[wn].yscale;	
 	
-	graph_dev_draw_line(sx1, sy1, sx2, sy2);
-	graph_dev_draw_line(sx1 - dx, sy1 - dy, sx2 - dx, sy2 - dy);
-	graph_dev_draw_line(sx1 + dx, sy1 + dy, sx2 + dx, sy2 + dy);
+	graph_dev_draw_line(wn, sx1, sy1, sx2, sy2);
+	graph_dev_draw_line(wn, sx1 - dx, sy1 - dy, sx2 - dx, sy2 - dy);
+	graph_dev_draw_line(wn, sx1 + dx, sy1 + dy, sx2 + dx, sy2 + dy);
 }
 
-static int clip_rectangle(float *x, float *y, float *width, float *height)
+static int clip_rectangle(int wn, float *x, float *y, float *width, float *height)
 {
 	float x2, y2;
 
 	x2 = *x + *width;
 	y2 = *y + *height;
-	if (x2 < sgc.c.x1)
+	if (x2 < sgc[wn].c.x1)
 		return 0;
-	if (*x > sgc.c.x2)
+	if (*x > sgc[wn].c.x2)
 		return 0;
-	if (y2 < sgc.c.y1)
+	if (y2 < sgc[wn].c.y1)
 		return 0;
-	if (*y > sgc.c.y2)
+	if (*y > sgc[wn].c.y2)
 		return 0;
 
-	if (*x < sgc.c.x1)
-		*x = sgc.c.x1;
-	if (x2 > sgc.c.x2)
-		x2 = sgc.c.x2;
-	if (*y < sgc.c.y1)
-		*y = sgc.c.y1;
-	if (y2 > sgc.c.y2)
-		y2 = sgc.c.y2;
+	if (*x < sgc[wn].c.x1)
+		*x = sgc[wn].c.x1;
+	if (x2 > sgc[wn].c.x2)
+		x2 = sgc[wn].c.x2;
+	if (*y < sgc[wn].c.y1)
+		*y = sgc[wn].c.y1;
+	if (y2 > sgc[wn].c.y2)
+		y2 = sgc[wn].c.y2;
 
 	*width = x2 - *x;
 	*height = y2 - *y;
 	return 1;
 }
 
-void sng_current_draw_rectangle(int filled, float x, float y, float width, float height)
+void sng_current_draw_rectangle(int wn, int filled, float x, float y, float width, float height)
 {
-	if (!clip_rectangle(&x, &y, &width, &height))
+	if (!clip_rectangle(wn, &x, &y, &width, &height))
 		return;
-	graph_dev_draw_rectangle(filled, x * sgc.xscale, y * sgc.yscale,
-		width * sgc.xscale, height * sgc.yscale);
+	graph_dev_draw_rectangle(wn, filled, x * sgc[wn].xscale, y * sgc[wn].yscale,
+		width * sgc[wn].xscale, height * sgc[wn].yscale);
 }
 
-void sng_current_draw_bright_line(float x1, float y1, float x2, float y2, int color)
+void sng_current_draw_bright_line(wn, float x1, float y1, float x2, float y2, int color)
 {
 	float sx1, sy1, sx2, sy2, dx, dy;
 
@@ -196,13 +197,13 @@ void sng_current_draw_bright_line(float x1, float y1, float x2, float y2, int co
 		dy = 0;
 	}
 
-	if (!clip_line(&sgc.c, &x1, &y1, &x2, &y2))
+	if (!clip_line(&sgc[wn].c, &x1, &y1, &x2, &y2))
 		return;
 
-	sx1 = x1 * sgc.xscale;
-	sx2 = x2 * sgc.xscale;
-	sy1 = y1 * sgc.yscale;	
-	sy2 = y2 * sgc.yscale;	
+	sx1 = x1 * sgc[wn].xscale;
+	sx2 = x2 * sgc[wn].xscale;
+	sy1 = y1 * sgc[wn].yscale;	
+	sy2 = y2 * sgc[wn].yscale;	
 
 	sng_set_foreground(WHITE);	
 	graph_dev_draw_line(sx1, sy1, sx2, sy2);
@@ -211,10 +212,10 @@ void sng_current_draw_bright_line(float x1, float y1, float x2, float y2, int co
 	graph_dev_draw_line(sx1 + dx, sy1 + dy, sx2 + dx, sy2 + dy);
 }
 
-void sng_current_draw_arc(int filled, float x, float y, float width, float height, float angle1, float angle2)
+void sng_current_draw_arc(int wn, int filled, float x, float y, float width, float height, float angle1, float angle2)
 {
-	graph_dev_draw_arc(filled, x * sgc.xscale, y * sgc.yscale, width * sgc.xscale,
-				height * sgc.yscale, angle1, angle2);
+	graph_dev_draw_arc(filled, x * sgc[wn].xscale, y * sgc[wn].yscale, width * sgc[wn].xscale,
+				height * sgc[wn].yscale, angle1, angle2);
 }
 
 void sng_dotted_line_plot_func(int x, int y, void *context)
@@ -233,56 +234,56 @@ void sng_electric_line_plot_func(int x, int y, void *context)
 		graph_dev_draw_point(x, y);
 }
 
-static void sng_bright_electric_line_plot_func(int x, int y, void *context)
+static void sng_bright_electric_line_plot_func(int wn, int x, int y, void *context)
 {
 	struct sng_dotted_plot_func_context *c = context;
 
 	if (snis_randn(100) < 20) {
-		sng_set_foreground(c->i);
-		graph_dev_draw_point(x, y);
+		sng_set_foreground(wn, c->i);
+		graph_dev_draw_point(wn, x, y);
 	}
 }
 
-void sng_draw_dotted_line(float x1, float y1, float x2, float y2)
+void sng_draw_dotted_line(int wn, float x1, float y1, float x2, float y2)
 {
 	struct sng_dotted_plot_func_context context;
 
 	context.i = 0;
 
-	if (!clip_line(&sgc.c, &x1, &y1, &x2, &y2))
+	if (!clip_line(&sgc[wn].c, &x1, &y1, &x2, &y2))
 		return;
 
-	bline(x1 * sgc.xscale, y1 * sgc.yscale, x2 * sgc.xscale, y2 * sgc.yscale,
+	bline(x1 * sgc[wn].xscale, y1 * sgc[wn].yscale, x2 * sgc[wn].xscale, y2 * sgc[wn].yscale,
 			sng_dotted_line_plot_func, &context);
 }
 
-void sng_draw_electric_line(float x1, float y1, float x2, float y2)
+void sng_draw_electric_line(int wn, float x1, float y1, float x2, float y2)
 {
 	struct sng_dotted_plot_func_context context;
 
 	context.i = 0;
 
-	if (!clip_line(&sgc.c, &x1, &y1, &x2, &y2))
+	if (!clip_line(&sgc[wn].c, &x1, &y1, &x2, &y2))
 		return;
 
-	bline(x1 * sgc.xscale, y1 * sgc.yscale, x2 * sgc.xscale, y2 * sgc.yscale,
+	bline(x1 * sgc[wn].xscale, y1 * sgc[wn].yscale, x2 * sgc[wn].xscale, y2 * sgc[wn].yscale,
 			sng_electric_line_plot_func, &context);
 }
 
-static void sng_draw_bright_white_electric_line(float x1, float y1, float x2, float y2, int color)
+static void sng_draw_bright_white_electric_line(int wn, float x1, float y1, float x2, float y2, int color)
 {
 	struct sng_dotted_plot_func_context context;
 
 	context.i = color;
 
-	if (!clip_line(&sgc.c, &x1, &y1, &x2, &y2))
+	if (!clip_line(&sgc[wn].c, &x1, &y1, &x2, &y2))
 		return;
 
-	bline(x1 * sgc.xscale, y1 * sgc.yscale, x2 * sgc.xscale, y2 * sgc.yscale,
+	bline(x1 * sgc[wn].xscale, y1 * sgc[wn].yscale, x2 * sgc[wn].xscale, y2 * sgc[wn].yscale,
 			sng_bright_electric_line_plot_func, &context);
 }
 
-void sng_draw_laser_line(float x1, float y1, float x2, float y2, int color)
+void sng_draw_laser_line(int wn, float x1, float y1, float x2, float y2, int color)
 {
 	float dx, dy;
 
@@ -294,7 +295,7 @@ void sng_draw_laser_line(float x1, float y1, float x2, float y2, int color)
 		dy = 0;
 	}
 
-	if (!clip_line(&sgc.c, &x1, &y1, &x2, &y2))
+	if (!clip_line(&sgc[wn].c, &x1, &y1, &x2, &y2))
 		return;
 
 	sng_draw_bright_white_electric_line(x1, y1, x2, y2, color);
@@ -357,19 +358,19 @@ float sng_abs_xy_draw_letter(struct my_vect_obj **font, unsigned char letter, fl
 	return diff; 
 }
 
-static float crawl3d_transform_x(float x, float y)
+static float crawl3d_transform_x(int wn, float x, float y)
 {
-	x = (1800.0 * (x - sgc.screen_width / 2.0) / (2000.0 - y)) + sgc.screen_width / 2.0;
+	x = (1800.0 * (x - sgc[wn].screen_width / 2.0) / (2000.0 - y)) + sgc[wn].screen_width / 2.0;
 	return x;
 }
 
-static float crawl3d_transform_y(float y)
+static float crawl3d_transform_y(int wn, float y)
 {
-	y = (1300.0 * (y - sgc.screen_height / 2.0) / (3000.0 - y)) + 7.0 * sgc.screen_height / 8.0;
+	y = (1300.0 * (y - sgc[wn].screen_height / 2.0) / (3000.0 - y)) + 7.0 * sgc[wn].screen_height / 8.0;
 	return y;
 }
 
-float sng_abs_xz_draw_letter(struct my_vect_obj **font, unsigned char letter, float x, float y)
+float sng_abs_xz_draw_letter(int wn, struct my_vect_obj **font, unsigned char letter, float x, float y)
 {
 	int i;
 	float x1, y1, x2, y2;
@@ -403,7 +404,7 @@ float sng_abs_xz_draw_letter(struct my_vect_obj **font, unsigned char letter, fl
 		y2 = crawl3d_transform_y(y2);
 
 		if (x1 > 0 && x2 > 0 && y1 > 0 && y2 > 0)
-			sng_current_draw_line(x1, y1, x2, y2);
+			sng_current_draw_line(wn, x1, y1, x2, y2);
 	}
 	diff = fabs(maxx - minx);
 	/* if (diff == 0)
@@ -413,14 +414,14 @@ float sng_abs_xz_draw_letter(struct my_vect_obj **font, unsigned char letter, fl
 
 /* Used for floating labels in the game. */
 /* Draws a string at an absolute x,y position on the screen. */ 
-void sng_abs_xy_draw_string(char *s, int font, float x, float y)
+void sng_abs_xy_draw_string(int wn, char *s, int font, float x, float y)
 {
 
 	int i, dx;	
 	float deltax = 0;
 
 	for (i = 0; s[i]; i++) {
-		dx = (letter_spacing[font]) + sng_abs_xy_draw_letter(gamefont[font + 5 * sng_font_family],
+		dx = (letter_spacing[font]) + sng_abs_xy_draw_letter(wn, gamefont[font + 5 * sng_font_family],
 			s[i], x + deltax, y);
 		if (s[i] == '\n') {
 			deltax = 0;
@@ -472,7 +473,7 @@ void sng_string_bounding_box(char *s, int font, float *bbx1, float *bby1, float 
 
 /* Used for floating labels in the game. */
 /* Draws a string centered at x,y position on the screen. */
-void sng_center_xy_draw_string(char *s, int font, float x, float y)
+void sng_center_xy_draw_string(int wn, char *s, int font, float x, float y)
 {
 	float bbx1, bby1, bbx2, bby2;
 	sng_string_bounding_box(s, font, &bbx1, &bby1, &bbx2, &bby2);
@@ -484,13 +485,13 @@ void sng_center_xy_draw_string(char *s, int font, float x, float y)
 	float deltax = 0;
 
 	for (i=0;s[i];i++) {
-		dx = (letter_spacing[font]) + sng_abs_xy_draw_letter(gamefont[font + 5 * sng_font_family],
+		dx = (letter_spacing[font]) + sng_abs_xy_draw_letter(wn, gamefont[font + 5 * sng_font_family],
 			s[i], ox + deltax, oy);
 		deltax += dx;
 	}
 }
 
-void sng_center_xz_draw_string(char *s, int font, float x, float y)
+void sng_center_xz_draw_string(int wn, char *s, int font, float x, float y)
 {
 	float bbx1, bby1, bbx2, bby2;
 	sng_string_bounding_box(s, font, &bbx1, &bby1, &bbx2, &bby2);
@@ -502,13 +503,13 @@ void sng_center_xz_draw_string(char *s, int font, float x, float y)
 	float deltax = 0;
 
 	for (i = 0; s[i]; i++) {
-		dx = (letter_spacing[font]) + sng_abs_xz_draw_letter(gamefont[font + 5 * sng_font_family],
+		dx = (letter_spacing[font]) + sng_abs_xz_draw_letter(wn, gamefont[font + 5 * sng_font_family],
 			s[i], ox + deltax, oy);
 		deltax += dx;
 	}
 }
 
-void sng_abs_xy_draw_string_with_cursor(char *s, int font, float x, float y, int cursor_pos, int cursor_on)
+void sng_abs_xy_draw_string_with_cursor(int wn, char *s, int font, float x, float y, int cursor_pos, int cursor_on)
 {
 
 	int i;
@@ -516,24 +517,24 @@ void sng_abs_xy_draw_string_with_cursor(char *s, int font, float x, float y, int
 	float deltax = 0;
 
 	if (!cursor_on) {
-		sng_abs_xy_draw_string(s, font, x, y);
+		sng_abs_xy_draw_string(wn, s, font, x, y);
 		return;
 	}
 
 	for (i = 0; s[i]; i++) {
 		if (i == cursor_pos)
-			sng_abs_xy_draw_letter(gamefont[font + 5 * sng_font_family], '_', x + deltax, y);
-		dx = (letter_spacing[font]) + sng_abs_xy_draw_letter(gamefont[font + 5 * sng_font_family],
+			sng_abs_xy_draw_letter(wn, gamefont[font + 5 * sng_font_family], '_', x + deltax, y);
+		dx = (letter_spacing[font]) + sng_abs_xy_draw_letter(wn, gamefont[font + 5 * sng_font_family],
 			s[i], x + deltax, y);
 		deltax += dx;
 	}
 	if (i == cursor_pos)
-		sng_abs_xy_draw_letter(gamefont[font + 5 * sng_font_family], '_', x + deltax, y);
+		sng_abs_xy_draw_letter(wn, gamefont[font + 5 * sng_font_family], '_', x + deltax, y);
 }
 
-void sng_draw_point(float x, float y)
+void sng_draw_point(wn, float x, float y)
 {
-	graph_dev_draw_point(x * sgc.xscale, y * sgc.yscale);
+	graph_dev_draw_point(wn, x * sgc[wn].xscale, y * sgc[wn].yscale);
 }
 
 /* from http://stackoverflow.com/a/6930407
@@ -896,26 +897,26 @@ void sng_setup_colors(void *gtk_widget, char *user_color_file)
 	graph_dev_setup_colors(gtk_widget, huex, TOTAL_COLORS);
 }
 
-void sng_set_foreground_alpha(int c, float a)
+void sng_set_foreground_alpha(int wn, int c, float a)
 {
-	sgc.hue = c;
-	graph_dev_set_color(&huex[c], a);
+	sgc[wn].hue = c;
+	graph_dev_set_color(wn, &huex[c], a);
 }
 
-void sng_set_foreground(int c)
+void sng_set_foreground(int wn, int c)
 {
 	if (c < 0)
 		return; /* TODO: find out why snis_limited_client calls this with negative color */
-	sgc.hue = c;
-	graph_dev_set_color(&huex[c], -1);
+	sgc[wn].hue = c;
+	graph_dev_set_color(wn, &huex[c], -1);
 }
 
-struct sng_color sng_get_foreground()
+struct sng_color sng_get_foreground(int wn)
 {
 	struct sng_color color;
-	color.red = huex[sgc.hue].red / 65535.0;
-	color.green = huex[sgc.hue].green / 65535.0;
-	color.blue = huex[sgc.hue].blue / 65535.0;
+	color.red = huex[sgc[wn].hue].red / 65535.0;
+	color.green = huex[sgc[wn].hue].green / 65535.0;
+	color.blue = huex[sgc[wn].hue].blue / 65535.0;
 	return color;
 }
 
@@ -933,9 +934,9 @@ void sng_set_context(void *gdk_drawable, void *gdk_gc)
 	graph_dev_set_context(gdk_drawable, gdk_gc);
 }
 
-void sng_draw_circle(int filled, float x, float y, float r)
+void sng_draw_circle(int wn, int filled, float x, float y, float r)
 {
-	sng_current_draw_arc(filled, x - r, y - r, r * 2, r * 2, 0, 2.0*M_PI);
+	sng_current_draw_arc(wn, filled, x - r, y - r, r * 2, r * 2, 0, 2.0*M_PI);
 }
 
 char *sng_load_png_texture(const char *filename, int flipVertical, int flipHorizontal, int pre_multiply_alpha,
@@ -1088,14 +1089,14 @@ cleanup:
 }
 
 /* convert from physical (e.g. mouse) coords to extent coords */
-float sng_pixelx_to_screenx(float x)
+float sng_pixelx_to_screenx(int wn, float x)
 {
-	return x / sgc.xscale;
+	return x / sgc[wn].xscale;
 }
 
-float sng_pixely_to_screeny(float y)
+float sng_pixely_to_screeny(int wn, float y)
 {
-	return y / sgc.yscale;
+	return y / sgc[wn].yscale;
 }
 
 void sng_set_font_family(int family)
@@ -1107,3 +1108,4 @@ int sng_get_font_family(void)
 {
 	return sng_font_family;
 }
+
