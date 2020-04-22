@@ -2370,7 +2370,7 @@ extern int graph_dev_entity_render_order(struct entity_context *cx, struct entit
 static void graph_dev_raster_triangle_mesh(int wn, struct entity_context *cx, struct entity *e,
 	union vec3 *eye_light_pos, const struct entity_transform *transform, struct sng_color *line_color)
 {
-	struct camera_info *c = &cx->camera;
+	struct camera_info *c = &cx->camera[wn];
 	struct raster_texture_params rtp = { 0 };
 	struct sng_color atmosphere_color = { 0 };
 	union vec3 water_color;
@@ -2670,7 +2670,7 @@ static void graph_dev_raster_triangle_mesh(int wn, struct entity_context *cx, st
 
 	if (filled_triangle) {
 		struct sng_color triangle_color;
-		if (cx->camera.renderer & BLACK_TRIS)
+		if (cx->camera[wn].renderer & BLACK_TRIS)
 			triangle_color = sng_get_color(BLACK);
 		else
 			triangle_color = sng_get_color(240 + GRAY + (NSHADESOFGRAY * e->shadecolor) + 10);

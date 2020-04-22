@@ -56,32 +56,32 @@ GLOBAL void entity_set_low_poly_mesh(struct entity *e, struct mesh *m);
 GLOBAL void render_entities(int wn, struct entity_context *cx);
 GLOBAL void render_line(int wn, struct entity_context *cx, float x1, float y1, float z1, float x2, float y2, float z2);
 GLOBAL void render_skybox(int wn, struct entity_context *cx);
-GLOBAL void camera_set_pos(struct entity_context *cx, float x, float y, float z);
-GLOBAL void camera_get_pos(struct entity_context *cx, float *x, float *y, float *z);
-GLOBAL void camera_look_at(struct entity_context *cx, float x, float y, float z);
-GLOBAL void camera_get_look_at(struct entity_context *cx, float *x, float *y, float *z);
-GLOBAL void camera_assign_up_direction(struct entity_context *cx, float x, float y, float z);
-GLOBAL void camera_get_up_direction(struct entity_context *cx, float *x, float *y, float *z);
-GLOBAL void camera_set_parameters(struct entity_context *cx,
+GLOBAL void camera_set_pos(int wn, struct entity_context *cx, float x, float y, float z);
+GLOBAL void camera_get_pos(int wn, struct entity_context *cx, float *x, float *y, float *z);
+GLOBAL void camera_look_at(int wn, struct entity_context *cx, float x, float y, float z);
+GLOBAL void camera_get_look_at(int wn, struct entity_context *cx, float *x, float *y, float *z);
+GLOBAL void camera_assign_up_direction(int wn, struct entity_context *cx, float x, float y, float z);
+GLOBAL void camera_get_up_direction(int wn, struct entity_context *cx, float *x, float *y, float *z);
+GLOBAL void camera_set_parameters(int wn, struct entity_context *cx,
 		float near, float far, int xvpixels, int yvpixels, float angle_of_view);
-GLOBAL void camera_get_parameters(struct entity_context *cx,
+GLOBAL void camera_get_parameters(int wn, struct entity_context *cx,
 		float *near, float *far, int *xvpixels, int *yvpixels, float *angle_of_view);
-GLOBAL void camera_set_orientation(struct entity_context *cx, union quat *q);
-GLOBAL void set_lighting(struct entity_context *cx, double x, double y, double z);
+GLOBAL void camera_set_orientation(int wn, struct entity_context *cx, union quat *q);
+GLOBAL void set_lighting(int wn, struct entity_context *cx, double x, double y, double z);
 GLOBAL void set_ambient_light(struct entity_context *cx, float ambient);
-GLOBAL void entity_init_fake_stars(struct entity_context *cx, int nstars, float radius);
+GLOBAL void entity_init_fake_stars(int wn, struct entity_context *cx, int nstars, float radius);
 GLOBAL void entity_free_fake_stars(struct entity_context *cx);
-GLOBAL void set_renderer(struct entity_context *cx, int renderer);
-GLOBAL int get_renderer(struct entity_context *cx);
+GLOBAL void set_renderer(int wn, struct entity_context *cx, int renderer);
+GLOBAL int get_renderer(int wn, struct entity_context *cx);
 #define WIREFRAME_RENDERER (1 << 0)
 #define FLATSHADING_RENDERER (1 << 1)
 #define BLACK_TRIS (1 << 2)
-GLOBAL void calculate_camera_transform(struct entity_context *cx);
-GLOBAL struct mat44d get_camera_v_transform(struct entity_context *cx);
-GLOBAL struct mat44d get_camera_vp_transform(struct entity_context *cx);
+GLOBAL void calculate_camera_transform(int wn, struct entity_context *cx);
+GLOBAL struct mat44d get_camera_v_transform(int wn, struct entity_context *cx);
+GLOBAL struct mat44d get_camera_vp_transform(int wn, struct entity_context *cx);
 GLOBAL int transform_vertices(const struct mat44 *matrix, struct vertex *v, int len);
-GLOBAL int transform_point(struct entity_context *cx, float x, float y, float z, float *sx, float *sy);
-GLOBAL int transform_line(struct entity_context *cx, float x1, float y1, float z1,
+GLOBAL int transform_point(int wn, struct entity_context *cx, float x, float y, float z, float *sx, float *sy);
+GLOBAL int transform_line(int wn, struct entity_context *cx, float x1, float y1, float z1,
 	float x2, float y2, float z2, float *sx1, float *sy1, float *sx2, float *sy2);
 
 GLOBAL void set_render_style(struct entity *e, int render_style);
@@ -92,14 +92,14 @@ GLOBAL void entity_context_free(struct entity_context *cx);
 #define RENDER_NO_FILL (1 << 3)
 #define RENDER_SPARKLE (1 << 4)
 #define RENDER_ILDA (1 << 5) /* for laser projectors */
-GLOBAL void entity_get_screen_coords(struct entity *e, float *x, float *y);
+GLOBAL void entity_get_screen_coords(int wn, struct entity *e, float *x, float *y);
 
 GLOBAL int get_entity_count(struct entity_context *cx);
 GLOBAL struct entity *get_entity(struct entity_context *cx, int n);
 GLOBAL void entity_set_user_data(struct entity *e, void *user_data);
 GLOBAL void *entity_get_user_data(struct entity *e);
-GLOBAL void set_window_offset(struct entity_context *cx, float x, float y);
-GLOBAL int entity_onscreen(struct entity *e);
+GLOBAL void set_window_offset(int wn, struct entity_context *cx, float x, float y);
+GLOBAL int entity_onscreen(int wn, struct entity *e);
 GLOBAL void update_entity_material(struct entity *e, struct material *material_ptr);
 GLOBAL struct material *entity_get_material(struct entity *e);
 GLOBAL float entity_get_alpha(struct entity *e);

@@ -300,7 +300,7 @@ static uint32_t my_ship_id = UNKNOWN_ID;
 static uint32_t my_ship_oid = UNKNOWN_ID;
 static uint32_t my_home_planet_oid = UNKNOWN_ID;
 #define MAXWINDOWS 2
-static int nwindows = 1;
+static int nwindows = 2;
 static int real_screen_width[MAXWINDOWS];
 static int real_screen_height[MAXWINDOWS];
 static SDL_Window *window[MAXWINDOWS];
@@ -4739,8 +4739,10 @@ static int key_press_cb(int wn, SDL_Keysym *keysym)
 			FLATSHADING_RENDERER | WIREFRAME_RENDERER | BLACK_TRIS,
 			};
 		if (control_key_pressed) {
+			int i;
 			r = (r + 1) % ARRAYSIZE(valid_combos);
-			set_renderer(ecx, valid_combos[r]);
+			for (i = 0; i < nwindows; i++)
+				set_renderer(i, ecx, valid_combos[r]);
 		}
 		break;
 		}
@@ -4899,13 +4901,13 @@ static void show_rotating_wombat(int wn)
 
 	if (!network_setup_ecx)
 		network_setup_ecx = entity_context_new(3, 3);
-	camera_assign_up_direction(network_setup_ecx, camera_up.v.x, camera_up.v.y, camera_up.v.z);
-	camera_set_pos(network_setup_ecx, camera_pos.v.x, camera_pos.v.y, camera_pos.v.z);
-	camera_look_at(network_setup_ecx, camera_lookat.v.x, camera_lookat.v.y, camera_lookat.v.z);
+	camera_assign_up_direction(wn, network_setup_ecx, camera_up.v.x, camera_up.v.y, camera_up.v.z);
+	camera_set_pos(wn, network_setup_ecx, camera_pos.v.x, camera_pos.v.y, camera_pos.v.z);
+	camera_look_at(wn, network_setup_ecx, camera_lookat.v.x, camera_lookat.v.y, camera_lookat.v.z);
 
-	set_renderer(network_setup_ecx, FLATSHADING_RENDERER | WIREFRAME_RENDERER | BLACK_TRIS);
-	camera_set_parameters(network_setup_ecx, near, far, SCREEN_WIDTH, SCREEN_HEIGHT, angle_of_view);
-	calculate_camera_transform(network_setup_ecx);
+	set_renderer(wn, network_setup_ecx, FLATSHADING_RENDERER | WIREFRAME_RENDERER | BLACK_TRIS);
+	camera_set_parameters(wn, network_setup_ecx, near, far, SCREEN_WIDTH, SCREEN_HEIGHT, angle_of_view);
+	calculate_camera_transform(wn, network_setup_ecx);
 	entity_context_set_hi_lo_poly_pixel_threshold(network_setup_ecx, low_poly_threshold);
 	wombat = add_entity(network_setup_ecx, ship_mesh_map[SHIP_CLASS_WOMBAT], 0.0, 0.0, 0.0, DARKGREEN);
 	quat_init_axis(&orientation, 0, 1, 0, (timer % 360) * M_PI / 180);
@@ -9219,7 +9221,7 @@ static void update_warp_tunnel(struct snis_entity *o, struct entity **warp_tunne
 	}
 }
 
-static void show_lens_flare(struct snis_entity *o, union vec3 *camera_pos, union quat *camera_orientation)
+static void show_lens_flare(int wn, struct snis_entity *o, union vec3 *camera_pos, union quat *camera_orientation)
 {
 #ifndef WITHOUTOPENGL
 	union vec3 halopos, to_sun;
@@ -9239,7 +9241,7 @@ static void show_lens_flare(struct snis_entity *o, union vec3 *camera_pos, union
 	if (!sun_entity)
 		return;
 
-	if (!entity_onscreen(sun_entity))
+	if (!entity_onscreen(wn, sun_entity))
 		return;
 
 	halopos.v.x = SUNX - camera_pos->v.x;
@@ -9406,20 +9408,20 @@ static void show_weapons_camera_view(int wn)
 		weapons_camera_shake = 0.7f * weapons_camera_shake;
 	}
 
-	camera_set_pos(ecx, cam_pos.v.x, cam_pos.v.y, cam_pos.v.z);
-	camera_set_orientation(ecx, &adjusted_cam_orientation);
-	camera_set_parameters(ecx, NEAR_CAMERA_PLANE * SHIP_MESH_SCALE, FAR_CAMERA_PLANE,
+	camera_set_pos(wn, ecx, cam_pos.v.x, cam_pos.v.y, cam_pos.v.z);
+	camera_set_orientation(wn, ecx, &adjusted_cam_orientation);
+	camera_set_parameters(wn, ecx, NEAR_CAMERA_PLANE * SHIP_MESH_SCALE, FAR_CAMERA_PLANE,
 				SCREEN_WIDTH, SCREEN_HEIGHT, angle_of_view);
-	set_window_offset(ecx, 0, 0);
-	set_lighting(ecx, SUNX, SUNY, SUNZ);
+	set_window_offset(wn, ecx, 0, 0);
+	set_lighting(wn, ecx, SUNX, SUNY, SUNZ);
 	set_ambient_light(ecx, ambient_light);
-	calculate_camera_transform(ecx);
+	calculate_camera_transform(wn, ecx);
 	entity_context_set_hi_lo_poly_pixel_threshold(ecx, low_poly_threshold);
 
 	sng_set_foreground(wn, GREEN);
 	if (!ecx_fake_stars_initialized) {
 		ecx_fake_stars_initialized = 1;
-		entity_init_fake_stars(ecx, nfake_stars, 300.0f * 10.0f);
+		entity_init_fake_stars(wn, ecx, nfake_stars, 300.0f * 10.0f);
 	}
 
 	render_skybox(wn, ecx);
@@ -9457,7 +9459,7 @@ static void show_weapons_camera_view(int wn)
 		add_ship_thrust_entities(NULL, NULL, ecx, o->entity,
 				o->tsd.ship.shiptype, o->tsd.ship.power_data.impulse.i, 0);
 
-	show_lens_flare(o, &cam_pos, &adjusted_cam_orientation); /* this will be using data from last frame */
+	show_lens_flare(wn, o, &cam_pos, &adjusted_cam_orientation); /* this will be using data from last frame */
 	render_entities(wn, ecx);
 	remove_lens_flare_entities();
 
@@ -9470,13 +9472,13 @@ static void show_weapons_camera_view(int wn)
 				continue;
 			if (target->type != OBJTYPE_SHIP2 && target->type != OBJTYPE_SHIP1)
 				continue;
-			if (!target->entity || !entity_onscreen(target->entity))
+			if (!target->entity || !entity_onscreen(wn, target->entity))
 				continue;
-			if (!entity_onscreen(target->entity))
+			if (!entity_onscreen(wn, target->entity))
 				continue;
 			entity_get_pos(target->entity, &ex, &ey, &ez);
 			dist = dist3d(o->x - ex, o->y - ey, o->z - ez);
-			entity_get_screen_coords(target->entity, &sx, &sy);
+			entity_get_screen_coords(wn, target->entity, &sx, &sy);
 			/* BUG: TORPEDO_VELOCITY and TORPEDO_LIFETIME are server-side tweakable
 			 * on the demon console, but if tweaked, the client will have no knowledge
 			 * of this tweaking, so this next condition will be incorrect.
@@ -9511,8 +9513,8 @@ static void show_weapons_camera_view(int wn)
 			float sx, sy;
 
 			if (curr_science_guy->alive && curr_science_guy->entity &&
-				entity_onscreen(curr_science_guy->entity)) {
-				entity_get_screen_coords(curr_science_guy->entity, &sx, &sy);
+				entity_onscreen(wn, curr_science_guy->entity)) {
+				entity_get_screen_coords(wn, curr_science_guy->entity, &sx, &sy);
 				draw_targeting_indicator(wn, sx, sy, UI_COLOR(weap_sci_selection), 0, 1.0f, 2.0f);
 			}
 		}
@@ -9792,26 +9794,26 @@ static void show_mainscreen(int wn)
 		player_ship = main_view_add_player_ship_entity(o);
 	}
 
-	camera_set_pos(ecx, cam_pos.v.x, cam_pos.v.y, cam_pos.v.z);
-	camera_set_orientation(ecx, &camera_orientation);
-	camera_set_parameters(ecx, NEAR_CAMERA_PLANE, FAR_CAMERA_PLANE,
+	camera_set_pos(wn, ecx, cam_pos.v.x, cam_pos.v.y, cam_pos.v.z);
+	camera_set_orientation(wn, ecx, &camera_orientation);
+	camera_set_parameters(wn, ecx, NEAR_CAMERA_PLANE, FAR_CAMERA_PLANE,
 				SCREEN_WIDTH, SCREEN_HEIGHT, angle_of_view);
-	set_window_offset(ecx, 0, 0);
-	set_lighting(ecx, SUNX, SUNY, SUNZ);
+	set_window_offset(wn, ecx, 0, 0);
+	set_lighting(wn, ecx, SUNX, SUNY, SUNZ);
 	set_ambient_light(ecx, ambient_light);
-	calculate_camera_transform(ecx);
+	calculate_camera_transform(wn, ecx);
 	entity_context_set_hi_lo_poly_pixel_threshold(ecx, low_poly_threshold);
 
 	sng_set_foreground(wn, GREEN);
 	if (!ecx_fake_stars_initialized) {
 		ecx_fake_stars_initialized = 1;
-		entity_init_fake_stars(ecx, nfake_stars, 300.0f * 10.0f);
+		entity_init_fake_stars(wn, ecx, nfake_stars, 300.0f * 10.0f);
 	}
 
 	render_skybox(wn, ecx);
 
 	pthread_mutex_lock(&universe_mutex);
-	show_lens_flare(o, &cam_pos, &camera_orientation); /* this will be using data from last frame */
+	show_lens_flare(wn, o, &cam_pos, &camera_orientation); /* this will be using data from last frame */
 	render_entities(wn, ecx);
 	remove_lens_flare_entities();
 
@@ -9825,8 +9827,8 @@ static void show_mainscreen(int wn)
 		float sx, sy;
 
 		if (curr_science_guy->alive && curr_science_guy->entity &&
-			entity_onscreen(curr_science_guy->entity)) {
-			entity_get_screen_coords(curr_science_guy->entity, &sx, &sy);
+			entity_onscreen(wn, curr_science_guy->entity)) {
+			entity_get_screen_coords(wn, curr_science_guy->entity, &sx, &sy);
 			draw_targeting_indicator(wn, sx, sy, UI_COLOR(main_sci_selection), 0, 1.0f, 2.0f);
 		}
 	}
@@ -10035,7 +10037,7 @@ static void snis_draw_3d_science_guy(int wn, struct snis_entity *o,
 	}
 	dr *= 100.0;
 
-	transform_point(sciballecx, o->x, o->y, o->z, &sx, &sy);
+	transform_point(wn, sciballecx, o->x, o->y, o->z, &sx, &sy);
 	*x = (int) sx;
 	*y = (int) sy;
 	r = hypot(sx - SCIENCE_SCOPE_CX, sy - SCIENCE_SCOPE_CY);
@@ -10049,7 +10051,7 @@ static void snis_draw_3d_science_guy(int wn, struct snis_entity *o,
 			tx = o->x + sin(da) * (float) snis_randn(dr);
 			ty = o->y + cos(da) * (float) snis_randn(dr); 
 			tz = o->z + cos(db) * (float) snis_randn(dr); 
-			if (transform_point(sciballecx, tx, ty, tz, &sx, &sy))
+			if (transform_point(wn, sciballecx, tx, ty, tz, &sx, &sy))
 				continue;
 			r = hypot(sx - SCIENCE_SCOPE_CX, sy - SCIENCE_SCOPE_CY);
 			if (r >= SCIENCE_SCOPE_R)
@@ -10278,7 +10280,7 @@ static void draw_3d_laserbeam(int wn, struct entity_context *cx, struct snis_ent
 	if (rc < 0)
 		return;
 	float sx1, sy1, sx2, sy2;
-	if (!transform_line(cx, clip1.v.x, clip1.v.y, clip1.v.z, clip2.v.x, clip2.v.y, clip2.v.z, &sx1, &sy1, &sx2, &sy2)) {
+	if (!transform_line(wn, cx, clip1.v.x, clip1.v.y, clip1.v.z, clip2.v.x, clip2.v.y, clip2.v.z, &sx1, &sy1, &sx2, &sy2)) {
 		sng_draw_laser_line(wn, sx1, sy1, sx2, sy2, UI_COLOR(nav_laser));
 	}
 }
@@ -10287,7 +10289,7 @@ static void snis_draw_3d_dotted_line(int wn, struct entity_context *cx,
 				float x1, float y1, float z1, float x2, float y2, float z2 )
 {
 	float sx1, sy1, sx2, sy2;
-	if (!transform_line(cx, x1, y1, z1, x2, y2, z2, &sx1, &sy1, &sx2, &sy2))
+	if (!transform_line(wn, cx, x1, y1, z1, x2, y2, z2, &sx1, &sy1, &sx2, &sy2))
 		sng_draw_dotted_line(wn, sx1, sy1, sx2, sy2);
 }
 
@@ -10295,7 +10297,7 @@ static void snis_draw_3d_line(int wn, struct entity_context *cx,
 				float x1, float y1, float z1, float x2, float y2, float z2 )
 {
 	float sx1, sy1, sx2, sy2;
-	if (!transform_line(cx, x1, y1, z1, x2, y2, z2, &sx1, &sy1, &sx2, &sy2)) {
+	if (!transform_line(wn, cx, x1, y1, z1, x2, y2, z2, &sx1, &sy1, &sx2, &sy2)) {
 		snis_draw_line(wn, sx1, sy1, sx2, sy2);
 	}
 }
@@ -10329,7 +10331,7 @@ static void snis_draw_3d_string(int wn, struct entity_context *cx, char *string,
 {
 	float sx, sy;
 
-	transform_point(cx, x, y, z, &sx, &sy);
+	transform_point(wn, cx, x, y, z, &sx, &sy);
 	if (sx >= 0 && sy >= 0)
 		sng_abs_xy_draw_string(wn, string, font, sx, sy);
 }
@@ -10559,7 +10561,7 @@ static void draw_sciplane_laserbeam(int wn, struct entity_context *cx, struct sn
 	if (rc < 0)
 		return;
 	float sx1, sy1, sx2, sy2;
-	if (!transform_line(cx, clip1.v.x, clip1.v.y, clip1.v.z, clip2.v.x, clip2.v.y, clip2.v.z, &sx1, &sy1, &sx2, &sy2)) {
+	if (!transform_line(wn, cx, clip1.v.x, clip1.v.y, clip1.v.z, clip2.v.x, clip2.v.y, clip2.v.z, &sx1, &sy1, &sx2, &sy2)) {
 		sng_draw_laser_line(wn, sx1, sy1, sx2, sy2, color);
 	}
 }
@@ -10755,15 +10757,15 @@ static void draw_sciplane_display(int wn, struct snis_entity *o, double range)
 	union vec3 camera_up = {{0,1,0}};
 	quat_rot_vec_self(&camera_up, &cam_orientation);
 
-	camera_assign_up_direction(instrumentecx, camera_up.v.x, camera_up.v.y, camera_up.v.z);
-	camera_set_pos(instrumentecx, camera_pos.v.x, camera_pos.v.y, camera_pos.v.z);
-	camera_look_at(instrumentecx, camera_lookat.v.x, camera_lookat.v.y, camera_lookat.v.z);
+	camera_assign_up_direction(wn, instrumentecx, camera_up.v.x, camera_up.v.y, camera_up.v.z);
+	camera_set_pos(wn, instrumentecx, camera_pos.v.x, camera_pos.v.y, camera_pos.v.z);
+	camera_look_at(wn, instrumentecx, camera_lookat.v.x, camera_lookat.v.y, camera_lookat.v.z);
 
-	set_renderer(instrumentecx, WIREFRAME_RENDERER);
-	camera_set_parameters(instrumentecx, range*(cam_range_fraction-1.0), range*(dist_to_cam_frac+1.0),
+	set_renderer(wn, instrumentecx, WIREFRAME_RENDERER);
+	camera_set_parameters(wn, instrumentecx, range*(cam_range_fraction-1.0), range*(dist_to_cam_frac+1.0),
 				SCREEN_WIDTH, SCREEN_HEIGHT, fovy);
-	set_window_offset(instrumentecx, 0, 0);
-	calculate_camera_transform(instrumentecx);
+	set_window_offset(wn, instrumentecx, 0, 0);
+	calculate_camera_transform(wn, instrumentecx);
 	entity_context_set_hi_lo_poly_pixel_threshold(instrumentecx, low_poly_threshold);
 
 	e = add_entity(instrumentecx, ring_mesh, o->x, o->y, o->z, UI_COLOR(sci_plane_ring));
@@ -10831,10 +10833,10 @@ static void draw_sciplane_display(int wn, struct snis_entity *o, double range)
 			z2 += o->z;
 
 			float sx1, sy1, sx2, sy2, sx3, sy3;
-			if (!transform_line(instrumentecx, x1, o->y, z1, x2, o->y, z2, &sx1, &sy1, &sx2, &sy2)) {
+			if (!transform_line(wn, instrumentecx, x1, o->y, z1, x2, o->y, z2, &sx1, &sy1, &sx2, &sy2)) {
 				sng_draw_dotted_line(wn, sx1, sy1, sx2, sy2);
 			}
-			if (!transform_point(instrumentecx, x3, o->y, z3, &sx3, &sy3)) {
+			if (!transform_point(wn, instrumentecx, x3, o->y, z3, &sx3, &sy3)) {
 				snprintf(buf, sizeof(buf), "%d",
 					(int) math_angle_to_game_angle_degrees(i * 360.0/slices));
 				sng_center_xy_draw_string(wn, buf, font, sx3, sy3);
@@ -10856,7 +10858,7 @@ static void draw_sciplane_display(int wn, struct snis_entity *o, double range)
 		tz1 = o->z - sin(heading - beam_width / 2 - jitter_offset) * range * 0.05;
 		tx2 = o->x + cos(heading - beam_width / 2 - jitter_offset) * range;
 		tz2 = o->z - sin(heading - beam_width / 2 - jitter_offset) * range;
-		if (!transform_line(instrumentecx, tx1, o->y, tz1, tx2, o->y, tz2, &sx1, &sy1, &sx2, &sy2))
+		if (!transform_line(wn, instrumentecx, tx1, o->y, tz1, tx2, o->y, tz2, &sx1, &sy1, &sx2, &sy2))
 			sng_draw_electric_line(wn, sx1, sy1, sx2, sy2);
 
 		/* Central scanning beam... */
@@ -10864,7 +10866,7 @@ static void draw_sciplane_display(int wn, struct snis_entity *o, double range)
 		tz1 = o->z - sin(heading - beam_width / 2 + scanner_offset) * range * 0.05;
 		tx2 = o->x + cos(heading - beam_width / 2 + scanner_offset) * range;
 		tz2 = o->z - sin(heading - beam_width / 2 + scanner_offset) * range;
-		if (!transform_line(instrumentecx, tx1, o->y, tz1, tx2, o->y, tz2, &sx1, &sy1, &sx2, &sy2))
+		if (!transform_line(wn, instrumentecx, tx1, o->y, tz1, tx2, o->y, tz2, &sx1, &sy1, &sx2, &sy2))
 			sng_draw_electric_line(wn, sx1, sy1, sx2, sy2);
 
 		/* The other side of the beam */
@@ -10872,7 +10874,7 @@ static void draw_sciplane_display(int wn, struct snis_entity *o, double range)
 		tz1 = o->z - sin(heading + beam_width / 2 + jitter_offset) * range * 0.05;
 		tx2 = o->x + cos(heading + beam_width / 2 + jitter_offset) * range;
 		tz2 = o->z - sin(heading + beam_width / 2 + jitter_offset) * range;
-		if (!transform_line(instrumentecx, tx1, o->y, tz1, tx2, o->y, tz2, &sx1, &sy1, &sx2, &sy2))
+		if (!transform_line(wn, instrumentecx, tx1, o->y, tz1, tx2, o->y, tz2, &sx1, &sy1, &sx2, &sy2))
 			sng_draw_electric_line(wn, sx1, sy1, sx2, sy2);
 	}
 
@@ -10973,7 +10975,7 @@ static void draw_sciplane_display(int wn, struct snis_entity *o, double range)
 			}
 
 			float sx, sy;
-			if (!transform_point(instrumentecx, display_pos.v.x, display_pos.v.y, display_pos.v.z,
+			if (!transform_point(wn, instrumentecx, display_pos.v.x, display_pos.v.y, display_pos.v.z,
 						&sx, &sy)) {
 				if (go[i].id != my_ship_id) /* We already drew ourself */
 					snis_draw_science_guy(wn, &go[i], sx, sy, dist, bw, pwr, range,
@@ -11070,7 +11072,7 @@ static void draw_sciplane_display(int wn, struct snis_entity *o, double range)
 			}
 
 			float sx, sy;
-			if (!transform_point(instrumentecx, display_pos.v.x, display_pos.v.y, display_pos.v.z,
+			if (!transform_point(wn, instrumentecx, display_pos.v.x, display_pos.v.y, display_pos.v.z,
 						&sx, &sy)) {
 				char buf[20];
 
@@ -11155,7 +11157,7 @@ static void draw_sciplane_display(int wn, struct snis_entity *o, double range)
 				float z2 = o->z - sin(angle) * radius;
 
 				float sx1, sy1, sx2, sy2;
-				if (!transform_line(instrumentecx, x1, y1, z1, x2, y2, z2, &sx1, &sy1, &sx2, &sy2)) {
+				if (!transform_line(wn, instrumentecx, x1, y1, z1, x2, y2, z2, &sx1, &sy1, &sx2, &sy2)) {
 					snis_draw_line(wn, sx1, sy1, sx2, sy2);
 				}
 			}
@@ -11243,7 +11245,7 @@ static void draw_science_3d_waypoints(int wn, struct snis_entity *o, double rang
 		char buf[10];
 		if (dist3d(wp[0] - o->x, wp[1] - o->y, wp[2] - o->z) >= range)
 			continue;
-		transform_point(sciballecx, wp[0], wp[1], wp[2], &sx, &sy);
+		transform_point(wn, sciballecx, wp[0], wp[1], wp[2], &sx, &sy);
 		snis_draw_line(wn, sx - 10, sy, sx + 10, sy);
 		snis_draw_line(wn, sx, sy - 10, sx, sy + 10);
 		snprintf(buf, sizeof(buf), "WP-%02d", i);
@@ -11285,16 +11287,16 @@ static void draw_all_the_3d_science_guys(int wn, struct snis_entity *o, double r
 	/* rotate camera to be behind my ship */
 	quat_rot_vec_self(&camera_pos, &o->tsd.ship.sciball_orientation);
 	vec3_add_self(&camera_pos, &ship_pos);
-        set_renderer(sciballecx, WIREFRAME_RENDERER);
-	camera_assign_up_direction(sciballecx, ship_up.v.x, ship_up.v.y, ship_up.v.z);
-	camera_set_pos(sciballecx, camera_pos.v.x, camera_pos.v.y, camera_pos.v.z);
-	camera_look_at(sciballecx, o->x, o->y, o->z);
-	camera_set_parameters(sciballecx, camera_pos_len-screen_radius, camera_pos_len+screen_radius,
+        set_renderer(wn, sciballecx, WIREFRAME_RENDERER);
+	camera_assign_up_direction(wn, sciballecx, ship_up.v.x, ship_up.v.y, ship_up.v.z);
+	camera_set_pos(wn, sciballecx, camera_pos.v.x, camera_pos.v.y, camera_pos.v.z);
+	camera_look_at(wn, sciballecx, o->x, o->y, o->z);
+	camera_set_parameters(wn, sciballecx, camera_pos_len-screen_radius, camera_pos_len+screen_radius,
 				SCIENCE_SCOPE_W * 0.95, SCIENCE_SCOPE_W * 0.95,
 				60.0 * M_PI / 180.0);
-	set_window_offset(sciballecx, SCIENCE_SCOPE_CX - (SCIENCE_SCOPE_W * 0.95) / 2.0,
+	set_window_offset(wn, sciballecx, SCIENCE_SCOPE_CX - (SCIENCE_SCOPE_W * 0.95) / 2.0,
 				SCIENCE_SCOPE_CY - (SCIENCE_SCOPE_W * 0.95) / 2.0);
-	calculate_camera_transform(sciballecx);
+	calculate_camera_transform(wn, sciballecx);
 	entity_context_set_hi_lo_poly_pixel_threshold(sciballecx, low_poly_threshold);
 
 	/* Add basis rings */
@@ -11335,17 +11337,17 @@ static void draw_all_the_3d_science_guys(int wn, struct snis_entity *o, double r
 		update_entity_orientation(e, &o->orientation);
 		update_entity_scale(e, screen_radius * 0.01);
 
-		transform_point(sciballecx, o->x - vx.v.x, o->y - vx.v.y, o->z - vx.v.z, &sx, &sy);
+		transform_point(wn, sciballecx, o->x - vx.v.x, o->y - vx.v.y, o->z - vx.v.z, &sx, &sy);
 		sng_abs_xy_draw_string(wn, "AFT", PICO_FONT, sx, sy);
-		transform_point(sciballecx, o->x + vx.v.x, o->y + vx.v.y, o->z + vx.v.z, &sx, &sy);
+		transform_point(wn, sciballecx, o->x + vx.v.x, o->y + vx.v.y, o->z + vx.v.z, &sx, &sy);
 		sng_abs_xy_draw_string(wn, "FORE", PICO_FONT, sx, sy);
-		transform_point(sciballecx, o->x - vy.v.x, o->y - vy.v.y, o->z - vy.v.z, &sx, &sy);
+		transform_point(wn, sciballecx, o->x - vy.v.x, o->y - vy.v.y, o->z - vy.v.z, &sx, &sy);
 		sng_abs_xy_draw_string(wn, "DOWN", PICO_FONT, sx, sy);
-		transform_point(sciballecx, o->x + vy.v.x, o->y + vy.v.y, o->z + vy.v.z, &sx, &sy);
+		transform_point(wn, sciballecx, o->x + vy.v.x, o->y + vy.v.y, o->z + vy.v.z, &sx, &sy);
 		sng_abs_xy_draw_string(wn, "UP", PICO_FONT, sx, sy);
-		transform_point(sciballecx, o->x - vz.v.x, o->y - vz.v.y, o->z - vz.v.z, &sx, &sy);
+		transform_point(wn, sciballecx, o->x - vz.v.x, o->y - vz.v.y, o->z - vz.v.z, &sx, &sy);
 		sng_abs_xy_draw_string(wn, "PORT", PICO_FONT, sx, sy);
-		transform_point(sciballecx, o->x + vz.v.x, o->y + vz.v.y, o->z + vz.v.z, &sx, &sy);
+		transform_point(wn, sciballecx, o->x + vz.v.x, o->y + vz.v.y, o->z + vz.v.z, &sx, &sy);
 		sng_abs_xy_draw_string(wn, "STBD", PICO_FONT, sx, sy);
 	}
 
@@ -12571,11 +12573,11 @@ static void draw_orientation_trident(int wn, struct snis_entity *o, float rx, fl
 	float fovy = 20.0 * M_PI / 180.0;
 	float dist_to_cam = 1.05 / tan(fovy/2.0);
 
-        set_renderer(tridentecx, WIREFRAME_RENDERER);
-	camera_set_parameters(tridentecx, dist_to_cam-1.0, dist_to_cam+1.0,
+        set_renderer(wn, tridentecx, WIREFRAME_RENDERER);
+	camera_set_parameters(wn, tridentecx, dist_to_cam-1.0, dist_to_cam+1.0,
 				2.0 * rr * ASPECT_RATIO, 2.0 * rr, fovy);
 	entity_context_set_hi_lo_poly_pixel_threshold(tridentecx, low_poly_threshold);
-	set_window_offset(tridentecx, rx - rr * ASPECT_RATIO, ry - rr);
+	set_window_offset(wn, tridentecx, rx - rr * ASPECT_RATIO, ry - rr);
 
 	/* figure out the camera positions */
 	union vec3 camera_up = { {0, 1, 0} };
@@ -12592,11 +12594,11 @@ static void draw_orientation_trident(int wn, struct snis_entity *o, float rx, fl
 		quat_rot_vec_self(&camera_lookat, &cam_orientation);
 	vec3_add_self(&camera_lookat, &center_pos);
 
-	camera_assign_up_direction(tridentecx, camera_up.v.x, camera_up.v.y, camera_up.v.z);
-	camera_set_pos(tridentecx, camera_pos.v.x, camera_pos.v.y, camera_pos.v.z);
-	camera_look_at(tridentecx, camera_lookat.v.x, camera_lookat.v.y, camera_lookat.v.z);
+	camera_assign_up_direction(wn, tridentecx, camera_up.v.x, camera_up.v.y, camera_up.v.z);
+	camera_set_pos(wn, tridentecx, camera_pos.v.x, camera_pos.v.y, camera_pos.v.z);
+	camera_look_at(wn, tridentecx, camera_lookat.v.x, camera_lookat.v.y, camera_lookat.v.z);
 
-	calculate_camera_transform(tridentecx);
+	calculate_camera_transform(wn, tridentecx);
 
 	struct material yaw_material = { {
 		.color_by_w = { COLOR_LIGHTER(CYAN, 100),
@@ -12761,16 +12763,16 @@ static void draw_3d_nav_starmap(int wn)
 	camera_pos.v.y = 0;
 	camera_pos.v.z = cos(angle) * cam_dist;
 
-	camera_assign_up_direction(instrumentecx, camera_up.v.x, camera_up.v.y, camera_up.v.z);
-	camera_set_pos(instrumentecx, camera_pos.v.x, camera_pos.v.y, camera_pos.v.z);
-	camera_look_at(instrumentecx, 0.0, 0.0, 0.0);
-	set_renderer(instrumentecx, WIREFRAME_RENDERER);
+	camera_assign_up_direction(wn, instrumentecx, camera_up.v.x, camera_up.v.y, camera_up.v.z);
+	camera_set_pos(wn, instrumentecx, camera_pos.v.x, camera_pos.v.y, camera_pos.v.z);
+	camera_look_at(wn, instrumentecx, 0.0, 0.0, 0.0);
+	set_renderer(wn, instrumentecx, WIREFRAME_RENDERER);
 	float near = 0.5;
 	float far = 1000.0;
 	float angle_of_view = 80;
-	camera_set_parameters(instrumentecx, near, far,
+	camera_set_parameters(wn, instrumentecx, near, far,
 				SCREEN_WIDTH, SCREEN_HEIGHT, angle_of_view * M_PI / 180.0);
-	calculate_camera_transform(instrumentecx);
+	calculate_camera_transform(wn, instrumentecx);
 	entity_context_set_hi_lo_poly_pixel_threshold(instrumentecx, low_poly_threshold);
 
 	/* Add star entities to the instrumentecx... */
@@ -12827,12 +12829,12 @@ static void draw_3d_nav_starmap(int wn)
 		e = get_entity(instrumentecx, i);
 		if (!e)
 			continue;
-		if (!entity_onscreen(e))
+		if (!entity_onscreen(wn, e))
 			continue;
 		s = entity_get_user_data(e);
 		if (!s)
 			continue;
-		entity_get_screen_coords(e, &sx, &sy);
+		entity_get_screen_coords(wn, e, &sx, &sy);
 		snprintf(buffer, sizeof(buffer), "%s", s->name);
 		sng_abs_xy_draw_string(wn, buffer, NANO_FONT, sx + 10, sy - 15);
 	}
@@ -13314,14 +13316,14 @@ static void draw_3d_nav_display(int wn)
 	quat_rot_vec_self(&camera_lookat, &cam_orientation);
 	vec3_add_self(&camera_lookat, &ship_pos);
 
-	camera_assign_up_direction(instrumentecx, camera_up.v.x, camera_up.v.y, camera_up.v.z);
-	camera_set_pos(instrumentecx, camera_pos.v.x, camera_pos.v.y, camera_pos.v.z);
-	camera_look_at(instrumentecx, camera_lookat.v.x, camera_lookat.v.y, camera_lookat.v.z);
+	camera_assign_up_direction(wn, instrumentecx, camera_up.v.x, camera_up.v.y, camera_up.v.z);
+	camera_set_pos(wn, instrumentecx, camera_pos.v.x, camera_pos.v.y, camera_pos.v.z);
+	camera_look_at(wn, instrumentecx, camera_lookat.v.x, camera_lookat.v.y, camera_lookat.v.z);
 
-	set_renderer(instrumentecx, WIREFRAME_RENDERER);
-	camera_set_parameters(instrumentecx, 1.0, camera_pos_len+screen_radius*2,
+	set_renderer(wn, instrumentecx, WIREFRAME_RENDERER);
+	camera_set_parameters(wn, instrumentecx, 1.0, camera_pos_len+screen_radius*2,
 				SCREEN_WIDTH, SCREEN_HEIGHT, ANGLE_OF_VIEW * M_PI / 180.0);
-	calculate_camera_transform(instrumentecx);
+	calculate_camera_transform(wn, instrumentecx);
 	entity_context_set_hi_lo_poly_pixel_threshold(instrumentecx, low_poly_threshold);
 
 	int in_nebula = 0;
@@ -13444,7 +13446,7 @@ static void draw_3d_nav_display(int wn)
 			random_point_in_3d_annulus(visible_distance, screen_radius, &ship_pos, &u, &v, &point);
 
 			float sx, sy;
-			if (!transform_point(instrumentecx, point.v.x, point.v.y, point.v.z, &sx, &sy)) {
+			if (!transform_point(wn, instrumentecx, point.v.x, point.v.y, point.v.z, &sx, &sy)) {
 				sng_draw_point(wn, sx, sy);
 			}
 		}
@@ -13713,7 +13715,7 @@ static void draw_3d_nav_display(int wn)
 		e = get_entity(instrumentecx, i);
 		if (!e)
 			continue;
-		if (!entity_onscreen(e))
+		if (!entity_onscreen(wn, e))
 			continue;
 		o = entity_get_user_data(e);
 		if (!o)
@@ -13730,16 +13732,16 @@ static void draw_3d_nav_display(int wn)
 		if (waypoint_diff >= 0 && waypoint_diff < 3 * MAXWAYPOINTS) {
 			/* It is a waypoint */
 			waypoint_diff = waypoint_diff / 3;
-			entity_get_screen_coords(e, &sx, &sy);
+			entity_get_screen_coords(wn, e, &sx, &sy);
 			snprintf(buffer, sizeof(buffer), "WAYPOINT-%02d", waypoint_diff);
 			sng_abs_xy_draw_string(wn, buffer, NANO_FONT, sx + 10, sy - 15);
 		} else if (arrow_label_diff >= 0 && arrow_label_diff < 4) { /* Arrow head */
-			entity_get_screen_coords(e, &sx, &sy);
+			entity_get_screen_coords(wn, e, &sx, &sy);
 			snprintf(buffer, sizeof(buffer), "%s", *arrowlabel);
 			sng_abs_xy_draw_string(wn, buffer, NANO_FONT, sx + 10, sy - 15);
 		} else {
 			/* It is not a waypoint */
-			entity_get_screen_coords(e, &sx, &sy);
+			entity_get_screen_coords(wn, e, &sx, &sy);
 			if (o->sdata.science_data_known) {
 				snprintf(buffer, sizeof(buffer), "%s", o->sdata.name);
 				sng_abs_xy_draw_string(wn, buffer, NANO_FONT, sx + 10, sy - 15);
@@ -13756,10 +13758,10 @@ static void draw_3d_nav_display(int wn)
 		draw_targeting_indicator(sx, sy, TARGETING_COLOR, 0, 1.0f, 2.0f);
 	}
 #endif
-	if (science_entity && entity_onscreen(science_entity)) {
+	if (science_entity && entity_onscreen(wn, science_entity)) {
 		float sx, sy;
 
-		entity_get_screen_coords(science_entity, &sx, &sy);
+		entity_get_screen_coords(wn, science_entity, &sx, &sy);
 		draw_targeting_indicator(wn, sx, sy, UI_COLOR(nav_science_select), 0, 1.0f, 2.0f);
 	}
 
@@ -16735,7 +16737,7 @@ static void draw_science_details(int wn)
 		return;
 	}
 
-	set_renderer(sciecx, WIREFRAME_RENDERER | BLACK_TRIS);
+	set_renderer(wn, sciecx, WIREFRAME_RENDERER | BLACK_TRIS);
 	m = NULL;
 	if (curr_science_guy->type == OBJTYPE_PLANET ||
 		curr_science_guy->type == OBJTYPE_BLACK_HOLE)
@@ -16758,20 +16760,20 @@ static void draw_science_details(int wn)
 		if (e)
 			update_entity_orientation(e, &orientation);
 		if (curr_science_guy->type == OBJTYPE_STARBASE) {
-			camera_set_pos(sciecx, m->radius * 4, 1000 - science_cam_timer % 1000, m->radius * 2);
-			camera_assign_up_direction(sciecx, 0.0, 0.0, 1.0);
+			camera_set_pos(wn, sciecx, m->radius * 4, 1000 - science_cam_timer % 1000, m->radius * 2);
+			camera_assign_up_direction(wn, sciecx, 0.0, 0.0, 1.0);
 		} else if (curr_science_guy->type == OBJTYPE_PLANET ||
 			curr_science_guy->type == OBJTYPE_BLACK_HOLE) {
-			camera_set_pos(sciecx, m->radius * 6, 1000 - science_cam_timer % 1000, m->radius * 2);
-			camera_assign_up_direction(sciecx, 0.0, 0.0, 1.0);
+			camera_set_pos(wn, sciecx, m->radius * 6, 1000 - science_cam_timer % 1000, m->radius * 2);
+			camera_assign_up_direction(wn, sciecx, 0.0, 0.0, 1.0);
 		} else {
-			camera_assign_up_direction(sciecx, 0.0, 1.0, 0.0);
-			camera_set_pos(sciecx, -m->radius * 4, m->radius * 1, 1000 - science_cam_timer % 1000);
+			camera_assign_up_direction(wn, sciecx, 0.0, 1.0, 0.0);
+			camera_set_pos(wn, sciecx, -m->radius * 4, m->radius * 1, 1000 - science_cam_timer % 1000);
 		}
-		camera_look_at(sciecx, (float) 0, (float) 0, (float) m->radius / 2.0);
-		camera_set_parameters(sciecx, 0.5, 8000.0,
+		camera_look_at(wn, sciecx, (float) 0, (float) 0, (float) m->radius / 2.0);
+		camera_set_parameters(wn, sciecx, 0.5, 8000.0,
 					SCREEN_WIDTH, SCREEN_HEIGHT, ANGLE_OF_VIEW * M_PI / 180.0);
-		set_lighting(sciecx, -m->radius * 4, 0, m->radius);
+		set_lighting(wn, sciecx, -m->radius * 4, 0, m->radius);
 		render_entities(wn, sciecx);
 	}
 	if (e)
@@ -19500,14 +19502,14 @@ static void show_demon_3d(int wn)
 	}
 
 	if (demon_ui.render_style == DEMON_UI_RENDER_STYLE_WIREFRAME)
-		set_renderer(instrumentecx, WIREFRAME_RENDERER);
+		set_renderer(wn, instrumentecx, WIREFRAME_RENDERER);
 	else
-		set_renderer(instrumentecx, FLATSHADING_RENDERER);
-	camera_set_pos(instrumentecx, demon_ui.camera_pos.v.x, demon_ui.camera_pos.v.y, demon_ui.camera_pos.v.z);
-	camera_set_orientation(instrumentecx, &demon_ui.camera_orientation);
-	camera_set_parameters(instrumentecx, 10.0, XKNOWN_DIM * 2.0, SCREEN_WIDTH, SCREEN_HEIGHT, angle_of_view);
-	set_window_offset(instrumentecx, 0, 0);
-	calculate_camera_transform(instrumentecx);
+		set_renderer(wn, instrumentecx, FLATSHADING_RENDERER);
+	camera_set_pos(wn, instrumentecx, demon_ui.camera_pos.v.x, demon_ui.camera_pos.v.y, demon_ui.camera_pos.v.z);
+	camera_set_orientation(wn, instrumentecx, &demon_ui.camera_orientation);
+	camera_set_parameters(wn, instrumentecx, 10.0, XKNOWN_DIM * 2.0, SCREEN_WIDTH, SCREEN_HEIGHT, angle_of_view);
+	set_window_offset(wn, instrumentecx, 0, 0);
+	calculate_camera_transform(wn, instrumentecx);
 	entity_context_set_hi_lo_poly_pixel_threshold(instrumentecx, low_poly_threshold);
 
 	pthread_mutex_lock(&universe_mutex);
@@ -19642,7 +19644,7 @@ static void show_demon_3d(int wn)
 					update_entity_parent(instrumentecx, ring2, e);
 				}
 			}
-			transform_point(instrumentecx, o->x, o->y, o->z, &sx, &sy);
+			transform_point(wn, instrumentecx, o->x, o->y, o->z, &sx, &sy);
 			sng_abs_xy_draw_string(wn, label, NANO_FONT, sx + 10, sy - 10);
 			break;
 		case OBJTYPE_BLACK_HOLE:
@@ -19706,15 +19708,15 @@ static void show_demon_3d(int wn)
 				union vec3 dist;
 				vec3_sub(&dist, &opos, &demon_ui.camera_pos);
 				if (o->type == OBJTYPE_STARBASE || vec3_magnitude(&dist) < XKNOWN_DIM / 10.0) {
-					transform_point(instrumentecx, o->x, o->y, o->z, &sx, &sy);
+					transform_point(wn, instrumentecx, o->x, o->y, o->z, &sx, &sy);
 					sng_abs_xy_draw_string(wn, label, NANO_FONT, sx + 10, sy - 10);
 				}
 			}
 		default:
 			break;
 		}
-		if (selected && e && entity_onscreen(e)) {
-			entity_get_screen_coords(e, &oidstrx, &oidstry);
+		if (selected && e && entity_onscreen(wn, e)) {
+			entity_get_screen_coords(wn, e, &oidstrx, &oidstry);
 			oidstrx += txx(10);
 			oidstry -= txy(20);
 			sng_abs_xy_draw_string(wn, oidstr, PICO_FONT, oidstrx, oidstry);
@@ -19749,9 +19751,9 @@ static void show_demon_3d(int wn)
 			struct mesh *m;
 
 			e = get_entity(instrumentecx, i);
-			if (!entity_onscreen(e))
+			if (!entity_onscreen(wn, e))
 				continue;
-			entity_get_screen_coords(e, &sx, &sy);
+			entity_get_screen_coords(wn, e, &sx, &sy);
 			if (fabs(sx - demon_ui.release_mousex) < threshold &&
 			    fabs(sy - demon_ui.release_mousey) < threshold) {
 				entity_get_pos(e, &epos.v.x, &epos.v.y, &epos.v.z);
@@ -19819,9 +19821,9 @@ static void show_demon_3d(int wn)
 			struct entity *e;
 
 			e = get_entity(instrumentecx, i);
-			if (!entity_onscreen(e))
+			if (!entity_onscreen(wn, e))
 				continue;
-			entity_get_screen_coords(e, &sx, &sy);
+			entity_get_screen_coords(wn, e, &sx, &sy);
 			dx = sx - demon_ui.release_mousex;
 			dy = sy - demon_ui.release_mousey;
 			if (fabsf(dx) < threshold &&
@@ -19852,13 +19854,13 @@ static void show_demon_3d(int wn)
 		struct snis_entity *o;
 
 		e = get_entity(instrumentecx, i);
-		if (!entity_onscreen(e))
+		if (!entity_onscreen(wn, e))
 			continue;
 		o = entity_get_user_data(e);
 		if (!o) /* e.g. axes have no associated object */
 			continue;
 		if (o->type == OBJTYPE_SHIP1) {
-			entity_get_screen_coords(e, &sx, &sy);
+			entity_get_screen_coords(wn, e, &sx, &sy);
 			sng_set_foreground(wn, MAGENTA);
 			sng_draw_circle(wn, 0, sx, sy, txx(20));
 			/* TODO: figure out why this sdata.name seems to be empty. */
