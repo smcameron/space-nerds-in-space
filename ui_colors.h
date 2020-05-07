@@ -240,7 +240,7 @@ struct ui_color_map {
 	struct ui_color_entry quit_unselected;
 };
 
-struct ui_color_map_accessor {
+GLOBAL struct ui_color_map_accessor {
 	union {
 		struct ui_color_map map;
 		struct ui_color_entry entry[sizeof(struct ui_color_map) / sizeof(struct ui_color_entry)];
