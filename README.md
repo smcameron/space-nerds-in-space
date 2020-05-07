@@ -72,8 +72,8 @@ Perform these steps as root:
     apt-get install build-essential;
     apt-get install portaudio19-dev;
     apt-get install libvorbis-dev;
-    apt-get install libgtk2.0-dev;
-    apt-get install libgtkglext1-dev;
+    apt-get install libsdl2-dev;
+    apt-get install libsdl2-2.0-0;
     apt-get install liblua5.2-dev;
     apt-get install libglew1.5-dev;
     apt-get install libssl-dev;
@@ -84,7 +84,6 @@ Perform these steps as root:
 
     apt-get install espeak; # optional alternative to libttspico-utils
     apt-get install alsa-utils; # optional alternative to sox, for "aplay" command
-    apt-get-install libsdl1.2-dev; # optional, only needed for mesh_viewer
     apt-get install openscad; # optional, only needed if you intend to work on 3D models.
                     # Also, it is recommended to get it from http://www.openscad.org/downloads.html
                     # as the version in the repos tends to be out of date.
@@ -92,10 +91,8 @@ Perform these steps as root:
     apt-get install stgit; # Useful for making patches if you're hacking on the game. It's like "quilt" but on top of git.
 ```
 
-
-Note: SDL should only be required if you want to build mesh_viewer, which is a utility program for viewing 3D models, and which is not required to run the game. mesh_viewer uses SDL 1.2, not SDL 2.x
-
 If you want to try the optional pocketsphinx based local speech recognition, you will want the following packages:
+
 
 ```
     apt-get install pocketsphinx-utils;
