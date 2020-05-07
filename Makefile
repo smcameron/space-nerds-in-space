@@ -647,7 +647,7 @@ MODELS=${MD}/freighter.stl \
 MYCFLAGS=-DPREFIX=${PREFIX} ${DEBUGFLAG} ${PROFILEFLAG} ${OPTIMIZEFLAG}\
 	--pedantic -Wall ${STOP_ON_WARN} -pthread -std=gnu99 ${RDYNAMIC} \
 	-Wno-extended-offsetof -Wno-gnu-folding-constant $(CFLAGS) -Wvla \
-	-DUSE_SNIS_XWINDOWS_HACKS=${USE_SNIS_XWINDOWS_HACKS} -fcommon
+	-DUSE_SNIS_XWINDOWS_HACKS=${USE_SNIS_XWINDOWS_HACKS} -fno-common
 GTKCFLAGS:=$(subst -I,-isystem ,$(shell $(PKG_CONFIG) --cflags gtk+-2.0))
 GTKLDFLAGS:=$(shell $(PKG_CONFIG) --libs gtk+-2.0) $(shell $(PKG_CONFIG) --libs gthread-2.0)
 VORBISFLAGS:=$(subst -I,-isystem ,$(shell $(PKG_CONFIG) --cflags vorbisfile))
