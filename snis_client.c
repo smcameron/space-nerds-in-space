@@ -2124,10 +2124,8 @@ static int update_cargo_container(uint32_t id, uint32_t timestamp, double x, dou
 		vy = y - go[i].y;
 		vz = z - go[i].z;
 		update_generic_object(i, timestamp, x, y, z, vx, vy, vz, NULL, 1);
-		if (item >= 0) {
-			go[i].tsd.cargo_container.contents.item = item;
-			go[i].tsd.cargo_container.contents.qty = qty;
-		}
+		go[i].tsd.cargo_container.contents.item = item;
+		go[i].tsd.cargo_container.contents.qty = qty;
 	}
 	return 0;
 }

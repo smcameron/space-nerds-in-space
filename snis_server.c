@@ -20816,8 +20816,6 @@ static int process_comms_crypto(struct game_client *c)
 	if (rc)
 		return rc;
 	new_mode = !!new_mode;
-	if (c->ship_index < 0) /* shouldn't happen */
-		return 0;
 	i = lookup_by_id(c->shipid);
 	if (i < 0)
 		return 0;
