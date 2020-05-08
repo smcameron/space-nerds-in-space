@@ -18552,7 +18552,8 @@ static void server_builtin_clients(__attribute__((unused)) char *cmd)
 		}
 		snprintf(buf, sizeof(buf), "%s %5d %5d %20s %08x %hhu.%hhu.%hhu.%hhu:%hu", station, i, c->bridge,
 				bridgelist[c->bridge].shipname, c->role,
-				(ip >> 24) & 0xff, (ip >> 16) & 0xff, (ip >> 8) & 0xff, ip & 0xff, port);
+				(uint8_t) ((ip >> 24) & 0xff), (uint8_t) ((ip >> 16) & 0xff),
+				(uint8_t) ((ip >> 8) & 0xff), (uint8_t) (ip & 0xff), port);
 		send_demon_console_msg(buf);
 	}
 }
@@ -23675,9 +23676,9 @@ static void process_instructions_from_client(struct game_client *c)
 
 protocol_error:
 	fprintf(stderr, "%s: bad opcode, protocol violation on socket %d\n", logprefix(), c->socket);
-	fprintf(stderr, "%s: Protocol error in process_instructions_from_client, opcode = %hu\n",
-		logprefix(), opcode);
-	fprintf(stderr, "%s: Last successful opcode was %d (0x%hx)\n", logprefix(), last_successful_opcode,
+	fprintf(stderr, "%s: Protocol error in process_instructions_from_client, opcode = %hhu (0x%hhx)\n",
+		logprefix(), opcode, opcode);
+	fprintf(stderr, "%s: Last successful opcode was %hhu (0x%hhx)\n", logprefix(), last_successful_opcode,
 			last_successful_opcode);
 	snis_print_last_buffer("snis_server: ", c->socket);
 orderly_client_shutdown:
