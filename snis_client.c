@@ -225,7 +225,6 @@ static float tonemapping_gain = 1.10; /* tweakable */
 #define snis_draw_rectangle DEFAULT_RECTANGLE_STYLE
 #define snis_bright_line DEFAULT_BRIGHT_LINE_STYLE
 #define snis_draw_arc DEFAULT_ARC_STYLE
-static const int max_frame_rate_hz = 60;
 static int frame_rate_hz = 30;
 static int use_60_fps = 0; /* tweakable, set this to 1, and game will run at 60 fps */
 static int red_alert_mode = 0;
