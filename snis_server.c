@@ -11372,8 +11372,6 @@ static int add_mining_bot(struct snis_entity *parent_ship, uint32_t asteroid_id,
 	o = &go[rc];
 	parent_ship->tsd.ship.mining_bots--; /* maybe we want miningbots to live in cargo hold? */
 	push_mining_bot_mode(o, parent_ship->id, asteroid_id, bridge, selected_waypoint);
-	snprintf(o->sdata.name, sizeof(o->sdata.name), "%s-MINER-%02d",
-		parent_ship->sdata.name, parent_ship->tsd.ship.mining_bots);
 	memset(o->sdata.name, 0, sizeof(o->sdata.name));
 	strncpy(o->sdata.name, parent_ship->tsd.ship.mining_bot_name, sizeof(o->sdata.name));
 
