@@ -11213,7 +11213,7 @@ finished:
 	o->vz = 0;
 	o->heading = 3 * M_PI / 2;
 	memset(mining_bot_name, 0, sizeof(mining_bot_name));
-	robot_name(mt, mining_bot_name, sizeof(mining_bot_name));
+	robot_name(mt, mining_bot_name, sizeof(mining_bot_name) - 5);
 	snprintf(o->tsd.ship.mining_bot_name, sizeof(o->tsd.ship.mining_bot_name),
 			"MNR-%s", mining_bot_name);
 	quat_init_axis(&o->orientation, 0, 1, 0, o->heading);
@@ -11372,8 +11372,8 @@ static int add_mining_bot(struct snis_entity *parent_ship, uint32_t asteroid_id,
 	o = &go[rc];
 	parent_ship->tsd.ship.mining_bots--; /* maybe we want miningbots to live in cargo hold? */
 	push_mining_bot_mode(o, parent_ship->id, asteroid_id, bridge, selected_waypoint);
-	memset(o->sdata.name, 0, sizeof(o->sdata.name));
 	strncpy(o->sdata.name, parent_ship->tsd.ship.mining_bot_name, sizeof(o->sdata.name));
+	o->sdata.name[sizeof(o->sdata.name) - 1] = '\0';
 
 	/* TODO make this better: */
 	go[rc].x = parent_ship->x + 30;
