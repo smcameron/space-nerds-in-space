@@ -5613,7 +5613,7 @@ static int process_load_skybox(void)
 	if (strncmp(string, "restore-default", sizeof(string)) != 0)
 		lua_skybox_prefix = strdup(string);
 	printf("snis_client: LOAD SKYBOX: '%s'\n", string);
-	strncpy(old_solarsystem_name, solarsystem_name, sizeof(old_solarsystem_name) - 1);
+	strlcpy(old_solarsystem_name, solarsystem_name, sizeof(old_solarsystem_name));
 	old_solarsystem_name[99] = '\0';
 	old_solarsystem_assets = solarsystem_assets;
 	per_solarsystem_textures_loaded = 0;
@@ -5783,7 +5783,7 @@ static int process_set_solarsystem(void)
 	if (rc != 0)
 		return rc;
 	solarsystem[99] = '\0';
-	strncpy(old_solarsystem_name, solarsystem_name, sizeof(old_solarsystem_name) - 1);
+	strlcpy(old_solarsystem_name, solarsystem_name, sizeof(old_solarsystem_name));
 	old_solarsystem_name[99] = '\0';
 	strcpy(old_solarsystem_name, solarsystem_name);
 	memcpy(dynamic_solarsystem_name, solarsystem, 100);
@@ -6934,7 +6934,7 @@ static void do_text_to_speech(char *text)
 		return;
 	}
 
-	strncpy(last_speech, fixed_text, sizeof(last_speech) - 1);
+	strlcpy(last_speech, fixed_text, sizeof(last_speech));
 	last_time = timer;
 
 	snprintf(command, sizeof(command), "export SNIS_TTS_VOLUME=%1.2f; %s/snis_text_to_speech.sh '%s'",
@@ -6949,7 +6949,7 @@ static void do_text_to_speech(char *text)
 
 		text_window_add_color_text(comms_ui.tw, "COMPUTER:", UI_COLOR(comms_computer_output));
 		while (chars_left > 0) {
-			strncpy(tx, "- ", 3);
+			strlcpy(tx, "- ", 3);
 			strncat(tx, text + len - chars_left, 77);
 			tx[79] = '\0';
 			text_window_add_color_text(comms_ui.tw, tx, UI_COLOR(comms_computer_output));
@@ -8417,8 +8417,7 @@ static void *connect_to_gameserver_thread(__attribute__((unused)) void *arg)
 		snprintf(hoststr, sizeof(hoststr), "%d.%d.%d.%d", x[0], x[1], x[2], x[3]);
 	}
 	fprintf(stderr, "snis_client: connecting to %s/%s\n", hoststr, portstr);
-	strncpy(connecting_to_server_msg, "CONNECTING TO SERVER...",
-		sizeof(connecting_to_server_msg) - 1);
+	strlcpy(connecting_to_server_msg, "CONNECTING TO SERVER...", sizeof(connecting_to_server_msg));
 
 	/* Check if the hoststr is numeric... */
 	rc = sscanf(hoststr, "%d.%d.%d.%d", &a, &b, &c, &d);
@@ -8492,8 +8491,8 @@ static void *connect_to_gameserver_thread(__attribute__((unused)) void *arg)
 	app.requested_faction = (uint8_t) net_setup_ui.selected_faction;
 	switch_warp_gate_number = -1;
 	app.role = htonl(role);
-	strncpy((char *) app.shipname, shipname, 19);
-	strncpy((char *) app.password, password, 19);
+	strlcpy((char *) app.shipname, shipname, sizeof(app.shipname));
+	strlcpy((char *) app.password, password, sizeof(app.password));
 
 	printf("Notifying server, opcode update player\n");
 	if (snis_writesocket(gameserver_sock, &app, sizeof(app)) < 0) {
@@ -8564,8 +8563,8 @@ static int connect_to_gameserver(int selected_server)
 static void show_connecting_screen(void)
 {
 	if (strcmp(connecting_to_server_msg, "") == 0)
-		strncpy(connecting_to_server_msg, "CONNECTING TO SERVER...",
-			sizeof(connecting_to_server_msg) - 1);
+		strlcpy(connecting_to_server_msg, "CONNECTING TO SERVER...",
+			sizeof(connecting_to_server_msg));
 	sng_set_foreground(UI_COLOR(lobby_connecting));
 	sng_abs_xy_draw_string(connecting_to_server_msg, SMALL_FONT, txx(100), txy(300) + LINEHEIGHT);
 	if (!connected_to_gameserver) {
@@ -8994,7 +8993,7 @@ static void show_gunsight(void)
 static void main_screen_add_text(char *msg)
 {
 	main_screen_text.last = (main_screen_text.last + 1) % MAINSCREEN_COMMS_LINES;
-	strncpy(main_screen_text.text[main_screen_text.last], msg, 99);
+	strlcpy(main_screen_text.text[main_screen_text.last], msg, 100);
 }
 
 static void draw_main_screen_text(void)
@@ -16782,7 +16781,7 @@ static void draw_science_details(void)
 		y += yinc;
 
 		if (p->custom_description) {
-			strncpy(planet_desc, p->custom_description, 255);
+			strlcpy(planet_desc, p->custom_description, 256);
 			planet_desc[256] = '\0';
 			for (i = 0; planet_desc[i] != '\0'; i++)
 				planet_desc[i] = toupper(planet_desc[i]);
@@ -16906,7 +16905,7 @@ static void draw_science_location_indicator(struct snis_entity *o)
 {
 	char ssname[12], buf[80];
 
-	strncpy(ssname, solarsystem_name, 11);
+	strlcpy(ssname, solarsystem_name, sizeof(ssname));
 	ssname[11] = '\0';
 	uppercase(ssname);
 	snprintf(buf, sizeof(buf), "%s SYSTEM", ssname);
@@ -18170,8 +18169,7 @@ static char *expand_demon_selection_string(char *input)
 	}
 	buffer[999] = '\0';
 	newinput = calloc(strlen(input) + strlen(buffer), 1);
-	strncpy(newinput, input, sel - input);
-	newinput[sel - input] = '\0';
+	strlcpy(newinput, input, sel - input + 1);
 	strncat(newinput, buffer, sizeof(newinput) - strlen(newinput) - 1);
 	strncat(newinput, sel + 4, sizeof(newinput) - strlen(newinput) - 1);
 	return newinput;
@@ -22532,7 +22530,7 @@ static void setup_physical_io_socket(void)
 	 * Ch. 57, p. 1175-1176.  To get this to work on non-linux, we'll need
 	 * to do something else.
 	 */
-	strncpy(&addr.sun_path[1], "snis-phys-io", sizeof(addr.sun_path) - 2);
+	strlcpy(&addr.sun_path[1], "snis-phys-io", sizeof(addr.sun_path) - 1);
 
 	physical_io_socket = socket(AF_UNIX, SOCK_DGRAM, 0);
 	if (physical_io_socket == -1) {
