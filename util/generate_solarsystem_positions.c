@@ -90,7 +90,7 @@ static void read_solarsystem_data(char *filename)
 	ss[nsolarsystems].x = x;
 	ss[nsolarsystems].y = y;
 	ss[nsolarsystems].z = z;
-	strncpy(ss[nsolarsystems].name, filename, sizeof(ss[nsolarsystems].name));
+	strlcpy(ss[nsolarsystems].name, filename, sizeof(ss[nsolarsystems].name));
 	nsolarsystems++;
 }
 
