@@ -39,15 +39,10 @@ static char default_ship_name[SHIPNAME_LEN];
 
 char *snis_prefs_read_default_ship_name(struct xdg_base_context *cx)
 {
-	int n;
 	char *name = xdg_base_slurp_file(cx, DEFAULT_SHIP_NAME_TXT);
 	if (!name)
 		return NULL;
-	n = strlen(name);
-	if (n > SHIPNAME_LEN - 1)
-		n = SHIPNAME_LEN - 1;
-	strncpy(default_ship_name, name, n);
-	default_ship_name[n] = '\0';
+	strlcpy(default_ship_name, name, SHIPNAME_LEN);
 	free(name);
 	return default_ship_name;
 }
@@ -56,18 +51,14 @@ void snis_prefs_save_default_ship_name(struct xdg_base_context *cx, char *name)
 {
 	int rc, fd, bytes_to_write;
 
-	int n = strlen(name) + 1;
-	if (n > SHIPNAME_LEN - 1)
-		n = SHIPNAME_LEN - 1;
-	strncpy(default_ship_name, name, n);
-	default_ship_name[n] = '\0';
+	strlcpy(default_ship_name, name, SHIPNAME_LEN);
 
 	fd = xdg_base_open_for_overwrite(cx, DEFAULT_SHIP_NAME_TXT);
 	if (fd < 0) {
 		fprintf(stderr, "Failed to open file %s: %s\n", DEFAULT_SHIP_NAME_TXT, strerror(errno));
 		return;
 	}
-	bytes_to_write = n - 1;
+	bytes_to_write = strlen(default_ship_name);
 	rc = write(fd, default_ship_name, bytes_to_write);
 	if (rc != bytes_to_write) {
 		fprintf(stderr, "Failed to write to %s: %s\n", DEFAULT_SHIP_NAME_TXT, strerror(errno));

@@ -9,6 +9,7 @@
 #include "snis_button.h"
 #undef DEFINE_BUTTON_GLOBALS
 #include "wwviaudio.h"
+#include "string-utils.h"
 
 static int default_button_sound = -1;
 
@@ -32,7 +33,7 @@ struct button {
 
 void snis_button_set_label(struct button *b, char *label)
 {
-	strncpy(b->label, label, sizeof(b->label) - 1);
+	strlcpy(b->label, label, sizeof(b->label));
 }
 
 static void snis_button_compute_dimensions(struct button *b)

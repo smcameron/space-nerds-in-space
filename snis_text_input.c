@@ -4,6 +4,7 @@
 #include "snis_font.h"
 #include "snis_typeface.h"
 #include "snis_graph.h"
+#include "string-utils.h"
 
 #define DEFINE_SNIS_TEXT_INPUT_GLOBALS
 #include "snis_text_input.h"
@@ -276,7 +277,7 @@ void snis_text_input_box_set_dynamic_width(struct snis_text_input_box *t,
 void snis_text_input_box_set_contents(struct snis_text_input_box *t, char *contents)
 {
 	memset(t->buffer, 0, t->buflen + 1);
-	strncpy(t->buffer, contents, t->buflen);
+	strlcpy(t->buffer, contents, t->buflen + 1);
 	t->cursor_pos = strlen(t->buffer);
 }
 

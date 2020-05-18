@@ -170,11 +170,11 @@ struct ship_type_entry *snis_read_ship_types(char *filename, int *count)
 			nrots = 0;
 			continue;
 		} else if (has_prefix("class:", line)) {
-			strncpy(class, get_field(line), sizeof(class) - 1);
+			strlcpy(class, get_field(line), sizeof(class));
 		} else if (has_prefix("model file:", line)) {
-			strncpy(model_file, get_field(line), sizeof(model_file) - 1);
+			strlcpy(model_file, get_field(line), sizeof(model_file));
 		} else if (has_prefix("thrust attach:", line)) {
-			strncpy(thrust_attach, get_field(line), sizeof(thrust_attach) - 1);
+			strlcpy(thrust_attach, get_field(line), sizeof(thrust_attach));
 		} else if (has_prefix("toughness:", line)) {
 			errorcount += parse_double_field(&toughness, filename, line, linecount);
 		} else if (has_prefix("max speed:", line)) {

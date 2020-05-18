@@ -5,6 +5,7 @@
 
 #include "arraysize.h"
 #include "pronunciation.h"
+#include "string-utils.h"
 
 static struct fixup_list_entry {
 	char *pattern;
@@ -45,12 +46,12 @@ static int fix_pronunciation_buffer(char *input, char *output, struct fixup_list
 
 	rc = regexec(fixup->re, input, 1, &match, 0);
 	if (rc) {
-		strncpy(output, input, TMP_PRONOUNCE_BUFFER_SIZE);
+		strlcpy(output, input, TMP_PRONOUNCE_BUFFER_SIZE);
 		return 0;
 	}
 
 	memset(output, 0, TMP_PRONOUNCE_BUFFER_SIZE);
-	strncpy(output, input, match.rm_so);
+	strlcpy(output, input, match.rm_so);
 	strncat(output, fixup->replacement, TMP_PRONOUNCE_BUFFER_SIZE - strlen(output) - 1);
 	strncat(output, &input[match.rm_eo], TMP_PRONOUNCE_BUFFER_SIZE - strlen(output) - 1);
 	return 1;
@@ -66,7 +67,7 @@ char *fix_pronunciation(char *input)
 	int count = 0;
 	int i;
 
-	strncpy(buffer[current_buffer], input, TMP_PRONOUNCE_BUFFER_SIZE);
+	strlcpy(buffer[current_buffer], input, TMP_PRONOUNCE_BUFFER_SIZE);
 	buffer[current_buffer][4095] = '\0';
 
 	for (i = 0; i < ARRAYSIZE(fixup_list); i++) {

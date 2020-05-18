@@ -8,6 +8,7 @@
 #include "mtwist.h"
 #include "mathutils.h"
 #include "ui_colors.h"
+#include "string-utils.h"
 
 #define SLIDERS_DEFINE_GLOBALS
 #include "snis_sliders.h"
@@ -45,12 +46,9 @@ struct slider *snis_slider_init(float x, float y, float length, float height, in
 	s->length = length;
 	s->height = height;
 	s->color = color;
-	strncpy(s->label, label, sizeof(s->label) - 1);
-	s->label[sizeof(s->label) - 1] = '\0';
-	strncpy(s->label1, l1, sizeof(s->label1) - 1);
-	s->label1[sizeof(s->label1) - 1] = '\0';
-	strncpy(s->label2, l2, sizeof(s->label2) - 1);
-	s->label2[sizeof(s->label2) - 1] = '\0';
+	strlcpy(s->label, label, sizeof(s->label));
+	strlcpy(s->label1, l1, sizeof(s->label1));
+	strlcpy(s->label2, l2, sizeof(s->label2));
 	s->r1 = r1;
 	s->r2 = r2;
 	s->sample = gmf;

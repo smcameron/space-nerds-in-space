@@ -2489,6 +2489,17 @@ sub process {
 			}
 		}
 
+# check for strcpy, strncpy, sprintf
+		if ($line =~ /[ \t]strcpy[(]/g) {
+			ERROR("STRCPY", "Do not use strcpy(), use strlcpy() instead.\n" . $herecurr);
+		}
+		if ($line =~ /[ \t]strncpy[(]/g) {
+			ERROR("STRNCPY", "Use strlcpy() instead of strncpy\n" . $herecurr);
+		}
+		if ($line =~ /[ \t]sprintf[(]/g) {
+			ERROR("SPRINTF", "Use snprintf() instead of sprintf\n" . $herecurr);
+		}
+
 # check for spaces between functions and their parentheses.
 		while ($line =~ /($Ident)\s+\(/g) {
 			my $name = $1;

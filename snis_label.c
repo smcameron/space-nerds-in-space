@@ -7,6 +7,7 @@
 #define DEFINE_LABEL_GLOBALS
 #include "snis_label.h"
 #undef DEFINE_LABEL_GLOBALS
+#include "string-utils.h"
 
 struct label {
 	int x, y;
@@ -23,7 +24,7 @@ struct label *snis_label_init(int x, int y,
 	l = malloc(sizeof(*l));
 	l->x = x;
 	l->y = y;
-	strncpy(l->label, label, sizeof(l->label) - 1);
+	strlcpy(l->label, label, sizeof(l->label));
 	l->label[sizeof(l->label) - 1] = '\0';
 	l->color = color;
 	l->font = font;

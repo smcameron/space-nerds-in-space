@@ -6,6 +6,7 @@
 #include "snis_graph.h"
 #include "snis_text_window.h"
 #include "wwviaudio.h"
+#include "string-utils.h"
 
 struct text_window {
 	int x, y, w, h;
@@ -41,8 +42,7 @@ int text_window_entry_count(struct text_window *tw)
 
 void text_window_add_color_text(struct text_window *tw, const char *text, int color)
 {
-	strncpy(tw->text[tw->last_entry], text, 79);
-	tw->text[tw->last_entry][79] = '\0';
+	strlcpy(tw->text[tw->last_entry], text, 80);
 	tw->textcolor[tw->last_entry] = color;
 	tw->last_entry = (tw->last_entry + 1) % tw->total_lines;
 	if (tw->last_entry == tw->first_entry)
@@ -165,8 +165,7 @@ void text_window_draw(struct text_window *tw)
 						tw->y + j * tw->lineheight + tw->lineheight);
 			} else {
 				char tmpbuf[100];	
-				strncpy(tmpbuf, tw->text[i], 99);
-				tmpbuf[99] = '\0';
+				strlcpy(tmpbuf, tw->text[i], sizeof(tmpbuf));
 				if (tw->printing_pos < len - 1) {
 					if (((*textwindow_timer >> 2) & 1) == 0) {
 						tmpbuf[tw->printing_pos] = '_';

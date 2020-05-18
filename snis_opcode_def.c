@@ -34,6 +34,7 @@
 #include "snis_marshal.h"
 #include "stacktrace.h"
 #include "arraysize.h"
+#include "string-utils.h"
 
 #define NSUBCODES 30
 #define NOPCODES (256 * NSUBCODES)
@@ -56,7 +57,7 @@ static int init_opcode_subcode_def(uint8_t opcode, uint8_t subcode, char *format
 		fprintf(stderr, "Opcode format length is too long for opcode %hhu, subcode %hhu\n", opcode, subcode);
 		return -1;
 	}
-	strncpy(opcode_def[index].format, format, sizeof(opcode_def[index].format));
+	strlcpy(opcode_def[index].format, format, sizeof(opcode_def[index].format));
 	return 0;
 }
 

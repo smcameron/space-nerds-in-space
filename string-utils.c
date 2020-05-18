@@ -194,15 +194,31 @@ int strchrcount(char *s, int c)
 	return count;
 }
 
-/* strncpy but force terminating null */
-char *strnzcpy(char *dest, const char *src, size_t n)
+#if USE_CUSTOM_STRLCPY
+size_t strlcpy(char *dest, const char *src, size_t n)
 {
-	char *rc;
+	size_t rc;
+	int i;
 
-	rc = strncpy(dest, src, n);
-	dest[n - 1] = '\0';
+	for (i = 0;; i++) {
+		if (i < n)
+			dest[i] = src[i];
+		else {
+			dest[n - 1] = '\0';
+			if (src[i])
+				rc = i + 1 + strlen(&src[i + 1]);
+			else
+				rc = i;
+			break;
+		}
+		if (!src[i]) {
+			rc = i;
+			break;
+		}
+	}
 	return rc;
 }
+#endif
 
 /* Printing a pointer to a function via %p is forbidden by ISO C, so we have this BS instead: */
 void format_function_pointer(char *buffer, void (*function_pointer)(void))

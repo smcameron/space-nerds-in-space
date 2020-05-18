@@ -29,6 +29,7 @@
 #include <errno.h>
 
 #include "snis-device-io.h"
+#include "string-utils.h"
 
 struct snis_device_io_connection {
 	struct sockaddr_un server_addr, client_addr;
@@ -79,7 +80,7 @@ int snis_device_io_setup(struct snis_device_io_connection **con)
 
 	memset(&server_addr, 0, sizeof(server_addr));
 	server_addr.sun_family = AF_UNIX;
-	strncpy(&server_addr.sun_path[1], "snis-phys-io", sizeof(server_addr.sun_path) - 2);
+	strlcpy(&server_addr.sun_path[1], "snis-phys-io", sizeof(server_addr.sun_path) - 1);
 	memcpy(&(*con)->client_addr, &client_addr, sizeof(client_addr));
 	memcpy(&(*con)->server_addr, &server_addr, sizeof(server_addr));
 	(*con)->client_socket = s;

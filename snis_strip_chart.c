@@ -6,8 +6,8 @@
 #include "snis_font.h"
 #include "snis_typeface.h"
 #include "snis_graph.h"
-
 #include "snis_strip_chart.h"
+#include "string-utils.h"
 
 struct strip_chart {
 	int x, y, width, height, color, warn_color, font, history_size, needle;
@@ -44,8 +44,8 @@ struct strip_chart *snis_strip_chart_init(int x, int y, int width, int height, c
 	sc->warn_color = warn_color;
 	sc->font = font;
 	sc->history_size = history_size;
-	strncpy(sc->label, label, sizeof(sc->label) - 1);
-	strncpy(sc->warning_msg, warning_msg, sizeof(sc->warning_msg) - 1);
+	strlcpy(sc->label, label, sizeof(sc->label));
+	strlcpy(sc->warning_msg, warning_msg, sizeof(sc->warning_msg));
 	sc->needle = 0;
 	sc->warning_on = 0;
 	sc->warning_level = warning_level;
@@ -114,8 +114,8 @@ struct scaling_strip_chart *snis_scaling_strip_chart_init(int x, int y,
 	sc->warn_color = warn_color;
 	sc->font = font;
 	sc->history_size = history_size;
-	strncpy(sc->label, label, sizeof(sc->label) - 1);
-	strncpy(sc->warning_msg, warning_msg, sizeof(sc->warning_msg) - 1);
+	strlcpy(sc->label, label, sizeof(sc->label));
+	strlcpy(sc->warning_msg, warning_msg, sizeof(sc->warning_msg));
 	sc->needle = 0;
 	sc->warning_on = 0;
 	sc->warning_level = warning_level;

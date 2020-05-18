@@ -2,6 +2,7 @@
 # for no voice chat, make WITHVOICECHAT=no
 WITHVOICECHAT=yes
 USE_SNIS_XWINDOWS_HACKS=1
+USE_CUSTOM_STRLCPY=0
 PKG_CONFIG?=pkg-config
 
 # use "make OSX=1" for mac
@@ -561,8 +562,8 @@ X11LIBS=$(shell $(PKG_CONFIG) --libs x11)
 X11CFLAGS=$(shell $(PKG_CONFIG) --cflags x11)
 
 SSGL=ssgl/libssglclient.a
-LIBS=-Lssgl -lssglclient -ldl -lm ${PNGLIBS} ${GLEWLIBS}
-SERVERLIBS=-Lssgl -lssglclient ${LRTLIB} -ldl -lm ${LUALIBS} ${CRYPTLIBS}
+LIBS=-Lssgl -lssglclient -ldl -lm -lbsd ${PNGLIBS} ${GLEWLIBS}
+SERVERLIBS=-Lssgl -lssglclient ${LRTLIB} -ldl -lm -lbsd ${LUALIBS} ${CRYPTLIBS}
 MULTIVERSELIBS=-Lssgl -lssglclient ${LRTLIB} -ldl -lm
 MULTIVERSELIBS=-Lssgl -lssglclient ${LRTLIB} -ldl -lm ${CRYPTLIBS}
 #
@@ -647,7 +648,8 @@ MODELS=${MD}/freighter.stl \
 MYCFLAGS=-DPREFIX=${PREFIX} ${DEBUGFLAG} ${PROFILEFLAG} ${OPTIMIZEFLAG}\
 	--pedantic -Wall ${STOP_ON_WARN} -pthread -std=gnu99 ${RDYNAMIC} \
 	-Wno-extended-offsetof -Wno-gnu-folding-constant $(CFLAGS) -Wvla \
-	-DUSE_SNIS_XWINDOWS_HACKS=${USE_SNIS_XWINDOWS_HACKS} -fno-common
+	-DUSE_SNIS_XWINDOWS_HACKS=${USE_SNIS_XWINDOWS_HACKS} -fno-common \
+	-DUSE_CUSTOM_STRLCPY=${USE_CUSTOM_STRLCPY}
 GTKCFLAGS:=$(subst -I,-isystem ,$(shell $(PKG_CONFIG) --cflags gtk+-2.0))
 GTKLDFLAGS:=$(shell $(PKG_CONFIG) --libs gtk+-2.0) $(shell $(PKG_CONFIG) --libs gthread-2.0)
 VORBISFLAGS:=$(subst -I,-isystem ,$(shell $(PKG_CONFIG) --cflags vorbisfile))
@@ -1000,7 +1002,7 @@ ${OD}/infinite-taunt.o:	infinite-taunt.c Makefile ${ODT}
 	$(Q)$(COMPILE)
 
 bin/infinite-taunt:	${OD}/infinite-taunt.o ${OD}/names.o ${OD}/mtwist.o Makefile ${BIN}
-	$(CC) -DTEST_TAUNT -o bin/infinite-taunt ${MYCFLAGS} ${OD}/mtwist.o infinite-taunt.c ${OD}/names.o
+	$(CC) -DTEST_TAUNT -o bin/infinite-taunt ${MYCFLAGS} ${OD}/mtwist.o infinite-taunt.c ${OD}/names.o -lbsd
 
 bin/names:	names.c names.h ${OD}/mtwist.o ${BIN}
 	$(CC) -DTEST_NAMES -o bin/names ${MYCFLAGS} ${GTKCFLAGS} ${OD}/mtwist.o names.c
@@ -1264,11 +1266,11 @@ $(OD)/snis-device-io.o:	snis-device-io.h snis-device-io.c Makefile ${ODT}
 
 bin/device-io-sample-1:	device-io-sample-1.c ${OD}/snis-device-io.o ${BIN}
 	$(CC) -Wall -Wextra --pedantic -pthread -o bin/device-io-sample-1 ${OD}/snis-device-io.o \
-			device-io-sample-1.c
+			device-io-sample-1.c -lbsd
 
 bin/snis_arduino: snis_arduino.c ${OD}/snis-device-io.o ${BIN}
 	$(CC) -Wall -Wextra --pedantic -pthread -o bin/snis_arduino ${OD}/snis-device-io.o \
-			snis_arduino.c
+			snis_arduino.c -lbsd
 
 $(OD)/nonuniform_random_sampler.o:	nonuniform_random_sampler.c nonuniform_random_sampler.h ${ODT}
 	$(Q)$(COMPILE)

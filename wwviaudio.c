@@ -33,6 +33,7 @@
 #include <math.h>
 
 #include "mathutils.h"
+#include "string-utils.h"
 
 #define WWVIAUDIO_DEFINE_GLOBALS
 #include "wwviaudio.h"
@@ -153,8 +154,7 @@ int wwviaudio_read_ogg_clip_into_allocated_buffer(char *filename, int16_t **samp
 	snprintf(filebuf, PATH_MAX, "%s/%s", DATADIR, filename);
 	rc = stat(filebuf, &statbuf);
 	if (rc != 0) {
-		strncpy(filebuf, filename, PATH_MAX);
-		filebuf[PATH_MAX] = '\0';
+		strlcpy(filebuf, filename, PATH_MAX);
 		rc = stat(filebuf, &statbuf);
 		if (rc != 0) {
 			fprintf(stderr, "stat('%s') failed.\n", filebuf);

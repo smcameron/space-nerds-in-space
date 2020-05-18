@@ -142,6 +142,7 @@ int snis_crypt(unsigned char *shipname, unsigned char *password,
 	/* Apple doesn't have crypt_r(), use crypt() instead. */
 	password = (unsigned char *) crypt((char *) buffer, (char *) salt);
 #endif
+	/* We actually want strncpy not strlcpy here */
 	strncpy((char *) crypted, (char *) password, cryptsize);
 	return 0;
 }

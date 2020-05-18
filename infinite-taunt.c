@@ -8,6 +8,7 @@
 #include "mtwist.h"
 #include "infinite-taunt.h"
 #include "names.h"
+#include "string-utils.h"
 
 static char *nothing = "";
 
@@ -1769,7 +1770,7 @@ void robot_name(struct mtwist_state *mt, char *buffer, int buflen)
 			break;
 		}
 	}
-	strncpy(buffer, name, buflen);
+	strlcpy(buffer, name, buflen);
 }
 
 enum planet_type planet_type_from_string(char *s)

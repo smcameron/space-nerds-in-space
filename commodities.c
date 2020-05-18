@@ -96,7 +96,7 @@ static int parse_float_field(char *filename, char *line, int ln, float *value, c
 	c = strtok_r(NULL, ",", saveptr);
 	if (!c)
 		return parse_error(filename, line, ln, NULL);
-	strnzcpy(word, c, sizeof(word));
+	strlcpy(word, c, sizeof(word));
 	clean_spaces(word);
 	rc = sscanf(word, "%f", value);
 	if (rc != 1)
@@ -113,7 +113,7 @@ static int parse_int_field(char *filename, char *line, int ln, int *value, char 
 	c = strtok_r(NULL, ",", saveptr);
 	if (!c)
 		return parse_error(filename, line, ln, NULL);
-	strnzcpy(word, c, sizeof(word));
+	strlcpy(word, c, sizeof(word));
 	clean_spaces(word);
 	rc = sscanf(word, "%d", value);
 	if (rc != 1)
@@ -165,7 +165,7 @@ static int parse_line(char *filename, char *line, int ln, struct commodity *c)
 	x = strtok_r(line, ",", &saveptr);
 	if (!x)
 		return parse_error(filename, line, ln, NULL);
-	strnzcpy(word, x, sizeof(word));
+	strlcpy(word, x, sizeof(word));
 	clean_spaces(word);
 	uppercase(word);
 	rc = lookup_category(word);
@@ -179,10 +179,10 @@ static int parse_line(char *filename, char *line, int ln, struct commodity *c)
 	x = strtok_r(NULL, ",", &saveptr);
 	if (!x)
 		return parse_error(filename, line, ln, NULL);
-	strnzcpy(word, x, sizeof(word));
+	strlcpy(word, x, sizeof(word));
 	clean_spaces(word);
 	uppercase(word);
-	strnzcpy(c->name, word, sizeof(c->name));
+	strlcpy(c->name, word, sizeof(c->name));
 	if (strcmp(c->name, word) != 0) {
 		fprintf(stderr, "%s:%d: '%s' truncated to %lu chars.\n", filename, ln, word,
 			(unsigned long) strlen(c->name));
@@ -193,10 +193,10 @@ static int parse_line(char *filename, char *line, int ln, struct commodity *c)
 	x = strtok_r(NULL, ",", &saveptr);
 	if (!x)
 		return parse_error(filename, line, ln, NULL);
-	strnzcpy(word, x, sizeof(word));
+	strlcpy(word, x, sizeof(word));
 	clean_spaces(word);
 	uppercase(word);
-	strnzcpy(c->unit, word, sizeof(c->unit));
+	strlcpy(c->unit, word, sizeof(c->unit));
 	if (strcmp(c->unit, word) != 0) {
 		fprintf(stderr, "%s:%d: '%s' truncated to %lu chars.\n", filename, ln, word,
 			(unsigned long) strlen(c->unit));
@@ -207,10 +207,10 @@ static int parse_line(char *filename, char *line, int ln, struct commodity *c)
 	x = strtok_r(NULL, ",", &saveptr);
 	if (!x)
 		return parse_error(filename, line, ln, NULL);
-	strnzcpy(word, x, sizeof(word));
+	strlcpy(word, x, sizeof(word));
 	clean_spaces(word);
 	uppercase(word);
-	strnzcpy(c->scans_as, word, sizeof(c->scans_as));
+	strlcpy(c->scans_as, word, sizeof(c->scans_as));
 	if (strcmp(c->scans_as, word) != 0) {
 		fprintf(stderr, "%s:%d: '%s' truncated to %lu chars.\n", filename, ln, word,
 			(unsigned long) strlen(c->scans_as));
@@ -365,9 +365,9 @@ int add_commodity(struct commodity **c, int *ncommodities, const char *category,
 	newc = &(*c)[n - 1];
 
 	newc->category = lookup_category(category);
-	strnzcpy(newc->name, name, sizeof(newc->name));
-	strnzcpy(newc->unit, unit, sizeof(newc->unit));
-	strnzcpy(newc->scans_as, scans_as, sizeof(newc->scans_as));
+	strlcpy(newc->name, name, sizeof(newc->name));
+	strlcpy(newc->unit, unit, sizeof(newc->unit));
+	strlcpy(newc->scans_as, scans_as, sizeof(newc->scans_as));
 	newc->base_price = base_price;
 	newc->volatility = volatility;
 	newc->legality = legality;

@@ -10,6 +10,7 @@
 #include "snis_typeface.h"
 #include "snis_graph.h"
 #include "snis_gauge.h"
+#include "string-utils.h"
 
 struct gauge {
 	int x, y, r;
@@ -57,7 +58,7 @@ struct gauge *gauge_init(int x, int y, int r, double r1, double r2,
 	}
 	g->ndivs = ndivs;
 	g->sample = gmf;
-	strncpy(g->title, title, sizeof(g->title) - 1);
+	strlcpy(g->title, title, sizeof(g->title));
 	g->title[sizeof(g->title) - 1] = '\0';
 	g->sample2 = NULL;
 	g->bg_color = -1;

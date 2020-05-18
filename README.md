@@ -71,6 +71,7 @@ Perform these steps as root:
 ```
     apt-get install build-essential;
     apt-get install portaudio19-dev;
+    apt-get install libbsd-dev; # for strlcpy()
     apt-get install libpng-dev;
     apt-get install libvorbis-dev;
     apt-get install libsdl2-dev;

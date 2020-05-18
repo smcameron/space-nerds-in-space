@@ -7,6 +7,7 @@
 
 #include "shader.h"
 #include "stacktrace.h"
+#include "string-utils.h"
 
 static void print_glsl_code_context(char *code[], int code_fragments, int lineno, int charno)
 {
@@ -67,7 +68,7 @@ static void print_glsl_compile_error(char *error_message, char *shadercode[], in
 		len = n - e;
 		if (len > sizeof(tmp) - 1)
 			len = sizeof(tmp) - 1;
-		strncpy(tmp, e, len);
+		strlcpy(tmp, e, sizeof(tmp));
 		tmp[len] = '\0';
 		rc = sscanf(tmp, "%*d:%d(%d)", &lineno, &charno);
 		if (rc == 2 && lineno > highest_error) {
