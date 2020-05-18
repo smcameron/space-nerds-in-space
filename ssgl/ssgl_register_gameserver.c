@@ -43,6 +43,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 #include "ssgl_socket_io.h"
 #include "ssgl_sanitize.h"
 #include "ssgl_connect_to_lobby.h"
+#include "ssgl_string.h"
 
 struct lobby_thread_arg {
 	struct ssgl_game_server gameserver;
@@ -62,7 +63,7 @@ static void *update_lobby_thread(void *arg)
 
 	/* now move this to stack, and free malloc'ed memory. */
 	memset(lobbyhost, 0, sizeof(lobbyhost));
-	strncpy(lobbyhost, a->lobbyhost, 1023);
+	strlcpy(lobbyhost, a->lobbyhost, sizeof(lobbyhost));
 	gameserver = a->gameserver;
 	thread = a->thread;
 
@@ -103,7 +104,7 @@ int ssgl_register_gameserver(char *lobbyhost, struct ssgl_game_server *gameserve
 	arg = malloc(sizeof(*arg));
 	arg->gameserver = *gameserver;
 	arg->nconnections = (volatile int *) nconnections;
-	strncpy(arg->lobbyhost, lobbyhost, sizeof(arg->lobbyhost)-1);
+	strlcpy(arg->lobbyhost, lobbyhost, sizeof(arg->lobbyhost));
 	arg->thread = lobby_thread;
 
 	rc = pthread_create(lobby_thread, NULL, update_lobby_thread, arg);

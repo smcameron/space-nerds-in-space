@@ -27,6 +27,8 @@ VERSION=0.1
 
 CC ?= gcc
 
+USE_CUSTOM_STRLCPY=0
+
 ifeq (${E},1)
 STOP_ON_WARN=-Werror
 else
@@ -57,17 +59,26 @@ OSX=0
 
 COMPILE=$(CC) ${MYCFLAGS} -c -o $@ $< && $(ECHO) '  COMPILE' $<
 
-MYCFLAGS=${DEBUGFLAG} ${OPTIMIZEFLAG} --pedantic -Wall -Wvla ${STOP_ON_WARN} -pthread ${LRTFLAGS} $(CFLAGS)
+MYCFLAGS=${DEBUGFLAG} ${OPTIMIZEFLAG} --pedantic -Wall -Wvla ${STOP_ON_WARN} -pthread ${LRTFLAGS} $(CFLAGS) \
+	-DUSE_CUSTOM_STRLCPY=${USE_CUSTOM_STRLCPY}
 
 SERVEROBJS=ssgl_sanitize.o ssgl_sleep.o \
 	ssgl_socket_io.o ssgl_log.o ssgl_get_primary_host_ip_addr.o ssgl_get_gamelobby_port.o
-LINKSERVER=$(CC) ${MYCFLAGS} ${LINKFLAGS} $< ${SERVEROBJS} -o $@ $(LDFLAGS) && $(ECHO) '  LINK' $<
-LINKCLIENT=$(CC) ${MYCFLAGS} -L. -o $@ $< -lssglclient $(LDFLAGS) && $(ECHO) '  LINK' $<
 
 ARCHIVEOBJS=ssgl_sleep.o ssgl_sanitize.o ssgl_recv_game_servers.o \
 		ssgl_connect_to_lobby.o ssgl_socket_io.o ssgl_get_primary_host_ip_addr.o \
 		ssgl_register_gameserver.o ssgl_log.o ssgl_register_for_bcast_packet.o \
 		ssgl_get_gamelobby_port.o
+
+LBSD=-lbsd
+ifeq (${USE_CUSTOM_STRLCPY}, 1)
+	ARCHIVEOBJS += ssgl_string.o
+	SERVEROBJS += ssgl_string.o
+	LBSD=
+endif
+
+LINKSERVER=$(CC) ${MYCFLAGS} ${LINKFLAGS} $< ${SERVEROBJS} -o $@ $(LDFLAGS) && $(ECHO) '  LINK' $<
+LINKCLIENT=$(CC) ${MYCFLAGS} -L. -o $@ $< -lssglclient ${LBSD} $(LDFLAGS) && $(ECHO) '  LINK' $<
 
 AR ?= ar
 ARCHIVE=$(AR) -cr $@ ${ARCHIVEOBJS} && $(ECHO) '  ARCHIVE' $@
@@ -81,13 +92,15 @@ SRCS = ssgl_connect_to_lobby.c \
 	ssgl_sanitize.c \
 	ssgl_server.c \
 	ssgl_sleep.c \
+	ssgl_string.c \
 	ssgl_log.c \
 	ssgl_socket_io.c \
 	ssgl_connect_to_lobby.h \
 	ssgl.h \
 	ssgl_protocol_id.h \
 	ssgl_sanitize.h \
-	ssgl_socket_io.h
+	ssgl_socket_io.h \
+	ssgl_string.h
 
 TXTFILES = AUTHORS COPYING LICENSE README
 
@@ -121,6 +134,9 @@ ssgl_get_primary_host_ip_addr.o:	ssgl_get_primary_host_ip_addr.c
 	$(Q)$(COMPILE)
 
 ssgl_connect_to_lobby.o:	ssgl_connect_to_lobby.c
+	$(Q)$(COMPILE)
+
+ssgl_string.o:	ssgl_string.c ssgl_string.h Makefile
 	$(Q)$(COMPILE)
 
 ssgl_register_for_bcast_packet.o: ssgl_register_for_bcast_packet.c

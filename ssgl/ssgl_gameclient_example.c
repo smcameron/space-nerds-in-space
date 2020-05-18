@@ -32,6 +32,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 #include <arpa/inet.h> /* for ntohs */
 
 #include "ssgl.h"
+#include "ssgl_string.h"
 
 int lsssglmode = 0;
 char *programname = "ssgl_gameclient_example";
@@ -89,7 +90,7 @@ int main(int argc, char *argv[])
 		exit(1);
 	}
 
-	strncpy(filter.game_type, gametype, sizeof(filter.game_type)-1);
+	strlcpy(filter.game_type, gametype, sizeof(filter.game_type));
 	printf("Filtering games of type '%s' on host '%s'\n", filter.game_type, hostname);
 	do {
 		rc = ssgl_recv_game_servers(sock, &game_server, &game_server_count, &filter);
