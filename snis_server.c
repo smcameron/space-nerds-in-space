@@ -775,8 +775,7 @@ static void enqueue_lua_command(const char *cmd)
 
 	q = malloc(sizeof(*q));
 	q->next = NULL;
-	strncpy(q->lua_command, cmd, sizeof(q->lua_command) - 1);
-	q->lua_command[sizeof(q->lua_command) - 1] = '\0';
+	strlcpy(q->lua_command, cmd, sizeof(q->lua_command));
 
 	if (!lua_command_queue_head) {
 		lua_command_queue_head = q;
@@ -794,13 +793,13 @@ static void dequeue_lua_command(char *cmdbuf, int bufsize)
 
 	qe = lua_command_queue_head;
 	if (!qe) {
-		strncpy(cmdbuf, "", bufsize - 1);
+		strlcpy(cmdbuf, "", bufsize);
 		return;
 	}
 
 	lua_command_queue_head = qe->next;
 	qe->next = NULL;
-	strncpy(cmdbuf, qe->lua_command, bufsize - 1);
+	strlcpy(cmdbuf, qe->lua_command, bufsize);
 	free(qe);
 }
 
@@ -2446,8 +2445,8 @@ static void queue_add_text_to_speech(struct game_client *c, const char *text)
 
 	/* Save this text in case we are asked to repeat it later, unless this text is already a repeat */
 	if (strncmp(tmpbuf, "I said, ", 8) != 0 && strcmp(tmpbuf, "I didn't say anything") != 0)
-		strncpy(bridgelist[c->bridge].last_text_to_speech, tmpbuf,
-			sizeof(bridgelist[c->bridge].last_text_to_speech) - 1);
+		strlcpy(bridgelist[c->bridge].last_text_to_speech, tmpbuf,
+			sizeof(bridgelist[c->bridge].last_text_to_speech));
 
 	pb = packed_buffer_allocate(512);
 	packed_buffer_append(pb, "bbb", OPCODE_NATURAL_LANGUAGE_REQUEST,
@@ -4460,8 +4459,7 @@ static void taunt_player(struct snis_entity *alien, struct snis_entity *player)
 			last_space = bytes_so_far;
 		bytes_so_far++;
 		if (last_space > 28) {
-			strncpy(tmpbuf, start, bytes_so_far);
-			tmpbuf[bytes_so_far] = '\0';
+			strlcpy(tmpbuf, start, imin(bytes_so_far, sizeof(tmpbuf)));
 			send_comms_packet(alien, name, 0, tmpbuf);
 			strcpy(name, "-  ");
 			start = &buffer[i];
@@ -4470,7 +4468,7 @@ static void taunt_player(struct snis_entity *alien, struct snis_entity *player)
 		}
 	}
 	if (bytes_so_far > 0) {
-		strcpy(tmpbuf, start);
+		strlcpy(tmpbuf, start, sizeof(tmpbuf));
 		send_comms_packet(alien, name, 0, tmpbuf);
 	}
 }
@@ -10701,7 +10699,7 @@ static int add_generic_object(double x, double y, double z,
 	case OBJTYPE_PLANET:
 	case OBJTYPE_BLACK_HOLE:
 		n = random_name(mt);
-		strncpy(go[i].sdata.name, n, sizeof(go[i].sdata.name) - 1);
+		strlcpy(go[i].sdata.name, n, sizeof(go[i].sdata.name));
 		free(n);
 		break;
 	default:
@@ -11372,7 +11370,7 @@ static int add_mining_bot(struct snis_entity *parent_ship, uint32_t asteroid_id,
 	o = &go[rc];
 	parent_ship->tsd.ship.mining_bots--; /* maybe we want miningbots to live in cargo hold? */
 	push_mining_bot_mode(o, parent_ship->id, asteroid_id, bridge, selected_waypoint);
-	strncpy(o->sdata.name, parent_ship->tsd.ship.mining_bot_name, sizeof(o->sdata.name));
+	strlcpy(o->sdata.name, parent_ship->tsd.ship.mining_bot_name, sizeof(o->sdata.name));
 	o->sdata.name[sizeof(o->sdata.name) - 1] = '\0';
 
 	/* TODO make this better: */
@@ -11393,7 +11391,7 @@ static int add_specific_ship(const char *name, double x, double y, double z,
 		return i;
 	set_object_location(&go[i], x, y, z);
 	go[i].sdata.faction = the_faction % nfactions();
-	strncpy(go[i].sdata.name, name, sizeof(go[i].sdata.name) - 1);
+	strlcpy(go[i].sdata.name, name, sizeof(go[i].sdata.name));
 	return i;
 }
 
@@ -11792,7 +11790,7 @@ static int add_spacemonster(double x, double y, double z)
 	go[i].tsd.spacemonster.head_size = snis_randn(255);
 	go[i].tsd.spacemonster.tentacle_size = snis_randn(255);
 	go[i].move = spacemonster_move;
-	strncpy(go[i].sdata.name, "M. MYSTERIUM", sizeof(go[i].sdata.name) - 1);
+	strlcpy(go[i].sdata.name, "M. MYSTERIUM", sizeof(go[i].sdata.name));
 	random_point_on_sphere(1.0, &dx, &dy, &dz);
 	v = snis_randn(1000) / 1000.0;
 	v = v * max_spacemonster_velocity;
@@ -11829,7 +11827,7 @@ static int l_add_spacemonster(lua_State *l)
 		lua_pushnumber(lua_state, -1.0);
 		return 1;
 	}
-	strncpy(go[i].sdata.name, name, sizeof(go[i].sdata.name) - 1);
+	strlcpy(go[i].sdata.name, name, sizeof(go[i].sdata.name));
 	lua_pushnumber(lua_state, (double) go[i].id);
 	pthread_mutex_unlock(&universe_mutex);
 	return 1;
@@ -13209,7 +13207,7 @@ static int l_add_nebula(lua_State *l)
 		lua_pushnumber(lua_state, -1.0);
 		return 1;
 	}
-	strncpy(go[i].sdata.name, name, sizeof(go[i].sdata.name) - 1);
+	strlcpy(go[i].sdata.name, name, sizeof(go[i].sdata.name));
 	lua_pushnumber(lua_state, (double) go[i].id);
 	pthread_mutex_unlock(&universe_mutex);
 	return 1;
@@ -13245,7 +13243,7 @@ static int add_derelict(const char *name, double x, double y, double z,
 	if (i < 0)
 		return i;
 	if (name)
-		strncpy(go[i].sdata.name, name, sizeof(go[i].sdata.name) - 1);
+		strlcpy(go[i].sdata.name, name, sizeof(go[i].sdata.name));
 	go[i].sdata.shield_strength = 0;
 	go[i].sdata.shield_wavelength = 0;
 	go[i].sdata.shield_width = 0;
@@ -13537,7 +13535,7 @@ static int l_add_planet(lua_State *l)
 		lua_pushnumber(lua_state, -1.0);
 		return 1;
 	}
-	strncpy(go[i].sdata.name, name, sizeof(go[i].sdata.name) - 1);
+	strlcpy(go[i].sdata.name, name, sizeof(go[i].sdata.name));
 	lua_pushnumber(lua_state, (double) go[i].id);
 	pthread_mutex_unlock(&universe_mutex);
 	return 1;
@@ -13567,7 +13565,7 @@ static int l_add_black_hole(lua_State *l)
 		lua_pushnumber(lua_state, -1.0);
 		return 1;
 	}
-	strncpy(go[i].sdata.name, name, sizeof(go[i].sdata.name) - 1);
+	strlcpy(go[i].sdata.name, name, sizeof(go[i].sdata.name));
 	lua_pushnumber(lua_state, (double) go[i].id);
 	pthread_mutex_unlock(&universe_mutex);
 	return 1;
@@ -16162,7 +16160,7 @@ static void npc_menu_item_mining_bot_status_report(struct npc_menu_item *item,
 					do {
 						int len;
 						memset(m, 0, sizeof(m));
-						strncpy(m, asteroid->tsd.derelict.ships_log + i, sizeof(m) - 1);
+						strlcpy(m, asteroid->tsd.derelict.ships_log + i, sizeof(m));
 						send_comms_packet(miner, npcname, channel, "... %s\n", m);
 						len = strlen(m);
 						n = n - len;
@@ -21556,7 +21554,7 @@ static int l_set_custom_button_label(lua_State *l)
 	if (s < 0 || s > 5)
 		goto error;
 	memset(bridgelist[b].custom_button_text[s], 0, sizeof(bridgelist[b].custom_button_text[s]));
-	strncpy(bridgelist[b].custom_button_text[s], text, sizeof(bridgelist[b].custom_button_text[s]) - 1);
+	strlcpy(bridgelist[b].custom_button_text[s], text, sizeof(bridgelist[b].custom_button_text[s]));
 	pthread_mutex_unlock(&universe_mutex);
 	lua_pushnumber(lua_state, 0);
 	return 1;
@@ -24252,7 +24250,7 @@ static void queue_set_solarsystem(struct game_client *c)
 	if (!pb)
 		return;
 	memset(solarsystem, 0, sizeof(solarsystem));
-	strncpy(solarsystem, solarsystem_name, 99);
+	strlcpy(solarsystem, solarsystem_name, sizeof(solarsystem));
 	packed_buffer_append(pb, "br", OPCODE_SET_SOLARSYSTEM, solarsystem, (uint16_t) 100);
 	pb_queue_to_client(c, pb);
 }
@@ -25857,10 +25855,10 @@ static void register_with_game_lobby(char *lobbyhost, int port,
 	gs.port = htons(port);
 	snis_log(SNIS_INFO, "gs.port = %hu\n", gs.port);
 		
-	strncpy(gs.server_nickname, servernick, 14);
-	strncpy(gs.protocol_version, SNIS_PROTOCOL_VERSION, sizeof(gs.protocol_version));
-	strncpy(gs.game_instance, gameinstance, 19);
-	strncpy(gs.location, location, 19);
+	strlcpy(gs.server_nickname, servernick, 15);
+	strlcpy(gs.protocol_version, SNIS_PROTOCOL_VERSION, sizeof(gs.protocol_version));
+	strlcpy(gs.game_instance, gameinstance, 20);
+	strlcpy(gs.location, location, 20);
 	strcpy(gs.game_type, "SNIS");
 
 	if (ssgl_get_primary_host_ip_addr(&gs.ipaddr) != 0) {
@@ -26589,8 +26587,7 @@ static void nl_describe_game_object(struct game_client *c, uint32_t id)
 	switch (go[i].type) {
 	case OBJTYPE_PLANET:
 		if (go[i].tsd.planet.custom_description) {
-			strncpy(description, go[i].tsd.planet.custom_description, 253);
-			description[253] = '\0';
+			strlcpy(description, go[i].tsd.planet.custom_description, sizeof(description));
 		} else {
 			mt = mtwist_init(go[i].tsd.planet.description_seed);
 			ss_planet_type = go[i].tsd.planet.solarsystem_planet_type;
@@ -30027,8 +30024,7 @@ static void process_options(int argc, char *argv[])
 				multiverse_server = malloc(sizeof(*multiverse_server));
 				memset(multiverse_server, 0, sizeof(*multiverse_server));
 			}
-			strncpy(multiverse_server->location, optarg,
-					sizeof(multiverse_server->location) - 1);
+			strlcpy(multiverse_server->location, optarg, sizeof(multiverse_server->location));
 			multiverse_server->sock = -1;
 			pthread_mutex_init(&multiverse_server->queue_mutex, NULL);
 			break;
@@ -30506,7 +30502,7 @@ static void update_starmap(struct ssgl_game_server *gameserver, int ngameservers
 		}
 		/* Didn't find it, it is one we do not know about, add it. */
 		if (!found && nstarmap_entries < ARRAYSIZE(starmap)) {
-			strncpy(starmap[nstarmap_entries].name, gameserver[i].location, SSGL_LOCATIONSIZE);
+			strlcpy(starmap[nstarmap_entries].name, gameserver[i].location, SSGL_LOCATIONSIZE);
 			starmap[j].x = x;
 			starmap[j].y = y;
 			starmap[j].z = z;
