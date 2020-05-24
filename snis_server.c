@@ -12514,6 +12514,18 @@ static void setup_randomized_starbase_orbit(struct snis_entity *o)
 	o->tsd.starbase.orbital_velocity = o->tsd.starbase.orbital_velocity * 10000.0 / o->tsd.starbase.altitude;
 }
 
+static void starbase_maybe_associate_nearby_planet(struct snis_entity *sb)
+{
+	float dist;
+	int p = nl_find_nearest_object_of_type(sb->id, OBJTYPE_PLANET);
+	if (p < 0 || go[p].type != OBJTYPE_PLANET)
+		return;
+	dist = object_dist(sb, &go[p]);
+	if (dist > go[p].tsd.planet.radius * 3.0)
+		return;
+	sb->tsd.starbase.associated_planet_id = go[p].id;
+}
+
 static int add_starbase(double x, double y, double z,
 			double vx, double vz, double heading, int n, uint32_t assoc_planet_id)
 {
@@ -12532,6 +12544,8 @@ static int add_starbase(double x, double y, double z,
 	go[i].tsd.starbase.under_attack = 0;
 	go[i].tsd.starbase.lifeform_count = snis_randn(100) + 100;
 	go[i].tsd.starbase.associated_planet_id = assoc_planet_id;
+	if (assoc_planet_id == (uint32_t) -1)
+		starbase_maybe_associate_nearby_planet(&go[i]);
 	go[i].sdata.shield_strength = 255;
 	go[i].tsd.starbase.spin_rate_10ths_deg_per_sec = snis_randn(130) + 20;
 	go[i].tsd.starbase.bid_price = malloc(sizeof(*go[i].tsd.starbase.bid_price) * ncommodities);
