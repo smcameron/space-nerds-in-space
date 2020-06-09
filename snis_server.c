@@ -1901,6 +1901,8 @@ static void modify_transport_contracts(uint32_t location_id)
 				free_transport_contract(transport_contract[i]);
 				transport_contract[i] =
 					create_transport_contract(universe_timestamp, commodity, ncommodities);
+				if (!transport_contract[i])
+					delete_transport_contract(transport_contract, &ntransport_contracts, i);
 				continue;
 			} else {
 				transport_contract[i]->origin = (uint32_t) -1;
@@ -1912,6 +1914,8 @@ static void modify_transport_contracts(uint32_t location_id)
 				free_transport_contract(transport_contract[i]);
 				transport_contract[i] =
 					create_transport_contract(universe_timestamp, commodity, ncommodities);
+				if (!transport_contract[i])
+					delete_transport_contract(transport_contract, &ntransport_contracts, i);
 				continue;
 			} else {
 				/* The cargo now belongs to the player */
@@ -2967,7 +2971,8 @@ static void update_transport_contracts(void)
 		return;
 	transport_contract[ntransport_contracts] =
 			create_transport_contract(universe_timestamp, commodity, ncommodities);
-	ntransport_contracts++;
+	if (transport_contract[ntransport_contracts])
+		ntransport_contracts++;
 }
 
 static void disable_rts_mode(void);

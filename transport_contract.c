@@ -53,6 +53,8 @@ static uint32_t random_shipping_location(struct mtwist_state *mt, uint32_t avoid
 
 void free_transport_contract(struct transport_contract *tc)
 {
+	if (!tc)
+		return;
 	if (tc->shipper)
 		free(tc->shipper);
 	if (tc->recipient)
@@ -69,6 +71,9 @@ struct transport_contract *create_transport_contract(uint32_t universe_timestamp
 
 	if (!mt)
 		mt = mtwist_init(87832993);
+
+	if (nshipping_locations < 2)
+		return NULL;
 
 	tc = calloc(1, sizeof(*tc));
 	tc->contract_id = 10000 + mtwist_int(mt, 10000);
