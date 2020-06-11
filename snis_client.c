@@ -19618,7 +19618,7 @@ static void show_demon_3d(void)
 			break;
 		case OBJTYPE_FLARE:
 			e = add_entity(instrumentecx, torpedo_nav_mesh, o->x, o->y, o->z, color);
-			if (e) {
+			if (e && o->entity) {
 				update_entity_scale(e,  demon_ui.exaggerated_scale * scale +
 						(1.0 - demon_ui.exaggerated_scale) * entity_get_scale(o->entity));
 				update_entity_material(e, &yellow_material);
