@@ -18479,16 +18479,26 @@ static int process_enscript_command(struct game_client *c)
 	 * to guarantee file doesn't already exist in a race free way.
 	 */
 	fd = open(scriptname, O_EXCL | O_CREAT | O_WRONLY, 0644);
-	if (fd < 0) /* FIXME: we fail silently here. */
+	if (fd < 0) {
+		send_demon_console_color_msg(YELLOW, "FAILED TO OPEN %s", scriptname);
+		send_demon_console_color_msg(YELLOW, "REASON - %s", strerror(errno));
+		fprintf(stderr, "Failed to open '%s': %s\n", scriptname, strerror(errno));
 		return 0;
+	}
 
 	/* let's do buffered i/o for this */
 	f = fdopen(fd, "w");
-	if (!f) /* FIXME: we fail silently here. */
+	if (!f) {
+		send_demon_console_color_msg(YELLOW, "FAILED TO FDOPEN %s", scriptname);
+		send_demon_console_color_msg(YELLOW, "REASON - %s", strerror(errno));
+		fprintf(stderr, "Failed to fdopen '%s': %s\n", scriptname, strerror(errno));
 		return 0;
+	}
 
 	partially_enscript_game_state(f);
 	fclose(f); /* close() not needed, fclose() is enough. */
+	send_demon_console_msg("ENSCRIPTED %s", scriptname);
+	fprintf(stderr, "ENSCRIPTED %s\n", scriptname);
 	return 0;
 }
 
