@@ -18478,7 +18478,7 @@ static int process_enscript_command(struct game_client *c)
 	 * Using a combo of open + fdopen here rather than just fopen
 	 * to guarantee file doesn't already exist in a race free way.
 	 */
-	fd = open(scriptname, O_CREAT | O_WRONLY, 0644);
+	fd = open(scriptname, O_EXCL | O_CREAT | O_WRONLY, 0644);
 	if (fd < 0) /* FIXME: we fail silently here. */
 		return 0;
 
