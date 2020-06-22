@@ -19562,10 +19562,20 @@ static void show_demon_3d(void)
 			color = YELLOW;
 			material = &yellow_material;
 			break;
+		case OBJTYPE_EXPLOSION:
+		case OBJTYPE_NEBULA:
+		case OBJTYPE_WORMHOLE:
+		case OBJTYPE_LASERBEAM:
+		case OBJTYPE_TRACTORBEAM:
+		case OBJTYPE_WARP_EFFECT:
+		case OBJTYPE_SHIELD_EFFECT:
+		case OBJTYPE_DOCKING_PORT:
+		case OBJTYPE_BLOCK:
+		case OBJTYPE_TURRET:
+			continue;
 		default:
-			color = MAGENTA;
-			material = &magenta_material;
-			break;
+			print_demon_console_msg("UNKNOWN OBJECT TYPE AT %s:%d - %d", __FILE__, __LINE__, o->type);
+			continue;
 		}
 		if (demon_id_selected(o->id)) {
 			selected = 1;
@@ -19673,8 +19683,9 @@ static void show_demon_3d(void)
 					sng_abs_xy_draw_string(label, NANO_FONT, sx + 10, sy - 10);
 				}
 			}
-		default:
 			break;
+		default:
+			continue;
 		}
 		if (selected && e && entity_onscreen(e)) {
 			entity_get_screen_coords(e, &oidstrx, &oidstry);
