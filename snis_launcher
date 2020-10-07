@@ -81,7 +81,7 @@ show_current_ssgl_port()
 {
 	if [ "$SSGL_PORT" = "" ]
 	then
-		echo -n "currently not set, will default to gamelobby/2419"
+		echo -n "currently not set, will default to gamelobby/2914"
 		unset SSGL_PORT
 	else
 		echo -n "currently $SSGL_PORT"

@@ -48,7 +48,7 @@ unsigned short ssgl_get_gamelobby_port(char *proto)
 			port = s->sin_port;
 			freeaddrinfo(lobbyserverinfo);
 		} else {
-			port = htons(2419);
+			port = htons(2914);
 		}
 	}
 	return port;

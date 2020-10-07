@@ -8,13 +8,13 @@ ssgl_server \- Super Simple Game Lobby server
 .warn 511
 .PP
 ssgl_server is the server process for a very simple game lobby service.
-It listens for connections on tcp port 2419 (gamelobby) from game servers
+It listens for connections on tcp port 2914 (gamelobby) from game servers
 and game clients and provides a mechanism for game clients to connect to
 game servers and nothing more.  It requires a gamelobby entry in /etc/services
-identifying the "gamelobby" service at tcp and udp port number 2419.
+identifying the "gamelobby" service at tcp and udp port number 2914.
 .DI
-gamelobby	2419/tcp
-gamelobby	2419/udp
+gamelobby	2914/tcp
+gamelobby	2914/udp
 .DE
 .SH Options:
 .TP
@@ -29,7 +29,7 @@ SSGL_PORT
 .PP
 Allows overriding the default port.  By default the gamelobby port
 will be looked up via getaddrinfo(), and if that fails, it will fall
-back to using 2419/tcp and 2419/udp.  However if SSGL_PORT is set to
+back to using 2914/tcp and 2914/udp.  However if SSGL_PORT is set to
 a numeric decimal port number, that will be used for tcp and udp port
 numbers instead.
 .PP

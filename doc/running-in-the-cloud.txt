@@ -25,7 +25,7 @@ around for things needed for snis_client, which you're not building.
 Firewall configuration and port stuff
 -------------------------------------
 
-ssgl_server (the lobby process) usually listens on port 2419. You can either
+ssgl_server (the lobby process) usually listens on port 2914. You can either
 open that port on your firewall or choose another port.
 
 snis_server port numbers are chosen dynamically.  You can restrict the range
@@ -92,7 +92,7 @@ Choose 10, "Options".
 No SNIS processes are currently running.
 ------------------------------------------------------------
     1. Enter Lobby Host IP addr (currently localhost)
-    2. Enter Lobby Host Port number (currently not set, will default to gamelobby/2419)
+    2. Enter Lobby Host Port number (currently not set, will default to gamelobby/2914)
     3. Enter SNIS server port range MIN:MAX (currently not set, will default to IANA dynamic port range)
     0. Return to main menu
 

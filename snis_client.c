@@ -19974,7 +19974,7 @@ static void connect_to_lobby_button_pressed()
 	lobbyhost = net_setup_ui.lobbyname;
 	rc = sscanf(net_setup_ui.lobbyportstr, "%d", &lobbyport);
 	if (rc != 1 || use_default_lobby_port)
-		lobbyport = -1; /* let ssgl use default 2419 or $SSGL_PORT if set */
+		lobbyport = -1; /* let ssgl use default 2914 or $SSGL_PORT if set */
 	shipname = net_setup_ui.shipname;
 	password = net_setup_ui.password;
 	role = 0;
