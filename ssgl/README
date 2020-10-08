@@ -44,7 +44,7 @@ To build:
 
 Type "make"
 
-"ssgl_server" is the lobby server program.  It listens on tcp port 2419 for
+"ssgl_server" is the lobby server program.  It listens on tcp port 2914 for
 connections from gameserver and gameclients.
 
 "ssgl_gameserver_example" is a trivial example of a gameserver interacting
