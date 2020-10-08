@@ -134,7 +134,7 @@ void snis_debug_dump(char *cmd, struct snis_entity go[], int nstarbase_models,
 		t = "PLAYER SHIP";
 		printfn("TYPE: %s", t);
 		break;
-	case OBJTYPE_SHIP2:
+	case OBJTYPE_NPCSHIP:
 		t = "NPC SHIP";
 		printfn("TYPE: %s, SHIPTYPE: %s (%d)", t,
 			o->tsd.ship.shiptype >= 0 && o->tsd.ship.shiptype < nshiptypes ?

@@ -1319,7 +1319,7 @@ static int update_econ_ship(uint32_t id, uint32_t timestamp, double x, double y,
 		vx = 0.0;
 		vy = 0.0;
 		vz = 0.0;
-		i = add_generic_object(id, timestamp, x, y, z, vx, vy, vz, orientation, OBJTYPE_SHIP2, 1, e);
+		i = add_generic_object(id, timestamp, x, y, z, vx, vy, vz, orientation, OBJTYPE_NPCSHIP, 1, e);
 		if (i < 0) {
 			if (e)
 				remove_entity(ecx, e);
@@ -1423,7 +1423,7 @@ static int update_ship_sdata(uint32_t id, uint8_t subclass, char *name,
 	go[i].sdata.faction = faction;
 	if (strcmp(name, "-") != 0)
 		strcpy(go[i].sdata.name, name);
-	if (go[i].type == OBJTYPE_BRIDGE || go[i].type == OBJTYPE_SHIP2)
+	if (go[i].type == OBJTYPE_BRIDGE || go[i].type == OBJTYPE_NPCSHIP)
 		go[i].tsd.ship.lifeform_count = lifeform_count;
 	if (go[i].type == OBJTYPE_STARBASE)
 		go[i].tsd.starbase.lifeform_count = lifeform_count;
@@ -1709,7 +1709,7 @@ static void init_laserbeam_data(struct snis_entity *o)
 		offset.v.y = 0;
 		offset.v.z = 0;
 		if (shooter)
-			color = (shooter->type == OBJTYPE_SHIP2) ?
+			color = (shooter->type == OBJTYPE_NPCSHIP) ?
 				NPC_LASER_COLOR : PLAYER_LASER_COLOR;
 		else
 			color = NPC_LASER_COLOR;
@@ -3064,7 +3064,7 @@ static void move_objects(void)
 			update_warp_field_error();
 			calculate_planetary_altitude(o);
 			update_shading_planet(o);
-		case OBJTYPE_SHIP2:
+		case OBJTYPE_NPCSHIP:
 			move_object(timestamp, o, &interpolate_oriented_object);
 			ship_emit_sparks(o);
 			update_shading_planet(o);
@@ -3363,7 +3363,7 @@ static void do_explosion(uint32_t related_id, double x, double y, double z,
 	debris_chance = 50;
 	switch (victim_type) {
 	case OBJTYPE_BRIDGE:
-	case OBJTYPE_SHIP2:
+	case OBJTYPE_NPCSHIP:
 	case OBJTYPE_DERELICT:
 		color = SHIP_COLOR;
 		break;
@@ -3691,7 +3691,7 @@ static void demon_dirkey(int h, int v, int r, int t)
 
 	if (demon_ui.captain_of < 0)
 		return;
-	if (go[demon_ui.captain_of].type != OBJTYPE_SHIP2)
+	if (go[demon_ui.captain_of].type != OBJTYPE_NPCSHIP)
 		return;
 	oid = go[demon_ui.captain_of].id;
 
@@ -3769,7 +3769,7 @@ static void draw_plane_radar(struct snis_entity *o, union quat *aim, float cx, f
 			continue; /* skip drawing yourself. */
 
 		if (go[i].type != OBJTYPE_BRIDGE &&
-			go[i].type != OBJTYPE_SHIP2 &&
+			go[i].type != OBJTYPE_NPCSHIP &&
 			go[i].type != OBJTYPE_STARBASE &&
 			go[i].type != OBJTYPE_WARPGATE &&
 			go[i].type != OBJTYPE_ASTEROID &&
@@ -5138,7 +5138,7 @@ static int process_update_ship_packet(uint8_t opcode)
 	double dsheading, dbeamwidth;
 	double hgax, hgay, hgaz; /* high gain antenna aim */
 	int rc;
-	int type = opcode == OPCODE_UPDATE_SHIP ? OBJTYPE_BRIDGE : OBJTYPE_SHIP2;
+	int type = opcode == OPCODE_UPDATE_SHIP ? OBJTYPE_BRIDGE : OBJTYPE_NPCSHIP;
 	uint8_t tloading, tloaded, throttle, rpm, temp, scizoom, weapzoom, navzoom,
 		mainzoom, warpdrive,
 		missile_count, phaser_charge, phaser_wavelength, shiptype,
@@ -5717,7 +5717,7 @@ static void do_whatever_detonate_does(uint32_t id, double x, double y, double z,
 	o = &go[i];
 	switch (o->type) {
 	case OBJTYPE_BRIDGE:
-	case OBJTYPE_SHIP2:
+	case OBJTYPE_NPCSHIP:
 		radius = 1.25f * ship_mesh_map[o->tsd.ship.shiptype]->radius;
 		break;
 	case OBJTYPE_WARPGATE:
@@ -6095,7 +6095,7 @@ static int process_update_ship_cargo_info(void)
 	if (i < 0)
 		goto out;
 	o = &go[i];
-	if (o->type != OBJTYPE_BRIDGE && o->type != OBJTYPE_SHIP2)
+	if (o->type != OBJTYPE_BRIDGE && o->type != OBJTYPE_NPCSHIP)
 		goto out;
 	for (i = 0; i < count; i++) {
 		rc = read_and_unpack_buffer(buffer, "bwS", &bay, &item, &qty, (int32_t) 1000000);
@@ -9430,7 +9430,7 @@ static void show_weapons_camera_view(void)
 			float sx, sy, dist, ex, ey, ez;
 			if (!target->alive)
 				continue;
-			if (target->type != OBJTYPE_SHIP2 && target->type != OBJTYPE_BRIDGE)
+			if (target->type != OBJTYPE_NPCSHIP && target->type != OBJTYPE_BRIDGE)
 				continue;
 			if (!target->entity || !entity_onscreen(target->entity))
 				continue;
@@ -9854,7 +9854,7 @@ static void snis_draw_science_guy(struct snis_entity *o,
 		}
 	} else {
 		switch(o->type) {
-		case OBJTYPE_SHIP2:
+		case OBJTYPE_NPCSHIP:
 		case OBJTYPE_BRIDGE:
 			sng_set_foreground(UI_COLOR(sci_ball_ship));
 			break;
@@ -9893,7 +9893,7 @@ static void snis_draw_science_guy(struct snis_entity *o,
 		default:
 			sng_set_foreground(UI_COLOR(sci_ball_default_blip));
 		}
-		if (o->type == OBJTYPE_SHIP2 || o->type == OBJTYPE_BRIDGE) {
+		if (o->type == OBJTYPE_NPCSHIP || o->type == OBJTYPE_BRIDGE) {
 			snis_draw_arrow(x, y, SCIENCE_SCOPE_R / 2, o->heading, 0.3);
 		} else if (o->type == OBJTYPE_PLANET) {
 			sng_draw_circle(0, x, y, 20);
@@ -9908,7 +9908,7 @@ static void snis_draw_science_guy(struct snis_entity *o,
 	
 	if (o->sdata.science_data_known) {
 		switch (o->type) {
-		case OBJTYPE_SHIP2:
+		case OBJTYPE_NPCSHIP:
 			sng_set_foreground(UI_COLOR(sci_ball_ship));
 			if (global_rts_mode) {
 				int unit_type;
@@ -10020,7 +10020,7 @@ static void snis_draw_3d_science_guy(struct snis_entity *o,
 		}
 	} else {
 		switch(o->type) {
-		case OBJTYPE_SHIP2:
+		case OBJTYPE_NPCSHIP:
 		case OBJTYPE_BRIDGE:
 			sng_set_foreground(UI_COLOR(sci_ball_ship));
 			break;
@@ -10048,7 +10048,7 @@ static void snis_draw_3d_science_guy(struct snis_entity *o,
 		default:
 			sng_set_foreground(UI_COLOR(sci_ball_energy));
 		}
-		if (o->type == OBJTYPE_SHIP2 || o->type == OBJTYPE_BRIDGE) {
+		if (o->type == OBJTYPE_NPCSHIP || o->type == OBJTYPE_BRIDGE) {
 			e = add_entity(sciballecx, ship_icon_mesh, o->x, o->y, o->z, UI_COLOR(sci_ball_ship));
 			if (e) {
 				update_entity_scale(e, scale);
@@ -10064,7 +10064,7 @@ static void snis_draw_3d_science_guy(struct snis_entity *o,
 
 	if (o->sdata.science_data_known) {
 		switch (o->type) {
-		case OBJTYPE_SHIP2:
+		case OBJTYPE_NPCSHIP:
 		case OBJTYPE_BRIDGE:
 			sng_set_foreground(UI_COLOR(sci_ball_ship));
 			snprintf(buffer, sizeof(buffer), "%s %s\n", o->sdata.name,
@@ -10191,7 +10191,7 @@ static void populate_science_pull_down_menu(void)
 						science_menu_selection, (void *) (intptr_t) o->id);
 				break;
 			case OBJTYPE_BRIDGE:
-			case OBJTYPE_SHIP2:
+			case OBJTYPE_NPCSHIP:
 			case OBJTYPE_DERELICT:
 				pull_down_menu_add_row(sci_ui.menu, "SHIPS",
 						o->sdata.name[0] == '\0' ? "UNKNOWN" : o->sdata.name,
@@ -10482,7 +10482,7 @@ static void draw_sciplane_laserbeam(struct entity_context *cx, struct snis_entit
 			return;
 	}
 
-	if (shooter->type == OBJTYPE_SHIP2)
+	if (shooter->type == OBJTYPE_NPCSHIP)
 		color = UI_COLOR(sci_plane_npc_laser);
 	else
 		color = UI_COLOR(sci_plane_player_laser);
@@ -10538,7 +10538,7 @@ static int science_tooltip_text(struct science_data *sd, char *buffer, int bufle
 
 	switch (o->type) {
 	case OBJTYPE_BRIDGE:
-	case OBJTYPE_SHIP2:
+	case OBJTYPE_NPCSHIP:
 		snprintf(buffer, buflen, "SHIP, TYPE: %s, NAME:%s",
 				ship_type[o->sdata.subclass].class, o->sdata.name);
 		break;
@@ -13562,13 +13562,13 @@ static void draw_3d_nav_display(void)
 		case OBJTYPE_ASTEROID:
 		case OBJTYPE_STARBASE:
 		case OBJTYPE_WARPGATE:
-		case OBJTYPE_SHIP2:
+		case OBJTYPE_NPCSHIP:
 		case OBJTYPE_CARGO_CONTAINER:
 		case OBJTYPE_BRIDGE:
 		case OBJTYPE_WARP_CORE:
 		case OBJTYPE_SPACEMONSTER: {
 				int color = UI_COLOR(nav_entity);
-				if (go[i].type == OBJTYPE_SHIP2)
+				if (go[i].type == OBJTYPE_NPCSHIP)
 					color = UI_COLOR(nav_ship);
 				else if (go[i].type == OBJTYPE_ASTEROID)
 					color = UI_COLOR(nav_asteroid);
@@ -13634,7 +13634,7 @@ static void draw_3d_nav_display(void)
 				contact_scale = ((255.0 - current_zoom) / 255.0) * 3.0 + 1.0;
 				draw_contact_offset_and_ring = 0;
 				break;
-			case OBJTYPE_SHIP2:
+			case OBJTYPE_NPCSHIP:
 			case OBJTYPE_BRIDGE:
 				contact_scale = ship_mesh_map[SHIP_CLASS_CRUISER]->radius /
 							entity_get_mesh(contact)->radius * ship_scale;
@@ -16005,7 +16005,7 @@ static void comms_setup_rts_buttons(int activate, struct snis_entity *player_shi
 			struct snis_entity *ship = &go[i];
 			char button_label[20];
 			char tooltip[100];
-			if (ship->alive && ship->type == OBJTYPE_SHIP2 &&
+			if (ship->alive && ship->type == OBJTYPE_NPCSHIP &&
 				ship->sdata.faction == player_ship->sdata.faction) {
 				col = fleet_unit_button % FLEET_BUTTON_COLS;
 				row = fleet_unit_button / FLEET_BUTTON_COLS;
@@ -16382,7 +16382,7 @@ static void draw_science_data(struct snis_entity *ship, struct snis_entity *o, i
 		snprintf(buffer, sizeof(buffer), "NAME: %s", o ? o->sdata.name : "NO SCAN TARGET SELECTED");
 		sng_abs_xy_draw_string(buffer, TINY_FONT, x, y);
 		if (o && (o->type == OBJTYPE_BRIDGE ||
-			o->type == OBJTYPE_SHIP2 ||
+			o->type == OBJTYPE_NPCSHIP ||
 			o->type == OBJTYPE_WARPGATE ||
 			o->type == OBJTYPE_STARBASE ||
 			o->type == OBJTYPE_DERELICT)) {
@@ -16404,7 +16404,7 @@ static void draw_science_data(struct snis_entity *ship, struct snis_entity *o, i
 
 	if (o) {
 		switch (o->type) {
-		case OBJTYPE_SHIP2:
+		case OBJTYPE_NPCSHIP:
 			if (global_rts_mode) {
 				int unit_type;
 				char *unit_type_name;
@@ -16745,7 +16745,7 @@ static void draw_science_details(void)
 
 	y = SCREEN_HEIGHT - 200 * SCREEN_HEIGHT / 600;
 	if (curr_science_guy->type == OBJTYPE_BRIDGE ||
-		curr_science_guy->type == OBJTYPE_SHIP2) {
+		curr_science_guy->type == OBJTYPE_NPCSHIP) {
 		snprintf(buf, sizeof(buf), "LIFEFORMS: %d", curr_science_guy->tsd.ship.lifeform_count);
 	} else {
 		if (curr_science_guy->type == OBJTYPE_STARBASE) {
@@ -16849,7 +16849,7 @@ static void draw_science_details(void)
 		sng_abs_xy_draw_string(buf, sdf, 10, y);
 		y += yinc;
 	}
-	if (curr_science_guy->type == OBJTYPE_SHIP2 || curr_science_guy->type == OBJTYPE_BRIDGE) {
+	if (curr_science_guy->type == OBJTYPE_NPCSHIP || curr_science_guy->type == OBJTYPE_BRIDGE) {
 		struct ship_data *s = &curr_science_guy->tsd.ship;
 		if (curr_science_guy->type == OBJTYPE_BRIDGE)
 			snprintf(buf, sizeof(buf), "WEAPONRY: TORPEDOES, BLASTERS AND MISSILES");
@@ -17340,7 +17340,7 @@ static void demon_select(uint32_t id)
 				old_captain = demon_ui.captain_of;
 				demon_ui.captain_of = -1;
 		}
-		if (index >= 0 && (go[index].type == OBJTYPE_SHIP2 ||
+		if (index >= 0 && (go[index].type == OBJTYPE_NPCSHIP ||
 			go[index].type == OBJTYPE_STARBASE)) {
 			int new_captain;
 
@@ -17445,7 +17445,7 @@ static void demon_button_create_item(double x, double y, double z)
 
 	switch (demon_ui.buttonmode) {
 		case DEMON_BUTTON_SHIPMODE:
-			item_type = OBJTYPE_SHIP2;
+			item_type = OBJTYPE_NPCSHIP;
 			data1 = demon_ui.shiptype;
 			data2 = demon_ui.faction;
 			break;
@@ -17707,7 +17707,7 @@ static void debug_draw_object(struct snis_entity *o,
 		if ((timer & 0x02) && !demon_id_selected(o->id))
 			goto done_drawing_item;
 		break;
-	case OBJTYPE_SHIP2:
+	case OBJTYPE_NPCSHIP:
 
 #define FACTION_COLORS 8
 		if (o->sdata.science_data_known)
@@ -17770,20 +17770,20 @@ static void debug_draw_object(struct snis_entity *o,
 	snis_draw_line(x1, y2, x2, y1);
 	if (demon_id_selected(o->id)) {
 		draw_selection_marker(x1, y1, x2, y2, 6, o->id);
-		if (o->type == OBJTYPE_BRIDGE || o->type == OBJTYPE_SHIP2) {
+		if (o->type == OBJTYPE_BRIDGE || o->type == OBJTYPE_NPCSHIP) {
 			snis_draw_arrow(x, y, SCIENCE_SCOPE_R, o->heading, 0.4);
 		}
-		if (o->type == OBJTYPE_SHIP2 && (timer & 0x04))
+		if (o->type == OBJTYPE_NPCSHIP && (timer & 0x04))
 			debug_draw_ship_patrol_route(o->tsd.ship.ai[1].u.patrol.npoints,
 						o->tsd.ship.ai[1].u.patrol.p,
 						ux1, uy1, ux2, uy2);
 	} else {
-		if (o->type == OBJTYPE_BRIDGE || o->type == OBJTYPE_SHIP2) {
+		if (o->type == OBJTYPE_BRIDGE || o->type == OBJTYPE_NPCSHIP) {
 			snis_draw_arrow(x, y, SCIENCE_SCOPE_R, o->heading, 0.4);
 		}
 	}
 
-	if (o->type == OBJTYPE_BRIDGE || o->type == OBJTYPE_SHIP2) {
+	if (o->type == OBJTYPE_BRIDGE || o->type == OBJTYPE_NPCSHIP) {
 		float threat_level, toughness;
 		sng_abs_xy_draw_string(o->sdata.name, NANO_FONT,
 					x + xoffset, y + yoffset);
@@ -17805,7 +17805,7 @@ static void debug_draw_object(struct snis_entity *o,
 		sng_draw_dotted_line(x, y, vx, vy);
 	}
 
-	if ((o->type == OBJTYPE_SHIP2 || o->type == OBJTYPE_STARBASE) &&
+	if ((o->type == OBJTYPE_NPCSHIP || o->type == OBJTYPE_STARBASE) &&
 			go_index(o) == demon_ui.captain_of) {
 		sng_set_foreground(UI_COLOR(demon_starbase));
 		sng_draw_circle(0, x, y, 10 + (timer % 10));
@@ -18624,7 +18624,7 @@ static void demon_torpedo_button_pressed(void *x)
 {
 	if (demon_ui.captain_of < 0)
 		return;
-	if (go[demon_ui.captain_of].type != OBJTYPE_SHIP2)
+	if (go[demon_ui.captain_of].type != OBJTYPE_NPCSHIP)
 		return;
 	queue_to_server(snis_opcode_pkt("bw", OPCODE_DEMON_FIRE_TORPEDO,
 				go[demon_ui.captain_of].id));
@@ -18634,7 +18634,7 @@ static void demon_phaser_button_pressed(void *x)
 {
 	if (demon_ui.captain_of < 0)
 		return;
-	if (go[demon_ui.captain_of].type != OBJTYPE_SHIP2)
+	if (go[demon_ui.captain_of].type != OBJTYPE_NPCSHIP)
 		return;
 	queue_to_server(snis_opcode_pkt("bw", OPCODE_DEMON_FIRE_PHASER,
 				go[demon_ui.captain_of].id));
@@ -19511,7 +19511,7 @@ static void show_demon_3d(void)
 			material = &magenta_material;
 			draw_label = 1;
 			break;
-		case OBJTYPE_SHIP2:
+		case OBJTYPE_NPCSHIP:
 			color = faction_color[o->sdata.faction % ARRAYSIZE(faction_color)];
 			strcpy(label, o->sdata.name);
 			material = faction_material[o->sdata.faction % ARRAYSIZE(faction_color)];
@@ -19634,7 +19634,7 @@ static void show_demon_3d(void)
 				update_entity_material(e, &yellow_material);
 			}
 			break;
-		case OBJTYPE_SHIP2:
+		case OBJTYPE_NPCSHIP:
 		case OBJTYPE_BRIDGE:
 		case OBJTYPE_ASTEROID:
 		case OBJTYPE_STARBASE:
@@ -19694,7 +19694,7 @@ static void show_demon_3d(void)
 			sng_abs_xy_draw_string(oidstr, PICO_FONT, oidstrx, oidstry);
 
 			sng_set_foreground(RED);
-			if (o->type == OBJTYPE_SHIP2) {
+			if (o->type == OBJTYPE_NPCSHIP) {
 				demon_draw_ship_patrol_route(o->tsd.ship.ai[1].u.patrol.npoints,
 						o->tsd.ship.ai[1].u.patrol.p);
 
@@ -20412,7 +20412,7 @@ static void make_science_forget_stuff(void)
 		if (o->sdata.science_data_known) /* forget after awhile */
 			o->sdata.science_data_known--;
 		if (!o->sdata.science_data_known) {
-			if (o->type == OBJTYPE_BRIDGE || o->type == OBJTYPE_SHIP2) {
+			if (o->type == OBJTYPE_BRIDGE || o->type == OBJTYPE_NPCSHIP) {
 				for (j = 0; j < MAX_CARGO_BAYS_PER_SHIP; j++) {
 					o->tsd.ship.cargo[j].contents.item = -1;
 					o->tsd.ship.cargo[j].contents.qty = 0;

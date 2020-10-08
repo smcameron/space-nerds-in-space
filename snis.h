@@ -100,7 +100,7 @@
 #define NBASES (NPLANETS + 10)
 
 #define OBJTYPE_BRIDGE 9 /* players */
-#define OBJTYPE_SHIP2 1 /* computer controlled ships */
+#define OBJTYPE_NPCSHIP 1 /* computer controlled ships */
 #define OBJTYPE_ASTEROID 2
 #define OBJTYPE_STARBASE 3
 #define OBJTYPE_DEBRIS 4
