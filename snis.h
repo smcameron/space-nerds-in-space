@@ -99,7 +99,7 @@
 #define MIN_PLANET_SEPARATION (UNIVERSE_DIM / 10.0)
 #define NBASES (NPLANETS + 10)
 
-#define OBJTYPE_SHIP1 9 /* players */
+#define OBJTYPE_BRIDGE 9 /* players */
 #define OBJTYPE_SHIP2 1 /* computer controlled ships */
 #define OBJTYPE_ASTEROID 2
 #define OBJTYPE_STARBASE 3

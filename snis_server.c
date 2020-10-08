@@ -1243,7 +1243,7 @@ static void delete_bridge(int b)
 	}
 	fprintf(stderr, "snis_server: deleting player ship\n");
 	for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
-		if (go[i].type == OBJTYPE_SHIP1 && go[i].id == bridgelist[b].shipid) {
+		if (go[i].type == OBJTYPE_BRIDGE && go[i].id == bridgelist[b].shipid) {
 			delete_from_clients_and_server_helper(&go[i], 0); /* 0 because client lock is already held. */
 			break;
 		}
@@ -1357,7 +1357,7 @@ static void black_hole_collision_detection(void *o1, void *o2)
 	if (dist > BLACK_HOLE_INFLUENCE_LIMIT * black_hole->tsd.black_hole.radius)
 		return;
 	if (dist < BLACK_HOLE_EVENT_HORIZON * black_hole->tsd.black_hole.radius) {
-		if (object->type != OBJTYPE_SHIP1) {
+		if (object->type != OBJTYPE_BRIDGE) {
 			(void) add_blackhole_explosion(black_hole->id,
 						black_hole->x, black_hole->y, black_hole->z,
 						500, 100, 100, object->type);
@@ -1456,7 +1456,7 @@ static void calculate_warp_core_explosion_damage(struct snis_entity *target, dou
 static void calculate_missile_explosion_damage(struct snis_entity *target,
 						double damage_factor, uint8_t targeted_system)
 {
-	if (target->type == OBJTYPE_SHIP1) /* Nerf the missiles against player ships */
+	if (target->type == OBJTYPE_BRIDGE) /* Nerf the missiles against player ships */
 		damage_factor = damage_factor * MISSILE_NERF_FACTOR;
 	calculate_torpedolike_damage(target, missile_damage_factor * damage_factor, targeted_system);
 }
@@ -1469,7 +1469,7 @@ static void check_warp_core_explosion_damage(struct snis_entity *warp_core,
 	double damage_factor;
 
 	switch (object->type) {
-	case OBJTYPE_SHIP1:
+	case OBJTYPE_BRIDGE:
 	case OBJTYPE_SHIP2:
 		dist = object_dist(warp_core, object);
 		if (dist > WARP_CORE_EXPLOSION_DAMAGE_DISTANCE)
@@ -1582,7 +1582,7 @@ static void derelict_collision_detection(void *derelict, void *object)
 {
 	struct snis_entity *o = object;
 	struct snis_entity *d = derelict;
-	if (o->type == OBJTYPE_SHIP1) /* If some player ship is nearby, do not cull. */
+	if (o->type == OBJTYPE_BRIDGE) /* If some player ship is nearby, do not cull. */
 		d->alive = 1;
 }
 
@@ -1655,7 +1655,7 @@ static void wormhole_collision_detection(void *wormhole, void *object)
 						o->tsd.wormhole.dest_y,
 						o->tsd.wormhole.dest_z + sin(a) * r);
 			t->timestamp = universe_timestamp;
-			if (t->type == OBJTYPE_SHIP1) {
+			if (t->type == OBJTYPE_BRIDGE) {
 				warp_dist = hypot3d(o->x - x1, o->y - y1, o->z - z1);
 				equiv_warp_factor = 10.0 * warp_dist / (XKNOWN_DIM / 2.0);
 				schedule_callback8(event_callback, &callback_schedule,
@@ -1697,7 +1697,7 @@ static void gather_opcode_not_sent_stats(struct snis_entity *o)
 		return;
 
 	switch (o->type) {
-	case OBJTYPE_SHIP1:
+	case OBJTYPE_BRIDGE:
 		opcode[0] = OPCODE_UPDATE_SHIP;
 		opcode[1] = OPCODE_UPDATE_POWER_DATA;
 		opcode[2] = OPCODE_UPDATE_COOLANT_DATA;
@@ -1934,7 +1934,7 @@ static void delete_object(struct snis_entity *o)
 	}
 
 	/* Omit OBJTYPE_SHIP2 here because we want the registration preserved for the derelict */
-	if (o->type == OBJTYPE_SHIP1 || o->type == OBJTYPE_DERELICT)
+	if (o->type == OBJTYPE_BRIDGE || o->type == OBJTYPE_DERELICT)
 		ship_registry_delete_ship_entries(&ship_registry, o->id);
 	/* If a starbase gets killed, any bounties registered for it should get wiped out */
 	if (o->type == OBJTYPE_STARBASE) {
@@ -2061,7 +2061,7 @@ static void unhook_remote_cameras(uint32_t id)
 	 * camera feed from this object gets unhooked from it.
 	 */
 	for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
-		if (go[i].alive && go[i].type == OBJTYPE_SHIP1 && go[i].tsd.ship.viewpoint_object == id)
+		if (go[i].alive && go[i].type == OBJTYPE_BRIDGE && go[i].tsd.ship.viewpoint_object == id)
 			go[i].tsd.ship.viewpoint_object = go[i].id;
 	}
 }
@@ -2232,7 +2232,7 @@ static float comms_transmission_strength(struct snis_entity *transmitter, struct
 			}
 		}
 	}
-	if (transmitter->type == OBJTYPE_SHIP1) {
+	if (transmitter->type == OBJTYPE_BRIDGE) {
 		/* Account for antenna aim */
 		union vec3 antenna_dir;
 		antenna_dir.v.x = 1.0;
@@ -2555,7 +2555,7 @@ static void distribute_damage_to_damcon_system_parts(struct snis_entity *o,
 	int total_damage;
 	int per_part_damage[DAMCON_PARTS_PER_SYSTEM];
 
-	if (!d) /* OBJTYPE_SHIP2 don't have all the systems OBJTYPE_SHIP1 have */
+	if (!d) /* OBJTYPE_SHIP2 don't have all the systems OBJTYPE_BRIDGE have */
 		return;
 
 	total_damage = damage * DAMCON_PARTS_PER_SYSTEM;
@@ -2594,7 +2594,7 @@ static void distribute_damage_to_damcon_system_parts_fractionally(struct snis_en
 	int total_damage;
 	int per_part_damage[DAMCON_PARTS_PER_SYSTEM];
 
-	if (!d) /* OBJTYPE_SHIP2 don't have all the systems OBJTYPE_SHIP1 have */
+	if (!d) /* OBJTYPE_SHIP2 don't have all the systems OBJTYPE_BRIDGE have */
 		return;
 
 	total_damage = damage * DAMCON_PARTS_PER_SYSTEM;
@@ -2732,10 +2732,10 @@ static void calculate_block_damage(struct snis_entity *o)
 static void calculate_torpedolike_damage(struct snis_entity *target, double weapons_factor, uint8_t targeted_system)
 {
 	double ss;
-	const double twp = weapons_factor * (target->type == OBJTYPE_SHIP1 ? 0.333 : 1.0);
+	const double twp = weapons_factor * (target->type == OBJTYPE_BRIDGE ? 0.333 : 1.0);
 	struct damcon_data *d = NULL;
 
-	if (target->type == OBJTYPE_SHIP1) {
+	if (target->type == OBJTYPE_BRIDGE) {
 		if (player_invincibility)
 			return;
 		int bridge = lookup_bridge_by_shipid(target->id);
@@ -2852,7 +2852,7 @@ static void calculate_laser_damage(struct snis_entity *o, uint8_t wavelength, fl
 	float old_damage;
 	struct damcon_data *d = NULL;
 
-	if (o->type == OBJTYPE_SHIP1) {
+	if (o->type == OBJTYPE_BRIDGE) {
 		b = lookup_bridge_by_shipid(o->id);
 		if (b < 0)
 			fprintf(stderr, "b < 0 at %s:%d\n", __FILE__, __LINE__);
@@ -2891,7 +2891,7 @@ static void calculate_laser_damage(struct snis_entity *o, uint8_t wavelength, fl
 			damage = 255.0;
 		x[i] = (uint8_t) damage;
 		damage = x[i] - old_damage;
-		if (o->type == OBJTYPE_SHIP1)
+		if (o->type == OBJTYPE_BRIDGE)
 			distribute_damage_to_damcon_system_parts(o, d, (int) damage, i);
 	}
 	if (o->tsd.ship.damage.shield_damage == 255) {
@@ -3023,7 +3023,7 @@ static int enemy_faction(int faction1, int faction2)
 
 static int friendly_fire(struct snis_entity *attacker, struct snis_entity *victim)
 {
-	if (attacker->type == OBJTYPE_SHIP1) /* players cannot commit friendly fire */
+	if (attacker->type == OBJTYPE_BRIDGE) /* players cannot commit friendly fire */
 		return 0;
 
 	return !enemy_faction(attacker->sdata.faction, victim->sdata.faction);
@@ -3045,7 +3045,7 @@ static uint32_t buddies_pick_who_to_attack(struct snis_entity *attacker)
 {
 	int f;
 
-	if (attacker->type == OBJTYPE_SHIP1) /* player controlled ship */
+	if (attacker->type == OBJTYPE_BRIDGE) /* player controlled ship */
 		return attacker->id;
 
 	f = find_fleet_number(attacker);
@@ -3267,7 +3267,7 @@ static void push_attack_mode(struct snis_entity *attacker, uint32_t victim_id, i
 		return;
 	}
 
-	if (go[i].type == OBJTYPE_SHIP2 || go[i].type == OBJTYPE_SHIP1) {
+	if (go[i].type == OBJTYPE_SHIP2 || go[i].type == OBJTYPE_BRIDGE) {
 		if (attacker->tsd.ship.ai[0].ai_mode != AI_MODE_COP) {
 			if (go[i].type == OBJTYPE_SHIP2 &&
 				go[i].tsd.ship.ai[0].ai_mode == AI_MODE_COP)
@@ -3421,7 +3421,7 @@ static int make_derelict(struct snis_entity *o)
 				o->vy + snis_random_float() * 2.0,
 				o->vz + snis_random_float() * 2.0,
 				o->tsd.ship.shiptype, o->sdata.faction, 0, o->id);
-	if (o->type == OBJTYPE_SHIP1 || o->type == OBJTYPE_SHIP2) {
+	if (o->type == OBJTYPE_BRIDGE || o->type == OBJTYPE_SHIP2) {
 		for (i = 0; i < o->tsd.ship.ncargo_bays; i++) {
 			int item;
 			float qty;
@@ -3463,7 +3463,7 @@ static void process_potential_victim(void *context, void *entity)
 		return;
 
 	/* only victimize players, other ships, starbases, and space monsters */
-	if (v->type != OBJTYPE_STARBASE && v->type != OBJTYPE_SHIP1 &&
+	if (v->type != OBJTYPE_STARBASE && v->type != OBJTYPE_BRIDGE &&
 		v->type != OBJTYPE_SHIP2 && v->type != OBJTYPE_SPACEMONSTER)
 		return;
 
@@ -3509,7 +3509,7 @@ static void process_potential_victim(void *context, void *entity)
 		fightiness = (10000.0 * hostility) / (dist + 1.0);
 		o->tsd.ship.threat_level += fightiness;
 
-		if (v->type == OBJTYPE_SHIP1)
+		if (v->type == OBJTYPE_BRIDGE)
 			fightiness *= 3.0f; /* prioritize hitting player... */
 	}
 
@@ -3944,7 +3944,7 @@ static void missile_collision_detection(void *context, void *entity)
 			if (snis_randn(1000) < 1000.0 * flare_confuse_chance)
 				missile->tsd.missile.target_id = target->id;
 			break;
-		case OBJTYPE_SHIP1:
+		case OBJTYPE_BRIDGE:
 		case OBJTYPE_SHIP2:
 			notify_the_cops(missile, target);
 			damage_factor = missile_explosion_damage_distance / (sqrt(dist2) + 3.0);
@@ -3958,7 +3958,7 @@ static void missile_collision_detection(void *context, void *entity)
 				/* make sound for players that got hit */
 				/* make sound for players that did the hitting */
 				snis_queue_add_sound(EXPLOSION_SOUND, ROLE_SOUNDSERVER, missile->tsd.missile.target_id);
-				if (target->type != OBJTYPE_SHIP1) {
+				if (target->type != OBJTYPE_BRIDGE) {
 					if (target->type == OBJTYPE_SHIP2)
 						make_derelict(target);
 					respawn_object(target);
@@ -4003,7 +4003,7 @@ static void torpedo_collision_detection(void *context, void *entity)
 	/* What's the -3 about? */
 	if (o->alive >= torpedo_lifetime - 3)
 		return;
-	if (t->type != OBJTYPE_SHIP1 && t->type != OBJTYPE_SHIP2 &&
+	if (t->type != OBJTYPE_BRIDGE && t->type != OBJTYPE_SHIP2 &&
 			t->type != OBJTYPE_STARBASE &&
 			t->type != OBJTYPE_ASTEROID &&
 			t->type != OBJTYPE_CARGO_CONTAINER &&
@@ -4092,8 +4092,8 @@ static void torpedo_collision_detection(void *context, void *entity)
 		return;
 	}
 
-	if (t->type == OBJTYPE_SHIP1 || t->type == OBJTYPE_SHIP2) {
-		if (t->type != OBJTYPE_SHIP1 ||
+	if (t->type == OBJTYPE_BRIDGE || t->type == OBJTYPE_SHIP2) {
+		if (t->type != OBJTYPE_BRIDGE ||
 			t->tsd.ship.damage.maneuvering_damage > 150)
 			do_collision_impulse(t, o);
 		calculate_torpedo_damage(t, o->tsd.torpedo.targeted_system);
@@ -4116,12 +4116,12 @@ static void torpedo_collision_detection(void *context, void *entity)
 		/* make sound for players that got hit */
 		/* make sound for players that did the hitting */
 		snis_queue_add_sound(EXPLOSION_SOUND, ROLE_SOUNDSERVER, o->tsd.torpedo.ship_id);
-		if (t->type == OBJTYPE_SHIP1 || t->type == OBJTYPE_SHIP2) {
+		if (t->type == OBJTYPE_BRIDGE || t->type == OBJTYPE_SHIP2) {
 			int i = lookup_by_id(o->tsd.torpedo.ship_id);
 			if (i > 0)
 				pop_ai_attack_mode(&go[i]);
 		}
-		if (t->type != OBJTYPE_SHIP1) {
+		if (t->type != OBJTYPE_BRIDGE) {
 			if (t->type == OBJTYPE_SHIP2)
 				make_derelict(t);
 			respawn_object(t);
@@ -4180,7 +4180,7 @@ static void missile_move(struct snis_entity *o)
 			/* NPCs don't notice missiles instantly. */
 			if (o->alive < missile_lifetime - missile_countermeasure_delay)
 				push_avoid_missile(target, o);
-		} else if (target->type == OBJTYPE_SHIP1) {
+		} else if (target->type == OBJTYPE_BRIDGE) {
 			if (target->tsd.ship.missile_lock_detected == 0)
 				snis_queue_add_text_to_speech("Missile lock detected.",
 					ROLE_TEXT_TO_SPEECH, target->id);
@@ -4295,7 +4295,7 @@ static void laser_collision_detection(void *context, void *entity)
 		return;
 	if (t == o)
 		return;
-	if (t->type != OBJTYPE_SHIP1 && t->type != OBJTYPE_SHIP2 &&
+	if (t->type != OBJTYPE_BRIDGE && t->type != OBJTYPE_SHIP2 &&
 		t->type != OBJTYPE_STARBASE && t->type != OBJTYPE_ASTEROID &&
 		t->type != OBJTYPE_TORPEDO && t->type != OBJTYPE_CARGO_CONTAINER &&
 		t->type != OBJTYPE_BLOCK && t->type != OBJTYPE_SPACEMONSTER)
@@ -4373,7 +4373,7 @@ static void laser_collision_detection(void *context, void *entity)
 		return;
 	}
 
-	if (t->type == OBJTYPE_SHIP1 || t->type == OBJTYPE_SHIP2) {
+	if (t->type == OBJTYPE_BRIDGE || t->type == OBJTYPE_SHIP2) {
 		calculate_laser_damage(t, o->tsd.laser.wavelength,
 			(float) o->tsd.laser.power * LASER_PROJECTILE_BOOST, o->tsd.laser.targeted_system);
 		send_ship_damage_packet(t);
@@ -4404,7 +4404,7 @@ static void laser_collision_detection(void *context, void *entity)
 		/* make sound for players that did the hitting */
 		snis_queue_add_sound(EXPLOSION_SOUND,
 				ROLE_SOUNDSERVER, o->tsd.laser.ship_id);
-		if (t->type != OBJTYPE_SHIP1) {
+		if (t->type != OBJTYPE_BRIDGE) {
 			if (t->type == OBJTYPE_SHIP2)
 				make_derelict(t);
 			respawn_object(t);
@@ -4659,7 +4659,7 @@ static void spacemonster_collision_process(void *context, void *entity)
 			}
 		}
 		break;
-	case OBJTYPE_SHIP1:
+	case OBJTYPE_BRIDGE:
 	case OBJTYPE_SHIP2:
 		if (o->tsd.spacemonster.ship_dist < 0.0) {
 			o->tsd.spacemonster.nearest_ship = thing->id;
@@ -5051,7 +5051,7 @@ static void check_for_incoming_fire(struct snis_entity *o)
 {
 	int i;
 
-	if (o->type != OBJTYPE_SHIP1)
+	if (o->type != OBJTYPE_BRIDGE)
 		return;
 
 	for (i = 0; i < nbridges; i++) {
@@ -5360,7 +5360,7 @@ static void ai_maybe_fire_weapon(struct snis_entity *o, struct snis_entity *v, i
 			if (snis_randn(1000) < (enemy_missile_fire_chance * 10) + imacop * 200 &&
 				o->tsd.ship.next_missile_time < universe_timestamp &&
 				ship_type[o->tsd.ship.shiptype].has_missiles) {
-				if (v->type == OBJTYPE_SHIP1 || v->type == OBJTYPE_SHIP2) {
+				if (v->type == OBJTYPE_BRIDGE || v->type == OBJTYPE_SHIP2) {
 					o->tsd.ship.next_missile_time = universe_timestamp +
 						enemy_missile_fire_interval;
 					ai_trace(o->id, "FIRING MISSILE AT %u", v->id);
@@ -5444,7 +5444,7 @@ static void ai_attack_mode_brain(struct snis_entity *o)
 	}
 
 	/* Trigger the victim ship's emf detector */
-	if (v->type == OBJTYPE_SHIP1 || v->type == OBJTYPE_SHIP2) {
+	if (v->type == OBJTYPE_BRIDGE || v->type == OBJTYPE_SHIP2) {
 		uint8_t emf_value = (uint8_t) (snis_randn(120) +
 			130.0 * ATTACK_MODE_GIVE_UP_DISTANCE / vdist);
 		if (v->tsd.ship.emf_detector < emf_value)
@@ -5499,7 +5499,7 @@ static void ai_attack_mode_brain(struct snis_entity *o)
 	if ((o->sdata.faction != 0 || imacop) ||
 		(v->type != OBJTYPE_STARBASE && v->type != OBJTYPE_PLANET)) {
 		ai_maybe_fire_weapon(o, v, imacop, vdist, extra_range);
-		if (v->type == OBJTYPE_SHIP1 && snis_randn(10000) < 50)
+		if (v->type == OBJTYPE_BRIDGE && snis_randn(10000) < 50)
 			taunt_player(o, v);
 	} else {
 		/* FIXME: give neutrals soemthing to do so they don't just sit there */;
@@ -6771,7 +6771,7 @@ static void announce_starbase_status_change(char *basename, int winner, int lose
 		return;
 	for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
 		struct snis_entity *o = &go[i];
-		if (o->alive && o->type == OBJTYPE_SHIP1) {
+		if (o->alive && o->type == OBJTYPE_BRIDGE) {
 			if (o->sdata.faction == loser) {
 				if (zone == 4) /* Starbase changed hands */
 					snprintf(buffer, sizeof(buffer), "%s has been captured by the enemy.",
@@ -7411,7 +7411,7 @@ static void ship_collision_avoidance(void *context, void *entity)
 		return;
 
 	/* Tow ship should not try to avoid thing it's towing */
-	if ((obstacle->type == OBJTYPE_SHIP2 || obstacle->type == OBJTYPE_SHIP1) &&
+	if ((obstacle->type == OBJTYPE_SHIP2 || obstacle->type == OBJTYPE_BRIDGE) &&
 		ship_is_towing(o) == obstacle->id)
 		return;
 
@@ -10165,7 +10165,7 @@ static void docking_port_move(struct snis_entity *o)
 	if (!docker->tsd.ship.docking_magnets) { /* undocking happens here */
 		o->tsd.docking_port.docked_guy = (uint32_t) -1;
 		revoke_docking_permission(o, docker->id);
-		if (docker->type == OBJTYPE_SHIP1) {
+		if (docker->type == OBJTYPE_BRIDGE) {
 			int bn = lookup_bridge_by_shipid(docker->id);
 			if (bn >= 0) {
 				bridgelist[bn].last_docked_time = universe_timestamp;
@@ -10220,7 +10220,7 @@ static void block_add_to_naughty_list(struct snis_entity *o, uint32_t id)
 	i = lookup_by_id(id);
 	if (i < 0)
 		return;
-	if (go[i].type != OBJTYPE_SHIP1 && go[i].type != OBJTYPE_SHIP2)
+	if (go[i].type != OBJTYPE_BRIDGE && go[i].type != OBJTYPE_SHIP2)
 		return;
 	rootid = o->tsd.block.root_id;
 	if (rootid != -1) {
@@ -10540,7 +10540,7 @@ static void starbase_move(struct snis_entity *o)
 		a = &go[j];
 		if (!a->alive)
 			continue;
-		if (a->type != OBJTYPE_SHIP1 && a->type != OBJTYPE_SHIP2)
+		if (a->type != OBJTYPE_BRIDGE && a->type != OBJTYPE_SHIP2)
 			continue;
 		float dist2 = object_dist2(o, a);
 		if (dist2 > (torpedo_velocity * torpedo_lifetime) * (torpedo_velocity * torpedo_lifetime))
@@ -10564,7 +10564,7 @@ static void starbase_move(struct snis_entity *o)
 			add_torpedo(o->x, o->y, o->z, vx, vy, vz, o->id, TARGET_ALL_SYSTEMS);
 			o->tsd.starbase.next_torpedo_time = universe_timestamp +
 					STARBASE_TORPEDO_FIRE_INTERVAL;
-			fired_at_player = a->type == OBJTYPE_SHIP1;
+			fired_at_player = a->type == OBJTYPE_BRIDGE;
 		}
 		if (snis_randn(100) < 30 &&
 			o->tsd.starbase.next_laser_time <= universe_timestamp) {
@@ -10572,7 +10572,7 @@ static void starbase_move(struct snis_entity *o)
 			add_laserbeam(o->id, a->id, LASERBEAM_DURATION, TARGET_ALL_SYSTEMS);
 			o->tsd.starbase.next_laser_time = universe_timestamp +
 					STARBASE_LASER_FIRE_INTERVAL;
-			fired_at_player |= (a->type == OBJTYPE_SHIP1);
+			fired_at_player |= (a->type == OBJTYPE_BRIDGE);
 		}
 		if (fired_at_player && snis_randn(100) < 20) {
 			char x[200];
@@ -10696,7 +10696,7 @@ static int add_generic_object(double x, double y, double z,
 			memset(&client[j].go_clients[i], 0, sizeof(client[j].go_clients[i]));
 
 	switch (type) {
-	case OBJTYPE_SHIP1:
+	case OBJTYPE_BRIDGE:
 	case OBJTYPE_SHIP2:
 	case OBJTYPE_ASTEROID:
 	case OBJTYPE_STARBASE:
@@ -10971,7 +10971,7 @@ static void repair_damcon_systems(struct snis_entity *o)
 	struct damcon_data *d;
 	struct snis_damcon_entity *p;
 
-	if (o->type != OBJTYPE_SHIP1)
+	if (o->type != OBJTYPE_BRIDGE)
 		return;
 
 	b = lookup_bridge_by_shipid(o->id);
@@ -11241,7 +11241,7 @@ static int add_player(double x, double z, double vx, double vz, double heading,
 {
 	int i;
 
-	i = add_generic_object(x, 0.0, z, vx, 0.0, vz, heading, OBJTYPE_SHIP1);
+	i = add_generic_object(x, 0.0, z, vx, 0.0, vz, heading, OBJTYPE_BRIDGE);
 	if (i < 0)
 		return i;
 	respawn_player(&go[i], warpgate_number);
@@ -11521,7 +11521,7 @@ static int l_get_player_ship_ids(lua_State *l)
 	pthread_mutex_lock(&universe_mutex);
 	lua_newtable(l);
 	for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
-		if (go[i].type == OBJTYPE_SHIP1) {
+		if (go[i].type == OBJTYPE_BRIDGE) {
 			lua_pushnumber(l, (double) index);
 			lua_pushnumber(l, (double) go[i].id);
 			lua_settable(l, -3);
@@ -12767,7 +12767,7 @@ static int add_laser(double x, double y, double z,
 	go[i].tsd.laser.ship_id = ship_id;
 	go[i].tsd.laser.targeted_system = targeted_system;
 	s = lookup_by_id(ship_id);
-	if (go[s].type == OBJTYPE_SHIP1 || go[s].type == OBJTYPE_SHIP2) {
+	if (go[s].type == OBJTYPE_BRIDGE || go[s].type == OBJTYPE_SHIP2) {
 		go[i].tsd.laser.power = go[s].tsd.ship.phaser_charge;
 		go[i].tsd.laser.wavelength = go[s].tsd.ship.phaser_wavelength;
 	} else if (go[s].type == OBJTYPE_TURRET) {
@@ -12832,7 +12832,7 @@ static void laserbeam_move(struct snis_entity *o)
 		calculate_laser_starbase_damage(target, o->tsd.laserbeam.wavelength);
 		notify_the_cops(o, target);
 		break;
-	case OBJTYPE_SHIP1: /* Fall thru */
+	case OBJTYPE_BRIDGE: /* Fall thru */
 	case OBJTYPE_SHIP2:
 		calculate_laser_damage(target, o->tsd.laserbeam.wavelength,
 					(float) o->tsd.laserbeam.power, o->tsd.laserbeam.targeted_system);
@@ -12869,10 +12869,10 @@ static void laserbeam_move(struct snis_entity *o)
 		/* make sound for players that got hit */
 		/* make sound for players that did the hitting */
 
-		if (origin->type == OBJTYPE_SHIP1)
+		if (origin->type == OBJTYPE_BRIDGE)
 			snis_queue_add_sound(EXPLOSION_SOUND,
 					ROLE_SOUNDSERVER, origin->id);
-		if (ttype != OBJTYPE_SHIP1) {
+		if (ttype != OBJTYPE_BRIDGE) {
 			if (ttype == OBJTYPE_SHIP2)
 				make_derelict(target);
 			respawn_object(target);
@@ -13032,7 +13032,7 @@ static int add_laserbeam(uint32_t origin, uint32_t target, int alive, uint8_t ta
 		return i;
 	o = &go[oi];
 	t = &go[ti];
-	if (t->type != OBJTYPE_SHIP1 && t->type != OBJTYPE_SHIP2 && t->type != OBJTYPE_STARBASE)
+	if (t->type != OBJTYPE_BRIDGE && t->type != OBJTYPE_SHIP2 && t->type != OBJTYPE_STARBASE)
 		return i;
 
 	union vec3 impact_point;
@@ -13655,7 +13655,7 @@ static int l_play_sound(lua_State *l)
 		lua_pushnumber(lua_state, -1);
 		goto out;
 	}
-	if (go[i].type != OBJTYPE_SHIP1) {
+	if (go[i].type != OBJTYPE_BRIDGE) {
 		pthread_mutex_unlock(&universe_mutex);
 		send_demon_console_msg("PLAY_SOUND: NOT PLAYER SHIP: %f", lua_oid1);
 		lua_pushnumber(lua_state, -1);
@@ -13690,7 +13690,7 @@ static int l_set_red_alert_status(lua_State *l)
 		lua_pushnumber(l, -1.0);
 		return 1;
 	}
-	if (go[i].type != OBJTYPE_SHIP1) {
+	if (go[i].type != OBJTYPE_BRIDGE) {
 		pthread_mutex_unlock(&universe_mutex);
 		lua_pushnumber(l, -1.0);
 		return 1;
@@ -14896,7 +14896,7 @@ static int process_demon_move_object(struct game_client *c)
 	if (i < 0 || !go[i].alive)
 		goto out;
 	o = &go[i];
-	if (o->type == OBJTYPE_SHIP2 || o->type == OBJTYPE_SHIP1)
+	if (o->type == OBJTYPE_SHIP2 || o->type == OBJTYPE_BRIDGE)
 		warp_ship(o, o->x + dx, o->y + dy, o->z + dz);
 	else
 		set_object_location(o, o->x + dx, o->y + dy, o->z + dz);
@@ -14967,7 +14967,7 @@ static void pack_and_send_ship_sdata_packet(struct game_client *c, struct snis_e
 	p.shield_depth = o->sdata.shield_depth;
 	p.faction = o->sdata.faction;
 	p.lifeform_count = 0;
-	if (o->type == OBJTYPE_SHIP2 || o->type == OBJTYPE_SHIP1)
+	if (o->type == OBJTYPE_SHIP2 || o->type == OBJTYPE_BRIDGE)
 		p.lifeform_count = o->tsd.ship.lifeform_count;
 	else if (o->type == OBJTYPE_STARBASE)
 		p.lifeform_count = o->tsd.starbase.lifeform_count;
@@ -14985,7 +14985,7 @@ static void send_update_ship_cargo_info(struct game_client *c, struct snis_entit
 
 	/* TODO: maybe we do not always send all this info or throttle it some how */
 
-	if (o->type != OBJTYPE_SHIP1 && o->type != OBJTYPE_SHIP2)
+	if (o->type != OBJTYPE_BRIDGE && o->type != OBJTYPE_SHIP2)
 		return;
 
 	/* If ship has no cargo, skip it */
@@ -15745,7 +15745,7 @@ static void starbase_registration_query_npc_bot(struct snis_entity *o, int bridg
 				c = lookup_by_id(ship_registry.entry[i].id);
 				if (c < 0)
 					continue;
-				if (go[c].type != OBJTYPE_STARBASE && go[i].type != OBJTYPE_SHIP1 &&
+				if (go[c].type != OBJTYPE_STARBASE && go[i].type != OBJTYPE_BRIDGE &&
 							go[i].type != OBJTYPE_SHIP2)
 					continue;
 				if (strncasecmp(msg, go[c].sdata.name, strlen(msg)) != 0)
@@ -15768,7 +15768,7 @@ static void starbase_registration_query_npc_bot(struct snis_entity *o, int bridg
 			return;
 		}
 	}
-	if (go[i].type != OBJTYPE_SHIP1 &&
+	if (go[i].type != OBJTYPE_BRIDGE &&
 		go[i].type != OBJTYPE_SHIP2 &&
 		go[i].type != OBJTYPE_DERELICT &&
 		go[i].type != OBJTYPE_STARBASE) {
@@ -18399,7 +18399,7 @@ static void partially_enscript_game_state(FILE *f)
 		if (!o->alive)
 			continue;
 		switch (go[i].type) {
-		case OBJTYPE_SHIP1:
+		case OBJTYPE_BRIDGE:
 			enscript_player(f, o, ++player);
 			break;
 		case OBJTYPE_SHIP2:
@@ -19810,7 +19810,7 @@ static int l_computer_command(lua_State *l)
 		send_demon_console_color_msg(YELLOW, "computer_command: Bad ship id %.0f", id);
 		return 0;
 	}
-	if (go[i].type != OBJTYPE_SHIP1)  {
+	if (go[i].type != OBJTYPE_BRIDGE)  {
 		pthread_mutex_unlock(&universe_mutex);
 		send_demon_console_color_msg(YELLOW, "computer_command: object not player ship: %.0f", id);
 		return 0;
@@ -19942,7 +19942,7 @@ static int l_text_to_speech(lua_State *l)
 		goto error;
 	receiver = &go[i];
 	switch (receiver->type) {
-	case OBJTYPE_SHIP1:
+	case OBJTYPE_BRIDGE:
 		pthread_mutex_unlock(&universe_mutex);
 		snis_queue_add_text_to_speech(transmission, ROLE_TEXT_TO_SPEECH, receiver->id);
 		return 0;
@@ -20026,7 +20026,7 @@ static int l_set_player_damage(lua_State *l)
 	if (i < 0)
 		goto error;
 	o = &go[i];
-	if (o->type != OBJTYPE_SHIP1)
+	if (o->type != OBJTYPE_BRIDGE)
 		goto error;
 	if (value < 0 || value > 255)
 		goto error;
@@ -20124,7 +20124,7 @@ static int l_load_skybox(lua_State *l)
 	if (i < 0)
 		goto error;
 	o = &go[i];
-	if (o->type != OBJTYPE_SHIP1)
+	if (o->type != OBJTYPE_BRIDGE)
 		goto error;
 	if (strlen(fileprefix) > 100)
 		goto error;
@@ -20164,7 +20164,7 @@ static int l_get_player_damage(lua_State *l)
 	if (i < 0)
 		goto error;
 	o = &go[i];
-	if (o->type != OBJTYPE_SHIP1)
+	if (o->type != OBJTYPE_BRIDGE)
 		goto error;
 	if (strncmp(system, "shields", 6) == 0) {
 		bvalue = o->tsd.ship.damage.shield_damage;
@@ -20438,7 +20438,7 @@ static void process_demon_clear_all(void)
 	for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
 		struct snis_entity *o = &go[i];
 
-		if (o->type != OBJTYPE_SHIP1 && snis_object_pool_is_allocated(pool, i) && o->id != (uint32_t) -1)
+		if (o->type != OBJTYPE_BRIDGE && snis_object_pool_is_allocated(pool, i) && o->id != (uint32_t) -1)
 			delete_from_clients_and_server(o);
 	}
 	rts_mode = 0;
@@ -20481,7 +20481,7 @@ static void setup_rtsmode_battlefield(void)
 	for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
 		struct snis_entity *o = &go[i];
 
-		if (o->type == OBJTYPE_SHIP1)
+		if (o->type == OBJTYPE_BRIDGE)
 			reset_player_ship(o);
 	}
 	for (i = 0; i < ARRAYSIZE(rts_planet); i++) { /* Add the main planets */
@@ -20499,7 +20499,7 @@ static void setup_rtsmode_battlefield(void)
 		struct snis_entity *o = &go[i];
 		int side = i % ARRAYSIZE(rts_planet);
 		union vec3 *p = &rts_main_planet_pos[side];
-		if (o->type != OBJTYPE_SHIP1)
+		if (o->type != OBJTYPE_BRIDGE)
 			continue;
 		random_point_on_sphere(MAX_PLANET_RADIUS * 1.2, &x, &y, &z);
 		set_object_location(o, x + p->v.x, y + p->v.y, z + p->v.z);
@@ -21093,7 +21093,7 @@ static int l_show_menu(lua_State *l)
 			goto error;
 		}
 		o = &go[i];
-		if (o->type != OBJTYPE_SHIP1) {
+		if (o->type != OBJTYPE_BRIDGE) {
 			pthread_mutex_unlock(&universe_mutex);
 			goto error;
 		}
@@ -21146,7 +21146,7 @@ static int l_show_timed_text(lua_State *l)
 			goto error;
 		}
 		o = &go[i];
-		if (o->type != OBJTYPE_SHIP1) {
+		if (o->type != OBJTYPE_BRIDGE) {
 			pthread_mutex_unlock(&universe_mutex);
 			goto error;
 		}
@@ -21248,7 +21248,7 @@ static int l_get_ship_attribute(lua_State *l)
 		goto error;
 	}
 	o = &go[i];
-	if (o->type != OBJTYPE_SHIP1 && o->type != OBJTYPE_SHIP2) {
+	if (o->type != OBJTYPE_BRIDGE && o->type != OBJTYPE_SHIP2) {
 		snprintf(errmsg, sizeof(errmsg), "ID %d IS NOT A SHIP\n", oid);
 		goto error;
 	}
@@ -21405,13 +21405,13 @@ static int l_set_commodity_contents(lua_State *l)
 	if (i > snis_object_pool_highest_object(pool))
 		goto out;
 	o = &go[i];
-	if (o->type != OBJTYPE_SHIP1 && o->type != OBJTYPE_CARGO_CONTAINER && o->type != OBJTYPE_SHIP2)
+	if (o->type != OBJTYPE_BRIDGE && o->type != OBJTYPE_CARGO_CONTAINER && o->type != OBJTYPE_SHIP2)
 		goto out;
 	if (index < -1 || index >= ncommodities)
 		goto out;
 	if (lua_quantity < 0.01)
 		goto out;
-	if (o->type == OBJTYPE_SHIP1 || o->type == OBJTYPE_SHIP2) {
+	if (o->type == OBJTYPE_BRIDGE || o->type == OBJTYPE_SHIP2) {
 		const double lua_cargo_bay = luaL_checknumber(l, 4);
 		int cargo_bay = (int) lua_cargo_bay;
 		if (cargo_bay < 0 || cargo_bay >= o->tsd.ship.ncargo_bays)
@@ -21464,7 +21464,7 @@ static int l_reset_player_ship(lua_State *l)
 	if (i < 0)
 		goto out;
 	o = &go[i];
-	if (o->type != OBJTYPE_SHIP1)
+	if (o->type != OBJTYPE_BRIDGE)
 		goto out;
 	reset_player_ship(o);
 	pthread_mutex_unlock(&universe_mutex);
@@ -21487,7 +21487,7 @@ static int l_dock_player_to_starbase(lua_State *l)
 	i = lookup_by_id(player_id);
 	if (i < 0)
 		goto failure;
-	if (go[i].type != OBJTYPE_SHIP1)
+	if (go[i].type != OBJTYPE_BRIDGE)
 		goto failure;
 	player = &go[i];
 	i = lookup_by_id(starbase_id);
@@ -21924,7 +21924,7 @@ static int l_update_player_wallet(lua_State *l)
 		send_demon_console_msg("UPDATE_PLAYER_WALLET: BAD PLAYER SHIP ID: %u", (uint32_t) pid);
 		return 0;
 	}
-	if (go[i].type != OBJTYPE_SHIP1) {
+	if (go[i].type != OBJTYPE_BRIDGE) {
 		pthread_mutex_unlock(&universe_mutex);
 		send_demon_console_msg("UPDATE_PLAYER_WALLET: WRONG OBJECT TYPE: %u", (uint32_t) pid);
 		return 0;
@@ -21953,7 +21953,7 @@ static int l_set_passenger_location(lua_State *l)
 		send_demon_console_msg("SET_PASSENGER_LOCATION: BAD LOCATION: %d", location);
 		return 0;
 	}
-	if (go[i].type != OBJTYPE_STARBASE && go[i].type != OBJTYPE_SHIP1) {
+	if (go[i].type != OBJTYPE_STARBASE && go[i].type != OBJTYPE_BRIDGE) {
 		pthread_mutex_unlock(&universe_mutex);
 		send_demon_console_msg("SET_PASSENGER_LOCATION: INAPPROPRIATE LOCATION: %d", location);
 		return 0;
@@ -21986,7 +21986,7 @@ static int l_create_passenger(lua_State *l)
 		send_demon_console_msg("CREATE_PASSENGER: BAD LOCATION ID %u", id32);
 		return 0;
 	}
-	if (go[location].type != OBJTYPE_SHIP1 && go[location].type != OBJTYPE_STARBASE) {
+	if (go[location].type != OBJTYPE_BRIDGE && go[location].type != OBJTYPE_STARBASE) {
 		pthread_mutex_unlock(&universe_mutex);
 		send_demon_console_msg("CREATE_PASSENGER: INAPPROPRIATE LOCATION ID %u", id32);
 		return 0;
@@ -22091,7 +22091,7 @@ static int process_delete_item(struct game_client *c)
 	if (i < 0)
 		goto out;
 	o = &go[i];
-	if (o->type == OBJTYPE_SHIP1)
+	if (o->type == OBJTYPE_BRIDGE)
 		goto out;
 	delete_from_clients_and_server(o);
 out:
@@ -22266,7 +22266,7 @@ static uint32_t find_potential_missile_target(struct snis_entity *shooter)
 	for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
 		target = &go[i];
 		switch (target->type) {
-		case OBJTYPE_SHIP1:
+		case OBJTYPE_BRIDGE:
 		case OBJTYPE_SHIP2:
 		case OBJTYPE_STARBASE:
 		case OBJTYPE_DERELICT:
@@ -22299,7 +22299,7 @@ static uint32_t find_potential_missile_target(struct snis_entity *shooter)
 
 static void fire_missile(struct snis_entity *shooter, uint32_t target_id, uint8_t targeted_system)
 {
-	if (shooter->type == OBJTYPE_SHIP1) {
+	if (shooter->type == OBJTYPE_BRIDGE) {
 		snis_queue_add_sound(MISSILE_LAUNCH, ROLE_SOUNDSERVER, shooter->id);
 		snis_queue_add_text_to_speech("Missile away.",
 				ROLE_TEXT_TO_SPEECH, shooter->id);
@@ -23872,7 +23872,7 @@ static void send_respawn_time(struct game_client *c, struct snis_entity *o);
 static void queue_up_client_object_update(struct game_client *c, struct snis_entity *o)
 {
 	switch(o->type) {
-	case OBJTYPE_SHIP1:
+	case OBJTYPE_BRIDGE:
 		send_update_ship_packet(c, o, OPCODE_UPDATE_SHIP);
 		if (!o->alive)
 			send_respawn_time(c, o);
@@ -23967,7 +23967,7 @@ static void queue_up_client_object_update(struct game_client *c, struct snis_ent
 static void queue_up_client_object_sdata_update(struct game_client *c, struct snis_entity *o)
 {
 	switch (o->type) {
-	case OBJTYPE_SHIP1:
+	case OBJTYPE_BRIDGE:
 	case OBJTYPE_SHIP2:
 	case OBJTYPE_ASTEROID:
 	case OBJTYPE_CARGO_CONTAINER:
@@ -24214,7 +24214,7 @@ static void queue_up_client_updates(struct game_client *c)
 		for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
 			/* printf("obj %d: a=%d, ts=%u, uts%u, type=%hhu\n",
 				i, go[i].alive, go[i].timestamp, universe_timestamp, go[i].type); */
-			if (!go[i].alive && go[i].type != OBJTYPE_SHIP1)
+			if (!go[i].alive && go[i].type != OBJTYPE_BRIDGE)
 				continue;
 
 			if (too_far_away_to_care(c, &go[i]) &&
@@ -25821,7 +25821,7 @@ static void move_objects(double absolute_time, int discontinuity)
 				go[i].sdata.faction < ARRAYSIZE(faction_population)) {
 				faction_population[go[i].sdata.faction]++;
 			}
-			if (go[i].type == OBJTYPE_SHIP1)  {
+			if (go[i].type == OBJTYPE_BRIDGE)  {
 				b = lookup_bridge_by_shipid(go[i].id);
 				if (b >= 0 && (universe_timestamp >= multiverse_update_time ||
 					(!bridgelist[b].verified && !bridgelist[b].requested_verification)))
@@ -25829,7 +25829,7 @@ static void move_objects(double absolute_time, int discontinuity)
 			}
 			netstats.nobjects++;
 		} else {
-			if (go[i].type == OBJTYPE_SHIP1)  {
+			if (go[i].type == OBJTYPE_BRIDGE)  {
 				int b = lookup_bridge_by_shipid(go[i].id);
 				if (b != -1) {
 					if (universe_timestamp >= go[i].respawn_time) {
@@ -26450,7 +26450,7 @@ static uint32_t natural_language_object_lookup(void *context, char *word)
 				goto done;
 			}
 			break;
-		case OBJTYPE_SHIP1:
+		case OBJTYPE_BRIDGE:
 			b = lookup_bridge_by_shipid(go[i].id);
 			if (b < 0)
 				break;
@@ -26662,7 +26662,7 @@ static void nl_describe_game_object(struct game_client *c, uint32_t id)
 				ship_type[go[i].tsd.ship.shiptype].class, extradescription);
 		queue_add_text_to_speech(c, description);
 		return;
-	case OBJTYPE_SHIP1:
+	case OBJTYPE_BRIDGE:
 		pthread_mutex_unlock(&universe_mutex);
 		snprintf(description, sizeof(description),
 				"%s is a human piloted wombat class space ship", go[i].sdata.name);
@@ -27942,7 +27942,7 @@ static void nl_set_ship_course_to_dest_helper(struct game_client *c,
 		modifier = "the planet ";
 	else if (dest->type == OBJTYPE_ASTEROID)
 		modifier = "the asteroid ";
-	else if (dest->type == OBJTYPE_SHIP1 || dest->type == OBJTYPE_SHIP2)
+	else if (dest->type == OBJTYPE_BRIDGE || dest->type == OBJTYPE_SHIP2)
 		modifier = "the ship ";
 	else
 		modifier = "";

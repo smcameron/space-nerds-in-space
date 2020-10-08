@@ -130,7 +130,7 @@ void snis_debug_dump(char *cmd, struct snis_entity go[], int nstarbase_models,
 	printfn("-- SDATA FACTION = %hhu", o->sdata.faction);
 
 	switch (o->type) {
-	case OBJTYPE_SHIP1:
+	case OBJTYPE_BRIDGE:
 		t = "PLAYER SHIP";
 		printfn("TYPE: %s", t);
 		break;
