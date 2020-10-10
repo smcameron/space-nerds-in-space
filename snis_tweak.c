@@ -23,6 +23,7 @@
 #include <stdint.h>
 #include <string.h>
 #include <ctype.h>
+#include <regex.h>
 
 #include "snis_tweak.h"
 #include "arraysize.h"
@@ -131,15 +132,38 @@ int tweak_variable(struct tweakable_var_descriptor *tweak, int count, char *cmd,
 	return 0;
 }
 
-void tweakable_vars_list(struct tweakable_var_descriptor *tweak, int count, void (*printfn)(const char *, ...))
+void tweakable_vars_list(struct tweakable_var_descriptor *tweak, char *regexp_pattern,
+				int count, void (*printfn)(const char *, ...))
 {
-	int i;
+	int i, rc;
 	struct tweakable_var_descriptor *v;
+	regex_t re;
+	char *pattern = NULL; /* Assume there is no regexp pattern */
+
+	if (regexp_pattern) {
+		/* Cut off any leading "VARS " and extract the regex pattern following it.*/
+		if (strncmp(regexp_pattern, "VARS ", 5) == 0 && strlen(regexp_pattern) > 5) {
+			pattern = regexp_pattern + 5;
+			rc = regcomp(&re, pattern, REG_NOSUB | REG_ICASE);
+			if (rc) {
+				printfn("FAILED TO COMPILE REGEXP '%s'", regexp_pattern);
+				return;
+			}
+		}
+	}
 
 	for (i = 0; i < count; i++) {
 		v = &tweak[i];
 		if (!v->name)
 			break;
+		if (pattern) {
+			rc = regexec(&re, v->name, 0, NULL, 0);
+			if (rc) { /* no match on name, try description */
+				rc = regexec(&re, v->description, 0, NULL, 0);
+				if (rc) /* no match on description */
+					continue;
+			}
+		}
 		switch (v->type) {
 		case 'f':
 			printfn("%s = %.2f (D=%.2f, MN=%.2f, MX=%.2f)", v->name,

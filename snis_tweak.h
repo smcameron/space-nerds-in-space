@@ -38,7 +38,8 @@ int find_tweakable_var_descriptor(struct tweakable_var_descriptor *desc, int cou
 #define TWEAK_UNKNOWN_TYPE (-5)
 int tweak_variable(struct tweakable_var_descriptor *tweak, int count, char *cmd,
 			char *msg, int msgsize);
-void tweakable_vars_list(struct tweakable_var_descriptor *tweak, int count, void (*printfn)(const char *, ...));
+void tweakable_vars_list(struct tweakable_var_descriptor *tweak, char *regex_pattern,
+				int count, void (*printfn)(const char *, ...));
 int tweakable_var_describe(struct tweakable_var_descriptor *tweak, int count, char *cmd,
 				void (*printfn)(const char *, ...), int suppress_unknown_var);
 #endif

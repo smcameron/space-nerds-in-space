@@ -18383,7 +18383,7 @@ static int construct_demon_command(char *input,
 			break;
 		case 19: /* "VARS", list tweakable vars */
 			uppercase(original);
-			tweakable_vars_list(client_tweak, ARRAYSIZE(client_tweak), print_demon_console_msg);
+			tweakable_vars_list(client_tweak, original, ARRAYSIZE(client_tweak), print_demon_console_msg);
 			send_lua_script_packet_to_server(original);
 			break;
 		case 20: /* "DESCRIBE", describe a tweakable variable */

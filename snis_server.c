@@ -18843,9 +18843,9 @@ static void server_builtin_set(char *cmd)
 	send_demon_console_msg(msg);
 }
 
-static void server_builtin_vars(__attribute__((unused)) char *cmd)
+static void server_builtin_vars(char *cmd)
 {
-	tweakable_vars_list(server_tweak, ARRAYSIZE(server_tweak), send_demon_console_msg);
+	tweakable_vars_list(server_tweak, cmd, ARRAYSIZE(server_tweak), send_demon_console_msg);
 }
 
 static void server_builtin_describe(char *cmd)
