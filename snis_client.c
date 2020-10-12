@@ -7632,15 +7632,15 @@ static int process_update_flare_packet(void)
 {
 	unsigned char buffer[sizeof(struct update_flare_packet)];
 	uint32_t id, timestamp;
-	double vx, vy, vz;
+	double x, y, z;
 	int rc;
 
 	rc = read_and_unpack_buffer(buffer, "wwSSS", &id, &timestamp,
-		&vx, (int32_t) UNIVERSE_DIM, &vy, (int32_t) UNIVERSE_DIM, &vz, (int32_t) UNIVERSE_DIM);
+		&x, (int32_t) UNIVERSE_DIM, &y, (int32_t) UNIVERSE_DIM, &z, (int32_t) UNIVERSE_DIM);
 	if (rc != 0)
 		return rc;
 	pthread_mutex_lock(&universe_mutex);
-	rc = update_flare(id, timestamp, vx, vy, vz);
+	rc = update_flare(id, timestamp, x, y, z);
 	pthread_mutex_unlock(&universe_mutex);
 	return rc < 0;
 }
