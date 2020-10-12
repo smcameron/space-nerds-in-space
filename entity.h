@@ -49,6 +49,7 @@ GLOBAL void update_entity_non_uniform_scale(struct entity *e, float x_scale, flo
 GLOBAL void update_entity_color(struct entity *e, int color);
 GLOBAL void update_entity_shadecolor(struct entity *e, int color);
 GLOBAL void update_entity_visibility(struct entity *e, int visible);
+GLOBAL int entity_get_visibility(struct entity *e);
 GLOBAL struct mesh *entity_get_mesh(struct entity *e);
 GLOBAL void entity_set_mesh(struct entity *e, struct mesh *m);
 GLOBAL struct mesh *entity_get_low_poly_mesh(struct entity *e);

@@ -240,6 +240,11 @@ void update_entity_visibility(struct entity *e, int visible)
 	e->e_visible = visible;
 }
 
+int entity_get_visibility(struct entity *e)
+{
+	return e->e_visible;
+}
+
 void update_entity_material(struct entity *e, struct material *material_ptr)
 {
 	e->material_ptr = material_ptr;

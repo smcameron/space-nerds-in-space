@@ -17689,6 +17689,11 @@ static void debug_draw_object(struct snis_entity *o,
 	if (!o->alive)
 		return;
 
+	/* Suppress drawing of entities which aren't visible due
+	 * interpolate_generic_object() not having enough data yet. */
+	if (o->entity && !entity_get_visibility(o->entity))
+		return;
+
 	tardy = (o->nupdates > 0 && universe_timestamp() - o->updatetime[0] > 50.0 && o->type != OBJTYPE_SPARK);
 	x = ux_to_usersx(o->x, ux1, ux2);
 	if (x < 0 || x > SCREEN_WIDTH)
@@ -19488,6 +19493,10 @@ static void show_demon_3d(void)
 
 		selected = 0;
 		if (!o->alive)
+			continue;
+		/* Suppress drawing of entities which aren't visible due
+		 * interpolate_generic_object() not having enough data yet. */
+		if (o->entity && !entity_get_visibility(o->entity))
 			continue;
 		switch (o->type) {
 		case OBJTYPE_PLANET:
