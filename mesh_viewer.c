@@ -86,11 +86,13 @@ static struct material atmosphere_material;
 static struct material cyl_albedo;
 static struct material diffuse_material;
 static struct material alpha_by_normal;
+static struct material warpgate_effect_material;
 static int planet_mode = 0;
 static int cubemap_mode = 0;
 static int burst_rod_mode = 0;
 static int thrust_mode = 0;
 static int turret_mode = 0;
+static int warpgate_mode = 0;
 static char *replacement_assets_file = NULL;
 static struct replacement_asset replacement_asset = { 0 };
 static int reload_shaders = 0;
@@ -504,7 +506,7 @@ static void process_events()
 static void check_modes(void)
 {
 	/* modes are mutually exclusive, ensure at most one is selected. */
-	int sum = planet_mode + cubemap_mode + burst_rod_mode + thrust_mode + turret_mode;
+	int sum = planet_mode + cubemap_mode + burst_rod_mode + thrust_mode + turret_mode + warpgate_mode;
 	if (turret_mode) {
 		if (!turret_model) {
 			fprintf(stderr,
@@ -519,9 +521,25 @@ static void check_modes(void)
 	}
 	if (sum <= 1)
 		return;
-	fprintf(stderr, "mesh_viewer: burstrod, cubemap, planet, thrust and turret\n");
+	fprintf(stderr, "mesh_viewer: burstrod, cubemap, planet, thrust, turret and warpgate\n");
 	fprintf(stderr, "             modes are mutually exclusive.\n");
 	exit(1);
+}
+
+static void scroll_warpgate_texture(void)
+{
+	float u1, u2;
+
+	if (!warpgate_mode)
+		return;
+
+	/* Scroll through the warp gate effect texture */
+	u1 = (float) (frame_counter & 0x0ff) / (float) 0x0ff;
+	u2 = u1 + 0.1;
+	if (u2 > 1.0)
+		u2 = u2 - 1.0;
+	warpgate_effect_material.warp_gate_effect.u1 = u1;
+	warpgate_effect_material.warp_gate_effect.u2 = u2;
 }
 
 #define FRAME_INDEX_MAX 10
@@ -593,6 +611,10 @@ static void draw_screen()
 		update_entity_material(e, &diffuse_material);
 	} else if (use_alpha_by_normal) {
 		update_entity_material(e, &alpha_by_normal);
+	} else if (warpgate_mode) {
+		update_entity_material(e, &warpgate_effect_material);
+		update_entity_scale(e, 1.0);
+		scroll_warpgate_texture();
 	}
 	if (!turret_mode) {
 		update_entity_orientation(e, &lobby_orientation);
@@ -778,6 +800,7 @@ __attribute__((noreturn)) void usage(char *program)
 	fprintf(stderr, " %s --turret <turret-model> --turretbase <turret-base-model>\n", program);
 	fprintf(stderr, " %s --cylindrical <cylindrical-texture-map>\n", program);
 	fprintf(stderr, " %s -m <mesh-file> --emittance <cylindrical-emittance-map>\n", program);
+	fprintf(stderr, " %s --warpgate\n", program);
 	fprintf(stderr, "             (emittance requires --cylindrical to be set)\n");
 	exit(-1);
 }
@@ -815,6 +838,7 @@ static struct option long_options[] = {
 	{ "diffuse", required_argument, NULL, 'd' },
 	{ "trap-nans", no_argument, NULL, 'f' },
 	{ "replacement-assets", required_argument, NULL, 'r' },
+	{ "warpgate", no_argument, NULL, 'w' },
 	{ 0, 0, 0, 0 },
 };
 
@@ -825,7 +849,7 @@ static void process_options(int argc, char *argv[])
 	while (1) {
 		int option_index;
 
-		c = getopt_long(argc, argv, "IAB:T:bc:d:fC:Y:Z:e:hi:m:n:p:r:s:t:", long_options, &option_index);
+		c = getopt_long(argc, argv, "IAB:T:bc:d:fC:Y:Z:e:hi:m:n:p:r:s:t:w", long_options, &option_index);
 		if (c < 0) {
 			break;
 		}
@@ -837,6 +861,9 @@ static void process_options(int argc, char *argv[])
 		case 'T':
 			turret_mode = 1;
 			turret_model = optarg;
+			break;
+		case 'w':
+			warpgate_mode = 1;
 			break;
 		case 'b':
 			burst_rod_mode = 1;
@@ -941,10 +968,11 @@ int main(int argc, char *argv[])
 	}
 
 	filename = modelfile;
-	if (!filename && !(planet_mode || burst_rod_mode || thrust_mode || turret_mode))
+	if (!filename && !(planet_mode || burst_rod_mode || thrust_mode || turret_mode || warpgate_mode))
 		usage(program);
 
-	if (!planet_mode && !burst_rod_mode && !thrust_mode && !turret_mode && stat(filename, &statbuf) != 0) {
+	if (!planet_mode && !burst_rod_mode && !thrust_mode && !turret_mode && !warpgate_mode &&
+			stat(filename, &statbuf) != 0) {
 		fprintf(stderr, "%s: %s: %s\n", program, filename, strerror(errno));
 		exit(1);
 	}
@@ -1022,6 +1050,14 @@ int main(int argc, char *argv[])
 		target_mesh = snis_read_model(turret_model);
 		turret_base_mesh = snis_read_model(turret_base_model);
 		atmosphere_mesh = NULL;
+	} else if (warpgate_mode) {
+		target_mesh = mesh_fabricate_disc(1.0, 32);
+		material_init_warp_gate_effect(&warpgate_effect_material);
+		warpgate_effect_material.texture_mapped_unlit.texture_id =
+			graph_dev_load_texture(maybe_replace_asset("share/snis/textures/warp-tunnel.png"), 0);
+		warpgate_effect_material.texture_mapped_unlit.do_cullface = 0;
+		warpgate_effect_material.texture_mapped_unlit.do_blend = 1;
+		warpgate_effect_material.texture_mapped_unlit.alpha = 1.0;
 	} else { /* just ordinary model mode */
 		target_mesh = snis_read_model(filename);
 		if (cylinder_albedo) {
