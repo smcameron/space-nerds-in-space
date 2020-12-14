@@ -8812,8 +8812,19 @@ static int player_attempt_warpgate_jump(struct snis_entity *warpgate, struct sni
 		fprintf(stderr, "BUG: %s:%d player ship has no bridge\n", __FILE__, __LINE__);
 		return 0;
 	}
-	if (bridgelist[b].warp_gate_ticket.ipaddr == 0) /* No ticket? No warp. */
+	if (bridgelist[b].warp_gate_ticket.ipaddr == 0) { /* No ticket? No warp. */
+		static int last_msg_time = 0;
+
+		/* Throttle this message to once per 30secs... should be per-bridge, but, eh. */
+		if (last_msg_time < universe_timestamp - 300) {
+			last_msg_time = universe_timestamp;
+			/* We snoop the player's current channel, but how would the putative warp gate operators */
+			/* know it? Oh well. */
+			send_comms_packet(warpgate, warpgate->sdata.name, bridgelist[b].comms_channel,
+				"NO WARP GATE TICKET DETECTED, WARP GATE PASSAGE DENIED, SORRY.");
+		}
 		return 0;
+	}
 	pb = packed_buffer_allocate(3 + 20);
 	packed_buffer_append(pb, "bb", OPCODE_SWITCH_SERVER,
 		(uint8_t) warpgate->tsd.warpgate.warpgate_number);
