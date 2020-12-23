@@ -185,6 +185,7 @@ static volatile int vertical_controls_timer = 0;
 static int desired_mouse_ui_mode = MOUSE_MODE_FREE_MOUSE;
 static int current_mouse_ui_mode = MOUSE_MODE_FREE_MOUSE;
 static volatile int mouse_mode_timer = 0;
+static int mouse_idle_time = 0; /* Used to hide mouse cursor on main view when mouse is idle */
 
 static int display_frame_stats = 0;
 static int quickstartmode = 0; /* allows auto connecting to first (only) lobby entry */
@@ -21865,12 +21866,24 @@ static int mouse_button_held(int button)
 	return TRUE;
 }
 
+static void maybe_hide_mouse_cursor(void)
+{
+	/* Hide the mouse cursor if no movement for 60 ticks and displaymode is main view) */
+	if (mouse_idle_time < 60)
+		mouse_idle_time++;
+	if (mouse_idle_time == 60 && displaymode == DISPLAYMODE_MAINSCREEN)
+		SDL_ShowCursor(SDL_DISABLE);
+}
+
 static int main_da_motion_notify(SDL_Window *window, SDL_MouseMotionEvent *event)
 {
 	float pitch, yaw;
 	float smoothx, smoothy;
 	int sx, sy;
 	int window_origin_x, window_origin_y;
+
+	mouse_idle_time = 0;
+	SDL_ShowCursor(SDL_ENABLE);
 
 	/* Find window origin in real screen coords */
 	SDL_GetWindowPosition(window, &window_origin_x, &window_origin_y);
@@ -23626,6 +23639,7 @@ int main(int argc, char *argv[])
 			nextTime += delta[1];
 			process_events(window);
 			advance_game();
+			maybe_hide_mouse_cursor();
 			if (final_quit_selection)
 				break;
 		} else {
