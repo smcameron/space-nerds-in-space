@@ -4406,7 +4406,15 @@ static void deal_with_keyboard()
 		h = -1;
 	if (kbstate.pressed[keyright])
 		h = 1;
-	if (kbstate.pressed[keyup])
+	/* keyviewmode is 'w' because SHIFT-w changes the main view to follow weapons.
+	 * We need to check if w is pressed for 'up' (WASD controls).  This is an ugly
+	 * hack, but it mostly works, except SHIFT-w changes to weapons mode AND
+	 * gives a bit of back-tilting yaw input, which it shouldn't. But at least
+	 * WASD works and not just ASD now. Of course, if the user changes keyviewmode
+	 * via ~/.space-nerds-in-space/snis-keymap.txt, it will probably do something
+	 * not quite expected.
+	 */
+	if (kbstate.pressed[keyup] || kbstate.pressed[keyviewmode])
 		v = -1;
 	if (kbstate.pressed[keydown])
 		v = 1;
@@ -4501,6 +4509,7 @@ static int key_press_cb(SDL_Window *window, SDL_Keysym *keysym)
 		kbstate.pressed[ka] = 1;
 
 	int control_key_pressed = keysym->mod & KMOD_CTRL;
+	int shift_key_pressed = keysym->mod & KMOD_SHIFT;
 
 	if (keysym->sym == SDLK_F12) {
 		pthread_mutex_lock(&voip_mutex);
@@ -4708,7 +4717,8 @@ static int key_press_cb(SDL_Window *window, SDL_Keysym *keysym)
 		break;
 	case keyviewmode:
 		/* Toggle main screen between "normal" and "weapons" view */
-		do_view_mode_change();
+		if (shift_key_pressed)
+			do_view_mode_change();
 		break;
 	case keyrenderswitch: {
 		static int r = 0;
