@@ -879,7 +879,7 @@ static int add_generic_object(uint32_t id, uint32_t timestamp, double x, double 
 		double vx, double vy, double vz,
 		const union quat *orientation, int type, uint16_t alive, struct entity *entity)
 {
-	int i;
+	int i, j;
 
 	i = snis_object_pool_alloc_obj(pool); 	 
 	if (i < 0) {
@@ -893,10 +893,13 @@ static int add_generic_object(uint32_t id, uint32_t timestamp, double x, double 
 	go[i].id = id;
 	go[i].nupdates = 1;
 	go[i].updatetime[0] = t;
-	go[i].o[0] = *orientation;
-	go[i].r[0].v.x = x;
-	go[i].r[0].v.y = y;
-	go[i].r[0].v.z = z;
+
+	for (j = 0; j < SNIS_ENTITY_NUPDATE_HISTORY; j++) {
+		go[i].o[j] = *orientation;
+		go[i].r[j].v.x = x;
+		go[i].r[j].v.y = y;
+		go[i].r[j].v.z = z;
+	}
 
 	/* entity move will update this */
 	set_object_location(&go[i], 0, 0, 0);
