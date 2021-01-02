@@ -901,8 +901,7 @@ static int add_generic_object(uint32_t id, uint32_t timestamp, double x, double 
 		go[i].r[j].v.z = z;
 	}
 
-	/* entity move will update this */
-	set_object_location(&go[i], 0, 0, 0);
+	set_object_location(&go[i], x, y, z);
 	go[i].orientation = identity_quat;
 
 	go[i].vx = vx;
