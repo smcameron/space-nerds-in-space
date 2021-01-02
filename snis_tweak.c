@@ -27,6 +27,7 @@
 
 #include "snis_tweak.h"
 #include "arraysize.h"
+#include "string-utils.h"
 
 int find_tweakable_var_descriptor(struct tweakable_var_descriptor *desc, int count, char *name)
 {
@@ -50,8 +51,15 @@ int tweak_variable(struct tweakable_var_descriptor *tweak, int count, char *cmd,
 	float f;
 	int i;
 	uint8_t b;
+	char *arg;
 
-	rc = sscanf(cmd, "SET %[^= ]%*[ =]%[^= ]", variable, valuestr);
+	arg = get_abbreviated_command_arg("SET", cmd);
+	if (!arg) {
+		if (msg)
+			snprintf(msg, msgsize, "SET: INVALID SET COMMAND: %s", cmd);
+		return TWEAK_BAD_SYNTAX;
+	}
+	rc = sscanf(arg, "%[^= ]%*[ =]%[^= ]", variable, valuestr);
 	if (rc != 2) {
 		if (msg)
 			snprintf(msg, msgsize, "SET: INVALID SET COMMAND: %s", cmd);
@@ -142,13 +150,15 @@ void tweakable_vars_list(struct tweakable_var_descriptor *tweak, char *regexp_pa
 
 	if (regexp_pattern) {
 		/* Cut off any leading "VARS " and extract the regex pattern following it.*/
-		if (strncmp(regexp_pattern, "VARS ", 5) == 0 && strlen(regexp_pattern) > 5) {
-			pattern = regexp_pattern + 5;
-			rc = regcomp(&re, pattern, REG_NOSUB | REG_ICASE);
-			if (rc) {
-				printfn("FAILED TO COMPILE REGEXP '%s'", regexp_pattern);
-				return;
-			}
+		pattern = get_abbreviated_command_arg("VARS", regexp_pattern);
+		if (!pattern) {
+			printfn("FAILED TO EXTRACT REGEXP PATTERN");
+			return;
+		}
+		rc = regcomp(&re, pattern, REG_NOSUB | REG_ICASE);
+		if (rc) {
+			printfn("FAILED TO COMPILE REGEXP '%s'", regexp_pattern);
+			return;
 		}
 	}
 
@@ -190,8 +200,14 @@ int tweakable_var_describe(struct tweakable_var_descriptor *tweak, int count, ch
 	int rc;
 	char variable[255];
 	struct tweakable_var_descriptor *v;
+	char *arg;
 
-	rc = sscanf(cmd, "DESCRIBE%*[ ]%s", variable);
+	arg = get_abbreviated_command_arg("DESCRIBE", cmd);
+	if (!arg) {
+		printfn("DESCRIBE: BAD COMMAND '%s'", cmd);
+		return TWEAK_BAD_SYNTAX;
+	}
+	rc = sscanf(arg, "%s", variable);
 	if (rc != 1) {
 		printfn("DESCRIBE: INVALID USAGE. USE E.G., DESCRIBE MAX_PLAYER_VELOCITY");
 		return TWEAK_BAD_SYNTAX;

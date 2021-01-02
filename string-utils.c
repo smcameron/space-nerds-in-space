@@ -261,3 +261,46 @@ char *get_field(char *line)
 	}
 	return i;
 }
+
+/* get_abbreviated_command_arg is for processing console commands.
+ * There are commands like * "DESCRIBE BLAH". But the user does not have to
+ * type DESCRIBE, they just have to type enough of DESCRIBE to be unique
+ * among the various commands, so "DESC BLAH" or even "DE BLAH" should work,
+ * if unique.  But then we need to find the command argument after whatever
+ * they typed. so,
+ *
+ *   get_abbreviated_command_arg("DESCRIBE", "DESC BLAH");
+ *
+ * should return a pointer to the B in DESC BLAH
+ *
+ *   get_abbreviated_command_arg("DESCRIBE", "DECSRIBE BLAH");
+ *
+ * should return NULL. (DECSCRIBE is misspelled).
+ */
+char *get_abbreviated_command_arg(char *expected_command, char *user_input)
+{
+	char *e, *i;
+	int mismatch = 0;
+
+	e = expected_command;
+	i = user_input;
+
+	for (;*i && *e;) {
+		if (*i == *e) {
+			i++;
+			e++;
+			continue;
+		}
+		if (*i == ' ') {
+			i++;
+			break;
+		}
+		mismatch = 1;
+		break;
+	}
+	if (mismatch)
+		return NULL;
+	while (*i == ' ')
+		i++;
+	return i;
+}
