@@ -19427,6 +19427,7 @@ static int process_exec_lua_script(struct game_client *c)
 	int i, rc;
 	uint8_t len;
 	char firstword[300];
+	int wordlen;
 
 	rc = read_and_unpack_buffer(c, buffer, "b", &len);
 	if (rc)
@@ -19443,8 +19444,9 @@ static int process_exec_lua_script(struct game_client *c)
 	}
 
 	/* See if it's a server builtin command */
+	wordlen = strlen(firstword); /* allow abbreviated commands to work. */
 	for (i = 0; i < ARRAYSIZE(server_builtin); i++) {
-		if (strcmp(firstword, server_builtin[i].cmd) == 0) {
+		if (strncmp(firstword, server_builtin[i].cmd, wordlen) == 0) {
 			server_builtin[i].fn(txt);
 			return 0;
 		}
