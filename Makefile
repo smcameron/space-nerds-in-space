@@ -655,8 +655,6 @@ MYCFLAGS=-DPREFIX=${PREFIX} ${DEBUGFLAG} ${PROFILEFLAG} ${OPTIMIZEFLAG}\
 	-Wno-extended-offsetof -Wno-gnu-folding-constant $(CFLAGS) -Wvla \
 	-DUSE_SNIS_XWINDOWS_HACKS=${USE_SNIS_XWINDOWS_HACKS} -fno-common \
 	-DUSE_CUSTOM_STRLCPY=${USE_CUSTOM_STRLCPY}
-GTKCFLAGS:=$(subst -I,-isystem ,$(shell $(PKG_CONFIG) --cflags gtk+-2.0))
-GTKLDFLAGS:=$(shell $(PKG_CONFIG) --libs gtk+-2.0) $(shell $(PKG_CONFIG) --libs gthread-2.0)
 VORBISFLAGS:=$(subst -I,-isystem ,$(shell $(PKG_CONFIG) --cflags vorbisfile))
 
 ifeq (${WITHVOICECHAT},yes)
@@ -680,7 +678,6 @@ ECHO=echo
 endif
 
 COMPILE=$(ECHO) '  COMPILE' $< && $(CC) ${MYCFLAGS} ${LUACFLAGS} -c -o $@ $<
-LIMCOMPILE=$(ECHO) '  COMPILE' $< && $(CC) -DWITHOUTOPENGL=1 ${MYCFLAGS} ${GTKCFLAGS} -c -o $@ $<
 VORBISCOMPILE=$(ECHO) '  COMPILE' $< && $(CC) ${MYCFLAGS} ${VORBISFLAGS} ${SNDFLAGS} -c -o $@ $<
 SDLCOMPILE=$(ECHO) '  COMPILE' $< && $(CC) ${MYCFLAGS} ${SDLCFLAGS} ${X11CFLAGS} -c -o $@ $<
 SNISSERVERDBGCOMPILE=$(ECHO) '  COMPILE' $< && $(CC) -DSNIS_SERVER_DATA ${MYCFLAGS} ${LUACFLAGS} -c -o $(OD)/snis_server_debug.o $<
@@ -700,16 +697,16 @@ EXTRACTDOCKINGPORTS=$(ECHO) '  EXTRACT DOCKING PORTS' $@ && $(AWK) -f extract_do
 _ELOBJS=mtwist.o mathutils.o quat.o open-simplex-noise.o png_utils.o crater.o pthread_util.o
 ELOBJS=$(patsubst %,$(OD)/%, ${_ELOBJS})
 ELLIBS=-lm ${LRTLIB} -lpng
-ELLINK=$(ECHO) '  LINK' $@ && $(CC) ${MYCFLAGS} -o $@ ${GTKCFLAGS} ${OD}/earthlike.o ${ELOBJS} ${ELLIBS} $(LDFLAGS)
+ELLINK=$(ECHO) '  LINK' $@ && $(CC) ${MYCFLAGS} -o $@ ${OD}/earthlike.o ${ELOBJS} ${ELLIBS} $(LDFLAGS)
 MCLIBS=-lm ${LRTLIB} -lpng
 _MCOBJS=png_utils.o
 MCOBJS=$(patsubst %,$(OD)/%, ${_MCOBJS})
-MCLINK=$(ECHO) '  LINK' $@ && $(CC) ${MYCFLAGS} -o $@ ${GTKCFLAGS} util/mask_clouds.o ${MCOBJS} ${MCLIBS} $(LDFLAGS)
+MCLINK=$(ECHO) '  LINK' $@ && $(CC) ${MYCFLAGS} -o $@ util/mask_clouds.o ${MCOBJS} ${MCLIBS} $(LDFLAGS)
 
 CMNMLIBS=-lm ${LRTLIB} -lpng
 _CMNMOBJS=png_utils.o
 CMNMOBJS=$(patsubst %,$(OD)/%, ${_CMNMOBJS})
-CMNMLINK=$(ECHO) '  LINK' $@ && $(CC) ${MYCFLAGS} -o $@ ${GTKCFLAGS} util/cloud-mask-normalmap.o ${CMNMOBJS} ${CMNMLIBS} $(LDFLAGS)
+CMNMLINK=$(ECHO) '  LINK' $@ && $(CC) ${MYCFLAGS} -o $@ util/cloud-mask-normalmap.o ${CMNMOBJS} ${CMNMLIBS} $(LDFLAGS)
 
 all:	bin/.t ${COMMONOBJS} ${SERVEROBJS} ${MULTIVERSEOBJS} ${CLIENTOBJS} ${BINPROGS} ${SCAD_PARAMS_FILES} ${DOCKING_PORT_FILES}
 
@@ -880,10 +877,6 @@ $(OD)/snis_server_tracker.o:	snis_server_tracker.c snis_server_tracker.h pthread
 $(OD)/snis_client.o:	snis_client.c Makefile build_info.h ui_colors.h ${ODT}
 	$(Q)$(SDLCOMPILE) ${VCHAT}
 
-$(OD)/snis_limited_client.o:	snis_client.c Makefile build_info.h ${ODT}
-	@echo -n "  (limited client) "
-	$(Q)$(LIMCOMPILE) ${VCHAT}
-
 $(OD)/mesh_viewer.o:	mesh_viewer.c Makefile build_info.h ${ODT}
 	$(Q)$(SDLCOMPILE)
 
@@ -1010,11 +1003,7 @@ bin/infinite-taunt:	${OD}/infinite-taunt.o ${OD}/names.o ${OD}/mtwist.o Makefile
 	$(CC) -DTEST_TAUNT -o bin/infinite-taunt ${MYCFLAGS} ${OD}/mtwist.o infinite-taunt.c ${OD}/names.o ${LBSD}
 
 bin/names:	names.c names.h ${OD}/mtwist.o ${BIN}
-	$(CC) -DTEST_NAMES -o bin/names ${MYCFLAGS} ${GTKCFLAGS} ${OD}/mtwist.o names.c
-
-$(OD)/snis_limited_graph.o:	snis_graph.c Makefile ${ODT}
-	@echo -n "  (limited client) "
-	$(Q)$(LIMCOMPILE)
+	$(CC) -DTEST_NAMES -o bin/names ${MYCFLAGS} ${OD}/mtwist.o names.c
 
 $(OD)/snis_graph.o:	snis_graph.c Makefile ${ODT}
 	$(Q)$(SDLCOMPILE)
@@ -1079,7 +1068,7 @@ $(OD)/stl_parser.o:	stl_parser.c Makefile ${ODT}
 bin/stl_parser:	stl_parser.c $(OD)/matrix.o $(OD)/mesh.o $(OD)/mathutils.o $(OD)/quat.o $(OD)/mtwist.o \
 		$(OD)/open-simplex-noise.o mikktspace/mikktspace.o \
 		$(OD)/string-utils.o Makefile ${BIN}
-	$(CC) -DTEST_STL_PARSER ${MYCFLAGS} ${GTKCFLAGS} -o bin/stl_parser stl_parser.c ${OD}/matrix.o ${OD}/mesh.o ${OD}/mathutils.o \
+	$(CC) -DTEST_STL_PARSER ${MYCFLAGS} -o bin/stl_parser stl_parser.c ${OD}/matrix.o ${OD}/mesh.o ${OD}/mathutils.o \
 		${OD}/quat.o ${OD}/mtwist.o mikktspace/mikktspace.o ${OD}/string-utils.o ${OD}/open-simplex-noise.o -lm $(LDFLAGS)
 
 $(OD)/entity.o:	entity.c Makefile ${ODT}
@@ -1192,7 +1181,7 @@ bin/test_key_value_parser:	key_value_parser.c key_value_parser.h Makefile ${BIN}
 	bin/test_key_value_parser
 
 bin/test-matrix:	matrix.c Makefile ${BIN}
-	$(CC) ${MYCFLAGS} ${GTKCFLAGS} -DTEST_MATRIX -o bin/test-matrix matrix.c -lm
+	$(CC) ${MYCFLAGS} -DTEST_MATRIX -o bin/test-matrix matrix.c -lm
 
 bin/test-space-partition:	space-part.c Makefile ${BIN}
 	$(CC) ${MYCFLAGS} -g -DTEST_SPACE_PARTITION -o bin/test-space-partition space-part.c -lm

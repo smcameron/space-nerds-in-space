@@ -23284,60 +23284,6 @@ static void setup_screen_parameters(SDL_Window *window)
 	sng_set_screen_size(real_screen_width, real_screen_height);
 }
 
-#if 0
-static void setup_window_geometry(SDL_Window *window)
-{
-	/* clamp window aspect ratio to constant */
-	GdkGeometry geom;
-	geom.min_aspect = (gdouble) SCREEN_WIDTH / (gdouble) SCREEN_HEIGHT;
-	geom.max_aspect = geom.min_aspect;
-	gtk_window_set_geometry_hints(GTK_WINDOW(window), NULL, &geom, GDK_HINT_ASPECT);
-}
-
-static void setup_gtk_window_and_drawing_area(GtkWidget **window, GtkWidget **vbox, GtkWidget **main_da)
-{
-	*window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
-	setup_window_geometry(*window);
-	/* These scalings are arbitrary, just played with it until it looked "good." */
-	snis_typefaces_init_with_scaling((float) SCREEN_WIDTH / 1050.0, (float) SCREEN_HEIGHT / 500.0);
-
-	gtk_container_set_border_width(GTK_CONTAINER(*window), 0);
-	*vbox = gtk_vbox_new(FALSE, 0);
-	gtk_window_move(GTK_WINDOW(*window), screen_offset_x, screen_offset_y);
-	*main_da = gtk_drawing_area_new();
-
-	g_signal_connect(G_OBJECT(*window), "delete_event",
-		G_CALLBACK(delete_event), NULL);
-	g_signal_connect(G_OBJECT(*window), "destroy",
-		G_CALLBACK(destroy), NULL);
-	g_signal_connect(G_OBJECT(*window), "key_press_event",
-		G_CALLBACK(key_press_cb), "window");
-	g_signal_connect(G_OBJECT(*window), "key_release_event",
-		G_CALLBACK(key_release_cb), "window");
-	g_signal_connect(G_OBJECT(*main_da), "expose_event",
-		G_CALLBACK(main_da_expose), NULL);
-	g_signal_connect(G_OBJECT(*main_da), "configure_event",
-		G_CALLBACK(main_da_configure), NULL);
-	g_signal_connect(G_OBJECT(*main_da), "scroll_event",
-		G_CALLBACK(main_da_scroll), NULL);
-	gtk_widget_add_events(*main_da, GDK_BUTTON_PRESS_MASK);
-	gtk_widget_add_events(*main_da, GDK_BUTTON_RELEASE_MASK);
-	gtk_widget_add_events(*main_da, GDK_BUTTON3_MOTION_MASK);
-	gtk_widget_add_events(*main_da, GDK_POINTER_MOTION_MASK);
-	g_signal_connect(G_OBJECT(*main_da), "button_press_event",
-		G_CALLBACK(main_da_button_press), NULL);
-	g_signal_connect(G_OBJECT(*main_da), "button_release_event",
-		G_CALLBACK(main_da_button_release), NULL);
-	g_signal_connect(G_OBJECT(*main_da), "motion_notify_event",
-		G_CALLBACK(main_da_motion_notify), NULL);
-
-	gtk_container_add(GTK_CONTAINER(*window), *vbox);
-	gtk_box_pack_start(GTK_BOX(*vbox), *main_da, TRUE /* expand */, TRUE /* fill */, 0);
-
-	gtk_window_set_default_size(GTK_WINDOW(*window), real_screen_width, real_screen_height);
-}
-#endif
-
 static void lobby_chosen(void *x)
 {
 	uint32_t ipaddr = (uint32_t) (intptr_t) x;
