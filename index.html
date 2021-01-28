@@ -26,6 +26,8 @@ pre{
 </style>
 </head>
 <body style="color:#7fafff; background-color:#000000">
+<link rel="icon" type="image/png" href="misc-images/snisicon.png">
+
 <p align=center><font size=+5><a name="Space Nerds In Space">S P A C E  &emsp;  N E R D S  &emsp;  I N  &emsp;  S P A C E</a></font>
 <p align=center><font size=+3>An Open Source Multi-player Networked Starship Bridge Simulator for Linux</font>
 <p align=center>Please consider donating to support development of Space Nerds In Space.
@@ -967,9 +969,11 @@ use the tts command to cause the computer on those ships to speak something.
 (This appears to be broken at the moment.)
 <li><b>CONSOLE</b> - toggle the demon screen console on and off. The console
 is a large terminal-like text box that you can interact with.
-<li><b>VARS</b> - list tweakable variables and their minimum, maximum,
+<li><b>VARS [regexp]</b> - list tweakable variables and their minimum, maximum,
 and default values on the demon console.  There are a number of tweakable
-variables that can affect gameplay.
+variables that can affect gameplay. You may optionally also specify a regular
+expression as an argument to the VARS command to restrict the output to only
+those commands whose name or description matches the regular expression.
 <li><b>SET <em>variable</em> = <em>value</em></b> - set a tweakable variable. The special
 value <cmd>DEFAULT</cmd> sets the variable back to its default value. List the
 tweakable variables using the <cmd>VARS</cmd> command.
