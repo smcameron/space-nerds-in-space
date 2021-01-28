@@ -428,11 +428,19 @@ in snis_client.c:
 
 <h3><a name="snisclientif">Important Functions in snis_client.c</a></h3>
 
+<h4>process_events()</h4>
+
+<p>process_events() is called from the main loop in main() at a rate of 60 Hz to process SDL events.
+Mouse movement, mouse wheel and button presses, key up, key-down, quit, and window resize events are
+handled here.
+
 <h4>main_da_expose()</h4>
 
-<p>main_da_expose() is connected to the GTK expose event for the main drawing area (main_da_expose means main drawing area expose).
+<p>main_da_expose() is called from the main loop at the bottom of main(),
+(main_da_expose means main drawing area expose) at 60 or 30Hz (depending on user
+tweakable variable use_60_fps.)
 This function is what draws the main drawing area -- which covers the entire screen.  In other words, it is what draws
-<em>everything that appears on the screen</em>. It is indirectly triggered at 30Hz via advance_game().
+<em>everything that appears on the screen</em>.
 
 <p>Within main_da_expose, there is a big switch statement which draws the appropriate screen
 depending on the value of displaymode.  See also the following functions in snis_client.c
@@ -465,20 +473,9 @@ displaymode.
 
 <h4>advance_game()</h4>
 
-advance_game() is called at a rate of 30Hz by a gtk timer arranged via this call in main() in snis_client.c:
+advance_game() is called at a rate of 60Hz from the main loop:
 
-<pre>
-	timer_tag = g_timeout_add(1000 / frame_rate_hz, advance_game, NULL);
-</pre>
-
-advance_game() polls the state of input devices and triggers an "expose" event for the main drawing area
-(which triggers a call to main_da_expose()) via this call:
-
-<pre>
-	gtk_widget_queue_draw(main_da);
-</pre>
-
-<p>advance_game() also moves objects and sparks on the client (doing interpolation between server updates),
+<p>advance_game() moves objects and sparks on the client (doing interpolation between server updates),
 expires starmap entries (how stars get removed from the starmap when snis_server processes exit) and notifies
 the server if the user has requested a change to the current displaymode (switched the screen
 to a different role, e.g. from Navigation to Weapons). (Ordinarily the server doesn't care which displaymode
@@ -490,15 +487,19 @@ a warp gate is traversed, triggered by receipt of OPCODE_SWITCH_SERVER from the 
 connected snis_server instance. This snis_server switching business is one of the more complicated
 parts and could probably be simplified, somehow.
 
+<p>advance_game() also polls the state of joysticks and processes changes in state of the keyboard
+and mouse (previously recorded by process_events()), and with any custom physical io devices
+(deal_with_physical_io_devices() -- of which there are currently none).
+
 <h4>Keyboard callbacks: key_press_cb, key_release_cb</h4>
 
-<p>Called by gtk when a key press or release event occurs. Keyboard handling stuff is here. See also
+<p>Called by process_events() when a key press or release event occurs. Keyboard handling stuff is here. See also
 deal_with_keyboard() in snis_client.c which acts on information collected in the aforementioned
 event handling functions.
 
 <h4>Mouse button callbacks: main_da_button_press, main_da_button_release, main_da_motion_notify</h4>
 
-<p>Called by gtk when there are mouse button press, release or motion events. See also deal_with_mouse()
+<p>Called by process_events() when there are mouse button press, release or motion events. See also deal_with_mouse()
 in snis_client.c which also acts on information collected in the aforementioned event handler functions.
 
 <h3><a name="snisclientthreads">snis_client Threads</a></h3>
@@ -671,32 +672,13 @@ send_demon_text_command(), which sends the commands to snis_server to be acted u
 
 <p>See main() in snis_client.c, at the end of the file.
 
-<p>There is a lot of initialization, reading of config files, parsing of options, setting up gtk windows, etc.
+<p>There is a lot of initialization, reading of config files, parsing of options, setting up SDL windows, etc.
 at the beginning which I won't describe here.
 
-<p>I will mention the call to setup_gtk_window_and_drawing_area() in snis_client.c which is where
-key press and key release events and mouse button press and mouse motion and scroll events are hooked
-from gtk to various callback functions. So if you're trying to figure out what happens when you press
-or release a key or mouse button or move the mouse, this is the beginning of the chain you need to
-follow.
-
-<p>One important line in snis_client.c:main() is this:
-<pre>
-	timer_tag = g_timeout_add(1000 / frame_rate_hz, advance_game, NULL);
-</pre>
-
-<p>which sets up a timer callback to repeatedly call advance_game() at a rate of 30Hz. This is what ultimately
-causes the screen to be drawn and the user inputs to be monitored at 30Hz.
-
-The last important line within snis_client.c:main() is
-
-<pre>
-	gtk_main ();
-</pre>
-
-This is the main gtk event loop.  This function does not return until the program is about to exit.
-advance_game is called at a rate of 30Hz from within gtk_main() because we set it up to do so with
-g_timeout_add as mentioned above.
+Towards the bottom of main() is a <em>while</em> loop. This is the main loop of the game
+and it runs at a rate of 60 Hz. It calls process_events() and advance_game() at
+60Hz, and main_da_expose() to draw the screen at 30 or 60 Hz depending on the user
+tweakable variable use_60_fps. The default is 30 Hz.
 
 <h4><a name="snisclientvoicechatdecodethread">Voice Chat decoding thread</a></h4>
 
@@ -714,11 +696,6 @@ to snis_server to be forwarded to other clients. See the section below about
 
 
 <h3><a name="rendering">Rendering</a></h3>
-
-<p>There are two renderers, the primary OpenGL based renderer and the secondary gdk based
-renderer.  The gdk based render is a software renderer and is very limited in its abilities,
-and is not suitable for all stations.  The gdk renderer is only used by snis_limited_client,
-(a binary built from snis_client.c, see the Makefile) everything else uses the opengl renderer.
 
 <p>entity.h and graph_dev.h define the interface to the renderer, with entity.h
 defining the higher level and common parts while graph_dev.h defines parts that have
@@ -883,7 +860,7 @@ Mainly this is choosing between "normal" rendering (FLATSHADING_RENDERER) and so
 
 <h3><a name="guiwidget">GUI widget system</a></h3>
 
-<p>There are a variety of custom "widgets" (not to be confused with gtk widgets)
+<p>There are a variety of custom "widgets"
 used to create the UI: buttons, text input fields, scrolling text windows,
 gauges, sliders, and pull down menus.
 
@@ -1040,9 +1017,14 @@ show_demon_console() -- though it's just unhiding a text box widget.
 
 <h3><a name="kmjinput">Keyboard, Mouse and Joystick Input</a></h3>
 
-<p>Keyboard and mouse input are handled by GTK. setup_gtk_window_and_drawing_area() in
-snis.c hooks gtk events for key presses and key releases and mouse button presses and
-mouse motion to the following functions:
+<p>Keyboard and mouse input are handled at a low level by SDL which calls
+process_events() to handle key presses and key releases and mouse button
+presses and mouse motion which dispatches to the following functions:
+
+process_event passes the event to ui_element_list_event() which allows the
+custom widgets (buttons, sliders, menus, etc) to potentially process the
+event. If the widgets do not consume the event, it may be further processed
+as a direct input to the game, as follows:
 
 <ul>
 <li>key press - key_press_cb()
@@ -1050,7 +1032,9 @@ mouse motion to the following functions:
 <li>mouse button press - main_da_button_press()
 <li>mouse button release - main_da_button_release()
 <li>mouse motion - main_da_motion_notify()
+<li>window resize - sng_set_screen_size()
 </ul>
+
 
 <p>There is a struct keyboard_state kbstate variable defined
 in snis_keyboard.c and snis_keyboard.h which captures the current
@@ -1149,8 +1133,8 @@ via OPCODE_UPDATE_SOLARSYSTEM_LOCATION.)
 <p>These adjacencies determine which stars you can travel to via warpgates from any
 given star, and are how snis_client knows what to lines to draw between stars on the
 starmap.  The starmap is drawn by the function draw_3d_nav_starmap() in snis_client.c
-called by show_navigation(), called by main_da_expose(), called (through a function
-pointer) by gtk_main(), using the starmap_adjacency[][] array, which is filled in
+called by show_navigation(), called by main_da_expose(), called from the main loop
+in main(), using the starmap_adjacency[][] array, which is filled in
 by starmap_compute_adjacencies() in starmap_adjacency.c called from
 process_update_solarsystem_location(), or initially from construct_starmap(), called
 from main() in snis_client.c
@@ -2716,8 +2700,10 @@ of the renderer</td></tr>
 code that is using the renderer</td></tr>
 <tr><td>fleet.c, fleet.h</td><td>Defines data structures and functions related to grouping NPC ships into fleets</td></tr>
 <tr><td>generate_skybox.c</td><td>Program to procedurally generate skybox cubemap textures</td></tr>
-<tr><td>graph_dev_gdk.c</td><td>GDK implementation of the interface defined by graph_dev.h. This is a core part of the
-software renderer used by the limited client.</td></tr>
+<tr><td>graph_dev_gdk.c</td><td>Obsolete. This was a GDK implementation of the interface defined by
+graph_dev.h. This was a core part of the
+software renderer used by the limited client. (The limited client ceased to exist when snis_client
+was converted from GTK to SDL2.)</td></tr>
 <tr><td>graph_dev.h</td><td>Interface of device dependent portion of the renderer (graph_dev_gdk and graph_dev_opengl implement this interface)</td></tr>
 <tr><td>graph_dev_mesh_stub.c, graph_dev_mesh_stub.h</td><td>Stub routines used by snis_server to satisfy requirements of mesh.c.  mesh.c calls some
 functions to initialize some things related to rendering, but since snis_server doesn't render, it doesn't need these things.  So for snis_server,
@@ -2760,7 +2746,7 @@ return the closest point on the surface of that box to a given point. Useful for
 <tr><td>placeholder-socket-points.h</td><td>2D drawing data for "sockets" on the damage control screen</td></tr>
 <tr><td>placeholder-system-points.h</td><td>2D drawing data for "systems" on the damage control screen</td></tr>
 <tr><td>planetary_atmosphere.c, planetary_atmosphere.h</td><td>Code for procedurally generating chemical compositions of planetary atmospheres</td></tr>
-<tr><td>png_utils.c, png_utils.h</td><td>Code for reading and writing PNG images (this should probably be replaced by some GTK stuff)</td></tr>
+<tr><td>png_utils.c, png_utils.h</td><td>Code for reading and writing PNG images</td></tr>
 <tr><td>power-model.c, power-model.h</td><td>Code to model the players' ship's systems as an electrical circuit</td></tr>
 <tr><td>print_ship_attributes.c</td><td>Program to print out ship attribute names and offsets (for debugging purposes).</td></tr>
 <tr><td>pronunciation.c, pronunciation.h</td><td>Code to fix up abbreviations like SB-00 and WG-01 to "starbase zero" and "warp gate one" so that
@@ -2806,7 +2792,8 @@ callbacks for events are implemented.</td></tr>
 <tr><td>snis_hash.c, snis_hash.h</td><td>Defines hash functions used for passwords</td></tr>
 <tr><td>snis_keyboard.c, snis_keyboard.h</td><td>Defines key mapping and functions to read key mapping config file</td></tr>
 <tr><td>snis_label.c, snis_label.h</td><td>Label UI widget</td></tr>
-<tr><td>snis_limited_graph.c</td><td>Defines many GDK drawing and graphics functions</td></tr>
+<tr><td>snis_limited_graph.c</td><td>Obsolete. Defines many GDK drawing and graphics functions once used
+by the limited client (which doesn't exist since the conversion from GTK to SDL2.)</td></tr>
 <tr><td>snis_log.h</td><td>Defines some snis log file functions (in terms of ssgl log file functions) Not very heavily used.</td></tr>
 <tr><td>snis_marshal.c, snis_marshal.h</td><td>Defines a packed buffer structure and functions for packing
 or unpacking various data types into or out of such buffers</td></tr>
