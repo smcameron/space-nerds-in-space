@@ -4510,7 +4510,7 @@ static int key_press_cb(SDL_Window *window, SDL_Keysym *keysym)
 	if (ka > 0 && ka < NKEYSTATES)
 		kbstate.pressed[ka] = 1;
 
-	int control_key_pressed = keysym->mod & KMOD_CTRL;
+	control_key_pressed = keysym->mod & KMOD_CTRL;
 	int shift_key_pressed = keysym->mod & KMOD_SHIFT;
 
 	if (keysym->sym == SDLK_F12) {
