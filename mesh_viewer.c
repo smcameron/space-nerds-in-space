@@ -35,7 +35,9 @@
 #include "open-simplex-noise.h"
 #include "replacement_assets.h"
 
-#define FOV (30.0 * M_PI / 180.0)
+#define DEFAULT_FOV (30.0 * M_PI / 180.0)
+#define MIN_FOV (15.0 * M_PI / 180.0)
+#define MAX_FOV (95.0 * M_PI / 180.0)
 #define FPS 60
 
 #define SCREEN_WIDTH 800	/* window width, in pixels */
@@ -96,6 +98,7 @@ static int warpgate_mode = 0;
 static char *replacement_assets_file = NULL;
 static struct replacement_asset replacement_asset = { 0 };
 static int reload_shaders = 0;
+static float FOV = DEFAULT_FOV;
 
 static char *maybe_replace_asset(char *asset)
 {
@@ -245,6 +248,16 @@ static void distort_the_mesh(int distort)
 	mesh_graph_dev_init(target_mesh);
 }
 
+static void adjust_fov(float factor)
+{
+	if (factor > 1.0 && FOV < MAX_FOV) {
+		FOV *=	factor;
+		return;
+	}
+	if (factor < 1.0 && FOV > MIN_FOV)
+		FOV *= factor;
+}
+
 static void handle_key_down(SDL_Keysym *keysym)
 {
 	static int fullscreen = 0;
@@ -299,6 +312,12 @@ static void handle_key_down(SDL_Keysym *keysym)
 		break;
 	case SDLK_u:
 		distort_the_mesh(0);
+		break;
+	case SDLK_0:
+		adjust_fov(1.02);
+		break;
+	case SDLK_9:
+		adjust_fov(0.98);
 		break;
 	default:
 		break;
