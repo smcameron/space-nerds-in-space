@@ -43,4 +43,6 @@
 char *handle_spelled_numbers_in_place(char *input);
 char *handle_spelled_numbers_alloc(char *input);
 
+int numbers_to_words(float number, int max_decimal_places, char *buffer, int buflen); /* convert floats to words (to 3 decimal places) */
+
 #endif

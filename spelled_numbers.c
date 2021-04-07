@@ -21,6 +21,7 @@
 
 #include "spelled_numbers.h"
 
+#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -328,6 +329,157 @@ char *handle_spelled_numbers(char *input)
 	return handle_spelled_numbers_in_place(x);
 }
 
+static char *one[] = { "zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine" };
+static char *teen[] = { "ten", "eleven", "twelve", "thirteen", "fourteen", "fifteen", "sixteen",
+				"seventeen", "eightteen", "nineteen" };
+static char *tens[] = { "", "", "twenty", "thirty", "forty", "fifty", "sixty", "seventy", "eighty", "ninety" };
+
+static int frac_to_words(float number, char *buffer, int buflen, int max_decimal_places)
+{
+	int i, rc, x;
+	float frac = fabsf(number - trunc(number));
+	int digit;
+
+	buflen--;
+	x = 0;
+	rc = snprintf(buffer, buflen, "point");
+	if (rc < 0)
+		return -1;
+	buflen -= rc;
+	x = rc;
+	for (i = 0; i < max_decimal_places; i++) {
+		char *word;
+		frac = (frac - trunc(frac)) * 10.0;
+		digit = (int) (trunc(frac));
+		word = one[digit];
+		rc = snprintf(&buffer[x], buflen, " %s", word);
+		if (rc < 0)
+			return -1;
+		x += rc;
+		buflen -= x;
+		if (buflen < 2)
+			return -1;
+	}
+	return x;
+}
+
+static int int_to_words(int number, char *buffer, int buflen);
+
+/* number is the number to convert.
+ * number_name = "billion", "million", "thousand", or "hundred"
+ * number_value = the integer value of number_name
+ * output the buffer to store the output words in
+ * outputlen = capacity of output buffer
+ */
+static int int_to_words_helper(int number, char *number_name, int number_value, char *output, int outputlen)
+{
+	char num[100];
+	char rest[100];
+	int rc;
+
+	int n = number / number_value; /* i.e. millions = number / 1000000 */
+	int remaining = number - number_value * n;
+	rc = int_to_words(n, num, 100);
+	if (rc < 0)
+		return rc;
+	if (remaining != 0) {
+		rc = int_to_words(remaining, rest, 100);
+		if (rc < 0)
+			return rc;
+		rc = snprintf(output, outputlen, "%s %s %s", num, number_name, rest);
+	} else {
+		rc = snprintf(output, outputlen, "%s %s", num, number_name);
+	}
+	return rc;
+}
+
+static int int_to_words(int number, char *buffer, int buflen)
+{
+	int rc, x;
+
+	x = 0;
+	if (number < 0)
+		number = -number;
+	if (number < 10) {
+		rc = snprintf(&buffer[x], buflen, "%s", one[number]);
+		if (rc < 0)
+			return -1;
+		buflen -= rc;
+		x += rc;
+		return x;
+	}
+	if (number < 20) {
+		rc = snprintf(&buffer[x], buflen, "%s", teen[number - 10]);
+		if (rc < 0)
+			return -1;
+		buflen -= rc;
+		x += rc;
+		return x;
+	}
+	if (number < 100) {
+		char rest[100];
+		int ts = number / 10;
+		int remaining = number - 10 * ts;
+		if (remaining != 0) {
+			rc = int_to_words(remaining, rest, 100);
+			if (rc < 0)
+				return rc;
+			rc = snprintf(buffer, buflen, "%s %s", tens[ts], rest);
+		} else {
+			rc = snprintf(buffer, buflen, "%s", tens[ts]);
+		}
+		return rc;
+	}
+	if (number < 1000)
+		return int_to_words_helper(number, "hundred", 100, buffer, buflen);
+	if (number < 1000000)
+		return int_to_words_helper(number, "thousand", 1000, buffer, buflen);
+	if (number < 1000000000)
+		return int_to_words_helper(number, "million", 1000000, buffer, buflen);
+	if (number < 1000000000000)
+		return int_to_words_helper(number, "billion", 1000000000, buffer, buflen);
+	return -1;
+}
+
+static int integer_to_words(int number, char *buffer, int buflen)
+{
+	int rc = 0;
+
+	if (number < 0) {
+		rc = snprintf(buffer, buflen, "minus ");
+		if (rc < 0)
+			return rc;
+		number = -number;
+	}
+	rc = int_to_words(number, &buffer[rc], buflen - rc);
+	return rc;
+}
+
+/* Convert numeric values to words, e.g. 1234.5 becomes "one thousand two hundred thirty-four point five" */
+int numbers_to_words(float number, int max_decimal_places, char *buffer, int buflen)
+{
+	int i, rc;
+	float f;
+	char ipart[500], fpart[500];
+
+	i = trunc(number);
+	f = fabsf(number) - fabsf(i);
+
+	rc = integer_to_words(i, ipart, 500);
+	if (rc < 0)
+		return rc;
+	if (max_decimal_places > 0)
+		rc = frac_to_words(f, fpart, 500, max_decimal_places);
+		if (rc < 0)
+			return rc;
+
+	if ((f * 1000) >= 1.0 && max_decimal_places > 0)
+		rc = snprintf(buffer, buflen, "%s %s", ipart, fpart);
+	else
+		rc = snprintf(buffer, buflen, "%s", ipart);
+	return rc;
+}
+
 #ifdef SPELLED_NUMBERS_TEST_CASE
 static int total = 0;
 static int testcase(char *input, char *expected)
@@ -352,6 +504,118 @@ static int testcase(char *input, char *expected)
 	}
 	free(output);
 	return 0;
+}
+
+static int testcase_frac_to_words(float input, int max_decimal_places, char *expected)
+{
+	int rc;
+	char output[1000];
+
+	rc = frac_to_words(input, output, 1000, max_decimal_places);
+	if (rc < 0) {
+		printf("Failed: frac_to_words(%f, ...) returned rc = %d\n", input, rc);
+		return 1;
+	}
+	if (strcmp(expected, output) != 0) {
+		printf("Failed: frac_to_words(%f, ...) returned '%s', expected '%s'\n", input, output, expected);
+		return 1;
+	}
+	return 0;
+}
+
+static int testcase_integer_to_words(int input, char *expected)
+{
+	int rc;
+	char output[1000];
+	rc = integer_to_words(input, output, 1000);
+	if (rc < 0) {
+		printf("Failed: int_to_words(%d, ...) returned rc = %d\n", input, rc);
+		return 1;
+	}
+	if (strcmp(expected, output) != 0) {
+		printf("Failed: int_to_words(%d, ...) returned '%s', expected '%s'\n", input, output, expected);
+		return 1;
+	}
+	return 0;
+}
+
+static int testcase_numbers_to_words(float input, int max_decimal_places, char *expected)
+{
+	int rc;
+	char output[1000];
+	rc = numbers_to_words(input, max_decimal_places, output, 1000);
+	if (rc < 0) {
+		printf("Failed: numbers_to_words(%f, ...) returned rc = %d\n", input, rc);
+		return 1;
+	}
+	if (strcmp(expected, output) != 0) {
+		printf("Failed: numbers_to_words(%f, ...) returned '%s', expected '%s'\n", input, output, expected);
+		return 1;
+	}
+	return 0;
+}
+
+static int test_frac_to_words(void)
+{
+	int rc = 0;
+
+	rc += testcase_frac_to_words(0.123, 3, "point one two three");
+	rc += testcase_frac_to_words(7.123, 2, "point one two");
+	rc += testcase_frac_to_words(7.7777, 3, "point seven seven seven");
+	rc += testcase_frac_to_words(-7.127777, 4, "point one two seven seven");
+	rc += testcase_frac_to_words(-7.127777, 1, "point one");
+	rc += testcase_frac_to_words(1.77770e3, 3, "point six nine nine"); /* float precision */
+	return rc;
+}
+
+static int test_int_to_words(void)
+{
+	int rc = 0;
+	char buffer[1000];
+
+	rc += testcase_integer_to_words(0, "zero");
+	rc += testcase_integer_to_words(9, "nine");
+	rc += testcase_integer_to_words(10, "ten");
+	rc += testcase_integer_to_words(-1, "minus one");
+	rc += testcase_integer_to_words(-2, "minus two");
+	rc += testcase_integer_to_words(20, "twenty");
+	rc += testcase_integer_to_words(25, "twenty five");
+	rc += testcase_integer_to_words(-34, "minus thirty four");
+	rc += testcase_integer_to_words(100, "one hundred");
+	rc += testcase_integer_to_words(500, "five hundred");
+	rc += testcase_integer_to_words(520, "five hundred twenty");
+	rc += testcase_integer_to_words(1520, "one thousand five hundred twenty");
+	rc += testcase_integer_to_words(11520, "eleven thousand five hundred twenty");
+	rc += testcase_integer_to_words(211520, "two hundred eleven thousand five hundred twenty");
+	rc += testcase_integer_to_words(3000005, "three million five");
+	rc += testcase_integer_to_words(3211520, "three million two hundred eleven thousand five hundred twenty");
+	rc += testcase_integer_to_words(43211520,
+		"forty three million two hundred eleven thousand five hundred twenty");
+	rc += testcase_integer_to_words(543211520,
+		"five hundred forty three million two hundred eleven thousand five hundred twenty");
+}
+
+static int test_numbers_to_words(void)
+{
+	int rc = 0;
+
+	rc += test_frac_to_words();
+	rc += test_int_to_words();
+
+	rc += testcase_numbers_to_words(0.0, 3, "zero");
+	rc += testcase_numbers_to_words(1.1, 3, "one point one zero zero");
+	rc += testcase_numbers_to_words(13.1, 2, "thirteen point one zero");
+	rc += testcase_numbers_to_words(113.1, 3, "one hundred thirteen point zero nine nine");
+	rc += testcase_numbers_to_words(113.123, 3, "one hundred thirteen point one two three");
+	rc += testcase_numbers_to_words(113.123, 4, "one hundred thirteen point one two three zero");
+	rc += testcase_numbers_to_words(1e6, 3, "one million");
+	rc += testcase_numbers_to_words(-1.005e6, 3, "minus one million five thousand");
+	rc += testcase_numbers_to_words(-1.005033e6, 3, "minus one million five thousand thirty three");
+	rc += testcase_numbers_to_words(-1.0005e7, 3, "minus ten million five thousand");
+	rc += testcase_numbers_to_words(3.1415927, 6, "three point one four one five nine two");
+	rc += testcase_numbers_to_words(3.1415927, 0, "three");
+
+	return rc;
 }
 
 int main(int argc, char *argv[])
@@ -453,6 +717,8 @@ int main(int argc, char *argv[])
 
 	/* It is a pretty severe bug that the following test case fails. */
 	rc += testcase("one hundred and ten thousand", "110000");
+
+	rc += test_numbers_to_words();
 
 	if (rc) {
 		printf("Failed %d out of %d test cases\n", rc, total);

@@ -1214,7 +1214,7 @@ test_scipher:	scipher.c scipher.h mathutils.o mtwist.o
 	$(CC) -g -fsanitize=address -DTEST_SCIPHER -o test_scipher scipher.c mathutils.o mtwist.o -lm
 
 spelled_numbers:	spelled_numbers.c
-	$(CC) -g -DSPELLED_NUMBERS_TEST_CASE -o spelled_numbers spelled_numbers.c
+	$(CC) -g -DSPELLED_NUMBERS_TEST_CASE -o spelled_numbers spelled_numbers.c -lm
 
 ${SSGL}:
 	(cd ssgl && ${MAKE} USE_CUSTOM_STRLCPY=${USE_CUSTOM_STRLCPY} )
