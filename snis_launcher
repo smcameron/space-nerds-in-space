@@ -265,7 +265,7 @@ start_snis_server()
 	get_solarsystem_name
 	echo "Using solar system $SOLARSYSTEM_NAME"
 	SS1="$SOLARSYSTEM_NAME"
-	${SNIS_SERVER} -l "${LOBBYHOST}" -L "$(uppercase ""$SS1"")" -m narnia -s "$SS1" ${ENABLE_ENSCRIPT} ${TRAP_NANS} > snis_server_log.txt 2>&1 &
+	${SNIS_SERVER} -l "${LOBBYHOST}" -L "$(uppercase \""$SS1"\")" -m narnia -s "$SS1" ${ENABLE_ENSCRIPT} ${TRAP_NANS} > snis_server_log.txt 2>&1 &
 	sleep 2.5
 }
 
