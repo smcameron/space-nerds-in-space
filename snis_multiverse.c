@@ -39,6 +39,7 @@ persisted in a simple database by snis_multiverse.
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include <netinet/ip.h>
 #include <netinet/tcp.h>
 #include <arpa/inet.h>
 #include <netdb.h>
@@ -898,8 +899,12 @@ static void service_connection(int connection)
 	fprintf(stderr, "snis_multiverse: zzz 2\n");
 	i = setsockopt(connection, IPPROTO_TCP, TCP_NODELAY, (char *) &flag, sizeof(int));
 	if (i < 0)
-		snis_log(SNIS_ERROR, "snis_multiverse: setsockopt failed: %s.\n", strerror(errno));
+		snis_log(SNIS_ERROR, "snis_multiverse: setsockopt(TCP_NODELAY) failed: %s.\n", strerror(errno));
 	fprintf(stderr, "snis_multiverse: zzz 2.5\n");
+	uint8_t iptos_lowdelay = IPTOS_LOWDELAY;
+	i = setsockopt(connection, IPPROTO_IP, IPTOS_LOWDELAY, &iptos_lowdelay, sizeof(iptos_lowdelay));
+	if (i < 0)
+		snis_log(SNIS_ERROR, "snis_multiverse: setsockopt(IPTOS_LOWDELAY) failed: %s.\n", strerror(errno));
 
 	if (verify_client_protocol(connection)) {
 		log_client_info(SNIS_ERROR, connection, "snis_multiverse: disconnected, protocol violation\n");

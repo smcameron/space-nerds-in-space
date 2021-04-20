@@ -32,6 +32,7 @@
 #include <sys/types.h>
 #include <fcntl.h>
 #include <netinet/in.h>
+#include <netinet/ip.h>
 #include <arpa/inet.h>
 #include <sys/socket.h>
 #include <netdb.h>
@@ -25342,7 +25343,11 @@ static void service_connection(int connection)
 
 	i = setsockopt(connection, IPPROTO_TCP, TCP_NODELAY, (char *) &flag, sizeof(int));
 	if (i < 0)
-		snis_log(SNIS_ERROR, "setsockopt failed: %s.\n", strerror(errno));
+		snis_log(SNIS_ERROR, "setsockopt(TCP_NODELAY) failed: %s.\n", strerror(errno));
+	uint8_t iptos_lowdelay = IPTOS_LOWDELAY;
+	i = setsockopt(connection, IPPROTO_IP, IP_TOS, &iptos_lowdelay, sizeof(iptos_lowdelay));
+	if (i < 0)
+		snis_log(SNIS_ERROR, "setsockopt(IPTOS_LOWDELAY) failed: %s.\n", strerror(errno));
 
 	if (verify_client_protocol(connection)) {
 		log_client_info(SNIS_ERROR, connection, "disconnected, protocol violation\n");
@@ -30402,6 +30407,10 @@ static void connect_to_multiverse(struct multiverse_server_info *msi, uint32_t i
 	rc = setsockopt(sock, IPPROTO_TCP, TCP_NODELAY, (char *) &flag, sizeof(int));
 	if (rc)
 		fprintf(stderr, "setsockopt(TCP_NODELAY) failed.\n");
+	uint8_t iptos_lowdelay = IPTOS_LOWDELAY;
+	rc = setsockopt(sock, IPPROTO_IP, IPTOS_LOWDELAY, (char *) &iptos_lowdelay, sizeof(iptos_lowdelay));
+	if (rc)
+		fprintf(stderr, "setsockopt(IPTOS_LOWDELAY) failed.\n");
 	const int len = sizeof(SNIS_MULTIVERSE_VERSION) - 1;
 	if (multiverse_debug)
 		fprintf(stderr, "%s: writing SNIS_MULTIVERSE_VERSION (len = %d)\n",

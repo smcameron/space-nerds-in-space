@@ -42,6 +42,7 @@
 #include <assert.h>
 #include <netinet/tcp.h>
 #include <netinet/in.h>
+#include <netinet/ip.h>
 #include <getopt.h>
 #include <signal.h>
 #ifdef __APPLE__
@@ -8480,6 +8481,13 @@ static void *connect_to_gameserver_thread(__attribute__((unused)) void *arg)
 		fprintf(stderr, "setsockopt(TCP_NODELAY) failed.\n");
 		snprintf(connecting_to_server_msg, sizeof(connecting_to_server_msg),
 				"setsockopt(TCP_NODELAY) failed.");
+	}
+	uint8_t iptos_lowdelay = IPTOS_LOWDELAY;
+	rc = setsockopt(gameserver_sock, IPPROTO_IP, IP_TOS, &iptos_lowdelay, sizeof(uint8_t));
+	if (rc) {
+		fprintf(stderr, "setsockopt(IPTOS_LOWDELAY) failed.\n");
+		snprintf(connecting_to_server_msg, sizeof(connecting_to_server_msg),
+				"setsockopt(IPTOS_LOWDELAY) failed.");
 	}
 
 	rc = snis_writesocket(gameserver_sock, SNIS_PROTOCOL_VERSION, strlen(SNIS_PROTOCOL_VERSION));
