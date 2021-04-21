@@ -25477,7 +25477,7 @@ static void *listener_thread_fn(__attribute__((unused)) void *unused)
 	uint16_t port;
 	struct addrinfo hints;
 	struct addrinfo *result, *rp;
-	int s;
+	int loop_count, s, port_bound;
 	char portstr[20];
 	char *snis_server_port_var;
 	char *port_range;
@@ -25512,7 +25512,8 @@ static void *listener_thread_fn(__attribute__((unused)) void *unused)
 	/* Bind "rendezvous" socket to a random port to listen for connections.
 	 * unless SNISSERVERPORT is defined, in which case, try to use that.
 	 */
-	while (1) {
+	port_bound = 0;
+	for (loop_count = 0; loop_count < 10000; loop_count++) {
 
 		/* 
 		 * choose a random port in the "Dynamic and/or Private" range
@@ -25551,15 +25552,27 @@ static void *listener_thread_fn(__attribute__((unused)) void *unused)
 
 		for (rp = result; rp != NULL; rp = rp->ai_next) {
 			rendezvous = socket(rp->ai_family, rp->ai_socktype, rp->ai_protocol);
-			if (rendezvous == -1)
+			if (rendezvous == -1) {
+				fprintf(stderr, "socket returned -1, %d %s\n", errno, strerror(errno));
 				continue;
+			}
 
-			if (bind(rendezvous, rp->ai_addr, rp->ai_addrlen) == 0)
+			if (bind(rendezvous, rp->ai_addr, rp->ai_addrlen) == 0) {
+				port_bound = 1;
 				break;                  /* Success */
+			}
+			fprintf(stderr, "snis_server: bind on rendezvous socket returned %d: %d:%s\n",
+					rc, errno, strerror(errno));
 			close(rendezvous);
 		}
 		if (rp != NULL)
 			break;
+	}
+
+	if (!port_bound) {
+		fprintf(stderr, "snis_server:Failed to bind listener socket after %d attempts.  Exiting.\n",
+			loop_count);
+		exit(1);
 	}
 
 	/* At this point, "rendezvous" is bound to a random port */
