@@ -4044,16 +4044,11 @@ void graph_dev_expire_texture(char *filename)
 {
 	int i;
 
-	fprintf(stderr, "attempting to expire texture %s\n", filename);
 	for (i = 0; i < nloaded_textures; i++)
 		if (strcmp(loaded_textures[i].filename, filename) == 0) {
-			fprintf(stderr, "Expired texture %d, %s\n", i, loaded_textures[i].filename);
 			loaded_textures[i].expired = 1;
 			return;
-		} else {
-			fprintf(stderr, "Did not match '%s'\n", loaded_textures[i].filename);
 		}
-	fprintf(stderr, "Did not expire texture %s\n", filename);
 }
 
 void graph_dev_expire_cubemap_texture(int is_inside,
@@ -4071,26 +4066,21 @@ void graph_dev_expire_cubemap_texture(int is_inside,
 		texture_filename_pos_y, texture_filename_neg_y,
 		texture_filename_pos_z, texture_filename_neg_z };
 
-	fprintf(stderr, "attempting to expire cubemap texture %s\n", texture_filename_pos_x);
 	for (i = 0; i < nloaded_cubemap_textures; i++) {
 		if (loaded_cubemap_textures[i].is_inside == is_inside) {
 			int match = 1;
 			for (j = 0; j < NCUBEMAP_TEXTURES; j++) {
 				if (strcmp(tex_filenames[j], loaded_cubemap_textures[i].filename[j]) != 0) {
-					fprintf(stderr, "Did not match %s\n", loaded_cubemap_textures[i].filename[j]);
 					match = 0;
 					break;
 				}
 			}
 			if (match) {
-				fprintf(stderr, "Expired cubemap texture %d, %s\n",
-					i, loaded_cubemap_textures[i].filename[0]);
 				loaded_cubemap_textures[i].expired = 1;
 				return;
 			}
 		}
 	}
-	fprintf(stderr, "Failed to expire cubemap texture %s\n", texture_filename_pos_x);
 }
 
 /* Returns texture id, or zero if failure */

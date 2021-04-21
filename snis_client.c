@@ -21728,7 +21728,6 @@ static void expire_per_solarsystem_textures(char *old_solarsystem, struct solars
 	int i;
 	char path[PATH_MAX];
 
-	fprintf(stderr, "xxxxxxx asset_dir='%s', old_solarsystem='%s'\n", asset_dir, old_solarsystem);
 	snprintf(path, sizeof(path), "solarsystems/%s/%s", old_solarsystem, assets->skybox_prefix);
 	expire_skybox_texture(path);
 
