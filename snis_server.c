@@ -25523,8 +25523,7 @@ static void *listener_thread_fn(__attribute__((unused)) void *unused)
 			/* TODO: figure out how to ensure snis_server instance port numbers
 			 * do not collide with each other.
 			 */
-			port = (snis_randn(INT_MAX) % (snis_server_port_max - snis_server_port_min)) +
-					snis_server_port_min;
+			port = snis_randn(snis_server_port_max - snis_server_port_min) + snis_server_port_min;
 		else
 			port = default_snis_server_port;
 		snis_log(SNIS_INFO, "Trying port %d\n", port);
