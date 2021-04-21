@@ -2227,12 +2227,10 @@ static int update_planet(uint32_t id, uint32_t timestamp, double x, double y, do
 
 		/* each planet texture has other versions with a variation of the ring materials */
 		m = solarsystem_planet_type;
-		fprintf(stderr, "zzz %s solarsystem_planet_type = %d\n", solarsystem_name, m);
 		if (!hasring) {
 			const int ring_materials = (NPLANET_MATERIALS / 2);
 			m = m + ring_materials + 6 * (ring_selector % (ring_materials / 6));
 		}
-		fprintf(stderr, "zzz m = %d, has_atmosphere = %hhu, has ring = %d\n", m, has_atmosphere, hasring);
 
 		e = add_entity(ecx, planet_sphere_mesh, x, y, z, PLANET_COLOR);
 		if (e) {
