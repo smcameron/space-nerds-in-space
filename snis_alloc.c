@@ -40,7 +40,7 @@ struct snis_object_pool {
 };
 
 #define BITISSET(pool, id) \
-        ((pool)->free_obj_bitmap[(id) >> 5] & (1 << ((id) % 32)))
+	((pool)->free_obj_bitmap[(id) >> 5] & ((uint32_t) 1 << ((id) % 32)))
 
 void snis_object_pool_setup(struct snis_object_pool **pool, int maxobjs)
 {
@@ -95,7 +95,7 @@ int snis_object_pool_alloc_obj(struct snis_object_pool *pool)
 			if (answer > pool->highest_object_number)
 				pool->highest_object_number = answer;
 			/* Found free bit, bit j.  Set it, marking it non free.  */
-			pool->free_obj_bitmap[i] |= (1 << j);
+			pool->free_obj_bitmap[i] |= ((uint32_t) 1 << j);
 			return answer;
 		}
 	}
@@ -112,7 +112,7 @@ void snis_object_pool_free_object(struct snis_object_pool *pool, int i)
 {
 	int j;
 
-        pool->free_obj_bitmap[i >> 5] &= ~(1 << (i % 32)); /* clear the proper bit. */ 
+	pool->free_obj_bitmap[i >> 5] &= ~((uint32_t) 1 << (i % 32)); /* clear the proper bit. */
 	if (i != pool->highest_object_number)
 		return;
 
@@ -120,7 +120,7 @@ void snis_object_pool_free_object(struct snis_object_pool *pool, int i)
 		if (pool->free_obj_bitmap[i] == 0)
 			continue;
 		for (j = 31 ; j >= 0; j--) {
-			if (pool->free_obj_bitmap[i] & (1 << j)) {
+			if (pool->free_obj_bitmap[i] & ((uint32_t) 1 << j)) {
 				pool->highest_object_number = (i << 5) + j;
 				return;
 			}
