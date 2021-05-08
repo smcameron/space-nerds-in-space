@@ -5446,8 +5446,9 @@ static void ai_attack_mode_brain(struct snis_entity *o)
 
 	/* Trigger the victim ship's emf detector */
 	if (v->type == OBJTYPE_BRIDGE || v->type == OBJTYPE_NPCSHIP) {
-		uint8_t emf_value = (uint8_t) (snis_randn(120) +
-			130.0 * ATTACK_MODE_GIVE_UP_DISTANCE / vdist);
+		double emf = (snis_randn(120) + 130.0 *
+				(ATTACK_MODE_GIVE_UP_DISTANCE - vdist) / ATTACK_MODE_GIVE_UP_DISTANCE);
+		uint8_t emf_value = 0xff & (int) emf;
 		if (v->tsd.ship.emf_detector < emf_value)
 			v->tsd.ship.emf_detector = emf_value;
 	}
