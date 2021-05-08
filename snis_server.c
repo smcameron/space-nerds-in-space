@@ -8312,7 +8312,10 @@ static void damcon_robot_move(struct snis_damcon_entity *o, struct damcon_data *
 
 static unsigned char device_power_byte_form(struct power_device *d)
 {
-	return (unsigned char) (255.0 * device_current(d) / device_max_current(d));
+	float power = 255.0 * device_current(d) / device_max_current(d);
+	if (power > 255.0)
+		power = 255.0;
+	return (unsigned char) power;
 }
 
 static void do_power_model_computations(struct snis_entity *o)

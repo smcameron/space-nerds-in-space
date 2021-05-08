@@ -114,6 +114,7 @@ void power_model_compute(struct power_model *m)
 
 	if (m->actual_current > m->max_current) {
 		m->actual_voltage = m->max_current * total_resistance;
+		m->actual_current = m->max_current;
 	} else {
 		m->actual_voltage = m->actual_current * total_resistance; 
 	}
