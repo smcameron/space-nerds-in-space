@@ -25561,7 +25561,8 @@ static void *listener_thread_fn(__attribute__((unused)) void *unused)
 				continue;
 			}
 
-			if (bind(rendezvous, rp->ai_addr, rp->ai_addrlen) == 0) {
+			rc = bind(rendezvous, rp->ai_addr, rp->ai_addrlen);
+			if (rc == 0) {
 				port_bound = 1;
 				break;                  /* Success */
 			}
