@@ -337,7 +337,7 @@ static char *tens[] = { "", "", "twenty", "thirty", "forty", "fifty", "sixty", "
 static int frac_to_words(float number, char *buffer, int buflen, int max_decimal_places)
 {
 	int i, rc, x;
-	float frac = fabsf(number - trunc(number));
+	float frac = fabsf(number - truncf(number));
 	int digit;
 
 	buflen--;
@@ -436,9 +436,8 @@ static int int_to_words(int number, char *buffer, int buflen)
 		return int_to_words_helper(number, "thousand", 1000, buffer, buflen);
 	if (number < 1000000000)
 		return int_to_words_helper(number, "million", 1000000, buffer, buflen);
-	if (number < 1000000000000)
+	/* if (number < 1000000000000) */ /* always true as number is an int and a trillion won't fit. */
 		return int_to_words_helper(number, "billion", 1000000000, buffer, buflen);
-	return -1;
 }
 
 static int integer_to_words(int number, char *buffer, int buflen)
@@ -463,7 +462,7 @@ int numbers_to_words(float number, int max_decimal_places, char *buffer, int buf
 	char ipart[500], fpart[500];
 
 	i = trunc(number);
-	f = fabsf(number) - fabsf(i);
+	f = fabsf(number) - abs(i);
 
 	rc = integer_to_words(i, ipart, 500);
 	if (rc < 0)
