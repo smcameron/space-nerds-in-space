@@ -34,6 +34,13 @@ CC ?= gcc
 # DESTDIR=.
 PREFIX?=.
 
+ifeq (${UBSAN},1)
+UBSANFLAG=-fsanitize=undefined
+CC=clang
+else
+UBSANFLAG=
+endif
+
 # object fild directory
 OD=object_files
 
@@ -650,7 +657,7 @@ MODELS=${MD}/freighter.stl \
 	${MD}/cylinder.stl \
 	${MD}/missile.stl
 
-MYCFLAGS=-DPREFIX=${PREFIX} ${DEBUGFLAG} ${PROFILEFLAG} ${OPTIMIZEFLAG}\
+MYCFLAGS=-DPREFIX=${PREFIX} ${DEBUGFLAG} ${PROFILEFLAG} ${OPTIMIZEFLAG} ${UBSANFLAG}\
 	--pedantic -Wall ${STOP_ON_WARN} -pthread -std=gnu99 ${RDYNAMIC} \
 	-Wno-extended-offsetof -Wno-gnu-folding-constant $(CFLAGS) -Wvla \
 	-DUSE_SNIS_XWINDOWS_HACKS=${USE_SNIS_XWINDOWS_HACKS} -fno-common \
