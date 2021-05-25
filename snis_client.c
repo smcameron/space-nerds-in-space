@@ -394,17 +394,32 @@ static struct replacement_asset replacement_assets;
 
 static struct ui_element_list *uiobjs = NULL;
 static ui_element_drawing_function ui_slider_draw = (ui_element_drawing_function) snis_slider_draw;
+static ui_element_update_position_function ui_slider_update_position =
+		(ui_element_update_position_function) snis_slider_update_position;
 static ui_element_button_release_function ui_slider_button_release =
 		(ui_element_button_release_function) snis_slider_button_press;
 static ui_element_button_release_function ui_button_button_press =
 		(ui_element_button_release_function) snis_button_button_press;
+static ui_element_inside_function ui_slider_inside = (ui_element_inside_function)
+					snis_slider_mouse_inside;
 
 static ui_element_drawing_function ui_button_draw = (ui_element_drawing_function) snis_button_draw;
 static ui_element_drawing_function ui_strip_chart_draw =
 		(ui_element_drawing_function) snis_strip_chart_draw;
+static ui_element_update_position_function ui_strip_chart_update_position =
+		(ui_element_update_position_function) snis_strip_chart_update_position;
+static ui_element_inside_function ui_strip_chart_inside = (ui_element_inside_function) snis_strip_chart_inside;
 static ui_element_drawing_function ui_scaling_strip_chart_draw =
 		(ui_element_drawing_function) snis_scaling_strip_chart_draw;
+static ui_element_inside_function ui_scaling_strip_chart_inside =
+	(ui_element_inside_function) snis_scaling_strip_chart_inside;
+static ui_element_update_position_function ui_scaling_strip_chart_update_position =
+	(ui_element_update_position_function) snis_scaling_strip_chart_update_position;
 static ui_element_drawing_function ui_label_draw = (ui_element_drawing_function) snis_label_draw;
+static ui_element_update_position_function ui_label_update_position =
+		(ui_element_update_position_function) snis_label_update_position;
+static ui_element_inside_function ui_label_inside =
+	(ui_element_inside_function) snis_label_inside;
 static ui_element_button_release_function ui_button_button_release =
 		(ui_element_button_release_function) snis_button_button_release;
 static ui_element_button_release_function ui_pull_down_menu_button_release =
@@ -419,17 +434,27 @@ static ui_element_set_focus_function ui_text_input_box_set_focus = (ui_element_s
 					snis_text_input_box_set_focus;
 static ui_element_button_release_function ui_text_input_button_release = (ui_element_button_release_function)
 					snis_text_input_box_button_press;
+static ui_element_inside_function ui_text_input_inside = (ui_element_inside_function) snis_text_input_box_button_press;
 static ui_element_keypress_function ui_text_input_keypress = (ui_element_keypress_function)
 					snis_text_input_box_keypress;
 static ui_element_button_release_function ui_text_window_button_release = (ui_element_button_release_function)
 					text_window_button_press;
+static ui_element_inside_function ui_text_window_inside = (ui_element_inside_function) text_window_inside;
+static ui_element_update_position_function ui_text_window_update_position =
+		(ui_element_update_position_function) text_window_update_position;
+static ui_element_update_position_function ui_text_input_box_update_position =
+	(ui_element_update_position_function) snis_text_input_box_update_position;
+
 static ui_element_inside_function ui_button_inside = (ui_element_inside_function)
 					snis_button_inside;
+static ui_element_update_position_function ui_button_update_position = (ui_element_update_position_function)
+					snis_button_set_position;
+
 static ui_element_inside_function ui_gauge_inside = (ui_element_inside_function) gauge_inside;
+static ui_element_update_position_function ui_gauge_update_position =
+	(ui_element_update_position_function) gauge_update_position;
 static ui_element_inside_function ui_pull_down_menu_inside =
 	(ui_element_inside_function) pull_down_menu_inside;
-static ui_element_inside_function ui_slider_inside = (ui_element_inside_function)
-					snis_slider_mouse_inside;
 
 #define MAXTEXTURES 10
 
@@ -3581,6 +3606,8 @@ static struct mouse_state {
 	int x, y;
 	int deltax, deltay; /* for captured mouse on weapons screen */
 	struct mouse_button_state button[3];
+	struct ui_element *selected_ui_element;
+	int ui_x, ui_y; /* initial position of grabbed ui element */
 } mouse;
 
 static void request_demon_rot_packet(uint32_t oid, uint8_t kind, uint8_t amount)
@@ -5038,8 +5065,11 @@ static void show_lobbyscreen(void)
 				sng_set_foreground(UI_COLOR(lobby_selected_server));
 				snis_draw_rectangle(0, txx(25), txy(100) + (-0.5 + i) * LINEHEIGHT,
 					txx(600), LINEHEIGHT);
-				snis_button_set_position(lobby_ui.lobby_connect_to_server_button,
-					txx(650), (int) (txy(100) + (-0.5 + i) * LINEHEIGHT));
+				struct ui_element *e =
+					ui_element_get_by_element(uiobjs, lobby_ui.lobby_connect_to_server_button);
+				if (e)
+					ui_element_update_position_offset(e,
+						txx(650), (int) (txy(100) + (-0.5 + i) * LINEHEIGHT));
 				ui_unhide_widget(lobby_ui.lobby_connect_to_server_button);
 			} else
 				sng_set_foreground(UI_COLOR(lobby_connecting));
@@ -11982,6 +12012,7 @@ static void ui_add_slider(struct slider *s, int active_displaymode, char *toolti
 	struct ui_element *uie;
 
 	uie = ui_element_init(s, ui_slider_draw, ui_slider_button_release, ui_slider_inside,
+				ui_slider_update_position, snis_slider_get_x(s), snis_slider_get_y(s),
 						active_displaymode, &displaymode);
 	ui_element_set_tooltip(uie, tooltip);
 	ui_element_list_add_element(&uiobjs, uie); 
@@ -11992,6 +12023,7 @@ static void ui_add_button(struct button *b, int active_displaymode, char *toolti
 	struct ui_element *uie;
 
 	uie = ui_element_init(b, ui_button_draw, ui_button_button_release, ui_button_inside,
+						ui_button_update_position, snis_button_get_x(b), snis_button_get_y(b),
 						active_displaymode, &displaymode);
 	ui_element_set_tooltip(uie, tooltip);
 	ui_element_set_button_press_function(uie, ui_button_button_press);
@@ -12003,7 +12035,7 @@ static void ui_add_pull_down_menu(struct pull_down_menu *pdm, int active_display
 	struct ui_element *uie;
 
 	uie = ui_element_init(pdm, ui_pull_down_menu_draw, ui_pull_down_menu_button_release,
-				ui_pull_down_menu_inside, active_display_mode, &displaymode);
+				ui_pull_down_menu_inside, NULL, -1, -1, active_display_mode, &displaymode);
 	ui_element_set_tooltip(uie, "");
 	ui_set_update_mouse_pos_callback(uie, (ui_update_mouse_pos_function)
 						pull_down_menu_update_mouse_pos);
@@ -12014,7 +12046,9 @@ static void ui_add_strip_chart(struct strip_chart *sc, int active_displaymode)
 {
 	struct ui_element *uie;
 
-	uie = ui_element_init(sc, ui_strip_chart_draw, NULL, NULL,
+	uie = ui_element_init(sc, ui_strip_chart_draw, NULL,
+		ui_strip_chart_inside, ui_strip_chart_update_position,
+		snis_strip_chart_get_x(sc), snis_strip_chart_get_y(sc),
 		active_displaymode, &displaymode);
 	ui_element_list_add_element(&uiobjs, uie);
 }
@@ -12023,7 +12057,9 @@ static void ui_add_scaling_strip_chart(struct scaling_strip_chart *sc, int activ
 {
 	struct ui_element *uie;
 
-	uie = ui_element_init(sc, ui_scaling_strip_chart_draw, NULL, NULL,
+	uie = ui_element_init(sc, ui_scaling_strip_chart_draw, NULL,
+		ui_scaling_strip_chart_inside, ui_scaling_strip_chart_update_position,
+		snis_scaling_strip_chart_get_x(sc), snis_scaling_strip_chart_get_y(sc),
 		active_displaymode, &displaymode);
 	ui_element_list_add_element(&uiobjs, uie);
 }
@@ -12052,8 +12088,9 @@ static void ui_add_label(struct label *l, int active_displaymode)
 {
 	struct ui_element *uie;
 
-	uie = ui_element_init(l, ui_label_draw, NULL, NULL,
-						active_displaymode, &displaymode);
+	uie = ui_element_init(l, ui_label_draw, NULL, ui_label_inside, ui_label_update_position,
+				snis_label_get_x(l), snis_label_get_y(l),
+				active_displaymode, &displaymode);
 	ui_element_list_add_element(&uiobjs, uie); 
 }
 
@@ -12061,7 +12098,8 @@ static void ui_add_gauge(struct gauge *g, int active_displaymode)
 {
 	struct ui_element *uie;
 
-	uie = ui_element_init(g, ui_gauge_draw, NULL, ui_gauge_inside,
+	uie = ui_element_init(g, ui_gauge_draw, NULL, ui_gauge_inside, ui_gauge_update_position,
+						gauge_get_x(g), gauge_get_y(g),
 						active_displaymode, &displaymode);
 	ui_element_list_add_element(&uiobjs, uie); 
 }
@@ -12070,7 +12108,9 @@ static void ui_add_text_window(struct text_window *tw, int active_displaymode)
 {
 	struct ui_element *uie;
 
-	uie = ui_element_init(tw, ui_text_window_draw, ui_text_window_button_release, NULL,
+	uie = ui_element_init(tw, ui_text_window_draw, ui_text_window_button_release,
+						ui_text_window_inside, ui_text_window_update_position,
+						text_window_get_x(tw), text_window_get_y(tw),
 						active_displaymode, &displaymode);
 	ui_element_list_add_element(&uiobjs, uie); 
 }
@@ -12079,7 +12119,9 @@ static void ui_add_text_input_box(struct snis_text_input_box *t, int active_disp
 {
 	struct ui_element *uie;
 
-	uie = ui_element_init(t, ui_text_input_draw, ui_text_input_button_release, NULL,
+	uie = ui_element_init(t, ui_text_input_draw, ui_text_input_button_release,
+						ui_text_input_inside, ui_text_input_box_update_position,
+						snis_text_input_box_get_x(t), snis_text_input_box_get_y(t),
 						active_displaymode, &displaymode);
 	ui_element_set_focus_callback(uie, ui_text_input_box_set_focus);
 	ui_element_get_keystrokes(uie, ui_text_input_keypress, NULL);
@@ -12090,7 +12132,7 @@ static void init_lobby_ui()
 {
 	lobby_ui.lobby_cancel_button = snis_button_init(txx(650), txy(520), -1, -1,
 			"CANCEL", UI_COLOR(lobby_cancel), NANO_FONT, lobby_cancel_button_pressed, NULL);
-	lobby_ui.lobby_connect_to_server_button = snis_button_init(txx(250), txy(520), -1, -1,
+	lobby_ui.lobby_connect_to_server_button = snis_button_init(0, 0, -1, -1,
 			"CONNECT TO SERVER", UI_COLOR(lobby_connect_not_ok), NANO_FONT,
 			lobby_connect_to_server_button_pressed, NULL);
 	ui_add_button(lobby_ui.lobby_cancel_button, DISPLAYMODE_LOBBYSCREEN,
@@ -17876,6 +17918,7 @@ static struct demon_cmd_def {
 	{ "CDUMP", "DUMP CLIENT-SIDE OBJECT" },
 	{ "FOLLOW", "FOLLOW AN OBJECT" },
 	{ "RELOAD_SHADERS", "RELOAD ALL GLSL SHADERS" },
+	{ "RESET_UI_POS", "RESET POSITIONS OF ALL UI ELEMENTS TO DEFAULTS" },
 	/* Note: Server builtin command help isn't here, it's in the server code,
 	 * elicited by a call to "send_lua_script_packet_to_server("HELP")"
 	 */
@@ -18433,6 +18476,9 @@ static int construct_demon_command(char *input,
 		case 23: /* RELOAD_SHADERS */
 			reload_shaders = 1;
 			break;
+		case 24:
+			ui_element_list_reset_position_offsets(uiobjs);
+			break;
 		default: /* unknown, maybe it's a builtin server command or a lua script */
 			uppercase(original);
 			copy = expand_demon_selection_string(original);
@@ -18763,6 +18809,11 @@ static void demon_enscript_solarsystem_pressed(void *x)
 	print_demon_console_msg("SAVING TO ENSCRIPTED_SOLARSYSTEM.LUA IF ENABLED ON SERVER");
 }
 
+static void demon_reset_ui_widgets(void *x)
+{
+	ui_element_list_reset_position_offsets(uiobjs);
+}
+
 static int demon_planet_water_specularity_checkbox(void *x)
 {
 	return graph_dev_planet_specularity;
@@ -19036,6 +19087,9 @@ static void init_demon_ui()
 			demon_enscript_solarsystem_pressed, NULL);
 	pull_down_menu_add_tooltip(demon_ui.menu, "META", "ENSCRIPT SOLARSYSTEM",
 						"SAVE STATE OF MOST OBJECTS TO A LUA SCRIPT");
+	pull_down_menu_add_row(demon_ui.menu, "META", "RESET UI WIDGETS", demon_reset_ui_widgets, NULL);
+	pull_down_menu_add_tooltip(demon_ui.menu, "META", "RESET UI WIDGETS",
+						"RESET UI WIDGET POSITIONS TO DEFAULTS");
 	pull_down_menu_add_column(demon_ui.menu, "ADD");
 	pull_down_menu_add_row(demon_ui.menu, "ADD", "SHIP", demon_ship_button_pressed, (void *)
 					(intptr_t) demon_ui.shiptype);
@@ -21788,7 +21842,17 @@ static int main_da_button_press(SDL_MouseButtonEvent *event)
 		default:
 			break;
 	}
-	ui_element_list_button_press(uiobjs, event->x, event->y);
+	if (!kbstate.pressed[key_left_shift] && !kbstate.pressed[key_right_shift])
+		ui_element_list_button_press(uiobjs, event->x, event->y);
+	else if (event->button == 1) {
+		mouse.selected_ui_element = ui_element_list_find_by_position(uiobjs, event->x, event->y);
+		if (mouse.selected_ui_element) {
+			ui_element_get_position_offset(mouse.selected_ui_element, &mouse.ui_x, &mouse.ui_y);
+		} else {
+			mouse.ui_x = 0;
+			mouse.ui_y = 0;
+		}
+	}
 	return TRUE;
 }
 
@@ -21849,7 +21913,10 @@ static int main_da_button_release(SDL_MouseButtonEvent *event)
 	default:
 		break;
 	}
-	ui_element_list_button_release(uiobjs, event->x, event->y);
+	if (!mouse.selected_ui_element)
+		ui_element_list_button_release(uiobjs, event->x, event->y);
+	else
+		mouse.selected_ui_element = NULL;
 	return TRUE;
 }
 
@@ -21998,6 +22065,13 @@ static int main_da_motion_notify(SDL_Window *window, SDL_MouseMotionEvent *event
 	default:
 		break;
 	}
+
+	/* Allow some ui elements to be moved */
+	if (mouse.selected_ui_element)
+		ui_element_update_position_offset(mouse.selected_ui_element,
+			mouse.ui_x + event->x - mouse.button[0].press_x,
+			mouse.ui_y + event->y - mouse.button[0].press_y);
+
 	return TRUE;
 }
 

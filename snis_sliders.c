@@ -365,3 +365,18 @@ void snis_slider_mouse_position_query(int *x, int *y) /* Allows sliders to query
 	slider_mouse_y = y;
 }
 
+void snis_slider_update_position(struct slider *s, int x, int y)
+{
+	s->x = x;
+	s->y = y;
+}
+
+int snis_slider_get_x(struct slider *s)
+{
+	return (int) s->x;
+}
+
+int snis_slider_get_y(struct slider *s)
+{
+	return (int) s->y;
+}

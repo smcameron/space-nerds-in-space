@@ -286,6 +286,22 @@ int text_window_button_press(struct text_window *tw, int x, int y)
 	return 0;
 }
 
+int text_window_inside(struct text_window *tw, int x, int y)
+{
+	x = sng_pixelx_to_screenx(x);
+	y = sng_pixelx_to_screenx(y);
+
+	if (x < tw->x)
+		return 0;
+	if (x > tw->x + tw->w)
+		return 0;
+	if (y < tw->y)
+		return 0;
+	if (y > tw->y + tw->h)
+		return 0;
+	return 1;
+}
+
 void text_window_blank_background(struct text_window *tw, int do_blank)
 {
 	tw->do_blank = do_blank;
@@ -310,3 +326,20 @@ void text_window_set_visible_lines(struct text_window *tw, int visible_lines)
 	tw->visible_lines = visible_lines;
 	tw->h = tw->lineheight * tw->visible_lines + 10;
 }
+
+void text_window_update_position(struct text_window *tw, int x, int y)
+{
+	tw->x = x;
+	tw->y = y;
+}
+
+int text_window_get_x(struct text_window *tw)
+{
+	return tw->x;
+}
+
+int text_window_get_y(struct text_window *tw)
+{
+	return tw->y;
+}
+

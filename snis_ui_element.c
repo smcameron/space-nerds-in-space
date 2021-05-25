@@ -12,6 +12,7 @@ struct ui_element {
 	ui_element_button_release_function button_release;
 	ui_element_button_release_function button_press;
 	ui_element_set_focus_function set_focus;
+	ui_element_update_position_function set_position;
 	int has_focus;
 	ui_element_keypress_function keypress_fn, keyrelease_fn;
 	ui_element_inside_function inside_fn;
@@ -19,6 +20,8 @@ struct ui_element {
 	int hidden;
 	char *tooltip;
 	int tooltip_timer;
+	int defaultx, defaulty; /* default position of widget */
+	int xoffset, yoffset; /* offset from default position */
 };
 
 struct ui_element_list {
@@ -32,6 +35,9 @@ struct ui_element *ui_element_init(void *element,
 			ui_element_drawing_function draw,
 			ui_element_button_release_function button_release,
 			ui_element_inside_function inside_fn,
+			ui_element_update_position_function update_pos_fn,
+			int defaultx,
+			int defaulty,
 			int active_displaymode, volatile int *displaymode)
 {
 	struct ui_element *e;
@@ -52,6 +58,9 @@ struct ui_element *ui_element_init(void *element,
 	e->tooltip = NULL;
 	e->tooltip_timer = TOOLTIP_DELAY;
 	e->update_mouse_pos = NULL;
+	e->set_position = update_pos_fn;
+	e->defaultx = defaultx;
+	e->defaulty = defaulty;
 	return e;
 }
 
@@ -119,8 +128,11 @@ void ui_element_list_draw(struct ui_element_list *list)
 {
 	for (; list != NULL; list = list->next) {
 		struct ui_element *e = list->element;
-		if (e->draw && e->active_displaymode == *e->displaymode && !e->hidden)
+		if (e->draw && e->active_displaymode == *e->displaymode && !e->hidden) {
+			if (e->set_position)
+				e->set_position(e->element, e->defaultx + e->xoffset, e->defaulty + e->yoffset);
 			e->draw(e->element);
+		}
 	}
 }
 
@@ -263,6 +275,21 @@ void ui_element_set_inside_callback(struct ui_element *e,
 void ui_element_set_displaymode(struct ui_element *e, int displaymode)
 {
 	e->active_displaymode = displaymode;
+}
+
+struct ui_element *ui_element_get_by_element(struct ui_element_list *list, void *element)
+{
+	struct ui_element_list *i;
+
+	for (i = list; i; i = i->next) {
+		struct ui_element *e = i->element;
+		intptr_t a, b;
+		a = (intptr_t) e->element;
+		b = (intptr_t) element;
+		if (a == b)
+			return e;
+	}
+	return NULL;
 }
 
 static void advance_focus(struct ui_element_list *list)
@@ -414,4 +441,52 @@ void ui_set_update_mouse_pos_callback(struct ui_element *e, ui_update_mouse_pos_
 void ui_element_set_button_press_function(struct ui_element *e, ui_element_button_release_function button_press)
 {
 	e->button_press = button_press;
+}
+
+void ui_element_update_position_offset(struct ui_element *element, int xoffset, int yoffset)
+{
+	element->xoffset = xoffset;
+	element->yoffset = yoffset;
+}
+
+void ui_element_get_position_offset(struct ui_element *element, int *xoffset, int *yoffset)
+{
+	*xoffset = element->xoffset;
+	*yoffset = element->yoffset;
+}
+
+void ui_element_set_default_position(struct ui_element *element, int x, int y)
+{
+	element->defaultx = x;
+	element->defaulty = y;
+}
+
+void ui_element_reset_position_offset(struct ui_element *element)
+{
+	if (!element->set_position)
+		return;
+	element->xoffset = 0;
+	element->yoffset = 0;
+	element->set_position(element->element, element->defaultx, element->defaulty);
+}
+
+void ui_element_list_reset_position_offsets(struct ui_element_list *list)
+{
+	for (; list != NULL; list = list->next) {
+		struct ui_element *e = list->element;
+		ui_element_reset_position_offset(e);
+	}
+}
+
+struct ui_element *ui_element_list_find_by_position(struct ui_element_list *list, int x, int y)
+{
+	for (; list != NULL; list = list->next) {
+		struct ui_element *e = list->element;
+		if (e->draw && e->active_displaymode == *e->displaymode && !e->hidden &&
+			e->set_position && e->inside_fn) {
+			if (e->inside_fn(e->element, x, y))
+				return e;
+		}
+	}
+	return NULL;
 }

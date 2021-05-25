@@ -101,5 +101,9 @@ GLOBAL int snis_slider_alarm_triggered(struct slider *s);
 
 GLOBAL void snis_slider_mouse_position_query(int *x, int *y); /* Allows sliders to query mouse position */
 
+GLOBAL void snis_slider_update_position(struct slider *s, int x, int y);
+GLOBAL int snis_slider_get_x(struct slider *s);
+GLOBAL int snis_slider_get_y(struct slider *s);
+
 #undef GLOBAL
 #endif

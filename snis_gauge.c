@@ -188,3 +188,19 @@ int gauge_inside(struct gauge *g, int physical_x, int physical_y)
 	return dx * dx + dy * dy < g->r * g->r;
 }
 
+void gauge_update_position(struct gauge *g, int x, int y)
+{
+	g->x = x;
+	g->y = y;
+}
+
+int gauge_get_x(struct gauge *g)
+{
+	return g->x;
+}
+
+int gauge_get_y(struct gauge *g)
+{
+	return g->y;
+}
+

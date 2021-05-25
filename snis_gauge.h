@@ -53,4 +53,8 @@ GLOBAL void gauge_set_multiplier(struct gauge *g, float multiplier);
 /* Returns true if (physical_x, physical_y) is inside the gauge.  Used for tooltips. */
 GLOBAL int gauge_inside(struct gauge *g, int physical_x, int physical_y);
 
+GLOBAL void gauge_update_position(struct gauge *g, int x, int y);
+GLOBAL int gauge_get_x(struct gauge *g);
+GLOBAL int gauge_get_y(struct gauge *g);
+
 #endif

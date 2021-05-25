@@ -169,6 +169,8 @@ char *keyactionstring[] = {
 	"key_eng_preset_4",
 	"key_eng_preset_5",
 	"key_eng_preset_6",
+	"key_left_shift",
+	"key_right_shift",
 };
 
 void zero_keymaps(void)
@@ -310,6 +312,10 @@ void init_keymap(void)
 	ffmapkey(all, SDLK_F8, keyf8);
 	ffmapkey(all, SDLK_F9, keyf9);
 	ffmapkey(all, SDLK_F10, keyf10);
+	mapkey(all, SDLK_LSHIFT, key_left_shift);
+	ffmapkey(all, SDLK_LSHIFT, key_left_shift);
+	mapkey(all, SDLK_RSHIFT, key_right_shift);
+	ffmapkey(all, SDLK_RSHIFT, key_right_shift);
 
 	ffmapkey(all, SDLK_F11, keyfullscreen);
 	ffmapkey(all, SDLK_PAGEDOWN, key_page_down);

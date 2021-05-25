@@ -285,3 +285,9 @@ int snis_text_input_box_get_x(struct snis_text_input_box *t) { return t->x; }
 int snis_text_input_box_get_y(struct snis_text_input_box *t) { return t->y; }
 
 char *snis_text_input_box_get_buffer(struct snis_text_input_box *t) { return t->buffer; }
+
+void snis_text_input_box_update_position(struct snis_text_input_box *t, int x, int y)
+{
+	t->x = x;
+	t->y = y;
+}

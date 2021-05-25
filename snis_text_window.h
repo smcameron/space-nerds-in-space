@@ -27,5 +27,9 @@ GLOBAL void text_window_set_background_alpha(struct text_window *tw, float alpha
 GLOBAL void text_window_set_font(struct text_window *tw, int font);
 GLOBAL void text_window_slow_printing_effect(struct text_window *tw, int value);
 GLOBAL void text_window_set_visible_lines(struct text_window *tw, int visible_lines);
+GLOBAL void text_window_update_position(struct text_window *tw, int x, int y);
+GLOBAL int text_window_get_x(struct text_window *tw);
+GLOBAL int text_window_get_y(struct text_window *tw);
+GLOBAL int text_window_inside(struct text_window *tw, int x, int y);
 
 #endif

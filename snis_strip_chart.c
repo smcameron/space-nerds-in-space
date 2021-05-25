@@ -93,6 +93,39 @@ void snis_strip_chart_update(struct strip_chart *sc, uint8_t value)
 	sc->history[sc->needle] = 0;
 }
 
+int snis_strip_chart_inside(struct strip_chart *sc, int x, int y)
+{
+	x = sng_pixelx_to_screenx(x);
+	y = sng_pixelx_to_screenx(y);
+
+	if (x < sc->x)
+		return 0;
+	if (x > sc->x + sc->width)
+		return 0;
+	if (y < sc->y)
+		return 0;
+	if (y > sc->y + sc->height)
+		return 0;
+	return 1;
+
+}
+
+void snis_strip_chart_update_position(struct strip_chart *sc, int x, int y)
+{
+	sc->x = x;
+	sc->y = y;
+}
+
+int snis_strip_chart_get_x(struct strip_chart *sc)
+{
+	return sc->x;
+}
+
+int snis_strip_chart_get_y(struct strip_chart *sc)
+{
+	return sc->y;
+}
+
 struct scaling_strip_chart *snis_scaling_strip_chart_init(int x, int y,
 			int width, int height, char *label, char *warning_msg,
 			int color, int warn_color, float warning_level, int font, int history_size)
@@ -190,5 +223,38 @@ void snis_scaling_strip_chart_update(struct scaling_strip_chart *sc, float value
 		sc->warning_on = 0;
 	sc->needle = (sc->needle + 1) % sc->history_size;
 	sc->history[sc->needle] = 0;
+}
+
+int snis_scaling_strip_chart_inside(struct scaling_strip_chart *sc, int x, int y)
+{
+	x = sng_pixelx_to_screenx(x);
+	y = sng_pixelx_to_screenx(y);
+
+	if (x < sc->x)
+		return 0;
+	if (x > sc->x + sc->width)
+		return 0;
+	if (y < sc->y)
+		return 0;
+	if (y > sc->y + sc->height)
+		return 0;
+	return 1;
+
+}
+
+void snis_scaling_strip_chart_update_position(struct scaling_strip_chart *sc, int x, int y)
+{
+	sc->x = x;
+	sc->y = y;
+}
+
+int snis_scaling_strip_chart_get_x(struct scaling_strip_chart *sc)
+{
+	return sc->x;
+}
+
+int snis_scaling_strip_chart_get_y(struct scaling_strip_chart *sc)
+{
+	return sc->y;
 }
 
