@@ -32,10 +32,7 @@ struct ui_element_list {
 static void (*draw_tooltip)(int mousex, int mousey, char *tooltip);
 
 struct ui_element *ui_element_init(void *element,
-			ui_element_drawing_function draw,
-			ui_element_button_release_function button_release,
-			ui_element_inside_function inside_fn,
-			ui_element_update_position_function update_pos_fn,
+			struct ui_element_functions fns,
 			int defaultx,
 			int defaulty,
 			int active_displaymode, volatile int *displaymode)
@@ -44,10 +41,10 @@ struct ui_element *ui_element_init(void *element,
 
 	e = malloc(sizeof(*e));
 	e->element = element;
-	e->draw = draw;
-	e->button_release = button_release;
+	e->draw = fns.draw;
+	e->button_release = fns.button_release;
 	e->button_press = NULL;
-	e->inside_fn = inside_fn;
+	e->inside_fn = fns.inside;
 	e->active_displaymode = active_displaymode;
 	e->displaymode = displaymode;
 	e->set_focus = NULL;
@@ -58,7 +55,7 @@ struct ui_element *ui_element_init(void *element,
 	e->tooltip = NULL;
 	e->tooltip_timer = TOOLTIP_DELAY;
 	e->update_mouse_pos = NULL;
-	e->set_position = update_pos_fn;
+	e->set_position = fns.update_pos_fn;
 	e->defaultx = defaultx;
 	e->defaulty = defaulty;
 	return e;

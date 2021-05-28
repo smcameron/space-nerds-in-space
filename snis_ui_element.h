@@ -15,6 +15,13 @@ typedef void (*ui_tooltip_drawing_function)(int x, int y, char *tooltip);
 typedef void (*ui_update_mouse_pos_function)(void *element, int physical_x, int physical_y);
 typedef void (*ui_element_update_position_function)(void *element, int x, int y);
 
+struct ui_element_functions {
+	ui_element_drawing_function draw;
+	ui_element_button_release_function button_release;
+	ui_element_inside_function inside;
+	ui_element_update_position_function update_pos_fn;
+};
+
 #ifdef DEFINE_UI_ELEMENT_LIST_GLOBALS
 #define GLOBAL
 #else
@@ -24,10 +31,7 @@ typedef void (*ui_element_update_position_function)(void *element, int x, int y)
 #define TOOLTIP_DELAY (30) /* 1 second */
 
 GLOBAL struct ui_element *ui_element_init(void *element,
-			ui_element_drawing_function draw,
-			ui_element_button_release_function button_release,
-			ui_element_inside_function inside,
-			ui_element_update_position_function update_pos_fn,
+			struct ui_element_functions fns,
 			int defaultx,
 			int defaulty,
 			int active_displaymode, volatile int *displaymode);
