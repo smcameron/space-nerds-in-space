@@ -487,3 +487,50 @@ struct ui_element *ui_element_list_find_by_position(struct ui_element_list *list
 	}
 	return NULL;
 }
+
+int ui_element_list_save_position_offsets(struct ui_element_list *list, struct xdg_base_context *cx)
+{
+	FILE *f;
+
+	f = xdg_base_fopen_for_write(cx, "snis_ui_position_offsets.txt");
+	if (!f)
+		return -1;
+	/* TODO: this is the dumbest thing that might work. Not very robust.
+	 * There is no attempt to keep straight which numbers go with which
+	 * widgets, it just assumes they're the same every time.
+	 */
+	for (; list != NULL; list = list->next)
+		fprintf(f, "%d %d\n", list->element->xoffset, list->element->yoffset);
+	fclose(f);
+	return 0;
+}
+
+int ui_element_list_restore_position_offsets(struct ui_element_list *list, struct xdg_base_context *cx)
+{
+	FILE *f;
+	int a, b, rc;
+
+	f = xdg_base_fopen_for_read(cx, "snis_ui_position_offsets.txt");
+	if (!f)
+		return -1;
+	/* TODO: this is the dumbest thing that might work. Not very robust.
+	 * There is no attempt to keep straight which numbers go with which
+	 * widgets, it just assumes they're the same every time.
+	 */
+	for (; list != NULL; list = list->next) {
+		rc = fscanf(f, "%d %d\n", &a, &b);
+		if (rc < 0 && feof(f)) {
+			fclose(f);
+			return -1;
+		}
+		if (rc != 2) {
+			fclose(f);
+			return -1;
+		}
+		list->element->xoffset = a;
+		list->element->yoffset = b;
+	}
+	fclose(f);
+	return 0;
+}
+

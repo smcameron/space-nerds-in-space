@@ -18810,6 +18810,11 @@ static void demon_reset_ui_widgets(void *x)
 	ui_element_list_reset_position_offsets(uiobjs);
 }
 
+static void demon_save_ui_widget_positions(void *x)
+{
+	(void) ui_element_list_save_position_offsets(uiobjs, xdg_base_ctx);
+}
+
 static int demon_planet_water_specularity_checkbox(void *x)
 {
 	return graph_dev_planet_specularity;
@@ -19086,6 +19091,10 @@ static void init_demon_ui()
 	pull_down_menu_add_row(demon_ui.menu, "META", "RESET UI WIDGETS", demon_reset_ui_widgets, NULL);
 	pull_down_menu_add_tooltip(demon_ui.menu, "META", "RESET UI WIDGETS",
 						"RESET UI WIDGET POSITIONS TO DEFAULTS");
+	pull_down_menu_add_row(demon_ui.menu, "META", "SAVE UI WIDGET POSITIONS",
+						demon_save_ui_widget_positions, NULL);
+	pull_down_menu_add_tooltip(demon_ui.menu, "META", "SAVE UI WIDGET POSITIONS",
+						"SAVE CUSTOM POSITIONING OF UI WIDGETS TO A FILE");
 	pull_down_menu_add_column(demon_ui.menu, "ADD");
 	pull_down_menu_add_row(demon_ui.menu, "ADD", "SHIP", demon_ship_button_pressed, (void *)
 					(intptr_t) demon_ui.shiptype);
@@ -23649,6 +23658,8 @@ int main(int argc, char *argv[])
 
 	ssgl_register_for_bcast_packets(lobby_list_change_notification); /* must happen after init_net_setup_ui() */
 	snis_protocol_debugging(1);
+
+	(void) ui_element_list_restore_position_offsets(uiobjs, xdg_base_ctx);
 
 	set_default_clip_window();
 

@@ -2,6 +2,7 @@
 #define SNIS_UI_ELEMENT_H__
 
 #include <SDL.h>
+#include "xdg_base_dir_spec.h"
 
 struct ui_element;
 struct ui_element_list;
@@ -71,6 +72,8 @@ GLOBAL void ui_set_tooltip_drawing_function(ui_tooltip_drawing_function f);
 GLOBAL void ui_element_set_button_press_function(struct ui_element *e, ui_element_button_release_function button_press);
 GLOBAL struct ui_element *ui_element_get_by_element(struct ui_element_list *list, void *element);
 GLOBAL struct ui_element *ui_element_list_find_by_position(struct ui_element_list *list, int x, int y);
+GLOBAL int ui_element_list_save_position_offsets(struct ui_element_list *list, struct xdg_base_context *cx);
+GLOBAL int ui_element_list_restore_position_offsets(struct ui_element_list *list, struct xdg_base_context *cx);
 
 #undef GLOBAL
 #endif
