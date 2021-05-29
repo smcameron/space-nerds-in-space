@@ -398,69 +398,109 @@ static struct ui_element_functions ui_slider_functions = {
 	.draw = (ui_element_drawing_function) snis_slider_draw,
 	.update_pos_fn = (ui_element_update_position_function) snis_slider_update_position,
 	.button_release = (ui_element_button_release_function) snis_slider_button_press,
+	.button_press = NULL,
 	.inside = (ui_element_inside_function) snis_slider_mouse_inside,
+	.set_focus = NULL,
+	.keypress_fn = NULL,
+	.keyrelease_fn = NULL,
+	.update_mouse_pos = NULL,
 };
 
 static struct ui_element_functions ui_button_functions = {
 	.draw = (ui_element_drawing_function) snis_button_draw,
 	.update_pos_fn = (ui_element_update_position_function) snis_button_set_position,
 	.button_release = (ui_element_button_release_function) snis_button_button_release,
+	.button_press = (ui_element_button_release_function) snis_button_button_press,
 	.inside = (ui_element_inside_function) snis_button_inside,
+	.set_focus = NULL,
+	.keypress_fn = NULL,
+	.keyrelease_fn = NULL,
+	.update_mouse_pos = NULL,
 };
 
 static struct ui_element_functions ui_strip_chart_functions = {
 	.draw = (ui_element_drawing_function) snis_strip_chart_draw,
 	.update_pos_fn = (ui_element_update_position_function) snis_strip_chart_update_position,
 	.button_release = NULL,
+	.button_press = NULL,
 	.inside = (ui_element_inside_function) snis_strip_chart_inside,
+	.set_focus = NULL,
+	.keypress_fn = NULL,
+	.keyrelease_fn = NULL,
+	.update_mouse_pos = NULL,
 };
 
 static struct ui_element_functions ui_scaling_strip_chart_functions = {
 	.draw = (ui_element_drawing_function) snis_scaling_strip_chart_draw,
 	.update_pos_fn = (ui_element_update_position_function) snis_scaling_strip_chart_update_position,
 	.button_release = NULL,
+	.button_press = NULL,
 	.inside = (ui_element_inside_function) snis_scaling_strip_chart_inside,
+	.set_focus = NULL,
+	.keypress_fn = NULL,
+	.keyrelease_fn = NULL,
+	.update_mouse_pos = NULL,
 };
 
 static struct ui_element_functions ui_label_functions = {
 	.draw = (ui_element_drawing_function) snis_label_draw,
 	.update_pos_fn = (ui_element_update_position_function) snis_label_update_position,
 	.button_release = NULL,
+	.button_press = NULL,
 	.inside = (ui_element_inside_function) snis_label_inside,
+	.set_focus = NULL,
+	.keypress_fn = NULL,
+	.keyrelease_fn = NULL,
+	.update_mouse_pos = NULL,
 };
 
 static struct ui_element_functions ui_gauge_functions = {
 	.draw = (ui_element_drawing_function) gauge_draw,
 	.update_pos_fn = (ui_element_update_position_function) gauge_update_position,
 	.button_release = NULL,
+	.button_press = NULL,
 	.inside = (ui_element_inside_function) gauge_inside,
+	.set_focus = NULL,
+	.keypress_fn = NULL,
+	.keyrelease_fn = NULL,
+	.update_mouse_pos = NULL,
 };
 
 static struct ui_element_functions ui_text_input_functions = {
 	.draw = (ui_element_drawing_function) snis_text_input_box_draw,
 	.update_pos_fn = (ui_element_update_position_function) snis_text_input_box_update_position,
 	.button_release = (ui_element_button_release_function) snis_text_input_box_button_press,
+	.button_press = NULL,
 	.inside = (ui_element_inside_function) snis_text_input_box_button_press,
+	.set_focus = (ui_element_set_focus_function) snis_text_input_box_set_focus,
+	.keypress_fn = (ui_element_keypress_function) snis_text_input_box_keypress,
+	.keyrelease_fn = NULL,
+	.update_mouse_pos = NULL,
 };
 
 static struct ui_element_functions ui_text_window_functions = {
 	.draw = (ui_element_drawing_function) text_window_draw,
 	.update_pos_fn = (ui_element_update_position_function) text_window_update_position,
 	.button_release = (ui_element_button_release_function) text_window_button_press,
+	.button_press = NULL,
 	.inside = (ui_element_inside_function) text_window_inside,
+	.set_focus = NULL,
+	.keypress_fn = NULL,
+	.keyrelease_fn = NULL,
+	.update_mouse_pos = NULL,
 };
 
 static struct ui_element_functions ui_pull_down_menu_functions = {
 	.draw = (ui_element_drawing_function) pull_down_menu_draw,
 	.update_pos_fn = NULL,
 	.button_release = (ui_element_button_release_function) pull_down_menu_button_press,
+	.button_press = NULL,
 	.inside = (ui_element_inside_function) pull_down_menu_inside,
+	.set_focus = NULL,
+	.keypress_fn = NULL,
+	.keyrelease_fn = NULL,
+	.update_mouse_pos = (ui_update_mouse_pos_function) pull_down_menu_update_mouse_pos,
 };
-
-static ui_element_set_focus_function ui_text_input_box_set_focus = (ui_element_set_focus_function)
-					snis_text_input_box_set_focus;
-static ui_element_keypress_function ui_text_input_keypress = (ui_element_keypress_function)
-					snis_text_input_box_keypress;
 
 #define MAXTEXTURES 10
 
@@ -12030,8 +12070,6 @@ static void ui_add_button(struct button *b, int active_displaymode, char *toolti
 	uie = ui_element_init(b, ui_button_functions, snis_button_get_x(b), snis_button_get_y(b),
 						active_displaymode, &displaymode);
 	ui_element_set_tooltip(uie, tooltip);
-	ui_element_set_button_press_function(uie, (ui_element_button_release_function) snis_button_button_press);
-
 	ui_element_list_add_element(&uiobjs, uie); 
 }
 
@@ -12041,8 +12079,6 @@ static void ui_add_pull_down_menu(struct pull_down_menu *pdm, int active_display
 
 	uie = ui_element_init(pdm, ui_pull_down_menu_functions, -1, -1, active_display_mode, &displaymode);
 	ui_element_set_tooltip(uie, "");
-	ui_set_update_mouse_pos_callback(uie, (ui_update_mouse_pos_function)
-						pull_down_menu_update_mouse_pos);
 	ui_element_list_add_element(&uiobjs, uie);
 }
 
@@ -12119,8 +12155,6 @@ static void ui_add_text_input_box(struct snis_text_input_box *t, int active_disp
 
 	uie = ui_element_init(t, ui_text_input_functions, snis_text_input_box_get_x(t), snis_text_input_box_get_y(t),
 						active_displaymode, &displaymode);
-	ui_element_set_focus_callback(uie, ui_text_input_box_set_focus);
-	ui_element_get_keystrokes(uie, ui_text_input_keypress, NULL);
 	ui_element_list_add_element(&uiobjs, uie); 
 }
 

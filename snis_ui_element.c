@@ -43,18 +43,18 @@ struct ui_element *ui_element_init(void *element,
 	e->element = element;
 	e->draw = fns.draw;
 	e->button_release = fns.button_release;
-	e->button_press = NULL;
+	e->button_press = fns.button_press;
 	e->inside_fn = fns.inside;
 	e->active_displaymode = active_displaymode;
 	e->displaymode = displaymode;
-	e->set_focus = NULL;
+	e->set_focus = fns.set_focus;
 	e->has_focus = 0;
-	e->keypress_fn = NULL;	
-	e->keyrelease_fn = NULL;
+	e->keypress_fn = fns.keypress_fn;
+	e->keyrelease_fn = fns.keyrelease_fn;
 	e->hidden = 0;
 	e->tooltip = NULL;
 	e->tooltip_timer = TOOLTIP_DELAY;
-	e->update_mouse_pos = NULL;
+	e->update_mouse_pos = fns.update_mouse_pos;
 	e->set_position = fns.update_pos_fn;
 	e->defaultx = defaultx;
 	e->defaulty = defaulty;
@@ -257,18 +257,6 @@ void ui_element_list_button_press(struct ui_element_list *list, int x, int y)
 	}
 }
 
-void ui_element_set_focus_callback(struct ui_element *e,
-					ui_element_set_focus_function set_focus)
-{
-	e->set_focus = set_focus;
-}
-
-void ui_element_set_inside_callback(struct ui_element *e,
-					ui_element_inside_function inside_fn)
-{
-	e->inside_fn = inside_fn;
-}
-
 void ui_element_set_displaymode(struct ui_element *e, int displaymode)
 {
 	e->active_displaymode = displaymode;
@@ -391,14 +379,6 @@ int ui_element_list_event(struct ui_element_list *list, SDL_Event *event)
 	}
 }
 
-void ui_element_get_keystrokes(struct ui_element *e,
-				ui_element_keypress_function keypress_fn,
-				ui_element_keypress_function keyrelease_fn)
-{
-	e->keypress_fn = keypress_fn;
-	e->keyrelease_fn = keyrelease_fn;
-}
-
 void ui_element_hide(struct ui_element *e)
 {
 	e->hidden = 1;
@@ -428,16 +408,6 @@ void ui_set_widget_focus(struct ui_element_list *list, void *widget)
 void ui_set_tooltip_drawing_function(ui_tooltip_drawing_function f)
 {
 	draw_tooltip = f;
-}
-
-void ui_set_update_mouse_pos_callback(struct ui_element *e, ui_update_mouse_pos_function f)
-{
-	e->update_mouse_pos = f;
-}
-
-void ui_element_set_button_press_function(struct ui_element *e, ui_element_button_release_function button_press)
-{
-	e->button_press = button_press;
 }
 
 void ui_element_update_position_offset(struct ui_element *element, int xoffset, int yoffset)
