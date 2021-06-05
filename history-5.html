@@ -1,0 +1,1326 @@
+
+
+
+<p>This is a PAGE 5 of a copy of a <a href="https://forum.freegamedev.net/viewtopic.php?f=22&t=3710">thread
+on freegamedev.net</a>. Once around 2010 or so, I lost a similar thread over there for my
+other little game, Word War vi when the forum database was lost, so I created this as a backup
+in case something similar happens again.
+
+<p><a href="history-4.html">BACK TO PAGE 4</a>
+
+<hr>
+<p>.<b>fluffrabbit 22 Aug 2019, 16:45</b>
+<p>That looks awesome, but if you look at the interface they use on the old
+Soyuz capsules to dock with ISS, yours is way more complicated. I'd be afraid
+to slam into something if I were looking at all those shiny glowy lines. No
+idea what they mean.
+<hr>
+<p><b>smcameron 22 Aug 2019, 23:14</b>
+<p>It's a lot more clear what's going on when it's in motion. That being said,
+you're not meant to drive the ship using this screen only. The main view is
+useful for avoiding nearby things. This is more for navigating among things at
+a medium distance. There are also 4 different camera positions ranging from
+very far behind your ship to almost right on top of it. Switching between these
+views (which it smoothly interpolates between) depending on circumstance can
+make things clearer as well.
+<hr>
+<p><b>fluffrabbit 22 Aug 2019, 23:53</b>
+<p>It's good that you have different views. I'm so accustomed to single-screen
+games that I forget all the components involved with this. The source looks
+easy to build, but there seem to be several services you need going at once to
+play it.
+<hr>
+<p><b>smcameron 23 Aug 2019, 01:44</b>
+<p>There are several services needed besides snis_client (snis_server,
+ssgl_server, snis_multiverse). You can run all 4 on the same machine. There's a
+script to help start them all, snis_launcher:
+
+<pre>
+scameron@sirius ~/github/space-nerds-in-space $ ./snis_launcher
+
+     Welcome to Space Nerds In Space
+
+------------------------------------------------------------
+No SNIS processes are currently running.
+------------------------------------------------------------
+
+   1. Launch SNIS lobby server
+   The lobby server allows clients to find servers
+   There should be one lobby server total.
+   2. Launch SNIS multiverse server
+   The multiverse server stores player ship data
+   There should be one multiverse server total
+   3. Launch SNIS server
+   There should be one snis server per solarsystem.
+   There should be at least one instance of snis_server.
+   4. Launch SNIS client process
+   There should be one snis client process per player
+   plus one more per ship for the main screen.
+   ...
+</pre>
+
+<p>The first four menu items of snis_launcher start the necessary services.
+
+<p>Or, there's a "./quickstart" script that will just start everything. If
+you're just running the thing by yourself, that's probably easiest, but for a
+real session, snis_launcher is generally better, because most people will only
+be running snis_client and nothing else on their machines.
+<hr>
+ <p><b>fluffrabbit 23 Aug 2019, 03:00</b>
+<p>./quickstart it is. I'll have to try it some time soon.
+<hr>
+<p><b>smcameron 30 Aug 2019, 17:46</b>
+Short dev update 2018-08-30
+<p><a href="https://www.youtube.com/watch?v=fSD8SV3TSFE"><img src="https://img.youtube.com/vi/fSD8SV3TSFE/hqdefault.jpg"></a>
+<hr>
+<p><b>fluffrabbit 30 Aug 2019, 21:48</b>
+<p>&lt;suggestions&gt;
+
+<p>1. Put the build instructions in the source tree and link to that from the readme. (What if GitHub goes down? What if someone is building offline?)
+
+<p>2. Get all the C&amp;H files out of the root directory so we can quickly see what is relevant to launching the game. I know there are some other organizational issues, but this would be a big help to the signal-to-noise ratio.
+
+<p>3. For your apt-get install commands, you should stack all the essential packages into a single line like so:
+
+<pre>
+    sudo apt-get install build-essential portaudio19-dev libvorbis-dev libgtk2.0-dev libgtkglext1-dev liblua5.2-dev libglew1.5-dev libssl-dev libttspico-utils sox
+</pre>
+
+
+
+<p>I know there are multiple options regarding TTS, but I'll leave that to your discretion.
+
+&lt;/suggestions&gt;
+
+<p>There appear to be some depth sorting issues with the main menu. (Ignore the
+disjointed lines; those are just a result of screen tearing.) This doesn't look
+like the ship in the pictures, so spherical cows seem to have replaced
+everything. It also won't run.
+
+<p><img src="https://i.postimg.cc/GpPQGMYS/snis.png">
+<p>Here's some terminal output:
+<pre>
+Failed to read model from file './share/snis/models/docking_port.stl'
+Assume form of . . . A SPHERICAL COW!
+Failed to read model from file './share/snis/models/docking_port2.stl'
+Assume form of . . . A SPHERICAL COW!
+Failed to read model from file './share/snis/models/tetrahedron.stl'
+Assume form of . . . A SPHERICAL COW!
+Failed to read model from file './share/snis/models/warpgate.stl'
+Assume form of . . . A SPHERICAL COW!
+Failed to read model from file './share/snis/models/warp-core.stl'
+Assume form of . . . A SPHERICAL COW!
+Failed to read model from file './share/snis/models/cylinder.stl'
+Assume form of . . . A SPHERICAL COW!
+x = 289, y = 466, width = 296.000000, height = 32.000000
+x = 289, y = 466, width = 296.000000, height = 32.000000
+x = 289, y = 466, width = 296.000000, height = 32.000000
+x = 289, y = 466, width = 296.000000, height = 32.000000
+x = 289, y = 466, width = 296.000000, height = 32.000000
+x = 289, y = 466, width = 296.000000, height = 32.000000
+x = 289, y = 466, width = 296.000000, height = 32.000000
+x = 289, y = 466, width = 296.000000, height = 32.000000
+x = 289, y = 466, width = 296.000000, height = 32.000000
+x = 289, y = 466, width = 296.000000, height = 32.000000
+x = 291, y = 466, width = 296.000000, height = 32.000000
+x = 316, y = 452, width = 296.000000, height = 32.000000
+snis_client: connect to lobby pressed
+lobbyname = 'localhost'
+shipname = ''
+x = 400, y = 727, width = 272.000000, height = 32.000000
+x = 400, y = 727, width = 272.000000, height = 32.000000
+x = 400, y = 727, width = 272.000000, height = 32.000000
+x = 400, y = 727, width = 272.000000, height = 32.000000
+x = 400, y = 727, width = 272.000000, height = 32.000000
+x = 400, y = 727, width = 272.000000, height = 32.000000
+x = 400, y = 727, width = 272.000000, height = 32.000000
+x = 400, y = 727, width = 272.000000, height = 32.000000
+x = 400, y = 727, width = 272.000000, height = 32.000000
+x = 400, y = 727, width = 272.000000, height = 32.000000
+x = 400, y = 727, width = 272.000000, height = 32.000000
+x = 400, y = 727, width = 272.000000, height = 32.000000
+x = 400, y = 727, width = 272.000000, height = 32.000000
+x = 400, y = 727, width = 272.000000, height = 32.000000
+x = 400, y = 727, width = 272.000000, height = 32.000000
+x = 400, y = 727, width = 272.000000, height = 32.000000
+x = 400, y = 727, width = 272.000000, height = 32.000000
+x = 400, y = 727, width = 272.000000, height = 32.000000
+x = 400, y = 727, width = 272.000000, height = 32.000000
+x = 400, y = 727, width = 272.000000, height = 32.000000
+x = 400, y = 727, width = 272.000000, height = 32.000000
+x = 400, y = 727, width = 272.000000, height = 32.000000
+x = 400, y = 727, width = 272.000000, height = 32.000000
+x = 400, y = 727, width = 272.000000, height = 32.000000
+x = 400, y = 727, width = 272.000000, height = 32.000000
+x = 400, y = 727, width = 272.000000, height = 32.000000
+x = 400, y = 727, width = 272.000000, height = 32.000000
+x = 400, y = 727, width = 272.000000, height = 32.000000
+x = 400, y = 727, width = 272.000000, height = 32.000000
+x = 400, y = 727, width = 272.000000, height = 32.000000
+x = 400, y = 727, width = 272.000000, height = 32.000000
+x = 400, y = 727, width = 272.000000, height = 32.000000
+x = 400, y = 727, width = 272.000000, height = 32.000000
+x = 400, y = 727, width = 272.000000, height = 32.000000
+x = 400, y = 727, width = 272.000000, height = 32.000000
+x = 400, y = 727, width = 272.000000, height = 32.000000
+x = 400, y = 727, width = 272.000000, height = 32.000000
+x = 400, y = 727, width = 272.000000, height = 32.000000
+x = 400, y = 727, width = 272.000000, height = 32.000000
+x = 400, y = 727, width = 272.000000, height = 32.000000
+x = 400, y = 727, width = 272.000000, height = 32.000000
+x = 400, y = 727, width = 272.000000, height = 32.000000
+x = 400, y = 727, width = 272.000000, height = 32.000000
+x = 400, y = 727, width = 272.000000, height = 32.000000
+x = 400, y = 727, width = 272.000000, height = 32.000000
+x = 400, y = 727, width = 272.000000, height = 32.000000
+x = 400, y = 727, width = 272.000000, height = 32.000000
+x = 400, y = 727, width = 272.000000, height = 32.000000
+x = 400, y = 727, width = 272.000000, height = 32.000000
+x = 400, y = 727, width = 272.000000, height = 32.000000
+x = 400, y = 727, width = 272.000000, height = 32.000000
+x = 400, y = 727, width = 272.000000, height = 32.000000
+x = 400, y = 727, width = 272.000000, height = 32.000000
+x = 400, y = 727, width = 272.000000, height = 32.000000
+snis_client: connect to lobby pressed
+lobbyname = 'localhost'
+shipname = ''
+x = 400, y = 727, width = 272.000000, height = 32.000000
+x = 400, y = 727, width = 272.000000, height = 32.000000
+x = 400, y = 727, width = 272.000000, height = 32.000000
+x = 400, y = 727, width = 272.000000, height = 32.000000
+x = 400, y = 727, width = 272.000000, height = 32.000000
+x = 400, y = 727, width = 272.000000, height = 32.000000
+x = 400, y = 727, width = 272.000000, height = 32.000000
+x = 400, y = 727, width = 272.000000, height = 32.000000
+x = 400, y = 727, width = 272.000000, height = 32.000000
+x = 400, y = 727, width = 272.000000, height = 32.000000
+x = 400, y = 727, width = 272.000000, height = 32.000000
+x = 400, y = 727, width = 272.000000, height = 32.000000
+x = 400, y = 727, width = 272.000000, height = 32.000000
+x = 400, y = 727, width = 272.000000, height = 32.000000
+x = 400, y = 727, width = 272.000000, height = 32.000000
+x = 400, y = 727, width = 272.000000, height = 32.000000
+x = 400, y = 727, width = 272.000000, height = 32.000000
+x = 400, y = 727, width = 272.000000, height = 32.000000
+x = 400, y = 727, width = 272.000000, height = 32.000000
+x = 400, y = 727, width = 272.000000, height = 32.000000
+x = 400, y = 727, width = 272.000000, height = 32.000000
+x = 400, y = 727, width = 272.000000, height = 32.000000
+x = 400, y = 727, width = 272.000000, height = 32.000000
+x = 400, y = 727, width = 272.000000, height = 32.000000
+x = 400, y = 727, width = 272.000000, height = 32.000000
+x = 400, y = 727, width = 272.000000, height = 32.000000
+x = 400, y = 727, width = 272.000000, height = 32.000000
+x = 400, y = 727, width = 272.000000, height = 32.000000
+snis_client: connect to lobby pressed
+lobbyname = 'localhost'
+shipname = ''
+x = 400, y = 727, width = 272.000000, height = 32.000000
+x = 400, y = 727, width = 272.000000, height = 32.000000
+x = 400, y = 727, width = 272.000000, height = 32.000000
+x = 400, y = 727, width = 272.000000, height = 32.000000
+x = 400, y = 727, width = 272.000000, height = 32.000000
+x = 400, y = 727, width = 272.000000, height = 32.000000
+x = 400, y = 727, width = 272.000000, height = 32.000000
+x = 400, y = 727, width = 272.000000, height = 32.000000
+x = 400, y = 727, width = 272.000000, height = 32.000000
+x = 400, y = 727, width = 272.000000, height = 32.000000
+x = 400, y = 727, width = 272.000000, height = 32.000000
+x = 400, y = 727, width = 272.000000, height = 32.000000
+x = 400, y = 727, width = 272.000000, height = 32.000000
+x = 400, y = 727, width = 272.000000, height = 32.000000
+x = 400, y = 727, width = 272.000000, height = 32.000000
+x = 400, y = 724, width = 272.000000, height = 32.000000
+x = 409, y = 703, width = 272.000000, height = 32.000000
+start lobby server button pressed.
+execl'ing ./bin/ssgl_server
+x = 296, y = 264, width = 306.000000, height = 32.000000
+x = 296, y = 264, width = 306.000000, height = 32.000000
+x = 296, y = 264, width = 306.000000, height = 32.000000
+x = 295, y = 265, width = 306.000000, height = 32.000000
+x = 296, y = 266, width = 306.000000, height = 32.000000
+x = 296, y = 266, width = 306.000000, height = 32.000000
+x = 296, y = 266, width = 306.000000, height = 32.000000
+x = 299, y = 270, width = 306.000000, height = 32.000000
+x = 301, y = 273, width = 306.000000, height = 32.000000
+x = 308, y = 280, width = 306.000000, height = 32.000000
+x = 311, y = 283, width = 306.000000, height = 32.000000
+start game server button pressed.
+snis_server(default):: Created lockfile /tmp/snis_server_lock.DEFAULT2, proceeding.
+WARNING: lua enscript enabled!
+THIS PERMITS USERS TO CREATE FILES ON THE SERVER
+x = 284, y = 472, width = 296.000000, height = 32.000000
+./share/snis/replacement_assets.txt: Warning:  No such file or directory
+x = 284, y = 472, width = 296.000000, height = 32.000000
+x = 284, y = 472, width = 296.000000, height = 32.000000
+x = 284, y = 472, width = 296.000000, height = 32.000000
+x = 284, y = 472, width = 296.000000, height = 32.000000
+x = 284, y = 472, width = 296.000000, height = 32.000000
+x = 284, y = 472, width = 296.000000, height = 32.000000
+x = 284, y = 472, width = 296.000000, height = 32.000000
+x = 284, y = 472, width = 296.000000, height = 32.000000
+Reading starbase model specifications...done
+x = 284, y = 472, width = 296.000000, height = 32.000000
+fopen: ./share/snis/solarsystems/default2/assets.txt: No such file or directory
+Unable to read solarsystem asset spec from './share/snis/solarsystems/default2/assets.txt'./share/snis/solarsystems/default2/assets.txt: No such file or directory
+Failed reading solarsystem assets for 'default2'
+x = 284, y = 472, width = 296.000000, height = 32.000000
+x = 284, y = 472, width = 296.000000, height = 32.000000
+x = 284, y = 472, width = 296.000000, height = 32.000000
+x = 284, y = 472, width = 296.000000, height = 32.000000
+x = 284, y = 472, width = 296.000000, height = 32.000000
+x = 284, y = 472, width = 296.000000, height = 32.000000
+x = 284, y = 472, width = 296.000000, height = 32.000000
+x = 284, y = 472, width = 296.000000, height = 32.000000
+x = 284, y = 472, width = 296.000000, height = 32.000000
+x = 284, y = 472, width = 296.000000, height = 32.000000
+x = 284, y = 472, width = 296.000000, height = 32.000000
+x = 284, y = 472, width = 296.000000, height = 32.000000
+x = 284, y = 472, width = 296.000000, height = 32.000000
+x = 284, y = 472, width = 296.000000, height = 32.000000
+x = 284, y = 472, width = 296.000000, height = 32.000000
+x = 284, y = 472, width = 296.000000, height = 32.000000
+x = 284, y = 472, width = 296.000000, height = 32.000000
+x = 284, y = 472, width = 296.000000, height = 32.000000
+x = 284, y = 472, width = 296.000000, height = 32.000000
+x = 284, y = 472, width = 296.000000, height = 32.000000
+x = 284, y = 472, width = 296.000000, height = 32.000000
+x = 284, y = 472, width = 296.000000, height = 32.000000
+x = 284, y = 472, width = 296.000000, height = 32.000000
+x = 284, y = 472, width = 296.000000, height = 32.000000
+x = 284, y = 472, width = 296.000000, height = 32.000000
+x = 284, y = 472, width = 296.000000, height = 32.000000
+x = 367, y = 715, width = 272.000000, height = 32.000000
+x = 367, y = 715, width = 272.000000, height = 32.000000
+x = 367, y = 715, width = 272.000000, height = 32.000000
+x = 367, y = 715, width = 272.000000, height = 32.000000
+x = 367, y = 715, width = 272.000000, height = 32.000000
+x = 367, y = 715, width = 272.000000, height = 32.000000
+x = 367, y = 715, width = 272.000000, height = 32.000000
+x = 367, y = 715, width = 272.000000, height = 32.000000
+x = 367, y = 715, width = 272.000000, height = 32.000000
+x = 367, y = 715, width = 272.000000, height = 32.000000
+x = 367, y = 715, width = 272.000000, height = 32.000000
+x = 367, y = 715, width = 272.000000, height = 32.000000
+x = 367, y = 715, width = 272.000000, height = 32.000000
+x = 367, y = 715, width = 272.000000, height = 32.000000
+x = 367, y = 715, width = 272.000000, height = 32.000000
+x = 367, y = 715, width = 272.000000, height = 32.000000
+x = 367, y = 715, width = 272.000000, height = 32.000000
+x = 367, y = 715, width = 272.000000, height = 32.000000
+x = 367, y = 715, width = 272.000000, height = 32.000000
+x = 367, y = 715, width = 272.000000, height = 32.000000
+snis_client: connect to lobby pressed
+lobbyname = 'localhost'
+shipname = 'Thing'
+snis_client: connecting to lobby...
+Trying to connect to lobby.
+snis_client: connecting to lobby
+snis_client: Connected to lobby
+lobby cancel button pressed
+snis_client: ssgl_recv_game_server failed: ssgl_recv_game_servers failed: Bad file descriptor
+
+x = 981, y = 607, width = 464.000000, height = 32.000000
+x = 981, y = 607, width = 464.000000, height = 32.000000
+x = 980, y = 607, width = 464.000000, height = 32.000000
+x = 980, y = 607, width = 464.000000, height = 32.000000
+x = 980, y = 607, width = 464.000000, height = 32.000000
+x = 980, y = 607, width = 464.000000, height = 32.000000
+x = 978, y = 607, width = 464.000000, height = 32.000000
+x = 977, y = 607, width = 464.000000, height = 32.000000
+x = 976, y = 607, width = 464.000000, height = 32.000000
+x = 976, y = 607, width = 464.000000, height = 32.000000
+x = 976, y = 607, width = 464.000000, height = 32.000000
+x = 976, y = 607, width = 464.000000, height = 32.000000
+x = 973, y = 606, width = 464.000000, height = 32.000000
+Trying to connect to lobby.
+lobby socket = 15, done with lobby
+start lobby server button pressed.
+execl'ing ./bin/ssgl_server
+x = 234, y = 269, width = 306.000000, height = 32.000000
+x = 234, y = 269, width = 306.000000, height = 32.000000
+x = 234, y = 269, width = 306.000000, height = 32.000000
+x = 234, y = 269, width = 306.000000, height = 32.000000
+x = 234, y = 269, width = 306.000000, height = 32.000000
+x = 236, y = 273, width = 306.000000, height = 32.000000
+snis_client: connect to lobby pressed
+lobbyname = 'localhost'
+shipname = 'Thing'
+snis_client: connecting to lobby...
+Trying to connect to lobby.
+snis_client: connecting to lobby
+snis_client: Connected to lobby
+lobby cancel button pressed
+snis_client: ssgl_recv_game_server failed: ssgl_recv_game_servers failed: Bad file descriptor
+
+9811 frames / 345 seconds, 28.4377 frames/sec
+server netstats: 0 bytes sent, 0 bytes recd, secs = 1, bw = 0 bytes/sec
+</pre>
+<hr>
+<p><b>smcameron 30 Aug 2019, 23:14</b>
+<blockquote>
+    fluffrabbit wrote:
+    &lt;suggestions&gt;
+
+    1. Put the build instructions in the source tree and link to that from the readme. (What if GitHub goes down? What if someone is building offline?)
+</blockquote>
+
+Ok.
+<blockquote>
+    2. Get all the C&amp;H files out of the root directory so we can quickly see what is relevant to launching the game. I know there are some other organizational issues, but this would be a big help to the signal-to-noise ratio.
+</blockquote>
+
+
+Flat no. Will fuck up the git history.
+<blockquote>
+    3. For your apt-get install commands, you should stack all the essential packages into a single line like so:
+
+
+        sudo apt-get install build-essential portaudio19-dev libvorbis-dev libgtk2.0-dev libgtkglext1-dev liblua5.2-dev libglew1.5-dev libssl-dev libttspico-utils sox
+</blockquote>
+
+Eh, maybe.
+<blockquote>
+
+    I know there are multiple options regarding TTS, but I'll leave that to your discretion.
+
+    &lt;/suggestions&gt;
+
+    There appear to be some depth sorting issues with the main menu. (Ignore
+the disjointed lines; those are just a result of screen tearing.) This doesn't
+look like the ship in the pictures, so spherical cows seem to have replaced
+everything. It also won't run.
+
+</blockquote>
+
+<p>Did you run "make update-assets" or "make models" ? You have to do at least one of those.
+
+<p>You're missing asset files. I have seen openscad crap out on some systems
+leaving some assets unbuilt if you went the "make models" route instead of
+"make update-assets".
+
+<p>After fixing the assets, try running with ./snis_launcher and choosing
+option 1, then 2, then 3, then 4. Then there will be log files in
+snis_client_log.txt snis_server_log.txt. It looks like snis_server isn't
+started (might be due to lack of asset files, but very hard to tell what
+problems you've got. FWIW, I compiled it and ran it on 5 or 6 different systems
+a week ago with no problems ... did have some problems with OpenSuSE Leap 15.1
+though, due to strange changes they made wrt pkg-config.)
+
+<p>A fresh clone and build looks like this for me:
+
+<pre>
+scameron@wombat ~/github/testsnis2 $ git clone git@github.com:smcameron/space-nerds-in-space.git
+Cloning into 'space-nerds-in-space'...
+Enter passphrase for key '/home/scameron/.ssh/id_rsa':
+remote: Enumerating objects: 683, done.
+remote: Counting objects: 100% (683/683), done.
+remote: Compressing objects: 100% (237/237), done.
+remote: Total 21433 (delta 432), reused 604 (delta 369), pack-reused 20750
+Receiving objects: 100% (21433/21433), 176.32 MiB | 4.35 MiB/s, done.
+Resolving deltas: 100% (14562/14562), done.
+Checking connectivity... done.
+scameron@wombat ~/github/testsnis2 $ make
+make: *** No targets specified and no makefile found.  Stop.
+scameron@wombat ~/github/testsnis2 $ ls
+space-nerds-in-space
+scameron@wombat ~/github/testsnis2 $ cd space-nerds-in-space/
+scameron@wombat ~/github/testsnis2/space-nerds-in-space $ make
+  COMPILE mathutils.c
+  COMPILE snis_alloc.c
+  COMPILE snis_socket_io.c
+  COMPILE snis_marshal.c
+  COMPILE bline.c
+  COMPILE shield_strength.c
+  COMPILE stacktrace.c
+  COMPILE snis_ship_type.c
+  COMPILE snis_faction.c
+  COMPILE mtwist.c
+  COMPILE names.c
+  COMPILE infinite-taunt.c
+  COMPILE snis_damcon_systems.c
+  COMPILE string-utils.c
+  COMPILE c-is-the-locale.c
+  COMPILE starbase_metadata.c
+  COMPILE arbitrary_spin.c
+  COMPILE planetary_atmosphere.c
+  COMPILE planetary_ring_data.c
+  COMPILE mesh.c
+  COMPILE pthread_util.c
+  COMPILE snis_opcode_def.c
+  COMPILE rts_unit_data.c
+  COMPILE commodities.c
+  COMPILE snis_tweak.c
+  COMPILE rootcheck.c
+  COMPILE corporations.c
+  COMPILE replacement_assets.c
+  COMPILE snis_asset_dir.c
+  COMPILE snis_bin_dir.c
+(cd mikktspace &amp;&amp; make )
+make[1]: Entering directory '/home/scameron/github/testsnis2/space-nerds-in-space/mikktspace'
+  COMPILE mikktspace.c -c mikktspace.c
+make[1]: Leaving directory '/home/scameron/github/testsnis2/space-nerds-in-space/mikktspace'
+  COMPILE check-endianness.c
+  GATHER BUILD INFO
+  EXTRACT DOCKING PORTS share/snis/models/starbase2.docking_ports.h
+  EXTRACT DOCKING PORTS share/snis/models/starbase3.docking_ports.h
+  EXTRACT DOCKING PORTS share/snis/models/starbase4.docking_ports.h
+  EXTRACT DOCKING PORTS share/snis/models/starbase5.docking_ports.h
+  EXTRACT DOCKING PORTS share/snis/models/starbase6.docking_ports.h
+  EXTRACT DOCKING PORTS share/snis/models/starbase.docking_ports.h
+  COMPILE snis_server.c
+  COMPILE starbase-comms.c
+  COMPILE power-model.c
+  COMPILE quat.c
+  COMPILE vec4.c
+  COMPILE matrix.c
+  COMPILE snis_event_callback.c
+  COMPILE space-part.c
+  COMPILE fleet.c
+  COMPILE docking_port.c
+  COMPILE elastic_collision.c
+  COMPILE snis_nl.c
+  COMPILE spelled_numbers.c
+  COMPILE snis_server_tracker.c
+  COMPILE snis_bridge_update_packet.c
+  COMPILE solarsystem_config.c
+  COMPILE a_star.c
+  COMPILE key_value_parser.c
+  COMPILE nonuniform_random_sampler.c
+  COMPILE oriented_bounding_box.c
+  COMPILE shape_collision.c
+  COMPILE graph_dev_mesh_stub.c
+  COMPILE turret_aimer.c
+  COMPILE snis_hash.c
+  COMPILE snis_debug.c
+  COMPILE ship_registration.c
+  COMPILE snis_multiverse.c
+  COMPILE starmap_adjacency.c
+  COMPILE ogg_to_pcm.c
+  COMPILE wwviaudio.c
+  COMPILE snis_ui_element.c
+  COMPILE snis_font.c
+  COMPILE snis_text_input.c
+  COMPILE snis_typeface.c
+  COMPILE snis_gauge.c
+  COMPILE snis_button.c
+  COMPILE snis_label.c
+  COMPILE snis_sliders.c
+  COMPILE snis_text_window.c
+  COMPILE snis_strip_chart.c
+  COMPILE material.c
+  COMPILE stl_parser.c
+  COMPILE entity.c
+  COMPILE my_point.c
+  COMPILE liang-barsky.c
+  COMPILE joystick.c
+  COMPILE thrust_attachment.c
+  COMPILE ui_colors.c
+  COMPILE snis_keyboard.c
+  COMPILE pronunciation.c
+  COMPILE snis_preferences.c
+  COMPILE snis_pull_down_menu.c
+  COMPILE snis_debug.c
+  COMPILE xdg_base_dir_spec.c
+  COMPILE shader.c
+  COMPILE graph_dev_opengl.c
+  COMPILE opengl_cap.c
+  COMPILE snis_graph.c
+  COMPILE snis_client.c
+  COMPILE joystick_config.c
+  COMPILE graph_dev_gdk.c
+  (limited client)   COMPILE snis_graph.c
+  (limited client)   COMPILE snis_client.c
+(cd ssgl &amp;&amp; make )
+make[1]: Entering directory '/home/scameron/github/testsnis2/space-nerds-in-space/ssgl'
+  COMPILE ssgl_sanitize.c
+  COMPILE ssgl_sleep.c
+  COMPILE ssgl_socket_io.c
+  COMPILE ssgl_log.c
+  COMPILE ssgl_get_primary_host_ip_addr.c
+  COMPILE ssgl_get_gamelobby_port.c
+  COMPILE ssgl_server.c
+  LINK ssgl_server.o
+  COMPILE ssgl_recv_game_servers.c
+  COMPILE ssgl_connect_to_lobby.c
+  COMPILE ssgl_register_gameserver.c
+  COMPILE ssgl_register_for_bcast_packet.c
+  ARCHIVE libssglclient.a
+  COMPILE ssgl_gameclient_example.c
+  LINK ssgl_gameclient_example.o
+  COMPILE ssgl_gameserver_example.c
+  LINK ssgl_gameserver_example.o
+cp ssgl_gameclient_example lsssgl
+make[1]: Leaving directory '/home/scameron/github/testsnis2/space-nerds-in-space/ssgl'
+  LINK bin/snis_server
+  LINK bin/snis_client
+  LINK bin/snis_limited_client
+  LINK bin/snis_multiverse
+  EXTRACT THRUST PARAMS share/snis/models/disruptor.scad_params.h
+  EXTRACT THRUST PARAMS share/snis/models/enforcer.scad_params.h
+  EXTRACT THRUST PARAMS share/snis/models/starbase5.scad_params.h
+  EXTRACT THRUST PARAMS share/snis/models/research-vessel.scad_params.h
+  EXTRACT THRUST PARAMS share/snis/models/conqueror.scad_params.h
+  EXTRACT THRUST PARAMS share/snis/models/cruiser.scad_params.h
+  EXTRACT THRUST PARAMS share/snis/models/asteroid-miner.scad_params.h
+  EXTRACT THRUST PARAMS share/snis/models/battlestar.scad_params.h
+  EXTRACT THRUST PARAMS share/snis/models/wombat.scad_params.h
+  EXTRACT THRUST PARAMS share/snis/models/destroyer.scad_params.h
+  EXTRACT THRUST PARAMS share/snis/models/dragonhawk.scad_params.h
+  EXTRACT THRUST PARAMS share/snis/models/tanker.scad_params.h
+  EXTRACT THRUST PARAMS share/snis/models/swordfish.scad_params.h
+  EXTRACT THRUST PARAMS share/snis/models/vanquisher.scad_params.h
+  EXTRACT THRUST PARAMS share/snis/models/freighter.scad_params.h
+  EXTRACT THRUST PARAMS share/snis/models/scrambler.scad_params.h
+  EXTRACT THRUST PARAMS share/snis/models/spaceship2.scad_params.h
+  EXTRACT THRUST PARAMS share/snis/models/spaceship3.scad_params.h
+  EXTRACT THRUST PARAMS share/snis/models/skorpio.scad_params.h
+  EXTRACT THRUST PARAMS share/snis/models/spaceship.scad_params.h
+  EXTRACT THRUST PARAMS share/snis/models/transport.scad_params.h
+  EXTRACT THRUST PARAMS share/snis/models/escapepod.scad_params.h
+  EXTRACT THRUST PARAMS share/snis/models/mantis.scad_params.h
+  EXTRACT THRUST PARAMS share/snis/models/missile.scad_params.h
+scameron@wombat ~/github/testsnis2/space-nerds-in-space $ make update-assets
+fetching /tmp/snis_asset_manifest27581.txt... done
+Creating ./share/snis/replacement-files/default-assets.txt... done
+Creating ./share/snis/replacement_assets.txt... done
+Creating ./share/snis/solarsystems/tau-scorpii/image2.png... done
+Creating ./share/snis/solarsystems/tau-scorpii/rustywall0.png... done
+Creating ./share/snis/solarsystems/tau-scorpii/rocky1-rgb-3.png... done
+Creating ./share/snis/solarsystems/tau-scorpii/image1.png... done
+Creating ./share/snis/solarsystems/tau-scorpii/erth-2.png... done
+Creating ./share/snis/solarsystems/tau-scorpii/image4.png... done
+Creating ./share/snis/solarsystems/tau-scorpii/sun.png... done
+Creating ./share/snis/solarsystems/tau-scorpii/bluish2.png... done
+Creating ./share/snis/solarsystems/tau-scorpii/rocky1-rgb-1.png... done
+Creating ./share/snis/solarsystems/tau-scorpii/rocky1-normalmap-rgb-1.png... done
+Creating ./share/snis/solarsystems/tau-scorpii/gasgiant-d-1.png... done
+Creating ./share/snis/solarsystems/tau-scorpii/gasgiant-d-0.png... done
+Creating ./share/snis/solarsystems/tau-scorpii/rocky1-normalmap-rgb-3.png... done
+Creating ./share/snis/solarsystems/tau-scorpii/jungle3.png... done
+Creating ./share/snis/solarsystems/tau-scorpii/bluish5.png... done
+Creating ./share/snis/solarsystems/tau-scorpii/rocky1-rgb-5.png... done
+Creating ./share/snis/solarsystems/tau-scorpii/rustywall3.png... done
+Creating ./share/snis/solarsystems/tau-scorpii/erth-0.png... done
+Creating ./share/snis/solarsystems/tau-scorpii/rustywall1.png... done
+Creating ./share/snis/solarsystems/tau-scorpii/rocky1-normalmap-rgb-5.png... done
+Creating ./share/snis/solarsystems/tau-scorpii/bluish4.png... done
+Creating ./share/snis/solarsystems/tau-scorpii/jungle5.png... done
+Creating ./share/snis/solarsystems/tau-scorpii/rocky1-rgb-4.png... done
+Creating ./share/snis/solarsystems/tau-scorpii/erth-4.png... done
+Creating ./share/snis/solarsystems/tau-scorpii/rocky1-rgb-2.png... done
+Creating ./share/snis/solarsystems/tau-scorpii/rocky1-rgb-0.png... done
+Creating ./share/snis/solarsystems/tau-scorpii/rocky1-normalmap-rgb-0.png... done
+Creating ./share/snis/solarsystems/tau-scorpii/rocky1-normalmap-rgb-4.png... done
+Creating ./share/snis/solarsystems/tau-scorpii/gasgiant-d-2.png... done
+Creating ./share/snis/solarsystems/tau-scorpii/bluish0.png... done
+Creating ./share/snis/solarsystems/tau-scorpii/bluish3.png... done
+Creating ./share/snis/solarsystems/tau-scorpii/rustywall4.png... done
+Creating ./share/snis/solarsystems/tau-scorpii/assets.txt... done
+Creating ./share/snis/solarsystems/tau-scorpii/bluish1.png... done
+Creating ./share/snis/solarsystems/tau-scorpii/erth-1.png... done
+Creating ./share/snis/solarsystems/tau-scorpii/erth-5.png... done
+Creating ./share/snis/solarsystems/tau-scorpii/image5.png... done
+Creating ./share/snis/solarsystems/tau-scorpii/gasgiant-d-5.png... done
+Creating ./share/snis/solarsystems/tau-scorpii/erth-3.png... done
+Creating ./share/snis/solarsystems/tau-scorpii/rocky1-normalmap-rgb-2.png... done
+Creating ./share/snis/solarsystems/tau-scorpii/rustywall2.png... done
+Creating ./share/snis/solarsystems/tau-scorpii/jungle2.png... done
+Creating ./share/snis/solarsystems/tau-scorpii/gasgiant-d-3.png... done
+Creating ./share/snis/solarsystems/tau-scorpii/jungle0.png... done
+Creating ./share/snis/solarsystems/tau-scorpii/image3.png... done
+Creating ./share/snis/solarsystems/tau-scorpii/rustywall5.png... done
+Creating ./share/snis/solarsystems/tau-scorpii/image0.png... done
+Creating ./share/snis/solarsystems/tau-scorpii/jungle4.png... done
+Creating ./share/snis/solarsystems/tau-scorpii/gasgiant-d-4.png... done
+Creating ./share/snis/solarsystems/tau-scorpii/jungle1.png... done
+Creating ./share/snis/solarsystems/karado/maurz1.png... done
+Creating ./share/snis/solarsystems/karado/earthlike1-with-clouds-rgb-2.png... done
+Creating ./share/snis/solarsystems/karado/ounii-normalmap-masked3.png... done
+Creating ./share/snis/solarsystems/karado/maurz3.png... done
+Creating ./share/snis/solarsystems/karado/earthlike1-with-clouds-rgb-1.png... done
+Creating ./share/snis/solarsystems/karado/maurz-normalmap0.png... done
+Creating ./share/snis/solarsystems/karado/earthlike1-normalmap-masked-rgb-0.png... done
+Creating ./share/snis/solarsystems/karado/earthlike1-normalmap-masked-rgb-1.png... done
+Creating ./share/snis/solarsystems/karado/sun.png... done
+Creating ./share/snis/solarsystems/karado/earthlike1-with-clouds-rgb-5.png... done
+Creating ./share/snis/solarsystems/karado/earthlike1-normalmap-masked-rgb-4.png... done
+Creating ./share/snis/solarsystems/karado/kolaron1.png... done
+Creating ./share/snis/solarsystems/karado/skybox-4.png... done
+Creating ./share/snis/solarsystems/karado/earthlike1-with-clouds-rgb-0.png... done
+Creating ./share/snis/solarsystems/karado/tounah-normalmap1.png... done
+Creating ./share/snis/solarsystems/karado/ounii-with-clouds-0.png... done
+Creating ./share/snis/solarsystems/karado/tounah3.png... done
+Creating ./share/snis/solarsystems/karado/tounah-normalmap3.png... done
+Creating ./share/snis/solarsystems/karado/skybox-0.png... done
+Creating ./share/snis/solarsystems/karado/ounii-normalmap-masked0.png... done
+Creating ./share/snis/solarsystems/karado/norphi5.png... done
+Creating ./share/snis/solarsystems/karado/maurz5.png... done
+Creating ./share/snis/solarsystems/karado/norphi-normalmap4.png... done
+Creating ./share/snis/solarsystems/karado/earthlike1-normalmap-masked-rgb-5.png... done
+Creating ./share/snis/solarsystems/karado/ounii-with-clouds-4.png... done
+Creating ./share/snis/solarsystems/karado/kolaron3.png... done
+Creating ./share/snis/solarsystems/karado/earthlike1-normalmap-masked-rgb-3.png... done
+Creating ./share/snis/solarsystems/karado/kolaron4.png... done
+Creating ./share/snis/solarsystems/karado/maurz-normalmap3.png... done
+Creating ./share/snis/solarsystems/karado/maurz0.png... done
+Creating ./share/snis/solarsystems/karado/norphi4.png... done
+Creating ./share/snis/solarsystems/karado/tounah1.png... done
+Creating ./share/snis/solarsystems/karado/ounii-normalmap-masked1.png... done
+Creating ./share/snis/solarsystems/karado/kolaron5.png... done
+Creating ./share/snis/solarsystems/karado/kolaron0.png... done
+Creating ./share/snis/solarsystems/karado/skybox-2.png... done
+Creating ./share/snis/solarsystems/karado/maurz-normalmap4.png... done
+Creating ./share/snis/solarsystems/karado/maurz-normalmap5.png... done
+Creating ./share/snis/solarsystems/karado/skybox-3.png... done
+Creating ./share/snis/solarsystems/karado/ounii-with-clouds-2.png... done
+Creating ./share/snis/solarsystems/karado/ounii-with-clouds-5.png... done
+Creating ./share/snis/solarsystems/karado/tounah-normalmap0.png... done
+Creating ./share/snis/solarsystems/karado/skybox-1.png... done
+Creating ./share/snis/solarsystems/karado/ounii-normalmap-masked2.png... done
+Creating ./share/snis/solarsystems/karado/norphi-normalmap5.png... done
+Creating ./share/snis/solarsystems/karado/tounah4.png... done
+Creating ./share/snis/solarsystems/karado/tounah0.png... done
+Creating ./share/snis/solarsystems/karado/ounii-with-clouds-1.png... done
+Creating ./share/snis/solarsystems/karado/skybox-5.png... done
+Creating ./share/snis/solarsystems/karado/ounii-with-clouds-3.png... done
+Creating ./share/snis/solarsystems/karado/norphi-normalmap0.png... done
+Creating ./share/snis/solarsystems/karado/earthlike1-with-clouds-rgb-3.png... done
+Creating ./share/snis/solarsystems/karado/tounah2.png... done
+Creating ./share/snis/solarsystems/karado/norphi-normalmap1.png... done
+Creating ./share/snis/solarsystems/karado/assets.txt... done
+Creating ./share/snis/solarsystems/karado/norphi0.png... done
+Creating ./share/snis/solarsystems/karado/maurz-normalmap2.png... done
+Creating ./share/snis/solarsystems/karado/maurz2.png... done
+Creating ./share/snis/solarsystems/karado/maurz-normalmap1.png... done
+Creating ./share/snis/solarsystems/karado/norphi1.png... done
+Creating ./share/snis/solarsystems/karado/norphi-normalmap2.png... done
+Creating ./share/snis/solarsystems/karado/kolaron2.png... done
+Creating ./share/snis/solarsystems/karado/earthlike1-normalmap-masked-rgb-2.png... done
+Creating ./share/snis/solarsystems/karado/maurz4.png... done
+Creating ./share/snis/solarsystems/karado/tounah-normalmap4.png... done
+Creating ./share/snis/solarsystems/karado/tounah-normalmap5.png... done
+Creating ./share/snis/solarsystems/karado/norphi2.png... done
+Creating ./share/snis/solarsystems/karado/ounii-normalmap-masked5.png... done
+Creating ./share/snis/solarsystems/karado/norphi3.png... done
+Creating ./share/snis/solarsystems/karado/earthlike1-with-clouds-rgb-4.png... done
+Creating ./share/snis/solarsystems/karado/ounii-normalmap-masked4.png... done
+Creating ./share/snis/solarsystems/karado/norphi-normalmap3.png... done
+Creating ./share/snis/solarsystems/karado/tounah5.png... done
+Creating ./share/snis/solarsystems/karado/tounah-normalmap2.png... done
+Creating ./share/snis/solarsystems/zolon/p32.png... done
+Creating ./share/snis/solarsystems/zolon/e1-normalmap5.png... done
+Creating ./share/snis/solarsystems/zolon/p54.png... done
+Creating ./share/snis/solarsystems/zolon/p3-normalmap4.png... done
+Creating ./share/snis/solarsystems/zolon/p3-normalmap3.png... done
+Creating ./share/snis/solarsystems/zolon/p60.png... done
+Creating ./share/snis/solarsystems/zolon/e14.png... done
+Creating ./share/snis/solarsystems/zolon/p3-normalmap0.png... done
+Creating ./share/snis/solarsystems/zolon/p22.png... done
+Creating ./share/snis/solarsystems/zolon/p013.png... done
+Creating ./share/snis/solarsystems/zolon/e13.png... done
+Creating ./share/snis/solarsystems/zolon/e11.png... done
+Creating ./share/snis/solarsystems/zolon/e12.png... done
+Creating ./share/snis/solarsystems/zolon/p52.png... done
+Creating ./share/snis/solarsystems/zolon/e1-normalmap2.png... done
+Creating ./share/snis/solarsystems/zolon/p62.png... done
+Creating ./share/snis/solarsystems/zolon/skybox2.png... done
+Creating ./share/snis/solarsystems/zolon/p30.png... done
+Creating ./share/snis/solarsystems/zolon/p51.png... done
+Creating ./share/snis/solarsystems/zolon/skybox4.png... done
+Creating ./share/snis/solarsystems/zolon/p23.png... done
+Creating ./share/snis/solarsystems/zolon/p20.png... done
+Creating ./share/snis/solarsystems/zolon/p010.png... done
+Creating ./share/snis/solarsystems/zolon/e1-normalmap1.png... done
+Creating ./share/snis/solarsystems/zolon/p31.png... done
+Creating ./share/snis/solarsystems/zolon/p015.png... done
+Creating ./share/snis/solarsystems/zolon/redstar.png... done
+Creating ./share/snis/solarsystems/zolon/skybox5.png... done
+Creating ./share/snis/solarsystems/zolon/p012.png... done
+Creating ./share/snis/solarsystems/zolon/p65.png... done
+Creating ./share/snis/solarsystems/zolon/p64.png... done
+Creating ./share/snis/solarsystems/zolon/p24.png... done
+Creating ./share/snis/solarsystems/zolon/p3-normalmap5.png... done
+Creating ./share/snis/solarsystems/zolon/p50.png... done
+Creating ./share/snis/solarsystems/zolon/e10.png... done
+Creating ./share/snis/solarsystems/zolon/p014.png... done
+Creating ./share/snis/solarsystems/zolon/p011.png... done
+Creating ./share/snis/solarsystems/zolon/e15.png... done
+Creating ./share/snis/solarsystems/zolon/p53.png... done
+Creating ./share/snis/solarsystems/zolon/p3-normalmap2.png... done
+Creating ./share/snis/solarsystems/zolon/p3-normalmap1.png... done
+Creating ./share/snis/solarsystems/zolon/e1-normalmap3.png... done
+Creating ./share/snis/solarsystems/zolon/assets.txt... done
+Creating ./share/snis/solarsystems/zolon/skybox0.png... done
+Creating ./share/snis/solarsystems/zolon/p61.png... done
+Creating ./share/snis/solarsystems/zolon/p33.png... done
+Creating ./share/snis/solarsystems/zolon/p34.png... done
+Creating ./share/snis/solarsystems/zolon/skybox1.png... done
+Creating ./share/snis/solarsystems/zolon/e1-normalmap0.png... done
+Creating ./share/snis/solarsystems/zolon/e1-normalmap4.png... done
+Creating ./share/snis/solarsystems/zolon/p35.png... done
+Creating ./share/snis/solarsystems/zolon/p63.png... done
+Creating ./share/snis/solarsystems/zolon/p25.png... done
+Creating ./share/snis/solarsystems/zolon/p55.png... done
+Creating ./share/snis/solarsystems/zolon/skybox3.png... done
+Creating ./share/snis/solarsystems/zolon/p21.png... done
+Creating ./share/snis/solarsystems/default/dorjna-normalmap1.png... done
+Creating ./share/snis/solarsystems/default/dorjna4.png... done
+Creating ./share/snis/solarsystems/default/doobion-with-clouds-4.png... done
+Creating ./share/snis/solarsystems/default/dorjna0.png... done
+Creating ./share/snis/solarsystems/default/dorjna5.png... done
+Creating ./share/snis/solarsystems/default/doobion-normalmap-masked5.png... done
+Creating ./share/snis/solarsystems/default/doobion-normalmap-masked3.png... done
+Creating ./share/snis/solarsystems/default/dorjna-normalmap0.png... done
+Creating ./share/snis/solarsystems/default/dorjna-normalmap3.png... done
+Creating ./share/snis/solarsystems/default/dorjna2.png... done
+Creating ./share/snis/solarsystems/default/doobion-with-clouds-3.png... done
+Creating ./share/snis/solarsystems/default/doobion-normalmap-masked0.png... done
+Creating ./share/snis/solarsystems/default/doobion-with-clouds-1.png... done
+Creating ./share/snis/solarsystems/default/doobion-with-clouds-2.png... done
+Creating ./share/snis/solarsystems/default/dorjna-normalmap5.png... done
+Creating ./share/snis/solarsystems/default/doobion-normalmap-masked1.png... done
+Creating ./share/snis/solarsystems/default/dorjna1.png... done
+Creating ./share/snis/solarsystems/default/doobion-normalmap-masked4.png... done
+Creating ./share/snis/solarsystems/default/dorjna-normalmap2.png... done
+Creating ./share/snis/solarsystems/default/dorjna3.png... done
+Creating ./share/snis/solarsystems/default/doobion-with-clouds-5.png... done
+Creating ./share/snis/solarsystems/default/dorjna-normalmap4.png... done
+Creating ./share/snis/solarsystems/default/doobion-normalmap-masked2.png... done
+Creating ./share/snis/solarsystems/default/doobion-with-clouds-0.png... done
+Creating ./share/snis/solarsystems/sirius/hedas-normal1.png... done
+Creating ./share/snis/solarsystems/sirius/hedas5.png... done
+Creating ./share/snis/solarsystems/sirius/hedas2.png... done
+Creating ./share/snis/solarsystems/sirius/kadar0.png... done
+Creating ./share/snis/solarsystems/sirius/kadar4.png... done
+Creating ./share/snis/solarsystems/sirius/corealto0.png... done
+Creating ./share/snis/solarsystems/sirius/zukon5.png... done
+Creating ./share/snis/solarsystems/sirius/sun.png... done
+Creating ./share/snis/solarsystems/sirius/ourck-with-clouds-4.png... done
+Creating ./share/snis/solarsystems/sirius/greenhaze5.png... done
+Creating ./share/snis/solarsystems/sirius/hedas-normal4.png... done
+Creating ./share/snis/solarsystems/sirius/corealto1.png... done
+Creating ./share/snis/solarsystems/sirius/ourck-with-clouds-5.png... done
+Creating ./share/snis/solarsystems/sirius/corealto2.png... done
+Creating ./share/snis/solarsystems/sirius/corealto4.png... done
+Creating ./share/snis/solarsystems/sirius/greenhaze3.png... done
+Creating ./share/snis/solarsystems/sirius/vorloxx1.png... done
+Creating ./share/snis/solarsystems/sirius/kadar3.png... done
+Creating ./share/snis/solarsystems/sirius/greenhaze2.png... done
+Creating ./share/snis/solarsystems/sirius/corealto5.png... done
+Creating ./share/snis/solarsystems/sirius/corealto3.png... done
+Creating ./share/snis/solarsystems/sirius/ourck-with-clouds-3.png... done
+Creating ./share/snis/solarsystems/sirius/hedas0.png... done
+Creating ./share/snis/solarsystems/sirius/hedas-normal5.png... done
+Creating ./share/snis/solarsystems/sirius/kadar1.png... done
+Creating ./share/snis/solarsystems/sirius/hedas1.png... done
+Creating ./share/snis/solarsystems/sirius/ourck-with-clouds-2.png... done
+Creating ./share/snis/solarsystems/sirius/vorloxx2.png... done
+Creating ./share/snis/solarsystems/sirius/zukon0.png... done
+Creating ./share/snis/solarsystems/sirius/zukon3.png... done
+Creating ./share/snis/solarsystems/sirius/greenhaze4.png... done
+Creating ./share/snis/solarsystems/sirius/hedas4.png... done
+Creating ./share/snis/solarsystems/sirius/greenhaze1.png... done
+Creating ./share/snis/solarsystems/sirius/assets.txt... done
+Creating ./share/snis/solarsystems/sirius/kadar5.png... done
+Creating ./share/snis/solarsystems/sirius/hedas-normal2.png... done
+Creating ./share/snis/solarsystems/sirius/zukon4.png... done
+Creating ./share/snis/solarsystems/sirius/zukon1.png... done
+Creating ./share/snis/solarsystems/sirius/vorloxx3.png... done
+Creating ./share/snis/solarsystems/sirius/ourck-with-clouds-1.png... done
+Creating ./share/snis/solarsystems/sirius/zukon2.png... done
+Creating ./share/snis/solarsystems/sirius/hedas-normal0.png... done
+Creating ./share/snis/solarsystems/sirius/greenhaze0.png... done
+Creating ./share/snis/solarsystems/sirius/ourck-with-clouds-0.png... done
+Creating ./share/snis/solarsystems/sirius/vorloxx0.png... done
+Creating ./share/snis/solarsystems/sirius/vorloxx5.png... done
+Creating ./share/snis/solarsystems/sirius/hedas-normal3.png... done
+Creating ./share/snis/solarsystems/sirius/vorloxx4.png... done
+Creating ./share/snis/solarsystems/sirius/hedas3.png... done
+Creating ./share/snis/solarsystems/sirius/kadar2.png... done
+Creating ./share/snis/solarsystems/varco/earthlike1-with-clouds-rgb-2.png... done
+Creating ./share/snis/solarsystems/varco/earthlike1-with-clouds-rgb-1.png... done
+Creating ./share/snis/solarsystems/varco/rocky1-rgb-3.png... done
+Creating ./share/snis/solarsystems/varco/earthlike2-normalmap-rgb-1.png... done
+Creating ./share/snis/solarsystems/varco/rocky2-rgb-3.png... done
+Creating ./share/snis/solarsystems/varco/rocky1-rgb-1.png... done
+Creating ./share/snis/solarsystems/varco/rocky2-rgb-2.png... done
+Creating ./share/snis/solarsystems/varco/rocky1-normalmap-rgb-1.png... done
+Creating ./share/snis/solarsystems/varco/earthlike1-normalmap-rgb-5.png... done
+Creating ./share/snis/solarsystems/varco/earthlike1-with-clouds-rgb-5.png... done
+Creating ./share/snis/solarsystems/varco/rocky2-rgb-4.png... done
+Creating ./share/snis/solarsystems/varco/earthlike1-with-clouds-rgb-0.png... done
+Creating ./share/snis/solarsystems/varco/gasgiant2-rgb-2.png... done
+Creating ./share/snis/solarsystems/varco/rocky1-normalmap-rgb-3.png... done
+Creating ./share/snis/solarsystems/varco/gasgiant2-rgb-5.png... done
+Creating ./share/snis/solarsystems/varco/rocky2-normalmap-rgb-2.png... done
+Creating ./share/snis/solarsystems/varco/earthlike2-normalmap-rgb-4.png... done
+Creating ./share/snis/solarsystems/varco/rocky2-normalmap-rgb-1.png... done
+Creating ./share/snis/solarsystems/varco/skybox2.png... done
+Creating ./share/snis/solarsystems/varco/rocky1-rgb-5.png... done
+Creating ./share/snis/solarsystems/varco/earthlike2-normalmap-rgb-2.png... done
+Creating ./share/snis/solarsystems/varco/skybox4.png... done
+Creating ./share/snis/solarsystems/varco/rocky2-normalmap-rgb-5.png... done
+Creating ./share/snis/solarsystems/varco/gasgiant2-rgb-0.png... done
+Creating ./share/snis/solarsystems/varco/earthlike1-normalmap-rgb-0.png... done
+Creating ./share/snis/solarsystems/varco/earthlike2-with-clouds-rgb-5.png... done
+Creating ./share/snis/solarsystems/varco/earthlike2-normalmap-rgb-5.png... done
+Creating ./share/snis/solarsystems/varco/earthlike2-normalmap-rgb-0.png... done
+Creating ./share/snis/solarsystems/varco/rocky1-normalmap-rgb-5.png... done
+Creating ./share/snis/solarsystems/varco/skybox5.png... done
+Creating ./share/snis/solarsystems/varco/earthlike1-normalmap-rgb-2.png... done
+Creating ./share/snis/solarsystems/varco/rocky1-rgb-4.png... done
+Creating ./share/snis/solarsystems/varco/earthlike1-normalmap-rgb-4.png... done
+Creating ./share/snis/solarsystems/varco/cyansun.png... done
+Creating ./share/snis/solarsystems/varco/gasgiant1-rgb-2.png... done
+Creating ./share/snis/solarsystems/varco/rocky2-normalmap-rgb-4.png... done
+Creating ./share/snis/solarsystems/varco/rocky1-rgb-2.png... done
+Creating ./share/snis/solarsystems/varco/rocky2-rgb-1.png... done
+Creating ./share/snis/solarsystems/varco/rocky1-rgb-0.png... done
+Creating ./share/snis/solarsystems/varco/rocky1-normalmap-rgb-0.png... done
+Creating ./share/snis/solarsystems/varco/rocky1-normalmap-rgb-4.png... done
+Creating ./share/snis/solarsystems/varco/gasgiant2-rgb-4.png... done
+Creating ./share/snis/solarsystems/varco/gasgiant1-rgb-4.png... done
+Creating ./share/snis/solarsystems/varco/earthlike1-with-clouds-rgb-3.png... done
+Creating ./share/snis/solarsystems/varco/rocky2-rgb-5.png... done
+Creating ./share/snis/solarsystems/varco/assets.txt... done
+Creating ./share/snis/solarsystems/varco/skybox0.png... done
+Creating ./share/snis/solarsystems/varco/gasgiant1-rgb-3.png... done
+Creating ./share/snis/solarsystems/varco/earthlike2-with-clouds-rgb-0.png... done
+Creating ./share/snis/solarsystems/varco/earthlike1-normalmap-rgb-3.png... done
+Creating ./share/snis/solarsystems/varco/rocky2-normalmap-rgb-0.png... done
+Creating ./share/snis/solarsystems/varco/gasgiant2-rgb-3.png... done
+Creating ./share/snis/solarsystems/varco/rocky1-normalmap-rgb-2.png... done
+Creating ./share/snis/solarsystems/varco/earthlike1-normalmap-rgb-1.png... done
+Creating ./share/snis/solarsystems/varco/earthlike2-with-clouds-rgb-2.png... done
+Creating ./share/snis/solarsystems/varco/skybox1.png... done
+Creating ./share/snis/solarsystems/varco/earthlike1-with-clouds-rgb-4.png... done
+Creating ./share/snis/solarsystems/varco/gasgiant1-rgb-5.png... done
+Creating ./share/snis/solarsystems/varco/earthlike2-normalmap-rgb-3.png... done
+Creating ./share/snis/solarsystems/varco/earthlike2-with-clouds-rgb-4.png... done
+Creating ./share/snis/solarsystems/varco/gasgiant2-rgb-1.png... done
+Creating ./share/snis/solarsystems/varco/gasgiant1-rgb-1.png... done
+Creating ./share/snis/solarsystems/varco/gasgiant1-rgb-0.png... done
+Creating ./share/snis/solarsystems/varco/earthlike2-with-clouds-rgb-3.png... done
+Creating ./share/snis/solarsystems/varco/skybox3.png... done
+Creating ./share/snis/solarsystems/varco/earthlike2-with-clouds-rgb-1.png... done
+Creating ./share/snis/solarsystems/varco/rocky2-rgb-0.png... done
+Creating ./share/snis/solarsystems/varco/rocky2-normalmap-rgb-3.png... done
+Creating ./share/snis/solarsystems/polaris/albara1.png... done
+Creating ./share/snis/solarsystems/polaris/nemalta0.png... done
+Creating ./share/snis/solarsystems/polaris/vedekri4.png... done
+Creating ./share/snis/solarsystems/polaris/violethaze4.png... done
+Creating ./share/snis/solarsystems/polaris/nemalta5.png... done
+Creating ./share/snis/solarsystems/polaris/violethaze0.png... done
+Creating ./share/snis/solarsystems/polaris/sun.png... done
+Creating ./share/snis/solarsystems/polaris/elibon5.png... done
+Creating ./share/snis/solarsystems/polaris/violethaze3.png... done
+Creating ./share/snis/solarsystems/polaris/elibon4.png... done
+Creating ./share/snis/solarsystems/polaris/zebina-with-clouds-4.png... done
+Creating ./share/snis/solarsystems/polaris/aronov1.png... done
+Creating ./share/snis/solarsystems/polaris/aronov0.png... done
+Creating ./share/snis/solarsystems/polaris/albara2.png... done
+Creating ./share/snis/solarsystems/polaris/nemalta2.png... done
+Creating ./share/snis/solarsystems/polaris/zebina-with-clouds-5.png... done
+Creating ./share/snis/solarsystems/polaris/aronov2.png... done
+Creating ./share/snis/solarsystems/polaris/nemalta4.png... done
+Creating ./share/snis/solarsystems/polaris/albara5.png... done
+Creating ./share/snis/solarsystems/polaris/violethaze5.png... done
+Creating ./share/snis/solarsystems/polaris/zebina-with-clouds-3.png... done
+Creating ./share/snis/solarsystems/polaris/zebina-with-clouds-0.png... done
+Creating ./share/snis/solarsystems/polaris/zebina-with-clouds-1.png... done
+Creating ./share/snis/solarsystems/polaris/albara4.png... done
+Creating ./share/snis/solarsystems/polaris/vedekri1.png... done
+Creating ./share/snis/solarsystems/polaris/zebina-with-clouds-2.png... done
+Creating ./share/snis/solarsystems/polaris/elibon1.png... done
+Creating ./share/snis/solarsystems/polaris/vedekri2.png... done
+Creating ./share/snis/solarsystems/polaris/vedekri5.png... done
+Creating ./share/snis/solarsystems/polaris/aronov4.png... done
+Creating ./share/snis/solarsystems/polaris/nemalta3.png... done
+Creating ./share/snis/solarsystems/polaris/aronov3.png... done
+Creating ./share/snis/solarsystems/polaris/violethaze2.png... done
+Creating ./share/snis/solarsystems/polaris/assets.txt... done
+Creating ./share/snis/solarsystems/polaris/nemalta1.png... done
+Creating ./share/snis/solarsystems/polaris/elibon0.png... done
+Creating ./share/snis/solarsystems/polaris/aronov5.png... done
+Creating ./share/snis/solarsystems/polaris/elibon2.png... done
+Creating ./share/snis/solarsystems/polaris/vedekri3.png... done
+Creating ./share/snis/solarsystems/polaris/albara3.png... done
+Creating ./share/snis/solarsystems/polaris/elibon3.png... done
+Creating ./share/snis/solarsystems/polaris/albara0.png... done
+Creating ./share/snis/solarsystems/polaris/violethaze1.png... done
+Creating ./share/snis/solarsystems/polaris/vedekri0.png... done
+Creating ./share/snis/solarsystems/quidgebo/kratoria5.png... done
+Creating ./share/snis/solarsystems/quidgebo/kang-with-clouds-0.png... done
+Creating ./share/snis/solarsystems/quidgebo/kratoria-normalmap3.png... done
+Creating ./share/snis/solarsystems/quidgebo/kang-normalmap-masked4.png... done
+Creating ./share/snis/solarsystems/quidgebo/lettek2.png... done
+Creating ./share/snis/solarsystems/quidgebo/sun.png... done
+Creating ./share/snis/solarsystems/quidgebo/bluegreen-skybox4.png... done
+Creating ./share/snis/solarsystems/quidgebo/lettek5.png... done
+Creating ./share/snis/solarsystems/quidgebo/kang-normalmap-masked5.png... done
+Creating ./share/snis/solarsystems/quidgebo/guleldob2.png... done
+Creating ./share/snis/solarsystems/quidgebo/lettek4.png... done
+Creating ./share/snis/solarsystems/quidgebo/kojax-normal-masked3.png... done
+Creating ./share/snis/solarsystems/quidgebo/lettek-normalmap1.png... done
+Creating ./share/snis/solarsystems/quidgebo/kojax-normal-masked4.png... done
+Creating ./share/snis/solarsystems/quidgebo/behko2.png... done
+Creating ./share/snis/solarsystems/quidgebo/behko3.png... done
+Creating ./share/snis/solarsystems/quidgebo/behko0.png... done
+Creating ./share/snis/solarsystems/quidgebo/kratoria2.png... done
+Creating ./share/snis/solarsystems/quidgebo/lettek-normalmap0.png... done
+Creating ./share/snis/solarsystems/quidgebo/lettek-normalmap4.png... done
+Creating ./share/snis/solarsystems/quidgebo/kojax-with-clouds-5.png... done
+Creating ./share/snis/solarsystems/quidgebo/kojax-normal-masked5.png... done
+Creating ./share/snis/solarsystems/quidgebo/kojax-normal-masked2.png... done
+Creating ./share/snis/solarsystems/quidgebo/kratoria-normalmap2.png... done
+Creating ./share/snis/solarsystems/quidgebo/lettek-normalmap2.png... done
+Creating ./share/snis/solarsystems/quidgebo/behko1.png... done
+Creating ./share/snis/solarsystems/quidgebo/kratoria1.png... done
+Creating ./share/snis/solarsystems/quidgebo/kojax-normal-masked1.png... done
+Creating ./share/snis/solarsystems/quidgebo/bluegreen-skybox5.png... done
+Creating ./share/snis/solarsystems/quidgebo/kojax-with-clouds-3.png... done
+Creating ./share/snis/solarsystems/quidgebo/kojax-with-clouds-2.png... done
+Creating ./share/snis/solarsystems/quidgebo/lettek3.png... done
+Creating ./share/snis/solarsystems/quidgebo/kratoria4.png... done
+Creating ./share/snis/solarsystems/quidgebo/kojax-normal-masked0.png... done
+Creating ./share/snis/solarsystems/quidgebo/lettek0.png... done
+Creating ./share/snis/solarsystems/quidgebo/kratoria3.png... done
+Creating ./share/snis/solarsystems/quidgebo/kang-with-clouds-2.png... done
+Creating ./share/snis/solarsystems/quidgebo/guleldob3.png... done
+Creating ./share/snis/solarsystems/quidgebo/guleldob1.png... done
+Creating ./share/snis/solarsystems/quidgebo/behko5.png... done
+Creating ./share/snis/solarsystems/quidgebo/bluegreen-skybox3.png... done
+Creating ./share/snis/solarsystems/quidgebo/kratoria-normalmap0.png... done
+Creating ./share/snis/solarsystems/quidgebo/kang-normalmap-masked3.png... done
+Creating ./share/snis/solarsystems/quidgebo/kang-with-clouds-1.png... done
+Creating ./share/snis/solarsystems/quidgebo/lettek1.png... done
+Creating ./share/snis/solarsystems/quidgebo/kang-with-clouds-4.png... done
+Creating ./share/snis/solarsystems/quidgebo/guleldob0.png... done
+Creating ./share/snis/solarsystems/quidgebo/kang-normalmap-masked0.png... done
+Creating ./share/snis/solarsystems/quidgebo/bluegreen-skybox2.png... done
+Creating ./share/snis/solarsystems/quidgebo/kratoria-normalmap1.png... done
+Creating ./share/snis/solarsystems/quidgebo/bluegreen-skybox1.png... done
+Creating ./share/snis/solarsystems/quidgebo/assets.txt... done
+Creating ./share/snis/solarsystems/quidgebo/kang-normalmap-masked2.png... done
+Creating ./share/snis/solarsystems/quidgebo/guleldob5.png... done
+Creating ./share/snis/solarsystems/quidgebo/kang-with-clouds-5.png... done
+Creating ./share/snis/solarsystems/quidgebo/kratoria-normalmap4.png... done
+Creating ./share/snis/solarsystems/quidgebo/guleldob4.png... done
+Creating ./share/snis/solarsystems/quidgebo/bluegreen-skybox0.png... done
+Creating ./share/snis/solarsystems/quidgebo/kang-with-clouds-3.png... done
+Creating ./share/snis/solarsystems/quidgebo/kratoria-normalmap5.png... done
+Creating ./share/snis/solarsystems/quidgebo/kojax-with-clouds-1.png... done
+Creating ./share/snis/solarsystems/quidgebo/behko4.png... done
+Creating ./share/snis/solarsystems/quidgebo/lettek-normalmap3.png... done
+Creating ./share/snis/solarsystems/quidgebo/kojax-with-clouds-0.png... done
+Creating ./share/snis/solarsystems/quidgebo/lettek-normalmap5.png... done
+Creating ./share/snis/solarsystems/quidgebo/kratoria0.png... done
+Creating ./share/snis/solarsystems/quidgebo/kang-normalmap-masked1.png... done
+Creating ./share/snis/solarsystems/quidgebo/kojax-with-clouds-4.png... done
+Creating ./share/snis/sounds/admiral-thompson-msg-3.ogg... done
+Creating ./share/snis/sounds/admiral-thompson-msg-2.ogg... done
+Creating ./share/snis/sounds/admiral-thompson-msg-1.ogg... done
+Creating ./share/snis/sounds/admiral-thompson-msg-4.ogg... done
+Creating ./share/snis/models/asteroid.stl... done
+Creating ./share/snis/models/laser.stl... done
+Creating ./share/snis/models/docking_port2.stl... done
+Creating ./share/snis/models/planet.stl... done
+Creating ./share/snis/models/tetrahedron.stl... done
+Creating ./share/snis/models/asteroid2.stl... done
+Creating ./share/snis/models/cruiser.stl... done
+Creating ./share/snis/models/asteroid3.stl... done
+Creating ./share/snis/models/vanquisher.stl... done
+Creating ./share/snis/models/spaceship3.stl... done
+Creating ./share/snis/models/axis.stl... done
+Creating ./share/snis/models/destroyer.stl... done
+Creating ./share/snis/models/planet3.stl... done
+Creating ./share/snis/models/starbase5.stl... done
+Creating ./share/snis/models/torpedo.stl... done
+Creating ./share/snis/models/starbase4.stl... done
+Creating ./share/snis/models/spacemonster.stl... done
+Creating ./share/snis/models/heading_indicator_tail.stl... done
+Creating ./share/snis/models/ship-icon.stl... done
+Creating ./share/snis/models/planet1.stl... done
+Creating ./share/snis/models/missile.stl... done
+Creating ./share/snis/models/spaceship_turret_base.stl... done
+Creating ./share/snis/models/long-triangular-prism.stl... done
+Creating ./share/snis/models/laser_turret.stl... done
+Creating ./share/snis/models/cylinder.stl... done
+Creating ./share/snis/models/battlestar/battlestar_normal.png... done
+Creating ./share/snis/models/battlestar/license.txt... done
+Creating ./share/snis/models/battlestar/battlestar_emission.png... done
+Creating ./share/snis/models/battlestar/battlestar.mtl... done
+Creating ./share/snis/models/battlestar/battlestar_diffuse.png... done
+Creating ./share/snis/models/battlestar/battlestar_specular.png... done
+Creating ./share/snis/models/battlestar/battlestar.obj... done
+Creating ./share/snis/models/scrambler.stl... done
+Creating ./share/snis/models/carrier/carrier01_emission.png... done
+Creating ./share/snis/models/carrier/license.txt... done
+Creating ./share/snis/models/carrier/carrier01_diffuse.png... done
+Creating ./share/snis/models/carrier/carrier01_specular.png... done
+Creating ./share/snis/models/carrier/carrier01.obj... done
+Creating ./share/snis/models/carrier/carrier01.mtl... done
+Creating ./share/snis/models/carrier/carrier01_normal.png... done
+Creating ./share/snis/models/carrier/carrier.scad_params.h... done
+Creating ./share/snis/models/laser_turret_base.stl... done
+Creating ./share/snis/models/warp-core.stl... done
+Creating ./share/snis/models/heading_indicator.stl... done
+Creating ./share/snis/models/starbase6.stl... done
+Creating ./share/snis/models/spaceship_turret.stl... done
+Creating ./share/snis/models/dragonhawk.stl... done
+Creating ./share/snis/models/tanker.stl... done
+Creating ./share/snis/models/flat-tetrahedron.stl... done
+Creating ./share/snis/models/starbase3.stl... done
+Creating ./share/snis/models/docking_port.stl... done
+Creating ./share/snis/models/asteroid4.stl... done
+Creating ./share/snis/models/mantis.stl... done
+Creating ./share/snis/models/warpgate.stl... done
+Creating ./share/snis/models/space_monster_torso.stl... done
+Creating ./share/snis/models/skorpio.stl... done
+Creating ./share/snis/models/freighter.stl... done
+Creating ./share/snis/models/space_monster_tentacle_segment.stl... done
+Creating ./share/snis/models/spaceship2.stl... done
+Creating ./share/snis/models/uv_sphere.stl... done
+Creating ./share/snis/models/escapepod.stl... done
+Creating ./share/snis/models/spaceship.stl... done
+Creating ./share/snis/models/wombat.stl... done
+Creating ./share/snis/models/big-flat-tetrahedron.stl... done
+Creating ./share/snis/models/transport.stl... done
+Creating ./share/snis/models/wormhole.stl... done
+Creating ./share/snis/models/battlestar.stl... done
+Creating ./share/snis/models/asteroid-miner.stl... done
+Creating ./share/snis/models/planet2.stl... done
+Creating ./share/snis/models/swordfish.stl... done
+
+262 files already up to date
+0 files updated
+510 new files
+0 update failures
+
+scameron@wombat ~/github/testsnis2/space-nerds-in-space $ 
+</pre>
+
+And it runs. The very first time, you do have to check the "create ship" box on the first screen.
+<hr>
+<p><b>smcameron 31 Aug 2019, 00:35</b>
+<p>Ok, I do see a problem if you do "make models" instead of "make update-assets" and run quickstart.
+<pre>
+snis_multiverse: SHUTTING DOWN SNIS SERVER for default
+pid(985): readsocket other side closed conn
+snis_multiverse: bad client, disconnecting socket 5
+</pre>
+
+<p>snis_multiverse decides to shutdown snis_server since it has no players... well, it shouldn't be but it is.
+
+<p>Ah, I think I see why, it's a bit complicated. The quickstart unilaterally exempted the snis_server instance
+for solarsystem "karado" from being shut down, but that is not always the correct one to pick for exemption.
+
+<p>I think this should fix that particular problem: <a href="https://github.com/smcameron/space-nerds-in-space/commit/b741e232b75017f7e3537ae4490a38d6b07e8514">https://github.com/smcameron/space-nerds-in-space/commit/b741e232b75017f7e3537ae4490a38d6b07e8514</a>. 
+
+<p>Edit: With that, a fresh clone, make, make models, and ./quickstart works.
+
+<p>You do have to check the "create ship" and "main view" checkboxes the first time though.
+<hr>
+<p><b>fluffrabbit » 31 Aug 2019, 00:43</b>
+<p>I'll test it when I have returned to the world of the living.
+
+<p>Also, I never manually ran "make models", just "make". What makes do I have to run manually?
+<hr>
+<p><b>smcameron 31 Aug 2019, 00:47</b>
+<blockquote>
+    fluffrabbit wrote:
+    <p>I'll test it when I have returned to the world of the living.
+
+    <p>Also, I never manually ran "make models", just "make". What makes do I have to run manually?
+</blockquote>
+
+
+Just "make" and either "make models" or "make update-assets". I recommend "make
+update-assets" rather than "make models" as it's more assets and it's quicker.
+"make models" runs openscad to compile a bunch of scad files to stl files,
+which takes forever, and can be problematic if you happen to have a broken
+version of openscad. As an aside, "make clean" will wipe out a bunch of .stl
+files, which will then need to be rebuilt either by "make update-assets" or
+"make models". There is "make mostly-clean", which does everything "make clean"
+does *except* make mostly-clean does not delete the .stl files.
+<hr>
+<p><b>GunChleoc 31 Aug 2019, 05:01</b>
+<blockquote>
+    smcameron wrote:
+<blockquote>
+        fluffrabbit wrote:
+        <p>2. Get all the C&H files out of the root directory so we can quickly see what is relevant to launching the game. I know there are some other organizational issues, but this would be a big help to the signal-to-noise ratio.
+</blockquote>
+
+    Flat no. Will fuck up the git history.
+</blockquote>
+
+<p>That shouldn't be a problem if you move them with the git mv command.
+</hr>
+<p><b>smcameron 31 Aug 2019, 15:04</b>
+<blockquote>
+    GunChleoc wrote:
+    That shouldn't be a problem if you move them with the git mv command.
+</blockquote>
+
+<p>If that were true, the "--follow" option to "git log" would not exist,
+because it would not be needed. And git log --follow doesn't even work in all
+cases.
+
+<pre>
+GIT-LOG(1)                        Git Manual                        GIT-LOG(1)
+
+NAME
+       git-log - Show commit logs
+
+SYNOPSIS
+       git log [&lt;options&gt;] [&lt;revision range&gt;] [[--] &lt;path&gt;...]
+
+DESCRIPTION
+       Shows the commit logs.
+
+       The command takes options applicable to the git rev-list command to
+       control what is shown and how, and options applicable to the git diff-*
+       commands to control how the changes each commit introduces are shown.
+
+OPTIONS
+       --follow
+           Continue listing the history of a file beyond renames (works only
+           for a single file).
+</pre>
+Let's try it:
+<pre>
+scameron@wombat ~/github/snistest/space-nerds-in-space $ git diff
+scameron@wombat ~/github/snistest/space-nerds-in-space $ git branch testgitmv
+scameron@wombat ~/github/snistest/space-nerds-in-space $ git checkout testgitmv
+Switched to branch 'testgitmv'
+scameron@wombat ~/github/snistest/space-nerds-in-space $ mkdir src
+scameron@wombat ~/github/snistest/space-nerds-in-space $ git mv snis_client.c src/snis_client.c
+scameron@wombat ~/github/snistest/space-nerds-in-space $ git add src/snis_client.c
+scameron@wombat ~/github/snistest/space-nerds-in-space $ git commit -m 'test move'
+[testgitmv 44d2cb4] test move
+ 1 file changed, 0 insertions(+), 0 deletions(-)
+ rename snis_client.c =&gt; src/snis_client.c (100%)
+scameron@wombat ~/github/snistest/space-nerds-in-space $ git log src/snis_client.c
+commit 44d2cb46e4251a0009de9a9c3c89c98c0c9fb14c
+Author: Stephen M. Cameron &lt;stephenmcameron@gmail.com&gt;
+Date:   Sat Aug 31 10:26:04 2019 -0400
+
+    test move
+
+scameron@wombat ~/github/snistest/space-nerds-in-space $
+</pre>
+It definitely breaks the history.
+<hr>
+<p><b>GunChleoc 31 Aug 2019, 15:53</b>
+<p>Meh. It works just fine with Bazaar, so it's a shame that they didn't implement it better in Git :(
+<hr>
+<p><b>smcameron 18 Oct 2019, 15:32</b>
+<p>Code breaking mini-game idea...
+
+<p>Trying to think up some mission scripts, I had an idea for a coded message
+containing clues which the crew has to decipher. The code would be a simple
+substitution cipher, with each letter of the alphabet randomly switched with
+another letter of the alphabet. Given a large enough ciphertext and knowing the
+language of the plaintext (e.g. English), and knowing the frequency with which
+letters occur in the target language (e.g. ETAONIRSH...), and knowing a few
+common bigrams, (TH, HE, IN, ER,...) such ciphers are pretty easy to crack.
+With some help from the computer (e.g. automated frequency analysis, and
+allowing the user to try out substitutions easily), it might make a fun mini
+game that the whole crew might participate in.
+
+<p>What I'm imagining is two windows, on top, the ciphertext, and on bottom,
+the plaintext (or, possibly alternating lines of ciphertext and plaintext
+instead). Initially the plaintext window will just contain an underscore for
+every character. Below the plaintext window is the alphabet, and the players
+may type in possible substitutions for each letter, which instantly are
+displayed in the plaintext window. Additionally, the most frequently occurring
+2 or 3 unsubstituted characters in the ciphertext are identified.
+
+<p>So it becomes a bit like a game of hangman, or "Wheel of Fortune", you make
+some substitutions and see if you can recognize what might be some words. You
+see a letter by itself, and you know it's probably the word "a". You see the
+most common letter, and presume it is most likely to be "e", the next most
+common is most likely "t", etc. A three letter word occurring many time is
+likely to be "THE". As you make substitutions, more and more of the message
+becomes apparent, and more and more obvious guesses for letter substitutions
+become apparent, and eventually the message is revealed.
+
+<p>Or, at least that's how I imagine it working.
+
+<p>I could code the entire thing in Lua (though the UI would necessarily be
+uglier and done entirely within the COMMS window) or I could do a little C
+programming and make a special "code breaking" computer that would be nicer to
+use, though it seems a bit too special purpose.
+
+<p>What do you guys think? Is this idea worth exploring?
+
+<p>Perhaps similar to this game: 
+<a href="http://www.hanginghyena.com/cryptograms_casual">http://www.hanginghyena.com/cryptograms_casual</a>
+<hr>
+<p><b>dulsi 18 Oct 2019, 16:22</b>
+<p>I like crypto quotes so I would enjoy an addition like this. I have a idea
+for crypto quote game set in WW2 but haven't had the time to implement it. I
+haven't tried this game so I don't know how well it fits into your overall
+game.
+</hr>
+<p><b>smcameron 23 Oct 2019, 02:04</b>
+<p>I have laid the foundation for the de-ciphering mini game, and here's a demo of
+it. No mission scripts yet take advantage of this system though.
+
+<p><a href="https://www.youtube.com/watch?v=bwAARa-dDH0"><img src="https://img.youtube.com/vi/bwAARa-dDH0/hqdefault.jpg"></a>
+<hr>
+<p><b>smcameron 05 Nov 2019, 04:45</b>
+<p>Nothing really new to report right now, except that today, SNIS is 7 years old.
+<hr>
+<p><b>Julius 05 Nov 2019, 11:11</b>
+<p>Wow, time to get a divorce 
+<hr>
+<p><b>smcameron 09 Nov 2019, 18:21</b>
+<p>A little video of my process for debugging NPC ship movement.
+<p><a href="https://www.youtube.com/watch?v=HcVyhEIIKa0"><img src="https://img.youtube.com/vi/HcVyhEIIKa0/hqdefault.jpg"></a>A
+<hr>
+<p><b>smcameron 19 Nov 2019, 00:12</b>
+<p>Hunting NaNs
+
+<p>What are NaNs? A better question might be what aren't NaNs. NaN stands for
+"Not a Number", and NaNs are special floating point values that can occur when
+you attempt to do things like divide by zero or other "impossible" mathematical
+operations. Most typically in my experience, NaN generation due to dividing by
+zero happens when you attempt to normalize a vector with zero magnitude. Once
+NaNs are generated, they typically spread through any calculation in which they
+are used, corrupting all sorts of calculations and causing weird behavior for
+anything depending on those calculations (most typically, NPC ship movement.)
+
+<p>Since Space Nerds in Space seems to work pretty well for the most part, I
+sort of presumed that NaNs weren't really something I was bumping into much --
+that my code was correct enough that I wasn't generally dividing by zero much
+if at all. And I suppose that must have been mostly true -- mostly true in that
+the game did work well enough, seemingly. But then I tried actually taking a
+look to see whether any NaNs were scurrying around down in there.
+
+<p>Oh my god... So many NaNs! So the way that you figure out whether you've got
+NaNs is to enable floating point exceptions to terminate your program and
+produce a core dump. The code to do so looks like this:
+
+<pre>feenableexcept(FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW);</pre>
+
+<p>Then you compile everything without optimization and run it, and see what
+blows up. Well things blew up *immediately*, leaving a core file for debugging.
+For a day or so, this cycle continued: Compile, run, explode, debug, fix. Many
+NaNs knew what it was to be roasted in the depths of the core that day, I can
+tell you!
+
+<p>After awhile, I slew enough NaN generating bugs that things no longer
+exploded immediately, but required several minutes of running before exploding.
+Now, I think I only have one NaN bug left (that I know of). And I have a fix
+for that one, I'm just not certain my fix is really right, so I want to think
+about it some more before I commit it (or some better fix).
+
+<p>In any case, if you're interested in the gory details, you can check out the
+bug report on github: <a href="https://github.com/smcameron/space-nerds-in-space/issues/236">https://github.com/smcameron/space-nerds-in-space/issues/236</a> 
+<hr>
+<a href="history-6.html">CONTINUED ON PAGE 6</a>
+
+

@@ -1,0 +1,1013 @@
+
+
+<p>This is a PAGE 4 of a copy of a <a href="https://forum.freegamedev.net/viewtopic.php?f=22&t=3710">thread
+on freegamedev.net</a>. Once around 2010 or so, I lost a similar thread over there for my
+other little game, Word War vi when the forum database was lost, so I created this as a backup
+in case something similar happens again.
+
+<p><a href="history-3.html">BACK TO PAGE 3</a>
+
+<hr>
+<p><b>MCMic 28 Jan 2019, 14:49</b>
+<p>I guess the starbase problem comes from a typo in the lua code, there is starbase_numberJ instead of starbase_number in SPACEPOX.lua
+
+<p>But still, the game should not let a mission script add 2 starbase with the same number if it cannot handle it after.
+<hr>
+<p><b>smcameron 28 Jan 2019, 21:42</b>
+
+<p>It's probably harder to know what you're supposed to do in the SPACEPOX mission than it should be. You are supposed to, if I remember correctly (spoilers follow) ...
+<p>* find the derelict in the nebula
+<p>* find the cargo container containing the vaccine
+<p>* When you get the cargo container, a bunch of zarkons will appear, and your warp drive will be damaged.
+<p>* The worm hole is there to help you escape from the zarkons.
+<p>* once you repair your warp drive, you can go back to bonx station and deliver the vaccines
+<p>* You can use the long range scanner (LRS) on science and should be able to find planets and starbases e.g. find BONX and ICARUS station.
+
+<p>None of this is terribly obvious, although spelling it out might rob the crew of the fun of figuring it out.
+
+<p>It is not expected that you'd solve the mission on the first try, I suppose.
+
+<p>For Saving Planet Erph, you should be able to see Erph on Science with the Long Range Scanners (LRS).
+
+<p>Thanks for the note about the "starbase_numberJ" typo. <a href="https://github.com/smcameron/space-nerds-in-space/commit/cb766b65cc46f9f26ac9e625329731bccceeed7d">Fixed.</a>
+
+<p>The computer can be a bit cheating. Esp. you can type on comms, e.g.: "set a
+course for planet erph", even if you have no idea where that is, and it will do
+it... I should fix that so unless you have scanned it recently, it won't help
+you out with that. I'll have to think about how COMMS damage might affect
+computer behavior... maybe I can come up with some non-annoying way for it to
+misbehave. On the other hand, it might be interesting to have a way for NAV to
+get damaged, and the *only* way to save the ship is to drive it via the
+computer. Once here, we played a game in which we tried to dock using only the
+computer, but were not successful (was playing on an old machine using the
+limited client with most stations disabled.)
+
+<p>Ally ships in scenarios... the NPC ships are kind of dumb, you can make NPC
+ships from LUA, but the extent that they are "allies" would be down to whatever
+behavior you could give them in the script. I should work on the NPC behavior
+to make such a thing more possible (and believable). The author of Empty
+Epsilon (another bridge sim) once indicated to me that the key to much NPC
+behavior is lies, and more lies. If you tell the player a ship has some
+property, they believe it, even if it has no such property. So in that sense a
+script can easily indicate that an NPC ship is an "ally" via COMMS some way,
+and I suppose as long as it doesn't shoot at you, you might believe it was a
+"ally". Do you have any specific ideas about how such "ally" ships should
+behave? I have resisted allowing players to give random NPC ships commands,
+because I can't think of a good way to do it. Something like the starbase menus
+perhaps, but it seems to me to break immersion a bit. Another idea would be to
+extend the "natural language" system the computer uses to also handle player to
+NPC comms, to allow you to make requests of NPC ships (e.g. please rendezvous
+at x, y, z) I don't know, that seems a little too prone to suffering from
+"guess the magic sentence" syndrome.
+<blockquote>
+    is there any way to go back to initial solarsystem state once a mission is started?
+</blockquote>
+
+<p>Yes, type "regenerate" on the demon screen (there is a lua script,
+REGENERATE.LUA that calls regenerate_universe().) I suppose it's not exactly
+the same solarsystem, but similar enough, I suppose, and if you don't like that
+one, you can "regenerate" again as many times as you want.
+
+<blockquote>
+    Is there any way to buy torpedos and missiles?
+</blockquote>
+
+<p>Just dock at a starbase, they will be replenished.
+<blockquote>
+    Torpedos are really hard to use.
+</blockquote>
+
+
+<p>Yes they are. Perhaps some aiming assist is needed.
+The missiles on the other hand are far too easy to use.
+<blockquote>
+    Is it possible to take down a starbase?
+</blockquote>
+
+<p>They are quite resilient, but yes. If you leave snis_server running for a
+long time, you may notice some starbases disappear. This is because they
+eventually accumulated enough damage from random NPCs attacking them over time.
+A single ship is not so likely to succeed at taking down a starbase though.
+<blockquote>
+    When COMMS screen puts the science screen on the main screen we do not see the details of the selected object nor the 3D view of it. Is that known/expected?
+</blockquote>
+
+
+<p>No, that doesn't sound right. The main screen should mirror whatever the
+science console has on it. That is, all stations showing science should show
+approximately the same thing. If any one science screen selects DETAILS, all
+stations on science should switch to DETAILS. Same for all the sub-screens of
+SCIENCE. (There may be small differences, like, if you have 3 stations showing
+science, and you switch to DETAILS, the angle of view of the 3D model may be
+different on the 3 screens.) But you should not see 3 different science
+stations with one on the short range scanner, one on the waypoints and one on
+the details screen. They should all be on the same subscreen of SCIENCE. I just
+tried this, and it seems to work for me as I have described. So if you can
+reproduce the behavior you described, it sounds like some sort of buggy
+behavior.
+<hr>
+<p><b>MCMic 28 Jan 2019, 22:48</b>
+
+<blockquote>
+    <p>It's probably harder to know what you're supposed to do in the SPACEPOX mission than it should be. You are supposed to, if I remember correctly (spoilers follow) ...
+    <p>* find the derelict in the nebula
+    <p>* find the cargo container containing the vaccine
+    <p>* When you get the cargo container, a bunch of zarkons will appear, and your warp drive will be damaged.
+    <p>* The worm hole is there to help you escape from the zarkons.
+    <p>* once you repair your warp drive, you can go back to bonx station and deliver the vaccines
+    <p>* You can use the long range scanner (LRS) on science and should be able to find planets and starbases e.g. find BONX and ICARUS station.
+
+    <p>None of this is terribly obvious, although spelling it out might rob the crew of the fun of figuring it out.
+
+    <p>It is not expected that you'd solve the mission on the first try, I suppose.
+</blockquote>
+
+<p>This is close to what we did, exept that we did not notice warp drive was damaged.
+And we went back through the wormwhole and then used a tractor ship, so not sure if that was the shortest route.
+
+<p>There is way enough information for finding the vaccine (we did on second try I think, but we died from Zarkons right away).
+<blockquote>
+    For Saving Planet Erph, you should be able to see Erph on Science with the Long Range Scanners (LRS).
+</blockquote>
+
+<p>Ok so I think our misuse of the LRS was our main problem. I thought it was just the same thing as SRS but in 3D, mostly.
+<p>On SRS/LRS, what is the use of narrowing the radar?
+<p>And is there any trick to select things when there are too many overlapping?
+<blockquote>
+    The computer can be a bit cheating. Esp. you can type on comms, e.g.: "set
+a course for planet erph", even if you have no idea where that is, and it will
+do it... I should fix that so unless you have scanned it recently, it won't
+help you out with that.
+</blockquote>
+
+
+<p>That would make sense. «No known position for object X» It could just set
+course to the last known position. (last scanned one, which for planets is most
+likely the right one)
+<blockquote>
+I'll have to think about how COMMS damage might affect computer behavior...
+maybe I can come up with some non-annoying way for it to misbehave. On the
+other hand, it might be interesting to have a way for NAV to get damaged, and
+the *only* way to save the ship is to drive it via the computer. Once here, we
+played a game in which we tried to dock using only the computer, but were not
+successful (was playing on an old machine using the limited client with most
+stations disabled.)
+</blockquote>
+
+<p>What do you think about my idea of having to power COMMS to use computer?
+That gives a use to the useless COMMS PWR slider and is a nerf for the computer
+since it means you cannot use it on top of everything else.  The commands would
+need to be sorted between those requiring power (setting a course), not a lot
+of power (guiding mining bot?), or always available (hailing stations. Except
+if COMMS systems are completely damaged I guess).
+
+<blockquote>
+Ally ships in scenarios... the NPC ships are kind of dumb, you can make NPC
+ships from LUA, but the extent that they are "allies" would be down to whatever
+behavior you could give them in the script. I should work on the NPC behavior
+to make such a thing more possible (and believable). The author of Empty
+Epsilon (another bridge sim) once indicated to me that the key to much NPC
+behavior is lies, and more lies. If you tell the player a ship has some
+property, they believe it, even if it has no such property. So in that sense a
+script can easily indicate that an NPC ship is an "ally" via COMMS some way,
+and I suppose as long as it doesn't shoot at you, you might believe it was a
+"ally". Do you have any specific ideas about how such "ally" ships should
+behave?
+</blockquote>
+
+<p>I would go with something along the line of «the enemy of my enemy is my
+ally».  Basically a ship which does not shoot me (unless I shoot at him?) and
+shoots at ships shooting at me is an ally.
+Even more if this ship is somehow following me. (This would make sense in a scenario where someone provides me extra security for a mission. Or the other way around, I’m the security)
+
+<p>I have resisted allowing players to give random NPC ships commands, because
+I can't think of a good way to do it. Something like the starbase menus
+perhaps, but it seems to me to break immersion a bit. Another idea would be to
+extend the "natural language" system the computer uses to also handle player to
+NPC comms, to allow you to make requests of NPC ships (e.g. please rendezvous
+at x, y, z) I don't know, that seems a little too prone to suffering from
+"guess the magic sentence" syndrome.
+
+<p>No good idea from me here, except scripted incomming transmissions from the
+scenarios and ships following you or expecting you to follow them. (or to
+rendez-vous indeed).  I guess hailing such an ally ship I would expect the same
+kind of fake repetitive dialog you find when talking to NPC in MMOs.
+<blockquote>
+<blockquote>
+        is there any way to go back to initial solarsystem state once a mission is started?
+</blockquote>
+
+
+    Yes, type "regenerate" on the demon screen (there is a lua script,
+REGENERATE.LUA that calls regenerate_universe().) I suppose it's not exactly
+the same solarsystem, but similar enough, I suppose, and if you don't like that
+one, you can "regenerate" again as many times as you want.
+</blockquote>
+
+<p>Hum, I’m not sure I understand what it does, the result does depend on which solarsystem I started?
+It should be added to mainmenu in my opinion. Which should be easily available.
+<blockquote>
+<blockquote>
+        Is there any way to buy torpedos and missiles?
+</blockquote>
+
+
+    Just dock at a starbase, they will be replenished.
+</blockquote>
+
+
+<p>Oh, ok, did not know that. Does it cost money?
+<p>Regarding money, when we got the tractor ship ride, we ended up at -2000
+money or something. Is money infinite in the current implementation or is it
+dangerous to stay negative? (I saw those police ships around…)
+
+<blockquote>
+<blockquote>
+        Torpedos are really hard to use.
+</blockquote>
+
+
+    Yes they are. Perhaps some aiming assist is needed.
+    The missiles on the other hand are far too easy to use.
+</blockquote>
+
+
+<p>Yes.
+<p>Some ideas:
+
+    <p>To launch a missile you need to keep the button pressed for a short time without the ship leaving your screen. (time required to lock the target)
+    Be able to blow torpedos with the phaser to do spatial damage. (would be kind of dangerous, means if I shoot torpedo and then phaser right away it blows in my face)
+    Torpedos bend lightly toward what I’m aiming at, so I can adjust course slightly
+
+<blockquote>
+<blockquote>
+        Is it possible to take down a starbase?
+</blockquote>
+
+
+    They are quite resilient, but yes. If you leave snis_server running for a long time, you may notice some starbases disappear. This is because they eventually accumulated enough damage from random NPCs attacking them over time. A single ship is not so likely to succeed at taking down a starbase though.
+</blockquote>
+
+<p>Yeah we tried and got nuked.
+<blockquote>
+<blockquote>
+        When COMMS screen puts the science screen on the main screen we do not see the details of the selected object nor the 3D view of it. Is that known/expected?
+</blockquote>
+
+
+    No, that doesn't sound right. The main screen should mirror whatever the
+science console has on it. That is, all stations showing science should show
+approximately the same thing. If any one science screen selects DETAILS, all
+stations on science should switch to DETAILS. Same for all the sub-screens of
+SCIENCE. (There may be small differences, like, if you have 3 stations showing
+science, and you switch to DETAILS, the angle of view of the 3D model may be
+different on the 3 screens.) But you should not see 3 different science
+stations with one on the short range scanner, one on the waypoints and one on
+the details screen. They should all be on the same subscreen of SCIENCE. I just
+tried this, and it seems to work for me as I have described. So if you can
+reproduce the behavior you described, it sounds like some sort of buggy
+behavior.
+</blockquote>
+
+
+<p>I got a bug then. What I saw on the main screen was the detail view but as
+an empty shell, without any information in it. (all labels but no value and no
+3D model)
+
+<p>You did not answer regarding TTS?
+<hr>
+<p><b>MCMic 28 Jan 2019, 23:14</b>
+<p>Ok the bug in space pox seems fixed.
+<p>And I do see a lot of stuff with LRS, easy to find Bonx planet from the start of the mission. Description is funny :-)
+
+<p>It’s really hard to select objects in LRS though. I managed to select Bonx but never the starbase next to it, while I saw its label.
+<hr>
+<p><b>smcameron 28 Jan 2019, 23:20</b>
+<p>TTS... I need to look into it a bit.
+
+<p>I think we usually play with all stations running as TTS servers.
+
+<p>I think when you use for example COMMS to ask the computer something, the
+response goes back to that same client that made the request. But for
+spontaneous computer speech it generally uses all the client(s) with ROLE_TTS,
+and sometimes ROLE_ALL. It could probably be a bit more consistent.
+
+<p>If you "grep queue_add_text_to_speech snis_server.c" you can see all the
+places it's called. When the first parameter is "c", generally that is the
+computer queuing speech back to the client that made some request.
+
+<p>There's also a volume control for the text to speech. You can either request
+the computer to "turn up the volume" or "turn down the volume".
+
+<p>I think by default it's 33%
+<hr>
+<p><b>MCMic » 29 Jan 2019, 20:35</b>
+<p>Ok then next time we’ll check TTS on all stations I guess.
+
+<p>[EDIT]
+<p>@smcameron: It seems to me that create_asteroid_field is using derelictx instead of its x parameter, and same thing for y/z. (Fixing this may change the mission behavior)
+<hr>
+<p><b>smcameron 31 Jan 2019, 03:06</b>
+<blockquote>
+    @smcameron: It seems to me that create_asteroid_field is using derelictx instead of its x parameter, and same thing for y/z. (Fixing this may change the mission behavior)
+</blockquote>
+
+<p>Thanks for pointing that out. <a href="https://github.com/smcameron/space-nerds-in-space/commit/49784cfebd7048510599cbf6f26341bf2f9c6129">fixed</a>.
+<hr>
+<p><b>MCMic 06 Feb 2019, 12:42</b>
+<p><a href="http://www.esa.int/spaceinimages/Images/2019/02/Soyuz_simulator_in_Antarctica">http://www.esa.int/spaceinimages/Images/2019/02/Soyuz_simulator_in_Antarctica</a>
+<p>This popped up in my RSS today, I thought he was playing SNIS for a minute…
+</hr>
+<p><b>smcameron 10 Feb 2019, 06:17</b>
+<p>Today I have been experimenting with procedurally generated "greeble" normal
+map textures. I don't think I will use this in its current form -- not quite
+good enough -- but it shows promise:
+
+<p><a href="https://www.youtube.com/watch?v=sLiExdznL7w">https://www.youtube.com/watch?v=sLiExdznL7w</a>
+<p><a href="https://www.youtube.com/watch?v=sLiExdznL7w"><img src="https://img.youtube.com/vi/sLiExdznL7w/hqdefault.jpg"></a>.
+
+<p>The code for generating the normal map texture is here... I'll probably work
+on it a bit more. It probably won't ever be able to make a directly usable
+normal map, but will probably be useful if you cut and paste from the generated
+normal map into a custom normal map. So, maybe it will be a "procedurally
+assisted" normal map tool rather than a procedurally generated normal map tool.
+
+<a href="https://github.com/smcameron/groovygreebler">https://github.com/smcameron/groovygreebler</a>
+<hr>
+<p><b>MCMic » 11 Feb 2019, 16:13</b>
+<P>Interesting.
+
+<P>Would be a good base for texturing starbases/mantis, no?
+<hr>
+<p><b>smcameron 11 Feb 2019, 22:04</b>
+<blockquote>
+    Would be a good base for texturing starbases/mantis, no?
+</blockquote>
+
+<p>Maybe. It's just a normal map and a heightmap, there's not really any
+corresponding diffuse map or emission map, though coming up with a diffuse map
+is probably not hard (even plain white would be fine, really). The hard part is
+doing the uv-unwrapping. Without the uv-unwrap, there's not a whole lot of
+sense worrying about the various texture maps. From what I recall of the
+unwrapping of the few starbases, the Wombat, the Disruptor, and a few others,
+which began as openscad models, the meshes that openscad produces are not
+great, and can have many weird little things that are fine if you're 3D
+printing, but not so fine if you're trying to uv-unwrap. Not that it's
+impossible to unwrap an openscad mesh, but typically as part of that, the mesh
+ends up getting cleaned up a bit in blender, and the process is somewhat
+painful. Note, I didn't do the unwrapping, a couple other people did those, and
+I'm just relaying what I recall of their complaints. Which brings up another
+thing to consider. As soon as you uv-unwrap a model, it kind of freezes it a
+little bit, because now you have all these other art assets -- diffuse map,
+normal map, emission map -- that will break if you touch the model (they will
+need updating, or potentially complete re-doing). A lot of these openscad
+models I have are just kind of thrown together without a whole lot of thought
+-- they are kind of quick and dirty little things, which is kind of the reason
+I used openscad in the first place, precisely because it's great for quick and
+dirty little things. Before attempting to uv-unwrap such models, it would be
+wise to spend time making sure the model is decent enough to bother unwrapping.
+<hr>
+<p><b>smcameron 11 Feb 2019, 22:23</b>
+<p>That being said, trying it out on a couple of the starbases that are already
+uv-unwrapped, the first one doesn't look too bad, but 2nd one doesn't really
+work as it needs a more radial design. That's a 4096x4096 normal map texture,
+which is quite big, but making it smaller... it doesn't look good smaller.
+
+<p>I think the starbases probably are good candidates for using normalmaps,
+because you do get quite close to them. For ships though, I think we probably
+don't really even need normal maps mostly, because mostly you're never near
+enough to be able to see them.
+
+<p>I might also want a way for different objects to share normal maps. Having a
+single 4096x4096 normalmap is tolerable. Having loads of such huge textures
+starts to not be a good idea.
+
+<p><img src="https://i.imgur.com/fZuSJGk.jpg">
+<p><img src="https://i.imgur.com/mTVDvwX.jpg">
+
+<hr>
+<p><b>smcameron 17 Feb 2019, 07:55</b>
+<p>A bit of game play footage from earlier...
+<p><a href="https://www.youtube.com/watch?v=3fFl0VH-4zA">https://www.youtube.com/watch?v=3fFl0VH-4zA</a>
+<p><a href="https://www.youtube.com/watch?v=3fFl0VH-4zA"><img src="https://img.youtube.com/vi/3fFl0VH-4zA/hqdefault.jpg"></a>
+<hr>
+<p><b>Danimal » 17 Feb 2019, 12:19</b>
+<p>Im happy my "greeble" link back at OGA helped you guys
+</hr>
+<p><b>smcameron 17 Feb 2019, 15:13</b>
+<blockquote>
+Danimal {l Wrote}:
+Im happy my "greeble" link back at OGA helped you guys
+</blockquote>
+<p>Uh ... what greeble link?
+<hr>
+<p><b>MCMic 18 Feb 2019, 13:12</b>
+<blockquote>
+<blockquote>
+        <p>New question:
+        <p>I got an old computer (Thinkpad X200) with Xubuntu 18.04 on it. The game builds fine but then gives a black screen instead of the window content.
+        <p>I looked at the output and it says GLSL 1.30 is not supported by my computer.
+        <p>I checked and it’s true, this hardware does not support OpenGL 3 and newer.
+        <p>Is there any hope around this problem or is it impossible to render the game on such a computer?
+        <p>(I used make update-assets, would it help if I use make models instead? To build the models on the same hardware?)
+</blockquote>
+
+    <p>If you run snis_limited_client (menu item 5 in snis_launcher instead of 4), then you don't need opengl. However, you should probably only use COMMS, SCIENCE, ENGINEERING, and DAMAGE CONTROL, the other screens (NAV, WEAPONS, MAIN VIEW, DEMON) will probably not work very well (it won't hurt anything to try them, but you'll see that they don't work very well.)
+
+    <p>If you notice a red FPS indicator appear in the upper left hand corner of the screen, it means things are running a little too slow (it shows up if things drop below 29 frames per second). I have seen it show up when using the limited client on the login screen, but once past that, ENG, SCI, DAMAGE CONTROL, and COMMS seemed to be ok.
+</blockquote>
+
+<p>I noticed the commit you did mentioning opengl 2 so I tried to build again on the same computer and it works :-)
+It can now run snis_client.
+
+<p>Weapons and Main screen are laggy (is showed 25 FPS iirc), but I intend to use this computer for COMMS anyway.
+<hr>
+<p><b>MCMic 18 Feb 2019, 13:14</b>
+<blockquote>
+    Danimal:
+    Im happy my "greeble" link back at OGA helped you guys
+</blockquote>
+
+<p>I tried to answer you on OGA but the forum keeps giving me error 500 :-/
+<hr>
+<p><b>smcameron 18 Feb 2019, 17:48</b>
+<blockquote>
+    smcameron wrote:
+<blockquote>
+        Danimal wrote:
+        Im happy my "greeble" link back at OGA helped you guys
+</blockquote>
+Uh ... what greeble link?
+</blockquote>
+
+<p><em>smcameron exercises google-fu</em>
+
+<p>Oh, I guess you must mean this: <a href="https://opengameart.org/forumtopic/need-texturing-on-space-stations">https://opengameart.org/forumtopic/need-texturing-on-space-stations</a> 
+
+<p>Thanks for that. However, the greebles in the above images were made via
+<a href="https://github.com/smcameron/groovygreebler">https://github.com/smcameron/groovygreebler</a>
+which I wrote the other day.
+<hr>
+<p><b>smcameron 28 Apr 2019, 16:03</b>
+<p>Just some video of cruising around, looking at stuff.
+
+<p><a href="https://www.youtube.com/watch?v=OexArz3oNTk">https://www.youtube.com/watch?v=OexArz3oNTk</a>
+<p><a href="https://www.youtube.com/watch?v=OexArz3oNTk"><img src="https://img.youtube.com/vi/OexArz3oNTk/hqdefault.jpg"></a>
+<hr>
+<p><b>smcameron 03 May 2019, 23:22</b>
+<p>Added a new mission script, "El Cubo de la Muerte", run by typing "cubomuerte" on the demon screen.
+<hr>
+<p><b>MCMic 11 May 2019, 23:36</b>
+<p>Finally did a second session, the crew just left.
+
+<p>We were only 4 so it was a bit cahotic.
+
+<p>We first tried to win space pox as we had lost it due to a bug last time.
+But we never managed to get into the wormwhole with the vaccine. I really think
+this battle is too hard, I get that you are supposed to flee and not win it,
+but you should have a bit more time to flee. I think the wombat should be
+stronger actually.
+
+<p>Then we played royal wedding, I tried to intervene as less as possible as I
+knew the script. We failed the battle 2 or 3 times, then I edited the script to
+reduce missile chance to 1 (from 5) and we managed to win the battle and then
+the mission, with the good ending. This really would’ve worked better with a
+dedicated communications officer.  We had two bugs, a lua problem which caused
+the prince panic not to happen, and we still had the prince on board after the
+end of the mission.
+
+<p>I was not sure if cubomuerte was playable/stable yet so we did not try it.
+We tried Demolisher to see the big ship, but we did not understand what we were
+supposed to do, we went inside the ship and out, and then died at some point.
+The TTS was going through all computers at the same time, on some of them with
+espeak and others with the other tech, so it was impossible to understand and
+the text is not written anywhere.
+
+<p>I still do not understand how to set up TTS, first time I only checked TTS
+checkbox on server and it caused problems with the computer, this time I
+checked TTS on all stations but we get this kind of problems.
+
+<p>We also had a crash.
+<p>I’m going to open issues on the tracker now.
+
+<p>Oh, and one station was a Mac Book Air and it does work starting my snislive
+USB key on it. But you need a dongle to get ethernet, and you have no USB port
+left for a mouse. (unless you have a thunderbolt dongle for the ethernet)
+<hr>
+<p><b>smcameron 12 May 2019, 03:29</b>
+
+<blockquote>
+    MCMic wrote:
+    Finally did a second session, the crew just left.
+</blockquote>
+
+
+<p>Thanks for giving it a try... for a minute I thought that by, "the crew just
+left", that they were so disappointed by the game that they walked out, but I
+think you only mean that they recently left just before you wrote this, ha.
+<blockquote>
+    <p>We were only 4 so it was a bit cahotic.
+
+    <p>We first tried to win space pox as we had lost it due to a bug last
+time. But we never managed to get into the wormwhole with the vaccine. I really
+think this battle is too hard, I get that you are supposed to flee and not win
+it, but you should have a bit more time to flee. I think the wombat should be
+stronger actually.
+</blockquote>
+
+<p>Thanks for the feedback. I'll try making some adjustments. I believe I wrote
+this script before missiles existed, and so it probably doesn't turn them off,
+so they are probably a lot stronger now since missiles appeared than they were
+when I originally wrote this script. I should fix that.
+<blockquote>
+    Then we played royal wedding, I tried to intervene as less as possible as I
+knew the script. We failed the battle 2 or 3 times, then I edited the script to
+reduce missile chance to 1 (from 5) and we managed to win the battle and then
+the mission, with the good ending. This really would’ve worked better with a
+dedicated communications officer.  We had two bugs, a lua problem which caused
+the prince panic not to happen, and we still had the prince on board after the
+end of the mission.
+</blockquote>
+
+
+<p>I noticed your bug report on that. I don't have a clear idea what might be
+going wrong, the script *looks* correct to me. I'll have to try to duplicate
+the problem.
+<blockquote>
+    <p>I was not sure if cubomuerte was playable/stable yet so we did not try it.
+    <p>We tried Demolisher to see the big ship, but we did not understand what we were supposed to do, we went inside the ship and out, and then died at some point. The TTS was going through all computers at the same time, on some of them with espeak and others with the other tech, so it was impossible to understand and the text is not written anywhere.
+    <p>I still do not understand how to set up TTS, first time I only checked TTS checkbox on server and it caused problems with the computer, this time I checked TTS on all stations but we get this kind of problems.
+</blockquote>
+
+<p>Hmm, probably best to have text to speech on only one computer (TTS server
+checked on login page) with pico2wav rather than espeak. I agree that having
+only the speech is not good. The Demolisher script isn't really finished.
+(Spoiler: My idea was that the way to destroy it is to overheat the warp core
+and eject it inside the Demolisher.) But I didn't get around to writing some
+sort of hints to let the players know that this is what they are supposed to
+do, nor to writing the code that makes such a thing work.
+
+<p>Cubomuerte should be playable (although the audio recordings it uses are of
+questionable quality) -- I had to manually ride the volume control on the
+stereo when we played it to make it audible in some parts, and to tame the
+quindar tones[1] that were unreasonably loud. Also, if you lose cubomuerte,
+it's not very obvious what has happened. I need to work on that. And how you
+"trigger the device" is kind of lame, and should probably be re-written.
+<blockquote>
+    We also had a crash.
+    I’m going to open issues on the tracker now.
+</blockquote>
+
+<p>Thanks. I gather the crash was on SCIENCE. I think I have seen that one time
+in the last 2 months, but I don't know what it is. I have a hunch it's
+something to do with o-&gt;entity being NULL, or the mesh associated with
+o-&gt;entity being NULL, but I'm not sure. I changed science to make it clearer
+when nothing is selected, which can happen if science range is reduced, or the
+selected item goes out of range, or if range is reduced due to lack of sensor
+power. There might be other reasons as well, but at least now it should be a
+lot more obvious when nothing is selected. This change *might* also reduce the
+chance of a crash, but not really knowing yet what was causing the crash, it
+also might not.
+
+<blockquote>
+    Oh, and one station was a Mac Book Air and it does work starting my
+snislive USB key on it. But you need a dongle to get ethernet, and you have no
+USB port left for a mouse. (unless you have a thunderbolt dongle for the
+ethernet)
+</blockquote>
+
+<p>Hmm, that is unfortunate hardware design. I believe the limited client can
+be compiled on the Mac and will run natively on the Mac, but is only good for
+engineering, damage control, comms, and *maybe* science.
+
+<p>[1] Quindar tones: <a href="https://en.wikipedia.org/wiki/Quindar_tones">https://en.wikipedia.org/wiki/Quindar_tones</a>
+<hr>
+<p><b>MCMic 12 May 2019, 11:57</b>
+<blockquote>
+    smcameron wrote:
+<blockquote>
+        MCMic wrote: 
+        Finally did a second session, the crew just left.
+</blockquote>
+
+Thanks for giving it a try... for a minute I thought that by, "the crew
+just left", that they were so disappointed by the game that they walked out,
+but I think you only mean that they recently left just before you wrote this,
+ha.
+</blockquote>
+
+
+<p>Yeah it was the latter, sorry for the confusion ^^
+
+<blockquote>
+    Thanks for the feedback. I'll try making some adjustments. I believe I
+wrote this script before missiles existed, and so it probably doesn't turn them
+off, so they are probably a lot stronger now since missiles appeared than they
+were when I originally wrote this script. I should fix that.
+</blockquote>
+
+<p>Oh, that makes sense. Yeah, lots of missiles impacted us.
+<blockquote>
+    I noticed your bug report on that. I don't have a clear idea what might be
+going wrong, the script *looks* correct to me. I'll have to try to duplicate
+the problem.
+</blockquote>
+
+<p>I’ll try as well to see if the bug triggers if I start the prince panic at
+script startup.  It may be some weird stuff related to playing the same mission
+twice in a row, I’m not sure if there are some leftover from one run to the
+next.
+</blockquote>
+    Hmm, probably best to have text to speech on only one computer (TTS server checked on login page) with pico2wav rather than espeak.
+</blockquote>
+
+<P>If we do that then the computer does not answer requests which does not come
+from the computer with TTS if I recall correctly.
+
+<blockquote>
+I agree that having only the speech is not good. The Demolisher script isn't
+really finished. (Spoiler: My idea was that the way to destroy it is to
+overheat the warp core and eject it inside the Demolisher.) But I didn't get
+around to writing some sort of hints to let the players know that this is what
+they are supposed to do, nor to writing the code that makes such a thing work.
+</blockquote>
+
+<p>It may be good to state in the mission begin text that the mission is in alpha-testing state then.
+<blockquote>
+    Cubomuerte should be playable (although the audio recordings it uses are of
+questionable quality) -- I had to manually ride the volume control on the
+stereo when we played it to make it audible in some parts, and to tame the
+quindar tones[1] that were unreasonably loud. Also, if you lose cubomuerte,
+it's not very obvious what has happened. I need to work on that. And how you
+"trigger the device" is kind of lame, and should probably be re-written.
+</blockquote>
+
+<p>We may try it next time then. But on my current setup changing volume while playing is not practical.
+<blockquote>
+    Hmm, that is unfortunate hardware design. I believe the limited client can
+be compiled on the Mac and will run natively on the Mac, but is only good for
+engineering, damage control, comms, and *maybe* science.
+
+</blockquote>
+
+<p>Yeah but booting the USB key is easier :-)
+<hr>
+<p><b>smcameron 30 May 2019, 13:03</b>
+<p>I realized that I never mentioned here that I have created some
+documentation about the codebase for Space Nerds in Space. It's not 100%
+complete (probably never will be) and there are still some big holes (I didn't
+do very much in the way of documenting the renderer guts for example) but it's
+better than nothing.
+
+<ul>
+<li><a href="http://htmlpreview.github.io/?https://github.com/smcameron/space-nerds-in-space/blob/master/doc/hacking-space-nerds-in-space.html">Hacking on Space Nerds in Space</a>
+<li>The HTML source for this document is <a href="https://github.com/smcameron/space-nerds-in-space/blob/master/doc/hacking-space-nerds-in-space.html">in the github repo.</a>
+</ul>
+
+<p>It's a reasonable place to start for anyone who might be interesting in
+tinkering with the game or just wondering how it works.
+
+<p>Feel free to send patches to this document if you find mistakes or something
+that could be clearer (or just open an issue if something is bugging you about
+it and you want me to fix it.)
+<hr>
+<p><b>smcameron 15 Jul 2019, 01:17</b>
+<p>For the benefit of some star wars LARPers, you can now choose an alien font
+by typing "set current_typeface=1" on the demon screen. You can select the
+default ASCII font via "set current_typeface=0".
+
+<p><img src="https://i.imgur.com/jDiVeXJ.jpg">
+<hr>
+<p><b>fluffrabbit 15 Jul 2019, 02:58</b>
+Why does the technologically advanced Galactic Republic/Galactic Empire/Naboo
+civilization use primitive neolithic glyphs? If you look at early writing
+systems, this is pretty much it, except of course for the Arabic numerals. This
+is monkey script.
+<hr>
+<p><b>smcameron 15 Jul 2019, 05:05</b>
+<blockquote>
+    fluffrabbit wrote:
+    Why does the technologically advanced Galactic Republic/Galactic
+Empire/Naboo civilization use primitive neolithic glyphs? If you look at early
+writing systems, this is pretty much it, except of course for the Arabic
+numerals. This is monkey script.
+</blockquote>
+
+<p>Heh. Stop digging. The deeper you dig, the less sense it makes. Also, I "<a
+href="https://github.com/smcameron/space-nerds-in-space/commit/a80e7281b71595ba0fd3c88872d62863ac1440a5">fixed</a>"
+the Arabic numerals.
+
+<p>I also kind of like that I <a href="https://github.com/smcameron/space-nerds-in-space/commit/0aa6a024b58ad543e393279aed8887f10a2f7ec8">rabidly
+enforce locale=C</a>, but yet support this insanity.
+<hr>
+<p><b>fluffrabbit 15 Jul 2019, 08:26</b>
+<p>I don't locales.
+<pre>
+    stroke_t
+</pre>
+
+<p>I'd say you make a lot of crazy design decisions. I thought you were just rendering a font, but you're actually tracing the glyphs. o.O
+<hr>
+<p><b>e4mafia 25 Jul 2019, 13:40</b>
+<p>Hey btaggart
+
+<P>Did you ever validate your Mac build instructions? Would be very grateful if you could share.
+<hr>
+<P><b>smcameron » 27 Jul 2019, 19:33</b>
+<blockquote>
+    e4mafia wrote:
+    Hey btaggart
+
+    Did you ever validate your Mac build instructions? Would be very grateful if you could share.
+</blockquote>
+
+<p>Hi, I'm not btaggart, but the last time I helped someone get SNIS (sort of)
+running on Mac was in February of 2019. We couldn't get any of the opengl stuff
+to compile. This may have been due to a newer Mac without opengl support?
+Looking back, he was running "Mac OS mojave" (that's what he called it... I
+don't really know much about macs). I believe it has worked in the past (many
+years ago though) but I don't think it works with recent macs because of
+opengl. I think we were able to get the limited client to run though (since it
+doesn't use opengl). The limited client is well, limited in that it does not
+really work well with all the stations, only engineering, damage control,
+comms, and *maybe* science. It will try to do the others if you choose to try
+them, but performance and aesthetics will suffer greatly.
+
+<p>There were some issues we encountered (and resolved some) back then, at least
+one related to Mac, around crypt_r(), which I think I was able to work around.
+<a href="https://github.com/smcameron/space-nerds-in-space/issues/197">https://github.com/smcameron/space-nerds-in-space/issues/197</a>
+
+<p>Let me know if you figure out anything interesting.
+<hr>
+<p><b>fluffrabbit 27 Jul 2019, 19:37</b>
+<p>AFAIK OpenGL is deprecated but not removed entirely as that would break
+everything. There is a concept of "modern OpenGL" which Apple helped
+popularize, wherein you don't use any extensions and stick to a recent "core
+profile", most commonly OpenGL 3.3.
+<hr>
+<p><b>smcameron 27 Jul 2019, 19:42</b>
+<blockquote>
+    fluffrabbit wrote:
+    <p>AFAIK OpenGL is deprecated but not removed entirely as that would break everything. There is a concept of "modern OpenGL" which Apple helped popularize, wherein you don't use any extensions and stick to a recent "core profile", most commonly OpenGL 3.3.
+</blockquote>
+
+<p>Yeah, but we couldn't figure out how to *compile* opengl code on mojave,
+couldn't find the header files anywhere, I think. That is, you might well be
+able to run opengl code, but can you *develop* opengl code on mojave? Maybe if
+you compiled on an older mac, and moved the binary over? OTOH, I'm very far
+from knowledgeable about Macs, so, there might be a way to get it to work.
+<hr>
+<p><b>fluffrabbit 27 Jul 2019, 19:53</b>
+<blockquote>
+    smcameron wrote:
+<blockquote>
+        fluffrabbit wrote: 
+        <p>AFAIK OpenGL is deprecated but not removed entirely as that would break everything. There is a concept of "modern OpenGL" which Apple helped popularize, wherein you don't use any extensions and stick to a recent "core profile", most commonly OpenGL 3.3.
+</blockquote>
+
+    Yeah, but we couldn't figure out how to *compile* opengl code on mojave,
+couldn't find the header files anywhere, I think. That is, you might well be
+able to run opengl code, but can you *develop* opengl code on mojave? Maybe if
+you compiled on an older mac, and moved the binary over? OTOH, I'm very far
+from knowledgeable about Macs, so, there might be a way to get it to work.
+</blockquote>
+
+<p>Don't rely on the system OpenGL headers. Use <a href="https://github.com/Dav1dde/glad/tree/glad2">Glad 2</a>.
+<hr>
+<p><b>smcameron 27 Jul 2019, 19:55</b>
+<p>Thanks, we definitely would not have known to look for this. I will forward
+this to the guy I was trying to help back in Feb. Maybe he'll make some
+progress. I suspect that this may cause further difficulties.
+<pre>
+#include &lt;gtk/gtkgl.h&gt;
+</pre>
+<hr>
+<p><b>fluffrabbit 27 Jul 2019, 19:59</b>
+<blockquote>
+    smcameron {l Wrote}:
+    Thanks, we definitely would not have known to look for this. I will forward this to the guy I was trying to help back in Feb. Maybe he'll make some progress. I suspect that this may cause further difficulties.
+	<pre>
+        #include &lt;gtk/gtkgl.h&gt;
+	</pre>
+</blockquote>
+<p>GTK on a Mac? Yeah, I don't think so.:) 
+<hr>
+<p><b>e4mafia 27 Jul 2019, 23:19</b>
+<p>What’s weird is that I can’t get the helm/Mac station to work in an Ubuntu vm under parallels on it either.
+<p>Time to dust off a non Mac x86 laptop I guess.
+<p>Are there know issues on latest Ubuntu that could be the cause? No control at all on Mac. Station doesn’t respond to direction input. Mouse works for doing warps though so I know it’s not hung.
+<hr>
+<p><b>smcameron » 28 Jul 2019, 00:30</b>
+<blockquote>
+    Are there know issues on latest Ubuntu that could be the cause?
+</blockquote>
+
+<p>Not that I'm aware of, though I haven't tried the latest ubuntu myself. It's
+just using GTK 2.0 for keyboard input, which underneath is just using normal X
+windows stuff, so I expect if e.g., gnome terminal works, then so should SNIS.
+Maybe the window doesn't have keyboard focus for some reaso
+<hr>
+<p><b>smcameron 28 Jul 2019, 00:33</b>
+<blockquote>
+    GTK on a Mac? Yeah, I don't think so
+</blockquote>
+
+<p>We already got that working... the limited client uses gtk. It's the combo of gtk and opengl that seems a bit iffy to me.
+<hr>
+ <p><b>smcameron 01 Aug 2019, 20:21</b>
+
+<p>In thinking about how to make Comms more interesting and fun, taking into
+account that it is almost completely a text based interface, the idea had
+occurred to me to put some interactive-fiction like elements in. For example,
+maybe there's a mission in which you find a derelict ship and you send a robot
+over to investigate, commanding it via Comms in the manner of Zork and those
+old infocom games.
+
+<p>Now I already have a Zork-like parser built into the game for "the
+computer", however that's in C, and I don't want to build it into the game just
+for a particular mission. And exposing that to Lua seems like a lot of work.
+Like more than I want to bite off. And not really knowing Lua particularly
+well, the idea of writing interactive fiction in Lua directly seemed somewhat
+daunting and unappealing. So, for a long time, I just kind of shelved this idea
+as being sort of "not worth it." But lately I started thinking about it again,
+and thought, well, maybe I should dig into Lua a bit. So this morning I started
+looking at an old and very small toy project I had done in python that
+implemented some basic interactive fiction features. I had done that project as
+a way of learning python. I decided to see what it would take to do the same
+thing in Lua. Turns out Lua's tables are not all that different than python's
+dictionaries, similar enough that porting this python code to Lua was actually
+pretty straightforward, and the resulting code is surprisingly similar to the
+python code. You can see it here:
+<a href="https://github.com/smcameron/smcamerons-lua-adventure">https://github.com/smcameron/smcamerons-lua-adventure</a>
+The python one is here:
+<a href="https://github.com/smcameron/smcamerons-python-adventure">https://github.com/smcameron/smcamerons-python-adventure</a>
+
+<p>So with that under my belt, I think it should be totally possible to write a
+Lua mission script that incorporates these interactive-fiction ideas so I can
+make this concept of Comms directing a remote robot around on a derelict ship a
+reality. Probably want to keep it short, maybe break it up into several
+different segments, I don't want to make a mission that amounts to "Drive the
+ship over there and then play Zork for 3 hours," but I think this idea has a
+lot of potential to make Comms more interesting, and it's good for me to get a
+little more proficient with Lua.
+
+<p>And after a day or so more tinkering, I have a proof of concept working with
+COMMS. You can try it out by typing "testintfic" on the DEMON screen, then
+switching to COMMS, and changing the channel to 1234.
+
+<p>Here's a pic (click on it for embiggening):
+
+<p><a href="https://i.imgur.com/BjRMVtO.jpg"><img src="https://i.imgur.com/BjRMVtOl.jpg"></a>
+<hr>
+<p><b>smcameron 18 Aug 2019, 13:50</b>
+<p>Posted this on my patreon, figured I'd post it here as well.
+
+<p><a href="https://i.imgur.com/5gdfQ6v.jpg"><img src="https://i.imgur.com/5gdfQ6vm.jpg"></a> (click to embiggen).
+
+<p>First playtest of STURNVULF mission script
+
+<p>2019-08-16 -- Tonight at HackRVA in Richmond, VA, I and a few other people
+tried a play test session of the new STURNVULF mission script, which has an
+interactive-fiction-like element as part of it, similar to old Infocom games
+like Zork. In this mission, your crew is informed of a ship called the
+STURNVULF's last known position, and that a previous rescue ship sent to the
+aid of the STURNVULF was destroyed, probably by Zarkons, but not before landing
+a rescue robot on the STURNVULF.
+
+<p>You fly your ship out and locate the STURNVULF, and can command the rescue
+robot via COMMS in the usual interactive-fiction manner to try to figure out
+what's going on. There are survivors to rescue and planted bombs to deal with.
+
+<p>The playtesting mostly went alright, with no outright crashes or lockups of
+the system per se, but not without a few hiccups. Overall I was satisfied with
+the near lack of bugs, especially since I made 23 commits related to the
+STURNVULF mission today, right up until a couple hours before we began
+playtesting, and many more in the days leading up to now. But there were a few
+bugs and tweaks needed.
+
+<p>The gist of the mission is that while COMMS is busy wrangling the remote
+robot aboard the STURNVULF, Zarkons periodically appear to harrass the rest of
+your crew.
+
+<p>It soon became apparent that the frequency of Zarkons appearing was too
+great, and within short order, the ship was spinning around helplessly with
+badly damaged maneuvering. Giving the ship 1000 missiles and greatly decreasing
+the frequency of Zarkon appearances made the crew's job manageable enough that
+COMMS could make progress while the rest of the crew could wrangle the Zarkons
+without too much drama. This worked pretty well for the most part.
+
+<p>However, it took COMMS quite a long time to work through the little
+adventure I had set for them. In fact it took long enough that we ran out of
+fuel twice, and had to call a Mantis tow ship twice to be towed in for fuel and
+general repairs. This interrupts COMMS adventure, because you must be nearby
+the STURNVULF for the robot to receive your communications. And the first time
+we tried calling the tow ship, none were around, so I had to go into the Demon
+screen and add in a Mantis tow ship so that we could summon it again. After
+that summoning the tow ship worked flawlessly.
+
+<p>So that's all fine, more or less, but the pacing was perhaps a little slower
+and longer-running than would be ideal. There was a bit of "guess the verb" or
+"guess the noun" or "guess the phrasing" happening with the adventure game as
+well. This is probably to be expected given the whole thing is a bunch of Lua
+script I threw together in the last 2 weeks. I have significantly leveled up in
+my Lua programming abilities over the last 2 weeks as a result of this, so
+that's nice.
+
+<p>There were some (justified) complaints about the NAV screen, esp. about the
+SCIENCE Arrow, and how it's difficult to tell if it's point towards you or away
+from you. Having played with it a lot myself, I suppose I'm accustomed to it
+and can figure it out quite easily, but for people that are new to it, or who
+have not played the game in a few months, visually it can be pretty ambiguous
+and confusing. Need to think about how to improve that without making it too
+ugly.
+
+<p>There were at least two outright bugs in the script. 1) at some point (maybe
+2 hours(!) into the mission) we got a "comparing number with nil" error. I have
+the log file on my laptop, I don't remember the precise line. I think it was in
+add_zarkons(), probably zarkon was nil unexpectedly. 2) The script creates a
+custom button on the SCIENCE screen, ("TRANSPORTER") used to beam survivors off
+the STURNVULF. At some point, this button disappeared, making it impossible to
+transport any more survivors off the STURNVULF. I think it may be after we
+docked with a starbase for refuelling, perhaps that clears the custom buttons.
+I will need to look into that.
+
+<p>Replayability of the mission is probably not very good, as once you've
+figured out all the little puzzles in the little adventure game, the novelty of
+them is gone, and it becomes much less interesting. So creating this type of
+mission script is *very* high effort (especially this first one of this type,
+subsequent ones would be easier as much of it is abstracted and generalized ...
+by which I mean all the stuff in
+share/snis/luascripts/MISSIONS/lib/interactive-fiction.lua) for very low
+replayability. But, I will say it did give a feeling of a much more detailed
+context about what the mission was about. It was much more of a proper Star
+Trek like feeling to have this little robot being directed by COMMS rummaging
+around on the disabled ship trying to figure out what happened while the rest
+of the crew fights off the Zarkons, rather than just the usual "go over there
+and blow those guys up for no very real reason" type of mission.
+
+<p>The (natural and expected) slowness of COMMS figuring out the little
+adventure game was to some degree at odds with the desired pacing of the rest
+of the crew. I tried to throw COMMS up on the MAIN VIEW and the rest of the
+crew could enjoy what was going on there between Zarkon encounters, but the
+Zarkon encounters were distracting enough that the unfolding story was hard to
+follow very closely. After I adjusted the Zarkon encounter frequency to be low
+enough, there were many instances between encounters when the crew would become
+distracted and then be caught off guard by the next encounter.
+
+<p>Overall, I'd say the idea of putting interactive-fiction into COMMS was a
+qualified success -- very good for COMMS, maybe not quite perfect for the rest
+of the crew, the pacing needs work, and the mission becomes too long for the
+rest of the crew.
+
+<p>There were some problems compiling the game on SuSE leap 15.1. 1) Needed to
+install pkg-config and pkg-config_files. 2) Needed to set pkg-config-path
+environment variable (to what? Need to find this out.) 3) All references to lua
+5.2 needed to be changed to lua 5.3. Note, we only compiled snis_client (via
+"make bin/snis_client") which shouldn't need lua at all. I don't know if the
+differences between lua 5.3 and lua 5.2 are significant enough to break things.
+I normally use lua 5.2 on my systems.
+
+<p>If you would like to try the little COMMS adventure from the terminal
+without the whole surrounding SNIS infrastructure, you can run "lua
+share/snis/luascripts/MISSIONS/STURNVULF.LUA There will be some slight
+differences in how the transporting of survivors works, and the "win condition"
+doesn't really trigger in this stand alone mode, but if you just want to play
+with the little adventure game by itself, you can.
+
+<p>BTW, the tweaks I made to missiles and to the zarkon encounter frequency
+have not been committed to github, so the STURNVULF mission that's in github
+right now will be a *very* tough (read: impossibly tough) mission. I'll
+probably work on updating it in the next few days.
+
+<p>Here is a <a href="https://github.com/smcameron/space-nerds-in-space/issues?utf8=%E2%9C%93&q=created%3A2019-08-18">
+list of issues created as a result of this play testing session.</a>
+
+<hr>
+<p><b>smcameron 22 Aug 2019, 14:52</b>
+
+<p><a href="https://i.imgur.com/mBQD99g.jpg"><img src="https://i.imgur.com/mBQD99gm.jpg"></a> (click to embiggen).
+
+<p>Improved heading indicators for SCIENCE and COMMS
+
+<p>Some feedback I got from the most recent play testing session was that the
+directional arrow indicators on the NAV screen showing what direction WEAPONS
+was currently pointing and the direction of the current SCIENCE selection were
+a bit ambiguous, sort of like the Necker cube. It could be hard to tell if the
+arrows were pointing mostly away from you, or mostly towards you. You could
+move the ship, and watch the motion of the arrows and figure it out if you had
+previous experience with the screen and knew the behavior, but for new players,
+moving the ship sometimes just makes the arrows move in a confusing way if
+you're brain has already latched onto the "wrong" interpretation of the Necker
+cube, so to speak.
+
+<p>I have tried to mitigate this problem in two ways. First, I have added tails
+onto the arrows and second, I have added "contact patches" (indicated by the
+white arrows in the picture above) which show the point directly above the
+central disc where the arrow's head and tail lie. I hope that these will give
+even new player's brains enough 3D cues to automatically latch onto the correct
+interpretation.
+
+<hr>
+<a href="history-5.html"> ... CONTINUE TO PAGE 5 ...</a>
+
+

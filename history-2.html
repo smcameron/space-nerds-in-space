@@ -1,0 +1,2154 @@
+<p>This is a PAGE 2 of a copy of a <a href="https://forum.freegamedev.net/viewtopic.php?f=22&t=3710">thread
+on freegamedev.net</a>. Once around 2010 or so, I lost a similar thread over there for my
+other little game, Word War vi when the forum database was lost, so I created this as a backup
+in case something similar happens again.
+
+<p><a href="history.html">BACK TO PAGE 1"</a>
+
+<hr>
+<p><b>smcameron » 21 Dec 2014, 05:02</b>
+<p>Hello Pollux568, and thanks for the kind words.
+
+<p>I am aware of the lack of missions, etc. within SNIS. There is some
+capability for missions, but it is a bit, let's say half-baked and
+under-documented.
+
+<p>If you switch to the "demon screen", and type in "lua abc.lua", and if there
+is a script in share/snis/luascripts named ABC.LUA (has to be uppercase -- you
+could consider that a bug) it will run the script, which can do many things.
+There are some example scripts in share/snis/luascripts which you may want to
+take a look at.
+
+<pre>
+CLEAR_ALL.LUA
+COLLISION.LUA
+HELLO.LUA
+initialize.lua
+SAVING-PLANET-ERPH.LUA
+SILLY-SPACE-BATTLE.LUA
+TRAINING-MISSION-1.LUA
+TRAINING-MISSION-2.LUA
+</pre>
+So, for example, you can go to the "demon screen" and type "lua
+saving-planet-erph.lua" and it will run that script. You can take a look at the
+scripts and potentially make your own missions. Documentation (what there is of
+it) for what the scripts can do is in lua-api.txt See:
+<a href="https://github.com/smcameron/space-nerds-in-space/blob/master/lua-api.txt">
+https://github.com/smcameron/space-nerds-in-space/blob/master/lua-api.txt</a>
+My hope was that users might create some mission scripts for SNIS. The api
+isn't set in stone yet though, but I do try to not break the api unnecessarily
+and not adding stupid things to the api that will need to be changed later
+(time will tell if I am successful at not breaking it.)
+
+So I guess what I am saying is that I'm aware of the lack of missions, and have
+tried to put in some infrastructure to allow missions be built for the game.
+The missions generally have to make heavy use of the comms system to be able to
+inform the player of what is supposed to do (generally, making starbases
+pretend to make requests for the players to go do stuff.) I am not sure how
+well that scheme really works, but I'm not sure how else to do it.
+
+On another topic, to explain the lack of development activity on SNIS lately,
+about 3 months ago, in an interesting twist, I ended up not having a job for a
+bit, and spent about a month getting a new job -- which worked out pretty well,
+I think, since I did get a job at, of all places, GOOGLE! So, for the last 2
+months, I have been doing nothing but trying to get my house ready to sell so
+that I can move across the country. Consequently, for the last 3 months, I have
+not worked on Space Nerds In Space at all. Once I start working again (in about
+2 weeks!), I expect it will likely eat my brain for quite a while until things
+settle down to some sense of normalcy at which time maybe I can get back to
+working on SNIS some more.
+
+Thanks for giving SNIS a try.
+<hr>
+<p><b>smcameron » 25 Jan 2015, 06:31</b>
+<p>So, getting settled in at my new job, had some time today to play around
+with gaseous-giganticus, the procedural gas giant texture generation program
+that is part of Space Nerds In Space, and so I made a little video about how to
+use it. Well, the audio isn't sync'ed to the video, and the video runs too fast
+(which, in this case is probably a good thing as it's a demo of a rather
+compute intensive and slow program.) This lets you get to see it actually
+working, instead of only still shots of the output of the program, which might
+be interesting.
+
+<p><iframe width="560" height="315" src="https://www.youtube.com/embed/8nx5yPpQh2M" frameborder="0" gesture="media" allow="encrypted-media" allowfullscreen></iframe>
+<p><a href="https://www.youtube.com/watch?v=8nx5yPpQh2M&feature=youtu.be">
+https://www.youtube.com/watch?v=8nx5yPpQh2M&feature=youtu.be</a>
+<hr>
+<p><b>Pollux568 03 Feb 2015, 05:33</b>
+<p>Congratulations for your job ! Do you think your work on SNIS has helped you to be recruited ? Has your job any connection with the game ?
+
+<p>I'll try the LUA scripts - but sadly I've never coded in LUA, so I don't know if I'll be able to do anything of interest...
+
+<p>By the way, the gas giants looks awesome with these textures and lights, great job :)
+<hr>
+<p><b>smcameron 04 Feb 2015, 06:06</b>
+<blockquote>
+Pollux568:
+<p>Congratulations for your job ! Do you think your work on SNIS has helped you to be recruited ? Has your job any connection with the game ?
+
+<p>I'll try the LUA scripts - but sadly I've never coded in LUA, so I don't know if I'll be able to do anything of interest...
+
+<p>By the way, the gas giants looks awesome with these textures and lights, great job :)
+</blockquote>
+
+
+<p>Thanks. I don't think the game had much to do with getting the job, except
+indirectly, as I (re)learned some things while programming the game about
+TCP/IP and multithreaded programming, and knowing those things may have come in
+handy to know during the interviews. The job has nothing to do with games,
+graphics or anything like that.
+<hr>
+<p><b>smcameron » 08 Feb 2015, 03:07</b>
+<p>Thanks to Iván Sánchez Ortega, it should now be possible to build a Debian
+package for Space Nerds In Space. I have not tried doing so myself, however. If
+you'd like to try it, there are some instructions here:
+<a href="https://github.com/smcameron/space-nerds-in-space/pull/49">
+https://github.com/smcameron/space-nerds-in-space/pull/49</a>
+
+<blockquote>
+How to build the Debian package by yourself, short version:
+<pre>
+sudo apt-get install dpkg-dev debhelper devscripts
+cd /place/where/you/cloned/space-nerds-in-space
+dpkg-buildpackage
+</pre>
+
+<p>If something is wrong (e.g. missing build dependency), look at the output of
+dpkg-buildpackage. If the build is successful, the .deb will be located at
+/place/where/you/cloned/space-nerds-in-space/../snis-version.deb
+
+<p>In order to get the Git commit messages into the Debian changelog (and bump
+versions), look at git-buildpackage and git-dch
+</blockquote>
+If you trust a random internet guy to compile things for you, you may or may not find a .deb package here:
+<a href="https://github.com/IvanSanchez/space-nerds-in-space/releases/tag/v0.20140108">
+https://github.com/IvanSanchez/space-nerds-in-space/releases/tag/v0.20140108</a>
+<hr>
+<p><b>smcameron 01 Apr 2015, 06:42</b>
+
+<p>I have made a fun little experiment with morphing nebulae. It is right now only
+a half-baked implementation in that the morphing happens entirely on the client
+and no attempt is made to keep different clients to have the same morphing
+behavior so that all clients see a consistent view. It's a fairly subtle
+effect, and I am not sure it's worth it in that it's really just something
+that's fun for me as a programmer, but doesn't really add anything to the game
+play, so this might not ever actually make it into the game.
+
+<p><iframe width="560" height="315" src="https://www.youtube.com/embed/RADFjxcXmbM" frameborder="0" gesture="media" allow="encrypted-media" allowfullscreen></iframe>
+<p><a href="https://www.youtube.com/watch?v=RADFjxcXmbM&feature=youtu.be">
+https://www.youtube.com/watch?v=RADFjxcXmbM&feature=youtu.be</a>
+<hr>
+<p><b>andrewj 01 Apr 2015, 09:28</b>
+<p>If it doesn't affect gameplay (having different effects on each client),
+then you may as well keep it. Little things like this add up, make for a richer
+experience.
+<hr>
+<p><b>Vandar 01 Apr 2015, 10:26</b>
+<p>Very nice planets you do have there. Some years ago I tried to make planets,
+too, but my results were not so nice as yours. Good work :)
+<hr>
+<p><b>smcameron 01 Apr 2015, 20:20</b>
+<p>Here's a video that shows the effect a little better and explains how it
+works. (Youtube says it's 95% processed so it might not play just yet).
+<p><iframe width="560" height="315" src="https://www.youtube.com/embed/jab82mKhLdk" frameborder="0" gesture="media" allow="encrypted-media" allowfullscreen></iframe>
+<p><a href="https://www.youtube.com/watch?v=jab82mKhLdk&feature=youtu.be">
+https://www.youtube.com/watch?v=jab82mKhLdk&feature=youtu.be</a>
+<hr>
+<p><b>smcameron 09 Apr 2015, 07:52</b>
+<p>Working on some Space Monster code lately...
+<p><iframe width="560" height="315" src="https://www.youtube.com/embed/Pw1BR29O70Y" frameborder="0" gesture="media" allow="encrypted-media" allowfullscreen></iframe>
+<p><a href="https://www.youtube.com/watch?v=Pw1BR29O70Y&feature=youtu.be">
+https://www.youtube.com/watch?v=Pw1BR29O70Y&feature=youtu.be"</a>
+<hr>
+<p><b>eugeneloza 09 Apr 2015, 09:26</b>
+<p>Looks awesome!!!
+<hr>
+<p><b>Vandar 09 Apr 2015, 11:46</b>
+The "masters of Orion II" send greetings!
+<hr>
+<p><b>smcameron 11 Apr 2015, 05:17</b>
+<p>Refined the motion of the tentacles a bit... still not checked in.
+Everything is done server side right now and network traffic is 3 quaternions
+plus x,y,z for each joint of each tentacle -- 8 tentacles, 10 joints per
+tentacle... 4 floats per quaternion... means 15 floats per joint * 80 joints *
+4 bytes per float == 4800 bytes per spacemonster per update. Need to push a
+bunch of this to the client side so it doesn't need to go over the network. So,
+still just in the proof of concept stage at this point.
+<p><iframe width="560" height="315" src="https://www.youtube.com/embed/6Eb4gDTT2ys" frameborder="0" gesture="media" allow="encrypted-media" allowfullscreen></iframe>
+<p><a href="https://www.youtube.com/watch?v=6Eb4gDTT2ys&feature=youtu.be">
+https://www.youtube.com/watch?v=6Eb4gDTT2ys&feature=youtu.be</a>
+<hr>
+<p><b>Vandar 11 Apr 2015, 21:39</b>
+<p>Looks good. Having the animation data kept on client side and only transfer
+animation pattern id's from the server will cut down traffic a lot.
+<hr>
+<p><b>smcameron 12 Apr 2015, 00:26</b>
+<blockquote>
+Vandar:
+Looks good. Having the animation data kept on client side and only transfer
+animation pattern id's from the server will cut down traffic a lot.
+</blockquote>
+
+<p>It's not quite that easy. The "animation data" is procedurally generated on the
+fly. The trick is to get all the clients to generate exactly the same data at
+the same time, and allow for late joiners. It's not unsolvable, but not super
+easy either. For now, I sidestep the problem by generated on the server once
+and distributing to the clients -- I think I will continue to do it that way,
+but find a way to drastically shrink what's generated on the server (e.g. maybe
+I pass a new random seed around to all the clients to seed a per-creature
+random number generator so the clients can all generated the same data at the
+same time -- which is pretty much your same idea.)
+<hr>
+<p><b>Vandar 12 Apr 2015, 21:04</b>
+<p>I've been using seeded procedural content generation in a few projects of mine,
+and it works quite fine. So passing the seed and, if needed, additional
+parameters to the rng of all clients will produce exactly the same outcome on
+all clients - assuming that your messaging is monotone ordered, i.e. messages
+are interpreted in the same sequence on all clients (clients still can lag
+behind, important is only that the sequence is the same).
+
+<p>Good luck :)
+<hr>
+<p><b>Vandar 14 Apr 2015, 15:35</b>
+Following this project made me want to add a 3D flight module to my own space
+exploration game variant. 5 hours learning OpenGL and looking at code examples,
+und uncounted thoughts of swear-words later, I finally have the basics
+together. Should be good enough to display something in between Elite and
+Frontier style worlds, but I'm not sure if I'll go into procedural planet
+generation like Frontier had it ... now I must couple the display module with
+the rest of the game.
+<hr>
+<p><b>smcameron 15 Apr 2015, 02:54</b>
+<p>Cool. Adding 3D to a 2D game isn't easy for a variety of reasons. Enemy AI,
+steering, shooting, etc. becomes harder. Making the gameplay fun becomes (to
+me) more difficult. It's such a fundamental change that you risk damaging the
+game, or adding so much complexity to it that you can't finish it. The one
+piece of advice I'd offer is make sure you use consistent coordinate systems
+everywhere -- that is, x, y, and z axes always point the same way and you
+always use a consistent handedness of the coord systems used in the game
+universe and in the rendering system -- Opengl is going to want to most
+naturally use a particular coordinate system, don't fight it, modify your game
+to use that coordinate system rather than converting between that coordinate
+system and a different one within your game. Failing to do that when I first
+began adding 3D to my game lead to untold hours of debugging insanity. My first
+attempt failed because of this, and a 2nd attempt involved going back and
+fixing the coordinate systems to be consistent, and I probably would have
+failed a 2nd time if not for the help of my friend Jeremy -- or at least it
+would have taken a lot longer than it did.
+<hr>
+<p><b>Vandar 15 Apr 2015, 10:48</b>
+<p>Well, the history of the project is long ... briefly said, it's been 3D data
+wise all the time, but there was only a map-like projection of space. No
+enemies, no fights. It's about exploration. Now I'm adding a new view for the
+data, showing space flight in 3D. Question is, if I want to use billboard
+sprites for planets, or make them 3D models, furthermore if I want to use
+procedural generation for the planets (which would be an interesting thing to
+do). And I'm afraid, once there are visible planets in space, players will want
+to land there.
+
+<p>Finishing the project ... um, probably will never happen. I started in 1995
+or so when I was fascinated by Elite II - Frontier, worked on it for a while,
+had to dump a lot of code due to technology changes, started over with a new
+code base, dumped the new codebase, resurrected parts of the old code,
+translated it from C++ to Java and gave it a new Swing-based UI. At the moment
+it's not about completing something but a "I want to see if this works", which
+means embedding OpenGL in a Swing UI driven game. As a side effect I'm learning
+more about OpenGL, but more or less unintended.
+
+<p>Space monster brings questions: How metabolism works? What's engergy source?
+How they move?
+<hr>
+<p><b>smcameron 01 May 2015, 07:53</b>
+<p>Been working on a (very crude) planetary atmosphere shader lately.
+<p><img src="http://i.imgur.com/Cw79Xne.png">
+<hr>
+<p><b>charlie 01 May 2015, 09:45</b>
+<p>Eye candy! Nice, very nice.
+<hr>
+<p><b>Vandar 02 May 2015, 21:48</b>
+<p>A gorgeous planet! Makes me want to improve my own earth type planet generator, but I doubt I can reach this level.
+
+<p>Do space monsters use bone shaped asteroids as chew toys? I'm wondering :p
+<hr>
+<p><b>smcameron » 03 May 2015, 02:47</b>
+<p>About the space monsters... well I have not yet got the code in a state I am
+happy to commit, so some might say space monsters don't really exist. Perhaps
+some sort of scientific mission to study the "space monsters" should be
+undertaken.
+<hr>
+<p><b>Vandar 03 May 2015, 22:32</b>
+<blockquote>
+smcameron:
+<p>some might say space monsters don't really exist.
+</blockquote>
+
+<p>But ... but ... I saw one! It was huge! Larger than the ship. And it had
+tentacles! Lots of! And it was pale like death :o
+
+<p>Your way to create planets is clearly superior to mine. Although I have
+clouds and atmosphere effects now, too, they don't look as good as yours. Oh
+well ... I should port more of the UI panels anyways, to get a playable game
+again. I'm curious to see where your project is heading to :)
+<hr>
+<p><b>smcameron 04 May 2015, 05:13</b>
+I am guessing from looking at this image:
+http://forum.freegamedev.net/download/file.php?id=9300&mode=view that you are
+using some noise to generate the terrain. How are you picking your colors? To
+me it looks like your land is too "green" and your water is too light. I have
+experimented some and had good luck with picking colors by indexing into a
+color texture with one axis (in my case, vertical axis) being specified by
+altitude, and the other axis being specified by a 3D noise function.  For land,
+and water, respectively, these color picking textures worked pretty good:
+<p><img src="http://i.imgur.com/8hV4fkR.png">
+<img src="http://i.imgur.com/bdIskjL.png">
+<p>Producing planets like this (this one is without clouds, but with my atmosphere code):
+<p><img src="http://i.imgur.com/Ub2Z6d3.png">
+<hr>
+<p><b>Vandar 04 May 2015, 15:26</b>
+<p>I'm using hand-coded color maps and simpex noise. I suspect that you have
+both, superior color maps (the textures that you showed), but also a superior
+noise function, or at least you make better use of your noise function, so that
+it creates swirly structures and details like the rivers. Better color maps
+will help my code, too, but adding more complexity to the noise function seems
+to be a problem, I doubt the player wants to wait more than minute to have the
+stellar system generated. Actually even 10 seconds of wait appear long ... but
+with some time there will come ideas :)
+
+<p>PS: I think the biggest difference is the fact that you have a 2-dimensional
+color picking system, while I have a 1-dimensional one that only uses height.
+
+<hr>
+<p><b>smcameron 05 May 2015, 03:53</b>
+<p>The rivers and things come about because in my heightfield generation code,
+I sample real earth elevation data from images that I got from here:
+<a href="http://visibleearth.nasa.gov/view.php?id=73934">http://visibleearth.nasa.gov/view.php?id=73934</a>
+and use it to modulate my
+generated terrain E.g. I add a big circular pimple onto my planet, but then
+essentially multiply the pimple heightfield by a sampled region of some real
+terrain data, and keep doing that over and over. if the edges of the pimple I
+am adding into the surface have height zero, then after muliplying, they're
+still zero. Consequently it all fades together nicely, and I can add in
+zillions of such wrinkly terrain-modulated pimples and it all blends together.
+That part probably is pretty tough to do on the GPU I expect. Improving your
+color picking is probably do-able though.
+<hr>
+<p><b>Vandar » 05 May 2015, 14:43</b>
+<p>My planets are precalculted too, so I could do a lot more detailed
+calculations as well. At the moment creating the Werteizin system with its 24
+bodies takes between 1 second and 20 seconds, depending on the texture size and
+triangle count. One second is fine, 20 seconds stress the players patience
+quite a bit. I'll try to improve my color maps, the last incarantions of some
+planet types already look better than the early ones. Some others are in real
+bad shape, though.
+
+
+<p>Thanks for your tips, it's interesting to learn how you creature such fine planets :)
+<hr>
+<p><b>smcameron 28 May 2015, 04:27</b>
+<p>A short video of some folks trying out Space Nerds In Space at MisCon,
+Montana's premier science fiction/fantasy convention, in Missoula, Montana this
+past weekend:
+<p><iframe width="560" height="315" src="https://www.youtube.com/embed/Lkug5JMiFzE" frameborder="0" gesture="media" allow="encrypted-media" allowfullscreen></iframe>
+<p><a href="https://www.youtube.com/watch?v=Lkug5JMiFzE&feature=youtu.be">
+https://www.youtube.com/watch?v=Lkug5JMiFzE&feature=youtu.be</a>
+<hr>
+<p><b>smcameron 31 May 2015, 19:19</b>
+<p>Jeremy and I were interviewed by Paul Brown of <a href="http://ocsmag.com/">Open Content and Software Magazine</a>
+recently via IRC. Here is the result of that: <a href="http://www.ocsmag.com/2015/05/31/space-nerds-in-space-interview/">
+Space Nerds In Space -- The Interview</a>.
+<hr>
+<p><b>smcameron 07 Jul 2015, 06:11</b>
+<p>Previously, I seem to recall someone suggesting that I should work on the
+color scheme of the UI of Space Nerds In Space, as what's there now is a
+somewhat haphazard mishmash of nominal primary and secondary named colors.
+Well, I have not really revamped the colors, in fact they are currently the
+same as they've always been. But, I have made it possible to modify the colors
+of nearly every UI element independently via a simple config file. Well, it's
+not as easy as it probably could be, and the names for all the ui elements are
+probably slightly opaque, but it is tweakable by mere mortals. For example, In
+a few minutes, I tweaked the colors of the Navigation screen to get this:
+<p><img src="http://i.imgur.com/3f0Dvbo.png">
+<hr>
+<p><b>smcameron 13 Jul 2015, 07:55</b>
+I cooked up a new system for docking with starbases. Now the NAV screen has a
+button to engage or disengage docking magnets, and starbases can have docking
+ports. When you approach a docking port with the magnets engaged, then you
+dock. To undock, turn of the docking magnets. This still isn't complete -- but
+the concept works at least.
+
+<p><iframe width="560" height="315" src="https://www.youtube.com/embed/EvWKz1wbFLo" frameborder="0" gesture="media" allow="encrypted-media" allowfullscreen></iframe>
+<p><a href="https://www.youtube.com/watch?v=EvWKz1wbFLo&feature=youtu.be">
+https://www.youtube.com/watch?v=EvWKz1wbFLo&feature=youtu.be</a>
+<hr>
+<p><b>charlie 13 Jul 2015, 12:58</b>
+<p>Cool to see you still adding features. :)
+
+<p>Just a word of warning - the sound is way out of sync (lagging maybe 30s+ behind) on the video.
+<hr>
+<p><b>smcameron 24 Jul 2015, 05:17</b>
+<p>Another docking demo video. In the previous video, you could "dock" with a
+docking port, but it didn't actually do anything -- to have the systems on your
+ship repaired and replenished, you still had to dock the old way, which was
+just to get on comms and request to dock while floating vaguely next to a
+starbase. Now, requesting permission to dock via comms gets you only that --
+permission to dock for a period of 3 minutes. During that three minutes, you
+can dock with a docking port, and get your ships systems repaired and
+replenished. If you don't dock within 3 minutes, the permission expires, and
+you'll have to ask again. Attempting to dock without first asking permission
+via comms won't work. Pressing F1 while on the navigation screen gives a
+summary of the process. 
+
+<p><iframe width="560" height="315" src="https://www.youtube.com/embed/uM9bylVnKmM" frameborder="0" gesture="media" allow="encrypted-media" allowfullscreen></iframe>
+<a href="https://www.youtube.com/watch?v=uM9bylVnKmM&feature=youtu.be">
+https://www.youtube.com/watch?v=uM9bylVnKmM&feature=youtu.be</a>
+<hr>
+<p><b>smcameron 02 Aug 2015, 04:46</b>
+Have added a mining system to Space Nerds In Space. Here's a little demo. (I
+reverted to my old system of pointing a camera at the screen to evade the audio
+sync problem).
+<p><iframe width="560" height="315" src="https://www.youtube.com/embed/5wAKVxg9TCs" frameborder="0" gesture="media" allow="encrypted-media" allowfullscreen></iframe>
+<a href="https://www.youtube.com/watch?v=5wAKVxg9TCs&feature=youtu.be">
+https://www.youtube.com/watch?v=5wAKVxg9TCs&feature=youtu.be</a>
+<hr>
+<p><b>btaggart 14 Aug 2015, 21:48</b>
+<p>I just found this project and am very interested in trying it out. I'm running into some build problems, I'm hoping someone can help me with. Linux is not my primary OS, so I apologize if the answers seem obvious to others.
+
+<p>I'm running Ubuntu 15.04 inside VirtualBox on Mac OS X Yosemite. I installed all the dependencies. When I run 'make', it starts with this warning twice:
+
+<p>"Package sdl was not found in the pkg-config search path. Perhaps you should add the directory containing 'sdl.pc' to the PKG_CONFIG_PATH environment variable. No package 'sdl' found"
+
+<p>Then it builds for a while and ends up failing, not able to find 'SDL/SDL.h'.
+
+<p>I've previously tried both Raspbian and Ubuntu Mate on my Raspberry Pi 2, but could not find SDL2 in the former and OpenSCAD in the latter case, though I have not tried building them locally yet. If anyone has overcome these issues, I would love to know.
+
+<p>Also, does anyone have build instructions for Mac OS X?
+
+<p>In general, I think this project would benefit from some build instructions, as it is not as simple as 'git clone, then make'.
+
+<p>Thanks in advance for any help.
+
+<p>Ben.
+<hr>
+<p><b>smcameron 16 Aug 2015, 02:41</b>
+<blockquote>
+btaggart:
+<p>I just found this project and am very interested in trying it out. I'm running into some build problems, I'm hoping someone can help me with. Linux is not my primary OS, so I apologize if the answers seem obvious to others.
+
+<p>I'm running Ubuntu 15.04 inside VirtualBox on Mac OS X Yosemite. I installed all the dependencies. When I run 'make', it starts with this warning twice:
+
+<p>"Package sdl was not found in the pkg-config search path. Perhaps you should add the directory containing 'sdl.pc' to the PKG_CONFIG_PATH environment variable. No package 'sdl' found"
+
+<p>Then it builds for a while and ends up failing, not able to find 'SDL/SDL.h'.
+</blockquote>
+
+
+<p>I think you need sdl-dev. e.g:
+
+<p>apt-cache search sdl-dev
+<p>libsdl1.2-dev - Simple DirectMedia Layer development files
+
+<p>Then "apt-get install libsdl1.2-dev".
+
+<p>Well, the above is for ubuntu 14.04 (actually Mint 17 -- derived from ubuntu 14.04) which is different than what you're running, so, it might be different.
+<p>Try "apt-cache search sdl-dev", and it will tell you which sdl-dev you need.
+
+<p>In any case, I think sdl is only used by mesh_viewer, which is a tool for viewing models, but which is not actually used in the game. So you may be able to get by without sdl if you can get the build to proceed without mesh_viewer.
+
+<p>As long as it builds snis_client and snis_server, and all the openscad models, if mesh_viewer isn't built, it won't stop the game from running.
+
+
+
+
+<blockquote>
+    I've previously tried both Raspbian and Ubuntu Mate on my Raspberry Pi 2, but could not find SDL2 in the former and OpenSCAD in the latter case, though I have not tried building them locally yet. If anyone has overcome these issues, I would love to know.
+
+</blockquote>
+
+<p>You're not going to have a good time on the raspberry pi. The little machine just doesn't have enough oomph.
+
+
+<blockquote>
+    Also, does anyone have build instructions for Mac OS X?
+</blockquote>
+
+
+<p>I haven't built it myself on Mac, though I know it has been done by at least one other person, although I am not sure it has been done recently (within the last year or so.)
+
+<blockquote>
+    In general, I think this project would benefit from some build instructions, as it is not as simple as 'git clone, then make'.
+</blockquote>
+
+
+<p>True. Send me a patch? ;) There are some build instructions here:
+https://smcameron.github.io/space-nerds-in-space/ although they are in the
+context of creating a bootable image. If you're not creating a bootable image,
+then the parts you're interested in begin after you're in the chrooted
+environment. Granted, those instructions don't mention libsdl-dev. It is hard
+to fighure out all the build dependencies when, as in my case, you already had
+most of them installed before you began. And it is even harder to track them
+across multiple linux distros. My strategy is to try to make the game good
+enough that I just keep the source on github and hope that other people will
+find it worthwhile to package it up for all their various distros. Not entirely
+successful so far, but that's ok too.
+<hr>
+<p><b>btaggart 16 Aug 2015, 03:12</b>
+<p>Thanks for the quick response. By the time my post was moderated (it was my first), I had figured out the SDL issue for Linux, and also have gotten it building and running on on Mac OSX. I'm getting a friend to try my steps on Mac, so when he confirms them, I'll post them here.
+
+<p>As SDL2 was the missing dependency on Raspbian, I tried that one again, but hit some other problems. If I ever get that worked out, I'll post about my experience.
+
+<p>Are you ever planning on restructuring the project so you don't have the bulk of the game files in one directory, or so that it builds to a separate directory?
+
+<p>Has anyone made progress on building for Windows (or know of some obvious reason why it's not worth trying)? All your libraries seem to be cross-platform, and the big obvious hurdle I see right now is the lack of an apt-get alternative and a built-in pkg-config.
+<hr>
+<p><b>smcameron 16 Aug 2015, 05:43</b>
+
+<blockquote>
+    btaggart:
+    <p>Thanks for the quick response. By the time my post was moderated (it was my first), I had figured out the SDL issue for Linux, and also have gotten it building and running on on Mac OSX. I'm getting a friend to try my steps on Mac, so when he confirms them, I'll post them here.
+
+    <p>As SDL2 was the missing dependency on Raspbian, I tried that one again, but hit some other problems. If I ever get that worked out, I'll post about my experience.
+
+</blockquote>
+<p>Cool. Thanks.
+
+
+<blockquote>
+    Are you ever planning on restructuring the project so you don't have the bulk of the game files in one directory, or so that it builds to a separate directory?
+</blockquote>
+
+
+<p>Wasn't planning on it, as... well, wasn't aware of anything driving such a
+requirement. I know that's kind of how cmake works, but... I'm not using cmake.
+So, why would I want to do that? I am not seeing what that would enable or what
+problem that would avoid. Not that I'm against it, but I'm not going to do it
+without some good reason.
+
+
+<blockquote>
+    Has anyone made progress on building for Windows (or know of some obvious reason why it's not worth trying)? All your libraries seem to be cross-platform, and the big obvious hurdle I see right now is the lack of an apt-get alternative and a built-in pkg-config.
+</blockquote>
+
+<p>Not a lot of progress on that front. Jeremy was for a time working on an SDL
+port (moving away from gtk) but, that has stalled, I guess (to be fair, we both
+got pretty demanding new jobs at the beginning of this year, so free time is a
+bit scarce). Not that gtk can't be compiled for Windows (and has been done
+before on my other game, Word War vi, though I don't know if gtkglext works
+with Windows). From my perspective... windows has enough games, and, if people
+are crying that the game doesn't work on Windows, well, shoe's on the other
+foot now isn't it? How does it feel? :)
+
+
+<p>It occurs to me that the joystick code uses linux-specific ioctls, so that
+won't work on mac or windows -- but joysticks aren't really a big part of this
+game, so that's no matter -- actually I haven't tested the joystick code in
+ages. (on second look, I forgot somebody already ported the joystick code to
+windows for word war vi, so it might work on windows.)
+
+<hr>
+<p><b>by btaggart 17 Aug 2015, 17:21</b>
+<blockquote>
+    smcameron:
+    Wasn't planning on it, as... well, wasn't aware of anything driving such a requirement. I know that's kind of how cmake works, but... I'm not using cmake. So, why would I want to do that? I am not seeing what that would enable or what problem that would avoid. Not that I'm against it, but I'm not going to do it without some good reason.
+</blockquote>
+
+
+
+<p>To be honest, this response took me by surprise. I've been a professional
+software engineer for 20 years now and I've never worked on a project set up
+this way. It would be easier for people to contribute if they know what's going
+on in the code, and having source files broken down into logical groups helps
+with that. Also, building into the source directory makes it really hard to
+package up the game for distribution, if you (or I) ever wanted to do that.
+Also, building into the source directory means that a mistake in the makefile
+could overwrite your source.
+
+<p>Obviously, this is your project and you'll run it as you see fit, and all
+these reasons are mostly conveniences. I'm looking forward to getting my
+Artemis group to give this a try.
+<hr>
+<p><b>smcameron 18 Aug 2015, 05:52</b>
+<blockquote>
+    btaggart:
+<blockquote>
+        smcameron:
+        <p>Wasn't planning on it, as... well, wasn't aware of anything driving such a requirement. I know that's kind of how cmake works, but... I'm not using cmake. So, why would I want to do that? I am not seeing what that would enable or what problem that would avoid. Not that I'm against it, but I'm not going to do it without some good reason.
+</blockquote>
+    To be honest, this response took me by surprise. I've been a professional software engineer for 20 years now and I've never worked on a project set up this way. 
+</blockquote>
+
+
+<p>Not that it's relevant, esp. seeing as how this is only a hobby and not a
+professional project, but I've been a professional software engineer for 28
+years, and I've seen plenty of projects set up this way. One example off the
+top of my head: fio. it would not be hard to find others, as this is more or
+less the old-school way of using make.
+
+<blockquote>
+    It would be easier for people to contribute if they know what's going on in the code, and having source files broken down into logical groups helps with that.
+</blockquote>
+
+
+<p>The entire project is...
+<pre>
+$ find . -name '*.[ch]' -print | wc
+    158     158    2853
+$ find . -name '*.[ch]' -print | xargs wc | tail
+     52     216    1383 ./vec4.c
+    781    2155   17581 ./snis_marshal.c
+      6      20      72 ./placeholder-part-points.h
+    232     733    5815 ./snis_text_window.c
+     25     106    1294 ./snis_event_callback.h
+      6      20      70 ./placeholder-system-points.h
+     85     228    1114 ./string-utils.c
+     26      95     808 ./snis_gauge.h
+      6       8     110 ./starbase-comms.h
+  75069  388161 2886969 total
+</pre>
+
+only 158 C source files and ~75k lines of code. So as these things go, this
+project is fairly small, and relatively speaking, it's not really hard to find
+anything. There is likely nothing you cannot find with a single grep (even what
+little token pasting is done is augmented with comments to enable grepping).
+Contrast with the asset importing library "assimp" (
+http://assimp.sourceforge.net/ ) which last I checked was around 300k lines of
+code, and all it does is import 3D assets (incidentally, this is why I wrote my
+own asset importing code -- 2700 lines of it, roughly -- I can understand and
+debug 2700 lines a hell of a lot easier than the 300k of assimp.) And, have you
+ever watched someone work with a C++ codebase with visual studio? Almost
+invariably, they *have no idea* where anything is defined, unless they are the
+ones that wrote the bit of code they are looking at, and even then, it's iffy.
+They use the IDE to navigate the code. What file any particular piece of code
+is in does not matter for purposes of making the code easier to understand, and
+this only gets more true as the codebase grows (e.g. if your code base is
+multiple millions of LOC, you better have good tools, because you're not going
+to learn your way fluently around it any time soon.) Now, I don't use visual
+studio. I use vim and gcc and make. The more files there are, the more files
+there are to search through. There are a few reasons to break things up into
+separate files. That a file is merely large is not one of those reasons.
+Breaking a large file up into smaller ones only *for the sake of making the
+files smaller* makes things *harder* to find, not easier. The two largest C
+files in SNIS are snis_client.c and snis_server.c and they are both roughly 13k
+lines each -- not really all that big. The next biggest file is 3k lines.
+
+And I have and do separate functionality out into separate files to form
+modules -- and if you take the time to look, you'll see that I am fairly
+diligent about defining reasonable interfaces and not polluting the global
+namespace unnecessarily and things like that. Is it perfect? No. But it doesn't
+need to be perfect. But in any case, you are talking about moving things around
+into different directories, rather than busting up files, and more
+specifically, you're talking about separating the build artifacts from the
+source files specifically by means of directories (they are already separated
+by naming conventions, mostly.)
+
+<blockquote>
+    Also, building into the source directory makes it really hard to package up the game for distribution, if you (or I) ever wanted to do that. 
+</blockquote>
+
+<p>With that, I concede you may have a point. This has nothing to do with how
+hard or easy the code is to understand though. And as a counterpoint, there is
+already some packaging of snis going on around the net,
+https://aur.archlinux.org/packages/snis-git/ and moving things around would
+presumably break them (though possibly make it easier for them in the long
+run.)
+
+<blockquote>
+    Also, building into the source directory means that a mistake in the makefile could overwrite your source.
+</blockquote>
+
+<p>As could a mistake with the "rm" command, or any number of other shell
+commands. We have git and stacked git I don't think that overwriting the source
+accidentally via the specific vector of a Makefile mistake is a concern worth
+worrying about. git reflog will correct most such mistakes.
+
+
+<p>Moving files around may also introduce discontinuities in the git history --
+"git log --follow..." is supposed to mitigate that, but, I am not super
+confident that it works perfectly.
+
+<blockquote>
+Obviously, this is your project and you'll run it as you see fit, and all these reasons are mostly conveniences. I'm looking forward to getting my Artemis group to give this a try.
+
+</blockquote>
+
+
+<p>So, the point about packaging seems like it could be a legitimate one, but
+there are tons of other bits of software out there that build in a similar
+manner (the typical "./configure", "make", "make install" steps) that don't
+seem to have any trouble getting packaged up despite dropping build artifacts
+right next to source files.
+
+
+<p>And, while making a game is a goal for me, it is really a secondary goal --
+the primary goal of this thing is for me to have a project to have fun
+tinkering with. Moving files around to different directories, potentially
+making the git history ugly... it's a little hard for me to get very excited
+about it.
+
+<hr>
+<p><b>smcameron 24 Aug 2015, 05:03</b>
+<p>Been working on the names given to spaceships -- previously a random
+nonsense "alien" name was given to each ship, with some effort given to try to
+make it pronounceable and short, but ultimately the names were not very
+satisfying. So I've tried to make them a little more "sci-fi", while keeping a
+bit of the "alienness" here and there. Seems like an improvement, but I'll
+probably continue tinkering with it. Here are a few samples of the sort of
+names it now generates:
+<blockquote>
+<pre>
+scameron@spacenerd ~/github/space-nerds-in-space $ ./infinite-taunt | tr 'a-z' 'A-Z' | head -25
+LUPHU STARRO
+LIBRA WALRUS
+SWIFT LIGHTRAY
+PUSPE JADE
+MOONGAZER HEAVENLY
+JIO GRAVITON
+ANDROMEDA TUI
+SHOS TIEMPO
+ACHO NIGHTSKY
+ORBIT AURIGA
+VISTA STARMAN
+HEAVENLY VAE
+CYGNUS WANDERING
+OSHI STARWAY
+STARCROSSER STELLAR
+BLACKSKY WOLF
+ALTO KRAKEN
+GRYPHON TOPAZ
+SCYLLA REDSHIFT
+ALTA FORTUNE
+PERSEUS BONZAAR
+ASTERION BEAST
+JEWEL SHINING
+WALRUS ASCENDRE
+ESTERON SAPPHIRE
+</pre>
+</blockquote>
+<hr>
+<p><b>c_xong » 24 Aug 2015, 05:23</b>
+There's another spaceship name generator here: http://fantasynamegenerators.com/spaceship-names.php
+
+And here's the source, which includes the dictionary (although there's no license): http://fantasynamegenerators.com/scripts/spaceshipNames.js 
+
+It's a simpler generator, as it only uses a single dictionary with an optional prefix acronym like "SS". It's made by the guy who's making Spryke
+(http://www.volnaiskra.com/), so it'll be cool if you can ask him about incorporating his code or at least his dictionary.
+</hr>
+<p><b>smcameron » 31 Aug 2015, 06:00</b>
+
+Because getting a few friends together into a room with a bunch of linux
+systems wasn't quite hard enough, I have been experimenting with adding "warp
+gates" into Space Nerds In Space. Normally, there's a single server process
+which simulates the universe, and a number of client processes through which
+players interact with that server process. Well, I say the server simulates
+"the universe", but really, there's one big star in the center, a few planets,
+and a bunch of asteroids, along with a big fake starry sky as a back drop. It
+feels a little small, more like a solar system. So I thought, hey, it'd be kind
+of cool if you could run multiple server processes, each running their own
+"solar system", and have a way to travel from one to the other. That's what
+warp gates do. I've got a proof of concept running, although some critical
+pieces are still missing (e.g. when you travel from one system to another, you
+actually jump into a new ship that's local to that system, and so far none of
+the state of your old ship transfers to the new ship, and, what's more, if you
+jump back to the old universe, you end up in your old ship, which continued on
+it's journey without you when you first jumped out of the universe. So still
+quite a lot of work to do to get all that straightened out, but nothing
+insurmountable, I don't think.)
+
+<p><iframe width="560" height="315" src="https://www.youtube.com/embed/4N0ILFW_ft0" frameborder="0" gesture="media" allow="encrypted-media" allowfullscreen></iframe>
+<p><a href="https://www.youtube.com/watch?v=4N0ILFW_ft0&feature=youtu.be">
+https://www.youtube.com/watch?v=4N0ILFW_ft0&feature=youtu.be</a>
+<hr>
+<p><b>Vandar 31 Aug 2015, 14:34</b>
+<p>Nice idea. Also good to have one simulation process per system, that allows
+easy control over which parts of the universe you really need to calculate
+(e.g. system without players can hibernate, till someone enters).
+<hr>
+<p><b>smcameron 02 Nov 2015, 06:29</b>
+
+<p>Spent all day today working on procedural clouds of a sort. Clouds have been
+in the back of my mind for quite some time, and I've been thinking of various
+ways to approach the problem. This morning I had a bit of an epiphany. I
+realized that my "earthlike" program, which sort of dynamically creates
+heightmap "brushes" on the fly by sampling real terrain elevation data and
+which it then paints onto a sphere, could also be used for clouds. Instead of
+sampling terrain elevation data, it could sample (slightly processed) satellite
+cloud imagery, treat it as if it were elevation data, and paint it onto a
+sphere in exactly the same way. This could produce a 6 seamless cubemap images
+of cloud texture. I could also modify gaseous-giganticus to take a cubemap
+image set as input and use that for initial particle coloration. So I could
+feed my cloud cubemap through gaseous-giganticus and see if I could get some
+neat fluid-flow going to make some weather systems or something. So that's what
+I've been up to all day. And it worked ok. Not quite as well as I was hoping it
+would, but ok.
+
+
+<p>Some images:
+<p><img src="http://i.imgur.com/z7OyVqZ.jpg">
+<p>The above image is "earthlike" sampling from some cloud images without any fluid flow from gaseous giganticus.
+<p><img src="http://i.imgur.com/jHS4hs2.jpg">
+<p>I just like the fjords in the terrain generation here. Very Slartibartfastian.
+<p><img src="http://i.imgur.com/5uXXl5M.jpg">
+<p>Gaseous-giganticus working it's fake fluid-flow magic on the cloud field.
+<p><img src="http://i.imgur.com/vfzFzQg.jpg">
+<p>Clouds after having been through a bit of the gaseous-giganticus wringer.
+<p>Besides clouds, I have been working on the multiple universe idea a lot,
+there's still a lot left to do... uncommitted patches that I have on my stack
+currently:
+<pre>
+    + handle-multiple-display-monitors.patch
+    + add-description-of-monitor-option-to-man-page
+    + add-snis-multiverse-program.patch
+    + make-snis-multiverse-connect-to-ssgl.patch
+    + add-opcode-to-switch-servers.patch
+    + try-multiverse-experiment.patch
+    + make-snis-server-track-other-servers-via-lobby-client.patch
+    + allow-player-to-buy-warpgate-tickets-at-starbases.patch
+    + add-warp-gate-model.patch
+    + add-warp-gate-objects.patch
+    + make-warpgates-work.patch
+    + make-snis-multiverse-listen-for-incoming-connections.patch
+    + clean-up-snis_server-argument-processing.patch
+    + allow-server-tracker-to-track-multiverse-servers.patch
+    + add-notifier-to-server-tracker.patch
+    + make-snis-server-connect-to-snis-multiverse.patch
+    + make-snis-server-update-snis-multiverse-with-player-ship-data.patch
+    + debug-multiverse-connection.patch
+    + make-snis-server-transmit-player-data-to-snis-multiverse.patch
+    + progress.patch
+    + factor-out-stop_gameserver_writer-function.patch
+    + distinguish-between-creating-and-joining-ships.patch
+    + show-failed-login-attempt-msgs-on-client.patch
+    + set-thread-names.patch
+    + do-not-create-new-damcon-entities-on-warp-gate-traversal.patch
+    + debug-it.patch
+    + debug-warp-purchasing
+    + transmit-sdata-from-snis-server-to-snis-multiverse
+    + make-snis-multiverse-save-its-data-periodically
+    + make-creating-ships-be-controlled-by-snis-multiverse
+    + earthlike-changes
+    + allow-gaseous-giganticus-to-begin-with-cubemap-images
+    + gaseous-giganticus-allow-controlling-fade-rate
+    &gt; increase-graph-dev-cubemap-texture-reload-delay
+</pre>
+
+<p><b>smcameron 08 Nov 2015, 20:09</b>
+<p>Still tinkering with clouds...
+<p><img src="http://i.imgur.com/nKeDFrc.jpg">
+<hr>
+<p><b>smcameron 09 Nov 2015, 02:35</b>
+<p>I think I'm getting better at this cloud thing...
+
+<p>If anyone would like to try their hand at this sort of thing I've outlined
+the procedure I used here <a href="https://raw.githubusercontent.com/smcameron/space-nerds-in-space/master/howto-generate-earthlike-planets.txt">How to generate earth like planet textures</a>.
+<p><img src="http://i.imgur.com/oVnKnzq.jpg">
+<hr>
+<p><b>Arthur 09 Nov 2015, 05:17</b>
+<p>Wow, seems like you store a lot of data in the cloud! ;)
+<p>Keep up the good work. :)
+<hr>
+<p><b>andrewj 10 Nov 2015, 08:07</b>
+<p>yeah, very very nice!
+<hr>
+<p><b>smcameron 30 Nov 2015, 03:07</b>
+<p>I was looking at some images of Jupiter, and one thing that I've noticed is
+that it's got these "spots" for lack of a better word -- these circular
+whirlpools. My procedurally generated gas giants do not have these circular
+whirlpools, though they do occasionally have a bit of rotation going on. So I
+have tried to modify gaseous-giganticus to allow putting some whirlpools in by
+adding some code to manipulate the velocity field. The direction of rotation
+isn't always "correct" -- which is to say, comporting with the already present
+rotation of the unmolested velocity field. I can probably fix that though.
+Nevertheless, the experiments so far are not entirely failures. Here's one:
+<p><img src="http://i.imgur.com/RjHS1z1.jpg">
+<hr>
+<p><b>charlie 30 Nov 2015, 11:24</b>
+<p>Looks fantastic, even if rotationally incorrect. :P
+<hr>
+<p><b>smcameron » 08 Dec 2015, 08:23</b>
+<p>As I have been working on making better assets for Space Nerds In Space, I
+have resisted the urge to update the assets in the main repository because I
+don't want to create a lot of churn as I keep dinking around with things. Also,
+at some point, the art assets should probably be separated from the code. I've
+also been thinking about how to distribute those assets. I don't have a very
+good answer for that yet. Nevertheless I have created a new repo just for
+assets. https://github.com/smcameron/space-nerd ... ace-assets
+
+<p>With a recent commit, I have at least separated out the assets that define a
+"solar system" to some extent. These assets are 1) planet cubemap textures, 2)
+central "star" texture, and 3) skybox cubemap textures. I have created a simple
+specification for such a combination of textures which now lives in
+share/snis/solarsystems/xxx/assets.txt where "xxx" is the name of the solar
+system in question. By default, there is a "default" solar system, which is the
+same one that's been in the main space-nerds-in-space repository since the
+beginning. I've created a new solarsystem, "tau-scorpii", which is in the new
+repository, space-nerds-in-space-assets. Copying the tau-scorpii directory into
+share/snis/solarsystems on all your SNIS clients and setting
+SNIS_SOLARSYSTEM=tau-scorpii before invoking quickstart (or using the
+--solarsystem option of snis_client) will make it use the new solar system.
+
+<p>Here are some pics:
+<p><img src="http://i.imgur.com/I5QaLjz.png">
+<p><img src="http://i.imgur.com/SOHZJRN.png">
+<p><img src="http://i.imgur.com/J4G6qsI.png">
+<hr>
+<p><b>Vandar 15 Dec 2015, 23:31</b>
+<p>Nice work there on the clouds. I found good looking clouds quite difficult
+to create also. Real weather systems are a tricky mix of bands, swirls and
+flocks of satellite clouds.
+
+<p>Lately there are some images going around about "real" exoplanets. Like the
+ones in this article: 
+<a href="http://www.heise.de/newsticker/meldung/Exoplaneten-Bislang-groesster-Atmosphaeren-Katalog-beantwortet-erste-Fragen-3043302.html">
+http://www.heise.de/newsticker/meldung/Exoplaneten-Bislang-groesster-Atmosphaeren-Katalog-beantwortet-erste-Fragen-3043302.html</a>
+
+
+<p>I wonder how they were made. The article says "artistic impression", so I
+guess they have little to do with the real exoplanets looks, but on the other
+hand, they look as if they were made with specific planet features in mind
+(color, bands, surface type, amount of fluid/rocky parts on the surface)
+<hr>
+<p><b>charlie 16 Dec 2015, 01:21</b>
+On the last image, with the 'ringed earth-like planted' in the background
+behind another planet, the rings are visible through the earth-like planet. :P
+<hr>
+<p><b>Vandar 16 Dec 2015, 14:37</b>
+Interesting, that planet must be an illusion, a space mirage. But what keeps
+the ring there? There must be something hidden in the mirage. Woot,
+exploration!
+<hr>
+<p><b>charlie 16 Dec 2015, 16:44</b>
+<blockquote>
+    Vandar {l Wrote}:
+    Interesting, that planet must be an illusion, a space mirage. But what keeps the ring there? There must be something hidden in the mirage. Woot, exploration!
+</blockquote>
+<p>Or it's a shader bug. ;)
+<hr>
+<p><b>smcameron 17 Dec 2015, 09:01</b>
+<p>It is indeed a bug, probably not in the shader, but in the engine. I have
+not so far been able to figure it out, but have known about it for awhile.
+Atmosphere rendering seems to cause some problems with depth sorting. By
+tapping the sysrq key a couple times (if your keyboard has it) you can bring up
+a menu which will allow you to turn off atmosphere rendering, and then the
+problems with depth sorting seem to disappear.
+<hr>
+<p><b>psymin 17 Dec 2015, 16:42</b>
+<p>My apologies if this isn't the proper place to post a question like this .. but ..
+
+<p>Which joysticks would you recommend for the gunner position?
+
+<p>Just thinking of which things might help add to the "feel" of the system for
+players. If there are joysticks you've had more success with than others I'm
+all ears :)
+<hr>
+<p><b>smcameron 18 Dec 2015, 05:36</b>
+<p>Good question. I have not used a joystick very much with this game at all,
+and for what little time I have spent using a joystick, it has been an xbox 360
+controller. This also means the code has not been polished with joystick use in
+mind, so I expect using a joystick on the weapons station will not be as good
+an experience as it should be.
+
+
+<p>For a time in 2014, I was designing for my own use a series of "consoles" --
+boxes with loads of switches, buttons, lights, knobs, faders, joysticks, etc, a
+unique one for each station, with a usb connection. There is some basic support
+for custom input devices in the code, and I got as far as <a href="https://www.youtube.com/watch?v=w6vwbhHMmI4">rigging up a toggle
+switch to an arduino to trigger torpedoes to fire</a>. The plan I had was to run a
+bridge sim with these consoles at ComicPalooza in Houston as part of the booth
+for the hackerspace I was a member of at the time. As part of that plan, there
+is a half-completed design for a 3D printable joystick I was trying to make
+<a href="https://github.com/smcameron/stick-of-great-enjoyment">here</a>.
+But then I got a new job and moved to California, so that was the end of
+that.
+
+<p>Having said that, I can't help but be attracted to the <a href="http://arstechnica.com/gadgets/2014/09/flying-in-style-with-thrustmasters-450-warthog-joystick/1/">HOTAS Warthog</a>, just
+because, well, look at that thing. It's a tad on the pricey side though.
+<hr>
+<p><b>smcameron 20 Dec 2015, 00:55</b>
+<p>Been playing around trying to make rocky cratered planets today...
+<p><img src="http://i.imgur.com/zYDv1qA.jpg">
+<hr>
+<p><b>charlie 21 Dec 2015, 01:05</b>
+That is pretty god damn awesome.
+<hr>
+<p><b>andrewj 21 Dec 2015, 02:23</b>
+<p>The craters look like they are splattered onto a texture, without any height map or normal map affecting the lighting.
+<hr>
+<p><b>smcameron 21 Dec 2015, 02:30</b>
+<p>That is because there is no height map or normal map affecting the lighting.
+The texture colors are generated (baked in) from a height map, and the craters
+are splatted into the height map prior to generating the colors.
+
+<p>My program does generate corresponding height maps and normal maps, but my
+engine doesn't know how to use them. Feel free to send me a patch.
+<hr>
+<p><b>andrewj 22 Dec 2015, 01:52</b>
+<p>Ahh I see, your approach sounds fine, I just think with a better lighting system it could go from looking good to looking amazing.
+<hr>
+<p><b>Julius 22 Dec 2015, 04:30</b>
+<p>Not sure if at that scale, shadows (unless at extreme dusk/dawn angles) would be really visible?
+<hr>
+<p><b>smcameron 22 Dec 2015, 06:04</b>
+<blockquote>
+    Julius:
+    <p>Not sure if at that scale, shadows (unless at extreme dusk/dawn angles) would be really visible?
+</blockquote>
+Certainly using a normal map in the lighting calculations won't get you the
+kind of long shadows you see if you look up images of "lunar terminator", like
+this image from NASA:
+<p><img src="http://nssdc.gsfc.nasa.gov/imgcat/hires/a12_h_50_7438.gif">
+<p>which, that would be cool, but to do that I think I'd need to do shadow
+mapping, and... I so far haven't even managed to do normal mapping, so this
+seems unlikely.
+
+<p>I think the normal mapping would definitely help to make things look more
+"3D", but it would probably be easy to kind of "over do" the effect and
+unwittingly produce a caricature of what it really should look like.
+
+<p>Just looking at the normal maps I currently generate, I'm pretty sure I am
+already "over doing" it a bit (but since I am not actually *using* the normal
+maps yet...no big deal.) You can kind of get an idea what the lighting effects
+of the normal maps would be just by looking at the normal maps used as if they
+were color textures:
+<p><img src="http://i.imgur.com/VhWQ93x.jpg">
+<hr>
+<p><b>Vandar 22 Dec 2015, 16:00</b>
+<p>When I had been working on the planets for Solarex, they had some hundreds
+of thousands of triangles already. Still a triangle spans some dozens of miles,
+so only the biggest craters could have real heights.
+
+<p>At times I think a space flight simulation must have planets in several
+detail levels, or able to add details on the fly when the player gets closer to
+a planet.
+
+<p>The point when my concept failed was the low orbit, from when the surface
+should become a real surface and not just an spherical image, because
+descending further you'll soon fly over plains, and in between mountains. It's
+not possible to keep the whole planet in memory on that level of detail, so
+there must be a transition from sphere to sphere segment (and if the player
+flies onward, a concept to attach new sphere segments seamlesslyy to the one
+already generated). This was beyond my skills.
+
+<p>SNIS still has superior planets compared to mine, and the craters make them
+even better. Good work there!
+<hr>
+<p><b>andrewj 25 Dec 2015, 13:42</b>
+<p>I can see on the normal map image what feels missing to me: it is basically
+because there is just a rim, the whole middle of the crator (inside the rim)
+seems completely flat.
+
+<p>I would expect the inside of the crater to be more like the shape of a wok.
+
+<p>If that is a caricature and totally unrealistic, for me that doesn't matter
+if the results looks good.
+<hr>
+<p><b>smcameron 25 Dec 2015, 19:21</b>
+<p>The craters are certainly still a work in progress. That being said, about the flat interiors of the craters I will say a few things.
+
+<p>1) It seems to be in line with photos of lunar craters, esp. the large ones:
+<a
+href="http://www.madpc.co.uk/~peterl/Moon/Craters/Apennines.html">http://www.madpc.co.uk/~peterl/Moon/Craters/Apennines.html</a>
+I expect this is because the larger impacts essentially liquefy at the point of
+impact, and so level out (but I am no lunar geologist, so that may not be
+correct.)
+
+<p>2) What you think "looks good" may be largely down to what you're expecting
+to see. I've spent quite a lot of time lately looking at lunar craters, so that
+flat interiors of the craters don't seem too out of place to me, at least in
+the case of the larger craters.
+
+<p>3) The craters actually do slam a bowl shaped depression into the height
+map. However, the height map is of limited precision (1 bytte in the current
+implementation) and if the terrain is already close to zero (likely) then it
+can and often does "bottom out" ate zero, producing the flatness that you
+noticed. Fixing that is probably a matter of tuning the algorithm a bit to get
+a height map that's not naturally so close to zero.
+
+<p>The main complaints I have so far with the craters are:
+
+<p>1) the height map perturbations are tloo large scale compared to the terrain
+generation height map perturbations, resulting in clipping and or overflow at 0
+and at 255.
+
+<p>2) Not nearly enough small craters.
+
+<p>3) The colors are determined by altitude and by position in a 3d noise field
+to offset into a color map. Sometimes this works well, giving the "rays" a
+contrasting color, but sometimes it doesn't work well. It might be neat if the
+craters actually did some kind of "color displacement". Then again what I've
+got now might be good enough, esp. if I can get the normal maps working.
+
+<p>4) Probably should only have "rays" on the larger craters, not on every crater.
+
+<p>So yeah, I am not totally happy with the craters, but neither am I totally unhappy with them.
+<hr>
+<p><b>Vandar » 25 Dec 2015, 23:18</b>
+<blockquote>
+    smcameron:
+    So yeah, I am not totally happy with the craters, but neither am I totally unhappy with them.
+</blockquote>
+
+<p>They are definitely quite good as they are.
+</hr>
+<p><b>smcameron 29 Dec 2015, 23:42</b>
+<p>My first attempt at getting normal mapping to work -- I have never been
+quite so shocked to see something appear to work immediately as with this code
+right here. I was bracing myself for about a month worth of debugging hell --
+instead I get this! Woohoo!
+
+<p>(I suspect there are artifacts near the edges of each face of the cube map,
+but they are surprisingly subtle if they are there.)
+<p><iframe width="560" height="315" src="https://www.youtube.com/embed/bBCXbUjAuxk" frameborder="0" gesture="media" allow="encrypted-media" allowfullscreen></iframe>
+<p><a href="https://www.youtube.com/watch?v=bBCXbUjAuxk&feature=youtu.be">
+https://www.youtube.com/watch?v=bBCXbUjAuxk&feature=youtu.be</a>
+<p>Edit: and on playing around with it some more, it definitely has some problems, so my month worth of debugging likely still lies ahead.
+<hr>
+<p><b>smcameron 16 Jan 2016, 21:58</b>
+<p>Ok, I think I have got normal mapping working (I still need to make it work
+with the shader that does the ring shadows, but I don't think that will be too
+hard.) The way the craters influence the normal maps needs some work, but the
+other terrain features look great.
+<p><img src="http://i.imgur.com/ofbRSks.png">
+<hr>
+<p><b>smcameron 16 Jan 2016, 23:19</b>
+<p>And now it's working in the ring-shadowing shader:
+<p><img src="http://i.imgur.com/aZhd4MA.png">
+<hr>
+<p><b>smcameron 17 Jan 2016, 02:08</b>
+<p>Found a bug in the code which produces my normal map images that was giving
+me a little trouble. Now it all seems to be working pretty well.
+<p><img src="http://i.imgur.com/nhTiImP.jpg">
+<hr>
+<p><b>Arthur 17 Jan 2016, 12:21</b>
+<p>That's no moon, it's... oh actually it looks like a moon. Good work, this looks better and better. :)
+<hr>
+<p><b>smcameron 20 Jan 2016, 08:09</b>
+<p>Now that I've got normal mapping for the planets working, I've got some new assets in the space-nerds-in-space-assets repository, the Karado star system.
+<a href="https://github.com/smcameron/space-nerds-in-space-assets/tree/master/share/snis/solarsystems">
+https://github.com/smcameron/space-nerds-in-space-assets/tree/master/share/snis/solarsystems</a>
+
+<p>A few pics:
+<p><img src="http://i.imgur.com/wYd4ZDj.png">
+<p><img src="http://i.imgur.com/YFwkbbY.png">
+<p><img src="http://i.imgur.com/USYFGN9.png">
+<p><img src="http://i.imgur.com/h6ON9Jp.png">
+<hr>
+<p><b>smcameron 27 Jan 2016, 05:30</b>
+
+<p>Been a while since I made an update video. This one shows progress on the
+multi-server and warp gate system that I first mentioned back in August of last
+year. I am still working on it, and while I have made a lot of progress, it's a
+pretty big job and I've got about 30 uncommitted patches in my current stack,
+and still a ways to go. But it does now reload per-solarsystem textures on
+transiting between solarsystems and that is (mostly) working now, which means
+that you can quite easily *tell* when you travelled from one solarsystem to
+another since the planets and skybox, etc. now look different. It is still (and
+perhaps will always be) a requirement that the client have the necessary
+textures resident locally, but that is a detail. And the video shows off a bit
+of the fruits of the most recent adventures in normal mapping that have
+monopolized this thread for the last month or so. Without further ado:
+
+<p><iframe width="560" height="315" src="https://www.youtube.com/embed/Qq7ID2zn75I" frameborder="0" gesture="media" allow="encrypted-media" allowfullscreen></iframe>
+<p><a href="https://www.youtube.com/watch?v=Qq7ID2zn75I&feature=youtu.be">
+https://www.youtube.com/watch?v=Qq7ID2zn75I&amp;feature=youtu.be</a>
+<hr>
+<p><b>smcameron 04 Apr 2016, 01:24</b>
+<p>Been messing around with natural language processing kinds of things...
+<p><iframe width="560" height="315" src="https://www.youtube.com/embed/Uge43ACAtos" frameborder="0" gesture="media" allow="encrypted-media" allowfullscreen></iframe>
+<p><a href="https://www.youtube.com/watch?v=Uge43ACAtos&feature=youtu.be">
+https://www.youtube.com/watch?v=Uge43ACAtos&feature=youtu.be</a>
+<hr>
+<p><b>charlie 04 Apr 2016, 11:32</b>
+<p>Your project is seriously cool. Your updates never cease to impress me. Thank you and long may it continue.
+<hr>
+<p><b>smcameron 10 Apr 2016, 03:33</b>
+<p>Figured out how to make pocketsphinx use a custom vocabulary which improves
+its accuracy considerably. Also wrote some code to convert spelled out numbers
+like "two hundred thirty eight" to "238" which enables a lot of things.
+<p><iframe width="560" height="315" src="https://www.youtube.com/embed/3EZNzcF4_4g" frameborder="0" gesture="media" allow="encrypted-media" allowfullscreen></iframe>
+<p><a href="https://www.youtube.com/watch?v=3EZNzcF4_4g&feature=youtu.be">
+https://www.youtube.com/watch?v=3EZNzcF4_4g&feature=youtu.be</a>
+<hr>
+<p><b>Julius 10 Apr 2016, 13:13</b>
+<p>Any plans to make a VR (Google Cardbord etc.) enabled bridge that also allows networked play?
+<hr>
+<p><b>smcameron 10 Apr 2016, 16:16</b>
+<blockquote>
+    Julius:
+    <p>Any plans to make a VR (Google Cardbord etc.) enabled bridge that also allows networked play?
+</blockquote>
+
+
+
+<p>Not really, no. To do that, the game would become a first person shooter,
+essentially, and I'd need an interior model of the space ship that you could
+wander around, etc. This seems like a huge amount of work, and all the UI's
+I've done so far would have to be... rendered to textures and pasted into
+virtual monitors inside the bridge interiror, or something along those lines
+(and probably redesigned and simplified to enable operating them via VR), and
+it would just be a radical overhaul of the game that even if I wanted to do,
+I'm not sure I'd want to bite off such a large piece of work. And all that is
+ignoring any porting issues of taking a C program and getting it running on
+Android, which I really don't know too much about. If I were to try to go for a
+VR route, I think I'd stick to dedicated systems built specifically for it,
+like the Rift (which was at one time going to support linux but I think they
+may have dropped that feature -- haven't been paying attention.) I think
+turning the game into a a VR FPS kind of takes away a bit from the
+collaborative in-person experience of the game, which probably isn't a good
+thing, since that is the main differentiating thing about the game.
+
+<p>One could argue that having a voice activated computer that can do
+everything on the ship might also take away from that experience -- what are
+the players needed for if the captain can just say, "computer do this, do
+that", and the thing drives itself?) But, such a computer is star trek canon,
+and kind of ridiculously cool that it's actually possible to attempt to create
+such a thing, and not even very difficult, so... it gets a pass. And well, the
+computer cannot fire or aim the guns, and while it's a neat novelty, it doesn't
+actually work so well that it's super convenient, and it can be ignored easily
+if it detracts from the multiplayer in-person experience.
+
+<p>There is a non-free game called "Pulsar: Lost Colony" that you can look up
+which is a multi-player bridge sim that is done as a first person shooter style
+where you wander around a virtual bridge that has virtual terminals for
+stations, etc, and I know at one time they were talking about supporting
+occulus rift, and even had some prototype going, but I do not know if that is
+still on their full feature list. It wouldn't surprise me if they cut it or put
+it on the back burner just due to lack of people able to take advantage of it
+and uncertainty about the hardware or for other reasons (eg. performance
+requirements). Here's a video of their prototype:
+
+<a href="https://www.youtube.com/watch?v=g3KqLGOVYPg">https://www.youtube.com/watch?v=g3KqLGOVYPg</a>
+<hr>
+<p><b>Julius » 11 Apr 2016, 12:28</b>
+<p>I don't really think you need a full walkable 3D bridge, as you basically
+never move from the chair/station. What can be done very easily with the
+Cardboard SDK is a stereoscopic 360° rendered picture/looping video in which
+you can freely look around and interact with predefined points.
+
+<p>The jmonkey3D engine also has a more or less ready made support for
+Cardboard/Occulus etc. if that fits the bill better.
+
+<p>While I agree that this game shines with in-person multiplayer, simple VR
+support would be probably the next best thing for playing it over the internet
+and communicating with your friends via voice chat.
+
+<p>P.S.: To my own surprise the Google Cardboard works actually much better than expected (if you have the right phone/headset combination).
+<hr>
+<p><b>smcameron » 17 Apr 2016, 18:25</b>
+<p>More minor improvements in the voice recognition -- not sure it's apparent
+what differences there are from the last video posted. I figured out a little
+more about how pocketsphinx works, and now it understands more commands, and
+more different ways of doing the same command, but it is incremental progress,
+really.
+<p><iframe width="560" height="315" src="https://www.youtube.com/embed/tfcme7maygw" frameborder="0" gesture="media" allow="encrypted-media" allowfullscreen></iframe>
+<p><a href="https://www.youtube.com/watch?v=tfcme7maygw&feature=youtu.be">
+https://www.youtube.com/watch?v=tfcme7maygw&feature=youtu.be</a>
+<hr>
+<p><b>Imerion 18 Apr 2016, 12:14</b>
+<p>You're actually adding voice recognition to this? That is so cool! I already
+thought this game was a dream coming true, but it's even more so now! :D
+<hr>
+<p><b>smcameron 24 Apr 2016, 03:58</b>
+<p>Around <a href="https://www.youtube.com/watch?v=4N0ILFW_ft0&feature=youtu.be">the end of August of 2015</a>
+I had made a proof of concept of traveling
+between multiple "universes" (really, more like solar systems) within the game.
+Over the last 8 months or so I have been slowly trying to get this code stable
+and working, and doing all the things it needs to be able to do (mostly having
+to do with maintaining state of the player ship) to be something worth
+committing. There turned out to be quite a lot of code for this, around 75
+patches. I didn't clean them up quite to the level of my usual standards, but
+carrying around ~70 patches for ~8 months was getting to be a little tiresome
+(although <a href="http://procode.org/stgit/">stgit</a> made it tolerable). This new code is still disgustingly hacky
+in the way that it works, but it is nonetheless committed, and you can try
+playing with it.
+<pre>
+ git diff 8d8dd83 e8e9842 | diffstat
+ Makefile                                    |   44
+ README                                      |    3
+ graph_dev.h                                 |   15
+ graph_dev_gdk.c                             |   33
+ graph_dev_opengl.c                          |  182 +++
+ key_value_parser.c                          |  458 +++++++++
+ key_value_parser.h                          |  103 ++
+ quat.c                                      |   10
+ quat.h                                      |    4
+ quickstart                                  |   59 +
+ share/snis/models/warpgate.scad             |   38
+ share/snis/solarsystems/default/assets.txt  |    3
+ share/snis/solarsystems/default2/assets.txt |   14
+ snis.h                                      |   20
+ snis_bridge_update_packet.c                 |  200 ++++
+ snis_bridge_update_packet.h                 |   35
+ snis_client.6                               |    2
+ snis_client.c                               |  766 +++++++++++++---
+ snis_hash.c                                 |  106 ++
+ snis_hash.h                                 |   32
+ snis_marshal.h                              |    5
+ snis_multiverse.6                           |   37
+ snis_multiverse.c                           | 1336 ++++++++++++++++++++++++++++
+ snis_multiverse.h                           |   19
+ snis_packet.h                               |   12
+ snis_server.6                               |   47
+ snis_server.c                               | 1199 ++++++++++++++++++++++++-
+ snis_server_tracker.c                       |  243 +++++
+ snis_server_tracker.h                       |   18
+ solarsystem_config.c                        |   54 -
+ solarsystem_config.h                        |    2
+ ssgl/ssgl.h                                 |    1
+ ui_colors.h                                 |    2
+ 33 files changed, 4877 insertions(+), 225 deletions(-)
+</pre>
+<p>There is now a new process, snis_multiverse, which maintains the state of all
+bridges in a small "database". This means that when you run snis_client (either
+manually, or via the quickstart script) there is now a "create ship" checkbox.
+The first time you use a ship name, you need to check this box, and subsequent
+times, you should leave it unchecked -- that is to say, your ship is now
+persistent between runs, and its state is preserved in the "database"
+maintained by snis_multiverse.
+
+<p>I am quite sure there are a lot of bugs lurking in this new code -- some I
+already know about, and undoubtedly some that I don't know about. I expect
+there are some races in the hand-over code when all the snis_clients on a
+bridge switch to a new snis_server, and I expect there is still some ship state
+that is not preserved across such switches, but at least the infrastructure to
+preserve that state exists now.
+
+<p>By default, the quickstart script will only start a single instance of
+snis_server, and there will not be any warp gates in the game. But, if you
+"export MULTIVERSE_TEST=1" prior to running quickstart, it will create 3
+instances of snis_server -- that is to say, 3 solar systems -- and will put
+warp gates near each planet, and you can buy warp gate tickets to different
+solar systems from the starbases via the comms station. You are advised to use
+<a href="https://github.com/smcameron/space-nerds-in-space-assets">additional art assets in the space-nerds-in-space-assets repository on github</a>
+if you run multiple solar systems.
+
+<p>When running in multiverse mode, every planet currently has a nearby warp gate,
+and from any warp gate, you can get to every other known solar system. The warp
+gates correspond 1 to 1 between every pair of solarsystems, so if you depart
+from warp gate X in solarsystem A to solarsystem B, you will consistently pop
+out of the same warp gate in solarsystem B, and if you depart from warp gate
+X+1 in solarsystem A, you will pop out at warp gate N+1 in solarsystem B. In
+the future, I think I would like to be able to have some kind of graph to
+establish the possible paths of travel between warp gates to enable building a
+more interesting topology of solar systems than this kind of automatic and
+fully connected graph we have now.
+<hr>
+<p><b>smcameron 08 May 2016, 07:04</b>
+<p><a href="http://forum.freegamedev.net/viewtopic.php?f=22&t=3710&start=25">About three years ago</a>
+I implemented the damage control station with a little
+robot that you can drive around to repair your ship, and this is tied into the
+engineering station and power model for all the various systems of the ship. At
+the time, there was a bit of discussion about whether or not this thing was
+actually a good idea, or maybe not such a great idea.
+
+
+<p>I have now made the damage control station "optional." It's optional in the
+sense that now the "automatic" mode for the robot actually works, and if you
+turn it on, then the robot can drive itself around and autonomously repair your
+ship for you without any intervention. There is some intelligence to how it
+chooses what to repair at any given time -- if shields or warp drive are esp.
+damaged, it will fix those first, as they tend to be more critical for
+survival, and otherwise choose to fix approximately the closest and most
+damaged component. There is doubtless room for improvement, better
+prioritization of which systems to repair first, and taking into account the
+overall damage to a system, not just the damage to individual components, etc.
+If you manually control the robot, you can likely do a quicker job, and make
+wiser decisions about what to repair next. But if you're short a player, the
+robot doesn't strictly require a human operator any more.
+
+
+<p>I don't have a video for this update -- it's not all that interesting to watch.
+From the programming side, the most interesting thing is the <a href="https://en.wikipedia.org/wiki/A*_search_algorithm">A* pathfinding
+algorithm</a> which is used to let the robot navigate around the deck where all the
+systems reside -- not that the A* algorithm is anything new, but I think the
+<a href="https://github.com/smcameron/space-nerds-in-space/blob/master/a_star.h">API I came up with</a>
+is quite nice, although the implementation is nothing
+special, and on a large graph, performance is suboptimal just because I didn't
+bother to optimize since the graph I am searching is small (~50-100 nodes).
+It's nice because the caller is not required to represent the search space in
+any particular way, so long as a list of neighbor nodes may be obtained from a
+given node, and so long as a cost estimate and distance estimate function can
+be constructed to estimate the distance/cost between two given nodes. An
+example of how to use the API is in <a href="https://github.com/smcameron/space-nerds-in-space/blob/master/a_star_test.c">a_star_test.c</a>.
+<hr>
+<p><b>smcameron 30 May 2016, 05:40</b>
+<p>Development update for May, 2016 -- 3D "demon" screen implemented.
+<p><iframe width="560" height="315" src="https://www.youtube.com/embed/ju8pDrY6Tos" frameborder="0" gesture="media" allow="encrypted-media" allowfullscreen></iframe>
+<p><a href="https://www.youtube.com/watch?v=ju8pDrY6Tos&feature=youtu.be">
+https://www.youtube.com/watch?v=ju8pDrY6Tos&feature=youtu.be</a>
+<hr>
+<p><b>charlie 30 May 2016, 14:16</b>
+Nice update.
+<hr>
+<p><b>smcameron 13 Jun 2016, 04:05</b>
+<p>Lately I have been working on enhancing the capabilities of the Lua API to better enable scripted missions.
+
+<p>The Lua API is documented here: 
+<a href="https://github.com/smcameron/space-nerds-in-space/blob/master/lua-api.txt">
+https://github.com/smcameron/space-nerds-in-space/blob/master/lua-api.txt</a>
+
+<p>The following additions have been made in the last few days:
+
+<p>You can now set asteroid speeds (between 0 and 1). This is primarily to allow stationary asteroids.
+<p>You can now control the ratios of the ingredients contained within asteroids.
+<pre>
+	set_asteroid_speed(id, speed);
+</pre>
+Sets the speed of the asteroid with the specified id to the specified
+value. The speed should be between 0 and 1.
+<pre>
+    set_asteroid_minerals(id, carbon, silicates, nickeliron, preciousmetals);
+</pre>
+
+-- sets the proportions
+of carbon, silicates, nickeliron, preciousmetals. Returns 0.0 on success, nil otherwise.
+May fail if id doesn't match an asteroid.
+
+<p>Example:
+<pre>
+            asteroid = add_asteroid(1000.0, 1000.0, 10000.0);
+            set_asteroid_speed(asteroid, 0.0);
+            set_asteroid_minerals(asteroid, 90.0, 5.0, 3.0, 2.0);
+</pre>
+
+<p>You can now get a callback based on proximity of two objects to one another.
+So you can have your mission script react when the player ventures too close to
+the space-thingy in your mission scripts.
+<pre>
+    register_proximity_callback(callback, oid1, oid2, distance);
+</pre>
+
+-- when the objects
+indicated by oid1 and oid2 are within the specified distance of one another,
+the specified callback is called passing the two object ids.
+
+<p>Example:
+<pre>
+            function mycallback(oid1, oid2, distance)
+                    print "Player has come within 300 of starbase_x\n";
+            end
+            register_proximity_callback("mycallback", player_ids[1], starbase_x, 300);
+</pre>
+
+<p>Timed text windows for mission start explanations, win screens, lose screens, etc. are now supported.
+<pre>
+    show_timed_text(id, time_in_seconds, textstring);
+</pre>
+
+<p>shows a text screen with the given textstring for the specified amount of time
+on all clients of the bridge for the given player ship id. If id is -1, then
+the message is displayed on all clients of all bridges.
+
+<p>Lua scripts can now be chained with one script starting another when it
+ends. The specified script is added to a queue, and when the current script
+ends, the next one on the queue begins.
+<pre>
+    enqueue_lua_script(scriptname);
+</pre>
+Queue the named lua script for execution;
+
+<p>Many ship attributes may now be queried:
+
+{l Code}: {l Select All Code}
+<pre>
+    get_ship_attribute(id, attribute_name); 
+</pre>
+
+-- returns the specified attribute of the ship. The
+type depends on the attribute, though generally will be a number or a string.
+
+<p>The attributes and their types are listed below (output of print_ship_attributes program):
+The types are as follows (from key_value_parser.h):
+<pre>
+       's' - string
+       'q' - number (uint64_t)
+       'w' - number (uint32_t)
+       'h' - number (uint16_t)
+       'b' - number (uint8_t)
+       'Q' - number (int64_t)
+       'W' - number (int32_t)
+       'H' - number (int16_t)
+       'B' - number (int8_t)
+       'd' - number (double)
+       'f' - number (float)
+</pre>
+Though, to lua, they're all just "numbers."
+
+<p>The attributes are as follows:
+<pre>
+                                     Key Type     offset       size      index
+                                       x    d         96          8          0
+                                       y    d        104          8          0
+                                       z    d        112          8          0
+                                      vx    d        120          8          0
+                                      vy    d        128          8          0
+                                      vz    d        136          8          0
+                                 heading    d        144          8          0
+                                   alive    h        152          2          0
+                                    type    w        156          4          0
+                               torpedoes    w        168          4          0
+                                   power    w        172          4          0
+                                 shields    w        176          4          0
+                                shipname    s        180        100          0
+                                velocity    d        280          8          0
+                            yaw_velocity    d        288          8          0
+                          pitch_velocity    d        296          8          0
+                           roll_velocity    d        304          8          0
+                        desired_velocity    d        312          8          0
+                        gun_yaw_velocity    d        320          8          0
+                             sci_heading    d        328          8          0
+                          sci_beam_width    d        336          8          0
+                        sci_yaw_velocity    d        344          8          0
+              sciball_orientation.vec[0]    f        352          4          0
+              sciball_orientation.vec[1]    f        356          4          0
+              sciball_orientation.vec[2]    f        360          4          0
+              sciball_orientation.vec[3]    f        364          4          0
+                          sciball_yawvel    d        432          8          0
+                        sciball_pitchvel    d        440          8          0
+                         sciball_rollvel    d        448          8          0
+                 weap_orientation.vec[0]    f        456          4          0
+                 weap_orientation.vec[1]    f        460          4          0
+                 weap_orientation.vec[2]    f        464          4          0
+                 weap_orientation.vec[3]    f        468          4          0
+                             weap_yawvel    d        536          8          0
+                           weap_pitchvel    d        544          8          0
+                        torpedoes_loaded    b        552          1          0
+                       torpedoes_loading    b        553          1          0
+                       torpedo_load_time    h        554          2          0
+                      phaser_bank_charge    b        556          1          0
+                                    fuel    w        560          4          0
+                                     rpm    b        564          1          0
+                                throttle    b        565          1          0
+                                    temp    b        566          1          0
+                                shiptype    b        567          1          0
+                                 scizoom    b        568          1          0
+                                weapzoom    b        569          1          0
+                                mainzoom    b        571          1          0
+                     requested_warpdrive    b        573          1          0
+                        requested_shield    b        574          1          0
+                       phaser_wavelength    b        575          1          0
+                           phaser_charge    b        576          1          0
+                    damage.shield_damage    b        992          1          0
+                   damage.impulse_damage    b        993          1          0
+                      damage.warp_damage    b        994          1          0
+               damage.maneuvering_damage    b        995          1          0
+              damage.phaser_banks_damage    b        996          1          0
+                   damage.sensors_damage    b        997          1          0
+                     damage.comms_damage    b        998          1          0
+                   damage.tractor_damage    b        999          1          0
+                               view_mode    b       2064          1          0
+                              view_angle    d       2072          8          0
+               power_data.maneuvering.r1    b       2080          1          0
+               power_data.maneuvering.r2    b       2081          1          0
+               power_data.maneuvering.r3    b       2082          1          0
+                power_data.maneuvering.i    b       2083          1          0
+                      power_data.warp.r1    b       2084          1          0
+                      power_data.warp.r2    b       2085          1          0
+                      power_data.warp.r3    b       2086          1          0
+                       power_data.warp.i    b       2087          1          0
+                   power_data.impulse.r1    b       2088          1          0
+                   power_data.impulse.r2    b       2089          1          0
+                   power_data.impulse.r3    b       2090          1          0
+                    power_data.impulse.i    b       2091          1          0
+                   power_data.sensors.r1    b       2092          1          0
+                   power_data.sensors.r2    b       2093          1          0
+                   power_data.sensors.r3    b       2094          1          0
+                    power_data.sensors.i    b       2095          1          0
+                     power_data.comms.r1    b       2096          1          0
+                     power_data.comms.r2    b       2097          1          0
+                     power_data.comms.r3    b       2098          1          0
+                      power_data.comms.i    b       2099          1          0
+                   power_data.phasers.r1    b       2100          1          0
+                   power_data.phasers.r2    b       2101          1          0
+                   power_data.phasers.r3    b       2102          1          0
+                    power_data.phasers.i    b       2103          1          0
+                   power_data.shields.r1    b       2104          1          0
+                   power_data.shields.r2    b       2105          1          0
+                   power_data.shields.r3    b       2106          1          0
+                    power_data.shields.i    b       2107          1          0
+                   power_data.tractor.r1    b       2108          1          0
+                   power_data.tractor.r2    b       2109          1          0
+                   power_data.tractor.r3    b       2110          1          0
+                    power_data.tractor.i    b       2111          1          0
+                      power_data.voltage    b       2112          1          0
+             coolant_data.maneuvering.r1    b       2128          1          0
+             coolant_data.maneuvering.r2    b       2129          1          0
+             coolant_data.maneuvering.r3    b       2130          1          0
+              coolant_data.maneuvering.i    b       2131          1          0
+                    coolant_data.warp.r1    b       2132          1          0
+                    coolant_data.warp.r2    b       2133          1          0
+                    coolant_data.warp.r3    b       2134          1          0
+                     coolant_data.warp.i    b       2135          1          0
+                 coolant_data.impulse.r1    b       2136          1          0
+                 coolant_data.impulse.r2    b       2137          1          0
+                 coolant_data.impulse.r3    b       2138          1          0
+                  coolant_data.impulse.i    b       2139          1          0
+                 coolant_data.sensors.r1    b       2140          1          0
+                 coolant_data.sensors.r2    b       2141          1          0
+                 coolant_data.sensors.r3    b       2142          1          0
+                  coolant_data.sensors.i    b       2143          1          0
+                   coolant_data.comms.r1    b       2144          1          0
+                   coolant_data.comms.r2    b       2145          1          0
+                   coolant_data.comms.r3    b       2146          1          0
+                    coolant_data.comms.i    b       2147          1          0
+                 coolant_data.phasers.r1    b       2148          1          0
+                 coolant_data.phasers.r2    b       2149          1          0
+                 coolant_data.phasers.r3    b       2150          1          0
+                  coolant_data.phasers.i    b       2151          1          0
+                 coolant_data.shields.r1    b       2152          1          0
+                 coolant_data.shields.r2    b       2153          1          0
+                 coolant_data.shields.r3    b       2154          1          0
+                  coolant_data.shields.i    b       2155          1          0
+                 coolant_data.tractor.r1    b       2156          1          0
+                 coolant_data.tractor.r2    b       2157          1          0
+                 coolant_data.tractor.r3    b       2158          1          0
+                  coolant_data.tractor.i    b       2159          1          0
+                    coolant_data.voltage    b       2160          1          0
+          temperature_data.shield_damage    b       2176          1          0
+         temperature_data.impulse_damage    b       2177          1          0
+            temperature_data.warp_damage    b       2178          1          0
+     temperature_data.maneuvering_damage    b       2179          1          0
+    temperature_data.phaser_banks_damage    b       2180          1          0
+         temperature_data.sensors_damage    b       2181          1          0
+           temperature_data.comms_damage    b       2182          1          0
+         temperature_data.tractor_damage    b       2183          1          0
+                               warp_time    d       2184          8          0
+                              scibeam_a1    d       2192          8          0
+                              scibeam_a2    d       2200          8          0
+                           scibeam_range    d       2208          8          0
+                                 reverse    b       2216          1          0
+                                 trident    b       2217          1          0
+                       next_torpedo_time    d       2220          8          0
+                         next_laser_time    d       2224          8          0
+                          lifeform_count    b       2228          1          0
+                            tractor_beam    w       2232          4          0
+                 overheating_damage_done    b       2236          1          0
+              steering_adjustment.vec[0]    f       2240          4          0
+              steering_adjustment.vec[1]    f       2244          4          0
+              steering_adjustment.vec[2]    f       2248          4          0
+                          braking_factor    f       2252          4          0
+                             ncargo_bays    W       2448          4          0
+                                  wallet    f       2452          4          0
+                            threat_level    f       2456          4          0
+                         docking_magnets    b       2516          1          0
+                        passenger_berths    b       2517          1          0
+                             mining_bots    b       2518          1          0
+                         mining_bot_name    s       2524         20          0
+                              sdata.name    s       2576         20          0
+                sdata.science_data_known    h       2596          2          0
+                          sdata.subclass    B       2598          1          0
+                   sdata.shield_strength    B       2599          1          0
+                 sdata.shield_wavelength    B       2600          1          0
+                      sdata.shield_width    B       2601          1          0
+                      sdata.shield_depth    B       2602          1          0
+                           sdata.faction    B       2603          1          0
+                              sci_coordx    d       2608          8          0
+                              sci_coordz    d       2616          8          0
+                      orientation.vec[0]    f       2720          4          0
+                      orientation.vec[1]    f       2724          4          0
+                      orientation.vec[2]    f       2728          4          0
+                      orientation.vec[3]    f       2732          4          0
+</pre>
+Example usage:
+<pre>
+   player_ids = get_player_ship_ids();
+   money_player_has = get_ship_attribute(player_ids[1], "wallet");
+   ship_name = get_ship_attribute(player_ids[1], "sdata.name");
+</pre>
+Enjoy.
+<hr>
+<p><b>smcameron 20 Jun 2016, 07:07</b>
+<p>Some improvements to planetary rings. I spent some time watching videos of
+the Cassini flyby of Saturn. In particular this one: 
+<a href="https://vimeo.com/33933151">
+https://vimeo.com/33933151</a>
+
+<p>This made me realize a few of things. 1) the rings are essentially either
+opaque or transparent -- there's not a lot of translucency. 2) The side of the
+rings in sunlight looks different than the opposite side, which is in shade.
+So, I made a few changes to try to get things to look a bit more realistic.
+Shadows tend to be stark, not subtle.
+
+<p>Here are three views of the same planet with my changes The rings have a
+light side and a dark side now.
+<p><img src="http://i.imgur.com/gbgAUrA.png"> 
+<p><img src="http://i.imgur.com/eSqKcy0.png"> 
+<p><img src="http://i.imgur.com/VoeLWYu.png"> 
+<p>What things used to look like:
+<p><img src="http://i.imgur.com/wrpyKDY.png"> 
+<hr>
+<p><b>smcameron 03 Jul 2016, 06:35</b>
+<p>Here's a video that demonstrates some new functionality of the Lua API of
+Space Nerds in Space. In particular, it demos the show_timed_text() and
+text_to_speech() functions. This is a demo of the training-mission-1.lua
+script, which implements a timed race in which the player has to dock at four
+starbases in succession, finally returning to the first starbase to dock and
+complete the race. It took me about 10 minutes to complete the circuit in this
+run.
+<p><iframe width="560" height="315" src="https://www.youtube.com/embed/nc1n_4vaOSQ" frameborder="0" gesture="media" allow="encrypted-media" allowfullscreen></iframe>
+<p><a href="https://www.youtube.com/watch?v=nc1n_4vaOSQ&feature=youtu.be">
+https://www.youtube.com/watch?v=nc1n_4vaOSQ&feature=youtu.be</a>
+<hr>
+<p><b>charlie 03 Jul 2016, 20:36</b>
+<p>Customary virtual applause from a lurker fanboi. You can't hear but I am clapping!
+<hr>
+<p><b>smcameron 10 Jul 2016, 05:53</b>
+<p>Here is a demo of the <a
+href="https://github.com/smcameron/space-nerds-in-space/blob/master/share/snis/luascripts/SAVING-PLANET-ERPH.LUA">Saving
+Planet Erph</a> mission of Space Nerds In Space:
+<p><iframe width="560" height="315" src="https://www.youtube.com/embed/nTBiM5zJi8A" frameborder="0" gesture="media" allow="encrypted-media" allowfullscreen></iframe>
+<p><a href="https://www.youtube.com/watch?v=nTBiM5zJi8A&feature=youtu.be">
+https://www.youtube.com/watch?v=nTBiM5zJi8A&feature=youtu.be</a>
+<p>To run this mission, run SNIS as normal, then go to the "demon" screen and
+type in "lua mainmenu.lua", then select "Saving planet erph" from the menu on
+the main view screen.
+<hr>
+<p><b>smcameron 12 Jul 2016, 06:29</b>
+<p>Github user ProfessorKaos64 has built and hosted Space Nerds In Space
+binaries for SteamOS Brewmaster and Debian Jessie (have not tried these
+myself.)
+
+<ul>
+<li><a href="http://packages.libregeek.org/debian/pool/games/s/snis/">
+http://packages.libregeek.org/debian/pool/games/s/snis/</a>
+<li><a href="http://packages.libregeek.org/SteamOS-Tools/pool/games/s/snis/">
+http://packages.libregeek.org/SteamOS-Tools/pool/games/s/snis/</a>
+</ul>
+<hr>
+<p><b>smcameron 17 Jul 2016, 18:03</b>
+<p>I have added a new mission script, SPACEPOX.LUA
+
+<p>SPACE POX
+
+<p>Locate and deliver SPACE POX VACCINE to save the crew
+of the ICARUS station orbiting planet BONX from the
+SPACE POX which has broken out and is slowly killing
+them off one by one in a series of unlikely "accidents"
+
+<p>This mission can be kind of difficult
+The biggest difficulty is finding the space pox vaccine
+unless you know the trick. Then, the zarkon dreadknights
+are liable to get you unless you make a quick getaway, but
+your warp drive will probably not help you.
+
+<p>Here is the script: <a
+href="https://github.com/smcameron/space-nerds-in-space/blob/master/share/snis/luascripts/SPACEPOX.LUA">SPACEPOX.LUA</a>
+(contains spoilers, obviously).
+
+<p>Found quite a few bugs in the Lua API while making this one. It is a little
+more difficult than I expected to come up with decent scenarios and implement
+them.
+<hr>
+<p><b>Imerion 18 Jul 2016, 01:58</b>
+<p>That video. Wow. I'm so very very impressed by how cool this project is.
+Looks amazing, can't wait to get a group together to play it. Perhaps this
+fall, when I might buy an extra computer. ;)
+<hr>
+<p><b>smcameron 29 Aug 2016, 04:10</b>
+<p>A small update. New things are:
+
+<ul>
+<li>Text entry boxes can be dynamically sized.
+<li>New EMF graph on Comms screen that can give early warning of impending attack
+<li>Tow truck service implemented.
+</ul>
+<p><iframe width="560" height="315" src="https://www.youtube.com/embed/_KO6T3UXozI" frameborder="0" gesture="media" allow="encrypted-media" allowfullscreen></iframe>
+<p><a href="https://www.youtube.com/watch?v=_KO6T3UXozI&feature=youtu.be">
+https://www.youtube.com/watch?v=_KO6T3UXozI&feature=youtu.be</a>
+<hr>
+<p><b>smcameron 05 Nov 2016, 06:07</b>
+<p>Don't really have an update, but just wanted to let people know a couple
+things. First, I haven't disappeared, and while I haven't done much lately with
+SNIS, I've not given up on it. Second, today marks exactly 4 years since I made
+the first post about it here, starting this very thread.
+
+<p>So I wish a happy 4th birthday to all the Space Nerds In Space.
+<hr>
+<p><b>farcodev 06 Nov 2016, 00:13</b>
+<p>Happy BDay to your project!
+<p>Keep it up!
+<hr>
+<p><b>smcameron 01 Jan 2017, 04:41</b>
+<p>Spent a bit of time the last couple of days mucking around trying to improve
+the look of thruster exhaust plumes....
+
+<p>This forum has a way of cropping the images, so you might have to right
+click and "view image" to see the entire image.
+<p><img src="http://i.imgur.com/tvC0Ym9.png">
+<p><img src="http://i.imgur.com/gDhGE4M.png">
+<p><img src="http://i.imgur.com/JykcrB5.png">
+<p><img src="http://i.imgur.com/yeCo9BX.png">
+<p><img src="http://i.imgur.com/2wUMT7J.png">
+<hr>
+<p><b>smcameron 02 Jan 2017, 21:35</b>
+<p>Working on some new stuff... not entirely sure this thing is a good idea, but this was on my screen a few minutes ago:
+<p><img src="http://i.imgur.com/qylJALG.png">
+<hr>
+<p><b>smcameron 03 Jan 2017, 04:22</b>
+<p>Ok, got collision detection working for the new Big Honking Death Machine...
+<p><iframe width="560" height="315" src="https://www.youtube.com/embed/WUTmXUIMifQ" frameborder="0" gesture="media" allow="encrypted-media" allowfullscreen></iframe>
+<p><a href="https://www.youtube.com/watch?v=WUTmXUIMifQ&feature=youtu.be">
+https://www.youtube.com/watch?v=WUTmXUIMifQ&feature=youtu.be</a>
+<hr>
+<p><b>smcameron 09 Jan 2017, 04:10</b>
+<p>In case anyone might be interested, <a href="http://smcameron.github.io/space-nerds-in-space/snis-nl-slides/slideshow.html#1">
+Here are some slides about how the
+speech recognition and natural language processing hack works in Space Nerds in
+Space.</a>
+
+<p>The image on the first slide is busted, but it's not important.
+
+<p>Use arrow keys to navigate. This probably does not work worth a damn on
+mobile.
+
+<p>And if you don't know what the speech recognition/natural language
+processing hack is, here's a video from ~6 months ago:
+<p><iframe width="560" height="315" src="https://www.youtube.com/embed/tfcme7maygw" frameborder="0" gesture="media" allow="encrypted-media" allowfullscreen></iframe>
+<p><a href="https://www.youtube.com/watch?v=tfcme7maygw&feature=youtu.be">
+https://www.youtube.com/watch?v=tfcme7maygw&feature=youtu.be</a>
+<hr>
+<p><b>smcameron 17 Jan 2017, 05:03</b>
+<p>Inspired by the opening scene of the new Star Wars movie, and the sense of
+scale it was able to convey, I spent a half hour or so playing around with the
+camera in SNIS. And this happened:
+<p><iframe width="560" height="315" src="https://www.youtube.com/embed/siPMjrEq8Rw" frameborder="0" gesture="media" allow="encrypted-media" allowfullscreen></iframe>
+<p><a href="https://www.youtube.com/watch?v=siPMjrEq8Rw&feature=youtu.be">
+https://www.youtube.com/watch?v=siPMjrEq8Rw&feature=youtu.be</a>
+<hr>
+<p><b>smcameron » 31 Jan 2017, 14:45</b>
+<p>Experimenting with some different ways to control velocity. I don't think
+this will be put into the game -- makes things seem too small -- but it looks
+cool.
+<p><iframe width="560" height="315" src="https://www.youtube.com/embed/bvGfYSLtiNM" frameborder="0" gesture="media" allow="encrypted-media" allowfullscreen></iframe>
+<p><a href="https://www.youtube.com/watch?v=bvGfYSLtiNM&feature=youtu.be">
+https://www.youtube.com/watch?v=bvGfYSLtiNM&feature=youtu.be</a>
+<hr>
+<p><b>Imerion 01 Feb 2017, 13:32</b>
+<p>Very cool! Especially that giant ship. :D
+<hr>
+<p><b>smcameron 06 Feb 2017, 00:00</b>
+<p>FWIW, I have made some improvements to the web page, adding fairly extensive documentation about how to build and run Space Nerds In Space.
+
+<p><a href="http://smcameron.github.io/space-nerds-in-space/">
+http://smcameron.github.io/space-nerds-in-space/</a>
+<hr>
+<p><b>smcameron 21 Feb 2017, 16:24</b>
+<p>Here is some GPL'ed 3D turret aiming code someone may find useful. It does
+rely on some other code (for quaternions and vectors mostly). I figured I'd
+post this here since I thought other game developers might find it useful, as
+getting this to work is a bit tricky. The turret may be arbitrarily oriented,
+it is not required that the turret axes be aligned with any world axes, for
+example. The turret is rate limited in its motion about its axes (you set the
+limits.) It currently does not have enforced limits on motion about those axes
+though -- the turret can pass the guns through its own base, for example. It's
+on my list of things to do, but it's not done.
+
+
+<ul>
+<li><a href="https://github.com/smcameron/space-nerds-in-space/blob/master/turret_aimer.h">
+https://github.com/smcameron/space-nerds-in-space/blob/master/turret_aimer.h</a>
+<li><a href="https://github.com/smcameron/space-nerds-in-space/blob/master/turret_aimer.c">
+https://github.com/smcameron/space-nerds-in-space/blob/master/turret_aimer.c</a>
+</ul>
+
+<p>See also quat.c, quat.h for the vector and quaternion code it relies on.
+
+<p>Here's a quick demo:
+<p><iframe width="560" height="315" src="https://www.youtube.com/embed/JVBWHlVaY9U" frameborder="0" gesture="media" allow="encrypted-media" allowfullscreen></iframe>
+<p><a href="https://www.youtube.com/watch?v=JVBWHlVaY9U&feature=youtu.be">
+https://www.youtube.com/watch?v=JVBWHlVaY9U&feature=youtu.be</a>
+<hr>
+<p><b>lynxmonkey 28 Mar 2017, 05:34</b>
+<p>This is, by far, the most amazing game ever! I played Artemis with our crew for
+a while, that was super fun, but this is a whole new level of awesome.  The
+whole "real time" effect is the best, It's like being in a real life version of
+Firefly or USS Defiant. Start up the game, pull up a seat, open a beer and
+hangout, until you're required to do some work. Being a member of this crew, in
+this space, is like having the best job in the verse.
+
+<p>I'm on comms and have figured out:
+<p>request to dock
+<p>request a towing service
+<p>buy / sell mined stuff to get money
+
+<p>-- I still haven't figured out how to re-fuel the ship, any advice here would be great... please... seriously... I really need help..
+<p>otherwise our games will continue to end, with the ships voice telling us the fuel level is critical. I figure it's probably going to involve "/computer do X " or "/hail SB-01 request refuel" ??
+
+<p>Please keep making this great game :)
+<hr>
+<p><b>smcameron 07 Apr 2017, 03:26</b>
+<blockquote>
+    lynxmonkey:
+    <p>This is, by far, the most amazing game ever! I played Artemis with our crew for a while, that was super fun, but this is a whole new level of awesome.  The whole "real time" effect is the best, It's like being in a real life version of Firefly or USS Defiant. Start up the game, pull up a seat, open a beer and hangout, until you're required to do some work. Being a member of this crew, in this space, is like having the best job in the verse.
+</blockquote>
+<p>Thanks for the very kind words! Sorry for the slow reply, haven't been checking this forum as frequently as I should.
+<blockquote>
+    <p>I'm on comms and have figured out:
+    <p>request to dock
+    <p>request a towing service
+    <p>buy / sell mined stuff to get money
+
+    <p>-- I still haven't figured out how to re-fuel the ship, any advice here would be great... please... seriously... I really need help..
+    <p>otherwise our games will continue to end, with the ships voice telling us the fuel level is critical. I figure it's probably going to involve "/computer do X " or "/hail SB-01 request refuel" ??
+
+    <p>Please keep making this great game :)
+</blockquote>
+
+<p>There are two ways to get out of the "Fuel levels critical" situation, one of which is cheating.
+
+<p>The first way is to hail a starbase, and select option 4, "REQUEST TOWING
+SERVICE". A tow ship will be dispatched to your location and tow you to the
+starbase which you contacted. If you have near zero fuel, it will give you a
+little bit of fuel too, so you can drive to the starbase and dock. Once you
+dock with the starbase, you will be refueled. It is possible the tow ship might
+get killed en route to your location, in which case it won't show up (you can
+call for another one.) It's also possible for the tow ship to be attacked while
+towing you, in which case it may drop you where ever you might be (middle of
+nowhere) and run away. Again, you can call another tow truck in that case.
+
+<p>To successfully dock with the starbase (after the tow truck drops you off near it) you need to:
+
+<p>1: make sure docking magnets are engaged (there's a button on the navigation screen)
+<p>2: make sure you lower your shields (it will tell you to lower your shields if you forget)
+<p>3: request permission to dock while shields are down and when you're pretty close to the starbase (within 5000 units, I think. It will tell you if you're too far.)
+<p>4: Navigate to a docking port on the station after permission is granted but before permission expires (you can ask permission again, of course.)
+
+<p>The docking ports vary in appearance, but you can guess which parts of the station they are, some look like this:
+
+<p><img src="http://i.imgur.com/JO7gGy1.jpg">
+<p>or like this:
+<p><img src="http://i.imgur.com/9jTwvFw.jpg">
+<p>Once you dock with the port (by ramming it, basically), you will be
+connected to it. Your ship will be refueled and repaired, and all the systems
+will be turned off. To undock, turn off the docking magnets (navigation screen)
+and power on your systems (engineering screen).
+
+
+<p>The second (cheating) way to get more fuel is as follows. Once it starts
+saying "Fuel levels Critical!", go to the DEMON screen, and type in "safemode".
+The next time it says "Fuel levels Critical!", you will get your tank filled.
+"safemode" also has some side effects, it prevents enemies from deciding to
+attack you (if they already decided though, they don't quit.) If you type
+"safemode" a second time, it toggles off (you won't lose your fuel, but enemies
+might decide to attack). Safemode is a toggle. However there's no indicator of
+whether it's enabled or not (I should fix it, but I only put it in to help with
+debugging anyway.)
+<hr>
+<p><b>smcameron 16 Apr 2017, 08:38</b>
+<p>I added a "Star Map" to the navigation screen.
+<p><iframe width="560" height="315" src="https://www.youtube.com/embed/fhu04_ymcM0" frameborder="0" gesture="media" allow="encrypted-media" allowfullscreen></iframe>
+<p><a href="https://www.youtube.com/watch?v=fhu04_ymcM0">
+https://www.youtube.com/watch?v=fhu04_ymcM0</a>
+<hr>
+<p><b>smcameron 28 Apr 2017, 07:40</b>
+<p>Haven't tried these myself, but there's some stuff by Hayden Hughes to build
+a bootable arch-linux based Space Nerds In Space usb image here:
+https://github.com/HUg0005/snis-live and some (again, untried by me) prebuilt
+images linked from the readme there.
+<hr>
+<p><b>smcameron 03 May 2017, 07:03</b>
+<p>A couple new features added recently:
+
+<p>1. You can now set up to 10 waypoints on the Science station, either by
+typing in X, Y, Z coordinates directly, or by marking the ship's current
+position. The waypoints are selectable from the list of waypoints, or via the
+short range scanner or via the long range scanner. Once selected, the green
+arrow on the Navigation screen will point to the waypoint (just as it points
+towards anything that Science has selected.)
+
+<p>2. Life support system. There's a new system on the damage control screen,
+life support. There are also power and coolant sliders on the Engineering
+screen for life support, and a gauge for oxygen, which is produced by the life
+support system (from e.g. electrolysis of water). If the life support system is
+damaged (or deprived of power), it will produce less oxygen. Oxygen is consumed
+at a fixed rate. If the rate of oxygen production is below the rate of
+consumption, the oxygen levels will slowly decrease. If they get too low, the
+crew will asphyxiate.
+
+<p>A video demoing the new features: 
+<a href="https://www.youtube.com/watch?v=5LmPP7OLtqM">
+https://www.youtube.com/watch?v=5LmPP7OLtqM</a>
+<hr>
+<p><b>smcameron 25 Jun 2017, 19:47</b>
+
+<p>Some minor progress on Space Nerds In Space. Improved UI sound effects (I
+think), most buttons make some kind of sound now. Added tooltips to all buttons
+and sliders. Now you can eject the warp core. I need to work on the warp core
+ejecting mechanic to make it a bit more meaningful, but the basics are there.
+
+<p><iframe width="560" height="315" src="https://www.youtube.com/embed/MImkMx3ZNWI" frameborder="0" gesture="media" allow="encrypted-media" allowfullscreen></iframe>
+<p><a href="https://www.youtube.com/watch?v=MImkMx3ZNWI&feature=youtu.be">
+https://www.youtube.com/watch?v=MImkMx3ZNWI&feature=youtu.be</a>
+
+<p>The sci-fi UI sound effects were made with this thing:
+<a href="https://www.modulargrid.net/e/racks/synth/88651/2146">https://www.modulargrid.net/e/racks/synth/88651/2146</a>
+(Warning, this makes noise -- play with the 4 large knobs at the top left.)
+<hr>
+<p><b>smcameron 05 Jul 2017, 06:14</b>
+<p>Quick demo of new attitude indicator and yaw/pitch/roll rate indicator on the nav screen:
+
+<p><a href="https://www.youtube.com/watch?v=eNOe1ghJmIg">
+https://www.youtube.com/watch?v=eNOe1ghJmIg</a>
+<hr>
+<p><b>charlie 05 Jul 2017, 10:39</b>
+<p>That is seriously neat!
+<hr>
+<p><b>smcameron 30 Jul 2017, 22:12</b>
+<p>Space Nerds In Space Lua Scripting Tutorial videos:
+
+<p>Part 1: <a href="https://www.youtube.com/watch?v=p-98bsIYoWI"> https://www.youtube.com/watch?v=p-98bsIYoWI</a>
+<p>Part 2: <a href="https://youtu.be/K-nt7147ksU"> https://youtu.be/K-nt7147ksU</a>
+<p>Part 3: <a href="https://www.youtube.com/watch?v=8EgWLZfvcYs"> https://www.youtube.com/watch?v=8EgWLZfvcYs</a>
+<p>Part 4: <a href="https://youtu.be/W6vm4m0voQ4"> https://youtu.be/W6vm4m0voQ4</a>
+<hr>
+<p><b>smcameron 08 Sep 2017, 06:13</b>
+<p><img src="https://i.imgur.com/fgM36Kq.png">
+<p>Experimenting with specular reflection on planetary rings.
+<hr>
+<p><b>smcameron 10 Sep 2017, 03:16</b>
+<p>Finally got tired of faffing about with trying to record videos on linux via
+software methods and sprang for an HD video capture device. Audio is recorded
+with a Zoom H4N (but with low batteries, so it's a little distorted.)
+
+<p><a href="http://www.youtube.com/watch?v=weZMeTjVPro">http://www.youtube.com/watch?v=weZMeTjVPro</a>
+<hr>
+<p><b>smcameron 19 Oct 2017, 06:07</b>
+<p>Been thinking about Comms, and how comms always seems to be lacking
+something very meaningful to do in these bridge simulator type games, so I am
+revisiting an idea I had about 3 years ago but never really pursued: Add a Real
+Time Strategy game into Space Nerds In Space, and let Comms be the one to
+direct the action. Here's a little demo of what I have working so far:
+
+<p><iframe width="560" height="315" src="https://www.youtube.com/embed/8V8oLyaxsKo" frameborder="0" gesture="media" allow="encrypted-media" allowfullscreen></iframe>
+<p><a href="https://www.youtube.com/watch?v=8V8oLyaxsKo">
+https://www.youtube.com/watch?v=8V8oLyaxsKo</a>
+<hr>
+<p><b>smcameron 21 Oct 2017, 19:51</b>
+<p>Don't know if anyone will find this interesting, but I decided to try a
+little live stream coding session. Mostly it's 30 minutes of me being slightly
+puzzled. OTH, I found that "obs studio" is actually capable of doing a decent
+job capturing video, unlike anything else I've tried so far that didn't involve
+extra hardware.
+
+<p><iframe width="560" height="315" src="https://www.youtube.com/embed/70dalJo83hg" frameborder="0" gesture="media" allow="encrypted-media" allowfullscreen></iframe>
+<p><a href="https://www.youtube.com/watch?v=70dalJo83hg">
+https://www.youtube.com/watch?v=70dalJo83hg</a>
+<hr>
+<p><b>smcameron 07 Nov 2017, 22:16</b>
+<p>Looky what I got... Space Nerd accoutrements. It will probably take a few
+days before I get all this working with Space Nerds In Space.
+<p><img src="https://i.imgur.com/Bd1mrQYh.jpg">
+<hr>
+<p><b>smcameron 09 Nov 2017, 04:22</b>
+<p>So I've got the basics working with this HOTAS joystick setup today-- not
+counting the rudder pedals -- my cheapo "open box special" turned out to be
+missing a RJ12 to USB adapter that's apparently needed for the rudder pedals.
+D'oh! (I suspect someone broke or lost their adapter, went to Fry's and bought
+this thing, extracted the adapter, then returned it, sans adapter, and then I
+bought it as an "open box special.")
+
+
+<p>There is now a joystick config file (example default config here: 
+<a href="https://github.com/smcameron/space-nerds-in-space/blob/master/share/snis/joystick_config.txt">https://github.com/smcameron/space-nerds-in-space/blob/master/share/snis/joystick_config.txt</a>)
+
+<p>Have to say, it's pretty cool!
+
+<p>I still need to add more "functions" that are hookable to the joysticks
+(e.g. Currently it's not possible to connect "Reverse", "Engage warp", "toggle
+docking magnets", and other misc. things to the various joystick buttons, but
+there's no reason it couldn't be, and this sort of thing I will get to in the
+next few days.)
+
+<p>In case anyone plays around with this (ha!) and adds some config for their
+particular joystick, I am trying to collect such configurations, and have an
+issue to do so here: 
+<a href="https://github.com/smcameron/space-nerds-in-space/issues/118">
+https://github.com/smcameron/space-nerds-in-space/issues/118</a>
+<hr>
+<p><b>smcameron 10 Nov 2017, 06:47</b>
+<p>So, while watching <a href="https://www.youtube.com/watch?v=V5c4c5cIik4">a
+review</a> of this HOTAS joystick/throttle/rudder pedals combo, I realized that
+the missing RJ12 to USB adapter is actually not a problem after all because the
+throttle has an RJ12 socket into which you can plug the rudder pedals, and I
+tried it out, and it seems to work, with the rudder pedals showing up as an
+additional 3 axes on the throttle device.
+
+Also, I've committed changes to allow mapping almost everything on the
+Navigation screen to joystick buttons and axes.
+<hr>
+<p><b>Julius 10 Nov 2017, 07:16</b>
+<p>Pretty nice... although they would seem a bit out of place on a bridge
+simulator (as opposed to a dog-fighting space shooter).
+
+<p>Any other plans for input devices? Separate Android touch-screen? Steam controller?
+<hr>
+<p><b>smcameron 10 Nov 2017, 16:49</b>
+<p>I don't think it's really out of place for the Nav console, but supposing
+not everyone agrees with that, it's easy enough to not buy something like this
+and not plug it in. In any case, someone specifically asked for this
+capability, and it's easy enough, so I didn't see a reason not to do it.
+
+<p>As for other input devices, no plans for phones, the steam controller should
+be very easy as I presume it shows up as just another input device, so it
+should just be a matter of seeing what it shows up as in /dev/input/by-id and
+adding some entries into the joystick config file. But, kind of hard to do that
+when I do not own a steam controller. Feel free to send patches. Github issue
+to collect joystick configs here: 
+<a href="https://github.com/smcameron/space-nerds-in-space/issues/118">
+https://github.com/smcameron/space-nerds-in-space/issues/118</a>
+<hr>
+<p><b>smcameron 03 Dec 2017, 22:51</b>
+<p>Tutorial video showing all the features of the Navigation screen:
+<a href="https://www.youtube.com/watch?v=-aUQsmFpOzM">
+https://www.youtube.com/watch?v=-aUQsmFpOzM</a>
+<hr>
+
+<p><b>smcameron 16 Feb 2018, 22:55</b>
+<p>Adding black holes to Space Nerds In Space:
+
+<p><a href="https://www.youtube.com/watch?v=v3_U6KxUW8I">https://www.youtube.com/watch?v=v3_U6KxUW8I</a>
+<p><a href="https://www.youtube.com/watch?v=v3_U6KxUW8I"><img src="https://img.youtube.com/vi/v3_U6KxUW8I/hqdefault.jpg"></a>
+<hr>
+<p><b>smcameron 20 Feb 2018, 20:01</b>
+<p>Spacemonsters! They don't do much other than flail their tentacles around, but they're committed.
+<p><a href="https://youtu.be/64CeCEq_IpI">https://youtu.be/64CeCEq_IpI</a>
+<p><a href="https://youtu.be/64CeCEq_IpI"><img src="https://img.youtube.com/vi/64CeCEq_IpI/hqdefault.jpg"></a>
+
+<hr>
+<p><b>smcameron » 24 Feb 2018, 15:31</b>
+<p>Space monsters with albedo and emittance textures:
+
+<p><img src="https://i.imgur.com/6qRSXwf.png">
+<p><img src="https://i.imgur.com/f09q5hQ.png">
+<p><img src="https://i.imgur.com/JRGotmo.png">
+<p><img src="https://i.imgur.com/MAdLJ7a.png">
+<hr>
+<p><b>Julius 24 Feb 2018, 17:37</b>
+<p>Quite neat. These are procedurally generated?
+<hr>
+<p><b>smcameron » 24 Feb 2018, 18:44</b>
+<p>No, not procedurally generated. Well, the number of tentacles is variable
+between 3 and 5, but that is the extent of the variation in the meshes. There
+are two static meshes, one for the head, and one for each tentacle segment. The
+tentacle segments are procedurally placed and moved at run time -- so maybe
+procedural animation, I guess.
+
+<p>The albedo and emittance textures are in some sense procedurally generated
+offline -- in that they are bits of patterns from Gray Scott diffusion reaction
+process that have been manipulated in the gimp, but ultimately they are just
+static textures.
+
+<p>The emittance is changed procedurally at run time too, so the glow effect
+varies with time (I added that after I made these screen shots, so those show
+full emittance.)
+<hr>
+<p><b>smcameron 25 Feb 2018, 00:54</b>
+<p>I'm sitting here at HackRVA, the hackerspace in Richmond, Virginia, and guess what they've got...
+
+<p>A HOTAS WARTHOG.
+
+<p><img src="https://i.imgur.com/Fp97u1R.jpg">
+
+<p>
+I committed <a href="https://github.com/smcameron/space-nerds-in-space/commit/58a1f8177235d8345dcba3592171864c4e4bbe98">a config for it</a>.
+<hr>
+<p><a href="history-3.html">CONTINUED ON PAGE 3</a>.
+

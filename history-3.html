@@ -1,0 +1,1001 @@
+
+<p>This is a PAGE 3 of a copy of a <a href="https://forum.freegamedev.net/viewtopic.php?f=22&t=3710">thread
+on freegamedev.net</a>. Once around 2010 or so, I lost a similar thread over there for my
+other little game, Word War vi when the forum database was lost, so I created this as a backup
+in case something similar happens again.
+
+<p><a href="history-2.html">BACK TO PAGE 2"</a>
+
+<hr>
+<p><b>smcameron 26 Feb 2018, 13:49</b>
+<p>Some video of the new space monsters...
+
+<p><a href="https://www.youtube.com/watch?v=l8r5Ac4r_QU"><img src="https://img.youtube.com/vi/l8r5Ac4r_QU/hqdefault.jpg"></a>
+<hr>
+<p><b>smcameron 02 Mar 2018, 21:59</b>
+<p>Anybody have any DMX lighting hardware?
+
+<p>I'm trying to control such lights from linux, but I do not have any DMX hardware.
+
+<p>If someone would like to test it, there's a program called test_snis_dmx:
+<pre>
+scameron@sirius ~/github/space-nerds-in-space $ make test_snis_dmx
+  CHECKING for struct termios2... not OK. We will define it ourself.
+  COMPILE snis_dmx.c
+scameron@sirius ~/github/space-nerds-in-space $ ./test_snis_dmx /dev/null
+snis_dmx.c:236: NOTICE!!! This snis_dmx library is COMPLETELY UNTESTED as
+snis_dmx.c:238: I currently do not have any hardware I can test with.
+snis_dmx.c:240: Do not be surprised if it utterly fails to do what you want.
+snis_dmx: ioctl TCGETS2 failed: Inappropriate ioctl for device
+Failed to start DMX thread on device '/dev/null', Inappropriate ioctl for device
+scameron@sirius ~/github/space-nerds-in-space $
+</pre>
+<p>In the example, I told it to test /dev/null, which of course didn't work. If
+you had some real DMX hardware on a serial device, it would try to blink all
+the lights at 0.5Hz for 40 seconds. Seeing as how I cannot test it, it's
+somewhat unlikely that it will actually work, but it is within the realm of
+possibility.
+
+<p>The eventual goal is to be able to connect events within the game to
+lighting cues, so that e.g. being hit by enemy fire can trigger strobe flashes,
+red alert can turn the room lights red, etc.
+<hr>
+<p><b>smcameron 05 Mar 2018, 18:42</b>
+<p>From the wreckage of a derelict ship, some disturbing footage was recovered...
+<p><a href="https://www.youtube.com/watch?v=woMkFN47U-Q">https://www.youtube.com/watch?v=woMkFN47U-Q</a>
+<p><a href="https://www.youtube.com/watch?v=woMkFN47U-Q"><img src="https://img.youtube.com/vi/woMkFN47U-Q/hqdefault.jpg"></a>
+<hr>
+<p><b>smcameron 27 Mar 2018, 18:27</b>
+<p>Development Update 2018-03-27:
+<p><a href="https://www.youtube.com/watch?v=Jzj4CSFYD6s">https://www.youtube.com/watch?v=Jzj4CSFYD6s</a>
+<p><a href="https://www.youtube.com/watch?v=Jzj4CSFYD6s"><img src="https://img.youtube.com/vi/Jzj4CSFYD6s/hqdefault.jpg"></a>
+<hr>
+<p><b>charlie 27 Mar 2018, 20:42</b>
+<p>Cool update but I can barely hear the commentary after the half way point of the video as the music and sound effects drown it out.
+<hr>
+<p><b>smcameron 28 Mar 2018, 01:36</b>
+<p>Thanks for the feedback Charlie. I remixed the audio.
+<p><a href="https://youtu.be/tWeQyX2jDWY">https://youtu.be/tWeQyX2jDWY</a>
+<p><a href="https://youtu.be/tWeQyX2jDWY"><img src="https://img.youtube.com/vi/tWeQyX2jDWY/hqdefault.jpg"></a>
+<hr>
+<p><b>smcameron 29 Jun 2018, 14:07</b>
+<p>Quite some time ago, I added the capability for speech recognition (using
+pocketsphinx) and some rudimentary Zork-like natural language processing to
+Space Nerds In Space. However, like a dancing bear, the speech recognition is
+remarkable mostly in that works at all, not because it works so well.
+Especially, background noise is a big problem, but also accents, talking too
+fast, and mumbling slightly will make it not work so well.
+
+<p>The speech recognition is done in a separate process and the text which it
+produces is fed into the game via a fifo that snis_client monitors. This means
+the speech recognition can be replaced relatively easily (assuming the
+existence of an alternative). It occurred to me that if I had an android app
+which could do speech recognition (should be easy enough, right?) and then
+forward the recognized text to an arbitrary TCP socket, then I make some little
+program to forward this text from this TCP socket to the fifo. In fact, I don't
+even need to make something, I can just use netcat for that. However, I don't
+really know anything about writing android apps, and it's been almost 20 years
+since I even tried Java. If I were to do it, there's considerable static
+friction before I can get moving.
+
+<p>I mentioned this idea to Max Redmond, a member of my local hackerspace
+(these days, that's HackRVA) and hey presto, now we have an android app that
+does exactly what I imagined.
+
+<p>It's here:
+
+<p>Source code: <a href="https://github.com/Athulus/SpaceNerdsCommunicator">https://github.com/Athulus/SpaceNerdsCommunicator</a>
+<p>Releases: <a href="https://github.com/Athulus/SpaceNerdsCommunicator/releases">https://github.com/Athulus/SpaceNerdsCommunicator/releases</a>
+
+<p>To use this with SNIS, find out the IP address of one of the machines
+running snis_client, then run this in a terminal:
+
+<pre>
+netcat -lvk -p 8080 &gt; /tmp/snis-natural-language-fifo
+</pre>
+
+<p>Then run the app on your android device, set the IP address, and then you can
+hit the microphone button and talk. Android will do the speech recognition (and
+do a much better job of it than pocketsphinx does) and the text will get
+forwarded to netcat and then into snis_client, and finally to snis_server,
+where it will be processed. It does not have the "Computer" hot word though.
+
+<p>It occurs to me now that unlike the fifo, the socket is a 2-way communications
+channel, so it might be worthwhile to set up a special socket for getting the
+NL text into snis_client and use that instead of or in addition to a fifo so
+that responses could be sent back to the android device as text (and then maybe
+text-to-speech). Then you could operate the ship from a phone remotely and at
+least get the responses from the computer instead of operating completely
+blind. Not that it would be super useful to try to play the game remotely via
+voice control without any visible output.
+
+<p>Perhaps a role-play mission where you're stranded on a planet, and you have to
+bring the unmanned ship into orbit around your planet using voice alone. i.e.
+"Set a course for planet X", "full speed ahead", "how far to planet X" (repeat
+until the reported number is small enough), "standard orbit", "beam me up
+scotty". Well, it's not much of a mission, I suppose.
+<hr>
+<p><b>smcameron 07 Jul 2018, 21:10</b>
+<p>Here's a picture of Space Nerds In Space built and running on Windows 10
+using the linux subsystem (not that it looks any different than on linux):
+
+<p><img src="https://i.imgur.com/2QOXPFh.jpg">
+<p>Surprisingly straightforward.
+<hr>
+<p><b> smcameron 28 Jul 2018, 02:01</b>
+<p>Latest dev update video for Space Nerds In Space, 2018-07-27: 
+<p><a href="https://www.youtube.com/watch?v=60oUfXtFlI4">https://www.youtube.com/watch?v=60oUfXtFlI4</a>
+<p><a href="https://www.youtube.com/watch?v=60oUfXtFlI4"><img src="https://img.youtube.com/vi/60oUfXtFlI4/hqdefault.jpg"></a>
+<hr>
+<p><b>charlie 02 Aug 2018, 00:55</b>
+<p>That network scaling issue was an interesting one, I bet. Was it some kind of loop that should not have been there?
+<hr>
+<p><b>smcameron 02 Aug 2018, 10:17</b>
+<p>You can read about debugging that issue <a href="https://github.com/smcameron/space-nerds-in-space/issues/135">here</a>,
+where I spend a good deal of time chasing red herrings before figuring it out. But to skip to the "good part"...
+
+<p>In the most general terms, the cause of the problem was "the programmer got
+confused because there were too many layers of abstraction for him (me) at the
+moment he wrote that code." More specifically, I knew that some information
+needed to get to all the clients, so I called a function that sprayed the
+information to all the clients. However, I was calling this from a place that
+was already in a per-client context (already being called per client), so for
+each client, I sprayed the information to each client (that is to say, instead
+of n times, n^2 times.) I wasn't doing this for *all* the data, but for a
+subset of data that was particular to NPC ships (of which there are a lot, so
+not an insignificant amount.) so it's not quite true that the traffic literally
+scaled as the square of the number of clients, but it is true that it scaled as
+the square of the number of clients asymptotically -- the more clients there
+were, the closer to the true square the amount of traffic became. Also, I think
+it was actually number of clients *per bridge* squared, times number of
+bridges... but in this particular case, the number of bridges was 1.
+
+<p><a href="https://github.com/smcameron/space-nerds-in-space/commit/2d595e2a4dae5ecb442e8370ec7f67c32427111d">The fix</a>
+was essentially to replace the call to the function which sprayed the
+data out to all clients with a call to a function that just transmitted to one
+client. There was also some mutex confusion in there that got fixed, which may
+or may not have contributed to the problem.
+
+<p>How I found the n^2 problem was, unfortunately, really just by staring at
+the code and noticing it, rather than by some Sherlockian sequence of deductive
+steps.
+<hr>
+<p><b>smcameron 16 Aug 2018, 21:12</b>
+<p>Dev update 2018-08-16: <a href="https://www.youtube.com/watch?v=MwmLa1IOmJg">https://www.youtube.com/watch?v=MwmLa1IOmJg</a>
+<p><a href="https://www.youtube.com/watch?v=MwmLa1IOmJg"><img src="https://img.youtube.com/vi/MwmLa1IOmJg/hqdefault.jpg"></a>
+<ul>
+<li>Now the lobby IP address can be automatically detected
+<li>New console on Demon screen
+<li>You can control permissible roles for each client from the Demon screen
+<li>Tweakable variables now accessible from the Demon screen
+</ul>
+<hr>
+<p><b>smcameron 09 Sep 2018, 22:44</b>
+<p>Dev update for 2018-09-09 -- mostly debugging tools.
+<p><a href="https://youtu.be/lq1MvX-4TVE">https://youtu.be/lq1MvX-4TVE</a>
+<p><a href="https://youtu.be/lq1MvX-4TVE"><img src="https://img.youtube.com/vi/lq1MvX-4TVE/hqdefault.jpg"></a>
+<hr>
+<p><b>smcameron 04 Oct 2018, 00:53</b>
+<p>Dev update for 2018-10-03
+<p><a href="https://www.youtube.com/watch?v=CFBD6WqT14o">https://www.youtube.com/watch?v=CFBD6WqT14o</a>
+<p><a href="https://www.youtube.com/watch?v=CFBD6WqT14o"><img src="https://img.youtube.com/vi/CFBD6WqT14o/hqdefault.jpg"></a>
+<ul>
+<li>Auto-wrangler system for automatically starting and stopping snis_server processes on demand.
+<li>Importing Oolite models
+<li>Normal mapping
+<li>Ship registration and Bounty system
+</ul>
+<hr>
+<p><b>sudoRmRf 21 Oct 2018, 02:13</b>
+<p>In one of your recent update videos you discribed a theoretical MMO use but
+then stated that this all was not likely as it is hard enough to get 5 people
+to play let alone many crews. Is there some sort of limitation preventing the
+use of a public server running SNIS, where my three people crew could meet at
+my house and interact with another crew somewhere else? Or is it just simply
+such servers do not exist?
+<hr>
+<p><b>smcameron » 23 Oct 2018, 01:35</b>
+
+<blockquote>
+In one of your recent update videos you discribed a theoretical MMO use but
+then stated that this all was not likely as it is hard enough to get 5 people
+to play let alone many crews. Is there some sort of limitation preventing the
+use of a public server running SNIS, where my three people crew could meet at
+my house and interact with another crew somewhere else? Or is it just simply
+such servers do not exist?
+</blockquote>
+
+<p>Technically it can run that way, on a server on the internet with remote crew
+members, and I have run it that way once or twice just by myself to see how it
+would perform with a server in New York (a digitalocean droplet) with me in
+Virginia. It's not a great experience though, the latency is a bit of a
+problem, although it worked better than I expected -- almost normally, but not
+quite, occasionally sort of freezing up for a few moments at a time. I didn't
+try it for very long, or really try to characterize the behavior in any depth
+-- just ran it for a few minutes out of curiosity. Total bandwidth could be a
+problem as well, since each client requires approximately 100kbytes / sec,
+though it varies somewhat depending on how many things are going on in the
+game, and you could in theory design some Lua script missions to use not very
+many objects and drastically reduce bandwidth requirements that way.
+
+<p>But basically, the design has always been for a LAN game with everyone in the
+same room, and for a LAN game with no more than about 20 clients. With those
+constraints, 100kbytes / sec / client is not a big problem. Over the internet,
+it's a bit more of a problem.
+
+
+<p>If you want to try such an experiment yourself to see how it is, here are
+<a href="https://github.com/smcameron/space-nerds-in-space/blob/master/lobbyless-operation.txt">some instructions</a>.
+
+<p>Note, those instructions are sort of mixed together with instructions about
+running the game with no lobby, but there's no reason you couldn't also run the
+lobby on the same host, and run the clients more "normally", which, if you
+wanted to have multiple solar systems and traverse between them, you must run
+the lobby server (ssgl_server), since it's part of how that works.
+
+<p>It is also true that "such servers do not exist", at least not to my
+knowledge (I don't run any.) Nothing's stopping anyone from running such a
+thing, but I would not advise doing so on any machine that hosts anything
+valuable, I'm fairly sure any determined attacker could manage to gain shell
+access via snis_server if they tried (not to say I know of any particular
+exploit, but I'd just be surprised if there weren't some bug somewhere in there
+that gave enough of a toehold.)
+<hr>
+<p><b>scameron 03 Nov 2018, 17:29</b>
+<p>Six Years of Space Nerds In Space:
+<p><a href="https://youtu.be/RAboPRjI4Vg">https://youtu.be/RAboPRjI4Vg</a>
+<p><a href="https://youtu.be/RAboPRjI4Vg"><img src="https://img.youtube.com/vi/RAboPRjI4Vg/hqdefault.jpg"></a>
+<hr>
+<p><b>GunChleoc 06 Nov 2018, 21:11</b>
+<p>Thanks, I enjoyed watching that 
+<hr>
+<p><b>MCMic 15 Jan 2019, 10:40</b>
+<p>Hello,
+
+<p>First, congratulations on this project, it’s quite impressive.
+
+<p>I will try to find enough people and hardware to test it, and I have a few questions/remarks after reading the website.
+
+<ol>
+<li>What is the black empty space on the COMMS screen for? Seems like wasted
+space, more text lines could be shown, in my tests nothing ever showed there.
+<li>I get a lot of errors in the output about files that could not be found,
+for instance "/usr/share/snis/textures/green-spark.png", am I missing files? I
+can’t find those in the git repo either. I’m using the AUR package on
+ArchLinux.
+<li>What is the sound server role checkbox for?
+<li>I failed to launch any lua script, it says it cannot find the script, but
+the path it’s showing starts with share/ and not /usr/share/ so I’m thinking
+maybe the prefix is missing in the script path in the code?  <li>If I look into
+/usr/share/snis/luascripts I only have 7 scripts and I do not have the
+SAVING-PLANET-ERPH.LUA for instance, are some missions missing from make
+install? (It would be good if missions could be separated from other luascripts
+in some way, so that we can know which scenarios are available to play and
+which scripts are just testing or tools)
+<li>Is there any recommendation on controls? I expect a joystick for weapon
+control would come in handy, are there other posts which profit from specific
+control devices?
+<li>The first time I tried to build the AUR package it failed
+on a cp of the TTS script, saying bin dir did not exists. I’m thinking this is
+some random problem depending on the order the make threads are run.
+<li>The liberapay account is broken since they changed money operator and you
+did not configure the new one (it’s more like their money operator ditch them…)
+</ol>
+
+<p>I have a github account so I can open issues if needed.
+<hr>
+<p><b>smcameron 16 Jan 2019, 02:08</b>
+
+<blockqoute>
+Hello,
+
+First, congratulations on this project, it’s quite impressive.
+
+I will try to find enough people and hardware to test it, and I have a few
+questions/remarks after reading the website.
+
+What is the black empty space on the COMMS screen for? Seems like wasted space,
+more text lines could be shown, in my tests nothing ever showed there.
+</blockquote>
+
+Some stuff appears there if you turn the experimental Real Time Strategy mode
+on. A little over a year ago I started adding some real-time-strategy elements
+to the game, though it's not really completed. I should probably work on that
+some more. To turn on the RTS mode, go to the demon screen and type
+"rtsmode-on". To turn it off, type "rtsmode-off". The idea is supposed to be
+similar to an old SEGA genesis game called Herzog Zwei. COMMS can command the
+home planet and any occupied starbases to build various ships, and can command
+those ships. Send troop ships to starbases to take them over (and gain more
+building power) Utimately, destroy the opponent's home planet with your fleet.
+The RTS mode is not really fully implemented or well balanced or tested, and
+the UI is pretty strange, to say the least, but it's sort of in there. There's
+a video about it here: <a href="https://www.youtube.com/watch?v=8V8oLyaxsKo">https://www.youtube.com/watch?v=8V8oLyaxsKo</a>.
+
+<blockquote>
+I get a lot of errors in the output about files that could not be found, for
+instance "/usr/share/snis/textures/green-spark.png", am I missing files? I
+can’t find those in the git repo either. I’m using the AUR package on
+ArchLinux.  </blockquote>
+
+<p>github issue here: <a href="https://github.com/smcameron/space-nerds-in-space/issues/179">https://github.com/smcameron/space-nerds-in-space/issues/179</a>.
+
+<blockquote>
+What is the sound server role checkbox for?
+</blockquote>
+
+<p>The idea is you have a bunch of people in the same room playing the game.
+Most likely, only one of the computers is hooked up to the giant stereo system.
+If that computer is denoted as the "sound server", then that's where most of
+the sound effects, etc. will go, so that when you get hit by a torpedo, it
+makes a room-shaking blast from the big stereo, and not just a tiny pop from a
+laptop speaker. Same idea with the "text to speech" server.
+
+<blockquote>
+I failed to launch any lua script, it says it cannot find the
+script, but the path it’s showing starts with share/ and not /usr/share/ so I’m
+thinking maybe the prefix is missing in the script path in the code?
+</blockquote>
+
+<p>github issue here: <a href="https://github.com/smcameron/space-nerds-in-space/issues/177">https://github.com/smcameron/space-nerds-in-space/issues/177</a>.
+
+<blockquote>
+If I look into /usr/share/snis/luascripts I only have 7 scripts and I do not
+have the SAVING-PLANET-ERPH.LUA for instance, are some missions missing from
+make install? (It would be good if missions could be separated from other
+luascripts in some way, so that we can know which scenarios are available to
+play and which scripts are just testing or tools)
+</blockquote> 
+
+<p>github issue here: <a href="https://github.com/smcameron/space-nerds-in-space/issues/178">https://github.com/smcameron/space-nerds-in-space/issues/178</a>.
+
+<blockquote>
+Is there any recommendation on controls? I expect a joystick for weapon control
+would come in handy, are there other posts which profit from specific control
+devices
+</blockquote> 
+
+<p>Joystick actually doesn't work that well for weapons, kind of hard to aim.
+Mouse works better. Joystick or HOTAS works pretty well for NAV, rudder pedals
+too. Config is in share/snis/joystick_config.txt
+
+<p>Mostly, keyboard and mouse should be sufficient.
+
+<blockquote>
+The first time I tried to build the AUR package it failed on a cp of the TTS
+script, saying bin dir did not exists. I’m thinking this is some random problem
+depending on the order the make threads are run.
+</blockquote>
+
+<p>github issue here: <a href="https://github.com/smcameron/space-nerds-in-space/issues/176">https://github.com/smcameron/space-nerds-in-space/issues/176</a>
+(see 2nd comment... that you wrote, of course.)
+
+<blockquote>
+The liberapay account is broken since they changed money operator and you did not configure the new one (it’s more like their money operator ditch them...)
+</blockquote>
+
+<p>Huh. Nobody's ever tried to use that as far as I know. I'll have to look into it.
+
+<blockquote>
+I have a github account so I can open issues if needed.
+</blockquote>
+
+<p>I noticed. :)
+<hr>
+<p><b>smcameron 17 Jan 2019, 00:40</b>
+<blockquote>
+The liberapay account is broken since they changed money operator and you
+did not configure the new one (it’s more like their money operator ditch them…)
+</blockquote>
+
+<p>Ok... I think it should be fixed now. Patreon also works.
+<hr>
+<p><b>MCMic 17 Jan 2019, 10:37</b>
+<blockquote>
+    Ok... I think it should be fixed now. Patreon also works.
+</blockquote>
+<p>Yeah it worked, but the way liberapay works is a bit weird now, this is the fist time I use it since their problem with mangopay…
+<blockquote>
+Joystick actually doesn't work that well for weapons, kind of hard to aim. 
+</blockquote>
+
+<p>Surprising. I’ll have to test.
+<blockquote>
+Mouse works better. Joystick or HOTAS works pretty well for NAV, rudder pedals too. Config is in share/snis/joystick_config.txt
+</blockquote>
+<p>
+Yeah I saw that I’ll hack into it as soon as I get my hand on a joystick. (I
+only have a fighting game joystick right now, does not seem appropriate . . .
+<a href="https://www.amazon.com/HORI-Real-Arcade-Pro-PlayStation-4/dp/B00SULMRI4">https://www.amazon.com/HORI-Real-Arcade-Pro-PlayStation-4/dp/B00SULMRI4</a>.
+<blockquote>
+    Mostly, keyboard and mouse should be sufficient.
+</blockquote>
+
+<p>Ok, but I felt like putting a bit different controls on each post to make them stand out from each other.
+<p>From what I’ve computed Weapons would need only joystick (or mouse),
+Engineering only mouse (or tactile), and Comms could have only keyboard (if I
+find a way to click those buttons from keyboard. And a real Red alert button
+would be extra cool).
+
+<p>I started to hack together a project to build an ISO for playing Space Nerds In Space from a USB stick (or live CD):
+<a href="https://gitlab.com/MCMic/snislive">https://gitlab.com/MCMic/snislive</a>
+<p>It works when built on my computer but I’m trying to get gitlab CI to build it for me and put the ISO for download.
+<p>The ISO is 800Mo and uses LXDE.
+<p>There is a slight bug with text rendering in terminals, not sure where that comes from.
+<p>The game launches and works fine. Only real problem I had is no wifi on my
+computer which requires a broadcom driver only available in the AUR (not easy
+to install AUR packages in the ISO, plus this one is non-free so I think it
+would not be legal).
+<p>I also had some differences on where some widgets show
+up in the game, making things overlap on the engineering screen. Not sure if
+that’s from the resolution difference or GTK configuration or whatever.
+<hr>
+<p><b>smcameron » 17 Jan 2019, 15:55</b>
+<blockquote>
+<blockquote>
+Ok... I think it should be fixed now. Patreon also works.
+</blockquote>
+<p>Yeah it worked, but the way liberapay works is a bit weird now, this is the fist time I use it since their problem with mangopay…
+</blockquote>
+
+
+<p>I noticed some money showed up in my paypal, presumably you did that. Thank you very much!
+<blockquote>
+<blockquote>
+Joystick actually doesn't work that well for weapons, kind of hard to aim. 
+</blockquote>
+Surprising. I’ll have to test.
+<blockquote>
+Mouse works better. Joystick or HOTAS works pretty well for NAV, rudder pedals too. Config is in share/snis/joystick_config.txt
+</blockquote>
+Yeah I saw that I’ll hack into it as soon as I get my hand on a joystick. (I only have a fighting game joystick right now, does not seem appropriate . . .
+<a href="https://www.amazon.com/HORI-Real-Arcade-Pro-PlayStation-4/dp/B00S">https://www.amazon.com/HORI-Real-Arcade-Pro-PlayStation-4/dp/B00S</a>
+</blockquote>
+
+<p>I have used "Thrustmaster T16000M FCS Flight Pack" that I got cheap as an
+opened box from Fry's successfully as well as the "HOTAS Warthog" (not mine)
+though that one is quite expensive. One thing I should work on is the game
+assumes all joystick buttons are momentary switches, but sometimes there can be
+toggle switches like on HOTAS Warthog, and the game still treats them as
+momentary.
+
+<blockquote>
+<blockquote>
+Mostly, keyboard and mouse should be sufficient.
+</blockquote>
+
+Ok, but I felt like putting a bit different controls on each post to make them
+stand out from each other.  From what I’ve computed Weapons would need only
+joystick (or mouse), Engineering only mouse (or tactile), and Comms could have
+only keyboard (if I find a way to click those buttons from keyboard. And a real
+Red alert button would be extra cool).
+</blockquote>
+
+There is some code to enable custom built control panels, however it is not
+well exercised, so probably has some missing features. There is a little
+library in <a href="https://github.com/smcameron/space-nerds-in-space/blob/master/snis-device-io.h">snis-device-io.h</a>
+and <a href="https://github.com/smcameron/space-nerds-in-space/blob/master/snis-device-io.c">snis-device-io.c</a>
+and an example of using them
+in <a href="https://github.com/smcameron/space-nerds-in-space/blob/master/device-io-sample-1.c">device-io-sample-1.c</a>.
+The idea is you build a little control panel using
+(say) an arduino and write a little program to communicate with your arduino
+via the serial port to poll the state of control panel buttons, toggle
+switches, potentiometers or whatever you dream up in the way of controls, and
+then translate this state into actions transmitted to the game as defined by
+snis-device-io.* The little library takes care of setting up a socket to
+communicate with the game via snis_device_io_setup(), and you transmit actions
+to the game via snis_device_io_send(). At this point, the traffic is one-way --
+that is there is no information from the game sent back to the custom control
+panels -- which would mean creating an engineering screen with a bunch of LEDs
+to show power and coolant status would not be possible with the current code,
+though it could be expanded of course -- there just isn't demand for it (except
+my own demand, which has so far not been strong enough.) The farthest I got in
+the way of building a control panel is one time I made torpedos be fire-able
+via a toggle switch and an arduino: <a href="https://www.youtube.com/watch?v=w6vwbhHMmI4">https://www.youtube.com/watch?v=w6vwbhHMmI4</a>
+
+
+<blockquote>
+I started to hack together a project to build an ISO for playing Space Nerds In Space from a USB stick (or live CD): 
+<a href="https://gitlab.com/MCMic/snislive">https://gitlab.com/MCMic/snislive</a>
+It works when built on my computer but I’m trying to get gitlab CI to build it for me and put the ISO for download.
+The ISO is 800Mo and uses LXDE.
+</blockquote>
+
+<p>Cool!
+<blockquote>
+<p>There is a slight bug with text rendering in terminals, not sure where that comes from.
+ <p>The game launches and works fine. Only real problem I had is no wifi on my
+computer which requires a broadcom driver only available in the AUR (not easy
+to install AUR packages in the ISO, plus this one is non-free so I think it
+would not be legal).
+
+<p>I also had some differences on where some widgets show up in the game,
+making things overlap on the engineering screen. Not sure if that’s from the
+resolution difference or GTK configuration or whatever.
+
+</blockquote>
+
+<p>In general, I have found that it's ok for one or two stations to use wifi,
+but generally things work better with a wired setup. As for things rendering
+weirdly, at different resolutions, that is quite possible. It should detect the
+aspect ratio, and make some crude adjustments, but it might not be ideal. If
+you look in snis_launcher, line 25, you can see some different aspect ratios.
+Really though, the aspect ratio handling is kind of hacky, and the positioning
+of widgets on the screen is also pretty hacky. It's kind of a hard problem.
+<hr>
+
+<p><b>MCMic 17 Jan 2019, 17:00</b>
+<blockquote>
+    I noticed some money showed up in my paypal, presumably you did that. Thank you very much!
+</blockquote>
+
+<p>You’re welcome! It’s supposed to be a yearly donation cause of how liberapay works. We’ll see in one year if I’m still playing snis and if liberapay is still existing ^^
+
+<blockquote>
+There is some code to enable custom built control panels, however it is not
+well exercised, so probably has some missing features. There is a little
+library in snis-device-io.h and snis-device-io.c and an example of using them
+in device-io-sample-1.c. The idea is you build a little control panel using
+(say) an arduino and write a little program to communicate with your arduino
+via the serial port to poll the state of control panel buttons, toggle
+switches, potentiometers or whatever you dream up in the way of controls, and
+then translate this state into actions transmitted to the game as defined by
+snis-device-io.* The little library takes care of setting up a socket to
+communicate with the game via snis_device_io_setup(), and you transmit actions
+to the game via snis_device_io_send(). At this point, the traffic is one-way --
+that is there is no information from the game sent back to the custom control
+panels -- which would mean creating an engineering screen with a bunch of LEDs
+to show power and coolant status would not be possible with the current code,
+though it could be expanded of course -- there just isn't demand for it (except
+my own demand, which has so far not been strong enough.) The farthest I got in
+the way of building a control panel is one time I made torpedos be fire-able
+via a toggle switch and an arduino: https://www.youtube.com/watch?v=w6vwbhHMmI4
+</blockquote>
+
+
+<p>Nice one!
+<p>I’m not good with electronics and low-level stuff like arduino.
+<p>If I manage to play I will probably give feedback here and show what we used for input.
+<blockquote>
+In general, I have found that it's ok for one or two stations to use wifi, but generally things work better with a wired setup.
+</blockquote>
+
+<p>Ok, I’ll have to hunt for ethernet cables as well then.
+
+<blockquote>
+As for things rendering weirdly, at different resolutions, that is quite
+possible. It should detect the aspect ratio, and make some crude adjustments,
+but it might not be ideal. If you look in snis_launcher, line 25, you can see
+some different aspect ratios. Really though, the aspect ratio handling is kind
+of hacky, and the positioning of widgets on the screen is also pretty hacky.
+It's kind of a hard problem.
+</blockquote>
+
+<p>I did notice some weirdness and problems in the widgets placements, I think at some point I’ll try to see if I can help on this front.
+
+<p>New question:
+<p>I got an old computer (Thinkpad X200) with Xubuntu 18.04 on it. The game builds fine but then gives a black screen instead of the window content.
+<p>I looked at the output and it says GLSL 1.30 is not supported by my computer.
+<p>I checked and it’s true, this hardware does not support OpenGL 3 and newer.
+<p>Is there any hope around this problem or is it impossible to render the game on such a computer?
+<p>(I used make update-assets, would it help if I use make models instead? To build the models on the same hardware?)
+</hr>
+<p><b>smcameron » 17 Jan 2019, 21:34</b>
+
+<blockquote>
+<p>New question:
+<p>I got an old computer (Thinkpad X200) with Xubuntu 18.04 on it. The game builds fine but then gives a black screen instead of the window content.
+<p>I looked at the output and it says GLSL 1.30 is not supported by my computer.
+<p>I checked and it’s true, this hardware does not support OpenGL 3 and newer.
+<p>Is there any hope around this problem or is it impossible to render the game on such a computer?
+<p>(I used make update-assets, would it help if I use make models instead? To build the models on the same hardware?)
+</blockquote>
+
+<p>If you run snis_limited_client (menu item 5 in snis_launcher instead of 4),
+then you don't need opengl. However, you should probably only use COMMS,
+SCIENCE, ENGINEERING, and DAMAGE CONTROL, the other screens (NAV, WEAPONS, MAIN
+VIEW, DEMON) will probably not work very well (it won't hurt anything to try
+them, but you'll see that they don't work very well.)
+
+<p>If you notice a red FPS indicator appear in the upper left hand corner of
+the screen, it means things are running a little too slow (it shows up if
+things drop below 29 frames per second). I have seen it show up when using the
+limited client on the login screen, but once past that, ENG, SCI, DAMAGE
+CONTROL, and COMMS seemed to be ok.
+<hr>
+<p><b>MCMic 19 Jan 2019, 11:29</b>
+<p>Regarding Engineering screen:
+
+<p>What does the "Deploy chaff" button does? It’s not explained on the website.
+<p>What does the COMMS PWR slider does? It’s at 0 in preset 1 and yet the COMMS screen seems to work fine.
+<hr>
+<p><b>MCMic » 19 Jan 2019, 11:53</b>
+<p>Regarding additionnal assets downloaded by
+<pre>
+    make update-assets
+</pre>
+, those are the ones in the https://github.com/smcameron/space-nerds-in-space-assets git repository?
+
+<p>If so I think the best solution for me is to package them as an snis-extra-assets-git package in AUR.
+<hr>
+<p><b>MCMic 19 Jan 2019, 13:58</b>
+<p>Finally managed to build the ISO using gitlab CI!
+
+<p>So you can now link to 
+<a href="https://gitlab.com/MCMic/snislive/-/jobs/artifacts/master/browse?job=build">
+https://gitlab.com/MCMic/snislive/-/jobs/artifacts/master/browse?job=build</a>
+which
+redirects to the artifacts of the latest sucessful build.
+
+<p>I did not try the ISO made by gitlab yet but I see no reason why it would differ from what I build locally.
+<hr>
+<p><b>smcameron » 19 Jan 2019, 14:31</b>
+<blockquote>
+<p>Regarding Engineering screen:
+
+<p>What does the "Deploy chaff" button does? It’s not explained on the website.
+<p>What does the COMMS PWR slider does? It’s at 0 in preset 1 and yet the COMMS screen seems to work fine.
+</blockquote>
+
+<p>So on weapons, if you point the guns at an enemy that is within range
+(spinning arrow thingy is red, not blue) and press the 'N' key, and have
+missiles remaining, it fires a homing missile (N is for Nuke) at them. Enemies
+can also fire homing missiles at you. When that happens, it is pretty tough to
+survive, and to try to make it somewhat more survivable, Comms will get a
+flashing red warning in the middle of the screen about "MISSILE LOCK ON
+DETECTED!" If COMMS shouts out and engineering reacts quickly enough,
+engineering can DEPLOY CHAFF, which will have a good chance of throwing the
+incoming missile off target and save the day. So that's what CHAFF does. If the
+enemy missiles turn out to be too potent and demoralizing you can go to the
+DEMON screen and type in "SET MISSILE_FIRE_CHANCE = 0" and the enemies will
+never fire any missiles.
+
+<p>COMMS PWR does not do anything, actually.
+
+<p>That being said, there is an aim-able comms antenna that is normally
+disabled (that is, no aiming is required by default). If you go to the DEMON
+screen, there's a lua script, ENABLE_ANTENNA.LUA and DISABLE_ANTENNA.LUA
+
+<p>When antenna is enabled, there is a new arrow on the NAV screen showing
+which way the antenna is pointed. It can only point in a half sphere at the
+front half of the ship. If you try to communicate with something that is not
+close by, say a distant starbase, you have to point the antenna towards it.
+This means your ship has to be pointing at least kind of towards it and not
+away from it, as the antenna cannot point towards the rear of the ship. Comms
+is "attenuated" based on (iirc) the dot product of the vector towards the
+object you're communicating with and the vector of the antenna aim. To aim the
+antenna, say at a starbase, first ask SCIENCE for the BEARING and MARK to the
+target. Say it's bearing 250 mark -79. Then, use the computer with a command
+like "/computer antenna 250 -79". The computer will point to this bearing, and
+maintain aim at this point so long as the ship is roughly oriented such that
+that bearing/mark is within the front hemisphere of the ship. If the ship
+points mostly away from the target, then the antenna will not be able to
+maintain aim, and signal quality will suffer or go to zero. If the aim is bad
+enough, your message will get dropped entirely, or, may be "distorted", meaning
+some fraction of characters will be replaced with an asterisk. But, overall, I
+found that it's sort of hard enough to tell what the hell is happening when
+comms is working perfectly, and making comms degrade does not make the game
+more fun, and it can be difficult to tell the difference between COMMS not
+working well because the antenna is not well aimed vs. COMMS not working
+because of a bug in the program. It seemed more frustrating than fun. So this
+feature is turned off by default.
+
+<p> That has nothing to do with comms power though... which comms power doesn't
+do anything because I couldn't really figure out something good for it to do,
+and realistically, a radio just doesn't need that much power to begin with. If
+you have a good idea about what comms power ought to do, let me know.
+<hr>
+<p><b>smcameron 19 Jan 2019, 14:34</b>
+
+<blockquote>
+Regarding additionnal assets downloaded by
+<pre>
+        make update-assets
+</pre>
+
+, those are the ones in the https://github.com/smcameron/space-nerd ... ace-assets git repository?
+
+<p>If so I think the best solution for me is to package them as an snis-extra-assets-git package in AUR.
+</blockquote>
+
+<p>No, the web server has more assets than are in that github repo. I made the
+web server because git is not especially good for storing assets and I realized
+if I continued to use git for that, I would soon use up my allocation of free
+space on github.
+
+<hr>
+<p><b>smcameron 19 Jan 2019, 14:34</b>
+
+<blockquote>
+<p>Finally managed to build the ISO using gitlab CI!
+
+<p>So you can now link to https://gitlab.com/MCMic/snislive/-/job ... ?job=build which redirects to the artifacts of the latest sucessful build.
+
+<p>I did not try the ISO made by gitlab yet but I see no reason why it would differ from what I build locally.
+</blockquote>
+
+<p>Cool!
+
+<p>Does this auto-sync with my repo on github? I guess it probably does.
+
+<p>I have prepared a patch to link to this, but I'm not going to do it until
+you at least try out the ISO image. I mean, *someone* should try it before we
+inflict it upon the world.
+<hr>
+<p><b>MCMic 19 Jan 2019, 15:34</b>
+
+<blockquote>
+Does this auto-sync with my repo on github? I guess it probably does.
+</blockquote>
+
+<p>It is manual built only, to avoid taking too much power and spacedisk of gitlab for no reason.
+But when built, it builds the AUR package which pulls latest the commit from github master. The name of the file contains the date it was built on.
+
+<blockquote>
+I have prepared a patch to link to this, but I'm not going to do it until
+you at least try out the ISO image. I mean, *someone* should try it before we
+inflict it upon the world.
+</blockquote>
+
+
+<p>Fair enough.
+<p>I’ll keep you updated when I tested it.
+<p>You may want to link to the project webpage as there are some
+information/instruction as well as the download link, not sure.
+
+<p>Also if you are editing the website source, it would be good to fix the
+width of the webpage which is way larger than my browser, and this is
+extra-annoying from mobile as well. From what I’ve seen the best fix is to put
+"overflow:auto" as css style for the pre tags. It’s those pre blocks which are
+larger than anything else.
+
+<p>No, the web server has more assets than are in that github repo. I made the
+web server because git is not especially good for storing assets and I realized
+if I continued to use git for that, I would soon use up my allocation of free
+space on github.
+
+<p>Hum. That is not practical for packaging, the PKGBUILD needs to be exaustive
+regarding source of data and their checksum (well git repos are an exception
+regarding checksum).  Could you provide those in a single archive so that it
+can be added as a source of the package?
+<p>And if the github repo with assets is obsolete you could mention that in its readme.
+
+<blockquote>
+That has nothing to do with comms power though... which comms power doesn't
+do anything because I couldn't really figure out something good for it to do,
+and realistically, a radio just doesn't need that much power to begin with. If
+you have a good idea about what comms power ought to do, let me know.
+</blockquote>
+
+
+<p>Intuitively I would have expected a range setting like the one for the
+radar, which requires more power to talk to far starbases.  But maybe it makes
+no sense and radioing far does not take more power, just more time?
+
+<p>In the end the solution may just be to remove the comms pwr bar from engineering.
+<hr>
+<p><b>MCMic » 19 Jan 2019, 15:38</b>
+<p>Note: I can add you to the project in gitlab and give you enough rights to trigger builds if you want.
+You can log into gitlab.com using your github account and it will create you an account automatically.
+<hr>
+<p><b>smcameron 19 Jan 2019, 20:13</b>
+
+<blockquote>
+<p>...
+<p>Also if you are editing the website source, it would be good to fix the
+width of the webpage which is way larger than my browser, and this is
+extra-annoying from mobile as well. From what I’ve seen the best fix is to put
+"overflow:auto" as css style for the pre tags. It’s those pre blocks which are
+larger than anything else.
+</blockquote>
+
+<p>My web-site editing skills are pretty rudimentary (which i how I like them). I'll poke at it some, but don't expect much.
+
+<blockquote>
+<blockquote>
+<p>No, the web server has more assets than are in that github repo. I made the
+web server because git is not especially good for storing assets and I realized
+if I continued to use git for that, I would soon use up my allocation of free
+space on github.
+</blockquote>
+
+<p>Hum. That is not practical for packaging, the PKGBUILD needs to be
+exaustive regarding source of data and their checksum (well git repos are an
+exception regarding checksum).  Could you provide those in a single archive so
+that it can be added as a source of the package?
+And if the github repo with assets is obsolete you could mention that in its readme.
+</blockquote>
+
+<p>Hmm, a single archive defeats the purpose, which is to not download things
+more than necessary. Checksum (md5sum) and locations of assets are here:
+https://spacenerdsinspace.com/snis-assets/manifest.txt
+
+<p>Prepend https://spacenerdsinspace.com/snis-assets/ before all the paths listed in that file.
+
+<p>Or, don't include the assets in the package, and include
+util/snis_update_assets.sh in the package, then run that script to fetch the
+assets separately. The whole point is the assets change from time to time, and
+you shouldn't have to re-install just to get new assets, and you shouldn't have
+to download the assets you already have.
+
+<p>Or, you could make your own archive, by running snis_update_assets.sh and packing up whatever it grabs.
+<hr>
+<p><b>MCMic 19 Jan 2019, 20:37</b>
+<blockquote>
+Or, don't include the assets in the package, and include
+util/snis_update_assets.sh in the package, then run that script to fetch the
+assets separately. 
+</blockquote>
+
+<p>The build step of the package is supposed to run offline, as far as I know. I’ll see what exactly is missing and if I can think of an easy solution.
+
+<p>I tested the ISO from gitlab.com and it works as fine as the one built locally.
+<p>I failed to boot it from an UEFI computer but that may be my inexperience with UEFI, I’m gonna try some more.
+<p>I also noticed I have no sound once booted from the USB stick. I may need to include pulse audio, I’m gonna look into that.
+
+<p>[EDIT]Hum, in the end the solution on the UEFI computer was just to wait, it
+seems the black screen I get is the boot menu, and waiting for long enough it
+just starts the first menu option and boots the system. And it had sound, so
+there is sound in the system after all. I think I will still add pulseaudio and
+pavucontrol to the iso to be able to set up sound on any setup.
+<hr>
+<p><b>smcameron 21 Jan 2019, 21:48</b>
+
+<p>MCMic, I sent you an email with a link to an archive of all the SNIS assets.
+In case you didn't see it it's here:
+https://spacenerdsinspace.com/snis-asset-archives/
+<hr>
+<p><b>MCMic 24 Jan 2019, 13:56</b>
+What is the difference between "disembark" and "eject" passengers? I think I did the wrong one and did not get paid.
+<hr>
+<p><b>smcameron 24 Jan 2019, 16:51</b>
+<p>Heh. I had to look at the code to find out. This is not a very frequently exercised feature, I would say.
+
+<p>I think the difference is that "ejecting" a passenger means delivering them to someplace they weren't intending to go, while "disembarking" them means delivering them where they intended to go. If you disembark passengers, only those intending to go to the starbase you're currently docked at will leave the ship.
+
+<p>If you eject passengers, the ones being ejected at the wrong starbase will deduct money from your wallet in the amount of the fare. You will still get paid for passegers "ejected" at their correct destination. So for passengers ejected at the wrong desitnation, not only you didn't get paid, you got fined. This should probably be made more obvious somehow.
+
+<p>Here's the relevant "disembark" code. sb-&gt;id is the starbase you're currently docked at.
+<pre>
+        for (i = 0; i &lt; npassengers; i++) {
+                if (passenger[i].location == b-&gt;shipid &amp;&amp; passenger[i].destination == sb-&gt;id) {
+                        send_comms_packet(sb, npcname, ch, "  PASSENGER %s DISEMBARKED\n",
+                                        passenger[i].name);
+                        ship-&gt;tsd.ship.wallet += passenger[i].fare;
+                        /* passenger disembarks, ceases to be a passenger, replace with new one */
+                        update_passenger(i, nstarbases);
+                }
+        }
+</pre>
+And here's the relevant "eject" code:
+<pre>
+        for (i = 0; i &lt; npassengers; i++) {
+                if (passenger[i].location == b-&gt;shipid &amp;&amp; passenger[i].destination == sb-&gt;id) {
+                        send_comms_packet(sb, npcname, ch, "  PASSENGER %s DISEMBARKED\n",
+                                        passenger[i].name);
+                        ship-&gt;tsd.ship.wallet += passenger[i].fare;
+                        /* passenger disembarks, ceases to be a passenger, replace with new one */
+                        update_passenger(i, nstarbases);
+                        continue;
+                }
+                if (passenger[i].location == b-&gt;shipid) {
+                        send_comms_packet(sb, npcname, ch, "  PASSENGER %s EJECTED\n",
+                                        passenger[i].name);
+                        /* Player is fined for ejecting passengers */
+</pre>
+The "update_passenger" code looks like this:
+<pre>
+static void update_passenger(int i, int nstarbases)
+{
+        static struct mtwist_state *mt = NULL;
+        if (!mt)
+                mt = mtwist_init(mtwist_seed);
+        character_name(mt, passenger[i].name,  sizeof(passenger[i].name) - 1);
+        passenger[i].location = nth_starbase(snis_randn(nstarbases));
+        do {
+                passenger[i].destination = nth_starbase(snis_randn(nstarbases));
+        } while (passenger[i].destination == passenger[i].location &amp;&amp; nstarbases &gt; 1);
+        passenger[i].fare = compute_fare(passenger[i].location, passenger[i].destination);
+}
+</pre>
+Basically, the passengers get re-used, and placed on random starbases intent on travelling to other different random starbases.
+<hr>
+<p><b>MCMic 24 Jan 2019, 23:53</b>
+<p>Thanks for the explanation.
+
+<p>I feel like fares earned and fines paid should produce some output indeed
+(since the station did tell me it charged me for refuel for instance, when I
+got no output after ejecting passengers I thought I did not get paid. Of course
+this is also because I was testing the game alone and have no crew to monitor
+the money account and such).
+
+<p>I hit a problem with my gitlab built ISO, with all the assets the ISO is now
+more than 1Gio and gitlab.com refuses to host it so it gets trashed…
+<hr>
+<p><b>MCMic 28 Jan 2019, 12:38</b>
+<p>I finally was able to play the game with a whole crew this week-end.
+
+<p>We tried and failed space pox, then went back to saving planet erph which we
+won, then tried space pox a few other times and lost.
+
+<p>(spoilers about SNIS missions)
+<p>First time we missed the box, mined the derelict of the lunear, found
+nothing, went through the wormwhole, did not understand what to do after.  Then
+a few times we sent the mining bot on the box and died quickly after.
+Then we used the tractor beam to take the box through the wormwhole with us and
+it worked. We had the vaccine.  We were not sure where to go, so we tried to
+hail the starbase to get repairs and fuel, and information.
+There was a weird bug here, the starbase appeared as SB-00 but if we hailed
+SB-00 it would answer that we are way too far to dock, while we were just next
+to it. Clearly I think the SB-00 we were hailing and the one next to us was not
+the same one.  So after trying a few things we finally decided to go back
+through the wormwhole but we got short on fuel at that time. In a desperate
+move we hailed a starbase (sb-00 I guess) and asked to be tracked. It worked,
+and we managed to dock, and to see that this starbase was actually next to the
+Bonx planet we’ve been searching, but at that point the last member of the
+icarus died. We tried to search a bit for icarus around Bonx and did not see
+it. (But do not tell me where it is we will try again sometime)
+
+<p>Despite the station hailing bug, the main problem we had was how to know
+where an object which is not in range of scanners is. For instance the Bonx
+planet, or the Icarus station, how do we know it’s our side of the wormwhole,
+and how do we know where it is. We tried hailing Bonx or Icarus with no
+success.  Actually it was the same for planet erph, we found it because we
+could actually see it from the window, but it was kind of random «Hey here’s a
+planet let’s try to see if it’s this one».
+<p>So either we missed a way of doing that, or the game would need something
+like this, maybe being able to ask starbases for close planets and other
+starbases names/positions?
+
+<p>We had a problem with TTS, I activated it only on the server/main screen
+which was plugged into the sound system, but some things were silent, like
+mining bot deployment, or computer answers. This means we were basically unable
+to use the computer since it did not answer. (but things like "docking system
+engaged" was correctly spoken) So what did I do wrong, should TTS be checked on
+all stations?
+
+<p>Speaking of the computer, it feels a bit like cheating since we can ask it
+do drive for us, mostly. So I was thinking maybe this is what should be
+controlled by the power slider for COMMS screen. A low power computer would
+only be able to give manifest and hail stuff, while a fully powered can set
+courses.
+
+<p>We also missed a way to add currently selected object as a waypoint in the
+Science screen. And in some cases the SCI arrow was not there in the Navigation
+screen, not sure why (even with a selected object, which is why we tried to add
+a waypoint for it I think. But maybe this was the buggy sb-00 again and it’s
+the same bug).
+
+<p>All in all the game is quite fun, I think the least interesting job is
+engineering screen, since he goes from doing nothing because there’s nothing to
+do to doing nothing because there’s not much he can do giving the "all failure"
+situation. (at least at our level of playing).  A really good improvement would
+be to allow the engineer to add presets of his own. This would allow him to
+prepare presets for fighting, warping, that kind of stuff and ajust them as we
+go. We did not use the chaff and maybe we should have, not sure.
+
+<p>The COMMS screen was busy enough so I do not see the need for this RTS
+feature (we did not try it). From what I’ve seen in your video about it this
+feels a bit like if the comm guy was playing something else on his phone while
+on the bridge. The idea of guiding a fleet of NPC ships around us would be
+something else though ^^. Are ally ships something we can do in scenarios?
+
+<p>An other question, is there any way to go back to initial solarsystem state
+once a mission is started? After winning saving planet erph, we docked at the
+starbase, which told us to go away because it was zarkon, so we went away but
+there was nothing in the solar system anymore because of the mission beginning
+clear. As I did not know how to do that we just played missions from this point
+on.  The mainmenu is quite handy and there should be a way of launching it
+without going demonscreen. (maybe a key binding on mainscreen?)
+
+<p>I will send a patch with a joystick configuration for a second joystick we used for weapons. We never had the case where we used the wavelength feature, is it useful sometimes? It always felt like fights were too short to be able to look into that. Except the zarkon but we had most of them with missiles.
+Is there any way to buy torpedos and missiles?
+<p>Torpedos are really hard to use.
+<p>Is it possible to take down a starbase?
+
+<p>When COMMS screen puts the science screen on the main screen we do not see the details of the selected object nor the 3D view of it. Is that known/expected?
+<p>Also not sure if this is possible but it would come in handy if the cursor
+of the displayed screen was shown, allowing the scienctific to point at things
+while explaining stuff for instance (But I get that this might be impossible by
+design).
+<hr>
+<a href="history-4.html">CONTINUED ON PAGE 4</a>.

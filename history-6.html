@@ -1,0 +1,1063 @@
+
+
+<p>This is a PAGE 6 of a copy of a <a href="https://forum.freegamedev.net/viewtopic.php?f=22&t=3710">thread
+on freegamedev.net</a>. Once around 2010 or so, I lost a similar thread over there for my
+other little game, Word War vi when the forum database was lost, so I created this as a backup
+in case something similar happens again.
+
+<p><a href="history-5.html">BACK TO PAGE 5</a>
+
+<hr>
+<p><b>smcameron 04 Dec 2019, 15:05</b>
+
+<p>I haven't tried this myself, but I have just received word from Dan Hunsaker
+that SNIS runs fine at 30 FPS on a Raspberry pi 4, including the weapons screen
+and even hybrid main/nav (probably the most demanding.) This is pretty cool
+news. May be some thermal issues, so you may want/need a good heatsink and/or
+fan setup (I'm not up to speed on Raspberry Pi 4 stuff, so I can't really be
+more specific.) The screen resolution was 720p (1280×720). Also this was
+running everything on the pi, (snis_server, snis_client, ssgl_server,
+snis_multiverse) not only snis_client. That being said, snis_client takes the
+lion's share of the resources, but still interesting to see the Raspberry Pi 4
+performing decently as a general purpose computer, including graphics and
+network heavy apps.
+
+<p>At 1080p, (1920x1080), FPS drops into the 10 FPS range (not really
+acceptable), and at 720p there's the occasional drop into the 28 or 29 FPS at
+720p (not ideal but acceptable) and this might not even happen if you only run
+snis_client, and not snis_server and ssgl_server and snis_multiverse on the
+RPI.
+
+<p>If anyone else can confirm these results that'd be cool.
+<hr>
+<p><a href="https://www.youtube.com/watch?v=wdy4ICZqc68"><img src="https://img.youtube.com/vi/wdy4ICZqc68/hqdefault.jpg"></a>
+<p><a href="https://www.youtube.com/watch?v=wdy4ICZqc68">https://www.youtube.com/watch?v=wdy4ICZqc68</a>
+<p>I finally got a Raspberry Pi 4B to try for myself. The summary is that the
+Raspberry Pi 4B with 4GB RAM is fine for the less intensive screens like
+NAVIGATION, ENGINEERING, DAMAGE CONTROL, SCIENCE, and COMMS, it's still not
+really good enough for the MAIN VIEW, WEAPONS or DEMON screens, despite a few
+optimistic reports I'd received from users. The video is long and boring,
+mostly taken up with installation, which went pretty smoothly for the most
+part. Then I try it out at first at the default resolution of 1080p and then at
+720p to see if that makes performance good enough. The "easy" screens seem to
+be fine at either 1080p or 720p (maybe NAV drops to 28 FPS on 1080p sometimes),
+and the "hard" screens are terrible at 1080p and slightly less terrible at
+720p. Oh well.
+<hr>
+<p><b>smcameron » 26 Jan 2020, 01:2</b>
+<p><a href="https://www.youtube.com/watch?v=51ljGNx3px4"><img src="https://img.youtube.com/vi/51ljGNx3px4/hqdefault.jpg"></a>
+<p>Here's a video showing today's progress building physical consoles for Space
+Nerds in Space. Still early stages, but I have basic control of engineering
+more or less working. There's a repo for the hardware design and for the
+portion of code that runs on the arduino in
+https://github.com/smcameron/snis-consoles The code and plans there are still a
+bit hand-wavy and subject to change, but kind of working.
+
+<p>Within the space-nerds-in-space repo, there's a new program, snis_arduino,
+which reads commands from the arduino via usb-serial, and forwards these
+commands to snis_client to make it so. That is invoked like so:
+
+<pre>
+    snis_arduino /dev/ttyACM0
+</pre>
+
+
+<p>Assuming /dev/ttyACM0 is the serial port at which your arduino appears. You
+may have to add your user to the "dialout" group ("sudo adduser username
+dialout") before snis_arduino can successfully open /dev/ttyACM0. You can
+monitor snis_arduino's stderr if it doesn't seem to work.
+
+<p>Of course it's all still very much a work in progress, so I really don't
+expect anyone else to be trying this out at this point (or, realistically,
+ever, ha.)
+<hr>
+<p><b>CapnRobberts 10 Feb 2020, 17:03</b>
+<p>Hello,
+
+<p>I am trying to understand how all the various components of Space Nerds work together, to get a better idea of the system as a whole.
+<p>Can anyone verify that my assumptions are correct or not?
+<p><a href="https://www.beskararmorworks.com/SNIS_system_layout.pdf">https://www.beskararmorworks.com/SNIS_system_layout.pdf</a>
+
+<p>I'm just looking to get a high level idea of what is going on before I dig deeper into it.
+<hr>
+<p><b>smcameron 11 Feb 2020, 02:49</b>
+<p>CapnRobberts, yeah, that looks more or less accurate (by which I mean, I
+didn't notice anything wrong.)
+
+<p>Have you seen this: <a href="http://htmlpreview.github.io/?https://github.com/smcameron/space-nerds-in-space/blob/master/doc/hacking-space-nerds-in-space.html">
+Hacking on Space Nerds in Space</a>? It's a fairly detailed
+description of how all the stuff fits together (maybe you have seen it and
+you're just trying to condense it down to something more digestible).
+
+<p>Feel free to ask any questions. Some of the stuff (esp. multiverse stuff) is
+pretty hacky as it wasn't designed in from the beginning.
+
+<p>For most stuff, you'll only need to mess with snis_client or snis_server.
+
+<p>For Lua scripts, you won't need to touch any of the C code (unless you
+happen to need to do something which is currently not supported by the Lua API.
+If that happens, the first thing to do would be to ask me about it and see if I
+can update the Lua API or figure some way to do it with the existing API.)
+<hr>
+<p><b>CapnRobberts 11 Feb 2020, 03:46</b>
+<p>I had not seen that, I will read it over, thank you.
+
+<p>When the multiverse server is set to autowrangle and starts up snis_server
+instances on its own, I do not see it use the -i option to specify an initial
+lua script. How do mission scripts work across servers/systems? Or how is a
+script preserved if an instance is shutdown then restarted? How would you have
+a mission script work that needed to go from one system to another? Is there
+data storage inside the bridge info on the multiverse server that will let lua
+scripts from one system write data that is readable by scripts in another
+system?
+<hr>
+<p><b>smcameron 11 Feb 2020, 04:50</b>
+<blockquote>
+    CapnRobberts wrote:
+    <P>IHow do mission scripts work across servers/systems? Or how is a script
+preserved if an instance is shutdown then restarted? How would you have a
+mission script work that needed to go from one system to another? Is there data
+storage inside the bridge info on the multiverse server that will let lua
+scripts from one system write data that is readable by scripts in another
+system?  </blockquote>
+
+
+<p>Ha ha. They don't, they're not, you can't* and nope. Lua scripts run
+entirely within a snis_server instance, and one Lua script cannot communicate
+with another Lua script in a different snis_server instance, and if a
+snis_server instance is shut down, the states of any Lua scripts it is running
+are lost.
+
+<p>The idea of multiple solar systems arose initially to solve the problem of
+"I'm bored of seeing these same old planets."
+
+<p>The multiverse system and autowrangler silliness were both hacks tacked on
+later just because I could, and because they're kind of cool, despite the
+problems they bring. My original design only envisioned there being a single
+snis_server instance. In every "real" game I've played with other people, we
+have never even used the warp gates, and always stayed in the same solar system
+(not coincidentally because every Lua script that currently exists for SNIS is
+designed to work with a single solar system.)
+
+<p>Lua scripting itself brings some hard to solve problems. For instance,
+there's no way to checkpoint the game because even if you could check point all
+the non-Lua stuff (which should in theory be possible, but the infrastructure's
+not really there), there's no sane way to capture the state of any running Lua
+scripts, and of course that's related to why it doesn't play well with
+autowrangler.
+
+<p>I went back and forth in my mind for quite some time before adding the
+multiverse/auto-wrangler stuff, because it also brings a lot of potential
+problems. I think I talk about my rationale for including this hackery a little
+bit in <a href="https://www.youtube.com/watch?v=CFBD6WqT14o">this video</a>,
+not that you need to watch that to get the gist of it.
+
+<p>* If you wanted to write a some scenario scripts that use multiple solar
+systems, you could do so but it would require the game master to invoke the lua
+scripts on each snis_server instance manually, and no information could be
+passed from one snis_server to another (except by the game master injecting it
+in some way manually), and if you backtracked and went back to a solarsystem
+you had previously left, you might notice its state had reverted or changed
+from what it was when you last left it esp. if the solarsystem got
+"autowrangled" in the meantime. You could kind of fake some things. For
+example, if you wanted the players to think a ship was chasing them across the
+galaxy, you could write a lua script that would spawn in the chasing ship at
+the warp gate where the players entered a solar system, but it would be up to
+the game master to trigger this script to add the chasing ship into the new
+snis_server (and also up to the game master to delete the chasing ship from the
+old snis_server instance.) This gets to be a little problematic, because the
+game master screen is actually tied to a player ship, and the player ship is
+only communicating with a single snis_server instance at any one time. So the
+game master might need to have multiple player ships under his sole control
+just for the purpose of triggering scripts in snis_server instances that the
+actual players are not currently in. This is I suppose an artifact again of the
+original design only having a single snis_server instance.
+
+<p>At this point I feel I should say that a lot of the "fun" to be found in
+this game (and other games of this type, like Artemis and Empty Epsilon) is to
+be found in the players themselves, not actually in the game code itself.
+There's a role-playing element to it, and if they players aren't that into it
+(which is fine) they're probably somewhat less likely to have a good time, and
+this role-playing nonsense can paper over some of the seams as well.
+
+<p>Another point to bring up is because it is so hard to get a group of people
+together to play, and because invariably after an hour or so, at least one
+person seems to have some place else they need to be, there's very little
+continuity between sessions. So the idea of having some long campaign over many
+sessions where one chain of events leads to another, and there's a long,
+involved story... just doesn't really seem to work. This genre of game seems to
+naturally be best served in small, bite-sized, self-contained chunks that are
+independent of one another.
+
+<hr>
+<p><b>CapnRobberts 11 Feb 2020, 06:01</b>
+<blockquote>
+    smcameron wrote:
+    <p>Ha ha. They don't, they're not, you can't* and nope. Lua scripts run
+entirely within a snis_server instance, and one Lua script cannot communicate
+with another Lua script in a different snis_server instance, and if a
+snis_server instance is shut down, the states of any Lua scripts it is running
+are lost.
+</blockquote>
+
+<p>That makes sense, I wasn't sure if there was some key/value pair data stored
+with the solar system or bridge that a script could use for persistent data or
+not.
+<blockquote>
+    smcameron wrote:
+    <p>Another point to bring up is because it is so hard to get a group of
+people together to play, and because invariably after an hour or so, at least
+one person seems to have some place else they need to be, there's very little
+continuity between sessions. So the idea of having some long campaign over many
+sessions where one chain of events leads to another, and there's a long,
+involved story... just doesn't really seem to work. This genre of game seems to
+naturally be best served in small, bite-sized, self-contained chunks that are
+independent of one another.
+</blockquote>
+
+<p>This is probably why some people wish to play it over the internet ;)
+
+<p>Thank you.
+<hr>
+<p><b>CapnRobberts » 20 Feb 2020, 23:39</b>
+<p>Question regarding Lua Scrips.
+<p>It looks like when you register events that events from only one lua script can be registered at a time.
+I see that all scripts except initialize.lua call clear_all(), and that clears out all the event callbacks.
+This makes sense because it looks like there is only ever one lua_state for the entire server.
+
+<p>Is that correct? are the events registered by initalize.lua cleared out when a mission script or something else is run? If not, how does the event know what script the named function goes with and how does it resolve conflicts?
+<hr>
+<p><b>smcameron 21 Feb 2020, 05:07</b>
+<p>@CapnRobberts
+
+<p>It's been a long time since I wrote that code, so it's possible I might get
+some of the details slightly wrong, but, as I recall...
+
+<p>The callbacks (timers and events) are not tied to specific scripts per se.
+
+<p>There are three variables in snis_server.c that control the lua event and
+timer callbacks:
+
+<p><a href="https://github.com/smcameron/space-nerds-in-space/blob/master/snis_server.c#L761">Link to code</a>
+<pre>
+* lua_timer
+* event_callback
+* callback_schedule
+</pre>
+
+<p>lua_timer is a linked list of registered timer callbacks, with each entry
+containing the name of the lua function to call, the time to call it, and a
+cookie to pass to it.
+
+<p>event_callback is a linked list in which each element contains the name of
+the event, the number of callbacks registered for that event, and an array of
+lua function names to call back when that event occurs. (So more than one lua
+function can be registered for a given event, up to MAXCALLBACKS, which happens
+to be 3, but it could be expanded arbitrarily if need be. See
+snis_event_callback.c)
+
+<p>callback_schedule is a list of callbacks to fire every frame. Each tick of
+the server clock (10Hz) the callback schedule is cleared. As events happen
+during the processing for the server tick callbacks and parameters are added
+into the callback_schedule. IIRC, the lua functions need to be called from the
+thread that set up the lua state (and there is only one lua state in
+snis_server), hence why the schedule.
+(See <a href="http://lua-users.org/wiki/ThreadsTutorial">this re: lua and threads</a>) Any
+threads may add things into the schedule, which is my code, not Lua code.
+Later, in the correct thread, at a particular point in processing a server
+tick, all the indicated lua functions in the schedule get called, then the
+schedule is cleared to get ready for the next server tick.
+
+<p>See the end of move_objects() function in snis_server.c where it calls:
+<pre>
+* fire_lua_timers();
+* fire_lua_callbacks();
+* fire_lua_proximity_checks();
+* send_queued_lua_comms_transmissions();
+</pre>
+
+<p>So if you run one lua script, and it creates some functions, and registers
+for timers or events to call those functions, then you run a second script, and
+that second script does not clear those things, they will still be in effect,
+and you can register multiple callbacks (up to 3) for an event, and I think all
+the timer registrations are independent, so an arbitrary number can fire on a
+given server tick.
+
+<p>See l_register_callback(), l_register_proximity_callback(),
+l_register_timer_callback(), l_comms_channel_listen(), ... I think those are
+the main things in snis_server.c where callbacks get registered.
+
+<p>There are calls to schedule_callbackX (where X is some small integer) that
+occur when any event is detected (e.g. player death). These add things into the
+callback schedule that get fired by move_objects() later in the server tick.
+
+<p>The timer callbacks are one-shot. That is, if you want to repeatedly get
+called back, each callback must re-register itself for the next callback.  I
+think the event callbacks are persistent until something calls clear_all() one
+way or another (though I see in some scripts it re-registers for the callback
+inside the callback, as if they were one-shots. Pretty sure they aren't
+one-shots, and there's no way to clear them other than clear_all(). There
+probably *should* be a way to clear an event callback registration, but
+currently I do not think that there is, other than clear_all().)
+
+<p>Hope that helps.
+
+<p>Edit: as for initialize.lua, there is currently nothing important in there
+(really I think I only made it while I was creating the callback system, so it
+was ok for testing -- printing things out when a few events happen). But if
+those get cleared out, it's no matter, because there's nothing in there anyway.
+It does not appear to get run each time after clear_all(). So basically, you
+can ignore initialize.lua, it doesn't do anything important and isn't really
+useful in its current form. It *might* be useful if it were called after
+clear_all(), but... if I haven't really needed it yet, it's doubtful. It
+appears to be an idea that I had while making the lua scripting system which
+never got very far.
+
+<p>Edit again: I created an issue to track these Lua API weirdnesses:
+<a href="https://github.com/smcameron/space-nerds-in-space/issues/250">https://github.com/smcameron/space-nerds-in-space/issues/250</a>
+<hr>
+<p><b>CapnRobberts 21 Feb 2020, 06:06</b>
+<p>So if you have two scripts that have the same function name, the later
+loaded one will blow out previous functions of the same name since everything
+runs within the same lua state. I think I get it.
+
+<p>Thanks.
+<hr>
+<p><b>smcameron 21 Feb 2020, 06:11</b>
+<p>Yes, I think you got it.
+<hr>
+<p><b>smcameron 22 Feb 2020, 23:48</b>
+<p>Now you can set a per-client tweakable variable on the console,
+MAIN_VIEW_AZIMUTH_ANGLE, and with multiple main view clients, you can construct
+a widescreen view. About +75 or -75 degrees for the left and right views.
+
+<p><a href="https://www.youtube.com/watch?v=xqjor36kdsM"><img src="https://img.youtube.com/vi/xqjor36kdsM/hqdefault.jpg"></a>
+<hr>
+<p><b>MCMic 23 Feb 2020, 12:06</b>
+<p>That’s a nice idea!
+
+<p>I’m not sure I’ll have enough hardware for a multiple windows setup anytime soon though.
+<hr>
+<p><b>MCMic 23 Feb 2020, 12:10</b>
+<p>Was looking into porthole windows, to add a small side window, then realized the door of a busted washing machine would probably be perfect to build that . . .
+<hr>
+<p><b>smcameron 23 Feb 2020, 15:13</b>
+<blockquote>
+    MCMic wrote:
+    <p>That’s a nice idea!
+
+    <p>I’m not sure I’ll have enough hardware for a multiple windows setup anytime soon though.
+</blockquote>
+
+
+<p>Me either. Well, I do have a couple Raspberry Pi 4's around, and a have a
+couple monitors for those ordered, so I suppose with my desktop unit and those
+2, I could set up a 3 monitor system pretty soon (although the Raspberry Pis
+aren't really fast enough). And really to do it right, you need 3 projectors
+and 3 big screens and... a house to put it all in. So... Dammit. I can't even
+use my own software to full effect.
+<hr>
+<p><b>smcameron » 23 Feb 2020, 15:29</b>
+<p>Hmm, big TVs are getting pretty cheap, here's a 55 inch TV for $299.
+<p>https://www.amazon.com/TOSHIBA-50LF711U20-50-inch-Ultra-Smart/dp/B07S8XNWWF/ref=sr_1_5?keywords=60+inch+tv&amp;qid=1582468002&amp;sr=8-5
+
+<p>Get 3 of those, put one in a corner, and two on the walls on either side of it... Hmm.
+
+<p>No. I'm not doing that.
+<hr>
+<p><b>CapnRobberts 23 Feb 2020, 23:42</b>
+<p>Would you really want to push 4k OpenGL through a Pi4?
+<hr>
+<p><b>smcameron » 24 Feb 2020, 00:42</b>
+<blockquote>
+    CapnRobberts wrote: 
+    <p>Would you really want to push 4k OpenGL through a Pi4?
+</blockquote>
+
+<p>Of course not. If you read upthread, you'll see that I tested the Raspberry
+Pi 4 with 4Gb and performance is really only acceptable on the simpler screens,
+and then only at 1080p. Even at 720p, the Raspberry Pi isn't really up to the
+task of the main screen or weapons screen.
+
+<p>But if I had the stuff lying around, and nothing else to try it with, why
+wouldn't I try it out just to get a sensation of sort of what it might be like
+(disregarding the poor expected performance.) Most of the fun I get out of this
+game is dinking around with stupid crap rather than actually playing it.
+<hr>
+<p><b>smcameron 28 Feb 2020, 15:22</b>
+<p>I gave the weapons screen the same treatment as the main screen. Now you can
+set weapons_azimuth_angle via the demon screen. +/- 75 degrees seems to work
+alright for setting up a left and right view. It's not perfect, there's some
+near-plane clipping of the gun turret happening in the left and right screens.
+You can't really set up a two screen setup with the guns in the middle because
+the gauges only render if the azimuth angle is zero.
+<p><a href="https://youtu.be/NEFGWxXMHJM"><img src="https://img.youtube.com/vi/NEFGWxXMHJM/hqdefault.jpg"></a>
+<hr>
+<p><b>MCMic 10 Mar 2020, 11:45</b>
+<p>On 2020-04-04, I will be animating a SNIS session in Lyon, France:
+<p><a href="https://pretalx.jdll.org/jdll2020/talk/ZPJD9R/">https://pretalx.jdll.org/jdll2020/talk/ZPJD9R/</a>
+
+<p>This will be part of the event <a href="https://jdll.org/">https://jdll.org/</a>
+
+<p>Most likely I will only be able to accept 6 players, I looked into having
+two crews playing together, but most likely I will be short on computers for
+this.  Maybe I will try it anyway if a few players have their own laptop, I
+need to see the room first to get an idea what it will be like.
+<hr>
+<p><b>smcameron 10 Mar 2020, 15:48</b>
+<p>@MCMic, Sounds cool, I hope it goes well. I'll try not to break things
+before then. If you like, I could mention this on https://bridgesim.net, there
+are some French speaking people there, though I do not know if they are near
+Lyon. (But if you can only accept 6 people, perhaps you don't need any help
+rounding up a crew.)
+
+<p>I have a patch to move the solar system center to (0,0,0) which helps a
+little with the weapons jittering (but doesn't fix it completely). But it
+breaks the 2D demon screen a little bit, so I have another patch to remove the
+2D demon screen altogether, and then working on more patches to make the 3D
+demon screen do everything that the 2D demon screen can do. One thing that the
+2D demon screen is good at that the 3D demon screen is not very good at is
+manually creating a whole bunch of objects in a particular arrangement. I
+haven't figured out a way around that. This capability is nice for creating Lua
+scripts, you can just place a bunch of objects manually, then use the
+"enscript" command to save the layout to a Lua script, which you can then
+modify. Saves you from having to create an algorithm to place things. So I've
+been sitting on those patches while I try to get them into acceptable shape and
+make sure they don't break anything. Still not there yet.
+
+<p>I suppose I should hold off on committing those two big changes until after 2020/04/04.
+
+<p>And that probably goes for changes related to the weapons and damage system
+mentioned in this issue: <a href="https://github.com/smcameron/space-nerds-in-space/issues/243">https://github.com/smcameron/space-nerds-in-space/issues/243</a> 
+Or at least such changes should be hidden behind a tweakable variable.
+
+<p>(In case I do break things, you could always use an older commit if need be,
+however in that case, you run the risk that the extra assets might from
+spacenerdsinspace.com might not match up exactly right (not that they change
+that much, but they do change from time to time.))
+<hr>
+<p><b>MCMic 10 Mar 2020, 18:32</b>
+<blockquote>
+    smcameron wrote:
+    <p>@MCMic, Sounds cool, I hope it goes well. I'll try not to break things
+before then. If you like, I could mention this on https://bridgesim.net, there
+are some French speaking people there, though I do not know if they are near
+Lyon. (But if you can only accept 6 people, perhaps you don't need any help
+rounding up a crew.)
+</blockquote>
+
+<p>That’s the hard part, I do need 6 people to show up, but if there are many
+more than this it’s not good either, so it’s hard to estimate if I should
+advertise it or not.
+<blockquote>
+    smcameron wrote:
+    <p>I have a patch to move the solar system center to (0,0,0) which helps a
+little with the weapons jittering (but doesn't fix it completely). But it
+breaks the 2D demon screen a little bit, so I have another patch to remove the
+2D demon screen altogether, and then working on more patches to make the 3D
+demon screen do everything that the 2D demon screen can do. One thing that the
+2D demon screen is good at that the 3D demon screen is not very good at is
+manually creating a whole bunch of objects in a particular arrangement. I
+haven't figured out a way around that. This capability is nice for creating Lua
+scripts, you can just place a bunch of objects manually, then use the
+"enscript" command to save the layout to a Lua script, which you can then
+modify. Saves you from having to create an algorithm to place things. So I've
+been sitting on those patches while I try to get them into acceptable shape and
+make sure they don't break anything. Still not there yet.
+</blockquote>
+
+<p>I never understood how to navigate the 3D demon screen :-/
+But I do not really use the demon screen apart for debugging and starting scripts.
+<blockquote>
+    <p>I suppose I should hold off on committing those two big changes until
+after 2020/04/04.
+
+    <p>And that probably goes for changes related to the weapons and damage
+system mentioned in this issue: https://github.com/smcameron/space-nerd ...
+issues/243 Or at least such changes should be hidden behind a tweakable
+variable.
+
+    <p>(In case I do break things, you could always use an older commit if need
+be, however in that case, you run the risk that the extra assets might from
+spacenerdsinspace.com might not match up exactly right (not that they change
+that much, but they do change from time to time.)) </blockquote>
+
+
+<p>It’s not that big of a deal if I need to stay at an older commit.
+
+<p>I’m having a game session at my place at the end of march, so I will build
+live USB sticks for it and use the same ones for the event most likely.
+<hr>
+<p><b>smcameron 11 Mar 2020, 23:19</b>
+<blockquote>
+    smcameron wrote:
+    <p>I have a patch to move the solar system center to (0,0,0) which helps a
+little with the weapons jittering (but doesn't fix it completely). But it
+breaks the 2D demon screen a little bit, 
+</blockquote>
+
+<p>I fixed the problems with the patch that broke the 2D demon screen, and it
+seemed pretty solid, so I went ahead and committed it.
+
+<p>Not sure it's a great idea to invite people at a conference to touch your
+keyboards with this corona virus thing out there. <a
+href="https://artemis.forumchitchat.com/post/important-message-from-thom-about-armada-2020-10452079">
+I noticed the Artemis Armada 2020 convention got canceled, or at least postponed</a>.
+
+<hr>
+<p><b>smcameron 12 Mar 2020, 23:41</b>
+<p>Just a brief dev update for 2020-03-12, nothing revolutionary, just incremental progress:
+<p><a href="https://youtu.be/lDwmwPETKQk"><img src="https://img.youtube.com/vi/lDwmwPETKQk/hqdefault.jpg"></a>
+<hr>
+<p><b>MCMic 13 Mar 2020, 11:57</b>
+<blockquote>
+    smcameron wrote:
+    <p>Not sure it's a great idea to invite people at a conference to touch
+your keyboards with this corona virus thing out there.
+</blockquote>
+
+<p>They just annouced schools and university will be closed starting monday.
+Most likely the event will be canceled, but they did not annouce it yet. It’s in one month, we’ll see.
+
+<p>[EDIT] It’s just been officially canceled.
+<hr>
+<p><b>CapnRobberts 14 Mar 2020, 16:25</b>
+<p>Can anyone clarify the space_partition system to me?
+
+<p>It looks like space_partition is a 2D Grid of space_partition_entry structures stored in the content handle.
+where the space_partition_entry is a linked list of entries.  There is an
+offset stored from where the entry pointer is back to the actual start of the
+entity structure so that you can get from an entity to it's entry struct.
+
+<p>Does that sounds correct?
+
+<p>I see that the common pointer on the partition is used, but I don't see where it is ever initialized.
+
+<p>I'm still just trying to understand what all is going on in the server.
+<p>Thanks.
+<hr>
+<p><b>smcameron 15 Mar 2020, 04:00</b>
+<p>You've probably already seen this, but I'll post the link if not: Collision Detection in Space Nerds in Space.
+
+<p>It's been awhile since I've looked at this code. You're correct it's a 2D
+grid of cells. The "common" cell is for things that wander outside the area
+mapped into this 2D grid of cells as a "catch all". Normally there shouldn't be
+much if anything in the common cell.
+
+<p>The common pointer is initialized in add_sp_entry().
+
+<pre>
+    static void add_sp_entry(struct space_partition *p, struct space_partition_entry *e, int cell)
+    {
+            struct space_partition_entry **c;
+
+            if (cell &lt; 0)
+                    c = &amp;p-&gt;common; &lt;--- notice the ampersand here.  c is the address of common.
+            else
+                    c = &amp;p-&gt;content[cell];
+
+            e-&gt;cell = cell;
+            if (!(*c)) {
+                    (*c) = e;  &lt;--- common gets initialized here.
+                    e-&gt;next = NULL;
+                    e-&gt;prev = NULL;
+                    return;
+            }
+            (*c)-&gt;prev = e;
+            e-&gt;next = *c;
+            e-&gt;prev = NULL;
+            (*c) = e;
+    }
+</pre>
+
+<p>add_sp_entry() is called by space_partition_update(), which is part of the
+space partition API and is called whenever a snis_entity has its position
+updated (see set_object_location() in snis_server.c). Common will get updated
+if space_partition_update() calls get_cell() and gets -1 back, which happens if
+the item being added into the space partition has x, y coords that are "out of
+bounds".
+
+<p>Yes, p-&gt;offset is essentially a constant value that is the offset into the
+struct snis_entity at which the entity's space_partition_entry resides. This is
+kind of like the how the berkeley queue thing works (see output of "man 3
+queue" if you're curious about that.) This kind of thing is called an
+"intrusive data structure".
+
+<p>This allows me to pass a pointer to a struct snis_entity into
+space_partition_update(), but the space_partition code does not need to know
+what a snis_entity is, it only needs to know the offset into it where it can
+find the space_partitition_entry to store its data. In theory, I could use this
+space partition code for any game, as it is totally self-contained (notice
+space-part.h and space-part.c do not #include any other files apart from
+standard library stuff.)
+
+<p>And then later, space_partition_process() via process_cell() can subtract this
+p-&gt;offset to get the struct snis_entity pointer to pass along through the
+function pointer supplied as a parameter.
+
+<p>So, it's a really old-school way of writing generic code. A C++ programmer
+would probably do it with templates instead. It should no doubt have more
+comments in there, esp. in space-part.h to explain how the thing is supposed to
+be used.
+
+<p>Chasing around all those pointers is probably horrible for cache misses. OTOH,
+once you've got the space_partition_entry, you probably also have the
+snis_entity in the cache already because the space_partition_entry is inside
+the snis_entity.
+
+<p>I won't pretend that any of this is *good* code. But it works well enough. (and
+just looked at the git history and there are 2 commits for space-part.c and
+space-part.h, the initial commit in 2013, and one commit in 2019 to fix an
+unused variable warning, so it must not be too terrible since it's needed very
+close to zero maintenance in 7 years.)
+
+<p>Hope that helps.
+<hr>
+<p><b>CapnRobberts 15 Mar 2020, 04:38</b>
+<p>That does help, thanks.
+
+<p>I'm not sure that templates/generics would be the right way in C++, maybe a
+polymorphic interface, but I can see how this would be functional for straight
+C.
+<hr>
+<p><b>CapnRobberts 15 Mar 2020, 23:37</b>
+<pre>
+p = &amp;go[i];
+   if (p-&gt;type != OBJTYPE_PLANET) {
+      /* This can happen if a planet gets destroyed and another object re-uses the ID. */
+      o-&gt;tsd.starbase.associated_planet_id = -1;
+      return;
+   }
+</pre>
+
+Is there any technical reason a starbase can't orbit something else like an asteroid?
+<hr>
+<p><b>smcameron 16 Mar 2020, 01:44</b>
+<p>Not really, other than that it wasn't designed this way. (Though if you are
+asking if you stick the ID of an asteroid into a planet's associated_planet_id
+and set starbases_orbit = 1, will it work? The answer is no. The asteroids
+move. Planets do not, the orbit of the starbase would be miscalculated, I think
+(he says, without looking at the code.))
+
+<p>But there are actually two concepts of how starbases "orbit" planets, the
+original conception, and a relatively new, failed experiment. I think you are
+asking about the new failed experiment (but maybe you don't realize it is a
+failed experiment). The "failed experiment" variant doesn't really even work
+right, and is not active by default. I mean, the starbases do orbit -- actually
+move in a circle around the planet -- contingent upon running "set
+STARBASES_ORBIT=1" on the demon screen -- however, NPC ships don't really know
+how to deal with this, so they congregate around the place the starbase used to
+be. So having starbases orbit planets in the sense of "actually move in a
+circle around the planet" falls into the "failed experiment" category. Some
+<a href="https://bridgesim.net/index.php?p=/discussion/comment/4304/#Comment_4304">discussion of it here</a>.
+
+<p>In the original conception of "orbit", with "STARBASES_ORBIT == 0" (which is
+the default), then starbases do not move around planets or move at all, but
+they may still have an "associated planet", which they are placed nearby, but
+stationary, as if they were in orbit. The way they detect the situation that
+their planet has been destroyed (e.g. by the game master) is to find out that
+the ID they record for this object no longer exists or is not a planet. Now
+that I think about it, the ID should not get re-used (contrary to the comments,
+aka "lies") as they are monotonically increasing. I suppose the ID could wrap
+around after 2-billion or so, but then we've got other problems. In any case,
+in this original conception of "orbiting" an associated planet, mostly what the
+associated planet is used for is in messages describing where the starbase is,
+and the code that generates those messages assume that whatever's in
+associated_planet_id refers to a planet if it isn't -1.
+
+<p>Starbases can be in deep space, not orbiting anything, in which case the
+associated planet id is -1.
+
+<p>You should probably forget about the notion of orbiting starbases except to
+mean only "hovering near a stationary object.".
+<hr>
+<p><b>CapnRobberts 21 Mar 2020, 00:13</b>
+<p>Yes, I see how the AI logic only stores fixed coordinate points, not an offset relative to an entity.
+<hr>
+<p><b>smcameron 02 Apr 2020, 00:10</b>
+<p><a href="https://bridgesim.net/index.php?p=/discussion/488/new-release-the-lockdown-update#latest">Daid mentioned over on bridgesim.net</a>
+that he had added voice chat to Empty
+Epsilon. Now, that is a good idea. An idea worth borrowing. And so I have. Now
+you can press-to-talk F12 and you voice will be delivered to your crew-mates,
+or CTRL-F12, and your voice will be delivered to all players within the
+snis_server instance. I will say this hasn't been very well tested, I don't
+really have a good way to test it properly, but it does work for what little
+testing I've done (two clients both running on the same machine). I'm using
+libopus to do the audio compression, and it seems to do a pretty good job, it
+doesn't take a huge amount of bandwidth or anything. Took about a day to code
+up, and 6 days to debug, lol.
+<hr>
+<p><b>smcameron 02 Apr 2020, 18:33</b>
+<p>Realized the voice chat code I committed yesterday would not behave well if
+multiple clients transmitted audio concurrently. I was using a single stream
+for all VOIP decoding and mixing on each client, so it would interleave audio
+packets from different clients in this single stream, and the decoder is not
+stateless, so this would confuse the decoder anyway, probably making it produce
+even worse sounds than you might expect. It would work ok, so long as two
+clients didn't try to talk at the same time.
+
+<p>So I fixed it today, so that as many as 4 clients may transmit audio
+concurrently, and they will be decoded and mixed from separate streams within
+each client receiving them. In theory. Haven't really tested it much at all.
+<hr>
+<p><B>smcameron » 03 Apr 2020, 03:17</b>
+<p>So I tried out my voice chat over the internet, and uncovered a little
+problem... makes a bit of horrible noise. Up to now I had only tried it
+locally, and it seems to work fine that way for me. So, still some work for me
+to do there.
+
+<p>OTOH, I got some video of what it's like to run with the clients local (in
+Virginia) and the server remote (in New York). About 25ms latency, about
+21.5k/sec per client (43k /sec total) bandwidth usage if I "set npc_ship_count
+= 100", "set asteroid_count = 0", and "regenerate" on the demon screen to cut
+out a lot of stuff. And it seemed more or less... totally playable? Color me
+surprised. Here's a video:
+
+<p><a href="https://youtu.be/d7ozaAyy-8Q"><img src="https://img.youtube.com/vi/d7ozaAyy-8Q/hqdefault.jpg"></a>
+<hr>
+<p><b>smcameron 03 Apr 2020, 19:52</b>
+<p>So voice chat may be working fine after all. I remembered that I've heard
+that "horrible noise" before, in contexts unrelated to SNIS (playing youtube
+videos), and that I've previously solved it by unplugging and re-plugging my
+USB audio interface. Today I was unable to recreate the "horrible noise"
+problem and voice chat seemed to work fine going from Virginia to New York and
+back again. Quick demo: <a href="https://youtu.be/XngYX7ncPeA">https://youtu.be/XngYX7ncPeA</a>
+
+<p>Also, I wrote up <a href="https://github.com/smcameron/space-nerds-in-space/blob/master/doc/running-in-the-cloud.txt">some instructions for running SNIS in the cloud</a>
+<hr>
+<p><b>smcameron 07 Apr 2020, 21:17</b>
+<p>Quick little demo of planetary lightning effect. It really makes the atmospheres of the planets come alive, especially on the dark sides.
+
+<p><a href="https://youtu.be/U4qt-avWa7s">https://youtu.be/U4qt-avWa7s</a>
+
+<p>Youtube really compresses the dark areas of the video pretty heavily, so I'm
+not sure it comes across very well in this video. it's a fairly subtle effect
+in any case.
+
+<p>Edit: Here's a still shot with exaggerated amounts of lightning just to show
+the effect. Captured in a still shot it's a little less convincing than when
+they just flash briefly.
+
+<p><img src="https://i.imgur.com/KCzfVty.jpg">
+<hr>
+<p><b>charlie 08 Apr 2020, 14:26</b>
+<p>Wow. That looks awesome. 
+<hr>
+<p><b>smcameron 09 Apr 2020, 02:12</b>
+<p>Another quick update. Added a warp gate effect, not a big deal but better
+than the nothing that was there before, and also now NPC ships are respawned at
+warp gates instead of at just random locations.
+
+<p><a href="https://youtu.be/t1Vhyg9SCjU">https://youtu.be/t1Vhyg9SCjU</a>
+<hr>
+<p><b>MCMic 09 Apr 2020, 12:54</b>
+<blockquote>
+    smcameron wrote:
+    <p>Another quick update. Added a warp gate effect, not a big deal but
+better than the nothing that was there before, and also now NPC ships are
+respawned at warp gates instead of at just random locations.
+
+    <a href="https://youtu.be/t1Vhyg9SCjU">https://youtu.be/t1Vhyg9SCjU</a>
+</blockquote>
+
+<p>Regarding the constant battle, should’nt ships respawn in a warpgate
+situated in area controlled by their faction, or get assigned the faction which
+controls the area where they respawn, whatever seems better?
+
+<p>There are weird behavior of lighting from explosions on the planet in the video, like this: 
+
+<a href="https://forum.freegamedev.net/download/file.php?id=12315&mode=view"><img src="https://forum.freegamedev.net/download/file.php?id=12315&t=1"></a>
+
+Also at <a href="https://youtu.be/t1Vhyg9SCjU?t=90">https://youtu.be/t1Vhyg9SCjU?t=90</a> there is a visible line on the left of the planet.
+<hr>
+<p><b>smcameron » 09 Apr 2020, 14:25</b>
+<p>Yeah, I'm going to do something about the constantly fighting bugs in a jar,
+not sure quite what, but something.
+
+<p>As for that weird effect of the explosion, ha, that's just because the
+explosion is made of billboards and what you're seeing is a giant billboard
+intersecting the planet.
+
+<p>Particularly explosions start off with one *giant* spark that rapidly
+shrinks in size to give the impression of an initial blast, and I think you
+captured that giant spark intersecting the planet.
+
+<p>The code is this:
+<pre>
+   if (nsparks &gt; 40) { /* a big explosion, add one big freakin' stationary spark that fades quickly */
+                        add_spark(x, y, z, 0, 0, 0, 15, color, &amp;spark_material, 0.8, 0, 250.0);
+</pre>
+<p>The size of that spark could be as much as 1000 units. hmm, that planet has
+a radius of 6506 though (diameter 13012) so no spark should be *that* big, so
+hmm, that is weird.
+
+<p>Edit: Oh, the billboard mesh used is 50x50 units, so that spark could be as
+big as 50000x50000 units, so yeah now it makes sense.  
+
+<pre>
+        particle_mesh = mesh_fabricate_billboard(50.0f, 50.0f);
+</pre>
+
+<p>Edit again: The visible line on the left of the planet is a rendering
+artifact due to the two render passes for near and far objects to get enough
+z-buffer precision. It used to be a lot worse than it is now. There is a closed
+issue for this: <a href="https://github.com/smcameron/space-nerds-in-space/issues/80">https://github.com/smcameron/space-nerds-in-space/issues/80</a>
+
+<p>Now we dynamically choose the distance at which the boundary between these
+render passes exists from a few candidate distances, and try to choose it such
+that it does not intersect any large objects to avoid this artifact. Sometimes
+it's not possible to avoid all large objects so we choose the distance which
+intersects the fewest large objects, so sometimes there are still artifacts.
+
+<p>Code is in entity.c, in render_entities(). It could be that "500" as the
+dividing line between "big" and "small" entities is too small, as the planet
+atmosphere and planet rings are where you notice these artifacts the most, and
+they are both *much* bigger than 500.
+
+<pre>
+                        /* For each boundary candidate, count large object intersections */
+                        if (pass == 0 &amp;&amp; n_passes &gt; 1) {
+                                if (e-&gt;m-&gt;radius * max_scale &lt; 500)
+                                        continue; /* ignore small objects in choosing render pass boundary */
+                                camera_to_entity.v.x = e-&gt;x - camera_pos.v.x;
+                                camera_to_entity.v.y = e-&gt;y - camera_pos.v.y;
+                                camera_to_entity.v.z = e-&gt;z - camera_pos.v.z;
+
+                                float zdist = vec3_dot(&amp;camera_to_entity, &amp;camera_look);
+                                if (zdist &lt; 0)
+                                        continue; /* behind camera, ignore (should already be frustum culled). */
+                                if (e-&gt;m-&gt;geometry_mode == MESH_GEOMETRY_POINTS) /* Ignore fake stars, etc. */
+                                        continue;
+                                if (e-&gt;m-&gt;radius * max_scale &gt; 299999.0)
+                                        continue; /* Hack to ignore warp tunnels (r=300000) */
+
+                                /* Check each candidate boundary for intersection with this object */
+                                for (k = 0; k &lt; 3; k++)
+                                        if (fabsf(zdist - boundary_candidate[k]) &lt; e-&gt;m-&gt;radius * max_scale)
+                                                boundary_intersects[k]++;
+                        }
+                }
+
+                if (pass == 0 &amp;&amp; n_passes &gt; 1) {
+                        /* Find the boundary candidate with the fewest large object intersections */
+                        last_candidate = candidate;
+                        candidate = 0;
+                        if (boundary_intersects[candidate] != 0) {
+                                /* Test for less than or *equal* so we choose the *farthest* among equals so
+                                 * that any resulting artifacts are more likely to occupy less screen space
+                                 * and be less obnoxious. With a little luck, it will even move it to a place
+                                 * that is invisible, like the back side of a planet.
+                                 */
+                                if (boundary_intersects[1] &lt;= boundary_intersects[candidate])
+                                        candidate = 1;
+                                if (boundary_intersects[2] &lt;= boundary_intersects[candidate])
+                                        candidate = 2;
+                        }
+
+                        if (last_candidate != candidate) {
+                                /* Recalculate the camera transforms if the render pass boundary was changed
+                                   to avoid some intersecting object */
+                                render_pass_boundary = boundary_candidate[candidate];
+                                calculate_camera_transform_near_far(&amp;cx-&gt;camera, &amp;rendering_pass[0],
+                                                                render_pass_boundary, cx-&gt;camera.far);
+                                calculate_camera_transform_near_far(&amp;cx-&gt;camera, &amp;rendering_pass[1],
+                                        cx-&gt;camera.near, render_pass_boundary + render_pass_boundary / 1000.0);
+                        }
+                }
+</pre>
+
+<p>The more you know about how all this stuff works, the more flaws you will see. It's all smoke and mirrors.
+<hr>
+<p><b>smcameron 09 Apr 2020, 22:15</b>
+<p>Ok, I made the respawning choose a warp gate based on faction (although
+sometimes a faction has no warp gates) and 1/3rd of the time a respawn will
+happen the old way (no warp gate just random positioning). This helps some with
+the excessive fighting.
+
+<p>I also made it so that now NPC ships will chase after and collect cargo
+containers if they are close enough and slow moving enough relative to the
+ship's max speed. This cuts down on the growth of the number of objects (and
+thus also on network traffic) but at the expense that loose cargo containers
+are quite a bit scarcer than they used to be. Also ships used to be spawned
+with their cargo bays completely filled. Now they spawn half-filled so they
+have some empty bays to allow for picking up floating cargo. That also means
+there are less total cargo bays floating around because when a ship is
+destroyed whatever is in its hold is released. Now there's half the total cargo
+containers to be potentially released, and of those which are released, some
+will be scooped up by other NPC ships.
+<hr>
+<p><b>smcameron 12 Apr 2020, 22:53</b>
+<p>After integrating a pull request from Byron Roosa, Space Nerds in Space now
+builds and runs on Mac OSX (Mojave) I'm told. You can see the pull request
+discussion here, there might be some tips about how to build it in there (I
+don't have a Mac or any knowledge of how things are done on a Mac myself).
+<a href="https://github.com/smcameron/space-nerds-in-space/pull/276">https://github.com/smcameron/space-nerds-in-space/pull/276</a>
+<hr>
+<p><b>smcameron 18 Apr 2020, 18:43</b>
+<p>Lately I have been experimenting with porting snis_client from GTK2 to SDL2
+(guided by a patch my friend Jeremy wrote 5 years ago.) I have just about
+everything working except if you resize the window, it doesn't clamp things to
+a fixed aspect ratio. Other than that, I think everything else is working (of
+course there might be bugs that I don't know about.)
+
+<p>With these patches (which I haven't committed yet), this does mean the
+limited client doesn't exist anymore, which is unfortunate. (Is it possible to
+use SDL without opengl? I'm not sure. If it is, maybe the limited client can
+continue to exist with a bit more work.)
+
+<p>Moving to SDL2 has some potential benefits. Perhaps a windows port would be
+easier, in case someone wants to try that. Perhaps webassembly might be a
+possibility.
+<p>For now, the patches are here, in case anybody wants to play with them:
+<a href="https://github.com/smcameron/space-nerds-in-space/issues/277#issuecomment-615894494">https://github.com/smcameron/space-nerds-in-space/issues/277#issuecomment-615894494</a>
+<hr>
+<p><b>CapnRobberts 18 Apr 2020, 20:36</b>
+<p>You would need some form of networking middle-ware library to get a native
+Windows version working. The Winsock API is not 100% function level compatible
+with Berkeley sockets. SDL Net provides a platform independent interface to
+sockets.
+<hr>
+<p><b>smcameron 19 Apr 2020, 00:49</b>
+<p>According to this, it doesn't look to be too badly different:
+<a href="https://tangentsoft.net/wskfaq/articles/bsd-compatibility.html">https://tangentsoft.net/wskfaq/articles/bsd-compatibility.html</a>.
+<hr>
+<p><b>CapnRobberts 19 Apr 2020, 00:52</b>
+<p>Yes you can write your own dual purpose code with #defs for the different
+parts, many open source games have gone that route and constatnly reinvent the
+wheel :) if you are going to merge SDL into a branch on the repository, just
+using SDLs networking layer may be simpler.
+<hr>
+<p><b>smcameron 19 Apr 2020, 02:39</b>
+<p>If you haven't already noticed, reinventing wheels is kinda my thing. 
+<hr>
+<p><b>smcameron 20 Apr 2020, 03:07</b>
+<p>Development update for 2020-04-19: 
+<a href="https://youtu.be/QLkJ8u0nxzY">https://youtu.be/QLkJ8u0nxzY</a>
+
+<p>Transport Contracts, a new font, and SDL2.
+<hr>
+<p><b>MCMic 24 Apr 2020, 22:10</b>
+<p>I finally found someone to host the ISO for the SNIS live USB, so builds now gets uploaded to
+<a href="https://snis.mugoreve.fr/">https://snis.mugoreve.fr/</a>
+
+<p>[EDIT] Note that I did not test a recent build of the USB live
+<hr>
+<p><b>smcameron 25 Apr 2020, 03:25</b>
+<p>So I've got the SDL port at pretty much parity with the GTK implementation,
+seems pretty stable, doesn't have any weird oddities that I know of.
+
+<p>It also doesn't have anything over and above the GTK implementation. And it
+does mean the limited client will die.
+
+<p>So the question is, should I proceed with this? It would make a windows port
+easier, but I'm not doing a windows port (maybe somebody else will, but I
+won't) so that is a purely theoretical advantage at this point. My multi-window
+system is so far not panning out (a bit buggy, and less performant than just
+running two clients) so that's not a real advantage.
+
+<p>So the question is, do we ditch the limited client on the hope that someone
+comes along and does a windows port? There's no other benefit from the SDL
+port, really.
+
+<p>If you want to try it, there's a branch, "sdl2-conversion-2020-04-22-B", but
+you'll want to back up to commit 20dd7adfde127450069369706b3fb8867b662bf9 as
+commits after that have to do with the multi-window stuff that doesn't work so
+well.
+<hr>
+<p><b>CapnRobberts 25 Apr 2020, 16:50</b>
+<p>In its current state the work for a Windows port is the same with SDL 2 as
+it was with GTK. GTK exists on Windows. It's all the other unixy things that
+would have to change, time, networking, anything in unistd, etc...
+<hr>
+<p><b>smcameron 25 Apr 2020, 17:29</b>
+<blockquote>
+    CapnRobberts wrote:
+    <p>In its current state the work for a Windows port is the same with SDL 2 as
+it was with GTK. GTK exists on Windows. It's all the other unixy things that
+would have to change, time, networking, anything in unistd, etc...
+</blockquote>
+
+Yeah it does (and I even had another much simpler game I wrote that used GTK
+get ported by someone to windows) however, the combination of GTK and opengl is
+very much less common on windows and harder to deal with and seems to be pretty
+offputting, whereas SDL2 and opengl are common as dirt on windows.
+
+But I expect the actual answer is nobody really gives a shit what I do with it,
+because nobody plays this silly game anyway, ha.
+<hr>
+<p><b>CapnRobberts 25 Apr 2020, 17:43</b>
+<p>Market-share wise they may be related. I know it's a pet/learning project
+for you, but if you wanted more people to play it, a Windows version would
+possibly give you a larger audience.
+<hr>
+<p><b>smcameron 28 Apr 2020, 03:11</b>
+<blockquote>
+    CapnRobberts wrote:
+    <p>Market-share wise they may be related. I know it's a pet/learning
+project for you, but if you wanted more people to play it, a Windows version
+would possibly give you a larger audience.
+</blockquote>
+
+This is not really new information to me. But, I don't have a windows machine,
+I'm not going to get one, and I don't know anything about windows and haven't
+used windows at all since 1999 or so, so even if I did get a windows machine, I
+seriously wouldn't have the slightest idea how to even use it. If a windows
+port emerges, it will be because someone other than me deems it worthy of a
+port. And that is as it should be.
+<hr>
+<p><b>CapnRobberts 28 Apr 2020, 04:11</b>
+<p>Oh no, I was not suggesting you do the work. It's quite clear where you
+stand on that :) Just that collaboration for the work rather than a simple port
+may be better, such as using more of the features in SDL. I'm sure it'll get
+sorted out eventually.
+<hr>
+<p><b>smcameron 01 Jul 2020, 13:41</b>
+<p>Awhile back, I mentioned the long shadows that you see at the terminator on
+the lunar surface and how you won't get those using normal maps for lighting:
+<blockquote>
+    Certainly using a normal map in the lighting calculations won't get you the
+kind of long shadows you see if you look up images of "lunar terminator", like
+this image from NASA:
+</blockquote>
+
+And I posted this picture to illustrate the kind of shadows I'm talking about:
+
+<p><img src="https://nssdc.gsfc.nasa.gov/imgcat/hires/a12_h_50_7438.gif">
+
+<p>Now I come across this technique, called "Normal Mapping Shadows":
+http://enbdev.com/doc_normalmappingshadows.htm
+
+<p>Here is an example without this technique and with it. The effect is especially
+prominent in the tire tracks. (you may need to "view image" if the forum clips
+it too badly.)
+
+<p>Image
+
+<p>Now to implement this in SNIS, I would need to overcome a few problems:
+
+<ol>
+<li>I need to understand the basics of how it works. I think the basic gist of
+it is, in the fragment shader, you use a vector towards the light to define a
+line through the normal map texture that you traverse, summing some dot
+products as you go to see if a shadow would be cast at that location, and how
+strongly.
+
+<li>I need to take into account the curvature of the planet surface. Currently
+the fragment shader only has the interpolated normal vector at the particular
+texel, as you traverse across the normal map, this normal would rotate about
+the center of the planet by a bit. Might be able to ignore this if the traverse
+is not too far at some loss of accuracy.
+
+<li>I need to figure out how to deal with the cubemap seams. This seems a bit
+harder because the tangent and bitangent vectors change discontinuously across
+this seam, not to mention other mind bending complexities.
+</ol>
+
+<p> I'm not feeling quite ambitious enough to think I will really implement
+this, but it is cool to realize that it *is* possible to do with only the
+normal map. It might also require a better graphics card that what I currently
+own to do this fast enough, but worrying about that now is putting the cart
+before the horse.
+<hr>
+<a href="history-7.html">CONTINUED ON PAGE 7</a>
+
