@@ -111,19 +111,23 @@ out which sound device to use on its own.
 .PP
 .SH FILES
 .PP
+$XDG_DATA_HOME/space-nerds-in-space is a directory used to store
+various user defaults.  If $XDG_DATA_HOME is not set, $HOME/.local/share
+is assumed. Old versions os snis_client would use ~/.space-nerds-in-space.
+See https://specifications.freedesktop.org/basedir-spec/basedir-spec-latest.html
+.PP
 $XDG_DATA_HOME/space-nerds-in-space/default_ship_name.txt
 This file preserves the ship name field between runs so that you
 do not have to re-type it each time in the login screen.
-If XDG_DATA_HOME is not set, ~/.local/share is assumed.
-Old versions of snis_client would create this file in
-~/.space-nerds-in-space.
 .PP
 $XDG_DATA_HOME/space-nerds-in-space/role_defaults.txt
 This file preserves the selected roles between runs so that you
 do not have to fill in the checkboxes each time in the login
-screen.  If XDG_DATA_HOME is not set, $HOME/.local/share is assumed.
-Old versions of snis_client would create this file in
-$HOME/.space-nerds-in-space.
+screen.
+.PP
+$XDG_DATA_HOME/space-nerds-in-space/snis_ui_position_offsets.txt
+This file preserves positions of UI elements if the user moves them
+and saves them.
 .PP
 $SNIS_ASSET_DIR/sounds/*.ogg, various audio files used by the game.
 .PP
