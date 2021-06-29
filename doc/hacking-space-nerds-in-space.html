@@ -1235,7 +1235,7 @@ do not need to write any code to wait for the token.
 
 <p>The code for that looks like this:
 <pre>
-        if (event-&gt;keyval == GDK_F12) { /* F12 key pressed? */
+        if (keysym-&gt;sym == SDLK_F12) {
                 pthread_mutex_lock(&amp;voip_mutex);
                         if (!have_talking_stick) {
                                 pthread_mutex_unlock(&amp;voip_mutex);
@@ -1282,7 +1282,7 @@ stopped, and if the client is in possession of any token, it is released to the
 server where it may then be handed out again to whichever client asks for a
 token.
 <pre>
-        if (event-&gt;keyval == GDK_F12) {
+        if (keysym-&gt;sym == SDLK_F12) {
                 voice_chat_stop_recording(); /* This shuts down the portaudio thread that was recording. */
                 /* We release even if we don't have, snis_server will know the real deal. */
                 release_talking_stick();
