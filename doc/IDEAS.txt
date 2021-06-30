@@ -1,6 +1,19 @@
 Here be ideas about what might or might not be added into the game
 at some point.
 
+Wed Jun 30 02:29:08 EDT 2021
+----------------------------
+
+Might be a good idea to add ipv6 support. In some places, ipv4 from ISPs is apparently
+somewhat scarce and expensive (e.g. Brazil) and this situation is not likely to improve
+for ipv4 with time. Plus, it might just be an interesting problem to work on.  snis_server,
+ssgl_server, and snis_multiverse would have to support both ipv4 and ipv6 concurrently.
+Clients could, I suppose be ipv4 or ipv6. Not sure if it makes sense for snis_client to be
+both ipv4 and ipv6, using one or the other with different snis_servers.  I think not.
+I think the snis_client should probably be ipv4 XOR ipv6, decided at initialization,
+either by user choice, or by what interfaces are configured (i.e. if there is only an
+ipv6 interface then use ipv6.)
+
 ----------------------------
 Sun Sep  2 08:25:58 EDT 2018
 
