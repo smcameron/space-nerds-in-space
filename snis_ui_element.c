@@ -61,6 +61,8 @@ struct ui_element *ui_element_init(void *element,
 	e->set_position = fns.update_pos_fn;
 	e->defaultx = defaultx;
 	e->defaulty = defaulty;
+	e->xoffset = 0;
+	e->yoffset = 0;
 	return e;
 }
 
