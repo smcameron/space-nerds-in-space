@@ -104,6 +104,7 @@ GLOBAL void snis_slider_mouse_position_query(int *x, int *y); /* Allows sliders 
 GLOBAL void snis_slider_update_position(struct slider *s, int x, int y);
 GLOBAL int snis_slider_get_x(struct slider *s);
 GLOBAL int snis_slider_get_y(struct slider *s);
+GLOBAL char *snis_slider_get_label(struct slider *s);
 
 #undef GLOBAL
 #endif

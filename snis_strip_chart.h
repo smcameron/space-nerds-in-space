@@ -12,6 +12,7 @@ extern void snis_strip_chart_update_position(struct strip_chart *sc, int x, int 
 extern int snis_strip_chart_inside(struct strip_chart *sc, int x, int y);
 extern int snis_strip_chart_get_x(struct strip_chart *sc);
 extern int snis_strip_chart_get_y(struct strip_chart *sc);
+extern char *snis_strip_chart_get_label(struct strip_chart *sc);
 
 extern struct scaling_strip_chart *snis_scaling_strip_chart_init(int x, int y,
 			int width, int height, char *label, char *warning_msg,
@@ -22,5 +23,6 @@ extern void snis_scaling_strip_chart_update_position(struct scaling_strip_chart 
 extern int snis_scaling_strip_chart_inside(struct scaling_strip_chart *sc, int x, int y);
 extern int snis_scaling_strip_chart_get_x(struct scaling_strip_chart *sc);
 extern int snis_scaling_strip_chart_get_y(struct scaling_strip_chart *sc);
+extern char *snis_scaling_strip_chart_get_label(struct scaling_strip_chart *sc);
 
 #endif

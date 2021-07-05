@@ -56,5 +56,6 @@ GLOBAL int gauge_inside(struct gauge *g, int physical_x, int physical_y);
 GLOBAL void gauge_update_position(struct gauge *g, int x, int y);
 GLOBAL int gauge_get_x(struct gauge *g);
 GLOBAL int gauge_get_y(struct gauge *g);
+GLOBAL char *gauge_get_label(struct gauge *g);
 
 #endif

@@ -204,3 +204,7 @@ int gauge_get_y(struct gauge *g)
 	return g->y;
 }
 
+char *gauge_get_label(struct gauge *g)
+{
+	return g->title;
+}

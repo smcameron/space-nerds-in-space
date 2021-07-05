@@ -404,6 +404,7 @@ static struct ui_element_functions ui_slider_functions = {
 	.keypress_fn = NULL,
 	.keyrelease_fn = NULL,
 	.update_mouse_pos = NULL,
+	.get_label = (ui_element_get_label_function) snis_slider_get_label,
 };
 
 static struct ui_element_functions ui_button_functions = {
@@ -416,6 +417,7 @@ static struct ui_element_functions ui_button_functions = {
 	.keypress_fn = NULL,
 	.keyrelease_fn = NULL,
 	.update_mouse_pos = NULL,
+	.get_label = (ui_element_get_label_function) snis_button_get_label,
 };
 
 static struct ui_element_functions ui_strip_chart_functions = {
@@ -428,6 +430,7 @@ static struct ui_element_functions ui_strip_chart_functions = {
 	.keypress_fn = NULL,
 	.keyrelease_fn = NULL,
 	.update_mouse_pos = NULL,
+	.get_label = (ui_element_get_label_function) snis_strip_chart_get_label,
 };
 
 static struct ui_element_functions ui_scaling_strip_chart_functions = {
@@ -440,6 +443,7 @@ static struct ui_element_functions ui_scaling_strip_chart_functions = {
 	.keypress_fn = NULL,
 	.keyrelease_fn = NULL,
 	.update_mouse_pos = NULL,
+	.get_label = (ui_element_get_label_function) snis_scaling_strip_chart_get_label,
 };
 
 static struct ui_element_functions ui_label_functions = {
@@ -452,6 +456,7 @@ static struct ui_element_functions ui_label_functions = {
 	.keypress_fn = NULL,
 	.keyrelease_fn = NULL,
 	.update_mouse_pos = NULL,
+	.get_label = (ui_element_get_label_function) snis_label_get_label,
 };
 
 static struct ui_element_functions ui_gauge_functions = {
@@ -464,6 +469,7 @@ static struct ui_element_functions ui_gauge_functions = {
 	.keypress_fn = NULL,
 	.keyrelease_fn = NULL,
 	.update_mouse_pos = NULL,
+	.get_label = (ui_element_get_label_function) gauge_get_label,
 };
 
 static struct ui_element_functions ui_text_input_functions = {
@@ -476,6 +482,7 @@ static struct ui_element_functions ui_text_input_functions = {
 	.keypress_fn = (ui_element_keypress_function) snis_text_input_box_keypress,
 	.keyrelease_fn = NULL,
 	.update_mouse_pos = NULL,
+	.get_label = NULL,
 };
 
 static struct ui_element_functions ui_text_window_functions = {
@@ -488,6 +495,7 @@ static struct ui_element_functions ui_text_window_functions = {
 	.keypress_fn = NULL,
 	.keyrelease_fn = NULL,
 	.update_mouse_pos = NULL,
+	.get_label = NULL,
 };
 
 static struct ui_element_functions ui_pull_down_menu_functions = {
@@ -500,6 +508,7 @@ static struct ui_element_functions ui_pull_down_menu_functions = {
 	.keypress_fn = NULL,
 	.keyrelease_fn = NULL,
 	.update_mouse_pos = (ui_update_mouse_pos_function) pull_down_menu_update_mouse_pos,
+	.get_label = NULL,
 };
 
 #define MAXTEXTURES 10
@@ -15829,8 +15838,9 @@ static void init_comms_ui(void)
 		for (j = 0; j < FLEET_BUTTON_ROWS; j++) {
 			comms_ui.fleet_unit_button[i][j] = snis_button_init(txx(140) + i * txx(50),
 									txy(355) + j * txy(14), txx(45), -1,
-									"BLAH", UI_COLOR(comms_good_status), PICO_FONT,
-									comms_fleet_ship_button_pressed, NULL);
+									"FLEETBTN", UI_COLOR(comms_good_status),
+									PICO_FONT, comms_fleet_ship_button_pressed,
+									NULL);
 			ui_add_button(comms_ui.fleet_unit_button[i][j], DISPLAYMODE_COMMS, "ASSIGN ORDERS TO UNIT");
 			ui_hide_widget(comms_ui.fleet_unit_button[i][j]);
 			snis_button_set_color(comms_ui.fleet_unit_button[i][j], UI_COLOR(comms_good_status));

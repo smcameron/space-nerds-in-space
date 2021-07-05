@@ -15,6 +15,7 @@ typedef int (*ui_element_inside_function)(void *element, int physical_x, int phy
 typedef void (*ui_tooltip_drawing_function)(int x, int y, char *tooltip);
 typedef void (*ui_update_mouse_pos_function)(void *element, int physical_x, int physical_y);
 typedef void (*ui_element_update_position_function)(void *element, int x, int y);
+typedef char * (*ui_element_get_label_function)(void *element);
 
 struct ui_element_functions {
 	ui_element_drawing_function draw;
@@ -26,6 +27,7 @@ struct ui_element_functions {
 	ui_element_keypress_function keypress_fn;
 	ui_element_keypress_function keyrelease_fn;
 	ui_update_mouse_pos_function update_mouse_pos;
+	ui_element_get_label_function get_label;
 };
 
 #ifdef DEFINE_UI_ELEMENT_LIST_GLOBALS

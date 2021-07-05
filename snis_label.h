@@ -23,6 +23,7 @@ GLOBAL void snis_label_update_position(struct label *l, int x, int y);
 GLOBAL int snis_label_inside(struct label *l, int x, int y);
 GLOBAL int snis_label_get_x(struct label *l);
 GLOBAL int snis_label_get_y(struct label *l);
+GLOBAL char *snis_label_get_label(struct label *l);
 
 #undef GLOBAL
 #endif

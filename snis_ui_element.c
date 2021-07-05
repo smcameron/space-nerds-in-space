@@ -1,5 +1,6 @@
 #include <stdlib.h>
 #include <string.h>
+#include <errno.h>
 
 #define DEFINE_UI_ELEMENT_GLOBALS
 #include "snis_ui_element.h"
@@ -13,6 +14,7 @@ struct ui_element {
 	ui_element_button_release_function button_press;
 	ui_element_set_focus_function set_focus;
 	ui_element_update_position_function set_position;
+	ui_element_get_label_function get_label;
 	int has_focus;
 	ui_element_keypress_function keypress_fn, keyrelease_fn;
 	ui_element_inside_function inside_fn;
@@ -42,6 +44,7 @@ struct ui_element *ui_element_init(void *element,
 	e = malloc(sizeof(*e));
 	e->element = element;
 	e->draw = fns.draw;
+	e->get_label = fns.get_label;
 	e->button_release = fns.button_release;
 	e->button_press = fns.button_press;
 	e->inside_fn = fns.inside;
@@ -470,7 +473,9 @@ int ui_element_list_save_position_offsets(struct ui_element_list *list, struct x
 	 * widgets, it just assumes they're the same every time.
 	 */
 	for (; list != NULL; list = list->next)
-		fprintf(f, "%d %d\n", list->element->xoffset, list->element->yoffset);
+		fprintf(f, "%d %d # %s\n", list->element->xoffset, list->element->yoffset,
+			list->element->get_label != NULL ?
+			list->element->get_label(list->element->element) : "UNKNOWN");
 	fclose(f);
 	return 0;
 }
@@ -479,6 +484,8 @@ int ui_element_list_restore_position_offsets(struct ui_element_list *list, struc
 {
 	FILE *f;
 	int a, b, rc;
+	char line[512];
+	int lc = 0;
 
 	f = xdg_base_fopen_for_read(cx, "snis_ui_position_offsets.txt");
 	if (!f)
@@ -488,13 +495,19 @@ int ui_element_list_restore_position_offsets(struct ui_element_list *list, struc
 	 * widgets, it just assumes they're the same every time.
 	 */
 	for (; list != NULL; list = list->next) {
-		rc = fscanf(f, "%d %d\n", &a, &b);
-		if (rc < 0 && feof(f)) {
+		errno = 0;
+		if (fgets(line, sizeof(line), f) == NULL) {
+			if (errno)
+				fprintf(stderr, "snis_ui_position_offsets.txt: unexpected error:%s\n", strerror(errno));
+			else
+				fprintf(stderr, "snis_ui_position_offsets.txt: unexpected EOF\n");
 			fclose(f);
 			return -1;
 		}
+		lc++;
+		rc = sscanf(line, "%d %d\n", &a, &b);
 		if (rc != 2) {
-			fclose(f);
+			fprintf(stderr, "Bad line in snis_ui_position_offsets.txt: %d:%s\n", lc, line);
 			return -1;
 		}
 		list->element->xoffset = a;

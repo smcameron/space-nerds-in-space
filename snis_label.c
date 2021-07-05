@@ -81,3 +81,8 @@ int snis_label_inside(struct label *l, int x, int y)
 		return 0;
 	return 1;
 }
+
+char *snis_label_get_label(struct label *l)
+{
+	return l->label;
+}

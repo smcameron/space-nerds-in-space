@@ -50,6 +50,7 @@ GLOBAL void snis_button_set_long_press_function(struct button *b,
 		button_function long_press, void *cookie);
 
 GLOBAL void snis_button_set_label(struct button *b, char *label); /* Sets button label */
+GLOBAL char *snis_button_get_label(struct button *b);
 GLOBAL int snis_button_get_x(struct button *b); /* These 4 functions get x, y, width, height */
 GLOBAL int snis_button_get_y(struct button *b);
 GLOBAL int snis_button_get_width(struct button *b);

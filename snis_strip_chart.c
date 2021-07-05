@@ -258,3 +258,12 @@ int snis_scaling_strip_chart_get_y(struct scaling_strip_chart *sc)
 	return sc->y;
 }
 
+char *snis_strip_chart_get_label(struct strip_chart *sc)
+{
+	return sc->label;
+}
+
+char *snis_scaling_strip_chart_get_label(struct scaling_strip_chart *sc)
+{
+	return sc->label;
+}

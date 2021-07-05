@@ -380,3 +380,9 @@ int snis_slider_get_y(struct slider *s)
 {
 	return (int) s->y;
 }
+
+char *snis_slider_get_label(struct slider *s)
+{
+	return s->label;
+}
+

@@ -36,6 +36,11 @@ void snis_button_set_label(struct button *b, char *label)
 	strlcpy(b->label, label, sizeof(b->label));
 }
 
+char *snis_button_get_label(struct button *b)
+{
+	return b->label;
+}
+
 static void snis_button_compute_dimensions(struct button *b)
 {
 	float x1, y1, x2, y2, emwidth, emheight;
