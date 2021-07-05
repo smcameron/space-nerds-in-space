@@ -16,7 +16,7 @@ player_ids = get_player_ship_ids();
 -- if we already created the commodity in a previous run, don't
 -- make another duplicate, just look it up.
 wedding_cake = lookup_commodity("WEDDING CAKE");
-if wedding_cake < 0 then
+if wedding_cake == nil then
 	-- first run, have to make the commodity
 	wedding_cake = add_commodity("FOOD", "WEDDING CAKE", "BOXES", "FOOD",
                                 10.0, 02, 1.0, 0.0);

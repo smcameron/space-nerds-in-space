@@ -21425,19 +21425,24 @@ static int l_set_commodity_contents(lua_State *l)
 		goto out;
 	if (index < -1 || index >= ncommodities)
 		goto out;
-	if (lua_quantity < 0.01)
-		goto out;
 	if (o->type == OBJTYPE_BRIDGE || o->type == OBJTYPE_NPCSHIP) {
 		const double lua_cargo_bay = luaL_checknumber(l, 4);
 		int cargo_bay = (int) lua_cargo_bay;
 		if (cargo_bay < 0 || cargo_bay >= o->tsd.ship.ncargo_bays)
 			goto out;
-		o->tsd.ship.cargo[cargo_bay].contents.item = index;
-		o->tsd.ship.cargo[cargo_bay].contents.qty = lua_quantity;
+		if (lua_quantity <= 0.01) {
+			o->tsd.ship.cargo[cargo_bay].contents.item = -1;
+			o->tsd.ship.cargo[cargo_bay].contents.qty = 0;
+		} else {
+			o->tsd.ship.cargo[cargo_bay].contents.item = index;
+			o->tsd.ship.cargo[cargo_bay].contents.qty = lua_quantity;
+		}
 		o->tsd.ship.cargo[cargo_bay].paid = 0.0;
 		o->tsd.ship.cargo[cargo_bay].origin = -1;
 		o->tsd.ship.cargo[cargo_bay].dest = -1;
 	} else if (o->type == OBJTYPE_CARGO_CONTAINER) {
+		if (lua_quantity <= 0.01)
+			goto out;
 		o->tsd.cargo_container.contents.item = index;
 		o->tsd.cargo_container.contents.qty = lua_quantity;
 	}
