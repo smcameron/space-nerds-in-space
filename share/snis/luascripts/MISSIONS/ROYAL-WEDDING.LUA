@@ -70,10 +70,17 @@ ships = {}
 -- Create commodities
 -- add_commodity(category, name, unit, scans_as,
 -- 		base_price, volatility, legality, odds);
-wedding_cake = add_commodity("FOOD", "WEDDING CAKE", "BOXES", "FOOD",
-				10.0, 02, 1.0, 0.0);
-dead_bodyguard = add_commodity("BEINGS", "BODYGUARD", "DEAD", "ORGANIC MATTER",
-				0.0, 0, 1.0, 0.0);
+wedding_cake = lookup_commodity("WEDDING CAKE");
+if wedding_cake == nil then
+	wedding_cake = add_commodity("FOOD", "WEDDING CAKE", "BOXES", "FOOD",
+					10.0, 02, 1.0, 0.0);
+end
+
+dead_bodyguard = lookup_commodity("BODYGUARD");
+if dead_bodyguard == nil then
+	dead_bodyguard = add_commodity("BEINGS", "BODYGUARD", "DEAD", "ORGANIC MATTER",
+					0.0, 0, 1.0, 0.0);
+end
 
 function random_point_at_distance(x, y, distance)
 	-- Random angle betweem 0 and pi/2
