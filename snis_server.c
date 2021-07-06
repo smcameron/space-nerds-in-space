@@ -17102,7 +17102,7 @@ static void npc_menu_item_request_dock(struct npc_menu_item *item,
 		snis_queue_add_sound(TOO_FAR_AWAY, ROLE_COMMS, b->shipid);
 		return;
 	}
-	if (o->sdata.shield_strength > 15) {
+	if (o->tsd.ship.power_data.shields.i > 15) {
 		send_comms_packet(sb, npcname, ch, "%s, YOU MUST LOWER SHIELDS FIRST.\n", b->shipname);
 		snis_queue_add_sound(LOWER_SHIELDS_HIT_LIGHTS, ROLE_COMMS, b->shipid);
 		return;
