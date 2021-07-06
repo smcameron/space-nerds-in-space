@@ -21430,7 +21430,7 @@ static int l_set_commodity_contents(lua_State *l)
 		int cargo_bay = (int) lua_cargo_bay;
 		if (cargo_bay < 0 || cargo_bay >= o->tsd.ship.ncargo_bays)
 			goto out;
-		if (lua_quantity <= 0.01) {
+		if (lua_quantity < 0.01) {
 			o->tsd.ship.cargo[cargo_bay].contents.item = -1;
 			o->tsd.ship.cargo[cargo_bay].contents.qty = 0;
 		} else {
@@ -21441,7 +21441,7 @@ static int l_set_commodity_contents(lua_State *l)
 		o->tsd.ship.cargo[cargo_bay].origin = -1;
 		o->tsd.ship.cargo[cargo_bay].dest = -1;
 	} else if (o->type == OBJTYPE_CARGO_CONTAINER) {
-		if (lua_quantity <= 0.01)
+		if (lua_quantity < 0.01)
 			goto out;
 		o->tsd.cargo_container.contents.item = index;
 		o->tsd.cargo_container.contents.qty = lua_quantity;
