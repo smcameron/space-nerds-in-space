@@ -9241,6 +9241,46 @@ static void player_collision_detection(void *player, void *object)
 					ROLE_SOUNDSERVER | ROLE_NAVIGATION);
 		}
 	}
+	if (t->type == OBJTYPE_ASTEROID) {
+		/* TODO: we should probably do something more sophisticated, like have a collision
+		 * surface similar to how OBJTYPE_BLOCK is done, so we can have a collision response
+		 * that takes the asteroid rotation into effect
+		 */
+
+		/* Determined empirically via printf in snis_client.c:init_meshes().
+		 * This will break if the asteroid models change.
+		 */
+		static const float asteroid_radius[] = { 31.835129, 43.656696, 50.246250, 45.869514 };
+
+		/* This must match what's in snis_client.c:update_asteroid(). */
+		int k = t->id % (NASTEROID_MODELS * NASTEROID_SCALES);
+		int s = k % NASTEROID_SCALES; /* scale */
+		float scale = s ? s * 10.0 : 3.0;
+		union vec3 relative_vel;
+
+		double d = sqrt(dist2) - scale * asteroid_radius[t->id % NASTEROID_MODELS];
+		if (d > 0)
+			return;
+
+		relative_vel.v.x = t->vx - o->vx;
+		relative_vel.v.y = t->vy - o->vy;
+		relative_vel.v.z = t->vz - o->vz;
+		snis_queue_add_sound(SPACEMONSTER_SLAP, ROLE_SOUNDSERVER, o->id);
+		if (vec3_magnitude(&relative_vel) > 100.0) { /* I guess, arbitrary */
+			if (!player_invincibility) {
+				/* TODO: I should really factor out this player death stuff */
+				o->alive = 0;
+				o->tsd.ship.damage.shield_damage = 255;
+				o->timestamp = universe_timestamp;
+				o->respawn_time = universe_timestamp + player_respawn_time * 10;
+				schedule_callback(event_callback, &callback_schedule,
+					"player-death-callback", o->id);
+				snis_queue_add_sound(EXPLOSION_SOUND, ROLE_SOUNDSERVER, o->id);
+				return;
+			}
+		}
+		do_collision_impulse(o, t); /* probably should tweak the masses here. */
+	}
 }
 
 static void update_player_orientation(struct snis_entity *o)

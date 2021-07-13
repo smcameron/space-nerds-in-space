@@ -22944,6 +22944,9 @@ static void init_meshes()
 		mesh_distort(asteroid_mesh[i], 0.25, osn);
 		mesh_set_average_vertex_normals(asteroid_mesh[i]);
 		mesh_graph_dev_init(asteroid_mesh[i]);
+		/* The following printf is used for asteroid radius hack in */
+		/* snis_server.c:player_collision_detection() */
+		/* printf("asteroid[%d] radius is %f\n", i, asteroid_mesh[i]->radius); */
 	}
 
 	unit_cube_mesh = mesh_unit_cube(2);
