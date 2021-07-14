@@ -1340,6 +1340,18 @@ static int add_blackhole_explosion(uint32_t related_id, double x, double y, doub
 				uint16_t nsparks, uint16_t time, uint8_t victim_type);
 static void snis_queue_add_sound(uint16_t sound_number, uint32_t roles, uint32_t shipid);
 
+static void kill_player(struct snis_entity *player, int with_explosion_sound)
+{
+	if (!player_invincibility) {
+		player->alive = 0;
+		player->respawn_time = universe_timestamp + player_respawn_time * 10;
+		player->timestamp = universe_timestamp;
+		schedule_callback(event_callback, &callback_schedule, "player-death-callback", player->id);
+	}
+	if (with_explosion_sound)
+		snis_queue_add_sound(EXPLOSION_SOUND, ROLE_SOUNDSERVER, player->id);
+}
+
 static void black_hole_collision_detection(void *o1, void *o2)
 {
 	struct snis_entity *black_hole = o1;
@@ -1368,16 +1380,10 @@ static void black_hole_collision_detection(void *o1, void *o2)
 			delete_from_clients_and_server(object);
 			return;
 		} else if (!player_invincibility) {
-			object->alive = 0;
-			object->respawn_time = universe_timestamp + player_respawn_time * 10;
-			object->timestamp = universe_timestamp;
-			snis_queue_add_sound(EXPLOSION_SOUND,
-				ROLE_SOUNDSERVER, object->id);
+			kill_player(object, 1);
 			schedule_callback3(event_callback, &callback_schedule,
 					"black-hole-consumed-object-event", (double) black_hole->id,
 					(double) object->id, (double) object->type);
-			schedule_callback(event_callback, &callback_schedule,
-					"player-death-callback", object->id);
 		}
 		return;
 	} else {
@@ -3965,10 +3971,7 @@ static void missile_collision_detection(void *context, void *entity)
 					respawn_object(target);
 					delete_from_clients_and_server(target);
 				} else {
-					snis_queue_add_sound(EXPLOSION_SOUND,
-						ROLE_SOUNDSERVER, target->id);
-					schedule_callback(event_callback, &callback_schedule,
-							"player-death-callback", target->id);
+					kill_player(target, 1);
 				}
 				missile_explode(missile);
 			} else {
@@ -4129,10 +4132,7 @@ static void torpedo_collision_detection(void *context, void *entity)
 			delete_from_clients_and_server(t);
 			
 		} else {
-			snis_queue_add_sound(EXPLOSION_SOUND,
-				ROLE_SOUNDSERVER, t->id);
-			schedule_callback(event_callback, &callback_schedule,
-					"player-death-callback", t->id);
+			kill_player(t, 1);
 		}
 	} else {
 		(void) add_explosion(t->x, t->y, t->z, 50, 5, 5, t->type);
@@ -4411,9 +4411,7 @@ static void laser_collision_detection(void *context, void *entity)
 			respawn_object(t);
 			delete_from_clients_and_server(t);
 		} else {
-			snis_queue_add_sound(EXPLOSION_SOUND, ROLE_SOUNDSERVER, t->id);
-			schedule_callback(event_callback, &callback_schedule,
-					"player-death-callback", t->id);
+			kill_player(t, 1);
 		}
 	} else {
 		(void) add_explosion(t->x, t->y, t->z, 50, 5, 5, t->type);
@@ -8508,14 +8506,9 @@ static void do_temperature_computations(struct snis_entity *o)
 		if (bridgelist[b].warp_core_critical_timer == 0) {
 			bridgelist[b].warp_core_critical = 0;
 			if (!player_invincibility) {
-				o->alive = 0;
+				kill_player(o, 1);
 				o->tsd.ship.damage.shield_damage = 255;
-				o->timestamp = universe_timestamp;
-				o->respawn_time = universe_timestamp + player_respawn_time * 10;
-				schedule_callback(event_callback, &callback_schedule,
-					"player-death-callback", o->id);
 			}
-			snis_queue_add_sound(EXPLOSION_SOUND, ROLE_SOUNDSERVER, o->id);
 		}
 	}
 }
@@ -9083,14 +9076,8 @@ static void player_collision_detection(void *player, void *object)
 
 		if (dist2 < surface_dist2 && !player_invincibility)  {
 			/* crashed into planet */
-			o->alive = 0;
-			o->timestamp = universe_timestamp;
-			o->respawn_time = universe_timestamp + player_respawn_time * 10;
+			kill_player(o, 1);
 			send_ship_damage_packet(o);
-			snis_queue_add_sound(EXPLOSION_SOUND,
-					ROLE_SOUNDSERVER, o->id);
-			schedule_callback(event_callback, &callback_schedule,
-					"player-death-callback", o->id);
 		} else if (dist2 < too_close2 && (universe_timestamp & 0x7) == 0) {
 			if (t->tsd.planet.has_atmosphere) {
 				(void) add_explosion(o->x + o->vx * 2, o->y + o->vy * 2, o->z + o->vz * 2,
@@ -9267,17 +9254,8 @@ static void player_collision_detection(void *player, void *object)
 		relative_vel.v.z = t->vz - o->vz;
 		snis_queue_add_sound(SPACEMONSTER_SLAP, ROLE_SOUNDSERVER, o->id);
 		if (vec3_magnitude(&relative_vel) > 100.0) { /* I guess, arbitrary */
-			if (!player_invincibility) {
-				/* TODO: I should really factor out this player death stuff */
-				o->alive = 0;
-				o->tsd.ship.damage.shield_damage = 255;
-				o->timestamp = universe_timestamp;
-				o->respawn_time = universe_timestamp + player_respawn_time * 10;
-				schedule_callback(event_callback, &callback_schedule,
-					"player-death-callback", o->id);
-				snis_queue_add_sound(EXPLOSION_SOUND, ROLE_SOUNDSERVER, o->id);
-				return;
-			}
+			kill_player(o, 1);
+			return;
 		}
 		do_collision_impulse(o, t); /* probably should tweak the masses here. */
 	}
@@ -9742,14 +9720,8 @@ static int do_sunburn_damage(struct snis_entity *o)
 
 	/* kill the player if they are too close to the sun for too long */
 	if (damage_was_done && o->tsd.ship.damage.shield_damage == 255) {
-		o->alive = 0;
+		kill_player(o, 1);
 		o->tsd.ship.damage.shield_damage = 255;
-		o->timestamp = universe_timestamp;
-		o->respawn_time = universe_timestamp + player_respawn_time * 10;
-		snis_queue_add_sound(EXPLOSION_SOUND,
-				ROLE_SOUNDSERVER, o->id);
-		schedule_callback(event_callback, &callback_schedule,
-			"player-death-callback", o->id);
 	}
 	return damage_was_done;
 }
@@ -12934,10 +12906,7 @@ static void laserbeam_move(struct snis_entity *o)
 			respawn_object(target);
 			delete_from_clients_and_server(target);
 		} else {
-			snis_queue_add_sound(EXPLOSION_SOUND,
-						ROLE_SOUNDSERVER, target->id);
-			schedule_callback(event_callback, &callback_schedule,
-					"player-death-callback", target->id);
+			kill_player(target, 1);
 		}
 	} else {
 		(void) add_explosion(target->x, target->y, target->z, 50, 5, 5, ttype);
