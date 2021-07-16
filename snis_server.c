@@ -30154,11 +30154,6 @@ static void wakeup_multiverse_writer(struct multiverse_server_info *msi)
 	pthread_mutex_unlock(&msi->event_mutex);
 }
 
-static void wakeup_multiverse_reader(struct multiverse_server_info *msi)
-{
-	/* TODO: fill this in */
-}
-
 static void write_queued_packets_to_mvserver(struct multiverse_server_info *msi)
 {
 	struct packed_buffer *buffer;
@@ -30552,7 +30547,8 @@ static void disconnect_from_multiverse(struct multiverse_server_info *msi)
 	msi->writer_time_to_exit = 1;
 	pthread_mutex_unlock(&msi->exit_mutex);
 	wakeup_multiverse_writer(msi);
-	wakeup_multiverse_reader(msi);
+	close(msi->sock); /* This will wake up the multiverse_reader thread and make it quit. */
+	msi->sock = -1;
 }
 
 static void update_starmap(struct ssgl_game_server *gameserver, int ngameservers)
