@@ -13695,6 +13695,52 @@ static void draw_3d_nav_display(void)
 				targeted_entity = contact;
 #endif
 			break;
+		case OBJTYPE_BLOCK:
+			switch (go[i].tsd.block.shape.type) {
+			int j;
+			float sizex, sizey, sizez;
+			float contact_scale;
+
+
+			case SHAPE_SPHERE:
+				contact_scale = ((255.0 - current_zoom) / 255.0);
+				sizex = sizey = sizez = contact_scale * go[i].tsd.block.shape.sphere.radius;
+				contact = add_entity(instrumentecx, low_poly_sphere_mesh,
+							go[i].x, go[i].y, go[i].z, UI_COLOR(nav_ship));
+				update_entity_non_uniform_scale(contact, sizex, sizey, sizez);
+				update_entity_orientation(contact, &go[i].orientation);
+				break;
+			case SHAPE_CUBOID:
+				contact_scale = ((255.0 - current_zoom) / 255.0);
+				sizex = contact_scale * go[i].tsd.block.shape.cuboid.sx;
+				sizey = contact_scale * go[i].tsd.block.shape.cuboid.sy;
+				sizez = contact_scale * go[i].tsd.block.shape.cuboid.sz;
+				contact = add_entity(instrumentecx, unit_cube_mesh,
+							go[i].x, go[i].y, go[i].z, UI_COLOR(nav_ship));
+				update_entity_non_uniform_scale(contact, sizex, sizey, sizez);
+				update_entity_orientation(contact, &go[i].orientation);
+				break;
+			case SHAPE_CAPSULE:
+				contact_scale = ((255.0 - current_zoom) / 255.0);
+				sizex = contact_scale * go[i].tsd.block.shape.capsule.length;
+				sizey = contact_scale * go[i].tsd.block.shape.capsule.radius;
+				sizez = contact_scale * go[i].tsd.block.shape.capsule.radius;
+				contact = add_entity(instrumentecx, cylinder_mesh,
+							go[i].x, go[i].y, go[i].z, UI_COLOR(nav_ship));
+				update_entity_non_uniform_scale(contact, sizex, sizey, sizez);
+				update_entity_orientation(contact, &go[i].orientation);
+				for (j = 0; j < 2; j++) {
+					struct entity *e;
+					e = add_entity(instrumentecx, cylindrically_mapped_sphere_mesh,
+							go[i].x + 0.5 * (1.0 - (j * 2.0)) * sizex,
+							go[i].y + 0, go[i].z + 0, UI_COLOR(nav_ship));
+					if (e) {
+						update_entity_scale(e, sizey);
+						update_entity_orientation(e, &go[i].orientation);
+					}
+				}
+				break;
+			}
 		} /* end switch */
 
 		if (contact) {
@@ -13748,7 +13794,7 @@ static void draw_3d_nav_display(void)
 			}
 
 			/* update the scale based on current scale */
-			if (contact) {
+			if (contact && go[i].type != OBJTYPE_BLOCK) {
 				if (go[i].type == OBJTYPE_PLANET || go[i].type == OBJTYPE_BLACK_HOLE)
 					update_entity_scale(contact, entity_get_scale(contact) * contact_scale);
 				else
