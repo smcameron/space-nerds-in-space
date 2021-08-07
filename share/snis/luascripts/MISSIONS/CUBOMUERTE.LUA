@@ -615,7 +615,7 @@ end
 
 initial_audio_message_time = 5 * secs;
 add_zarkon_fleet(0, 0, 0);
-comms_channel_listen("MEGAMASS BHG 1.7", 123, "bhg_listener");
+comms_channel_listen("MEGAMASS BHG 1.7", bhg_channel, "bhg_listener");
 
 register_timer_callback("scheduled_audio_message", initial_audio_message_time, 1);
 register_timer_callback("check_bhg_position", 10, 0);
