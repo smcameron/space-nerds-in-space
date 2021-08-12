@@ -108,6 +108,13 @@ from bump center scaled into range 0 - Pi</h2>
 	<h2>vector lengths representing elevation are adjusted to make the bumps
 	<p align=center><img src="cosine.png"></p>
 	<p align=center>0.5 + 0.5 * cos(x) in the range of -Pi to Pi</p>
+	<p>Wed Aug 11 20:14:17 EDT 2021 Note: KdotJPEG informs me of a more efficient polynomial that involves no sqrt() or trig functions which produces nearly the same curve:
+	<ul>
+	<li> s = min(x^2, 1.0);
+	<li> (1 - s)^2
+	</ul>
+	<p>Here's a graph, the green line is (1 - s)^2, the blue line is 0.5 + 0.5 * (cos(sqrt(s) * PI).
+	<p align=center><img src="more-efficient.jpg">
       </hgroup>
     </section>
     <section>
