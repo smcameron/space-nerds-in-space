@@ -21403,13 +21403,11 @@ static int l_lookup_commodity(lua_State *l)
 	const char *lua_commodity_name = luaL_checkstring(l, 1);
 	int i;
 
-	for (i = 0; i < ncommodities; i++) {
-		if (strcasecmp(lua_commodity_name, commodity[i].name) == 0) {
-			lua_pushnumber(l, (float) i);
-			return 1;
-		}
-	}
-	lua_pushnil(l);
+	i = lookup_commodity(commodity, ncommodities, lua_commodity_name);
+	if (i < 0)
+		lua_pushnil(l);
+	else
+		lua_pushnumber(l, (float) i);
 	return 1;
 }
 

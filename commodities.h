@@ -50,6 +50,8 @@ float commodity_calculate_price(struct commodity *c,
 int add_commodity(struct commodity **c, int *ncommodities, const char *category, const char *name, const char *unit,
 			const char *scans_as, float base_price, float volatility, float legality, int odds);
 
+int lookup_commodity(struct commodity *c, int ncommodities, const char *commodity_name);
+
 const char *commodity_category(int cat);
 const char *commodity_category_description(int cat);
 const int ncommodity_categories(void);

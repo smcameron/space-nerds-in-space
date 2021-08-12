@@ -376,6 +376,16 @@ int add_commodity(struct commodity **c, int *ncommodities, const char *category,
 	return n - 1;
 }
 
+int lookup_commodity(struct commodity *c, int ncommodities, const char *commodity_name)
+{
+	int i;
+
+	for (i = 0; i < ncommodities; i++)
+		if (strcasecmp(commodity_name, c[i].name) == 0)
+			return i;
+	return -1;
+}
+
 const char *commodity_category(int cat)
 {
 	if (cat < 0 || cat >= ncategories)
