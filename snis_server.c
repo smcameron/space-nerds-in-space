@@ -11465,7 +11465,7 @@ static int l_add_ship(lua_State *l)
 	auto_respawn = (ar > 0.999);
 
 	if (shiptype < 0 || shiptype > nshiptypes - 1) {
-		lua_pushnumber(lua_state, -1.0);
+		lua_pushnil(lua_state);
 		return 1;
 	}
 
@@ -11473,7 +11473,10 @@ static int l_add_ship(lua_State *l)
 	i = add_specific_ship(name, x, y, z,
 		(uint8_t) shiptype % nshiptypes,
 		(uint8_t) the_faction % nfactions(), auto_respawn);
-	lua_pushnumber(lua_state, i < 0 ? -1.0 : (double) go[i].id);
+	if (i < 0)
+		lua_pushnil(lua_state);
+	else
+		lua_pushnumber(lua_state, (double) go[i].id);
 	pthread_mutex_unlock(&universe_mutex);
 	return 1;
 }
@@ -11490,7 +11493,10 @@ static int l_add_asteroid(lua_State *l)
 
 	pthread_mutex_lock(&universe_mutex);
 	i = add_asteroid(x, y, z, 0.0, 0.0, 0.0, 1.0);
-	lua_pushnumber(lua_state, i < 0 ? -1.0 : (double) go[i].id);
+	if (i < 0)
+		lua_pushnil(lua_state);
+	else
+		lua_pushnumber(lua_state, (double) go[i].id);
 	pthread_mutex_unlock(&universe_mutex);
 	return 1;
 }
@@ -11536,7 +11542,7 @@ static int l_add_cargo_container(lua_State *l)
 		pthread_mutex_unlock(&universe_mutex);
 		return 1;
 	}
-	lua_pushnumber(lua_state, i < 0 ? -1.0 : (double) go[i].id);
+	lua_pushnumber(lua_state, (double) go[i].id);
 	pthread_mutex_unlock(&universe_mutex);
 	return 1;
 }
@@ -11806,7 +11812,10 @@ static int l_add_random_ship(lua_State *l)
 
 	pthread_mutex_lock(&universe_mutex);
 	i = add_ship(-1, snis_randn(nshiptypes), 1);
-	lua_pushnumber(lua_state, i >= 0 ? (double) go[i].id : -1.0);
+	if (i < 0)
+		lua_pushnil(lua_state);
+	else
+		lua_pushnumber(lua_state, (double) go[i].id);
 	pthread_mutex_unlock(&universe_mutex);
 	return 1;
 }
@@ -11857,7 +11866,7 @@ static int l_add_spacemonster(lua_State *l)
 	i = add_spacemonster(x, y, z);
 	if (i < 0) {
 		pthread_mutex_unlock(&universe_mutex);
-		lua_pushnumber(lua_state, -1.0);
+		lua_pushnil(lua_state);
 		return 1;
 	}
 	strlcpy(go[i].sdata.name, name, sizeof(go[i].sdata.name));
@@ -12192,12 +12201,15 @@ static int l_add_turret(lua_State *l)
 	i = lookup_by_id(parent_id);
 	if (i < 0) {
 		pthread_mutex_unlock(&universe_mutex);
-		lua_pushnumber(lua_state, -1.0);
+		lua_pushnil(lua_state);
 		return 1;
 	}
 	i = add_turret(parent_id, 0.0, 0.0, 0.0, x, y, z, identity_quat, up,
 			(int) firing_interval);
-	lua_pushnumber(lua_state, i < 0 ? -1.0 : (double) go[i].id);
+	if (i < 0)
+		lua_pushnil(lua_state);
+	else
+		lua_pushnumber(lua_state, (double) go[i].id);
 	pthread_mutex_unlock(&universe_mutex);
 	return 1;
 }
@@ -12270,7 +12282,7 @@ static int l_add_block(lua_State *l)
 	dz = 0.0;
 
 	if ((int) material_index != 0 && (int) material_index != 1) {
-		lua_pushnumber(lua_state, -1.0);
+		lua_pushnil(lua_state);
 		return 1;
 	}
 	switch ((int) form) {
@@ -12279,7 +12291,7 @@ static int l_add_block(lua_State *l)
 	case SHAPE_CAPSULE:
 		break;
 	default:
-		lua_pushnumber(lua_state, -1.0);
+		lua_pushnil(lua_state);
 		return 1;
 	}
 	quat_init_axis(&rotation, rotx, roty, rotz, angle);
@@ -12299,7 +12311,10 @@ static int l_add_block(lua_State *l)
 	}
 	i = add_block_object(parent_id, x, y, z, 0.0, 0.0, 0.0, dx, dy, dz, sx, sy, sz, rotation,
 				(int) material_index, (int) form);
-	lua_pushnumber(lua_state, i < 0 ? -1.0 : (double) go[i].id);
+	if (i < 0)
+		lua_pushnil(lua_state);
+	else
+		lua_pushnumber(lua_state, (double) go[i].id);
 	pthread_mutex_unlock(&universe_mutex);
 	return 1;
 }
@@ -12444,7 +12459,7 @@ static int l_add_turrets_to_block_face(lua_State *l)
 	i = lookup_by_id(parent_id);
 	if (i < 0) {
 		pthread_mutex_unlock(&universe_mutex);
-		lua_pushnumber(lua_state, -1.0);
+		lua_pushnil(lua_state);
 		return 1;
 	}
 	face = (int) dface;
@@ -12632,7 +12647,10 @@ static int l_add_starbase(lua_State *l)
 
 	pthread_mutex_lock(&universe_mutex);
 	i  = add_starbase(x, y, z, 0, 0, 0, n, -1);
-	lua_pushnumber(lua_state, i < 0 ? -1.0 : (double) go[i].id);
+	if (i < 0)
+		lua_pushnil(lua_state);
+	else
+		lua_pushnumber(lua_state, (double) go[i].id);
 	pthread_mutex_unlock(&universe_mutex);
 	return 1;
 }
@@ -12728,7 +12746,7 @@ static int l_add_explosion(lua_State *l)
 	explosion_type = lua_tonumber(lua_state, 8);
 
 	if (nsparks <= 0 || time <= 0 || v <= 0) {
-		lua_pushnumber(lua_state, -1.0);
+		lua_pushnil(lua_state);
 		return 1;
 	}
 	if (nsparks >= 200.0)
@@ -12737,7 +12755,7 @@ static int l_add_explosion(lua_State *l)
 				(uint16_t) nsparks, (uint16_t) time, (uint8_t) victim_type,
 				(uint8_t) explosion_type);
 	if (rc < 0) {
-		lua_pushnumber(lua_state, -1.0);
+		lua_pushnil(lua_state);
 		return 1;
 	}
 	lua_pushnumber(lua_state, 0.0);
@@ -13248,7 +13266,7 @@ static int l_add_nebula(lua_State *l)
 	i = add_nebula(x, y, z, 0.0, 0.0, 0.0, r);
 	if (i < 0) {
 		pthread_mutex_unlock(&universe_mutex);
-		lua_pushnumber(lua_state, -1.0);
+		lua_pushnil(lua_state);
 		return 1;
 	}
 	strlcpy(go[i].sdata.name, name, sizeof(go[i].sdata.name));
@@ -13361,7 +13379,10 @@ static int l_add_derelict(lua_State *l)
 	vz = snis_random_float() * 10.0;
 	/* assume lua-added derelicts are part of some scenario, so should be persistent */
 	i = add_derelict(name, x, y, z, vx, vy, vz, shiptype, the_faction, 1, (uint32_t) -1);
-	lua_pushnumber(lua_state, i < 0 ? -1.0 : (double) go[i].id);
+	if (i < 0)
+		lua_pushnil(lua_state);
+	else
+		lua_pushnumber(lua_state, (double) go[i].id);
 	pthread_mutex_unlock(&universe_mutex);
 	return 1;
 }
@@ -13376,12 +13397,12 @@ static int l_derelict_set_ships_log(lua_State *l)
 	ships_log = lua_tostring(lua_state, 2);
 	id = (int) did;
 	if (id < 0) {
-		lua_pushnumber(lua_state, -1.0);
+		lua_pushnil(lua_state);
 		return 1;
 	}
 	rc = derelict_set_ships_log(id, ships_log);
 	if (rc)
-		lua_pushnumber(lua_state, -1.0);
+		lua_pushnil(lua_state);
 	else
 		lua_pushnumber(lua_state, 0.0);
 	return 1;
@@ -13576,7 +13597,7 @@ static int l_add_planet(lua_State *l)
 	i = add_planet(x, y, z, r, (uint8_t) s, t);
 	if (i < 0) {
 		pthread_mutex_unlock(&universe_mutex);
-		lua_pushnumber(lua_state, -1.0);
+		lua_pushnil(lua_state);
 		return 1;
 	}
 	strlcpy(go[i].sdata.name, name, sizeof(go[i].sdata.name));
@@ -13606,7 +13627,7 @@ static int l_add_black_hole(lua_State *l)
 	i = add_black_hole(x, y, z, r);
 	if (i < 0) {
 		pthread_mutex_unlock(&universe_mutex);
-		lua_pushnumber(lua_state, -1.0);
+		lua_pushnil(lua_state);
 		return 1;
 	}
 	strlcpy(go[i].sdata.name, name, sizeof(go[i].sdata.name));
@@ -13677,13 +13698,13 @@ static int l_play_sound(lua_State *l)
 	if (i < 0) {
 		pthread_mutex_unlock(&universe_mutex);
 		send_demon_console_msg("PLAY_SOUND: BAD OBJECT ID: %f", lua_oid1);
-		lua_pushnumber(lua_state, -1);
+		lua_pushnil(lua_state);
 		goto out;
 	}
 	if (go[i].type != OBJTYPE_BRIDGE) {
 		pthread_mutex_unlock(&universe_mutex);
 		send_demon_console_msg("PLAY_SOUND: NOT PLAYER SHIP: %f", lua_oid1);
-		lua_pushnumber(lua_state, -1);
+		lua_pushnil(lua_state);
 		goto out;
 	}
 	send_oneshot_sound_request(&go[i], fn);
@@ -13712,12 +13733,12 @@ static int l_set_red_alert_status(lua_State *l)
 	i = lookup_by_id(lua_oid);
 	if (i < 0) {
 		pthread_mutex_unlock(&universe_mutex);
-		lua_pushnumber(l, -1.0);
+		lua_pushnil(l);
 		return 1;
 	}
 	if (go[i].type != OBJTYPE_BRIDGE) {
 		pthread_mutex_unlock(&universe_mutex);
-		lua_pushnumber(l, -1.0);
+		lua_pushnil(l);
 		return 1;
 	}
 	shipid = go[i].id;
@@ -13733,7 +13754,7 @@ static int l_set_red_alert_status(lua_State *l)
 	client_unlock();
 	if (!c) {
 		pthread_mutex_unlock(&universe_mutex);
-		lua_pushnumber(l, -1.0);
+		lua_pushnil(l);
 		return 1;
 	}
 	set_red_alert_mode(c, redalert);
@@ -13751,14 +13772,14 @@ static int l_destroy_ship(lua_State *l)
 	i = lookup_by_id(lua_oid);
 	if (i < 0) {
 		pthread_mutex_unlock(&universe_mutex);
-		lua_pushnumber(l, -1.0);
+		lua_pushnil(l);
 		send_demon_console_msg("DESTROY_SHIP: OBJECT NOT FOUND");
 		return 1;
 	}
 	t = &go[i];
 	if (t->type != OBJTYPE_NPCSHIP) {
 		pthread_mutex_unlock(&universe_mutex);
-		lua_pushnumber(l, -1.0);
+		lua_pushnil(l);
 		send_demon_console_msg("DESTROY_SHIP: OBJECT NOT AN NPC SHIP");
 		return 1;
 	}
@@ -13788,13 +13809,13 @@ static int l_add_torpedo(lua_State *l)
 	i = lookup_by_id(iid);
 	if (i < 0) {
 		pthread_mutex_unlock(&universe_mutex);
-		lua_pushnumber(l, -1.0);
+		lua_pushnil(l);
 		send_demon_console_msg("ADD_TORPEDO: OBJECT NOT FOUND");
 		return 1;
 	}
 	i = add_torpedo(x, y, z, vx, vy, vz, iid, TARGET_ALL_SYSTEMS);
 	pthread_mutex_unlock(&universe_mutex);
-	lua_pushnumber(l, (double) i);
+	lua_pushnumber(l, (double) go[i].id);
 	return 1;
 }
 
@@ -13811,14 +13832,14 @@ static int l_set_starbase_factions_allowed(lua_State *l)
 	i = lookup_by_id(starbase_id);
 	if (i < 0) {
 		pthread_mutex_unlock(&universe_mutex);
-		lua_pushnumber(l, -1.0);
+		lua_pushnil(l);
 		send_demon_console_msg("SET_STARBASE_FACTIONS_ALLOWED: STARBASE NOT FOUND");
 		return 1;
 	}
 	sb = &go[i];
 	if (sb->type != OBJTYPE_STARBASE) {
 		pthread_mutex_unlock(&universe_mutex);
-		lua_pushnumber(l, -1.0);
+		lua_pushnil(l);
 		send_demon_console_msg("SET_STARBASE_FACTIONS_ALLOWED: OBJECT IS WRONG TYPE");
 		return 1;
 	}
@@ -21550,7 +21571,7 @@ static int l_dock_player_to_starbase(lua_State *l)
 	return 1;
 failure:
 	pthread_mutex_unlock(&universe_mutex);
-	lua_pushnumber(l, -1.0);
+	lua_pushnil(l);
 	return 1;
 }
 
@@ -21617,7 +21638,7 @@ static int l_set_custom_button_label(lua_State *l)
 	return 1;
 error:
 	pthread_mutex_unlock(&universe_mutex);
-	lua_pushnumber(lua_state, -1);
+	lua_pushnil(lua_state);
 	return 1;
 }
 
@@ -21645,7 +21666,7 @@ static int enable_or_disable_custom_button(double oid, double screen, int enable
 	return 1;
 error:
 	pthread_mutex_unlock(&universe_mutex);
-	lua_pushnumber(lua_state, -1);
+	lua_pushnil(lua_state);
 	return 1;
 }
 
@@ -21724,23 +21745,23 @@ static int l_add_bounty(lua_State *l)
 	i = lookup_by_id(sbid);
 	if (i < 0) {
 		pthread_mutex_unlock(&universe_mutex);
-		lua_pushnumber(l, -1);
+		lua_pushnil(l);
 		return 1;
 	}
 	if (go[i].type != OBJTYPE_STARBASE) {
 		pthread_mutex_unlock(&universe_mutex);
-		lua_pushnumber(l, -1);
+		lua_pushnil(l);
 		return 1;
 	}
 	i = lookup_by_id(id);
 	if (i < 0) {
 		pthread_mutex_unlock(&universe_mutex);
-		lua_pushnumber(l, -1);
+		lua_pushnil(l);
 		return 1;
 	}
 	if (go[i].type != OBJTYPE_NPCSHIP) {
 		pthread_mutex_unlock(&universe_mutex);
-		lua_pushnumber(l, -1);
+		lua_pushnil(l);
 		return 1;
 	}
 	ship_registry_add_bounty(&ship_registry, id, crime, amount, sbid);

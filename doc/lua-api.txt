@@ -198,14 +198,15 @@ clear_all() -- this clears the entire universe except for human controlled ships
 	a mission script.
 
 id = add_random_ship() -- adds a random ship to the universe in a random location
-	returns the "id" of the ship.  If adding ship failed, -1.0 is returned.
+	returns the "id" of the ship.  If adding ship failed, nil is returned.
 
 id = add_ship(name, x, y, z, type, faction, auto_respawn) -- adds a ship to the
         universe of the specified type and faction at the specified locations.  If
-        adding ship failed, -1.0 is returned.
+        adding ship failed, nil is returned.
 
 id = add_asteroid(x, y, z) -- adds an asteroid at the specified location
-	(it will orbit around the center of the universe)
+	(it will orbit around the center of the universe). Returns the ID of the
+	asteroid, or nil if it fails.
 
 set_asteroid_speed(id, speed);
 	Sets the speed of the asteroid with the specified id to the specified
@@ -222,14 +223,14 @@ set_asteroid_minerals(id, carbon, silicates, nickeliron, preciousmetals); -- set
 	set_asteroid_minerals(asteroid, 90.0, 5.0, 3.0, 2.0);
 
 id = add_cargo_container(x, y, z, vx, vy, vz) -- adds a cargo container at specified
-	location and velocity
+	location and velocity. Returns ID of cargo container, or nil on failure.
 
 id = add_derelict(name, x, y, z, shiptype, faction) -- adds a derelict vessel at
-	specified location
+	specified location. Returns ID of derelict or nil on failure.
 
 rc = derelict_set_ships_log(id, ships_log_entry)
 	Sets the ships log entry (a string) to the specified value for the derelict identified
-	by id. Returns 0.0 if successful, -1.0 otherwise. Maximum length of ships_log_entry is
+	by id. Returns 0.0 if successful, nil otherwise. Maximum length of ships_log_entry is
 	100 characters.
 
 	Example:
@@ -240,24 +241,24 @@ rc = derelict_set_ships_log(id, ships_log_entry)
 	These log entries can be recovered by the mining bot.
 
 id = add_starbase(x, y, z, n) - adds a starbase at location x,y with number n (0 <= n <= 99).
-	the starbase will be named "SB-n"
+	the starbase will be named "SB-n"  Returns the ID of the starbase, or nil on failure.
 	TODO: allow starbases to be named arbitrary strings.
 
 id = add_planet(name, x, y, z, r, s, t) - adds planet at x,y,z with specified name, radius,
 	and security (security: 0 = low, 1 = medium, 2 = high) and type t (0 = earthlike,
 	1 = gas-giant, 2 = rocky (you can remember because they are alphabetical order)).
 	The last parameter, t, is optional.
-	returns id of planet or -1.0 on failure.   Radius should be between 800 and 7000.
+	returns id of planet or nil on failure.   Radius should be between 800 and 7000.
 
 id = add_black_hole(name, x, y, z, r) - adds a black hole at x,y,z with specified name, and
-	radius, returns id of black hole or -1.0 on failure.   Radius should be between 1000
+	radius, returns id of black hole or nil on failure.   Radius should be between 1000
 	and 7000.
 
 id = add_nebula(name, x, y, z, r) - adds nebula at x,y with specified radius and name,
-	returns id of nebula or -1.0 on failure. 
+	returns id of nebula or nil on failure.
 
 id = add_spacemonster(name, x, y, z) - adds spacemonster at x,y,z with specified name,
-	returns id of spacemonster or -1.0 on failure.
+	returns id of spacemonster or nil on failure.
 
 id1, id2 = add_wormhole_pair(x1, y1, z1, x2, y2, z2) - adds connected wormholes at the
 	specified location, returns -1 for a wormhole id that fails to create.
@@ -655,8 +656,9 @@ reset_player_ship(player_ship_id) -- resets the player ship to healthy status wi
 	player_ids = get_player_ship_ids();
 	reset_player_ship(player_ids[1]);
 
-add_turret(parent_id, x, y, z, firing_interval) -- adds a turrent onto the specified
+add_turret(parent_id, x, y, z, firing_interval) -- adds a turret onto the specified
 	object at the specified offset with specified firing interval (10ths of secs).
+	Returns the ID of the turret, or nil on failure.
 
   Example:
 	turret_id = add_turret(starbase_id, 100, 100, 0);
@@ -691,7 +693,7 @@ add_block(parent_id, x, y, z, sx, sy, sz, rotx, roty, rotz, angle, material_inde
 		2.0: block form is a capsule (cylinder with hemispheres at the end).
 		  The length of the cylinder is sx, and the radius is max(sy, sz).
 
-	Returns the ID of the created block.
+	Returns the ID of the created block, or nil on failure.
 
 	Note: if the parent_id < 0, then the block will be given a random rotational
 	velocity.
@@ -704,7 +706,7 @@ add_block(parent_id, x, y, z, sx, sy, sz, rotx, roty, rotz, angle, material_inde
 add_turrets_to_block_face(parent_id, face, rows, cols)
 	Adds an array of rows * cols turrets onto one of the faces of a block;
 
-	if parent_id is invalid, -1 is returned and nothing is done.
+	if parent_id is invalid, nil is returned and nothing is done.
 
 	face is a number betwee 0 and 5 inclusive indicating which face of the block
 	to add the turret array.
@@ -719,6 +721,8 @@ add_turrets_to_block_face(parent_id, face, rows, cols)
 	face is forced in range by "face = fabs(face) % 6".
 
 	rows and cols indicate the size of the turret array to add.
+
+	Returns 0.0 on success, nil on failure.
 
   Example:
 	block = add_block(-1, 1000, 1000, 1000, 500, 500, 500, 1, 0, 0, 45 * 3.1415927 / 180.0, 0);
@@ -769,9 +773,11 @@ add_explosion(x, y, z, v, nsparks, time, victim_type, explosion_type);
 	snis.h:#define OBJTYPE_WARP_CORE 24
 	snis.h:#define OBJTYPE_BLACK_HOLE 25
 
+	Returns 0.0 on success, nil on failure.
+
 dock_player_to_starbase(player_id, starbase_id)
 	Docks the player with an empty docking port on the specified starbase.
-	returns -1.0 on failure, 0.0 on success. May fail if all docking ports
+	returns nil on failure, 0.0 on success. May fail if all docking ports
 	are full or if the player id or starbase id are not correct.
 
 x,y,z,id = get_mining_bot_destination(id)
@@ -803,17 +809,18 @@ set_custom_button_label(player_id, screen, label)
 		4 - SCIENCE
 		5 - COMMS
 	"label" is a string that you want the button to display. The string must be
-	15 characters or fewer, or it will be truncated.
+	15 characters or fewer, or it will be truncated.  Returns 0 on success, nil on failure.
 
 enable_custom_button(player_id, screen);
 	Enables the specified custom button for the specified player.
 	"screen" is an integer as described above (see set_custom_button_label).
 	You can register a callback for the event "custom-button-press-event" to
-	react to custom button presses.
+	react to custom button presses. Returns 0 on success, nil on failure.
 
 disable_custom_button(player_id, screen);
 	Disables (hides) the specified custom button for the specified player.
 	"screen" is an integer as described above (see set_custom_button_label).
+	Returns 0 on success, nil on failure.
 
 fire_missile(shooter_id, target_id)
 	Fires a missile from the location of shooter id homing on target_id
@@ -842,7 +849,7 @@ add_bounty(ship_id, crime, amount, starbase_id)
 	Add a bounty for the specified amount (number) for the specified ship_id (number)
 	and crime (string) redeemable at the specified starbase_id (number);
 
-	On success, 0 is returned. On failure, -1 is returned.
+	On success, 0 is returned. On failure, nil is returned.
 	Failure can happen if the ship_id is not the id of a ship, or if the starbase_id
 	is not the id of a starbase.
 
@@ -943,30 +950,34 @@ play_sound(player_ship_id, ogg_file) -- Plays a "one shot" sound on any terminal
 	specified player ship which have the SOUNDSERVER role. Note, only one such sound
 	can play concurrently. If you attempt to play a second sound before the first
 	has finished playing, the second sound request will be ignored. The sounds files
-	must reside within the asset directory (by default, share/snis).
+	must reside within the asset directory (by default, share/snis).  Returns 0.0 on
+	success, nil on failure.
 
 	Example:
 		play_sound(player_ship_id, "sounds/red-alert.ogg");
 
 set_red_alert_status(ship_id, status) -- sets the red-alert status for the specified ship
-	to the specified status (1 = RED ALERT ON, 0 = RED ALERT OFF);
+	to the specified status (1 = RED ALERT ON, 0 = RED ALERT OFF);  Returns 0 on success,
+	nil on failure.
 
 destroy_ship(ship_id)
 	Explodes the given ship creating a derelict and ejecting any cargo contained in
 	the ship. Useful for testing scenarios that involve the player destroying a ship,
 	emulating sabotage of ships, etc. This function is for destroying NPC ships only,
-	not player ships.
+	not player ships. Returns 0.0 on success, nil on failure.
 
 add_torpedo(x, y, z, vx, vy, vz, firing_ship_id)
 	Adds a torpedo at (x, y, z) with velocity (vx, vy, vz) fired from
-	ship firing_ship_id.
+	ship firing_ship_id.  Returns the ID of the torpedo on success, nil
+	on failure.
 
 set_starbase_factions_allowed(starbase_id, faction_mask)
 	Sets the faction mask for the given starbase.  The faction mask is
 	a bit field, with each bit indicating whether a particular faction is
 	permitted to dock.  The faction mask is only honored if the server side
 	tweakable variable "docking_by_faction" is non-zero (e.g. via
-	set_variable("docking_by_faction", 1);)
+	set_variable("docking_by_faction", 1);)  Returns 0 on success, nil on
+	failure.
 
 generate_cipher_key()
 
