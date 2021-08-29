@@ -10,7 +10,7 @@ How can I help?
 
 1. Got ideas for some mission scenarios? Open an issue describing the mission you'd like to see.
    Do you know [Lua](https://www.lua.org/)?  We need more mission scenario scripts.
-   Take a look at [lua-api.txt](https://github.com/smcameron/space-nerds-in-space/blob/master/lua-api.txt)
+   Take a look at [lua-api.txt](https://github.com/smcameron/space-nerds-in-space/blob/master/doc/lua-api.txt)
    and at some of the mission scripts in
    [share/snis/luascripts](https://github.com/smcameron/space-nerds-in-space/tree/master/share/snis/luascripts).
    Reasonably good examples are [Saving Planet Erph](https://github.com/smcameron/space-nerds-in-space/blob/master/share/snis/luascripts/SAVING-PLANET-ERPH.LUA),
