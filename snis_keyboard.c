@@ -312,9 +312,7 @@ void init_keymap(void)
 	ffmapkey(all, SDLK_F8, keyf8);
 	ffmapkey(all, SDLK_F9, keyf9);
 	ffmapkey(all, SDLK_F10, keyf10);
-	mapkey(all, SDLK_LSHIFT, key_left_shift);
 	ffmapkey(all, SDLK_LSHIFT, key_left_shift);
-	mapkey(all, SDLK_RSHIFT, key_right_shift);
 	ffmapkey(all, SDLK_RSHIFT, key_right_shift);
 
 	ffmapkey(all, SDLK_F11, keyfullscreen);
