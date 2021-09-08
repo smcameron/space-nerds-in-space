@@ -23387,6 +23387,11 @@ static void process_instructions_from_client(struct game_client *c)
 				logprefix(), c->socket);
 			goto orderly_client_shutdown;
 		}
+		if (errno == ECONNRESET) {
+			fprintf(stderr, "%s: connection reset by client on socket %d\n",
+				logprefix(), c->socket);
+			goto orderly_client_shutdown;
+		}
 		fprintf(stderr, "%s: snis_readsocket() returned %d, errno = %s\n",
 			logprefix(), rc, strerror(errno));
 		goto protocol_error;
