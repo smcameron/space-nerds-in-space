@@ -467,10 +467,11 @@ int numbers_to_words(float number, int max_decimal_places, char *buffer, int buf
 	rc = integer_to_words(i, ipart, 500);
 	if (rc < 0)
 		return rc;
-	if (max_decimal_places > 0)
+	if (max_decimal_places > 0) {
 		rc = frac_to_words(f, fpart, 500, max_decimal_places);
 		if (rc < 0)
 			return rc;
+	}
 
 	if ((f * 1000) >= 1.0 && max_decimal_places > 0)
 		rc = snprintf(buffer, buflen, "%s %s", ipart, fpart);
