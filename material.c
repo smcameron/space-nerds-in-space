@@ -33,7 +33,7 @@ static unsigned int load_texture(const char *asset_dir, char *filename, int line
 {
 	char fname[PATH_MAX + 1];
 
-	sprintf(fname, "%s/textures/%s", asset_dir, filename);
+	snprintf(fname, sizeof(fname), "%s/textures/%s", asset_dir, filename);
 	return graph_dev_load_texture(fname, linear_colorspace);
 }
 
