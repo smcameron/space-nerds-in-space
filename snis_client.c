@@ -5121,7 +5121,7 @@ static void show_lobbyscreen(void)
 				snis_draw_rectangle(0, txx(25), txy(100) + (-0.5 + i) * LINEHEIGHT,
 					txx(600), LINEHEIGHT);
 				struct ui_element *e =
-					ui_element_get_by_element(uiobjs, lobby_ui.lobby_connect_to_server_button);
+					widget_to_ui_element(uiobjs, lobby_ui.lobby_connect_to_server_button);
 				if (e)
 					ui_element_update_position_offset(e,
 						txx(650), (int) (txy(100) + (-0.5 + i) * LINEHEIGHT));

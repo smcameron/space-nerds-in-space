@@ -158,8 +158,6 @@ GLOBAL void ui_element_set_displaymode(struct ui_element *e, int displaymode);
 GLOBAL struct ui_element *widget_to_ui_element(struct ui_element_list *list, void *widget);
 /* Sets the tooltip drawing function. fn ptr used to isolate drawing code from this code */
 GLOBAL void ui_set_tooltip_drawing_function(ui_tooltip_drawing_function f);
-/* Similar to widget_to_ui_element(), but by ui element instead of by widget */
-GLOBAL struct ui_element *ui_element_get_by_element(struct ui_element_list *list, void *element);
 /* Returns the first ui element in the list that (x, y) is inside. Useful for implementing user
  * moveable widgets. */
 GLOBAL struct ui_element *ui_element_list_find_by_position(struct ui_element_list *list, int x, int y);

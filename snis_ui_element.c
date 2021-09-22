@@ -267,21 +267,6 @@ void ui_element_set_displaymode(struct ui_element *e, int displaymode)
 	e->active_displaymode = displaymode;
 }
 
-struct ui_element *ui_element_get_by_element(struct ui_element_list *list, void *element)
-{
-	struct ui_element_list *i;
-
-	for (i = list; i; i = i->next) {
-		struct ui_element *e = i->element;
-		intptr_t a, b;
-		a = (intptr_t) e->element;
-		b = (intptr_t) element;
-		if (a == b)
-			return e;
-	}
-	return NULL;
-}
-
 static void advance_focus(struct ui_element_list *list)
 {
 	struct ui_element_list *i;
