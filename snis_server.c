@@ -14851,36 +14851,66 @@ static int process_request_thrust(struct game_client *c)
 
 static void send_demon_console_color_msg(uint8_t color, const char *fmt, ...)
 {
+	char msg[1000];
 	char buf[DEMON_CONSOLE_MSG_MAX];
 	struct packed_buffer *pb;
 	va_list arg_ptr;
+	int length, start, bytes_to_copy;
 
 	memset(buf, 0, sizeof(buf));
 	va_start(arg_ptr, fmt);
-	vsnprintf(buf, sizeof(buf) - 1, fmt, arg_ptr);
+	vsnprintf(msg, sizeof(msg) - 1, fmt, arg_ptr);
 	va_end(arg_ptr);
-	buf[sizeof(buf) - 1] = '\0';
-	pb = packed_buffer_allocate(3 + sizeof(buf));
-	packed_buffer_append(pb, "bbb", OPCODE_CONSOLE_OP, OPCODE_CONSOLE_SUBCMD_ADD_TEXT, color);
-	packed_buffer_append_raw(pb, buf, sizeof(buf));
-	send_packet_to_all_clients(pb, ROLE_DEMON);
+
+	length = strlen(msg);
+	start = 0;
+
+	while (1) {
+		bytes_to_copy = length - start;
+		if (bytes_to_copy <= 0)
+			break;
+		if (bytes_to_copy > DEMON_CONSOLE_MSG_MAX - 1)
+			bytes_to_copy = DEMON_CONSOLE_MSG_MAX - 1;
+		memcpy(buf, &msg[start], bytes_to_copy);
+		buf[bytes_to_copy] = '\0';
+		pb = packed_buffer_allocate(3 + sizeof(buf));
+		packed_buffer_append(pb, "bbb", OPCODE_CONSOLE_OP, OPCODE_CONSOLE_SUBCMD_ADD_TEXT, color);
+		packed_buffer_append_raw(pb, buf, sizeof(buf));
+		send_packet_to_all_clients(pb, ROLE_DEMON);
+		start += bytes_to_copy;
+	}
 }
 
 static void send_demon_console_msg(const char *fmt, ...)
 {
+	char msg[1000];
 	char buf[DEMON_CONSOLE_MSG_MAX];
 	struct packed_buffer *pb;
 	va_list arg_ptr;
+	int length, start, bytes_to_copy;
 
 	memset(buf, 0, sizeof(buf));
 	va_start(arg_ptr, fmt);
-	vsnprintf(buf, sizeof(buf) - 1, fmt, arg_ptr);
+	vsnprintf(msg, sizeof(msg) - 1, fmt, arg_ptr);
 	va_end(arg_ptr);
-	buf[sizeof(buf) - 1] = '\0';
-	pb = packed_buffer_allocate(3 + sizeof(buf));
-	packed_buffer_append(pb, "bbb", OPCODE_CONSOLE_OP, OPCODE_CONSOLE_SUBCMD_ADD_TEXT, 255);
-	packed_buffer_append_raw(pb, buf, sizeof(buf));
-	send_packet_to_all_clients(pb, ROLE_DEMON);
+
+	length = strlen(msg);
+	start = 0;
+
+	while (1) {
+		bytes_to_copy = length - start;
+		if (bytes_to_copy <= 0)
+			break;
+		if (bytes_to_copy > DEMON_CONSOLE_MSG_MAX - 1)
+			bytes_to_copy = DEMON_CONSOLE_MSG_MAX - 1;
+		memcpy(buf, &msg[start], bytes_to_copy);
+		buf[bytes_to_copy] = '\0';
+		pb = packed_buffer_allocate(3 + sizeof(buf));
+		packed_buffer_append(pb, "bbb", OPCODE_CONSOLE_OP, OPCODE_CONSOLE_SUBCMD_ADD_TEXT, 255);
+		packed_buffer_append_raw(pb, buf, sizeof(buf));
+		send_packet_to_all_clients(pb, ROLE_DEMON);
+		start += bytes_to_copy;
+	}
 }
 
 static int process_demon_thrust(struct game_client *c)
@@ -26130,13 +26160,13 @@ static void print_lua_error_message(char *error_context, char *lua_command)
 		snprintf(error_msg, sizeof(error_msg) - 1, "%s %s", error_context, lua_command);
 	else
 		snprintf(error_msg, sizeof(error_msg) - 1, "%s", error_context);
-	fprintf(stderr, "%s", error_msg);
+	fprintf(stderr, "%s\n", error_msg);
 	send_demon_console_color_msg(YELLOW, "%s", error_msg);
 
 	if (lua_command) {
 		snprintf(error_msg, sizeof(error_msg) - 1, "LUA: %s",
 			lua_tostring(lua_state, -1));
-		fprintf(stderr, "%s", error_msg);
+		fprintf(stderr, "%s\n", error_msg);
 		send_demon_console_color_msg(YELLOW, "%s", error_msg);
 	}
 }
