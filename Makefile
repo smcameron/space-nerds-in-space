@@ -1325,8 +1325,8 @@ bin/test_snis_dmx:	test_snis_dmx.c ${OD}/snis_dmx.o ${BIN}
 $(OD)/snis_test_audio.o:	snis_test_audio.c Makefile ${SNDOBJS} ${OGGOBJ} ${ODT}
 	$(Q)$(VORBISCOMPILE)
 
-bin/snis_test_audio:	${OD}/snis_test_audio.o ${SNDLIBS} Makefile ${BIN}
-	$(CC) -o bin/snis_test_audio ${OD}/snis_test_audio.o ${SNDOBJS} ${OGGOBJ} ${SNDLIBS}
+bin/snis_test_audio:	${OD}/snis_test_audio.o ${SNDLIBS} Makefile ${BIN} ${OD}/mathutils.o ${OD}/mtwist.o
+	$(CC) -o bin/snis_test_audio ${OD}/snis_test_audio.o ${SNDOBJS} ${OGGOBJ} ${SNDLIBS} ${OD}/mathutils.o ${OD}/mtwist.o -lm -lbsd
 
 install:	${BINPROGS} ${MODELS} ${AUDIOFILES} ${TEXTURES} \
 		${MATERIALS} ${CONFIGFILES} ${SHADERS} ${LUASCRIPTS} ${LUAUTILS} \
