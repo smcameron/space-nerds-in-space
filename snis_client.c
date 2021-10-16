@@ -21036,6 +21036,7 @@ static int main_da_expose(SDL_Window *window)
 	static int frame_index = 0;
 	static float frame_rates[FRAME_INDEX_MAX];
 	static float frame_times[FRAME_INDEX_MAX];
+	static int window_hidden = 1;
 	int player_lost_rts;
 	int player_won_rts;
 	int i;
@@ -21060,6 +21061,14 @@ static int main_da_expose(SDL_Window *window)
 	maybe_reload_shaders();
 
 	load_textures();
+
+	/* Don't unhide the window until all the textures are loaded and window size is set up
+	 * so we don't sit there for several seconds with the screen looking kind of messed up.
+	 */
+	if (da_configured && window_hidden) {
+		SDL_ShowWindow(window);
+		window_hidden = 0;
+	}
 
 	graph_dev_start_frame();
 
@@ -23760,6 +23769,13 @@ int main(int argc, char *argv[])
 
 	if (fullscreen)
 		SDL_SetWindowFullscreen(window, SDL_WINDOW_FULLSCREEN_DESKTOP);
+
+	/* Hide the window until we're ready to draw on it.  We have a bunch of textures and
+	 * models to load, which takes some time, and if we don't hide the window, it just sits
+	 * there looking ugly for awhile.  It gets made visible in main_da_expose().
+	 */
+	SDL_HideWindow(window);
+
 	main_da_configure(window);
 
 	const double maxTimeBehind = 0.5;
