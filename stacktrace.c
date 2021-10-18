@@ -1,6 +1,7 @@
 #include <signal.h>
 #include <execinfo.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 #include "stacktrace.h"
 
@@ -12,8 +13,13 @@ void stacktrace(char *msg)
 
 	trace_size = backtrace(trace, 30);
 	traceline = backtrace_symbols(trace, trace_size);
+	if (!traceline) {
+		fprintf(stderr, "backtrace_symbols failed, no stack trace.\n");
+		return;
+	}
 	fprintf(stderr, "%s\n", msg);
 	fprintf(stderr, "Stack trace:\n");
 	for (i=0; i < trace_size; ++i)
 		printf("- %s\n", traceline[i]);
+	free(traceline);
 }
