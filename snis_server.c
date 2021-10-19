@@ -30239,6 +30239,10 @@ badserver:
 	shutdown(msi->sock, SHUT_RDWR);
 	close(msi->sock);
 	msi->sock = -1;
+	msi->port = (uint16_t) -1;	/* So that when snis_multiverse gets restarted, */
+					/* even if it happens to get the same IP and port */
+					/* it previously had, we will recognize it as having */
+					/* come back from the dead. */
 }
 
 static void *multiverse_writer(void *arg)
@@ -30580,6 +30584,8 @@ error:
 	if (sock >= 0) {
 		shutdown(sock, SHUT_RDWR);
 		close(sock);
+		msi->sock = -1;
+		msi->port = -1;
 	}
 	freeaddrinfo(mvserverinfo);
 	return;
@@ -30745,8 +30751,12 @@ static void servers_changed_cb(void *cookie)
 	fprintf(stderr, "%s: servers_changed_cb connecting to multiverse server\n",
 			logprefix());
 	connect_to_multiverse(multiverse_server, ipaddr, port);
-	fprintf(stderr, "%s: servers_changed_cb connected to multiverse server\n",
-		logprefix());
+	if (multiverse_server->sock >= 0)
+		fprintf(stderr, "%s: servers_changed_cb connected to multiverse server\n",
+			logprefix());
+	else
+		fprintf(stderr, "%s: servers_changed_cb failed to connnect to multiverse server (possibly stale port number from ssgl)\n",
+			logprefix());
 	fprintf(stderr, "%s: servers_changed_cb releasing queue lock\n",
 		logprefix());
 	pthread_mutex_unlock(&multiverse_server->queue_mutex);
