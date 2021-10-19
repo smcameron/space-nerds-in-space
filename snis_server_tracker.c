@@ -187,7 +187,7 @@ static void *server_tracker_thread(void *tracker_info)
 		if (mverse_server_count == 0 || game_server_count == 0)
 			ssgl_sleep(1);  /* thread safe sleep. */
 		else
-			ssgl_sleep(20);  /* thread safe sleep. */
+			ssgl_sleep(5);  /* thread safe sleep. */
 
 	} while (!time_to_quit);
 	fprintf(stderr, "snis_server: server tracker thread exiting\n");
