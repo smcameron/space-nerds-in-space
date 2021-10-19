@@ -30068,22 +30068,29 @@ static char *lobby_location = NULL;
 static char *lobby_servernick = NULL;
 static char snis_server_lockfile[PATH_MAX] = { 0 };
 
+static void cleanup_lockfile(void)
+{
+	/* This may be called from a signal handler so do not call any non-reentrant functions. */
+	if (snis_server_lockfile[0] != '\0')
+		(void) rmdir(snis_server_lockfile);
+}
+
 /* Clean up the lock file on SIGTERM */
 static void sigterm_handler(int sig, siginfo_t *siginfo, void *context)
 {
 	static const char buffer[] = "snis_server: Received SIGTERM, exiting.\n";
 	int rc;
 
-	if (snis_server_lockfile[0] != '\0')
-		(void) rmdir(snis_server_lockfile);
+	cleanup_lockfile();
+
 	/* Need to check return value of write() here even though we can't do
 	 * anything with that info at this point, otherwise the compiler complains
 	 * if we just ignore write() return value.
 	 */
-	rc = write(2, buffer, sizeof(buffer));  /* We're assuming 2 is still hooked to stderr */
+	rc = write(2, buffer, sizeof(buffer) - 1);  /* We're assuming 2 is still hooked to stderr */
 	if (rc < 0)
-		exit(2);
-	exit(1);
+		_exit(2);
+	_exit(1);
 }
 
 static void catch_sigterm(void)
@@ -30095,12 +30102,6 @@ static void catch_sigterm(void)
 	action.sa_flags = SA_SIGINFO;
 	if (sigaction(SIGTERM, &action, NULL) < 0)
 		fprintf(stderr, "%s: Failed to register SIGTERM handler.\n", logprefix());
-}
-
-static void cleanup_lockfile(void)
-{
-	if (snis_server_lockfile[0] != '\0')
-		(void) rmdir(snis_server_lockfile);
 }
 
 static void create_lock_or_die(char *location)
