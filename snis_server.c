@@ -30213,6 +30213,7 @@ static void write_queued_packets_to_mvserver(struct multiverse_server_info *msi)
 {
 	struct packed_buffer *buffer;
 	int rc;
+	static int snis_multiverse_seen_recently = 0;
 
 	pthread_mutex_lock(&msi->event_mutex);
 	buffer = packed_buffer_queue_combine(&msi->mverse_queue, &msi->queue_mutex);
@@ -30220,9 +30221,11 @@ static void write_queued_packets_to_mvserver(struct multiverse_server_info *msi)
 		rc = snis_writesocket(msi->sock, buffer->buffer, buffer->buffer_size);
 		packed_buffer_free(buffer);
 		if (rc) {
-			fprintf(stderr, "snis_server; failed to write to multiverse server\n");
+			if (snis_multiverse_seen_recently)
+				fprintf(stderr, "snis_server; failed to write to multiverse server\n");
 			goto badserver;
 		}
+		snis_multiverse_seen_recently = 1;
 	} else {
 		if (multiverse_debug)
 			fprintf(stderr, "%s: multiverse_writer awakened, but nothing to write.\n",
@@ -30234,7 +30237,9 @@ static void write_queued_packets_to_mvserver(struct multiverse_server_info *msi)
 	return;
 
 badserver:
-	fprintf(stderr, "%s: multiverse server disappeared\n", logprefix());
+	if (snis_multiverse_seen_recently)
+		fprintf(stderr, "%s: multiverse server disappeared\n", logprefix());
+	snis_multiverse_seen_recently = 0;
 	pthread_mutex_unlock(&msi->event_mutex);
 	shutdown(msi->sock, SHUT_RDWR);
 	close(msi->sock);
