@@ -30237,8 +30237,10 @@ static void write_queued_packets_to_mvserver(struct multiverse_server_info *msi)
 	return;
 
 badserver:
-	if (snis_multiverse_seen_recently)
+	if (snis_multiverse_seen_recently) {
 		fprintf(stderr, "%s: multiverse server disappeared\n", logprefix());
+		send_demon_console_color_msg(RED, "snis_server: multiverse server disappeared");
+	}
 	snis_multiverse_seen_recently = 0;
 	pthread_mutex_unlock(&msi->event_mutex);
 	shutdown(msi->sock, SHUT_RDWR);
@@ -30756,12 +30758,15 @@ static void servers_changed_cb(void *cookie)
 	fprintf(stderr, "%s: servers_changed_cb connecting to multiverse server\n",
 			logprefix());
 	connect_to_multiverse(multiverse_server, ipaddr, port);
-	if (multiverse_server->sock >= 0)
+	if (multiverse_server->sock >= 0) {
 		fprintf(stderr, "%s: servers_changed_cb connected to multiverse server\n",
 			logprefix());
-	else
+		send_demon_console_color_msg(YELLOW, "snis_server connected to multiverse server");
+	} else {
 		fprintf(stderr, "%s: servers_changed_cb failed to connnect to multiverse server (possibly stale port number from ssgl)\n",
 			logprefix());
+		send_demon_console_color_msg(RED, "snis_server failed to connect to multiverse server");
+	}
 	fprintf(stderr, "%s: servers_changed_cb releasing queue lock\n",
 		logprefix());
 	pthread_mutex_unlock(&multiverse_server->queue_mutex);
