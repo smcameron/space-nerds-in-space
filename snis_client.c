@@ -19281,13 +19281,17 @@ static void init_demon_ui()
 	ui_add_button(demon_ui.demon_console_button, DISPLAYMODE_DEMON,
 			"TOGGLE DEBUGGING CONSOLE ON/OFF");
 	ui_add_text_window(demon_ui.console, DISPLAYMODE_DEMON);
-	ui_add_pull_down_menu(demon_ui.menu, DISPLAYMODE_DEMON); /* needs to be last */
-	ui_unhide_widget(demon_ui.demon_move_button);
-	ui_unhide_widget(demon_ui.demon_scale_button);
 	ui_add_text_input_box(demon_ui.demon_input, DISPLAYMODE_DEMON);
 	ui_add_scaling_strip_chart(demon_ui.bytes_recd_strip_chart, DISPLAYMODE_DEMON);
 	ui_add_scaling_strip_chart(demon_ui.bytes_sent_strip_chart, DISPLAYMODE_DEMON);
 	ui_add_scaling_strip_chart(demon_ui.latency_strip_chart, DISPLAYMODE_DEMON);
+
+	/* The pulldown menu needs to be the last thing added to the ui element list
+	 * so that it is drawn on top of everything else and gets mouse clicks */
+	ui_add_pull_down_menu(demon_ui.menu, DISPLAYMODE_DEMON);
+
+	ui_unhide_widget(demon_ui.demon_move_button);
+	ui_unhide_widget(demon_ui.demon_scale_button);
 	ui_hide_widget(demon_ui.bytes_recd_strip_chart);
 	ui_hide_widget(demon_ui.bytes_sent_strip_chart);
 	ui_hide_widget(demon_ui.latency_strip_chart);

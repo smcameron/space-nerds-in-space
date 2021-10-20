@@ -200,9 +200,10 @@ void ui_element_list_clear_focus(struct ui_element_list *list)
 void ui_element_list_button_release(struct ui_element_list *list, int x, int y)
 {
 	int hit;
-	struct ui_element *e;
+	struct ui_element *e, *candidate = NULL;
 	struct ui_element_list *i;
 
+	/* We need to go through the entire list because we need to find the last (topmost) element */
 	for (i = list; i != NULL; i = i->next) {
 		e = i->element;
 		if (e->button_release && e->active_displaymode == *e->displaymode && !e->hidden) {
@@ -213,18 +214,24 @@ void ui_element_list_button_release(struct ui_element_list *list, int x, int y)
 			 */
 			if (e->inside_fn) {
 				hit = e->inside_fn(e->element, x, y);
-				if (hit) {
-					ui_set_focus(list, e, 1);
-					(void) e->button_release(e->element, x, y);
-					break;
-				}
+				if (hit)
+					candidate = e;
 			} else {
 				hit = e->button_release(e->element, x, y);
-				if (hit) {
-					ui_set_focus(list, e, 1);
-					break;
-				}
+				if (hit)
+					candidate = e;
 			}
+		}
+	}
+	if (candidate) {
+		if (candidate->inside_fn) {
+			if (candidate->inside_fn(candidate->element, x, y)) {
+				ui_set_focus(list, candidate, 1);
+				candidate->button_release(candidate->element, x, y);
+			}
+		} else {
+			if (candidate->button_press(candidate->element, x, y))
+				ui_set_focus(list, e, 1);
 		}
 	}
 }
@@ -236,9 +243,10 @@ void ui_element_list_button_release(struct ui_element_list *list, int x, int y)
 void ui_element_list_button_press(struct ui_element_list *list, int x, int y)
 {
 	int hit;
-	struct ui_element *e;
+	struct ui_element *e, *candidate = NULL;
 	struct ui_element_list *i;
 
+	/* We need to go through the entire list because we need to find the last (topmost) element */
 	for (i = list; i != NULL; i = i->next) {
 		e = i->element;
 		if (e->button_press && e->active_displaymode == *e->displaymode && !e->hidden) {
@@ -250,14 +258,19 @@ void ui_element_list_button_press(struct ui_element_list *list, int x, int y)
 			if (e->inside_fn) {
 				hit = e->inside_fn(e->element, x, y);
 				if (hit) {
-					(void) e->button_press(e->element, x, y);
-					break;
+					candidate = e;
 				}
 			} else {
-				hit = e->button_press(e->element, x, y);
-				if (hit)
-					break;
+				candidate = e;
 			}
+		}
+	}
+	if (candidate) {
+		if (candidate->inside_fn) {
+			if (candidate->inside_fn(candidate->element, x, y))
+				candidate->button_press(candidate->element, x, y);
+		} else {
+			candidate->button_press(candidate->element, x, y);
 		}
 	}
 }
