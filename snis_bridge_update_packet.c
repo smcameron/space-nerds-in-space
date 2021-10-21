@@ -46,7 +46,17 @@ struct packed_buffer *build_bridge_update_packet(struct snis_entity *o,
 	fuel = o->tsd.ship.fuel;
 	oxygen = o->tsd.ship.fuel;
 
-	tloading = (uint8_t) (o->tsd.ship.torpedoes_loading & 0x0f);
+	/* We never want to save the ship state with torpedoes in the midst of loading.
+	 * If we do, then when the state is reloaded, it will be stuck.  The torpedo
+	 * won't finish loading, and we can't fire the torpedoes or load torpedoes. It
+	 * will be just stuck with the torpedo trying to load.  So zero it out.
+	 * Previously, it was this:
+	 * tloading = (uint8_t) (o->tsd.ship.torpedoes_loading & 0x0f);
+	 * Setting it to zero should fix this (very very rare) problem of the
+	 * torpedoes loading getting stuck. (Only seen it one time ever.)
+	 * See github bug: https://github.com/smcameron/space-nerds-in-space/issues/94
+	 */
+	tloading = 0;
 	tloaded = (uint8_t) (o->tsd.ship.torpedoes_loaded & 0x0f);
 	tloading = tloading | (tloaded << 4);
 
