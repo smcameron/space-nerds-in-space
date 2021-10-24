@@ -13012,8 +13012,6 @@ static void tractorbeam_move(struct snis_entity *o)
 		inauthority = 0.2;
 		break;
 	default:
-		authority = 0.0;
-		inauthority = 0.0;
 		return;
 	}
 	authority = authority * ((float) origin->tsd.ship.power_data.tractor.i / 255.0);
