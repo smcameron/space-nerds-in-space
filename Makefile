@@ -522,7 +522,7 @@ _COMMONOBJS=mathutils.o snis_alloc.o snis_socket_io.o snis_marshal.o \
 		planetary_atmosphere.o planetary_ring_data.o mesh.o pthread_util.o \
 		snis_opcode_def.o rts_unit_data.o commodities.o snis_tweak.o rootcheck.o \
 		corporations.o replacement_assets.o snis_asset_dir.o snis_bin_dir.o scipher.o \
-		planetary_properties.o open-simplex-noise.o
+		planetary_properties.o open-simplex-noise.o snis_licenses.o
 COMMONOBJS=$(patsubst %,$(OD)/%,${_COMMONOBJS}) mikktspace/mikktspace.o
 
 _SERVEROBJS=snis_server.o starbase-comms.o \
@@ -537,7 +537,7 @@ SERVEROBJS=${COMMONOBJS} $(patsubst %,$(OD)/%,${_SERVEROBJS})
 _MULTIVERSEOBJS=snis_multiverse.o snis_marshal.o snis_socket_io.o mathutils.o mtwist.o stacktrace.o \
 		snis_hash.o quat.o string-utils.o key_value_parser.o snis_bridge_update_packet.o \
 		pthread_util.o rootcheck.o starmap_adjacency.o replacement_assets.o snis_asset_dir.o \
-		snis_bin_dir.o
+		snis_bin_dir.o snis_licenses.o
 MULTIVERSEOBJS=$(patsubst %,$(OD)/%,${_MULTIVERSEOBJS})
 
 OGGOBJ=$(patsubst %,$(OD)/%,${_OGGOBJ})
@@ -796,6 +796,9 @@ $(OD)/thrust_attachment.o:	thrust_attachment.c thrust_attachment.h Makefile ${OD
 	$(Q)$(COMPILE)
 
 $(OD)/docking_port.o:	docking_port.c docking_port.h Makefile ${ODT}
+	$(Q)$(COMPILE)
+
+$(OD)/snis_licenses.o:	snis_licenses.c snis_licenses.h Makefile ${ODT}
 	$(Q)$(COMPILE)
 
 $(OD)/ui_colors.o:	ui_colors.c ui_colors.h snis_graph.h Makefile ${ODT}

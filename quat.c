@@ -2,7 +2,8 @@
    quaternion library - implementation
 
    Copyright (C) 2013 Tobias Simon
-   most of the code was stolen from the Internet
+   Portions Copyright (C) 2014 Jeremy Van Grinsven
+   Portions Copyright (C) 2018 Stephen M. Cameron
 
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by

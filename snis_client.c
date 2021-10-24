@@ -133,6 +133,7 @@
 #include "open-simplex-noise.h"
 #include "snis_voice_chat.h"
 #include "snis_xwindows_hacks.h"
+#include "snis_licenses.h"
 
 #define SHIP_COLOR CYAN
 #define STARBASE_COLOR RED
@@ -8690,87 +8691,7 @@ static void show_info_message(char *msg)
 	sng_abs_xy_draw_string(msg, SMALL_FONT, txx(100), txy(300) + LINEHEIGHT * 3);
 }
 
-static char *credits_text[] = {
-	"S P A C E   N E R D S   I N   S P A C E",
-	"",
-	"*   *   *",
-	"",
-	"HTTPS://SMCAMERON.GITHUB.IO/SPACE-NERDS-IN-SPACE/",
-	"HTTPS://WWW.PATREON.COM/user?u=9573826",
-	"",
-	"CREATED BY",
-	"STEPHEN M. CAMERON",
-	"AND",
-	"JEREMY VAN GRINSVEN",
-	"",
-	"INSPIRED BY",
-	"THOM ROBERTSON AND",
-	"ARTEMIS: STARSHIP BRIDGE SIMULATOR",
-	"",
-	"SPECIAL THANKS TO",
-	"",
-	"TX/RX LABS IN HOUSTON, TX",
-	"WITHOUT WHICH THIS GAME",
-	"WOULD NOT EXIST",
-	"",
-	"HACKRVA IN RICHMOND, VA",
-	"",
-	"QUBODUP & FREEGAMEDEV.NET",
-	"",
-	"KWADROKE & BRIDGESIM.NET",
-	"",
-	"*   *   *",
-	"",
-	"OTHER CONTRIBUTORS",
-	"",
-	"ANDY CONRAD (HER001)",
-	"ANTHONY J. BENTLEY",
-	"BYRON ROOSA",
-	"CHRISTIAN ROBERTS",
-	"JIMMY (DUSTEDDK)",
-	"EMMANOUEL KAPERNAROS",
-	"HARRISON TOTTY",
-	"IOAN LOOSLEY",
-	"IVAN SANCHEZ ORTEGA",
-	"JUSTIN WARWICK",
-	"KYLE ROBBERTZE",
-	"LUCKI",
-	"MCMic",
-	"MICHAEL ALDRIDGE",
-	"MICHAEL T DEGUZIS",
-	"REMI VERSCHELDE",
-	"SCOTT BENESH",
-	"STEFAN GUSTAVSON",
-	"THOMAS GLAMSCH",
-	"TOBIAS SIMON",
-	"VIKTOR HAHN",
-	"ZACHARY SCHULTZ",
-	"",
-	"SPECIAL THANKS TO THE FOLLOWING PATRONS",
-	"OF SPACE NERDS IN SPACE",
-	"",
-	"ALEC SLOMAN",
-	"ANDREW ROACH",
-	"BILL LEMMOND",
-	"BILLY",
-	"CALEB COHOON",
-	"ELI ROSS",
-	"MARTIN HAUKELI",
-	"DAN HUNSAKER",
-	"EMMANOUIL KAPERNAROS",
-	"JUSTIN ROKISKY",
-	"MCMic",
-	"Q'S LAB, A RIDGECREST MAKERSPACE",
-	"RAYMOND D MERIDETH",
-	"RINZLER",
-	"STEPHEN WARD",
-	"TALAS",
-	"",
-	"*   *   *",
-	"",
-};
-
-static void draw_credits_screen(int lines, char *crawl[])
+static void draw_credits_screen(void)
 {
 	static float z = 1200;
 	int i;
@@ -8782,8 +8703,8 @@ static void draw_credits_screen(int lines, char *crawl[])
 	}
 
 	sng_set_foreground(UI_COLOR(damcon_part));
-	for (i = 0; i < lines; i++) {
-			sng_center_xz_draw_string(crawl[i],
+	for (i = 0; snis_credits_text[i] != NULL; i++) {
+			sng_center_xz_draw_string(snis_credits_text[i],
 					SMALL_FONT, SCREEN_WIDTH / 2, i * txy(40) + z);
 	}
 }
@@ -9001,7 +8922,7 @@ static void show_common_screen(char *title)
 					SMALL_FONT, SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2);
 	}
 	if (credits_screen_active)
-		draw_credits_screen(ARRAYSIZE(credits_text), credits_text);
+		draw_credits_screen();
 	if (login_failed_timer) {
 		sng_set_foreground(UI_COLOR(special_options));
 		login_failed_timer--;
@@ -22214,6 +22135,7 @@ static void usage(void)
 	fprintf(stderr, "       snis_client [--aspect-ratio x,y] [--monitor m ] [ --solarsystem solarsystem ]\\\n"
 			"                    --nolobby --serverhost serverhost --serverport serverport\\\n"
 			"                    --starship starshipname --pw password\n");
+	fprintf(stderr, "       snis_client --acknowledgments\n");
 	fprintf(stderr, "       Example: ./snis_client --lobbyhost localhost --starship Enterprise --pw tribbles\n");
 	fprintf(stderr, "Note: serverhost and serverport are mutually exclusive with lobbyhost\n");
 	exit(1);
@@ -23286,8 +23208,16 @@ static void check_lobby_serverhost_options()
 	}
 }
 
+static void acknowledgments(void)
+{
+	print_snis_credits_text();
+	print_snis_licenses();
+}
+
+#define OPT_ACKNOWLEDGMENTS 1000
 static struct option long_options[] = {
 	{ "allroles", no_argument, NULL, 'A' },
+	{ "acknowledgments", no_argument, NULL, OPT_ACKNOWLEDGMENTS },
 	{ "soundserver", no_argument, NULL, 'a' },
 	{ "comms", no_argument, NULL, 'C' },
 	{ "engineering", no_argument, NULL, 'E' },
@@ -23325,6 +23255,10 @@ static void process_options(int argc, char *argv[])
 		if (c == -1)
 			break;
 		switch (c) {
+		case OPT_ACKNOWLEDGMENTS:
+			acknowledgments();
+			exit(0);
+			break; /* not reached */
 		case 'v':
 			printf("snis_client v. %s\n", SNIS_VERSION);
 			break;

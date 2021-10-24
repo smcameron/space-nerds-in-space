@@ -126,6 +126,7 @@
 #include "talking_stick.h"
 #include "wwviaudio.h" /* Just for WWVIAUDIO_CHAIN_COUNT */
 #include "transport_contract.h"
+#include "snis_licenses.h"
 
 #define CLIENT_UPDATE_PERIOD_NSECS 500000000
 #define MAXCLIENTS 100
@@ -26019,6 +26020,7 @@ static void usage(void)
 	fprintf(stderr, "snis_server: usage:\n");
 	fprintf(stderr, "snis_server -l lobbyhost -L location \\\n"
 			"          [ -m multiverse-location ] [ -n servernick ]\n");
+	fprintf(stderr, "snis_server --acknowledgments\n");
 	fprintf(stderr, "For example: snis_server -l lobbyserver -g 'steves game' -n zuul -L Houston\n");
 	exit(0);
 }
@@ -30046,7 +30048,9 @@ static void init_natural_language_system(void)
  * Here ends the natural language parsing code.
  *****************************************************************************************/
 
+#define OPT_ACKNOWLEDGMENTS 1000
 static struct option long_options[] = {
+	{ "acknowledgments", no_argument, NULL, OPT_ACKNOWLEDGMENTS },
 	{ "enable-enscript", no_argument, NULL, 'e' },
 	{ "help", no_argument, NULL, 'h' },
 	{ "lobbyhost", required_argument, NULL, 'l' },
@@ -30122,6 +30126,12 @@ static void create_lock_or_die(char *location)
 	fprintf(stderr, "%s: Created lockfile %s, proceeding.\n", logprefix(), snis_server_lockfile);
 }
 
+static void acknowledgments(void)
+{
+	print_snis_credits_text();
+	print_snis_licenses();
+}
+
 static void process_options(int argc, char *argv[])
 {
 	int c;
@@ -30135,6 +30145,10 @@ static void process_options(int argc, char *argv[])
 		if (c == -1)
 			break;
 		switch (c) {
+		case OPT_ACKNOWLEDGMENTS:
+			acknowledgments();
+			exit(0);
+			break; /* not reached */
 		case 'e':
 			lua_enscript_enabled = 1;
 			fprintf(stderr, "WARNING: lua enscript enabled!\n");

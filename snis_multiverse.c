@@ -76,6 +76,7 @@ persisted in a simple database by snis_multiverse.
 #include "replacement_assets.h"
 #include "snis_asset_dir.h"
 #include "snis_bin_dir.h"
+#include "snis_licenses.h"
 
 static char *asset_dir;
 static char *lobby, *nick, *location;
@@ -456,6 +457,7 @@ static void usage()
 {
 	fprintf(stderr, "usage: snis_multiverse [--autowrangle] -l lobbyserver -n servernick \\\n");
 	fprintf(stderr, "          -L location [ --exempt snis-server-location]\n");
+	fprintf(stderr, "       snis_multiverse --acknowledgments\n");
 	exit(1);
 }
 
@@ -1288,7 +1290,15 @@ static void open_log_file(void)
 	}
 }
 
+static void acknowledgments(void)
+{
+	print_snis_credits_text();
+	print_snis_licenses();
+}
+
+#define OPT_ACKNOWLEDGMENTS 1000
 static struct option long_options[] = {
+	{ "acknowledgments", no_argument, NULL, OPT_ACKNOWLEDGMENTS },
 	{ "autowrangle", no_argument, NULL, 'a' },
 	{ "exempt", required_argument, NULL, 'e'},
 	{ "lobby", required_argument, NULL, 'l'},
@@ -1305,7 +1315,7 @@ static void parse_options(int argc, char *argv[], char **lobby, char **nick, cha
 	*location = NULL;
 	*nick = NULL;
 
-	if (argc < 4)
+	if ((argc < 4) && (argc != 2 || strcmp(argv[1], "--acknowledgments") != 0))
 		usage();
 	while (1) {
 		int option_index;
@@ -1313,6 +1323,10 @@ static void parse_options(int argc, char *argv[], char **lobby, char **nick, cha
 		if (c == -1)
 			break;
 		switch (c) {
+		case OPT_ACKNOWLEDGMENTS:
+			acknowledgments();
+			exit(0);
+			break; /* not reached */
 		case 'e':
 			exempt_snis_server(optarg);
 			break;
