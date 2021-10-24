@@ -341,7 +341,6 @@ static int frac_to_words(float number, char *buffer, int buflen, int max_decimal
 	int digit;
 
 	buflen--;
-	x = 0;
 	rc = snprintf(buffer, buflen, "point");
 	if (rc < 0)
 		return -1;
