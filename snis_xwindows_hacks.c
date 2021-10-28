@@ -47,6 +47,14 @@ void constrain_aspect_ratio_via_xlib(SDL_Window *window, int w, int h)
 		return;
 	}
 
+	if (info.subsystem == SDL_SYSWM_WAYLAND) {
+		fprintf(stderr, "\n\n\nI see you're running Wayland.\n"
+			"I do not know how to constrain the aspect ratio with wayland.\n"
+			"Do you?  If so, please help solve this bug:\n"
+			"https://github.com/smcameron/space-nerds-in-space/issues/302\n\n"
+			"Thanks,\n\n--steve\n\n\n");
+	}
+
 	if (info.subsystem != SDL_SYSWM_X11) {
 		fprintf(stderr, "Apparently not X11, no aspect ratio constraining for you!\n");
 		return;
