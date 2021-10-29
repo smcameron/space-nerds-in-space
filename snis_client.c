@@ -21990,10 +21990,12 @@ static void maybe_hide_mouse_cursor(void)
  */
 static void maybe_resize_window(SDL_Window *window)
 {
-	if (!window_manager_can_constrain_aspect_ratio && time_to_set_window_size) {
-		SDL_SetWindowSize(window, real_screen_width, real_screen_height);
-		time_to_set_window_size = 0;
-	}
+	if (window_manager_can_constrain_aspect_ratio)
+		return;
+	if (!time_to_set_window_size)
+		return;
+	SDL_SetWindowSize(window, real_screen_width, real_screen_height);
+	time_to_set_window_size = 0;
 }
 
 static int main_da_motion_notify(SDL_Window *window, SDL_MouseMotionEvent *event)
