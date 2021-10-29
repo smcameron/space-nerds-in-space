@@ -25,9 +25,12 @@
  * when running under X11.
  */
 
-/* SDL2 cannot reasonably constrain the aspect ratio of a window */
-void constrain_aspect_ratio_via_xlib(SDL_Window *window, int w, int h);
+/* SDL2 cannot reasonably constrain the aspect ratio of a window.
+ * This uses xlib to do it via hints.  It returns 0 on success, -1
+ * on failure.
+ */
+int constrain_aspect_ratio_via_xlib(SDL_Window *window, int w, int h);
 #else
-void constrain_aspect_ratio_via_xlib();
+int constrain_aspect_ratio_via_xlib();
 #endif
 

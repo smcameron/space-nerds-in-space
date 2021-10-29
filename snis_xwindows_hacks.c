@@ -32,7 +32,8 @@
  */
 
 /* SDL2 doesn't have a reasonable way to constrain a window to a chosen aspect ratio */
-void constrain_aspect_ratio_via_xlib(SDL_Window *window, int w, int h)
+/* Returns -1 on failure, 0 on success */
+int constrain_aspect_ratio_via_xlib(SDL_Window *window, int w, int h)
 {
 	SDL_SysWMinfo info;
 	Display *display;
@@ -44,7 +45,7 @@ void constrain_aspect_ratio_via_xlib(SDL_Window *window, int w, int h)
 	SDL_VERSION(&info.version);
 	if (!SDL_GetWindowWMInfo(window, &info)) {
 		fprintf(stderr, "SDL_GetWindowWMInfo failed.\n");
-		return;
+		return -1;
 	}
 
 	if (info.subsystem == SDL_SYSWM_WAYLAND) {
@@ -57,20 +58,20 @@ void constrain_aspect_ratio_via_xlib(SDL_Window *window, int w, int h)
 
 	if (info.subsystem != SDL_SYSWM_X11) {
 		fprintf(stderr, "Apparently not X11, no aspect ratio constraining for you!\n");
-		return;
+		return -1;
 	}
 	display = info.info.x11.display;
 	xwindow = info.info.x11.window;
 	hints = XAllocSizeHints();
 	if (!hints) {
 		fprintf(stderr, "Failed to allocate size hints\n");
-		return;
+		return -1;
 	}
 	s = XGetWMSizeHints(display, xwindow, hints, &supplied_return, XA_WM_SIZE_HINTS);
 	if (s) {
 		fprintf(stderr, "XGetWMSizeHints failed\n");
 		XFree(hints);
-		return;
+		return -1;
 	}
 	hints->min_aspect.x = w;
 	hints->min_aspect.y = h;
@@ -79,6 +80,7 @@ void constrain_aspect_ratio_via_xlib(SDL_Window *window, int w, int h)
 	hints->flags = PAspect;
 	XSetWMNormalHints(display, xwindow, hints);
 	XFree(hints);
+	return 0;
 }
 
 #else
