@@ -211,7 +211,7 @@ double game_angle_to_math_angle(double angle)
 void line_eqn_from_two_points(double x1, double y1, double x2, double y2,
 				double *A, double *B, double *C)
 {
-	/* knowing that (y1 – y2)x + (x2 – x1)y + (x1y2 – x2y1) = 0 ... */
+	/* knowing that (y1 - y2)x + (x2 - x1)y + (x1y2 - x2y1) = 0 ... */
 	*A = y1 - y2;
 	*B = x2 - x1;
 	*C = -(x1 * y2 - x2 * y1);

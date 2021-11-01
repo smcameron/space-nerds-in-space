@@ -103,7 +103,7 @@ static void test1()
 	TESTIT(dz > 0.00001, "test failed, z wrong\n");
 	TESTIT(dy > 0.00001, "test failed, y wrong\n");
 
-	/* Test that quat(0,1,0,45°) rotate (1,0,0) = (.707,0,-.707) */
+	/* Test that quat(0,1,0,45 degrees) rotate (1,0,0) = (.707,0,-.707) */
 	v1.m[0] = 1;
 	v1.m[1] = 0;
 	v1.m[2] = 0;
