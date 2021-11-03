@@ -47,9 +47,11 @@
 #include <signal.h>
 #ifdef __APPLE__
 #include <SDL2.h>
+#include <SDL_image.h>
 #else
 #include <fenv.h>
 #include <SDL2/SDL.h>
+#include <SDL2/SDL_image.h>
 #endif
 
 #include "opengl_cap.h"
@@ -297,6 +299,8 @@ static uint32_t my_home_planet_oid = UNKNOWN_ID;
 static int real_screen_width;
 static int real_screen_height;
 static int time_to_set_window_size = 0;
+static volatile int splash_screen_still_needed = 1;
+static volatile int splash_progress = 0;
 static float original_aspect_ratio;
 static int window_manager_can_constrain_aspect_ratio = 0;
 static int suppress_hyperspace_noise = 0;	/* tweakable */
@@ -21484,6 +21488,7 @@ static int main_da_configure(SDL_Window *window)
 
 	/* Indicate that the da has been configured fully (with a non-null gc) */
 	da_configured = 1;
+	splash_screen_still_needed = 0;
 	return TRUE;
 }
 
@@ -21557,6 +21562,7 @@ static int load_static_textures(void)
 	spark_material.texture_mapped_unlit.texture_id = load_texture("textures/spark-texture.png", 0);
 	spark_material.texture_mapped_unlit.do_blend = 1;
 
+	splash_progress = 18;
 	material_init_texture_mapped_unlit(&flare_material);
 	flare_material.billboard_type = MATERIAL_BILLBOARD_TYPE_SPHERICAL;
 	flare_material.rotate_randomly = 1;
@@ -21586,6 +21592,7 @@ static int load_static_textures(void)
 
 	ring_data = calloc(NPLANETARY_RING_MATERIALS, sizeof(*ring_data));
 	init_planetary_ring_data(ring_data, NPLANETARY_RING_MATERIALS, PLANETARY_RING_MTWIST_SEED);
+	splash_progress = 20;
 	for (i = 0; i < NPLANETARY_RING_MATERIALS; i++) { /* Copy ring data into material struct */
 		material_init_textured_planet_ring(&planetary_ring_material[i]);
 		planetary_ring_material[i].textured_planet_ring.texture_id = planetary_ring_texture_id;
@@ -21599,6 +21606,7 @@ static int load_static_textures(void)
 	material_init_textured_shield(&shield_material);
 	shield_material.textured_shield.texture_id = load_cubemap_textures(0, "textures/shield-effect-", 1);
 
+	splash_progress = 25;
 	for (i = 0; i < NNEBULA_MATERIALS; i++) {
 		char filename[20];
 		snprintf(filename, sizeof(filename), "nebula%d.mat", i);
@@ -21607,6 +21615,7 @@ static int load_static_textures(void)
 		nebula_material[i].nebula.alpha *= 0.125;
 	}
 
+	splash_progress = 30;
 	material_init_texture_cubemap(&asteroid_material[0]);
 	asteroid_material[0].texture_cubemap.texture_id = load_cubemap_textures(0, "textures/asteroid1-", 0);
 	material_init_texture_cubemap(&asteroid_material[1]);
@@ -21619,6 +21628,7 @@ static int load_static_textures(void)
 	wormhole_material.texture_mapped_unlit.tint = sng_get_color(MAGENTA);
 	wormhole_material.texture_mapped_unlit.alpha = 0.5;
 
+	splash_progress = 35;
 	init_thrust_material(&thrust_material[0], "textures/thrustblue.png");
 	init_thrust_material(&thrust_material[1], "textures/thrustred.png");
 	init_thrust_material(&thrust_material[2], "textures/thrustgreen.png");
@@ -21662,6 +21672,7 @@ static int load_static_textures(void)
 	warp_tunnel_material.texture_mapped_unlit.do_blend = 1;
 	warp_tunnel_material.texture_mapped_unlit.alpha = 0.25;
 
+	splash_progress = 40;
 	material_init_texture_mapped(&block_material);
 	block_material.texture_mapped.texture_id = load_texture("textures/spaceplate.png", 0);
 	block_material.texture_mapped.emit_texture_id = load_texture("textures/spaceplateemit.png", 0);
@@ -21682,6 +21693,7 @@ static int load_static_textures(void)
 	spacemonster_tentacle_material.texture_mapped.emit_texture_id =
 		load_texture("textures/spacemonster_tentacle_emit.png", 0);
 
+	splash_progress = 45;
 	material_init_texture_mapped(&missile_material);
 	missile_material.texture_mapped.texture_id =
 		load_texture("textures/missile_texture.png", 0);
@@ -21705,6 +21717,7 @@ static int load_static_textures(void)
 	docking_port_material.texture_mapped.emit_texture_id =
 		load_texture("textures/docking_port_emit.png", 0);
 
+	splash_progress = 50;
 	material_init_texture_mapped_unlit(&lens_flare_ghost_material);
 	lens_flare_ghost_material.billboard_type = MATERIAL_BILLBOARD_TYPE_SPHERICAL;
 	lens_flare_ghost_material.texture_mapped_unlit.texture_id = load_texture("textures/lens_flare_ghost.png", 0);
@@ -21715,6 +21728,7 @@ static int load_static_textures(void)
 	lens_flare_halo_material.texture_mapped_unlit.texture_id = load_texture("textures/lens_flare_halo.png", 0);
 	lens_flare_halo_material.texture_mapped_unlit.do_blend = 1;
 	lens_flare_halo_material.texture_mapped_unlit.alpha = 0.20;
+	splash_progress = 60;
 	material_init_texture_mapped_unlit(&anamorphic_flare_material);
 	anamorphic_flare_material.billboard_type = MATERIAL_BILLBOARD_TYPE_SPHERICAL;
 	anamorphic_flare_material.texture_mapped_unlit.texture_id = load_texture("textures/anamorphic_flare.png", 0);
@@ -21732,6 +21746,7 @@ static int load_static_textures(void)
 	}
 
 	static_textures_loaded = 1;
+	splash_progress = 65;
 
 	return 1;
 }
@@ -21743,6 +21758,7 @@ static int load_per_solarsystem_textures()
 
 	if (per_solarsystem_textures_loaded)
 		return 0;
+	splash_progress = 55;
 	if (strcmp(old_solarsystem_name, "") == 0)
 		strcpy(old_solarsystem_name, DEFAULT_SOLAR_SYSTEM);
 	reload_per_solarsystem_textures(old_solarsystem_name, solarsystem_name,
@@ -21761,6 +21777,7 @@ static int load_per_solarsystem_textures()
 	sun_material.texture_mapped_unlit.texture_id = load_texture(path, 0);
 	sun_material.texture_mapped_unlit.do_blend = 1;
 
+	splash_progress = 60;
 	for (i = 0; i < solarsystem_assets->nplanet_textures; i++) {
 		snprintf(path, sizeof(path), "solarsystems/%s/%s", solarsystem_name,
 				solarsystem_assets->planet_texture[i]);
@@ -21786,6 +21803,7 @@ static int load_per_solarsystem_textures()
 		}
 	}
 	j = 0;
+	splash_progress = 65;
 	for (i = solarsystem_assets->nplanet_textures; i < NPLANET_MATERIALS; i++) {
 		if (i == NPLANET_MATERIALS / 2)
 			j = 0;
@@ -21798,6 +21816,7 @@ static int load_per_solarsystem_textures()
 		j = (j + 1) % solarsystem_assets->nplanet_textures;
 	}
 	per_solarsystem_textures_loaded = 1;
+	splash_progress = 70;
 	return 1;
 }
 
@@ -22905,6 +22924,7 @@ static void init_meshes()
 	turret_base_mesh = snis_read_model(d, "laser_turret_base.stl");
 	ship_turret_mesh = snis_read_model(d, "spaceship_turret.stl");
 	ship_turret_base_mesh = snis_read_model(d, "spaceship_turret_base.stl");
+	splash_progress = 75;
 	mesh_scale(ship_turret_mesh, SHIP_MESH_SCALE);
 	mesh_scale(ship_turret_base_mesh, SHIP_MESH_SCALE);
 	torpedo_nav_mesh = snis_read_model(d, "torpedo.stl");
@@ -22923,6 +22943,7 @@ static void init_meshes()
 	laser_mesh = snis_read_model(d, "laser.stl");
 
 	open_simplex_noise(77374223LL, &osn);
+	splash_progress = 80;
 	for (i = 0; i < NASTEROID_MODELS; i++) {
 		char filename[100];
 
@@ -22966,12 +22987,14 @@ static void init_meshes()
 	planetary_ring_lp_mesh = mesh_fabricate_planetary_ring(MIN_RING_RADIUS, MAX_RING_RADIUS, 64);
 	nav_planetary_ring_mesh = mesh_fabricate_planetary_ring(MIN_RING_RADIUS * 1.5, MAX_RING_RADIUS * 0.75, 36);
 
+	splash_progress = 80;
 	for (i = 0; i < nstarbase_models; i++) {
 		char *filename = starbase_metadata[i].model_file;
 		printf("reading starbase model %d of %d '%s'\n", i + 1, nstarbase_models, filename);
 		starbase_mesh[i] = snis_read_model(d, filename);
 		mesh_scale(starbase_mesh[i], STARBASE_SCALE_FACTOR);
 	}
+	splash_progress = 85;
 
 	allocate_ship_thrust_attachment_points(nshiptypes);
 	for (i = 0; i < nshiptypes; i++) {
@@ -22994,6 +23017,7 @@ static void init_meshes()
 		mesh_scale(ship_mesh_map[i], SHIP_MESH_SCALE * ship_type[i].extra_scaling);
 		derelict_mesh[i] = make_derelict_mesh(ship_mesh_map[i]);
 	}
+	splash_progress = 90;
 
 #ifndef WITHOUTOPENGL
 	particle_mesh = mesh_fabricate_billboard(50.0f, 50.0f);
@@ -23034,6 +23058,7 @@ static void init_meshes()
 	/* model 2 is the "invisible" docking port for starbases that have their docking ports
 	 * integrated into the starbase model (e.g. starbase/starbase.obj).
 	 */
+	splash_progress = 95;
 	docking_port_mesh[DOCKING_PORT_INVISIBLE_MODEL] = snis_read_model(d, "tetrahedron.stl");
 	nebula_mesh = mesh_fabricate_billboard(2, 2);
 	sun_mesh = mesh_fabricate_billboard(30000, 30000);
@@ -23056,6 +23081,7 @@ static void init_meshes()
 		v2 = v1 + 0.25;
 		planetary_lightning_mesh[i] = mesh_fabricate_billboard_with_uv_map(1.0, 1.0, u1, v1, u2, v2);
 	}
+	splash_progress = 100;
 
 	open_simplex_noise_free(osn);
 	mtwist_free(mt);
@@ -23633,6 +23659,79 @@ static void enable_sdl_fullscreen_sanity(void)
 								/* I am Very tempted to set it to 1. */
 }
 
+static void *splash_screen_fn(__attribute__((unused)) void *arg)
+{
+	SDL_Window *splash_window = NULL;
+	SDL_Renderer *renderer = NULL;
+	SDL_Texture *image = NULL;
+	SDL_Rect rect, progress;
+	int width, height;
+	char fname[PATH_MAX];
+	char *filename;
+
+	splash_window = SDL_CreateWindow("Space Nerds in Space",
+		SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 600, 338, 0);
+	if (!splash_window) {
+		fprintf(stderr, "Could not create window: %s\n", SDL_GetError());
+		goto out;
+	}
+	renderer = SDL_CreateRenderer(splash_window, -1, 0);
+	if (!renderer) {
+		fprintf(stderr, "Could not create SDL renderer: %s\n", SDL_GetError());
+		goto out;
+	}
+	snprintf(fname, sizeof(fname), "%s/textures/%s", asset_dir, "snis-splash.jpg");
+	filename = replacement_asset_lookup(fname, &replacement_assets);
+	image = IMG_LoadTexture(renderer, filename);
+	if (!image) {
+		fprintf(stderr, "Could not load image: %s\n", SDL_GetError());
+		goto out;
+	}
+	SDL_QueryTexture(image, NULL, NULL, &width, &height);
+	rect.x = 0;
+	rect.y = 0;
+	rect.w = width;
+	rect.h = height;
+	SDL_SetRenderDrawColor(renderer, 0, 128, 0, 255);
+	do {
+		progress.x = 0;
+		progress.y = 45;
+		progress.w = (splash_progress * 600) / 100;
+		progress.h = 20;
+		SDL_RenderClear(renderer);
+		SDL_RenderCopy(renderer, image, NULL, &rect);
+		SDL_RenderFillRect(renderer, &progress);
+		SDL_RenderPresent(renderer);
+		ssgl_msleep(33);
+	} while (splash_screen_still_needed);
+
+out:
+	if (image)
+		SDL_DestroyTexture(image);
+	if (renderer)
+		SDL_DestroyRenderer(renderer);
+	if (splash_window)
+		SDL_DestroyWindow(splash_window);
+	return NULL;
+}
+
+static int start_sdl_and_splash_screen(void)
+{
+	static pthread_t splash_screen_thread;
+
+	if (SDL_Init(SDL_INIT_VIDEO) != 0) {
+		fprintf(stderr, "Unable to initialize SDL (Video):  %s\n", SDL_GetError());
+		return 1;
+	}
+	if (SDL_Init(SDL_INIT_EVENTS) != 0) {
+		fprintf(stderr, "Unable to initialize SDL (Events):  %s\n", SDL_GetError());
+		return 1;
+	}
+	atexit(SDL_Quit);
+	create_thread(&splash_screen_thread, splash_screen_fn, NULL, "snis-splash", 1);
+	return 0;
+}
+
 int main(int argc, char *argv[])
 {
 	refuse_to_run_as_root("snis_client");
@@ -23651,6 +23750,10 @@ int main(int argc, char *argv[])
 #endif
 	check_lobby_serverhost_options();
 	asset_dir = override_asset_dir();
+
+	if (start_sdl_and_splash_screen())
+		return 1;
+
 	setup_sound();
 	snis_opcode_def_init();
 	memset(&main_screen_text, 0, sizeof(main_screen_text));
@@ -23662,11 +23765,13 @@ int main(int argc, char *argv[])
 	damconscreeny = NULL;
 
 	read_replacement_assets(&replacement_assets, asset_dir);
+	splash_progress = 3;
 	stl_parser_set_asset_replacement_function(stl_parser_asset_replacer);
 
 	char commodity_path[PATH_MAX];
 	snprintf(commodity_path, sizeof(commodity_path), "%s/%s", asset_dir, "commodities.txt");
 	commodity = read_commodities(commodity_path, &ncommodities);
+	splash_progress = 6;
 
 	if (read_ship_types())
 		return -1;
@@ -23690,17 +23795,9 @@ int main(int argc, char *argv[])
 	docking_port_info = read_docking_port_info(starbase_metadata, nstarbase_models,
 							STARBASE_SCALE_FACTOR);
 	maybe_connect_to_lobby();
-	if (SDL_Init(SDL_INIT_VIDEO) != 0) {
-		fprintf(stderr, "Unable to initialize SDL (Video):  %s\n", SDL_GetError());
-		return 1;
-	}
-	if (SDL_Init(SDL_INIT_EVENTS) != 0) {
-		fprintf(stderr, "Unable to initialize SDL (Events):  %s\n", SDL_GetError());
-		return 1;
-	}
-	atexit(SDL_Quit);
 	init_keymap();
 	read_keymap_config_file();
+	splash_progress = 9;
 
 #if 0
 	sng_set_context(GTK_WIDGET(main_da)->window, gc);
@@ -23718,13 +23815,14 @@ int main(int argc, char *argv[])
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 0);
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
 
-	SDL_Window *window = SDL_CreateWindow("SNIS",
+	SDL_Window *window = SDL_CreateWindow("Space Nerds in Space",
 		SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
 		0, 0, SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIDDEN);
 	if (!window) {
 		fprintf(stderr, "Could not create window: %s\n", SDL_GetError());
 		exit(1);
 	}
+	splash_progress = 12;
 	SDL_GLContext gl_context = SDL_GL_CreateContext(window);
 	(void) gl_context;
 	setup_screen_parameters(window);
@@ -23741,6 +23839,7 @@ int main(int argc, char *argv[])
 	snis_slider_set_sound(SLIDER_SOUND);
 	text_window_set_timer(&timer);
 	ui_set_tooltip_drawing_function(draw_tooltip);
+	splash_progress = 13;
 	init_lobby_ui();
 	init_nav_ui();
 	init_engineering_ui();
@@ -23757,6 +23856,7 @@ int main(int argc, char *argv[])
 	setup_text_to_speech_thread();
 	voice_chat_setup_threads();
 	ecx = entity_context_new(5000, 5000);
+	splash_progress = 14;
 
 	snis_slider_mouse_position_query(&mouse.x, &mouse.y);
 
@@ -23769,6 +23869,7 @@ int main(int argc, char *argv[])
 
 	if (fullscreen)
 		SDL_SetWindowFullscreen(window, SDL_WINDOW_FULLSCREEN_DESKTOP);
+	splash_progress = 15;
 	main_da_configure(window);
 
 	const double maxTimeBehind = 0.5;
