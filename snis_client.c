@@ -23720,7 +23720,7 @@ int main(int argc, char *argv[])
 
 	SDL_Window *window = SDL_CreateWindow("SNIS",
 		SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
-		720, 576, SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
+		0, 0, SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIDDEN);
 	if (!window) {
 		fprintf(stderr, "Could not create window: %s\n", SDL_GetError());
 		exit(1);
@@ -23777,6 +23777,8 @@ int main(int argc, char *argv[])
 	double currentTime = time_now_double();
 	double nextTime = currentTime + delta[1];
 	double nextDrawTime = currentTime + delta[use_60_fps];
+
+	SDL_ShowWindow(window);
 	while (1) {
 		currentTime = time_now_double();
 

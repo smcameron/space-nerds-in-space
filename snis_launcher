@@ -278,7 +278,7 @@ start_snis_client()
 		return
 	fi
 	echo
-	echo "Starting snis_client"
+	echo "Starting snis_client (it may take a few moments to appear)"
 	echo
 	CLIENT="$1"
 	${CLIENT} --lobbyhost "${LOBBYHOST}" $ASPECT_RATIO_ARG --fullscreen ${TRAP_NANS} > snis_client_log.txt 2>&1 &
