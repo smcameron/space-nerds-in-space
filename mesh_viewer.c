@@ -85,6 +85,7 @@ static struct material planet_material;
 static struct material green_phaser_material;
 static struct material thrust_material;
 static struct material atmosphere_material;
+float atmosphere_brightness = 0.5;
 static struct material cyl_albedo;
 static struct material diffuse_material;
 static struct material alpha_by_normal;
@@ -131,6 +132,8 @@ static char *help_text =
 	"  * MOUSE CONTROL-RIGHT-CLICK DRAG TO ROTATE LIGHT\n"
 	"  * ESC TO EXIT VIEWER\n"
 	"  - a TOGGLE ATMOSPHERE RENDERING (PLANET MODE ONLY)\n"
+	"  - ] MAKE ATMOSPHERE BRIGHTER\n"
+	"  - [ MAKE ATMOSPHERE DIMMER\n"
 	"  - p TAKE A SNAPSHOT\n"
 	"  - f TOGGLE PERIODIC SNAPSHOTS\n"
 	"  - s TOGGLE AUTO-SPIN MODE\n"
@@ -306,6 +309,16 @@ static void handle_key_down(SDL_Keysym *keysym)
 	case SDLK_PLUS:
 	case SDLK_KP_PLUS:
 		adjust_spinning(1.1);
+		break;
+	case SDLK_LEFTBRACKET:
+		atmosphere_brightness -= 0.05;
+		if (atmosphere_brightness < 0.0)
+			atmosphere_brightness = 0.0;
+		break;
+	case SDLK_RIGHTBRACKET:
+		atmosphere_brightness += 0.05;
+		if (atmosphere_brightness > 1.0)
+			atmosphere_brightness = 1.0;
 		break;
 	case SDLK_d:
 		distort_the_mesh(1);
@@ -1047,6 +1060,8 @@ int main(int argc, char *argv[])
 			planet_material.textured_planet.normalmap_id = 0;
 		planet_material.textured_planet.ring_material = 0;
 		material_init_atmosphere(&atmosphere_material);
+		atmosphere_material.atmosphere.brightness = &atmosphere_brightness;
+		atmosphere_material.atmosphere.brightness_modifier = 1.0;
 	} else if (cubemap_mode) {
 		target_mesh = snis_read_model(filename);
 		atmosphere_mesh = NULL;
