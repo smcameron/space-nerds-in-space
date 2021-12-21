@@ -125,18 +125,18 @@ static struct mesh *snis_read_model(char *path)
 
 static char *help_text =
 	"MESH VIEWER\n\n"
-	"  CONTROLS\n\n"
-	"  * MOUSE RIGHT-CLICK DRAG TO ROTATE MODEL\n\n"
-	"  * MOUSE SCROLL WHEEL TO ZOOM\n\n"
-	"  * MOUSE CONTROL-RIGHT-CLICK DRAG TO ROTATE LIGHT\n\n"
-	"  * ESC TO EXIT VIEWER\n\n"
-	"  * 'a' to toggle atmosphere rendering (planet mode only)\n\n"
-	"  * 'p' to take a snapshot\n\n"
-	"  * 'f' to toggle periodic snapshots\n\n"
-	"  * 's' to toggle auto-spin mode\n\n"
-	"  * 'n' to turn auto-spin on for 10 frames\n\n"
-	"  * '+' speed up rate of spin\n\n"
-	"  * '-' slow down rate of spin\n\n"
+	"  CONTROLS\n"
+	"  * MOUSE RIGHT-CLICK DRAG TO ROTATE MODEL\n"
+	"  * MOUSE SCROLL WHEEL TO ZOOM\n"
+	"  * MOUSE CONTROL-RIGHT-CLICK DRAG TO ROTATE LIGHT\n"
+	"  * ESC TO EXIT VIEWER\n"
+	"  - a TOGGLE ATMOSPHERE RENDERING (PLANET MODE ONLY)\n"
+	"  - p TAKE A SNAPSHOT\n"
+	"  - f TOGGLE PERIODIC SNAPSHOTS\n"
+	"  - s TOGGLE AUTO-SPIN MODE\n"
+	"  - n TURN AUTO_SPIN ON FOR 10 FRAMES\n"
+	"  - + SPEED UP RATE OF SPIN\n"
+	"  - - SLOW DOWN RATE OF SPIN\n"
 	"PRESS F1 TO EXIT HELP\n";
 
 static void draw_help_text(const char *text)
@@ -175,9 +175,9 @@ static void draw_help_text(const char *text)
 static void draw_help_screen()
 {
 	sng_set_foreground(BLACK);
-	sng_current_draw_rectangle(1, 50, 50, SCREEN_WIDTH - 100, SCREEN_HEIGHT - 100);
+	sng_current_draw_rectangle(1, 50, 50, SCREEN_WIDTH - 50, SCREEN_HEIGHT - 100);
 	sng_set_foreground(GREEN);
-	sng_current_draw_rectangle(0, 50, 50, SCREEN_WIDTH - 100, SCREEN_HEIGHT - 100);
+	sng_current_draw_rectangle(0, 50, 50, SCREEN_WIDTH - 50, SCREEN_HEIGHT - 100);
 	draw_help_text(help_text);
 }
 
