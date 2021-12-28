@@ -15341,7 +15341,8 @@ static int process_weap_select_target(struct game_client *c)
 
 typedef void (*meta_comms_func)(char *name, struct game_client *c, char *txt);
 
-static void meta_comms_help(char *name, struct game_client *c, char *txt)
+static void meta_comms_help(__attribute__((unused)) char *name, struct game_client *c,
+			__attribute__((unused)) char *txt)
 {
 	int i;
 	const char *hlptxt[] = {
@@ -15368,7 +15369,8 @@ static void meta_comms_help(char *name, struct game_client *c, char *txt)
 		send_comms_packet(NULL, "", bridgelist[c->bridge].comms_channel, hlptxt[i]);
 }
 
-static void meta_comms_about(char *name, struct game_client *c, char *txt)
+static void meta_comms_about(__attribute__((unused)) char *name, struct game_client *c,
+			__attribute__((unused)) char *txt)
 {
 	int i;
 	const char *abouttxt[] = {
