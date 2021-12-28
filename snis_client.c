@@ -11043,7 +11043,7 @@ static void draw_sciplane_display(struct snis_entity *o, double range)
 
 			if (dist2 > range * range) {
 				/* follow selected guy outside bounds */
-				if (!(selected_guy_popout && curr_science_waypoint == i)) {
+				if (!(selected_guy_popout && curr_science_waypoint == (uint32_t) i)) {
 					continue; /* not close enough */
 				}
 			}
@@ -11081,7 +11081,7 @@ static void draw_sciplane_display(struct snis_entity *o, double range)
 				snis_draw_line(sx, sy - 10, sx, sy + 10);
 				snprintf(buf, sizeof(buf), "WP-%02d", i);
 				sng_abs_xy_draw_string(buf, PICO_FONT, sx + 10, sy - 10);
-				if (i == curr_science_waypoint)
+				if ((uint32_t) i == curr_science_waypoint)
 					sng_draw_circle(0, sx, sy, 10);
 			}
 
