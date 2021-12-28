@@ -17710,7 +17710,8 @@ static void demon_button_release(int button, double x, double y)
 	}
 }
 
-static void do_damcon_button_release(int button, double x, double y)
+static void do_damcon_button_release(int button, __attribute__((unused)) double x,
+						__attribute__((unused)) double y)
 {
 	switch (button) {
 	case 3:
