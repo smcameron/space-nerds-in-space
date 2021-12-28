@@ -1004,8 +1004,9 @@ static void snis_nl_debuglevel(void *context, int argc, char *argv[], int pos[],
 	fprintf(stderr, "Set debug level to %d, '%s'\n", debuglevel, debuglevel ? "on" : "off");
 }
 
-static void snis_nl_dumpvocab(void *context, int argc, char *argv[], int pos[],
-				union snis_nl_extra_data extra_data[])
+static void snis_nl_dumpvocab(__attribute__((unused)) void *context, __attribute__((unused)) int argc,
+				__attribute__((unused)) char *argv[], __attribute__((unused)) int pos[],
+				__attribute__((unused)) union snis_nl_extra_data extra_data[])
 {
 	int i;
 
