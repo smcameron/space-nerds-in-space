@@ -1792,16 +1792,16 @@ void generate_crime(struct mtwist_state *mt, char *buffer, int buflen)
 	switch (x % 3) {
 	case 0:
 		act = random_word(mt, Crime, ARRAYSIZE(Crime));
-		sprintf(buffer, "%s", act);
+		snprintf(buffer, buflen, "%s", act);
 		break;
 	case 1:
 	case 2:
 		modifier = random_word(mt, CrimeModifier, ARRAYSIZE(CrimeModifier));
 		act = random_word(mt, Crime, ARRAYSIZE(Crime));
 		if (modifier[0] != '+')
-			sprintf(buffer, "%s %s", modifier, act);
+			snprintf(buffer, buflen, "%s %s", modifier, act);
 		else
-			sprintf(buffer, "%s %s", act, modifier + 1);
+			snprintf(buffer, buflen, "%s %s", act, modifier + 1);
 		break;
 	}
 }
