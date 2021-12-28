@@ -992,8 +992,11 @@ void snis_nl_add_synonym(char *synonym_word, char *canonical_word)
 	nsynonyms++;
 }
 
-static void snis_nl_debuglevel(void *context, int argc, char *argv[], int pos[],
-				union snis_nl_extra_data extra_data[])
+static void snis_nl_debuglevel(__attribute__((unused)) void *context,
+				__attribute__((unused)) int argc,
+				__attribute__((unused)) char *argv[],
+				__attribute__((unused)) int pos[],
+				__attribute__((unused)) union snis_nl_extra_data extra_data[])
 {
 	if (pos[1] != POS_NUMBER) {
 		debuglevel = !!debuglevel;
