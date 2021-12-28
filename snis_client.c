@@ -6581,7 +6581,7 @@ static int cipher_freq_compare(const void *a, const void *b)
 }
 
 /* Sort the letters of the enciphered message by frequency */
-static void sort_cipher_alpha_by_freq(int cipher_freq[], char cipher_alpha_by_freq[])
+static void sort_cipher_alpha_by_freq(char cipher_alpha_by_freq[])
 {
 	memcpy(cipher_alpha_by_freq, "ABCDEFGHIJKLMNOPQRSTUVWXYZ", 27);
 	qsort(cipher_alpha_by_freq, 26, 1, cipher_freq_compare);
@@ -6659,7 +6659,7 @@ static int process_comm_transmission(void)
 			if (c >= 'A' && c <= 'Z')
 				cipher_freq[c - 'A']++;
 		}
-		sort_cipher_alpha_by_freq(cipher_freq, cipher_alpha_by_freq);
+		sort_cipher_alpha_by_freq(cipher_alpha_by_freq);
 		break;
 	case OPCODE_COMMS_KEY_GUESS:
 		string[26] = '\0';
