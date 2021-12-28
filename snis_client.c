@@ -18266,8 +18266,7 @@ static char *expand_demon_selection_string(char *input)
 	return newinput;
 }
 
-static int construct_demon_command(char *input,
-		struct demon_cmd_packet **cmd, char *errmsg)
+static int construct_demon_command(char *input, char *errmsg)
 {
 	char *s;
 	int i, l, g, g2, v;
@@ -18540,7 +18539,6 @@ static void clear_empty_demon_variables(void)
 
 static void send_demon_text_command(char *command)
 {
-	struct demon_cmd_packet *demon_cmd;
 	int rc;
 
 	demon_help_mode = 0;
@@ -18548,7 +18546,7 @@ static void send_demon_text_command(char *command)
 		return;
 	clear_empty_demon_variables();
 	strcpy(demon_ui.error_msg, "");
-	rc = construct_demon_command(command, &demon_cmd, demon_ui.error_msg);
+	rc = construct_demon_command(command, demon_ui.error_msg);
 	if (rc)
 		print_demon_console_msg(demon_ui.error_msg);
 }
