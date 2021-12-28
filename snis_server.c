@@ -3691,6 +3691,7 @@ static void ship_figure_out_what_to_do(struct snis_entity *o)
 				break;
 			}
 		}
+		break;
 	default:
 		ai_trace(o->id, "UNEXPECTED DEFAULT, NO ACTION");
 		break;
