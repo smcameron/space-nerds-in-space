@@ -5813,7 +5813,8 @@ static int universe_timestamp_sample_compare_less(const void *a, const void *b, 
 }
 
 static void do_whatever_detonate_does(uint32_t id, double x, double y, double z,
-					uint32_t time, double fractional_time)
+					__attribute__((unused)) uint32_t time,
+					__attribute__((unused)) double fractional_time)
 {
 	int i;
 	struct snis_entity *o;
