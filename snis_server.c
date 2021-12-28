@@ -17867,7 +17867,7 @@ static void meta_comms_computer(char *name, struct game_client *c, char *txt)
 	free(duptxt);
 }
 
-static void meta_comms_antenna(char *name, struct game_client *c, char *txt)
+static void meta_comms_antenna(__attribute__((unused)) char *name, struct game_client *c, char *txt)
 {
 	char *duptxt;
 	float bearing, mark;
