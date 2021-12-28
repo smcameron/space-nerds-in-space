@@ -9629,7 +9629,7 @@ static void point_external_camera_at_ship(void)
 	desired_external_camera_position.v.z += o->z;
 }
 
-static void update_external_camera_position_and_orientation(struct snis_entity *o, int first_frame,
+static void update_external_camera_position_and_orientation(int first_frame,
 					union vec3 *cam_pos, union quat *cam_orientation)
 {
 	point_external_camera_at_ship();
@@ -9790,7 +9790,7 @@ static void show_mainscreen(void)
 		cam_pos.v.x = 0;
 		cam_pos.v.y = 0;
 		cam_pos.v.z = 0;
-		update_external_camera_position_and_orientation(o, first_frame, &cam_pos, &camera_orientation);
+		update_external_camera_position_and_orientation(first_frame, &cam_pos, &camera_orientation);
 		player_ship = main_view_add_player_ship_entity(o);
 	}
 
