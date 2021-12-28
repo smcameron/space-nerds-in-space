@@ -17850,7 +17850,7 @@ static void send_to_npcbot(int bridge, char *name, char *msg)
 }
 
 static void perform_natural_language_request(struct game_client *c, char *txt);
-static void meta_comms_computer(char *name, struct game_client *c, char *txt)
+static void meta_comms_computer(__attribute__((unused)) char *name, struct game_client *c, char *txt)
 {
 	char *duptxt;
 	char *x;
