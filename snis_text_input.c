@@ -247,7 +247,8 @@ int snis_text_input_box_keypress(struct snis_text_input_box *t, SDL_Event *event
 	return 0;
 }
 
-int snis_text_input_box_keyrelease(struct snis_text_input_box *t, SDL_Event *event)
+int snis_text_input_box_keyrelease(__attribute__((unused)) struct snis_text_input_box *t,
+					__attribute__((unused)) SDL_Event *event)
 {
 	return 0;
 }
