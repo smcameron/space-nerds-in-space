@@ -94,7 +94,7 @@ int ncorporations(void)
 
 const char *corporation_get_name(int i)
 {
-	if (i < 0 || i >= ARRAYSIZE(corp))
+	if (i < 0 || (size_t) i >= ARRAYSIZE(corp))
 		return NULL;
 	return corp[i].name;
 }
