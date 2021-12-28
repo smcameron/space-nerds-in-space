@@ -273,17 +273,11 @@ static void construct_starmap(void)
 	return;
 }
 
-static void remove_starsystem(struct starsystem_info *ss)
-{
-}
-
 /* assumes service_mutex held. */
 static void put_starsystem(struct starsystem_info *ss)
 {
 	assert(ss->refcount > 0);
 	ss->refcount--;
-	if (ss->refcount == 0)
-		remove_starsystem(ss);
 }
 
 /* assumes service_mutex held. */
@@ -880,10 +874,6 @@ static void *starsystem_write_thread(void /* struct starsystem_info */ *starsyst
 	return NULL;
 }
 
-static void add_new_starsystem(struct starsystem_info *ss)
-{
-}
-
 /* Creates a thread for each incoming connection... */
 static void service_connection(int connection)
 {
@@ -949,8 +939,6 @@ static void service_connection(int connection)
 
 	pthread_mutex_init(&starsystem[i].write_queue_mutex, NULL);
 	packed_buffer_queue_init(&starsystem[i].write_queue);
-
-	add_new_starsystem(&starsystem[i]);
 
 	/* initialize refcount to 1 to keep starsystem[i] from getting reaped. */
 	starsystem[i].refcount = 1;
