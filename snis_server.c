@@ -5953,7 +5953,7 @@ static float ai_ship_travel_towards(struct snis_entity *o,
 	return dist2;
 }
 
-static void mining_bot_unload_one_ore(struct snis_entity *bot,
+static void mining_bot_unload_one_ore(__attribute__((unused)) struct snis_entity *bot,
 					struct snis_entity *parent,
 					struct ai_mining_bot_data *ai,
 					uint8_t *ore, int commodity_index)
@@ -15648,14 +15648,14 @@ static uint32_t find_free_channel(void)
 	return snis_randn(100000); /* simplest possible thing that might work. */
 }
 
-static void npc_menu_item_not_implemented(struct npc_menu_item *item,
+static void npc_menu_item_not_implemented(__attribute__((unused)) struct npc_menu_item *item,
 					char *npcname, struct npc_bot_state *botstate)
 {
 	send_comms_packet(NULL, npcname, botstate->channel,
 				"  SORRY, THAT IS NOT IMPLEMENTED");
 }
 
-static void npc_menu_item_sign_off(struct npc_menu_item *item,
+static void npc_menu_item_sign_off(__attribute__((unused)) struct npc_menu_item *item,
 					char *npcname, struct npc_bot_state *botstate)
 {
 	int i;
@@ -15757,7 +15757,7 @@ static void parts_buying_npc_bot(struct snis_entity *o, int bridge,
 }
 
 static void npc_menu_item_buy_parts(struct npc_menu_item *item,
-				char *npcname, struct npc_bot_state *botstate)
+				__attribute__((unused)) char *npcname, struct npc_bot_state *botstate)
 {
 	struct bridge_data *b;
 	int i, bridge;
@@ -15920,8 +15920,8 @@ static void starbase_registration_query_npc_bot(struct snis_entity *o, int bridg
 	pthread_mutex_unlock(&universe_mutex);
 }
 
-static void npc_menu_item_query_ship_registration(struct npc_menu_item *item,
-					char *npcname, struct npc_bot_state *botstate)
+static void npc_menu_item_query_ship_registration(__attribute__((unused)) struct npc_menu_item *item,
+					__attribute__((unused)) char *npcname, struct npc_bot_state *botstate)
 {
 	struct bridge_data *b;
 	int i, bridge;
@@ -15947,8 +15947,9 @@ static void starbase_cargo_buying_npc_bot(struct snis_entity *o, int bridge,
 						char *name, char *msg);
 static void starbase_cargo_selling_npc_bot(struct snis_entity *o, int bridge,
 						char *name, char *msg);
-static void npc_menu_item_buysell_cargo(struct npc_menu_item *item,
-					char *npcname, struct npc_bot_state *botstate, int buy)
+static void npc_menu_item_buysell_cargo(__attribute__((unused)) struct npc_menu_item *item,
+					__attribute__((unused)) char *npcname,
+					struct npc_bot_state *botstate, int buy)
 {
 	struct bridge_data *b;
 	int i, bridge;
@@ -15971,7 +15972,7 @@ static void npc_menu_item_buysell_cargo(struct npc_menu_item *item,
 	botstate->special_bot(&go[i], bridge, (char *) b->shipname, "");
 }
 
-static void npc_menu_item_mining_bot_transport_ores(struct npc_menu_item *item,
+static void npc_menu_item_mining_bot_transport_ores(__attribute__((unused)) struct npc_menu_item *item,
 				char *npcname, struct npc_bot_state *botstate)
 {
 	int i;
@@ -16035,7 +16036,7 @@ static void npc_menu_item_mining_bot_stow(struct npc_menu_item *item,
 	send_comms_packet(miner, npcname, channel, " RETURNING TO SHIP");
 }
 
-static void npc_menu_item_mining_bot_retarget(struct npc_menu_item *item,
+static void npc_menu_item_mining_bot_retarget(__attribute__((unused)) struct npc_menu_item *item,
 				char *npcname, struct npc_bot_state *botstate)
 {
 	int i;
@@ -16097,7 +16098,7 @@ static void npc_menu_item_mining_bot_retarget(struct npc_menu_item *item,
 	ai->mode = MINING_MODE_APPROACH_ASTEROID;
 }
 
-static void npc_menu_item_mining_bot_cam(struct npc_menu_item *item,
+static void npc_menu_item_mining_bot_cam(__attribute__((unused)) struct npc_menu_item *item,
 				char *npcname, struct npc_bot_state *botstate)
 {
 	int i;
@@ -16127,7 +16128,7 @@ static void npc_menu_item_mining_bot_cam(struct npc_menu_item *item,
 	}
 }
 
-static void npc_menu_item_mining_bot_status_report(struct npc_menu_item *item,
+static void npc_menu_item_mining_bot_status_report(__attribute__((unused)) struct npc_menu_item *item,
 				char *npcname, struct npc_bot_state *botstate)
 {
 	int i;
@@ -16289,8 +16290,8 @@ static void npc_menu_item_mining_bot_status_report(struct npc_menu_item *item,
 	send_comms_packet(miner, npcname, channel, "--- END STATUS REPORT ---");
 }
 
-static void npc_menu_item_choose_cargo_category(struct npc_menu_item *item,
-					char *npcname, struct npc_bot_state *botstate)
+static void npc_menu_item_choose_cargo_category(__attribute__((unused)) struct npc_menu_item *item,
+					__attribute__((unused)) char *npcname, struct npc_bot_state *botstate)
 {
 	struct bridge_data *b;
 	int i, bridge;
@@ -16580,7 +16581,7 @@ static void starbase_deliver_contract_cargo_bot(struct snis_entity *sb, int brid
 	}
 }
 
-static void npc_menu_item_transport_contracts(struct npc_menu_item *item,
+static void npc_menu_item_transport_contracts(__attribute__((unused)) struct npc_menu_item *item,
 					char *npcname, struct npc_bot_state *botstate, int choice)
 {
 	struct bridge_data *b;
@@ -16721,7 +16722,7 @@ static void starbase_passenger_boarding_npc_bot(struct snis_entity *sb, int brid
 	}
 }
 
-static void npc_menu_item_eject_passengers(struct npc_menu_item *item,
+static void npc_menu_item_eject_passengers(__attribute__((unused)) struct npc_menu_item *item,
 					char *npcname, struct npc_bot_state *botstate)
 {
 	struct snis_entity *sb, *ship;
@@ -16774,7 +16775,7 @@ static void npc_menu_item_eject_passengers(struct npc_menu_item *item,
 	}
 }
 
-static void npc_menu_item_disembark_passengers(struct npc_menu_item *item,
+static void npc_menu_item_disembark_passengers(__attribute__((unused)) struct npc_menu_item *item,
 					char *npcname, struct npc_bot_state *botstate)
 {
 	struct snis_entity *sb, *ship;
@@ -16814,8 +16815,8 @@ static void npc_menu_item_disembark_passengers(struct npc_menu_item *item,
 	}
 }
 
-static void npc_menu_item_board_passengers(struct npc_menu_item *item,
-					char *npcname, struct npc_bot_state *botstate)
+static void npc_menu_item_board_passengers(__attribute__((unused)) struct npc_menu_item *item,
+					__attribute__((unused)) char *npcname, struct npc_bot_state *botstate)
 {
 	struct snis_entity *sb;
 	struct bridge_data *b = container_of(botstate, struct bridge_data, npcbot);
@@ -16830,7 +16831,7 @@ static void npc_menu_item_board_passengers(struct npc_menu_item *item,
 	botstate->special_bot(sb, bridge, (char *) b->shipname, "");
 }
 
-static void npc_menu_item_collect_bounties(struct npc_menu_item *item,
+static void npc_menu_item_collect_bounties(__attribute__((unused)) struct npc_menu_item *item,
 					char *npcname, struct npc_bot_state *botstate)
 {
 	struct snis_entity *sb, *ship;
@@ -16948,7 +16949,7 @@ static void npc_menu_item_collect_bounties(struct npc_menu_item *item,
 	pthread_mutex_unlock(&universe_mutex);
 }
 
-static void npc_menu_item_list_bounties(struct npc_menu_item *item,
+static void npc_menu_item_list_bounties(__attribute__((unused)) struct npc_menu_item *item,
 					char *npcname, struct npc_bot_state *botstate)
 {
 
@@ -17028,7 +17029,7 @@ static void npc_menu_item_list_bounties(struct npc_menu_item *item,
 	send_comms_packet(starbase, npcname, channel, "", count);
 }
 
-static void npc_menu_item_travel_advisory(struct npc_menu_item *item,
+static void npc_menu_item_travel_advisory(__attribute__((unused)) struct npc_menu_item *item,
 					char *npcname, struct npc_bot_state *botstate)
 {
 	uint32_t plid, ch = botstate->channel;
@@ -17119,7 +17120,7 @@ static void npc_menu_item_travel_advisory(struct npc_menu_item *item,
 	send_comms_packet(sb, npcname, ch, "-----------------------------------------------------");
 }
 
-static void npc_menu_item_request_dock(struct npc_menu_item *item,
+static void npc_menu_item_request_dock(__attribute__((unused)) struct npc_menu_item *item,
 				char *npcname, struct npc_bot_state *botstate)
 {
 	struct snis_entity *o;
@@ -17179,7 +17180,7 @@ static void npc_menu_item_request_dock(struct npc_menu_item *item,
 	starbase_grant_docker_permission(sb, o, b, npcname, ch);
 }
 
-static void warp_gate_ticket_buying_npc_bot(struct snis_entity *o, int bridge,
+static void warp_gate_ticket_buying_npc_bot(__attribute__((unused)) struct snis_entity *o, int bridge,
 		char *name, char *msg)
 {
 	struct npc_bot_state *botstate = &bridgelist[bridge].npcbot;
@@ -17292,7 +17293,7 @@ static void warp_gate_ticket_buying_npc_bot(struct snis_entity *o, int bridge,
 	free(gameserver);
 }
 
-static void npc_menu_item_warp_gate_tickets(struct npc_menu_item *item,
+static void npc_menu_item_warp_gate_tickets(__attribute__((unused)) struct npc_menu_item *item,
 				char *npcname, struct npc_bot_state *botstate)
 {
 	struct snis_entity *o;
@@ -17328,7 +17329,7 @@ static void push_tow_mode(struct snis_entity *tow_ship, uint32_t disabled_ship,
 	tow_ship->tsd.ship.ai[0].u.tow_ship.ship_connected = 0;
 }
 
-static void npc_menu_item_towing_service(struct npc_menu_item *item,
+static void npc_menu_item_towing_service(__attribute__((unused)) struct npc_menu_item *item,
 				char *npcname, struct npc_bot_state *botstate)
 {
 	struct snis_entity *o;
