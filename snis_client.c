@@ -6910,7 +6910,7 @@ static int process_set_waypoint(void)
 		if (rc)
 			return rc;
 		row = row32;
-		if (row32 == (uint32_t) -1 || row32 < sci_ui.nwaypoints) {
+		if (row32 == (uint32_t) -1 || row32 < (uint32_t) sci_ui.nwaypoints) {
 			curr_science_waypoint = row32;
 			prev_science_waypoint = row32;
 			if (row32 != (uint32_t) -1) {
