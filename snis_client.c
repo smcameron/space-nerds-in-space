@@ -12225,7 +12225,7 @@ static void show_rts_win_screen(void)
 	sng_abs_xy_draw_string(buf, BIG_FONT, txx(20), txy(250));
 }
 
-void set_cursor(int cursor_type)
+void set_cursor(__attribute__((unused)) int cursor_type)
 {
 	/* SDL TODO */
 #if 0
