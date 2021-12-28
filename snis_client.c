@@ -3153,7 +3153,10 @@ static void move_objects(void)
 		case OBJTYPE_BRIDGE:
 			update_warp_field_error();
 			calculate_planetary_altitude(o);
+			move_object(timestamp, o, &interpolate_oriented_object);
+			ship_emit_sparks(o);
 			update_shading_planet(o);
+			break;	
 		case OBJTYPE_NPCSHIP:
 			move_object(timestamp, o, &interpolate_oriented_object);
 			ship_emit_sparks(o);
@@ -3180,6 +3183,7 @@ static void move_objects(void)
 			move_object(timestamp, o, &interpolate_oriented_object);
 			block_emit_sparks(o);
 			update_shading_planet(o);
+			break;
 		case OBJTYPE_TURRET:
 			move_object(timestamp, o, &interpolate_oriented_object);
 			turret_emit_sparks(o);
@@ -3239,10 +3243,11 @@ static void move_objects(void)
 			o->move(o);
 			break;
 		case OBJTYPE_DOCKING_PORT:
-			/* Fallthru.  We do not expect docking port objects on the client.
+			/* We do not expect docking port objects on the client.
 			 * Docking ports exist on the client only as entities attached to
 			 * starbases.
 			 */
+			break;
 		default:
 			break;
 		}
