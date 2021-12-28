@@ -16459,7 +16459,7 @@ static void draw_science_data(struct snis_entity *ship, struct snis_entity *o, i
 	sng_set_foreground(UI_COLOR(sci_wireframe));
 	snis_draw_rectangle(0, SCIENCE_DATA_X, SCIENCE_DATA_Y,
 					SCIENCE_DATA_W, SCIENCE_DATA_H);
-	if (waypoint_index != (uint32_t) -1)  {
+	if (waypoint_index != -1)  {
 		snprintf(buffer, sizeof(buffer), "NAME: WAYPOINT-%02d", waypoint_index);
 		sng_abs_xy_draw_string(buffer, TINY_FONT, x, y);
 	} else {
@@ -16529,7 +16529,7 @@ static void draw_science_data(struct snis_entity *ship, struct snis_entity *o, i
 			snprintf(buffer, sizeof(buffer), "TYPE: %s", "UNKNOWN");
 			break;
 		}
-	} else if (waypoint_index != (uint32_t) -1) {
+	} else if (waypoint_index != -1) {
 		snprintf(buffer, sizeof(buffer), "TYPE: WAYPOINT");
 	} else {
 		snprintf(buffer, sizeof(buffer), "TYPE:");
@@ -16539,7 +16539,7 @@ static void draw_science_data(struct snis_entity *ship, struct snis_entity *o, i
 
 	if (o)
 		snprintf(buffer, sizeof(buffer), "X: %0.2lf", o->x);
-	else if (waypoint_index != (uint32_t) -1)
+	else if (waypoint_index != -1)
 		snprintf(buffer, sizeof(buffer), "X: %0.2lf", sci_ui.waypoint[waypoint_index][0]);
 	else
 		snprintf(buffer, sizeof(buffer), "X:");
@@ -16548,7 +16548,7 @@ static void draw_science_data(struct snis_entity *ship, struct snis_entity *o, i
 
 	if (o)
 		snprintf(buffer, sizeof(buffer), "Y: %0.2lf", o->y);
-	else if (waypoint_index != (uint32_t) -1)
+	else if (waypoint_index != -1)
 		snprintf(buffer, sizeof(buffer), "Y: %0.2lf", sci_ui.waypoint[waypoint_index][1]);
 	else
 		snprintf(buffer, sizeof(buffer), "Y:");
@@ -16557,7 +16557,7 @@ static void draw_science_data(struct snis_entity *ship, struct snis_entity *o, i
 
 	if (o)
 		snprintf(buffer, sizeof(buffer), "Z: %0.2lf", o->z);
-	else if (waypoint_index != (uint32_t) -1)
+	else if (waypoint_index != -1)
 		snprintf(buffer, sizeof(buffer), "Z: %0.2lf", sci_ui.waypoint[waypoint_index][2]);
 	else
 		snprintf(buffer, sizeof(buffer), "Z:");
@@ -16585,7 +16585,7 @@ static void draw_science_data(struct snis_entity *ship, struct snis_entity *o, i
 	y += yinc;
 	sng_abs_xy_draw_string(buffer, TINY_FONT, x, y);
 
-	if (o || waypoint_index != (uint32_t) -1) {
+	if (o || waypoint_index != -1) {
 		if (o) {
 			dx = o->x - ship->x;
 			dy = o->y - ship->y;
@@ -16616,7 +16616,7 @@ static void draw_science_data(struct snis_entity *ship, struct snis_entity *o, i
 	y += yinc;
 	sng_abs_xy_draw_string(buffer2, TINY_FONT, x, y);
 
-	if (o || waypoint_index != (uint32_t) -1) {
+	if (o || waypoint_index != -1) {
 		range = dist3d(dx, dy, dz);
 		if (update_display)
 			dejittered_range = (range + last_range / 2); /* avg of last 2 for some hysteresis */
@@ -16627,7 +16627,7 @@ static void draw_science_data(struct snis_entity *ship, struct snis_entity *o, i
 	y += yinc;
 	sng_abs_xy_draw_string(buffer, TINY_FONT, x, y);
 
-	if (o || waypoint_index != (uint32_t) -1) {
+	if (o || waypoint_index != -1) {
 		/* closing rate is avg of last 2 for hysteresis */
 		closing_rate = (frame_rate_hz * (last_range - range) + last_closing_rate) / 2.0;
 		last_range = range;
@@ -16646,7 +16646,7 @@ static void draw_science_data(struct snis_entity *ship, struct snis_entity *o, i
 	 * science targeting the planet. If you're not closing > 2.0 we assume
 	 * you're not actually trying to get there.
 	 */
-	if ((o || waypoint_index != (uint32_t) -1) && dejittered_closing_rate > 2.0) {
+	if ((o || waypoint_index != -1) && dejittered_closing_rate > 2.0) {
 		if (update_display) {
 			eta_mins = (int) (round(dejittered_range) / round(dejittered_closing_rate)) / 60;
 			eta_secs = (int) (round(dejittered_range) / round(dejittered_closing_rate)) % 60;
@@ -16658,7 +16658,7 @@ static void draw_science_data(struct snis_entity *ship, struct snis_entity *o, i
 	y += yinc;
 	sng_abs_xy_draw_string(buffer, TINY_FONT, x, y);
 
-	if (o || waypoint_index != (uint32_t) -1) {
+	if (o || waypoint_index != -1) {
 		snprintf(buffer, sizeof(buffer), "WARP FACTOR: %2.2lf", 10.0 * range / (XKNOWN_DIM / 2.0));
 	} else {
 		snprintf(buffer, sizeof(buffer), "WARP FACTOR:");
