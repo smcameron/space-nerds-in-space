@@ -4311,7 +4311,7 @@ static void do_joystick_roll(__attribute__((unused)) void *x, int value)
 }
 
 /* client joystick status */
-static struct js_state jss[MAX_JOYSTICKS] = { { { 0 } } };
+static struct js_state jss[MAX_JOYSTICKS];
 
 static void deal_with_joysticks()
 {
