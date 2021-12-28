@@ -65,7 +65,7 @@ static int orders_ok_for_unit_type[ARRAYSIZE(order_data)][ARRAYSIZE(unit_data)] 
 struct rts_unit_data *rts_unit_type(int n)
 {
 	BUILD_ASSERT(ARRAYSIZE(unit_data) == NUM_RTS_UNIT_TYPES);
-	if (n < 0 || n >= ARRAYSIZE(unit_data))
+	if (n < 0 || (size_t) n >= ARRAYSIZE(unit_data))
 		return NULL;
 	return &unit_data[n];
 }
@@ -73,7 +73,7 @@ struct rts_unit_data *rts_unit_type(int n)
 struct rts_order_data *rts_order_type(int n)
 {
 	BUILD_ASSERT(ARRAYSIZE(order_data) >= NUM_RTS_ORDER_TYPES);
-	if (n < 0 || n >= ARRAYSIZE(order_data))
+	if (n < 0 || (size_t) n >= ARRAYSIZE(order_data))
 		return NULL;
 	return &order_data[n];
 }
@@ -98,14 +98,14 @@ int rts_allocate_unit_number(int unit_type, int faction)
 
 int rts_unit_type_to_ship_type(int unit_type)
 {
-	if (unit_type < 0 || unit_type >= ARRAYSIZE(unit_type_to_ship_type))
+	if (unit_type < 0 || (size_t) unit_type >= ARRAYSIZE(unit_type_to_ship_type))
 		return -1;
 	return unit_type_to_ship_type[unit_type];
 }
 
 void set_rts_unit_type_to_ship_type(int unit_type, int ship_type)
 {
-	if (unit_type < 0 || unit_type >= ARRAYSIZE(unit_type_to_ship_type))
+	if (unit_type < 0 || (size_t) unit_type >= ARRAYSIZE(unit_type_to_ship_type))
 		return;
 	unit_type_to_ship_type[unit_type] = ship_type;
 }
@@ -114,7 +114,7 @@ int orders_valid_for_unit_type(int orders, int unit_type)
 {
 	if (unit_type < 0 || unit_type >= NUM_RTS_UNIT_TYPES)
 		return 0;
-	if (orders < 0 || orders >= ARRAYSIZE(order_data))
+	if (orders < 0 || (size_t) orders >= ARRAYSIZE(order_data))
 		return 0;
 	return orders_ok_for_unit_type[orders][unit_type];
 }
