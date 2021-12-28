@@ -1158,12 +1158,14 @@ void graph_dev_set_color(void *gdk_color, float a)
 	}
 }
 
-void graph_dev_set_context(void *gdk_drawable, void *gdk_gc)
+void graph_dev_set_context(__attribute__((unused)) void *gdk_drawable, __attribute__((unused)) void *gdk_gc)
 {
 	/* noop */
 }
 
-void graph_dev_setup_colors(void *gtk_widget, void *gdk_color_huex, int nhuex)
+void graph_dev_setup_colors(__attribute__((unused)) void *gtk_widget,
+		__attribute__((unused)) void *gdk_color_huex, 
+		__attribute__((unused)) int nhuex)
 {
 	/* noop */
 }
