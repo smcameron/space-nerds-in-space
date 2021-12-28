@@ -2162,7 +2162,7 @@ static void graph_dev_draw_nebula(const struct mat44 *mat_mvp, const struct mat4
 
 }
 
-static void graph_dev_raster_particle_animation(const struct entity_context *cx, struct entity *e,
+static void graph_dev_raster_particle_animation(struct entity *e,
 	const struct entity_transform *transform, GLuint texture_number,
 	float particle_radius, float time_base)
 {
@@ -2744,7 +2744,7 @@ void graph_dev_draw_entity(struct entity_context *cx, struct entity *e, union ve
 		if (e->material_ptr && e->material_ptr->type == MATERIAL_TEXTURED_PARTICLE) {
 			struct material_textured_particle *mt = &e->material_ptr->textured_particle;
 
-			graph_dev_raster_particle_animation(cx, e, transform, mt->texture_id,
+			graph_dev_raster_particle_animation(e, transform, mt->texture_id,
 				mt->radius * vec3_cwise_min(&e->scale), mt->time_base);
 		}
 		break;
