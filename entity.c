@@ -471,8 +471,8 @@ int transform_line(struct entity_context *cx, float x1, float y1, float z1, floa
 			float *sx1, float *sy1, float *sx2, float *sy2)
 {
 	struct vertex v[2] = {
-		{x1, y1, z1, 1},
-		{x2, y2, z2, 1}};
+		VERTEX_INIT(x1, y1, z1, 1),
+		VERTEX_INIT(x2, y2, z2, 1) };
 
 	/* there is no model transform on a point */
 	struct mat44 mat_vp;
@@ -512,7 +512,7 @@ int transform_line(struct entity_context *cx, float x1, float y1, float z1, floa
 static int transform_point_in_frustum(struct entity_context *cx, struct frustum *f,
 	float x, float y, float z, float *sx, float *sy)
 {
-	struct vertex v = {x, y, z, 1};
+	struct vertex v = VERTEX_INIT(x, y, z, 1);
 
 	/* there is no model transform on a point */
 	struct mat44 mat_vp;

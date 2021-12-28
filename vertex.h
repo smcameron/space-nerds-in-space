@@ -25,4 +25,7 @@ struct vertex {
 	float wx, wy, wz, ww; /* world coords */
 	int clip;
 };
+
+#define VERTEX_INIT(x, y, z, w) { (x), (y), (z), (w), 0, 0, 0, 0, 0 }
+
 #endif
