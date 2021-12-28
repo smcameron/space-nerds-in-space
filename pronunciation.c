@@ -70,7 +70,7 @@ char *fix_pronunciation(char *input)
 	strlcpy(buffer[current_buffer], input, TMP_PRONOUNCE_BUFFER_SIZE);
 	buffer[current_buffer][4095] = '\0';
 
-	for (i = 0; i < ARRAYSIZE(fixup_list); i++) {
+	for (i = 0; (size_t) i < ARRAYSIZE(fixup_list); i++) {
 		do {
 			count = fix_pronunciation_buffer(buffer[current_buffer], buffer[next_buffer], &fixup_list[i]);
 			current_buffer = next_buffer;
