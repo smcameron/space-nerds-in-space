@@ -4386,7 +4386,7 @@ int graph_dev_load_skybox_texture(
 	return -1;
 }
 
-void graph_dev_draw_skybox(struct entity_context *cx, const struct mat44 *mat_vp)
+void graph_dev_draw_skybox(const struct mat44 *mat_vp)
 {
 	draw_vertex_buffer_2d();
 

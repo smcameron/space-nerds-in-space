@@ -929,7 +929,7 @@ static int clip_line(struct mat41 *vtx0, struct mat41 *vtx1)
 	return 0;
 }
 
-void graph_dev_draw_skybox(struct entity_context *cx, const struct mat44 *mat_vp)
+void graph_dev_draw_skybox(const struct mat44 *mat_vp)
 {
 	/* no skybox on gdk rendering */
 }

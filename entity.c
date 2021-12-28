@@ -572,7 +572,7 @@ void render_line(struct entity_context *cx, float x1, float y1, float z1, float 
 
 void render_skybox(struct entity_context *cx)
 {
-	graph_dev_draw_skybox(cx, &cx->camera.frustum.vp_matrix_no_translate);
+	graph_dev_draw_skybox(&cx->camera.frustum.vp_matrix_no_translate);
 }
 
 #if defined(__APPLE__)  || defined(__FreeBSD__)
