@@ -7717,7 +7717,7 @@ static void *damcon_robot_nth_neighbor(__attribute__((unused)) void *context, vo
 	return n1->tsd.waypoint.neighbor[n];
 }
 
-static float damcon_robot_movement_cost(void *context, void *node1, void *node2)
+static float damcon_robot_movement_cost(__attribute__((unused)) void *context, void *node1, void *node2)
 {
 	struct snis_damcon_entity *n1, *n2;
 	float dx, dy;
