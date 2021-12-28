@@ -3730,8 +3730,8 @@ static struct demon_ui {
 	char input[100];
 	char error_msg[80];
 	double ix, iz, ix2, iz2;
-	int captain_of;
-	int follow_id;
+	uint32_t captain_of;
+	uint32_t follow_id;
 	int selectmode;
 	int buttonmode;
 	int shiptype;
@@ -3786,7 +3786,7 @@ static void demon_dirkey(int h, int v, int r, int t)
 	uint32_t oid;
 	int fine;
 
-	if (demon_ui.captain_of < 0)
+	if (demon_ui.captain_of == (uint32_t) -1)
 		return;
 	if (go[demon_ui.captain_of].type != OBJTYPE_NPCSHIP)
 		return;
@@ -6058,10 +6058,10 @@ static void delete_object(uint32_t id)
 		prev_science_guy = NULL;
 
 	/* if demon screen was captain of this thing, it isn't now. */
-	if (i == demon_ui.captain_of)
-		demon_ui.captain_of = -1;
+	if ((uint32_t) i == demon_ui.captain_of)
+		demon_ui.captain_of = (uint32_t) -1;
 	if (id == demon_ui.follow_id) {
-		demon_ui.follow_id = -1;
+		demon_ui.follow_id = (uint32_t) -1;
 		print_demon_console_msg("NO LONGER FOLLOWING DELETED OBJECT");
 	}
 	remove_entity(ecx, go[i].entity);
@@ -17300,7 +17300,7 @@ static void show_comms(void)
 
 static void send_demon_comms_packet_to_server(char *msg)
 {
-	if (demon_ui.captain_of < 0) {
+	if (demon_ui.captain_of == (uint32_t) -1) {
 		print_demon_console_color_msg(YELLOW, "YOU MUST BE IN CAPTAIN MODE TO DO THAT");
 		return;
 	}
@@ -17418,11 +17418,11 @@ static void demon_select(uint32_t id)
 	if (demon_ui.buttonmode == DEMON_BUTTON_CAPTAINMODE) {
 		int index = lookup_object_by_id(id);
 
-		if (demon_ui.captain_of != -1) {
+		if (demon_ui.captain_of != (uint32_t) -1) {
 			queue_to_server(snis_opcode_pkt("bw", OPCODE_DEMON_DISPOSSESS,
 				go[demon_ui.captain_of].id));
 				old_captain = demon_ui.captain_of;
-				demon_ui.captain_of = -1;
+				demon_ui.captain_of = (uint32_t) -1;
 		}
 		if (index >= 0 && (go[index].type == OBJTYPE_NPCSHIP ||
 			go[index].type == OBJTYPE_STARBASE)) {
@@ -17448,12 +17448,12 @@ static void demon_deselect(uint32_t id)
 		if (demon_ui.selected_id[i] == id) {
 			int index;
 			print_demon_console_msg("DESELECTED %u\n", id);
-			if (demon_ui.captain_of != -1) {
+			if (demon_ui.captain_of != (uint32_t) -1) {
 				index = lookup_object_by_id(id);
-				if (demon_ui.captain_of == index) {
+				if (demon_ui.captain_of == (uint32_t) index) {
 					queue_to_server(snis_opcode_pkt("bw", OPCODE_DEMON_DISPOSSESS,
 						go[demon_ui.captain_of].id));
-					demon_ui.captain_of = -1;
+					demon_ui.captain_of = (uint32_t) -1;
 				}
 			}
 			if (i == demon_ui.nselected - 1) {
@@ -18209,9 +18209,9 @@ static void client_demon_follow(char *cmd)
 
 	rc = sscanf(cmd, "%*s %u", &id);
 	if (rc != 1) {
-		if (demon_ui.follow_id != -1) {
+		if (demon_ui.follow_id != (uint32_t) -1) {
 			print_demon_console_msg("NO LONGER FOLLOWING %u", demon_ui.follow_id);
-			demon_ui.follow_id = -1;
+			demon_ui.follow_id = (uint32_t) -1;
 		} else {
 			print_demon_console_color_msg(YELLOW, "INVALID FOLLOW COMMAND");
 		}
@@ -18712,7 +18712,7 @@ static void demon_select_none_button_pressed(__attribute__((unused)) void *x)
 
 static void demon_torpedo_button_pressed(__attribute__((unused)) void *x)
 {
-	if (demon_ui.captain_of < 0)
+	if (demon_ui.captain_of == (uint32_t) -1)
 		return;
 	if (go[demon_ui.captain_of].type != OBJTYPE_NPCSHIP)
 		return;
@@ -18722,7 +18722,7 @@ static void demon_torpedo_button_pressed(__attribute__((unused)) void *x)
 
 static void demon_phaser_button_pressed(__attribute__((unused)) void *x)
 {
-	if (demon_ui.captain_of < 0)
+	if (demon_ui.captain_of == (uint32_t) -1)
 		return;
 	if (go[demon_ui.captain_of].type != OBJTYPE_NPCSHIP)
 		return;
@@ -18967,8 +18967,8 @@ static void init_demon_ui()
 	demon_ui.selectedx = -1.0;
 	demon_ui.selectedz = -1.0;
 	demon_ui.selectmode = 0;
-	demon_ui.captain_of = -1;
-	demon_ui.follow_id = -1;
+	demon_ui.captain_of = (uint32_t) -1;
+	demon_ui.follow_id = (uint32_t) -1;
 	demon_ui.use_3d = 1;
 	demon_ui.console_active = 0;
 	demon_ui.log_console = 0;
@@ -19514,10 +19514,10 @@ static void show_demon_3d(void)
 	}
 
 	/* If in captain mode or follow mode, then set desired camera position/orientation accordingly */
-	if (demon_ui.captain_of >= 0 || demon_ui.follow_id >= 0) {
+	if (demon_ui.captain_of != (uint32_t) -1 || demon_ui.follow_id != (uint32_t) -1) {
 		struct snis_entity *o;
 
-		if (demon_ui.captain_of >= 0) {
+		if (demon_ui.captain_of != (uint32_t) -1) {
 			o = &go[demon_ui.captain_of];
 		} else {
 			int i = lookup_object_by_id(demon_ui.follow_id);
@@ -19859,7 +19859,7 @@ static void show_demon_3d(void)
 					vec3_normalize_self(&dpos);
 					quat_rot_vec_self(&up, &demon_ui.camera_orientation);
 					quat_from_u2v(&demon_ui.desired_camera_orientation, &right, &dpos, &up);
-					if (demon_ui.captain_of != -1) {
+					if (demon_ui.captain_of != (uint32_t) -1) {
 						double dx, dy, dz;
 
 						dx = demon_ui.desired_camera_pos.v.x - go[demon_ui.captain_of].x;
@@ -19995,7 +19995,7 @@ static void show_demon(void)
 		show_demon_3d();
 	else
 		show_demon_2d();
-	if (demon_ui.captain_of != -1) {
+	if (demon_ui.captain_of != (uint32_t) -1) {
 		sng_set_foreground(WHITE);
 		sng_center_xy_draw_string("CAPTAIN MODE", SMALL_FONT, SCREEN_WIDTH / 2, txy(20));
 	}
