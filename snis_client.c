@@ -23541,7 +23541,7 @@ static char *stl_parser_asset_replacer(char *path)
  * can't get good results from SDL_SetWindowSize() if you call it while
  * SDL_PollEvents() is returning non-zero. (I don't know why that is.)
  */
-static void constrain_aspect_ratio(SDL_Window *window, int *w, int *h)
+static void constrain_aspect_ratio(int *w, int *h)
 {
 	float new_aspect_ratio = (float) *w / (float) *h;
 
@@ -23604,7 +23604,7 @@ static void process_events(SDL_Window *window)
 						 * release the mouse button, the window will snap to the correct size.
 						 */
 						SDL_GL_GetDrawableSize(window, &width, &height);
-						constrain_aspect_ratio(window, &width, &height);
+						constrain_aspect_ratio(&width, &height);
 						real_screen_width = width;
 						real_screen_height = height;
 
