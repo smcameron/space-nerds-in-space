@@ -634,7 +634,7 @@ struct graph_dev_gl_shader_metadata {
 
 static void maybe_unload_shader(struct graph_dev_gl_shader_metadata *meta, GLuint *program_id)
 {
-	if (meta->program_id && *meta->program_id != -1) /* Shader is currently loaded? */
+	if (meta->program_id && *meta->program_id != (GLuint) -1) /* Shader is currently loaded? */
 		glDeleteProgram(*meta->program_id); /* Unload shader */
 	meta->program_id = program_id;
 	*meta->program_id = -1;
