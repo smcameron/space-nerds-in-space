@@ -8678,7 +8678,7 @@ static void revoke_docking_permission(struct snis_entity *docking_port, uint32_t
 	starbase = &go[i];
 	model = starbase->id % nstarbase_models;
 	for (i = 0; i < docking_port_info[model]->nports; i++) {
-		if (starbase->tsd.starbase.expected_docker[i] == player_id) {
+		if ((uint32_t) starbase->tsd.starbase.expected_docker[i] == player_id) {
 			starbase->tsd.starbase.expected_docker[i] = -1;
 			starbase->tsd.starbase.expected_docker_timer[i] = 0;
 		}
@@ -8702,7 +8702,7 @@ static int starbase_grant_docker_permission(struct snis_entity *starbase,
 	int i;
 
 	for (i = 0; i < docking_port_info[model]->nports; i++) {
-		if (starbase->tsd.starbase.expected_docker[i] == docker->id &&
+		if ((uint32_t) starbase->tsd.starbase.expected_docker[i] == docker->id &&
 			starbase->tsd.starbase.expected_docker_timer[i] > 0) {
 			starbase->tsd.starbase.expected_docker_timer[i] = STARBASE_DOCK_TIME;
 			/* transmit re-granting of docking permission */
@@ -8761,7 +8761,7 @@ static int starbase_expecting_docker(struct snis_entity *starbase, uint32_t dock
 	int i;
 
 	for (i = 0; i < docking_port_info[model]->nports; i++) {
-		if (starbase->tsd.starbase.expected_docker[i] == docker &&
+		if ((uint32_t) starbase->tsd.starbase.expected_docker[i] == docker &&
 			starbase->tsd.starbase.expected_docker_timer[i] > 0)
 			return 1;
 	}
