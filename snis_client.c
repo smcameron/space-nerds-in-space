@@ -2756,7 +2756,7 @@ static inline void spin_planet(double timestamp, struct snis_entity *o)
 typedef void(*interpolate_update_func)(double timestamp, struct snis_entity *o, int visible,
 	int from_index, int to_index, float t);
 
-static void interpolate_generic_object(double timestamp, struct snis_entity *o, int visible,
+static void interpolate_generic_object(__attribute__((unused)) double timestamp, struct snis_entity *o, int visible,
 	int from_index, int to_index, float t)
 {
 #ifdef INTERP_DEBUG
@@ -2778,7 +2778,7 @@ static void interpolate_generic_object(double timestamp, struct snis_entity *o, 
 	}
 }
 
-static void interpolate_oriented_object(double timestamp, struct snis_entity *o,
+static void interpolate_oriented_object(__attribute__((unused)) double timestamp, struct snis_entity *o,
 	int visible, int from_index, int to_index, float t)
 {
 #ifdef INTERP_DEBUG
