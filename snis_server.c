@@ -2093,7 +2093,7 @@ static void delete_from_clients_and_server_helper(struct snis_entity *o, int tak
 		break;
 	case OBJTYPE_STARBASE:
 		delete_starbase_docking_ports(o);
-		/* deliberate fallthrough */
+		/* FALLTHROUGH */
 	default:
 		schedule_callback(event_callback, &callback_schedule,
 				"object-death-event", o->id);
@@ -24041,7 +24041,8 @@ static void queue_up_client_object_update(struct game_client *c, struct snis_ent
 		send_update_warp_core(c, o);
 		break;
 	case OBJTYPE_DOCKING_PORT:
-		/* fall through (client already knows the docking port info based on the starbase info) */
+		/* (client already knows the docking port info based on the starbase info) */
+		break;
 	default:
 		break;
 	}
@@ -30376,7 +30377,8 @@ static int process_multiverse_verification(struct multiverse_server_info *msi)
 		case SNISMV_VERIFICATION_RESPONSE_TOO_MANY_BRIDGES:
 			bridgelist[b].verified = BRIDGE_REFUSED;
 			break;
-		case SNISMV_VERIFICATION_RESPONSE_FAIL: /* deliberate fall through */
+		case SNISMV_VERIFICATION_RESPONSE_FAIL:
+			/* FALLTHROUGH */
 		default:
 			bridgelist[b].verified = BRIDGE_FAILED_VERIFICATION;
 			break;
