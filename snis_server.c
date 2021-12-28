@@ -18404,7 +18404,7 @@ static void enscript_nebula(FILE *f, struct snis_entity *o, int nebula)
 		nebula, o->sdata.name, o->x, o->y, o->z, o->tsd.nebula.r);
 }
 
-static void enscript_wormhole(FILE *f, struct snis_entity *o, int wormhole)
+static void enscript_wormhole(FILE *f, __attribute__((unused)) struct snis_entity *o, int wormhole)
 {
 	if (wormhole == 1)
 		fprintf(f, "wormhole = {};\n");
