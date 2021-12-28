@@ -704,8 +704,8 @@ static struct wwviaudio_record_data {
 static int wwviaudio_record_cb(const void *input_buffer,
 		__attribute__((unused)) void *outputBuffer,
 		unsigned long frames_per_buffer,
-		const PaStreamCallbackTimeInfo *time_info,
-		PaStreamCallbackFlags status_flags,
+		__attribute__((unused)) const PaStreamCallbackTimeInfo *time_info,
+		__attribute__((unused)) PaStreamCallbackFlags status_flags,
 		void *dataptr)
 {
 	struct wwviaudio_record_data *d = dataptr;
