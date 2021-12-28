@@ -18293,7 +18293,7 @@ static int construct_demon_command(char *input, char *errmsg)
 	}
 
 	v = -1;
-	for (i = 0; i < ARRAYSIZE(demon_cmd); i++) {
+	for (i = 0; (size_t) i < ARRAYSIZE(demon_cmd); i++) {
 		if (strncmp(demon_cmd[i].verb, s, strlen(s)))
 			continue;
 		v = i;
