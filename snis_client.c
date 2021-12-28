@@ -14566,7 +14566,7 @@ static void show_engineering_damage_report(int subsystem)
 	const int sysmap[] = { 0, 4, 5, 6, 1, 3, 2, 7, 8 };
 	/* TODO BUILD ASSERT that sysmap is correct size */
 
-	if (subsystem < 0 || subsystem >= ARRAYSIZE(sysmap))
+	if (subsystem < 0 || (size_t) subsystem >= ARRAYSIZE(sysmap))
 		return;
 
 	y = 0.3333 * SCREEN_HEIGHT + sysmap[subsystem] * 0.06666 * SCREEN_HEIGHT;
