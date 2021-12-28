@@ -342,7 +342,8 @@ void voice_chat_stop_threads(void)
 	voice_chat_stop_thread(&outgoing);
 }
 
-static void recording_callback(void *cookie, int16_t *buffer, int nsamples)
+static void recording_callback(__attribute__((unused)) void *cookie,
+		__attribute__((unused)) int16_t *buffer, int nsamples)
 {
 	if (nsamples != VC_BUFFER_SIZE)
 		return;
