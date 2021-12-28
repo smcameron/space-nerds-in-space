@@ -14405,10 +14405,6 @@ static void add_damcon_systems(struct damcon_data *d)
 	d->o[i].version++;
 }
 
-static void add_damcon_parts(struct damcon_data *d)
-{
-}
-
 static struct snis_damcon_entity *find_nth_waypoint(struct damcon_data *d, int n)
 {
 	int i;
@@ -14611,7 +14607,6 @@ static void populate_damcon_arena(struct damcon_data *d)
 	add_damcon_robot(d);
 	add_damcon_systems(d);
 	add_damcon_labels(d);
-	add_damcon_parts(d);
 	add_damcon_waypoints(d);
 }
 
