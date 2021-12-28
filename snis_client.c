@@ -11209,20 +11209,20 @@ static void add_scanner_beam_orange_slice(struct entity_context *ecx,
 			o->tsd.ship.sci_heading + o->tsd.ship.sci_beam_width / 2.0 + M_PI / 2.0 + jitter_offset);
 	quat_init_axis(&q3, 0.0f, 1.0f, 0.0f,
 			o->tsd.ship.sci_heading + o->tsd.ship.sci_beam_width / 2.0 + M_PI / 2.0 - scanner_offset);
-	e = add_entity(sciballecx, orange_slice, o->x, o->y, o->z, color);
+	e = add_entity(ecx, orange_slice, o->x, o->y, o->z, color);
 	if (e) {
 		quat_mul(&q4, &q1, &q);
 		update_entity_orientation(e, &q4);
 		update_entity_scale(e, r);
 	}
 
-	e = add_entity(sciballecx, orange_slice, o->x, o->y, o->z, color);
+	e = add_entity(ecx, orange_slice, o->x, o->y, o->z, color);
 	if (e) {
 		quat_mul(&q4, &q2, &q);
 		update_entity_orientation(e, &q4);
 		update_entity_scale(e, r);
 	}
-	e = add_entity(sciballecx, orange_slice, o->x, o->y, o->z, color);
+	e = add_entity(ecx, orange_slice, o->x, o->y, o->z, color);
 	if (e) {
 		quat_mul(&q4, &q3, &q);
 		update_entity_orientation(e, &q4);
