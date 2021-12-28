@@ -84,7 +84,7 @@ void snis_debug_dump(char *cmd, struct snis_entity go[], int nstarbase_models,
 
 	rc = sscanf(cmd, "%*s %u", &id);
 	if (rc != 1) {
-		if (last_object != -1) {
+		if (last_object != (uint32_t) -1) {
 			id = last_object;
 			printfn("%s - DUMPING LAST OBJECT ID %u", label, id);
 		} else {
