@@ -134,30 +134,30 @@ char *damcon_part_name(uint8_t system, uint8_t part)
 {
 	BUILD_ASSERT(ARRAYSIZE(damcon_system_names) == DAMCON_SYSTEM_COUNT);
 
-	if (system < 0 || system >= ARRAYSIZE(damcon_part_names))
+	if (system >= ARRAYSIZE(damcon_part_names))
 		return "UNKNOWN";
-	if (part < 0 || part >= DAMCON_PARTS_PER_SYSTEM)
+	if (part >= DAMCON_PARTS_PER_SYSTEM)
 		return "UNKNOWN";
 	return damcon_part_names[system][part];
 }
 
 char *damcon_system_name(uint8_t system)
 {
-	if (system < 0 || system >= ARRAYSIZE(damcon_system_names))
+	if (system >= ARRAYSIZE(damcon_system_names))
 		return "UNKNOWN";
 	return damcon_system_names[system];
 }
 
 char *damcon_tool_name(uint8_t tool)
 {
-	if (tool < 0 || tool >= ARRAYSIZE(damcon_tools))
+	if (tool >= ARRAYSIZE(damcon_tools))
 		return "UNKNOWN";
 	return damcon_tools[tool];
 }
 
 char *damcon_damage_name(uint8_t damage)
 {
-	if (damage < 0 || damage >= ARRAYSIZE(damcon_damages))
+	if (damage >= ARRAYSIZE(damcon_damages))
 		return "UNKNOWN";
 	return damcon_damages[damage];
 }
