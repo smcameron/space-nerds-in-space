@@ -371,7 +371,7 @@ static inline int between(double a, double p, double b)
 
 static inline int point_between(double ax, double ay, double px, double py, double bx, double by)
 {
-	return between(ax, px, bx) && between(ay, px, by);
+	return between(ax, px, bx) && between(ay, py, by);
 }
 
 /*
