@@ -612,7 +612,7 @@ static void nl_parse_machine_step(struct nl_parse_machine **list,
 		return;
 
 	/* We ran out of syntax */
-	if (p->syntax_pos >= strlen(p->syntax)) {
+	if ((size_t) p->syntax_pos >= strlen(p->syntax)) {
 		if (p->current_token >= ntokens) {
 			p->state = NL_STATE_SUCCESS;
 			return;
