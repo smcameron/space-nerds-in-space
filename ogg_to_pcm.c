@@ -37,9 +37,10 @@ static const int bits = 16;
    samplesize in *samplesize. and etc.
 */
 int ogg_to_pcm(char *infile, int16_t **pcmbuffer,
-	int *samplesize, int *sample_rate, int *nchannels,
+	__attribute__((unused)) int *samplesize, int *sample_rate, int *nchannels,
 	uint64_t *nsamples)
 {
+	/* FIXME: samplesize is ignored, assumed to be int16_t */
 	OggVorbis_File vf;
 	char buf[8192];
 	unsigned char *bufferptr;
