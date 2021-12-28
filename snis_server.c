@@ -11433,8 +11433,8 @@ static int add_specific_ship(const char *name, double x, double y, double z,
 
 static int l_attach_science_text(lua_State *l)
 {
-	const double id = luaL_checknumber(lua_state, 1);
-	const char *text = lua_tostring(lua_state, 2);
+	const double id = luaL_checknumber(l, 1);
+	const char *text = lua_tostring(l, 2);
 	pthread_mutex_lock(&universe_mutex);
 	int i = lookup_by_id((uint32_t) id);
 	if (i < 0)
@@ -11443,11 +11443,11 @@ static int l_attach_science_text(lua_State *l)
 		free(go[i].sdata.science_text);
 	go[i].sdata.science_text = strndup(text, 256);
 	pthread_mutex_unlock(&universe_mutex);
-	lua_pushnumber(lua_state, 0.0);
+	lua_pushnumber(l, 0.0);
 	return 1;
 error:
 	pthread_mutex_unlock(&universe_mutex);
-	lua_pushnil(lua_state);
+	lua_pushnil(l);
 	return 1;
 }
 
@@ -11458,17 +11458,17 @@ static int l_add_ship(lua_State *l)
 	double shiptype, the_faction;
 	int i, auto_respawn;
 
-	name = lua_tostring(lua_state, 1);
-	x = lua_tonumber(lua_state, 2);
-	y = lua_tonumber(lua_state, 3);
-	z = lua_tonumber(lua_state, 4);
-	shiptype = lua_tonumber(lua_state, 5);
-	the_faction = lua_tonumber(lua_state, 6);
-	ar = lua_tonumber(lua_state, 7);
+	name = lua_tostring(l, 1);
+	x = lua_tonumber(l, 2);
+	y = lua_tonumber(l, 3);
+	z = lua_tonumber(l, 4);
+	shiptype = lua_tonumber(l, 5);
+	the_faction = lua_tonumber(l, 6);
+	ar = lua_tonumber(l, 7);
 	auto_respawn = (ar > 0.999);
 
 	if (shiptype < 0 || shiptype > nshiptypes - 1) {
-		lua_pushnil(lua_state);
+		lua_pushnil(l);
 		return 1;
 	}
 
@@ -11477,9 +11477,9 @@ static int l_add_ship(lua_State *l)
 		(uint8_t) shiptype % nshiptypes,
 		(uint8_t) the_faction % nfactions(), auto_respawn);
 	if (i < 0)
-		lua_pushnil(lua_state);
+		lua_pushnil(l);
 	else
-		lua_pushnumber(lua_state, (double) go[i].id);
+		lua_pushnumber(l, (double) go[i].id);
 	pthread_mutex_unlock(&universe_mutex);
 	return 1;
 }
@@ -11490,24 +11490,24 @@ static int l_add_asteroid(lua_State *l)
 	double x, y, z;
 	int i;
 
-	x = lua_tonumber(lua_state, 1);
-	y = lua_tonumber(lua_state, 2);
-	z = lua_tonumber(lua_state, 3);
+	x = lua_tonumber(l, 1);
+	y = lua_tonumber(l, 2);
+	z = lua_tonumber(l, 3);
 
 	pthread_mutex_lock(&universe_mutex);
 	i = add_asteroid(x, y, z, 0.0, 0.0, 0.0, 1.0);
 	if (i < 0)
-		lua_pushnil(lua_state);
+		lua_pushnil(l);
 	else
-		lua_pushnumber(lua_state, (double) go[i].id);
+		lua_pushnumber(l, (double) go[i].id);
 	pthread_mutex_unlock(&universe_mutex);
 	return 1;
 }
 
 static int l_set_asteroid_speed(lua_State *l)
 {
-	const double id = luaL_checknumber(lua_state, 1);
-	const double v = luaL_checknumber(lua_state, 2);
+	const double id = luaL_checknumber(l, 1);
+	const double v = luaL_checknumber(l, 2);
 	pthread_mutex_lock(&universe_mutex);
 	int i = lookup_by_id((uint32_t) id);
 	if (i < 0)
@@ -11518,11 +11518,11 @@ static int l_set_asteroid_speed(lua_State *l)
 		goto error;
 	go[i].tsd.asteroid.v = (float) v;
 	pthread_mutex_unlock(&universe_mutex);
-	lua_pushnumber(lua_state, 0.0);
+	lua_pushnumber(l, 0.0);
 	return 1;
 error:
 	pthread_mutex_unlock(&universe_mutex);
-	lua_pushnil(lua_state);
+	lua_pushnil(l);
 	return 1;
 }
 
@@ -11531,21 +11531,21 @@ static int l_add_cargo_container(lua_State *l)
 	double x, y, z, vx, vy, vz;
 	int i;
 
-	x = lua_tonumber(lua_state, 1);
-	y = lua_tonumber(lua_state, 2);
-	z = lua_tonumber(lua_state, 3);
-	vx = lua_tonumber(lua_state, 4);
-	vy = lua_tonumber(lua_state, 5);
-	vz = lua_tonumber(lua_state, 6);
+	x = lua_tonumber(l, 1);
+	y = lua_tonumber(l, 2);
+	z = lua_tonumber(l, 3);
+	vx = lua_tonumber(l, 4);
+	vy = lua_tonumber(l, 5);
+	vz = lua_tonumber(l, 6);
 
 	pthread_mutex_lock(&universe_mutex);
 	i = add_cargo_container(x, y, z, vx, vy, vz, -1, 0, 1);
 	if (i < 0) {
-		lua_pushnil(lua_state);
+		lua_pushnil(l);
 		pthread_mutex_unlock(&universe_mutex);
 		return 1;
 	}
-	lua_pushnumber(lua_state, (double) go[i].id);
+	lua_pushnumber(l, (double) go[i].id);
 	pthread_mutex_unlock(&universe_mutex);
 	return 1;
 }
@@ -11575,18 +11575,18 @@ static int l_get_object_location(lua_State *l)
 	double id;
 
 	pthread_mutex_lock(&universe_mutex);
-	id = lua_tonumber(lua_state, 1);
+	id = lua_tonumber(l, 1);
 	i = lookup_by_id((uint32_t) id);
 	if (i < 0) {
 		pthread_mutex_unlock(&universe_mutex);
-		lua_pushnil(lua_state);
-		lua_pushnil(lua_state);
-		lua_pushnil(lua_state);
+		lua_pushnil(l);
+		lua_pushnil(l);
+		lua_pushnil(l);
 		return 3;
 	}
-	lua_pushnumber(lua_state, go[i].x);
-	lua_pushnumber(lua_state, go[i].y);
-	lua_pushnumber(lua_state, go[i].z);
+	lua_pushnumber(l, go[i].x);
+	lua_pushnumber(l, go[i].y);
+	lua_pushnumber(l, go[i].z);
 	pthread_mutex_unlock(&universe_mutex);
 	return 3;
 }
@@ -11597,10 +11597,10 @@ static int l_move_object(lua_State *l)
 	double id, x, y, z;
 	struct snis_entity *o;
 
-	id = lua_tonumber(lua_state, 1);
-	x = lua_tonumber(lua_state, 2);
-	y = lua_tonumber(lua_state, 3);
-	z = lua_tonumber(lua_state, 4);
+	id = lua_tonumber(l, 1);
+	x = lua_tonumber(l, 2);
+	y = lua_tonumber(l, 3);
+	z = lua_tonumber(l, 4);
 
 	pthread_mutex_lock(&universe_mutex);
 	i = lookup_by_id((uint32_t) id);
@@ -11620,10 +11620,10 @@ static int l_set_object_velocity(lua_State *l)
 	double id, vx, vy, vz;
 	struct snis_entity *o;
 
-	id = lua_tonumber(lua_state, 1);
-	vx = lua_tonumber(lua_state, 2);
-	vy = lua_tonumber(lua_state, 3);
-	vz = lua_tonumber(lua_state, 4);
+	id = lua_tonumber(l, 1);
+	vx = lua_tonumber(l, 2);
+	vy = lua_tonumber(l, 3);
+	vz = lua_tonumber(l, 4);
 
 	pthread_mutex_lock(&universe_mutex);
 	i = lookup_by_id((uint32_t) id);
@@ -11642,11 +11642,11 @@ static int l_set_object_orientation(lua_State *l)
 	int i;
 	double id, rotx, roty, rotz, angle;
 
-	id = lua_tonumber(lua_state, 1);
-	rotx = lua_tonumber(lua_state, 2);
-	roty = lua_tonumber(lua_state, 3);
-	rotz = lua_tonumber(lua_state, 4);
-	angle = lua_tonumber(lua_state, 5);
+	id = lua_tonumber(l, 1);
+	rotx = lua_tonumber(l, 2);
+	roty = lua_tonumber(l, 3);
+	rotz = lua_tonumber(l, 4);
+	angle = lua_tonumber(l, 5);
 
 	pthread_mutex_lock(&universe_mutex);
 	i = lookup_by_id((uint32_t) id);
@@ -11668,17 +11668,17 @@ static int l_align_object_towards(lua_State *l)
 	union vec3 start, goal;
 	union quat rotation, new_orientation;
 
-	id = lua_tonumber(lua_state, 1);
-	x = lua_tonumber(lua_state, 2);
-	y = lua_tonumber(lua_state, 3);
-	z = lua_tonumber(lua_state, 4);
-	max_angle = fabs(lua_tonumber(lua_state, 5));
+	id = lua_tonumber(l, 1);
+	x = lua_tonumber(l, 2);
+	y = lua_tonumber(l, 3);
+	z = lua_tonumber(l, 4);
+	max_angle = fabs(lua_tonumber(l, 5));
 
 	pthread_mutex_lock(&universe_mutex);
 	i = lookup_by_id((uint32_t) id);
 	if (i < 0) {
 		pthread_mutex_unlock(&universe_mutex);
-		lua_pushnumber(lua_state, -720.0 * M_PI / 180.0);
+		lua_pushnumber(l, -720.0 * M_PI / 180.0);
 		return 1;
 	}
 	start.v.x = 1.0;
@@ -11707,7 +11707,7 @@ static int l_align_object_towards(lua_State *l)
 	go[i].orientation = new_orientation;
 	go[i].timestamp = universe_timestamp;
 	pthread_mutex_unlock(&universe_mutex);
-	lua_pushnumber(lua_state, unlimited_angle);
+	lua_pushnumber(l, unlimited_angle);
 	return 1;
 }
 
@@ -11717,11 +11717,11 @@ static int l_set_object_rotational_velocity(lua_State *l)
 	double id, rotx, roty, rotz, angle;
 	struct snis_entity *o;
 
-	id = lua_tonumber(lua_state, 1);
-	rotx = lua_tonumber(lua_state, 2);
-	roty = lua_tonumber(lua_state, 3);
-	rotz = lua_tonumber(lua_state, 4);
-	angle = lua_tonumber(lua_state, 5);
+	id = lua_tonumber(l, 1);
+	rotx = lua_tonumber(l, 2);
+	roty = lua_tonumber(l, 3);
+	rotz = lua_tonumber(l, 4);
+	angle = lua_tonumber(l, 5);
 
 	pthread_mutex_lock(&universe_mutex);
 	i = lookup_by_id((uint32_t) id);
@@ -11762,10 +11762,10 @@ static int l_set_object_relative_position(lua_State *l)
 	double id, rx, ry, rz;
 	struct snis_entity *o;
 
-	id = lua_tonumber(lua_state, 1);
-	rx = lua_tonumber(lua_state, 2);
-	ry = lua_tonumber(lua_state, 3);
-	rz = lua_tonumber(lua_state, 4);
+	id = lua_tonumber(l, 1);
+	rx = lua_tonumber(l, 2);
+	ry = lua_tonumber(l, 3);
+	rz = lua_tonumber(l, 4);
 
 	pthread_mutex_lock(&universe_mutex);
 	i = lookup_by_id((uint32_t) id);
@@ -11796,7 +11796,7 @@ static int l_delete_object(lua_State *l)
 	int i;
 	double id;
 
-	id = lua_tonumber(lua_state, 1);
+	id = lua_tonumber(l, 1);
 
 	pthread_mutex_lock(&universe_mutex);
 	i = lookup_by_id((uint32_t) id);
@@ -11816,9 +11816,9 @@ static int l_add_random_ship(lua_State *l)
 	pthread_mutex_lock(&universe_mutex);
 	i = add_ship(-1, snis_randn(nshiptypes), 1);
 	if (i < 0)
-		lua_pushnil(lua_state);
+		lua_pushnil(l);
 	else
-		lua_pushnumber(lua_state, (double) go[i].id);
+		lua_pushnumber(l, (double) go[i].id);
 	pthread_mutex_unlock(&universe_mutex);
 	return 1;
 }
@@ -11860,20 +11860,20 @@ static int l_add_spacemonster(lua_State *l)
 	const char *name;
 	int i;
 
-	name = lua_tostring(lua_state, 1);
-	x = lua_tonumber(lua_state, 2);
-	y = lua_tonumber(lua_state, 3);
-	z = lua_tonumber(lua_state, 4);
+	name = lua_tostring(l, 1);
+	x = lua_tonumber(l, 2);
+	y = lua_tonumber(l, 3);
+	z = lua_tonumber(l, 4);
 
 	pthread_mutex_lock(&universe_mutex);
 	i = add_spacemonster(x, y, z);
 	if (i < 0) {
 		pthread_mutex_unlock(&universe_mutex);
-		lua_pushnil(lua_state);
+		lua_pushnil(l);
 		return 1;
 	}
 	strlcpy(go[i].sdata.name, name, sizeof(go[i].sdata.name));
-	lua_pushnumber(lua_state, (double) go[i].id);
+	lua_pushnumber(l, (double) go[i].id);
 	pthread_mutex_unlock(&universe_mutex);
 	return 1;
 }
@@ -12193,26 +12193,26 @@ static int l_add_turret(lua_State *l)
 	union vec3 up = { { 0.0, 0.0, 1.0 } };
 	int i;
 
-	rid = lua_tonumber(lua_state, 1);
-	x = lua_tonumber(lua_state, 2);
-	y = lua_tonumber(lua_state, 3);
-	z = lua_tonumber(lua_state, 4);
-	firing_interval = lua_tonumber(lua_state, 5);
+	rid = lua_tonumber(l, 1);
+	x = lua_tonumber(l, 2);
+	y = lua_tonumber(l, 3);
+	z = lua_tonumber(l, 4);
+	firing_interval = lua_tonumber(l, 5);
 
 	pthread_mutex_lock(&universe_mutex);
 	parent_id = (uint32_t) rid;
 	i = lookup_by_id(parent_id);
 	if (i < 0) {
 		pthread_mutex_unlock(&universe_mutex);
-		lua_pushnil(lua_state);
+		lua_pushnil(l);
 		return 1;
 	}
 	i = add_turret(parent_id, 0.0, 0.0, 0.0, x, y, z, identity_quat, up,
 			(int) firing_interval);
 	if (i < 0)
-		lua_pushnil(lua_state);
+		lua_pushnil(l);
 	else
-		lua_pushnumber(lua_state, (double) go[i].id);
+		lua_pushnumber(l, (double) go[i].id);
 	pthread_mutex_unlock(&universe_mutex);
 	return 1;
 }
@@ -12267,25 +12267,25 @@ static int l_add_block(lua_State *l)
 	union quat rotation;
 	int i;
 
-	rid = lua_tonumber(lua_state, 1);
-	x = lua_tonumber(lua_state, 2);
-	y = lua_tonumber(lua_state, 3);
-	z = lua_tonumber(lua_state, 4);
-	sx = lua_tonumber(lua_state, 5);
-	sy = lua_tonumber(lua_state, 6);
-	sz = lua_tonumber(lua_state, 7);
-	rotx = lua_tonumber(lua_state, 8);
-	roty = lua_tonumber(lua_state, 9);
-	rotz = lua_tonumber(lua_state, 10);
-	angle = lua_tonumber(lua_state, 11);
-	material_index = lua_tonumber(lua_state, 12);
-	form = lua_tonumber(lua_state, 13);
+	rid = lua_tonumber(l, 1);
+	x = lua_tonumber(l, 2);
+	y = lua_tonumber(l, 3);
+	z = lua_tonumber(l, 4);
+	sx = lua_tonumber(l, 5);
+	sy = lua_tonumber(l, 6);
+	sz = lua_tonumber(l, 7);
+	rotx = lua_tonumber(l, 8);
+	roty = lua_tonumber(l, 9);
+	rotz = lua_tonumber(l, 10);
+	angle = lua_tonumber(l, 11);
+	material_index = lua_tonumber(l, 12);
+	form = lua_tonumber(l, 13);
 	dx = 0.0;
 	dy = 0.0;
 	dz = 0.0;
 
 	if ((int) material_index != 0 && (int) material_index != 1) {
-		lua_pushnil(lua_state);
+		lua_pushnil(l);
 		return 1;
 	}
 	switch ((int) form) {
@@ -12294,7 +12294,7 @@ static int l_add_block(lua_State *l)
 	case SHAPE_CAPSULE:
 		break;
 	default:
-		lua_pushnil(lua_state);
+		lua_pushnil(l);
 		return 1;
 	}
 	quat_init_axis(&rotation, rotx, roty, rotz, angle);
@@ -12315,9 +12315,9 @@ static int l_add_block(lua_State *l)
 	i = add_block_object(parent_id, x, y, z, 0.0, 0.0, 0.0, dx, dy, dz, sx, sy, sz, rotation,
 				(int) material_index, (int) form);
 	if (i < 0)
-		lua_pushnil(lua_state);
+		lua_pushnil(l);
 	else
-		lua_pushnumber(lua_state, (double) go[i].id);
+		lua_pushnumber(l, (double) go[i].id);
 	pthread_mutex_unlock(&universe_mutex);
 	return 1;
 }
@@ -12452,17 +12452,17 @@ static int l_add_turrets_to_block_face(lua_State *l)
 	uint32_t parent_id;
 	int i, face, rows, cols;
 
-	rid = lua_tonumber(lua_state, 1);
-	dface = lua_tonumber(lua_state, 2);
-	drows = lua_tonumber(lua_state, 3);
-	dcols = lua_tonumber(lua_state, 4);
+	rid = lua_tonumber(l, 1);
+	dface = lua_tonumber(l, 2);
+	drows = lua_tonumber(l, 3);
+	dcols = lua_tonumber(l, 4);
 
 	pthread_mutex_lock(&universe_mutex);
 	parent_id = (uint32_t) rid;
 	i = lookup_by_id(parent_id);
 	if (i < 0) {
 		pthread_mutex_unlock(&universe_mutex);
-		lua_pushnil(lua_state);
+		lua_pushnil(l);
 		return 1;
 	}
 	face = (int) dface;
@@ -12470,7 +12470,7 @@ static int l_add_turrets_to_block_face(lua_State *l)
 	cols = (int) dcols;
 	add_turrets_to_block_face(parent_id, face, rows, cols);
 	pthread_mutex_unlock(&universe_mutex);
-	lua_pushnumber(lua_state, 0.0);
+	lua_pushnumber(l, 0.0);
 	return 1;
 }
 
@@ -12643,17 +12643,17 @@ static int l_add_starbase(lua_State *l)
 	double x, y, z, n;
 	int i;
 
-	x = lua_tonumber(lua_state, 1);
-	y = lua_tonumber(lua_state, 2);
-	z = lua_tonumber(lua_state, 3);
-	n = lua_tonumber(lua_state, 4);
+	x = lua_tonumber(l, 1);
+	y = lua_tonumber(l, 2);
+	z = lua_tonumber(l, 3);
+	n = lua_tonumber(l, 4);
 
 	pthread_mutex_lock(&universe_mutex);
 	i  = add_starbase(x, y, z, 0, 0, 0, n, -1);
 	if (i < 0)
-		lua_pushnil(lua_state);
+		lua_pushnil(l);
 	else
-		lua_pushnumber(lua_state, (double) go[i].id);
+		lua_pushnumber(l, (double) go[i].id);
 	pthread_mutex_unlock(&universe_mutex);
 	return 1;
 }
@@ -12739,17 +12739,17 @@ static int l_add_explosion(lua_State *l)
 	int rc;
 	double x, y, z, v, nsparks, time, victim_type, explosion_type;
 
-	x = lua_tonumber(lua_state, 1);
-	y = lua_tonumber(lua_state, 2);
-	z = lua_tonumber(lua_state, 3);
-	v = lua_tonumber(lua_state, 4);
-	nsparks = lua_tonumber(lua_state, 5);
-	time = lua_tonumber(lua_state, 6);
-	victim_type = lua_tonumber(lua_state, 7);
-	explosion_type = lua_tonumber(lua_state, 8);
+	x = lua_tonumber(l, 1);
+	y = lua_tonumber(l, 2);
+	z = lua_tonumber(l, 3);
+	v = lua_tonumber(l, 4);
+	nsparks = lua_tonumber(l, 5);
+	time = lua_tonumber(l, 6);
+	victim_type = lua_tonumber(l, 7);
+	explosion_type = lua_tonumber(l, 8);
 
 	if (nsparks <= 0 || time <= 0 || v <= 0) {
-		lua_pushnil(lua_state);
+		lua_pushnil(l);
 		return 1;
 	}
 	if (nsparks >= 200.0)
@@ -12758,10 +12758,10 @@ static int l_add_explosion(lua_State *l)
 				(uint16_t) nsparks, (uint16_t) time, (uint8_t) victim_type,
 				(uint8_t) explosion_type);
 	if (rc < 0) {
-		lua_pushnil(lua_state);
+		lua_pushnil(l);
 		return 1;
 	}
-	lua_pushnumber(lua_state, 0.0);
+	lua_pushnumber(l, 0.0);
 	return 1;
 }
 
@@ -13257,21 +13257,21 @@ static int l_add_nebula(lua_State *l)
 	const char *name;
 	int i;
 
-	name = lua_tostring(lua_state, 1);
-	x = lua_tonumber(lua_state, 2);
-	y = lua_tonumber(lua_state, 3);
-	z = lua_tonumber(lua_state, 4);
-	r = lua_tonumber(lua_state, 5);
+	name = lua_tostring(l, 1);
+	x = lua_tonumber(l, 2);
+	y = lua_tonumber(l, 3);
+	z = lua_tonumber(l, 4);
+	r = lua_tonumber(l, 5);
 
 	pthread_mutex_lock(&universe_mutex);
 	i = add_nebula(x, y, z, 0.0, 0.0, 0.0, r);
 	if (i < 0) {
 		pthread_mutex_unlock(&universe_mutex);
-		lua_pushnil(lua_state);
+		lua_pushnil(l);
 		return 1;
 	}
 	strlcpy(go[i].sdata.name, name, sizeof(go[i].sdata.name));
-	lua_pushnumber(lua_state, (double) go[i].id);
+	lua_pushnumber(l, (double) go[i].id);
 	pthread_mutex_unlock(&universe_mutex);
 	return 1;
 }
@@ -13367,12 +13367,12 @@ static int l_add_derelict(lua_State *l)
 	const char *name;
 	int i;
 
-	name = lua_tostring(lua_state, 1);
-	x = lua_tonumber(lua_state, 2);
-	y = lua_tonumber(lua_state, 3);
-	z = lua_tonumber(lua_state, 4);
-	shiptype = lua_tonumber(lua_state, 5);
-	the_faction = lua_tonumber(lua_state, 6);
+	name = lua_tostring(l, 1);
+	x = lua_tonumber(l, 2);
+	y = lua_tonumber(l, 3);
+	z = lua_tonumber(l, 4);
+	shiptype = lua_tonumber(l, 5);
+	the_faction = lua_tonumber(l, 6);
 
 	pthread_mutex_lock(&universe_mutex);
 	vx = snis_random_float() * 10.0;
@@ -13381,9 +13381,9 @@ static int l_add_derelict(lua_State *l)
 	/* assume lua-added derelicts are part of some scenario, so should be persistent */
 	i = add_derelict(name, x, y, z, vx, vy, vz, shiptype, the_faction, 1, (uint32_t) -1);
 	if (i < 0)
-		lua_pushnil(lua_state);
+		lua_pushnil(l);
 	else
-		lua_pushnumber(lua_state, (double) go[i].id);
+		lua_pushnumber(l, (double) go[i].id);
 	pthread_mutex_unlock(&universe_mutex);
 	return 1;
 }
@@ -13394,18 +13394,18 @@ static int l_derelict_set_ships_log(lua_State *l)
 	const char *ships_log;
 	int rc, id;
 
-	did = lua_tonumber(lua_state, 1);
-	ships_log = lua_tostring(lua_state, 2);
+	did = lua_tonumber(l, 1);
+	ships_log = lua_tostring(l, 2);
 	id = (int) did;
 	if (id < 0) {
-		lua_pushnil(lua_state);
+		lua_pushnil(l);
 		return 1;
 	}
 	rc = derelict_set_ships_log(id, ships_log);
 	if (rc)
-		lua_pushnil(lua_state);
+		lua_pushnil(l);
 	else
-		lua_pushnumber(lua_state, 0.0);
+		lua_pushnumber(l, 0.0);
 	return 1;
 }
 
@@ -13576,16 +13576,16 @@ static int l_add_planet(lua_State *l)
 	const char *name;
 	int i;
 
-	name = lua_tostring(lua_state, 1);
-	x = lua_tonumber(lua_state, 2);
-	y = lua_tonumber(lua_state, 3);
-	z = lua_tonumber(lua_state, 4);
-	r = lua_tonumber(lua_state, 5);
-	s = lua_tonumber(lua_state, 6);
+	name = lua_tostring(l, 1);
+	x = lua_tonumber(l, 2);
+	y = lua_tonumber(l, 3);
+	z = lua_tonumber(l, 4);
+	r = lua_tonumber(l, 5);
+	s = lua_tonumber(l, 6);
 
 	/* 7th optional param is planet type, 0 = earthlike, 1 = gas-giant, 2 = rocky, default = random */
 	if (lua_gettop(l) >= 7)
-		t = (int) lua_tonumber(lua_state, 7) % 3;
+		t = (int) lua_tonumber(l, 7) % 3;
 	else
 		t = -1;
 
@@ -13598,11 +13598,11 @@ static int l_add_planet(lua_State *l)
 	i = add_planet(x, y, z, r, (uint8_t) s, t);
 	if (i < 0) {
 		pthread_mutex_unlock(&universe_mutex);
-		lua_pushnil(lua_state);
+		lua_pushnil(l);
 		return 1;
 	}
 	strlcpy(go[i].sdata.name, name, sizeof(go[i].sdata.name));
-	lua_pushnumber(lua_state, (double) go[i].id);
+	lua_pushnumber(l, (double) go[i].id);
 	pthread_mutex_unlock(&universe_mutex);
 	return 1;
 }
@@ -13613,11 +13613,11 @@ static int l_add_black_hole(lua_State *l)
 	const char *name;
 	int i;
 
-	name = lua_tostring(lua_state, 1);
-	x = lua_tonumber(lua_state, 2);
-	y = lua_tonumber(lua_state, 3);
-	z = lua_tonumber(lua_state, 4);
-	r = lua_tonumber(lua_state, 5);
+	name = lua_tostring(l, 1);
+	x = lua_tonumber(l, 2);
+	y = lua_tonumber(l, 3);
+	z = lua_tonumber(l, 4);
+	r = lua_tonumber(l, 5);
 
 	if (r < MIN_BLACK_HOLE_RADIUS)
 		r = MIN_BLACK_HOLE_RADIUS;
@@ -13628,11 +13628,11 @@ static int l_add_black_hole(lua_State *l)
 	i = add_black_hole(x, y, z, r);
 	if (i < 0) {
 		pthread_mutex_unlock(&universe_mutex);
-		lua_pushnil(lua_state);
+		lua_pushnil(l);
 		return 1;
 	}
 	strlcpy(go[i].sdata.name, name, sizeof(go[i].sdata.name));
-	lua_pushnumber(lua_state, (double) go[i].id);
+	lua_pushnumber(l, (double) go[i].id);
 	pthread_mutex_unlock(&universe_mutex);
 	return 1;
 }
@@ -13663,16 +13663,16 @@ static int l_too_close_to_planet_or_sun(lua_State *l)
 	double x, y, z, limit;
 	int too_close;
 
-	x = lua_tonumber(lua_state, 1);
-	y = lua_tonumber(lua_state, 2);
-	z = lua_tonumber(lua_state, 3);
-	limit = lua_tonumber(lua_state, 4);
+	x = lua_tonumber(l, 1);
+	y = lua_tonumber(l, 2);
+	z = lua_tonumber(l, 3);
+	limit = lua_tonumber(l, 4);
 
 	pthread_mutex_lock(&universe_mutex);
 	too_close = too_close_to_other_planet_or_sun(x, y, z, limit);
 	pthread_mutex_unlock(&universe_mutex);
 
-	lua_pushnumber(lua_state, too_close);
+	lua_pushnumber(l, too_close);
 	return 1;
 }
 
@@ -13699,18 +13699,18 @@ static int l_play_sound(lua_State *l)
 	if (i < 0) {
 		pthread_mutex_unlock(&universe_mutex);
 		send_demon_console_msg("PLAY_SOUND: BAD OBJECT ID: %f", lua_oid1);
-		lua_pushnil(lua_state);
+		lua_pushnil(l);
 		goto out;
 	}
 	if (go[i].type != OBJTYPE_BRIDGE) {
 		pthread_mutex_unlock(&universe_mutex);
 		send_demon_console_msg("PLAY_SOUND: NOT PLAYER SHIP: %f", lua_oid1);
-		lua_pushnil(lua_state);
+		lua_pushnil(l);
 		goto out;
 	}
 	send_oneshot_sound_request(&go[i], fn);
 	pthread_mutex_unlock(&universe_mutex);
-	lua_pushnumber(lua_state, 0);
+	lua_pushnumber(l, 0);
 out:
 	if (fn)
 		free(fn);
@@ -13913,17 +13913,17 @@ static int l_add_wormhole_pair(lua_State *l)
 	double x1, y1, z1, x2, y2, z2; 
 	int id1, id2;
 
-	x1 = lua_tonumber(lua_state, 1);
-	y1 = lua_tonumber(lua_state, 2);
-	z1 = lua_tonumber(lua_state, 3);
-	x2 = lua_tonumber(lua_state, 4);
-	y2 = lua_tonumber(lua_state, 5);
-	z2 = lua_tonumber(lua_state, 6);
+	x1 = lua_tonumber(l, 1);
+	y1 = lua_tonumber(l, 2);
+	z1 = lua_tonumber(l, 3);
+	x2 = lua_tonumber(l, 4);
+	y2 = lua_tonumber(l, 5);
+	z2 = lua_tonumber(l, 6);
 
 	pthread_mutex_lock(&universe_mutex);
 	add_wormhole_pair(&id1, &id2, x1, y1, z1, x2, y2, z2);
-	lua_pushnumber(lua_state, (double) go[id1].id);
-	lua_pushnumber(lua_state, (double) go[id2].id);
+	lua_pushnumber(l, (double) go[id1].id);
+	lua_pushnumber(l, (double) go[id2].id);
 	pthread_mutex_unlock(&universe_mutex);
 	return 2;
 }
@@ -19562,12 +19562,12 @@ static int l_ai_push_attack(lua_State *l)
 	struct snis_entity *o, *v;
 
 	pthread_mutex_lock(&universe_mutex);
-	oid = lua_tonumber(lua_state, 1);
+	oid = lua_tonumber(l, 1);
 	i = lookup_by_id(oid);
 	if (i < 0)
 		goto error;
 	o = &go[i];
-	oid = lua_tonumber(lua_state, 2);
+	oid = lua_tonumber(l, 2);
 	i = lookup_by_id(oid);
 	if (i < 0)
 		goto error;
@@ -19590,7 +19590,7 @@ static int l_ai_push_catatonic(lua_State *l)
 	double oid;
 
 	pthread_mutex_lock(&universe_mutex);
-	oid = lua_tonumber(lua_state, 1);
+	oid = lua_tonumber(l, 1);
 	i = lookup_by_id(oid);
 	if (i < 0)
 		goto error;
@@ -19614,13 +19614,13 @@ static int l_ai_push_patrol(lua_State *l)
 	struct snis_entity *o;
 
 	pthread_mutex_lock(&universe_mutex);
-	oid = lua_tonumber(lua_state, 1);
+	oid = lua_tonumber(l, 1);
 	i = lookup_by_id(oid);
 	if (i < 0)
 		goto error;
 	o = &go[i];
 
-	npd = lua_tonumber(lua_state, 2);
+	npd = lua_tonumber(l, 2);
 	if (npd < 2.0 || npd > 5.0)
 		goto error;
 	np = (int) npd;
@@ -19635,15 +19635,15 @@ static int l_ai_push_patrol(lua_State *l)
 	for (p = 0; p < np; p++) {
 		if (lua_isnoneornil(l, i))
 			break;
-		x = lua_tonumber(lua_state, i);
+		x = lua_tonumber(l, i);
 		i++;
 		if (lua_isnoneornil(l, i))
 			goto error;
-		y = lua_tonumber(lua_state, i);
+		y = lua_tonumber(l, i);
 		i++;
 		if (lua_isnoneornil(l, i))
 			goto error;
-		z = lua_tonumber(lua_state, i);
+		z = lua_tonumber(l, i);
 		i++;
 
 		o->tsd.ship.ai[n].u.patrol.p[p].v.x = x; 
@@ -19708,7 +19708,7 @@ static int l_unregister_callback(lua_State *l)
 	return 1;
 }
 
-static int l_print_registered_callbacks(lua_State *l)
+static int l_print_registered_callbacks(__attribute__((unused)) lua_State *l)
 {
 	pthread_mutex_lock(&universe_mutex);
 	print_registered_callbacks(event_callback);
@@ -21287,10 +21287,10 @@ static int l_set_asteroid_minerals(lua_State *l)
 					(float) lua_nickeliron, (float) lua_preciousmetals);
 	pthread_mutex_unlock(&universe_mutex);
 	if (rc) {
-		lua_pushnil(lua_state);
+		lua_pushnil(l);
 		return 1;
 	}
-	lua_pushnumber(lua_state, 0.0);
+	lua_pushnumber(l, 0.0);
 	return 1;
 }
 
@@ -21317,7 +21317,7 @@ static int l_get_ship_attribute(lua_State *l)
 	char errmsg[100] = { 0 };
 
 	oid = (uint32_t) lua_oid;
-	attribute = lua_tostring(lua_state, 2);
+	attribute = lua_tostring(l, 2);
 	pthread_mutex_lock(&universe_mutex);
 	i = lookup_by_id(oid);
 	if (i < 0) {
@@ -21420,7 +21420,7 @@ static int l_get_ship_attribute(lua_State *l)
 error:
 	pthread_mutex_unlock(&universe_mutex);
 	send_demon_console_msg(errmsg);
-	lua_pushnil(lua_state);
+	lua_pushnil(l);
 	return 1;
 }
 
@@ -21430,7 +21430,7 @@ static int l_get_commodity_name(lua_State *l)
 	int index = (int) lua_commodity_index;
 
 	if (index < 0 || index >= ncommodities) {
-		lua_pushnil(lua_state);
+		lua_pushnil(l);
 		return 1;
 	}
 	lua_pushstring(l, commodity[index].name);
@@ -21443,7 +21443,7 @@ static int l_get_commodity_units(lua_State *l)
 	int index = (int) lua_commodity_index;
 
 	if (index < 0 || index >= ncommodities) {
-		lua_pushnil(lua_state);
+		lua_pushnil(l);
 		return 1;
 	}
 	lua_pushstring(l, commodity[index].unit);
@@ -21625,21 +21625,21 @@ static int l_object_distance(lua_State *l)
 	o2 = &go[i];
 	dist = object_dist(o1, o2);
 	pthread_mutex_unlock(&universe_mutex);
-	lua_pushnumber(lua_state, dist);
+	lua_pushnumber(l, dist);
 	return 1;
 failure:
 	pthread_mutex_unlock(&universe_mutex);
-	lua_pushnil(lua_state);
+	lua_pushnil(l);
 	return 1;
 }
 
-static int l_enable_antenna_aiming(lua_State *l)
+static int l_enable_antenna_aiming(__attribute__((unused)) lua_State *l)
 {
 	enable_comms_attenuation = 1;
 	return 0;
 }
 
-static int l_disable_antenna_aiming(lua_State *l)
+static int l_disable_antenna_aiming(__attribute__((unused)) lua_State *l)
 {
 	enable_comms_attenuation = 0;
 	return 0;
@@ -21650,7 +21650,7 @@ static int l_set_custom_button_label(lua_State *l)
 	int i, b, s;
 	const double oid = luaL_checknumber(l, 1);
 	const double screen = luaL_checknumber(l, 2);
-	const char *text = lua_tostring(lua_state, 3);
+	const char *text = lua_tostring(l, 3);
 
 	s = (int) screen;
 	pthread_mutex_lock(&universe_mutex);
@@ -21665,11 +21665,11 @@ static int l_set_custom_button_label(lua_State *l)
 	memset(bridgelist[b].custom_button_text[s], 0, sizeof(bridgelist[b].custom_button_text[s]));
 	strlcpy(bridgelist[b].custom_button_text[s], text, sizeof(bridgelist[b].custom_button_text[s]));
 	pthread_mutex_unlock(&universe_mutex);
-	lua_pushnumber(lua_state, 0);
+	lua_pushnumber(l, 0);
 	return 1;
 error:
 	pthread_mutex_unlock(&universe_mutex);
-	lua_pushnil(lua_state);
+	lua_pushnil(l);
 	return 1;
 }
 
@@ -21858,7 +21858,7 @@ static int l_generate_name(lua_State *l)
 
 static int l_ai_trace(lua_State *l)
 {
-	const double id = luaL_checknumber(lua_state, 1);
+	const double id = luaL_checknumber(l, 1);
 	uint32_t id32 = (uint32_t) id;
 	int i;
 
@@ -21884,7 +21884,7 @@ static int l_ai_trace(lua_State *l)
 
 static int l_get_passenger_location(lua_State *l)
 {
-	const double pidx = luaL_checknumber(lua_state, 1);
+	const double pidx = luaL_checknumber(l, 1);
 	int p = (int) pidx;
 	double location;
 
@@ -21896,13 +21896,13 @@ static int l_get_passenger_location(lua_State *l)
 	pthread_mutex_lock(&universe_mutex);
 	location = passenger[p].location;
 	pthread_mutex_unlock(&universe_mutex);
-	lua_pushnumber(lua_state, location);
+	lua_pushnumber(l, location);
 	return 1;
 }
 
 static int l_set_planet_description(lua_State *l)
 {
-	const double planet_id = luaL_checknumber(lua_state, 1);
+	const double planet_id = luaL_checknumber(l, 1);
 	const char *description = luaL_checkstring(l, 2);
 	struct snis_entity *o;
 	int i;
@@ -21933,7 +21933,7 @@ static int l_set_planet_description(lua_State *l)
 static int set_planet_byte_property_helper(lua_State *l, char *property,
 						int offset, int lobound, int highbound)
 {
-	const double planet_id = luaL_checknumber(lua_state, 1);
+	const double planet_id = luaL_checknumber(l, 1);
 	const double value = luaL_checknumber(l, 2);
 	struct snis_entity *p;
 	uint8_t *target, v;
@@ -21993,8 +21993,8 @@ static int l_set_planet_security(lua_State *l)
 
 static int l_update_player_wallet(lua_State *l)
 {
-	const double pid = luaL_checknumber(lua_state, 1);
-	const double delta_money = luaL_checknumber(lua_state, 2);
+	const double pid = luaL_checknumber(l, 1);
+	const double delta_money = luaL_checknumber(l, 2);
 	int i;
 
 	pthread_mutex_lock(&universe_mutex);
@@ -22016,8 +22016,8 @@ static int l_update_player_wallet(lua_State *l)
 
 static int l_set_passenger_location(lua_State *l)
 {
-	const double pidx = luaL_checknumber(lua_state, 1);
-	const double ploc = luaL_checknumber(lua_state, 2);
+	const double pidx = luaL_checknumber(l, 1);
+	const double ploc = luaL_checknumber(l, 2);
 	int i, p = (int) pidx;
 	uint32_t location = (uint32_t) ploc;
 
@@ -22045,11 +22045,11 @@ static int l_set_passenger_location(lua_State *l)
 
 static int l_create_passenger(lua_State *l)
 {
-	const double pidx = luaL_checknumber(lua_state, 1);
+	const double pidx = luaL_checknumber(l, 1);
 	const char *name = luaL_checkstring(l, 2);
-	const double loc = luaL_checknumber(lua_state, 3);
-	const double dest = luaL_checknumber(lua_state, 4);
-	const double fare = luaL_checknumber(lua_state, 5);
+	const double loc = luaL_checknumber(l, 3);
+	const double dest = luaL_checknumber(l, 4);
+	const double fare = luaL_checknumber(l, 5);
 	uint32_t id32;
 	int location, destination, p = (int) pidx;
 
