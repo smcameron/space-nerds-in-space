@@ -246,10 +246,10 @@ int get_joystick_state(int fd, struct js_state *state)
 	while ((rc = read_joystick_event(fd, &jse) == 1)) {
 		jse.type &= ~JS_EVENT_INIT; /* ignore synthetic events */
 		if (jse.type == JS_EVENT_AXIS) {
-			if (jse.number >= 0 && jse.number < MAX_JOYSTICK_AXES)
+			if (jse.number < MAX_JOYSTICK_AXES)
 				state->axis[jse.number] = jse.value;
 		} else if (jse.type == JS_EVENT_BUTTON) {
-			if (jse.number >= 0 && jse.number < MAX_JOYSTICK_BUTTONS) {
+			if (jse.number < MAX_JOYSTICK_BUTTONS) {
 				switch (jse.value) {
 				case 0:
 				case 1:
