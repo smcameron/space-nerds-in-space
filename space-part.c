@@ -178,7 +178,9 @@ struct space_partition_entry *space_partition_neighbors(struct space_partition *
 	return (struct space_partition_entry *) p->content[cell];
 }
 
-static void process_cell(struct space_partition *p, void *entity, double x, double y,
+static void process_cell(struct space_partition *p, __attribute__((unused)) void *entity,
+				__attribute__((unused)) double x,
+				__attribute__((unused))  double y,
                                 void *context, space_partition_function fn, int cell)
 {
 	struct space_partition_entry *e, *i, *next;
