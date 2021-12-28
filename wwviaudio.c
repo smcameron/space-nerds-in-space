@@ -710,7 +710,7 @@ static int wwviaudio_record_cb(const void *input_buffer,
 {
 	struct wwviaudio_record_data *d = dataptr;
 	int left = d->total_samples - d->pos;
-	int count = left < frames_per_buffer ?  left : frames_per_buffer;
+	int count = left < (int) frames_per_buffer ? (int) left : (int) frames_per_buffer;
 	if (!input_buffer)
 		memset(&d->sample[d->pos], 0, sizeof(int16_t) * count);
 	else
