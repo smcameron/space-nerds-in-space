@@ -137,7 +137,7 @@ void snis_debug_dump(char *cmd, struct snis_entity go[], int nstarbase_models,
 	case OBJTYPE_NPCSHIP:
 		t = "NPC SHIP";
 		printfn("TYPE: %s, SHIPTYPE: %s (%d)", t,
-			o->tsd.ship.shiptype >= 0 && o->tsd.ship.shiptype < nshiptypes ?
+			o->tsd.ship.shiptype < nshiptypes ?
 				ship_type[o->tsd.ship.shiptype].class : "UNKNOWN",
 			o->tsd.ship.shiptype);
 		printfn("DESTINATION XYZ = %.2f, %.2f, %.2f",
