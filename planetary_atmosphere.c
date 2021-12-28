@@ -102,7 +102,7 @@ static int lookup_compound(char *name)
 {
 	int i;
 
-	for (i = 0; i < ARRAYSIZE(atmospheric_compound); i++) {
+	for (i = 0; (size_t) i < ARRAYSIZE(atmospheric_compound); i++) {
 		if (strcmp(atmospheric_compound[i].name, name) == 0)
 			return i;
 	}
