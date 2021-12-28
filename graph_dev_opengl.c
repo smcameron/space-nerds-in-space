@@ -2753,7 +2753,7 @@ void graph_dev_draw_entity(struct entity_context *cx, struct entity *e, union ve
 
 /* This implementation is ok for drawing a few times, but the performance
    will really suck as lines per frame goes up */
-void graph_dev_draw_3d_line(struct entity_context *cx, const struct mat44 *mat_vp, const struct mat44 *mat_v,
+void graph_dev_draw_3d_line(__attribute__((unused)) struct entity_context *cx, const struct mat44 *mat_vp,
 	float x1, float y1, float z1, float x2, float y2, float z2)
 {
 	draw_vertex_buffer_2d();

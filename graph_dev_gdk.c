@@ -659,7 +659,7 @@ void graph_dev_draw_entity(struct entity_context *cx, struct entity *e, union ve
 	}
 }
 
-void graph_dev_draw_3d_line(struct entity_context *cx, const struct mat44 *mat_vp, const struct mat44 *mat_v,
+void graph_dev_draw_3d_line(struct entity_context *cx, const struct mat44 *mat_vp,
 	float x1, float y1, float z1, float x2, float y2, float z2)
 {
 	float sx1, sy1, sx2, sy2;
