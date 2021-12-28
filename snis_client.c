@@ -14194,7 +14194,7 @@ static void preset_button_long_pressed(void *preset)
 	if (!preset)
 		return;
 	selection = (struct button **) preset - &eng_ui.preset_buttons[0];
-	if (selection < 0 || selection >= ARRAYSIZE(eng_ui.preset_buttons))
+	if (selection < 0 || (size_t) selection >= ARRAYSIZE(eng_ui.preset_buttons))
 		return;
 	transmit_save_preset(selection);
 	preset_button_pressed(preset);
