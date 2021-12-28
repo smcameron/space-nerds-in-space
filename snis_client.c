@@ -5797,9 +5797,11 @@ static int nuniverse_timestamp_samples = 0;
 static struct universe_timestamp_sample universe_timestamp_samples[UPDATE_UNIVERSE_TIMESTAMP_COUNT];
 
 #if defined(__APPLE__)  || defined(__FreeBSD__)
-static int universe_timestamp_sample_compare_less(void *vcx, const void *a, const void *b)
+static int universe_timestamp_sample_compare_less(__attribute__((unused)) void *vcx,
+							const void *a, const void *b)
 #else
-static int universe_timestamp_sample_compare_less(const void *a, const void *b, void *vcx)
+static int universe_timestamp_sample_compare_less(const void *a, const void *b,
+							__attribute__((unused)) void *vcx)
 #endif
 {
 	const struct universe_timestamp_sample *A = a;
