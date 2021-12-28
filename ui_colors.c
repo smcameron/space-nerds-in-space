@@ -39,7 +39,7 @@ void fixup_ui_color(int old_color, int new_color)
 	/* Kind of hacky, we just tromp through memory clobbering ints on the
 	 * presumption that a struct full of ints will be virtually contiguous
 	 */
-	for (i = 0; i < ARRAYSIZE(ui_color.u.entry); i++) {
+	for (i = 0; (size_t) i < ARRAYSIZE(ui_color.u.entry); i++) {
 		struct ui_color_entry *e = &ui_color.u.entry[i];
 		if (e->index == old_color) {
 			e->index = new_color;
@@ -52,7 +52,7 @@ void modify_ui_color(char *ui_component, int new_color)
 {
 	int i;
 
-	for (i = 0; i < ARRAYSIZE(ui_color.u.entry); i++) {
+	for (i = 0; (size_t) i < ARRAYSIZE(ui_color.u.entry); i++) {
 		struct ui_color_entry *e = &ui_color.u.entry[i];
 		if (strcmp(e->name, ui_component) == 0)
 			e->index = new_color;
