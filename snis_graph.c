@@ -227,7 +227,7 @@ void sng_dotted_line_plot_func(int x, int y, void *context)
 	graph_dev_draw_point(x, y);
 }
 
-void sng_electric_line_plot_func(int x, int y, void *context)
+void sng_electric_line_plot_func(int x, int y, __attribute__((unused)) void *context)
 {
 	if (snis_randn(100) < 10)
 		graph_dev_draw_point(x, y);
