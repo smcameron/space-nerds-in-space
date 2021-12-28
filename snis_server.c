@@ -18004,7 +18004,7 @@ channels_maxxed:
 	free(duptxt);
 }
 
-static void meta_comms_error(char *name, struct game_client *c, char *txt)
+static void meta_comms_error(struct game_client *c, char *txt)
 {
 	printf("meta comms error %u,%s\n", bridgelist[c->bridge].comms_channel, txt);
 }
@@ -18072,7 +18072,7 @@ match:
 	if (current_match_length > 1 && !ambiguous)
 		mcd->f(name, c, txt);
 	else
-		meta_comms_error(name, c, txt);
+		meta_comms_error(c, txt);
 }
 
 static int process_comms_transmission(struct game_client *c, int use_real_name)
