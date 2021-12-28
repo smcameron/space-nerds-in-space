@@ -57,9 +57,9 @@ int server_tracker_stop(struct server_tracker *st)
 	return 0;
 }
 
+#if 0
 static void print_game_servers(struct ssgl_game_server *game_server, int game_server_count)
 {
-#if 0
 	int i;
 
 	printf("IP addr/port       %15s %20s %15s %20s\n",
@@ -76,8 +76,10 @@ static void print_game_servers(struct ssgl_game_server *game_server, int game_se
 			game_server[i].location);
 	}
 	printf("\n");
-#endif
 }
+#else
+#define print_game_servers(x, y)
+#endif
 
 static int compare_game_server_list(struct ssgl_game_server *a, int acount,
 				struct ssgl_game_server *b, int bcount)
