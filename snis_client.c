@@ -4852,7 +4852,7 @@ static int key_press_cb(SDL_Window *window, SDL_Keysym *keysym)
 	return FALSE;
 }
 
-static int key_release_cb(SDL_Window *window, SDL_Keysym *keysym)
+static int key_release_cb(SDL_Keysym *keysym)
 {
 	enum keyaction ka;
 
@@ -23575,7 +23575,7 @@ static void process_events(SDL_Window *window)
 			key_press_cb(window, &event.key.keysym);
 			break;
 		case SDL_KEYUP:
-			key_release_cb(window, &event.key.keysym);
+			key_release_cb(&event.key.keysym);
 			break;
 		case SDL_QUIT:
 			/* Handle quit requests (like Ctrl-c). */
