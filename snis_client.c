@@ -17594,21 +17594,21 @@ static void demon_select_and_act(double sx1, double sy1,
 	pthread_mutex_unlock(&universe_mutex);
 }
 
-static void demon_button2_release_3d(int button, double x, double y)
+static void demon_button2_release_3d(double x, double y)
 {
 	demon_ui.release_mousex = x;
 	demon_ui.release_mousey = y;
 	demon_ui.button2_released = 1;
 }
 
-static void demon_button3_release_3d(int button, double x, double y)
+static void demon_button3_release_3d(double x, double y)
 {
 	demon_ui.release_mousex = x;
 	demon_ui.release_mousey = y;
 	demon_ui.button3_released = 1;
 }
 
-static void demon_button3_release(int button, double x, double y)
+static void demon_button3_release(double x, double y)
 {
 	int nselected;
 	double ox, oy;
@@ -17654,7 +17654,7 @@ static void demon_button3_release(int button, double x, double y)
 	}
 }
 
-static void demon_button2_release(int button, double x, double y)
+static void demon_button2_release(double x, double y)
 {
 	int i;
 	double dx, dy, dz;
@@ -17686,12 +17686,10 @@ static void demon_button_release(int button, double x, double y)
 	if (demon_ui.use_3d) {
 		switch (button) {
 		case 2:
-			demon_button2_release_3d(button,
-				sng_pixelx_to_screenx(x), sng_pixely_to_screeny(y));
+			demon_button2_release_3d(sng_pixelx_to_screenx(x), sng_pixely_to_screeny(y));
 			break;
 		case 3:
-			demon_button3_release_3d(button,
-				sng_pixelx_to_screenx(x), sng_pixely_to_screeny(y));
+			demon_button3_release_3d(sng_pixelx_to_screenx(x), sng_pixely_to_screeny(y));
 			break;
 		default:
 			break;
@@ -17700,10 +17698,10 @@ static void demon_button_release(int button, double x, double y)
 	}
 	switch (button) {
 	case 2:
-		demon_button2_release(button, x, y);
+		demon_button2_release(x, y);
 		return;
 	case 3:
-		demon_button3_release(button, x, y);
+		demon_button3_release(x, y);
 		return;
 	default:
 		return;
