@@ -1858,7 +1858,7 @@ static void spacemonster_move_tentacles(struct snis_entity *o)
 	mtwist_free(mt);
 }
 
-static void init_spacemonster_data(struct snis_entity *o, float tentacle_scale)
+static void init_spacemonster_data(struct snis_entity *o, __attribute__((unused)) float tentacle_scale)
 {
 	int i, j, ntentacles;
 	struct entity *parent;
