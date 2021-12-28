@@ -5593,7 +5593,7 @@ static int process_warp_limbo_packet(void)
 		return rc;
 	if (suppress_hyperspace_noise)
 		warp_limbo_countdown = 0;
-	else if (value >= 0 && value <= 40 * frame_rate_hz)
+	else if (value <= 40 * frame_rate_hz)
 		warp_limbo_countdown = value;
 	return 0;
 } 
@@ -22479,7 +22479,7 @@ static void process_physical_device_io(unsigned short opcode, unsigned short val
 		snis_slider_poke_input(eng_ui.shield_control_slider, d, 1);
 		break;
 	case DEVIO_OPCODE_ENG_PRESET:
-		if ((value >= 0) && (value < ENG_PRESET_NUMBER))
+		if (value < ENG_PRESET_NUMBER)
 			snis_button_trigger_button(eng_ui.preset_buttons[value]);
 		break;
 	case DEVIO_OPCODE_ENG_PRESET_SAVE:
@@ -22615,14 +22615,14 @@ static void process_physical_device_io(unsigned short opcode, unsigned short val
 		sci_waypoints_pressed((void *) 0);
 		break;
 	case DEVIO_OPCODE_SELECT_WAYPOINT:
-		if (value >= 0 && value < sci_ui.nwaypoints && value < MAXWAYPOINTS)
+		if (value < sci_ui.nwaypoints && value < MAXWAYPOINTS)
 			science_select_waypoint_pressed(&sci_ui.select_waypoint_button[value]);
 		break;
 	case DEVIO_OPCODE_CURRPOS_WAYPOINT:
 		science_add_current_pos_pressed(NULL);
 		break;
 	case DEVIO_OPCODE_CLEAR_WAYPOINT:
-		if (value >= 0 && value < sci_ui.nwaypoints && value < MAXWAYPOINTS)
+		if (value < sci_ui.nwaypoints && value < MAXWAYPOINTS)
 			science_clear_waypoint_pressed(&sci_ui.clear_waypoint_button[value]);
 		break;
 	case DEVIO_OPCODE_COMMS_COMMS_ONSCREEN:
