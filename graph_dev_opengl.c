@@ -2099,7 +2099,7 @@ void graph_dev_raster_point_cloud_mesh(struct graph_dev_gl_point_cloud_shader *s
 }
 
 static void graph_dev_draw_nebula(const struct mat44 *mat_mvp, const struct mat44 *mat_mv,
-	struct entity *e, union vec3 *eye_light_pos)
+	struct entity *e)
 {
 	struct material_nebula *mt = &e->material_ptr->nebula;
 	struct raster_texture_params rtp = { 0 };
@@ -2717,7 +2717,7 @@ void graph_dev_draw_entity(struct entity_context *cx, struct entity *e, union ve
 	struct sng_color line_color = sng_get_color(e->color);
 
 	if (e->material_ptr && e->material_ptr->type == MATERIAL_NEBULA) {
-		graph_dev_draw_nebula(&transform->mvp, &transform->mv, e, eye_light_pos);
+		graph_dev_draw_nebula(&transform->mvp, &transform->mv, e);
 		return;
 	}
 
