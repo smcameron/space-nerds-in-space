@@ -594,7 +594,8 @@ void vec3_print(const char *prefix, const union vec3 *v)
 
 #if 1
 /* Calculate the quaternion to rotate from vector u to vector v */
-void quat_from_u2v(union quat *q, const union vec3 *u, const union vec3 *v, const union vec3 *up)
+void quat_from_u2v(union quat *q, const union vec3 *u, const union vec3 *v,
+		__attribute__((unused)) const union vec3 *up)
 {
 	/* See: http://lolengine.net/blog/2013/09/18/beautiful-maths-quaternion-from-vectors */
 	union vec3 w;
