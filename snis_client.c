@@ -18553,13 +18553,13 @@ static void send_demon_text_command(char *command)
 		print_demon_console_msg(demon_ui.error_msg);
 }
 
-static void demon_exec_button_pressed(void *x)
+static void demon_exec_button_pressed(__attribute__((unused)) void *x)
 {
 	send_demon_text_command(demon_ui.input);
 	snis_text_input_box_zero(demon_ui.demon_input);
 }
 
-static void set_demon_button_colors()
+static void set_demon_button_colors(void)
 {
 	const int selected = UI_COLOR(demon_selected_button);
 	const int deselected = UI_COLOR(demon_deselected_button);
@@ -18610,7 +18610,7 @@ static void demon_modebutton_pressed(int whichmode)
 	}
 }
 
-static void demon_home_button_pressed(void *x)
+static void demon_home_button_pressed(__attribute__((unused)) void *x)
 {
 	if (demon_ui.use_3d) {
 		home_demon_camera();
@@ -18637,37 +18637,37 @@ static void demon_faction_button_pressed(void *x)
 	demon_ui.faction = faction % (nfactions() + 1);
 }
 
-static void demon_starbase_button_pressed(void *x)
+static void demon_starbase_button_pressed(__attribute__((unused)) void *x)
 {
 	demon_modebutton_pressed(DEMON_BUTTON_STARBASEMODE);
 }
 
-static void demon_planet_button_pressed(void *x)
+static void demon_planet_button_pressed(__attribute__((unused)) void *x)
 {
 	demon_modebutton_pressed(DEMON_BUTTON_PLANETMODE);
 }
 
-static void demon_black_hole_button_pressed(void *x)
+static void demon_black_hole_button_pressed(__attribute__((unused)) void *x)
 {
 	demon_modebutton_pressed(DEMON_BUTTON_BLACKHOLEMODE);
 }
 
-static void demon_asteroid_button_pressed(void *x)
+static void demon_asteroid_button_pressed(__attribute__((unused)) void *x)
 {
 	demon_modebutton_pressed(DEMON_BUTTON_ASTEROIDMODE);
 }
 
-static void demon_nebula_button_pressed(void *x)
+static void demon_nebula_button_pressed(__attribute__((unused)) void *x)
 {
 	demon_modebutton_pressed(DEMON_BUTTON_NEBULAMODE);
 }
 
-static void demon_spacemonster_button_pressed(void *x)
+static void demon_spacemonster_button_pressed(__attribute__((unused)) void *x)
 {
 	demon_modebutton_pressed(DEMON_BUTTON_SPACEMONSTERMODE);
 }
 
-static void demon_captain_button_pressed(void *x)
+static void demon_captain_button_pressed(__attribute__((unused)) void *x)
 {
 	demon_modebutton_pressed(DEMON_BUTTON_CAPTAINMODE);
 }
@@ -18697,7 +18697,7 @@ static void demon_utility_button_pressed(void *x)
 	send_lua_script_packet_to_server(scriptname);
 }
 
-static void demon_delete_button_pressed(void *x)
+static void demon_delete_button_pressed(__attribute__((unused)) void *x)
 {
 	int i;
 
@@ -18709,12 +18709,12 @@ static void demon_delete_button_pressed(void *x)
 	pthread_mutex_unlock(&universe_mutex);
 }
 
-static void demon_select_none_button_pressed(void *x)
+static void demon_select_none_button_pressed(__attribute__((unused)) void *x)
 {
 	demon_select_none();
 }
 
-static void demon_torpedo_button_pressed(void *x)
+static void demon_torpedo_button_pressed(__attribute__((unused)) void *x)
 {
 	if (demon_ui.captain_of < 0)
 		return;
@@ -18724,7 +18724,7 @@ static void demon_torpedo_button_pressed(void *x)
 				go[demon_ui.captain_of].id));
 }
 
-static void demon_phaser_button_pressed(void *x)
+static void demon_phaser_button_pressed(__attribute__((unused)) void *x)
 {
 	if (demon_ui.captain_of < 0)
 		return;
@@ -18734,7 +18734,7 @@ static void demon_phaser_button_pressed(void *x)
 				go[demon_ui.captain_of].id));
 }
 
-static void demon_2d3d_button_pressed(void *x)
+static void demon_2d3d_button_pressed(__attribute__((unused)) void *x)
 {
 	demon_ui.use_3d = !demon_ui.use_3d;
 	if (demon_ui.use_3d) {
@@ -18746,7 +18746,7 @@ static void demon_2d3d_button_pressed(void *x)
 	}
 }
 
-static void demon_move_button_pressed(void *x)
+static void demon_move_button_pressed(__attribute__((unused)) void *x)
 {
 	double avgx, avgy, avgz, dx, dy, dz;
 	int i, count;
@@ -18795,7 +18795,7 @@ static void demon_move_button_pressed(void *x)
 	}
 }
 
-static void demon_scale_button_pressed(void *x)
+static void demon_scale_button_pressed(__attribute__((unused)) void *x)
 {
 	if (demon_ui.desired_exaggerated_scale > 0.0) {
 		demon_ui.desired_exaggerated_scale = 0.0;
@@ -18806,48 +18806,48 @@ static void demon_scale_button_pressed(void *x)
 	}
 }
 
-static int demon_scale_checkbox(void *x)
+static int demon_scale_checkbox(__attribute__((unused)) void *x)
 {
 	return demon_ui.exaggerated_scale_active;
 }
 
-static void demon_rocket_noise_pressed(void *x)
+static void demon_rocket_noise_pressed(__attribute__((unused)) void *x)
 {
 	suppress_rocket_noise = !suppress_rocket_noise;
 }
 
-static int demon_rocket_noise_checkbox(void *x)
+static int demon_rocket_noise_checkbox(__attribute__((unused)) void *x)
 {
 	return !suppress_rocket_noise;
 }
 
-static void demon_planet_water_specularity_pressed(void *x)
+static void demon_planet_water_specularity_pressed(__attribute__((unused)) void *x)
 {
 	graph_dev_planet_specularity = !graph_dev_planet_specularity;
 }
 
-static void demon_enscript_solarsystem_pressed(void *x)
+static void demon_enscript_solarsystem_pressed(__attribute__((unused)) void *x)
 {
 	send_enscript_packet_to_server("ENSCRIPTED_SOLARSYSTEM.LUA");
 	print_demon_console_msg("SAVING TO ENSCRIPTED_SOLARSYSTEM.LUA IF ENABLED ON SERVER");
 }
 
-static void demon_reset_ui_widgets(void *x)
+static void demon_reset_ui_widgets(__attribute__((unused)) void *x)
 {
 	ui_element_list_reset_position_offsets(uiobjs);
 }
 
-static void demon_save_ui_widget_positions(void *x)
+static void demon_save_ui_widget_positions(__attribute__((unused)) void *x)
 {
 	(void) ui_element_list_save_position_offsets(uiobjs, xdg_base_ctx);
 }
 
-static int demon_planet_water_specularity_checkbox(void *x)
+static int demon_planet_water_specularity_checkbox(__attribute__((unused)) void *x)
 {
 	return graph_dev_planet_specularity;
 }
 
-static void demon_netstats_button_pressed(void *x)
+static void demon_netstats_button_pressed(__attribute__((unused)) void *x)
 {
 	if (!demon_ui.netstats_active) {
 		ui_unhide_widget(demon_ui.bytes_sent_strip_chart);
@@ -18862,27 +18862,27 @@ static void demon_netstats_button_pressed(void *x)
 	}
 }
 
-static int demon_netstats_checkbox(void *x)
+static int demon_netstats_checkbox(__attribute__((unused)) void *x)
 {
 	return demon_ui.netstats_active;
 }
 
-static void demon_render_style_pressed(void *x)
+static void demon_render_style_pressed(__attribute__((unused)) void *x)
 {
 	demon_ui.render_style = !demon_ui.render_style;
 }
 
-static int demon_render_style_checkbox(void *x)
+static int demon_render_style_checkbox(__attribute__((unused)) void *x)
 {
 	return demon_ui.render_style;
 }
 
-static void demon_console_pressed(void *x)
+static void demon_console_pressed(__attribute__((unused)) void *x)
 {
 	demon_ui.console_active = !demon_ui.console_active;
 }
 
-static int demon_console_checkbox(void *x)
+static int demon_console_checkbox(__attribute__((unused)) void *x)
 {
 	return demon_ui.console_active;
 }
