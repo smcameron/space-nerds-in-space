@@ -994,6 +994,7 @@ static int add_generic_object(uint32_t id, uint32_t timestamp, double x, double 
 	go[i].orientation = identity_quat;
 
 	go[i].vx = vx;
+	go[i].vy = vy;
 	go[i].vz = vz;
 	go[i].heading = quat_to_heading(orientation);
 	go[i].type = type;
