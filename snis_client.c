@@ -10107,6 +10107,7 @@ static void snis_draw_3d_science_guy(struct snis_entity *o,
 		case OBJTYPE_WARPGATE:
 			sng_set_foreground(UI_COLOR(sci_ball_warpgate));
 			snprintf(buffer, sizeof(buffer), "%s %s\n", "SB",  o->sdata.name);
+			break;
 		case OBJTYPE_STARBASE:
 			sng_set_foreground(UI_COLOR(sci_ball_starbase));
 			snprintf(buffer, sizeof(buffer), "%s %s\n", "SB",  o->sdata.name);
