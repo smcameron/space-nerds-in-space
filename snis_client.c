@@ -15064,7 +15064,7 @@ static void science_select_waypoint_pressed(void *cookie)
 	struct button **b = cookie;
 	int index = b - &sci_ui.select_waypoint_button[0];
 
-	if (index == curr_science_waypoint)
+	if ((uint32_t) index == curr_science_waypoint)
 		index = -1;
 	request_sci_select_target(OPCODE_SCI_SELECT_TARGET_TYPE_WAYPOINT,
 					(uint32_t) index);
