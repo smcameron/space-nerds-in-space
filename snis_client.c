@@ -23475,7 +23475,7 @@ static void lobby_list_change_notification(struct ssgl_lobby_descriptor *list, i
 	int nlobbies = 0;
 
 	/* Make a local copy of the list */
-	if (nitems >= ARRAYSIZE(lobbylist))
+	if ((size_t) nitems >= ARRAYSIZE(lobbylist))
 		nitems = ARRAYSIZE(lobbylist);
 	memcpy(lobbylist, list, sizeof(lobbylist[0]) * nitems);
 	nlobbies = nitems;
