@@ -5800,7 +5800,7 @@ static int has_arrived_at_destination(struct snis_entity *o, float dist2)
 
 /* Push a oneshot patrol route to get from startv to endv while avoiding the planet */
 static void push_planet_avoidance_route(struct snis_entity *o,
-		union vec3 *startv, union vec3 *endv, struct snis_entity *planet)
+		union vec3 *endv, struct snis_entity *planet)
 {
 	int i, n;
 	union vec3 p, p2s, p2e, v, v2;
@@ -5894,7 +5894,7 @@ static float ai_ship_travel_towards(struct snis_entity *o,
 	/* Check if there's a planet in the way and try to avoid it. */
 	planet = planet_between_points(&startv, &endv);
 	if (planet) {
-		push_planet_avoidance_route(o, &startv, &endv, planet);
+		push_planet_avoidance_route(o, &endv, planet);
 		return dist2;
 	}
 
