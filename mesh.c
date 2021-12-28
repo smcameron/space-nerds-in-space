@@ -2151,7 +2151,7 @@ static void create_particle(float h, float r1, struct particle *particles, int i
 	particles[i].active = 1;
 }
 
-static void evolve_particle(float h, struct particle *particles, int i)
+static void evolve_particle(/* float h, */ struct particle *particles, int i)
 {
 	particles[i].lifetime -= particles[i].decay;
 	particles[i].xpos += particles[i].xspeed;
@@ -2162,7 +2162,7 @@ static void evolve_particle(float h, struct particle *particles, int i)
 }
 
 
-struct mesh *init_thrust_mesh(int streaks, double h, double r1, double r2)
+struct mesh *init_thrust_mesh(int streaks, double h, double r1)
 {
 #define MAX_THRUST_MESH_STREAKS 70
 	struct mesh *my_mesh = malloc(sizeof(*my_mesh));
@@ -2203,7 +2203,7 @@ struct mesh *init_thrust_mesh(int streaks, double h, double r1, double r2)
 			float y1 = particles[i].ypos;
 			float z1 = particles[i].zpos;
 
-			evolve_particle(h, particles, i);
+			evolve_particle(/* h, */ particles, i);
 
 			if (particles[i].lifetime < 0) {
 				particles[i].active = 0;
@@ -2496,7 +2496,9 @@ static int mikktspace_get_num_faces(const SMikkTSpaceContext *pContext)
 	return m->ntriangles;
 }
 
-static int mikktspace_get_num_vertices_of_face(const SMikkTSpaceContext *pContext, const int iFace)
+static int mikktspace_get_num_vertices_of_face(
+		__attribute__((unused)) const SMikkTSpaceContext *pContext,
+		__attribute__((unused)) const int iFace)
 {
 	return 3;
 }

@@ -23070,7 +23070,7 @@ static void init_meshes()
 	nebula_mesh = mesh_fabricate_billboard(2, 2);
 	sun_mesh = mesh_fabricate_billboard(30000, 30000);
 	unit_quad = mesh_fabricate_billboard(1, 1);
-	thrust_animation_mesh = init_thrust_mesh(70, 200, 1.3, 1);
+	thrust_animation_mesh = init_thrust_mesh(70, 200, 1.3);
 	warpgate_mesh = snis_read_model(d, "warpgate.stl");
 	mesh_cylindrical_yz_uv_map(warpgate_mesh);
 	warpgate_effect_mesh = mesh_fabricate_disc(1.0, 32);
