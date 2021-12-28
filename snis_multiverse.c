@@ -150,7 +150,9 @@ static void cleanup_lockfile(void)
  * TODO: figure out how to share this lockfile related code with the very similar but
  * slightly different code in snis_server.c
  */
-static void sigterm_handler(int sig, siginfo_t *siginfo, void *context)
+static void sigterm_handler(__attribute__((unused)) int sig,
+			__attribute__((unused)) siginfo_t *siginfo,
+			__attribute__((unused)) void *context)
 {
 	static const char buffer[] = "snis_multiverse: Received SIGTERM, exiting.\n";
 	int rc;
