@@ -10162,7 +10162,7 @@ static void demon_ship_move(struct snis_entity *o)
 		o->tsd.ship.velocity *= player_velocity_damping;
 }
 
-static void nebula_move(struct snis_entity *o)
+static void nebula_move(__attribute__((unused)) struct snis_entity *o)
 {
 	return;
 }
