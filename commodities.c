@@ -80,6 +80,7 @@ static int add_category(char *c)
 
 static int parse_error(char *filename, char *line, int ln, char *bad_word)
 {
+	printf("%s:%d %s\n", filename, ln, line);
 	if (bad_word)
 		printf("Error at line %s:%d at %s\n", filename, ln, bad_word);
 	else
