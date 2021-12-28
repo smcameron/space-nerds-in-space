@@ -220,7 +220,7 @@ static void free_tokens(struct nl_token *word[], int nwords)
 		free(word[i]);
 }
 
-static void maybe_do_pronoun_substitution(void *context, struct nl_token *t)
+static void maybe_do_pronoun_substitution(__attribute__((unused)) void *context, struct nl_token *t)
 {
 	if (t->pos[t->npos] != POS_PRONOUN)
 		return;
