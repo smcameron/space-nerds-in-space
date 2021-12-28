@@ -1765,7 +1765,7 @@ static void gather_opcode_not_sent_stats(struct snis_entity *o)
 	default:
 		break;
 	}
-	for (int i = 0; i < ARRAYSIZE(opcode); i++)
+	for (int i = 0; (size_t) i < ARRAYSIZE(opcode); i++)
 		if (opcode[i] > 0)
 			write_opcode_stats[opcode[i]].count_not_sent++;
 }
@@ -2948,7 +2948,7 @@ static void inflict_rts_main_base_damage(struct snis_entity *o, struct snis_enti
 		return;
 	if (target->type != OBJTYPE_PLANET)
 		return;
-	for (i = 0; i < ARRAYSIZE(rts_planet); i++) {
+	for (i = 0; (size_t) i < ARRAYSIZE(rts_planet); i++) {
 		if (go[rts_planet[i].index].id == target->id) {
 			int health = rts_planet[i].health;
 			health = health - damage_fn(o, target);
@@ -6935,7 +6935,7 @@ static void ai_atk_main_base_mode_brain(struct snis_entity *o)
 			main_base = &go[i];
 			if (main_base->alive && main_base->type == OBJTYPE_PLANET &&
 				main_base->sdata.faction != o->sdata.faction) {
-				for (j = 0; j < ARRAYSIZE(rts_planet); j++) {
+				for (j = 0; (size_t) j < ARRAYSIZE(rts_planet); j++) {
 					if (i == rts_planet[j].index) {
 						o->tsd.ship.ai[n].u.atk_main_base.base_id = main_base->id;
 						break;
@@ -7029,7 +7029,7 @@ static void ai_rts_guard_base(struct snis_entity *o)
 
 				if (b->sdata.faction != o->sdata.faction)
 					continue;
-				for (j = 0; j < ARRAYSIZE(rts_planet); j++) {
+				for (j = 0; (size_t) j < ARRAYSIZE(rts_planet); j++) {
 					if (go[rts_planet[j].index].id == b->id) {
 						found_planet = 1;
 						break;
@@ -10366,7 +10366,7 @@ static void turret_move(struct snis_entity *o)
 	if (root < 0 || (parent->type == OBJTYPE_BLOCK && parent->tsd.block.health == 0)) {
 		o->tsd.turret.current_target_id = (uint32_t) -1;
 	} else {
-		for (i = 0; i < ARRAYSIZE(go[root].tsd.block.naughty_list); i++)  {
+		for (i = 0; (size_t) i < ARRAYSIZE(go[root].tsd.block.naughty_list); i++)  {
 			if (go[root].tsd.block.naughty_list[i] == (uint32_t) -1)
 				break;
 			int n = lookup_by_id(go[root].tsd.block.naughty_list[i]);
@@ -12032,7 +12032,7 @@ static float calculate_commodity_price(struct snis_entity *planet, int item)
 
 	if (!test_done) {
 
-		for (i = 0; i < ARRAYSIZE(economy_name); i++) {
+		for (i = 0; (size_t) i < ARRAYSIZE(economy_name); i++) {
 			economy = 1.0f - (float) i / (float) ARRAYSIZE(economy_name);
 			tech_level = 0.5f;
 			government = 0.5f;
@@ -12040,7 +12040,7 @@ static float calculate_commodity_price(struct snis_entity *planet, int item)
 					economy, tech_level, government);
 			printf("economy %d: %.2f %s\n", i, price, commodity[item].name);
 		}
-		for (i = 0; i < ARRAYSIZE(tech_level_name); i++) {
+		for (i = 0; (size_t) i < ARRAYSIZE(tech_level_name); i++) {
 			economy = 0.5f;
 			tech_level = 1.0f - (float) i / (float) ARRAYSIZE(tech_level_name);
 			government = 0.5f;
@@ -12048,7 +12048,7 @@ static float calculate_commodity_price(struct snis_entity *planet, int item)
 					economy, tech_level, government);
 			printf("tech level %d: %.2f %s\n", i, price, commodity[item].name);
 		}
-		for (i = 0; i < ARRAYSIZE(government_name); i++) {
+		for (i = 0; (size_t) i < ARRAYSIZE(government_name); i++) {
 			economy = 0.5f;
 			tech_level = 0.5f;
 			government = 1.0f - (float) i / (float) ARRAYSIZE(government_name);
@@ -14548,7 +14548,7 @@ static int  damcon_waypoint_continuity_failure(int from, int to)
 {
 	int i, j;
 
-	for (i = 0; i < ARRAYSIZE(damcon_waypoint_data); i++) {
+	for (i = 0; (size_t) i < ARRAYSIZE(damcon_waypoint_data); i++) {
 		struct waypoint_data_entry *e = &damcon_waypoint_data[i];
 		if (e->n != from)
 			continue;
@@ -14563,7 +14563,7 @@ static void damcon_waypoint_sanity_check(void)
 {
 	int i, j;
 
-	for (i = 0; i < ARRAYSIZE(damcon_waypoint_data); i++) {
+	for (i = 0; (size_t) i < ARRAYSIZE(damcon_waypoint_data); i++) {
 		struct waypoint_data_entry *e = &damcon_waypoint_data[i];
 		for (j = 0; e->neighbor[j] != -1; j++) {
 			if (damcon_waypoint_continuity_failure(e->neighbor[j], e->n)) {
@@ -14580,7 +14580,7 @@ static void add_damcon_waypoints(struct damcon_data *d)
 	struct snis_damcon_entity *w, *n;
 
 	damcon_waypoint_sanity_check();
-	for (i = 0; i < ARRAYSIZE(damcon_waypoint_data); i++) {
+	for (i = 0; (size_t) i < ARRAYSIZE(damcon_waypoint_data); i++) {
 		struct waypoint_data_entry *e = &damcon_waypoint_data[i];
 		rc = add_damcon_waypoint(d, e->x, e->y);
 		if (rc < 0) {
@@ -14590,7 +14590,7 @@ static void add_damcon_waypoints(struct damcon_data *d)
 		}
 		d->o[rc].tsd.waypoint.n = e->n;
 	}
-	for (i = 0; i < ARRAYSIZE(damcon_waypoint_data); i++) {
+	for (i = 0; (size_t) i < ARRAYSIZE(damcon_waypoint_data); i++) {
 		struct waypoint_data_entry *e = &damcon_waypoint_data[i];
 		w = find_nth_waypoint(d, e->n);
 		for (j = 0; e->neighbor[j] >= 0; j++) {
@@ -17906,7 +17906,7 @@ static void meta_comms_hail(char *name, struct game_client *c, char *txt)
 
 	x = strtok_r(duptxt, " ,", &saveptr);
 	i = 0;
-	while (x && i < ARRAYSIZE(namelist)) {
+	while (x && (size_t) i < ARRAYSIZE(namelist)) {
 		x = strtok_r(NULL, " ,", &saveptr);
 		if (x)
 			namelist[i++] = x;
@@ -18036,7 +18036,7 @@ static void process_meta_comms_packet(char *name, struct game_client *c, char *t
 	/* allow user to get away with typing enough of the command
 	 * name to resolve ambiguity
 	 */
-	for (i = 0; i < ARRAYSIZE(meta_comms); i++) {
+	for (i = 0; (size_t) i < ARRAYSIZE(meta_comms); i++) {
 		int len = strlen(meta_comms[i].command);
 		if (len < len2)
 			limit = len;
@@ -19478,7 +19478,7 @@ static void server_builtin_help(char *cmd)
 	int i;
 
 	send_demon_console_color_msg(WHITE, "SERVER BUILTIN COMMANDS:");
-	for (i = 0; i < ARRAYSIZE(server_builtin) - 1; i++)
+	for (i = 0; (size_t) i < ARRAYSIZE(server_builtin) - 1; i++)
 		send_demon_console_msg("- %s -- %s", server_builtin[i].cmd, server_builtin[i].description);
 	list_lua_scripts();
 }
@@ -19508,7 +19508,7 @@ static int process_exec_lua_script(struct game_client *c)
 
 	/* See if it's a server builtin command */
 	wordlen = strlen(firstword); /* allow abbreviated commands to work. */
-	for (i = 0; i < ARRAYSIZE(server_builtin); i++) {
+	for (i = 0; (size_t) i < ARRAYSIZE(server_builtin); i++) {
 		if (strncmp(firstword, server_builtin[i].cmd, wordlen) == 0) {
 			server_builtin[i].fn(txt);
 			return 0;
@@ -20560,7 +20560,7 @@ static void setup_rtsmode_battlefield(void)
 		if (o->type == OBJTYPE_BRIDGE)
 			reset_player_ship(o);
 	}
-	for (i = 0; i < ARRAYSIZE(rts_planet); i++) { /* Add the main planets */
+	for (i = 0; (size_t) i < ARRAYSIZE(rts_planet); i++) { /* Add the main planets */
 		union vec3 *p = &rts_main_planet_pos[0];
 		struct snis_entity *planet;
 		rts_planet[i].index = add_planet(p[i].v.x, p[i].v.y, p[i].v.z, MAX_PLANET_RADIUS * 0.85, 0, -1);
@@ -20609,7 +20609,7 @@ static void setup_rtsmode_battlefield(void)
 	if (human_teams == 1) {
 		rts_ai.faction = computer_faction;
 		rts_ai.active = 1;
-		for (i = 0; i < ARRAYSIZE(rts_planet); i++) {
+		for (i = 0; (size_t) i < ARRAYSIZE(rts_planet); i++) {
 			if (go[rts_planet[i].index].sdata.faction == computer_faction)
 				rts_ai.main_base_id = go[rts_planet[i].index].id;
 		}
@@ -24205,7 +24205,7 @@ static void queue_up_client_rts_update(struct game_client *c)
 		return;
 
 	/* Queue up main base health updates */
-	for (i = 0; i < ARRAYSIZE(rts_planet); i++) {
+	for (i = 0; (size_t) i < ARRAYSIZE(rts_planet); i++) {
 		uint32_t health = rts_planet[i].health;
 		uint32_t id = go[rts_planet[i].index].id;
 		pb_queue_to_client(c, snis_opcode_subcode_pkt("bbbww", OPCODE_RTS_FUNC,
@@ -26677,7 +26677,7 @@ static void nl_describe_noun(struct game_client *c, char *word)
 	int i;
 	printf("%s: describing '%s'\n", logprefix(), word);
 
-	for (i = 0; i < ARRAYSIZE(noun_description); i++) {
+	for (i = 0; (size_t) i < ARRAYSIZE(noun_description); i++) {
 		if (strcasecmp(word, noun_description[i].noun) == 0) {
 			queue_add_text_to_speech(c, noun_description[i].description);
 			return;
@@ -27948,7 +27948,7 @@ static void nl_set_npq(void *context, int argc, char *argv[], int pos[],
 	if (noun < 0)
 		goto no_understand;
 
-	for (i = 0; i < ARRAYSIZE(nl_settable_thing); i++) {
+	for (i = 0; (size_t) i < ARRAYSIZE(nl_settable_thing); i++) {
 		if (strcasecmp(nl_settable_thing[i].name, argv[noun]) == 0) {
 			setit = nl_settable_thing[i].setfn;
 			break;
@@ -28439,7 +28439,7 @@ static void nl_raise_or_lower_npa(void *context, int argc, char *argv[], int pos
 	if (adj < 0)
 		goto no_understand;
 
-	for (i = 0; i < ARRAYSIZE(nl_settable_thing); i++) {
+	for (i = 0; (size_t) i < ARRAYSIZE(nl_settable_thing); i++) {
 		if (strcasecmp(nl_settable_thing[i].name, argv[noun]) == 0) {
 			setit = nl_settable_thing[i].setfn;
 			break;
@@ -28459,7 +28459,7 @@ static void nl_raise_or_lower_npa(void *context, int argc, char *argv[], int pos
 		queue_add_text_to_speech(c, answer);
 		return;
 	} else if (strcasecmp(argv[noun], "power") == 0) {
-		for (i = 0; i < ARRAYSIZE(nl_settable_power_thing); i++) {
+		for (i = 0; (size_t) i < ARRAYSIZE(nl_settable_power_thing); i++) {
 			if (strcasecmp(nl_settable_power_thing[i].name, argv[adj]) == 0) {
 				setit = nl_settable_power_thing[i].setfn;
 				break;
@@ -28473,7 +28473,7 @@ static void nl_raise_or_lower_npa(void *context, int argc, char *argv[], int pos
 		setit(c, argv[adj], (raise == 0) ? 0.0 : 1.0);
 		return;
 	} else if (strcasecmp(argv[noun], "coolant") == 0) {
-		for (i = 0; i < ARRAYSIZE(nl_settable_coolant_thing); i++) {
+		for (i = 0; (size_t) i < ARRAYSIZE(nl_settable_coolant_thing); i++) {
 			if (strcasecmp(nl_settable_coolant_thing[i].name, argv[adj]) == 0) {
 				setit = nl_settable_coolant_thing[i].setfn;
 				break;
@@ -28544,7 +28544,7 @@ static void nl_raise_or_lower_n(void *context, int argc, char *argv[], int pos[]
 	if (noun < 0)
 		goto no_understand;
 
-	for (i = 0; i < ARRAYSIZE(nl_settable_thing); i++) {
+	for (i = 0; (size_t) i < ARRAYSIZE(nl_settable_thing); i++) {
 		if (strcasecmp(nl_settable_thing[i].name, argv[noun]) == 0) {
 			setit = nl_settable_thing[i].setfn;
 			break;
@@ -29637,7 +29637,7 @@ static void nl_run_snis_test_cases(__attribute__((unused)) void *context,
 	int passed = 0;
 	int failed = 0;
 
-	for (i = 0; i < ARRAYSIZE(nl_test_case); i++) {
+	for (i = 0; (size_t) i < ARRAYSIZE(nl_test_case); i++) {
 		rc = snis_nl_test_parse_natural_language_request(NULL, nl_test_case[i].text);
 		if (rc != nl_test_case[i].expected) {
 			fprintf(stderr, "FAILED NATURAL LANGUAGE TEST: '%s' expected %s got %s\n",
@@ -30660,7 +30660,7 @@ static void update_starmap(struct ssgl_game_server *gameserver, int ngameservers
 			}
 		}
 		/* Didn't find it, it is one we do not know about, add it. */
-		if (!found && nstarmap_entries < ARRAYSIZE(starmap)) {
+		if (!found && (size_t) nstarmap_entries < ARRAYSIZE(starmap)) {
 			strlcpy(starmap[nstarmap_entries].name, gameserver[i].location, SSGL_LOCATIONSIZE);
 			starmap[j].x = x;
 			starmap[j].y = y;
