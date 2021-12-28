@@ -163,7 +163,7 @@ static void do_delete(struct snis_text_input_box *t)
 
 static void do_rightarrow(struct snis_text_input_box *t)
 {
-	if (t->cursor_pos < t->buflen && t->cursor_pos < strlen(t->buffer))
+	if (t->cursor_pos < t->buflen && (size_t) t->cursor_pos < strlen(t->buffer))
 		t->cursor_pos++;
 }
 
