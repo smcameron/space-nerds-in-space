@@ -20874,7 +20874,7 @@ static void draw_help_screen(void)
 	snis_draw_rectangle(1, 50, 50, SCREEN_WIDTH - 100, SCREEN_HEIGHT - 100);
 	sng_set_foreground(UI_COLOR(help_text));
 	snis_draw_rectangle(0, 50, 50, SCREEN_WIDTH - 100, SCREEN_HEIGHT - 100);
-	if (displaymode < 0 || displaymode >= ARRAYSIZE(help_text)) {
+	if (displaymode < 0 || (size_t) displaymode >= ARRAYSIZE(help_text)) {
 		char msg[100];
 		snprintf(msg, sizeof(msg), "\nUNKNOWN SCREEN %d, NO HELP AVAILABLE\n", displaymode);
 		draw_help_text(msg);
