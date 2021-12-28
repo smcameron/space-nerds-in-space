@@ -19474,7 +19474,7 @@ static void list_lua_scripts(void)
 	free(namelist);
 }
 
-static void server_builtin_help(char *cmd)
+static void server_builtin_help(__attribute__((unused)) char *cmd)
 {
 	int i;
 
