@@ -14348,10 +14348,6 @@ static void add_damcon_sockets(struct damcon_data *d, int x, int y,
 	}
 }
 
-static void add_damcon_labels(struct damcon_data *d)
-{
-}
-
 static void add_damcon_systems(struct damcon_data *d)
 {
 	int i;
@@ -14606,7 +14602,6 @@ static void populate_damcon_arena(struct damcon_data *d)
 	snis_object_pool_setup(&d->pool, MAXDAMCONENTITIES);
 	add_damcon_robot(d);
 	add_damcon_systems(d);
-	add_damcon_labels(d);
 	add_damcon_waypoints(d);
 }
 
