@@ -24,11 +24,11 @@
  */
 #include "graph_dev_mesh_stub.h"
 
-void mesh_graph_dev_init(struct mesh *m)
+void mesh_graph_dev_init(__attribute__((unused)) struct mesh *m)
 {
 }
 
-void mesh_graph_dev_cleanup(struct mesh *m)
+void mesh_graph_dev_cleanup(__attribute__((unused)) struct mesh *m)
 {
 }
 
