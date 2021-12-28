@@ -115,18 +115,18 @@ static inline void packed_double_nbo(struct packed_double *pd)
 
 static void packed_buffer_check(struct packed_buffer *pb)
 {
-	if (pb->buffer_cursor > pb->buffer_size) {
+	if ((uint32_t) pb->buffer_cursor > pb->buffer_size) {
 		fprintf(stderr, "pb->buffer_cursor = %d, pb->buffer_size = %d\n",
 			pb->buffer_cursor, pb->buffer_size);
 		packed_buffer_print("sanity violation", pb);
 		stacktrace("pb->buffer_cursor > pb->buffer_size\n");
-		assert((pb)->buffer_cursor <= (pb)->buffer_size);
+		assert((uint32_t) (pb)->buffer_cursor <= (pb)->buffer_size);
 	}
 }
 
 static void packed_buffer_check_add(struct packed_buffer *pb, int additional_bytes)
 {
-	if (pb->buffer_cursor + (additional_bytes) > pb->buffer_size) {
+	if ((uint32_t) (pb->buffer_cursor + additional_bytes) > pb->buffer_size) {
 		fprintf(stderr, "Buffer overflow: cursor = %d, additional bytes = %llu, buffer size = %d\n",
 			pb->buffer_cursor, (unsigned long long) additional_bytes, pb->buffer_size);
 		stacktrace("");
