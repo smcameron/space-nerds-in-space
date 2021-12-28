@@ -4018,7 +4018,7 @@ static void do_dirkey(int h, int v, int r, int t)
 				external_camera_dirkey(h, v, r);
 				break;
 			}
-			/* Deliberate fallthrough here */
+			/* FALLTHROUGH */
 		case DISPLAYMODE_NAVIGATION:
 			if (nav_ui_computer_active()) /* suppress keystrokes typed to computer */
 				break;
