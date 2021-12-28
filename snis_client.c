@@ -21051,7 +21051,7 @@ static int main_da_expose(SDL_Window *window)
 		if (global_rts_mode) {
 			player_lost_rts = 0;
 			player_won_rts = 0;
-			for (i = 0; i < ARRAYSIZE(rts_planet); i++) {
+			for (i = 0; (size_t) i < ARRAYSIZE(rts_planet); i++) {
 				if (rts_planet[i].health == 0) {
 					if (rts_planet[i].faction == o->sdata.faction)
 						player_lost_rts = 1;
