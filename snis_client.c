@@ -19271,7 +19271,7 @@ static void calculate_new_demon_zoom(int direction, double x, double y)
 			&demon_ui.ux1, &demon_ui.uy1, &demon_ui.ux2, &demon_ui.uy2);
 }
 
-static void demon_3d_scroll(int direction /* 1 = up, 0 = down */, double x, double y)
+static void demon_3d_scroll(int direction /* 1 = up, 0 = down */)
 {
 	union vec3 delta = { { 0 } };
 	float scroll_factor;
@@ -20579,7 +20579,7 @@ static int main_da_scroll(SDL_MouseWheelEvent *e)
 			return 0;
 		}
 		if (demon_ui.use_3d)
-			demon_3d_scroll(e->y > 0, mouse.x, mouse.y);
+			demon_3d_scroll(e->y > 0);
 		else
 			calculate_new_demon_zoom(e->y > 0, mouse.x, mouse.y);
 		return 0;
