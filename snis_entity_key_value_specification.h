@@ -414,7 +414,7 @@ struct key_value_specification snis_entity_kvs[] = {
 	UINT8_BRIDGE_FIELD(persistent_bridge_data.engineering_preset[5][16]),
 	UINT8_BRIDGE_FIELD(persistent_bridge_data.engineering_preset[5][17]),
 #endif
-	{ 0, 0, 0, 0 },
+	{ 0, 0, 0, 0, 0 },
 };
 
 #endif
