@@ -6412,7 +6412,7 @@ static int process_sci_select_target_packet(void)
 		}
 		return 0;
 	case OPCODE_SCI_SELECT_TARGET_TYPE_WAYPOINT:
-		if (id >= sci_ui.nwaypoints && id != (uint32_t) -1) /* not valid */
+		if (id >= (uint32_t) sci_ui.nwaypoints && id != (uint32_t) -1) /* not valid */
 			return 0;
 		wwviaudio_add_sound(SCIENCE_DATA_ACQUIRED_SOUND);
 		if (id == curr_science_waypoint || id == (uint32_t) -1) {
