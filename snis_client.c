@@ -8663,7 +8663,7 @@ error:
 	return NULL;
 }
 
-static int connect_to_gameserver(int selected_server)
+static int connect_to_gameserver(void)
 {
 	int rc;
 
@@ -8686,7 +8686,7 @@ static void show_connecting_screen(void)
 	sng_abs_xy_draw_string(connecting_to_server_msg, SMALL_FONT, txx(100), txy(300) + LINEHEIGHT);
 	if (!connected_to_gameserver) {
 		connected_to_gameserver = 1;
-		(void) connect_to_gameserver(lobby_selected_server);
+		(void) connect_to_gameserver();
 	}
 }
 
