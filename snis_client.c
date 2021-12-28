@@ -6529,7 +6529,7 @@ static struct comms_ui {
 	struct slider *our_base_health, *enemy_base_health;
 } comms_ui;
 
-static void comms_dirkey(int h, int v)
+static void comms_dirkey(__attribute__((unused)) int h, int v)
 {
 	/* note: No point making round trip to server and fanning out
 	 * scrolling requests to all comms clients because the comms
