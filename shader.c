@@ -66,7 +66,7 @@ static void print_glsl_compile_error(char *error_message, char *shadercode[], in
 		if (!n)
 			break;
 		len = n - e;
-		if (len > sizeof(tmp) - 1)
+		if ((size_t) len > sizeof(tmp) - 1)
 			len = sizeof(tmp) - 1;
 		strlcpy(tmp, e, sizeof(tmp));
 		tmp[len] = '\0';
