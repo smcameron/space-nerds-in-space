@@ -9744,6 +9744,7 @@ static void show_mainscreen(void)
 			vec3_init(&desired_cam_offset, 0, 0, 0);
 			if (vp == o)
 				break;
+			/* FALLTHROUGH */
 		case 1:
 		case 2: {
 				vec3_init(&desired_cam_offset, -1.0f, 0.25f, 0.0f);
