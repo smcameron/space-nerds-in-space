@@ -1042,7 +1042,7 @@ char *sng_load_png_texture(const char *filename, int flipVertical, int flipHoriz
 
 	int bytes_per_pixel = (color_type == PNG_COLOR_TYPE_RGB_ALPHA ? 4 : 3);
 
-	for (i = 0; i < th; i++) {
+	for (i = 0; (png_uint_32) i < th; i++) {
 		png_byte *src_row;
 		png_byte *dest_row = image_data + i * image_data_row_bytes;
 
@@ -1052,7 +1052,7 @@ char *sng_load_png_texture(const char *filename, int flipVertical, int flipHoriz
 			src_row = row_pointers[i];
 
 		if (flipHorizontal) {
-			for (j = 0; j < tw; j++) {
+			for (j = 0; (png_uint_32) j < tw; j++) {
 				png_byte *src = src_row + bytes_per_pixel * j;
 				png_byte *dest = dest_row + bytes_per_pixel * (tw - j - 1);
 				memcpy(dest, src, bytes_per_pixel);
@@ -1062,7 +1062,7 @@ char *sng_load_png_texture(const char *filename, int flipVertical, int flipHoriz
 		}
 
 		if (has_alpha && pre_multiply_alpha) {
-			for (j = 0; j < tw; j++) {
+			for (j = 0; (png_uint_32) j < tw; j++) {
 				png_byte *pixel = dest_row + bytes_per_pixel * j;
 				float alpha = pixel[3] / 255.0;
 				pixel[0] = pixel[0] * alpha;
