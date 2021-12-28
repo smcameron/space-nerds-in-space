@@ -2530,8 +2530,8 @@ static void instantly_repair_damcon_part(struct damcon_data *d, int system, int 
 	}
 }
 
-static void distribute_per_part_damage_among_parts(struct snis_entity *o,
-		struct damcon_data *d, int per_part_damage[], int damcon_system)
+static void distribute_per_part_damage_among_parts(struct damcon_data *d,
+		int per_part_damage[], int damcon_system)
 {
 	int i, n, count;
 	struct snis_damcon_entity *p;
@@ -2556,8 +2556,7 @@ static void distribute_per_part_damage_among_parts(struct snis_entity *o,
 	}
 }
 
-static void distribute_damage_to_damcon_system_parts(struct snis_entity *o,
-			struct damcon_data *d, int damage, int damcon_system)
+static void distribute_damage_to_damcon_system_parts(struct damcon_data *d, int damage, int damcon_system)
 {
 	int i;
 	int total_damage;
@@ -2591,12 +2590,12 @@ static void distribute_damage_to_damcon_system_parts(struct snis_entity *o,
 		per_part_damage[n] = tmp;
 	}
 
-	distribute_per_part_damage_among_parts(o, d, per_part_damage, damcon_system);
+	distribute_per_part_damage_among_parts(d, per_part_damage, damcon_system);
 	return;
 }
 
-static void distribute_damage_to_damcon_system_parts_fractionally(struct snis_entity *o,
-			struct damcon_data *d, int damage, int damcon_system, double f[])
+static void distribute_damage_to_damcon_system_parts_fractionally(struct damcon_data *d,
+		int damage, int damcon_system, double f[])
 {
 	int i;
 	int total_damage;
@@ -2611,7 +2610,7 @@ static void distribute_damage_to_damcon_system_parts_fractionally(struct snis_en
 	for (i = 0; i < DAMCON_PARTS_PER_SYSTEM; i++)
 		per_part_damage[i] = (int) (total_damage * f[i]);
 
-	distribute_per_part_damage_among_parts(o, d, per_part_damage, damcon_system);
+	distribute_per_part_damage_among_parts(d, per_part_damage, damcon_system);
 	return;
 }
 
@@ -2657,7 +2656,7 @@ static void player_update_shield_wavelength_width_depth(struct snis_entity *play
 	}
 }
 
-static int roll_damage(struct snis_entity *o, struct damcon_data *d, 
+static int roll_damage(struct damcon_data *d, 
 			double weapons_factor, double shield_strength, uint8_t current_system_damage,
 			int damcon_system)
 {
@@ -2665,7 +2664,7 @@ static int roll_damage(struct snis_entity *o, struct damcon_data *d,
 	if (damage + current_system_damage > 255)
 		damage = 255 - current_system_damage;
 
-	distribute_damage_to_damcon_system_parts(o, d, damage, damcon_system);
+	distribute_damage_to_damcon_system_parts(d, damage, damcon_system);
 	
 	return damage + current_system_damage;
 }
@@ -2772,64 +2771,64 @@ static void calculate_torpedolike_damage(struct snis_entity *target, double weap
 	if (targeted_system < NUM_POWER_MODEL_SYSTEMS) {
 		switch (targeted_system) {
 		case DAMCON_TYPE_SHIELDSYSTEM:
-			target->tsd.ship.damage.shield_damage = roll_damage(target, d, 3 * twp, ss,
+			target->tsd.ship.damage.shield_damage = roll_damage(d, 3 * twp, ss,
 					target->tsd.ship.damage.shield_damage, DAMCON_TYPE_SHIELDSYSTEM);
 			break;
 		case DAMCON_TYPE_IMPULSE:
-			target->tsd.ship.damage.impulse_damage = roll_damage(target, d, 3 * twp, ss,
+			target->tsd.ship.damage.impulse_damage = roll_damage(d, 3 * twp, ss,
 					target->tsd.ship.damage.impulse_damage, DAMCON_TYPE_IMPULSE);
 			break;
 		case DAMCON_TYPE_WARPDRIVE:
-			target->tsd.ship.damage.warp_damage = roll_damage(target, d, 3 * twp, ss,
+			target->tsd.ship.damage.warp_damage = roll_damage(d, 3 * twp, ss,
 					target->tsd.ship.damage.warp_damage, DAMCON_TYPE_WARPDRIVE);
 			break;
 		case DAMCON_TYPE_MANEUVERING:
-			target->tsd.ship.damage.maneuvering_damage = roll_damage(target, d, 3 * twp, ss,
+			target->tsd.ship.damage.maneuvering_damage = roll_damage(d, 3 * twp, ss,
 					target->tsd.ship.damage.maneuvering_damage, DAMCON_TYPE_MANEUVERING);
 			break;
 		case DAMCON_TYPE_PHASERBANK:
-			target->tsd.ship.damage.phaser_banks_damage = roll_damage(target, d, 3 * twp, ss,
+			target->tsd.ship.damage.phaser_banks_damage = roll_damage(d, 3 * twp, ss,
 					target->tsd.ship.damage.phaser_banks_damage, DAMCON_TYPE_PHASERBANK);
 			break;
 		case DAMCON_TYPE_SENSORARRAY:
-			target->tsd.ship.damage.sensors_damage = roll_damage(target, d, 3 * twp, ss,
+			target->tsd.ship.damage.sensors_damage = roll_damage(d, 3 * twp, ss,
 					target->tsd.ship.damage.sensors_damage, DAMCON_TYPE_SENSORARRAY);
 			break;
 		case DAMCON_TYPE_COMMUNICATIONS:
-			target->tsd.ship.damage.comms_damage = roll_damage(target, d, 3 * twp, ss,
+			target->tsd.ship.damage.comms_damage = roll_damage(d, 3 * twp, ss,
 					target->tsd.ship.damage.comms_damage, DAMCON_TYPE_COMMUNICATIONS);
 			break;
 		case DAMCON_TYPE_TRACTORSYSTEM:
-			target->tsd.ship.damage.tractor_damage = roll_damage(target, d, 3 * twp, ss,
+			target->tsd.ship.damage.tractor_damage = roll_damage(d, 3 * twp, ss,
 					target->tsd.ship.damage.tractor_damage, DAMCON_TYPE_TRACTORSYSTEM);
 			break;
 		case DAMCON_TYPE_LIFESUPPORTSYSTEM:
-			target->tsd.ship.damage.lifesupport_damage = roll_damage(target, d, 3 * twp, ss,
+			target->tsd.ship.damage.lifesupport_damage = roll_damage(d, 3 * twp, ss,
 					target->tsd.ship.damage.lifesupport_damage, DAMCON_TYPE_LIFESUPPORTSYSTEM);
 			break;
 		}
 		/* Also target shields ... otherwise the ship can live almost indefinitely. */
-		target->tsd.ship.damage.shield_damage = roll_damage(target, d, twp, ss,
+		target->tsd.ship.damage.shield_damage = roll_damage(d, twp, ss,
 				target->tsd.ship.damage.shield_damage, DAMCON_TYPE_SHIELDSYSTEM);
 	} else {
 		/* Target all systems */
-		target->tsd.ship.damage.shield_damage = roll_damage(target, d, twp, ss,
+		target->tsd.ship.damage.shield_damage = roll_damage(d, twp, ss,
 				target->tsd.ship.damage.shield_damage, DAMCON_TYPE_SHIELDSYSTEM);
-		target->tsd.ship.damage.impulse_damage = roll_damage(target, d, twp, ss,
+		target->tsd.ship.damage.impulse_damage = roll_damage(d, twp, ss,
 				target->tsd.ship.damage.impulse_damage, DAMCON_TYPE_IMPULSE);
-		target->tsd.ship.damage.warp_damage = roll_damage(target, d, twp, ss,
+		target->tsd.ship.damage.warp_damage = roll_damage(d, twp, ss,
 				target->tsd.ship.damage.warp_damage, DAMCON_TYPE_WARPDRIVE);
-		target->tsd.ship.damage.maneuvering_damage = roll_damage(target, d, twp, ss,
+		target->tsd.ship.damage.maneuvering_damage = roll_damage(d, twp, ss,
 				target->tsd.ship.damage.maneuvering_damage, DAMCON_TYPE_MANEUVERING);
-		target->tsd.ship.damage.phaser_banks_damage = roll_damage(target, d, twp, ss,
+		target->tsd.ship.damage.phaser_banks_damage = roll_damage(d, twp, ss,
 				target->tsd.ship.damage.phaser_banks_damage, DAMCON_TYPE_PHASERBANK);
-		target->tsd.ship.damage.sensors_damage = roll_damage(target, d, twp, ss,
+		target->tsd.ship.damage.sensors_damage = roll_damage(d, twp, ss,
 				target->tsd.ship.damage.sensors_damage, DAMCON_TYPE_SENSORARRAY);
-		target->tsd.ship.damage.comms_damage = roll_damage(target, d, twp, ss,
+		target->tsd.ship.damage.comms_damage = roll_damage(d, twp, ss,
 				target->tsd.ship.damage.comms_damage, DAMCON_TYPE_COMMUNICATIONS);
-		target->tsd.ship.damage.tractor_damage = roll_damage(target, d, twp, ss,
+		target->tsd.ship.damage.tractor_damage = roll_damage(d, twp, ss,
 				target->tsd.ship.damage.tractor_damage, DAMCON_TYPE_TRACTORSYSTEM);
-		target->tsd.ship.damage.lifesupport_damage = roll_damage(target, d, twp, ss,
+		target->tsd.ship.damage.lifesupport_damage = roll_damage(d, twp, ss,
 				target->tsd.ship.damage.lifesupport_damage, DAMCON_TYPE_LIFESUPPORTSYSTEM);
 	}
 
@@ -2900,7 +2899,7 @@ static void calculate_laser_damage(struct snis_entity *o, uint8_t wavelength, fl
 		x[i] = (uint8_t) damage;
 		damage = x[i] - old_damage;
 		if (o->type == OBJTYPE_BRIDGE)
-			distribute_damage_to_damcon_system_parts(o, d, (int) damage, i);
+			distribute_damage_to_damcon_system_parts(d, (int) damage, i);
 	}
 	if (o->tsd.ship.damage.shield_damage == 255) {
 		o->timestamp = universe_timestamp;
@@ -2928,13 +2927,15 @@ static void calculate_laser_starbase_damage(struct snis_entity *o, uint8_t wavel
 		o->alive = 0;
 }
 
-static int calculate_rts_main_base_laser_damage(struct snis_entity *o, struct snis_entity *target)
+static int calculate_rts_main_base_laser_damage(__attribute__((unused)) struct snis_entity *o,
+			__attribute__((unused)) struct snis_entity *target)
 {
 	/* FIXME: do something better here to take strength of unit into account */
 	return RTS_MAX_LASER_MAIN_BASE_DAMAGE;
 }
 
-static int calculate_rts_main_base_torpedo_damage(struct snis_entity *o, struct snis_entity *target)
+static int calculate_rts_main_base_torpedo_damage(__attribute__((unused)) struct snis_entity *o,
+			__attribute__((unused)) struct snis_entity *target)
 {
 	/* FIXME: do something better here taking the strength of the unit into account */
 	return RTS_MAX_TORPEDO_MAIN_BASE_DAMAGE;
@@ -4440,7 +4441,8 @@ static void laser_move(struct snis_entity *o)
 }
 
 static void send_comms_packet(struct snis_entity *transmitter, char *sender, uint32_t channel, const char *format, ...);
-static void taunt_player(struct snis_entity *alien, struct snis_entity *player)
+static void taunt_player(struct snis_entity *alien,
+		__attribute__((unused)) struct snis_entity *player)
 {
 	char buffer[1000];
 	char name[100];
@@ -8541,7 +8543,7 @@ static int calc_overheat_damage(struct snis_entity *o, struct damcon_data *d,
 		new_value = 255.0f;
 	*system = (uint8_t) new_value;
 	damage = (new_value - old_value);
-	distribute_damage_to_damcon_system_parts(o, d, (int) damage, system_number);
+	distribute_damage_to_damcon_system_parts(d, (int) damage, system_number);
 	return 1;
 }
 
@@ -9689,7 +9691,7 @@ static int calc_sunburn_damage(struct snis_entity *o, struct damcon_data *d,
 		new_value = 255.0f;
 	*system = (uint8_t) new_value;
 	damage = (new_value - old_value);
-	distribute_damage_to_damcon_system_parts(o, d, (int) damage, system_number);
+	distribute_damage_to_damcon_system_parts(d, (int) damage, system_number);
 	return 1;
 }
 
@@ -20170,10 +20172,10 @@ distribute_damage:
 
 	assert(b >= 0 && b < nbridges);
 	if (fabs(ftotal) < 0.0001)
-		distribute_damage_to_damcon_system_parts(o, &bridgelist[b].damcon,
+		distribute_damage_to_damcon_system_parts(&bridgelist[b].damcon,
 				damage_delta, system_number);
 	else
-		distribute_damage_to_damcon_system_parts_fractionally(o, &bridgelist[b].damcon,
+		distribute_damage_to_damcon_system_parts_fractionally(&bridgelist[b].damcon,
 				damage_delta, system_number, f);
 	lua_pushnumber(l, 0.0);
 	return 1;
