@@ -54,6 +54,6 @@ int lookup_commodity(struct commodity *c, int ncommodities, const char *commodit
 
 const char *commodity_category(int cat);
 const char *commodity_category_description(int cat);
-const int ncommodity_categories(void);
+int ncommodity_categories(void);
 
 #endif

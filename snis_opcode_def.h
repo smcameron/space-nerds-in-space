@@ -27,9 +27,9 @@
 int snis_opcode_def_init(void);
 
 /* Returns payload size of an opcode (that has no subcode) */
-const int snis_opcode_payload_size(uint8_t opcode);
+int snis_opcode_payload_size(uint8_t opcode);
 /* Returns payload size of an opcode, subcode pair */
-const int snis_opcode_subcode_payload_size(uint8_t opcode, uint8_t subcode);
+int snis_opcode_subcode_payload_size(uint8_t opcode, uint8_t subcode);
 /* Returns format of opcode that has no subcode */
 const char *snis_opcode_format(uint8_t opcode);
 /* Returns format of an opcode, subcode pair */

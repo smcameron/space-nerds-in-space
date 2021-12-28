@@ -400,7 +400,7 @@ const char *commodity_category_description(int cat)
 	return category_description[cat];
 }
 
-const int ncommodity_categories(void)
+int ncommodity_categories(void)
 {
 	return ncategories;
 }

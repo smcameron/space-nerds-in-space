@@ -302,7 +302,7 @@ static void check_index(int index)
 }
 
 /* Returns payload size of an opcode (that has no subcode) */
-const int snis_opcode_payload_size(uint8_t opcode)
+int snis_opcode_payload_size(uint8_t opcode)
 {
 	int index = opcode * NSUBCODES;
 
@@ -311,7 +311,7 @@ const int snis_opcode_payload_size(uint8_t opcode)
 }
 
 /* Returns payload size of an opcode, subcode pair */
-const int snis_opcode_subcode_payload_size(uint8_t opcode, uint8_t subcode)
+int snis_opcode_subcode_payload_size(uint8_t opcode, uint8_t subcode)
 {
 	int index = opcode * NSUBCODES + subcode;
 
