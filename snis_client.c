@@ -4340,7 +4340,7 @@ static void deal_with_joysticks()
 			continue;
 
 		/* Fire off joystick button callbacks registered via set_joystick_button_fn() */
-		for (i = 0; i < ARRAYSIZE(jss[j].button); i++)
+		for (i = 0; (size_t) i < ARRAYSIZE(jss[j].button); i++)
 			if (jss[j].button[i] == 1)
 				joystick_button(joystick_cfg, NULL, displaymode, j, i);
 
@@ -4349,7 +4349,7 @@ static void deal_with_joysticks()
 			return;
 
 		/* Fire off joystick axis callbacks registered via set_joystick_axis_fn() */
-		for (i = 0; i < ARRAYSIZE(jss[j].axis); i++)
+		for (i = 0; (size_t) i < ARRAYSIZE(jss[j].axis); i++)
 			joystick_axis(joystick_cfg, NULL, displaymode, j, i, jss[j].axis[i]);
 	}
 }
@@ -6941,7 +6941,7 @@ static int process_rts_func(void)
 		rc = read_and_unpack_buffer(buffer, "bww", &faction, &id, &health);
 		if (rc)
 			return rc;
-		for (i = 0; i < ARRAYSIZE(rts_planet); i++) {
+		for (i = 0; (size_t) i < ARRAYSIZE(rts_planet); i++) {
 			if (rts_planet[i].id == id && rts_planet[i].faction != 255) {
 				rts_planet[i].health = (uint16_t) health;
 				found = 1;
@@ -6949,7 +6949,7 @@ static int process_rts_func(void)
 			}
 		}
 		if (!found) {
-			for (i = 0; i < ARRAYSIZE(rts_planet); i++) {
+			for (i = 0; (size_t) i < ARRAYSIZE(rts_planet); i++) {
 				if (rts_planet[i].faction == 255) {
 					int index = lookup_object_by_id(id);
 					if (index >= 0 && go[index].type == OBJTYPE_PLANET) {
@@ -6983,7 +6983,7 @@ static int process_demon_rtsmode(void)
 	case OPCODE_RTSMODE_SUBCMD_DISABLE:
 		my_home_planet_oid = UNKNOWN_ID; /* Clear this cached value */
 		/* Clear the rts_planet array */
-		for (i = 0; i < ARRAYSIZE(rts_planet); i++) {
+		for (i = 0; (size_t) i < ARRAYSIZE(rts_planet); i++) {
 			rts_planet[i].health = 0;
 			rts_planet[i].id = 0;
 			rts_planet[i].faction = 255;
@@ -11260,7 +11260,7 @@ static void draw_science_3d_waypoints(struct snis_entity *o, double range, float
 			*closest_guy = nscience_guys;
 		}
 		nscience_guys++;
-		if (i == curr_science_waypoint)
+		if ((uint32_t) i == curr_science_waypoint)
 			sng_draw_circle(0, sx, sy, 10);
 	}
 }
@@ -11698,7 +11698,7 @@ static double sample_main_base_health(void)
 	o = find_my_ship();
 	if (!o)
 		return 0.0;
-	for (i = 0; i < ARRAYSIZE(rts_planet); i++) {
+	for (i = 0; (size_t) i < ARRAYSIZE(rts_planet); i++) {
 		if (o->sdata.faction == rts_planet[i].faction)
 			return (double) rts_planet[i].health;
 	}
@@ -11713,7 +11713,7 @@ static double sample_enemy_base_health(void)
 	o = find_my_ship();
 	if (!o)
 		return 0.0;
-	for (i = 0; i < ARRAYSIZE(rts_planet); i++) {
+	for (i = 0; (size_t) i < ARRAYSIZE(rts_planet); i++) {
 		if (o->sdata.faction != rts_planet[i].faction)
 			return (double) rts_planet[i].health;
 	}
