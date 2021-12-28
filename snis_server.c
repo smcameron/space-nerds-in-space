@@ -9784,7 +9784,7 @@ static void maybe_do_player_warp(struct snis_entity *o)
 	}
 }
 
-static void maybe_transmit_attached_science_text(int bridge, struct snis_entity *ship,
+static void maybe_transmit_attached_science_text(struct snis_entity *ship,
 	struct snis_entity *sci_selection)
 {
 	static int timer = 0;
@@ -9847,7 +9847,7 @@ static void check_science_selection(struct snis_entity *o)
 		goto deselect;
 	dist2 = object_dist2(o, &go[i]);
 	range2 = o->tsd.ship.scibeam_range * o->tsd.ship.scibeam_range;
-	maybe_transmit_attached_science_text(bn, o, &go[i]);
+	maybe_transmit_attached_science_text(o, &go[i]);
 	if (go[i].type == OBJTYPE_PLANET)
 		maybe_transmit_custom_planet_description(o, &go[i]);
 	if (dist2 <= range2)
