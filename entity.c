@@ -1003,7 +1003,7 @@ void render_entities(struct entity_context *cx)
 			else
 				e->m = e->high_poly;
 
-			int render_order = graph_dev_entity_render_order(cx, e);
+			int render_order = graph_dev_entity_render_order(e);
 			switch (render_order) {
 				case GRAPH_DEV_RENDER_FAR_TO_NEAR:
 					cx->far_to_near_entity_depth[cx->nfar_to_near_entity_depth] = j;

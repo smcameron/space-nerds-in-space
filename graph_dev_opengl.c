@@ -2328,7 +2328,7 @@ static void graph_dev_raster_particle_animation(const struct entity_context *cx,
 	}
 }
 
-extern int graph_dev_entity_render_order(struct entity_context *cx, struct entity *e)
+extern int graph_dev_entity_render_order(struct entity *e)
 {
 	int does_blending = 0;
 

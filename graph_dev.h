@@ -52,7 +52,7 @@ extern void graph_dev_clear_depth_bit();
 
 #define GRAPH_DEV_RENDER_FAR_TO_NEAR 0
 #define GRAPH_DEV_RENDER_NEAR_TO_FAR 1
-extern int graph_dev_entity_render_order(struct entity_context *cx, struct entity *e);
+extern int graph_dev_entity_render_order(struct entity *e);
 
 extern void graph_dev_draw_entity(struct entity_context *cx, struct entity *e, union vec3 *eye_light_pos,
 	const struct entity_transform *transform);

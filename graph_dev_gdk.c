@@ -614,7 +614,7 @@ static void transform_entity(const struct mat44 *mat_mvp, const struct mat44 *ma
 	}
 }
 
-extern int graph_dev_entity_render_order(struct entity_context *cx, struct entity *e)
+extern int graph_dev_entity_render_order(struct entity *e)
 {
 	/* all software rendered entites are rendered far to near */
 	return GRAPH_DEV_RENDER_FAR_TO_NEAR;
