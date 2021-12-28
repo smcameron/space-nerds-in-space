@@ -109,7 +109,7 @@ static int straight_replace_entry(char *input, struct number_map_entry *e)
 			strcpy(replacement, "");
 		len = strlen(replacement);
 		wordlen = strlen(e->name);
-		if (len > strlen(e->name)) {
+		if ((size_t) len > strlen(e->name)) {
 			printf("Bug, '%s' is longer than '%s'\n",
 				replacement, e->name);
 			return -1;
@@ -314,7 +314,7 @@ char *handle_spelled_numbers_in_place(char *input)
 {
 	int i, changes;
 
-	for (i = 0; i < ARRAYSIZE(number_map); i++) {
+	for (i = 0; (size_t) i < ARRAYSIZE(number_map); i++) {
 		straight_replace_loop(input, &number_map[i]);
 	}
 	do {
