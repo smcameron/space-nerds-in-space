@@ -30693,7 +30693,7 @@ static void update_starmap(struct ssgl_game_server *gameserver, int ngameservers
 }
 
 /* This is used to check if the multiverse server has changed */
-static void servers_changed_cb(void *cookie)
+static void servers_changed_cb(__attribute__((unused)) void *cookie)
 {
 	struct ssgl_game_server *gameserver = NULL;
 	int i, nservers, same_as_before = 0;
