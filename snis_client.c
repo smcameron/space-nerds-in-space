@@ -6100,7 +6100,7 @@ static void delete_all_objects(void)
 	int i;
 	pthread_mutex_lock(&universe_mutex);
 	for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
-		if (go[i].id == -1)
+		if (go[i].id == (uint32_t) -1)
 			continue;
 		go[i].alive = 0;
 		remove_entity(ecx, go[i].entity);
