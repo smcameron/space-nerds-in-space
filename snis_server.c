@@ -7011,7 +7011,7 @@ static void ai_rts_guard_base(struct snis_entity *o)
 		o->tsd.ship.ai[0].ai_mode = AI_MODE_RTS_STANDBY;
 		return;
 	}
-	if (o->tsd.ship.ai[n].u.guard_base.base_id == -1) {
+	if (o->tsd.ship.ai[n].u.guard_base.base_id == (uint32_t) -1) {
 		for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
 			struct snis_entity *b = &go[i];
 			if (!b->alive)
@@ -7519,7 +7519,7 @@ static void ship_move(struct snis_entity *o)
 	switch (o->tsd.ship.cmd_data.command) {
 	case DEMON_CMD_ATTACK:
 		o->tsd.ship.ai[n].ai_mode = AI_MODE_ATTACK;
-		if (o->tsd.ship.ai[n].u.attack.victim_id == (uint32_t) -1 || snis_randn(1000) < 50)
+		if (o->tsd.ship.ai[n].u.attack.victim_id == -1 || snis_randn(1000) < 50)
 			ship_choose_new_attack_victim(o);
 		break;
 	default:
@@ -7690,7 +7690,7 @@ static void damcon_repair_socket_move(struct snis_damcon_entity *o,
 	struct snis_damcon_entity *part = NULL;
 
 	id = o->tsd.socket.contents_id;
-	if (id == DAMCON_SOCKET_EMPTY)
+	if ((uint32_t) id == DAMCON_SOCKET_EMPTY)
 		return;
 	i = lookup_by_damcon_id(d, id);
 	if (i < 0)
@@ -8813,9 +8813,10 @@ static int player_attempt_warpgate_jump(struct snis_entity *warpgate, struct sni
 		return 0;
 	}
 	if (bridgelist[b].warp_gate_ticket.ipaddr == 0) { /* No ticket? No warp. */
-		static int last_msg_time = 0;
+		static uint32_t last_msg_time = 0;
 
 		/* Throttle this message to once per 30secs... should be per-bridge, but, eh. */
+		/* FIXME: what happens when universe_timestamp rolls over? */
 		if (last_msg_time < universe_timestamp - 300) {
 			last_msg_time = universe_timestamp;
 			/* We snoop the player's current channel, but how would the putative warp gate operators */
@@ -8866,7 +8867,7 @@ static void player_attempt_dock_with_starbase(struct snis_entity *docking_port,
 		}
 		return;
 	}
-	if (docking_port->tsd.docking_port.docked_guy == -1) {
+	if (docking_port->tsd.docking_port.docked_guy == (uint32_t) -1) {
 		docking_port->tsd.docking_port.docked_guy = player->id;
 		do_docking_action(player, sb, bridge, npcname);
 	} else {
@@ -10253,7 +10254,7 @@ static void block_add_to_naughty_list(struct snis_entity *o, uint32_t id)
 	if (go[i].type != OBJTYPE_BRIDGE && go[i].type != OBJTYPE_NPCSHIP)
 		return;
 	rootid = o->tsd.block.root_id;
-	if (rootid != -1) {
+	if (rootid != (uint32_t) -1) {
 		i = lookup_by_id(rootid);
 		if (i < 0)
 			return;
@@ -10580,7 +10581,7 @@ static void starbase_move(struct snis_entity *o)
 		if (planet_between_objs(o, a))
 			continue;
 		if (snis_randn(100) < 30 &&
-			o->tsd.starbase.next_torpedo_time <= universe_timestamp) {
+			(uint32_t) o->tsd.starbase.next_torpedo_time <= universe_timestamp) {
 			/* fire torpedo */
 			float dist = sqrt(dist2);
 			double tx, ty, tz, vx, vy, vz;
@@ -10597,7 +10598,7 @@ static void starbase_move(struct snis_entity *o)
 			fired_at_player = a->type == OBJTYPE_BRIDGE;
 		}
 		if (snis_randn(100) < 30 &&
-			o->tsd.starbase.next_laser_time <= universe_timestamp) {
+			(uint32_t) o->tsd.starbase.next_laser_time <= universe_timestamp) {
 			/* fire laser */
 			add_laserbeam(o->id, a->id, LASERBEAM_DURATION, TARGET_ALL_SYSTEMS);
 			o->tsd.starbase.next_laser_time = universe_timestamp +
@@ -12143,7 +12144,7 @@ static uint32_t find_root_id(int parent_id)
 	/* TODO: Detect cycles. */
 	int i;
 	uint32_t id;
-	if (parent_id == (uint32_t) -1) /* am I root? */
+	if (parent_id == -1) /* am I root? */
 		return -1;
 	id = parent_id;
 	do {
@@ -12795,7 +12796,7 @@ static int lookup_by_damcon_id(struct damcon_data *d, int id)
 	int i;
 
 	for (i = 0; i <= snis_object_pool_highest_object(d->pool); i++) {
-		if (d->o[i].id == id)
+		if (d->o[i].id == (uint32_t) id)
 			return 	i;
 	}
 	return -1;
@@ -15295,7 +15296,7 @@ static void science_select_target(struct game_client *c, uint8_t selection_type,
 			"object-scanned-event", (double) c->shipid, (double) id);
 	}
 	if (selection_type == OPCODE_SCI_SELECT_TARGET_TYPE_WAYPOINT) {
-		if (id < bridgelist[c->bridge].nwaypoints || id == (uint32_t) -1) {
+		if ((int) id < bridgelist[c->bridge].nwaypoints || id == (uint32_t) -1) {
 			bridgelist[c->bridge].selected_waypoint = id;
 			bridgelist[c->bridge].science_selection = (uint32_t) -1;
 		}
@@ -15872,7 +15873,7 @@ static void starbase_registration_query_npc_bot(struct snis_entity *o, int bridg
 			c = lookup_by_id(found);
 			if (c < 0)
 				break;
-			if (lookup_by_id(go[c].tsd.ship.last_seen_near) == (uint32_t) -1)
+			if (lookup_by_id(go[c].tsd.ship.last_seen_near) == -1)
 				break;
 			if (go[c].type != OBJTYPE_NPCSHIP)
 				break;
@@ -15896,7 +15897,7 @@ static void starbase_registration_query_npc_bot(struct snis_entity *o, int bridg
 			if (c >= 0 && go[c].type == OBJTYPE_STARBASE && go[c].alive) {
 				send_comms_packet(o, n, channel, "WANTED FOR - %s", ship_registry.entry[i].entry);
 				int p = lookup_by_id(go[c].tsd.starbase.associated_planet_id);
-				if (p >= 0 && go[c].tsd.starbase.associated_planet_id != (uint32_t) -1)
+				if (p >= 0 && go[c].tsd.starbase.associated_planet_id != -1)
 					send_comms_packet(o, n, channel, "BOUNTY - $%.0f COLLECTIBLE AT %s ORBITING %s",
 						ship_registry.entry[i].bounty,
 						c < 0 ? "UNKNOWN" : go[c].sdata.name, go[p].sdata.name);
@@ -17005,7 +17006,7 @@ static void npc_menu_item_list_bounties(struct npc_menu_item *item,
 			}
 			send_comms_packet(starbase, n, channel, "WANTED FOR - %s", ship_registry.entry[i].entry);
 				int p = lookup_by_id(go[sb].tsd.starbase.associated_planet_id);
-				if (p >= 0 && go[ship].tsd.starbase.associated_planet_id != (uint32_t) -1)
+				if (p >= 0 && go[ship].tsd.starbase.associated_planet_id != -1)
 					send_comms_packet(starbase, n, channel,
 								"BOUNTY - $%.0f COLLECTIBLE AT %s ORBITING %s",
 						ship_registry.entry[i].bounty,
@@ -18109,7 +18110,7 @@ static int process_comms_transmission(struct game_client *c, int use_real_name)
 			return 0;
 		}
 		send_comms_packet(&go[c->ship_index], name, bridgelist[c->bridge].comms_channel, "%s", txt);
-		if (bridgelist[c->bridge].npcbot.channel == bridgelist[c->bridge].comms_channel)
+		if (bridgelist[c->bridge].npcbot.channel == (uint32_t) bridgelist[c->bridge].comms_channel)
 			send_to_npcbot(c->bridge, name, txt);
 		break;
 	case OPCODE_COMMS_KEY_GUESS:
@@ -18306,7 +18307,7 @@ static int process_set_waypoint(struct game_client *c)
 			}
 		}
 
-		if (row >= 0 && row < bridgelist[b].nwaypoints) {
+		if (row < bridgelist[b].nwaypoints) {
 			for (int i = row; i < bridgelist[b].nwaypoints - 1; i++)
 				bridgelist[b].waypoint[i] = bridgelist[b].waypoint[i + 1];
 			bridgelist[b].nwaypoints--;
@@ -19649,7 +19650,7 @@ static int l_ai_push_patrol(lua_State *l)
 		o->tsd.ship.ai[n].u.patrol.p[p].v.y = y; 
 		o->tsd.ship.ai[n].u.patrol.p[p].v.z = z; 
 
-		if (p >= ARRAYSIZE(o->tsd.ship.ai[n].u.patrol.p))
+		if ((size_t) p >= ARRAYSIZE(o->tsd.ship.ai[n].u.patrol.p))
 			break;
 	}
 	o->tsd.ship.ai[n].u.patrol.npoints = p;
@@ -20704,11 +20705,11 @@ static int process_rts_func_build_unit(struct game_client *c)
 		return 0;
 	pthread_mutex_lock(&universe_mutex);
 	index = lookup_by_id(bridgelist[c->bridge].shipid);
-	if (index == (uint32_t) -1)
+	if (index == -1)
 		goto out;
 	ship = &go[index];
 	index = lookup_by_id(builder_id);
-	if (index == (uint32_t) -1)
+	if (index == -1)
 		goto out;
 	builder = &go[index];
 
@@ -22112,7 +22113,7 @@ static int process_create_item(struct game_client *c)
 	pthread_mutex_lock(&universe_mutex);
 	switch (item_type) {
 	case OBJTYPE_NPCSHIP:
-		if (data1 < 0 || data1 >= nshiptypes)
+		if (data1 >= nshiptypes)
 			data1 = snis_randn(nshiptypes);
 		n = random_name(mt);
 		if (data2 >= nfactions())
@@ -22237,7 +22238,7 @@ static int process_request_bytevalue_pwr(struct game_client *c, int offset,
 		pthread_mutex_unlock(&universe_mutex);
 		return -1;
 	}
-	if (i != c->ship_index)
+	if ((uint32_t) i != c->ship_index)
 		snis_log(SNIS_ERROR, "i != ship index at %s:%d\n", __FILE__, __LINE__);
 	bytevalue = (uint8_t *) &go[i];
 	bytevalue += offset;
@@ -22268,7 +22269,7 @@ static int process_request_reverse(struct game_client *c)
 		pthread_mutex_unlock(&universe_mutex);
 		return -1;
 	}
-	if (i != c->ship_index)
+	if ((uint32_t) i != c->ship_index)
 		snis_log(SNIS_ERROR, "i != ship index at %s:%d\n", __FILE__, __LINE__);
 	go[i].tsd.ship.reverse = !!v;
 	pthread_mutex_unlock(&universe_mutex);
@@ -22291,7 +22292,7 @@ static int process_nav_trident_mode(struct game_client *c)
 		pthread_mutex_unlock(&universe_mutex);
 		return -1;
 	}
-	if (i != c->ship_index)
+	if ((uint32_t) i != c->ship_index)
 		snis_log(SNIS_ERROR, "i != ship index at %s:%d\n", __FILE__, __LINE__);
 	go[i].tsd.ship.trident = !!v;
 	pthread_mutex_unlock(&universe_mutex);
@@ -22310,7 +22311,7 @@ static int process_adjust_control_bytevalue(struct game_client *c, uint32_t id,
 		pthread_mutex_unlock(&universe_mutex);
 		return -1;
 	}
-	if (i != c->ship_index)
+	if ((uint32_t) i != c->ship_index)
 		snis_log(SNIS_ERROR, "i != ship index at %s:%d\n", __FILE__, __LINE__);
 	bytevalue = (uint8_t *) &go[i];
 	bytevalue += offset;
@@ -22399,7 +22400,7 @@ static int process_adjust_control_fire_missile(struct game_client *c, uint32_t i
 		pthread_mutex_unlock(&universe_mutex);
 		return -1;
 	}
-	if (i != c->ship_index)
+	if ((uint32_t) i != c->ship_index)
 		snis_log(SNIS_ERROR, "i != ship index at %s:%d\n", __FILE__, __LINE__);
 	o = &go[i];
 	if (o->tsd.ship.missile_count <= 0)
@@ -22434,7 +22435,7 @@ static int process_adjust_control_deploy_flare(struct game_client *c, uint32_t i
 		pthread_mutex_unlock(&universe_mutex);
 		return 0;
 	}
-	if (i != c->ship_index)
+	if ((uint32_t) i != c->ship_index)
 		snis_log(SNIS_ERROR, "i != ship index at %s:%d\n", __FILE__, __LINE__);
 	o = &go[i];
 	for (i = 0; i < flare_count; i++)
@@ -22567,7 +22568,7 @@ static int process_save_engineering_preset(struct game_client *c)
 		pthread_mutex_unlock(&universe_mutex);
 		return -1;
 	}
-	if (i != c->ship_index)
+	if ((uint32_t) i != c->ship_index)
 		snis_log(SNIS_ERROR, "i != ship index at %s:%d\n", __FILE__, __LINE__);
 
 	bd = &bridgelist[c->bridge].persistent_bridge_data;
@@ -22616,7 +22617,7 @@ static int process_apply_engineering_preset(struct game_client *c)
 		pthread_mutex_unlock(&universe_mutex);
 		return -1;
 	}
-	if (i != c->ship_index)
+	if ((uint32_t) i != c->ship_index)
 		snis_log(SNIS_ERROR, "i != ship index at %s:%d\n", __FILE__, __LINE__);
 
 	bd = &bridgelist[c->bridge].persistent_bridge_data;
@@ -22677,7 +22678,7 @@ static int process_docking_magnets(struct game_client *c)
 		pthread_mutex_unlock(&universe_mutex);
 		return -1;
 	}
-	if (i != c->ship_index)
+	if ((uint32_t) i != c->ship_index)
 		snis_log(SNIS_ERROR, "i != ship index at %s:%t\n", __FILE__, __LINE__);
 	go[i].tsd.ship.docking_magnets = !go[i].tsd.ship.docking_magnets;
 	go[i].timestamp = universe_timestamp;
@@ -22757,7 +22758,7 @@ static int process_standard_orbit(struct game_client *c)
 		pthread_mutex_unlock(&universe_mutex);
 		return -1;
 	}
-	if (i != c->ship_index)
+	if ((uint32_t) i != c->ship_index)
 		snis_log(SNIS_ERROR, "i != ship index at %s:%t\n", __FILE__, __LINE__);
 	ship = &go[i];
 	toggle_standard_orbit(c, ship);
@@ -22781,7 +22782,7 @@ static int process_request_starmap(struct game_client *c)
 		pthread_mutex_unlock(&universe_mutex);
 		return -1;
 	}
-	if (i != c->ship_index)
+	if ((uint32_t) i != c->ship_index)
 		snis_log(SNIS_ERROR, "i != ship index at %s:%t\n", __FILE__, __LINE__);
 	ship = &go[i];
 	ship->tsd.ship.nav_mode = !ship->tsd.ship.nav_mode;
@@ -22833,7 +22834,7 @@ static int process_engage_warp(struct game_client *c)
 		pthread_mutex_unlock(&universe_mutex);
 		return -1;
 	}
-	if (i != c->ship_index)
+	if ((uint32_t) i != c->ship_index)
 		snis_log(SNIS_ERROR, "i != ship index at %s:%t\n", __FILE__, __LINE__);
 	o = &go[i];
 	if (o->tsd.ship.warp_time >= 0) {/* already engaged */
@@ -23240,7 +23241,7 @@ static int turn_on_tractor_beam(struct game_client *c, struct snis_entity *ship,
 		goto tractorfail;
 
 	/* If something is already tractored, turn off beam... */
-	if (ship->tsd.ship.tractor_beam != -1) {
+	if (ship->tsd.ship.tractor_beam != (uint32_t) -1) {
 		i = lookup_by_id(ship->tsd.ship.tractor_beam);
 		if (i >= 0 && oid == go[i].tsd.laserbeam.target) {
 			/* if same thing selected, turn off beam and we're done */
@@ -24174,7 +24175,7 @@ static void queue_up_client_waypoint_update(struct game_client *c)
 {
 	int i;
 
-	if ((universe_timestamp % 100) == c->bridge) /* update every 10 secs regardless */
+	if ((universe_timestamp % 100) == (uint32_t) c->bridge) /* update every 10 secs regardless */
 		c->waypoints_dirty = 1;
 	if (!c->waypoints_dirty)
 		return;
@@ -25748,10 +25749,8 @@ static void move_damcon_entities_on_bridge(int bridge_number)
 		socket = &d->o[i];
 		if (socket->tsd.socket.system >= DAMCON_SYSTEM_COUNT - 1)
 			continue;
-		if (socket->tsd.socket.system < 0)
-			continue;
 		id = socket->tsd.socket.contents_id;
-		if (id == DAMCON_SOCKET_EMPTY) {
+		if ((uint32_t) id == DAMCON_SOCKET_EMPTY) {
 			count_socket_as_empty(damage, socket->tsd.socket.system);
 			continue;
 		}
