@@ -17923,7 +17923,7 @@ static void meta_comms_hail(char *name, struct game_client *c, char *txt)
 				int found = 0;
 
 				for (k = 0; k < nchannels; k++)
-					if (bridgelist[j].comms_channel == channel[k]) {
+					if ((uint32_t) bridgelist[j].comms_channel == channel[k]) {
 						found = 1;
 						break;
 					}
@@ -17980,7 +17980,7 @@ channels_maxxed:
 	pthread_mutex_unlock(&universe_mutex);
 
 	/* If switching to channel to communicate with a starbase... */
-	if (switch_channel && bridgelist[c->bridge].comms_channel != channel[0]) {
+	if (switch_channel && (uint32_t) bridgelist[c->bridge].comms_channel != channel[0]) {
 		snprintf(msg, sizeof(msg), "TRANSMISSION TERMINATED ON CHANNEL %u",
 				bridgelist[c->bridge].comms_channel);
 		send_comms_packet(&go[c->ship_index], name, bridgelist[c->bridge].comms_channel, msg);
