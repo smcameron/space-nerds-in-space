@@ -9652,7 +9652,7 @@ static void update_external_camera_position_and_orientation(struct snis_entity *
 static void draw_nav_main_idiot_lights(struct snis_entity *ship, int color)
 {
 	/* idiot lights for low power of various systems */
-	sng_set_foreground(UI_COLOR(nav_warning));
+	sng_set_foreground(color);
 	if (ship->tsd.ship.power_data.sensors.i < idiot_light_threshold && (timer & 0x08))
 		sng_center_xy_draw_string("LOW SENSOR POWER", NANO_FONT, SCREEN_WIDTH / 2, txy(65));
 	if (ship->tsd.ship.power_data.maneuvering.i < idiot_light_threshold && (timer & 0x08))
