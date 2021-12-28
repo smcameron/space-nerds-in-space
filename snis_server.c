@@ -9803,7 +9803,7 @@ static void maybe_transmit_attached_science_text(int bridge, struct snis_entity 
 	send_packet_to_all_clients_on_a_bridge(ship->id, pb, ROLE_SCIENCE);
 }
 
-static void maybe_transmit_custom_planet_description(int bridge, struct snis_entity *ship,
+static void maybe_transmit_custom_planet_description(struct snis_entity *ship,
 				struct snis_entity *planet)
 {
 	struct packed_buffer *pb;
@@ -9849,7 +9849,7 @@ static void check_science_selection(struct snis_entity *o)
 	range2 = o->tsd.ship.scibeam_range * o->tsd.ship.scibeam_range;
 	maybe_transmit_attached_science_text(bn, o, &go[i]);
 	if (go[i].type == OBJTYPE_PLANET)
-		maybe_transmit_custom_planet_description(bn, o, &go[i]);
+		maybe_transmit_custom_planet_description(o, &go[i]);
 	if (dist2 <= range2)
 		return;
 	if ((go[i].type == OBJTYPE_PLANET || go[i].type == OBJTYPE_STARBASE) &&
