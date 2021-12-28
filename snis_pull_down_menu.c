@@ -429,7 +429,8 @@ int pull_down_menu_add_row(struct pull_down_menu *m, char *column, char *row, vo
 	return pull_down_menu_add_row_internal(m, column, row, func, cookie, 1);
 }
 
-int pull_down_menu_button_press(struct pull_down_menu *m, int x, int y)
+int pull_down_menu_button_press(struct pull_down_menu *m,
+		__attribute__((unused)) int x, __attribute__((unused)) int y)
 {
 	struct pull_down_menu_item *row;
 
