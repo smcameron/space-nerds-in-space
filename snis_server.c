@@ -13944,7 +13944,7 @@ static void add_wormholes(void)
 }
 
 static int add_warpgate(double x, double y, double z,
-			double vx, double vz, double heading, int n, uint32_t assoc_planet_id)
+			double vx, double vz, double heading, int n)
 {
 	int i;
 
@@ -13970,7 +13970,6 @@ static void add_warpgates(void)
 {
 	int i, j, k, planet_index;
 	double x, y, z;
-	uint32_t assoc_planet_id;
 
 	for (i = 0; i < NWARPGATES; i++) {
 		int p = 0;
@@ -13986,7 +13985,6 @@ static void add_warpgates(void)
 				y = go[j].y + dy;
 				z = go[j].z + dz;
 				found = 1;
-				assoc_planet_id = go[j].id;
 				planet_index = j;
 				break;
 			}
@@ -13995,10 +13993,9 @@ static void add_warpgates(void)
 			/* If we get here, it's a bug... */
 			printf("Nonfatal bug at %s:%d\n", __FILE__, __LINE__);
 			random_object_coordinates_yrange(&x, &y, &z, 1000);
-			assoc_planet_id = (uint32_t) -1;
 			planet_index = -1;
 		}
-		k = add_warpgate(x, y, z, 0.0, 0.0, 0.0, i, assoc_planet_id);
+		k = add_warpgate(x, y, z, 0.0, 0.0, 0.0, i);
 		if (k > 0) {
 			/* Set the faction of the warp gate to match the planet */
 			if (found && planet_index > 0)
