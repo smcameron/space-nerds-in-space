@@ -2007,7 +2007,7 @@ static void remove_ship_victim(struct snis_entity *ship, uint32_t victim_id)
 
 	for (i = 0; i < ship->tsd.ship.nai_entries; i++) {
 		if (ship->tsd.ship.ai[i].ai_mode == AI_MODE_ATTACK) {
-			if (ship->tsd.ship.ai[i].u.attack.victim_id == victim_id)
+			if ((uint32_t) ship->tsd.ship.ai[i].u.attack.victim_id == victim_id)
 				ship->tsd.ship.ai[i].u.attack.victim_id = -2;
 		}
 	}
@@ -2018,7 +2018,7 @@ static void remove_starbase_victim(struct snis_entity *starbase, uint32_t victim
 	int i, j;
 
 	for (i = 0; i < starbase->tsd.starbase.nattackers;) {
-		if (starbase->tsd.starbase.attacker[i] == victim_id) {
+		if ((uint32_t) starbase->tsd.starbase.attacker[i] == victim_id) {
 			for (j = i; j < starbase->tsd.starbase.nattackers - 1; j++) {
 				starbase->tsd.starbase.attacker[j] = starbase->tsd.starbase.attacker[j + 1];
 			}
@@ -2146,7 +2146,7 @@ static void send_packet_to_all_clients_on_a_bridge_except(uint32_t shipid, struc
 			for (j = 0; j < exceptions->nclients; j++) {
 				if (exceptions->client[j] != i)
 					continue;
-				if (exceptions->shipid[j] != shipid && shipid != ANY_SHIP_ID)
+				if ((uint32_t) exceptions->shipid[j] != shipid && shipid != ANY_SHIP_ID)
 					continue;
 				skip = 1;
 				break;
@@ -2349,7 +2349,7 @@ static void send_comms_packet_to_all_bridges_on_channel(struct snis_entity *tran
 		if (!(c->role & roles))
 			continue;
 
-		if (bridgelist[c->bridge].comms_channel != channel)
+		if ((uint32_t) bridgelist[c->bridge].comms_channel != channel)
 			continue;
 
 		/* transmitter may be null (e.g. LUA script) */
@@ -2769,7 +2769,7 @@ static void calculate_torpedolike_damage(struct snis_entity *target, double weap
 				target->sdata.shield_depth,
 				target->sdata.shield_wavelength);
 
-	if (targeted_system >= 0 && targeted_system < NUM_POWER_MODEL_SYSTEMS) {
+	if (targeted_system < NUM_POWER_MODEL_SYSTEMS) {
 		switch (targeted_system) {
 		case DAMCON_TYPE_SHIELDSYSTEM:
 			target->tsd.ship.damage.shield_damage = roll_damage(target, d, 3 * twp, ss,
@@ -2882,7 +2882,7 @@ static void calculate_laser_damage(struct snis_entity *o, uint8_t wavelength, fl
 				o->sdata.shield_depth,
 				o->sdata.shield_wavelength);
 
-	for (i = 0; i < sizeof(o->tsd.ship.damage); i++) {
+	for (i = 0; (size_t) i < sizeof(o->tsd.ship.damage); i++) {
 
 		if (i != targeted_system && targeted_system != TARGET_ALL_SYSTEMS)
 			continue;
@@ -3308,7 +3308,7 @@ static void push_attack_mode(struct snis_entity *attacker, uint32_t victim_id, i
 
 	if (n > 0 && attacker->tsd.ship.ai[n - 1].ai_mode == AI_MODE_ATTACK) {
 
-		if (attacker->tsd.ship.ai[n - 1].u.attack.victim_id == victim_id)
+		if ((uint32_t) attacker->tsd.ship.ai[n - 1].u.attack.victim_id == victim_id)
 			return; /* already attacking this guy */
 		v = &go[i];
 		d1 = dist3dsqrd(v->x - attacker->x, v->y - attacker->y, v->z - attacker->z);
@@ -3770,7 +3770,7 @@ static void add_starbase_attacker(struct snis_entity *starbase, int attacker_id)
 
 	/* Attacker is not already known */
 	n = starbase->tsd.starbase.nattackers;
-	if (n >= ARRAYSIZE(starbase->tsd.starbase.attacker))
+	if ((size_t) n >= ARRAYSIZE(starbase->tsd.starbase.attacker))
 		n %= ARRAYSIZE(starbase->tsd.starbase.attacker);
 	else
 		starbase->tsd.starbase.nattackers++;
@@ -4738,7 +4738,7 @@ static void spacemonster_play(struct snis_entity *o)
 	double dist;
 	float vel, esttime;
 
-	if (o->tsd.spacemonster.nearest_spacemonster == -1)
+	if (o->tsd.spacemonster.nearest_spacemonster == (uint32_t) -1)
 		return;
 	i = lookup_by_id(o->tsd.spacemonster.nearest_spacemonster);
 	if (i < 0)
@@ -4823,7 +4823,7 @@ static void spacemonster_fight(struct snis_entity *o)
 	o->tsd.spacemonster.dvz = to_target.v.z;
 
 	/* If too close to other spacemonster, steer away from it */
-	if (o->tsd.spacemonster.nearest_spacemonster != -1) {
+	if (o->tsd.spacemonster.nearest_spacemonster != (uint32_t) -1) {
 		i = lookup_by_id(o->tsd.spacemonster.nearest_spacemonster);
 		if (i >= 0) {
 			float dist = object_dist(o, &go[i]);
@@ -4852,7 +4852,7 @@ static void spacemonster_eat(struct snis_entity *o)
 	float vscale;
 	int candidate;
 
-	if (o->tsd.spacemonster.nearest_asteroid == -1 || snis_randn(1000) < 20) {
+	if (o->tsd.spacemonster.nearest_asteroid == (uint32_t) -1 || snis_randn(1000) < 20) {
 		/* Find the nearest asteroid somewhere We look sometimes randomly too
 		 * because asteroids move, and the nearest one could change
 		 */
@@ -4903,7 +4903,7 @@ static void spacemonster_eat(struct snis_entity *o)
 	o->tsd.spacemonster.dvz = v.v.z;
 
 	/* If too close to other spacemonster, steer away from it */
-	if (o->tsd.spacemonster.nearest_spacemonster != -1) {
+	if (o->tsd.spacemonster.nearest_spacemonster != (uint32_t) -1) {
 		i = lookup_by_id(o->tsd.spacemonster.nearest_spacemonster);
 		if (i >= 0) {
 			dist = object_dist(o, &go[i]);
@@ -5162,7 +5162,7 @@ static void check_for_nearby_targets(struct snis_entity *o)
 		int i;
 		struct snis_entity *v;
 
-		if (victim_id == -1) {/* no nearby victims */
+		if (victim_id == (uint32_t) -1) {/* no nearby victims */
 			ai_trace(o->id, "CHECKING FOR NEARBY TARGETS, FOUND NONE");
 			return;
 		}
@@ -5321,7 +5321,7 @@ static void ai_maybe_fire_weapon(struct snis_entity *o, struct snis_entity *v, i
 {
 	if (snis_randn(1000) < (enemy_torpedo_fire_chance * 10) + imacop * 150 &&
 		vdist <= (torpedo_lifetime * torpedo_velocity) + extra_range &&
-		o->tsd.ship.next_torpedo_time <= universe_timestamp &&
+		(uint32_t) o->tsd.ship.next_torpedo_time <= universe_timestamp &&
 		o->tsd.ship.torpedoes > 0 &&
 		ship_type[o->tsd.ship.shiptype].has_torpedoes) {
 		double dist, flight_time, tx, ty, tz, vx, vy, vz;
@@ -5347,7 +5347,7 @@ static void ai_maybe_fire_weapon(struct snis_entity *o, struct snis_entity *v, i
 		}
 	} else {
 		if (snis_randn(1000) < enemy_laser_fire_chance * 10 + imacop * 200 &&
-			o->tsd.ship.next_laser_time <= universe_timestamp &&
+			(uint32_t) o->tsd.ship.next_laser_time <= universe_timestamp &&
 			ship_type[o->tsd.ship.shiptype].has_lasers) {
 			if (v->type == OBJTYPE_PLANET || !planet_between_objs(o, v)) {
 				o->tsd.ship.next_laser_time = universe_timestamp +
@@ -5359,7 +5359,7 @@ static void ai_maybe_fire_weapon(struct snis_entity *o, struct snis_entity *v, i
 		} else {
 			/* TODO: This probability may need tuning. */
 			if (snis_randn(1000) < (enemy_missile_fire_chance * 10) + imacop * 200 &&
-				o->tsd.ship.next_missile_time < universe_timestamp &&
+				(uint32_t) o->tsd.ship.next_missile_time < universe_timestamp &&
 				ship_type[o->tsd.ship.shiptype].has_missiles) {
 				if (v->type == OBJTYPE_BRIDGE || v->type == OBJTYPE_NPCSHIP) {
 					o->tsd.ship.next_missile_time = universe_timestamp +
@@ -5399,13 +5399,13 @@ static void ai_attack_mode_brain(struct snis_entity *o)
 		return;
 	}
 
-	if (o->tsd.ship.ai[n].u.attack.victim_id == (uint32_t) -2) { /* victim was removed */
+	if (o->tsd.ship.ai[n].u.attack.victim_id == -2) { /* victim was removed */
 		ai_trace(o->id, "POP ATTACK, VICTIM WAS REMOVED");
 		pop_ai_attack_mode(o);
 		return;
 	}
 
-	if (o->tsd.ship.ai[n].u.attack.victim_id == (uint32_t) -1) {
+	if (o->tsd.ship.ai[n].u.attack.victim_id == -1) {
 		int victim_id = find_nearest_victim(o);
 
 		if (victim_id == -1) { /* no nearby victims */
@@ -5713,7 +5713,7 @@ static void ai_fleet_member_mode_brain(struct snis_entity *o)
 
 	position = fleet_position_number(f->fleet, o->id);
 	leader_id = fleet_get_leader_id(f->fleet);
-	if (leader_id == o->id) { /* I'm the leader now */
+	if ((uint32_t) leader_id == o->id) { /* I'm the leader now */
 		ai_trace(o->id, "BECAME FLEET LEADER");
 		o->tsd.ship.ai[n].ai_mode = AI_MODE_FLEET_LEADER;
 		o->tsd.ship.ai[0].u.fleet.fleet_position = 0;
