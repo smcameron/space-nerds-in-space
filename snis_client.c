@@ -16471,8 +16471,7 @@ static void draw_science_data(struct snis_entity *ship, struct snis_entity *o, i
 			o->type == OBJTYPE_STARBASE ||
 			o->type == OBJTYPE_DERELICT)) {
 			y += yinc;
-			the_faction = o ?
-				o->sdata.faction >= 0 &&
+			the_faction = o ?  
 				o->sdata.faction < nfactions() ?
 					faction_name(o->sdata.faction) : "UNKNOWN" : "UNKNOWN";
 			snprintf(buffer, sizeof(buffer), "ORIG: %s", the_faction);
