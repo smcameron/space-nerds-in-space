@@ -12285,7 +12285,7 @@ static void show_manual_weapons(void)
 }
 
 static void send_natural_language_request_to_server(char *msg);
-static void nav_computer_data_entered(void *x)
+static void nav_computer_data_entered(__attribute__((unused)) void *x)
 {
 	trim_whitespace(nav_ui.input);
 	clean_spaces(nav_ui.input);
@@ -13893,53 +13893,53 @@ static void show_navigation(void)
 	show_common_screen("NAV");
 }
 
-static void main_engineering_button_pressed(void *x)
+static void main_engineering_button_pressed(__attribute__((unused)) void *x)
 {
 	displaymode = DISPLAYMODE_ENGINEERING;
 }
 
-static void robot_forward_button_pressed(void *x)
+static void robot_forward_button_pressed(__attribute__((unused)) void *x)
 {
 	damcon_dirkey(0, -1);
 }
 
-static void robot_backward_button_pressed(void *x)
+static void robot_backward_button_pressed(__attribute__((unused)) void *x)
 {
 	damcon_dirkey(0, 1);
 }
 
-static void robot_left_button_pressed(void *x)
+static void robot_left_button_pressed(__attribute__((unused)) void *x)
 {
 	damcon_dirkey(-1, 0);
 }
 
-static void robot_right_button_pressed(void *x)
+static void robot_right_button_pressed(__attribute__((unused)) void *x)
 {
 	damcon_dirkey(1, 0);
 }
 
-static void robot_gripper_button_pressed(void *x)
+static void robot_gripper_button_pressed(__attribute__((unused)) void *x)
 {
 	queue_to_server(snis_opcode_pkt("b", OPCODE_REQUEST_ROBOT_GRIPPER));
 }
 
-static void robot_auto_button_pressed(void *x)
+static void robot_auto_button_pressed(__attribute__((unused)) void *x)
 {
 	queue_to_server(snis_opcode_pkt("bb", OPCODE_ROBOT_AUTO_MANUAL, DAMCON_ROBOT_FULLY_AUTONOMOUS));
 }
 
-static void robot_manual_button_pressed(void *x)
+static void robot_manual_button_pressed(__attribute__((unused)) void *x)
 {
 	queue_to_server(snis_opcode_pkt("bb", OPCODE_ROBOT_AUTO_MANUAL, DAMCON_ROBOT_MANUAL_MODE));
 }
 
-static void eject_warp_core_button_pressed(void *x)
+static void eject_warp_core_button_pressed(__attribute__((unused)) void *x)
 {
 	queue_to_server(snis_opcode_pkt("b", OPCODE_EJECT_WARP_CORE));
 	return;
 }
 
-static void damcon_custom_button_pressed(void *x)
+static void damcon_custom_button_pressed(__attribute__((unused)) void *x)
 {
 	queue_to_server(snis_opcode_pkt("bb", OPCODE_CUSTOM_BUTTON, OPCODE_CUSTOM_BUTTON_SUBCMD_DAMCON));
 }
@@ -14146,12 +14146,12 @@ static int process_client_config(void)
 	return 0;
 }
 
-static void damcon_button_pressed(void *x)
+static void damcon_button_pressed(__attribute__((unused)) void *x)
 {
 	displaymode = DISPLAYMODE_DAMCON;
 }
 
-static void silence_alarms_pressed(void *x)
+static void silence_alarms_pressed(__attribute__((unused)) void *x)
 {
 	struct snis_entity *o = find_my_ship();
 	if (!o)
@@ -14160,12 +14160,12 @@ static void silence_alarms_pressed(void *x)
 		OPCODE_ADJUST_CONTROL_SILENCE_ALARMS);
 }
 
-static void eng_custom_button_pressed(void *x)
+static void eng_custom_button_pressed(__attribute__((unused)) void *x)
 {
 	queue_to_server(snis_opcode_pkt("bb", OPCODE_CUSTOM_BUTTON, OPCODE_CUSTOM_BUTTON_SUBCMD_ENG));
 }
 
-static void eng_deploy_flare_button_pressed(void *x)
+static void eng_deploy_flare_button_pressed(__attribute__((unused)) void *x)
 {
 	transmit_adjust_control_input(0, OPCODE_ADJUST_CONTROL_DEPLOY_FLARE);
 }
@@ -14200,7 +14200,7 @@ static void preset_button_long_pressed(void *preset)
 	preset_button_pressed(preset);
 }
 
-static void preset_save_button_pressed(void *x)
+static void preset_save_button_pressed(__attribute__((unused)) void *x)
 {
 	transmit_save_preset(eng_ui.selected_preset);
 }
@@ -14997,43 +14997,43 @@ static void show_damcon(void)
 	show_common_screen("DAMAGE CONTROL");
 }
 
-static void sci_details_pressed(void *x)
+static void sci_details_pressed(__attribute__((unused)) void *x)
 {
 	queue_to_server(snis_opcode_pkt("bb", OPCODE_SCI_DETAILS,
 		(unsigned char) SCI_DETAILS_MODE_DETAILS));
 }
 
-static void sci_waypoints_pressed(void *x)
+static void sci_waypoints_pressed(__attribute__((unused)) void *x)
 {
 	queue_to_server(snis_opcode_pkt("bb", OPCODE_SCI_DETAILS,
 		(unsigned char) SCI_DETAILS_MODE_WAYPOINTS));
 }
 
-static void sci_align_to_ship_pressed(void *x)
+static void sci_align_to_ship_pressed(__attribute__((unused)) void *x)
 {
 	queue_to_server(snis_opcode_pkt("b", OPCODE_SCI_ALIGN_TO_SHIP));
 }
 
-static void sci_threed_pressed(void *x)
+static void sci_threed_pressed(__attribute__((unused)) void *x)
 {
 	queue_to_server(snis_opcode_pkt("bb", OPCODE_SCI_DETAILS,
 		(unsigned char) SCI_DETAILS_MODE_THREED));
 }
 
-static void sci_sciplane_pressed(void *x)
+static void sci_sciplane_pressed(__attribute__((unused)) void *x)
 {
 	queue_to_server(snis_opcode_pkt("bb", OPCODE_SCI_DETAILS,
 		(unsigned char) SCI_DETAILS_MODE_SCIPLANE));
 }
 
-static void sci_tractor_pressed(void *x)
+static void sci_tractor_pressed(__attribute__((unused)) void *x)
 {
 	uint32_t id = curr_science_guy ? curr_science_guy->id : (uint32_t) 0xffffffff;
 	queue_to_server(snis_opcode_pkt("bw", OPCODE_REQUEST_TRACTORBEAM, id));
 	sci_ui.low_tractor_power_timer = 3 * frame_rate_hz;
 }
 
-static void sci_mining_bot_pressed(void *x)
+static void sci_mining_bot_pressed(__attribute__((unused)) void *x)
 {
 	uint32_t id = curr_science_guy ? curr_science_guy->id : (uint32_t) 0xffffffff;
 	queue_to_server(snis_opcode_pkt("bw", OPCODE_REQUEST_MINING_BOT, id));
@@ -15044,7 +15044,7 @@ static void sci_custom_button_pressed(__attribute__((unused)) void *x)
 	queue_to_server(snis_opcode_pkt("bb", OPCODE_CUSTOM_BUTTON, OPCODE_CUSTOM_BUTTON_SUBCMD_SCIENCE));
 }
 
-static void science_waypoint_entered(void *cookie)
+static void science_waypoint_entered(__attribute__((unused)) void *cookie)
 {
 	return;
 }
@@ -15070,7 +15070,7 @@ static void science_select_waypoint_pressed(void *cookie)
 					(uint32_t) index);
 }
 
-static void science_add_current_pos_pressed(void *cookie)
+static void science_add_current_pos_pressed(__attribute__((unused)) void *cookie)
 {
 	struct snis_entity *o = find_my_ship();
 	if (!o)
@@ -15082,7 +15082,7 @@ static void science_add_current_pos_pressed(void *cookie)
 						o->z, (int32_t) UNIVERSE_DIM));
 }
 
-static void science_add_waypoint_pressed(void *cookie)
+static void science_add_waypoint_pressed(__attribute__((unused)) void *cookie)
 {
 	int rc;
 	double x, y, z;
@@ -15355,7 +15355,7 @@ static void comms_cryptanalysis_button_pressed(__attribute__((unused)) void *x)
 	queue_to_server(snis_opcode_pkt("bb", OPCODE_COMMS_CRYPTO, !o->tsd.ship.comms_crypto_mode));
 }
 
-static void comms_screen_red_alert_pressed(void *x)
+static void comms_screen_red_alert_pressed(__attribute__((unused)) void *x)
 {
 	unsigned char new_alert_mode;
 
@@ -15371,7 +15371,7 @@ static void comms_hail_mining_bot_pressed(__attribute__((unused)) void *x)
 	return;
 }
 
-static void comms_main_screen_pressed(void *x)
+static void comms_main_screen_pressed(__attribute__((unused)) void *x)
 {
 	unsigned char new_comms_mode;
 
@@ -15452,7 +15452,7 @@ static void send_normal_comms_packet_to_server(char *msg)
 	send_comms_packet_to_server(msg, OPCODE_COMMS_TRANSMISSION, my_ship_id);
 }
 
-static void comms_transmit_button_pressed(void *x)
+static void comms_transmit_button_pressed(__attribute__((unused)) void *x)
 {
 	if (strlen(comms_ui.input) == 0)
 		return;
@@ -15577,7 +15577,7 @@ static void send_updated_cipher_key_to_server(void)
 	queue_to_server(pb);
 }
 
-static void crypto_reset_button_pressed(void *x)
+static void crypto_reset_button_pressed(__attribute__((unused)) void *x)
 {
 	int i;
 
