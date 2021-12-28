@@ -294,7 +294,7 @@ int snis_opcode_def_init(void)
 
 static void check_index(int index)
 {
-	if (index < 0 || index > ARRAYSIZE(opcode_def)) {
+	if (index < 0 || (size_t) index >= ARRAYSIZE(opcode_def)) {
 		fprintf(stderr, "Bad opcode index %d detected\n", index);
 		stacktrace("Bad opcode index");
 		abort();
@@ -317,7 +317,7 @@ int snis_opcode_subcode_payload_size(uint8_t opcode, uint8_t subcode)
 
 	check_index(index);
 	assert(subcode < NSUBCODES);
-	if (index < 0 || index > ARRAYSIZE(opcode_def))
+	if (index < 0 || (size_t) index >= ARRAYSIZE(opcode_def))
 		abort();
 	return opcode_def[index].size;
 }
