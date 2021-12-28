@@ -124,7 +124,7 @@ GLOBAL void ui_element_reset_position_offset(struct ui_element *element);
 GLOBAL void ui_element_list_reset_position_offsets(struct ui_element_list *list);
 /* Find the element in the linked list of elements and give it keyboard focus
  * while removing keyboard focus from all other elements in the linked list */
-GLOBAL void ui_set_focus(struct ui_element_list *list, struct ui_element *e, int has_focus);
+GLOBAL void ui_set_focus(struct ui_element_list *list, struct ui_element *e);
 /* Removes keyboard focus from all ui elements in a linked list */
 GLOBAL void ui_element_list_clear_focus(struct ui_element_list *list);
 /* Find the ui element in the linked list associated with the given widget and

@@ -160,7 +160,7 @@ void ui_element_set_tooltip(struct ui_element *element, char *tooltip)
 	element->tooltip = strdup(tooltip);
 }
 
-void ui_set_focus(struct ui_element_list *list, struct ui_element *e, int has_focus)
+void ui_set_focus(struct ui_element_list *list, struct ui_element *e)
 {
 	if (!e)
 		return;
@@ -226,12 +226,12 @@ void ui_element_list_button_release(struct ui_element_list *list, int x, int y)
 	if (candidate) {
 		if (candidate->inside_fn) {
 			if (candidate->inside_fn(candidate->element, x, y)) {
-				ui_set_focus(list, candidate, 1);
+				ui_set_focus(list, candidate);
 				candidate->button_release(candidate->element, x, y);
 			}
 		} else {
 			if (candidate->button_press(candidate->element, x, y))
-				ui_set_focus(list, e, 1);
+				ui_set_focus(list, e);
 		}
 	}
 }
@@ -405,7 +405,7 @@ void ui_set_widget_focus(struct ui_element_list *list, void *widget)
 {
 	struct ui_element *uie = widget_to_ui_element(list, widget);
 	if (uie)
-		ui_set_focus(list, uie, 1);
+		ui_set_focus(list, uie);
 }
 
 void ui_set_tooltip_drawing_function(ui_tooltip_drawing_function f)
