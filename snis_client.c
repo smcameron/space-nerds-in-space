@@ -5878,7 +5878,7 @@ static void init_planetary_atmospheres(void)
 	planetary_atmosphere_model_init_models(ATMOSPHERE_TYPE_GEN_SEED, NATMOSPHERE_TYPES);
 }
 
-static void reload_per_solarsystem_textures(char *old_solarsystem, char *new_solarsystem,
+static void reload_per_solarsystem_textures(char *old_solarsystem,
 						struct solarsystem_asset_spec *old_assets,
 						struct solarsystem_asset_spec *new_assets);
 static int read_solarsystem_config(const char *solarsystem_name,
@@ -21768,7 +21768,7 @@ static int load_per_solarsystem_textures()
 	splash_progress = 55;
 	if (strcmp(old_solarsystem_name, "") == 0)
 		strcpy(old_solarsystem_name, DEFAULT_SOLAR_SYSTEM);
-	reload_per_solarsystem_textures(old_solarsystem_name, solarsystem_name,
+	reload_per_solarsystem_textures(old_solarsystem_name,
 					old_solarsystem_assets, solarsystem_assets);
 	fprintf(stderr, "load_per_solarsystem_textures, loading\n");
 	if (!lua_skybox_prefix)
@@ -21849,7 +21849,7 @@ static void expire_per_solarsystem_textures(char *old_solarsystem, struct solars
 	}
 }
 
-static void reload_per_solarsystem_textures(char *old_solarsystem, char *new_solarsystem,
+static void reload_per_solarsystem_textures(char *old_solarsystem,
 						struct solarsystem_asset_spec *old_assets,
 						struct solarsystem_asset_spec *new_assets)
 {
