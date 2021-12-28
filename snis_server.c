@@ -26817,7 +26817,7 @@ static int nl_find_nearest_object_of_type(uint32_t id, int objtype)
 	o = &go[i];
 
 	for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
-		if (go[i].type != objtype)
+		if (go[i].type != (uint32_t) objtype)
 			continue;
 		if (!go[i].alive)
 			continue;
