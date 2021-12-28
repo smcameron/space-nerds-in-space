@@ -16317,7 +16317,7 @@ static void science_button_release(int button, int x, int y)
 		else
 			request_sci_select_target(OPCODE_SCI_SELECT_TARGET_TYPE_OBJECT, (uint32_t) -1); /* deselect */
 	} else if (waypoint_selected != -1) {
-		if (curr_science_waypoint != waypoint_selected)
+		if (curr_science_waypoint != (uint32_t) waypoint_selected)
 			request_sci_select_target(OPCODE_SCI_SELECT_TARGET_TYPE_WAYPOINT,
 					(uint32_t) waypoint_selected);
 		else
