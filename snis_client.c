@@ -20545,7 +20545,7 @@ static void make_science_forget_stuff(void)
 	pthread_mutex_unlock(&universe_mutex);
 }
 
-static int main_da_scroll(SDL_Window *window, SDL_MouseWheelEvent *e)
+static int main_da_scroll(SDL_MouseWheelEvent *e)
 {
 	struct snis_entity *o;
 	int16_t newval = 0;
@@ -23631,7 +23631,7 @@ static void process_events(SDL_Window *window)
 			main_da_motion_notify(window, &event.motion);
 			break;
 		case SDL_MOUSEWHEEL:
-			main_da_scroll(window, &event.wheel);
+			main_da_scroll(&event.wheel);
 			break;
 		}
 	}
