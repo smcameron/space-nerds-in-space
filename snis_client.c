@@ -16711,7 +16711,7 @@ static void draw_science_waypoints(void)
 	sng_abs_xy_draw_string("Y", NANO_FONT, txx(350), txy(180));
 	sng_abs_xy_draw_string("Z", NANO_FONT, txx(450), txy(180));
 	for (i = 0; i < sci_ui.nwaypoints; i++) {
-		if (i != curr_science_waypoint)
+		if ((uint32_t) i != curr_science_waypoint)
 			sng_set_foreground(UI_COLOR(sci_wireframe));
 		else
 			sng_set_foreground(UI_COLOR(sci_selected_waypoint));
