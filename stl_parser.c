@@ -736,7 +736,6 @@ static int fixup_vertex_indices(int v[], int n)
 }
 
 static int obj_add_face(struct mesh *m, char *line, int *tris_alloced,
-			struct triangle **ft, int *ft_alloced, int *ft_used,
 			struct vertex *vt, int nvt, struct vertex *vn, int nvn)
 {
 	int rc, v[3], tv[3], nv[3], tmp;
@@ -1020,8 +1019,6 @@ struct mesh *read_obj_file(char *file_name)
 	int tris_alloced = 0;
 	int texture_verts_alloced = 0;
 	int texture_verts_used = 0;
-	int texture_faces_alloced = 0;
-	int texture_faces_used = 0;
 	int normal_verts_alloced = 0;
 	int normal_verts_used = 0;
 	struct mesh *m;
@@ -1083,7 +1080,6 @@ struct mesh *read_obj_file(char *file_name)
 				goto flame_out;
 		} else if (strncmp(line, "f ", 2) == 0) { /* face */
 			if (obj_add_face(m, line, &tris_alloced,
-					&ft, &texture_faces_alloced, &texture_faces_used,
 					vt, texture_verts_used, vn, normal_verts_used))
 				goto flame_out;
 		} else if (strncmp(line, "mtllib ", 2) == 0) {
