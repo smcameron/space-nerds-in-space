@@ -26528,7 +26528,7 @@ static void take_your_locale_and_shove_it(void)
  *****************************************************************************************/
 
 /* callback used by natural language parser to look up game objects */
-static uint32_t natural_language_object_lookup(void *context, char *word)
+static uint32_t natural_language_object_lookup(__attribute__((unused)) void *context, char *word)
 {
 	uint32_t answer = 0xffffffff; /* not found */
 	int i, b;
@@ -26837,7 +26837,8 @@ static int nl_find_nearest_object_of_type(uint32_t id, int objtype)
 
 /* Assumes universe lock is held -- find "nearest" or "selected" or "other adjective" object */
 static int nl_find_nearest_object(struct game_client *c, int argc, char *argv[], int pos[],
-					union snis_nl_extra_data extra_data[], int starting_word)
+					__attribute__((unused)) union snis_nl_extra_data extra_data[],
+					int starting_word)
 {
 	int i, object, adj, objtype;
 
@@ -27056,7 +27057,7 @@ no_understand:
 }
 
 static void nl_what_is_anpan(void *context, int argc, char *argv[], int pos[],
-				union snis_nl_extra_data extra_data[])
+				__attribute__((unused)) union snis_nl_extra_data extra_data[])
 {
 	struct game_client *c = context;
 	int adj1, adj2, adj3, prep, noun1, noun2;
@@ -27183,7 +27184,7 @@ static void nl_how_anxPx(void *context, int argc, char *argv[], int pos[],
 
 /* do we have enough fuel */
 static void nl_do_Pxan(void *context, int argc, char *argv[], int pos[],
-				union snis_nl_extra_data extra_data[])
+				__attribute__((unused)) union snis_nl_extra_data extra_data[])
 {
 	struct game_client *c = context;
 	int pronoun, auxverb, adjective, noun;
@@ -27216,7 +27217,7 @@ no_understand:
 }
 
 static void nl_african_or_european(void *context, int argc, char *argv[], int pos[],
-				union snis_nl_extra_data extra_data[])
+				__attribute__((unused)) union snis_nl_extra_data extra_data[])
 {
 	struct game_client *c = context;
 	int verb;
@@ -27273,7 +27274,8 @@ static void nl_rotate_ship(struct game_client *c, union quat *rotation)
 }
 
 static int nl_calculate_ship_rotation(struct game_client *c,
-					int argc, char *argv[], int pos[],
+					__attribute__((unused)) int argc, char *argv[],
+					__attribute__((unused)) int pos[],
 					union snis_nl_extra_data extra_data[],
 					int direction, int amount, char *reply,
 					union quat *rotation)
@@ -27366,7 +27368,7 @@ no_understand:
 
 /* lights on/off/out */
 static void nl_lights_p(void *context, int argc, char *argv[], int pos[],
-			union snis_nl_extra_data extra_data[])
+			__attribute__((unused)) union snis_nl_extra_data extra_data[])
 {
 	struct game_client *c = context;
 	int i, prep;
@@ -27409,8 +27411,11 @@ no_understand:
 	queue_add_text_to_speech(c, "Sorry, I do not understand which direction you want to turn.");
 }
 
-static void nl_repeat_n(void *context, int argc, char *argv[], int pos[],
-			union snis_nl_extra_data extra_data[])
+static void nl_repeat_n(void *context,
+			__attribute__((unused)) int argc,
+			__attribute__((unused)) char *argv[],
+			__attribute__((unused)) int pos[],
+			__attribute__((unused)) union snis_nl_extra_data extra_data[])
 {
 	char buf[256];
 	struct game_client *c = context;
@@ -27422,7 +27427,7 @@ static void nl_repeat_n(void *context, int argc, char *argv[], int pos[],
 	queue_add_text_to_speech(c, buf);
 }
 
-static void nl_set_volume(struct game_client *c, char *word, float value)
+static void nl_set_volume(struct game_client *c, __attribute__((unused)) char *word, float value)
 {
 	char text[100];
 
@@ -27450,7 +27455,7 @@ static void nl_set_volume(struct game_client *c, char *word, float value)
 
 /* Eg: "turn/shut on/off/out lights", "turn up/down volume" */
 static void nl_turn_pn_or_np(void *context, int argc, char *argv[], int pos[],
-			union snis_nl_extra_data extra_data[], int np)
+			__attribute__((unused)) union snis_nl_extra_data extra_data[], int np)
 {
 	struct game_client *c = context;
 	int i, prep, noun, value;
@@ -27844,7 +27849,7 @@ static float nl_get_zoom(struct game_client *c)
 	return -1.0;
 }
 
-static void nl_set_zoom(struct game_client *c, char *word, float value)
+static void nl_set_zoom(struct game_client *c, __attribute__((unused)) char *word, float value)
 {
 	switch (bridgelist[c->bridge].current_displaymode) {
 	case DISPLAYMODE_MAINSCREEN:
@@ -28012,7 +28017,7 @@ static void nl_set_ship_course_to_direction_helper(struct game_client *c,
 static void nl_set_ship_course_to_waypoint_helper(struct game_client *c,
 	struct snis_entity *ship,
 	int waypoint_number,
-	char *destination_name)
+	__attribute__((unused)) char *destination_name)
 {
 	union vec3 direction;
 	char waypoint_name[20];
@@ -28350,7 +28355,7 @@ no_understand:
 }
 
 static void nl_disengage_n(void *context, int argc, char *argv[], int pos[],
-		union snis_nl_extra_data extra_data[])
+		__attribute__((unused)) union snis_nl_extra_data extra_data[])
 {
 	struct game_client *c = context;
 	int i, device;
@@ -28411,7 +28416,7 @@ no_understand:
  * figuring maximum/minimum and in reply construction.
  */
 static void nl_raise_or_lower_npa(void *context, int argc, char *argv[], int pos[],
-		union snis_nl_extra_data extra_data[], int raise)
+		__attribute__((unused)) union snis_nl_extra_data extra_data[], int raise)
 {
 	struct game_client *c = context;
 	nl_set_function setit = NULL;
@@ -28511,7 +28516,7 @@ static void nl_set_npa(void *context, int argc, char *argv[], int pos[],
 
 /* "raise shields" */
 static void nl_shields_p(void *context, int argc, char *argv[], int pos[],
-		union snis_nl_extra_data extra_data[])
+		__attribute__((unused)) union snis_nl_extra_data extra_data[])
 {
 	struct game_client *c = context;
 	int prep;
@@ -28533,7 +28538,7 @@ no_understand:
 
 /* "raise shields" */
 static void nl_raise_or_lower_n(void *context, int argc, char *argv[], int pos[],
-		union snis_nl_extra_data extra_data[], int raise)
+		__attribute__((unused)) union snis_nl_extra_data extra_data[], int raise)
 {
 	struct game_client *c = context;
 	nl_set_function setit = NULL;
@@ -28578,7 +28583,7 @@ static void nl_lower_n(void *context, int argc, char *argv[], int pos[],
 }
 
 static void nl_engage_n(void *context, int argc, char *argv[], int pos[],
-		union snis_nl_extra_data extra_data[])
+		__attribute__((unused)) union snis_nl_extra_data extra_data[])
 {
 	struct game_client *c = context;
 	int i;
@@ -28733,7 +28738,8 @@ static void nl_enter_an(void *context, int argc, char *argv[], int pos[], union 
 
 static void nl_red_alert(void *context,
 			__attribute__((unused)) int argc,
-			__attribute__((unused)) char *argv[], int pos[],
+			__attribute__((unused)) char *argv[],
+			__attribute__((unused)) int pos[],
 			__attribute__((unused)) union snis_nl_extra_data extra_data[])
 {
 	struct game_client *c = context;
@@ -28862,7 +28868,8 @@ no_understand:
 }
 
 /* "zoom 10%" */
-static void nl_zoom_q(void *context, int argc, char *argv[], int pos[], union snis_nl_extra_data extra_data[])
+static void nl_zoom_q(void *context, int argc,
+		__attribute__((unused)) char *argv[], int pos[], union snis_nl_extra_data extra_data[])
 {
 	struct game_client *c = context;
 	int number;
@@ -28917,8 +28924,11 @@ no_understand:
 }
 
 /* Just "zoom" or "magnify", by itself */
-static void nl_zoom(void *context, int argc, char *argv[], int pos[],
-			union snis_nl_extra_data extra_data[])
+static void nl_zoom(void *context,
+			__attribute__((unused)) int argc,
+			__attribute__((unused)) char *argv[],
+			__attribute__((unused)) int pos[],
+			__attribute__((unused)) union snis_nl_extra_data extra_data[])
 {
 	struct game_client *c = context;
 	float amount;
@@ -28939,7 +28949,7 @@ static void nl_zoom(void *context, int argc, char *argv[], int pos[],
 
 /* "zoom in/out" */
 static void nl_zoom_p(void *context, int argc, char *argv[], int pos[],
-			union snis_nl_extra_data extra_data[])
+			__attribute__((unused)) union snis_nl_extra_data extra_data[])
 {
 	struct game_client *c = context;
 	int prep;
@@ -28982,7 +28992,7 @@ no_understand:
 }
 
 static void nl_reverse_n(void *context, int argc, char *argv[], int pos[],
-			union snis_nl_extra_data extra_data[])
+			__attribute__((unused)) union snis_nl_extra_data extra_data[])
 {
 	struct game_client *c = context;
 	int i, noun;
@@ -29022,7 +29032,7 @@ no_understand:
 }
 
 static void nl_shortlong_range_scan(void *context, int argc, char *argv[], int pos[],
-			union snis_nl_extra_data extra_data[])
+			__attribute__((unused)) union snis_nl_extra_data extra_data[])
 {
 	struct game_client *c = context;
 	uint8_t mode;
@@ -29049,8 +29059,11 @@ no_understand:
 	queue_add_text_to_speech(c, "I do not understand your request.");
 }
 
-static void nl_help(void *context, int argc, char *argv[], int pos[],
-			union snis_nl_extra_data extra_data[])
+static void nl_help(void *context,
+			__attribute__((unused)) int argc,
+			__attribute__((unused)) char *argv[],
+			__attribute__((unused)) int pos[],
+			__attribute__((unused)) union snis_nl_extra_data extra_data[])
 {
 	struct game_client *c = context;
 
@@ -29168,7 +29181,10 @@ static int compare_damage_report_entries(const void *a, const void *b)
 	return dra->percent > drb->percent;
 }
 
-static void nl_damage_report(void *context, int argc, char *argv[], int pos[],
+static void nl_damage_report(void *context,
+		__attribute__((unused)) int argc,
+		__attribute__((unused)) char *argv[],
+		__attribute__((unused)) int pos[],
 		__attribute__((unused)) union snis_nl_extra_data extra_data[])
 {
 	struct game_client *c = context;
@@ -29358,7 +29374,10 @@ no_understand:
 	queue_add_text_to_speech(c, "I am sorry, I did not understand that.");
 }
 
-static void sorry_dave(void *context, int argc, char *argv[], int pos[],
+static void sorry_dave(void *context,
+		__attribute__((unused)) int argc,
+		__attribute__((unused)) char *argv[],
+		__attribute__((unused)) int pos[],
 		__attribute__((unused)) union snis_nl_extra_data extra_data[])
 {
 	struct game_client *c = context;
@@ -29630,7 +29649,8 @@ static const struct nl_test_case_entry {
 
 static void nl_run_snis_test_cases(__attribute__((unused)) void *context,
 		__attribute__((unused)) int argc,
-		__attribute__((unused)) char *argv[], int pos[],
+		__attribute__((unused)) char *argv[],
+		__attribute__((unused)) int pos[],
 		__attribute__((unused)) union snis_nl_extra_data extra_data[])
 {
 	int i, rc;
@@ -30080,7 +30100,9 @@ static void cleanup_lockfile(void)
 }
 
 /* Clean up the lock file on SIGTERM */
-static void sigterm_handler(int sig, siginfo_t *siginfo, void *context)
+static void sigterm_handler(__attribute__((unused)) int sig,
+			__attribute__((unused)) siginfo_t *siginfo,
+			__attribute__((unused)) void *context)
 {
 	static const char buffer[] = "snis_server: Received SIGTERM, exiting.\n";
 	int rc;
