@@ -14,6 +14,12 @@
 #include <SDL2.h>
 #else
 #include <fenv.h>
+
+/* For some reason I have to define this prototype myself, (defining _GNU_SOURCE before
+ * including fenv.h doesn't help.)
+ */
+extern int feenableexcept(int excepts); 
+
 #include <SDL2/SDL.h>
 #endif
 
@@ -412,7 +418,7 @@ void do_autospin(void)
 	last_lobby_orientation = lobby_orientation;
 }
 
-static int main_da_button_press(int button, int x, int y)
+static int main_da_button_press(int button, __attribute__((unused)) int x, __attribute__((unused)) int y)
 {
 	if (button == 3) {
 		/* start drag */
