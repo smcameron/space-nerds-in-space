@@ -6,7 +6,7 @@
 #include "crater.h"
 #include "png_utils.h"
 
-int main(int argc, char *argv[])
+int main(__attribute__((unused)) int argc, __attribute__((unused)) char *argv[])
 {
 	unsigned char *image;
 	float crater_r;
