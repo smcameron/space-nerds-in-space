@@ -1256,7 +1256,7 @@ bin/test-marshal:	snis_marshal.c ${OD}/stacktrace.o Makefile ${BIN}
 	$(CC) -DTEST_MARSHAL -o bin/test-marshal snis_marshal.c ${OD}/stacktrace.o
 
 bin/test-quat:	test-quat.c ${OD}/quat.o ${OD}/matrix.o ${OD}/mathutils.o ${OD}/mtwist.o Makefile ${BIN}
-	$(CC) -Wall -Wextra --pedantic -o test-quat test-quat.c ${OD}/quat.o ${OD}/matrix.o ${OD}/mathutils.o ${OD}/mtwist.o -lm
+	$(CC) -Wall -Wextra --pedantic -o bin/test-quat test-quat.c ${OD}/quat.o ${OD}/matrix.o ${OD}/mathutils.o ${OD}/mtwist.o -lm
 
 bin/test-fleet: ${OD}/quat.o ${OD}/fleet.o ${OD}/mathutils.o ${OD}/mtwist.o Makefile ${BIN}
 	$(CC) -DTESTFLEET=1 -c -o ${OD}/test-fleet.o fleet.c
