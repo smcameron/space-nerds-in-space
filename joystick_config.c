@@ -156,7 +156,7 @@ static void translate_mode_names(char *line)
 
 	/* Figure out which mode number it is... */
 	m = -1;
-	for (i = 0; i < ARRAYSIZE(mode); i++) {
+	for (i = 0; (size_t) i < ARRAYSIZE(mode); i++) {
 		if (strcmp(mode[i].name, modename) == 0) {
 			m = i;
 			break;
