@@ -216,84 +216,84 @@ static void test_torus_dist(void)
 	p.v.y = 0.0;
 	p.v.z = 0.0;
 	dist = point_to_torus_dist(&p, 20.0, 5.0);
-	TESTIT(fabsf(dist) - 15.0 > 1e-5, "point_to_torus_dist failed.\n");
+	TESTIT(fabs(dist) - 15.0 > 1e-5, "point_to_torus_dist failed.\n");
 	printf("got %f, expected %f\n", dist, 15.0);
 
 	p.v.x = 20.0;
 	p.v.y = 0.0;
 	p.v.z = 0.0;
 	dist = point_to_torus_dist(&p, 20.0, 5.0);
-	TESTIT(fabsf(dist - (sqrtf((20.0 * 20.0) + (20.0 * 20.0)) - 5.0)) > 1e-5, "torus test 1 failed.");
+	TESTIT(fabs(dist - (sqrtf((20.0 * 20.0) + (20.0 * 20.0)) - 5.0)) > 1e-5, "torus test 1 failed.");
 	printf("got %f, expected %f\n", dist, sqrtf((20.0 * 20.0) + (20.0 * 20.0)) - 5.0);
 
 	p.v.x = 0.0;
 	p.v.y = 20.0;
 	p.v.z = 0.0;
 	dist = point_to_torus_dist(&p, 20.0, 5.0);
-	TESTIT(fabsf(dist - -5.0) > 1e-5, "torus test 2 failed.");
+	TESTIT(fabs(dist - -5.0) > 1e-5, "torus test 2 failed.");
 	printf("got %f, expected %f\n", dist, -5.0);
 
 	p.v.x = 0.0;
 	p.v.y = 0.0;
 	p.v.z = 20.0;
 	dist = point_to_torus_dist(&p, 20.0, 5.0);
-	TESTIT(fabsf(dist - -5.0) > 1e-5, "torus test 3 failed.");
+	TESTIT(fabs(dist - -5.0) > 1e-5, "torus test 3 failed.");
 	printf("got %f, expected %f\n", dist, -5.0);
 
 	p.v.x = 40.0;
 	p.v.y = 20.0;
 	p.v.z = 0.0;
 	dist = point_to_torus_dist(&p, 20.0, 5.0);
-	TESTIT(fabsf(dist - (40.0 - 5.0)) > 1e-5, "torus test 4 failed.");
+	TESTIT(fabs(dist - (40.0 - 5.0)) > 1e-5, "torus test 4 failed.");
 	printf("got %f, expected %f\n", dist, 40.0 - 5.0);
 
 	p.v.x = 0.0;
 	p.v.y = 40.0;
 	p.v.z = 0.0;
 	dist = point_to_torus_dist(&p, 20.0, 5.0);
-	TESTIT(fabsf(dist - (20.0 - 5.0)) > 1e-5, "torus test 5 failed.");
+	TESTIT(fabs(dist - (20.0 - 5.0)) > 1e-5, "torus test 5 failed.");
 	printf("got %f, expected %f\n", dist, 20.0 - 5.0);
 
 	p.v.x = 0.0;
 	p.v.y = -40.0;
 	p.v.z = 0.0;
 	dist = point_to_torus_dist(&p, 20.0, 5.0);
-	TESTIT(fabsf(dist - (20.0 - 5.0)) > 1e-5, "torus test 6 failed.");
+	TESTIT(fabs(dist - (20.0 - 5.0)) > 1e-5, "torus test 6 failed.");
 	printf("got %f, expected %f\n", dist, 20.0 - 5.0);
 
 	p.v.x = -5.0;
 	p.v.y = (1.0 / sqrtf(2.0)) * 20.0;
 	p.v.z = (1.0 / sqrtf(2.0)) * 20.0;
 	dist = point_to_torus_dist(&p, 20.0, 5.0);
-	TESTIT(fabsf(dist - 0.0) > 1e-5, "torus test 7 failed.");
+	TESTIT(fabs(dist - 0.0) > 1e-5, "torus test 7 failed.");
 	printf("got %f, expected %f\n", dist, 0.0);
 
 	p.v.x = -5.0;
 	p.v.y = -(1.0 / sqrtf(2.0)) * 20.0;
 	p.v.z = (1.0 / sqrtf(2.0)) * 20.0;
 	dist = point_to_torus_dist(&p, 20.0, 5.0);
-	TESTIT(fabsf(dist - 0.0) > 1e-5, "torus test 7 failed.");
+	TESTIT(fabs(dist - 0.0) > 1e-5, "torus test 7 failed.");
 	printf("got %f, expected %f\n", dist, 0.0);
 
 	p.v.x = -5.0;
 	p.v.y = -(1.0 / sqrtf(2.0)) * 20.0;
 	p.v.z = -(1.0 / sqrtf(2.0)) * 20.0;
 	dist = point_to_torus_dist(&p, 20.0, 5.0);
-	TESTIT(fabsf(dist - 0.0) > 1e-5, "torus test 7 failed.");
+	TESTIT(fabs(dist - 0.0) > 1e-5, "torus test 7 failed.");
 	printf("got %f, expected %f\n", dist, 0.0);
 
 	p.v.x = -4.0;
 	p.v.y = -(1.0 / sqrtf(2.0)) * 20.0;
 	p.v.z = -(1.0 / sqrtf(2.0)) * 20.0;
 	dist = point_to_torus_dist(&p, 20.0, 5.0);
-	TESTIT(fabsf(dist - -1.0) > 1e-5, "torus test 7 failed.");
+	TESTIT(fabs(dist - -1.0) > 1e-5, "torus test 7 failed.");
 	printf("got %f, expected %f\n", dist, -1.0);
 
 	p.v.x = -40.0;
 	p.v.y = -(1.0 / sqrtf(2.0)) * 20.0;
 	p.v.z = -(1.0 / sqrtf(2.0)) * 20.0;
 	dist = point_to_torus_dist(&p, 20.0, 5.0);
-	TESTIT(fabsf(dist - 35.0) > 1e-5, "torus test 7 failed.");
+	TESTIT(fabs(dist - 35.0) > 1e-5, "torus test 7 failed.");
 	printf("got %f, expected %f\n", dist, 35.0);
 }
 
@@ -314,12 +314,12 @@ static void test_heading_mark_vec3(void)
 				h1 * 180.0 / M_PI, m1 * 180.0 / M_PI,
 				h2 * 180.0 / M_PI, m2 * 180.0 / M_PI,
 				h3 * 180.0 / M_PI, m3 * 180.0 / M_PI);
-			TESTIT(fabsf(m1 - m2) > 0.5 * M_PI / 180.0, "heading mark vec3 m1m2 test failed.");
-			TESTIT(fabsf(m1 - m3) > 0.5 * M_PI / 180.0, "heading mark vec3 m1h3 test failed.");
-			if (fabsf(fabsf(m1) - 90.0 * M_PI / 180.0) > 0.01) {
+			TESTIT(fabs(m1 - m2) > 0.5 * M_PI / 180.0, "heading mark vec3 m1m2 test failed.");
+			TESTIT(fabs(m1 - m3) > 0.5 * M_PI / 180.0, "heading mark vec3 m1h3 test failed.");
+			if (fabs(fabs(m1) - 90.0 * M_PI / 180.0) > 0.01) {
 				/* at mark +/- 90, heading can be anything */
-				TESTIT(fabsf(h1 - h2) > 0.5 * M_PI / 180.0, "heading mark vec3 h1h2 testfailed.");
-				TESTIT(fabsf(h1 - h3) > 0.5 * M_PI / 180.0, "heading mark vec3 h1h3 test failed.");
+				TESTIT(fabs(h1 - h2) > 0.5 * M_PI / 180.0, "heading mark vec3 h1h2 testfailed.");
+				TESTIT(fabs(h1 - h3) > 0.5 * M_PI / 180.0, "heading mark vec3 h1h3 test failed.");
 			}
 		}
 	}
