@@ -231,7 +231,7 @@ static void callback(__attribute__((unused)) void *context, __attribute__((unuse
 	printf("callback called\n");
 }
 
-int main(int argc, char *argv[])
+int main(__attribute__((unused)) int argc, __attribute__((unused)) char *argv[])
 {
 
 	struct space_partition *sp;
