@@ -31,11 +31,14 @@ int png_utils_write_png_image(const char *filename, unsigned char *pixels, int w
 	png_structp png_ptr;
 	png_infop info_ptr;
 	png_byte **row;
-	int x, y, rc, colordepth = 8;
+	int x, y, *rc, rv, colordepth = 8;
 	int bytes_per_pixel = has_alpha ? 4 : 3;
 	FILE *f;
 
-	rc = -1; /* assume failure until we eventually succeed */
+	rc = malloc(sizeof(*rc)); /* allocate on heap so longjmp won't clobber it */
+	if (!rc)
+		return -1;
+	*rc = -1; /* assume failure until we eventually succeed */
 	f = fopen(filename, "w");
 	if (!f) {
 		fprintf(stderr, "fopen: %s:%s\n", filename, strerror(errno));
@@ -87,12 +90,14 @@ int png_utils_write_png_image(const char *filename, unsigned char *pixels, int w
 	for (y = 0; y < h; y++)
 		png_free(png_ptr, row[y]);
 	png_free(png_ptr, row);
-	rc = 0; /* success */
+	*rc = 0; /* success */
 cleanup2:
 	png_destroy_write_struct(&png_ptr, &info_ptr);
 cleanup1:
 	fclose(f);
-	return rc;
+	rv = *rc;
+	free(rc);
+	return rv;
 }
 
 char *png_utils_read_png_image(const char *filename, int flipVertical, int flipHorizontal,
