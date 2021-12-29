@@ -27,6 +27,7 @@
 
 int png_utils_write_png_image(const char *filename, unsigned char *pixels, int w, int h, int has_alpha, int invert)
 {
+
 	png_structp png_ptr;
 	png_infop info_ptr;
 	png_byte **row;
@@ -105,6 +106,7 @@ char *png_utils_read_png_image(const char *filename, int flipVertical, int flipH
 	png_infop info_ptr = NULL;
 	png_infop end_info = NULL;
 	png_byte *image_data = NULL;
+	png_byte **image_data_ptr = NULL;
 
 	FILE *fp = fopen(filename, "rb");
 	if (!fp) {
@@ -145,6 +147,14 @@ char *png_utils_read_png_image(const char *filename, int flipVertical, int flipH
 			"2nd png_create_info_struct() returned NULL");
 		goto cleanup;
 	}
+
+	/* Alloc this on the heap prior to setjmp so longjmp can't clobber it */
+	image_data_ptr = malloc(sizeof(*image_data_ptr));
+	if (!image_data_ptr) {
+		snprintf(whynot, whynotlen, "Failed to allocat image_data_ptr");
+		goto cleanup;
+	}
+	*image_data_ptr = NULL;
 
 	if (setjmp(png_jmpbuf(png_ptr))) {
 		snprintf(whynot, whynotlen, "libpng encounted an error");
@@ -195,6 +205,7 @@ char *png_utils_read_png_image(const char *filename, int flipVertical, int flipH
 		snprintf(whynot, whynotlen, "malloc failed in load_png_texture");
 		goto cleanup;
 	}
+	*image_data_ptr = image_data; /* Save in case longjmp clobber image_data */
 
 	int bytes_per_pixel = (color_type == PNG_COLOR_TYPE_RGB_ALPHA ? 4 : 3);
 
@@ -233,8 +244,11 @@ char *png_utils_read_png_image(const char *filename, int flipVertical, int flipH
 	return (char *) image_data;
 
 cleanup:
-	if (image_data)
-		free(image_data);
+	if (image_data_ptr) {
+		if (*image_data_ptr)
+			free(*image_data_ptr);
+		free(image_data_ptr);
+	}
 	png_destroy_read_struct(&png_ptr, &info_ptr, &end_info);
 	fclose(fp);
 	return 0;
