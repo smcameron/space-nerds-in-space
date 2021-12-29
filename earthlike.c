@@ -940,9 +940,9 @@ int main(int argc, char *argv[])
 	if (sampledata)
 		scale_sampledata(sampledata, samplew, sampleh, sample_bytes_per_row);
 	printf("Loading %s\n", landfile);
-	land = load_image(landfile, &landw, &landh, &landa, &landbpr);
+	land = (unsigned char *) load_image(landfile, &landw, &landh, &landa, &landbpr);
 	printf("Loading %s\n", waterfile);
-	water = load_image(waterfile, &waterw, &waterh, &watera, &waterbpr);
+	water = (unsigned char *) load_image(waterfile, &waterw, &waterh, &watera, &waterbpr);
 	printf("Allocating output images.\n");
 	allocate_output_images();
 	printf("Initializing vertices.\n");
