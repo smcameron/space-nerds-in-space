@@ -165,7 +165,7 @@ static void *dmx_writer_thread(void *arg)
 	} while (1);
 }
 
-static int setup_serial_port(int fd, char *device)
+static int setup_serial_port(int fd, __attribute__((unused)) char *device)
 {
 	struct termios2 options;
 	int rc;
@@ -344,7 +344,7 @@ int snis_dmx_set_rgb(int handle, int number, uint8_t r, uint8_t g, uint8_t b)
 	if (!t->thread_in_use || t->fd < 0 || number >= t->nlights || t->light[number].size != 4)
 		goto error;
 	offset = t->light[number].byte;
-	if (offset < 0 || offset >= sizeof(t->dmx_packet))
+	if (offset < 0 || (size_t) offset >= sizeof(t->dmx_packet))
 		goto error;
 	t->dmx_packet[offset] = r;
 	t->dmx_packet[offset + 1] = g;
@@ -371,7 +371,7 @@ int snis_dmx_set_u8_level(int handle, int number, uint8_t level)
 	if (!t->thread_in_use || t->fd < 0 || number >= t->nlights || t->light[number].size != 1)
 		goto error;
 	offset = t->light[number].byte;
-	if (offset < 0 || offset >= sizeof(t->dmx_packet))
+	if (offset < 0 || (size_t) offset >= sizeof(t->dmx_packet))
 		goto error;
 	t->dmx_packet[offset] = level;
 	pthread_mutex_unlock(&mutex);
@@ -399,7 +399,7 @@ int snis_dmx_set_be16_level(int handle, int number, uint16_t level)
 	if (!t->thread_in_use || t->fd < 0 || number >= t->nlights || t->light[number].size != 2)
 		goto error;
 	offset = t->light[number].byte;
-	if (offset < 0 || offset >= sizeof(t->dmx_packet))
+	if (offset < 0 || (size_t) offset >= sizeof(t->dmx_packet))
 		goto error;
 	/* Convert native CPU endian u16 to big endian u16 */
 	t->dmx_packet[offset] = levelbyte[cpu_is_little_endian];
