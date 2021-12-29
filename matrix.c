@@ -548,7 +548,7 @@ void mat41_rotate_mat41(struct mat41 *rhs, struct mat41 *v, struct mat41 *axis, 
 #include <stdio.h>
 #include <math.h>
 
-int main(int argc, char *argv[])
+int main(__attribute__((unused)) int argc, __attribute__((unused)) char *argv[])
 {
 	struct mat44 answer;
 	struct mat44 identity = {{ { 1, 0, 0, 0 },  
