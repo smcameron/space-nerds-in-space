@@ -481,8 +481,8 @@ int main(int argc, char *argv[])
 	CHECK(data.i32 == 415);
 	CHECK(data.i64 == 420);
 	CHECK(fabs(data.floatdata - 6.66666) < 0.0001);
-	CHECK(abs(data.doubledata - 3.1415927) < 0.0001);
-	CHECK(abs(data2.xyz - 1.2345) < 0.0001);
+	CHECK(fabs(data.doubledata - 3.1415927) < 0.0001);
+	CHECK(fabs(data2.xyz - 1.2345) < 0.0001);
 	CHECK(fabs(data2.abc[0] - 7.8910) < 0.0001);
 	CHECK(fabs(data2.abc[1] - 2.222) < 0.0001);
 	CHECK(strcmp("this is a test", data.some_data) == 0);
