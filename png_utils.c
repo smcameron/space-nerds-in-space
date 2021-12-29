@@ -28,8 +28,8 @@
 int png_utils_write_png_image(const char *filename, unsigned char *pixels, int w, int h, int has_alpha, int invert)
 {
 
-	png_structp png_ptr;
-	png_infop info_ptr;
+	png_structp png_ptr = NULL;
+	png_infop info_ptr = NULL;
 	png_byte **row;
 	int x, y, *rc, rv, colordepth = 8;
 	int bytes_per_pixel = has_alpha ? 4 : 3;
@@ -42,7 +42,7 @@ int png_utils_write_png_image(const char *filename, unsigned char *pixels, int w
 	f = fopen(filename, "w");
 	if (!f) {
 		fprintf(stderr, "fopen: %s:%s\n", filename, strerror(errno));
-		return -1;
+		goto cleanup0;
 	}
 	png_ptr = png_create_write_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
 	if (!png_ptr)
@@ -95,6 +95,7 @@ cleanup2:
 	png_destroy_write_struct(&png_ptr, &info_ptr);
 cleanup1:
 	fclose(f);
+cleanup0:
 	rv = *rc;
 	free(rc);
 	return rv;
