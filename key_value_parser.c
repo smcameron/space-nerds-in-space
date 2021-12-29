@@ -445,7 +445,7 @@ struct key_value_specification test_kvs[] = {
 	} \
 }
 
-int main(int argc, char *argv[])
+int main(__attribute__((unused)) int argc, __attribute__((unused)) char *argv[])
 {
 	int rc;
 	struct test_struct data;
