@@ -948,6 +948,7 @@ char *sng_load_png_texture(const char *filename, int flipVertical, int flipHoriz
 	png_structp png_ptr = NULL;
 	png_infop info_ptr = NULL;
 	png_infop end_info = NULL;
+	png_byte **image_data_ptr = NULL;
 	png_byte *image_data = NULL;
 
 	FILE *fp = fopen(filename, "rb");
@@ -989,6 +990,14 @@ char *sng_load_png_texture(const char *filename, int flipVertical, int flipHoriz
 			"2nd png_create_info_struct() returned NULL");
 		goto cleanup;
 	}
+
+	/* Prior to setjmp, must malloc so as not to be clobbered by longjmp */
+	image_data_ptr = malloc(sizeof(*image_data_ptr));
+	if (!image_data_ptr) {
+		snprintf(whynot, whynotlen, "Failled to allocate image_data_ptr");
+		goto cleanup;
+	}
+	*image_data_ptr = NULL;
 
 	if (setjmp(png_jmpbuf(png_ptr))) {
 		snprintf(whynot, whynotlen, "libpng encounted an error");
@@ -1039,6 +1048,7 @@ char *sng_load_png_texture(const char *filename, int flipVertical, int flipHoriz
 		snprintf(whynot, whynotlen, "malloc failed in load_png_texture");
 		goto cleanup;
 	}
+	*image_data_ptr = image_data; /* save in case longjmp clobbers image_data */
 
 	int bytes_per_pixel = (color_type == PNG_COLOR_TYPE_RGB_ALPHA ? 4 : 3);
 
@@ -1074,11 +1084,15 @@ char *sng_load_png_texture(const char *filename, int flipVertical, int flipHoriz
 
 	png_destroy_read_struct(&png_ptr, &info_ptr, &end_info);
 	fclose(fp);
+	free(image_data_ptr);
 	return (char *)image_data;
 
 cleanup:
-	if (image_data)
-		free(image_data);
+	if (image_data_ptr) {
+		if (*image_data_ptr)
+			free(*image_data_ptr);
+		free(image_data_ptr);
+	}
 	png_destroy_read_struct(&png_ptr, &info_ptr, &end_info);
 	fclose(fp);
 #else
