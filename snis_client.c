@@ -22844,6 +22844,10 @@ static void setup_joysticks(void)
 			if (rc != 0) {
 				printf("Joystick '%s' not sending events, ignoring...\n", joysticks_found[i].name);
 				close_joystick(joystick_fd[i]);
+				if (joystick_name[i]) {
+					free(joystick_name[i]);
+					joystick_name[i] = NULL;
+				}
 				joystick_fd[i] = -1;
 				return;
 			}
