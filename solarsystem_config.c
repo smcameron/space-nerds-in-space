@@ -28,6 +28,8 @@
 
 static void free_string_ptr(char **x)
 {
+	if (!x)
+		return;
 	if (*x) {
 		free(*x);
 		*x = NULL;
@@ -352,14 +354,21 @@ void solarsystem_asset_spec_free(struct solarsystem_asset_spec *s)
 		return;
 	free_string_ptr(&s->sun_texture);
 	free_string_ptr(&s->skybox_prefix);
-	for (i = 0; i < PLANET_TYPE_COUNT_SHALL_BE; i++) {
-		free_string_ptr(&s->planet_texture[i]);
-		free_string_ptr(&s->planet_normalmap[i]);
-		free_string_ptr(&s->planet_type[i]);
+	if (s->planet_texture) {
+		for (i = 0; i < PLANET_TYPE_COUNT_SHALL_BE; i++)
+			free_string_ptr(&s->planet_texture[i]);
+		free(s->planet_texture);
 	}
-	free(s->planet_texture);
-	free(s->planet_normalmap);
-	free(s->planet_type);
+	if (s->planet_normalmap) {
+		for (i = 0; i < PLANET_TYPE_COUNT_SHALL_BE; i++)
+			free_string_ptr(&s->planet_normalmap[i]);
+		free(s->planet_normalmap);
+	}
+	if (s->planet_type) {
+		for (i = 0; i < PLANET_TYPE_COUNT_SHALL_BE; i++)
+			free_string_ptr(&s->planet_type[i]);
+		free(s->planet_type);
+	}
 	if (s->atmosphere_color)
 		free(s->atmosphere_color);
 	s->planet_texture = NULL;
