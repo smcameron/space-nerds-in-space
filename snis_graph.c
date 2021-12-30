@@ -26,6 +26,7 @@
 #include "graph_dev.h"
 #include "ui_colors.h"
 #include "string-utils.h"
+#include "png_utils.h"
 
 #define TOTAL_COLORS (NCOLORS + NSPARKCOLORS + NRAINBOWCOLORS + NSHADESOFGRAY * (NSHADECOLORS + 1) + \
 	(NGRADIENTS * NTOTAL_GRADIENT_SHADES) + MAX_USER_COLORS)
@@ -944,163 +945,11 @@ char *sng_load_png_texture(const char *filename, int flipVertical, int flipHoriz
 	int *w, int *h, int *hasAlpha, char *whynot, int whynotlen)
 {
 #ifndef WITHOUTOPENGL
-	int i, j, bit_depth, color_type, row_bytes, image_data_row_bytes;
-	png_byte header[8];
-	png_uint_32 tw, th;
-	png_structp png_ptr = NULL;
-	png_infop info_ptr = NULL;
-	png_infop end_info = NULL;
-	png_byte **image_data_ptr = NULL;
-	png_byte *image_data = NULL;
-
-	FILE *fp = fopen(filename, "rb");
-	if (!fp) {
-		snprintf(whynot, whynotlen, "Failed to open '%s': %s",
-			filename, strerror(errno));
-		return 0;
-	}
-
-	if (fread(header, 1, 8, fp) != 8) {
-		snprintf(whynot, whynotlen, "Failed to read 8 byte header from '%s'\n",
-				filename);
-		goto cleanup;
-	}
-	if (png_sig_cmp(header, 0, 8)) {
-		snprintf(whynot, whynotlen, "'%s' isn't a png file.",
-			filename);
-		goto cleanup;
-	}
-
-	png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING,
-							NULL, NULL, NULL);
-	if (!png_ptr) {
-		snprintf(whynot, whynotlen,
-			"png_create_read_struct() returned NULL");
-		goto cleanup;
-	}
-
-	info_ptr = png_create_info_struct(png_ptr);
-	if (!info_ptr) {
-		snprintf(whynot, whynotlen,
-			"png_create_info_struct() returned NULL");
-		goto cleanup;
-	}
-
-	end_info = png_create_info_struct(png_ptr);
-	if (!end_info) {
-		snprintf(whynot, whynotlen,
-			"2nd png_create_info_struct() returned NULL");
-		goto cleanup;
-	}
-
-	/* Prior to setjmp, must malloc so as not to be clobbered by longjmp */
-	image_data_ptr = malloc(sizeof(*image_data_ptr));
-	if (!image_data_ptr) {
-		snprintf(whynot, whynotlen, "Failled to allocate image_data_ptr");
-		goto cleanup;
-	}
-	*image_data_ptr = NULL;
-
-	if (setjmp(png_jmpbuf(png_ptr))) {
-		snprintf(whynot, whynotlen, "libpng encounted an error");
-		goto cleanup;
-	}
-
-	png_init_io(png_ptr, fp);
-	png_set_sig_bytes(png_ptr, 8);
-
-	/*
-	 * PNG_TRANSFORM_STRIP_16 |
-	 * PNG_TRANSFORM_PACKING  forces 8 bit
-	 * PNG_TRANSFORM_EXPAND forces to expand a palette into RGB
-	 */
-	png_read_png(png_ptr, info_ptr, PNG_TRANSFORM_STRIP_16 | PNG_TRANSFORM_PACKING | PNG_TRANSFORM_EXPAND, NULL);
-
-	png_get_IHDR(png_ptr, info_ptr, &tw, &th, &bit_depth, &color_type, NULL, NULL, NULL);
-
-	if (bit_depth != 8) {
-		snprintf(whynot, whynotlen, "load_png_texture only supports 8-bit image channel depth");
-		goto cleanup;
-	}
-
-	if (color_type != PNG_COLOR_TYPE_RGB && color_type != PNG_COLOR_TYPE_RGB_ALPHA) {
-		snprintf(whynot, whynotlen, "load_png_texture only supports RGB and RGBA");
-		goto cleanup;
-	}
-
-	if (w)
-		*w = tw;
-	if (h)
-		*h = th;
-	int has_alpha = (color_type == PNG_COLOR_TYPE_RGB_ALPHA);
-	if (hasAlpha)
-		*hasAlpha = has_alpha;
-
-	row_bytes = png_get_rowbytes(png_ptr, info_ptr);
-	image_data_row_bytes = row_bytes;
-
-	/* align to 4 byte boundary */
-	if (image_data_row_bytes & 0x03)
-		image_data_row_bytes += 4 - (image_data_row_bytes & 0x03);
-
-	png_bytepp row_pointers = png_get_rows(png_ptr, info_ptr);
-
-	image_data = malloc(image_data_row_bytes * th * sizeof(png_byte) + 15);
-	if (!image_data) {
-		snprintf(whynot, whynotlen, "malloc failed in load_png_texture");
-		goto cleanup;
-	}
-	*image_data_ptr = image_data; /* save in case longjmp clobbers image_data */
-
-	int bytes_per_pixel = (color_type == PNG_COLOR_TYPE_RGB_ALPHA ? 4 : 3);
-
-	for (i = 0; (png_uint_32) i < th; i++) {
-		png_byte *src_row;
-		png_byte *dest_row = image_data + i * image_data_row_bytes;
-
-		if (flipVertical)
-			src_row = row_pointers[th - i - 1];
-		else
-			src_row = row_pointers[i];
-
-		if (flipHorizontal) {
-			for (j = 0; (png_uint_32) j < tw; j++) {
-				png_byte *src = src_row + bytes_per_pixel * j;
-				png_byte *dest = dest_row + bytes_per_pixel * (tw - j - 1);
-				memcpy(dest, src, bytes_per_pixel);
-			}
-		} else {
-			memcpy(dest_row, src_row, row_bytes);
-		}
-
-		if (has_alpha && pre_multiply_alpha) {
-			for (j = 0; (png_uint_32) j < tw; j++) {
-				png_byte *pixel = dest_row + bytes_per_pixel * j;
-				float alpha = pixel[3] / 255.0;
-				pixel[0] = pixel[0] * alpha;
-				pixel[1] = pixel[1] * alpha;
-				pixel[2] = pixel[2] * alpha;
-			}
-		}
-	}
-
-	png_destroy_read_struct(&png_ptr, &info_ptr, &end_info);
-	fclose(fp);
-	free(image_data_ptr);
-	return (char *)image_data;
-
-cleanup:
-	if (image_data_ptr) {
-		if (*image_data_ptr)
-			free(*image_data_ptr);
-		free(image_data_ptr);
-	}
-	png_destroy_read_struct(&png_ptr, &info_ptr, &end_info);
-	fclose(fp);
+	return png_utils_read_png_image(filename, flipVertical, flipHorizontal,
+		pre_multiply_alpha, w, h, hasAlpha, whynot, whynotlen);
 #else
-	snprintf(whynot, whynotlen, "load_png_texture: compiled without opengl support.");
-#endif
 	return 0;
+#endif
 }
 
 /* convert from physical (e.g. mouse) coords to extent coords */
