@@ -238,12 +238,11 @@ void close_joystick(int fd)
 
 int get_joystick_state(int fd, struct js_state *state)
 {
-	int rc;
 	struct js_event jse;
 
 	if (fd < 0)
 		return -1;
-	while ((rc = read_joystick_event(fd, &jse) == 1)) {
+	while (read_joystick_event(fd, &jse) == 1) {
 		jse.type &= ~JS_EVENT_INIT; /* ignore synthetic events */
 		if (jse.type == JS_EVENT_AXIS) {
 			if (jse.number < MAX_JOYSTICK_AXES)
