@@ -6,6 +6,7 @@
 #include <inttypes.h>
 #include <errno.h>
 #include <string.h>
+#include <assert.h>
 #ifndef WITHOUTOPENGL
 #include <GL/glew.h>
 #include <png.h>
@@ -326,6 +327,7 @@ float sng_abs_xy_draw_letter(struct my_vect_obj **font, unsigned char letter, fl
 	float x1, y1, x2, y2;
 	float minx, maxx, diff;
 
+	assert(font['_'] != NULL); /* prevent scan-build from complaining about null ptr deref */
 	if (letter == ' ' || letter == '\n' || letter == '\t' || font[letter] == NULL)
 		return abs(font['_']->p[0].x - font['_']->p[1].x);
 
