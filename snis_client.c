@@ -1589,7 +1589,7 @@ static int update_missile(uint32_t id, uint32_t timestamp, double x, double y, d
 		if (i < 0)
 			return i;
 		go[i].tsd.missile.target_id = (uint32_t) -1;
-		if (e) {
+		if (e && nthrust_ports == 2) { /* one for thrust, one for flare */
 			go[i].tsd.missile.thrust_entity[0] = thrust_entity[0];
 			go[i].tsd.missile.thrust_entity[1] = thrust_entity[1];
 		} else {
@@ -9095,8 +9095,10 @@ static void add_thrust_entities(struct entity *thrust_entity[],
 {
 	int i, p;
 
-	if (!ap)
+	if (!ap) {
+		*nthrust_ports = 0;
 		return;
+	}
 
 	assert((thrust_entity && nthrust_ports) || (!thrust_entity && !nthrust_ports));
 
