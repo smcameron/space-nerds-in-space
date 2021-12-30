@@ -295,6 +295,8 @@ struct commodity *read_commodities(char *filename, int *ncommodities)
 			continue;
 		case -1:
 			fclose(f);
+			if (clist)
+				free(clist);
 			return NULL;
 		}
 	}
