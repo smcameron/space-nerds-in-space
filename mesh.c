@@ -320,8 +320,10 @@ static void copy_mesh_contents(struct mesh *copy, struct mesh *original)
 		copy->l[i].tint_color = original->l[i].tint_color;
 		copy->l[i].time_offset = original->l[i].time_offset;
 	}
-	if (original->tex)
+	if (original->tex) {
+		assert(copy->tex != NULL);
 		memcpy(copy->tex, original->tex, sizeof(*copy->tex) * original->ntriangles * 3);
+	}
 	copy->radius = original->radius;
 	if (original->material) {
 		copy->material = malloc(sizeof(*copy->material));
