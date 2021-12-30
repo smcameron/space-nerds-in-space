@@ -403,7 +403,6 @@ static int int_to_words(int number, char *buffer, int buflen)
 		rc = snprintf(&buffer[x], buflen, "%s", one[number]);
 		if (rc < 0)
 			return -1;
-		buflen -= rc;
 		x += rc;
 		return x;
 	}
@@ -411,7 +410,6 @@ static int int_to_words(int number, char *buffer, int buflen)
 		rc = snprintf(&buffer[x], buflen, "%s", teen[number - 10]);
 		if (rc < 0)
 			return -1;
-		buflen -= rc;
 		x += rc;
 		return x;
 	}
