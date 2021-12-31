@@ -1188,6 +1188,12 @@ function intfic.after_each_turn_hook()
 			intfic.write("I retain the ID card.\n");
 	end
 
+	-- Make it obvious the transporter button does nothing
+	if intfic.objects["transporter_lever"].button_state == true then
+		intfic.objects["transporter_lever"].button_state = false; -- unpress the button
+		intfic.write("Nothing happens. The transporter seems to be broken.\n");
+	end
+
 	-- Make the button a momentary switch that opens or closes the outer airlock door
 	if intfic.objects["button"].button_state == true then
 		intfic.objects["button"].button_state = false; -- unpress the button
