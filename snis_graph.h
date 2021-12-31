@@ -94,9 +94,6 @@ SNG_GLOBAL void sng_set_clip_window(int x1, int y1, int x2, int y2);
 /* offet and scale 3d rendering inside extent bounds */
 SNG_GLOBAL void sng_set_3d_viewport(int x_offset, int y_offset, int width, int height);
 
-SNG_GLOBAL char *sng_load_png_texture(const char *filename, int flipVertical, int flipHorizontal,
-	int pre_multiply_alpha, int *w, int *h, int *hasAlpha, char *whynot, int whynotlen);
-
 SNG_GLOBAL int add_user_color(uint8_t r, uint8_t g, uint8_t b);
 
 /* convert from physical (e.g. mouse) coords to extent coords */

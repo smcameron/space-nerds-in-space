@@ -941,17 +941,6 @@ void sng_draw_circle(int filled, float x, float y, float r)
 	sng_current_draw_arc(filled, x - r, y - r, r * 2, r * 2, 0, 2.0*M_PI);
 }
 
-char *sng_load_png_texture(const char *filename, int flipVertical, int flipHorizontal, int pre_multiply_alpha,
-	int *w, int *h, int *hasAlpha, char *whynot, int whynotlen)
-{
-#ifndef WITHOUTOPENGL
-	return png_utils_read_png_image(filename, flipVertical, flipHorizontal,
-		pre_multiply_alpha, w, h, hasAlpha, whynot, whynotlen);
-#else
-	return 0;
-#endif
-}
-
 /* convert from physical (e.g. mouse) coords to extent coords */
 float sng_pixelx_to_screenx(float x)
 {

@@ -765,7 +765,10 @@ utils:	${UTILPROGS}
 $(OD)/rootcheck.o:	rootcheck.c rootcheck.h Makefile ${ODT}
 	$(Q)$(COMPILE)
 
-$(OD)/graph_dev_opengl.o : graph_dev_opengl.c Makefile ${ODT}
+$(OD)/graph_dev_opengl.o : graph_dev_opengl.c graph_dev.h shader.h vertex.h triangle.h \
+		mtwist.h mathutils.h matrix.h quat.h mesh.h vec4.h snis_graph.h graph_dev.h \
+		material.h entity.h entity_private.h snis_typeface.h opengl_cap.h png_utils.h \
+		Makefile ${ODT}
 	$(Q)$(SDLCOMPILE)
 
 $(OD)/opengl_cap.o : opengl_cap.c Makefile ${ODT}

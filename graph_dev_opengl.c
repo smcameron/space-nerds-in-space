@@ -23,6 +23,7 @@
 #include "entity_private.h"
 #include "snis_typeface.h"
 #include "opengl_cap.h"
+#include "png_utils.h"
 
 #define OPENGL_VERSION_STRING "#version 120\n"
 #define UNIVERSAL_SHADER_HEADER \
@@ -4013,8 +4014,8 @@ static int load_cubemap_texture_id(
 	for (i = 0; i < NCUBEMAP_TEXTURES; i++) {
 		int tw, th, hasAlpha = 0;
 		/* do horizontal invert if we are projecting on the inside */
-		char *image_data = sng_load_png_texture(tex_filenames[i], 0, is_inside, 1, &tw, &th, &hasAlpha,
-			whynotz, whynotlen);
+		char *image_data = png_utils_read_png_image(tex_filenames[i], 0, is_inside, 1,
+					&tw, &th, &hasAlpha, whynotz, whynotlen);
 		if (image_data) {
 			if (linear_colorspace)
 				colorspace = hasAlpha ? GL_RGBA8 : GL_RGB8;
@@ -4214,7 +4215,7 @@ static int load_texture_id(GLuint texture_number, const char *filename, int use_
 	else
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 
-	char *image_data = sng_load_png_texture(filename, 1, 0, 1, &tw, &th, &hasAlpha,
+	char *image_data = png_utils_read_png_image(filename, 1, 0, 1, &tw, &th, &hasAlpha,
 						whynotz, whynotlen);
 	if (image_data) {
 		glTexImage2D(GL_TEXTURE_2D, 0, colorspace, tw, th, 0,
