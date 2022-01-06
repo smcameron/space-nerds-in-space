@@ -101,6 +101,7 @@ static int cubemap_mode = 0;
 static int burst_rod_mode = 0;
 static int thrust_mode = 0;
 static int turret_mode = 0;
+static int no_skybox = 0;
 static int warpgate_mode = 0;
 static char *replacement_assets_file = NULL;
 static struct replacement_asset replacement_asset = { 0 };
@@ -696,7 +697,8 @@ static void draw_screen()
 		e = add_entity(cx, light_mesh, light_pos.v.x, light_pos.v.y, light_pos.v.z, WHITE);
 	}
 
-	render_skybox(cx);
+	if (!no_skybox)
+		render_skybox(cx);
 	render_entities(cx);
 
 	remove_all_entity(cx);
@@ -877,6 +879,7 @@ static struct option long_options[] = {
 	{ "trap-nans", no_argument, NULL, 'f' },
 	{ "replacement-assets", required_argument, NULL, 'r' },
 	{ "warpgate", no_argument, NULL, 'w' },
+	{ "no-skybox", no_argument, NULL, 'K' },
 	{ 0, 0, 0, 0 },
 };
 
@@ -887,7 +890,7 @@ static void process_options(int argc, char *argv[])
 	while (1) {
 		int option_index;
 
-		c = getopt_long(argc, argv, "IAB:T:bc:d:fC:Y:Z:e:hi:m:n:p:r:s:t:w", long_options, &option_index);
+		c = getopt_long(argc, argv, "IAB:T:bc:d:fC:KY:Z:e:hi:m:n:p:r:s:t:w", long_options, &option_index);
 		if (c < 0) {
 			break;
 		}
@@ -895,6 +898,9 @@ static void process_options(int argc, char *argv[])
 		case 'B':
 			turret_mode = 1;
 			turret_base_model = optarg;
+			break;
+		case 'K':
+			no_skybox = 1;
 			break;
 		case 'T':
 			turret_mode = 1;
