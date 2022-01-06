@@ -103,6 +103,7 @@ static int thrust_mode = 0;
 static int turret_mode = 0;
 static int no_skybox = 0;
 static int warpgate_mode = 0;
+static int black_and_white = 0;
 static char *replacement_assets_file = NULL;
 static struct replacement_asset replacement_asset = { 0 };
 static int reload_shaders = 0;
@@ -592,7 +593,10 @@ static void draw_screen()
 
 	double start_time = time_now_double();
 
-	glClearColor(0.0, 0.0, 0.0, 0.0);
+	if (black_and_white)
+		glClearColor(1.0, 1.0, 1.0, 1.0);
+	else
+		glClearColor(0.0, 0.0, 0.0, 0.0);
 
 	graph_dev_start_frame();
 
@@ -858,6 +862,7 @@ static void process_int_option(char *option_name, char *option_value, int *value
 }
 
 static struct option long_options[] = {
+	{ "black-and-white", no_argument, NULL, 'W' },
 	{ "model", required_argument, NULL, 'm' },
 	{ "turretbase", required_argument, NULL, 'B' },
 	{ "cubemap", required_argument, NULL, 'c' },
@@ -890,7 +895,7 @@ static void process_options(int argc, char *argv[])
 	while (1) {
 		int option_index;
 
-		c = getopt_long(argc, argv, "IAB:T:bc:d:fC:KY:Z:e:hi:m:n:p:r:s:t:w", long_options, &option_index);
+		c = getopt_long(argc, argv, "IAB:T:bc:d:fC:KY:Z:e:hi:m:n:p:r:s:t:wW", long_options, &option_index);
 		if (c < 0) {
 			break;
 		}
@@ -908,6 +913,9 @@ static void process_options(int argc, char *argv[])
 			break;
 		case 'w':
 			warpgate_mode = 1;
+			break;
+		case 'W':
+			black_and_white = 1;
 			break;
 		case 'b':
 			burst_rod_mode = 1;
