@@ -83,43 +83,13 @@ static void print_glsl_compile_error(char *error_message, char *shadercode[], in
 static char *read_file(const char *shader_directory, const char *filename)
 {
 	char fname[PATH_MAX];
-	char *buffer = NULL;
-	int string_size, read_size;
-	FILE *handler;
+	int bytes;
 
 	if (shader_directory)
 		snprintf(fname, sizeof(fname), "%s/%s", shader_directory, filename);
 	else
 		strcpy(fname, filename);
-
-	handler = fopen(fname, "r");
-	if (!handler)
-		return NULL;
-
-	/* seek the last byte of the file */
-	fseek(handler, 0, SEEK_END);
-	/* offset from the first to the last byte, or in other words, filesize */
-	string_size = ftell(handler);
-	/* go back to the start of the file */
-	rewind(handler);
-
-	/* allocate a string that can hold it all */
-	buffer = (char *) malloc(sizeof(char) * (string_size + 1));
-	/* read it all in one operation */
-	/* TODO: rewrite this for better error handling */
-	read_size = fread(buffer, sizeof(char), string_size, handler);
-	/* fread doesnt set it so put a \0 in the last position
-	   and buffer is now officialy a string */
-	buffer[string_size] = '\0';
-
-	if (string_size != read_size) {
-		/* something went wrong, throw away the memory and set
-		   the buffer to NULL */
-		free(buffer);
-		buffer = NULL;
-	}
-	fclose(handler);
-	return buffer;
+	return slurp_file(fname, &bytes);
 }
 
 GLuint load_concat_shaders(const char *shader_directory,
