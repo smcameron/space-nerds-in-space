@@ -45,6 +45,7 @@
 #include <netinet/ip.h>
 #include <getopt.h>
 #include <signal.h>
+#include <sys/ioctl.h>
 #ifdef __APPLE__
 #include <SDL2.h>
 #include <SDL_image.h>
@@ -230,6 +231,8 @@ static float tonemapping_gain = 1.10; /* tweakable */
 #define snis_draw_rectangle DEFAULT_RECTANGLE_STYLE
 #define snis_bright_line DEFAULT_BRIGHT_LINE_STYLE
 #define snis_draw_arc DEFAULT_ARC_STYLE
+static volatile uint32_t outgoing_client_queue_length = 0;
+static volatile uint32_t incoming_client_queue_length = 0;
 static int frame_rate_hz = 30;
 static int use_60_fps = 0; /* tweakable, set this to 1, and game will run at 60 fps */
 static int red_alert_mode = 0;
@@ -3726,6 +3729,8 @@ static struct demon_ui {
 	struct scaling_strip_chart *bytes_recd_strip_chart;
 	struct scaling_strip_chart *bytes_sent_strip_chart;
 	struct scaling_strip_chart *latency_strip_chart;
+	struct scaling_strip_chart *outgoing_client_queue_length_chart;
+	struct scaling_strip_chart *incoming_client_queue_length_chart;
 	struct pull_down_menu *menu;
 	struct text_window *console;
 	char input[100];
@@ -6488,6 +6493,12 @@ static int process_update_netstats(void)
 	netstats.bps_index = (netstats.bps_index + 1) & 0x01;
 	netstats.lasttime = ts;
 	snis_scaling_strip_chart_update(demon_ui.latency_strip_chart, 0.001 * (float) latency_in_usec);
+	snis_scaling_strip_chart_update(demon_ui.outgoing_client_queue_length_chart,
+					(float) outgoing_client_queue_length);
+	outgoing_client_queue_length = 0;
+	snis_scaling_strip_chart_update(demon_ui.incoming_client_queue_length_chart,
+					(float) incoming_client_queue_length);
+	incoming_client_queue_length = 0;
 	return 0;
 }
 
@@ -7987,6 +7998,7 @@ static void *gameserver_reader(__attribute__((unused)) void *arg)
 	uint8_t last_opcode = 0x00;
 	uint8_t opcode = 0xff;
 	uint8_t add_player_error;
+	uint32_t bytes_ready;
 	int rc = 0;
 
 	printf("snis_client: gameserver reader thread\n");
@@ -7994,6 +8006,9 @@ static void *gameserver_reader(__attribute__((unused)) void *arg)
 		add_player_error = 0;
 		previous_opcode = last_opcode;
 		last_opcode = opcode;
+		rc = ioctl(gameserver_sock, FIONREAD, &bytes_ready);
+		if (rc == 0 && bytes_ready > incoming_client_queue_length)
+			incoming_client_queue_length = bytes_ready;
 		/* printf("Client reading from game server %d bytes...\n", sizeof(opcode)); */
 		rc = snis_readsocket(gameserver_sock, &opcode, sizeof(opcode));
 
@@ -8359,6 +8374,8 @@ static void write_queued_packets_to_server(void)
 	pthread_mutex_lock(&to_server_queue_event_mutex);
 	buffer = packed_buffer_queue_combine(&to_server_queue, &to_server_queue_mutex);
 	if (buffer) {
+		if (buffer->buffer_size > outgoing_client_queue_length)
+			outgoing_client_queue_length = buffer->buffer_size;
 		rc = snis_writesocket(gameserver_sock, buffer->buffer, buffer->buffer_size);
 		packed_buffer_free(buffer);
 		if (rc) {
@@ -18855,11 +18872,15 @@ static void demon_netstats_button_pressed(__attribute__((unused)) void *x)
 		ui_unhide_widget(demon_ui.bytes_sent_strip_chart);
 		ui_unhide_widget(demon_ui.bytes_recd_strip_chart);
 		ui_unhide_widget(demon_ui.latency_strip_chart);
+		ui_unhide_widget(demon_ui.outgoing_client_queue_length_chart);
+		ui_unhide_widget(demon_ui.incoming_client_queue_length_chart);
 		demon_ui.netstats_active = 1;
 	} else {
 		ui_hide_widget(demon_ui.bytes_sent_strip_chart);
 		ui_hide_widget(demon_ui.bytes_recd_strip_chart);
 		ui_hide_widget(demon_ui.latency_strip_chart);
+		ui_hide_widget(demon_ui.outgoing_client_queue_length_chart);
+		ui_hide_widget(demon_ui.incoming_client_queue_length_chart);
 		demon_ui.netstats_active = 0;
 	}
 }
@@ -19066,17 +19087,26 @@ static void init_demon_ui()
 	snis_button_set_sound(demon_ui.demon_console_button, UISND14);
 #define NETSTATS_SAMPLES 1000
 	demon_ui.bytes_recd_strip_chart =
-		snis_scaling_strip_chart_init(txx(120), txy(5), txx(550.0), txy(100.0),
+		snis_scaling_strip_chart_init(txx(120), txy(5), txx(550.0), txy(60.0),
 				"BYTES/S RECD BY SERVER", "", UI_COLOR(science_graph_plot_strong),
 				UI_COLOR(common_red_alert), 200000.0, NANO_FONT, NETSTATS_SAMPLES);
 	demon_ui.bytes_sent_strip_chart =
-		snis_scaling_strip_chart_init(txx(120), txy(135), txx(550.0), txy(100.0),
+		snis_scaling_strip_chart_init(txx(120), txy(85), txx(550.0), txy(60.0),
 				"BYTES/S SENT BY SERVER", "", UI_COLOR(science_graph_plot_strong),
 				UI_COLOR(common_red_alert), 200000.0, NANO_FONT, NETSTATS_SAMPLES);
 	demon_ui.latency_strip_chart =
-		snis_scaling_strip_chart_init(txx(120), txy(265), txx(550.0), txy(100.0),
+		snis_scaling_strip_chart_init(txx(120), txy(165), txx(550.0), txy(60.0),
 				"LATENCY (ms)", "", UI_COLOR(science_graph_plot_strong),
 				UI_COLOR(common_red_alert), 200000.0, NANO_FONT, NETSTATS_SAMPLES);
+	demon_ui.outgoing_client_queue_length_chart =
+		snis_scaling_strip_chart_init(txx(120), txy(245), txx(550.0), txy(60.0),
+				"CLIENT OUTGOING QUEUE LENGTH (BYTES)", "", UI_COLOR(science_graph_plot_strong),
+				UI_COLOR(common_red_alert), 2000.0, NANO_FONT, NETSTATS_SAMPLES);
+	demon_ui.incoming_client_queue_length_chart =
+		snis_scaling_strip_chart_init(txx(120), txy(325), txx(550.0), txy(60.0),
+				"CLIENT INCOMING QUEUE LENGTH (BYTES)", "", UI_COLOR(science_graph_plot_strong),
+				UI_COLOR(common_red_alert), 2000.0, NANO_FONT, NETSTATS_SAMPLES);
+
 	demon_ui.menu = create_pull_down_menu(NANO_FONT, SCREEN_WIDTH);
 	pull_down_menu_set_tooltip_drawing_function(demon_ui.menu, draw_tooltip);
 	pull_down_menu_set_gravity(demon_ui.menu, 1);
@@ -19222,6 +19252,8 @@ static void init_demon_ui()
 	ui_add_scaling_strip_chart(demon_ui.bytes_recd_strip_chart, DISPLAYMODE_DEMON);
 	ui_add_scaling_strip_chart(demon_ui.bytes_sent_strip_chart, DISPLAYMODE_DEMON);
 	ui_add_scaling_strip_chart(demon_ui.latency_strip_chart, DISPLAYMODE_DEMON);
+	ui_add_scaling_strip_chart(demon_ui.outgoing_client_queue_length_chart, DISPLAYMODE_DEMON);
+	ui_add_scaling_strip_chart(demon_ui.incoming_client_queue_length_chart, DISPLAYMODE_DEMON);
 
 	/* The pulldown menu needs to be the last thing added to the ui element list
 	 * so that it is drawn on top of everything else and gets mouse clicks */
@@ -19232,6 +19264,8 @@ static void init_demon_ui()
 	ui_hide_widget(demon_ui.bytes_recd_strip_chart);
 	ui_hide_widget(demon_ui.bytes_sent_strip_chart);
 	ui_hide_widget(demon_ui.latency_strip_chart);
+	ui_hide_widget(demon_ui.outgoing_client_queue_length_chart);
+	ui_hide_widget(demon_ui.incoming_client_queue_length_chart);
 	ui_hide_widget(demon_ui.console);
 	home_demon_camera();
 	demon_ui.camera_orientation = demon_ui.desired_camera_orientation;
