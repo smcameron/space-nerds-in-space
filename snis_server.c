@@ -53,6 +53,7 @@
 #include <dirent.h>
 #include <signal.h>
 #include <fenv.h>
+#include <sys/ioctl.h>
 
 #include "arraysize.h"
 #include "container-of.h"
@@ -456,6 +457,8 @@ static struct game_client {
 				/* "lockroles", and "rotateroles" */
 	int16_t talking_stick;	/* Which audio chain VOIP transmissions from this client should use. */
 				/* -1 if none assigned */
+	volatile uint32_t outgoing_queue_length;
+	volatile uint32_t incoming_queue_length;
 #define COMPUTE_AVERAGE_TO_CLIENT_BUFFER_SIZE 0
 #if COMPUTE_AVERAGE_TO_CLIENT_BUFFER_SIZE
 	uint64_t write_sum;	/* Statistics about data written to client */
@@ -23401,8 +23404,12 @@ static void process_instructions_from_client(struct game_client *c)
 	int rc;
 	uint8_t opcode;
 	static uint8_t last_successful_opcode = OPCODE_NOOP;
+	uint32_t bytes_ready;
 
 	opcode = OPCODE_NOOP;
+	rc = ioctl(c->socket, FIONREAD, &bytes_ready);
+	if (rc == 0 && bytes_ready > c->incoming_queue_length)
+		c->incoming_queue_length = bytes_ready;
 	rc = snis_readsocket(c->socket, &opcode, sizeof(opcode));
 	if (rc != 0) {
 		if (errno == 0) { /* Client has performed orderly shutdown */
@@ -23857,6 +23864,8 @@ static void write_queued_updates_to_client(struct game_client *c, uint8_t over_c
 		if ((universe_timestamp % 50) == 0)
 			printf("avg = %llu\n", c->write_sum / c->write_count);
 #endif
+		if (buffer->buffer_size > c->outgoing_queue_length)
+			c->outgoing_queue_length = buffer->buffer_size;
 		rc = snis_writesocket(c->socket, buffer->buffer, buffer->buffer_size);
 		packed_buffer_free(buffer);
 		if (rc != 0) {
@@ -24099,7 +24108,7 @@ static void queue_netstats(struct game_client *c)
 		return;
 	gettimeofday(&now, NULL);
 	elapsed_seconds = now.tv_sec - netstats.start.tv_sec;
-	pb_queue_to_client(c, snis_opcode_pkt("bqqwwwwwwwww", OPCODE_UPDATE_NETSTATS,
+	pb_queue_to_client(c, snis_opcode_pkt("bqqwwwwwwwwwww", OPCODE_UPDATE_NETSTATS,
 					netstats.bytes_sent, netstats.bytes_recd,
 					netstats.nobjects, netstats.nships,
 					elapsed_seconds,
@@ -24108,7 +24117,11 @@ static void queue_netstats(struct game_client *c)
 					faction_population[1],
 					faction_population[2],
 					faction_population[3],
-					faction_population[4]));
+					faction_population[4],
+					c->outgoing_queue_length,
+					c->incoming_queue_length));
+	c->outgoing_queue_length = 0;
+	c->incoming_queue_length = 0;
 }
 
 static void queue_starmap(struct game_client *c)

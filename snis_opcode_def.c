@@ -177,7 +177,7 @@ int snis_opcode_def_init(void)
 			OPCODE_ADJUST_CONTROL_DEPLOY_FLARE, "bbwb");
 	/* rc |= init_opcode_def(OPCODE_UPDATE_PLANET_DESCRIPTION, "bwhr"); */
 	rc |= init_opcode_def(OPCODE_UPDATE_RESPAWN_TIME, "bb");
-	rc |= init_opcode_def(OPCODE_UPDATE_NETSTATS, "bqqwwwwwwwww");
+	rc |= init_opcode_def(OPCODE_UPDATE_NETSTATS, "bqqwwwwwwwwwww");
 	rc |= init_opcode_def(OPCODE_COMMS_TRANSMISSION, "n/a");
 	rc |= init_opcode_def(OPCODE_WARP_LIMBO, "bh");
 	rc |= init_opcode_def(OPCODE_DEMON_COMMAND, "n/a");

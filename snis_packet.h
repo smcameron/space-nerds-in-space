@@ -670,6 +670,8 @@ struct netstats_packet {
 	uint32_t elapsed_seconds;
 	uint32_t latency_in_usec;
 	uint32_t faction_population[5];
+	uint32_t outgoing_queue_length;
+	uint32_t incoming_queue_length;
 };
 
 struct comms_transmission_packet {
