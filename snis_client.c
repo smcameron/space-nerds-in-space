@@ -23786,8 +23786,19 @@ out:
 		SDL_DestroyTexture(image);
 	if (renderer)
 		SDL_DestroyRenderer(renderer);
-	if (splash_window)
-		SDL_DestroyWindow(splash_window);
+	if (splash_window) {
+		/* SDL_DestroyWindow(splash_window); */
+
+		/* We can't safely destroy the window, because SDL_PollEvent() in process_events()
+		 * is (apparently) not thread safe and doesn't expect windows to get ripped out from under
+		 * it by other threads.  So we just hide the window instead of destroying it.
+		 * This is my theory anyway for why I was seeing occasional crashes and sometimes
+		 * X "bad window" complaints in the log files right at the time the splash screen gets
+		 * destroyed.
+		 */
+		SDL_HideWindow(splash_window);
+	}
+
 	return NULL;
 }
 
