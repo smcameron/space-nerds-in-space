@@ -19891,6 +19891,10 @@ static void show_demon_3d(void)
 		}
 	}
 
+	pthread_mutex_unlock(&universe_mutex);
+	render_entities(instrumentecx);
+	pthread_mutex_lock(&universe_mutex);
+
 	/* Check if user is navigating to something on the screen */
 	if (demon_ui.button3_released) {
 		int found = 0;
@@ -19998,9 +20002,8 @@ static void show_demon_3d(void)
 				demon_select(closest->id);
 		}
 	}
-	pthread_mutex_unlock(&universe_mutex);
-	render_entities(instrumentecx);
-	pthread_mutex_lock(&universe_mutex);
+
+	/* Draw a circle around human controlled ships */
 	for (i = 0; i <= get_entity_count(instrumentecx); i++) {
 		float sx, sy;
 		struct entity *e;

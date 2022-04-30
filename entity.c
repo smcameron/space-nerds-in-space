@@ -96,6 +96,9 @@ struct entity *add_entity(struct entity_context *cx,
 	cx->entity_list[n].parent = 0;
 	cx->entity_list[n].entity_child_index = -1;
 	cx->entity_list[n].emit_intensity = 1.0;
+	cx->entity_list[n].sx = -1;
+	cx->entity_list[n].sy = -1;
+	cx->entity_list[n].onscreen = 0;
 	if (m && m->material)
 		update_entity_material(&cx->entity_list[n], m->material);
 
