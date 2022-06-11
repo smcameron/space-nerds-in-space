@@ -187,32 +187,31 @@ is that newer Macs don't support OpenGL, which means you're out of luck.
 
 <h2>Step 1: Install Dependencies</h2>
 <p><b>Build dependencies</b>
-<p>Perform these steps as <b>root</b>:
 <pre>
 <blockquote>
-apt-get install build-essential;
-apt-get install portaudio19-dev;
-apt-get install libbsd-dev; # for strlcpy()
-apt-get install libpng-dev;
-apt-get install libvorbis-dev;
-apt-get install libsdl2-dev;
-apt-get install libsdl2-image-dev;
-apt-get install libsdl2-2.0-0;
-apt-get install liblua5.2-dev;
-apt-get install libglew1.5-dev;
-apt-get install libssl-dev;
-apt-get install libttspico-utils; # for text to speech
-apt-get install sox; # for "play" command, used by text to speech
+sudo apt-get install build-essential;
+sudo apt-get install portaudio19-dev;
+sudo apt-get install libbsd-dev; # for strlcpy()
+sudo apt-get install libpng-dev;
+sudo apt-get install libvorbis-dev;
+sudo apt-get install libsdl2-dev;
+sudo apt-get install libsdl2-image-dev;
+sudo apt-get install libsdl2-2.0-0;
+sudo apt-get install liblua5.2-dev;
+sudo apt-get install libglew1.5-dev;
+sudo apt-get install libssl-dev;
+sudo apt-get install libttspico-utils; # for text to speech
+sudo apt-get install sox; # for "play" command, used by text to speech
 
 # (The following are optional)
 
-apt-get install espeak; # optional alternative to libttspico-utils
-apt-get install alsa-utils; # optional alternative to sox, for "aplay" command
-apt-get install openscad; # optional, only needed if you intend to work on 3D models.
+sudo apt-get install espeak; # optional alternative to libttspico-utils
+sudo apt-get install alsa-utils; # optional alternative to sox, for "aplay" command
+sudo apt-get install openscad; # optional, only needed if you intend to work on 3D models.
                 # Also, it is recommended to get it from http://www.openscad.org/downloads.html
                 # as the version in the repos tends to be out of date.
-apt-get install git; # Version control, useful if you're hacking on the game
-apt-get install stgit; # Useful for making patches if you're hacking on the game. It's like "<a href="https://en.wikipedia.org/wiki/Quilt_(software)">quilt</a>"
+sudo apt-get install git; # Version control, useful if you're hacking on the game
+sudo apt-get install stgit; # Useful for making patches if you're hacking on the game. It's like "<a href="https://en.wikipedia.org/wiki/Quilt_(software)">quilt</a>"
 but on top of git.
 </blockquote>
 </pre>
@@ -221,10 +220,10 @@ but on top of git.
 you will want the following packages:
 <pre>
 <blockquote>
-apt-get install pocketsphinx-utils;
-apt-get install pocketsphinx-lm-en-hub4;
-apt-get install pocketsphinx-lm-en-hub4;
-apt-get install libpocketsphinx1;
+sudo apt-get install pocketsphinx-utils;
+sudo apt-get install pocketsphinx-lm-en-hub4;
+sudo apt-get install pocketsphinx-lm-en-hub4;
+sudo apt-get install libpocketsphinx1;
 </blockquote>
 </pre>
 
@@ -1424,22 +1423,22 @@ into this fifo if you want to, e.g.:
 </pre>
 <ul>
 <li><b>Pocketsphinx based speech-recognition</b>
-<p>You must install some packages (as <b>root</b>, or using <b>sudo</b>):
+<p>You must install some packages:
 <pre>
 <blockquote>
-apt-get install libttspico-utils; # for text to speech
-apt-get install espeak; # optional alternative to libttspico-utils
-apt-get install sox; # for "play" command, used by text to speech
-apt-get install alsa-utils; # optional alternative to sox, for "aplay" command
+sudo apt-get install libttspico-utils; # for text to speech
+sudo apt-get install espeak; # optional alternative to libttspico-utils
+sudo apt-get install sox; # for "play" command, used by text to speech
+sudo apt-get install alsa-utils; # optional alternative to sox, for "aplay" command
 </blockquote>
 </pre>
 <p>And for the pocketsphinx based speech recognition:
 <pre>
 <blockquote>
-apt-get install pocketsphinx-utils;
-apt-get install pocketsphinx-lm-en-hub4;
-apt-get install pocketsphinx-lm-en-hub4;
-apt-get install libpocketsphinx1;
+sudo apt-get install pocketsphinx-utils;
+sudo apt-get install pocketsphinx-lm-en-hub4;
+sudo apt-get install pocketsphinx-lm-en-hub4;
+sudo apt-get install libpocketsphinx1;
 </blockquote>
 </pre>
 
