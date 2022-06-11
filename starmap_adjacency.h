@@ -10,9 +10,9 @@
 #define MAXSTARMAPENTRIES 1000 /* max number of solar systems */
 #define MAX_STARMAP_ADJACENCIES 5 /* max warp lanes from one star to other stars */
 struct starmap_entry {
-	char name[SSGL_LOCATIONSIZE];
 	double x, y, z;
 	int time_before_expiration; /* Used by client */
+	char name[SSGL_LOCATIONSIZE];
 };
 
 void starmap_set_one_adjacency(int starmap_adjacency[MAXSTARMAPENTRIES][MAX_STARMAP_ADJACENCIES],

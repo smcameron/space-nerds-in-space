@@ -30,17 +30,17 @@ struct atmosphere_color_rgb {
 struct solarsystem_asset_spec {
 	char *sun_texture;
 	char *skybox_prefix;
-	int nplanet_textures;
 	char **planet_texture;
 	char **planet_normalmap;
 	char **planet_type;
 	float *atmosphere_brightness; /* array of atmosphere brightnesses for planets between 0 and 1 */
 	struct atmosphere_color_rgb *atmosphere_color;
 	struct atmosphere_color_rgb *water_color; /* for use in specular calculations */
-	struct atmosphere_color_rgb sun_color; /* for use in specular calculations */
 	double x, y, z; /* Location of solarsystem (separate coord sys from rest of objects) */
+	int nplanet_textures;
 	int spec_errors, spec_warnings;
 	int random_seed;
+	struct atmosphere_color_rgb sun_color; /* for use in specular calculations */
 };
 
 struct solarsystem_asset_spec *solarsystem_asset_spec_read(char *filename);

@@ -30,9 +30,9 @@ struct space_partition {
 	int xdim, ydim;
 	double minx, maxx, miny, maxy;
 	double cell_width, cell_height;
-	int offset;
 	struct space_partition_entry **content;
 	struct space_partition_entry *common;
+	int offset;
 };
 
 static inline int get_cell(struct space_partition *p, int x, int y)

@@ -42,8 +42,8 @@ struct my_point_t {
 
 /* Just a grouping of arrays of points with the number of points in the array */
 struct my_vect_obj {
-	int npoints;
 	struct my_point_t *p;
+	int npoints;
 	int bbx1, bby1, bbx2, bby2; /* bounding box */
 };
 

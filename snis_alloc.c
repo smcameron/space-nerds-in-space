@@ -33,10 +33,10 @@
 /* borrowed heavily from Word War vi (wordwarvi.c, http://wordwarvi.sf.net ) */
 
 struct snis_object_pool {
+	uint32_t *free_obj_bitmap;
 	int nbitblocks;
 	int highest_object_number;
 	int maxobjs;
-	uint32_t *free_obj_bitmap;
 };
 
 #define BITISSET(pool, id) \

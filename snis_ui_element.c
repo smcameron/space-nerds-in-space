@@ -8,6 +8,7 @@
 struct ui_element {
 	void *element;
 	int active_displaymode;
+	int has_focus;
 	volatile int *displaymode;
 	ui_element_drawing_function draw;
 	ui_element_button_release_function button_release;
@@ -15,13 +16,12 @@ struct ui_element {
 	ui_element_set_focus_function set_focus;
 	ui_element_update_position_function set_position;
 	ui_element_get_label_function get_label;
-	int has_focus;
 	ui_element_keypress_function keypress_fn, keyrelease_fn;
 	ui_element_inside_function inside_fn;
 	ui_update_mouse_pos_function update_mouse_pos;
 	int hidden;
-	char *tooltip;
 	int tooltip_timer;
+	char *tooltip;
 	int defaultx, defaulty; /* default position of widget */
 	int xoffset, yoffset; /* offset from default position */
 };

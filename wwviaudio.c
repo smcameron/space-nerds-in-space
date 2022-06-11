@@ -128,13 +128,13 @@ static struct sound_clip {
 struct audio_queue_entry {
 	int active;
 	int nsamples;
-	int pos;
 	int16_t *sample;
-	float volume;
-	float delta_volume;
 	void (*callback)(void *cookie);
 	void *cookie;
 	void *next;
+	float volume;
+	float delta_volume;
+	int pos;
 };
 
 static struct audio_queue_entry *audio_queue = NULL;

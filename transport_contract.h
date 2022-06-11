@@ -10,9 +10,9 @@ struct transport_contract {
 	float qty;
 	float shipping_fee;
 	float cargo_value;
+	int loaded;
 	char *recipient;
 	char *shipper;
-	int loaded;
 };
 
 void add_transport_contract_shipping_location(uint32_t loc);

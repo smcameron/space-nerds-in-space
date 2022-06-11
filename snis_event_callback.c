@@ -29,16 +29,16 @@
 #define MAXCALLBACKS (3)
 struct event_callback_entry {
 	char *event;
-	int ncallbacks;
 	char *callback[MAXCALLBACKS];
 	struct event_callback_entry *next;
+	int ncallbacks;
 };
 
 struct callback_schedule_entry {
 	char *callback;
-	int nparams;
 	double param[MAX_LUA_CALLBACK_PARAMS];
 	struct callback_schedule_entry *next;
+	int nparams;
 };
 
 /* Adds a new callback onto the schedule e */

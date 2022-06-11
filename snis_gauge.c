@@ -13,12 +13,12 @@
 #include "string-utils.h"
 
 struct gauge {
-	int x, y, r;
+	int x, y, r, needle_color;
 	gauge_monitor_function sample;
 	gauge_monitor_function sample2;
 	double r1,r2;
 	double start_angle, angular_range;
-	int needle_color, dial_color, needle_color2;
+	int dial_color, needle_color2;
 	int dial_font, label_font;
 	int ndivs;
 	char title[16]; 

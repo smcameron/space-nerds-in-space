@@ -39,12 +39,12 @@ struct server_tracker {
 	char *lobbyhost;
 	pthread_t thread;
 	int sock;
-	pthread_mutex_t mutex;
 	int time_to_quit;
+	pthread_mutex_t mutex;
 	struct ssgl_game_server *game_server;
 	int game_server_count;
-	struct ssgl_game_server *mverse_server;
 	int mverse_server_count;
+	struct ssgl_game_server *mverse_server;
 	void *cookie;
 	server_tracker_change_notifier notifier;
 };

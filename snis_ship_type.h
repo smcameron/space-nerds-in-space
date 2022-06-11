@@ -32,13 +32,11 @@ struct ship_type_entry {
 	char *model_file;
 	char *thrust_attachment_file;
 	double toughness;
-	uint8_t max_shield_strength;
-	double max_speed;
 	int warpchance;
 	int crew_max;
+	double max_speed;
 	int ncargo_bays;
 	int nrotations;
-	char axis[3];
 	float angle[3];
 	int has_lasers;
 	int has_torpedoes;
@@ -46,8 +44,10 @@ struct ship_type_entry {
 	int rts_unit_type;
 	float extra_scaling;
 	uint8_t manufacturer; /* index into corporations in corporations.c */
+	char axis[3];
 	float relative_mass;
 	float mass_kg;
+	uint8_t max_shield_strength;
 };
 
 struct ship_type_entry *snis_read_ship_types(char *filename, int *count);

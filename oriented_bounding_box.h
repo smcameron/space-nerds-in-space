@@ -23,8 +23,8 @@
 
 struct oriented_bounding_box {
 	double centerx, centery, centerz;
-	union vec3 u[3]; /* x, y, and z unit vectors indicating orientation */
 	double e[3]; /* Scale factor to apply to u[] to get to obb faces */
+	union vec3 u[3]; /* x, y, and z unit vectors indicating orientation */
 };
 /* Returns the closest point q on the surface of an oriented bounding box to the given point.
  * This function is based on ClosestPtPointOBB() from "Real Time Collision Detection" by

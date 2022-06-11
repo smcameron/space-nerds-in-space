@@ -22,13 +22,12 @@
 #define ENTITY_PRIVATE_H__
 
 struct entity {
-	int visible;
 	struct mesh *m;
 	struct mesh *low_poly;
 	struct mesh *high_poly;
+	int visible;
 	float x, y, z; /* world coords */
 	float cx, cy, cz; /* camera coords */
-	unsigned char onscreen; /* if screen coords are valid */
 	float sx, sy; /* screen coords */
 	union vec3 scale;
 	float dist3dsqrd;
@@ -42,13 +41,14 @@ struct entity {
 
 	struct material *material_ptr;
 
-	int e_visible;
 	union vec3 e_pos;
 	union vec3 e_scale;
 	union quat e_orientation;
 	struct entity *parent;
 	int entity_child_index;
 	float in_shade;
+	int e_visible;
+	unsigned char onscreen; /* if screen coords are valid */
 };
 
 struct entity_child {
@@ -73,20 +73,20 @@ struct camera_info {
 	float near, far;
 	float angle_of_view;
 	int xvpixels, yvpixels;
-	int renderer;
 	struct frustum frustum;
+	int renderer;
 };
 
 struct entity_context {
-	int maxobjs;
 	struct snis_object_pool *entity_pool;
 	struct entity *entity_list; /* array, [maxobjs] */
+	int maxobjs;
 	int maxchildren;
 	struct snis_object_pool *entity_child_pool;
 	struct entity_child *entity_child_list; /* array, [maxchildren] */
 	int nfar_to_near_entity_depth;
-	int *far_to_near_entity_depth; /* array [maxobjs] */
 	int nnear_to_far_entity_depth;
+	int *far_to_near_entity_depth; /* array [maxobjs] */
 	int *near_to_far_entity_depth; /* array [maxobjs] */
 	struct camera_info camera;
 	struct entity *fake_stars;
@@ -112,9 +112,9 @@ struct entity_transform {
 	struct mat44d m;
 	struct mat44 mvp;
 	struct mat44 mv;
-	struct mat33 normal;
 	struct mat44d *vp;
 	struct mat44d *v;
+	struct mat33 normal;
 };
 
 #endif

@@ -25,7 +25,6 @@
 
 struct ship_registry_entry {
 	uint32_t id;
-	char type;
 #define SHIP_REG_TYPE_REGISTRATION 'r'
 #define SHIP_REG_TYPE_BOUNTY 'b'
 #define SHIP_REG_TYPE_OWNER 'o'
@@ -35,6 +34,7 @@ struct ship_registry_entry {
 	char *entry;
 	float bounty;
 	uint32_t bounty_collection_site;
+	char type;
 };
 
 struct ship_registry {

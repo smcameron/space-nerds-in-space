@@ -19,17 +19,17 @@ static int *slider_mouse_y = NULL;
 
 struct slider {
 	float x, y, length, height;
-	int color;
 	double value, input;
+	int color;
 	char label[20], label1[5], label2[5];
+	unsigned char timer;
+	unsigned char fuzz;
+	int colors_reversed;
 	double r1, r2;
 	slider_monitor_function sample;
 	slider_clicked_function clicked;
 	int vertical;
 	int font;
-	int colors_reversed;
-	unsigned char timer;
-	unsigned char fuzz;
 };
 
 static int slider_sound = -1;

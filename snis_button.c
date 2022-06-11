@@ -21,12 +21,12 @@ struct button {
 	int disabled_color;
 	int font;
 	int long_press_timer;
+	int button_sound;
 	int (*checkbox_function)(void *);
 	void *checkbox_cookie;
 	void *long_press_cookie;
 	button_function button_release; /* Called when the user presses then releases the button. */
 	button_function long_press_button_release; /* Called when the user presses holds then release button */
-	int button_sound;
 	void *cookie;
 	unsigned char button_press_feedback_counter;
 };

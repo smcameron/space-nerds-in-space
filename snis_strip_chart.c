@@ -21,8 +21,9 @@ struct scaling_strip_chart {
 	int x, y, width, height, color, warn_color, font, history_size, needle;
 	char label[100];
 	char warning_msg[100];
+	float warning_on;
 	float *history;
-	float warning_on, warning_level;
+	float warning_level;
 	float bottom, top;
 };
 

@@ -62,9 +62,9 @@ struct mesh {
 	struct vertex *v;
 	struct mesh_line *l;
 	struct texture_coord *tex; /* if not null, contains 3 (u,v)'s per triangle */
-	float radius;
 	struct material *material; /* for now just one material */
 	void *graph_ptr;
+	float radius;
 };
 
 GLOBAL float mesh_compute_radius(struct mesh *m);

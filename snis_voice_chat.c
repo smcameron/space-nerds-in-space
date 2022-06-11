@@ -56,8 +56,8 @@ static struct audio_buffer {
 	int nopus_bytes;
 	struct audio_buffer *next, *prev;
 	uint32_t snis_radio_channel;
-	uint8_t destination; /* VOICE_CHAT_DESTINATION_CREW, _ALL, or _CHANNEL */
 	int audio_chain;
+	uint8_t destination; /* VOICE_CHAT_DESTINATION_CREW, _ALL, or _CHANNEL */
 } recording_buffer;
 
 struct audio_queue {

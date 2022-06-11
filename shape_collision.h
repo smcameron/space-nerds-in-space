@@ -6,11 +6,6 @@
 #include "math.h"
 
 struct shape {
-	uint8_t type;
-#define SHAPE_CUBOID 0
-#define SHAPE_SPHERE 1
-#define SHAPE_CAPSULE 2
-	float overall_radius;
 	__extension__ union {
 		struct shape_sphere {
 			float radius;
@@ -24,6 +19,11 @@ struct shape {
 			struct oriented_bounding_box obb;
 		} cuboid;
 	};
+	float overall_radius;
+	uint8_t type;
+#define SHAPE_CUBOID 0
+#define SHAPE_SPHERE 1
+#define SHAPE_CAPSULE 2
 };
 		
 /* Given point point, and a shape s at position shape_position, and orientation

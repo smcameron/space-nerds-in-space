@@ -14,9 +14,9 @@ struct snis_text_input_box {
 	int color, font;
 	char *buffer;
 	int buflen;
+	int cursor_pos;
 	snis_text_input_box_callback callback, return_function;
 	void *cookie;
-	int cursor_pos;
 	volatile int *timer;
 	int height, width, minwidth, maxwidth, desiredwidth;
 	int has_focus;

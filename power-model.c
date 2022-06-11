@@ -11,15 +11,15 @@ struct power_device {
 	struct power_model *pm;
 	resistor_sample_fn r1, r2, r3;
 	float or1, or2, or3; /* previous values of resistors */
-	void *cookie;
 	float damage;
+	void *cookie;
 	float i;
 };
 
 #define MAX_DEVICES_PER_MODEL 9
 struct power_model {
-	int ndevices;
 	struct power_device *d[MAX_DEVICES_PER_MODEL];
+	int ndevices;
 	float max_current;
 	float nominal_voltage;
 	float actual_voltage;
