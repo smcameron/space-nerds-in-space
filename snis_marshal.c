@@ -21,6 +21,12 @@
 #define MAX_FRACTIONAL 0x7FFFFFFFFFFFFFFFLL /* 2^63 - 1 */
 #define RADIANS_SCALE (31415927)
 
+/* Change SNIS_MARSHAL_DETECT_NANS to 1 and then doubles and quaternions will
+ * be checked before packing and after unpacking and if NaNs or infinities are
+ * found, they will be logged.
+ */
+#define SNIS_MARSHAL_DETECT_NANS 0
+
 static void pack_double(double value, struct packed_double *pd)
 {
 	double fractional = fabs(frexp(value, &pd->exponent)) - 0.5;
@@ -570,6 +576,54 @@ void packed_buffer_extract_quat(struct packed_buffer *pb, float q[])
 	}
 }
 
+#if SNIS_MARSHAL_DETECT_NANS
+#warning "snis_marshal.c: NaN detection enabled"
+static void check_double(char *where, double d)
+{
+	int c = fpclassify(d);
+
+	switch (c) {
+	case FP_NORMAL:
+	case FP_SUBNORMAL:
+	case FP_ZERO:
+		return;
+	case FP_NAN:
+	case FP_INFINITE:
+	default:
+		break;
+	}
+	fprintf(stderr, "Bad float encountered in snis_marshal %s\n", where);
+	stacktrace("Bad float encountered in snis_marshal\n");
+}
+
+static void check_quaternion(char *where, float *q)
+{
+	int i, c;
+
+	for (i = 0; i < 4; i++) {
+		c = fpclassify(q[i]);
+		switch (c) {
+		case FP_NORMAL:
+		case FP_SUBNORMAL:
+		case FP_ZERO:
+			continue;
+		case FP_NAN:
+		case FP_INFINITE:
+		default:
+			break;
+		}
+		fprintf(stderr, "Bad quaternion encountered in snis_marshal %s\n", where);
+		fprintf(stderr, "q[0,1,2,3] = %f, %f, %f, %f\n", q[0], q[1], q[2], q[3]);
+		stacktrace("Bad quaternion encountered in snis_marshal\n");
+		return;
+	}
+	return;
+}
+#else
+#define check_double(a, b)
+#define check_quaternion(a, b)
+#endif
+
 int packed_buffer_append_va(struct packed_buffer *pb, const char *format, va_list ap)
 {
 	uint8_t b, bits;
@@ -614,15 +668,18 @@ int packed_buffer_append_va(struct packed_buffer *pb, const char *format, va_lis
 			break;
 		case 'd':
 			d = va_arg(ap, double);
+			check_double("packed_buffer_append_va:'d'", d);
 			packed_buffer_append_double(pb, d);
 			break;
 		case 'S':
 			d = va_arg(ap, double);
+			check_double("packed_buffer_append_va:'S'", d);
 			sscale = va_arg(ap, int32_t); 
 			packed_buffer_append_ds32(pb, d, sscale);
 			break;
 		case 'R':
 			d = va_arg(ap, double);
+			check_double("packed_buffer_append_va:'R'", d);
 			sscale = INT32_MAX / RADIANS_SCALE;
 			if (d < -2.0 * M_PI || d > 2.0 * M_PI) {
 				printf("out of range angle %d\n", (int) (d * 180.0 / M_PI));
@@ -632,11 +689,13 @@ int packed_buffer_append_va(struct packed_buffer *pb, const char *format, va_lis
 			break;
 		case 'U':
 			d = va_arg(ap, double);
+			check_double("packed_buffer_append_va:'U'", d);
 			uscale = va_arg(ap, uint32_t); 
 			packed_buffer_append_du32(pb, d, uscale);
 			break;
 		case 'Q':
 			quaternion = va_arg(ap, float *);
+			check_quaternion("packed_buffer_append_va:'Q'", quaternion);
 			packed_buffer_append_quat(pb, quaternion);
 			break;
 		case 'B':
@@ -799,25 +858,30 @@ int packed_buffer_extract_va(struct packed_buffer *pb, const char *format, va_li
 		case 'd':
 			d = va_arg(ap, double *);
 			*d = packed_buffer_extract_double(pb);
+			check_double("packed_buffer_extract_va:'d'", *d);
 			break;
 		case 'S':
 			d = va_arg(ap, double *);
 			sscale = va_arg(ap, int32_t); 
 			*d = packed_buffer_extract_ds32(pb, sscale);
+			check_double("packed_buffer_extract_va:'S'", *d);
 			break;
 		case 'R':
 			d = va_arg(ap, double *);
 			sscale = INT32_MAX / RADIANS_SCALE;
 			*d = packed_buffer_extract_ds32(pb, sscale);
+			check_double("packed_buffer_extract_va:'R'", *d);
 			break;
 		case 'U':
 			d = va_arg(ap, double *);
 			uscale = va_arg(ap, uint32_t); 
 			*d = packed_buffer_extract_du32(pb, uscale);
+			check_double("packed_buffer_extract_va:'U'", *d);
 			break;
 		case 'Q':
 			quaternion = va_arg(ap, float *);
 			packed_buffer_extract_quat(pb, quaternion);
+			check_quaternion("packed_buffer_extract_va:'Q'", quaternion);
 			break;
 		case 'B':
 			bits = packed_buffer_extract_u8(pb);
