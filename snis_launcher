@@ -26,6 +26,7 @@ LOBBYHOST=localhost
 # ASPECT_RATIO="16:9"
 TRAP_NANS=
 # TRAP_NANS=--trap-nans
+SPLASH_SCREEN="ENABLED"
 
 ENABLE_ENSCRIPT=
 # ENABLE_ENSCRIPT=--enable-enscript
@@ -103,6 +104,7 @@ cat << EOF 1>&2
     1. Enter Lobby Host IP addr (currently $LOBBYHOST)
     2. Enter Lobby Host Port number ($(show_current_ssgl_port))
     3. Enter SNIS server port range MIN:MAX ($(show_current_snis_port_range))
+    4. Enable/Disable splash screen (currently $SPLASH_SCREEN)
     0. Return to main menu
 EOF
 }
@@ -280,8 +282,15 @@ start_snis_client()
 	echo
 	echo "Starting snis_client (it may take a few moments to appear)"
 	echo
+	if [ "$SPLASH_SCREEN" = "DISABLED" ]
+	then
+		SPLASH_SCREEN_OPTION="--no-splash-screen"
+	else
+		SPLASH_SCREEN_OPTION=""
+	fi
 	CLIENT="$1"
-	${CLIENT} --lobbyhost "${LOBBYHOST}" $ASPECT_RATIO_ARG --fullscreen ${TRAP_NANS} > snis_client_log.txt 2>&1 &
+	${CLIENT} --lobbyhost "${LOBBYHOST}" $ASPECT_RATIO_ARG --fullscreen \
+		${TRAP_NANS} ${SPLASH_SCREEN_OPTION} > snis_client_log.txt 2>&1 &
 	sleep 1
 	# --starship "$shipname" --pw "$password" $@
 }
@@ -404,6 +413,15 @@ choose_options()
 		;;
 		3)
 			enter_snis_server_port_range
+		;;
+		4)
+			if [ "$SPLASH_SCREEN" = "ENABLED" ]
+			then
+				SPLASH_SCREEN="DISABLED"
+			else
+				SPLASH_SCREEN="ENABLED"
+			fi
+			echo "Splash screen is now $SPLASH_SCREEN"
 		;;
 		esac
 	done

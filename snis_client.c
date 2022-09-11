@@ -304,6 +304,7 @@ static int real_screen_height;
 static int time_to_set_window_size = 0;
 static volatile int splash_screen_still_needed = 1;
 static volatile int splash_progress = 0;
+static int skip_splash_screen = 0;
 static float original_aspect_ratio;
 static int window_manager_can_constrain_aspect_ratio = 0;
 static int suppress_hyperspace_noise = 0;	/* tweakable */
@@ -23358,6 +23359,7 @@ static struct option long_options[] = {
 	{ "solarsystem", required_argument, NULL, '*'},
 	{ "joystick", required_argument, NULL, 'j'},
 	{ "trap-nans", no_argument, NULL, 't'},
+	{ "no-splash-screen", no_argument, NULL, 'x' },
 	{ 0, 0, 0, 0 },
 };
 
@@ -23370,7 +23372,7 @@ static void process_options(int argc, char *argv[])
 	y = -1;
 	while (1) {
 		int option_index;
-		c = getopt_long(argc, argv, "AaCEfj:Ll:Nn:Mm:p:P:qr:Ss:tvW*:", long_options, &option_index);
+		c = getopt_long(argc, argv, "AaCEfj:Ll:Nn:Mm:p:P:qr:Ss:tvW*:x", long_options, &option_index);
 		if (c == -1)
 			break;
 		switch (c) {
@@ -23466,6 +23468,9 @@ static void process_options(int argc, char *argv[])
 				usage();
 			requested_aspect_x = x;
 			requested_aspect_y = y;
+			break;
+		case 'x':
+			skip_splash_screen = 1;
 			break;
 		case 'y':
 			if (!optarg)
@@ -23834,7 +23839,8 @@ static int start_sdl_and_splash_screen(void)
 		return 1;
 	}
 	atexit(SDL_Quit);
-	create_thread(&splash_screen_thread, splash_screen_fn, NULL, "snis-splash", 1);
+	if (!skip_splash_screen)
+		create_thread(&splash_screen_thread, splash_screen_fn, NULL, "snis-splash", 1);
 	return 0;
 }
 
