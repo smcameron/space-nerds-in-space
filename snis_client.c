@@ -23735,6 +23735,25 @@ static void enable_sdl_fullscreen_sanity(void)
 								/* I am Very tempted to set it to 1. */
 }
 
+/*
+ * splash_screen_fn(), which is run in its own thread, is a bit questionable.
+ *
+ * This page https://wiki.libsdl.org/CategoryThread says the following:
+ *
+ *   NOTE: You should not expect to be able to create a window, render,
+ *   or receive events on any thread other than the main one. For
+ *   platform-specific exceptions or complicated options ask on
+ *   the forums/mailing list.
+ *
+ * Yet, here we go, creating a window and rendering stuff in it in a thread that
+ * is not the main thread. Empirically, it seems to "work", excepting we can't
+ * destroy the window when we're done as we would like to, but can only "hide" it.
+ *
+ * Fixing this "properly" is not as simple as putting all this stuff in the main
+ * game loop because everything that happens here happens before the main game
+ * loop is even reached, while a bunch of stuff is being initialized, read
+ * from disk, etc.
+ */
 static void *splash_screen_fn(__attribute__((unused)) void *arg)
 {
 	SDL_Window *splash_window = NULL;
