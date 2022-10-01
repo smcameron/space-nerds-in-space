@@ -27,39 +27,19 @@
  */
 #define SNIS_MARSHAL_DETECT_NANS 0
 
-static int host_is_little_endian()
-{
-	static int answer = -1;
-	uint32_t x = 0x01020304;
-	unsigned char *c = (unsigned char *) &x;
-
-	if (answer != -1)
-		return answer;
-
-	answer = (c[0] == 0x04);
-	return answer;
-}
-
 /* change a u64 to network byte order */
 static uint64_t cpu_to_be64(uint64_t v)
 {
-	unsigned char *x, *y;
-	uint64_t answer;
-
-	if (!host_is_little_endian())
-		return v;
-		
-	x = (unsigned char *) &v;
-	y = (unsigned char *) &answer;
-	y[0] = x[7];
-	y[1] = x[6];
-	y[2] = x[5];
-	y[3] = x[4];
-	y[4] = x[3];
-	y[5] = x[2];
-	y[6] = x[1];
-	y[7] = x[0];
-	return answer;
+	/* This works whether the native byte order is big or little endian.  Think about it. */
+	unsigned char *x = (unsigned char *) &v;
+	return	((uint64_t) x[0] << 56) |
+		((uint64_t) x[1] << 48) |
+		((uint64_t) x[2] << 40) |
+		((uint64_t) x[3] << 32) |
+		((uint64_t) x[4] << 24) |
+		((uint64_t) x[5] << 16) |
+		((uint64_t) x[6] << 8) |
+		((uint64_t) x[7] << 0);
 }
 
 static uint64_t be64_to_cpu(uint64_t v)
