@@ -461,16 +461,6 @@ struct update_flare_packet {
 	uint32_t x, y, z;
 };
 
-struct add_laser_packet {
-	uint8_t opcode;
-	uint32_t id;
-	uint32_t timestamp;
-	uint8_t power;
-	uint8_t wavelength;
-	struct packed_double x, y;
-	struct packed_double vx, vy;
-};
-
 struct delete_object_packet {
 	uint8_t opcode;
 	uint32_t id;
@@ -591,34 +581,6 @@ struct ack_player_packet {
 	uint8_t opcode;
 	uint8_t allowed;
 };
-
-struct pos_ship_packet {
-	uint8_t opcode;
-	uint32_t id;
-	struct packed_double x, y;
-	struct packed_double vx, vy;
-	struct packed_double heading;
-};
-
-struct pos_starbase_packet {
-	uint8_t opcode;
-	uint32_t id;
-	struct packed_double x, y;
-	struct packed_double vx, vy;
-	struct packed_double heading;
-};
-
-struct pos_laser_packet {
-	uint8_t opcode;
-	uint32_t id;
-	struct packed_double x, y;
-};
-
-struct pos_torpedo_packet {
-	uint8_t opcode;
-	uint32_t id;
-	struct packed_double x, y;
-}; 
 
 struct play_sound_packet {
 	uint8_t opcode;
