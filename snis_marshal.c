@@ -381,48 +381,50 @@ void packed_buffer_init(struct packed_buffer * pb, void *buffer, int size)
 	pb->buffer_cursor = 0;
 }
 
-uint32_t dtou32(double d, uint32_t scale)
+static uint32_t dtou32(double d, uint32_t scale)
 {
 	return (uint32_t) ((d / scale) * (double) UINT32_MAX);
 }
 
-double u32tod(uint32_t u, uint32_t scale)
+static double u32tod(uint32_t u, uint32_t scale)
 {
 	return ((double) u * (double) scale) / (double) UINT32_MAX;
 }
 
-int32_t dtos32(double d, int32_t scale)
+static int32_t dtos32(double d, int32_t scale)
 {
 	return (int32_t) ((d / scale) * (double) INT32_MAX);
 }
 
+#ifdef TEST_MARSHAL
 /* Q for quaternion */
-int32_t Qtos32(float q)
+static int32_t Qtos32(float q)
 {
 	/* q must be between -1.0 and 1.0 */
 	return (int32_t) (q * (float) (INT32_MAX - 1));
 }
 
 /* Q for quaternion */
-float s32toQ(int32_t i)
+static float s32toQ(int32_t i)
 {
 	return ((float) i) / (float) (INT32_MAX - 1);
 }
+#endif
 
 /* Q for quaternion */
-int16_t Qtos16(float q)
+static int16_t Qtos16(float q)
 {
 	/* q must be between -1.0 and 1.0 */
 	return (int16_t) (q * (float) (INT16_MAX - 1));
 }
 
 /* Q for quaternion */
-float s16toQ(int16_t i)
+static float s16toQ(int16_t i)
 {
 	return ((float) i) / (float) (INT16_MAX - 1);
 }
 
-double s32tod(int32_t u, int32_t scale)
+static double s32tod(int32_t u, int32_t scale)
 {
 	return ((double) u * (double) scale) / (double) INT32_MAX;
 }

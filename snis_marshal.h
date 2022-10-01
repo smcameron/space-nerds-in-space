@@ -80,15 +80,6 @@ GLOBAL void packed_buffer_print(char *label, struct packed_buffer *pb);
 GLOBAL struct packed_buffer *packed_buffer_copy(struct packed_buffer *pb);
 GLOBAL void packed_buffer_init(struct packed_buffer * pb, void *buffer, int size);
 
-GLOBAL uint32_t dtou32(double d, uint32_t scale);
-GLOBAL double u32tod(uint32_t u, uint32_t scale);
-GLOBAL int32_t dtos32(double d, int32_t scale);
-GLOBAL double s32tod(int32_t u, int32_t scale);
-GLOBAL int16_t Qtos16(float q); /* for quaternion elements. (-1.0 <= q <= 1.0) must hold */
-GLOBAL int32_t Qtos32(float q);
-GLOBAL float s16toQ(int16_t i);
-GLOBAL float s32toQ(int32_t i);
-
 GLOBAL int packed_buffer_append_du32(struct packed_buffer *pb, double d, uint32_t scale);
 GLOBAL int packed_buffer_append_ds32(struct packed_buffer *pb, double d, int32_t scale);
 GLOBAL double packed_buffer_extract_du32(struct packed_buffer *pb, uint32_t scale);
