@@ -6,14 +6,6 @@
 
 #include "quat.h"
 
-#pragma pack(1)
-struct packed_double 
-{
-	int64_t fractional;
-	int32_t exponent;
-};
-#pragma pack()
-
 struct packed_buffer
 {
 	unsigned char *buffer;
@@ -46,7 +38,6 @@ GLOBAL void packed_buffer_free(struct packed_buffer *pb);
  * "q" = u64 (quad word)
  * "s" = string (char *)
  * "r" = raw (char *) (unsigned short len)
- * "d" = double
  * "S" = 32-bit signed integer encoded double (takes 2 params, double + scale )
  * "U" = 32-bit unsigned integer encoded double (takes 2 params, double + scale )
  * "Q" = 4 16-bit signed integer encoded floats representing a quaternion axis + angle
@@ -64,7 +55,6 @@ GLOBAL int packed_buffer_extract(struct packed_buffer *pb, const char *format, .
 GLOBAL int packed_buffer_extract_va(struct packed_buffer *pb, const char *format,
 					va_list ap);
 GLOBAL struct packed_buffer *packed_buffer_new(const char *format, ...);
-GLOBAL int packed_buffer_append_double(struct packed_buffer *pb, double value);
 GLOBAL int packed_buffer_append_u16(struct packed_buffer *pb, uint16_t value);
 GLOBAL int packed_buffer_append_u8(struct packed_buffer *pb, uint8_t value);
 GLOBAL int packed_buffer_append_u32(struct packed_buffer *pb, uint32_t value);
@@ -74,7 +64,6 @@ GLOBAL uint16_t packed_buffer_extract_u16(struct packed_buffer *pb);
 GLOBAL uint8_t packed_buffer_extract_u8(struct packed_buffer *pb);
 GLOBAL uint32_t packed_buffer_extract_u32(struct packed_buffer *pb);
 GLOBAL uint64_t packed_buffer_extract_u64(struct packed_buffer *pb);
-GLOBAL double packed_buffer_extract_double(struct packed_buffer *pb);
 GLOBAL void packed_buffer_extract_quat(struct packed_buffer *pb, float q[]);
 GLOBAL int packed_buffer_append_string(struct packed_buffer *pb, unsigned char *str, unsigned short len);
 GLOBAL int packed_buffer_extract_string(struct packed_buffer *pb, char *buffer, int buflen);

@@ -27,34 +27,6 @@
  */
 #define SNIS_MARSHAL_DETECT_NANS 0
 
-static void pack_double(double value, struct packed_double *pd)
-{
-	double fractional = fabs(frexp(value, &pd->exponent)) - 0.5;
-
-	if (fractional < 0.0) {
-		pd->fractional = 0;
-		return;
-	}
-
-	pd->fractional = 1 + (int64_t) (fractional * 2.0 * (MAX_FRACTIONAL - 1));
-	if (value < 0.0)
-		pd->fractional = -pd->fractional;
-}
-
-static double unpack_double(const struct packed_double *pd)
-{
-	double fractional, value;
-
-	if (pd->fractional == 0)
-		return 0.0;
-
-	fractional = ((double) (llabs(pd->fractional) - 1) / (MAX_FRACTIONAL - 1)) / 2.0;
-	value = ldexp(fractional + 0.5, pd->exponent);
-	if (pd->fractional < 0)
-		return -value;
-	return value;
-}
-
 static int host_is_little_endian()
 {
 	static int answer = -1;
@@ -95,30 +67,6 @@ static uint64_t be64_to_cpu(uint64_t v)
 	return cpu_to_be64(v);
 }
 
-/* change a packed double to network byte order. */
-static inline void packed_double_nbo(struct packed_double *pd)
-{
-	if (!host_is_little_endian())
-		return;
-	unsigned char *a, *b;
-	a = (unsigned char *) &pd->exponent;
-	b = (unsigned char *) &pd->exponent;
-	a[0] = b[3];
-	a[1] = b[2];
-	a[2] = b[1];
-	a[3] = b[0];
-	a = (unsigned char *) &pd->fractional;
-	b = (unsigned char *) &pd->fractional;
-	a[0] = b[7];
-	a[1] = b[6];
-	a[2] = b[5];
-	a[3] = b[4];
-	a[4] = b[3];
-	a[5] = b[2];
-	a[6] = b[1];
-	a[7] = b[0];
-}
-
 static void packed_buffer_check(struct packed_buffer *pb)
 {
 	if ((uint32_t) pb->buffer_cursor > pb->buffer_size) {
@@ -138,35 +86,6 @@ static void packed_buffer_check_add(struct packed_buffer *pb, int additional_byt
 		stacktrace("");
 		assert(0);
 	}
-}
-
-/* Change a packed double to host byte order. */
-static inline void packed_double_to_host(struct packed_double *pd)
-{
-	packed_double_nbo(pd);
-}
-
-int packed_buffer_append_double(struct packed_buffer *pb, double value)
-{
-	struct packed_double pd;
-	packed_buffer_check_add(pb, sizeof(pd));
-	pack_double(value, &pd);
-	packed_double_nbo(&pd);
-	memcpy(&pb->buffer[pb->buffer_cursor], &pd, sizeof(pd));
-	pb->buffer_cursor += sizeof(pd);
-	packed_buffer_check(pb);
-	return 0;
-}
-
-double packed_buffer_extract_double(struct packed_buffer *pb)
-{
-	struct packed_double pd;
-
-	memcpy(&pd, &pb->buffer[pb->buffer_cursor], sizeof(pd));
-	pb->buffer_cursor += sizeof(pd);
-	packed_buffer_check(pb);
-	packed_double_to_host(&pd);
-	return unpack_double(&pd);	
 }
 
 int packed_buffer_append_u16(struct packed_buffer *pb, uint16_t value)
@@ -666,11 +585,6 @@ int packed_buffer_append_va(struct packed_buffer *pb, const char *format, va_lis
 			len = (unsigned short) va_arg(ap, int);
 			packed_buffer_append_raw(pb, r, len);
 			break;
-		case 'd':
-			d = va_arg(ap, double);
-			check_double("packed_buffer_append_va:'d'", d);
-			packed_buffer_append_double(pb, d);
-			break;
 		case 'S':
 			d = va_arg(ap, double);
 			check_double("packed_buffer_append_va:'S'", d);
@@ -771,9 +685,6 @@ int calculate_buffer_size(const char *format)
 		case 'R':
 			size += 4;
 			break;
-		case 'd':
-			size += sizeof(double);
-			break;
 		case 'q':
 			size += 8;
 			break;
@@ -854,11 +765,6 @@ int packed_buffer_extract_va(struct packed_buffer *pb, const char *format, va_li
 			r = va_arg(ap, char *);
 			len = va_arg(ap, int);
 			packed_buffer_extract_raw(pb, r, len);
-			break;
-		case 'd':
-			d = va_arg(ap, double *);
-			*d = packed_buffer_extract_double(pb);
-			check_double("packed_buffer_extract_va:'d'", *d);
 			break;
 		case 'S':
 			d = va_arg(ap, double *);
