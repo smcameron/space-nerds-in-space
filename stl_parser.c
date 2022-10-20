@@ -626,11 +626,15 @@ static int obj_add_vertex(struct mesh *m, char *line, int *verts_alloced)
 	float x, y, z, w;
 
 	rc = sscanf(line, "v %f %f %f %f", &x, &y, &z, &w);
-	if (rc != 4) {
+	switch (rc) {
+	case 3: /* w is optional weight for rational curves/surfaces (unsupported by SNIS),
+		   if missing, implicitly 1.0f */
 		w = 1.0f;
-		rc = sscanf(line, "v %f %f %f", &x, &y, &z);
-		if (rc != 3)
-			return -1;
+		break;
+	case 4:
+		break;
+	default:
+		return -1;
 	}
 
 	/* Get some more memory for vertices if needed */
@@ -654,13 +658,14 @@ static int obj_add_texture_vertex(struct vertex **vt, char *line,
 
 	w = 0.0f;
 	rc = sscanf(line, "vt %f %f %f", &u, &v, &w);
-	if (rc == 3) {
-		fprintf(stderr, "ignoring w component of texture.\n");
+	switch (rc) {
+	case 2: /* w is optional depth of texture, (unsupported by SNIS) if missing, implicitly 0.0f */
 		w = 0.0f;
-	} else {
-		rc = sscanf(line, "vt %f %f", &u, &v);
-		if (rc != 2)
-			return -1;
+		break;
+	case 3:
+		break;
+	default:
+		return -1;
 	}
 
 	if (*nverts_used >= *nverts_alloced) {
@@ -1070,7 +1075,7 @@ struct mesh *read_obj_file(char *file_name)
 		if (strncmp(line, "v ", 2) == 0) { /* vertex */
 			if (obj_add_vertex(m, line, &verts_alloced))
 				goto flame_out;
-		} else if (strncmp(line, "vt ", 3) == 0) { /* face */
+		} else if (strncmp(line, "vt ", 3) == 0) { /* texture vertex (u/v mapping) */
 			if (obj_add_texture_vertex(&vt, line,
 					&texture_verts_alloced, &texture_verts_used))
 				goto flame_out;
