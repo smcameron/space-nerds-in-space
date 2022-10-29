@@ -404,3 +404,9 @@ NICE TO HAVE:
   update the display at all once it calls load_textures() until load_textures()
   returns -- which can take several seconds.
 
+* This is an interesting article about using doubles rather than floats for translations
+  to avoid jitteriness when far from the origin without having a floating origin (means,
+  it might even work for multi-player.)
+  https://godotengine.org/article/emulating-double-precision-gpu-render-large-worlds
+  Has some limitations though, so not sure it will really work or gain that much for
+  our purposes.
