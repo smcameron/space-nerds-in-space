@@ -10377,7 +10377,7 @@ static void draw_3d_mark_arc(struct entity_context *ecx,
 	int increments = (int) fabs(mark / (5.0 * M_PI / 180.0)) + 1;
 	float delta = mark / increments;
 	int i;
-	union vec3 p1;
+	union vec3 p1 = { { 0, 0, 0 } };
 	for (i = 0; i <= increments; i++) {
 		union vec3 p2;
 		heading_mark_to_vec3(r, heading, delta * i, &p2);
