@@ -173,7 +173,7 @@ union vec3 faction_center(int faction_number)
 int nearest_faction(union vec3 v)
 {
 	int i;
-	double len;
+	double len = 0;
 	int winner = 0;
 	union vec3 distv;
 
