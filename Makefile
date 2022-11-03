@@ -661,7 +661,11 @@ MYCFLAGS=-DPREFIX=${PREFIX} ${DEBUGFLAG} ${PROFILEFLAG} ${OPTIMIZEFLAG} ${UBSANF
 	--pedantic -Wall -Wextra ${STOP_ON_WARN} -pthread -std=gnu99 ${RDYNAMIC} \
 	-Wno-extended-offsetof -Wno-gnu-folding-constant $(CFLAGS) -Wvla \
 	-DUSE_SNIS_XWINDOWS_HACKS=${USE_SNIS_XWINDOWS_HACKS} -fno-common \
-	-DUSE_CUSTOM_STRLCPY=${USE_CUSTOM_STRLCPY} -Wno-format-truncation
+	-DUSE_CUSTOM_STRLCPY=${USE_CUSTOM_STRLCPY} -Wno-format-truncation \
+	-D_FORTIFY_SOURCE=2 -fsanitize=bounds \
+	-Wstringop-truncation -Warray-bounds -Wstringop-overflow \
+	-fstack-protector-strong -Wimplicit-fallthrough
+
 VORBISFLAGS:=$(subst -I,-isystem ,$(shell $(PKG_CONFIG) --cflags vorbisfile))
 
 ifeq (${WITHVOICECHAT},yes)
