@@ -23887,8 +23887,12 @@ static int start_sdl(void)
  * a separate executable for it when we can instead just run for a little
  * while after the fork and then exit.
  *
- * Note, various things fail related to the splash screen (pipe, fork),
+ * Note, if various things fail related to the splash screen (pipe, fork),
  * we return 0 (success) because the splash screen is not critical.
+ *
+ * Note also, we start SDL separately in each process, rather than once
+ * for both.  This is to avoid sharing file descriptors between the processes
+ * so they don't eat each other's events.
  *
  * -1 is returned only if SDL cannot be started.
  */
@@ -23897,8 +23901,11 @@ static int start_sdl_and_splash_screen(void)
 	int rc, pipefd[2];
 	pid_t pid;
 
-	if (skip_splash_screen)
+	if (skip_splash_screen) {
+		if (start_sdl())
+			return -1;
 		return 0;
+	}
 
 	rc = pipe(pipefd);
 	if (rc) {
