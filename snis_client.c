@@ -302,8 +302,7 @@ static uint32_t my_home_planet_oid = UNKNOWN_ID;
 static int real_screen_width;
 static int real_screen_height;
 static int time_to_set_window_size = 0;
-static volatile int splash_screen_still_needed = 1;
-static volatile int splash_progress = 0;
+static int pipe_to_splash_screen = -1;
 static int skip_splash_screen = 0;
 static float original_aspect_ratio;
 static int window_manager_can_constrain_aspect_ratio = 0;
@@ -21561,7 +21560,6 @@ static int main_da_configure(SDL_Window *window)
 
 	/* Indicate that the da has been configured fully (with a non-null gc) */
 	da_configured = 1;
-	splash_screen_still_needed = 0;
 	return TRUE;
 }
 
@@ -21601,6 +21599,36 @@ static void init_thrust_material(struct material *thrust_material, char *image_f
 	thrust_material->textured_particle.time_base = 0.1;
 }
 
+static void update_splash_progress(int progress)
+{
+	int i, rc, bytesleft;
+	char buffer[sizeof(progress)];
+
+	if (pipe_to_splash_screen < 0)
+		return;
+
+	memcpy(buffer, &progress, sizeof(buffer));
+	bytesleft = sizeof(buffer);
+	i = 0;
+
+	do {
+		rc = write(pipe_to_splash_screen, &buffer[i], bytesleft);
+		if (rc > 0) {
+			bytesleft -= rc;
+			i += rc;
+		} else {
+			if (errno == EINTR)
+				continue;
+			fprintf(stderr, "failed to write to splash screen: %s\n", strerror(errno));
+			return;
+		}
+	} while (bytesleft > 0);
+	if (progress == 100) {
+		close(pipe_to_splash_screen);
+		pipe_to_splash_screen = -1;
+	}
+}
+
 static int load_static_textures(void)
 {
 	if (static_textures_loaded)
@@ -21635,7 +21663,7 @@ static int load_static_textures(void)
 	spark_material.texture_mapped_unlit.texture_id = load_texture("textures/spark-texture.png", 0);
 	spark_material.texture_mapped_unlit.do_blend = 1;
 
-	splash_progress = 18;
+	update_splash_progress(18);
 	material_init_texture_mapped_unlit(&flare_material);
 	flare_material.billboard_type = MATERIAL_BILLBOARD_TYPE_SPHERICAL;
 	flare_material.rotate_randomly = 1;
@@ -21665,7 +21693,7 @@ static int load_static_textures(void)
 
 	ring_data = calloc(NPLANETARY_RING_MATERIALS, sizeof(*ring_data));
 	init_planetary_ring_data(ring_data, NPLANETARY_RING_MATERIALS, PLANETARY_RING_MTWIST_SEED);
-	splash_progress = 20;
+	update_splash_progress(20);
 	for (i = 0; i < NPLANETARY_RING_MATERIALS; i++) { /* Copy ring data into material struct */
 		material_init_textured_planet_ring(&planetary_ring_material[i]);
 		planetary_ring_material[i].textured_planet_ring.texture_id = planetary_ring_texture_id;
@@ -21679,7 +21707,7 @@ static int load_static_textures(void)
 	material_init_textured_shield(&shield_material);
 	shield_material.textured_shield.texture_id = load_cubemap_textures(0, "textures/shield-effect-", 1);
 
-	splash_progress = 25;
+	update_splash_progress(25);
 	for (i = 0; i < NNEBULA_MATERIALS; i++) {
 		char filename[20];
 		snprintf(filename, sizeof(filename), "nebula%d.mat", i);
@@ -21688,7 +21716,7 @@ static int load_static_textures(void)
 		nebula_material[i].nebula.alpha *= 0.125;
 	}
 
-	splash_progress = 30;
+	update_splash_progress(30);
 	material_init_texture_cubemap(&asteroid_material[0]);
 	asteroid_material[0].texture_cubemap.texture_id = load_cubemap_textures(0, "textures/asteroid1-", 0);
 	material_init_texture_cubemap(&asteroid_material[1]);
@@ -21701,7 +21729,7 @@ static int load_static_textures(void)
 	wormhole_material.texture_mapped_unlit.tint = sng_get_color(MAGENTA);
 	wormhole_material.texture_mapped_unlit.alpha = 0.5;
 
-	splash_progress = 35;
+	update_splash_progress(35);
 	init_thrust_material(&thrust_material[0], "textures/thrustblue.png");
 	init_thrust_material(&thrust_material[1], "textures/thrustred.png");
 	init_thrust_material(&thrust_material[2], "textures/thrustgreen.png");
@@ -21745,7 +21773,7 @@ static int load_static_textures(void)
 	warp_tunnel_material.texture_mapped_unlit.do_blend = 1;
 	warp_tunnel_material.texture_mapped_unlit.alpha = 0.25;
 
-	splash_progress = 40;
+	update_splash_progress(40);
 	material_init_texture_mapped(&block_material);
 	block_material.texture_mapped.texture_id = load_texture("textures/spaceplate.png", 0);
 	block_material.texture_mapped.emit_texture_id = load_texture("textures/spaceplateemit.png", 0);
@@ -21766,7 +21794,7 @@ static int load_static_textures(void)
 	spacemonster_tentacle_material.texture_mapped.emit_texture_id =
 		load_texture("textures/spacemonster_tentacle_emit.png", 0);
 
-	splash_progress = 45;
+	update_splash_progress(45);
 	material_init_texture_mapped(&missile_material);
 	missile_material.texture_mapped.texture_id =
 		load_texture("textures/missile_texture.png", 0);
@@ -21790,7 +21818,7 @@ static int load_static_textures(void)
 	docking_port_material.texture_mapped.emit_texture_id =
 		load_texture("textures/docking_port_emit.png", 0);
 
-	splash_progress = 50;
+	update_splash_progress(50);
 	material_init_texture_mapped_unlit(&lens_flare_ghost_material);
 	lens_flare_ghost_material.billboard_type = MATERIAL_BILLBOARD_TYPE_SPHERICAL;
 	lens_flare_ghost_material.texture_mapped_unlit.texture_id = load_texture("textures/lens_flare_ghost.png", 0);
@@ -21801,7 +21829,7 @@ static int load_static_textures(void)
 	lens_flare_halo_material.texture_mapped_unlit.texture_id = load_texture("textures/lens_flare_halo.png", 0);
 	lens_flare_halo_material.texture_mapped_unlit.do_blend = 1;
 	lens_flare_halo_material.texture_mapped_unlit.alpha = 0.20;
-	splash_progress = 60;
+	update_splash_progress(60);
 	material_init_texture_mapped_unlit(&anamorphic_flare_material);
 	anamorphic_flare_material.billboard_type = MATERIAL_BILLBOARD_TYPE_SPHERICAL;
 	anamorphic_flare_material.texture_mapped_unlit.texture_id = load_texture("textures/anamorphic_flare.png", 0);
@@ -21819,7 +21847,7 @@ static int load_static_textures(void)
 	}
 
 	static_textures_loaded = 1;
-	splash_progress = 65;
+	update_splash_progress(65);
 
 	return 1;
 }
@@ -21831,7 +21859,7 @@ static int load_per_solarsystem_textures()
 
 	if (per_solarsystem_textures_loaded)
 		return 0;
-	splash_progress = 55;
+	update_splash_progress(55);
 	if (strcmp(old_solarsystem_name, "") == 0)
 		strcpy(old_solarsystem_name, DEFAULT_SOLAR_SYSTEM);
 	reload_per_solarsystem_textures(old_solarsystem_name,
@@ -21850,7 +21878,7 @@ static int load_per_solarsystem_textures()
 	sun_material.texture_mapped_unlit.texture_id = load_texture(path, 0);
 	sun_material.texture_mapped_unlit.do_blend = 1;
 
-	splash_progress = 60;
+	update_splash_progress(60);
 	for (i = 0; i < solarsystem_assets->nplanet_textures; i++) {
 		snprintf(path, sizeof(path), "solarsystems/%s/%s", solarsystem_name,
 				solarsystem_assets->planet_texture[i]);
@@ -21876,7 +21904,7 @@ static int load_per_solarsystem_textures()
 		}
 	}
 	j = 0;
-	splash_progress = 65;
+	update_splash_progress(65);
 	for (i = solarsystem_assets->nplanet_textures; i < NPLANET_MATERIALS; i++) {
 		if (i == NPLANET_MATERIALS / 2)
 			j = 0;
@@ -21889,7 +21917,7 @@ static int load_per_solarsystem_textures()
 		j = (j + 1) % solarsystem_assets->nplanet_textures;
 	}
 	per_solarsystem_textures_loaded = 1;
-	splash_progress = 70;
+	update_splash_progress(70);
 	return 1;
 }
 
@@ -23001,7 +23029,7 @@ static void init_meshes()
 	turret_base_mesh = snis_read_model(d, "laser_turret_base.stl");
 	ship_turret_mesh = snis_read_model(d, "spaceship_turret.stl");
 	ship_turret_base_mesh = snis_read_model(d, "spaceship_turret_base.stl");
-	splash_progress = 75;
+	update_splash_progress(75);
 	mesh_scale(ship_turret_mesh, SHIP_MESH_SCALE);
 	mesh_scale(ship_turret_base_mesh, SHIP_MESH_SCALE);
 	torpedo_nav_mesh = snis_read_model(d, "torpedo.stl");
@@ -23020,7 +23048,7 @@ static void init_meshes()
 	laser_mesh = snis_read_model(d, "laser.stl");
 
 	open_simplex_noise(77374223LL, &osn);
-	splash_progress = 80;
+	update_splash_progress(80);
 	for (i = 0; i < NASTEROID_MODELS; i++) {
 		char filename[100];
 
@@ -23064,14 +23092,14 @@ static void init_meshes()
 	planetary_ring_lp_mesh = mesh_fabricate_planetary_ring(MIN_RING_RADIUS, MAX_RING_RADIUS, 64);
 	nav_planetary_ring_mesh = mesh_fabricate_planetary_ring(MIN_RING_RADIUS * 1.5, MAX_RING_RADIUS * 0.75, 36);
 
-	splash_progress = 80;
+	update_splash_progress(80);
 	for (i = 0; i < nstarbase_models; i++) {
 		char *filename = starbase_metadata[i].model_file;
 		printf("reading starbase model %d of %d '%s'\n", i + 1, nstarbase_models, filename);
 		starbase_mesh[i] = snis_read_model(d, filename);
 		mesh_scale(starbase_mesh[i], STARBASE_SCALE_FACTOR);
 	}
-	splash_progress = 85;
+	update_splash_progress(85);
 
 	allocate_ship_thrust_attachment_points(nshiptypes);
 	for (i = 0; i < nshiptypes; i++) {
@@ -23094,7 +23122,7 @@ static void init_meshes()
 		mesh_scale(ship_mesh_map[i], SHIP_MESH_SCALE * ship_type[i].extra_scaling);
 		derelict_mesh[i] = make_derelict_mesh(ship_mesh_map[i]);
 	}
-	splash_progress = 90;
+	update_splash_progress(90);
 
 #ifndef WITHOUTOPENGL
 	particle_mesh = mesh_fabricate_billboard(50.0f, 50.0f);
@@ -23135,7 +23163,7 @@ static void init_meshes()
 	/* model 2 is the "invisible" docking port for starbases that have their docking ports
 	 * integrated into the starbase model (e.g. starbase/starbase.obj).
 	 */
-	splash_progress = 95;
+	update_splash_progress(95);
 	docking_port_mesh[DOCKING_PORT_INVISIBLE_MODEL] = snis_read_model(d, "tetrahedron.stl");
 	nebula_mesh = mesh_fabricate_billboard(2, 2);
 	sun_mesh = mesh_fabricate_billboard(30000, 30000);
@@ -23158,7 +23186,7 @@ static void init_meshes()
 		v2 = v1 + 0.25;
 		planetary_lightning_mesh[i] = mesh_fabricate_billboard_with_uv_map(1.0, 1.0, u1, v1, u2, v2);
 	}
-	splash_progress = 100;
+	update_splash_progress(100);
 
 	open_simplex_noise_free(osn);
 	mtwist_free(mt);
@@ -23741,25 +23769,17 @@ static void enable_sdl_fullscreen_sanity(void)
 }
 
 /*
- * splash_screen_fn(), which is run in its own thread, is a bit questionable.
+ * splash_screen_fn(), which is run in its own process.
  *
- * This page https://wiki.libsdl.org/CategoryThread says the following:
+ * Previously, this was done in its own thread, but that can't work right
+ * because this page https://wiki.libsdl.org/CategoryThread says the following:
  *
  *   NOTE: You should not expect to be able to create a window, render,
  *   or receive events on any thread other than the main one. For
  *   platform-specific exceptions or complicated options ask on
  *   the forums/mailing list.
- *
- * Yet, here we go, creating a window and rendering stuff in it in a thread that
- * is not the main thread. Empirically, it seems to "work", excepting we can't
- * destroy the window when we're done as we would like to, but can only "hide" it.
- *
- * Fixing this "properly" is not as simple as putting all this stuff in the main
- * game loop because everything that happens here happens before the main game
- * loop is even reached, while a bunch of stuff is being initialized, read
- * from disk, etc.
  */
-static void *splash_screen_fn(__attribute__((unused)) void *arg)
+static void splash_screen_fn(int pipefd)
 {
 	SDL_Window *splash_window = NULL;
 	SDL_Renderer *renderer = NULL;
@@ -23768,6 +23788,8 @@ static void *splash_screen_fn(__attribute__((unused)) void *arg)
 	int width, height;
 	char fname[PATH_MAX];
 	char *filename;
+	int exitcode = 0;
+	int splash_progress = 0;
 
 	splash_window = SDL_CreateWindow("Space Nerds in Space",
 		SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 600, 338, 0);
@@ -23794,6 +23816,8 @@ static void *splash_screen_fn(__attribute__((unused)) void *arg)
 	rect.h = height;
 	SDL_SetRenderDrawColor(renderer, 0, 128, 0, 255);
 	do {
+		int bytesleft, i;
+		char buf[sizeof(splash_progress)];
 		progress.x = 0;
 		progress.y = 45;
 		progress.w = (splash_progress * 600) / 100;
@@ -23802,8 +23826,31 @@ static void *splash_screen_fn(__attribute__((unused)) void *arg)
 		SDL_RenderCopy(renderer, image, NULL, &rect);
 		SDL_RenderFillRect(renderer, &progress);
 		SDL_RenderPresent(renderer);
-		ssgl_msleep(33);
-	} while (splash_screen_still_needed);
+		bytesleft = sizeof(splash_progress);
+		i = 0;
+		do {
+			int rc;
+
+			rc = read(pipefd, &buf[i], bytesleft);
+			if (rc > 0) {
+				i += rc;
+				bytesleft -= rc;
+			}
+			if (rc < 0 && errno == EINTR)
+				continue;
+			if (rc < 0) {
+				fprintf(stderr, "splash screen read failed: %s\n", strerror(errno));
+				exitcode = 1;
+				goto out;
+			}
+			if (rc == 0) {
+				fprintf(stderr, "splash screen pipe read EOF.\n");
+				exitcode = 0;
+				goto out;
+			}
+		} while (bytesleft > 0);
+		memcpy(&splash_progress, buf, sizeof(splash_progress));
+	} while (1);
 
 out:
 	if (image)
@@ -23811,25 +23858,13 @@ out:
 	if (renderer)
 		SDL_DestroyRenderer(renderer);
 	if (splash_window) {
-		/* SDL_DestroyWindow(splash_window); */
-
-		/* We can't safely destroy the window, because SDL_PollEvent() in process_events()
-		 * is (apparently) not thread safe and doesn't expect windows to get ripped out from under
-		 * it by other threads.  So we just hide the window instead of destroying it.
-		 * This is my theory anyway for why I was seeing occasional crashes and sometimes
-		 * X "bad window" complaints in the log files right at the time the splash screen gets
-		 * destroyed.
-		 */
-		SDL_HideWindow(splash_window);
+		SDL_DestroyWindow(splash_window);
 	}
-
-	return NULL;
+	exit(exitcode);
 }
 
-static int start_sdl_and_splash_screen(void)
+static int start_sdl(void)
 {
-	static pthread_t splash_screen_thread;
-
 	if (SDL_Init(SDL_INIT_VIDEO) != 0) {
 		fprintf(stderr, "Unable to initialize SDL (Video):  %s\n", SDL_GetError());
 		return 1;
@@ -23839,8 +23874,58 @@ static int start_sdl_and_splash_screen(void)
 		return 1;
 	}
 	atexit(SDL_Quit);
-	if (!skip_splash_screen)
-		create_thread(&splash_screen_thread, splash_screen_fn, NULL, "snis-splash", 1);
+	return 0;
+}
+
+/* Note, when this is called, the program must still be single threaded.
+ * This is because after fork(), if the program is multithreaded, only
+ * async safe functions may be called.  However, if the program is single
+ * threaded, this restriction is absent.  We do not want this restriction.
+ *
+ * Note, we do not call exec() after the fork.  That is because the splash
+ * screen is short-lived, and we do not want to bother with having to create
+ * a separate executable for it when we can instead just run for a little
+ * while after the fork and then exit.
+ *
+ * Note, various things fail related to the splash screen (pipe, fork),
+ * we return 0 (success) because the splash screen is not critical.
+ *
+ * -1 is returned only if SDL cannot be started.
+ */
+static int start_sdl_and_splash_screen(void)
+{
+	int rc, pipefd[2];
+	pid_t pid;
+
+	if (skip_splash_screen)
+		return 0;
+
+	rc = pipe(pipefd);
+	if (rc) {
+		fprintf(stderr, "pipe() failed, skipping splash screen: %s\n", strerror(errno));
+		return 0;
+	}
+
+	pid = fork();
+	if (pid < 0) {
+		fprintf(stderr, "fork() failed, skipping splash screen: %s\n", strerror(errno));
+		close(pipefd[0]);
+		close(pipefd[1]);
+		return 0;
+	}
+
+	if (pid == 0) { /* child process */
+		close(pipefd[1]); /* close the "write" end of the pipe. */
+		if (start_sdl())
+			exit(1);
+		splash_screen_fn(pipefd[0]); /* <-- this does not return, it exits. */
+	}
+
+	/* parent process */
+	close(pipefd[0]); /* close the "read" end of the pipe. */
+	pipe_to_splash_screen = pipefd[1];
+	if (start_sdl())
+		return -1;
 	return 0;
 }
 
@@ -23863,6 +23948,7 @@ int main(int argc, char *argv[])
 	check_lobby_serverhost_options();
 	asset_dir = override_asset_dir();
 
+	/* No threads other than the main thread should be running when we call this. */
 	if (start_sdl_and_splash_screen())
 		return 1;
 
@@ -23877,13 +23963,13 @@ int main(int argc, char *argv[])
 	damconscreeny = NULL;
 
 	read_replacement_assets(&replacement_assets, asset_dir);
-	splash_progress = 3;
+	update_splash_progress(3);
 	stl_parser_set_asset_replacement_function(stl_parser_asset_replacer);
 
 	char commodity_path[PATH_MAX];
 	snprintf(commodity_path, sizeof(commodity_path), "%s/%s", asset_dir, "commodities.txt");
 	commodity = read_commodities(commodity_path, &ncommodities);
-	splash_progress = 6;
+	update_splash_progress(6);
 
 	if (read_ship_types())
 		return -1;
@@ -23909,7 +23995,7 @@ int main(int argc, char *argv[])
 	maybe_connect_to_lobby();
 	init_keymap();
 	read_keymap_config_file();
-	splash_progress = 9;
+	update_splash_progress(9);
 
 #if 0
 	sng_set_context(GTK_WIDGET(main_da)->window, gc);
@@ -23934,7 +24020,7 @@ int main(int argc, char *argv[])
 		fprintf(stderr, "Could not create window: %s\n", SDL_GetError());
 		exit(1);
 	}
-	splash_progress = 12;
+	update_splash_progress(12);
 	SDL_GLContext gl_context = SDL_GL_CreateContext(window);
 	(void) gl_context;
 	setup_screen_parameters(window);
@@ -23951,7 +24037,7 @@ int main(int argc, char *argv[])
 	snis_slider_set_sound(SLIDER_SOUND);
 	text_window_set_timer(&timer);
 	ui_set_tooltip_drawing_function(draw_tooltip);
-	splash_progress = 13;
+	update_splash_progress(13);
 	init_lobby_ui();
 	init_nav_ui();
 	init_engineering_ui();
@@ -23968,7 +24054,7 @@ int main(int argc, char *argv[])
 	setup_text_to_speech_thread();
 	voice_chat_setup_threads();
 	ecx = entity_context_new(5000, 5000);
-	splash_progress = 14;
+	update_splash_progress(14);
 
 	snis_slider_mouse_position_query(&mouse.x, &mouse.y);
 
@@ -23981,7 +24067,7 @@ int main(int argc, char *argv[])
 
 	if (fullscreen)
 		SDL_SetWindowFullscreen(window, SDL_WINDOW_FULLSCREEN_DESKTOP);
-	splash_progress = 15;
+	update_splash_progress(15);
 	main_da_configure(window);
 
 	const double maxTimeBehind = 0.5;
