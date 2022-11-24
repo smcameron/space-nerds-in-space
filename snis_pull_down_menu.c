@@ -7,7 +7,7 @@
 #include "snis_pull_down_menu.h"
 #include "snis_graph.h"
 #include "snis_typeface.h"
-
+#include "read_menu_file.h"
 
 struct pull_down_menu_item {
 	char *name;
@@ -607,4 +607,20 @@ int pull_down_menu_add_tooltip(struct pull_down_menu *pdm, char *column, char *r
 	}
 	pthread_mutex_unlock(&pdm->mutex);
 	return 1;
+}
+
+void pull_down_menu_add_from_file(struct pull_down_menu *pdm, char *column, char *file,
+	void (*menu_button_fn)(void *))
+{
+	int i;
+	struct menu_text *mt;
+
+	mt = read_menu_file(file);
+	pull_down_menu_add_column(pdm, column);
+	for (i = 0; i < mt->count; i++) {
+		pull_down_menu_add_row(pdm, column, mt->menu_text[i], menu_button_fn, strdup(mt->script[i]));
+		if (mt->tooltip[i])
+			pull_down_menu_add_tooltip(pdm, column, mt->menu_text[i], mt->tooltip[i]);
+	}
+	free_menu_text(mt);
 }

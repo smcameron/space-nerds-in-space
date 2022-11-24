@@ -16,5 +16,7 @@ struct menu_text {
  */
 struct menu_text *read_menu_file(char *menu_file);
 
+void free_menu_text(struct menu_text *mt);
+
 #endif
 

@@ -18931,20 +18931,20 @@ static int demon_console_checkbox(__attribute__((unused)) void *x)
  * The second field is the lua script to run.
  * The third optional field is the tooltip text for the menu item.
  */
-static struct menu_text *read_menu_asset(char *menu_file)
+static void add_submenu_from_file(struct pull_down_menu *pdm, char *column,
+						char *menu_file, void (*menu_button_fn)(void *))
 {
 	char fname[PATH_MAX + 1];
 	char *filename;
 
 	snprintf(fname, sizeof(fname), "%s/luascripts/%s", asset_dir, menu_file);
 	filename = replacement_asset_lookup(fname, &replacement_assets);
-	return read_menu_file(filename);
+	pull_down_menu_add_from_file(pdm, column, filename, menu_button_fn);
 }
 
 static void init_demon_ui()
 {
 	int i, x, y, dy, n;
-	struct menu_text *missions, *utility;
 
 	demon_ui.ux1 = 0;
 	demon_ui.uy1 = 0;
@@ -19151,29 +19151,8 @@ static void init_demon_ui()
 	pull_down_menu_add_row(demon_ui.menu, "CAPTAIN", "FIRE TORPEDO", demon_torpedo_button_pressed, NULL);
 	pull_down_menu_add_row(demon_ui.menu, "CAPTAIN", "FIRE PHASER", demon_phaser_button_pressed, NULL);
 
-	utility = read_menu_asset("UTIL/utility_menu.txt");
-	pull_down_menu_add_column(demon_ui.menu, "UTILITY");
-	for (i = 0; i < utility->count; i++) {
-		pull_down_menu_add_row(demon_ui.menu, "UTILITY", utility->menu_text[i],
-					demon_utility_button_pressed, utility->script[i]);
-		if (utility->tooltip[i])
-			pull_down_menu_add_tooltip(demon_ui.menu, "UTILITY",
-							utility->menu_text[i], utility->tooltip[i]);
-	}
-
-	missions = read_menu_asset("MISSIONS/missions_menu.txt");
-	pull_down_menu_add_column(demon_ui.menu, "MISSIONS");
-	for (i = 0; i < missions->count; i++) {
-		pull_down_menu_add_row(demon_ui.menu, "MISSIONS", missions->menu_text[i],
-					demon_mission_button_pressed, missions->script[i]);
-		/* We never deallocate the missions menu, mm->script[x] is a cookie passed
-		 * into pull_down_menu_add_row(), which is passed along to demon_mission_button_pressed(),
-		 * and so it must stick around.
-		 */
-		if (missions->tooltip[i])
-			pull_down_menu_add_tooltip(demon_ui.menu, "MISSIONS",
-							missions->menu_text[i], missions->tooltip[i]);
-	}
+	add_submenu_from_file(demon_ui.menu, "UTILITY", "UTIL/utility_menu.txt", demon_utility_button_pressed);
+	add_submenu_from_file(demon_ui.menu, "MISSIONS", "MISSIONS/missions_menu.txt", demon_mission_button_pressed);
 
 	demon_ui.console = text_window_init(txx(100), txy(10), SCREEN_WIDTH - txx(110), 500, 47,
 						UI_COLOR(demon_default));

@@ -24,6 +24,7 @@ void pull_down_menu_copy(struct pull_down_menu *dest, struct pull_down_menu *src
 void pull_down_menu_set_gravity(struct pull_down_menu *pdm, int right); /* 0 means left, 1 means right */
 void pull_down_menu_set_tooltip_drawing_function(struct pull_down_menu *pdm, pull_down_menu_tooltip_drawing_function f);
 int pull_down_menu_add_tooltip(struct pull_down_menu *pdm, char *column, char *row, char *tooltip);
+void pull_down_menu_add_from_file(struct pull_down_menu *pdm, char *column, char *file, void (*menu_button_fn)(void *));
 
 
 #endif

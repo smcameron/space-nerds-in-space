@@ -65,3 +65,15 @@ struct menu_text *read_menu_file(char *menu_file)
 	return mm;
 }
 
+void free_menu_text(struct menu_text *mt)
+{
+	int i;
+
+	for (i = 0; i < mt->count; i++) {
+		free(mt->tooltip[i]);
+		free(mt->menu_text[i]);
+		free(mt->script[i]);
+	}
+	free(mt);
+}
+
