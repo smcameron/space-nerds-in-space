@@ -21555,6 +21555,23 @@ done:
 	pipe_to_splash_screen = -1;
 }
 
+static void load_texture_mapped_unlit_material(struct material *m, char *file, int billboard_type, int rotate_randomly)
+{
+	material_init_texture_mapped_unlit(m);
+	m->billboard_type = billboard_type;
+	m->texture_mapped_unlit.texture_id = load_texture(file, 0);
+	m->texture_mapped_unlit.do_blend = 1;
+	m->rotate_randomly = rotate_randomly;
+}
+
+static void load_texture_mapped_material(struct material *m, char *texture_file, char *emit_file)
+{
+	material_init_texture_mapped(m);
+	m->texture_mapped.texture_id = load_texture(texture_file, 0);
+	if (emit_file)
+		m->texture_mapped.emit_texture_id = load_texture(emit_file, 0);
+}
+
 static int load_static_textures(void)
 {
 	if (static_textures_loaded)
@@ -21567,52 +21584,25 @@ static int load_static_textures(void)
 	green_phaser_material.textured_particle.radius = 0.75;
 	green_phaser_material.textured_particle.time_base = 0.25;
 
-	material_init_texture_mapped_unlit(&red_laser_material);
-	red_laser_material.billboard_type = MATERIAL_BILLBOARD_TYPE_AXIS;
-	red_laser_material.texture_mapped_unlit.texture_id = load_texture("textures/red-laser-texture.png", 0);
-	red_laser_material.texture_mapped_unlit.do_blend = 1;
-
-	material_init_texture_mapped_unlit(&blue_tractor_material);
-	blue_tractor_material.billboard_type = MATERIAL_BILLBOARD_TYPE_AXIS;
-	blue_tractor_material.texture_mapped_unlit.texture_id = load_texture("textures/blue-tractor-texture.png", 0);
-	blue_tractor_material.texture_mapped_unlit.do_blend = 1;
-
-	material_init_texture_mapped_unlit(&red_torpedo_material);
-	red_torpedo_material.billboard_type = MATERIAL_BILLBOARD_TYPE_SPHERICAL;
-	red_torpedo_material.rotate_randomly = 1;
-	red_torpedo_material.texture_mapped_unlit.texture_id = load_texture("textures/red-torpedo-texture.png", 0);
-	red_torpedo_material.texture_mapped_unlit.do_blend = 1;
-
-	material_init_texture_mapped_unlit(&spark_material);
-	spark_material.billboard_type = MATERIAL_BILLBOARD_TYPE_SPHERICAL;
-	spark_material.rotate_randomly = 1;
-	spark_material.texture_mapped_unlit.texture_id = load_texture("textures/spark-texture.png", 0);
-	spark_material.texture_mapped_unlit.do_blend = 1;
+	load_texture_mapped_unlit_material(&red_laser_material,
+			"textures/red-laser-texture.png", MATERIAL_BILLBOARD_TYPE_AXIS, 0);
+	load_texture_mapped_unlit_material(&blue_tractor_material,
+			"textures/blue-tractor-texture.png", MATERIAL_BILLBOARD_TYPE_AXIS, 0);
+	load_texture_mapped_unlit_material(&red_torpedo_material,
+			"textures/red-torpedo-texture.png", MATERIAL_BILLBOARD_TYPE_SPHERICAL, 1);
+	load_texture_mapped_unlit_material(&spark_material,
+			"textures/spark-texture.png", MATERIAL_BILLBOARD_TYPE_SPHERICAL, 1);
 
 	update_splash_progress(18);
-	material_init_texture_mapped_unlit(&flare_material);
-	flare_material.billboard_type = MATERIAL_BILLBOARD_TYPE_SPHERICAL;
-	flare_material.rotate_randomly = 1;
-	flare_material.texture_mapped_unlit.texture_id = load_texture("textures/spark-texture.png", 0);
-	flare_material.texture_mapped_unlit.do_blend = 1;
 
-	material_init_texture_mapped_unlit(&blackhole_spark_material);
-	blackhole_spark_material.billboard_type = MATERIAL_BILLBOARD_TYPE_SPHERICAL;
-	blackhole_spark_material.rotate_randomly = 1;
-	blackhole_spark_material.texture_mapped_unlit.texture_id = load_texture("textures/green-spark.png", 0);
-	blackhole_spark_material.texture_mapped_unlit.do_blend = 1;
-
-	material_init_texture_mapped_unlit(&laserflash_material);
-	laserflash_material.billboard_type = MATERIAL_BILLBOARD_TYPE_SPHERICAL;
-	laserflash_material.rotate_randomly = 1;
-	laserflash_material.texture_mapped_unlit.texture_id = load_texture("textures/laserflash.png", 0);
-	laserflash_material.texture_mapped_unlit.do_blend = 1;
-
-	material_init_texture_mapped_unlit(&warp_effect_material);
-	warp_effect_material.billboard_type = MATERIAL_BILLBOARD_TYPE_SPHERICAL;
-	warp_effect_material.rotate_randomly = 1;
-	warp_effect_material.texture_mapped_unlit.texture_id = load_texture("textures/warp-effect.png", 0);
-	warp_effect_material.texture_mapped_unlit.do_blend = 1;
+	load_texture_mapped_unlit_material(&flare_material,
+			"textures/spark-texture.png", MATERIAL_BILLBOARD_TYPE_SPHERICAL, 1);
+	load_texture_mapped_unlit_material(&blackhole_spark_material,
+			"textures/green-spark.png", MATERIAL_BILLBOARD_TYPE_SPHERICAL, 1);
+	load_texture_mapped_unlit_material(&laserflash_material,
+			"textures/laserflash.png", MATERIAL_BILLBOARD_TYPE_SPHERICAL, 1);
+	load_texture_mapped_unlit_material(&warp_effect_material,
+			"textures/warp-effect.png", MATERIAL_BILLBOARD_TYPE_SPHERICAL, 1);
 
 	int i;
 	planetary_ring_texture_id = load_texture_no_mipmaps("textures/planetary-ring0.png", 0);
@@ -21700,66 +21690,42 @@ static int load_static_textures(void)
 	warp_tunnel_material.texture_mapped_unlit.alpha = 0.25;
 
 	update_splash_progress(40);
-	material_init_texture_mapped(&block_material);
-	block_material.texture_mapped.texture_id = load_texture("textures/spaceplate.png", 0);
-	block_material.texture_mapped.emit_texture_id = load_texture("textures/spaceplateemit.png", 0);
-	material_init_texture_mapped(&small_block_material);
-	small_block_material.texture_mapped.texture_id = load_texture("textures/spaceplate_small.png", 0);
-	small_block_material.texture_mapped.emit_texture_id = load_texture("textures/spaceplate_small_emit.png", 0);
 
-	material_init_texture_mapped_unlit(&black_hole_material);
-	black_hole_material.billboard_type = MATERIAL_BILLBOARD_TYPE_SPHERICAL;
-	black_hole_material.texture_mapped_unlit.texture_id = load_texture("textures/black_hole.png", 0);
-	black_hole_material.texture_mapped_unlit.do_blend = 1;
+	load_texture_mapped_material(&block_material, "textures/spaceplate.png",
+				"textures/spaceplateemit.png");
+	load_texture_mapped_material(&small_block_material, "textures/spaceplate_small.png",
+				"textures/spaceplate_small_emit.png");
+
+	load_texture_mapped_unlit_material(&black_hole_material, "textures/black_hole.png",
+			MATERIAL_BILLBOARD_TYPE_SPHERICAL, 0);
 	black_hole_material.texture_mapped_unlit.do_cullface = 0;
 	black_hole_material.texture_mapped_unlit.alpha = 1.0;
 
-	material_init_texture_mapped(&spacemonster_tentacle_material);
-	spacemonster_tentacle_material.texture_mapped.texture_id =
-		load_texture("textures/spacemonster_tentacle_texture.png", 0);
-	spacemonster_tentacle_material.texture_mapped.emit_texture_id =
-		load_texture("textures/spacemonster_tentacle_emit.png", 0);
+	load_texture_mapped_material(&spacemonster_tentacle_material, "textures/spacemonster_tential_texture.png",
+				"textures/spacemonster_tentacle_emit.png");
 
 	update_splash_progress(45);
-	material_init_texture_mapped(&missile_material);
-	missile_material.texture_mapped.texture_id =
-		load_texture("textures/missile_texture.png", 0);
+	load_texture_mapped_material(&missile_material, "textures/missile_texture.png", NULL);
+	load_texture_mapped_material(&spacemonster_material, "textures/spacemonster_texture.png",
+				"textures/spacemonster_emit.png");
+	load_texture_mapped_material(&warpgate_material, "textures/warpgate_texture.png",
+				"textures/warpgate_emit.png");
 
-	material_init_texture_mapped(&spacemonster_material);
-	spacemonster_material.texture_mapped.texture_id =
-		load_texture("textures/spacemonster_texture.png", 0);
-	spacemonster_material.texture_mapped.emit_texture_id =
-		load_texture("textures/spacemonster_emit.png", 0);
-	material_init_texture_mapped(&warpgate_material);
-	warpgate_material.texture_mapped.texture_id =
-		load_texture("textures/warpgate_texture.png", 0);
-	warpgate_material.texture_mapped.emit_texture_id =
-		load_texture("textures/warpgate_emit.png", 0);
 	material_init_warp_gate_effect(&warpgate_effect_material);
 	warpgate_effect_material.warp_gate_effect.texture_id =
 		warp_tunnel_material.texture_mapped_unlit.texture_id; /* share this texture */
-	material_init_texture_mapped(&docking_port_material);
-	docking_port_material.texture_mapped.texture_id =
-		load_texture("textures/docking_port_texture.png", 0);
-	docking_port_material.texture_mapped.emit_texture_id =
-		load_texture("textures/docking_port_emit.png", 0);
-
+	load_texture_mapped_material(&docking_port_material, "textures/docking_port_texture.png",
+				"textures/docking_port_emit.png");
 	update_splash_progress(50);
-	material_init_texture_mapped_unlit(&lens_flare_ghost_material);
-	lens_flare_ghost_material.billboard_type = MATERIAL_BILLBOARD_TYPE_SPHERICAL;
-	lens_flare_ghost_material.texture_mapped_unlit.texture_id = load_texture("textures/lens_flare_ghost.png", 0);
-	lens_flare_ghost_material.texture_mapped_unlit.do_blend = 1;
+	load_texture_mapped_unlit_material(&lens_flare_ghost_material, "textures/lens_flare_ghost.png",
+			MATERIAL_BILLBOARD_TYPE_SPHERICAL, 0);
 	lens_flare_ghost_material.texture_mapped_unlit.alpha = 0.10;
-	material_init_texture_mapped_unlit(&lens_flare_halo_material);
-	lens_flare_halo_material.billboard_type = MATERIAL_BILLBOARD_TYPE_SPHERICAL;
-	lens_flare_halo_material.texture_mapped_unlit.texture_id = load_texture("textures/lens_flare_halo.png", 0);
-	lens_flare_halo_material.texture_mapped_unlit.do_blend = 1;
+	load_texture_mapped_unlit_material(&lens_flare_halo_material, "textures/lens_flare_halo.png",
+			MATERIAL_BILLBOARD_TYPE_SPHERICAL, 0);
 	lens_flare_halo_material.texture_mapped_unlit.alpha = 0.20;
 	update_splash_progress(60);
-	material_init_texture_mapped_unlit(&anamorphic_flare_material);
-	anamorphic_flare_material.billboard_type = MATERIAL_BILLBOARD_TYPE_SPHERICAL;
-	anamorphic_flare_material.texture_mapped_unlit.texture_id = load_texture("textures/anamorphic_flare.png", 0);
-	anamorphic_flare_material.texture_mapped_unlit.do_blend = 1;
+	load_texture_mapped_unlit_material(&anamorphic_flare_material, "textures/anamorphic_flare.png",
+			MATERIAL_BILLBOARD_TYPE_SPHERICAL, 0);
 	anamorphic_flare_material.texture_mapped_unlit.alpha = 0.20;
 	for (i = 0; i < NLIGHTNINGS; i++) {
 		struct material *m = &planetary_lightning_material[i];
@@ -21767,7 +21733,7 @@ static int load_static_textures(void)
 		if (i == 0)
 			m->planetary_lightning.texture_id =
 				load_texture("textures/planetary-lightning-texture.png", 1);
-		else /* They all share the stame texture */
+		else /* They all share the same texture */
 			m->planetary_lightning.texture_id =
 				planetary_lightning_material[0].planetary_lightning.texture_id;
 	}
