@@ -23794,7 +23794,7 @@ static int start_sdl(void)
  *   platform-specific exceptions or complicated options ask on
  *   the forums/mailing list.
  */
-static void splash_screen_fn(int pipefd)
+static void __attribute__((noreturn)) splash_screen_fn(int pipefd)
 {
 	SDL_Window *splash_window = NULL;
 	SDL_Renderer *renderer = NULL;
@@ -23924,6 +23924,7 @@ static void start_splash_screen(void)
 	if (pid == 0) { /* child process */
 		close(pipefd[1]); /* close the "write" end of the pipe. */
 		splash_screen_fn(pipefd[0]); /* <-- this does not return, it exits. */
+		__builtin_unreachable();
 	}
 
 	/* parent process */
