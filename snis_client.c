@@ -137,6 +137,7 @@
 #include "snis_voice_chat.h"
 #include "snis_xwindows_hacks.h"
 #include "snis_licenses.h"
+#include "read_menu_file.h"
 
 #define SHIP_COLOR CYAN
 #define STARBASE_COLOR RED
@@ -18924,81 +18925,26 @@ static int demon_console_checkbox(__attribute__((unused)) void *x)
 	return demon_ui.console_active;
 }
 
-struct demon_screen_menu_text {
-#define MAX_MISSION_MENU_ITEMS 50
-	int count;
-	char *menu_text[MAX_MISSION_MENU_ITEMS], *script[MAX_MISSION_MENU_ITEMS];
-	char *tooltip[MAX_MISSION_MENU_ITEMS];
-};
-
-/* Read share/snis/luascripts/MISSSIONS/missions_menu.txt
+/* Read e.g. share/snis/luascripts/MISSSIONS/missions_menu.txt
  * Each line contains three fields separated by a comma.
  * The first field is the menu text, and the
  * The second field is the lua script to run.
  * The third optional field is the tooltip text for the menu item.
  */
-static struct demon_screen_menu_text *read_menu_file(char *menu_file)
+static struct menu_text *read_menu_asset(char *menu_file)
 {
 	char fname[PATH_MAX + 1];
 	char *filename;
-	char line[256];
-	char menu_text[256];
-	char script[256];
-	char tooltip[256];
-	char *l;
-	FILE *f;
-	int rc;
-
-	struct demon_screen_menu_text *mm = malloc(sizeof(*mm));
-	mm->count = 0;
-	memset(mm, 0, sizeof(*mm));
 
 	snprintf(fname, sizeof(fname), "%s/luascripts/%s", asset_dir, menu_file);
 	filename = replacement_asset_lookup(fname, &replacement_assets);
-	f = fopen(filename, "r");
-	if (!f) {
-		free(mm);
-		return NULL;
-	}
-	do {
-		l = fgets(line, 255, f);
-		if (!l)
-			break;
-		trim_whitespace(line);
-		clean_spaces(line);
-		if (strcmp(line, "") == 0) /* skip blank lines */
-			continue;
-		if (line[0] == '#')
-			continue; /* skip comments */
-		rc = sscanf(line, "%[^,]%*[, ]%[^,]%*[, ]%[^,\n]", menu_text, script, tooltip);
-		if (rc != 3) {
-			rc = sscanf(line, "%[^,]%*[, ]%[^,\n]", menu_text, script);
-			if (rc != 2) {
-				fprintf(stderr, "Bad line in %s: %s\n", filename, line);
-				continue;
-			}
-		}
-		mm->menu_text[mm->count] = strdup(menu_text);
-		mm->script[mm->count] = strdup(script);
-		if (rc == 3)
-			mm->tooltip[mm->count] = strdup(tooltip);
-		else
-			mm->tooltip[mm->count] = NULL;
-		mm->count++;
-		if (mm->count == MAX_MISSION_MENU_ITEMS) {
-			fprintf(stderr, "Demon screen menu %s max item count reached at '%s'\n",
-				filename, line);
-			break;
-		}
-	} while (1);
-	fclose(f);
-	return mm;
+	return read_menu_file(filename);
 }
 
 static void init_demon_ui()
 {
 	int i, x, y, dy, n;
-	struct demon_screen_menu_text *missions, *utility;
+	struct menu_text *missions, *utility;
 
 	demon_ui.ux1 = 0;
 	demon_ui.uy1 = 0;
@@ -19205,7 +19151,7 @@ static void init_demon_ui()
 	pull_down_menu_add_row(demon_ui.menu, "CAPTAIN", "FIRE TORPEDO", demon_torpedo_button_pressed, NULL);
 	pull_down_menu_add_row(demon_ui.menu, "CAPTAIN", "FIRE PHASER", demon_phaser_button_pressed, NULL);
 
-	utility = read_menu_file("UTIL/utility_menu.txt");
+	utility = read_menu_asset("UTIL/utility_menu.txt");
 	pull_down_menu_add_column(demon_ui.menu, "UTILITY");
 	for (i = 0; i < utility->count; i++) {
 		pull_down_menu_add_row(demon_ui.menu, "UTILITY", utility->menu_text[i],
@@ -19215,7 +19161,7 @@ static void init_demon_ui()
 							utility->menu_text[i], utility->tooltip[i]);
 	}
 
-	missions = read_menu_file("MISSIONS/missions_menu.txt");
+	missions = read_menu_asset("MISSIONS/missions_menu.txt");
 	pull_down_menu_add_column(demon_ui.menu, "MISSIONS");
 	for (i = 0; i < missions->count; i++) {
 		pull_down_menu_add_row(demon_ui.menu, "MISSIONS", missions->menu_text[i],
