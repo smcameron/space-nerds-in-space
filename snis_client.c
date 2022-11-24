@@ -23769,6 +23769,20 @@ static void enable_sdl_fullscreen_sanity(void)
 								/* I am Very tempted to set it to 1. */
 }
 
+static int start_sdl(void)
+{
+	if (SDL_Init(SDL_INIT_VIDEO) != 0) {
+		fprintf(stderr, "Unable to initialize SDL (Video):  %s\n", SDL_GetError());
+		return 1;
+	}
+	if (SDL_Init(SDL_INIT_EVENTS) != 0) {
+		fprintf(stderr, "Unable to initialize SDL (Events):  %s\n", SDL_GetError());
+		return 1;
+	}
+	atexit(SDL_Quit);
+	return 0;
+}
+
 /*
  * splash_screen_fn(), which is run in its own process.
  *
@@ -23792,6 +23806,8 @@ static void splash_screen_fn(int pipefd)
 	int exitcode = 0;
 	int splash_progress = 0;
 
+	if (start_sdl())
+		exit(1);
 	splash_window = SDL_CreateWindow("Space Nerds in Space",
 		SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 600, 338, 0);
 	if (!splash_window) {
@@ -23864,20 +23880,6 @@ out:
 	exit(exitcode);
 }
 
-static int start_sdl(void)
-{
-	if (SDL_Init(SDL_INIT_VIDEO) != 0) {
-		fprintf(stderr, "Unable to initialize SDL (Video):  %s\n", SDL_GetError());
-		return 1;
-	}
-	if (SDL_Init(SDL_INIT_EVENTS) != 0) {
-		fprintf(stderr, "Unable to initialize SDL (Events):  %s\n", SDL_GetError());
-		return 1;
-	}
-	atexit(SDL_Quit);
-	return 0;
-}
-
 /* Note, when this is called, the program must still be single threaded.
  * This is because after fork(), if the program is multithreaded, only
  * async safe functions may be called.  However, if the program is single
@@ -23897,21 +23899,18 @@ static int start_sdl(void)
  *
  * -1 is returned only if SDL cannot be started.
  */
-static int start_sdl_and_splash_screen(void)
+static void start_splash_screen(void)
 {
 	int rc, pipefd[2];
 	pid_t pid;
 
-	if (skip_splash_screen) {
-		if (start_sdl())
-			return -1;
-		return 0;
-	}
+	if (skip_splash_screen)
+		return;
 
 	rc = pipe(pipefd);
 	if (rc) {
 		fprintf(stderr, "pipe() failed, skipping splash screen: %s\n", strerror(errno));
-		return 0;
+		return;
 	}
 
 	pid = fork();
@@ -23919,22 +23918,18 @@ static int start_sdl_and_splash_screen(void)
 		fprintf(stderr, "fork() failed, skipping splash screen: %s\n", strerror(errno));
 		close(pipefd[0]);
 		close(pipefd[1]);
-		return 0;
+		return;
 	}
 
 	if (pid == 0) { /* child process */
 		close(pipefd[1]); /* close the "write" end of the pipe. */
-		if (start_sdl())
-			exit(1);
 		splash_screen_fn(pipefd[0]); /* <-- this does not return, it exits. */
 	}
 
 	/* parent process */
 	close(pipefd[0]); /* close the "read" end of the pipe. */
 	pipe_to_splash_screen = pipefd[1];
-	if (start_sdl())
-		return -1;
-	return 0;
+	return;
 }
 
 int main(int argc, char *argv[])
@@ -23957,7 +23952,8 @@ int main(int argc, char *argv[])
 	asset_dir = override_asset_dir();
 
 	/* No threads other than the main thread should be running when we call this. */
-	if (start_sdl_and_splash_screen())
+	start_splash_screen();
+	if (start_sdl())
 		return 1;
 
 	setup_sound();
