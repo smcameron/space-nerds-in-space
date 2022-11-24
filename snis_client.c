@@ -21620,13 +21620,14 @@ static void update_splash_progress(int progress)
 			if (errno == EINTR)
 				continue;
 			fprintf(stderr, "failed to write to splash screen: %s\n", strerror(errno));
-			return;
+			goto done;
 		}
 	} while (bytesleft > 0);
-	if (progress == 100) {
-		close(pipe_to_splash_screen);
-		pipe_to_splash_screen = -1;
-	}
+	if (progress < 100)
+		return;
+done:
+	close(pipe_to_splash_screen);
+	pipe_to_splash_screen = -1;
 }
 
 static int load_static_textures(void)
