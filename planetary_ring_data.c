@@ -17,7 +17,11 @@ void init_planetary_ring_data(struct planetary_ring_data ring_data[],
 
 	for (i = 0; i < nplanetary_rings; i++) {
 		ring_data[i].alpha = 1.0;
-		ring_data[i].texture_v = (float) i / 256.0f;
+		/* texture_v is the vertical offset into the texture in share/snis/planetary-ring0.png.
+		 * We are choosing a horizontal row of pixels in this texture to serve as a cross section
+		 * of the planetary ring.
+		 */
+		ring_data[i].texture_v = (float) i / (float) nplanetary_rings;
 
 		r1 = fabsf(mtwist_float(mt) * (MAX_RING_RADIUS - MIN_RING_RADIUS - 0.5f)) + MIN_RING_RADIUS + 0.5f;
 		r2 = fabsf(mtwist_float(mt) * (MAX_RING_RADIUS - MIN_RING_RADIUS - 0.5f)) + MIN_RING_RADIUS + 0.5f;
@@ -37,7 +41,7 @@ void init_planetary_ring_data(struct planetary_ring_data ring_data[],
 	 * too similar.
 	 */
 	for (i = 0; i < nplanetary_rings; i++) {
-		int n = ((int) (mtwist_float(mt) * 256 * 100)) % 256;
+		int n = ((int) (mtwist_float(mt) * nplanetary_rings * 100)) % nplanetary_rings;
 		float x = ring_data[n].texture_v;
 		ring_data[n].texture_v = ring_data[i].texture_v;
 		ring_data[i].texture_v = x;
