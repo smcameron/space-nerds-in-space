@@ -21701,7 +21701,7 @@ static int load_static_textures(void)
 	black_hole_material.texture_mapped_unlit.do_cullface = 0;
 	black_hole_material.texture_mapped_unlit.alpha = 1.0;
 
-	load_texture_mapped_material(&spacemonster_tentacle_material, "textures/spacemonster_tential_texture.png",
+	load_texture_mapped_material(&spacemonster_tentacle_material, "textures/spacemonster_tentacle_texture.png",
 				"textures/spacemonster_tentacle_emit.png");
 
 	update_splash_progress(45);
