@@ -26649,6 +26649,15 @@ static void init_synonyms(void)
 	snis_nl_add_synonym("come again", "repeat");
 	snis_nl_add_synonym("pardon me", "repeat");
 	snis_nl_add_synonym("what did you say", "repeat");
+	snis_nl_add_synonym("dang", "damn");
+	snis_nl_add_synonym("god damn", "goddamn");
+	snis_nl_add_synonym("god damned", "goddamn");
+	snis_nl_add_synonym("god dang",	"goddamn");
+	snis_nl_add_synonym("god danged", "goddamn");
+	snis_nl_add_synonym("freakin", "freaking");
+	snis_nl_add_synonym("mother fucking", "fucking");
+	snis_nl_add_synonym("piece of shit", "shitty");
+	snis_nl_add_synonym("piece of crap", "shitty");
 }
 
 static const struct noun_description_entry {
@@ -29484,6 +29493,7 @@ static const struct nl_test_case_entry {
 	{ "full power to phasers", 0, },
 	{ "full speed", 0, },
 	{ "full speed ahead", 0, },
+	{ "fucking full fucking speed ahead", 0, },
 	{ "full speed reverse", 0, },
 	{ "maximum speed ahead", 0, },
 	{ "maximum speed reverse", 0, },
@@ -29649,6 +29659,11 @@ static const struct nl_test_case_entry {
 	{ "set a course for star base two", 0, },
 	{ "set a course for warp gate three", 0, },
 	{ "set a course for the warp gate", 0, },
+	{ "set the piece of shit warp drive power to fucking max", 0, },
+	{ "set a bloody fucking course for the nearest piece of crap asteroid", 0, },
+	{ "deploy the shitty mining bot", 0, },
+	{ "fucking scan the nearest piece of shit derelict", 0, },
+	{ "fucking piece of shit turn on the fucking lights", 0, },
 };
 
 static void nl_run_snis_test_cases(__attribute__((unused)) void *context,
@@ -30056,7 +30071,23 @@ static void init_dictionary(void)
 	snis_nl_add_dictionary_word("may",		"may",		POS_AUXVERB);
 	snis_nl_add_dictionary_word("must",		"must",		POS_AUXVERB);
 	snis_nl_add_dictionary_word("ought",		"ought",	POS_AUXVERB);
-
+	/* Allow "swearing" adjectives to be understood (or at least ignored) */
+	snis_nl_add_dictionary_word("fucking",		"fucking",	POS_EXPLETIVE);
+	snis_nl_add_dictionary_word("shitty",		"shitty",	POS_EXPLETIVE);
+	snis_nl_add_dictionary_word("damned",		"damned",	POS_EXPLETIVE);
+	snis_nl_add_dictionary_word("goddamn",		"goddamn",	POS_EXPLETIVE);
+	snis_nl_add_dictionary_word("damn",		"damn",		POS_EXPLETIVE);
+	snis_nl_add_dictionary_word("blasted",		"blasted",	POS_EXPLETIVE);
+	snis_nl_add_dictionary_word("freaking",		"freaking",	POS_EXPLETIVE);
+	snis_nl_add_dictionary_word("bleeding",		"bleeding",	POS_EXPLETIVE);
+	snis_nl_add_dictionary_word("bloody",		"bloody",	POS_EXPLETIVE);
+	snis_nl_add_dictionary_word("confounded",	"confounded",	POS_EXPLETIVE);
+	snis_nl_add_dictionary_word("infernal",		"infernal",	POS_EXPLETIVE);
+	snis_nl_add_dictionary_word("blooming",		"blooming",	POS_EXPLETIVE);
+	snis_nl_add_dictionary_word("blessed",		"blessed",	POS_EXPLETIVE);
+	snis_nl_add_dictionary_word("blessed",		"blessed",	POS_EXPLETIVE);
+	snis_nl_add_dictionary_word("doggone",		"doggone",	POS_EXPLETIVE);
+	snis_nl_add_dictionary_word("rotten",		"rotten",	POS_EXPLETIVE);
 }
 
 static void init_natural_language_system(void)

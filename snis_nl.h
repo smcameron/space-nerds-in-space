@@ -36,6 +36,7 @@
 #define POS_PRONOUN		10
 #define POS_EXTERNAL_NOUN	11
 #define POS_AUXVERB		12
+#define POS_EXPLETIVE		13
 
 union snis_nl_extra_data;
 typedef void (*snis_nl_verb_function)(void *context, int argc, char *argv[], int part_of_speech[],

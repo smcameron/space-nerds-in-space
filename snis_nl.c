@@ -45,6 +45,7 @@ static const char * const part_of_speech[] = {
 	"pronoun",
 	"externalnoun",
 	"auxverb",
+	"expletive",
 };
 
 #define MAX_SYNONYMS 100
@@ -317,6 +318,22 @@ static void classify_tokens(void *context, struct nl_token *t[], int ntokens)
 
 	for (i = 0; i < ntokens; i++)
 		classify_token(context, t[i]);
+}
+
+static void remove_expletives(struct nl_token *t[], int *ntokens)
+{
+	int i, j;
+
+	i = 0;
+	while (i < *ntokens) {
+		if (t[i]->npos == 1 && t[i]->pos[0] == POS_EXPLETIVE) {
+			for (j = i; j < *ntokens - 1; j++)
+				t[j] = t[j + 1];
+			(*ntokens)--;
+			continue;
+		}
+		i++;
+	}
 }
 
 static void print_token_instance(struct nl_token *t, int i)
@@ -960,6 +977,7 @@ static int nl_parse_natural_language_request(void *context, char *original, int 
 	multiword_processor_encode(copy);
 	token = tokenize(copy, &ntokens);
 	classify_tokens(context, token, ntokens);
+	remove_expletives(token, &ntokens);
 	// print_tokens(token, ntokens);
 	rc = extract_meaning(context, original, token, ntokens, test_only);
 	free_tokens(token, ntokens);
