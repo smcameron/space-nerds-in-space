@@ -1,4 +1,19 @@
 
+Update: Wed 30 Nov 2022 05:46:55 PM EST
+---------------------------------------
+
+I tried this again in Nov of 2022 with the pocketsphinx that you
+can apt-get install for linux Mint 20.1, and for whatever reason it
+did not work anywhere close to as well as what I was able to make
+work back in 2016, as seen here: https://www.youtube.com/watch?v=tfcme7maygw
+
+I don't know why it doesn't work so well anymore, but it definitely
+does not work well AT ALL now, which is kind of shame.  Well, I suppose
+with the neural net based speech recognition stuff that's around now,
+pocketsphinx was far behind state of the art anyway.  Perhaps some new
+speech recognition will come along and be not too hard to set up which
+we can use as a replacement.
+
 How to get speech recognition working with Space Nerds In Space
 ---------------------------------------------------------------
 
