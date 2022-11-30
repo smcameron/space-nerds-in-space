@@ -37,6 +37,9 @@ BENEATH - Main
 BESIDE - Main 
 BESIDES - Main 
 BETWEEN - Main 
+BLEEDING - Main 
+BLESSED - Main 
+BLOOMING - Main 
 BOOST - Main 
 BOT - By LtoS rules
 BY - Main 
@@ -52,6 +55,7 @@ COMMS - By LtoS rules
 COMMUNICATIONS - Main 
 COMPUTE - Main 
 COMPUTER - Main 
+CONFOUNDED - Main 
 COOLANT - Main 
 COOLING - Main 
 CORE - Main 
@@ -62,6 +66,10 @@ COUNTERCLOCKWISE - Main
 COURSE - Main 
 CUT - Main 
 DAMAGE - Main 
+DAMN - Main 
+DAMNED - Main 
+DANG - Main 
+DANGED - By LtoS rules
 DEACTIVATE - Main 
 DECREASE - Main 
 DEENERGIZE - By LtoS rules
@@ -78,6 +86,7 @@ DISENGAGE - Main
 DISTANCE - Main 
 DO - Main 
 DOCKING - Main 
+DOGGONE - Main 
 DOWN - Main 
 DRIVE - Main 
 DURING - Main 
@@ -109,10 +118,13 @@ FORTY - Main
 FORWARD - Main 
 FOUR - Main 
 FOURTEEN - Main 
+FREAKING - Main 
 FROM - Main 
+FUCKING - Main 
 FUEL - Main 
 FULL - Main 
 GATE - Main 
+GOD - Main 
 HALF - Main 
 HAVE - Main 
 HEAD - Main 
@@ -124,6 +136,7 @@ HUNDRED - Main
 IMPULSE - Main 
 IN - Main 
 INCREASE - Main 
+INFERNAL - Main 
 INSIDE - Main 
 IS - Main 
 IT - Main 
@@ -194,6 +207,7 @@ RIGHT - Main
 ROBOT - Main 
 ROLL - Main 
 ROTATE - Main 
+ROTTEN - Main 
 ROUTE - Main 
 SAY - Main 
 SCAN - Main 
