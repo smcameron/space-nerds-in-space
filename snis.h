@@ -41,7 +41,7 @@
 #include "shape_collision.h"
 
 #define DEFAULT_SOLAR_SYSTEM "default"
-#define SNIS_PROTOCOL_VERSION "SNIS055"
+#define SNIS_PROTOCOL_VERSION "SNIS056"
 #define COMMON_MTWIST_SEED 97872
 /* dimensions of the "known" universe */
 #define XKNOWN_DIM 600000.0
@@ -981,14 +981,16 @@ struct snis_entity;
 typedef void (*move_function)(struct snis_entity *o);
 
 struct snis_entity_science_data {
-	char name[20];
 	char *science_text; /* usually, this will be null. */
+	char name[20];
 	uint8_t subclass;
 	uint8_t shield_strength;
 	uint8_t shield_wavelength;
 	uint8_t shield_width;
 	uint8_t shield_depth;
 	uint8_t faction;
+	uint8_t flags;
+#define SDATA_FLAGS_BOUNTY_OFFERED (1 << 0)
 #ifdef SNIS_CLIENT_DATA
 	uint16_t science_data_known;
 #endif

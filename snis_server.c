@@ -1936,6 +1936,25 @@ static void modify_transport_contracts(uint32_t location_id)
 	}
 }
 
+
+static void clear_ship_bounty_flags_on_starbase_death(uint32_t id)
+{
+	int i, n;
+	struct ship_registry_entry *sre;
+
+	for (i = 0; i < ship_registry.nentries; i++) {
+		sre = &ship_registry.entry[i];
+		if (sre->type != SHIP_REG_TYPE_BOUNTY)
+			continue;
+		if (sre->bounty_collection_site != id)
+			continue;
+		n = lookup_by_id(sre->id);
+		if (n < 0)
+			continue;
+		go[n].sdata.flags &= ~SDATA_FLAGS_BOUNTY_OFFERED;
+	}
+}
+
 static void delete_object(struct snis_entity *o)
 {
 	remove_space_partition_entry(space_partition, &o->partition);
@@ -1949,6 +1968,7 @@ static void delete_object(struct snis_entity *o)
 		ship_registry_delete_ship_entries(&ship_registry, o->id);
 	/* If a starbase gets killed, any bounties registered for it should get wiped out */
 	if (o->type == OBJTYPE_STARBASE) {
+		clear_ship_bounty_flags_on_starbase_death(o->id);
 		ship_registry_delete_bounty_entries_by_site(&ship_registry, o->id);
 		remove_transport_contract_shipping_location(o->id);
 		modify_transport_contracts(o->id);
@@ -11309,6 +11329,7 @@ static int add_ship(int faction, int shiptype, int auto_respawn)
 	go[i].tsd.ship.shiptype = shiptype;
 	go[i].sdata.subclass = shiptype;
 	go[i].sdata.shield_strength = ship_type[shiptype].max_shield_strength;
+	go[i].sdata.flags = 0;
 	go[i].tsd.ship.nai_entries = 0;
 	memset(go[i].tsd.ship.ai, 0, sizeof(go[i].tsd.ship.ai));
 	go[i].tsd.ship.lifeform_count = ship_type[go[i].tsd.ship.shiptype].crew_max;
@@ -11367,6 +11388,7 @@ static int add_ship(int faction, int shiptype, int auto_respawn)
 			ship_registry_add_bounty(&ship_registry, go[i].id, crime,
 				1000.0 + snis_randn(10) * 100.0,
 				nth_starbase(snis_randn(NBASES)));
+			go[i].sdata.flags |= SDATA_FLAGS_BOUNTY_OFFERED;
 		}
 	}
 	ship_registry_add_entry(&ship_registry, go[i].id, SHIP_REG_TYPE_REGISTRATION, registration);
@@ -15017,6 +15039,7 @@ static void pack_and_send_ship_sdata_packet(struct game_client *c, struct snis_e
 		p.lifeform_count = o->tsd.starbase.lifeform_count;
 	else
 		p.lifeform_count = 0;
+	p.flags = o->sdata.flags;
 	send_ship_sdata_packet(c, &p, o->type);
 }
 
@@ -21766,6 +21789,7 @@ static int l_add_bounty(lua_State *l)
 		return 1;
 	}
 	ship_registry_add_bounty(&ship_registry, id, crime, amount, sbid);
+	go[i].sdata.flags |= SDATA_FLAGS_BOUNTY_OFFERED;
 	pthread_mutex_unlock(&universe_mutex);
 	lua_pushnumber(l, 0);
 	return 1;
@@ -24609,9 +24633,9 @@ static void send_ship_sdata_packet(struct game_client *c, struct ship_sdata_pack
 	case OBJTYPE_ASTEROID:
 		if (((sip->id + universe_timestamp) & 0x1f) == 0) {
 			pb = packed_buffer_allocate(sizeof(struct ship_sdata_without_name_packet));
-			packed_buffer_append(pb, "bwbbbbbbb", OPCODE_SHIP_SDATA_WITHOUT_NAME, sip->id, sip->subclass,
+			packed_buffer_append(pb, "bwbbbbbbbb", OPCODE_SHIP_SDATA_WITHOUT_NAME, sip->id, sip->subclass,
 				sip->shield_strength, sip->shield_wavelength, sip->shield_width, sip->shield_depth,
-				sip->faction, sip->lifeform_count);
+				sip->faction, sip->lifeform_count, sip->flags);
 			pb_queue_to_client(c, pb);
 			return;
 		}
@@ -24620,9 +24644,9 @@ static void send_ship_sdata_packet(struct game_client *c, struct ship_sdata_pack
 		break;
 	}
 	pb = packed_buffer_allocate(sizeof(struct ship_sdata_packet));
-	packed_buffer_append(pb, "bwbbbbbbbr", OPCODE_SHIP_SDATA, sip->id, sip->subclass,
+	packed_buffer_append(pb, "bwbbbbbbbbr", OPCODE_SHIP_SDATA, sip->id, sip->subclass,
 		sip->shield_strength, sip->shield_wavelength, sip->shield_width, sip->shield_depth,
-		sip->faction, sip->lifeform_count,
+		sip->faction, sip->lifeform_count, sip->flags,
 		sip->name, (unsigned short) sizeof(sip->name));
 	pb_queue_to_client(c, pb);
 }

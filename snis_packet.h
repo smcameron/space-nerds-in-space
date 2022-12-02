@@ -336,6 +336,7 @@ struct ship_sdata_packet {
 	uint8_t shield_depth;
 	uint8_t faction;
 	uint8_t lifeform_count;
+	uint8_t flags;
 	char name[NAMESIZE];
 };
 
@@ -349,6 +350,7 @@ struct ship_sdata_without_name_packet {
 	uint8_t shield_depth;
 	uint8_t faction;
 	uint8_t lifeform_count;
+	uint8_t flags;
 };
 
 struct request_ship_sdata_packet {

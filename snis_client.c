@@ -1508,7 +1508,8 @@ static int update_coolant_model_data(uint32_t id, struct power_model_data *pmd,
 
 static int update_ship_sdata(uint32_t id, uint8_t subclass, char *name,
 				uint8_t shield_strength, uint8_t shield_wavelength,
-				uint8_t shield_width, uint8_t shield_depth, uint8_t faction, uint8_t lifeform_count)
+				uint8_t shield_width, uint8_t shield_depth, uint8_t faction,
+				uint8_t lifeform_count, uint8_t flags)
 {
 	int i;
 	i = lookup_object_by_id(id);
@@ -1520,6 +1521,7 @@ static int update_ship_sdata(uint32_t id, uint8_t subclass, char *name,
 	go[i].sdata.shield_width = shield_width;
 	go[i].sdata.shield_depth = shield_depth;
 	go[i].sdata.faction = faction;
+	go[i].sdata.flags = flags;
 	if (strcmp(name, "-") != 0)
 		strcpy(go[i].sdata.name, name);
 	if (go[i].type == OBJTYPE_BRIDGE || go[i].type == OBJTYPE_NPCSHIP)
@@ -6161,7 +6163,7 @@ static int process_ship_sdata_packet(void)
 	unsigned char buffer[50];
 	uint32_t id;
 	uint8_t subclass, shstrength, shwavelength, shwidth,
-		shdepth, faction, lifeform_count;
+		shdepth, faction, lifeform_count, flags;
 	int rc;
 	char name[NAMESIZE];
 
@@ -6169,11 +6171,12 @@ static int process_ship_sdata_packet(void)
 	rc = snis_readsocket(gameserver_sock, buffer, sizeof(struct ship_sdata_packet) - sizeof(uint8_t));
 	if (rc != 0)
 		return rc;
-	packed_buffer_unpack_raw(buffer, sizeof(buffer), "wbbbbbbbr", &id, &subclass, &shstrength, &shwavelength,
-			&shwidth, &shdepth, &faction, &lifeform_count,
+	packed_buffer_unpack_raw(buffer, sizeof(buffer), "wbbbbbbbbr", &id, &subclass, &shstrength, &shwavelength,
+			&shwidth, &shdepth, &faction, &lifeform_count, &flags,
 			name, (unsigned short) sizeof(name));
 	pthread_mutex_lock(&universe_mutex);
-	update_ship_sdata(id, subclass, name, shstrength, shwavelength, shwidth, shdepth, faction, lifeform_count);
+	update_ship_sdata(id, subclass, name, shstrength, shwavelength, shwidth, shdepth, faction,
+				lifeform_count, flags);
 	pthread_mutex_unlock(&universe_mutex);
 	return 0;
 }
@@ -6183,17 +6186,18 @@ static int process_ship_sdata_without_name(void)
 	unsigned char buffer[50];
 	uint32_t id;
 	uint8_t subclass, shstrength, shwavelength, shwidth,
-		shdepth, faction, lifeform_count;
+		shdepth, faction, lifeform_count, flags;
 	int rc;
 
 	assert(sizeof(buffer) > sizeof(struct ship_sdata_without_name_packet) - sizeof(uint8_t));
 	rc = snis_readsocket(gameserver_sock, buffer, sizeof(struct ship_sdata_without_name_packet) - sizeof(uint8_t));
 	if (rc != 0)
 		return rc;
-	packed_buffer_unpack_raw(buffer, sizeof(buffer), "wbbbbbbb", &id, &subclass, &shstrength, &shwavelength,
-			&shwidth, &shdepth, &faction, &lifeform_count);
+	packed_buffer_unpack_raw(buffer, sizeof(buffer), "wbbbbbbbb", &id, &subclass, &shstrength, &shwavelength,
+			&shwidth, &shdepth, &faction, &lifeform_count, &flags);
 	pthread_mutex_lock(&universe_mutex);
-	update_ship_sdata(id, subclass, "-", shstrength, shwavelength, shwidth, shdepth, faction, lifeform_count);
+	update_ship_sdata(id, subclass, "-", shstrength, shwavelength, shwidth, shdepth, faction,
+				lifeform_count, flags);
 	pthread_mutex_unlock(&universe_mutex);
 	return 0;
 }
@@ -9991,8 +9995,9 @@ static void snis_draw_science_guy(struct snis_entity *o,
 						rts_unit_type(unit_type)->name;
 				snprintf(buffer, sizeof(buffer), "%s %s\n", o->sdata.name, unit_type_name);
 			} else {
-				snprintf(buffer, sizeof(buffer), "%s %s\n", o->sdata.name,
-					ship_type[o->sdata.subclass].class);
+				snprintf(buffer, sizeof(buffer), "%s %s %s\n", o->sdata.name,
+					ship_type[o->sdata.subclass].class,
+					(selected && (o->sdata.flags & SDATA_FLAGS_BOUNTY_OFFERED)) ? "BOUNTY OFFERED" : "");
 			}
 			break;
 		case OBJTYPE_BRIDGE:
@@ -16511,9 +16516,11 @@ static void draw_science_data(struct snis_entity *ship, struct snis_entity *o, i
 			sng_abs_xy_draw_string(buffer, TINY_FONT, x, y);
 			y += yinc;
 			if (o->type != OBJTYPE_DERELICT)
-				snprintf(buffer, sizeof(buffer), "REGISTRATION: %d", o->id);
+				snprintf(buffer, sizeof(buffer), "REGISTRATION: %d %s", o->id,
+					(o->sdata.flags & SDATA_FLAGS_BOUNTY_OFFERED) ? "BOUNTY OFFERED" : "");
 			else
-				snprintf(buffer, sizeof(buffer), "REGISTRATION: %d", o->tsd.derelict.orig_ship_id);
+				snprintf(buffer, sizeof(buffer), "REGISTRATION: %d %s", o->tsd.derelict.orig_ship_id,
+					(o->sdata.flags & SDATA_FLAGS_BOUNTY_OFFERED) ? "BOUNTY OFFERED" : "");
 			sng_abs_xy_draw_string(buffer, TINY_FONT, x, y);
 		}
 	}
