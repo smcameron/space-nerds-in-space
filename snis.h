@@ -177,8 +177,8 @@ struct ship_damage_data {
 #define NUM_POWER_MODEL_SYSTEMS (sizeof(struct ship_damage_data))
 
 struct command_data {
-	uint8_t command;
 	double x, z;
+	uint8_t command;
 	uint8_t nids1, nids2;
 	__extension__ union {
 		uint32_t id[256];
@@ -459,6 +459,12 @@ struct ship_data {
 #define LASER_DAMAGE_MAX (4)
 #define LASER_PROJECTILE_BOOST 20.0
 
+/* These values are for the player ship, RTS units are different see rts_unit_data.h */
+#define FUEL_DURATION (10.0) /* minutes */
+#define FUEL_UNITS (FUEL_DURATION * 60.0 * 30.0)
+#define FUEL_CONSUMPTION_UNIT ((uint32_t) (UINT_MAX / FUEL_UNITS))
+	uint32_t fuel;			/* amount of fuel on the ship.  UINT_MAX == full fuel */
+
 	double velocity;	/* current speed of the ship */
 #define MIN_PLAYER_VELOCITY (0.1)
 #define MAX_PLAYER_VELOCITY (30.0)
@@ -513,20 +519,15 @@ struct ship_data {
 	uint8_t torpedoes_loading;	/* 1 means torpedo is currently loading, 0 means not currently loading */
 	uint16_t torpedo_load_time;	/* ticks remaining before torpedo finishes loading */
 	uint8_t phaser_bank_charge;	/* current level of phaser bank charge, 0 - 255 */
-/* These values are for the player ship, RTS units are different see rts_unit_data.h */
-#define FUEL_DURATION (10.0) /* minutes */
-#define FUEL_UNITS (FUEL_DURATION * 60.0 * 30.0)
-#define FUEL_CONSUMPTION_UNIT ((uint32_t) (UINT_MAX / FUEL_UNITS))
-	uint32_t fuel;			/* amount of fuel on the ship.  UINT_MAX == full fuel */
+	uint8_t rpm;			/* Not sure this is really used anymore */
+	uint8_t throttle;		/* Not sure this is really used anymore */
+	uint8_t temp;			/* displayed, but not really used, I think */
 #define OXYGEN_DURATION (4.0) /* minutes */
 #define OXYGEN_UNITS (OXYGEN_DURATION * 60.0 * 30.0)
 #define OXYGEN_CONSUMPTION_UNIT ((uint32_t) (UINT_MAX / OXYGEN_UNITS))
 #define OXYGEN_PRODUCTION_UNIT (1.8 * OXYGEN_CONSUMPTION_UNIT)
 #define OXYGEN_REPLENISHMENT_UNIT OXYGEN_CONSUMPTION_UNIT
 	uint32_t oxygen;		/* amount of oxygen available, UINT_MAX = full oxygen */
-	uint8_t rpm;			/* Not sure this is really used anymore */
-	uint8_t throttle;		/* Not sure this is really used anymore */
-	uint8_t temp;			/* displayed, but not really used, I think */
 	uint8_t shiptype; /* same as snis_entity_science_data subclass */
 	uint8_t scizoom;		/* Controlled by science range slider, shared by LRS and SRS */
 	uint8_t weapzoom;		/* I think this is not used anymore. */
@@ -541,27 +542,30 @@ struct ship_data {
 #define WARP_CORE_EXPLOSION_DAMAGE_DISTANCE 20000.0
 #define WARP_CORE_EXPLOSION_WEAPONS_FACTOR 30.0
 	uint8_t warp_core_status;	/* 0 = good, 1 = ejected */
+	uint8_t reverse;		/* Is the ship in reverse? */
+	uint8_t trident;		/* trident mode on nav screen, 1 = ABSOLUTE, 0 = RELATIVE */
 #define MAX_AI_STACK_ENTRIES 5
 	struct ai_stack_entry ai[MAX_AI_STACK_ENTRIES];	/* Brain states for NPC ships */
 	int nai_entries;		/* number of brain states in use */
+	int32_t warp_time; /* time remaining until warp engages */
 	double dox, doy, doz, dist;	/* destination offsets and distance */
 	struct ship_damage_data damage;	/* damage to each of the ships systems. Only used for player ships, not NPCs */
+	uint8_t lifeform_count;			/* Lifeforms aboard NPC ship, displayed on science details */
+	uint8_t in_secure_area; /* Are cops nearby? */
+	uint8_t emf_detector;	/* Used for EMF graph on comms screen */
+	uint32_t home_planet;	/* ID of planet NPC ships originate from */
 	struct command_data cmd_data;	/* Used for demon builtin commands, somewhat archaic */
 	struct damcon_data *damcon;	/* All the objects on the damage control screen, robot, modules, etc. */
-	uint8_t view_mode;		/* mainscreen view mode (normal or weapons) toggle via shift-W key */
 	double view_angle;		/* I don't think this is really used. */
+	double scibeam_a1, scibeam_a2, scibeam_range; /* used server side to cache sci beam calcs (why?) */
 
 	/* Power and coolant model data.  See power-model.h and power-model.c */
-	struct power_model_data power_data;
 	struct power_model *power_model;
-	struct power_model_data coolant_data;
 	struct power_model *coolant_model;
+	struct power_model_data power_data;
+	struct power_model_data coolant_data;
 	struct ship_damage_data temperature_data;
 
-	int32_t warp_time; /* time remaining until warp engages */
-	double scibeam_a1, scibeam_a2, scibeam_range; /* used server side to cache sci beam calcs (why?) */
-	uint8_t reverse;		/* Is the ship in reverse? */
-	uint8_t trident;		/* trident mode on nav screen, 1 = ABSOLUTE, 0 = RELATIVE */
 	uint8_t exterior_lights; /* 255 = on, 0 = off */
 	int32_t next_torpedo_time;		/* rate limits NPC torpedo firing */
 #define ENEMY_TORPEDO_FIRE_INTERVAL (12 * 10)	/* 12 seconds */
@@ -569,7 +573,6 @@ struct ship_data {
 #define ENEMY_LASER_FIRE_INTERVAL (6 * 10)	/* 6 seconds */
 	int32_t next_missile_time;		/* rate limits NPC missile firing */
 #define ENEMY_MISSILE_FIRE_INTERVAL (12 * 10)	/* 12 seconds */
-	uint8_t lifeform_count;			/* Lifeforms aboard NPC ship, displayed on science details */
 #define MAX_TRACTOR_DIST 5000.0 /* TODO: tweak this */
 #define TRACTOR_BEAM_IDEAL_DIST 200.0 /* TODO: tweak this */
 #define MAX_TRACTOR_VELOCITY 10.0
@@ -578,7 +581,13 @@ struct ship_data {
 				/* For the mining bot, the tractor beam is overloaded to hold the ID of */
 				/* salvaged derelicts ("chip id", for bounties) */
 				/* For other NPC ships, tractor_beam is unused, I believe */
+	uint8_t view_mode;		/* mainscreen view mode (normal or weapons) toggle via shift-W key */
 	uint8_t damage_data_dirty; /* used by snis_server to know if damage data needs to be transmitted to clients */
+	uint8_t auto_respawn;	/* For NPC ships when they get killed. Lua scripts can make */
+				/* NPC ships that don't respawn */
+#define NAV_MODE_NORMAL 0
+#define NAV_MODE_STARMAP 1
+	uint8_t nav_mode;	/* 1 = Normal navigation screen or 0 = starmap mode */
 	union vec3 steering_adjustment; /* NPC ship steering adjustments to avoid obstacles */
 	float braking_factor;		/* NPC ship braking adjustment to avoid obstacles */
 #define MAX_CARGO_BAYS_PER_SHIP 8
@@ -596,14 +605,6 @@ struct ship_data {
 #define MAX_THRUST_PORTS 5
 	int nthrust_ports;	/* number of thrusters */
 	struct entity *thrust_entity[MAX_THRUST_PORTS * 2]; /* entities for the flames coming from thrusters */
-	uint8_t in_secure_area; /* Are cops nearby? */
-	uint8_t emf_detector;	/* Used for EMF graph on comms screen */
-	uint8_t auto_respawn;	/* For NPC ships when they get killed. Lua scripts can make */
-				/* NPC ships that don't respawn */
-#define NAV_MODE_NORMAL 0
-#define NAV_MODE_STARMAP 1
-	uint8_t nav_mode;	/* 1 = Normal navigation screen or 0 = starmap mode */
-	uint32_t home_planet;	/* ID of planet NPC ships originate from */
 	int flames_timer;	/* how many ticks before damaged NPC ship stops emitting flames. */
 	uint8_t docking_magnets;	/* 1 = magnets engaged, 0 magnets disengaged */
 	uint8_t comms_crypto_mode;	/* 1 = comms crypto screen is on, 0 = normal comms */
@@ -998,11 +999,11 @@ struct snis_entity_science_data {
  */
 struct snis_entity {
 	uint32_t id;		/* unique ID of the object (unique within snis_server, and snis_client */
+	uint32_t type;		/* what kind of object is this? See OBJTYPE_* defines, above */
 	double x, y, z;		/* coordinates of object in space */
 	double vx, vy, vz;	/* velocity of object */
 	double heading;		/* heading of the object (archaic?) */
 	uint16_t alive;		/* when 0, object is no longer alive */
-	uint32_t type;		/* what kind of object is this? See OBJTYPE_* defines, above */
 	uint32_t respawn_time;	/* Used in different ways for respawning player ship, and NPC ships */
 	union type_specific_data tsd; /* data particular to the type of object */
 	move_function move;	/* function to move the object. Varies by object type, and there */
