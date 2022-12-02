@@ -64,11 +64,11 @@ struct packed_buffer *build_bridge_update_packet(struct snis_entity *o,
 			o->x, (int32_t) UNIVERSE_DIM,
 			o->y, (int32_t) UNIVERSE_DIM,
 			o->z, (int32_t) UNIVERSE_DIM);
-	packed_buffer_append(pb, "RRRwwRRbbbwwbbbbbbbbbbbbbwQQQbbwbbbb",
+	packed_buffer_append(pb, "RRRwRRbbbwwbbbbbbbbbbbbbwQQQbbwbbbb",
 			o->tsd.ship.yaw_velocity,
 			o->tsd.ship.pitch_velocity,
 			o->tsd.ship.roll_velocity,
-			o->tsd.ship.torpedoes, o->tsd.ship.power,
+			o->tsd.ship.torpedoes,
 			o->tsd.ship.sci_heading,
 			o->tsd.ship.sci_beam_width,
 			tloading, throttle, rpm, fuel, oxygen, o->tsd.ship.temp,
@@ -103,7 +103,7 @@ struct packed_buffer *build_bridge_update_packet(struct snis_entity *o,
 void unpack_bridge_update_packet(struct snis_entity *o, struct persistent_bridge_data *bd, struct packed_buffer *pb)
 {
 	uint16_t alive;
-	uint32_t torpedoes, power;
+	uint32_t torpedoes;
 	uint32_t fuel, oxygen, victim_id;
 	double dx, dy, dz, dyawvel, dpitchvel, drollvel;
 	double dsheading, dbeamwidth;
@@ -123,11 +123,11 @@ void unpack_bridge_update_packet(struct snis_entity *o, struct persistent_bridge
 	packed_buffer_extract(pb, "hSSS", &alive,
 				&dx, (int32_t) UNIVERSE_DIM, &dy, (int32_t) UNIVERSE_DIM,
 				&dz, (int32_t) UNIVERSE_DIM);
-	packed_buffer_extract(pb, "RRRwwRR",
+	packed_buffer_extract(pb, "RRRwRR",
 				&dyawvel,
 				&dpitchvel,
 				&drollvel,
-				&torpedoes, &power,
+				&torpedoes,
 				&dsheading,
 				&dbeamwidth);
 	packed_buffer_extract(pb, "bbbwwbbbbbbbbbbbbbwQQQbbwbbbb",
@@ -174,7 +174,6 @@ void unpack_bridge_update_packet(struct snis_entity *o, struct persistent_bridge
 	o->tsd.ship.pitch_velocity = dpitchvel;
 	o->tsd.ship.roll_velocity = drollvel;
 	o->tsd.ship.torpedoes = torpedoes;
-	o->tsd.ship.power = power;
 	o->tsd.ship.sci_heading = dsheading;
 	o->tsd.ship.sci_beam_width = dbeamwidth;
 	o->tsd.ship.torpedoes_loaded = tloaded;

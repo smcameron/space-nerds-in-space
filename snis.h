@@ -41,7 +41,7 @@
 #include "shape_collision.h"
 
 #define DEFAULT_SOLAR_SYSTEM "default"
-#define SNIS_PROTOCOL_VERSION "SNIS054"
+#define SNIS_PROTOCOL_VERSION "SNIS055"
 #define COMMON_MTWIST_SEED 97872
 /* dimensions of the "known" universe */
 #define XKNOWN_DIM 600000.0
@@ -459,7 +459,6 @@ struct ship_data {
 #define LASER_DAMAGE_MAX (4)
 #define LASER_PROJECTILE_BOOST 20.0
 
-	uint32_t power;		/* Not sure this is *really* used anymore since the power model went in */
 	double velocity;	/* current speed of the ship */
 #define MIN_PLAYER_VELOCITY (0.1)
 #define MAX_PLAYER_VELOCITY (30.0)

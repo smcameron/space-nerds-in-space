@@ -143,7 +143,6 @@ void snis_debug_dump(char *cmd, struct snis_entity go[], int nstarbase_models,
 		printfn("DESTINATION XYZ = %.2f, %.2f, %.2f",
 			o->tsd.ship.dox, o->tsd.ship.doy, o->tsd.ship.doz);
 		printfn("TORPEDOES: %u", o->tsd.ship.torpedoes);
-		printfn("POWER: %u", o->tsd.ship.power);
 		printfn("VELOCITY: %.2f", o->tsd.ship.velocity);
 		printfn("FUEL = %u", o->tsd.ship.fuel);
 		printfn("SHIELD DAMAGE: %u", o->tsd.ship.damage.shield_damage);

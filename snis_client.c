@@ -5253,7 +5253,7 @@ static int process_update_ship_packet(uint8_t opcode)
 	unsigned char buffer[146];
 	struct packed_buffer pb;
 	uint16_t alive;
-	uint32_t id, timestamp, torpedoes, power;
+	uint32_t id, timestamp, torpedoes;
 	uint32_t fuel, oxygen, victim_id, wallet, viewpoint_object;
 	double dx, dy, dz, dyawvel, dpitchvel, drollvel;
 	double dsheading, dbeamwidth;
@@ -5280,11 +5280,11 @@ static int process_update_ship_packet(uint8_t opcode)
 	packed_buffer_extract(&pb, "wwhSSS", &id, &timestamp, &alive,
 				&dx, (int32_t) UNIVERSE_DIM, &dy, (int32_t) UNIVERSE_DIM,
 				&dz, (int32_t) UNIVERSE_DIM);
-	packed_buffer_extract(&pb, "RRRwwRR",
+	packed_buffer_extract(&pb, "RRRwRR",
 				&dyawvel,
 				&dpitchvel,
 				&drollvel,
-				&torpedoes, &power,
+				&torpedoes,
 				&dsheading,
 				&dbeamwidth);
 	packed_buffer_extract(&pb, "bbbwwbbbbbbbbbbbbwQQQQSSSbB8bbww",
@@ -5335,7 +5335,6 @@ static int process_update_ship_packet(uint8_t opcode)
 	o->tsd.ship.pitch_velocity = dpitchvel;
 	o->tsd.ship.roll_velocity = drollvel;
 	o->tsd.ship.torpedoes = torpedoes;
-	o->tsd.ship.power = power;
 	o->tsd.ship.sci_heading = dsheading;
 	o->tsd.ship.sci_beam_width = dbeamwidth;
 	o->tsd.ship.torpedoes_loaded = tloaded;

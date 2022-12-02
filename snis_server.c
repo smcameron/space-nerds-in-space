@@ -7601,14 +7601,6 @@ static double rpmx[] = {
 		4.0 * 255.0 / 5.0,
 		256.0 };
 
-static double powery[] =  {
-	0.0, 0.0, 
-		0.33 * (double) UINT32_MAX, 
-		0.6 * (double) UINT32_MAX, 
-		0.8 * (double) UINT32_MAX,  
-		0.95 * (double) UINT32_MAX,  
-		0.8 * (double) UINT32_MAX,  } ;
-
 static double tempy[] = {
 	0.0, 0.0,
 		0.3 * (double) UINT8_MAX,
@@ -7617,15 +7609,6 @@ static double tempy[] = {
 		0.65 * (double) UINT8_MAX,
 		1.0 * (double) UINT8_MAX,
 	};
-
-static double powertempy[] = {
-	0.0, 0.0, 
-		0.4,
-		0.5,
-		0.7,
-		0.8,
-		1.0,
-};
 
 static uint8_t update_phaser_banks(int current, int power, int max)
 {
@@ -10067,8 +10050,6 @@ static void player_move(struct snis_entity *o)
 			o->tsd.ship.rpm -= diff;
 		}
 	}
-	o->tsd.ship.power = table_interp((double) o->tsd.ship.rpm,
-			rpmx, powery, ARRAYSIZE(rpmx));
 	desired_temp = (uint8_t) table_interp((double) o->tsd.ship.rpm,
 			rpmx, tempy, ARRAYSIZE(rpmx));
 	if (snis_randn(100) < 50) { /* adjust temp slowly, stochastically */
@@ -10082,8 +10063,6 @@ static void player_move(struct snis_entity *o)
 		}
 		o->tsd.ship.temp += diff;
 	}
-	o->tsd.ship.power *= table_interp((double) o->tsd.ship.temp,
-			rpmx, powertempy, ARRAYSIZE(powertempy));
 
 	/* Update shield strength */
 	if (o->sdata.shield_strength < o->tsd.ship.power_data.shields.i)
@@ -11060,7 +11039,6 @@ static void init_player(struct snis_entity *o, int reset_ship, float *charges)
 	o->move = player_move;
 	money += (INITIAL_TORPEDO_COUNT - o->tsd.ship.torpedoes) * TORPEDO_UNIT_COST;
 	o->tsd.ship.torpedoes = INITIAL_TORPEDO_COUNT;
-	o->tsd.ship.power = 100.0;
 	o->tsd.ship.yaw_velocity = 0.0;
 	o->tsd.ship.pitch_velocity = 0.0;
 	o->tsd.ship.roll_velocity = 0.0;
@@ -11072,7 +11050,6 @@ static void init_player(struct snis_entity *o, int reset_ship, float *charges)
 	o->tsd.ship.oxygen = UINT32_MAX;
 	o->tsd.ship.rpm = 0;
 	o->tsd.ship.temp = 0;
-	o->tsd.ship.power = 0;
 	o->tsd.ship.scizoom = 128;
 	o->tsd.ship.throttle = 200;
 	o->tsd.ship.torpedo_load_time = 0;
@@ -11325,7 +11302,6 @@ static int add_ship(int faction, int shiptype, int auto_respawn)
 		return i;
 	go[i].move = ship_move;
 	go[i].tsd.ship.torpedoes = INITIAL_TORPEDO_COUNT;
-	go[i].tsd.ship.power = 100.0;
 	go[i].tsd.ship.yaw_velocity = 0.0;
 	go[i].tsd.ship.pitch_velocity = 0.0;
 	go[i].tsd.ship.roll_velocity = 0.0;
@@ -24851,11 +24827,11 @@ static void send_update_ship_packet(struct game_client *c,
 	packed_buffer_append(pb, "bwwhSSS", opcode, o->id, o->timestamp, o->alive,
 			o->x, (int32_t) UNIVERSE_DIM, o->y, (int32_t) UNIVERSE_DIM,
 			o->z, (int32_t) UNIVERSE_DIM);
-	packed_buffer_append(pb, "RRRwwRRbbbwwbbbbbbbbbbbbwQQQQSSSbB8bbww",
+	packed_buffer_append(pb, "RRRwRRbbbwwbbbbbbbbbbbbwQQQQSSSbB8bbww",
 			o->tsd.ship.yaw_velocity,
 			o->tsd.ship.pitch_velocity,
 			o->tsd.ship.roll_velocity,
-			o->tsd.ship.torpedoes, o->tsd.ship.power,
+			o->tsd.ship.torpedoes,
 			o->tsd.ship.sci_heading,
 			o->tsd.ship.sci_beam_width,
 			tloading, throttle, rpm, fuel, oxygen, o->tsd.ship.temp,

@@ -49,7 +49,6 @@ struct key_value_specification snis_entity_kvs[] = {
 	UINT16_FIELD(alive),
 	UINT32_FIELD(type),
 	UINT32_TSDFIELD(torpedoes),
-	UINT32_TSDFIELD(power),
 	DOUBLE_TSDFIELD(velocity),
 	DOUBLE_TSDFIELD(yaw_velocity),
 	DOUBLE_TSDFIELD(pitch_velocity),

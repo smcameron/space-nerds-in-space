@@ -282,7 +282,6 @@ struct update_ship_packet {
 	uint16_t alive;
 	uint32_t x, y, z, yawvel, pitchvel, rollvel;
         uint32_t ntorpedoes;
-        uint32_t power;
 	uint32_t sci_heading;
 	uint32_t sci_beam_width;
 	uint8_t torpedoes_loaded; /* lower nybble == no. loading, upper == no. loaded. */
