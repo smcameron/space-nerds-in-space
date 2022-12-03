@@ -7241,8 +7241,9 @@ static void ai_brain(struct snis_entity *o)
 		ai_fleet_member_mode_brain(o);
 		break;
 	case AI_MODE_HANGOUT:
-		ai_trace(o->id, "HANGOUT %d", 10 * o->tsd.ship.ai[n].u.hangout.time_to_go / 10);
-		o->tsd.ship.ai[n].u.hangout.time_to_go--;
+		ai_trace(o->id, "HANGOUT %u SECS", 10 * o->tsd.ship.ai[n].u.hangout.time_to_go / 10);
+		if (o->tsd.ship.ai[n].u.hangout.time_to_go != 0)
+			o->tsd.ship.ai[n].u.hangout.time_to_go--;
 		if (o->tsd.ship.ai[n].u.hangout.time_to_go <= 0) {
 			ai_trace(o->id, "POP HANGOUT");
 			pop_ai_stack(o);

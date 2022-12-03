@@ -204,7 +204,7 @@ void snis_debug_dump(char *cmd, struct snis_entity go[], int nstarbase_models,
 				}
 				break;
 			case AI_MODE_HANGOUT:
-				printfn("----- time to go %d\n",
+				printfn("----- time to go %u\n",
 						o->tsd.ship.ai[i].u.hangout.time_to_go);
 				break;
 			case AI_MODE_COP:
