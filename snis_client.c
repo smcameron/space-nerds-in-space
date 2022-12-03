@@ -9995,9 +9995,7 @@ static void snis_draw_science_guy(struct snis_entity *o,
 						rts_unit_type(unit_type)->name;
 				snprintf(buffer, sizeof(buffer), "%s %s\n", o->sdata.name, unit_type_name);
 			} else {
-				snprintf(buffer, sizeof(buffer), "%s %s %s\n", o->sdata.name,
-					ship_type[o->sdata.subclass].class,
-					(selected && (o->sdata.flags & SDATA_FLAGS_BOUNTY_OFFERED)) ? "BOUNTY OFFERED" : "");
+				snprintf(buffer, sizeof(buffer), "%s\n", ship_type[o->sdata.subclass].class);
 			}
 			break;
 		case OBJTYPE_BRIDGE:
@@ -10618,8 +10616,11 @@ static int science_tooltip_text(struct science_data *sd, char *buffer, int bufle
 	switch (o->type) {
 	case OBJTYPE_BRIDGE:
 	case OBJTYPE_NPCSHIP:
-		snprintf(buffer, buflen, "SHIP, TYPE: %s, NAME:%s",
-				ship_type[o->sdata.subclass].class, o->sdata.name);
+		snprintf(buffer, buflen, "NAME: %s\nREG: %d\nFACTION: %s\nTYPE: %s%s",
+					o->sdata.name, o->id,
+					faction_name(o->sdata.faction),
+					ship_type[o->sdata.subclass].class,
+					o->sdata.flags & SDATA_FLAGS_BOUNTY_OFFERED ? "\n(BOUNTY OFFERED)" : "");
 		break;
 	case OBJTYPE_ASTEROID:
 		snprintf(buffer, buflen, "ASTEROID, NAME:%s", o->sdata.name);
@@ -10654,7 +10655,7 @@ static int science_tooltip_text(struct science_data *sd, char *buffer, int bufle
 	case OBJTYPE_PLANET: {
 			struct planet_data *p = &o->tsd.planet;
 			char *planet_type_str = solarsystem_assets->planet_type[p->solarsystem_planet_type];
-			snprintf(buffer, buflen, "PLANET, TYPE:%s, NAME:%s", planet_type_str, o->sdata.name);
+			snprintf(buffer, buflen, "PLANET\nTYPE: %s\nNAME: %s", planet_type_str, o->sdata.name);
 			uppercase(buffer);
 		}
 		break;
@@ -10683,7 +10684,13 @@ static int science_tooltip_text(struct science_data *sd, char *buffer, int bufle
 	return 1;
 }
 
+static void draw_tooltip_color(int mousex, int mousey, char *tooltip, int color);
 static void draw_tooltip(int mousex, int mousey, char *tooltip);
+
+static void draw_sciplane_tooltip(int mousex, int mousey, char *tooltip)
+{
+	draw_tooltip_color(mousex, mousey, tooltip, UI_COLOR(sciplane_tooltip));
+}
 
 static void draw_sciplane_display(struct snis_entity *o, double range)
 {
@@ -11166,7 +11173,7 @@ static void draw_sciplane_display(struct snis_entity *o, double range)
 		if (closest_guy >= 0 && closest_distance > 0 && closest_distance < 400) {
 			char scitooltip[100];
 			if (science_tooltip_text(&science_guy[closest_guy], scitooltip, sizeof(scitooltip) - 1))
-				draw_tooltip(mouse.x, mouse.y, scitooltip);
+				draw_sciplane_tooltip(mouse.x, mouse.y, scitooltip);
 		}
 
 		/* draw in the laserbeams */
@@ -11469,7 +11476,7 @@ static void draw_all_the_3d_science_guys(struct snis_entity *o, double range, do
 	if (closest_guy >= 0 && closest_distance > 0 && closest_distance < 400) {
 		char scitooltip[100];
 		if (science_tooltip_text(&science_guy[closest_guy], scitooltip, sizeof(scitooltip) - 1))
-			draw_tooltip(mouse.x, mouse.y, scitooltip);
+			draw_sciplane_tooltip(mouse.x, mouse.y, scitooltip);
 	}
 
 	pthread_mutex_unlock(&universe_mutex);
@@ -14567,7 +14574,7 @@ static void init_engineering_ui(void)
 	ui_add_slider(eu->lifesupport_temperature, dm, NULL);
 }
 
-static void draw_tooltip(int mousex, int mousey, char *tooltip)
+static void draw_tooltip_color(int mousex, int mousey, char *tooltip, int color)
 {
 	float bbx1, bby1, bbx2, bby2, width, height;
 	int x, y;
@@ -14589,9 +14596,14 @@ static void draw_tooltip(int mousex, int mousey, char *tooltip)
 
 	sng_set_foreground(BLACK);
 	snis_draw_rectangle(1, x, y, width, height);
-	sng_set_foreground(UI_COLOR(tooltip));
+	sng_set_foreground(color);
 	snis_draw_rectangle(0, x, y, width, height);
 	sng_abs_xy_draw_string(tooltip, PICO_FONT, x + txx(3), y + txy(12));
+}
+
+static void draw_tooltip(int mousex, int mousey, char *tooltip)
+{
+	draw_tooltip_color(mousex, mousey, tooltip, UI_COLOR(tooltip));
 }
 
 static void show_engineering_damage_report(int subsystem)

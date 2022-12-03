@@ -224,6 +224,7 @@ struct ui_color_map {
 	struct ui_color_entry special_options;
 	struct ui_color_entry help_text;
 	struct ui_color_entry tooltip;
+	struct ui_color_entry sciplane_tooltip;
 
 	struct ui_color_entry warp_hash;
 	struct ui_color_entry last_color;
@@ -424,6 +425,7 @@ GLOBAL struct ui_color_map_accessor {
 	.u.map.special_options		= { WHITE,		"special-options" },
 	.u.map.help_text		= { WHITE,		"help-text" },
 	.u.map.tooltip			= { DARKGREEN,		"tooltip" },
+	.u.map.sciplane_tooltip		= { LIMEGREEN,		"sciplane-tooltip" },
 
 	.u.map.warp_hash		= { WHITE,		"warp-hash" },
 
