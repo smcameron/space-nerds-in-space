@@ -7429,9 +7429,8 @@ static void ship_collision_avoidance(void *context, void *entity)
 		o->tsd.ship.last_seen_near = obstacle->id;
 		if (d < obstacle->tsd.planet.radius * obstacle->tsd.planet.radius) {
 			/* ship has crashed into planet */
-			(void) add_explosion(o->x, o->y, o->z, 30, 50, 25, o->type);
-			respawn_object(o);
-			delete_from_clients_and_server(o);
+			o->alive = 0;
+			/* Don't add explosion, respawn, or delete here, ship_move() will do all that later. */
 		}
 		return; /* Do not use steering forces to avoid planets.  That is done elsewhere */
 	}
