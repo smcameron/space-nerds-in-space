@@ -20,6 +20,6 @@ void stacktrace(char *msg)
 	fprintf(stderr, "%s\n", msg);
 	fprintf(stderr, "Stack trace:\n");
 	for (i=0; i < trace_size; ++i)
-		printf("- %s\n", traceline[i]);
+		fprintf(stderr, "- %s\n", traceline[i]);
 	free(traceline);
 }
