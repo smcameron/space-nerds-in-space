@@ -15030,7 +15030,7 @@ static void pack_and_send_ship_sdata_packet(struct game_client *c, struct snis_e
 	memset(p.name, 0, sizeof(p.name));
 	strcpy(p.name, o->sdata.name);
 	p.id = o->id;
-	if (o->type == OBJTYPE_NPCSHIP)
+	if (o->type == OBJTYPE_NPCSHIP || o->type == OBJTYPE_BRIDGE)
 		p.subclass = o->tsd.ship.shiptype;
 	else
 		p.subclass = 0;
