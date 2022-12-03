@@ -3251,6 +3251,7 @@ static void push_cop_mode(struct snis_entity *cop)
 	patrol->npoints = npoints;
 	patrol->dest = 0;
 	patrol->oneshot = 0;
+	patrol->max_hangout_time = 255;
 
 	random_quat(&q);
 
