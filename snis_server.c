@@ -3853,6 +3853,11 @@ static void notify_the_cops(struct snis_entity *weapon, struct snis_entity *targ
 		return;
 	}
 
+	if (target->type == OBJTYPE_NPCSHIP && target->sdata.flags & SDATA_FLAGS_BOUNTY_OFFERED) {
+		/* cops don't care if you attack a ship that has a bounty offered */
+		return;
+	}
+
 	switch (weapon->type) {
 	case OBJTYPE_TORPEDO:
 		perp_id = weapon->tsd.torpedo.ship_id;
