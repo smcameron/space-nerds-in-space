@@ -52,6 +52,7 @@ void ship_registry_delete_ship_entries(struct ship_registry *r, uint32_t id);
 int ship_registry_get_next_entry(struct ship_registry *r, uint32_t id, int n);
 void ship_registry_delete_bounty_entries_by_site(struct ship_registry *r, uint32_t collection_site);
 void free_ship_registry(struct ship_registry *r);
+int ship_registry_ship_has_bounty(struct ship_registry *r, uint32_t id);
 
 
 #endif

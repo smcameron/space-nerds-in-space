@@ -10660,6 +10660,12 @@ static int science_tooltip_text(struct science_data *sd, char *buffer, int bufle
 		}
 		break;
 	case OBJTYPE_DERELICT:
+		snprintf(buffer, buflen, "NAME: %s\nREG: %d\nFACTION: %s\nTYPE: %s (DERELICT)%s",
+			o->sdata.name, o->tsd.derelict.orig_ship_id,
+			faction_name(o->sdata.faction),
+			ship_type[o->sdata.subclass].class,
+			o->sdata.flags & SDATA_FLAGS_BOUNTY_OFFERED ? "\n(BOUNTY OFFERED)" : "");
+		break;
 	case OBJTYPE_BLOCK:
 	case OBJTYPE_TURRET:
 	case OBJTYPE_WARP_CORE:

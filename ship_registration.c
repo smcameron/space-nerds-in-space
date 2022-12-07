@@ -169,3 +169,14 @@ void free_ship_registry(struct ship_registry *r)
 	r->nentries = 0;
 	r->entry = NULL;
 }
+
+int ship_registry_ship_has_bounty(struct ship_registry *r, uint32_t id)
+{
+	int i;
+
+	for (i = 0; i < r->nentries; i++)
+		if (r->entry[i].id == id && r->entry[i].type == SHIP_REG_TYPE_BOUNTY)
+			return 1;
+	return 0;
+}
+

@@ -13344,6 +13344,8 @@ static int add_derelict(const char *name, double x, double y, double z,
 	go[i].tsd.derelict.ships_log = NULL;
 	go[i].tsd.derelict.orig_ship_id = orig_ship_id;
 	go[i].tsd.derelict.ship_id_chip_present = 1;
+	if (ship_registry_ship_has_bounty(&ship_registry, orig_ship_id))
+		go[i].sdata.flags |= SDATA_FLAGS_BOUNTY_OFFERED;
 	return i;
 }
 

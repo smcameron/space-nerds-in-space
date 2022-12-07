@@ -147,6 +147,7 @@ void snis_debug_dump(char *cmd, struct snis_entity go[], int nstarbase_models,
 		printfn("FUEL = %u", o->tsd.ship.fuel);
 		printfn("SHIELD DAMAGE: %u", o->tsd.ship.damage.shield_damage);
 		printfn("THREAT LEVEL = %.2f", o->tsd.ship.threat_level);
+		printfn("FLAGS = %hhu", o->sdata.flags);
 #ifdef SNIS_SERVER_DATA
 		printfn("TARGETING SYSTEM = %hhu", o->tsd.ship.targeted_system);
 #endif
@@ -476,6 +477,7 @@ void snis_debug_dump(char *cmd, struct snis_entity go[], int nstarbase_models,
 		printfn("-- SHIPS LOG: %s",
 				o->tsd.derelict.ships_log ? o->tsd.derelict.ships_log : "NULL");
 		printfn("-- ORIG_SHIP_ID: %u", o->tsd.derelict.orig_ship_id);
+		printfn("-- FLAGS: %hhu", o->sdata.flags);
 		break;
 	case OBJTYPE_TRACTORBEAM:
 		t = "TRACTORBEAM";
