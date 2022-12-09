@@ -20050,16 +20050,23 @@ static void show_warp_hash_screen(void)
 
 static void show_warp_limbo_screen(void)
 {
-	if (displaymode == DISPLAYMODE_MAINSCREEN) {
+	switch (displaymode) {
+	case DISPLAYMODE_MAINSCREEN:
 		show_mainscreen();
-	} else {
-		if (displaymode == DISPLAYMODE_WEAPONS) {
-			show_manual_weapons();
-			ui_element_list_draw(uiobjs);
-			ui_element_list_maybe_draw_tooltips(uiobjs, mouse.x, mouse.y);
-		} else {
-			show_warp_hash_screen();
-		}
+		break;
+	case DISPLAYMODE_WEAPONS:
+		show_manual_weapons();
+		ui_element_list_draw(uiobjs);
+		ui_element_list_maybe_draw_tooltips(uiobjs, mouse.x, mouse.y);
+		break;
+	case DISPLAYMODE_DEMON:
+		show_demon();
+		ui_element_list_draw(uiobjs);
+		ui_element_list_maybe_draw_tooltips(uiobjs, mouse.x, mouse.y);
+		break;
+	default:
+		show_warp_hash_screen();
+		break;
 	}
 }
 
