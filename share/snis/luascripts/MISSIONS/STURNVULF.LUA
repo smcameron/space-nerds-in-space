@@ -30,6 +30,8 @@ local function dbgout(s)
 	end
 end
 
+dbgout("STURNVULF.LUA: Starting STURNVULF.LUA");
+
 if random_point_on_sphere ~= nil then
 	-- Choose a location for the STURNVULF
 	svx, svy, svz = random_point_on_sphere(200000);
@@ -43,6 +45,8 @@ else
 	-- Choose a random channel for the ROBOT COMMS
 	robot_channel = 1234;
 end
+
+dbgout("STURNVULF.LUA: Initial location of sturnvulf: (" .. svx .. "," .. svy .. "," .. svz .. ")");
 
 local function examine_body(entry)
 	-- entry is { "noun", object },
@@ -1056,11 +1060,11 @@ function robot_listen(from, channel, message)
 	end
 	if object_distance ~= nil then
 		if sturnvulf == nil then
-			dbgout("sturnvulf is nil! (2)");
+			dbgout("STURNVULF.LUA: sturnvulf is nil! (2)");
 		end
 		distance = object_distance(sturnvulf, player_ids[1]);
 		if distance == nil then
-			dbgout("distance to sturnvulf is nil! (2)");
+			dbgout("STURNVULF.LUA: distance to sturnvulf is nil! (3)");
 			intfic.write("... no response ...\n");
 		end
 		if distance <= 8000 then
@@ -1487,30 +1491,30 @@ function maintain_zarkon_focus()
 end
 
 function add_zarkons(cookie)
-	dbgout("Add zarkons!");
+	dbgout("STURNVULF.LUA: Add zarkons!");
 	if sturnvulf == nil then
-		dbgout("sturnvulf is nil!");
+		dbgout("STURNVULF.LUA: sturnvulf is nil!");
 	end
 	dist = object_distance(sturnvulf, player_ids[1]);
 	if dist == nil then
-		dbgout("distance to sturnvulf is nil!");
+		dbgout("STURNVULF.LUA: distance to sturnvulf is nil!");
 		register_timer_callback("add_zarkons", 300, 0);
 		return;
 	end
 	if dist > 15000 then
-		dbgout("Distance too great!");
+		dbgout("STURNVULF.LUA Distance too great!");
 		register_timer_callback("add_zarkons", 300, 0);
 		return;
 	end
 
 	zarkon_timer = zarkon_timer - 1;
 	if zarkon_timer > 0 then
-		dbgout("timer not expired: " .. tostring(zarkon_timer));
+		dbgout("STURNVULF.LUA: timer not expired: " .. tostring(zarkon_timer));
 		register_timer_callback("add_zarkons", 300, 0);
 		return;
 	end
 
-	dbgout("Adding a zarkon!");
+	dbgout("STURNVULF.LUA: Adding a zarkon!");
 	local x, y, z = random_point_on_sphere(5000);
 	px, py, pz = get_object_location(player_ids[1]);
 	x = x + px;
@@ -1686,7 +1690,13 @@ function setup_solarsystem()
 		dock_player_to_starbase(player_ids[1], starbase[2]);
 	end
 	sturnvulf = add_ship("STURNVULF", svx, svy, svz, 13, 0, 0);
+	if sturnvulf == nil then
+		dbgout("STURNVULF.LUA: sturnvulf = add_ship() returned nil!");
+	end
 	velnoxa = add_derelict("VELNOXA", svx, svy + 1000, svz - 5000, 17, 0);
+	if velnoxa == nil then
+		dbgout("STURNVULF.LUA: velnoxa = add_derelict() returned nil!");
+	end
 	set_object_velocity(velnoxa, 0, 0, 0);
 	ai_push_catatonic(sturnvulf); -- Make the ship just sit there doing nothing.
 	add_zarkons(0);
