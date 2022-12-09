@@ -14860,6 +14860,7 @@ static void send_demon_console_color_msg(uint8_t color, const char *fmt, ...)
 	va_start(arg_ptr, fmt);
 	vsnprintf(msg, sizeof(msg) - 1, fmt, arg_ptr);
 	va_end(arg_ptr);
+	fprintf(stderr, "%s\n", msg);
 
 	length = strlen(msg);
 	start = 0;
@@ -14892,6 +14893,7 @@ static void send_demon_console_msg(const char *fmt, ...)
 	va_start(arg_ptr, fmt);
 	vsnprintf(msg, sizeof(msg) - 1, fmt, arg_ptr);
 	va_end(arg_ptr);
+	fprintf(stderr, "%s\n", msg);
 
 	length = strlen(msg);
 	start = 0;
