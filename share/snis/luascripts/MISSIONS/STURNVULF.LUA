@@ -1476,7 +1476,7 @@ function setup_custom_words()
 end
 
 setup_custom_words();
-zarkon_timer = 0;
+zarkon_timer = 6;
 
 function maintain_zarkon_focus()
 	if zarkon ~= nil then
@@ -1509,7 +1509,8 @@ function add_zarkons(cookie)
 
 	zarkon_timer = zarkon_timer - 1;
 	if zarkon_timer > 0 then
-		dbgout("STURNVULF.LUA: timer not expired: " .. tostring(zarkon_timer));
+		dbgout("STURNVULF.LUA: " ..
+			tostring(30 * zarkon_timer) .. " seconds remain until zarkon attack.");
 		register_timer_callback("add_zarkons", 300, 0);
 		return;
 	end
