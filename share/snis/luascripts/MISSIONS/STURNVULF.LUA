@@ -1546,8 +1546,18 @@ function add_adjusted_nebula(name, x, y, z, r)
 	return add_nebula(name, x + adjx, y, z + adjz, r);
 end
 
+function something_died(id)
+	if sturnvulf == nil then
+		return;
+	end
+	if id == sturnvulf then
+		dbgout("STURNVULF.LUA: The STURNVULF just died. Mission is ruined.");
+	end
+end
+
 function setup_solarsystem()
 	clear_all();
+	register_callback("object-death-event", "something_died");
 	set_variable("MISSILE_FIRE_CHANCE", "0");
 	set_variable("INITIAL_MISSILE_COUNT", "255"); -- give player lots of missiles
 	planet = {};
