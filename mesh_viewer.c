@@ -40,18 +40,24 @@ extern int feenableexcept(int excepts);
 #include "turret_aimer.h"
 #include "open-simplex-noise.h"
 #include "replacement_assets.h"
+#include "snis_xwindows_hacks.h"
 
 #define DEFAULT_FOV (30.0 * M_PI / 180.0)
 #define MIN_FOV (15.0 * M_PI / 180.0)
 #define MAX_FOV (95.0 * M_PI / 180.0)
 #define FPS 60
 
-#define SCREEN_WIDTH 800	/* window width, in pixels */
-#define SCREEN_HEIGHT 600	/* window height, in pixels */
+static int SCREEN_WIDTH = 1600;		/* window width, in pixels */
+static int SCREEN_HEIGHT = 900;	/* window height, in pixels */
+static int screen_offset_x;
+static int screen_offset_y;
 #define ASPECT_RATIO (SCREEN_WIDTH/(float)SCREEN_HEIGHT)
-
+static int window_manager_can_constrain_aspect_ratio = 0;
+static float original_aspect_ratio;
+static int time_to_set_window_size = 0;
 static int real_screen_width;
 static int real_screen_height;
+
 static int wireframe = 0;
 static int oldwireframe = 0;
 static int autospin_initialized = 0;
@@ -490,6 +496,43 @@ static int sdl_button_to_int(int sdl_button)
 	return 0;
 }
 
+/* This is used to manually resize the window if the window manager is
+ * not capable of constraining the aspect ratio.
+ */
+static void maybe_resize_window(SDL_Window *window)
+{
+	if (window_manager_can_constrain_aspect_ratio)
+		return;
+	if (!time_to_set_window_size)
+		return;
+	SDL_SetWindowSize(window, real_screen_width, real_screen_height);
+	time_to_set_window_size = 0;
+}
+
+/* This is used to manually constrain the aspect ratio and dimensions of the window
+ * if the window manager isn't capable of constraining the aspect ratio. The window
+ * dimensions are set here but the window is not actually resized here because this
+ * gets called from the SDL event hanlder, process_events() below. Apparently you
+ * can't get good results from SDL_SetWindowSize() if you call it while
+ * SDL_PollEvents() is returning non-zero. (I don't know why that is.)
+ */
+static void constrain_aspect_ratio(int *w, int *h)
+{
+	float new_aspect_ratio = (float) *w / (float) *h;
+
+	/* a = w / h */
+	/* w = a * h */
+	/* h = w / a */
+
+	if (new_aspect_ratio < original_aspect_ratio) {
+		*h = (int) ((float) *w / original_aspect_ratio);
+		*w = (int) (original_aspect_ratio * (float) *h);
+	} else if (new_aspect_ratio > original_aspect_ratio) {
+		*w = (int) (original_aspect_ratio * (float) *h);
+		*h = (int) ((float) *w / original_aspect_ratio);
+	}
+}
+
 static void process_events()
 {
 	/* Our SDL event placeholder. */
@@ -508,6 +551,44 @@ static void process_events()
 			quit(0);
 			break;
 		case SDL_WINDOWEVENT:
+			if (event.window.event == SDL_WINDOWEVENT_RESIZED ||
+				event.window.event == SDL_WINDOWEVENT_SIZE_CHANGED) {
+
+				/* We need to update real_screen_width and real_screen_height, and
+				 * call sng_set_screen_size(). Additionally if the window manager can't
+				 * constrain the aspect ratio, we need to do that too. and set a flag so
+				 * the window can be resized once we're out of the event loop.
+				 */
+				if (window_manager_can_constrain_aspect_ratio) { /* E.g. X11 */
+					SDL_GL_GetDrawableSize(screen,
+						&real_screen_width, &real_screen_height);
+				} else {
+					/* We have to constrain the aspect ratio manually on e.g. Wayland.
+					 * This works *almost* as well as having the window manager do it.
+					 * The only thing that isn't quite as good is that the user is able
+					 * to stretch the window to non-conforming sizes, and once they
+					 * release the mouse button, the window will snap to the correct size.
+					 */
+					int width, height;
+
+					SDL_GL_GetDrawableSize(screen, &width, &height);
+					constrain_aspect_ratio(&width, &height);
+					/* If statement here to keep from creating an infinite event loop */
+					if (real_screen_width != width || real_screen_height != height) {
+						real_screen_width = width;
+						real_screen_height = height;
+
+						/* I would call SDL_SetWindowSize() here, but it doesn't seem
+						 * to work. Perhaps because it's being called from the event
+						 * handler?  This does not quite make sense to me, but anyway,
+						 * so we set this flag and do it later.
+						 */
+						time_to_set_window_size = 1; /* see maybe_resize_window() */
+					}
+				}
+				sng_set_screen_size(real_screen_width, real_screen_height);
+			}
+#if 0
 			if (event.window.event == SDL_WINDOWEVENT_RESIZED) {
 				real_screen_width = event.window.data1;
 				real_screen_height = event.window.data2;
@@ -515,6 +596,7 @@ static void process_events()
 				SDL_SetWindowSize(screen, real_screen_width, real_screen_height);
 				sng_set_screen_size(real_screen_width, real_screen_height);
 			}
+#endif
 			break;
 		case SDL_MOUSEWHEEL: {
 				if (event.wheel.y > 0)
@@ -992,6 +1074,57 @@ static void process_options(int argc, char *argv[])
 	return;
 }
 
+static void figure_aspect_ratio(SDL_Window *window, int requested_x, int requested_y,
+				int *x, int *y)
+{
+	SDL_GL_GetDrawableSize(window, &real_screen_width, &real_screen_height);
+	*x = real_screen_width;
+	*y = real_screen_height;
+	screen_offset_x = 0;
+	screen_offset_y = 0;
+
+	int sw, sh, monitors;
+	SDL_Rect bounds;
+
+	monitors = SDL_GetNumVideoDisplays();
+	if (monitors < 0)
+		return;
+
+	SDL_GetDisplayBounds(0, &bounds);
+	sw = bounds.w;
+	sh = bounds.h;
+	screen_offset_x = bounds.x;
+	screen_offset_y = bounds.y;
+
+
+	if (requested_x <= 0 || requested_y <= 0) {
+		*x = sw;
+		*y = sh;
+		return;
+	}
+
+	/*
+	 * The requested long axis gets full screen dimension in that axis,
+	 * and the other axis gets adjusted.  If that makes the other
+	 * axis exceed screen dimensions, then further adjustments are made.
+	 */
+	if (requested_x > requested_y) {
+		*x = sw;
+		*y = (int) ((double) sw * (double) requested_y / (double) requested_x);
+		if (*y > sh) {
+			*y = sh;
+			*x = (int) ((double) sh * (double) requested_x / (double) requested_y);
+		}
+	} else {
+		*y = sh;
+		*x = (int) ((double) sh * (double) requested_x / (double) requested_y);
+		if (*x > sw) {
+			*y = (int) ((double) sw * (double) requested_y / (double) requested_x);
+			*x = sw;
+		}
+	}
+}
+
 static void enable_sdl_fullscreen_sanity(void)
 {
 	/* If SDL_VIDEO_MINIMIZE_ON_FOCUS_LOSS isn't set to zero,
@@ -1070,15 +1203,19 @@ int main(int argc, char *argv[])
 	}
 
 	screen = SDL_CreateWindow("Mesh Viewer", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
-			SCREEN_WIDTH, SCREEN_HEIGHT, SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
+			3 * SCREEN_WIDTH / 4, 3 * SCREEN_HEIGHT / 4, SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
 	if (!screen) {
 		fprintf(stderr, "SDL_CreateWindow failed: %s\n", SDL_GetError());
 		quit(1);
 	}
 	renderer = SDL_CreateRenderer(screen, -1, SDL_RENDERER_ACCELERATED);
 
-	real_screen_width = SCREEN_WIDTH;
-	real_screen_height = SCREEN_HEIGHT;
+	figure_aspect_ratio(screen, -1, -1, &real_screen_width, &real_screen_height);
+	SCREEN_WIDTH = real_screen_width;
+	SCREEN_HEIGHT = real_screen_height;
+	real_screen_width = (3 * real_screen_width) / 4;
+	real_screen_height = (3 * real_screen_height) / 4;
+	original_aspect_ratio = (float) real_screen_width / (float) real_screen_height;
 
 	sng_setup_colors(0, NULL);
 
@@ -1087,6 +1224,9 @@ int main(int argc, char *argv[])
 	graph_dev_setup("share/snis/shader");
 	setup_skybox("orange-haze");
 
+	SDL_SetWindowSize(screen, real_screen_width, real_screen_height);
+	window_manager_can_constrain_aspect_ratio =
+		(constrain_aspect_ratio_via_xlib(screen, SCREEN_WIDTH, SCREEN_HEIGHT) == 0);
 	sng_set_extent_size(SCREEN_WIDTH, SCREEN_HEIGHT);
 	sng_set_screen_size(real_screen_width, real_screen_height);
 	sng_set_clip_window(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
@@ -1242,6 +1382,7 @@ int main(int argc, char *argv[])
 			if (timeToSleep > 0)
 				sleep_double(timeToSleep);
 		}
+		maybe_resize_window(screen);
 	}
 
 	/* Never reached. */
