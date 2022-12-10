@@ -23583,11 +23583,49 @@ static void constrain_aspect_ratio(int *w, int *h)
 	}
 }
 
-static void process_events(SDL_Window *window)
+static void handle_window_event(SDL_Window *window, SDL_Event event)
 {
 	int width, height;
 
-	/* Our SDL event placeholder. */
+	switch (event.window.event) {
+	case SDL_WINDOWEVENT_RESIZED:
+	case SDL_WINDOWEVENT_SIZE_CHANGED:
+		/* We need to update real_screen_width and real_screen_height, and
+		 * call sng_set_screen_size(). Additionally if the window manager can't
+		 * constrain the aspect ratio, we need to do that too. and set a flag so
+		 * the window can be resized once we're out of the event loop.
+		 */
+		if (window_manager_can_constrain_aspect_ratio) { /* E.g. X11 */
+			SDL_GL_GetDrawableSize(window,
+				&real_screen_width, &real_screen_height);
+			break;
+		}
+		/* We have to constrain the aspect ratio manually on e.g. Wayland.
+		 * This works *almost* as well as having the window manager do it.
+		 * The only thing that isn't quite as good is that the user is able
+		 * to stretch the window to non-conforming sizes, and once they
+		 * release the mouse button, the window will snap to the correct size.
+		 */
+		SDL_GL_GetDrawableSize(window, &width, &height);
+		constrain_aspect_ratio(&width, &height);
+		real_screen_width = width;
+		real_screen_height = height;
+
+		/* I would call SDL_SetWindowSize() here, but it doesn't seem
+		 * to work. Perhaps because it's being called from the event
+		 * handler?  This does not quite make sense to me, but anyway,
+		 * so we set this flag and do it later.
+		 */
+		time_to_set_window_size = 1; /* see maybe_resize_window() */
+		break;
+	default:
+		break;
+	}
+	sng_set_screen_size(real_screen_width, real_screen_height);
+}
+
+static void process_events(SDL_Window *window)
+{
 	SDL_Event event;
 
 	/* Grab all the events off the queue. */
@@ -23608,44 +23646,9 @@ static void process_events(SDL_Window *window)
 			in_the_process_of_quitting = 1;
 			final_quit_selection = 1;
 			break;
-
-		case SDL_WINDOWEVENT: {
-				switch (event.window.event) {
-				case SDL_WINDOWEVENT_RESIZED:
-				case SDL_WINDOWEVENT_SIZE_CHANGED:
-					/* We need to update real_screen_width and real_screen_height, and
-					 * call sng_set_screen_size(). Additionally if the window manager can't
-					 * constrain the aspect ratio, we need to do that too. and set a flag so
-					 * the window can be resized once we're out of the event loop.
-					 */
-					if (window_manager_can_constrain_aspect_ratio) { /* E.g. X11 */
-						SDL_GL_GetDrawableSize(window,
-							&real_screen_width, &real_screen_height);
-					} else {
-						/* We have to constrain the aspect ratio manually on e.g. Wayland.
-						 * This works *almost* as well as having the window manager do it.
-						 * The only thing that isn't quite as good is that the user is able
-						 * to stretch the window to non-conforming sizes, and once they
-						 * release the mouse button, the window will snap to the correct size.
-						 */
-						SDL_GL_GetDrawableSize(window, &width, &height);
-						constrain_aspect_ratio(&width, &height);
-						real_screen_width = width;
-						real_screen_height = height;
-
-						/* I would call SDL_SetWindowSize() here, but it doesn't seem
-						 * to work. Perhaps because it's being called from the event
-						 * handler?  This does not quite make sense to me, but anyway,
-						 * so we set this flag and do it later.
-						 */
-						time_to_set_window_size = 1; /* see maybe_resize_window() */
-					}
-					sng_set_screen_size(real_screen_width, real_screen_height);
-					break;
-				}
-			}
+		case SDL_WINDOWEVENT:
+			handle_window_event(window, event);
 			break;
-
 		case SDL_MOUSEBUTTONDOWN:
 			main_da_button_press(&event.button);
 			break;
