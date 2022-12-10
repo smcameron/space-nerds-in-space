@@ -1,0 +1,295 @@
+#!/bin/bash
+
+#disable globbing
+set -f
+
+packages=""
+dev_packages=""
+opt_tts_packages=""
+package_manager="unknown"
+verbose=0
+
+dbgout()
+{
+	if [ "$verbose" = "0" ]
+	then
+		return
+	fi
+	echo "$1"
+}
+
+apt_min_packages()
+{	echo "portaudio19-dev
+	libbsd-dev
+	libpng-dev
+	libvorbis-dev
+	libsdl2-dev
+	libsdl2-image-dev
+	libsdl2-2.0-0
+	liblua5.2-dev
+	libglew1.5-dev
+	libttspico-utils
+	sox"
+}
+
+apt_opt_tts_packages()
+{
+	echo "espeak
+		alsa-utils"
+}
+
+apt_dev_packages()
+{
+	echo "openscad
+		git
+		stgit"
+}
+
+yum_min_packages()
+{
+	apt_min_packages
+}
+
+yum_opt_tts_packages()
+{
+	apt_opt_tts_packages
+}
+
+yum_dev_packages()
+{
+	apt_dev_packages
+}
+
+zypper_min_packages()
+{
+	apt_min_packages
+}
+
+zypper_opt_tts_packages()
+{
+	apt_opt_tts_packages
+}
+
+zypper_dev_packages()
+{
+	apt_dev_packages
+}
+
+rpm_min_packages()
+{
+	apt_min_packages
+}
+
+rpm_opt_tts_packages()
+{
+	apt_opt_tts_packages
+}
+
+rpm_dev_packages()
+{
+	apt_dev_packages
+}
+
+intro()
+{
+	cat << EOF
+
+This script will attempt to install the following packages using $package_manager
+if they are not already installed.
+
+EOF
+
+	for p in $packages
+	do
+		echo "	$p"
+	done
+	echo
+
+	echo "Optionally, additional packages may be installed:"
+	echo
+	for p in $opt_tts_packages $dev_packages
+	do
+		echo "	$p"
+	done
+	echo
+}
+
+check_package_manager()
+{
+	if type apt > /dev/null 2>&1
+	then
+		package_manager="apt"
+		return
+	fi
+
+	if type yum > /dev/null 2>&1
+	then
+		package_manager="yum"
+		return
+	fi
+
+	if type zypper > /dev/null 2>&1
+	then
+		package_manager="zypper"
+	fi
+
+	if type "rpm" > /dev/null 2>&1
+	then
+		package_manager="rpm"
+	fi
+
+	if [ "$package_manager" = "unknown" ]
+	then
+		echo "The package manager of this system is unknown, so I'm afraid this script won't help." 1>&2
+		exit 1
+	fi
+}
+
+yn()
+{
+	prompt="$1"
+	x="x"
+
+
+	while [ "$x" != "y" ] && [ "$x" != "Y" ] && [ "$x" != "n" ] && [ "$x" != "N" ]
+	do
+		echo -n "$prompt"
+		read -r x
+	done
+	if [ "$x" = "y" ] || [ "$x" = "Y" ]
+	then
+		return 1
+	fi
+	return 0
+}
+
+apt_install_package()
+{
+	p="$1"
+	dbgout "Executing sudo apt install $1"
+	sudo apt install "$1"
+	return $?
+}
+
+apt_already_installed()
+{
+	dpkg -l "$1" > /dev/null 2>&1
+	return $?
+}
+
+yum_install_package()
+{
+	dbgout "Executing sudo yum install $1"
+	sudo yum install "$1"
+	exit 1
+}
+
+yum_already_installed()
+{
+	sudo yum info "$1" > /dev/null 2>&1 
+	return $?
+}
+
+zypper_install_package()
+{
+	dbgout "Executing sudo zypper in $1"
+	sudo zypper in "$1"
+	exit 1
+}
+
+zypper_already_installed()
+{
+	sudo zypper info "$1" > /dev/null 2>&1
+	return $?
+}
+
+rpm_install_package()
+{
+	dbgout "Executing sudo rpm install $1"
+	sudo rpm install "$1"
+	exit 1
+}
+
+rpm_already_installed()
+{
+	sudo rpm -q "$1" > /dev/null 2>&1
+	return $?
+}
+
+maybe_install_package()
+{
+	p="$1"
+	if "$package_manager"_already_installed "$p"
+	then
+		echo "$p is already installed."
+	else
+		echo
+		echo "Installing package $p with $package_manager"
+		"$package_manager"_install_package "$p"
+	fi
+}
+
+do_you_want()
+{
+	desc="$1"
+	shift
+	echo
+	echo "Do you want $desc? "
+	echo
+	for p in "$@"
+	do
+		echo "  $p"
+	done
+	echo
+	yn "Y/N? "
+	return $?
+}
+
+main()
+{
+	check_package_manager
+
+	packages=$("$package_manager"_min_packages)
+	opt_tts_packages=$("$package_manager"_opt_tts_packages)
+	dev_packages=$("$package_manager"_dev_packages)
+	
+	intro
+
+	if yn "Proceed? "
+	then
+		echo "Aborting install at user request."
+		exit 0
+	fi
+
+	do_you_want "optional alternate text to speech/audio packages" $opt_tts_packages
+	if [ "$?" = "1" ]
+	then
+		packages="$packages $opt_tts_packages"
+	fi
+
+	do_you_want "optional development packages" $dev_packages
+	if [ "$?" = "1" ]
+	then
+		packages="$packages $dev_packages"
+	fi
+
+	for p in $packages
+	do
+		if maybe_install_package "$p"
+		then
+			continue;
+		else
+			echo 1>&2
+			echo "Failed to install package $p." 1>&2
+			yn "Continue with remaining packages? "
+			if [ "$?" != "1" ]
+			then
+				echo "Aborting at user request." 1>&2
+				exit 1
+			fi
+		fi
+	done
+}
+
+main
+
