@@ -23608,6 +23608,13 @@ static void handle_window_event(SDL_Window *window, SDL_Event event)
 		 */
 		SDL_GL_GetDrawableSize(window, &width, &height);
 		constrain_aspect_ratio(&width, &height);
+
+		/* Only resize the window if the size is actually different, otherwise
+		 * we will create an infinite window resize event loop.
+		 */
+		if (real_screen_width == width && real_screen_height == height)
+			break;
+
 		real_screen_width = width;
 		real_screen_height = height;
 
