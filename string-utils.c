@@ -194,7 +194,6 @@ int strchrcount(char *s, int c)
 	return count;
 }
 
-#if USE_CUSTOM_STRLCPY
 size_t strlcpy(char *dest, const char *src, size_t n)
 {
 	size_t i;
@@ -214,7 +213,6 @@ size_t strlcpy(char *dest, const char *src, size_t n)
 			break;
 	return i;
 }
-#endif
 
 /* Printing a pointer to a function via %p is forbidden by ISO C, so we have this BS instead: */
 void format_function_pointer(char *buffer, void (*function_pointer)(void))

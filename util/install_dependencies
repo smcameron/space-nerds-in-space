@@ -20,7 +20,6 @@ dbgout()
 
 apt_min_packages()
 {	echo "portaudio19-dev
-	libbsd-dev
 	libpng-dev
 	libvorbis-dev
 	libsdl2-dev

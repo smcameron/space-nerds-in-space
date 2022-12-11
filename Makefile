@@ -2,7 +2,6 @@
 # for no voice chat, make WITHVOICECHAT=no
 WITHVOICECHAT=yes
 USE_SNIS_XWINDOWS_HACKS=1
-USE_CUSTOM_STRLCPY=0
 PKG_CONFIG?=pkg-config
 
 # use "make OSX=1" for mac
@@ -437,12 +436,6 @@ DESKTOPSRCDIR=.
 DESKTOPFILES=${DESKTOPSRCDIR}/snis.desktop
 UPDATE_DESKTOP=update-desktop-database ${DESKTOPDIR} || :
 
-ifeq (${USE_CUSTOM_STRLCPY}, 1)
-LBSD=
-else
-LBSD=-lbsd
-endif
-
 # -rdynamic is used by gcc for runtime stack traces (see stacktrace.c)
 # but clang complains about it.
 USING_CLANG=$(shell $(CC) --version | grep clang)
@@ -575,9 +568,9 @@ X11LIBS=$(shell $(PKG_CONFIG) --libs x11)
 X11CFLAGS=$(shell $(PKG_CONFIG) --cflags x11)
 
 SSGL=ssgl/libssglclient.a
-LIBS=-Lssgl -lssglclient -ldl -lm ${LBSD} ${PNGLIBS} ${GLEWLIBS}
-SERVERLIBS=-Lssgl -lssglclient ${LRTLIB} -ldl -lm ${LBSD} ${LUALIBS} ${CRYPTLIBS}
-MULTIVERSELIBS=-Lssgl -lssglclient ${LRTLIB} -ldl -lm ${LBSD} ${CRYPTLIBS}
+LIBS=-Lssgl -lssglclient -ldl -lm ${PNGLIBS} ${GLEWLIBS}
+SERVERLIBS=-Lssgl -lssglclient ${LRTLIB} -ldl -lm ${LUALIBS} ${CRYPTLIBS}
+MULTIVERSELIBS=-Lssgl -lssglclient ${LRTLIB} -ldl -lm ${CRYPTLIBS}
 #
 # NOTE: if you get
 #
@@ -661,7 +654,7 @@ MYCFLAGS=-DPREFIX=${PREFIX} ${DEBUGFLAG} ${PROFILEFLAG} ${OPTIMIZEFLAG} ${UBSANF
 	--pedantic -Wall -Wextra ${STOP_ON_WARN} -pthread -std=gnu99 ${RDYNAMIC} \
 	-Wno-extended-offsetof -Wno-gnu-folding-constant $(CFLAGS) -Wvla \
 	-DUSE_SNIS_XWINDOWS_HACKS=${USE_SNIS_XWINDOWS_HACKS} -fno-common \
-	-DUSE_CUSTOM_STRLCPY=${USE_CUSTOM_STRLCPY} -Wno-format-truncation \
+	-Wno-format-truncation \
 	-D_FORTIFY_SOURCE=2 -fsanitize=bounds \
 	-Wstringop-truncation -Warray-bounds -Wstringop-overflow \
 	-fstack-protector-strong -Wimplicit-fallthrough
@@ -842,7 +835,7 @@ $(OD)/snis_ship_type.o:   snis_ship_type.c snis_ship_type.h corporations.h Makef
 	$(Q)$(COMPILE)
 
 bin/test_snis_ship_type: snis_ship_type.c snis_ship_type.h ${OD}/string-utils.o ${OD}/corporations.o ${OD}/rts_unit_data.o ${BIN}
-	$(CC) ${MYCFLAGS} -DTEST_SNIS_SHIP_TYPE -o bin/test_snis_ship_type snis_ship_type.c ${OD}/string-utils.o ${OD}/corporations.o ${OD}/rts_unit_data.o ${LBSD}
+	$(CC) ${MYCFLAGS} -DTEST_SNIS_SHIP_TYPE -o bin/test_snis_ship_type snis_ship_type.c ${OD}/string-utils.o ${OD}/corporations.o ${OD}/rts_unit_data.o
 
 $(OD)/snis_faction.o:   snis_faction.c string-utils.h Makefile ${ODT}
 	$(Q)$(COMPILE)
@@ -934,7 +927,7 @@ $(OD)/util/generate_solarsystem_positions.o:	util/generate_solarsystem_positions
 	$(Q)$(COMPILE)
 
 util/generate_solarsystem_positions:	util/generate_solarsystem_positions.o ${OD}/string-utils.o
-	$(CC) ${MYCFLAGS} -o $@ util/generate_solarsystem_positions.o ${OD}/string-utils.o -lm ${LBSD}
+	$(CC) ${MYCFLAGS} -o $@ util/generate_solarsystem_positions.o ${OD}/string-utils.o -lm
 
 $(OD)/snis_socket_io.o:	snis_socket_io.c Makefile ${ODT}
 	$(Q)$(COMPILE)
@@ -1017,7 +1010,7 @@ ${OD}/infinite-taunt.o:	infinite-taunt.c Makefile ${ODT}
 	$(Q)$(COMPILE)
 
 bin/infinite-taunt:	${OD}/infinite-taunt.o ${OD}/names.o ${OD}/mtwist.o Makefile ${BIN}
-	$(CC) -DTEST_TAUNT -o bin/infinite-taunt ${MYCFLAGS} ${OD}/mtwist.o infinite-taunt.c ${OD}/names.o ${LBSD}
+	$(CC) -DTEST_TAUNT -o bin/infinite-taunt ${MYCFLAGS} ${OD}/mtwist.o infinite-taunt.c ${OD}/names.o
 
 bin/names:	names.c names.h ${OD}/mtwist.o ${BIN}
 	$(CC) -DTEST_NAMES -o bin/names ${MYCFLAGS} ${OD}/mtwist.o names.c
@@ -1140,7 +1133,7 @@ bin/test_transport_contract:	transport_contract.c transport_contract.h ${OD}/com
 				${OD}/names.o ${OD}/mtwist.o ${OD}/string-utils.o ${OD}/infinite-taunt.o \
 				${ODT} ${BIN}
 	$(CC) -g -DTEST_TRANSPORT_CONTRACT=1 -o bin/test_transport_contract transport_contract.c \
-			${OD}/commodities.o ${OD}/names.o ${OD}/mtwist.o ${OD}/string-utils.o ${OD}/infinite-taunt.o ${LBSD}
+			${OD}/commodities.o ${OD}/names.o ${OD}/mtwist.o ${OD}/string-utils.o ${OD}/infinite-taunt.o
 
 $(OD)/fleet.o:	fleet.c Makefile ${ODT}
 	$(Q)$(COMPILE)
@@ -1237,7 +1230,7 @@ spelled_numbers:	spelled_numbers.c
 	$(CC) -g -DSPELLED_NUMBERS_TEST_CASE -o spelled_numbers spelled_numbers.c -lm
 
 ${SSGL}:
-	(cd ssgl && ${MAKE} USE_CUSTOM_STRLCPY=${USE_CUSTOM_STRLCPY} )
+	(cd ssgl && ${MAKE} )
 
 mikktspace/mikktspace.o:
 	(cd mikktspace && ${MAKE} )
@@ -1278,13 +1271,13 @@ bin/test-mtwist: ${OD}/mtwist.o test-mtwist.c Makefile ${BIN}
 $(OD)/snis-device-io.o:	snis-device-io.h snis-device-io.c Makefile ${ODT}
 	$(CC) -Wall -Wextra --pedantic -pthread -c -o ${OD}/snis-device-io.o snis-device-io.c
 
-bin/device-io-sample-1:	device-io-sample-1.c ${OD}/snis-device-io.o ${BIN}
-	$(CC) -Wall -Wextra --pedantic -pthread -o bin/device-io-sample-1 ${OD}/snis-device-io.o \
-			device-io-sample-1.c ${LBSD}
+bin/device-io-sample-1:	device-io-sample-1.c ${OD}/snis-device-io.o ${OD}/string-utils.o ${BIN}
+	$(CC) -Wall -Wextra --pedantic -pthread -o bin/device-io-sample-1 ${OD}/string-utils.o ${OD}/snis-device-io.o \
+			device-io-sample-1.c
 
-bin/snis_arduino: snis_arduino.c ${OD}/snis-device-io.o ${BIN}
-	$(CC) -Wall -Wextra --pedantic -pthread -o bin/snis_arduino ${OD}/snis-device-io.o \
-			snis_arduino.c ${LBSD}
+bin/snis_arduino: snis_arduino.c ${OD}/snis-device-io.o ${OD}/string-utils.o ${BIN}
+	$(CC) -Wall -Wextra --pedantic -pthread -o bin/snis_arduino ${OD}/snis-device-io.o ${OD}/string-utils.o \
+			snis_arduino.c
 
 $(OD)/nonuniform_random_sampler.o:	nonuniform_random_sampler.c nonuniform_random_sampler.h ${ODT}
 	$(Q)$(COMPILE)
@@ -1294,13 +1287,13 @@ bin/test_nonuniform_random_sampler:	nonuniform_random_sampler.c ${OD}/mathutils.
 
 bin/test-commodities:	${OD}/commodities.o Makefile ${OD}/string-utils.o ${BIN}
 	$(CC) -DTESTCOMMODITIES=1 -O3 -c commodities.c -o ${OD}/test-commodities.o
-	$(CC) -DTESTCOMMODITIES=1 -o bin/test-commodities ${OD}/string-utils.o ${OD}/test-commodities.o ${LBSD}
+	$(CC) -DTESTCOMMODITIES=1 -o bin/test-commodities ${OD}/string-utils.o ${OD}/test-commodities.o
 
 bin/test-obj-parser:	test-obj-parser.c mikktspace/mikktspace.o ${OD}/string-utils.o ${OD}/stl_parser.o ${OD}/mesh.o \
 		${OD}/mtwist.o ${OD}/mathutils.o ${OD}/matrix.o ${OD}/quat.o ${OD}/open-simplex-noise.o ${OD}/stacktrace.o Makefile ${BIN}
 	$(CC) -o bin/test-obj-parser mikktspace/mikktspace.o ${OD}/string-utils.o ${OD}/stl_parser.o ${OD}/mtwist.o \
 		${OD}/mathutils.o ${OD}/matrix.o ${OD}/mesh.o ${OD}/quat.o ${OD}/open-simplex-noise.o ${OD}/stacktrace.o \
-		-lm test-obj-parser.c ${LBSD}
+		-lm test-obj-parser.c
 
 test:	bin/test-matrix bin/test-space-partition bin/test-marshal bin/test-quat bin/test-fleet bin/test-mtwist bin/test-commodities bin/test_solarsystem_config
 	/bin/true	# Prevent make from running "$(CC) test.o".
