@@ -519,6 +519,7 @@ static struct bridge_data {
 #define MAX_PLAYER_CONTRACTS 8
 	struct transport_contract *contract[MAX_PLAYER_CONTRACTS];
 	int ncontracts;
+	uint8_t repairs_in_progress;
 	/* persistent_bridge_data contains per-bridge data which is saved/restored by snis_multiverse
 	 * but which is not present within snis_entity. (e.g. engineering preset data).
 	 * See snis_bridge_update_packet.h.
@@ -8783,10 +8784,11 @@ static int starbase_expecting_docker(struct snis_entity *starbase, uint32_t dock
 }
 
 static void init_player(struct snis_entity *o, int reset_ship, float *charges);
+static void init_power_model(struct snis_entity *o);
+static void init_coolant_model(struct snis_entity *o);
 static void do_docking_action(struct snis_entity *ship, struct snis_entity *starbase,
 			struct bridge_data *b, char *npcname)
 {
-	float charges;
 	int channel = b->npcbot.channel;
 
 	if (enemy_faction(ship->sdata.faction, starbase->sdata.faction)) {
@@ -8804,15 +8806,15 @@ static void do_docking_action(struct snis_entity *ship, struct snis_entity *star
 	}
 	send_comms_packet(starbase, npcname, channel,
 		"CONTINUOUS AIR SUPPLY ESTABLISH THROUGH DOCKING PORT AIRLOCK.");
-	/* TODO make the repair/refuel process a bit less easy */
-	send_comms_packet(starbase, npcname, channel,
-		"%s, YOUR SHIP HAS BEEN REPAIRED AND REFUELED.\n", b->shipname);
-	init_player(ship, 0, &charges);
+
+	/* Player ship repair is not here, it occurs gradually via starbase_move() */
+	b->repairs_in_progress = 1;
+	init_power_model(ship);
+	init_coolant_model(ship);
+
 	ship->timestamp = universe_timestamp;
 	snis_queue_add_sound(DOCKING_SOUND, ROLE_ALL, ship->id);
 	snis_queue_add_sound(WELCOME_TO_STARBASE, ROLE_NAVIGATION, ship->id);
-	send_comms_packet(starbase, npcname, channel,
-		"%s, YOUR ACCOUNT HAS BEEN BILLED $%5.2f\n", b->shipname, charges);
 	schedule_callback2(event_callback, &callback_schedule,
 			"player-docked-event", (double) ship->id, starbase->id);
 }
@@ -10546,6 +10548,146 @@ static void orbit_starbase(struct snis_entity *o)
 		o->tsd.starbase.orbital_angle -= 2 * M_PI;
 }
 
+static void rollup_damcon_systems_into_overall_damage(struct snis_entity *o, struct bridge_data *b)
+{
+	int i, n;
+	int new_damage[DAMCON_SYSTEM_COUNT] = { 0 };
+	struct damcon_data *d = &b->damcon;
+
+	n = snis_object_pool_highest_object(d->pool);
+	for (i = 0; i <= n; i++) {
+		struct snis_damcon_entity *p = &d->o[i];
+		if (p->type != DAMCON_TYPE_PART)
+			continue;
+		assert(p->tsd.part.system < DAMCON_SYSTEM_COUNT);
+		new_damage[p->tsd.part.system] += p->tsd.part.damage;
+	}
+
+	o->tsd.ship.damage.shield_damage = (uint8_t) (new_damage[0] / DAMCON_PARTS_PER_SYSTEM);
+	o->tsd.ship.damage.impulse_damage = (uint8_t) (new_damage[1] / DAMCON_PARTS_PER_SYSTEM);
+	o->tsd.ship.damage.warp_damage = (uint8_t) (new_damage[2] / DAMCON_PARTS_PER_SYSTEM);
+	o->tsd.ship.damage.maneuvering_damage = (uint8_t) (new_damage[3] / DAMCON_PARTS_PER_SYSTEM);
+	o->tsd.ship.damage.phaser_banks_damage = (uint8_t) (new_damage[4] / DAMCON_PARTS_PER_SYSTEM);
+	o->tsd.ship.damage.sensors_damage = (uint8_t) (new_damage[5] / DAMCON_PARTS_PER_SYSTEM);
+	o->tsd.ship.damage.comms_damage = (uint8_t) (new_damage[6] / DAMCON_PARTS_PER_SYSTEM);
+	o->tsd.ship.damage.tractor_damage = (uint8_t) (new_damage[7] / DAMCON_PARTS_PER_SYSTEM);
+	o->tsd.ship.damage.lifesupport_damage = (uint8_t) (new_damage[8] / DAMCON_PARTS_PER_SYSTEM);
+}
+
+static void gradually_repair_damcon_systems(struct snis_entity *sb, struct bridge_data *b,
+						struct snis_entity *o, int *needs_work);
+static void gradually_repair_docked_player_ship(struct snis_entity *sb, struct bridge_data *b)
+{
+
+#define TORPEDO_UNIT_COST 50.0f
+#define MISSILE_UNIT_COST 150.0f
+#define FUEL_UNIT_COST (1500.0f / (float) UINT32_MAX)
+#define OXYGEN_UNIT_COST (20.0f / (float) UINT32_MAX)
+#define WARP_CORE_COST 1500
+#define DOCK_REPAIR_TIME 200 /* tenths of seconds */
+
+
+	if (!sb || !b)
+		return;
+
+	if (!b->repairs_in_progress)
+		return;
+
+	int i = lookup_by_id(b->shipid);
+	if (i < 0)
+		return;
+	struct snis_entity *o = &go[i];
+
+	int needs_work = 0;
+	float money = 0.0;
+
+	/* Set nominal cooling levels in case things are hot, so they cool down */
+	o->tsd.ship.coolant_data.maneuvering.r2 = 128;
+	o->tsd.ship.coolant_data.warp.r2 = 128;
+	o->tsd.ship.coolant_data.impulse.r2 = 128;
+	o->tsd.ship.coolant_data.sensors.r2 = 128;
+	o->tsd.ship.coolant_data.comms.r2 = 128;
+	o->tsd.ship.coolant_data.phasers.r2 = 128;
+	o->tsd.ship.coolant_data.shields.r2 = 128;
+	o->tsd.ship.coolant_data.tractor.r2 = 128;
+	o->tsd.ship.power_data.lifesupport.r2	= 230; /* don't turn off the air */
+	o->tsd.ship.coolant_data.lifesupport.r2	= 255;
+
+	/* Maybe load some torpedoes */
+	if ((o->tsd.ship.torpedoes < INITIAL_TORPEDO_COUNT)) {
+		if ((universe_timestamp % 10) == 0) {
+			money += TORPEDO_UNIT_COST;
+			o->tsd.ship.torpedoes++;
+			if (o->tsd.ship.torpedoes == INITIAL_TORPEDO_COUNT)
+				send_comms_packet(sb, sb->sdata.name, b->npcbot.channel,
+					"FULL COMPLEMENT OF TORPEDOES LOADED AND STOWED ABOARD %s", b->shipname);
+		}
+		needs_work = 1;
+	}
+
+	/* Maybe load some missiles */
+	o->tsd.ship.missile_count = initial_missile_count;
+	if ((o->tsd.ship.missile_count < initial_missile_count)) {
+		if ((universe_timestamp % 10) == 0) {
+			money += MISSILE_UNIT_COST;
+			o->tsd.ship.missile_count++;
+			if (o->tsd.ship.missile_count == initial_missile_count)
+				send_comms_packet(sb, sb->sdata.name, b->npcbot.channel,
+					"FULL COMPLEMENT OF MISSILES LOADED AND STOWED ABOARD %s", b->shipname);
+		}
+		needs_work = 1;
+	}
+
+	/* Maybe load some fuel */
+	if (o->tsd.ship.fuel < 0.99 * UINT32_MAX) {
+		uint32_t fuel_increment = UINT32_MAX / DOCK_REPAIR_TIME;
+		if (UINT32_MAX - o->tsd.ship.fuel < fuel_increment) {
+			fuel_increment = UINT32_MAX - o->tsd.ship.fuel;
+			send_comms_packet(sb, sb->sdata.name, b->npcbot.channel,
+				"%s HAS BEEN FULLY REFUELED", b->shipname);
+		}
+		o->tsd.ship.fuel += fuel_increment;
+		money += FUEL_UNIT_COST * fuel_increment;
+		needs_work = 1;
+	}
+
+	/* Maybe load some oxygen */
+	if (o->tsd.ship.oxygen < UINT32_MAX) {
+		uint32_t oxy_increment = UINT32_MAX / (DOCK_REPAIR_TIME * 2);
+		if (UINT32_MAX - o->tsd.ship.oxygen < oxy_increment) {
+			oxy_increment = UINT32_MAX - o->tsd.ship.oxygen;
+			send_comms_packet(sb, sb->sdata.name, b->npcbot.channel,
+				"OXYGEN SUPPLY OF %s HAS BEEN REPLENISHED", b->shipname);
+		}
+		o->tsd.ship.oxygen += oxy_increment;
+		money += OXYGEN_UNIT_COST * oxy_increment;
+		needs_work = 1;
+	}
+
+	/* Maybe replace the warp core */
+	if (o->tsd.ship.warp_core_status != WARP_CORE_STATUS_GOOD) {
+		if ((universe_timestamp % 100) == 0) {
+			money += WARP_CORE_COST;
+			o->tsd.ship.warp_core_status = WARP_CORE_STATUS_GOOD;
+			send_comms_packet(sb, sb->sdata.name, b->npcbot.channel,
+				"WARP CORE OF %s HAS BEEN REPLACED", b->shipname);
+		}
+		needs_work = 1;
+	}
+
+	gradually_repair_damcon_systems(sb, b, o, &needs_work);
+	rollup_damcon_systems_into_overall_damage(o, b);
+	o->tsd.ship.damage_data_dirty = 1;
+
+	/* Present the bill when repairs are complete */
+	if (!needs_work) {
+		/* present_bill(); */
+		send_comms_packet(sb, sb->sdata.name, b->npcbot.channel,
+			"ALL REPAIRS AND RESTOCKING OF %s COMPLETE", b->shipname);
+		b->repairs_in_progress = 0;
+	}
+}
+
 static void starbase_move(struct snis_entity *o)
 {
 	char location[50];
@@ -10642,13 +10784,24 @@ static void starbase_move(struct snis_entity *o)
 		}
 	}
 
-	/* expire the expected dockers */
+	/* expire the expected dockers and repair ships at docking ports */
 	model = o->id % nstarbase_models;
 	if (docking_port_info[model]) {
 		for (j = 0; j < docking_port_info[model]->nports; j++) {
-			int id = o->tsd.starbase.expected_docker[j];
-			if (id == -1)
+
+			/* Repair any ship docked at this docking port */
+			uint32_t id = docking_port_resident(o->tsd.starbase.docking_port[j]);
+			if (id != (uint32_t) -1) {
+				/* TODO: make this safe */
+				int bn = lookup_bridge_by_shipid(id);
+				if (bn >= 0)
+					gradually_repair_docked_player_ship(o, &bridgelist[bn]);
+			}
+
+			/* Expire docking permission for any expected dockers that are late */
+			if (o->tsd.starbase.expected_docker[j] == -1)
 				continue;
+			id = o->tsd.starbase.expected_docker[j];
 			if (o->tsd.starbase.expected_docker_timer[j] > 0)
 				o->tsd.starbase.expected_docker_timer[j]--;
 			if (o->tsd.starbase.expected_docker_timer[j] > 0)
@@ -11029,7 +11182,39 @@ static void repair_damcon_systems(struct snis_entity *o)
 		p->version++;
 	}
 	o->tsd.ship.damage_data_dirty = 1;
-}	
+}
+
+/* this is used when docked at a starbase */
+static void gradually_repair_damcon_systems(struct snis_entity *sb, struct bridge_data *b,
+						struct snis_entity *o, int *needs_work)
+{
+	int i, n;
+	struct damcon_data *d;
+	struct snis_damcon_entity *p;
+
+	if (o->type != OBJTYPE_BRIDGE)
+		return;
+
+	d = &b->damcon;
+	n = snis_object_pool_highest_object(d->pool);
+	for (i = 0; i <= n; i++) {
+		p = &d->o[i];
+		if (p->type != DAMCON_TYPE_PART)
+			continue;
+		if (p->tsd.part.damage > 0) {
+			p->tsd.part.damage--;
+			*needs_work = 1;
+			p->version++;
+			if (p->tsd.part.damage == 0) {
+				send_comms_packet(sb, sb->sdata.name, b->npcbot.channel,
+					"REPLACED/REPAIRED %s (PART OF %s)",
+					damcon_part_name(p->tsd.part.system, p->tsd.part.part),
+					damcon_system_name(p->tsd.part.system));
+			}
+		}
+	}
+	o->tsd.ship.damage_data_dirty = 1;
+}
 	
 static void update_passenger(int i, int nstarbases);
 static int count_starbases(void);
@@ -25362,6 +25547,7 @@ static int add_new_player(struct game_client *c)
 		bridgelist[nbridges].text_to_speech_volume_timestamp = universe_timestamp;
 		memset(bridgelist[nbridges].contract, 0, sizeof(bridgelist[nbridges].contract));
 		bridgelist[nbridges].ncontracts = 0;
+		bridgelist[nbridges].repairs_in_progress = 0;
 		clear_bridge_waypoints(nbridges);
 		fill_default_presets(nbridges);
 		c->bridge = nbridges;
