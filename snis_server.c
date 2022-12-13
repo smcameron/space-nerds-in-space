@@ -9973,7 +9973,8 @@ static void player_move(struct snis_entity *o)
 	do_power_model_computations(o);
 	do_coolant_model_computations(o);
 	do_temperature_computations(o);
-	o->tsd.ship.damage_data_dirty = do_overheating_damage(o);
+	/* careful not to accidentally clear damage_data_dirty if it's already set. */
+	o->tsd.ship.damage_data_dirty |= do_overheating_damage(o);
 	o->tsd.ship.damage_data_dirty |= do_sunburn_damage(o);
 	if (o->tsd.ship.fuel > FUEL_CONSUMPTION_UNIT) {
 		power_model_enable(o->tsd.ship.power_model);
