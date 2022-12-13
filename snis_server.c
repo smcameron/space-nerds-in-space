@@ -8906,7 +8906,6 @@ static void set_nominal_coolant_levels(struct snis_entity *o)
 	o->tsd.ship.coolant_data.lifesupport.r2	= 255;
 }
 
-static void init_player(struct snis_entity *o, int reset_ship, float *charges);
 static void init_power_model(struct snis_entity *o);
 static void init_coolant_model(struct snis_entity *o);
 static void do_docking_action(struct snis_entity *ship, struct snis_entity *starbase,
@@ -11387,33 +11386,17 @@ static int count_starbases(void);
 /* init_player()
  * o is the player ship
  *
- * reset_ship is 1 if we are resetting the ship (e.g. at
- *   the beginning of a game) and 0 if we do not want to reset the ship (e.g. we
- *   are just docking at a starbase.  Resetting the ship means the following
- *   additional actions are taken (as compared to just docking with a starbase):
- *
- *   1. Clearing any ship_id_chips the player has collected.
- *   2. Clearing any custom buttons lua scripts might have created.
- *   3. Clearing the ship's cargo bay.
- *   4. Resetting the ship's wallet to a default value.
- *   5. Clearing any passengers off the ship.
- *   6. Clearing any enciphered message and cipher keys
- *
- * *charges is an "out" parameter indicating the fees charged for repairs and
- *  restocking
+ * This is used at the beginning of the game or when resetting the player ship
+ * via the UTILITY menu on the demon screen. This used to also do ship repair
+ * when docking at starbases, but this is no longer the case.
  */
-static void init_player(struct snis_entity *o, int reset_ship, float *charges)
+static void init_player(struct snis_entity *o)
 {
 	int i;
 	int b;
-	float money = 0.0;
 
-#define TORPEDO_UNIT_COST 50.0f
-#define FUEL_UNIT_COST (1500.0f / (float) UINT32_MAX)
-#define WARP_CORE_COST 1500
 	b = lookup_bridge_by_shipid(o->id);
 	o->move = player_move;
-	money += (INITIAL_TORPEDO_COUNT - o->tsd.ship.torpedoes) * TORPEDO_UNIT_COST;
 	o->tsd.ship.torpedoes = INITIAL_TORPEDO_COUNT;
 	o->tsd.ship.yaw_velocity = 0.0;
 	o->tsd.ship.pitch_velocity = 0.0;
@@ -11421,7 +11404,6 @@ static void init_player(struct snis_entity *o, int reset_ship, float *charges)
 	o->tsd.ship.velocity = 0.0;
 	o->tsd.ship.desired_velocity = 0.0;
 	o->tsd.ship.sci_beam_width = MAX_SCI_BW_YAW_VELOCITY;
-	money += (float) (UINT32_MAX - o->tsd.ship.fuel) * FUEL_UNIT_COST;
 	o->tsd.ship.fuel = UINT32_MAX;
 	o->tsd.ship.oxygen = UINT32_MAX;
 	o->tsd.ship.rpm = 0;
@@ -11458,53 +11440,47 @@ static void init_player(struct snis_entity *o, int reset_ship, float *charges)
 	o->tsd.ship.nav_damping_suppression = 0.0;
 	o->tsd.ship.rts_active_button = 255; /* none active */
 	o->tsd.ship.exterior_lights = 255; /* On */
-	if (o->tsd.ship.warp_core_status != WARP_CORE_STATUS_GOOD)
-		money += WARP_CORE_COST;
 	o->tsd.ship.warp_core_status = WARP_CORE_STATUS_GOOD;
 	if (b >= 0) { /* On first joining, ship won't have a bridge yet. */
 		bridgelist[b].warp_core_critical = 0;
 		strcpy(bridgelist[b].last_text_to_speech, "");
 		bridgelist[b].text_to_speech_volume = 0.33;
 		bridgelist[b].text_to_speech_volume_timestamp = universe_timestamp;
-		if (reset_ship) {
-			/* Clear ship id chips */
-			memset(bridgelist[b].ship_id_chip, 0, sizeof(bridgelist[b].ship_id_chip));
-			bridgelist[b].nship_id_chips = 0;
-			/* Clear any custom buttons a Lua script might have created */
-			bridgelist[b].active_custom_buttons = 0;
-			memset(bridgelist[b].custom_button_text, 0, sizeof(bridgelist[b].custom_button_text));
-			memset(bridgelist[b].cipher_key, '_', sizeof(bridgelist[b].cipher_key));
-			memset(bridgelist[b].guessed_key, '_', sizeof(bridgelist[b].guessed_key));
-			memset(bridgelist[b].enciphered_message, 0, sizeof(bridgelist[b].enciphered_message));
-			bridgelist[b].flare_cooldown = 0;
-		}
+		/* Clear ship id chips */
+		memset(bridgelist[b].ship_id_chip, 0, sizeof(bridgelist[b].ship_id_chip));
+		bridgelist[b].nship_id_chips = 0;
+		/* Clear any custom buttons a Lua script might have created */
+		bridgelist[b].active_custom_buttons = 0;
+		memset(bridgelist[b].custom_button_text, 0, sizeof(bridgelist[b].custom_button_text));
+		memset(bridgelist[b].cipher_key, '_', sizeof(bridgelist[b].cipher_key));
+		memset(bridgelist[b].guessed_key, '_', sizeof(bridgelist[b].guessed_key));
+		memset(bridgelist[b].enciphered_message, 0, sizeof(bridgelist[b].enciphered_message));
+		bridgelist[b].flare_cooldown = 0;
 	}
 	quat_init_axis(&o->tsd.ship.computer_desired_orientation, 0, 1, 0, 0);
 	o->tsd.ship.computer_steering_time_left = 0;
-	if (reset_ship) {
-		int nstarbases = count_starbases();
-		/* The reset_ship param is a stopgap until real docking code
-		 * is done.
-		 */
-		for (i = 0; i < o->tsd.ship.ncargo_bays; i++) {
-			o->tsd.ship.cargo[i].contents.item = -1;
-			o->tsd.ship.cargo[i].contents.qty = 0.0f;
-			o->tsd.ship.cargo[i].paid = 0.0;
-			o->tsd.ship.cargo[i].origin = -1;
-			o->tsd.ship.cargo[i].dest = -1;
-			o->tsd.ship.cargo[i].due_date = -1;
-		}
-		if (rts_mode)
-			o->tsd.ship.wallet = INITIAL_RTS_WALLET_MONEY;
-		else
-			o->tsd.ship.wallet = INITIAL_WALLET_MONEY;
-
-		/* Clear any passengers off the ship */
-		for (i = 0; i < MAX_PASSENGERS; i++)
-			if (passenger[i].location == o->id)
-				update_passenger(i, nstarbases);
-		o->tsd.ship.lifeform_count = 5; /* because there are 5 stations: nav, weap, eng+damcon, sci, comms */
+	int nstarbases = count_starbases();
+	/* The reset_ship param is a stopgap until real docking code
+	 * is done.
+	 */
+	for (i = 0; i < o->tsd.ship.ncargo_bays; i++) {
+		o->tsd.ship.cargo[i].contents.item = -1;
+		o->tsd.ship.cargo[i].contents.qty = 0.0f;
+		o->tsd.ship.cargo[i].paid = 0.0;
+		o->tsd.ship.cargo[i].origin = -1;
+		o->tsd.ship.cargo[i].dest = -1;
+		o->tsd.ship.cargo[i].due_date = -1;
 	}
+	if (rts_mode)
+		o->tsd.ship.wallet = INITIAL_RTS_WALLET_MONEY;
+	else
+		o->tsd.ship.wallet = INITIAL_WALLET_MONEY;
+
+	/* Clear any passengers off the ship */
+	for (i = 0; i < MAX_PASSENGERS; i++)
+		if (passenger[i].location == o->id)
+			update_passenger(i, nstarbases);
+	o->tsd.ship.lifeform_count = 5; /* because there are 5 stations: nav, weap, eng+damcon, sci, comms */
 	o->tsd.ship.viewpoint_object = o->id;
 	quat_init_axis(&o->tsd.ship.sciball_orientation, 1, 0, 0, 0);
 	quat_init_axis(&o->tsd.ship.weap_orientation, 1, 0, 0, 0);
@@ -11515,10 +11491,6 @@ static void init_player(struct snis_entity *o, int reset_ship, float *charges)
 	o->tsd.ship.power_data.lifesupport.r2	= 230; /* don't turn off the air */
 	o->tsd.ship.coolant_data.lifesupport.r2	= 255;
 	repair_damcon_systems(o);
-	if (charges) {
-		o->tsd.ship.wallet -= money;
-		*charges = money;
-	}
 	o->tsd.ship.current_hg_ant_orientation = identity_quat;
 	o->tsd.ship.desired_hg_ant_aim.v.x = 1.0;
 	o->tsd.ship.desired_hg_ant_aim.v.y = 0.0;
@@ -11609,7 +11581,7 @@ finished:
 	snprintf(o->tsd.ship.mining_bot_name, sizeof(o->tsd.ship.mining_bot_name),
 			"MNR-%s", mining_bot_name);
 	quat_init_axis(&o->orientation, 0, 1, 0, o->heading);
-	init_player(o, 1, NULL);
+	init_player(o);
 	if (warpgate_number != (uint8_t) -1) { /* Give player a little boost out of the warp gate */
 		union vec3 boost;
 
@@ -20928,7 +20900,7 @@ static void reset_player_ship(struct snis_entity *o)
 {
 	int b;
 
-	init_player(o, 1, NULL);
+	init_player(o);
 	b = lookup_bridge_by_shipid(o->id);
 	if (b >= 0)
 		clear_bridge_waypoints(b);
