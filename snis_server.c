@@ -472,6 +472,109 @@ static int nclients = 0; /* number of entries in client[] that are active */
 #define client_index(client_ptr) ((long) ((client_ptr) - &client[0]))
 static pthread_mutex_t client_mutex = PTHREAD_MUTEX_INITIALIZER; /* protects client[] array */
 
+struct repair_order {
+	#define REPAIR_OPTION_FUEL (1 << 0)
+	#define REPAIR_OPTION_OXYGEN (1 << 1)
+	#define REPAIR_OPTION_PARTS (1 << 2)
+	#define REPAIR_OPTION_MISSILES (1 << 3)
+	#define REPAIR_OPTION_TORPEDOES (1 << 4)
+	#define REPAIR_OPTION_WARP_CORE (1 << 5)
+	#define REPAIR_OPTION_THE_WORKS (0x003f)
+	uint16_t options;
+};
+
+static const char * const bill_item_type_name[] = {
+	"FUEL",
+	"OXYGEN",
+	"PARTS",
+	"MISSILES",
+	"PHOTON TORPEDOES",
+	"WARP CORE",
+};
+
+struct repair_bill_item {
+#define REPAIR_BILL_ITEM_TYPE_FUEL 0
+#define REPAIR_BILL_ITEM_TYPE_OXYGEN 1
+#define REPAIR_BILL_ITEM_TYPE_PART 2
+#define REPAIR_BILL_ITEM_TYPE_MISSILE 3
+#define REPAIR_BILL_ITEM_TYPE_TORPEDO 4
+#define REPAIR_BILL_ITEM_TYPE_WARP_CORE 5
+	int type;
+	uint8_t system;
+	uint8_t part;
+	uint8_t count;
+	float cost;
+};
+
+
+struct repair_bill {
+	int nitems;
+	struct repair_bill_item item[50];
+};
+
+static void add_repair_bill_item(struct repair_bill *rb, int type, uint8_t system, uint8_t part, float cost)
+{
+	int i;
+
+	switch (type) {
+	case REPAIR_BILL_ITEM_TYPE_FUEL: /* fallthrough */
+	case REPAIR_BILL_ITEM_TYPE_OXYGEN:
+		for (i = 0; i < rb->nitems; i++) {
+			if (rb->item[i].type == type) {
+				rb->item[i].cost += cost;
+				return;
+			}
+		}
+		if (rb->nitems >= (int) ARRAYSIZE(rb->item))
+			break;
+		i = rb->nitems;
+		rb->item[i].type = type;
+		rb->item[i].system = 0;
+		rb->item[i].part = 0;
+		rb->item[i].count = 0;
+		rb->item[i].cost = cost;
+		rb->nitems++;
+		break;
+	case REPAIR_BILL_ITEM_TYPE_PART:
+		for (i = 0; i < rb->nitems; i++) {
+			if (rb->item[i].type == type &&
+				rb->item[i].system == system &&
+				rb->item[i].part == part)
+				return; /* don't count parts twice */
+		}
+		if (rb->nitems >= (int) ARRAYSIZE(rb->item))
+			break;
+		i = rb->nitems;
+		rb->item[i].type = type;
+		rb->item[i].system = system;
+		rb->item[i].part = part;
+		rb->item[i].count = 1;
+		rb->item[i].cost = damcon_base_price(system, part);
+		rb->nitems++;
+		break;
+	case REPAIR_BILL_ITEM_TYPE_MISSILE: /* fallthrough */
+	case REPAIR_BILL_ITEM_TYPE_TORPEDO:
+	case REPAIR_BILL_ITEM_TYPE_WARP_CORE:
+		for (i = 0; i < rb->nitems; i++) {
+			if (rb->item[i].type == type) {
+				rb->item[i].cost += cost;
+				rb->item[i].count++;
+				return;
+			}
+		}
+		if (rb->nitems >= (int) ARRAYSIZE(rb->item))
+			break;
+		i = rb->nitems;
+		rb->item[i].type = type;
+		rb->item[i].system = 0;
+		rb->item[i].part = 0;
+		rb->item[i].count = 1;
+		rb->item[i].cost = cost;
+		rb->nitems++;
+		break;
+	}
+}
+
 static struct bridge_data {
 	unsigned char shipname[20];	/* Name of this ship */
 	unsigned char password[20];	/* Password for this ship (plaintext) */
@@ -523,6 +626,8 @@ static struct bridge_data {
 	struct transport_contract *contract[MAX_PLAYER_CONTRACTS];
 	int ncontracts;
 	uint8_t repairs_in_progress;
+	struct repair_bill repair_bill;
+	struct repair_order repair_order;
 	/* persistent_bridge_data contains per-bridge data which is saved/restored by snis_multiverse
 	 * but which is not present within snis_entity. (e.g. engineering preset data).
 	 * See snis_bridge_update_packet.h.
@@ -10619,15 +10724,15 @@ static void gradually_repair_docked_player_ship(struct snis_entity *sb, struct b
 	struct snis_entity *o = &go[i];
 
 	int needs_work = 0;
-	float money = 0.0;
 
 	/* Set nominal cooling levels in case things are hot, so they cool down */
 	set_nominal_coolant_levels(o);
 
 	/* Maybe load some torpedoes */
-	if ((o->tsd.ship.torpedoes < INITIAL_TORPEDO_COUNT)) {
+	if ((o->tsd.ship.torpedoes < INITIAL_TORPEDO_COUNT) &&
+		(b->repair_order.options & REPAIR_OPTION_TORPEDOES)) {
 		if ((universe_timestamp % 10) == 0) {
-			money += TORPEDO_UNIT_COST;
+			add_repair_bill_item(&b->repair_bill, REPAIR_BILL_ITEM_TYPE_TORPEDO, -1, -1, TORPEDO_UNIT_COST);
 			o->tsd.ship.torpedoes++;
 			if (o->tsd.ship.torpedoes == INITIAL_TORPEDO_COUNT)
 				send_comms_packet(sb, sb->sdata.name, b->npcbot.channel,
@@ -10638,9 +10743,10 @@ static void gradually_repair_docked_player_ship(struct snis_entity *sb, struct b
 
 	/* Maybe load some missiles */
 	o->tsd.ship.missile_count = initial_missile_count;
-	if ((o->tsd.ship.missile_count < initial_missile_count)) {
+	if ((o->tsd.ship.missile_count < initial_missile_count) &&
+		(b->repair_order.options & REPAIR_OPTION_MISSILES)) {
 		if ((universe_timestamp % 10) == 0) {
-			money += MISSILE_UNIT_COST;
+			add_repair_bill_item(&b->repair_bill, REPAIR_BILL_ITEM_TYPE_MISSILE, -1, -1, MISSILE_UNIT_COST);
 			o->tsd.ship.missile_count++;
 			if (o->tsd.ship.missile_count == initial_missile_count)
 				send_comms_packet(sb, sb->sdata.name, b->npcbot.channel,
@@ -10650,15 +10756,17 @@ static void gradually_repair_docked_player_ship(struct snis_entity *sb, struct b
 	}
 
 	/* Maybe load some fuel */
-	if (o->tsd.ship.fuel < 0.99 * UINT32_MAX) {
+	if (o->tsd.ship.fuel < 0.99 * UINT32_MAX &&
+		(b->repair_order.options & REPAIR_OPTION_FUEL)) {
 		uint32_t fuel_increment = UINT32_MAX / DOCK_REPAIR_TIME;
 		if (UINT32_MAX - o->tsd.ship.fuel < fuel_increment) {
 			fuel_increment = UINT32_MAX - o->tsd.ship.fuel;
 			send_comms_packet(sb, sb->sdata.name, b->npcbot.channel,
 				"%s HAS BEEN FULLY REFUELED", b->shipname);
 		}
+		add_repair_bill_item(&b->repair_bill, REPAIR_BILL_ITEM_TYPE_FUEL, -1, -1,
+					fuel_increment * FUEL_UNIT_COST);
 		o->tsd.ship.fuel += fuel_increment;
-		money += FUEL_UNIT_COST * fuel_increment;
 		needs_work = 1;
 	}
 
@@ -10670,15 +10778,16 @@ static void gradually_repair_docked_player_ship(struct snis_entity *sb, struct b
 			send_comms_packet(sb, sb->sdata.name, b->npcbot.channel,
 				"OXYGEN SUPPLY OF %s HAS BEEN REPLENISHED", b->shipname);
 		}
+		add_repair_bill_item(&b->repair_bill, REPAIR_BILL_ITEM_TYPE_OXYGEN, -1, -1,
+					oxy_increment * OXYGEN_UNIT_COST);
 		o->tsd.ship.oxygen += oxy_increment;
-		money += OXYGEN_UNIT_COST * oxy_increment;
 		needs_work = 1;
 	}
 
 	/* Maybe replace the warp core */
 	if (o->tsd.ship.warp_core_status != WARP_CORE_STATUS_GOOD) {
 		if ((universe_timestamp % 100) == 0) {
-			money += WARP_CORE_COST;
+			add_repair_bill_item(&b->repair_bill, REPAIR_BILL_ITEM_TYPE_WARP_CORE, -1, -1, WARP_CORE_COST);
 			o->tsd.ship.warp_core_status = WARP_CORE_STATUS_GOOD;
 			send_comms_packet(sb, sb->sdata.name, b->npcbot.channel,
 				"WARP CORE OF %s HAS BEEN REPLACED", b->shipname);
@@ -10690,13 +10799,54 @@ static void gradually_repair_docked_player_ship(struct snis_entity *sb, struct b
 	rollup_damcon_systems_into_overall_damage(o, b);
 	o->tsd.ship.damage_data_dirty = 1;
 
+	if (needs_work)
+		return;
+
 	/* Present the bill when repairs are complete */
-	if (!needs_work) {
-		/* present_bill(); */
-		send_comms_packet(sb, sb->sdata.name, b->npcbot.channel,
-			"ALL REPAIRS AND RESTOCKING OF %s COMPLETE", b->shipname);
-		b->repairs_in_progress = 0;
+	float total = 0.0;
+	send_comms_packet(sb, sb->sdata.name, b->npcbot.channel,
+		"ALL REPAIRS AND RESTOCKING OF %s COMPLETE", b->shipname);
+	send_comms_packet(sb, sb->sdata.name, b->npcbot.channel,
+		"-------- BILL FOR REPAIRS ------------------", b->shipname);
+
+	for (i = 0; i < b->repair_bill.nitems; i++) {
+		struct repair_bill_item *item = &b->repair_bill.item[i];
+		switch (item->type) {
+		case REPAIR_BILL_ITEM_TYPE_FUEL:
+		case REPAIR_BILL_ITEM_TYPE_OXYGEN:
+			send_comms_packet(sb, sb->sdata.name, b->npcbot.channel,
+					" $%8.2f: %s", item->cost, bill_item_type_name[item->type]);
+			total += item->cost;
+			break;
+		case REPAIR_BILL_ITEM_TYPE_PART:
+			send_comms_packet(sb, sb->sdata.name, b->npcbot.channel,
+					" $%8.2f: 1 %s (PART OF %s)", item->cost,
+						damcon_part_name(item->system, item->part),
+						damcon_system_name(item->system));
+			total += item->cost;
+			break;
+		case REPAIR_BILL_ITEM_TYPE_MISSILE:
+		case REPAIR_BILL_ITEM_TYPE_TORPEDO:
+			send_comms_packet(sb, sb->sdata.name, b->npcbot.channel,
+					" $%8.2f: %d %s", item->cost, item->count,
+						bill_item_type_name[item->type]);
+			total += item->cost;
+			break;
+		case REPAIR_BILL_ITEM_TYPE_WARP_CORE:
+			send_comms_packet(sb, sb->sdata.name, b->npcbot.channel,
+					" $%8.2f: 1 %s", item->cost,
+						bill_item_type_name[item->type]);
+			total += item->cost;
+			break;
+		}
 	}
+	send_comms_packet(sb, sb->sdata.name, b->npcbot.channel,
+		"--------------------------------------------");
+	send_comms_packet(sb, sb->sdata.name, b->npcbot.channel, " $%8.2f TOTAL", total);
+	send_comms_packet(sb, sb->sdata.name, b->npcbot.channel,
+		"--------------------------------------------");
+	o->tsd.ship.wallet -= total;
+	b->repairs_in_progress = 0;
 }
 
 static void starbase_move(struct snis_entity *o)
@@ -11217,6 +11367,9 @@ static void gradually_repair_damcon_systems(struct snis_entity *sb, struct bridg
 			*needs_work = 1;
 			p->version++;
 			if (p->tsd.part.damage == 0) {
+				add_repair_bill_item(&b->repair_bill, REPAIR_BILL_ITEM_TYPE_PART,
+						p->tsd.part.system, p->tsd.part.part,
+						damcon_base_price(p->tsd.part.system, p->tsd.part.part));
 				send_comms_packet(sb, sb->sdata.name, b->npcbot.channel,
 					"REPLACED/REPAIRED %s (PART OF %s)",
 					damcon_part_name(p->tsd.part.system, p->tsd.part.part),
@@ -16015,7 +16168,9 @@ static void npc_menu_item_full_repair_resupply(__attribute__((unused)) struct np
 			"REPAIRS AND RESUPPLY OF %s ALREADY IN PROGRESS", o->sdata.name);
 		return;
 	}
+	b->repair_order.options = REPAIR_OPTION_THE_WORKS;
 	b->repairs_in_progress = 1;
+	b->repair_bill.nitems = 0;
 	pthread_mutex_unlock(&universe_mutex);
 	send_comms_packet(sb, sb->sdata.name, channel,
 		"REPAIRS AND RESUPPLY OF %s INITIATED", o->sdata.name);
