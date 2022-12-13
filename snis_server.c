@@ -320,6 +320,8 @@ static void npc_menu_item_sign_off(struct npc_menu_item *item,
 				char *npcname, struct npc_bot_state *botstate);
 static void npc_menu_item_buy_parts(struct npc_menu_item *item,
 				char *npcname, struct npc_bot_state *botstate);
+static void npc_menu_item_full_repair_resupply(struct npc_menu_item *item,
+				char *npcname, struct npc_bot_state *botstate);
 static void npc_menu_item_mining_bot_status_report(struct npc_menu_item *item,
 				char *npcname, struct npc_bot_state *botstate);
 static void npc_menu_item_mining_bot_transport_ores(struct npc_menu_item *item,
@@ -360,6 +362,7 @@ struct npc_bot_state {
 static struct npc_menu_item repairs_and_fuel_menu[] = {
 	/* by convention, first element is menu title */
 	{ "REPAIRS AND FUEL MENU", 0, 0, 0 },
+	{ "REPAIR ALL SYSTEMS AND RESUPPLY SHIP", 0, 0, npc_menu_item_full_repair_resupply },
 	{ "BUY SHIELD SYSTEM PARTS", 0, 0, npc_menu_item_buy_parts },
 	{ "BUY IMPULSE DRIVE PARTS", 0, 0, npc_menu_item_buy_parts },
 	{ "BUY WARP DRIVE PARTS", 0, 0, npc_menu_item_buy_parts },
@@ -8783,6 +8786,21 @@ static int starbase_expecting_docker(struct snis_entity *starbase, uint32_t dock
 	return 0;
 }
 
+static void set_nominal_coolant_levels(struct snis_entity *o)
+{
+	/* Set nominal cooling levels in case things are hot, so they cool down */
+	o->tsd.ship.coolant_data.maneuvering.r2 = 128;
+	o->tsd.ship.coolant_data.warp.r2 = 128;
+	o->tsd.ship.coolant_data.impulse.r2 = 128;
+	o->tsd.ship.coolant_data.sensors.r2 = 128;
+	o->tsd.ship.coolant_data.comms.r2 = 128;
+	o->tsd.ship.coolant_data.phasers.r2 = 128;
+	o->tsd.ship.coolant_data.shields.r2 = 128;
+	o->tsd.ship.coolant_data.tractor.r2 = 128;
+	o->tsd.ship.power_data.lifesupport.r2	= 230; /* don't turn off the air */
+	o->tsd.ship.coolant_data.lifesupport.r2	= 255;
+}
+
 static void init_player(struct snis_entity *o, int reset_ship, float *charges);
 static void init_power_model(struct snis_entity *o);
 static void init_coolant_model(struct snis_entity *o);
@@ -8807,10 +8825,12 @@ static void do_docking_action(struct snis_entity *ship, struct snis_entity *star
 	send_comms_packet(starbase, npcname, channel,
 		"CONTINUOUS AIR SUPPLY ESTABLISH THROUGH DOCKING PORT AIRLOCK.");
 
-	/* Player ship repair is not here, it occurs gradually via starbase_move() */
-	b->repairs_in_progress = 1;
+	/* Player ship repair is not here, it occurs gradually via starbase_move()
+	 * triggered by player requesting repairs via comms.
+	 */
 	init_power_model(ship);
 	init_coolant_model(ship);
+	set_nominal_coolant_levels(ship);
 
 	ship->timestamp = universe_timestamp;
 	snis_queue_add_sound(DOCKING_SOUND, ROLE_ALL, ship->id);
@@ -10602,16 +10622,7 @@ static void gradually_repair_docked_player_ship(struct snis_entity *sb, struct b
 	float money = 0.0;
 
 	/* Set nominal cooling levels in case things are hot, so they cool down */
-	o->tsd.ship.coolant_data.maneuvering.r2 = 128;
-	o->tsd.ship.coolant_data.warp.r2 = 128;
-	o->tsd.ship.coolant_data.impulse.r2 = 128;
-	o->tsd.ship.coolant_data.sensors.r2 = 128;
-	o->tsd.ship.coolant_data.comms.r2 = 128;
-	o->tsd.ship.coolant_data.phasers.r2 = 128;
-	o->tsd.ship.coolant_data.shields.r2 = 128;
-	o->tsd.ship.coolant_data.tractor.r2 = 128;
-	o->tsd.ship.power_data.lifesupport.r2	= 230; /* don't turn off the air */
-	o->tsd.ship.coolant_data.lifesupport.r2	= 255;
+	set_nominal_coolant_levels(o);
 
 	/* Maybe load some torpedoes */
 	if ((o->tsd.ship.torpedoes < INITIAL_TORPEDO_COUNT)) {
@@ -15963,6 +15974,51 @@ static void npc_menu_item_buy_parts(struct npc_menu_item *item,
 				(DAMCON_SYSTEM_COUNT - 1);
 	botstate->special_bot = parts_buying_npc_bot;
 	botstate->special_bot(&go[i], bridge, (char *) b->shipname, "");
+}
+
+static void npc_menu_item_full_repair_resupply(__attribute__((unused)) struct npc_menu_item *item,
+				__attribute__((unused)) char *npcname,
+				struct npc_bot_state *botstate)
+{
+	pthread_mutex_lock(&universe_mutex);
+
+	/* Find the starbase */
+	int i = lookup_by_id(botstate->object_id);
+	if (i < 0) {
+		pthread_mutex_unlock(&universe_mutex);
+		return;
+	}
+	struct snis_entity *sb = &go[i];
+	/* find our bridge... */
+	struct bridge_data *b = container_of(botstate, struct bridge_data, npcbot);
+
+	/* find our ship */
+	i = lookup_by_id(b->shipid);
+	if (i < 0) {
+		pthread_mutex_unlock(&universe_mutex);
+		return;
+	}
+	struct snis_entity *o = &go[i];
+	uint32_t channel = botstate->channel;
+
+	/* player must be docked for full repairs */
+	int player_is_docked = ship_is_docked(b->shipid, sb);
+	if (!player_is_docked) {
+		pthread_mutex_unlock(&universe_mutex);
+		send_comms_packet(sb, sb->sdata.name, channel,
+			"SORRY, YOU NEED TO BE DOCKED FOR FULL SERVICE REPAIR/RESUPPLY");
+			return;
+	}
+	if (b->repairs_in_progress) {
+		pthread_mutex_unlock(&universe_mutex);
+		send_comms_packet(sb, sb->sdata.name, channel,
+			"REPAIRS AND RESUPPLY OF %s ALREADY IN PROGRESS", o->sdata.name);
+		return;
+	}
+	b->repairs_in_progress = 1;
+	pthread_mutex_unlock(&universe_mutex);
+	send_comms_packet(sb, sb->sdata.name, channel,
+		"REPAIRS AND RESUPPLY OF %s INITIATED", o->sdata.name);
 }
 
 static int lookup_by_registration(uint32_t id)
