@@ -133,6 +133,18 @@ void snis_debug_dump(char *cmd, struct snis_entity go[], int nstarbase_models,
 	case OBJTYPE_BRIDGE:
 		t = "PLAYER SHIP";
 		printfn("TYPE: %s", t);
+		printfn("SHEILD DAMAGE: %hhu", o->tsd.ship.damage.shield_damage);
+		printfn("IMPULSE DAMAGE: %hhu", o->tsd.ship.damage.impulse_damage);
+		printfn("WARP DAMAGE: %hhu", o->tsd.ship.damage.warp_damage);
+		printfn("MANEUVERING DAMAGE: %hhu", o->tsd.ship.damage.maneuvering_damage);
+		printfn("PHASER DAMAGE: %hhu", o->tsd.ship.damage.phaser_banks_damage);
+		printfn("SENSORS DAMAGE: %hhu", o->tsd.ship.damage.sensors_damage);
+		printfn("COMMS DAMAGE: %hhu", o->tsd.ship.damage.comms_damage);
+		printfn("TRACTOR DAMAGE: %hhu", o->tsd.ship.damage.tractor_damage);
+		printfn("LIFESUPPORT DAMAGE: %hhu", o->tsd.ship.damage.lifesupport_damage);
+		printfn("TORPEDOES: %u", o->tsd.ship.torpedoes);
+		printfn("MISSILES: %u", o->tsd.ship.missile_count);
+		printfn("FUEL: %u", o->tsd.ship.fuel);
 		break;
 	case OBJTYPE_NPCSHIP:
 		t = "NPC SHIP";
