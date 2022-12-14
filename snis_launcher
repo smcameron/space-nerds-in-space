@@ -42,7 +42,7 @@ SOLARSYSTEM_NAME="default"
 
 remove_snis_lock_dirs()
 {
-	for x in /tmp/snis_lock_dir.*
+	for x in /tmp/snis_multiverse_lock /tmp/snis_server_lock.*
 	do
 		if [ -d "$x" ]
 		then
