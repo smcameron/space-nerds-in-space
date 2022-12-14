@@ -134,5 +134,8 @@ int imin(int a, int b);
 /* Map (scale and offset) value x from range (min1, max1) to range (min2, max2) */
 float fmap(float x, float min1, float max1, float min2, float max2);
 
+/* Return distance from point (px,py) to line (lx1,ly2)-(lx2,ly2) */
+double point_to_line_dist(double lx1, double ly1, double lx2, double ly2, double px, double py);
+
 #undef GLOBAL
 #endif

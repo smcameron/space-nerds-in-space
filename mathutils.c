@@ -531,3 +531,9 @@ float fmap(float x, float min1, float max1, float min2, float max2)
 {
 	return min2 + (x - min1) * (max2 - min2) / (max1 - min1);
 }
+
+double point_to_line_dist(double lx1, double ly1, double lx2, double ly2, double px, double py)
+{
+	double normal_length = hypot(lx1 - lx2, ly1 - ly2);
+	return fabs((px - lx1) * (ly2 - ly1) - (py - ly1) * (lx2 - lx1)) / normal_length;
+}
