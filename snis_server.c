@@ -4719,20 +4719,17 @@ static void maybe_find_spacemonster_a_home(struct snis_entity *o)
 	for (i = 0; i <= snis_object_pool_highest_object(pool); i++)
 		if (go[i].alive && go[i].type == OBJTYPE_NEBULA)
 			nebula_count++;
-	if (nebula_count != 0) {
-		home_nebula = snis_randn(nebula_count);
-		for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
-			if (go[i].alive && go[i].type == OBJTYPE_NEBULA) {
-				if (home_nebula == 0) {
-					o->tsd.spacemonster.home = go[i].id;
-					break;
-				} else {
-					home_nebula--;
-				}
-			}
+	if (nebula_count == 0)
+		return;
+	home_nebula = snis_randn(nebula_count);
+	for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
+		if (!go[i].alive || go[i].type != OBJTYPE_NEBULA)
+			continue;
+		home_nebula--;
+		if (home_nebula == 0) {
+			o->tsd.spacemonster.home = go[i].id;
+			return;
 		}
-	} else {
-		o->tsd.spacemonster.home = (uint32_t) -1;
 	}
 }
 
