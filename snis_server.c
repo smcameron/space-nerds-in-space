@@ -6887,14 +6887,14 @@ static void maybe_leave_fleet(struct snis_entity *o)
 		return;
 
 	for (i = 0; i < o->tsd.ship.nai_entries; i++) {
-		if (o->tsd.ship.ai[i].ai_mode == AI_MODE_FLEET_MEMBER) {
-			ai_trace(o->id, "LEAVING FLEET");
-			fleet_leave(o->id);
-			o->tsd.ship.nai_entries = 0;
-			memset(o->tsd.ship.ai, 0, sizeof(o->tsd.ship.ai));
-			ship_figure_out_what_to_do(o);
-			return;
-		}
+		if (o->tsd.ship.ai[i].ai_mode != AI_MODE_FLEET_MEMBER)
+			continue;
+		ai_trace(o->id, "LEAVING FLEET");
+		fleet_leave(o->id);
+		o->tsd.ship.nai_entries = 0;
+		memset(o->tsd.ship.ai, 0, sizeof(o->tsd.ship.ai));
+		ship_figure_out_what_to_do(o);
+		return;
 	}
 }
 
