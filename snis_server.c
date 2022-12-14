@@ -5222,15 +5222,13 @@ static void check_for_incoming_fire(struct snis_entity *o)
 		return;
 
 	for (i = 0; i < nbridges; i++) {
-		if (bridgelist[i].shipid == o->id) {
-			if (universe_timestamp - bridgelist[i].last_incoming_fire_sound_time >
-				30 * 20) {
-				snis_queue_add_sound(INCOMING_FIRE_DETECTED,
-					ROLE_SOUNDSERVER, o->id);
-				bridgelist[i].last_incoming_fire_sound_time = universe_timestamp;
-			}
-			break;
+		if (bridgelist[i].shipid != o->id)
+			continue;
+		if (universe_timestamp - bridgelist[i].last_incoming_fire_sound_time > 30 * 20) {
+			snis_queue_add_sound(INCOMING_FIRE_DETECTED, ROLE_SOUNDSERVER, o->id);
+			bridgelist[i].last_incoming_fire_sound_time = universe_timestamp;
 		}
+		break;
 	}
 }
 
