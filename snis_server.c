@@ -1765,25 +1765,25 @@ static void wormhole_collision_detection(void *wormhole, void *object)
 		return;
 	default:
 		dist2 = object_dist2(t, o);
-		if (dist2 < 30.0 * 30.0) {
-			a = snis_randn(360) * M_PI / 180.0;
-			r = 60.0;
-			x1 = o->x;
-			y1 = o->y;
-			z1 = o->z;
-			set_object_location(t, o->tsd.wormhole.dest_x + cos(a) * r, 
-						o->tsd.wormhole.dest_y,
-						o->tsd.wormhole.dest_z + sin(a) * r);
-			t->timestamp = universe_timestamp;
-			if (t->type == OBJTYPE_BRIDGE) {
-				warp_dist = hypot3d(o->x - x1, o->y - y1, o->z - z1);
-				equiv_warp_factor = 10.0 * warp_dist / (XKNOWN_DIM / 2.0);
-				schedule_callback8(event_callback, &callback_schedule,
-					"player-wormhole-travel-event", (double) o->id,
-					x1, y1, z1, o->x, o->y, o->z, equiv_warp_factor);
-				send_wormhole_limbo_packet(t->id, 5 * 30);
-			}
-		}
+		if (dist2 >= 30.0 * 30.0)
+			break;
+		a = snis_randn(360) * M_PI / 180.0;
+		r = 60.0;
+		x1 = o->x;
+		y1 = o->y;
+		z1 = o->z;
+		set_object_location(t, o->tsd.wormhole.dest_x + cos(a) * r,
+					o->tsd.wormhole.dest_y,
+					o->tsd.wormhole.dest_z + sin(a) * r);
+		t->timestamp = universe_timestamp;
+		if (t->type != OBJTYPE_BRIDGE)
+			break;
+		warp_dist = hypot3d(o->x - x1, o->y - y1, o->z - z1);
+		equiv_warp_factor = 10.0 * warp_dist / (XKNOWN_DIM / 2.0);
+		schedule_callback8(event_callback, &callback_schedule,
+			"player-wormhole-travel-event", (double) o->id,
+			x1, y1, z1, o->x, o->y, o->z, equiv_warp_factor);
+		send_wormhole_limbo_packet(t->id, 5 * 30);
 	}
 }
 
