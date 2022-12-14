@@ -4764,7 +4764,33 @@ static void spacemonster_set_antagonist(struct snis_entity *o, uint32_t id)
 	o->tsd.spacemonster.current_antagonist = i;
 }
 
-static int nl_find_nearest_object_of_type(uint32_t id, int objtype);
+/* Assumes universe lock is held */
+static int find_nearest_object_of_type(struct snis_entity *o, int objtype)
+{
+	int i;
+	double x, y, z;
+	double nearest_dist = -1.0;
+	double d;
+	int nearest = -1;
+
+	for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
+		if (!go[i].alive)
+			continue;
+		if (go[i].type != (uint32_t) objtype)
+			continue;
+		if (go[i].id == o->id)
+			continue;
+		x = go[i].x - o->x;
+		y = go[i].y - o->y;
+		z = go[i].z - o->z;
+		d = x * x + y * y + z * z;
+		if (d < nearest_dist || nearest_dist < 0) {
+			nearest = i;
+			nearest_dist = d;
+		}
+	}
+	return nearest;
+}
 
 static void spacemonster_collision_process(void *context, void *entity)
 {
@@ -12900,7 +12926,7 @@ static void setup_randomized_starbase_orbit(struct snis_entity *o)
 static void starbase_maybe_associate_nearby_planet(struct snis_entity *sb)
 {
 	float dist;
-	int p = nl_find_nearest_object_of_type(sb->id, OBJTYPE_PLANET);
+	int p = find_nearest_object_of_type(sb, OBJTYPE_PLANET);
 	if (p < 0 || go[p].type != OBJTYPE_PLANET)
 		return;
 	dist = object_dist(sb, &go[p]);
@@ -17448,15 +17474,15 @@ static void npc_menu_item_travel_advisory(__attribute__((unused)) struct npc_men
 		send_comms_packet(sb, npcname, ch, " PLANETARY SURFACE PRESSURE: %.0f Pa", atm->pressure);
 		send_comms_packet(sb, npcname, ch, "");
 
-		i = nl_find_nearest_object_of_type(pl->id, OBJTYPE_PLANET);
+		i = find_nearest_object_of_type(pl, OBJTYPE_PLANET);
 		if (i >= 0) {
 			send_comms_packet(sb, npcname, ch, " NEXT NEAREST PLANET: %s", go[i].sdata.name);
 			send_comms_packet(sb, npcname, ch, " ");
 		}
 		/* If the nearest planet to the nearest warpgate is our planet, advertise it */
-		i = nl_find_nearest_object_of_type(pl->id, OBJTYPE_WARPGATE);
+		i = find_nearest_object_of_type(pl, OBJTYPE_WARPGATE);
 		if (i >= 0) {
-			j = nl_find_nearest_object_of_type(go[i].id, OBJTYPE_PLANET);
+			j = find_nearest_object_of_type(&go[i], OBJTYPE_PLANET);
 			if ((j >= 0) && (go[j].id == pl->id)) {
 				send_comms_packet(sb, npcname, ch, " WARPGATE AVAILABLE: %s", go[i].sdata.name);
 				send_comms_packet(sb, npcname, ch, " ");
@@ -17469,7 +17495,7 @@ static void npc_menu_item_travel_advisory(__attribute__((unused)) struct npc_men
 		send_comms_packet(sb, npcname, ch, " UNDER %s CONTROL.", faction_name(sb->sdata.faction));
 		send_comms_packet(sb, npcname, ch, " COORDINATES: %.0lf, %.0lf, %.0lf", sb->x, sb->y, sb->z);
 		send_comms_packet(sb, npcname, ch, "");
-		i = nl_find_nearest_object_of_type(sb->id, OBJTYPE_PLANET);
+		i = find_nearest_object_of_type(sb, OBJTYPE_PLANET);
 		if (i >= 0) {
 			send_comms_packet(sb, npcname, ch, " NEXT NEAREST PLANET: %s", go[i].sdata.name);
 			send_comms_packet(sb, npcname, ch, " ");
@@ -23108,7 +23134,7 @@ static void toggle_standard_orbit(struct game_client *c, struct snis_entity *shi
 		return;
 	}
 	/* Find nearest planet to ship */
-	planet_index = nl_find_nearest_object_of_type(c->shipid, OBJTYPE_PLANET);
+	planet_index = find_nearest_object_of_type(ship, OBJTYPE_PLANET);
 	if (planet_index < 0) { /* no planets around */
 		pthread_mutex_unlock(&universe_mutex);
 		snis_queue_add_text_to_speech("There are no nearby planets to orbit",
@@ -27213,41 +27239,6 @@ static void nl_describe_n(void *context, int argc, char *argv[], int pos[],
 	queue_add_text_to_speech(c, "I do not know anything about that.");
 }
 
-/* Assumes universe lock is held */
-static int nl_find_nearest_object_of_type(uint32_t id, int objtype)
-{
-	int i;
-	double x, y, z;
-	double nearest_yet = -1.0;
-	double d;
-	struct snis_entity *o;
-	int nearest = -1;
-
-	i = lookup_by_id(id);
-	if (i < 0)
-		return -1;
-
-	o = &go[i];
-
-	for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
-		if (go[i].type != (uint32_t) objtype)
-			continue;
-		if (!go[i].alive)
-			continue;
-		if (go[i].id == id)
-			continue;
-		x = go[i].x - o->x;
-		y = go[i].y - o->y;
-		z = go[i].z - o->z;
-		d = x * x + y * y + z * z;
-		if (d < nearest_yet || nearest_yet < 0) {
-			nearest = i;
-			nearest_yet = d;
-		}
-	}
-	return nearest;
-}
-
 /* Assumes universe lock is held -- find "nearest" or "selected" or "other adjective" object */
 static int nl_find_nearest_object(struct game_client *c, int argc, char *argv[], int pos[],
 					__attribute__((unused)) union snis_nl_extra_data extra_data[],
@@ -27295,7 +27286,10 @@ static int nl_find_nearest_object(struct game_client *c, int argc, char *argv[],
 			return -1;
 		i = lookup_by_id(bridgelist[c->bridge].science_selection);
 	} else {
-		i = nl_find_nearest_object_of_type(c->shipid, objtype);
+		i = lookup_by_id(c->shipid);
+		if (i < 0)
+			return -1;
+		i = find_nearest_object_of_type(&go[i], objtype);
 	}
 	if (i < 0)
 		return -1;
