@@ -4941,6 +4941,28 @@ static void spacemonster_play(struct snis_entity *o)
 	}
 }
 
+static void steer_away_from_other_spacemonster(struct snis_entity *o, float speed)
+{
+	/* If too close to other spacemonster, steer away from it */
+	if (o->tsd.spacemonster.nearest_spacemonster == (uint32_t) -1)
+		return;
+	int i = lookup_by_id(o->tsd.spacemonster.nearest_spacemonster);
+	if (i < 0)
+		return;
+	float dist = object_dist(o, &go[i]);
+	if (dist >= 500) /* far enough away, nothing to do */
+		return;
+	union vec3 steer;
+	steer.v.x = o->x - go[i].x;
+	steer.v.y = o->y - go[i].y;
+	steer.v.z = o->z - go[i].z;
+	vec3_normalize_self(&steer);
+	vec3_mul_self(&steer, speed);
+	o->tsd.spacemonster.dvx += steer.v.x;
+	o->tsd.spacemonster.dvy += steer.v.y;
+	o->tsd.spacemonster.dvz += steer.v.z;
+}
+
 static void spacemonster_fight(struct snis_entity *o)
 {
 	int i;
@@ -4977,26 +4999,7 @@ static void spacemonster_fight(struct snis_entity *o)
 	o->tsd.spacemonster.dvx = to_target.v.x;
 	o->tsd.spacemonster.dvy = to_target.v.y;
 	o->tsd.spacemonster.dvz = to_target.v.z;
-
-	/* If too close to other spacemonster, steer away from it */
-	if (o->tsd.spacemonster.nearest_spacemonster != (uint32_t) -1) {
-		i = lookup_by_id(o->tsd.spacemonster.nearest_spacemonster);
-		if (i >= 0) {
-			float dist = object_dist(o, &go[i]);
-			if (dist < 500) { /* too close */
-				union vec3 steer;
-
-				steer.v.x = o->x - go[i].x;
-				steer.v.y = o->y - go[i].y;
-				steer.v.z = o->z - go[i].z;
-				vec3_normalize_self(&steer);
-				vec3_mul_self(&steer, 0.5 * max_spacemonster_velocity);
-				o->tsd.spacemonster.dvx += steer.v.x;
-				o->tsd.spacemonster.dvy += steer.v.y;
-				o->tsd.spacemonster.dvz += steer.v.z;
-			}
-		}
-	}
+	steer_away_from_other_spacemonster(o, 0.5 * max_spacemonster_velocity);
 }
 
 static void spacemonster_eat(struct snis_entity *o)
@@ -5057,28 +5060,7 @@ static void spacemonster_eat(struct snis_entity *o)
 	o->tsd.spacemonster.dvx = v.v.x;
 	o->tsd.spacemonster.dvy = v.v.y;
 	o->tsd.spacemonster.dvz = v.v.z;
-
-	/* If too close to other spacemonster, steer away from it */
-	if (o->tsd.spacemonster.nearest_spacemonster != (uint32_t) -1) {
-		i = lookup_by_id(o->tsd.spacemonster.nearest_spacemonster);
-		if (i >= 0) {
-			dist = object_dist(o, &go[i]);
-			if (dist < 500) { /* too close */
-				union vec3 steer;
-				float mul;
-
-				steer.v.x = o->x - go[i].x;
-				steer.v.y = o->y - go[i].y;
-				steer.v.z = o->z - go[i].z;
-				vec3_normalize_self(&steer);
-				mul = vscale * 0.5 + 0.5;
-				vec3_mul_self(&steer, mul);
-				o->tsd.spacemonster.dvx += steer.v.x;
-				o->tsd.spacemonster.dvy += steer.v.y;
-				o->tsd.spacemonster.dvz += steer.v.z;
-			}
-		}
-	}
+	steer_away_from_other_spacemonster(o, 0.5 * vscale + 0.5);
 }
 
 static void spacemonster_move(struct snis_entity *o)
