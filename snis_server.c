@@ -5920,13 +5920,11 @@ static int inside_planet(float x, float y, float z)
 
 	for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
 		o = &go[i];
-		if (o->type == OBJTYPE_PLANET && o->alive) {
-			d2 =	(x - o->x) * (x - o->x) +
-				(y - o->y) * (y - o->y) +
-				(z - o->z) * (z - o->z);
-			if (d2 < (o->tsd.planet.radius * o->tsd.planet.radius) * 1.05)
-				return 1;
-		}
+		if (!o->alive || o->type != OBJTYPE_PLANET)
+			continue;
+		d2 = (x - o->x) * (x - o->x) + (y - o->y) * (y - o->y) + (z - o->z) * (z - o->z);
+		if (d2 < (o->tsd.planet.radius * o->tsd.planet.radius) * 1.05)
+			return 1;
 	}
 	return 0;
 }
