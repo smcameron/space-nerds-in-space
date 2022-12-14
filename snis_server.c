@@ -17701,16 +17701,58 @@ static void push_tow_mode(struct snis_entity *tow_ship, uint32_t disabled_ship,
 	tow_ship->tsd.ship.ai[0].u.tow_ship.ship_connected = 0;
 }
 
+/* Returns index into go[] of nearest tow ship to player o, bridge b
+ * or -1 if no tow ships available or if a tow ship is already on its
+ * way.  *already_en_route will be set to 1 if a tow ship was already
+ * on its way, 0 otherwise.
+ */
+static int find_nearest_tow_ship(struct snis_entity *o, struct bridge_data *b, int *already_en_route)
+{
+	int i;
+	int nearest_tow_ship = -1;
+	double nearest_tow_ship_distance;
+
+	for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
+		if (!go[i].alive)
+			continue;
+		if (go[i].type != OBJTYPE_NPCSHIP)
+			continue;
+		if (go[i].tsd.ship.shiptype != SHIP_CLASS_MANTIS)
+			continue;
+		/* Check to see if this tow ship is already en route someplace */
+		int n = go[i].tsd.ship.nai_entries - 1;
+		if (go[i].tsd.ship.ai[n].ai_mode == AI_MODE_TOW_SHIP) {
+			/* Check to see if there's a tow ship already en route to this player */
+			if (go[i].tsd.ship.ai[n].u.tow_ship.disabled_ship == b->shipid) {
+				*already_en_route = 1;
+				return -1;
+			}
+			continue;
+		}
+		/* Tow ship is not busy, see how far away */
+		double dx, dy, dz, dist;
+		dx = o->x - go[i].x;
+		dy = o->y - go[i].y;
+		dz = o->z - go[i].z;
+		dist = dx * dx + dy * dy + dz * dz;
+		if (nearest_tow_ship == -1 || dist < nearest_tow_ship_distance) {
+			nearest_tow_ship = i;
+			nearest_tow_ship_distance = dist;
+		}
+	}
+	*already_en_route = 0;
+	return nearest_tow_ship;
+}
+
 static void npc_menu_item_towing_service(__attribute__((unused)) struct npc_menu_item *item,
 				char *npcname, struct npc_bot_state *botstate)
 {
 	struct snis_entity *o;
 	struct bridge_data *b = container_of(botstate, struct bridge_data, npcbot);
 	int i, bridge = b - bridgelist;
-	int closest_tow_ship;
-	double closest_tow_ship_distance;
 	uint32_t channel = bridgelist[bridge].npcbot.channel;
 	struct snis_entity *sb;
+	int nearest_tow_ship, already_en_route = 0;
 
 	pthread_mutex_lock(&universe_mutex);
 	i = lookup_by_id(b->shipid);
@@ -17723,46 +17765,23 @@ static void npc_menu_item_towing_service(__attribute__((unused)) struct npc_menu
 		return;
 	sb = &go[i];
 
-	closest_tow_ship = -1;
-	for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
-		if (!go[i].alive)
-			continue;
-		if (go[i].type == OBJTYPE_NPCSHIP && go[i].tsd.ship.shiptype == SHIP_CLASS_MANTIS) {
-			/* Check to see if this tow ship is already en route someplace */
-			int n = go[i].tsd.ship.nai_entries - 1;
-			if (go[i].tsd.ship.ai[n].ai_mode == AI_MODE_TOW_SHIP) {
-				/* Check to see if there's a tow ship already en route to this player */
-				if (go[i].tsd.ship.ai[n].u.tow_ship.disabled_ship == b->shipid) {
-					send_comms_packet(sb, npcname, channel,
-						"%s, THE MANTIS TOW SHIP %s IS ALREADY EN ROUTE",
-						b->shipname, go[i].sdata.name);
-					goto out;
-				}
-			} else {
-				/* Tow ship is not busy, see how far away */
-				double dx, dy, dz, dist;
-				dx = o->x - go[i].x;
-				dy = o->y - go[i].y;
-				dz = o->z - go[i].z;
-				dist = sqrt(dx * dx + dy * dy + dz * dz);
-				if (closest_tow_ship == -1 || dist < closest_tow_ship_distance) {
-					closest_tow_ship = i;
-					closest_tow_ship_distance = dist;
-				}
-			}
-		}
+	nearest_tow_ship = find_nearest_tow_ship(o, b, &already_en_route);
+	if (nearest_tow_ship == -1 && already_en_route) {
+		send_comms_packet(sb, npcname, channel,
+			"%s, THE MANTIS TOW SHIP %s IS ALREADY EN ROUTE",
+			b->shipname, go[i].sdata.name);
+		goto out;
 	}
-
-	if (closest_tow_ship == -1) { /* No tow ships, or all tow ships busy */
+	if (nearest_tow_ship == -1) { /* No tow ships, or all tow ships busy */
 		send_comms_packet(sb, npcname, channel, "%s, SORRY, ALL MANTIS TOW SHPS ARE CURRENTLY BUSY.",
 				b->shipname);
 		goto out;
 	}
 
 	/* Send the tow ship to the player */
-	push_tow_mode(&go[closest_tow_ship], o->id, botstate->object_id);
+	push_tow_mode(&go[nearest_tow_ship], o->id, botstate->object_id);
 	send_comms_packet(sb, npcname, channel, "%s, THE MANTIS TOW SHIP %s HAS BEEN",
-			b->shipname, go[closest_tow_ship].sdata.name);
+			b->shipname, go[nearest_tow_ship].sdata.name);
 	send_comms_packet(sb, npcname, channel, "DISPATCHED TO YOUR LOCATION");
 	send_comms_packet(sb, npcname, channel, "%s, UPON DELIVERY YOUR ACCOUNT\n", b->shipname);
 	send_comms_packet(sb, npcname, channel, "WILL BE BILLED $%5.2f\n", TOW_SHIP_CHARGE);
