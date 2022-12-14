@@ -7856,7 +7856,7 @@ static float damcon_robot_movement_cost(__attribute__((unused)) void *context, v
 	return fabsf(dx) + fabsf(dy); /* Manhattan distance */
 }
 
-static struct snis_damcon_entity *find_nearest_waypoint(struct damcon_data *d, float x, float y)
+static struct snis_damcon_entity *find_nearest_damcon_waypoint(struct damcon_data *d, float x, float y)
 {
 	int i, nearest = -1;
 	float dx, dy, dist, nearest_dist;
@@ -7877,9 +7877,10 @@ static struct snis_damcon_entity *find_nearest_waypoint(struct damcon_data *d, f
 	return &d->o[nearest];
 }
 
-static struct snis_damcon_entity *find_nearest_waypoint_to_obj(struct damcon_data *d, struct snis_damcon_entity *target)
+static struct snis_damcon_entity *find_nearest_damcon_waypoint_to_obj(struct damcon_data *d,
+	struct snis_damcon_entity *target)
 {
-	return find_nearest_waypoint(d, target->x, target->y);
+	return find_nearest_damcon_waypoint(d, target->x, target->y);
 }
 
 static struct snis_damcon_entity *damcon_find_closest_damaged_part_by_damage(struct damcon_data *d,
@@ -8023,14 +8024,14 @@ static struct snis_damcon_entity *find_robot_goal(struct damcon_data *d)
 		if (part->tsd.part.damage >= DAMCON_EASY_REPAIR_THRESHOLD) {
 			/* have to take it to the repair station */
 			socket = find_repair_socket(d);
-			waypoint = find_nearest_waypoint_to_obj(d, socket);
+			waypoint = find_nearest_damcon_waypoint_to_obj(d, socket);
 			d->robot->tsd.robot.repair_socket_id = socket->id;
 			next_state = DAMCON_ROBOT_REPAIR;
 		} else {
 			socket = find_socket_for_part(d, part);
 			if (!socket)
 				return NULL;
-			waypoint = find_nearest_waypoint_to_obj(d, socket);
+			waypoint = find_nearest_damcon_waypoint_to_obj(d, socket);
 			next_state = DAMCON_ROBOT_REPLACE;
 		}
 		dx = waypoint->x - d->robot->x;
@@ -8044,7 +8045,7 @@ static struct snis_damcon_entity *find_robot_goal(struct damcon_data *d)
 	d->robot->tsd.robot.damaged_part_id = (uint32_t) -1;
 	part = damcon_find_next_thing_to_repair(d);
 	if (part)
-		waypoint = find_nearest_waypoint_to_obj(d, part);
+		waypoint = find_nearest_damcon_waypoint_to_obj(d, part);
 	else
 		waypoint = find_nth_waypoint(d, 17); /* default destination */
 	if (waypoint && !part)
@@ -8059,7 +8060,7 @@ static struct snis_damcon_entity *find_robot_goal(struct damcon_data *d)
 			d->robot->tsd.robot.robot_state = DAMCON_ROBOT_PICKUP;
 		return waypoint;
 	} else {
-		return find_nearest_waypoint(d, d->robot->tsd.robot.long_term_goal_x,
+		return find_nearest_damcon_waypoint(d, d->robot->tsd.robot.long_term_goal_x,
 						d->robot->tsd.robot.long_term_goal_y);
 	}
 }
@@ -8142,7 +8143,7 @@ static void damcon_robot_think(struct snis_damcon_entity *o, struct damcon_data 
 
 	switch (o->tsd.robot.robot_state) {
 	case  DAMCON_ROBOT_DECIDE_LTG:
-		start = find_nearest_waypoint_to_obj(d, d->robot);
+		start = find_nearest_damcon_waypoint_to_obj(d, d->robot);
 		goal = find_robot_goal(d);
 		d->robot->tsd.robot.long_term_goal_x = goal->x;
 		d->robot->tsd.robot.long_term_goal_y = goal->y;
