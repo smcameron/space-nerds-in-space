@@ -5318,30 +5318,30 @@ static int add_laserbeam(uint32_t origin, uint32_t target, int alive, uint8_t ta
 
 static void check_for_nearby_targets(struct snis_entity *o)
 {
-	uint32_t victim_id;
-
 	/* check for nearby targets... */
-	if (((universe_timestamp + o->id) & 0x0f) == 0) {
-		victim_id = find_nearest_victim(o);
-		int i;
-		struct snis_entity *v;
+	if (((universe_timestamp + o->id) & 0x0f) != 0)
+		return;
 
-		if (victim_id == (uint32_t) -1) {/* no nearby victims */
-			ai_trace(o->id, "CHECKING FOR NEARBY TARGETS, FOUND NONE");
-			return;
-		}
+	uint32_t victim_id = find_nearest_victim(o);
+	int i;
+	struct snis_entity *v;
 
-		i = lookup_by_id(victim_id);
-		if (i >= 0) {
-			double dist2;
+	if (victim_id == (uint32_t) -1) {/* no nearby victims */
+		ai_trace(o->id, "CHECKING FOR NEARBY TARGETS, FOUND NONE");
+		return;
+	}
 
-			v = &go[i];
-			dist2 = object_dist2(o, v);
-			if (dist2 < PATROL_ATTACK_DIST * PATROL_ATTACK_DIST) {
-				ai_trace(o->id, "CHECKING FOR NEARBY TARGETS, FOUND %u", victim_id);
-				push_attack_mode(o, victim_id, 0);
-			}
-		}
+	i = lookup_by_id(victim_id);
+	if (i < 0)
+		return;
+
+	double dist2;
+
+	v = &go[i];
+	dist2 = object_dist2(o, v);
+	if (dist2 < PATROL_ATTACK_DIST * PATROL_ATTACK_DIST) {
+		ai_trace(o->id, "CHECKING FOR NEARBY TARGETS, FOUND %u", victim_id);
+		push_attack_mode(o, victim_id, 0);
 	}
 }
 
