@@ -5275,35 +5275,33 @@ static int is_being_towed(struct snis_entity *o)
 	return -1;
 }
 
-/* Returns 0 if ship is not towing anything, the object ID of the thing it's towing otherwise */
-static uint32_t ship_is_towing(struct snis_entity *o)
+/* Returns -1 if ship is not towing anything, the index into go[] of the thing it's towing otherwise */
+static int ship_is_towing(struct snis_entity *o)
 {
 	int i, n;
 	if (o->type != OBJTYPE_NPCSHIP)
+		return 0;
+	if (o->tsd.ship.shiptype != SHIP_CLASS_MANTIS)
 		return 0;
 	n = o->tsd.ship.nai_entries - 1;
 	for (i = n; n >= 0; n--) {
 		if (o->tsd.ship.ai[i].ai_mode != AI_MODE_TOW_SHIP)
 			continue;
 		if (o->tsd.ship.ai[i].u.tow_ship.ship_connected)
-			return o->tsd.ship.ai[n].u.tow_ship.disabled_ship;
+			return lookup_by_id(o->tsd.ship.ai[n].u.tow_ship.disabled_ship);
 	}
-	return 0;
+	return -1;
 }
 
 static void update_towed_ship(struct snis_entity *o)
 {
 	int i;
 	struct snis_entity *disabled_ship;
-	uint32_t disabled_ship_id;
 	union vec3 towing_offset = { { 0.0, -20.0, 0.0 } };
 
 	if (o->tsd.ship.shiptype != SHIP_CLASS_MANTIS)
 		return;
-	disabled_ship_id = ship_is_towing(o);
-	if (!disabled_ship_id)
-		return;
-	i = lookup_by_id(disabled_ship_id);
+	i = ship_is_towing(o);
 	if (i < 0)
 		return;
 	disabled_ship = &go[i];
@@ -7580,9 +7578,11 @@ static void ship_collision_avoidance(void *context, void *entity)
 		return;
 
 	/* Tow ship should not try to avoid thing it's towing */
-	if ((obstacle->type == OBJTYPE_NPCSHIP || obstacle->type == OBJTYPE_BRIDGE) &&
-		ship_is_towing(o) == obstacle->id)
-		return;
+	if (obstacle->type == OBJTYPE_NPCSHIP || obstacle->type == OBJTYPE_BRIDGE) {
+		int i = ship_is_towing(o);
+		if (i >= 0 && go[i].id == obstacle->id)
+			return;
+	}
 
 	/* hmm, server has no idea about meshes... */
 	d = dist3dsqrd(o->x - obstacle->x, o->y - obstacle->y, o->z - obstacle->z);
