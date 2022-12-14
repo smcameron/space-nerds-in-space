@@ -333,6 +333,9 @@ show_snis_processes()
 	if [ "$p" = "" ]
 	then
 		echo "No SNIS processes are currently running."
+		# Since we know there are no processes, let's clean up any lock files
+		# that may be lying around (shouldn't be any, but just in case).
+		remove_snis_lock_dirs
 	else
 		echo "The following SNIS processes are running:"
 		echo "$p" | reformat_processes
