@@ -268,7 +268,7 @@ static pthread_t text_to_speech_thread;
 static pthread_mutex_t text_to_speech_mutex;
 static pthread_cond_t text_to_speech_cond = PTHREAD_COND_INITIALIZER;
 static int text_to_speech_thread_time_to_quit = 0;
-static float text_to_speech_volume = 0.33;
+static float text_to_speech_volume = 0.329412;
 
 static int fullscreen = 0;
 static int in_the_process_of_quitting = 0;
@@ -18162,7 +18162,7 @@ static void print_demon_console_color_msg(int color, const char *fmt, ...)
 
 static struct tweakable_var_descriptor client_tweak[] = {
 	{ "TTS_VOLUME", "TEXT TO SPEECH VOLUME", &text_to_speech_volume, 'f',
-		0.0, 1.0, 0.33, 0, 0, 0 },
+		0.0, 1.0, 0.329412, 0, 0, 0 },
 	{ "SUPPRESS_ROCKET_NOISE", "1 MEANS SUPPRESS, 0 MEANS DO NOT SUPPRESS", &suppress_rocket_noise, 'i',
 		0.0, 1.0, 0.0, 0, 1, 0 },
 	{ "ROCKET_NOISE_VOLUME", "VOLUME OF ROCKET NOISE, 0 to 1", &rocket_noise_volume, 'f',
@@ -18188,7 +18188,7 @@ static struct tweakable_var_descriptor client_tweak[] = {
 	{ "WEAPONS_AZIMUTH_ANGLE", "-180 TO 180 DEGREES",
 		&weapons_azimuth_angle, 'f', -180.0, 180.0, 0.0, 0, 0, 0 },
 	{ "USE_60_FPS", "0 OR 1 to USE 30 OR 60 FPS, RESPECTIVELY",
-		&use_60_fps, 'i', 0.0, 0.0, 0.0, 0, 1, 1 },
+		&use_60_fps, 'i', 0.0, 0.0, 0.0, 0, 1, 0 },
 	{ "LENS_FLARE", "0 OR 1 TO DISABLE OR ENABLE LENS FLARE EFFECT",
 		&lens_flare_enabled, 'i', 0.0, 0.0, 0.0, 0, 1, 1 },
 	{ "LENS_FLARE_INTENSITY", "0.0 TO 1.0 TO SET LENS FLARE INTENSITY",
@@ -18226,11 +18226,11 @@ static struct tweakable_var_descriptor client_tweak[] = {
 	{ "COMPRESSOR_LIMIT", "AUDIO DYNAMIC RANGE COMPRESSOR LIMIT",
 		&compressor_limit, 'f', 0.1, 0.99, 0.98, 0, 0, 0 },
 	{ "VOIP_COMPRESSOR_THRESHOLD", "AUDIO DYNAMIC RANGE VOIP_COMPRESSOR THRESHOLD",
-		&voip_compressor_threshold, 'f', 0.01, 0.99, 0.3, 0, 0, 0 },
+		&voip_compressor_threshold, 'f', 0.01, 0.99, 0.2, 0, 0, 0 },
 	{ "VOIP_COMPRESSOR_LIMIT", "AUDIO DYNAMIC RANGE VOIP_COMPRESSOR LIMIT",
-		&voip_compressor_limit, 'f', 0.1, 0.99, 0.7, 0, 0, 0 },
+		&voip_compressor_limit, 'f', 0.1, 0.99, 0.3, 0, 0, 0 },
 	{ "TONEMAPPING_GAIN", "COLOR TONEMAPPING GAIN",
-		&tonemapping_gain, 'f', 0.0, 1.19, 1.185, 0, 0, 0 },
+		&tonemapping_gain, 'f', 0.0, 1.19, 1.1, 0, 0, 0 },
 	{ "PLANETARY_LIGHTNING", "PLANETARY LIGHTNING ACTIVE 0 - 1",
 		&planetary_lightning, 'i', 0.0, 0.0, 0.0, 0, 1, 1 },
 	{ "DISPLAY_FRAME_STATS", "DISPLAY FRAME RATE EVEN IF AT ACCEPTABLE LEVELS",
