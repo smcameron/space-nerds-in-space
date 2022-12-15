@@ -39,6 +39,7 @@ struct tweakable_var_descriptor {
 	char type;		/* type values are 'f', 'i', or 'b' for float, integer, byte */
 	float minf, maxf, defaultf;	/* min, max and default for 'f' float variables */
 	int mini, maxi, defaulti;	/* min, max and default for 'i' integer variables */
+	char readonly;
 };
 
 /* Look up the tweakable variable descriptor by name
@@ -69,6 +70,7 @@ int find_tweakable_var_descriptor(struct tweakable_var_descriptor *desc, int cou
 #define TWEAK_OUT_OF_RANGE (-3)
 #define TWEAK_BAD_SYNTAX (-4)
 #define TWEAK_UNKNOWN_TYPE (-5)
+#define TWEAK_READONLY_VARIABLE (-6)
 int tweak_variable(struct tweakable_var_descriptor *tweak, int count, char *cmd,
 			char *msg, int msgsize);
 /* Prints out a list of tweakable variables within the tweak array that match

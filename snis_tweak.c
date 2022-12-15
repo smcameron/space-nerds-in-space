@@ -72,6 +72,11 @@ int tweak_variable(struct tweakable_var_descriptor *tweak, int count, char *cmd,
 		return TWEAK_UNKNOWN_VARIABLE;
 	}
 	v = &tweak[rc];
+	if (v->readonly) {
+		if (msg)
+			snprintf(msg, msgsize, "SET: VARIABLE %s IS READ ONLY", variable);
+		return TWEAK_READONLY_VARIABLE;
+	}
 	switch (v->type) {
 	case 'f':
 		if (strcmp(valuestr, "DEFAULT") == 0) {
@@ -176,16 +181,19 @@ void tweakable_vars_list(struct tweakable_var_descriptor *tweak, char *regexp_pa
 		}
 		switch (v->type) {
 		case 'f':
-			printfn("%s = %.2f (D=%.2f, MN=%.2f, MX=%.2f)", v->name,
-					*((float *) v->address), v->defaultf, v->minf, v->maxf);
+			printfn("%s = %.2f (D=%.2f, MN=%.2f, MX=%.2f)%s", v->name,
+					*((float *) v->address), v->defaultf, v->minf, v->maxf,
+						v->readonly ? " READ ONLY" : "");
 			break;
 		case 'b':
-			printfn("%s = %hhu (D=%d, MN=%d, MX=%d)", v->name,
-					*((uint8_t *) v->address), v->defaulti, v->mini, v->maxi);
+			printfn("%s = %hhu (D=%d, MN=%d, MX=%d)%s", v->name,
+					*((uint8_t *) v->address), v->defaulti, v->mini, v->maxi,
+						v->readonly ? " READ ONLY" : "");
 			break;
 		case 'i':
-			printfn("%s = %d (D=%d,MN=%d,MX=%d)", v->name,
-					*((int32_t *) v->address), v->defaulti, v->mini, v->maxi);
+			printfn("%s = %d (D=%d,MN=%d,MX=%d)%s", v->name,
+					*((int32_t *) v->address), v->defaulti, v->mini, v->maxi,
+						v->readonly ? " READ ONLY" : "");
 			break;
 		default:
 			printfn("%s = ? (unknown type '%c')", v->name, v->type);
@@ -224,19 +232,19 @@ int tweakable_var_describe(struct tweakable_var_descriptor *tweak, int count, ch
 	printfn("   TYPE: %c", toupper(v->type));
 	switch (v->type) {
 	case 'b':
-		printfn("   CURRENT VALUE: %hhu", *((uint8_t *) v->address));
+		printfn("   CURRENT VALUE: %hhu%s", *((uint8_t *) v->address), v->readonly ? " READ ONLY" : "");
 		printfn("   DEFAULT VALUE: %d", v->defaulti);
 		printfn("   MINIMUM VALUE: %d", v->mini);
 		printfn("   MAXIMUM VALUE: %d", v->maxi);
 		break;
 	case 'i':
-		printfn("   CURRENT VALUE: %d", *((int *) v->address));
+		printfn("   CURRENT VALUE: %d%s", *((int *) v->address), v->readonly ? " READ ONLY" : "");
 		printfn("   DEFAULT VALUE: %d", v->defaulti);
 		printfn("   MINIMUM VALUE: %d", v->mini);
 		printfn("   MAXIMUM VALUE: %d", v->maxi);
 		break;
 	case 'f':
-		printfn("   CURRENT VALUE: %f", *((float *) v->address));
+		printfn("   CURRENT VALUE: %f%s", *((float *) v->address), v->readonly ? " READ ONLY" : "");
 		printfn("   DEFAULT VALUE: %f", v->defaultf);
 		printfn("   MINIMUM VALUE: %f", v->minf);
 		printfn("   MAXIMUM VALUE: %f", v->maxf);
