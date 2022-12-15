@@ -198,6 +198,7 @@ static int quickstartmode = 0; /* allows auto connecting to first (only) lobby e
 static float turret_recoil_amount = 0.0f;
 static int global_rts_mode = 0;
 static int current_typeface = 2; /* tweakable */
+static int spurious_wakeups = 0; /* tweakable */
 
 static int mtwist_seed = COMMON_MTWIST_SEED;
 static float current_altitude = 1e20;
@@ -8397,7 +8398,8 @@ static void write_queued_packets_to_server(void)
 			goto badserver;
 		}
 	} else {
-		printf("Hmm, gameserver_writer awakened, but nothing to write.\n");
+		/* pthread_cond_wait can have spurious wakeups... don't log them, just count them. */
+		spurious_wakeups++;
 	}
 	if (have_packets_for_server)
 		have_packets_for_server = 0;
@@ -18233,6 +18235,8 @@ static struct tweakable_var_descriptor client_tweak[] = {
 		&planetary_lightning, 'i', 0.0, 0.0, 0.0, 0, 1, 1 },
 	{ "DISPLAY_FRAME_STATS", "DISPLAY FRAME RATE EVEN IF AT ACCEPTABLE LEVELS",
 		&display_frame_stats, 'i', 0.0, 0.0, 0.0, 0, 1, 0 },
+	{ "SPURIOUS_WAKEUPS", "COUNT OF SPURIOUS WAKEUPS IN SNIS_CLIENT",
+		&spurious_wakeups, 'i', 0.0, 0.0, 0.0, 0, INT_MAX, 0 },
 	{ NULL, NULL, NULL, '\0', 0.0, 0.0, 0.0, 0, 0, 0 },
 };
 
