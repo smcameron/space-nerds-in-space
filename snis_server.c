@@ -19272,7 +19272,7 @@ static struct tweakable_var_descriptor server_tweak[] = {
 		&sci_bw_yaw_increment, 'f', 0.5 * M_PI / 180.0, 30 * M_PI / 180.0,
 		SCI_BW_YAW_INCREMENT, 0, 0, 0, 0 },
 	{ "SCI_BW_YAW_INCREMENT_FINE", "FINE SCIENCE BEAM YAW INCREMENT IN RADIANS",
-		&sci_bw_yaw_increment, 'f', 0.001 * M_PI / 180.0, 10 * M_PI / 180.0,
+		&sci_bw_yaw_increment_fine, 'f', 0.001 * M_PI / 180.0, 10 * M_PI / 180.0,
 		SCI_BW_YAW_INCREMENT_FINE, 0, 0, 0, 0 },
 	{ "PLAYER_RESPAWN_TIME", "SECONDS PLAYER SPENDS DEAD BEFORE RESPAWNING",
 		&player_respawn_time, 'i', 0.0, 0.0, 0.0, 0, 255, RESPAWN_TIME_SECS, 0 },
