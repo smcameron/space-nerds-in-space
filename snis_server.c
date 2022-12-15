@@ -19148,7 +19148,7 @@ static struct tweakable_var_descriptor server_tweak[] = {
 		0.0, MISSILE_TARGET_DIST * 10.0, MISSILE_TARGET_DIST, 0, 0, 0, 0 },
 	{ "LASERBEAM_MISSILE_CHANCE",
 		"CHANCE OUT OF 1000 THAT LASERBEAM DESTROYS MISSILE",
-		&laserbeam_missile_chance, 'i', 0.0, 0.0, 0.0, 0, 1000, LASERBEAM_MISSILE_CHANCE, 0 },
+		&laserbeam_missile_chance, 'f', 0.0, 1000.0, LASERBEAM_MISSILE_CHANCE, 0, 0, 0, 0 },
 	{ "MAX_MISSILE_DELTAV",
 		"MAX ACCELERATION OF MISSILES",
 		&max_missile_deltav, 'f',
