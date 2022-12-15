@@ -290,3 +290,34 @@ void tweakable_vars_export_tweaked_vars(FILE *f, struct tweakable_var_descriptor
 		}
 	}
 }
+
+void tweakable_vars_print_tweaked_vars(struct tweakable_var_descriptor *tweak, int count,
+                                void (*printfn)(const char *fmt, ...))
+{
+	for (int i = 0; i < count; i++) {
+		if (tweak[i].readonly)
+			continue;
+		switch (tweak[i].type) {
+		case 'f': {
+			float *v = tweak[i].address;
+			if (fabsf(*v - tweak[i].defaultf) > 0.00001)
+				printfn("%s = %g", tweak[i].name, *v);
+			break;
+		}
+		case 'i': {
+			int *v = tweak[i].address;
+			if (*v != tweak[i].defaulti)
+				printfn("%s = %d", tweak[i].name, *v);
+			break;
+		}
+		case 'b': {
+			uint8_t *v = tweak[i].address;
+			if (*v != (uint8_t) tweak[i].defaulti)
+				printfn("%s = %hhu", tweak[i].name, *v);
+			break;
+		}
+		default:
+			break;
+		}
+	}
+}

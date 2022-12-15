@@ -18000,6 +18000,7 @@ static struct demon_cmd_def {
 	{ "FOLLOW", "FOLLOW AN OBJECT" },
 	{ "RELOAD_SHADERS", "RELOAD ALL GLSL SHADERS" },
 	{ "RESET_UI_POS", "RESET POSITIONS OF ALL UI ELEMENTS TO DEFAULTS" },
+	{ "TWEAKS", "SHOW WHICH VARIABLES HAVE BEEN TWEAKED" },
 	/* Note: Server builtin command help isn't here, it's in the server code,
 	 * elicited by a call to "send_lua_script_packet_to_server("HELP")"
 	 */
@@ -18562,6 +18563,13 @@ static int construct_demon_command(char *input, char *errmsg)
 			break;
 		case 24:
 			ui_element_list_reset_position_offsets(uiobjs);
+			break;
+		case 25: /* tweaks */
+			print_demon_console_color_msg(WHITE, "--- CLIENT SIDE TWEAKS ---");
+			tweakable_vars_print_tweaked_vars(client_tweak, ARRAYSIZE(client_tweak), 
+					print_demon_console_msg);
+			print_demon_console_color_msg(WHITE, "--- SERVER SIDE TWEAKS ---");
+			send_lua_script_packet_to_server("TWEAKS");
 			break;
 		default: /* unknown, maybe it's a builtin server command or a lua script */
 			uppercase(original);

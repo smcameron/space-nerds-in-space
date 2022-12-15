@@ -19588,6 +19588,11 @@ static void server_builtin_rotateroles(char *cmd)
 
 static void server_builtin_help(char *cmd);
 
+static void server_builtin_tweaks(__attribute((unused)) char *cmd)
+{
+	tweakable_vars_print_tweaked_vars(server_tweak, ARRAYSIZE(server_tweak), send_demon_console_msg);
+}
+
 static void server_builtin_find(char *cmd)
 {
 	char name[100];
@@ -19750,6 +19755,7 @@ static struct server_builtin_cmd {
 	{ "AIPOP", "POP TOP ITEM OFF AI STACK", server_builtin_ai_pop, },
 	{ "DUMP_OPCODE_STATS", "DUMP OPCODE STATS", server_builtin_dump_opcode_stats, },
 	{ "HELP", "LIST SERVER BUILTIN COMMANDS", server_builtin_help, },
+	{ "TWEAKS", "SHOW VARIABLES WHICH HAVE BEEN TWEAKED", server_builtin_tweaks, },
 };
 
 static int filter_directories(const struct dirent *d)
