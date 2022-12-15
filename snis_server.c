@@ -19175,7 +19175,7 @@ static struct tweakable_var_descriptor server_tweak[] = {
 		0.0, 0.0, 0.0, 0, 10000, ENEMY_LASER_FIRE_INTERVAL, 0 },
 	{ "TORPEDO_FIRE_INTERVAL",
 		"10THS OF SECS. MINIMUM PERIOD BETWEEN ENEMY TORPEDO FIRE",
-		&enemy_laser_fire_interval, 'i',
+		&enemy_torpedo_fire_interval, 'i',
 		0.0, 0.0, 0.0, 0, 10000, ENEMY_TORPEDO_FIRE_INTERVAL, 0 },
 	{ "MISSILE_PROXIMITY_DISTANCE",
 		"MINIMUM DISTANCE BETWEEN MISSILE AND TARGET TO DETONATE",
