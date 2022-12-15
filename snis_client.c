@@ -3531,7 +3531,7 @@ static void do_explosion(uint32_t related_id, double x, double y, double z,
 	case EXPLOSION_TYPE_REGULAR:
 	default:
 		if (nsparks > 40) { /* a big explosion, add one big freakin' stationary spark that fades quickly */
-			add_spark(x, y, z, 0, 0, 0, 15, color, &spark_material, 0.8, 0, 250.0);
+			add_spark(x, y, z, 0, 0, 0, 15, color, &spark_material, 0.8, 0, 50.0);
 			nsparks *= spark_multiplier;
 		}
 		for (i = 0; i < nsparks; i++) {
