@@ -24,6 +24,7 @@
 #include <string.h>
 #include <ctype.h>
 #include <regex.h>
+#include <math.h>
 
 #include "snis_tweak.h"
 #include "arraysize.h"
@@ -62,7 +63,7 @@ int tweak_variable(struct tweakable_var_descriptor *tweak, int count, char *cmd,
 	rc = sscanf(arg, "%[^= ]%*[ =]%[^= ]", variable, valuestr);
 	if (rc != 2) {
 		if (msg)
-			snprintf(msg, msgsize, "SET: INVALID SET COMMAND: %s", cmd);
+			snprintf(msg, msgsize, "SET: INVALID ARG TO SET COMMAND: %s", cmd);
 		return TWEAK_BAD_SYNTAX;
 	}
 	rc = find_tweakable_var_descriptor(tweak, count, variable);
@@ -256,3 +257,36 @@ int tweakable_var_describe(struct tweakable_var_descriptor *tweak, int count, ch
 	return 0;
 }
 
+/* Saves tweaked variables (variables which have a value that is different from the default)
+ * into a script which can later be run to restore the tweaked values.
+ * f should be a FILE * opened for writing.
+ */
+void tweakable_vars_export_tweaked_vars(FILE *f, struct tweakable_var_descriptor *tweak, int count)
+{
+	for (int i = 0; i < count; i++) {
+		if (tweak[i].readonly)
+			continue;
+		switch (tweak[i].type) {
+		case 'f': {
+			float *v = tweak[i].address;
+			if (fabsf(*v - tweak[i].defaultf) > 0.00001)
+				fprintf(f, "set %s=%g\n", tweak[i].name, *v);
+			break;
+		}
+		case 'i': {
+			int *v = tweak[i].address;
+			if (*v != tweak[i].defaulti)
+				fprintf(f, "set %s=%d\n", tweak[i].name, *v);
+			break;
+		}
+		case 'b': {
+			uint8_t *v = tweak[i].address;
+			if (*v != (uint8_t) tweak[i].defaulti)
+				fprintf(f, "set %s=%hhu\n", tweak[i].name, *v);
+			break;
+		}
+		default:
+			break;
+		}
+	}
+}

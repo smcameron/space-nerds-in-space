@@ -107,4 +107,11 @@ void tweakable_vars_list(struct tweakable_var_descriptor *tweak, char *regex_pat
  */
 int tweakable_var_describe(struct tweakable_var_descriptor *tweak, int count, char *cmd,
 				void (*printfn)(const char *, ...), int suppress_unknown_var);
+
+/* Saves tweaked variables (variables which have a value that is different from the default)
+ * into a script which can later be run to restore the tweaked values.
+ * f should be a FILE * opened for writing.
+ */
+void tweakable_vars_export_tweaked_vars(FILE *f, struct tweakable_var_descriptor *tweak, int count);
+
 #endif

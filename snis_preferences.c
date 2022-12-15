@@ -31,11 +31,13 @@
 #include "snis_packet.h"
 #include "string-utils.h"
 #include "snis_preferences.h"
+#include "snis_tweak.h"
 
 static char default_ship_name[SHIPNAME_LEN];
 
 #define DEFAULT_SHIP_NAME_TXT "default_ship_name.txt"
 #define ROLE_DEFAULTS_TXT "role_defaults.txt"
+#define CLIENT_TWEAKS_TXT "snis_client_tweaks.txt"
 
 char *snis_prefs_read_default_ship_name(struct xdg_base_context *cx)
 {
@@ -118,4 +120,40 @@ void snis_prefs_read_checkbox_defaults(struct xdg_base_context *cx, int *role_ma
 	*create_ship_v = value[10];
 	*join_ship_v = value[11];
 	return;
+}
+
+void snis_prefs_read_client_tweaks(struct xdg_base_context *cx,
+		int (*tweak_fn)(char *cmd, int suppress_unknown_var_error))
+{
+	char buffer[1024];
+	char *x;
+	size_t i;
+	FILE *f = xdg_base_fopen_for_read(cx, CLIENT_TWEAKS_TXT);
+
+	if (!f)
+		return;
+	do {
+		x = fgets(buffer, sizeof(buffer), f);
+		if (!x) {
+			if (errno == EINTR)
+				continue;
+			else
+				break;
+		}
+		/* remove the newline */
+		i = strlen(buffer);
+		buffer[i - 1] = '\0';
+		uppercase(buffer);
+		tweak_fn(buffer, 0);
+	} while (1);
+	fclose(f);
+}
+
+void snis_prefs_save_client_tweaks(struct xdg_base_context *cx, struct tweakable_var_descriptor *tweaks, int count)
+{
+	FILE *f = xdg_base_fopen_for_write(cx, CLIENT_TWEAKS_TXT);
+	if (!f)
+		return;
+	tweakable_vars_export_tweaked_vars(f, tweaks, count);
+	fclose(f);
 }

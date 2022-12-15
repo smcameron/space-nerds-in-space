@@ -18240,7 +18240,7 @@ static struct tweakable_var_descriptor client_tweak[] = {
 	{ NULL, NULL, NULL, '\0', 0.0, 0.0, 0.0, 0, 0, 0, 0 },
 };
 
-static int set_clientside_variable(char *cmd)
+static int set_clientside_variable(char *cmd, int suppress_unknown_var_error)
 {
 	int rc;
 	char msg[255];
@@ -18249,7 +18249,9 @@ static int set_clientside_variable(char *cmd)
 	rc = tweak_variable(client_tweak, ARRAYSIZE(client_tweak), cmd, msg, sizeof(msg));
 	switch (rc) {
 	case TWEAK_UNKNOWN_VARIABLE:
-		break; /* Suppress message, try it on the server */
+		if (suppress_unknown_var_error)
+			break; /* Suppress message, try it on the server */
+		/* FALLTHROUGH */
 	default:
 		print_demon_console_msg("%s", msg);
 		break;
@@ -18523,7 +18525,7 @@ static int construct_demon_command(char *input, char *errmsg)
 			break;
 		case 18: /* Set tweakable variable possibly client side, possibly server side. */
 			uppercase(original);
-			switch (set_clientside_variable(original)) {
+			switch (set_clientside_variable(original, 1)) {
 			case TWEAK_UNKNOWN_VARIABLE:
 				send_lua_script_packet_to_server(original); /* Try it on server */
 				break;
@@ -18900,6 +18902,11 @@ static void demon_save_ui_widget_positions(__attribute__((unused)) void *x)
 	(void) ui_element_list_save_position_offsets(uiobjs, xdg_base_ctx);
 }
 
+static void demon_save_client_tweaks(__attribute__((unused)) void *x)
+{
+	snis_prefs_save_client_tweaks(xdg_base_ctx, client_tweak, ARRAYSIZE(client_tweak));
+}
+
 static int demon_planet_water_specularity_checkbox(__attribute__((unused)) void *x)
 {
 	return graph_dev_planet_specularity;
@@ -19150,6 +19157,10 @@ static void init_demon_ui()
 						demon_save_ui_widget_positions, NULL);
 	pull_down_menu_add_tooltip(demon_ui.menu, "META", "SAVE UI WIDGET POSITIONS",
 						"SAVE CUSTOM POSITIONING OF UI WIDGETS TO A FILE");
+	pull_down_menu_add_row(demon_ui.menu, "META", "SAVE CLIENT TWEAKS", demon_save_client_tweaks, NULL);
+	pull_down_menu_add_tooltip(demon_ui.menu, "META", "SAVE CLIENT TWEAKS",
+						"SAVE CLIENT VARIABLE TWEAKS IN XDG BASE\n"
+						"DIRECTORY IN snis_client_tweaks.txt");
 	pull_down_menu_add_column(demon_ui.menu, "ADD");
 	pull_down_menu_add_row(demon_ui.menu, "ADD", "SHIP", demon_ship_button_pressed, (void *)
 					(intptr_t) demon_ui.shiptype);
@@ -23988,6 +23999,7 @@ int main(int argc, char *argv[])
 	init_comms_ui();
 	init_demon_ui();
 	init_net_setup_ui();
+	snis_prefs_read_client_tweaks(xdg_base_ctx, set_clientside_variable);
 	setup_joysticks();
 	setup_physical_io_socket();
 	setup_natural_language_fifo();
