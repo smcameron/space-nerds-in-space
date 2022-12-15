@@ -19590,7 +19590,9 @@ static void server_builtin_help(char *cmd);
 
 static void server_builtin_tweaks(__attribute((unused)) char *cmd)
 {
-	tweakable_vars_print_tweaked_vars(server_tweak, ARRAYSIZE(server_tweak), send_demon_console_msg);
+	int count = tweakable_vars_print_tweaked_vars(server_tweak, ARRAYSIZE(server_tweak), send_demon_console_msg);
+	if (count == 0)
+		send_demon_console_msg("  NONE");
 }
 
 static void server_builtin_find(char *cmd)

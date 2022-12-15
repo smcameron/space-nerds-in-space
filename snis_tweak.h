@@ -115,9 +115,9 @@ int tweakable_var_describe(struct tweakable_var_descriptor *tweak, int count, ch
 void tweakable_vars_export_tweaked_vars(FILE *f, struct tweakable_var_descriptor *tweak, int count);
 
 /* Prints tweaked variables (variables which have a value that is different from the default)
- * using the provided printfn function.
+ * using the provided printfn function.  The number of tweaks printed is returned.
  */
-void tweakable_vars_print_tweaked_vars(struct tweakable_var_descriptor *tweak, int count,
+int tweakable_vars_print_tweaked_vars(struct tweakable_var_descriptor *tweak, int count,
 				void (*printfn)(const char *fmt, ...));
 
 #endif

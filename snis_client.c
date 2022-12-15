@@ -18564,13 +18564,16 @@ static int construct_demon_command(char *input, char *errmsg)
 		case 24:
 			ui_element_list_reset_position_offsets(uiobjs);
 			break;
-		case 25: /* tweaks */
+		case 25: { /* tweaks */
 			print_demon_console_color_msg(WHITE, "--- CLIENT SIDE TWEAKS ---");
-			tweakable_vars_print_tweaked_vars(client_tweak, ARRAYSIZE(client_tweak), 
+			int count = tweakable_vars_print_tweaked_vars(client_tweak, ARRAYSIZE(client_tweak),
 					print_demon_console_msg);
+			if (count == 0)
+				print_demon_console_msg("  NONE");
 			print_demon_console_color_msg(WHITE, "--- SERVER SIDE TWEAKS ---");
 			send_lua_script_packet_to_server("TWEAKS");
 			break;
+		}
 		default: /* unknown, maybe it's a builtin server command or a lua script */
 			uppercase(original);
 			copy = expand_demon_selection_string(original);
