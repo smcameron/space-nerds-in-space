@@ -796,6 +796,10 @@ static uint32_t get_new_object_id(void)
 	static uint32_t answer;
 	static pthread_mutex_t object_id_lock = PTHREAD_MUTEX_INITIALIZER;
 
+	/* We consume object IDs at a rate of about 2000 / minute.
+	 * Consequently, current_id will overflow after approximately four
+	 * years of continuous operation.  I'm not too worried about it.
+	 */
 	pthread_mutex_lock(&object_id_lock);
 	answer = current_id++;
 	pthread_mutex_unlock(&object_id_lock);
