@@ -30474,6 +30474,7 @@ static void init_natural_language_system(void)
 #define OPT_ACKNOWLEDGMENTS 1000
 static struct option long_options[] = {
 	{ "acknowledgments", no_argument, NULL, OPT_ACKNOWLEDGMENTS },
+	{ "acknowledgements", no_argument, NULL, OPT_ACKNOWLEDGMENTS },
 	{ "enable-enscript", no_argument, NULL, 'e' },
 	{ "help", no_argument, NULL, 'h' },
 	{ "lobbyhost", required_argument, NULL, 'l' },

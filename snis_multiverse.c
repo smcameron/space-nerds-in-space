@@ -1289,6 +1289,7 @@ static void acknowledgments(void)
 #define OPT_ACKNOWLEDGMENTS 1000
 static struct option long_options[] = {
 	{ "acknowledgments", no_argument, NULL, OPT_ACKNOWLEDGMENTS },
+	{ "acknowledgements", no_argument, NULL, OPT_ACKNOWLEDGMENTS },
 	{ "autowrangle", no_argument, NULL, 'a' },
 	{ "exempt", required_argument, NULL, 'e'},
 	{ "lobby", required_argument, NULL, 'l'},
@@ -1305,7 +1306,9 @@ static void parse_options(int argc, char *argv[], char **lobby, char **nick, cha
 	*location = NULL;
 	*nick = NULL;
 
-	if ((argc < 4) && (argc != 2 || strcmp(argv[1], "--acknowledgments") != 0))
+	if ((argc < 4) &&
+		(argc != 2 || (strcmp(argv[1], "--acknowledgments") != 0 &&
+				strcmp(argv[1], "--acknowledgements") != 0)))
 		usage();
 	while (1) {
 		int option_index;

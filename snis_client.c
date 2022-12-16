@@ -23315,6 +23315,7 @@ static void acknowledgments(void)
 static struct option long_options[] = {
 	{ "allroles", no_argument, NULL, 'A' },
 	{ "acknowledgments", no_argument, NULL, OPT_ACKNOWLEDGMENTS },
+	{ "acknowledgements", no_argument, NULL, OPT_ACKNOWLEDGMENTS },
 	{ "soundserver", no_argument, NULL, 'a' },
 	{ "comms", no_argument, NULL, 'C' },
 	{ "engineering", no_argument, NULL, 'E' },
