@@ -1,0 +1,27 @@
+This document is a brief summary of typical things you need to change to
+add a new opcode into the SNIS protocol.
+
+Typically, the opcode is sent from the snis_client to snis_server in response
+to some user action, and then snis_server updates some internal data structure
+of the player ship (for example) and this data gets mirrored back to the clients
+in some way (maybe using the same opcode).
+
+Typically the following things need to be changed:
+
+1.  snis_packet.h: Choose a new opcode value.
+
+2.  Modify snis client/snis server to send/receive the new opcode
+
+3.  Modify snis_opcode_def.c to check the format of the opcode
+
+4.  Modify snis_packet.h if there is a data structure that needs to be updated/added
+
+5.  change SNIS_PROTOCOL_VERSION in snis.h
+
+6.  update snis_entity_key_value_specification.h
+	if any data is to be persisted between game runs or across warp gates.
+
+7.  update snis_bridge_update_packet.c and UPDATE_BRIDGE_PACKET_SIZE in snis_bridge_update_packet.h
+
+8.  update doc/snis-protocol.html
+
