@@ -318,9 +318,10 @@ struct update_ship_packet {
 	uint8_t rts_mode;
 	uint8_t exterior_lights;
 	uint8_t alarms_silenced;
+	uint8_t missile_lock_detected;
 #endif
 	uint8_t flag_bits;
-	uint8_t missile_lock_detected;
+	uint8_t comms_crypto_mode;
 	uint8_t rts_active_button;
 	uint32_t wallet;
 	uint32_t viewpoint_object;
