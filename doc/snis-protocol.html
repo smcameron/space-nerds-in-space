@@ -809,6 +809,10 @@ It has many subcodes.
 <tr><td>ADJUST SENSORS COOLANT</td><td>22</td></tr>
 <tr><td>ADJUST PHASERBANKS COOLANT</td><td>23</td></tr>
 <tr><td>ADJUST COMMS COOLANT</td><td>24</td></tr>
+<tr><td>ADJUST EXTERIOR LIGHTS</td><td>25</td></tr>
+<tr><td>ADJUST SILENCE_ALARMS</td><td>26</td></tr>
+<tr><td>ADJUST FIRE MISSILE</td><td>27</td></tr>
+<tr><td>ADJUST DEPLOY FLARE</td><td>28</td></tr>
 </table>
 
 <h4>139/0 Request Laser Wavelength</h4> (Client to Server)
@@ -1069,6 +1073,46 @@ have the same slider setting.
 <tr><td>1</td><td>b</td><td>24</td></tr>
 <tr><td>2</td><td>w</td><td>Object ID</td></tr>
 <tr><td>6</td><td>b</td><td>coolant value</td></tr>
+</table>
+
+<h4>139/25 Exterior Lights</h4> (Client to Server)
+
+<p align=center><table border=1, width=60%>
+<tr><td>Offset</td><td>Data Type</td><td>Value</td><td>Scale</td></tr>
+<tr><td>0</td><td>b</td><td>139</td></tr>
+<tr><td>1</td><td>b</td><td>25</td></tr>
+<tr><td>2</td><td>w</td><td>Object ID</td></tr>
+<tr><td>6</td><td>b</td><td>lights value</td></tr>
+</table>
+
+<h4>139/26 Silence Alarms</h4> (Client to Server)
+
+<p align=center><table border=1, width=60%>
+<tr><td>Offset</td><td>Data Type</td><td>Value</td><td>Scale</td></tr>
+<tr><td>0</td><td>b</td><td>139</td></tr>
+<tr><td>1</td><td>b</td><td>26</td></tr>
+<tr><td>2</td><td>w</td><td>Object ID</td></tr>
+<tr><td>6</td><td>b</td><td>alarms value</td></tr>
+</table>
+
+<h4>139/27 Fire Missile</h4> (Client to Server)
+
+<p align=center><table border=1, width=60%>
+<tr><td>Offset</td><td>Data Type</td><td>Value</td><td>Scale</td></tr>
+<tr><td>0</td><td>b</td><td>139</td></tr>
+<tr><td>1</td><td>b</td><td>27</td></tr>
+<tr><td>2</td><td>w</td><td>Object ID</td></tr>
+<tr><td>6</td><td>b</td><td>1</td></tr>
+</table>
+
+<h4>139/28 Deploy Flare</h4> (Client to Server)
+
+<p align=center><table border=1, width=60%>
+<tr><td>Offset</td><td>Data Type</td><td>Value</td><td>Scale</td></tr>
+<tr><td>0</td><td>b</td><td>139</td></tr>
+<tr><td>1</td><td>b</td><td>28</td></tr>
+<tr><td>2</td><td>w</td><td>Object ID</td></tr>
+<tr><td>6</td><td>b</td><td>0</td></tr>
 </table>
 
 <h4>141 Update Respawn Time</h4> (Server to Client)
