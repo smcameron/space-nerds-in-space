@@ -41,7 +41,7 @@
 #include "shape_collision.h"
 
 #define DEFAULT_SOLAR_SYSTEM "default"
-#define SNIS_PROTOCOL_VERSION "SNIS056"
+#define SNIS_PROTOCOL_VERSION "SNIS057"
 #define COMMON_MTWIST_SEED 97872
 /* dimensions of the "known" universe */
 #define XKNOWN_DIM 600000.0
@@ -621,6 +621,7 @@ struct ship_data {
 	uint8_t rts_active_button; /* which comms RTS button is currently active. 255 means none */
 	uint8_t alarms_silenced;	/* on engineering screen. 1 means silenced, 0 means not silenced */
 	uint8_t missile_lock_detected;	/* Used for message on comms screen about incoming missiles. */
+	uint8_t align_sciball_to_ship;	/* Toggle for aligning sciball to ship */
 	uint32_t viewpoint_object;	/* Used for mining bot remote camera. */
 	union quat current_hg_ant_orientation; /* current high gain antenna orientation */
 	union vec3 desired_hg_ant_aim; /* direction we would like high gain antenna to aim */

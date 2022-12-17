@@ -64,7 +64,7 @@ struct packed_buffer *build_bridge_update_packet(struct snis_entity *o,
 			o->x, (int32_t) UNIVERSE_DIM,
 			o->y, (int32_t) UNIVERSE_DIM,
 			o->z, (int32_t) UNIVERSE_DIM);
-	packed_buffer_append(pb, "RRRwRRbbbwwbbbbbbbbbbbbbwQQQbbwbbbb",
+	packed_buffer_append(pb, "RRRwRRbbbwwbbbbbbbbbbbbbwQQQbbwbbbbb",
 			o->tsd.ship.yaw_velocity,
 			o->tsd.ship.pitch_velocity,
 			o->tsd.ship.roll_velocity,
@@ -90,7 +90,8 @@ struct packed_buffer *build_bridge_update_packet(struct snis_entity *o,
 			o->tsd.ship.warp_core_status,
 			o->tsd.ship.exterior_lights,
 			o->tsd.ship.alarms_silenced,
-			o->tsd.ship.missile_lock_detected);
+			o->tsd.ship.missile_lock_detected,
+			o->tsd.ship.align_sciball_to_ship);
 	packed_buffer_append(pb, "bbbbbr",
 		o->sdata.shield_strength, o->sdata.shield_wavelength, o->sdata.shield_width, o->sdata.shield_depth,
 		o->sdata.faction, o->sdata.name, (unsigned short) sizeof(o->sdata.name));
@@ -117,7 +118,7 @@ void unpack_bridge_update_packet(struct snis_entity *o, struct persistent_bridge
 	unsigned char name[sizeof(o->sdata.name)];
 	int32_t iwallet;
 	uint8_t warp_core_status, exterior_lights, alarms_silenced, missile_lock_detected;
-	uint8_t comms_crypto_mode;
+	uint8_t align_sciball_to_ship, comms_crypto_mode;
 	struct power_model_data power_data, coolant_data;
 
 	packed_buffer_extract(pb, "hSSS", &alive,
@@ -130,7 +131,7 @@ void unpack_bridge_update_packet(struct snis_entity *o, struct persistent_bridge
 				&torpedoes,
 				&dsheading,
 				&dbeamwidth);
-	packed_buffer_extract(pb, "bbbwwbbbbbbbbbbbbbwQQQbbwbbbb",
+	packed_buffer_extract(pb, "bbbwwbbbbbbbbbbbbbwQQQbbwbbbbb",
 			&tloading, &throttle, &rpm, &fuel, &oxygen, &temp,
 			&scizoom, &weapzoom, &navzoom, &mainzoom,
 			&warpdrive,
@@ -138,7 +139,7 @@ void unpack_bridge_update_packet(struct snis_entity *o, struct persistent_bridge
 			&reverse, &trident, &comms_crypto_mode, &victim_id, &orientation.vec[0],
 			&sciball_orientation.vec[0], &weap_orientation.vec[0], &in_secure_area,
 			&docking_magnets, (uint32_t *) &iwallet, &warp_core_status, &exterior_lights,
-			&alarms_silenced, &missile_lock_detected);
+			&alarms_silenced, &missile_lock_detected, &align_sciball_to_ship);
 	packed_buffer_extract(pb, "bbbbbr", &shield_strength, &shield_wavelength, &shield_width, &shield_depth,
 			&faction, name, (uint16_t) sizeof(name));
 	packed_buffer_extract(pb, "r", &power_data, (uint16_t) sizeof(struct power_model_data));
@@ -220,6 +221,7 @@ void unpack_bridge_update_packet(struct snis_entity *o, struct persistent_bridge
 	o->tsd.ship.exterior_lights = exterior_lights;
 	o->tsd.ship.alarms_silenced = alarms_silenced;
 	o->tsd.ship.missile_lock_detected = missile_lock_detected;
+	o->tsd.ship.align_sciball_to_ship = align_sciball_to_ship;
 	o->tsd.ship.comms_crypto_mode = comms_crypto_mode;
 }
 

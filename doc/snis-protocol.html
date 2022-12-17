@@ -352,7 +352,7 @@ An authoritative list of opcodes may be found in snis_packet.h
 <tr><td>OPCODE_UPDATE_BUILD_INFO</td><td>216</td></tr>
 <tr><td>OPCODE_DETONATE</td><td>217</td></tr>
 <tr><td>OPCODE_ENSCRIPT</td><td>218</td></tr>
-<tr><td>OPCODE_SCI_ALIGN_TO_SHIP</td><td>219</td></tr>
+<tr><td>not used</td><td>219</td></tr>
 <tr><td>OPCODE_NAV_TRIDENT_MODE</td><td>220</td></tr>
 <tr><td>OPCODE_ATMOSPHERIC_FRICTION</td><td>221</td></tr>
 <tr><td>OPCODE_UPDATE_DOCKING_PORT</td><td>222</td></tr>
@@ -813,6 +813,7 @@ It has many subcodes.
 <tr><td>ADJUST SILENCE_ALARMS</td><td>26</td></tr>
 <tr><td>ADJUST FIRE MISSILE</td><td>27</td></tr>
 <tr><td>ADJUST DEPLOY FLARE</td><td>28</td></tr>
+<tr><td>ADJUST ALIGN SCIBALL TO SHIP</td><td>29</td></tr>
 </table>
 
 <h4>139/0 Request Laser Wavelength</h4> (Client to Server)
@@ -1113,6 +1114,16 @@ have the same slider setting.
 <tr><td>1</td><td>b</td><td>28</td></tr>
 <tr><td>2</td><td>w</td><td>Object ID</td></tr>
 <tr><td>6</td><td>b</td><td>0</td></tr>
+</table>
+
+<h4>139/29 Align Sciball to Ship</h4> (Client to Server)
+
+<p align=center><table border=1, width=60%>
+<tr><td>Offset</td><td>Data Type</td><td>Value</td><td>Scale</td></tr>
+<tr><td>0</td><td>b</td><td>139</td></tr>
+<tr><td>1</td><td>b</td><td>29</td></tr>
+<tr><td>2</td><td>w</td><td>Object ID</td></tr>
+<tr><td>6</td><td>b</td><td>0 or 1</td></tr>
 </table>
 
 <h4>141 Update Respawn Time</h4> (Server to Client)

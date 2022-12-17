@@ -70,7 +70,7 @@ int snis_opcode_def_init(void)
 {
 	int rc = 0;
 
-	rc |= init_opcode_def(OPCODE_UPDATE_SHIP, "bwwhSSSRRRwRRbbbwwbbbbbbbbbbbbwQQQQSSSbB8bbww");
+	rc |= init_opcode_def(OPCODE_UPDATE_SHIP, "bwwhSSSRRRwRRbbbwwbbbbbbbbbbbbwQQQQSSSbB8bbbww");
 	rc |= init_opcode_def(OPCODE_UPDATE_STARBASE, "bwwSSSQbbbbwbb");
 	rc |= init_opcode_def(OPCODE_UPDATE_LASER, "bwwwbSSSQ");
 	rc |= init_opcode_def(OPCODE_UPDATE_TORPEDO, "bwwwSSS");
@@ -175,6 +175,8 @@ int snis_opcode_def_init(void)
 			OPCODE_ADJUST_CONTROL_FIRE_MISSILE, "bbwb");
 	rc |= init_opcode_subcode_def(OPCODE_ADJUST_CONTROL_INPUT,
 			OPCODE_ADJUST_CONTROL_DEPLOY_FLARE, "bbwb");
+	rc |= init_opcode_subcode_def(OPCODE_ADJUST_CONTROL_INPUT,
+			OPCODE_ADJUST_CONTROL_ALIGN_SCIBALL_TO_SHIP, "bbwb");
 	/* rc |= init_opcode_def(OPCODE_UPDATE_PLANET_DESCRIPTION, "bwhr"); */
 	rc |= init_opcode_def(OPCODE_UPDATE_RESPAWN_TIME, "bb");
 	rc |= init_opcode_def(OPCODE_UPDATE_NETSTATS, "bqqwwwwwwwwwww");
@@ -251,7 +253,6 @@ int snis_opcode_def_init(void)
 	rc |= init_opcode_def(OPCODE_UPDATE_BUILD_INFO, "n/a");
 	rc |= init_opcode_def(OPCODE_DETONATE, "bwSSSwU");
 	rc |= init_opcode_def(OPCODE_ENSCRIPT, "n/a");
-	rc |= init_opcode_def(OPCODE_SCI_ALIGN_TO_SHIP, "b");
 	rc |= init_opcode_def(OPCODE_NAV_TRIDENT_MODE, "bwb");
 	rc |= init_opcode_def(OPCODE_ATMOSPHERIC_FRICTION, "b");
 	rc |= init_opcode_def(OPCODE_DOCKING_MAGNETS, "bwb");

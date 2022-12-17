@@ -5268,7 +5268,8 @@ static int process_update_ship_packet(uint8_t opcode)
 		missile_count, phaser_charge, phaser_wavelength, shiptype,
 		reverse, trident, in_secure_area, docking_magnets, emf_detector,
 		nav_mode, warp_core_status, rts_mode, exterior_lights, alarms_silenced,
-		missile_lock_detected, rts_active_button, comms_crypto_mode;
+		missile_lock_detected, rts_active_button, comms_crypto_mode,
+		align_sciball_to_ship;
 	union quat orientation, sciball_orientation, weap_orientation, hg_ant_orientation;
 	union euler ypr;
 	struct entity *e;
@@ -5290,7 +5291,7 @@ static int process_update_ship_packet(uint8_t opcode)
 				&torpedoes,
 				&dsheading,
 				&dbeamwidth);
-	packed_buffer_extract(&pb, "bbbwwbbbbbbbbbbbbwQQQQSSSbB8bbww",
+	packed_buffer_extract(&pb, "bbbwwbbbbbbbbbbbbwQQQQSSSbB8bbbww",
 			&tloading, &throttle, &rpm, &fuel, &oxygen, &temp,
 			&scizoom, &weapzoom, &navzoom, &mainzoom,
 			&warpdrive,
@@ -5304,6 +5305,7 @@ static int process_update_ship_packet(uint8_t opcode)
 			&in_secure_area,
 			&docking_magnets, &nav_mode, &warp_core_status, &rts_mode,
 			&exterior_lights, &alarms_silenced, &missile_lock_detected,
+			&align_sciball_to_ship,
 			&comms_crypto_mode, &rts_active_button, &wallet,
 			&viewpoint_object);
 	tloaded = (tloading >> 4) & 0x0f;
@@ -5353,6 +5355,8 @@ static int process_update_ship_packet(uint8_t opcode)
 	o->tsd.ship.mainzoom = mainzoom;
 	o->tsd.ship.warpdrive = warpdrive;
 	o->tsd.ship.missile_count = missile_count;
+	/* mirrored by sci_ui.align_sciball_to_ship in show_3d_science() */
+	o->tsd.ship.align_sciball_to_ship = align_sciball_to_ship;
 	o->tsd.ship.phaser_charge = phaser_charge;
 	o->tsd.ship.phaser_wavelength = phaser_wavelength;
 	o->tsd.ship.damcon = NULL;
@@ -6313,6 +6317,7 @@ static struct science_ui {
 	int nwaypoints;
 	struct pull_down_menu *menu;
 	int low_tractor_power_timer;
+	int align_sciball_to_ship; /* mirrors player's o->tsd.ship.align_sciball_to_ship */
 } sci_ui;
 
 static void science_activate_waypoints_widgets(void)
@@ -15069,7 +15074,15 @@ static void sci_waypoints_pressed(__attribute__((unused)) void *x)
 
 static void sci_align_to_ship_pressed(__attribute__((unused)) void *x)
 {
-	queue_to_server(snis_opcode_pkt("b", OPCODE_SCI_ALIGN_TO_SHIP));
+	struct snis_entity *o;
+
+	o = find_my_ship();
+	if (!o)
+		return;
+	if (o->tsd.ship.align_sciball_to_ship == 0)
+		transmit_adjust_control_input((uint8_t) 1, OPCODE_ADJUST_CONTROL_ALIGN_SCIBALL_TO_SHIP);
+	else
+		transmit_adjust_control_input((uint8_t) 0, OPCODE_ADJUST_CONTROL_ALIGN_SCIBALL_TO_SHIP);
 }
 
 static void sci_threed_pressed(__attribute__((unused)) void *x)
@@ -15208,13 +15221,14 @@ static void init_science_ui(void)
 
 	const int atsx = 10 * SCREEN_WIDTH / 800;
 	const int atsy = trby;
-	const int atsw = 75 * SCREEN_WIDTH / 800;
+	const int atsw = 95 * SCREEN_WIDTH / 800;
 	const int atsh = trbh;
 
 	const int cbbx = SCREEN_WIDTH - txx(100);
 	const int cbby = txy(30);
 
 	sci_ui.low_tractor_power_timer = 0;
+	sci_ui.align_sciball_to_ship = 0;
 
 	sci_ui.scizoom = snis_slider_init(szx, szy, szw, szh, UI_COLOR(sci_slider), "RANGE", "0", "100",
 				0.0, 100.0, sample_scizoom, do_scizoom);
@@ -15246,6 +15260,9 @@ static void init_science_ui(void)
 	snis_button_set_sound(sci_ui.details_button, UISND18);
 	sci_ui.align_to_ship_button = snis_button_init(atsx, atsy, atsw, atsh, "ALIGN TO SHIP",
 			UI_COLOR(sci_button), NANO_FONT, sci_align_to_ship_pressed, (void *) 0);
+	snis_button_set_checkbox_function(sci_ui.align_to_ship_button,
+					snis_button_generic_checkbox_function,
+					&sci_ui.align_sciball_to_ship);
 	snis_button_set_sound(sci_ui.align_to_ship_button, UISND19);
 
 	sci_ui.menu = create_pull_down_menu(NANO_FONT, SCREEN_WIDTH);
@@ -17067,6 +17084,11 @@ static void show_3d_science(struct snis_entity *o, int current_zoom)
 {
 	int cx, cy, r;
 	double zoom;
+
+	/* mirror align_sciball_to_ship to sci_ui */
+	pthread_mutex_lock(&universe_mutex);
+	sci_ui.align_sciball_to_ship = o->tsd.ship.align_sciball_to_ship;
+	pthread_mutex_unlock(&universe_mutex);
 
 	cx = SCIENCE_SCOPE_CX;
 	cy = SCIENCE_SCOPE_CY;

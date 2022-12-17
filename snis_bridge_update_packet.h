@@ -30,7 +30,7 @@
 #include "snis_marshal.h"
 #include "snis_multiverse.h"
 
-#define UPDATE_BRIDGE_PACKET_SIZE 342
+#define UPDATE_BRIDGE_PACKET_SIZE 343
 
 /* struct persistent_bridge_data contains per bridge data that snis_multiverse needs to
  * save/restore but which is not present in struct snis_entity.

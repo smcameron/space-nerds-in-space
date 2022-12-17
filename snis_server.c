@@ -9519,7 +9519,10 @@ skip_standard_orbit:
 
 static void update_player_sciball_orientation(struct snis_entity *o)
 {
-	quat_apply_relative_yaw_pitch_roll(&o->tsd.ship.sciball_orientation,
+	if (o->tsd.ship.align_sciball_to_ship)
+		o->tsd.ship.sciball_orientation = o->orientation;
+	else
+		quat_apply_relative_yaw_pitch_roll(&o->tsd.ship.sciball_orientation,
 			o->tsd.ship.sciball_yawvel,
 			o->tsd.ship.sciball_pitchvel,
 			o->tsd.ship.sciball_rollvel);
@@ -15562,19 +15565,6 @@ static int process_sci_details(struct game_client *c)
 	send_packet_to_requestor_plus_role_on_a_bridge(c, 
 			snis_opcode_pkt("bb", OPCODE_SCI_DETAILS,
 			new_details), ROLE_MAIN);
-	return 0;
-}
-
-static int process_sci_align_to_ship(struct game_client *c)
-{
-	if (c->ship_index == (uint32_t) -1)
-		return 0;
-	/* Snap sciball orientation to ship orientation */
-	struct snis_entity *o = &go[c->ship_index];
-	pthread_mutex_lock(&universe_mutex);
-	o->tsd.ship.sciball_orientation = o->orientation;
-	o->timestamp = universe_timestamp;
-	pthread_mutex_unlock(&universe_mutex);
 	return 0;
 }
 
@@ -22944,6 +22934,9 @@ static int process_adjust_control_input(struct game_client *c)
 		return process_adjust_control_fire_missile(c, id);
 	case OPCODE_ADJUST_CONTROL_DEPLOY_FLARE:
 		return process_adjust_control_deploy_flare(c, id);
+	case OPCODE_ADJUST_CONTROL_ALIGN_SCIBALL_TO_SHIP:
+		return process_adjust_control_bytevalue(c, id,
+			offsetof(struct snis_entity, tsd.ship.align_sciball_to_ship), v, no_limit);
 	default:
 		return -1;
 	}
@@ -24013,11 +24006,6 @@ static void process_instructions_from_client(struct game_client *c)
 			break;
 		case OPCODE_SCI_DETAILS:
 			rc = process_sci_details(c);
-			if (rc)
-				goto protocol_error;
-			break;
-		case OPCODE_SCI_ALIGN_TO_SHIP:
-			rc = process_sci_align_to_ship(c);
 			if (rc)
 				goto protocol_error;
 			break;
@@ -25254,7 +25242,7 @@ static void send_update_ship_packet(struct game_client *c,
 	packed_buffer_append(pb, "bwwhSSS", opcode, o->id, o->timestamp, o->alive,
 			o->x, (int32_t) UNIVERSE_DIM, o->y, (int32_t) UNIVERSE_DIM,
 			o->z, (int32_t) UNIVERSE_DIM);
-	packed_buffer_append(pb, "RRRwRRbbbwwbbbbbbbbbbbbwQQQQSSSbB8bbww",
+	packed_buffer_append(pb, "RRRwRRbbbwwbbbbbbbbbbbbwQQQQSSSbB8bbbww",
 			o->tsd.ship.yaw_velocity,
 			o->tsd.ship.pitch_velocity,
 			o->tsd.ship.roll_velocity,
@@ -25286,6 +25274,7 @@ static void send_update_ship_packet(struct game_client *c,
 			o->tsd.ship.exterior_lights,
 			o->tsd.ship.alarms_silenced,
 			o->tsd.ship.missile_lock_detected,
+			o->tsd.ship.align_sciball_to_ship,
 			o->tsd.ship.comms_crypto_mode,
 			o->tsd.ship.rts_active_button,
 			wallet, o->tsd.ship.viewpoint_object);

@@ -112,6 +112,7 @@
 #define   OPCODE_ADJUST_CONTROL_SILENCE_ALARMS 26
 #define   OPCODE_ADJUST_CONTROL_FIRE_MISSILE 27
 #define   OPCODE_ADJUST_CONTROL_DEPLOY_FLARE 28
+#define   OPCODE_ADJUST_CONTROL_ALIGN_SCIBALL_TO_SHIP 29
 
 #define OPCODE_UPDATE_PLANET_DESCRIPTION 140
 #define OPCODE_UPDATE_RESPAWN_TIME 141
@@ -203,7 +204,7 @@
 #define OPCODE_UPDATE_BUILD_INFO		216
 #define OPCODE_DETONATE				217
 #define OPCODE_ENSCRIPT				218
-#define OPCODE_SCI_ALIGN_TO_SHIP		219
+/* UNUSED OPCODE 219 */
 #define OPCODE_NAV_TRIDENT_MODE			220
 #define OPCODE_ATMOSPHERIC_FRICTION		221
 #define OPCODE_UPDATE_CARGO_CONTAINER_POSITION	222
@@ -321,6 +322,7 @@ struct update_ship_packet {
 	uint8_t missile_lock_detected;
 #endif
 	uint8_t flag_bits;
+	uint8_t align_sciball_to_ship;
 	uint8_t comms_crypto_mode;
 	uint8_t rts_active_button;
 	uint32_t wallet;
