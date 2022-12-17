@@ -153,3 +153,43 @@ be scalable (at some cost that might be prohibitive).
 Need to put a speed limit on cargo containers. THIS IDEA HAS BEEN IMPLEMENTED
 ------------------------
 
+*** AWAY TEAM(S) ***
+
+1. COMMS could summon a team led by an NPC, "Cmdr. Winston," or whatever
+   to the transporter room.
+
+2. Science could select an object, or a planet + longitude + latitude
+   and beam the away team down to the planet.
+
+3. Science's chosen longitude and latitude could show up on the planet
+   surface in navigation.
+
+4. Beam up/down only works if the ship is near to the lat+long.
+
+5. Comms can communicate with the away team (similar to mining bot, I guess.)
+
+6. Away team has "transponders" that have string "IDs" that you can "lock on to"
+   to beam them up/down.
+
+7. Away team can put these transponders onto cargo containers
+   that can then be beamed up/down.
+
+8. Lua scripts can act as the away team, sending/receiving comms to do things
+   (similar to the robot in STURNVULF mission.)
+
+9. Maybe away team could be beamed to other ships or to starbases to do stuff.
+
+10. Science could have sliders to select longitude/latitude and the targeted
+    area can be highlighted on globe on science and on navigation.  maybe
+    extra scanning info (e.g. transponder tags?  Minerals?  lifeforms?
+    macguffins?)
+
+11. Away teams could be killed or lost, or left behind, or bring passengers
+    aboard.
+
+12. NPC "away teams" could contact the ship (via comms) from the planet surface
+    requesting to be beamed aboard, or whatever.
+
+13. Need to write some Lua mission using these ideas to see what could be done.
+
+
