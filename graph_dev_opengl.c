@@ -4544,6 +4544,6 @@ void graph_dev_grab_framebuffer(unsigned char **buffer, int *width, int *height)
 
 void graph_dev_set_tonemapping_gain(float tmg)
 {
-	if (tonemapping_gain >= 0.0 && tonemapping_gain <= 1.19)
+	if (tmg >= MIN_TONEMAPPING_GAIN && tmg <= MAX_TONEMAPPING_GAIN)
 		tonemapping_gain = tmg;
 }
