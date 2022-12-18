@@ -37,9 +37,9 @@ extern int nuser_colors;
 #define COLOR_DARKER(c,p) (c-(p*NGRADIENT_SHADES/100))
 #define COLOR_LIGHTER(c, p) (c+(p*NGRADIENT_SHADES/100))
 
-#define MAX_TONEMAPPING_GAIN (2.2)
-#define MIN_TONEMAPPING_GAIN (0.0)
-#define DEFAULT_TONEMAPPING_GAIN (1.1)
+#define MAX_TONEMAPPING_GAIN (2.2f)
+#define MIN_TONEMAPPING_GAIN (0.0f)
+#define DEFAULT_TONEMAPPING_GAIN (1.1f)
 
 struct my_vect_obj;
 
