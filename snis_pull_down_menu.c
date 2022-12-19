@@ -293,7 +293,7 @@ static void draw_menu_col(struct pull_down_menu *m, int col, float y, int curren
 		}
 		y = y + font_lineheight[font];
 		sng_abs_xy_draw_string(r->name, font, x + 4 + cbw, y - 2);
-		if (i == current_row && col == m->current_col)
+		if ((i == current_row || i == 0) && col == m->current_col)
 			sng_abs_xy_draw_string(r->name, font, x + 5 + cbw, y - 1);
 		y = y + 6;
 		/* Reset tooltip delays for non-current items */
