@@ -199,6 +199,7 @@ static float turret_recoil_amount = 0.0f;
 static int global_rts_mode = 0;
 static int current_typeface = 2; /* tweakable */
 static int spurious_wakeups = 0; /* tweakable */
+static int suppress_warp_hash = 0; /* tweakable */
 
 static int mtwist_seed = COMMON_MTWIST_SEED;
 static float current_altitude = 1e20;
@@ -18259,6 +18260,8 @@ static struct tweakable_var_descriptor client_tweak[] = {
 		&display_frame_stats, 'i', 0.0, 0.0, 0.0, 0, 1, 0, 0 },
 	{ "SPURIOUS_WAKEUPS", "COUNT OF SPURIOUS WAKEUPS IN SNIS_CLIENT",
 		&spurious_wakeups, 'i', 0.0, 0.0, 0.0, 0, INT_MAX, 0, 1 },
+	{ "SUPPRESS_WARP_HASH", "SUPPRESS THE 'STATIC' ON STATIONS DURING WARP",
+		&suppress_warp_hash, 'i', 0.0, 0.0, 0.0, 0, 1, 0, 0 },
 	{ NULL, NULL, NULL, '\0', 0.0, 0.0, 0.0, 0, 0, 0, 0 },
 };
 
@@ -21078,8 +21081,10 @@ static int main_da_expose(SDL_Window *window)
 		warp_limbo_countdown--;
 		if (in_the_process_of_quitting)
 			draw_quit_screen();
-		show_warp_limbo_screen();
-		goto end_of_drawing;
+		if (!suppress_warp_hash) {
+			show_warp_limbo_screen();
+			goto end_of_drawing;
+		}
 	} else if (damage_limbo_countdown) {
 		show_warp_hash_screen();
 		damage_limbo_countdown--;
