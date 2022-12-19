@@ -544,7 +544,7 @@ static struct mesh *asteroid_mesh[NASTEROID_MODELS];
 static struct mesh *unit_cube_mesh;
 static struct mesh *sphere_mesh;
 static struct mesh *sphere_lp_mesh; /* low poly version */
-static struct mesh *low_poly_sphere_mesh;
+static struct mesh *uv_sphere_mesh;
 static struct mesh *cylindrically_mapped_sphere_mesh;
 static struct mesh *planetary_ring_mesh;
 static struct mesh *planetary_ring_lp_mesh; /* low poly version */
@@ -2011,7 +2011,7 @@ static int update_block(uint32_t id, uint32_t timestamp, double x, double y, dou
 	}
 	switch (form) {
 	case SHAPE_SPHERE:
-		e = add_entity(ecx, low_poly_sphere_mesh, x, y, z, BLOCK_COLOR);
+		e = add_entity(ecx, uv_sphere_mesh, x, y, z, BLOCK_COLOR);
 		break;
 	case SHAPE_CUBOID:
 		e = add_entity(ecx, unit_cube_mesh, x, y, z, BLOCK_COLOR);
@@ -13609,7 +13609,7 @@ static void draw_3d_nav_display(void)
 			}
 			break;
 		case OBJTYPE_PLANET: {
-				contact = add_entity(instrumentecx, low_poly_sphere_mesh,
+				contact = add_entity(instrumentecx, uv_sphere_mesh,
 							go[i].x, go[i].y, go[i].z, UI_COLOR(nav_planet));
 				if (contact) {
 					set_render_style(contact, science_style);
@@ -13640,7 +13640,7 @@ static void draw_3d_nav_display(void)
 			}
 			break;
 		case OBJTYPE_BLACK_HOLE: {
-				contact = add_entity(instrumentecx, low_poly_sphere_mesh,
+				contact = add_entity(instrumentecx, uv_sphere_mesh,
 							go[i].x, go[i].y, go[i].z, UI_COLOR(nav_entity));
 				if (contact) {
 					set_render_style(contact, science_style);
@@ -13698,7 +13698,7 @@ static void draw_3d_nav_display(void)
 			case SHAPE_SPHERE:
 				contact_scale = ((255.0 - current_zoom) / 255.0);
 				sizex = sizey = sizez = contact_scale * go[i].tsd.block.shape.sphere.radius;
-				contact = add_entity(instrumentecx, low_poly_sphere_mesh,
+				contact = add_entity(instrumentecx, uv_sphere_mesh,
 							go[i].x, go[i].y, go[i].z, UI_COLOR(nav_ship));
 				update_entity_non_uniform_scale(contact, sizex, sizey, sizez);
 				update_entity_orientation(contact, &go[i].orientation);
@@ -16863,7 +16863,7 @@ static void draw_science_details(void)
 	m = NULL;
 	if (curr_science_guy->type == OBJTYPE_PLANET ||
 		curr_science_guy->type == OBJTYPE_BLACK_HOLE)
-		m = low_poly_sphere_mesh;
+		m = uv_sphere_mesh;
 	else if (curr_science_guy->entity)
 		m = entity_get_mesh(curr_science_guy->entity);
 	angle = (M_PI / 180.0) * (timer % 360);
@@ -19768,7 +19768,7 @@ static void show_demon_3d(void)
 
 		switch (o->type) {
 		case OBJTYPE_PLANET:
-			e = add_entity(instrumentecx, low_poly_sphere_mesh,  o->x, o->y, o->z, color);
+			e = add_entity(instrumentecx, uv_sphere_mesh,  o->x, o->y, o->z, color);
 			if (e) {
 				update_entity_scale(e, o->tsd.planet.radius);
 				entity_set_user_data(e, o);
@@ -19796,7 +19796,7 @@ static void show_demon_3d(void)
 			sng_abs_xy_draw_string(label, NANO_FONT, sx + 10, sy - 10);
 			break;
 		case OBJTYPE_BLACK_HOLE:
-			e = add_entity(instrumentecx, low_poly_sphere_mesh,  o->x, o->y, o->z, color);
+			e = add_entity(instrumentecx, uv_sphere_mesh,  o->x, o->y, o->z, color);
 			if (e) {
 				update_entity_scale(e, o->tsd.black_hole.radius * 2.0);
 				entity_set_user_data(e, o);
@@ -23046,9 +23046,9 @@ static void init_meshes()
 	sphere_mesh = mesh_unit_spherified_cube(16);
 #endif
 	sphere_lp_mesh = mesh_unit_spherified_cube(8);
-	low_poly_sphere_mesh = snis_read_model(d, "uv_sphere.stl");
-	mesh_cylindrical_xy_uv_map(low_poly_sphere_mesh);
-	cylindrically_mapped_sphere_mesh = mesh_duplicate(low_poly_sphere_mesh);
+	uv_sphere_mesh = snis_read_model(d, "uv_sphere.stl");
+	mesh_cylindrical_xy_uv_map(uv_sphere_mesh);
+	cylindrically_mapped_sphere_mesh = mesh_duplicate(uv_sphere_mesh);
 	mesh_cylindrical_xy_uv_map(cylindrically_mapped_sphere_mesh);
 	warp_tunnel_mesh = mesh_tube(XKNOWN_DIM, 450.0, 20);
 	nav_axes_mesh = mesh_fabricate_axes();
