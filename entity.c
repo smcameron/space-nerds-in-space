@@ -1215,6 +1215,8 @@ void entity_init_fake_stars(struct entity_context *cx, int nstars, float radius)
 		entity_free_fake_stars(cx);
 
 	cx->nfakestars = nstars;
+	if (nstars == 0)
+		return;
 	cx->fakestars_radius = radius;
 
 	cx->fake_stars_mesh = calloc(1, sizeof(*cx->fake_stars_mesh));
