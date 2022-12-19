@@ -2435,6 +2435,7 @@ static void graph_dev_raster_triangle_mesh(struct entity_context *cx, struct ent
 			rtp.specular_intensity = mt->specular_intensity;
 			rtp.emit_intensity = mt->emit_intensity * e->emit_intensity;
 			rtp.normalmap_id = mt->normalmap_id;
+			rtp.do_cullface = 1;
 
 			if (rtp.emit_texture_number > 0 && rtp.normalmap_id > 0)
 				rtp.shader = &textured_lit_emit_normal_shader;
