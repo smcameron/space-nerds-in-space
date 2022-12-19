@@ -542,10 +542,8 @@ static struct mesh *torpedo_nav_mesh;
 static struct mesh *laser_mesh;
 static struct mesh *asteroid_mesh[NASTEROID_MODELS];
 static struct mesh *unit_cube_mesh;
-static struct mesh *planet_sphere_mesh;
-static struct mesh *planet_sphere_lp_mesh; /* low poly version */
-static struct mesh *atmosphere_mesh;
-static struct mesh *atmosphere_lp_mesh; /* low poly version */
+static struct mesh *sphere_mesh;
+static struct mesh *sphere_lp_mesh; /* low poly version */
 static struct mesh *low_poly_sphere_mesh;
 static struct mesh *cylindrically_mapped_sphere_mesh;
 static struct mesh *planetary_ring_mesh;
@@ -2330,11 +2328,11 @@ static int update_planet(uint32_t id, uint32_t timestamp, double x, double y, do
 			m = m + ring_materials + 6 * (ring_selector % (ring_materials / 6));
 		}
 
-		e = add_entity(ecx, planet_sphere_mesh, x, y, z, PLANET_COLOR);
+		e = add_entity(ecx, sphere_mesh, x, y, z, PLANET_COLOR);
 		if (e) {
 			update_entity_scale(e, r);
 			update_entity_material(e, &planet_material[m]);
-			entity_set_low_poly_mesh(e, planet_sphere_lp_mesh);
+			entity_set_low_poly_mesh(e, sphere_lp_mesh);
 		}
 
 
@@ -2359,7 +2357,7 @@ static int update_planet(uint32_t id, uint32_t timestamp, double x, double y, do
 			return i;
 		go[i].tsd.planet.rotational_velocity = rotational_velocity;
 		if (has_atmosphere) {
-			atm = add_entity(ecx, atmosphere_mesh, 0.0f, 0.0f, 0.0f, WHITE);
+			atm = add_entity(ecx, sphere_mesh, 0.0f, 0.0f, 0.0f, WHITE);
 			go[i].tsd.planet.atmosphere = atm;
 			if (atm) {
 				update_entity_scale(atm, atm_scale);
@@ -2381,7 +2379,7 @@ static int update_planet(uint32_t id, uint32_t timestamp, double x, double y, do
 				update_entity_visibility(atm, 1);
 				update_entity_parent(ecx, atm, e);
 				update_entity_orientation(atm, &identity_quat);
-				entity_set_low_poly_mesh(atm, atmosphere_lp_mesh);
+				entity_set_low_poly_mesh(atm, sphere_lp_mesh);
 			}
 		} else {
 			go[i].tsd.planet.atmosphere = NULL;
@@ -3396,7 +3394,7 @@ static void add_shield_effect(struct snis_entity *o,
 	i = snis_object_pool_alloc_obj(sparkpool);
 	if (i < 0)
 		return;
-	e = add_entity(ecx, atmosphere_mesh, o->x, o->y, o->z, PARTICLE_COLOR);
+	e = add_entity(ecx, sphere_mesh, o->x, o->y, o->z, PARTICLE_COLOR);
 	if (e) {
 		set_render_style(e, RENDER_NORMAL);
 		update_entity_material(e, &shield_material);
@@ -3414,7 +3412,7 @@ static void add_shield_effect(struct snis_entity *o,
 	spark[i].alive = SHIELD_EFFECT_LIFETIME;
 	spark[i].move = shield_effect_move;
 	spark[i].entity = e;
-	atm = add_entity(ecx, atmosphere_mesh, 0, 0, 0, WHITE);
+	atm = add_entity(ecx, sphere_mesh, 0, 0, 0, WHITE);
 	if (atm && e) {
 		material_init_atmosphere(&spark[i].tsd.spark.atm_material);
 		spark[i].tsd.spark.atm_material.atmosphere.r = 0.5;
@@ -23043,14 +23041,11 @@ static void init_meshes()
 	mesh_unit_cube_uv_map(unit_cube_mesh);
 
 #ifndef WITHOUTOPENGL
-	atmosphere_mesh = mesh_unit_spherified_cube(32);
-	planet_sphere_mesh = mesh_unit_spherified_cube(32);
+	sphere_mesh = mesh_unit_spherified_cube(32);
 #else
-	atmosphere_mesh = mesh_unit_spherified_cube(16);
-	planet_sphere_mesh = mesh_unit_spherified_cube(16);
+	sphere_mesh = mesh_unit_spherified_cube(16);
 #endif
-	atmosphere_lp_mesh = mesh_unit_spherified_cube(8);
-	planet_sphere_lp_mesh = mesh_unit_spherified_cube(8);
+	sphere_lp_mesh = mesh_unit_spherified_cube(8);
 	low_poly_sphere_mesh = snis_read_model(d, "uv_sphere.stl");
 	mesh_cylindrical_xy_uv_map(low_poly_sphere_mesh);
 	cylindrically_mapped_sphere_mesh = mesh_duplicate(low_poly_sphere_mesh);
