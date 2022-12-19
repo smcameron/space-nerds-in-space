@@ -23043,8 +23043,8 @@ static void init_meshes()
 	mesh_unit_cube_uv_map(unit_cube_mesh);
 
 #ifndef WITHOUTOPENGL
-	atmosphere_mesh = mesh_unit_spherified_cube(64);
-	planet_sphere_mesh = mesh_unit_spherified_cube(64);
+	atmosphere_mesh = mesh_unit_spherified_cube(32);
+	planet_sphere_mesh = mesh_unit_spherified_cube(32);
 #else
 	atmosphere_mesh = mesh_unit_spherified_cube(16);
 	planet_sphere_mesh = mesh_unit_spherified_cube(16);
