@@ -70,6 +70,7 @@ struct ui_color_map {
 	struct ui_color_entry network_setup_logo;
 	struct ui_color_entry network_setup_active;
 	struct ui_color_entry network_setup_inactive;
+	struct ui_color_entry network_setup_selected;
 	struct ui_color_entry network_setup_input;
 	struct ui_color_entry network_setup_role;
 
@@ -182,6 +183,8 @@ struct ui_color_map {
 	struct ui_color_entry sci_waypoint;
 	struct ui_color_entry sci_selected_waypoint;
 	struct ui_color_entry sci_warning;
+	struct ui_color_entry sci_pull_down_menu;
+	struct ui_color_entry sci_pull_down_menu_selection;
 
 	struct ui_color_entry comms_button;
 	struct ui_color_entry comms_slider;
@@ -218,6 +221,8 @@ struct ui_color_map {
 	struct ui_color_entry demon_deselected_button;
 	struct ui_color_entry demon_self;
 	struct ui_color_entry demon_input;
+	struct ui_color_entry demon_pull_down_menu;
+	struct ui_color_entry demon_pull_down_menu_selection;
 
 	struct ui_color_entry death_text;
 
@@ -271,6 +276,7 @@ GLOBAL struct ui_color_map_accessor {
 	.u.map.network_setup_logo	= { DARKGREEN,		"network-setup-logo" },
 	.u.map.network_setup_active	= { GREEN_FIXUP,	"network-setup-active" },
 	.u.map.network_setup_inactive	= { RED,		"network-setup-inactive" },
+	.u.map.network_setup_selected	= { WHITE,		"network-setup-selected" },
 	.u.map.network_setup_input	= { GREEN_FIXUP,	"network-setup-input" },
 	.u.map.network_setup_role	= { GREEN_FIXUP,	"network-setup-role" },
 
@@ -383,6 +389,9 @@ GLOBAL struct ui_color_map_accessor {
 	.u.map.sci_waypoint		= { CYAN_FIXUP,		"sci-waypoint" },
 	.u.map.sci_selected_waypoint	= { YELLOW,		"sci-selected-waypoint" },
 	.u.map.sci_warning		= { RED,		"sci-warning" },
+	.u.map.sci_pull_down_menu	= { GREEN_FIXUP,	"sci-pull-down-menu" },
+	.u.map.sci_pull_down_menu_selection
+					= { YELLOW,		"sci-pull-down-menu-selection" },
 
 	.u.map.comms_button		= { GREEN_FIXUP,	"comms-button" },
 	.u.map.comms_slider		= { GREEN_FIXUP,	"comms-slider" },
@@ -419,6 +428,9 @@ GLOBAL struct ui_color_map_accessor {
 	.u.map.demon_deselected_button	= { GREEN_FIXUP,	"demon-deselected-button" },
 	.u.map.demon_self		= { RED,		"demon-self" },
 	.u.map.demon_input		= { GREEN_FIXUP,	"demon-input" },
+	.u.map.demon_pull_down_menu	= { GREEN_FIXUP,	"demon-pull-down-menu" },
+	.u.map.demon_pull_down_menu_selection
+					= { YELLOW,		"demon-pull-down-menu-selection" },
 
 	.u.map.death_text		= { RED,		"death-text" },
 

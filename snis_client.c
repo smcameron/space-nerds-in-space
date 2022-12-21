@@ -15265,7 +15265,8 @@ static void init_science_ui(void)
 	snis_button_set_sound(sci_ui.align_to_ship_button, UISND19);
 
 	sci_ui.menu = create_pull_down_menu(NANO_FONT, SCREEN_WIDTH);
-	pull_down_menu_set_color(sci_ui.menu, UI_COLOR(sci_button));
+	pull_down_menu_set_color(sci_ui.menu, UI_COLOR(sci_pull_down_menu));
+	pull_down_menu_set_highlight_color(sci_ui.menu, UI_COLOR(sci_pull_down_menu_selection));
 	pull_down_menu_set_background_alpha(sci_ui.menu, 0.75);
 	pull_down_menu_add_column(sci_ui.menu, "SCIENCE");
 
@@ -19148,7 +19149,8 @@ static void init_demon_ui()
 	demon_ui.menu = create_pull_down_menu(NANO_FONT, SCREEN_WIDTH);
 	pull_down_menu_set_tooltip_drawing_function(demon_ui.menu, draw_tooltip);
 	pull_down_menu_set_gravity(demon_ui.menu, 1);
-	pull_down_menu_set_color(demon_ui.menu, UI_COLOR(demon_deselected_button));
+	pull_down_menu_set_color(demon_ui.menu, UI_COLOR(demon_pull_down_menu));
+	pull_down_menu_set_highlight_color(demon_ui.menu, UI_COLOR(demon_pull_down_menu_selection));
 	pull_down_menu_set_background_alpha(demon_ui.menu, 0.75);
 	pull_down_menu_add_column(demon_ui.menu, "META");
 	pull_down_menu_add_row(demon_ui.menu, "META", "HOME", demon_home_button_pressed, NULL);
@@ -20469,6 +20471,7 @@ static void init_net_setup_ui(void)
 	int input_color = UI_COLOR(network_setup_input);
 	int active_button_color = UI_COLOR(network_setup_active);
 	int inactive_button_color = UI_COLOR(network_setup_inactive);
+	int selected_color = UI_COLOR(network_setup_selected);
 
 	char *preferred_shipname = snis_prefs_read_default_ship_name(xdg_base_ctx);
 
@@ -20516,6 +20519,7 @@ static void init_net_setup_ui(void)
 			TINY_FONT, browser_button_pressed, "http://spacenerdsinspace.com/donate.html");
 	net_setup_ui.menu = create_pull_down_menu(NANO_FONT, SCREEN_WIDTH);
 	pull_down_menu_set_color(net_setup_ui.menu, active_button_color);
+	pull_down_menu_set_highlight_color(net_setup_ui.menu, selected_color);
 	init_net_role_buttons(&net_setup_ui);
 	init_join_create_buttons(&net_setup_ui);
 	init_faction_buttons(&net_setup_ui);

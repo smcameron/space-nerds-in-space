@@ -35,6 +35,7 @@ struct pull_down_menu {
 	int ncols;
 	int font;
 	int color;
+	int highlight_color;
 	int current_col, current_row;
 	int current_physical_x, current_physical_y; /* mouse pos */
 	struct pull_down_menu_column *col[MAX_PULL_DOWN_COLUMNS];
@@ -292,6 +293,8 @@ static void draw_menu_col(struct pull_down_menu *m, int col, float y, int curren
 			}
 		}
 		y = y + font_lineheight[font];
+		if ((i == current_row || i == 0) && col == m->current_col)
+			sng_set_foreground(m->highlight_color);
 		sng_abs_xy_draw_string(r->name, font, x + 4 + cbw, y - 2);
 		if ((i == current_row || i == 0) && col == m->current_col)
 			sng_abs_xy_draw_string(r->name, font, x + 5 + cbw, y - 1);
@@ -453,6 +456,14 @@ void pull_down_menu_set_color(struct pull_down_menu *m, int color)
 {
 	pthread_mutex_lock(&m->mutex);
 	m->color = color;
+	m->highlight_color = color;
+	pthread_mutex_unlock(&m->mutex);
+}
+
+void pull_down_menu_set_highlight_color(struct pull_down_menu *m, int color)
+{
+	pthread_mutex_lock(&m->mutex);
+	m->highlight_color = color;
 	pthread_mutex_unlock(&m->mutex);
 }
 
