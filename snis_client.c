@@ -17976,7 +17976,7 @@ static void debug_draw_object(struct snis_entity *o,
 	}
 
 	if ((o->type == OBJTYPE_NPCSHIP || o->type == OBJTYPE_STARBASE) &&
-			go_index(o) == demon_ui.captain_of) {
+			(uint32_t) go_index(o) == demon_ui.captain_of) {
 		sng_set_foreground(UI_COLOR(demon_starbase));
 		sng_draw_circle(0, x, y, 10 + (timer % 10));
 	}
