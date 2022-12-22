@@ -1461,7 +1461,7 @@ cppcheck:
 scan-build:
 	make mostly-clean
 	rm -fr /tmp/snis-scan-build-output
-	scan-build -o /tmp/snis-scan-build-output make CC=clang
+	util/run-scan-build /tmp/snis-scan-build-output
 	xdg-open /tmp/snis-scan-build-output/*/index.html
 
 # opus stuff for voice chat

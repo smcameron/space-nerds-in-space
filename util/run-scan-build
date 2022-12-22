@@ -1,0 +1,36 @@
+#!/bin/sh
+
+# Debian has his somewhat annoying habit of naming clang stuff
+# weird things (clang-11, clang-13, etc.) I guess to support
+# multiple versions of the compiler at once, but it breaks a lot
+# of stuff too. There's probably a better way to do this.
+
+try_programs()
+{
+	for x in "$@"
+	do
+		type "$x" > /dev/null 2>&1
+		if [ "$?" = "0" ]
+		then
+			echo "$x"
+			return 0
+		fi
+	done
+	return 1
+}
+
+find_scan_build()
+{
+	try_programs "scan_build" "scan-build-13" "scan-build-11"
+	return $?
+}
+
+if sb=$(find_scan_build)
+then
+	$sb -o "$1" make CC=clang
+	exit $?
+fi
+
+echo "Failed to find scan-build." 1>&2
+exit 1
+
