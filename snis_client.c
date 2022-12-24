@@ -18147,18 +18147,25 @@ static void set_demon_group(int n)
 	dg->nids = count;
 }
 
-static void print_demon_console_msg_helper(char *buffer, int color)
+static void print_demon_console_msg_helper(char *text, int color)
 {
-	if (color >= 0)
-		text_window_add_color_text(demon_ui.console, buffer, color);
-	else
-		text_window_add_text(demon_ui.console, buffer);
-	if (demon_ui.log_console) {
-		int n = strlen(buffer);
-		if (n >= 1 && buffer[n - 1] == '\n')
-			buffer[n - 1] = '\0'; /* prevent doubling newlines */
-		fprintf(stderr, "%s\n", buffer);
-	}
+	char buffer[2048];
+	int len = strlen(text);
+	char *saveptr = NULL;
+	char *c;
+	if (len > 2047)
+		len = 2047;
+	snprintf(buffer, sizeof(buffer), "%s", text);
+	c = strtok_r(buffer, "\n", &saveptr);
+	do {
+		if (color >= 0)
+			text_window_add_color_text(demon_ui.console, c, color);
+		else
+			text_window_add_text(demon_ui.console, c);
+		if (demon_ui.log_console)
+			fprintf(stderr, "%s\n", c);
+		c = strtok_r(NULL, "\n", &saveptr);
+	} while (c);
 }
 
 void print_demon_console_msg(const char *fmt, ...)
