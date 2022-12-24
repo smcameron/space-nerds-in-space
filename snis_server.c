@@ -1025,7 +1025,6 @@ static int do_lua_pcall(char *function_name, lua_State *l, int nargs)
 		snprintf(errmsg, sizeof(errmsg) - 1, "snis_server: lua callback '%s' had error %d: '%s'.\n",
 			function_name, rc, lua_tostring(l, -1));
 		send_demon_console_color_msg(YELLOW, "%s", errmsg);
-		fprintf(stderr, "%s\n", errmsg);
 		stacktrace("do_lua_pcall");
 		fflush(stderr);
 	}
@@ -1283,9 +1282,6 @@ static void set_object_location(struct snis_entity *o, double x, double y, doubl
 	if (isnan(o->x) || isnan(o->y) || isnan(o->z)) {
 		send_demon_console_color_msg(ORANGERED,
 			"NaN DETECTED AT %s:%d:SET_OBJECT_LOCATION() x,y,z = %lf,%lf,%lf!",
-			__FILE__, __LINE__, x, y, z);
-		fprintf(stderr,
-			"NaN DETECTED AT %s:%d:SET_OBJECT_LOCATION() x,y,z = %lf,%lf,%lf!\n",
 			__FILE__, __LINE__, x, y, z);
 	}
 	o->x = x;
@@ -18954,25 +18950,22 @@ static int process_enscript_command(struct game_client *c)
 	 */
 	fd = open(scriptname, O_EXCL | O_CREAT | O_WRONLY, 0644);
 	if (fd < 0) {
-		send_demon_console_color_msg(YELLOW, "FAILED TO OPEN %s", scriptname);
-		send_demon_console_color_msg(YELLOW, "REASON - %s", strerror(errno));
-		fprintf(stderr, "Failed to open '%s': %s\n", scriptname, strerror(errno));
+		send_demon_console_color_msg(YELLOW, "FAILED TO OPEN %s: %s",
+			scriptname, strerror(errno));
 		return 0;
 	}
 
 	/* let's do buffered i/o for this */
 	f = fdopen(fd, "w");
 	if (!f) {
-		send_demon_console_color_msg(YELLOW, "FAILED TO FDOPEN %s", scriptname);
-		send_demon_console_color_msg(YELLOW, "REASON - %s", strerror(errno));
-		fprintf(stderr, "Failed to fdopen '%s': %s\n", scriptname, strerror(errno));
+		send_demon_console_color_msg(YELLOW, "FAILED TO FDOPEN %s: %s",
+			scriptname, strerror(errno));
 		return 0;
 	}
 
 	partially_enscript_game_state(f);
 	fclose(f); /* close() not needed, fclose() is enough. */
 	send_demon_console_msg("ENSCRIPTED %s", scriptname);
-	fprintf(stderr, "ENSCRIPTED %s\n", scriptname);
 	return 0;
 }
 
@@ -26573,13 +26566,11 @@ static void print_lua_error_message(char *error_context, char *lua_command)
 		snprintf(error_msg, sizeof(error_msg) - 1, "%s %s", error_context, lua_command);
 	else
 		snprintf(error_msg, sizeof(error_msg) - 1, "%s", error_context);
-	fprintf(stderr, "%s\n", error_msg);
 	send_demon_console_color_msg(YELLOW, "%s", error_msg);
 
 	if (lua_command) {
 		snprintf(error_msg, sizeof(error_msg) - 1, "LUA: %s",
 			lua_tostring(lua_state, -1));
-		fprintf(stderr, "%s\n", error_msg);
 		send_demon_console_color_msg(YELLOW, "%s", error_msg);
 	}
 }
@@ -30689,10 +30680,8 @@ static void write_queued_packets_to_mvserver(struct multiverse_server_info *msi)
 	return;
 
 badserver:
-	if (snis_multiverse_seen_recently) {
-		fprintf(stderr, "%s: multiverse server disappeared\n", logprefix());
+	if (snis_multiverse_seen_recently)
 		send_demon_console_color_msg(RED, "snis_server: multiverse server disappeared");
-	}
 	snis_multiverse_seen_recently = 0;
 	pthread_mutex_unlock(&msi->event_mutex);
 	shutdown(msi->sock, SHUT_RDWR);
@@ -31211,15 +31200,10 @@ static void servers_changed_cb(__attribute__((unused)) void *cookie)
 	fprintf(stderr, "%s: servers_changed_cb connecting to multiverse server\n",
 			logprefix());
 	connect_to_multiverse(multiverse_server, ipaddr, port);
-	if (multiverse_server->sock >= 0) {
-		fprintf(stderr, "%s: servers_changed_cb connected to multiverse server\n",
-			logprefix());
-		send_demon_console_color_msg(YELLOW, "snis_server connected to multiverse server");
-	} else {
-		fprintf(stderr, "%s: servers_changed_cb failed to connnect to multiverse server (possibly stale port number from ssgl)\n",
-			logprefix());
-		send_demon_console_color_msg(RED, "snis_server failed to connect to multiverse server");
-	}
+	if (multiverse_server->sock >= 0)
+		send_demon_console_color_msg(YELLOW, "%s connected to multiverse server", logprefix());
+	else
+		send_demon_console_color_msg(RED, "%s failed to connect to multiverse server", logprefix());
 	fprintf(stderr, "%s: servers_changed_cb releasing queue lock\n",
 		logprefix());
 	pthread_mutex_unlock(&multiverse_server->queue_mutex);
