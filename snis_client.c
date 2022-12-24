@@ -18151,12 +18151,17 @@ static void print_demon_console_msg_helper(char *text, int color)
 {
 	char buffer[2048];
 	int len = strlen(text);
+	int no_newlines = 0;
 	char *saveptr = NULL;
 	char *c;
 	if (len > 2047)
 		len = 2047;
 	snprintf(buffer, sizeof(buffer), "%s", text);
 	c = strtok_r(buffer, "\n", &saveptr);
+	if (!c) {
+		no_newlines = 1;
+		c = buffer;
+	}
 	do {
 		if (color >= 0)
 			text_window_add_color_text(demon_ui.console, c, color);
@@ -18164,6 +18169,8 @@ static void print_demon_console_msg_helper(char *text, int color)
 			text_window_add_text(demon_ui.console, c);
 		if (demon_ui.log_console)
 			fprintf(stderr, "%s\n", c);
+		if (no_newlines)
+			break;
 		c = strtok_r(NULL, "\n", &saveptr);
 	} while (c);
 }
