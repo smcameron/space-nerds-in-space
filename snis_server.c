@@ -994,16 +994,32 @@ static void runaway_lua_script_detected(lua_State *lstate, __attribute__((unused
 static void send_demon_console_msg(const char *fmt, ...);
 static void send_demon_console_color_msg(uint8_t color, const char *fmt, ...);
 
+static int traceback_lua(lua_State *L) {
+	const char *msg = lua_tostring(L, 1);
+	if (msg) {
+		luaL_traceback(L, L, msg, 1);
+	} else if (!lua_isnoneornil(L, 1)) {  /* is there an error object? */
+		if (!luaL_callmeta(L, 1, "__tostring"))  /* try its 'tostring' metamethod */
+		lua_pushliteral(L, "(no error message)");
+	}
+	return 1;
+}
+
 static int do_lua_pcall(char *function_name, lua_State *l, int nargs)
 {
 	int rc;
 	int nresults = 0;
-	int errfunc = 0;
+
+	/* Set up for potential Lua stack trace, add traceback_lua function */
+	int base = lua_gettop(l) - nargs;
+	lua_pushcfunction(l, traceback_lua);
+        lua_insert(l, base);
 
 	if (lua_instruction_count_limit > 0)
 		lua_sethook(lua_state, runaway_lua_script_detected, LUA_MASKCOUNT, lua_instruction_count_limit);
 
-	rc = lua_pcall(l, nargs, nresults, errfunc);
+	rc = lua_pcall(l, nargs, nresults, base);
+	lua_remove(l, base); /* remove traceback_lua function */
 	if (rc) {
 		char errmsg[1000];
 		snprintf(errmsg, sizeof(errmsg) - 1, "snis_server: lua callback '%s' had error %d: '%s'.\n",
@@ -26679,8 +26695,13 @@ static void process_lua_commands(void)
 
 		if (lua_instruction_count_limit > 0)
 			lua_sethook(lua_state, runaway_lua_script_detected, LUA_MASKCOUNT, lua_instruction_count_limit);
+		/* Set up for potential Lua stack trace, add traceback_lua function */
+		int base = lua_gettop(lua_state) - nargs;
+		lua_pushcfunction(lua_state, traceback_lua);
+		lua_insert(lua_state, base);
 
-		rc = lua_pcall(lua_state, nargs, 0, 0); /* Call the script */
+		rc = lua_pcall(lua_state, nargs, 0, base); /* Call the script */
+		lua_remove(lua_state, base); /* remove traceback_lua function */
 		if (rc)
 			print_lua_error_message("ERROR IN SCRIPT", arg[0]);
 
