@@ -15192,20 +15192,13 @@ static int process_request_thrust(struct game_client *c)
 }
 #endif
 
-static void send_demon_console_color_msg(uint8_t color, const char *fmt, ...)
+static void send_demon_console_msg_helper(int color, const char *msg)
 {
-	char msg[1000];
+	int length, start, bytes_to_copy;
 	char buf[DEMON_CONSOLE_MSG_MAX];
 	struct packed_buffer *pb;
-	va_list arg_ptr;
-	int length, start, bytes_to_copy;
 
 	memset(buf, 0, sizeof(buf));
-	va_start(arg_ptr, fmt);
-	vsnprintf(msg, sizeof(msg) - 1, fmt, arg_ptr);
-	va_end(arg_ptr);
-	fprintf(stderr, "%s\n", msg);
-
 	length = strlen(msg);
 	start = 0;
 
@@ -15225,37 +15218,28 @@ static void send_demon_console_color_msg(uint8_t color, const char *fmt, ...)
 	}
 }
 
-static void send_demon_console_msg(const char *fmt, ...)
+static void send_demon_console_color_msg(uint8_t color, const char *fmt, ...)
 {
 	char msg[1000];
-	char buf[DEMON_CONSOLE_MSG_MAX];
-	struct packed_buffer *pb;
 	va_list arg_ptr;
-	int length, start, bytes_to_copy;
 
-	memset(buf, 0, sizeof(buf));
 	va_start(arg_ptr, fmt);
 	vsnprintf(msg, sizeof(msg) - 1, fmt, arg_ptr);
 	va_end(arg_ptr);
 	fprintf(stderr, "%s\n", msg);
+	send_demon_console_msg_helper(color, msg);
+}
 
-	length = strlen(msg);
-	start = 0;
+static void send_demon_console_msg(const char *fmt, ...)
+{
+	char msg[1000];
+	va_list arg_ptr;
 
-	while (1) {
-		bytes_to_copy = length - start;
-		if (bytes_to_copy <= 0)
-			break;
-		if (bytes_to_copy > DEMON_CONSOLE_MSG_MAX - 1)
-			bytes_to_copy = DEMON_CONSOLE_MSG_MAX - 1;
-		memcpy(buf, &msg[start], bytes_to_copy);
-		buf[bytes_to_copy] = '\0';
-		pb = packed_buffer_allocate(3 + sizeof(buf));
-		packed_buffer_append(pb, "bbb", OPCODE_CONSOLE_OP, OPCODE_CONSOLE_SUBCMD_ADD_TEXT, 255);
-		packed_buffer_append_raw(pb, buf, sizeof(buf));
-		send_packet_to_all_clients(pb, ROLE_DEMON);
-		start += bytes_to_copy;
-	}
+	va_start(arg_ptr, fmt);
+	vsnprintf(msg, sizeof(msg) - 1, fmt, arg_ptr);
+	va_end(arg_ptr);
+	fprintf(stderr, "%s\n", msg);
+	send_demon_console_msg_helper(255, msg);
 }
 
 static int process_demon_thrust(struct game_client *c)
