@@ -994,9 +994,11 @@ static void runaway_lua_script_detected(lua_State *lstate, __attribute__((unused
 static void send_demon_console_msg(const char *fmt, ...);
 static void send_demon_console_color_msg(uint8_t color, const char *fmt, ...);
 
-static int do_lua_pcall(char *function_name, lua_State *l, int nargs, int nresults, int errfunc)
+static int do_lua_pcall(char *function_name, lua_State *l, int nargs)
 {
 	int rc;
+	int nresults = 0;
+	int errfunc = 0;
 
 	if (lua_instruction_count_limit > 0)
 		lua_sethook(lua_state, runaway_lua_script_detected, LUA_MASKCOUNT, lua_instruction_count_limit);
@@ -1045,7 +1047,7 @@ static void fire_lua_timers(void)
 		next = i->next;
 		lua_getglobal(lua_state, i->callback);
 		lua_pushnumber(lua_state, i->cookie_val);
-		do_lua_pcall(i->callback, lua_state, 1, 0, 0);
+		do_lua_pcall(i->callback, lua_state, 1);
 		free_timer_event(&i);
 	}
 
@@ -1165,7 +1167,7 @@ static void fire_lua_proximity_checks(void)
 		lua_pushnumber(lua_state, (double) i->oid1);
 		lua_pushnumber(lua_state, (double) i->oid2);
 		lua_pushnumber(lua_state, (double) sqrt(dist2));
-		do_lua_pcall(i->callback, lua_state, 3, 0, 0);
+		do_lua_pcall(i->callback, lua_state, 3);
 		free_lua_proximity_check(&i);
 	}
 }
@@ -1189,7 +1191,7 @@ static void send_one_lua_comms_transmission(struct lua_comms_transmission *trans
 		lua_pushstring(lua_state, transmission->sender);
 		lua_pushnumber(lua_state, (double) lua_channel[i].channel);
 		lua_pushstring(lua_state, transmission->transmission);
-		do_lua_pcall(lua_channel[i].callback, lua_state, 3, 0, 0);
+		do_lua_pcall(lua_channel[i].callback, lua_state, 3);
 	}
 }
 
@@ -1227,7 +1229,7 @@ static void fire_lua_callbacks(struct callback_schedule_entry **sched)
 		lua_getglobal(lua_state, callback);
 		for (j = 0; j < MAX_LUA_CALLBACK_PARAMS; j++)
 			lua_pushnumber(lua_state, callback_schedule_entry_param(i, j));
-		do_lua_pcall(callback, lua_state, MAX_LUA_CALLBACK_PARAMS, 0, 0);
+		do_lua_pcall(callback, lua_state, MAX_LUA_CALLBACK_PARAMS);
 		free(callback);
 	}
 	free_callback_schedule(sched);
