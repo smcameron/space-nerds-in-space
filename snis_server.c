@@ -2569,6 +2569,7 @@ static void ai_trace(uint32_t id, char *format, ...)
 	struct packed_buffer *pb;
 	va_list arg_ptr;
 	static char last_buf[DEMON_CONSOLE_MSG_MAX] = { 0 };
+	uint8_t len;
 
 	if (id == (uint32_t) -1 || id != ai_trace_id)
 		return;
@@ -2580,11 +2581,13 @@ static void ai_trace(uint32_t id, char *format, ...)
 	buf[sizeof(buf) - 1] = '\0';
 	if (strcmp(buf, last_buf) == 0) /* suppress duplicate messages */
 		return;
+	len = strlen(buf) + 1;
 	/* fprintf(stderr, "%s\n", buf); */
 	strcpy(last_buf, buf);
-	pb = packed_buffer_allocate(3 + sizeof(buf));
-	packed_buffer_append(pb, "bbb", OPCODE_CONSOLE_OP, OPCODE_CONSOLE_SUBCMD_ADD_TEXT, 255);
-	packed_buffer_append_raw(pb, buf, sizeof(buf));
+	pb = packed_buffer_allocate(4 + len);
+	packed_buffer_append(pb, "bbbb", OPCODE_CONSOLE_OP, OPCODE_CONSOLE_SUBCMD_ADD_TEXT, 255, len);
+	if (len > 0)
+		packed_buffer_append_raw(pb, buf, len);
 	send_packet_to_all_clients(pb, ROLE_DEMON);
 }
 
@@ -15218,9 +15221,9 @@ static void send_demon_console_msg_helper(int color, const char *msg)
 
 		memcpy(buf, &msg[start], bytes_to_copy);
 		buf[bytes_to_copy] = '\0';
-		pb = packed_buffer_allocate(3 + sizeof(buf));
-		packed_buffer_append(pb, "bbb", OPCODE_CONSOLE_OP, OPCODE_CONSOLE_SUBCMD_ADD_TEXT, color);
-		packed_buffer_append_raw(pb, buf, sizeof(buf));
+		pb = packed_buffer_allocate(4 + strlen(buf));
+		packed_buffer_append(pb, "bbbb", OPCODE_CONSOLE_OP, OPCODE_CONSOLE_SUBCMD_ADD_TEXT, color, strlen(buf));
+		packed_buffer_append_raw(pb, buf, strlen(buf));
 		send_packet_to_all_clients(pb, ROLE_DEMON);
 		start += bytes_to_copy;
 	}

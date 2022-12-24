@@ -14134,27 +14134,35 @@ static int process_custom_button(void)
 static int process_console_op(void)
 {
 	int rc;
-	uint8_t subcmd;
+	uint8_t subcmd, len;
 	int color;
 	uint8_t u8color;
-	uint8_t buffer[DEMON_CONSOLE_MSG_MAX];
+	uint8_t buffer[DEMON_CONSOLE_MSG_MAX + 1];
 
 	rc = read_and_unpack_buffer(buffer, "b", &subcmd);
 	if (rc != 0)
 		return rc;
 	switch (subcmd) {
 	case OPCODE_CONSOLE_SUBCMD_ADD_TEXT:
-		rc = read_and_unpack_buffer(buffer, "b", &u8color);
+		rc = read_and_unpack_buffer(buffer, "bb", &u8color, &len);
 		if (rc != 0)
 			return rc;
+		if (len > DEMON_CONSOLE_MSG_MAX)
+			return -1;
 		color = u8color;
 		if (color >= NCOLORS)
 			color = UI_COLOR(demon_default);
 		memset(buffer, 0, sizeof(buffer));
-		rc = snis_readsocket(gameserver_sock, buffer, sizeof(buffer));
-		if (rc != 0)
-			return rc;
+		if (len > 0) { /* len can be zero if client sends multiple newlines in a row */
+			rc = snis_readsocket(gameserver_sock, buffer, len);
+			if (rc != 0)
+				return rc;
+		}
 		buffer[DEMON_CONSOLE_MSG_MAX - 1] = '\0';
+		if (len > 0)
+			buffer[len] = '\0';
+		else
+			buffer[0] = '\0';
 		print_demon_console_color_msg(color, "%s", buffer);
 		break;
 	default:
