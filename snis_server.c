@@ -15194,9 +15194,10 @@ static int process_request_thrust(struct game_client *c)
 
 static void send_demon_console_msg_helper(int color, const char *msg)
 {
-	int length, start, bytes_to_copy;
+	int length, start, bytes_to_copy, bytes_to_newline;
 	char buf[DEMON_CONSOLE_MSG_MAX];
 	struct packed_buffer *pb;
+	char *newline;
 
 	memset(buf, 0, sizeof(buf));
 	length = strlen(msg);
@@ -15208,6 +15209,17 @@ static void send_demon_console_msg_helper(int color, const char *msg)
 			break;
 		if (bytes_to_copy > DEMON_CONSOLE_MSG_MAX - 1)
 			bytes_to_copy = DEMON_CONSOLE_MSG_MAX - 1;
+
+		/* Break packets at newlines to preserve formatting */
+		newline = index(&msg[start], '\n');
+		if (newline) {
+			bytes_to_newline = newline - &msg[start] + 1;
+			if (bytes_to_newline < bytes_to_copy) {
+				*newline = '\0';
+				bytes_to_copy = bytes_to_newline;
+			}
+		}
+
 		memcpy(buf, &msg[start], bytes_to_copy);
 		buf[bytes_to_copy] = '\0';
 		pb = packed_buffer_allocate(3 + sizeof(buf));
