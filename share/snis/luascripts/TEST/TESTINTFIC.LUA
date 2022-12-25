@@ -1,3 +1,5 @@
+-- TEST INTERACTIVE FICTION LUA MODULE
+
 package.path = package.path .. ";share/snis/luascripts/MISSIONS/lib/?.lua";
 local intfic_package = require("interactive_fiction");
 

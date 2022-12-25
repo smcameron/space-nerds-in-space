@@ -1,4 +1,4 @@
-
+-- TEST RUNAWAY LUA CODE 
 -- Deliberately do an infinite loop to test runaway detection
 
 demon_print("TESTING RUNAWAY LUA SCRIPT\n");

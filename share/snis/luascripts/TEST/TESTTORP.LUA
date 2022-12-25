@@ -1,3 +1,4 @@
+-- TEST ADDING TORPEDO FROM LUA
 
 player_ids = get_player_ship_ids();
 

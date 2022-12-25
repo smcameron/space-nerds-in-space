@@ -1,3 +1,4 @@
+-- TEST COMMS CIPHER STUFF
 
 key = generate_cipher_key();
 
