@@ -189,6 +189,8 @@ static int flare_count = FLARE_COUNT;
 static float flare_confuse_chance = FLARE_CONFUSE_CHANCE;
 static int multiverse_debug = 0;
 static int suppress_starbase_complaints = 0;
+#define STARBASE_DEFAULT_HEAL_TIME (10.0)
+static float starbase_heal_time = STARBASE_DEFAULT_HEAL_TIME; /* in minutes */
 static int player_invincibility = 0;
 static int game_paused = 0;
 #define DEFAULT_LUA_INSTRUCTION_COUNT_LIMIT 100000
@@ -10869,6 +10871,13 @@ static void gradually_repair_docked_player_ship(struct snis_entity *sb, struct b
 	b->repairs_in_progress = 0;
 }
 
+static void heal_starbase(struct snis_entity *o)
+{
+	uint32_t next_heal_time = (starbase_heal_time * 60 * 10) / 256;
+	if (0 == (universe_timestamp % next_heal_time) && o->sdata.shield_strength < 255)
+		o->sdata.shield_strength++;
+}
+
 static void starbase_move(struct snis_entity *o)
 {
 	char location[50];
@@ -10882,6 +10891,7 @@ static void starbase_move(struct snis_entity *o)
 
 	spin_starbase(o);
 	orbit_starbase(o);
+	heal_starbase(o);
 	starbase_update_docking_ports(o);
 	then = o->tsd.starbase.last_time_called_for_help;
 	now = universe_timestamp;
@@ -19302,6 +19312,8 @@ static struct tweakable_var_descriptor server_tweak[] = {
 		&respawn_warpgate_chance, 'f', 0.0, 1.0, 0.66, 0, 0, 0, 0 },
 	{ "DEBUG_CARGO_CHASING", "0 - 1 - ENABLE/DISABLE DEBUGGING OF NPC CARGO CHASING",
 		&debug_npc_cargo_chasing, 'i', 0.0, 0.0, 0.0, 0, 1, 0, 0 },
+	{ "STARBASE_HEAL_TIME", "1 - 10000 - MINUTES FOR STARBASE TO HEAL ITSELF",
+		&starbase_heal_time, 'f', 1.0, 10000.0, STARBASE_DEFAULT_HEAL_TIME, 0, 0, 0, 0 },
 	{ NULL, NULL, NULL, '\0', 0.0, 0.0, 0.0, 0, 0, 0, 0 },
 };
 
