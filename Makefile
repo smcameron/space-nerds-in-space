@@ -1467,6 +1467,7 @@ scan-build:
 # opus stuff for voice chat
 opus-1.3.1.tar.gz:
 	wget https://archive.mozilla.org/pub/opus/opus-1.3.1.tar.gz
+	md5sum opus-1.3.1.tar.gz | grep d7c07db796d21c9cf1861e0c2b0c0617
 
 opus-1.3.1:	opus-1.3.1.tar.gz
 	tar xzf opus-1.3.1.tar.gz
