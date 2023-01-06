@@ -3,6 +3,7 @@
 WITHVOICECHAT=yes
 USE_SNIS_XWINDOWS_HACKS=1
 PKG_CONFIG?=pkg-config
+SDL2_CONFIG?=sdl2-config
 
 # use "make OSX=1" for mac
 OSX=0
@@ -496,8 +497,8 @@ endif
 PNGLIBS:=$(shell $(PKG_CONFIG) --libs libpng)
 PNGCFLAGS:=$(shell $(PKG_CONFIG) --cflags libpng)
 
-SDLLIBS:=$(shell $(PKG_CONFIG) sdl2 --libs) -lSDL2_image
-SDLCFLAGS:=$(shell $(PKG_CONFIG) sdl2 --cflags)
+SDLLIBS:=$(shell $(SDL2_CONFIG) --libs) -lSDL2_image
+SDLCFLAGS:=$(shell $(SDL2_CONFIG) --cflags)
 
 GLEWLIBS:=$(shell $(PKG_CONFIG) --libs-only-l glew)
 GLEWCFLAGS:=$(shell $(PKG_CONFIG) --cflags glew)

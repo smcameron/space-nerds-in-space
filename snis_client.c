@@ -46,14 +46,13 @@
 #include <getopt.h>
 #include <signal.h>
 #include <sys/ioctl.h>
-#ifdef __APPLE__
-#include <SDL2.h>
-#include <SDL_image.h>
-#else
+#ifndef __APPLE__
+#include <SDL.h>
 #include <fenv.h>
-#include <SDL2/SDL.h>
-#include <SDL2/SDL_image.h>
+#else
+#include <SDL2.h>
 #endif
+#include <SDL_image.h>
 
 #include "opengl_cap.h"
 #include "arraysize.h"

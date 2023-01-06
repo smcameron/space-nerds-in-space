@@ -20,7 +20,7 @@
  */
 extern int feenableexcept(int excepts); 
 
-#include <SDL2/SDL.h>
+#include <SDL.h>
 #endif
 
 #include "mtwist.h"
