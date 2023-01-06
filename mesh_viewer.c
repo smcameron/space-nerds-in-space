@@ -1208,7 +1208,7 @@ int main(int argc, char *argv[])
 		fprintf(stderr, "SDL_CreateWindow failed: %s\n", SDL_GetError());
 		quit(1);
 	}
-	renderer = SDL_CreateRenderer(screen, -1, SDL_RENDERER_ACCELERATED);
+	renderer = SDL_CreateRenderer(screen, -1, 0);
 
 	figure_aspect_ratio(screen, -1, -1, &real_screen_width, &real_screen_height);
 	SCREEN_WIDTH = real_screen_width;
