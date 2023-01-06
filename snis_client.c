@@ -169,6 +169,7 @@ static int screen_offset_x = 0;
 static int screen_offset_y = 0;
 
 static int da_configured = 0;
+static int vsync_mode = 1; /* tweakable, -1 = adaptive vsync, 1 = vsync, 0 = no vsync */
 
 static int reload_shaders = 0; /* Flag to trigger reloading of glsl shaders in main render loop */
 
@@ -18284,6 +18285,8 @@ static struct tweakable_var_descriptor client_tweak[] = {
 		&spurious_wakeups, 'i', 0.0, 0.0, 0.0, 0, INT_MAX, 0, 1 },
 	{ "SUPPRESS_WARP_HASH", "SUPPRESS THE 'STATIC' ON STATIONS DURING WARP",
 		&suppress_warp_hash, 'i', 0.0, 0.0, 0.0, 0, 1, 0, 0 },
+	{ "VSYNC", "VSYNC MODE, -1 = ADAPTIVE VSYNC, 1 = VSYNC ON, 0 = VSYNC OFF",
+		&vsync_mode, 'i', 0.0, 0.0, 0.0, -1, 1, 1, 0, },
 	{ NULL, NULL, NULL, '\0', 0.0, 0.0, 0.0, 0, 0, 0, 0 },
 };
 
@@ -21064,6 +21067,26 @@ static void maybe_reload_shaders(void)
 	reload_shaders = 0;
 }
 
+static void maybe_set_vsync_mode(void)
+{
+	static int old_vsync_mode = -3; /* so vsync_mode != old_vsync_mode first time through */
+	const char *vsync_name[] = { "ADAPTIVE VSYNC", "VSYNC OFF", "VSYNC ON" };
+
+	if (vsync_mode == old_vsync_mode)
+		return;
+
+	if (vsync_mode < -1 || vsync_mode > 1) /* paranoia, this should never happen */
+		vsync_mode = 1;
+
+	if (SDL_GL_SetSwapInterval(vsync_mode) != 0) { /* sometimes adaptive vsync is not supported */
+		print_demon_console_msg("FAILED TO SET VSYNC MODE TO %d, USING 0 INSTEAD.\n");
+		SDL_GL_SetSwapInterval(0);
+		vsync_mode = 0;
+	}
+	print_demon_console_msg("VSYNC MODE IS NOW: %s\n", vsync_name[vsync_mode + 1]);
+	old_vsync_mode = vsync_mode;
+}
+
 static int main_da_expose(SDL_Window *window)
 {
 	static double last_frame_time = 0;
@@ -21093,6 +21116,7 @@ static int main_da_expose(SDL_Window *window)
 	make_science_forget_stuff();
 
 	maybe_reload_shaders();
+	maybe_set_vsync_mode();
 
 	load_textures();
 
