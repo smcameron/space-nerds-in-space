@@ -71,7 +71,7 @@ void snis_prefs_save_default_ship_name(struct xdg_base_context *cx, char *name)
 
 void snis_prefs_save_checkbox_defaults(struct xdg_base_context *cx, int role_main_v, int role_nav_v, int role_weap_v,
 					int role_eng_v, int role_damcon_v, int role_sci_v,
-					int role_comms_v, int role_sound_v, int role_demon_v,
+					int role_comms_v, int role_sound_v, int role_projector_v, int role_demon_v,
 					int role_text_to_speech_v, int create_ship_v, int join_ship_v)
 {
 	FILE *f = xdg_base_fopen_for_write(cx, ROLE_DEFAULTS_TXT);
@@ -80,29 +80,29 @@ void snis_prefs_save_checkbox_defaults(struct xdg_base_context *cx, int role_mai
 			__FILE__, __LINE__, ROLE_DEFAULTS_TXT, strerror(errno));
 		return;
 	}
-	fprintf(f, "%d %d %d %d %d %d %d %d %d %d %d %d\n",
+	fprintf(f, "%d %d %d %d %d %d %d %d %d %d %d %d %d\n",
 		role_main_v, role_nav_v, role_weap_v, role_eng_v, role_damcon_v,
-		role_sci_v, role_comms_v, role_sound_v, role_demon_v,
+		role_sci_v, role_comms_v, role_sound_v, role_projector_v, role_demon_v,
 		role_text_to_speech_v, create_ship_v, join_ship_v);
 	fclose(f);
 }
 
 void snis_prefs_read_checkbox_defaults(struct xdg_base_context *cx, int *role_main_v, int *role_nav_v, int *role_weap_v,
 					int *role_eng_v, int *role_damcon_v, int *role_sci_v,
-					int *role_comms_v, int *role_sound_v, int *role_demon_v,
+					int *role_comms_v, int *role_sound_v, int *role_projector_v, int *role_demon_v,
 					int *role_text_to_speech_v, int *create_ship_v, int *join_ship_v)
 {
 	int rc;
-	int value[12] = { 0 };
+	int value[13] = { 0 };
 
 	FILE *f = xdg_base_fopen_for_read(cx, ROLE_DEFAULTS_TXT);
 	if (!f)
 		return;
-	rc = fscanf(f, "%d %d %d %d %d %d %d %d %d %d %d %d",
+	rc = fscanf(f, "%d %d %d %d %d %d %d %d %d %d %d %d %d",
 		&value[0], &value[1], &value[2], &value[3],
 		&value[4], &value[5], &value[6], &value[7],
-		&value[8], &value[9], &value[10], &value[11]);
-	if (rc != 12) {
+		&value[8], &value[9], &value[10], &value[11], &value[12]);
+	if (rc != 13) {
 		fclose(f);
 		return;
 	}
@@ -115,10 +115,11 @@ void snis_prefs_read_checkbox_defaults(struct xdg_base_context *cx, int *role_ma
 	*role_sci_v = value[5];
 	*role_comms_v = value[6];
 	*role_sound_v = value[7];
-	*role_demon_v = value[8];
-	*role_text_to_speech_v = value[9];
-	*create_ship_v = value[10];
-	*join_ship_v = value[11];
+	*role_projector_v = value[8];
+	*role_demon_v = value[9];
+	*role_text_to_speech_v = value[10];
+	*create_ship_v = value[11];
+	*join_ship_v = value[12];
 	return;
 }
 

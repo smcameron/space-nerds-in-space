@@ -15568,7 +15568,7 @@ static int process_role_onscreen(struct game_client *c)
 		new_displaymode = DISPLAYMODE_MAINSCREEN;
 	send_packet_to_all_clients_on_a_bridge(c->shipid, 
 			snis_opcode_pkt("bb", OPCODE_ROLE_ONSCREEN, new_displaymode),
-			ROLE_MAIN);
+			ROLE_PROJECTOR);
 	bridgelist[c->bridge].current_displaymode = new_displaymode;
 	return 0;
 }
@@ -15587,7 +15587,7 @@ static int process_sci_details(struct game_client *c)
 		new_details = 0;
 	send_packet_to_requestor_plus_role_on_a_bridge(c, 
 			snis_opcode_pkt("bb", OPCODE_SCI_DETAILS,
-			new_details), ROLE_MAIN);
+			new_details), ROLE_PROJECTOR);
 	return 0;
 }
 
@@ -19350,6 +19350,10 @@ static uint32_t verify_role(uint32_t role)
 	/* Enforce that if a client has ROLE_MAIN, it has all onscreen roles */
 	if (role & ROLE_MAIN)
 		role |= onscreen_roles;
+
+	/* Enforce that if a client has ROLE_PROJECTOR, it has all onscreen roles */
+	if (role & ROLE_PROJECTOR)
+		role |= onscreen_roles;
 	
 	role = role | ROLE_DEMON; /* always have demon, otherwise you can get into trouble. */
 	return role;
@@ -19364,7 +19368,7 @@ static void invalid_role_syntax_msg(void)
 	send_demon_console_color_msg(YELLOW, "- TO REMOVE ROLES: ROLE <CLIENT> -ROLE");
 	send_demon_console_color_msg(YELLOW, "- TO SET SINGLE ROLE: ROLE <CLIENT> ROLE");
 	send_demon_console_color_msg(
-		YELLOW, " - ROLES ARE: MAIN, NAV, WEAP, ENG, DAM, COM, SCI, DEM, TTS, SOU, ALL");
+		YELLOW, " - ROLES ARE: MAIN, NAV, WEAP, ENG, DAM, COM, SCI, DEM, TTS, SOU, PRO, ALL");
 }
 
 static void server_builtin_setrole(char *cmd)
@@ -19425,10 +19429,12 @@ static void server_builtin_setrole(char *cmd)
 			newrole = ROLE_TEXT_TO_SPEECH;
 		else if (strncmp(rolestr, "SOU", 3) == 0)
 			newrole = ROLE_SOUNDSERVER;
+		else if (strncmp(rolestr, "PRO", 3) == 0)
+			newrole = ROLE_PROJECTOR;
 		else if (strncmp(rolestr, "ALL", 3) == 0)
 			newrole = ROLE_MAIN | ROLE_NAVIGATION | ROLE_WEAPONS | ROLE_ENGINEERING | ROLE_DAMCON |
 					ROLE_SCIENCE | ROLE_COMMS | ROLE_DEMON | ROLE_TEXT_TO_SPEECH |
-					ROLE_SOUNDSERVER;
+					ROLE_SOUNDSERVER | ROLE_PROJECTOR;
 		else {
 			send_demon_console_color_msg(YELLOW, "INVALID ROLE NAME");
 			return;
@@ -19497,6 +19503,8 @@ static void server_builtin_setrole(char *cmd)
 			send_demon_console_msg("- TEXT TO SPEECH");
 		if (role & ROLE_SOUNDSERVER)
 			send_demon_console_msg("- SOUND SERVER");
+		if (role & ROLE_PROJECTOR)
+			send_demon_console_msg("- PROJECTOR");
 		break;
 	default:
 		client_unlock();
@@ -20255,7 +20263,8 @@ static int score_client_for_computer_command(struct game_client *c)
 {
 	return !!(c->role & ROLE_TEXT_TO_SPEECH) * 4 +
 			!!(c->role & ROLE_SOUNDSERVER) * 2 +
-			!!(c->role & ROLE_MAIN);
+			!!(c->role & ROLE_MAIN) +
+			!!(c->role & ROLE_PROJECTOR);
 }
 
 /* Normally, we know the client that requested a computer command. But this
@@ -29217,7 +29226,7 @@ static void nl_onscreen_verb_n(void *context, int argc, char *argv[], int pos[],
 	queue_add_text_to_speech(c, reply);
 	send_packet_to_all_clients_on_a_bridge(c->shipid,
 			snis_opcode_pkt("bb", OPCODE_ROLE_ONSCREEN, new_displaymode),
-			ROLE_MAIN);
+			ROLE_PROJECTOR);
 	bridgelist[c->bridge].current_displaymode = new_displaymode;
 	return;
 
@@ -29257,7 +29266,7 @@ static void nl_onscreen_verb_pn(void *context, int argc, char *argv[], int pos[]
 	queue_add_text_to_speech(c, reply);
 	send_packet_to_all_clients_on_a_bridge(c->shipid,
 			snis_opcode_pkt("bb", OPCODE_ROLE_ONSCREEN, new_displaymode),
-			ROLE_MAIN);
+			ROLE_PROJECTOR);
 	bridgelist[c->bridge].current_displaymode = new_displaymode;
 	return;
 

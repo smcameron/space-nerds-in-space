@@ -562,6 +562,7 @@ struct request_thrust_packet {
 #define ROLE_DAMCON		(1 << DISPLAYMODE_DAMCON)
 #define ROLE_SOUNDSERVER	(1 << DISPLAYMODE_FONTTEST)
 #define ROLE_TEXT_TO_SPEECH	(1 << 10)
+#define ROLE_PROJECTOR		(1 << 11)
 #define ROLE_ALL		((uint32_t) 0x0ffffffffff)
 
 #define SCI_DETAILS_MODE_THREED 1

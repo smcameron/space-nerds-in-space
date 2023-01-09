@@ -6256,6 +6256,9 @@ static int process_role_onscreen_packet(void)
 	if (rc != 0)
 		return rc;
 
+	if (!(role & ROLE_PROJECTOR)) /* If this client is not the big projector, ignore request */
+		return 0;
+
 	if (!(role & ROLE_MAIN)) {
 		/*
 		 * Should "never" happen, server should only send display mode
@@ -7804,6 +7807,7 @@ static struct network_setup_ui {
 	struct button *role_sci;
 	struct button *role_comms;
 	struct button *role_sound;
+	struct button *role_projector;
 	struct button *role_demon;
 	struct button *role_text_to_speech;
 	struct button *join_ship_checkbox;
@@ -7823,6 +7827,7 @@ static struct network_setup_ui {
 	int role_sound_v;
 	int role_demon_v;
 	int role_text_to_speech_v;
+	int role_projector_v;
 	int create_ship_v;
 	int join_ship_v;
 	int faction_checkbox_v[MAX_FACTIONS];
@@ -7863,6 +7868,7 @@ static int process_client_id_packet(void)
 					net_setup_ui.role_weap_v, net_setup_ui.role_eng_v,
 					net_setup_ui.role_damcon_v, net_setup_ui.role_sci_v,
 					net_setup_ui.role_comms_v, net_setup_ui.role_sound_v,
+					net_setup_ui.role_projector_v,
 					net_setup_ui.role_demon_v, net_setup_ui.role_text_to_speech_v,
 					net_setup_ui.create_ship_v, net_setup_ui.join_ship_v);
 	return 0;
@@ -20204,10 +20210,11 @@ static void connect_to_lobby_button_pressed()
 	role |= (ROLE_SOUNDSERVER * !!net_setup_ui.role_sound_v);
 	role |= (ROLE_DEMON * !!net_setup_ui.role_demon_v);
 	role |= (ROLE_TEXT_TO_SPEECH * !!net_setup_ui.role_text_to_speech_v);
+	role |= (ROLE_PROJECTOR * !!net_setup_ui.role_projector_v);
 	if (role == 0)
 		role = ROLE_ALL;
 
-	/* If they select MAIN SCREEN role, then they need to get all the other stations too.
+	/* If they select MAIN SCREEN or PROJECTOR role, then they need to get all the other stations too.
 	 * This is so that Ctrl-O (onscreen!) will work right.  There are some things which
 	 * are only transmitted from snis_server to snis_client if the client has the right role.
 	 * If the main screen is to be able to display every station, it will need all the
@@ -20215,6 +20222,9 @@ static void connect_to_lobby_button_pressed()
 	 */
 	if (role & ROLE_MAIN)
 		role |= (ROLE_WEAPONS | ROLE_NAVIGATION | ROLE_ENGINEERING |
+			ROLE_DAMCON | ROLE_SCIENCE | ROLE_COMMS | ROLE_DEMON);
+	if (role & ROLE_PROJECTOR)
+		role |= (ROLE_MAIN | ROLE_WEAPONS | ROLE_NAVIGATION | ROLE_ENGINEERING |
 			ROLE_DAMCON | ROLE_SCIENCE | ROLE_COMMS | ROLE_DEMON);
 
 	login_failed_timer = 0; /* turn off any old login failed messages */
@@ -20266,7 +20276,7 @@ static void network_checkbox_pressed(void *x)
 
 	*i = !*i;
 
-	/* If they select MAIN SCREEN role, then they need to get all the other stations too.
+	/* If they select MAIN SCREEN or PROJECTOR role, then they need to get all the other stations too.
 	 * This is so that Ctrl-O (onscreen!) will work right.  There are some things which
 	 * are only transmitted from snis_server to snis_client if the client has the right role.
 	 * If the main screen is to be able to display every station, it will need all the
@@ -20274,7 +20284,19 @@ static void network_checkbox_pressed(void *x)
 	 * connect_to_lobby_button_pressed(), so if they select MAIN, then deselect some other
 	 * things, it will still work.
 	 */
-	if (i == &net_setup_ui.role_main_v && *i) {
+	if (i == &net_setup_ui.role_projector_v && *i) { /* projector implies main and all stations */
+		net_setup_ui.role_main_v = 1;
+		net_setup_ui.role_nav_v = 1;
+		net_setup_ui.role_weap_v = 1;
+		net_setup_ui.role_eng_v = 1;
+		net_setup_ui.role_damcon_v = 1;
+		net_setup_ui.role_sci_v = 1;
+		net_setup_ui.role_comms_v = 1;
+		net_setup_ui.role_demon_v = 1;
+	}
+	if (i == &net_setup_ui.role_main_v && !*i) /* not main implies not projector */
+		net_setup_ui.role_projector_v = 0;
+	if (i == &net_setup_ui.role_main_v && *i) { /* main implies all stations */
 		net_setup_ui.role_nav_v = 1;
 		net_setup_ui.role_weap_v = 1;
 		net_setup_ui.role_eng_v = 1;
@@ -20316,6 +20338,7 @@ static void init_net_role_buttons(struct network_setup_ui *nsu)
 	nsu->role_sci = init_net_role_button(x, &y, "SCIENCE ROLE", &nsu->role_sci_v);
 	nsu->role_comms = init_net_role_button(x, &y, "COMMUNICATIONS ROLE", &nsu->role_comms_v);
 	nsu->role_sound = init_net_role_button(x, &y, "SOUND SERVER ROLE", &nsu->role_sound_v);
+	nsu->role_projector = init_net_role_button(x, &y, "PROJECTOR ROLE", &nsu->role_projector_v);
 	nsu->role_demon = init_net_role_button(x, &y, "DEMON MODE",
 							&nsu->role_demon_v);
 	nsu->role_text_to_speech = init_net_role_button(x, &y, "TEXT TO SPEECH",
@@ -20356,6 +20379,9 @@ static void init_net_role_buttons(struct network_setup_ui *nsu)
 			"FOR SOUNDS INTENDED TO BE HEARD BY THE WHOLE CREW.\n"
 			"IT IS BEST TO HAVE ONLY ONE SOUND SERVER PER\n"
 			"BRIDGE CONNECTED TO A DECENT STEREO SOUND SYSTEM");
+	ui_add_button(nsu->role_projector, DISPLAYMODE_NETWORK_SETUP,
+			"WHETHER THIS TERMINAL IS CONNECTED TO A PROJECTOR\n"
+			"OR LARGE SCREEN MEANT TO BE VIEWED BY EVERYONE");
 	ui_add_button(nsu->role_demon, DISPLAYMODE_NETWORK_SETUP,
 			"WHETHER THIS TERMINAL SHOULD ACT AS DEMON SCREEN.\n"
 			"THE DEMON SCREEN IS LIKE A GAME MASTER/DEBUG SCREEN");
@@ -20551,7 +20577,8 @@ static void init_net_setup_ui(void)
 					&net_setup_ui.role_weap_v, &net_setup_ui.role_eng_v,
 					&net_setup_ui.role_damcon_v,
 					&net_setup_ui.role_sci_v, &net_setup_ui.role_comms_v,
-					&net_setup_ui.role_sound_v, &net_setup_ui.role_demon_v,
+					&net_setup_ui.role_sound_v, &net_setup_ui.role_projector_v,
+					&net_setup_ui.role_demon_v,
 					&net_setup_ui.role_text_to_speech_v, &net_setup_ui.create_ship_v,
 					&net_setup_ui.join_ship_v);
 	if (preferred_shipname) {
@@ -23389,6 +23416,7 @@ static struct option long_options[] = {
 	{ "acknowledgments", no_argument, NULL, OPT_ACKNOWLEDGMENTS },
 	{ "acknowledgements", no_argument, NULL, OPT_ACKNOWLEDGMENTS },
 	{ "soundserver", no_argument, NULL, 'a' },
+	{ "projector", no_argument, NULL, 'J' },
 	{ "comms", no_argument, NULL, 'C' },
 	{ "engineering", no_argument, NULL, 'E' },
 	{ "fullscreen", no_argument, NULL, 'f' },
@@ -23422,7 +23450,7 @@ static void process_options(int argc, char *argv[])
 	y = -1;
 	while (1) {
 		int option_index;
-		c = getopt_long(argc, argv, "AaCEfj:Ll:Nn:Mm:p:P:qr:Ss:tvW*:x", long_options, &option_index);
+		c = getopt_long(argc, argv, "AaCEfJj:Ll:Nn:Mm:p:P:qr:Ss:tvW*:x", long_options, &option_index);
 		if (c == -1)
 			break;
 		switch (c) {
@@ -23503,6 +23531,9 @@ static void process_options(int argc, char *argv[])
 			break;
 		case 'C':
 			role |= ROLE_COMMS;
+			break;
+		case 'J':
+			role |= ROLE_PROJECTOR;
 			break;
 		case 'a':
 			role |= ROLE_SOUNDSERVER;
