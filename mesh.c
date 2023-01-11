@@ -281,6 +281,11 @@ static void copy_mesh_contents(struct mesh *copy, struct mesh *original)
 {
 	int i;
 
+	/* Give clang scan-build some hints to avoid false positives. */
+	assert(copy->nvertices == 0 || (copy->nvertices > 0 && copy->v != NULL));
+	assert(copy->ntriangles == 0 || (copy->ntriangles > 0 && copy->t != NULL));
+	assert(copy->nlines == 0 || (copy->nlines > 0 && copy->l != NULL));
+
 	copy->geometry_mode = original->geometry_mode;
 	copy->ntriangles = original->ntriangles;
 	copy->nvertices = original->nvertices;
