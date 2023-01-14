@@ -75,9 +75,6 @@ GLOBAL void mat33_product(const struct mat33 *lhs, const struct mat33 *rhs, stru
 
 GLOBAL void mat33_product_ddf(const struct mat33d *lhs, const struct mat33d *rhs, struct mat33 *output);
 
-GLOBAL void mat33_x_mat31(const struct mat33 *lhs, const struct mat31 *rhs,
-				struct mat31 *output);
-
 GLOBAL void mat33_x_vec3(const struct mat33 *lhs, const union vec3 *rhs,
 				union vec3 *output);
 
@@ -113,20 +110,6 @@ GLOBAL void mat44_x_vec4_into_vec3(const struct mat44 *lhs, const union vec4 *rh
 GLOBAL void mat44_x_vec4_into_vec3_dff(const struct mat44d *lhs, const union vec4 *rhs,
 				union vec3 *output);
 
-GLOBAL void mat41_translate(struct mat41 *rhs, float tx, float ty, float tz,
-				struct mat41 *output);
-GLOBAL void mat41_rotate_x(struct mat41 *rhs, float angle, struct mat41 *output);
-GLOBAL void mat41_rotate_y(struct mat41 *rhs, float angle, struct mat41 *output);
-GLOBAL void mat41_rotate_y_self(struct mat41 *rhs, float angle);
-GLOBAL void mat41_rotate_z(struct mat41 *rhs, float angle, struct mat41 *output);
-GLOBAL void mat41_scale(struct mat41 *rhs, float scale, struct mat41 *output);
-
-GLOBAL void mat44_translate(struct mat44 *rhs, float tx, float ty, float tz,
-				struct mat44 *output);
-GLOBAL void mat44_rotate_x(struct mat44 *rhs, float angle, struct mat44 *output);
-GLOBAL void mat44_rotate_y(struct mat44 *rhs, float angle, struct mat44 *output);
-GLOBAL void mat44_rotate_z(struct mat44 *rhs, float angle, struct mat44 *output);
-GLOBAL void mat44_scale(struct mat44 *rhs, float scale, struct mat44 *output);
 GLOBAL void normalize_vector(struct mat41 *v, struct mat41 *output);
 GLOBAL void mat41_cross_mat41(struct mat41 *v1, struct mat41 *v2, struct mat41 *output);
 GLOBAL void print44(struct mat44 *m);
@@ -134,7 +117,6 @@ GLOBAL void print41(struct mat41 *m);
 GLOBAL float mat41_dot_mat41(struct mat41 *m1, struct mat41 *m2);
 GLOBAL float dist3d(float dx, float dy, float dz);
 GLOBAL float dist3dsqrd(float dx, float dy, float dz);
-GLOBAL void mat41_rotate_mat41(struct mat41 *rhs, struct mat41 *v, struct mat41 *axis, float angle);
 
 #undef GLOBAL
 #endif

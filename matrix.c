@@ -107,31 +107,6 @@ struct mat33 *mat33_inverse_transpose_ff(const struct mat33 *src, struct mat33 *
 	return output;
 }
 
-/* for post muliplication, mat44 must be column major and stored column major order */
-void mat33_x_mat31(const struct mat33 *lhs, const struct mat31 *rhs,
-				struct mat31 *output)
-{
-	/*
-	     lhs         rhs     output
-	     | a b c | | x |   |ax + by + cz|
-	     | d e f | | y | = |dx + ey + fz|
-	     | g h i | | z |   |gx + hy + iz|
-
-	 assumed to be stored in memory like { {a, e, i}, {b, f, j}... }
-	 so, lhs->m[3][2] == g. address like: lhs->[column][row].
-
-	 */
-
-	int row, col;
-
-	for (row = 0; row < 3; row++) {
-		output->m[row] = 0;
-		for (col = 0; col < 3; col++)
-			output->m[row] += lhs->m[col][row] * rhs->m[col];
-	}
-}
-
-/* see mat33_x_mat31 */
 void mat33_x_vec3(const struct mat33 *lhs, const union vec3 *rhs,
 				union vec3 *output)
 {
@@ -362,110 +337,6 @@ void mat41_x_mat44(const struct mat41 *lhs, const struct mat44 *rhs,
 	}
 }
 
-/* column major... */
-void mat41_translate(struct mat41 *rhs, float tx, float ty, float tz, struct mat41 *output)
-{
-	struct mat44 translate = {{{ 1, 0, 0, 0 }, /* column major, so this looks xposed */
-				   { 0, 1, 0, 0 },
-				   { 0, 0, 1, 0 },
-				   { tx, ty, tz, 1}}};
-
-	mat44_x_mat41(&translate, rhs, output);
-}
-
-/* column major... */
-void mat41_rotate_x(struct mat41 *rhs, float angle, struct mat41 *output)
-{
-	struct mat44 rotatex = {{{ 1, 0,            0,           0 },
-				 { 0, cosf(angle),  sinf(angle), 0 },
-				 { 0, -sinf(angle), cosf(angle), 0 },
-				 { 0, 0,            0,           1 }}};
-	mat44_x_mat41(&rotatex, rhs, output);
-}
-
-/* column major... */
-void mat41_rotate_y(struct mat41 *rhs, float angle, struct mat41 *output)
-{
-	struct mat44 rotatey = {{{ cosf(angle), 0, -sinf(angle), 0},
-				 { 0,           1, 0,            0},
-				 { sinf(angle), 0, cosf(angle),  0},
-				 { 0,           0, 0,            1}}};
-	mat44_x_mat41(&rotatey, rhs, output);
-}
-
-void mat41_rotate_y_self(struct mat41 *rhs, float angle)
-{
-	struct mat41 input;
-	memcpy(&input,rhs,sizeof(input));
-	mat41_rotate_y(&input, angle, rhs);
-}
-
-/* column major... */
-void mat41_rotate_z(struct mat41 *rhs, float angle, struct mat41 *output)
-{
-	struct mat44 rotatez = {{{  cosf(angle), sinf(angle), 0,  0},
-				 { -sinf(angle), cosf(angle), 0,  0},
-				 { 0,            0,           1,  0},
-				 { 0,            0,           0,  1}}};
-	mat44_x_mat41(&rotatez, rhs, output);
-}
-
-void mat41_scale(struct mat41 *rhs, float scale, struct mat41 *output)
-{
-	struct mat44 scalem = {{{ scale, 0, 0, 0 },
-				{ 0, scale, 0, 0 },
-				{ 0, 0, scale, 0 },
-				{ 0, 0, 0,     1 }}};
-	mat44_x_mat41(&scalem, rhs, output);
-}
-
-void mat44_translate(struct mat44 *rhs, float tx, float ty, float tz,
-                                struct mat44 *output)
-{
-	struct mat44 translate = {{{ 1, 0, 0, 0 }, /* column major, so this looks xposed */
-				   { 0, 1, 0, 0 },
-				   { 0, 0, 1, 0 },
-				   { tx, ty, tz, 1}}};
-
-	mat44_product(&translate, rhs, output);
-}
-
-void mat44_rotate_x(struct mat44 *rhs, float angle, struct mat44 *output)
-{
-	struct mat44 rotatex = {{{ 1, 0,            0,           0 },
-				 { 0, cosf(angle),  sinf(angle), 0 },
-				 { 0, -sinf(angle), cosf(angle), 0 },
-				 { 0, 0,            0,           1 }}};
-	mat44_product(rhs, &rotatex, output);
-}
-
-void mat44_rotate_y(struct mat44 *rhs, float angle, struct mat44 *output)
-{
-	struct mat44 rotatey = {{{ cosf(angle), 0, -sinf(angle), 0},
-				 { 0,           1, 0,            0},
-				 { sinf(angle), 0, cosf(angle),  0},
-				 { 0,           0, 0,            1}}};
-	mat44_product(rhs, &rotatey, output);
-}
-
-void mat44_rotate_z(struct mat44 *rhs, float angle, struct mat44 *output)
-{
-	struct mat44 rotatez = {{{  cosf(angle), sinf(angle), 0,  0},
-				 { -sinf(angle), cosf(angle), 0,  0},
-				 { 0,            0,           1,  0},
-				 { 0,            0,           0,  1}}};
-	mat44_product(rhs, &rotatez, output);
-}
-
-void mat44_scale(struct mat44 *rhs, float scale, struct mat44 *output)
-{
-	struct mat44 scalem = {{{ scale, 0, 0, 0 },
-				{ 0, scale, 0, 0 },
-				{ 0, 0, scale, 0 },
-				{ 0, 0, 0,     1 }}};
-	mat44_product(rhs, &scalem, output);
-}
-
 float dist3d(float dx, float dy, float dz)
 {
 	return sqrt(dx * dx + dy * dy + dz * dz);
@@ -512,36 +383,6 @@ void print41(struct mat41 *m)
 float mat41_dot_mat41(struct mat41 *m1, struct mat41 *m2)
 {
 	return m1->m[0] * m2->m[0] + m1->m[1] * m2->m[1] + m1->m[2] * m2->m[2];
-}
-
-/*
- * Rotate vector v around axis by angle, store answer in rhs.
- * based on stackoverflow code here:
- * http://stackoverflow.com/questions/7582398/rotate-a-vector-about-another-vector
- */
-void mat41_rotate_mat41(struct mat41 *rhs, struct mat41 *v, struct mat41 *axis, float angle)
-{
-	float c = cosf(angle);
-	float s = sinf(angle);
-	float C = 1.0 - c;
-	float Q[3][3];
-
-	Q[0][0] = axis->m[0] * axis->m[0] * C + c;
-	Q[0][1] = axis->m[1] * axis->m[0] * C + axis->m[2] * s;
-	Q[0][2] = axis->m[2] * axis->m[0] * C - axis->m[1] * s;
-
-	Q[1][0] = axis->m[1] * axis->m[0] * C - axis->m[2] * s;
-	Q[1][1] = axis->m[1] * axis->m[1] * C + c;
-	Q[1][2] = axis->m[2] * axis->m[1] * C + axis->m[0] * s;
-
-	Q[2][0] = axis->m[0] * axis->m[2] * C + axis->m[1] * s;
-	Q[2][1] = axis->m[2] * axis->m[1] * C - axis->m[0] * s;
-	Q[2][2] = axis->m[2] * axis->m[2] * C + c;
-
-	rhs->m[0] = v->m[0] * Q[0][0] + v->m[0] * Q[0][1] + v->m[0] * Q[0][2];
-	rhs->m[1] = v->m[1] * Q[1][0] + v->m[1] * Q[1][1] + v->m[1] * Q[1][2];
-	rhs->m[2] = v->m[2] * Q[2][0] + v->m[2] * Q[2][1] + v->m[2] * Q[2][2];
-	rhs->m[3] = 1.0;
 }
 
 #ifdef TEST_MATRIX
