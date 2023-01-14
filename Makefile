@@ -548,9 +548,6 @@ COMMONCLIENTOBJS=${COMMONOBJS} ${OGGOBJ} ${SNDOBJS} $(patsubst %,$(OD)/%,${_COMM
 _CLIENTOBJS= shader.o graph_dev_opengl.o opengl_cap.o snis_graph.o snis_client.o joystick_config.o snis_xwindows_hacks.o png_utils.o
 CLIENTOBJS=${COMMONCLIENTOBJS} $(patsubst %,$(OD)/%,${_CLIENTOBJS})
 
-_LIMCLIENTOBJS=graph_dev_gdk.o snis_limited_graph.o snis_limited_client.o joystick_config.o
-LIMCLIENTOBJS=${COMMONCLIENTOBJS} $(patsubst %,$(OD)/%,${_LIMCLIENTOBJS})
-
 _SDLCLIENTOBJS=shader.o graph_dev_opengl.o opengl_cap.o snis_graph.o mesh_viewer.o \
 				png_utils.o turret_aimer.o quat.o mathutils.o mesh.o \
 				mtwist.o material.o entity.o snis_alloc.o matrix.o stacktrace.o stl_parser.o \
@@ -689,7 +686,6 @@ SNISSERVERDBGCOMPILE=$(ECHO) '  COMPILE' $< && $(CC) -DSNIS_SERVER_DATA ${MYCFLA
 SNISCLIENTDBGCOMPILE=$(ECHO) '  COMPILE' $< && $(CC) -DSNIS_CLIENT_DATA ${MYCFLAGS} ${LUACFLAGS} -c -o $(OD)/snis_client_debug.o $<
 
 CLIENTLINK=$(ECHO) '  LINK' $@ && $(CC) ${MYCFLAGS} ${SNDFLAGS} -o $@ ${X11LIBS} ${SDLCFLAGS} ${CLIENTOBJS} ${SDLLIBS} ${LIBS} ${SNDLIBS} $(LDFLAGS) ${LIBOPUS} ${X11LIBS}
-LIMCLIENTLINK=$(ECHO) '  LINK' $@ && $(CC) ${MYCFLAGS} ${SNDFLAGS} -o $@ ${LIMCLIENTOBJS} ${SDLLIBS} ${LIBS} ${SNDLIBS} $(LDFLAGS) ${LIBOPUS}
 SDLCLIENTLINK=$(ECHO) '  LINK' $@ && $(CC) ${MYCFLAGS} ${SNDFLAGS} -o $@ ${SDLCFLAGS} ${SDLCLIENTOBJS} ${SDLLIBS} ${LIBS} ${SNDLIBS} $(LDFLAGS) ${X11LIBS}
 SERVERLINK=$(ECHO) '  LINK' $@ && $(CC) ${MYCFLAGS} -o $@ ${SERVEROBJS} ${SERVERLIBS} $(LDFLAGS)
 MULTIVERSELINK=$(ECHO) '  LINK' $@ && $(CC) ${MYCFLAGS} -o $@ ${MULTIVERSEOBJS} ${MULTIVERSELIBS} $(LDFLAGS)
@@ -770,9 +766,6 @@ $(OD)/graph_dev_opengl.o : graph_dev_opengl.c graph_dev.h shader.h vertex.h tria
 	$(Q)$(SDLCOMPILE)
 
 $(OD)/opengl_cap.o : opengl_cap.c Makefile ${ODT}
-	$(Q)$(SDLCOMPILE)
-
-$(OD)/graph_dev_gdk.o : graph_dev_gdk.c Makefile ${ODT}
 	$(Q)$(SDLCOMPILE)
 
 $(OD)/graph_dev_mesh_stub.o:	graph_dev_mesh_stub.c graph_dev_mesh_stub.h ${ODT}
@@ -971,9 +964,6 @@ bin/snis_client:	${CLIENTOBJS} ${SSGL} Makefile ${BIN} ${OPUSARCHIVE}
 
 bin/snis_multiverse:	${MULTIVERSEOBJS} ${SSGL} Makefile ${BIN}
 	$(Q)$(MULTIVERSELINK)
-
-bin/snis_limited_client:	${LIMCLIENTOBJS} ${SSGL} Makefile ${BIN}
-	$(Q)$(LIMCLIENTLINK)
 
 ssgl/lsssgl: ${SSGL}
 
@@ -1237,7 +1227,7 @@ mikktspace/mikktspace.o:
 	(cd mikktspace && ${MAKE} )
 
 mostly-clean:
-	rm -f ${SERVEROBJS} ${CLIENTOBJS} ${LIMCLIENTOBJS} ${MULTIVERSEOBJS} ${SDLCLIENTOBJS} ${SSGL} \
+	rm -f ${SERVEROBJS} ${CLIENTOBJS} ${MULTIVERSEOBJS} ${SDLCLIENTOBJS} ${SSGL} \
 	${BINPROGS} ${UTILPROGS} ${ELOBJS} stl_parser snis_limited_client.c \
 	test-space-partition snis_test_audio.o snis_test_audio joystick_test local_termios2.h \
 	bin/nebula_noise bin/generate_skybox bin/names bin/infinite-taunt bin/stl_parser \
