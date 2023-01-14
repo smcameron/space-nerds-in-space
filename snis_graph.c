@@ -767,13 +767,13 @@ bailout:
 	return;
 }
 
-void sng_setup_colors(void *gtk_widget, char *user_color_file)
+void sng_setup_colors(char *user_color_file)
 {
 	int i;
 
 	BUILD_ASSERT(ARRAYSIZE(gradient_colors) == NGRADIENTS);
 
-	/* values extracted from gdk_color_parse */
+	/* values extracted from gdk_color_parse() ages ago back when we used GTK. */
 	huex[WHITE].red = 65535;
 	huex[WHITE].green = 65535;
 	huex[WHITE].blue = 65535;
@@ -895,8 +895,6 @@ void sng_setup_colors(void *gtk_widget, char *user_color_file)
 	fixup_ui_color(BLUE_FIXUP, BLUE);
 	fixup_ui_color(GREEN_FIXUP, GREEN);
 	fixup_ui_color(CYAN_FIXUP, CYAN);
-
-	graph_dev_setup_colors(gtk_widget, huex, TOTAL_COLORS);
 }
 
 void sng_set_foreground_alpha(int c, float a)
@@ -929,11 +927,6 @@ struct sng_color sng_get_color(int c)
 	color.green = huex[c].green / 65535.0;
 	color.blue = huex[c].blue / 65535.0;
 	return color;
-}
-
-void sng_set_context(void *gdk_drawable, void *gdk_gc)
-{
-	graph_dev_set_context(gdk_drawable, gdk_gc);
 }
 
 void sng_draw_circle(int filled, float x, float y, float r)

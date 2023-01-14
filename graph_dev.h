@@ -43,8 +43,7 @@ extern int graph_dev_setup(const char *shader_dir);
 extern void graph_dev_reload_all_shaders(void);
 extern void graph_dev_start_frame();
 extern void graph_dev_end_frame();
-extern void graph_dev_set_context(void *gdk_drawable, void *gdk_gc);
-extern void graph_dev_set_color(void *gdk_color, float a);
+extern void graph_dev_set_color(struct graph_dev_color *color, float a);
 extern void graph_dev_set_screen_size(int width, int height);
 extern void graph_dev_set_extent_scale(float x_scale, float y_scale);
 extern void graph_dev_set_3d_viewport(int x_offset, int y_offset, int width, int height);
@@ -101,8 +100,6 @@ extern void graph_dev_expire_cubemap_texture(int is_inside,
 
 extern void graph_dev_display_debug_menu_show();
 extern int graph_dev_graph_dev_debug_menu_click(int x, int y);
-
-extern void graph_dev_setup_colors(void *gtk_widget, void *gdk_color_huex, int nhuex);
 
 /* graph_dev_grab_framebuffer only implemented for opengl backend */
 extern void graph_dev_grab_framebuffer(unsigned char **buffer, int *width, int *height);

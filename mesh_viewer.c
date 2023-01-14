@@ -1217,7 +1217,7 @@ int main(int argc, char *argv[])
 	real_screen_height = (3 * real_screen_height) / 4;
 	original_aspect_ratio = (float) real_screen_width / (float) real_screen_height;
 
-	sng_setup_colors(0, NULL);
+	sng_setup_colors(NULL);
 
 	snis_typefaces_init();
 	sng_set_font_family(0);

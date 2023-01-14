@@ -77,12 +77,11 @@ SNG_GLOBAL void sng_center_xy_draw_string(char *s, int font, float x, float y);
 SNG_GLOBAL void sng_center_xz_draw_string(char *s, int font, float x, float y);
 SNG_GLOBAL void sng_string_bounding_box(char *s, int font, float *bbx1, float *bby1, float *bbx2, float *bby2);
 SNG_GLOBAL void sng_draw_point(float x, float y);
-SNG_GLOBAL void sng_setup_colors(void *w, char *user_color_file);
+SNG_GLOBAL void sng_setup_colors(char *user_color_file);
 SNG_GLOBAL void sng_set_foreground(int c);
 SNG_GLOBAL void sng_set_foreground_alpha(int c, float a);
 SNG_GLOBAL struct sng_color sng_get_foreground();
 SNG_GLOBAL struct sng_color sng_get_color(int c);
-SNG_GLOBAL void sng_set_context(void *gdk_drawable, void *gdk_gc);
 SNG_GLOBAL void sng_draw_circle(int filled, float x, float y, float r);
 SNG_GLOBAL void sng_draw_laser_line(float x1, float y1, float x2, float y2, int color);
 

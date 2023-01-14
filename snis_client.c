@@ -23371,7 +23371,7 @@ static void init_colors(void)
 			return;
 		}
 	}
-	sng_setup_colors(NULL, color_file);
+	sng_setup_colors(color_file);
 }
 
 static void check_lobby_serverhost_options()
@@ -24063,10 +24063,6 @@ int main(int argc, char *argv[])
 	init_keymap();
 	read_keymap_config_file();
 	update_splash_progress(9);
-
-#if 0
-	sng_set_context(GTK_WIDGET(main_da)->window, gc);
-#endif
 
 	SDL_GL_SetAttribute(SDL_GL_RED_SIZE, 5);
 	SDL_GL_SetAttribute(SDL_GL_GREEN_SIZE, 5);

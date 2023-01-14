@@ -1147,9 +1147,9 @@ static void enable_3d_viewport()
 }
 
 
-void graph_dev_set_color(void *gdk_color, float a)
+void graph_dev_set_color(struct graph_dev_color *color, float a)
 {
-	sgc.hue = gdk_color;
+	sgc.hue = color;
 
 	if (a >= 0) {
 		sgc.alpha_blend = 1;
@@ -1157,18 +1157,6 @@ void graph_dev_set_color(void *gdk_color, float a)
 	} else {
 		sgc.alpha_blend = 0;
 	}
-}
-
-void graph_dev_set_context(__attribute__((unused)) void *gdk_drawable, __attribute__((unused)) void *gdk_gc)
-{
-	/* noop */
-}
-
-void graph_dev_setup_colors(__attribute__((unused)) void *gtk_widget,
-		__attribute__((unused)) void *gdk_color_huex, 
-		__attribute__((unused)) int nhuex)
-{
-	/* noop */
 }
 
 static void draw_vertex_buffer_2d()
