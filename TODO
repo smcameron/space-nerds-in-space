@@ -410,3 +410,6 @@ NICE TO HAVE:
   https://godotengine.org/article/emulating-double-precision-gpu-render-large-worlds
   Has some limitations though, so not sure it will really work or gain that much for
   our purposes.
+  This appears to be the commit that article is talking about:
+  https://github.com/godotengine/godot/commit/27a3014f5052ae40f89684a5559c17fbebe7aa8d
+
