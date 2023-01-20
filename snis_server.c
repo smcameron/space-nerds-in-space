@@ -22523,6 +22523,8 @@ static int process_create_item(struct game_client *c)
 	int rc, i = -1;
 	static struct mtwist_state *mt = NULL;
 
+	assert(sizeof(buffer) >= (size_t) snis_opcode_payload_size(OPCODE_CREATE_ITEM));
+
 	if (!mt)
 		mt = mtwist_init(mtwist_seed);
 
