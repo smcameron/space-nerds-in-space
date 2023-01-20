@@ -22516,7 +22516,7 @@ static int l_create_passenger(lua_State *l)
 
 static int process_create_item(struct game_client *c)
 {
-	unsigned char buffer[14];
+	unsigned char buffer[16];
 	unsigned char item_type, data1, data2;
 	char *n;
 	double x, y, z, r;
