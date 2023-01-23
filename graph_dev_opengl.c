@@ -52,7 +52,7 @@
 	"}\n\n"
 
 #define TEX_RELOAD_DELAY 1.0
-#define CUBEMAP_TEX_RELOAD_DELAY 10.0
+#define CUBEMAP_TEX_RELOAD_DELAY 1.0
 #define MAX_LOADED_TEXTURES 80
 struct loaded_texture {
 	GLuint texture_id;
