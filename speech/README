@@ -1,29 +1,26 @@
 
-Update: Wed 30 Nov 2022 05:46:55 PM EST
----------------------------------------
-
-I tried this again in Nov of 2022 with the pocketsphinx that you
-can apt-get install for linux Mint 20.1, and for whatever reason it
-did not work anywhere close to as well as what I was able to make
-work back in 2016, as seen here: https://www.youtube.com/watch?v=tfcme7maygw
-
-I don't know why it doesn't work so well anymore, but it definitely
-does not work well AT ALL now, which is kind of shame.  Well, I suppose
-with the neural net based speech recognition stuff that's around now,
-pocketsphinx was far behind state of the art anyway.  Perhaps some new
-speech recognition will come along and be not too hard to set up which
-we can use as a replacement.
-
 How to get speech recognition working with Space Nerds In Space
 ---------------------------------------------------------------
 
 1. Install pocketsphinx on the client system to which the microphone you want
-   to use is attached
+   to use is attached, probably something like:
+
+	apt-get install pocketsphinx;
+	apt-get install pocketsphinx-en-us;
+
+I definitely recommend "apt-get install pocketsphinx; apt-get install pocketsphinx-en-us"
+over trying to build from source.
 
 NOTE: You can build pocketsphinx from source as described in steps 1.1
 and 1.2.  Or you may be able to install it from your distro's package
 repositories instead, which may be more convenient, but I don't have
 instructions for how to do that.
+
+Also, if you get this error:
+
+	ERROR: "acmod.c", line 80: Acoustic model definition is not specified either with -mdef option or with -hmm
+
+it probably means you didn't install pocketsphinx-en-us
 
 1.1 Clone sphinxbase then build it.
 
