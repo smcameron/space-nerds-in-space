@@ -10024,6 +10024,16 @@ deselect:
 		OPCODE_SCI_SELECT_TARGET_TYPE_OBJECT, (uint32_t) -1), ROLE_SCIENCE | ROLE_NAVIGATION | ROLE_WEAPONS);
 }
 
+static void maybe_reboot_terminals(struct snis_entity *player_ship)
+{
+	if (player_ship->tsd.ship.damage.comms_damage < 150)
+		return;
+	if (snis_randn(60 * 10 * 4) != 5) /* About once every 4 minutes reboot some stuff */
+		return;
+	send_packet_to_all_clients_on_a_bridge(player_ship->id,
+			snis_opcode_subcode_pkt("bb", OPCODE_TERMINAL_EFFECT, OPCODE_TERMINAL_EFFECT_REBOOT), ROLE_ALL);
+}
+
 static void aim_high_gain_antenna(struct snis_entity *o)
 {
 	union vec3 straight_ahead = { { 1.0, 0.0, 0.0 } };
@@ -10286,6 +10296,7 @@ static void player_move(struct snis_entity *o)
 					RTS_WALLET_REFRESH_MINIMUM;
 	}
 	check_science_selection(o);
+	maybe_reboot_terminals(o);
 
 	update_flare_cooldown_timer(o);
 
