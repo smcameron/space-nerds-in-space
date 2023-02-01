@@ -202,6 +202,8 @@ static int distant_update_period = 20; /* Distant objects are updated only after
 static int docking_by_faction = 0;
 static int npc_ship_count = 250; /* tweakable.  Used by universe regeneration */
 static int asteroid_count = 200; /* tweakable.  Used by universe regeneration */
+#define DEFAULT_DAMAGE_REBOOT_CHANCE 10
+static int damage_reboot_chance = DEFAULT_DAMAGE_REBOOT_CHANCE; /* tweakable, chance out of 1000 */
 
 /* Tweakable values for player ship steering speeds */
 static float steering_adjust_factor = 1.0;  /* steering adjust factors applies to roll, pitch and yaw */
@@ -2891,6 +2893,11 @@ static void calculate_block_damage(struct snis_entity *o)
 	/* Doesn't die, just breaks away... */
 }
 
+static uint32_t random_terminals(void)
+{
+	return snis_randn(10000) % 255;
+}
+
 static void calculate_torpedolike_damage(struct snis_entity *target, double weapons_factor, uint8_t targeted_system)
 {
 	double ss;
@@ -2907,6 +2914,11 @@ static void calculate_torpedolike_damage(struct snis_entity *target, double weap
 			return;
 		}
 		d = &bridgelist[bridge].damcon;
+		if (snis_randn(1000) < damage_reboot_chance * 10) { /* 10% of torpedo hits, reboot terminals */
+			const uint8_t reboot = OPCODE_TERMINAL_EFFECT_REBOOT;
+			send_packet_to_all_clients_on_a_bridge(target->id,
+				snis_opcode_subcode_pkt("bb", OPCODE_TERMINAL_EFFECT, reboot), random_terminals());
+		}
 	} else if (target->type == OBJTYPE_TURRET) {
 		calculate_turret_damage(target);
 		return;
@@ -3060,6 +3072,12 @@ static void calculate_laser_damage(struct snis_entity *o, uint8_t wavelength, fl
 		o->timestamp = universe_timestamp;
 		o->respawn_time = universe_timestamp + player_respawn_time * 10;
 		o->alive = 0;
+	}
+	if (o->type == OBJTYPE_BRIDGE) { /* small fraction of time reboot terminals if comms has damage */
+		if (o->tsd.ship.damage.comms_damage >= 20 && snis_randn(1000) < 5 * damage_reboot_chance)
+			send_packet_to_all_clients_on_a_bridge(o->id,
+				snis_opcode_subcode_pkt("bb", OPCODE_TERMINAL_EFFECT,
+					OPCODE_TERMINAL_EFFECT_REBOOT), random_terminals());
 	}
 }
 
@@ -4116,6 +4134,11 @@ static void missile_collision_detection(void *context, void *entity)
 				missile->tsd.missile.target_id = target->id;
 			break;
 		case OBJTYPE_BRIDGE:
+			if (snis_randn(1000) < 10 * damage_reboot_chance)
+				send_packet_to_all_clients_on_a_bridge(target->id,
+					snis_opcode_subcode_pkt("bb", OPCODE_TERMINAL_EFFECT,
+						OPCODE_TERMINAL_EFFECT_REBOOT), random_terminals());
+			/* Fall thru */
 		case OBJTYPE_NPCSHIP:
 			notify_the_cops(missile, target);
 			damage_factor = missile_explosion_damage_distance / (sqrt(dist2) + 3.0);
@@ -10031,7 +10054,8 @@ static void maybe_reboot_terminals(struct snis_entity *player_ship)
 	if (snis_randn(60 * 10 * 4) != 5) /* About once every 4 minutes reboot some stuff */
 		return;
 	send_packet_to_all_clients_on_a_bridge(player_ship->id,
-			snis_opcode_subcode_pkt("bb", OPCODE_TERMINAL_EFFECT, OPCODE_TERMINAL_EFFECT_REBOOT), ROLE_ALL);
+			snis_opcode_subcode_pkt("bb", OPCODE_TERMINAL_EFFECT,
+				OPCODE_TERMINAL_EFFECT_REBOOT), random_terminals());
 }
 
 static void aim_high_gain_antenna(struct snis_entity *o)
@@ -19325,6 +19349,8 @@ static struct tweakable_var_descriptor server_tweak[] = {
 		&debug_npc_cargo_chasing, 'i', 0.0, 0.0, 0.0, 0, 1, 0, 0 },
 	{ "STARBASE_HEAL_TIME", "1 - 10000 - MINUTES FOR STARBASE TO HEAL ITSELF",
 		&starbase_heal_time, 'f', 1.0, 10000.0, STARBASE_DEFAULT_HEAL_TIME, 0, 0, 0, 0 },
+	{ "DAMAGE_REBOOT_CHANCE", "0 - 100 - CHANCE OF TERMINALS REBOOTING ON DAMAGE",
+		&damage_reboot_chance, 'i', 0.0, 0.0, 0.0, 0, 100, DEFAULT_DAMAGE_REBOOT_CHANCE, 0 },
 	{ NULL, NULL, NULL, '\0', 0.0, 0.0, 0.0, 0, 0, 0, 0 },
 };
 
