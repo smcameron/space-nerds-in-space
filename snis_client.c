@@ -20187,6 +20187,10 @@ static void show_reboot_screen(void)
 		y += font_lineheight[NANO_FONT];
 	}
 	char spin[] = "|";
+	if (terminal_reboot_timer == terminal_reboot_time)
+		wwviaudio_add_sound(TERMINAL_REBOOT);
+	if (terminal_reboot_timer == 1)
+		wwviaudio_add_sound(TERMINAL_READY);
 	if (terminal_reboot_timer < terminal_reboot_time / 2) {
 		spin[0] = spinner[(terminal_reboot_timer & (0x3 << 2)) >> 2];
 		sng_abs_xy_draw_string(spin, NANO_FONT, x, y);
@@ -22532,6 +22536,8 @@ static void read_sound_clips(void)
 	read_ogg_clip(TOO_FAR_AWAY, d, "too-far-away.ogg");
 	read_ogg_clip(LOWER_SHIELDS_HIT_LIGHTS, d, "lower-shields-and-hit-lights.ogg");
 	read_ogg_clip(CLEAR_TO_DEPART, d, "wombat-clear-to-depart.ogg");
+	read_ogg_clip(TERMINAL_REBOOT, d, "term_reboot.ogg");
+	read_ogg_clip(TERMINAL_READY, d, "term_ready.ogg");
 	printf("Done.\n");
 }
 
