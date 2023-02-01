@@ -158,6 +158,7 @@ int wwviaudio_read_ogg_clip_into_allocated_buffer(char *filename, int16_t **samp
 		rc = stat(filebuf, &statbuf);
 		if (rc != 0) {
 			fprintf(stderr, "stat('%s') failed.\n", filebuf);
+			*nsamples = 0;
 			return -1;
 		}
 	}
@@ -194,6 +195,7 @@ int wwviaudio_read_ogg_clip_into_allocated_buffer(char *filename, int16_t **samp
 
 	return 0;
 error:
+	*nsamples = 0;
 	return -1;
 }
 
