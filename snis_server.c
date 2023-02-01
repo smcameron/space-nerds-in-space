@@ -9904,7 +9904,7 @@ static void maybe_do_player_warp(struct snis_entity *o)
 	if (o->tsd.ship.warp_time == 0) { /* Is it time to engage warp? */
 		/* 5 seconds of warp limbo */
 		send_packet_to_all_clients_on_a_bridge(o->id,
-			snis_opcode_pkt("bh", OPCODE_WARP_LIMBO,
+			snis_opcode_pkt("bbh", OPCODE_TERMINAL_EFFECT, OPCODE_TERMINAL_EFFECT_WARP_LIMBO,
 				(uint16_t) (5 * 30)), ROLE_ALL);
 		bridgelist[b].warpv.v.x = (bridgelist[b].warpx - o->x) / 50.0;
 		bridgelist[b].warpv.v.y = (bridgelist[b].warpy - o->y) / 50.0;
@@ -22514,6 +22514,50 @@ static int l_create_passenger(lua_State *l)
 	return 0;
 }
 
+static int l_terminal_effect(lua_State *l)
+{
+	const double ship_idx = luaL_checknumber(l, 1);
+	const double rolex = luaL_checknumber(l, 2);
+	const double effectx = luaL_checknumber(l, 3);
+
+	uint32_t ship_id = (uint32_t) ship_idx;
+	uint32_t role = (uint32_t) rolex;
+	uint8_t effect = (uint8_t) effectx;
+
+	pthread_mutex_lock(&universe_mutex);
+	int i = lookup_by_id(ship_id);
+	if (i < 0) {
+		pthread_mutex_unlock(&universe_mutex);
+		send_demon_console_msg("TERMINAL_EFFECT: BAD PLAYER SHIP ID: %u", ship_id);
+		return 0;
+	}
+	if (go[i].type != OBJTYPE_BRIDGE) {
+		pthread_mutex_unlock(&universe_mutex);
+		send_demon_console_msg("TERMINAL_EFFECT: WRONG OBJECT TYPE: %u", ship_id);
+		return 0;
+	}
+	switch (effect) {
+	case OPCODE_TERMINAL_EFFECT_WARP_LIMBO: /* Fall thru */
+	case OPCODE_TERMINAL_EFFECT_WORMHOLE_LIMBO:
+		send_packet_to_all_clients_on_a_bridge(ship_id,
+			snis_opcode_subcode_pkt("bbh", OPCODE_TERMINAL_EFFECT, effect,
+				(uint16_t) (5 * 30)), role);
+		pthread_mutex_unlock(&universe_mutex);
+		break;
+	case OPCODE_TERMINAL_EFFECT_REBOOT:
+		send_packet_to_all_clients_on_a_bridge(ship_id,
+			snis_opcode_subcode_pkt("bb", OPCODE_TERMINAL_EFFECT, effect), role);
+		pthread_mutex_unlock(&universe_mutex);
+		break;
+	default:
+		pthread_mutex_unlock(&universe_mutex);
+		send_demon_console_msg("TERMINAL_EFFECT: BAD EFFECT NUMBER: %u", (uint32_t) effect);
+		return 0;
+	}
+	pthread_mutex_unlock(&universe_mutex);
+	return 0;
+}
+
 static int process_create_item(struct game_client *c)
 {
 	unsigned char buffer[16];
@@ -23084,7 +23128,8 @@ static void send_initiate_warp_packet(struct game_client *c, int enough_oomph)
 static void send_wormhole_limbo_packet(int shipid, uint16_t value)
 {
 	send_packet_to_all_clients_on_a_bridge(shipid,
-			snis_opcode_pkt("bh", OPCODE_WORMHOLE_LIMBO, value),
+			snis_opcode_pkt("bbh", OPCODE_TERMINAL_EFFECT,
+					OPCODE_TERMINAL_EFFECT_WORMHOLE_LIMBO, value),
 			ROLE_ALL);
 }
 
@@ -26582,6 +26627,7 @@ static void setup_lua(void)
 	add_lua_callable_fn(l_get_faction_name, "get_faction_name");
 	add_lua_callable_fn(l_computer_command, "computer_command");
 	add_lua_callable_fn(l_issue_docking_clearance, "issue_docking_clearance");
+	add_lua_callable_fn(l_terminal_effect, "terminal_effect");
 }
 
 static void print_lua_error_message(char *error_context, char *lua_command)

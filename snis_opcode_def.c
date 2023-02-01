@@ -181,7 +181,9 @@ int snis_opcode_def_init(void)
 	rc |= init_opcode_def(OPCODE_UPDATE_RESPAWN_TIME, "bb");
 	rc |= init_opcode_def(OPCODE_UPDATE_NETSTATS, "bqqwwwwwwwwwww");
 	rc |= init_opcode_def(OPCODE_COMMS_TRANSMISSION, "n/a");
-	rc |= init_opcode_def(OPCODE_WARP_LIMBO, "bh");
+	rc |= init_opcode_subcode_def(OPCODE_TERMINAL_EFFECT, OPCODE_TERMINAL_EFFECT_WARP_LIMBO, "bbh");
+	rc |= init_opcode_subcode_def(OPCODE_TERMINAL_EFFECT, OPCODE_TERMINAL_EFFECT_REBOOT, "bb");
+	rc |= init_opcode_subcode_def(OPCODE_TERMINAL_EFFECT, OPCODE_TERMINAL_EFFECT_WORMHOLE_LIMBO, "bbh");
 	rc |= init_opcode_def(OPCODE_DEMON_COMMAND, "n/a");
 	rc |= init_opcode_def(OPCODE_UPDATE_NEBULA, "bwwSSSSQQSS");
 	rc |= init_opcode_def(OPCODE_DAMCON_OBJ_UPDATE, "bwwwSSSRb");
@@ -192,7 +194,6 @@ int snis_opcode_def_init(void)
 	rc |= init_opcode_def(OPCODE_REQUEST_ROBOT_GRIPPER, "b");
 	rc |= init_opcode_def(OPCODE_MAINSCREEN_VIEW_MODE, "bRb");
 	rc |= init_opcode_def(OPCODE_UPDATE_WORMHOLE, "bwwSSS");
-	rc |= init_opcode_def(OPCODE_WORMHOLE_LIMBO, "bh");
 	rc |= init_opcode_def(OPCODE_UPDATE_SPACEMONSTER, "bwwSSSwQbbb");
 	rc |= init_opcode_def(OPCODE_REQUEST_WEAPZOOM, "bwb");
 	/* rc |= init_opcode_def(OPCODE_REQUEST_ONESHOT_SOUND, "bhr"); */

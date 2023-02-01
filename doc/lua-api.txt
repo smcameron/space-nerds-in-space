@@ -1014,6 +1014,27 @@ issue_docking_clearance(starbase_id, ship_id, starbase_name, comms_channel)
 	and comms_channel is the channel on which this information is transmitted
 	(if unsure, use 0 for channel).
 
+terminal_effect(ship_id, role, effect)
+	Causes a player's terminal to execute a special effect.
+	The effects are:
+
+	0: Warp Limbo
+	1: Terminal Reboot
+	2: Wormhole Limbo (currently exactly the same as Warp Limbo)
+
+	The roles are:
+
+	main view = 1
+	navigation = 2
+	weapons = 4
+	engineering = 8
+	science = 16
+	comms = 32
+	demon screen = 64
+	damage control = 128
+
+	They may be bitwise OR'ed together.  All the above roles would be 0xff
+
 INTERACTIVE FICTION:
 
 There is a Lua library to help with creating Zork-like interactive fiction missions controlled by

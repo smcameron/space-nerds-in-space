@@ -337,6 +337,8 @@ static volatile int displaymode = DISPLAYMODE_LOBBYSCREEN;
 static volatile int helpmode = 0;
 static volatile float weapons_camera_shake = 0.0f; 
 static volatile float main_camera_shake = 0.0f;
+static int terminal_reboot_timer = 0;
+static int terminal_reboot_time = 120; /* ticks */
 static float impulse_camera_shake = 1.0; /* tweakable */
 static unsigned char camera_mode;
 static unsigned char nav_camera_mode;
@@ -5598,20 +5600,34 @@ static int process_update_missile_packet(void)
 	return (rc < 0);
 }
 
-static int process_warp_limbo_packet(void)
+static int process_terminal_effect_packet(void)
 {
 	unsigned char buffer[sizeof(struct warp_limbo_packet)];
 	int rc;
+	uint8_t effect;
 	uint16_t value;
 
-	rc = read_and_unpack_buffer(buffer, "h", &value);
+
+	rc = read_and_unpack_buffer(buffer, "b", &effect);
 	if (rc != 0)
 		return rc;
-	if (suppress_hyperspace_noise)
-		warp_limbo_countdown = 0;
-	else if (value <= 40 * frame_rate_hz)
-		warp_limbo_countdown = value;
-	return 0;
+	switch (effect) {
+	case OPCODE_TERMINAL_EFFECT_WARP_LIMBO:
+	case OPCODE_TERMINAL_EFFECT_WORMHOLE_LIMBO:
+		rc = read_and_unpack_buffer(buffer, "h", &value);
+		if (rc != 0)
+			return rc;
+		if (suppress_hyperspace_noise)
+			warp_limbo_countdown = 0;
+		else if (value <= 40 * frame_rate_hz)
+			warp_limbo_countdown = value;
+		return 0;
+	case OPCODE_TERMINAL_EFFECT_REBOOT:
+		terminal_reboot_timer = terminal_reboot_time;
+		return 0;
+	default:
+		return -1;
+	}
 } 
 
 static int process_initiate_warp_packet()
@@ -5627,11 +5643,6 @@ static int process_initiate_warp_packet()
 	else
 		wwviaudio_add_sound(WARP_DRIVE_FUMBLE);
 	return 0;
-}
-
-static int process_wormhole_limbo_packet(void)
-{
-	return process_warp_limbo_packet();
 }
 
 static int process_update_laser_packet(void)
@@ -8136,14 +8147,11 @@ static void *gameserver_reader(__attribute__((unused)) void *arg)
 		case OPCODE_UPDATE_MISSILE:
 			rc = process_update_missile_packet();
 			break;
-		case OPCODE_WARP_LIMBO:
-			rc = process_warp_limbo_packet();
+		case OPCODE_TERMINAL_EFFECT:
+			rc = process_terminal_effect_packet();
 			break;
 		case OPCODE_INITIATE_WARP:
 			rc = process_initiate_warp_packet();
-			break;
-		case OPCODE_WORMHOLE_LIMBO:
-			rc = process_wormhole_limbo_packet();
 			break;
 		case OPCODE_DELETE_OBJECT:
 			rc = process_delete_object_packet();
@@ -20130,6 +20138,63 @@ static void show_warp_hash_screen(void)
 	}
 }
 
+static void show_reboot_screen(void)
+{
+	static char *spinner = "|\\-/";
+	static char *reboot_text[] = {
+		"Sirius Cybernetics Corp. Flight Console Firmware v. 1.51a (bootleg)",
+		"Fly Safe!!!  Fly Siriusly Safe!!!",
+		"",
+		"OPTIONS: 0xB0A710AD",
+		"PORT /def/tty00",
+		"",
+		"STARTING REALTIME CLOCK..."
+		"Incorrect configuration checksum",
+		"Clearing to default values",
+		"Probing memory banks: 1 2 3 4 5",
+		"Initializing auxiliary register",
+		"Installing timer interrupt handler",
+		"Timing CPU clock speed",
+		"Reset/Initialize keyboard",
+		"Setting up console parameters",
+		"FlightStation 99/4a Rev 2 board",
+		"Extended BASIC detected",
+		"ROM Rev 1.51a (bootleg)",
+		"Sub-Ethanet address ff:ff:ff:ff:ff:ff, Host ID: ffffffff",
+		"",
+		"",
+		"Testing",
+		"Testing audio chip: listen for a beep",
+		"Synchronous Error Reg Test",
+		"Synchronous Virtual Address Reg Test",
+		"Asynchronous Error Reg Test",
+		"Asynchronous Virtual Address Reg Test",
+		"System Enable Reg Test",
+		"Memory Test",
+		"",
+		"Connecting to ship's main computer...",
+	};
+	int n = ARRAYSIZE(reboot_text);
+	int x = txy(10);
+	int y = txy(10);
+	int nlines = ((terminal_reboot_time - terminal_reboot_timer) * n) / (terminal_reboot_time / 2);
+	if (nlines > n)
+		nlines = n;
+
+	sng_set_foreground(GREEN);
+	for (int i = 0; i < nlines; i++) {
+		sng_abs_xy_draw_string(reboot_text[i], NANO_FONT, x, y);
+		y += font_lineheight[NANO_FONT];
+	}
+	char spin[] = "|";
+	if (terminal_reboot_timer < terminal_reboot_time / 2) {
+		spin[0] = spinner[(terminal_reboot_timer & (0x3 << 2)) >> 2];
+		sng_abs_xy_draw_string(spin, NANO_FONT, x, y);
+	} else {
+		sng_abs_xy_draw_string("_", NANO_FONT, x, y);
+	}
+}
+
 static void show_warp_limbo_screen(void)
 {
 	switch (displaymode) {
@@ -21164,6 +21229,12 @@ static int main_da_expose(SDL_Window *window)
 	} else if (damage_limbo_countdown) {
 		show_warp_hash_screen();
 		damage_limbo_countdown--;
+		if (in_the_process_of_quitting)
+			draw_quit_screen();
+		goto end_of_drawing;
+	} else if (terminal_reboot_timer) {
+		show_reboot_screen();
+		terminal_reboot_timer--;
 		if (in_the_process_of_quitting)
 			draw_quit_screen();
 		goto end_of_drawing;

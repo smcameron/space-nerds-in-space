@@ -277,7 +277,7 @@ An authoritative list of opcodes may be found in snis_packet.h
 <tr><td>OPCODE_UPDATE_RESPAWN_TIME</td><td> 141</td></tr>
 <tr><td>OPCODE_UPDATE_NETSTATS</td><td> 142</td></tr>
 <tr><td>OPCODE_COMMS_TRANSMISSION</td><td> 143</td></tr>
-<tr><td>OPCODE_WARP_LIMBO</td><td>	144	</td></tr>
+<tr><td>OPCODE_TERMINAL_EFFECT</td><td>	144	</td></tr>
 <tr><td>OPCODE_DEMON_COMMAND</td><td> 145</td></tr>
 <tr><td>OPCODE_UPDATE_NEBULA</td><td>		146</td></tr>
 <tr><td>OPCODE_DAMCON_OBJ_UPDATE</td><td>	147</td></tr>
@@ -1178,16 +1178,28 @@ this should probably be locked down a little better, somehow.)
 <tr><td>1</td><td>b</td><td><em>length</em> bytes of comms transmission</td></tr>
 </table>
 
-<h4>144 Warp Limbo</h4> (Server to Client)
+<h4>144 Terminal Effect</h4> (Server to Client)
 
-This command puts some terminals (not Main View, not Weapons)
+<p>This command causes the player's terminal to execute terminal "effects"
+There are 2 effects, 1 = "Warp Limbo", and 2 = "terminal reboot".  There
+is also 3 = "Wormhole Limbo", but it is currently exactly the same as
+"Warp Limbo".
+
+<p>The "warp limbo" effect puts some terminals (not Main View, not Weapons)
 into "warp limbo" so they show only hash.  The idea is, the terminals
 don't work while in hyperspace, but you can still look out the windows.
+
+<p>The "terminal reboot" effect causes the player's terminal to appear to
+"reboot."
+
+<p>Note: for the "terminal reboot" effect, the time parameter is omitted
+(not sent/received).
 
 <p align=center><table border=1, width=60%>
 <tr><td>Offset</td><td>Data Type</td><td>Value</td><td>Scale</td></tr>
 <tr><td>0</td><td>b</td><td>144</td></tr>
-<tr><td>1</td><td>h</td><td>time in 1/30ths of a second (30 == 1 second)</td></tr>
+<tr><td>1</td><td>b</td><td>Effect (0 = Warp Limbo, 1 = Reboot terminal 2 = Wormhole limbo)</td></tr>
+<tr><td>2</td><td>h</td><td>time in 1/30ths of a second (30 == 1 second)</td></tr>
 </table>
 
 <h4>145 Demon Command</h4> (Client to Server)
