@@ -21237,11 +21237,15 @@ static int main_da_expose(SDL_Window *window)
 			draw_quit_screen();
 		goto end_of_drawing;
 	} else if (terminal_reboot_timer) {
-		show_reboot_screen();
-		terminal_reboot_timer--;
-		if (in_the_process_of_quitting)
-			draw_quit_screen();
-		goto end_of_drawing;
+		if (displaymode == DISPLAYMODE_DEMON) {
+			terminal_reboot_timer--;
+		} else {
+			show_reboot_screen();
+			terminal_reboot_timer--;
+			if (in_the_process_of_quitting)
+				draw_quit_screen();
+			goto end_of_drawing;
+		}
 	}
 
 	if (displaymode < DISPLAYMODE_FONTTEST) {
