@@ -787,7 +787,7 @@ int packed_buffer_extract_va(struct packed_buffer *pb, const char *format, va_li
 			}
 			break;
 		default:
-			rc = -EINVAL;
+			rc = EINVAL;
 			break;
 		}
 	}
