@@ -55,7 +55,7 @@ int snis_device_io_setup(struct snis_device_io_connection **con)
 
 	*con = malloc(sizeof(**con));
 	if (!*con)
-		return ENOMEM;
+		return -ENOMEM;
 	memset(*con, 0, sizeof(**con));
 
 	memset(&client_addr, 0, sizeof(client_addr));
