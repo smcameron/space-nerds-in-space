@@ -2489,15 +2489,12 @@ sub process {
 			}
 		}
 
-# check for -EINTR, to catch smcameron's kernel programming habits
-		if ($line =~ /[-]EINTR/g) {
-			ERROR("-EINTR", "You mean EINTR. This ain't kernel-land.\n" . $herecurr);
+# check for negative errno values to catch smcameron's kernel programming habits
+		if ($line =~ /errno [!=]= [-]E[A-Z]*/g) {
+			ERROR("errno", "errno values are not negative, this ain't kernel-land.\n" . $herecurr);
 		}
-		if ($line =~ /[-]ENOMEM/g) {
-			ERROR("-ENOMEM", "You mean ENOMEM. This ain't kernel-land.\n" . $herecurr);
-		}
-		if ($line =~ /[-]EINVAL/g) {
-			ERROR("-EINVAL", "You mean EINVAL. This ain't kernel-land.\n" . $herecurr);
+		if ($line =~ /[-]E[A-Z]* [!=]= errno/g) {
+			ERROR("errno", "errno values are not negative, this ain't kernel-land.\n" . $herecurr);
 		}
 
 # check for strcpy, strncpy, sprintf
