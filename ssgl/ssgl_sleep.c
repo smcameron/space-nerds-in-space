@@ -42,7 +42,7 @@ void ssgl_sleep(int seconds)
 		rc = nanosleep(&req, &rem);
 		if (rc == 0)
 			break;
-		if (rc < 0 && errno == -EINTR) {
+		if (rc < 0 && errno == EINTR) {
 			req = rem;
 			rem.tv_sec = 0;
 			rem.tv_nsec = 0;
@@ -66,7 +66,7 @@ void ssgl_msleep(int milliseconds)
 		rc = nanosleep(&req, &rem);
 		if (rc == 0)
 			break;
-		if (rc < 0 && errno == -EINTR) {
+		if (rc < 0 && errno == EINTR) {
 			req = rem;
 			rem.tv_sec = 0;
 			rem.tv_nsec = 0;

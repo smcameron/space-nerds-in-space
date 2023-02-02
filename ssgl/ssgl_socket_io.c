@@ -50,7 +50,7 @@ int ssgl_readsocket(int fd, void *buffer, int buflen)
 		if (rc == len)
 			return 0;
 		if (rc < 0) {
-			if (errno == -EINTR)
+			if (errno == EINTR)
 				continue;
 			else
 				return rc;
@@ -71,7 +71,7 @@ int ssgl_writesocket(int fd, void *buffer, int buflen)
 		if (rc == len)
 			return 0;
 		if (rc < 0) {
-			if (errno == -EINTR)
+			if (errno == EINTR)
 				continue;
 			else
 				return rc;

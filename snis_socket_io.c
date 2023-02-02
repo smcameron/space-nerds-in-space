@@ -81,7 +81,7 @@ int snis_readsocket(int fd, void *buffer, int buflen)
 			return 0;
 		}
 		if (rc < 0) {
-			if (errno == -EINTR)
+			if (errno == EINTR)
 				continue;
 			else
 				return rc;
@@ -107,7 +107,7 @@ int snis_writesocket(int fd, void *buffer, int buflen)
 			return 0;
 		}
 		if (rc < 0) {
-			if (errno == -EINTR)
+			if (errno == EINTR)
 				continue;
 			else
 				return rc;

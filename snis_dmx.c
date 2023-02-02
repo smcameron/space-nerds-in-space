@@ -74,7 +74,7 @@ static void thread_safe_msleep(int milliseconds)
 		rc = nanosleep(&req, &rem);
 		if (rc == 0)
 			break;
-		if (rc < 0 && errno == -EINTR) {
+		if (rc < 0 && errno == EINTR) {
 			req = rem;
 			rem.tv_sec = 0;
 			rem.tv_nsec = 0;
