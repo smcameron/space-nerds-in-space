@@ -2493,6 +2493,12 @@ sub process {
 		if ($line =~ /[-]EINTR/g) {
 			ERROR("-EINTR", "You mean EINTR. This ain't kernel-land.\n" . $herecurr);
 		}
+		if ($line =~ /[-]ENOMEM/g) {
+			ERROR("-ENOMEM", "You mean ENOMEM. This ain't kernel-land.\n" . $herecurr);
+		}
+		if ($line =~ /[-]EINVAL/g) {
+			ERROR("-EINVAL", "You mean EINVAL. This ain't kernel-land.\n" . $herecurr);
+		}
 
 # check for strcpy, strncpy, sprintf
 		if ($line =~ /[ \t]strcpy[(]/g) {
