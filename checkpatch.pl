@@ -2489,6 +2489,11 @@ sub process {
 			}
 		}
 
+# check for -EINTR, to catch smcameron's kernel programming habits
+		if ($line =~ /[-]EINTR/g) {
+			ERROR("-EINTR", "You mean EINTR. This ain't kernel-land.\n" . $herecurr);
+		}
+
 # check for strcpy, strncpy, sprintf
 		if ($line =~ /[ \t]strcpy[(]/g) {
 			ERROR("STRCPY", "Do not use strcpy(), use strlcpy() instead.\n" . $herecurr);
