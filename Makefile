@@ -1154,7 +1154,7 @@ $(OD)/snis_client_debug.o: snis_debug.c snis_debug.h Makefile ${ODT}
 	$(Q)$(SNISCLIENTDBGCOMPILE)
 
 $(OD)/snis_xwindows_hacks.o:	snis_xwindows_hacks.c snis_xwindows_hacks.h Makefile ${ODT}
-	$(Q)$(COMPILE)
+	$(Q)$(COMPILE) ${SDLCFLAGS}
 
 $(OD)/snis_server_debug.o: snis_debug.c snis_debug.h Makefile ${ODT}
 	$(Q)$(SNISSERVERDBGCOMPILE)

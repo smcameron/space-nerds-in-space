@@ -23,7 +23,7 @@
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
 #include <X11/Xos.h>
-#include <SDL2/SDL_syswm.h> /* for SDL_GetWindowWMInfo */
+#include <SDL_syswm.h> /* for SDL_GetWindowWMInfo */
 
 #include "snis_xwindows_hacks.h"
 
