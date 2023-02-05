@@ -21,19 +21,13 @@
 
 #include "arbitrary_spin.h"
 
-void compute_arbitrary_spin(float frame_rate_hz, double timestamp,
+void compute_arbitrary_spin(double timestamp, /* in secs, with usec precision (but not necc. usec accuracy) */
 				union quat *orientation,
 				union quat *rotational_velocity)
 {
-	/* reduce to axis and angle */
 	float x, y, z, a;
 	quat_to_axis(rotational_velocity, &x, &y, &z, &a);
-
-	/* current rotation is universe timestamp * rotation per timestamp
-	   rotational_velocity is frame_rate_hz and universe is 1/10 sec */
-	a = a * frame_rate_hz / (10.0 * frame_rate_hz / 30) * timestamp;
-
-	quat_init_axis(orientation, x, y, z, a);
+	quat_init_axis(orientation, x, y, z, fmod(a * timestamp, 2 * M_PI));
 }
 
 union quat random_orientation[NRANDOM_ORIENTATIONS];
@@ -50,7 +44,12 @@ void initialize_random_orientations_and_spins(int mtwist_seed)
 		consistent_random_axis_quat(mt, &random_orientation[i], angle);
 	}
 	for (i = 0; i < NRANDOM_SPINS; i++) {
-		float angular_speed = ((float) mtwist_int(mt, 100) / 10.0 - 5.0) * M_PI / 180.0;
+		/* 3.0f multiplier is here for stupid historical reasons
+		 * having to do with client frame rate being 3x the
+		 * server tick rate, even though the tick rate and frame
+		 * rate are completely irrelevant to these calculations.
+		 */
+		float angular_speed = (3.0f * (float) mtwist_int(mt, 100) / 10.0f - 5.0f) * M_PI / 180.0f;
 		consistent_random_axis_quat(mt, &random_spin[i], angular_speed);
 	}
 	mtwist_free(mt);

@@ -9,7 +9,7 @@
 extern union quat random_orientation[NRANDOM_ORIENTATIONS];
 extern union quat random_spin[NRANDOM_SPINS];
 extern void initialize_random_orientations_and_spins(int mtwist_seed);
-extern void compute_arbitrary_spin(float frame_rate_hz, double timestamp,
+extern void compute_arbitrary_spin(double timestamp, /* in secs, with usec precision */
 					union quat *orientation,
 					union quat *rotational_velocity);
 

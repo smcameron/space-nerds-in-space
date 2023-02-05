@@ -2717,7 +2717,7 @@ static void spin_wormhole(double timestamp, struct snis_entity *o)
 
 static void arbitrary_spin(double timestamp, struct snis_entity *o, union quat *rotational_velocity)
 {
-	compute_arbitrary_spin(frame_rate_hz, timestamp, &o->orientation, rotational_velocity);
+	compute_arbitrary_spin(timestamp, &o->orientation, rotational_velocity);
 	if (o->entity)
 		update_entity_orientation(o->entity, &o->orientation);
 }
@@ -2753,7 +2753,7 @@ static inline void spin_planet(double timestamp, struct snis_entity *o)
 	 * Arguably this should be done on the server and o->orientation updated as normal,
 	 * but this saves a bit of bandwidth at the cost of being a little too clever.
 	 */
-	compute_arbitrary_spin(frame_rate_hz, timestamp, &spun, &o->tsd.planet.rotational_velocity);
+	compute_arbitrary_spin(timestamp, &spun, &o->tsd.planet.rotational_velocity);
 	quat_conjugate(&local_rotation, &spun, &o->orientation);
 	quat_mul(&new_orientation, &local_rotation, &o->orientation);
 
