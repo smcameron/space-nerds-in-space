@@ -10713,6 +10713,28 @@ static int science_tooltip_text(struct science_data *sd, char *buffer, int bufle
 static void draw_tooltip_color(int mousex, int mousey, char *tooltip, int color);
 static void draw_tooltip(int mousex, int mousey, char *tooltip);
 
+/* Used for drawing x,y coords of widgets when moving widgets */
+static void draw_widget_position(int x, int y)
+{
+	char buf[80];
+	int tx, ty, xo, yo;
+	/* x and y are in real screen coords */
+
+	tx = x * 800 / real_screen_width;
+	ty = y * 600 / real_screen_height;
+	if (tx < 800 / 2)
+		xo = 100;
+	else
+		xo = -100;
+	if (ty < 600 / 2)
+		yo = 50;
+	else
+		yo = -50;
+	snprintf(buf, sizeof(buf), "(%d, %d)", tx, ty);
+	sng_set_foreground(WHITE);
+	sng_abs_xy_draw_string(buf, NANO_FONT, x + xo, y + yo);
+}
+
 static void draw_sciplane_tooltip(int mousex, int mousey, char *tooltip)
 {
 	draw_tooltip_color(mousex, mousey, tooltip, UI_COLOR(sciplane_tooltip));
@@ -22124,6 +22146,7 @@ static int main_da_button_press(SDL_MouseButtonEvent *event)
 		mouse.selected_ui_element = ui_element_list_find_by_position(uiobjs, event->x, event->y);
 		if (mouse.selected_ui_element) {
 			ui_element_get_position_offset(mouse.selected_ui_element, &mouse.ui_x, &mouse.ui_y);
+			ui_element_show_position(mouse.selected_ui_element, 1);
 		} else {
 			mouse.ui_x = 0;
 			mouse.ui_y = 0;
@@ -22189,10 +22212,12 @@ static int main_da_button_release(SDL_MouseButtonEvent *event)
 	default:
 		break;
 	}
-	if (!mouse.selected_ui_element)
+	if (!mouse.selected_ui_element) {
 		ui_element_list_button_release(uiobjs, event->x, event->y);
-	else
+	} else {
+		ui_element_show_position(mouse.selected_ui_element, 0);
 		mouse.selected_ui_element = NULL;
+	}
 	return TRUE;
 }
 
@@ -24181,6 +24206,7 @@ int main(int argc, char *argv[])
 	snis_slider_set_sound(SLIDER_SOUND);
 	text_window_set_timer(&timer);
 	ui_set_tooltip_drawing_function(draw_tooltip);
+	ui_set_widget_position_drawing_function(draw_widget_position);
 	update_splash_progress(13);
 	init_lobby_ui();
 	init_nav_ui();

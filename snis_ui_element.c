@@ -24,6 +24,7 @@ struct ui_element {
 	char *tooltip;
 	int defaultx, defaulty; /* default position of widget */
 	int xoffset, yoffset; /* offset from default position */
+	int show_widget_position; /* used when moving widgets */
 };
 
 struct ui_element_list {
@@ -32,6 +33,7 @@ struct ui_element_list {
 };
 
 static void (*draw_tooltip)(int mousex, int mousey, char *tooltip);
+static void (*draw_widget_position)(int x, int y);
 
 struct ui_element *ui_element_init(void *element,
 			struct ui_element_functions fns,
@@ -63,12 +65,20 @@ struct ui_element *ui_element_init(void *element,
 	e->defaulty = defaulty;
 	e->xoffset = 0;
 	e->yoffset = 0;
+	e->show_widget_position = 0;
 	return e;
+}
+
+void ui_element_show_position(struct ui_element *e, int value)
+{
+	e->show_widget_position = !!value;
 }
 
 void ui_element_draw(struct ui_element *element)
 {
 	element->draw(element);
+	if (element->show_widget_position && draw_widget_position)
+		draw_widget_position(element->defaultx + element->xoffset, element->defaulty + element->yoffset);
 }
 
 void ui_element_maybe_draw_tooltip(struct ui_element *element, int mousex, int mousey)
@@ -87,6 +97,8 @@ void ui_element_maybe_draw_tooltip(struct ui_element *element, int mousex, int m
 	if (element->tooltip_timer > 0)
 		element->tooltip_timer--;
 	if (element->tooltip_timer > 0)
+		return;
+	if (element->show_widget_position) /* Suppress tooltip when moving widgets */
 		return;
 	if (draw_tooltip)
 		draw_tooltip(mousex, mousey, element->tooltip);
@@ -134,6 +146,8 @@ void ui_element_list_draw(struct ui_element_list *list)
 			if (e->set_position)
 				e->set_position(e->element, e->defaultx + e->xoffset, e->defaulty + e->yoffset);
 			e->draw(e->element);
+			if (e->show_widget_position && draw_widget_position)
+				draw_widget_position(e->defaultx + e->xoffset, e->defaulty + e->yoffset);
 		}
 	}
 }
@@ -411,6 +425,11 @@ void ui_set_widget_focus(struct ui_element_list *list, void *widget)
 void ui_set_tooltip_drawing_function(ui_tooltip_drawing_function f)
 {
 	draw_tooltip = f;
+}
+
+void ui_set_widget_position_drawing_function(ui_element_draw_position_function f)
+{
+	draw_widget_position = f;
 }
 
 void ui_element_update_position_offset(struct ui_element *element, int xoffset, int yoffset)

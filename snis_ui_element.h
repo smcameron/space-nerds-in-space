@@ -43,6 +43,7 @@ typedef void (*ui_tooltip_drawing_function)(int x, int y, char *tooltip);
 typedef void (*ui_update_mouse_pos_function)(void *element, int physical_x, int physical_y);
 typedef void (*ui_element_update_position_function)(void *element, int x, int y);
 typedef char * (*ui_element_get_label_function)(void *element);
+typedef void (*ui_element_draw_position_function)(int x, int y);
 
 /*
 	struct ui_element_functions defines an interface of function pointers that a UI element
@@ -158,6 +159,10 @@ GLOBAL void ui_element_set_displaymode(struct ui_element *e, int displaymode);
 GLOBAL struct ui_element *widget_to_ui_element(struct ui_element_list *list, void *widget);
 /* Sets the tooltip drawing function. fn ptr used to isolate drawing code from this code */
 GLOBAL void ui_set_tooltip_drawing_function(ui_tooltip_drawing_function f);
+/* Sets the widget position drawing function, used to print coords when moving widgets */
+GLOBAL void ui_set_widget_position_drawing_function(ui_element_draw_position_function f);
+/* Do, or do not show element position when drawing element (value == 1 or 0) */
+GLOBAL void ui_element_show_position(struct ui_element *e, int value);
 /* Returns the first ui element in the list that (x, y) is inside. Useful for implementing user
  * moveable widgets. */
 GLOBAL struct ui_element *ui_element_list_find_by_position(struct ui_element_list *list, int x, int y);
