@@ -15055,6 +15055,10 @@ static void do_yaw(struct game_client *c, int yaw)
 	double max_yaw_velocity =
 		(MAX_YAW_VELOCITY * ship->tsd.ship.power_data.maneuvering.i) / 255;
 
+	if (max_yaw_velocity < 0.001 * M_PI / 180.0) /* Remind the player that they need power */
+		snis_queue_add_text_to_speech("Maneuvering power is low, attitude control thrusters not responding.",
+				ROLE_NAVIGATION, ship->id);
+
 	ship->tsd.ship.computer_steering_time_left = 0; /* cancel any computer steering in progress */
 	do_generic_axis_rot(&ship->tsd.ship.yaw_velocity, yaw, max_yaw_velocity,
 			YAW_INCREMENT * yaw_adjust_factor * steering_adjust_factor,
@@ -15067,6 +15071,10 @@ static void do_pitch(struct game_client *c, int pitch)
 	double max_pitch_velocity =
 		(MAX_PITCH_VELOCITY * ship->tsd.ship.power_data.maneuvering.i) / 255;
 
+	if (max_pitch_velocity < 0.001 * M_PI / 180.0) /* Remind the player that they need power */
+		snis_queue_add_text_to_speech("Maneuvering power is low, attitude control thrusters not responding.",
+				ROLE_NAVIGATION, ship->id);
+
 	ship->tsd.ship.computer_steering_time_left = 0; /* cancel any computer steering in progress */
 	do_generic_axis_rot(&ship->tsd.ship.pitch_velocity, pitch, max_pitch_velocity,
 			PITCH_INCREMENT * pitch_adjust_factor * steering_adjust_factor,
@@ -15078,6 +15086,10 @@ static void do_roll(struct game_client *c, int roll)
 	struct snis_entity *ship = &go[c->ship_index];
 	double max_roll_velocity =
 		(MAX_ROLL_VELOCITY * ship->tsd.ship.power_data.maneuvering.i) / 255;
+
+	if (max_roll_velocity < 0.001 * M_PI / 180.0) /* Remind the player that they need power */
+		snis_queue_add_text_to_speech("Maneuvering power is low, attitude control thrusters not responding.",
+				ROLE_NAVIGATION, ship->id);
 
 	ship->tsd.ship.computer_steering_time_left = 0; /* cancel any computer steering in progress */
 	do_generic_axis_rot(&ship->tsd.ship.roll_velocity, roll, max_roll_velocity,
