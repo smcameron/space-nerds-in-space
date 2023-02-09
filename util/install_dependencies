@@ -8,6 +8,7 @@ dev_packages=""
 opt_tts_packages=""
 package_manager="unknown"
 verbose=0
+DRYRUN=
 
 dbgout()
 {
@@ -166,7 +167,7 @@ apt_install_package()
 {
 	p="$1"
 	dbgout "Executing sudo apt install $1"
-	sudo apt install "$1"
+	$DRYRUN sudo apt install "$1"
 	return $?
 }
 
@@ -179,7 +180,7 @@ apt_already_installed()
 yum_install_package()
 {
 	dbgout "Executing sudo yum install $1"
-	sudo yum install "$1"
+	$DRYRUN sudo yum install "$1"
 	exit 1
 }
 
@@ -192,7 +193,7 @@ yum_already_installed()
 zypper_install_package()
 {
 	dbgout "Executing sudo zypper in $1"
-	sudo zypper in "$1"
+	$DRYRUN sudo zypper in "$1"
 	exit 1
 }
 
@@ -205,7 +206,7 @@ zypper_already_installed()
 rpm_install_package()
 {
 	dbgout "Executing sudo rpm install $1"
-	sudo rpm install "$1"
+	$DRYRUN sudo rpm install "$1"
 	exit 1
 }
 
@@ -246,6 +247,11 @@ do_you_want()
 
 main()
 {
+	if [ "$1" = "--dry-run" ]
+	then
+		DRYRUN="echo"
+	fi
+
 	check_package_manager
 
 	packages=$("$package_manager"_min_packages)
@@ -290,5 +296,6 @@ main()
 	done
 }
 
-main
+main $@
+
 
