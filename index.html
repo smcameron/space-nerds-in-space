@@ -166,7 +166,17 @@ If you're a member of a hackerspace, this game is explicitly <em>made for you</e
 
 <h1><a name="buildinstructions">Build Instructions</a></h1>
 
-<a href="https://www.youtube.com/watch?v=tCokfUtZOqw">(Here is a long, boring video demonstrating how to install)</a>
+<p>Here's a quick preview of the build instructions detailed below:
+<ol start="0">
+<li>Acquire necessary hardware (some linux machines, network switch, cables, projector, stereo, etc.)
+<li>Clone git repository or obtain source tarball and unpack it.
+<li>Install dependencies (run <cmd>util/install_dependencies</cmd> on apt-based systems)
+<li>Build the code (type "<cmd>make<cmd>")
+<li>Download additional art assets (type "<cmd>make update-assets</cmd>")
+<li>Run the game (type "<cmd>./snis_launcher</cmd>")
+</ol>
+
+<p><a href="https://www.youtube.com/watch?v=tCokfUtZOqw">(Here is a long, boring video demonstrating how to install)</a>
 
 <h2>Step 0: Acquire Hardware and OS</h2>
 <p>This is a linux game.  You will need a computer running linux that has
@@ -179,14 +189,61 @@ youtube video demonstrating installation and running SNIS on a Raspberry Pi 4B</
 if you want to see for yourself what it's like.
 Older Raspberry Pis
 are generally <em>not</em> powerful enough to run the game.
-The game is currently developed using <a href="https://www.linuxmint.com/">Mint 17.3</a>
+
+<p>It is possible to run the game entirely on a single linux laptop, but for the full and
+proper spaceship experience you will want six linux computers, a network switch,
+a projector or large TV, and a stereo system for audio in a reasonably dark
+room.
+
+<p>The game is currently developed using <a href="https://www.linuxmint.com/">Mint 17.3</a>
 It is within the realm of possibility that the game could be made to build
 and work on Mac OSX (it has been done before, but not since 2014 or so.)
 You're on your own if you want to try to run it on Mac, and my understanding
 is that newer Macs don't support OpenGL, which means you're out of luck.
 
-<h2>Step 1: Install Dependencies</h2>
-<p><b>Build dependencies</b>
+<h2>Step 1: Download the Source Code</h2>
+
+<p>The source code is here:
+<a href="https://github.com/smcameron/space-nerds-in-space">Space Nerds In Space github page</a>
+<p><b>NOTE: Do <e>NOT</em> perform these steps as root!</b>
+<p>To get the source code, there are three methods:
+<ul>
+<li>If you are a registered github user, type (as a non-root user):
+<pre>
+<blockquote>
+git clone git@github.com:smcameron/space-nerds-in-space.git
+<blockquote>
+</pre>
+<li>If not a registered github user, you can still use git with https.  Type (as a non-root user):
+<pre>
+<blockquote>
+git clone https://github.com/smcameron/space-nerds-in-space.git
+<blockquote>
+</pre>
+<li>Finally, you can just download a snapshot zipfile without using git at all:
+<ul>
+<li><a href="https://github.com/smcameron/space-nerds-in-space/archive/master.zip">
+https://github.com/smcameron/space-nerds-in-space/archive/master.zip</a>
+</ul>
+<p>After downloading the zip file, you must unpack the zip file.  Type (as a non-root user):
+<pre>
+<blockquote>
+unzip space-nerds-in-space-master.zip
+cd space-nerds-in-space-master
+</blockquote>
+</ul>
+
+<h2>Step 2: Install Dependencies</h2>
+<p>There is a script, <cmd>util/install_dependencies</cmd>. In theory it can install dependencies
+on apt, yum, zypper, or rpm based systems, but it has only been tried with apt based
+systems. If you want to see what it will do without actually doing anything, it has
+a <cmd>--dry-run</cmd> option.
+<blockquote>
+<cmd>util/install_dependencies</cmd>
+</blockquote>
+If you don't want to run this script, or find that it does not work for you, you can
+install the dependencies manually, as described below. If <cmd>util/install_dependencies</cmd>
+performs its job satisfactorily, you can advance to Step 3.
 <pre>
 <blockquote>
 sudo apt-get install build-essential;
@@ -264,40 +321,6 @@ be problematic.
 </div>
 </p>
 
-
-
-<h2>Step 2: Download the Source Code</h2>
-
-<p>The source code is here:
-<a href="https://github.com/smcameron/space-nerds-in-space">Space Nerds In Space github page</a>
-<p><b>NOTE: Do <e>NOT</em> perform these steps as root!</b>
-<p>To get the source code, there are three methods:
-<ul>
-<li>If you are a registered github user, type (as a non-root user):
-<pre>
-<blockquote>
-git clone git@github.com:smcameron/space-nerds-in-space.git
-<blockquote>
-</pre>
-<li>If not a registered github user, you can still use git with https.  Type (as a non-root user):
-<pre>
-<blockquote>
-git clone https://github.com/smcameron/space-nerds-in-space.git
-<blockquote>
-</pre>
-<li>Finally, you can just download a snapshot zipfile without using git at all:
-<ul>
-<li><a href="https://github.com/smcameron/space-nerds-in-space/archive/master.zip">
-https://github.com/smcameron/space-nerds-in-space/archive/master.zip</a>
-</ul>
-<p>After downloading the zip file, you must unpack the zip file.  Type (as a non-root user):
-<pre>
-<blockquote>
-unzip space-nerds-in-space-master.zip
-cd space-nerds-in-space-master
-</blockquote>
-</ul>
-
 <h2>Step 3: Build the Code</h2>
 <p>To build the code, make sure you are in the top level
 directory for the game ("space-nerds-in-space" if you
@@ -334,8 +357,8 @@ account to file a bug report.
 <li><a href="https://github.com/smcameron/space-nerds-in-space/issues">Click here to file a bug report</a>.
 </ul>
 
-<h2>Step 4: build openscad models (optional)</h2>
-<p>Or you can skip to step 5 and download them.
+<h2>Step 4: build openscad models (optional, not recommended)</h2>
+<p>Or you can skip to step 5 and download them (recommended).
 This step will take a long time and requires that you installed OpenSCAD.
 In general, unless you are working on the models, you can skip this step.
 (Again, as a non-root user):
