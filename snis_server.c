@@ -128,6 +128,7 @@
 #include "wwviaudio.h" /* Just for WWVIAUDIO_CHAIN_COUNT */
 #include "transport_contract.h"
 #include "snis_licenses.h"
+#include "fallthrough.h"
 
 #define CLIENT_UPDATE_PERIOD_NSECS 500000000
 #define MAXCLIENTS 100
@@ -2248,7 +2249,7 @@ static void delete_from_clients_and_server_helper(struct snis_entity *o, int tak
 		break;
 	case OBJTYPE_STARBASE:
 		delete_starbase_docking_ports(o);
-		/* FALLTHROUGH */
+		FALLTHROUGH;
 	default:
 		schedule_callback(event_callback, &callback_schedule,
 				"object-death-event", o->id);
@@ -4142,7 +4143,7 @@ static void missile_collision_detection(void *context, void *entity)
 		case OBJTYPE_BRIDGE:
 			if (snis_randn(1000) < 10 * damage_reboot_chance)
 				reboot_random_terminals(target);
-			/* Fall thru */
+			FALLTHROUGH;
 		case OBJTYPE_NPCSHIP:
 			notify_the_cops(missile, target);
 			damage_factor = missile_explosion_damage_distance / (sqrt(dist2) + 3.0);
@@ -7447,6 +7448,7 @@ static void ai_brain(struct snis_entity *o)
 		break;
 	case AI_MODE_RTS_RESUPPLY:
 		ai_rts_resupply(o);
+		break;
 	case AI_MODE_CATATONIC:
 		break;
 	default:

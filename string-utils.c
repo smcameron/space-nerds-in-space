@@ -8,6 +8,8 @@
 #include <fcntl.h>
 #include <errno.h>
 
+#include "fallthrough.h"
+
 void clean_spaces(char *line)
 {
 	char *s, *d;
@@ -40,8 +42,11 @@ void remove_trailing_whitespace(char *s)
 	while (len >= 0) {
 		switch (s[len]) {
 		case '\t':
+			FALLTHROUGH;
 		case ' ':
+			FALLTHROUGH;
 		case '\r':
+			FALLTHROUGH;
 		case '\n':
 			s[len] = '\0';
 			len--;

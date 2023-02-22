@@ -137,6 +137,7 @@
 #include "snis_xwindows_hacks.h"
 #include "snis_licenses.h"
 #include "read_menu_file.h"
+#include "fallthrough.h"
 
 #define SHIP_COLOR CYAN
 #define STARBASE_COLOR RED
@@ -4033,7 +4034,7 @@ static void do_dirkey(int h, int v, int r, int t)
 				external_camera_dirkey(h, v, r);
 				break;
 			}
-			/* FALLTHROUGH */
+			FALLTHROUGH;
 		case DISPLAYMODE_NAVIGATION:
 			if (nav_ui_computer_active()) /* suppress keystrokes typed to computer */
 				break;
@@ -9806,7 +9807,7 @@ static void show_mainscreen(void)
 			vec3_init(&desired_cam_offset, 0, 0, 0);
 			if (vp == o)
 				break;
-			/* FALLTHROUGH */
+			FALLTHROUGH;
 		case 1:
 		case 2: {
 				vec3_init(&desired_cam_offset, -1.0f, 0.25f, 0.0f);
@@ -18337,7 +18338,7 @@ static int set_clientside_variable(char *cmd, int suppress_unknown_var_error)
 	case TWEAK_UNKNOWN_VARIABLE:
 		if (suppress_unknown_var_error)
 			break; /* Suppress message, try it on the server */
-		/* FALLTHROUGH */
+		FALLTHROUGH;
 	default:
 		print_demon_console_msg("%s", msg);
 		break;
