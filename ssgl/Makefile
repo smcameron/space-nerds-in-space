@@ -55,10 +55,18 @@ OSX=0
 # LINKFLAGS=-lrt
 # LRTFLAGS=-lrt
 
+# Compiler specific flags
+ifeq (${CC}, "gcc")
+# clang doesn't seem to know about these
+COMPSPECCFLAGS=-Wno-format-truncation
+else
+COMPSPECCFLAGS=
+endif
+
 COMPILE=$(CC) ${MYCFLAGS} -c -o $@ $< && $(ECHO) '  COMPILE' $<
 
 MYCFLAGS=${DEBUGFLAG} ${OPTIMIZEFLAG} --pedantic -Wall -Wvla ${STOP_ON_WARN} -pthread ${LRTFLAGS} $(CFLAGS) \
-	-Wno-format-truncation
+	${COMPSPECCFLAGS}
 
 SERVEROBJS=ssgl_sanitize.o ssgl_sleep.o \
 	ssgl_socket_io.o ssgl_log.o ssgl_get_primary_host_ip_addr.o ssgl_get_gamelobby_port.o \

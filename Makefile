@@ -648,14 +648,34 @@ MODELS=${MD}/freighter.stl \
 	${MD}/cylinder.stl \
 	${MD}/missile.stl
 
+# compiler specific cflags
+ifeq (${USING_CLANG},)
+#
+# We are not using clang.
+#
+# clang doesn't seem to know about these
+# (which is weird, because "git -S no-extended-offsetof" shows this flag
+# was added in the commit enabling clang support.)
+#
+COMPSPECCFLAGS=-Wno-extended-offsetof -Wno-format-truncation -Wstringop-truncation -Wstringop-overflow
+else
+# We are using clang
+#
+# I do not remember why we have -Wno-gnu-folding-constant, it was added when clang support
+# was added, so clang apparently needed this at one time. It's not clear that it is still
+# needed.  I suspect clang used to throw many spurious warnings related to this.
+#
+COMPSPECCFLAGS=-Wno-gnu-folding-constant
+endif
+
 MYCFLAGS=-DPREFIX=${PREFIX} ${DEBUGFLAG} ${PROFILEFLAG} ${OPTIMIZEFLAG} ${UBSANFLAG}\
 	--pedantic -Wall -Wextra ${STOP_ON_WARN} -pthread -std=gnu99 ${RDYNAMIC} \
-	-Wno-extended-offsetof -Wno-gnu-folding-constant $(CFLAGS) -Wvla \
+	$(CFLAGS) -Wvla \
 	-DUSE_SNIS_XWINDOWS_HACKS=${USE_SNIS_XWINDOWS_HACKS} -fno-common \
-	-Wno-format-truncation \
 	-D_FORTIFY_SOURCE=2 -fsanitize=bounds \
-	-Wstringop-truncation -Warray-bounds -Wstringop-overflow \
-	-fstack-protector-strong -Wimplicit-fallthrough
+	-Warray-bounds \
+	-fstack-protector-strong -Wimplicit-fallthrough \
+	${COMPSPECCFLAGS}
 
 VORBISFLAGS:=$(subst -I,-isystem ,$(shell $(PKG_CONFIG) --cflags vorbisfile))
 
