@@ -19968,6 +19968,7 @@ static int process_exec_lua_script(struct game_client *c)
 	uint8_t len;
 	char firstword[300];
 	int wordlen;
+	char *trimmed_cmd;
 
 	rc = read_and_unpack_buffer(c, buffer, "b", &len);
 	if (rc)
@@ -19976,15 +19977,19 @@ static int process_exec_lua_script(struct game_client *c)
 	if (rc)
 		return rc;
 	txt[len] = '\0';
+	trimmed_cmd = trim_whitespace(txt);
 	memset(firstword, 0, sizeof(firstword));
-	for (i = 0; txt[i] != '\0'; i++) {
-		if (txt[i] == ' ')
+	for (i = 0; trimmed_cmd[i] != '\0'; i++) {
+		if (trimmed_cmd[i] == ' ')
 			break;
-		firstword[i] = txt[i];
+		firstword[i] = trimmed_cmd[i];
 	}
-
-	/* See if it's a server builtin command */
-	wordlen = strlen(firstword); /* allow abbreviated commands to work. */
+	wordlen = strlen(firstword);
+	if (wordlen == 0) { /* shouldn't happen */
+		send_demon_console_color_msg(YELLOW, "MALFORMED (EMPTY) COMMAND");
+		return 0;
+	}
+	/* See if it's a server builtin command, wordlen limit allows abbreviated commands */
 	for (i = 0; (size_t) i < ARRAYSIZE(server_builtin); i++) {
 		if (strncmp(firstword, server_builtin[i].cmd, wordlen) == 0) {
 			server_builtin[i].fn(txt);
