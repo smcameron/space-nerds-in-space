@@ -758,7 +758,7 @@ BINARY_NAMES=snis_client snis_server snis_limited_client snis_multiverse nebula_
 	infinite-taunt names stl_parser test_key_value_parser test-matrix test-space-partition \
 	test-marshal test-quat test-fleet test-mtwist device-io-sample-1 test-nonuniform-random-sampler \
 	test-commodities test-obj-parser test_solarsystem_config test_crater print_ship_attributes \
-	test_snis_dmx snis_test_audio check-endianness
+	test_snis_dmx snis_test_audio check-endianness test_stringutils
 ${BINARY_NAMES}:
 	@echo "You probably meant: make bin/$@" 1>&2
 	@/bin/false
@@ -1207,6 +1207,9 @@ bin/test_key_value_parser:	key_value_parser.c key_value_parser.h Makefile ${BIN}
 bin/test-matrix:	matrix.c Makefile ${BIN}
 	$(CC) ${MYCFLAGS} -DTEST_MATRIX -o bin/test-matrix matrix.c -lm
 
+bin/test_stringutils:	test_stringutils.c Makefile ${BIN} ${ODT} ${OD}/string-utils.o
+	$(CC) ${MYCFLAGS} -g -o bin/test_stringutils test_stringutils.c ${OD}/string-utils.o
+
 bin/test-space-partition:	space-part.c Makefile ${BIN}
 	$(CC) ${MYCFLAGS} -g -DTEST_SPACE_PARTITION -o bin/test-space-partition space-part.c -lm
 
@@ -1257,7 +1260,7 @@ mostly-clean:
 	bin/device-io-sample-1 bin/print_ship_attributes bin/snis_test_audio bin/test_crater \
 	bin/test_key_value_parser bin/test_snis_dmx test_scipher bin/test_snis_ship_type wwviaudio_basic_test \
 	${MANSRCDIR}/earthlike.1.gz  ${MANSRCDIR}/snis_client.6.gz  ${MANSRCDIR}/snis_server.6.gz  \
-	${MANSRCDIR}/snis_test_audio.1.gz bin/test_transport_contract
+	${MANSRCDIR}/snis_test_audio.1.gz bin/test_transport_contract bin/test_stringutils
 	rm -f ${BIN}
 	rm -fr opus-1.3.1
 	rm -f libopus.a
