@@ -45,6 +45,7 @@ void remove_trailing_whitespace(char *s)
 		case '\n':
 			s[len] = '\0';
 			len--;
+			break;
 		default:
 			return;
 		}
