@@ -285,7 +285,11 @@ char *get_abbreviated_command_arg(char *expected_command, char *user_input)
 	e = expected_command;
 	i = user_input;
 
-	for (;*i && *e;) {
+	/* skip leading whitespace */
+	for (; *i && (*i == ' ' || *i == '\t' || *i == '\r' || *i == '\n'); i++)
+		/* no for loop body */;
+
+	for (; *i && *e;) {
 		if (*i == *e) {
 			i++;
 			e++;

@@ -237,6 +237,7 @@ int main(__attribute__((unused)) int argc, __attribute__((unused)) char *argv[])
 	test_get_abbreviated_command_arg(57, "blast", "blast\t   1\t   ", 5);
 	test_get_abbreviated_command_arg(58, "x", "blast\t   1", -1);
 	test_get_abbreviated_command_arg(59, "blastx", "bl   1\n", 5);
+	test_get_abbreviated_command_arg(60, "vars", "    v   1\n", 8);
 
 	if (tests_passed == total_tests && tests_failed == 0)
 		printf("%d tests passed\n", tests_passed);
