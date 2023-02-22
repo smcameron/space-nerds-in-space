@@ -434,7 +434,9 @@ static int int_to_words(int number, char *buffer, int buflen)
 	if (number < 1000000000)
 		return int_to_words_helper(number, "million", 1000000, buffer, buflen);
 	/* if (number < 1000000000000) */ /* always true as number is an int and a trillion won't fit. */
+	{ /* braces here to suppress clang warning about indentation */
 		return int_to_words_helper(number, "billion", 1000000000, buffer, buflen);
+	}
 }
 
 static int integer_to_words(int number, char *buffer, int buflen)
