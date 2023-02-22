@@ -15557,12 +15557,13 @@ static void send_enscript_packet_to_server(char *filename)
 static void send_lua_script_packet_to_server(char *script)
 {
 	struct packed_buffer *pb;
-	uint8_t len = strlen(script);
-	printf("script = '%s', len = %hhu\n", script, len);
+	char *trimmed_script = trim_whitespace(script);
+	uint8_t len = strlen(trimmed_script);
+	printf("script = '%s', len = %hhu\n", trimmed_script, len);
 
 	pb = packed_buffer_allocate(sizeof(struct lua_script_packet) + len);
 	packed_buffer_append(pb, "bb", OPCODE_EXEC_LUA_SCRIPT, len);
-	packed_buffer_append_raw(pb, script, (unsigned short) len);
+	packed_buffer_append_raw(pb, trimmed_script, (unsigned short) len);
 	packed_buffer_queue_add(&to_server_queue, pb, &to_server_queue_mutex);
 	wakeup_gameserver_writer();
 }
@@ -18705,7 +18706,7 @@ static void send_demon_text_command(char *command)
 		return;
 	clear_empty_demon_variables();
 	strcpy(demon_ui.error_msg, "");
-	rc = construct_demon_command(command, demon_ui.error_msg);
+	rc = construct_demon_command(trim_whitespace(command), demon_ui.error_msg);
 	if (rc)
 		print_demon_console_msg(demon_ui.error_msg);
 }
