@@ -99,7 +99,7 @@ char *trim_whitespace(char *s)
 	return x;
 }
 
-char *skip_leading_whitespace(char *s)
+static char *skip_leading_whitespace(char *s)
 {
 	char *i;
 
