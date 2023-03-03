@@ -21261,7 +21261,9 @@ static int main_da_expose(SDL_Window *window)
 			draw_quit_screen();
 		goto end_of_drawing;
 	} else if (terminal_reboot_timer) {
-		if (displaymode == DISPLAYMODE_DEMON) {
+		if (displaymode == DISPLAYMODE_DEMON ||
+			displaymode == DISPLAYMODE_MAINSCREEN ||
+			displaymode == DISPLAYMODE_WEAPONS) {
 			terminal_reboot_timer--;
 		} else {
 			show_reboot_screen();
