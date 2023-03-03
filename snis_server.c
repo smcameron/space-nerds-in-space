@@ -2926,7 +2926,7 @@ static void calculate_torpedolike_damage(struct snis_entity *target, double weap
 			return;
 		}
 		d = &bridgelist[bridge].damcon;
-		if (snis_randn(1000) < damage_reboot_chance * 10) /* 10% of torpedo hits, reboot terminals */
+		if (snis_randn(1000) < damage_reboot_chance) /* 1% of torpedo hits, reboot terminals */
 			reboot_random_terminals(target);
 	} else if (target->type == OBJTYPE_TURRET) {
 		calculate_turret_damage(target);
@@ -3083,7 +3083,7 @@ static void calculate_laser_damage(struct snis_entity *o, uint8_t wavelength, fl
 		o->alive = 0;
 	}
 	if (o->type == OBJTYPE_BRIDGE) { /* small fraction of time reboot terminals if comms has damage */
-		if (o->tsd.ship.damage.comms_damage >= 20 && snis_randn(1000) < 5 * damage_reboot_chance)
+		if (o->tsd.ship.damage.comms_damage >= 20 && snis_randn(1000) < damage_reboot_chance)
 			reboot_random_terminals(o);
 	}
 }
@@ -4141,7 +4141,7 @@ static void missile_collision_detection(void *context, void *entity)
 				missile->tsd.missile.target_id = target->id;
 			break;
 		case OBJTYPE_BRIDGE:
-			if (snis_randn(1000) < 10 * damage_reboot_chance)
+			if (snis_randn(1000) < damage_reboot_chance)
 				reboot_random_terminals(target);
 			FALLTHROUGH;
 		case OBJTYPE_NPCSHIP:
