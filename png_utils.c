@@ -247,6 +247,8 @@ char *png_utils_read_png_image(const char *filename, int flipVertical, int flipH
 
 	png_destroy_read_struct(&png_ptr, &info_ptr, &end_info);
 	fclose(fp);
+	if (image_data_ptr)
+		free(image_data_ptr);
 	return (char *) image_data;
 
 cleanup:
