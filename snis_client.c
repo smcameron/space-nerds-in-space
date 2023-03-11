@@ -52,7 +52,6 @@
 #else
 #include <SDL2.h>
 #endif
-#include <SDL_image.h>
 
 #include "opengl_cap.h"
 #include "arraysize.h"
@@ -138,6 +137,7 @@
 #include "snis_licenses.h"
 #include "read_menu_file.h"
 #include "fallthrough.h"
+#include "png_utils.h"
 
 #define SHIP_COLOR CYAN
 #define STARBASE_COLOR RED
@@ -23977,6 +23977,9 @@ static void __attribute__((noreturn)) splash_screen_fn(int pipefd)
 	char *filename;
 	int exitcode = 0;
 	int splash_progress = 0;
+	char *splash_screen_pixels = NULL;
+	char whynot[255];
+	int w, h, a;
 
 	if (start_sdl())
 		exit(1);
@@ -23991,18 +23994,28 @@ static void __attribute__((noreturn)) splash_screen_fn(int pipefd)
 		fprintf(stderr, "Could not create SDL renderer: %s\n", SDL_GetError());
 		goto out;
 	}
-	snprintf(fname, sizeof(fname), "%s/textures/%s", asset_dir, "snis-splash.jpg");
+	snprintf(fname, sizeof(fname), "%s/textures/%s", asset_dir, "snis-splash.png");
 	filename = replacement_asset_lookup(fname, &replacement_assets);
-	image = IMG_LoadTexture(renderer, filename);
-	if (!image) {
-		fprintf(stderr, "Could not load image: %s\n", SDL_GetError());
+
+	splash_screen_pixels = png_utils_read_png_image(filename, 0, 0, 0, &w, &h, &a, whynot, sizeof(whynot));
+	if (!splash_screen_pixels) {
+		fprintf(stderr, "Failed to read png file %s: %s\n", filename, whynot);
 		goto out;
 	}
+
+	image = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ABGR8888, SDL_TEXTUREACCESS_STATIC, w, h);
+	if (!image) {
+		fprintf(stderr, "Could not create texture: %s\n", SDL_GetError());
+		goto out;
+	}
+	SDL_UpdateTexture(image, NULL, splash_screen_pixels, 4 * w);
+#if 0
 	SDL_QueryTexture(image, NULL, NULL, &width, &height);
 	rect.x = 0;
 	rect.y = 0;
 	rect.w = width;
 	rect.h = height;
+#endif
 	SDL_SetRenderDrawColor(renderer, 0, 128, 0, 255);
 	do {
 		int bytesleft, i;
@@ -24012,7 +24025,7 @@ static void __attribute__((noreturn)) splash_screen_fn(int pipefd)
 		progress.w = (splash_progress * 600) / 100;
 		progress.h = 20;
 		SDL_RenderClear(renderer);
-		SDL_RenderCopy(renderer, image, NULL, &rect);
+		SDL_RenderCopy(renderer, image, NULL, NULL);
 		SDL_RenderFillRect(renderer, &progress);
 		SDL_RenderPresent(renderer);
 		bytesleft = sizeof(splash_progress);
@@ -24042,6 +24055,8 @@ static void __attribute__((noreturn)) splash_screen_fn(int pipefd)
 	} while (1);
 
 out:
+	if (splash_screen_pixels)
+		free(splash_screen_pixels);
 	if (image)
 		SDL_DestroyTexture(image);
 	if (renderer)

@@ -497,7 +497,7 @@ endif
 PNGLIBS:=$(shell $(PKG_CONFIG) --libs libpng)
 PNGCFLAGS:=$(shell $(PKG_CONFIG) --cflags libpng)
 
-SDLLIBS:=$(shell $(SDL2_CONFIG) --libs) -lSDL2_image
+SDLLIBS:=$(shell $(SDL2_CONFIG) --libs)
 SDLCFLAGS:=$(shell $(SDL2_CONFIG) --cflags)
 
 GLEWLIBS:=$(shell $(PKG_CONFIG) --libs-only-l glew)
