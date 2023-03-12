@@ -74,7 +74,6 @@ Perform these steps as root:
     apt-get install libpng-dev;
     apt-get install libvorbis-dev;
     apt-get install libsdl2-dev;
-    apt-get install libsdl2-image-dev;
     apt-get install libsdl2-2.0-0;
     apt-get install liblua5.2-dev;
     apt-get install libglew1.5-dev;
