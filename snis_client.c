@@ -23971,8 +23971,7 @@ static void __attribute__((noreturn)) splash_screen_fn(int pipefd)
 	SDL_Window *splash_window = NULL;
 	SDL_Renderer *renderer = NULL;
 	SDL_Texture *image = NULL;
-	SDL_Rect rect, progress;
-	int width, height;
+	SDL_Rect progress;
 	char fname[PATH_MAX];
 	char *filename;
 	int exitcode = 0;
@@ -24009,13 +24008,6 @@ static void __attribute__((noreturn)) splash_screen_fn(int pipefd)
 		goto out;
 	}
 	SDL_UpdateTexture(image, NULL, splash_screen_pixels, 4 * w);
-#if 0
-	SDL_QueryTexture(image, NULL, NULL, &width, &height);
-	rect.x = 0;
-	rect.y = 0;
-	rect.w = width;
-	rect.h = height;
-#endif
 	SDL_SetRenderDrawColor(renderer, 0, 128, 0, 255);
 	do {
 		int bytesleft, i;
