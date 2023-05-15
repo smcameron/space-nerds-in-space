@@ -23,16 +23,16 @@
 
 #include <GL/glew.h>
 
-extern int msaa_framebuffer_supported();
+extern int msaa_framebuffer_supported(void);
 
-extern int msaa_render_to_fbo_supported();
+extern int msaa_render_to_fbo_supported(void);
 
-extern int msaa_max_samples();
+extern int msaa_max_samples(void);
 
-extern int fbo_render_to_texture_supported();
+extern int fbo_render_to_texture_supported(void);
 
-extern int framebuffer_srgb_supported();
+extern int framebuffer_srgb_supported(void);
 
-extern int texture_srgb_supported();
+extern int texture_srgb_supported(void);
 
 #endif

@@ -779,7 +779,7 @@ error:
 	return -1;
 }
 
-int wwviaudio_stop_audio_capture()
+int wwviaudio_stop_audio_capture(void)
 {
 	PaError rc = paNoError;
 

@@ -728,7 +728,7 @@ static void set_default_clip_window(void)
 	sng_set_clip_window(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
 }
 
-static double universe_timestamp()
+static double universe_timestamp(void)
 {
 	return (time_now_double() - universe_timestamp_offset) * (double)UNIVERSE_TICKS_PER_SECOND;
 }
@@ -1149,7 +1149,7 @@ static void update_generic_damcon_object(struct snis_damcon_entity *o,
 	o->heading = heading;
 }
 
-static void clear_damcon_pool()
+static void clear_damcon_pool(void)
 {
 	snis_object_pool_free_all_objects(damcon_pool);
 	memset(dco, 0, sizeof(dco));
@@ -3998,7 +3998,7 @@ static void do_onscreen(uint8_t mode)
 	queue_to_server(snis_opcode_pkt("bb", OPCODE_ROLE_ONSCREEN, mode));
 }
 
-static void do_view_mode_change()
+static void do_view_mode_change(void)
 {
 	uint8_t new_mode;
 	struct snis_entity *o;
@@ -4111,7 +4111,7 @@ static void fire_missile_button_pressed(__attribute__((unused)) void *notused)
 	transmit_adjust_control_input(1, OPCODE_ADJUST_CONTROL_FIRE_MISSILE);
 }
 
-static void do_mainscreen_camera_mode()
+static void do_mainscreen_camera_mode(void)
 {
 	if (displaymode != DISPLAYMODE_MAINSCREEN)
 		return;
@@ -4119,7 +4119,7 @@ static void do_mainscreen_camera_mode()
 		(unsigned char) (camera_mode + 1) % 3));
 }
 
-static void do_nav_camera_mode()
+static void do_nav_camera_mode(void)
 {
 	if (displaymode != DISPLAYMODE_NAVIGATION)
 		return;
@@ -4142,7 +4142,7 @@ static void robot_manual_button_pressed(void *x);
 static void fire_phaser_button_pressed(__attribute__((unused)) void *notused);
 static void fire_torpedo_button_pressed(__attribute__((unused)) void *notused);
 static void fire_missile_button_pressed(__attribute__((unused)) void *notused);
-static void load_torpedo_button_pressed();
+static void load_torpedo_button_pressed(void);
 
 static void do_joystick_engage_warp(__attribute__((unused)) void *notused)
 {
@@ -4329,7 +4329,7 @@ static void do_joystick_roll(__attribute__((unused)) void *x, int value)
 /* client joystick status */
 static struct js_state jss[MAX_JOYSTICKS];
 
-static void deal_with_joysticks()
+static void deal_with_joysticks(void)
 {
 
 	int joystick_throttle = 3;
@@ -4370,13 +4370,13 @@ static void deal_with_joysticks()
 	}
 }
 
-static void deal_with_physical_io_devices()
+static void deal_with_physical_io_devices(void)
 {
 	/* FIXME: fill this in. */
 }
 
 static int mouse_button_held(int button);
-static void deal_with_mouse()
+static void deal_with_mouse(void)
 {
 	int i;
 	/* The majority of mouse events are dealt with in main_da_button_press
@@ -4496,7 +4496,7 @@ static struct engineering_ui {
 	int gauge_radius;
 } eng_ui;
 
-static void deal_with_keyboard()
+static void deal_with_keyboard(void)
 {
 	int h, v, z, r, t;
 	int sbh, sbv, sbr; /* sciball keys */
@@ -4926,14 +4926,14 @@ static struct lobby_ui {
 	struct button *lobby_connect_to_server_button;
 } lobby_ui;
 
-static void lobby_connect_to_server_button_pressed()
+static void lobby_connect_to_server_button_pressed(__attribute__((unused)) void *unused)
 {
 	printf("lobby connect to server button pressed\n");
 	if (lobby_selected_server != -1)
 		displaymode = DISPLAYMODE_CONNECTING;
 }
 
-static void lobby_cancel_button_pressed()
+static void lobby_cancel_button_pressed(__attribute__((unused)) void *unused)
 {
 	printf("lobby cancel button pressed\n");
 	displaymode = DISPLAYMODE_NETWORK_SETUP;
@@ -5631,7 +5631,7 @@ static int process_terminal_effect_packet(void)
 	}
 } 
 
-static int process_initiate_warp_packet()
+static int process_initiate_warp_packet(void)
 {
 	unsigned char buffer[10], enough_oomph;
 	int rc;
@@ -5693,7 +5693,7 @@ static int process_update_spacemonster(void)
 	return (rc < 0);
 }
 
-static int process_red_alert()
+static int process_red_alert(void)
 {
 	int rc;
 	unsigned char buffer[10];
@@ -5713,7 +5713,7 @@ static struct main_screen_text_data {
 	int comms_on_mainscreen;
 } main_screen_text;
 
-static int process_comms_mainscreen()
+static int process_comms_mainscreen(void)
 {
 	int rc;
 	unsigned char buffer[10];
@@ -6034,7 +6034,7 @@ static int process_latency_check(void)
 	return 0;
 }
 
-static int process_proximity_alert()
+static int process_proximity_alert(void)
 {
 	static int last_time = 0;
 
@@ -6044,7 +6044,7 @@ static int process_proximity_alert()
 	return 0;
 }
 
-static int process_atmospheric_friction()
+static int process_atmospheric_friction(void)
 {
 	static int last_time = 0;
 
@@ -6054,7 +6054,7 @@ static int process_atmospheric_friction()
 	return 0;
 }
 
-static int process_collision_notification()
+static int process_collision_notification(void)
 {
 	static int last_time = 0;
 
@@ -11572,7 +11572,7 @@ static void snis_draw_dotted_vline(int x1, int y1, int y2, int dots)
 	}
 }
 
-static void load_torpedo_button_pressed()
+static void load_torpedo_button_pressed(void)
 {
 	struct snis_entity *o;
 
@@ -12198,7 +12198,7 @@ static void ui_add_text_input_box(struct snis_text_input_box *t, int active_disp
 	ui_element_list_add_element(&uiobjs, uie); 
 }
 
-static void init_lobby_ui()
+static void init_lobby_ui(void)
 {
 	lobby_ui.lobby_cancel_button = snis_button_init(txx(650), txy(520), -1, -1,
 			"CANCEL", UI_COLOR(lobby_cancel), NANO_FONT, lobby_cancel_button_pressed, NULL);
@@ -12340,7 +12340,7 @@ void set_normal_cursor(void)
 	/* SDL TODO set_cursor(window, GDK_ARROW); */
 }
 
-static void maybe_grab_or_ungrab_mouse()
+static void maybe_grab_or_ungrab_mouse(void)
 {
 	/* If we are not on the weapons screen, free the mouse if not already free. */
 	if (displaymode != DISPLAYMODE_WEAPONS) {
@@ -14707,7 +14707,7 @@ static void show_engineering_damage_report(int subsystem)
 	}
 }
 
-static int engineering_warnings_active()
+static int engineering_warnings_active(void)
 {
 	return snis_slider_alarm_triggered(eng_ui.shield_damage) ||
 		snis_slider_alarm_triggered(eng_ui.phaser_banks_damage) ||
@@ -15682,7 +15682,7 @@ static int comms_rts_order_checkbox(void *x)
 	return *fleet_order_checkbox;
 }
 
-static void comms_input_entered()
+static void comms_input_entered(__attribute__((unused)) void *unused)
 {
 	printf("comms input entered\n");
 }
@@ -19075,7 +19075,7 @@ static void add_submenu_from_file(struct pull_down_menu *pdm, char *column,
 	pull_down_menu_add_from_file(pdm, column, filename, menu_button_fn);
 }
 
-static void init_demon_ui()
+static void init_demon_ui(void)
 {
 	int i, x, y, dy, n;
 
@@ -20245,17 +20245,17 @@ static void show_warp_limbo_screen(void)
 	}
 }
 
-static void lobby_hostname_entered()
+static void lobby_hostname_entered(__attribute__((unused)) void *unused)
 {
 	printf("lobby hostname entered: %s\n", net_setup_ui.lobbyname);
 }
 
-static void shipname_entered()
+static void shipname_entered(__attribute__((unused)) void *unused)
 {
 	printf("shipname entered: %s\n", net_setup_ui.shipname);
 }
 
-static void password_entered()
+static void password_entered(__attribute__((unused)) void *unused)
 {
 	printf("password entered\n");
 }
@@ -20271,7 +20271,7 @@ static void sanitize_string(char *s)
 			s[i] = 'x';
 }
 
-static void connect_to_lobby_button_pressed()
+static void connect_to_lobby_button_pressed(__attribute__((unused)) void *unused)
 {
 	int rc;
 
@@ -21710,7 +21710,7 @@ static void set_planetary_lightning_material_uv_coords(void)
 	}
 }
 
-static void init_meshes();
+static void init_meshes(void);
 
 /* call back for configure_event (for window resize) */
 static int main_da_configure(SDL_Window *window)
@@ -22008,7 +22008,7 @@ static int load_static_textures(void)
 	return 1;
 }
 
-static int load_per_solarsystem_textures()
+static int load_per_solarsystem_textures(void)
 {
 	int i, j;
 	char path[PATH_MAX];
@@ -23170,7 +23170,7 @@ static struct mesh *make_derelict_mesh(struct mesh *source)
 	return m;
 }
 
-static void init_meshes()
+static void init_meshes(void)
 {
 	int i;
 	char *d = asset_dir;
@@ -23484,7 +23484,7 @@ static void init_colors(void)
 	sng_setup_colors(color_file);
 }
 
-static void check_lobby_serverhost_options()
+static void check_lobby_serverhost_options(void)
 {
 	if (serverport != -1) {
 		if (serverport < 0 || serverport > 0x0ffff) {
@@ -23727,7 +23727,7 @@ static void lobby_chosen(void *x)
 		(ntohl(ipaddr) & 0x0000ff00) >> 8,
 		(ntohl(ipaddr) & 0x000000ff));
 	snis_text_input_box_set_contents(net_setup_ui.lobbyservername, msg);
-	connect_to_lobby_button_pressed();
+	connect_to_lobby_button_pressed(NULL);
 }
 
 /* This gets called from a thread created by ssgl_register_for_bcast_packets() with a mutex held. */

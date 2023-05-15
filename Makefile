@@ -675,7 +675,7 @@ MYCFLAGS=-DPREFIX=${PREFIX} ${DEBUGFLAG} ${PROFILEFLAG} ${OPTIMIZEFLAG} ${UBSANF
 	-D_FORTIFY_SOURCE=2 -fsanitize=bounds \
 	-Warray-bounds \
 	-fstack-protector-strong -Wimplicit-fallthrough \
-	${COMPSPECCFLAGS}
+	${COMPSPECCFLAGS} -Wstrict-prototypes
 
 VORBISFLAGS:=$(subst -I,-isystem ,$(shell $(PKG_CONFIG) --cflags vorbisfile))
 

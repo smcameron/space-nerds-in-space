@@ -64,7 +64,7 @@ static int process_hostility(char *line)
 	return 0;
 }
 
-static void initialize_faction_hostility()
+static void initialize_faction_hostility(void)
 {
 	int i, j;
 

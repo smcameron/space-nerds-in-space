@@ -31,7 +31,7 @@
 #define DEFINE_MATHUTILS_GLOBALS 1
 #include "mathutils.h"
 
-double time_now_double()
+double time_now_double(void)
 {
 	struct timeval time;
 	if (gettimeofday(&time, NULL))

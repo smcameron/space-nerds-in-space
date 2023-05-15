@@ -37,7 +37,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 int lsssglmode = 0;
 char *programname = "ssgl_gameclient_example";
 
-static void usage()
+static void usage(void)
 {
 	fprintf(stderr, "%s: usage:\n   %s [lobby-hostname] [gametypefilter]\n",
 		programname, programname);

@@ -1001,7 +1001,7 @@ static struct graph_dev_gl_context {
 		} \
 	} while (0)
 
-static void print_framebuffer_error()
+static void print_framebuffer_error(void)
 {
 	switch (glCheckFramebufferStatus(GL_FRAMEBUFFER)) {
 	case GL_FRAMEBUFFER_COMPLETE:
@@ -1085,7 +1085,7 @@ void graph_dev_set_3d_viewport(int x_offset, int y_offset, int width, int height
 	sgc.vp_height_3d = height;
 }
 
-static void enable_2d_viewport()
+static void enable_2d_viewport(void)
 {
 	if (sgc.active_vp != 1) {
 		/* 2d viewport is entire screen */
@@ -1126,7 +1126,7 @@ static void enable_2d_viewport()
 	}
 }
 
-static void enable_3d_viewport()
+static void enable_3d_viewport(void)
 {
 	if (sgc.active_vp != 2) {
 		VIEWPORT(sgc.vp_x_3d, sgc.vp_y_3d, sgc.vp_width_3d, sgc.vp_height_3d);
@@ -1159,7 +1159,7 @@ void graph_dev_set_color(struct graph_dev_color *color, float a)
 	}
 }
 
-static void draw_vertex_buffer_2d()
+static void draw_vertex_buffer_2d(void)
 {
 	if (sgc.nvertex_2d > 0) {
 		/* printf("start draw_vertex_buffer_2d %d\n", sgc.nvertex_2d); */
@@ -2861,7 +2861,7 @@ static void graph_dev_raster_full_screen_effect(struct graph_dev_gl_fs_effect_sh
 	glUseProgram(0);
 }
 
-void graph_dev_start_frame()
+void graph_dev_start_frame(void)
 {
 	/* reset viewport to whole screen */
 	sgc.active_vp = 0;
@@ -2925,7 +2925,7 @@ void graph_dev_start_frame()
 	sgc.fbo_current = sgc.fbo_3d;
 }
 
-void graph_dev_end_frame()
+void graph_dev_end_frame(void)
 {
 	/* printf("end frame\n"); */
 	draw_vertex_buffer_2d();
@@ -2995,7 +2995,7 @@ void graph_dev_end_frame()
 	}
 }
 
-void graph_dev_clear_depth_bit()
+void graph_dev_clear_depth_bit(void)
 {
 	glClear(GL_DEPTH_BUFFER_BIT);
 }
@@ -3779,7 +3779,7 @@ static void setup_smaa_effect(struct graph_dev_smaa_effect *effect)
 		effect->blend_target.color0_texture, 0);
 }
 
-static void setup_2d()
+static void setup_2d(void)
 {
 	memset(&render_target_2d, 0, sizeof(render_target_2d));
 
@@ -3806,7 +3806,7 @@ static void setup_2d()
 	}
 }
 
-static void setup_3d()
+static void setup_3d(void)
 {
 	sgc.gl_info_3d_line.nlines = 0;
 
@@ -4163,7 +4163,7 @@ static time_t get_file_modify_time(const char *filename)
 	return s.st_mtime;
 }
 
-int graph_dev_reload_cubemap_textures()
+int graph_dev_reload_cubemap_textures(void)
 {
 	int i, failed = 0;
 	for (i = 0; i < nloaded_cubemap_textures; i++) {
@@ -4305,7 +4305,7 @@ const char *graph_dev_get_texture_filename(unsigned int texture_id)
 	return "";
 }
 
-int graph_dev_reload_textures()
+int graph_dev_reload_textures(void)
 {
 	int i;
 	for (i = 0; i < nloaded_textures; i++) {
@@ -4315,7 +4315,7 @@ int graph_dev_reload_textures()
 	return 0;
 }
 
-int graph_dev_reload_changed_textures()
+int graph_dev_reload_changed_textures(void)
 {
 	int i;
 	for (i = 0; i < nloaded_textures; i++) {
@@ -4335,7 +4335,7 @@ int graph_dev_reload_changed_textures()
 }
 
 /* returns 0 on success */
-int graph_dev_reload_changed_cubemap_textures()
+int graph_dev_reload_changed_cubemap_textures(void)
 {
 	int i, failed = 0;
 	for (i = 0; i < nloaded_cubemap_textures; i++) {
@@ -4434,7 +4434,7 @@ static void debug_menu_draw_item(char *item, int itemnumber, int grayed, int che
 	sng_abs_xy_draw_string(item, NANO_FONT, (x + 20) / sgc.x_scale, (y + 10) / sgc.y_scale);
 }
 
-void graph_dev_display_debug_menu_show()
+void graph_dev_display_debug_menu_show(void)
 {
 	sng_set_foreground(BLACK);
 	graph_dev_draw_rectangle(1, 10, 30, 370 * sgc.x_scale, 265);

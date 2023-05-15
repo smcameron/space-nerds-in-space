@@ -41,13 +41,13 @@ struct graph_dev_color { /* This exactly mimics GdkColor */
 
 extern int graph_dev_setup(const char *shader_dir);
 extern void graph_dev_reload_all_shaders(void);
-extern void graph_dev_start_frame();
-extern void graph_dev_end_frame();
+extern void graph_dev_start_frame(void);
+extern void graph_dev_end_frame(void);
 extern void graph_dev_set_color(struct graph_dev_color *color, float a);
 extern void graph_dev_set_screen_size(int width, int height);
 extern void graph_dev_set_extent_scale(float x_scale, float y_scale);
 extern void graph_dev_set_3d_viewport(int x_offset, int y_offset, int width, int height);
-extern void graph_dev_clear_depth_bit();
+extern void graph_dev_clear_depth_bit(void);
 
 #define GRAPH_DEV_RENDER_FAR_TO_NEAR 0
 #define GRAPH_DEV_RENDER_NEAR_TO_FAR 1
@@ -86,9 +86,9 @@ extern unsigned int graph_dev_load_texture(const char *filename, int linear_colo
 extern unsigned int graph_dev_load_texture_no_mipmaps(const char *filename, int linear_colorspace);
 extern const char *graph_dev_get_texture_filename(unsigned int);
 extern void graph_dev_draw_skybox(const struct mat44 *mat_vp);
-extern int graph_dev_reload_changed_textures();
-extern int graph_dev_reload_changed_cubemap_textures();
-extern void graph_dev_expire_all_textures();
+extern int graph_dev_reload_changed_textures(void);
+extern int graph_dev_reload_changed_cubemap_textures(void);
+extern void graph_dev_expire_all_textures(void);
 extern void graph_dev_expire_texture(char *filename);
 extern void graph_dev_expire_cubemap_texture(int is_inside,
 	const char *texture_filename_pos_x,
@@ -98,7 +98,7 @@ extern void graph_dev_expire_cubemap_texture(int is_inside,
 	const char *texture_filename_pos_z,
 	const char *texture_filename_neg_z);
 
-extern void graph_dev_display_debug_menu_show();
+extern void graph_dev_display_debug_menu_show(void);
 extern int graph_dev_graph_dev_debug_menu_click(int x, int y);
 
 /* graph_dev_grab_framebuffer only implemented for opengl backend */

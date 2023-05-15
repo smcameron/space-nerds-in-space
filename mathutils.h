@@ -32,7 +32,7 @@
 #define GLOBAL
 #endif
 
-GLOBAL double time_now_double();
+GLOBAL double time_now_double(void);
 GLOBAL void sleep_double(double time);
 
 GLOBAL double degrees_to_radians(double degrees);
@@ -45,7 +45,7 @@ GLOBAL double hypot3d(double x, double y, double z);
 GLOBAL int snis_rand(void); /* like rand() */
 GLOBAL void snis_srand(unsigned seed); /* like srand() */
 GLOBAL int snis_randn(int n); /* returns n * snis_rand() / SNIS_RAND_MAX */
-GLOBAL float snis_random_float(); /* return random number -1 <= n <= 1 */
+GLOBAL float snis_random_float(void); /* return random number -1 <= n <= 1 */
 GLOBAL void normalize_angle(double *angle);
 GLOBAL double interpolate(double x, double x1, double y1, double x2, double y2);
 GLOBAL double table_interp(double x, const double xv[], const double yv[], int nv);

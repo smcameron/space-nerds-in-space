@@ -91,12 +91,12 @@ static void log_disconnect(int level, int connection, char *reason)
 			client_ip, reason);
 }
 
-static inline void ssgl_lock()
+static inline void ssgl_lock(void)
 {
 	(void) pthread_mutex_lock(&ssgl_mutex);
 }
 
-static inline void ssgl_unlock()
+static inline void ssgl_unlock(void)
 {
 	(void) pthread_mutex_unlock(&ssgl_mutex);
 }

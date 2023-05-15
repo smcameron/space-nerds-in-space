@@ -80,7 +80,7 @@ SNG_GLOBAL void sng_draw_point(float x, float y);
 SNG_GLOBAL void sng_setup_colors(char *user_color_file);
 SNG_GLOBAL void sng_set_foreground(int c);
 SNG_GLOBAL void sng_set_foreground_alpha(int c, float a);
-SNG_GLOBAL struct sng_color sng_get_foreground();
+SNG_GLOBAL struct sng_color sng_get_foreground(void);
 SNG_GLOBAL struct sng_color sng_get_color(int c);
 SNG_GLOBAL void sng_draw_circle(int filled, float x, float y, float r);
 SNG_GLOBAL void sng_draw_laser_line(float x1, float y1, float x2, float y2, int color);

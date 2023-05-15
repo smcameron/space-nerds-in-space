@@ -449,7 +449,7 @@ static int restore_bridge_info(const char *filename, struct bridge_info *b, unsi
 	return rc;
 }
 
-static void usage()
+static void usage(void)
 {
 	fprintf(stderr, "usage: snis_multiverse [--autowrangle] -l lobbyserver -n servernick \\\n");
 	fprintf(stderr, "          -L location [ --exempt snis-server-location]\n");

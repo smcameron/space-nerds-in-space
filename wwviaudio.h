@@ -197,9 +197,9 @@ GLOBAL void wwviaudio_list_devices(void);
 GLOBAL int wwviaudio_start_audio_capture(int16_t *buffer, int nsamples,
 	void (*callback)(void *, int16_t *, int), void *cookie);
 
-GLOBAL int wwviaudio_stop_audio_capture();
+GLOBAL int wwviaudio_stop_audio_capture(void);
 
-GLOBAL unsigned int wwviaudio_get_mixer_cycle_count();
+GLOBAL unsigned int wwviaudio_get_mixer_cycle_count(void);
 
 GLOBAL void wwviaudio_set_compressor_params(float threshold, float limit);
 GLOBAL void wwviaudio_set_voip_compressor_params(float threshold, float limit);

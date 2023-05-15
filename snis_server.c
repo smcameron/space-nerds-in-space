@@ -812,12 +812,12 @@ static uint32_t get_new_object_id(void)
 	return answer;
 }
 
-static inline void client_lock()
+static inline void client_lock(void)
 {
         (void) pthread_mutex_lock(&client_mutex);
 }
 
-static inline void client_unlock()
+static inline void client_unlock(void)
 {
         (void) pthread_mutex_unlock(&client_mutex);
 }
@@ -14436,7 +14436,7 @@ static void add_enforcers_to_planet(struct snis_entity *p)
 	}
 }
 
-static void add_enforcers()
+static void add_enforcers(void)
 {
 	int i;
 
@@ -21016,7 +21016,7 @@ static void reset_player_ship(struct snis_entity *o)
 	o->timestamp = universe_timestamp;
 }
 
-static void initialize_rts_ai()
+static void initialize_rts_ai(void)
 {
 	rts_ai.active = 0;
 	rts_ai.wallet = INITIAL_RTS_WALLET_MONEY;
@@ -26419,7 +26419,7 @@ static void update_multiverse(struct snis_entity *o)
 	queue_to_multiverse(multiverse_server, pb);
 }
 
-static void check_opcode_stats()
+static void check_opcode_stats(void)
 {
 	if (prev_collect_opcode_stats == collect_opcode_stats)
 		return;

@@ -87,7 +87,7 @@ extern struct keyboard_state kbstate;
 
 extern char *keyactionstring[];
 
-extern void init_keymap();
+extern void init_keymap(void);
 extern int remapkey(char *stations, char *keyname, char *actionname);
 extern void read_keymap_config_file(void);
 

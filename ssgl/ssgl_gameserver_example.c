@@ -39,7 +39,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 #include "ssgl.h"
 #include "ssgl_string.h"
 
-static void usage()
+static void usage(void)
 {
 	fprintf(stderr, "usage: ssgl_gameserver_example lobbyserver servernick gametype gameinst location\n");
 	exit(1);
