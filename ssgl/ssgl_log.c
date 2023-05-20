@@ -39,7 +39,7 @@ void ssgl_log(int level, const char* format, ...)
 	struct timeval tv;
 	time_t now;
 	struct tm nowtm;
-	char tmbuf[64], buf[64];
+	char tmbuf[64], buf[128];
 
 	if (level < loglevel)
 		return;
