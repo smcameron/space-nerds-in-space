@@ -33,12 +33,7 @@ typedef unsigned char stroke_t;
 /**************************
 
 	Here's how this works, there's a 3x7 grid. on which the
-	letters are drawn.  You list the sequence of strokes.
-	Use LP to lift the pen, 99 to mark the end.
-
-	Inspired by Hofstadters' Creative Concepts and Creative Analogies.
-
-                               letter 'A'    can be compactly represented by:
+	letters are drawn, as below.
 
 		0   1   2   3   4
 
@@ -53,13 +48,24 @@ typedef unsigned char stroke_t;
                25  26  27  28  29
 
                30  31  32  33  34
-The grid numbers can be decoded into (x,y) coords like:
+
+	To represent a glyph list a sequence of strokes between grid points.
+	Use LP to lift the pen, 99 to mark the end.
+
+	The letter 'A' can be compactly represented by: { 20, 5, 1, 2, 8, 23, LP, 10, 13, 99 },
+
+	The grid numbers can be decoded into (x,y) coords like:
+
 	x = ((n % 3) * xscale);
 	y = (x/3) * yscale;      truncating division. 
 
-	(not sure the above actually works)
+	use decode_glyph[] to get x and y values -- see below
 
-	instead, use decode_glyph[] to get x and y values -- see below
+	Inspired Fluid Concepts and Creative Analogies, p. 420-421,
+	chapter 10, "Letter Spirit: Esthetic Perception and Creative Play
+	in the Rich Microcosm of the Roman Alphabet", by Douglas Hofstadter
+	and Gary McGraw
+
 ***************************/
 
 struct font_def {
