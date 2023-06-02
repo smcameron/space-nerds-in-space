@@ -65,6 +65,8 @@ struct loaded_texture {
 };
 static int nloaded_textures = 0;
 static struct loaded_texture loaded_textures[MAX_LOADED_TEXTURES];
+static char *error_texture_file = NULL;
+static int no_texture_mode = 0;
 
 #define NCUBEMAP_TEXTURES 6
 #define MAX_LOADED_CUBEMAP_TEXTURES 40
@@ -4003,7 +4005,13 @@ static int load_cubemap_texture_id(
 	for (i = 0; i < NCUBEMAP_TEXTURES; i++) {
 		int tw, th, hasAlpha = 0;
 		/* do horizontal invert if we are projecting on the inside */
-		char *image_data = png_utils_read_png_image(tex_filenames[i], 0, is_inside, 1,
+		char *image_data = NULL;
+
+		if (!no_texture_mode)
+			image_data = png_utils_read_png_image(tex_filenames[i], 0, is_inside, 1,
+					&tw, &th, &hasAlpha, whynotz, whynotlen);
+		else
+			image_data = png_utils_read_png_image(error_texture_file, 0, is_inside, 1,
 					&tw, &th, &hasAlpha, whynotz, whynotlen);
 		if (image_data) {
 			if (linear_colorspace)
@@ -4204,7 +4212,12 @@ static int load_texture_id(GLuint texture_number, const char *filename, int use_
 	else
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 
-	char *image_data = png_utils_read_png_image(filename, 1, 0, 1, &tw, &th, &hasAlpha,
+	char *image_data = NULL;
+	if (!no_texture_mode)
+		image_data = png_utils_read_png_image(filename, 1, 0, 1, &tw, &th, &hasAlpha,
+						whynotz, whynotlen);
+	else
+		image_data = png_utils_read_png_image(error_texture_file, 1, 0, 1, &tw, &th, &hasAlpha,
 						whynotz, whynotlen);
 	if (image_data) {
 		glTexImage2D(GL_TEXTURE_2D, 0, colorspace, tw, th, 0,
@@ -4535,4 +4548,19 @@ void graph_dev_set_tonemapping_gain(float tmg)
 {
 	if (tmg >= MIN_TONEMAPPING_GAIN && tmg <= MAX_TONEMAPPING_GAIN)
 		tonemapping_gain = tmg;
+}
+
+void graph_dev_set_error_texture(const char *error_texture_png)
+{
+	error_texture_file = strdup(error_texture_png);
+}
+
+void graph_dev_set_no_texture_mode()
+{
+	no_texture_mode = 1;
+	if (!error_texture_file) {
+		fprintf(stderr, "BUG at %s:%s:%d: error_texture_file is not set, but no_texture_mode set\n",
+			__FILE__, __func__, __LINE__);
+		fflush(stderr);
+	}
 }

@@ -107,5 +107,7 @@ extern void graph_dev_grab_framebuffer(unsigned char **buffer, int *width, int *
 extern int graph_dev_planet_specularity; /* Set to 1 to enable, 0 to disable planet specularity */
 extern int graph_dev_atmosphere_ring_shadows; /* Set to 1 to enable, 0 to disable atmosphere ring shadows */
 extern void graph_dev_set_tonemapping_gain(float tmg);
+extern void graph_dev_set_error_texture(const char *error_texture_png);
+extern void graph_dev_set_no_texture_mode(void);
 #endif
 

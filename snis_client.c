@@ -177,6 +177,9 @@ static int reload_shaders = 0; /* Flag to trigger reloading of glsl shaders in m
 /* Set to 1 by command line option "--trap-nans" (or "-t").  Will abort when NaNs are produced. */
 static int trap_nans = 0;
 
+/* Set to 1 by command line opiton "--no-textures" to use a default texture for everything */
+static int no_textures_mode = 0;
+
 /* helper function to transform from 800x600 original coord system */
 static inline int txx(int x) { return x * SCREEN_WIDTH / 800; }
 static inline int txy(int y) { return y * SCREEN_HEIGHT / 600; }
@@ -21724,6 +21727,12 @@ static int main_da_configure(SDL_Window *window)
 		char shader_dir[PATH_MAX];
 		snprintf(shader_dir, sizeof(shader_dir), "%s/%s", asset_dir, "shader");
 		graph_dev_setup(shader_dir);
+		if (no_textures_mode) {
+			char err_tex[PATH_MAX];
+			snprintf(err_tex, sizeof(err_tex), "%s/textures/small-green-grid.png", asset_dir);
+			graph_dev_set_error_texture(err_tex);
+			graph_dev_set_no_texture_mode();
+		}
 		gl_is_setup = 1;
 	}
 
@@ -23547,6 +23556,7 @@ static struct option long_options[] = {
 	{ "solarsystem", required_argument, NULL, '*'},
 	{ "joystick", required_argument, NULL, 'j'},
 	{ "trap-nans", no_argument, NULL, 't'},
+	{ "no-textures", no_argument, NULL, 'T' },
 	{ "no-splash-screen", no_argument, NULL, 'x' },
 	{ 0, 0, 0, 0 },
 };
@@ -23678,6 +23688,9 @@ static void process_options(int argc, char *argv[])
 			break;
 		case 't':
 			trap_nans = 1;
+			break;
+		case 'T':
+			no_textures_mode = 1;
 			break;
 		default:
 			usage();

@@ -28,6 +28,10 @@ TRAP_NANS=
 # TRAP_NANS=--trap-nans
 SPLASH_SCREEN="ENABLED"
 
+# change to --no-textures to run without textures
+NO_TEXTURES=
+# NO_TEXTURES=--no-textures
+
 ENABLE_ENSCRIPT=
 # ENABLE_ENSCRIPT=--enable-enscript
 
@@ -100,11 +104,21 @@ show_current_snis_port_range()
 
 print_options_menu()
 {
+	if [ "$NO_TEXTURES" = "" ]
+	then
+		NT="not set"
+	else
+		NT="set"
+	fi
+
 cat << EOF 1>&2
     1. Enter Lobby Host IP addr (currently $LOBBYHOST)
     2. Enter Lobby Host Port number ($(show_current_ssgl_port))
     3. Enter SNIS server port range MIN:MAX ($(show_current_snis_port_range))
     4. Enable/Disable splash screen (currently $SPLASH_SCREEN)
+    5. Toggle --no-textures option (currently $NT)
+       May be useful for running NAV, ENG, DAMAGE, SCIENCE, or COMMS on
+       underpowered hardware
     0. Return to main menu
 EOF
 }
@@ -290,7 +304,7 @@ start_snis_client()
 	fi
 	CLIENT="$1"
 	${CLIENT} --lobbyhost "${LOBBYHOST}" $ASPECT_RATIO_ARG --fullscreen \
-		${TRAP_NANS} ${SPLASH_SCREEN_OPTION} > snis_client_log.txt 2>&1 &
+		${TRAP_NANS} ${SPLASH_SCREEN_OPTION} ${NO_TEXTURES} > snis_client_log.txt 2>&1 &
 	sleep 1
 	# --starship "$shipname" --pw "$password" $@
 }
@@ -428,6 +442,16 @@ choose_options()
 				SPLASH_SCREEN="ENABLED"
 			fi
 			echo "Splash screen is now $SPLASH_SCREEN"
+		;;
+		5)
+			if [ "$NO_TEXTURES" = "" ]
+			then
+				echo "Set --no-textures option"
+				NO_TEXTURES="--no-textures"
+			else
+				echo "Unset --no-textures option"
+				NO_TEXTURES=""
+			fi
 		;;
 		esac
 	done
