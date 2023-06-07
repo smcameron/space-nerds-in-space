@@ -65,6 +65,13 @@ Do not use the lobby server.  This option requires that the
 --serverport and --serverhost options be used and that the --lobbyhost
 option is not used.
 .TP
+\fB\--no-textures\fR
+Do not load all the ordinarily used textures. Instead load the same small
+texture for every texture in the game.  This can be useful when running
+stations that do not use textures on memory constrained systems. (E.g. NAV,
+ENGINEERING, DAMAGE CONTROL, SCIENCE and COMMS). This can save approximately
+400Mb of memory usage.
+.TP
 \fB\-S, --science\fR
 Request this client process support the SCIENCE role.
 .TP
