@@ -9825,6 +9825,26 @@ static void update_ship_position_and_velocity(struct snis_entity *o)
 	}
 }
 
+/* Used to make sure a starbase is nearby when leaving or entering
+ * a secure area to prevent broadcasting messages from dead starbases
+ */
+static int ship_near_planet_and_starbase(struct snis_entity *o)
+{
+	int i;
+
+	i = find_nearest_object_of_type(o, OBJTYPE_PLANET);
+	if (i < 0)
+		return 0;
+	struct snis_entity *planet = &go[i];
+	i = find_nearest_object_of_type(o, OBJTYPE_STARBASE);
+	if (i < 0)
+		return 0;
+	struct snis_entity *starbase = &go[i];
+	if ((uint32_t) starbase->tsd.starbase.associated_planet_id == planet->id)
+		return 1;
+	return 0;
+}
+
 static void update_player_position_and_velocity(struct snis_entity *o)
 {
 	union vec3 desired_velocity;
@@ -9851,9 +9871,11 @@ static void update_player_position_and_velocity(struct snis_entity *o)
 	o->tsd.ship.in_secure_area = 0;  /* player_collision_detection fills this in. */
 	space_partition_process(space_partition, o, o->x, o->z, o,
 				player_collision_detection);
-	if (o->tsd.ship.in_secure_area == 0 && previous_security > 0)
+	if (o->tsd.ship.in_secure_area == 0 && previous_security > 0 &&
+		ship_near_planet_and_starbase(o))
 		snis_queue_add_sound(LEAVING_SECURE_AREA, ROLE_COMMS, o->id);
-	if (o->tsd.ship.in_secure_area > 0 && previous_security == 0)
+	if (o->tsd.ship.in_secure_area > 0 && previous_security == 0 &&
+		ship_near_planet_and_starbase(o))
 		snis_queue_add_sound(ENTERING_SECURE_AREA, ROLE_COMMS, o->id);
 }
 
