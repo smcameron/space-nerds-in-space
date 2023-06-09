@@ -403,7 +403,7 @@ spot_check_for_assets()
 	if [ ! -f "${SNIS_ASSET_DIR}/models/cylinder.stl" ]
 	then
 		echo "Failed to find ${SNIS_ASSET_DIR}/models/cylinder.stl" 1>&2
-		echo "Perhaps you need to run 'make update-assets' or 'make assets'?" 1>&2
+		echo "Perhaps you need to run 'make update-assets' or 'make models'?" 1>&2
 		exit 1
 	fi
 }
