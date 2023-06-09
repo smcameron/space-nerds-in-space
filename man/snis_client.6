@@ -9,12 +9,13 @@ snis_client \- Multi player cooperative star ship bridge simulator (client)
 .PP
 snis_client is the client process for the game Space Nerds In Space, which is
 a multiplayer starship bridge simulator.  The server process simulates the 
-game universe and processes input data from client processes and sends outputs
+game universe and processes input data from client processes and sends updated
+game state information
 to client processes.  The serverhost parameter is the hostname of the host
 running the ssgl_server game lobby process.  The shipname parameter is the name
 of the ship in the game universe to which the client should connect (if the ship
 does not exist, one is created).  The password is the password for the ship in the
-game (this is a insecure "password", transmitted in plaintext).  The first client
+game. This is an insecure "password", transmitted in plaintext.  The first client
 on a ship establishes a ship name and password, subsequent clients join the ship.
 (Mistyping either the shipname or the password will result in a new ship being
 created with the wrong name/password.)
@@ -55,7 +56,8 @@ Request this client process support the MAIN SCREEN role.
 If your system has multiple monitors, the --monitor option allows you to
 specify which one you want to use.  It takes an integer argument, with 0
 being the first monitor, 1 being the second, etc.  The default monitor may
-be designated by -1 (or by omitting the --monitor option entirely).
+be designated by -1 (or by omitting the --monitor option entirely). NOTE:
+this option is broken since snis_client was converted from GTK2 to SDL2.
 .TP
 \fB\-N, --navigation\fR
 Request this client process support the NAVIGATION role.
@@ -85,9 +87,9 @@ Specify the portnumber of the snis_server process.  This option requires
 the --nolobby and --serverhost options are also used, and requires that
 the --lobbyhost option is not used.
 .TP
-\fB\-* solarsystem, --solarsystem solarsystem\fR
+\fB\--solarsystem solarsystem\fR
 Load the specified solarsystem assets instead of the default assets.  These
-are defined by $SNIS_ASSET_DIR/solarsystems/*/assets.txt
+are defined by "$SNIS_ASSET_DIR/solarsystems/*/assets.txt".
 .TP
 \fB\-a, --soundserver\fR
 Request this client process support the SOUNDSERVER role.
@@ -126,7 +128,7 @@ out which sound device to use on its own.
 .PP
 $XDG_DATA_HOME/space-nerds-in-space is a directory used to store
 various user defaults.  If $XDG_DATA_HOME is not set, $HOME/.local/share
-is assumed. Old versions os snis_client would use ~/.space-nerds-in-space.
+is assumed. Old versions of snis_client would use ~/.space-nerds-in-space.
 See https://specifications.freedesktop.org/basedir-spec/basedir-spec-latest.html
 .PP
 $XDG_DATA_HOME/space-nerds-in-space/default_ship_name.txt
