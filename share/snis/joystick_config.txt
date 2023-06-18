@@ -328,3 +328,33 @@ device:usb-0079_Generic_USB_Joystick-joystick
    button 0 phaser
    button 1 torpedo
    button 2 missile
+# Saitek X52 flight control system
+device:usb-Saitek_Saitek_X52_Flight_Control_System-joystick
+ mode main
+   axis 0 roll
+   axis 1 pitch
+   axis 5 yaw
+   axis 2 throttle
+ mode navigation
+   axis 0 roll
+   axis 1 pitch
+   axis 5 yaw
+   axis 2 throttle
+   invert axis 6 warp
+   button 4 nav-change-pov
+   button 26 nav-lights
+   button 27 nav-docking-magnets
+   button 28 nav-standard-orbit
+   button 29 nav-starmap
+   button 30 nav-attitude-indicator-abs-rel
+   button 7 nav-reverse
+   button 6 nav-engage-warp
+ mode weapons
+   axis 0 weapons-yaw
+   axis 1 weapons-pitch
+   axis 5 weapons-yaw
+   button 4 torpedo
+   button 1 missile
+   button 0 phaser
+   invert axis 3 weapons-wavelength 0
+
