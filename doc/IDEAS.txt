@@ -192,4 +192,30 @@ Need to put a speed limit on cargo containers. THIS IDEA HAS BEEN IMPLEMENTED
 
 13. Need to write some Lua mission using these ideas to see what could be done.
 
+-------------------------------
+Tue 20 Jun 2023 06:57:05 AM EDT
+
+*** Build starbases out of blocks ***
+
+Currently, starbases are each made of a single model (STL or OBJ), with some docking
+ports (also a single model) glued onto them.  There is no real collision detection
+between ships (player or non-player) and the starbases (apart from the docking ports).
+
+Starbases could be built out of "blocks" (OBJTYPE_BLOCK), though the blocks would
+have to be improved and more types of blocks would need to be added.  Currently
+blocks only have one of two textures, and there are only a few types of blocks
+(cuboid, sphere and capsule).  Would need to allow more textures, and more shapes
+(cylinder and ring, at least.) This would allow proper collision detection between
+the player ship and the starbases, and allow for more elaborate and larger
+starbases.  For collision detection of new shapes, take a look at
+https://iquilezles.org/articles/distfunctions/ of course.
+
+Alternately (and probably better), starbases could be modeled in the usual way,
+but supplemented with "invisible blocks" used only for collision deteciton
+(this type of thing is called a "collider", in other engines, I think).
+
+It would be nice if there were a better way to construct composite objects of
+multiple blocks than what we have now.  What we have now is very primitive,
+cumbersome, and mentally taxing... see share/snis/luascripts/MISSIONS/BIGSHIP.LUA
+for example.
 
