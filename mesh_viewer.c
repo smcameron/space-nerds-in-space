@@ -189,7 +189,7 @@ static void draw_help_text(const char *text)
 	} while (1);
 }
 
-static void draw_help_screen()
+static void draw_help_screen(void)
 {
 	sng_set_foreground(BLACK);
 	sng_current_draw_rectangle(1, 50, 50, SCREEN_WIDTH - 50, SCREEN_HEIGHT - 100);
@@ -533,7 +533,7 @@ static void constrain_aspect_ratio(int *w, int *h)
 	}
 }
 
-static void process_events()
+static void process_events(void)
 {
 	/* Our SDL event placeholder. */
 	SDL_Event event;
@@ -666,7 +666,7 @@ static void scroll_warpgate_texture(void)
 
 #define FRAME_INDEX_MAX 10
 
-static void draw_screen()
+static void draw_screen(void)
 {
 	static double last_frame_time;
 	static int frame_index;
@@ -790,7 +790,7 @@ static void draw_screen()
 	remove_all_entity(cx);
 
 	if (helpmode)
-		draw_help_screen(0);
+		draw_help_screen();
 
 	if (display_frame_stats > 0) {
 		float avg_frame_rate = 0;
