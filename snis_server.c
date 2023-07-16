@@ -16314,7 +16314,7 @@ static void starbase_registration_query_npc_bot(struct snis_entity *o, int bridg
 	}
 	send_comms_packet(o, n, channel, "REGISTRATION ID - %d", selection);
 	send_comms_packet(o, n, channel, "NAME - %s", go[i].sdata.name);
-	if (o->type == OBJTYPE_STARBASE) {
+	if (go[i].type == OBJTYPE_STARBASE) {
 		send_comms_packet(o, n, channel, "MAKE - %s",
 				corporation_get_name(go[i].id % num_spacecraft_manufacturers() + 1));
 		send_comms_packet(o, n, channel, "MODEL - %s", starbase_model_name(go[i].id));
