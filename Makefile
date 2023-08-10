@@ -758,7 +758,7 @@ BINARY_NAMES=snis_client snis_server snis_limited_client snis_multiverse nebula_
 	infinite-taunt names stl_parser test_key_value_parser test-matrix test-space-partition \
 	test-marshal test-quat test-fleet test-mtwist device-io-sample-1 test-nonuniform-random-sampler \
 	test-commodities test-obj-parser test_solarsystem_config test_crater print_ship_attributes \
-	test_snis_dmx snis_test_audio check-endianness test_stringutils
+	test_snis_dmx snis_test_audio check-endianness test_stringutils yoke-test-program
 ${BINARY_NAMES}:
 	@echo "You probably meant: make bin/$@" 1>&2
 	@/bin/false
@@ -1260,7 +1260,8 @@ mostly-clean:
 	bin/device-io-sample-1 bin/print_ship_attributes bin/snis_test_audio bin/test_crater \
 	bin/test_key_value_parser bin/test_snis_dmx test_scipher bin/test_snis_ship_type wwviaudio_basic_test \
 	${MANSRCDIR}/earthlike.1.gz  ${MANSRCDIR}/snis_client.6.gz  ${MANSRCDIR}/snis_server.6.gz  \
-	${MANSRCDIR}/snis_test_audio.1.gz bin/test_transport_contract bin/test_stringutils
+	${MANSRCDIR}/snis_test_audio.1.gz bin/test_transport_contract bin/test_stringutils \
+	bin/yoke-test-program
 	rm -f ${BIN}
 	rm -fr opus-1.3.1
 	rm -f libopus.a
@@ -1288,6 +1289,11 @@ $(OD)/snis-device-io.o:	snis-device-io.h snis-device-io.c Makefile ${ODT}
 bin/device-io-sample-1:	device-io-sample-1.c ${OD}/snis-device-io.o ${OD}/string-utils.o ${BIN}
 	$(CC) -Wall -Wextra --pedantic -pthread -o bin/device-io-sample-1 ${OD}/string-utils.o ${OD}/snis-device-io.o \
 			device-io-sample-1.c
+
+bin/yoke-test-program:	yoke-test-program.c ${OD}/snis-device-io.o ${OD}/string-utils.o \
+	${SSGL} ${BIN} ${OD}/pthread_util.o
+	$(CC) -Wall -Wextra --pedantic -pthread -o bin/yoke-test-program ${OD}/string-utils.o \
+	${OD}/snis-device-io.o ${OD}/pthread_util.o yoke-test-program.c -Lssgl -lssglclient
 
 bin/snis_arduino: snis_arduino.c ${OD}/snis-device-io.o ${OD}/string-utils.o ${BIN}
 	$(CC) -Wall -Wextra --pedantic -pthread -o bin/snis_arduino ${OD}/snis-device-io.o ${OD}/string-utils.o \
