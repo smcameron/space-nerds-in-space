@@ -23968,6 +23968,41 @@ static int start_sdl(void)
 	return 0;
 }
 
+/* Get previously stored loading time for splash screen to use
+ * to measure progress against.
+ */
+static int get_previous_loading_time(double *prev_loading_time_ms)
+{
+	char *loading_time_str = xdg_base_slurp_file(xdg_base_ctx, "prev_loading_time.txt");
+	if (!loading_time_str)
+		return 1; /* no previous loading time available */
+	double v;
+	int rc = sscanf(loading_time_str, "%lg", &v);
+	free(loading_time_str);
+	if (rc != 1)
+		return 1; /* no previous loading time available */
+	*prev_loading_time_ms = v;
+	return 0;
+}
+
+static void save_loading_time(double loading_time_ms)
+{
+	char buffer[100];
+
+	int fd = xdg_base_open_for_overwrite(xdg_base_ctx, "prev_loading_time.txt");
+	if (fd < 0) {
+		fprintf(stderr, "Failed to open file %s: %s\n", "prev_loading_time.txt", strerror(errno));
+		return;
+	}
+	snprintf(buffer, sizeof(buffer), "%lg\n", loading_time_ms);
+	size_t bytes_to_write = strlen(buffer);
+	ssize_t rc = write(fd, buffer, bytes_to_write);
+	if ((size_t) rc != bytes_to_write)
+		fprintf(stderr, "Failed to write to %s: %s\n", "prev_loading_time.txt", strerror(errno));
+	fsync(fd);
+	close(fd);
+}
+
 /*
  * splash_screen_fn(), which is run in its own process.
  *
@@ -23992,6 +24027,17 @@ static void __attribute__((noreturn)) splash_screen_fn(int pipefd)
 	char *splash_screen_pixels = NULL;
 	char whynot[255];
 	int w, h, a;
+	double loading_time_ms = 4500.0;
+	struct timeval current_time, start_time;
+	double elapsed_time_ms;
+	int no_previous_loading_time;
+
+	gettimeofday(&start_time, NULL);
+
+	/* Get previously recorded loading time, if any */
+	no_previous_loading_time = get_previous_loading_time(&loading_time_ms);
+	if (loading_time_ms < 0.1 || loading_time_ms > 30000.0) /* guard against nonsense values, divide by zero */
+		loading_time_ms = 4500.0; /* empirically measured on my laptop -- steve */
 
 	if (start_sdl())
 		exit(1);
@@ -24056,10 +24102,23 @@ static void __attribute__((noreturn)) splash_screen_fn(int pipefd)
 				goto out;
 			}
 		} while (bytesleft > 0);
-		memcpy(&splash_progress, buf, sizeof(splash_progress));
+		if (no_previous_loading_time) {
+			memcpy(&splash_progress, buf, sizeof(splash_progress));
+		} else {
+			gettimeofday(&current_time, NULL);
+			elapsed_time_ms = timeval_difference(start_time, current_time);
+			splash_progress = (int) (100.0 * (elapsed_time_ms / loading_time_ms));
+			if (splash_progress > 100)
+				splash_progress = 100;
+		}
 	} while (1);
 
 out:
+	if (exitcode == 0) {
+		gettimeofday(&current_time, NULL);
+		elapsed_time_ms = timeval_difference(start_time, current_time);
+		save_loading_time(elapsed_time_ms);
+	}
 	if (splash_screen_pixels)
 		free(splash_screen_pixels);
 	if (image)
