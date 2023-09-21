@@ -24003,6 +24003,12 @@ static void save_loading_time(double loading_time_ms)
 	close(fd);
 }
 
+void splash_screen_timer_handler(__attribute__((unused)) int signum)
+{
+	/* Nothing to actually do, we just need the timer to interrupt the pipe read */
+	return;
+}
+
 /*
  * splash_screen_fn(), which is run in its own process.
  *
@@ -24031,6 +24037,8 @@ static void __attribute__((noreturn)) splash_screen_fn(int pipefd)
 	struct timeval current_time, start_time;
 	double elapsed_time_ms;
 	int no_previous_loading_time;
+	struct sigaction sa;
+	struct itimerval timer;
 
 	gettimeofday(&start_time, NULL);
 
@@ -24068,6 +24076,20 @@ static void __attribute__((noreturn)) splash_screen_fn(int pipefd)
 	}
 	SDL_UpdateTexture(image, NULL, splash_screen_pixels, 4 * w);
 	SDL_SetRenderDrawColor(renderer, 0, 128, 0, 255);
+
+	/* Handle SIGALRM via splash_screen_timer_handler */
+	memset(&sa, 0, sizeof(sa));
+	sa.sa_handler = splash_screen_timer_handler;
+	sigaction(SIGALRM, &sa, NULL);
+
+	/* Configure timer to fire at 10Hz */
+	timer.it_value.tv_sec = 0;
+	timer.it_value.tv_usec = 100000;
+	timer.it_interval.tv_sec = 0;
+	timer.it_interval.tv_usec = 100000;
+
+	setitimer(ITIMER_REAL, &timer, NULL);
+
 	do {
 		int bytesleft, i;
 		char buf[sizeof(splash_progress)];
@@ -24089,8 +24111,12 @@ static void __attribute__((noreturn)) splash_screen_fn(int pipefd)
 				i += rc;
 				bytesleft -= rc;
 			}
-			if (rc < 0 && errno == EINTR)
-				continue;
+			if (rc < 0 && errno == EINTR) {
+				if (no_previous_loading_time)
+					continue;
+				else
+					goto update_progress;
+			}
 			if (rc < 0) {
 				fprintf(stderr, "splash screen read failed: %s\n", strerror(errno));
 				exitcode = 1;
@@ -24102,6 +24128,7 @@ static void __attribute__((noreturn)) splash_screen_fn(int pipefd)
 				goto out;
 			}
 		} while (bytesleft > 0);
+update_progress:
 		if (no_previous_loading_time) {
 			memcpy(&splash_progress, buf, sizeof(splash_progress));
 		} else {
