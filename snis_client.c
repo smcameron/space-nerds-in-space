@@ -19580,7 +19580,7 @@ static void show_demon_3d(void)
 	float camera_movement_rate = 0.05;
 	const int faction_color[] = { CYAN, YELLOW, ORANGERED, AMBER, };
 	float entity_scale;
-	struct material *faction_material[4];
+	static struct material *faction_material[4];
 	static int initialized_materials = 0;
 	static struct material red_material, blue_material, white_material,
 		green_material, magenta_material, amber_material,
@@ -19643,6 +19643,7 @@ static void show_demon_3d(void)
 		faction_material[1] = &yellow_material;
 		faction_material[2] = &orangered_material;
 		faction_material[3] = &amber_material;
+		initialized_materials = 1;
 	}
 
 	/* If in captain mode or follow mode, then set desired camera position/orientation accordingly */
