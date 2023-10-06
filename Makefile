@@ -190,7 +190,6 @@ TEXTUREFILES=${TEXTURESRCDIR}/AreaTex.h \
 	${TEXTURESRCDIR}/orange-haze4.png \
 	${TEXTURESRCDIR}/orange-haze5.png \
 	${TEXTURESRCDIR}/planetary-ring0.png \
-	${TEXTURESRCDIR}/planetary-ring1.png \
 	${TEXTURESRCDIR}/planet-texture0-0.png \
 	${TEXTURESRCDIR}/planet-texture0-1.png \
 	${TEXTURESRCDIR}/planet-texture0-2.png \
