@@ -4641,9 +4641,6 @@ static int key_press_cb(SDL_Window *window, SDL_Keysym *keysym)
 		else
 			voice_chat_start_recording(VOICE_CHAT_DESTINATION_CREW, 0);
 	}
-#if 0
-	printf("event->keyval = 0x%08x, GDK_z = %08x, GDK_space = %08x\n", event->keyval, GDK_z, GDK_space);
-#endif
 
         switch (ka) {
 	case key_invert_vertical:
@@ -4863,6 +4860,12 @@ static int key_press_cb(SDL_Window *window, SDL_Keysym *keysym)
 		break;
 	case key_demon_console:
 		demon_ui.console_active = !demon_ui.console_active;
+		break;
+	case key_increase_warp:
+		snis_slider_nudge(nav_ui.warp_slider, 0.05, 0);
+		break;
+	case key_decrease_warp:
+		snis_slider_nudge(nav_ui.warp_slider, -0.05, 0);
 		break;
 	default:
 		break;

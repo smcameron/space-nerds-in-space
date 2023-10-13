@@ -173,6 +173,8 @@ char *keyactionstring[] = {
 	"key_eng_preset_6",
 	"key_left_shift",
 	"key_right_shift",
+	"key_increase_warp",
+	"key_decrease_warp",
 };
 
 #ifdef DEBUG_KEYMAP
@@ -360,6 +362,9 @@ void init_keymap(void)
 	ffmapkey(eng, SDLK_KP_4, key_eng_preset_4);
 	ffmapkey(eng, SDLK_KP_5, key_eng_preset_5);
 	ffmapkey(eng, SDLK_KP_6, key_eng_preset_6);
+
+	mapkey(nav, SDLK_COMMA, key_decrease_warp);
+	mapkey(nav, SDLK_PERIOD, key_increase_warp);
 
 #ifdef DEBUG_KEYMAP
 	print_keymap("keymap", keymap);
