@@ -22978,6 +22978,7 @@ missile_fail:
 	queue_add_text_to_speech(c,
 		"I can't let you just fire missiles off into empty space, "
 		"you must aim at an in range target first.");
+	return 0;
 
 initial_missile_fail: /* Just make the failure sound */
 	bridgelist[c->bridge].last_missile_fail_time = universe_timestamp;
