@@ -14,5 +14,10 @@
 	"  * /help\n"
 	"  * /channel channel-number - change current channel\n"
 	"  * /computer <english request for computer>\n"
+	"  * /eject cargo-bay-number - eject cargo\n"
 	"  * /hail ship-name - hail ship on current channel\n"
+	"  * /inventory - report inventory of ship's cargo hold\n"
+	"  * /passengers - report list of passengers\n"
+	"  * /antenna <bearing> <mark> - aim the high gain antenna\n"
+	"  * /about - information about the game\n"
 	ESC_OR_F1_HELP_TEXT,

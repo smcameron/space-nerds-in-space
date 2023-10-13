@@ -15755,30 +15755,28 @@ typedef void (*meta_comms_func)(char *name, struct game_client *c, char *txt);
 static void meta_comms_help(__attribute__((unused)) char *name, struct game_client *c,
 			__attribute__((unused)) char *txt)
 {
-	int i;
+	char buffer[256];
+	int i, j;
+#define ESC_OR_F1_HELP_TEXT
+#define FKEYS_HELP_TEXT
 	const char *hlptxt[] = {
-		"COMMUNICATIONS",
-		"  CONTROLS",
-		"  * ZOOM CONTROLS MAIN SCREEN ZOOM",
-		"  * RED ALERT SOUNDS RED ALERT ALARM",
-		"  * TOP ROW OF BUTTONS CONTROLS MAIN SCREEN",
-		"  COMMANDS",
-		"  * COMMANDS ARE PRECEDED BY FORWARD SLASH ->  /",
-		"  * /help",
-		"  * /computer <english request for computer>",
-		"  * /channel channel-number - change current channel",
-		"  * /eject cargo-bay-number - eject cargo",
-		"  * /hail ship-name - hail ship or starbase on current channel",
-		"  * /inventory - report inventory of ship's cargo hold",
-		"  * /passengers - report list of passengers",
-		"  * /antenna <bearing> <mark> - aim the high gain antenna",
-		"  * /about - information about the game",
-		"",
-		0,
+#include "help_text_comms_screen.txt"
 	};
-	for (i = 0; hlptxt[i]; i++)
-		send_comms_packet(NULL, "", bridgelist[c->bridge].comms_channel, hlptxt[i]);
+
+	for (i = 0, j = 0; 1; i++) {
+		buffer[j] = hlptxt[0][i];
+		if (buffer[j] == '\n' || buffer[j] == '\0') {
+			buffer[j] = '\0';
+			j = 0;
+			send_comms_packet(NULL, "", bridgelist[c->bridge].comms_channel, buffer);
+		} else {
+			j++;
+		}
+		if (hlptxt[0][i] == '\0')
+			break;
+	}
 }
+	
 
 static void meta_comms_about(__attribute__((unused)) char *name, struct game_client *c,
 			__attribute__((unused)) char *txt)
