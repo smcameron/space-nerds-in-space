@@ -357,9 +357,9 @@ account to file a bug report.
 </ul>
 
 <h2>Step 4: build openscad models (optional, not recommended)</h2>
-<p>Or you can skip to step 5 and download them (recommended).
+<p>Or you can skip to step 5 and just download the models instead (recommended).
 This step will take a long time and requires that you installed OpenSCAD.
-In general, unless you are working on the models, you can skip this step.
+In general, unless you are working on the models, you can and should skip this step.
 (Again, as a non-root user):
 <pre>
 <blockquote>
@@ -2350,8 +2350,9 @@ it on your system?
 <p>One reason you might <em>not</em> want to install the game is that the game changes quite frequently, and
 if the protocol changes (as it does) the version you installed is likely to be out of date and you will
 have to recompile anyway.  So "git pull" followed by "make" is not that hard.
-<p>That being said, maybe you do want to try installing the game in the traditional sense. Here's how to
-install the game into /usr/local:
+<p>That being said, maybe you do insist on wanting to try installing the game in
+the traditional sense.  I would advise against this (see below), but if you insist,
+here's how to install the game into /usr/local:
 <ul>
 <li><cmd>make mostly-clean</cmd>
 <li><cmd>make DESTDIR= PREFIX=/usr/local</cmd>
@@ -2362,8 +2363,21 @@ if you want it to really land in <cmd>/usr/local</cmd>.
 
 <p>Then you can run it via:
 <p><cmd>/usr/local/bin/snis_launcher</p>
-<p>Note that I don't use "make install" very much, so it's quite possible there are some bugs in the
+<p>Note that I don't use <cmd>make install</cmd> very much, so it's quite possible there are some bugs in the
 Makefile around this area, though it worked as of Jan 16, 2019, so far as I know.
+<p>If you do want to use <cmd>make install</cmd>, there's no reason to do so as root if you pick
+a PREFIX that you have permission to write into.  The main rationale for installing things
+as root is to put them into, e.g. /usr/local/ and the main rationale for doing <em>that</em>
+is so that multiple users on the same system can run the program while installing it only
+once.  These days, while linux is a multiuser system, the nature of this game requires that
+each player have their own computer, and since the game uses OpenGL, you're not going to log
+in remotely and try to run the game with X windows over the network, so there's no good
+reason to <cmd>make install</cmd> as root.
+<p>Additionally, if you do e.g. <cmd>make DESTDIR= PREFIX=$HOME/snis install</cmd> then you
+must also do <cmd>cd $HOME/snis; bin/snis_update_assets.sh</cmd> to get updated assets
+(the Makefile doesn't know about these new assets so it can't install them).
+<p>Also, <cmd>snis_launcher</cmd> will be installed in the bin subdirectory rather than
+at the top level, so to run it, do: <cmd>cd $HOME/snis ; bin/snis_launcher</cmd>.
 <li>If you want to hack on the game, have a look at
 <a href="https://github.com/smcameron/space-nerds-in-space/blob/master/CONTRIBUTING.md">CONTRIBUTING.md</a>,
 and for more details about how to find what bit of functionality is controlled by which bit of code, have
