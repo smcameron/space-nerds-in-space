@@ -6,7 +6,9 @@ then
 	exit 1
 fi
 
-# Hack this in for now
+# Hack this in for now.  Note: the Makefile edits the next line with sed
+# so be careful if you change it that the Makefile still edits it correctly.
+# Currently it matches the pattern: '^PREFIX=[.]$'
 PREFIX=.
 
 BINDIR=${PREFIX}/bin

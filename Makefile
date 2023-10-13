@@ -588,7 +588,7 @@ MULTIVERSELIBS=-Lssgl -lssglclient ${LRTLIB} -ldl -lm ${CRYPTLIBS}
 
 
 BINPROGS=bin/ssgl_server bin/snis_server bin/snis_client bin/snis_text_to_speech.sh \
-		bin/snis_multiverse bin/lsssgl bin/snis_arduino
+		bin/snis_multiverse bin/lsssgl bin/snis_arduino bin/snis_launcher
 UTILPROGS=util/mask_clouds util/cloud-mask-normalmap bin/mesh_viewer util/sample_image_colors \
 		util/generate_solarsystem_positions bin/nebula_noise bin/generate_skybox bin/earthlike
 
@@ -846,6 +846,9 @@ $(OD)/stacktrace.o:   stacktrace.c Makefile ${ODT}
 
 $(OD)/snis_ship_type.o:   snis_ship_type.c snis_ship_type.h corporations.h Makefile ${ODT}
 	$(Q)$(COMPILE)
+
+bin/snis_launcher:	snis_launcher
+	./modify_snis_launcher.sh snis_launcher ${PREFIX} > bin/snis_launcher
 
 bin/test_snis_ship_type: snis_ship_type.c snis_ship_type.h ${OD}/string-utils.o ${OD}/corporations.o ${OD}/rts_unit_data.o ${BIN}
 	$(CC) ${MYCFLAGS} -DTEST_SNIS_SHIP_TYPE -o bin/test_snis_ship_type snis_ship_type.c ${OD}/string-utils.o ${OD}/corporations.o ${OD}/rts_unit_data.o
