@@ -400,7 +400,7 @@ void read_keymap_config_file(struct xdg_base_context *xdg_base_ctx)
 		if (s[0] == '#') /* comment? */
 			continue;
 		rc = sscanf(s, "map %s %s %s", stations, keyname, actionname);
-		if (rc == 2) {
+		if (rc == 3) {
 			if (remapkey(stations, keyname, actionname) == 0)
 				continue;
 		}
