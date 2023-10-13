@@ -373,6 +373,7 @@ void init_keymap(void)
 	mapkey(nav, SDLK_LEFTBRACKET, key_decrease_impulse);
 	mapkey(nav, SDLK_RIGHTBRACKET, key_increase_impulse);
 	mapkey(nav, SDLK_SLASH, key_engage_warp);
+	mapkey(nav, SDLK_BACKSPACE, keyreverse);
 
 #ifdef DEBUG_KEYMAP
 	print_keymap("keymap", keymap);

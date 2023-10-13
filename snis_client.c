@@ -4613,6 +4613,7 @@ static void release_talking_stick(void)
 }
 
 static void engage_warp_button_pressed(__attribute__((unused)) void *cookie);
+static void reverse_button_pressed(__attribute__((unused)) void *s);
 
 static int key_press_cb(SDL_Window *window, SDL_Keysym *keysym)
 {
@@ -4877,6 +4878,9 @@ static int key_press_cb(SDL_Window *window, SDL_Keysym *keysym)
 		break;
 	case key_decrease_impulse:
 		snis_slider_nudge(nav_ui.throttle_slider, -0.05, 0);
+		break;
+	case keyreverse:
+		reverse_button_pressed((void *) 0);
 		break;
 	default:
 		break;
