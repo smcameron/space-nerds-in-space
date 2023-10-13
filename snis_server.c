@@ -639,6 +639,7 @@ static struct bridge_data {
 	 * See snis_bridge_update_packet.h.
 	 */
 	struct persistent_bridge_data persistent_bridge_data;
+	uint32_t last_missile_fail_time; /* universe timestamp of last missile failure */
 } bridgelist[MAXCLIENTS];
 static int nbridges = 0;		/* Number of elements present in bridgelist[] */
 static int announce_players = 0; /* Announce new players via TTS? */
@@ -22965,6 +22966,21 @@ static int process_adjust_control_fire_missile(struct game_client *c, uint32_t i
 	return 0;
 
 missile_fail:
+	if (c->bridge < 0)
+		goto initial_missile_fail;
+	if (bridgelist[c->bridge].last_missile_fail_time <= universe_timestamp - 90)
+		goto initial_missile_fail;
+
+/* repeated missile failure: make the failure sound, and also explain the problem. */
+	bridgelist[c->bridge].last_missile_fail_time = universe_timestamp;
+	pthread_mutex_unlock(&universe_mutex);
+	snis_queue_add_sound(LASER_FAILURE, ROLE_SOUNDSERVER, o->id);
+	queue_add_text_to_speech(c,
+		"I can't let you just fire missiles off into empty space, "
+		"you must aim at an in range target first.");
+
+initial_missile_fail: /* Just make the failure sound */
+	bridgelist[c->bridge].last_missile_fail_time = universe_timestamp;
 	pthread_mutex_unlock(&universe_mutex);
 	snis_queue_add_sound(LASER_FAILURE, ROLE_SOUNDSERVER, o->id);
 	return 0;
@@ -25894,6 +25910,7 @@ static int add_new_player(struct game_client *c)
 		bridgelist[nbridges].warp_core_critical_timer = 0;
 		bridgelist[nbridges].warp_core_critical = 0;
 		bridgelist[nbridges].active_custom_buttons = 0;
+		bridgelist[nbridges].last_missile_fail_time = 0;
 		memset(bridgelist[nbridges].custom_button_text, 0, sizeof(bridgelist[nbridges].custom_button_text));
 		memset(bridgelist[nbridges].cipher_key, '_', sizeof(bridgelist[nbridges].cipher_key));
 		memset(bridgelist[nbridges].guessed_key, '_', sizeof(bridgelist[nbridges].guessed_key));
