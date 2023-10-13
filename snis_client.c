@@ -24278,7 +24278,7 @@ int main(int argc, char *argv[])
 							STARBASE_SCALE_FACTOR);
 	maybe_connect_to_lobby();
 	init_keymap();
-	read_keymap_config_file();
+	read_keymap_config_file(xdg_base_ctx);
 	update_splash_progress(9);
 
 	SDL_GL_SetAttribute(SDL_GL_RED_SIZE, 5);

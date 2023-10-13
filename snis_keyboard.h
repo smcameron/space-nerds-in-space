@@ -1,6 +1,8 @@
 #ifndef SNIS_KEYBOARD_H_
 #define SNIS_KEYBOARD_H_
 
+#include "xdg_base_dir_spec.h"
+
 enum keyaction {
 		keynone		= 0,
 		keydown		= 1,
@@ -89,7 +91,7 @@ extern char *keyactionstring[];
 
 extern void init_keymap(void);
 extern int remapkey(char *stations, char *keyname, char *actionname);
-extern void read_keymap_config_file(void);
+extern void read_keymap_config_file(struct xdg_base_context *xdg_base_ctx);
 
 #endif
 

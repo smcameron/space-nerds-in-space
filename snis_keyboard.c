@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <limits.h>
+#include <errno.h>
 #include <SDL.h>
 
 #include "arraysize.h"
@@ -371,22 +372,21 @@ int remapkey(char *stations, char *keyname, char *actionname)
 	return 1;
 }
 
-void read_keymap_config_file(void)
+void read_keymap_config_file(struct xdg_base_context *xdg_base_ctx)
 {
 	FILE *f;
 	char line[256];
-	char *s, *homedir;
-	char filename[PATH_MAX], keyname[256], actionname[256], stations[256];
+	char *s;
+	char keyname[256], actionname[256], stations[256];
 	int lineno, rc;
 
-	homedir = getenv("HOME");
-	if (homedir == NULL)
+	errno = 0;
+	f = xdg_base_fopen_for_read(xdg_base_ctx, "snis-keymap.txt");
+	if (!f) {
+		if (errno != ENOENT) /* it's normal for this file to not exist */
+			fprintf(stderr, "Failed to open snis-keymap.txt: %s\n", strerror(errno));
 		return;
-
-	sprintf(filename, "%s/.space-nerds-in-space/snis-keymap.txt", homedir);
-	f = fopen(filename, "r");
-	if (!f)
-		return;
+	}
 
 	lineno = 0;
 	while (!feof(f)) {
@@ -405,7 +405,7 @@ void read_keymap_config_file(void)
 				continue;
 		}
 		fprintf(stderr, "%s: syntax error at line %d:'%s'\n",
-			filename, lineno, line);
+			"snis-keymap.txt", lineno, line);
 	}
 	fclose(f);
 }

@@ -817,7 +817,7 @@ $(OD)/snis_licenses.o:	snis_licenses.c snis_licenses.h Makefile ${ODT}
 $(OD)/ui_colors.o:	ui_colors.c ui_colors.h snis_graph.h Makefile ${ODT}
 	$(Q)$(COMPILE)
 
-$(OD)/snis_keyboard.o:	snis_keyboard.c snis_keyboard.h ${OD}/string-utils.o Makefile ${ODT}
+$(OD)/snis_keyboard.o:	snis_keyboard.c snis_keyboard.h ${OD}/string-utils.o xdg_base_dir_spec.h Makefile ${ODT}
 	$(Q)$(SDLCOMPILE)
 
 $(OD)/snis_preferences.o:	snis_preferences.c snis_preferences.h string-utils.h snis_packet.h ${ODT}
