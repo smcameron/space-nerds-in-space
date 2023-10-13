@@ -175,6 +175,33 @@ char *keyactionstring[] = {
 	"key_right_shift",
 };
 
+#ifdef DEBUG_KEYMAP
+static char *get_keyname(unsigned int keyvalue)
+{
+	static char tmpbuf[20];
+	for (int i = 0; i < (int) ARRAYSIZE(keyname_value_map); i++)
+		if (keyname_value_map[i].value == keyvalue)
+			return keyname_value_map[i].name;
+	snprintf(tmpbuf, sizeof(tmpbuf), "%d?", keyvalue);
+	return tmpbuf;
+}
+
+static void print_keymap(char *name, enum keyaction keymap[DISPLAYMODE_COUNT][256])
+{
+	for (int i = 0; i < DISPLAYMODE_COUNT; i++) {
+		for (int j = 0; j < 256; j++) {
+			if (keymap[i][j] == keynone)
+				continue;
+			fprintf(stderr, "%s[%s][%s] = %s\n",
+				name,
+				displaymode_name[i],
+				get_keyname(j),
+				keyactionstring[keymap[i][j]]);
+		}
+	}
+}
+#endif
+
 void zero_keymaps(void)
 {
 	memset(keymap, 0, sizeof(keymap));
@@ -333,6 +360,12 @@ void init_keymap(void)
 	ffmapkey(eng, SDLK_KP_4, key_eng_preset_4);
 	ffmapkey(eng, SDLK_KP_5, key_eng_preset_5);
 	ffmapkey(eng, SDLK_KP_6, key_eng_preset_6);
+
+#ifdef DEBUG_KEYMAP
+	print_keymap("keymap", keymap);
+	print_keymap("ffkeymap", ffkeymap);
+#endif
+
 }
 
 int remapkey(char *stations, char *keyname, char *actionname)
