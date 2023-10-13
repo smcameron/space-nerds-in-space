@@ -182,6 +182,7 @@ char *keyactionstring[] = {
 	"key_engage_warp",
 	"key_docking_magnets",
 	"key_exterior_lights",
+	"key_standard_orbit",
 };
 
 #ifdef DEBUG_KEYMAP
@@ -378,6 +379,7 @@ void init_keymap(void)
 	mapkey(nav, SDLK_BACKSPACE, keyreverse);
 	mapkey(nav, SDLK_x, key_docking_magnets);
 	mapkey(nav, SDLK_i, key_exterior_lights);
+	mapkey(nav, SDLK_b, key_standard_orbit);
 
 #ifdef DEBUG_KEYMAP
 	print_keymap("keymap", keymap);

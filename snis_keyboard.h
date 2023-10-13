@@ -75,7 +75,8 @@ enum keyaction {
 		key_engage_warp = 68,
 		key_docking_magnets = 69,
 		key_exterior_lights = 70,
-#define NKEYSTATES 71
+		key_standard_orbit = 71,
+#define NKEYSTATES 72
 };
 
 struct keyboard_state {
