@@ -72,7 +72,8 @@ enum keyaction {
 		key_increase_warp = 65,
 		key_decrease_impulse = 66,
 		key_increase_impulse = 67,
-#define NKEYSTATES 68
+		key_engage_warp = 68,
+#define NKEYSTATES 69
 };
 
 struct keyboard_state {

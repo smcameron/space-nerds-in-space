@@ -4612,6 +4612,8 @@ static void release_talking_stick(void)
 	pthread_mutex_unlock(&voip_mutex);
 }
 
+static void engage_warp_button_pressed(__attribute__((unused)) void *cookie);
+
 static int key_press_cb(SDL_Window *window, SDL_Keysym *keysym)
 {
 	enum keyaction ka;
@@ -4866,6 +4868,9 @@ static int key_press_cb(SDL_Window *window, SDL_Keysym *keysym)
 		break;
 	case key_decrease_warp:
 		snis_slider_nudge(nav_ui.warp_slider, -0.05, 0);
+		break;
+	case key_engage_warp:
+		engage_warp_button_pressed((void *) 0);
 		break;
 	case key_increase_impulse:
 		snis_slider_nudge(nav_ui.throttle_slider, 0.05, 0);
