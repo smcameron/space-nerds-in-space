@@ -180,6 +180,7 @@ char *keyactionstring[] = {
 	"key_increase_impulse",
 	"key_decrease_impulse",
 	"key_engage_warp",
+	"key_docking_magnets",
 };
 
 #ifdef DEBUG_KEYMAP
@@ -374,6 +375,7 @@ void init_keymap(void)
 	mapkey(nav, SDLK_RIGHTBRACKET, key_increase_impulse);
 	mapkey(nav, SDLK_SLASH, key_engage_warp);
 	mapkey(nav, SDLK_BACKSPACE, keyreverse);
+	mapkey(nav, SDLK_x, key_docking_magnets);
 
 #ifdef DEBUG_KEYMAP
 	print_keymap("keymap", keymap);

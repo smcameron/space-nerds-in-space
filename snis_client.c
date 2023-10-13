@@ -4614,6 +4614,7 @@ static void release_talking_stick(void)
 
 static void engage_warp_button_pressed(__attribute__((unused)) void *cookie);
 static void reverse_button_pressed(__attribute__((unused)) void *s);
+static void docking_magnets_button_pressed(__attribute__((unused)) void *cookie);
 
 static int key_press_cb(SDL_Window *window, SDL_Keysym *keysym)
 {
@@ -4881,6 +4882,9 @@ static int key_press_cb(SDL_Window *window, SDL_Keysym *keysym)
 		break;
 	case keyreverse:
 		reverse_button_pressed((void *) 0);
+		break;
+	case key_docking_magnets:
+		docking_magnets_button_pressed((void *) 0);
 		break;
 	default:
 		break;
