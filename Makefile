@@ -588,7 +588,8 @@ MULTIVERSELIBS=-Lssgl -lssglclient ${LRTLIB} -ldl -lm ${CRYPTLIBS}
 
 
 BINPROGS=bin/ssgl_server bin/snis_server bin/snis_client bin/snis_text_to_speech.sh \
-		bin/snis_multiverse bin/lsssgl bin/snis_arduino bin/snis_launcher
+		bin/snis_multiverse bin/lsssgl bin/snis_arduino bin/snis_launcher \
+		bin/snis_update_assets.sh
 UTILPROGS=util/mask_clouds util/cloud-mask-normalmap bin/mesh_viewer util/sample_image_colors \
 		util/generate_solarsystem_positions bin/nebula_noise bin/generate_skybox bin/earthlike
 
@@ -849,6 +850,10 @@ $(OD)/snis_ship_type.o:   snis_ship_type.c snis_ship_type.h corporations.h Makef
 
 bin/snis_launcher:	snis_launcher
 	./modify_snis_launcher.sh snis_launcher ${PREFIX} > bin/snis_launcher
+
+bin/snis_update_assets.sh:	util/snis_update_assets.sh
+	cp util/snis_update_assets.sh bin/snis_update_assets.sh
+	chmod +x bin/snis_update_assets.sh
 
 bin/test_snis_ship_type: snis_ship_type.c snis_ship_type.h ${OD}/string-utils.o ${OD}/corporations.o ${OD}/rts_unit_data.o ${BIN}
 	$(CC) ${MYCFLAGS} -DTEST_SNIS_SHIP_TYPE -o bin/test_snis_ship_type snis_ship_type.c ${OD}/string-utils.o ${OD}/corporations.o ${OD}/rts_unit_data.o
@@ -1443,7 +1448,6 @@ uninstall:
 	for x in ${BINPROGS} ; do \
 		rm -f ${DESTDIR}/${PREFIX}/$$x ; \
 	done
-	rm -f ${DESTDIR}/${PREFIX}/bin/snis_launcher
 	rm -fr ${DESTDIR}/${PREFIX}/share/snis
 	rm -f ${MANDIR}/snis_client.6.gz ${MANDIR}/snis_client.6
 	rm -f ${MANDIR}/snis_server.6.gz ${MANDIR}/snis_server.6
