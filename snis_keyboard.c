@@ -84,6 +84,8 @@ struct keyname_value_entry keyname_value_map[] = {
 	{ "'", SDLK_QUOTE },
 	{ "(", SDLK_LEFTPAREN },
 	{ ")", SDLK_RIGHTPAREN },
+	{ "[", SDLK_LEFTBRACKET },
+	{ "]", SDLK_RIGHTBRACKET },
 	{ "space", SDLK_SPACE },
 	{ "enter", SDLK_RETURN },
 	{ "return", SDLK_RETURN },
@@ -175,6 +177,8 @@ char *keyactionstring[] = {
 	"key_right_shift",
 	"key_increase_warp",
 	"key_decrease_warp",
+	"key_increase_impulse",
+	"key_decrease_impulse",
 };
 
 #ifdef DEBUG_KEYMAP
@@ -365,6 +369,8 @@ void init_keymap(void)
 
 	mapkey(nav, SDLK_COMMA, key_decrease_warp);
 	mapkey(nav, SDLK_PERIOD, key_increase_warp);
+	mapkey(nav, SDLK_LEFTBRACKET, key_decrease_impulse);
+	mapkey(nav, SDLK_RIGHTBRACKET, key_increase_impulse);
 
 #ifdef DEBUG_KEYMAP
 	print_keymap("keymap", keymap);

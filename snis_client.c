@@ -4867,6 +4867,12 @@ static int key_press_cb(SDL_Window *window, SDL_Keysym *keysym)
 	case key_decrease_warp:
 		snis_slider_nudge(nav_ui.warp_slider, -0.05, 0);
 		break;
+	case key_increase_impulse:
+		snis_slider_nudge(nav_ui.throttle_slider, 0.05, 0);
+		break;
+	case key_decrease_impulse:
+		snis_slider_nudge(nav_ui.throttle_slider, -0.05, 0);
+		break;
 	default:
 		break;
 	}
