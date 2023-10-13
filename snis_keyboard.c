@@ -135,7 +135,7 @@ struct keyboard_state kbstate = { {0} };
 
 char *keyactionstring[] = {
 	"none", "down", "up", "left", "right",
-	"torpedo", "key_unused", "fullscreen", "thrust",
+	"torpedo", "key_starmap", "fullscreen", "thrust",
 	"quit", "pause", "reverse",
 	"mainscreen", "navigation", "weapons", "science",
 	"damage", "debug", "demon", "f8", "f9", "f10",
@@ -379,6 +379,7 @@ void init_keymap(void)
 	mapkey(nav, SDLK_x, key_docking_magnets);
 	mapkey(nav, SDLK_i, key_exterior_lights);
 	mapkey(nav, SDLK_b, key_standard_orbit);
+	mapkey(nav, SDLK_t, key_starmap);
 
 #ifdef DEBUG_KEYMAP
 	print_keymap("keymap", keymap);

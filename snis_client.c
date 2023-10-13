@@ -4617,6 +4617,7 @@ static void reverse_button_pressed(__attribute__((unused)) void *s);
 static void docking_magnets_button_pressed(__attribute__((unused)) void *cookie);
 static void nav_lights_button_pressed(__attribute__((unused)) void *cookie);
 static void standard_orbit_button_pressed(__attribute__((unused)) void *cookie);
+static void nav_starmap_button_pressed(__attribute__((unused)) void *cookie);
 
 static int key_press_cb(SDL_Window *window, SDL_Keysym *keysym)
 {
@@ -4893,6 +4894,9 @@ static int key_press_cb(SDL_Window *window, SDL_Keysym *keysym)
 		break;
 	case key_standard_orbit:
 		standard_orbit_button_pressed((void *) 0);
+		break;
+	case key_starmap:
+		nav_starmap_button_pressed((void *) 0);
 		break;
 	default:
 		break;
