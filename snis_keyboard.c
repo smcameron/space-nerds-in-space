@@ -135,7 +135,7 @@ struct keyboard_state kbstate = { {0} };
 
 char *keyactionstring[] = {
 	"none", "down", "up", "left", "right",
-	"torpedo", "transform", "fullscreen", "thrust",
+	"torpedo", "key_unused", "fullscreen", "thrust",
 	"quit", "pause", "reverse",
 	"mainscreen", "navigation", "weapons", "science",
 	"damage", "debug", "demon", "f8", "f9", "f10",
@@ -290,7 +290,6 @@ void init_keymap(void)
 	mapkey(damcon, SDLK_SPACE, key_robot_gripper);
 	mapkey(weap, SDLK_z, keytorpedo);
 
-	mapkey(all, SDLK_b, keytransform); /* wtf is this? */
 	mapkey(demon, SDLK_x, keythrust);
 	mapkey(mainscreen | weap, SDLK_r, keyrenderswitch);
 

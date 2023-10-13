@@ -10,7 +10,7 @@ enum keyaction {
 		keyleft		= 3,
 		keyright	= 4,
                 keytorpedo	= 5,
-		keytransform	= 6,
+		key_unused	= 6,
                 keyfullscreen	= 7,
 		keythrust	= 8,
                 keyquit		= 9,
