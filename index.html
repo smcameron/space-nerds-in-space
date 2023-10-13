@@ -2356,7 +2356,9 @@ here's how to install the game into /usr/local:
 <ul>
 <li><cmd>make mostly-clean</cmd>
 <li><cmd>make DESTDIR= PREFIX=/usr/local</cmd>
+<li><cmd>make DESTDIR= PREFIX=/usr/local update-assets</cmd>
 <li><cmd>sudo make DESTDIR= PREFIX=/usr/local install</cmd>
+<li><cmd>sudo make DESTDIR= PREFIX=/usr/lcoal install-assets</cmd>
 </ul>
 <p>Note that <cmd>DESTDIR</cmd> is <cmd>.</cmd> by default, so you must specify <cmd>DESTDIR=</cmd>
 if you want it to really land in <cmd>/usr/local</cmd>.
@@ -2373,9 +2375,6 @@ once.  These days, while linux is a multiuser system, the nature of this game re
 each player have their own computer, and since the game uses OpenGL, you're not going to log
 in remotely and try to run the game with X windows over the network, so there's no good
 reason to <cmd>make install</cmd> as root.
-<p>Additionally, if you do e.g. <cmd>make DESTDIR= PREFIX=$HOME/snis install</cmd> then you
-must also do <cmd>cd $HOME/snis; bin/snis_update_assets.sh</cmd> to get updated assets
-(the Makefile doesn't know about these new assets so it can't install them).
 <p>Also, <cmd>snis_launcher</cmd> will be installed in the bin subdirectory rather than
 at the top level, so to run it, do: <cmd>cd $HOME/snis ; bin/snis_launcher</cmd>.
 <li>If you want to hack on the game, have a look at
