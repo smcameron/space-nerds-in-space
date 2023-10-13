@@ -70,6 +70,7 @@ struct keyname_value_entry keyname_value_map[] = {
 	{ "=", SDLK_EQUALS },
 	{ "?", SDLK_QUESTION },
 	{ ".", SDLK_PERIOD },
+	{ "/", SDLK_SLASH },
 	{ ",", SDLK_COMMA },
 	{ "<", SDLK_LESS },
 	{ ">", SDLK_GREATER },
