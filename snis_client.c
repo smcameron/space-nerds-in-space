@@ -4450,6 +4450,7 @@ static struct engineering_ui {
 	struct gauge *oxygen_gauge;
 	struct button *damcon_button;
 	struct button *preset_buttons[ENG_PRESET_NUMBER];
+	struct timeval preset_press_time[ENG_PRESET_NUMBER];
 	struct button *preset_save_button;
 	struct button *silence_alarms;
 	struct button *deploy_flare;
@@ -4582,21 +4583,6 @@ static void deal_with_keyboard(void)
 
 	if (sbh || sbv || sbr)
 		do_sciball_dirkey(sbh, sbv, sbr);
-
-	if (displaymode == DISPLAYMODE_ENGINEERING) {
-		if (kbstate.pressed[key_eng_preset_1])
-			snis_button_trigger_button(eng_ui.preset_buttons[0]);
-		if (kbstate.pressed[key_eng_preset_2])
-			snis_button_trigger_button(eng_ui.preset_buttons[1]);
-		if (kbstate.pressed[key_eng_preset_3])
-			snis_button_trigger_button(eng_ui.preset_buttons[2]);
-		if (kbstate.pressed[key_eng_preset_4])
-			snis_button_trigger_button(eng_ui.preset_buttons[3]);
-		if (kbstate.pressed[key_eng_preset_5])
-			snis_button_trigger_button(eng_ui.preset_buttons[4]);
-		if (kbstate.pressed[key_eng_preset_6])
-			snis_button_trigger_button(eng_ui.preset_buttons[5]);
-	}
 }
 
 static void request_talking_stick(void)
@@ -4619,7 +4605,7 @@ static void nav_lights_button_pressed(__attribute__((unused)) void *cookie);
 static void standard_orbit_button_pressed(__attribute__((unused)) void *cookie);
 static void nav_starmap_button_pressed(__attribute__((unused)) void *cookie);
 
-static int key_press_cb(SDL_Window *window, SDL_Keysym *keysym)
+static int key_press_cb(SDL_Window *window, SDL_Keysym *keysym, int key_repeat)
 {
 	enum keyaction ka;
 
@@ -4920,12 +4906,28 @@ static int key_press_cb(SDL_Window *window, SDL_Keysym *keysym)
 	case key_weap_wavelen_nudge_down:
 		snis_slider_nudge(weapons.wavelen_slider, -0.05, 0);
 		break;
+	case key_eng_preset_1:
+	case key_eng_preset_2:
+	case key_eng_preset_3:
+	case key_eng_preset_4:
+	case key_eng_preset_5:
+	case key_eng_preset_6: {
+			if (key_repeat) /* don't save the time if it's repeating keypress */
+				break;
+			/* save the time of the button press so we can trigger
+			 * normal or long press on key release */
+			int n = (int) ka - (int) key_eng_preset_1;
+			gettimeofday(&eng_ui.preset_press_time[n], NULL);
+		}
+		break;
 	default:
 		break;
 	}
 
 	return FALSE;
 }
+
+static void preset_button_long_pressed(void *preset);
 
 static int key_release_cb(SDL_Keysym *keysym)
 {
@@ -4942,6 +4944,28 @@ static int key_release_cb(SDL_Keysym *keysym)
 		voice_chat_stop_recording();
 		/* We release even if we don't have, snis_server will know the real deal. */
 		release_talking_stick();
+	}
+
+	switch (ka) {
+	case key_eng_preset_1:
+	case key_eng_preset_2:
+	case key_eng_preset_3:
+	case key_eng_preset_4:
+	case key_eng_preset_5:
+	case key_eng_preset_6: {
+			struct timeval now;
+			int n = (int) ka - (int) key_eng_preset_1;
+			gettimeofday(&now, NULL);
+			double elapsed_time_ms = timeval_difference(eng_ui.preset_press_time[n], now);
+			memset(&eng_ui.preset_press_time[n], 0, sizeof(eng_ui.preset_press_time[n]));
+			if (elapsed_time_ms > 1000.0)
+				preset_button_long_pressed(&eng_ui.preset_buttons[n]);
+			else
+				snis_button_trigger_button(eng_ui.preset_buttons[n]);
+		}
+		break;
+	default:
+		break;
 	}
 
 	return FALSE;
@@ -23775,7 +23799,7 @@ static void process_events(SDL_Window *window)
 
 		switch (event.type) {
 		case SDL_KEYDOWN:
-			key_press_cb(window, &event.key.keysym);
+			key_press_cb(window, &event.key.keysym, event.key.repeat);
 			break;
 		case SDL_KEYUP:
 			key_release_cb(&event.key.keysym);
