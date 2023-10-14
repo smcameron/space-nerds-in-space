@@ -76,7 +76,19 @@ enum keyaction {
 		key_docking_magnets = 69,
 		key_exterior_lights = 70,
 		key_standard_orbit = 71,
-#define NKEYSTATES 72
+		key_weap_wavelen_0 = 72,
+		key_weap_wavelen_1 = 73,
+		key_weap_wavelen_2 = 74,
+		key_weap_wavelen_3 = 75,
+		key_weap_wavelen_4 = 76,
+		key_weap_wavelen_5 = 77,
+		key_weap_wavelen_6 = 78,
+		key_weap_wavelen_7 = 79,
+		key_weap_wavelen_8 = 80,
+		key_weap_wavelen_9 = 81,
+		key_weap_wavelen_nudge_up,
+		key_weap_wavelen_nudge_down,
+#define NKEYSTATES 84
 };
 
 struct keyboard_state {

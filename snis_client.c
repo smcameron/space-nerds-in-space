@@ -4898,6 +4898,28 @@ static int key_press_cb(SDL_Window *window, SDL_Keysym *keysym)
 	case key_starmap:
 		nav_starmap_button_pressed((void *) 0);
 		break;
+	case key_weap_wavelen_0:
+	case key_weap_wavelen_1:
+	case key_weap_wavelen_2:
+	case key_weap_wavelen_3:
+	case key_weap_wavelen_4:
+	case key_weap_wavelen_5:
+	case key_weap_wavelen_6:
+	case key_weap_wavelen_7:
+	case key_weap_wavelen_8:
+	case key_weap_wavelen_9: {
+			int value = (int) ka - (int) key_weap_wavelen_0;
+			if (value == 0)
+				value = 10;
+			snis_slider_poke_input(weapons.wavelen_slider, ((double) value) / 10.0, 1);
+		}
+		break;
+	case key_weap_wavelen_nudge_up:
+		snis_slider_nudge(weapons.wavelen_slider, 0.05, 0);
+		break;
+	case key_weap_wavelen_nudge_down:
+		snis_slider_nudge(weapons.wavelen_slider, -0.05, 0);
+		break;
 	default:
 		break;
 	}

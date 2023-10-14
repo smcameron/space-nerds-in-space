@@ -183,6 +183,18 @@ char *keyactionstring[] = {
 	"key_docking_magnets",
 	"key_exterior_lights",
 	"key_standard_orbit",
+	"key_weap_wavelen_0",
+	"key_weap_wavelen_1",
+	"key_weap_wavelen_2",
+	"key_weap_wavelen_3",
+	"key_weap_wavelen_4",
+	"key_weap_wavelen_5",
+	"key_weap_wavelen_6",
+	"key_weap_wavelen_7",
+	"key_weap_wavelen_8",
+	"key_weap_wavelen_9",
+	"key_weap_wavlen_nudge_up",
+	"key_weap_wavlen_nudge_down",
 };
 
 #ifdef DEBUG_KEYMAP
@@ -285,6 +297,18 @@ void init_keymap(void)
 	mapkey(all, SDLK_m, key_toggle_watermark);
 	mapkey(weap, SDLK_m, key_mouse_mode);
 	mapkey(weap, SDLK_n, key_weap_fire_missile);
+	mapkey(weap, SDLK_0, key_weap_wavelen_0);
+	mapkey(weap, SDLK_1, key_weap_wavelen_1);
+	mapkey(weap, SDLK_2, key_weap_wavelen_2);
+	mapkey(weap, SDLK_3, key_weap_wavelen_3);
+	mapkey(weap, SDLK_4, key_weap_wavelen_4);
+	mapkey(weap, SDLK_5, key_weap_wavelen_5);
+	mapkey(weap, SDLK_6, key_weap_wavelen_6);
+	mapkey(weap, SDLK_7, key_weap_wavelen_7);
+	mapkey(weap, SDLK_8, key_weap_wavelen_8);
+	mapkey(weap, SDLK_9, key_weap_wavelen_9);
+	mapkey(weap, SDLK_EQUALS, key_weap_wavelen_nudge_up);
+	mapkey(weap, SDLK_MINUS, key_weap_wavelen_nudge_down);
 	mapkey(all, SDLK_SPACE, key_space);
 	mapkey(weap, SDLK_SPACE, keyphaser);
 	mapkey(damcon, SDLK_SPACE, key_robot_gripper);
