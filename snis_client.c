@@ -14476,16 +14476,16 @@ static void init_engineering_ui(void)
 	eu->damcon_button = snis_button_init(txx(630), txy(550), -1, txy(25),
 						"DAMAGE CONTROL", color,
 						NANO_FONT, damcon_button_pressed, (void *) 0);
-	eu->custom_button = snis_button_init(snis_button_get_x(eu->silence_alarms) +
+	eu->deploy_flare = snis_button_init(snis_button_get_x(eu->silence_alarms) +
 						snis_button_get_width(eu->silence_alarms) + txx(5),
-						y, -1, -1, "CUSTOM BUTTON",
-						color, NANO_FONT, eng_custom_button_pressed, (void *) 0);
-	snis_button_set_sound(eu->custom_button, UISND14);
-	eu->deploy_flare = snis_button_init(snis_button_get_x(eu->custom_button) +
-						snis_button_get_width(eu->custom_button) + txx(5),
 						y, -1, -1, "DEPLOY FLARE",
 						color, NANO_FONT, eng_deploy_flare_button_pressed, (void *) 0);
 	snis_button_set_sound(eu->deploy_flare, UISND14);
+	eu->custom_button = snis_button_init(snis_button_get_x(eu->deploy_flare) +
+						snis_button_get_width(eu->deploy_flare) + txx(5),
+						y, -1, -1, "CUSTOM BUTTON",
+						color, NANO_FONT, eng_custom_button_pressed, (void *) 0);
+	snis_button_set_sound(eu->custom_button, UISND14);
 	color = UI_COLOR(eng_power_meter);
 	eu->shield_slider = snis_slider_init(20, y += yinc, powersliderlen, sh, color,
 				"PWR SHIELDS", "0", "100", 0.0, 255.0,
