@@ -41,7 +41,7 @@
 #include "shape_collision.h"
 
 #define DEFAULT_SOLAR_SYSTEM "default"
-#define SNIS_PROTOCOL_VERSION "SNIS060"
+#define SNIS_PROTOCOL_VERSION "SNIS061"
 #define COMMON_MTWIST_SEED 97872
 /* dimensions of the "known" universe */
 #define XKNOWN_DIM 600000.0
@@ -142,7 +142,7 @@
 /* If ENG_PRESET_NUMBER changes to something other than 6, then you need
  * to update snis_entity_key_value_specification.h
  */
-#define ENG_PRESET_NUMBER 6
+#define ENG_PRESET_NUMBER 10
 
 struct power_model_device {
 	uint8_t r1, r2, r3, i;

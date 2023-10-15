@@ -349,7 +349,7 @@ static int write_bridge_info(FILE *f, struct bridge_info *b)
 	/* snis_entity_key_value_specification.h assumes there are 6 presets in
 	 * an array with elements 0-5. If that is not the case, we detect it here.
 	 */
-	BUILD_ASSERT(ENG_PRESET_NUMBER == 6);
+	BUILD_ASSERT(ENG_PRESET_NUMBER == 10);
 
 	fprintf(f, "starsystem:%s\n", b->starsystem_name);
 	return key_value_write_lines(f, snis_entity_kvs, base_address);
@@ -589,7 +589,7 @@ static int update_bridge(struct starsystem_info *ss)
 {
 	unsigned char pwdhash[PWDHASHLEN];
 	int i, rc;
-	unsigned char buffer[358];
+	unsigned char buffer[430];
 	struct packed_buffer pb;
 	struct snis_entity *o;
 

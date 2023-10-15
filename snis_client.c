@@ -4906,17 +4906,21 @@ static int key_press_cb(SDL_Window *window, SDL_Keysym *keysym, int key_repeat)
 	case key_weap_wavelen_nudge_down:
 		snis_slider_nudge(weapons.wavelen_slider, -0.05, 0);
 		break;
+	case key_eng_preset_0:
 	case key_eng_preset_1:
 	case key_eng_preset_2:
 	case key_eng_preset_3:
 	case key_eng_preset_4:
 	case key_eng_preset_5:
-	case key_eng_preset_6: {
+	case key_eng_preset_6:
+	case key_eng_preset_7:
+	case key_eng_preset_8:
+	case key_eng_preset_9: {
 			if (key_repeat) /* don't save the time if it's repeating keypress */
 				break;
 			/* save the time of the button press so we can trigger
 			 * normal or long press on key release */
-			int n = (int) ka - (int) key_eng_preset_1;
+			int n = (int) ka - (int) key_eng_preset_0;
 			gettimeofday(&eng_ui.preset_press_time[n], NULL);
 		}
 		break;
@@ -4947,14 +4951,18 @@ static int key_release_cb(SDL_Keysym *keysym)
 	}
 
 	switch (ka) {
+	case key_eng_preset_0:
 	case key_eng_preset_1:
 	case key_eng_preset_2:
 	case key_eng_preset_3:
 	case key_eng_preset_4:
 	case key_eng_preset_5:
-	case key_eng_preset_6: {
+	case key_eng_preset_6:
+	case key_eng_preset_7:
+	case key_eng_preset_8:
+	case key_eng_preset_9: {
 			struct timeval now;
-			int n = (int) ka - (int) key_eng_preset_1;
+			int n = (int) ka - (int) key_eng_preset_0;
 			gettimeofday(&now, NULL);
 			double elapsed_time_ms = timeval_difference(eng_ui.preset_press_time[n], now);
 			memset(&eng_ui.preset_press_time[n], 0, sizeof(eng_ui.preset_press_time[n]));
@@ -14454,7 +14462,7 @@ static void init_engineering_ui(void)
 	color = UI_COLOR(eng_button);
 	x = txx(20);
 	for (i = 0; i < ENG_PRESET_NUMBER; ++i) {
-		snprintf(preset_txt, 2, "%d", i + 1);
+		snprintf(preset_txt, 2, "%d", i);
 		eu->preset_buttons[i] = snis_button_init(x, y, -1, -1, preset_txt, color, NANO_FONT,
 						preset_button_pressed, &eu->preset_buttons[i]);
 		snis_button_set_sound(eu->preset_buttons[i], UISND12);
@@ -14613,7 +14621,7 @@ static void init_engineering_ui(void)
 	for (i = 0; i < ENG_PRESET_NUMBER; ++i) {
 		snprintf(preset_txt, sizeof(preset_txt), "SELECT ENGINEERING PRESET %d\n"
 			"PRESS AND HOLD FOR 1 SECOND TO SAVE\n"
-			"CURRENT VALUES IN THIS PRESET", i + 1);
+			"CURRENT VALUES IN THIS PRESET", i);
 		ui_add_button(eu->preset_buttons[i], dm, preset_txt);
 	}
 	ui_add_button(eu->preset_save_button, dm, "SAVE CURRENT VALUES IN THE ACTIVE PRESET");

@@ -167,12 +167,16 @@ char *keyactionstring[] = {
 	"key_robot_gripper",
 	"key_demon_console",
 	"key_toggle_external_camera",
+	"key_eng_preset_0",
 	"key_eng_preset_1",
 	"key_eng_preset_2",
 	"key_eng_preset_3",
 	"key_eng_preset_4",
 	"key_eng_preset_5",
 	"key_eng_preset_6",
+	"key_eng_preset_7",
+	"key_eng_preset_8",
+	"key_eng_preset_9",
 	"key_left_shift",
 	"key_right_shift",
 	"key_increase_warp",
@@ -381,18 +385,26 @@ void init_keymap(void)
 	ffmapkey(all, SDLK_PAGEDOWN, key_page_down);
 	ffmapkey(all, SDLK_PAGEUP, key_page_up);
 
+	mapkey(eng, SDLK_0, key_eng_preset_0);
 	mapkey(eng, SDLK_1, key_eng_preset_1);
 	mapkey(eng, SDLK_2, key_eng_preset_2);
 	mapkey(eng, SDLK_3, key_eng_preset_3);
 	mapkey(eng, SDLK_4, key_eng_preset_4);
 	mapkey(eng, SDLK_5, key_eng_preset_5);
 	mapkey(eng, SDLK_6, key_eng_preset_6);
+	mapkey(eng, SDLK_7, key_eng_preset_7);
+	mapkey(eng, SDLK_8, key_eng_preset_8);
+	mapkey(eng, SDLK_9, key_eng_preset_9);
+	ffmapkey(eng, SDLK_KP_0, key_eng_preset_0);
 	ffmapkey(eng, SDLK_KP_1, key_eng_preset_1);
 	ffmapkey(eng, SDLK_KP_2, key_eng_preset_2);
 	ffmapkey(eng, SDLK_KP_3, key_eng_preset_3);
 	ffmapkey(eng, SDLK_KP_4, key_eng_preset_4);
 	ffmapkey(eng, SDLK_KP_5, key_eng_preset_5);
 	ffmapkey(eng, SDLK_KP_6, key_eng_preset_6);
+	ffmapkey(eng, SDLK_KP_7, key_eng_preset_7);
+	ffmapkey(eng, SDLK_KP_8, key_eng_preset_8);
+	ffmapkey(eng, SDLK_KP_9, key_eng_preset_9);
 
 	mapkey(nav, SDLK_COMMA, key_decrease_warp);
 	mapkey(nav, SDLK_PERIOD, key_increase_warp);

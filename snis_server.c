@@ -30888,7 +30888,7 @@ static int process_update_bridge(struct multiverse_server_info *msi)
 {
 	unsigned char pwdhash[PWDHASHLEN];
 	int i, rc;
-	unsigned char buffer[358];
+	unsigned char buffer[UPDATE_BRIDGE_PACKET_SIZE];
 	struct packed_buffer pb;
 	struct snis_entity *o;
 	double x, y, z;
