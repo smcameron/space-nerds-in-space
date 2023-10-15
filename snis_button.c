@@ -52,7 +52,7 @@ static void snis_button_compute_dimensions(struct button *b)
 	if (b->height < 0)
 		b->height = emheight * 1.8;
 	if (b->width < 0)
-		b->width = fabs(x2 - x1) + emwidth * 1.8;
+		b->width = 0.9 * fabs(x2 - x1) + emwidth * 1.8;
 }
 
 struct button *snis_button_init(int x, int y, int width, int height,
