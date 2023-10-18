@@ -277,8 +277,12 @@ static float text_to_speech_volume = 0.329412;
 
 static int fullscreen = 0;
 static int in_the_process_of_quitting = 0;
-static int current_quit_selection = 0;
-static int final_quit_selection = 0;
+static int quit_disconnect_button_present = 0;
+#define QUIT_SELECTION_QUIT 0
+#define QUIT_SELECTION_CONTINUE 1
+#define QUIT_SELECTION_DISCONNECT 2
+static unsigned int current_quit_selection = QUIT_SELECTION_CONTINUE;
+static int final_quit_selection = QUIT_SELECTION_CONTINUE;
 
 static int textscreen_timer = 0;
 static int user_defined_menu_active = 0;
@@ -4024,10 +4028,18 @@ static void do_dirkey(int h, int v, int r, int t)
 	v = v * vertical_controls_inverted;
 
 	if (in_the_process_of_quitting) {
-		if (h < 0)
-			current_quit_selection = 1;
-		if (h > 0)
-			current_quit_selection = 0;
+		unsigned int max_quit_selection = 1 + quit_disconnect_button_present;
+		if (h > 0) {
+			current_quit_selection++;
+			if (current_quit_selection > max_quit_selection)
+				current_quit_selection = 0;
+		}
+		if (h < 0) {
+			if (current_quit_selection == 0)
+				current_quit_selection = max_quit_selection;
+			else
+				current_quit_selection--;
+		}
 		return;
 	}
 
@@ -4598,6 +4610,21 @@ static void release_talking_stick(void)
 	pthread_mutex_unlock(&voip_mutex);
 }
 
+static void quit_continue_or_disconnect(void)
+{
+	final_quit_selection = current_quit_selection;
+	switch (final_quit_selection) {
+	case QUIT_SELECTION_QUIT:
+		break;
+	case QUIT_SELECTION_CONTINUE:
+		in_the_process_of_quitting = 0;
+		break;
+	case QUIT_SELECTION_DISCONNECT:
+		in_the_process_of_quitting = 0;
+		break;
+	}
+}
+
 static void engage_warp_button_pressed(__attribute__((unused)) void *cookie);
 static void reverse_button_pressed(__attribute__((unused)) void *s);
 static void docking_magnets_button_pressed(__attribute__((unused)) void *cookie);
@@ -4684,12 +4711,11 @@ static int key_press_cb(SDL_Window *window, SDL_Keysym *keysym, int key_repeat)
 				break;
 			}
 			in_the_process_of_quitting = !in_the_process_of_quitting;
-			if (!in_the_process_of_quitting)
-				current_quit_selection = 0;
-			else {
+			if (in_the_process_of_quitting) {
 				/* Clear focus from text widgets so they don't eat the keystrokes */
 				ui_element_list_clear_focus(uiobjs);
 			}
+			current_quit_selection = QUIT_SELECTION_CONTINUE;
 			break;
 	case keytorpedo:
 		fire_torpedo_button_pressed(NULL);
@@ -4699,27 +4725,21 @@ static int key_press_cb(SDL_Window *window, SDL_Keysym *keysym, int key_repeat)
 		break;
 	case keyphaser:
 		if (in_the_process_of_quitting) {
-			final_quit_selection = current_quit_selection;
-			if (!final_quit_selection)
-				in_the_process_of_quitting = 0;
+			quit_continue_or_disconnect();
 			break;
 		}
 		do_laser();
 		break;
 	case key_robot_gripper:
 		if (in_the_process_of_quitting) {
-			final_quit_selection = current_quit_selection;
-			if (!final_quit_selection)
-				in_the_process_of_quitting = 0;
+			quit_continue_or_disconnect();
 			break;
 		}
 		robot_gripper_button_pressed(NULL);
 		break;
 	case key_space:
 		if (in_the_process_of_quitting) {
-			final_quit_selection = current_quit_selection;
-			if (!final_quit_selection)
-				in_the_process_of_quitting = 0;
+			quit_continue_or_disconnect();
 			break;
 		}
 		if (displaymode == DISPLAYMODE_MAINSCREEN) {
@@ -21016,46 +21036,79 @@ static void draw_help_screen(void)
 	draw_help_text(help_text[displaymode]);
 }
 
-#define QUIT_BUTTON_WIDTH (200 * SCREEN_WIDTH / 800)
+#define QUIT_BUTTON_WIDTH (150 * SCREEN_WIDTH / 800)
 #define QUIT_BUTTON_HEIGHT (50 * SCREEN_HEIGHT / 600)
 #define QUIT_BUTTON_X (130 * SCREEN_WIDTH / 800)
+#define NOQUIT_BUTTON_X (350 * SCREEN_WIDTH / 800)
+#define DISCONNECT_BUTTON_X (570 * SCREEN_WIDTH / 800)
 #define QUIT_BUTTON_Y (420 * SCREEN_HEIGHT / 600)
-#define NOQUIT_BUTTON_X (480 * SCREEN_WIDTH / 800)
+
+static struct quit_button {
+	int x, y;
+	char *text;
+} quit_buttons[3];
 
 static void draw_quit_screen(void)
 {
-	int x;
 	static int quittimer = 0;
 
 	quittimer++;
 
+	quit_buttons[0].x = QUIT_BUTTON_X;
+	quit_buttons[0].y = QUIT_BUTTON_Y;
+	quit_buttons[0].text = "Quit";
+	quit_buttons[1].x = NOQUIT_BUTTON_X;
+	quit_buttons[1].y = QUIT_BUTTON_Y;
+	quit_buttons[1].text = "Continue";
+	quit_buttons[2].x = DISCONNECT_BUTTON_X;
+	quit_buttons[2].y = QUIT_BUTTON_Y;
+	quit_buttons[2].text = "Disconnect";
+
+	switch (displaymode) {
+	case DISPLAYMODE_MAINSCREEN:
+	case DISPLAYMODE_NAVIGATION:
+	case DISPLAYMODE_WEAPONS:
+	case DISPLAYMODE_ENGINEERING:
+	case DISPLAYMODE_SCIENCE:
+	case DISPLAYMODE_COMMS:
+	case DISPLAYMODE_DEMON:
+	case DISPLAYMODE_DAMCON:
+		quit_disconnect_button_present = 1;
+		break;
+	case DISPLAYMODE_FONTTEST:
+	case DISPLAYMODE_INTROSCREEN:
+	case DISPLAYMODE_LOBBYSCREEN:
+	case DISPLAYMODE_CONNECTING:
+	case DISPLAYMODE_CONNECTED:
+	case DISPLAYMODE_NETWORK_SETUP:
+	default:
+		quit_disconnect_button_present = 0;
+		break;
+	}
+
 	sng_set_foreground(BLACK);
-	snis_draw_rectangle(1, txx(100), txy(100),
-			SCREEN_WIDTH - txx(200), SCREEN_HEIGHT - txy(200));
+	snis_draw_rectangle(1, txx(50), txy(100),
+			SCREEN_WIDTH - txx(100), SCREEN_HEIGHT - txy(200));
 	sng_set_foreground(UI_COLOR(quit_border));
-	snis_draw_rectangle(FALSE, txx(100), txy(100),
-			SCREEN_WIDTH - txx(200), SCREEN_HEIGHT - txy(200));
+	snis_draw_rectangle(FALSE, txx(50), txy(100),
+			SCREEN_WIDTH - txx(100), SCREEN_HEIGHT - txy(200));
 	sng_set_foreground(UI_COLOR(quit_text));
 	sng_abs_xy_draw_string("Quit?", BIG_FONT, txx(300), txy(280));
 
-	if (current_quit_selection == 1) {
-		x = QUIT_BUTTON_X;
-		sng_set_foreground(UI_COLOR(quit_selection));
-	} else {
-		x = NOQUIT_BUTTON_X;
-		sng_set_foreground(UI_COLOR(quit_unselected));
-	}
-	sng_abs_xy_draw_string("Quit Now", SMALL_FONT, txx(150), txy(450));
-	if (current_quit_selection == 0)
-		sng_set_foreground(UI_COLOR(quit_selection));
-	else
-		sng_set_foreground(UI_COLOR(quit_unselected));
-	sng_abs_xy_draw_string("Don't Quit", SMALL_FONT, txx(500), txy(450));
-
-	if ((quittimer & 0x04)) {
-		sng_set_foreground(UI_COLOR(quit_selection));
-		snis_draw_rectangle(FALSE, x, QUIT_BUTTON_Y,
-			QUIT_BUTTON_WIDTH, QUIT_BUTTON_HEIGHT);
+	for (unsigned int i = 0; i < ARRAYSIZE(quit_buttons); i++) {
+		if (!quit_disconnect_button_present && i == 2)
+			continue;
+		if (current_quit_selection == i)
+			sng_set_foreground(UI_COLOR(quit_selection));
+		else
+			sng_set_foreground(UI_COLOR(quit_unselected));
+		sng_abs_xy_draw_string(quit_buttons[i].text, SMALL_FONT,
+			quit_buttons[i].x + 50, quit_buttons[i].y + 40);
+		if ((quittimer & 0x04)) {
+			sng_set_foreground(UI_COLOR(quit_selection));
+			snis_draw_rectangle(FALSE, quit_buttons[current_quit_selection].x,
+				QUIT_BUTTON_Y, QUIT_BUTTON_WIDTH, QUIT_BUTTON_HEIGHT);
+		}
 	}
 }
 
@@ -22098,15 +22151,20 @@ static int main_da_button_release(SDL_MouseButtonEvent *event)
 		int sy = sng_pixely_to_screeny(event->y);
 		if (sx > QUIT_BUTTON_X && sx < QUIT_BUTTON_X + QUIT_BUTTON_WIDTH &&
 			sy > QUIT_BUTTON_Y && sy < QUIT_BUTTON_Y + QUIT_BUTTON_HEIGHT) {
-			final_quit_selection = 1;
+			final_quit_selection = QUIT_SELECTION_QUIT;
 			in_the_process_of_quitting = 1;
 			/* Clear focus from text widgets so they don't eat the keystrokes */
 			ui_element_list_clear_focus(uiobjs);
 		}
 		if (sx > NOQUIT_BUTTON_X && sx < NOQUIT_BUTTON_X + QUIT_BUTTON_WIDTH &&
 			sy > QUIT_BUTTON_Y && sy < QUIT_BUTTON_Y + QUIT_BUTTON_HEIGHT) {
-			final_quit_selection = 0;
+			final_quit_selection = QUIT_SELECTION_CONTINUE;
 			in_the_process_of_quitting = 0;
+		}
+		if (sx > DISCONNECT_BUTTON_X && sx < DISCONNECT_BUTTON_X + QUIT_BUTTON_WIDTH &&
+			sy > QUIT_BUTTON_Y && sy < QUIT_BUTTON_Y + QUIT_BUTTON_HEIGHT) {
+			in_the_process_of_quitting = 0;
+			final_quit_selection = QUIT_SELECTION_DISCONNECT;
 		}
 		return TRUE;
 	}
@@ -23814,8 +23872,8 @@ static void process_events(SDL_Window *window)
 			break;
 		case SDL_QUIT:
 			/* Handle quit requests (like Ctrl-c). */
-			in_the_process_of_quitting = 1;
-			final_quit_selection = 1;
+			in_the_process_of_quitting = 0;
+			final_quit_selection = QUIT_SELECTION_CONTINUE;
 			break;
 		case SDL_WINDOWEVENT:
 			handle_window_event(window, event);
@@ -24282,8 +24340,19 @@ int main(int argc, char *argv[])
 			advance_game();
 			maybe_hide_mouse_cursor();
 			maybe_resize_window(window);
-			if (final_quit_selection)
+			if (final_quit_selection == QUIT_SELECTION_QUIT)
 				break;
+			if (final_quit_selection == QUIT_SELECTION_DISCONNECT) {
+				final_quit_selection = QUIT_SELECTION_CONTINUE;
+				/* This will close the connection to snis_server and punt
+				 * us back to the network connection screen.
+				 */
+				if (gameserver_sock >= 0) {
+					shutdown(gameserver_sock, SHUT_RDWR);
+					close(gameserver_sock);
+					gameserver_sock = -1;
+				}
+			}
 		} else {
 			double timeToSleep = nextTime - currentTime;
 			if (timeToSleep > 0)
