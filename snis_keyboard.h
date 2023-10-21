@@ -101,7 +101,8 @@ enum keyaction {
 		key_comms_about = 94,
 		key_comms_crypto = 95,
 		key_comms_red_alert = 96,
-#define NKEYSTATES 97
+		key_comms_hail_mining_bot = 97,
+#define NKEYSTATES 98
 };
 
 struct keyboard_state {

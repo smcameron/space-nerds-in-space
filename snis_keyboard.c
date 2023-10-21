@@ -208,6 +208,7 @@ char *keyactionstring[] = {
 	"key_comms_about",
 	"key_comms_crypto",
 	"key_comms_red_alert",
+	"key_comms_hail_mining_bot",
 };
 
 #ifdef DEBUG_KEYMAP
@@ -435,6 +436,7 @@ void init_keymap(void)
 	mapkey(comms, SDLK_a, key_comms_about);
 	mapkey(comms, SDLK_y, key_comms_crypto);
 	mapkey(comms, SDLK_r, key_comms_red_alert);
+	mapkey(comms, SDLK_b, key_comms_hail_mining_bot);
 
 #ifdef DEBUG_KEYMAP
 	print_keymap("keymap", keymap);
