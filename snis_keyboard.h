@@ -94,7 +94,8 @@ enum keyaction {
 		key_weap_wavelen_nudge_down = 87,
 		key_comms_hail = 88,
 		key_comms_channel = 89,
-#define NKEYSTATES 90
+		key_comms_manifest = 90,
+#define NKEYSTATES 91
 };
 
 struct keyboard_state {
