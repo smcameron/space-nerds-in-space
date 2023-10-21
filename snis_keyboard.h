@@ -102,7 +102,14 @@ enum keyaction {
 		key_comms_crypto = 95,
 		key_comms_red_alert = 96,
 		key_comms_hail_mining_bot = 97,
-#define NKEYSTATES 98
+		key_comms_comms_screen = 98,
+		key_comms_nav_screen = 99,
+		key_comms_weap_screen = 100,
+		key_comms_eng_screen = 101,
+		key_comms_damcon_screen = 102,
+		key_comms_science_screen = 103,
+		key_comms_main_screen = 104,
+#define NKEYSTATES 105
 };
 
 struct keyboard_state {

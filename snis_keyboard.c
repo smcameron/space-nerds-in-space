@@ -209,6 +209,13 @@ char *keyactionstring[] = {
 	"key_comms_crypto",
 	"key_comms_red_alert",
 	"key_comms_hail_mining_bot",
+	"key_comms_comms_screen",
+	"key_comms_nav_screen",
+	"key_comms_weap_screen",
+	"key_comms_eng_screen",
+	"key_comms_damcon_screen",
+	"key_comms_science_screen",
+	"key_comms_main_screen",
 };
 
 #ifdef DEBUG_KEYMAP
@@ -437,6 +444,13 @@ void init_keymap(void)
 	mapkey(comms, SDLK_y, key_comms_crypto);
 	mapkey(comms, SDLK_r, key_comms_red_alert);
 	mapkey(comms, SDLK_b, key_comms_hail_mining_bot);
+	mapkey(comms, SDLK_2, key_comms_comms_screen);
+	mapkey(comms, SDLK_3, key_comms_nav_screen);
+	mapkey(comms, SDLK_4, key_comms_weap_screen);
+	mapkey(comms, SDLK_5, key_comms_eng_screen);
+	mapkey(comms, SDLK_6, key_comms_damcon_screen);
+	mapkey(comms, SDLK_7, key_comms_science_screen);
+	mapkey(comms, SDLK_8, key_comms_main_screen);
 
 #ifdef DEBUG_KEYMAP
 	print_keymap("keymap", keymap);
