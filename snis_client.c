@@ -4625,6 +4625,48 @@ static void quit_continue_or_disconnect(void)
 	}
 }
 
+static struct comms_ui {
+	struct text_window *tw;
+	struct button *comms_onscreen_button;
+	struct button *nav_onscreen_button;
+	struct button *weap_onscreen_button;
+	struct button *eng_onscreen_button;
+	struct button *damcon_onscreen_button;
+	struct button *sci_onscreen_button;
+	struct button *main_onscreen_button;
+	struct button *custom_button;
+	struct button *cryptanalysis_button;
+	struct button *comms_transmit_button;
+	struct button *red_alert_button;
+	struct button *hail_mining_bot_button;
+	struct button *mainscreen_comms;
+	struct button *rts_starbase_button[NUM_RTS_BASES];
+	struct button *rts_fleet_button;
+	struct button *rts_main_planet_button;
+	struct button *rts_order_unit_button[NUM_RTS_UNIT_TYPES];
+	struct button *rts_order_command_button[NUM_RTS_ORDER_TYPES];
+	struct button *hail_button;
+	struct button *channel_button;
+	struct button *manifest_button;
+	struct button *computer_button;
+	struct button *eject_button;
+	struct button *help_button;
+	struct button *about_button;
+	struct button *crypto_reset;
+	struct snis_text_input_box *crypt_alpha[26];
+	char crypt_alpha_text[26][3];
+#define FLEET_BUTTON_COLS 9
+#define FLEET_BUTTON_ROWS 10
+	struct button *fleet_unit_button[FLEET_BUTTON_COLS][FLEET_BUTTON_ROWS];
+	int fleet_order_checkbox[NUM_RTS_ORDER_TYPES];
+	struct snis_text_input_box *comms_input;
+	struct slider *mainzoom_slider;
+	char input[100];
+	uint32_t channel;
+	struct strip_chart *emf_strip_chart;
+	struct slider *our_base_health, *enemy_base_health;
+} comms_ui;
+
 static void engage_warp_button_pressed(__attribute__((unused)) void *cookie);
 static void reverse_button_pressed(__attribute__((unused)) void *s);
 static void docking_magnets_button_pressed(__attribute__((unused)) void *cookie);
@@ -4710,6 +4752,13 @@ static int key_press_cb(SDL_Window *window, SDL_Keysym *keysym, int key_repeat)
 				helpmode = 0;
 				break;
 			}
+
+			/* Allow Esc to clear focus on text input widget on Comms screen */
+			if (displaymode == DISPLAYMODE_COMMS && snis_text_input_box_has_focus(comms_ui.comms_input)) {
+				snis_text_input_box_set_focus(comms_ui.comms_input, 0);
+				break;
+			}
+
 			in_the_process_of_quitting = !in_the_process_of_quitting;
 			if (in_the_process_of_quitting) {
 				/* Clear focus from text widgets so they don't eat the keystrokes */
@@ -6646,48 +6695,6 @@ static int process_update_netstats(void)
 					(float) netstats.incoming_queue_length);
 	return 0;
 }
-
-static struct comms_ui {
-	struct text_window *tw;
-	struct button *comms_onscreen_button;
-	struct button *nav_onscreen_button;
-	struct button *weap_onscreen_button;
-	struct button *eng_onscreen_button;
-	struct button *damcon_onscreen_button;
-	struct button *sci_onscreen_button;
-	struct button *main_onscreen_button;
-	struct button *custom_button;
-	struct button *cryptanalysis_button;
-	struct button *comms_transmit_button;
-	struct button *red_alert_button;
-	struct button *hail_mining_bot_button;
-	struct button *mainscreen_comms;
-	struct button *rts_starbase_button[NUM_RTS_BASES];
-	struct button *rts_fleet_button;
-	struct button *rts_main_planet_button;
-	struct button *rts_order_unit_button[NUM_RTS_UNIT_TYPES];
-	struct button *rts_order_command_button[NUM_RTS_ORDER_TYPES];
-	struct button *hail_button;
-	struct button *channel_button;
-	struct button *manifest_button;
-	struct button *computer_button;
-	struct button *eject_button;
-	struct button *help_button;
-	struct button *about_button;
-	struct button *crypto_reset;
-	struct snis_text_input_box *crypt_alpha[26];
-	char crypt_alpha_text[26][3];
-#define FLEET_BUTTON_COLS 9
-#define FLEET_BUTTON_ROWS 10
-	struct button *fleet_unit_button[FLEET_BUTTON_COLS][FLEET_BUTTON_ROWS];
-	int fleet_order_checkbox[NUM_RTS_ORDER_TYPES];
-	struct snis_text_input_box *comms_input;
-	struct slider *mainzoom_slider;
-	char input[100];
-	uint32_t channel;
-	struct strip_chart *emf_strip_chart;
-	struct slider *our_base_health, *enemy_base_health;
-} comms_ui;
 
 static void comms_dirkey(__attribute__((unused)) int h, int v)
 {
@@ -17374,8 +17381,6 @@ static void update_comms_ui_visibility(struct snis_entity *o)
 		for (i = 0; i < 26; i++)
 			ui_hide_widget(comms_ui.crypt_alpha[i]);
 		ui_hide_widget(comms_ui.crypto_reset);
-		if (!in_the_process_of_quitting) /* don't eat inputs meant for the quit dialog */
-			ui_set_widget_focus(uiobjs, comms_ui.comms_input);
 	}
 }
 
