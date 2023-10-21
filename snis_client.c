@@ -4680,6 +4680,28 @@ static void comms_computer_button_pressed(__attribute__((unused)) void *x);
 static void comms_eject_button_pressed(__attribute__((unused)) void *x);
 static void comms_help_button_pressed(__attribute__((unused)) void *x);
 static void comms_about_button_pressed(__attribute__((unused)) void *x);
+static void comms_cryptanalysis_button_pressed(__attribute__((unused)) void *x);
+
+static int maybe_trigger_comms_button(void (*button_press_func)(__attribute__((unused)) void *x), int grab_focus)
+{
+	if (displaymode != DISPLAYMODE_COMMS)
+		return 0;
+
+	if (snis_text_input_box_has_focus(comms_ui.comms_input))
+		return 0;
+
+	struct snis_entity *o = find_my_ship();
+	if (!o)
+		return 0;
+
+	if (o->tsd.ship.comms_crypto_mode)
+		return 0;
+
+	button_press_func(NULL);
+	if (grab_focus)
+		snis_text_input_box_set_focus(comms_ui.comms_input, 1);
+	return 1;
+}
 
 static int key_press_cb(SDL_Window *window, SDL_Keysym *keysym, int key_repeat)
 {
@@ -4774,46 +4796,28 @@ static int key_press_cb(SDL_Window *window, SDL_Keysym *keysym, int key_repeat)
 			current_quit_selection = QUIT_SELECTION_CONTINUE;
 			break;
 	case key_comms_hail:
-		if (!snis_text_input_box_has_focus(comms_ui.comms_input)) {
-			comms_hail_button_pressed(NULL);
-			snis_text_input_box_set_focus(comms_ui.comms_input, 1);
-		}
+		(void) maybe_trigger_comms_button(comms_hail_button_pressed, 1);
 		break;
 	case key_comms_channel:
-		if (!snis_text_input_box_has_focus(comms_ui.comms_input)) {
-			comms_channel_button_pressed(NULL);
-			snis_text_input_box_set_focus(comms_ui.comms_input, 1);
-		}
+		(void) maybe_trigger_comms_button(comms_channel_button_pressed, 1);
 		break;
 	case key_comms_manifest:
-		if (!snis_text_input_box_has_focus(comms_ui.comms_input)) {
-			comms_manifest_button_pressed(NULL);
-			/* don't set focus for manifest because there are no params to type */
-		}
+		(void) maybe_trigger_comms_button(comms_manifest_button_pressed, 0);
 		break;
 	case key_comms_computer:
-		if (!snis_text_input_box_has_focus(comms_ui.comms_input)) {
-			comms_computer_button_pressed(NULL);
-			snis_text_input_box_set_focus(comms_ui.comms_input, 1);
-		}
+		(void) maybe_trigger_comms_button(comms_computer_button_pressed, 1);
 		break;
 	case key_comms_eject:
-		if (!snis_text_input_box_has_focus(comms_ui.comms_input)) {
-			comms_eject_button_pressed(NULL);
-			snis_text_input_box_set_focus(comms_ui.comms_input, 1);
-		}
+		(void) maybe_trigger_comms_button(comms_eject_button_pressed, 1);
 		break;
 	case key_comms_help:
-		if (!snis_text_input_box_has_focus(comms_ui.comms_input)) {
-			comms_help_button_pressed(NULL);
-			/* don't set focus for help because there are no params to type */
-		}
+		(void) maybe_trigger_comms_button(comms_help_button_pressed, 0);
 		break;
 	case key_comms_about:
-		if (!snis_text_input_box_has_focus(comms_ui.comms_input)) {
-			comms_about_button_pressed(NULL);
-			/* don't set focus for about because there are no params to type */
-		}
+		(void) maybe_trigger_comms_button(comms_about_button_pressed, 0);
+		break;
+	case key_comms_crypto:
+		(void) maybe_trigger_comms_button(comms_cryptanalysis_button_pressed, 0);
 		break;
 	case keytorpedo:
 		fire_torpedo_button_pressed(NULL);
