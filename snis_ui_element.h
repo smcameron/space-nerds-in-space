@@ -129,7 +129,8 @@ GLOBAL void ui_set_focus(struct ui_element_list *list, struct ui_element *e);
 /* Removes keyboard focus from all ui elements in a linked list */
 GLOBAL void ui_element_list_clear_focus(struct ui_element_list *list);
 /* Find the ui element in the linked list associated with the given widget and
- * remove keyboard focus from it */
+ * give it keyboard focus.  The difference between this and ui_set_focus is
+ * this one uses the widget pointer, not the ui_element pointer. */
 GLOBAL void ui_set_widget_focus(struct ui_element_list *list, void *widget);
 /* Set a ui element's tooltip */
 GLOBAL void ui_element_set_tooltip(struct ui_element *e, char *tooltip);
