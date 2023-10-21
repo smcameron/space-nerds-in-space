@@ -200,6 +200,7 @@ char *keyactionstring[] = {
 	"key_weap_wavlen_nudge_up",
 	"key_weap_wavlen_nudge_down",
 	"key_comms_hail",
+	"key_comms_channel",
 };
 
 #ifdef DEBUG_KEYMAP
@@ -419,6 +420,7 @@ void init_keymap(void)
 	mapkey(nav, SDLK_t, key_starmap);
 
 	mapkey(comms, SDLK_h, key_comms_hail);
+	mapkey(comms, SDLK_c, key_comms_channel);
 
 #ifdef DEBUG_KEYMAP
 	print_keymap("keymap", keymap);
