@@ -113,6 +113,11 @@ void snis_text_input_box_set_focus(struct snis_text_input_box *t, int has_focus)
 	}
 }
 
+int snis_text_input_box_has_focus(struct snis_text_input_box *t)
+{
+	return t->has_focus;
+}
+
 int snis_text_input_box_button_press(struct snis_text_input_box *t, int x, int y)
 {
 	int hit;

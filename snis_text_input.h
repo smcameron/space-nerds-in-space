@@ -36,6 +36,9 @@ GLOBAL void snis_text_input_box_draw(struct snis_text_input_box *t);
 /* Set the text input to have focus (has_focus != 0) or not (has_focus == 0) */
 GLOBAL void snis_text_input_box_set_focus(struct snis_text_input_box *t, int has_focus);
 
+/* Returns 1 if *t has focus, 0 otherwise */
+GLOBAL int snis_text_input_box_has_focus(struct snis_text_input_box *t);
+
 /* Returns 1 if x,y are inside the text box, 0 otherwise */
 GLOBAL int snis_text_input_box_button_press(struct snis_text_input_box *t, int x, int y);
 
