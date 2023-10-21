@@ -4677,6 +4677,7 @@ static void comms_hail_button_pressed(__attribute__((unused)) void *x);
 static void comms_channel_button_pressed(__attribute__((unused)) void *x);
 static void comms_manifest_button_pressed(__attribute__((unused)) void *x);
 static void comms_computer_button_pressed(__attribute__((unused)) void *x);
+static void comms_eject_button_pressed(__attribute__((unused)) void *x);
 
 static int key_press_cb(SDL_Window *window, SDL_Keysym *keysym, int key_repeat)
 {
@@ -4791,6 +4792,12 @@ static int key_press_cb(SDL_Window *window, SDL_Keysym *keysym, int key_repeat)
 	case key_comms_computer:
 		if (!snis_text_input_box_has_focus(comms_ui.comms_input)) {
 			comms_computer_button_pressed(NULL);
+			snis_text_input_box_set_focus(comms_ui.comms_input, 1);
+		}
+		break;
+	case key_comms_eject:
+		if (!snis_text_input_box_has_focus(comms_ui.comms_input)) {
+			comms_eject_button_pressed(NULL);
 			snis_text_input_box_set_focus(comms_ui.comms_input, 1);
 		}
 		break;

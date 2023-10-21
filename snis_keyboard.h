@@ -96,7 +96,8 @@ enum keyaction {
 		key_comms_channel = 89,
 		key_comms_manifest = 90,
 		key_comms_computer = 91,
-#define NKEYSTATES 92
+		key_comms_eject = 92,
+#define NKEYSTATES 93
 };
 
 struct keyboard_state {

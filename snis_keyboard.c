@@ -203,6 +203,7 @@ char *keyactionstring[] = {
 	"key_comms_channel",
 	"key_comms_manifest",
 	"key_comms_computer",
+	"key_comms_eject",
 };
 
 #ifdef DEBUG_KEYMAP
@@ -425,6 +426,7 @@ void init_keymap(void)
 	mapkey(comms, SDLK_c, key_comms_channel);
 	mapkey(comms, SDLK_m, key_comms_manifest);
 	mapkey(comms, SDLK_p, key_comms_computer);
+	mapkey(comms, SDLK_e, key_comms_eject);
 
 #ifdef DEBUG_KEYMAP
 	print_keymap("keymap", keymap);
