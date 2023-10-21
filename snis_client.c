@@ -4681,6 +4681,7 @@ static void comms_eject_button_pressed(__attribute__((unused)) void *x);
 static void comms_help_button_pressed(__attribute__((unused)) void *x);
 static void comms_about_button_pressed(__attribute__((unused)) void *x);
 static void comms_cryptanalysis_button_pressed(__attribute__((unused)) void *x);
+static void comms_screen_red_alert_pressed(__attribute__((unused)) void *x);
 
 static int maybe_trigger_comms_button(void (*button_press_func)(__attribute__((unused)) void *x), int grab_focus)
 {
@@ -4818,6 +4819,9 @@ static int key_press_cb(SDL_Window *window, SDL_Keysym *keysym, int key_repeat)
 		break;
 	case key_comms_crypto:
 		(void) maybe_trigger_comms_button(comms_cryptanalysis_button_pressed, 0);
+		break;
+	case key_comms_red_alert:
+		(void) maybe_trigger_comms_button(comms_screen_red_alert_pressed, 0);
 		break;
 	case keytorpedo:
 		fire_torpedo_button_pressed(NULL);
