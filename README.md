@@ -76,7 +76,7 @@ Perform these steps as root:
     apt-get install libsdl2-dev;
     apt-get install libsdl2-2.0-0;
     apt-get install liblua5.2-dev;
-    apt-get install libglew1.5-dev;
+    apt-get install libglew-dev;
     apt-get install libssl-dev;
     apt-get install libttspico-utils; # for text to speech
     apt-get install sox; # for "play" command, used by text to speech
