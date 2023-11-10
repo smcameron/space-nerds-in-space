@@ -21186,7 +21186,7 @@ static void draw_quit_screen(void)
 		else
 			sng_set_foreground(UI_COLOR(quit_unselected));
 		sng_abs_xy_draw_string(quit_buttons[i].text, SMALL_FONT,
-			quit_buttons[i].x + 50, quit_buttons[i].y + 40);
+			quit_buttons[i].x + 50, quit_buttons[i].y + 50);
 		if ((quittimer & 0x04)) {
 			sng_set_foreground(UI_COLOR(quit_selection));
 			snis_draw_rectangle(FALSE, quit_buttons[current_quit_selection].x,
