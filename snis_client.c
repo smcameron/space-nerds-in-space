@@ -4683,7 +4683,6 @@ static void comms_about_button_pressed(__attribute__((unused)) void *x);
 static void comms_cryptanalysis_button_pressed(__attribute__((unused)) void *x);
 static void comms_screen_red_alert_pressed(__attribute__((unused)) void *x);
 static void comms_hail_mining_bot_pressed(__attribute__((unused)) void *x);
-static void comms_screen_button_pressed(void *x);
 
 static int maybe_trigger_comms_button(void (*button_press_func)(__attribute__((unused)) void *x), int grab_focus)
 {
@@ -4828,22 +4827,6 @@ static int key_press_cb(SDL_Window *window, SDL_Keysym *keysym, int key_repeat)
 	case key_comms_hail_mining_bot:
 		(void) maybe_trigger_comms_button(comms_hail_mining_bot_pressed, 1);
 		break;
-	case key_comms_nav_screen:
-	case key_comms_weap_screen:
-	case key_comms_eng_screen:
-	case key_comms_damcon_screen:
-	case key_comms_science_screen:
-	case key_comms_comms_screen:
-	case key_comms_main_screen: {
-			struct snis_entity *o = find_my_ship();
-			if (!o)
-				break;
-			if (o->tsd.ship.comms_crypto_mode)
-				break;
-			intptr_t screen_number = (int) ka - (int) key_comms_comms_screen;
-			comms_screen_button_pressed((void *) screen_number);
-			break;
-		}
 	case keytorpedo:
 		fire_torpedo_button_pressed(NULL);
 		break;
