@@ -4675,7 +4675,6 @@ static void standard_orbit_button_pressed(__attribute__((unused)) void *cookie);
 static void nav_starmap_button_pressed(__attribute__((unused)) void *cookie);
 static void comms_hail_button_pressed(__attribute__((unused)) void *x);
 static void comms_channel_button_pressed(__attribute__((unused)) void *x);
-static void comms_manifest_button_pressed(__attribute__((unused)) void *x);
 
 static int key_press_cb(SDL_Window *window, SDL_Keysym *keysym, int key_repeat)
 {
@@ -4779,12 +4778,6 @@ static int key_press_cb(SDL_Window *window, SDL_Keysym *keysym, int key_repeat)
 		if (!snis_text_input_box_has_focus(comms_ui.comms_input)) {
 			comms_channel_button_pressed(NULL);
 			snis_text_input_box_set_focus(comms_ui.comms_input, 1);
-		}
-		break;
-	case key_comms_manifest:
-		if (!snis_text_input_box_has_focus(comms_ui.comms_input)) {
-			comms_manifest_button_pressed(NULL);
-			/* don't set focus for manifest because there are no params to type */
 		}
 		break;
 	case keytorpedo:
