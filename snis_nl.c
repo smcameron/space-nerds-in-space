@@ -221,7 +221,7 @@ static void free_tokens(struct nl_token *word[], int nwords)
 		free(word[i]);
 }
 
-static void maybe_do_pronoun_substitution(__attribute__((unused)) void *context, struct nl_token *t)
+static void maybe_do_pronoun_substitution(__attribute__((unused)) void *user_context, struct nl_token *t)
 {
 	if (t->pos[t->npos] != POS_PRONOUN)
 		return;
@@ -238,7 +238,7 @@ static void maybe_do_pronoun_substitution(__attribute__((unused)) void *context,
 		t->external_noun.handle = -1;
 }
 
-static void classify_token(void *context, struct nl_token *t)
+static void classify_token(void *user_context, struct nl_token *t)
 {
 	int i, j;
 	float x, rc;
@@ -254,7 +254,7 @@ static void classify_token(void *context, struct nl_token *t)
 			continue;
 		t->pos[t->npos] = dictionary[i].p_o_s;
 		t->meaning[t->npos] = i;
-		maybe_do_pronoun_substitution(context, t);
+		maybe_do_pronoun_substitution(user_context, t);
 		t->npos++;
 		if (t->npos >= MAX_MEANINGS)
 			break;
@@ -300,7 +300,7 @@ static void classify_token(void *context, struct nl_token *t)
 	}
 
 	if (external_lookup) {
-		handle = external_lookup(context, t->word);
+		handle = external_lookup(user_context, t->word);
 		if (handle != 0xffffffff) {
 			t->pos[t->npos] = POS_EXTERNAL_NOUN;
 			t->meaning[t->npos] = -1;
@@ -312,12 +312,12 @@ static void classify_token(void *context, struct nl_token *t)
 	}
 }
 
-static void classify_tokens(void *context, struct nl_token *t[], int ntokens)
+static void classify_tokens(void *user_context, struct nl_token *t[], int ntokens)
 {
 	int i;
 
 	for (i = 0; i < ntokens; i++)
-		classify_token(context, t[i]);
+		classify_token(user_context, t[i]);
 }
 
 static void remove_expletives(struct nl_token *t[], int *ntokens)
@@ -772,7 +772,7 @@ void snis_nl_set_current_topic(int part_of_speech, char *word, union snis_nl_ext
 	snis_nl_current_topic.extra_data = extra_data;
 }
 
-static void do_action(void *context, struct nl_parse_machine *p, struct nl_token **token, int ntokens)
+static void do_action(void *user_context, struct nl_parse_machine *p, struct nl_token **token, int ntokens)
 {
 	int argc;
 	char *argv[MAX_WORDS];
@@ -794,7 +794,7 @@ static void do_action(void *context, struct nl_parse_machine *p, struct nl_token
 		struct nl_token *t = token[i];
 		if (t->pos[p->meaning[i]] == POS_VERB) {
 			if (vf != NULL) {
-				vf(context, argc, argv, pos, extra_data);
+				vf(user_context, argc, argv, pos, extra_data);
 				vf = NULL;
 			}
 			argc = 1;
@@ -840,7 +840,7 @@ static void do_action(void *context, struct nl_parse_machine *p, struct nl_token
 			snis_nl_set_current_topic(antecedent_pos, argv[antecedent_word], antecedent_extra_data);
 			snis_nl_current_topic.meaning = antecedent_noun_meaning;
 		}
-		vf(context, argc, argv, pos, extra_data);
+		vf(user_context, argc, argv, pos, extra_data);
 		vf = NULL;
 	}
 }
@@ -933,7 +933,7 @@ static void nl_parse_machines_score(struct nl_parse_machine **list, int ntokens)
 		nl_parse_machine_score(p, ntokens);
 }
 
-static int extract_meaning(void *context, char *original_text, struct nl_token *token[], int ntokens, int test_only)
+static int extract_meaning(void *user_context, char *original_text, struct nl_token *token[], int ntokens, int test_only)
 {
 	struct nl_parse_machine *list, *p;
 	int rc;
@@ -953,19 +953,19 @@ static int extract_meaning(void *context, char *original_text, struct nl_token *
 		}
 		rc = 0;
 		if (!test_only)
-			do_action(context, p, token, ntokens);
+			do_action(user_context, p, token, ntokens);
 	} else {
 		if (debuglevel > 0)
 			printf("Failure to comprehend '%s'\n", original_text);
 		if (error_function && !test_only)
-			error_function(context);
+			error_function(user_context);
 		rc = -1;
 	}
 	parse_machine_free_list(p);
 	return rc;
 }
 
-static int nl_parse_natural_language_request(void *context, char *original, int test_only)
+static int nl_parse_natural_language_request(void *user_context, char *original, int test_only)
 {
 	int ntokens;
 	struct nl_token **token = NULL;
@@ -976,10 +976,10 @@ static int nl_parse_natural_language_request(void *context, char *original, int 
 	handle_spelled_numbers_in_place(copy);
 	multiword_processor_encode(copy);
 	token = tokenize(copy, &ntokens);
-	classify_tokens(context, token, ntokens);
+	classify_tokens(user_context, token, ntokens);
 	remove_expletives(token, &ntokens);
 	// print_tokens(token, ntokens);
-	rc = extract_meaning(context, original, token, ntokens, test_only);
+	rc = extract_meaning(user_context, original, token, ntokens, test_only);
 	free_tokens(token, ntokens);
 	if (token)
 		free(token);
@@ -987,16 +987,16 @@ static int nl_parse_natural_language_request(void *context, char *original, int 
 	return rc;
 }
 
-void snis_nl_parse_natural_language_request(void *context, char *txt)
+void snis_nl_parse_natural_language_request(void *user_context, char *txt)
 {
-	(void) nl_parse_natural_language_request(context, txt, 0);
+	(void) nl_parse_natural_language_request(user_context, txt, 0);
 }
 
-int snis_nl_test_parse_natural_language_request(void *context, char *txt)
+int snis_nl_test_parse_natural_language_request(void *user_context, char *txt)
 {
 	if (debuglevel > 0)
 		printf("Testing: %s\n", txt);
-	return nl_parse_natural_language_request(context, txt, 1);
+	return nl_parse_natural_language_request(user_context, txt, 1);
 }
 
 void snis_nl_add_synonym(char *synonym_word, char *canonical_word)
@@ -1010,7 +1010,7 @@ void snis_nl_add_synonym(char *synonym_word, char *canonical_word)
 	nsynonyms++;
 }
 
-static void snis_nl_debuglevel(__attribute__((unused)) void *context,
+static void snis_nl_debuglevel(__attribute__((unused)) void *user_context,
 				__attribute__((unused)) int argc,
 				__attribute__((unused)) char *argv[],
 				__attribute__((unused)) int pos[],
@@ -1025,7 +1025,7 @@ static void snis_nl_debuglevel(__attribute__((unused)) void *context,
 	fprintf(stderr, "Set debug level to %d, '%s'\n", debuglevel, debuglevel ? "on" : "off");
 }
 
-static void snis_nl_dumpvocab(__attribute__((unused)) void *context, __attribute__((unused)) int argc,
+static void snis_nl_dumpvocab(__attribute__((unused)) void *user_context, __attribute__((unused)) int argc,
 				__attribute__((unused)) char *argv[], __attribute__((unused)) int pos[],
 				__attribute__((unused)) union snis_nl_extra_data extra_data[])
 {
@@ -1140,7 +1140,7 @@ static void init_synonyms(void)
 	snis_nl_add_synonym("deploy", "launch");
 }
 
-static void generic_verb_action(__attribute__((unused)) void *context, int argc, char *argv[], int pos[],
+static void generic_verb_action(__attribute__((unused)) void *user_context, int argc, char *argv[], int pos[],
 		__attribute__((unused)) union snis_nl_extra_data extra_data[])
 {
 	int i;
