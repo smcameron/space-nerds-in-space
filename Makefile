@@ -1231,7 +1231,7 @@ $(OD)/snis_nl.o:	snis_nl.c snis_nl.h Makefile ${ODT}
 	$(Q)$(COMPILE)
 
 snis_nl:	snis_nl.o ${OD}/string-utils.o ${OD}/spelled_numbers.o
-	$(CC) -g -DTEST_NL -o snis_nl ${OD}/string-utils.o ${OD}/spelled_numbers.o snis_nl.c
+	$(CC) -fsanitize=bounds -g -DTEST_NL -o snis_nl ${OD}/string-utils.o ${OD}/spelled_numbers.o snis_nl.c
 
 $(OD)/spelled_numbers.o:	spelled_numbers.c spelled_numbers.h Makefile ${ODT}
 	$(Q)$(COMPILE)
