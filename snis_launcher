@@ -169,7 +169,7 @@ start_snis_lobby()
 		echo
 		echo "WARNING: current lobby host is ${LOBBYHOST}, not localhost."
 		echo "Are you sure you mean to start a local lobby server (y/n)?"
-		read x
+		read -r x
 		if [ "$x" != "y" ]
 		then
 			echo "Not starting lobby host."
@@ -196,7 +196,7 @@ start_snis_multiverse()
 		return
 	fi
 	printf "Autowrangle snis_servers (y/n, default = y)?"
-	read x
+	read -r x
 	if [ "$x" != "n" ]
 	then
 		echo
@@ -245,7 +245,7 @@ get_solarsystem_name()
 			echo "   $name"
 		done
 		printf "Enter the name of the solarsystem (default = %s): " "$default"
-		read ssname;
+		read -r ssname;
 		if [ "$ssname" = "" ]
 		then
 			ssname="$default"
@@ -314,21 +314,21 @@ start_snis_client()
 enter_lobby_host()
 {
 	printf "Enter lobby host: "
-	read x
+	read -r x
 	export LOBBYHOST="$x"
 }
 
 enter_lobby_port()
 {
 	printf "Enter lobby port: "
-	read x
+	read -r x
 	export SSGL_PORT="$x"
 }
 
 enter_snis_server_port_range()
 {
 	printf "Enter SNIS server port range (min:max): "
-	read x
+	read -r x
 	export SNIS_SERVER_PORT_RANGE="$x"
 }
 
@@ -421,7 +421,7 @@ choose_options()
 		print_options_menu
 		check_for_bad_lockfiles
 		printf "   Choose [0-3]: "
-		read x
+		read -r x
 
 		case "$x" in
 		0)
@@ -471,7 +471,7 @@ do
 	print_main_menu
 	check_for_bad_lockfiles
 	printf "   Choose [0-10]: "
-	read x
+	read -r x
 
 	case "$x" in
 	0)
