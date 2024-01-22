@@ -12,13 +12,13 @@ PREFIX="$2"
 
 if [ "$PREFIX" = "" ]
 then
-	cat "$2"
+	cat "$INPUT"
 	exit 0
 fi
 
 if [ "$PREFIX" = "." ]
 then
-	cat "$2"
+	cat "$INPUT"
 	exit 0
 fi
 
