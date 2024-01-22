@@ -128,7 +128,7 @@ EOF
 kill_processes()
 {
 	pattern="$1"
-	p=$(ps aux | egrep "$pattern" | grep -v 'grep')
+	p=$(ps aux | grep -E "$pattern" | grep -v 'grep')
 	if [ "$p" = "" ]
 	then
 		echo "There are no processes to kill."
@@ -136,7 +136,7 @@ kill_processes()
 	else
 		echo "$p"
 	fi
-	ps aux | egrep "$pattern" | grep -v 'grep' | awk '{ printf("kill %s\n", $2); }' | /bin/sh
+	ps aux | grep -E "$pattern" | grep -v 'grep' | awk '{ printf("kill %s\n", $2); }' | /bin/sh
 	echo "Killed the above processes."
 }
 
@@ -345,7 +345,7 @@ reformat_processes()
 show_snis_processes()
 {
 	echo "------------------------------------------------------------"
-	p=$(ps aux | egrep 'snis_multiverse|snis_server|snis_client|ssgl_server' | grep -v grep)
+	p=$(ps aux | grep -E 'snis_multiverse|snis_server|snis_client|ssgl_server' | grep -v grep)
 	if [ "$p" = "" ]
 	then
 		echo "No SNIS processes are currently running."
@@ -368,7 +368,7 @@ check_for_bad_lockfiles()
 			continue;
 		fi
 		instancename=$(echo "$x" | sed -e 's/.*[.]//')
-		ps aux | egrep snis_server | grep "[-]L $instancename[ ]" > /dev/null 2>&1
+		ps aux | grep -E snis_server | grep "[-]L $instancename[ ]" > /dev/null 2>&1
 		if [ "$?" = "1" ]
 		then
 			echo 1>&2
