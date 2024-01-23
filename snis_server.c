@@ -27106,7 +27106,7 @@ static void take_your_locale_and_shove_it(void)
 
 /* callback used by natural language parser to look up game objects */
 static uint32_t natural_language_object_lookup(__attribute__((unused)) struct snis_nl_context *ctx,
-					__attribute__((unused)) void *context, char *word)
+					char *word)
 {
 	uint32_t answer = 0xffffffff; /* not found */
 	int i, b;
@@ -27156,7 +27156,8 @@ static void perform_natural_language_request(struct game_client *c, char *txt)
 {
 	lowercase(txt);
 	printf("%s\n", txt);
-	snis_nl_parse_natural_language_request(snis_nl_ctx, c, txt);
+	snis_nl_set_user_context(snis_nl_ctx, c);
+	snis_nl_parse_natural_language_request(snis_nl_ctx, txt);
 }
 
 static void init_synonyms(struct snis_nl_context *ctx)
@@ -27369,10 +27370,10 @@ static void nl_describe_game_object(struct game_client *c, uint32_t id)
 }
 
 static void nl_describe_n(__attribute__((unused)) struct snis_nl_context *ctx,
-		void *context, int argc, char *argv[], int pos[],
+		int argc, char *argv[], int pos[],
 		union snis_nl_extra_data extra_data[])
 {
-	struct game_client *c = context;
+	struct game_client *c = snis_nl_get_user_context(ctx);
 	int i;
 
 	for (i = 0; i < argc; i++) {
@@ -27450,10 +27451,10 @@ no_understand:
 }
 
 static void nl_describe_an(__attribute__((unused)) struct snis_nl_context *ctx,
-		void *context, int argc, char *argv[], int pos[],
+		int argc, char *argv[], int pos[],
 		union snis_nl_extra_data extra_data[])
 {
-	struct game_client *c = context;
+	struct game_client *c = snis_nl_get_user_context(ctx);
 	int i, adj, noun;
 	uint32_t id;
 
@@ -27558,12 +27559,12 @@ no_understand:
 	queue_add_text_to_speech(c, "Sorry, I do not know how to compute that.");
 }
 
-static void nl_compute_npn(__attribute__((unused)) struct snis_nl_context *ctx,
-				void *context, int argc, char *argv[], int pos[],
+static void nl_compute_npn(struct snis_nl_context *ctx,
+				int argc, char *argv[], int pos[],
 				union snis_nl_extra_data extra_data[])
 {
 	int first_noun;
-	struct game_client *c = context;
+	struct game_client *c = snis_nl_get_user_context(ctx);
 	int calculate_course = 0;
 	int calculate_distance = 0;
 
@@ -27595,10 +27596,9 @@ no_understand:
 	queue_add_text_to_speech(c, "Sorry, I do not know how to compute that.");
 }
 
-static void nl_what_is_npn(struct snis_nl_context *ctx, void *context, int argc, char *argv[], int pos[],
+static void nl_what_is_npn(struct snis_nl_context *ctx, int argc, char *argv[], int pos[],
 				union snis_nl_extra_data extra_data[])
 {
-	struct game_client *c = context;
 	int noun;
 
 	noun = nl_find_next_word(argc, pos, POS_NOUN, 0);
@@ -27608,19 +27608,20 @@ static void nl_what_is_npn(struct snis_nl_context *ctx, void *context, int argc,
 			goto no_understand;
 	}
 	if (strcasecmp(argv[noun], "distance") == 0) { /* what is the distance <preposition> <noun> */
-		nl_compute_npn(ctx, c, argc, argv, pos, extra_data);
+		nl_compute_npn(ctx, argc, argv, pos, extra_data);
 		return;
 	}
 
 no_understand:
-	queue_add_text_to_speech(c, "Sorry, I do not know what that is.");
+	queue_add_text_to_speech(snis_nl_get_user_context(ctx),
+				"Sorry, I do not know what that is.");
 }
 
-static void nl_what_is_anpan(__attribute__((unused)) struct snis_nl_context *ctx,
-				void *context, int argc, char *argv[], int pos[],
+static void nl_what_is_anpan(struct snis_nl_context *ctx,
+				int argc, char *argv[], int pos[],
 				__attribute__((unused)) union snis_nl_extra_data extra_data[])
 {
-	struct game_client *c = context;
+	struct game_client *c = snis_nl_get_user_context(ctx);
 	int adj1, adj2, adj3, prep, noun1, noun2;
 
 	adj1 = nl_find_next_word(argc, pos, POS_ADJECTIVE, 0);
@@ -27667,11 +27668,11 @@ skip_joke:
 }
 
 /* "how far to starbase 0?" */
-static void nl_how_apn(__attribute__((unused)) struct snis_nl_context *ctx,
-				void *context, int argc, char *argv[], int pos[],
+static void nl_how_apn(struct snis_nl_context *ctx,
+				int argc, char *argv[], int pos[],
 				union snis_nl_extra_data extra_data[])
 {
-	struct game_client *c = context;
+	struct game_client *c = snis_nl_get_user_context(ctx);
 	int adjective;
 
 	adjective = nl_find_next_word(argc, pos, POS_ADJECTIVE, 0);
@@ -27709,17 +27710,17 @@ static void nl_fuel_report(struct game_client *c)
 
 /* "How much fuel..." */
 static void nl_how_an(struct snis_nl_context *ctx,
-				void *context, int argc, char *argv[], int pos[],
+				int argc, char *argv[], int pos[],
 				union snis_nl_extra_data extra_data[])
 {
-	struct game_client *c = context;
+	struct game_client *c = snis_nl_get_user_context(ctx);
 	int adjective, noun;
 
 	adjective = nl_find_next_word(argc, pos, POS_ADJECTIVE, 0);
 	if (adjective < 0)
 		goto no_understand;
 	if (strcasecmp(argv[adjective], "far") == 0) {
-		nl_how_apn(ctx, context, argc, argv, pos, extra_data);
+		nl_how_apn(ctx, argc, argv, pos, extra_data);
 		return;
 	}
 	if (strcasecmp(argv[adjective], "much") != 0)
@@ -27740,18 +27741,18 @@ no_understand:
 
 /* How much fuel do we have */
 static void nl_how_anxPx(struct snis_nl_context *ctx,
-				void *context, int argc, char *argv[], int pos[],
+				int argc, char *argv[], int pos[],
 				union snis_nl_extra_data extra_data[])
 {
-	nl_how_an(ctx, context, argc, argv, pos, extra_data);
+	nl_how_an(ctx, argc, argv, pos, extra_data);
 }
 
 /* do we have enough fuel */
-static void nl_do_Pxan(__attribute__((unused)) struct snis_nl_context *ctx,
-				void *context, int argc, char *argv[], int pos[],
+static void nl_do_Pxan(struct snis_nl_context *ctx,
+				int argc, char *argv[], int pos[],
 				__attribute__((unused)) union snis_nl_extra_data extra_data[])
 {
-	struct game_client *c = context;
+	struct game_client *c = snis_nl_get_user_context(ctx);
 	int pronoun, auxverb, adjective, noun;
 
 	pronoun = nl_find_next_word(argc, pos, POS_PRONOUN, 0);
@@ -27781,11 +27782,11 @@ no_understand:
 	queue_add_text_to_speech(c, "Sorry, I do not know.");
 }
 
-static void nl_african_or_european(__attribute__((unused)) struct snis_nl_context *ctx,
-				void *context, int argc, char *argv[], int pos[],
+static void nl_african_or_european(struct snis_nl_context *ctx,
+				int argc, char *argv[], int pos[],
 				__attribute__((unused)) union snis_nl_extra_data extra_data[])
 {
-	struct game_client *c = context;
+	struct game_client *c = snis_nl_get_user_context(ctx);
 	int verb;
 
 	verb = nl_find_next_word(argc, pos, POS_VERB, 0);
@@ -27803,11 +27804,11 @@ static void nl_african_or_european(__attribute__((unused)) struct snis_nl_contex
 	queue_add_text_to_speech(c, "Um, what?");
 }
 
-static void nl_what_is_n(__attribute__((unused)) struct snis_nl_context *ctx,
-				void *context, int argc, char *argv[], int pos[],
+static void nl_what_is_n(struct snis_nl_context *ctx,
+				int argc, char *argv[], int pos[],
 				union snis_nl_extra_data extra_data[])
 {
-	nl_describe_n(snis_nl_ctx, context, argc, argv, pos, extra_data);
+	nl_describe_n(ctx, argc, argv, pos, extra_data);
 }
 
 static void nl_rotate_ship(struct game_client *c, union quat *rotation)
@@ -27879,11 +27880,11 @@ static int nl_calculate_ship_rotation(struct game_client *c,
 	return 0;
 }
 
-static void nl_turn_aq(__attribute__((unused)) struct snis_nl_context *ctx,
-				void *context, int argc, char *argv[], int pos[],
+static void nl_turn_aq(struct snis_nl_context *ctx,
+				int argc, char *argv[], int pos[],
 				union snis_nl_extra_data extra_data[])
 {
-	struct game_client *c = context;
+	struct game_client *c = snis_nl_get_user_context(ctx);
 	int adj, number;
 	union quat rotation;
 	char reply[100];
@@ -27907,11 +27908,11 @@ no_understand:
 	queue_add_text_to_speech(c, "Sorry, I do not understand which direction you want to turn.");
 }
 
-static void nl_turn_qa(__attribute__((unused)) struct snis_nl_context *ctx,
-				void *context, int argc, char *argv[], int pos[],
+static void nl_turn_qa(struct snis_nl_context *ctx,
+				int argc, char *argv[], int pos[],
 				union snis_nl_extra_data extra_data[])
 {
-	struct game_client *c = context;
+	struct game_client *c = snis_nl_get_user_context(ctx);
 	int adj, number;
 	union quat rotation;
 	char reply[100];
@@ -27936,11 +27937,11 @@ no_understand:
 }
 
 /* lights on/off/out */
-static void nl_lights_p(__attribute__((unused)) struct snis_nl_context *ctx,
-			void *context, int argc, char *argv[], int pos[],
+static void nl_lights_p(struct snis_nl_context *ctx,
+			int argc, char *argv[], int pos[],
 			__attribute__((unused)) union snis_nl_extra_data extra_data[])
 {
-	struct game_client *c = context;
+	struct game_client *c = snis_nl_get_user_context(ctx);
 	int i, prep;
 	uint8_t current_lights;
 	prep = nl_find_next_word(argc, pos, POS_PREPOSITION, 0);
@@ -27981,15 +27982,14 @@ no_understand:
 	queue_add_text_to_speech(c, "Sorry, I do not understand which direction you want to turn.");
 }
 
-static void nl_repeat_n(__attribute__((unused)) struct snis_nl_context *ctx,
-			void *context,
+static void nl_repeat_n(struct snis_nl_context *ctx,
 			__attribute__((unused)) int argc,
 			__attribute__((unused)) char *argv[],
 			__attribute__((unused)) int pos[],
 			__attribute__((unused)) union snis_nl_extra_data extra_data[])
 {
 	char buf[256];
-	struct game_client *c = context;
+	struct game_client *c = snis_nl_get_user_context(ctx);
 
 	if (strcmp(bridgelist[c->bridge].last_text_to_speech, "") == 0)
 		snprintf(buf, sizeof(buf), "I didn't say anything.");
@@ -28025,10 +28025,10 @@ static void nl_set_volume(struct game_client *c, __attribute__((unused)) char *w
 }
 
 /* Eg: "turn/shut on/off/out lights", "turn up/down volume" */
-static void nl_turn_pn_or_np(void *context, int argc, char *argv[], int pos[],
+static void nl_turn_pn_or_np(struct snis_nl_context *ctx, int argc, char *argv[], int pos[],
 			__attribute__((unused)) union snis_nl_extra_data extra_data[], int np)
 {
-	struct game_client *c = context;
+	struct game_client *c = snis_nl_get_user_context(ctx);
 	int i, prep, noun, value;
 	uint8_t current_lights, current_docking;
 	uint32_t current_tractor;
@@ -28129,27 +28129,27 @@ no_understand:
 }
 
 /* Eg: "turn/shut on/off/out lights" */
-static void nl_turn_pn(__attribute__((unused)) struct snis_nl_context *ctx,
-			void *context, int argc, char *argv[], int pos[],
+static void nl_turn_pn(struct snis_nl_context *ctx,
+			int argc, char *argv[], int pos[],
 			union snis_nl_extra_data extra_data[])
 {
-	nl_turn_pn_or_np(context, argc, argv, pos, extra_data, 0);
+	nl_turn_pn_or_np(ctx, argc, argv, pos, extra_data, 0);
 }
 
 /* Eg: "turn/shut lights on/off/out" */
-static void nl_turn_np(__attribute__((unused)) struct snis_nl_context *ctx,
-			void *context, int argc, char *argv[], int pos[],
+static void nl_turn_np(struct snis_nl_context *ctx,
+			int argc, char *argv[], int pos[],
 			union snis_nl_extra_data extra_data[])
 {
-	nl_turn_pn_or_np(context, argc, argv, pos, extra_data, 1);
+	nl_turn_pn_or_np(ctx, argc, argv, pos, extra_data, 1);
 }
 
 /* Eg: "turn right 90 degrees" */
-static void nl_turn_aqa(__attribute__((unused)) struct snis_nl_context *ctx,
-			void *context, int argc, char *argv[], int pos[],
+static void nl_turn_aqa(struct snis_nl_context *ctx,
+			int argc, char *argv[], int pos[],
 				union snis_nl_extra_data extra_data[])
 {
-	struct game_client *c = context;
+	struct game_client *c = snis_nl_get_user_context(ctx);
 	int direction, amount, unit;
 	union quat rotation;
 	char reply[100];
@@ -28181,11 +28181,11 @@ no_understand:
 }
 
 /* Eg: "turn 90 degrees right " */
-static void nl_turn_qaa(__attribute__((unused)) struct snis_nl_context *ctx,
-			void *context, int argc, char *argv[], int pos[],
+static void nl_turn_qaa(struct snis_nl_context *ctx,
+			int argc, char *argv[], int pos[],
 				union snis_nl_extra_data extra_data[])
 {
-	struct game_client *c = context;
+	struct game_client *c = snis_nl_get_user_context(ctx);
 	int direction, amount, unit;
 	union quat rotation;
 	char reply[100];
@@ -28515,11 +28515,11 @@ static struct settable_thing_entry nl_settable_thing[] = {
 	{ "volume", nl_set_volume, },
 };
 
-static void nl_set_npq(__attribute__((unused)) struct snis_nl_context *ctx,
-		void *context, int argc, char *argv[], int pos[],
+static void nl_set_npq(struct snis_nl_context *ctx,
+		int argc, char *argv[], int pos[],
 		union snis_nl_extra_data extra_data[])
 {
-	struct game_client *c = context;
+	struct game_client *c = snis_nl_get_user_context(ctx);
 	int i, noun, prep, value;
 	float fraction;
 	nl_set_function setit = NULL;
@@ -28637,11 +28637,11 @@ static void nl_set_ship_course_to_dest_helper(struct game_client *c,
 }
 
 /* E.g.: navigate to the star base one, navigate to warp gate seven */
-static void nl_navigate_pnq(__attribute__((unused)) struct snis_nl_context *ctx,
-	void *context, int argc, char *argv[], int pos[],
+static void nl_navigate_pnq(struct snis_nl_context *ctx,
+	int argc, char *argv[], int pos[],
 	union snis_nl_extra_data extra_data[])
 {
-	struct game_client *c = context;
+	struct game_client *c = snis_nl_get_user_context(ctx);
 	int wp, i, prep, noun;
 	char *name, *namecopy;
 	char buffer[20];
@@ -28663,10 +28663,10 @@ static void nl_navigate_pnq(__attribute__((unused)) struct snis_nl_context *ctx,
 	i = -1;
 	if (strcasecmp(argv[noun], "starbase") == 0) {
 		snprintf(buffer, sizeof(buffer), "SB-%02.0f", value);
-		i = natural_language_object_lookup(ctx, NULL, buffer); /* slightly racy */
+		i = natural_language_object_lookup(ctx, buffer); /* slightly racy */
 	} else if (strcasecmp(argv[noun], "gate") == 0) {
 		snprintf(buffer, sizeof(buffer), "WG-%02.0f", value);
-		i = natural_language_object_lookup(ctx, NULL, buffer); /* slightly racy */
+		i = natural_language_object_lookup(ctx, buffer); /* slightly racy */
 	} else if (strcasecmp(argv[noun], "waypoint") == 0) {
 		snprintf(buffer, sizeof(buffer), "WP-%02.0f", value);
 		wp = (int) value;
@@ -28717,11 +28717,11 @@ no_understand:
 }
 
 /* E.g.: navigate to the nearest starbase */
-static void nl_navigate_pn(__attribute__((unused)) struct snis_nl_context *ctx,
-	void *context, int argc, char *argv[], int pos[],
+static void nl_navigate_pn(struct snis_nl_context *ctx,
+	int argc, char *argv[], int pos[],
 	union snis_nl_extra_data extra_data[])
 {
-	struct game_client *c = context;
+	struct game_client *c = snis_nl_get_user_context(ctx);
 	int i, prep, noun;
 	char *name, *namecopy;
 	struct snis_entity *dest;
@@ -28765,11 +28765,11 @@ no_understand:
 }
 
 /* Eg: "set a course for starbase one..." */
-static void nl_set_npnq(__attribute__((unused)) struct snis_nl_context *ctx,
-		void *context, int argc, char *argv[], int pos[],
+static void nl_set_npnq(struct snis_nl_context *ctx,
+		int argc, char *argv[], int pos[],
 		union snis_nl_extra_data extra_data[])
 {
-	struct game_client *c = context;
+	struct game_client *c = snis_nl_get_user_context(ctx);
 	int setthing, prep, settowhat;
 	char *name, *namecopy;
 	int wp, i = -1;
@@ -28794,10 +28794,10 @@ static void nl_set_npnq(__attribute__((unused)) struct snis_nl_context *ctx,
 	i = -1;
 	if (strcasecmp(argv[settowhat], "starbase") == 0) {
 		snprintf(buffer, sizeof(buffer), "SB-%02.0f", value);
-		i = natural_language_object_lookup(ctx, NULL, buffer); /* slightly racy */
+		i = natural_language_object_lookup(ctx, buffer); /* slightly racy */
 	} else if (strcasecmp(argv[settowhat], "gate") == 0) {
 		snprintf(buffer, sizeof(buffer), "WG-%02.0f", value);
-		i = natural_language_object_lookup(ctx, NULL, buffer); /* slightly racy */
+		i = natural_language_object_lookup(ctx, buffer); /* slightly racy */
 	} else if (strcasecmp(argv[settowhat], "waypoint") == 0) {
 		snprintf(buffer, sizeof(buffer), "WP-%02.0f", value);
 		wp = (int) value;
@@ -28864,11 +28864,11 @@ no_understand:
 }
 
 /* Eg: "set a course for blah..." */
-static void nl_set_npn(__attribute__((unused)) struct snis_nl_context *ctx,
-		void *context, int argc, char *argv[], int pos[],
+static void nl_set_npn(struct snis_nl_context *ctx,
+		int argc, char *argv[], int pos[],
 		union snis_nl_extra_data extra_data[])
 {
-	struct game_client *c = context;
+	struct game_client *c = snis_nl_get_user_context(ctx);
 	int setthing, prep, settowhat;
 	char *name, *namecopy;
 	int i = -1;
@@ -28934,11 +28934,11 @@ no_understand:
 	return;
 }
 
-static void nl_disengage_n(__attribute__((unused)) struct snis_nl_context *ctx,
-		void *context, int argc, char *argv[], int pos[],
+static void nl_disengage_n(struct snis_nl_context *ctx,
+		int argc, char *argv[], int pos[],
 		__attribute__((unused)) union snis_nl_extra_data extra_data[])
 {
-	struct game_client *c = context;
+	struct game_client *c = snis_nl_get_user_context(ctx);
 	int i, device;
 	char response[100];
 
@@ -28996,10 +28996,10 @@ no_understand:
  * "raise" value of 0 means decrease, 1 means increase, 2 means set, used only in
  * figuring maximum/minimum and in reply construction.
  */
-static void nl_raise_or_lower_npa(void *context, int argc, char *argv[], int pos[],
+static void nl_raise_or_lower_npa(struct snis_nl_context *ctx, int argc, char *argv[], int pos[],
 		__attribute__((unused)) union snis_nl_extra_data extra_data[], int raise)
 {
-	struct game_client *c = context;
+	struct game_client *c = snis_nl_get_user_context(ctx);
 	nl_set_function setit = NULL;
 	char answer[100];
 	int i, noun, prep, adj;
@@ -29077,33 +29077,33 @@ no_understand:
 	queue_add_text_to_speech(c, "I don't know how to adjust that.");
 }
 
-static void nl_raise_npa(__attribute__((unused)) struct snis_nl_context *ctx,
-		void *context, int argc, char *argv[], int pos[],
+static void nl_raise_npa(struct snis_nl_context *ctx,
+		int argc, char *argv[], int pos[],
 		union snis_nl_extra_data extra_data[])
 {
-	nl_raise_or_lower_npa(context, argc, argv, pos, extra_data, 1);
+	nl_raise_or_lower_npa(ctx, argc, argv, pos, extra_data, 1);
 }
 
-static void nl_lower_npa(__attribute__((unused)) struct snis_nl_context *ctx,
-		void *context, int argc, char *argv[], int pos[],
+static void nl_lower_npa(struct snis_nl_context *ctx,
+		int argc, char *argv[], int pos[],
 		union snis_nl_extra_data extra_data[])
 {
-	nl_raise_or_lower_npa(context, argc, argv, pos, extra_data, 0);
+	nl_raise_or_lower_npa(ctx, argc, argv, pos, extra_data, 0);
 }
 
-static void nl_set_npa(__attribute__((unused)) struct snis_nl_context *ctx,
-		void *context, int argc, char *argv[], int pos[],
+static void nl_set_npa(struct snis_nl_context *ctx,
+		int argc, char *argv[], int pos[],
 		union snis_nl_extra_data extra_data[])
 {
-	nl_raise_or_lower_npa(context, argc, argv, pos, extra_data, 2);
+	nl_raise_or_lower_npa(ctx, argc, argv, pos, extra_data, 2);
 }
 
 /* "raise shields" */
-static void nl_shields_p(__attribute__((unused)) struct snis_nl_context *ctx,
-		void *context, int argc, char *argv[], int pos[],
+static void nl_shields_p(struct snis_nl_context *ctx,
+		int argc, char *argv[], int pos[],
 		__attribute__((unused)) union snis_nl_extra_data extra_data[])
 {
-	struct game_client *c = context;
+	struct game_client *c = snis_nl_get_user_context(ctx);
 	int prep;
 
 	prep = nl_find_next_word(argc, pos, POS_PREPOSITION, 0);
@@ -29122,10 +29122,10 @@ no_understand:
 }
 
 /* "raise shields" */
-static void nl_raise_or_lower_n(void *context, int argc, char *argv[], int pos[],
+static void nl_raise_or_lower_n(struct snis_nl_context *ctx, int argc, char *argv[], int pos[],
 		__attribute__((unused)) union snis_nl_extra_data extra_data[], int raise)
 {
-	struct game_client *c = context;
+	struct game_client *c = snis_nl_get_user_context(ctx);
 	nl_set_function setit = NULL;
 	char answer[100];
 	int i, noun;
@@ -29155,25 +29155,25 @@ no_understand:
 		queue_add_text_to_speech(c, "Sorry, I do not know how to decrease that.");
 }
 
-static void nl_raise_n(__attribute__((unused)) struct snis_nl_context *ctx,
-		void *context, int argc, char *argv[], int pos[],
+static void nl_raise_n(struct snis_nl_context *ctx,
+		int argc, char *argv[], int pos[],
 		union snis_nl_extra_data extra_data[])
 {
-	nl_raise_or_lower_n(context, argc, argv, pos, extra_data, 1);
+	nl_raise_or_lower_n(ctx, argc, argv, pos, extra_data, 1);
 }
 
-static void nl_lower_n(__attribute__((unused)) struct snis_nl_context *ctx,
-		void *context, int argc, char *argv[], int pos[],
+static void nl_lower_n(struct snis_nl_context *ctx,
+		int argc, char *argv[], int pos[],
 		union snis_nl_extra_data extra_data[])
 {
-	nl_raise_or_lower_n(context, argc, argv, pos, extra_data, 0);
+	nl_raise_or_lower_n(ctx, argc, argv, pos, extra_data, 0);
 }
 
-static void nl_engage_n(__attribute__((unused)) struct snis_nl_context *ctx,
-		void *context, int argc, char *argv[], int pos[],
+static void nl_engage_n(struct snis_nl_context *ctx,
+		int argc, char *argv[], int pos[],
 		__attribute__((unused)) union snis_nl_extra_data extra_data[])
 {
-	struct game_client *c = context;
+	struct game_client *c = snis_nl_get_user_context(ctx);
 	int i;
 	int device, enough_oomph;
 	char response[100];
@@ -29227,11 +29227,11 @@ no_understand:
 	return;
 }
 
-static void nl_engage_npn(__attribute__((unused)) struct snis_nl_context *ctx,
-		void *context, int argc, char *argv[], int pos[],
+static void nl_engage_npn(struct snis_nl_context *ctx,
+		int argc, char *argv[], int pos[],
 		union snis_nl_extra_data extra_data[])
 {
-	struct game_client *c = context;
+	struct game_client *c = snis_nl_get_user_context(ctx);
 	int i, device, prep, target;
 	char reply[100];
 
@@ -29269,10 +29269,10 @@ no_understand:
 	queue_add_text_to_speech(c, "Sorry, I am unfamiliar with the way you are using the word engage");
 }
 
-static void nl_leave_or_enter_n(void *context, int argc, char *argv[], int pos[],
+static void nl_leave_or_enter_n(struct snis_nl_context *ctx, int argc, char *argv[], int pos[],
 			__attribute__((unused)) union snis_nl_extra_data extra_data[], int entering)
 {
-	struct game_client *c = context;
+	struct game_client *c = snis_nl_get_user_context(ctx);
 	int i, noun;
 
 	noun = nl_find_next_word(argc, pos, POS_NOUN, 0);
@@ -29305,47 +29305,46 @@ no_understand:
 	queue_add_text_to_speech(c, "Sorry, I am unfamiliar with the way you are using the word leave");
 }
 
-static void nl_leave_n(__attribute__((unused)) struct snis_nl_context *ctx,
-	void *context, int argc, char *argv[], int pos[], union snis_nl_extra_data extra_data[])
+static void nl_leave_n(struct snis_nl_context *ctx,
+	int argc, char *argv[], int pos[], union snis_nl_extra_data extra_data[])
 {
-	nl_leave_or_enter_n(context, argc, argv, pos, extra_data, 0);
+	nl_leave_or_enter_n(ctx, argc, argv, pos, extra_data, 0);
 }
 
-static void nl_leave_an(__attribute__((unused)) struct snis_nl_context *ctx,
-	void *context, int argc, char *argv[], int pos[], union snis_nl_extra_data extra_data[])
+static void nl_leave_an(struct snis_nl_context *ctx,
+	int argc, char *argv[], int pos[], union snis_nl_extra_data extra_data[])
 {
-	nl_leave_or_enter_n(context, argc, argv, pos, extra_data, 0);
+	nl_leave_or_enter_n(ctx, argc, argv, pos, extra_data, 0);
 }
 
-static void nl_enter_n(__attribute__((unused)) struct snis_nl_context *ctx,
-	void *context, int argc, char *argv[], int pos[], union snis_nl_extra_data extra_data[])
+static void nl_enter_n(struct snis_nl_context *ctx,
+	int argc, char *argv[], int pos[], union snis_nl_extra_data extra_data[])
 {
-	nl_leave_or_enter_n(context, argc, argv, pos, extra_data, 1);
+	nl_leave_or_enter_n(ctx, argc, argv, pos, extra_data, 1);
 }
 
-static void nl_enter_an(__attribute__((unused)) struct snis_nl_context *ctx,
-	void *context, int argc, char *argv[], int pos[], union snis_nl_extra_data extra_data[])
+static void nl_enter_an(struct snis_nl_context *ctx,
+	int argc, char *argv[], int pos[], union snis_nl_extra_data extra_data[])
 {
-	nl_leave_or_enter_n(context, argc, argv, pos, extra_data, 1);
+	nl_leave_or_enter_n(ctx, argc, argv, pos, extra_data, 1);
 }
 
-static void nl_red_alert(__attribute__((unused)) struct snis_nl_context *ctx,
-			void *context,
+static void nl_red_alert(struct snis_nl_context *ctx,
 			__attribute__((unused)) int argc,
 			__attribute__((unused)) char *argv[],
 			__attribute__((unused)) int pos[],
 			__attribute__((unused)) union snis_nl_extra_data extra_data[])
 {
-	struct game_client *c = context;
+	struct game_client *c = snis_nl_get_user_context(ctx);
 	unsigned char new_alert_mode = 1;
 	set_red_alert_mode(c, new_alert_mode);
 }
 
-static void nl_red_alert_p(__attribute__((unused)) struct snis_nl_context *ctx,
-			void *context, int argc, char *argv[], int pos[],
+static void nl_red_alert_p(struct snis_nl_context *ctx,
+			int argc, char *argv[], int pos[],
 			__attribute__((unused)) union snis_nl_extra_data extra_data[])
 {
-	struct game_client *c = context;
+	struct game_client *c = snis_nl_get_user_context(ctx);
 	unsigned char new_alert_mode = 0;
 	char reply[100];
 	int prep;
@@ -29388,11 +29387,11 @@ static int string_to_displaymode(char *string)
 	return -1;
 }
 
-static void nl_onscreen_verb_n(__attribute__((unused)) struct snis_nl_context *ctx,
-			void *context, int argc, char *argv[], int pos[],
+static void nl_onscreen_verb_n(struct snis_nl_context *ctx,
+			int argc, char *argv[], int pos[],
 			__attribute__((unused)) union snis_nl_extra_data extra_data[])
 {
-	struct game_client *c = context;
+	struct game_client *c = snis_nl_get_user_context(ctx);
 	int verb, noun;
 	int new_displaymode = 255;
 	char reply[100];
@@ -29423,11 +29422,11 @@ no_understand:
 	return;
 }
 
-static void nl_onscreen_verb_pn(__attribute__((unused)) struct snis_nl_context *ctx,
-			void *context, int argc, char *argv[], int pos[],
+static void nl_onscreen_verb_pn(struct snis_nl_context *ctx,
+			int argc, char *argv[], int pos[],
 			__attribute__((unused)) union snis_nl_extra_data extra_data[])
 {
-	struct game_client *c = context;
+	struct game_client *c = snis_nl_get_user_context(ctx);
 	int verb, prep, noun;
 	int new_displaymode = 255;
 	char reply[100];
@@ -29465,11 +29464,10 @@ no_understand:
 }
 
 /* "zoom 10%" */
-static void nl_zoom_q(__attribute__((unused)) struct snis_nl_context *ctx,
-		void *context, int argc,
+static void nl_zoom_q(struct snis_nl_context *ctx, int argc,
 		__attribute__((unused)) char *argv[], int pos[], union snis_nl_extra_data extra_data[])
 {
-	struct game_client *c = context;
+	struct game_client *c = snis_nl_get_user_context(ctx);
 	int number;
 	float amount;
 
@@ -29488,10 +29486,10 @@ no_understand:
 }
 
 /* "zoom in/out x%" */
-static void nl_zoom_pq(__attribute__((unused)) struct snis_nl_context *ctx,
-		void *context, int argc, char *argv[], int pos[], union snis_nl_extra_data extra_data[])
+static void nl_zoom_pq(struct snis_nl_context *ctx,
+		int argc, char *argv[], int pos[], union snis_nl_extra_data extra_data[])
 {
-	struct game_client *c = context;
+	struct game_client *c = snis_nl_get_user_context(ctx);
 	int prep, number;
 	float direction = 1.0;
 	float amount;
@@ -29523,14 +29521,13 @@ no_understand:
 }
 
 /* Just "zoom" or "magnify", by itself */
-static void nl_zoom(__attribute__((unused)) struct snis_nl_context *ctx,
-			void *context,
+static void nl_zoom(struct snis_nl_context *ctx,
 			__attribute__((unused)) int argc,
 			__attribute__((unused)) char *argv[],
 			__attribute__((unused)) int pos[],
 			__attribute__((unused)) union snis_nl_extra_data extra_data[])
 {
-	struct game_client *c = context;
+	struct game_client *c = snis_nl_get_user_context(ctx);
 	float amount;
 
 	amount = nl_get_zoom(c);
@@ -29548,11 +29545,11 @@ static void nl_zoom(__attribute__((unused)) struct snis_nl_context *ctx,
 }
 
 /* "zoom in/out" */
-static void nl_zoom_p(__attribute__((unused)) struct snis_nl_context *ctx,
-			void *context, int argc, char *argv[], int pos[],
+static void nl_zoom_p(struct snis_nl_context *ctx,
+			int argc, char *argv[], int pos[],
 			__attribute__((unused)) union snis_nl_extra_data extra_data[])
 {
-	struct game_client *c = context;
+	struct game_client *c = snis_nl_get_user_context(ctx);
 	int prep;
 	float direction = 1.0;
 	float amount;
@@ -29592,11 +29589,11 @@ no_understand:
 	queue_add_text_to_speech(c, "I do not understand your zoom request.");
 }
 
-static void nl_reverse_n(__attribute__((unused)) struct snis_nl_context *ctx,
-			void *context, int argc, char *argv[], int pos[],
+static void nl_reverse_n(struct snis_nl_context *ctx,
+			int argc, char *argv[], int pos[],
 			__attribute__((unused)) union snis_nl_extra_data extra_data[])
 {
-	struct game_client *c = context;
+	struct game_client *c = snis_nl_get_user_context(ctx);
 	int i, noun;
 	struct snis_entity *o;
 
@@ -29633,11 +29630,11 @@ no_understand:
 	queue_add_text_to_speech(c, "I do not understand your zoom request.");
 }
 
-static void nl_shortlong_range_scan(__attribute__((unused)) struct snis_nl_context *ctx,
-			void *context, int argc, char *argv[], int pos[],
+static void nl_shortlong_range_scan(struct snis_nl_context *ctx,
+			int argc, char *argv[], int pos[],
 			__attribute__((unused)) union snis_nl_extra_data extra_data[])
 {
-	struct game_client *c = context;
+	struct game_client *c = snis_nl_get_user_context(ctx);
 	uint8_t mode;
 
 	int verb;
@@ -29662,22 +29659,21 @@ no_understand:
 	queue_add_text_to_speech(c, "I do not understand your request.");
 }
 
-static void nl_help(__attribute__((unused)) struct snis_nl_context *ctx,
-			void *context,
+static void nl_help(struct snis_nl_context *ctx,
 			__attribute__((unused)) int argc,
 			__attribute__((unused)) char *argv[],
 			__attribute__((unused)) int pos[],
 			__attribute__((unused)) union snis_nl_extra_data extra_data[])
 {
-	struct game_client *c = context;
+	struct game_client *c = snis_nl_get_user_context(ctx);
 
 	queue_add_text_to_speech(c, "Sure.  Just ask me what you would like me to do in plain English.");
 }
 
-static void nl_target_n(__attribute__((unused)) struct snis_nl_context *ctx,
-			void *context, int argc, char *argv[], int pos[], union snis_nl_extra_data extra_data[])
+static void nl_target_n(struct snis_nl_context *ctx,
+			int argc, char *argv[], int pos[], union snis_nl_extra_data extra_data[])
 {
-	struct game_client *c = context;
+	struct game_client *c = snis_nl_get_user_context(ctx);
 	int i, noun;
 	char *name, *namecopy;
 	char reply[100];
@@ -29720,10 +29716,10 @@ target_lost:
 }
 
 /* E.g.: target warp gate 1, target star base 2 */
-static void nl_target_nq(__attribute__((unused)) struct snis_nl_context *ctx,
-			void *context, int argc, char *argv[], int pos[], union snis_nl_extra_data extra_data[])
+static void nl_target_nq(struct snis_nl_context *ctx,
+			int argc, char *argv[], int pos[], union snis_nl_extra_data extra_data[])
 {
-	struct game_client *c = context;
+	struct game_client *c = snis_nl_get_user_context(ctx);
 	int i, noun;
 	char *name, *namecopy;
 	char reply[100];
@@ -29741,10 +29737,10 @@ static void nl_target_nq(__attribute__((unused)) struct snis_nl_context *ctx,
 	amount = extra_data[number].number.value;
 	if (strcmp(argv[noun], "starbase") == 0) {
 		snprintf(buffer, sizeof(buffer), "SB-%02.0f", amount);
-		i = natural_language_object_lookup(ctx, NULL, buffer); /* slightly racy */
+		i = natural_language_object_lookup(ctx, buffer); /* slightly racy */
 	} else if (strcmp(argv[noun], "gate") == 0) {
 		snprintf(buffer, sizeof(buffer), "WG-%02.0f", amount);
-		i = natural_language_object_lookup(ctx, NULL, buffer); /* slightly racy */
+		i = natural_language_object_lookup(ctx, buffer); /* slightly racy */
 	} else {
 		goto target_lost;
 	}
@@ -29787,14 +29783,13 @@ static int compare_damage_report_entries(const void *a, const void *b)
 	return dra->percent > drb->percent;
 }
 
-static void nl_damage_report(__attribute__((unused)) struct snis_nl_context *ctx,
-		void *context,
+static void nl_damage_report(struct snis_nl_context *ctx,
 		__attribute__((unused)) int argc,
 		__attribute__((unused)) char *argv[],
 		__attribute__((unused)) int pos[],
 		__attribute__((unused)) union snis_nl_extra_data extra_data[])
 {
-	struct game_client *c = context;
+	struct game_client *c = snis_nl_get_user_context(ctx);
 	struct damage_report_entry dr[8];
 	struct snis_entity *o;
 	int i;
@@ -29857,11 +29852,11 @@ static void nl_damage_report(__attribute__((unused)) struct snis_nl_context *ctx
 	queue_add_text_to_speech(c, damage_report);
 }
 
-static void nl_launch_n(__attribute__((unused)) struct snis_nl_context *ctx,
-		void *context, int argc, char *argv[], int pos[],
+static void nl_launch_n(struct snis_nl_context *ctx,
+		int argc, char *argv[], int pos[],
 		__attribute__((unused)) union snis_nl_extra_data extra_data[])
 {
-	struct game_client *c = context;
+	struct game_client *c = snis_nl_get_user_context(ctx);
 	struct snis_entity *ship;
 	uint32_t oid;
 	int i, noun;
@@ -29915,11 +29910,11 @@ static void nl_set_reverse(struct game_client *c, int reverse, float value)
 }
 
 /* full stop, full throttle, full reverse... */
-static void nl_full_n(__attribute__((unused)) struct snis_nl_context *ctx,
-		void *context, int argc, char *argv[], int pos[],
+static void nl_full_n(struct snis_nl_context *ctx,
+		int argc, char *argv[], int pos[],
 		__attribute__((unused)) union snis_nl_extra_data extra_data[])
 {
-	struct game_client *c = context;
+	struct game_client *c = snis_nl_get_user_context(ctx);
 	int noun, reverse = 0;
 	float value = 1.0;
 
@@ -29950,11 +29945,11 @@ no_understand:
 }
 
 /* full speed ahead */
-static void nl_full_na(__attribute__((unused)) struct snis_nl_context *ctx,
-		void *context, int argc, char *argv[], int pos[],
+static void nl_full_na(struct snis_nl_context *ctx,
+		int argc, char *argv[], int pos[],
 		__attribute__((unused)) union snis_nl_extra_data extra_data[])
 {
-	struct game_client *c = context;
+	struct game_client *c = snis_nl_get_user_context(ctx);
 	int adj, noun, reverse;
 
 	noun = nl_find_next_word(argc, pos, POS_NOUN, 0);
@@ -29984,19 +29979,19 @@ no_understand:
 	queue_add_text_to_speech(c, "I am sorry, I did not understand that.");
 }
 
-static void sorry_dave(__attribute((unused)) struct snis_nl_context *ctx, void *context,
+static void sorry_dave(__attribute((unused)) struct snis_nl_context *ctx,
 		__attribute__((unused)) int argc,
 		__attribute__((unused)) char *argv[],
 		__attribute__((unused)) int pos[],
 		__attribute__((unused)) union snis_nl_extra_data extra_data[])
 {
-	struct game_client *c = context;
+	struct game_client *c = snis_nl_get_user_context(ctx);
 	queue_add_text_to_speech(c, "I am sorry Dave, I am afraid I can't do that.");
 }
 
-static void natural_language_parse_failure(void *context)
+static void natural_language_parse_failure(struct snis_nl_context *ctx)
 {
-	struct game_client *c = context;
+	struct game_client *c = snis_nl_get_user_context(ctx);
 	queue_add_text_to_speech(c, "I am sorry, I did not understand that.");
 }
 
@@ -30265,7 +30260,6 @@ static const struct nl_test_case_entry {
 };
 
 static void nl_run_snis_test_cases(struct snis_nl_context *ctx,
-		__attribute__((unused)) void *context,
 		__attribute__((unused)) int argc,
 		__attribute__((unused)) char *argv[],
 		__attribute__((unused)) int pos[],
@@ -30276,7 +30270,7 @@ static void nl_run_snis_test_cases(struct snis_nl_context *ctx,
 	int failed = 0;
 
 	for (i = 0; (size_t) i < ARRAYSIZE(nl_test_case); i++) {
-		rc = snis_nl_test_parse_natural_language_request(ctx, NULL, nl_test_case[i].text);
+		rc = snis_nl_test_parse_natural_language_request(ctx, nl_test_case[i].text);
 		if (rc != nl_test_case[i].expected) {
 			fprintf(stderr, "FAILED NATURAL LANGUAGE TEST: '%s' expected %s got %s\n",
 				nl_test_case[i].text,

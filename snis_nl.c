@@ -96,6 +96,7 @@ struct snis_nl_context {
 	int nsynonyms;
 	struct synonym_entry synonym[MAX_SYNONYMS + 1];
 	struct snis_nl_topic current_topic;
+	void *user_context;
 	snis_nl_external_noun_lookup external_lookup;
 	snis_nl_error_function error_function;
 	snis_nl_multiword_preprocessor_fn multiword_preprocessor_fn;
@@ -230,8 +231,7 @@ static void free_tokens(struct nl_token *word[], int nwords)
 		free(word[i]);
 }
 
-static void maybe_do_pronoun_substitution(struct snis_nl_context *ctx,
-			__attribute__((unused)) void *user_context, struct nl_token *t)
+static void maybe_do_pronoun_substitution(struct snis_nl_context *ctx, struct nl_token *t)
 {
 	if (t->pos[t->npos] != POS_PRONOUN)
 		return;
@@ -248,7 +248,7 @@ static void maybe_do_pronoun_substitution(struct snis_nl_context *ctx,
 		t->external_noun.handle = -1;
 }
 
-static void classify_token(struct snis_nl_context *ctx, void *user_context, struct nl_token *t)
+static void classify_token(struct snis_nl_context *ctx, struct nl_token *t)
 {
 	int i, j;
 	float x, rc;
@@ -264,7 +264,7 @@ static void classify_token(struct snis_nl_context *ctx, void *user_context, stru
 			continue;
 		t->pos[t->npos] = ctx->dictionary[i].p_o_s;
 		t->meaning[t->npos] = i;
-		maybe_do_pronoun_substitution(ctx, user_context, t);
+		maybe_do_pronoun_substitution(ctx, t);
 		t->npos++;
 		if (t->npos >= MAX_MEANINGS)
 			break;
@@ -310,7 +310,7 @@ static void classify_token(struct snis_nl_context *ctx, void *user_context, stru
 	}
 
 	if (ctx->external_lookup) {
-		handle = ctx->external_lookup(ctx, user_context, t->word);
+		handle = ctx->external_lookup(ctx, t->word);
 		if (handle != 0xffffffff) {
 			t->pos[t->npos] = POS_EXTERNAL_NOUN;
 			t->meaning[t->npos] = -1;
@@ -322,12 +322,12 @@ static void classify_token(struct snis_nl_context *ctx, void *user_context, stru
 	}
 }
 
-static void classify_tokens(struct snis_nl_context *ctx, void *user_context, struct nl_token *t[], int ntokens)
+static void classify_tokens(struct snis_nl_context *ctx, struct nl_token *t[], int ntokens)
 {
 	int i;
 
 	for (i = 0; i < ntokens; i++)
-		classify_token(ctx, user_context, t[i]);
+		classify_token(ctx, t[i]);
 }
 
 static void remove_expletives(struct nl_token *t[], int *ntokens)
@@ -786,7 +786,7 @@ void snis_nl_set_current_topic(struct snis_nl_context *ctx,
 }
 
 static void do_action(struct snis_nl_context *ctx,
-	void *user_context, struct nl_parse_machine *p, struct nl_token **token, int ntokens)
+	struct nl_parse_machine *p, struct nl_token **token, int ntokens)
 {
 	int argc;
 	char *argv[MAX_WORDS];
@@ -808,7 +808,7 @@ static void do_action(struct snis_nl_context *ctx,
 		struct nl_token *t = token[i];
 		if (t->pos[p->meaning[i]] == POS_VERB) {
 			if (vf != NULL) {
-				vf(ctx, user_context, argc, argv, pos, extra_data);
+				vf(ctx, argc, argv, pos, extra_data);
 				vf = NULL;
 			}
 			argc = 1;
@@ -854,7 +854,7 @@ static void do_action(struct snis_nl_context *ctx,
 			snis_nl_set_current_topic(ctx, antecedent_pos, argv[antecedent_word], antecedent_extra_data);
 			ctx->current_topic.meaning = antecedent_noun_meaning;
 		}
-		vf(ctx, user_context, argc, argv, pos, extra_data);
+		vf(ctx, argc, argv, pos, extra_data);
 		vf = NULL;
 	}
 }
@@ -951,7 +951,7 @@ static void nl_parse_machines_score(struct nl_parse_machine **list, int ntokens)
 }
 
 static int extract_meaning(struct snis_nl_context *ctx,
-	void *user_context, char *original_text, struct nl_token *token[], int ntokens, int test_only)
+	char *original_text, struct nl_token *token[], int ntokens, int test_only)
 {
 	struct nl_parse_machine *list, *p;
 	int rc;
@@ -971,12 +971,12 @@ static int extract_meaning(struct snis_nl_context *ctx,
 		}
 		rc = 0;
 		if (!test_only)
-			do_action(ctx, user_context, p, token, ntokens);
+			do_action(ctx, p, token, ntokens);
 	} else {
 		if (ctx->debuglevel > 0)
 			printf("Failure to comprehend '%s'\n", original_text);
 		if (ctx->error_function && !test_only)
-			ctx->error_function(user_context);
+			ctx->error_function(ctx);
 		rc = -1;
 	}
 	parse_machine_free_list(p);
@@ -984,7 +984,7 @@ static int extract_meaning(struct snis_nl_context *ctx,
 }
 
 static int nl_parse_natural_language_request(struct snis_nl_context *ctx,
-			void *user_context, char *original, int test_only)
+			char *original, int test_only)
 {
 	int ntokens;
 	struct nl_token **token = NULL;
@@ -995,10 +995,10 @@ static int nl_parse_natural_language_request(struct snis_nl_context *ctx,
 	handle_spelled_numbers_in_place(copy);
 	multiword_processor_encode(ctx, copy);
 	token = tokenize(ctx, copy, &ntokens);
-	classify_tokens(ctx, user_context, token, ntokens);
+	classify_tokens(ctx, token, ntokens);
 	remove_expletives(token, &ntokens);
 	/* print_tokens(ctx, token, ntokens); */
-	rc = extract_meaning(ctx, user_context, original, token, ntokens, test_only);
+	rc = extract_meaning(ctx, original, token, ntokens, test_only);
 	free_tokens(token, ntokens);
 	if (token)
 		free(token);
@@ -1006,16 +1006,16 @@ static int nl_parse_natural_language_request(struct snis_nl_context *ctx,
 	return rc;
 }
 
-void snis_nl_parse_natural_language_request(struct snis_nl_context *ctx, void *user_context, char *txt)
+void snis_nl_parse_natural_language_request(struct snis_nl_context *ctx, char *txt)
 {
-	(void) nl_parse_natural_language_request(ctx, user_context, txt, 0);
+	(void) nl_parse_natural_language_request(ctx, txt, 0);
 }
 
-int snis_nl_test_parse_natural_language_request(struct snis_nl_context *ctx, void *user_context, char *txt)
+int snis_nl_test_parse_natural_language_request(struct snis_nl_context *ctx, char *txt)
 {
 	if (ctx->debuglevel > 0)
 		printf("Testing: %s\n", txt);
-	return nl_parse_natural_language_request(ctx, user_context, txt, 1);
+	return nl_parse_natural_language_request(ctx, txt, 1);
 }
 
 void snis_nl_add_synonym(struct snis_nl_context *ctx, char *synonym_word, char *canonical_word)
@@ -1030,7 +1030,6 @@ void snis_nl_add_synonym(struct snis_nl_context *ctx, char *synonym_word, char *
 }
 
 static void snis_nl_debuglevel(struct snis_nl_context *ctx,
-				__attribute__((unused)) void *user_context,
 				__attribute__((unused)) int argc,
 				__attribute__((unused)) char *argv[],
 				__attribute__((unused)) int pos[],
@@ -1046,7 +1045,7 @@ static void snis_nl_debuglevel(struct snis_nl_context *ctx,
 }
 
 static void snis_nl_dumpvocab(struct snis_nl_context *ctx,
-				__attribute__((unused)) void *user_context, __attribute__((unused)) int argc,
+				__attribute__((unused)) int argc,
 				__attribute__((unused)) char *argv[], __attribute__((unused)) int pos[],
 				__attribute__((unused)) union snis_nl_extra_data extra_data[])
 {
@@ -1144,6 +1143,16 @@ void snis_nl_print_verbs_by_fn(struct snis_nl_context *ctx, const char *label, s
 		printf("%s total count: %d\n", label, count);
 }
 
+void *snis_nl_get_user_context(struct snis_nl_context *ctx)
+{
+	return ctx->user_context;
+}
+
+void snis_nl_set_user_context(struct snis_nl_context *ctx, void *user_context)
+{
+	ctx->user_context = user_context;
+}
+
 void snis_nl_context_free(struct snis_nl_context *nl)
 {
 	free(nl);
@@ -1169,7 +1178,7 @@ static void init_synonyms(struct snis_nl_context *ctx)
 }
 
 static void generic_verb_action(struct snis_nl_context *ctx,
-		__attribute__((unused)) void *user_context, int argc, char *argv[], int pos[],
+		int argc, char *argv[], int pos[],
 		__attribute__((unused)) union snis_nl_extra_data extra_data[])
 {
 	int i;
@@ -1408,7 +1417,7 @@ int main(int argc, char *argv[])
 	init_dictionary(ctx);
 
 	for (i = 1; i < argc; i++)
-		snis_nl_parse_natural_language_request(ctx, NULL, argv[i]);
+		snis_nl_parse_natural_language_request(ctx, argv[i]);
 
 	if (argc != 1)
 		return 0;
@@ -1424,7 +1433,7 @@ int main(int argc, char *argv[])
 		if (i > 0)
 			x[i - 1] = '\0';
 
-		snis_nl_parse_natural_language_request(ctx, NULL, line);
+		snis_nl_parse_natural_language_request(ctx, line);
 	} while (1);
 	snis_nl_context_free(ctx);
 	return 0;
