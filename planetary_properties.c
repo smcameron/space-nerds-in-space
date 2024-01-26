@@ -22,6 +22,7 @@ double planetary_mass(double radius, enum planet_type t)
 	return gas_giant_multiplier * table_interp(eradius, planet_radius, planet_mass, ARRAYSIZE(planet_radius));
 }
 
+/* Returns "diameter" of planet as a multiple of earth's diameter */
 double planetary_diameter(double radius, enum planet_type t)
 {
 	/* We lie about the gas giant diameter to make them seem bigger. */
@@ -29,3 +30,13 @@ double planetary_diameter(double radius, enum planet_type t)
 	return gas_giant_multiplier * radius / 6000.0;
 }
 
+double planetary_gravity(double radius, enum planet_type t)
+{
+	const double radius_of_earth_meters = 6378100.0;
+	const double G = 6.6743e-11; /* gravitational constant */
+	const double earth_mass_kg = 5.972e24;
+	double mass = planetary_mass(radius, t) * earth_mass_kg;
+
+	double r = planetary_diameter(radius, t) * radius_of_earth_meters;
+	return G * (mass / (r * r));
+}

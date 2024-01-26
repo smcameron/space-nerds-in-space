@@ -17092,8 +17092,9 @@ static void draw_science_details(void)
 
 		planet_type_str = solarsystem_assets->planet_type[p->solarsystem_planet_type];
 		pt = planet_type_from_string(planet_type_str);
-		snprintf(buf, sizeof(buf), "MASS: %.2f EU / DIAM: %.2f EU",
-				planetary_mass(p->radius, pt), planetary_diameter(p->radius, pt));
+		snprintf(buf, sizeof(buf), "MASS: %.2f EU / DIAM: %.2f EU / GRAV: %.2f m/s2",
+				planetary_mass(p->radius, pt), planetary_diameter(p->radius, pt),
+				planetary_gravity(p->radius, pt));
 		sng_abs_xy_draw_string(buf, sdf, 10, y);
 		y += yinc;
 
