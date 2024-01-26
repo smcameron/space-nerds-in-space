@@ -26,20 +26,15 @@ https://github.com/smcameron/gneutronica/blob/master/gneutronica.c#L1198
 It should be possible to turn on logging of the client and server consoles,
 so whatever is in the console is logged to stderr/stdout as well.
 
-Need to change the screen-switching sound affect. The current
-one is a little annoying.
-
 In earthlike, instead of craters deforming the height map, how about
 deforming the normalmap directly? I think this might solve the
 overlapping crater problem.
 
 -------------------------
 
-*** MONEY:
+** SHIP UPGRADES? **
 
-Add some kind of money into the game, and each ship would have an
-account, controlled by the COMMS officer.  At starbases, you could
-buy and sell various items of cargo, and upgrade your ship.  Ship
+At starbases, you could upgrade your ship.  Ship
 upgrades could be accomplished by initially depriving the ship of
 various modules on the DAMAGE CONTROL screen, which could be bought.
 It might also be possible to start the ship off with only a single
@@ -47,13 +42,8 @@ laser cannon (instead of current dual laser cannons) and no torpedo
 system (Damage control, again), which could be upgraded at starbases
 for money.  Maybe even add a second weapons turret (requiring another
 player to man it) on the bottom of the ship for a price.
-(partially implemented.  There is money, the player can buy and sell
-commodities, but not extra ship parts, though they are charged for fuel
-and repairs to the ship at starbases.)
 
-Allow COMMS to interact with starbases and NPC ships with more options,
-buying/selling/trading cargo, ship systems, torpedoes, fuel.  Allow
-comms to try to extort NPC ships to release their cargo, pay tribute,
+Allow comms to try to extort NPC ships to release their cargo, pay tribute,
 or... something like that.  Allow transfer of funds between player ships.
 *maybe* funds transfer between NPC ships and player ships. (what about
 derelicts -- perhaps bearer bonds might be found aboard, or... something?)
@@ -82,76 +72,6 @@ Maybe player ships can engage in piracy as well, having some way to hail ships
 and demand cargo ejection, maybe be able to use the mining robot to plant a bomb
 on other ships?
 
-=====================================================================
-OLD IDEAS -- below this line are older ideas no longer very relevant
-for one reason or another
-=====================================================================
-
------------------------------------
-Thu Sep 13 13:24:40 EDT 2018
-
-THIS IDEA HAS BEEN IMPLEMENTED!
-
-Let us call this idea THE EMBIGGENING.
-
-I've had this idea for a long while (ever since multiverse) but it has a
-problem, so I never really thought about it very hard, plus, for purposes of
-developing the game and fixing bugs and making things look and work better, so
-far just tooling around in a single solarsystem has really been quite enough to
-occupy my attention.  But I think this idea is worth writing down.
-
-The basic idea is as follows:  Allow the multiverse process to auto-start
-snis_server instances for systems which are reachable via a single warp-gate
-hop by any current player-ship, and auto-shutdown any snis_server that is not
-reachable via a single warp-gate hop by any current player-ship.  In this way
-we can create a large universe with many solarsystems that is explorable by
-the players, and has some sense of "terrain" or "topological structure" given
-by the warp-gate routes. And we can do this *without* having to simultaneously
-run a snis_server for every possible solarsystem the player might ever visit.
-
-Possibly, we could also auto-transmit solarsystem assets on-demand (only
-once a player is within one hop) and thus save a bit on transmitting assets by
-only transmitting to players who actually visit someplace near those assets.
-
-Problems:
-
-If we have a lot of players scattered around, we will end up starting many
-instances of snis_server.  In the worst case, we'll run all possible
-snis_server instances at once -- which really, is the same as the current state
-of affairs.  Performance will be a problem, unless we start them on multiple
-machines, which is possible, but a bit more complicated, not to mention
-expensive.  Mitigating this, we're not going to have a lot of players.  We're
-just not. And anyway, I don't run the servers, players do.  So is this really a
-problem?
-
-It seems the choice is between:
-
-1) Making it *possible* to have a very large universe consisting of hundreds of
-explorable solarsystems, but with the limitation that only one or two
-player-ships may be active concurrently, or if there are more player ships that
-they always stick together in one or two solarsystems, and thus keep the total
-number of running snis_server processes acceptably low.
-
-and:
-
-2) The current situation, in which it is *impossible* to have a universe of
-100s of solarsystems *at all* since it would currently require running 100s
-of snis_servers simultaneously to achieve this.
-
-So now I am inclined to think this idea of enabling multiverse to optionally
-auto-start/stop snis_servers on demand may actually be worthwhile.
-
--------------------------
-*** SHARDS -- THIS IDEA HAS BEEN IMPLEMENTED
-
-allow players to travel from a universe hosted on one server to
-a universe hosted on another via some kind of gate, a la the old
-BBS "doors" or something.  May be too hard to do securely, sanely.
-But it would be a way to make the universe "bigger" and would
-be scalable (at some cost that might be prohibitive).
-------------------------
-Need to put a speed limit on cargo containers. THIS IDEA HAS BEEN IMPLEMENTED
-------------------------
 
 *** AWAY TEAM(S) ***
 
