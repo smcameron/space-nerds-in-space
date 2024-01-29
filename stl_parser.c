@@ -157,7 +157,7 @@ static int read_facet(FILE *f, struct triangle *t, int *linecount)
 	rc = fscanf(f, " endfacet\n");
 	(*linecount)++;
 	if (rc != 0) {
-		fprintf(stderr, "failed 'endloop' at line %d\n", *linecount);
+		fprintf(stderr, "failed 'endfacet' at line %d\n", *linecount);
 		return -1;
 	}
 	return 0;
