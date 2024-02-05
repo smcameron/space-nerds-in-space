@@ -769,10 +769,19 @@ static int rts_ai_build_queue_compare(const void *a, const void *b,
 {
 	const struct rts_ai_build_queue_entry *entry1 = a;
 	const struct rts_ai_build_queue_entry *entry2 = b;
-	if (entry1->priority == entry2->priority) /* Same priority, prioritize cheapest one */
-		return rts_unit_type(entry1->unittype)->cost_to_build -
-				rts_unit_type(entry2->unittype)->cost_to_build;
-	return entry1->priority - entry2->priority;
+	if (entry1->priority == entry2->priority) { /* Same priority, prioritize cheapest one */
+
+		if (rts_unit_type(entry1->unittype)->cost_to_build > rts_unit_type(entry2->unittype)->cost_to_build)
+			return 1;
+		if (rts_unit_type(entry1->unittype)->cost_to_build < rts_unit_type(entry2->unittype)->cost_to_build)
+			return -1;
+		return 0;
+	}
+	if (entry1->priority > entry2->priority)
+		return 1;
+	if (entry1->priority < entry2->priority)
+		return -1;
+	return 0;
 }
 
 static void rts_ai_sort_build_queue(void)
@@ -19793,7 +19802,11 @@ static int compare_opcode_stats(const void *a, const void *b)
 	const struct opcode_stat *A = a;
 	const struct opcode_stat *B = b;
 
-	return B->bytes - A->bytes;
+	if (B->bytes > A->bytes)
+		return 1;
+	if (B->bytes < A->bytes)
+		return -1;
+	return 0;
 }
 
 static void server_builtin_dump_opcode_stats(__attribute__((unused)) char *cmd)
@@ -29780,7 +29793,11 @@ static int compare_damage_report_entries(const void *a, const void *b)
 	const struct damage_report_entry * const dra = a;
 	const struct damage_report_entry * const drb = b;
 
-	return dra->percent > drb->percent;
+	if (dra->percent > drb->percent)
+		return 1;
+	if (dra->percent < drb->percent)
+		return -1;
+	return 0;
 }
 
 static void nl_damage_report(struct snis_nl_context *ctx,

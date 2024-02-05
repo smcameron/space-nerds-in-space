@@ -6737,7 +6737,11 @@ static int cipher_freq_compare(const void *a, const void *b)
 		return 0;
 	f1 = cipher_freq[x - 'A'];
 	f2 = cipher_freq[y - 'A'];
-	return f2 - f1;
+	if (f2 > f1)
+		return 1;
+	if (f2 < f1)
+		return -1;
+	return 0;
 }
 
 /* Sort the letters of the enciphered message by frequency */
