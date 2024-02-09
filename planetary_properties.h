@@ -4,6 +4,7 @@
 
 double planetary_mass(double radius, enum planet_type t);
 double planetary_diameter(double radius, enum planet_type t);
+double planetary_gravity(double radisu, enum planet_type t);
 
 #endif
 

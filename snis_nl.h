@@ -38,11 +38,15 @@
 #define POS_AUXVERB		12
 #define POS_EXPLETIVE		13
 
+struct snis_nl_context;
+
 union snis_nl_extra_data;
-typedef void (*snis_nl_verb_function)(void *context, int argc, char *argv[], int part_of_speech[],
+typedef void (*snis_nl_verb_function)(struct snis_nl_context *ctx,
+				int argc, char *argv[], int part_of_speech[],
 				union snis_nl_extra_data *extra_data);
-typedef void (*snis_nl_error_function)(void *context);
-typedef void (*snis_nl_multiword_preprocessor_fn)(char *word, int encode_or_decode);
+typedef void (*snis_nl_error_function)(struct snis_nl_context *ctx);
+typedef void (*snis_nl_multiword_preprocessor_fn)(struct snis_nl_context *ctx,
+						char *word, int encode_or_decode);
 #define SNIS_NL_ENCODE 1
 #define SNIS_NL_DECODE 2
 
@@ -113,18 +117,25 @@ union snis_nl_extra_data {
 		struct snis_nl_external_noun_data external_noun;
 };
 
-typedef uint32_t (*snis_nl_external_noun_lookup)(void *context, char *word);
+typedef uint32_t (*snis_nl_external_noun_lookup)(struct snis_nl_context *ctx, char *word);
 
-void snis_nl_add_synonym(char *synonym, char *canonical_word);
-void snis_nl_add_dictionary_word(char *word, char *canonical_word, int part_of_speech);
-void snis_nl_add_dictionary_verb(char *word, char *canonical_word, char *syntax, snis_nl_verb_function action);
-void snis_nl_add_external_lookup(snis_nl_external_noun_lookup lookup);
-void snis_nl_add_error_function(snis_nl_error_function error_func);
-void snis_nl_add_multiword_preprocessor(snis_nl_multiword_preprocessor_fn multiword_processor);
-void snis_nl_parse_natural_language_request(void *context, char *text);
-int snis_nl_test_parse_natural_language_request(void *context, char *text);
-void snis_nl_print_verbs_by_fn(const char *label, snis_nl_verb_function verb_function);
-void snis_nl_set_current_topic(int part_of_speech, char *word, union snis_nl_extra_data extra_data);
-void snis_nl_clear_current_topic(void);
+struct snis_nl_context *snis_nl_context_create(void);
+void snis_nl_context_free(struct snis_nl_context *ctx);
+void snis_nl_add_synonym(struct snis_nl_context *ctx, char *synonym, char *canonical_word);
+void snis_nl_add_dictionary_word(struct snis_nl_context *ctx, char *word, char *canonical_word, int part_of_speech);
+void snis_nl_add_dictionary_verb(struct snis_nl_context *ctx,
+		char *word, char *canonical_word, char *syntax, snis_nl_verb_function action);
+void snis_nl_add_external_lookup(struct snis_nl_context *ctx, snis_nl_external_noun_lookup lookup);
+void snis_nl_add_error_function(struct snis_nl_context *ctx, snis_nl_error_function error_func);
+void snis_nl_add_multiword_preprocessor(struct snis_nl_context *ctx,
+			snis_nl_multiword_preprocessor_fn multiword_processor);
+void snis_nl_parse_natural_language_request(struct snis_nl_context *ctx, char *text);
+int snis_nl_test_parse_natural_language_request(struct snis_nl_context *ctx, char *text);
+void snis_nl_print_verbs_by_fn(struct snis_nl_context *ctx, const char *label, snis_nl_verb_function verb_function);
+void snis_nl_set_current_topic(struct snis_nl_context *ctx,
+		int part_of_speech, char *word, union snis_nl_extra_data extra_data);
+void snis_nl_clear_current_topic(struct snis_nl_context *ctx);
+void snis_nl_set_user_context(struct snis_nl_context *ctx, void *user_context);
+void *snis_nl_get_user_context(struct snis_nl_context *ctx);
 
 #endif

@@ -90,26 +90,9 @@ enum keyaction {
 		key_weap_wavelen_7 = 83,
 		key_weap_wavelen_8 = 84,
 		key_weap_wavelen_9 = 85,
-		key_weap_wavelen_nudge_up = 86,
-		key_weap_wavelen_nudge_down = 87,
-		key_comms_hail = 88,
-		key_comms_channel = 89,
-		key_comms_manifest = 90,
-		key_comms_computer = 91,
-		key_comms_eject = 92,
-		key_comms_help = 93,
-		key_comms_about = 94,
-		key_comms_crypto = 95,
-		key_comms_red_alert = 96,
-		key_comms_hail_mining_bot = 97,
-		key_comms_comms_screen = 98,
-		key_comms_nav_screen = 99,
-		key_comms_weap_screen = 100,
-		key_comms_eng_screen = 101,
-		key_comms_damcon_screen = 102,
-		key_comms_science_screen = 103,
-		key_comms_main_screen = 104,
-#define NKEYSTATES 105
+		key_weap_wavelen_nudge_up,
+		key_weap_wavelen_nudge_down,
+#define NKEYSTATES 88
 };
 
 struct keyboard_state {

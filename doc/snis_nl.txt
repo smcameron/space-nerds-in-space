@@ -42,24 +42,36 @@ to wit, the following:
 #define POS_EXTERNAL_NOUN	11
 #define POS_AUXVERB		12
 
-To use the library, first you have to teach it some vocabulary.  This is mainly done with the following
-three functions, which teach it about synonyms, verbs, and words that aren't verbs:
+To use the library, first you have to get a context, and teach it some
+vocabulary.  This is mainly done with the following four functions, which teach
+it about synonyms, verbs, and words that aren't verbs:
 
-void snis_nl_add_synonym(char *synonym, char *canonical_word);
-void snis_nl_add_dictionary_word(char *word, char *canonical_word, int part_of_speech);
-void snis_nl_add_dictionary_verb(char *word, char *canonical_word, char *syntax, snis_nl_verb_function action);
+struct snis_nl_context *snis_nl_context_create(void);
+void snis_nl_add_synonym(struct snis_nl_context *ctx, char *synonym, char *canonical_word);
+void snis_nl_add_dictionary_word(struct snis_nl_context *ctx, char *word,
+		char *canonical_word, int part_of_speech);
+void snis_nl_add_dictionary_verb(struct snis_nl_context *ctx, char *word,
+		char *canonical_word, char *syntax, snis_nl_verb_function action);
+
+There is also:
+
+   void snis_nl_context_free(struct snis_nl_context *ctx);
+
+to free the context when you're done.  Normally this would be done at the end
+of your program.
 
 -----------------
 Synonyms are done first, as these are simple word substitutions which are done prior to
 any attempt to parse for meaning.  For example, the following defines a few synonyms:
 
-	snis_nl_add_synonym("lay in a course", "set a course");
-	snis_nl_add_synonym("rotate", "turn");
-	snis_nl_add_synonym("cut", "lower");
-	snis_nl_add_synonym("decrease", "lower");
-	snis_nl_add_synonym("boost", "raise");
-	snis_nl_add_synonym("booster", "rocket");
-	snis_nl_add_synonym("increase", "raise");
+	struct snis_nl_context *ctx = snis_nl_context_create();
+	snis_nl_add_synonym(ctx, "lay in a course", "set a course");
+	snis_nl_add_synonym(ctx, "rotate", "turn");
+	snis_nl_add_synonym(ctx, "cut", "lower");
+	snis_nl_add_synonym(ctx, "decrease", "lower");
+	snis_nl_add_synonym(ctx, "boost", "raise");
+	snis_nl_add_synonym(ctx, "booster", "rocket");
+	snis_nl_add_synonym(ctx, "increase", "raise");
 
 If you attempt to parse "lay in a course for saturn and rotate 90 degrees left and increase shields"
 the parser would see this as being identical to "set a course for saturn and turn 90 degrees left and
@@ -72,16 +84,16 @@ is the word, or token.  So "booster" would not be transformed into "raiseer", bu
 Adding words (other than verbs) to the dictionary is done via the "snis_nl_add_dictionary_word" function.
 Some examples:
 
-	snis_nl_add_dictionary_word("planet", "planet", POS_NOUN);
-	snis_nl_add_dictionary_word("star", "star", POS_NOUN);
-	snis_nl_add_dictionary_word("money", "money", POS_NOUN);
-	snis_nl_add_dictionary_word("coins", "money", POS_NOUN);
-	snis_nl_add_dictionary_word("of", "of", POS_PREPOSITION);
-	snis_nl_add_dictionary_word("for", "for", POS_PREPOSITION);
-	snis_nl_add_dictionary_word("red", "red", POS_ADJECTIVE);
-	snis_nl_add_dictionary_word("a", "a", POS_ARTICLE);
-	snis_nl_add_dictionary_word("an", "an", POS_ARTICLE);
-	snis_nl_add_dictionary_word("the", "the", POS_ARTICLE);
+	snis_nl_add_dictionary_word(ctx, "planet", "planet", POS_NOUN);
+	snis_nl_add_dictionary_word(ctx, "star", "star", POS_NOUN);
+	snis_nl_add_dictionary_word(ctx, "money", "money", POS_NOUN);
+	snis_nl_add_dictionary_word(ctx, "coins", "money", POS_NOUN);
+	snis_nl_add_dictionary_word(ctx, "of", "of", POS_PREPOSITION);
+	snis_nl_add_dictionary_word(ctx, "for", "for", POS_PREPOSITION);
+	snis_nl_add_dictionary_word(ctx, "red", "red", POS_ADJECTIVE);
+	snis_nl_add_dictionary_word(ctx, "a", "a", POS_ARTICLE);
+	snis_nl_add_dictionary_word(ctx, "an", "an", POS_ARTICLE);
+	snis_nl_add_dictionary_word(ctx, "the", "the", POS_ARTICLE);
 
 Note that words with equivalent meanings can be implemented by using the same "canonical" word
 (e.g. "coins" and "money" mean the same thing, above).
@@ -90,8 +102,10 @@ Note that words with equivalent meanings can be implemented by using the same "c
 Adding verbs to the dictionary is a little more complicated, and is done with the snis_nl_add_dictionary_verb
 function.  The arguments to this function require a little explanation.
 
-	void snis_nl_add_dictionary_verb(char *word, char *canonical_word, char *syntax, snis_nl_verb_function action);
+	void snis_nl_add_dictionary_verb(struct snis_nl_context *ctx,
+		char *word, char *canonical_word, char *syntax, snis_nl_verb_function action);
 
+ctx:	This is the snis_nl_context pointer obtained from snis_nl_context_create();
 word:	This is simply which verb you are adding to the dictionary, e.g.: "get",
 	"take", "set", "scan", or whatever verb you are trying to define.
 
@@ -117,20 +131,21 @@ action: This is a function pointer which will be called which should have the fo
 	which will be explained later.
 
 	union snis_nl_extra_data;
-	typedef void (*snis_nl_verb_function)(void *context, int argc, char *argv[], int part_of_speech[],
+	typedef void (*snis_nl_verb_function)(struct snis_nl_context *ctx,
+					int argc, char *argv[], int part_of_speech[],
 					union snis_nl_extra_data *extra_data);
 
 Some examples:
 
-	snis_nl_add_dictionary_verb("describe",		"describe",	"n", nl_describe_n);   /* describe the blah */
-	snis_nl_add_dictionary_verb("describe",		"describe",	"an", nl_describe_an); /* describe the red blah */
-	snis_nl_add_dictionary_verb("navigate",		"navigate",	"pn", nl_navigage_pn); /* navigate to home */
-	snis_nl_add_dictionary_verb("set",		"set",		"npq", nl_set_npq);    /* set the knob to 100 */
-	snis_nl_add_dictionary_verb("set",		"set",		"npa", nl_set_npa);    /* set the knob to maximum */
-	snis_nl_add_dictionary_verb("set",		"set",		"npn", nl_set_npn);    /* set a course for home */
-	snis_nl_add_dictionary_verb("set",		"set",		"npan", nl_set_npn);   /* set a course for the nearest starbase */
-	snis_nl_add_dictionary_verb("plot",		"plot",		"npn", nl_set_npn);    /* plot a course fo home */
-	snis_nl_add_dictionary_verb("plot",		"plot",		"npan", nl_set_npn);   /* plot a course for the nearest planet */
+	snis_nl_add_dictionary_verb(ctx, "describe",	"describe",	"n", nl_describe_n);   /* describe the blah */
+	snis_nl_add_dictionary_verb(ctx, "describe",	"describe",	"an", nl_describe_an); /* describe the red blah */
+	snis_nl_add_dictionary_verb(ctx, "navigate",	"navigate",	"pn", nl_navigage_pn); /* navigate to home */
+	snis_nl_add_dictionary_verb(ctx, "set",		"set",		"npq", nl_set_npq);    /* set the knob to 100 */
+	snis_nl_add_dictionary_verb(ctx, "set",		"set",		"npa", nl_set_npa);    /* set the knob to maximum */
+	snis_nl_add_dictionary_verb(ctx, "set",		"set",		"npn", nl_set_npn);    /* set a course for home */
+	snis_nl_add_dictionary_verb(ctx, "set",		"set",		"npan", nl_set_npn);   /* set a course for the nearest starbase */
+	snis_nl_add_dictionary_verb(ctx, "plot",	"plot",		"npn", nl_set_npn);    /* plot a course fo home */
+	snis_nl_add_dictionary_verb(ctx, "plot",	"plot",		"npan", nl_set_npn);   /* plot a course for the nearest planet */
 
 Note that the same verb is often added to the dictionary multiple times with different
 syntaxes, sometimes associated with the same action function, sometimes with a different
@@ -138,11 +153,21 @@ action function.  This is really the key to how the whole thing works.
 
 The parameters which are passed to your function are:
 
-context:  This is just a void pointer which is passed from your program through the parsing
-function and finally back to your program.  It is for you to use as a "cookie", so that you
-can pass along some context to know for example, what the current topic is, or which entity
-in your system is requesting something to be parsed, etc.  It is for you to use (or not)
-however you like.
+ctx:  This is a pointer to the struct snis_nl_context.  Importantly, this also contains a
+      void *user_context pointer which you may set via:
+
+	void snis_nl_set_user_context(struct snis_nl_context *ctx, void *user_context);
+
+      This user_context pointer is passed from your program through the parsing
+      function and finally back to your program.  It is for you to use as a "cookie", so that you
+      can pass along some context to know for example, what the current topic is, or which entity
+      in your system is requesting something to be parsed, etc.  It is for you to use (or not)
+      however you like.
+
+      It may be obtained from the struct snis_nl_context pointer via:
+
+	/* Assuming ctx is a pointer to a struct snis_nl_context ... */
+	void *user_context = snis_nl_get_user_context(ctx);
 
 argc: This is simply count of the elements of the following parallel array parameters.
 
@@ -180,7 +205,7 @@ to a function which you may implement.  If you do not have such multiword tokens
 need to use this.
 
 -----------------
-typedef void (*snis_nl_error_function)(void *context);
+typedef void (*snis_nl_error_function)(struct snis_nl_context *context);
 void snis_nl_add_error_function(snis_nl_error_function error_func);
 
 You can add an error function.  This will get called whenever the parser is not able to
@@ -202,7 +227,7 @@ are for.  To use them, you provide a lookup function to the parse via:
 
 Your function should have a prototype like:
 
-	uint32_t my_lookup_function(void *context, char *word);
+	uint32_t my_lookup_function(struct snis_nl_context *context, char *word);
 
 This function should lookup the word that it is passed, and return a
 uint32_t handle.  Later, in your verb function, when you encounter
@@ -221,7 +246,7 @@ it refers.
 The main parsing function
 -----------------
 
-void snis_nl_parse_natural_language_request(void *context, char *text);
+void snis_nl_parse_natural_language_request(struct snis_nl_context *context, char *text);
 
 snis_nl_parse_natural_language_request is the main function that parses the input
 text and calls the verb functions.  You pass it a context pointer which can be

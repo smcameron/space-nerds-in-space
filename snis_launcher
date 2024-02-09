@@ -2,7 +2,7 @@
 
 if [ "$(id -u)" = "0" ]
 then
-	echo "You are root. Do not run this script as root." 1>&2
+	printf "You are root. Do not run this script as root.\n" 1>&2
 	exit 1
 fi
 
@@ -86,10 +86,10 @@ show_current_ssgl_port()
 {
 	if [ "$SSGL_PORT" = "" ]
 	then
-		echo -n "currently not set, will default to gamelobby/2914"
+		printf "currently not set, will default to gamelobby/2914"
 		unset SSGL_PORT
 	else
-		echo -n "currently $SSGL_PORT"
+		printf "currently %s" "$SSGL_PORT"
 	fi
 }
 
@@ -97,10 +97,10 @@ show_current_snis_port_range()
 {
 	if [ "$SNIS_SERVER_PORT_RANGE" = "" ]
 	then
-		echo -n "currently not set, will default to IANA dynamic port range"
+		printf "currently not set, will default to IANA dynamic port range"
 		unset SNIS_SERVER_PORT_RANGE
 	else
-		echo -n "currently $SNIS_SERVER_PORT_RANGE"
+		printf "currently %s" "$SNIS_SERVER_PORT_RANGE"
 	fi
 }
 
@@ -128,16 +128,16 @@ EOF
 kill_processes()
 {
 	pattern="$1"
-	p=$(ps aux | egrep "$pattern" | grep -v 'grep')
+	p=$(ps aux | grep -E "$pattern" | grep -v 'grep')
 	if [ "$p" = "" ]
 	then
-		echo "There are no processes to kill."
+		printf "There are no processes to kill.\n"
 		return
 	else
-		echo "$p"
+		printf "%s\n" "$p"
 	fi
-	ps aux | egrep "$pattern" | grep -v 'grep' | awk '{ printf("kill %s\n", $2); }' | /bin/sh
-	echo "Killed the above processes."
+	ps aux | grep -E "$pattern" | grep -v 'grep' | awk '{ printf("kill %s\n", $2); }' | /bin/sh
+	printf "Killed the above processes.\n"
 }
 
 check_for_binary()
@@ -145,12 +145,8 @@ check_for_binary()
 	binary="$1"
 	if [ ! -x "$binary" ]
 	then
-		echo 1>&2
-		echo 1>&2
-		echo "snis_launcher: Failed to find binary executable $1, aborting." 1>&2
-		echo "snis_launcher: You may need to run \"make\"" 1>&2
-		echo 1>&2
-		echo 1>&2
+		printf "\n\nsnis_launcher: Failed to find binary executable %s, aborting.\n" "$1" 1>&2
+		printf "snis_launcher: You may need to run \"make\"\n\n\n" 1>&2
 		sleep 1
 		return 1
 	fi
@@ -166,21 +162,18 @@ start_snis_lobby()
 	fi
 	if [ "${LOBBYHOST}" != "localhost" ]
 	then
-		echo
-		echo "WARNING: current lobby host is ${LOBBYHOST}, not localhost."
-		echo "Are you sure you mean to start a local lobby server (y/n)?"
-		read x
+		printf "\nWARNING: current lobby host is %s, not localhost.\n" "${LOBBYHOST}"
+		printf "Are you sure you mean to start a local lobby server (y/n)? "
+		read -r x
 		if [ "$x" != "y" ]
 		then
-			echo "Not starting lobby host."
+			printf "Not starting lobby host.\n"
 			return
 		else
-			echo "Starting local lobby host anyway."
+			printf "Starting local lobby host anyway.\n"
 		fi
 	fi
-	echo
-	echo "Starting the lobby server"
-	echo
+	printf "\nStarting the lobby server\n\n"
 	${SSGL_SERVER} > snis_lobby_log.txt 2>&1
 	sleep 0.25
 }
@@ -196,15 +189,14 @@ start_snis_multiverse()
 		return
 	fi
 	printf "Autowrangle snis_servers (y/n, default = y)?"
-	read x
+	read -r x
 	if [ "$x" != "n" ]
 	then
-		echo
-		echo "Which solarsystem should be exempted from auto-wrangling?"
+		printf "\nWhich solarsystem should be exempted from auto-wrangling?\n"
 		get_solarsystem_name
 		exempt="-e $SOLARSYSTEM_NAME"
 		autowrangle=-a
-		echo "Exempting solarsystem $SOLARSYSTEM_NAME from auto-wrangling."
+		printf "Exempting solarsystem %s from auto-wrangling.\n" "$SOLARSYSTEM_NAME"
 	else
 		autowrangle=
 		exempt=
@@ -212,22 +204,22 @@ start_snis_multiverse()
 
 	if [ ! -d ./snisdb ]
 	then
-		echo "./snisdb/ does not exist, creating directory." 1>&2
+		printf "./snisdb/ does not exist, creating directory.\n" 1>&2
 		mkdir ./snisdb
 		if [ "$?" != "0" ]
 		then
-			echo "mkdir ./snisdb failed."
+			printf "mkdir ./snisdb failed.\n"
 		fi
 		if [ ! -d ./snisdb ]
 		then
-			echo "Directory ./snisdb does not exist, snis_multiverse will not run without it, please create it." 1>&2
-			echo "Failed to start multiverse server" 1>&2
+			printf "Directory ./snisdb does not exist, snis_multiverse will not run without it, please create it.\n" 1>&2
+			printf "Failed to start multiverse server\n" 1>&2
 			return;
 		fi
-		echo "Created ./snisdb for snis_multiverse" 1>&2
+		printf "Created ./snisdb for snis_multiverse\n" 1>&2
 	fi
 	(${SNIS_MULTIVERSE} $autowrangle -l "${LOBBYHOST}" -n nickname -L narnia $exempt > snis_multiverse_log.txt 2>&1 ; \
-		echo "snis_multiverse died, status was $?" 1>&2 ) &
+		printf "snis_multiverse died, status was %s\n" "$?" 1>&2 ) &
 }
 
 get_solarsystem_name()
@@ -237,22 +229,22 @@ get_solarsystem_name()
 		default="$SOLARSYSTEM_NAME"
 		dname="."
 
-		echo "Choose a solar system:"
+		printf "Choose a solar system:\n"
 		for ss in ${SNIS_ASSET_DIR}/solarsystems/*/assets.txt
 		do
 			dname=$(dirname "$ss")
 			name=$(basename "$dname")
-			echo "   $name"
+			printf "   %s\n" "$name"
 		done
 		printf "Enter the name of the solarsystem (default = %s): " "$default"
-		read ssname;
+		read -r ssname;
 		if [ "$ssname" = "" ]
 		then
 			ssname="$default"
 		fi
 		if [ ! -f "${SNIS_ASSET_DIR}/solarsystems/$ssname"/assets.txt ]
 		then
-			echo "Invalid choice: $ssname"
+			printf "Invalid choice: %s\n" "$ssname"
 		else
 			break;
 		fi
@@ -267,7 +259,7 @@ get_solarsystem_name()
 
 uppercase()
 {
-	echo "$1" | tr '[:lower:]' '[:upper:]'
+	printf "%s\n" "$1" | tr '[:lower:]' '[:upper:]'
 }
 
 start_snis_server()
@@ -277,11 +269,9 @@ start_snis_server()
 	then
 		return
 	fi
-	echo
-	echo "Starting snis_server"
-	echo
+	printf "\nStarting snis_server\n\n"
 	get_solarsystem_name
-	echo "Using solar system $SOLARSYSTEM_NAME"
+	printf "Using solar system %s\n" "$SOLARSYSTEM_NAME"
 	SS1="$SOLARSYSTEM_NAME"
 	UPPER_SS1=$(uppercase "$SS1")
 	${SNIS_SERVER} -l "${LOBBYHOST}" -L "$UPPER_SS1" -m narnia -s "$SS1" ${ENABLE_ENSCRIPT} ${TRAP_NANS} > snis_server_log.txt 2>&1 &
@@ -295,9 +285,7 @@ start_snis_client()
 	then
 		return
 	fi
-	echo
-	echo "Starting snis_client (it may take a few moments to appear)"
-	echo
+	printf "\nStarting snis_client (it may take a few moments to appear)\n\n"
 	if [ "$SPLASH_SCREEN" = "DISABLED" ]
 	then
 		SPLASH_SCREEN_OPTION="--no-splash-screen"
@@ -314,21 +302,21 @@ start_snis_client()
 enter_lobby_host()
 {
 	printf "Enter lobby host: "
-	read x
+	read -r x
 	export LOBBYHOST="$x"
 }
 
 enter_lobby_port()
 {
 	printf "Enter lobby port: "
-	read x
+	read -r x
 	export SSGL_PORT="$x"
 }
 
 enter_snis_server_port_range()
 {
 	printf "Enter SNIS server port range (min:max): "
-	read x
+	read -r x
 	export SNIS_SERVER_PORT_RANGE="$x"
 }
 
@@ -344,19 +332,19 @@ reformat_processes()
 
 show_snis_processes()
 {
-	echo "------------------------------------------------------------"
-	p=$(ps aux | egrep 'snis_multiverse|snis_server|snis_client|ssgl_server' | grep -v grep)
+	printf "%s\n" "------------------------------------------------------------"
+	p=$(ps aux | grep -E 'snis_multiverse|snis_server|snis_client|ssgl_server' | grep -v grep)
 	if [ "$p" = "" ]
 	then
-		echo "No SNIS processes are currently running."
+		printf "No SNIS processes are currently running.\n"
 		# Since we know there are no processes, let's clean up any lock files
 		# that may be lying around (shouldn't be any, but just in case).
 		remove_snis_lock_dirs
 	else
-		echo "The following SNIS processes are running:"
-		echo "$p" | reformat_processes
+		printf "The following SNIS processes are running:\n"
+		printf "%s\n" "$p" | reformat_processes
 	fi
-	echo "------------------------------------------------------------"
+	printf "%s\n" "------------------------------------------------------------"
 }
 
 check_for_bad_lockfiles()
@@ -367,14 +355,14 @@ check_for_bad_lockfiles()
 		then
 			continue;
 		fi
-		instancename=$(echo "$x" | sed -e 's/.*[.]//')
-		ps aux | egrep snis_server | grep "[-]L $instancename[ ]" > /dev/null 2>&1
+		instancename=$(printf "%s\n" "$x" | sed -e 's/.*[.]//')
+		ps aux | grep -E snis_server | grep "[-]L $instancename[ ]" > /dev/null 2>&1
 		if [ "$?" = "1" ]
 		then
-			echo 1>&2
-			echo "WARNING: lockdir $x found, but no corresponding snis_server process!" 1>&2
-			echo "You may need to execute the following command: rmdir $x" 1>&2
-			echo 1>&2
+			printf "\n" 1>&2
+			printf "WARNING: lockdir %s found, but no corresponding snis_server process!\n" "$x" 1>&2
+			printf "You may need to execute the following command: rmdir %s\n" "$x" 1>&2
+			printf "\n" 1>&2
 		fi
 	done
 }
@@ -389,13 +377,13 @@ check_for_ip_address()
 	ipaddr=$(${SSGL_SERVER} --find-ip-address 2>/dev/null)
 	if [ "$ipaddr" = "" -o "$ipaddr" = "0.0.0.0" ]
 	then
-		echo "Failed to find primary IP address." 1>&2
-		echo "You might need to set SSGL_PRIMARY_IP_PROBE_ADDR" 1>&2
-		echo "If you are on a LAN with an IP address like 192.168.1.10" 1>&2
-		echo "try 'export SSGL_PRIMARY_IP_PROBE_ADDR=192.168.1.10'" 1>&2
-		echo "If you are running everything locally on a single machine" 1>&2
-		echo "and you want to use the localhost interface try" 1>&2
-		echo "'export SSGL_PRIMARY_IP_PROBE_ADDR=127.0.0.1'" 1>&2
+		printf "Failed to find primary IP address.\n" 1>&2
+		printf "You might need to set SSGL_PRIMARY_IP_PROBE_ADDR\n" 1>&2
+		printf "If you are on a LAN with an IP address like 192.168.1.10\n" 1>&2
+		printf "try 'export SSGL_PRIMARY_IP_PROBE_ADDR=192.168.1.10'\n" 1>&2
+		printf "If you are running everything locally on a single machine\n" 1>&2
+		printf "and you want to use the localhost interface try\n" 1>&2
+		printf "'export SSGL_PRIMARY_IP_PROBE_ADDR=127.0.0.1'\n" 1>&2
 		exit 1
 	fi
 }
@@ -404,8 +392,8 @@ spot_check_for_assets()
 {
 	if [ ! -f "${SNIS_ASSET_DIR}/models/cylinder.stl" ]
 	then
-		echo "Failed to find ${SNIS_ASSET_DIR}/models/cylinder.stl" 1>&2
-		echo "Perhaps you need to run 'make update-assets' or 'make models'?" 1>&2
+		printf "Failed to find %s/models/cylinder.stl\n" "${SNIS_ASSET_DIR}" 1>&2
+		printf "Perhaps you need to run 'make update-assets' or 'make models'?\n" 1>&2
 		exit 1
 	fi
 }
@@ -414,14 +402,12 @@ choose_options()
 {
 	while true
 	do
-		echo
-		echo "     Space Nerds In Space Options"
-		echo
+		printf "\n     Space Nerds In Space Options\n\n"
 		show_snis_processes
 		print_options_menu
 		check_for_bad_lockfiles
 		printf "   Choose [0-3]: "
-		read x
+		read -r x
 
 		case "$x" in
 		0)
@@ -443,15 +429,15 @@ choose_options()
 			else
 				SPLASH_SCREEN="ENABLED"
 			fi
-			echo "Splash screen is now $SPLASH_SCREEN"
+			printf "Splash screen is now %s\nn" "$SPLASH_SCREEN"
 		;;
 		5)
 			if [ "$NO_TEXTURES" = "" ]
 			then
-				echo "Set --no-textures option"
+				printf "Set --no-textures option\n"
 				NO_TEXTURES="--no-textures"
 			else
-				echo "Unset --no-textures option"
+				printf "Unset --no-textures option\n"
 				NO_TEXTURES=""
 			fi
 		;;
@@ -464,20 +450,16 @@ spot_check_for_assets
 
 while true
 do
-	echo
-	echo "     Welcome to Space Nerds In Space"
-	echo
+	printf "\n     Welcome to Space Nerds In Space\n\n"
 	show_snis_processes
 	print_main_menu
 	check_for_bad_lockfiles
 	printf "   Choose [0-10]: "
-	read x
+	read -r x
 
 	case "$x" in
 	0)
-	   echo
-	   echo "Goodbye! Thanks for playing!"
-	   echo
+	   printf "\nGoodbye! Thanks for playing!\n\n"
 	   exit
 		;;
 	5) kill_processes 'snis_server|snis_client|snis_multiverse|ssgl_server'
@@ -500,7 +482,7 @@ do
 		;;
 	9) choose_options
 		;;
-	*) echo "Invalid choice."
+	*) printf "Invalid choice.\n"
 	        ;;
 	esac
 done

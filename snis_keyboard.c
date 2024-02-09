@@ -199,23 +199,6 @@ char *keyactionstring[] = {
 	"key_weap_wavelen_9",
 	"key_weap_wavlen_nudge_up",
 	"key_weap_wavlen_nudge_down",
-	"key_comms_hail",
-	"key_comms_channel",
-	"key_comms_manifest",
-	"key_comms_computer",
-	"key_comms_eject",
-	"key_comms_help",
-	"key_comms_about",
-	"key_comms_crypto",
-	"key_comms_red_alert",
-	"key_comms_hail_mining_bot",
-	"key_comms_comms_screen",
-	"key_comms_nav_screen",
-	"key_comms_weap_screen",
-	"key_comms_eng_screen",
-	"key_comms_damcon_screen",
-	"key_comms_science_screen",
-	"key_comms_main_screen",
 };
 
 #ifdef DEBUG_KEYMAP
@@ -433,24 +416,6 @@ void init_keymap(void)
 	mapkey(nav, SDLK_i, key_exterior_lights);
 	mapkey(nav, SDLK_b, key_standard_orbit);
 	mapkey(nav, SDLK_t, key_starmap);
-
-	mapkey(comms, SDLK_h, key_comms_hail);
-	mapkey(comms, SDLK_c, key_comms_channel);
-	mapkey(comms, SDLK_m, key_comms_manifest);
-	mapkey(comms, SDLK_p, key_comms_computer);
-	mapkey(comms, SDLK_e, key_comms_eject);
-	mapkey(comms, SDLK_SLASH, key_comms_help); /* uppercase slash key is question mark */
-	mapkey(comms, SDLK_a, key_comms_about);
-	mapkey(comms, SDLK_y, key_comms_crypto);
-	mapkey(comms, SDLK_r, key_comms_red_alert);
-	mapkey(comms, SDLK_b, key_comms_hail_mining_bot);
-	mapkey(comms, SDLK_2, key_comms_comms_screen);
-	mapkey(comms, SDLK_3, key_comms_nav_screen);
-	mapkey(comms, SDLK_4, key_comms_weap_screen);
-	mapkey(comms, SDLK_5, key_comms_eng_screen);
-	mapkey(comms, SDLK_6, key_comms_damcon_screen);
-	mapkey(comms, SDLK_7, key_comms_science_screen);
-	mapkey(comms, SDLK_8, key_comms_main_screen);
 
 #ifdef DEBUG_KEYMAP
 	print_keymap("keymap", keymap);

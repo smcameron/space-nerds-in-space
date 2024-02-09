@@ -4625,86 +4625,12 @@ static void quit_continue_or_disconnect(void)
 	}
 }
 
-static struct comms_ui {
-	struct text_window *tw;
-	struct button *comms_onscreen_button;
-	struct button *nav_onscreen_button;
-	struct button *weap_onscreen_button;
-	struct button *eng_onscreen_button;
-	struct button *damcon_onscreen_button;
-	struct button *sci_onscreen_button;
-	struct button *main_onscreen_button;
-	struct button *custom_button;
-	struct button *cryptanalysis_button;
-	struct button *comms_transmit_button;
-	struct button *red_alert_button;
-	struct button *hail_mining_bot_button;
-	struct button *mainscreen_comms;
-	struct button *rts_starbase_button[NUM_RTS_BASES];
-	struct button *rts_fleet_button;
-	struct button *rts_main_planet_button;
-	struct button *rts_order_unit_button[NUM_RTS_UNIT_TYPES];
-	struct button *rts_order_command_button[NUM_RTS_ORDER_TYPES];
-	struct button *hail_button;
-	struct button *channel_button;
-	struct button *manifest_button;
-	struct button *computer_button;
-	struct button *eject_button;
-	struct button *help_button;
-	struct button *about_button;
-	struct button *crypto_reset;
-	struct snis_text_input_box *crypt_alpha[26];
-	char crypt_alpha_text[26][3];
-#define FLEET_BUTTON_COLS 9
-#define FLEET_BUTTON_ROWS 10
-	struct button *fleet_unit_button[FLEET_BUTTON_COLS][FLEET_BUTTON_ROWS];
-	int fleet_order_checkbox[NUM_RTS_ORDER_TYPES];
-	struct snis_text_input_box *comms_input;
-	struct slider *mainzoom_slider;
-	char input[100];
-	uint32_t channel;
-	struct strip_chart *emf_strip_chart;
-	struct slider *our_base_health, *enemy_base_health;
-} comms_ui;
-
 static void engage_warp_button_pressed(__attribute__((unused)) void *cookie);
 static void reverse_button_pressed(__attribute__((unused)) void *s);
 static void docking_magnets_button_pressed(__attribute__((unused)) void *cookie);
 static void nav_lights_button_pressed(__attribute__((unused)) void *cookie);
 static void standard_orbit_button_pressed(__attribute__((unused)) void *cookie);
 static void nav_starmap_button_pressed(__attribute__((unused)) void *cookie);
-static void comms_hail_button_pressed(__attribute__((unused)) void *x);
-static void comms_channel_button_pressed(__attribute__((unused)) void *x);
-static void comms_manifest_button_pressed(__attribute__((unused)) void *x);
-static void comms_computer_button_pressed(__attribute__((unused)) void *x);
-static void comms_eject_button_pressed(__attribute__((unused)) void *x);
-static void comms_help_button_pressed(__attribute__((unused)) void *x);
-static void comms_about_button_pressed(__attribute__((unused)) void *x);
-static void comms_cryptanalysis_button_pressed(__attribute__((unused)) void *x);
-static void comms_screen_red_alert_pressed(__attribute__((unused)) void *x);
-static void comms_hail_mining_bot_pressed(__attribute__((unused)) void *x);
-static void comms_screen_button_pressed(void *x);
-
-static int maybe_trigger_comms_button(void (*button_press_func)(__attribute__((unused)) void *x), int grab_focus)
-{
-	if (displaymode != DISPLAYMODE_COMMS)
-		return 0;
-
-	if (snis_text_input_box_has_focus(comms_ui.comms_input))
-		return 0;
-
-	struct snis_entity *o = find_my_ship();
-	if (!o)
-		return 0;
-
-	if (o->tsd.ship.comms_crypto_mode)
-		return 0;
-
-	button_press_func(NULL);
-	if (grab_focus)
-		snis_text_input_box_set_focus(comms_ui.comms_input, 1);
-	return 1;
-}
 
 static int key_press_cb(SDL_Window *window, SDL_Keysym *keysym, int key_repeat)
 {
@@ -4784,13 +4710,6 @@ static int key_press_cb(SDL_Window *window, SDL_Keysym *keysym, int key_repeat)
 				helpmode = 0;
 				break;
 			}
-
-			/* Allow Esc to clear focus on text input widget on Comms screen */
-			if (displaymode == DISPLAYMODE_COMMS && snis_text_input_box_has_focus(comms_ui.comms_input)) {
-				snis_text_input_box_set_focus(comms_ui.comms_input, 0);
-				break;
-			}
-
 			in_the_process_of_quitting = !in_the_process_of_quitting;
 			if (in_the_process_of_quitting) {
 				/* Clear focus from text widgets so they don't eat the keystrokes */
@@ -4798,52 +4717,6 @@ static int key_press_cb(SDL_Window *window, SDL_Keysym *keysym, int key_repeat)
 			}
 			current_quit_selection = QUIT_SELECTION_CONTINUE;
 			break;
-	case key_comms_hail:
-		(void) maybe_trigger_comms_button(comms_hail_button_pressed, 1);
-		break;
-	case key_comms_channel:
-		(void) maybe_trigger_comms_button(comms_channel_button_pressed, 1);
-		break;
-	case key_comms_manifest:
-		(void) maybe_trigger_comms_button(comms_manifest_button_pressed, 0);
-		break;
-	case key_comms_computer:
-		(void) maybe_trigger_comms_button(comms_computer_button_pressed, 1);
-		break;
-	case key_comms_eject:
-		(void) maybe_trigger_comms_button(comms_eject_button_pressed, 1);
-		break;
-	case key_comms_help:
-		(void) maybe_trigger_comms_button(comms_help_button_pressed, 0);
-		break;
-	case key_comms_about:
-		(void) maybe_trigger_comms_button(comms_about_button_pressed, 0);
-		break;
-	case key_comms_crypto:
-		(void) maybe_trigger_comms_button(comms_cryptanalysis_button_pressed, 0);
-		break;
-	case key_comms_red_alert:
-		(void) maybe_trigger_comms_button(comms_screen_red_alert_pressed, 0);
-		break;
-	case key_comms_hail_mining_bot:
-		(void) maybe_trigger_comms_button(comms_hail_mining_bot_pressed, 1);
-		break;
-	case key_comms_nav_screen:
-	case key_comms_weap_screen:
-	case key_comms_eng_screen:
-	case key_comms_damcon_screen:
-	case key_comms_science_screen:
-	case key_comms_comms_screen:
-	case key_comms_main_screen: {
-			struct snis_entity *o = find_my_ship();
-			if (!o)
-				break;
-			if (o->tsd.ship.comms_crypto_mode)
-				break;
-			intptr_t screen_number = (int) ka - (int) key_comms_comms_screen;
-			comms_screen_button_pressed((void *) screen_number);
-			break;
-		}
 	case keytorpedo:
 		fire_torpedo_button_pressed(NULL);
 		break;
@@ -6774,6 +6647,48 @@ static int process_update_netstats(void)
 	return 0;
 }
 
+static struct comms_ui {
+	struct text_window *tw;
+	struct button *comms_onscreen_button;
+	struct button *nav_onscreen_button;
+	struct button *weap_onscreen_button;
+	struct button *eng_onscreen_button;
+	struct button *damcon_onscreen_button;
+	struct button *sci_onscreen_button;
+	struct button *main_onscreen_button;
+	struct button *custom_button;
+	struct button *cryptanalysis_button;
+	struct button *comms_transmit_button;
+	struct button *red_alert_button;
+	struct button *hail_mining_bot_button;
+	struct button *mainscreen_comms;
+	struct button *rts_starbase_button[NUM_RTS_BASES];
+	struct button *rts_fleet_button;
+	struct button *rts_main_planet_button;
+	struct button *rts_order_unit_button[NUM_RTS_UNIT_TYPES];
+	struct button *rts_order_command_button[NUM_RTS_ORDER_TYPES];
+	struct button *hail_button;
+	struct button *channel_button;
+	struct button *manifest_button;
+	struct button *computer_button;
+	struct button *eject_button;
+	struct button *help_button;
+	struct button *about_button;
+	struct button *crypto_reset;
+	struct snis_text_input_box *crypt_alpha[26];
+	char crypt_alpha_text[26][3];
+#define FLEET_BUTTON_COLS 9
+#define FLEET_BUTTON_ROWS 10
+	struct button *fleet_unit_button[FLEET_BUTTON_COLS][FLEET_BUTTON_ROWS];
+	int fleet_order_checkbox[NUM_RTS_ORDER_TYPES];
+	struct snis_text_input_box *comms_input;
+	struct slider *mainzoom_slider;
+	char input[100];
+	uint32_t channel;
+	struct strip_chart *emf_strip_chart;
+	struct slider *our_base_health, *enemy_base_health;
+} comms_ui;
+
 static void comms_dirkey(__attribute__((unused)) int h, int v)
 {
 	/* note: No point making round trip to server and fanning out
@@ -6822,7 +6737,11 @@ static int cipher_freq_compare(const void *a, const void *b)
 		return 0;
 	f1 = cipher_freq[x - 'A'];
 	f2 = cipher_freq[y - 'A'];
-	return f2 - f1;
+	if (f2 > f1)
+		return 1;
+	if (f2 < f1)
+		return -1;
+	return 0;
 }
 
 /* Sort the letters of the enciphered message by frequency */
@@ -16184,45 +16103,45 @@ static void init_comms_ui(void)
 
 	ui_add_text_window(comms_ui.tw, DISPLAYMODE_COMMS);
 	ui_add_button(comms_ui.comms_onscreen_button, DISPLAYMODE_COMMS,
-			"PROJECT COMMS SCREEN ON THE MAIN VIEW\nKEYBOARD SHORTCUT '2'");
+			"PROJECT COMMS SCREEN ON THE MAIN VIEW");
 	ui_add_button(comms_ui.nav_onscreen_button, DISPLAYMODE_COMMS,
-			"PROJECT NAVIGATION SCREEN ON THE MAIN VIEW\nKEYBOARD SHORTCUT '3'");
+			"PROJECT NAVIGATION SCREEN ON THE MAIN VIEW");
 	ui_add_button(comms_ui.weap_onscreen_button, DISPLAYMODE_COMMS,
-			"PROJECT WEAPONS SCREEN ON THE MAIN VIEW\nKEYBOARD SHORTCUT '4'");
+			"PROJECT WEAPONS SCREEN ON THE MAIN VIEW");
 	ui_add_button(comms_ui.eng_onscreen_button, DISPLAYMODE_COMMS,
-			"PROJECT ENGINEERING SCREEN ON THE MAIN VIEW\nKEYBOARD SHORTCUT '5'");
+			"PROJECT ENGINEERING SCREEN ON THE MAIN VIEW");
 	ui_add_button(comms_ui.damcon_onscreen_button, DISPLAYMODE_COMMS,
-			"PROJECT DAMAGE CONTROL SCREEN ON THE MAIN VIEW\nKEYBOARD SHORTCUT '6'");
+			"PROJECT DAMAGE CONTROL SCREEN ON THE MAIN VIEW");
 	ui_add_button(comms_ui.sci_onscreen_button, DISPLAYMODE_COMMS,
-			"PROJECT SCIENCE SCREEN ON THE MAIN VIEW\nKEYBOARD SHORTCUT '7'");
+			"PROJECT SCIENCE SCREEN ON THE MAIN VIEW");
 	ui_add_button(comms_ui.main_onscreen_button, DISPLAYMODE_COMMS,
-			"PROJECT MAIN SCREEN ON THE MAIN VIEW\nKEYBOARD SHORTCUT '8'");
+			"PROJECT MAIN SCREEN ON THE MAIN VIEW");
 	ui_add_button(comms_ui.custom_button, DISPLAYMODE_COMMS,
 			"CUSTOM BUTTON");
 	ui_add_button(comms_ui.hail_button, DISPLAYMODE_COMMS,
-			"HAIL ANOTHER SHIP OR STARBASE BY NAME\nKEYBOARD SHORTCUT 'H'");
+			"HAIL ANOTHER SHIP OR STARBASE BY NAME");
 	ui_add_button(comms_ui.channel_button, DISPLAYMODE_COMMS,
-			"SET THE CHANNEL NUMBER ON WHICH TO XMIT/RECV\nKEYBOARD SHORTCUT 'C'");
+			"SET THE CHANNEL NUMBER ON WHICH TO XMIT/RECV");
 	ui_add_button(comms_ui.manifest_button, DISPLAYMODE_COMMS,
-			"SHOW SHIP'S MANIFEST\nKEYBOARD SHORTCUT 'M'");
+			"SHOW SHIP'S MANIFEST");
 	ui_add_button(comms_ui.computer_button, DISPLAYMODE_COMMS,
-			"COMMAND THE SHIP'S COMPUTER\nKEYBOARD SHORTCUT 'P'");
+			"COMMAND THE SHIP'S COMPUTER");
 	ui_add_button(comms_ui.eject_button, DISPLAYMODE_COMMS,
-			"EJECT CONTENTS OF ONE OF THE SHIPS CARGO BAYS\nKEYBOARD SHORTCUT 'E'");
+			"EJECT CONTENTS OF ONE OF THE SHIPS CARGO BAYS");
 	ui_add_button(comms_ui.help_button, DISPLAYMODE_COMMS,
-			"SHOW HELP SCREEN FOR COMMS TERMINAL\nKEYBOARD SHORTCUT '?'");
+			"SHOW HELP SCREEN FOR COMMS TERMINAL");
 	ui_add_button(comms_ui.about_button, DISPLAYMODE_COMMS,
-			"SHOW VERSION INFO ABOUT SPACE NERDS IN SPACE\nKEYBOARD SHORTCUT 'A'");
+			"SHOW VERSION INFO ABOUT SPACE NERDS IN SPACE");
 	ui_add_button(comms_ui.cryptanalysis_button, DISPLAYMODE_COMMS,
-			"CRYPTANALYSIS OF ENCRYPTED MESSAGES\nKEYBOARD SHORTCUT 'Y'");
+			"CRYPTANALYSIS OF ENCRYPTED MESSAGES");
 	ui_add_button(comms_ui.red_alert_button, DISPLAYMODE_COMMS,
-			"ACTIVATE RED ALERT ALARM\nKEYBOARD SHORTCUT 'R'");
+			"ACTIVATE RED ALERT ALARM");
 	ui_add_button(comms_ui.hail_mining_bot_button, DISPLAYMODE_COMMS,
-			"HAIL THE MINING BOT IF IT IS DEPLOYED\nKEYBOARD SHORTCUT 'B'");
+			"HAIL THE MINING BOT IF IT IS DEPLOYED");
 	ui_add_button(comms_ui.mainscreen_comms, DISPLAYMODE_COMMS,
 			"DISPLAY MOST RECENT COMMS TRANSMISSSIONS ON MAIN SCREEN");
 	ui_add_button(comms_ui.comms_transmit_button, DISPLAYMODE_COMMS,
-			"TRANSMIT ENTERED TEXT ON CURRENT CHANNEL\nKEYBOARD SHORTCUT 'ENTER'");
+			"TRANSMIT ENTERED TEXT ON CURRENT CHANNEL");
 	ui_add_button(comms_ui.rts_fleet_button, DISPLAYMODE_COMMS,
 			"TRANSMIT ORDERS TO FLEET");
 	ui_add_button(comms_ui.rts_main_planet_button, DISPLAYMODE_COMMS,
@@ -17177,8 +17096,9 @@ static void draw_science_details(void)
 
 		planet_type_str = solarsystem_assets->planet_type[p->solarsystem_planet_type];
 		pt = planet_type_from_string(planet_type_str);
-		snprintf(buf, sizeof(buf), "MASS: %.2f EU / DIAM: %.2f EU",
-				planetary_mass(p->radius, pt), planetary_diameter(p->radius, pt));
+		snprintf(buf, sizeof(buf), "MASS: %.2f EU / DIAM: %.2f EU / GRAV: %.2f m/s2",
+				planetary_mass(p->radius, pt), planetary_diameter(p->radius, pt),
+				planetary_gravity(p->radius, pt));
 		sng_abs_xy_draw_string(buf, sdf, 10, y);
 		y += yinc;
 
@@ -17459,6 +17379,8 @@ static void update_comms_ui_visibility(struct snis_entity *o)
 		for (i = 0; i < 26; i++)
 			ui_hide_widget(comms_ui.crypt_alpha[i]);
 		ui_hide_widget(comms_ui.crypto_reset);
+		if (!in_the_process_of_quitting) /* don't eat inputs meant for the quit dialog */
+			ui_set_widget_focus(uiobjs, comms_ui.comms_input);
 	}
 }
 
