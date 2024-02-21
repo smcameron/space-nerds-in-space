@@ -113,6 +113,13 @@ print_options_menu()
 		NT="set"
 	fi
 
+	if [ "$ENABLE_ENSCRIPT" = "" ]
+	then
+		EE="not set"
+	else
+		EE="set"
+	fi
+
 cat << EOF 1>&2
     1. Enter Lobby Host IP addr (currently $LOBBYHOST)
     2. Enter Lobby Host Port number ($(show_current_ssgl_port))
@@ -121,6 +128,8 @@ cat << EOF 1>&2
     5. Toggle --no-textures option (currently $NT)
        May be useful for running NAV, ENG, DAMAGE, SCIENCE, or COMMS on
        underpowered hardware
+    6. Set/unset --enable-enscript option (currently $EE)
+       (WARNING: this option enables clients to create files on the server)
     0. Return to main menu
 EOF
 }
@@ -439,6 +448,16 @@ choose_options()
 			else
 				printf "Unset --no-textures option\n"
 				NO_TEXTURES=""
+			fi
+		;;
+		6)
+			if [ "$ENABLE_ENSCRIPT" = "" ]
+			then
+				printf "Set --enable-enscript option\n";
+				ENABLE_ENSCRIPT="--enable-enscript"
+			else
+				printf "Unset --eneable-enscript option\n";
+				ENABLE_ENSCRIPT=""
 			fi
 		;;
 		esac
