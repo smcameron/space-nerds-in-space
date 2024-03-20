@@ -1,0 +1,10 @@
+The Contrib directory is meant to contain things contributed by others
+which aren't necessary to run Space Nerds in Space, and which in
+some sense aren't a part of the core of the game, but which work
+with Space Nerds in Space -- various optional utilities and what not.
+
+Things you find in here might be quite experimental and might not
+necessarily be well tested.  They might also be just fine.
+
+Caveat emptor.
+
