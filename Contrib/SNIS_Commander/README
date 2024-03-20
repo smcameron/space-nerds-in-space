@@ -1,0 +1,10 @@
+SNIS_Commander:
+
+In a python virtualenv with voila available you can:
+
+ voila --debug --Voila.ip=0.0.0.0 --port 9996 ./SNIS_Commander.ipynb
+
+which will serve a very rudimentary web application with a simple form which sends
+commands to "ship" (natural-language-fifo), "game" (demon mode) and messages which
+will be read by the computer (text-to-speech)
+
