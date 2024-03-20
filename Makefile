@@ -849,6 +849,7 @@ $(OD)/snis_ship_type.o:   snis_ship_type.c snis_ship_type.h corporations.h Makef
 
 bin/snis_launcher:	snis_launcher
 	./modify_snis_launcher.sh snis_launcher ${PREFIX} > bin/snis_launcher
+	chmod +x bin/snis_launcher
 
 bin/test_snis_ship_type: snis_ship_type.c snis_ship_type.h ${OD}/string-utils.o ${OD}/corporations.o ${OD}/rts_unit_data.o ${BIN}
 	$(CC) ${MYCFLAGS} -DTEST_SNIS_SHIP_TYPE -o bin/test_snis_ship_type snis_ship_type.c ${OD}/string-utils.o ${OD}/corporations.o ${OD}/rts_unit_data.o

@@ -57,6 +57,16 @@ remove_snis_lock_dirs()
 	done
 }
 
+check_for_unexpected_lockdir()
+{
+	if [ -d "$1" ]
+	then
+		printf "\nUnexpected lock directory $1 found.\n" 1>&2
+		printf "Perhaps the server process $2 is already running. If not, perhaps\n" 1>&1
+		printf "it crashed and if so, then this lock directory should be removed.\n\n" 1>&2
+	fi
+}
+
 print_main_menu()
 {
 cat << EOF 1>&2
@@ -227,6 +237,7 @@ start_snis_multiverse()
 		fi
 		printf "Created ./snisdb for snis_multiverse\n" 1>&2
 	fi
+	check_for_unexpected_lockdir /tmp/snis_multiverse_lock snis_multiverse
 	(${SNIS_MULTIVERSE} $autowrangle -l "${LOBBYHOST}" -n nickname -L narnia $exempt > snis_multiverse_log.txt 2>&1 ; \
 		printf "snis_multiverse died, status was %s\n" "$?" 1>&2 ) &
 }
@@ -283,6 +294,7 @@ start_snis_server()
 	printf "Using solar system %s\n" "$SOLARSYSTEM_NAME"
 	SS1="$SOLARSYSTEM_NAME"
 	UPPER_SS1=$(uppercase "$SS1")
+	check_for_unexpected_lockdir /tmp/snis_server_lock."$UPPER_SS1" "snis_server $SS1"
 	${SNIS_SERVER} -l "${LOBBYHOST}" -L "$UPPER_SS1" -m narnia -s "$SS1" ${ENABLE_ENSCRIPT} ${TRAP_NANS} > snis_server_log.txt 2>&1 &
 	sleep 2.5
 }
