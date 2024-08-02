@@ -9025,6 +9025,7 @@ static void show_watermark(void)
 
 static int blue_rectangle = 1; /* tweakable via console */
 static int station_label = 1; /* tweakable via console */
+static int station_label_disappears = 1; /* tweakable via console */
 
 static void show_common_screen(char *title)
 {
@@ -9032,6 +9033,18 @@ static void show_common_screen(char *title)
 	int border_color;
 	struct snis_entity *o;
 	int rl, pbl;
+	static int frame_counter = 0;
+	static char last_title[100] = { 0 };
+
+	if (strncmp(title, last_title, sizeof(last_title)) != 0) {
+		strlcpy(last_title, title, sizeof(last_title));
+		frame_counter = 0;
+	}
+	if (frame_counter < 1024) /* prevent wraparound by capping to 1024 */
+		frame_counter++;
+
+	/* zero frame_counter if station label should not disappear to prevent it disappearing */
+	frame_counter *= station_label_disappears;
 
 	o = find_my_ship();
 
@@ -9051,7 +9064,7 @@ static void show_common_screen(char *title)
 		}
 	} else {
 		sng_set_foreground(title_color);
-		if (station_label)
+		if (station_label && frame_counter < 60 * (use_60_fps + 1))
 			sng_abs_xy_draw_string(title, SMALL_FONT, txx(25), txy(LINEHEIGHT));
 	}
 
@@ -18370,6 +18383,8 @@ static struct tweakable_var_descriptor client_tweak[] = {
 		&blue_rectangle, 'i', 0.0, 0.0, 0.0, 0, 1, 1, 0 },
 	{ "STATION_LABEL", "0 OR 1 TO TURN OFF OR ON THE STATION LABELS, RESPECTIVELY",
 		&station_label, 'i', 0.0, 0.0, 0.0, 0, 1, 1, 0 },
+	{ "STATION_LABEL_DISAPPEARS", "0 OR 1 TO MAKE STATION LABELS DISAPPEAR AFTER A FEW SECONDS",
+		&station_label_disappears, 'i', 0.0, 0.0, 0.0, 0, 1, 1, 0 },
 	{ "EXTERNAL_CAMERA", "0 OR 1 TO TURN OFF OR ON THE EXTERNAL CAMERA, RESPECTIVELY",
 		&external_camera_active, 'i', 0.0, 0.0, 0.0, 0, 1, 0, 0 },
 	{ "NAV_HAS_COMPUTER", "0 OR 1 TO ALLOW NAV TO HAVE COMPUTER ACCESS",
