@@ -20,6 +20,18 @@ fi
 if [ "$SNIS_LOG_DIR" = "" ]
 then
 	SNIS_LOG_DIR="."
+else
+	if [ ! -d "$SNIS_LOG_DIR" ]
+	then
+		echo "snis_launcher: SNIS_LOG_DIR $SNIS_LOG_DIR is not a directory." 1>&2
+		exit 1
+	else
+		if [ ! -w "$SNIS_LOG_DIR" ]
+		then
+			echo "snis_launcher: SNIS_LOG_DIR $SNIS_LOG_DIR is not writable." 1>&2
+			exit 1
+		fi
+	fi
 fi
 
 SNIS_SERVER=${BINDIR}/snis_server
