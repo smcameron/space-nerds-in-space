@@ -16,6 +16,12 @@ if [ "$SNIS_ASSET_DIR" = "" ]
 then
 	export SNIS_ASSET_DIR=${PREFIX}/share/snis
 fi
+
+if [ "$SNIS_LOG_DIR" = "" ]
+then
+	SNIS_LOG_DIR="."
+fi
+
 SNIS_SERVER=${BINDIR}/snis_server
 SNIS_CLIENT=${BINDIR}/snis_client
 SNIS_MULTIVERSE=${BINDIR}/snis_multiverse
@@ -193,7 +199,7 @@ start_snis_lobby()
 		fi
 	fi
 	printf "\nStarting the lobby server\n\n"
-	${SSGL_SERVER} > snis_lobby_log.txt 2>&1
+	${SSGL_SERVER} > "$SNIS_LOG_DIR"/snis_lobby_log.txt 2>&1
 	sleep 0.25
 }
 
@@ -238,7 +244,8 @@ start_snis_multiverse()
 		printf "Created ./snisdb for snis_multiverse\n" 1>&2
 	fi
 	check_for_unexpected_lockdir /tmp/snis_multiverse_lock snis_multiverse
-	(${SNIS_MULTIVERSE} $autowrangle -l "${LOBBYHOST}" -n nickname -L narnia $exempt > snis_multiverse_log.txt 2>&1 ; \
+	(${SNIS_MULTIVERSE} $autowrangle -l "${LOBBYHOST}" -n nickname -L narnia $exempt > \
+		"$SNIS_LOG_DIR"/snis_multiverse_log.txt 2>&1 ; \
 		printf "snis_multiverse died, status was %s\n" "$?" 1>&2 ) &
 }
 
@@ -295,7 +302,8 @@ start_snis_server()
 	SS1="$SOLARSYSTEM_NAME"
 	UPPER_SS1=$(uppercase "$SS1")
 	check_for_unexpected_lockdir /tmp/snis_server_lock."$UPPER_SS1" "snis_server $SS1"
-	${SNIS_SERVER} -l "${LOBBYHOST}" -L "$UPPER_SS1" -m narnia -s "$SS1" ${ENABLE_ENSCRIPT} ${TRAP_NANS} > snis_server_log.txt 2>&1 &
+	${SNIS_SERVER} -l "${LOBBYHOST}" -L "$UPPER_SS1" -m narnia -s "$SS1" ${ENABLE_ENSCRIPT} ${TRAP_NANS} > \
+		"$SNIS_LOG_DIR"/snis_server_log.txt 2>&1 &
 	sleep 2.5
 }
 
@@ -315,7 +323,7 @@ start_snis_client()
 	fi
 	CLIENT="$1"
 	${CLIENT} --lobbyhost "${LOBBYHOST}" $ASPECT_RATIO_ARG --fullscreen \
-		${TRAP_NANS} ${SPLASH_SCREEN_OPTION} ${NO_TEXTURES} > snis_client_log.txt 2>&1 &
+		${TRAP_NANS} ${SPLASH_SCREEN_OPTION} ${NO_TEXTURES} > "$SNIS_LOG_DIR"/snis_client_log.txt 2>&1 &
 	sleep 1
 	# --starship "$shipname" --pw "$password" $@
 }
