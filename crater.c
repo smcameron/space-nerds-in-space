@@ -31,7 +31,7 @@
 
 unsigned char base_level = 127;
 
-static float zerotoone()
+static float zerotoone(void)
 {
 	return 0.5 * (1.0 + snis_random_float());
 }
