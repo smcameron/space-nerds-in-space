@@ -235,7 +235,7 @@ int main(int argc, char *argv[])
 	printf("WARNING!  This program is experimental!  Are you sure you wish to proceeed (y/n)? ");
 	memset(answer, 0, sizeof(answer));
 	char *a = fgets(answer, sizeof(answer), stdin);
-	if (strncmp(answer, "y\n", 3) != 0)
+	if (!a || strncmp(answer, "y\n", 3) != 0)
 		exit(1);
 
 	/* Set up curl */
