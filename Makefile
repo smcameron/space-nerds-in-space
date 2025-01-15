@@ -588,7 +588,8 @@ MULTIVERSELIBS=-Lssgl -lssglclient ${LRTLIB} -ldl -lm ${CRYPTLIBS}
 
 
 BINPROGS=bin/ssgl_server bin/snis_server bin/snis_client bin/snis_text_to_speech.sh \
-		bin/snis_multiverse bin/lsssgl bin/snis_arduino bin/snis_launcher
+		bin/snis_multiverse bin/lsssgl bin/snis_arduino bin/snis_launcher \
+		bin/snis_update_assets
 UTILPROGS=util/mask_clouds util/cloud-mask-normalmap bin/mesh_viewer util/sample_image_colors \
 		util/generate_solarsystem_positions bin/nebula_noise bin/generate_skybox bin/earthlike
 
@@ -1472,6 +1473,9 @@ Makefile.depend :
 bin/check-endianness:	check-endianness.c Makefile ${BIN}
 	@echo "  COMPILE check-endianness.c"
 	$(Q)$(CC) -o bin/check-endianness check-endianness.c
+
+bin/snis_update_assets:	util/snis_update_assets.c
+	$(Q)$(CC) -o bin/snis_update_assets util/snis_update_assets.c -lcrypto -lcurl
 
 build_info.h: bin/check-endianness snis.h gather_build_info Makefile
 	@echo "  GATHER BUILD INFO"
