@@ -100,9 +100,12 @@ static char *compute_md5_sum(const char *filename)
 static int fetch_manifest(CURL *curl, char *manifest_url, char **manifest_filename)
 {
 	/* Generate a temporary filename */
-	*manifest_filename = malloc(1024);
-	snprintf(*manifest_filename, 1024, "/tmp/snis_tmp_manifest.txt");
-	return fetch_file(curl, manifest_url, *manifest_filename);
+	*manifest_filename = malloc(PATH_MAX);
+	snprintf(*manifest_filename, PATH_MAX, "/tmp/snis_tmp_manifest.txt");
+	int rc = fetch_file(curl, manifest_url, *manifest_filename);
+	if (rc)
+		free(*manifest_filename);
+	return rc;
 }
 
 static int make_parent_directories(char *asset_filename)
@@ -246,10 +249,11 @@ int main(int argc, char *argv[])
 	rc = fetch_manifest(curl, manifest_url, &manifest_filename);
 	if (rc) {
 		fprintf(stderr, "%s: Failed to fetch manifest from %s\n", P, manifest_url);
-		return -1;
+		goto out1;
 	}
 	process_manifest(curl, manifest_filename);
 	free(manifest_filename);
+out1:
 	curl_easy_cleanup(curl);
 out:
 	curl_global_cleanup();
