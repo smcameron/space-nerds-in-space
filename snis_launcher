@@ -6,6 +6,11 @@ then
 	exit 1
 fi
 
+if [ "$SNIS_DB_DIR" = "" ]
+then
+	SNIS_DB_DIR="."
+fi
+
 # Hack this in for now.  Note: the Makefile edits the next line with sed
 # so be careful if you change it that the Makefile still edits it correctly.
 # Currently it matches the pattern: '^PREFIX=[.]$'
@@ -239,21 +244,21 @@ start_snis_multiverse()
 		exempt=
 	fi
 
-	if [ ! -d ./snisdb ]
+	if [ ! -d "$SNIS_DB_DIR"/snisdb ]
 	then
-		printf "./snisdb/ does not exist, creating directory.\n" 1>&2
-		mkdir ./snisdb
+		printf "%s/snisdb/ does not exist, creating directory.\n" "$SNIS_DB_DIR" 1>&2
+		mkdir -p "$SNIS_DB_DIR"/snisdb
 		if [ "$?" != "0" ]
 		then
-			printf "mkdir ./snisdb failed.\n"
+			printf "mkdir %s/snisdb failed.\n" "$SNIS_DB_DIR"
 		fi
-		if [ ! -d ./snisdb ]
+		if [ ! -d "$SNIS_DB_DIR"/snisdb ]
 		then
-			printf "Directory ./snisdb does not exist, snis_multiverse will not run without it, please create it.\n" 1>&2
+			printf "Directory %s/snisdb does not exist, snis_multiverse will not run without it, please create it.\n" "$SNIS_DB_DIR" 1>&2
 			printf "Failed to start multiverse server\n" 1>&2
 			return;
 		fi
-		printf "Created ./snisdb for snis_multiverse\n" 1>&2
+		printf "Created %s/snisdb for snis_multiverse\n" "$SNIS_DB_DIR" 1>&2
 	fi
 	check_for_unexpected_lockdir /tmp/snis_multiverse_lock snis_multiverse
 	(${SNIS_MULTIVERSE} $autowrangle -l "${LOBBYHOST}" -n nickname -L narnia $exempt > \
