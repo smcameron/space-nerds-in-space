@@ -41,6 +41,47 @@ This file is part of Spacenerds In Space.
 static int updated_files = 0;
 static int new_files = 0;
 
+static struct directory_list {
+	char **name;
+	int nnames;
+	int nslots;
+} dir_list = { NULL, 0, 0 };
+
+static int lookup_dir_name(struct directory_list *dir_list, char *name)
+{
+	for (int i = 0; i < dir_list->nnames; i++)
+		if (strcmp(dir_list->name[i], name) == 0)
+			return i;
+	return -1;
+}
+
+static int remember_dir_name(struct directory_list *dir_list, char *name)
+{
+	/* Check if we already know it so we don't store it again. */
+	int rc = lookup_dir_name(dir_list, name);
+	if (rc >= 0)
+		return 0;
+
+	/* Make space for the new name if necessary */
+	if (dir_list->nnames >= dir_list->nslots) {
+		int new_nslots;
+		if (dir_list->nslots == 0)
+			new_nslots = 10;
+		else
+			new_nslots *= 2;
+		char **new_name = realloc(dir_list->name, new_nslots * sizeof(*new_name));
+		if (new_name) {
+			dir_list->name = new_name;
+			dir_list->nslots = new_nslots;
+		} else {
+			return -1;
+		}
+	}
+	dir_list->name[dir_list->nnames] = strdup(name);
+	dir_list->nnames++;
+	return 0;
+}
+
 /* Callback function to write the received data to a file */
 static size_t write_data(void *ptr, size_t size, size_t nmemb, FILE *stream)
 {
@@ -131,13 +172,23 @@ static int make_parent_directories(char *asset_filename)
 		if (t) {
 			strcat(path, "/");
 			strcat(path, t);
-			/* printf("%s: Creating directory %s\n", P, path); */
+
+			/* Check if we already created this directory */
+			int dirnum = lookup_dir_name(&dir_list, path);
+			if (dirnum >= 0)
+				continue; /* we did */
+
+			printf("%s: Creating directory %s\n", P, path);
 			errno = 0;
 			int rc = mkdir(path, 0775);
-			if (rc && errno == EEXIST)
+			if (rc && errno == EEXIST) {
+				(void) remember_dir_name(&dir_list, path); /* so we don't keep trying to create it */
 				continue;
-			if (!rc && errno == 0)
+			}
+			if (!rc && errno == 0) {
+				(void) remember_dir_name(&dir_list, path); /* so we don't keep trying to create it */
 				continue;
+			}
 			fprintf(stderr, "%s: failed to create directory %s: %s\n", P, path, strerror(errno)); {
 				free(x);
 				return -1;
