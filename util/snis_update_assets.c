@@ -82,6 +82,20 @@ static int remember_dir_name(struct directory_list *dir_list, char *name)
 	return 0;
 }
 
+static void free_directory_list(struct directory_list *dir_list)
+{
+	if (!dir_list->name)
+		return;
+	for (int i = 0; i < dir_list->nnames; i++) {
+		free(dir_list->name[i]);
+		dir_list->name[i] = NULL;
+	}
+	free(dir_list->name);
+	dir_list->name = NULL;
+	dir_list->nslots = 0;
+	dir_list->nnames = 0;
+}
+
 /* Callback function to write the received data to a file */
 static size_t write_data(void *ptr, size_t size, size_t nmemb, FILE *stream)
 {
@@ -309,5 +323,6 @@ out1:
 out:
 	curl_global_cleanup();
 	printf("Updated files: %d\nNew files: %d\n", updated_files, new_files);
+	free_directory_list(&dir_list);
 	return rc;
 }
