@@ -80,7 +80,8 @@ persisted in a simple database by snis_multiverse.
 
 static char *asset_dir;
 static char *lobby, *nick, *location;
-static char *database_root = "./snisdb";
+#define DEFAULT_DATABASE_ROOT "./snisdb"
+static char *database_root = DEFAULT_DATABASE_ROOT;
 static const int database_mode = 0744;
 static pthread_mutex_t data_mutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t listener_mutex = PTHREAD_MUTEX_INITIALIZER;
@@ -1551,6 +1552,17 @@ static void read_replacement_assets(struct replacement_asset *r, char *asset_dir
 		fprintf(stderr, "%s: Warning:  %s\n", p, strerror(errno));
 }
 
+static void maybe_override_database_root(void)
+{
+	char *snis_db_dir = getenv("SNIS_DB_DIR");
+
+	if (!snis_db_dir)
+		return;
+
+	database_root = malloc(PATH_MAX);
+	snprintf(database_root, PATH_MAX, "%s/%s", snis_db_dir, DEFAULT_DATABASE_ROOT);
+}
+
 int main(int argc, char *argv[])
 {
 	struct ssgl_game_server gameserver;
@@ -1558,6 +1570,7 @@ int main(int argc, char *argv[])
 	pthread_t lobby_thread;
 	struct in_addr ip;
 
+	maybe_override_database_root();
 	asset_dir = override_asset_dir();
 	refuse_to_run_as_root("snis_multiverse");
 	create_lock_or_die();
