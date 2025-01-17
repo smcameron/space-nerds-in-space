@@ -1566,16 +1566,12 @@ int main(int argc, char *argv[])
 	construct_starmap();
 
 	open_log_file();
+	printf("SNIS multiverse server\n");
+	create_database_root_or_die(database_root);
 	if (restore_data()) {
 		fprintf(stderr, "Failed to restore data from checkpoint database\n");
 		return -1;
 	}
-
-
-	printf("SNIS multiverse server\n");
-
-	create_database_root_or_die(database_root);
-
 	snis_protocol_debugging(1);
 	ignore_sigpipe();
 	rc = start_listener_thread();
