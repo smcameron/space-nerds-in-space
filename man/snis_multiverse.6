@@ -47,8 +47,21 @@ Specify the location of this multiverse process.
 Print the program's version number and exit.
 .TP
 .SH FILES
-.PP
-TBD
+.TP
+\fB./snis_multiverse_log.txt\fR
+(Only if started via snis_launcher.) This file contains the stdout and
+stderr of snis_multiverse, Can be useful for debugging.  This file can
+be relocated via the SNIS_LOG_DIR environment variable.
+.TP
+\fB./snisdb\fR
+Directory containing a database of bridge data.  This database is used for verifying
+username/passwords for bridges and for storing bridge state to allow bridges to transition
+from one snis_server instance to another.
+
+This directory is normally stored in the current directory of the snis_multiverse process
+but can be relocated via the environment variable SNIS_DB_DIR.  If SNIS_DB_DIR is set to,
+for instance, /home/kilroy, then the database will be stored under /home/kilroy/snisdb
+
 .PP
 .SH SEE ALSO
 .PP
