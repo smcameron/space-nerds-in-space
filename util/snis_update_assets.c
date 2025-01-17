@@ -192,7 +192,6 @@ static int make_parent_directories(char *asset_filename)
 			if (dirnum >= 0)
 				continue; /* we did */
 
-			printf("%s: Creating directory %s\n", P, path);
 			errno = 0;
 			int rc = mkdir(path, 0775);
 			if (rc && errno == EEXIST) {
@@ -200,6 +199,7 @@ static int make_parent_directories(char *asset_filename)
 				continue;
 			}
 			if (!rc && errno == 0) {
+				printf("%s: Created directory %s\n", P, path);
 				(void) remember_dir_name(&dir_list, path); /* so we don't keep trying to create it */
 				continue;
 			}
