@@ -68,7 +68,7 @@ static int remember_dir_name(struct directory_list *dir_list, char *name)
 		if (dir_list->nslots == 0)
 			new_nslots = 10;
 		else
-			new_nslots *= 2;
+			new_nslots = dir_list->nslots * 2;
 		char **new_name = realloc(dir_list->name, new_nslots * sizeof(*new_name));
 		if (new_name) {
 			dir_list->name = new_name;
