@@ -41,10 +41,12 @@ This file is part of Spacenerds In Space.
 
 static struct option long_options[] = {
 	{"dry-run", no_argument, 0, 'd' },
+	{"destdir", required_argument, 0, 'D' },
 	{0, 0, 0, 0 },
 };
 
 static int dry_run = 0;
+static char *destdir = NULL;
 
 static int updated_files = 0;
 static int new_files = 0;
@@ -321,12 +323,15 @@ static void process_cmdline_options(int argc, char *argv[])
 	while (1) {
 		option_index = 0;
 
-		c = getopt_long(argc, argv, "", long_options, &option_index);
+		c = getopt_long(argc, argv, "D:", long_options, &option_index);
 		if (c == -1)
 			break;
 		switch (c) {
 		case 'd': /* dry run */
 			dry_run = 1;
+			break;
+		case 'D':
+			destdir = strdup(optarg);
 			break;
 		default:
 			break;
@@ -343,6 +348,15 @@ int main(int argc, char *argv[])
 	char answer[100];
 
 	process_cmdline_options(argc, argv);
+
+	if (destdir) {
+		errno = 0;
+		rc = chdir(destdir);
+		if (rc != 0) {
+			fprintf(stderr, "%s: failed to chdir to %s\n", P, destdir);
+			exit(1);
+		}
+	}
 
 	printf("WARNING!  This program is experimental!  Are you sure you wish to proceeed (y/n)? ");
 	memset(answer, 0, sizeof(answer));
