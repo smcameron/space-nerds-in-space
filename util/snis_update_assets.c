@@ -33,10 +33,18 @@ This file is part of Spacenerds In Space.
 #include <unistd.h>
 #include <curl/curl.h>
 #include <openssl/md5.h>
+#include <getopt.h>
 
 #define SNIS_ASSET_URL "https://spacenerdsinspace.com/snis-assets/"
 #define MANIFEST_URL SNIS_ASSET_URL "manifest.txt"
 #define P "snis_update_assets"
+
+static struct option long_options[] = {
+	{"dry-run", no_argument, 0, 'd' },
+	{0, 0, 0, 0 },
+};
+
+static int dry_run = 0;
 
 static int updated_files = 0;
 static int new_files = 0;
@@ -103,11 +111,15 @@ static size_t write_data(void *ptr, size_t size, size_t nmemb, FILE *stream)
 }
 
 /* Function to fetch a file using libcurl */
-static int fetch_file(CURL *curl, const char *url, const char *filename)
+static int fetch_file_helper(CURL *curl, const char *url, const char *filename, int honor_dry_run)
 {
 	CURLcode res;
 	FILE *fp;
 
+	if (dry_run && honor_dry_run) {
+		printf("Would fetch %s\n", url);
+		return 0;
+	}
 	printf("Fetching %s\n", url);
 	curl_easy_setopt(curl, CURLOPT_URL, url);
 	curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_data);
@@ -123,6 +135,11 @@ static int fetch_file(CURL *curl, const char *url, const char *filename)
 	}
 	fclose(fp);
 	return !(res == CURLE_OK);
+}
+
+static int fetch_file(CURL *curl, const char *url, const char *filename)
+{
+	fetch_file_helper(curl, url, filename, 1);
 }
 
 static char *compute_md5_sum(const char *filename)
@@ -157,7 +174,9 @@ static int fetch_manifest(CURL *curl, char *manifest_url, char **manifest_filena
 	/* Generate a temporary filename */
 	*manifest_filename = malloc(PATH_MAX);
 	snprintf(*manifest_filename, PATH_MAX, "/tmp/snis_tmp_manifest.txt");
-	int rc = fetch_file(curl, manifest_url, *manifest_filename);
+
+	/* Actually fetch the manifest ignoring --dry-run flag. */
+	int rc = fetch_file_helper(curl, manifest_url, *manifest_filename, 0);
 	if (rc)
 		free(*manifest_filename);
 	return rc;
@@ -192,6 +211,11 @@ static int make_parent_directories(char *asset_filename)
 			if (dirnum >= 0)
 				continue; /* we did */
 
+			if (dry_run) {
+				printf("%s: Would create directory %s\n", P, path);
+				(void) remember_dir_name(&dir_list, path); /* so we don't keep trying to create it */
+				continue;
+			}
 			errno = 0;
 			int rc = mkdir(path, 0775);
 			if (rc && errno == EEXIST) {
@@ -290,6 +314,26 @@ out:
 	return rc;
 }
 
+static void process_cmdline_options(int argc, char *argv[])
+{
+	int c, option_index;
+
+	while (1) {
+		option_index = 0;
+
+		c = getopt_long(argc, argv, "", long_options, &option_index);
+		if (c == -1)
+			break;
+		switch (c) {
+		case 'd': /* dry run */
+			dry_run = 1;
+			break;
+		default:
+			break;
+		}
+	}
+}
+
 int main(int argc, char *argv[])
 {
 	int rc = 0;
@@ -297,6 +341,8 @@ int main(int argc, char *argv[])
 	char *manifest_filename;
 	CURL *curl;
 	char answer[100];
+
+	process_cmdline_options(argc, argv);
 
 	printf("WARNING!  This program is experimental!  Are you sure you wish to proceeed (y/n)? ");
 	memset(answer, 0, sizeof(answer));
@@ -323,7 +369,9 @@ out1:
 	curl_easy_cleanup(curl);
 out:
 	curl_global_cleanup();
-	printf("Updated files: %d\nNew files: %d\n", updated_files, new_files);
+	printf("%s files: %d\n%s files: %d\n",
+			dry_run ? "Would have updated" : "Updated", updated_files,
+			dry_run ? "Would have created new" : "New", new_files);
 	free_directory_list(&dir_list);
 	return rc;
 }
