@@ -29,11 +29,15 @@ This file is part of Spacenerds In Space.
 #include <string.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <fcntl.h>
 #include <limits.h>
 #include <unistd.h>
 #include <curl/curl.h>
 #include <openssl/md5.h>
 #include <getopt.h>
+#include <dirent.h>
+
+#include "../string-utils.h"
 
 #define SNIS_ASSET_URL "https://spacenerdsinspace.com/snis-assets/"
 #define MANIFEST_URL SNIS_ASSET_URL "manifest.txt"
@@ -42,11 +46,14 @@ This file is part of Spacenerds In Space.
 static struct option long_options[] = {
 	{"dry-run", no_argument, 0, 'd' },
 	{"destdir", required_argument, 0, 'D' },
+	{"srcdir", required_argument, 0, 's' },
 	{0, 0, 0, 0 },
 };
 
 static int dry_run = 0;
 static char *destdir = NULL;
+static char *srcdir = NULL;
+static char orig_cwd[PATH_MAX * 2] = { 0 };
 
 static int updated_files = 0;
 static int new_files = 0;
@@ -239,14 +246,60 @@ static int make_parent_directories(char *asset_filename)
 	return 0;
 }
 
+static int copy_file(char *src, char *dest)
+{
+	int fsize;
+
+	printf("Copying %s to %s\n", src, dest);
+	if (dry_run)
+		return 0;
+	char *buffer = slurp_file(src, &fsize);
+	if (!buffer) {
+		fprintf(stderr, "%s: failed to read file %s\n", P, src);
+		return -1;
+	}
+
+	int bytes_to_write = fsize;
+	int bytes_written = 0;
+
+	int fd = open(dest, O_TRUNC | O_WRONLY | O_CREAT, 0644);
+	do {
+
+		int rc = write(fd, &buffer[bytes_written], bytes_to_write);
+		if (rc >= 0) {
+			bytes_written += rc;
+			bytes_to_write -= rc;
+			if (bytes_to_write == 0)
+				break;
+		}
+		if (rc < 0) {
+			fprintf(stderr, "%s: failed to write to %s: %s\n", P, dest, strerror(errno));
+			close(fd);
+			return -1;
+		}
+	} while (1);
+	close(fd);
+	return 0;
+}
+
 static int fetch_asset(CURL *curl, char *asset_filename)
 {
 	char url[PATH_MAX + 1000];
 	int rc = make_parent_directories(asset_filename);
 	if (rc != 0)
 		return rc;
-	snprintf(url, sizeof(url), "%s%s", SNIS_ASSET_URL, asset_filename);
-	return fetch_file(curl, url, asset_filename);
+	if (!srcdir) {
+		snprintf(url, sizeof(url), "%s%s", SNIS_ASSET_URL, asset_filename);
+		return fetch_file(curl, url, asset_filename);
+	} else {
+		/* fprintf(stderr, "Copy file from %s/%s to %s\n", orig_cwd, asset_filename, asset_filename); */
+		int srclen = strlen(orig_cwd) + 1 + strlen(asset_filename) + 1;
+		char *src = malloc(srclen);
+		snprintf(src, srclen, "%s/%s", orig_cwd, asset_filename);
+		rc = copy_file(src, asset_filename);
+		free(src);
+		return rc;
+	}
 }
 
 static int process_manifest(CURL *curl, char *manifest_filename)
@@ -319,6 +372,7 @@ out:
 static void process_cmdline_options(int argc, char *argv[])
 {
 	int c, option_index;
+	char cwd[PATH_MAX];
 
 	while (1) {
 		option_index = 0;
@@ -333,10 +387,97 @@ static void process_cmdline_options(int argc, char *argv[])
 		case 'D':
 			destdir = strdup(optarg);
 			break;
+		case 's':
+			srcdir = strdup(optarg);
+			if (!getcwd(cwd, PATH_MAX)) {
+				fprintf(stderr, "%s: Cannot get current directory: %s\n", P, strerror(errno));
+				exit(1);
+			}
+			snprintf(orig_cwd, PATH_MAX, "%s", cwd);
+			break;
 		default:
 			break;
 		}
 	}
+}
+
+static char *filenames_to_ignore[] = {
+	".",
+	"..",
+	".gitignore",
+	".git"
+};
+
+static int file_should_be_ignored(char *filename)
+{
+	int n = sizeof(filenames_to_ignore) / sizeof(filenames_to_ignore[0]);
+	for (int i = 0; i < n; i++) {
+		if (strcmp(filename, filenames_to_ignore[i]) == 0)
+			return 1;
+	}
+	return 0;
+}
+
+static int recursively_build_local_manifest(FILE *f, char *srcdir)
+{
+	char dir[PATH_MAX];
+	struct dirent **namelist;
+	int rc, n;
+
+	rc = 0;
+	/* fprintf(stderr, "Executing scandir on %s\n", srcdir); */
+	errno = 0;
+	n = scandir(srcdir, &namelist, NULL, alphasort);
+	if (n == -1) {
+		fprintf(stderr, "%s: scandir %s failed: %s\n", P, srcdir, strerror(errno));
+		return -1;
+	}
+
+	for (int i = 0; i < n; i++) {
+		struct stat statbuf;
+		char path[PATH_MAX];
+		if (file_should_be_ignored(namelist[i]->d_name))
+			continue;
+		snprintf(path, PATH_MAX, "%s/%s", srcdir, namelist[i]->d_name);
+		errno = 0;
+		rc = stat(path, &statbuf);
+		if (rc != 0) {
+			fprintf(stderr, "%s: failed to stat %s: %s\n", P, namelist[i]->d_name, strerror(errno));
+			goto out;
+		}
+
+		if ((statbuf.st_mode & S_IFMT) == S_IFREG) { /* Regular file? */
+			snprintf(dir, PATH_MAX, "%s/%s", srcdir, namelist[i]->d_name);
+			char *md5sum = compute_md5_sum(dir);
+			/* fprintf(stderr, "%s  %s\n", md5sum, dir); */
+			fprintf(f, "%s  %s\n", md5sum, dir);
+		} else if ((statbuf.st_mode & S_IFMT) == S_IFDIR) { /* Directory? */
+			snprintf(dir, PATH_MAX, "%s/%s", srcdir, namelist[i]->d_name);
+			rc = recursively_build_local_manifest(f, dir);
+			if (rc)
+				goto out;
+		} /* Ignore everything except directories and regular files */
+	}
+
+out:
+	for (int i = 0; i < n; i++) {
+		free(namelist[i]);
+	}
+	free(namelist);
+	return rc;
+}
+
+static int build_local_manifest(char *srcdir, char *manifest_filename)
+{
+	FILE *f = fopen(manifest_filename, "w+");
+	if (!f) {
+		fprintf(stderr, "%s: Failed to open %s for write\n", P, manifest_filename);
+		return -1;
+	}
+
+	int rc = recursively_build_local_manifest(f, srcdir);
+	fclose(f);
+	return rc;
 }
 
 int main(int argc, char *argv[])
@@ -348,15 +489,6 @@ int main(int argc, char *argv[])
 	char answer[100];
 
 	process_cmdline_options(argc, argv);
-
-	if (destdir) {
-		errno = 0;
-		rc = chdir(destdir);
-		if (rc != 0) {
-			fprintf(stderr, "%s: failed to chdir to %s\n", P, destdir);
-			exit(1);
-		}
-	}
 
 	printf("WARNING!  This program is experimental!  Are you sure you wish to proceeed (y/n)? ");
 	memset(answer, 0, sizeof(answer));
@@ -372,11 +504,27 @@ int main(int argc, char *argv[])
 		goto out;
 	}
 
-	rc = fetch_manifest(curl, manifest_url, &manifest_filename);
-	if (rc) {
-		fprintf(stderr, "%s: Failed to fetch manifest from %s\n", P, manifest_url);
-		goto out1;
+	if (!srcdir) {
+		rc = fetch_manifest(curl, manifest_url, &manifest_filename);
+		if (rc) {
+			fprintf(stderr, "%s: Failed to fetch manifest from %s\n", P, manifest_url);
+			goto out1;
+		}
+	} else {
+		manifest_filename = strdup("/tmp/snis-asset-local-manifest.txt");
+		rc = build_local_manifest(srcdir, manifest_filename);
 	}
+
+	if (destdir) {
+		errno = 0;
+		rc = chdir(destdir);
+		if (rc != 0) {
+			fprintf(stderr, "%s: failed to chdir to %s\n", P, destdir);
+			exit(1);
+		}
+		fprintf(stderr, "Changed current directory to %s\n", destdir);
+	}
+
 	process_manifest(curl, manifest_filename);
 	free(manifest_filename);
 out1:
