@@ -22,10 +22,28 @@ export SNIS_DB_DIR
 PREFIX=.
 
 BINDIR=${PREFIX}/bin
+export SNIS_ASSET_SRC_DIR=${PREFIX}/share/snis
 if [ "$SNIS_ASSET_DIR" = "" ]
 then
-	export SNIS_ASSET_DIR=${PREFIX}/share/snis
+	if [ "$XDG_DATA_HOME" = "" ]
+	then
+		export SNIS_ASSET_DIR=$HOME/.local/share/space-nerds-in-space/share/snis
+	else
+		export SNIS_ASSET_DIR=$XDG_DATA_HOME/space-nerds-in-space/share/snis
+	fi
 fi
+
+echo $SNIS_ASSET_DIR | grep '[/]share[/]snis$' > /dev/null 2>&1
+if [ "$?" != "0" ]
+then
+	echo "Error: SNIS_ASSET_DIR must end with /share/snis" 1>&2
+	echo "Current value of SNIS_ASSET_DIR is $SNIS_ASSET_DIR" 1>&2
+	echo "Exiting." 1>&2
+	exit 1
+fi
+
+SNIS_ASSET_DIR_ROOT=$(echo $SNIS_ASSET_DIR | sed -e 's/[/]share[/]snis$//')
+
 
 if [ "$SNIS_LOG_DIR" = "" ]
 then
@@ -114,7 +132,7 @@ cat << EOF 1>&2
    5. Stop all SNIS processes
    6. Stop all SNIS clients
    7. Stop all SNIS servers
-   8. Check for asset updates
+   8. Check for asset updates and set up assets
    9. Options
    0. Quit
 EOF
@@ -443,9 +461,8 @@ spot_check_for_assets()
 {
 	if [ ! -f "${SNIS_ASSET_DIR}/models/cylinder.stl" ]
 	then
-		printf "Failed to find %s/models/cylinder.stl\n" "${SNIS_ASSET_DIR}" 1>&2
-		printf "Perhaps you need to run 'make update-assets' or 'make models'?\n" 1>&2
-		exit 1
+		printf "\nFailed to find %s/models/cylinder.stl\n" "${SNIS_ASSET_DIR}" 1>&2
+		printf "Perhaps you need to check for asset updates first (option 8).\n\n" 1>&2
 	fi
 }
 
@@ -507,7 +524,6 @@ choose_options()
 }
 
 check_for_ip_address
-spot_check_for_assets
 
 while true
 do
@@ -515,6 +531,7 @@ do
 	show_snis_processes
 	print_main_menu
 	check_for_bad_lockfiles
+	spot_check_for_assets
 	printf "   Choose [0-10]: "
 	read -r x
 
@@ -539,7 +556,11 @@ do
 		;;
 	4) start_snis_client "$SNIS_CLIENT"
 		;;
-	8) ( bin/snis_update_assets --dry-run --destdir "$SNIS_ASSET_DIR"/../..; )
+	8)
+		# copy local assets first
+		bin/snis_update_assets --destdir "$SNIS_ASSET_DIR_ROOT" --srcdir "$SNIS_ASSET_SRC_DIR" ;
+		# download assets from spacenerdsinspace.com
+		bin/snis_update_assets --destdir "$SNIS_ASSET_DIR_ROOT" ;
 		;;
 	9) choose_options
 		;;
