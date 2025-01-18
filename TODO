@@ -414,3 +414,15 @@ NICE TO HAVE:
   https://github.com/godotengine/godot/commit/27a3014f5052ae40f89684a5559c17fbebe7aa8d
   And here is a paper: https://andrewthall.org/papers/df64_qf128.pdf
 
+* share/snis and snisdb should probably honor the XDG directory specification for runtime
+  data.  For snisdb this should be pretty straightforward as we already have SNIS_DB_DIR
+  to allow moving it.  But share/snis is a little trickier.  Currently some of that stuff
+  is in github, and some on spacenerdsinspace.com.  The idea I have for now is to modify
+  snis_update_assets to be able to copy data from a local source as well as from remote,
+  and allow it to generate a manifest for local stuff on the fly by traversing the directory
+  and knowing to skip .git dirs, etc.  Then, either via snis_launcher, or maybe via
+  snis_client and snis_server (with some interlock to prevent them stomping on each other)
+  the assets could be updated to copy them under (by default) ~/.local/share/space-nerds-in-space
+  in accordance with XDG dir spec for runtime usage.  snis_update_assets could check for
+  updates periodically (probably the first run, plus on startup if more than a week has
+  elapsed, or on user demand.)  Something like that.
