@@ -233,6 +233,7 @@ static int process_manifest(CURL *curl, char *manifest_filename)
 	f = fopen(manifest_filename, "r");
 	if (!f) {
 		fprintf(stderr, "%s: Failed to open %s: %s\n", P, manifest_filename, strerror(errno));
+		return -1;
 	}
 
 	do {
