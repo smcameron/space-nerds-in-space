@@ -539,7 +539,7 @@ do
 		;;
 	4) start_snis_client "$SNIS_CLIENT"
 		;;
-	8) util/snis_update_assets.sh --dry-run
+	8) ( bin/snis_update_assets --dry-run --destdir "$SNIS_ASSET_DIR"/../..; )
 		;;
 	9) choose_options
 		;;
