@@ -8,8 +8,13 @@ fi
 
 if [ "$SNIS_DB_DIR" = "" ]
 then
-	SNIS_DB_DIR="."
+	SNIS_DB_DIR="$XDG_DATA_HOME"
+	if [ "$SNIS_DB_DIR" = "" ]
+	then
+		SNIS_DB_DIR="$HOME/.local/share/space-nerds-in-space"
+	fi
 fi
+export SNIS_DB_DIR
 
 # Hack this in for now.  Note: the Makefile edits the next line with sed
 # so be careful if you change it that the Makefile still edits it correctly.

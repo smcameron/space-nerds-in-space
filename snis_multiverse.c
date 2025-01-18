@@ -1555,9 +1555,27 @@ static void read_replacement_assets(struct replacement_asset *r, char *asset_dir
 static void maybe_override_database_root(void)
 {
 	char *snis_db_dir = getenv("SNIS_DB_DIR");
+	char x[PATH_MAX];
 
-	if (!snis_db_dir)
+	if (!snis_db_dir) {
+		char *xdg_data_home = getenv("XDG_DATA_HOME");
+		if (!xdg_data_home || xdg_data_home[0] != '/') {
+			char *home = getenv("HOME");
+			if (!home) {
+				fprintf(stderr, "HOME is not set!\n");
+				snis_db_dir = "."; /* legacy, shouldn't get here as $HOME ought to be set */
+			} else {
+				snprintf(x, PATH_MAX, "%s/.local/share/space-nerds-in-space", home);
+				snis_db_dir = x;
+			}
+		} else {
+			snprintf(x, PATH_MAX, "%s/space-nerds-in-space", xdg_data_home);
+			snis_db_dir = x;
+		}
 		return;
+	}
+
+	fprintf(stderr, "snis_db_dir = %s\n", snis_db_dir);
 
 	database_root = malloc(PATH_MAX);
 	snprintf(database_root, PATH_MAX, "%s/%s", snis_db_dir, DEFAULT_DATABASE_ROOT);
