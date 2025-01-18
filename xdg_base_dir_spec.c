@@ -51,7 +51,7 @@ struct xdg_base_context *xdg_base_context_new(char *appname, char *legacy_path)
 	cx->appname = strdup(appname);
 	cx->legacy_path = legacy_path ? strdup(legacy_path) : NULL;
 	s = getenv("XDG_DATA_HOME");
-	cx->xdg_data_home = s ? strdup(s) : NULL;
+	cx->xdg_data_home = (s && s[0] == '/') ? strdup(s) : NULL;
 	home = getenv("HOME");
 	cx->home = home ? strdup(home) : NULL;
 
