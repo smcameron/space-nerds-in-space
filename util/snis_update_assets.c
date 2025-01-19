@@ -369,6 +369,13 @@ out:
 	return rc;
 }
 
+static void usage(void)
+{
+	fprintf(stderr, "\n%s: usage:\n", P);
+	fprintf(stderr, "%s [ --dry-run ] [ --srcdir dir ] --destdir dir\n\n", P);
+	exit(1);
+}
+
 static void process_cmdline_options(int argc, char *argv[])
 {
 	int c, option_index;
@@ -399,6 +406,11 @@ static void process_cmdline_options(int argc, char *argv[])
 			break;
 		}
 	}
+	if (!destdir) {
+		fprintf(stderr, "%s: required destination directory not specified.\n", P);
+		usage();
+	}
+
 }
 
 static char *filenames_to_ignore[] = {
