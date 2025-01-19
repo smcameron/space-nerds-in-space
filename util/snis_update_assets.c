@@ -48,6 +48,7 @@ static struct option long_options[] = {
 	{"destdir", required_argument, 0, 'D' },
 	{"srcdir", required_argument, 0, 's' },
 	{"force", no_argument, 0, 'f' },
+	{"verbose", no_argument, 0, 'V'},
 	{0, 0, 0, 0 },
 };
 
@@ -56,6 +57,7 @@ static char *destdir = NULL;
 static char *srcdir = NULL;
 static char orig_cwd[PATH_MAX * 2] = { 0 };
 static int force_option = 0;
+static int verbose = 0;
 
 static int updated_files = 0;
 static int new_files = 0;
@@ -311,6 +313,8 @@ static int process_manifest(CURL *curl, char *manifest_filename)
 	int linecount = 0;
 	int rc = 0;
 
+	if (verbose)
+		printf("Processing manifest %s\n", manifest_filename);
 	f = fopen(manifest_filename, "r");
 	if (!f) {
 		fprintf(stderr, "%s: Failed to open %s: %s\n", P, manifest_filename, strerror(errno));
@@ -354,11 +358,18 @@ static int process_manifest(CURL *curl, char *manifest_filename)
 			if (rc == 0) { /* file exists? */
 				char *computed_md5sum = compute_md5_sum(asset_filename);
 				if (strcmp(computed_md5sum, md5sum) != 0) {
+					if (verbose)
+						printf("md5 mismatch, updating %s\n", asset_filename);
 					if (fetch_asset(curl, asset_filename) == 0)
 						updated_files++;
+				} else {
+					if (verbose)
+						printf("md5 ok %s\n", asset_filename);
 				}
 				free(computed_md5sum);
 			} else if (errno == ENOENT) { /* file does not exist, fetch it */
+				if (verbose)
+					printf("new file %s\n", asset_filename);
 				if (fetch_asset(curl, asset_filename) == 0)
 					new_files++;
 			} else {
@@ -386,7 +397,7 @@ static void process_cmdline_options(int argc, char *argv[])
 	while (1) {
 		option_index = 0;
 
-		c = getopt_long(argc, argv, "D:f", long_options, &option_index);
+		c = getopt_long(argc, argv, "D:fV", long_options, &option_index);
 		if (c == -1)
 			break;
 		switch (c) {
@@ -406,6 +417,9 @@ static void process_cmdline_options(int argc, char *argv[])
 			break;
 		case 'f':
 			force_option = 1;
+			break;
+		case 'V':
+			verbose = 1;
 			break;
 		default:
 			break;
@@ -442,7 +456,8 @@ static int recursively_build_local_manifest(FILE *f, char *srcdir)
 	int rc, n;
 
 	rc = 0;
-	/* fprintf(stderr, "Executing scandir on %s\n", srcdir); */
+	if (verbose)
+		printf("Executing scandir on %s\n", srcdir);
 	errno = 0;
 	n = scandir(srcdir, &namelist, NULL, alphasort);
 	if (n == -1) {
@@ -453,8 +468,11 @@ static int recursively_build_local_manifest(FILE *f, char *srcdir)
 	for (int i = 0; i < n; i++) {
 		struct stat statbuf;
 		char path[PATH_MAX];
-		if (file_should_be_ignored(namelist[i]->d_name))
+		if (file_should_be_ignored(namelist[i]->d_name)) {
+			if (verbose)
+				printf("Ignoring %s\n", namelist[i]->d_name);
 			continue;
+		}
 		snprintf(path, PATH_MAX, "%s/%s", srcdir, namelist[i]->d_name);
 		errno = 0;
 		rc = stat(path, &statbuf);
@@ -466,14 +484,18 @@ static int recursively_build_local_manifest(FILE *f, char *srcdir)
 		if ((statbuf.st_mode & S_IFMT) == S_IFREG) { /* Regular file? */
 			snprintf(dir, PATH_MAX, "%s/%s", srcdir, namelist[i]->d_name);
 			char *md5sum = compute_md5_sum(dir);
-			/* fprintf(stderr, "%s  %s\n", md5sum, dir); */
+			if (verbose)
+				printf("%s  %s\n", md5sum, dir);
 			fprintf(f, "%s  %s\n", md5sum, dir);
 		} else if ((statbuf.st_mode & S_IFMT) == S_IFDIR) { /* Directory? */
 			snprintf(dir, PATH_MAX, "%s/%s", srcdir, namelist[i]->d_name);
 			rc = recursively_build_local_manifest(f, dir);
 			if (rc)
 				goto out;
-		} /* Ignore everything except directories and regular files */
+		} else { /* Ignore everything except directories and regular files */
+			if (verbose)
+				printf("Ignoring %s (not regular file, not directory)\n", namelist[i]->d_name);
+		}
 	}
 
 out:
@@ -525,12 +547,16 @@ int main(int argc, char *argv[])
 	}
 
 	if (!srcdir) {
+		if (verbose)
+			printf("Fetching remote manifest\n");
 		rc = fetch_manifest(curl, manifest_url, &manifest_filename);
 		if (rc) {
 			fprintf(stderr, "%s: Failed to fetch manifest from %s\n", P, manifest_url);
 			goto out1;
 		}
 	} else {
+		if (verbose)
+			printf("Building local manifest\n");
 		manifest_filename = strdup("/tmp/snis-asset-local-manifest.txt");
 		rc = build_local_manifest(srcdir, manifest_filename);
 	}
