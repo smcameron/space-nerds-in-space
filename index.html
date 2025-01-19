@@ -368,6 +368,15 @@ In general, unless you are working on the models, you can and should skip this s
   make models
 </blockquote>
 </pre>
+Note: If you intend to run the game without downloading aditional assets
+(step 5, below), with just the default assets, this can be done, but
+requires the additional step of running:
+<pre>
+<blockquote>
+  bin/snis_update_assets --force --destdir ~/.local/share/space-nerds-in-space --srcdir ./share/snis
+</blockquote>
+</pre>
+to copy assets into ~/.local/share/space-nerds-in-space.
 <h2><a name="additionalassets">Step 5: Download additional assets</a></h2>
 <p>If you skipped step 4 and didn't build the openscad models, they will be downloaded
 in this step, along with some other things. This step requires an internet connection.
@@ -375,9 +384,12 @@ If you performed step 4, you may skip this step though it is not recommended,
 as you will be missing some additional solarsystem assets. As a non-root user:
 <pre>
 <blockquote>
-  make update-assets
+  ./snis_launcher
 </blockquote>
 </pre>
+Then choose option 8, "Check for asset updates and set up assets".  This will copy assets
+to (by default) into $HOME/.local/share/space-nerds-in-space/ and download additional assets
+over the internet.
 
 <h2><a name="singlemachineinstructions">Step 6. Run the Game on a single system (Try this before trying multiplayer)</a></h2>
 <p>Type (as a non-root user):
