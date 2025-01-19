@@ -558,9 +558,11 @@ do
 		;;
 	8)
 		# copy local assets first
-		bin/snis_update_assets --destdir "$SNIS_ASSET_DIR_ROOT" --srcdir "$SNIS_ASSET_SRC_DIR" ;
+		echo "Updating local assets..."
+		bin/snis_update_assets --force --destdir "$SNIS_ASSET_DIR_ROOT" --srcdir "$SNIS_ASSET_SRC_DIR" ;
 		# download assets from spacenerdsinspace.com
-		bin/snis_update_assets --destdir "$SNIS_ASSET_DIR_ROOT" ;
+		echo "Downloading remote assets from asset server..."
+		bin/snis_update_assets --force --destdir "$SNIS_ASSET_DIR_ROOT" ;
 		;;
 	9) choose_options
 		;;

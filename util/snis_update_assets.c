@@ -47,6 +47,7 @@ static struct option long_options[] = {
 	{"dry-run", no_argument, 0, 'd' },
 	{"destdir", required_argument, 0, 'D' },
 	{"srcdir", required_argument, 0, 's' },
+	{"force", no_argument, 0, 'f' },
 	{0, 0, 0, 0 },
 };
 
@@ -54,6 +55,7 @@ static int dry_run = 0;
 static char *destdir = NULL;
 static char *srcdir = NULL;
 static char orig_cwd[PATH_MAX * 2] = { 0 };
+static int force_option = 0;
 
 static int updated_files = 0;
 static int new_files = 0;
@@ -372,7 +374,7 @@ out:
 static void usage(void)
 {
 	fprintf(stderr, "\n%s: usage:\n", P);
-	fprintf(stderr, "%s [ --dry-run ] [ --srcdir dir ] --destdir dir\n\n", P);
+	fprintf(stderr, "%s [ --force ] [ --dry-run ] [ --srcdir dir ] --destdir dir\n\n", P);
 	exit(1);
 }
 
@@ -384,7 +386,7 @@ static void process_cmdline_options(int argc, char *argv[])
 	while (1) {
 		option_index = 0;
 
-		c = getopt_long(argc, argv, "D:", long_options, &option_index);
+		c = getopt_long(argc, argv, "D:f", long_options, &option_index);
 		if (c == -1)
 			break;
 		switch (c) {
@@ -401,6 +403,9 @@ static void process_cmdline_options(int argc, char *argv[])
 				exit(1);
 			}
 			snprintf(orig_cwd, PATH_MAX, "%s", cwd);
+			break;
+		case 'f':
+			force_option = 1;
 			break;
 		default:
 			break;
@@ -502,11 +507,14 @@ int main(int argc, char *argv[])
 
 	process_cmdline_options(argc, argv);
 
-	printf("WARNING!  This program is experimental!  Are you sure you wish to proceeed (y/n)? ");
-	memset(answer, 0, sizeof(answer));
-	char *a = fgets(answer, sizeof(answer), stdin);
-	if (!a || strncmp(answer, "y\n", 3) != 0)
-		exit(1);
+	if (!force_option) {
+		printf("Asset directory is %s\n", destdir);
+		printf("Are you sure you wish to proceeed with setting up assets (y/n)? ");
+		memset(answer, 0, sizeof(answer));
+		char *a = fgets(answer, sizeof(answer), stdin);
+		if (!a || strncmp(answer, "y\n", 3) != 0)
+			exit(1);
+	}
 
 	/* Set up curl */
 	curl_global_init(CURL_GLOBAL_ALL);
