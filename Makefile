@@ -763,14 +763,16 @@ ${BINARY_NAMES}:
 	@echo "You probably meant: make bin/$@" 1>&2
 	@/bin/false
 
-update-assets:
-	@util/snis_update_assets.sh
-
-check-assets:
-	@util/snis_update_assets.sh --dry-run
-
-install-assets:
-	@util/snis_update_assets.sh --localcopy --destdir ${DESTDIR}/${PREFIX}
+# Updating assets is now done via snis_launcher
+#
+# update-assets:
+#	@util/snis_update_assets.sh
+#
+# check-assets:
+#	@util/snis_update_assets.sh --dry-run
+#
+# install-assets:
+#	@util/snis_update_assets.sh --localcopy --destdir ${DESTDIR}/${PREFIX}
 
 build:	all
 

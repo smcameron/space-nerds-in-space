@@ -1,5 +1,9 @@
 #!/bin/sh
 
+echo "Sorry, this shell script has been superseded by snis_update_assets.c" 1>&2
+echo "which should be run from within bin/snis_launcher, option 8." 1>&2
+exit 1
+
 ASSET_URL="https://spacenerdsinspace.com/snis-assets"
 MANIFEST_URL="$ASSET_URL/manifest.txt"
 PROG="$0"
