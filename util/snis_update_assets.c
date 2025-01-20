@@ -385,7 +385,7 @@ out:
 static void usage(void)
 {
 	fprintf(stderr, "\n%s: usage:\n", P);
-	fprintf(stderr, "%s [ --force ] [ --dry-run ] [ --srcdir dir ] --destdir dir\n\n", P);
+	fprintf(stderr, "%s [ --verbose ] [ --force ] [ --dry-run ] [ --srcdir dir ] --destdir dir\n\n", P);
 	exit(1);
 }
 
