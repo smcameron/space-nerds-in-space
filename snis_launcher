@@ -37,7 +37,7 @@ then
 	fi
 	if [ ! -d "$SNIS_ASSET_DIR" ]
 	then
-		mkdir - p "$SNIS_ASSET_DIR"
+		mkdir -p "$SNIS_ASSET_DIR"
 	fi
 fi
 
@@ -77,7 +77,7 @@ fi
 
 if [ ! -d "$SNIS_LOG_DIR" ]
 then
-	mkdir -p "$SNIS_LOG_DIR" ]
+	mkdir -p "$SNIS_LOG_DIR"
 fi
 
 SNIS_SERVER=${BINDIR}/snis_server
