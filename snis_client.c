@@ -4631,6 +4631,7 @@ static void docking_magnets_button_pressed(__attribute__((unused)) void *cookie)
 static void nav_lights_button_pressed(__attribute__((unused)) void *cookie);
 static void standard_orbit_button_pressed(__attribute__((unused)) void *cookie);
 static void nav_starmap_button_pressed(__attribute__((unused)) void *cookie);
+static void explain_denied_role(char *role_name);
 
 static int key_press_cb(SDL_Window *window, SDL_Keysym *keysym, int key_repeat)
 {
@@ -4768,6 +4769,8 @@ static int key_press_cb(SDL_Window *window, SDL_Keysym *keysym, int key_repeat)
 		if (role & ROLE_NAVIGATION) {
 			displaymode = DISPLAYMODE_NAVIGATION;
 			wwviaudio_add_sound(CHANGESCREEN_SOUND);
+		} else {
+			explain_denied_role("navigation");
 		}
 		break;
 	case keyf3:
@@ -4777,6 +4780,8 @@ static int key_press_cb(SDL_Window *window, SDL_Keysym *keysym, int key_repeat)
 		if (role & ROLE_WEAPONS) {
 			displaymode = DISPLAYMODE_WEAPONS;
 			wwviaudio_add_sound(CHANGESCREEN_SOUND);
+		} else {
+			explain_denied_role("weapons");
 		}
 		break;
 	case keyf4:
@@ -4786,6 +4791,8 @@ static int key_press_cb(SDL_Window *window, SDL_Keysym *keysym, int key_repeat)
 		if (role & ROLE_ENGINEERING) {
 			displaymode = DISPLAYMODE_ENGINEERING;
 			wwviaudio_add_sound(CHANGESCREEN_SOUND);
+		} else {
+			explain_denied_role("engineering");
 		}
 		break;
 	case keyf5:
@@ -4795,6 +4802,8 @@ static int key_press_cb(SDL_Window *window, SDL_Keysym *keysym, int key_repeat)
 		if (role & ROLE_DAMCON) {
 			displaymode = DISPLAYMODE_DAMCON;
 			wwviaudio_add_sound(CHANGESCREEN_SOUND);
+		} else {
+			explain_denied_role("damage control");
 		}
 		break;
 	case keyf6:
@@ -4804,6 +4813,8 @@ static int key_press_cb(SDL_Window *window, SDL_Keysym *keysym, int key_repeat)
 		if (role & ROLE_SCIENCE) {
 			displaymode = DISPLAYMODE_SCIENCE;
 			wwviaudio_add_sound(CHANGESCREEN_SOUND);
+		} else {
+			explain_denied_role("science");
 		}
 		break;
 	case keyf7:
@@ -4813,6 +4824,8 @@ static int key_press_cb(SDL_Window *window, SDL_Keysym *keysym, int key_repeat)
 		if (role & ROLE_COMMS) {
 			displaymode = DISPLAYMODE_COMMS;
 			wwviaudio_add_sound(CHANGESCREEN_SOUND);
+		} else {
+			explain_denied_role("communication");
 		}
 		break;
 	case keyf8:
@@ -4822,6 +4835,8 @@ static int key_press_cb(SDL_Window *window, SDL_Keysym *keysym, int key_repeat)
 		if (role & ROLE_MAIN) {
 			displaymode = DISPLAYMODE_MAINSCREEN;
 			wwviaudio_add_sound(CHANGESCREEN_SOUND);
+		} else {
+			explain_denied_role("main screen");
 		}
 		break;
 	case keyf9:
@@ -4831,6 +4846,8 @@ static int key_press_cb(SDL_Window *window, SDL_Keysym *keysym, int key_repeat)
 		if (role & ROLE_DEMON) {
 			displaymode = DISPLAYMODE_DEMON;
 			wwviaudio_add_sound(CHANGESCREEN_SOUND);
+		} else {
+			explain_denied_role("demon screen");
 		}
 		break;
 	case keyf10:
@@ -7343,6 +7360,17 @@ static void text_to_speech(char *text)
 	if (rc)
 		printf("huh... pthread_cond_broadcast failed in text_to_speech().\n");
 	pthread_mutex_unlock(&text_to_speech_mutex);
+}
+
+/* Trigger text to speech to explain why a selected ROLE is not active on this terminal */
+static void explain_denied_role(char *role_name)
+{
+	char speech[4096];
+
+	snprintf(speech, sizeof(speech), "The %s role is not active on this terminal. "
+			"If you want to activate it, press escape and disconnect, then reconnect after "
+			"selecting the %s role on the network setup screen.", role_name, role_name);
+	text_to_speech(speech);
 }
 
 static int process_natural_language_request(void)
