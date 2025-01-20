@@ -47,7 +47,12 @@ SNIS_ASSET_DIR_ROOT=$(echo $SNIS_ASSET_DIR | sed -e 's/[/]share[/]snis$//')
 
 if [ "$SNIS_LOG_DIR" = "" ]
 then
-	SNIS_LOG_DIR="."
+	if [ "$XDG_DATA_HOME" = "" ]
+	then
+		export SNIS_LOG_DIR=$HOME/.local/share/space-nerds-in-space
+	else
+		export SNIS_LOG_DIR=$XDG_DATA_HOME/space-nerds-in-space
+	fi
 else
 	if [ ! -d "$SNIS_LOG_DIR" ]
 	then
