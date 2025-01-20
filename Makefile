@@ -1360,10 +1360,7 @@ $(OD)/snis_test_audio.o:	snis_test_audio.c Makefile ${SNDOBJS} ${OGGOBJ} ${ODT}
 bin/snis_test_audio:	${OD}/snis_test_audio.o ${SNDLIBS} Makefile ${BIN} ${OD}/mathutils.o ${OD}/mtwist.o
 	$(CC) -o bin/snis_test_audio ${OD}/snis_test_audio.o ${SNDOBJS} ${OGGOBJ} ${SNDLIBS} ${OD}/mathutils.o ${OD}/mtwist.o -lm -lbsd
 
-install:	${BINPROGS} ${MODELS} ${AUDIOFILES} ${TEXTURES} \
-		${MATERIALS} ${CONFIGFILES} ${SHADERS} ${LUASCRIPTS} ${LUAUTILS} \
-		${LUAMISSIONS} ${LUASRCLIBS} ${LUATESTS} ${MANPAGES} ${SSGL} \
-		${SOLARSYSTEMFILES}
+install:	${BINPROGS} ${MANPAGES} ${SSGL}
 	@# First check that PREFIX is sane, and esp. that it's not pointed at source
 	@mkdir -p ${DESTDIR}/${PREFIX}
 	@touch ${DESTDIR}/${PREFIX}/.canary-in-the-coal-mine.canary
@@ -1385,48 +1382,50 @@ install:	${BINPROGS} ${MODELS} ${AUDIOFILES} ${TEXTURES} \
 		{ print; } ' < snis_launcher > /tmp/snis_launcher
 	${INSTALL} -m 755 /tmp/snis_launcher ${DESTDIR}/${PREFIX}/bin
 	rm -f /tmp/snis_launcher
-	for d in ${MATERIALDIR} ${LUASCRIPTDIR}/UTIL ${LUASCRIPTDIR}/TEST \
-		${LUASCRIPTDIR}/MISSIONS ${LUASCRIPTDIR}/MISSIONS/lib ${SHADERDIR} ${SOUNDDIR} \
-		${TEXTUREDIR} ${MODELDIR}/wombat ${SHADERDIR} ; do \
-		mkdir -p $$d ; \
-	done
-	${INSTALL} -m 644 ${CONFIGFILES} ${CONFIGFILEDIR}
-	${INSTALL} -m 644 ${SOUNDFILES} ${SOUNDDIR}
-	${INSTALL} -m 644 ${TEXTUREFILES} ${TEXTUREDIR}
-	${INSTALL} -m 644  ${LUASCRIPTS} ${LUASCRIPTDIR}
-	${INSTALL} -m 644  ${LUAUTILS} ${LUASCRIPTDIR}/UTIL
-	${INSTALL} -m 644  ${LUAMISSIONS} ${LUASCRIPTDIR}/MISSIONS
-	${INSTALL} -m 644  ${LUASRCLIBS} ${LUASCRIPTDIR}/MISSIONS/lib
-	${INSTALL} -m 644  ${LUATESTS} ${LUASCRIPTDIR}/TEST
-	${INSTALL} -m 644  ${MATERIALFILES} ${MATERIALDIR}
-	${INSTALL} -m 644  ${MODELS} ${MODELDIR}
-	mkdir -p ${SOLARSYSTEMDIR}/default
-	${INSTALL} -m 644 ${SOLARSYSTEMSRCDIR}/default/assets.txt ${SOLARSYSTEMDIR}/default
-	for d in dreadknight disruptor conqueror enforcer starbase starbase2 cargocontainer research-vessel ; do \
-		mkdir -p ${MODELDIR}/$$d ; \
-		${INSTALL} -m 644 ${MODELSRCDIR}/$$d/$$d.mtl ${MODELDIR}/$$d ; \
-		cp ${MODELSRCDIR}/$$d/$$d.obj ${MODELDIR}/$$d ; \
-		cp ${MODELSRCDIR}/$$d/$$d.png ${MODELDIR}/$$d ; \
-		if [ -f ${MODELSRCDIR}/$$d/$$d"lights.png" ] ; then \
-			cp ${MODELSRCDIR}/$$d/$$d"lights.png" ${MODELDIR}/$$d ; \
-		fi ; \
-		if [ -f ${MODELSRCDIR}/$$d/$$d"-lighting.png" ] ; then \
-			cp ${MODELSRCDIR}/$$d/$$d"-lighting.png" ${MODELDIR}/$$d ; \
-		fi ; \
-	done
-	${INSTALL} -m 644 ${MODELSRCDIR}/dreadknight/dreadknight-exhaust-plumes.h ${MODELDIR}/dreadknight
-	${INSTALL} -m 644 ${MODELSRCDIR}/wombat/snis3006lights.png ${MODELDIR}/wombat
-	${INSTALL} -m 644 ${MODELSRCDIR}/wombat/snis3006.mtl ${MODELDIR}/wombat
-	${INSTALL} -m 644 ${MODELSRCDIR}/wombat/snis3006.obj ${MODELDIR}/wombat
-	${INSTALL} -m 644 ${MODELSRCDIR}/wombat/snis3006.png ${MODELDIR}/wombat
-	${INSTALL} -m 644 ${DOCKING_PORT_FILES} ${MODELDIR}
-	${INSTALL} -m 644 ${SCAD_PARAMS_FILES} ${MODELDIR}
-	${INSTALL} -m 644 ${SHADERS} ${SHADERDIR}
+	# for d in ${MATERIALDIR} ${LUASCRIPTDIR}/UTIL ${LUASCRIPTDIR}/TEST \
+	#	${LUASCRIPTDIR}/MISSIONS ${LUASCRIPTDIR}/MISSIONS/lib ${SHADERDIR} ${SOUNDDIR} \
+	#	${TEXTUREDIR} ${MODELDIR}/wombat ${SHADERDIR} ; do \
+	#	mkdir -p $$d ; \
+	# done
+	# ${INSTALL} -m 644 ${CONFIGFILES} ${CONFIGFILEDIR}
+	# ${INSTALL} -m 644 ${SOUNDFILES} ${SOUNDDIR}
+	# ${INSTALL} -m 644 ${TEXTUREFILES} ${TEXTUREDIR}
+	# ${INSTALL} -m 644  ${LUASCRIPTS} ${LUASCRIPTDIR}
+	# ${INSTALL} -m 644  ${LUAUTILS} ${LUASCRIPTDIR}/UTIL
+	# ${INSTALL} -m 644  ${LUAMISSIONS} ${LUASCRIPTDIR}/MISSIONS
+	# ${INSTALL} -m 644  ${LUASRCLIBS} ${LUASCRIPTDIR}/MISSIONS/lib
+	# ${INSTALL} -m 644  ${LUATESTS} ${LUASCRIPTDIR}/TEST
+	# ${INSTALL} -m 644  ${MATERIALFILES} ${MATERIALDIR}
+	# ${INSTALL} -m 644  ${MODELS} ${MODELDIR}
+	# mkdir -p ${SOLARSYSTEMDIR}/default
+	# ${INSTALL} -m 644 ${SOLARSYSTEMSRCDIR}/default/assets.txt ${SOLARSYSTEMDIR}/default
+	# for d in dreadknight disruptor conqueror enforcer starbase starbase2 cargocontainer research-vessel ; do \
+	#	mkdir -p ${MODELDIR}/$$d ; \
+	#	${INSTALL} -m 644 ${MODELSRCDIR}/$$d/$$d.mtl ${MODELDIR}/$$d ; \
+	#	cp ${MODELSRCDIR}/$$d/$$d.obj ${MODELDIR}/$$d ; \
+	#	cp ${MODELSRCDIR}/$$d/$$d.png ${MODELDIR}/$$d ; \
+	#	if [ -f ${MODELSRCDIR}/$$d/$$d"lights.png" ] ; then \
+	#		cp ${MODELSRCDIR}/$$d/$$d"lights.png" ${MODELDIR}/$$d ; \
+	#	fi ; \
+	#	if [ -f ${MODELSRCDIR}/$$d/$$d"-lighting.png" ] ; then \
+	#		cp ${MODELSRCDIR}/$$d/$$d"-lighting.png" ${MODELDIR}/$$d ; \
+	#	fi ; \
+	#done
+	#${INSTALL} -m 644 ${MODELSRCDIR}/dreadknight/dreadknight-exhaust-plumes.h ${MODELDIR}/dreadknight
+	#${INSTALL} -m 644 ${MODELSRCDIR}/wombat/snis3006lights.png ${MODELDIR}/wombat
+	#${INSTALL} -m 644 ${MODELSRCDIR}/wombat/snis3006.mtl ${MODELDIR}/wombat
+	#${INSTALL} -m 644 ${MODELSRCDIR}/wombat/snis3006.obj ${MODELDIR}/wombat
+	#${INSTALL} -m 644 ${MODELSRCDIR}/wombat/snis3006.png ${MODELDIR}/wombat
+	#${INSTALL} -m 644 ${DOCKING_PORT_FILES} ${MODELDIR}
+	#${INSTALL} -m 644 ${SCAD_PARAMS_FILES} ${MODELDIR}
+	#${INSTALL} -m 644 ${SHADERS} ${SHADERDIR}
 	mkdir -p ${MANDIR}
 	${INSTALL} -m 644 ${MANPAGES} ${MANDIR}
 	mkdir -p ${DESKTOPDIR}
 	${INSTALL} -m 644 ${DESKTOPFILES} ${DESKTOPDIR}
 	${UPDATE_DESKTOP}
+	mkdir -p ${PREFIX}/share/snis
+	bin/snis_update_assets --force --destdir ${PREFIX} --srcdir ./share/snis
 
 uninstall:
 	@# check that PREFIX is sane
