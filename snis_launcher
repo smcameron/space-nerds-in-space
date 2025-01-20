@@ -26,7 +26,6 @@ export SNIS_DB_DIR
 PREFIX=.
 
 BINDIR=${PREFIX}/bin
-export SNIS_ASSET_SRC_DIR=${PREFIX}/share/snis
 if [ "$SNIS_ASSET_DIR" = "" ]
 then
 	if [ "$XDG_DATA_HOME" = "" ]
@@ -577,7 +576,7 @@ do
 	8)
 		# copy local assets first
 		echo "Updating local assets..."
-		bin/snis_update_assets --force --destdir "$SNIS_ASSET_DIR_ROOT" --srcdir "$SNIS_ASSET_SRC_DIR" ;
+		bin/snis_update_assets --force --destdir "$SNIS_ASSET_DIR_ROOT" --srcdir ./share/snis ;
 		# download assets from spacenerdsinspace.com
 		echo "Downloading remote assets from asset server..."
 		bin/snis_update_assets --force --destdir "$SNIS_ASSET_DIR_ROOT" ;
