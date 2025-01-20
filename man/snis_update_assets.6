@@ -1,0 +1,54 @@
+.TH SPACE-NERDS-IN-SPACE "6" "Jan 2025" "snis_update_assets" "Games"
+.SH NAME
+snis_update_assets \- a utility for copying and downloading art assets for "Space Nerds In Space."
+.SH SYNOPSIS
+.B snis_update_assets [ --dry-run ] [ --force ] [ --verbose ] [ --srcdir dir ] --destdir dir
+.SH DESCRIPTION
+.\" Add any additional description here
+.warn 511
+.PP
+snis_update_assets is a tool for updating and copying art assets for the game "Space Nerds In Space."
+It can copy local assets and download remote assets from https://spacenerdsinspace.com. It only copies
+or downloads files which are new or different than existing files in the destination directory. It is
+normally invoked via the snis_launcher script rather than directly by the user.
+.SH Options:
+.TP
+\fB--dry-run\fR
+Invokes the "dry run" mode in which no files are copied and only the manifest is downloaded from
+spacenerdsinspace.com. Instead of copying files or downloading files, only messages are printed
+describing what would have been downloaded or copied.
+.TP
+\fB--destdir directory\fR
+This required argument specifies the destination directory for copied and downloaded files.
+.TP
+\fB--force\fR
+Without this option, you are warned that this program is experimental, and asked if you
+wish to proceed. With the --force option, this warning is skipped.
+.TP
+\fB--srcdir\fR
+This optional argument specifies a source directory from which files are to be copied.
+If it is omitted, then files are downloaded from https://spacenerdsinspace.com
+.TP
+\fB--verbose\fR
+Extra messages are printed. This can be useful for debugging snis_update_assets, or
+determining why it isn't doing what you expect.
+.SH
+EXAMPLES
+.PP
+Normally snis_update_assets is not invoked directly by the user, but indirectly from
+within the snis_launcher script, or from within the "make install" Makefile target.
+.PP
+
+Here are some sample invocations of snis_update_assets:
+
+   # Copy from ./share/snis to ~/.local/share/space-nerds-in-space
+   bin/snis_update_assets --force --destdir ~/.local/share/space-nerds-in-space --srcdir ./share/snis
+
+   # Download extra assets from spacenerdsinspace.com:
+   bin/snis_update_assets --force --destdir ~/.local/share/space-nerds-in-space
+.SH SEE ALSO
+.PP
+snis_client(6), ssgl_server(6), snis_server(6)
+.SH AUTHOR
+snis_update_assets was written by Stephen M. Cameron
+.br
