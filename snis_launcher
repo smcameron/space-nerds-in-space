@@ -12,6 +12,10 @@ then
 	if [ "$SNIS_DB_DIR" = "" ]
 	then
 		SNIS_DB_DIR="$HOME/.local/share/space-nerds-in-space"
+		if [ ! -d "$SNIS_DB_DIR" ]
+		then
+			mkdir -p "$SNIS_DB_DIR"
+		fi
 	fi
 fi
 export SNIS_DB_DIR
@@ -30,6 +34,10 @@ then
 		export SNIS_ASSET_DIR=$HOME/.local/share/space-nerds-in-space/share/snis
 	else
 		export SNIS_ASSET_DIR=$XDG_DATA_HOME/space-nerds-in-space/share/snis
+	fi
+	if [ ! -d "$SNIS_ASSET_DIR" ]
+	then
+		mkdir - p "$SNIS_ASSET_DIR"
 	fi
 fi
 
@@ -65,6 +73,11 @@ else
 			exit 1
 		fi
 	fi
+fi
+
+if [ ! -d "$SNIS_LOG_DIR" ]
+then
+	mkdir -p "$SNIS_LOG_DIR" ]
 fi
 
 SNIS_SERVER=${BINDIR}/snis_server
