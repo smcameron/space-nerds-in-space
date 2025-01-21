@@ -203,7 +203,7 @@ int snis_button_button_press(struct button *b, int x, int y)
 		return 0;
 	if (!b->enabled)
 		return 0;
-	b->long_press_timer = 30; /* assuming button is drawn at 30Hz, 1 second */
+	b->long_press_timer = 60; /* assuming button is drawn at 30Hz, 2 seconds */
 	return 1;
 }
 

@@ -14685,7 +14685,7 @@ static void init_engineering_ui(void)
 	ui_add_button(eu->damcon_button, dm, "SWITCH TO THE DAMAGE CONTROL SCREEN");
 	for (i = 0; i < ENG_PRESET_NUMBER; ++i) {
 		snprintf(preset_txt, sizeof(preset_txt), "SELECT ENGINEERING PRESET %d\n"
-			"PRESS AND HOLD FOR 1 SECOND TO SAVE\n"
+			"PRESS AND HOLD FOR 2 SECONDS TO SAVE\n"
 			"CURRENT VALUES IN THIS PRESET", i);
 		ui_add_button(eu->preset_buttons[i], dm, preset_txt);
 	}
