@@ -1,4 +1,4 @@
-<!DOCTYPE html><html>
+m!DOCTYPE html><html>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -104,6 +104,7 @@ Good luck!
 <ul>
 <li><a href="#videos">Videos</a>
 <li><a href="#screenshots">ScreenShots</a>
+<li><a href="#flatpak">Appimage and Flatpa</a> SNIS pre-compiled in Appimage and Flatpak form
 <li><a href="#buildinstructions">Build Instructions</a> -- How to build the game from source code
 <li><a href="#singlemachineinstructions">How to run Space Nerds In Space on a single machine</a>
 <li><a href="#controls">Controlling the Ship</a>
@@ -164,6 +165,15 @@ If you're a member of a hackerspace, this game is explicitly <em>made for you</e
 
 <font size=+1>
 
+<h1><a name="flatpak">Appimage and Flatpak</a></h1>
+<p>If you don't wish to build SNIS yourself (though I must stress, building it
+yourself is <em>not difficult</em>), Github user and (presumably) SNIS fan
+Vince Pelss has compiled SNIS into Appimage and Flatpak forms. These may be found here:
+<ul>
+<li>Flatpak: <a href="https://github.com/vpelss/snis_flatpak">https://github.com/vpelss/snis_flatpak</a>
+<li>Appimage: <a href="https://github.com/vpelss/Space-Nerds-In-Space-Appimage">https://github.com/vpelss/Space-Nerds-In-Space-Appimage</a>
+</ul>
+
 <h1><a name="buildinstructions">Build Instructions</a></h1>
 
 <p>Here's a quick preview of the build instructions detailed below:
@@ -173,7 +183,7 @@ If you're a member of a hackerspace, this game is explicitly <em>made for you</e
 <li>Install dependencies (run <cmd>util/install_dependencies</cmd> on apt-based systems)
 <li>Build the code (type "<cmd>make<cmd>")
 <li>Download additional art assets (type "<cmd>make update-assets</cmd>")
-<li>Run the game (type "<cmd>./snis_launcher</cmd>")
+<li>Run the game (type "<cmd>bin/snis_launcher</cmd>")
 </ol>
 
 <p><a href="https://www.youtube.com/watch?v=tCokfUtZOqw">(Here is a long, boring video demonstrating how to install)</a>
@@ -384,7 +394,7 @@ If you performed step 4, you may skip this step though it is not recommended,
 as you will be missing some additional solarsystem assets. As a non-root user:
 <pre>
 <blockquote>
-  ./snis_launcher
+  bin/snis_launcher
 </blockquote>
 </pre>
 Then choose option 8, "Check for asset updates and set up assets".  This will copy assets
@@ -395,7 +405,7 @@ over the internet.
 <p>Type (as a non-root user):
 <blockquote>
 <pre>
-    $ ./snis_launcher 
+    $ bin/snis_launcher
 
          Welcome to Space Nerds In Space
 
@@ -469,7 +479,7 @@ better than most.
 </ul>
 <p>To quit the game, press ESC and confirm using arrow keys and ENTER.
 Note, this only quits your client process.
-You can re-join the server (via "./snis_launcher" script option 4)
+You can re-join the server (via "bin/snis_launcher" script option 4)
 It still leaves several processes running, the snis_server, the lobby process
 and snis_multiverse.  To kill all of them, run the "./killem" script.
 <h3><a name="navcontrols">NAVIGATION SCREEN</a></h3>
@@ -1196,7 +1206,7 @@ see something like this (assuming your username is capnkirk):
 <blockquote>
 <pre>
 capnkirk@enterprise ~ $ cd github/space-nerds-in-space
-capnkirk@enterprise ~/github/space-nerds-in-space $ ./snis_launcher
+capnkirk@enterprise ~/github/space-nerds-in-space $ bin/snis_launcher
 
      Welcome to Space Nerds In Space
 
@@ -1342,7 +1352,7 @@ capnkirk@enterprise$ ifconfig | grep 'inet addr'
 <li>Run <b>snis_launcher</b>. You should see:
 <blockquote>
 <pre>
-capnkirk@enterprise $ ./snis_launcher
+capnkirk@enterprise $ bin/snis_launcher
 
      Welcome to Space Nerds In Space
 
@@ -2267,7 +2277,7 @@ Let's say all the machines on your network have an IP address like
 192.168.1.xxx.  When you start snis_launcher, you should do it like so:
 <pre>
 	export SSGL_PRIMARY_IP_ADDR_PROBE=192.168.1.1
-	./snis_launcher
+	bin/snis_launcher
 </pre>
 <p>IPv6.  SNIS does not yet work with IPv6.  Feel free to send patches.
 <li><b>Latency and Bandwidth related problems</b>
