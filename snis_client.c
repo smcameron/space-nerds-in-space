@@ -23596,7 +23596,10 @@ static void process_options(int argc, char *argv[])
 			exit(0);
 			break; /* not reached */
 		case 'v':
-			printf("snis_client v. %s\n", SNIS_VERSION);
+			printf("snis_client ");
+			printf("%s\n", BUILD_INFO_STRING1);
+			printf("%s\n", BUILD_INFO_STRING2);
+			exit(0);
 			break;
 		case 'q':
 			quickstartmode = 1;
