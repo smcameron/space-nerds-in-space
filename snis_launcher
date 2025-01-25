@@ -139,10 +139,14 @@ cat << EOF 1>&2
 	There should be one lobby server total.
    2. Launch SNIS multiverse server
 	The multiverse server stores player ship data
-	There should be one multiverse server total
+	and optionally may automatically start and stop
+	snis_server instances.  There should be at most one
+	multiverse server.
    3. Launch SNIS server
 	There should be one snis server per solarsystem.
 	There should be at least one instance of snis_server.
+	If multiverse server is automatically starting/stopping
+	snis_server instances, you can skip this option.
    4. Launch SNIS client process
 	There should be one snis client process per player
 	plus one more per ship for the main screen.
@@ -270,15 +274,15 @@ start_snis_multiverse()
 	then
 		return
 	fi
-	printf "Autowrangle snis_servers (y/n, default = y)?"
+	printf "Automatically start/stop snis_server instances as needed (y/n, default = y)?"
 	read -r x
 	if [ "$x" != "n" ]
 	then
-		printf "\nWhich solarsystem should be exempted from auto-wrangling?\n"
+		printf "\nWhich solarsystem should be exempted from being automatically stopped?\n"
 		get_solarsystem_name
 		exempt="-e $SOLARSYSTEM_NAME"
 		autowrangle=-a
-		printf "Exempting solarsystem %s from auto-wrangling.\n" "$SOLARSYSTEM_NAME"
+		printf "Exempting solarsystem %s from auto-stopping.\n" "$SOLARSYSTEM_NAME"
 	else
 		autowrangle=
 		exempt=
