@@ -30850,7 +30850,7 @@ static void process_options(int argc, char *argv[])
 			lobby_servernick = optarg;
 			break;
 		case 'v':
-			printf("SPACE NERDS IN SPACE SERVER ");
+			printf("snis_server ");
 			printf("%s\n", BUILD_INFO_STRING1);
 			printf("%s\n", BUILD_INFO_STRING2);
 			exit(0);
