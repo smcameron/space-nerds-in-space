@@ -77,6 +77,8 @@ persisted in a simple database by snis_multiverse.
 #include "snis_asset_dir.h"
 #include "snis_bin_dir.h"
 #include "snis_licenses.h"
+#include "snis_version.h"
+#include "build_info.h"
 
 static char *asset_dir;
 static char *lobby, *nick, *location;
@@ -1296,6 +1298,7 @@ static struct option long_options[] = {
 	{ "lobby", required_argument, NULL, 'l'},
 	{ "servernick", required_argument, NULL, 'n'},
 	{ "location", required_argument, NULL, 'L'},
+	{ "version", no_argument, NULL, 'v' },
 	{ 0, 0, 0, 0 },
 };
 
@@ -1309,11 +1312,13 @@ static void parse_options(int argc, char *argv[], char **lobby, char **nick, cha
 
 	if ((argc < 4) &&
 		(argc != 2 || (strcmp(argv[1], "--acknowledgments") != 0 &&
-				strcmp(argv[1], "--acknowledgements") != 0)))
+				strcmp(argv[1], "--acknowledgements") != 0 &&
+				strcmp(argv[1], "--version") != 0 &&
+				strcmp(argv[1], "-v") != 0)))
 		usage();
 	while (1) {
 		int option_index;
-		c = getopt_long(argc, argv, "ae:L:l:n:", long_options, &option_index);
+		c = getopt_long(argc, argv, "ae:L:l:n:v", long_options, &option_index);
 		if (c == -1)
 			break;
 		switch (c) {
@@ -1339,6 +1344,11 @@ static void parse_options(int argc, char *argv[], char **lobby, char **nick, cha
 		case 'n':
 			*nick = optarg;
 			break;
+		case 'v':
+			printf("snis_multiverse ");
+			printf("%s\n", BUILD_INFO_STRING1);
+			printf("%s\n", BUILD_INFO_STRING2);
+			exit(0);
 		default:
 			usage(); /* no return */
 			break;
