@@ -227,7 +227,7 @@ static void update_menu_widths(struct pull_down_menu *m)
 		end = m->ncols;
 		inc = 1;
 		title_x = 0;
-		menu_x = 0;
+		menu_x = 1;
 	}
 	for (i = start; i != end; i += inc) {
 		if (m->gravity) {
@@ -273,10 +273,10 @@ static void draw_menu_col(struct pull_down_menu *m, int col, float y, int curren
 			x = c->menu_x;
 		}
 		sng_set_foreground_alpha(BLACK, m->alpha);
-		sng_current_draw_rectangle(1, x, y, width, font_lineheight[font] + 6);
+		sng_current_draw_rectangle(1, x, y, width - 1, font_lineheight[font] + 6);
 		sng_set_foreground(m->color);
 		sng_current_draw_line(x, y, x, y + font_lineheight[font] + 6);
-		sng_current_draw_line(x + width, y, x + width, y + font_lineheight[font] + 6);
+		sng_current_draw_line(x + width - 1, y, x + width - 1, y + font_lineheight[font] + 6);
 		if (i == 0 || i == limit - 1)
 			sng_current_draw_line(x, y + font_lineheight[font] + 6,
 				x + width, y + font_lineheight[font] + 6);
