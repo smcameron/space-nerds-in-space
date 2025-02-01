@@ -20,13 +20,39 @@
  *   will be the same when ported to other languages.
  */
 
+#if ((__GNUC_STDC_INLINE__) || (__STDC_VERSION__ >= 199901L))
+	#include <stdint.h>
+	#define INLINE inline
+#elif (defined (_MSC_VER) || defined (__GNUC_GNU_INLINE__))
+	#include <stdint.h>
+	#define INLINE __inline
+#else 
+	/* ANSI C doesn't have inline or stdint.h. */
+	#define INLINE
+#endif
+
+#ifdef __cplusplus
+	extern "C" {
+#endif
+
+/* You can override this to be float if you want by adding -DOSNFLOAT=float to CFLAGS
+ * It is not as well tested with floats though.
+ */
+#ifndef OSNFLOAT
+#define OSNFLOAT double
+#endif
+
 struct osn_context;
- 
-void open_simplex_noise_init(uint16_t perm[], int nelements);
-void open_simplex_noise_free(struct osn_context *ctx);
+
 int open_simplex_noise(int64_t seed, struct osn_context **ctx);
-double open_simplex_noise2(struct osn_context *ctx, double x, double y);
-double open_simplex_noise3(struct osn_context *ctx, double x, double y, double z);
-double open_simplex_noise4(struct osn_context *ctx, double x, double y, double z, double w);
+void open_simplex_noise_free(struct osn_context *ctx);
+int open_simplex_noise_init_perm(struct osn_context *ctx, int16_t p[], int nelements);
+OSNFLOAT open_simplex_noise2(const struct osn_context *ctx, OSNFLOAT x, OSNFLOAT y);
+OSNFLOAT open_simplex_noise3(const struct osn_context *ctx, OSNFLOAT x, OSNFLOAT y, OSNFLOAT z);
+OSNFLOAT open_simplex_noise4(const struct osn_context *ctx, OSNFLOAT x, OSNFLOAT y, OSNFLOAT z, OSNFLOAT w);
+
+#ifdef __cplusplus
+	}
+#endif
 
 #endif
