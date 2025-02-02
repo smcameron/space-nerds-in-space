@@ -1457,6 +1457,7 @@ local function unscrew_object(entry)
 	intfic.write(entry[1] .. ": Ok, I unscrewed the grate.\n");
 	intfic.objects["duct"].suppress_itemizing = false;
 	intfic.objects["duct"].desc = "an open ventilation duct on the aft wall.";
+	intfic.objects["duct"].examine = "The duct on the aft wall is open and looks large enough to enter.";
 	intfic.room["first_mates_quarters"].aft = "duct1";
 end
 
