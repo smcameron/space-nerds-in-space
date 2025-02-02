@@ -652,7 +652,7 @@ function intfic.generic_doverb(verb_fn, words, locations)
 end
 
 function intfic.dotake(words)
-	intfic.generic_doverb(intfic.take_object, words, { intfic.current_location, "pocket" });
+	intfic.generic_doverb(intfic.take_object, words, { intfic.current_location });
 end
 
 function intfic.dodrop(words)
