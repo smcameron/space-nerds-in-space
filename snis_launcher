@@ -83,6 +83,7 @@ SNIS_SERVER=${BINDIR}/snis_server
 SNIS_CLIENT=${BINDIR}/snis_client
 SNIS_MULTIVERSE=${BINDIR}/snis_multiverse
 SSGL_SERVER=${BINDIR}/ssgl_server
+SNIS_UPDATE_ASSETS=${BINDIR}/snis_update_assets
 ASPECT_RATIO="${ASPECT_RATIO:-}"
 LOBBYHOST=localhost
 # ASPECT_RATIO="5:4"
@@ -580,10 +581,10 @@ do
 	8)
 		# copy local assets first
 		echo "Updating local assets..."
-		bin/snis_update_assets --force --destdir "$SNIS_ASSET_DIR_ROOT" --srcdir ./share/snis ;
+		${SNIS_UPDATE_ASSETS} --force --destdir "$SNIS_ASSET_DIR_ROOT" --srcdir ./share/snis ;
 		# download assets from spacenerdsinspace.com
 		echo "Downloading remote assets from asset server..."
-		bin/snis_update_assets --force --destdir "$SNIS_ASSET_DIR_ROOT" ;
+		${SNIS_UPDATE_ASSETS} --force --destdir "$SNIS_ASSET_DIR_ROOT" ;
 		;;
 	9) choose_options
 		;;
