@@ -8646,13 +8646,14 @@ static void request_universe_timestamp(void);
 
 static void send_build_info_to_server(void)
 {
-	char *buildinfo[3];
-	int len[3];
+	char *buildinfo[4];
+	int len[4];
 	struct packed_buffer *pb;
 
 	buildinfo[0] = strdup(BUILD_INFO_STRING1);
 	buildinfo[1] = strdup(BUILD_INFO_STRING2);
-	buildinfo[2] = strdup(BUILD_INFO_STRING3);
+	buildinfo[2] = strdup(BUILD_INFO_STRING5);
+	buildinfo[3] = strdup(BUILD_INFO_STRING3);
 
 	for (int i = 0; i < (int) ARRAYSIZE(buildinfo); i++) {
 		if (!buildinfo[i]) { /* Shut clang scan-build's mouth about null ptrs */
@@ -8666,7 +8667,7 @@ static void send_build_info_to_server(void)
 		buildinfo[i][len[i] - 1] = '\0';
 	}
 
-	pb = packed_buffer_allocate(len[0] + len[1] + len[2] + 20);
+	pb = packed_buffer_allocate(len[0] + len[1] + len[2] + len[3] + 6 * 4);
 	for (int i = 0; i < (int) ARRAYSIZE(buildinfo); i++) {
 		packed_buffer_append(pb, "bbw", OPCODE_UPDATE_BUILD_INFO, i, len[i]);
 		packed_buffer_append_raw(pb, buildinfo[i], (unsigned short) len[i]);
@@ -23600,6 +23601,7 @@ static void process_options(int argc, char *argv[])
 			printf("%s\n", BUILD_INFO_STRING1);
 			printf("%s\n", BUILD_INFO_STRING2);
 			printf("%s\n", BUILD_INFO_STRING3);
+			printf("%s\n", BUILD_INFO_STRING5);
 			exit(0);
 			break;
 		case 'q':

@@ -43,7 +43,7 @@ if [ "$diffcount" = "0" ]
 then
 	diffsummary=""
 else
-	diffsummary="+ $diffcount"
+	diffsummary=$(git diff --stat | tail -1 | sed -e 's/^ *//')
 fi
 
 # today=$(date '+%Y-%m-%d %H:%M:%S')
@@ -66,9 +66,10 @@ cat << EOF
 
 /* This file is machine generated */
 #define BUILD_INFO_STRING1 "v. " SNIS_VERSION " - $endianness $machine $os"
-#define BUILD_INFO_STRING2 "$protocol_version $git_hash $diffsummary"
+#define BUILD_INFO_STRING2 "$protocol_version $git_hash"
 #define BUILD_INFO_STRING3 "$with_voice_chat"
 #define BUILD_INFO_STRING4 "SPACE NERDS IN SPACE v. " SNIS_VERSION
+#define BUILD_INFO_STRING5 "$diffsummary"
 
 #endif
 EOF
