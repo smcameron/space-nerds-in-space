@@ -1481,7 +1481,7 @@ bin/snis_update_assets:	util/snis_update_assets.c string-utils.o
 
 build_info.h: bin/check-endianness snis.h gather_build_info Makefile
 	@echo "  GATHER BUILD INFO"
-	$(Q)@./gather_build_info > build_info.h
+	$(Q)@./gather_build_info ${VCHAT} > build_info.h
 
 cppcheck:
 	cppcheck --force .

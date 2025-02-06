@@ -457,7 +457,7 @@ static struct game_client {
 				/* Contains timestamps for last update time of damcon objs for this client */
 	uint8_t refcount; /* count of threads using this client structure. When 0, can delete. see put_client(). */
 	int request_universe_timestamp; /* Used for sending timestamp samples to client to gauge latency */
-	char *build_info[2]; /* version/endianness etc. of client, see gather_build_info script, string1, and string2 */ 
+	char *build_info[3];	/* version/endianness etc. of client, see gather_build_info script. */
 	uint32_t latency_in_usec; /* network latency, visible via demon screen */
 	int waypoints_dirty;	/* trigger update of waypoints to client. If one client updates */
 				/* waypoints, all clients need to see that update */
@@ -15806,6 +15806,8 @@ static void meta_comms_about(__attribute__((unused)) char *name, struct game_cli
 		send_comms_packet(NULL, "", bridgelist[c->bridge].comms_channel, "UNKNOWN SNIS CLIENT");
 	if (c->build_info[1])
 		send_comms_packet(NULL, "", bridgelist[c->bridge].comms_channel, c->build_info[1]);
+	if (c->build_info[2])
+		send_comms_packet(NULL, "", bridgelist[c->bridge].comms_channel, c->build_info[2]);
 	send_comms_packet(NULL, "", bridgelist[c->bridge].comms_channel, "SPACE NERDS IN SPACE SERVER:");
 	send_comms_packet(NULL, "", bridgelist[c->bridge].comms_channel, BUILD_INFO_STRING1);
 	send_comms_packet(NULL, "", bridgelist[c->bridge].comms_channel, BUILD_INFO_STRING2);
@@ -21590,7 +21592,7 @@ static int process_build_info(struct game_client *c)
 	rc = read_and_unpack_buffer(c, buffer, "bw", &x, &buflen);
 	if (rc != 0)
 		return rc;
-	if (x != 0 && x != 1)
+	if (x > 2)
 		return -1;
 	if (buflen > 256)
 		return -1;

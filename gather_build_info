@@ -1,5 +1,12 @@
 #!/bin/sh
 
+if [ "$1" = "-DWITHVOICECHAT=1" ]
+then
+	with_voice_chat="COMPILED WITH VOICE CHAT ENABLED"
+else
+	with_voice_chat="COMPILED WITHOUT VOICE CHAT FEATURE"
+fi
+
 machine=$(uname -m) > /dev/null 2>&1
 if [ "$?" != "0" ]
 then
@@ -60,7 +67,8 @@ cat << EOF
 /* This file is machine generated */
 #define BUILD_INFO_STRING1 "v. " SNIS_VERSION " - $endianness $machine $os"
 #define BUILD_INFO_STRING2 "$protocol_version $git_hash $diffsummary"
-#define BUILD_INFO_STRING3 "SPACE NERDS IN SPACE v. " SNIS_VERSION
+#define BUILD_INFO_STRING3 "$with_voice_chat"
+#define BUILD_INFO_STRING4 "SPACE NERDS IN SPACE v. " SNIS_VERSION
 
 #endif
 EOF

@@ -8646,35 +8646,35 @@ static void request_universe_timestamp(void);
 
 static void send_build_info_to_server(void)
 {
-	char *buildinfo1 = strdup(BUILD_INFO_STRING1);
-	char *buildinfo2 = strdup(BUILD_INFO_STRING2);
+	char *buildinfo[3];
+	int len[3];
 	struct packed_buffer *pb;
-	int len1, len2;
 
-	if (!buildinfo1 || !buildinfo2) { /* Shut clang scan-build's mouth about null ptrs */
-		fprintf(stderr, "Out of memory in send_build_info_to_server\n");
-		fflush(stderr);
-		abort(); /* If we're out of memory at this early point, there's no hope anyway. */
+	buildinfo[0] = strdup(BUILD_INFO_STRING1);
+	buildinfo[1] = strdup(BUILD_INFO_STRING2);
+	buildinfo[2] = strdup(BUILD_INFO_STRING3);
+
+	for (int i = 0; i < (int) ARRAYSIZE(buildinfo); i++) {
+		if (!buildinfo[i]) { /* Shut clang scan-build's mouth about null ptrs */
+			fprintf(stderr, "Out of memory in send_build_info_to_server\n");
+			fflush(stderr);
+			abort(); /* If we're out of memory at this early point, there's no hope anyway. */
+		}
+		len[i] = strlen(buildinfo[i]) + 1;
+		if (len[i] > 255)
+			len[i] = 255;
+		buildinfo[i][len[i] - 1] = '\0';
 	}
 
-	len1 = strlen(buildinfo1);
-	len2 = strlen(buildinfo2);
-
-	if (len1 > 255)
-		len1 = 255;
-	if (len2 > 255)
-		len2 = 255;
-	buildinfo1[len1] = '\0';
-	buildinfo2[len2] = '\0';
-
-	pb = packed_buffer_allocate(strlen(buildinfo1) + strlen(buildinfo2) + 20);
-	packed_buffer_append(pb, "bbw", OPCODE_UPDATE_BUILD_INFO, 0, len1 + 1);
-	packed_buffer_append_raw(pb, buildinfo1, (unsigned short) len1 + 1);
-	packed_buffer_append(pb, "bbw", OPCODE_UPDATE_BUILD_INFO, 1, len2 + 1);
-	packed_buffer_append_raw(pb, buildinfo2, (unsigned short) len2 + 1);
+	pb = packed_buffer_allocate(len[0] + len[1] + len[2] + 20);
+	for (int i = 0; i < (int) ARRAYSIZE(buildinfo); i++) {
+		packed_buffer_append(pb, "bbw", OPCODE_UPDATE_BUILD_INFO, i, len[i]);
+		packed_buffer_append_raw(pb, buildinfo[i], (unsigned short) len[i]);
+	}
 	queue_to_server(pb);
-	free(buildinfo2);
-	free(buildinfo1);
+
+	for (int i = 0; i < (int) ARRAYSIZE(buildinfo); i++)
+		free(buildinfo[i]);
 }
 
 static void snis_client_cross_check_opcodes(void)
@@ -9048,7 +9048,7 @@ static void show_textscreen(void)
 static void show_watermark(void)
 {
 	sng_set_foreground(YELLOW);
-	sng_abs_xy_draw_string(BUILD_INFO_STRING3, NANO_FONT, txx(25), txy(590));
+	sng_abs_xy_draw_string(BUILD_INFO_STRING4, NANO_FONT, txx(25), txy(590));
 }
 
 static int blue_rectangle = 1; /* tweakable via console */
@@ -23599,6 +23599,7 @@ static void process_options(int argc, char *argv[])
 			printf("snis_client ");
 			printf("%s\n", BUILD_INFO_STRING1);
 			printf("%s\n", BUILD_INFO_STRING2);
+			printf("%s\n", BUILD_INFO_STRING3);
 			exit(0);
 			break;
 		case 'q':
