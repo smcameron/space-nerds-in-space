@@ -268,8 +268,14 @@ sudo apt-get install sox; # for "play" command, used by text to speech
 sudo apt-get install libcrypt-dev; # used by bin/snis_update_assets
 sudo apt-get install libcurl-dev; # used by bin/snis_update_assets
 
-# (The following are optional)
+# Opus is needed for voice-chat, though you can compile without voice chat or,
+# you can have the Makefile download and compile opus for you instead of
+# using packages if you distro does not have Opus packages
+#
+sudo apt-get install libopus-dev; # used for voice-chat feature
+sudo apt-get install libopus0; # used for voice-chat feature
 
+# (The following are optional)
 sudo apt-get install espeak; # optional alternative to libttspico-utils
 sudo apt-get install alsa-utils; # optional alternative to sox, for "aplay" command
 sudo apt-get install openscad; # optional, only needed if you intend to work on 3D models.
@@ -358,7 +364,10 @@ make
 
 <p>If you have problems building the code, it likely means there is some
 missing dependency.  Double check that you have all the required dependencies
-installed.
+installed.  If the missing dependencies have to do with opus libraries, and your
+distro does not have opus packages, you can run "make DOWNLOAD_OPUS=yes", and the
+makefile will download the opus library source from mozilla.org and compile it
+for you.
 
 <p>You can also file a bug report if you think you have discovered a problem
 with the build process, or the instructions here.  I believe you will need a github
