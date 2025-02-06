@@ -1,6 +1,10 @@
 # To compile with voice chat, WITHVOICECHAT=yes,
 # for no voice chat, make WITHVOICECHAT=no
 WITHVOICECHAT=yes
+# If your distro does not have opus library packages, the Makefile can download the source from
+# Mozilla.org and compile it.  Normally you shouldn't need to do this, but you can change this
+# to yes if you need to do this.
+DOWNLOAD_OPUS?=no
 USE_SNIS_XWINDOWS_HACKS=1
 PKG_CONFIG?=pkg-config
 SDL2_CONFIG?=sdl2-config
@@ -681,15 +685,24 @@ MYCFLAGS=-DPREFIX=${PREFIX} ${DEBUGFLAG} ${PROFILEFLAG} ${OPTIMIZEFLAG} ${UBSANF
 VORBISFLAGS:=$(subst -I,-isystem ,$(shell $(PKG_CONFIG) --cflags vorbisfile))
 
 ifeq (${WITHVOICECHAT},yes)
-LIBOPUS=-L. -lopus
-OPUSARCHIVE=libopus.a
+ifeq (${DOWNLOAD_OPUS},no)
+LIBOPUS:=$(shell $(PKG_CONFIG) --libs opus)
+OPUSCFLAGS:=$(shell $(PKG_CONFIG) --cflags opus)
 VCHAT=-DWITHVOICECHAT=1
-OPUSINCLUDE=-I./opus-1.3.1/include
-else
-LIBOPUS=
 OPUSARCHIVE=
+else
+# we're downloading Opus
+LIBOPUS=-L. -lopus
+OPUSCFLAGS=-I./opus-1.3.1/include
+VCHAT=-DWITHVOICECHAT=1
+OPUSARCHIVE=libopus.a
+endif
+else
+# no voice chat
+LIBOPUS=
+OPUSCFLAGS=
 VCHAT=
-OPUSINCLUDE=
+OPUSARCHIVE=
 endif
 
 ifeq (${V},1)
@@ -1079,7 +1092,7 @@ $(OD)/starmap_adjacency.o:	starmap_adjacency.c starmap_adjacency.h $(OD)/quat.o 
 	$(Q)$(COMPILE)
 
 $(OD)/snis_voice_chat.o:	snis_voice_chat.c snis_voice_chat.h pthread_util.h wwviaudio.h ${OPUSARCHIVE}
-	$(Q)$(COMPILE) ${VCHAT} ${OPUSINCLUDE}
+	$(Q)$(COMPILE) ${VCHAT} ${OPUSCFLAGS}
 
 $(OD)/replacement_assets.o:	replacement_assets.c replacement_assets.h ${ODT}
 	$(Q)$(COMPILE)
