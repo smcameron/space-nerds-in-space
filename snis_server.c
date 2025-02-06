@@ -19068,7 +19068,7 @@ static int process_enscript_command(struct game_client *c)
 	return 0;
 }
 
-static void server_builtin_clients(__attribute__((unused)) char *cmd)
+static void server_builtin_clients(char *cmd)
 {
 	int i, rc;
 	char buf[80];
@@ -19077,11 +19077,22 @@ static void server_builtin_clients(__attribute__((unused)) char *cmd)
 	socklen_t namelen;
 	uint16_t port;
 	uint32_t ip;
+	int which_client = -1;
+
+	rc = sscanf(cmd, "%*s %d", &which_client);
+	if (rc == 1) {
+		if (which_client < 0 || which_client >= nclients) {
+			send_demon_console_color_msg(YELLOW, "INVALID CLIENT NUMBER");
+			return;
+		}
+	}
 
 	send_demon_console_msg("%10s %5s %5s %20s %8s %20s",
 				"CURRENT", "CLNT", "BRDG", "SHIP NAME", "ROLES", "IP ADDR");
 	send_demon_console_msg("--------------------------------------------------------------");
 	for (i = 0; i < nclients; i++) {
+		if (which_client >= 0)
+			i = which_client;
 		struct game_client *c = &client[i];
 		switch (c->current_station) {
 		case DISPLAYMODE_MAINSCREEN:
@@ -19146,6 +19157,13 @@ static void server_builtin_clients(__attribute__((unused)) char *cmd)
 				(uint8_t) ((ip >> 24) & 0xff), (uint8_t) ((ip >> 16) & 0xff),
 				(uint8_t) ((ip >> 8) & 0xff), (uint8_t) (ip & 0xff), port);
 		send_demon_console_msg(buf);
+		if (which_client >= 0) {
+			for (int j = 0; j < (int) ARRAYSIZE(c->build_info); j++) {
+				snprintf(buf, sizeof(buf), "    %s", c->build_info[j]);
+				send_demon_console_msg(buf);
+			}
+			break;
+		}
 	}
 }
 
