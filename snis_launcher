@@ -215,16 +215,17 @@ EOF
 kill_processes()
 {
 	pattern="$1"
-	p=$(ps aux | grep -E "$pattern" | grep -v 'grep')
+	p=$(ps ax -o pid,cmd | grep -E "$pattern" | grep -v 'grep')
 	if [ "$p" = "" ]
 	then
 		printf "There are no processes to kill.\n"
 		return
 	else
-		printf "%s\n" "$p"
+		printf "\n\n%s\n" "$p"
 	fi
-	ps aux | grep -E "$pattern" | grep -v 'grep' | awk '{ printf("kill %s\n", $2); }' | /bin/sh
-	printf "Killed the above processes.\n"
+	ps ax -o pid,cmd | grep -E "$pattern" | grep -v 'grep' | awk '{ printf("kill %s\n", $1); }' | /bin/sh
+	printf "\nKilled the above processes.\n"
+	sleep 0.25
 }
 
 check_for_binary()
@@ -424,7 +425,7 @@ reformat_processes()
 show_snis_processes()
 {
 	printf "%s\n" "------------------------------------------------------------"
-	p=$(ps aux | grep -E 'snis_multiverse|snis_server|snis_client|ssgl_server' | grep -v grep)
+	p=$(ps ax -o pid,cmd | grep -E 'snis_multiverse|snis_server|snis_client|ssgl_server' | grep -v grep)
 	if [ "$p" = "" ]
 	then
 		printf "No SNIS processes are currently running.\n"
@@ -447,7 +448,7 @@ check_for_bad_lockfiles()
 			continue;
 		fi
 		instancename=$(printf "%s\n" "$x" | sed -e 's/.*[.]//')
-		ps aux | grep -E snis_server | grep "[-]L $instancename[ ]" > /dev/null 2>&1
+		ps ax -o pid,cmd | grep -E snis_server | grep "[-]L $instancename[ ]" > /dev/null 2>&1
 		if [ "$?" = "1" ]
 		then
 			printf "\n" 1>&2
