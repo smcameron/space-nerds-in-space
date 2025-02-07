@@ -23416,6 +23416,36 @@ static void prevent_zombies(void)
 				strerror(errno));
 }
 
+static void handle_sigterm(__attribute__((unused)) int signum)
+{
+	final_quit_selection = QUIT_SELECTION_QUIT;
+}
+
+static void catch_sigterm(void)
+{
+	struct sigaction sa;
+
+	sa.sa_handler = handle_sigterm;
+	sigemptyset(&sa.sa_mask);
+	sa.sa_flags = 0;
+
+	if (sigaction(SIGTERM, &sa, NULL) != 0)
+		fprintf(stderr, "Failed to handle SIGTERM: %s\n", strerror(errno));
+}
+
+static void catch_sigint(void)
+{
+	struct sigaction sa;
+
+	sa.sa_handler = SIG_IGN;
+	sigemptyset(&sa.sa_mask);
+	sa.sa_flags = 0;
+
+	if (sigaction(SIGTERM, &sa, NULL) != 0)
+		fprintf(stderr, "Failed to ignore SIGINT, Ctrl-C will terminate program: %s\n",
+				strerror(errno));
+}
+
 static void set_random_seed(void)
 {
 	char *seed = getenv("SNISRAND");
@@ -23925,8 +23955,12 @@ static void process_events(SDL_Window *window)
 			key_release_cb(&event.key.keysym);
 			break;
 		case SDL_QUIT:
-			/* Handle quit requests (like Ctrl-c). */
-			in_the_process_of_quitting = 0;
+			/* By default SDL2 installs signal handlers for SIGINT and SIGTERM and converts
+			 * both of them into SDL_QUIT events.  We suppress these default signal handlers
+			 * and install our own, so we should not get here except by e.g. clicking the 'X'
+			 * on the window border.
+			 */
+			in_the_process_of_quitting = 1;
 			final_quit_selection = QUIT_SELECTION_CONTINUE;
 			break;
 		case SDL_WINDOWEVENT:
@@ -23979,6 +24013,7 @@ static void enable_sdl_fullscreen_sanity(void)
 
 static int start_sdl(void)
 {
+	SDL_SetHint(SDL_HINT_NO_SIGNAL_HANDLERS, "1"); /* Suppress default SDL2 SIGTERM and SIGINT signal handlers */
 	if (SDL_Init(SDL_INIT_VIDEO) != 0) {
 		fprintf(stderr, "Unable to initialize SDL (Video):  %s\n", SDL_GetError());
 		return 1;
@@ -24069,6 +24104,9 @@ static void __attribute__((noreturn)) splash_screen_fn(int pipefd)
 	no_previous_loading_time = get_previous_loading_time(&loading_time_ms);
 	if (loading_time_ms < 0.1 || loading_time_ms > 30000.0) /* guard against nonsense values, divide by zero */
 		loading_time_ms = 4500.0; /* empirically measured on my laptop -- steve */
+
+	catch_sigterm();
+	catch_sigint();
 
 	if (start_sdl())
 		exit(1);
