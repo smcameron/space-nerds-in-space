@@ -9933,6 +9933,10 @@ static void show_mainscreen(void)
 	else
 		current_zoom = newzoom(current_zoom, o->tsd.ship.mainzoom);
 
+	/* Main Nav hybrid doesn't allow zooming main view */
+	if (displaymode == DISPLAYMODE_NAVIGATION) /* means main_nav_hybrid == 1 */
+		current_zoom = 0;
+
 	angle_of_view = ((255.0 - (float) current_zoom) / 255.0) *
 				(max_angle_of_view - min_angle_of_view) + min_angle_of_view;
 
