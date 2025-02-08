@@ -21361,8 +21361,13 @@ static int main_da_expose(SDL_Window *window)
 		show_mainscreen();
 		break;
 	case DISPLAYMODE_NAVIGATION:
-		if (main_nav_hybrid)
+		if (main_nav_hybrid) {
 			show_mainscreen();
+			/* Clear the depth buffer so that navigation elements don't
+			 * end up *behind* main screen elements (e.g. planets.)
+			 */
+			graph_dev_clear_depth_bit();
+		}
 		show_navigation();
 		break;
 	case DISPLAYMODE_WEAPONS:
