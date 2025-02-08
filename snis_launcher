@@ -546,6 +546,58 @@ choose_options()
 	done
 }
 
+really_exit()
+{
+	printf "\nGoodbye! Thanks for playing!\n\n"
+	exit
+}
+
+do_exit()
+{
+
+	local CONTAINER_TYPE=""
+	if [ "$FLATPAK_ID" != "" ]
+	then
+		CONTAINER_TYPE="flatpak"
+	fi
+
+	if [ "$APPIMAGE" != "" ]
+	then
+		CONTAINER_TYPE="appimage"
+	fi
+
+
+	if [ "$CONTAINER_TYPE" != "" ]
+	then
+		local pattern="snis_server|snis_multiverse|snis_client|ssgl_server"
+		p=$(ps ax -o pid,cmd | grep -E "$pattern" | grep -v 'grep')
+		if [ "$p" != "" ]
+		then
+			printf "\n\nSNIS processes are still running in this $CONTAINER_TYPE container\n\n"
+			printf "%s" "$p"
+			printf "\n\n\n"
+			printf "If you exit now, those processes will continue, but become inaccessible\n"
+			printf "Do you REALLY want to quit? (y/n) "
+			read answer
+			if [ "$answer" = "y" -o "$answer" = "Y" ]
+			then
+				printf "OK, here is a shell in the $CONTAINER_TYPE container. When\n"
+				printf "you exit this shell, you will exit the container.\n\n"
+				/usr/bin/sh
+			else
+				return
+			fi
+			really_exit
+		else
+			# no processes running, safe to exit
+			really_exit
+		fi
+	else
+		# Not in a container, we can just exit
+		really_exit
+	fi
+}
+
 check_for_ip_address
 
 while true
@@ -560,8 +612,7 @@ do
 
 	case "$x" in
 	0)
-	   printf "\nGoodbye! Thanks for playing!\n\n"
-	   exit
+	   do_exit
 		;;
 	5) kill_processes 'snis_server|snis_client|snis_multiverse|ssgl_server'
 		remove_snis_lock_dirs
@@ -594,5 +645,5 @@ do
 	esac
 done
 
-exit
+do_exit
 
