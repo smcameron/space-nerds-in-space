@@ -9890,6 +9890,9 @@ static void adjust_main_view_azimuth_angle(union quat *cam_orientation)
 	if (main_view_azimuth_angle == 0.0)
 		return;
 
+	if (displaymode == DISPLAYMODE_NAVIGATION) /* main-nav-hybrid mode? */
+		return;
+
 	quat_init_axis(&az, 0.0, 1.0, 0.0, main_view_azimuth_angle * M_PI / 180.0);
 	quat_mul_self(cam_orientation, &az);
 }
