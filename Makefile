@@ -35,7 +35,6 @@ V ?= 0
 
 CC ?= gcc
 
-# DESTDIR=.
 PREFIX?=.
 
 ifeq (${UBSAN},1)
@@ -48,7 +47,7 @@ endif
 # object fild directory
 OD=object_files
 
-DATADIR=${DESTDIR}/${PREFIX}/share/snis
+DATADIR=${DESTDIR}${PREFIX}/share/snis
 CONFIGFILEDIR=${DATADIR}
 CONFIGSRCDIR=./share/snis
 CONFIGFILES=${CONFIGSRCDIR}/commodities.txt \
@@ -355,7 +354,7 @@ MATERIALFILES=${MATERIALSRCDIR}/nebula0.mat \
 	${MATERIALSRCDIR}/nebula8.mat \
 	${MATERIALSRCDIR}/nebula9.mat
 
-SHADERDIR=${DESTDIR}/${PREFIX}/share/snis/shader
+SHADERDIR=${DESTDIR}${PREFIX}/share/snis/shader
 SHADERSRCDIR=${ASSETSSRCDIR}/shader
 SHADERS=${SHADERSRCDIR}/atmosphere.frag \
 	${SHADERSRCDIR}/atmosphere.vert \
@@ -434,9 +433,9 @@ MANPAGES=${MANSRCDIR}/snis_client.6.gz ${MANSRCDIR}/snis_server.6.gz \
 	${MANSRCDIR}/earthlike.1.gz \
 	${MANSRCDIR}/snis_text_to_speech.sh.6 ${MANSRCDIR}/snis_test_audio.1.gz ssgl/ssgl_server.6 ${MANSRCDIR}/snis_multiverse.6 \
 	${MANSRCDIR}/snis_update_assets.6
-MANDIR=${DESTDIR}/${PREFIX}/share/man/man6
+MANDIR=${DESTDIR}${PREFIX}/share/man/man6
 
-DESKTOPDIR=${DESTDIR}/${PREFIX}/share/applications
+DESKTOPDIR=${DESTDIR}${PREFIX}/share/applications
 DESKTOPSRCDIR=.
 DESKTOPFILES=${DESKTOPSRCDIR}/snis.desktop
 UPDATE_DESKTOP=update-desktop-database ${DESKTOPDIR} || :
@@ -673,7 +672,7 @@ else
 COMPSPECCFLAGS=-Wno-gnu-folding-constant
 endif
 
-MYCFLAGS=-DPREFIX=${PREFIX} ${DEBUGFLAG} ${PROFILEFLAG} ${OPTIMIZEFLAG} ${UBSANFLAG}\
+MYCFLAGS=-DDESTDIR=${DESTDIR} -DPREFIX=${PREFIX} ${DEBUGFLAG} ${PROFILEFLAG} ${OPTIMIZEFLAG} ${UBSANFLAG}\
 	--pedantic -Wall -Wextra ${STOP_ON_WARN} -pthread -std=gnu99 ${RDYNAMIC} \
 	$(CFLAGS) -Wvla \
 	-DUSE_SNIS_XWINDOWS_HACKS=${USE_SNIS_XWINDOWS_HACKS} -fno-common \
@@ -786,7 +785,7 @@ ${BINARY_NAMES}:
 #	@util/snis_update_assets.sh --dry-run
 #
 # install-assets:
-#	@util/snis_update_assets.sh --localcopy --destdir ${DESTDIR}/${PREFIX}
+#	@util/snis_update_assets.sh --localcopy --destdir ${DESTDIR}${PREFIX}
 
 build:	all
 
@@ -865,7 +864,7 @@ $(OD)/snis_ship_type.o:   snis_ship_type.c snis_ship_type.h corporations.h Makef
 	$(Q)$(COMPILE)
 
 bin/snis_launcher:	snis_launcher
-	./modify_snis_launcher.sh snis_launcher ${PREFIX} > bin/snis_launcher
+	./modify_snis_launcher.sh snis_launcher ${DESTDIR} ${PREFIX} > bin/snis_launcher
 	chmod +x bin/snis_launcher
 
 bin/test_snis_ship_type: snis_ship_type.c snis_ship_type.h ${OD}/string-utils.o ${OD}/corporations.o ${OD}/rts_unit_data.o ${BIN}
@@ -1376,26 +1375,23 @@ bin/snis_test_audio:	${OD}/snis_test_audio.o ${SNDLIBS} Makefile ${BIN} ${OD}/ma
 
 install:	${BINPROGS} ${MANPAGES} ${SSGL}
 	@# First check that PREFIX is sane, and esp. that it's not pointed at source
-	@mkdir -p ${DESTDIR}/${PREFIX}
-	@touch ${DESTDIR}/${PREFIX}/.canary-in-the-coal-mine.canary
+	@mkdir -p ${DESTDIR}${PREFIX}
+	@touch ${DESTDIR}${PREFIX}/.canary-in-the-coal-mine.canary
 	@if [ -f .canary-in-the-coal-mine.canary ] ; then \
 		echo 1>&2 ; \
-		echo "DESTDIR/PREFIX is ${DESTDIR}/${PREFIX} -- cannot install here" 1>&2 ; \
+		echo "DESTDIR/PREFIX is ${DESTDIR}${PREFIX} -- cannot install here" 1>&2 ; \
 		echo "Try: make PREFIX=/usr/local ; make PREFIX=/usr/local install" 1>&2  ; \
 		echo 1>&2 ; \
-		rm -f ${DESTDIR}/${PREFIX}/.canary-in-the-coal-mine.canary ; \
+		rm -f ${DESTDIR}${PREFIX}/.canary-in-the-coal-mine.canary ; \
 		exit 1 ; \
 	fi
-	@ rm -f ${DESTDIR}/${PREFIX}/.canary-in-the-coal-mine.canary
-	mkdir -p ${DESTDIR}/${PREFIX}/bin
+	@ rm -f ${DESTDIR}${PREFIX}/.canary-in-the-coal-mine.canary
+	mkdir -p ${DESTDIR}${PREFIX}/bin
 	for x in ${BINPROGS} ; do \
 		${INSTALL} -m 755 $$x \
-				${DESTDIR}/${PREFIX}/bin; \
+				${DESTDIR}${PREFIX}/bin; \
 	done
-	${AWK} '/^PREFIX=.*/ { printf("PREFIX='${PREFIX}'\n"); next; } \
-		{ print; } ' < snis_launcher > /tmp/snis_launcher
-	${INSTALL} -m 755 /tmp/snis_launcher ${DESTDIR}/${PREFIX}/bin
-	rm -f /tmp/snis_launcher
+	${INSTALL} -m 755 bin/snis_launcher ${DESTDIR}${PREFIX}/bin
 	# for d in ${MATERIALDIR} ${LUASCRIPTDIR}/UTIL ${LUASCRIPTDIR}/TEST \
 	#	${LUASCRIPTDIR}/MISSIONS ${LUASCRIPTDIR}/MISSIONS/lib ${SHADERDIR} ${SOUNDDIR} \
 	#	${TEXTUREDIR} ${MODELDIR}/wombat ${SHADERDIR} ; do \
@@ -1438,29 +1434,29 @@ install:	${BINPROGS} ${MANPAGES} ${SSGL}
 	mkdir -p ${DESKTOPDIR}
 	${INSTALL} -m 644 ${DESKTOPFILES} ${DESKTOPDIR}
 	${UPDATE_DESKTOP}
-	mkdir -p ${PREFIX}/share/snis
-	bin/snis_update_assets --force --destdir ${PREFIX} --srcdir ./share/snis
+	mkdir -p ${DESTDIR}${PREFIX}/share/snis
+	bin/snis_update_assets --force --destdir ${DESTDIR}${PREFIX} --srcdir ./share/snis
 
 uninstall:
 	@# check that PREFIX is sane
-	@touch ${DESTDIR}/${PREFIX}/.canary-in-the-coal-mine.canary
+	@touch ${DESTDIR}${PREFIX}/.canary-in-the-coal-mine.canary
 	@if [ -f .canary-in-the-coal-mine.canary ] ; then \
 		echo 1>&2 ; \
-		echo "DESTDIR/PREFIX is ${DESTDIR}/${PREFIX} -- cannot uninstall here" 1>&2 ; \
+		echo "DESTDIR/PREFIX is ${DESTDIR}${PREFIX} -- cannot uninstall here" 1>&2 ; \
 		echo "Try: make PREFIX=/usr/local uninstall" 1>&2  ; \
 		echo 1>&2 ; \
-		rm -f ${DESTDIR}/${PREFIX}/.canary-in-the-coal-mine.canary ; \
+		rm -f ${DESTDIR}${PREFIX}/.canary-in-the-coal-mine.canary ; \
 		exit 1 ; \
 	fi
-	@rm -f ${DESTDIR}/${PREFIX}/.canary-in-the-coal-mine.canary
-	if [ ! -d "${DESTDIR}/${PREFIX}" ] ; then \
+	@rm -f ${DESTDIR}${PREFIX}/.canary-in-the-coal-mine.canary
+	if [ ! -d "${DESTDIR}${PREFIX}" ] ; then \
 		echo "DESTDIR/PREFIX is not a directory." 1>&2 ;\
 		exit 1 ;\
 	fi
 	for x in ${BINPROGS} ; do \
-		rm -f ${DESTDIR}/${PREFIX}/$$x ; \
+		rm -f ${DESTDIR}${PREFIX}/$$x ; \
 	done
-	rm -fr ${DESTDIR}/${PREFIX}/share/snis
+	rm -fr ${DESTDIR}${PREFIX}/share/snis
 	rm -f ${MANDIR}/snis_client.6.gz ${MANDIR}/snis_client.6
 	rm -f ${MANDIR}/snis_server.6.gz ${MANDIR}/snis_server.6
 	rm -f ${MANDIR}/earthlike.1.gz ${MANDIR}/earthlike.1

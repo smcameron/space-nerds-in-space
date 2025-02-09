@@ -22,7 +22,7 @@
 
 #include "snis_asset_dir.h"
 
-static char *default_asset_dir = STRPREFIX(PREFIX) "/" DEFAULT_ASSET_DIR;
+static char *default_asset_dir = STRPREFIX(DESTDIR) STRPREFIX(PREFIX) "/" DEFAULT_ASSET_DIR;
 
 char *override_asset_dir(void)
 {

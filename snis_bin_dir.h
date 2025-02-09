@@ -22,8 +22,8 @@
 */
 
 /* Returns the binary location for SNIS executables.  Returns either the environment
- * variable ${SNISBINDIR}/bin, or if SNISBINDIR isn't set, returns PREFIX/bin where
- * PREFIX is defined by the Makefile (See also: snis_asset_dir.h).
+ * variable ${SNISBINDIR}/bin, or if SNISBINDIR isn't set, returns ${DESTIR}${PREFIX}/bin where
+ * DESTDIR and PREFIX are defined by the Makefile (See also: snis_asset_dir.h).
  */
 char *get_snis_bin_dir(void);
 

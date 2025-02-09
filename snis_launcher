@@ -20,12 +20,13 @@ then
 fi
 export SNIS_DB_DIR
 
-# Hack this in for now.  Note: the Makefile edits the next line with sed
+# Hack this in for now.  Note: the Makefile edits the next two lines with sed
 # so be careful if you change it that the Makefile still edits it correctly.
-# Currently it matches the pattern: '^PREFIX=[.]$'
+# Currently it matches the pattern: '^PREFIX=[.]$' and '^DESTDIR=$'
 PREFIX=.
+DESTDIR=
 
-BINDIR=${PREFIX}/bin
+BINDIR=${DESTDIR}${PREFIX}/bin
 if [ "$SNIS_ASSET_DIR" = "" ]
 then
 	if [ "$XDG_DATA_HOME" = "" ]

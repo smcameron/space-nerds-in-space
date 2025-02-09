@@ -38,7 +38,7 @@ char *get_snis_bin_dir(void)
 	if (envbindir)
 		snprintf(snis_bin_dir, sizeof(snis_bin_dir) - 1, "%s/bin", envbindir);
 	else
-		snprintf(snis_bin_dir, sizeof(snis_bin_dir) - 1, "%s/bin", STRPREFIX(PREFIX));
+		snprintf(snis_bin_dir, sizeof(snis_bin_dir) - 1, "%s%s/bin", STRPREFIX(DESTDIR), STRPREFIX(PREFIX));
 
 	return snis_bin_dir;
 }
