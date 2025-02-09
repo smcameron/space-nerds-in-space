@@ -153,9 +153,9 @@ cat << EOF 1>&2
    5. Launch SNIS client process
 	There should be one snis client process per player
 	plus one more per ship for the main screen.
-   6. Stop all SNIS processes
-   7. Stop all SNIS clients
-   8. Stop all SNIS servers
+   6. Stop all SNIS clients
+   7. Stop all SNIS servers
+   8. Stop all SNIS clients and servers
    9. Options
    0. Quit
 EOF
@@ -631,12 +631,12 @@ do
 		;;
 	5) start_snis_client "$SNIS_CLIENT"
 		;;
-	6) kill_processes 'snis_server|snis_client|snis_multiverse|ssgl_server'
+	6) kill_processes 'snis_client'
+		;;
+	7) kill_processes 'snis_server|snis_multiverse|ssgl_server'
 		remove_snis_lock_dirs
 		;;
-	7) kill_processes 'snis_client'
-		;;
-	8) kill_processes 'snis_server|snis_multiverse|ssgl_server'
+	8) kill_processes 'snis_server|snis_client|snis_multiverse|ssgl_server'
 		remove_snis_lock_dirs
 		;;
 	9) choose_options
