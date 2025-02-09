@@ -998,7 +998,7 @@ $(OD)/snis_damcon_systems.o:	snis_damcon_systems.c Makefile ${ODT}
 bin/snis_server:	${SERVEROBJS} ${SSGL} Makefile ${BIN}
 	$(Q)$(SERVERLINK)
 
-bin/snis_client:	${CLIENTOBJS} ${SSGL} Makefile ${BIN} ${OPUSARCHIVE}
+bin/snis_client:	${CLIENTOBJS} ${SDLCLIENTOBJS} ${SSGL} Makefile ${BIN} ${OPUSARCHIVE}
 	$(Q)$(CLIENTLINK)
 
 bin/snis_multiverse:	${MULTIVERSEOBJS} ${SSGL} Makefile ${BIN}
