@@ -8018,6 +8018,7 @@ static int process_client_id_packet(void)
 	 * will get a bridge verification failure.
 	 */
 	net_setup_ui.create_ship_v = 0;
+	net_setup_ui.join_ship_v = 1;
 
 	snis_prefs_save_checkbox_defaults(xdg_base_ctx, net_setup_ui.role_main_v, net_setup_ui.role_nav_v,
 					net_setup_ui.role_weap_v, net_setup_ui.role_eng_v,
