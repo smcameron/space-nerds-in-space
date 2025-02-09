@@ -136,26 +136,26 @@ print_main_menu()
 {
 cat << EOF 1>&2
 
-   1. Launch SNIS lobby server
+   1. Check for asset updates and set up assets
+   2. Launch SNIS lobby server
 	The lobby server allows clients to find servers
 	There should be one lobby server total.
-   2. Launch SNIS multiverse server
+   3. Launch SNIS multiverse server
 	The multiverse server stores player ship data
 	and optionally may automatically start and stop
 	snis_server instances.  There should be at most one
 	multiverse server.
-   3. Launch SNIS server
+   4. Launch SNIS server
 	There should be one snis server per solarsystem.
 	There should be at least one instance of snis_server.
 	If multiverse server is automatically starting/stopping
 	snis_server instances, you can skip this option.
-   4. Launch SNIS client process
+   5. Launch SNIS client process
 	There should be one snis client process per player
 	plus one more per ship for the main screen.
-   5. Stop all SNIS processes
-   6. Stop all SNIS clients
-   7. Stop all SNIS servers
-   8. Check for asset updates and set up assets
+   6. Stop all SNIS processes
+   7. Stop all SNIS clients
+   8. Stop all SNIS servers
    9. Options
    0. Quit
 EOF
@@ -615,29 +615,29 @@ do
 	0)
 	   do_exit
 		;;
-	5) kill_processes 'snis_server|snis_client|snis_multiverse|ssgl_server'
-		remove_snis_lock_dirs
-		;;
-	6) kill_processes 'snis_client'
-		;;
-	7) kill_processes 'snis_server|snis_multiverse|ssgl_server'
-		remove_snis_lock_dirs
-		;;
-	1) start_snis_lobby
-		;;
-	2) start_snis_multiverse
-		;;
-	3) start_snis_server
-		;;
-	4) start_snis_client "$SNIS_CLIENT"
-		;;
-	8)
+	1)
 		# copy local assets first
 		echo "Updating local assets..."
 		${SNIS_UPDATE_ASSETS} --force --destdir "$SNIS_ASSET_DIR_ROOT" --srcdir ./share/snis ;
 		# download assets from spacenerdsinspace.com
 		echo "Downloading remote assets from asset server..."
 		${SNIS_UPDATE_ASSETS} --force --destdir "$SNIS_ASSET_DIR_ROOT" ;
+		;;
+	2) start_snis_lobby
+		;;
+	3) start_snis_multiverse
+		;;
+	4) start_snis_server
+		;;
+	5) start_snis_client "$SNIS_CLIENT"
+		;;
+	6) kill_processes 'snis_server|snis_client|snis_multiverse|ssgl_server'
+		remove_snis_lock_dirs
+		;;
+	7) kill_processes 'snis_client'
+		;;
+	8) kill_processes 'snis_server|snis_multiverse|ssgl_server'
+		remove_snis_lock_dirs
 		;;
 	9) choose_options
 		;;
