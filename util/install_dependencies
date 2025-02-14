@@ -28,7 +28,9 @@ apt_min_packages()
 	liblua5.2-dev
 	libglew-dev
 	libttspico-utils
-	sox"
+	sox
+	libcrypt-dev
+	libcurl4-gnutls-dev"
 }
 
 apt_opt_tts_packages()
@@ -185,7 +187,7 @@ yum_install_package()
 
 yum_already_installed()
 {
-	sudo yum info "$1" > /dev/null 2>&1 
+	sudo yum info "$1" > /dev/null 2>&1
 	return $?
 }
 
@@ -256,7 +258,7 @@ main()
 	packages=$("$package_manager"_min_packages)
 	opt_tts_packages=$("$package_manager"_opt_tts_packages)
 	dev_packages=$("$package_manager"_dev_packages)
-	
+
 	intro
 
 	if yn "Proceed? "
