@@ -57,7 +57,7 @@ Here's a quick preview of the build instructions detailed below:
 2. Install dependencies (run `util/install_dependencies` on apt-based systems)
 3. Build the code (type "`make`")
 4. Download additional art assets (type "`bin/snis_launcher`", then choose
-option 8, "Check for asset updates and set up assets".)
+option 1, "Check for asset updates and set up assets".)
 5. Run the game (type "`bin/snis_launcher`")
 
 
@@ -275,7 +275,7 @@ as you will be missing some additional solarsystem assets. As a non-root user:
 >  bin/snis_launcher
 ```
 
-Then choose option 8, "Check for asset updates and set up assets".  This will copy assets
+Then choose option 1, "Check for asset updates and set up assets".  This will copy assets
 to (by default) into $HOME/.local/share/space-nerds-in-space/ and download additional assets
 over the internet.
 
