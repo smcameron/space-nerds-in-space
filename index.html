@@ -172,189 +172,224 @@ Vince Pelss has compiled SNIS into Appimage and Flatpak forms. These may be foun
 <li>Appimage: <a href="https://github.com/vpelss/Space-Nerds-In-Space-Appimage">https://github.com/vpelss/Space-Nerds-In-Space-Appimage</a>
 </ul>
 
-<h1><a name="buildinstructions">Build Instructions</a></h1>
+<!-- DO NOT EDIT THESE BUILD INSTRUCTIONS BELOW -->
+<!-- THEY ARE AUTOMATICALLY GENERATED FROM README.md on the master branch -->
+<!-- by using tinymd2html. https://github.com/smcameron/tinymd2html -->
+
+<style>
+fwf {
+	font-family: courier
+}
+</style>
+
+<p><a name="buildinstructions"><h1>Build Instructions</h1></a>
 
 <p>Here's a quick preview of the build instructions detailed below:
-<ol start="0">
+
+<p><ol>
 <li>Acquire necessary hardware (some linux machines, network switch, cables, projector, stereo, etc.)
 <li>Clone git repository or obtain source tarball and unpack it.
-<li>Install dependencies (run <cmd>util/install_dependencies</cmd> on apt-based systems)
-<li>Build the code (type "<cmd>make<cmd>")
-<li>Download additional art assets (type "<cmd>bin/snis_launcher</cmd>", then choose
+<li>Install dependencies (run <fwf>util/install_dependencies</fwf> on apt-based systems)
+<li>Build the code (type "<fwf>make</fwf>")
+<li>Download additional art assets (type "<fwf>bin/snis_launcher</fwf>", then choose
+</ol>
 option 8, "Check for asset updates and set up assets".)
-<li>Run the game (type "<cmd>bin/snis_launcher</cmd>")
+<ol>
+<li>Run the game (type "<fwf>bin/snis_launcher</fwf>")
 </ol>
 
-<p><a href="https://www.youtube.com/watch?v=tCokfUtZOqw">(Here is a long, boring video demonstrating how to install)</a>
 
-<h2>Step 0: Acquire Hardware and OS</h2>
+<p><a href="https://www.youtube.com/watch?v=tCokfUtZOqw">Here is a long, boring video demonstrating how to install</a>
+
+<p><a name="step0acquirehardwareandos"><h2>Step 0: Acquire Hardware and OS</h2></a>
+
 <p>This is a linux game.  You will need a computer running linux that has
 a reasonably decent GPU.  A Raspberry Pi 4 (with 4Gb RAM) and heatsinks is
-sufficiently powerful to run the game at 720p for <em>some</em> screens, namely NAVIGATION,
-ENGINEERING, DAMAGE CONTROL, SCIENCE and COMMS, but is <em>not</em> really good enough
+sufficiently powerful to run the game at 720p for &lt;em&gt;some&lt;/em&gt; screens, namely NAVIGATION,
+ENGINEERING, DAMAGE CONTROL, SCIENCE and COMMS, but is &lt;em&gt;not&lt;/em&gt; really good enough
 for the MAIN VIEW, WEAPONS, or DEMON screens (you'll see very low FPS).
-<a href="https://www.youtube.com/watch?v=wdy4ICZqc68">Here is a long boring
-youtube video demonstrating installation and running SNIS on a Raspberry Pi 4B</a>
+<a href="https://www.youtube.com/watch?v=wdy4ICZqc68">Here is a long boring youtube video demonstrating installation and running SNIS on a Raspberry Pi 4B</a>
 if you want to see for yourself what it's like.
 Older Raspberry Pis
-are generally <em>not</em> powerful enough to run the game.
+are generally <b>not</b> powerful enough to run the game.
 
 <p>It is possible to run the game entirely on a single linux laptop, but for the full and
 proper spaceship experience you will want six linux computers, a network switch,
 a projector or large TV, and a stereo system for audio in a reasonably dark
 room.
 
-<p>The game is currently developed using <a href="https://www.linuxmint.com/">Mint 17.3</a>
+<p>The game is currently developed using <a href="https://www.linuxmint.com/">Mint 20.3</a>
 It is within the realm of possibility that the game could be made to build
 and work on Mac OSX (it has been done before, but not since 2014 or so.)
 You're on your own if you want to try to run it on Mac, and my understanding
 is that newer Macs don't support OpenGL, which means you're out of luck.
 
-<h2>Step 1: Download the Source Code</h2>
+<p><a name="step1downloadthesourcecode"><h2>Step 1: Download the Source Code</h2></a>
 
 <p>The source code is here:
 <a href="https://github.com/smcameron/space-nerds-in-space">Space Nerds In Space github page</a>
-<p><b>NOTE: Do <e>NOT</em> perform these steps as root!</b>
+
+<p><b>NOTE: Do NOT perform these steps as root!</b>
+
 <p>To get the source code, there are three methods:
-<ul>
+
+<p><ul>
 <li>If you are a registered github user, type (as a non-root user):
-<pre>
+</ul>
+
+<p><pre>
 <blockquote>
-git clone git@github.com:smcameron/space-nerds-in-space.git
-<blockquote>
+ git clone git@github.com:smcameron/space-nerds-in-space.git
+</blockquote>
 </pre>
+
+<p><ul>
 <li>If not a registered github user, you can still use git with https.  Type (as a non-root user):
-<pre>
+</ul>
+
+<p><pre>
 <blockquote>
-git clone https://github.com/smcameron/space-nerds-in-space.git
-<blockquote>
+ git clone https://github.com/smcameron/space-nerds-in-space.git
+</blockquote>
 </pre>
+
+<p><ul>
 <li>Finally, you can just download a snapshot zipfile without using git at all:
 <ul>
-<li><a href="https://github.com/smcameron/space-nerds-in-space/archive/master.zip">
-https://github.com/smcameron/space-nerds-in-space/archive/master.zip</a>
+<li><a href="https://github.com/smcameron/space-nerds-in-space/archive/master.zip">https://github.com/smcameron/space-nerds-in-space/archive/master.zip</a>
 </ul>
+</ul>
+
 <p>After downloading the zip file, you must unpack the zip file.  Type (as a non-root user):
-<pre>
-<blockquote>
-unzip space-nerds-in-space-master.zip
-cd space-nerds-in-space-master
-</blockquote>
-</ul>
 
-<h2>Step 2: Install Dependencies</h2>
-<p>There is a script, <cmd>util/install_dependencies</cmd>. In theory it can install dependencies
-on apt, yum, zypper, or rpm based systems, but it has only been tried with apt based
-systems. If you want to see what it will do without actually doing anything, it has
-a <cmd>--dry-run</cmd> option.
+<p><pre>
 <blockquote>
-<cmd>util/install_dependencies</cmd>
-</blockquote>
-If you don't want to run this script, or find that it does not work for you, you can
-install the dependencies manually, as described below. If <cmd>util/install_dependencies</cmd>
-performs its job satisfactorily, you can advance to Step 3.
-<pre>
-<blockquote>
-sudo apt-get install build-essential;
-sudo apt-get install portaudio19-dev;
-sudo apt-get install libpng-dev;
-sudo apt-get install libvorbis-dev;
-sudo apt-get install libsdl2-dev;
-sudo apt-get install libsdl2-2.0-0;
-sudo apt-get install liblua5.2-dev;
-sudo apt-get install libglew-dev;
-sudo apt-get install libttspico-utils; # optional, for text to speech
-sudo apt-get install sox; # for "play" command, used by text to speech
-sudo apt-get install libcrypt-dev; # used by bin/snis_update_assets
-sudo apt-get install libcurl-dev; # used by bin/snis_update_assets
-
-# Opus is needed for voice-chat, though you can compile without voice chat or,
-# you can have the Makefile download and compile opus for you instead of
-# using packages if you distro does not have Opus packages
-#
-sudo apt-get install libopus-dev; # used for voice-chat feature
-sudo apt-get install libopus0; # used for voice-chat feature
-
-# (The following are optional)
-sudo apt-get install espeak; # optional alternative to libttspico-utils
-sudo apt-get install alsa-utils; # optional alternative to sox, for "aplay" command
-sudo apt-get install openscad; # optional, only needed if you intend to work on 3D models.
-                # Also, it is recommended to get it from http://www.openscad.org/downloads.html
-                # as the version in the repos tends to be out of date.
-sudo apt-get install git; # Version control, useful if you're hacking on the game
-sudo apt-get install stgit; # Useful for making patches if you're hacking on the game. It's like "<a href="https://en.wikipedia.org/wiki/Quilt_(software)">quilt</a>"
-but on top of git.
+ unzip space-nerds-in-space-master.zip
+ cd space-nerds-in-space-master
 </blockquote>
 </pre>
+
+<p><a name="step2installdependencies"><h2>Step 2: Install Dependencies</h2></a>
+
+<p>There is a script, <fwf>util/install_dependencies</fwf>. In theory it can install dependencies
+on apt, yum, zypper, or rpm based systems, but it has only been tried with apt based
+systems. If you want to see what it will do without actually doing anything, it has
+a <fwf>--dry-run</fwf> option.
+
+<p><pre>
+<fwf>util/install_dependencies</fwf>
+</pre>
+
+<p>If you don't want to run this script, or find that it does not work for you, you can
+install the dependencies manually, as described below. If <fwf>util/install_dependencies</fwf>
+performs its job satisfactorily, you can advance to Step 3.
+
+<p><pre>
+<blockquote>
+ sudo apt-get install build-essential;
+ sudo apt-get install portaudio19-dev;
+ sudo apt-get install libpng-dev;
+ sudo apt-get install libvorbis-dev;
+ sudo apt-get install libsdl2-dev;
+ sudo apt-get install libsdl2-2.0-0;
+ sudo apt-get install liblua5.2-dev;
+ sudo apt-get install libglew-dev;
+ sudo apt-get install libttspico-utils; # optional, for text to speech
+ sudo apt-get install sox; # for "play" command, used by text to speech
+ sudo apt-get install libcrypt-dev; # used by bin/snis_update_assets
+ sudo apt-get install libcurl-dev; # used by bin/snis_update_assets
+ 
+ # Opus is needed for voice-chat, though you can compile without voice chat or,
+ # you can have the Makefile download and compile opus for you instead of
+ # using packages if you distro does not have Opus packages
+ #
+ sudo apt-get install libopus-dev; # used for voice-chat feature
+ sudo apt-get install libopus0; # used for voice-chat feature
+ 
+ # (The following are optional)
+ sudo apt-get install espeak; # optional alternative to libttspico-utils
+ sudo apt-get install alsa-utils; # optional alternative to sox, for "aplay" command
+ sudo apt-get install openscad; # optional, only needed if you intend to work on 3D models.
+                 # Also, it is recommended to get it from http://www.openscad.org/downloads.html
+                 # as the version in the repos tends to be out of date.
+ sudo apt-get install git; # Version control, useful if you're hacking on the game
+ sudo apt-get install stgit; # Useful for making patches if you're hacking on the game.
+ It's like <a href="https://en.wikipedia.org/wiki/Quilt_%28software%29">quilt</a> but on top of git.
+</blockquote>
+
+<p></pre>
 
 <p>If you want to try the optional pocketsphinx based local speech recognition,
 you will want the following packages:
-<pre>
+
+<p><pre>
 <blockquote>
-sudo apt-get install pocketsphinx-utils;
-sudo apt-get install pocketsphinx-lm-en-hub4;
-sudo apt-get install pocketsphinx-lm-en-hub4;
-sudo apt-get install libpocketsphinx1;
+ sudo apt-get install pocketsphinx-utils;
+ sudo apt-get install pocketsphinx-lm-en-hub4;
+ sudo apt-get install pocketsphinx-lm-en-hub4;
+ sudo apt-get install libpocketsphinx1;
 </blockquote>
 </pre>
 
 <p>The above list may be incomplete, and these are the package names on mint 17.3 / ubuntu,
 so may be different on RPM based systems.
 
-<p class="tab">
-<div class="boxed">
-<p class="tab">NOTE: Later, the Makefile will download the Opus library source (
-https://archive.mozilla.org/pub/opus/opus-1.3.1.tar.gz).  This library is used
-for the voice chat feature. If you intend to build on a machine which does not
-have internet access, or for whatever reason do not want the makefile to download
-this library at build time, you can download it yourself beforehand. Or you can
-modify the Makefile and change "WITHVOICECHAT=yes" at the top of the file to
-"WITHVOICECHAT=no" and it will not download this library (and you won't have the
-voice chat feature.)
-</p>
-</div>
+<blockquote>
+ NOTE: Later, the Makefile will download the Opus library source (
+ https://archive.mozilla.org/pub/opus/opus-1.3.1.tar.gz).  This library is used
+ for the voice chat feature. If you intend to build on a machine which does not
+ have internet access, or for whatever reason do not want the makefile to download
+ this library at build time, you can download it yourself beforehand. Or you can
+ modify the Makefile and change "WITHVOICECHAT=yes" at the top of the file to
+ "WITHVOICECHAT=no" and it will not download this library (and you won't have the
+ voice chat feature.)
+</blockquote>
 
-<p class="tab">
-<div class="boxed">
-<p class="tab">NOTE: problems building on SuSE Leap 15.1. The following problems/solutions have
-been conveyed to me regarding SuSE Leap 15.1. This information is not very complete or
-accurate, but it is the best I have for now.  Please feel free to send me
-improvements to these instructions.
-See <a href="https://github.com/smcameron/space-nerds-in-space/issues/222">
-Bug 222</a>.
-<ol>
+<blockquote>
+ NOTE: problems building on SuSE Leap 15.1. The following problems/solutions have
+ been conveyed to me regarding SuSE Leap 15.1. This information is not very complete or
+ accurate, but it is the best I have for now.  Please feel free to send me
+ improvements to these instructions.
+ See <a href="https://github.com/smcameron/space-nerds-in-space/issues/222">Bug 222</a>
+</blockquote>
+
+
+<p><ol>
 <li>Need to install pkg-config and pkg-config_files.
 <li>Need to set pkg-config-path environment variable
 <li>All references to lua 5.2 in the Makefile need to be changed to lua 5.3.
-Note, we only compiled snis_client (via "make bin/snis_client") which shouldn't
-need lua at all. I don't know if the differences between lua 5.3 and lua 5.2 are
-significant enough to break things. I normally use lua 5.2 on my systems.
-<a href="http://www.lua.org/manual/5.3/readme.html#changes">Changes to Lua 5.3</a>
--- at a quick glance I didn't see anything that I think will
-be problematic.
+   Note, we only compiled snis_client (via "make bin/snis_client") which shouldn't
+   need lua at all. I don't know if the differences between lua 5.3 and lua 5.2 are
+   significant enough to break things. I normally use lua 5.2 on my systems.
+   <a href="http://www.lua.org/manual/5.3/readme.html#changes">Changes to Lua 5.3</a>
+<ul>
+<li> at a quick glance I didn't see anything that I think will be problematic.
+</ul>
 </ol>
-</p>
-</div>
-</p>
 
-<h2>Step 3: Build the Code</h2>
+<p><a name="step3buildthecode"><h2>Step 3: Build the Code</h2></a>
+
 <p>To build the code, make sure you are in the top level
 directory for the game ("space-nerds-in-space" if you
 got the source using git, or "space-nerds-in-space-master" if you
 downloaded the zip file), and type (as a non-root user):
 
-<pre><blockquote>
-make
-</blockquote></pre>
+<p><pre>
+<blockquote>
+ make
+</blockquote>
+</pre>
+
 <p>You should see quite a lot of output, like this:
-<pre>
+
+<p><pre>
 <blockquote>
   COMPILE mathutils.c
   COMPILE snis_alloc.c
   COMPILE snis_socket_io.c
 
-... many steps omitted here ...
-
+ ... many steps omitted here ...
+ 
   LINK bin/snis_server
   LINK bin/snis_client
   LINK bin/snis_limited_client
@@ -372,42 +407,58 @@ for you.
 <p>You can also file a bug report if you think you have discovered a problem
 with the build process, or the instructions here.  I believe you will need a github
 account to file a bug report.
-<ul>
-<li><a href="https://github.com/smcameron/space-nerds-in-space/issues">Click here to file a bug report</a>.
+
+<p><ul>
+<li><a href="https://github.com/smcameron/space-nerds-in-space/issues">Click here to file a bug report</a>
 </ul>
 
-<h2>Step 4: build openscad models (optional, not recommended)</h2>
+
+<p><a name="step4buildopenscadmodelsoptionalnotrecommended"><h2>Step 4: build openscad models (optional, not recommended)</h2></a>
+
 <p>Or you can skip to step 5 and just download the models instead (recommended).
 This step will take a long time and requires that you installed OpenSCAD.
 In general, unless you are working on the models, you can and should skip this step.
 (Again, as a non-root user):
-<pre>
+
+<p><pre>
 <blockquote>
-  make models
+ make models
 </blockquote>
 </pre>
-Note: If you intend to run the game without downloading aditional assets
+
+<p>Note: If you intend to run the game without downloading aditional assets
 (step 5, below), with just the default assets, this can be done, but
 requires the additional step of running:
-<pre>
+
+<p><pre>
 <blockquote>
   bin/snis_update_assets --force --destdir ~/.local/share/space-nerds-in-space --srcdir ./share/snis
 </blockquote>
 </pre>
-to copy assets into ~/.local/share/space-nerds-in-space.
-<h2><a name="additionalassets">Step 5: Download additional assets</a></h2>
+
+<p>to copy assets into ~/.local/share/space-nerds-in-space.
+
+<p><a name="step5downloadadditionalassets"><h2>Step 5: Download additional assets</h2></a>
+
 <p>If you skipped step 4 and didn't build the openscad models, they will be downloaded
 in this step, along with some other things. This step requires an internet connection.
 If you performed step 4, you may skip this step though it is not recommended,
 as you will be missing some additional solarsystem assets. As a non-root user:
-<pre>
+
+<p><pre>
 <blockquote>
   bin/snis_launcher
 </blockquote>
 </pre>
-Then choose option 8, "Check for asset updates and set up assets".  This will copy assets
+
+<p>Then choose option 8, "Check for asset updates and set up assets".  This will copy assets
 to (by default) into $HOME/.local/share/space-nerds-in-space/ and download additional assets
 over the internet.
+
+
+<!-- DO NOT EDIT THE BUILD INSTRUCTIONS ABOVE -->
+<!-- THEY ARE AUTOMATICALLY GENERATED FROM README.md on the master branch -->
+<!-- by using tinymd2html. https://github.com/smcameron/tinymd2html -->
 
 <h2><a name="singlemachineinstructions">Step 6. Run the Game on a single system (Try this before trying multiplayer)</a></h2>
 <p>Type (as a non-root user):
