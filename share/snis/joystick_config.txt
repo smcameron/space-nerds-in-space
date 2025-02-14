@@ -357,4 +357,44 @@ device:usb-Saitek_Saitek_X52_Flight_Control_System-joystick
    button 1 missile
    button 0 phaser
    invert axis 3 weapons-wavelength 0
-
+# Logitech Attack3 Joystick
+device:usb-Logitech_Logitech_Attack_3-joystick
+ mode main
+   axis 0 yaw 1
+   axis 1 pitch 1
+   axis 2 throttle 0
+   button 0 nav-engage-warp
+   button 1 nav-change-pov
+   button 2 nav-docking-magnets
+   button 3 nav-nudge-warp-down
+   button 4 nav-nudge-warp-up
+   button 5 nav-standard-orbit
+   button 6 nav-reverse
+   button 7 nav-nudge-zoom-down
+   button 8 nav-nudge-zoom-up
+   button 9 nav-starmap
+   button 10 nav-lights
+ mode navigation
+   axis 0 yaw 1
+   axis 1 pitch 1
+   axis 2 throttle 0
+   button 0 nav-engage-warp
+   button 1 nav-change-pov
+   button 2 nav-docking-magnets
+   button 3 nav-nudge-warp-down
+   button 4 nav-nudge-warp-up
+   button 5 nav-standard-orbit
+   button 6 nav-reverse
+   button 7 nav-nudge-zoom-down
+   button 8 nav-nudge-zoom-up
+   button 9 nav-starmap
+   button 10 nav-lights
+ mode weapons
+   axis 0 weapons-yaw 1
+   axis 1 weapons-pitch 1
+   axis 2 weapons-wavelength 0
+   button 0 phaser
+   button 1 torpedo
+   button 2 missile
+   button 3 weapons-wavelength-down
+   button 4 weapons-wavelength-up
