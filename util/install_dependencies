@@ -20,7 +20,15 @@ dbgout()
 }
 
 apt_min_packages()
-{	echo "portaudio19-dev
+{
+	# Unfortunately various distros may name packages differently. For
+	# example on Kali Linux 22 apparently it's "libcurl4-gnutls-dev"
+	# rather than libcurl-dev.  After digging around a bit on the web,
+	# I find that this is kind of an intractable problem, so I'm listing
+	# the package names for the distro I'm currently using for
+	# development (which is Mint).  -- steve
+
+	echo "portaudio19-dev
 	libpng-dev
 	libvorbis-dev
 	libsdl2-dev
@@ -28,6 +36,8 @@ apt_min_packages()
 	liblua5.2-dev
 	libglew-dev
 	libttspico-utils
+	libcrypt-dev
+	libcurl-dev
 	sox"
 }
 
