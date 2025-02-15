@@ -486,7 +486,7 @@ spot_check_for_assets()
 	if [ ! -f "${SNIS_ASSET_DIR}/models/cylinder.stl" ]
 	then
 		printf "\nFailed to find %s/models/cylinder.stl\n" "${SNIS_ASSET_DIR}" 1>&2
-		printf "You should check for asset updates (option 8).\n\n" 1>&2
+		printf "You should check for asset updates (option 1).\n\n" 1>&2
 	fi
 }
 
