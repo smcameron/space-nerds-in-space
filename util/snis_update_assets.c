@@ -253,6 +253,33 @@ static int make_parent_directories(char *asset_filename)
 static int copy_file(char *src, char *dest)
 {
 	int fsize;
+	struct stat sb1, sb2;
+
+
+	/* Guard against copying a file on top of itself. This really shouldn't happen
+	 * so this is kind of just paranoia.
+	 */
+	int rc = stat(src, &sb1);
+	if (rc) {
+		fprintf(stderr, "%s: failed to stat %s: %s\n", P, src, strerror(errno));
+		return -1;
+	}
+
+	/* We expect that dest does not exist, as we're trying to copy to dest. */
+	rc = stat(dest, &sb1);
+	if (rc == 0) {
+		/* But in this case it does exist, so let's make sure we're not copying
+		 * a file on top of itself.
+		 */
+		if (sb1.st_dev == sb2.st_dev && sb1.st_ino == sb2.st_ino) {
+			fprintf(stderr, "%s: %s: No need to copy.\n", P, dest);
+			return 0;
+		}
+	} else {
+		if (errno != ENOENT) /* Some other error besides failure to exist */
+			fprintf(stderr, "%s: failed to stat %s: %s\n", P, dest, strerror(errno));
+		/* We'll proceed with trying to copy anyway. */
+	}
 
 	printf("Copying %s to %s\n", src, dest);
 	if (dry_run)
