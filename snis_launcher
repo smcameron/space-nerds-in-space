@@ -599,6 +599,43 @@ do_exit()
 	fi
 }
 
+check_for_asset_updates()
+{
+
+	# Gently encourage not to check for assets too frequently
+	if [ -f "${SNIS_DB_DIR}/last_asset_update_time.txt" ]
+	then
+		LAST_ASSET_CHK_TIME=$(cat ${SNIS_DB_DIR}/last_asset_update_time.txt)
+		THIS_ASSET_CHK_TIME=$(date '+%s')
+		SECONDS_SINCE=$(expr "$THIS_ASSET_CHK_TIME" - "$LAST_ASSET_CHK_TIME")
+
+		# If less than 24 hours, gently suggest not checking again right now.
+
+		if [ "$SECONDS_SINCE" -lt 86400 ]
+		then
+			printf "\n\nYou have already checked for new assets within the past 24 hours.\n"
+			printf "Do you really want to check again now? (y/n) "
+
+			read -r x
+
+
+			if [ "$x" != "Y" -a "$x" != "y" ]
+			then
+				return;
+			fi
+		fi
+	fi
+
+	# copy local assets first
+	echo "Updating local assets..."
+	${SNIS_UPDATE_ASSETS} --force --destdir "$SNIS_ASSET_DIR_ROOT" --srcdir ./share/snis ;
+	# download assets from spacenerdsinspace.com
+	echo "Downloading remote assets from asset server..."
+	${SNIS_UPDATE_ASSETS} --force --destdir "$SNIS_ASSET_DIR_ROOT" ;
+
+	date '+%s' > "${SNIS_DB_DIR}"/last_asset_update_time.txt
+}
+
 check_for_ip_address
 
 while true
@@ -615,13 +652,7 @@ do
 	0)
 	   do_exit
 		;;
-	1)
-		# copy local assets first
-		echo "Updating local assets..."
-		${SNIS_UPDATE_ASSETS} --force --destdir "$SNIS_ASSET_DIR_ROOT" --srcdir ./share/snis ;
-		# download assets from spacenerdsinspace.com
-		echo "Downloading remote assets from asset server..."
-		${SNIS_UPDATE_ASSETS} --force --destdir "$SNIS_ASSET_DIR_ROOT" ;
+	1) check_for_asset_updates
 		;;
 	2) start_snis_lobby
 		;;
