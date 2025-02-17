@@ -21121,7 +21121,28 @@ static struct launcher_ui {
 	struct button *start_snis_server_btn;
 	struct button *start_snis_client_btn;
 	struct button *quit_btn;
+	struct gauge *ssgl_gauge;
+	struct gauge *multiverse_gauge;
+	struct gauge *snis_server_gauge;
+	int ssgl_count;
+	int multiverse_count;
+	int snis_server_count;
 } launcher_ui;
+
+static double sample_ssglcount(void)
+{
+	return (double) launcher_ui.ssgl_count;
+}
+
+static double sample_multiversecount(void)
+{
+	return (double) launcher_ui.multiverse_count;
+}
+
+static double sample_snis_servercount(void)
+{
+	return (double) launcher_ui.snis_server_count;
+}
 
 static void init_launcher_ui(void)
 {
@@ -21146,6 +21167,18 @@ static void init_launcher_ui(void)
 	launcher_ui.quit_btn = snis_button_init(x, y, -1, -1, "QUIT",
 				active_button_color, TINY_FONT, launcher_quit_btn_pressed, 0);
 
+	launcher_ui.ssgl_gauge = gauge_init(txx(500), txy(100), 150, 0.0, 100.0, -120.0 * M_PI / 180.0,
+			120.0 * 2.0 * M_PI / 180.0, UI_COLOR(weap_gauge_needle), UI_COLOR(weap_gauge),
+			10, "LOBBY", sample_ssglcount);
+
+	launcher_ui.multiverse_gauge = gauge_init(txx(500), txy(270), 150, 0.0, 100.0, -120.0 * M_PI / 180.0,
+			120.0 * 2.0 * M_PI / 180.0, UI_COLOR(weap_gauge_needle), UI_COLOR(weap_gauge),
+			10, "MULTIVERSE", sample_multiversecount);
+
+	launcher_ui.snis_server_gauge = gauge_init(txx(500), txy(470), 150, 0.0, 10.0, -120.0 * M_PI / 180.0,
+			120.0 * 2.0 * M_PI / 180.0, UI_COLOR(weap_gauge_needle), UI_COLOR(weap_gauge),
+			10, "SNIS SERV", sample_snis_servercount);
+
 	ui_add_button(launcher_ui.start_ssgl_btn, DISPLAYMODE_LAUNCHER,
 			"START SNIS LOBBY SERVER PROCESS");
 	ui_add_button(launcher_ui.start_snis_multiverse_btn, DISPLAYMODE_LAUNCHER,
@@ -21156,10 +21189,53 @@ static void init_launcher_ui(void)
 			"START SNIS CLIENT SERVER PROCESS");
 	ui_add_button(launcher_ui.quit_btn, DISPLAYMODE_LAUNCHER,
 			"QUIT SPACE NERDS IN SPACE");
+	ui_add_gauge(launcher_ui.ssgl_gauge, DISPLAYMODE_LAUNCHER);
+	ui_add_gauge(launcher_ui.multiverse_gauge, DISPLAYMODE_LAUNCHER);
+	ui_add_gauge(launcher_ui.snis_server_gauge, DISPLAYMODE_LAUNCHER);
+}
+
+static int get_process_count(char *pattern)
+{
+
+	char cmd[PATH_MAX];
+	char buffer[20];
+	int value;
+
+	snprintf(cmd, PATH_MAX, "ps ax | grep '%s' | grep -v grep | wc -l", pattern);
+	/* Hmm, we probably shouldn't be able to get away with this because SDL2/fork/exec.
+	 * Why does this work?
+	 */
+	FILE *f = popen(cmd, "r");
+	if (!f)
+		return 0;
+	char *s = fgets(buffer, sizeof(buffer), f);
+	if (!s) {
+		fclose(f);
+		return 0;
+	}
+	fclose(f);
+	int rc = sscanf(buffer, "%d", &value);
+	if (rc == 1)
+		return value;
+	return 0;
+}
+
+static void collect_process_stats(void)
+{
+	launcher_ui.ssgl_count = 100 * get_process_count("ssgl_server");
+	launcher_ui.multiverse_count = 100 * get_process_count("snis_multiverse");
+	launcher_ui.snis_server_count = get_process_count("snis_server");
 }
 
 static void show_launcher(void)
 {
+	static int framecounter = 0;
+
+	framecounter++;
+	if ((framecounter % 60) == 0) {
+		framecounter = 0;
+		collect_process_stats();
+	}
 	station_label_disappears = 0;
 	show_common_screen("SPACE NERDS IN SPACE");
 	station_label_disappears = 1;
