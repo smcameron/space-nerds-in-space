@@ -20945,12 +20945,25 @@ static void fork_multiverse(void)
 	if (!executable_path)
 		return;
 
-	size_t len = strlen(executable_path);
+	ssize_t len = strlen(executable_path);
 
 	char *multiverse_server = malloc(2 * len);
+	char *snis_bin_dir = malloc(2 * len);
+
 	snprintf(multiverse_server, 2 * len, "%s", executable_path);
 	dirname(multiverse_server);
-	setenv("SNISBINDIR", multiverse_server, 0); /* this is a bit of a hack */
+
+	/* This is a bit of a hack. Probably shouldn't need to use SNISBINDIR here.
+	 * we have to cut off the trailing "/bin", because snis_multiverse adds it
+	 * back on.
+	 */
+	snprintf(snis_bin_dir, 2 * len, "%s", multiverse_server);
+	len = strlen(snis_bin_dir) - 4;
+	if (len >= 0 && strcmp(&snis_bin_dir[len], "/bin") == 0)
+		dirname(snis_bin_dir); /* cut off trailing /bin */
+	setenv("SNISBINDIR", snis_bin_dir, 0);
+	fprintf(stderr, "set SNISBINDIR to %s\n", snis_bin_dir);
+
 	strcat(multiverse_server, "/snis_multiverse");
 	int fd = xdg_base_open_for_overwrite(xdg_base_ctx, "snis_multiverse_log.txt");
 	if (fd < 0) {
@@ -20986,7 +20999,6 @@ static void fork_snis_server(void)
 	char *snis_server = malloc(2 * len);
 	snprintf(snis_server, 2 * len, "%s", executable_path);
 	dirname(snis_server);
-	setenv("SNISBINDIR", snis_server, 0); /* this is a bit of a hack */
 	strcat(snis_server, "/snis_server");
 	int fd = xdg_base_open_for_overwrite(xdg_base_ctx, "snis_server_log.txt");
 	if (fd < 0) {
