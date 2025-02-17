@@ -25,6 +25,7 @@ struct gauge {
 	int bg_color;
 	float bg_alpha;
 	float multiplier;
+	double last_value[2];
 };
 
 void gauge_add_needle(struct gauge *g, gauge_monitor_function sample, int color)
@@ -63,6 +64,8 @@ struct gauge *gauge_init(int x, int y, int r, double r1, double r2,
 	g->sample2 = NULL;
 	g->bg_color = -1;
 	g->multiplier = 1.0;
+	g->last_value[0] = 0.0;
+	g->last_value[1] = 0.0;
 
 	return g;
 }
@@ -137,7 +140,8 @@ void gauge_draw(struct gauge *g)
 	}
 	sng_center_xy_draw_string(g->title, g->label_font,
 			g->x, (g->y + (g->r * 0.5)));
-	value = g->sample();
+	value = (g->sample() + g->last_value[0]) / 2.0;
+	g->last_value[0] = value;
 	sprintf(buffer, "%4.2lf", value);
 	sng_center_xy_draw_string(buffer, g->label_font,
 			g->x, (g->y + (g->r * 0.5)) + 15);
@@ -147,7 +151,9 @@ void gauge_draw(struct gauge *g)
 	draw_gauge_needle(g->x, g->y, g->r, a);
 
 	if (g->sample2) {
-		a = ((g->sample2() - g->r1) / (g->r2 - g->r1)) * g->angular_range + g->start_angle;
+		value = (g->sample2() + g->last_value[1]) / 2.0;
+		g->last_value[1] = value;
+		a = ((value - g->r1) / (g->r2 - g->r1)) * g->angular_range + g->start_angle;
 		sng_set_foreground(g->needle_color2);
 		draw_gauge_needle(g->x, g->y, g->r * 0.8, a);
 	}
