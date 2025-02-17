@@ -386,7 +386,7 @@ start_snis_client()
 		SPLASH_SCREEN_OPTION=""
 	fi
 	CLIENT="$1"
-	${CLIENT} --lobbyhost "${LOBBYHOST}" $ASPECT_RATIO_ARG --fullscreen \
+	${CLIENT} --lobbyhost "${LOBBYHOST}" $ASPECT_RATIO_ARG --fullscreen --no-launcher \
 		${TRAP_NANS} ${SPLASH_SCREEN_OPTION} ${NO_TEXTURES} > "$SNIS_LOG_DIR"/snis_client_log.txt 2>&1 &
 	sleep 1
 	# --starship "$shipname" --pw "$password" $@

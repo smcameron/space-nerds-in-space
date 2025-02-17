@@ -33,6 +33,7 @@
 #include <limits.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <fcntl.h>
 #include <math.h>
 #include <errno.h>
 #include <pthread.h>
@@ -46,6 +47,7 @@
 #include <getopt.h>
 #include <signal.h>
 #include <sys/ioctl.h>
+#include <libgen.h>
 #ifndef __APPLE__
 #include <SDL.h>
 #include <fenv.h>
@@ -314,6 +316,7 @@ static int real_screen_width;
 static int real_screen_height;
 static int time_to_set_window_size = 0;
 static int pipe_to_splash_screen = -1;
+static int pipe_to_forker_process = -1;
 static int skip_splash_screen = 0;
 static float original_aspect_ratio;
 static int window_manager_can_constrain_aspect_ratio = 0;
@@ -408,6 +411,7 @@ static char *serverhost = NULL;
 static int serverport = -1;
 static int monitorid = -1;
 static int avoid_lobby = 0;
+static int no_launcher = 0;
 
 static pthread_mutex_t lobby_data_mutex = PTHREAD_MUTEX_INITIALIZER;
 static struct ssgl_game_server lobby_game_server[100];
@@ -869,7 +873,8 @@ try_again:
 	}
 
 	if (lobby_socket < 0) {
-		displaymode = DISPLAYMODE_NETWORK_SETUP;
+		if (displaymode != DISPLAYMODE_LAUNCHER)
+			displaymode = DISPLAYMODE_NETWORK_SETUP;
 		lobby_count = 0;
 		goto outta_here;
 	}
@@ -20905,6 +20910,262 @@ static void show_network_setup(void)
 	}
 }
 
+static char *get_executable_path(void)
+{
+	static char path[PATH_MAX];
+	memset(path, 0, sizeof(path));
+	if (readlink("/proc/self/exe", path, PATH_MAX) == -1)
+		return NULL;
+	return path;
+}
+
+static void fork_ssgl(void)
+{
+	char *executable_path = get_executable_path();
+
+	if (!executable_path)
+		return;
+
+	char *ssgl_server = strdup(executable_path);
+	dirname(ssgl_server);
+	strcat(ssgl_server, "/ssgl_server");
+
+	int rc = fork();
+	if (!rc) { /* child process */
+		execl(ssgl_server, ssgl_server, NULL);
+	}
+}
+
+static void fork_multiverse(void)
+{
+	char *executable_path = get_executable_path();
+
+	if (!executable_path)
+		return;
+
+	char *multiverse_server = strdup(executable_path);
+	dirname(multiverse_server);
+	setenv("SNISBINDIR", multiverse_server, 0); /* this is a bit of a hack */
+	strcat(multiverse_server, "/snis_multiverse");
+	int fd = xdg_base_open_for_overwrite(xdg_base_ctx, "snis_multiverse_log.txt");
+	if (fd < 0) {
+		fd = open("/dev/null", O_WRONLY, 0644);
+	}
+
+	fprintf(stderr, "Forking multiverse\n");
+	fprintf(stderr, "%s\n", multiverse_server);
+
+	int rc = fork();
+	if (!rc) { /* child process */
+		close(pipe_to_forker_process);
+		/* Set stderr and stdout to got to snis_multiverse_log.txt */
+		(void) dup2(fd, 1);
+		(void) dup2(fd, 2);
+		rc = execl(multiverse_server, multiverse_server, "-a",
+			"-l", "localhost", "-n", "nickname",
+			"-L", "narnia", "-e", "default", NULL);
+	}
+	close(fd);
+}
+
+static void fork_snis_server(void)
+{
+	char *executable_path = get_executable_path();
+
+	if (!executable_path)
+		return;
+
+	char *snis_server = strdup(executable_path);
+	dirname(snis_server);
+	setenv("SNISBINDIR", snis_server, 0); /* this is a bit of a hack */
+	strcat(snis_server, "/snis_server");
+	int fd = xdg_base_open_for_overwrite(xdg_base_ctx, "snis_server_log.txt");
+	if (fd < 0) {
+		fd = open("/dev/null", O_WRONLY, 0644);
+	}
+
+	fprintf(stderr, "Forking snis_server\n");
+	fprintf(stderr, "%s\n", snis_server);
+
+	int rc = fork();
+	if (!rc) { /* child process */
+		close(pipe_to_forker_process);
+		/* Set stderr and stdout to got to snis_server_log.txt */
+		(void) dup2(fd, 1);
+		(void) dup2(fd, 2);
+		rc = execl(snis_server, snis_server, "-a",
+			"-l", "localhost", "-L", "DEFAULT", "-m", "narnia", "-s", "default", NULL);
+	}
+	close(fd);
+}
+
+/* An SDL2 program can't just fork/exec at any time, so we fork off this forker thing
+ * *before* SDL2 is initialized, that way we can fork off new processes from here without
+ * pissing off SDL2 and XWindows and getting everybody killed.
+ *
+ * We then can command this thing via a pipe.
+ */
+static void start_forker_process(void)
+{
+	int rc, pipefd[2];
+	char ch;
+
+	if (no_launcher) /* Only start the forker process if we want the launcher */
+		return;
+
+	rc = pipe(pipefd);
+	if (rc) {
+		fprintf(stderr, "snis_client: start_forker_process, pipe() failed: %s\n",
+			strerror(errno));
+	}
+	rc = fork();
+	if (!rc) { /* child process */
+		close(pipefd[1]); /* close the write side of the pipe */
+		close(pipe_to_splash_screen); /* inherited from parent */
+
+		do {
+			errno = 0;
+			rc = read(pipefd[0], &ch, 1);
+#define FORKER_START_SSGL '1'
+#define FORKER_START_MULTIVERSE '2'
+#define FORKER_START_SNIS_SERVER '3'
+#define FORKER_QUIT '4'
+			switch (rc) {
+			case 1:
+				switch (ch) {
+				case FORKER_START_SSGL:
+					fork_ssgl();
+					break;
+				case FORKER_START_MULTIVERSE:
+					fork_multiverse();
+					break;
+				case FORKER_START_SNIS_SERVER:
+					fork_snis_server();
+					break;
+				case FORKER_QUIT:
+				default:
+					break;
+				}
+				continue;
+			case -1:
+				if (errno == EINTR)
+					continue;
+				goto exit_forker_process;
+				break;
+			default:
+				goto exit_forker_process;
+				break;
+			}
+		} while (1);
+exit_forker_process:
+		close(pipefd[0]);
+		exit(0);
+	}
+	close(pipefd[0]); /* close the read side of the pipe */
+	pipe_to_forker_process = pipefd[1];
+
+}
+
+static void start_ssgl_btn_pressed(__attribute__((unused)) void *x)
+{
+	int rc;
+	char ch = FORKER_START_SSGL;
+	if (pipe_to_forker_process >= 0)
+		rc = write(pipe_to_forker_process, &ch, 1);
+	(void) rc;
+}
+
+static void start_snis_multiverse_btn_pressed(__attribute__((unused)) void *x)
+{
+	int rc;
+	char ch = FORKER_START_MULTIVERSE;
+	if (pipe_to_forker_process >= 0)
+		rc = write(pipe_to_forker_process, &ch, 1);
+	(void) rc;
+}
+
+static void start_snis_server_btn_pressed(__attribute__((unused)) void *x)
+{
+	int rc;
+	char ch = FORKER_START_SNIS_SERVER;
+	if (pipe_to_forker_process >= 0)
+		rc = write(pipe_to_forker_process, &ch, 1);
+	(void) rc;
+}
+
+static void stop_forker_process(void)
+{
+	int rc;
+	char ch = FORKER_QUIT;
+	if (pipe_to_forker_process >= 0)
+		rc = write(pipe_to_forker_process, &ch, 1);
+	close(pipe_to_forker_process);
+	(void) rc;
+}
+
+static void start_snis_client_btn_pressed(__attribute__((unused)) void *x)
+{
+	displaymode = DISPLAYMODE_NETWORK_SETUP;
+	stop_forker_process();
+}
+
+static void launcher_quit_btn_pressed(__attribute__((unused)) void *x)
+{
+	stop_forker_process();
+	exit(0);
+}
+
+static struct launcher_ui {
+	struct button *start_ssgl_btn;
+	struct button *start_snis_multiverse_btn;
+	struct button *start_snis_server_btn;
+	struct button *start_snis_client_btn;
+	struct button *quit_btn;
+} launcher_ui;
+
+static void init_launcher_ui(void)
+{
+	float x, y;
+
+	x = txx(100);
+	y = txy(100);
+	int active_button_color = UI_COLOR(network_setup_active);
+
+	launcher_ui.start_ssgl_btn = snis_button_init(x, y, -1, -1, "START LOBBY SERVER",
+				active_button_color, TINY_FONT, start_ssgl_btn_pressed, 0);
+	y += txy(40);
+	launcher_ui.start_snis_multiverse_btn = snis_button_init(x, y, -1, -1, "START SNIS MULTIVERSE SERVER",
+				active_button_color, TINY_FONT, start_snis_multiverse_btn_pressed, 0);
+	y += txy(40);
+	launcher_ui.start_snis_server_btn = snis_button_init(x, y, -1, -1, "START SNIS SERVER",
+				active_button_color, TINY_FONT, start_snis_server_btn_pressed, 0);
+	y += txy(40);
+	launcher_ui.start_snis_client_btn = snis_button_init(x, y, -1, -1, "START SNIS CLIENT",
+				active_button_color, TINY_FONT, start_snis_client_btn_pressed, 0);
+	y += txy(40);
+	launcher_ui.quit_btn = snis_button_init(x, y, -1, -1, "QUIT",
+				active_button_color, TINY_FONT, launcher_quit_btn_pressed, 0);
+
+	ui_add_button(launcher_ui.start_ssgl_btn, DISPLAYMODE_LAUNCHER,
+			"START SNIS LOBBY SERVER PROCESS");
+	ui_add_button(launcher_ui.start_snis_multiverse_btn, DISPLAYMODE_LAUNCHER,
+			"START SNIS MULTIVERSE SERVER PROCESS");
+	ui_add_button(launcher_ui.start_snis_server_btn, DISPLAYMODE_LAUNCHER,
+			"START SNIS SERVER PROCESS");
+	ui_add_button(launcher_ui.start_snis_client_btn, DISPLAYMODE_LAUNCHER,
+			"START SNIS CLIENT SERVER PROCESS");
+	ui_add_button(launcher_ui.quit_btn, DISPLAYMODE_LAUNCHER,
+			"QUIT SPACE NERDS IN SPACE");
+}
+
+static void show_launcher(void)
+{
+	station_label_disappears = 0;
+	show_common_screen("SPACE NERDS IN SPACE");
+	station_label_disappears = 1;
+	show_rotating_wombat();
+}
+
 static void make_science_forget_stuff(void)
 {
 	int i, j;
@@ -21398,6 +21659,9 @@ static int main_da_expose(SDL_Window *window)
 		break;
 	case DISPLAYMODE_NETWORK_SETUP:
 		show_network_setup();
+		break;
+	case DISPLAYMODE_LAUNCHER:
+		show_launcher();
 		break;
 	default:
 		show_fonttest();
@@ -23591,6 +23855,7 @@ static void acknowledgments(void)
 }
 
 #define OPT_ACKNOWLEDGMENTS 1000
+#define NO_LAUNCHER 1001
 static struct option long_options[] = {
 	{ "allroles", no_argument, NULL, 'A' },
 	{ "acknowledgments", no_argument, NULL, OPT_ACKNOWLEDGMENTS },
@@ -23619,6 +23884,7 @@ static struct option long_options[] = {
 	{ "trap-nans", no_argument, NULL, 't'},
 	{ "no-textures", no_argument, NULL, 'T' },
 	{ "no-splash-screen", no_argument, NULL, 'x' },
+	{ "no-launcher", no_argument, NULL, NO_LAUNCHER },
 	{ 0, 0, 0, 0 },
 };
 
@@ -23757,6 +24023,10 @@ static void process_options(int argc, char *argv[])
 			break;
 		case 'T':
 			no_textures_mode = 1;
+			break;
+		case NO_LAUNCHER:
+			displaymode = DISPLAYMODE_NETWORK_SETUP;
+			no_launcher = 1;
 			break;
 		default:
 			usage();
@@ -24288,7 +24558,7 @@ static void start_splash_screen(void)
 int main(int argc, char *argv[])
 {
 	refuse_to_run_as_root("snis_client");
-	displaymode = DISPLAYMODE_NETWORK_SETUP;
+	displaymode = DISPLAYMODE_LAUNCHER; /* DISPLAYMODE_NETWORK_SETUP; */
 
 	enable_sdl_fullscreen_sanity();
 	xdg_base_ctx = xdg_base_context_new("space-nerds-in-space", ".space-nerds-in-space");
@@ -24304,8 +24574,10 @@ int main(int argc, char *argv[])
 	check_lobby_serverhost_options();
 	asset_dir = override_asset_dir();
 
-	/* No threads other than the main thread should be running when we call this. */
+	/* No threads other than the main thread should be running when we call these. */
 	start_splash_screen();
+	start_forker_process();
+
 	if (start_sdl())
 		return 1;
 
@@ -24401,6 +24673,7 @@ int main(int argc, char *argv[])
 	init_comms_ui();
 	init_demon_ui();
 	init_net_setup_ui();
+	init_launcher_ui();
 	snis_prefs_read_client_tweaks(xdg_base_ctx, set_clientside_variable);
 	setup_joysticks();
 	setup_physical_io_socket();
