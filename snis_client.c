@@ -21292,14 +21292,17 @@ static void init_launcher_ui(void)
 	launcher_ui.ssgl_gauge = gauge_init(txx(600), txy(100), 150, 0.0, 100.0, -120.0 * M_PI / 180.0,
 			120.0 * 2.0 * M_PI / 180.0, UI_COLOR(weap_gauge_needle), UI_COLOR(weap_gauge),
 			10, "LOBBY", sample_ssglcount);
+	gauge_set_fonts(launcher_ui.ssgl_gauge, NANO_FONT, NANO_FONT);
 
 	launcher_ui.multiverse_gauge = gauge_init(txx(600), txy(270), 150, 0.0, 100.0, -120.0 * M_PI / 180.0,
 			120.0 * 2.0 * M_PI / 180.0, UI_COLOR(weap_gauge_needle), UI_COLOR(weap_gauge),
 			10, "MULTIVERSE", sample_multiversecount);
+	gauge_set_fonts(launcher_ui.multiverse_gauge, NANO_FONT, NANO_FONT);
 
-	launcher_ui.snis_server_gauge = gauge_init(txx(600), txy(470), 150, 0.0, 10.0, -120.0 * M_PI / 180.0,
+	launcher_ui.snis_server_gauge = gauge_init(txx(600), txy(440), 150, 0.0, 10.0, -120.0 * M_PI / 180.0,
 			120.0 * 2.0 * M_PI / 180.0, UI_COLOR(weap_gauge_needle), UI_COLOR(weap_gauge),
 			10, "SNIS SERV", sample_snis_servercount);
+	gauge_set_fonts(launcher_ui.snis_server_gauge, NANO_FONT, NANO_FONT);
 
 	ui_add_button(launcher_ui.start_ssgl_btn, DISPLAYMODE_LAUNCHER,
 			"START SNIS LOBBY SERVER PROCESS");
