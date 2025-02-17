@@ -20934,6 +20934,7 @@ static void fork_ssgl(void)
 	if (!rc) { /* child process */
 		execl(ssgl_server, ssgl_server, NULL);
 	}
+	free(ssgl_server);
 }
 
 static void fork_multiverse(void)
@@ -20965,6 +20966,7 @@ static void fork_multiverse(void)
 			"-l", "localhost", "-n", "nickname",
 			"-L", "narnia", "-e", "default", NULL);
 	}
+	free(multiverse_server);
 	close(fd);
 }
 
@@ -20996,6 +20998,7 @@ static void fork_snis_server(void)
 		rc = execl(snis_server, snis_server, "-a",
 			"-l", "localhost", "-L", "DEFAULT", "-m", "narnia", "-s", "default", NULL);
 	}
+	free(snis_server);
 	close(fd);
 }
 
@@ -21059,6 +21062,7 @@ static void fork_snis_launcher(void)
 	/* Because even if they do succeed, they background themselves and we */
 	/* can't get the status, so it appears that they failed even when they didn't. */
 	(void) rc;
+	free(snis_launcher);
 }
 
 /* An SDL2 program can't just fork/exec at any time, so we fork off this forker thing
