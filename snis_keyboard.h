@@ -106,7 +106,7 @@ struct keyname_value_entry {
 
 extern struct keyname_value_entry keyname_value_map[];
 
-#define DISPLAYMODE_COUNT 14
+#define DISPLAYMODE_COUNT 15
 extern enum keyaction keymap[DISPLAYMODE_COUNT][256];
 extern enum keyaction ffkeymap[DISPLAYMODE_COUNT][256];
 extern struct keyboard_state kbstate;

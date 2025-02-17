@@ -267,7 +267,7 @@ static void ffmapkey(int displaymodes, unsigned int keysym, enum keyaction key)
 void init_keymap(void)
 {
 
-	const unsigned short all = 0x03fff; /* all 14 displaymodes */
+	const unsigned short all = 0x07fff; /* all 15 displaymodes */
 	const unsigned short nav = 1 << DISPLAYMODE_NAVIGATION;
 	const unsigned short weap = 1 << DISPLAYMODE_WEAPONS;
 	const unsigned short eng = 1 << DISPLAYMODE_ENGINEERING;
