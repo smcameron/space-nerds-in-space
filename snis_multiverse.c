@@ -1582,7 +1582,6 @@ static void maybe_override_database_root(void)
 			snprintf(x, PATH_MAX, "%s/space-nerds-in-space", xdg_data_home);
 			snis_db_dir = x;
 		}
-		return;
 	}
 
 	fprintf(stderr, "snis_db_dir = %s\n", snis_db_dir);
