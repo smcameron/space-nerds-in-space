@@ -21039,6 +21039,28 @@ static void fork_snis_process_terminator(void)
 	exit(0); /* "There's one more chip."  Taps forehead. */
 }
 
+static void fork_snis_launcher(void)
+{
+	char *executable_path = get_executable_path();
+	char cmd[PATH_MAX * 2];
+
+	if (!executable_path)
+		return;
+
+	char *snis_launcher = strdup(executable_path);
+	dirname(snis_launcher);
+	strcat(snis_launcher, "/snis_launcher");
+
+	/* Why is there no xdg-terminal command?  We'll try gnome terminal, with xterm as fallback. */
+	snprintf(cmd, sizeof(cmd), "gnome-terminal -- %s || xterm -e %s", snis_launcher, snis_launcher);
+
+	int rc = system(cmd);
+	/* Unfortunately, we cannot detect if gnome-terminal or xterm succeeded */
+	/* Because even if they do succeed, they background themselves and we */
+	/* can't get the status, so it appears that they failed even when they didn't. */
+	(void) rc;
+}
+
 /* An SDL2 program can't just fork/exec at any time, so we fork off this forker thing
  * *before* SDL2 is initialized, that way we can fork off new processes from here without
  * pissing off SDL2 and XWindows and getting everybody killed.
@@ -21071,6 +21093,7 @@ static void start_forker_process(void)
 #define FORKER_START_SNIS_SERVER '3'
 #define FORKER_QUIT '4'
 #define FORKER_KILL_EM_ALL '5' /* terminate all snis processes */
+#define FORKER_ADVANCED '6' /* start snis_launcher in a terminal */
 			switch (rc) {
 			case 1:
 				switch (ch) {
@@ -21085,6 +21108,9 @@ static void start_forker_process(void)
 					break;
 				case FORKER_KILL_EM_ALL:
 					fork_snis_process_terminator();
+					break;
+				case FORKER_ADVANCED:
+					fork_snis_launcher();
 					break;
 				case FORKER_QUIT:
 				default:
@@ -21168,12 +21194,22 @@ static void launcher_quit_btn_pressed(__attribute__((unused)) void *x)
 	exit(0);
 }
 
+static void launcher_advanced_btn_pressed(__attribute__((unused)) void *x)
+{
+	int rc;
+	char ch = FORKER_ADVANCED;
+	if (pipe_to_forker_process >= 0)
+		rc = write(pipe_to_forker_process, &ch, 1);
+	(void) rc;
+}
+
 static struct launcher_ui {
 	struct button *start_ssgl_btn;
 	struct button *start_snis_multiverse_btn;
 	struct button *start_snis_server_btn;
 	struct button *start_snis_client_btn;
 	struct button *stop_all_snis_btn;
+	struct button *advanced_btn;
 	struct button *quit_btn;
 	struct gauge *ssgl_gauge;
 	struct gauge *multiverse_gauge;
@@ -21221,6 +21257,9 @@ static void init_launcher_ui(void)
 	launcher_ui.stop_all_snis_btn = snis_button_init(x, y, -1, -1, "STOP ALL SNIS PROCESSES",
 				active_button_color, TINY_FONT, start_snis_process_terminator, 0);
 	y += txy(40);
+	launcher_ui.advanced_btn = snis_button_init(x, y, -1, -1, "ADVANCED OPTIONS",
+				active_button_color, TINY_FONT, launcher_advanced_btn_pressed, 0);
+	y += txy(40);
 	launcher_ui.quit_btn = snis_button_init(x, y, -1, -1, "QUIT",
 				active_button_color, TINY_FONT, launcher_quit_btn_pressed, 0);
 
@@ -21246,6 +21285,8 @@ static void init_launcher_ui(void)
 			"START SNIS CLIENT SERVER PROCESS");
 	ui_add_button(launcher_ui.stop_all_snis_btn, DISPLAYMODE_LAUNCHER,
 			"STOP ALL SNIS PROCESSES (INCLUDING THIS ONE)");
+	ui_add_button(launcher_ui.advanced_btn, DISPLAYMODE_LAUNCHER,
+			"ADVANCED OPTIONS");
 	ui_add_button(launcher_ui.quit_btn, DISPLAYMODE_LAUNCHER,
 			"QUIT SPACE NERDS IN SPACE");
 	ui_add_gauge(launcher_ui.ssgl_gauge, DISPLAYMODE_LAUNCHER);
