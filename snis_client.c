@@ -20999,6 +20999,46 @@ static void fork_snis_server(void)
 	close(fd);
 }
 
+static void fork_snis_process_terminator(void)
+{
+	pid_t process_list[1024];
+	pid_t my_pid;
+	int npids = 0;
+
+	my_pid = getpid();
+
+	fprintf(stderr, "snis_client: Terminating all SNIS processes (including this one)\n");
+	FILE *f = popen("ps ax | egrep 'ssgl_server|snis_multiverse|snis_server|snis_client' | grep -v grep", "r");
+	if (!f) {
+		fprintf(stderr, "snis_client: popen failed: %s\n", strerror(errno));
+		return;
+	}
+
+	/* Seek ... */
+	do {
+		int pid, rc;
+		char buffer[1024];
+		char *c = fgets(buffer, sizeof(buffer), f);
+		if (!c)
+			break;
+		rc = sscanf(buffer, " %d", &pid);
+		if (rc != 1)
+			continue;
+		fprintf(stderr, "%s", buffer);
+		process_list[npids++] = pid;
+	} while (1);
+
+	/* ... and Destroy!  \m/ Kill'em All \m/ */
+	for (int i = 0; i < npids; i++) {
+		if (process_list[i] != my_pid) { /* Save ourself for last */
+			if (kill(process_list[i], SIGTERM)) {
+				fprintf(stderr, "kill %d: %s\n", process_list[i], strerror(errno));
+			}
+		}
+	}
+	exit(0); /* "There's one more chip."  Taps forehead. */
+}
+
 /* An SDL2 program can't just fork/exec at any time, so we fork off this forker thing
  * *before* SDL2 is initialized, that way we can fork off new processes from here without
  * pissing off SDL2 and XWindows and getting everybody killed.
@@ -21030,6 +21070,7 @@ static void start_forker_process(void)
 #define FORKER_START_MULTIVERSE '2'
 #define FORKER_START_SNIS_SERVER '3'
 #define FORKER_QUIT '4'
+#define FORKER_KILL_EM_ALL '5' /* terminate all snis processes */
 			switch (rc) {
 			case 1:
 				switch (ch) {
@@ -21041,6 +21082,9 @@ static void start_forker_process(void)
 					break;
 				case FORKER_START_SNIS_SERVER:
 					fork_snis_server();
+					break;
+				case FORKER_KILL_EM_ALL:
+					fork_snis_process_terminator();
 					break;
 				case FORKER_QUIT:
 				default:
@@ -21103,6 +21147,15 @@ static void stop_forker_process(void)
 	(void) rc;
 }
 
+static void start_snis_process_terminator(__attribute__((unused)) void *x)
+{
+	int rc;
+	char ch = FORKER_KILL_EM_ALL;
+	if (pipe_to_forker_process >= 0)
+		rc = write(pipe_to_forker_process, &ch, 1);
+	(void) rc;
+}
+
 static void start_snis_client_btn_pressed(__attribute__((unused)) void *x)
 {
 	displaymode = DISPLAYMODE_NETWORK_SETUP;
@@ -21120,6 +21173,7 @@ static struct launcher_ui {
 	struct button *start_snis_multiverse_btn;
 	struct button *start_snis_server_btn;
 	struct button *start_snis_client_btn;
+	struct button *stop_all_snis_btn;
 	struct button *quit_btn;
 	struct gauge *ssgl_gauge;
 	struct gauge *multiverse_gauge;
@@ -21164,18 +21218,21 @@ static void init_launcher_ui(void)
 	launcher_ui.start_snis_client_btn = snis_button_init(x, y, -1, -1, "START SNIS CLIENT",
 				active_button_color, TINY_FONT, start_snis_client_btn_pressed, 0);
 	y += txy(40);
+	launcher_ui.stop_all_snis_btn = snis_button_init(x, y, -1, -1, "STOP ALL SNIS PROCESSES",
+				active_button_color, TINY_FONT, start_snis_process_terminator, 0);
+	y += txy(40);
 	launcher_ui.quit_btn = snis_button_init(x, y, -1, -1, "QUIT",
 				active_button_color, TINY_FONT, launcher_quit_btn_pressed, 0);
 
-	launcher_ui.ssgl_gauge = gauge_init(txx(500), txy(100), 150, 0.0, 100.0, -120.0 * M_PI / 180.0,
+	launcher_ui.ssgl_gauge = gauge_init(txx(600), txy(100), 150, 0.0, 100.0, -120.0 * M_PI / 180.0,
 			120.0 * 2.0 * M_PI / 180.0, UI_COLOR(weap_gauge_needle), UI_COLOR(weap_gauge),
 			10, "LOBBY", sample_ssglcount);
 
-	launcher_ui.multiverse_gauge = gauge_init(txx(500), txy(270), 150, 0.0, 100.0, -120.0 * M_PI / 180.0,
+	launcher_ui.multiverse_gauge = gauge_init(txx(600), txy(270), 150, 0.0, 100.0, -120.0 * M_PI / 180.0,
 			120.0 * 2.0 * M_PI / 180.0, UI_COLOR(weap_gauge_needle), UI_COLOR(weap_gauge),
 			10, "MULTIVERSE", sample_multiversecount);
 
-	launcher_ui.snis_server_gauge = gauge_init(txx(500), txy(470), 150, 0.0, 10.0, -120.0 * M_PI / 180.0,
+	launcher_ui.snis_server_gauge = gauge_init(txx(600), txy(470), 150, 0.0, 10.0, -120.0 * M_PI / 180.0,
 			120.0 * 2.0 * M_PI / 180.0, UI_COLOR(weap_gauge_needle), UI_COLOR(weap_gauge),
 			10, "SNIS SERV", sample_snis_servercount);
 
@@ -21187,6 +21244,8 @@ static void init_launcher_ui(void)
 			"START SNIS SERVER PROCESS");
 	ui_add_button(launcher_ui.start_snis_client_btn, DISPLAYMODE_LAUNCHER,
 			"START SNIS CLIENT SERVER PROCESS");
+	ui_add_button(launcher_ui.stop_all_snis_btn, DISPLAYMODE_LAUNCHER,
+			"STOP ALL SNIS PROCESSES (INCLUDING THIS ONE)");
 	ui_add_button(launcher_ui.quit_btn, DISPLAYMODE_LAUNCHER,
 			"QUIT SPACE NERDS IN SPACE");
 	ui_add_gauge(launcher_ui.ssgl_gauge, DISPLAYMODE_LAUNCHER);
