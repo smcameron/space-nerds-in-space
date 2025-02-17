@@ -20926,7 +20926,9 @@ static void fork_ssgl(void)
 	if (!executable_path)
 		return;
 
-	char *ssgl_server = strdup(executable_path);
+	size_t len = strlen(executable_path);
+	char *ssgl_server = malloc(2 * len);
+	snprintf(ssgl_server, 2 * len, "%s", executable_path);
 	dirname(ssgl_server);
 	strcat(ssgl_server, "/ssgl_server");
 
@@ -20940,11 +20942,13 @@ static void fork_ssgl(void)
 static void fork_multiverse(void)
 {
 	char *executable_path = get_executable_path();
-
 	if (!executable_path)
 		return;
 
-	char *multiverse_server = strdup(executable_path);
+	size_t len = strlen(executable_path);
+
+	char *multiverse_server = malloc(2 * len);
+	snprintf(multiverse_server, 2 * len, "%s", executable_path);
 	dirname(multiverse_server);
 	setenv("SNISBINDIR", multiverse_server, 0); /* this is a bit of a hack */
 	strcat(multiverse_server, "/snis_multiverse");
@@ -20977,7 +20981,10 @@ static void fork_snis_server(void)
 	if (!executable_path)
 		return;
 
-	char *snis_server = strdup(executable_path);
+	size_t len = strlen(executable_path);
+
+	char *snis_server = malloc(2 * len);
+	snprintf(snis_server, 2 * len, "%s", executable_path);
 	dirname(snis_server);
 	setenv("SNISBINDIR", snis_server, 0); /* this is a bit of a hack */
 	strcat(snis_server, "/snis_server");
@@ -21050,7 +21057,10 @@ static void fork_snis_launcher(void)
 	if (!executable_path)
 		return;
 
-	char *snis_launcher = strdup(executable_path);
+	size_t len = strlen(executable_path);
+
+	char *snis_launcher = malloc(2 * len);
+	snprintf(snis_launcher, 2 * len, "%s", executable_path);
 	dirname(snis_launcher);
 	strcat(snis_launcher, "/snis_launcher");
 
