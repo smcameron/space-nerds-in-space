@@ -21101,6 +21101,35 @@ static void fork_snis_launcher(void)
 	free(snis_launcher);
 }
 
+static void fork_update_assets(void)
+{
+	char *executable_path = get_executable_path();
+	char cmd[PATH_MAX * 2];
+
+	if (!executable_path)
+		return;
+
+	size_t len = strlen(executable_path);
+
+	char *update_assets = malloc(2 * len);
+	snprintf(update_assets, 2 * len, "%s", executable_path);
+	dirname(update_assets);
+	strcat(update_assets, "/update_assets_from_launcher.sh");
+
+	snprintf(cmd, sizeof(cmd), "%s", update_assets);
+	fprintf(stderr, "'%s'\n", cmd);
+
+	snprintf(cmd, sizeof(cmd), "gnome-terminal -- %s || xterm -e %s", update_assets, update_assets);
+
+	int rc = system(cmd);
+	/* Unfortunately, we cannot detect if gnome-terminal or xterm succeeded */
+	/* Because even if they do succeed, they background themselves and we */
+	/* can't get the status, so it appears that they failed even when they didn't. */
+	(void) rc;
+
+	free(update_assets);
+}
+
 /* An SDL2 program can't just fork/exec at any time, so we fork off this forker thing
  * *before* SDL2 is initialized, that way we can fork off new processes from here without
  * pissing off SDL2 and XWindows and getting everybody killed.
@@ -21134,6 +21163,7 @@ static void start_forker_process(void)
 #define FORKER_QUIT '4'
 #define FORKER_KILL_EM_ALL '5' /* terminate all snis processes */
 #define FORKER_ADVANCED '6' /* start snis_launcher in a terminal */
+#define FORKER_UPDATE_ASSETS '7' /* check for updated art assets */
 			switch (rc) {
 			case 1:
 				switch (ch) {
@@ -21151,6 +21181,9 @@ static void start_forker_process(void)
 					break;
 				case FORKER_ADVANCED:
 					fork_snis_launcher();
+					break;
+				case FORKER_UPDATE_ASSETS:
+					fork_update_assets();
 					break;
 				case FORKER_QUIT:
 				default:
@@ -21248,6 +21281,7 @@ static struct launcher_ui {
 	struct button *start_snis_server_btn;
 	struct button *start_snis_client_btn;
 	struct button *stop_all_snis_btn;
+	struct button *update_assets_btn;
 	struct button *advanced_btn;
 	struct button *quit_btn;
 	struct gauge *ssgl_gauge;
@@ -21257,6 +21291,16 @@ static struct launcher_ui {
 	int multiverse_count;
 	int snis_server_count;
 } launcher_ui;
+
+static void launcher_update_assets_btn_pressed(__attribute__((unused)) void *x)
+{
+	int rc;
+	char ch = FORKER_UPDATE_ASSETS;
+
+	if (pipe_to_forker_process >= 0)
+		rc = write(pipe_to_forker_process, &ch, 1);
+	(void) rc;
+}
 
 static double sample_ssglcount(void)
 {
@@ -21296,6 +21340,9 @@ static void init_launcher_ui(void)
 	launcher_ui.stop_all_snis_btn = snis_button_init(x, y, -1, -1, "STOP ALL SNIS PROCESSES",
 				active_button_color, TINY_FONT, start_snis_process_terminator, 0);
 	y += txy(40);
+	launcher_ui.update_assets_btn = snis_button_init(x, y, -1, -1, "UPDATE ASSETS",
+				active_button_color, TINY_FONT, launcher_update_assets_btn_pressed, 0);
+	y += txy(40);
 	launcher_ui.advanced_btn = snis_button_init(x, y, -1, -1, "ADVANCED OPTIONS",
 				active_button_color, TINY_FONT, launcher_advanced_btn_pressed, 0);
 	y += txy(40);
@@ -21327,6 +21374,8 @@ static void init_launcher_ui(void)
 			"START SNIS CLIENT SERVER PROCESS");
 	ui_add_button(launcher_ui.stop_all_snis_btn, DISPLAYMODE_LAUNCHER,
 			"STOP ALL SNIS PROCESSES (INCLUDING THIS ONE)");
+	ui_add_button(launcher_ui.update_assets_btn, DISPLAYMODE_LAUNCHER,
+			"CHECK FOR UPDATED ART ASSETS");
 	ui_add_button(launcher_ui.advanced_btn, DISPLAYMODE_LAUNCHER,
 			"ADVANCED OPTIONS");
 	ui_add_button(launcher_ui.quit_btn, DISPLAYMODE_LAUNCHER,
