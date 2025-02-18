@@ -122,7 +122,9 @@ After downloading the zip file, you must unpack the zip file.  Type (as a non-ro
 There is a script, `util/install_dependencies`. In theory it can install dependencies
 on apt, yum, zypper, or rpm based systems, but it has only been tried with apt based
 systems. If you want to see what it will do without actually doing anything, it has
-a `--dry-run` option.
+a `--dry-run` option.  Even on apt-based systems, package names are not consistent
+across various linux distros so it might not do the right thing.  This is a Hard
+Problem which there is no avoiding.
 
 ```
 `util/install_dependencies`
@@ -146,6 +148,11 @@ performs its job satisfactorily, you can advance to Step 3.
 > sudo apt-get install libcrypt-dev; # used by bin/snis_update_assets
 > sudo apt-get install libcurl-dev; # used by bin/snis_update_assets
 > 
+> You might also need these in addition or instead of some of the above:
+>
+> sudo apt-get install lib4curl-openssl-dev
+> sudo apt-get install libssl-dev
+>
 > # Opus is needed for voice-chat, though you can compile without voice chat or,
 > # you can have the Makefile download and compile opus for you instead of
 > # using packages if you distro does not have Opus packages
