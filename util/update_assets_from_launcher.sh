@@ -62,7 +62,16 @@ SNIS_UPDATE_ASSETS=${BINDIR}/snis_update_assets
 
 # copy local assets first
 echo "Updating local assets..."
-${SNIS_UPDATE_ASSETS} --force --destdir "$SNIS_ASSET_DIR_ROOT" --srcdir ${DESTDIR}${PREFIX}/share/snis ;
+echo "Changing directory to ${DESTDIR}${PREFIX}"
+
+cd ${DESTDIR}${PREFIX}
+if [ "$?" != 0 ]
+then
+	echo "Failed to cd to ${DESTDIR}${PREFIX}" 1>&2
+	exit 1
+fi
+
+${SNIS_UPDATE_ASSETS} --force --destdir "$SNIS_ASSET_DIR_ROOT" --srcdir ./share/snis ;
 # download assets from spacenerdsinspace.com
 echo "Downloading remote assets from asset server..."
 ${SNIS_UPDATE_ASSETS} --force --destdir "$SNIS_ASSET_DIR_ROOT" ;
