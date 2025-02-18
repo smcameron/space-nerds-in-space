@@ -84,6 +84,7 @@ static char *asset_dir;
 static char *lobby, *nick, *location;
 #define DEFAULT_DATABASE_ROOT "./snisdb"
 static char *database_root = DEFAULT_DATABASE_ROOT;
+static char snis_db_dir[PATH_MAX] = { 0 };
 static const int database_mode = 0744;
 static pthread_mutex_t data_mutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t listener_mutex = PTHREAD_MUTEX_INITIALIZER;
@@ -1381,15 +1382,18 @@ static void start_snis_server(char *starsystem_name)
 	char snis_server_location[PATH_MAX];
 	char upper_snis_server_location[PATH_MAX];
 	int rc;
+	char *snis_log_dir = getenv("SNIS_LOG_DIR");
+	if (!snis_log_dir)
+		snis_log_dir = snis_db_dir;
 
 	snprintf(snis_server_location, sizeof(snis_server_location) - 1, "%s", starsystem_name);
 	strcpy(upper_snis_server_location, snis_server_location);
 	uppercase(upper_snis_server_location);
 	bindir = get_snis_bin_dir();
 	snprintf(cmd, sizeof(cmd) - 1,
-			"%s/snis_server -l %s -L %s -m %s -s %s > snis_server.%s.log 2>&1 &", bindir,
+			"%s/snis_server -l %s -L %s -m %s -s %s > %s/snis_server.%s.log 2>&1 &", bindir,
 			lobby, upper_snis_server_location, location, snis_server_location,
-			starsystem_name);
+			snis_log_dir, starsystem_name);
 
 	fprintf(stderr, "snis_multiverse: STARTING SNIS SERVER for %s\n", starsystem_name);
 	fprintf(stderr, "snis_multiverse: Executing cmd: %s\n", cmd);
@@ -1562,26 +1566,27 @@ static void read_replacement_assets(struct replacement_asset *r, char *asset_dir
 		fprintf(stderr, "%s: Warning:  %s\n", p, strerror(errno));
 }
 
+/* Also sets snis_db_dir... */
 static void maybe_override_database_root(void)
 {
-	char *snis_db_dir = getenv("SNIS_DB_DIR");
-	char x[PATH_MAX];
+	char *sdd = getenv("SNIS_DB_DIR");
 
-	if (!snis_db_dir) {
+	if (!sdd) {
 		char *xdg_data_home = getenv("XDG_DATA_HOME");
 		if (!xdg_data_home || xdg_data_home[0] != '/') {
 			char *home = getenv("HOME");
 			if (!home) {
 				fprintf(stderr, "HOME is not set!\n");
-				snis_db_dir = "."; /* legacy, shouldn't get here as $HOME ought to be set */
+				/* legacy, shouldn't get here as $HOME ought to be set */
+				snprintf(snis_db_dir, sizeof(snis_db_dir), ".");
 			} else {
-				snprintf(x, PATH_MAX, "%s/.local/share/space-nerds-in-space", home);
-				snis_db_dir = x;
+				snprintf(snis_db_dir, PATH_MAX, "%s/.local/share/space-nerds-in-space", home);
 			}
 		} else {
-			snprintf(x, PATH_MAX, "%s/space-nerds-in-space", xdg_data_home);
-			snis_db_dir = x;
+			snprintf(snis_db_dir, PATH_MAX, "%s/space-nerds-in-space", xdg_data_home);
 		}
+	} else {
+		snprintf(snis_db_dir, sizeof(snis_db_dir), "%s", sdd);
 	}
 
 	fprintf(stderr, "snis_db_dir = %s\n", snis_db_dir);
