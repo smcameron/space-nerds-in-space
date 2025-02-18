@@ -634,7 +634,7 @@ check_for_asset_updates()
 
 	# copy local assets first
 	echo "Updating local assets..."
-	${SNIS_UPDATE_ASSETS} --force --destdir "$SNIS_ASSET_DIR_ROOT" --srcdir ./share/snis ;
+	${SNIS_UPDATE_ASSETS} --force --destdir "$SNIS_ASSET_DIR_ROOT" --srcdir ${DESTDIR}${PREFIX}/share/snis ;
 	# download assets from spacenerdsinspace.com
 	echo "Downloading remote assets from asset server..."
 	${SNIS_UPDATE_ASSETS} --force --destdir "$SNIS_ASSET_DIR_ROOT" ;
