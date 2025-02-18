@@ -412,6 +412,7 @@ static int serverport = -1;
 static int monitorid = -1;
 static int avoid_lobby = 0;
 static int no_launcher = 0;
+static int auto_download_assets = 0;
 
 static pthread_mutex_t lobby_data_mutex = PTHREAD_MUTEX_INITIALIZER;
 static struct ssgl_game_server lobby_game_server[100];
@@ -21108,7 +21109,7 @@ static void fork_snis_launcher(void)
 	free(snis_launcher);
 }
 
-static void fork_update_assets(void)
+static void fork_update_assets(int should_wait)
 {
 	char *executable_path = get_executable_path();
 	char cmd[PATH_MAX * 2];
@@ -21126,7 +21127,9 @@ static void fork_update_assets(void)
 	snprintf(cmd, sizeof(cmd), "%s", update_assets);
 	fprintf(stderr, "'%s'\n", cmd);
 
-	snprintf(cmd, sizeof(cmd), "gnome-terminal -- %s || xterm -e %s", update_assets, update_assets);
+	snprintf(cmd, sizeof(cmd), "gnome-terminal %s -- %s || xterm -e %s %s%s",
+		should_wait ? "--wait" : "", update_assets, update_assets,
+		should_wait ? "|| " : "", should_wait ? update_assets : "");
 
 	int rc = system(cmd);
 	/* Unfortunately, we cannot detect if gnome-terminal or xterm succeeded */
@@ -21190,7 +21193,7 @@ static void start_forker_process(void)
 					fork_snis_launcher();
 					break;
 				case FORKER_UPDATE_ASSETS:
-					fork_update_assets();
+					fork_update_assets(0);
 					break;
 				case FORKER_QUIT:
 				default:
@@ -24132,6 +24135,7 @@ static void acknowledgments(void)
 
 #define OPT_ACKNOWLEDGMENTS 1000
 #define NO_LAUNCHER 1001
+#define AUTO_DOWNLOAD_ASSETS 1002
 static struct option long_options[] = {
 	{ "allroles", no_argument, NULL, 'A' },
 	{ "acknowledgments", no_argument, NULL, OPT_ACKNOWLEDGMENTS },
@@ -24161,6 +24165,7 @@ static struct option long_options[] = {
 	{ "no-textures", no_argument, NULL, 'T' },
 	{ "no-splash-screen", no_argument, NULL, 'x' },
 	{ "no-launcher", no_argument, NULL, NO_LAUNCHER },
+	{ "auto-download-assets", no_argument, NULL, AUTO_DOWNLOAD_ASSETS },
 	{ 0, 0, 0, 0 },
 };
 
@@ -24303,6 +24308,9 @@ static void process_options(int argc, char *argv[])
 		case NO_LAUNCHER:
 			displaymode = DISPLAYMODE_NETWORK_SETUP;
 			no_launcher = 1;
+			break;
+		case AUTO_DOWNLOAD_ASSETS:
+			auto_download_assets = 1;
 			break;
 		default:
 			usage();
@@ -24839,6 +24847,24 @@ static void start_splash_screen(void)
 	return;
 }
 
+/* This should only ever be called before SDL is started.
+ * If auto-download-assets flag is set, we spot check some downloadable
+ * asset, and if not present, we download assets.
+ */
+static void maybe_download_assets(void)
+{
+	char path[PATH_MAX];
+	struct stat statbuf;
+
+	/* Spot check if some downloadable asset is present */
+	snprintf(path, sizeof(path), "%s/%s", asset_dir, "models/cylinder.stl");
+	errno = 0;
+	int rc = stat(path, &statbuf);
+
+	if (rc < 0 && errno == ENOENT && auto_download_assets)
+		fork_update_assets(1);
+}
+
 int main(int argc, char *argv[])
 {
 	refuse_to_run_as_root("snis_client");
@@ -24857,6 +24883,7 @@ int main(int argc, char *argv[])
 #endif
 	check_lobby_serverhost_options();
 	asset_dir = override_asset_dir();
+	maybe_download_assets();
 
 	/* No threads other than the main thread should be running when we call these. */
 	start_splash_screen();
