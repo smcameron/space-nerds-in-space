@@ -24615,15 +24615,15 @@ static void __attribute__((noreturn)) splash_screen_fn(int pipefd)
 	splash_screen_pixels = png_utils_read_png_image(filename, 0, 0, 0, &w, &h, &a, whynot, sizeof(whynot));
 	if (!splash_screen_pixels) {
 		fprintf(stderr, "Failed to read png file %s: %s\n", filename, whynot);
-		goto out;
-	}
+	} else {
 
-	image = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ABGR8888, SDL_TEXTUREACCESS_STATIC, w, h);
-	if (!image) {
-		fprintf(stderr, "Could not create texture: %s\n", SDL_GetError());
-		goto out;
+		image = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ABGR8888, SDL_TEXTUREACCESS_STATIC, w, h);
+		if (!image) {
+			fprintf(stderr, "Could not create texture: %s\n", SDL_GetError());
+			goto out;
+		}
+		SDL_UpdateTexture(image, NULL, splash_screen_pixels, 4 * w);
 	}
-	SDL_UpdateTexture(image, NULL, splash_screen_pixels, 4 * w);
 	SDL_SetRenderDrawColor(renderer, 0, 128, 0, 255);
 
 	/* Handle SIGALRM via splash_screen_timer_handler */
@@ -24647,7 +24647,15 @@ static void __attribute__((noreturn)) splash_screen_fn(int pipefd)
 		progress.w = (splash_progress * 600) / 100;
 		progress.h = 20;
 		SDL_RenderClear(renderer);
-		SDL_RenderCopy(renderer, image, NULL, NULL);
+		if (image) {
+			SDL_RenderCopy(renderer, image, NULL, NULL);
+		} else {
+			/* If no image just draw a black rectangle */
+			SDL_Rect black_rect = {0, 0, 600, 338};
+			SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+			SDL_RenderFillRect(renderer, &black_rect);
+		}
+		SDL_SetRenderDrawColor(renderer, 0, 128, 0, 255);
 		SDL_RenderFillRect(renderer, &progress);
 		SDL_RenderPresent(renderer);
 		bytesleft = sizeof(splash_progress);
