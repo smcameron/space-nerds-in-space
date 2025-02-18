@@ -60,6 +60,34 @@ PREFIX=.
 
 SNIS_UPDATE_ASSETS=${BINDIR}/snis_update_assets
 
+if [ -f "${SNIS_ASSET_DIR_ROOT}/last_asset_update_time.txt" ]
+then
+	# Make sure date supports +%s, some very old ones don't.
+	date '+%s' | grep '^[0-9][0-9]*$' > /dev/null 2>&1
+	if [ "$?" = "0" ]
+	then
+
+		LAST_ASSET_CHK_TIME=$(cat ${SNIS_ASSET_DIR_ROOT}/last_asset_update_time.txt)
+		THIS_ASSET_CHK_TIME=$(date '+%s')
+		SECONDS_SINCE=$(expr "$THIS_ASSET_CHK_TIME" - "$LAST_ASSET_CHK_TIME")
+
+		# If less than 24 hours, gently suggest not checking again right now.
+
+		if [ "$SECONDS_SINCE" -lt 86400 ]
+		then
+			printf "\n\nYou have already checked for new assets within the past 24 hours.\n"
+			printf "Do you really want to check again now? (y/n) "
+
+			read -r x
+
+			if [ "$x" != "Y" -a "$x" != "y" ]
+			then
+				exit 0;
+			fi
+		fi
+	fi
+fi
+
 # copy local assets first
 echo "Updating local assets..."
 echo "Changing directory to ${DESTDIR}${PREFIX}"
@@ -75,6 +103,8 @@ ${SNIS_UPDATE_ASSETS} --force --destdir "$SNIS_ASSET_DIR_ROOT" --srcdir ./share/
 # download assets from spacenerdsinspace.com
 echo "Downloading remote assets from asset server..."
 ${SNIS_UPDATE_ASSETS} --force --destdir "$SNIS_ASSET_DIR_ROOT" ;
+
+date '+%s' > "${SNIS_ASSET_DIR_ROOT}/last_asset_update_time.txt"
 
 printf "\n\n\n--- Press Return ---\n\n\n"
 
