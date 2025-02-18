@@ -7974,6 +7974,7 @@ static struct network_setup_ui {
 	struct button *create_ship_checkbox;
 	struct button *faction_checkbox[MAX_FACTIONS];
 	struct button *support_button;
+	struct button *launcher_button;
 	struct button *website_button;
 	struct button *forum_button;
 	struct pull_down_menu *menu;
@@ -20498,6 +20499,11 @@ static void connect_to_lobby_button_pressed(__attribute__((unused)) void *unused
 	connect_to_lobby();
 }
 
+static void launcher_button_pressed(__attribute__((unused)) void *v)
+{
+	displaymode = DISPLAYMODE_LAUNCHER;
+}
+
 static void browser_button_pressed(void *v)
 {
 	int rc;
@@ -20822,6 +20828,10 @@ static void init_net_setup_ui(void)
 	net_setup_ui.connect_to_lobby =
 		snis_button_init(left, y, -1, -1, "ENTER LOBBY xxxxxxxxxxxxxxx", inactive_button_color,
 			TINY_FONT, connect_to_lobby_button_pressed, NULL);
+	net_setup_ui.launcher_button =
+		snis_button_init(left + txx(300), y, -1, -1, "PROCESS LAUNCHER",
+			active_button_color,
+			TINY_FONT, launcher_button_pressed, NULL);
 	net_setup_ui.website_button =
 		snis_button_init(left + txx(500), y, -1, -1, "WEBSITE",
 			active_button_color,
@@ -20856,6 +20866,8 @@ static void init_net_setup_ui(void)
 			"USE THE DEFAULT LOBBY PORT OR IF UNCHECKED SPECIFY A PORT");
 	ui_add_button(net_setup_ui.connect_to_lobby, DISPLAYMODE_NETWORK_SETUP,
 			"CONNECT TO THE LOBBY SERVER");
+	ui_add_button(net_setup_ui.launcher_button, DISPLAYMODE_NETWORK_SETUP,
+			"GO BACK TO THE SNIS PROCESS LAUNCHER SCREEN");
 	ui_add_button(net_setup_ui.website_button, DISPLAYMODE_NETWORK_SETUP,
 			"SPACE NERDS IN SPACE WEBSITE");
 	ui_add_button(net_setup_ui.forum_button, DISPLAYMODE_NETWORK_SETUP,
@@ -20870,6 +20882,8 @@ static void init_net_setup_ui(void)
 	ui_add_text_input_box(net_setup_ui.password_box, DISPLAYMODE_NETWORK_SETUP);
 	ui_add_pull_down_menu(net_setup_ui.menu, DISPLAYMODE_NETWORK_SETUP); /* needs to be last */
 	ui_hide_widget(net_setup_ui.lobbyport);
+	if (no_launcher)
+		ui_hide_widget(net_setup_ui.launcher_button);
 } 
 
 static void show_network_setup(void)
@@ -21211,7 +21225,6 @@ static void start_snis_process_terminator(__attribute__((unused)) void *x)
 static void start_snis_client_btn_pressed(__attribute__((unused)) void *x)
 {
 	displaymode = DISPLAYMODE_NETWORK_SETUP;
-	stop_forker_process();
 }
 
 static void launcher_quit_btn_pressed(__attribute__((unused)) void *x)
