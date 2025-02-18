@@ -600,6 +600,7 @@ static union vec3 warp_tunnel_direction;
 static struct mesh *nav_axes_mesh = NULL;
 static struct mesh *demon3d_axes_mesh = NULL;
 static struct mesh *cylinder_mesh;
+static struct mesh *spherical_cow;
 #define NLIGHTNINGS 20
 static int planetary_lightning = 1; /* tweakable */
 static struct mesh *planetary_lightning_mesh[NLIGHTNINGS] = { 0 };
@@ -5130,6 +5131,12 @@ static void show_rotating_wombat(void)
 	union vec3 camera_lookat = { { 0, -5, 0 } };
 	struct entity *wombat, *turret_base, *turret;
 	union quat orientation;
+
+	/* If we couldn't read the meshes (probably need to update assets)
+	 * don't draw anything.
+	 */
+	if (ship_turret_mesh == spherical_cow || ship_turret_base_mesh == spherical_cow)
+		return;
 
 	if (!network_setup_ecx)
 		network_setup_ecx = entity_context_new(3, 3);
@@ -23719,16 +23726,18 @@ static struct mesh *snis_read_model(char *directory, char *filename)
 	char path[PATH_MAX];
 	struct mesh *m;
 
+	if (spherical_cow == NULL) {
+		spherical_cow = mesh_unit_spherified_cube(8);
+		if (spherical_cow)
+			mesh_scale(spherical_cow, 20.0f);
+	}
+
 	snprintf(path, sizeof(path), "%s/models/%s", directory, filename);
 	m = read_mesh(replacement_asset_lookup(path, &replacement_assets));
 	if (!m) {
 		printf("Failed to read model from file '%s'\n", path);
 		printf("Assume form of . . . A SPHERICAL COW!\n");
-		m = mesh_unit_spherified_cube(8);
-		if (!m)
-			printf("...or possibly a spherical cow dump!\n");
-		else
-			mesh_scale(m, 20.0f);
+		m = spherical_cow;
 	}
 	return m;
 }
