@@ -1,4 +1,4 @@
-.TH SPACE-NERDS-IN-SPACE "6" "NOVEMBER 2017" "snis_client" "Games"
+.TH SPACE-NERDS-IN-SPACE "6" "FEBRUARY 2025" "snis_client" "Games"
 .SH NAME
 snis_client \- Multi player cooperative star ship bridge simulator (client) 
 .SH SYNOPSIS
@@ -67,6 +67,14 @@ Do not use the lobby server.  This option requires that the
 --serverport and --serverhost options be used and that the --lobbyhost
 option is not used.
 .TP
+\fB\--no-launcher\fR
+Suppress the SNIS process launcher screen that appears when snis_client
+starts up.  If you are only running the snis_client, and other processes
+are all on another machine, what appears on the launcher screen is
+superfluous.  If you are using the snis_launcher script to start SNIS processes
+it uses this flag when starting SNIS client, as snis_launcher can do
+everything the snis_client launcher screen can do and more.
+.TP
 \fB\--no-textures\fR
 Do not load all the ordinarily used textures. Instead load the same small
 texture for every texture in the game.  This can be useful when running
@@ -93,6 +101,9 @@ are defined by "$SNIS_ASSET_DIR/solarsystems/*/assets.txt".
 .TP
 \fB\-a, --soundserver\fR
 Request this client process support the SOUNDSERVER role.
+.TP
+\fB\--auto-download-assets\fR
+Automatically download art assets from spacenerdsinspace.com
 .TP
 \fB\-W, --weapons\fR
 Request this client process support the WEAPONS role.
