@@ -21265,7 +21265,7 @@ static void start_snis_process_terminator(__attribute__((unused)) void *x)
 	(void) rc;
 }
 
-static void start_snis_client_btn_pressed(__attribute__((unused)) void *x)
+static void connect_client_btn_pressed(__attribute__((unused)) void *x)
 {
 	displaymode = DISPLAYMODE_NETWORK_SETUP;
 }
@@ -21289,7 +21289,7 @@ static struct launcher_ui {
 	struct button *start_ssgl_btn;
 	struct button *start_snis_multiverse_btn;
 	struct button *start_snis_server_btn;
-	struct button *start_snis_client_btn;
+	struct button *connect_client_btn;
 	struct button *stop_all_snis_btn;
 	struct button *update_assets_btn;
 	struct button *advanced_btn;
@@ -21351,8 +21351,8 @@ static void init_launcher_ui(void)
 	launcher_ui.start_snis_server_btn = snis_button_init(x, y, -1, -1, "START SNIS SERVER",
 				active_button_color, TINY_FONT, start_snis_server_btn_pressed, 0);
 	y += txy(40);
-	launcher_ui.start_snis_client_btn = snis_button_init(x, y, -1, -1, "START SNIS CLIENT",
-				active_button_color, TINY_FONT, start_snis_client_btn_pressed, 0);
+	launcher_ui.connect_client_btn = snis_button_init(x, y, -1, -1, "CONNECT CLIENT",
+				active_button_color, TINY_FONT, connect_client_btn_pressed, 0);
 	y += txy(40);
 	launcher_ui.stop_all_snis_btn = snis_button_init(x, y, -1, -1, "STOP ALL SNIS PROCESSES",
 				active_button_color, TINY_FONT, start_snis_process_terminator, 0);
@@ -21391,8 +21391,8 @@ static void init_launcher_ui(void)
 			"START SNIS MULTIVERSE SERVER PROCESS");
 	ui_add_button(launcher_ui.start_snis_server_btn, DISPLAYMODE_LAUNCHER,
 			"START SNIS SERVER PROCESS");
-	ui_add_button(launcher_ui.start_snis_client_btn, DISPLAYMODE_LAUNCHER,
-			"START SNIS CLIENT SERVER PROCESS");
+	ui_add_button(launcher_ui.connect_client_btn, DISPLAYMODE_LAUNCHER,
+			"CONNECT SNIS CLIENT TO LOBBY AND SNIS SERVER");
 	ui_add_button(launcher_ui.stop_all_snis_btn, DISPLAYMODE_LAUNCHER,
 			"STOP ALL SNIS PROCESSES (INCLUDING THIS ONE)");
 	ui_add_button(launcher_ui.update_assets_btn, DISPLAYMODE_LAUNCHER,
