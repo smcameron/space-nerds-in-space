@@ -21391,6 +21391,7 @@ static void init_launcher_ui(void)
 	y += txy(40);
 	launcher_ui.update_assets_btn = snis_button_init(x, y, -1, -1, "UPDATE ASSETS",
 				active_button_color, TINY_FONT, launcher_update_assets_btn_pressed, 0);
+	snis_button_set_disabled_color(launcher_ui.update_assets_btn, DARKGREEN);
 	y += txy(40);
 	launcher_ui.advanced_btn = snis_button_init(x, y, -1, -1, "ADVANCED OPTIONS",
 				active_button_color, TINY_FONT, launcher_advanced_btn_pressed, 0);
@@ -21512,6 +21513,38 @@ static void maybe_show_downloading_message(void)
 					TINY_FONT, txx(100), txy(520));
 }
 
+static int assets_updated_too_recently(void)
+{
+	static int already_checked = 0;
+	static int answer = 0;
+
+	if (already_checked)
+		return answer;
+
+	char *last_update = xdg_base_slurp_file(xdg_base_ctx, "last_asset_update_time.txt");
+	time_t last_update_time;
+
+	if (!last_update) {
+		answer = 0;
+		return answer;
+	}
+
+	int rc = sscanf(last_update, "%ld", &last_update_time);
+	if (rc != 1) {
+		answer = 0;
+		return answer;
+	}
+
+	struct timeval now;
+	rc = gettimeofday(&now, NULL);
+	if ((long) now.tv_sec - last_update_time < 60l * 60l) {
+		answer = 1;
+		return answer;
+	}
+	answer = 0;
+	return 0;
+}
+
 static void show_launcher(void)
 {
 	static int framecounter = 0;
@@ -21520,6 +21553,15 @@ static void show_launcher(void)
 	if ((framecounter % 60) == 0) {
 		framecounter = 0;
 		collect_process_stats();
+	}
+	if (assets_updated_too_recently()) {
+		snis_button_disable(launcher_ui.update_assets_btn);
+		ui_set_widget_tooltip(launcher_ui.update_assets_btn,
+			"ASSETS ALREADY UPDATED WITHIN THE LAST HOUR");
+	} else {
+		snis_button_enable(launcher_ui.update_assets_btn);
+		ui_set_widget_tooltip(launcher_ui.update_assets_btn,
+			"CHECK FOR UPDATED ART ASSETS");
 	}
 	station_label_disappears = 0;
 	show_common_screen("SPACE NERDS IN SPACE");
