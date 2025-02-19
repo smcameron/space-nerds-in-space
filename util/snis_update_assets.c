@@ -599,6 +599,7 @@ int main(int argc, char *argv[])
 	}
 
 	process_manifest(curl, manifest_filename);
+	unlink(manifest_filename);
 	free(manifest_filename);
 out1:
 	curl_easy_cleanup(curl);
