@@ -21118,10 +21118,11 @@ static void fork_snis_launcher(void)
 	free(snis_launcher);
 }
 
-static void fork_update_assets(int should_wait)
+static void fork_update_assets(void)
 {
 	char *executable_path = get_executable_path();
 	char cmd[PATH_MAX * 2];
+	char logfilename[PATH_MAX];
 
 	if (!executable_path)
 		return;
@@ -21131,21 +21132,33 @@ static void fork_update_assets(int should_wait)
 	char *update_assets = malloc(2 * len);
 	snprintf(update_assets, 2 * len, "%s", executable_path);
 	dirname(update_assets);
-	strcat(update_assets, "/update_assets_from_launcher.sh");
+	strcat(update_assets, "/update_assets_from_launcher.sh dontask");
 
 	snprintf(cmd, sizeof(cmd), "%s", update_assets);
 	fprintf(stderr, "'%s'\n", cmd);
 
+#if 0
 	snprintf(cmd, sizeof(cmd), "gnome-terminal %s -- %s || xterm -e %s %s%s",
 		should_wait ? "--wait" : "", update_assets, update_assets,
 		should_wait ? "|| " : "", should_wait ? update_assets : "");
+#endif
 
+	char *x = xdg_base_data_filename(xdg_base_ctx, "asset_download_log.txt",
+				logfilename, (int) sizeof(logfilename));
+	if (!x)
+		strlcpy(logfilename, "/tmp/asset_download_log.txt", sizeof(logfilename));
+
+	snprintf(cmd, sizeof(cmd), "%s > %s 2>&1 &", update_assets, logfilename);
+
+	errno = 0;
 	int rc = system(cmd);
+#if 0
 	/* Unfortunately, we cannot detect if gnome-terminal or xterm succeeded */
 	/* Because even if they do succeed, they background themselves and we */
 	/* can't get the status, so it appears that they failed even when they didn't. */
+#endif
 	(void) rc;
-
+	/* TODO: could probably do better error reporting here. */
 	free(update_assets);
 }
 
@@ -21203,7 +21216,7 @@ static void start_forker_process(void)
 					fork_snis_launcher();
 					break;
 				case FORKER_UPDATE_ASSETS:
-					fork_update_assets(0);
+					fork_update_assets();
 					break;
 				case FORKER_KILL_SERVERS:
 					fork_snis_process_terminator(0);
@@ -21466,6 +21479,39 @@ static void collect_process_stats(void)
 	launcher_ui.snis_client_count = get_process_count("[/]snis_client") / 2;
 }
 
+static void maybe_show_downloading_message(void)
+{
+	static int framecounter = 0;
+	char sentinel_file[PATH_MAX];
+	static int s = 0;
+	const char *spinner = "|/-\\";
+	static char message[100] = { 0 };
+
+	framecounter++;
+	if ((framecounter % 60) == 30) {
+		struct stat statbuf;
+		framecounter = 0;
+		char *x = xdg_base_data_filename(xdg_base_ctx, "snis_downloading.txt",
+					sentinel_file, (int) sizeof(sentinel_file));
+		if (!x)
+			strlcpy(sentinel_file, "/tmp/snis_downloading.txt", sizeof(sentinel_file));
+
+		int rc = stat(sentinel_file, &statbuf);
+		if (rc == 0) { /* file exists */
+			s = (s + 1) & 0x03;
+			snprintf(message, sizeof(message), "DOWNLOADING ASSETS %c", spinner[s]);
+			fprintf(stderr, "download sentinel file = %s\n", sentinel_file);
+		} else {
+			strlcpy(message, "", sizeof(message));
+		}
+	}
+	sng_set_foreground(UI_COLOR(network_setup_active));
+	sng_abs_xy_draw_string(message, TINY_FONT, txx(100), txy(500));
+	if (strcmp(message, "") != 0)
+		sng_abs_xy_draw_string("(RESTART SNIS_CLIENT TO PICK UP NEW ASSETS)",
+					TINY_FONT, txx(100), txy(520));
+}
+
 static void show_launcher(void)
 {
 	static int framecounter = 0;
@@ -21479,6 +21525,7 @@ static void show_launcher(void)
 	show_common_screen("SPACE NERDS IN SPACE");
 	station_label_disappears = 1;
 	show_rotating_wombat();
+	maybe_show_downloading_message();
 }
 
 static void make_science_forget_stuff(void)
@@ -24900,7 +24947,7 @@ static void maybe_download_assets(void)
 	int rc = stat(path, &statbuf);
 
 	if (rc < 0 && errno == ENOENT && auto_download_assets)
-		fork_update_assets(1);
+		fork_update_assets();
 }
 
 int main(int argc, char *argv[])

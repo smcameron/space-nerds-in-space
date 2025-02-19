@@ -2,6 +2,8 @@
 
 # This script is meant to be invoked only by snis_client
 
+ask="$1"
+
 if [ "$(id -u)" = "0" ]
 then
 	printf "You are root. Do not run this script as root.\n" 1>&2
@@ -75,18 +77,31 @@ then
 
 		if [ "$SECONDS_SINCE" -lt 86400 ]
 		then
-			printf "\n\nYou have already checked for new assets within the past 24 hours.\n"
-			printf "Do you really want to check again now? (y/n) "
-
-			read -r x
-
-			if [ "$x" != "Y" -a "$x" != "y" ]
+			if [ "$ask" != "dontask" ]
 			then
-				exit 0;
+				printf "\n\nYou have already checked for new assets within the past 24 hours.\n"
+				printf "Do you really want to check again now? (y/n) "
+
+				read -r x
+
+				if [ "$x" != "Y" -a "$x" != "y" ]
+				then
+					exit 0;
+				fi
 			fi
 		fi
 	fi
 fi
+
+cleanup()
+{
+	/bin/rm -f "$SNIS_DB_DIR"/snis_downloading.txt
+}
+
+trap cleanup EXIT
+
+# snis_client monitors for presence/absence of this file
+date > "$SNIS_DB_DIR"/snis_downloading.txt
 
 # copy local assets first
 echo "Updating local assets..."
@@ -96,6 +111,7 @@ cd ${DESTDIR}${PREFIX}
 if [ "$?" != 0 ]
 then
 	echo "Failed to cd to ${DESTDIR}${PREFIX}" 1>&2
+	cleanup
 	exit 1
 fi
 
@@ -106,8 +122,6 @@ ${SNIS_UPDATE_ASSETS} --force --destdir "$SNIS_ASSET_DIR_ROOT" ;
 
 date '+%s' > "${SNIS_ASSET_DIR_ROOT}/last_asset_update_time.txt"
 
-printf "\n\n\n--- Press Return ---\n\n\n"
-
-read -r x
-
+cleanup
+exit 0
 
