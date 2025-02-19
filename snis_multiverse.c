@@ -1398,10 +1398,17 @@ static void start_snis_server(char *starsystem_name)
 	fprintf(stderr, "snis_multiverse: STARTING SNIS SERVER for %s\n", starsystem_name);
 	fprintf(stderr, "snis_multiverse: Executing cmd: %s\n", cmd);
 	/* TODO: We should really fork() and exec() this ourself without getting bash involved. */
+	errno = 0;
 	rc = system(cmd);
 	if (rc) {
-		fprintf(stderr, "snis_multiverse: Failed to start snis_server: %s\n", strerror(errno));
+		fprintf(stderr, "snis_multiverse: Failed to start snis_server:\n");
 		fprintf(stderr, "cmd was: %s\n", cmd);
+		if (rc == -1)
+			fprintf(stderr, "errno was %d: %s\n", errno, strerror(errno));
+		else if (rc == 127)
+			fprintf(stderr, "system() returned 127 (shell could not be exec'ed)\n");
+		else
+			fprintf(stderr, "system() returned child status %d\n", rc);
 		return;
 	}
 }
