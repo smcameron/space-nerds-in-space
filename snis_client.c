@@ -21118,14 +21118,16 @@ static void fork_snis_launcher(void)
 	free(snis_launcher);
 }
 
-static void fork_update_assets(void)
+static void fork_update_assets(int background)
 {
 	char *executable_path = get_executable_path();
 	char cmd[PATH_MAX * 2];
 	char logfilename[PATH_MAX];
 
-	if (!executable_path)
+	if (!executable_path) {
+		fprintf(stderr, "executable_path is NULL!, Cannot update assets\n");
 		return;
+	}
 
 	size_t len = strlen(executable_path);
 
@@ -21134,10 +21136,10 @@ static void fork_update_assets(void)
 	dirname(update_assets);
 	strcat(update_assets, "/update_assets_from_launcher.sh dontask");
 
+#if 0
 	snprintf(cmd, sizeof(cmd), "%s", update_assets);
 	fprintf(stderr, "'%s'\n", cmd);
 
-#if 0
 	snprintf(cmd, sizeof(cmd), "gnome-terminal %s -- %s || xterm -e %s %s%s",
 		should_wait ? "--wait" : "", update_assets, update_assets,
 		should_wait ? "|| " : "", should_wait ? update_assets : "");
@@ -21148,8 +21150,10 @@ static void fork_update_assets(void)
 	if (!x)
 		strlcpy(logfilename, "/tmp/asset_download_log.txt", sizeof(logfilename));
 
-	snprintf(cmd, sizeof(cmd), "%s > %s 2>&1 &", update_assets, logfilename);
+	snprintf(cmd, sizeof(cmd), "%s > %s 2>&1 %s", update_assets,
+				logfilename, background ? "&" : "");
 
+	fprintf(stderr, "Asset updating command: %s\n", cmd);
 	errno = 0;
 	int rc = system(cmd);
 #if 0
@@ -21216,7 +21220,7 @@ static void start_forker_process(void)
 					fork_snis_launcher();
 					break;
 				case FORKER_UPDATE_ASSETS:
-					fork_update_assets();
+					fork_update_assets(1);
 					break;
 				case FORKER_KILL_SERVERS:
 					fork_snis_process_terminator(0);
@@ -24987,9 +24991,10 @@ static void maybe_download_assets(void)
 	snprintf(path, sizeof(path), "%s/%s", asset_dir, "models/cylinder.stl");
 	errno = 0;
 	int rc = stat(path, &statbuf);
-
+	/* fprintf(stderr, "stat -> %d, %d, %d, %s, auto_dl = %d \n",
+		rc, errno, ENOENT, strerror(errno), auto_download_assets); */
 	if (rc < 0 && errno == ENOENT && auto_download_assets)
-		fork_update_assets();
+		fork_update_assets(0);
 }
 
 int main(int argc, char *argv[])
@@ -25001,16 +25006,17 @@ int main(int argc, char *argv[])
 	xdg_base_ctx = xdg_base_context_new("space-nerds-in-space", ".space-nerds-in-space");
 	take_your_locale_and_shove_it();
 	ignore_sigpipe();
+	process_options(argc, argv);
+	asset_dir = override_asset_dir();
+	fprintf(stderr, "asset dir = %s\n", asset_dir);
+	maybe_download_assets();
 	prevent_zombies();
 	set_random_seed();
-	process_options(argc, argv);
 #ifndef __APPLE__
 	if (trap_nans)
 		feenableexcept(FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW);
 #endif
 	check_lobby_serverhost_options();
-	asset_dir = override_asset_dir();
-	maybe_download_assets();
 
 	/* No threads other than the main thread should be running when we call these. */
 	start_splash_screen();
