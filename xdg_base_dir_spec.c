@@ -217,6 +217,24 @@ int xdg_base_open_for_overwrite(struct xdg_base_context *cx, char *filename)
 	return -1;
 }
 
+char *xdg_base_data_filename(struct xdg_base_context *cx, char *basename, char *filename, size_t filenamelen)
+{
+	char p[PATH_MAX];
+
+	if (cx->xdg_data_home && cx->appname)
+		snprintf(p, sizeof(p), "%s/%s/%s", cx->xdg_data_home, cx->appname, basename);
+	else if (cx->home && cx->appname)
+		snprintf(p, sizeof(p), "%s/.local/share/%s/%s", cx->home, cx->appname, basename);
+	else if (cx->legacy_path && cx->home)
+		snprintf(p, sizeof(p), "%s/%s/%s", cx->home, cx->legacy_path, basename);
+	else
+		return NULL;
+
+	snprintf(filename, filenamelen, "%s", p);
+	return filename;
+
+}
+
 #ifdef TEST_XDG_BASE_DIR
 
 int main(int argc, char *argv[])

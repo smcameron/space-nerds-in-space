@@ -26,7 +26,7 @@ struct xdg_base_context;
 
 struct xdg_base_context *xdg_base_context_new(char *appname, char *default_path);
 void xdg_base_context_free(struct xdg_base_context *cx);
-char *xdg_base_data_filename(struct xdg_base_context *cx, char *basename, char *filename, int filenamelen);
+char *xdg_base_data_filename(struct xdg_base_context *cx, char *basename, char *filename, size_t filenamelen);
 char *xdg_base_slurp_file(struct xdg_base_context *cx, char *filename);
 FILE *xdg_base_fopen_for_write(struct xdg_base_context *cx, char *filename);
 FILE *xdg_base_fopen_for_read(struct xdg_base_context *cx, char *filename);
