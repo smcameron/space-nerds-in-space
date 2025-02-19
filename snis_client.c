@@ -21423,9 +21423,9 @@ static int get_process_count(char *pattern)
 
 static void collect_process_stats(void)
 {
-	launcher_ui.ssgl_count = 100 * get_process_count("ssgl_server");
-	launcher_ui.multiverse_count = 100 * get_process_count("snis_multiverse");
-	launcher_ui.snis_server_count = get_process_count("snis_server");
+	launcher_ui.ssgl_count = 100 * get_process_count("[/]ssgl_server");
+	launcher_ui.multiverse_count = 100 * get_process_count("[/]snis_multiverse ");
+	launcher_ui.snis_server_count = get_process_count("[/]snis_server ");
 }
 
 static void show_launcher(void)
