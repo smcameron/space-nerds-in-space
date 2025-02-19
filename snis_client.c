@@ -21297,9 +21297,11 @@ static struct launcher_ui {
 	struct gauge *ssgl_gauge;
 	struct gauge *multiverse_gauge;
 	struct gauge *snis_server_gauge;
+	struct gauge *snis_client_gauge;
 	int ssgl_count;
 	int multiverse_count;
 	int snis_server_count;
+	int snis_client_count;
 } launcher_ui;
 
 static void launcher_update_assets_btn_pressed(__attribute__((unused)) void *x)
@@ -21325,6 +21327,11 @@ static double sample_multiversecount(void)
 static double sample_snis_servercount(void)
 {
 	return (double) launcher_ui.snis_server_count;
+}
+
+static double sample_snis_clientcount(void)
+{
+	return (double) launcher_ui.snis_client_count;
 }
 
 static void init_launcher_ui(void)
@@ -21359,20 +21366,24 @@ static void init_launcher_ui(void)
 	launcher_ui.quit_btn = snis_button_init(x, y, -1, -1, "QUIT",
 				active_button_color, TINY_FONT, launcher_quit_btn_pressed, 0);
 
-	launcher_ui.ssgl_gauge = gauge_init(txx(600), txy(100), 150, 0.0, 100.0, -120.0 * M_PI / 180.0,
+	launcher_ui.ssgl_gauge = gauge_init(txx(400), txy(100), 150, 0.0, 100.0, -120.0 * M_PI / 180.0,
 			120.0 * 2.0 * M_PI / 180.0, UI_COLOR(weap_gauge_needle), UI_COLOR(weap_gauge),
 			10, "LOBBY", sample_ssglcount);
 	gauge_set_fonts(launcher_ui.ssgl_gauge, NANO_FONT, NANO_FONT);
 
-	launcher_ui.multiverse_gauge = gauge_init(txx(600), txy(270), 150, 0.0, 100.0, -120.0 * M_PI / 180.0,
+	launcher_ui.multiverse_gauge = gauge_init(txx(400), txy(270), 150, 0.0, 100.0, -120.0 * M_PI / 180.0,
 			120.0 * 2.0 * M_PI / 180.0, UI_COLOR(weap_gauge_needle), UI_COLOR(weap_gauge),
 			10, "MULTIVERSE", sample_multiversecount);
 	gauge_set_fonts(launcher_ui.multiverse_gauge, NANO_FONT, NANO_FONT);
 
-	launcher_ui.snis_server_gauge = gauge_init(txx(600), txy(440), 150, 0.0, 10.0, -120.0 * M_PI / 180.0,
+	launcher_ui.snis_server_gauge = gauge_init(txx(600), txy(100), 150, 0.0, 10.0, -120.0 * M_PI / 180.0,
 			120.0 * 2.0 * M_PI / 180.0, UI_COLOR(weap_gauge_needle), UI_COLOR(weap_gauge),
 			10, "SNIS SERV", sample_snis_servercount);
 	gauge_set_fonts(launcher_ui.snis_server_gauge, NANO_FONT, NANO_FONT);
+	launcher_ui.snis_client_gauge = gauge_init(txx(600), txy(270), 150, 0.0, 10.0, -120.0 * M_PI / 180.0,
+			120.0 * 2.0 * M_PI / 180.0, UI_COLOR(weap_gauge_needle), UI_COLOR(weap_gauge),
+			10, "SNIS CLIENT", sample_snis_clientcount);
+	gauge_set_fonts(launcher_ui.snis_client_gauge, NANO_FONT, NANO_FONT);
 
 	ui_add_button(launcher_ui.start_ssgl_btn, DISPLAYMODE_LAUNCHER,
 			"START SNIS LOBBY SERVER PROCESS");
@@ -21393,6 +21404,12 @@ static void init_launcher_ui(void)
 	ui_add_gauge(launcher_ui.ssgl_gauge, DISPLAYMODE_LAUNCHER);
 	ui_add_gauge(launcher_ui.multiverse_gauge, DISPLAYMODE_LAUNCHER);
 	ui_add_gauge(launcher_ui.snis_server_gauge, DISPLAYMODE_LAUNCHER);
+	ui_add_gauge(launcher_ui.snis_client_gauge, DISPLAYMODE_LAUNCHER);
+
+	launcher_ui.ssgl_count = 0;
+	launcher_ui.multiverse_count = 0;
+	launcher_ui.snis_server_count = 0;
+	launcher_ui.snis_client_count = 0;
 }
 
 static int get_process_count(char *pattern)
@@ -21426,6 +21443,8 @@ static void collect_process_stats(void)
 	launcher_ui.ssgl_count = 100 * get_process_count("[/]ssgl_server");
 	launcher_ui.multiverse_count = 100 * get_process_count("[/]snis_multiverse ");
 	launcher_ui.snis_server_count = get_process_count("[/]snis_server ");
+	/* divide by two because each snis_client has 2 processes */
+	launcher_ui.snis_client_count = get_process_count("[/]snis_client") / 2;
 }
 
 static void show_launcher(void)
