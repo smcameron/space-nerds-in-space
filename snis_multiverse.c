@@ -1603,6 +1603,21 @@ static void maybe_override_database_root(void)
 	snprintf(database_root, PATH_MAX, "%s/%s", snis_db_dir, DEFAULT_DATABASE_ROOT);
 }
 
+static void unignore_sigchld(void)
+{
+	/* When started from the shell or from snis_launcher, this is not necessary,
+	 * (but doesn't hurt), but when started from snis_client, this is necessary,
+	 * as snis_client does ignore SIGCHLD. SIGCHLD should not be ignored by
+	 * snis_multiverse.
+	 */
+	struct sigaction sig_action;
+
+	/* Query SIGKILL to get default action, (not caught, not ignored) */
+	sigaction(SIGKILL, NULL, &sig_action);
+	/* Handle SIGCHLD same as SIGKILL (that is, do not handle it) */
+	sigaction(SIGCHLD, &sig_action, NULL);
+}
+
 int main(int argc, char *argv[])
 {
 	struct ssgl_game_server gameserver;
@@ -1610,6 +1625,7 @@ int main(int argc, char *argv[])
 	pthread_t lobby_thread;
 	struct in_addr ip;
 
+	unignore_sigchld();
 	maybe_override_database_root();
 	asset_dir = override_asset_dir();
 	refuse_to_run_as_root("snis_multiverse");
