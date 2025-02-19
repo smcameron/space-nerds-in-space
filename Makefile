@@ -1381,7 +1381,7 @@ install:	${BINPROGS} ${MANPAGES} ${SSGL}
 	@# First check that PREFIX is sane, and esp. that it's not pointed at source
 	@mkdir -p ${DESTDIR}${PREFIX}
 	@touch ${DESTDIR}${PREFIX}/.canary-in-the-coal-mine.canary
-	@if [ -f .canary-in-the-coal-mine.canary ] ; then \
+	@if [ -f .canary-in-the-coal-mine.canary -o "${DESTDIR}" = "" -a "${PREFIX}" = "."  ] ; then \
 		echo 1>&2 ; \
 		echo "DESTDIR/PREFIX is ${DESTDIR}${PREFIX} -- cannot install here" 1>&2 ; \
 		echo "Try: make PREFIX=/usr/local ; make PREFIX=/usr/local install" 1>&2  ; \
