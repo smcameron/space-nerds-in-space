@@ -864,11 +864,11 @@ $(OD)/snis_ship_type.o:   snis_ship_type.c snis_ship_type.h corporations.h Makef
 	$(Q)$(COMPILE)
 
 bin/snis_launcher:	snis_launcher
-	./modify_snis_launcher.sh snis_launcher ${DESTDIR} ${PREFIX} > bin/snis_launcher
+	./modify_snis_launcher.sh snis_launcher "${DESTDIR}" "${PREFIX}" > bin/snis_launcher
 	chmod +x bin/snis_launcher
 
 bin/update_assets_from_launcher.sh:	util/update_assets_from_launcher.sh
-	./modify_snis_launcher.sh util/update_assets_from_launcher.sh ${DESTDIR} ${PREFIX} > bin/update_assets_from_launcher.sh
+	./modify_snis_launcher.sh util/update_assets_from_launcher.sh "${DESTDIR}" "${PREFIX}" > bin/update_assets_from_launcher.sh
 	chmod +x bin/update_assets_from_launcher.sh
 
 bin/test_snis_ship_type: snis_ship_type.c snis_ship_type.h ${OD}/string-utils.o ${OD}/corporations.o ${OD}/rts_unit_data.o ${BIN}
