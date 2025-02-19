@@ -1401,6 +1401,7 @@ static void start_snis_server(char *starsystem_name)
 	rc = system(cmd);
 	if (rc) {
 		fprintf(stderr, "snis_multiverse: Failed to start snis_server: %s\n", strerror(errno));
+		fprintf(stderr, "cmd was: %s\n", cmd);
 		return;
 	}
 }
