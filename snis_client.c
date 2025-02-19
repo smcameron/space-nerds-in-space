@@ -21366,21 +21366,21 @@ static void init_launcher_ui(void)
 	launcher_ui.quit_btn = snis_button_init(x, y, -1, -1, "QUIT",
 				active_button_color, TINY_FONT, launcher_quit_btn_pressed, 0);
 
-	launcher_ui.ssgl_gauge = gauge_init(txx(400), txy(100), 150, 0.0, 100.0, -120.0 * M_PI / 180.0,
+	launcher_ui.ssgl_gauge = gauge_init(txx(450), txy(100), 150, 0.0, 100.0, -120.0 * M_PI / 180.0,
 			120.0 * 2.0 * M_PI / 180.0, UI_COLOR(weap_gauge_needle), UI_COLOR(weap_gauge),
 			10, "LOBBY", sample_ssglcount);
 	gauge_set_fonts(launcher_ui.ssgl_gauge, NANO_FONT, NANO_FONT);
 
-	launcher_ui.multiverse_gauge = gauge_init(txx(400), txy(270), 150, 0.0, 100.0, -120.0 * M_PI / 180.0,
+	launcher_ui.multiverse_gauge = gauge_init(txx(600), txy(100), 150, 0.0, 100.0, -120.0 * M_PI / 180.0,
 			120.0 * 2.0 * M_PI / 180.0, UI_COLOR(weap_gauge_needle), UI_COLOR(weap_gauge),
 			10, "MULTIVERSE", sample_multiversecount);
 	gauge_set_fonts(launcher_ui.multiverse_gauge, NANO_FONT, NANO_FONT);
 
-	launcher_ui.snis_server_gauge = gauge_init(txx(600), txy(100), 150, 0.0, 10.0, -120.0 * M_PI / 180.0,
+	launcher_ui.snis_server_gauge = gauge_init(txx(450), txy(300), 150, 0.0, 10.0, -120.0 * M_PI / 180.0,
 			120.0 * 2.0 * M_PI / 180.0, UI_COLOR(weap_gauge_needle), UI_COLOR(weap_gauge),
 			10, "SNIS SERV", sample_snis_servercount);
 	gauge_set_fonts(launcher_ui.snis_server_gauge, NANO_FONT, NANO_FONT);
-	launcher_ui.snis_client_gauge = gauge_init(txx(600), txy(270), 150, 0.0, 10.0, -120.0 * M_PI / 180.0,
+	launcher_ui.snis_client_gauge = gauge_init(txx(600), txy(300), 150, 0.0, 10.0, -120.0 * M_PI / 180.0,
 			120.0 * 2.0 * M_PI / 180.0, UI_COLOR(weap_gauge_needle), UI_COLOR(weap_gauge),
 			10, "SNIS CLIENT", sample_snis_clientcount);
 	gauge_set_fonts(launcher_ui.snis_client_gauge, NANO_FONT, NANO_FONT);
