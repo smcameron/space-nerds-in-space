@@ -1,4 +1,4 @@
-.TH SPACE-NERDS-IN-SPACE "6" "Jan 2014" "snis_multiverse" "Games"
+.TH SPACE-NERDS-IN-SPACE "6" "Feb 2025" "snis_multiverse" "Games"
 .SH NAME
 snis_multiverse \- Multi player cooperative star ship bridge simulator (server wrangler)
 .SH SYNOPSIS
@@ -22,6 +22,15 @@ of the location of the server, or some other descriptive information.
 .TP
 \fB--acknowledgments\fR
 Prints out acknowledgments and license information and exits.
+.TP
+\fB--allow-remote-networks\fR
+By default, snis_server instances started by snis_multiverse will not
+allow clients to connect from remote networks, but only from the local
+network as determined by the netmask. With this option, snis_multiverse
+will invoke snis_server instances with the same --allow-remote-networks
+option so that such instances will allow clients to connect from
+remote networks.  See also: the environment variable SNIS_ALLOW_REMOTE_NETWORKS
+below.
 .TP
 \fB\--autowrangle, -a\fR
 Automatically start snis_server processes within one warp-gate hop
@@ -68,7 +77,12 @@ If the environment variable SNIS_DB_DIR is set, then snisdb is stored in
 $SNIS_DB_DIR.
 Finally if XDG_DATA_HOME is set, and is an absolute path,
 then snisdb is stored in $XDG_DATA_HOME/space-nerds-in-space.
-
+.PP
+.SH ENVIRONMENT VARIABLES
+.TP
+\fBSNIS_ALLOW_REMOTE_NETWORKS\fR
+If the value of this environment variable is "1" it has the same effect
+as the --allow-remote-networks option.
 .PP
 .SH SEE ALSO
 .PP

@@ -95,6 +95,7 @@ static int default_snis_multiverse_port = -1; /* -1 means choose a random port *
 static int snis_log_level = 2;
 static int nconnections = 0;
 static int debuglevel = 0;
+static int allow_remote_networks = 0;
 
 #define MAX_BRIDGES 1024
 #define MAX_CONNECTIONS 100
@@ -1305,6 +1306,7 @@ static void acknowledgments(void)
 }
 
 #define OPT_ACKNOWLEDGMENTS 1000
+#define OPT_ALLOW_REMOTE_NETWORKS 1001
 static struct option long_options[] = {
 	{ "acknowledgments", no_argument, NULL, OPT_ACKNOWLEDGMENTS },
 	{ "acknowledgements", no_argument, NULL, OPT_ACKNOWLEDGMENTS },
@@ -1314,6 +1316,7 @@ static struct option long_options[] = {
 	{ "servernick", required_argument, NULL, 'n'},
 	{ "location", required_argument, NULL, 'L'},
 	{ "version", no_argument, NULL, 'v' },
+	{ "allow-remote-networks", no_argument, NULL, OPT_ALLOW_REMOTE_NETWORKS },
 	{ 0, 0, 0, 0 },
 };
 
@@ -1364,11 +1367,21 @@ static void parse_options(int argc, char *argv[], char **lobby, char **nick, cha
 			printf("%s\n", BUILD_INFO_STRING1);
 			printf("%s\n", BUILD_INFO_STRING2);
 			exit(0);
+		case OPT_ALLOW_REMOTE_NETWORKS:
+			allow_remote_networks = 1;
+			break;
 		default:
 			usage(); /* no return */
 			break;
 		}
 	}
+
+	char *remote_nets = getenv("SNIS_ALLOW_REMOTE_NETWORKS");
+	if (remote_nets && strncmp(remote_nets, "1", 2) == 0)
+		allow_remote_networks = 1;
+
+	if (allow_remote_networks)
+		fprintf(stderr, "snis_multiverse: WARNING: Allowing remote network clients!\n");
 
 	if (!*lobby || !*nick || !*location)
 		usage(); /* no return */
@@ -1405,8 +1418,9 @@ static void start_snis_server(char *starsystem_name)
 	uppercase(upper_snis_server_location);
 	bindir = get_snis_bin_dir();
 	snprintf(cmd, sizeof(cmd) - 1,
-			"%s/snis_server -l %s -L %s -m %s -s %s > %s/snis_server.%s.log 2>&1 &", bindir,
+			"%s/snis_server -l %s -L %s -m %s -s %s %s > %s/snis_server.%s.log 2>&1 &", bindir,
 			lobby, upper_snis_server_location, location, snis_server_location,
+			allow_remote_networks ? "--allow-remote-networks" : "",
 			snis_log_dir, starsystem_name);
 
 	fprintf(stderr, "snis_multiverse: STARTING SNIS SERVER for %s\n", starsystem_name);
