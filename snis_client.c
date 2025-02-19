@@ -21118,7 +21118,7 @@ static void fork_snis_launcher(void)
 	free(snis_launcher);
 }
 
-static void fork_update_assets(int background)
+static void fork_update_assets(int background_task, int local_only)
 {
 	char *executable_path = get_executable_path();
 	char cmd[PATH_MAX * 2];
@@ -21150,12 +21150,29 @@ static void fork_update_assets(int background)
 	if (!x)
 		strlcpy(logfilename, "/tmp/asset_download_log.txt", sizeof(logfilename));
 
-	snprintf(cmd, sizeof(cmd), "%s > %s 2>&1 %s", update_assets,
-				logfilename, background ? "&" : "");
+	char *logdirname = strdup(logfilename);
+	dirname(logdirname);
+	struct stat dirstat;
+	int rc = stat(logdirname, &dirstat);
+	if (rc != 0 && errno == ENOENT) {
+		rc = mkdir(logdirname, 0755);
+		if (rc != 0) {
+			fprintf(stderr, "Failed to create directory %s: %s\n",
+				logdirname, strerror(errno));
+			free(logdirname);
+			free(update_assets);
+			return;
+		}
+	}
+	free(logdirname);
+
+	snprintf(cmd, sizeof(cmd), "%s %s > %s 2>&1 %s", update_assets,
+				local_only ? "localonly" : "",
+				logfilename, background_task ? "&" : "");
 
 	fprintf(stderr, "Asset updating command: %s\n", cmd);
 	errno = 0;
-	int rc = system(cmd);
+	rc = system(cmd);
 #if 0
 	/* Unfortunately, we cannot detect if gnome-terminal or xterm succeeded */
 	/* Because even if they do succeed, they background themselves and we */
@@ -21220,7 +21237,7 @@ static void start_forker_process(void)
 					fork_snis_launcher();
 					break;
 				case FORKER_UPDATE_ASSETS:
-					fork_update_assets(1);
+					fork_update_assets(1, 0);
 					break;
 				case FORKER_KILL_SERVERS:
 					fork_snis_process_terminator(0);
@@ -24991,10 +25008,10 @@ static void maybe_download_assets(void)
 	snprintf(path, sizeof(path), "%s/%s", asset_dir, "models/cylinder.stl");
 	errno = 0;
 	int rc = stat(path, &statbuf);
-	/* fprintf(stderr, "stat -> %d, %d, %d, %s, auto_dl = %d \n",
+	/* fprintf(stderr, "stat -> %d, %d, %d, %s, auto_dl = %d\n",
 		rc, errno, ENOENT, strerror(errno), auto_download_assets); */
-	if (rc < 0 && errno == ENOENT && auto_download_assets)
-		fork_update_assets(0);
+	if (rc < 0 && errno == ENOENT)
+		fork_update_assets(0, !auto_download_assets);
 }
 
 int main(int argc, char *argv[])
