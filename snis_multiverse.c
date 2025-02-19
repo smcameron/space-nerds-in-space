@@ -184,6 +184,20 @@ static void catch_sigterm(void)
 		fprintf(stderr, "%s: Failed to register SIGTERM handler.\n", "snis_multiverse");
 }
 
+static void ignore_signal(int sig)
+{
+	struct sigaction action;
+
+	memset(&action, 0, sizeof(action));
+	action.sa_handler = SIG_IGN;
+	sigemptyset(&action.sa_mask);
+	action.sa_flags = 0;
+
+	if (sigaction(sig, &action, NULL) != 0)
+		fprintf(stderr, "%s: Failed to ignore signal %d, Ctrl-C will terminate program: %s\n",
+			"snis_multiverse", sig, strerror(errno));
+}
+
 static void create_lock_or_die(void)
 {
 	int rc;
@@ -1626,6 +1640,8 @@ int main(int argc, char *argv[])
 	struct in_addr ip;
 
 	unignore_sigchld();
+	ignore_signal(SIGINT);
+	ignore_signal(SIGHUP);
 	maybe_override_database_root();
 	asset_dir = override_asset_dir();
 	refuse_to_run_as_root("snis_multiverse");
