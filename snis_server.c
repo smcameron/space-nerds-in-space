@@ -36,6 +36,7 @@
 #include <arpa/inet.h>
 #include <sys/socket.h>
 #include <netdb.h>
+#include <ifaddrs.h>
 #include <errno.h>
 #include <time.h>
 #include <ctype.h>
@@ -254,6 +255,7 @@ static struct passenger_data passenger[MAX_PASSENGERS];
 static int npassengers;
 static struct transport_contract *transport_contract[MAX_TRANSPORT_CONTRACTS] = { 0 };
 static int ntransport_contracts = 0;
+static int local_net_connections_only = 1; /* tweakable */
 
 static struct multiverse_server_info {
 	int sock;			/* Socket to the snis_multiverse process */
@@ -19422,6 +19424,8 @@ static struct tweakable_var_descriptor server_tweak[] = {
 		&damage_reboot_chance, 'i', 0.0, 0.0, 0.0, 0, 100, DEFAULT_DAMAGE_REBOOT_CHANCE, 0 },
 	{ "DISABLE_TERMINAL_REBOOTING", "0, 1 - 1 DISABLES TERMINAL REBOOTING, 0 ENABLES IT",
 		&disable_terminal_rebooting, 'i', 0.0, 0.0, 0.0, 0, 1, 0, 0 },
+	{ "LOCAL-NET-ONLY", "0, 1 - 1 MEANS ONLY CLIENTS ON LOCAL NETWORK MAY CONNECT",
+		&local_net_connections_only, 'i', 0.0, 0.0, 0.0, 0, 1, 1, 0 },
 	{ NULL, NULL, NULL, '\0', 0.0, 0.0, 0.0, 0, 0, 0, 0 },
 };
 
@@ -26149,6 +26153,73 @@ static void service_connection(int connection)
 
 static pthread_t listener_thread;
 
+static int is_local_network(struct sockaddr_in remote_name, int local_socket)
+{
+	struct sockaddr_in name;
+	socklen_t namelen;
+	uint16_t port;
+	uint32_t ip;
+	char buf[256];
+
+	/* Print out the remote socket address */
+	memcpy(&ip, &remote_name.sin_addr, sizeof(ip));
+	ip = ntohl(ip);
+	port = ntohs(remote_name.sin_port);
+	snprintf(buf, sizeof(buf), "%hhu.%hhu.%hhu.%hhu:%hu",
+			(uint8_t) ((ip >> 24) & 0xff), (uint8_t) ((ip >> 16) & 0xff),
+			(uint8_t) ((ip >> 8) & 0xff), (uint8_t) (ip & 0xff), port);
+	fprintf(stderr, "remote socket: %s\n", buf);
+
+	/* Print out the local socket address */
+	namelen = sizeof(name);
+	int rc = getsockname(local_socket, &name, &namelen);
+	if (rc == 0) {
+		memcpy(&ip, &name.sin_addr, sizeof(ip));
+		ip = ntohl(ip);
+		port = ntohs(name.sin_port);
+	}
+	snprintf(buf, sizeof(buf), "%hhu.%hhu.%hhu.%hhu:%hu",
+			(uint8_t) ((ip >> 24) & 0xff), (uint8_t) ((ip >> 16) & 0xff),
+			(uint8_t) ((ip >> 8) & 0xff), (uint8_t) (ip & 0xff), port);
+	fprintf(stderr, "local socket: %s\n", buf);
+
+	/* Get the local host's interface addresses */
+	struct ifaddrs *ifaddr, *ifa;
+	if (getifaddrs(&ifaddr) == -1) {
+		fprintf(stderr, "Cannot get local hosts interface addresses\n");
+		return 0;
+	}
+
+	int same_network = 0;
+	for (ifa = ifaddr; ifa != NULL; ifa = ifa->ifa_next) {
+		if (ifa->ifa_addr == NULL || ifa->ifa_addr->sa_family != AF_INET)
+			continue;
+
+		struct sockaddr_in *local_addr = (struct sockaddr_in *)ifa->ifa_addr;
+		struct sockaddr_in *netmask_addr = (struct sockaddr_in *)ifa->ifa_netmask;
+
+		if (local_addr == NULL || netmask_addr == NULL)
+			continue;
+
+		unsigned long local_ip_net_order = local_addr->sin_addr.s_addr;
+		unsigned long netmask_net_order = netmask_addr->sin_addr.s_addr;
+		unsigned long remote_ip_net_order = remote_name.sin_addr.s_addr;
+
+		unsigned long local_network_addr = local_ip_net_order & netmask_net_order;
+		unsigned long remote_network_addr = remote_ip_net_order & netmask_net_order;
+
+		if (local_network_addr == remote_network_addr) {
+			same_network = 1;
+			fprintf(stderr, "Same network, netmask = 0x%08x.\n", ntohl(netmask_net_order));
+			break;
+		}
+	}
+	freeifaddrs(ifaddr);
+	if (!same_network)
+		fprintf(stderr, "Different network.\n");
+	return same_network;
+}
+
 /* This thread listens for incoming client connections, and
  * on establishing a connection, starts a thread for that 
  * connection.
@@ -26293,6 +26364,13 @@ static void *listener_thread_fn(__attribute__((unused)) void *unused)
 			/* shutdown(connection, SHUT_RDWR);
 			close(connection);
 			continue; */
+		}
+		if (local_net_connections_only &&
+			!is_local_network(remote_addr, connection)) {
+			fprintf(stderr, "Connection from non-local network IP dropped.\n");
+			shutdown(connection, SHUT_RDWR);
+			close(connection);
+			continue;
 		}
 		service_connection(connection);
 	}
@@ -30738,6 +30816,7 @@ static void init_natural_language_system(void)
  *****************************************************************************************/
 
 #define OPT_ACKNOWLEDGMENTS 1000
+#define OPT_ALLOW_REMOTE_NETWORKS 1001
 static struct option long_options[] = {
 	{ "acknowledgments", no_argument, NULL, OPT_ACKNOWLEDGMENTS },
 	{ "acknowledgements", no_argument, NULL, OPT_ACKNOWLEDGMENTS },
@@ -30750,6 +30829,7 @@ static struct option long_options[] = {
 	{ "solarsystem", required_argument, NULL, 's' },
 	{ "version", no_argument, NULL, 'v' },
 	{ "trap-nans", no_argument, NULL, 't' },
+	{ "allow-remote-networks", no_argument, NULL, OPT_ALLOW_REMOTE_NETWORKS },
 	{ 0, 0, 0, 0 },
 };
 
@@ -30880,6 +30960,10 @@ static void process_options(int argc, char *argv[])
 			break;
 		case 't':
 			trap_nans = 1;
+			break;
+		case OPT_ALLOW_REMOTE_NETWORKS:
+			local_net_connections_only = 0;
+			fprintf(stderr, "snis_server: WARNING: allowing remote network connections\n");
 			break;
 		}
 	}
@@ -31510,6 +31594,18 @@ static void ignore_signal(int sig)
 			"snis_server", sig, strerror(errno));
 }
 
+static void check_local_net_conns(void)
+{
+	static int old_local_nets_only = -1;
+
+	/* if local_net_connections_only changes, log the change. */
+	if (local_net_connections_only != old_local_nets_only) {
+		fprintf(stderr, "snis_server: %s new remote network client connections\n",
+			local_net_connections_only ? "disabling" : "enabling");
+		old_local_nets_only = local_net_connections_only;
+	}
+}
+
 int main(int argc, char *argv[])
 {
 	int port, i;
@@ -31645,6 +31741,7 @@ int main(int argc, char *argv[])
 		simulate_slow_server(0);
 		check_rts_finish_condition();
 		update_transport_contracts();
+		check_local_net_conns();
 	}
 	space_partition_free(space_partition);
 	lua_teardown();

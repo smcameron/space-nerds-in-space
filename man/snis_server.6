@@ -1,4 +1,4 @@
-.TH SPACE-NERDS-IN-SPACE "6" "Feb 2019" "snis_server" "Games"
+.TH SPACE-NERDS-IN-SPACE "6" "Feb 2025" "snis_server" "Games"
 .SH NAME
 snis_server \- Multi player cooperative star ship bridge simulator (server) 
 .SH SYNOPSIS
@@ -24,6 +24,13 @@ is the hostname of the server hosting the ssgl_server process.
 .TP
 \fB\--acknowledgments\fR
 Prints out acknowledgments and license information and exits.
+.TP
+\fB\--allow-remote-networks\fR
+By default, snis_server will drop connections from any client originating
+from a different network, allowing connections only from clients on the
+same network, as it is primarily a LAN game.  This option allows clients
+to connect from different networks.  There is also a tweakable variable in the
+console LOCAL-NET-ONLY, which this option sets to zero.
 .TP
 \fB\-e, --enable-enscript\fR
 Enable the "enscript" command on the Demon screen.  This allows clients to create
