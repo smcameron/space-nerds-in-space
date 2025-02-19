@@ -21043,16 +21043,24 @@ static void fork_snis_server(void)
 	close(fd);
 }
 
-static void fork_snis_process_terminator(void)
+static void fork_snis_process_terminator(int clients_too)
 {
 	pid_t process_list[1024];
 	pid_t my_pid;
 	int npids = 0;
+	#define SERVER_PATTERN "'/ssgl_server|/snis_multiverse|/snis_server'"
+	#define ALL_SNIS_PATTERN "'/ssgl_server|/snis_multiverse|/snis_server|snis_client'"
+
 
 	my_pid = getpid();
 
-	fprintf(stderr, "snis_client: Terminating all SNIS processes (including this one)\n");
-	FILE *f = popen("ps ax | egrep 'ssgl_server|snis_multiverse|snis_server|snis_client' | grep -v grep", "r");
+	fprintf(stderr, "snis_client: Terminating all SNIS server processes\n");
+	FILE *f;
+
+	if (clients_too)
+		f = popen("ps ax | egrep " ALL_SNIS_PATTERN " | grep -v grep", "r");
+	else
+		f = popen("ps ax | egrep " SERVER_PATTERN " | grep -v grep", "r");
 	if (!f) {
 		fprintf(stderr, "snis_client: popen failed: %s\n", strerror(errno));
 		return;
@@ -21080,7 +21088,8 @@ static void fork_snis_process_terminator(void)
 			}
 		}
 	}
-	exit(0); /* "There's one more chip."  Taps forehead. */
+	if (clients_too)
+		exit(0); /* "There's one more chip."  Taps forehead. */
 }
 
 static void fork_snis_launcher(void)
@@ -21174,6 +21183,7 @@ static void start_forker_process(void)
 #define FORKER_KILL_EM_ALL '5' /* terminate all snis processes */
 #define FORKER_ADVANCED '6' /* start snis_launcher in a terminal */
 #define FORKER_UPDATE_ASSETS '7' /* check for updated art assets */
+#define FORKER_KILL_SERVERS '8' /* terminate all snis processes */
 			switch (rc) {
 			case 1:
 				switch (ch) {
@@ -21187,13 +21197,16 @@ static void start_forker_process(void)
 					fork_snis_server();
 					break;
 				case FORKER_KILL_EM_ALL:
-					fork_snis_process_terminator();
+					fork_snis_process_terminator(1);
 					break;
 				case FORKER_ADVANCED:
 					fork_snis_launcher();
 					break;
 				case FORKER_UPDATE_ASSETS:
 					fork_update_assets(0);
+					break;
+				case FORKER_KILL_SERVERS:
+					fork_snis_process_terminator(0);
 					break;
 				case FORKER_QUIT:
 				default:
@@ -21256,10 +21269,16 @@ static void stop_forker_process(void)
 	(void) rc;
 }
 
-static void start_snis_process_terminator(__attribute__((unused)) void *x)
+static void start_snis_process_terminator(void *x)
 {
 	int rc;
-	char ch = FORKER_KILL_EM_ALL;
+	int clients_too = (int) (intptr_t) x;
+	char ch;
+
+	if (clients_too)
+		ch = FORKER_KILL_EM_ALL;
+	else
+		ch = FORKER_KILL_SERVERS;
 	if (pipe_to_forker_process >= 0)
 		rc = write(pipe_to_forker_process, &ch, 1);
 	(void) rc;
@@ -21354,7 +21373,7 @@ static void init_launcher_ui(void)
 	launcher_ui.connect_client_btn = snis_button_init(x, y, -1, -1, "CONNECT CLIENT",
 				active_button_color, TINY_FONT, connect_client_btn_pressed, 0);
 	y += txy(40);
-	launcher_ui.stop_all_snis_btn = snis_button_init(x, y, -1, -1, "STOP ALL SNIS PROCESSES",
+	launcher_ui.stop_all_snis_btn = snis_button_init(x, y, -1, -1, "STOP ALL SERVER PROCESSES",
 				active_button_color, TINY_FONT, start_snis_process_terminator, 0);
 	y += txy(40);
 	launcher_ui.update_assets_btn = snis_button_init(x, y, -1, -1, "UPDATE ASSETS",
