@@ -31496,12 +31496,28 @@ static void read_replacement_assets(struct replacement_asset *r, char *asset_dir
 		fprintf(stderr, "%s: Warning:  %s\n", p, strerror(errno));
 }
 
+static void ignore_signal(int sig)
+{
+	struct sigaction action;
+
+	memset(&action, 0, sizeof(action));
+	action.sa_handler = SIG_IGN;
+	sigemptyset(&action.sa_mask);
+	action.sa_flags = 0;
+
+	if (sigaction(sig, &action, NULL) != 0)
+		fprintf(stderr, "%s: Failed to ignore signal %d, Ctrl-C will terminate program: %s\n",
+			"snis_server", sig, strerror(errno));
+}
+
 int main(int argc, char *argv[])
 {
 	int port, i;
 	struct timespec thirtieth_second;
 
 	refuse_to_run_as_root("snis_server");
+	ignore_signal(SIGINT);
+	ignore_signal(SIGHUP);
 	take_your_locale_and_shove_it();
 
 	process_options(argc, argv);
