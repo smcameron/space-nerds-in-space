@@ -150,7 +150,7 @@ performs its job satisfactorily, you can advance to Step 3.
 > 
 > You might also need these in addition or instead of some of the above:
 >
-> sudo apt-get install lib4curl-openssl-dev
+> sudo apt-get install libcurl4-openssl-dev
 > sudo apt-get install libssl-dev
 >
 > # Opus is needed for voice-chat, though you can compile without voice chat or,
