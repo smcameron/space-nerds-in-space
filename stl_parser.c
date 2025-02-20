@@ -861,6 +861,10 @@ process_it:
 		m->t[m->ntriangles].vnormal[2].z = m->t[m->ntriangles].n.z;
 	}
 	if (tvalid) {
+		if (!m->tex) {
+			printf("Unexpectedly found texture data mid stream, no thanks.\n");
+			return -1;
+		}
 		m->tex[m->ntriangles * 3 + 0].u = vt[tv[0]].x;
 		m->tex[m->ntriangles * 3 + 0].v = vt[tv[0]].y;
 		m->tex[m->ntriangles * 3 + 1].u = vt[tv[1]].x;
