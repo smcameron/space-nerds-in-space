@@ -44,6 +44,12 @@ else
 UBSANFLAG=
 endif
 
+ifeq (${ASAN},1)
+ASANFLAG=-fsanitize=address
+else
+ASANFLAG=
+endif
+
 # object fild directory
 OD=object_files
 
@@ -672,7 +678,8 @@ else
 COMPSPECCFLAGS=-Wno-gnu-folding-constant
 endif
 
-MYCFLAGS=-DDESTDIR=${DESTDIR} -DPREFIX=${PREFIX} ${DEBUGFLAG} ${PROFILEFLAG} ${OPTIMIZEFLAG} ${UBSANFLAG}\
+MYCFLAGS=-DDESTDIR=${DESTDIR} -DPREFIX=${PREFIX} ${DEBUGFLAG} ${PROFILEFLAG} \
+	${OPTIMIZEFLAG} ${ASANFLAG} ${UBSANFLAG}\
 	--pedantic -Wall -Wextra ${STOP_ON_WARN} -pthread -std=gnu99 ${RDYNAMIC} \
 	$(CFLAGS) -Wvla \
 	-DUSE_SNIS_XWINDOWS_HACKS=${USE_SNIS_XWINDOWS_HACKS} -fno-common \
@@ -1319,8 +1326,8 @@ bin/yoke-test-program:	yoke-test-program.c ${OD}/snis-device-io.o ${OD}/string-u
 	${OD}/snis-device-io.o ${OD}/pthread_util.o yoke-test-program.c -Lssgl -lssglclient
 
 bin/snis_arduino: snis_arduino.c ${OD}/snis-device-io.o ${OD}/string-utils.o ${BIN}
-	$(CC) -Wall -Wextra --pedantic -pthread -o bin/snis_arduino ${OD}/snis-device-io.o ${OD}/string-utils.o \
-			snis_arduino.c
+	$(CC) ${ASANFLAG} ${UBSANFLAG} -Wall -Wextra --pedantic -pthread -o bin/snis_arduino \
+			${OD}/snis-device-io.o ${OD}/string-utils.o snis_arduino.c
 
 $(OD)/nonuniform_random_sampler.o:	nonuniform_random_sampler.c nonuniform_random_sampler.h ${ODT}
 	$(Q)$(COMPILE)
