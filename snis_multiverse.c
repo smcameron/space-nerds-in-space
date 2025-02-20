@@ -1697,11 +1697,11 @@ int main(int argc, char *argv[])
 
 	i = 0;
 	do {
-		ssgl_sleep(1);
-		wrangle_snis_server_processes(); /* Wrangle snis_server processes at 1Hz */
-		if ((i % 30) == 0)
+		ssgl_sleep(6);
+		wrangle_snis_server_processes(); /* Wrangle snis_server processes at 0.16Hz once every 6 seconds. */
+		if ((i % 5) == 0)
 			checkpoint_data(); /* Checkpoint data every 30 secs */
-		i = (i + 1) % 30;
+		i = (i + 1) % 5;
 	} while (1);
 	return 0;
 }
