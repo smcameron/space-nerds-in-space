@@ -870,6 +870,7 @@ static void compact_mesh_allocations(struct mesh *m)
 		convert_triangle_vertex_offsets_to_ptrs(m); /* Convert offsets back to ptrs */
 		return;
 	}
+	m->v = newptr;
 	convert_triangle_vertex_offsets_to_ptrs(m); /* Convert offsets back to ptrs */
 	if (m->ntriangles <= 0) {
 		stacktrace("compact_mesh_allocations() -- mesh with ntriangles <= 0");
