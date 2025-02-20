@@ -1081,7 +1081,10 @@ struct mesh *read_obj_file(char *file_name)
 			if (s[0] == '#') /* skip comments */
 				continue;
 			remove_trailing_whitespace(s);
-			continuation = (s[strlen(s) - 1] == '\\');
+			if (strlen(s) > 0)
+				continuation = (s[strlen(s) - 1] == '\\');
+			else
+				continuation = 0;
 			clean_spaces(s);
 			if (strlen(line) + strlen(s) + 1 > sizeof(line)) {
 				printf("%s: line too long: %d\n", filename, lineno);
