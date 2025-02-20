@@ -1118,9 +1118,11 @@ $(OD)/stl_parser.o:	stl_parser.c Makefile ${ODT}
 
 bin/stl_parser:	stl_parser.c $(OD)/matrix.o $(OD)/mesh.o $(OD)/mathutils.o $(OD)/quat.o $(OD)/mtwist.o \
 		$(OD)/open-simplex-noise.o mikktspace/mikktspace.o \
-		$(OD)/string-utils.o Makefile ${BIN}
-	$(CC) -DTEST_STL_PARSER ${MYCFLAGS} -o bin/stl_parser stl_parser.c ${OD}/matrix.o ${OD}/mesh.o ${OD}/mathutils.o \
-		${OD}/quat.o ${OD}/mtwist.o mikktspace/mikktspace.o ${OD}/string-utils.o ${OD}/open-simplex-noise.o -lm $(LDFLAGS)
+		$(OD)/string-utils.o $(OD)/stacktrace.o Makefile ${BIN}
+	$(CC) -DTEST_STL_PARSER ${MYCFLAGS} ${ASANFLAG} ${UBFLAG} \
+		-o bin/stl_parser stl_parser.c ${OD}/matrix.o ${OD}/mesh.o ${OD}/mathutils.o \
+		${OD}/quat.o ${OD}/mtwist.o mikktspace/mikktspace.o ${OD}/string-utils.o ${OD}/open-simplex-noise.o \
+		${OD}/stacktrace.o -lm $(LDFLAGS)
 
 $(OD)/entity.o:	entity.c Makefile ${ODT}
 	$(Q)$(SDLCOMPILE)

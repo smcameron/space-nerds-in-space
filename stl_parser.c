@@ -1465,22 +1465,23 @@ int main(int argc, char *argv[])
 	return 0;
 }
 
-void mesh_graph_dev_init(struct mesh *m)
+void mesh_graph_dev_init(__attribute__((unused)) struct mesh *m)
 {
 
 }
 
-void mesh_graph_dev_cleanup(struct mesh *m)
+void mesh_graph_dev_cleanup(__attribute__((unused)) struct mesh *m)
 {
 
 }
 
-unsigned int graph_dev_load_texture(const char *filename)
+unsigned int graph_dev_load_texture(__attribute__((unused)) const char *filename,
+					__attribute__((unused)) int linear_colorspace)
 {
 	return 1;
 }
 
-void material_init_texture_mapped(struct material *m)
+void material_init_texture_mapped(__attribute__((unused)) struct material *m)
 {
 }
 
