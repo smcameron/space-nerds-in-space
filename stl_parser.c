@@ -1146,6 +1146,10 @@ struct mesh *read_obj_file(char *file_name)
 		printf("Mesh contains no vertices\n");
 		goto flame_out;
 	}
+	if (m->ntriangles <= 0) {
+		printf("Mesh contains no triangles\n");
+		goto flame_out;
+	}
 	compact_mesh_allocations(m);
 	m->radius = mesh_compute_radius(m);
 	check_triangle_vertices(m);
