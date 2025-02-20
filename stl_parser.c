@@ -740,6 +740,14 @@ static int fixup_vertex_indices(int v[], int n)
 	return 0;
 }
 
+static int bounds_check_vertex_indices(int v[], int count, int nvertices)
+{
+	for (int i = 0; i < count; i++)
+		if (v[i] < 0 || v[i] >= nvertices)
+			return -1;
+	return 0;
+}
+
 static int obj_add_face(struct mesh *m, char *line, int *tris_alloced,
 			struct vertex *vt, int nvt, struct vertex *vn, int nvn)
 {
@@ -789,15 +797,25 @@ static int obj_add_face(struct mesh *m, char *line, int *tris_alloced,
 
 process_it:
 
-	if (vvalid)
+	if (vvalid) {
 		if (fixup_vertex_indices(v, m->nvertices))
 			return -1;
-	if (tvalid)
+		if (bounds_check_vertex_indices(v, 3, m->nvertices))
+			return -1;
+	}
+	if (tvalid) {
 		if (fixup_vertex_indices(tv, nvt))
 			return -1;
-	if (nvalid)
+		if (bounds_check_vertex_indices(tv, 3, nvt))
+			return -1;
+	}
+	if (nvalid) {
 		if (fixup_vertex_indices(nv, nvn))
 			return -1;
+		if (bounds_check_vertex_indices(nv, 3, nvn))
+			return -1;
+	}
+
 
 	if (m->ntriangles + 1 > *tris_alloced) {
 		struct triangle *newmem;
