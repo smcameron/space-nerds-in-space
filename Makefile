@@ -1293,7 +1293,7 @@ mostly-clean:
 	bin/test_key_value_parser bin/test_snis_dmx test_scipher bin/test_snis_ship_type wwviaudio_basic_test \
 	${MANSRCDIR}/earthlike.1.gz  ${MANSRCDIR}/snis_client.6.gz  ${MANSRCDIR}/snis_server.6.gz  \
 	${MANSRCDIR}/snis_test_audio.1.gz bin/test_transport_contract bin/test_stringutils \
-	bin/yoke-test-program
+	bin/yoke-test-program fuzz_obj_parser
 	rm -f ${BIN}
 	rm -fr opus-1.3.1
 	rm -f libopus.a
@@ -1525,5 +1525,8 @@ opus-1.3.1:	opus-1.3.1.tar.gz
 
 libopus.a:	opus-1.3.1
 	(cd opus-1.3.1 && ./configure && make && cp ./.libs/libopus.a ..)
+
+fuzz_obj_parser:	fuzz_obj_parser.c
+	afl-clang-fast -g3 -fsanitize=address,undefined fuzz_obj_parser.c -lm -o fuzz_obj_parser
 
 include Makefile.depend
