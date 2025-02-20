@@ -1150,6 +1150,10 @@ struct mesh *read_obj_file(char *file_name)
 		printf("Mesh contains no triangles\n");
 		goto flame_out;
 	}
+	if (m->nvertices > m->ntriangles * 3) {
+		printf("Mesh contains too many vertices for the number of triangles\n");
+		goto flame_out;
+	}
 	compact_mesh_allocations(m);
 	m->radius = mesh_compute_radius(m);
 	check_triangle_vertices(m);
