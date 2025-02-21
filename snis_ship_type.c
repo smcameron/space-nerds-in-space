@@ -200,25 +200,25 @@ struct ship_type_entry *snis_read_ship_types(char *filename, int *count)
 		} else if (has_prefix("x rotation:", line)) {
 			if (!parse_float_field(&rot[nrots], filename, line, linecount)) {
 				axis[nrots] = 'x';
-				if (nrots < 4)
+				if (nrots < 3)
 					nrots++;
 			}
 		} else if (has_prefix("y rotation:", line)) {
 			if (!parse_float_field(&rot[nrots], filename, line, linecount)) {
 				axis[nrots] = 'y';
-				if (nrots < 4)
+				if (nrots < 3)
 					nrots++;
 			}
 		} else if (has_prefix("z rotation:", line)) {
 			if (!parse_float_field(&rot[nrots], filename, line, linecount)) {
 				axis[nrots] = 'z';
-				if (nrots < 4)
+				if (nrots < 3)
 					nrots++;
 			}
 		} else if (has_prefix("scale:", line)) {
 			if (!parse_float_field(&rot[nrots], filename, line, linecount)) {
 				axis[nrots] = 's';
-				if (nrots < 4)
+				if (nrots < 3)
 					nrots++;
 			}
 		} else if (has_prefix("}", line)) {
