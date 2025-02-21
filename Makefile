@@ -1529,4 +1529,11 @@ libopus.a:	opus-1.3.1
 fuzz_obj_parser:	fuzz_obj_parser.c
 	afl-clang-fast -g3 -fsanitize=address,undefined fuzz_obj_parser.c -lm -o fuzz_obj_parser
 
+run-fuzz-obj-parser:	fuzz_obj_parser put-cpu-in-hi-performance-mode
+	/bin/rm -fr fuzz.out
+	afl-fuzz -i share/snis/models/cargocontainer -o fuzz.out ./fuzz_obj_parser
+
+put-cpu-in-hi-performance-mode:
+	(cd /sys/devices/system/cpu && echo performance | sudo tee cpu*/cpufreq/scaling_governor)
+
 include Makefile.depend
