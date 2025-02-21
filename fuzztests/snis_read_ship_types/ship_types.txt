@@ -1,0 +1,398 @@
+# 
+# format is:
+#
+# ship type {
+#	class: CLASSNAME
+#	model file: model_file.stl
+#	thrust attach: -
+#	toughness: 0.5
+#	max speed: 1000
+#	warp chance: 50
+#	crew max: 15
+#	cargo bays: 3
+#	has lasers: 1
+#	has torpedoes: 0
+#	has missiles: 1
+#	extra scaling: 1.0
+#	relative mass: 1.0
+#	x rotation:
+#	y rotation:
+#	z rotation:
+#	scale:
+#}
+#
+# if thrust attach is "-", then it's name is same as the model file, but with .scad_params.h
+# substituted for the "extension" of the filename.
+# if thrust attach is "!", then there is intentionally no thrust attach file.
+#
+
+ship type {
+	class: CRUISER
+	model file: cruiser.stl
+	thrust attach: -
+	toughness: 0.5
+	max speed: 1000
+	warp chance: 50
+	crew max: 15
+	cargo bays: 3
+	has lasers: 1
+	has torpedoes: 0
+	has missiles: 1
+	extra scaling: 1.0
+	relative mass: 1.0
+}
+
+ship type {
+	class: DESTROYER
+	model file: destroyer.stl
+	thrust attach: -
+	toughness: 0.7
+	max speed: 1500
+	warp chance: 50
+	crew max: 10
+	cargo bays: 2
+	has lasers: 1
+	has torpedoes: 1
+	has missiles: 1
+	extra scaling: 1.0
+	relative mass: 2.0
+}
+
+ship type {
+	class: FREIGHTER
+	model file: freighter.stl
+	thrust attach: -
+	toughness: 0.2
+	max speed: 800
+	warp chance: 3
+	crew max: 10
+	cargo bays: 8
+	has lasers: 1
+	has missiles: 0
+	has torpedoes: 0
+	extra scaling: 1.0
+	relative mass: 1.1
+}
+
+ship type {
+	class: TANKER
+	model file: tanker.stl
+	thrust attach: -
+	toughness: 0.2
+	max speed: 750
+	warp chance: 5
+	crew max: 10
+	cargo bays: 1
+	has lasers: 1
+	has torpedoes: 0
+	has missiles: 0
+	extra scaling: 1.0
+	relative mass: 9.5
+}
+
+ship type {
+	class: TRANSPORT
+	model file: transport.stl
+	thrust attach: -
+	toughness: 0.4
+	max speed: 900
+	warp chance: 10
+	crew max: 200
+	cargo bays: 1
+	has lasers: 0
+	has torpedoes: 1
+	has missiles: 0
+	extra scaling: 1.0
+	relative mass: 4.0
+}
+
+ship type {
+	class: BATTLESTAR
+	model file:  battlestar.stl
+	thrust attach: -
+	toughness: 0.8
+	max speed: 1100
+	warp chance: 25
+	crew max: 75
+	cargo bays: 3
+	has lasers: 1
+	has torpedoes: 1
+	has missiles: 1
+	extra scaling: 1.0
+	relative mass: 3.5
+}
+
+ship type {
+	class: STARSHIP
+	model file: spaceship.stl
+	thrust attach: -
+	toughness: 0.5
+	max speed: 800
+	warp chance: 40
+	crew max: 10
+	cargo bays: 3
+	has lasers: 1
+	has torpedoes: 1
+	has missiles: 1
+	extra scaling: 1.0
+	relative mass: 1.2
+}
+
+ship type {
+	class: MINER
+	model file: asteroid-miner.stl
+	thrust attach: -
+	toughness: 0.1
+	max speed: 2250
+	warp chance: 2
+	crew max: 3
+	cargo bays: 2
+	has lasers: 1
+	has torpedoes: 0
+	has missiles: 0
+	extra scaling: 1.0
+	relative mass: 0.2
+}
+
+ship type {
+	class: SCIENCE
+	model file: spaceship2.stl
+	thrust attach: -
+	toughness: 0.9
+	max speed: 750
+	warp chance: 5
+	crew max: 7
+	cargo bays: 2
+	has lasers: 0
+	has torpedoes: 0
+	has missiles: 0
+	extra scaling: 1.0
+	relative mass: 1.2
+}
+
+ship type {
+	class: SPACEFARER
+	model file: spaceship3.stl
+	thrust attach: -
+	toughness: 0.6
+	max speed: 900
+	warp chance: 35
+	crew max: 5
+	cargo bays: 1
+	has lasers: 0
+	has torpedoes: 1
+	has missiles: 1
+	extra scaling: 1.0
+	relative mass: 1.6
+}
+
+ship type {
+	class: DRAGONHAWK
+	model file: dragonhawk.stl
+	thrust attach: -
+	toughness: 0.3
+	max speed: 1200
+	warp chance: 20
+	crew max: 5
+	cargo bays: 1
+	has lasers: 1
+	has torpedoes: 1
+	has missiles: 1
+	extra scaling: 1.0
+	relative mass: 1.7
+}
+
+ship type {
+	class: SKORPIO
+	model file: skorpio.stl
+	thrust attach: -
+	toughness: 0.3
+	max speed: 1400
+	warp chance: 50
+	crew max: 9
+	cargo bays: 1
+	has lasers: 1
+	has torpedoes: 1
+	has missiles: 1
+	extra scaling: 1.0
+	relative mass: 1.0
+}
+
+ship type {
+	class: DISRUPTOR
+	model file: disruptor/disruptor.obj
+	thrust attach: ../disruptor.scad_params.h
+	toughness: 0.9
+	max speed: 1000
+	warp chance: 50
+	crew max: 21
+	cargo bays: 2
+	has lasers: 1
+	has torpedoes: 1
+	has missiles: 1
+	extra scaling: 1.0
+	relative mass: 3.1
+}
+
+ship type {
+	class: RESEARCH
+	model file: research-vessel/research-vessel.obj
+	thrust attach: ../research-vessel.scad_params.h
+	toughness: 0.15
+	max speed: 700
+	warp chance: 3
+	crew max: 7
+	cargo bays: 1
+	has lasers: 0
+	has torpedoes: 0
+	has missiles: 0
+	extra scaling: 1.0
+	relative mass: 5.1
+}
+
+ship type {
+	class: CONQUEROR
+	model file: conqueror/conqueror.obj
+	thrust attach: ../conqueror.scad_params.h
+	toughness: 0.7
+	max speed: 1000
+	warp chance: 25
+	crew max: 17
+	cargo bays: 1
+	has lasers: 1
+	has torpedoes: 1
+	has missiles: 1
+	extra scaling: 1.0
+	relative mass: 3.3
+}
+
+ship type {
+	class: SCRAMBLER
+	model file: scrambler.stl
+	thrust attach: -
+	toughness: 0.3
+	max speed: 1400
+	warp chance: 15
+	crew max: 30
+	cargo bays: 1
+	has lasers: 1
+	has torpedoes: 0
+	has missiles: 1
+	extra scaling: 1.0
+	relative mass: 1.5
+}
+
+ship type {
+	class: SWORDFISH
+	model file: swordfish.stl
+	thrust attach: -
+	toughness: 0.2
+	max speed: 1400
+	warp chance: 15
+	crew max: 30
+	cargo bays: 1
+	has lasers: 1
+	has torpedoes: 1
+	has missiles: 1
+	extra scaling: 1.0
+	relative mass: 1.7
+}
+
+ship type {
+	class: WOMBAT
+	model file: wombat/snis3006.obj
+	thrust attach: ../wombat.scad_params.h
+	toughness: 0.95
+	max speed: 1400
+	warp chance: 50
+	crew max: 30
+	cargo bays: 8
+	has lasers: 1
+	has torpedoes: 1
+	has missiles: 1
+	extra scaling: 1.0
+	relative mass: 1.0
+	x rotation: -90.0
+	y rotation: 90.0
+}
+
+ship type {
+	class: DREADKNIGHT
+	model file: dreadknight/dreadknight.obj
+	thrust attach: dreadknight-exhaust-plumes.h
+	toughness: 0.7
+	max speed: 1300
+	warp chance: 30
+	crew max: 25
+	cargo bays: 2
+	has lasers: 1
+	has torpedoes: 1
+	has missiles: 1
+	extra scaling: 3.0
+	relative mass: 3.9
+}
+
+ship type {
+	class: VANQUISHER
+	model file: vanquisher.stl
+	thrust attach: -
+	toughness: 0.3
+	max speed: 1400
+	warp chance: 60
+	crew max: 3
+	cargo bays: 1
+	has lasers: 1
+	has torpedoes: 0
+	has missiles: 1
+	extra scaling: 1.0
+	relative mass: 0.52
+}
+
+ship type {
+	class: ENFORCER
+	model file: enforcer/enforcer.obj
+	thrust attach: ../enforcer.scad_params.h
+	toughness: 0.98
+	max speed: 2700
+	warp chance: 50
+	crew max: 5
+	cargo bays: 1
+	has lasers: 1
+	has torpedoes: 1
+	has missiles: 1
+	extra scaling: 1.0
+	relative mass: 2.1
+}
+
+ship type {
+	class: ESCAPEPOD
+	model file: escapepod.stl
+	thrust attach: -
+	toughness: 0.1
+	max speed: 200
+	warp chance: 0
+	crew max: 3
+	cargo bays: 0
+	has lasers: 0
+	has torpedoes: 0
+	has missiles: 0
+	extra scaling: 1.0
+	relative mass: 0.2
+}
+
+ship type {
+	class: MANTIS
+	model file: mantis.stl
+	thrust attach: -
+	toughness: 0.9
+	max speed: 1600
+	warp chance: 50
+	crew max: 30
+	cargo bays: 5
+	has lasers: 1
+	has torpedoes: 1
+	has missiles: 1
+	extra scaling: 1.0
+	relative mass: 9.1
+}
+

@@ -1293,7 +1293,7 @@ mostly-clean:
 	bin/test_key_value_parser bin/test_snis_dmx test_scipher bin/test_snis_ship_type wwviaudio_basic_test \
 	${MANSRCDIR}/earthlike.1.gz  ${MANSRCDIR}/snis_client.6.gz  ${MANSRCDIR}/snis_server.6.gz  \
 	${MANSRCDIR}/snis_test_audio.1.gz bin/test_transport_contract bin/test_stringutils \
-	bin/yoke-test-program fuzz_obj_parser
+	bin/yoke-test-program fuzz_obj_parser fuzz_snis_read_ship_types
 	rm -f ${BIN}
 	rm -fr opus-1.3.1
 	rm -f libopus.a
@@ -1529,6 +1529,10 @@ libopus.a:	opus-1.3.1
 fuzz_obj_parser:	fuzz_obj_parser.c
 	afl-clang-fast -g3 -fsanitize=address,undefined fuzz_obj_parser.c -lm -o fuzz_obj_parser
 
+fuzz_snis_read_ship_types:	fuzz_snis_read_ship_types.c
+	afl-clang-fast -g3 -fsanitize=address,undefined fuzz_snis_read_ship_types.c \
+		-lm -o fuzz_snis_read_ship_types
+
 run-fuzz-obj-parser:	fuzz_obj_parser put-cpu-in-hi-performance-mode
 	/bin/rm -fr fuzz.out
 	afl-fuzz -T "Fuzzing read_obj_parser" -i share/snis/models/cargocontainer \
@@ -1538,6 +1542,11 @@ run-fuzz-stl-parser:	fuzz_obj_parser put-cpu-in-hi-performance-mode
 	/bin/rm -fr fuzz.out
 	afl-fuzz -T "Fuzzing read_stl_parser" -i fuzztests/read_stl_file \
 		-o fuzz.out -- ./fuzz_obj_parser stl
+
+run-fuzz-snis-read-ship-types:	fuzz_snis_read_ship_types put-cpu-in-hi-performance-mode
+	/bin/rm -fr fuzz.out
+	afl-fuzz -T "Fuzzing snis_read_ship_types" -i fuzztests/snis_read_ship_types \
+		-o fuzz.out -- ./fuzz_snis_read_ship_types
 
 put-cpu-in-hi-performance-mode:
 	(cd /sys/devices/system/cpu && echo performance | sudo tee cpu*/cpufreq/scaling_governor)
