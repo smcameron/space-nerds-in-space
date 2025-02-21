@@ -1531,7 +1531,13 @@ fuzz_obj_parser:	fuzz_obj_parser.c
 
 run-fuzz-obj-parser:	fuzz_obj_parser put-cpu-in-hi-performance-mode
 	/bin/rm -fr fuzz.out
-	afl-fuzz -i share/snis/models/cargocontainer -o fuzz.out ./fuzz_obj_parser
+	afl-fuzz -T "Fuzzing read_obj_parser" -i share/snis/models/cargocontainer \
+		-o fuzz.out -- ./fuzz_obj_parser obj
+
+run-fuzz-stl-parser:	fuzz_obj_parser put-cpu-in-hi-performance-mode
+	/bin/rm -fr fuzz.out
+	afl-fuzz -T "Fuzzing read_stl_parser" -i fuzztests/read_stl_file \
+		-o fuzz.out -- ./fuzz_obj_parser stl
 
 put-cpu-in-hi-performance-mode:
 	(cd /sys/devices/system/cpu && echo performance | sudo tee cpu*/cpufreq/scaling_governor)

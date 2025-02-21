@@ -25,8 +25,16 @@ void material_init_texture_mapped(struct material *x) {}
 
 __AFL_FUZZ_INIT();
 
-int main(void)
+
+int main(int argc, char *argv[])
 {
+	struct mesh *(*parse_file)(char *filename) = NULL;
+
+	if (argc == 1 || argc > 1 && strcmp(argv[1], "obj") == 0)
+		parse_file = read_obj_file;
+	else if (argc > 1 && strcmp(argv[1], "stl") == 0)
+		parse_file = read_stl_file;
+
 	__AFL_INIT();
 	int fd = memfd_create("fuzz", 0);
 	assert(fd == 3);
@@ -35,6 +43,6 @@ int main(void)
 		int len = __AFL_FUZZ_TESTCASE_LEN;
 		ftruncate(fd, 0);
 		pwrite(fd, buf, len, 0);
-		read_obj_file("/proc/self/fd/3");
+		parse_file("/proc/self/fd/3");
 	}
 }
