@@ -93,8 +93,11 @@ char *trim_whitespace(char *s)
 {
 	char *x, *z;
 
-	for (x = s; *x == ' ' || *x == '\t'; x++)
-		;
+	for (x = s; *x != '\0' && (*x == ' ' || *x == '\t'); x++)
+		/* empty loop body */ ;
+	if (*x == '\0')
+		return x;
+
 	z = x + (strlen(x) - 1);
 
 	while (z >= x && (*z == ' ' ||  *z == '\t' || *z == '\n')) {
