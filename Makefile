@@ -442,8 +442,8 @@ MANPAGES=${MANSRCDIR}/snis_client.6.gz ${MANSRCDIR}/snis_server.6.gz \
 MANDIR=${DESTDIR}${PREFIX}/share/man/man6
 
 DESKTOPDIR=${DESTDIR}${PREFIX}/share/applications
-DESKTOPSRCDIR=.
-DESKTOPFILES=${DESKTOPSRCDIR}/snis.desktop
+DESKTOPSRCDIR=./share/applications
+DESKTOPFILES=${DESKTOPSRCDIR}/snis.desktop ${DESKTOPSRCDIR}/snis-icon.svg
 UPDATE_DESKTOP=update-desktop-database ${DESKTOPDIR} || :
 
 # -rdynamic is used by gcc for runtime stack traces (see stacktrace.c)
@@ -1448,6 +1448,8 @@ install:	${BINPROGS} ${MANPAGES} ${SSGL}
 	${INSTALL} -m 644 ${MANPAGES} ${MANDIR}
 	mkdir -p ${DESKTOPDIR}
 	${INSTALL} -m 644 ${DESKTOPFILES} ${DESKTOPDIR}
+	grep -v '^Icon=' < ${DESKTOPSRCDIR}/snis.desktop > ${DESKTOPDIR}/snis.desktop
+	echo "Icon=${DESKTOPDIR}/snis-icon.svg" >> ${DESKTOPDIR}/snis.desktop
 	${UPDATE_DESKTOP}
 	mkdir -p ${DESTDIR}${PREFIX}/share/snis
 	bin/snis_update_assets --force --destdir ${DESTDIR}${PREFIX} --srcdir ./share/snis
@@ -1480,6 +1482,7 @@ uninstall:
 	rm -f ${MANDIR}/snis_multiverse.6
 	rm -f ${MANDIR}/snis_text_to_speech.sh.6
 	rm -f ${DESKTOPDIR}/snis.desktop
+	rm -f ${DESKTOPDIR}/snis-icon.svg
 	${UPDATE_DESKTOP}
 
 clean:	mostly-clean
