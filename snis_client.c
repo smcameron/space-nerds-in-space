@@ -548,6 +548,7 @@ static struct ui_element_functions ui_pull_down_menu_functions = {
 #define GLuint int
 #endif
 
+static int missing_assets_detected = 0;
 static volatile int static_textures_loaded = 0; /* blech, volatile global. */
 static volatile int per_solarsystem_textures_loaded = 0;
 static char *lua_skybox_prefix = NULL;
@@ -9160,6 +9161,13 @@ static void show_common_screen(char *title)
 		else
 			sng_center_xy_draw_string("SPACE DUST DISABLED",
 					SMALL_FONT, SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2);
+	}
+
+	if (missing_assets_detected) {
+		sng_set_foreground(RED);
+		if (timer & 0x8)
+			sng_center_xy_draw_string("MISSING ASSETS DETECTED",
+					SMALL_FONT, SCREEN_WIDTH / 2, 3 * SCREEN_HEIGHT / 4);
 	}
 	if (credits_screen_active)
 		draw_credits_screen();
@@ -23980,6 +23988,7 @@ static struct mesh *snis_read_model(char *directory, char *filename)
 		printf("Failed to read model from file '%s'\n", path);
 		printf("Assume form of . . . A SPHERICAL COW!\n");
 		m = spherical_cow;
+		missing_assets_detected = 1;
 	}
 	return m;
 }
