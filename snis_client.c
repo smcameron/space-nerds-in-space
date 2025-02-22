@@ -21991,7 +21991,7 @@ static void maybe_reload_shaders(void)
 {
 	if (!reload_shaders)
 		return;
-	fprintf(stderr, "Reloading shaders\n");
+	print_demon_console_msg("Reloading shaders\n");
 	graph_dev_reload_all_shaders();
 	reload_shaders = 0;
 }
