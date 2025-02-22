@@ -152,7 +152,7 @@ static int fetch_file_helper(CURL *curl, const char *url, const char *filename, 
 
 static int fetch_file(CURL *curl, const char *url, const char *filename)
 {
-	fetch_file_helper(curl, url, filename, 1);
+	return fetch_file_helper(curl, url, filename, 1);
 }
 
 static char *compute_md5_sum(const char *filename)
