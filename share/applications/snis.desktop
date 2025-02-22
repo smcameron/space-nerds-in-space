@@ -2,7 +2,7 @@
 Name=Space Nerds in Space
 GenericName=Space Nerds in Space
 Comment=Networked spaceship bridge simulator
-Exec=snis_client
+Exec=snis_client --fullscreen
 Icon=snis-icon.svg
 Terminal=false
 Type=Application
