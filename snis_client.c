@@ -23273,7 +23273,7 @@ static int read_ship_types(void)
 
 	ship_type = snis_read_ship_types(path, &nshiptypes);
 	if (!ship_type) {
-		fprintf(stderr, "Unable to read ship types from %s", path);
+		fprintf(stderr, "Unable to read ship types from %s\n", path);
 		if (errno)
 			fprintf(stderr, "%s: %s\n", path, strerror(errno));
 		return -1;
