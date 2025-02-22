@@ -20964,6 +20964,9 @@ static void fork_ssgl(void)
 	int rc = fork();
 	if (!rc) { /* child process */
 		execl(ssgl_server, ssgl_server, NULL);
+		rc = write(2, "execl failed.\n", 14);
+		(void) rc; /* shut clang scan-build up. */
+		_exit(1);
 	}
 	free(ssgl_server);
 }
@@ -21007,14 +21010,17 @@ static void fork_multiverse(int autowrangle)
 		(void) dup2(fd, 1);
 		(void) dup2(fd, 2);
 		if (autowrangle) {
-			rc = execl(multiverse_server, multiverse_server, "-a",
+			execl(multiverse_server, multiverse_server, "-a",
 				"-l", "localhost", "-n", "nickname",
 				"-L", "narnia", "-e", "default", NULL);
 		} else {
-			rc = execl(multiverse_server, multiverse_server,
+			execl(multiverse_server, multiverse_server,
 				"-l", "localhost", "-n", "nickname",
 				"-L", "narnia", "-e", "default", NULL);
 		}
+		rc = write(2, "execl failed.\n", 14);
+		(void) rc; /* shut clang scan-build up. */
+		_exit(1);
 	}
 	free(multiverse_server);
 	close(fd);
@@ -21045,8 +21051,11 @@ static void fork_snis_server(void)
 		/* Set stderr and stdout to got to snis_server_log.txt */
 		(void) dup2(fd, 1);
 		(void) dup2(fd, 2);
-		rc = execl(snis_server, snis_server, "-a",
+		execl(snis_server, snis_server, "-a",
 			"-l", "localhost", "-L", "DEFAULT", "-m", "narnia", "-s", "default", NULL);
+		rc = write(2, "execl failed.\n", 14);
+		(void) rc; /* shut clang scan-build up. */
+		_exit(1);
 	}
 	free(snis_server);
 	close(fd);
