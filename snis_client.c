@@ -20961,7 +20961,7 @@ static void fork_ssgl(void)
 	free(ssgl_server);
 }
 
-static void fork_multiverse(void)
+static void fork_multiverse(int autowrangle)
 {
 	char *executable_path = get_executable_path();
 	if (!executable_path)
@@ -21001,9 +21001,15 @@ static void fork_multiverse(void)
 		/* Set stderr and stdout to got to snis_multiverse_log.txt */
 		(void) dup2(fd, 1);
 		(void) dup2(fd, 2);
-		rc = execl(multiverse_server, multiverse_server, "-a",
-			"-l", "localhost", "-n", "nickname",
-			"-L", "narnia", "-e", "default", NULL);
+		if (autowrangle) {
+			rc = execl(multiverse_server, multiverse_server, "-a",
+				"-l", "localhost", "-n", "nickname",
+				"-L", "narnia", "-e", "default", NULL);
+		} else {
+			rc = execl(multiverse_server, multiverse_server,
+				"-l", "localhost", "-n", "nickname",
+				"-L", "narnia", "-e", "default", NULL);
+		}
 	}
 	free(multiverse_server);
 	close(fd);
@@ -21211,21 +21217,25 @@ static void start_forker_process(void)
 			errno = 0;
 			rc = read(pipefd[0], &ch, 1);
 #define FORKER_START_SSGL '1'
-#define FORKER_START_MULTIVERSE '2'
+#define FORKER_START_MULTIVERSE_AUTOWRANGLE '2'
 #define FORKER_START_SNIS_SERVER '3'
 #define FORKER_QUIT '4'
 #define FORKER_KILL_EM_ALL '5' /* terminate all snis processes */
 #define FORKER_ADVANCED '6' /* start snis_launcher in a terminal */
 #define FORKER_UPDATE_ASSETS '7' /* check for updated art assets */
 #define FORKER_KILL_SERVERS '8' /* terminate all snis processes */
+#define FORKER_START_MULTIVERSE_NO_AUTOWRANGLE '9'
 			switch (rc) {
 			case 1:
 				switch (ch) {
 				case FORKER_START_SSGL:
 					fork_ssgl();
 					break;
-				case FORKER_START_MULTIVERSE:
-					fork_multiverse();
+				case FORKER_START_MULTIVERSE_AUTOWRANGLE:
+					fork_multiverse(1);
+					break;
+				case FORKER_START_MULTIVERSE_NO_AUTOWRANGLE:
+					fork_multiverse(0);
 					break;
 				case FORKER_START_SNIS_SERVER:
 					fork_snis_server();
@@ -21275,10 +21285,12 @@ static void start_ssgl_btn_pressed(__attribute__((unused)) void *x)
 	(void) rc;
 }
 
-static void start_snis_multiverse_btn_pressed(__attribute__((unused)) void *x)
+static void start_snis_multiverse_btn_pressed(void *x)
 {
 	int rc;
-	char ch = FORKER_START_MULTIVERSE;
+	int *autowrangle = x;
+	char ch = *autowrangle ? FORKER_START_MULTIVERSE_AUTOWRANGLE :
+						FORKER_START_MULTIVERSE_NO_AUTOWRANGLE;
 	if (pipe_to_forker_process >= 0)
 		rc = write(pipe_to_forker_process, &ch, 1);
 	(void) rc;
@@ -21341,6 +21353,7 @@ static void launcher_advanced_btn_pressed(__attribute__((unused)) void *x)
 static struct launcher_ui {
 	struct button *start_ssgl_btn;
 	struct button *start_snis_multiverse_btn;
+	struct button *autowrangle_checkbox;
 	struct button *start_snis_server_btn;
 	struct button *connect_client_btn;
 	struct button *stop_all_snis_btn;
@@ -21355,7 +21368,13 @@ static struct launcher_ui {
 	int multiverse_count;
 	int snis_server_count;
 	int snis_client_count;
+	int autowrangle;
 } launcher_ui;
+
+static void autowrangle_checkbox_pressed(__attribute__((unused)) void *x)
+{
+	launcher_ui.autowrangle = !launcher_ui.autowrangle;
+}
 
 static void launcher_update_assets_btn_pressed(__attribute__((unused)) void *x)
 {
@@ -21399,7 +21418,14 @@ static void init_launcher_ui(void)
 				active_button_color, TINY_FONT, start_ssgl_btn_pressed, 0);
 	y += txy(40);
 	launcher_ui.start_snis_multiverse_btn = snis_button_init(x, y, -1, -1, "START SNIS MULTIVERSE SERVER",
-				active_button_color, TINY_FONT, start_snis_multiverse_btn_pressed, 0);
+				active_button_color, TINY_FONT, start_snis_multiverse_btn_pressed,
+				&launcher_ui.autowrangle);
+	y += txy(40);
+	launcher_ui.autowrangle_checkbox = snis_button_init(x + 50, y, -1, -1, "AUTO-WRANGLE SNIS SERVERS",
+				active_button_color, TINY_FONT, autowrangle_checkbox_pressed, 0);
+	snis_button_set_checkbox_function(launcher_ui.autowrangle_checkbox,
+					snis_button_generic_checkbox_function,
+					&launcher_ui.autowrangle);
 	y += txy(40);
 	launcher_ui.start_snis_server_btn = snis_button_init(x, y, -1, -1, "START SNIS SERVER",
 				active_button_color, TINY_FONT, start_snis_server_btn_pressed, 0);
@@ -21443,6 +21469,8 @@ static void init_launcher_ui(void)
 			"START SNIS LOBBY SERVER PROCESS");
 	ui_add_button(launcher_ui.start_snis_multiverse_btn, DISPLAYMODE_LAUNCHER,
 			"START SNIS MULTIVERSE SERVER PROCESS");
+	ui_add_button(launcher_ui.autowrangle_checkbox, DISPLAYMODE_LAUNCHER,
+			"SNIS_MULTIVERSE SHOULD AUTOMATICALLY START/STOP SNIS_SERVER PROCESSES AS NEEDED");
 	ui_add_button(launcher_ui.start_snis_server_btn, DISPLAYMODE_LAUNCHER,
 			"START SNIS SERVER PROCESS");
 	ui_add_button(launcher_ui.connect_client_btn, DISPLAYMODE_LAUNCHER,
@@ -21464,6 +21492,7 @@ static void init_launcher_ui(void)
 	launcher_ui.multiverse_count = 0;
 	launcher_ui.snis_server_count = 0;
 	launcher_ui.snis_client_count = 0;
+	launcher_ui.autowrangle = 1;
 }
 
 static int get_process_count(char *pattern)
