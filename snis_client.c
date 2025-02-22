@@ -20956,9 +20956,8 @@ static void fork_ssgl(void)
 	if (!executable_path)
 		return;
 
-	size_t len = strlen(executable_path);
-	char *ssgl_server = malloc(2 * len);
-	snprintf(ssgl_server, 2 * len, "%s", executable_path);
+	char *ssgl_server = malloc(PATH_MAX * 2);
+	snprintf(ssgl_server, PATH_MAX * 2, "%s", executable_path);
 	dirname(ssgl_server);
 	strcat(ssgl_server, "/ssgl_server");
 
@@ -20975,20 +20974,18 @@ static void fork_multiverse(int autowrangle)
 	if (!executable_path)
 		return;
 
-	ssize_t len = strlen(executable_path);
+	char *multiverse_server = malloc(PATH_MAX * 2);
+	char *snis_bin_dir = malloc(PATH_MAX * 2);
 
-	char *multiverse_server = malloc(2 * len);
-	char *snis_bin_dir = malloc(2 * len);
-
-	snprintf(multiverse_server, 2 * len, "%s", executable_path);
+	snprintf(multiverse_server, PATH_MAX * 2, "%s", executable_path);
 	dirname(multiverse_server);
 
 	/* This is a bit of a hack. Probably shouldn't need to use SNISBINDIR here.
 	 * we have to cut off the trailing "/bin", because snis_multiverse adds it
 	 * back on.
 	 */
-	snprintf(snis_bin_dir, 2 * len, "%s", multiverse_server);
-	len = strlen(snis_bin_dir) - 4;
+	snprintf(snis_bin_dir, PATH_MAX * 2, "%s", multiverse_server);
+	ssize_t len = strlen(snis_bin_dir) - 4;
 	if (len >= 0 && strcmp(&snis_bin_dir[len], "/bin") == 0)
 		dirname(snis_bin_dir); /* cut off trailing /bin */
 	setenv("SNISBINDIR", snis_bin_dir, 0);
@@ -21030,10 +21027,8 @@ static void fork_snis_server(void)
 	if (!executable_path)
 		return;
 
-	size_t len = strlen(executable_path);
-
-	char *snis_server = malloc(2 * len);
-	snprintf(snis_server, 2 * len, "%s", executable_path);
+	char *snis_server = malloc(PATH_MAX * 2);
+	snprintf(snis_server, PATH_MAX * 2, "%s", executable_path);
 	dirname(snis_server);
 	strcat(snis_server, "/snis_server");
 	int fd = xdg_base_open_for_overwrite(xdg_base_ctx, "snis_server_log.txt");
@@ -21114,10 +21109,8 @@ static void fork_snis_launcher(void)
 	if (!executable_path)
 		return;
 
-	size_t len = strlen(executable_path);
-
-	char *snis_launcher = malloc(2 * len);
-	snprintf(snis_launcher, 2 * len, "%s", executable_path);
+	char *snis_launcher = malloc(PATH_MAX * 2);
+	snprintf(snis_launcher, PATH_MAX * 2, "%s", executable_path);
 	dirname(snis_launcher);
 	strcat(snis_launcher, "/snis_launcher");
 
@@ -21143,10 +21136,8 @@ static void fork_update_assets(int background_task, int local_only)
 		return;
 	}
 
-	size_t len = strlen(executable_path);
-
-	char *update_assets = malloc(2 * len);
-	snprintf(update_assets, 2 * len, "%s", executable_path);
+	char *update_assets = malloc(PATH_MAX * 2);
+	snprintf(update_assets, PATH_MAX * 2, "%s", executable_path);
 	dirname(update_assets);
 	strcat(update_assets, "/update_assets_from_launcher.sh dontask");
 
