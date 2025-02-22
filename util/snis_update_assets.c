@@ -355,7 +355,7 @@ static int process_manifest(CURL *curl, char *manifest_filename)
 		linecount++;
 		/* if there's a trailing newline, cut it off */
 		int l = strlen(s);
-		if (s > 0 && s[l - 1] == '\n')
+		if (l > 0 && s[l - 1] == '\n')
 			s[l - 1] = '\0';
 
 		char *md5sum = s;
