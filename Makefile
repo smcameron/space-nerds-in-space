@@ -1293,7 +1293,8 @@ mostly-clean:
 	bin/test_key_value_parser bin/test_snis_dmx test_scipher bin/test_snis_ship_type wwviaudio_basic_test \
 	${MANSRCDIR}/earthlike.1.gz  ${MANSRCDIR}/snis_client.6.gz  ${MANSRCDIR}/snis_server.6.gz  \
 	${MANSRCDIR}/snis_test_audio.1.gz bin/test_transport_contract bin/test_stringutils \
-	bin/yoke-test-program fuzz_obj_parser fuzz_snis_read_ship_types fuzz_solarsystem_asset_spec_read
+	bin/yoke-test-program fuzz_obj_parser fuzz_snis_read_ship_types fuzz_solarsystem_asset_spec_read \
+	fuzz_read_thrust_attachments
 	rm -f ${BIN}
 	rm -fr opus-1.3.1
 	rm -f libopus.a
@@ -1533,6 +1534,10 @@ fuzz_snis_read_ship_types:	fuzz_snis_read_ship_types.c
 	afl-clang-fast -g3 -fsanitize=address,undefined fuzz_snis_read_ship_types.c \
 		-lm -o fuzz_snis_read_ship_types
 
+fuzz_read_thrust_attachments:	fuzz_read_thrust_attachments.c
+	afl-clang-fast -g3 -fsanitize=address,undefined fuzz_read_thrust_attachments.c \
+		-lm -o fuzz_read_thrust_attachments
+
 fuzz_solarsystem_asset_spec_read:	fuzz_solarsystem_asset_spec_read.c
 	afl-clang-fast -g3 -fsanitize=address,undefined fuzz_solarsystem_asset_spec_read.c \
 		-lm -o fuzz_solarsystem_asset_spec_read
@@ -1556,6 +1561,11 @@ run-fuzz-solarsystem-asset-spec-read:	fuzz_solarsystem_asset_spec_read put-cpu-i
 	/bin/rm -fr fuzz.out
 	afl-fuzz -T "Fuzzing solarsystem_asset_spec_read" -i fuzztests/solarsystem_asset_spec_read \
 		-o fuzz.out -- ./fuzz_solarsystem_asset_spec_read
+
+run-fuzz-read-thrust-attachments:	fuzz_read_thrust_attachments put-cpu-in-hi-performance-mode
+	/bin/rm -fr fuzz.out
+	afl-fuzz -T "Fuzzing solarsystem_asset_spec_read" -i fuzztests/read_thrust_attachments \
+		-o fuzz.out -- ./fuzz_read_thrust_attachments
 
 put-cpu-in-hi-performance-mode:
 	(cd /sys/devices/system/cpu && echo performance | sudo tee cpu*/cpufreq/scaling_governor)
