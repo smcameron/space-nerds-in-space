@@ -39,6 +39,9 @@ GLOBAL int snis_button_trigger_long_press(struct button *b);
 GLOBAL void snis_button_set_color(struct button *b, int color); /* Sets the color of the button */
 GLOBAL int snis_button_get_color(struct button *b); /* Returns the color of the button */
 
+/* By default, buttons have a visible border. You can turn it on or off with this. */
+GLOBAL void snis_button_set_visible_border(struct button *b, int visible_border);
+
 /* Sets the button's checkbox function and a cookie to be passed to the checkbox function.
  * If the checkbox function is not null, then the button will be drawn with a checkbox
  * and if the checkbox function returns 0, the checkbox will not be checked, otherwise it

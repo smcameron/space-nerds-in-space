@@ -29,6 +29,7 @@ struct button {
 	button_function long_press_button_release; /* Called when the user presses holds then release button */
 	void *cookie;
 	unsigned char button_press_feedback_counter;
+	int visible_border;
 };
 
 void snis_button_set_label(struct button *b, char *label)
@@ -80,6 +81,7 @@ struct button *snis_button_init(int x, int y, int width, int height,
 	b->button_sound = default_button_sound;
 	b->enabled = 1;
 	b->long_press_timer = 0;
+	b->visible_border = 1;
 	if (b->width < 0 || b->height < 0)
 		snis_button_compute_dimensions(b);
 	return b;
@@ -130,11 +132,13 @@ void snis_button_draw(struct button *b)
 		offset = 1;
 	else
 		offset = 0;
-	snis_button_draw_outline(b->x + offset, b->y + offset,
-					b->width + offset, b->height + offset);
-	if (b->button_press_feedback_counter)
-		snis_button_draw_outline(b->x + 1 + offset, b->y + 1 + offset,
-					b->width - 2 + offset, b->height - 2 + offset);
+	if (b->visible_border) {
+		snis_button_draw_outline(b->x + offset, b->y + offset,
+						b->width + offset, b->height + offset);
+		if (b->button_press_feedback_counter)
+			snis_button_draw_outline(b->x + 1 + offset, b->y + 1 + offset,
+						b->width - 2 + offset, b->height - 2 + offset);
+	}
 	if (!b->checkbox_function) {
 		sng_abs_xy_draw_string(b->label, b->font, b->x + 10, b->y + b->height / 1.7);
 		if (b->button_press_feedback_counter)
@@ -273,6 +277,11 @@ void snis_button_set_long_press_function(struct button *b, button_function long_
 {
 	b->long_press_button_release = long_press_function;
 	b->long_press_cookie = cookie;
+}
+
+void snis_button_set_visible_border(struct button *b, int visible_border)
+{
+	b->visible_border = !!visible_border;
 }
 
 /* This is meant for use as a checkbox function for checkboxes that modify/reflect a simple int */
