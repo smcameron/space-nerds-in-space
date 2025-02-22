@@ -447,7 +447,8 @@ METAINFOFILES=${METAINFOSRCDIR}/io.github.smcameron.space-nerds-in-space.metainf
 
 DESKTOPDIR=${DESTDIR}${PREFIX}/share/applications
 DESKTOPSRCDIR=./share/applications
-DESKTOPFILES=${DESKTOPSRCDIR}/io.github.smcameron.space-nerds-in-space.desktop ${DESKTOPSRCDIR}/snis-icon.svg
+DESKTOPFILES=${DESKTOPSRCDIR}/io.github.smcameron.space-nerds-in-space.desktop \
+	${DESKTOPSRCDIR}/io.github.smcameron.space-nerds-in-space.svg
 UPDATE_DESKTOP=update-desktop-database ${DESKTOPDIR} || :
 
 # -rdynamic is used by gcc for runtime stack traces (see stacktrace.c)
@@ -1453,7 +1454,7 @@ install:	${BINPROGS} ${MANPAGES} ${SSGL}
 	mkdir -p ${DESKTOPDIR}
 	${INSTALL} -m 644 ${DESKTOPFILES} ${DESKTOPDIR}
 	grep -v '^Icon=' < ${DESKTOPSRCDIR}/io.github.smcameron.space-nerds-in-space.desktop > ${DESKTOPDIR}/io.github.smcameron.space-nerds-in-space.desktop
-	echo "Icon=${DESKTOPDIR}/snis-icon.svg" >> ${DESKTOPDIR}/io.github.smcameron.space-nerds-in-space.desktop
+	echo "Icon=${DESKTOPDIR}/io.github.smcameron.space-nerds-in-space.svg" >> ${DESKTOPDIR}/io.github.smcameron.space-nerds-in-space.desktop
 	mkdir -p ${METAINFODIR}
 	${INSTALL} -m 644 ${METAINFOFILES} ${METAINFODIR}
 	${UPDATE_DESKTOP}
@@ -1488,7 +1489,7 @@ uninstall:
 	rm -f ${MANDIR}/snis_multiverse.6
 	rm -f ${MANDIR}/snis_text_to_speech.sh.6
 	rm -f ${DESKTOPDIR}/io.github.smcameron.space-nerds-in-space.desktop
-	rm -f ${DESKTOPDIR}/snis-icon.svg
+	rm -f ${DESKTOPDIR}/io.github.smcameron.space-nerds-in-space.svg
 	rm -f ${METAINFODIR}/io.github.smcameron.space-nerds-in-space.metainfo.xml
 	${UPDATE_DESKTOP}
 
