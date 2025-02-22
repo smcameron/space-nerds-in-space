@@ -21426,6 +21426,7 @@ static void init_launcher_ui(void)
 	snis_button_set_checkbox_function(launcher_ui.autowrangle_checkbox,
 					snis_button_generic_checkbox_function,
 					&launcher_ui.autowrangle);
+	snis_button_set_visible_border(launcher_ui.autowrangle_checkbox, 0);
 	y += txy(40);
 	launcher_ui.start_snis_server_btn = snis_button_init(x, y, -1, -1, "START SNIS SERVER",
 				active_button_color, TINY_FONT, start_snis_server_btn_pressed, 0);
