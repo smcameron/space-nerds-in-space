@@ -266,7 +266,7 @@ static int copy_file(char *src, char *dest)
 	}
 
 	/* We expect that dest does not exist, as we're trying to copy to dest. */
-	rc = stat(dest, &sb1);
+	rc = stat(dest, &sb2);
 	if (rc == 0) {
 		/* But in this case it does exist, so let's make sure we're not copying
 		 * a file on top of itself.
