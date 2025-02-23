@@ -21610,7 +21610,6 @@ static void maybe_show_downloading_message(void)
 		if (rc == 0) { /* file exists */
 			s = (s + 1) & 0x03;
 			snprintf(message, sizeof(message), "CHECKING FOR NEW ART ASSETS %c", spinner[s]);
-			fprintf(stderr, "download sentinel file = %s\n", sentinel_file);
 		} else {
 			strlcpy(message, "", sizeof(message));
 		}
