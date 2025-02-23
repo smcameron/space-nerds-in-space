@@ -2,7 +2,7 @@
 .SH NAME
 snis_client \- Multi player cooperative star ship bridge simulator (client) 
 .SH SYNOPSIS
-.B snis_client serverhost shipname password [ OPTIONS ]
+.B snis_client [ OPTIONS ] 
 .SH DESCRIPTION
 .\" Add any additional description here
 .warn 511
@@ -36,15 +36,25 @@ and aspect ratio will disable the --fullscreen option.  Note: You may experience
 some problems with widget and text placement with aspect ratios significantly
 different than 16:9.
 .TP
+\fB\-A, --allroles\fR
+This snis_client should be able to display all roles.
+.TP
 \fB\-C, --comms\fR
 Request this client process support the COMMS (communication) role.
 .TP
 \fB\--debug\fR
 Request this client process support the DEBUG role.
 .TP
+\fB\-E, --engineering\fR
+Request this client process support the ENGINEERING role.
+.TP
 \fB\-f, --fullscreen\fR
 Use the full display, with no window borders.  This option is ignored
 if the --aspect-ratio option is also specified.
+.TP
+\fB\-j joystick-device, --joystick joystick-device\fR
+Specify the joystick device file to use.  Typically something like
+/dev/input/by-id/something-or-other.
 .TP
 \fB\-J, --projector\fR
 Request this client support the PROJECTOR role.
@@ -61,11 +71,18 @@ this option is broken since snis_client was converted from GTK2 to SDL2.
 .TP
 \fB\-N, --navigation\fR
 Request this client process support the NAVIGATION role.
+\fB\-l hostname, --lobbyhost hostname\fR
+Specify the hostname or IP address of the machine running the ssgl_server
+game lobby.
 .TP
 \fB\-L, --nolobby\fR
 Do not use the lobby server.  This option requires that the
 --serverport and --serverhost options be used and that the --lobbyhost
-option is not used.
+option is not used.  It also requires that the --starship and --pw options
+be used as the network setup screen will be skipped.  It also requires that
+the snis_server you will be connecting to was started with the
+SNISSERVERPORT and SNISNOLOBBY environment variables set to the portnumber
+you want to use and to 1, respectively.
 .TP
 \fB\--no-launcher\fR
 Suppress the SNIS process launcher screen that appears when snis_client
@@ -95,6 +112,12 @@ Specify the portnumber of the snis_server process.  This option requires
 the --nolobby and --serverhost options are also used, and requires that
 the --lobbyhost option is not used.
 .TP
+\fB\-n shipname, --starship shipname\fR
+Specifies the name of your space ship.  The shipname together with the password
+identify your space ship.
+.TP
+\fB\-P password, --pw password\fR
+Specifies the password to be used to connect to a snis_server process.
 \fB\--solarsystem solarsystem\fR
 Load the specified solarsystem assets instead of the default assets.  These
 are defined by "$SNIS_ASSET_DIR/solarsystems/*/assets.txt".
@@ -110,6 +133,20 @@ Request this client process support the WEAPONS role.
 .TP
 \fB\-v, --version\fR
 Print the program's version number and exit.
+.TP
+\fB\-q, --quickstart\fR
+Allows connecting to the first entry in ssgl_server automatically.
+This option is deprecated and will likely be removed soon.
+\fB\-t, --trap-nans\fR
+This option is for debugging floating point problems, and will cause the
+program to trap (crash) on divide by zero, invalid or overflow conditions
+instead of propagating NaN (not-a-number) values through floating point
+calculations.
+\fB\-x, --no-splash-screen\fR
+Suppress the splash screen on start up.
+\fB\-y number\fR
+Requested aspect ratio y dimension.  This option is deprecated and will
+likely be removed.
 .SH ENVIRONMENT VARIABLES
 SNIS_ASSET_DIR if set controls the directory from which sounds and 3D models
 are read.  By default, "share/snis" is used.
