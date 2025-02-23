@@ -81,7 +81,7 @@ int main(int argc, char *argv[])
 	}
 	if (argc >= 3) {
 		hostname = argv[1];
-		gametype = argv[3];
+		gametype = argv[2];
 	}
 
 	sock = ssgl_gameclient_connect_to_lobby(hostname);
