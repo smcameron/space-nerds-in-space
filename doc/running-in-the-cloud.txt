@@ -175,4 +175,23 @@ for example the rule that allows your ssh session to exist, you will have a bad 
 Also pay attention to v4 and v6 rules, because "ufw allow 20000" will likely add *two*
 rules, one for v4 and one for v6 and you almost certainly want to delete them both.
 
+Running a bare snis_server process
+----------------------------------
+
+You can also run a bare snis_server process with no ssgl_server lobby or snis_multiverse
+at all, but connecting with snis_client becomes a little more cumbersome.
+
+To do this, start snis_server like this:
+
+export SNISSERVERNOLOBBY=1
+export SNISSERVERPORT=20000 # or whatever port you want to use
+snis_server -n your-name -L your-location
+
+You can put whatever you want for your-name and your-location
+
+To connect with snis_client:
+
+snis_client -s hostname -p portnumber --starship enterprise --pw tribbles --nolobby --no-launcher
+
+You can put whatever you want for "enterprise" and "tribbles"
 
