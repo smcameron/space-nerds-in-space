@@ -441,7 +441,8 @@ MAN6PAGES=${MANSRCDIR}/snis_client.6.gz ${MANSRCDIR}/snis_server.6.gz \
 	${MANSRCDIR}/snis_multiverse.6 \
 	${MANSRCDIR}/snis_update_assets.6
 MAN1PAGES=${MANSRCDIR}/earthlike.1.gz \
-	${MANSRCDIR}/snis_test_audio.1.gz
+	${MANSRCDIR}/snis_test_audio.1.gz \
+	${MANSRCDIR}/lsssgl.1
 MAN6DIR=${DESTDIR}${PREFIX}/share/man/man6
 MAN1DIR=${DESTDIR}${PREFIX}/share/man/man1
 

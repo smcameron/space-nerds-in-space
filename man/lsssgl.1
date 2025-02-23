@@ -1,0 +1,42 @@
+.TH LSSSGL "1" "FEBRUARY 2025" "LSSSGL" "User Commands"
+.SH NAME
+lsssgl \- List processes registered with ssgl_server
+.SH SYNOPSIS
+.B lsssgl [ -h hostname ] [ -f filter ] [ -F interval ] [ -H ]
+.SH DESCRIPTION
+.\" Add any additional description here
+.warn 511
+.PP
+lsssgl attempts to connect to an ssgl_server process running on the
+specified hostname (or localhost if none is specified) and queries it
+to find what hosts/processes are registered and filters the response by
+the specified filter and prints out the filtered list of registered
+processes. If an interval is specified, it will then sleep the specified
+number of seconds and repeat the process indefinitely, otherwise it will
+exit.
+.PP
+.SH EXAMPLES
+.nf
+	$ lsssgl
+	Filtering games of type '*' on host 'localhost'
+		IP addr/port       Game Type         Instance/Map Server Nickname             Location   Protocol
+	---------------------------------------------------------------------------------------------------------
+	10.200.200.158/57466     SNIS-MVERSE                    -        nickname               narnia    SNIS062
+	10.200.200.158/51691            SNIS        7.2 10.0 -3.3               -               KARADO    SNIS062
+	10.200.200.158/52914            SNIS        6.0 -4.5 -4.1               -              POLARIS    SNIS062
+	10.200.200.158/54975            SNIS          0.8 9.0 9.7               -                ZOLON    SNIS062
+	10.200.200.158/56415            SNIS          0.0 0.0 0.0               -              DEFAULT    SNIS062
+
+	$ lsssgl -h localhost -f SNIS-MVERSE
+	Filtering games of type 'SNIS-MVERSE' on host 'localhost'
+		IP addr/port       Game Type         Instance/Map Server Nickname             Location   Protocol
+	---------------------------------------------------------------------------------------------------------
+	10.200.200.158/57466     SNIS-MVERSE                    -        nickname               narnia    SNIS062
+.fi
+.PP
+.SH SEE ALSO
+.PP
+ssgl_server
+.SH AUTHOR
+Written by Stephen M. Cameron
+.br
