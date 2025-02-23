@@ -1495,6 +1495,8 @@ uninstall:
 	rm -f ${MAN1DIR}/snis_test_audio.1.gz
 	rm -f ${MAN6DIR}/snis_multiverse.6
 	rm -f ${MAN6DIR}/snis_text_to_speech.sh.6
+	rm -f ${MAN6DIR}/snis_update_assets.6
+	rm -f ${MAN1DIR}/lsssgl.1
 	rm -f ${DESKTOPDIR}/io.github.smcameron.space-nerds-in-space.desktop
 	rm -f ${DESKTOPDIR}/io.github.smcameron.space-nerds-in-space.svg
 	rm -f ${METAINFODIR}/io.github.smcameron.space-nerds-in-space.metainfo.xml
