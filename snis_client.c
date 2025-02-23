@@ -23261,6 +23261,9 @@ static void usage(void)
 	fprintf(stderr, "       snis_client --acknowledgments\n");
 	fprintf(stderr, "       Example: ./snis_client --lobbyhost localhost --starship Enterprise --pw tribbles\n");
 	fprintf(stderr, "Note: serverhost and serverport are mutually exclusive with lobbyhost\n");
+	fprintf(stderr, "      if --nolobby is used, then you must use the --starship, --pw,\n");
+	fprintf(stderr, "      --serverhost and --serverport options to specify the ship name, password.\n");
+	fprintf(stderr, "      snis_server hostname or IP address, and snis_server port number.\n");
 	exit(1);
 }
 
@@ -24565,6 +24568,18 @@ static void process_options(int argc, char *argv[])
 	}
 	if (role == 0)
 		role = ROLE_ALL;
+
+	if (avoid_lobby) {
+		if (!shipname)
+			fprintf(stderr, "snis_client: With --nolobby, --starship shipname option must be used.\n");
+		if (!password)
+			fprintf(stderr, "snis_client: With --nolobby, --pw password option must be used.\n");
+		if (!serverhost)
+			fprintf(stderr, "snis_client: With --nolobby, --serverhost option must be used.\n");
+		if (serverport == -1)
+			fprintf(stderr, "snis_client: With --nolobby, --serverport option must be used.\n");
+		exit(1);
+	}
 }
 
 static void setup_ship_mesh_maps(void)
