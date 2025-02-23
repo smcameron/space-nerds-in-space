@@ -1,0 +1,8 @@
+76b9e527c8077379a28473c8a30a7389  share/snis/replacement-files/asteroid3-1.png
+c34107eaa887ea53c5d6c088b6ba031f  share/snis/replacement-files/cargocontainer.png
+5bb88da5ad05ae17689bb36f6d089dfd  share/snis/replacement-files/asteroid3-3.png
+ec11f757eb8182f984f09c8ff801a745  share/snis/replacement-files/default-assets.txt
+30b3c65389b528d4aaaf19e69c90cad7  share/snis/replacement-files/asteroid3-5.png
+6d4a8a0962aab48a942effb8dc9b94ca  share/snis/replacement-files/Attribution.txt
+40b415d650b604bc1630f423f2f7f8e7  share/snis/replacement-files/asteroid3-2.png
+821a1b3b60b32c5525fc95b642838057  share/snis/replacement-files/asteroid3-4.png

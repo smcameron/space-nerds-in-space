@@ -378,6 +378,7 @@ static int process_manifest(CURL *curl, char *manifest_filename)
 			}
 		}
 		if (asset_filename) {
+#ifndef FUZZ_TESTING
 			/* See if the file already exists */
 			struct stat statbuf;
 			int rc = stat(asset_filename, &statbuf);
@@ -402,6 +403,7 @@ static int process_manifest(CURL *curl, char *manifest_filename)
 			} else {
 				fprintf(stderr, "%s: cannot stat %s: %s\n", P, asset_filename, strerror(errno));
 			}
+#endif
 		}
 	} while (1);
 out:
@@ -546,6 +548,8 @@ static int build_local_manifest(char *srcdir, char *manifest_filename)
 	return rc;
 }
 
+#ifndef FUZZ_TESTING
+
 int main(int argc, char *argv[])
 {
 	int rc = 0;
@@ -611,3 +615,6 @@ out:
 	free_directory_list(&dir_list);
 	return rc;
 }
+
+#endif
+

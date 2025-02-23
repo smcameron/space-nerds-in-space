@@ -1,0 +1,9 @@
+4b266ee8e81063dfc528f2969f6677aa  ./share/snis/blue_colors.cfg
+4adbd5eaa4f0dc9246f80f94c245b100  ./share/snis/commodities.txt
+ea75fbc1a243e29f0ed450c239a4041b  ./share/snis/factions.txt
+76034539de00b5dc831b509a05eec006  ./share/snis/joystick_config.txt
+5c0cf64a6d905b8f9360e39b360bb895  ./share/snis/luascripts/EXPORTED.LUA
+3240ba631afac3ec688c879a0089e1b1  ./share/snis/luascripts/MAINMENU.LUA
+6e10fdbceaeb4d5f81a056081f8d0fa9  ./share/snis/luascripts/MISSIONS/BIGSHIP.LUA
+19be88ddb07f726d1f6189faf9e9295a  ./share/snis/luascripts/MISSIONS/CUBOMUERTE.LUA
+3d32c630ebb3e97041306ffcb61f2d06  ./share/snis/luascripts/MISSIONS/DEMOLISHER.LUA

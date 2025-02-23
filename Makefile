@@ -1299,7 +1299,7 @@ mostly-clean:
 	${MANSRCDIR}/earthlike.1.gz  ${MANSRCDIR}/snis_client.6.gz  ${MANSRCDIR}/snis_server.6.gz  \
 	${MANSRCDIR}/snis_test_audio.1.gz bin/test_transport_contract bin/test_stringutils \
 	bin/yoke-test-program fuzz_obj_parser fuzz_snis_read_ship_types fuzz_solarsystem_asset_spec_read \
-	fuzz_read_thrust_attachments
+	fuzz_read_thrust_attachments fuzz_process_manifest
 	rm -f ${BIN}
 	rm -fr opus-1.3.1
 	rm -f libopus.a
@@ -1553,6 +1553,10 @@ fuzz_solarsystem_asset_spec_read:	fuzz_solarsystem_asset_spec_read.c
 	afl-clang-fast -g3 -fsanitize=address,undefined fuzz_solarsystem_asset_spec_read.c \
 		-lm -o fuzz_solarsystem_asset_spec_read
 
+fuzz_process_manifest:	fuzz_process_manifest.c util/snis_update_assets.c Makefile
+	afl-clang-fast -g3 -fsanitize=address,undefined fuzz_process_manifest.c \
+		-lm -o fuzz_process_manifest -lcrypto
+
 run-fuzz-obj-parser:	fuzz_obj_parser put-cpu-in-hi-performance-mode
 	/bin/rm -fr fuzz.out
 	afl-fuzz -T "Fuzzing read_obj_parser" -i share/snis/models/cargocontainer \
@@ -1577,6 +1581,11 @@ run-fuzz-read-thrust-attachments:	fuzz_read_thrust_attachments put-cpu-in-hi-per
 	/bin/rm -fr fuzz.out
 	afl-fuzz -T "Fuzzing solarsystem_asset_spec_read" -i fuzztests/read_thrust_attachments \
 		-o fuzz.out -- ./fuzz_read_thrust_attachments
+
+run-fuzz-process_manifest:	fuzz_process_manifest put-cpu-in-hi-performance-mode
+	/bin/rm -fr fuzz.out
+	afl-fuzz -T "Fuzzing process_manifest" -i fuzztests/process_manifest \
+		-o fuzz.out -- ./fuzz_process_manifest
 
 put-cpu-in-hi-performance-mode:
 	(cd /sys/devices/system/cpu && echo performance | sudo tee cpu*/cpufreq/scaling_governor)
