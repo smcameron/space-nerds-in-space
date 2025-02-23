@@ -435,11 +435,15 @@ DOCKING_PORT_FILES=${MODELSRCDIR}/starbase2.docking_ports.h \
 	${MODELSRCDIR}/starbase.docking_ports.h
 
 MANSRCDIR=./man
-MANPAGES=${MANSRCDIR}/snis_client.6.gz ${MANSRCDIR}/snis_server.6.gz \
-	${MANSRCDIR}/earthlike.1.gz \
-	${MANSRCDIR}/snis_text_to_speech.sh.6 ${MANSRCDIR}/snis_test_audio.1.gz ssgl/ssgl_server.6 ${MANSRCDIR}/snis_multiverse.6 \
+MAN6PAGES=${MANSRCDIR}/snis_client.6.gz ${MANSRCDIR}/snis_server.6.gz \
+	${MANSRCDIR}/snis_text_to_speech.sh.6 \
+	ssgl/ssgl_server.6 \
+	${MANSRCDIR}/snis_multiverse.6 \
 	${MANSRCDIR}/snis_update_assets.6
-MANDIR=${DESTDIR}${PREFIX}/share/man/man6
+MAN1PAGES=${MANSRCDIR}/earthlike.1.gz \
+	${MANSRCDIR}/snis_test_audio.1.gz
+MAN6DIR=${DESTDIR}${PREFIX}/share/man/man6
+MAN1DIR=${DESTDIR}${PREFIX}/share/man/man1
 
 METAINFOSRCDIR=./share/metainfo
 METAINFODIR=${DESTDIR}${PREFIX}/share/metainfo
@@ -1392,7 +1396,7 @@ $(OD)/snis_test_audio.o:	snis_test_audio.c Makefile ${SNDOBJS} ${OGGOBJ} ${ODT}
 bin/snis_test_audio:	${OD}/snis_test_audio.o ${SNDLIBS} Makefile ${BIN} ${OD}/mathutils.o ${OD}/mtwist.o
 	$(CC) ${MYCFLAGS} -o bin/snis_test_audio ${OD}/snis_test_audio.o ${SNDOBJS} ${OGGOBJ} ${SNDLIBS} ${OD}/mathutils.o ${OD}/mtwist.o -lm -lbsd
 
-install:	${BINPROGS} ${MANPAGES} ${SSGL}
+install:	${BINPROGS} ${MAN1PAGES} ${MAN6PAGES} ${SSGL}
 	@# First check that PREFIX is sane, and esp. that it's not pointed at source
 	@mkdir -p ${DESTDIR}${PREFIX}
 	@touch ${DESTDIR}${PREFIX}/.canary-in-the-coal-mine.canary
@@ -1449,8 +1453,10 @@ install:	${BINPROGS} ${MANPAGES} ${SSGL}
 	#${INSTALL} -m 644 ${DOCKING_PORT_FILES} ${MODELDIR}
 	#${INSTALL} -m 644 ${SCAD_PARAMS_FILES} ${MODELDIR}
 	#${INSTALL} -m 644 ${SHADERS} ${SHADERDIR}
-	mkdir -p ${MANDIR}
-	${INSTALL} -m 644 ${MANPAGES} ${MANDIR}
+	mkdir -p ${MAN6DIR}
+	mkdir -p ${MAN1DIR}
+	${INSTALL} -m 644 ${MAN1PAGES} ${MAN1DIR}
+	${INSTALL} -m 644 ${MAN6PAGES} ${MAN6DIR}
 	mkdir -p ${DESKTOPDIR}
 	${INSTALL} -m 644 ${DESKTOPFILES} ${DESKTOPDIR}
 	grep -v '^Icon=' < ${DESKTOPSRCDIR}/io.github.smcameron.space-nerds-in-space.desktop > ${DESKTOPDIR}/io.github.smcameron.space-nerds-in-space.desktop
@@ -1481,13 +1487,13 @@ uninstall:
 		rm -f ${DESTDIR}${PREFIX}/$$x ; \
 	done
 	rm -fr ${DESTDIR}${PREFIX}/share/snis
-	rm -f ${MANDIR}/snis_client.6.gz ${MANDIR}/snis_client.6
-	rm -f ${MANDIR}/snis_server.6.gz ${MANDIR}/snis_server.6
-	rm -f ${MANDIR}/earthlike.1.gz ${MANDIR}/earthlike.1
-	rm -f ${MANDIR}/ssgl_server.6
-	rm -f ${MANDIR}/snis_test_audio.1.gz
-	rm -f ${MANDIR}/snis_multiverse.6
-	rm -f ${MANDIR}/snis_text_to_speech.sh.6
+	rm -f ${MAN6DIR}/snis_client.6.gz ${MAN6DIR}/snis_client.6
+	rm -f ${MAN6DIR}/snis_server.6.gz ${MAN6DIR}/snis_server.6
+	rm -f ${MAN1DIR}/earthlike.1.gz ${MAN1DIR}/earthlike.1
+	rm -f ${MAN6DIR}/ssgl_server.6
+	rm -f ${MAN1DIR}/snis_test_audio.1.gz
+	rm -f ${MAN6DIR}/snis_multiverse.6
+	rm -f ${MAN6DIR}/snis_text_to_speech.sh.6
 	rm -f ${DESKTOPDIR}/io.github.smcameron.space-nerds-in-space.desktop
 	rm -f ${DESKTOPDIR}/io.github.smcameron.space-nerds-in-space.svg
 	rm -f ${METAINFODIR}/io.github.smcameron.space-nerds-in-space.metainfo.xml
