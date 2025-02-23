@@ -36,6 +36,9 @@ console LOCAL-NET-ONLY, which this option sets to zero.
 Enable the "enscript" command on the Demon screen.  This allows clients to create
 files on the server so you should probably leave this off.
 .TP
+\fB\-h, --help\fR
+Prints a usage message and exits.
+.TP
 \fB\-l, --lobbyhost\fR
 Set the hostname at which the lobbyhost is running.
 .TP
@@ -49,6 +52,22 @@ Set the 'location' of the snis_multiverse server to connect to.  snis_server
 will monitor the lobby looking for entries with game type of 'SNIS-MVERSE'
 (i.e. for instances of snis_multiverse) and with the location field set to
 the value specified by the --multiverse option.
+.TP
+\fB\-n nickname, --servernick nickname\fR
+Specifies a nickname for this snis_server instance.  This name will be
+transmitted to ssgl_server, and be visible in snis_client in the lobby,
+and in the output of lsssgl.
+.TP
+\fB\-s solarsystem-name, --solarsystem solarsystem-name\fR
+Specifies the solarsystem name. This is used to select what assets
+to use for skybox textures, planet textures and so on.  The default
+solarsystem name is "default".
+.TP
+\fB\-t, --trap-nans\fR
+Trap (crash) whenever certain floating point exceptions occur.
+This is for debugging erroneous floating point calculations that
+produce NaN (not a number) values, such as divide-by-zero, overflow,
+and so on.
 .TP
 \fB\-v, --version\fR
 Print the program's version number and exit.
@@ -95,9 +114,22 @@ must be less than or equal to 65335.  This can be useful for restricting
 the range of port numbers to those which a firewall configuration might
 permit.  Default values are a minimum of 49151 and a maximum of 65335.
 See http://www.iana.org/assignments/port-numbers
+.PP
+SSGL_PRIMARY_IP_PROBE_ADDR
+If you are on a dual-homed machine with multiple network interfaces on
+multiple networks or on a machine that is on an isolated network that
+can't reach the internet, you may need to use this.  By default
+snis_server assumes that the interface to listen for connections on is
+one that can reach 8.8.8.8 (Google's DNS server).  No packets are
+transmitted to 8.8.8.8, it just queries the routing table to see what
+interface should be used to transmit there if we wanted to.
+If ssgl_server is not reachable by the same interface that can reach
+8.8.8.8, or if there is no interace that can reach 8.8.8.8, then this
+variable can be set to any IP address on the network on which
+ssgl_server is reachable so that the correct network interface is chosen.
 .SH SEE ALSO
 .PP
-snis_client(6), ssgl_server(6), snis_multiverse(6)
+snis_client(6), ssgl_server(6), snis_multiverse(6), lsssgl(1).
 .SH GOOD LUCK
 .PP
 You'll need it.
