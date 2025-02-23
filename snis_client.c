@@ -24570,15 +24570,25 @@ static void process_options(int argc, char *argv[])
 		role = ROLE_ALL;
 
 	if (avoid_lobby) {
-		if (!shipname)
+		int should_exit = 0;
+		if (!shipname) {
 			fprintf(stderr, "snis_client: With --nolobby, --starship shipname option must be used.\n");
-		if (!password)
+			should_exit = 1;
+		}
+		if (!password) {
 			fprintf(stderr, "snis_client: With --nolobby, --pw password option must be used.\n");
-		if (!serverhost)
+			should_exit = 1;
+		}
+		if (!serverhost) {
 			fprintf(stderr, "snis_client: With --nolobby, --serverhost option must be used.\n");
-		if (serverport == -1)
+			should_exit = 1;
+		}
+		if (serverport == -1) {
 			fprintf(stderr, "snis_client: With --nolobby, --serverport option must be used.\n");
-		exit(1);
+			should_exit = 1;
+		}
+		if (should_exit)
+			exit(1);
 	}
 }
 
