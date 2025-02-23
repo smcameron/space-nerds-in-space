@@ -30,12 +30,23 @@ OTHER DEALINGS IN THE SOFTWARE.
 #include <time.h>
 #include <errno.h>
 #include <arpa/inet.h> /* for ntohs */
+#include <getopt.h>
 
 #include "ssgl.h"
 #include "ssgl_string.h"
 
-int lsssglmode = 0;
-char *programname = "ssgl_gameclient_example";
+static struct option long_options[] = {
+	{ "host", required_argument, NULL, 'h' },
+	{ "filter", required_argument, NULL, 'f' },
+	{ "follow", required_argument, NULL, 'F' },
+	{ "help", no_argument, NULL, '?' },
+	{ 0, 0, 0 },
+};
+
+static int followmode = 0;
+static char *programname = "lssgl";
+static char *hostname, *gametype;
+static float interval_in_secs = 5.0f;
 
 static void usage(void)
 {
@@ -46,43 +57,56 @@ static void usage(void)
 	exit(1);
 }
 
+static void process_options(int argc, char *argv[])
+{
+	while (1) {
+		int option_index;
+		int c = getopt_long(argc, argv, "h:f:F:H", long_options, &option_index);
+		if (c == -1)
+			break;
+		switch (c) {
+		case 'h':
+			hostname = optarg;
+			break;
+		case 'f':
+			gametype = optarg;
+			break;
+		case 'F':
+			followmode = 1;
+			float v;
+			int rc = sscanf(optarg, "%f", &v);
+			if (rc == 1) {
+				if (v >= 5.0f  && v < 3600.0f) {
+					interval_in_secs = v;
+				} else {
+					interval_in_secs = v < 5.0f ? 5.0f : 3600.0f;
+					fprintf(stderr, "%s: wait interval %f out of range 5 - 3600, using %f\n",
+							programname, v, interval_in_secs);
+				}
+			} else {
+				fprintf(stderr, "%s: bad wait interval '%s', should be between 5 and 3600 seconds\n",
+					programname, optarg);
+				exit(1);
+			}
+			break;
+		case '?':
+			usage();
+			break;
+		}
+	}
+}
+
 int main(int argc, char *argv[])
 {
 	struct ssgl_game_server *game_server = NULL;
 	struct ssgl_client_filter filter;
 	int game_server_count, rc, i;
-	char *hostname, *gametype;
 	int sock;
 
-	if (strlen(argv[0]) >= 6) {
-		char *cmd = argv[0] + strlen(argv[0]) - 6;
-		if (strcmp(cmd, "lsssgl") == 0) {
-			lsssglmode = 1;
-			programname = "lsssgl";
-		}
-	}
+	gametype = "*";
+	hostname = "localhost";
 
-	if (argc < 1)
-		usage();
-
-	if (argc >= 2) {
-		if (strcmp(argv[1], "help") == 0 ||
-			strcmp(argv[1], "-help") == 0 ||
-			strcmp(argv[1], "--help") == 0)
-			usage();
-	}
-	if (argc == 1) {
-		hostname = "localhost";
-		gametype = "*";
-	}
-	if (argc == 2) {
-		hostname = argv[1];
-		gametype = "*";
-	}
-	if (argc >= 3) {
-		hostname = argv[1];
-		gametype = argv[2];
-	}
+	process_options(argc, argv);
 
 	sock = ssgl_gameclient_connect_to_lobby(hostname);
 	if (sock < 0) {
@@ -117,9 +141,9 @@ int main(int argc, char *argv[])
 		printf("\n");	
 		if (game_server_count > 0)
 			free(game_server);
-		if (!lsssglmode)
-			ssgl_sleep(5);  /* just a thread safe sleep. */
-	} while (!lsssglmode);
+		if (followmode)
+			ssgl_msleep((int) (1000.0f * interval_in_secs));  /* just a thread safe sleep. */
+	} while (followmode);
 	return 0;
 }
 
