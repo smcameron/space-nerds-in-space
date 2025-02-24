@@ -20,6 +20,31 @@ instance from another running on the same host (multiple snis_server processes
 may be run on the same host).  The location should be a short human readable
 string to uniquely identify the game instance and is required.  The lobbyhost
 is the hostname of the server hosting the ssgl_server process.
+.SH Examples:
+.TP
+Note:
+Normally, you shouldn't have to start snis_server manually yourself.  It should
+either be started by snis_client, snis_multiverse, or by the snis_launcher script.
+But in case you want to start it manually for whatever reason, here are some
+examples.
+.TP
+- Ordinary invocation
+.nf
+
+	snis_server -l lobbyhost -L location -m multiverse-location \\
+		-n server-nickname
+.fi
+.TP
+- Bare snis_server
+Running a bare snis_server instance with no lobby and no snis_multiverse, allowing
+WAN connections from snis_clients on port 20000
+.nf
+
+	export SNISSERVERNOLOBBY=1
+	export SNISSERVERPORT=20000
+	snis_server --allow-remote-networks -L location -s solarsystem \\
+		-n server-nickname
+.fi
 .SH Options:
 .TP
 \fB\--acknowledgments\fR

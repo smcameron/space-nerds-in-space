@@ -185,7 +185,7 @@ To do this, start snis_server like this:
 
 export SNISSERVERNOLOBBY=1
 export SNISSERVERPORT=20000 # or whatever port you want to use
-snis_server -n your-name -L your-location
+snis_server -n your-name -L your-location --allow-remote-networks
 
 You can put whatever you want for your-name and your-location
 

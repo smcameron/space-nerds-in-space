@@ -19,6 +19,27 @@ game. This is an insecure "password", transmitted in plaintext.  The first clien
 on a ship establishes a ship name and password, subsequent clients join the ship.
 (Mistyping either the shipname or the password will result in a new ship being
 created with the wrong name/password.)
+.SH Examples:
+.TP
+- Ordinary invocation:
+.nf
+
+	snis_client
+.fi
+.TP
+- Connect to a remote ssgl_server, start up in fullscreen mode, and skip the process launcher screen:
+.nf
+
+	snis_client --lobbyhost mycloudserver.example.com --fullscreen \\
+		--no-launcher
+.fi
+.TP
+- Connect to a remote bare snis_server instance on port 20000 with no lobby and no snis_multiverse:
+.nf
+
+	snis_client --nolobby --no-launcher --starship Enterprise \\
+		--pw tribbles -s myserver.example.com -p 20000
+.fi
 .SH Options:
 .TP
 \fB--acknowledgments\fR
