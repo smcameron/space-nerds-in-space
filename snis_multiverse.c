@@ -1688,6 +1688,7 @@ int main(int argc, char *argv[])
 	pthread_t lobby_thread;
 	struct in_addr ip;
 
+	print_args(argc, argv);
 	unignore_sigchld();
 	ignore_signal(SIGINT);
 	ignore_signal(SIGHUP);

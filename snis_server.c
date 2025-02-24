@@ -31637,6 +31637,7 @@ int main(int argc, char *argv[])
 	struct timespec thirtieth_second;
 
 	refuse_to_run_as_root("snis_server");
+	print_args(argc, argv);
 	ignore_signal(SIGINT);
 	ignore_signal(SIGHUP);
 	take_your_locale_and_shove_it();

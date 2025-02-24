@@ -25141,6 +25141,7 @@ static void maybe_download_assets(void)
 int main(int argc, char *argv[])
 {
 	refuse_to_run_as_root("snis_client");
+	print_args(argc, argv);
 	displaymode = DISPLAYMODE_LAUNCHER; /* DISPLAYMODE_NETWORK_SETUP; */
 
 	enable_sdl_fullscreen_sanity();
