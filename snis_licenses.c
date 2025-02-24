@@ -48,6 +48,7 @@ char *snis_credits_text[] = {
 	"JUSTIN WARWICK",
 	"KYLE ROBBERTZE",
 	"LUCKI",
+	"MARCIN SERWIN",
 	"MCMic",
 	"MICHAEL ALDRIDGE",
 	"MICHAEL T DEGUZIS",
