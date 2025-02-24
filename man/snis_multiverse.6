@@ -46,6 +46,11 @@ connected player ships anywhere.
 \fB\--lobby, -l lobbyserver\fR
 Specify the lobby server hostname or IP address.
 .TP
+\fB\-p port-number, --port port-number\fR
+Specify the port number to use for incoming connections from snis_server
+processes.  If a port is not specified, a port is randomly chosen from
+the dynamic port range, 49152 - 65535.
+.TP
 \fB\--servernick, -n nickname\fR
 Specify the nickname of this multiverse process.
 (It's not really used for anything, nevertheless, it's required.)

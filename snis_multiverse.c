@@ -1014,23 +1014,13 @@ static void *listener_thread_fn(__attribute__((unused)) void *unused)
 	struct addrinfo *result, *rp;
 	int s;
 	char portstr[20];
-	char *snis_multiverse_port_var;
 
 	snis_log(SNIS_INFO, "snis_multiverse: snis_multiverse starting\n");
-	snis_multiverse_port_var = getenv("SNISMULTIVERSEPORT");
-	default_snis_multiverse_port = -1;
-	if (snis_multiverse_port_var != NULL) {
-		int rc, value;
-		rc = sscanf(snis_multiverse_port_var, "%d", &value);
-		if (rc == 1) {
-			default_snis_multiverse_port = value & 0x0ffff;
-			printf("snis_multiverse: Using SNISMULTIVERSEPORT value %d\n",
-				default_snis_multiverse_port);
-		}
-	}
+	if (default_snis_multiverse_port != -1)
+		printf("snis_multiverse: Using port %d\n", default_snis_multiverse_port);
 
 	/* Bind "rendezvous" socket to a random port to listen for connections.
-	 * unless SNISSERVERPORT is defined, in which case, try to use that.
+	 * unless --port option is used, in which case, try to use that.
 	 */
 	while (1) {
 
@@ -1039,7 +1029,7 @@ static void *listener_thread_fn(__attribute__((unused)) void *unused)
 		 * see http://www.iana.org/assignments/port-numbers
 		 */
 		if (default_snis_multiverse_port == -1)
-			port = snis_randn(65335 - 49152) + 49151;
+			port = snis_randn(65335 - 49153) + 49152;
 		else
 			port = default_snis_multiverse_port;
 		snis_log(SNIS_INFO, "snis_multiverse: Trying port %d\n", port);
@@ -1317,12 +1307,13 @@ static struct option long_options[] = {
 	{ "location", required_argument, NULL, 'L'},
 	{ "version", no_argument, NULL, 'v' },
 	{ "allow-remote-networks", no_argument, NULL, OPT_ALLOW_REMOTE_NETWORKS },
+	{ "port", required_argument, NULL, 'p' },
 	{ 0, 0, 0, 0 },
 };
 
 static void parse_options(int argc, char *argv[], char **lobby, char **nick, char **location)
 {
-	int c;
+	int c, rc, v;
 
 	*lobby = NULL;
 	*location = NULL;
@@ -1336,7 +1327,7 @@ static void parse_options(int argc, char *argv[], char **lobby, char **nick, cha
 		usage();
 	while (1) {
 		int option_index;
-		c = getopt_long(argc, argv, "ae:L:l:n:v", long_options, &option_index);
+		c = getopt_long(argc, argv, "ae:L:l:n:p:v", long_options, &option_index);
 		if (c == -1)
 			break;
 		switch (c) {
@@ -1369,6 +1360,19 @@ static void parse_options(int argc, char *argv[], char **lobby, char **nick, cha
 			exit(0);
 		case OPT_ALLOW_REMOTE_NETWORKS:
 			allow_remote_networks = 1;
+			break;
+		case 'p':
+			rc = sscanf(optarg, "%d", &v);
+			if (rc != 1) {
+				fprintf(stderr, "snis_multiverse: bad port option '%s'\n", optarg);
+				usage(); /* no return */
+				break;
+			}
+			if (v < 1024 || v > 65535) {
+				fprintf(stderr, "snis_multiverse: port number out of range (1024 - 65535): %d\n", v);
+				usage();
+			}
+			default_snis_multiverse_port = v;
 			break;
 		default:
 			usage(); /* no return */
