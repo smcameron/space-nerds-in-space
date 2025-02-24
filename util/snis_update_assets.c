@@ -421,7 +421,6 @@ static void usage(void)
 static void process_cmdline_options(int argc, char *argv[])
 {
 	int c, option_index;
-	char cwd[PATH_MAX];
 
 	while (1) {
 		option_index = 0;
@@ -536,7 +535,7 @@ out:
 	return rc;
 }
 
-static int build_local_manifest(char *srcdir, char *manifest_filename)
+static int build_local_manifest(char *manifest_filename)
 {
 	FILE *f = fopen(manifest_filename, "w+");
 	if (!f) {
@@ -590,7 +589,7 @@ int main(int argc, char *argv[])
 		if (verbose)
 			printf("Building local manifest\n");
 		manifest_filename = strdup("/tmp/snis-asset-local-manifest.txt");
-		rc = build_local_manifest(srcdir, manifest_filename);
+		rc = build_local_manifest(manifest_filename);
 	}
 
 	if (destdir) {
