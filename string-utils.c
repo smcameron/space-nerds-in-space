@@ -311,3 +311,13 @@ char *get_abbreviated_command_arg(char *expected_command, char *user_input)
 		i++;
 	return i;
 }
+
+void print_args(int argc, char *argv[])
+{
+	for (int i = 0; i < argc; i++) {
+		fprintf(stderr, "%s%s%s\n",
+			i > 0 ? "	" : "",
+			argv[i],
+			i == argc - 1 ? "" : " \\");
+	}
+}

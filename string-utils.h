@@ -39,4 +39,6 @@ char *get_field(char *line);
  */
 char *get_abbreviated_command_arg(char *expected_command, char *user_input);
 
+void print_args(int argc, char *argv[]);
+
 #endif
