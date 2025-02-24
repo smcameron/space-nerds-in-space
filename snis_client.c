@@ -21134,6 +21134,32 @@ static void fork_snis_launcher(void)
 	free(snis_launcher);
 }
 
+static char **saved_argv;
+
+static void save_args(int argc, char *argv[], char ***saved_argv)
+{
+	*saved_argv = calloc(sizeof((*saved_argv)[0]), argc + 1);
+	for (int i = 0; i < argc; i++)
+		(*saved_argv)[i] = strdup(argv[i]);
+	(*saved_argv)[argc] = NULL;
+}
+
+static void fork_restart_snis_client(void)
+{
+	char *executable_path = get_executable_path();
+
+	if (!executable_path)
+		return;
+
+	int rc = fork();
+	if (!rc) { /* child process */
+		execv(executable_path, saved_argv);
+		rc = write(2, "execv failed.\n", 14);
+		(void) rc; /* shut clang scan-build up. */
+		_exit(1);
+	}
+}
+
 static void fork_update_assets(int background_task, int local_only)
 {
 	char *executable_path = get_executable_path();
@@ -21233,6 +21259,7 @@ static void start_forker_process(void)
 #define FORKER_UPDATE_ASSETS '7' /* check for updated art assets */
 #define FORKER_KILL_SERVERS '8' /* terminate all snis processes */
 #define FORKER_START_MULTIVERSE_NO_AUTOWRANGLE '9'
+#define FORKER_RESTART_SNIS_CLIENT 'R'
 			switch (rc) {
 			case 1:
 				switch (ch) {
@@ -21259,6 +21286,9 @@ static void start_forker_process(void)
 					break;
 				case FORKER_KILL_SERVERS:
 					fork_snis_process_terminator(0);
+					break;
+				case FORKER_RESTART_SNIS_CLIENT:
+					fork_restart_snis_client();
 					break;
 				case FORKER_QUIT:
 				default:
@@ -21349,6 +21379,20 @@ static void launcher_quit_btn_pressed(__attribute__((unused)) void *x)
 	exit(0);
 }
 
+static void launcher_restart_btn_pressed(__attribute__((unused)) void *x)
+{
+	int rc;
+	char ch;
+
+	ch = FORKER_RESTART_SNIS_CLIENT;
+	if (pipe_to_forker_process >= 0)
+		rc = write(pipe_to_forker_process, &ch, 1);
+	(void) rc;
+	ssgl_sleep(3);
+	stop_forker_process();
+	exit(0);
+}
+
 static void launcher_advanced_btn_pressed(__attribute__((unused)) void *x)
 {
 	int rc;
@@ -21372,6 +21416,7 @@ static struct launcher_ui {
 	struct gauge *multiverse_gauge;
 	struct gauge *snis_server_gauge;
 	struct gauge *snis_client_gauge;
+	struct button *restart_btn;
 	int ssgl_count;
 	int multiverse_count;
 	int snis_server_count;
@@ -21454,6 +21499,9 @@ static void init_launcher_ui(void)
 	y += txy(40);
 	launcher_ui.quit_btn = snis_button_init(x, y, -1, -1, "QUIT",
 				active_button_color, TINY_FONT, launcher_quit_btn_pressed, 0);
+	y += txy(40);
+	launcher_ui.restart_btn = snis_button_init(x, y, -1, -1, "RESTART SNIS CLIENT",
+				active_button_color, TINY_FONT, launcher_restart_btn_pressed, 0);
 
 	launcher_ui.ssgl_gauge = gauge_init(txx(450), txy(100), 150, 0.0, 100.0, -120.0 * M_PI / 180.0,
 			120.0 * 2.0 * M_PI / 180.0, UI_COLOR(weap_gauge_needle), UI_COLOR(weap_gauge),
@@ -21525,6 +21573,8 @@ static void init_launcher_ui(void)
 			"SNIS LOBBY PROCESSES BEFORE QUITTING, THEY WILL REMAIN RUNNING.\n"
 			"THIS IS DELIBERATE, AS YOU ARE NOT REQUIRED TO RUN SNIS_CLIENT\n"
 			"ON THE MACHINE HOSTING THE VARIOUS SNIS SERVER PROCESSSES");
+	ui_add_button(launcher_ui.restart_btn, DISPLAYMODE_LAUNCHER,
+			"RESTART SNIS_CLIENT TO USE NEWLY DOWNLOADED ASSETS\n");
 	ui_add_gauge(launcher_ui.ssgl_gauge, DISPLAYMODE_LAUNCHER);
 	ui_add_gauge(launcher_ui.multiverse_gauge, DISPLAYMODE_LAUNCHER);
 	ui_add_gauge(launcher_ui.snis_server_gauge, DISPLAYMODE_LAUNCHER);
@@ -21546,6 +21596,7 @@ static void init_launcher_ui(void)
 			"SNIS CLIENT GAUGE\n\n"
 			"THIS GAUGE SHOWS THE NUMBER OF SNIS CLIENT PROCESSES RUNNING LOCALLY\n"
 			"ON THIS MACHINE.");
+	ui_hide_widget(launcher_ui.restart_btn); /* only unhides if new assets are available */
 
 	launcher_ui.ssgl_count = 0;
 	launcher_ui.multiverse_count = 0;
@@ -21596,6 +21647,7 @@ static void maybe_show_downloading_message(void)
 	static int s = 0;
 	const char *spinner = "|/-\\";
 	static char message[100] = { 0 };
+	static int download_in_progress = 0;
 
 	framecounter++;
 	if ((framecounter % 60) == 30) {
@@ -21610,8 +21662,13 @@ static void maybe_show_downloading_message(void)
 		if (rc == 0) { /* file exists */
 			s = (s + 1) & 0x03;
 			snprintf(message, sizeof(message), "CHECKING FOR NEW ART ASSETS %c", spinner[s]);
+			download_in_progress = 1;
 		} else {
 			strlcpy(message, "", sizeof(message));
+			if (download_in_progress) {
+				/* download has finished, unhide the restart button */
+				ui_unhide_widget(launcher_ui.restart_btn);
+			}
 		}
 	}
 	sng_set_foreground(UI_COLOR(network_setup_active));
@@ -25142,6 +25199,7 @@ static void maybe_download_assets(void)
 int main(int argc, char *argv[])
 {
 	refuse_to_run_as_root("snis_client");
+	save_args(argc, argv, &saved_argv);
 	print_args(argc, argv);
 	displaymode = DISPLAYMODE_LAUNCHER; /* DISPLAYMODE_NETWORK_SETUP; */
 
