@@ -256,6 +256,7 @@ static int npassengers;
 static struct transport_contract *transport_contract[MAX_TRANSPORT_CONTRACTS] = { 0 };
 static int ntransport_contracts = 0;
 static int local_net_connections_only = 1; /* tweakable */
+static int no_lobby = 0;
 
 static struct multiverse_server_info {
 	int sock;			/* Socket to the snis_multiverse process */
@@ -652,7 +653,7 @@ static pthread_mutex_t listener_mutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_cond_t listener_started;
 static int listener_port = -1;
 static int default_snis_server_port = -1; /* -1 means choose a random port */
-static int snis_server_port_min = 49151; /* see http://www.iana.org/assignments/port-numbers */
+static int snis_server_port_min = 49152; /* "dynamic" port range see http://www.iana.org/assignments/port-numbers */
 static int snis_server_port_max = 65335;
 static pthread_t lobbythread;
 static struct server_tracker *server_tracker;
@@ -26234,20 +26235,12 @@ static void *listener_thread_fn(__attribute__((unused)) void *unused)
 	struct addrinfo *result, *rp;
 	int loop_count, s, port_bound;
 	char portstr[20];
-	char *snis_server_port_var;
 	char *port_range;
 
         snis_log(SNIS_INFO, "snis_server starting\n");
-	snis_server_port_var = getenv("SNISSERVERPORT");
-	default_snis_server_port = -1;
-	if (snis_server_port_var != NULL) {
-		int rc, value;
-		rc = sscanf(snis_server_port_var, "%d", &value);
-		if (rc == 1) {
-			default_snis_server_port = value & 0x0ffff;
-			printf("%s: Using SNISSERVERPORT value %d\n",
+	if (default_snis_server_port != -1) {
+		fprintf(stderr, "%s: Using port %d\n",
 				logprefix(), default_snis_server_port);
-		}
 	}
 
 	port_range = getenv("SNIS_SERVER_PORT_RANGE");
@@ -26265,7 +26258,7 @@ static void *listener_thread_fn(__attribute__((unused)) void *unused)
 	}
 
 	/* Bind "rendezvous" socket to a random port to listen for connections.
-	 * unless SNISSERVERPORT is defined, in which case, try to use that.
+	 * unless --port option is used, in which case, try to use that.
 	 */
 	port_bound = 0;
 	for (loop_count = 0; loop_count < 10000; loop_count++) {
@@ -30817,6 +30810,7 @@ static void init_natural_language_system(void)
 
 #define OPT_ACKNOWLEDGMENTS 1000
 #define OPT_ALLOW_REMOTE_NETWORKS 1001
+#define OPT_NO_LOBBY 1002
 static struct option long_options[] = {
 	{ "acknowledgments", no_argument, NULL, OPT_ACKNOWLEDGMENTS },
 	{ "acknowledgements", no_argument, NULL, OPT_ACKNOWLEDGMENTS },
@@ -30830,6 +30824,8 @@ static struct option long_options[] = {
 	{ "version", no_argument, NULL, 'v' },
 	{ "trap-nans", no_argument, NULL, 't' },
 	{ "allow-remote-networks", no_argument, NULL, OPT_ALLOW_REMOTE_NETWORKS },
+	{ "nolobby", no_argument, NULL, OPT_NO_LOBBY },
+	{ "port", required_argument, NULL, 'p' },
 	{ 0, 0, 0, 0 },
 };
 
@@ -30910,10 +30906,11 @@ static void process_options(int argc, char *argv[])
 
 	lobby_servernick = default_lobby_servernick;
 	lobbyhost = default_lobbyhost;
+	int rc, v;
 
 	while (1) {
 		int option_index;
-		c = getopt_long(argc, argv, "ehL:l:m:n:s:tv", long_options, &option_index);
+		c = getopt_long(argc, argv, "ehL:l:m:n:p:s:tv", long_options, &option_index);
 		if (c == -1)
 			break;
 		switch (c) {
@@ -30965,6 +30962,21 @@ static void process_options(int argc, char *argv[])
 			local_net_connections_only = 0;
 			fprintf(stderr, "snis_server: WARNING: allowing remote network connections\n");
 			break;
+		case OPT_NO_LOBBY:
+			no_lobby = 1;
+			break;
+		case 'p':
+			rc = sscanf(optarg, "%d", &v);
+			if (rc == 1) {
+				if (v < 1024 || v > 65535) {
+					fprintf(stderr, "snis_server: port number out of range (1024 - 65535): %d\n", v);
+					usage();
+				}
+				default_snis_server_port = v;
+			} else {
+				fprintf(stderr, "snis_server: Bad port number '%s'\n", optarg);
+				usage();
+			}
 		}
 	}
 	if (lobby_location == NULL)
@@ -31684,19 +31696,19 @@ int main(int argc, char *argv[])
 
 	ignore_sigpipe();	
 	snis_collect_netstats(&netstats);
-	if (getenv("SNISSERVERNOLOBBY") == NULL) {
+	if (!no_lobby) { /* Are we using the lobby? */
 		/* Pack the solarsystem position into the gameinstance string */
 		snprintf(lobby_gameinstance, sizeof(lobby_gameinstance), "%3.1lf %3.1lf %3.1lf",
 			solarsystem_assets->x, solarsystem_assets->y, solarsystem_assets->z);
 		register_with_game_lobby(lobbyhost, port,
 			lobby_servernick, lobby_gameinstance, lobby_location);
 		server_tracker = server_tracker_start(lobbyhost, servers_changed_cb, NULL);
-	} else {
+	} else { /* No, not using the lobby, we're a bare snis_server */
 		printf("%s: Skipping lobby registration\n", logprefix());
 		server_tracker = NULL;
 		if (multiverse_server != NULL) {
 			fprintf(stderr,
-				"SNISSERVERNOLOBBY and --multiverse option are mutually exclusive\n");
+				"--nolobby and --multiverse option are mutually exclusive\n");
 			fprintf(stderr,
 				"ignoring --multiverse option\n");
 			free(multiverse_server);

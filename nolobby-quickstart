@@ -1,5 +1,8 @@
 #!/bin/sh
 
+echo "This script is obsolete".
+exit 1
+
 SERVERHOST="$1"
 if [ "$SERVERHOST" = "" ]
 then

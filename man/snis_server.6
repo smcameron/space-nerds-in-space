@@ -40,10 +40,8 @@ Running a bare snis_server instance with no lobby and no snis_multiverse, allowi
 WAN connections from snis_clients on port 20000
 .nf
 
-	export SNISSERVERNOLOBBY=1
-	export SNISSERVERPORT=20000
 	snis_server --allow-remote-networks -L location -s solarsystem \\
-		-n server-nickname
+		-n server-nickname --nolobby -p 20000
 .fi
 .SH Options:
 .TP
@@ -83,6 +81,15 @@ Specifies a nickname for this snis_server instance.  This name will be
 transmitted to ssgl_server, and be visible in snis_client in the lobby,
 and in the output of lsssgl.
 .TP
+\fB\--nolobby\fR
+This is for running a bare snis_server instance with no lobby (no ssgl_server)
+and no snis_multiverse.
+.TP
+\fB\-p port-number, --port port-number\fR
+Specify the port number to use for incoming connections from snis_client.
+If not specified a port will be chosen randomly from the default range
+for dynamic ports, 49152 - 65535.
+.TP
 \fB\-s solarsystem-name, --solarsystem solarsystem-name\fR
 Specifies the solarsystem name. This is used to select what assets
 to use for skybox textures, planet textures and so on.  The default
@@ -118,16 +125,6 @@ the demon screen to execute Z/A.LUA.
 .SH ENVIRONMENT VARIABLES
 .PP
 SNISRAND can be set to a random seed to affect universe generation
-.PP
-SNISSERVERPORT can be used to control the port on which snis_server listens
-for new connections.  If not set, a random port number is used which clients
-discover via ssgl_server.  If set, the given port number is used (and clients
-still discover it via ssgl_server.)
-.PP
-SNISSERVERNOLOBBY if this is defined the server will not attempt to connect to
-the lobby server process "ssgl_server".  Generally SNISSERVERPORT should be used
-when SNISSERVERNOLOBBY is used (otherwise you'll have to figure out which port
-snis_server is using via e.g. examining output of "netstat -na").
 .PP
 SNIS_ASSET_DIR can cause the program to use a different directory to read
 various assets (models, sounds, etc.) from a different directory allowing

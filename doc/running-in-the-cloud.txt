@@ -183,9 +183,7 @@ at all, but connecting with snis_client becomes a little more cumbersome.
 
 To do this, start snis_server like this:
 
-export SNISSERVERNOLOBBY=1
-export SNISSERVERPORT=20000 # or whatever port you want to use
-snis_server -n your-name -L your-location --allow-remote-networks
+snis_server -n your-name -L your-location --allow-remote-networks --nolobby -p 20000
 
 You can put whatever you want for your-name and your-location
 
