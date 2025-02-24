@@ -21631,6 +21631,7 @@ static int assets_updated_too_recently(void)
 
 	char *last_update = xdg_base_slurp_file(xdg_base_ctx, "last_asset_update_time.txt");
 	time_t last_update_time;
+	already_checked = 1;
 
 	if (!last_update) {
 		answer = 0;
