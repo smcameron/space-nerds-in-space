@@ -21051,7 +21051,7 @@ static void fork_snis_server(void)
 		/* Set stderr and stdout to got to snis_server_log.txt */
 		(void) dup2(fd, 1);
 		(void) dup2(fd, 2);
-		execl(snis_server, snis_server, "-a",
+		execl(snis_server, snis_server,
 			"-l", "localhost", "-L", "DEFAULT", "-m", "narnia", "-s", "default", NULL);
 		rc = write(2, "execl failed.\n", 14);
 		(void) rc; /* shut clang scan-build up. */
