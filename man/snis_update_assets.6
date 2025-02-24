@@ -1,4 +1,4 @@
-.TH SPACE-NERDS-IN-SPACE "6" "Jan 2025" "snis_update_assets" "Games"
+.TH SPACE-NERDS-IN-SPACE "6" "February 2025" "snis_update_assets" "Games"
 .SH NAME
 snis_update_assets \- a utility for copying and downloading art assets for "Space Nerds In Space."
 .SH SYNOPSIS
@@ -10,7 +10,7 @@ snis_update_assets \- a utility for copying and downloading art assets for "Spac
 snis_update_assets is a tool for updating and copying art assets for the game "Space Nerds In Space."
 It can copy local assets and download remote assets from https://spacenerdsinspace.com. It only copies
 or downloads files which are new or different than existing files in the destination directory. It is
-normally invoked via the snis_launcher script rather than directly by the user.
+normally invoked via snis_client, snis_launcher, or the Makefile rather than directly by the user.
 .SH Options:
 .TP
 \fB--dry-run\fR
@@ -35,8 +35,9 @@ determining why it isn't doing what you expect.
 .SH
 EXAMPLES
 .PP
-Normally snis_update_assets is not invoked directly by the user, but indirectly from
-within the snis_launcher script, or from within the "make install" Makefile target.
+Normally snis_update_assets is not invoked directly by the user, but indirectly
+by snis_client, the snis_launcher script, or from within the "make install"
+Makefile target.
 .PP
 
 Here are some sample invocations of snis_update_assets:
