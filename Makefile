@@ -8,6 +8,7 @@ DOWNLOAD_OPUS?=no
 USE_SNIS_XWINDOWS_HACKS=1
 PKG_CONFIG?=pkg-config
 SDL2_CONFIG?=sdl2-config
+SERVERSONLY ?= 0
 
 # use "make OSX=1" for mac
 OSX=0
@@ -469,10 +470,12 @@ RDYNAMIC=
 $(echo ${USING_CLANG})
 endif
 
+ifeq (${SERVERSONLY},0)
 SNDLIBS:=$(shell $(PKG_CONFIG) --libs portaudio-2.0 vorbisfile)
 SNDFLAGS:=-DWITHAUDIOSUPPORT $(shell $(PKG_CONFIG) --cflags portaudio-2.0) -DDATADIR=\"${DATADIR}\"
 _OGGOBJ=ogg_to_pcm.o
 _SNDOBJS=wwviaudio.o
+endif
 
 ifeq (${E},1)
 STOP_ON_WARN=-Werror
@@ -513,6 +516,7 @@ LUALIBS:=$(shell $(PKG_CONFIG) --libs lua)
 LUACFLAGS:=$(shell $(PKG_CONFIG) --cflags lua)
 endif
 
+ifeq (${SERVERSONLY},0)
 PNGLIBS:=$(shell $(PKG_CONFIG) --libs libpng)
 PNGCFLAGS:=$(shell $(PKG_CONFIG) --cflags libpng)
 
@@ -521,6 +525,7 @@ SDLCFLAGS:=$(shell $(SDL2_CONFIG) --cflags)
 
 GLEWLIBS:=$(shell $(PKG_CONFIG) --libs-only-l glew)
 GLEWCFLAGS:=$(shell $(PKG_CONFIG) --cflags glew)
+endif
 
 ifeq ($(OSX), 0)
 	CRYPTLIBS:=-lcrypt
@@ -607,8 +612,9 @@ MULTIVERSELIBS=-Lssgl -lssglclient ${LRTLIB} -ldl -lm ${CRYPTLIBS}
 #
 
 
-BINPROGS=bin/ssgl_server bin/snis_server bin/snis_client bin/snis_text_to_speech.sh \
-		bin/snis_multiverse bin/lsssgl bin/snis_arduino bin/snis_launcher \
+SERVERPROGS=bin/ssgl_server bin/snis_server bin/snis_multiverse
+BINPROGS=${SERVERPROGS} bin/snis_client bin/snis_text_to_speech.sh \
+		bin/lsssgl bin/snis_arduino bin/snis_launcher \
 		bin/snis_update_assets bin/update_assets_from_launcher.sh
 UTILPROGS=util/mask_clouds util/cloud-mask-normalmap bin/mesh_viewer util/sample_image_colors \
 		util/generate_solarsystem_positions bin/nebula_noise bin/generate_skybox bin/earthlike
@@ -698,7 +704,9 @@ MYCFLAGS=-DDESTDIR=${DESTDIR} -DPREFIX=${PREFIX} ${DEBUGFLAG} ${PROFILEFLAG} \
 	-fstack-protector-strong -Wimplicit-fallthrough \
 	${COMPSPECCFLAGS} -Wstrict-prototypes
 
+ifeq (${SERVERSONLY},0)
 VORBISFLAGS:=$(subst -I,-isystem ,$(shell $(PKG_CONFIG) --cflags vorbisfile))
+endif
 
 ifeq (${WITHVOICECHAT},yes)
 ifeq (${DOWNLOAD_OPUS},no)
@@ -760,6 +768,10 @@ CMNMOBJS=$(patsubst %,$(OD)/%, ${_CMNMOBJS})
 CMNMLINK=$(ECHO) '  LINK' $@ && $(CC) ${MYCFLAGS} -o $@ util/cloud-mask-normalmap.o ${CMNMOBJS} ${CMNMLIBS} $(LDFLAGS)
 
 all:	bin/.t ${COMMONOBJS} ${SERVEROBJS} ${MULTIVERSEOBJS} ${CLIENTOBJS} ${BINPROGS} ${SCAD_PARAMS_FILES} ${DOCKING_PORT_FILES}
+
+# if you only want to build the servers, say on a cloud server
+# use WITHVOICECHAT=no SERVERSONLY=1 to avoid complaints from pkg-config
+serversonly:	${SERVERPROGS}
 
 models:	${MODELS}
 

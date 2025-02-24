@@ -16,11 +16,11 @@ snis_client requires to build.  You should only need:
 
   git clone https://github.com/smcameron/space-nerds-in-space.git
 
-  make bin/snis_server bin/snis_multiverse bin/ssgl_server
+  make WITHVOICECHAT=no SERVERSONLY=1 serversonly
 
-You will probably see some complaining about pkg-config this and that. As long as
-those 3 binaries build ok, it's probably nothing to worry about. It's just hunting
-around for things needed for snis_client, which you're not building.
+This will build bin/snis_server bin/snis_multiverse bin/ssgl_server.  The
+WITHVOICECHAT=no and SERVERSONLY=1 flags are just to keep "make" from
+evaluating a bunch of pkg-config stuff that's only needed for snis_client.
 
 Firewall configuration and port stuff
 -------------------------------------
