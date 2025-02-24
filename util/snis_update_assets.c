@@ -40,6 +40,7 @@ This file is part of Spacenerds In Space.
 #include "../string-utils.h"
 
 #define SNIS_ASSET_URL "https://spacenerdsinspace.com/snis-assets/"
+#define ASSETS_BASE_DIR "share/snis"
 #define MANIFEST_URL SNIS_ASSET_URL "manifest.txt"
 #define P "snis_update_assets"
 
@@ -55,7 +56,6 @@ static struct option long_options[] = {
 static int dry_run = 0;
 static char *destdir = NULL;
 static char *srcdir = NULL;
-static char orig_cwd[PATH_MAX * 2] = { 0 };
 static int force_option = 0;
 static int verbose = 0;
 
@@ -324,9 +324,9 @@ static int fetch_asset(CURL *curl, char *asset_filename)
 		return fetch_file(curl, url, asset_filename);
 	} else {
 		/* fprintf(stderr, "Copy file from %s/%s to %s\n", orig_cwd, asset_filename, asset_filename); */
-		int srclen = strlen(orig_cwd) + 1 + strlen(asset_filename) + 1;
+		int srclen = strlen(srcdir) + 1 - sizeof(ASSETS_BASE_DIR) + strlen(asset_filename) + 1;
 		char *src = malloc(srclen);
-		snprintf(src, srclen, "%s/%s", orig_cwd, asset_filename);
+		snprintf(src, srclen, "%s/%s", srcdir, asset_filename + sizeof(ASSETS_BASE_DIR));
 		rc = copy_file(src, asset_filename);
 		free(src);
 		return rc;
@@ -437,12 +437,11 @@ static void process_cmdline_options(int argc, char *argv[])
 			destdir = strdup(optarg);
 			break;
 		case 's':
-			srcdir = strdup(optarg);
-			if (!getcwd(cwd, PATH_MAX)) {
-				fprintf(stderr, "%s: Cannot get current directory: %s\n", P, strerror(errno));
+			srcdir = realpath(optarg, NULL);
+			if (!srcdir) {
+				fprintf(stderr, "%s: Cannot resolve srcdir: %s\n", P, strerror(errno));
 				exit(1);
 			}
-			snprintf(orig_cwd, PATH_MAX, "%s", cwd);
 			break;
 		case 'f':
 			force_option = 1;
@@ -478,19 +477,21 @@ static int file_should_be_ignored(char *filename)
 	return 0;
 }
 
-static int recursively_build_local_manifest(FILE *f, char *srcdir)
+static int recursively_build_local_manifest(FILE *f, char *subdir)
 {
 	char dir[PATH_MAX];
 	struct dirent **namelist;
 	int rc, n;
 
 	rc = 0;
+	char fulldir[PATH_MAX];
+	snprintf(fulldir, PATH_MAX, "%s%s", srcdir, subdir);
 	if (verbose)
-		printf("Executing scandir on %s\n", srcdir);
+		printf("Executing scandir on %s\n", fulldir);
 	errno = 0;
-	n = scandir(srcdir, &namelist, NULL, alphasort);
+	n = scandir(fulldir, &namelist, NULL, alphasort);
 	if (n == -1) {
-		fprintf(stderr, "%s: scandir %s failed: %s\n", P, srcdir, strerror(errno));
+		fprintf(stderr, "%s: scandir %s failed: %s\n", P, subdir, strerror(errno));
 		return -1;
 	}
 
@@ -502,7 +503,7 @@ static int recursively_build_local_manifest(FILE *f, char *srcdir)
 				printf("Ignoring %s\n", namelist[i]->d_name);
 			continue;
 		}
-		snprintf(path, PATH_MAX, "%s/%s", srcdir, namelist[i]->d_name);
+		snprintf(path, PATH_MAX, "%s/%s", fulldir, namelist[i]->d_name);
 		errno = 0;
 		rc = stat(path, &statbuf);
 		if (rc != 0) {
@@ -511,13 +512,13 @@ static int recursively_build_local_manifest(FILE *f, char *srcdir)
 		}
 
 		if ((statbuf.st_mode & S_IFMT) == S_IFREG) { /* Regular file? */
-			snprintf(dir, PATH_MAX, "%s/%s", srcdir, namelist[i]->d_name);
-			char *md5sum = compute_md5_sum(dir);
+			snprintf(dir, PATH_MAX, ASSETS_BASE_DIR "%s/%s", subdir, namelist[i]->d_name);
+			char *md5sum = compute_md5_sum(path);
 			if (verbose)
 				printf("%s  %s\n", md5sum, dir);
 			fprintf(f, "%s  %s\n", md5sum, dir);
 		} else if ((statbuf.st_mode & S_IFMT) == S_IFDIR) { /* Directory? */
-			snprintf(dir, PATH_MAX, "%s/%s", srcdir, namelist[i]->d_name);
+			snprintf(dir, PATH_MAX, "%s/%s", subdir, namelist[i]->d_name);
 			rc = recursively_build_local_manifest(f, dir);
 			if (rc)
 				goto out;
@@ -543,7 +544,7 @@ static int build_local_manifest(char *srcdir, char *manifest_filename)
 		return -1;
 	}
 
-	int rc = recursively_build_local_manifest(f, srcdir);
+	int rc = recursively_build_local_manifest(f, "");
 	fclose(f);
 	return rc;
 }
@@ -613,6 +614,7 @@ out:
 			dry_run ? "Would have updated" : "Updated", updated_files,
 			dry_run ? "Would have created new" : "New", new_files);
 	free_directory_list(&dir_list);
+	free(srcdir);
 	return rc;
 }
 
