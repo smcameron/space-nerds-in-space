@@ -323,7 +323,7 @@ static int fetch_asset(CURL *curl, char *asset_filename)
 		snprintf(url, sizeof(url), "%s%s", SNIS_ASSET_URL, asset_filename);
 		return fetch_file(curl, url, asset_filename);
 	} else {
-		/* fprintf(stderr, "Copy file from %s/%s to %s\n", orig_cwd, asset_filename, asset_filename); */
+		/* fprintf(stderr, "Copy file from %s to %s\n", src, asset_filename); */
 		int srclen = strlen(srcdir) + 1 - sizeof(ASSETS_BASE_DIR) + strlen(asset_filename) + 1;
 		char *src = malloc(srclen);
 		snprintf(src, srclen, "%s/%s", srcdir, asset_filename + sizeof(ASSETS_BASE_DIR));
