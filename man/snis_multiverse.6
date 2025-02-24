@@ -54,9 +54,17 @@ the dynamic port range, 49152 - 65535.
 \fB\--servernick, -n nickname\fR
 Specify the nickname of this multiverse process.
 (It's not really used for anything, nevertheless, it's required.)
+.TP
 \fB\--location, -L location\fR
 Specify the location of this multiverse process.
 (It's not really used for anything, nevertheless, it's required.)
+.TP
+\fB\--snis-server-portrange min:max\fR
+By default snis_server processes will be started using the dynamic port
+range 49152 - 65535.  This option allows specifying a different range,
+useful if you're running behind a firewall and want to restrict which
+ports you need to open.
+.TP
 \fB\--version\fR
 Print the program's version number and exit.
 .TP

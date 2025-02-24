@@ -92,6 +92,8 @@ static pthread_cond_t listener_started;
 static pthread_mutex_t service_mutex = PTHREAD_MUTEX_INITIALIZER;
 static int listener_port = -1;
 static int default_snis_multiverse_port = -1; /* -1 means choose a random port */
+static int snis_server_port_min = -1;
+static int snis_server_port_max = -1;
 static int snis_log_level = 2;
 static int nconnections = 0;
 static int debuglevel = 0;
@@ -1297,6 +1299,7 @@ static void acknowledgments(void)
 
 #define OPT_ACKNOWLEDGMENTS 1000
 #define OPT_ALLOW_REMOTE_NETWORKS 1001
+#define OPT_SNIS_SERVER_PORT_RANGE 1002
 static struct option long_options[] = {
 	{ "acknowledgments", no_argument, NULL, OPT_ACKNOWLEDGMENTS },
 	{ "acknowledgements", no_argument, NULL, OPT_ACKNOWLEDGMENTS },
@@ -1308,12 +1311,13 @@ static struct option long_options[] = {
 	{ "version", no_argument, NULL, 'v' },
 	{ "allow-remote-networks", no_argument, NULL, OPT_ALLOW_REMOTE_NETWORKS },
 	{ "port", required_argument, NULL, 'p' },
+	{ "snis-server-portrange", required_argument, NULL, OPT_SNIS_SERVER_PORT_RANGE },
 	{ 0, 0, 0, 0 },
 };
 
 static void parse_options(int argc, char *argv[], char **lobby, char **nick, char **location)
 {
-	int c, rc, v;
+	int c, rc, v, v2;
 
 	*lobby = NULL;
 	*location = NULL;
@@ -1374,6 +1378,29 @@ static void parse_options(int argc, char *argv[], char **lobby, char **nick, cha
 			}
 			default_snis_multiverse_port = v;
 			break;
+		case OPT_SNIS_SERVER_PORT_RANGE:
+			rc = sscanf(optarg, "%d%*[:,-]%d", &v, &v2);
+			if (rc != 2) {
+				fprintf(stderr, "snis_multiverse: bad port range: '%s'\n", optarg);
+				usage(); /* no return */
+				break;
+			}
+			if (v > v2) {
+				fprintf(stderr,
+					"snis_multiverse: bad port range, %d - %d, min must be less than max\n",
+					v, v2);
+				usage(); /* no return */
+				break;
+			}
+			if (v < 1024 || v > 65535 || v2 < 1024 || v2 > 65535) {
+				fprintf(stderr,
+					"snis_multiverse: bad port range, min and max must be in range 1024 - 65535\n");
+				usage(); /* no return */
+				break;
+			}
+			snis_server_port_min = v;
+			snis_server_port_max = v2;
+			break;
 		default:
 			usage(); /* no return */
 			break;
@@ -1412,6 +1439,7 @@ static void start_snis_server(char *starsystem_name)
 	char *bindir;
 	char snis_server_location[PATH_MAX];
 	char upper_snis_server_location[PATH_MAX];
+	char snis_server_port_range[100];
 	int rc;
 	char *snis_log_dir = getenv("SNIS_LOG_DIR");
 	if (!snis_log_dir)
@@ -1421,10 +1449,13 @@ static void start_snis_server(char *starsystem_name)
 	strcpy(upper_snis_server_location, snis_server_location);
 	uppercase(upper_snis_server_location);
 	bindir = get_snis_bin_dir();
+	snprintf(snis_server_port_range, sizeof(snis_server_port_range), "-r %d:%d",
+			snis_server_port_min, snis_server_port_max);
 	snprintf(cmd, sizeof(cmd) - 1,
-			"%s/snis_server -l %s -L %s -m %s -s %s %s > %s/snis_server.%s.log 2>&1 &", bindir,
+			"%s/snis_server -l %s -L %s -m %s -s %s %s %s > %s/snis_server.%s.log 2>&1 &", bindir,
 			lobby, upper_snis_server_location, location, snis_server_location,
 			allow_remote_networks ? "--allow-remote-networks" : "",
+			snis_server_port_min > -1 ? snis_server_port_range : "",
 			snis_log_dir, starsystem_name);
 
 	fprintf(stderr, "snis_multiverse: STARTING SNIS SERVER for %s\n", starsystem_name);

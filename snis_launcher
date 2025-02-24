@@ -277,6 +277,12 @@ start_snis_multiverse()
 	then
 		return
 	fi
+	if [ "$SNIS_SERVER_PORT_RANGE" != "" ]
+	then
+		PORT_RANGE_OPT="--snis-server-portrange $SNIS_SERVER_PORT_RANGE"
+	else
+		PORT_RANGE_OPT=""
+	fi
 	printf "Automatically start/stop snis_server instances as needed (y/n, default = y)?"
 	read -r x
 	if [ "$x" != "n" ]
@@ -308,8 +314,8 @@ start_snis_multiverse()
 		printf "Created %s/snisdb for snis_multiverse\n" "$SNIS_DB_DIR" 1>&2
 	fi
 	check_for_unexpected_lockdir /tmp/snis_multiverse_lock snis_multiverse
-	(${SNIS_MULTIVERSE} $autowrangle -l "${LOBBYHOST}" -n nickname -L narnia $exempt > \
-		"$SNIS_LOG_DIR"/snis_multiverse_log.txt 2>&1 ; \
+	(${SNIS_MULTIVERSE} $autowrangle -l "${LOBBYHOST}" -n nickname -L narnia $exempt \
+		$PORT_RANGE_OPT > "$SNIS_LOG_DIR"/snis_multiverse_log.txt 2>&1 ; \
 		printf "snis_multiverse died, status was %s\n" "$?" 1>&2 ) &
 }
 
