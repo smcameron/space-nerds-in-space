@@ -26235,26 +26235,11 @@ static void *listener_thread_fn(__attribute__((unused)) void *unused)
 	struct addrinfo *result, *rp;
 	int loop_count, s, port_bound;
 	char portstr[20];
-	char *port_range;
 
         snis_log(SNIS_INFO, "snis_server starting\n");
 	if (default_snis_server_port != -1) {
 		fprintf(stderr, "%s: Using port %d\n",
 				logprefix(), default_snis_server_port);
-	}
-
-	port_range = getenv("SNIS_SERVER_PORT_RANGE");
-	if (port_range) {
-		int rc, min, max;
-
-		rc = sscanf(port_range, "%d:%d", &min, &max);
-		if (rc != 2 || max < min || min < 1024 || min > 65535 || max > 65535) {
-			fprintf(stderr, "Bad SNIS_SERVER_PORT_RANGE, using defaults %d:%d\n",
-				snis_server_port_min, snis_server_port_max);
-		} else {
-			snis_server_port_min = min;
-			snis_server_port_max = max;
-		}
 	}
 
 	/* Bind "rendezvous" socket to a random port to listen for connections.
@@ -26266,7 +26251,7 @@ static void *listener_thread_fn(__attribute__((unused)) void *unused)
 		/* 
 		 * choose a random port in the "Dynamic and/or Private" range
 		 * see http://www.iana.org/assignments/port-numbers or in another
-		 * range if SNIS_SERVER_PORT_RANGE is set.
+		 * range if --portrange option is used.
 		 */
 		if (default_snis_server_port == -1)
 			/* TODO: figure out how to ensure snis_server instance port numbers
@@ -30826,6 +30811,7 @@ static struct option long_options[] = {
 	{ "allow-remote-networks", no_argument, NULL, OPT_ALLOW_REMOTE_NETWORKS },
 	{ "nolobby", no_argument, NULL, OPT_NO_LOBBY },
 	{ "port", required_argument, NULL, 'p' },
+	{ "portrange", required_argument, NULL, 'r' },
 	{ 0, 0, 0, 0 },
 };
 
@@ -30906,11 +30892,11 @@ static void process_options(int argc, char *argv[])
 
 	lobby_servernick = default_lobby_servernick;
 	lobbyhost = default_lobbyhost;
-	int rc, v;
+	int rc, v, v2;
 
 	while (1) {
 		int option_index;
-		c = getopt_long(argc, argv, "ehL:l:m:n:p:s:tv", long_options, &option_index);
+		c = getopt_long(argc, argv, "ehL:l:m:n:p:r:s:tv", long_options, &option_index);
 		if (c == -1)
 			break;
 		switch (c) {
@@ -30977,6 +30963,33 @@ static void process_options(int argc, char *argv[])
 				fprintf(stderr, "snis_server: Bad port number '%s'\n", optarg);
 				usage();
 			}
+			break;
+		case 'r':
+			rc = sscanf(optarg, "%d%*[:,-]%d", &v, &v2);
+			if (rc != 2) {
+				fprintf(stderr, "snis_server: bad port range: '%s'\n", optarg);
+				usage(); /* no return */
+				break;
+			}
+			if (v > v2) {
+				fprintf(stderr,
+					"snis_server: bad port range, %d - %d, min must be less than max\n",
+					v, v2);
+				usage(); /* no return */
+				break;
+			}
+			if (v < 1024 || v > 65535 || v2 < 1024 || v2 > 65535) {
+				fprintf(stderr,
+					"snis_server: bad port range, min and max must be in range 1024 - 65535\n");
+				usage(); /* no return */
+				break;
+			}
+			snis_server_port_min = v;
+			snis_server_port_max = v2;
+			break;
+		default:
+			usage();
+			break;
 		}
 	}
 	if (lobby_location == NULL)

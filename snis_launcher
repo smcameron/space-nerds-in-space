@@ -360,13 +360,21 @@ start_snis_server()
 	then
 		return
 	fi
+
+	if [ "$SNIS_SERVER_PORT_RANGE" != "" ]
+	then
+		PORT_RANGE_OPT="--portrange $SNIS_SERVER_PORT_RANGE"
+	else
+		PORT_RANGE_OPT=""
+	fi
 	printf "\nStarting snis_server\n\n"
 	get_solarsystem_name
 	printf "Using solar system %s\n" "$SOLARSYSTEM_NAME"
 	SS1="$SOLARSYSTEM_NAME"
 	UPPER_SS1=$(uppercase "$SS1")
 	check_for_unexpected_lockdir /tmp/snis_server_lock."$UPPER_SS1" "snis_server $SS1"
-	${SNIS_SERVER} -l "${LOBBYHOST}" -L "$UPPER_SS1" -m narnia -s "$SS1" ${ENABLE_ENSCRIPT} ${TRAP_NANS} > \
+	${SNIS_SERVER} -l "${LOBBYHOST}" -L "$UPPER_SS1" -m narnia -s "$SS1" \
+		${ENABLE_ENSCRIPT} ${TRAP_NANS} ${PORT_RANGE_OPT} > \
 		"$SNIS_LOG_DIR"/snis_server_log.txt 2>&1 &
 	sleep 2.5
 }
