@@ -29,25 +29,22 @@ static const struct snis_process_options default_options = {
 	.snis_multiverse = {
 		.autowrangle = 1,
 		.allow_remote_networks = 0,
-		.lobbyhost = "localhost",
 		.nickname = "nickname",
 		.location = "narnia",
 		.exempt = "default",
-		.minport = 49152,
-		.maxport = 65355,
+		.port_number = "",
 	},
 	.snis_server = {
 		.allow_remote_networks = 0,
 		.enable_enscript = 0,
-		.lobbyhost = "localhost",
 		.nickname = "nickname",
 		.location = "narnia",
 		.multiverse_location = "narnia",
 		.solarsystem = "default",
-		.minport = 49152,
-		.maxport = 65355,
-		.nolobby = 0,
+		.port_range = "",
 	},
+	.lobbyhost = "localhost",
+	.nolobby = 0,
 };
 
 struct snis_process_options snis_process_options_default(void)

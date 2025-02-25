@@ -21031,6 +21031,202 @@ static void launcher_advanced_btn_pressed(__attribute__((unused)) void *x)
 	write_to_forker(FORKER_ADVANCED);
 }
 
+static void launcher_options_btn_pressed(__attribute__((unused)) void *x)
+{
+	displaymode = DISPLAYMODE_OPTIONS;
+}
+
+static struct options_ui {
+	struct button *launcher_btn;
+	struct label *client_opts, *multiverse_opts, *server_opts;
+	struct button *allow_remote_networks_btn;
+	struct button *autowrangle_btn;
+	struct button *mv_fixed_port_number_btn; /* mv_ means multiverse here. */
+	struct button *ss_default_port_range_btn; /* ss_ means snis_server here. */
+	struct button *ss_allow_remote_networks_btn;
+	struct snis_text_input_box *mv_port_number_input;
+	struct snis_text_input_box *ss_port_range_input;
+	char mv_port_number_text[15];
+	char ss_port_range_text[15];
+} options_ui;
+
+static void options_port_range_pressed(char *has_port_range, void *widget)
+{
+	*has_port_range = !*has_port_range;
+	if (*has_port_range)
+		ui_unhide_widget(widget);
+	else
+		ui_hide_widget(widget);
+	write_process_options_to_forker(&child_process_options);
+}
+
+static void ss_default_port_range_btn_pressed(__attribute__((unused)) void *x)
+{
+	options_port_range_pressed(&child_process_options.snis_server.has_port_range,
+				options_ui.ss_port_range_input);
+}
+
+static int options_ss_default_port_range_status(__attribute__((unused)) void *x)
+{
+	return !child_process_options.snis_server.has_port_range;
+}
+
+static void multiverse_fixed_port_number_btn_pressed(__attribute__((unused)) void *x)
+{
+	options_port_range_pressed(&child_process_options.snis_multiverse.has_fixed_port_number,
+				options_ui.mv_port_number_input);
+}
+
+static int options_mv_port_number_status(__attribute__((unused)) void *x)
+{
+	return child_process_options.snis_multiverse.has_fixed_port_number;
+}
+
+static void options_allow_remote_networks_pressed(__attribute__((unused)) void *x)
+{
+	child_process_options.snis_multiverse.allow_remote_networks =
+			!child_process_options.snis_multiverse.allow_remote_networks;
+	write_process_options_to_forker(&child_process_options);
+}
+
+static void options_ss_allow_remote_networks_pressed(__attribute__((unused)) void *x)
+{
+	child_process_options.snis_server.allow_remote_networks =
+			!child_process_options.snis_server.allow_remote_networks;
+	write_process_options_to_forker(&child_process_options);
+}
+
+static int options_allow_remote_networks_status(__attribute__((unused)) void *x)
+{
+	return child_process_options.snis_multiverse.allow_remote_networks;
+}
+
+static int options_ss_allow_remote_networks_status(__attribute__((unused)) void *x)
+{
+	return child_process_options.snis_server.allow_remote_networks;
+}
+
+static void options_autowrangle_btn_pressed(__attribute__((unused)) void *x)
+{
+	child_process_options.snis_multiverse.autowrangle =
+			!child_process_options.snis_multiverse.autowrangle;
+	write_process_options_to_forker(&child_process_options);
+}
+
+static int options_autowrangle_btn_status(__attribute__((unused)) void *x)
+{
+	return child_process_options.snis_multiverse.autowrangle;
+}
+
+static void init_options_ui(void)
+{
+	float x, y;
+	int color = UI_COLOR(launcher_button);
+
+	x = txx(20);
+	y = txy(550);
+	options_ui.launcher_btn =
+		snis_button_init(x, y, -1, -1, "BACK TO PROCESS LAUNCHER", color,
+			TINY_FONT, launcher_button_pressed, NULL);
+
+	y = txy(60);
+	options_ui.multiverse_opts = snis_label_init(x, y, "MULTIVERSE OPTIONS", color, TINY_FONT);
+	y += txy(20);
+	x += txx(10);
+
+	options_ui.mv_fixed_port_number_btn = snis_button_init(x, y, -1, -1, "USE FIXED PORT NUMBER", color,
+			NANO_FONT, multiverse_fixed_port_number_btn_pressed, NULL);
+	snis_button_set_checkbox_function(options_ui.mv_fixed_port_number_btn,
+					options_mv_port_number_status, NULL);
+	snis_button_set_visible_border(options_ui.mv_fixed_port_number_btn, 0);
+
+	options_ui.mv_port_number_input = snis_text_input_box_init(x + txx(150), y, txy(20), txx(100),
+					color, NANO_FONT, options_ui.mv_port_number_text,
+					sizeof(options_ui.mv_port_number_text), &timer, NULL, NULL);
+	y += txx(20);
+
+	options_ui.allow_remote_networks_btn = snis_button_init(x, y, -1, -1, "ALLOW REMOTE NETWORKS", color,
+			NANO_FONT, options_allow_remote_networks_pressed, NULL);
+	snis_button_set_checkbox_function(options_ui.allow_remote_networks_btn,
+					options_allow_remote_networks_status, NULL);
+	snis_button_set_visible_border(options_ui.allow_remote_networks_btn, 0);
+	y += txx(20);
+
+	options_ui.autowrangle_btn = snis_button_init(x, y, -1, -1, "WRANGLE SNIS SERVERS", color,
+			NANO_FONT, options_autowrangle_btn_pressed, NULL);
+	snis_button_set_checkbox_function(options_ui.autowrangle_btn,
+					options_autowrangle_btn_status, NULL);
+	snis_button_set_visible_border(options_ui.autowrangle_btn, 0);
+
+	x -= txx(10);
+	y = txy(50 + 180);
+	options_ui.server_opts = snis_label_init(x, y, "SNIS SERVER OPTIONS", color, TINY_FONT);
+	y += txy(20);
+	x += txx(10);
+
+	options_ui.ss_default_port_range_btn = snis_button_init(x, y, -1, -1, "USE DEFAULT PORT RANGE", color,
+			NANO_FONT, ss_default_port_range_btn_pressed, NULL);
+	snis_button_set_checkbox_function(options_ui.ss_default_port_range_btn,
+					options_ss_default_port_range_status, NULL);
+	snis_button_set_visible_border(options_ui.ss_default_port_range_btn, 0);
+
+	options_ui.ss_port_range_input = snis_text_input_box_init(x + txx(150), y, txy(20), txx(100),
+					color, NANO_FONT, options_ui.ss_port_range_text,
+					sizeof(options_ui.ss_port_range_text), &timer, NULL, NULL);
+	y += txx(20);
+
+	options_ui.ss_allow_remote_networks_btn = snis_button_init(x, y, -1, -1, "ALLOW REMOTE NETWORKS", color,
+			NANO_FONT, options_ss_allow_remote_networks_pressed, NULL);
+	snis_button_set_checkbox_function(options_ui.ss_allow_remote_networks_btn,
+					options_ss_allow_remote_networks_status, NULL);
+	snis_button_set_visible_border(options_ui.ss_allow_remote_networks_btn, 0);
+	y += txx(20);
+
+
+	y = txy(50 + 180 + 180);
+	x -= txx(10);
+	options_ui.client_opts = snis_label_init(x, y, "SNIS CLIENT OPTIONS", color, TINY_FONT);
+	x += txx(10);
+	x += txy(20);
+
+
+	ui_add_button(options_ui.launcher_btn, DISPLAYMODE_OPTIONS,
+			"GO BACK TO THE SNIS PROCESS LAUNCHER SCREEN");
+	ui_add_label(options_ui.multiverse_opts, DISPLAYMODE_OPTIONS);
+	ui_add_label(options_ui.server_opts, DISPLAYMODE_OPTIONS);
+	ui_add_label(options_ui.client_opts, DISPLAYMODE_OPTIONS);
+	ui_add_button(options_ui.mv_fixed_port_number_btn, DISPLAYMODE_OPTIONS,
+		"IF CHECKED USE A CUSTOM PORT NUMBER, OTHERWISE\n"
+		"USE A RANDOMLY CHOSEN PORT NUMBER FROM THE IANA\n"
+		"DYNAMIC PORT RANGE, 49152-65535");
+	ui_add_button(options_ui.allow_remote_networks_btn, DISPLAYMODE_OPTIONS,
+		"BY DEFAULT, ANY CLIENT CONNECTING FROM A REMOTE NETWORK\n"
+		"(AS DETERMINED BY THE NETMASK) WILL BE DROPPED. IF YOU\n"
+		"ARE PLAYING THIS GAME OVER THE INTERNET, YOU SHOULD CHECK\n"
+		"THIS BOX SO CONNECTIONS FROM REMOTE NETWORKS ARE PERMITTED.\n"
+		"IF YOU ARE PLAYING THIS GAME ON A LAN WITH NO REMOTE PLAYERS\n"
+		"YOU SHOULD LEAVE IT UNCHECKED\n");
+	ui_add_button(options_ui.autowrangle_btn, DISPLAYMODE_OPTIONS,
+		"IF CHECKED, SNIS_MULTIVERSE WILL AUTOMATICALLY\n"
+		"START AND STOP SNIS_SERVER INSTANCES AS NEEDED.");
+	ui_add_text_input_box(options_ui.mv_port_number_input, DISPLAYMODE_OPTIONS);
+	ui_set_widget_tooltip(options_ui.mv_port_number_input, "ENTER CUSTOM PORT RANGE, E.g.: 45000-50000");
+	ui_hide_widget(options_ui.mv_port_number_input);
+
+	ui_add_button(options_ui.ss_allow_remote_networks_btn, DISPLAYMODE_OPTIONS,
+		"BY DEFAULT, ANY CLIENT CONNECTING FROM A REMOTE NETWORK\n"
+		"(AS DETERMINED BY THE NETMASK) WILL BE DROPPED. IF YOU\n"
+		"ARE PLAYING THIS GAME OVER THE INTERNET, YOU SHOULD CHECK\n"
+		"THIS BOX SO CONNECTIONS FROM REMOTE NETWORKS ARE PERMITTED.\n"
+		"IF YOU ARE PLAYING THIS GAME ON A LAN WITH NO REMOTE PLAYERS\n"
+		"YOU SHOULD LEAVE IT UNCHECKED\n");
+	ui_add_button(options_ui.ss_default_port_range_btn, DISPLAYMODE_OPTIONS,
+		"USE IANA DYNAMIC PORT RANGE 49152-65535");
+	ui_add_text_input_box(options_ui.ss_port_range_input, DISPLAYMODE_OPTIONS);
+	ui_set_widget_tooltip(options_ui.ss_port_range_input, "ENTER CUSTOM PORT RANGE, E.g.: 45000-50000");
+	ui_hide_widget(options_ui.ss_port_range_input);
+}
+
 static struct launcher_ui {
 	struct button *start_ssgl_btn;
 	struct button *start_snis_multiverse_btn;
@@ -21039,6 +21235,7 @@ static struct launcher_ui {
 	struct button *connect_client_btn;
 	struct button *stop_all_snis_btn;
 	struct button *update_assets_btn;
+	struct button *options_btn;
 	struct button *advanced_btn;
 	struct button *quit_btn;
 	struct gauge *ssgl_gauge;
@@ -21046,51 +21243,11 @@ static struct launcher_ui {
 	struct gauge *snis_server_gauge;
 	struct gauge *snis_client_gauge;
 	struct button *restart_btn;
-	struct pull_down_menu *menu;
 	int ssgl_count;
 	int multiverse_count;
 	int snis_server_count;
 	int snis_client_count;
 } launcher_ui;
-
-static void autowrangle_checkbox_pressed(__attribute__((unused)) void *x)
-{
-	child_process_options.snis_multiverse.autowrangle = !child_process_options.snis_multiverse.autowrangle;
-	write_process_options_to_forker(&child_process_options);
-}
-
-static int autowrangle_checkbox_status(__attribute__((unused)) void *x)
-{
-	return child_process_options.snis_multiverse.autowrangle;
-}
-
-static void allow_any_network_checkbox_pressed(__attribute__((unused)) void *x)
-{
-	child_process_options.snis_multiverse.allow_remote_networks =
-			!child_process_options.snis_multiverse.allow_remote_networks;
-
-	/* If multiverse allow any networks, then snis_server must too */
-	if (child_process_options.snis_multiverse.allow_remote_networks)
-		child_process_options.snis_server.allow_remote_networks = 1;
-	write_process_options_to_forker(&child_process_options);
-}
-
-static int allow_any_network_checkbox_status(__attribute__((unused)) void *x)
-{
-	return (int) child_process_options.snis_multiverse.allow_remote_networks;
-}
-
-static void ss_allow_any_network_checkbox_pressed(__attribute__((unused)) void *x)
-{
-	child_process_options.snis_server.allow_remote_networks =
-			!child_process_options.snis_server.allow_remote_networks;
-	write_process_options_to_forker(&child_process_options);
-}
-
-static int ss_allow_any_network_checkbox_status(__attribute__((unused)) void *x)
-{
-	return (int) child_process_options.snis_server.allow_remote_networks;
-}
 
 static void launcher_update_assets_btn_pressed(__attribute__((unused)) void *x)
 {
@@ -21130,18 +21287,11 @@ static void init_launcher_ui(void)
 	y += txy(40);
 	launcher_ui.start_snis_multiverse_btn = snis_button_init(x, y, -1, -1, "START SNIS MULTIVERSE SERVER",
 				active_button_color, TINY_FONT, start_snis_multiverse_btn_pressed, NULL);
+	snis_button_set_disabled_color(launcher_ui.start_snis_multiverse_btn, DARKGREEN);
 	y += txy(40);
-#if 0
-	launcher_ui.autowrangle_checkbox = snis_button_init(x + 50, y, -1, -1, "AUTO-WRANGLE SNIS SERVERS",
-				active_button_color, TINY_FONT, autowrangle_checkbox_pressed, 0);
-	snis_button_set_checkbox_function(launcher_ui.autowrangle_checkbox,
-					snis_button_generic_checkbox_function,
-					&launcher_ui.autowrangle);
-	snis_button_set_visible_border(launcher_ui.autowrangle_checkbox, 0);
-	y += txy(40);
-#endif
 	launcher_ui.start_snis_server_btn = snis_button_init(x, y, -1, -1, "START SNIS SERVER",
 				active_button_color, TINY_FONT, start_snis_server_btn_pressed, 0);
+	snis_button_set_disabled_color(launcher_ui.start_snis_server_btn, DARKGREEN);
 	y += txy(40);
 	launcher_ui.connect_client_btn = snis_button_init(x, y, -1, -1, "CONNECT CLIENT",
 				active_button_color, TINY_FONT, connect_client_btn_pressed, 0);
@@ -21152,6 +21302,9 @@ static void init_launcher_ui(void)
 	launcher_ui.update_assets_btn = snis_button_init(x, y, -1, -1, "UPDATE ASSETS",
 				active_button_color, TINY_FONT, launcher_update_assets_btn_pressed, 0);
 	snis_button_set_disabled_color(launcher_ui.update_assets_btn, DARKGREEN);
+	y += txy(40);
+	launcher_ui.options_btn = snis_button_init(x, y, -1, -1, "OPTIONS",
+				active_button_color, TINY_FONT, launcher_options_btn_pressed, 0);
 	y += txy(40);
 	launcher_ui.advanced_btn = snis_button_init(x, y, -1, -1, "ADVANCED OPTIONS",
 				active_button_color, TINY_FONT, launcher_advanced_btn_pressed, 0);
@@ -21181,33 +21334,6 @@ static void init_launcher_ui(void)
 			10, "SNIS CLIENT", sample_snis_clientcount);
 	gauge_set_fonts(launcher_ui.snis_client_gauge, NANO_FONT, NANO_FONT);
 
-	launcher_ui.menu = create_pull_down_menu(NANO_FONT, SCREEN_WIDTH);
-	pull_down_menu_set_color(launcher_ui.menu, UI_COLOR(sci_pull_down_menu));
-	pull_down_menu_set_highlight_color(launcher_ui.menu, UI_COLOR(sci_pull_down_menu_selection));
-	pull_down_menu_set_background_alpha(launcher_ui.menu, 0.75);
-	pull_down_menu_add_column(launcher_ui.menu, "SNIS CLIENT OPTIONS");
-	pull_down_menu_add_row(launcher_ui.menu, "SNIS CLIENT OPTIONS", "OPTION 1", NULL, NULL);
-	pull_down_menu_add_row(launcher_ui.menu, "SNIS CLIENT OPTIONS", "OPTION 2", NULL, NULL);
-	pull_down_menu_add_row(launcher_ui.menu, "SNIS CLIENT OPTIONS", "OPTION 3", NULL, NULL);
-	pull_down_menu_add_column(launcher_ui.menu, "SNIS SERVER OPTIONS");
-	pull_down_menu_add_row(launcher_ui.menu, "SNIS SERVER OPTIONS", "ALLOW CLIENTS FROM ANY NETWORK",
-				ss_allow_any_network_checkbox_pressed, NULL);
-	pull_down_menu_set_checkbox_function(launcher_ui.menu, "SNIS SERVER OPTIONS",
-				"ALLOW CLIENTS FROM ANY NETWORK", ss_allow_any_network_checkbox_status, NULL);
-	pull_down_menu_add_row(launcher_ui.menu, "SNIS SERVER OPTIONS", "OPTION 2", NULL, NULL);
-	pull_down_menu_add_row(launcher_ui.menu, "SNIS SERVER OPTIONS", "OPTION 3", NULL, NULL);
-	pull_down_menu_add_column(launcher_ui.menu, "SNIS MULTIVERSE OPTIONS");
-	pull_down_menu_add_row(launcher_ui.menu, "SNIS MULTIVERSE OPTIONS", "AUTO-WRANGLE SNIS SERVER PROCESSES",
-						autowrangle_checkbox_pressed, NULL);
-	pull_down_menu_set_checkbox_function(launcher_ui.menu, "SNIS MULTIVERSE OPTIONS",
-				"AUTO-WRANGLE SNIS SERVER PROCESSES", autowrangle_checkbox_status, NULL);
-	pull_down_menu_add_row(launcher_ui.menu, "SNIS MULTIVERSE OPTIONS", "ALLOW CLIENTS FROM ANY NETWORK",
-				allow_any_network_checkbox_pressed, NULL);
-	pull_down_menu_set_checkbox_function(launcher_ui.menu, "SNIS MULTIVERSE OPTIONS",
-				"ALLOW CLIENTS FROM ANY NETWORK", allow_any_network_checkbox_status, NULL);
-	pull_down_menu_add_row(launcher_ui.menu, "SNIS MULTIVERSE OPTIONS", "OPTION 2", NULL, NULL);
-	pull_down_menu_add_row(launcher_ui.menu, "SNIS MULTIVERSE OPTIONS", "OPTION 3", NULL, NULL);
-
 	ui_add_button(launcher_ui.start_ssgl_btn, DISPLAYMODE_LAUNCHER,
 			"START SNIS LOBBY SERVER PROCESS\n\n"
 			"YOU NEED EXACTLY ONE SNIS LOBBY PROCESS RUNNING\n"
@@ -21216,16 +21342,6 @@ static void init_launcher_ui(void)
 			"START SNIS MULTIVERSE SERVER PROCESS\n\n"
 			"YOU NEED EXACTLY ONE SNIS MULTIVERSE PROCESS RUNNING\n"
 			"ON THE NETWORK");
-#if 0
-	ui_add_button(launcher_ui.autowrangle_checkbox, DISPLAYMODE_LAUNCHER,
-			"CHECK THIS BOX IF YOU WANT SNIS_MULTIVERSE TO AUTOMATICALLY\n"
-			"START/STOP SNIS_SERVER PROCESSES AS NEEDED. IT WILL NORMALLY\n"
-			"START UP SNIS_SEVRER INSTANCES FOR EVERY STAR SYSTEM IMMEDIATELY\n"
-			"ADJACENT TO ANY STAR SYSTEM IN WHICH A BRIDGE CREW IS PRESENT\n"
-			"YOU NEED TO CHECK THIS IF YOU INTEND TO USE WARP GATES\n"
-			"YOU DON'T NEED IT JUST TO RUN SOME MISSION SCRIPTS IN A SINGLE\n"
-			"STAR SYSTEM.");
-#endif
 	ui_add_button(launcher_ui.start_snis_server_btn, DISPLAYMODE_LAUNCHER,
 			"START A SNIS SERVER PROCESS\n\n"
 			"IF SNIS MULTIVERSE HAS ALREADY STARTED SOME SNIS SERVERS\n"
@@ -21250,6 +21366,9 @@ static void init_launcher_ui(void)
 			"HAVE TO RESTART SNIS_CLIENT. IF THIS BUTTON IS DISABLED, IT MEANS\n"
 			"THAT YOU HAVE ALREADY CHECKED FOR NEW ART ASSETS WITHIN THE PAST\n"
 			"60 MINUTES, AND THERE IS NO NEED TO CHECK AGAIN SO SOON.");
+	ui_add_button(launcher_ui.options_btn, DISPLAYMODE_LAUNCHER,
+			"OPTIONS\n\n"
+			"ALLOWS YOU TO SET VARIOUS OPTIONS.");
 	ui_add_button(launcher_ui.advanced_btn, DISPLAYMODE_LAUNCHER,
 			"ADVANCED OPTIONS\n\n"
 			"THIS RUNS THE SNIS_LAUNCHER SCRIPT WHICH HAS A FEW MORE\n"
@@ -21285,7 +21404,6 @@ static void init_launcher_ui(void)
 			"THIS GAUGE SHOWS THE NUMBER OF SNIS CLIENT PROCESSES RUNNING LOCALLY\n"
 			"ON THIS MACHINE.");
 	ui_hide_widget(launcher_ui.restart_btn); /* only unhides if new assets are available */
-	ui_add_pull_down_menu(launcher_ui.menu, DISPLAYMODE_LAUNCHER);
 
 	launcher_ui.ssgl_count = 0;
 	launcher_ui.multiverse_count = 0;
@@ -21402,9 +21520,48 @@ static int assets_updated_too_recently(void)
 	return 0;
 }
 
+static int multiverse_options_are_correct(void)
+{
+	if (child_process_options.snis_multiverse.has_fixed_port_number) {
+		int rc, portno;
+
+		rc = sscanf(child_process_options.snis_multiverse.port_number, "%d", &portno);
+		if (rc != 1) {
+			return 0;
+		}
+		if (portno < 1024) {
+			return 0;
+		}
+		if (portno > 65535) {
+			return 0;
+		}
+	}
+	return 1;
+}
+
+static int snis_server_options_are_correct(void)
+{
+	if (child_process_options.snis_server.has_port_range) {
+		if (port_range_formatted_correctly(child_process_options.snis_server.port_range))
+			return 1;
+		return 0;
+	}
+	return 1;
+}
+
 static void show_launcher(void)
 {
 	static int framecounter = 0;
+
+	if (multiverse_options_are_correct())
+		snis_button_enable(launcher_ui.start_snis_multiverse_btn);
+	else
+		snis_button_disable(launcher_ui.start_snis_multiverse_btn);
+
+	if (snis_server_options_are_correct())
+		snis_button_enable(launcher_ui.start_snis_server_btn);
+	else
+		snis_button_disable(launcher_ui.start_snis_server_btn);
 
 	framecounter++;
 	if ((framecounter % 60) == 0) {
@@ -21436,6 +21593,61 @@ static void show_launcher(void)
 	station_label_disappears = 1;
 	show_rotating_wombat();
 	maybe_show_downloading_message();
+}
+
+static void show_options(void)
+{
+	/* Check to see if the port ranges have been correctly filled out.  If not, then
+	 * make the port range input boxes red.
+	 */
+	int rc, color, port;
+
+	color = UI_COLOR(launcher_button);
+	if (child_process_options.snis_multiverse.has_fixed_port_number) {
+		rc = sscanf(options_ui.mv_port_number_text, "%d", &port);
+		if (rc == 1 && port > 1023 && port <= 65535)  {
+
+			/* Port number is correct.  If the text input box buffer is different from the
+			 * process options port number string, then copy the text to the process options and
+			 * send the process options to the forker process.
+			 */
+			color = UI_COLOR(launcher_button);
+			if (strcmp(child_process_options.snis_multiverse.port_number,
+								options_ui.mv_port_number_text) != 0) {
+				strlcpy(child_process_options.snis_multiverse.port_number,
+						options_ui.mv_port_number_text,
+						sizeof(child_process_options.snis_multiverse.port_number));
+				write_process_options_to_forker(&child_process_options);
+			}
+		} else {
+			color = RED;
+		}
+	}
+	snis_text_input_box_set_color(options_ui.mv_port_number_input, color);
+
+	color = UI_COLOR(launcher_button);
+	if (child_process_options.snis_server.has_port_range) {
+		if (port_range_formatted_correctly(options_ui.ss_port_range_text)) {
+			/* Port range is correct.  If the text input box buffer is different from the
+			 * process options port range string, then copy the text to the process options and
+			 * send the process options to the forker process.
+			 */
+			color = UI_COLOR(launcher_button);
+			if (strcmp(child_process_options.snis_server.port_range, options_ui.ss_port_range_text) != 0) {
+				strlcpy(child_process_options.snis_server.port_range, options_ui.ss_port_range_text,
+					sizeof(child_process_options.snis_server.port_range));
+				write_process_options_to_forker(&child_process_options);
+			}
+		} else {
+			color = RED;
+		}
+	}
+	snis_text_input_box_set_color(options_ui.ss_port_range_input, color);
+
+	station_label_disappears = 0;
+	show_common_screen("OPTIONS");
+	station_label_disappears = 1;
+	show_rotating_wombat();
 }
 
 static void make_science_forget_stuff(void)
@@ -21934,6 +22146,9 @@ static int main_da_expose(SDL_Window *window)
 		break;
 	case DISPLAYMODE_LAUNCHER:
 		show_launcher();
+		break;
+	case DISPLAYMODE_OPTIONS:
+		show_options();
 		break;
 	default:
 		show_fonttest();
@@ -25014,6 +25229,7 @@ int main(int argc, char *argv[])
 	init_demon_ui();
 	init_net_setup_ui();
 	init_launcher_ui();
+	init_options_ui();
 	snis_prefs_read_client_tweaks(xdg_base_ctx, set_clientside_variable);
 	setup_joysticks();
 	setup_physical_io_socket();

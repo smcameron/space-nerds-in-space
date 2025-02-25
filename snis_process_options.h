@@ -9,27 +9,25 @@ struct snis_process_options {
 	struct snis_multiverse_options {
 		char autowrangle;
 		char allow_remote_networks;
-		char lobbyhost[256];
 		char nickname[15];
 		char location[20];
 		char exempt[20];
-		char has_port_range;
-		unsigned short minport;
-		unsigned short maxport;
+		char has_fixed_port_number;
+		char port_number[15];
+		char ss_port_range[15];
 	} snis_multiverse;
 	struct snis_server_options {
 		char allow_remote_networks;
 		char enable_enscript;
-		char lobbyhost[256];
 		char nickname[15];
 		char location[20];
 		char multiverse_location[20];
 		char solarsystem[20];
 		char has_port_range;
-		unsigned short minport;
-		unsigned short maxport;
-		char nolobby;
+		char port_range[15];
 	} snis_server;
+	char lobbyhost[256];
+	char nolobby;
 };
 
 struct snis_process_options snis_process_options_default(void);

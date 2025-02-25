@@ -84,6 +84,10 @@ static char **build_multiverse_argv(char *multiverse_server)
 		argc++;
 	if (options.snis_multiverse.allow_remote_networks)
 		argc++;
+	if (options.snis_multiverse.has_fixed_port_number)
+		argc += 2;
+	if (options.snis_server.has_port_range)
+		argc += 2;
 
 	argv = calloc(argc, sizeof(char *));
 
@@ -94,9 +98,17 @@ static char **build_multiverse_argv(char *multiverse_server)
 		argv[i++] = strdup("-a");
 	if (options.snis_multiverse.allow_remote_networks)
 		argv[i++] = strdup("--allow-remote-networks");
+	if (options.snis_multiverse.has_fixed_port_number) {
+		argv[i++] = strdup("-p");
+		argv[i++] = strdup(options.snis_multiverse.port_number);
+	}
+	if (options.snis_server.has_port_range) {
+		argv[i++] = strdup("--snis-server-portrange");
+		argv[i++] = strdup(options.snis_server.port_range);
+	}
 
 	argv[i++] = strdup("-l");
-	argv[i++] = strdup(options.snis_multiverse.lobbyhost);
+	argv[i++] = strdup(options.lobbyhost);
 	argv[i++] = strdup("-n");
 	argv[i++] = strdup(options.snis_multiverse.nickname);
 	argv[i++] = strdup("-L");
@@ -115,6 +127,8 @@ static char **build_snis_server_argv(char *server)
 
 	if (options.snis_server.allow_remote_networks)
 		argc++;
+	if (options.snis_server.has_port_range)
+		argc += 2;
 
 	argv = calloc(argc, sizeof(char *));
 
@@ -123,9 +137,14 @@ static char **build_snis_server_argv(char *server)
 	argv[i++] = strdup(server);
 	if (options.snis_server.allow_remote_networks)
 		argv[i++] = strdup("--allow-remote-networks");
+	if (options.snis_server.has_port_range &&
+				port_range_formatted_correctly(options.snis_server.port_range)) {
+		argv[i++] = strdup("--portrange");
+		argv[i++] = strdup(options.snis_server.port_range);
+	}
 
 	argv[i++] = strdup("-l");
-	argv[i++] = strdup(options.snis_server.lobbyhost);
+	argv[i++] = strdup(options.lobbyhost);
 	argv[i++] = strdup("-L");
 	argv[i++] = strdup(options.snis_server.location);
 	argv[i++] = strdup("-m");
