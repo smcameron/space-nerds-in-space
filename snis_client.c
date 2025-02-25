@@ -21314,58 +21314,47 @@ exit_forker_process:
 
 }
 
-static void start_ssgl_btn_pressed(__attribute__((unused)) void *x)
+static void write_to_forker(char ch)
 {
 	int rc;
-	char ch = FORKER_START_SSGL;
+
 	if (pipe_to_forker_process >= 0)
 		rc = write(pipe_to_forker_process, &ch, 1);
 	(void) rc;
+}
+
+static void start_ssgl_btn_pressed(__attribute__((unused)) void *x)
+{
+	write_to_forker(FORKER_START_SSGL);
 }
 
 static void start_snis_multiverse_btn_pressed(void *x)
 {
-	int rc;
 	int *autowrangle = x;
 	char ch = *autowrangle ? FORKER_START_MULTIVERSE_AUTOWRANGLE :
 						FORKER_START_MULTIVERSE_NO_AUTOWRANGLE;
-	if (pipe_to_forker_process >= 0)
-		rc = write(pipe_to_forker_process, &ch, 1);
-	(void) rc;
+	write_to_forker(ch);
 }
 
 static void start_snis_server_btn_pressed(__attribute__((unused)) void *x)
 {
-	int rc;
-	char ch = FORKER_START_SNIS_SERVER;
-	if (pipe_to_forker_process >= 0)
-		rc = write(pipe_to_forker_process, &ch, 1);
-	(void) rc;
+	write_to_forker(FORKER_START_SNIS_SERVER);
 }
 
 static void stop_forker_process(void)
 {
-	int rc;
-	char ch = FORKER_QUIT;
-	if (pipe_to_forker_process >= 0)
-		rc = write(pipe_to_forker_process, &ch, 1);
+	write_to_forker(FORKER_QUIT);
 	close(pipe_to_forker_process);
-	(void) rc;
 }
 
 static void start_snis_process_terminator(void *x)
 {
-	int rc;
 	int clients_too = (int) (intptr_t) x;
-	char ch;
 
 	if (clients_too)
-		ch = FORKER_KILL_EM_ALL;
+		write_to_forker(FORKER_KILL_EM_ALL);
 	else
-		ch = FORKER_KILL_SERVERS;
-	if (pipe_to_forker_process >= 0)
-		rc = write(pipe_to_forker_process, &ch, 1);
-	(void) rc;
+		write_to_forker(FORKER_KILL_SERVERS);
 }
 
 static void connect_client_btn_pressed(__attribute__((unused)) void *x)
@@ -21381,13 +21370,8 @@ static void launcher_quit_btn_pressed(__attribute__((unused)) void *x)
 
 static void launcher_restart_btn_pressed(__attribute__((unused)) void *x)
 {
-	int rc;
-	char ch;
 
-	ch = FORKER_RESTART_SNIS_CLIENT;
-	if (pipe_to_forker_process >= 0)
-		rc = write(pipe_to_forker_process, &ch, 1);
-	(void) rc;
+	write_to_forker(FORKER_RESTART_SNIS_CLIENT);
 	ssgl_sleep(3);
 	stop_forker_process();
 	exit(0);
@@ -21395,11 +21379,7 @@ static void launcher_restart_btn_pressed(__attribute__((unused)) void *x)
 
 static void launcher_advanced_btn_pressed(__attribute__((unused)) void *x)
 {
-	int rc;
-	char ch = FORKER_ADVANCED;
-	if (pipe_to_forker_process >= 0)
-		rc = write(pipe_to_forker_process, &ch, 1);
-	(void) rc;
+	write_to_forker(FORKER_ADVANCED);
 }
 
 static struct launcher_ui {
@@ -21431,12 +21411,7 @@ static void autowrangle_checkbox_pressed(__attribute__((unused)) void *x)
 
 static void launcher_update_assets_btn_pressed(__attribute__((unused)) void *x)
 {
-	int rc;
-	char ch = FORKER_UPDATE_ASSETS;
-
-	if (pipe_to_forker_process >= 0)
-		rc = write(pipe_to_forker_process, &ch, 1);
-	(void) rc;
+	write_to_forker(FORKER_UPDATE_ASSETS);
 }
 
 static double sample_ssglcount(void)
