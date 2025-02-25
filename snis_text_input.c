@@ -297,3 +297,9 @@ void snis_text_input_box_update_position(struct snis_text_input_box *t, int x, i
 	t->x = x;
 	t->y = y;
 }
+
+void snis_text_input_box_set_color(struct snis_text_input_box *t, int color)
+{
+	t->color = color;
+}
+

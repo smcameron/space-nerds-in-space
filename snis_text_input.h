@@ -72,5 +72,7 @@ GLOBAL void snis_text_input_box_update_position(struct snis_text_input_box *t, i
 /* Get the pointer to the text box's associated buffer */
 GLOBAL char *snis_text_input_box_get_buffer(struct snis_text_input_box *t);
 
+GLOBAL void snis_text_input_box_set_color(struct snis_text_input_box *t, int color);
+
 #undef GLOBAL
 #endif
