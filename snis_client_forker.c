@@ -34,6 +34,7 @@
 #include "xdg_base_dir_spec.h"
 #include "string-utils.h"
 #include "snis_client_forker.h"
+#include "snis_process_options.h"
 
 static int pipe_to_forker_process;
 
@@ -95,17 +96,47 @@ static char **build_multiverse_argv(char *multiverse_server)
 		argv[i++] = strdup("--allow-remote-networks");
 
 	argv[i++] = strdup("-l");
-	argv[i++] = strdup("localhost");
+	argv[i++] = strdup(options.snis_multiverse.lobbyhost);
 	argv[i++] = strdup("-n");
-	argv[i++] = strdup("nickname");
+	argv[i++] = strdup(options.snis_multiverse.nickname);
 	argv[i++] = strdup("-L");
-	argv[i++] = strdup("narnia");
+	argv[i++] = strdup(options.snis_multiverse.location);
 	argv[i++] = strdup("-e");
-	argv[i++] = strdup("default");
+	argv[i++] = strdup(options.snis_multiverse.exempt);
 	argv[i++] = NULL;
 
 	return argv;
 }
+
+static char **build_snis_server_argv(char *server)
+{
+	int argc = 10;
+	char **argv;
+
+	if (options.snis_server.allow_remote_networks)
+		argc++;
+
+	argv = calloc(argc, sizeof(char *));
+
+	int i = 0;
+
+	argv[i++] = strdup(server);
+	if (options.snis_server.allow_remote_networks)
+		argv[i++] = strdup("--allow-remote-networks");
+
+	argv[i++] = strdup("-l");
+	argv[i++] = strdup(options.snis_server.lobbyhost);
+	argv[i++] = strdup("-L");
+	argv[i++] = strdup(options.snis_server.location);
+	argv[i++] = strdup("-m");
+	argv[i++] = strdup(options.snis_server.multiverse_location);
+	argv[i++] = strdup("-s");
+	argv[i++] = strdup(options.snis_server.solarsystem);
+	argv[i++] = NULL;
+
+	return argv;
+}
+
 
 static void fork_multiverse(void)
 {
@@ -176,14 +207,15 @@ static void fork_snis_server(void)
 	fprintf(stderr, "Forking snis_server\n");
 	fprintf(stderr, "%s\n", snis_server);
 
+	char **ss_argv = build_snis_server_argv(snis_server);
+
 	int rc = fork();
 	if (!rc) { /* child process */
 		close(pipe_to_forker_process);
 		/* Set stderr and stdout to got to snis_server_log.txt */
 		(void) dup2(fd, 1);
 		(void) dup2(fd, 2);
-		execl(snis_server, snis_server,
-			"-l", "localhost", "-L", "DEFAULT", "-m", "narnia", "-s", "default", NULL);
+		execv(snis_server, ss_argv);
 		rc = write(2, "execl failed.\n", 14);
 		(void) rc; /* shut clang scan-build up. */
 		_exit(1);
@@ -344,30 +376,31 @@ void fork_update_assets(int background_task, int local_only)
 	free(update_assets);
 }
 
-/* Read a character from the pipe from snis_client and interpret it as a flag.
- * We use this to set various things in launcher, which since we are forked off
- * we have our own copy of them.
- */
-static int forker_read_flag_value_from_pipe(int pipefd, int *flag)
+static int forker_read_options_from_pipe(int pipefd, struct snis_process_options *options)
 {
-	do {
-		int rc;
-		char ch;
+	int rc;
+	int bytes_read, bytes_to_read;
 
-		rc = read(pipefd, &ch, 1);
-		if (rc == 0)
-			return -1;
-		if (rc == -1) {
+	char *c = (char *) options;
+	bytes_read = 0;
+	bytes_to_read = sizeof(*options);
+
+	do {
+		rc = read(pipefd, c, bytes_to_read);
+		if (rc < 0) {
 			if (errno == EINTR)
 				continue;
-			return -1;
+			fprintf(stderr, "snis_client forker process: error reading from pipe: %s\n", strerror(errno));
+			fprintf(stderr, "exiting.\n");
+			exit(1);
 		}
-		if (ch)
-			*flag = 1;
-		else
-			*flag = 0;
-		return 0;
-	} while (1);
+		if (rc == 0) /* eof */
+			exit(1);
+		bytes_to_read -= rc;
+		bytes_read += rc;
+		c += rc;
+	} while (bytes_to_read > 0);
+	return 0;
 }
 
 /* An SDL2 program can't just fork/exec at any time, so we fork off this forker thing
@@ -380,6 +413,8 @@ void forker_process_start(int *pipe_to_forker_process, char **saved_argv)
 {
 	int rc, pipefd[2];
 	char ch;
+
+	options = snis_process_options_default();
 
 	memset(&options, 0, sizeof(options));
 
@@ -423,12 +458,8 @@ void forker_process_start(int *pipe_to_forker_process, char **saved_argv)
 				case FORKER_RESTART_SNIS_CLIENT:
 					fork_restart_snis_client(saved_argv);
 					break;
-				case FORKER_SET_AUTOWRANGLE:
-					if (forker_read_flag_value_from_pipe(pipefd[0], &options.snis_multiverse.autowrangle))
-						goto exit_forker_process;
-					break;
-				case FORKER_SET_ALLOW_REMOTE_NETWORKS:
-					if (forker_read_flag_value_from_pipe(pipefd[0], &options.snis_multiverse.allow_remote_networks))
+				case FORKER_UPDATE_PROCESS_OPTIONS:
+					if (forker_read_options_from_pipe(pipefd[0], &options))
 						goto exit_forker_process;
 					break;
 				case FORKER_QUIT:

@@ -141,6 +141,7 @@
 #include "fallthrough.h"
 #include "png_utils.h"
 #include "snis_client_forker.h"
+#include "snis_process_options.h"
 
 #define SHIP_COLOR CYAN
 #define STARBASE_COLOR RED
@@ -318,6 +319,7 @@ static int real_screen_height;
 static int time_to_set_window_size = 0;
 int pipe_to_splash_screen = -1;
 int pipe_to_forker_process = -1;
+static struct snis_process_options child_process_options;
 static int skip_splash_screen = 0;
 static float original_aspect_ratio;
 static int window_manager_can_constrain_aspect_ratio = 0;
@@ -20950,6 +20952,29 @@ static void write_to_forker(char ch)
 	(void) rc;
 }
 
+static void write_process_options_to_forker(struct snis_process_options *options)
+{
+	int rc, bytes_to_write;
+	char *c = (char *) options;
+	char ch = FORKER_UPDATE_PROCESS_OPTIONS;
+
+	rc = write(pipe_to_forker_process, &ch, 1);
+	(void) rc;
+
+	bytes_to_write = sizeof(*options);
+	do {
+		rc = write(pipe_to_forker_process, c, bytes_to_write);
+		if (rc < 0) {
+			if (errno == EINTR)
+				continue;
+			fprintf(stderr, "snis_client: error writing to forker process, %s\n", strerror(errno));
+			break;
+		}
+		bytes_to_write -= rc;
+		c += rc;
+	} while (bytes_to_write > 0);
+}
+
 static void start_ssgl_btn_pressed(__attribute__((unused)) void *x)
 {
 	write_to_forker(FORKER_START_SSGL);
@@ -21026,32 +21051,45 @@ static struct launcher_ui {
 	int multiverse_count;
 	int snis_server_count;
 	int snis_client_count;
-	int autowrangle;
-	int allow_remote_networks;
 } launcher_ui;
 
 static void autowrangle_checkbox_pressed(__attribute__((unused)) void *x)
 {
-	launcher_ui.autowrangle = !launcher_ui.autowrangle;
-	write_to_forker(FORKER_SET_AUTOWRANGLE);
-	write_to_forker((char) launcher_ui.autowrangle);
+	child_process_options.snis_multiverse.autowrangle = !child_process_options.snis_multiverse.autowrangle;
+	write_process_options_to_forker(&child_process_options);
 }
 
 static int autowrangle_checkbox_status(__attribute__((unused)) void *x)
 {
-	return launcher_ui.autowrangle;
+	return child_process_options.snis_multiverse.autowrangle;
 }
 
 static void allow_any_network_checkbox_pressed(__attribute__((unused)) void *x)
 {
-	launcher_ui.allow_remote_networks = !launcher_ui.allow_remote_networks;
-	write_to_forker(FORKER_SET_ALLOW_REMOTE_NETWORKS);
-	write_to_forker((char) launcher_ui.allow_remote_networks);
+	child_process_options.snis_multiverse.allow_remote_networks =
+			!child_process_options.snis_multiverse.allow_remote_networks;
+
+	/* If multiverse allow any networks, then snis_server must too */
+	if (child_process_options.snis_multiverse.allow_remote_networks)
+		child_process_options.snis_server.allow_remote_networks = 1;
+	write_process_options_to_forker(&child_process_options);
 }
 
 static int allow_any_network_checkbox_status(__attribute__((unused)) void *x)
 {
-	return launcher_ui.allow_remote_networks;
+	return (int) child_process_options.snis_multiverse.allow_remote_networks;
+}
+
+static void ss_allow_any_network_checkbox_pressed(__attribute__((unused)) void *x)
+{
+	child_process_options.snis_server.allow_remote_networks =
+			!child_process_options.snis_server.allow_remote_networks;
+	write_process_options_to_forker(&child_process_options);
+}
+
+static int ss_allow_any_network_checkbox_status(__attribute__((unused)) void *x)
+{
+	return (int) child_process_options.snis_server.allow_remote_networks;
 }
 
 static void launcher_update_assets_btn_pressed(__attribute__((unused)) void *x)
@@ -21152,7 +21190,10 @@ static void init_launcher_ui(void)
 	pull_down_menu_add_row(launcher_ui.menu, "SNIS CLIENT OPTIONS", "OPTION 2", NULL, NULL);
 	pull_down_menu_add_row(launcher_ui.menu, "SNIS CLIENT OPTIONS", "OPTION 3", NULL, NULL);
 	pull_down_menu_add_column(launcher_ui.menu, "SNIS SERVER OPTIONS");
-	pull_down_menu_add_row(launcher_ui.menu, "SNIS SERVER OPTIONS", "OPTION 1", NULL, NULL);
+	pull_down_menu_add_row(launcher_ui.menu, "SNIS SERVER OPTIONS", "ALLOW CLIENTS FROM ANY NETWORK",
+				ss_allow_any_network_checkbox_pressed, NULL);
+	pull_down_menu_set_checkbox_function(launcher_ui.menu, "SNIS SERVER OPTIONS",
+				"ALLOW CLIENTS FROM ANY NETWORK", ss_allow_any_network_checkbox_status, NULL);
 	pull_down_menu_add_row(launcher_ui.menu, "SNIS SERVER OPTIONS", "OPTION 2", NULL, NULL);
 	pull_down_menu_add_row(launcher_ui.menu, "SNIS SERVER OPTIONS", "OPTION 3", NULL, NULL);
 	pull_down_menu_add_column(launcher_ui.menu, "SNIS MULTIVERSE OPTIONS");
@@ -21250,8 +21291,6 @@ static void init_launcher_ui(void)
 	launcher_ui.multiverse_count = 0;
 	launcher_ui.snis_server_count = 0;
 	launcher_ui.snis_client_count = 0;
-	launcher_ui.autowrangle = 1;
-	launcher_ui.allow_remote_networks = 0;
 }
 
 static int get_process_count(char *pattern)
@@ -24853,6 +24892,7 @@ static char **saved_argv;
 int main(int argc, char *argv[])
 {
 	refuse_to_run_as_root("snis_client");
+	child_process_options = snis_process_options_default();
 	save_args(argc, argv, &saved_argv);
 	print_args(argc, argv);
 	displaymode = DISPLAYMODE_LAUNCHER; /* DISPLAYMODE_NETWORK_SETUP; */
