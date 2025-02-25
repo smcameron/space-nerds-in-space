@@ -21640,6 +21640,8 @@ static void collect_process_stats(void)
 	launcher_ui.snis_client_count = get_process_count("[/]snis_client") / 2;
 }
 
+static int already_checked_asset_update_time = 0;
+
 static void maybe_show_downloading_message(void)
 {
 	static int framecounter = 0;
@@ -21668,6 +21670,8 @@ static void maybe_show_downloading_message(void)
 			if (download_in_progress) {
 				/* download has finished, unhide the restart button */
 				ui_unhide_widget(launcher_ui.restart_btn);
+				/* make the asset update button get disabled */
+				already_checked_asset_update_time = 0;
 			}
 		}
 	}
@@ -21680,15 +21684,14 @@ static void maybe_show_downloading_message(void)
 
 static int assets_updated_too_recently(void)
 {
-	static int already_checked = 0;
 	static int answer = 0;
 
-	if (already_checked)
+	if (already_checked_asset_update_time)
 		return answer;
 
 	char *last_update = xdg_base_slurp_file(xdg_base_ctx, "last_asset_update_time.txt");
 	time_t last_update_time;
-	already_checked = 1;
+	already_checked_asset_update_time = 1;
 
 	if (!last_update) {
 		answer = 0;
