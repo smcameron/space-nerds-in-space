@@ -244,6 +244,12 @@ struct ui_color_map {
 	struct ui_color_entry quit_border;
 	struct ui_color_entry quit_selection;
 	struct ui_color_entry quit_unselected;
+
+	struct ui_color_entry launcher_button;
+	struct ui_color_entry launcher_text;
+	struct ui_color_entry launcher_gauge;
+	struct ui_color_entry launcher_gauge_needle;
+	struct ui_color_entry launcher_missing_assets;
 };
 
 GLOBAL struct ui_color_map_accessor {
@@ -451,6 +457,12 @@ GLOBAL struct ui_color_map_accessor {
 	.u.map.quit_border		= { RED,		"quit-border"},
 	.u.map.quit_selection		= { WHITE,		"quit-selection"},
 	.u.map.quit_unselected		= { RED,		"quit-unselected"},
+
+	.u.map.launcher_button		= { LIMEGREEN,		"launcher-button" },
+	.u.map.launcher_text		= { LIMEGREEN,		"launcher-text" },
+	.u.map.launcher_gauge		= { AMBER,		"launcher-gauge" },
+	.u.map.launcher_gauge_needle	= { RED,		"launcher-gauge-needle" },
+	.u.map.launcher_missing_assets	= { RED,		"launcher-missing-assets" },
 
 	.u.map.last_color		= { GREEN_FIXUP,	"last-color" },
 	}

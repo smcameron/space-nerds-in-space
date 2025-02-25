@@ -9164,7 +9164,7 @@ static void show_common_screen(char *title)
 	}
 
 	if (missing_assets_detected) {
-		sng_set_foreground(RED);
+		sng_set_foreground(UI_COLOR(launcher_missing_assets));
 		if (timer & 0x8)
 			sng_center_xy_draw_string("MISSING ASSETS DETECTED",
 					SMALL_FONT, SCREEN_WIDTH / 2, 3 * SCREEN_HEIGHT / 4);
@@ -21465,7 +21465,7 @@ static void init_launcher_ui(void)
 
 	x = txx(100);
 	y = txy(100);
-	int active_button_color = UI_COLOR(network_setup_active);
+	int active_button_color = UI_COLOR(launcher_button);
 
 	launcher_ui.start_ssgl_btn = snis_button_init(x, y, -1, -1, "START LOBBY SERVER",
 				active_button_color, TINY_FONT, start_ssgl_btn_pressed, 0);
@@ -21504,21 +21504,21 @@ static void init_launcher_ui(void)
 				active_button_color, TINY_FONT, launcher_restart_btn_pressed, 0);
 
 	launcher_ui.ssgl_gauge = gauge_init(txx(450), txy(100), 150, 0.0, 100.0, -120.0 * M_PI / 180.0,
-			120.0 * 2.0 * M_PI / 180.0, UI_COLOR(weap_gauge_needle), UI_COLOR(weap_gauge),
+			120.0 * 2.0 * M_PI / 180.0, UI_COLOR(launcher_gauge_needle), UI_COLOR(launcher_gauge),
 			10, "LOBBY", sample_ssglcount);
 	gauge_set_fonts(launcher_ui.ssgl_gauge, NANO_FONT, NANO_FONT);
 
 	launcher_ui.multiverse_gauge = gauge_init(txx(600), txy(100), 150, 0.0, 100.0, -120.0 * M_PI / 180.0,
-			120.0 * 2.0 * M_PI / 180.0, UI_COLOR(weap_gauge_needle), UI_COLOR(weap_gauge),
+			120.0 * 2.0 * M_PI / 180.0, UI_COLOR(launcher_gauge_needle), UI_COLOR(launcher_gauge),
 			10, "MULTIVERSE", sample_multiversecount);
 	gauge_set_fonts(launcher_ui.multiverse_gauge, NANO_FONT, NANO_FONT);
 
 	launcher_ui.snis_server_gauge = gauge_init(txx(450), txy(300), 150, 0.0, 10.0, -120.0 * M_PI / 180.0,
-			120.0 * 2.0 * M_PI / 180.0, UI_COLOR(weap_gauge_needle), UI_COLOR(weap_gauge),
+			120.0 * 2.0 * M_PI / 180.0, UI_COLOR(launcher_gauge_needle), UI_COLOR(launcher_gauge),
 			10, "SNIS SERV", sample_snis_servercount);
 	gauge_set_fonts(launcher_ui.snis_server_gauge, NANO_FONT, NANO_FONT);
 	launcher_ui.snis_client_gauge = gauge_init(txx(600), txy(300), 150, 0.0, 10.0, -120.0 * M_PI / 180.0,
-			120.0 * 2.0 * M_PI / 180.0, UI_COLOR(weap_gauge_needle), UI_COLOR(weap_gauge),
+			120.0 * 2.0 * M_PI / 180.0, UI_COLOR(launcher_gauge_needle), UI_COLOR(launcher_gauge),
 			10, "SNIS CLIENT", sample_snis_clientcount);
 	gauge_set_fonts(launcher_ui.snis_client_gauge, NANO_FONT, NANO_FONT);
 
@@ -21675,7 +21675,7 @@ static void maybe_show_downloading_message(void)
 			}
 		}
 	}
-	sng_set_foreground(UI_COLOR(network_setup_active));
+	sng_set_foreground(UI_COLOR(launcher_text));
 	sng_abs_xy_draw_string(message, TINY_FONT, txx(100), txy(500));
 	if (strcmp(message, "") != 0)
 		sng_abs_xy_draw_string("(RESTART SNIS_CLIENT TO PICK UP NEW ASSETS)",
