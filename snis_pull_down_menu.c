@@ -191,6 +191,7 @@ struct pull_down_menu *create_pull_down_menu(int font, int screen_width)
 	return m;
 }
 
+#define CHECK_BOX_SPACE 30
 static void update_menu_column_width(struct pull_down_menu_column *c, int font)
 {
 	int i;
@@ -201,9 +202,9 @@ static void update_menu_column_width(struct pull_down_menu_column *c, int font)
 	for (i = 0; i < c->nrows; i++) {
 		sng_string_bounding_box(c->item[i].name, font, &x1, &y1, &x2, &y2);
 		if (i == 0)
-			c->title_width = 20 + fabsf(x2 - x1) + 10 + 20 * (c->item[i].checkbox_function != NULL);
+			c->title_width = 20 + fabsf(x2 - x1) + 10 + CHECK_BOX_SPACE * (c->item[i].checkbox_function != NULL);
 		if (fabsf(x2 - x1) + 10 + 20 * (c->item[i].checkbox_function != NULL) > c->width)
-			c->width = fabsf(x2 - x1) + 10 + 20 * (c->item[i].checkbox_function != NULL);
+			c->width = fabsf(x2 - x1) + 10 + CHECK_BOX_SPACE * (c->item[i].checkbox_function != NULL);
 	}
 }
 
@@ -260,7 +261,7 @@ static void draw_menu_col(struct pull_down_menu *m, int col, float y, int curren
 		struct pull_down_menu_item *r = &c->item[i];
 		if (r->checkbox_function) {
 			cb = r->checkbox_function(r->checkbox_cookie);
-			cbw = 20;
+			cbw = CHECK_BOX_SPACE;
 		} else {
 			cb = 0;
 			cbw = 0;
@@ -281,16 +282,13 @@ static void draw_menu_col(struct pull_down_menu *m, int col, float y, int curren
 			sng_current_draw_line(x, y + font_lineheight[font] + 6,
 				x + width, y + font_lineheight[font] + 6);
 		if (cbw) {
-			float x1, y1, x2, y2;
+			float x1, y1;
 			x1 = x + 5;
-			x2 = x1 + 16;
-			y1 = y + 8;
-			y2 = y1 + 16;
-			sng_current_draw_rectangle(0, x1, y1, 16, 16);
-			if (cb) {
-				sng_current_draw_line(x1, y1, x2, y2);
-				sng_current_draw_line(x1, y2, x2, y1);
-			}
+			y1 = y + 10;
+			if (cb)
+				sng_current_draw_rectangle(1, x1, y1, 16, 16);
+			else
+				sng_current_draw_rectangle(0, x1, y1, 16, 16);
 		}
 		y = y + font_lineheight[font];
 		if ((i == current_row || i == 0) && col == m->current_col)
