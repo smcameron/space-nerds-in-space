@@ -566,7 +566,8 @@ _COMMONCLIENTOBJS= snis_ui_element.o snis_font.o snis_text_input.o \
 	snis_strip_chart.o material.o stl_parser.o entity.o matrix.o my_point.o liang-barsky.o joystick.o \
 	quat.o vec4.o thrust_attachment.o docking_port.o ui_colors.o snis_keyboard.o solarsystem_config.o \
 	pronunciation.o snis_preferences.o snis_pull_down_menu.o snis_client_debug.o starmap_adjacency.o \
-	shape_collision.o oriented_bounding_box.o xdg_base_dir_spec.o snis_voice_chat.o read_menu_file.o
+	shape_collision.o oriented_bounding_box.o xdg_base_dir_spec.o snis_voice_chat.o read_menu_file.o \
+	snis_client_forker.o
 COMMONCLIENTOBJS=${COMMONOBJS} ${OGGOBJ} ${SNDOBJS} $(patsubst %,$(OD)/%,${_COMMONCLIENTOBJS}) 
 
 _CLIENTOBJS= shader.o graph_dev_opengl.o opengl_cap.o snis_graph.o snis_client.o joystick_config.o snis_xwindows_hacks.o png_utils.o
@@ -1216,6 +1217,9 @@ $(OD)/string-utils.o:	string-utils.c Makefile ${ODT}
 	$(Q)$(COMPILE)
 
 $(OD)/read_menu_file.o:	read_menu_file.c read_menu_file.h string-utils.h Makefile ${ODT}
+	$(Q)$(COMPILE)
+
+$(OD)/snis_client_forker.o:	snis_client_forker.c snis_client_forker.h string-utils.h Makefile ${ODT}
 	$(Q)$(COMPILE)
 
 $(OD)/xdg_base_dir_spec.o:	xdg_base_dir_spec.c xdg_base_dir_spec.h Makefile ${ODT}

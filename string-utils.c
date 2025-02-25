@@ -334,3 +334,20 @@ int port_range_formatted_correctly(char *port_range)
 	return 1;
 }
 
+/* Copy program arguments into an something suitable for calling execv() */
+void save_args(int argc, char *argv[], char ***saved_argv)
+{
+	*saved_argv = calloc(sizeof((*saved_argv)[0]), argc + 1);
+	for (int i = 0; i < argc; i++)
+		(*saved_argv)[i] = strdup(argv[i]);
+	(*saved_argv)[argc] = NULL;
+}
+
+/* Free args allocated by save_args(); */
+void free_argv(char **argv)
+{
+        for (int i = 0; argv[i]; i++)
+                free(argv[i]);
+        free(argv);
+}
+
