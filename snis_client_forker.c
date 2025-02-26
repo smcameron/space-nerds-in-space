@@ -297,30 +297,6 @@ static void fork_snis_process_terminator(int clients_too)
 		exit(0); /* "There's one more chip."  Taps forehead. */
 }
 
-static void fork_snis_launcher(void)
-{
-	char *executable_path = get_executable_path();
-	char cmd[PATH_MAX * 2];
-
-	if (!executable_path)
-		return;
-
-	char *snis_launcher = malloc(PATH_MAX * 2);
-	snprintf(snis_launcher, PATH_MAX * 2, "%s", executable_path);
-	dirname(snis_launcher);
-	strcat(snis_launcher, "/snis_launcher");
-
-	/* Why is there no xdg-terminal command?  We'll try gnome terminal, with xterm as fallback. */
-	snprintf(cmd, sizeof(cmd), "gnome-terminal -- %s || xterm -e %s", snis_launcher, snis_launcher);
-
-	int rc = system(cmd);
-	/* Unfortunately, we cannot detect if gnome-terminal or xterm succeeded */
-	/* Because even if they do succeed, they background themselves and we */
-	/* can't get the status, so it appears that they failed even when they didn't. */
-	(void) rc;
-	free(snis_launcher);
-}
-
 static void fork_restart_snis_client(char **saved_argv)
 {
 	char *executable_path = get_executable_path();
@@ -469,9 +445,6 @@ void forker_process_start(int *pipe_to_forker_process, char **saved_argv)
 					break;
 				case FORKER_KILL_EM_ALL:
 					fork_snis_process_terminator(1);
-					break;
-				case FORKER_ADVANCED:
-					fork_snis_launcher();
 					break;
 				case FORKER_UPDATE_ASSETS:
 					fork_update_assets(1, 0);

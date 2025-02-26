@@ -21113,11 +21113,6 @@ static void launcher_restart_btn_pressed(__attribute__((unused)) void *x)
 	exit(0);
 }
 
-static void launcher_advanced_btn_pressed(__attribute__((unused)) void *x)
-{
-	write_to_forker(FORKER_ADVANCED);
-}
-
 static void launcher_options_btn_pressed(__attribute__((unused)) void *x)
 {
 	displaymode = DISPLAYMODE_OPTIONS;
@@ -21340,7 +21335,6 @@ static struct launcher_ui {
 	struct button *stop_all_snis_btn;
 	struct button *update_assets_btn;
 	struct button *options_btn;
-	struct button *advanced_btn;
 	struct button *quit_btn;
 	struct gauge *ssgl_gauge;
 	struct gauge *multiverse_gauge;
@@ -21408,11 +21402,8 @@ static void init_launcher_ui(void)
 				active_button_color, TINY_FONT, launcher_update_assets_btn_pressed, 0);
 	snis_button_set_disabled_color(launcher_ui.update_assets_btn, DARKGREEN);
 	y += txy(40);
-	launcher_ui.options_btn = snis_button_init(x, y, -1, -1, "OPTIONS",
+	launcher_ui.options_btn = snis_button_init(x, y, -1, -1, "OPTIONS . . .",
 				active_button_color, TINY_FONT, launcher_options_btn_pressed, 0);
-	y += txy(40);
-	launcher_ui.advanced_btn = snis_button_init(x, y, -1, -1, "ADVANCED OPTIONS",
-				active_button_color, TINY_FONT, launcher_advanced_btn_pressed, 0);
 	y += txy(40);
 	launcher_ui.quit_btn = snis_button_init(x, y, -1, -1, "QUIT",
 				active_button_color, TINY_FONT, launcher_quit_btn_pressed, 0);
@@ -21474,10 +21465,6 @@ static void init_launcher_ui(void)
 	ui_add_button(launcher_ui.options_btn, DISPLAYMODE_LAUNCHER,
 			"OPTIONS\n\n"
 			"ALLOWS YOU TO SET VARIOUS OPTIONS.");
-	ui_add_button(launcher_ui.advanced_btn, DISPLAYMODE_LAUNCHER,
-			"ADVANCED OPTIONS\n\n"
-			"THIS RUNS THE SNIS_LAUNCHER SCRIPT WHICH HAS A FEW MORE\n"
-			"SPECIALIZED OPTIONS AVAILABLE THAN THIS LAUNCHER SCREEN DOES.");
 	ui_add_button(launcher_ui.quit_btn, DISPLAYMODE_LAUNCHER,
 			"QUIT SPACE NERDS IN SPACE\n\n"
 			"QUIT THIS SNIS_CLIENT PROCESS.\n\n"
