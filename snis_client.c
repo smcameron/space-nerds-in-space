@@ -21392,7 +21392,7 @@ static void init_launcher_ui(void)
 				active_button_color, TINY_FONT, start_snis_server_btn_pressed, 0);
 	snis_button_set_disabled_color(launcher_ui.start_snis_server_btn, DARKGREEN);
 	y += txy(40);
-	launcher_ui.connect_client_btn = snis_button_init(x, y, -1, -1, "CONNECT CLIENT",
+	launcher_ui.connect_client_btn = snis_button_init(x, y, -1, -1, "CONNECT CLIENT TO SNIS SERVER",
 				active_button_color, TINY_FONT, connect_client_btn_pressed, 0);
 	y += txy(40);
 	launcher_ui.stop_all_snis_btn = snis_button_init(x, y, -1, -1, "STOP ALL SERVER PROCESSES",
@@ -21645,10 +21645,13 @@ static void show_launcher(void)
 {
 	static int framecounter = 0;
 
-	if (avoid_lobby)
+	if (avoid_lobby) {
 		snis_button_disable(launcher_ui.start_ssgl_btn);
-	else
+		snis_button_set_label(launcher_ui.connect_client_btn, "CONNECT CLIENT TO SNIS SERVER");
+	} else {
 		snis_button_enable(launcher_ui.start_ssgl_btn);
+		snis_button_set_label(launcher_ui.connect_client_btn, "CONNECT CLIENT TO LOBBY");
+	}
 
 	if (multiverse_options_are_correct() && !avoid_lobby)
 		snis_button_enable(launcher_ui.start_snis_multiverse_btn);
