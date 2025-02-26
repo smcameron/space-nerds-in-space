@@ -442,7 +442,7 @@ GLOBAL struct ui_color_map_accessor {
 
 	.u.map.special_options		= { WHITE,		"special-options" },
 	.u.map.help_text		= { WHITE,		"help-text" },
-	.u.map.tooltip			= { DARKGREEN,		"tooltip" },
+	.u.map.tooltip			= { LIMEGREEN,		"tooltip" },
 	.u.map.sciplane_tooltip		= { LIMEGREEN,		"sciplane-tooltip" },
 
 	.u.map.warp_hash		= { WHITE,		"warp-hash" },
