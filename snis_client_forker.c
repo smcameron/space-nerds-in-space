@@ -129,6 +129,8 @@ static char **build_snis_server_argv(char *server)
 		argc++;
 	if (options.snis_server.has_port_range)
 		argc += 2;
+	if (options.no_lobby)
+		argc += 1;
 
 	argv = calloc(argc, sizeof(char *));
 
@@ -141,6 +143,9 @@ static char **build_snis_server_argv(char *server)
 				port_range_formatted_correctly(options.snis_server.port_range)) {
 		argv[i++] = strdup("--portrange");
 		argv[i++] = strdup(options.snis_server.port_range);
+	}
+	if (options.no_lobby) {
+		argv[i++] = strdup("--nolobby");
 	}
 
 	argv[i++] = strdup("-l");

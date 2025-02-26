@@ -44,7 +44,7 @@ static const struct snis_process_options default_options = {
 		.port_range = "",
 	},
 	.lobbyhost = "localhost",
-	.nolobby = 0,
+	.no_lobby = 0,
 };
 
 struct snis_process_options snis_process_options_default(void)

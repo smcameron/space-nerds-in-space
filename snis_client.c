@@ -7966,6 +7966,10 @@ static int process_update_flare_packet(void)
 
 static struct network_setup_ui {
 	struct button *connect_to_lobby;
+	struct button *connect_to_snis_server;
+	struct snis_text_input_box *snis_server_name_input;
+	struct snis_text_input_box *snis_server_port_input;
+	struct label *ss_name_label, *ss_port_label;
 	struct snis_text_input_box *lobbyservername;
 	struct snis_text_input_box *lobbyport;
 	struct snis_text_input_box *shipname_box;
@@ -8006,6 +8010,8 @@ static struct network_setup_ui {
 	int faction_checkbox_v[MAX_FACTIONS];
 	char lobbyname[60];
 	char lobbyportstr[10];
+	char snis_server_name[60];
+	char snis_server_port[15];
 	char solarsystem[60];
 	char shipname[SHIPNAME_LEN];
 	char password[PASSWORD_LEN];
@@ -20439,21 +20445,6 @@ static void show_warp_limbo_screen(void)
 	}
 }
 
-static void lobby_hostname_entered(__attribute__((unused)) void *unused)
-{
-	printf("lobby hostname entered: %s\n", net_setup_ui.lobbyname);
-}
-
-static void shipname_entered(__attribute__((unused)) void *unused)
-{
-	printf("shipname entered: %s\n", net_setup_ui.shipname);
-}
-
-static void password_entered(__attribute__((unused)) void *unused)
-{
-	printf("password entered\n");
-}
-
 static void sanitize_string(char *s)
 {
 	int i, len;
@@ -20465,25 +20456,13 @@ static void sanitize_string(char *s)
 			s[i] = 'x';
 }
 
-static void connect_to_lobby_button_pressed(__attribute__((unused)) void *unused)
+static int get_ready_to_connect(void)
 {
-	int rc;
-
-	printf("snis_client: connect to lobby pressed\n");
 	/* These must be set to connect to the lobby... */
-	printf("lobbyname = '%s'\n", net_setup_ui.lobbyname);
 	printf("shipname = '%s'\n", net_setup_ui.shipname);
-	if (strcmp(net_setup_ui.lobbyname, "") == 0 ||
-		strcmp(net_setup_ui.shipname, "") == 0 ||
-		strcmp(net_setup_ui.password, "") == 0)
-		return;
+	if (strcmp(net_setup_ui.shipname, "") == 0 || strcmp(net_setup_ui.password, "") == 0)
+		return -1;
 
-	printf("snis_client: connecting to lobby...\n");
-	displaymode = DISPLAYMODE_LOBBYSCREEN;
-	lobbyhost = net_setup_ui.lobbyname;
-	rc = sscanf(net_setup_ui.lobbyportstr, "%d", &lobbyport);
-	if (rc != 1 || use_default_lobby_port)
-		lobbyport = -1; /* let ssgl use default 2914 or $SSGL_PORT if set */
 	shipname = net_setup_ui.shipname;
 	password = net_setup_ui.password;
 	role = 0;
@@ -20515,7 +20494,46 @@ static void connect_to_lobby_button_pressed(__attribute__((unused)) void *unused
 			ROLE_DAMCON | ROLE_SCIENCE | ROLE_COMMS | ROLE_DEMON);
 
 	login_failed_timer = 0; /* turn off any old login failed messages */
+	return 0;
+}
+
+static void connect_to_lobby_button_pressed(__attribute__((unused)) void *unused)
+{
+	int rc;
+
+	if (get_ready_to_connect())
+		return;
+
+	printf("snis_client: connect to lobby pressed\n");
+	/* These must be set to connect to the lobby... */
+	printf("lobbyname = '%s'\n", net_setup_ui.lobbyname);
+	if (strcmp(net_setup_ui.lobbyname, "") == 0)
+		return;
+
+	printf("snis_client: connecting to lobby...\n");
+	displaymode = DISPLAYMODE_LOBBYSCREEN;
+	lobbyhost = net_setup_ui.lobbyname;
+	rc = sscanf(net_setup_ui.lobbyportstr, "%d", &lobbyport);
+	if (rc != 1 || use_default_lobby_port)
+		lobbyport = -1; /* let ssgl use default 2914 or $SSGL_PORT if set */
 	connect_to_lobby();
+}
+
+static void connect_to_snis_server_button_pressed(__attribute__((unused)) void *x)
+{
+	if (get_ready_to_connect())
+		return;
+	int value = -1;
+	int rc = sscanf(net_setup_ui.snis_server_port, "%d", &value);
+	if (rc != 1 || value < 1024 || value > 65535) {
+		displaymode = DISPLAYMODE_NETWORK_SETUP;
+		return;
+	}
+	serverhost = net_setup_ui.snis_server_name;
+	serverport = value;
+	done_with_lobby = 1;
+	lobby_socket = -1;
+	displaymode = DISPLAYMODE_CONNECTING;
 }
 
 static void launcher_button_pressed(__attribute__((unused)) void *v)
@@ -20824,7 +20842,22 @@ static void init_net_setup_ui(void)
 	net_setup_ui.lobbyservername =
 		snis_text_input_box_init(left, y, txy(30), txx(750), input_color, TINY_FONT,
 					net_setup_ui.lobbyname, 50, &timer,
-					lobby_hostname_entered, NULL);
+					NULL, NULL);
+
+
+	net_setup_ui.snis_server_name_input =
+		snis_text_input_box_init(left, y, txy(30), txx(750), input_color, TINY_FONT,
+					net_setup_ui.snis_server_name, sizeof(net_setup_ui.snis_server_name), &timer,
+					NULL, NULL);
+	net_setup_ui.ss_name_label = snis_label_init(left, y - txy(20), "SNIS SERVER HOST", input_color, TINY_FONT);
+	net_setup_ui.snis_server_port_input =
+		snis_text_input_box_init(left, y + yinc * 2, txy(30), txx(100), input_color, TINY_FONT,
+					net_setup_ui.snis_server_port,
+					sizeof(net_setup_ui.snis_server_port), &timer, NULL, NULL);
+	net_setup_ui.ss_port_label = snis_label_init(left, y + yinc * 2 - txy(20),
+						"SNIS SERVER PORT", input_color, TINY_FONT);
+
+
 	net_setup_ui.default_lobby_port_checkbox = snis_button_init(left, y + yinc, txx(140), txy(18),
 					"USE DEFAULT LOBBY PORT", UI_COLOR(network_setup_role), NANO_FONT,
 					use_default_lobby_port_checkbox_pressed, &use_default_lobby_port);
@@ -20837,16 +20870,20 @@ static void init_net_setup_ui(void)
 	net_setup_ui.shipname_box =
 		snis_text_input_box_init(txx(150), y, txy(30), txx(250), input_color, TINY_FONT,
 					net_setup_ui.shipname, sizeof(net_setup_ui.shipname) - 1, &timer,
-					shipname_entered, NULL);
+					NULL, NULL);
 	y += yinc;
 	net_setup_ui.password_box =
 		snis_text_input_box_init(txx(150), y, txy(30), txx(250), input_color, TINY_FONT,
 					net_setup_ui.password, sizeof(net_setup_ui.password), &timer,
-					password_entered, NULL);
+					NULL, NULL);
 	y += yinc;
 	net_setup_ui.connect_to_lobby =
 		snis_button_init(left, y, -1, -1, "ENTER LOBBY xxxxxxxxxxxxxxx", inactive_button_color,
 			TINY_FONT, connect_to_lobby_button_pressed, NULL);
+	net_setup_ui.connect_to_snis_server =
+		snis_button_init(left, y, -1, -1, "CONNECT TO SNIS SERVER", active_button_color,
+			TINY_FONT, connect_to_snis_server_button_pressed, NULL);
+	snis_button_set_disabled_color(net_setup_ui.connect_to_snis_server, RED);
 	net_setup_ui.launcher_button =
 		snis_button_init(left + txx(300), y, -1, -1, "PROCESS LAUNCHER",
 			active_button_color,
@@ -20899,6 +20936,14 @@ static void init_net_setup_ui(void)
 	ui_add_text_input_box(net_setup_ui.lobbyport, DISPLAYMODE_NETWORK_SETUP);
 	ui_add_text_input_box(net_setup_ui.shipname_box, DISPLAYMODE_NETWORK_SETUP);
 	ui_add_text_input_box(net_setup_ui.password_box, DISPLAYMODE_NETWORK_SETUP);
+
+	ui_add_text_input_box(net_setup_ui.snis_server_name_input, DISPLAYMODE_NETWORK_SETUP);
+	ui_add_text_input_box(net_setup_ui.snis_server_port_input, DISPLAYMODE_NETWORK_SETUP);
+	ui_add_label(net_setup_ui.ss_name_label, DISPLAYMODE_NETWORK_SETUP);
+	ui_add_label(net_setup_ui.ss_port_label, DISPLAYMODE_NETWORK_SETUP);
+	ui_add_button(net_setup_ui.connect_to_snis_server, DISPLAYMODE_NETWORK_SETUP,
+			"CONNECT TO SNIS SERVER");
+
 	ui_add_pull_down_menu(net_setup_ui.menu, DISPLAYMODE_NETWORK_SETUP); /* needs to be last */
 	ui_hide_widget(net_setup_ui.lobbyport);
 	if (no_launcher)
@@ -20915,16 +20960,53 @@ static void show_network_setup(void)
 	sng_set_foreground(UI_COLOR(network_setup_text));
 	sng_abs_xy_draw_string("NETWORK SETUP", SMALL_FONT, txx(25), txy(10 + LINEHEIGHT * 2));
 	/* If manual and auto-detected lobbies are the same, hide the manual button. */
-	if (strcmp(net_setup_ui.lobbyname, "") != 0)
-		ui_unhide_widget(net_setup_ui.connect_to_lobby);
-	else
-		ui_hide_widget(net_setup_ui.connect_to_lobby);
 
-	snprintf(button_label, sizeof(button_label), "ENTER LOBBY %s", net_setup_ui.lobbyname);
-	snis_button_set_label(net_setup_ui.connect_to_lobby, button_label);
-	sng_abs_xy_draw_string("LOBBY SERVER NAME OR IP ADDRESS", TINY_FONT, txx(25), txy(130));
-	if (!use_default_lobby_port)
-		sng_abs_xy_draw_string("LOBBY PORT", TINY_FONT, txx(25), txy(240));
+	if (!avoid_lobby) {
+		if (strcmp(net_setup_ui.lobbyname, "") != 0)
+			ui_unhide_widget(net_setup_ui.connect_to_lobby);
+		else
+			ui_hide_widget(net_setup_ui.connect_to_lobby);
+
+		snprintf(button_label, sizeof(button_label), "ENTER LOBBY %s", net_setup_ui.lobbyname);
+		snis_button_set_label(net_setup_ui.connect_to_lobby, button_label);
+		sng_abs_xy_draw_string("LOBBY SERVER NAME OR IP ADDRESS", TINY_FONT, txx(25), txy(130));
+		if (!use_default_lobby_port) {
+			sng_abs_xy_draw_string("LOBBY PORT", TINY_FONT, txx(25), txy(240));
+			ui_unhide_widget(net_setup_ui.lobbyport);
+		} else {
+			ui_hide_widget(net_setup_ui.lobbyport);
+		}
+		ui_unhide_widget(net_setup_ui.default_lobby_port_checkbox);
+		ui_unhide_widget(net_setup_ui.lobbyservername);
+
+		ui_hide_widget(net_setup_ui.snis_server_name_input);
+		ui_hide_widget(net_setup_ui.snis_server_port_input);
+		ui_hide_widget(net_setup_ui.ss_name_label);
+		ui_hide_widget(net_setup_ui.ss_port_label);
+		ui_hide_widget(net_setup_ui.connect_to_snis_server);
+	} else {
+		ui_hide_widget(net_setup_ui.connect_to_lobby);
+		ui_hide_widget(net_setup_ui.default_lobby_port_checkbox);
+		ui_hide_widget(net_setup_ui.lobbyport);
+		ui_hide_widget(net_setup_ui.lobbyservername);
+
+		ui_unhide_widget(net_setup_ui.snis_server_name_input);
+		ui_unhide_widget(net_setup_ui.snis_server_port_input);
+		ui_unhide_widget(net_setup_ui.ss_name_label);
+		ui_unhide_widget(net_setup_ui.ss_port_label);
+		ui_unhide_widget(net_setup_ui.connect_to_snis_server);
+
+		int rc, v;
+
+		v = -1;
+		rc = sscanf(net_setup_ui.snis_server_port, "%d", &v);
+		if (rc == 1 && v > 1023 && v <= 65535 && strcmp(net_setup_ui.snis_server_name, "") != 0 &&
+					strcmp(net_setup_ui.password, "") != 0 &&
+					strcmp(net_setup_ui.shipname, "") != 0)
+			snis_button_enable(net_setup_ui.connect_to_snis_server);
+		else
+			snis_button_disable(net_setup_ui.connect_to_snis_server);
+	}
 	sng_abs_xy_draw_string("SHIP NAME", TINY_FONT, txx(20), txy(470));
 	sng_abs_xy_draw_string("PASSWORD", TINY_FONT, txx(20), txy(520));
 	sng_abs_xy_draw_string("NOTE: THE \"PASSWORD\" IS NOT CRYPTOGRAPHICALLY SECURE", NANO_FONT, txx(20), txy(540));
@@ -20932,14 +21014,16 @@ static void show_network_setup(void)
 	sanitize_string(net_setup_ui.solarsystem);
 	sanitize_string(net_setup_ui.lobbyname);
 
-	if (strcmp(net_setup_ui.shipname, "") != 0 &&
-		strcmp(net_setup_ui.password, "") != 0) {
-		if (strcmp(net_setup_ui.lobbyname, "") != 0)
-			snis_button_set_color(net_setup_ui.connect_to_lobby, UI_COLOR(network_setup_active));
-		else
+	if (!avoid_lobby) {
+		if (strcmp(net_setup_ui.shipname, "") != 0 &&
+			strcmp(net_setup_ui.password, "") != 0) {
+			if (strcmp(net_setup_ui.lobbyname, "") != 0)
+				snis_button_set_color(net_setup_ui.connect_to_lobby, UI_COLOR(network_setup_active));
+			else
+				snis_button_set_color(net_setup_ui.connect_to_lobby, UI_COLOR(network_setup_inactive));
+		} else {
 			snis_button_set_color(net_setup_ui.connect_to_lobby, UI_COLOR(network_setup_inactive));
-	} else {
-		snis_button_set_color(net_setup_ui.connect_to_lobby, UI_COLOR(network_setup_inactive));
+		}
 	}
 }
 
@@ -20977,16 +21061,19 @@ static void write_process_options_to_forker(struct snis_process_options *options
 
 static void start_ssgl_btn_pressed(__attribute__((unused)) void *x)
 {
+	write_process_options_to_forker(&child_process_options);
 	write_to_forker(FORKER_START_SSGL);
 }
 
 static void start_snis_multiverse_btn_pressed(__attribute__((unused)) void *x)
 {
+	write_process_options_to_forker(&child_process_options);
 	write_to_forker(FORKER_START_MULTIVERSE);
 }
 
 static void start_snis_server_btn_pressed(__attribute__((unused)) void *x)
 {
+	write_process_options_to_forker(&child_process_options);
 	write_to_forker(FORKER_START_SNIS_SERVER);
 }
 
@@ -21044,6 +21131,7 @@ static struct options_ui {
 	struct button *mv_fixed_port_number_btn; /* mv_ means multiverse here. */
 	struct button *ss_default_port_range_btn; /* ss_ means snis_server here. */
 	struct button *ss_allow_remote_networks_btn;
+	struct button *no_lobby_btn;
 	struct snis_text_input_box *mv_port_number_input;
 	struct snis_text_input_box *ss_port_range_input;
 	char mv_port_number_text[15];
@@ -21118,6 +21206,18 @@ static int options_autowrangle_btn_status(__attribute__((unused)) void *x)
 	return child_process_options.snis_multiverse.autowrangle;
 }
 
+static void options_no_lobby_btn_pressed(__attribute__((unused)) void *x)
+{
+	avoid_lobby = !avoid_lobby;
+	child_process_options.no_lobby = avoid_lobby;
+	write_process_options_to_forker(&child_process_options);
+}
+
+static int options_no_lobby_btn_status(__attribute__((unused)) void *x)
+{
+	return avoid_lobby;
+}
+
 static void init_options_ui(void)
 {
 	float x, y;
@@ -21185,10 +21285,15 @@ static void init_options_ui(void)
 
 	y = txy(50 + 180 + 180);
 	x -= txx(10);
-	options_ui.client_opts = snis_label_init(x, y, "SNIS CLIENT OPTIONS", color, TINY_FONT);
+	options_ui.client_opts = snis_label_init(x, y, "GLOBAL OPTIONS", color, TINY_FONT);
 	x += txx(10);
-	x += txy(20);
+	y += txy(20);
 
+	options_ui.no_lobby_btn = snis_button_init(x, y, -1, -1, "NO LOBBY / NO MULTIVERSE / BARE SNIS SERVER", color,
+			NANO_FONT, options_no_lobby_btn_pressed, NULL);
+	snis_button_set_checkbox_function(options_ui.no_lobby_btn,
+					options_no_lobby_btn_status, &avoid_lobby);
+	snis_button_set_visible_border(options_ui.no_lobby_btn, 0);
 
 	ui_add_button(options_ui.launcher_btn, DISPLAYMODE_OPTIONS,
 			"GO BACK TO THE SNIS PROCESS LAUNCHER SCREEN");
@@ -21225,6 +21330,10 @@ static void init_options_ui(void)
 	ui_add_text_input_box(options_ui.ss_port_range_input, DISPLAYMODE_OPTIONS);
 	ui_set_widget_tooltip(options_ui.ss_port_range_input, "ENTER CUSTOM PORT RANGE, E.g.: 45000-50000");
 	ui_hide_widget(options_ui.ss_port_range_input);
+
+	ui_add_button(options_ui.no_lobby_btn, DISPLAYMODE_OPTIONS,
+		"USE THIS ONLY IF YOU MEAN TO RUN A BARE SNIS SERVER WITH\n"
+		"NO SSGL_SERVER (NO LOBBY) AND NO SNIS_MULTIVERSE.");
 }
 
 static struct launcher_ui {
@@ -21284,6 +21393,7 @@ static void init_launcher_ui(void)
 
 	launcher_ui.start_ssgl_btn = snis_button_init(x, y, -1, -1, "START LOBBY SERVER",
 				active_button_color, TINY_FONT, start_ssgl_btn_pressed, 0);
+	snis_button_set_disabled_color(launcher_ui.start_ssgl_btn, DARKGREEN);
 	y += txy(40);
 	launcher_ui.start_snis_multiverse_btn = snis_button_init(x, y, -1, -1, "START SNIS MULTIVERSE SERVER",
 				active_button_color, TINY_FONT, start_snis_multiverse_btn_pressed, NULL);
@@ -21553,7 +21663,12 @@ static void show_launcher(void)
 {
 	static int framecounter = 0;
 
-	if (multiverse_options_are_correct())
+	if (avoid_lobby)
+		snis_button_disable(launcher_ui.start_ssgl_btn);
+	else
+		snis_button_enable(launcher_ui.start_ssgl_btn);
+
+	if (multiverse_options_are_correct() && !avoid_lobby)
 		snis_button_enable(launcher_ui.start_snis_multiverse_btn);
 	else
 		snis_button_disable(launcher_ui.start_snis_multiverse_btn);
