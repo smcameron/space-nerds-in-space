@@ -8011,8 +8011,8 @@ static struct network_setup_ui {
 	int create_ship_v;
 	int join_ship_v;
 	int faction_checkbox_v[MAX_FACTIONS];
-	char lobbyname[60];
-	char lobbyportstr[10];
+	char lobbyname[sizeof(child_process_options.lobbyhost)];
+	char lobbyportstr[sizeof(child_process_options.lobbyport)];
 	char snis_server_name[60];
 	char snis_server_port[15];
 	char solarsystem[60];
@@ -20864,7 +20864,7 @@ static void init_net_setup_ui(void)
 	y += yinc;
 	net_setup_ui.lobbyservername =
 		snis_text_input_box_init(left, y, txy(30), txx(750), input_color, TINY_FONT,
-					net_setup_ui.lobbyname, 50, &timer,
+					net_setup_ui.lobbyname, sizeof(net_setup_ui.lobbyname), &timer,
 					NULL, NULL);
 
 
@@ -20888,7 +20888,7 @@ static void init_net_setup_ui(void)
 					snis_button_generic_checkbox_function, &use_default_lobby_port);
 	net_setup_ui.lobbyport =
 		snis_text_input_box_init(left, y + yinc * 2, txy(30), txx(100), input_color, TINY_FONT,
-					net_setup_ui.lobbyportstr, 9, &timer, NULL, NULL);
+					net_setup_ui.lobbyportstr, sizeof(net_setup_ui.lobbyportstr), &timer, NULL, NULL);
 	y += yinc * 6;
 	net_setup_ui.shipname_box =
 		snis_text_input_box_init(txx(150), y, txy(30), txx(250), input_color, TINY_FONT,
@@ -21118,6 +21118,9 @@ static void start_snis_process_terminator(void *x)
 
 static void connect_client_btn_pressed(__attribute__((unused)) void *x)
 {
+	/* Copy from the lobby host/port info from options screen to net setup screen */
+	strcpy(net_setup_ui.lobbyname, child_process_options.lobbyhost);
+	strcpy(net_setup_ui.lobbyportstr, child_process_options.lobbyport);
 	displaymode = DISPLAYMODE_NETWORK_SETUP;
 }
 
@@ -21150,6 +21153,10 @@ static struct options_ui {
 	struct button *ss_default_port_range_btn; /* ss_ means snis_server here. */
 	struct button *ss_allow_remote_networks_btn;
 	struct button *no_lobby_btn;
+	struct label *lobbyhost_label;
+	struct label *lobbyport_label;
+	struct snis_text_input_box *lobbyhost_input;
+	struct snis_text_input_box *lobbyport_input;
 	struct snis_text_input_box *mv_port_number_input;
 	struct snis_text_input_box *ss_port_range_input;
 	char mv_port_number_text[15];
@@ -21307,6 +21314,18 @@ static void init_options_ui(void)
 	snis_button_set_checkbox_function(options_ui.no_lobby_btn,
 					options_no_lobby_btn_status, &avoid_lobby);
 	snis_button_set_visible_border(options_ui.no_lobby_btn, 0);
+	y += txy(30);
+
+	options_ui.lobbyhost_label = snis_label_init(x, y, "LOBBY HOST:", color, NANO_FONT);
+	options_ui.lobbyhost_input = snis_text_input_box_init(x + txx(80), y - txy(15), txy(25), txx(550),
+					color, NANO_FONT, child_process_options.lobbyhost,
+					sizeof(child_process_options.lobbyhost), &timer, NULL, NULL);
+	y += txy(30);
+	options_ui.lobbyport_label = snis_label_init(x, y, "LOBBY PORT:", color, NANO_FONT);
+	options_ui.lobbyport_input = snis_text_input_box_init(x + txx(80), y - txy(15), txy(25), txx(80),
+					color, NANO_FONT, child_process_options.lobbyport,
+					sizeof(child_process_options.lobbyport), &timer, NULL, NULL);
+
 
 	ui_add_button(options_ui.launcher_btn, DISPLAYMODE_OPTIONS,
 			"GO BACK TO THE SNIS PROCESS LAUNCHER SCREEN");
@@ -21347,6 +21366,13 @@ static void init_options_ui(void)
 	ui_add_button(options_ui.no_lobby_btn, DISPLAYMODE_OPTIONS,
 		"USE THIS ONLY IF YOU MEAN TO RUN A BARE SNIS SERVER WITH\n"
 		"NO SSGL_SERVER (NO LOBBY) AND NO SNIS_MULTIVERSE.");
+
+	ui_add_label(options_ui.lobbyhost_label, DISPLAYMODE_OPTIONS);
+	ui_add_text_input_box(options_ui.lobbyhost_input, DISPLAYMODE_OPTIONS);
+	ui_set_widget_tooltip(options_ui.lobbyhost_input, "ENTER LOBBY HOST NAME OR IP ADDRESS");
+	ui_add_label(options_ui.lobbyport_label, DISPLAYMODE_OPTIONS);
+	ui_add_text_input_box(options_ui.lobbyport_input, DISPLAYMODE_OPTIONS);
+	ui_set_widget_tooltip(options_ui.lobbyport_input, "ENTER LOBBY PORT NUMBER");
 }
 
 static struct launcher_ui {
@@ -21721,6 +21747,12 @@ static void show_launcher(void)
 	else
 		snis_button_disable(launcher_ui.start_snis_server_btn);
 
+	if (strcasecmp(child_process_options.lobbyhost, "localhost") != 0 &&
+		strcasecmp(child_process_options.lobbyhost, "127.0.0.1") != 0)
+		snis_button_disable(launcher_ui.start_ssgl_btn);
+	else
+		snis_button_enable(launcher_ui.start_ssgl_btn);
+
 	framecounter++;
 	if ((framecounter % 60) == 0) {
 		framecounter = 0;
@@ -21808,6 +21840,25 @@ static void show_options(void)
 		}
 	}
 	snis_text_input_box_set_color(options_ui.ss_port_range_input, color);
+
+	if (avoid_lobby) {
+		ui_hide_widget(options_ui.lobbyhost_input);
+		ui_hide_widget(options_ui.lobbyhost_label);
+		ui_hide_widget(options_ui.lobbyport_input);
+		ui_hide_widget(options_ui.lobbyport_label);
+	} else {
+		ui_unhide_widget(options_ui.lobbyhost_input);
+		ui_unhide_widget(options_ui.lobbyhost_label);
+		ui_unhide_widget(options_ui.lobbyport_input);
+		ui_unhide_widget(options_ui.lobbyport_label);
+	}
+
+	rc = sscanf(child_process_options.lobbyport, "%d", &port);
+	if (rc == 1 && port > 1023 && port <= 65535)
+		color = UI_COLOR(launcher_button);
+	else
+		color = RED;
+	snis_text_input_box_set_color(options_ui.lobbyport_input, color);
 
 	station_label_disappears = 0;
 	show_common_screen("OPTIONS");
