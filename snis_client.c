@@ -5274,7 +5274,7 @@ static void show_lobbyscreen(void)
 		snprintf(msg, sizeof(msg), "IP ADDRESS/PORT");
 		sng_abs_xy_draw_string(msg, NANO_FONT, txx(30), txy(100) + i * LINEHEIGHT);
 		snprintf(msg, sizeof(msg), "GAME INSTANCE");
-		sng_abs_xy_draw_string(msg, NANO_FONT, txx(150), txy(100) + i * LINEHEIGHT);
+		sng_abs_xy_draw_string(msg, NANO_FONT, txx(250), txy(100) + i * LINEHEIGHT);
 		snprintf(msg, sizeof(msg), "PROTOCOL");
 		sng_abs_xy_draw_string(msg, NANO_FONT, txx(350), txy(100) + i * LINEHEIGHT);
 		snprintf(msg, sizeof(msg), "LOCATION");
@@ -5328,7 +5328,7 @@ static void show_lobbyscreen(void)
 
 			sng_abs_xy_draw_string(msg, NANO_FONT, txx(30), txy(100) + i * LINEHEIGHT);
 			snprintf(msg, sizeof(msg), "%s", lobby_game_server[i].game_instance);
-			sng_abs_xy_draw_string(msg, NANO_FONT, txx(150), txy(100) + i * LINEHEIGHT);
+			sng_abs_xy_draw_string(msg, NANO_FONT, txx(250), txy(100) + i * LINEHEIGHT);
 			protocol_mismatch = strncmp(lobby_game_server[i].protocol_version, SNIS_PROTOCOL_VERSION,
 							sizeof(lobby_game_server[i].protocol_version)) != 0;
 			if (timer & 0x04 || !protocol_mismatch) {
