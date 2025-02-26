@@ -11,6 +11,7 @@ debian/snis.postrm.debhelper
 debian/snis.substvars
 earthlike.1.gz
 mesh_viewer
+object_files
 *.o
 .pc
 share/snis/models/starbase*.docking_ports.h
