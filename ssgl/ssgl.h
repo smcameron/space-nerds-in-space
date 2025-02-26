@@ -41,7 +41,12 @@ OTHER DEALINGS IN THE SOFTWARE.
 #pragma pack(1)
 #define SSGL_LOCATIONSIZE (20)
 struct ssgl_game_server {
+	/* ipaddr and port are both stored in network byte order here, and they are the addresses
+	 * that the client has told us.  They might differ from the real_ipaddr if they connected
+	 * from localhost (real_ipaddr will be 127.0.0.1) or if they are behind NAT.
+	 */
 	uint32_t ipaddr;
+	uint32_t real_ipaddr;
 	uint16_t port;
 	char game_type[15];		/* What kind of game is this? */
 	char game_instance[20];		/* which instance on the server of the game */

@@ -27,6 +27,7 @@ struct snis_process_options {
 		char port_range[15];
 	} snis_server;
 	char lobbyhost[256];
+	char lobbyport[15];
 	char no_lobby;
 };
 

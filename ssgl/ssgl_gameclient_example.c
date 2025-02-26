@@ -127,8 +127,11 @@ int main(int argc, char *argv[])
 		printf("---------------------------------------------------------------------------------------------------------\n");
 		for (i = 0; i < game_server_count; i++) {
 			unsigned char *x = (unsigned char *) &game_server[i].ipaddr;
+			unsigned char *y = (unsigned char *) &game_server[i].real_ipaddr;
 			char ipaddr_and_port[100];
-			sprintf(ipaddr_and_port, "%d.%d.%d.%d/%d", x[0], x[1], x[2], x[3],
+			snprintf(ipaddr_and_port, sizeof(ipaddr_and_port), "%d.%d.%d.%d/%d.%d.%d.%d/%d",
+					x[0], x[1], x[2], x[3],
+					y[0], y[1], y[2], y[3],
 					ntohs(game_server[i].port));
 			printf("%20s %15s %20s %15s %20s %10s\n", ipaddr_and_port,
 				game_server[i].game_type,
