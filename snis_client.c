@@ -21145,7 +21145,6 @@ static void options_port_range_pressed(char *has_port_range, void *widget)
 		ui_unhide_widget(widget);
 	else
 		ui_hide_widget(widget);
-	write_process_options_to_forker(&child_process_options);
 }
 
 static void ss_default_port_range_btn_pressed(__attribute__((unused)) void *x)
@@ -21174,14 +21173,12 @@ static void options_allow_remote_networks_pressed(__attribute__((unused)) void *
 {
 	child_process_options.snis_multiverse.allow_remote_networks =
 			!child_process_options.snis_multiverse.allow_remote_networks;
-	write_process_options_to_forker(&child_process_options);
 }
 
 static void options_ss_allow_remote_networks_pressed(__attribute__((unused)) void *x)
 {
 	child_process_options.snis_server.allow_remote_networks =
 			!child_process_options.snis_server.allow_remote_networks;
-	write_process_options_to_forker(&child_process_options);
 }
 
 static int options_allow_remote_networks_status(__attribute__((unused)) void *x)
@@ -21198,7 +21195,6 @@ static void options_autowrangle_btn_pressed(__attribute__((unused)) void *x)
 {
 	child_process_options.snis_multiverse.autowrangle =
 			!child_process_options.snis_multiverse.autowrangle;
-	write_process_options_to_forker(&child_process_options);
 }
 
 static int options_autowrangle_btn_status(__attribute__((unused)) void *x)
@@ -21210,7 +21206,6 @@ static void options_no_lobby_btn_pressed(__attribute__((unused)) void *x)
 {
 	avoid_lobby = !avoid_lobby;
 	child_process_options.no_lobby = avoid_lobby;
-	write_process_options_to_forker(&child_process_options);
 }
 
 static int options_no_lobby_btn_status(__attribute__((unused)) void *x)
@@ -21723,8 +21718,7 @@ static void show_options(void)
 		if (rc == 1 && port > 1023 && port <= 65535)  {
 
 			/* Port number is correct.  If the text input box buffer is different from the
-			 * process options port number string, then copy the text to the process options and
-			 * send the process options to the forker process.
+			 * process options port number string, then copy the text to the process options
 			 */
 			color = UI_COLOR(launcher_button);
 			if (strcmp(child_process_options.snis_multiverse.port_number,
@@ -21732,7 +21726,6 @@ static void show_options(void)
 				strlcpy(child_process_options.snis_multiverse.port_number,
 						options_ui.mv_port_number_text,
 						sizeof(child_process_options.snis_multiverse.port_number));
-				write_process_options_to_forker(&child_process_options);
 			}
 		} else {
 			color = RED;
@@ -21744,14 +21737,12 @@ static void show_options(void)
 	if (child_process_options.snis_server.has_port_range) {
 		if (port_range_formatted_correctly(options_ui.ss_port_range_text)) {
 			/* Port range is correct.  If the text input box buffer is different from the
-			 * process options port range string, then copy the text to the process options and
-			 * send the process options to the forker process.
+			 * process options port range string, then copy the text to the process options
 			 */
 			color = UI_COLOR(launcher_button);
 			if (strcmp(child_process_options.snis_server.port_range, options_ui.ss_port_range_text) != 0) {
 				strlcpy(child_process_options.snis_server.port_range, options_ui.ss_port_range_text,
 					sizeof(child_process_options.snis_server.port_range));
-				write_process_options_to_forker(&child_process_options);
 			}
 		} else {
 			color = RED;
