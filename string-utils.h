@@ -41,4 +41,10 @@ char *get_abbreviated_command_arg(char *expected_command, char *user_input);
 
 void print_args(int argc, char *argv[]);
 
+/* Returns true if a port range is formatted correctly, that is sscanf can scan it as %d%*[:,-]%d"
+   (two integers separated by a colon, comma or dash) and if the first integer is less than or
+   equal to the 2nd integer, and the first integer > 1023, and the 2nd integer less than or equal
+   to 65535. */
+int port_range_formatted_correctly(char *port_range);
+
 #endif

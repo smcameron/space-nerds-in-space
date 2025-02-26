@@ -321,3 +321,16 @@ void print_args(int argc, char *argv[])
 			i == argc - 1 ? "" : " \\");
 	}
 }
+
+int port_range_formatted_correctly(char *port_range)
+{
+	int rc, minp, maxp;
+
+	rc = sscanf(port_range, "%d%*[:,-]%d", &minp, &maxp);
+	if (rc != 2) /* not correctly formatted */
+		return 0;
+	if (maxp < minp || minp < 1024 || maxp > 65535)
+		return 0;
+	return 1;
+}
+
