@@ -30,12 +30,8 @@ struct button {
 	void *cookie;
 	unsigned char button_press_feedback_counter;
 	int visible_border;
+	int resize_when_label_changes;
 };
-
-void snis_button_set_label(struct button *b, char *label)
-{
-	strlcpy(b->label, label, sizeof(b->label));
-}
 
 char *snis_button_get_label(struct button *b)
 {
@@ -52,8 +48,17 @@ static void snis_button_compute_dimensions(struct button *b)
 	sng_string_bounding_box(b->label, b->font, &x1, &y1, &x2, &y2);
 	if (b->height < 0)
 		b->height = emheight * 1.8;
-	if (b->width < 0)
-		b->width = 0.9 * fabs(x2 - x1) + emwidth * 1.8;
+	if (b->width < 0 || b->resize_when_label_changes)
+		b->width = 1.0 * fabs(x2 - x1) + emwidth * 1.8;
+}
+
+void snis_button_set_label(struct button *b, char *label)
+{
+	if (strcmp(label, b->label) != 0) {
+		strlcpy(b->label, label, sizeof(b->label));
+		if (b->resize_when_label_changes)
+			snis_button_compute_dimensions(b);
+	}
 }
 
 struct button *snis_button_init(int x, int y, int width, int height,
@@ -84,7 +89,13 @@ struct button *snis_button_init(int x, int y, int width, int height,
 	b->visible_border = 1;
 	if (b->width < 0 || b->height < 0)
 		snis_button_compute_dimensions(b);
+	b->resize_when_label_changes = 0;
 	return b;
+}
+
+void snis_button_resize_when_label_changes(struct button *b, int resize)
+{
+	b->resize_when_label_changes = resize;
 }
 
 static void snis_button_draw_outline(float x1, float y1, float width, float height)
