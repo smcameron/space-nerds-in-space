@@ -21423,7 +21423,7 @@ static void init_launcher_ui(void)
 
 	launcher_ui.snis_server_gauge = gauge_init(txx(450), txy(300), 150, 0.0, 10.0, -120.0 * M_PI / 180.0,
 			120.0 * 2.0 * M_PI / 180.0, UI_COLOR(launcher_gauge_needle), UI_COLOR(launcher_gauge),
-			10, "SNIS SERV", sample_snis_servercount);
+			10, "SNIS SERVER", sample_snis_servercount);
 	gauge_set_fonts(launcher_ui.snis_server_gauge, NANO_FONT, NANO_FONT);
 	launcher_ui.snis_client_gauge = gauge_init(txx(600), txy(300), 150, 0.0, 10.0, -120.0 * M_PI / 180.0,
 			120.0 * 2.0 * M_PI / 180.0, UI_COLOR(launcher_gauge_needle), UI_COLOR(launcher_gauge),
