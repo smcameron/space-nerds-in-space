@@ -122,9 +122,9 @@ int main(int argc, char *argv[])
 			fprintf(stderr, "ssgl_recv_game_servers failed: %s\n", strerror(errno));
 			break;
 		}
-		printf("%20s %15s %20s %15s %20s %10s\n",
+		printf("%40s %15s %20s %15s %20s %10s\n",
 			"IP addr/port", "Game Type", "Instance/Map", "Server Nickname", "Location", "Protocol");
-		printf("---------------------------------------------------------------------------------------------------------\n");
+		printf("-----------------------------------------------------------------------------------------------------------------------------\n");
 		for (i = 0; i < game_server_count; i++) {
 			unsigned char *x = (unsigned char *) &game_server[i].ipaddr;
 			unsigned char *y = (unsigned char *) &game_server[i].real_ipaddr;
@@ -133,7 +133,7 @@ int main(int argc, char *argv[])
 					x[0], x[1], x[2], x[3],
 					y[0], y[1], y[2], y[3],
 					ntohs(game_server[i].port));
-			printf("%20s %15s %20s %15s %20s %10s\n", ipaddr_and_port,
+			printf("%40s %15s %20s %15s %20s %10s\n", ipaddr_and_port,
 				game_server[i].game_type,
 				game_server[i].game_instance,
 				game_server[i].server_nickname,
