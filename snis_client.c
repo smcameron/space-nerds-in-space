@@ -21394,6 +21394,7 @@ static void init_launcher_ui(void)
 	y += txy(40);
 	launcher_ui.connect_client_btn = snis_button_init(x, y, -1, -1, "CONNECT CLIENT TO SNIS SERVER",
 				active_button_color, TINY_FONT, connect_client_btn_pressed, 0);
+	snis_button_resize_when_label_changes(launcher_ui.connect_client_btn, 1);
 	y += txy(40);
 	launcher_ui.stop_all_snis_btn = snis_button_init(x, y, -1, -1, "STOP ALL SERVER PROCESSES",
 				active_button_color, TINY_FONT, start_snis_process_terminator, 0);
@@ -21405,8 +21406,9 @@ static void init_launcher_ui(void)
 	launcher_ui.options_btn = snis_button_init(x, y, -1, -1, "OPTIONS . . .",
 				active_button_color, TINY_FONT, launcher_options_btn_pressed, 0);
 	y += txy(40);
-	launcher_ui.quit_btn = snis_button_init(x, y, -1, -1, "QUIT",
+	launcher_ui.quit_btn = snis_button_init(x, y, -1, -1, "QUIT (SERVER PROCESSES CONTINUE)",
 				active_button_color, TINY_FONT, launcher_quit_btn_pressed, 0);
+	snis_button_resize_when_label_changes(launcher_ui.quit_btn, 1);
 	y += txy(40);
 	launcher_ui.restart_btn = snis_button_init(x, y, -1, -1, "RESTART SNIS CLIENT",
 				active_button_color, TINY_FONT, launcher_restart_btn_pressed, 0);
@@ -21433,30 +21435,55 @@ static void init_launcher_ui(void)
 	ui_add_button(launcher_ui.start_ssgl_btn, DISPLAYMODE_LAUNCHER,
 			"START SNIS LOBBY SERVER PROCESS\n\n"
 			"YOU NEED EXACTLY ONE SNIS LOBBY PROCESS RUNNING\n"
-			"ON THE NETWORK");
+			"ON THE NETWORK.\n\n"
+
+			"IF YOU ARE HOSTING THE SESSION, YOU NEED TO RUN THIS,\n"
+			"OTHERWISE IF YOU ARE CONNECTING TO A REMOTE SESSION,\n"
+			"YOU DO NOT NEED TO RUN THIS.");
 	ui_add_button(launcher_ui.start_snis_multiverse_btn, DISPLAYMODE_LAUNCHER,
 			"START SNIS MULTIVERSE SERVER PROCESS\n\n"
+
 			"YOU NEED EXACTLY ONE SNIS MULTIVERSE PROCESS RUNNING\n"
-			"ON THE NETWORK");
+			"ON THE NETWORK.\n\n"
+
+			"IF YOU ARE HOSTING THE SESSION, AND YOU WANT MULTIPLE\n"
+			"STAR SYSTEMS YOU CAN TRAVEL BETWEEN WITH WARP GATES,\n"
+			"YOU NEED TO RUN THIS,\n\n"
+
+			"OTHERWISE IF YOU ARE CONNECTING TO A REMOTE SESSION,\n"
+			"OR RUNNING A SINGLE INSTANCE OF SNIS SERVER THAT\n"
+			"CLIENTS CONNECT DIRECTLY TO WITHOUT USING THE LOBBY,\n"
+			"THEN YOU DO NOT NEED TO RUN THIS.");
 	ui_add_button(launcher_ui.start_snis_server_btn, DISPLAYMODE_LAUNCHER,
-			"START A SNIS SERVER PROCESS\n\n"
+			"MANUALLY START A SNIS SERVER PROCESS\n\n"
+
+			"IF YOU ARE NOT HOSTING A SESSION BUT CONNECTING TO A\n"
+			"REMOTE SESSION, YOU DO NOT NEED THIS.\n"
 			"IF SNIS MULTIVERSE HAS ALREADY STARTED SOME SNIS SERVERS\n"
 			"YOU DON'T NEED TO MANUALLY START ONE.  IF IT HASN'T, WHICH\n"
-			"WILL HAPPEN IF YOU DIDN'T CHECK 'AUTOWRANGLE' ABOVE, OR IF\n"
+			"MAY HAPPEN IF YOU DIDN'T CHECK 'AUTOWRANGLE' ABOVE, OR IF\n"
 			"THERE IS NO PLAYER SHIP CURRENTLY LOCATED IN ANY STAR SYSTEM\n"
-			"YOU WILL NEED TO START ONE SNIS_SERVER INSTANCE MANUALLY.");
+			"YOU WILL NEED TO START ONE SNIS_SERVER INSTANCE MANUALLY.\n\n"
+
+			"AND OF COURSE IF YOU ARE NOT USING THE LOBBY (SEE OPTIONS)\n"
+			"THEN YOU NEED TO START A SNIS_SERVER YOURSELF.\n");
 	ui_add_button(launcher_ui.connect_client_btn, DISPLAYMODE_LAUNCHER,
-			"CONNECT SNIS CLIENT TO LOBBY AND SNIS SERVER\n\n"
+			"CONNECT SNIS CLIENT TO LOBBY OR TO SNIS SERVER\n\n"
+
 			"LEAVE THIS PROCESS LAUNCHER SCREEN AND PROCEED TO\n"
 			"THE NETWORK SETUP SCREEN TO CONNECT YOUR CLIENT TO\n"
-			"A SNIS SERVER PROCESS AND BEGIN PLAYING THE GAME.");
+			"A LOBBY TO SELECT A SNIS SERVER INSTANCE TO CONNECT\n"
+			"TO OR IF THE 'NO LOBBY' OPTION IS SET, DIRECTLY TO\n"
+			"A SNIS SERVER.");
 	ui_add_button(launcher_ui.stop_all_snis_btn, DISPLAYMODE_LAUNCHER,
 			"STOP ALL SNIS SERVER PROCESSES\n\n"
+
 			"THIS WILL STOP ALL LOCALLY RUNNING SNIS LOBBY, SNIS MULTIVERSE\n"
 			"AND SNIS SERVER PROCESSES ON THIS MACHINE. IT DOES NOT STOP ANY\n"
 			"REMOTELY RUNNING PROCESSSES.");
 	ui_add_button(launcher_ui.update_assets_btn, DISPLAYMODE_LAUNCHER,
 			"CHECK FOR UPDATED ART ASSETS\n\n"
+
 			"THIS WILL CHECK HTTPS://SPACENERDSINSPACE.COM FOR ANY NEW ART\n"
 			"ASSETS AND DOWNLOAD THEM. TO USE ANY SUCH NEW ASSETS YOU WILL\n"
 			"HAVE TO RESTART SNIS_CLIENT. IF THIS BUTTON IS DISABLED, IT MEANS\n"
@@ -21464,14 +21491,18 @@ static void init_launcher_ui(void)
 			"60 MINUTES, AND THERE IS NO NEED TO CHECK AGAIN SO SOON.");
 	ui_add_button(launcher_ui.options_btn, DISPLAYMODE_LAUNCHER,
 			"OPTIONS\n\n"
-			"ALLOWS YOU TO SET VARIOUS OPTIONS.");
+
+			"ALLOWS YOU TO SET VARIOUS NETWORK SETTINGS SUCH AS PORT NUMBERS,\n"
+			"WHETHER YOU ARE USING THE LOBBY OR JUST DIRECTLY CONNECTING TO\n"
+			"A SNIS SERVER INSTANCE, ETC.");
 	ui_add_button(launcher_ui.quit_btn, DISPLAYMODE_LAUNCHER,
 			"QUIT SPACE NERDS IN SPACE\n\n"
+
 			"QUIT THIS SNIS_CLIENT PROCESS.\n\n"
+
 			"NOTE: IF YOU DO NOT STOP SNIS SERVER, SNIS MULTIVERSE, AND\n"
 			"SNIS LOBBY PROCESSES BEFORE QUITTING, THEY WILL REMAIN RUNNING.\n"
-			"THIS IS DELIBERATE, AS YOU ARE NOT REQUIRED TO RUN SNIS_CLIENT\n"
-			"ON THE MACHINE HOSTING THE VARIOUS SNIS SERVER PROCESSSES");
+			"THIS IS DELIBERATE.\n");
 	ui_add_button(launcher_ui.restart_btn, DISPLAYMODE_LAUNCHER,
 			"RESTART SNIS_CLIENT TO USE NEWLY DOWNLOADED ASSETS\n");
 	ui_add_gauge(launcher_ui.ssgl_gauge, DISPLAYMODE_LAUNCHER);
@@ -21481,18 +21512,22 @@ static void init_launcher_ui(void)
 
 	ui_set_widget_tooltip(launcher_ui.ssgl_gauge,
 			"SNIS LOBBY SERVER GAUGE\n\n"
+
 			"0 MEANS NO LOBBY SERVER IS RUNNING LOCALLY ON THIS MACHINE.\n"
 			"100 MEANS ONE LOBBY SERVER IS RUNNING LOCALLY ON THIS MACHINE.");
 	ui_set_widget_tooltip(launcher_ui.multiverse_gauge,
 			"SNIS MULTIVERSE SERVER GAUGE\n\n"
+
 			"0 MEANS NO MULTIVERSE SERVER IS RUNNING LOCALLY ON THIS MACHINE.\n"
 			"100 MEANS ONE MULTIVERSE SERVER IS RUNNING LOCALLY ON THIS MACHINE.");
 	ui_set_widget_tooltip(launcher_ui.snis_server_gauge,
 			"SNIS SERVER GAUGE\n\n"
+
 			"THIS GAUGE SHOWS THE NUMBER OF SNIS SERVER PROCESSES RUNNING LOCALLY\n"
 			"ON THIS MACHINE.");
 	ui_set_widget_tooltip(launcher_ui.snis_client_gauge,
 			"SNIS CLIENT GAUGE\n\n"
+
 			"THIS GAUGE SHOWS THE NUMBER OF SNIS CLIENT PROCESSES RUNNING LOCALLY\n"
 			"ON THIS MACHINE.");
 	ui_hide_widget(launcher_ui.restart_btn); /* only unhides if new assets are available */
@@ -21667,13 +21702,23 @@ static void show_launcher(void)
 	if ((framecounter % 60) == 0) {
 		framecounter = 0;
 		collect_process_stats();
+
+		if (launcher_ui.ssgl_count +
+			launcher_ui.snis_server_count +
+			launcher_ui.multiverse_count > 0) {
+			snis_button_set_label(launcher_ui.quit_btn, "QUIT (SERVER PROCESSES CONTINUE)");
+		} else {
+			snis_button_set_label(launcher_ui.quit_btn, "QUIT");
+		}
 	}
 	if (assets_updated_too_recently()) {
 		snis_button_disable(launcher_ui.update_assets_btn);
 		ui_set_widget_tooltip(launcher_ui.update_assets_btn,
 			"CHECK FOR UPDATED ART ASSETS\n\n"
+
 			"ASSETS HAVE ALREADY BEEN UPDATED WITHIN THE LAST HOUR SO THIS\n"
 			"BUTTON IS TEMPORARILY DISABLED FOR A LITTLE WHILE.\n\n"
+
 			"THIS WILL CHECK HTTPS://SPACENERDSINSPACE.COM FOR ANY NEW ART\n"
 			"ASSETS AND DOWNLOAD THEM. TO USE ANY SUCH NEW ASSETS YOU WILL\n"
 			"NEED TO RESTART SNIS_CLIENT. IF THIS BUTTON IS DISABLED, IT MEANS\n"
@@ -21682,6 +21727,7 @@ static void show_launcher(void)
 		snis_button_enable(launcher_ui.update_assets_btn);
 		ui_set_widget_tooltip(launcher_ui.update_assets_btn,
 			"CHECK FOR UPDATED ART ASSETS\n\n"
+
 			"THIS WILL CHECK HTTPS://SPACENERDSINSPACE.COM FOR ANY NEW ART\n"
 			"ASSETS AND DOWNLOAD THEM. TO USE ANY SUCH NEW ASSETS YOU WILL\n"
 			"NEED TO RESTART SNIS_CLIENT. IF THIS BUTTON IS DISABLED, IT MEANS\n"
