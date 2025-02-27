@@ -25,6 +25,7 @@ struct snis_process_options {
 		char solarsystem[20];
 		char has_port_range;
 		char port_range[15];
+		char NAT_ghetto_mode;
 	} snis_server;
 	char lobbyhost[256];
 	char lobbyport[15];

@@ -185,6 +185,13 @@ static int trap_nans = 0;
 /* Set to 1 by command line opiton "--no-textures" to use a default texture for everything */
 static int no_textures_mode = 0;
 
+/* -g, --NAT-ghetto-mode ... if we can't seem to connect to snis server, try the
+ * IP address of the lobby on the dubious theory that snis_servers quite often run
+ * on the same host as ssgl_server, and maybe it's just hidden by NAT and hope the
+ * port number works due to port forwarding.  Super gross.
+ */
+static int NAT_ghetto_mode = 0;
+
 /* helper function to transform from 800x600 original coord system */
 static inline int txx(int x) { return x * SCREEN_WIDTH / 800; }
 static inline int txy(int y) { return y * SCREEN_HEIGHT / 600; }
@@ -8766,8 +8773,8 @@ try_again:
 		} else if (attempt_number == 2) {
 			x = (unsigned char *) &lobby_game_server[lobby_selected_server].ipaddr;
 			snprintf(hoststr, sizeof(hoststr), "%d.%d.%d.%d", x[0], x[1], x[2], x[3]);
-		} else if (attempt_number == 3 && lobbyhost != NULL) {
-			fprintf(stderr, "Attempting NAT ghetto method ... \n");
+		} else if (attempt_number == 3 && lobbyhost != NULL && NAT_ghetto_mode) {
+			fprintf(stderr, "Attempting NAT ghetto method ...\n");
 			snprintf(hoststr, sizeof(hoststr), "%s", lobbyhost);
 		}
 		snprintf(portstr, sizeof(portstr), "%d", ntohs(lobby_game_server[lobby_selected_server].port));
@@ -8817,7 +8824,8 @@ try_again:
 	rc = connect(gameserver_sock, i->ai_addr, i->ai_addrlen);
 	if (rc < 0) {
 		fprintf(stderr, "Attempt %d: Connect failed: %s\n", attempt_number, strerror(errno));
-		if (!avoid_lobby && (attempt_number == 1 || (attempt_number == 2 && lobbyhost != NULL))) {
+		if (!avoid_lobby && (attempt_number == 1 ||
+			(attempt_number == 2 && lobbyhost != NULL && NAT_ghetto_mode))) {
 			attempt_number++;
 			if (lobby_game_server[lobby_selected_server].real_ipaddr !=
 						lobby_game_server[lobby_selected_server].ipaddr)
@@ -21072,6 +21080,8 @@ static void write_process_options_to_forker(struct snis_process_options *options
 	char *c = (char *) options;
 	char ch = FORKER_UPDATE_PROCESS_OPTIONS;
 
+	child_process_options.snis_server.NAT_ghetto_mode = NAT_ghetto_mode;
+
 	rc = write(pipe_to_forker_process, &ch, 1);
 	(void) rc;
 
@@ -21166,6 +21176,7 @@ static struct options_ui {
 	struct snis_text_input_box *lobbyport_input;
 	struct snis_text_input_box *mv_port_number_input;
 	struct snis_text_input_box *ss_port_range_input;
+	struct button *NAT_ghetto_mode_btn;
 	char mv_port_number_text[15];
 	char ss_port_range_text[15];
 } options_ui;
@@ -21332,7 +21343,13 @@ static void init_options_ui(void)
 	options_ui.lobbyport_input = snis_text_input_box_init(x + txx(80), y - txy(15), txy(25), txx(80),
 					color, NANO_FONT, child_process_options.lobbyport,
 					sizeof(child_process_options.lobbyport), &timer, NULL, NULL);
-
+	y += txy(30);
+	options_ui.NAT_ghetto_mode_btn = snis_button_init(x, y, -1, -1,
+			"NAT GHETTO MODE", color,
+			NANO_FONT, snis_button_generic_checkbox_toggler, &NAT_ghetto_mode);
+	snis_button_set_checkbox_function(options_ui.NAT_ghetto_mode_btn,
+				snis_button_generic_checkbox_function, &NAT_ghetto_mode);
+	snis_button_set_visible_border(options_ui.NAT_ghetto_mode_btn, 0);
 
 	ui_add_button(options_ui.launcher_btn, DISPLAYMODE_OPTIONS,
 			"GO BACK TO THE SNIS PROCESS LAUNCHER SCREEN");
@@ -21373,6 +21390,14 @@ static void init_options_ui(void)
 	ui_add_button(options_ui.no_lobby_btn, DISPLAYMODE_OPTIONS,
 		"USE THIS ONLY IF YOU MEAN TO RUN A BARE SNIS SERVER WITH\n"
 		"NO SSGL_SERVER (NO LOBBY) AND NO SNIS_MULTIVERSE.");
+	ui_add_button(options_ui.NAT_ghetto_mode_btn, DISPLAYMODE_OPTIONS,
+		"ENABLE NAT GHETTO MODE\n\n"
+		"IF IT HAPPENS THAT SNIS_CLIENT CANNOT CONNECT TO A SNIS_SERVER,\n"
+		"OR SNIS_SERVER CANNOT CONNECT TO SNIS_MULTIVERSE USING IP ADDRS\n"
+		"OBTAINED FROM SSGL_SERVER, THEN JUST TRY THE LOBBY IP ADDRESS\n"
+		"ON THE DUBIOUS THEORY THAT SNIS_SERVER AND SNIS_MULTIVERSE ARE OFTEN\n"
+		"ON THE SAME HOST AS THE LOBBY AND MAYBE IT IS ONLY BECAUSE OF NETWORK\n"
+		"ADDRESS TRANSLATION (NAT) THAT SSGL_SERVER HAS THE WRONG IP ADDRESSES\n");
 
 	ui_add_label(options_ui.lobbyhost_label, DISPLAYMODE_OPTIONS);
 	ui_add_text_input_box(options_ui.lobbyhost_input, DISPLAYMODE_OPTIONS);
@@ -24602,6 +24627,7 @@ static struct option long_options[] = {
 	{ "no-textures", no_argument, NULL, 'T' },
 	{ "no-splash-screen", no_argument, NULL, 'x' },
 	{ "no-launcher", no_argument, NULL, NO_LAUNCHER },
+	{ "NAT-ghetto-mode", no_argument, NULL, 'g' },
 	{ "auto-download-assets", no_argument, NULL, AUTO_DOWNLOAD_ASSETS },
 	{ 0, 0, 0, 0 },
 };
@@ -24615,7 +24641,7 @@ static void process_options(int argc, char *argv[])
 	y = -1;
 	while (1) {
 		int option_index;
-		c = getopt_long(argc, argv, "AaCEfJj:Ll:Nn:Mm:p:P:qr:Ss:tvW*:x", long_options, &option_index);
+		c = getopt_long(argc, argv, "AaCEfgJj:Ll:Nn:Mm:p:P:qr:Ss:tvW*:x", long_options, &option_index);
 		if (c == -1)
 			break;
 		switch (c) {
@@ -24741,6 +24767,9 @@ static void process_options(int argc, char *argv[])
 			break;
 		case 'T':
 			no_textures_mode = 1;
+			break;
+		case 'g':
+			NAT_ghetto_mode = 1;
 			break;
 		case NO_LAUNCHER:
 			displaymode = DISPLAYMODE_NETWORK_SETUP;

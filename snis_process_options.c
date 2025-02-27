@@ -42,6 +42,7 @@ static const struct snis_process_options default_options = {
 		.multiverse_location = "narnia",
 		.solarsystem = "default",
 		.port_range = "",
+		.NAT_ghetto_mode = 0,
 	},
 	.lobbyhost = "localhost",
 	.lobbyport = "2914",

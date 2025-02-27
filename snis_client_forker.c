@@ -106,6 +106,11 @@ static char **build_multiverse_argv(char *multiverse_server)
 		argv[i++] = strdup("--snis-server-portrange");
 		argv[i++] = strdup(options.snis_server.port_range);
 	}
+	/* We don't need to pass snis_server.NAT_ghetto_mode to multiverse
+	 * because any snis_servers that multiverse starts will be able to reach
+	 * multiverse because they are running on the same host because they are
+	 * child processes.
+	 */
 
 	argv[i++] = strdup("-l");
 	argv[i++] = strdup(options.lobbyhost);
@@ -131,6 +136,8 @@ static char **build_snis_server_argv(char *server)
 		argc += 2;
 	if (options.no_lobby)
 		argc += 1;
+	if (options.snis_server.NAT_ghetto_mode)
+		argc += 1;
 
 	argv = calloc(argc, sizeof(char *));
 
@@ -147,6 +154,8 @@ static char **build_snis_server_argv(char *server)
 	if (options.no_lobby) {
 		argv[i++] = strdup("--nolobby");
 	}
+	if (options.snis_server.NAT_ghetto_mode)
+		argv[i++] = strdup("-g");
 
 	argv[i++] = strdup("-l");
 	argv[i++] = strdup(options.lobbyhost);
