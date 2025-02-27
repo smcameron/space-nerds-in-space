@@ -94,6 +94,9 @@ GLOBAL void snis_button_set_cookie(struct button *b, void *cookie);
  */
 GLOBAL int snis_button_generic_checkbox_function(void *x);
 
+/* Can be used as a button press function for checkboxes, will do *(int *)x = !*(int *)x; */
+GLOBAL void snis_button_generic_checkbox_toggler(void *x);
+
 /* Control if button resizes when the label changes. By default, they don't. Use
  * 1 for resize, and they will, 0, and they won't resize.
  */
