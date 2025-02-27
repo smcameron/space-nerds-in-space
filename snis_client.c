@@ -8756,14 +8756,21 @@ try_again:
 
 		/* The one the thing we're trying to connect to discovered (which might be behind NAT)
 		 * and the one ssgl_server got from accept().  Depending what's going on, one might be
-		 * more useful than the other.  We'll try one, then the other.
+		 * more useful than the other.  We'll try one, then the other.  Third try, assume ssgl
+		 * has got useless IP's due to NAT, and guess that maybe our snis_server is on the same
+		 * machine as the lobby, with the port number we got from ssgl.
 		 */
-		if (attempt_number == 1)
+		if (attempt_number == 1) {
 			x = (unsigned char *) &lobby_game_server[lobby_selected_server].real_ipaddr;
-		else
+			snprintf(hoststr, sizeof(hoststr), "%d.%d.%d.%d", x[0], x[1], x[2], x[3]);
+		} else if (attempt_number == 2) {
 			x = (unsigned char *) &lobby_game_server[lobby_selected_server].ipaddr;
+			snprintf(hoststr, sizeof(hoststr), "%d.%d.%d.%d", x[0], x[1], x[2], x[3]);
+		} else if (attempt_number == 3 && lobbyhost != NULL) {
+			fprintf(stderr, "Attempting NAT ghetto method ... \n");
+			snprintf(hoststr, sizeof(hoststr), "%s", lobbyhost);
+		}
 		snprintf(portstr, sizeof(portstr), "%d", ntohs(lobby_game_server[lobby_selected_server].port));
-		snprintf(hoststr, sizeof(hoststr), "%d.%d.%d.%d", x[0], x[1], x[2], x[3]);
 	}
 	fprintf(stderr, "snis_client: connecting to %s/%s\n", hoststr, portstr);
 	strlcpy(connecting_to_server_msg, "CONNECTING TO SERVER...", sizeof(connecting_to_server_msg));
@@ -8810,7 +8817,7 @@ try_again:
 	rc = connect(gameserver_sock, i->ai_addr, i->ai_addrlen);
 	if (rc < 0) {
 		fprintf(stderr, "Attempt %d: Connect failed: %s\n", attempt_number, strerror(errno));
-		if (attempt_number == 1) {
+		if (!avoid_lobby && (attempt_number == 1 || (attempt_number == 2 && lobbyhost != NULL))) {
 			attempt_number++;
 			if (lobby_game_server[lobby_selected_server].real_ipaddr !=
 						lobby_game_server[lobby_selected_server].ipaddr)

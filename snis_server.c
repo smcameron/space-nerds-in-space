@@ -31278,21 +31278,32 @@ static void connect_to_multiverse(struct multiverse_server_info *msi,
 
 	assert(msi);
 
+	char portstr[50];
+	char hoststr[50];
+
 try_again:
-	if (attempt_number == 1)
+	snprintf(portstr, sizeof(portstr), "%d", port);
+	if (attempt_number == 1) {
 		x = (unsigned char *) &ipaddr;
-	else
+		snprintf(hoststr, sizeof(hoststr), "%d.%d.%d.%d", x[0], x[1], x[2], x[3]);
+	} else if (attempt_number == 2) {
 		x = (unsigned char *) &real_ipaddr;
+		snprintf(hoststr, sizeof(hoststr), "%d.%d.%d.%d", x[0], x[1], x[2], x[3]);
+	} else if (lobbyhost) {
+		/* NAT ghetto mode.  Our IP addresses from ssgl_server failed. So take a wild
+		 * guess that maybe this is because of NAT, and maybe snis_multiverse is running
+		 * on the same host as ssgl_server, and try that IP with the port number we got
+		 * from ssgl_server.
+		 */
+		fprintf(stderr, "Trying NAT ghetto method ...\n");
+		snprintf(hoststr, sizeof(hoststr), "%s", lobbyhost);
+	}
 
 	if (multiverse_debug)
 		fprintf(stderr, "%s: connecting to multiverse %s %hhu.%hhu.%hhu.%hhu/%hu\n",
 			logprefix(), multiverse_server->location, x[0], x[1], x[2], x[3], port);
-	char portstr[50];
-	char hoststr[50];
 	int flag = 1;
 
-	snprintf(portstr, sizeof(portstr), "%d", port);
-	snprintf(hoststr, sizeof(hoststr), "%d.%d.%d.%d", x[0], x[1], x[2], x[3]);
 
 	memset(&hints, 0, sizeof(hints));
 	hints.ai_family = AF_INET;
@@ -31317,7 +31328,7 @@ try_again:
 
 	rc = connect(sock, i->ai_addr, i->ai_addrlen);
 	if (rc < 0) {
-		if (attempt_number == 1) {
+		if (attempt_number == 1 || (attempt_number == 2 && lobbyhost != NULL)) {
 			fprintf(stderr, "%s: connect() to %s:%s failed: %s\n",
 				logprefix(), hoststr, portstr, strerror(errno));
 			attempt_number++;
