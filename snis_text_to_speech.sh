@@ -146,7 +146,7 @@ get_lock()
 do_text_to_speech()
 {
 	get_lock
-	nanotts -l en_GB -p "$1" 2>/dev/null
+	nanotts -v en-GB -p "$1" 2>/dev/null
 	if [ "$?" = "0" ]
 	then
 		return
