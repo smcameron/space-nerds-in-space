@@ -1326,7 +1326,7 @@ mostly-clean:
 	${MANSRCDIR}/earthlike.1.gz  ${MANSRCDIR}/snis_client.6.gz  ${MANSRCDIR}/snis_server.6.gz  \
 	${MANSRCDIR}/snis_test_audio.1.gz bin/test_transport_contract bin/test_stringutils \
 	bin/yoke-test-program fuzz_obj_parser fuzz_snis_read_ship_types fuzz_solarsystem_asset_spec_read \
-	fuzz_read_thrust_attachments fuzz_process_manifest
+	fuzz_read_thrust_attachments fuzz_process_manifest build_info.h
 	rm -f ${BIN}
 	rm -fr opus-1.3.1
 	rm -f libopus.a
