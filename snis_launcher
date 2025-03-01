@@ -1,5 +1,12 @@
 #!/bin/sh
 
+id | awk '{ print $2 }' | grep '[(]socker[)]' > /dev/null
+if [ "$?" != "0" ]
+then
+	echo "You must have real group ID "docker" to run this script." 1>&2
+	exit 1
+fi
+
 if [ "$(id -u)" = "0" ]
 then
 	printf "You are root. Do not run this script as root.\n" 1>&2

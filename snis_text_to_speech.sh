@@ -37,8 +37,24 @@ then
 	SNIS_TTS_VOLUME="0.33"
 fi
 
+check_nanotts()
+{
+	nanotts -c 'hello' > /dev/null 2>&1
+	if [ "$?" = "0" ]
+	then
+		echo "    OK - nanotts is present and executable"
+	else
+		echo "NOT OK!!!   Failed to run nanotts"
+	fi
+}
+
 check_presence()
 {
+	if [ "$1" = "nanotts" ]
+	then
+		check_nanotts
+		return
+	fi
 	program="$1"
 	arg="$2"
 	expected="$3"
@@ -87,6 +103,7 @@ then
 	echo "    Ok - Checking if we can remove the directory in /tmp"
 	rmdir "$TMPFILE" || (echo "NOT OK!!! Failed to rmdir $TMPFILE" && exit 1)
 	echo "    OK - Removed directory in /tmp OK"
+	check_presence nanotts
 	check_presence play /dev/null 2
 	check_presence aplay /dev/null 1
 	check_presence pico2wave x 1
@@ -129,6 +146,12 @@ get_lock()
 do_text_to_speech()
 {
 	get_lock
+	nanotts -l en_GB -p "$1" 2>/dev/null
+	if [ "$?" = "0" ]
+	then
+		return
+	fi 
+	echo "nanotts didn't work"
 	tmpfile=/tmp/tts-$$.wav
 	pico2wave -l=en-GB -w "$tmpfile" "$1" || espeak "$1"
 	play -q --volume "${SNIS_TTS_VOLUME}" "$tmpfile" > /dev/null 2>&1 || aplay "$tmpfile" > /dev/null 2>&1
