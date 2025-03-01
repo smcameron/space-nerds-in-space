@@ -169,7 +169,14 @@ static void update_expiration(int entry)
 	expiration[entry] = tv.tv_sec + SSGL_GAME_SERVER_TIMEOUT_SECS;
 }
 
-static void service_game_server(int connection)
+struct service_thread_info {
+	int connection;
+	pthread_t thread;
+	struct sockaddr_in remote_addr;
+	socklen_t remote_addr_len;
+};
+
+static void service_game_server(int connection, struct service_thread_info *threadinfo)
 {
 	int rc;
 	int i;
@@ -247,6 +254,7 @@ static void service_game_server(int connection)
 
 	/* printf("5 gs.game_type = '%s'\n",gs.game_type); */
 	/* add the new game server info into the directory... */
+	memcpy(&gs.real_ipaddr, &threadinfo->remote_addr.sin_addr, sizeof(gs.real_ipaddr));
 	game_server[ngame_servers] = gs;
 	update_expiration(ngame_servers);
 	/* printf("6 gs.game_type = '%s'\n",gs.game_type); */
@@ -368,11 +376,6 @@ badclient:
 	return;
 }
 
-struct service_thread_info {
-	int connection;
-	pthread_t thread;
-};
-
 static void *service_thread(void *arg)
 {
 	int rc;
@@ -395,7 +398,7 @@ static void *service_thread(void *arg)
 
 	/* Determine if this is a game client or a game server connecting */
 	if (proto_id.client_type == SSGL_GAME_SERVER)
-		service_game_server(connection);
+		service_game_server(connection, threadinfo);
 	else
 		service_game_client(connection);
 out:
@@ -406,7 +409,7 @@ out:
 	return 0; /* implicit pthread_exit(); here */
 }
 
-static void service(int connection)
+static void service(int connection, struct sockaddr_in remote_addr, socklen_t remote_addr_len)
 {
 	pthread_attr_t attr;
 	int rc;
@@ -419,6 +422,8 @@ static void service(int connection)
 	 */
 	threadinfo = malloc(sizeof(*threadinfo)); /* will be freed in service_thread(). */
 	threadinfo->connection = connection; /* linux overcommits, no sense in checking malloc return. */
+	threadinfo->remote_addr = remote_addr;
+	threadinfo->remote_addr_len = remote_addr_len;
 
 	get_peer_name(connection, client_ip);
 	ssgl_log(SSGL_INFO, "ssgl_server: New connection from %s\n", client_ip);
@@ -672,7 +677,7 @@ int main(int argc, char *argv[])
 			close(connection);
 			continue;
 		}
-		service(connection);
+		service(connection, remote_addr, remote_addr_len);
 	}
 	return 0;
 }

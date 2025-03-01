@@ -261,6 +261,7 @@ static int no_lobby = 0;
 static struct multiverse_server_info {
 	int sock;			/* Socket to the snis_multiverse process */
 	uint32_t ipaddr;		/* IP address of snis_multiverse obtained from ssgl_server */
+	uint32_t real_ipaddr;		/* Alternate IP address obtained from ssgl, both network byte order */
 	uint16_t port;			/* listening port of snis_multiverse obtained from ssgl_server */
 	pthread_t read_thread;		/* Thread that reads from snis_multiverse */
 	pthread_t write_thread;		/* Thread to write to snis_multiverse */
@@ -31263,17 +31264,25 @@ protocol_error:
 	return NULL;
 }
 
-static void connect_to_multiverse(struct multiverse_server_info *msi, uint32_t ipaddr, uint16_t port)
+static void connect_to_multiverse(struct multiverse_server_info *msi,
+					uint32_t ipaddr, uint32_t real_ipaddr, uint16_t port)
 {
 	int rc;
 	int sock = -1;
 	struct addrinfo *mvserverinfo, *i;
 	struct addrinfo hints;
-	unsigned char *x = (unsigned char *) &ipaddr;
+	unsigned char *x;
 	char response[100];
 	char starsystem_name[SSGL_LOCATIONSIZE];
+	int attempt_number = 1;
 
 	assert(msi);
+
+try_again:
+	if (attempt_number == 1)
+		x = (unsigned char *) &ipaddr;
+	else
+		x = (unsigned char *) &real_ipaddr;
 
 	if (multiverse_debug)
 		fprintf(stderr, "%s: connecting to multiverse %s %hhu.%hhu.%hhu.%hhu/%hu\n",
@@ -31307,8 +31316,16 @@ static void connect_to_multiverse(struct multiverse_server_info *msi, uint32_t i
 		goto error;
 
 	rc = connect(sock, i->ai_addr, i->ai_addrlen);
-	if (rc < 0)
-		goto error;
+	if (rc < 0) {
+		if (attempt_number == 1) {
+			fprintf(stderr, "%s: connect() to %s:%s failed: %s\n",
+				logprefix(), hoststr, portstr, strerror(errno));
+			attempt_number++;
+			goto try_again;
+		} else {
+			goto error;
+		}
+	}
 
 	rc = setsockopt(sock, IPPROTO_TCP, TCP_NODELAY, (char *) &flag, sizeof(int));
 	if (rc)
@@ -31371,6 +31388,7 @@ static void connect_to_multiverse(struct multiverse_server_info *msi, uint32_t i
 
 	msi->sock = sock;
 	msi->ipaddr = ipaddr;
+	msi->real_ipaddr = ipaddr;
 	msi->port = port;
 	msi->writer_time_to_exit = 0;
 	msi->reader_time_to_exit = 0;
@@ -31496,7 +31514,7 @@ static void servers_changed_cb(__attribute__((unused)) void *cookie)
 {
 	struct ssgl_game_server *gameserver = NULL;
 	int i, nservers, same_as_before = 0;
-	uint32_t ipaddr = -1;
+	uint32_t ipaddr = -1, real_ipaddr = -1;
 	uint16_t port = -1;
 	int found_multiverse_server = 0;
 
@@ -31571,7 +31589,7 @@ static void servers_changed_cb(__attribute__((unused)) void *cookie)
 	}
 	fprintf(stderr, "%s: servers_changed_cb connecting to multiverse server\n",
 			logprefix());
-	connect_to_multiverse(multiverse_server, ipaddr, port);
+	connect_to_multiverse(multiverse_server, ipaddr, real_ipaddr, port);
 	if (multiverse_server->sock >= 0)
 		send_demon_console_color_msg(YELLOW, "%s connected to multiverse server", logprefix());
 	else

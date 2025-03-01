@@ -142,6 +142,7 @@
 #include "png_utils.h"
 #include "snis_client_forker.h"
 #include "snis_process_options.h"
+#include "net_utils.h"
 
 #define SHIP_COLOR CYAN
 #define STARBASE_COLOR RED
@@ -5285,8 +5286,8 @@ static void show_lobbyscreen(void)
 		sng_set_foreground(UI_COLOR(lobby_connecting));
 		pthread_mutex_lock(&lobby_data_mutex);
 		for (i = 0; i < ngameservers; i++) {
-			unsigned char *x = (unsigned char *) 
-				&lobby_game_server[i].ipaddr;
+			unsigned char *x = (unsigned char *) &lobby_game_server[i].ipaddr;
+			unsigned char *y = (unsigned char *) &lobby_game_server[i].real_ipaddr;
 			if (lobbylast1clickx > txx(30) && lobbylast1clickx < txx(700) &&
 				lobbylast1clicky > txy(100) + (-0.5 + i) * LINEHEIGHT &&
 				lobbylast1clicky < txy(100) + (0.5 + i) * LINEHEIGHT) {
@@ -5307,7 +5308,9 @@ static void show_lobbyscreen(void)
 				lobby_selected_server = 0;
 			}
 			 
-			snprintf(msg, sizeof(msg), "%hhu.%hhu.%hhu.%hhu/%hu", x[0], x[1], x[2], x[3],
+			snprintf(msg, sizeof(msg), "%hhu.%hhu.%hhu.%hhu/%hhu.%hhu.%hhu.%hhu/%hu",
+					x[0], x[1], x[2], x[3],
+					y[0], y[1], y[2], y[3],
 					ntohs(lobby_game_server[i].port));
 
 			/* Check if the IP address we have is bogus.  This can happen if
@@ -8739,15 +8742,26 @@ static void *connect_to_gameserver_thread(__attribute__((unused)) void *arg)
 	unsigned char *x;
 	struct add_player_packet app;
 	int flag = 1;
+	int attempt_number;
 
+	attempt_number = 1;
 	fprintf(stderr, "snis_client: connect to gameserver thread\n");
 	if (avoid_lobby) {
 		strcpy(hoststr, serverhost);
 		snprintf(portstr, sizeof(portstr), "%d", serverport);
 	} else {
-		fprintf(stderr, "snis_client: connect_to_gameserver_thread, lobby_selected_server = %d\n",
-				lobby_selected_server);
-		x = (unsigned char *) &lobby_game_server[lobby_selected_server].ipaddr;
+try_again:
+		fprintf(stderr, "snis_client: connect_to_gameserver_thread, lobby_selected_server = %d, attempt %d\n",
+				lobby_selected_server, attempt_number);
+
+		/* The one the thing we're trying to connect to discovered (which might be behind NAT)
+		 * and the one ssgl_server got from accept().  Depending what's going on, one might be
+		 * more useful than the other.  We'll try one, then the other.
+		 */
+		if (attempt_number == 1)
+			x = (unsigned char *) &lobby_game_server[lobby_selected_server].real_ipaddr;
+		else
+			x = (unsigned char *) &lobby_game_server[lobby_selected_server].ipaddr;
 		snprintf(portstr, sizeof(portstr), "%d", ntohs(lobby_game_server[lobby_selected_server].port));
 		snprintf(hoststr, sizeof(hoststr), "%d.%d.%d.%d", x[0], x[1], x[2], x[3]);
 	}
@@ -8794,8 +8808,17 @@ static void *connect_to_gameserver_thread(__attribute__((unused)) void *arg)
 		goto error;
 
 	rc = connect(gameserver_sock, i->ai_addr, i->ai_addrlen);
-	if (rc < 0)
-		goto error;
+	if (rc < 0) {
+		fprintf(stderr, "Attempt %d: Connect failed: %s\n", attempt_number, strerror(errno));
+		if (attempt_number == 1) {
+			attempt_number++;
+			if (lobby_game_server[lobby_selected_server].real_ipaddr !=
+						lobby_game_server[lobby_selected_server].ipaddr)
+				goto try_again; /* Try again if there is a 2nd IP address */
+		} else {
+			goto error;
+		}
+	}
 
 	rc = setsockopt(gameserver_sock, IPPROTO_TCP, TCP_NODELAY, (char *) &flag, sizeof(int));
 	if (rc) {
