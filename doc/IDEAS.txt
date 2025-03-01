@@ -1,6 +1,34 @@
 Here be ideas about what might or might not be added into the game
 at some point.
 
+Sat 01 Mar 2025 04:42:28 PM EST
+-------------------------------
+
+Currently we have nine solarsystems defined, requiring 550M in PNG assets:
+
+$ du -h
+86M	./zaurno
+71M	./varco
+50M	./tau-scorpii
+89M	./karado
+53M	./zolon
+53M	./sirius
+41M	./polaris
+32M	./default
+77M	./quidgebo
+550M	.
+
+(On that front, what if we switched to a different image format, like JPEG
+or QOI or something... could drastically cut down on the size as PNGs aren't small.
+
+How could we get more solarsystems without more assets? We could have ephemeral
+(or fake, or some other descriptor) solarsystems without assets, which either
+re-use the existing assets, possibly modifying colors via shaders, or maybe
+develop some procedural shaders or on-the-fly asset generation fast enough for
+warp gate travel (How? Not easy.)  This would allow for a greatly expanded
+universe (though maybe a not very interesting universe).  Maybe we don't need
+such a thing.
+
 Wed Jun 30 02:29:08 EDT 2021
 ----------------------------
 
