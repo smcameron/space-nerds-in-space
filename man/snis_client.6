@@ -142,6 +142,13 @@ Specifies the password to be used to connect to a snis_server process.
 Load the specified solarsystem assets instead of the default assets.  These
 are defined by "$SNIS_ASSET_DIR/solarsystems/*/assets.txt".
 .TP
+\fB\-g, --NAT-ghetto-mode\fR
+In the event that snis_client cannot connect to snis_server using the IP addresses
+it gets from ssgl_server, take a wild guess that the reason is because of NAT, and
+take another wild guess that the snis_server process is probably running on the same
+host as the lobby server, and just use the lobby server's IP address, but the port
+number from ssgl_server, on the theory that it will work because of port forwarding.
+.TP
 \fB\-a, --soundserver\fR
 Request this client process support the SOUNDSERVER role.
 .TP

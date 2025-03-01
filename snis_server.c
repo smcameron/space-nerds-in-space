@@ -257,6 +257,7 @@ static struct transport_contract *transport_contract[MAX_TRANSPORT_CONTRACTS] = 
 static int ntransport_contracts = 0;
 static int local_net_connections_only = 1; /* tweakable */
 static int no_lobby = 0;
+static int NAT_ghetto_mode = 0;
 
 static struct multiverse_server_info {
 	int sock;			/* Socket to the snis_multiverse process */
@@ -30813,6 +30814,7 @@ static struct option long_options[] = {
 	{ "nolobby", no_argument, NULL, OPT_NO_LOBBY },
 	{ "port", required_argument, NULL, 'p' },
 	{ "portrange", required_argument, NULL, 'r' },
+	{ "NAT-ghetto-mode", no_argument, NULL, 'g' },
 	{ 0, 0, 0, 0 },
 };
 
@@ -30897,7 +30899,7 @@ static void process_options(int argc, char *argv[])
 
 	while (1) {
 		int option_index;
-		c = getopt_long(argc, argv, "ehL:l:m:n:p:r:s:tv", long_options, &option_index);
+		c = getopt_long(argc, argv, "eghL:l:m:n:p:r:s:tv", long_options, &option_index);
 		if (c == -1)
 			break;
 		switch (c) {
@@ -30987,6 +30989,9 @@ static void process_options(int argc, char *argv[])
 			}
 			snis_server_port_min = v;
 			snis_server_port_max = v2;
+			break;
+		case 'g':
+			NAT_ghetto_mode = 1;
 			break;
 		default:
 			usage();
@@ -31289,7 +31294,7 @@ try_again:
 	} else if (attempt_number == 2) {
 		x = (unsigned char *) &real_ipaddr;
 		snprintf(hoststr, sizeof(hoststr), "%d.%d.%d.%d", x[0], x[1], x[2], x[3]);
-	} else if (lobbyhost) {
+	} else if (lobbyhost && NAT_ghetto_mode) {
 		/* NAT ghetto mode.  Our IP addresses from ssgl_server failed. So take a wild
 		 * guess that maybe this is because of NAT, and maybe snis_multiverse is running
 		 * on the same host as ssgl_server, and try that IP with the port number we got
@@ -31328,7 +31333,8 @@ try_again:
 
 	rc = connect(sock, i->ai_addr, i->ai_addrlen);
 	if (rc < 0) {
-		if (attempt_number == 1 || (attempt_number == 2 && lobbyhost != NULL)) {
+		if (attempt_number == 1 ||
+			(attempt_number == 2 && lobbyhost != NULL && NAT_ghetto_mode)) {
 			fprintf(stderr, "%s: connect() to %s:%s failed: %s\n",
 				logprefix(), hoststr, portstr, strerror(errno));
 			attempt_number++;

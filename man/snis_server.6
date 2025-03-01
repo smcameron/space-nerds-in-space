@@ -59,6 +59,15 @@ console LOCAL-NET-ONLY, which this option sets to zero.
 Enable the "enscript" command on the Demon screen.  This allows clients to create
 files on the server so you should probably leave this off.
 .TP
+\fB\-g, --NAT-ghetto-mode\fR
+If it happens that snis_server cannot connect to snis_multiverse using the IP
+addresses it gets from ssgl_server, this flag makes it take a wild guess that
+the reason for this is NAT, so that ssgl_server has the wrong IP addresses and
+it takes another wild guess that snis_multiverse is running on the same host as
+ssgl_server, and so it attempts to connect using the IP address of the lobby host
+and the port number it got from the lobby for the snis_server on the theory that
+the port number will work because of port forwarding.
+.TP
 \fB\-h, --help\fR
 Prints a usage message and exits.
 .TP
