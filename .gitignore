@@ -37,3 +37,10 @@ test-mtwist
 test-quat
 test_solarsystem_config
 test-space-partition
+fuzz_obj_parser
+fuzz_snis_read_ship_types
+fuzz_solarsystem_asset_spec_read
+fuzz_read_thrust_attachments
+fuzz_process_manifest build_info.h
+fuzz.out
+
