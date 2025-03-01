@@ -301,3 +301,9 @@ int snis_button_generic_checkbox_function(void *x)
 	return *((int *) x);
 }
 
+void snis_button_generic_checkbox_toggler(void *x)
+{
+	int *y = x;
+	*y = !*y;
+}
+
