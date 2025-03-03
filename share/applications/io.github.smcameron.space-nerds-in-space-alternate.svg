@@ -60,6 +60,53 @@
        y1="153.06667"
        x2="107.68542"
        y2="217.36041" />
+    <clipPath
+       clipPathUnits="userSpaceOnUse"
+       id="clipPath913">
+      <g
+         id="g927"
+         transform="matrix(1.1189966,0,0,1.0270141,-12.328049,-5.5607555)">
+        <circle
+           r="6.8791666"
+           cy="263.09018"
+           cx="45.695034"
+           id="circle915"
+           style="fill:#ff0000;fill-rule:evenodd;stroke-width:0.26458332" />
+        <circle
+           r="6.8791666"
+           cy="262.99661"
+           cx="160.22087"
+           id="circle917"
+           style="fill:#ff0000;fill-rule:evenodd;stroke-width:0.26458332" />
+        <circle
+           r="6.8791666"
+           cy="145.45549"
+           cx="45.656284"
+           id="circle919"
+           style="fill:#ff0000;fill-rule:evenodd;stroke-width:0.26458332" />
+        <circle
+           r="6.8791666"
+           cy="145.52165"
+           cx="160.02243"
+           id="circle921"
+           style="fill:#ff0000;fill-rule:evenodd;stroke-width:0.26458332" />
+        <rect
+           ry="0"
+           y="145.45551"
+           x="38.777115"
+           height="117.54114"
+           width="128.32292"
+           id="rect923"
+           style="opacity:1;fill:#ff0000;fill-opacity:1;stroke:#0a005f;stroke-width:0;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:0.63926942" />
+        <rect
+           y="138.64249"
+           x="45.920864"
+           height="131.23334"
+           width="114.3"
+           id="rect925"
+           style="opacity:1;fill:#ff0000;fill-opacity:1;stroke:#0a005f;stroke-width:0;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:0.63926942" />
+      </g>
+    </clipPath>
   </defs>
   <sodipodi:namedview
      id="base"
