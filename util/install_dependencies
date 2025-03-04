@@ -31,12 +31,14 @@ apt_min_packages()
 	echo "portaudio19-dev
 	libpng-dev
 	libvorbis-dev
+	libopus-dev
 	libsdl2-dev
 	libsdl2-2.0-0
 	liblua5.2-dev
 	libglew-dev
 	libttspico-utils
 	libcrypt-dev
+	libssl-dev
 	libcurl-dev
 	sox"
 }
