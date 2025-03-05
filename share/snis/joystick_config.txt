@@ -50,8 +50,9 @@
 # nav-standard-orbit, nav-docking-magnets, nav-attitude-indicator-abs-rel,
 # nav-starmap, nav-reverse, nav-lights, nav-nudge-warp-up, nav-nudge-warp-down,
 # nav-nudge-zoom-up, nav-nudge-zoom-down, weapons-wavelength-up,
-# weapons-wavelength-down, nav-change-pov
-#
+# weapons-wavelength-down, nav-change-pov, eng-preset-0, eng-preset-1, eng-preset-2,
+# eng-preset-3, eng-preset-4, eng-preset-5, eng-preset-6, eng-preset-7, eng-preset-8,
+# eng-preset-9, eng-shield-toggle
 #
 # Here are examples of mapping a mode + button or mode + axis to a function:
 #

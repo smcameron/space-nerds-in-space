@@ -4535,6 +4535,29 @@ static struct engineering_ui {
 	int gauge_radius;
 } eng_ui;
 
+static void preset_button_pressed(void *button_ptr_ptr);
+
+#define EMPTYVOID __attribute__((unused)) void *
+static void do_joystick_eng_preset_0(EMPTYVOID x) { preset_button_pressed(&eng_ui.preset_buttons[0]); }
+static void do_joystick_eng_preset_1(EMPTYVOID x) { preset_button_pressed(&eng_ui.preset_buttons[1]); }
+static void do_joystick_eng_preset_2(EMPTYVOID x) { preset_button_pressed(&eng_ui.preset_buttons[2]); }
+static void do_joystick_eng_preset_3(EMPTYVOID x) { preset_button_pressed(&eng_ui.preset_buttons[3]); }
+static void do_joystick_eng_preset_4(EMPTYVOID x) { preset_button_pressed(&eng_ui.preset_buttons[4]); }
+static void do_joystick_eng_preset_5(EMPTYVOID x) { preset_button_pressed(&eng_ui.preset_buttons[5]); }
+static void do_joystick_eng_preset_6(EMPTYVOID x) { preset_button_pressed(&eng_ui.preset_buttons[6]); }
+static void do_joystick_eng_preset_7(EMPTYVOID x) { preset_button_pressed(&eng_ui.preset_buttons[7]); }
+static void do_joystick_eng_preset_8(EMPTYVOID x) { preset_button_pressed(&eng_ui.preset_buttons[8]); }
+static void do_joystick_eng_preset_9(EMPTYVOID x) { preset_button_pressed(&eng_ui.preset_buttons[9]); }
+static void do_joystick_eng_shield_toggle(EMPTYVOID x)
+{
+	float v = snis_slider_get_input(eng_ui.shield_control_slider);
+	if (v >= 0.5)
+		snis_slider_nudge(eng_ui.shield_control_slider, -v, 1);
+	else
+		snis_slider_nudge(eng_ui.shield_control_slider, 0.95 - v, 1);
+}
+#undef EMPTYVOID
+
 static void deal_with_keyboard(void)
 {
 	int h, v, z, r, t;
@@ -24182,6 +24205,17 @@ static void setup_joysticks(void)
 	set_joystick_button_fn(joystick_cfg, "weapons-wavelength-up", do_joystick_weapons_wavelength_up);
 	set_joystick_button_fn(joystick_cfg, "weapons-wavelength-down", do_joystick_weapons_wavelength_down);
 	set_joystick_button_fn(joystick_cfg, "nav-change-pov", do_joystick_nav_change_pov);
+	set_joystick_button_fn(joystick_cfg, "eng-preset-0", do_joystick_eng_preset_0);
+	set_joystick_button_fn(joystick_cfg, "eng-preset-1", do_joystick_eng_preset_1);
+	set_joystick_button_fn(joystick_cfg, "eng-preset-2", do_joystick_eng_preset_2);
+	set_joystick_button_fn(joystick_cfg, "eng-preset-3", do_joystick_eng_preset_3);
+	set_joystick_button_fn(joystick_cfg, "eng-preset-4", do_joystick_eng_preset_4);
+	set_joystick_button_fn(joystick_cfg, "eng-preset-5", do_joystick_eng_preset_5);
+	set_joystick_button_fn(joystick_cfg, "eng-preset-6", do_joystick_eng_preset_6);
+	set_joystick_button_fn(joystick_cfg, "eng-preset-7", do_joystick_eng_preset_7);
+	set_joystick_button_fn(joystick_cfg, "eng-preset-8", do_joystick_eng_preset_8);
+	set_joystick_button_fn(joystick_cfg, "eng-preset-9", do_joystick_eng_preset_9);
+	set_joystick_button_fn(joystick_cfg, "eng-shield-toggle", do_joystick_eng_shield_toggle);
 	snprintf(joystick_config_file, sizeof(joystick_config_file), "%s/joystick_config.txt", asset_dir);
 	read_joystick_config(joystick_cfg, joystick_config_file, joystick_name, njoysticks);
 
