@@ -4556,6 +4556,17 @@ static void do_joystick_eng_shield_toggle(EMPTYVOID x)
 	else
 		snis_slider_nudge(eng_ui.shield_control_slider, 0.95 - v, 1);
 }
+
+static void do_joystick_arrow_button(int h, int v)
+{
+	do_dirkey(h, v, 0, 0);
+}
+
+static void do_joystick_left_arrow(EMPTYVOID x) { do_joystick_arrow_button(-1, 0); }
+static void do_joystick_right_arrow(EMPTYVOID x) { do_joystick_arrow_button(1, 0); }
+static void do_joystick_up_arrow(EMPTYVOID x) { do_joystick_arrow_button(0, -1); }
+static void do_joystick_down_arrow(EMPTYVOID x) { do_joystick_arrow_button(0, 1); }
+
 #undef EMPTYVOID
 
 static void deal_with_keyboard(void)
@@ -24216,6 +24227,10 @@ static void setup_joysticks(void)
 	set_joystick_button_fn(joystick_cfg, "eng-preset-8", do_joystick_eng_preset_8);
 	set_joystick_button_fn(joystick_cfg, "eng-preset-9", do_joystick_eng_preset_9);
 	set_joystick_button_fn(joystick_cfg, "eng-shield-toggle", do_joystick_eng_shield_toggle);
+	set_joystick_button_fn(joystick_cfg, "left-arrow", do_joystick_left_arrow);
+	set_joystick_button_fn(joystick_cfg, "right-arrow", do_joystick_right_arrow);
+	set_joystick_button_fn(joystick_cfg, "up-arrow", do_joystick_up_arrow);
+	set_joystick_button_fn(joystick_cfg, "down-arrow", do_joystick_down_arrow);
 	snprintf(joystick_config_file, sizeof(joystick_config_file), "%s/joystick_config.txt", asset_dir);
 	read_joystick_config(joystick_cfg, joystick_config_file, joystick_name, njoysticks);
 
