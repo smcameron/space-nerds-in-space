@@ -4382,11 +4382,15 @@ static void deal_with_joysticks(void)
 		if (rc != 0)
 			continue;
 
-		/* If not on screen which uses joystick, ignore stick */
-		if (displaymode != DISPLAYMODE_DAMCON &&
-			displaymode != DISPLAYMODE_WEAPONS &&
+		/* If not on screen which joystick config supports, ignore stick */
+		if (displaymode != DISPLAYMODE_MAINSCREEN &&
 			displaymode != DISPLAYMODE_NAVIGATION &&
-			displaymode != DISPLAYMODE_MAINSCREEN)
+			displaymode != DISPLAYMODE_WEAPONS &&
+			displaymode != DISPLAYMODE_ENGINEERING &&
+			displaymode != DISPLAYMODE_DAMCON &&
+			displaymode != DISPLAYMODE_SCIENCE &&
+			displaymode != DISPLAYMODE_COMMS &&
+			displaymode != DISPLAYMODE_DEMON)
 			continue;
 
 		/* Fire off joystick button callbacks registered via set_joystick_button_fn() */
