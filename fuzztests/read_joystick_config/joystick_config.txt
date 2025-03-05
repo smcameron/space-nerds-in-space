@@ -1,0 +1,401 @@
+#
+# Joystick config file for Space Nerds In Space
+# The code that reads this file is in joystick_config.c
+#
+# If you add any new joystick configs to this file, please
+# consider forwarding the new config to stephenmcameron@gmail.com
+#
+# the "device:" lines are followed by a regular expression to match the
+# name of the joystick device as it appears in /dev/input/by-id.
+# (See the output of ls -l /dev/input/by-id).
+# Note, I am using the old style devices that link to /dev/js*, not
+# the new "evdev" devices. You can tell the old from the new as the
+# new device names end in "-event-joystick", while the old names just
+# end in "-joystick" (no "-event-").
+#
+# Following each "device:..." line, are the mappings from (mode, (button/axis)
+# tuples to game functions for that device.
+#
+# The modes are as follows:
+# (See DISPLAYMODE_* #defines in snis_packet.h)
+#
+# mode main - main screen
+# mode navigation - navigation
+# mode weapons - weapons
+# mode engineering - engineering
+# mode science - science
+# mode comms - comms
+# mode demon - demon screen
+# mode damcon - damage control
+#
+# Instead of names, you may also use numbers
+#
+# mode 0 # means the same as mode main
+# mode 1 # means the same as mode navigation
+# mode 2 # means the same as mode weapons
+# mode 3 # means the same as mode engineering
+# mode 4 # means the same as mode science
+# mode 5 # means the same as mode comms
+# mode 6 # means the same as mode demon
+# mode 7 # means the same as mode damcon
+#
+# You may also set the mode by itself and it
+# remains set until it is changed again
+#
+# The game functions are as follows:
+#
+# yaw, roll, pitch,
+# phaser, torpedo,  missile,  weapons-yaw,  weapons-pitch, damcon-pitch,
+# damcon-roll, throttle, warp, weapons-wavelength, damcon-gripper, nav-engage-warp,
+# nav-standard-orbit, nav-docking-magnets, nav-attitude-indicator-abs-rel,
+# nav-starmap, nav-reverse, nav-lights, nav-nudge-warp-up, nav-nudge-warp-down,
+# nav-nudge-zoom-up, nav-nudge-zoom-down, weapons-wavelength-up,
+# weapons-wavelength-down, nav-change-pov, eng-preset-1, eng-preset-2, eng-preset-3,
+# eng-preset-4, eng-preset-5, eng-preset-6, eng-preset-7, eng-preset-8, eng-preset-9,
+# eng-preset-10, eng-shield-toggle, left-arrow, right-arrow, up-arrow, down-arrow
+#
+# Here are examples of mapping a mode + button or mode + axis to a function:
+#
+#  mode 0 button 1 phaser		# map mode 0 button 1 to phaser function
+#  mode 1 axis 2 yaw			# map mode 1 axis 2 to yaw function
+#  mode 1 invert axis 3 roll 		# map mode 1 axis 3 to roll function and invert the axis
+#  mode 1 axis 2 throttle 0		# map mode 1 axis 2 to throttle with 0 deadzone
+#					# (default deadzone is 6000).
+#  mode navigation
+#    axis 2 yaw
+#    invert axis 1 pitch
+#    axis 0 roll
+#
+
+# Microsoft Xbox 360 controller
+device:usb-©Microsoft_Corporation_Controller_05EB4AD-joystick
+ mode main
+   axis 3 roll
+   axis 4 pitch
+   axis 0 yaw
+   button 3 phaser
+   button 2 torpedo
+ mode navigation
+   axis 3 roll
+   axis 4 pitch
+   axis 0 yaw
+ mode weapons
+   axis 3 weapons-yaw
+   axis 4 weapons-pitch
+   axis 0 weapons-yaw
+   button 3 phaser
+   button 2 torpedo
+ mode damcon
+   axis 3 damcon-roll
+   axis 4 damcon-pitch
+   button 1 damcon-gripper
+   button 0 damcon-gripper
+
+# Thrustmaster Throttle
+device:usb-Thrustmaster_TWCS_Throttle-joystick
+ mode main
+   axis 2 throttle 0
+   axis 5 yaw
+   button 0 nav-reverse
+   button 1 nav-docking-magnets
+   button 2 nav-starmap
+   button 8 nav-nudge-warp-down
+   button 6 nav-nudge-warp-up
+   button 5 nav-engage-warp
+   button 7 nav-standard-orbit
+   axis 6 yaw # rudder pedals
+ mode navigation
+   axis 2 throttle 0
+   axis 5 yaw
+   button 0 nav-reverse
+   button 1 nav-docking-magnets
+   button 2 nav-starmap
+   button 3 nav-nudge-zoom-down
+   button 4 nav-nudge-zoom-up
+   button 8 nav-nudge-warp-down
+   button 6 nav-nudge-warp-up
+   button 5 nav-engage-warp
+   button 10 nav-attitude-indicator-abs-rel
+   button 13 nav-change-pov
+   button 7 nav-standard-orbit
+   axis 6 yaw # rudder pedals
+ mode weapons
+   axis 5 weapons-yaw
+ mode damcon
+   axis 5 damcon-roll
+
+# Thrustmaster Joystick
+device:usb-Thrustmaster_T.16000M-joystick
+ mode main
+   axis 0 roll
+   axis 1 pitch
+   axis 2 yaw
+   button 0 phaser
+   button 1 torpedo
+ mode navigation
+   axis 0 roll
+   axis 1 pitch
+   axis 2 yaw
+ mode weapons
+   axis 0 weapons-yaw # yaw, not roll, weapons doesn't have roll
+   axis 1 weapons-pitch
+   axis 2 weapons-yaw
+   button 0 phaser
+   button 1 torpedo
+ mode damcon
+   button 1 damcon-gripper
+   button 0 damcon-gripper
+   axis 0 damcon-roll
+   axis 1 damcon-pitch
+   axis 2 damcon-roll
+
+# Thrustmaster T.Flight Stick X
+device:usb-Thrustmaster_T.Flight_Stick_X-joystick
+ mode main
+   axis 0 roll
+   axis 1 pitch
+   axis 2 yaw
+   button 0 phaser
+   button 1 torpedo
+ mode navigation
+   axis 0 roll
+   axis 1 pitch
+   axis 2 yaw
+   axis 3 throttle 0
+   button 1 nav-change-pov
+   button 2 nav-starmap
+   button 3 nav-docking-magnets
+   button 4 nav-standard-orbit
+   button 0 nav-attitude-indicator-abs-rel
+   button 5 nav-lights
+   button 6 nav-nudge-warp-up
+   button 7 nav-nudge-warp-down
+   button 8 nav-engage-warp
+   button 9 nav-reverse
+   button 10 nav-nudge-zoom-up
+   button 11 nav-nudge-zoom-down
+ mode weapons
+   axis 0 weapons-yaw
+   axis 1 weapons-pitch
+   axis 2 weapons-yaw
+   axis 3 weapons-wavelength 0
+   button 0 phaser
+   button 1 torpedo
+   button 3 missile
+ mode damcon
+   button 1 damcon-gripper
+   button 0 damcon-gripper
+   axis 0 damcon-roll
+   axis 1 damcon-pitch
+   axis 2 damcon-roll
+
+# HOTAS Warthog Throttle
+device:usb-Thrustmaster_Throttle_-_HOTAS_Warthog-joystick
+ mode main
+   axis 2 throttle 0
+   axis 5 yaw
+   button 0 nav-reverse
+   button 1 nav-docking-magnets
+   button 24 nav-starmap
+   button 8 nav-nudge-warp-down
+   button 6 nav-nudge-warp-up
+   button 5 nav-engage-warp
+   button 25 nav-standard-orbit
+   axis 6 yaw # rudder pedals
+ mode navigation
+   axis 2 throttle 0
+   axis 5 yaw
+   button 0 nav-reverse
+   button 1 nav-docking-magnets
+   button 24 nav-starmap
+   button 3 nav-nudge-zoom-down
+   button 4 nav-nudge-zoom-up
+   button 8 nav-nudge-warp-down
+   button 6 nav-nudge-warp-up
+   button 5 nav-engage-warp
+   button 10 nav-attitude-indicator-abs-rel
+   button 13 nav-change-pov
+   button 25 nav-standard-orbit
+   axis 6 yaw # rudder pedals
+ mode weapons
+   axis 5 weapons-yaw
+ mode damcon
+   axis 5 damcon-roll
+
+# HOTAS warthog Joystick
+device:usb-Thustmaster_Joystick_-_HOTAS_Warthog-joystick
+ mode main
+   axis 0 roll
+   axis 1 pitch
+   axis 2 yaw
+   button 0 phaser
+   button 1 torpedo
+   button 3 nav-engage-warp
+ mode navigation
+   axis 0 roll
+   axis 1 pitch
+   axis 2 yaw
+   button 8 nav-nudge-warp-down
+   button 6 nav-nudge-warp-up
+   button 3 nav-engage-warp
+ mode weapons
+   axis 0 weapons-yaw # yaw, not roll, weapons doesn't have roll
+   axis 1 weapons-pitch
+   axis 2 weapons-yaw
+   button 0 phaser
+   button 1 torpedo
+ mode damcon
+   button 1 damcon-gripper
+   button 0 damcon-gripper
+   axis 0 damcon-roll
+   axis 1 damcon-pitch
+   axis 2 damcon-roll
+
+# Logitech Dual-action Rumble
+device:usb-Logitech_Logitech_RumblePad_2_USB-joystick
+ mode main
+   axis 0 roll
+   axis 1 pitch
+   axis 2 yaw
+   button 4 torpedo
+   button 5 torpedo
+   button 6 phaser
+   button 7 phaser
+ mode navigation
+   axis 0 roll
+   axis 1 pitch
+   axis 2 yaw
+ mode weapons
+   axis 0 weapons-yaw
+   axis 1 weapons-pitch
+   axis 0 weapons-yaw
+   button 4 torpedo
+   button 5 torpedo
+   button 6 phaser
+   button 7 phaser
+ mode damcon
+   axis 0 damcon-roll
+   axis 1 damcon-pitch
+   button 4 damcon-gripper
+   button 5 damcon-gripper
+
+# Logitech G Saitek Cyborg F.L.Y. 5 (FLY 5)
+device:usb-Saitek_Cyborg_X-joystick
+ mode navigation
+   axis 0 roll 10
+   axis 1 pitch 10
+   axis 2 throttle 0
+   axis 3 yaw 10
+   axis 4 warp 0
+   button 1 nav-change-pov
+   button 2 nav-starmap
+   button 3 nav-docking-magnets
+   button 4 nav-standard-orbit
+   button 5 nav-attitude-indicator-abs-rel
+   button 6 nav-lights
+   button 9 nav-reverse
+   button 10 nav-engage-warp
+   button 11 nav-nudge-zoom-up
+   button 12 nav-nudge-zoom-down
+ mode weapons
+   axis 0 weapons-yaw 10
+   invert axis 1 weapons-pitch 10
+   axis 2 weapons-wavelength 0
+   axis 5 weapons-yaw
+   invert axis 6 weapons-pitch
+   button 0 phaser
+   button 3 torpedo
+   button 4 missile
+   button 11 weapons-wavelength-up
+   button 12 weapons-wavelength-down
+# Defender Cobra R4
+device:usb-0079_Generic_USB_Joystick-joystick
+ mode main
+   axis 4 roll
+   axis 1 pitch
+   axis 0 yaw
+ mode navigation
+   axis 4 roll
+   axis 1 pitch
+   axis 0 yaw
+   axis 3 throttle 0
+   button 4 nav-nudge-zoom-up
+   button 6 nav-nudge-zoom-down
+ mode weapons
+   axis 0 weapons-yaw
+   axis 1 weapons-pitch
+   axis 2 weapons-yaw
+   axis 3 weapons-wavelength 0
+   button 0 phaser
+   button 1 torpedo
+   button 2 missile
+# Saitek X52 flight control system
+device:usb-Saitek_Saitek_X52_Flight_Control_System-joystick
+ mode main
+   axis 0 roll
+   axis 1 pitch
+   axis 5 yaw
+   axis 2 throttle
+ mode navigation
+   axis 0 roll
+   axis 1 pitch
+   axis 5 yaw
+   axis 2 throttle
+   invert axis 6 warp
+   button 4 nav-change-pov
+   button 26 nav-lights
+   button 27 nav-docking-magnets
+   button 28 nav-standard-orbit
+   button 29 nav-starmap
+   button 30 nav-attitude-indicator-abs-rel
+   button 7 nav-reverse
+   button 6 nav-engage-warp
+ mode weapons
+   axis 0 weapons-yaw
+   axis 1 weapons-pitch
+   axis 5 weapons-yaw
+   button 4 torpedo
+   button 1 missile
+   button 0 phaser
+   invert axis 3 weapons-wavelength 0
+# Logitech Attack3 Joystick
+device:usb-Logitech_Logitech_Attack_3-joystick
+ mode main
+   axis 0 yaw 1
+   axis 1 pitch 1
+   axis 2 throttle 0
+   button 0 nav-engage-warp
+   button 1 nav-change-pov
+   button 2 nav-docking-magnets
+   button 3 nav-nudge-warp-down
+   button 4 nav-nudge-warp-up
+   button 5 nav-standard-orbit
+   button 6 nav-reverse
+   button 7 nav-nudge-zoom-down
+   button 8 nav-nudge-zoom-up
+   button 9 nav-starmap
+   button 10 nav-lights
+ mode navigation
+   axis 0 yaw 1
+   axis 1 pitch 1
+   axis 2 throttle 0
+   button 0 nav-engage-warp
+   button 1 nav-change-pov
+   button 2 nav-docking-magnets
+   button 3 nav-nudge-warp-down
+   button 4 nav-nudge-warp-up
+   button 5 nav-standard-orbit
+   button 6 nav-reverse
+   button 7 nav-nudge-zoom-down
+   button 8 nav-nudge-zoom-up
+   button 9 nav-starmap
+   button 10 nav-lights
+ mode weapons
+   axis 0 weapons-yaw 1
+   axis 1 weapons-pitch 1
+   axis 2 weapons-wavelength 0
+   button 0 phaser
+   button 1 torpedo
+   button 2 missile
+   button 3 weapons-wavelength-down
+   button 4 weapons-wavelength-up
