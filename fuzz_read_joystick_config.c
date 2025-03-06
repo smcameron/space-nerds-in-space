@@ -76,6 +76,13 @@ static void setup_for_parsing(struct joystick_config *joystick_cfg)
 	set_joystick_button_fn(joystick_cfg, "right-arrow", dummy_button_fn);
 	set_joystick_button_fn(joystick_cfg, "up-arrow", dummy_button_fn);
 	set_joystick_button_fn(joystick_cfg, "down-arrow", dummy_button_fn);
+	set_joystick_button_fn(joystick_cfg, "eng-deploy-flare", dummy_button_fn);
+	set_joystick_button_fn(joystick_cfg, "sci-right-arrow", dummy_button_fn);
+	set_joystick_button_fn(joystick_cfg, "sci-left-arrow", dummy_button_fn);
+	set_joystick_button_fn(joystick_cfg, "sci-up-arrow", dummy_button_fn);
+	set_joystick_button_fn(joystick_cfg, "sci-down-arrow", dummy_button_fn);
+	set_joystick_button_fn(joystick_cfg, "cycle-station-forward", dummy_button_fn);
+	set_joystick_button_fn(joystick_cfg, "cycle-station-backward", dummy_button_fn);
 }
 
 int main(int argc, char *argv[])
