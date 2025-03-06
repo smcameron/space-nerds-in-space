@@ -178,7 +178,6 @@ static void translate_mode_names(char *line)
 	memmove(start, s, len + 1);
 
 	/* Replace the mode name with its number, or 'x' for "all" */
-	fprintf(stderr, "modified line is '%s'\n", line);
 }
 
 static int parse_joystick_cfg_line(struct joystick_config *cfg, char *filename, char *line, int ln,
