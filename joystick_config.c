@@ -127,6 +127,9 @@ static int regex_match(char *regex_pattern, char *text)
 	return 0;
 }
 
+/* If this ever needs to be 2 digits, some re-working will be required */
+#define MODE_ALL (9)
+
 /* This function turns lines like "mode main" to "mode 0", "mode science" to "mode 4" */
 static void translate_mode_names(char *line)
 {
@@ -144,10 +147,9 @@ static void translate_mode_names(char *line)
 		{ "comms", 5 },
 		{ "demon", 6 },
 		{ "damcon", 7 },
+		{ "all", MODE_ALL },
 	};
 	char modename[255];
-	int len;
-	char *start;
 
 	/* Find the first word after "mode" */
 	rc = sscanf(line, " mode %s%*[^	 ]", modename);
@@ -168,12 +170,15 @@ static void translate_mode_names(char *line)
 	if (!s)
 		return;
 
-	/* Replace the mode name with its number */
+	/* Replace the mode name with its number, or 'x' for all. */
 	*s = mode[m].number + '0';
-	start = s + 1;
+	char *start = s + 1;
 	s = s + strlen(mode[m].name);
-	len = strlen(s);
+	int len = strlen(s);
 	memmove(start, s, len + 1);
+
+	/* Replace the mode name with its number, or 'x' for "all" */
+	fprintf(stderr, "modified line is '%s'\n", line);
 }
 
 static int parse_joystick_cfg_line(struct joystick_config *cfg, char *filename, char *line, int ln,
@@ -234,7 +239,7 @@ static int parse_joystick_cfg_line(struct joystick_config *cfg, char *filename, 
 #define DEFAULT_DEADZONE_VALUE 6000
 		if (rc < 4)
 			deadzone = DEFAULT_DEADZONE_VALUE;
-		if (mode < 0 || mode >= MAX_MODES) {
+		if (mode < 0 || (mode >= MAX_MODES && mode != MODE_ALL)) {
 			fprintf(stderr, "%s:%d Bad mode %d (must be between 0 and %d)\n",
 				filename, ln, mode, MAX_MODES - 1);
 			return 0; /* just keep going. */
@@ -251,9 +256,18 @@ static int parse_joystick_cfg_line(struct joystick_config *cfg, char *filename, 
 		}
 		if (*current_device == -1)
 			return 0; /* valid syntax, but not a device we care about */
-		cfg->axis[mode][*current_device][axis] = jaf;
-		cfg->invert[mode][*current_device][axis] = invert;
-		cfg->deadzone[mode][*current_device][axis] = deadzone;
+		if (mode != MODE_ALL) {
+			cfg->axis[mode][*current_device][axis] = jaf;
+			cfg->invert[mode][*current_device][axis] = invert;
+			cfg->deadzone[mode][*current_device][axis] = deadzone;
+		} else {
+			fprintf(stderr, "Setting joystick axis for all modes\n");
+			for (int i = 0; i < 8; i++) {
+				cfg->axis[i][*current_device][axis] = jaf;
+				cfg->invert[i][*current_device][axis] = invert;
+				cfg->deadzone[i][*current_device][axis] = deadzone;
+			}
+		}
 		return 0;
 	}
 	rc = sscanf(line, " mode %d button %d %s", &mode, &button, function);
@@ -266,7 +280,7 @@ static int parse_joystick_cfg_line(struct joystick_config *cfg, char *filename, 
 	}
 
 	if (rc == 3) {
-		if (mode < 0 || mode >= MAX_MODES) {
+		if (mode < 0 || (mode >= MAX_MODES && mode != MODE_ALL)) {
 			fprintf(stderr, "%s:%d Bad mode %d (must be between 0 and %d)\n",
 				filename, ln, mode, MAX_MODES - 1);
 			return 0; /* just keep going. */
@@ -283,7 +297,13 @@ static int parse_joystick_cfg_line(struct joystick_config *cfg, char *filename, 
 		}
 		if (*current_device == -1)
 			return 0; /* valid syntax, but not a device we care about */
-		cfg->button[mode][*current_device][button] = jbf;
+		if (mode != MODE_ALL) {
+			cfg->button[mode][*current_device][button] = jbf;
+		} else {
+			fprintf(stderr, "Setting joystick button for all modes\n");
+			for (int i = 0; i < 8; i++)
+				cfg->button[i][*current_device][button] = jbf;
+		}
 		return 0;
 	}
 	/* Do not report blank lines as syntax errors. */

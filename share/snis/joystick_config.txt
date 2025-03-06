@@ -27,6 +27,7 @@
 # mode comms - comms
 # mode demon - demon screen
 # mode damcon - damage control
+# mode all - all screens
 #
 # Instead of names, you may also use numbers
 #
@@ -38,6 +39,7 @@
 # mode 5 # means the same as mode comms
 # mode 6 # means the same as mode demon
 # mode 7 # means the same as mode damcon
+# mode 9 # means the same as mode all
 #
 # You may also set the mode by itself and it
 # remains set until it is changed again
