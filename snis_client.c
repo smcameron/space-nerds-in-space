@@ -14502,6 +14502,50 @@ static void enforce_displaymode_matches_roles(void)
 	displaymode = newdisplaymode;
 }
 
+static void cycle_displaymode(int direction)
+{
+	static const int displaymode_cycle[] = {
+				DISPLAYMODE_MAINSCREEN,
+				DISPLAYMODE_NAVIGATION,
+				DISPLAYMODE_WEAPONS,
+				DISPLAYMODE_ENGINEERING,
+				DISPLAYMODE_DAMCON,
+				DISPLAYMODE_SCIENCE,
+				DISPLAYMODE_COMMS,
+				DISPLAYMODE_DEMON,
+	};
+
+	if (direction < 0)
+		direction = -1;
+	else
+		direction = 1;
+
+	int i;
+	for (i = 0; i < (int) ARRAYSIZE(displaymode_cycle); i++) {
+		if (displaymode_cycle[i] == displaymode)
+			break;
+	}
+
+	do {
+		i = i + direction;
+		if (i < 0)
+			i = (int) ARRAYSIZE(displaymode_cycle) - 1;
+		if (i > (int) ARRAYSIZE(displaymode_cycle) - 1)
+			i = 0;
+	} while (!(role & (1 << displaymode_cycle[i])));
+	displaymode = displaymode_cycle[i];
+}
+
+static void cycle_displaymode_forward(__attribute__((unused)) void *x)
+{
+	cycle_displaymode(1);
+}
+
+static void cycle_displaymode_backward(__attribute__((unused)) void *x)
+{
+	cycle_displaymode(-1);
+}
+
 static int process_client_config(void)
 {
 	int rc;
@@ -24241,6 +24285,8 @@ static void setup_joysticks(void)
 	set_joystick_button_fn(joystick_cfg, "sci-right-arrow", do_joystick_science_right_arrow);
 	set_joystick_button_fn(joystick_cfg, "sci-up-arrow", do_joystick_science_up_arrow);
 	set_joystick_button_fn(joystick_cfg, "sci-down-arrow", do_joystick_science_down_arrow);
+	set_joystick_button_fn(joystick_cfg, "cycle-station-forward", cycle_displaymode_forward);
+	set_joystick_button_fn(joystick_cfg, "cycle-station-backward", cycle_displaymode_backward);
 	snprintf(joystick_config_file, sizeof(joystick_config_file), "%s/joystick_config.txt", asset_dir);
 	read_joystick_config(joystick_cfg, joystick_config_file, joystick_name, njoysticks);
 
