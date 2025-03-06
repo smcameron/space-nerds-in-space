@@ -108,7 +108,7 @@ int main(int argc, char *argv[])
 #else
 		joystick_cfg = new_joystick_config();
 		setup_for_parsing(joystick_cfg);
-		read_joystick_config(joystick_cfg, "fuzztests/read_joystick_config/joystick_config.txt",
+		read_joystick_config(joystick_cfg, argv[1],
 					joysticks, ARRAYSIZE(joysticks));
 		free_joystick_config(joystick_cfg);
 #endif
