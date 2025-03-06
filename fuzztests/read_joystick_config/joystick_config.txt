@@ -1,71 +1,4 @@
 #
-# Joystick config file for Space Nerds In Space
-# The code that reads this file is in joystick_config.c
-#
-# If you add any new joystick configs to this file, please
-# consider forwarding the new config to stephenmcameron@gmail.com
-#
-# the "device:" lines are followed by a regular expression to match the
-# name of the joystick device as it appears in /dev/input/by-id.
-# (See the output of ls -l /dev/input/by-id).
-# Note, I am using the old style devices that link to /dev/js*, not
-# the new "evdev" devices. You can tell the old from the new as the
-# new device names end in "-event-joystick", while the old names just
-# end in "-joystick" (no "-event-").
-#
-# Following each "device:..." line, are the mappings from (mode, (button/axis)
-# tuples to game functions for that device.
-#
-# The modes are as follows:
-# (See DISPLAYMODE_* #defines in snis_packet.h)
-#
-# mode main - main screen
-# mode navigation - navigation
-# mode weapons - weapons
-# mode engineering - engineering
-# mode science - science
-# mode comms - comms
-# mode demon - demon screen
-# mode damcon - damage control
-#
-# Instead of names, you may also use numbers
-#
-# mode 0 # means the same as mode main
-# mode 1 # means the same as mode navigation
-# mode 2 # means the same as mode weapons
-# mode 3 # means the same as mode engineering
-# mode 4 # means the same as mode science
-# mode 5 # means the same as mode comms
-# mode 6 # means the same as mode demon
-# mode 7 # means the same as mode damcon
-#
-# You may also set the mode by itself and it
-# remains set until it is changed again
-#
-# The game functions are as follows:
-#
-# yaw, roll, pitch,
-# phaser, torpedo,  missile,  weapons-yaw,  weapons-pitch, damcon-pitch,
-# damcon-roll, throttle, warp, weapons-wavelength, damcon-gripper, nav-engage-warp,
-# nav-standard-orbit, nav-docking-magnets, nav-attitude-indicator-abs-rel,
-# nav-starmap, nav-reverse, nav-lights, nav-nudge-warp-up, nav-nudge-warp-down,
-# nav-nudge-zoom-up, nav-nudge-zoom-down, weapons-wavelength-up,
-# weapons-wavelength-down, nav-change-pov, eng-preset-1, eng-preset-2, eng-preset-3,
-# eng-preset-4, eng-preset-5, eng-preset-6, eng-preset-7, eng-preset-8, eng-preset-9,
-# eng-preset-10, eng-shield-toggle, left-arrow, right-arrow, up-arrow, down-arrow
-#
-# Here are examples of mapping a mode + button or mode + axis to a function:
-#
-#  mode 0 button 1 phaser		# map mode 0 button 1 to phaser function
-#  mode 1 axis 2 yaw			# map mode 1 axis 2 to yaw function
-#  mode 1 invert axis 3 roll 		# map mode 1 axis 3 to roll function and invert the axis
-#  mode 1 axis 2 throttle 0		# map mode 1 axis 2 to throttle with 0 deadzone
-#					# (default deadzone is 6000).
-#  mode navigation
-#    axis 2 yaw
-#    invert axis 1 pitch
-#    axis 0 roll
-#
 
 # Microsoft Xbox 360 controller
 device:usb-©Microsoft_Corporation_Controller_05EB4AD-joystick
@@ -132,6 +65,7 @@ device:usb-Thrustmaster_T.16000M-joystick
    axis 2 yaw
    button 0 phaser
    button 1 torpedo
+   button 8 eng-deploy-flare
  mode navigation
    axis 0 roll
    axis 1 pitch
@@ -148,6 +82,14 @@ device:usb-Thrustmaster_T.16000M-joystick
    axis 0 damcon-roll
    axis 1 damcon-pitch
    axis 2 damcon-roll
+ mode science
+   button 8 sci-right-arrow
+   button 9 sci-left-arrow
+   button 6 sci-up-arrow
+   button 7 sci-down-arrow
+ mode all
+   button 6 cycle-station-forward
+   button 7 cycle-station-backward
 
 # Thrustmaster T.Flight Stick X
 device:usb-Thrustmaster_T.Flight_Stick_X-joystick
