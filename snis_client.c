@@ -4567,6 +4567,11 @@ static void do_joystick_right_arrow(EMPTYVOID x) { do_joystick_arrow_button(1, 0
 static void do_joystick_up_arrow(EMPTYVOID x) { do_joystick_arrow_button(0, -1); }
 static void do_joystick_down_arrow(EMPTYVOID x) { do_joystick_arrow_button(0, 1); }
 
+static void do_joystick_science_left_arrow(EMPTYVOID x) { science_dirkey(-1, 0); }
+static void do_joystick_science_right_arrow(EMPTYVOID x) { science_dirkey(1, 0); }
+static void do_joystick_science_up_arrow(EMPTYVOID x) { science_dirkey(0, -1); }
+static void do_joystick_science_down_arrow(EMPTYVOID x) { science_dirkey(0, 1); }
+
 #undef EMPTYVOID
 
 static void deal_with_keyboard(void)
@@ -24232,6 +24237,10 @@ static void setup_joysticks(void)
 	set_joystick_button_fn(joystick_cfg, "right-arrow", do_joystick_right_arrow);
 	set_joystick_button_fn(joystick_cfg, "up-arrow", do_joystick_up_arrow);
 	set_joystick_button_fn(joystick_cfg, "down-arrow", do_joystick_down_arrow);
+	set_joystick_button_fn(joystick_cfg, "sci-left-arrow", do_joystick_science_left_arrow);
+	set_joystick_button_fn(joystick_cfg, "sci-right-arrow", do_joystick_science_right_arrow);
+	set_joystick_button_fn(joystick_cfg, "sci-up-arrow", do_joystick_science_up_arrow);
+	set_joystick_button_fn(joystick_cfg, "sci-down-arrow", do_joystick_science_down_arrow);
 	snprintf(joystick_config_file, sizeof(joystick_config_file), "%s/joystick_config.txt", asset_dir);
 	read_joystick_config(joystick_cfg, joystick_config_file, joystick_name, njoysticks);
 
