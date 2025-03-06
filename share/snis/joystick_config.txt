@@ -52,7 +52,8 @@
 # nav-nudge-zoom-up, nav-nudge-zoom-down, weapons-wavelength-up,
 # weapons-wavelength-down, nav-change-pov, eng-preset-0, eng-preset-1, eng-preset-2,
 # eng-preset-3, eng-preset-4, eng-preset-5, eng-preset-6, eng-preset-7, eng-preset-8,
-# eng-preset-9, eng-shield-toggle, left-arrow, right-arrow, up-arrow, down-arrow
+# eng-preset-9, eng-shield-toggle, left-arrow, right-arrow, up-arrow, down-arrow,
+# eng-deploy-flare
 #
 # Here are examples of mapping a mode + button or mode + axis to a function:
 #

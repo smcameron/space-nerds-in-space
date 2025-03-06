@@ -24227,6 +24227,7 @@ static void setup_joysticks(void)
 	set_joystick_button_fn(joystick_cfg, "eng-preset-8", do_joystick_eng_preset_8);
 	set_joystick_button_fn(joystick_cfg, "eng-preset-9", do_joystick_eng_preset_9);
 	set_joystick_button_fn(joystick_cfg, "eng-shield-toggle", do_joystick_eng_shield_toggle);
+	set_joystick_button_fn(joystick_cfg, "eng-deploy-flare", eng_deploy_flare_button_pressed);
 	set_joystick_button_fn(joystick_cfg, "left-arrow", do_joystick_left_arrow);
 	set_joystick_button_fn(joystick_cfg, "right-arrow", do_joystick_right_arrow);
 	set_joystick_button_fn(joystick_cfg, "up-arrow", do_joystick_up_arrow);
