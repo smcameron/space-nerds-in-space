@@ -5187,6 +5187,7 @@ static void show_rotating_wombat(void)
 	union vec3 camera_lookat = { { 0, -5, 0 } };
 	struct entity *wombat, *turret_base, *turret;
 	union quat orientation;
+	int rotating_wombat_color = UI_COLOR(rotating_wombat);
 
 	/* If we couldn't read the meshes (probably need to update assets)
 	 * don't draw anything.
@@ -5204,11 +5205,11 @@ static void show_rotating_wombat(void)
 	camera_set_parameters(network_setup_ecx, near, far, SCREEN_WIDTH, SCREEN_HEIGHT, angle_of_view);
 	calculate_camera_transform(network_setup_ecx);
 	entity_context_set_hi_lo_poly_pixel_threshold(network_setup_ecx, low_poly_threshold);
-	wombat = add_entity(network_setup_ecx, ship_mesh_map[SHIP_CLASS_WOMBAT], 0.0, 0.0, 0.0, DARKGREEN);
+	wombat = add_entity(network_setup_ecx, ship_mesh_map[SHIP_CLASS_WOMBAT], 0.0, 0.0, 0.0, rotating_wombat_color);
 	quat_init_axis(&orientation, 0, 1, 0, (timer % 360) * M_PI / 180);
 	update_entity_orientation(wombat, &orientation);
-	turret_base = add_entity(network_setup_ecx, ship_turret_base_mesh, -1.5, 3.0, 0.0, DARKGREEN);
-	turret = add_entity(network_setup_ecx, ship_turret_mesh, -1.5, 3.0, 0.0, DARKGREEN);
+	turret_base = add_entity(network_setup_ecx, ship_turret_base_mesh, -1.5, 3.0, 0.0, rotating_wombat_color);
+	turret = add_entity(network_setup_ecx, ship_turret_mesh, -1.5, 3.0, 0.0, rotating_wombat_color);
 	update_entity_parent(network_setup_ecx, turret_base, wombat);
 	update_entity_parent(network_setup_ecx, turret, wombat);
 	render_entities(network_setup_ecx);
@@ -21550,15 +21551,15 @@ static void init_launcher_ui(void)
 
 	launcher_ui.start_ssgl_btn = snis_button_init(x, y, -1, -1, "START LOBBY SERVER",
 				active_button_color, TINY_FONT, start_ssgl_btn_pressed, 0);
-	snis_button_set_disabled_color(launcher_ui.start_ssgl_btn, DARKGREEN);
+	snis_button_set_disabled_color(launcher_ui.start_ssgl_btn, active_button_color);
 	y += txy(40);
 	launcher_ui.start_snis_multiverse_btn = snis_button_init(x, y, -1, -1, "START SNIS MULTIVERSE SERVER",
 				active_button_color, TINY_FONT, start_snis_multiverse_btn_pressed, NULL);
-	snis_button_set_disabled_color(launcher_ui.start_snis_multiverse_btn, DARKGREEN);
+	snis_button_set_disabled_color(launcher_ui.start_snis_multiverse_btn, active_button_color);
 	y += txy(40);
 	launcher_ui.start_snis_server_btn = snis_button_init(x, y, -1, -1, "START SNIS SERVER",
 				active_button_color, TINY_FONT, start_snis_server_btn_pressed, 0);
-	snis_button_set_disabled_color(launcher_ui.start_snis_server_btn, DARKGREEN);
+	snis_button_set_disabled_color(launcher_ui.start_snis_server_btn, active_button_color);
 	y += txy(40);
 	launcher_ui.connect_client_btn = snis_button_init(x, y, -1, -1, "CONNECT CLIENT TO SNIS SERVER",
 				active_button_color, TINY_FONT, connect_client_btn_pressed, 0);
@@ -21569,7 +21570,7 @@ static void init_launcher_ui(void)
 	y += txy(40);
 	launcher_ui.update_assets_btn = snis_button_init(x, y, -1, -1, "UPDATE ASSETS",
 				active_button_color, TINY_FONT, launcher_update_assets_btn_pressed, 0);
-	snis_button_set_disabled_color(launcher_ui.update_assets_btn, DARKGREEN);
+	snis_button_set_disabled_color(launcher_ui.update_assets_btn, active_button_color);
 	y += txy(40);
 	launcher_ui.options_btn = snis_button_init(x, y, -1, -1, "OPTIONS . . .",
 				active_button_color, TINY_FONT, launcher_options_btn_pressed, 0);

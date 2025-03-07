@@ -234,7 +234,6 @@ struct ui_color_map {
 	struct ui_color_entry sciplane_tooltip;
 
 	struct ui_color_entry warp_hash;
-	struct ui_color_entry last_color;
 
 	struct ui_color_entry starmap_star;
 	struct ui_color_entry starmap_home_star;
@@ -252,6 +251,10 @@ struct ui_color_map {
 	struct ui_color_entry launcher_gauge;
 	struct ui_color_entry launcher_gauge_needle;
 	struct ui_color_entry launcher_missing_assets;
+
+	struct ui_color_entry rotating_wombat;
+
+	struct ui_color_entry last_color;
 };
 
 GLOBAL struct ui_color_map_accessor {
@@ -467,6 +470,8 @@ GLOBAL struct ui_color_map_accessor {
 	.u.map.launcher_gauge		= { AMBER,		"launcher-gauge" },
 	.u.map.launcher_gauge_needle	= { RED,		"launcher-gauge-needle" },
 	.u.map.launcher_missing_assets	= { RED,		"launcher-missing-assets" },
+
+	.u.map.rotating_wombat		= { DARKGREEN,		"rotating-wombat" },
 
 	.u.map.last_color		= { GREEN_FIXUP,	"last-color" },
 	}
