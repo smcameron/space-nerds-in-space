@@ -84,6 +84,8 @@ struct ui_color_map {
 	struct ui_color_entry nav_text;
 	struct ui_color_entry nav_warning;
 	struct ui_color_entry nav_ring;
+	struct ui_color_entry nav_altitude_line_pos; /* altitude lines above nav ring */
+	struct ui_color_entry nav_altitude_line_neg; /* altitude lines below nav ring */
 	struct ui_color_entry nav_projected_ring;
 	struct ui_color_entry nav_self;
 	struct ui_color_entry nav_entity;
@@ -296,6 +298,8 @@ GLOBAL struct ui_color_map_accessor {
 	.u.map.nav_text			= { GREEN_FIXUP,	"nav-text" },
 	.u.map.nav_warning		= { RED,		"nav-warning" },
 	.u.map.nav_ring			= { DARKRED,		"nav-ring" },
+	.u.map.nav_altitude_line_pos	= { DARKRED,		"nav-altitude-line-pos" },
+	.u.map.nav_altitude_line_neg	= { DARKRED,		"nav-altitude-line-neg" },
 	.u.map.nav_projected_ring	= { DARKRED,		"nav-projected-ring" },
 	.u.map.nav_self			= { CYAN_FIXUP,		"nav-self" },
 	.u.map.nav_entity		= { GREEN_FIXUP,	"nav-entity" },

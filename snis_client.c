@@ -13264,10 +13264,10 @@ static void draw_nav_contact_offset_and_ring(struct snis_entity *player_ship,
 
 	if (proj_distance > 0)
 		e = add_entity(instrumentecx, vline_mesh_neg, contact_pos->v.x, contact_pos->v.y,
-			contact_pos->v.z, UI_COLOR(nav_ring));
+			contact_pos->v.z, UI_COLOR(nav_altitude_line_pos));
 	else
 		e = add_entity(instrumentecx, vline_mesh_pos, contact_pos->v.x, contact_pos->v.y,
-			contact_pos->v.z, UI_COLOR(nav_ring));
+			contact_pos->v.z, UI_COLOR(nav_altitude_line_neg));
 	if (e) {
 		update_entity_scale(e, fabs(proj_distance));
 		update_entity_orientation(e, &player_ship->orientation);
