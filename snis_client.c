@@ -15618,7 +15618,7 @@ static void init_science_ui(void)
 	sci_ui.sciplane_button = snis_button_init(scpx, scpy, scpw, scph, "SRS",
 			UI_COLOR(sci_button), NANO_FONT, sci_sciplane_pressed, (void *) 0);
 	snis_button_set_sound(sci_ui.sciplane_button, UISND16);
-	sci_ui.threed_button = snis_button_init(thdx, thdy, thdw, thdh, "LRS",
+	sci_ui.threed_button = snis_button_init(thdx, thdy, thdw, thdh, "\xcdRS",
 			UI_COLOR(sci_button), NANO_FONT, sci_threed_pressed, (void *) 0);
 	snis_button_set_sound(sci_ui.threed_button, UISND17);
 	sci_ui.details_button = snis_button_init(detx, dety, detw, deth, "DETAILS",

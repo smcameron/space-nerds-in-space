@@ -86,6 +86,7 @@ struct font_def {
 	stroke_t *glyph_N;
 	stroke_t *glyph_M;
 	stroke_t *glyph_L;
+	stroke_t *glyph_L_;
 	stroke_t *glyph_K;
 	stroke_t *glyph_J;
 	stroke_t *glyph_I;
@@ -185,6 +186,7 @@ static struct font_def ascii_font_def = {
 	.glyph_N = (stroke_t []) { 20, 0, 23, 3, 99 },
 	.glyph_M = (stroke_t []) { 20, 0, 17, 4, 24, 99 },
 	.glyph_L = (stroke_t []) { 0, 20, 23, 99},
+	.glyph_L_ = (stroke_t []) { 0, 20, 23, LP, 30, 33, 99},
 	.glyph_K = (stroke_t []) { 0, 20, LP, 15, 3, LP, 12, 24, 99},
 	.glyph_J = (stroke_t []) { 3, 18, 22, 21, 15, 99},
 	.glyph_I = (stroke_t []) { 0, 2, LP, 1, 21, LP, 20, 22, 99 },
@@ -273,6 +275,7 @@ static struct font_def alien_font_def = {
 	.glyph_W = (stroke_t []) { 0, 4, 24, 20, 0, 99 },
 	.glyph_V = (stroke_t []) { 0, 12, 4, LP, 12, 22, 99 },
 	.glyph_U = (stroke_t []) { 0, 20, 24, 4, 3, 7, 99 },
+	.glyph_u = (stroke_t []) { 0, 20, 24, 4, 3, 7, LP, 30, 34, 99 },
 	.glyph_T = (stroke_t []) { 15, 21, 23, 19, LP, 22, 2, 99 },
 	.glyph_S = (stroke_t []) { 1, 24, 4, LP, 15, 22, 99 },
 	.glyph_R = (stroke_t []) { 0, 4, 20, 99 },
@@ -281,7 +284,8 @@ static struct font_def alien_font_def = {
 	.glyph_O = (stroke_t []) { 1, 20, 24, 3, 1, 99 },
 	.glyph_N = (stroke_t []) { 1, 10, 21, 2, 23, 99 },
 	.glyph_M = (stroke_t []) { 24, 20, 3, 4, 9, 99 },
-	.glyph_L = (stroke_t []) { 15, 23, 24, 4, 99 },
+	.glyph_L = (stroke_t []) { 0, 20, 23, 99 },
+	.glyph_L_ = (stroke_t []) { 15, 23, 24, 4, LP, 30, 33, 99 },
 	.glyph_K = (stroke_t []) { 0, 4, 24, 20, 99 },
 	.glyph_J = (stroke_t []) { 10, 12, 9, 22, 20, 99 },
 	.glyph_I = (stroke_t []) { 5, 1, 2, 22, 99 },
@@ -378,7 +382,8 @@ static struct font_def ascii_smallcaps_font_def = {
 	.glyph_O = (stroke_t []) { 1, 2, 8, 18, 22, 21, 15, 5, 1, 99 },
 	.glyph_N = (stroke_t []) { 20, 0, 23, 3, 99 },
 	.glyph_M = (stroke_t []) { 20, 0, 11, 3, 23, 99 },
-	.glyph_L = (stroke_t []) { 0, 20, 23, 99 },
+	.glyph_L = (stroke_t []) {0, 20, 23, 99 },
+	.glyph_L_ = (stroke_t []) { 0, 20, 23, LP, 30, 33, 99 },
 	.glyph_K = (stroke_t []) { 0, 20, LP, 3, 10, 23, 99 },
 	.glyph_J = (stroke_t []) { 0, 3, LP, 2, 17, 21, 15, 99 },
 	.glyph_I = (stroke_t []) { 0, 3, LP, 1, 21, LP, 20, 23, 99 },
@@ -562,7 +567,7 @@ static struct my_vect_obj *prerender_glyph(stroke_t g[], float xscale, float ysc
 int snis_make_font(struct my_vect_obj ***font, struct font_def *f, float xscale, float yscale)
 {
 	struct my_vect_obj **v;
-
+    
 	v = malloc(sizeof(*v) * 256);
 	if (!v) {
 		if (v) free(v);
@@ -581,6 +586,7 @@ int snis_make_font(struct my_vect_obj ***font, struct font_def *f, float xscale,
 	v['J'] = prerender_glyph(f->glyph_J, xscale, yscale);
 	v['K'] = prerender_glyph(f->glyph_K, xscale, yscale);
 	v['L'] = prerender_glyph(f->glyph_L, xscale, yscale);
+	v[0xcd] = prerender_glyph(f->glyph_L_, xscale, yscale); //L_
 	v['M'] = prerender_glyph(f->glyph_M, xscale, yscale);
 	v['N'] = prerender_glyph(f->glyph_N, xscale, yscale);
 	v['O'] = prerender_glyph(f->glyph_O, xscale, yscale);
