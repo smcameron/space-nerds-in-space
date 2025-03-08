@@ -5249,8 +5249,8 @@ static void show_lobbyscreen(void)
 #define STARTLINE 100
 #define LINEHEIGHT 30
 
-	show_common_screen("");
 	show_rotating_wombat();
+	show_common_screen("");
 	sng_set_foreground(UI_COLOR(lobby_connecting));
 	if (lobby_socket == -1 && switched_server2 == -1) {
 		sng_set_foreground(WHITE);
@@ -21080,8 +21080,8 @@ static void show_network_setup(void)
 {
 	char button_label[100];
 
-	show_common_screen("SPACE NERDS IN SPACE");
 	show_rotating_wombat();
+	show_common_screen("SPACE NERDS IN SPACE");
 
 	sng_set_foreground(UI_COLOR(network_setup_text));
 	sng_abs_xy_draw_string("NETWORK SETUP", SMALL_FONT, txx(25), txy(10 + LINEHEIGHT * 2));
@@ -21910,9 +21910,9 @@ static void show_launcher(void)
 			"60 MINUTES, AND THERE IS NO NEED TO CHECK AGAIN SO SOON.");
 	}
 	station_label_disappears = 0;
+	show_rotating_wombat();
 	show_common_screen("SPACE NERDS IN SPACE");
 	station_label_disappears = 1;
-	show_rotating_wombat();
 	maybe_show_downloading_message();
 }
 
