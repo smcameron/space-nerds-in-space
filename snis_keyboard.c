@@ -348,7 +348,7 @@ void init_keymap(void)
 	ffmapkey(sci, SDLK_KP_4, keysciball_yawleft);
 	mapkey(sci, SDLK_SLASH, keysciball_yawright);
 	ffmapkey(sci, SDLK_KP_6, keysciball_yawright);
-	mapkey(sci, SDLK_l, keysciball_pitchdown);
+	/* mapkey(sci, SDLK_l, keysciball_pitchdown); */ /*see key_sci_lrs */
 	ffmapkey(sci, SDLK_KP_8, keysciball_pitchdown);
 	mapkey(sci, SDLK_PERIOD, keysciball_pitchup);
 	ffmapkey(sci, SDLK_KP_2, keysciball_pitchup);
