@@ -772,6 +772,7 @@ static int writer_thread_should_die = 0;
 static int writer_thread_alive = 0;
 static int connected_to_gameserver = 0;
 static unsigned char enforce_solarsystem = 1;
+static int disable_solarsystem_enforcement = 0;
 static char connecting_to_server_msg[100] = { 0 };
 
 #define MAX_LOBBY_TRIES 3
@@ -8922,6 +8923,8 @@ try_again:
 		gameserver_sock = -1;
 		goto error;
 	}
+
+	enforce_solarsystem = !disable_solarsystem_enforcement;
 
 	rc = snis_writesocket(gameserver_sock, &enforce_solarsystem, 1);
 	if (rc < 0) {
@@ -21288,6 +21291,7 @@ static struct options_ui {
 	struct button *ss_default_port_range_btn; /* ss_ means snis_server here. */
 	struct button *ss_allow_remote_networks_btn;
 	struct button *no_lobby_btn;
+	struct button *solarsystem_enforcement;
 	struct label *lobbyhost_label;
 	struct label *lobbyport_label;
 	struct snis_text_input_box *lobbyhost_input;
@@ -21374,6 +21378,16 @@ static int options_no_lobby_btn_status(__attribute__((unused)) void *x)
 	return avoid_lobby;
 }
 
+static void options_solarsystem_enforcement_pressed(__attribute((unused)) void *x)
+{
+	disable_solarsystem_enforcement = !disable_solarsystem_enforcement;
+}
+
+static int options_solarsystem_enforcement_status(__attribute((unused)) void *x)
+{
+	return !disable_solarsystem_enforcement;
+}
+
 static void init_options_ui(void)
 {
 	float x, y;
@@ -21445,11 +21459,21 @@ static void init_options_ui(void)
 	x += txx(10);
 	y += txy(20);
 
-	options_ui.no_lobby_btn = snis_button_init(x, y, -1, -1, "NO LOBBY / NO MULTIVERSE / BARE SNIS SERVER", color,
+	options_ui.no_lobby_btn = snis_button_init(x, y, -1, -1,
+			"NO LOBBY / NO MULTIVERSE / BARE SNIS SERVER", color,
 			NANO_FONT, options_no_lobby_btn_pressed, NULL);
 	snis_button_set_checkbox_function(options_ui.no_lobby_btn,
 					options_no_lobby_btn_status, &avoid_lobby);
 	snis_button_set_visible_border(options_ui.no_lobby_btn, 0);
+
+	options_ui.solarsystem_enforcement = snis_button_init(x + txy(400), y, -1, -1,
+				"ENFORCE CORRECT STAR SYSTEM", color, NANO_FONT,
+				options_solarsystem_enforcement_pressed, NULL);
+	snis_button_set_checkbox_function(options_ui.solarsystem_enforcement,
+				options_solarsystem_enforcement_status,
+				&disable_solarsystem_enforcement);
+	snis_button_set_visible_border(options_ui.solarsystem_enforcement, 0);
+
 	y += txy(30);
 
 	options_ui.lobbyhost_label = snis_label_init(x, y, "LOBBY HOST:", color, NANO_FONT);
@@ -21508,6 +21532,12 @@ static void init_options_ui(void)
 	ui_add_button(options_ui.no_lobby_btn, DISPLAYMODE_OPTIONS,
 		"USE THIS ONLY IF YOU MEAN TO RUN A BARE SNIS SERVER WITH\n"
 		"NO SSGL_SERVER (NO LOBBY) AND NO SNIS_MULTIVERSE.");
+	ui_add_button(options_ui.solarsystem_enforcement, DISPLAYMODE_OPTIONS,
+		"IF THIS IS CHECKED, YOUR SHIP'S CURRENT SOLARSYSTEM IS TRACKED\n"
+		"AND STORED, AND WHEN YOU LOG IN TO A SNIS SERVER, YOU MAY ONLY\n"
+		"LOG INTO THE ONE WHICH CONTAINS YOUR SHIP.  IF THIS IS NOT CHECKED\n"
+		"YOU MAY LOG INTO ANY SNIS SERVER INSTANCE, REGARDLESS OF WHERE\n"
+		"YOUR SHIP WAS LAST PARKED.");
 	ui_add_button(options_ui.NAT_ghetto_mode_btn, DISPLAYMODE_OPTIONS,
 		"ENABLE NAT GHETTO MODE\n\n"
 		"IF IT HAPPENS THAT SNIS_CLIENT CANNOT CONNECT TO A SNIS_SERVER,\n"
