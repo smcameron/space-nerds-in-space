@@ -612,6 +612,7 @@ static struct bridge_data {
 #define BRIDGE_VERIFIED 1
 #define BRIDGE_FAILED_VERIFICATION 2
 #define BRIDGE_REFUSED 3
+#define BRIDGE_FAILED_WRONG_SOLARSYSTEM 4
 	int requested_verification; /* Whether we've requested verification from multiverse server yet */
 	int requested_creation; /* whether user has requested creating new ship */
 	int nclients;			/* Number of connected clients that are part of this bridge */
@@ -645,6 +646,8 @@ static struct bridge_data {
 	 */
 	struct persistent_bridge_data persistent_bridge_data;
 	uint32_t last_missile_fail_time; /* universe timestamp of last missile failure */
+	int enforce_solarsystem;
+	char resident_solarsystem[SSGL_LOCATIONSIZE];
 } bridgelist[MAXCLIENTS];
 static int nbridges = 0;		/* Number of elements present in bridgelist[] */
 static int announce_players = 0; /* Announce new players via TTS? */
@@ -24999,6 +25002,7 @@ static void *per_client_write_thread(__attribute__((unused)) void /* struct game
 {
 	struct game_client *c = (struct game_client *) client;
 	int bridge_status;
+	struct packed_buffer *pb;
 
 	/* Wait for client[] array to get fully updated before proceeding. */
 	client_lock();
@@ -25019,12 +25023,39 @@ static void *per_client_write_thread(__attribute__((unused)) void /* struct game
 			break;
 
 		bridge_status = bridgelist[c->bridge].verified;
-		if (bridge_status == BRIDGE_FAILED_VERIFICATION ||
-			bridge_status == BRIDGE_REFUSED) {
-			unsigned char player_error = ADD_PLAYER_ERROR_FAILED_VERIFICATION;
-			if (bridge_status == BRIDGE_REFUSED)
-				player_error = ADD_PLAYER_ERROR_TOO_MANY_BRIDGES;
-			pb_queue_to_client(c, snis_opcode_pkt("bb", OPCODE_ADD_PLAYER_ERROR, player_error));
+		unsigned char player_error = 0;
+		switch (bridge_status) {
+		case BRIDGE_VERIFIED:
+			break;
+		case BRIDGE_UNVERIFIED:
+			break;
+		case BRIDGE_FAILED_VERIFICATION:
+			player_error = ADD_PLAYER_ERROR_FAILED_VERIFICATION;
+			break;
+		case BRIDGE_REFUSED:
+			player_error = ADD_PLAYER_ERROR_TOO_MANY_BRIDGES;
+			break;
+		case BRIDGE_FAILED_WRONG_SOLARSYSTEM:
+			player_error = ADD_PLAYER_ERROR_WRONG_SOLARSYSTEM;
+			break;
+		default:
+			break;
+		}
+
+
+		if (player_error) {
+			pb = packed_buffer_allocate(256);
+			packed_buffer_append(pb, "bb", OPCODE_ADD_PLAYER_ERROR, player_error);
+			if (player_error == ADD_PLAYER_ERROR_WRONG_SOLARSYSTEM) {
+				packed_buffer_append_u16(pb,
+					(uint16_t) strlen(bridgelist[c->bridge].resident_solarsystem));
+				packed_buffer_append_raw(pb, bridgelist[c->bridge].resident_solarsystem,
+						strlen(bridgelist[c->bridge].resident_solarsystem));
+			} else {
+				packed_buffer_append_u16(pb, (uint16_t) 1);
+				packed_buffer_append_raw(pb, "x", 1);
+			}
+			pb_queue_to_client(c, pb);
 			disconnect_timer = 1.0;
 		}
 
@@ -25076,6 +25107,21 @@ static int verify_client_protocol(int connection)
 		return -1;
 	snis_log(SNIS_INFO, "protocol verified.\n");
 	return 0;
+}
+
+/* When player connects, they can choose to request solarsytem enforcement
+ * where multiverse will tell them if they log in to the wrong solar system.
+ * (for warp gate traversal, we must turn this off).
+ */
+static int check_solarsystem_enforcement(int connection)
+{
+	int rc;
+	unsigned char enforcement;
+
+	rc = snis_readsocket(connection, &enforcement, 1);
+	if (rc < 0)
+		return -1;
+	return (int) !!enforcement;
 }
 
 static int lookup_bridge(unsigned char *shipname, unsigned char *password)
@@ -25890,7 +25936,7 @@ static void fill_default_presets(int bridgeid)
 	bridgelist[bridgeid].persistent_bridge_data.engineering_preset[1][17]	= 255;	/* lifesupport coolant */
 }
 
-static int add_new_player(struct game_client *c)
+static int add_new_player(struct game_client *c, int enforce_solarsystem)
 {
 	int rc;
 	struct add_player_packet app;
@@ -25953,6 +25999,7 @@ static int add_new_player(struct game_client *c)
 		bridgelist[nbridges].warp_core_critical = 0;
 		bridgelist[nbridges].active_custom_buttons = 0;
 		bridgelist[nbridges].last_missile_fail_time = 0;
+		bridgelist[nbridges].enforce_solarsystem = enforce_solarsystem;
 		memset(bridgelist[nbridges].custom_button_text, 0, sizeof(bridgelist[nbridges].custom_button_text));
 		memset(bridgelist[nbridges].cipher_key, '_', sizeof(bridgelist[nbridges].cipher_key));
 		memset(bridgelist[nbridges].guessed_key, '_', sizeof(bridgelist[nbridges].guessed_key));
@@ -26046,7 +26093,8 @@ static void service_connection(int connection)
 		close(connection);
 		return;
 	}
-	fprintf(stderr, "%s: connection 3\n", logprefix());
+
+	int enforce_solarsystem = check_solarsystem_enforcement(connection);
 
 	pthread_mutex_lock(&universe_mutex);
 	client_lock();
@@ -26076,7 +26124,7 @@ static void service_connection(int connection)
 	packed_buffer_queue_init(&client[i].client_write_queue);
 
 	fprintf(stderr, "%s: calling add new player\n", logprefix());
-	rc = add_new_player(&client[i]);
+	rc = add_new_player(&client[i], enforce_solarsystem);
 	if (rc) {
 		nclients--;
 		client_unlock();
@@ -26502,7 +26550,9 @@ static void update_multiverse(struct snis_entity *o)
 			bridgelist[bridge].verified == BRIDGE_UNVERIFIED ? "unverified" :
 			bridgelist[bridge].verified == BRIDGE_VERIFIED ? "verified" :
 			bridgelist[bridge].verified == BRIDGE_FAILED_VERIFICATION ? "failed verification" :
-			bridgelist[bridge].verified == BRIDGE_REFUSED ? "refused" : "unknown");
+			bridgelist[bridge].verified == BRIDGE_REFUSED ? "refused" :
+			bridgelist[bridge].verified == BRIDGE_FAILED_WRONG_SOLARSYSTEM ?
+				"wrong solarsystem" : "unknown");
 
 	/* Verify that this ship does not already exist if creation was requested, or
 	 * that it does already exist if creation was not requested.  Only do this once.
@@ -26513,12 +26563,16 @@ static void update_multiverse(struct snis_entity *o)
 
 		if (multiverse_debug)
 			print_hash("requesting verification of hash ", bridgelist[bridge].pwdhash);
-		pb = packed_buffer_allocate(PWDHASHLEN + 1);
+		pb = packed_buffer_allocate(PWDHASHLEN + 2);
 		if (bridgelist[bridge].requested_creation)
 			opcode = SNISMV_OPCODE_VERIFY_CREATE;
 		else
 			opcode = SNISMV_OPCODE_VERIFY_EXISTS;
-		packed_buffer_append(pb, "br", opcode, bridgelist[bridge].pwdhash, (uint16_t) PWDHASHLEN);
+		unsigned char verify_solarsystem =
+			bridgelist[bridge].enforce_solarsystem ?
+				SNISMV_OPERAND_VERIFY_SOLARSYSTEM : SNISMV_OPERAND_NOVERIFY_SOLARSYSTEM;
+		packed_buffer_append(pb, "bbr", opcode, verify_solarsystem,
+					bridgelist[bridge].pwdhash, (uint16_t) PWDHASHLEN);
 		bridgelist[bridge].requested_verification = 1;
 		queue_to_multiverse(multiverse_server, pb);
 		return;
@@ -31166,6 +31220,8 @@ static int process_multiverse_verification(struct multiverse_server_info *msi)
 	unsigned char buffer[PWDHASHLEN + 2];
 	unsigned char *pass;
 	unsigned char *pwdhash;
+	uint16_t len;
+	char resident_solarsystem[SSGL_LOCATIONSIZE + 1];
 
 	rc = snis_readsocket(msi->sock, buffer, PWDHASHLEN + 1);
 	if (rc)
@@ -31182,6 +31238,25 @@ static int process_multiverse_verification(struct multiverse_server_info *msi)
 			break;
 		case SNISMV_VERIFICATION_RESPONSE_TOO_MANY_BRIDGES:
 			bridgelist[b].verified = BRIDGE_REFUSED;
+			break;
+		case SNISMV_VERIFICATION_RESPONSE_WRONG_SOLARSYSTEM:
+			if (bridgelist[b].enforce_solarsystem)
+				bridgelist[b].verified = BRIDGE_FAILED_WRONG_SOLARSYSTEM;
+			/* else, we allow it. Warp gate traversal uses this path. */
+
+			/* Get the right solarsystem name */
+			rc = snis_readsocket(msi->sock, &len, 2);
+			len = ntohs(len);  /* ugly... */
+			if (rc)
+				return rc;
+			if (len > SSGL_LOCATIONSIZE)
+				return -1;
+			rc = snis_readsocket(msi->sock, resident_solarsystem, len);
+			if (rc)
+				return rc;
+			resident_solarsystem[len] = '\0';
+			snprintf(bridgelist[b].resident_solarsystem, sizeof(bridgelist[b].resident_solarsystem),
+					"%s", resident_solarsystem);
 			break;
 		case SNISMV_VERIFICATION_RESPONSE_FAIL:
 			/* FALLTHROUGH */

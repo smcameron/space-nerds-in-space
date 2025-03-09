@@ -700,7 +700,7 @@ static void send_bridge_update_to_snis_server(struct starsystem_info *ss,
 	packed_buffer_queue_add(&ss->write_queue, pb, &ss->write_queue_mutex);
 }
 
-static int verify_existence(struct starsystem_info *ss, int should_already_exist)
+static int verify_existence(struct starsystem_info *ss, int should_already_exist, int verify_solarsystem)
 {
 	unsigned char pwdhash[PWDHASHLEN];
 	unsigned char buffer[200];
@@ -737,9 +737,14 @@ static int verify_existence(struct starsystem_info *ss, int should_already_exist
 		/* It exists, pass if it should exist, fail otherwise */
 		if (should_already_exist) {
 			fprintf(stderr, "snis_multiverse: hash %s exists, as expected.\n", printable_hash);
-			pass = SNISMV_VERIFICATION_RESPONSE_PASS;
-			bd = &ship[i].persistent_bridge_data;
-			send_update = 1;
+			if (strcmp(ship[i].starsystem_name, ss->starsystem_name) != 0 &&
+				verify_solarsystem) {
+				pass = SNISMV_VERIFICATION_RESPONSE_WRONG_SOLARSYSTEM;
+			} else {
+				pass = SNISMV_VERIFICATION_RESPONSE_PASS;
+				bd = &ship[i].persistent_bridge_data;
+				send_update = 1;
+			}
 		} else {
 			fprintf(stderr, "snis_multiverse: hash %s exists, but should not.\n", printable_hash);
 			pass = SNISMV_VERIFICATION_RESPONSE_FAIL;
@@ -748,8 +753,16 @@ static int verify_existence(struct starsystem_info *ss, int should_already_exist
 	print_hash("checking hash ", pwdhash);
 	fprintf(stderr, "snis_multiverse: verify existence pass=%d\n", pass);
 	pthread_mutex_unlock(&data_mutex);
-	pb = packed_buffer_allocate(PWDHASHLEN + 2);
-	packed_buffer_append(pb, "bbr", SNISMV_OPCODE_VERIFICATION_RESPONSE, pass, pwdhash, PWDHASHLEN);
+	pb = packed_buffer_allocate(PWDHASHLEN + 2 + 255);
+	if (pass == SNISMV_VERIFICATION_RESPONSE_WRONG_SOLARSYSTEM) {
+		packed_buffer_append(pb, "bbrhr", SNISMV_OPCODE_VERIFICATION_RESPONSE, pass,
+				pwdhash, PWDHASHLEN,
+				(uint16_t) strlen(ship[i].starsystem_name),
+				ship[i].starsystem_name,
+				(uint16_t) strlen(ship[i].starsystem_name));
+	} else {
+		packed_buffer_append(pb, "bbr", SNISMV_OPCODE_VERIFICATION_RESPONSE, pass, pwdhash, PWDHASHLEN);
+	}
 	packed_buffer_queue_add(&ss->write_queue, pb, &ss->write_queue_mutex);
 
 	if (send_update)
@@ -777,6 +790,7 @@ static void process_instructions_from_snis_server(struct starsystem_info *ss)
 {
 	uint8_t opcode;
 	int rc;
+	unsigned char verify_solarsystem;
 
 	rc = snis_readsocket(ss->socket, &opcode, 1);
 	if (rc < 0)
@@ -795,12 +809,18 @@ static void process_instructions_from_snis_server(struct starsystem_info *ss)
 			goto bad_client;
 		break;
 	case SNISMV_OPCODE_VERIFY_CREATE:
-		rc = verify_existence(ss, 0);
+		rc = snis_readsocket(ss->socket, &verify_solarsystem, 1);
+		if (rc < 0)
+			goto bad_client;
+		rc = verify_existence(ss, 0, verify_solarsystem == SNISMV_OPERAND_VERIFY_SOLARSYSTEM);
 		if (rc)
 			goto bad_client;
 		break;
 	case SNISMV_OPCODE_VERIFY_EXISTS:
-		rc = verify_existence(ss, 1);
+		rc = snis_readsocket(ss->socket, &verify_solarsystem, 1);
+		if (rc < 0)
+			goto bad_client;
+		rc = verify_existence(ss, 1, verify_solarsystem == SNISMV_OPERAND_VERIFY_SOLARSYSTEM);
 		if (rc)
 			goto bad_client;
 		break;

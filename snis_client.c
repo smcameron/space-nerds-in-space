@@ -771,6 +771,7 @@ static int switched_server2 = -1;
 static int writer_thread_should_die = 0;
 static int writer_thread_alive = 0;
 static int connected_to_gameserver = 0;
+static unsigned char enforce_solarsystem = 1;
 static char connecting_to_server_msg[100] = { 0 };
 
 #define MAX_LOBBY_TRIES 3
@@ -5119,8 +5120,10 @@ static struct lobby_ui {
 static void lobby_connect_to_server_button_pressed(__attribute__((unused)) void *unused)
 {
 	printf("lobby connect to server button pressed\n");
-	if (lobby_selected_server != -1)
+	if (lobby_selected_server != -1) {
 		displaymode = DISPLAYMODE_CONNECTING;
+		enforce_solarsystem = 1;
+	}
 }
 
 static void lobby_cancel_button_pressed(__attribute__((unused)) void *unused)
@@ -7510,6 +7513,7 @@ static int process_switch_server(void)
 	switch_warp_gate_number = packed_buffer_extract_u8(&pb);
 	packed_buffer_extract_raw(&pb, switch_server_location_string, 20);
 	switch_server_location_string[19] = '\0';
+	enforce_solarsystem = 0; /* get past multiverse solarsystem verification for warp gates */
 	return 0;
 }
 
@@ -8108,10 +8112,12 @@ static int process_client_id_packet(void)
 	return 0;
 }
 
-static int process_add_player_error(uint8_t *error)
+static int process_add_player_error(int sock, uint8_t *error)
 {
 	unsigned char buffer[10];
 	uint8_t err;
+	uint16_t len;
+	char resident_solarsystem[SSGL_LOCATIONSIZE + 1];
 	int rc;
 
 	*error = 255;
@@ -8119,6 +8125,17 @@ static int process_add_player_error(uint8_t *error)
 	rc = read_and_unpack_buffer(buffer, "b", &err);
 	if (rc)
 		return rc;
+	rc = snis_readsocket(sock, &len, sizeof(len));
+	if (rc)
+		return rc;
+	len = ntohs(len);
+	if (len > SSGL_LOCATIONSIZE)
+		return -1;
+	rc = snis_readsocket(sock, resident_solarsystem, len);
+	if (rc)
+		return rc;
+	resident_solarsystem[len] = '\0';
+
 	switch (err) {
 	case ADD_PLAYER_ERROR_SHIP_DOES_NOT_EXIST:
 		snprintf(login_failed_msg, sizeof(login_failed_msg), "NO SHIP BY THAT NAME EXISTS");
@@ -8132,11 +8149,16 @@ static int process_add_player_error(uint8_t *error)
 	case ADD_PLAYER_ERROR_TOO_MANY_BRIDGES:
 		snprintf(login_failed_msg, sizeof(login_failed_msg), "TOO_MANY_BRIDGES");
 		break;
+	case ADD_PLAYER_ERROR_WRONG_SOLARSYSTEM:
+		uppercase(resident_solarsystem);
+		snprintf(login_failed_msg, sizeof(login_failed_msg),
+				"WRONG STAR SYSTEM, YOUR SHIP IS IN THE %s SYSTEM", resident_solarsystem);
+		break;
 	default:
 		snprintf(login_failed_msg, sizeof(login_failed_msg), "UNKNOWN ERROR");
 		break;
 	}
-	login_failed_timer = frame_rate_hz * 5;
+	login_failed_timer = frame_rate_hz * 60;
 	*error = err;
 	return 0;
 }
@@ -8299,7 +8321,7 @@ static void *gameserver_reader(__attribute__((unused)) void *arg)
 			break;
 		case OPCODE_ADD_PLAYER_ERROR:
 			fprintf(stderr, "snis_client: OPCODE_ADD_PLAYER_ERROR\n");
-			rc = process_add_player_error(&add_player_error);
+			rc = process_add_player_error(gameserver_sock, &add_player_error);
 			break;
 		case OPCODE_UPDATE_ASTEROID:
 			rc = process_update_asteroid_packet();
@@ -8894,6 +8916,14 @@ try_again:
 	}
 
 	rc = snis_writesocket(gameserver_sock, SNIS_PROTOCOL_VERSION, strlen(SNIS_PROTOCOL_VERSION));
+	if (rc < 0) {
+		shutdown(gameserver_sock, SHUT_RDWR);
+		close(gameserver_sock);
+		gameserver_sock = -1;
+		goto error;
+	}
+
+	rc = snis_writesocket(gameserver_sock, &enforce_solarsystem, 1);
 	if (rc < 0) {
 		shutdown(gameserver_sock, SHUT_RDWR);
 		close(gameserver_sock);

@@ -262,7 +262,7 @@ int snis_opcode_def_init(void)
 	rc |= init_opcode_def(OPCODE_REQUEST_STANDARD_ORBIT, "bwb");
 	rc |= init_opcode_def(OPCODE_SWITCH_SERVER, "n/a");
 	rc |= init_opcode_def(OPCODE_UPDATE_WARPGATE, "bwwSSSQ");
-	rc |= init_opcode_def(OPCODE_ADD_PLAYER_ERROR, "bb");
+	/* rc |= init_opcode_def(OPCODE_ADD_PLAYER_ERROR, "bbr"); */
 	rc |= init_opcode_subcode_def(OPCODE_NATURAL_LANGUAGE_REQUEST,
 					OPCODE_NL_SUBCOMMAND_TEXT_REQUEST, "n/a");
 	rc |= init_opcode_subcode_def(OPCODE_NATURAL_LANGUAGE_REQUEST,
