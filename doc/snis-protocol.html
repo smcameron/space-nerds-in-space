@@ -8,7 +8,183 @@
 <h2>1.  Lobby protocol</h2>
 
 <p>To establish connections between SNIS clients and SNIS game servers, the
-Super Simple Game Lobby protocol is used.  TBD: describe that.
+Super Simple Game Lobby protocol is used to advertise the game servers, their
+IP addresses and ports, and various other information so that the various
+processes my find one another and communicate.
+
+<h3>1.1 General Overview</h3>
+
+<h4>Connecting to ssgl_server</h4>
+
+<p>The lobby process is ssgl_server.  It listens for connections on port 2914 by
+default. When a server process wishes to advertise its presence, or a client wishes
+to query ssgl_server to find game servers, it connects to ssgl_server. The first
+thing a process connecting to ssgl_server does is to write the following packet:
+
+<p><table border=1>
+<tr>
+<td>Field</td>
+<td>type/size</td>
+<td>Contents</td>
+</tr>
+<tr>
+<td>ssgl protocol version</td>
+<td>uint32_t</td>
+<td>Protocol version of ssgl this process speaks, in network byte order.  Currently the value is 2.</td>
+</tr>
+<tr>
+<td>ssgl signature</td>
+<td>char [4]</td>
+<td>SSGL signature, currently the value: "SsGl"</td>
+</tr>
+<tr>
+<td>client type</td>
+<td>char [1]</td>
+<td>Either 's', or 'c' to indicate whether this is a server process wishing to advertise
+its presence, or a client wishing to find servers.  Note that a process may connect more
+than once, sometimes as a client and sometimes as server, as snis_server does.</td>
+</tr>
+</table>
+
+<h4>Registering a game server with ssgl_server</h4>
+
+<p>Then if the process is a game server that wishest to advertise its presence,
+it  writes a struct ssgl_game_server, then closes the connection. It
+should do this periodically, as ssgl_server will expire this information
+every 20 seconds.  A function is provided to start a thread to do this,
+ssgl_register_gameserver().
+
+<p>A struct ssgl_game_server contains:
+
+<p><table border=1>
+<tr>
+<td>Field</td>
+<td>Size/type</td>
+<td>Contents</td>
+</tr>
+<td>ipaddr</td>
+<td>uint32_t</td>
+<td>Internet facing IP address of game server, network byte order</td>
+</tr>
+<tr>
+<td>real_ipaddr</td>
+<td>uint32_t</td>
+<td>IP address as determined by ssgl_server's accept() system call, network byte order</td>
+</tr>
+<tr>
+<td>port</td>
+<td>uint16_t</td>
+<td>port number the game server is listening on, network byte order</td>
+</tr>
+<tr>
+<td>game_type</td>
+<td>char [15]</td>
+<td>Indicates what kind of server process this is</td>
+</tr>
+<tr>
+<td>game_instance</td>
+<td>char [20]</td>
+<td></td>
+</tr>
+<tr>
+<td>server_nickname</td>
+<td>char [15]</td>
+<td></td>
+</tr>
+<tr>
+<td>protocol version</td>
+<td>char [9]</td>
+<td></td>
+</tr>
+<tr>
+<td>location</td>
+<td>char [20]</td>
+<td></td>
+</tr>
+</table>
+
+<p>To some extent, the game_instance, server_nickname, protocol version, and location may be
+used for whatever a game likes, though they should be human readable values. Space Nerds in Space
+uses these values as follows.
+
+<p>game_type is either "SNIS-MVERSE" for snis_multiverse, or "SNIS" for snis_server.
+<p>game_instance is used by snis_server to convey 3D coordinates of the star system
+it represents.
+<p>server_nickname is not used, and has a value of "-" for snis_server, and "nickname" for
+snis_multiverse.
+<p>location is used by snis_server to convey the solarsystem name, and by snis_multiverse
+(and snis_server) to distinguish each instance of snis_multiverse from other snis_multiverse
+instances registered with the same ssgl_server (normally, there is only one snis_multiverse
+but it is possible to run multiple distinct groups of snis process that all use the same
+ssgl_server instance).
+
+<h4>Querying ssgl_server to find registered servers</h4>
+
+Processes query ssgl_server by connecting as a client, then writing a ssgl_client_filter
+packet.  Then ssgl_server will respond with a list of game servers.
+
+<p><table border=1>
+<tr>
+<td>Field</td>
+<td>type/size</td>
+<td>Contents</td>
+</tr>
+<tr>
+<td>game type</td>
+<td>char 15</td>
+<td>The type of game for which the client is interested in finding servers.
+For our purposes, this will either be "SNIS", or "SNIS-MVERSE".</td>
+</tr>
+</table>
+
+<p>The response from ssgl_server will be of the form:
+
+<p><table border=1>
+<tr>
+<td>Field</td>
+<td>type/size</td>
+<td>Contents</td>
+</tr>
+<tr>
+<td>Count</td>
+<td>uint32_t</td>
+<td>Number of servers matching the query, network byte order</td>
+</tr>
+</table>
+
+<p>This will be followed by <em>Count</em> instances of struct ssgl_game_server, described above.
+
+<p>There is a function provided to send the query and collect the response, ssgl_recv_game_servers().
+
+<h4>How processes find ssgl_server</h4>
+
+<p>Processes must either by told by the user the IP address and port of ssgl server
+(or assume the port is 2914), or if they are on the same LAN as ssgl_server, ssgl_server
+broadcasts this information.  A function ssgl_register_for_bcast_packets() is provided
+to make it easy for processes to listen for this broadcast information.
+
+<p>The format of the broadcast packets is:
+<p><table border=1>
+<tr>
+<td>Field</td>
+<td>type/size</td>
+<td>Contents</td>
+</tr>
+<tr>
+<td>IP address</td>
+<td>uint32_t</td>
+<td>IP address in network byte order</td>
+</tr>
+<tr>
+<td>port</td>
+<td>uint16_t</td>
+<td>port number, network byte order</td>
+</tr>
+<td>host name</td>
+<td>char [32]</td>
+<td>hostname, possibly truncated</td>
+</tr>
+</table>
 
 <h2>2. Game protocol</h2>
 
