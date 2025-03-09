@@ -20,6 +20,12 @@
 */
 /* Need _GNU_SOURCE for qsort_r, must be defined before any include directives */
 #define _GNU_SOURCE
+#define W_ "\xd7" /* underline text for sci_ui */
+#define T_ "\xd4"
+#define S_ "\xd3"
+#define M_ "\xcd"
+#define L_ "\xcc"
+#define D_ "\xc4"
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -15637,25 +15643,26 @@ static void init_science_ui(void)
 				0.0, 100.0, sample_sensors_power, NULL);
 	snis_slider_set_fuzz(sci_ui.scipower, 7);
 	snis_slider_set_label_font(sci_ui.scipower, NANO_FONT);
-	sci_ui.launch_mining_bot_button = snis_button_init(mbbx, mbby, mbbw, mbbh, "MINING BOT",
+	/* M_ , T_ , W_ , S_ , L_ , D_ are #define */
+	sci_ui.launch_mining_bot_button = snis_button_init(mbbx, mbby, mbbw, mbbh, M_"INING BOT",
 			UI_COLOR(sci_button), NANO_FONT, sci_mining_bot_pressed, (void *) 0);
 	snis_button_set_sound(sci_ui.launch_mining_bot_button, UISND13);
 	sci_ui.custom_button = snis_button_init(cbbx, cbby, -1, -1, "CUSTOM BUTTON", UI_COLOR(sci_button),
 						NANO_FONT, sci_custom_button_pressed, (void *) 0);
 	snis_button_set_sound(sci_ui.custom_button, UISND14);
-	sci_ui.tractor_button = snis_button_init(trbx, trby, trbw, trbh, "TRACTOR",
+	sci_ui.tractor_button = snis_button_init(trbx, trby, trbw, trbh, T_"RACTOR",
 			UI_COLOR(sci_button), NANO_FONT, sci_tractor_pressed, (void *) 0);
 	snis_button_set_sound(sci_ui.tractor_button, UISND14);
-	sci_ui.waypoints_button = snis_button_init(wpx, wpy, wpw, wph, "WAYPOINTS",
+	sci_ui.waypoints_button = snis_button_init(wpx, wpy, wpw, wph, W_"AYPOINTS",
 			UI_COLOR(sci_button), NANO_FONT, sci_waypoints_pressed, (void *) 0);
 	snis_button_set_sound(sci_ui.waypoints_button, UISND15);
-	sci_ui.sciplane_button = snis_button_init(scpx, scpy, scpw, scph, "SRS",
+	sci_ui.sciplane_button = snis_button_init(scpx, scpy, scpw, scph, S_"RS",
 			UI_COLOR(sci_button), NANO_FONT, sci_sciplane_pressed, (void *) 0);
 	snis_button_set_sound(sci_ui.sciplane_button, UISND16);
-	sci_ui.threed_button = snis_button_init(thdx, thdy, thdw, thdh, "\xcdRS",
+	sci_ui.threed_button = snis_button_init(thdx, thdy, thdw, thdh, L_"RS",
 			UI_COLOR(sci_button), NANO_FONT, sci_threed_pressed, (void *) 0);
 	snis_button_set_sound(sci_ui.threed_button, UISND17);
-	sci_ui.details_button = snis_button_init(detx, dety, detw, deth, "DETAILS",
+	sci_ui.details_button = snis_button_init(detx, dety, detw, deth, D_"ETAILS",
 			UI_COLOR(sci_button), NANO_FONT, sci_details_pressed, (void *) 0);
 	snis_button_set_sound(sci_ui.details_button, UISND18);
 	sci_ui.align_to_ship_button = snis_button_init(atsx, atsy, atsw, atsh, "ALIGN TO SHIP",
