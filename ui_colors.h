@@ -134,12 +134,6 @@ struct ui_color_map {
 	struct ui_color_entry eng_caution_status;
 	struct ui_color_entry eng_warning_status;
 
-	struct ui_color_entry science_graph_plot_strong;
-	struct ui_color_entry science_graph_plot_weak;
-	struct ui_color_entry science_graph_grid;
-	struct ui_color_entry science_data_label;
-	struct ui_color_entry science_annotation;
-
 	struct ui_color_entry damcon_arena_border;
 	struct ui_color_entry damcon_robot;
 	struct ui_color_entry damcon_system;
@@ -156,6 +150,7 @@ struct ui_color_map {
 	struct ui_color_entry sci_basis_ring_1;
 	struct ui_color_entry sci_basis_ring_2;
 	struct ui_color_entry sci_basis_ring_3;
+	struct ui_color_entry sci_heading_labels;
 	struct ui_color_entry sci_coords;
 	struct ui_color_entry sci_button;
 	struct ui_color_entry sci_slider;
@@ -187,6 +182,12 @@ struct ui_color_map {
 	struct ui_color_entry sci_warning;
 	struct ui_color_entry sci_pull_down_menu;
 	struct ui_color_entry sci_pull_down_menu_selection;
+
+	struct ui_color_entry science_graph_plot_strong;
+	struct ui_color_entry science_graph_plot_weak;
+	struct ui_color_entry science_graph_grid;
+	struct ui_color_entry science_data_label;
+	struct ui_color_entry science_annotation;
 
 	struct ui_color_entry comms_button;
 	struct ui_color_entry comms_slider;
@@ -351,12 +352,6 @@ GLOBAL struct ui_color_map_accessor {
 	.u.map.eng_caution_status	= { YELLOW,		"eng-caution-status" },
 	.u.map.eng_warning_status	= { ORANGERED,		"eng-warning-status" },
 
-	.u.map.science_graph_plot_strong = { LIMEGREEN,		"science-graph-plot-strong" },
-	.u.map.science_graph_plot_weak	= { RED,		"science-graph-plot-weak" },
-	.u.map.science_graph_grid	= { DARKGREEN,		"science-graph-grid" },
-	.u.map.science_data_label	= { GREEN_FIXUP,	"science-data-label" },
-	.u.map.science_annotation	= { CYAN_FIXUP,		"science-annotation" },
-
 	.u.map.damcon_arena_border	= { RED,		"damcon-arena-border" },
 	.u.map.damcon_robot		= { GREEN_FIXUP,	"damcon-robot" },
 	.u.map.damcon_system		= { AMBER,		"damcon-system" },
@@ -373,6 +368,7 @@ GLOBAL struct ui_color_map_accessor {
 	.u.map.sci_basis_ring_1		= { RED,		"sci-basis-ring-1" },
 	.u.map.sci_basis_ring_2		= { DARKGREEN,		"sci-basis-ring-2" },
 	.u.map.sci_basis_ring_3		= { BLUE_FIXUP,		"sci-basis-ring-3" },
+	.u.map.sci_heading_labels	= { GREEN_FIXUP,	"sci-heading-labels" },
 	.u.map.sci_coords		= { CYAN_FIXUP,		"sci-coords" },
 	.u.map.sci_button		= { GREEN_FIXUP,	"sci-button" },
 	.u.map.sci_slider		= { DARKGREEN,		"sci-slider" },
@@ -405,6 +401,12 @@ GLOBAL struct ui_color_map_accessor {
 	.u.map.sci_pull_down_menu	= { GREEN_FIXUP,	"sci-pull-down-menu" },
 	.u.map.sci_pull_down_menu_selection
 					= { YELLOW,		"sci-pull-down-menu-selection" },
+
+	.u.map.science_graph_plot_strong = { LIMEGREEN,		"science-graph-plot-strong" },
+	.u.map.science_graph_plot_weak	= { RED,		"science-graph-plot-weak" },
+	.u.map.science_graph_grid	= { DARKGREEN,		"science-graph-grid" },
+	.u.map.science_data_label	= { GREEN_FIXUP,	"science-data-label" },
+	.u.map.science_annotation	= { CYAN_FIXUP,		"science-annotation" },
 
 	.u.map.comms_button		= { GREEN_FIXUP,	"comms-button" },
 	.u.map.comms_slider		= { GREEN_FIXUP,	"comms-slider" },

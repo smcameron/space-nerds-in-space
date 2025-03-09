@@ -11217,7 +11217,7 @@ static void draw_sciplane_display(struct snis_entity *o, double range)
 	}
 
 	/* heading labels */
-	sng_set_foreground(UI_COLOR(sci_details_text));
+	sng_set_foreground(UI_COLOR(sci_heading_labels));
 	{
 		int font = NANO_FONT;
 		char buf[10];
