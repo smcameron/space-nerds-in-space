@@ -20,12 +20,6 @@
 */
 /* Need _GNU_SOURCE for qsort_r, must be defined before any include directives */
 #define _GNU_SOURCE
-#define W_ "\xd7" /* underline text for sci_ui */
-#define T_ "\xd4"
-#define S_ "\xd3"
-#define M_ "\xcd"
-#define L_ "\xcc"
-#define D_ "\xc4"
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -15643,7 +15637,7 @@ static void init_science_ui(void)
 				0.0, 100.0, sample_sensors_power, NULL);
 	snis_slider_set_fuzz(sci_ui.scipower, 7);
 	snis_slider_set_label_font(sci_ui.scipower, NANO_FONT);
-	/* M_ , T_ , W_ , S_ , L_ , D_ are #define */
+	/* M_ , T_ , W_ , S_ , L_ , D_ are #define'ed in snis_font.h */
 	sci_ui.launch_mining_bot_button = snis_button_init(mbbx, mbby, mbbw, mbbh, M_"INING BOT",
 			UI_COLOR(sci_button), NANO_FONT, sci_mining_bot_pressed, (void *) 0);
 	snis_button_set_sound(sci_ui.launch_mining_bot_button, UISND13);

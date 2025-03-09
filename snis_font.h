@@ -37,5 +37,12 @@ extern struct font_def *ascii_smallcaps_font;
 GLOBAL int snis_make_font(struct my_vect_obj ***font, struct font_def *f, float xscale, float yscale);
 GLOBAL int snis_font_lineheight(float yscale);
 
+#define D_ "\xc4" /* underline text */
+#define L_ "\xcc"
+#define M_ "\xcd"
+#define S_ "\xd3"
+#define T_ "\xd4"
+#define W_ "\xd7"
+
 #undef GLOBAL
 #endif
