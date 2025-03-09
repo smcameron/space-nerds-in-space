@@ -327,13 +327,18 @@ float sng_abs_xy_draw_letter(struct my_vect_obj **font, unsigned char letter, fl
 	int i;
 	float x1, y1, x2, y2;
 	float minx, maxx, diff;
+	int underlined = (letter & 0x80); /* high bit set indicates underlined char */
 
+	letter = (letter & ~0x80); /* mask out high bit */
 	assert(font['_'] != NULL); /* prevent scan-build from complaining about null ptr deref */
 	if (letter == ' ' || letter == '\n' || letter == '\t' || font[letter] == NULL)
 		return abs(font['_']->p[0].x - font['_']->p[1].x);
 
 	minx = x + font[letter]->p[0].x;
 	maxx = minx;
+
+	if (underlined)
+		(void) sng_abs_xy_draw_letter(font, '_', x, y);
 	for (i = 0; i < font[letter]->npoints-1; i++) {
 		if (font[letter]->p[i+1].x == LINE_BREAK)
 			i += 2;
