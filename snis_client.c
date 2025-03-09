@@ -8924,7 +8924,8 @@ try_again:
 		goto error;
 	}
 
-	enforce_solarsystem = !disable_solarsystem_enforcement;
+	if (disable_solarsystem_enforcement)
+		enforce_solarsystem = 0;
 
 	rc = snis_writesocket(gameserver_sock, &enforce_solarsystem, 1);
 	if (rc < 0) {
