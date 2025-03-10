@@ -98,7 +98,7 @@ void snis_text_input_box_draw(struct snis_text_input_box *t)
 		sng_current_draw_rectangle(0, t->x - 1, t->y - 1,
 						t->width + 2, t->height + 2);
 	sng_abs_xy_draw_string_with_cursor(t->buffer, t->font,
-				t->x + 4, t->y + font_lineheight[t->font],
+				t->x + 4, t->y + font_lineheight[t->font] - 4,
 				t->cursor_pos, cursor_on);
 }
 

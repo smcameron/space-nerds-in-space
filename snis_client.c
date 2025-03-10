@@ -4689,6 +4689,35 @@ static void quit_continue_or_disconnect(void)
 	}
 }
 
+static struct science_ui {
+	/* details mode is one of define SCI_DETAILS_MODE_THREED,
+	 * SCI_DETAILS_MODE_DETAILS, SCI_DETAILS_MODE_SCIPLANE,
+	 * SCI_DETAILS_MODE_WAYPOINTS
+	 */
+	int details_mode;
+	struct slider *scizoom;
+	struct slider *scipower;
+	struct button *details_button;
+	struct button *threed_button;
+	struct button *sciplane_button;
+	struct button *tractor_button;
+	struct button *align_to_ship_button;
+	struct button *launch_mining_bot_button;
+	struct button *waypoints_button;
+	struct button *add_waypoint_button;
+	struct button *add_current_pos_button;
+	struct button *custom_button;
+	struct snis_text_input_box *waypoint_input[3];
+	char waypoint_text[3][15];
+	struct button *clear_waypoint_button[MAXWAYPOINTS];
+	struct button *select_waypoint_button[MAXWAYPOINTS];
+	double waypoint[MAXWAYPOINTS][3];
+	int nwaypoints;
+	struct pull_down_menu *menu;
+	int low_tractor_power_timer;
+	int align_sciball_to_ship; /* mirrors player's o->tsd.ship.align_sciball_to_ship */
+} sci_ui;
+
 static void engage_warp_button_pressed(__attribute__((unused)) void *cookie);
 static void reverse_button_pressed(__attribute__((unused)) void *s);
 static void docking_magnets_button_pressed(__attribute__((unused)) void *cookie);
@@ -4725,6 +4754,19 @@ static int key_press_cb(SDL_Window *window, SDL_Keysym *keysym, int key_repeat)
 			voice_chat_start_recording(VOICE_CHAT_DESTINATION_ALL, 0);
 		else
 			voice_chat_start_recording(VOICE_CHAT_DESTINATION_CREW, 0);
+	}
+
+	if (in_the_process_of_quitting) {
+		if (keysym->sym == SDLK_q) {
+			current_quit_selection = QUIT_SELECTION_QUIT;
+			quit_continue_or_disconnect();
+		} else if (keysym->sym == SDLK_c) {
+			current_quit_selection = QUIT_SELECTION_CONTINUE;
+			quit_continue_or_disconnect();
+		} else if (keysym->sym == SDLK_d && quit_disconnect_button_present) {
+			current_quit_selection = QUIT_SELECTION_DISCONNECT;
+			quit_continue_or_disconnect();
+		}
 	}
 
         switch (ka) {
@@ -4877,6 +4919,7 @@ static int key_press_cb(SDL_Window *window, SDL_Keysym *keysym, int key_repeat)
 		if (role & ROLE_SCIENCE) {
 			displaymode = DISPLAYMODE_SCIENCE;
 			wwviaudio_add_sound(CHANGESCREEN_SOUND);
+			pull_down_menu_set_visible_timer(sci_ui.menu, 1);
 		} else {
 			explain_denied_role("science");
 		}
@@ -4910,6 +4953,7 @@ static int key_press_cb(SDL_Window *window, SDL_Keysym *keysym, int key_repeat)
 		if (role & ROLE_DEMON) {
 			displaymode = DISPLAYMODE_DEMON;
 			wwviaudio_add_sound(CHANGESCREEN_SOUND);
+			pull_down_menu_set_visible_timer(demon_ui.menu, 1);
 		} else {
 			explain_denied_role("demon screen");
 		}
@@ -6507,36 +6551,6 @@ static int process_role_onscreen_packet(void)
 	}
 	return 0;
 }
-
-static struct science_ui {
-	/* details mode is one of define SCI_DETAILS_MODE_THREED,
-	 * SCI_DETAILS_MODE_DETAILS, SCI_DETAILS_MODE_SCIPLANE,
-	 * SCI_DETAILS_MODE_WAYPOINTS
-	 */
-	int details_mode;
-	struct slider *scizoom;
-	struct slider *scipower;
-	struct button *details_button;
-	struct button *threed_button;
-	struct button *sciplane_button;
-	struct button *tractor_button;
-	struct button *align_to_ship_button;
-	struct button *launch_mining_bot_button;
-	struct button *waypoints_button;
-	struct button *add_waypoint_button;
-	struct button *add_current_pos_button;
-	struct button *custom_button;
-	struct snis_text_input_box *waypoint_input[3];
-	char waypoint_text[3][15];
-	struct button *clear_waypoint_button[MAXWAYPOINTS];
-	struct button *select_waypoint_button[MAXWAYPOINTS];
-	double waypoint[MAXWAYPOINTS][3];
-	int nwaypoints;
-	struct pull_down_menu *menu;
-	int low_tractor_power_timer;
-	int align_sciball_to_ship; /* mirrors player's o->tsd.ship.align_sciball_to_ship */
-} sci_ui;
-
 static void science_activate_waypoints_widgets(void)
 {
 	int i;
@@ -14569,6 +14583,10 @@ static void cycle_displaymode(int direction)
 			i = 0;
 	} while (!(role & (1 << displaymode_cycle[i])));
 	displaymode = displaymode_cycle[i];
+	if (displaymode == DISPLAYMODE_SCIENCE)
+		pull_down_menu_set_visible_timer(sci_ui.menu, 1);
+	else if (displaymode == DISPLAYMODE_DEMON)
+		pull_down_menu_set_visible_timer(demon_ui.menu, 1);
 }
 
 static void cycle_displaymode_forward(__attribute__((unused)) void *x)
@@ -22256,13 +22274,13 @@ static void draw_quit_screen(void)
 
 	quit_buttons[0].x = QUIT_BUTTON_X;
 	quit_buttons[0].y = QUIT_BUTTON_Y;
-	quit_buttons[0].text = "Quit";
+	quit_buttons[0].text = Q_"uit";
 	quit_buttons[1].x = NOQUIT_BUTTON_X;
 	quit_buttons[1].y = QUIT_BUTTON_Y;
-	quit_buttons[1].text = "Continue";
+	quit_buttons[1].text = C_"ontinue";
 	quit_buttons[2].x = DISCONNECT_BUTTON_X;
 	quit_buttons[2].y = QUIT_BUTTON_Y;
-	quit_buttons[2].text = "Disconnect";
+	quit_buttons[2].text = D_"isconnect";
 
 	switch (displaymode) {
 	case DISPLAYMODE_MAINSCREEN:
