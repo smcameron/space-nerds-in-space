@@ -5,6 +5,9 @@
 #define DEFINE_UI_ELEMENT_GLOBALS
 #include "snis_ui_element.h"
 
+SDL_Cursor* cursor_default;	
+SDL_Cursor* cursor_hand;	
+
 struct ui_element {
 	void *element;
 	int active_displaymode;
@@ -93,6 +96,25 @@ void ui_element_maybe_draw_tooltip(struct ui_element *element, int mousex, int m
 	if (!element->inside_fn(element->element, mousex, mousey)) {
 		element->tooltip_timer = TOOLTIP_DELAY;
 		return;
+	}
+	else
+	{
+		SDL_Cursor *test = SDL_GetCursor();
+		if (element->button_press)
+		{
+			SDL_Cursor *test = SDL_GetCursor();
+			if (SDL_GetCursor() != cursor_hand)
+			{
+				SDL_SetCursor(cursor_hand);
+			}
+			else
+			{
+				if (SDL_GetCursor() != cursor_default)
+				{
+					SDL_SetCursor(cursor_default);
+				}
+			}
+		}
 	}
 	if (element->tooltip_timer > 0)
 		element->tooltip_timer--;

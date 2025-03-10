@@ -176,3 +176,6 @@ GLOBAL int ui_element_list_restore_position_offsets(struct ui_element_list *list
 
 #undef GLOBAL
 #endif
+
+extern SDL_Cursor* cursor_default;	
+extern SDL_Cursor* cursor_hand;	

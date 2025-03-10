@@ -25685,6 +25685,9 @@ int main(int argc, char *argv[])
 	double nextTime = currentTime + delta[1];
 	double nextDrawTime = currentTime + delta[use_60_fps];
 
+	cursor_default = SDL_GetCursor();
+	cursor_hand = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_HAND);
+
 	SDL_ShowWindow(window);
 	while (1) {
 		currentTime = time_now_double();
