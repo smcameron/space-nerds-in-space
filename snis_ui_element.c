@@ -7,6 +7,7 @@
 
 SDL_Cursor* cursor_default;	
 SDL_Cursor* cursor_hand;	
+char mouse_in_element;
 
 struct ui_element {
 	void *element;
@@ -97,22 +98,11 @@ void ui_element_maybe_draw_tooltip(struct ui_element *element, int mousex, int m
 		element->tooltip_timer = TOOLTIP_DELAY;
 		return;
 	}
-	else
-	{
-		SDL_Cursor *test = SDL_GetCursor();
-		if (element->button_press)
-		{
-			SDL_Cursor *test = SDL_GetCursor();
-			if (SDL_GetCursor() != cursor_hand)
-			{
+	else{
+		if (element->button_press){
+			mouse_in_element = 1;
+			if (SDL_GetCursor() != cursor_hand){
 				SDL_SetCursor(cursor_hand);
-			}
-			else
-			{
-				if (SDL_GetCursor() != cursor_default)
-				{
-					SDL_SetCursor(cursor_default);
-				}
 			}
 		}
 	}
@@ -176,10 +166,16 @@ void ui_element_list_draw(struct ui_element_list *list)
 
 void ui_element_list_maybe_draw_tooltips(struct ui_element_list *list, int mousex, int mousey)
 {
+	mouse_in_element = 0;
 	for (; list != NULL; list = list->next) {
 		struct ui_element *e = list->element;
 		if (e->draw && e->active_displaymode == *e->displaymode && !e->hidden)
 			ui_element_maybe_draw_tooltip(e, mousex, mousey);
+	}
+	if (!mouse_in_element){
+		if (SDL_GetCursor() != cursor_default){
+			SDL_SetCursor(cursor_default);
+		}
 	}
 }
 
