@@ -4,10 +4,12 @@
 
 #define DEFINE_UI_ELEMENT_GLOBALS
 #include "snis_ui_element.h"
+#include "ui_colors.h"
 
 SDL_Cursor* cursor_default;	
 SDL_Cursor* cursor_hand;	
 char mouse_in_element;
+void *hover_element;
 
 struct ui_element {
 	void *element;
@@ -99,10 +101,14 @@ void ui_element_maybe_draw_tooltip(struct ui_element *element, int mousex, int m
 		return;
 	}
 	else{
+		hover_element = element;
 		if (element->button_press){
 			mouse_in_element = 1;
 			if (SDL_GetCursor() != cursor_hand){
 				SDL_SetCursor(cursor_hand);
+				//const int selected2 = UI_COLOR(damcon_selected_button);
+				//const int deselected2 = UI_COLOR(damcon_button);
+				//snis_button_set_color(element, selected2);
 			}
 		}
 	}
