@@ -14583,6 +14583,10 @@ static void cycle_displaymode(int direction)
 			i = 0;
 	} while (!(role & (1 << displaymode_cycle[i])));
 	displaymode = displaymode_cycle[i];
+	if (displaymode == DISPLAYMODE_SCIENCE)
+		pull_down_menu_set_visible_timer(sci_ui.menu, 1);
+	else if (displaymode == DISPLAYMODE_DEMON)
+		pull_down_menu_set_visible_timer(demon_ui.menu, 1);
 }
 
 static void cycle_displaymode_forward(__attribute__((unused)) void *x)
