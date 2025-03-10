@@ -954,7 +954,7 @@ $(OD)/snis_server_tracker.o:	snis_server_tracker.c snis_server_tracker.h pthread
 			ssgl/ssgl.h Makefile
 	$(Q)$(COMPILE)
 
-$(OD)/snis_client.o:	snis_client.c Makefile build_info.h ui_colors.h ${ODT}
+$(OD)/snis_client.o:	snis_client.c Makefile build_info.h ui_colors.h snis_ui.h ${ODT}
 	$(Q)$(SDLCOMPILE) ${VCHAT}
 
 $(OD)/mesh_viewer.o:	mesh_viewer.c Makefile build_info.h ${ODT}
