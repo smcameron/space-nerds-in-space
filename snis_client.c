@@ -4727,6 +4727,19 @@ static int key_press_cb(SDL_Window *window, SDL_Keysym *keysym, int key_repeat)
 			voice_chat_start_recording(VOICE_CHAT_DESTINATION_CREW, 0);
 	}
 
+	if (in_the_process_of_quitting) {
+		if (keysym->sym == SDLK_q) {
+			current_quit_selection = QUIT_SELECTION_QUIT;
+			quit_continue_or_disconnect();
+		} else if (keysym->sym == SDLK_c) {
+			current_quit_selection = QUIT_SELECTION_CONTINUE;
+			quit_continue_or_disconnect();
+		} else if (keysym->sym == SDLK_d && quit_disconnect_button_present) {
+			current_quit_selection = QUIT_SELECTION_DISCONNECT;
+			quit_continue_or_disconnect();
+		}
+	}
+
         switch (ka) {
 	case key_invert_vertical:
 			if (control_key_pressed) {
@@ -22256,13 +22269,13 @@ static void draw_quit_screen(void)
 
 	quit_buttons[0].x = QUIT_BUTTON_X;
 	quit_buttons[0].y = QUIT_BUTTON_Y;
-	quit_buttons[0].text = "Quit";
+	quit_buttons[0].text = Q_"uit";
 	quit_buttons[1].x = NOQUIT_BUTTON_X;
 	quit_buttons[1].y = QUIT_BUTTON_Y;
-	quit_buttons[1].text = "Continue";
+	quit_buttons[1].text = C_"ontinue";
 	quit_buttons[2].x = DISCONNECT_BUTTON_X;
 	quit_buttons[2].y = QUIT_BUTTON_Y;
-	quit_buttons[2].text = "Disconnect";
+	quit_buttons[2].text = D_"isconnect";
 
 	switch (displaymode) {
 	case DISPLAYMODE_MAINSCREEN:
