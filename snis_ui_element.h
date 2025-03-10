@@ -44,6 +44,7 @@ typedef void (*ui_update_mouse_pos_function)(void *element, int physical_x, int 
 typedef void (*ui_element_update_position_function)(void *element, int x, int y);
 typedef char * (*ui_element_get_label_function)(void *element);
 typedef void (*ui_element_draw_position_function)(int x, int y);
+typedef void (*ui_element_set_mouse_hover_function)(void *element, int hover_state);
 
 /*
 	struct ui_element_functions defines an interface of function pointers that a UI element
@@ -62,6 +63,7 @@ struct ui_element_functions {
 	ui_element_keypress_function keyrelease_fn;		/* optional Fn to call when keyrelease received */
 	ui_update_mouse_pos_function update_mouse_pos;		/* optional Fn to call with mouse pos */
 	ui_element_get_label_function get_label;		/* optional Fn to get UI element's label */
+	ui_element_set_mouse_hover_function set_hover_state;
 };
 
 #ifdef DEFINE_UI_ELEMENT_LIST_GLOBALS
@@ -105,6 +107,10 @@ GLOBAL void ui_element_list_draw(struct ui_element_list *list);
  * on each element in the list. (Generally the conditions are such that only one or zero are
  * actually drawn, barring overlapping ui elements (which are permitted but unusual)). */
 GLOBAL void ui_element_list_maybe_draw_tooltips(struct ui_element_list *list, int mousex, int mousey);
+
+/* Changes mouse hover state for all the ui elements in a list by calling element->set_hover_state()
+ * on each element in the list. */
+GLOBAL void ui_element_list_maybe_change_hover_state(struct ui_element_list *list, int mousex, int mousey);
 /* Signal mouse btn release to all the ui elements in a list so they can check if it occurs
  * within their boundaries, and if so, subsequently call ->button_release() */
 GLOBAL void ui_element_list_button_release(struct ui_element_list *list, int x, int y);

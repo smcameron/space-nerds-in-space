@@ -827,6 +827,10 @@ void sng_setup_colors(char *user_color_file)
 	huex[ORANGERED].green = 17733;
 	huex[ORANGERED].blue = 0;
 
+	huex[LIGHT_AMBER].red = 65535;
+	huex[LIGHT_AMBER].green = 230 * 256;
+	huex[LIGHT_AMBER].blue = 131 * 256;
+
 	for (i = 0; i < NSHADESOFGRAY; i++) {
 		huex[GRAY + i].red = (i * 32767 * 2) / 256;
 		huex[GRAY + i].green = (i * 32767 * 2) / 256;

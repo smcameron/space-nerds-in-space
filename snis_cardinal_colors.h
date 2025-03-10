@@ -14,6 +14,7 @@
 #define LIMEGREEN 9
 #define DARKTURQUOISE 10
 #define ORANGERED 11
-#define NCOLORS 12
+#define LIGHT_AMBER 12
+#define NCOLORS 13
 
 #endif

@@ -37,6 +37,7 @@ GLOBAL int snis_button_trigger_button(struct button *b);
 GLOBAL int snis_button_trigger_long_press(struct button *b);
 
 GLOBAL void snis_button_set_color(struct button *b, int color); /* Sets the color of the button */
+GLOBAL void snis_button_set_hover_color(struct button *b, int color);
 GLOBAL int snis_button_get_color(struct button *b); /* Returns the color of the button */
 
 /* By default, buttons have a visible border. You can turn it on or off with this. */
@@ -101,6 +102,8 @@ GLOBAL void snis_button_generic_checkbox_toggler(void *x);
  * 1 for resize, and they will, 0, and they won't resize.
  */
 GLOBAL void snis_button_resize_when_label_changes(struct button *b, int resize);
+
+GLOBAL void snis_button_set_mouse_hover(struct button *b, int hover_state);
 
 #undef GLOBAL
 #endif
