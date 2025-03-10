@@ -27,5 +27,11 @@ void pull_down_menu_set_tooltip_drawing_function(struct pull_down_menu *pdm, pul
 int pull_down_menu_add_tooltip(struct pull_down_menu *pdm, char *column, char *row, char *tooltip);
 void pull_down_menu_add_from_file(struct pull_down_menu *pdm, char *column, char *file, void (*menu_button_fn)(void *));
 
+/* Normally if the mouse is not near the pull down menu, it will be invisible.
+ * To aid discoverability, we can set a timer for how long the menu will be
+ * visible before going into hiding.
+ */
+void pull_down_menu_set_visible_timer(struct pull_down_menu *pdm, int seconds);
+
 
 #endif

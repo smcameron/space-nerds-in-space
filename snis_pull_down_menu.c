@@ -43,6 +43,7 @@ struct pull_down_menu {
 	float alpha;
 	int gravity;
 	pull_down_menu_tooltip_drawing_function tooltip_draw;
+	int visible_timer; /* in 30ths second */
 };
 
 static int pull_down_menu_inside_title(struct pull_down_menu *m, int col,
@@ -188,6 +189,7 @@ struct pull_down_menu *create_pull_down_menu(int font, int screen_width)
 	m->alpha = -1; /* no alpha */
 	m->gravity = 0;
 	m->tooltip_draw = NULL;
+	m->visible_timer = 1 * 30;
 	return m;
 }
 
@@ -326,10 +328,17 @@ void pull_down_menu_draw(struct pull_down_menu *m)
 
 	pthread_mutex_lock(&m->mutex);
 	update_menu_widths(m);
-	if (!pull_down_menu_inside_internal(m, m->current_physical_x, m->current_physical_y, 0)) {
-		pthread_mutex_unlock(&m->mutex);
-		return;
+
+	if (m->visible_timer > 0)
+		m->visible_timer--;
+
+	if (m->visible_timer == 0) {
+		if (!pull_down_menu_inside_internal(m, m->current_physical_x, m->current_physical_y, 0)) {
+			pthread_mutex_unlock(&m->mutex);
+			return;
+		}
 	}
+
 	if (m->gravity) {
 		start = m->ncols - 1;
 		end = -1;
@@ -632,4 +641,9 @@ void pull_down_menu_add_from_file(struct pull_down_menu *pdm, char *column, char
 			pull_down_menu_add_tooltip(pdm, column, mt->menu_text[i], mt->tooltip[i]);
 	}
 	free_menu_text(mt);
+}
+
+void pull_down_menu_set_visible_timer(struct pull_down_menu *pdm, int seconds)
+{
+	pdm->visible_timer = 30 * seconds;
 }
