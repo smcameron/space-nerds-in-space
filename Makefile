@@ -673,7 +673,8 @@ MODELS=${MD}/freighter.stl \
 	${MD}/space_monster_torso.stl \
 	${MD}/space_monster_tentacle_segment.stl \
 	${MD}/cylinder.stl \
-	${MD}/missile.stl
+	${MD}/missile.stl \
+	${MD}/mf-cockpit.stl
 
 # compiler specific cflags
 ifeq (${USING_CLANG},)

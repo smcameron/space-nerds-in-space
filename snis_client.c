@@ -594,6 +594,8 @@ static struct docking_port_attachment_point **docking_port_info;
 static struct mesh *ship_turret_mesh;
 static struct mesh *ship_turret_base_mesh;
 static struct mesh *turret_mesh;
+static struct mesh *mf_cockpit_mesh;
+static int mf_cockpit = 0;
 static struct mesh *turret_base_mesh;
 static struct mesh *particle_mesh;
 static struct mesh *debris_mesh;
@@ -9645,6 +9647,19 @@ static void show_weapons_camera_view(void)
 	pthread_mutex_unlock(&universe_mutex);
 }
 
+static struct entity *main_view_add_cockpit_entity(struct snis_entity *o)
+{
+	struct entity *cockpit_entity;
+	union vec3 v = { { 50.0f, 0.0f, 0.0f } };
+
+	/* temporarily add cockpit into scene */
+	quat_rot_vec_self(&v, &o->orientation);
+	cockpit_entity = add_entity(ecx, mf_cockpit_mesh, o->x + v.v.x, o->y + v.v.y, o->z + v.v.z, SHIP_COLOR);
+	update_entity_scale(cockpit_entity, 0.5);
+	update_entity_orientation(cockpit_entity, &o->orientation);
+	return cockpit_entity;
+}
+
 /* Add player ship entity into the scene for some camera modes */
 static struct entity *main_view_add_player_ship_entity(struct snis_entity *o)
 {
@@ -9786,6 +9801,7 @@ static void show_mainscreen(void)
 	struct snis_entity *vp;
 	struct entity *player_ship = 0;
 	double impulse_power;
+	struct entity *cockpit_entity = NULL;
 
 	if (!(o = find_my_ship()))
 		return;
@@ -9844,6 +9860,8 @@ static void show_mainscreen(void)
 		switch (camera_mode) {
 		case 0:
 			vec3_init(&desired_cam_offset, 0, 0, 0);
+			if (mf_cockpit)
+				cockpit_entity = main_view_add_cockpit_entity(o);
 			if (vp == o)
 				break;
 			FALLTHROUGH;
@@ -9889,6 +9907,8 @@ static void show_mainscreen(void)
 		cam_pos.v.z = 0;
 		update_external_camera_position_and_orientation(first_frame, &cam_pos, &camera_orientation);
 		player_ship = main_view_add_player_ship_entity(o);
+		/* if (mf_cockpit)
+			cockpit_entity = main_view_add_cockpit_entity(o); // for debugging the cockpit */
 	}
 
 	camera_set_pos(ecx, cam_pos.v.x, cam_pos.v.y, cam_pos.v.z);
@@ -9917,6 +9937,11 @@ static void show_mainscreen(void)
 	/* if we added the ship into the scene, remove it now */
 	if (player_ship) {
 		remove_entity(ecx, player_ship);
+	}
+
+	/* If we added the cockpit into the scene, remove it now */
+	if (mf_cockpit) {
+		remove_entity(ecx, cockpit_entity);
 	}
 
 	/* Draw science selector indicator on main screen */
@@ -18483,6 +18508,8 @@ static struct tweakable_var_descriptor client_tweak[] = {
 		&suppress_warp_hash, 'i', 0.0, 0.0, 0.0, 0, 1, 0, 0 },
 	{ "VSYNC", "VSYNC MODE, -1 = ADAPTIVE VSYNC, 1 = VSYNC ON, 0 = VSYNC OFF",
 		&vsync_mode, 'i', 0.0, 0.0, 0.0, -1, 1, 1, 0, },
+	{ "MF_COCKPIT", "1 - DISPLAY COCKPIT, 0 - DON'T DISPLAY COCKPIT",
+		&mf_cockpit, 'i', 0.0, 0.0, 0.0, 0, 1, 0, 0, },
 	{ NULL, NULL, NULL, '\0', 0.0, 0.0, 0.0, 0, 0, 0, 0 },
 };
 
@@ -24227,6 +24254,7 @@ static void init_meshes(void)
 	}
 
 	turret_mesh = snis_read_model(d, "laser_turret.stl");
+	mf_cockpit_mesh = snis_read_model(d, "mf-cockpit.stl");
 	turret_base_mesh = snis_read_model(d, "laser_turret_base.stl");
 	ship_turret_mesh = snis_read_model(d, "spaceship_turret.stl");
 	ship_turret_base_mesh = snis_read_model(d, "spaceship_turret_base.stl");
