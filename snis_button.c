@@ -72,11 +72,12 @@ struct button *snis_button_init(int x, int y, int width, int height,
 	b->y = y;
 	b->width = width;
 	b->height = height;
+	b->font = font; /* this must happen before setting the label */
+	b->resize_when_label_changes = 0; /* must happen before setting label */
 	snis_button_set_label(b, label);
 	b->label[sizeof(b->label) - 1] = '\0';
 	b->color = color;
 	b->disabled_color = color;
-	b->font = font;
 	b->button_release = button_release;
 	b->cookie = cookie;
 	b->checkbox_function = NULL;
@@ -89,7 +90,6 @@ struct button *snis_button_init(int x, int y, int width, int height,
 	b->visible_border = 1;
 	if (b->width < 0 || b->height < 0)
 		snis_button_compute_dimensions(b);
-	b->resize_when_label_changes = 0;
 	return b;
 }
 
