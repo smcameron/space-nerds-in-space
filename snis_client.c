@@ -9655,8 +9655,10 @@ static struct entity *main_view_add_cockpit_entity(struct snis_entity *o)
 	/* temporarily add cockpit into scene */
 	quat_rot_vec_self(&v, &o->orientation);
 	cockpit_entity = add_entity(ecx, mf_cockpit_mesh, o->x + v.v.x, o->y + v.v.y, o->z + v.v.z, SHIP_COLOR);
-	update_entity_scale(cockpit_entity, 0.5);
-	update_entity_orientation(cockpit_entity, &o->orientation);
+	if (cockpit_entity) {
+		update_entity_scale(cockpit_entity, 0.5);
+		update_entity_orientation(cockpit_entity, &o->orientation);
+	}
 	return cockpit_entity;
 }
 
@@ -9940,7 +9942,7 @@ static void show_mainscreen(void)
 	}
 
 	/* If we added the cockpit into the scene, remove it now */
-	if (mf_cockpit) {
+	if (cockpit_entity) {
 		remove_entity(ecx, cockpit_entity);
 	}
 
