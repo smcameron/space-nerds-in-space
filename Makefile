@@ -1327,7 +1327,8 @@ mostly-clean:
 	${MANSRCDIR}/earthlike.1.gz  ${MANSRCDIR}/snis_client.6.gz  ${MANSRCDIR}/snis_server.6.gz  \
 	${MANSRCDIR}/snis_test_audio.1.gz bin/test_transport_contract bin/test_stringutils \
 	bin/yoke-test-program fuzz_obj_parser fuzz_snis_read_ship_types fuzz_solarsystem_asset_spec_read \
-	fuzz_read_thrust_attachments fuzz_process_manifest build_info.h fuzz_read_joystick_config
+	fuzz_read_thrust_attachments fuzz_process_manifest build_info.h fuzz_read_joystick_config \
+	fuzz_read_commodities
 	rm -f ${BIN}
 	rm -fr opus-1.3.1
 	rm -f libopus.a
@@ -1581,6 +1582,10 @@ fuzz_read_joystick_config:	fuzz_read_joystick_config.c
 	afl-clang-fast -g3 -fsanitize=address,undefined fuzz_read_joystick_config.c \
 		-lm -o fuzz_read_joystick_config
 
+fuzz_read_commodities:	fuzz_read_commodities.c
+	afl-clang-fast -g3 -fsanitize=address,undefined fuzz_read_commodities.c \
+		-lm -o fuzz_read_commodities
+
 fuzz_read_thrust_attachments:	fuzz_read_thrust_attachments.c
 	afl-clang-fast -g3 -fsanitize=address,undefined fuzz_read_thrust_attachments.c \
 		-lm -o fuzz_read_thrust_attachments
@@ -1627,6 +1632,11 @@ run-fuzz-read-joystick-config:	fuzz_read_joystick_config put-cpu-in-hi-performan
 	/bin/rm -fr fuzz.out
 	afl-fuzz -T "Fuzzing read_joystick_config" -i fuzztests/read_joystick_config \
 		-o fuzz.out -- ./fuzz_read_joystick_config
+
+run-fuzz-read-commodities:	fuzz_read_commodities put-cpu-in-hi-performance-mode
+	/bin/rm -fr fuzz.out
+	afl-fuzz -T "Fuzzing read_commodities" -i fuzztests/read_commodities \
+		-o fuzz.out -- ./fuzz_read_commodities
 
 put-cpu-in-hi-performance-mode:
 	(cd /sys/devices/system/cpu && echo performance | sudo tee cpu*/cpufreq/scaling_governor)

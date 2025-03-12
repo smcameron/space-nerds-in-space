@@ -1,0 +1,143 @@
+# format is:
+#
+#	 char *category;
+#        char name[40];
+#        char unit[20];
+#	 char scans_as[20]; /* how it shows up in science scan */
+#        float base_price; range 0 - 1e6
+#        float volatility; range 0 - 1
+#        float legality; range 0 - 1
+#        int odds
+#
+# Note, first 8 must match mining-bot in snis.h
+#
+# You can perform some tests on this file via:
+#   make test-commodities
+#   ./test-commodities share/snis/commodities.txt
+#
+# or
+#
+#   ./test-commodities share/snis/commodities.txt > /dev/null # suppress everything but errors
+#
+# First, lets' define categories: short name, long name, econ sensitivity, govt sensitivity, tech sensitivity
+#
+category:food, food, 0.25, -0.05, -0.05
+category:liquor, liquors and wines, 0.25, -0.03, -0.03
+category:drugs, drugs and pharmaceuticals, -0.25, -0.1, -0.05
+category:livestock, slaves and animals, 0.25, 0.1, 0.2
+category:paper, books documents and paper goods, -0.2, -0.1, -0.15
+category:textiles, textiles cloth and clothing, -0.3, -0.1, -0.1
+category:furs, furs and hides, 0.3, 0.1, 0.1
+category:metals, metals alloys and ores, 0.3, -0.1, -0.1
+category:chemicals, chemical compounds, -0.2, -0.1, -0.1
+category:petroleum, petroleum products, 0.2, -0.1, 0.2
+category:gems, rare minerals and gem stones, 0.2, -0.1, 0.2
+category:electronics, electronics and computers, -0.2, -0.1, -0.2
+category:weapons, weapons and ammunition, -0.2, 0.2, -0.1
+category:dubious, dubious items, 0.2, -0.1, 0.0
+category:misc, miscellaneous commodities, 0.1, -0.1, -0.1
+#
+# category, name, units, scans as, base price, volatility, legality, odds
+metals, gold ore, tons, metallic ore, 1010.0, 0.2, 1.0, 10
+metals, platinum ore, tons, metallic ore, 1480.0, 0.2, 1.0, 5
+metals, germanium ore, tons, semi-metallic ore, 490.0, 0.2, 1.0, 30
+metals, uranium ore, tons, radioactive ore, 420.0, 0.2, 1.0, 20
+metals, gold, grams, gold, 10.0, 0.2, 1.0, 10
+metals, platinum, grams, platinum, 10.0, 0.2, 1.0, 5
+metals, germanium, kilograms, semi-metallic ore, 10.0, 0.2, 1.0, 30
+metals, uranium, grams, uranium, 10.0, 0.2, 1.0, 20
+
+# "normal" items
+# category, name,    unit,    scans_as,    base_price, volatility., legality, odds
+food, refined sugar, tons, organic crystals, 220.0, 0.2, 2.0, 100
+chemicals, sodium chloride, tons, granulated crystals, 100.0, 0.2, 2.0, 100
+food, spicy curry, barrels, various organics, 1100.0, 0.2, 1.0, 100
+liquor, wine, casks, water and ethanol, 2800.0, 0.2, 1.0, 100
+drugs, jakk, kilograms, organic compounds, 2900.0, 0.2, 0.2, 100
+misc, teakettles, crates, scrap metal, 10.0, 0.2, 1.0, 100
+drugs, recreational drugs, kilos, inorganic compounds, 3500.0, 0.2, 1.0, 100
+electronics, misc. positronics, tons, positronics, 2300.0, 0.2, 1.0, 100
+food, onions, bushels, vegetable matter, 60.0, 0.2, 1.0, 100
+misc, tractor parts, tons, iron and steel, 1610.0, 0.2, 1.0, 100
+chemicals, oxygen, tons, oxygen, 1520.0, 0.2, 1.0, 1000
+chemicals, hydrazine, tons, hydrazine, 2300.0, 0.2, 1.0, 1000
+metals, aluminum, tons, aluminum, 1479.0, 0.2, 1.0, 1000
+chemicals, thorium, tons, thorium, 7900.0, 0.2, 1.0, 1000
+petroleum, Oil, barrels, petroleum, 67.0, 0.2, 1.0, 500
+petroleum, kerosene, barrels, petroleum, 475.0, 0.2, 1.0, 500
+liquor, Ethanol, kegs, ethanol, 1900.0, 0.2, 1.0, 500
+drugs, tobacco, cartons, vegetable matter, 210.0, 0.2, 1.0, 100
+metals, scrap metal, tons, scrap metal, 160.0, 0.2, 1.0, 300
+metals, iron ore, tons, iron, 16.0, 0.2, 1.0, 700
+metals, thorium ore, tons, thorium, 670.0, 0.2, 1.0, 700
+metals, bauxite, tons, aluminum, 162.0, 0.2, 1.0, 700
+liquor, Champagne, bottles, silicon dioxide, 20.0, 0.2, 1.0, 200
+liquor, vodka, bottles, water and ethanol, 30.0, 0.2, 1.0, 300
+liquor, whiskey, barrels, water and ethanol, 8310.0, 0.2, 1.0, 100
+chemicals, epoxy, liters, organic polymer, 92.0, 0.2, 1.0, 100
+misc, distilling equipment, tons, scrap metal, 5700.0, 0.2, 0.2, 50
+textiles, cotton, bales, organic matter, 510.0, 0.2, 1.0, 900
+textiles, wool, skeins, organic matter, 9.9, 0.2, 1.0, 900
+textiles, silk, yards, organic matter, 29.00.0, 0.2, 1.0, 900
+textiles, jallavo, bales, organic matter, 1190.0, 0.2, 1.0, 900
+textiles, krinbah, spools, organic matter, 1210.0, 0.2, 1.0, 900
+food, flour, tons, vegetable matter, 520.0, 0.2, 1.0, 500
+liquor, beer, kegs, water and ethanol, 120.0, 0.2, 1.0, 300
+food, peanuts, pkgs, vegetable matter, 10.0, 0.2, 1.0, 50
+food, dried pasta, tons, organic matter, 110.0, 0.2, 1.0, 50
+food, raisins, ton, vegetable matter, 1610.0, 0.2, 1.0, 20
+food, wheat, bushels, vegetable matter, 6.7, 0.2, 1.0, 100
+food, corn, bushels, vegetable matter, 3.4, 0.2, 1.0, 100
+food, beeves, sides, organic matter, 1300.0, 0.2, 1.0, 100
+food, cheese, wheels, organic matter, 899.0, 0.2, 1.0, 100
+weapons, bullets, gross, lead, 145.0, 0.2, 1.0, 20
+drugs, pharmaceuticals, kilograms, inorganic compounds, 1720.0, 0.2, 1.0, 100
+furs, Horgbeast hides, hides, organic matter, 1250.0, 0.2, 1.0, 100
+furs, Whiffog pelts, pelts, organic matter, 25.0, 0.2, 1.0, 100
+furs, Yerbok hides, hides, organic matter, 1565.0, 0.2, 1.0, 100
+weapons, laser pistols, units, scrap metal, 750.0, 0.2, 0.2, 10
+weapons, laser rifles, units, scrap metal, 1610.0, 0.2, 0.2, 10
+weapons, ammunition, cases, scrap metal, 1570.0, 0.2, 0.2, 10
+livestock, Horgbeast, head, livestock, 1320.0, 0.2, 0.2, 10
+livestock, Yerbok, head, livestock, 1790.0, 0.2, 0.2, 10
+livestock, Whiffog, head, livestock, 250.0, 0.2, 0.2, 10
+livestock, slaves, head, lifeform, 2925.0, 0.2, 0.2, 10
+gems, diamonds, kilograms, carbon, 0.01, 0.2, 0.2, 10
+gems, emeralds, grams, silicate compounds, 5.0, 0.2, 0.2, 10
+gems, rubies, grams, aluminum oxide, 7.0, 0.2, 0.2, 10
+
+# silly items
+dubious, stolen weapons designs, briefcases, paper, 4910.0, 0.2, 1.0, 10
+paper, diplomatic papers, briefcases, paper, 5310.0, 0.2, 1.0, 10
+metals, bolonium, tons, unknown, 1910.0, 0.2, 1.0, 10
+dubious, dubious metaphors, volumes, paper, 3.0, 0.2, 1.0, 10
+paper, spiritual hogwash, pamphlets, paper, 10.0, 0.2, 1.0, 10
+dubious, negative entropy, casks, something very cold, 771.0, 0.2, 0.1, 10
+dubious, ethical theories, manifestos, paper, 13.0, 0.2, 1.0, 10
+paper, racy novellas, tons, paper, 110.0, 0.2, 0.2, 10
+drugs, mysterious nostrums, vials, various organics, 17.0, 0.2, 1.0, 10
+paper, accurate horoscopes, rolls, paper, 210.0, 0.2, 1.0, 10
+paper, legal documents, volumes, paper, 110.0, 0.2, 1.0, 10
+gems, cylindric diamacron, cylinders, unknown, 91.0, 0.2, 1.0, 10
+misc, complicated art, pieces, paper, 2310.0, 0.2, 1.0, 10
+paper, tax returns, manila folders, paper, 11.0, 0.2, 1.0, 10
+dubious, suspect philosophical theories, monographs, paper, 7.0, 0.2, 0.2, 10
+dubious, dubious financial instruments, tranches, paper, 307.0, 0.2, 1.0, 10
+food, corn fritters, baskets, vegetable matter, 6.70, 0.2, 1.0, 10
+paper, conspiracy theories, manifestos, paper, 50.0, 0.2, 1.0, 10
+paper, double entendres, comprehensions, paper, 40.0, 0.2, 1.0, 10
+dubious, airtight religions, prevarications, paper,  3010.0, 0.2, 1.0, 10
+misc, ancient artifacts, crates, SiO2 and organics, 5703.0, 0.2, 1.0, 10
+food, Misc. Krustaceans, tons, calcium and protein, 823.0, 0.2, 1.0, 10
+food, bacon, tons, organic matter, 9841.0, 0.2, 1.0, 0.0, 0.0, 0.1, 10
+food, cream gravy, barrels, water and organics, 235.0, 0.2, 1.0, 10
+food, Frozen biscuit dough, barrels, organic matter, 431.0, 0.2, 1.0, 10
+food, Chippos, bags, organic matter, 5.0, 0.2, 1.0, 10
+food, skittlebrau, kegs, water and ethanol, 210.0, 0.2, 0.2, 10
+drugs, maui wowie, kilograms, organic matter, 3210.0, 0.2, 1.0, 10
+misc, flatware, pkgs, scrap metal, 23.0, 0.2, 1.0, 10
+misc, cook stoves, units, scrap metal, 410.0, 0.2, 1.0, 10
+food, duunmelons, bushels, organic matter, 35.0, 0.2, 1.0, 10
+food, betelberries, bushels, organic matter, 79.0, 0.2, 1.0, 10
+misc, coffins, units, organic matter, 710.0, 0.2, 1.0, 10
+drugs, the spice, lumps, organic compound, 430.0, 0.2, 0.2, 5
