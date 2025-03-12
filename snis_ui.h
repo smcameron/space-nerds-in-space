@@ -369,6 +369,9 @@ struct launcher_ui {
 	struct gauge *snis_server_gauge;
 	struct gauge *snis_client_gauge;
 	struct button *restart_btn;
+	struct button *website_button;
+	struct button *forum_button;
+	struct button *support_button;
 	int ssgl_count;
 	int multiverse_count;
 	int snis_server_count;

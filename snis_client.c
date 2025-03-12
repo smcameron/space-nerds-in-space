@@ -20961,7 +20961,7 @@ static void init_net_setup_ui(void)
 	ui_add_button(net_setup_ui.website_button, DISPLAYMODE_NETWORK_SETUP,
 			"SPACE NERDS IN SPACE WEBSITE");
 	ui_add_button(net_setup_ui.forum_button, DISPLAYMODE_NETWORK_SETUP,
-			"SPACE NERDS IN SPACE FORUM ON BRIDGESIM.NET");
+			"SPACE NERDS IN SPACE DISCUSSIONS ON GITHUB");
 	ui_add_button(net_setup_ui.support_button, DISPLAYMODE_NETWORK_SETUP,
 			"HELP SUPPORT SPACE NERDS IN SPACE DEVELOPMENT");
 
@@ -21514,6 +21514,23 @@ static void init_launcher_ui(void)
 			10, "SNIS CLIENT", sample_snis_clientcount);
 	gauge_set_fonts(launcher_ui.snis_client_gauge, NANO_FONT, NANO_FONT);
 
+	y = txy(550);
+	launcher_ui.website_button =
+		snis_button_init(txx(500), y, -1, -1, "WEBSITE",
+			active_button_color,
+			TINY_FONT, browser_button_pressed, "http://spacenerdsinspace.com");
+	snis_button_set_hover_color(launcher_ui.website_button, hover_color);
+	launcher_ui.forum_button =
+		snis_button_init(txx(600), y, -1, -1, "FORUM",
+			active_button_color,
+			TINY_FONT, browser_button_pressed, "http://spacenerdsinspace.com/forum.html");
+	snis_button_set_hover_color(launcher_ui.forum_button, hover_color);
+	launcher_ui.support_button =
+		snis_button_init(txx(700), y, -1, -1, "DONATE",
+			active_button_color,
+			TINY_FONT, browser_button_pressed, "http://spacenerdsinspace.com/donate.html");
+	snis_button_set_hover_color(launcher_ui.support_button, hover_color);
+
 	ui_add_button(launcher_ui.start_ssgl_btn, DISPLAYMODE_LAUNCHER,
 			"START SNIS LOBBY SERVER PROCESS\n\n"
 			"YOU NEED EXACTLY ONE SNIS LOBBY PROCESS RUNNING\n"
@@ -21592,6 +21609,13 @@ static void init_launcher_ui(void)
 	ui_add_gauge(launcher_ui.snis_server_gauge, DISPLAYMODE_LAUNCHER);
 	ui_add_gauge(launcher_ui.snis_client_gauge, DISPLAYMODE_LAUNCHER);
 
+	ui_add_button(launcher_ui.website_button, DISPLAYMODE_LAUNCHER,
+			"DON'T KNOW WHAT THIS GAME IS ALL ABOUT?\n"
+			"WANT TO LEARN MORE?  VISIT HTTPS://SPACENERDSINSPACE.COM");
+	ui_add_button(launcher_ui.forum_button, DISPLAYMODE_LAUNCHER,
+			"SPACE NERDS IN SPACE DISCUSSIONS ON GITHUB");
+	ui_add_button(launcher_ui.support_button, DISPLAYMODE_LAUNCHER,
+			"HELP SUPPORT DEVELOPMENT OF SPACE NERDS IN SPACE");
 	ui_set_widget_tooltip(launcher_ui.ssgl_gauge,
 			"SNIS LOBBY SERVER GAUGE\n\n"
 
