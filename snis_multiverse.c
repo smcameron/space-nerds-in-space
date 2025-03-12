@@ -79,6 +79,7 @@ persisted in a simple database by snis_multiverse.
 #include "snis_licenses.h"
 #include "snis_version.h"
 #include "build_info.h"
+#include "commodities.h"
 
 static char *asset_dir;
 static char *lobby, *nick, *location;
@@ -117,6 +118,15 @@ static struct starsystem_info { /* one of these per connected snis_server */
 } starsystem[MAX_STARSYSTEMS] = { { 0 } };
 static int nstarsystems = 0;
 
+struct bridge_cargo {
+	int ncargo_bays;
+	struct cargo_contents {
+		struct flattened_commodity fc;
+		char qty[20];
+		char paid[20];
+	} cargo[MAX_CARGO_BAYS_PER_SHIP];
+};
+
 static struct bridge_info {
 	unsigned char pwdhash[PWDHASHLEN];	/* hash of password, shipname, salt */
 	int32_t initialized;			/* Have we unpacked data from snis server for this bridge? */
@@ -127,7 +137,7 @@ static struct bridge_info {
 	 * present in snis_entity, e.g. engineering presets.
 	 * See snis_bridge_update_packet.h. */
 	struct persistent_bridge_data persistent_bridge_data;
-
+	struct bridge_cargo cargo;
 } ship[MAX_BRIDGES];
 int nbridges = 0;
 
@@ -662,6 +672,99 @@ static int update_bridge(struct starsystem_info *ss)
 	return rc;
 }
 
+static int update_bridge_cargo(struct starsystem_info *ss)
+{
+	unsigned char pwdhash[PWDHASHLEN];
+	int i, rc;
+	unsigned char buffer[1024];
+	unsigned char *buf = NULL;
+	struct packed_buffer pb;
+	uint32_t nbytes;
+
+	memset(pwdhash, 0, sizeof(pwdhash));
+	rc = read_and_unpack_fixed_size_buffer(ss, buffer, PWDHASHLEN, "r", pwdhash, (uint16_t) PWDHASHLEN);
+	if (rc != 0)
+		return rc;
+	pthread_mutex_lock(&data_mutex);
+	i = lookup_ship_by_hash(pwdhash);
+	if (i < 0) {
+		fprintf(stderr, "snis_multiverse: update_bridge_cargo: Unknown ship hash\n");
+		pthread_mutex_unlock(&data_mutex);
+		return rc;
+	}
+	rc = snis_readsocket(ss->socket, &nbytes, sizeof(nbytes));
+	if (rc != 0) {
+		pthread_mutex_unlock(&data_mutex);
+		return rc;
+	}
+	nbytes = ntohl(nbytes);
+	if (nbytes > sizeof(buffer)) {
+		buf = malloc(nbytes);
+		memset(buf, 0, nbytes);
+	} else {
+		buf = buffer;
+	}
+	rc = snis_readsocket(ss->socket, buf, nbytes);
+	if (rc != 0)
+		goto errorout;
+
+	/* This is a wrapped buffer, unwrap it. */
+	pb.buffer = buf;
+	pb.buffer_size = nbytes;
+	pb.buffer_cursor = 0;
+
+	uint32_t ncargo_bays;
+	struct flattened_commodity fc;
+	char qty[20], paid[20];
+
+	rc = packed_buffer_extract(&pb, "w", &ncargo_bays);
+	if (rc < 0)
+		goto errorout;
+	if (ncargo_bays > MAX_CARGO_BAYS_PER_SHIP)
+		goto errorout;
+
+	memset(&ship[i].cargo, 0, sizeof(ship[i].cargo));
+	ship[i].cargo.ncargo_bays = ncargo_bays;
+	for (int j = 0; j < (int) ncargo_bays; j++) {
+		memset(&fc, 0, sizeof(fc));
+		memset(qty, 0, sizeof(qty));
+		memset(paid, 0, sizeof(paid));
+		if (packed_buffer_extract(&pb, "s", fc.name, sizeof(fc.name)) != 0)
+			goto errorout;
+		if (packed_buffer_extract(&pb, "s", fc.unit, sizeof(fc.unit)) != 0)
+			goto errorout;
+		if (packed_buffer_extract(&pb, "s", fc.scans_as, sizeof(fc.scans_as)) != 0)
+			goto errorout;
+		if (packed_buffer_extract(&pb, "s", fc.category, sizeof(fc.category)) != 0)
+			goto errorout;
+		if (packed_buffer_extract(&pb, "s", fc.base_price, sizeof(fc.base_price)) != 0)
+			goto errorout;
+		if (packed_buffer_extract(&pb, "s", fc.volatility, sizeof(fc.volatility)) != 0)
+			goto errorout;
+		if (packed_buffer_extract(&pb, "s", fc.legality, sizeof(fc.legality)) != 0)
+			goto errorout;
+		if (packed_buffer_extract(&pb, "s", qty, sizeof(qty)) != 0)
+			goto errorout;
+		if (packed_buffer_extract(&pb, "s", paid, sizeof(paid)) != 0)
+			goto errorout;
+
+		ship[i].cargo.cargo[j].fc = fc;
+		snprintf(ship[i].cargo.cargo[j].qty, sizeof(ship[i].cargo.cargo[j].qty), "%s", qty);
+		snprintf(ship[i].cargo.cargo[j].paid, sizeof(ship[i].cargo.cargo[j].paid), "%s", paid);
+	}
+	pthread_mutex_unlock(&data_mutex);
+
+	if (buf != NULL && buf != buffer)
+		free(buf);
+
+	return 0;
+errorout:
+	pthread_mutex_unlock(&data_mutex);
+	if (buf != NULL && buf != buffer)
+		free(buf);
+	return -1;
+}
+
 static int create_new_ship(unsigned char pwdhash[PWDHASHLEN])
 {
 	fprintf(stderr, "snis_multiverse: create_new_ship 1 (nbridges = %d, MAX=%d)\n", nbridges, MAX_BRIDGES);
@@ -674,12 +777,46 @@ static int create_new_ship(unsigned char pwdhash[PWDHASHLEN])
 	return 0;
 }
 
+/* build a cargo packet destined for snis_server */
+static struct packed_buffer *build_outgoing_cargo_update_packet(struct bridge_info *b)
+{
+	struct packed_buffer *pb, *wrapper;
+
+	pb = packed_buffer_allocate(1024);
+	if (!pb)
+		return pb;
+	packed_buffer_append(pb, "w", b->cargo.ncargo_bays);
+	for (int i = 0; i < b->cargo.ncargo_bays; i++) {
+		packed_buffer_append(pb, "s", b->cargo.cargo[i].fc.name);
+		packed_buffer_append(pb, "s", b->cargo.cargo[i].fc.unit);
+		packed_buffer_append(pb, "s", b->cargo.cargo[i].fc.scans_as);
+		packed_buffer_append(pb, "s", b->cargo.cargo[i].fc.category);
+		packed_buffer_append(pb, "s", b->cargo.cargo[i].fc.base_price);
+		packed_buffer_append(pb, "s", b->cargo.cargo[i].fc.volatility);
+		packed_buffer_append(pb, "s", b->cargo.cargo[i].fc.legality);
+		packed_buffer_append(pb, "s", b->cargo.cargo[i].qty);
+		packed_buffer_append(pb, "s", b->cargo.cargo[i].paid);
+	}
+
+	/* wrap the buffer so it's easier to read/unpack on the other side */
+	wrapper = packed_buffer_allocate(1 + PWDHASHLEN + 4 + pb->buffer_cursor);
+	if (!wrapper) {
+		packed_buffer_free(pb);
+		return wrapper;
+	}
+	packed_buffer_append(wrapper, "br", SNISMV_OPCODE_UPDATE_BRIDGE_CARGO, b->pwdhash, PWDHASHLEN);
+	packed_buffer_append(wrapper, "wr", pb->buffer_cursor, pb->buffer, pb->buffer_cursor);
+	packed_buffer_free(pb);
+	return wrapper;
+}
+
 static void send_bridge_update_to_snis_server(struct starsystem_info *ss,
 				struct persistent_bridge_data *bd, unsigned char *pwdhash)
 {
 	int i;
 	struct packed_buffer *pb;
 	struct snis_entity *o;
+	struct packed_buffer *cargo_pb;
 
 	pthread_mutex_lock(&data_mutex);
 	i = lookup_ship_by_hash(pwdhash);
@@ -696,8 +833,13 @@ static void send_bridge_update_to_snis_server(struct starsystem_info *ss,
 			packed_buffer_length(pb), UPDATE_BRIDGE_PACKET_SIZE);
 		abort();
 	}
+	cargo_pb = build_outgoing_cargo_update_packet(&ship[i]);
 	pthread_mutex_unlock(&data_mutex);
-	packed_buffer_queue_add(&ss->write_queue, pb, &ss->write_queue_mutex);
+
+	if (pb)
+		packed_buffer_queue_add(&ss->write_queue, pb, &ss->write_queue_mutex);
+	if (cargo_pb)
+		packed_buffer_queue_add(&ss->write_queue, cargo_pb, &ss->write_queue_mutex);
 }
 
 static int verify_existence(struct starsystem_info *ss, int should_already_exist, int verify_solarsystem)
@@ -805,6 +947,11 @@ static void process_instructions_from_snis_server(struct starsystem_info *ss)
 		break;
 	case SNISMV_OPCODE_UPDATE_BRIDGE:
 		rc = update_bridge(ss);
+		if (rc)
+			goto bad_client;
+		break;
+	case SNISMV_OPCODE_UPDATE_BRIDGE_CARGO:
+		rc = update_bridge_cargo(ss);
 		if (rc)
 			goto bad_client;
 		break;

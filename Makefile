@@ -555,7 +555,7 @@ SERVEROBJS=${COMMONOBJS} $(patsubst %,$(OD)/%,${_SERVEROBJS})
 _MULTIVERSEOBJS=snis_multiverse.o snis_marshal.o snis_socket_io.o mathutils.o mtwist.o stacktrace.o \
 		snis_hash.o quat.o string-utils.o key_value_parser.o snis_bridge_update_packet.o \
 		pthread_util.o rootcheck.o starmap_adjacency.o replacement_assets.o snis_asset_dir.o \
-		snis_bin_dir.o snis_licenses.o net_utils.o
+		snis_bin_dir.o snis_licenses.o net_utils.o commodities.o
 MULTIVERSEOBJS=$(patsubst %,$(OD)/%,${_MULTIVERSEOBJS})
 
 OGGOBJ=$(patsubst %,$(OD)/%,${_OGGOBJ})

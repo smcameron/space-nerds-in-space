@@ -18,6 +18,7 @@
 	along with Spacenerds in Space; if not, write to the Free Software
 	Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -226,3 +227,51 @@ void unpack_bridge_update_packet(struct snis_entity *o, struct persistent_bridge
 }
 
 
+/* build a cargo packet destined for snis_multiverse */
+struct packed_buffer *build_cargo_update_packet(struct snis_entity *o, unsigned char *pwdhash,
+					struct commodity c[])
+{
+	struct packed_buffer *pb;
+
+	pb = packed_buffer_allocate(1024);
+	if (!pb)
+		return pb;
+	packed_buffer_append(pb, "w", o->tsd.ship.ncargo_bays);
+	for (int i = 0; i < o->tsd.ship.ncargo_bays; i++) {
+		struct flattened_commodity fc;
+		char qty[20], paid[20];
+
+		memset(&fc, 0, sizeof(fc));
+		memset(qty, 0, sizeof(qty));
+		memset(paid, 0, sizeof(paid));
+		if (o->tsd.ship.cargo[i].contents.item > 0) {
+			flatten_commodity(&c[o->tsd.ship.cargo[i].contents.item], &fc);
+			snprintf(qty, sizeof(qty), "%g", o->tsd.ship.cargo[i].contents.qty);
+			snprintf(paid, sizeof(paid), "%g", o->tsd.ship.cargo[i].paid);
+		}
+
+		/* We lose the origin, dest, and due date on crossing a warp gate. */
+		packed_buffer_append(pb, "s", fc.name);
+		packed_buffer_append(pb, "s", fc.unit);
+		packed_buffer_append(pb, "s", fc.scans_as);
+		packed_buffer_append(pb, "s", fc.category);
+		packed_buffer_append(pb, "s", fc.base_price);
+		packed_buffer_append(pb, "s", fc.volatility);
+		packed_buffer_append(pb, "s", fc.legality);
+		packed_buffer_append(pb, "s", qty);
+		packed_buffer_append(pb, "s", paid);
+	}
+
+	/* Wrap this packed buffer in another buffer to make reading/unpacking on the other side easier */
+	struct packed_buffer *wrapper;
+
+	wrapper = packed_buffer_allocate(1 + PWDHASHLEN + 4 + pb->buffer_cursor);
+	if (!wrapper) {
+		packed_buffer_free(pb);
+		return wrapper;
+	}
+	packed_buffer_append(wrapper, "br", SNISMV_OPCODE_UPDATE_BRIDGE_CARGO, pwdhash, (uint16_t) PWDHASHLEN);
+	packed_buffer_append(wrapper, "wr", pb->buffer_cursor, pb->buffer, pb->buffer_cursor);
+	packed_buffer_free(pb);
+	return wrapper;
+}

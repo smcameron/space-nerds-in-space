@@ -26603,6 +26603,8 @@ static void update_multiverse(struct snis_entity *o)
 		abort();
 	}
 	queue_to_multiverse(multiverse_server, pb);
+	pb = build_cargo_update_packet(o, bridgelist[bridge].pwdhash, commodity);
+	queue_to_multiverse(multiverse_server, pb);
 }
 
 static void check_opcode_stats(void)
@@ -31274,6 +31276,175 @@ static int process_multiverse_verification(struct multiverse_server_info *msi)
 	return 0;
 }
 
+static int process_multiverse_update_bridge_cargo(struct multiverse_server_info *msi)
+{
+	int rc, b;
+	unsigned char buffer[PWDHASHLEN + 2];
+	unsigned char *pwdhash;
+	uint32_t len;
+	unsigned char data[1024];
+	struct snis_entity *o = NULL;
+
+	rc = snis_readsocket(msi->sock, buffer, PWDHASHLEN);
+	if (rc)
+		return rc;
+	pwdhash = buffer;
+	pthread_mutex_lock(&universe_mutex);
+	print_hash("Looking up hash:", pwdhash);
+	b = lookup_bridge_by_pwdhash(pwdhash);
+	if (b < 0) {
+		fprintf(stderr, "%s: received cargo update for unknown pwdhash.  Weird.\n", logprefix());
+		print_hash("unknown hash: ", pwdhash);
+		pthread_mutex_unlock(&universe_mutex);
+		return -1;
+	}
+	int i = lookup_by_id(bridgelist[b].shipid);
+	if (i < 0) {
+		pthread_mutex_unlock(&universe_mutex);
+		return -1;
+	}
+	o = &go[i];
+
+	rc = snis_readsocket(msi->sock, &len, sizeof(len));
+	if (rc < 0) {
+		fprintf(stderr, "snis_readsocket: %s%d: %s\n", __FILE__, __LINE__, strerror(errno));
+		pthread_mutex_unlock(&universe_mutex);
+		return -1;
+	}
+	len = ntohl(len);
+	if (len > sizeof(data)) {
+		fprintf(stderr, "Bad length in update_bridge_cargo\n");
+		pthread_mutex_unlock(&universe_mutex);
+		return -1;
+	}
+	rc = snis_readsocket(msi->sock, data, len);
+	if (rc < 0) {
+		fprintf(stderr, "snis_readsocket: %s%d: %s\n", __FILE__, __LINE__, strerror(errno));
+		pthread_mutex_unlock(&universe_mutex);
+		return -1;
+	}
+
+	struct packed_buffer pb;
+
+	/* get at the packed buffer inside the data */
+	pb.buffer = data;
+	pb.buffer_size = len;
+	pb.buffer_cursor = 0;
+
+	struct flattened_commodity fc;
+	char qty[20];
+	char paid[20];
+	int ncargo_bays = 0;
+
+	rc = packed_buffer_extract(&pb, "w", &ncargo_bays);
+	if (rc < 0)
+		goto errorout;
+	if (ncargo_bays > MAX_CARGO_BAYS_PER_SHIP)
+		goto errorout;
+
+	for (int i = 0; i < ncargo_bays; i++) {
+		memset(&fc, 0, sizeof(fc));
+		memset(qty, 0, sizeof(qty));
+		memset(paid, 0, sizeof(paid));
+
+		rc = packed_buffer_extract(&pb, "s", fc.name, sizeof(fc.name));
+		if (rc < 0)
+			goto errorout;
+		rc = packed_buffer_extract(&pb, "s", fc.unit, sizeof(fc.unit));
+		if (rc < 0)
+			goto errorout;
+		rc = packed_buffer_extract(&pb, "s", fc.scans_as, sizeof(fc.scans_as));
+		if (rc < 0)
+			goto errorout;
+		rc = packed_buffer_extract(&pb, "s", fc.category, sizeof(fc.category));
+		if (rc < 0)
+			goto errorout;
+		rc = packed_buffer_extract(&pb, "s", fc.base_price, sizeof(fc.base_price));
+		if (rc < 0)
+			goto errorout;
+		rc = packed_buffer_extract(&pb, "s", fc.volatility, sizeof(fc.volatility));
+		if (rc < 0)
+			goto errorout;
+		rc = packed_buffer_extract(&pb, "s", fc.legality, sizeof(fc.legality));
+		if (rc < 0)
+			goto errorout;
+		rc = packed_buffer_extract(&pb, "s", qty, sizeof(qty));
+		if (rc < 0)
+			goto errorout;
+		rc = packed_buffer_extract(&pb, "s", paid, sizeof(paid));
+		if (rc < 0)
+			goto errorout;
+
+		/* Now, reconstitute the native snis_server cargo data from this pickled cargo */
+		if (strcmp(fc.name, "") == 0) {
+			memset(&o->tsd.ship.cargo[i], 0, sizeof(o->tsd.ship.cargo[i]));
+			o->tsd.ship.cargo[i].contents.item = -1; /* empty */
+		} else {
+			float tmp;
+			int ci = lookup_commodity(commodity, ncommodities, fc.name);
+			if (ci >= 0) {
+				o->tsd.ship.cargo[i].contents.item = ci;
+				rc = sscanf(qty, "%g", &tmp);
+				if (rc != 1)
+					tmp = 0.0f;
+				o->tsd.ship.cargo[i].contents.qty = tmp;
+				rc = sscanf(paid, "%g", &tmp);
+				if (rc != 1)
+					tmp = 0.0f;
+				o->tsd.ship.cargo[i].paid = tmp;
+				/* We lose this info when we get cargo from multiverse */
+				o->tsd.ship.cargo[i].due_date = -1;
+				o->tsd.ship.cargo[i].origin = -1;
+				o->tsd.ship.cargo[i].dest = -1;
+			} else {
+				/* must be a custom commodity */
+				float base_price, volatility, legality, odds, tmp;
+				odds = 0.0f;
+				rc = sscanf(fc.base_price, "%g", &tmp);
+				if (rc != 1)
+					tmp = 10.0f; /* whatever */
+				base_price = tmp;
+				rc = sscanf(fc.volatility, "%g", &tmp);
+				if (rc != 1)
+					tmp = 0.0f; /* whatever */
+				volatility = tmp;
+				rc = sscanf(fc.legality, "%g", &tmp);
+				if (rc != 1)
+					tmp = 1.0f; /* whatever */
+				legality = tmp;
+				ci = add_commodity(&commodity, &ncommodities, fc.category, fc.name, fc.unit,
+							fc.scans_as, base_price, volatility, legality, odds);
+				if (ci >= 0) {
+					o->tsd.ship.cargo[i].contents.item = ci;
+					o->tsd.ship.cargo[i].contents.item = ci;
+					rc = sscanf(qty, "%g", &tmp);
+					if (rc != 1)
+						tmp = 0.0f;
+					o->tsd.ship.cargo[i].contents.qty = tmp;
+					rc = sscanf(paid, "%g", &tmp);
+					if (rc != 1)
+						tmp = 0.0f;
+					o->tsd.ship.cargo[i].paid = tmp;
+					/* We lose this info when we get cargo from multiverse */
+					o->tsd.ship.cargo[i].due_date = -1;
+					o->tsd.ship.cargo[i].origin = -1;
+				} else {
+					/* oh well */
+					memset(&o->tsd.ship.cargo[i], 0, sizeof(o->tsd.ship.cargo[i]));
+					o->tsd.ship.cargo[i].contents.item = -1; /* empty */
+				}
+			}
+		}
+	}
+
+	pthread_mutex_unlock(&universe_mutex);
+	return 0;
+
+errorout:
+	pthread_mutex_unlock(&universe_mutex);
+	return -1;
+}
+
 static void *multiverse_reader(void *arg)
 {
 	struct multiverse_server_info *msi = arg;
@@ -31324,6 +31495,11 @@ static void *multiverse_reader(void *arg)
 				fflush(stderr);
 			}
 			exit(0); /* Is this all we need to do? I think so... */
+			break;
+		case SNISMV_OPCODE_UPDATE_BRIDGE_CARGO:
+			rc = process_multiverse_update_bridge_cargo(msi);
+			if (rc)
+				goto protocol_error;
 			break;
 		default:
 			fprintf(stderr, "%s: unimplemented multiverse opcode %hhu\n",

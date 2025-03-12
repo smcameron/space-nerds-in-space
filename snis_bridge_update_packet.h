@@ -29,6 +29,7 @@
 #include "snis_packet.h"
 #include "snis_marshal.h"
 #include "snis_multiverse.h"
+#include "commodities.h"
 
 #define UPDATE_BRIDGE_PACKET_SIZE 415
 
@@ -43,6 +44,9 @@ struct persistent_bridge_data {
 
 struct packed_buffer *build_bridge_update_packet(struct snis_entity *o,
 				struct persistent_bridge_data *bd, unsigned char *pwdhash);
+struct packed_buffer *build_cargo_update_packet(struct snis_entity *o, unsigned char *pwdhash,
+				struct commodity c[]);
+
 void unpack_bridge_update_packet(struct snis_entity *o, struct persistent_bridge_data *bd, struct packed_buffer *pb);
 
 #endif
