@@ -154,7 +154,7 @@ int packed_buffer_append_string(struct packed_buffer *pb, unsigned char *str, un
 	memcpy(&pb->buffer[pb->buffer_cursor], &belen, sizeof(belen));
 	pb->buffer_cursor += sizeof(belen);
 	packed_buffer_check(pb);
-	memcpy(&pb->buffer[pb->buffer_cursor], &str, len);
+	memcpy(&pb->buffer[pb->buffer_cursor], str, len);
 	pb->buffer_cursor += len;
 	packed_buffer_check(pb);
 	return 0;
