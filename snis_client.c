@@ -15025,6 +15025,13 @@ static void show_engineering(void)
 		sng_abs_xy_draw_string(buffer, PICO_FONT, txx(350), txy(192) + font_lineheight[PICO_FONT]);
 	}
 
+	if (o->tsd.ship.warp_core_status != WARP_CORE_STATUS_GOOD) {
+		if (timer & 0x8) {
+			sng_set_foreground(UI_COLOR(eng_warning));
+			sng_abs_xy_draw_string("WARP CORE EJECTED", NANO_FONT, txx(600), txy(435));
+		}
+	}
+
 	show_common_screen("ENGINEERING");
 }
 
