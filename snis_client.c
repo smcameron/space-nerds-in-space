@@ -12493,6 +12493,8 @@ int nav_ui_lights_active(__attribute__((unused)) void *notused)
 	return o->tsd.ship.exterior_lights;
 }
 
+static void eject_warp_core_button_pressed(void *x);
+
 static void init_nav_ui(void)
 {
 	int x, y;
@@ -12577,6 +12579,14 @@ static void init_nav_ui(void)
 	snis_button_set_sound(nav_ui.lights_button, UISND7);
 	snis_button_set_hover_color(nav_ui.lights_button, hover_color);
 	y += button_y_spacing;
+	nav_ui.eject_warp_core_button = snis_button_init(SCREEN_WIDTH - txx(nav_ui.gauge_radius * 2.2 + 10),
+					txy(nav_ui.gauge_radius * 2 + y), -1, -1, "EJECT WARP CORE",
+					button_color,
+					NANO_FONT, eject_warp_core_button_pressed,
+					(void *) (intptr_t) DISPLAYMODE_NAVIGATION);
+	snis_button_set_sound(nav_ui.eject_warp_core_button, UISND7);
+	snis_button_set_hover_color(nav_ui.eject_warp_core_button, hover_color);
+	y += button_y_spacing;
 	nav_ui.custom_button = snis_button_init(SCREEN_WIDTH - txx(nav_ui.gauge_radius * 2.2 + 10),
 					txy(nav_ui.gauge_radius * 2 + y), -1, -1, "CUSTOM BUTTON",
 					button_color,
@@ -12617,6 +12627,10 @@ static void init_nav_ui(void)
 				"SWITCH BETWEEN NAVIGATION\nAND STAR MAP SCREENS");
 	ui_add_button(nav_ui.lights_button, DISPLAYMODE_NAVIGATION,
 				"TOGGLE EXTERIOR LIGHTS ON/OFF");
+	ui_add_button(nav_ui.eject_warp_core_button, DISPLAYMODE_NAVIGATION,
+				"EJECT THE WARP CORE\n"
+				"(WITH CONFIRMATION FROM\n"
+				"ENGINEERING)");
 	ui_add_button(nav_ui.custom_button, DISPLAYMODE_NAVIGATION, "CUSTOM BUTTON");
 	ui_add_button(nav_ui.reverse_button, DISPLAYMODE_NAVIGATION,
 				"TOGGLE REVERSE THRUST");
@@ -14107,9 +14121,11 @@ static void robot_manual_button_pressed(__attribute__((unused)) void *x)
 	queue_to_server(snis_opcode_pkt("bb", OPCODE_ROBOT_AUTO_MANUAL, DAMCON_ROBOT_MANUAL_MODE));
 }
 
-static void eject_warp_core_button_pressed(__attribute__((unused)) void *x)
+static void eject_warp_core_button_pressed(void *x)
 {
-	queue_to_server(snis_opcode_pkt("b", OPCODE_EJECT_WARP_CORE));
+	intptr_t v = (intptr_t) x;
+	unsigned char which = v & 0xff;
+	queue_to_server(snis_opcode_pkt("bb", OPCODE_EJECT_WARP_CORE, which));
 	return;
 }
 
@@ -14162,7 +14178,7 @@ static void init_damcon_ui(void)
 	snis_button_set_sound(damcon_ui.robot_manual_button, UISND25);
 	damcon_ui.eject_warp_core_button = snis_button_init(txx(300), txy(30), txx(90), txy(25),
 						"EJECT WARP CORE", UI_COLOR(damcon_button), NANO_FONT,
-						eject_warp_core_button_pressed, (void *) 0);
+						eject_warp_core_button_pressed, (void *) (intptr_t) DISPLAYMODE_DAMCON);
 	snis_button_set_hover_color(damcon_ui.eject_warp_core_button, hover_color);
 	snis_button_set_sound(damcon_ui.eject_warp_core_button, UISND12); /* FIXME: custom sound here */
 
@@ -14176,7 +14192,10 @@ static void init_damcon_ui(void)
 	ui_add_button(damcon_ui.robot_auto_button, DISPLAYMODE_DAMCON, "SELECT AUTONOMOUS ROBOT OPERATION");
 	ui_add_button(damcon_ui.robot_manual_button, DISPLAYMODE_DAMCON, "SELECT MANUAL ROBOT CONTROL");
 	ui_add_label(damcon_ui.robot_controls, DISPLAYMODE_DAMCON);
-	ui_add_button(damcon_ui.eject_warp_core_button, DISPLAYMODE_DAMCON, "EJECT THE WARP CORE");
+	ui_add_button(damcon_ui.eject_warp_core_button, DISPLAYMODE_DAMCON,
+					"EJECT THE WARP CORE\n"
+					"(WITH CONFIRMATION\n"
+					"FROM NAVIGATION)");
 }
 
 static int process_custom_button(void)

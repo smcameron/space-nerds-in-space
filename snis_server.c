@@ -648,6 +648,8 @@ static struct bridge_data {
 	uint32_t last_missile_fail_time; /* universe timestamp of last missile failure */
 	int enforce_solarsystem;
 	char resident_solarsystem[SSGL_LOCATIONSIZE];
+	int warp_core_ejection_armed;
+	int warp_core_ejection_confirm_countdown;
 } bridgelist[MAXCLIENTS];
 static int nbridges = 0;		/* Number of elements present in bridgelist[] */
 static int announce_players = 0; /* Announce new players via TTS? */
@@ -10102,6 +10104,24 @@ static void maybe_reboot_terminals(struct snis_entity *player_ship)
 	reboot_random_terminals(player_ship);
 }
 
+static void update_warp_ejection_countdown(struct snis_entity *o)
+{
+	int bn = lookup_bridge_by_shipid(o->id);
+	if (bn < 0)
+		return;
+	/* If armed, decrement count down, if countdown hits zero before confirmation, disarm. */
+	if (bridgelist[bn].warp_core_ejection_armed == -1)
+		return;
+
+	if (bridgelist[bn].warp_core_ejection_confirm_countdown > 0)
+		bridgelist[bn].warp_core_ejection_confirm_countdown--;
+	if (bridgelist[bn].warp_core_ejection_confirm_countdown == 0) {
+		bridgelist[bn].warp_core_ejection_armed = -1;
+		snis_queue_add_text_to_speech("Warp core ejection sequence aborted.",
+						ROLE_TEXT_TO_SPEECH, o->id);
+	}
+}
+
 static void aim_high_gain_antenna(struct snis_entity *o)
 {
 	union vec3 straight_ahead = { { 1.0, 0.0, 0.0 } };
@@ -10365,6 +10385,7 @@ static void player_move(struct snis_entity *o)
 	}
 	check_science_selection(o);
 	maybe_reboot_terminals(o);
+	update_warp_ejection_countdown(o);
 
 	update_flare_cooldown_timer(o);
 
@@ -11566,6 +11587,8 @@ static void init_player(struct snis_entity *o)
 		memset(bridgelist[b].guessed_key, '_', sizeof(bridgelist[b].guessed_key));
 		memset(bridgelist[b].enciphered_message, 0, sizeof(bridgelist[b].enciphered_message));
 		bridgelist[b].flare_cooldown = 0;
+		bridgelist[b].warp_core_ejection_confirm_countdown = 0; /* not counting */
+		bridgelist[b].warp_core_ejection_armed = -1; /* not armed */
 	}
 	quat_init_axis(&o->tsd.ship.computer_desired_orientation, 0, 1, 0, 0);
 	o->tsd.ship.computer_steering_time_left = 0;
@@ -23614,12 +23637,33 @@ static int process_eject_warp_core(struct game_client *c)
 	struct snis_entity *ship = &go[c->ship_index];
 	union vec3 relvel = { { 1.0, 0.0, 0.0, }, };
 	int b = c->bridge;
+	unsigned char which;
+	unsigned char buffer[10];
+	int rc;
+
+	rc = read_and_unpack_buffer(c, buffer, "b", &which);
+	if (rc != 0)
+		return -1;
 
 	if (ship->tsd.ship.warp_core_status == WARP_CORE_STATUS_EJECTED) {
 		snis_queue_add_text_to_speech("The warp core has already been ejected.",
 						ROLE_TEXT_TO_SPEECH, ship->id);
 		return 0; /* Warp core is already ejected */
 	}
+
+	if (bridgelist[b].warp_core_ejection_armed == -1) { /* not armed */
+		bridgelist[b].warp_core_ejection_armed = which; /* which person pressed eject 1st time. */
+		bridgelist[b].warp_core_ejection_confirm_countdown = 10 * 10; /* 10 seconds */
+		snis_queue_add_text_to_speech("Warp core ejection sequence armed.",
+						ROLE_TEXT_TO_SPEECH, ship->id);
+		return 0;
+	} else if (bridgelist[b].warp_core_ejection_armed == which) { /* the same person pressed eject again */
+		/* Do nothing. */
+		return 0;
+	}
+	bridgelist[b].warp_core_ejection_armed = -1; /* reset for next time */
+	bridgelist[b].warp_core_ejection_confirm_countdown = 0;
+
 	snis_queue_add_text_to_speech("Ejecting the warp core.", ROLE_TEXT_TO_SPEECH, ship->id);
 	quat_rot_vec_self(&relvel, &ship->orientation);
 	add_warp_core(ship->x, ship->y, ship->z,
@@ -26003,6 +26047,8 @@ static int add_new_player(struct game_client *c, int enforce_solarsystem)
 		bridgelist[nbridges].active_custom_buttons = 0;
 		bridgelist[nbridges].last_missile_fail_time = 0;
 		bridgelist[nbridges].enforce_solarsystem = enforce_solarsystem;
+		bridgelist[nbridges].warp_core_ejection_armed = -1;
+		bridgelist[nbridges].warp_core_ejection_confirm_countdown = 0;
 		memset(bridgelist[nbridges].custom_button_text, 0, sizeof(bridgelist[nbridges].custom_button_text));
 		memset(bridgelist[nbridges].cipher_key, '_', sizeof(bridgelist[nbridges].cipher_key));
 		memset(bridgelist[nbridges].guessed_key, '_', sizeof(bridgelist[nbridges].guessed_key));

@@ -110,7 +110,7 @@ int snis_opcode_def_init(void)
 	rc |= init_opcode_def(OPCODE_ECON_UPDATE_SHIP, "bwwSSSQbbb");
 	/* rc |= init_opcode_def(OPCODE_SHIP_SDATA, "bwbbbbbbbbr"); */
 	rc |= init_opcode_def(OPCODE_LOAD_TORPEDO, "b");
-	rc |= init_opcode_def(OPCODE_EJECT_WARP_CORE, "b");
+	rc |= init_opcode_def(OPCODE_EJECT_WARP_CORE, "bb");
 	rc |= init_opcode_def(OPCODE_ENGAGE_WARP, "bwb");
 	rc |= init_opcode_def(OPCODE_ROLE_ONSCREEN, "bb");
 	rc |= init_opcode_def(OPCODE_SCI_SELECT_TARGET, "bbw");

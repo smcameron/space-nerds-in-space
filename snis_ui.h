@@ -38,6 +38,7 @@ struct navigation_ui {
 	struct button *starmap_button;
 	struct button *lights_button;
 	struct button *camera_pos_button;
+	struct button *eject_warp_core_button;
 	struct button *custom_button;
 	int gauge_radius;
 	struct snis_text_input_box *computer_input;
