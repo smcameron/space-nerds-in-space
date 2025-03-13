@@ -737,6 +737,14 @@ struct opcode_format_descriptor {
 	char format[256];
 };
 
+/* Used to communicate passenger data between snis_server and snis_multiverse */
+struct flattened_passenger {
+	char name[50];
+	char fare[20];
+	char dest[20]; /* usually matches sdata.name */
+	char solarsystem[20];
+};
+
 #define DEMON_CONSOLE_MSG_MAX 80
 
 #pragma pack()

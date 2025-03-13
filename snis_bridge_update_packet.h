@@ -46,6 +46,8 @@ struct packed_buffer *build_bridge_update_packet(struct snis_entity *o,
 				struct persistent_bridge_data *bd, unsigned char *pwdhash);
 struct packed_buffer *build_cargo_update_packet(struct snis_entity *o, unsigned char *pwdhash,
 				struct commodity c[]);
+struct packed_buffer *build_passenger_update_packet(unsigned char *pwdhash,
+		struct flattened_passenger fp[], int passengers_aboard);
 
 void unpack_bridge_update_packet(struct snis_entity *o, struct persistent_bridge_data *bd, struct packed_buffer *pb);
 

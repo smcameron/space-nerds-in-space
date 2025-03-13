@@ -275,3 +275,33 @@ struct packed_buffer *build_cargo_update_packet(struct snis_entity *o, unsigned 
 	packed_buffer_free(pb);
 	return wrapper;
 }
+
+struct packed_buffer *build_passenger_update_packet(unsigned char *pwdhash,
+		struct flattened_passenger fp[], int passengers_aboard)
+{
+	struct packed_buffer *wrapper;
+	struct packed_buffer *pb = packed_buffer_allocate(sizeof(passengers_aboard) +
+				passengers_aboard * (1 + sizeof(struct flattened_passenger)));
+
+	packed_buffer_append(pb, "w", passengers_aboard);
+	if (!pb)
+		return pb;
+	for (int i = 0; i < passengers_aboard; i++) {
+		packed_buffer_append(pb, "s", fp[i].name);
+		packed_buffer_append(pb, "s", fp[i].solarsystem);
+		packed_buffer_append(pb, "s", fp[i].fare);
+		packed_buffer_append(pb, "s", fp[i].dest);
+	};
+
+	/* wrap the packet for easier unpacking in multiverse */
+	wrapper = packed_buffer_allocate(1 + PWDHASHLEN + sizeof(uint32_t) + pb->buffer_cursor);
+	if (!wrapper) {
+		packed_buffer_free(pb);
+		return wrapper;
+	}
+	packed_buffer_append(wrapper, "br", SNISMV_OPCODE_UPDATE_BRIDGE_PASSENGERS,
+					pwdhash, (uint16_t) PWDHASHLEN);
+	packed_buffer_append(wrapper, "wr", pb->buffer_cursor, pb->buffer, pb->buffer_cursor);
+	packed_buffer_free(pb);
+	return wrapper;
+}

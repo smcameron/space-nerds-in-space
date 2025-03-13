@@ -14550,6 +14550,7 @@ static void update_passenger(int i, int nstarbases)
 		mt = mtwist_init(mtwist_seed);
 	character_name(mt, passenger[i].name,  sizeof(passenger[i].name) - 1);
 	passenger[i].location = nth_starbase(snis_randn(nstarbases));
+	snprintf(passenger[i].solarsystem, sizeof(passenger[i].solarsystem), "%s", solarsystem_name);
 	do {
 		passenger[i].destination = nth_starbase(snis_randn(nstarbases));
 	} while (passenger[i].destination == passenger[i].location && nstarbases > 1);
@@ -15885,9 +15886,10 @@ static void meta_comms_inventory(char *name, struct game_client *c, char *txt)
 	for (i = 0; i < npassengers; i++) {
 		if (passenger[i].location == ship->id) {
 			int x = lookup_by_id(passenger[i].destination);
-			send_comms_packet(NULL, name, ch, "%2d. FARE %4d DEST: %10s NAME: %30s\n",
+			send_comms_packet(NULL, name, ch, "%2d. FARE %4d DEST: %10s (%s SYSTEM) NAME: %30s\n",
 					passenger_count + 1, passenger[i].fare,
 					x < 0 ? "UNKNOWN" : go[x].sdata.name,
+					passenger[i].solarsystem,
 					passenger[i].name);
 			passenger_count++;
 		}
@@ -22634,6 +22636,7 @@ static int l_create_passenger(lua_State *l)
 		return 0;
 	}
 	snprintf(passenger[p].name, sizeof(passenger[p].name), "%s", name);
+	snprintf(passenger[p].solarsystem, sizeof(passenger[p].solarsystem), "%s", solarsystem_name);
 	passenger[p].location = go[location].id;
 	passenger[p].destination = go[destination].id;
 	passenger[p].fare = fare;
@@ -26529,6 +26532,26 @@ static void queue_to_multiverse(struct multiverse_server_info *msi, struct packe
 	wakeup_multiverse_writer(msi);
 }
 
+static void flatten_passengers(uint32_t ship_id, struct flattened_passenger fp[], int *passengers_aboard)
+{
+	int npa = 0;
+	for (int i = 0; i < npassengers; i++) {
+		if (passenger[i].location != ship_id)
+			continue;
+		snprintf(fp[npa].name, sizeof(fp[npa].name), "%s", passenger[i].name);
+		snprintf(fp[npa].solarsystem, sizeof(fp[npa].solarsystem), "%s", passenger[i].solarsystem);
+		snprintf(fp[npa].fare, sizeof(fp[npa].fare), "%d", passenger[i].fare);
+
+		int idx = lookup_by_id(passenger[i].destination);
+		if (idx < 0)
+			snprintf(fp[npa].dest, sizeof(fp[npa].dest), "UNKNOWN");
+		else
+			snprintf(fp[npa].dest, sizeof(fp[npa].dest), "%s", go[idx].sdata.name);
+		npa++;
+	}
+	*passengers_aboard = npa;
+}
+
 static void update_multiverse(struct snis_entity *o)
 {
 	struct packed_buffer *pb;
@@ -26604,6 +26627,13 @@ static void update_multiverse(struct snis_entity *o)
 	}
 	queue_to_multiverse(multiverse_server, pb);
 	pb = build_cargo_update_packet(o, bridgelist[bridge].pwdhash, commodity);
+	queue_to_multiverse(multiverse_server, pb);
+
+	struct flattened_passenger fp[PASSENGER_BERTHS];
+	int passengers_aboard = 0;
+	flatten_passengers(o->id, fp, &passengers_aboard);
+
+	pb = build_passenger_update_packet(bridgelist[bridge].pwdhash, fp, passengers_aboard);
 	queue_to_multiverse(multiverse_server, pb);
 }
 
@@ -31445,6 +31475,172 @@ errorout:
 	return -1;
 }
 
+static void unflatten_passenger(struct snis_entity *our_ship, struct flattened_passenger *fp)
+{
+	int found = 0;
+	if (fp->name[0] == '\0') /* empty passenger berth */
+		return;
+	/* scan through this snis_server's passengers and see if he's around here */
+	for (int i = 0; i < npassengers; i++) {
+		if (strcmp(passenger[i].name, fp->name) == 0) {
+			found = 1;
+			passenger[i].location = our_ship->id;
+			snprintf(passenger[i].solarsystem, sizeof(passenger[i].solarsystem), "%s", fp->solarsystem);
+
+			for (int j = 0; j <= snis_object_pool_highest_object(pool); j++) {
+				if (go[j].type != OBJTYPE_STARBASE)
+					continue;
+				if (strcmp(go[j].sdata.name, fp->dest) == 0) {
+					passenger[i].destination = go[j].id;
+					break;
+				}
+			}
+			int fare;
+			int rc = sscanf(fp->fare, "%d", &fare);
+			if (rc == 1)
+				passenger[i].fare = fare;
+		}
+	}
+	int snatched = -1;
+	if (!found) { /* Apparently this guy wasn't from around here */
+		/* Try to snatch a passenger off a starbase and change him to our new guy */
+		for (int i = 0; i < MAX_PASSENGERS; i++) {
+			int idx = lookup_by_id(passenger[i].location);
+			if (idx < 0) { /* this guy must be lost, he will do */
+				snatched = i;
+				break;
+			}
+			if (go[idx].type == OBJTYPE_STARBASE) {
+				snatched = i;
+				break;
+			}
+		}
+		if (snatched == -1) {
+			/* There are no passengers on any starbases to snatch, they
+			 * must all be on player ships!  Amazing!
+			 */
+			fprintf(stderr, "snis_server: Marvel of marvels, there are no passengers on any starbase!\n");
+		} else {
+			int fare, rc;
+			snprintf(passenger[snatched].name, sizeof(passenger[snatched].name), "%s", fp->name);
+			snprintf(passenger[snatched].solarsystem, sizeof(passenger[snatched].solarsystem),
+					"%s", fp->solarsystem);
+
+			passenger[snatched].destination = (uint32_t) -1;
+			for (int j = 0; j <= snis_object_pool_highest_object(pool); j++) {
+				if (go[j].type != OBJTYPE_STARBASE)
+					continue;
+				if (strcmp(go[j].sdata.name, fp->dest) == 0) {
+					passenger[snatched].destination = go[j].id;
+					break;
+				}
+			}
+			if (passenger[snatched].destination == (uint32_t) -1)
+				passenger[snatched].destination = nth_starbase(snis_randn(NBASES));
+
+			rc = sscanf(fp->fare, "%d", &fare);
+			if (rc == 1)
+				passenger[snatched].fare = fare;
+			else
+				passenger[snatched].fare = 0; /* oh well */
+			passenger[snatched].location = our_ship->id;
+		}
+	}
+}
+
+static int process_multiverse_update_bridge_passengers(struct multiverse_server_info *msi)
+{
+	int rc, b;
+	unsigned char buffer[PWDHASHLEN + 2];
+	unsigned char *pwdhash;
+	uint32_t len;
+	unsigned char data[1024];
+	struct snis_entity *o = NULL;
+
+	rc = snis_readsocket(msi->sock, buffer, PWDHASHLEN);
+	if (rc)
+		return rc;
+	pwdhash = buffer;
+	pthread_mutex_lock(&universe_mutex);
+	print_hash("Looking up hash:", pwdhash);
+	b = lookup_bridge_by_pwdhash(pwdhash);
+	if (b < 0) {
+		fprintf(stderr, "%s: received passenger update for unknown pwdhash.  Weird.\n", logprefix());
+		print_hash("unknown hash: ", pwdhash);
+		pthread_mutex_unlock(&universe_mutex);
+		return -1;
+	}
+	int i = lookup_by_id(bridgelist[b].shipid);
+	if (i < 0) {
+		pthread_mutex_unlock(&universe_mutex);
+		return -1;
+	}
+	o = &go[i];
+
+	rc = snis_readsocket(msi->sock, &len, sizeof(len));
+	if (rc < 0) {
+		fprintf(stderr, "snis_readsocket: %s%d: %s\n", __FILE__, __LINE__, strerror(errno));
+		pthread_mutex_unlock(&universe_mutex);
+		return -1;
+	}
+	len = ntohl(len);
+	if (len > sizeof(data)) {
+		fprintf(stderr, "Bad length in update_bridge_passengers\n");
+		pthread_mutex_unlock(&universe_mutex);
+		return -1;
+	}
+	rc = snis_readsocket(msi->sock, data, len);
+	if (rc < 0) {
+		fprintf(stderr, "snis_readsocket: %s%d: %s\n", __FILE__, __LINE__, strerror(errno));
+		pthread_mutex_unlock(&universe_mutex);
+		return -1;
+	}
+
+	struct packed_buffer pb;
+
+	/* get at the packed buffer inside the data */
+	pb.buffer = data;
+	pb.buffer_size = len;
+	pb.buffer_cursor = 0;
+
+	struct flattened_passenger fp;
+	int32_t passengers_aboard = 0;
+
+	rc = packed_buffer_extract(&pb, "w", &passengers_aboard);
+	if (rc < 0)
+		goto errorout;
+	if (passengers_aboard > PASSENGER_BERTHS)
+		goto errorout;
+
+	for (int i = 0; i < passengers_aboard; i++) {
+		memset(&fp, 0, sizeof(fp));
+
+		rc = packed_buffer_extract(&pb, "s", fp.name, sizeof(fp.name));
+		if (rc < 0)
+			goto errorout;
+		rc = packed_buffer_extract(&pb, "s", fp.solarsystem, sizeof(fp.solarsystem));
+		if (rc < 0)
+			goto errorout;
+		rc = packed_buffer_extract(&pb, "s", fp.fare, sizeof(fp.fare));
+		if (rc < 0)
+			goto errorout;
+		rc = packed_buffer_extract(&pb, "s", fp.dest, sizeof(fp.dest));
+		if (rc < 0)
+			goto errorout;
+
+		/* Now, reconstitute the native snis_server passenger data from this pickled passenger */
+		unflatten_passenger(o, &fp);
+	}
+
+	pthread_mutex_unlock(&universe_mutex);
+	return 0;
+
+errorout:
+	pthread_mutex_unlock(&universe_mutex);
+	return -1;
+}
+
+
 static void *multiverse_reader(void *arg)
 {
 	struct multiverse_server_info *msi = arg;
@@ -31498,6 +31694,11 @@ static void *multiverse_reader(void *arg)
 			break;
 		case SNISMV_OPCODE_UPDATE_BRIDGE_CARGO:
 			rc = process_multiverse_update_bridge_cargo(msi);
+			if (rc)
+				goto protocol_error;
+			break;
+		case SNISMV_OPCODE_UPDATE_BRIDGE_PASSENGERS:
+			rc = process_multiverse_update_bridge_passengers(msi);
 			if (rc)
 				goto protocol_error;
 			break;

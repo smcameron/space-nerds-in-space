@@ -583,6 +583,48 @@ struct key_value_specification snis_entity_kvs[] = {
 	CARGO_STRING_FIELD(cargo.cargo[7].fc.legality),
 	CARGO_STRING_FIELD(cargo.cargo[7].qty),
 	CARGO_STRING_FIELD(cargo.cargo[7].paid),
+
+	CARGO_INT32_FIELD(passengers.passengers_aboard),
+	CARGO_STRING_FIELD(passengers.fp[0].name),
+	CARGO_STRING_FIELD(passengers.fp[0].solarsystem),
+	CARGO_STRING_FIELD(passengers.fp[0].fare),
+	CARGO_STRING_FIELD(passengers.fp[0].dest),
+
+	CARGO_STRING_FIELD(passengers.fp[1].name),
+	CARGO_STRING_FIELD(passengers.fp[1].solarsystem),
+	CARGO_STRING_FIELD(passengers.fp[1].fare),
+	CARGO_STRING_FIELD(passengers.fp[1].dest),
+
+	CARGO_STRING_FIELD(passengers.fp[2].name),
+	CARGO_STRING_FIELD(passengers.fp[2].solarsystem),
+	CARGO_STRING_FIELD(passengers.fp[2].fare),
+	CARGO_STRING_FIELD(passengers.fp[2].dest),
+
+	CARGO_STRING_FIELD(passengers.fp[3].name),
+	CARGO_STRING_FIELD(passengers.fp[3].solarsystem),
+	CARGO_STRING_FIELD(passengers.fp[3].fare),
+	CARGO_STRING_FIELD(passengers.fp[3].dest),
+
+	CARGO_STRING_FIELD(passengers.fp[4].name),
+	CARGO_STRING_FIELD(passengers.fp[4].solarsystem),
+	CARGO_STRING_FIELD(passengers.fp[4].fare),
+	CARGO_STRING_FIELD(passengers.fp[4].dest),
+
+	CARGO_STRING_FIELD(passengers.fp[5].name),
+	CARGO_STRING_FIELD(passengers.fp[5].solarsystem),
+	CARGO_STRING_FIELD(passengers.fp[5].fare),
+	CARGO_STRING_FIELD(passengers.fp[5].dest),
+
+	CARGO_STRING_FIELD(passengers.fp[6].name),
+	CARGO_STRING_FIELD(passengers.fp[6].solarsystem),
+	CARGO_STRING_FIELD(passengers.fp[6].fare),
+	CARGO_STRING_FIELD(passengers.fp[6].dest),
+
+	CARGO_STRING_FIELD(passengers.fp[7].name),
+	CARGO_STRING_FIELD(passengers.fp[7].solarsystem),
+	CARGO_STRING_FIELD(passengers.fp[7].fare),
+	CARGO_STRING_FIELD(passengers.fp[7].dest),
+
 #endif
 
 	{ 0, 0, 0, 0, 0 },

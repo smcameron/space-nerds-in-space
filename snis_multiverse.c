@@ -127,6 +127,11 @@ struct bridge_cargo {
 	} cargo[MAX_CARGO_BAYS_PER_SHIP];
 };
 
+struct bridge_passengers {
+	int32_t passengers_aboard;
+	struct flattened_passenger fp[PASSENGER_BERTHS];
+};
+
 static struct bridge_info {
 	unsigned char pwdhash[PWDHASHLEN];	/* hash of password, shipname, salt */
 	int32_t initialized;			/* Have we unpacked data from snis server for this bridge? */
@@ -138,6 +143,7 @@ static struct bridge_info {
 	 * See snis_bridge_update_packet.h. */
 	struct persistent_bridge_data persistent_bridge_data;
 	struct bridge_cargo cargo;
+	struct bridge_passengers passengers;
 } ship[MAX_BRIDGES];
 int nbridges = 0;
 
@@ -765,6 +771,81 @@ errorout:
 	return -1;
 }
 
+static int update_bridge_passengers(struct starsystem_info *ss)
+{
+	unsigned char pwdhash[PWDHASHLEN];
+	int i, rc;
+	unsigned char buffer[sizeof(uint32_t) + PASSENGER_BERTHS * (2 + sizeof(struct flattened_passenger))];
+	unsigned char *buf = NULL;
+	struct packed_buffer pb;
+	uint32_t nbytes;
+
+	memset(pwdhash, 0, sizeof(pwdhash));
+	rc = read_and_unpack_fixed_size_buffer(ss, buffer, PWDHASHLEN, "r", pwdhash, (uint16_t) PWDHASHLEN);
+	if (rc != 0)
+		return rc;
+	pthread_mutex_lock(&data_mutex);
+	i = lookup_ship_by_hash(pwdhash);
+	if (i < 0) {
+		fprintf(stderr, "snis_multiverse: update_bridge_passengers: Unknown ship hash\n");
+		pthread_mutex_unlock(&data_mutex);
+		return rc;
+	}
+	rc = snis_readsocket(ss->socket, &nbytes, sizeof(nbytes));
+	if (rc != 0) {
+		pthread_mutex_unlock(&data_mutex);
+		return rc;
+	}
+	nbytes = ntohl(nbytes);
+	if (nbytes > sizeof(buffer)) {
+		buf = malloc(nbytes);
+		memset(buf, 0, nbytes);
+	} else {
+		buf = buffer;
+	}
+	rc = snis_readsocket(ss->socket, buf, nbytes);
+	if (rc != 0)
+		goto errorout;
+
+	/* This is a wrapped buffer, unwrap it. */
+	pb.buffer = buf;
+	pb.buffer_size = nbytes;
+	pb.buffer_cursor = 0;
+
+	uint32_t passengers_aboard;
+	struct flattened_passenger fp;
+
+	rc = packed_buffer_extract(&pb, "w", &passengers_aboard);
+	if (rc < 0)
+		goto errorout;
+	if (passengers_aboard > PASSENGER_BERTHS)
+		goto errorout;
+	memset(&ship[i].passengers, 0, sizeof(ship[i].passengers));
+	ship[i].passengers.passengers_aboard = passengers_aboard;
+	for (int j = 0; j < (int) passengers_aboard; j++) {
+		memset(&fp, 0, sizeof(fp));
+		if (packed_buffer_extract(&pb, "s", fp.name, sizeof(fp.name)) != 0)
+			goto errorout;
+		if (packed_buffer_extract(&pb, "s", fp.solarsystem, sizeof(fp.solarsystem)) != 0)
+			goto errorout;
+		if (packed_buffer_extract(&pb, "s", fp.fare, sizeof(fp.fare)) != 0)
+			goto errorout;
+		if (packed_buffer_extract(&pb, "s", fp.dest, sizeof(fp.dest)) != 0)
+			goto errorout;
+		ship[i].passengers.fp[j] = fp;
+	}
+	pthread_mutex_unlock(&data_mutex);
+	if (buf != NULL && buf != buffer)
+		free(buf);
+	return 0;
+
+errorout:
+	pthread_mutex_unlock(&data_mutex);
+	if (buf != NULL && buf != buffer)
+		free(buf);
+	return -1;
+}
+
 static int create_new_ship(unsigned char pwdhash[PWDHASHLEN])
 {
 	fprintf(stderr, "snis_multiverse: create_new_ship 1 (nbridges = %d, MAX=%d)\n", nbridges, MAX_BRIDGES);
@@ -810,6 +891,34 @@ static struct packed_buffer *build_outgoing_cargo_update_packet(struct bridge_in
 	return wrapper;
 }
 
+/* build a passenger packet destined for snis_server */
+static struct packed_buffer *build_outgoing_passenger_update_packet(struct bridge_info *b)
+{
+	struct packed_buffer *pb, *wrapper;
+
+	pb = packed_buffer_allocate(1024);
+	if (!pb)
+		return pb;
+	packed_buffer_append(pb, "w", b->passengers.passengers_aboard);
+	for (int i = 0; i < b->passengers.passengers_aboard; i++) {
+		packed_buffer_append(pb, "s", b->passengers.fp[i].name);
+		packed_buffer_append(pb, "s", b->passengers.fp[i].solarsystem);
+		packed_buffer_append(pb, "s", b->passengers.fp[i].fare);
+		packed_buffer_append(pb, "s", b->passengers.fp[i].dest);
+	}
+
+	/* wrap the buffer so it's easier to read/unpack on the other side */
+	wrapper = packed_buffer_allocate(1 + PWDHASHLEN + 4 + pb->buffer_cursor);
+	if (!wrapper) {
+		packed_buffer_free(pb);
+		return wrapper;
+	}
+	packed_buffer_append(wrapper, "br", SNISMV_OPCODE_UPDATE_BRIDGE_PASSENGERS, b->pwdhash, PWDHASHLEN);
+	packed_buffer_append(wrapper, "wr", pb->buffer_cursor, pb->buffer, pb->buffer_cursor);
+	packed_buffer_free(pb);
+	return wrapper;
+}
+
 static void send_bridge_update_to_snis_server(struct starsystem_info *ss,
 				struct persistent_bridge_data *bd, unsigned char *pwdhash)
 {
@@ -817,6 +926,7 @@ static void send_bridge_update_to_snis_server(struct starsystem_info *ss,
 	struct packed_buffer *pb;
 	struct snis_entity *o;
 	struct packed_buffer *cargo_pb;
+	struct packed_buffer *passenger_pb;
 
 	pthread_mutex_lock(&data_mutex);
 	i = lookup_ship_by_hash(pwdhash);
@@ -834,12 +944,15 @@ static void send_bridge_update_to_snis_server(struct starsystem_info *ss,
 		abort();
 	}
 	cargo_pb = build_outgoing_cargo_update_packet(&ship[i]);
+	passenger_pb = build_outgoing_passenger_update_packet(&ship[i]);
 	pthread_mutex_unlock(&data_mutex);
 
 	if (pb)
 		packed_buffer_queue_add(&ss->write_queue, pb, &ss->write_queue_mutex);
 	if (cargo_pb)
 		packed_buffer_queue_add(&ss->write_queue, cargo_pb, &ss->write_queue_mutex);
+	if (passenger_pb)
+		packed_buffer_queue_add(&ss->write_queue, passenger_pb, &ss->write_queue_mutex);
 }
 
 static int verify_existence(struct starsystem_info *ss, int should_already_exist, int verify_solarsystem)
@@ -952,6 +1065,11 @@ static void process_instructions_from_snis_server(struct starsystem_info *ss)
 		break;
 	case SNISMV_OPCODE_UPDATE_BRIDGE_CARGO:
 		rc = update_bridge_cargo(ss);
+		if (rc)
+			goto bad_client;
+		break;
+	case SNISMV_OPCODE_UPDATE_BRIDGE_PASSENGERS:
+		rc = update_bridge_passengers(ss);
 		if (rc)
 			goto bad_client;
 		break;
