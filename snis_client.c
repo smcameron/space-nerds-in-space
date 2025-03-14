@@ -22091,6 +22091,7 @@ static char *help_text[] = {
 	ESC_OR_F1_HELP_TEXT,
 
 #include /* 13 */ "help_text_network_setup_screen.txt"
+#include /* 14 */ "help_text_launcher_screen.txt"
 
 };
 
