@@ -202,6 +202,7 @@ static float bandwidth_throttle_distance = (XKNOWN_DIM / 3); /* How far before o
 static int distant_update_period = 20; /* Distant objects are updated only after */
 				       /* this many ticks. tweakable */
 static int docking_by_faction = 0;
+static int starbase_docking_perm_dist = STARBASE_DOCKING_PERM_DIST;
 static int npc_ship_count = 250; /* tweakable.  Used by universe regeneration */
 static int asteroid_count = 200; /* tweakable.  Used by universe regeneration */
 #define DEFAULT_DAMAGE_REBOOT_CHANCE 10
@@ -17664,7 +17665,7 @@ static void npc_menu_item_request_dock(__attribute__((unused)) struct npc_menu_i
 		}
 	}
 	dist = object_dist(sb, o);
-	if (dist > STARBASE_DOCKING_PERM_DIST) {
+	if (dist > starbase_docking_perm_dist && starbase_docking_perm_dist >= 0) {
 		send_comms_packet(sb, npcname, ch, "%s, YOU ARE TOO FAR AWAY (%lf).\n", b->shipname, dist);
 		snis_queue_add_sound(TOO_FAR_AWAY, ROLE_COMMS, b->shipid);
 		return;
@@ -19457,6 +19458,8 @@ static struct tweakable_var_descriptor server_tweak[] = {
 		&disable_terminal_rebooting, 'i', 0.0, 0.0, 0.0, 0, 1, 0, 0 },
 	{ "LOCAL-NET-ONLY", "0, 1 - 1 MEANS ONLY CLIENTS ON LOCAL NETWORK MAY CONNECT",
 		&local_net_connections_only, 'i', 0.0, 0.0, 0.0, 0, 1, 1, 0 },
+	{ "STARBASE_DOCKING_PERM_DIST", "-1 - 1000000, MAX DIST FOR GRANTING DOCKING PERMISSION",
+		&starbase_docking_perm_dist, 'i', 0.0, 0.0, 0.0, -1, 1000000, STARBASE_DOCKING_PERM_DIST, 0 },
 	{ NULL, NULL, NULL, '\0', 0.0, 0.0, 0.0, 0, 0, 0, 0 },
 };
 
