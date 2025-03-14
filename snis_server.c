@@ -23018,6 +23018,9 @@ static int process_adjust_control_fire_missile(struct game_client *c, uint32_t i
 	int i;
 	struct snis_entity *o;
 	uint32_t target_id;
+	int reason;
+#define MISSILE_FAIL_NO_TARGET 1
+#define MISSILE_FAIL_OUT_OF_AMMO 2
 
 	pthread_mutex_lock(&universe_mutex);
 	i = lookup_by_id(id);
@@ -23028,11 +23031,15 @@ static int process_adjust_control_fire_missile(struct game_client *c, uint32_t i
 	if ((uint32_t) i != c->ship_index)
 		snis_log(SNIS_ERROR, "i != ship index at %s:%d\n", __FILE__, __LINE__);
 	o = &go[i];
-	if (o->tsd.ship.missile_count <= 0)
+	if (o->tsd.ship.missile_count <= 0) {
+		reason = MISSILE_FAIL_OUT_OF_AMMO;
 		goto missile_fail;
+	}
 	target_id = find_potential_missile_target(o);
-	if (target_id == (uint32_t) -1)
+	if (target_id == (uint32_t) -1) {
+		reason = MISSILE_FAIL_NO_TARGET;
 		goto missile_fail;
+	}
 	fire_missile(o, target_id, TARGET_ALL_SYSTEMS);
 	o->tsd.ship.missile_count--;
 	pthread_mutex_unlock(&universe_mutex);
@@ -23048,9 +23055,17 @@ missile_fail:
 	bridgelist[c->bridge].last_missile_fail_time = universe_timestamp;
 	pthread_mutex_unlock(&universe_mutex);
 	snis_queue_add_sound(LASER_FAILURE, ROLE_SOUNDSERVER, o->id);
-	queue_add_text_to_speech(c,
-		"I can't let you just fire missiles off into empty space, "
-		"you must aim at an in range target first.");
+	switch (reason) {
+	case MISSILE_FAIL_NO_TARGET:
+		queue_add_text_to_speech(c, "No target in range.");
+		break;
+	case MISSILE_FAIL_OUT_OF_AMMO:
+		queue_add_text_to_speech(c, "No missiles remain.");
+		break;
+	default:
+		queue_add_text_to_speech(c, "Unknown missile failure.");
+		break;
+	}
 	return 0;
 
 initial_missile_fail: /* Just make the failure sound */
