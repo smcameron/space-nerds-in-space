@@ -539,7 +539,7 @@ struct ship_data {
 	uint8_t phaser_charge;		/* charge of phaser weapon */
 #define WARP_CORE_STATUS_GOOD 0
 #define WARP_CORE_STATUS_EJECTED 1
-#define WARP_CORE_EXPLOSION_DAMAGE_DISTANCE 20000.0
+#define WARP_CORE_EXPLOSION_DAMAGE_DISTANCE 10000.0
 #define WARP_CORE_EXPLOSION_WEAPONS_FACTOR 30.0
 #define WARP_CORE_COUNTDOWN 300 /* 10ths of seconds before ejected warp core explodes */
 	uint8_t warp_core_status;	/* 0 = good, 1 = ejected */
