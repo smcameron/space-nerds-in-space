@@ -157,6 +157,7 @@ static float atmosphere_damage_factor = ATMOSPHERE_DAMAGE_FACTOR;
 static float missile_damage_factor = MISSILE_EXPLOSION_WEAPONS_FACTOR;
 static float spacemonster_damage_factor = SPACEMONSTER_WEAPONS_FACTOR;
 static float warp_core_damage_factor = WARP_CORE_EXPLOSION_WEAPONS_FACTOR;
+static float warp_core_countdown = WARP_CORE_COUNTDOWN; /* tweakable, deciseconds before ejected warp core explodes */
 static int limit_warp_near_planets = 1;
 static float warp_limit_dist_factor = 1.5;
 static float threat_level_flee_threshold = THREAT_LEVEL_FLEE_THRESHOLD;
@@ -1637,9 +1638,14 @@ static void check_warp_core_explosion_damage(struct snis_entity *warp_core,
 	case OBJTYPE_BRIDGE:
 	case OBJTYPE_NPCSHIP:
 		dist = object_dist(warp_core, object);
+		if (object->type == OBJTYPE_BRIDGE)
+			fprintf(stderr, "warp core explosion damage, dist = %g vs %g\n",
+					dist, WARP_CORE_EXPLOSION_DAMAGE_DISTANCE);
 		if (dist > WARP_CORE_EXPLOSION_DAMAGE_DISTANCE)
 			return;
 		damage_factor = WARP_CORE_EXPLOSION_DAMAGE_DISTANCE / (dist + 1.0);
+		if (object->type == OBJTYPE_BRIDGE)
+			fprintf(stderr, "warp core explosion damage factor = %g\n", damage_factor);
 		calculate_warp_core_explosion_damage(object, damage_factor);
 		send_ship_damage_packet(object);
 		break;
@@ -8686,7 +8692,7 @@ static void do_temperature_computations(struct snis_entity *o)
 		o->tsd.ship.warp_core_status != WARP_CORE_STATUS_EJECTED) {
 		if (!bridgelist[b].warp_core_critical) {
 			bridgelist[b].warp_core_critical = 1;
-			bridgelist[b].warp_core_critical_timer = 300; /* 30 seconds */
+			bridgelist[b].warp_core_critical_timer = WARP_CORE_COUNTDOWN; /* 30 seconds by default */
 		}
 	}
 	if (bridgelist[b].warp_core_critical) {
@@ -19461,6 +19467,8 @@ static struct tweakable_var_descriptor server_tweak[] = {
 		&local_net_connections_only, 'i', 0.0, 0.0, 0.0, 0, 1, 1, 0 },
 	{ "STARBASE_DOCKING_PERM_DIST", "-1 - 1000000, MAX DIST FOR GRANTING DOCKING PERMISSION",
 		&starbase_docking_perm_dist, 'i', 0.0, 0.0, 0.0, -1, 1000000, STARBASE_DOCKING_PERM_DIST, 0 },
+	{ "WARP_CORE_COUNTDOWN", "10 - 3000, 10ths OF SECONDS BEFORE EJECTED WARP CORE EXPLODES",
+		&warp_core_countdown, 'i', 0.0, 0.0, 0.0, 10, 3000, WARP_CORE_COUNTDOWN, 0 },
 	{ NULL, NULL, NULL, '\0', 0.0, 0.0, 0.0, 0, 0, 0, 0 },
 };
 
@@ -23687,7 +23695,7 @@ static int process_eject_warp_core(struct game_client *c)
 	quat_rot_vec_self(&relvel, &ship->orientation);
 	add_warp_core(ship->x, ship->y, ship->z,
 			ship->vx + relvel.v.x, ship->vy + relvel.v.y, ship->vz + relvel.v.z,
-			bridgelist[b].warp_core_critical_timer, ship->id);
+			warp_core_countdown, ship->id);
 	bridgelist[b].warp_core_critical = 0; /* Save player from warp core breach */
 	ship->tsd.ship.warp_core_status = WARP_CORE_STATUS_EJECTED;
 	return 0;
