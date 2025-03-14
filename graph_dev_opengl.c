@@ -3018,6 +3018,7 @@ void graph_dev_draw_rectangle(int filled, float x, float y, float width, float h
 	x2 = x + width;
 	y2 = y + height;
 
+	glDisable(GL_DEPTH_TEST);
 	if (sgc.alpha_blend) {
 		/* must empty the vertex buffer to draw this primitive with blending */
 		draw_vertex_buffer_2d();
