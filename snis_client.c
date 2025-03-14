@@ -10122,6 +10122,10 @@ static void snis_draw_science_guy(struct snis_entity *o,
 			sng_set_foreground(UI_COLOR(sci_ball_planet));
 			snprintf(buffer, sizeof(buffer), "%s %s\n", "P",  o->sdata.name);
 			break;
+		case OBJTYPE_WARP_CORE:
+			sng_set_foreground(UI_COLOR(sci_ball_black_hole));
+			snprintf(buffer, sizeof(buffer), "%s %s\n", "E",  o->sdata.name);
+			break;
 		case OBJTYPE_TORPEDO:
 		case OBJTYPE_MISSILE:
 		case OBJTYPE_SPARK:

@@ -12462,6 +12462,7 @@ static int add_warp_core(double x, double y, double z,
 	go[i].sdata.shield_wavelength = 0;
 	go[i].sdata.shield_width = 0;
 	go[i].sdata.shield_depth = 0;
+	snprintf(go[i].sdata.name, sizeof(go[i].sdata.name), "HIGH ENERGY PLASMA");
 	go[i].move = warp_core_move;
 	go[i].vx = vx;
 	go[i].vy = vy;
