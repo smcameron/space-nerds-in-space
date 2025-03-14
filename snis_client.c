@@ -5105,6 +5105,7 @@ static void show_lobbyscreen(void)
 {
 	char msg[100];
 	int i, protocol_mismatch;
+	int selected_protocol_mismatch;
 #define STARTLINE 100
 #define LINEHEIGHT 30
 
@@ -5194,6 +5195,7 @@ static void show_lobbyscreen(void)
 
 		/* Draw server info */
 		sng_set_foreground(UI_COLOR(lobby_connecting));
+		selected_protocol_mismatch = 0;
 		pthread_mutex_lock(&lobby_data_mutex);
 		for (i = 0; i < ngameservers; i++) {
 			unsigned char *x = (unsigned char *) &lobby_game_server[i].ipaddr;
@@ -5241,6 +5243,8 @@ static void show_lobbyscreen(void)
 			sng_abs_xy_draw_string(msg, NANO_FONT, txx(250), txy(100) + i * LINEHEIGHT);
 			protocol_mismatch = strncmp(lobby_game_server[i].protocol_version, SNIS_PROTOCOL_VERSION,
 							sizeof(lobby_game_server[i].protocol_version)) != 0;
+			if (protocol_mismatch && lobby_selected_server == i)
+				selected_protocol_mismatch = 1;
 			if (timer & 0x04 || !protocol_mismatch) {
 				if (protocol_mismatch)
 					sng_set_foreground(ORANGERED);
@@ -5254,7 +5258,7 @@ static void show_lobbyscreen(void)
 			sng_abs_xy_draw_string(msg, NANO_FONT, txx(550), txy(100) + i * LINEHEIGHT);
 		}
 		pthread_mutex_unlock(&lobby_data_mutex);
-		if (lobby_selected_server != -1)
+		if (lobby_selected_server != -1 && !selected_protocol_mismatch)
 			snis_button_set_color(lobby_ui.lobby_connect_to_server_button, UI_COLOR(lobby_connect_ok));
 		else
 			ui_hide_widget(lobby_ui.lobby_connect_to_server_button);
