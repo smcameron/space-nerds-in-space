@@ -16957,7 +16957,7 @@ static void draw_science_data(struct snis_entity *ship, struct snis_entity *o, i
 	if (o || waypoint_index != -1) {
 		range = dist3d(dx, dy, dz);
 		if (update_display)
-			dejittered_range = (range + last_range / 2); /* avg of last 2 for some hysteresis */
+			dejittered_range = 0.5 * (range + last_range); /* avg of last 2 for some hysteresis */
 		snprintf(buffer, sizeof(buffer), "RANGE: %8.2lf", dejittered_range);
 	} else {
 		snprintf(buffer, sizeof(buffer), "RANGE:");
