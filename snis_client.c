@@ -329,6 +329,7 @@ static int time_to_set_window_size = 0;
 int pipe_to_splash_screen = -1;
 int pipe_to_forker_process = -1;
 static struct snis_process_options child_process_options;
+static int running_in_container = 0; /* some things don't work in container, like invoking a browser */
 static int skip_splash_screen = 0;
 static float original_aspect_ratio;
 static int window_manager_can_constrain_aspect_ratio = 0;
@@ -20587,20 +20588,28 @@ static void browser_button_pressed(void *v)
 {
 	int rc;
 	char *site = v;
-	char cmd[1000];
+	char cmd[2000];
 
-	snprintf(cmd, sizeof(cmd), "xdg-open %s &", site);
-	rc = system(cmd);
-	if (rc == 0)
+	if (running_in_container) { /* We can't open a browser from within the container */
+		rc = SDL_SetClipboardText(site);
+		if (rc != 0) /* best we can do is copy the URL to the clipboard. */
+			text_to_speech("Failed to copy URL to clipboard.");
+		else
+			text_to_speech("Copied URL to clipboard.");
 		return;
-	snprintf(cmd, sizeof(cmd), "google-chrome %s &", site);
+	}
+	snprintf(cmd, sizeof(cmd), "xdg-open %s || google-chrome %s || firefox %s", site, site, site);
 	rc = system(cmd);
-	if (rc == 0)
+	/* We can't really tell if the above command works or not, unfortunately. */
+	if (rc == 0 || (rc == -1 && errno == ECHILD))
 		return;
-	snprintf(cmd, sizeof(cmd), "firefox %s &", site);
-	rc = system(cmd);
-	if (rc == 0)
-		return;
+	text_to_speech("Failed to open browser.");
+	rc = SDL_SetClipboardText(site);
+	if (rc != 0) /* best we can do is copy the URL to the clipboard. */
+		text_to_speech("Failed to copy URL to clipboard.");
+	else
+		text_to_speech("Copied URL to clipboard.");
+	return;
 }
 
 static struct button *init_net_checkbox_button(int x, int *y, char *txt,
@@ -20996,12 +21005,24 @@ static void init_net_setup_ui(void)
 			"CONNECT TO THE LOBBY SERVER");
 	ui_add_button(net_setup_ui.launcher_button, DISPLAYMODE_NETWORK_SETUP,
 			"GO BACK TO THE SNIS PROCESS LAUNCHER SCREEN");
-	ui_add_button(net_setup_ui.website_button, DISPLAYMODE_NETWORK_SETUP,
-			"SPACE NERDS IN SPACE WEBSITE");
-	ui_add_button(net_setup_ui.forum_button, DISPLAYMODE_NETWORK_SETUP,
-			"SPACE NERDS IN SPACE DISCUSSIONS ON GITHUB");
-	ui_add_button(net_setup_ui.support_button, DISPLAYMODE_NETWORK_SETUP,
-			"HELP SUPPORT SPACE NERDS IN SPACE DEVELOPMENT");
+	if (running_in_container) {
+		ui_add_button(net_setup_ui.website_button, DISPLAYMODE_NETWORK_SETUP,
+				"COPY URL OF SPACE NERDS IN SPACE WEBSITE TO CLIPBOARD");
+		ui_add_button(net_setup_ui.forum_button, DISPLAYMODE_NETWORK_SETUP,
+				"COPY URL OF SPACE NERDS IN SPACE\n"
+				"DISCUSSIONS ON GITHUB TO CLIPBOARD");
+		ui_add_button(net_setup_ui.support_button, DISPLAYMODE_NETWORK_SETUP,
+				"COPY URL OF SPACE NERDS IN SPACE\n"
+				"DONATION SITE TO CLIPBOARD");
+	} else {
+		ui_add_button(net_setup_ui.website_button, DISPLAYMODE_NETWORK_SETUP,
+				"VISIT SPACE NERDS IN SPACE WEB SITE");
+		ui_add_button(net_setup_ui.forum_button, DISPLAYMODE_NETWORK_SETUP,
+				"VISIT SPACE NERDS IN SPACE\n"
+				"DISCUSSIONS ON GITHUB");
+		ui_add_button(net_setup_ui.support_button, DISPLAYMODE_NETWORK_SETUP,
+				"VISIT SPACE NERDS IN SPACE DONATION WEB SITE");
+	}
 
 	/* note: the order of these is important for TAB key focus advance */
 	ui_add_text_input_box(net_setup_ui.lobbyservername, DISPLAYMODE_NETWORK_SETUP);
@@ -21647,13 +21668,23 @@ static void init_launcher_ui(void)
 	ui_add_gauge(launcher_ui.snis_server_gauge, DISPLAYMODE_LAUNCHER);
 	ui_add_gauge(launcher_ui.snis_client_gauge, DISPLAYMODE_LAUNCHER);
 
-	ui_add_button(launcher_ui.website_button, DISPLAYMODE_LAUNCHER,
-			"DON'T KNOW WHAT THIS GAME IS ALL ABOUT?\n"
-			"WANT TO LEARN MORE?  VISIT HTTPS://SPACENERDSINSPACE.COM");
-	ui_add_button(launcher_ui.forum_button, DISPLAYMODE_LAUNCHER,
-			"SPACE NERDS IN SPACE DISCUSSIONS ON GITHUB");
-	ui_add_button(launcher_ui.support_button, DISPLAYMODE_LAUNCHER,
-			"HELP SUPPORT DEVELOPMENT OF SPACE NERDS IN SPACE");
+	if (running_in_container) {
+		ui_add_button(launcher_ui.website_button, DISPLAYMODE_LAUNCHER,
+				"COPY URL OF SPACE NERDS IN SPACE WEB SITE TO CLIPBOARD");
+		ui_add_button(launcher_ui.forum_button, DISPLAYMODE_LAUNCHER,
+				"COPY URL OF SPACE NERDS IN SPACE DISCUSSIONS\n"
+				"ON GITHUB TO CLIPBOARD");
+		ui_add_button(launcher_ui.support_button, DISPLAYMODE_LAUNCHER,
+				"COPY URL OF SPACE NERDS IN SPACE DONATION WEB SITE TO CLIPBOARD");
+	} else {
+		ui_add_button(launcher_ui.website_button, DISPLAYMODE_LAUNCHER,
+				"DON'T KNOW WHAT THIS GAME IS ALL ABOUT?\n"
+				"WANT TO LEARN MORE?  VISIT HTTPS://SPACENERDSINSPACE.COM");
+		ui_add_button(launcher_ui.forum_button, DISPLAYMODE_LAUNCHER,
+				"VISIT SPACE NERDS IN SPACE DISCUSSIONS ON GITHUB");
+		ui_add_button(launcher_ui.support_button, DISPLAYMODE_LAUNCHER,
+				"VISIT SPACE NERDS IN SPACE DONATION WEB SITE");
+	}
 	ui_set_widget_tooltip(launcher_ui.ssgl_gauge,
 			"SNIS LOBBY SERVER GAUGE\n\n"
 
@@ -25442,11 +25473,61 @@ static void maybe_download_assets(void)
 		fork_update_assets(0, !auto_download_assets);
 }
 
+static void check_if_running_in_container(void)
+{
+	FILE *f = NULL;
+	char *c;
+	char buffer[256];
+
+	pid_t pid = getpid();
+	if (pid == 1) { /* If our pid is 1, we're definitely inside a container */
+		running_in_container = 1;
+		return;
+	}
+
+	/* First check obvious flatpak and appimage cases */
+	char *container = getenv("FLATPAK_ID");
+	if (!container || strcmp(container, "") == 0)
+		container = getenv("APPIMAGE");
+
+	if (container && strcmp(container, "") != 0) {
+		running_in_container = 1;
+		return;
+	}
+
+	/* Now check selinux stuff ... */
+	/* can't use slurp_file() because stat() doesn't return size of /proc files */
+	f = fopen("/proc/self/attr/current", "r");
+	if (!f) {
+		/* Can't open this file?  Maybe it's BSD or mac or something. */
+		running_in_container = 0;
+		return;
+	}
+	c = fgets(buffer, sizeof(buffer), f);
+	if (!c) {
+		fprintf(stderr, "Failed to read /proc/self/attr/current: %s\n", strerror(errno));
+		fclose(f);
+		running_in_container = 0;
+		return;
+	}
+	fclose(f);
+	/* I'm not 100% sure this accurately detects whether we're containerized.
+	 * I think if we find "unconfined", we're not in a container, but it may be
+	 * the case that there can be something else and we aren't in a container.
+	 */
+	if (strncmp(c, "unconfined", 10) != 0) {
+		running_in_container = 1;
+		return;
+	}
+	running_in_container = 0;
+}
+
 static char **saved_argv;
 
 int main(int argc, char *argv[])
 {
 	refuse_to_run_as_root("snis_client");
+	check_if_running_in_container();
 	child_process_options = snis_process_options_default();
 	save_args(argc, argv, &saved_argv);
 	print_args(argc, argv);
