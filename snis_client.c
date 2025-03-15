@@ -20589,6 +20589,10 @@ static void browser_button_pressed(void *v)
 	char *site = v;
 	char cmd[1000];
 
+	snprintf(cmd, sizeof(cmd), "xdg-open %s &", site);
+	rc = system(cmd);
+	if (rc == 0)
+		return;
 	snprintf(cmd, sizeof(cmd), "google-chrome %s &", site);
 	rc = system(cmd);
 	if (rc == 0)
