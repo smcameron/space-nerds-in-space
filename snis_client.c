@@ -330,6 +330,7 @@ int pipe_to_splash_screen = -1;
 int pipe_to_forker_process = -1;
 static struct snis_process_options child_process_options;
 static int running_in_container = 0; /* some things don't work in container, like invoking a browser */
+static int leave_no_orphans = 1; /* if in container, when we exit, kill all the servers too. tweakable. */
 static int skip_splash_screen = 0;
 static float original_aspect_ratio;
 static int window_manager_can_constrain_aspect_ratio = 0;
@@ -18547,6 +18548,8 @@ static struct tweakable_var_descriptor client_tweak[] = {
 		&vsync_mode, 'i', 0.0, 0.0, 0.0, -1, 1, 1, 0, },
 	{ "MF_COCKPIT", "1 - DISPLAY COCKPIT, 0 - DON'T DISPLAY COCKPIT",
 		&mf_cockpit, 'i', 0.0, 0.0, 0.0, 0, 1, 0, 0, },
+	{ "LEAVE_NO_ORPHANS", "1: KILL ALL SERVER PROCESSES ON EXIT IF RUNNING INSIDE CONTAINER",
+		&leave_no_orphans, 'i', 0.0, 0.0, 0.0, 0, 1, 0, 0, },
 	{ NULL, NULL, NULL, '\0', 0.0, 0.0, 0.0, 0, 0, 0, 0 },
 };
 
@@ -21196,15 +21199,22 @@ static void connect_client_btn_pressed(__attribute__((unused)) void *x)
 	displaymode = DISPLAYMODE_NETWORK_SETUP;
 }
 
+static void really_quit(void);
+
 static void launcher_quit_btn_pressed(__attribute__((unused)) void *x)
 {
+	if (running_in_container && leave_no_orphans) {
+		/* Don't want to leave server processes orphaned in stupid flatpak container */
+		start_snis_process_terminator((void *) 1);
+		ssgl_sleep(1);
+	}
 	stop_forker_process();
+	really_quit();
 	exit(0);
 }
 
 static void launcher_restart_btn_pressed(__attribute__((unused)) void *x)
 {
-
 	write_to_forker(FORKER_RESTART_SNIS_CLIENT);
 	ssgl_sleep(3);
 	stop_forker_process();
@@ -21416,6 +21426,14 @@ static void init_options_ui(void)
 	snis_button_set_visible_border(options_ui.NAT_ghetto_mode_btn, 0);
 	snis_button_set_hover_color(options_ui.NAT_ghetto_mode_btn, hover_color);
 
+	options_ui.leave_no_orphans_btn = snis_button_init(x + txx(200), y, -1, -1,
+			"LEAVE NO ORPHANED PROCESSES", color,
+			NANO_FONT, snis_button_generic_checkbox_toggler, &leave_no_orphans);
+	snis_button_set_checkbox_function(options_ui.leave_no_orphans_btn,
+				snis_button_generic_checkbox_function, &leave_no_orphans);
+	snis_button_set_visible_border(options_ui.leave_no_orphans_btn, 0);
+	snis_button_set_hover_color(options_ui.leave_no_orphans_btn, hover_color);
+
 	ui_add_button(options_ui.launcher_btn, DISPLAYMODE_OPTIONS,
 			"GO BACK TO THE SNIS PROCESS LAUNCHER SCREEN");
 	ui_add_label(options_ui.multiverse_opts, DISPLAYMODE_OPTIONS);
@@ -21470,6 +21488,10 @@ static void init_options_ui(void)
 		"ON THE SAME HOST AS THE LOBBY AND MAYBE IT IS ONLY BECAUSE OF NETWORK\n"
 		"ADDRESS TRANSLATION (NAT) THAT SSGL_SERVER HAS THE WRONG IP ADDRESSES\n");
 
+	ui_add_button(options_ui.leave_no_orphans_btn, DISPLAYMODE_OPTIONS,
+		"IF RUNNING IN A CONTAINER SUCH AS A FLATPAK OR APPIMAGE,\n"
+		"DO NOT LEAVE SERVER PROCESSES RUNNING IF THE USER QUITS\n"
+		"THE SNIS_CLIENT APPLICATION.");
 	ui_add_label(options_ui.lobbyhost_label, DISPLAYMODE_OPTIONS);
 	ui_add_text_input_box(options_ui.lobbyhost_input, DISPLAYMODE_OPTIONS);
 	ui_set_widget_tooltip(options_ui.lobbyhost_input, "ENTER LOBBY HOST NAME OR IP ADDRESS");
@@ -21887,7 +21909,10 @@ static void show_launcher(void)
 		if (launcher_ui.ssgl_count +
 			launcher_ui.snis_server_count +
 			launcher_ui.multiverse_count > 0) {
-			snis_button_set_label(launcher_ui.quit_btn, "QUIT (SERVER PROCESSES CONTINUE)");
+			if (running_in_container && leave_no_orphans)
+				snis_button_set_label(launcher_ui.quit_btn, "QUIT");
+			else
+				snis_button_set_label(launcher_ui.quit_btn, "QUIT (SERVER PROCESSES CONTINUE)");
 		} else {
 			snis_button_set_label(launcher_ui.quit_btn, "QUIT");
 		}
@@ -22527,8 +22552,6 @@ end_of_drawing:
 
 	return 0;
 }
-
-static void really_quit(void);
 
 static void maybe_play_rocket_sample(void)
 {
@@ -23556,7 +23579,6 @@ static void really_quit(void)
 	for (i = 0; i < njoysticks; i++)
 		close_joystick(joystick_fd[i]);
 	stop_text_to_speech_thread();
-	exit(1); /* probably bad form... oh well. */
 }
 
 static void usage(void)
@@ -25720,6 +25742,10 @@ int main(int argc, char *argv[])
 		}
 	}
 
+	if (running_in_container && leave_no_orphans) {
+		start_snis_process_terminator((void *) 1);
+		ssgl_sleep(1);
+	}
 	really_quit();
 	return 0;
 }

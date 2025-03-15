@@ -351,6 +351,7 @@ struct options_ui {
 	struct snis_text_input_box *mv_port_number_input;
 	struct snis_text_input_box *ss_port_range_input;
 	struct button *NAT_ghetto_mode_btn;
+	struct button *leave_no_orphans_btn;
 	char mv_port_number_text[15];
 	char ss_port_range_text[15];
 };
