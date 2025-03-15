@@ -21175,6 +21175,13 @@ static void start_snis_server_btn_pressed(__attribute__((unused)) void *x)
 	write_to_forker(FORKER_START_SNIS_SERVER);
 }
 
+static void start_servers_btn_pressed(__attribute__((unused)) void *x)
+{
+	start_ssgl_btn_pressed(NULL);
+	start_snis_multiverse_btn_pressed(NULL);
+	start_snis_server_btn_pressed(NULL);
+}
+
 static void stop_forker_process(void)
 {
 	write_to_forker(FORKER_QUIT);
@@ -21534,20 +21541,11 @@ static void init_launcher_ui(void)
 	int active_button_color = UI_COLOR(launcher_button);
 	int hover_color = UI_COLOR(launcher_button_hover);
 
-	launcher_ui.start_ssgl_btn = snis_button_init(x, y, -1, -1, "START LOBBY SERVER",
-				active_button_color, TINY_FONT, start_ssgl_btn_pressed, 0);
-	snis_button_set_disabled_color(launcher_ui.start_ssgl_btn, active_button_color);
-	snis_button_set_hover_color(launcher_ui.start_ssgl_btn, hover_color);
-	y += txy(40);
-	launcher_ui.start_snis_multiverse_btn = snis_button_init(x, y, -1, -1, "START SNIS MULTIVERSE SERVER",
-				active_button_color, TINY_FONT, start_snis_multiverse_btn_pressed, NULL);
-	snis_button_set_disabled_color(launcher_ui.start_snis_multiverse_btn, active_button_color);
-	snis_button_set_hover_color(launcher_ui.start_snis_multiverse_btn, hover_color);
-	y += txy(40);
-	launcher_ui.start_snis_server_btn = snis_button_init(x, y, -1, -1, "START SNIS SERVER",
-				active_button_color, TINY_FONT, start_snis_server_btn_pressed, 0);
-	snis_button_set_disabled_color(launcher_ui.start_snis_server_btn, active_button_color);
-	snis_button_set_hover_color(launcher_ui.start_snis_server_btn, hover_color);
+	launcher_ui.start_servers_btn = snis_button_init(x, y, -1, -1, "START SERVERS",
+				active_button_color, TINY_FONT, start_servers_btn_pressed, 0);
+	snis_button_set_disabled_color(launcher_ui.start_servers_btn, UI_COLOR(launcher_button_disabled));
+	snis_button_set_hover_color(launcher_ui.start_servers_btn, hover_color);
+
 	y += txy(40);
 	launcher_ui.connect_client_btn = snis_button_init(x, y, -1, -1, "CONNECT CLIENT TO SNIS SERVER",
 				active_button_color, TINY_FONT, connect_client_btn_pressed, 0);
@@ -21560,7 +21558,7 @@ static void init_launcher_ui(void)
 	y += txy(40);
 	launcher_ui.update_assets_btn = snis_button_init(x, y, -1, -1, "UPDATE ASSETS",
 				active_button_color, TINY_FONT, launcher_update_assets_btn_pressed, 0);
-	snis_button_set_disabled_color(launcher_ui.update_assets_btn, active_button_color);
+	snis_button_set_disabled_color(launcher_ui.update_assets_btn, UI_COLOR(launcher_button_disabled));
 	snis_button_set_hover_color(launcher_ui.update_assets_btn, hover_color);
 	y += txy(40);
 	launcher_ui.options_btn = snis_button_init(x, y, -1, -1, "OPTIONS . . .",
@@ -21576,21 +21574,21 @@ static void init_launcher_ui(void)
 				active_button_color, TINY_FONT, launcher_restart_btn_pressed, 0);
 	snis_button_set_hover_color(launcher_ui.restart_btn, hover_color);
 
-	launcher_ui.ssgl_gauge = gauge_init(txx(450), txy(100), 150, 0.0, 100.0, -120.0 * M_PI / 180.0,
+	launcher_ui.ssgl_gauge = gauge_init(txx(550), txy(100), 150, 0.0, 100.0, -120.0 * M_PI / 180.0,
 			120.0 * 2.0 * M_PI / 180.0, UI_COLOR(launcher_gauge_needle), UI_COLOR(launcher_gauge),
 			10, "LOBBY", sample_ssglcount);
 	gauge_set_fonts(launcher_ui.ssgl_gauge, NANO_FONT, NANO_FONT);
 
-	launcher_ui.multiverse_gauge = gauge_init(txx(600), txy(100), 150, 0.0, 100.0, -120.0 * M_PI / 180.0,
+	launcher_ui.multiverse_gauge = gauge_init(txx(700), txy(100), 150, 0.0, 100.0, -120.0 * M_PI / 180.0,
 			120.0 * 2.0 * M_PI / 180.0, UI_COLOR(launcher_gauge_needle), UI_COLOR(launcher_gauge),
 			10, "MULTIVERSE", sample_multiversecount);
 	gauge_set_fonts(launcher_ui.multiverse_gauge, NANO_FONT, NANO_FONT);
 
-	launcher_ui.snis_server_gauge = gauge_init(txx(450), txy(300), 150, 0.0, 10.0, -120.0 * M_PI / 180.0,
+	launcher_ui.snis_server_gauge = gauge_init(txx(550), txy(300), 150, 0.0, 10.0, -120.0 * M_PI / 180.0,
 			120.0 * 2.0 * M_PI / 180.0, UI_COLOR(launcher_gauge_needle), UI_COLOR(launcher_gauge),
 			10, "SNIS SERVER", sample_snis_servercount);
 	gauge_set_fonts(launcher_ui.snis_server_gauge, NANO_FONT, NANO_FONT);
-	launcher_ui.snis_client_gauge = gauge_init(txx(600), txy(300), 150, 0.0, 10.0, -120.0 * M_PI / 180.0,
+	launcher_ui.snis_client_gauge = gauge_init(txx(700), txy(300), 150, 0.0, 10.0, -120.0 * M_PI / 180.0,
 			120.0 * 2.0 * M_PI / 180.0, UI_COLOR(launcher_gauge_needle), UI_COLOR(launcher_gauge),
 			10, "SNIS CLIENT", sample_snis_clientcount);
 	gauge_set_fonts(launcher_ui.snis_client_gauge, NANO_FONT, NANO_FONT);
@@ -21612,6 +21610,61 @@ static void init_launcher_ui(void)
 			TINY_FONT, browser_button_pressed, "http://spacenerdsinspace.com/donate.html");
 	snis_button_set_hover_color(launcher_ui.support_button, hover_color);
 
+	launcher_ui.menu = create_pull_down_menu(NANO_FONT, SCREEN_WIDTH);
+	pull_down_menu_set_color(launcher_ui.menu, active_button_color);
+	pull_down_menu_set_highlight_color(launcher_ui.menu, hover_color);
+	pull_down_menu_set_disabled_color(launcher_ui.menu, UI_COLOR(launcher_button_disabled));
+	pull_down_menu_set_tooltip_drawing_function(launcher_ui.menu, draw_tooltip);
+	pull_down_menu_set_gravity(launcher_ui.menu, 0);
+	pull_down_menu_add_column(launcher_ui.menu, "START SNIS PROCESS");
+	pull_down_menu_add_row(launcher_ui.menu, "START SNIS PROCESS",
+					"START SNIS LOBBY PROCESS (SSGL_SERVER)",
+					start_ssgl_btn_pressed, NULL);
+	pull_down_menu_add_row(launcher_ui.menu, "START SNIS PROCESS",
+					"START SNIS MULTIVERSE PROCESS",
+					start_snis_multiverse_btn_pressed, NULL);
+	pull_down_menu_add_row(launcher_ui.menu, "START SNIS PROCESS",
+					"START SNIS SERVER PROCESS",
+					start_snis_server_btn_pressed, NULL);
+
+	pull_down_menu_add_tooltip(demon_ui.menu, "START SNIS_PROCESS", "START SNIS LOBBY PROCESS (SSGL_SERVER)",
+					"START SSGL_SERVER PROCESS\n"
+					"YOU NEED EXACTLY ONE SNIS LOBBY PROCESS RUNNING\n"
+					"ON THE NETWORK.\n\n"
+
+					"IF YOU ARE HOSTING THE SESSION, YOU NEED TO RUN THIS,\n"
+					"OTHERWISE IF YOU ARE CONNECTING TO A REMOTE SESSION,\n"
+					"YOU DO NOT NEED TO RUN THIS.");
+	pull_down_menu_add_tooltip(demon_ui.menu, "START SNIS_PROCESS", "START SNIS MULTIVERSE PROCESS",
+			"YOU NEED EXACTLY ONE SNIS MULTIVERSE PROCESS RUNNING\n"
+			"ON THE NETWORK.\n\n"
+
+			"IF YOU ARE HOSTING THE SESSION, AND YOU WANT MULTIPLE\n"
+			"STAR SYSTEMS YOU CAN TRAVEL BETWEEN WITH WARP GATES,\n"
+			"YOU NEED TO RUN THIS,\n\n"
+
+			"OTHERWISE IF YOU ARE CONNECTING TO A REMOTE SESSION,\n"
+			"OR RUNNING A SINGLE INSTANCE OF SNIS SERVER THAT\n"
+			"CLIENTS CONNECT DIRECTLY TO WITHOUT USING THE LOBBY,\n"
+			"THEN YOU DO NOT NEED TO RUN THIS.");
+	pull_down_menu_add_tooltip(demon_ui.menu, "START SNIS_PROCESS", "START SNIS SERVER PROCESS",
+			"IF YOU ARE NOT HOSTING A SESSION BUT CONNECTING TO A\n"
+			"REMOTE SESSION, YOU DO NOT NEED THIS.\n"
+			"IF SNIS MULTIVERSE HAS ALREADY STARTED SOME SNIS SERVERS\n"
+			"YOU DON'T NEED TO MANUALLY START ONE.  IF IT HASN'T, WHICH\n"
+			"MAY HAPPEN IF YOU DIDN'T CHECK 'AUTOWRANGLE' ABOVE, OR IF\n"
+			"THERE IS NO PLAYER SHIP CURRENTLY LOCATED IN ANY STAR SYSTEM\n"
+			"YOU WILL NEED TO START ONE SNIS_SERVER INSTANCE MANUALLY.\n\n"
+
+			"AND OF COURSE IF YOU ARE NOT USING THE LOBBY (SEE OPTIONS)\n"
+			"THEN YOU NEED TO START A SNIS_SERVER YOURSELF.\n");
+
+	ui_add_button(launcher_ui.start_servers_btn, DISPLAYMODE_LAUNCHER,
+			"START ALL THE NECESSARY SERVER PROCESSES:\n"
+			"SSGL_SERVER, SNIS_MULTIVERSE, AND SNIS_SERVER\n"
+			"(IF YOU WANT TO START THEM INDIVIDUALLY USE THE\n"
+			"MENU IN THE UPPER LEFT CORNER OF THE SCREEN)");
+#if 0
 	ui_add_button(launcher_ui.start_ssgl_btn, DISPLAYMODE_LAUNCHER,
 			"START SNIS LOBBY SERVER PROCESS\n\n"
 			"YOU NEED EXACTLY ONE SNIS LOBBY PROCESS RUNNING\n"
@@ -21647,6 +21700,7 @@ static void init_launcher_ui(void)
 
 			"AND OF COURSE IF YOU ARE NOT USING THE LOBBY (SEE OPTIONS)\n"
 			"THEN YOU NEED TO START A SNIS_SERVER YOURSELF.\n");
+#endif
 	ui_add_button(launcher_ui.connect_client_btn, DISPLAYMODE_LAUNCHER,
 			"CONNECT SNIS CLIENT TO LOBBY OR TO SNIS SERVER\n\n"
 
@@ -21728,6 +21782,7 @@ static void init_launcher_ui(void)
 			"THIS GAUGE SHOWS THE NUMBER OF SNIS CLIENT PROCESSES RUNNING LOCALLY\n"
 			"ON THIS MACHINE.");
 	ui_hide_widget(launcher_ui.restart_btn); /* only unhides if new assets are available */
+	ui_add_pull_down_menu(launcher_ui.menu, DISPLAYMODE_LAUNCHER); /* needs to be last */
 
 	launcher_ui.ssgl_count = 0;
 	launcher_ui.multiverse_count = 0;
@@ -21877,29 +21932,32 @@ static void show_launcher(void)
 {
 	static int framecounter = 0;
 
-	if (avoid_lobby) {
-		snis_button_disable(launcher_ui.start_ssgl_btn);
+	if (avoid_lobby || (strcasecmp(child_process_options.lobbyhost, "localhost") != 0 &&
+		strcasecmp(child_process_options.lobbyhost, "127.0.0.1") != 0)) {
+		snis_button_disable(launcher_ui.start_servers_btn);
+		pull_down_menu_item_disable(launcher_ui.menu,
+			"START SNIS PROCESS", "START SNIS LOBBY PROCESS (SSGL_SERVER)");
 		snis_button_set_label(launcher_ui.connect_client_btn, "CONNECT CLIENT TO SNIS SERVER");
 	} else {
-		snis_button_enable(launcher_ui.start_ssgl_btn);
+		snis_button_enable(launcher_ui.start_servers_btn);
+		pull_down_menu_item_enable(launcher_ui.menu,
+			"START SNIS PROCESS", "START SNIS LOBBY PROCESS (SSGL_SERVER)");
 		snis_button_set_label(launcher_ui.connect_client_btn, "CONNECT CLIENT TO LOBBY");
 	}
 
 	if (multiverse_options_are_correct() && !avoid_lobby)
-		snis_button_enable(launcher_ui.start_snis_multiverse_btn);
+		pull_down_menu_item_enable(launcher_ui.menu,
+			"START SNIS PROCESS", "START SNIS MULTIVERSE PROCESS");
 	else
-		snis_button_disable(launcher_ui.start_snis_multiverse_btn);
+		pull_down_menu_item_disable(launcher_ui.menu,
+			"START SNIS PROCESS", "START SNIS MULTIVERSE PROCESS");
 
 	if (snis_server_options_are_correct())
-		snis_button_enable(launcher_ui.start_snis_server_btn);
+		pull_down_menu_item_enable(launcher_ui.menu,
+			"START SNIS PROCESS", "START SNIS SERVER PROCESS");
 	else
-		snis_button_disable(launcher_ui.start_snis_server_btn);
-
-	if (strcasecmp(child_process_options.lobbyhost, "localhost") != 0 &&
-		strcasecmp(child_process_options.lobbyhost, "127.0.0.1") != 0)
-		snis_button_disable(launcher_ui.start_ssgl_btn);
-	else
-		snis_button_enable(launcher_ui.start_ssgl_btn);
+		pull_down_menu_item_disable(launcher_ui.menu,
+			"START SNIS PROCESS", "START SNIS SERVER PROCESS");
 
 	framecounter++;
 	if ((framecounter % 60) == 0) {

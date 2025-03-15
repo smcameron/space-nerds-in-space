@@ -257,6 +257,7 @@ struct ui_color_map {
 
 	struct ui_color_entry launcher_button;
 	struct ui_color_entry launcher_button_hover;
+	struct ui_color_entry launcher_button_disabled;
 	struct ui_color_entry launcher_text;
 	struct ui_color_entry launcher_gauge;
 	struct ui_color_entry launcher_gauge_needle;
@@ -489,6 +490,7 @@ GLOBAL struct ui_color_map_accessor {
 
 	.u.map.launcher_button		= { LIMEGREEN,		"launcher-button" },
 	.u.map.launcher_button_hover	= { GREEN_FIXUP,	"launcher-button-hover" },
+	.u.map.launcher_button_disabled	= { DARKGREEN,		"launcher-button-disabled" },
 	.u.map.launcher_text		= { LIMEGREEN,		"launcher-text" },
 	.u.map.launcher_gauge		= { AMBER,		"launcher-gauge" },
 	.u.map.launcher_gauge_needle	= { RED,		"launcher-gauge-needle" },

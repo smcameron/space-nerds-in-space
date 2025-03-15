@@ -357,10 +357,7 @@ struct options_ui {
 };
 
 struct launcher_ui {
-	struct button *start_ssgl_btn;
-	struct button *start_snis_multiverse_btn;
-	struct button *autowrangle_checkbox;
-	struct button *start_snis_server_btn;
+	struct button *start_servers_btn;
 	struct button *connect_client_btn;
 	struct button *stop_all_snis_btn;
 	struct button *update_assets_btn;
@@ -374,6 +371,7 @@ struct launcher_ui {
 	struct button *website_button;
 	struct button *forum_button;
 	struct button *support_button;
+	struct pull_down_menu *menu;
 	int ssgl_count;
 	int multiverse_count;
 	int snis_server_count;
