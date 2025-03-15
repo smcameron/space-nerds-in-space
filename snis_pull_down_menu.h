@@ -17,6 +17,7 @@ int pull_down_menu_inside(struct pull_down_menu *pdm, int physical_x, int physic
 void pull_down_menu_update_mouse_pos(struct pull_down_menu *m, int physical_x, int physical_y);
 void pull_down_menu_set_color(struct pull_down_menu *m, int color);
 void pull_down_menu_set_highlight_color(struct pull_down_menu *m, int color);
+void pull_down_menu_set_disabled_color(struct pull_down_menu *m, int color);
 void pull_down_menu_set_background_alpha(struct pull_down_menu *m, float alpha);
 void pull_down_menu_set_checkbox_function(struct pull_down_menu *pdm, char *column, char *row,
 						int (*checkbox_value)(void *cookie), void *cookie);
@@ -26,6 +27,8 @@ void pull_down_menu_set_gravity(struct pull_down_menu *pdm, int right); /* 0 mea
 void pull_down_menu_set_tooltip_drawing_function(struct pull_down_menu *pdm, pull_down_menu_tooltip_drawing_function f);
 int pull_down_menu_add_tooltip(struct pull_down_menu *pdm, char *column, char *row, char *tooltip);
 void pull_down_menu_add_from_file(struct pull_down_menu *pdm, char *column, char *file, void (*menu_button_fn)(void *));
+void pull_down_menu_item_disable(struct pull_down_menu *pdm, char *column, char *row);
+void pull_down_menu_item_enable(struct pull_down_menu *pdm, char *column, char *row);
 
 /* Normally if the mouse is not near the pull down menu, it will be invisible.
  * To aid discoverability, we can set a timer for how long the menu will be

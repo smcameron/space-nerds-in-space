@@ -17,6 +17,7 @@ struct pull_down_menu_item {
 	void *checkbox_cookie;
 	char *tooltip;
 	int tooltip_timer;
+	int disabled;
 };
 
 #define PDM_TOOLTIP_DELAY (30) /* 1 second */
@@ -36,6 +37,7 @@ struct pull_down_menu {
 	int font;
 	int color;
 	int highlight_color;
+	int disabled_color;
 	int current_col, current_row;
 	int current_physical_x, current_physical_y; /* mouse pos */
 	struct pull_down_menu_column *col[MAX_PULL_DOWN_COLUMNS];
@@ -293,8 +295,16 @@ static void draw_menu_col(struct pull_down_menu *m, int col, float y, int curren
 				sng_current_draw_rectangle(0, x1, y1, 16, 16);
 		}
 		y = y + font_lineheight[font];
-		if ((i == current_row || i == 0) && col == m->current_col)
-			sng_set_foreground(m->highlight_color);
+		if (!r->disabled)
+			sng_set_foreground(m->color);
+		else
+			sng_set_foreground(m->disabled_color);
+		if ((i == current_row || i == 0) && col == m->current_col) {
+			if (!r->disabled)
+				sng_set_foreground(m->highlight_color);
+			else
+				sng_set_foreground(m->disabled_color);
+		}
 		sng_abs_xy_draw_string(r->name, font, x + 4 + cbw, y - 2);
 		if ((i == current_row || i == 0) && col == m->current_col)
 			sng_abs_xy_draw_string(r->name, font, x + 5 + cbw, y - 1);
@@ -423,6 +433,7 @@ static int pull_down_menu_add_row_internal(struct pull_down_menu *m,
 		r->checkbox_cookie = NULL;
 		r->cookie = cookie;
 		r->tooltip = NULL;
+		r->disabled = 1;
 		c->nrows++;
 		c->width = 0; /* So it will get recalculated */
 		if (lock)
@@ -450,7 +461,7 @@ int pull_down_menu_button_press(struct pull_down_menu *m,
 	if (m->current_col >= 0 && m->current_col < m->ncols &&
 		m->current_row >= 0 && m->current_row < m->col[m->current_col]->nrows) {
 			row = &m->col[m->current_col]->item[m->current_row];
-			if (row->func)
+			if (row->func && !row->disabled)
 				row->func(row->cookie);
 			m->current_row = -1; /* deselect it */
 			m->current_col = -1;
@@ -471,6 +482,13 @@ void pull_down_menu_set_highlight_color(struct pull_down_menu *m, int color)
 {
 	pthread_mutex_lock(&m->mutex);
 	m->highlight_color = color;
+	pthread_mutex_unlock(&m->mutex);
+}
+
+void pull_down_menu_set_disabled_color(struct pull_down_menu *m, int disabled_color)
+{
+	pthread_mutex_lock(&m->mutex);
+	m->disabled_color = disabled_color;
 	pthread_mutex_unlock(&m->mutex);
 }
 
@@ -647,3 +665,29 @@ void pull_down_menu_set_visible_timer(struct pull_down_menu *pdm, int seconds)
 {
 	pdm->visible_timer = 30 * seconds;
 }
+
+static void pull_down_menu_item_set_enable_state(struct pull_down_menu *pdm, char *column, char *row, int enabled)
+{
+	struct pull_down_menu_item *item;
+
+	pthread_mutex_lock(&pdm->mutex);
+	item = find_menu_item(pdm, column, row);
+	if (item) {
+		item->disabled = enabled;
+		pthread_mutex_unlock(&pdm->mutex);
+		return;
+	}
+	pthread_mutex_unlock(&pdm->mutex);
+	return;
+}
+
+void pull_down_menu_item_enable(struct pull_down_menu *pdm, char *column, char *row)
+{
+	pull_down_menu_item_set_enable_state(pdm, column, row, 0);
+}
+
+void pull_down_menu_item_disable(struct pull_down_menu *pdm, char *column, char *row)
+{
+	pull_down_menu_item_set_enable_state(pdm, column, row, 1);
+}
+
