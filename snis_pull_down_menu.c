@@ -433,7 +433,7 @@ static int pull_down_menu_add_row_internal(struct pull_down_menu *m,
 		r->checkbox_cookie = NULL;
 		r->cookie = cookie;
 		r->tooltip = NULL;
-		r->disabled = 1;
+		r->disabled = 0;
 		c->nrows++;
 		c->width = 0; /* So it will get recalculated */
 		if (lock)
