@@ -637,6 +637,8 @@ int pull_down_menu_add_tooltip(struct pull_down_menu *pdm, char *column, char *r
 	pthread_mutex_lock(&pdm->mutex);
 	item = find_menu_item(pdm, column, row);
 	if (item) {
+		if (item->tooltip)
+			free(item->tooltip);
 		item->tooltip = strdup(tooltip);
 		pthread_mutex_unlock(&pdm->mutex);
 		return 0;
