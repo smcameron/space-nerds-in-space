@@ -25116,18 +25116,26 @@ static void *per_client_write_thread(__attribute__((unused)) void /* struct game
 
 		if (player_error) {
 			pb = packed_buffer_allocate(256);
-			packed_buffer_append(pb, "bb", OPCODE_ADD_PLAYER_ERROR, player_error);
 			if (player_error == ADD_PLAYER_ERROR_WRONG_SOLARSYSTEM) {
+#if 0
+				/* Tell player the right server */
 				packed_buffer_append_u16(pb,
 					(uint16_t) strlen(bridgelist[c->bridge].resident_solarsystem));
 				packed_buffer_append_raw(pb, bridgelist[c->bridge].resident_solarsystem,
 						strlen(bridgelist[c->bridge].resident_solarsystem));
+#else
+				/* Automatically switch the player to the correct server */
+				packed_buffer_append(pb, "bb", OPCODE_SWITCH_SERVER, (uint8_t) 255);
+				uppercase(bridgelist[c->bridge].resident_solarsystem);
+				packed_buffer_append_raw(pb, bridgelist[c->bridge].resident_solarsystem, 20);
+#endif
 			} else {
+				packed_buffer_append(pb, "bb", OPCODE_ADD_PLAYER_ERROR, player_error);
 				packed_buffer_append_u16(pb, (uint16_t) 1);
 				packed_buffer_append_raw(pb, "x", 1);
+				disconnect_timer = 1.0;
 			}
 			pb_queue_to_client(c, pb);
-			disconnect_timer = 1.0;
 		}
 
 		currentTime = time_now_double();

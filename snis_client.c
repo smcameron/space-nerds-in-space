@@ -781,6 +781,7 @@ static void format_date(char *buf, int bufsize, double date)
 static int switched_server = -1;
 static char switch_server_location_string[20] = { 0 };
 static int switch_warp_gate_number = -1;
+static int switch_with_redirection = 0;
 static int switched_server2 = -1;
 static int writer_thread_should_die = 0;
 static int writer_thread_alive = 0;
@@ -7303,7 +7304,12 @@ static int process_switch_server(void)
 	switch_warp_gate_number = packed_buffer_extract_u8(&pb);
 	packed_buffer_extract_raw(&pb, switch_server_location_string, 20);
 	switch_server_location_string[19] = '\0';
-	enforce_solarsystem = 0; /* get past multiverse solarsystem verification for warp gates */
+	if (switch_warp_gate_number != 255) {
+		enforce_solarsystem = 0; /* get past multiverse solarsystem verification for warp gates */
+		switch_with_redirection = 0;
+	} else {
+		switch_with_redirection = 1;
+	}
 	return 0;
 }
 
@@ -22473,9 +22479,13 @@ static int main_da_expose(SDL_Window *window)
 		if (!(o = find_my_ship())) {
 			char msg[100];
 			if (how_long_to_wait == -1)
-				how_long_to_wait = 4 * frame_rate_hz;
+				how_long_to_wait = 2 * frame_rate_hz;
 			if (how_long_to_wait > 0) {
-				snprintf(msg, sizeof(msg) - 1,
+				if (switch_with_redirection)
+					snprintf(msg, sizeof(msg) - 1,
+						"WRONG STAR SYSTEM BUDDY, REDIRECTING . . .");
+				else
+					snprintf(msg, sizeof(msg) - 1,
 						"PREPARE FOR THE JUMP TO LIGHTSPEED, SPACE NERD");
 				how_long_to_wait--;
 			}
