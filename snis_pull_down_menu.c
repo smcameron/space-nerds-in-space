@@ -192,6 +192,9 @@ struct pull_down_menu *create_pull_down_menu(int font, int screen_width)
 	m->gravity = 0;
 	m->tooltip_draw = NULL;
 	m->visible_timer = 1 * 30;
+	m->color = LIMEGREEN;
+	m->highlight_color = GREEN;
+	m->disabled_color = DARKGREEN;
 	return m;
 }
 
