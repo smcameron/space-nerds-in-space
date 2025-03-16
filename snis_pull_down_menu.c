@@ -645,6 +645,8 @@ int pull_down_menu_add_tooltip(struct pull_down_menu *pdm, char *column, char *r
 		item->tooltip = strdup(tooltip);
 		pthread_mutex_unlock(&pdm->mutex);
 		return 0;
+	} else {
+		fprintf(stderr, "Failed to add tooltip '%s' to '%s'/'%s'\n", tooltip, column, row);
 	}
 	pthread_mutex_unlock(&pdm->mutex);
 	return 1;

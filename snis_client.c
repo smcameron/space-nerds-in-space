@@ -21616,18 +21616,18 @@ static void init_launcher_ui(void)
 	pull_down_menu_set_disabled_color(launcher_ui.menu, UI_COLOR(launcher_button_disabled));
 	pull_down_menu_set_tooltip_drawing_function(launcher_ui.menu, draw_tooltip);
 	pull_down_menu_set_gravity(launcher_ui.menu, 0);
-	pull_down_menu_add_column(launcher_ui.menu, "START SNIS PROCESS");
-	pull_down_menu_add_row(launcher_ui.menu, "START SNIS PROCESS",
+	pull_down_menu_add_column(launcher_ui.menu, "SNIS");
+	pull_down_menu_add_row(launcher_ui.menu, "SNIS",
 					"START SNIS LOBBY PROCESS (SSGL_SERVER)",
 					start_ssgl_btn_pressed, NULL);
-	pull_down_menu_add_row(launcher_ui.menu, "START SNIS PROCESS",
+	pull_down_menu_add_row(launcher_ui.menu, "SNIS",
 					"START SNIS MULTIVERSE PROCESS",
 					start_snis_multiverse_btn_pressed, NULL);
-	pull_down_menu_add_row(launcher_ui.menu, "START SNIS PROCESS",
+	pull_down_menu_add_row(launcher_ui.menu, "SNIS",
 					"START SNIS SERVER PROCESS",
 					start_snis_server_btn_pressed, NULL);
 
-	pull_down_menu_add_tooltip(demon_ui.menu, "START SNIS_PROCESS", "START SNIS LOBBY PROCESS (SSGL_SERVER)",
+	pull_down_menu_add_tooltip(launcher_ui.menu, "SNIS", "START SNIS LOBBY PROCESS (SSGL_SERVER)",
 					"START SSGL_SERVER PROCESS\n"
 					"YOU NEED EXACTLY ONE SNIS LOBBY PROCESS RUNNING\n"
 					"ON THE NETWORK.\n\n"
@@ -21635,7 +21635,7 @@ static void init_launcher_ui(void)
 					"IF YOU ARE HOSTING THE SESSION, YOU NEED TO RUN THIS,\n"
 					"OTHERWISE IF YOU ARE CONNECTING TO A REMOTE SESSION,\n"
 					"YOU DO NOT NEED TO RUN THIS.");
-	pull_down_menu_add_tooltip(demon_ui.menu, "START SNIS_PROCESS", "START SNIS MULTIVERSE PROCESS",
+	pull_down_menu_add_tooltip(launcher_ui.menu, "SNIS", "START SNIS MULTIVERSE PROCESS",
 			"YOU NEED EXACTLY ONE SNIS MULTIVERSE PROCESS RUNNING\n"
 			"ON THE NETWORK.\n\n"
 
@@ -21647,7 +21647,7 @@ static void init_launcher_ui(void)
 			"OR RUNNING A SINGLE INSTANCE OF SNIS SERVER THAT\n"
 			"CLIENTS CONNECT DIRECTLY TO WITHOUT USING THE LOBBY,\n"
 			"THEN YOU DO NOT NEED TO RUN THIS.");
-	pull_down_menu_add_tooltip(demon_ui.menu, "START SNIS_PROCESS", "START SNIS SERVER PROCESS",
+	pull_down_menu_add_tooltip(launcher_ui.menu, "SNIS", "START SNIS SERVER PROCESS",
 			"IF YOU ARE NOT HOSTING A SESSION BUT CONNECTING TO A\n"
 			"REMOTE SESSION, YOU DO NOT NEED THIS.\n"
 			"IF SNIS MULTIVERSE HAS ALREADY STARTED SOME SNIS SERVERS\n"
@@ -21936,28 +21936,28 @@ static void show_launcher(void)
 		strcasecmp(child_process_options.lobbyhost, "127.0.0.1") != 0)) {
 		snis_button_disable(launcher_ui.start_servers_btn);
 		pull_down_menu_item_disable(launcher_ui.menu,
-			"START SNIS PROCESS", "START SNIS LOBBY PROCESS (SSGL_SERVER)");
+			"SNIS", "START SNIS LOBBY PROCESS (SSGL_SERVER)");
 		snis_button_set_label(launcher_ui.connect_client_btn, "CONNECT CLIENT TO SNIS SERVER");
 	} else {
 		snis_button_enable(launcher_ui.start_servers_btn);
 		pull_down_menu_item_enable(launcher_ui.menu,
-			"START SNIS PROCESS", "START SNIS LOBBY PROCESS (SSGL_SERVER)");
+			"SNIS", "START SNIS LOBBY PROCESS (SSGL_SERVER)");
 		snis_button_set_label(launcher_ui.connect_client_btn, "CONNECT CLIENT TO LOBBY");
 	}
 
 	if (multiverse_options_are_correct() && !avoid_lobby)
 		pull_down_menu_item_enable(launcher_ui.menu,
-			"START SNIS PROCESS", "START SNIS MULTIVERSE PROCESS");
+			"SNIS", "START SNIS MULTIVERSE PROCESS");
 	else
 		pull_down_menu_item_disable(launcher_ui.menu,
-			"START SNIS PROCESS", "START SNIS MULTIVERSE PROCESS");
+			"SNIS", "START SNIS MULTIVERSE PROCESS");
 
 	if (snis_server_options_are_correct())
 		pull_down_menu_item_enable(launcher_ui.menu,
-			"START SNIS PROCESS", "START SNIS SERVER PROCESS");
+			"SNIS", "START SNIS SERVER PROCESS");
 	else
 		pull_down_menu_item_disable(launcher_ui.menu,
-			"START SNIS PROCESS", "START SNIS SERVER PROCESS");
+			"SNIS", "START SNIS SERVER PROCESS");
 
 	framecounter++;
 	if ((framecounter % 60) == 0) {
