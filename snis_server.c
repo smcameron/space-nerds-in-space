@@ -10854,9 +10854,6 @@ static void gradually_repair_docked_player_ship(struct snis_entity *sb, struct b
 
 	int needs_work = 0;
 
-	/* Set nominal cooling levels in case things are hot, so they cool down */
-	set_nominal_coolant_levels(o);
-
 	/* Maybe load some torpedoes */
 	if ((o->tsd.ship.torpedoes < INITIAL_TORPEDO_COUNT) &&
 		(b->repair_order.options & REPAIR_OPTION_TORPEDOES)) {
