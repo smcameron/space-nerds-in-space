@@ -4,4 +4,6 @@
 
 extern void random_name(struct mtwist_state *mt, char buffer[], int bufsize);
 
+extern void npc_name(struct mtwist_state *mt, char buffer[], int bufsize);
+
 #endif

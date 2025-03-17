@@ -967,13 +967,14 @@ static char *Title[] = {
 	"DR.",
 	"CAPT",
 	"CORPORAL",
+	"AMBASSADOR",
 	"PVT",
 	"GENERAL",
 	"ASTRONOMER",
 	"PRINCE",
 	"PRINCESS",
 	"DUKE",
-	"PRINCIPAL",
+	"PRESIDENT",
 	"PHAROAH",
 	"ADMIRAL",
 	"CHANCELLOR",
@@ -982,7 +983,7 @@ static char *Title[] = {
 	"BARON",
 	"SULTAN",
 	"HIGHMAN",
-	"COMMANDER",
+	"CMDR",
 	"COLONEL",
 	"JAGGER",
 	"MORKMAN",
@@ -991,6 +992,7 @@ static char *Title[] = {
 	"SURVEYOR",
 	"REVEREND",
 	"PRIESTESS",
+	"PRIESTMUNTY",
 	"HOJON",
 	"KUKE",
 	"ARBER",
@@ -1669,7 +1671,7 @@ void character_name(struct mtwist_state *mt, char *buffer,
 	random_name(mt, name[1], sizeof(name[1]));
 	random_name(mt, name[2], sizeof(name[2]));
 
-	switch (mtwist_int(mt, 8)) {
+	switch (mtwist_int(mt, 20)) {
 	case 0:
 		snprintf(buffer, buflen, "%s %s %s %s%s", character_title(mt),
 				name[0], name[1], name[2], post_nominal_letters(mt));
@@ -1699,10 +1701,27 @@ void character_name(struct mtwist_state *mt, char *buffer,
 				post_nominal_letters(mt));
 		break;
 	case 7:
-	default:
+	case 9:
 		snprintf(buffer, buflen, "%s %c. %c. %s%s", character_title(mt),
 				random_initial(mt), random_initial(mt), name[0],
 				post_nominal_letters(mt));
+		break;
+	case 10:
+	case 11:
+	case 12:
+	case 13:
+	case 14:
+	case 15:
+	case 16:
+		snprintf(buffer, buflen, "%s ", character_title(mt));
+		int n = strlen(buffer);
+		int remaining = buflen - n;
+		npc_name(mt, &buffer[n], remaining);
+		uppercase(buffer);
+		break;
+	default:
+		npc_name(mt, buffer, buflen);
+		uppercase(buffer);
 		break;
 	}
 }
