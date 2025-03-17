@@ -93,9 +93,10 @@ struct packed_buffer *build_bridge_update_packet(struct snis_entity *o,
 			o->tsd.ship.alarms_silenced,
 			o->tsd.ship.missile_lock_detected,
 			o->tsd.ship.align_sciball_to_ship);
-	packed_buffer_append(pb, "bbbbbr",
+	packed_buffer_append(pb, "bbbbbbr",
 		o->sdata.shield_strength, o->sdata.shield_wavelength, o->sdata.shield_width, o->sdata.shield_depth,
-		o->sdata.faction, o->sdata.name, (unsigned short) sizeof(o->sdata.name));
+		o->sdata.faction, o->tsd.ship.sci_auto_sweep,
+		o->sdata.name, (unsigned short) sizeof(o->sdata.name));
 	packed_buffer_append(pb, "r", &o->tsd.ship.power_data, (uint16_t) sizeof(o->tsd.ship.power_data));
 	packed_buffer_append(pb, "r", &o->tsd.ship.coolant_data, (uint16_t) sizeof(o->tsd.ship.power_data));
 	packed_buffer_append(pb, "r", bd, (uint16_t) sizeof(*bd));
@@ -113,7 +114,7 @@ void unpack_bridge_update_packet(struct snis_entity *o, struct persistent_bridge
 		mainzoom, warpdrive,
 		missile_count, phaser_charge, phaser_wavelength, shiptype,
 		reverse, trident, in_secure_area, docking_magnets, shield_strength,
-		shield_wavelength, shield_width, shield_depth, faction;
+		shield_wavelength, shield_width, shield_depth, faction, sci_auto_sweep;
 	union quat orientation, sciball_orientation, weap_orientation;
 	union euler ypr;
 	unsigned char name[sizeof(o->sdata.name)];
@@ -141,8 +142,8 @@ void unpack_bridge_update_packet(struct snis_entity *o, struct persistent_bridge
 			&sciball_orientation.vec[0], &weap_orientation.vec[0], &in_secure_area,
 			&docking_magnets, (uint32_t *) &iwallet, &warp_core_status, &exterior_lights,
 			&alarms_silenced, &missile_lock_detected, &align_sciball_to_ship);
-	packed_buffer_extract(pb, "bbbbbr", &shield_strength, &shield_wavelength, &shield_width, &shield_depth,
-			&faction, name, (uint16_t) sizeof(name));
+	packed_buffer_extract(pb, "bbbbbbr", &shield_strength, &shield_wavelength, &shield_width, &shield_depth,
+			&faction, &sci_auto_sweep, name, (uint16_t) sizeof(name));
 	packed_buffer_extract(pb, "r", &power_data, (uint16_t) sizeof(struct power_model_data));
 	packed_buffer_extract(pb, "r", &coolant_data, (int) sizeof(struct power_model_data));
 	packed_buffer_extract(pb, "r", bd, (int) sizeof(*bd));
@@ -203,6 +204,7 @@ void unpack_bridge_update_packet(struct snis_entity *o, struct persistent_bridge
 	o->sdata.shield_width = shield_width;
 	o->sdata.shield_depth = shield_depth;
 	o->sdata.faction = faction;
+	o->tsd.ship.sci_auto_sweep = sci_auto_sweep;
 	memcpy(o->sdata.name, name, sizeof(o->sdata.name));
 	o->tsd.ship.power_data = power_data;
 	o->tsd.ship.coolant_data = coolant_data;

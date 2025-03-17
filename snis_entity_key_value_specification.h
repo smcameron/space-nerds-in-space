@@ -298,6 +298,7 @@ struct key_value_specification snis_entity_kvs[] = {
 	FLOAT_FIELD(orientation.vec[3]),
 	UINT8_TSDFIELD(exterior_lights),
 	UINT8_TSDFIELD(align_sciball_to_ship),
+	UINT8_TSDFIELD(sci_auto_sweep),
 #ifdef INCLUDE_BRIDGE_INFO_FIELDS
 	INT32_BRIDGE_FIELD(initialized),
 	UINT8_BRIDGE_FIELD(persistent_bridge_data.engineering_preset[0][0]),

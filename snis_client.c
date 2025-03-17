@@ -5336,7 +5336,7 @@ static int process_update_ship_packet(uint8_t opcode)
 		reverse, trident, in_secure_area, docking_magnets, emf_detector,
 		nav_mode, warp_core_status, rts_mode, exterior_lights, alarms_silenced,
 		missile_lock_detected, rts_active_button, comms_crypto_mode,
-		align_sciball_to_ship;
+		align_sciball_to_ship, sci_auto_sweep;
 	union quat orientation, sciball_orientation, weap_orientation, hg_ant_orientation;
 	union euler ypr;
 	struct entity *e;
@@ -5358,7 +5358,7 @@ static int process_update_ship_packet(uint8_t opcode)
 				&torpedoes,
 				&dsheading,
 				&dbeamwidth);
-	packed_buffer_extract(&pb, "bbbwwbbbbbbbbbbbbwQQQQSSSbB8bbbww",
+	packed_buffer_extract(&pb, "bbbwwbbbbbbbbbbbbwQQQQSSSbB8bbbwwb",
 			&tloading, &throttle, &rpm, &fuel, &oxygen, &temp,
 			&scizoom, &weapzoom, &navzoom, &mainzoom,
 			&warpdrive,
@@ -5374,7 +5374,7 @@ static int process_update_ship_packet(uint8_t opcode)
 			&exterior_lights, &alarms_silenced, &missile_lock_detected,
 			&align_sciball_to_ship,
 			&comms_crypto_mode, &rts_active_button, &wallet,
-			&viewpoint_object);
+			&viewpoint_object, &sci_auto_sweep);
 	tloaded = (tloading >> 4) & 0x0f;
 	tloading = tloading & 0x0f;
 	quat_to_euler(&ypr, &orientation);	
@@ -5424,6 +5424,8 @@ static int process_update_ship_packet(uint8_t opcode)
 	o->tsd.ship.missile_count = missile_count;
 	/* mirrored by sci_ui.align_sciball_to_ship in show_3d_science() */
 	o->tsd.ship.align_sciball_to_ship = align_sciball_to_ship;
+	/* mirrored by sci_ui.sci_auto_sweep in draw_sciplane_display() */
+	o->tsd.ship.sci_auto_sweep = sci_auto_sweep;
 	o->tsd.ship.phaser_charge = phaser_charge;
 	o->tsd.ship.phaser_wavelength = phaser_wavelength;
 	o->tsd.ship.damcon = NULL;
@@ -6378,7 +6380,7 @@ static void science_activate_waypoints_widgets(void)
 	ui_unhide_widget(sci_ui.add_waypoint_button);
 	ui_unhide_widget(sci_ui.add_current_pos_button);
 	ui_hide_widget(sci_ui.align_to_ship_button);
-	ui_hide_widget(sci_ui.align_to_ship_button);
+	ui_hide_widget(sci_ui.sci_auto_sweep_button);
 
 	for (i = 0; i < 3; i++)
 		ui_unhide_widget(sci_ui.waypoint_input[i]);
@@ -6405,7 +6407,7 @@ static void science_deactivate_waypoints_widgets(void)
 	ui_unhide_widget(sci_ui.sciplane_button);
 	ui_unhide_widget(sci_ui.waypoints_button);
 	ui_unhide_widget(sci_ui.align_to_ship_button);
-	ui_unhide_widget(sci_ui.align_to_ship_button);
+	ui_unhide_widget(sci_ui.sci_auto_sweep_button);
 
 	ui_hide_widget(sci_ui.add_waypoint_button);
 	ui_hide_widget(sci_ui.add_current_pos_button);
@@ -6433,22 +6435,27 @@ static int process_sci_details(void)
 	case SCI_DETAILS_MODE_THREED:
 		science_deactivate_waypoints_widgets();
 		ui_unhide_widget(sci_ui.align_to_ship_button);
+		ui_hide_widget(sci_ui.sci_auto_sweep_button);
 		break;
 	case SCI_DETAILS_MODE_DETAILS:
 		science_deactivate_waypoints_widgets();
 		ui_hide_widget(sci_ui.align_to_ship_button);
+		ui_hide_widget(sci_ui.sci_auto_sweep_button);
 		break;
 	case SCI_DETAILS_MODE_SCIPLANE:
 		science_deactivate_waypoints_widgets();
 		ui_hide_widget(sci_ui.align_to_ship_button);
+		ui_unhide_widget(sci_ui.sci_auto_sweep_button);
 		break;
 	case SCI_DETAILS_MODE_WAYPOINTS:
 		science_activate_waypoints_widgets();
 		ui_hide_widget(sci_ui.align_to_ship_button);
+		ui_hide_widget(sci_ui.sci_auto_sweep_button);
 		break;
 	default:
 		science_deactivate_waypoints_widgets();
 		ui_hide_widget(sci_ui.align_to_ship_button);
+		ui_unhide_widget(sci_ui.sci_auto_sweep_button);
 		break;
 	}
 
@@ -10827,6 +10834,11 @@ static void draw_sciplane_display(struct snis_entity *o, double range)
 {
 	static struct mesh *ring_mesh = 0;
 	static struct mesh *heading_ind_line_mesh = 0;
+
+	/* mirror o->tsd.ship.sci_auto_sweep to sci_ui */
+	pthread_mutex_lock(&universe_mutex);
+	sci_ui.sci_auto_sweep = o->tsd.ship.sci_auto_sweep;
+	pthread_mutex_unlock(&universe_mutex);
 
 	if (!ring_mesh) {
 		ring_mesh = init_circle_mesh(0, 0, 1, 90, 2.0f * M_PI);
@@ -15317,6 +15329,19 @@ static void sci_align_to_ship_pressed(__attribute__((unused)) void *x)
 		transmit_adjust_control_input((uint8_t) 0, OPCODE_ADJUST_CONTROL_ALIGN_SCIBALL_TO_SHIP);
 }
 
+static void sci_auto_sweep_button_pressed(__attribute__((unused)) void *x)
+{
+	struct snis_entity *o;
+
+	o = find_my_ship();
+	if (!o)
+		return;
+	if (o->tsd.ship.sci_auto_sweep == 0)
+		transmit_adjust_control_input((uint8_t) 1, OPCODE_ADJUST_CONTROL_SCI_AUTO_SWEEP);
+	else
+		transmit_adjust_control_input((uint8_t) 0, OPCODE_ADJUST_CONTROL_SCI_AUTO_SWEEP);
+}
+
 static void sci_threed_pressed(__attribute__((unused)) void *x)
 {
 	queue_to_server(snis_opcode_pkt("bb", OPCODE_SCI_DETAILS,
@@ -15500,6 +15525,7 @@ static void init_science_ui(void)
 			UI_COLOR(sci_button), NANO_FONT, sci_details_pressed, (void *) 0);
 	snis_button_set_hover_color(sci_ui.details_button, hover_color);
 	snis_button_set_sound(sci_ui.details_button, UISND18);
+
 	sci_ui.align_to_ship_button = snis_button_init(atsx, atsy, atsw, atsh, "ALIGN TO SHIP",
 			UI_COLOR(sci_button), NANO_FONT, sci_align_to_ship_pressed, (void *) 0);
 	snis_button_set_hover_color(sci_ui.align_to_ship_button, hover_color);
@@ -15507,6 +15533,15 @@ static void init_science_ui(void)
 					snis_button_generic_checkbox_function,
 					&sci_ui.align_sciball_to_ship);
 	snis_button_set_sound(sci_ui.align_to_ship_button, UISND19);
+
+	/* Occupies same screen sapce as ALIGN TO SHIP, but only one shows at a time */
+	sci_ui.sci_auto_sweep_button = snis_button_init(atsx, atsy, atsw, atsh, "AUTO SWEEP",
+			UI_COLOR(sci_button), NANO_FONT, sci_auto_sweep_button_pressed, (void *) 0);
+	snis_button_set_hover_color(sci_ui.sci_auto_sweep_button, hover_color);
+	snis_button_set_checkbox_function(sci_ui.sci_auto_sweep_button,
+					snis_button_generic_checkbox_function,
+					&sci_ui.sci_auto_sweep);
+	snis_button_set_sound(sci_ui.sci_auto_sweep_button, UISND19);
 
 	sci_ui.menu = create_pull_down_menu(NANO_FONT, SCREEN_WIDTH);
 	pull_down_menu_set_color(sci_ui.menu, UI_COLOR(sci_pull_down_menu));
@@ -15527,6 +15562,8 @@ static void init_science_ui(void)
 	ui_add_button(sci_ui.align_to_ship_button, DISPLAYMODE_SCIENCE,
 				"ALIGN LONG RANGE SCANNERS TO SHIP'S ORIENTATION");
 	ui_hide_widget(sci_ui.align_to_ship_button);
+	ui_add_button(sci_ui.sci_auto_sweep_button, DISPLAYMODE_SCIENCE,
+				"AUTOMATICALLY SWEEP THE SCIENCE BEAM");
 	sciecx = entity_context_new(50, 50);
 	sciballecx = entity_context_new(5000, 1000);
 	sciplane_tween = tween_init(500);
@@ -17356,7 +17393,7 @@ static void show_3d_science(struct snis_entity *o, int current_zoom)
 	int cx, cy, r;
 	double zoom;
 
-	/* mirror align_sciball_to_ship to sci_ui */
+	/* mirror align_sciball_to_ship and sci_auto_sweep to sci_ui */
 	pthread_mutex_lock(&universe_mutex);
 	sci_ui.align_sciball_to_ship = o->tsd.ship.align_sciball_to_ship;
 	pthread_mutex_unlock(&universe_mutex);

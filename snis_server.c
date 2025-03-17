@@ -10262,6 +10262,8 @@ static void player_move(struct snis_entity *o)
 	aim_high_gain_antenna(o);			/* try to aim antenna at desired comms target */
 	update_player_position_and_velocity(o);
 	
+	if (o->tsd.ship.sci_auto_sweep)
+		o->tsd.ship.sci_yaw_velocity = SCI_AUTO_SWEEP_YAW_VELOCITY;
 	o->tsd.ship.sci_heading += o->tsd.ship.sci_yaw_velocity;
 
 	normalize_angle(&o->tsd.ship.sci_heading);
@@ -11632,6 +11634,7 @@ static void init_player(struct snis_entity *o)
 	o->tsd.ship.desired_hg_ant_aim.v.x = 1.0;
 	o->tsd.ship.desired_hg_ant_aim.v.y = 0.0;
 	o->tsd.ship.desired_hg_ant_aim.v.z = 0.0;
+	o->tsd.ship.sci_auto_sweep = 0;
 	/* Fill in .tsd.ship.in_secure_area with correct value. */
 	space_partition_process(space_partition, o, o->x, o->z, o, player_collision_detection);
 }
@@ -23207,6 +23210,9 @@ static int process_adjust_control_input(struct game_client *c)
 	case OPCODE_ADJUST_CONTROL_ALIGN_SCIBALL_TO_SHIP:
 		return process_adjust_control_bytevalue(c, id,
 			offsetof(struct snis_entity, tsd.ship.align_sciball_to_ship), v, no_limit);
+	case OPCODE_ADJUST_CONTROL_SCI_AUTO_SWEEP:
+		return process_adjust_control_bytevalue(c, id,
+			offsetof(struct snis_entity, tsd.ship.sci_auto_sweep), v, no_limit);
 	default:
 		return -1;
 	}
@@ -25585,7 +25591,7 @@ static void send_update_ship_packet(struct game_client *c,
 	packed_buffer_append(pb, "bwwhSSS", opcode, o->id, o->timestamp, o->alive,
 			o->x, (int32_t) UNIVERSE_DIM, o->y, (int32_t) UNIVERSE_DIM,
 			o->z, (int32_t) UNIVERSE_DIM);
-	packed_buffer_append(pb, "RRRwRRbbbwwbbbbbbbbbbbbwQQQQSSSbB8bbbww",
+	packed_buffer_append(pb, "RRRwRRbbbwwbbbbbbbbbbbbwQQQQSSSbB8bbbwwb",
 			o->tsd.ship.yaw_velocity,
 			o->tsd.ship.pitch_velocity,
 			o->tsd.ship.roll_velocity,
@@ -25620,7 +25626,8 @@ static void send_update_ship_packet(struct game_client *c,
 			o->tsd.ship.align_sciball_to_ship,
 			o->tsd.ship.comms_crypto_mode,
 			o->tsd.ship.rts_active_button,
-			wallet, o->tsd.ship.viewpoint_object);
+			wallet, o->tsd.ship.viewpoint_object,
+			o->tsd.ship.sci_auto_sweep);
 	pb_queue_to_client(c, pb);
 
 	/* now that we've sent the accumulated value, clear the emf_detector to the noise floor */

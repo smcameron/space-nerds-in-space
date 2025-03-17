@@ -36,7 +36,7 @@
 #include "arraysize.h"
 #include "string-utils.h"
 
-#define NSUBCODES 30
+#define NSUBCODES 31
 #define NOPCODES (256 * NSUBCODES)
 
 static struct opcode_format_descriptor opcode_def[NOPCODES] = { { 0 } };
@@ -177,6 +177,8 @@ int snis_opcode_def_init(void)
 			OPCODE_ADJUST_CONTROL_DEPLOY_FLARE, "bbwb");
 	rc |= init_opcode_subcode_def(OPCODE_ADJUST_CONTROL_INPUT,
 			OPCODE_ADJUST_CONTROL_ALIGN_SCIBALL_TO_SHIP, "bbwb");
+	rc |= init_opcode_subcode_def(OPCODE_ADJUST_CONTROL_INPUT,
+			OPCODE_ADJUST_CONTROL_SCI_AUTO_SWEEP, "bbwb");
 	/* rc |= init_opcode_def(OPCODE_UPDATE_PLANET_DESCRIPTION, "bwhr"); */
 	rc |= init_opcode_def(OPCODE_UPDATE_RESPAWN_TIME, "bb");
 	rc |= init_opcode_def(OPCODE_UPDATE_NETSTATS, "bqqwwwwwwwwwww");

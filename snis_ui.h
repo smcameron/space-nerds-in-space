@@ -217,6 +217,7 @@ struct science_ui {
 	struct button *sciplane_button;
 	struct button *tractor_button;
 	struct button *align_to_ship_button;
+	struct button *sci_auto_sweep_button;
 	struct button *launch_mining_bot_button;
 	struct button *waypoints_button;
 	struct button *add_waypoint_button;
@@ -231,6 +232,7 @@ struct science_ui {
 	struct pull_down_menu *menu;
 	int low_tractor_power_timer;
 	int align_sciball_to_ship; /* mirrors player's o->tsd.ship.align_sciball_to_ship */
+	int sci_auto_sweep; /* mirrors player's o->tsd.ship.sci_auto_sweep */
 };
 
 struct lobby_ui {

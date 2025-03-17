@@ -41,7 +41,7 @@
 #include "shape_collision.h"
 
 #define DEFAULT_SOLAR_SYSTEM "default"
-#define SNIS_PROTOCOL_VERSION "SNIS064"
+#define SNIS_PROTOCOL_VERSION "SNIS065"
 #define COMMON_MTWIST_SEED 97872
 /* dimensions of the "known" universe */
 #define XKNOWN_DIM 600000.0
@@ -496,6 +496,7 @@ struct ship_data {
 #define GUN_YAW_INCREMENT_FINE (0.5 * PI / 180.0)
 #define GUN_YAW_DAMPING 0.1
 #define MAX_SCI_YAW_VELOCITY (15 * PI / 180.0)
+#define SCI_AUTO_SWEEP_YAW_VELOCITY (-10.0 * PI / 180.0)
 #define SCI_YAW_INCREMENT (3.5 * PI / 180.0)
 #define SCI_YAW_INCREMENT_FINE (0.5 * PI / 180.0)
 #define SCI_YAW_DAMPING 0.45
@@ -637,6 +638,7 @@ struct ship_data {
 #define COMMS_TRANSMISSION_STRENGTH_THRESHOLD (0.3)
 /* For distances longer than COMMS_LONG_DISTANCE_THRESHOLD comms may not work perfectly. */
 #define COMMS_LONG_DISTANCE_THRESHOLD (XKNOWN_DIM / 2.0)
+	uint8_t sci_auto_sweep;
 #ifdef SNIS_SERVER_DATA
 	/* Which system (weapons, shields, warp drive, etc.) of player ships to target damage on */
 	uint8_t targeted_system;

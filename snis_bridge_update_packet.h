@@ -31,7 +31,7 @@
 #include "snis_multiverse.h"
 #include "commodities.h"
 
-#define UPDATE_BRIDGE_PACKET_SIZE 415
+#define UPDATE_BRIDGE_PACKET_SIZE 416
 
 /* struct persistent_bridge_data contains per bridge data that snis_multiverse needs to
  * save/restore but which is not present in struct snis_entity.
