@@ -90,9 +90,11 @@ enum keyaction {
 		key_weap_wavelen_7 = 83,
 		key_weap_wavelen_8 = 84,
 		key_weap_wavelen_9 = 85,
-		key_weap_wavelen_nudge_up,
-		key_weap_wavelen_nudge_down,
-#define NKEYSTATES 88
+		key_weap_wavelen_nudge_up = 86,
+		key_weap_wavelen_nudge_down = 87,
+		key_sci_next_target = 88,
+		key_sci_prev_target = 89,
+#define NKEYSTATES 90
 };
 
 struct keyboard_state {

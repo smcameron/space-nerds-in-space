@@ -4423,6 +4423,107 @@ static void do_joystick_science_down_arrow(EMPTYVOID x) { science_dirkey(0, 1); 
 
 #undef EMPTYVOID
 
+static struct sci_candidate {
+	struct snis_entity *c;
+	float bearing;
+} sci_candidate[MAXGAMEOBJS];
+
+int sci_candidate_compare(const void *a, const void *b, __attribute__((unused)) void *cookie)
+{
+	const struct sci_candidate *c1 = a;
+	const struct sci_candidate *c2 = b;
+
+	if (c1->bearing < c2->bearing)
+		return -1;
+	if (c1->bearing > c2->bearing)
+		return 1;
+	return 0;
+}
+
+static void sci_next_prev_target_pressed(int direction)
+{
+	pthread_mutex_lock(&universe_mutex);
+
+	struct snis_entity *our_ship = find_my_ship();
+	if (!our_ship)
+		return;
+
+	double range = (MAX_SCIENCE_SCREEN_RADIUS - MIN_SCIENCE_SCREEN_RADIUS) *
+			(our_ship->tsd.ship.scizoom / 255.0) + MIN_SCIENCE_SCREEN_RADIUS;
+
+	/* Find all the known science targets, compute their bearing */
+	int ncandidates = 0;
+	for (int i = 0; i <= snis_object_pool_highest_object(pool); i++) {
+		struct snis_entity *o = &go[i];
+		if (!o->sdata.science_data_known)
+			continue;
+
+		union vec3 our_pos, target_pos, to_target;
+		target_pos.v.x = o->x;
+		target_pos.v.y = o->y;
+		target_pos.v.z = o->z;
+		our_pos.v.x = our_ship->x;
+		our_pos.v.y = our_ship->y;
+		our_pos.v.z = our_ship->z;
+		vec3_sub(&to_target, &target_pos, &our_pos);
+
+		double dist, bearing, mark;
+		vec3_to_heading_mark(&to_target, &dist, &bearing, &mark);
+
+		if (dist > range) /* out of range? */
+			continue;
+
+		sci_candidate[ncandidates].c = o;
+		sci_candidate[ncandidates].bearing = bearing;
+		ncandidates++;
+	}
+
+	if (ncandidates == 0)
+		return;
+
+	/* Sort all the candidate science targets by bearing */
+#if defined(__APPLE__)  || defined(__FreeBSD__)
+	qsort_r(sci_candidate, ncandidates, sizeof(sci_candidate[0]), sci_candidate_compare);
+#else
+	qsort_r(sci_candidate, ncandidates, sizeof(sci_candidate[0]), sci_candidate_compare, 0);
+#endif
+
+	/* Find the currently selected science candidate */
+	int guy = -1;
+	for (int i = 0; i < ncandidates; i++) {
+		if (sci_candidate[i].c == curr_science_guy) {
+			guy = i;
+			break;
+		}
+	}
+
+	/* If no currently selected candidate, then the first guy is our guy */
+	if (guy < 0) {
+		guy = 0;
+	} else { /* Otherwise advance to the next candidate ordered by bearing */
+		guy = guy + direction;
+		if (guy < 0)
+			guy = ncandidates - 1;
+		if (guy >= ncandidates)
+			guy = 0;
+	}
+	uint32_t guy_id = sci_candidate[guy].c->id;
+	pthread_mutex_unlock(&universe_mutex);
+
+	/* Request selection of our next guy */
+	request_sci_select_target(OPCODE_SCI_SELECT_TARGET_TYPE_OBJECT, guy_id);
+}
+
+static void sci_next_target_pressed(__attribute__((unused)) void *x)
+{
+	sci_next_prev_target_pressed(1);
+}
+
+static void sci_prev_target_pressed(__attribute__((unused)) void *x)
+{
+	sci_next_prev_target_pressed(-1);
+}
+
 static void deal_with_keyboard(void)
 {
 	int h, v, z, r, t;
@@ -4502,6 +4603,10 @@ static void deal_with_keyboard(void)
 			sci_waypoints_pressed(NULL);
 		if (kbstate.pressed[key_sci_details])
 			sci_details_pressed(NULL);
+		if (kbstate.pressed[key_sci_next_target])
+			sci_next_target_pressed(NULL);
+		if (kbstate.pressed[key_sci_prev_target])
+			sci_prev_target_pressed(NULL);
 	}
 
 	if (sbh || sbv || sbr)

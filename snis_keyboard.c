@@ -199,6 +199,8 @@ char *keyactionstring[] = {
 	"key_weap_wavelen_9",
 	"key_weap_wavlen_nudge_up",
 	"key_weap_wavlen_nudge_down",
+	"key_sci_next_target",
+	"key_sci_prev_target",
 };
 
 #ifdef DEBUG_KEYMAP
@@ -365,6 +367,8 @@ void init_keymap(void)
 	mapkey(sci, SDLK_s, key_sci_srs);
 	mapkey(sci, SDLK_w, key_sci_waypoints);
 	mapkey(sci, SDLK_d, key_sci_details);
+	mapkey(sci, SDLK_n, key_sci_next_target);
+	mapkey(sci, SDLK_p, key_sci_prev_target);
 
 	ffmapkey(nav | mainscreen | sci, SDLK_PLUS, keyzoom);
 	ffmapkey(nav | mainscreen | sci, SDLK_MINUS, keyunzoom);
