@@ -24528,6 +24528,8 @@ static void setup_joysticks(void)
 	set_joystick_button_fn(joystick_cfg, "sci-down-arrow", do_joystick_science_down_arrow);
 	set_joystick_button_fn(joystick_cfg, "cycle-station-forward", cycle_displaymode_forward);
 	set_joystick_button_fn(joystick_cfg, "cycle-station-backward", cycle_displaymode_backward);
+	set_joystick_button_fn(joystick_cfg, "sci-next-target", sci_next_target_pressed);
+	set_joystick_button_fn(joystick_cfg, "sci-prev-target", sci_prev_target_pressed);
 	snprintf(joystick_config_file, sizeof(joystick_config_file), "%s/joystick_config.txt", asset_dir);
 	read_joystick_config(joystick_cfg, joystick_config_file, joystick_name, njoysticks);
 

@@ -56,7 +56,7 @@
 # eng-preset-3, eng-preset-4, eng-preset-5, eng-preset-6, eng-preset-7, eng-preset-8,
 # eng-preset-9, eng-shield-toggle, left-arrow, right-arrow, up-arrow, down-arrow,
 # eng-deploy-flare, sci-left-arrow, sci-right-arrow, sci-up-arrow, sci-down-arrow,
-# cycle-station-forward, cycle-station-backward
+# cycle-station-forward, cycle-station-backward, sci-next-target, sci-prev-target
 #
 # Here are examples of mapping a mode + button or mode + axis to a function:
 #
