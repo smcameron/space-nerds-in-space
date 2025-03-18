@@ -141,7 +141,7 @@ struct transport_contract *duplicate_transport_contract(struct transport_contrac
 #include <stdio.h>
 #include "names.h"
 
-char *planet_name[MAX_SHIPPING_LOCATIONS];
+char planet_name[MAX_SHIPPING_LOCATIONS][20];
 struct commodity *commodity;
 
 static void print_transport_contract(struct transport_contract *tc)
@@ -172,7 +172,7 @@ int main(int argc, char *argv[])
 	}
 
 	for (i = 0; i < MAX_SHIPPING_LOCATIONS; i++) {
-		planet_name[i] = random_name(mt);
+		random_name(mt, planet_name[i], sizeof(planet_name[i]));
 		add_transport_contract_shipping_location((uint32_t) i);
 	}
 

@@ -1204,7 +1204,8 @@ $(OD)/transport_contract.o:	transport_contract.c transport_contract.h Makefile $
 bin/test_transport_contract:	transport_contract.c transport_contract.h ${OD}/commodities.o \
 				${OD}/names.o ${OD}/mtwist.o ${OD}/string-utils.o ${OD}/infinite-taunt.o \
 				${ODT} ${BIN}
-	$(CC) -g -DTEST_TRANSPORT_CONTRACT=1 -o bin/test_transport_contract transport_contract.c \
+	$(CC) -g ${ASANFLAG} ${UBFLAG} -fsanitize=bounds -DTEST_TRANSPORT_CONTRACT=1 \
+			-o bin/test_transport_contract transport_contract.c \
 			${OD}/commodities.o ${OD}/names.o ${OD}/mtwist.o ${OD}/string-utils.o ${OD}/infinite-taunt.o
 
 $(OD)/fleet.o:	fleet.c Makefile ${ODT}

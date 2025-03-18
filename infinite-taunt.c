@@ -1663,42 +1663,45 @@ int random_initial(struct mtwist_state *mt)
 void character_name(struct mtwist_state *mt, char *buffer,
 			int buflen)
 {
+	char name[3][100];
+
+	random_name(mt, name[0], sizeof(name[0]));
+	random_name(mt, name[1], sizeof(name[1]));
+	random_name(mt, name[2], sizeof(name[2]));
+
 	switch (mtwist_int(mt, 8)) {
 	case 0:
 		snprintf(buffer, buflen, "%s %s %s %s%s", character_title(mt),
-				random_name(mt), random_name(mt), random_name(mt),
-				post_nominal_letters(mt));
+				name[0], name[1], name[2], post_nominal_letters(mt));
 		break;
 	case 1:
 		snprintf(buffer, buflen, "%s %c. %c. %s%s", character_title(mt),
-				random_initial(mt), random_initial(mt), random_name(mt),
+				random_initial(mt), random_initial(mt), name[0],
 				post_nominal_letters(mt));
 		break;
 	case 2:
 	case 3:
 		snprintf(buffer, buflen, "%s %c. %s %s%s", character_title(mt),
-				random_initial(mt), random_name(mt), random_name(mt),
+				random_initial(mt), name[0], name[1],
 				post_nominal_letters(mt));
 		break;
 	case 4:
 		snprintf(buffer, buflen, "%s %c. %s%s", character_title(mt),
-				random_initial(mt), random_name(mt),
-				post_nominal_letters(mt));
+				random_initial(mt), name[0], post_nominal_letters(mt));
 		break;
 	case 5:
 		snprintf(buffer, buflen, "%s %s%s", character_title(mt),
-				random_name(mt),
-				post_nominal_letters(mt));
+				name[0], post_nominal_letters(mt));
 		break;
 	case 6:
 		snprintf(buffer, buflen, "%s %s %s%s", character_title(mt),
-				random_name(mt), random_name(mt),
+				name[0], name[1],
 				post_nominal_letters(mt));
 		break;
 	case 7:
 	default:
 		snprintf(buffer, buflen, "%s %c. %c. %s%s", character_title(mt),
-				random_initial(mt), random_initial(mt), random_name(mt),
+				random_initial(mt), random_initial(mt), name[0],
 				post_nominal_letters(mt));
 		break;
 	}
@@ -1706,6 +1709,9 @@ void character_name(struct mtwist_state *mt, char *buffer,
 
 void ship_name(struct mtwist_state *mt, char *buffer, int buflen)
 {
+	char name[100];
+
+	random_name(mt, name, sizeof(name));
 	switch (mtwist_int(mt, 6)) {
 	case 0:
 		snprintf(buffer, buflen, "%s %s",
@@ -1724,13 +1730,11 @@ void ship_name(struct mtwist_state *mt, char *buffer, int buflen)
 		break;
 	case 3:
 		snprintf(buffer, buflen, "%s %s",
-			random_name(mt),
-			random_word(mt, SpaceWorthy, ARRAYSIZE(SpaceWorthy)));
+			name, random_word(mt, SpaceWorthy, ARRAYSIZE(SpaceWorthy)));
 		break;
 	case 4:
 		snprintf(buffer, buflen, "%s %s",
-			random_word(mt, SpaceWorthy, ARRAYSIZE(SpaceWorthy)),
-			random_name(mt));
+			random_word(mt, SpaceWorthy, ARRAYSIZE(SpaceWorthy)), name);
 		break;
 	default:
 		snprintf(buffer, buflen, "%s %s",
@@ -1844,7 +1848,7 @@ static void usage(char *program)
 	fprintf(stderr, "%s [ options ]\n", program);
 	fprintf(stderr, "Options are:\n");
 
-	for (i = 0; i < ARRAYSIZE(long_options); i++)
+	for (i = 0; i < (int) ARRAYSIZE(long_options); i++)
 		fprintf(stderr, "  --%s\n", long_options[i].name);
 	exit(1);
 }

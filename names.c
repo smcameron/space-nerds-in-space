@@ -54,36 +54,40 @@ static char *pattern[] = {
 	"cvvccvcd",
 };
 
-static void append_stuff(struct mtwist_state *mt, char *s, char *a[], int asize)
+static void append_stuff(struct mtwist_state *mt, char buffer[], int bufsize, char *a[], int asize)
 {
 	int e;
 
 	e = mtwist_next(mt) % asize;
-	strcat(s, a[e]);
+	int len = strlen(buffer) + strlen(a[e]);
+	int remaining_chars = bufsize - strlen(buffer) - 1;
+	if (remaining_chars > 1)
+		strncat(buffer, a[e], remaining_chars);
+	if (len < bufsize - 1)
+		buffer[len] = '\0';
+	else
+		buffer[bufsize - 1] = '\0';
 }
 
-char *random_name(struct mtwist_state *mt)
+void random_name(struct mtwist_state *mt, char buffer[], int bufsize)
 {
 	char *i;
 	int  p;
-	char *result;
 
-	result = malloc(100);
+	buffer[0] = '\0';
 	p = mtwist_next(mt) % ARRAYSIZE(pattern);
-	memset(result, 0, 100);
 
 	for (i = pattern[p]; *i; i++) {
 		if (*i == 'v')
-			append_stuff(mt, result, vowel, ARRAYSIZE(vowel));
+			append_stuff(mt, buffer, bufsize, vowel, ARRAYSIZE(vowel));
 		else if (*i == 'c')
-			append_stuff(mt, result, consonant, ARRAYSIZE(consonant));
+			append_stuff(mt, buffer, bufsize, consonant, ARRAYSIZE(consonant));
 		else
-			append_stuff(mt, result, ending, ARRAYSIZE(ending));
-		/* printf("zzz result = %s, pattern = %s, *i = %c\n", result, pattern[p], *i); */
+			append_stuff(mt, buffer, bufsize, ending, ARRAYSIZE(ending));
+		/* printf("zzz buffer = %s, pattern = %s, *i = %c\n", buffer, pattern[p], *i); */
 	}
-	for (i = result; *i; i++)
+	for (i = buffer; *i; i++)
 		*i = toupper(*i);
-	return result;
 }
 
 #ifdef TEST_NAMES 
@@ -91,7 +95,7 @@ char *random_name(struct mtwist_state *mt)
 int main(int argc, char *argv[])
 {
 	int i, seed;
-	char *n;
+	char buffer[100];
 	struct mtwist_state *mt;
 
 	if (argc > 1) {
@@ -102,9 +106,8 @@ int main(int argc, char *argv[])
 	}
 
 	for (i = 0; i < 1000; i++) {
-		n = random_name(mt);
-		printf("%s\n", n);
-		free(n);
+		random_name(mt, buffer, sizeof(buffer));
+		printf("%s\n", buffer);
 	}
 	return 0;
 }

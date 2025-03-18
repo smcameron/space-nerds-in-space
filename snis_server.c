@@ -11159,7 +11159,6 @@ static int add_generic_object(double x, double y, double z,
 				double vx, double vy, double vz, double heading, int type)
 {
 	int i, j;
-	char *n;
 	union vec3 v;
 	static struct mtwist_state *mt = NULL;
 
@@ -11195,9 +11194,7 @@ static int add_generic_object(double x, double y, double z,
 	case OBJTYPE_DERELICT:
 	case OBJTYPE_PLANET:
 	case OBJTYPE_BLACK_HOLE:
-		n = random_name(mt);
-		strlcpy(go[i].sdata.name, n, sizeof(go[i].sdata.name));
-		free(n);
+		random_name(mt, go[i].sdata.name, sizeof(go[i].sdata.name));
 		break;
 	default:
 		memset(go[i].sdata.name, 0, sizeof(go[i].sdata.name));
@@ -22430,16 +22427,15 @@ static int l_generate_character_name(lua_State *l)
 
 static int l_generate_name(lua_State *l)
 {
-	char *name;
+	char name[100];
 	static struct mtwist_state *mt = NULL;
 
 	if (!mt)
 		mt = mtwist_init(mtwist_seed);
 
-	name = random_name(mt);
+	random_name(mt, name, sizeof(name));
 	uppercase(name);
 	lua_pushfstring(l, "%s", name);
-	free(name);
 	return 1;
 }
 
@@ -22727,7 +22723,7 @@ static int process_create_item(struct game_client *c)
 {
 	unsigned char buffer[16];
 	unsigned char item_type, data1, data2;
-	char *n;
+	char name[sizeof(((struct snis_entity *) 0)->sdata.name)];
 	double x, y, z, r;
 	int rc, i = -1;
 	static struct mtwist_state *mt = NULL;
@@ -22749,11 +22745,10 @@ static int process_create_item(struct game_client *c)
 	case OBJTYPE_NPCSHIP:
 		if (data1 >= nshiptypes)
 			data1 = snis_randn(nshiptypes);
-		n = random_name(mt);
+		random_name(mt, name, sizeof(name));
 		if (data2 >= nfactions())
 			data2 = snis_randn(nfactions());
-		i = add_specific_ship(n, x, y, z, data1, data2, 1);
-		free(n);
+		i = add_specific_ship(name, x, y, z, data1, data2, 1);
 		break;
 	case OBJTYPE_STARBASE:
 		i = add_starbase(x, y, z, 0, 0, 0, snis_randn(100), -1);
