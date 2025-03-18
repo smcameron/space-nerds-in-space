@@ -1,0 +1,12 @@
+#!/bin/sh
+
+TEMPLATE="$1"
+
+VERSION=$(awk '/define SNIS_VERSION/ { print $3 }' < snis_version.h)
+TODAYS_DATE=$(date '+%F') || exit 1
+
+sed -e 's/SNIS_VERSION/'"$VERSION"'/' < "$TEMPLATE" |\
+	sed -e 's/TODAYS_DATE/'\""$TODAYS_DATE"\"'/' || exit 1
+
+exit 0
+

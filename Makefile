@@ -449,7 +449,8 @@ MAN1DIR=${DESTDIR}${PREFIX}/share/man/man1
 
 METAINFOSRCDIR=./share/metainfo
 METAINFODIR=${DESTDIR}${PREFIX}/share/metainfo
-METAINFOFILES=${METAINFOSRCDIR}/io.github.smcameron.space-nerds-in-space.metainfo.xml
+METAINFOFILE=${METAINFOSRCDIR}/io.github.smcameron.space-nerds-in-space.metainfo.xml
+METAINFOFILE_TEMPLATE=${METAINFOFILE}.template
 
 DESKTOPDIR=${DESTDIR}${PREFIX}/share/applications
 DESKTOPSRCDIR=./share/applications
@@ -769,7 +770,7 @@ _CMNMOBJS=png_utils.o
 CMNMOBJS=$(patsubst %,$(OD)/%, ${_CMNMOBJS})
 CMNMLINK=$(ECHO) '  LINK' $@ && $(CC) ${MYCFLAGS} -o $@ util/cloud-mask-normalmap.o ${CMNMOBJS} ${CMNMLIBS} $(LDFLAGS)
 
-all:	bin/.t ${COMMONOBJS} ${SERVEROBJS} ${MULTIVERSEOBJS} ${CLIENTOBJS} ${BINPROGS} ${SCAD_PARAMS_FILES} ${DOCKING_PORT_FILES}
+all:	bin/.t ${COMMONOBJS} ${SERVEROBJS} ${MULTIVERSEOBJS} ${CLIENTOBJS} ${BINPROGS} ${SCAD_PARAMS_FILES} ${DOCKING_PORT_FILES} ${METAINFOFILE}
 
 # if you only want to build the servers, say on a cloud server
 # use WITHVOICECHAT=no SERVERSONLY=1 to avoid complaints from pkg-config
@@ -1328,7 +1329,7 @@ mostly-clean:
 	${MANSRCDIR}/snis_test_audio.1.gz bin/test_transport_contract bin/test_stringutils \
 	bin/yoke-test-program fuzz_obj_parser fuzz_snis_read_ship_types fuzz_solarsystem_asset_spec_read \
 	fuzz_read_thrust_attachments fuzz_process_manifest build_info.h fuzz_read_joystick_config \
-	fuzz_read_commodities
+	fuzz_read_commodities ${METAINFOFILE}
 	rm -f ${BIN}
 	rm -fr opus-1.3.1
 	rm -f libopus.a
@@ -1487,7 +1488,7 @@ install:	${BINPROGS} ${MAN1PAGES} ${MAN6PAGES} ${SSGL}
 	grep -v '^Icon=' < ${DESKTOPSRCDIR}/io.github.smcameron.space-nerds-in-space.desktop > ${DESKTOPDIR}/io.github.smcameron.space-nerds-in-space.desktop
 	echo "Icon=${DESKTOPDIR}/io.github.smcameron.space-nerds-in-space.svg" >> ${DESKTOPDIR}/io.github.smcameron.space-nerds-in-space.desktop
 	mkdir -p ${METAINFODIR}
-	${INSTALL} -m 644 ${METAINFOFILES} ${METAINFODIR}
+	${INSTALL} -m 644 ${METAINFOFILE} ${METAINFODIR}
 	${UPDATE_DESKTOP}
 	mkdir -p ${DESTDIR}${PREFIX}/share/snis
 	bin/snis_update_assets --force --destdir ${DESTDIR}${PREFIX} --srcdir ./share/snis
@@ -1640,5 +1641,8 @@ run-fuzz-read-commodities:	fuzz_read_commodities put-cpu-in-hi-performance-mode
 
 put-cpu-in-hi-performance-mode:
 	(cd /sys/devices/system/cpu && echo performance | sudo tee cpu*/cpufreq/scaling_governor)
+
+${METAINFOFILE}:	${METAINFOFILE_TEMPLATE} snis_version.h
+	./make_metainfo_file ${METAINFOFILE_TEMPLATE} > ${METAINFOFILE}
 
 include Makefile.depend
