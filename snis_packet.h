@@ -113,6 +113,7 @@
 #define   OPCODE_ADJUST_CONTROL_FIRE_MISSILE 27
 #define   OPCODE_ADJUST_CONTROL_DEPLOY_FLARE 28
 #define   OPCODE_ADJUST_CONTROL_ALIGN_SCIBALL_TO_SHIP 29
+#define   OPCODE_ADJUST_CONTROL_SCI_AUTO_SWEEP 30
 
 #define OPCODE_UPDATE_PLANET_DESCRIPTION 140
 #define OPCODE_UPDATE_RESPAWN_TIME 141
@@ -331,6 +332,7 @@ struct update_ship_packet {
 	uint8_t rts_active_button;
 	uint32_t wallet;
 	uint32_t viewpoint_object;
+	uint8_t sci_auto_sweep;
 };
 
 struct ship_sdata_packet {
@@ -735,6 +737,14 @@ struct opcode_format_descriptor {
 	int32_t size;
 	uint8_t subcode;
 	char format[256];
+};
+
+/* Used to communicate passenger data between snis_server and snis_multiverse */
+struct flattened_passenger {
+	char name[50];
+	char fare[20];
+	char dest[20]; /* usually matches sdata.name */
+	char solarsystem[20];
 };
 
 #define DEMON_CONSOLE_MSG_MAX 80

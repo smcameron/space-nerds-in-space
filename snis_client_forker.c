@@ -253,6 +253,7 @@ static void fork_snis_server(void)
 		(void) rc; /* shut clang scan-build up. */
 		_exit(1);
 	}
+	free_argv(ss_argv);
 	free(snis_server);
 	close(fd);
 }

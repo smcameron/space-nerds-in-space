@@ -25,6 +25,7 @@ struct ui_element {
 	ui_element_keypress_function keypress_fn, keyrelease_fn;
 	ui_element_inside_function inside_fn;
 	ui_update_mouse_pos_function update_mouse_pos;
+	ui_element_set_mouse_hover_function set_hover_state;
 	int hidden;
 	int tooltip_timer;
 	char *tooltip;
@@ -72,6 +73,7 @@ struct ui_element *ui_element_init(void *element,
 	e->xoffset = 0;
 	e->yoffset = 0;
 	e->show_widget_position = 0;
+	e->set_hover_state = fns.set_hover_state;
 	return e;
 }
 
@@ -118,6 +120,12 @@ void ui_element_maybe_draw_tooltip(struct ui_element *element, int mousex, int m
 		return;
 	if (draw_tooltip)
 		draw_tooltip(mousex, mousey, element->tooltip);
+}
+
+void ui_element_maybe_change_hover_state(struct ui_element *element, int mousex, int mousey)
+{
+	if (element->set_hover_state && element->inside_fn)
+		element->set_hover_state(element->element, element->inside_fn(element->element, mousex, mousey));
 }
 
 void ui_element_list_add_element(struct ui_element_list **list,
@@ -181,6 +189,15 @@ void ui_element_list_maybe_draw_tooltips(struct ui_element_list *list, int mouse
 		if (SDL_GetCursor() != cursor_default){
 			SDL_SetCursor(cursor_default);
 		}
+	}
+}
+
+void ui_element_list_maybe_change_hover_state(struct ui_element_list *list, int mousex, int mousey)
+{
+	for (; list != NULL; list = list->next) {
+		struct ui_element *e = list->element;
+		if (e->draw && e->active_displaymode == *e->displaymode && !e->hidden)
+			ui_element_maybe_change_hover_state(e, mousex, mousey);
 	}
 }
 

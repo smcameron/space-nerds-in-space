@@ -18,6 +18,7 @@
 	along with Spacenerds in Space; if not, write to the Free Software
 	Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -92,9 +93,10 @@ struct packed_buffer *build_bridge_update_packet(struct snis_entity *o,
 			o->tsd.ship.alarms_silenced,
 			o->tsd.ship.missile_lock_detected,
 			o->tsd.ship.align_sciball_to_ship);
-	packed_buffer_append(pb, "bbbbbr",
+	packed_buffer_append(pb, "bbbbbbr",
 		o->sdata.shield_strength, o->sdata.shield_wavelength, o->sdata.shield_width, o->sdata.shield_depth,
-		o->sdata.faction, o->sdata.name, (unsigned short) sizeof(o->sdata.name));
+		o->sdata.faction, o->tsd.ship.sci_auto_sweep,
+		o->sdata.name, (unsigned short) sizeof(o->sdata.name));
 	packed_buffer_append(pb, "r", &o->tsd.ship.power_data, (uint16_t) sizeof(o->tsd.ship.power_data));
 	packed_buffer_append(pb, "r", &o->tsd.ship.coolant_data, (uint16_t) sizeof(o->tsd.ship.power_data));
 	packed_buffer_append(pb, "r", bd, (uint16_t) sizeof(*bd));
@@ -112,7 +114,7 @@ void unpack_bridge_update_packet(struct snis_entity *o, struct persistent_bridge
 		mainzoom, warpdrive,
 		missile_count, phaser_charge, phaser_wavelength, shiptype,
 		reverse, trident, in_secure_area, docking_magnets, shield_strength,
-		shield_wavelength, shield_width, shield_depth, faction;
+		shield_wavelength, shield_width, shield_depth, faction, sci_auto_sweep;
 	union quat orientation, sciball_orientation, weap_orientation;
 	union euler ypr;
 	unsigned char name[sizeof(o->sdata.name)];
@@ -140,8 +142,8 @@ void unpack_bridge_update_packet(struct snis_entity *o, struct persistent_bridge
 			&sciball_orientation.vec[0], &weap_orientation.vec[0], &in_secure_area,
 			&docking_magnets, (uint32_t *) &iwallet, &warp_core_status, &exterior_lights,
 			&alarms_silenced, &missile_lock_detected, &align_sciball_to_ship);
-	packed_buffer_extract(pb, "bbbbbr", &shield_strength, &shield_wavelength, &shield_width, &shield_depth,
-			&faction, name, (uint16_t) sizeof(name));
+	packed_buffer_extract(pb, "bbbbbbr", &shield_strength, &shield_wavelength, &shield_width, &shield_depth,
+			&faction, &sci_auto_sweep, name, (uint16_t) sizeof(name));
 	packed_buffer_extract(pb, "r", &power_data, (uint16_t) sizeof(struct power_model_data));
 	packed_buffer_extract(pb, "r", &coolant_data, (int) sizeof(struct power_model_data));
 	packed_buffer_extract(pb, "r", bd, (int) sizeof(*bd));
@@ -202,6 +204,7 @@ void unpack_bridge_update_packet(struct snis_entity *o, struct persistent_bridge
 	o->sdata.shield_width = shield_width;
 	o->sdata.shield_depth = shield_depth;
 	o->sdata.faction = faction;
+	o->tsd.ship.sci_auto_sweep = sci_auto_sweep;
 	memcpy(o->sdata.name, name, sizeof(o->sdata.name));
 	o->tsd.ship.power_data = power_data;
 	o->tsd.ship.coolant_data = coolant_data;
@@ -226,3 +229,81 @@ void unpack_bridge_update_packet(struct snis_entity *o, struct persistent_bridge
 }
 
 
+/* build a cargo packet destined for snis_multiverse */
+struct packed_buffer *build_cargo_update_packet(struct snis_entity *o, unsigned char *pwdhash,
+					struct commodity c[])
+{
+	struct packed_buffer *pb;
+
+	pb = packed_buffer_allocate(1024);
+	if (!pb)
+		return pb;
+	packed_buffer_append(pb, "w", o->tsd.ship.ncargo_bays);
+	for (int i = 0; i < o->tsd.ship.ncargo_bays; i++) {
+		struct flattened_commodity fc;
+		char qty[20], paid[20];
+
+		memset(&fc, 0, sizeof(fc));
+		memset(qty, 0, sizeof(qty));
+		memset(paid, 0, sizeof(paid));
+		if (o->tsd.ship.cargo[i].contents.item > 0) {
+			flatten_commodity(&c[o->tsd.ship.cargo[i].contents.item], &fc);
+			snprintf(qty, sizeof(qty), "%g", o->tsd.ship.cargo[i].contents.qty);
+			snprintf(paid, sizeof(paid), "%g", o->tsd.ship.cargo[i].paid);
+		}
+
+		/* We lose the origin, dest, and due date on crossing a warp gate. */
+		packed_buffer_append(pb, "s", fc.name);
+		packed_buffer_append(pb, "s", fc.unit);
+		packed_buffer_append(pb, "s", fc.scans_as);
+		packed_buffer_append(pb, "s", fc.category);
+		packed_buffer_append(pb, "s", fc.base_price);
+		packed_buffer_append(pb, "s", fc.volatility);
+		packed_buffer_append(pb, "s", fc.legality);
+		packed_buffer_append(pb, "s", qty);
+		packed_buffer_append(pb, "s", paid);
+	}
+
+	/* Wrap this packed buffer in another buffer to make reading/unpacking on the other side easier */
+	struct packed_buffer *wrapper;
+
+	wrapper = packed_buffer_allocate(1 + PWDHASHLEN + 4 + pb->buffer_cursor);
+	if (!wrapper) {
+		packed_buffer_free(pb);
+		return wrapper;
+	}
+	packed_buffer_append(wrapper, "br", SNISMV_OPCODE_UPDATE_BRIDGE_CARGO, pwdhash, (uint16_t) PWDHASHLEN);
+	packed_buffer_append(wrapper, "wr", pb->buffer_cursor, pb->buffer, pb->buffer_cursor);
+	packed_buffer_free(pb);
+	return wrapper;
+}
+
+struct packed_buffer *build_passenger_update_packet(unsigned char *pwdhash,
+		struct flattened_passenger fp[], int passengers_aboard)
+{
+	struct packed_buffer *wrapper;
+	struct packed_buffer *pb = packed_buffer_allocate(sizeof(passengers_aboard) +
+				passengers_aboard * (1 + sizeof(struct flattened_passenger)));
+
+	packed_buffer_append(pb, "w", passengers_aboard);
+	if (!pb)
+		return pb;
+	for (int i = 0; i < passengers_aboard; i++) {
+		packed_buffer_append(pb, "s", fp[i].name);
+		packed_buffer_append(pb, "s", fp[i].solarsystem);
+		packed_buffer_append(pb, "s", fp[i].fare);
+		packed_buffer_append(pb, "s", fp[i].dest);
+	};
+
+	/* wrap the packet for easier unpacking in multiverse */
+	wrapper = packed_buffer_allocate(1 + PWDHASHLEN + sizeof(uint32_t) + pb->buffer_cursor);
+	if (!wrapper) {
+		packed_buffer_free(pb);
+		return wrapper;
+	}
+	packed_buffer_append(wrapper, "br", SNISMV_OPCODE_UPDATE_BRIDGE_PASSENGERS,
+					pwdhash, (uint16_t) PWDHASHLEN);
+	packed_buffer_append(wrapper, "wr", pb->buffer_cursor, pb->buffer, pb->buffer_cursor);
+	packed_buffer_free(pb);
+	return wrapper;
+}

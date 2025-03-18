@@ -41,7 +41,7 @@
 #include "shape_collision.h"
 
 #define DEFAULT_SOLAR_SYSTEM "default"
-#define SNIS_PROTOCOL_VERSION "SNIS063"
+#define SNIS_PROTOCOL_VERSION "SNIS065"
 #define COMMON_MTWIST_SEED 97872
 /* dimensions of the "known" universe */
 #define XKNOWN_DIM 600000.0
@@ -65,7 +65,7 @@
 #define MAXGAMEOBJS 5000
 #define MAXSPARKS 5000
 
-#define STARBASE_DOCKING_PERM_DIST 5000
+#define STARBASE_DOCKING_PERM_DIST 12000
 #define NASTEROID_MODELS 4
 #define NASTEROID_SCALES 3
 #define NASTEROID_CLUSTERS 10
@@ -139,7 +139,7 @@
 #define MAX_VOLTAGE 1000000.0
 #define INTERNAL_RESIST 0.000001
 
-/* If ENG_PRESET_NUMBER changes to something other than 6, then you need
+/* If ENG_PRESET_NUMBER changes, then you need
  * to update snis_entity_key_value_specification.h
  */
 #define ENG_PRESET_NUMBER 10
@@ -496,6 +496,7 @@ struct ship_data {
 #define GUN_YAW_INCREMENT_FINE (0.5 * PI / 180.0)
 #define GUN_YAW_DAMPING 0.1
 #define MAX_SCI_YAW_VELOCITY (15 * PI / 180.0)
+#define SCI_AUTO_SWEEP_YAW_VELOCITY (-10.0 * PI / 180.0)
 #define SCI_YAW_INCREMENT (3.5 * PI / 180.0)
 #define SCI_YAW_INCREMENT_FINE (0.5 * PI / 180.0)
 #define SCI_YAW_DAMPING 0.45
@@ -539,8 +540,9 @@ struct ship_data {
 	uint8_t phaser_charge;		/* charge of phaser weapon */
 #define WARP_CORE_STATUS_GOOD 0
 #define WARP_CORE_STATUS_EJECTED 1
-#define WARP_CORE_EXPLOSION_DAMAGE_DISTANCE 20000.0
+#define WARP_CORE_EXPLOSION_DAMAGE_DISTANCE 10000.0
 #define WARP_CORE_EXPLOSION_WEAPONS_FACTOR 30.0
+#define WARP_CORE_COUNTDOWN 300 /* 10ths of seconds before ejected warp core explodes */
 	uint8_t warp_core_status;	/* 0 = good, 1 = ejected */
 	uint8_t reverse;		/* Is the ship in reverse? */
 	uint8_t trident;		/* trident mode on nav screen, 1 = ABSOLUTE, 0 = RELATIVE */
@@ -636,6 +638,7 @@ struct ship_data {
 #define COMMS_TRANSMISSION_STRENGTH_THRESHOLD (0.3)
 /* For distances longer than COMMS_LONG_DISTANCE_THRESHOLD comms may not work perfectly. */
 #define COMMS_LONG_DISTANCE_THRESHOLD (XKNOWN_DIM / 2.0)
+	uint8_t sci_auto_sweep;
 #ifdef SNIS_SERVER_DATA
 	/* Which system (weapons, shields, warp drive, etc.) of player ships to target damage on */
 	uint8_t targeted_system;
@@ -1163,6 +1166,7 @@ struct damcon_data {
 #define PASSENGER_BERTHS 8
 struct passenger_data {
 	char name[50];
+	char solarsystem[20];
 	uint32_t location, destination;
 	uint32_t fare;
 };

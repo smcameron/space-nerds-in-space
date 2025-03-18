@@ -108,6 +108,13 @@ intro()
 This script will attempt to install the following packages using $package_manager
 if they are not already installed.
 
+NOTE: The package names vary from distro to distro, so for example, there is not
+only libcurl-dev, but other variations of the names.  For this reason this script
+may not do entirely the right thing.  It is a bit experimental.  You may wish to
+run it with the --dry-run switch, and then try what it would have done manually.
+
+You should not expect this script to get everything 100% correct.
+
 EOF
 
 	for p in $packages
@@ -271,7 +278,7 @@ main()
 	
 	intro
 
-	if yn "Proceed? "
+	if yn "Having read the above warning, do you still wish to proceed? "
 	then
 		echo "Aborting install at user request."
 		exit 0

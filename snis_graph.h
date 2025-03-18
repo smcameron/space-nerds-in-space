@@ -17,7 +17,7 @@ extern int BLUE;
 extern int GREEN;
 extern int CYAN;
 
-#define NCOLORS 12              /* number of "cardinal" colors */
+#define NCOLORS 13              /* number of "cardinal" colors */
 #define NSPARKCOLORS 25         /* 25 shades from yellow to red for the sparks */
 #define NRAINBOWSTEPS (16)
 #define NRAINBOWCOLORS (NRAINBOWSTEPS*3)

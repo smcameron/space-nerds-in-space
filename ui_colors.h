@@ -65,6 +65,7 @@ struct ui_color_map {
 	struct ui_color_entry lobby_connect_not_ok;
 	struct ui_color_entry lobby_cancel;
 	struct ui_color_entry lobby_server_heading;
+	struct ui_color_entry lobby_hover_color;
 
 	struct ui_color_entry network_setup_text;
 	struct ui_color_entry network_setup_logo;
@@ -79,7 +80,9 @@ struct ui_color_map {
 	struct ui_color_entry nav_heading_ring;
 	struct ui_color_entry nav_mark_ring;
 	struct ui_color_entry nav_button;
+	struct ui_color_entry nav_button_hover;
 	struct ui_color_entry nav_reverse_button;
+	struct ui_color_entry nav_rev_button_hover;
 	struct ui_color_entry nav_slider;
 	struct ui_color_entry nav_text;
 	struct ui_color_entry nav_warning;
@@ -126,6 +129,7 @@ struct ui_color_map {
 	struct ui_color_entry eng_coolant_meter; /* not used */
 	struct ui_color_entry eng_temperature;
 	struct ui_color_entry eng_button;
+	struct ui_color_entry eng_button_hover;
 	struct ui_color_entry eng_selected_button;
 	struct ui_color_entry eng_warning;
 	struct ui_color_entry eng_disabled;
@@ -144,6 +148,7 @@ struct ui_color_map {
 	struct ui_color_entry damcon_warning;
 	struct ui_color_entry damcon_wall;
 	struct ui_color_entry damcon_button;
+	struct ui_color_entry damcon_button_hover;
 	struct ui_color_entry damcon_selected_button;
 
 	struct ui_color_entry sci_plane_ring;
@@ -153,6 +158,7 @@ struct ui_color_map {
 	struct ui_color_entry sci_heading_labels;
 	struct ui_color_entry sci_coords;
 	struct ui_color_entry sci_button;
+	struct ui_color_entry sci_button_hover;
 	struct ui_color_entry sci_slider;
 	struct ui_color_entry sci_ball_ring;
 	struct ui_color_entry sci_ball_beam;
@@ -190,6 +196,7 @@ struct ui_color_map {
 	struct ui_color_entry science_annotation;
 
 	struct ui_color_entry comms_button;
+	struct ui_color_entry comms_button_hover;
 	struct ui_color_entry comms_slider;
 	struct ui_color_entry comms_text;
 	struct ui_color_entry comms_plaintext;
@@ -221,6 +228,7 @@ struct ui_color_map {
 	struct ui_color_entry demon_selection_box;
 	struct ui_color_entry demon_patrol_route;
 	struct ui_color_entry demon_selected_button;
+	struct ui_color_entry demon_hover_button;
 	struct ui_color_entry demon_deselected_button;
 	struct ui_color_entry demon_self;
 	struct ui_color_entry demon_input;
@@ -248,10 +256,15 @@ struct ui_color_map {
 	struct ui_color_entry quit_unselected;
 
 	struct ui_color_entry launcher_button;
+	struct ui_color_entry launcher_button_hover;
+	struct ui_color_entry launcher_button_disabled;
 	struct ui_color_entry launcher_text;
 	struct ui_color_entry launcher_gauge;
 	struct ui_color_entry launcher_gauge_needle;
 	struct ui_color_entry launcher_missing_assets;
+
+	struct ui_color_entry options_button;
+	struct ui_color_entry options_button_hover;
 
 	struct ui_color_entry rotating_wombat;
 
@@ -278,26 +291,29 @@ GLOBAL struct ui_color_map_accessor {
 	.u.map.slider_black		= { BLACK,		"slider-black" },
 
 	.u.map.lobby_connecting		= { WHITE,		"lobby-connecting" },
-	.u.map.lobby_selected_server	= { GREEN_FIXUP,	"lobby-selected-server" },
-	.u.map.lobby_connect_ok		= { GREEN_FIXUP,	"lobby-connect-ok" },
+	.u.map.lobby_selected_server	= { LIMEGREEN,		"lobby-selected-server" },
+	.u.map.lobby_connect_ok		= { LIMEGREEN,		"lobby-connect-ok" },
 	.u.map.lobby_connect_not_ok	= { RED,		"lobby-connect-not-ok" },
-	.u.map.lobby_cancel		= { WHITE,		"lobby-cancel" },
-	.u.map.lobby_server_heading	= { DARKGREEN,		"lobby-server-heading" },
+	.u.map.lobby_cancel		= { LIMEGREEN,		"lobby-cancel" },
+	.u.map.lobby_server_heading	= { LIMEGREEN,		"lobby-server-heading" },
+	.u.map.lobby_hover_color	= { GREEN_FIXUP,	"lobby-server-heading" },
 
-	.u.map.network_setup_text	= { GREEN_FIXUP,	"network-setup-text" },
-	.u.map.network_setup_logo	= { DARKGREEN,		"network-setup-logo" },
-	.u.map.network_setup_active	= { GREEN_FIXUP,	"network-setup-active" },
+	.u.map.network_setup_text	= { LIMEGREEN,		"network-setup-text" },
+	.u.map.network_setup_logo	= { LIMEGREEN,		"network-setup-logo" },
+	.u.map.network_setup_active	= { LIMEGREEN,		"network-setup-active" },
 	.u.map.network_setup_inactive	= { RED,		"network-setup-inactive" },
-	.u.map.network_setup_selected	= { WHITE,		"network-setup-selected" },
-	.u.map.network_setup_input	= { GREEN_FIXUP,	"network-setup-input" },
-	.u.map.network_setup_role	= { GREEN_FIXUP,	"network-setup-role" },
+	.u.map.network_setup_selected	= { GREEN_FIXUP,	"network-setup-selected" },
+	.u.map.network_setup_input	= { LIMEGREEN,		"network-setup-input" },
+	.u.map.network_setup_role	= { LIMEGREEN,		"network-setup-role" },
 
 	.u.map.nav_gauge		= { AMBER,		"nav-gauge" },
 	.u.map.nav_gauge_needle		= { RED,		"nav-gauge-needle" },
 	.u.map.nav_heading_ring		= { ORANGERED,		"nav-heading-ring" },
 	.u.map.nav_mark_ring		= { DARKRED,		"nav-mark-ring" },
 	.u.map.nav_button		= { AMBER,		"nav-button" },
+	.u.map.nav_button_hover		= { LIGHT_AMBER,	"nav-button-hover" },
 	.u.map.nav_reverse_button	= { RED,		"nav-reverse-button" },
+	.u.map.nav_rev_button_hover	= { RED,		"nav-rev-button-hover" },
 	.u.map.nav_slider		= { AMBER,		"nav-slider" },
 	.u.map.nav_text			= { GREEN_FIXUP,	"nav-text" },
 	.u.map.nav_warning		= { RED,		"nav-warning" },
@@ -344,6 +360,7 @@ GLOBAL struct ui_color_map_accessor {
 	.u.map.eng_coolant_meter	= { BLUE_FIXUP,		"eng-coolant-meter" },
 	.u.map.eng_temperature		= { AMBER,		"eng-temperature" },
 	.u.map.eng_button		= { AMBER,		"eng-button" },
+	.u.map.eng_button_hover		= { LIGHT_AMBER,	"eng-button-hover" },
 	.u.map.eng_selected_button	= { WHITE,		"eng-selected-button" },
 	.u.map.eng_warning		= { RED,		"eng-warning" },
 	.u.map.eng_disabled		= { RED,		"eng-disabled" },
@@ -362,6 +379,7 @@ GLOBAL struct ui_color_map_accessor {
 	.u.map.damcon_warning		= { RED,		"damcon-warning" },
 	.u.map.damcon_wall		= { AMBER,		"damcon-wall" },
 	.u.map.damcon_button		= { AMBER,		"damcon-button" },
+	.u.map.damcon_button_hover	= { LIGHT_AMBER,	"damcon-button-hover" },
 	.u.map.damcon_selected_button	= { WHITE,		"damcon-selected-button" },
 
 	.u.map.sci_plane_ring		= { DARKRED,		"sci-plane-ring" },
@@ -370,7 +388,8 @@ GLOBAL struct ui_color_map_accessor {
 	.u.map.sci_basis_ring_3		= { BLUE_FIXUP,		"sci-basis-ring-3" },
 	.u.map.sci_heading_labels	= { GREEN_FIXUP,	"sci-heading-labels" },
 	.u.map.sci_coords		= { CYAN_FIXUP,		"sci-coords" },
-	.u.map.sci_button		= { GREEN_FIXUP,	"sci-button" },
+	.u.map.sci_button		= { LIMEGREEN,		"sci-button" },
+	.u.map.sci_button_hover		= { GREEN_FIXUP,	"sci-button-hover" },
 	.u.map.sci_slider		= { DARKGREEN,		"sci-slider" },
 	.u.map.sci_ball_ring		= { DARKRED,		"sci-ball-ring" },
 	.u.map.sci_ball_beam		= { CYAN_FIXUP,		"sci-ball-beam" },
@@ -408,9 +427,10 @@ GLOBAL struct ui_color_map_accessor {
 	.u.map.science_data_label	= { GREEN_FIXUP,	"science-data-label" },
 	.u.map.science_annotation	= { CYAN_FIXUP,		"science-annotation" },
 
-	.u.map.comms_button		= { GREEN_FIXUP,	"comms-button" },
-	.u.map.comms_slider		= { GREEN_FIXUP,	"comms-slider" },
-	.u.map.comms_text		= { GREEN_FIXUP,	"comms-text" },
+	.u.map.comms_button		= { LIMEGREEN,		"comms-button" },
+	.u.map.comms_button_hover	= { GREEN_FIXUP,	"comms-button-hover" },
+	.u.map.comms_slider		= { LIMEGREEN,		"comms-slider" },
+	.u.map.comms_text		= { LIMEGREEN,		"comms-text" },
 	.u.map.comms_plaintext		= { WHITE,		"comms-plaintext" },
 	.u.map.comms_red_alert		= { RED,		"comms-red-alert" },
 	.u.map.comms_warning		= { RED,		"comms-warning" },
@@ -440,6 +460,7 @@ GLOBAL struct ui_color_map_accessor {
 	.u.map.demon_selection_box	= { WHITE,		"demon-selection-box" },
 	.u.map.demon_patrol_route	= { WHITE,		"demon-patrol-route" },
 	.u.map.demon_selected_button	= { WHITE,		"demon-selected-button" },
+	.u.map.demon_hover_button	= { WHITE,		"demon-hover-button" },
 	.u.map.demon_deselected_button	= { GREEN_FIXUP,	"demon-deselected-button" },
 	.u.map.demon_self		= { RED,		"demon-self" },
 	.u.map.demon_input		= { GREEN_FIXUP,	"demon-input" },
@@ -468,10 +489,15 @@ GLOBAL struct ui_color_map_accessor {
 	.u.map.quit_unselected		= { RED,		"quit-unselected"},
 
 	.u.map.launcher_button		= { LIMEGREEN,		"launcher-button" },
+	.u.map.launcher_button_hover	= { GREEN_FIXUP,	"launcher-button-hover" },
+	.u.map.launcher_button_disabled	= { DARKGREEN,		"launcher-button-disabled" },
 	.u.map.launcher_text		= { LIMEGREEN,		"launcher-text" },
 	.u.map.launcher_gauge		= { AMBER,		"launcher-gauge" },
 	.u.map.launcher_gauge_needle	= { RED,		"launcher-gauge-needle" },
 	.u.map.launcher_missing_assets	= { RED,		"launcher-missing-assets" },
+
+	.u.map.options_button		= { LIMEGREEN,		"options-button" },
+	.u.map.options_button_hover	= { GREEN_FIXUP,	"options-button-hover" },
 
 	.u.map.rotating_wombat		= { DARKGREEN,		"rotating-wombat" },
 

@@ -157,6 +157,7 @@ static float atmosphere_damage_factor = ATMOSPHERE_DAMAGE_FACTOR;
 static float missile_damage_factor = MISSILE_EXPLOSION_WEAPONS_FACTOR;
 static float spacemonster_damage_factor = SPACEMONSTER_WEAPONS_FACTOR;
 static float warp_core_damage_factor = WARP_CORE_EXPLOSION_WEAPONS_FACTOR;
+static float warp_core_countdown = WARP_CORE_COUNTDOWN; /* tweakable, deciseconds before ejected warp core explodes */
 static int limit_warp_near_planets = 1;
 static float warp_limit_dist_factor = 1.5;
 static float threat_level_flee_threshold = THREAT_LEVEL_FLEE_THRESHOLD;
@@ -202,6 +203,7 @@ static float bandwidth_throttle_distance = (XKNOWN_DIM / 3); /* How far before o
 static int distant_update_period = 20; /* Distant objects are updated only after */
 				       /* this many ticks. tweakable */
 static int docking_by_faction = 0;
+static int starbase_docking_perm_dist = STARBASE_DOCKING_PERM_DIST;
 static int npc_ship_count = 250; /* tweakable.  Used by universe regeneration */
 static int asteroid_count = 200; /* tweakable.  Used by universe regeneration */
 #define DEFAULT_DAMAGE_REBOOT_CHANCE 10
@@ -648,6 +650,8 @@ static struct bridge_data {
 	uint32_t last_missile_fail_time; /* universe timestamp of last missile failure */
 	int enforce_solarsystem;
 	char resident_solarsystem[SSGL_LOCATIONSIZE];
+	int warp_core_ejection_armed;
+	int warp_core_ejection_confirm_countdown;
 } bridgelist[MAXCLIENTS];
 static int nbridges = 0;		/* Number of elements present in bridgelist[] */
 static int announce_players = 0; /* Announce new players via TTS? */
@@ -1634,9 +1638,14 @@ static void check_warp_core_explosion_damage(struct snis_entity *warp_core,
 	case OBJTYPE_BRIDGE:
 	case OBJTYPE_NPCSHIP:
 		dist = object_dist(warp_core, object);
+		if (object->type == OBJTYPE_BRIDGE)
+			fprintf(stderr, "warp core explosion damage, dist = %g vs %g\n",
+					dist, WARP_CORE_EXPLOSION_DAMAGE_DISTANCE);
 		if (dist > WARP_CORE_EXPLOSION_DAMAGE_DISTANCE)
 			return;
 		damage_factor = WARP_CORE_EXPLOSION_DAMAGE_DISTANCE / (dist + 1.0);
+		if (object->type == OBJTYPE_BRIDGE)
+			fprintf(stderr, "warp core explosion damage factor = %g\n", damage_factor);
 		calculate_warp_core_explosion_damage(object, damage_factor);
 		send_ship_damage_packet(object);
 		break;
@@ -8683,7 +8692,7 @@ static void do_temperature_computations(struct snis_entity *o)
 		o->tsd.ship.warp_core_status != WARP_CORE_STATUS_EJECTED) {
 		if (!bridgelist[b].warp_core_critical) {
 			bridgelist[b].warp_core_critical = 1;
-			bridgelist[b].warp_core_critical_timer = 300; /* 30 seconds */
+			bridgelist[b].warp_core_critical_timer = WARP_CORE_COUNTDOWN; /* 30 seconds by default */
 		}
 	}
 	if (bridgelist[b].warp_core_critical) {
@@ -10102,6 +10111,24 @@ static void maybe_reboot_terminals(struct snis_entity *player_ship)
 	reboot_random_terminals(player_ship);
 }
 
+static void update_warp_ejection_countdown(struct snis_entity *o)
+{
+	int bn = lookup_bridge_by_shipid(o->id);
+	if (bn < 0)
+		return;
+	/* If armed, decrement count down, if countdown hits zero before confirmation, disarm. */
+	if (bridgelist[bn].warp_core_ejection_armed == -1)
+		return;
+
+	if (bridgelist[bn].warp_core_ejection_confirm_countdown > 0)
+		bridgelist[bn].warp_core_ejection_confirm_countdown--;
+	if (bridgelist[bn].warp_core_ejection_confirm_countdown == 0) {
+		bridgelist[bn].warp_core_ejection_armed = -1;
+		snis_queue_add_text_to_speech("Warp core ejection sequence aborted.",
+						ROLE_TEXT_TO_SPEECH, o->id);
+	}
+}
+
 static void aim_high_gain_antenna(struct snis_entity *o)
 {
 	union vec3 straight_ahead = { { 1.0, 0.0, 0.0 } };
@@ -10235,6 +10262,8 @@ static void player_move(struct snis_entity *o)
 	aim_high_gain_antenna(o);			/* try to aim antenna at desired comms target */
 	update_player_position_and_velocity(o);
 	
+	if (o->tsd.ship.sci_auto_sweep)
+		o->tsd.ship.sci_yaw_velocity = SCI_AUTO_SWEEP_YAW_VELOCITY;
 	o->tsd.ship.sci_heading += o->tsd.ship.sci_yaw_velocity;
 
 	normalize_angle(&o->tsd.ship.sci_heading);
@@ -10365,6 +10394,7 @@ static void player_move(struct snis_entity *o)
 	}
 	check_science_selection(o);
 	maybe_reboot_terminals(o);
+	update_warp_ejection_countdown(o);
 
 	update_flare_cooldown_timer(o);
 
@@ -10825,9 +10855,6 @@ static void gradually_repair_docked_player_ship(struct snis_entity *sb, struct b
 	struct snis_entity *o = &go[i];
 
 	int needs_work = 0;
-
-	/* Set nominal cooling levels in case things are hot, so they cool down */
-	set_nominal_coolant_levels(o);
 
 	/* Maybe load some torpedoes */
 	if ((o->tsd.ship.torpedoes < INITIAL_TORPEDO_COUNT) &&
@@ -11566,6 +11593,8 @@ static void init_player(struct snis_entity *o)
 		memset(bridgelist[b].guessed_key, '_', sizeof(bridgelist[b].guessed_key));
 		memset(bridgelist[b].enciphered_message, 0, sizeof(bridgelist[b].enciphered_message));
 		bridgelist[b].flare_cooldown = 0;
+		bridgelist[b].warp_core_ejection_confirm_countdown = 0; /* not counting */
+		bridgelist[b].warp_core_ejection_armed = -1; /* not armed */
 	}
 	quat_init_axis(&o->tsd.ship.computer_desired_orientation, 0, 1, 0, 0);
 	o->tsd.ship.computer_steering_time_left = 0;
@@ -11605,6 +11634,7 @@ static void init_player(struct snis_entity *o)
 	o->tsd.ship.desired_hg_ant_aim.v.x = 1.0;
 	o->tsd.ship.desired_hg_ant_aim.v.y = 0.0;
 	o->tsd.ship.desired_hg_ant_aim.v.z = 0.0;
+	o->tsd.ship.sci_auto_sweep = 0;
 	/* Fill in .tsd.ship.in_secure_area with correct value. */
 	space_partition_process(space_partition, o, o->x, o->z, o, player_collision_detection);
 }
@@ -12438,6 +12468,7 @@ static int add_warp_core(double x, double y, double z,
 	go[i].sdata.shield_wavelength = 0;
 	go[i].sdata.shield_width = 0;
 	go[i].sdata.shield_depth = 0;
+	snprintf(go[i].sdata.name, sizeof(go[i].sdata.name), "HIGH ENERGY PLASMA");
 	go[i].move = warp_core_move;
 	go[i].vx = vx;
 	go[i].vy = vy;
@@ -14550,6 +14581,7 @@ static void update_passenger(int i, int nstarbases)
 		mt = mtwist_init(mtwist_seed);
 	character_name(mt, passenger[i].name,  sizeof(passenger[i].name) - 1);
 	passenger[i].location = nth_starbase(snis_randn(nstarbases));
+	snprintf(passenger[i].solarsystem, sizeof(passenger[i].solarsystem), "%s", solarsystem_name);
 	do {
 		passenger[i].destination = nth_starbase(snis_randn(nstarbases));
 	} while (passenger[i].destination == passenger[i].location && nstarbases > 1);
@@ -15885,9 +15917,10 @@ static void meta_comms_inventory(char *name, struct game_client *c, char *txt)
 	for (i = 0; i < npassengers; i++) {
 		if (passenger[i].location == ship->id) {
 			int x = lookup_by_id(passenger[i].destination);
-			send_comms_packet(NULL, name, ch, "%2d. FARE %4d DEST: %10s NAME: %30s\n",
+			send_comms_packet(NULL, name, ch, "%2d. FARE %4d DEST: %10s (%s SYSTEM) NAME: %30s\n",
 					passenger_count + 1, passenger[i].fare,
 					x < 0 ? "UNKNOWN" : go[x].sdata.name,
+					passenger[i].solarsystem,
 					passenger[i].name);
 			passenger_count++;
 		}
@@ -17639,7 +17672,7 @@ static void npc_menu_item_request_dock(__attribute__((unused)) struct npc_menu_i
 		}
 	}
 	dist = object_dist(sb, o);
-	if (dist > STARBASE_DOCKING_PERM_DIST) {
+	if (dist > starbase_docking_perm_dist && starbase_docking_perm_dist >= 0) {
 		send_comms_packet(sb, npcname, ch, "%s, YOU ARE TOO FAR AWAY (%lf).\n", b->shipname, dist);
 		snis_queue_add_sound(TOO_FAR_AWAY, ROLE_COMMS, b->shipid);
 		return;
@@ -19432,6 +19465,10 @@ static struct tweakable_var_descriptor server_tweak[] = {
 		&disable_terminal_rebooting, 'i', 0.0, 0.0, 0.0, 0, 1, 0, 0 },
 	{ "LOCAL-NET-ONLY", "0, 1 - 1 MEANS ONLY CLIENTS ON LOCAL NETWORK MAY CONNECT",
 		&local_net_connections_only, 'i', 0.0, 0.0, 0.0, 0, 1, 1, 0 },
+	{ "STARBASE_DOCKING_PERM_DIST", "-1 - 1000000, MAX DIST FOR GRANTING DOCKING PERMISSION",
+		&starbase_docking_perm_dist, 'i', 0.0, 0.0, 0.0, -1, 1000000, STARBASE_DOCKING_PERM_DIST, 0 },
+	{ "WARP_CORE_COUNTDOWN", "10 - 3000, 10ths OF SECONDS BEFORE EJECTED WARP CORE EXPLODES",
+		&warp_core_countdown, 'i', 0.0, 0.0, 0.0, 10, 3000, WARP_CORE_COUNTDOWN, 0 },
 	{ NULL, NULL, NULL, '\0', 0.0, 0.0, 0.0, 0, 0, 0, 0 },
 };
 
@@ -22634,6 +22671,7 @@ static int l_create_passenger(lua_State *l)
 		return 0;
 	}
 	snprintf(passenger[p].name, sizeof(passenger[p].name), "%s", name);
+	snprintf(passenger[p].solarsystem, sizeof(passenger[p].solarsystem), "%s", solarsystem_name);
 	passenger[p].location = go[location].id;
 	passenger[p].destination = go[destination].id;
 	passenger[p].fare = fare;
@@ -22989,6 +23027,9 @@ static int process_adjust_control_fire_missile(struct game_client *c, uint32_t i
 	int i;
 	struct snis_entity *o;
 	uint32_t target_id;
+	int reason;
+#define MISSILE_FAIL_NO_TARGET 1
+#define MISSILE_FAIL_OUT_OF_AMMO 2
 
 	pthread_mutex_lock(&universe_mutex);
 	i = lookup_by_id(id);
@@ -22999,11 +23040,15 @@ static int process_adjust_control_fire_missile(struct game_client *c, uint32_t i
 	if ((uint32_t) i != c->ship_index)
 		snis_log(SNIS_ERROR, "i != ship index at %s:%d\n", __FILE__, __LINE__);
 	o = &go[i];
-	if (o->tsd.ship.missile_count <= 0)
+	if (o->tsd.ship.missile_count <= 0) {
+		reason = MISSILE_FAIL_OUT_OF_AMMO;
 		goto missile_fail;
+	}
 	target_id = find_potential_missile_target(o);
-	if (target_id == (uint32_t) -1)
+	if (target_id == (uint32_t) -1) {
+		reason = MISSILE_FAIL_NO_TARGET;
 		goto missile_fail;
+	}
 	fire_missile(o, target_id, TARGET_ALL_SYSTEMS);
 	o->tsd.ship.missile_count--;
 	pthread_mutex_unlock(&universe_mutex);
@@ -23019,9 +23064,17 @@ missile_fail:
 	bridgelist[c->bridge].last_missile_fail_time = universe_timestamp;
 	pthread_mutex_unlock(&universe_mutex);
 	snis_queue_add_sound(LASER_FAILURE, ROLE_SOUNDSERVER, o->id);
-	queue_add_text_to_speech(c,
-		"I can't let you just fire missiles off into empty space, "
-		"you must aim at an in range target first.");
+	switch (reason) {
+	case MISSILE_FAIL_NO_TARGET:
+		queue_add_text_to_speech(c, "No target in range.");
+		break;
+	case MISSILE_FAIL_OUT_OF_AMMO:
+		queue_add_text_to_speech(c, "No missiles remain.");
+		break;
+	default:
+		queue_add_text_to_speech(c, "Unknown missile failure.");
+		break;
+	}
 	return 0;
 
 initial_missile_fail: /* Just make the failure sound */
@@ -23157,6 +23210,9 @@ static int process_adjust_control_input(struct game_client *c)
 	case OPCODE_ADJUST_CONTROL_ALIGN_SCIBALL_TO_SHIP:
 		return process_adjust_control_bytevalue(c, id,
 			offsetof(struct snis_entity, tsd.ship.align_sciball_to_ship), v, no_limit);
+	case OPCODE_ADJUST_CONTROL_SCI_AUTO_SWEEP:
+		return process_adjust_control_bytevalue(c, id,
+			offsetof(struct snis_entity, tsd.ship.sci_auto_sweep), v, no_limit);
 	default:
 		return -1;
 	}
@@ -23611,17 +23667,38 @@ static int process_eject_warp_core(struct game_client *c)
 	struct snis_entity *ship = &go[c->ship_index];
 	union vec3 relvel = { { 1.0, 0.0, 0.0, }, };
 	int b = c->bridge;
+	unsigned char which;
+	unsigned char buffer[10];
+	int rc;
+
+	rc = read_and_unpack_buffer(c, buffer, "b", &which);
+	if (rc != 0)
+		return -1;
 
 	if (ship->tsd.ship.warp_core_status == WARP_CORE_STATUS_EJECTED) {
 		snis_queue_add_text_to_speech("The warp core has already been ejected.",
 						ROLE_TEXT_TO_SPEECH, ship->id);
 		return 0; /* Warp core is already ejected */
 	}
+
+	if (bridgelist[b].warp_core_ejection_armed == -1) { /* not armed */
+		bridgelist[b].warp_core_ejection_armed = which; /* which person pressed eject 1st time. */
+		bridgelist[b].warp_core_ejection_confirm_countdown = 10 * 10; /* 10 seconds */
+		snis_queue_add_text_to_speech("Warp core ejection sequence armed.",
+						ROLE_TEXT_TO_SPEECH, ship->id);
+		return 0;
+	} else if (bridgelist[b].warp_core_ejection_armed == which) { /* the same person pressed eject again */
+		/* Do nothing. */
+		return 0;
+	}
+	bridgelist[b].warp_core_ejection_armed = -1; /* reset for next time */
+	bridgelist[b].warp_core_ejection_confirm_countdown = 0;
+
 	snis_queue_add_text_to_speech("Ejecting the warp core.", ROLE_TEXT_TO_SPEECH, ship->id);
 	quat_rot_vec_self(&relvel, &ship->orientation);
 	add_warp_core(ship->x, ship->y, ship->z,
 			ship->vx + relvel.v.x, ship->vy + relvel.v.y, ship->vz + relvel.v.z,
-			bridgelist[b].warp_core_critical_timer, ship->id);
+			warp_core_countdown, ship->id);
 	bridgelist[b].warp_core_critical = 0; /* Save player from warp core breach */
 	ship->tsd.ship.warp_core_status = WARP_CORE_STATUS_EJECTED;
 	return 0;
@@ -25045,18 +25122,26 @@ static void *per_client_write_thread(__attribute__((unused)) void /* struct game
 
 		if (player_error) {
 			pb = packed_buffer_allocate(256);
-			packed_buffer_append(pb, "bb", OPCODE_ADD_PLAYER_ERROR, player_error);
 			if (player_error == ADD_PLAYER_ERROR_WRONG_SOLARSYSTEM) {
+#if 0
+				/* Tell player the right server */
 				packed_buffer_append_u16(pb,
 					(uint16_t) strlen(bridgelist[c->bridge].resident_solarsystem));
 				packed_buffer_append_raw(pb, bridgelist[c->bridge].resident_solarsystem,
 						strlen(bridgelist[c->bridge].resident_solarsystem));
+#else
+				/* Automatically switch the player to the correct server */
+				packed_buffer_append(pb, "bb", OPCODE_SWITCH_SERVER, (uint8_t) 255);
+				uppercase(bridgelist[c->bridge].resident_solarsystem);
+				packed_buffer_append_raw(pb, bridgelist[c->bridge].resident_solarsystem, 20);
+#endif
 			} else {
+				packed_buffer_append(pb, "bb", OPCODE_ADD_PLAYER_ERROR, player_error);
 				packed_buffer_append_u16(pb, (uint16_t) 1);
 				packed_buffer_append_raw(pb, "x", 1);
+				disconnect_timer = 1.0;
 			}
 			pb_queue_to_client(c, pb);
-			disconnect_timer = 1.0;
 		}
 
 		currentTime = time_now_double();
@@ -25506,7 +25591,7 @@ static void send_update_ship_packet(struct game_client *c,
 	packed_buffer_append(pb, "bwwhSSS", opcode, o->id, o->timestamp, o->alive,
 			o->x, (int32_t) UNIVERSE_DIM, o->y, (int32_t) UNIVERSE_DIM,
 			o->z, (int32_t) UNIVERSE_DIM);
-	packed_buffer_append(pb, "RRRwRRbbbwwbbbbbbbbbbbbwQQQQSSSbB8bbbww",
+	packed_buffer_append(pb, "RRRwRRbbbwwbbbbbbbbbbbbwQQQQSSSbB8bbbwwb",
 			o->tsd.ship.yaw_velocity,
 			o->tsd.ship.pitch_velocity,
 			o->tsd.ship.roll_velocity,
@@ -25541,7 +25626,8 @@ static void send_update_ship_packet(struct game_client *c,
 			o->tsd.ship.align_sciball_to_ship,
 			o->tsd.ship.comms_crypto_mode,
 			o->tsd.ship.rts_active_button,
-			wallet, o->tsd.ship.viewpoint_object);
+			wallet, o->tsd.ship.viewpoint_object,
+			o->tsd.ship.sci_auto_sweep);
 	pb_queue_to_client(c, pb);
 
 	/* now that we've sent the accumulated value, clear the emf_detector to the noise floor */
@@ -26000,6 +26086,8 @@ static int add_new_player(struct game_client *c, int enforce_solarsystem)
 		bridgelist[nbridges].active_custom_buttons = 0;
 		bridgelist[nbridges].last_missile_fail_time = 0;
 		bridgelist[nbridges].enforce_solarsystem = enforce_solarsystem;
+		bridgelist[nbridges].warp_core_ejection_armed = -1;
+		bridgelist[nbridges].warp_core_ejection_confirm_countdown = 0;
 		memset(bridgelist[nbridges].custom_button_text, 0, sizeof(bridgelist[nbridges].custom_button_text));
 		memset(bridgelist[nbridges].cipher_key, '_', sizeof(bridgelist[nbridges].cipher_key));
 		memset(bridgelist[nbridges].guessed_key, '_', sizeof(bridgelist[nbridges].guessed_key));
@@ -26529,6 +26617,26 @@ static void queue_to_multiverse(struct multiverse_server_info *msi, struct packe
 	wakeup_multiverse_writer(msi);
 }
 
+static void flatten_passengers(uint32_t ship_id, struct flattened_passenger fp[], int *passengers_aboard)
+{
+	int npa = 0;
+	for (int i = 0; i < npassengers; i++) {
+		if (passenger[i].location != ship_id)
+			continue;
+		snprintf(fp[npa].name, sizeof(fp[npa].name), "%s", passenger[i].name);
+		snprintf(fp[npa].solarsystem, sizeof(fp[npa].solarsystem), "%s", passenger[i].solarsystem);
+		snprintf(fp[npa].fare, sizeof(fp[npa].fare), "%d", passenger[i].fare);
+
+		int idx = lookup_by_id(passenger[i].destination);
+		if (idx < 0)
+			snprintf(fp[npa].dest, sizeof(fp[npa].dest), "UNKNOWN");
+		else
+			snprintf(fp[npa].dest, sizeof(fp[npa].dest), "%s", go[idx].sdata.name);
+		npa++;
+	}
+	*passengers_aboard = npa;
+}
+
 static void update_multiverse(struct snis_entity *o)
 {
 	struct packed_buffer *pb;
@@ -26602,6 +26710,15 @@ static void update_multiverse(struct snis_entity *o)
 			packed_buffer_length(pb), UPDATE_BRIDGE_PACKET_SIZE);
 		abort();
 	}
+	queue_to_multiverse(multiverse_server, pb);
+	pb = build_cargo_update_packet(o, bridgelist[bridge].pwdhash, commodity);
+	queue_to_multiverse(multiverse_server, pb);
+
+	struct flattened_passenger fp[PASSENGER_BERTHS];
+	int passengers_aboard = 0;
+	flatten_passengers(o->id, fp, &passengers_aboard);
+
+	pb = build_passenger_update_packet(bridgelist[bridge].pwdhash, fp, passengers_aboard);
 	queue_to_multiverse(multiverse_server, pb);
 }
 
@@ -31274,6 +31391,341 @@ static int process_multiverse_verification(struct multiverse_server_info *msi)
 	return 0;
 }
 
+static int process_multiverse_update_bridge_cargo(struct multiverse_server_info *msi)
+{
+	int rc, b;
+	unsigned char buffer[PWDHASHLEN + 2];
+	unsigned char *pwdhash;
+	uint32_t len;
+	unsigned char data[1024];
+	struct snis_entity *o = NULL;
+
+	rc = snis_readsocket(msi->sock, buffer, PWDHASHLEN);
+	if (rc)
+		return rc;
+	pwdhash = buffer;
+	pthread_mutex_lock(&universe_mutex);
+	print_hash("Looking up hash:", pwdhash);
+	b = lookup_bridge_by_pwdhash(pwdhash);
+	if (b < 0) {
+		fprintf(stderr, "%s: received cargo update for unknown pwdhash.  Weird.\n", logprefix());
+		print_hash("unknown hash: ", pwdhash);
+		pthread_mutex_unlock(&universe_mutex);
+		return -1;
+	}
+	int i = lookup_by_id(bridgelist[b].shipid);
+	if (i < 0) {
+		pthread_mutex_unlock(&universe_mutex);
+		return -1;
+	}
+	o = &go[i];
+
+	rc = snis_readsocket(msi->sock, &len, sizeof(len));
+	if (rc < 0) {
+		fprintf(stderr, "snis_readsocket: %s%d: %s\n", __FILE__, __LINE__, strerror(errno));
+		pthread_mutex_unlock(&universe_mutex);
+		return -1;
+	}
+	len = ntohl(len);
+	if (len > sizeof(data)) {
+		fprintf(stderr, "Bad length in update_bridge_cargo\n");
+		pthread_mutex_unlock(&universe_mutex);
+		return -1;
+	}
+	rc = snis_readsocket(msi->sock, data, len);
+	if (rc < 0) {
+		fprintf(stderr, "snis_readsocket: %s%d: %s\n", __FILE__, __LINE__, strerror(errno));
+		pthread_mutex_unlock(&universe_mutex);
+		return -1;
+	}
+
+	struct packed_buffer pb;
+
+	/* get at the packed buffer inside the data */
+	pb.buffer = data;
+	pb.buffer_size = len;
+	pb.buffer_cursor = 0;
+
+	struct flattened_commodity fc;
+	char qty[20];
+	char paid[20];
+	int ncargo_bays = 0;
+
+	rc = packed_buffer_extract(&pb, "w", &ncargo_bays);
+	if (rc < 0)
+		goto errorout;
+	if (ncargo_bays > MAX_CARGO_BAYS_PER_SHIP)
+		goto errorout;
+
+	for (int i = 0; i < ncargo_bays; i++) {
+		memset(&fc, 0, sizeof(fc));
+		memset(qty, 0, sizeof(qty));
+		memset(paid, 0, sizeof(paid));
+
+		rc = packed_buffer_extract(&pb, "s", fc.name, sizeof(fc.name));
+		if (rc < 0)
+			goto errorout;
+		rc = packed_buffer_extract(&pb, "s", fc.unit, sizeof(fc.unit));
+		if (rc < 0)
+			goto errorout;
+		rc = packed_buffer_extract(&pb, "s", fc.scans_as, sizeof(fc.scans_as));
+		if (rc < 0)
+			goto errorout;
+		rc = packed_buffer_extract(&pb, "s", fc.category, sizeof(fc.category));
+		if (rc < 0)
+			goto errorout;
+		rc = packed_buffer_extract(&pb, "s", fc.base_price, sizeof(fc.base_price));
+		if (rc < 0)
+			goto errorout;
+		rc = packed_buffer_extract(&pb, "s", fc.volatility, sizeof(fc.volatility));
+		if (rc < 0)
+			goto errorout;
+		rc = packed_buffer_extract(&pb, "s", fc.legality, sizeof(fc.legality));
+		if (rc < 0)
+			goto errorout;
+		rc = packed_buffer_extract(&pb, "s", qty, sizeof(qty));
+		if (rc < 0)
+			goto errorout;
+		rc = packed_buffer_extract(&pb, "s", paid, sizeof(paid));
+		if (rc < 0)
+			goto errorout;
+
+		/* Now, reconstitute the native snis_server cargo data from this pickled cargo */
+		if (strcmp(fc.name, "") == 0) {
+			memset(&o->tsd.ship.cargo[i], 0, sizeof(o->tsd.ship.cargo[i]));
+			o->tsd.ship.cargo[i].contents.item = -1; /* empty */
+		} else {
+			float tmp;
+			int ci = lookup_commodity(commodity, ncommodities, fc.name);
+			if (ci >= 0) {
+				o->tsd.ship.cargo[i].contents.item = ci;
+				rc = sscanf(qty, "%g", &tmp);
+				if (rc != 1)
+					tmp = 0.0f;
+				o->tsd.ship.cargo[i].contents.qty = tmp;
+				rc = sscanf(paid, "%g", &tmp);
+				if (rc != 1)
+					tmp = 0.0f;
+				o->tsd.ship.cargo[i].paid = tmp;
+				/* We lose this info when we get cargo from multiverse */
+				o->tsd.ship.cargo[i].due_date = -1;
+				o->tsd.ship.cargo[i].origin = -1;
+				o->tsd.ship.cargo[i].dest = -1;
+			} else {
+				/* must be a custom commodity */
+				float base_price, volatility, legality, odds, tmp;
+				odds = 0.0f;
+				rc = sscanf(fc.base_price, "%g", &tmp);
+				if (rc != 1)
+					tmp = 10.0f; /* whatever */
+				base_price = tmp;
+				rc = sscanf(fc.volatility, "%g", &tmp);
+				if (rc != 1)
+					tmp = 0.0f; /* whatever */
+				volatility = tmp;
+				rc = sscanf(fc.legality, "%g", &tmp);
+				if (rc != 1)
+					tmp = 1.0f; /* whatever */
+				legality = tmp;
+				ci = add_commodity(&commodity, &ncommodities, fc.category, fc.name, fc.unit,
+							fc.scans_as, base_price, volatility, legality, odds);
+				if (ci >= 0) {
+					o->tsd.ship.cargo[i].contents.item = ci;
+					o->tsd.ship.cargo[i].contents.item = ci;
+					rc = sscanf(qty, "%g", &tmp);
+					if (rc != 1)
+						tmp = 0.0f;
+					o->tsd.ship.cargo[i].contents.qty = tmp;
+					rc = sscanf(paid, "%g", &tmp);
+					if (rc != 1)
+						tmp = 0.0f;
+					o->tsd.ship.cargo[i].paid = tmp;
+					/* We lose this info when we get cargo from multiverse */
+					o->tsd.ship.cargo[i].due_date = -1;
+					o->tsd.ship.cargo[i].origin = -1;
+				} else {
+					/* oh well */
+					memset(&o->tsd.ship.cargo[i], 0, sizeof(o->tsd.ship.cargo[i]));
+					o->tsd.ship.cargo[i].contents.item = -1; /* empty */
+				}
+			}
+		}
+	}
+
+	pthread_mutex_unlock(&universe_mutex);
+	return 0;
+
+errorout:
+	pthread_mutex_unlock(&universe_mutex);
+	return -1;
+}
+
+static void unflatten_passenger(struct snis_entity *our_ship, struct flattened_passenger *fp)
+{
+	int found = 0;
+	if (fp->name[0] == '\0') /* empty passenger berth */
+		return;
+	/* scan through this snis_server's passengers and see if he's around here */
+	for (int i = 0; i < npassengers; i++) {
+		if (strcmp(passenger[i].name, fp->name) == 0) {
+			found = 1;
+			passenger[i].location = our_ship->id;
+			snprintf(passenger[i].solarsystem, sizeof(passenger[i].solarsystem), "%s", fp->solarsystem);
+
+			for (int j = 0; j <= snis_object_pool_highest_object(pool); j++) {
+				if (go[j].type != OBJTYPE_STARBASE)
+					continue;
+				if (strcmp(go[j].sdata.name, fp->dest) == 0) {
+					passenger[i].destination = go[j].id;
+					break;
+				}
+			}
+			int fare;
+			int rc = sscanf(fp->fare, "%d", &fare);
+			if (rc == 1)
+				passenger[i].fare = fare;
+		}
+	}
+	int snatched = -1;
+	if (!found) { /* Apparently this guy wasn't from around here */
+		/* Try to snatch a passenger off a starbase and change him to our new guy */
+		for (int i = 0; i < MAX_PASSENGERS; i++) {
+			int idx = lookup_by_id(passenger[i].location);
+			if (idx < 0) { /* this guy must be lost, he will do */
+				snatched = i;
+				break;
+			}
+			if (go[idx].type == OBJTYPE_STARBASE) {
+				snatched = i;
+				break;
+			}
+		}
+		if (snatched == -1) {
+			/* There are no passengers on any starbases to snatch, they
+			 * must all be on player ships!  Amazing!
+			 */
+			fprintf(stderr, "snis_server: Marvel of marvels, there are no passengers on any starbase!\n");
+		} else {
+			int fare, rc;
+			snprintf(passenger[snatched].name, sizeof(passenger[snatched].name), "%s", fp->name);
+			snprintf(passenger[snatched].solarsystem, sizeof(passenger[snatched].solarsystem),
+					"%s", fp->solarsystem);
+
+			passenger[snatched].destination = (uint32_t) -1;
+			for (int j = 0; j <= snis_object_pool_highest_object(pool); j++) {
+				if (go[j].type != OBJTYPE_STARBASE)
+					continue;
+				if (strcmp(go[j].sdata.name, fp->dest) == 0) {
+					passenger[snatched].destination = go[j].id;
+					break;
+				}
+			}
+			if (passenger[snatched].destination == (uint32_t) -1)
+				passenger[snatched].destination = nth_starbase(snis_randn(NBASES));
+
+			rc = sscanf(fp->fare, "%d", &fare);
+			if (rc == 1)
+				passenger[snatched].fare = fare;
+			else
+				passenger[snatched].fare = 0; /* oh well */
+			passenger[snatched].location = our_ship->id;
+		}
+	}
+}
+
+static int process_multiverse_update_bridge_passengers(struct multiverse_server_info *msi)
+{
+	int rc, b;
+	unsigned char buffer[PWDHASHLEN + 2];
+	unsigned char *pwdhash;
+	uint32_t len;
+	unsigned char data[1024];
+	struct snis_entity *o = NULL;
+
+	rc = snis_readsocket(msi->sock, buffer, PWDHASHLEN);
+	if (rc)
+		return rc;
+	pwdhash = buffer;
+	pthread_mutex_lock(&universe_mutex);
+	print_hash("Looking up hash:", pwdhash);
+	b = lookup_bridge_by_pwdhash(pwdhash);
+	if (b < 0) {
+		fprintf(stderr, "%s: received passenger update for unknown pwdhash.  Weird.\n", logprefix());
+		print_hash("unknown hash: ", pwdhash);
+		pthread_mutex_unlock(&universe_mutex);
+		return -1;
+	}
+	int i = lookup_by_id(bridgelist[b].shipid);
+	if (i < 0) {
+		pthread_mutex_unlock(&universe_mutex);
+		return -1;
+	}
+	o = &go[i];
+
+	rc = snis_readsocket(msi->sock, &len, sizeof(len));
+	if (rc < 0) {
+		fprintf(stderr, "snis_readsocket: %s%d: %s\n", __FILE__, __LINE__, strerror(errno));
+		pthread_mutex_unlock(&universe_mutex);
+		return -1;
+	}
+	len = ntohl(len);
+	if (len > sizeof(data)) {
+		fprintf(stderr, "Bad length in update_bridge_passengers\n");
+		pthread_mutex_unlock(&universe_mutex);
+		return -1;
+	}
+	rc = snis_readsocket(msi->sock, data, len);
+	if (rc < 0) {
+		fprintf(stderr, "snis_readsocket: %s%d: %s\n", __FILE__, __LINE__, strerror(errno));
+		pthread_mutex_unlock(&universe_mutex);
+		return -1;
+	}
+
+	struct packed_buffer pb;
+
+	/* get at the packed buffer inside the data */
+	pb.buffer = data;
+	pb.buffer_size = len;
+	pb.buffer_cursor = 0;
+
+	struct flattened_passenger fp;
+	int32_t passengers_aboard = 0;
+
+	rc = packed_buffer_extract(&pb, "w", &passengers_aboard);
+	if (rc < 0)
+		goto errorout;
+	if (passengers_aboard > PASSENGER_BERTHS)
+		goto errorout;
+
+	for (int i = 0; i < passengers_aboard; i++) {
+		memset(&fp, 0, sizeof(fp));
+
+		rc = packed_buffer_extract(&pb, "s", fp.name, sizeof(fp.name));
+		if (rc < 0)
+			goto errorout;
+		rc = packed_buffer_extract(&pb, "s", fp.solarsystem, sizeof(fp.solarsystem));
+		if (rc < 0)
+			goto errorout;
+		rc = packed_buffer_extract(&pb, "s", fp.fare, sizeof(fp.fare));
+		if (rc < 0)
+			goto errorout;
+		rc = packed_buffer_extract(&pb, "s", fp.dest, sizeof(fp.dest));
+		if (rc < 0)
+			goto errorout;
+
+		/* Now, reconstitute the native snis_server passenger data from this pickled passenger */
+		unflatten_passenger(o, &fp);
+	}
+
+	pthread_mutex_unlock(&universe_mutex);
+	return 0;
+
+errorout:
+	pthread_mutex_unlock(&universe_mutex);
+	return -1;
+}
+
+
 static void *multiverse_reader(void *arg)
 {
 	struct multiverse_server_info *msi = arg;
@@ -31324,6 +31776,16 @@ static void *multiverse_reader(void *arg)
 				fflush(stderr);
 			}
 			exit(0); /* Is this all we need to do? I think so... */
+			break;
+		case SNISMV_OPCODE_UPDATE_BRIDGE_CARGO:
+			rc = process_multiverse_update_bridge_cargo(msi);
+			if (rc)
+				goto protocol_error;
+			break;
+		case SNISMV_OPCODE_UPDATE_BRIDGE_PASSENGERS:
+			rc = process_multiverse_update_bridge_passengers(msi);
+			if (rc)
+				goto protocol_error;
 			break;
 		default:
 			fprintf(stderr, "%s: unimplemented multiverse opcode %hhu\n",

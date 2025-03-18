@@ -154,7 +154,7 @@ int packed_buffer_append_string(struct packed_buffer *pb, unsigned char *str, un
 	memcpy(&pb->buffer[pb->buffer_cursor], &belen, sizeof(belen));
 	pb->buffer_cursor += sizeof(belen);
 	packed_buffer_check(pb);
-	memcpy(&pb->buffer[pb->buffer_cursor], &str, len);
+	memcpy(&pb->buffer[pb->buffer_cursor], str, len);
 	pb->buffer_cursor += len;
 	packed_buffer_check(pb);
 	return 0;
@@ -345,20 +345,20 @@ void packed_buffer_print(char *label, struct packed_buffer *pb)
 	len = pb->buffer_size;
 	fprintf(stderr, "--- begin packed buffer: %s: cursor=%d, size=%d ---\n",
 		label, pb->buffer_cursor, pb->buffer_size);
-	for (i = 0; i < len; i++) {
-		fprintf(stderr, "%c%02x",
-			i == pb->buffer_cursor ? '>' : i == pb->buffer_cursor + 1 ? '<' : ' ',
-			pb->buffer[i]);
-		if (((i + 1) % 32) == 0)
-			fprintf(stderr, "\n");
-	}
-	fprintf(stderr, "---\n");
-	for (i = 0; i < len; i++) {
-		fprintf(stderr, "%c%c",
-			i == pb->buffer_cursor ? '>' : i == pb->buffer_cursor + 1 ? '<' : ' ',
-			isgraph(pb->buffer[i]) ? pb->buffer[i] : '.');
-		if (((i + 1) % 32) == 0)
-			fprintf(stderr, "\n");
+	for (i = 0; i < len; i += 16) {
+		fprintf(stderr, "%5d: ", i);
+		for (int j = 0; j < 16; j++) {
+			fprintf(stderr, "%c%02x",
+				(i + j) == pb->buffer_cursor ? '>' : (i + j) == pb->buffer_cursor + 1 ? '<' : ' ',
+			pb->buffer[i + j]);
+		}
+		printf("    ");
+		for (int j = 0; j < 16; j++) {
+			fprintf(stderr, "%c%c",
+				(i + j) == pb->buffer_cursor ? '>' : (i + j) == pb->buffer_cursor + 1 ? '<' : ' ',
+				isprint(pb->buffer[i + j]) ? pb->buffer[i + j] : '.');
+		}
+		fprintf(stderr, "\n");
 	}
 	fprintf(stderr, "--- end packed buffer: %s: L=%d,S=%d ---\n",
 		label, pb->buffer_cursor, pb->buffer_size);

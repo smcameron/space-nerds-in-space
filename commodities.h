@@ -38,6 +38,24 @@ struct commodity {
 	int odds;
 };
 
+/* This is used to transmit commodity information (cargo bay contents)
+ * to snis_multiverse and back.  Commodities exist within snis_server,
+ * and each snis_server can have custom commodities added by lua scripts
+ * for missions that do not exist in any other snis server.  In order to
+ * make these custom commodities capable of traversing warp gates, we
+ * have to transmit commodities in flattened string form, and then they
+ * can be reconstituted on the destination snis server.
+ */
+struct flattened_commodity {
+	char name[40];
+	char unit[20];
+	char scans_as[20];
+	char category[20];
+	char base_price[20];
+	char volatility[20];
+	char legality[20];
+};
+
 struct commodity *read_commodities(char *filename, int *ncommodities);
 
 /* economy, tech_level, government will be between 0.0 and 1.0 indicating the
@@ -55,5 +73,7 @@ int lookup_commodity(struct commodity *c, int ncommodities, const char *commodit
 const char *commodity_category(int cat);
 const char *commodity_category_description(int cat);
 int ncommodity_categories(void);
+
+void flatten_commodity(struct commodity *c, struct flattened_commodity *fc);
 
 #endif

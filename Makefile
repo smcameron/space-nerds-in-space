@@ -555,7 +555,7 @@ SERVEROBJS=${COMMONOBJS} $(patsubst %,$(OD)/%,${_SERVEROBJS})
 _MULTIVERSEOBJS=snis_multiverse.o snis_marshal.o snis_socket_io.o mathutils.o mtwist.o stacktrace.o \
 		snis_hash.o quat.o string-utils.o key_value_parser.o snis_bridge_update_packet.o \
 		pthread_util.o rootcheck.o starmap_adjacency.o replacement_assets.o snis_asset_dir.o \
-		snis_bin_dir.o snis_licenses.o net_utils.o
+		snis_bin_dir.o snis_licenses.o net_utils.o commodities.o
 MULTIVERSEOBJS=$(patsubst %,$(OD)/%,${_MULTIVERSEOBJS})
 
 OGGOBJ=$(patsubst %,$(OD)/%,${_OGGOBJ})
@@ -673,7 +673,8 @@ MODELS=${MD}/freighter.stl \
 	${MD}/space_monster_torso.stl \
 	${MD}/space_monster_tentacle_segment.stl \
 	${MD}/cylinder.stl \
-	${MD}/missile.stl
+	${MD}/missile.stl \
+	${MD}/mf-cockpit.stl
 
 # compiler specific cflags
 ifeq (${USING_CLANG},)
@@ -954,7 +955,7 @@ $(OD)/snis_server_tracker.o:	snis_server_tracker.c snis_server_tracker.h pthread
 			ssgl/ssgl.h Makefile
 	$(Q)$(COMPILE)
 
-$(OD)/snis_client.o:	snis_client.c Makefile build_info.h ui_colors.h ${ODT}
+$(OD)/snis_client.o:	snis_client.c Makefile build_info.h ui_colors.h snis_ui.h ${ODT}
 	$(Q)$(SDLCOMPILE) ${VCHAT}
 
 $(OD)/mesh_viewer.o:	mesh_viewer.c Makefile build_info.h ${ODT}
@@ -1326,7 +1327,8 @@ mostly-clean:
 	${MANSRCDIR}/earthlike.1.gz  ${MANSRCDIR}/snis_client.6.gz  ${MANSRCDIR}/snis_server.6.gz  \
 	${MANSRCDIR}/snis_test_audio.1.gz bin/test_transport_contract bin/test_stringutils \
 	bin/yoke-test-program fuzz_obj_parser fuzz_snis_read_ship_types fuzz_solarsystem_asset_spec_read \
-	fuzz_read_thrust_attachments fuzz_process_manifest build_info.h fuzz_read_joystick_config
+	fuzz_read_thrust_attachments fuzz_process_manifest build_info.h fuzz_read_joystick_config \
+	fuzz_read_commodities
 	rm -f ${BIN}
 	rm -fr opus-1.3.1
 	rm -f libopus.a
@@ -1580,6 +1582,10 @@ fuzz_read_joystick_config:	fuzz_read_joystick_config.c
 	afl-clang-fast -g3 -fsanitize=address,undefined fuzz_read_joystick_config.c \
 		-lm -o fuzz_read_joystick_config
 
+fuzz_read_commodities:	fuzz_read_commodities.c
+	afl-clang-fast -g3 -fsanitize=address,undefined fuzz_read_commodities.c \
+		-lm -o fuzz_read_commodities
+
 fuzz_read_thrust_attachments:	fuzz_read_thrust_attachments.c
 	afl-clang-fast -g3 -fsanitize=address,undefined fuzz_read_thrust_attachments.c \
 		-lm -o fuzz_read_thrust_attachments
@@ -1626,6 +1632,11 @@ run-fuzz-read-joystick-config:	fuzz_read_joystick_config put-cpu-in-hi-performan
 	/bin/rm -fr fuzz.out
 	afl-fuzz -T "Fuzzing read_joystick_config" -i fuzztests/read_joystick_config \
 		-o fuzz.out -- ./fuzz_read_joystick_config
+
+run-fuzz-read-commodities:	fuzz_read_commodities put-cpu-in-hi-performance-mode
+	/bin/rm -fr fuzz.out
+	afl-fuzz -T "Fuzzing read_commodities" -i fuzztests/read_commodities \
+		-o fuzz.out -- ./fuzz_read_commodities
 
 put-cpu-in-hi-performance-mode:
 	(cd /sys/devices/system/cpu && echo performance | sudo tee cpu*/cpufreq/scaling_governor)

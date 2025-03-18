@@ -298,6 +298,7 @@ struct key_value_specification snis_entity_kvs[] = {
 	FLOAT_FIELD(orientation.vec[3]),
 	UINT8_TSDFIELD(exterior_lights),
 	UINT8_TSDFIELD(align_sciball_to_ship),
+	UINT8_TSDFIELD(sci_auto_sweep),
 #ifdef INCLUDE_BRIDGE_INFO_FIELDS
 	INT32_BRIDGE_FIELD(initialized),
 	UINT8_BRIDGE_FIELD(persistent_bridge_data.engineering_preset[0][0]),
@@ -489,9 +490,166 @@ struct key_value_specification snis_entity_kvs[] = {
 	UINT8_BRIDGE_FIELD(persistent_bridge_data.engineering_preset[9][15]),
 	UINT8_BRIDGE_FIELD(persistent_bridge_data.engineering_preset[9][16]),
 	UINT8_BRIDGE_FIELD(persistent_bridge_data.engineering_preset[9][17]),
+
+
+/* Macros for constructing key value specifications for snis mv cargo, */
+#define CARGO_DOUBLE_FIELD(x) { #x, KVS_DOUBLE, 1, offsetof(struct bridge_info, x), sizeof(double), }
+#define CARGO_FLOAT_FIELD(x) { #x, KVS_FLOAT, 1, offsetof(struct bridge_info, x), sizeof(float), }
+#define CARGO_UINT32_FIELD(x) { #x, KVS_UINT32, 1, offsetof(struct bridge_info, x), sizeof(uint32_t), }
+#define CARGO_UINT16_FIELD(x) { #x, KVS_UINT16, 1, offsetof(struct bridge_info, x), sizeof(uint16_t), }
+#define CARGO_UINT8_FIELD(x) { #x, KVS_INT8, 1, offsetof(struct bridge_info, x), sizeof(int8_t), }
+#define CARGO_INT32_FIELD(x) { #x, KVS_INT32, 1, offsetof(struct bridge_info, x), sizeof(int32_t), }
+#define CARGO_INT16_FIELD(x) { #x, KVS_INT16, 1, offsetof(struct bridge_info, x), sizeof(int16_t), }
+#define CARGO_INT8_FIELD(x) { #x, KVS_INT8, 1, offsetof(struct bridge_info, x), sizeof(int8_t), }
+#define CARGO_STRING_FIELD(x) { #x, KVS_STRING, 1, offsetof(struct bridge_info, x), \
+	sizeof(((struct bridge_info *) 0)->x), }
+
+	CARGO_INT32_FIELD(cargo.ncargo_bays),
+	CARGO_STRING_FIELD(cargo.cargo[0].fc.name),
+	CARGO_STRING_FIELD(cargo.cargo[0].fc.unit),
+	CARGO_STRING_FIELD(cargo.cargo[0].fc.scans_as),
+	CARGO_STRING_FIELD(cargo.cargo[0].fc.category),
+	CARGO_STRING_FIELD(cargo.cargo[0].fc.base_price),
+	CARGO_STRING_FIELD(cargo.cargo[0].fc.volatility),
+	CARGO_STRING_FIELD(cargo.cargo[0].fc.legality),
+	CARGO_STRING_FIELD(cargo.cargo[0].qty),
+	CARGO_STRING_FIELD(cargo.cargo[0].paid),
+
+	CARGO_STRING_FIELD(cargo.cargo[1].fc.name),
+	CARGO_STRING_FIELD(cargo.cargo[1].fc.unit),
+	CARGO_STRING_FIELD(cargo.cargo[1].fc.scans_as),
+	CARGO_STRING_FIELD(cargo.cargo[1].fc.category),
+	CARGO_STRING_FIELD(cargo.cargo[1].fc.base_price),
+	CARGO_STRING_FIELD(cargo.cargo[1].fc.volatility),
+	CARGO_STRING_FIELD(cargo.cargo[1].fc.legality),
+	CARGO_STRING_FIELD(cargo.cargo[1].qty),
+	CARGO_STRING_FIELD(cargo.cargo[1].paid),
+
+	CARGO_STRING_FIELD(cargo.cargo[2].fc.name),
+	CARGO_STRING_FIELD(cargo.cargo[2].fc.unit),
+	CARGO_STRING_FIELD(cargo.cargo[2].fc.scans_as),
+	CARGO_STRING_FIELD(cargo.cargo[2].fc.category),
+	CARGO_STRING_FIELD(cargo.cargo[2].fc.base_price),
+	CARGO_STRING_FIELD(cargo.cargo[2].fc.volatility),
+	CARGO_STRING_FIELD(cargo.cargo[2].fc.legality),
+	CARGO_STRING_FIELD(cargo.cargo[2].qty),
+	CARGO_STRING_FIELD(cargo.cargo[2].paid),
+
+	CARGO_STRING_FIELD(cargo.cargo[3].fc.name),
+	CARGO_STRING_FIELD(cargo.cargo[3].fc.unit),
+	CARGO_STRING_FIELD(cargo.cargo[3].fc.scans_as),
+	CARGO_STRING_FIELD(cargo.cargo[3].fc.category),
+	CARGO_STRING_FIELD(cargo.cargo[3].fc.base_price),
+	CARGO_STRING_FIELD(cargo.cargo[3].fc.volatility),
+	CARGO_STRING_FIELD(cargo.cargo[3].fc.legality),
+	CARGO_STRING_FIELD(cargo.cargo[3].qty),
+	CARGO_STRING_FIELD(cargo.cargo[3].paid),
+
+	CARGO_STRING_FIELD(cargo.cargo[4].fc.name),
+	CARGO_STRING_FIELD(cargo.cargo[4].fc.unit),
+	CARGO_STRING_FIELD(cargo.cargo[4].fc.scans_as),
+	CARGO_STRING_FIELD(cargo.cargo[4].fc.category),
+	CARGO_STRING_FIELD(cargo.cargo[4].fc.base_price),
+	CARGO_STRING_FIELD(cargo.cargo[4].fc.volatility),
+	CARGO_STRING_FIELD(cargo.cargo[4].fc.legality),
+	CARGO_STRING_FIELD(cargo.cargo[4].qty),
+	CARGO_STRING_FIELD(cargo.cargo[4].paid),
+
+	CARGO_STRING_FIELD(cargo.cargo[5].fc.name),
+	CARGO_STRING_FIELD(cargo.cargo[5].fc.unit),
+	CARGO_STRING_FIELD(cargo.cargo[5].fc.scans_as),
+	CARGO_STRING_FIELD(cargo.cargo[5].fc.category),
+	CARGO_STRING_FIELD(cargo.cargo[5].fc.base_price),
+	CARGO_STRING_FIELD(cargo.cargo[5].fc.volatility),
+	CARGO_STRING_FIELD(cargo.cargo[5].fc.legality),
+	CARGO_STRING_FIELD(cargo.cargo[5].qty),
+	CARGO_STRING_FIELD(cargo.cargo[5].paid),
+
+	CARGO_STRING_FIELD(cargo.cargo[6].fc.name),
+	CARGO_STRING_FIELD(cargo.cargo[6].fc.unit),
+	CARGO_STRING_FIELD(cargo.cargo[6].fc.scans_as),
+	CARGO_STRING_FIELD(cargo.cargo[6].fc.category),
+	CARGO_STRING_FIELD(cargo.cargo[6].fc.base_price),
+	CARGO_STRING_FIELD(cargo.cargo[6].fc.volatility),
+	CARGO_STRING_FIELD(cargo.cargo[6].fc.legality),
+	CARGO_STRING_FIELD(cargo.cargo[6].qty),
+	CARGO_STRING_FIELD(cargo.cargo[6].paid),
+
+	CARGO_STRING_FIELD(cargo.cargo[7].fc.name),
+	CARGO_STRING_FIELD(cargo.cargo[7].fc.unit),
+	CARGO_STRING_FIELD(cargo.cargo[7].fc.scans_as),
+	CARGO_STRING_FIELD(cargo.cargo[7].fc.category),
+	CARGO_STRING_FIELD(cargo.cargo[7].fc.base_price),
+	CARGO_STRING_FIELD(cargo.cargo[7].fc.volatility),
+	CARGO_STRING_FIELD(cargo.cargo[7].fc.legality),
+	CARGO_STRING_FIELD(cargo.cargo[7].qty),
+	CARGO_STRING_FIELD(cargo.cargo[7].paid),
+
+	CARGO_INT32_FIELD(passengers.passengers_aboard),
+	CARGO_STRING_FIELD(passengers.fp[0].name),
+	CARGO_STRING_FIELD(passengers.fp[0].solarsystem),
+	CARGO_STRING_FIELD(passengers.fp[0].fare),
+	CARGO_STRING_FIELD(passengers.fp[0].dest),
+
+	CARGO_STRING_FIELD(passengers.fp[1].name),
+	CARGO_STRING_FIELD(passengers.fp[1].solarsystem),
+	CARGO_STRING_FIELD(passengers.fp[1].fare),
+	CARGO_STRING_FIELD(passengers.fp[1].dest),
+
+	CARGO_STRING_FIELD(passengers.fp[2].name),
+	CARGO_STRING_FIELD(passengers.fp[2].solarsystem),
+	CARGO_STRING_FIELD(passengers.fp[2].fare),
+	CARGO_STRING_FIELD(passengers.fp[2].dest),
+
+	CARGO_STRING_FIELD(passengers.fp[3].name),
+	CARGO_STRING_FIELD(passengers.fp[3].solarsystem),
+	CARGO_STRING_FIELD(passengers.fp[3].fare),
+	CARGO_STRING_FIELD(passengers.fp[3].dest),
+
+	CARGO_STRING_FIELD(passengers.fp[4].name),
+	CARGO_STRING_FIELD(passengers.fp[4].solarsystem),
+	CARGO_STRING_FIELD(passengers.fp[4].fare),
+	CARGO_STRING_FIELD(passengers.fp[4].dest),
+
+	CARGO_STRING_FIELD(passengers.fp[5].name),
+	CARGO_STRING_FIELD(passengers.fp[5].solarsystem),
+	CARGO_STRING_FIELD(passengers.fp[5].fare),
+	CARGO_STRING_FIELD(passengers.fp[5].dest),
+
+	CARGO_STRING_FIELD(passengers.fp[6].name),
+	CARGO_STRING_FIELD(passengers.fp[6].solarsystem),
+	CARGO_STRING_FIELD(passengers.fp[6].fare),
+	CARGO_STRING_FIELD(passengers.fp[6].dest),
+
+	CARGO_STRING_FIELD(passengers.fp[7].name),
+	CARGO_STRING_FIELD(passengers.fp[7].solarsystem),
+	CARGO_STRING_FIELD(passengers.fp[7].fare),
+	CARGO_STRING_FIELD(passengers.fp[7].dest),
+
 #endif
+
 	{ 0, 0, 0, 0, 0 },
 };
+
+#undef CARGO_DOUBLE_FIELD
+#undef CARGO_FLOAT_FIELD
+#undef CARGO_UINT32_FIELD
+#undef CARGO_UINT16_FIELD
+#undef CARGO_UINT8_FIELD
+#undef CARGO_INT32_FIELD
+#undef CARGO_INT16_FIELD
+#undef CARGO_INT8_FIELD
+#undef CARGO_STRING_FIELD
+
+#undef DOUBLE_FIELD
+#undef FLOAT_FIELD
+#undef UINT32_FIELD
+#undef UINT16_FIELD
+#undef UINT8_FIELD
+#undef INT32_FIELD
+#undef INT16_FIELD
+#undef INT8_FIELD
+#undef STRING_FIELD
 
 #endif
 

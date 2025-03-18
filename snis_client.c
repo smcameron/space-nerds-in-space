@@ -143,6 +143,7 @@
 #include "snis_client_forker.h"
 #include "snis_process_options.h"
 #include "net_utils.h"
+#include "snis_ui.h"
 
 #define SHIP_COLOR CYAN
 #define STARBASE_COLOR RED
@@ -328,6 +329,8 @@ static int time_to_set_window_size = 0;
 int pipe_to_splash_screen = -1;
 int pipe_to_forker_process = -1;
 static struct snis_process_options child_process_options;
+static int running_in_container = 0; /* some things don't work in container, like invoking a browser */
+static int leave_no_orphans = 1; /* if in container, when we exit, kill all the servers too. tweakable. */
 static int skip_splash_screen = 0;
 static float original_aspect_ratio;
 static int window_manager_can_constrain_aspect_ratio = 0;
@@ -447,6 +450,7 @@ static struct ui_element_functions ui_slider_functions = {
 	.keyrelease_fn = NULL,
 	.update_mouse_pos = NULL,
 	.get_label = (ui_element_get_label_function) snis_slider_get_label,
+	.set_hover_state = NULL,
 };
 
 static struct ui_element_functions ui_button_functions = {
@@ -460,6 +464,7 @@ static struct ui_element_functions ui_button_functions = {
 	.keyrelease_fn = NULL,
 	.update_mouse_pos = NULL,
 	.get_label = (ui_element_get_label_function) snis_button_get_label,
+	.set_hover_state = (ui_element_set_mouse_hover_function) snis_button_set_mouse_hover,
 };
 
 static struct ui_element_functions ui_strip_chart_functions = {
@@ -473,6 +478,7 @@ static struct ui_element_functions ui_strip_chart_functions = {
 	.keyrelease_fn = NULL,
 	.update_mouse_pos = NULL,
 	.get_label = (ui_element_get_label_function) snis_strip_chart_get_label,
+	.set_hover_state = NULL,
 };
 
 static struct ui_element_functions ui_scaling_strip_chart_functions = {
@@ -486,6 +492,7 @@ static struct ui_element_functions ui_scaling_strip_chart_functions = {
 	.keyrelease_fn = NULL,
 	.update_mouse_pos = NULL,
 	.get_label = (ui_element_get_label_function) snis_scaling_strip_chart_get_label,
+	.set_hover_state = NULL,
 };
 
 static struct ui_element_functions ui_label_functions = {
@@ -499,6 +506,7 @@ static struct ui_element_functions ui_label_functions = {
 	.keyrelease_fn = NULL,
 	.update_mouse_pos = NULL,
 	.get_label = (ui_element_get_label_function) snis_label_get_label,
+	.set_hover_state = NULL,
 };
 
 static struct ui_element_functions ui_gauge_functions = {
@@ -512,6 +520,7 @@ static struct ui_element_functions ui_gauge_functions = {
 	.keyrelease_fn = NULL,
 	.update_mouse_pos = NULL,
 	.get_label = (ui_element_get_label_function) gauge_get_label,
+	.set_hover_state = NULL,
 };
 
 static struct ui_element_functions ui_text_input_functions = {
@@ -525,6 +534,7 @@ static struct ui_element_functions ui_text_input_functions = {
 	.keyrelease_fn = NULL,
 	.update_mouse_pos = NULL,
 	.get_label = NULL,
+	.set_hover_state = NULL,
 };
 
 static struct ui_element_functions ui_text_window_functions = {
@@ -538,6 +548,7 @@ static struct ui_element_functions ui_text_window_functions = {
 	.keyrelease_fn = NULL,
 	.update_mouse_pos = NULL,
 	.get_label = NULL,
+	.set_hover_state = NULL,
 };
 
 static struct ui_element_functions ui_pull_down_menu_functions = {
@@ -551,6 +562,7 @@ static struct ui_element_functions ui_pull_down_menu_functions = {
 	.keyrelease_fn = NULL,
 	.update_mouse_pos = (ui_update_mouse_pos_function) pull_down_menu_update_mouse_pos,
 	.get_label = NULL,
+	.set_hover_state = NULL,
 };
 
 #define MAXTEXTURES 10
@@ -584,6 +596,8 @@ static struct docking_port_attachment_point **docking_port_info;
 static struct mesh *ship_turret_mesh;
 static struct mesh *ship_turret_base_mesh;
 static struct mesh *turret_mesh;
+static struct mesh *mf_cockpit_mesh;
+static int mf_cockpit = 0;
 static struct mesh *turret_base_mesh;
 static struct mesh *particle_mesh;
 static struct mesh *debris_mesh;
@@ -767,6 +781,7 @@ static void format_date(char *buf, int bufsize, double date)
 static int switched_server = -1;
 static char switch_server_location_string[20] = { 0 };
 static int switch_warp_gate_number = -1;
+static int switch_with_redirection = 0;
 static int switched_server2 = -1;
 static int writer_thread_should_die = 0;
 static int writer_thread_alive = 0;
@@ -774,6 +789,17 @@ static int connected_to_gameserver = 0;
 static unsigned char enforce_solarsystem = 1;
 static int disable_solarsystem_enforcement = 0;
 static char connecting_to_server_msg[100] = { 0 };
+
+static struct navigation_ui nav_ui;
+static struct damcon_ui damcon_ui;
+static struct demon_ui demon_ui;
+static struct engineering_ui eng_ui;
+static struct science_ui sci_ui;
+static struct lobby_ui lobby_ui;
+static struct comms_ui comms_ui;
+static struct network_setup_ui net_setup_ui;
+static struct options_ui options_ui;
+static struct launcher_ui launcher_ui;
 
 #define MAX_LOBBY_TRIES 3
 static void synchronous_update_lobby_info(void)
@@ -1201,42 +1227,6 @@ static int add_generic_damcon_object(uint32_t id, uint32_t ship_id, double x, do
 	update_generic_damcon_object(o, x, y, velocity, heading);
 	return i;
 }
-
-static struct navigation_ui {
-	struct slider *warp_slider;
-	struct slider *navzoom_slider;
-	struct slider *throttle_slider;
-	struct gauge *warp_gauge;
-	struct gauge *speedometer;
-	struct button *engage_warp_button;
-	struct button *docking_magnets_button;
-	struct button *standard_orbit_button;
-	struct button *reverse_button;
-	struct button *trident_button;
-	struct button *computer_button;
-	struct button *starmap_button;
-	struct button *lights_button;
-	struct button *camera_pos_button;
-	struct button *custom_button;
-	int gauge_radius;
-	struct snis_text_input_box *computer_input;
-	char input[100];
-	int computer_active;
-} nav_ui;
-
-static struct damcon_ui {
-	struct label *robot_controls;
-	struct button *engineering_button;
-	struct button *robot_forward_button;
-	struct button *robot_backward_button;
-	struct button *robot_left_button;
-	struct button *robot_right_button;
-	struct button *robot_gripper_button;
-	struct button *robot_auto_button;
-	struct button *robot_manual_button;
-	struct button *eject_warp_core_button;
-	struct button *custom_button;
-} damcon_ui;
 
 static int update_damcon_object(uint32_t id, uint32_t ship_id, uint32_t type,
 			double x, double y, double velocity,
@@ -3729,85 +3719,6 @@ static void request_demon_thrust_packet(uint32_t oid, uint8_t thrust)
 				OPCODE_DEMON_THRUST, oid, thrust));
 }
 
-static struct demon_ui {
-	/* (ux1, uy1), (ux2, uy2) are the universe (x,z) coordinates that correspond to
-	 * the upper left and lower right corners of the screen.
-	 */
-	float ux1, uy1, ux2, uy2;
-	double selectedx, selectedz;
-	double press_mousex, press_mousey;
-	double release_mousex, release_mousey;
-	int button2_pressed;
-	int button2_released;
-	int button3_pressed;
-	int button3_released;
-	int nselected;
-#define MAX_DEMON_SELECTABLE 256
-	uint32_t selected_id[MAX_DEMON_SELECTABLE];
-	struct button *demon_home_button;
-	struct button *demon_ship_button;
-	struct button *demon_starbase_button;
-	struct button *demon_planet_button;
-	struct button *demon_black_hole_button;
-	struct button *demon_asteroid_button;
-	struct button *demon_nebula_button;
-	struct button *demon_spacemonster_button;
-	struct button *demon_captain_button;
-	struct button *demon_delete_button;
-	struct button *demon_select_none_button;
-	struct button *demon_torpedo_button;
-	struct button *demon_phaser_button;
-	struct button *demon_2d3d_button;
-	struct button *demon_move_button;
-	struct button *demon_scale_button;
-	struct button *demon_console_button;
-	struct snis_text_input_box *demon_input;
-	struct scaling_strip_chart *bytes_recd_strip_chart;
-	struct scaling_strip_chart *bytes_sent_strip_chart;
-	struct scaling_strip_chart *latency_strip_chart;
-	struct scaling_strip_chart *outgoing_client_queue_length_chart;
-	struct scaling_strip_chart *incoming_client_queue_length_chart;
-	struct scaling_strip_chart *outgoing_server_queue_length_chart;
-	struct scaling_strip_chart *incoming_server_queue_length_chart;
-	struct pull_down_menu *menu;
-	struct text_window *console;
-	char input[100];
-	char error_msg[80];
-	double ix, iz, ix2, iz2;
-	uint32_t captain_of;
-	uint32_t follow_id;
-	int selectmode;
-	int buttonmode;
-	int shiptype;
-	int faction;
-	int render_style;
-#define DEMON_UI_RENDER_STYLE_WIREFRAME 0
-#define DEMON_UI_RENDER_STYLE_ALPHA_BY_NORMAL 1
-	int move_from_x, move_from_y; /* mouse coords where move begins */
-#define DEMON_BUTTON_NOMODE 0
-#define DEMON_BUTTON_SHIPMODE 1
-#define DEMON_BUTTON_STARBASEMODE 2
-#define DEMON_BUTTON_PLANETMODE 3
-#define DEMON_BUTTON_ASTEROIDMODE 4
-#define DEMON_BUTTON_NEBULAMODE 5
-#define DEMON_BUTTON_SPACEMONSTERMODE 6
-#define DEMON_BUTTON_BLACKHOLEMODE 7
-#define DEMON_BUTTON_DELETE 8
-#define DEMON_BUTTON_SELECTNONE 9
-#define DEMON_BUTTON_CAPTAINMODE 10
-	int use_3d;
-	union vec3 camera_pos;
-	union quat camera_orientation;
-	union vec3 desired_camera_pos;
-	union quat desired_camera_orientation;
-	float exaggerated_scale;
-	float desired_exaggerated_scale;
-	int exaggerated_scale_active;
-	int netstats_active;
-	int console_active;
-	int log_console;
-} demon_ui;
-
 static void home_demon_camera(void)
 {
 	union vec3 right = { { 1.0f, 0.0f, 0.0f } };
@@ -3870,12 +3781,7 @@ static void request_weapons_manual_pitch_packet(uint8_t pitch)
 	queue_to_server(snis_opcode_pkt("bb", OPCODE_REQUEST_MANUAL_GUNPITCH, pitch));
 }
 
-static struct weapons_ui {
-	struct gauge *phaser_bank_gauge;
-	struct gauge *phaser_wavelength;
-	struct slider *wavelen_slider;
-	struct button *custom_button;
-} weapons;
+static struct weapons_ui weapons;
 
 static void draw_plane_radar(struct snis_entity *o, union quat *aim, float cx, float cy, float r, float range)
 {
@@ -4478,65 +4384,6 @@ static void sci_threed_pressed(void *x);
 static void sci_sciplane_pressed(void *x);
 static void sci_waypoints_pressed(void *x);
 static void sci_details_pressed(void *x);
-
-static struct engineering_ui {
-	struct gauge *fuel_gauge;
-	struct gauge *amp_gauge;
-	struct gauge *voltage_gauge;
-	struct gauge *temp_gauge;
-	struct gauge *oxygen_gauge;
-	struct button *damcon_button;
-	struct button *preset_buttons[ENG_PRESET_NUMBER];
-	struct timeval preset_press_time[ENG_PRESET_NUMBER];
-	struct button *preset_save_button;
-	struct button *silence_alarms;
-	struct button *deploy_flare;
-	struct button *custom_button;
-	struct slider *shield_slider;
-	struct slider *shield_coolant_slider;
-	struct slider *maneuvering_slider;
-	struct slider *maneuvering_coolant_slider;
-	struct slider *warp_slider;
-	struct slider *warp_coolant_slider;
-	struct slider *impulse_slider;
-	struct slider *impulse_coolant_slider;
-	struct slider *sensors_slider;
-	struct slider *sensors_coolant_slider;
-	struct slider *comm_slider;
-	struct slider *comm_coolant_slider;
-	struct slider *phaserbanks_slider;
-	struct slider *phaserbanks_coolant_slider;
-	struct slider *tractor_slider;
-	struct slider *tractor_coolant_slider;
-	struct slider *lifesupport_slider;
-	struct slider *lifesupport_coolant_slider;
-	struct slider *shield_control_slider;
-
-	struct slider *shield_damage;
-	struct slider *impulse_damage;
-	struct slider *warp_damage;
-	struct slider *maneuvering_damage;
-	struct slider *phaser_banks_damage;
-	struct slider *sensors_damage;
-	struct slider *comms_damage;
-	struct slider *tractor_damage;
-	struct slider *lifesupport_damage;
-
-	struct slider *shield_temperature;
-	struct slider *impulse_temperature;
-	struct slider *warp_temperature;
-	struct slider *maneuvering_temperature;
-	struct slider *phaser_banks_temperature;
-	struct slider *sensors_temperature;
-	struct slider *comms_temperature;
-	struct slider *tractor_temperature;
-	struct slider *lifesupport_temperature;
-
-	int selected_subsystem;
-	int selected_preset;
-	int gauge_radius;
-} eng_ui;
-
 static void preset_button_pressed(void *button_ptr_ptr);
 
 #define EMPTYVOID __attribute__((unused)) void *
@@ -4575,6 +4422,107 @@ static void do_joystick_science_up_arrow(EMPTYVOID x) { science_dirkey(0, -1); }
 static void do_joystick_science_down_arrow(EMPTYVOID x) { science_dirkey(0, 1); }
 
 #undef EMPTYVOID
+
+static struct sci_candidate {
+	struct snis_entity *c;
+	float bearing;
+} sci_candidate[MAXGAMEOBJS];
+
+int sci_candidate_compare(const void *a, const void *b, __attribute__((unused)) void *cookie)
+{
+	const struct sci_candidate *c1 = a;
+	const struct sci_candidate *c2 = b;
+
+	if (c1->bearing < c2->bearing)
+		return -1;
+	if (c1->bearing > c2->bearing)
+		return 1;
+	return 0;
+}
+
+static void sci_next_prev_target_pressed(int direction)
+{
+	pthread_mutex_lock(&universe_mutex);
+
+	struct snis_entity *our_ship = find_my_ship();
+	if (!our_ship)
+		return;
+
+	double range = (MAX_SCIENCE_SCREEN_RADIUS - MIN_SCIENCE_SCREEN_RADIUS) *
+			(our_ship->tsd.ship.scizoom / 255.0) + MIN_SCIENCE_SCREEN_RADIUS;
+
+	/* Find all the known science targets, compute their bearing */
+	int ncandidates = 0;
+	for (int i = 0; i <= snis_object_pool_highest_object(pool); i++) {
+		struct snis_entity *o = &go[i];
+		if (!o->sdata.science_data_known)
+			continue;
+
+		union vec3 our_pos, target_pos, to_target;
+		target_pos.v.x = o->x;
+		target_pos.v.y = o->y;
+		target_pos.v.z = o->z;
+		our_pos.v.x = our_ship->x;
+		our_pos.v.y = our_ship->y;
+		our_pos.v.z = our_ship->z;
+		vec3_sub(&to_target, &target_pos, &our_pos);
+
+		double dist, bearing, mark;
+		vec3_to_heading_mark(&to_target, &dist, &bearing, &mark);
+
+		if (dist > range) /* out of range? */
+			continue;
+
+		sci_candidate[ncandidates].c = o;
+		sci_candidate[ncandidates].bearing = bearing;
+		ncandidates++;
+	}
+
+	if (ncandidates == 0)
+		return;
+
+	/* Sort all the candidate science targets by bearing */
+#if defined(__APPLE__)  || defined(__FreeBSD__)
+	qsort_r(sci_candidate, ncandidates, sizeof(sci_candidate[0]), sci_candidate_compare);
+#else
+	qsort_r(sci_candidate, ncandidates, sizeof(sci_candidate[0]), sci_candidate_compare, 0);
+#endif
+
+	/* Find the currently selected science candidate */
+	int guy = -1;
+	for (int i = 0; i < ncandidates; i++) {
+		if (sci_candidate[i].c == curr_science_guy) {
+			guy = i;
+			break;
+		}
+	}
+
+	/* If no currently selected candidate, then the first guy is our guy */
+	if (guy < 0) {
+		guy = 0;
+	} else { /* Otherwise advance to the next candidate ordered by bearing */
+		guy = guy + direction;
+		if (guy < 0)
+			guy = ncandidates - 1;
+		if (guy >= ncandidates)
+			guy = 0;
+	}
+	uint32_t guy_id = sci_candidate[guy].c->id;
+	pthread_mutex_unlock(&universe_mutex);
+
+	/* Request selection of our next guy */
+	request_sci_select_target(OPCODE_SCI_SELECT_TARGET_TYPE_OBJECT, guy_id);
+}
+
+static void sci_next_target_pressed(__attribute__((unused)) void *x)
+{
+	sci_next_prev_target_pressed(1);
+}
+
+static void sci_prev_target_pressed(__attribute__((unused)) void *x)
+{
+	sci_next_prev_target_pressed(-1);
+}
 
 static void deal_with_keyboard(void)
 {
@@ -4655,6 +4603,10 @@ static void deal_with_keyboard(void)
 			sci_waypoints_pressed(NULL);
 		if (kbstate.pressed[key_sci_details])
 			sci_details_pressed(NULL);
+		if (kbstate.pressed[key_sci_next_target])
+			sci_next_target_pressed(NULL);
+		if (kbstate.pressed[key_sci_prev_target])
+			sci_prev_target_pressed(NULL);
 	}
 
 	if (sbh || sbv || sbr)
@@ -4688,35 +4640,6 @@ static void quit_continue_or_disconnect(void)
 		break;
 	}
 }
-
-static struct science_ui {
-	/* details mode is one of define SCI_DETAILS_MODE_THREED,
-	 * SCI_DETAILS_MODE_DETAILS, SCI_DETAILS_MODE_SCIPLANE,
-	 * SCI_DETAILS_MODE_WAYPOINTS
-	 */
-	int details_mode;
-	struct slider *scizoom;
-	struct slider *scipower;
-	struct button *details_button;
-	struct button *threed_button;
-	struct button *sciplane_button;
-	struct button *tractor_button;
-	struct button *align_to_ship_button;
-	struct button *launch_mining_bot_button;
-	struct button *waypoints_button;
-	struct button *add_waypoint_button;
-	struct button *add_current_pos_button;
-	struct button *custom_button;
-	struct snis_text_input_box *waypoint_input[3];
-	char waypoint_text[3][15];
-	struct button *clear_waypoint_button[MAXWAYPOINTS];
-	struct button *select_waypoint_button[MAXWAYPOINTS];
-	double waypoint[MAXWAYPOINTS][3];
-	int nwaypoints;
-	struct pull_down_menu *menu;
-	int low_tractor_power_timer;
-	int align_sciball_to_ship; /* mirrors player's o->tsd.ship.align_sciball_to_ship */
-} sci_ui;
 
 static void engage_warp_button_pressed(__attribute__((unused)) void *cookie);
 static void reverse_button_pressed(__attribute__((unused)) void *s);
@@ -5157,10 +5080,6 @@ static void show_introscreen(void)
 static int lobbylast1clickx = -1;
 static int lobbylast1clicky = -1;
 static int lobby_selected_server = -1;
-static struct lobby_ui {
-	struct button *lobby_cancel_button;
-	struct button *lobby_connect_to_server_button;
-} lobby_ui;
 
 static void lobby_connect_to_server_button_pressed(__attribute__((unused)) void *unused)
 {
@@ -5294,6 +5213,7 @@ static void show_lobbyscreen(void)
 {
 	char msg[100];
 	int i, protocol_mismatch;
+	int selected_protocol_mismatch;
 #define STARTLINE 100
 #define LINEHEIGHT 30
 
@@ -5383,6 +5303,7 @@ static void show_lobbyscreen(void)
 
 		/* Draw server info */
 		sng_set_foreground(UI_COLOR(lobby_connecting));
+		selected_protocol_mismatch = 0;
 		pthread_mutex_lock(&lobby_data_mutex);
 		for (i = 0; i < ngameservers; i++) {
 			unsigned char *x = (unsigned char *) &lobby_game_server[i].ipaddr;
@@ -5430,6 +5351,8 @@ static void show_lobbyscreen(void)
 			sng_abs_xy_draw_string(msg, NANO_FONT, txx(250), txy(100) + i * LINEHEIGHT);
 			protocol_mismatch = strncmp(lobby_game_server[i].protocol_version, SNIS_PROTOCOL_VERSION,
 							sizeof(lobby_game_server[i].protocol_version)) != 0;
+			if (protocol_mismatch && lobby_selected_server == i)
+				selected_protocol_mismatch = 1;
 			if (timer & 0x04 || !protocol_mismatch) {
 				if (protocol_mismatch)
 					sng_set_foreground(ORANGERED);
@@ -5443,7 +5366,7 @@ static void show_lobbyscreen(void)
 			sng_abs_xy_draw_string(msg, NANO_FONT, txx(550), txy(100) + i * LINEHEIGHT);
 		}
 		pthread_mutex_unlock(&lobby_data_mutex);
-		if (lobby_selected_server != -1)
+		if (lobby_selected_server != -1 && !selected_protocol_mismatch)
 			snis_button_set_color(lobby_ui.lobby_connect_to_server_button, UI_COLOR(lobby_connect_ok));
 		else
 			ui_hide_widget(lobby_ui.lobby_connect_to_server_button);
@@ -5518,7 +5441,7 @@ static int process_update_ship_packet(uint8_t opcode)
 		reverse, trident, in_secure_area, docking_magnets, emf_detector,
 		nav_mode, warp_core_status, rts_mode, exterior_lights, alarms_silenced,
 		missile_lock_detected, rts_active_button, comms_crypto_mode,
-		align_sciball_to_ship;
+		align_sciball_to_ship, sci_auto_sweep;
 	union quat orientation, sciball_orientation, weap_orientation, hg_ant_orientation;
 	union euler ypr;
 	struct entity *e;
@@ -5540,7 +5463,7 @@ static int process_update_ship_packet(uint8_t opcode)
 				&torpedoes,
 				&dsheading,
 				&dbeamwidth);
-	packed_buffer_extract(&pb, "bbbwwbbbbbbbbbbbbwQQQQSSSbB8bbbww",
+	packed_buffer_extract(&pb, "bbbwwbbbbbbbbbbbbwQQQQSSSbB8bbbwwb",
 			&tloading, &throttle, &rpm, &fuel, &oxygen, &temp,
 			&scizoom, &weapzoom, &navzoom, &mainzoom,
 			&warpdrive,
@@ -5556,7 +5479,7 @@ static int process_update_ship_packet(uint8_t opcode)
 			&exterior_lights, &alarms_silenced, &missile_lock_detected,
 			&align_sciball_to_ship,
 			&comms_crypto_mode, &rts_active_button, &wallet,
-			&viewpoint_object);
+			&viewpoint_object, &sci_auto_sweep);
 	tloaded = (tloading >> 4) & 0x0f;
 	tloading = tloading & 0x0f;
 	quat_to_euler(&ypr, &orientation);	
@@ -5606,6 +5529,8 @@ static int process_update_ship_packet(uint8_t opcode)
 	o->tsd.ship.missile_count = missile_count;
 	/* mirrored by sci_ui.align_sciball_to_ship in show_3d_science() */
 	o->tsd.ship.align_sciball_to_ship = align_sciball_to_ship;
+	/* mirrored by sci_ui.sci_auto_sweep in draw_sciplane_display() */
+	o->tsd.ship.sci_auto_sweep = sci_auto_sweep;
 	o->tsd.ship.phaser_charge = phaser_charge;
 	o->tsd.ship.phaser_wavelength = phaser_wavelength;
 	o->tsd.ship.damcon = NULL;
@@ -6560,7 +6485,7 @@ static void science_activate_waypoints_widgets(void)
 	ui_unhide_widget(sci_ui.add_waypoint_button);
 	ui_unhide_widget(sci_ui.add_current_pos_button);
 	ui_hide_widget(sci_ui.align_to_ship_button);
-	ui_hide_widget(sci_ui.align_to_ship_button);
+	ui_hide_widget(sci_ui.sci_auto_sweep_button);
 
 	for (i = 0; i < 3; i++)
 		ui_unhide_widget(sci_ui.waypoint_input[i]);
@@ -6587,7 +6512,7 @@ static void science_deactivate_waypoints_widgets(void)
 	ui_unhide_widget(sci_ui.sciplane_button);
 	ui_unhide_widget(sci_ui.waypoints_button);
 	ui_unhide_widget(sci_ui.align_to_ship_button);
-	ui_unhide_widget(sci_ui.align_to_ship_button);
+	ui_unhide_widget(sci_ui.sci_auto_sweep_button);
 
 	ui_hide_widget(sci_ui.add_waypoint_button);
 	ui_hide_widget(sci_ui.add_current_pos_button);
@@ -6615,22 +6540,27 @@ static int process_sci_details(void)
 	case SCI_DETAILS_MODE_THREED:
 		science_deactivate_waypoints_widgets();
 		ui_unhide_widget(sci_ui.align_to_ship_button);
+		ui_hide_widget(sci_ui.sci_auto_sweep_button);
 		break;
 	case SCI_DETAILS_MODE_DETAILS:
 		science_deactivate_waypoints_widgets();
 		ui_hide_widget(sci_ui.align_to_ship_button);
+		ui_hide_widget(sci_ui.sci_auto_sweep_button);
 		break;
 	case SCI_DETAILS_MODE_SCIPLANE:
 		science_deactivate_waypoints_widgets();
 		ui_hide_widget(sci_ui.align_to_ship_button);
+		ui_unhide_widget(sci_ui.sci_auto_sweep_button);
 		break;
 	case SCI_DETAILS_MODE_WAYPOINTS:
 		science_activate_waypoints_widgets();
 		ui_hide_widget(sci_ui.align_to_ship_button);
+		ui_hide_widget(sci_ui.sci_auto_sweep_button);
 		break;
 	default:
 		science_deactivate_waypoints_widgets();
 		ui_hide_widget(sci_ui.align_to_ship_button);
+		ui_unhide_widget(sci_ui.sci_auto_sweep_button);
 		break;
 	}
 
@@ -6752,48 +6682,6 @@ static int process_update_netstats(void)
 					(float) netstats.incoming_queue_length);
 	return 0;
 }
-
-static struct comms_ui {
-	struct text_window *tw;
-	struct button *comms_onscreen_button;
-	struct button *nav_onscreen_button;
-	struct button *weap_onscreen_button;
-	struct button *eng_onscreen_button;
-	struct button *damcon_onscreen_button;
-	struct button *sci_onscreen_button;
-	struct button *main_onscreen_button;
-	struct button *custom_button;
-	struct button *cryptanalysis_button;
-	struct button *comms_transmit_button;
-	struct button *red_alert_button;
-	struct button *hail_mining_bot_button;
-	struct button *mainscreen_comms;
-	struct button *rts_starbase_button[NUM_RTS_BASES];
-	struct button *rts_fleet_button;
-	struct button *rts_main_planet_button;
-	struct button *rts_order_unit_button[NUM_RTS_UNIT_TYPES];
-	struct button *rts_order_command_button[NUM_RTS_ORDER_TYPES];
-	struct button *hail_button;
-	struct button *channel_button;
-	struct button *manifest_button;
-	struct button *computer_button;
-	struct button *eject_button;
-	struct button *help_button;
-	struct button *about_button;
-	struct button *crypto_reset;
-	struct snis_text_input_box *crypt_alpha[26];
-	char crypt_alpha_text[26][3];
-#define FLEET_BUTTON_COLS 9
-#define FLEET_BUTTON_ROWS 10
-	struct button *fleet_unit_button[FLEET_BUTTON_COLS][FLEET_BUTTON_ROWS];
-	int fleet_order_checkbox[NUM_RTS_ORDER_TYPES];
-	struct snis_text_input_box *comms_input;
-	struct slider *mainzoom_slider;
-	char input[100];
-	uint32_t channel;
-	struct strip_chart *emf_strip_chart;
-	struct slider *our_base_health, *enemy_base_health;
-} comms_ui;
 
 static void comms_dirkey(__attribute__((unused)) int h, int v)
 {
@@ -7528,7 +7416,12 @@ static int process_switch_server(void)
 	switch_warp_gate_number = packed_buffer_extract_u8(&pb);
 	packed_buffer_extract_raw(&pb, switch_server_location_string, 20);
 	switch_server_location_string[19] = '\0';
-	enforce_solarsystem = 0; /* get past multiverse solarsystem verification for warp gates */
+	if (switch_warp_gate_number != 255) {
+		enforce_solarsystem = 0; /* get past multiverse solarsystem verification for warp gates */
+		switch_with_redirection = 0;
+	} else {
+		switch_with_redirection = 1;
+	}
 	return 0;
 }
 
@@ -8036,60 +7929,6 @@ static int process_update_flare_packet(void)
 	pthread_mutex_unlock(&universe_mutex);
 	return rc < 0;
 }
-
-static struct network_setup_ui {
-	struct button *connect_to_lobby;
-	struct button *connect_to_snis_server;
-	struct snis_text_input_box *snis_server_name_input;
-	struct snis_text_input_box *snis_server_port_input;
-	struct label *ss_name_label, *ss_port_label;
-	struct snis_text_input_box *lobbyservername;
-	struct snis_text_input_box *lobbyport;
-	struct snis_text_input_box *shipname_box;
-	struct snis_text_input_box *password_box;
-	struct button *default_lobby_port_checkbox;
-	struct button *role_main;
-	struct button *role_nav;
-	struct button *role_weap;
-	struct button *role_eng;
-	struct button *role_damcon;
-	struct button *role_sci;
-	struct button *role_comms;
-	struct button *role_sound;
-	struct button *role_projector;
-	struct button *role_demon;
-	struct button *role_text_to_speech;
-	struct button *join_ship_checkbox;
-	struct button *create_ship_checkbox;
-	struct button *faction_checkbox[MAX_FACTIONS];
-	struct button *support_button;
-	struct button *launcher_button;
-	struct button *website_button;
-	struct button *forum_button;
-	struct pull_down_menu *menu;
-	int role_main_v;
-	int role_nav_v;
-	int role_weap_v;
-	int role_eng_v;
-	int role_damcon_v;
-	int role_sci_v;
-	int role_comms_v;
-	int role_sound_v;
-	int role_demon_v;
-	int role_text_to_speech_v;
-	int role_projector_v;
-	int create_ship_v;
-	int join_ship_v;
-	int faction_checkbox_v[MAX_FACTIONS];
-	char lobbyname[sizeof(child_process_options.lobbyhost)];
-	char lobbyportstr[sizeof(child_process_options.lobbyport)];
-	char snis_server_name[60];
-	char snis_server_port[15];
-	char solarsystem[60];
-	char shipname[SHIPNAME_LEN];
-	char password[PASSWORD_LEN];
-	int selected_faction;
-} net_setup_ui;
 
 static int process_client_id_packet(void)
 {
@@ -9932,6 +9771,21 @@ static void show_weapons_camera_view(void)
 	pthread_mutex_unlock(&universe_mutex);
 }
 
+static struct entity *main_view_add_cockpit_entity(struct snis_entity *o)
+{
+	struct entity *cockpit_entity;
+	union vec3 v = { { 50.0f, 0.0f, 0.0f } };
+
+	/* temporarily add cockpit into scene */
+	quat_rot_vec_self(&v, &o->orientation);
+	cockpit_entity = add_entity(ecx, mf_cockpit_mesh, o->x + v.v.x, o->y + v.v.y, o->z + v.v.z, SHIP_COLOR);
+	if (cockpit_entity) {
+		update_entity_scale(cockpit_entity, 0.5);
+		update_entity_orientation(cockpit_entity, &o->orientation);
+	}
+	return cockpit_entity;
+}
+
 /* Add player ship entity into the scene for some camera modes */
 static struct entity *main_view_add_player_ship_entity(struct snis_entity *o)
 {
@@ -10073,6 +9927,7 @@ static void show_mainscreen(void)
 	struct snis_entity *vp;
 	struct entity *player_ship = 0;
 	double impulse_power;
+	struct entity *cockpit_entity = NULL;
 
 	if (!(o = find_my_ship()))
 		return;
@@ -10131,6 +9986,8 @@ static void show_mainscreen(void)
 		switch (camera_mode) {
 		case 0:
 			vec3_init(&desired_cam_offset, 0, 0, 0);
+			if (mf_cockpit)
+				cockpit_entity = main_view_add_cockpit_entity(o);
 			if (vp == o)
 				break;
 			FALLTHROUGH;
@@ -10176,6 +10033,8 @@ static void show_mainscreen(void)
 		cam_pos.v.z = 0;
 		update_external_camera_position_and_orientation(first_frame, &cam_pos, &camera_orientation);
 		player_ship = main_view_add_player_ship_entity(o);
+		/* if (mf_cockpit)
+			cockpit_entity = main_view_add_cockpit_entity(o); // for debugging the cockpit */
 	}
 
 	camera_set_pos(ecx, cam_pos.v.x, cam_pos.v.y, cam_pos.v.z);
@@ -10204,6 +10063,11 @@ static void show_mainscreen(void)
 	/* if we added the ship into the scene, remove it now */
 	if (player_ship) {
 		remove_entity(ecx, player_ship);
+	}
+
+	/* If we added the cockpit into the scene, remove it now */
+	if (cockpit_entity) {
+		remove_entity(ecx, cockpit_entity);
 	}
 
 	/* Draw science selector indicator on main screen */
@@ -10377,6 +10241,10 @@ static void snis_draw_science_guy(struct snis_entity *o,
 		case OBJTYPE_PLANET:
 			sng_set_foreground(UI_COLOR(sci_ball_planet));
 			snprintf(buffer, sizeof(buffer), "%s %s\n", "P",  o->sdata.name);
+			break;
+		case OBJTYPE_WARP_CORE:
+			sng_set_foreground(UI_COLOR(sci_ball_black_hole));
+			snprintf(buffer, sizeof(buffer), "%s %s\n", "E",  o->sdata.name);
 			break;
 		case OBJTYPE_TORPEDO:
 		case OBJTYPE_MISSILE:
@@ -11071,6 +10939,11 @@ static void draw_sciplane_display(struct snis_entity *o, double range)
 {
 	static struct mesh *ring_mesh = 0;
 	static struct mesh *heading_ind_line_mesh = 0;
+
+	/* mirror o->tsd.ship.sci_auto_sweep to sci_ui */
+	pthread_mutex_lock(&universe_mutex);
+	sci_ui.sci_auto_sweep = o->tsd.ship.sci_auto_sweep;
+	pthread_mutex_unlock(&universe_mutex);
 
 	if (!ring_mesh) {
 		ring_mesh = init_circle_mesh(0, 0, 1, 90, 2.0f * M_PI);
@@ -12528,9 +12401,11 @@ static void init_lobby_ui(void)
 {
 	lobby_ui.lobby_cancel_button = snis_button_init(txx(650), txy(520), -1, -1,
 			"CANCEL", UI_COLOR(lobby_cancel), NANO_FONT, lobby_cancel_button_pressed, NULL);
+	snis_button_set_hover_color(lobby_ui.lobby_cancel_button, UI_COLOR(lobby_hover_color));
 	lobby_ui.lobby_connect_to_server_button = snis_button_init(0, 0, -1, -1,
 			"CONNECT TO SERVER", UI_COLOR(lobby_connect_not_ok), NANO_FONT,
 			lobby_connect_to_server_button_pressed, NULL);
+	snis_button_set_hover_color(lobby_ui.lobby_connect_to_server_button, UI_COLOR(lobby_hover_color));
 	ui_add_button(lobby_ui.lobby_cancel_button, DISPLAYMODE_LOBBYSCREEN,
 			"RETURN TO NETWORK SETUP SCREEN");
 	ui_add_button(lobby_ui.lobby_connect_to_server_button, DISPLAYMODE_LOBBYSCREEN,
@@ -12751,12 +12626,16 @@ int nav_ui_lights_active(__attribute__((unused)) void *notused)
 	return o->tsd.ship.exterior_lights;
 }
 
+static void eject_warp_core_button_pressed(void *x);
+
 static void init_nav_ui(void)
 {
 	int x, y;
 	const int gauge_color = UI_COLOR(nav_gauge);
 	const int needle_color = UI_COLOR(nav_gauge_needle);
 	const int button_color = UI_COLOR(nav_button);
+	const int hover_color = UI_COLOR(nav_button_hover);
+	const int rev_hover_color = UI_COLOR(nav_rev_button_hover);
 	const int button_y_spacing = 22;
 
 	x = 0;
@@ -12795,6 +12674,7 @@ static void init_nav_ui(void)
 					-1, -1, "ENGAGE WARP", button_color,
 					NANO_FONT, engage_warp_button_pressed, NULL);
 	snis_button_set_sound(nav_ui.engage_warp_button, UISND4);
+	snis_button_set_hover_color(nav_ui.engage_warp_button, hover_color);
 	y += button_y_spacing;
 	nav_ui.docking_magnets_button = snis_button_init(SCREEN_WIDTH - txx(nav_ui.gauge_radius * 2.2 + 10),
 					txy(nav_ui.gauge_radius * 2 + y),
@@ -12805,18 +12685,21 @@ static void init_nav_ui(void)
 			NULL);
 	snis_button_set_label(nav_ui.docking_magnets_button, "MAGNETS");
 	snis_button_set_sound(nav_ui.docking_magnets_button, UISND5);
+	snis_button_set_hover_color(nav_ui.docking_magnets_button, hover_color);
 	y += button_y_spacing;
 	nav_ui.standard_orbit_button = snis_button_init(SCREEN_WIDTH - txx(nav_ui.gauge_radius * 2.2 + 10),
 					txy(nav_ui.gauge_radius * 2 + y),
 					-1, -1, "STANDARD ORBIT", button_color,
 					NANO_FONT, standard_orbit_button_pressed, NULL);
 	snis_button_set_sound(nav_ui.standard_orbit_button, UISND6);
+	snis_button_set_hover_color(nav_ui.standard_orbit_button, hover_color);
 	y += button_y_spacing;
 	nav_ui.starmap_button = snis_button_init(SCREEN_WIDTH - txx(nav_ui.gauge_radius * 2.2 + 10),
 					txy(nav_ui.gauge_radius * 2 + y), -1, -1, "STAR MAP",
 					button_color,
 					NANO_FONT, nav_starmap_button_pressed, NULL);
 	snis_button_set_sound(nav_ui.starmap_button, UISND7);
+	snis_button_set_hover_color(nav_ui.starmap_button, hover_color);
 	y += button_y_spacing;
 	nav_ui.lights_button = snis_button_init(SCREEN_WIDTH - txx(nav_ui.gauge_radius * 2.2 + 10),
 					txy(nav_ui.gauge_radius * 2 + y), -1, -1, "MLIGHTS",
@@ -12827,21 +12710,34 @@ static void init_nav_ui(void)
 			NULL);
 	snis_button_set_label(nav_ui.lights_button, "LIGHTS");
 	snis_button_set_sound(nav_ui.lights_button, UISND7);
+	snis_button_set_hover_color(nav_ui.lights_button, hover_color);
+	y += button_y_spacing;
+	nav_ui.eject_warp_core_button = snis_button_init(SCREEN_WIDTH - txx(nav_ui.gauge_radius * 2.2 + 10),
+					txy(nav_ui.gauge_radius * 2 + y), -1, -1, "EJECT WARP CORE",
+					button_color,
+					NANO_FONT, eject_warp_core_button_pressed,
+					(void *) (intptr_t) DISPLAYMODE_NAVIGATION);
+	snis_button_set_sound(nav_ui.eject_warp_core_button, UISND7);
+	snis_button_set_hover_color(nav_ui.eject_warp_core_button, hover_color);
 	y += button_y_spacing;
 	nav_ui.custom_button = snis_button_init(SCREEN_WIDTH - txx(nav_ui.gauge_radius * 2.2 + 10),
 					txy(nav_ui.gauge_radius * 2 + y), -1, -1, "CUSTOM BUTTON",
 					button_color,
 					NANO_FONT, nav_custom_button_pressed, NULL);
 	snis_button_set_sound(nav_ui.custom_button, UISND21);
+	snis_button_set_hover_color(nav_ui.custom_button, hover_color);
 	nav_ui.reverse_button = snis_button_init(SCREEN_WIDTH - txx(16.6 + x), txy(3), txx(12), txy(14),
 			"R", button_color, NANO_FONT, reverse_button_pressed, NULL);
 	snis_button_set_sound(nav_ui.reverse_button, UISND8);
+	snis_button_set_hover_color(nav_ui.reverse_button, rev_hover_color);
 	nav_ui.trident_button = snis_button_init(txx(4), txy(166), -1, -1, "ABSOLUTE", button_color,
 			NANO_FONT, trident_button_pressed, NULL);
 	snis_button_set_sound(nav_ui.trident_button, UISND9);
+	snis_button_set_hover_color(nav_ui.trident_button, hover_color);
 	nav_ui.computer_button = snis_button_init(txx(4), txy(570), -1, -1, "COMPUTER", UI_COLOR(nav_button),
 			NANO_FONT, nav_computer_button_pressed, NULL);
 	snis_button_set_sound(nav_ui.computer_button, UISND10);
+	snis_button_set_hover_color(nav_ui.computer_button, hover_color);
 	nav_ui.computer_active = 0;
 	nav_ui.computer_input = snis_text_input_box_init(txx(10), txy(560), txy(30), txx(550),
 					UI_COLOR(nav_warning), TINY_FONT, nav_ui.input, 80, &timer, NULL, NULL);
@@ -12850,6 +12746,7 @@ static void init_nav_ui(void)
 	nav_ui.camera_pos_button = snis_button_init(txx(4), txy(210), -1, -1, "CAM POS", button_color,
 			NANO_FONT, nav_camera_pos_button_pressed, NULL);
 	snis_button_set_sound(nav_ui.camera_pos_button, UISND10);
+	snis_button_set_hover_color(nav_ui.camera_pos_button, hover_color);
 	ui_add_slider(nav_ui.warp_slider, DISPLAYMODE_NAVIGATION, "WARP DRIVER POWER CONTROL");
 	ui_add_slider(nav_ui.navzoom_slider, DISPLAYMODE_NAVIGATION, "NAVIGATION ZOOM CONTROL");
 	ui_add_slider(nav_ui.throttle_slider, DISPLAYMODE_NAVIGATION, "IMPULSE DRIVE THROTTLE CONTROL");
@@ -12863,6 +12760,10 @@ static void init_nav_ui(void)
 				"SWITCH BETWEEN NAVIGATION\nAND STAR MAP SCREENS");
 	ui_add_button(nav_ui.lights_button, DISPLAYMODE_NAVIGATION,
 				"TOGGLE EXTERIOR LIGHTS ON/OFF");
+	ui_add_button(nav_ui.eject_warp_core_button, DISPLAYMODE_NAVIGATION,
+				"EJECT THE WARP CORE\n"
+				"(WITH CONFIRMATION FROM\n"
+				"ENGINEERING)");
 	ui_add_button(nav_ui.custom_button, DISPLAYMODE_NAVIGATION, "CUSTOM BUTTON");
 	ui_add_button(nav_ui.reverse_button, DISPLAYMODE_NAVIGATION,
 				"TOGGLE REVERSE THRUST");
@@ -14353,9 +14254,11 @@ static void robot_manual_button_pressed(__attribute__((unused)) void *x)
 	queue_to_server(snis_opcode_pkt("bb", OPCODE_ROBOT_AUTO_MANUAL, DAMCON_ROBOT_MANUAL_MODE));
 }
 
-static void eject_warp_core_button_pressed(__attribute__((unused)) void *x)
+static void eject_warp_core_button_pressed(void *x)
 {
-	queue_to_server(snis_opcode_pkt("b", OPCODE_EJECT_WARP_CORE));
+	intptr_t v = (intptr_t) x;
+	unsigned char which = v & 0xff;
+	queue_to_server(snis_opcode_pkt("bb", OPCODE_EJECT_WARP_CORE, which));
 	return;
 }
 
@@ -14366,39 +14269,50 @@ static void damcon_custom_button_pressed(__attribute__((unused)) void *x)
 
 static void init_damcon_ui(void)
 {
+	int hover_color = UI_COLOR(damcon_button_hover);
 	damcon_ui.engineering_button = snis_button_init(txx(630), txy(550), -1, txy(25),
 			"ENGINEERING", UI_COLOR(damcon_button),
 			NANO_FONT, main_engineering_button_pressed, (void *) 0);
 	snis_button_set_sound(damcon_ui.engineering_button, UISND11);
+	snis_button_set_hover_color(damcon_ui.engineering_button, hover_color);
 	damcon_ui.robot_controls = snis_label_init(txx(630), txy(30), "ROBOT CONTROLS",
 							UI_COLOR(damcon_button), NANO_FONT);
 	damcon_ui.robot_forward_button = snis_button_init(txx(650), txy(60), txx(90), txy(25),
 			"FORWARD", UI_COLOR(damcon_button), NANO_FONT, robot_forward_button_pressed, (void *) 0);
+	snis_button_set_hover_color(damcon_ui.robot_forward_button, hover_color);
 	damcon_ui.robot_left_button = snis_button_init(txx(630), txy(100), txx(25), txy(25),
 			"L", UI_COLOR(damcon_button), NANO_FONT, robot_left_button_pressed, (void *) 0);
+	snis_button_set_hover_color(damcon_ui.robot_left_button, hover_color);
 	damcon_ui.robot_right_button = snis_button_init(txx(740), txy(100), txx(25), txy(25),
 			"R", UI_COLOR(damcon_button), NANO_FONT, robot_right_button_pressed, (void *) 0);
+	snis_button_set_hover_color(damcon_ui.robot_right_button, hover_color);
 	damcon_ui.robot_backward_button = snis_button_init(txx(650), txy(140), txx(90), txy(25), "BACKWARD",
 							UI_COLOR(damcon_button), NANO_FONT,
 							robot_backward_button_pressed, (void *) 0);
+	snis_button_set_hover_color(damcon_ui.robot_backward_button, hover_color);
 	damcon_ui.robot_gripper_button = snis_button_init(txx(650), txy(180), txx(90), txy(25), "GRIPPER",
 							UI_COLOR(damcon_button), NANO_FONT,
 							robot_gripper_button_pressed, (void *) 0);
+	snis_button_set_hover_color(damcon_ui.robot_gripper_button, hover_color);
 	snis_button_set_sound(damcon_ui.robot_gripper_button, UISND24);
 	damcon_ui.custom_button = snis_button_init(txx(650), txy(220), txx(90), txy(25),
 						"CUSTOM BUTTON", UI_COLOR(damcon_button), NANO_FONT,
 						damcon_custom_button_pressed, (void *) 0);
+	snis_button_set_hover_color(damcon_ui.custom_button, hover_color);
 	snis_button_set_sound(damcon_ui.custom_button, UISND13);
 	damcon_ui.robot_auto_button = snis_button_init(txx(400), txy(30), txx(90), txy(25),
 				"AUTO", UI_COLOR(damcon_button), NANO_FONT, robot_auto_button_pressed, (void *) 0);
+	snis_button_set_hover_color(damcon_ui.robot_auto_button, hover_color);
 	snis_button_set_sound(damcon_ui.robot_gripper_button, UISND25);
 	damcon_ui.robot_manual_button = snis_button_init(txx(500), txy(30), txx(90), txy(25), "MANUAL",
 							UI_COLOR(damcon_selected_button), NANO_FONT,
 							robot_manual_button_pressed, (void *) 0);
+	snis_button_set_hover_color(damcon_ui.robot_manual_button, hover_color);
 	snis_button_set_sound(damcon_ui.robot_manual_button, UISND25);
 	damcon_ui.eject_warp_core_button = snis_button_init(txx(300), txy(30), txx(90), txy(25),
 						"EJECT WARP CORE", UI_COLOR(damcon_button), NANO_FONT,
-						eject_warp_core_button_pressed, (void *) 0);
+						eject_warp_core_button_pressed, (void *) (intptr_t) DISPLAYMODE_DAMCON);
+	snis_button_set_hover_color(damcon_ui.eject_warp_core_button, hover_color);
 	snis_button_set_sound(damcon_ui.eject_warp_core_button, UISND12); /* FIXME: custom sound here */
 
 	ui_add_button(damcon_ui.engineering_button, DISPLAYMODE_DAMCON, "SWITCH TO ENGINEERING SCREEN");
@@ -14411,7 +14325,10 @@ static void init_damcon_ui(void)
 	ui_add_button(damcon_ui.robot_auto_button, DISPLAYMODE_DAMCON, "SELECT AUTONOMOUS ROBOT OPERATION");
 	ui_add_button(damcon_ui.robot_manual_button, DISPLAYMODE_DAMCON, "SELECT MANUAL ROBOT CONTROL");
 	ui_add_label(damcon_ui.robot_controls, DISPLAYMODE_DAMCON);
-	ui_add_button(damcon_ui.eject_warp_core_button, DISPLAYMODE_DAMCON, "EJECT THE WARP CORE");
+	ui_add_button(damcon_ui.eject_warp_core_button, DISPLAYMODE_DAMCON,
+					"EJECT THE WARP CORE\n"
+					"(WITH CONFIRMATION\n"
+					"FROM NAVIGATION)");
 }
 
 static int process_custom_button(void)
@@ -14743,12 +14660,14 @@ static void init_engineering_ui(void)
 
 	y += eng_ui.gauge_radius + txy(30);
 	color = UI_COLOR(eng_button);
+	int hover_color = UI_COLOR(eng_button_hover);
 	x = txx(20);
 	for (i = 0; i < ENG_PRESET_NUMBER; ++i) {
 		snprintf(preset_txt, 2, "%d", i);
 		eu->preset_buttons[i] = snis_button_init(x, y, -1, -1, preset_txt, color, NANO_FONT,
 						preset_button_pressed, &eu->preset_buttons[i]);
 		snis_button_set_sound(eu->preset_buttons[i], UISND12);
+		snis_button_set_hover_color(eu->preset_buttons[i], hover_color);
 		snis_button_set_long_press_function(eu->preset_buttons[i],
 						preset_button_long_pressed, &eu->preset_buttons[i]);
 		x += snis_button_get_width(eu->preset_buttons[i]) + txx(5);
@@ -14759,24 +14678,29 @@ static void init_engineering_ui(void)
 						color, NANO_FONT, preset_save_button_pressed, (void *) 0);
 	snis_button_disable(eu->preset_save_button);
 	snis_button_set_disabled_color(eu->preset_save_button, UI_COLOR(eng_disabled));
+	snis_button_set_hover_color(eu->preset_save_button, hover_color);
 	eu->silence_alarms = snis_button_init(snis_button_get_x(eu->preset_save_button) +
 						snis_button_get_width(eu->preset_save_button) + txx(5),
 						y, -1, -1, "UNSILENCE ALARMS",
 						color, NANO_FONT, silence_alarms_pressed, (void *) 0);
 	snis_button_set_sound(eu->silence_alarms, UISND13);
+	snis_button_set_hover_color(eu->silence_alarms, hover_color);
 	eu->damcon_button = snis_button_init(txx(630), txy(550), -1, txy(25),
 						"DAMAGE CONTROL", color,
 						NANO_FONT, damcon_button_pressed, (void *) 0);
+	snis_button_set_hover_color(eu->damcon_button, hover_color);
 	eu->deploy_flare = snis_button_init(snis_button_get_x(eu->silence_alarms) +
 						snis_button_get_width(eu->silence_alarms) + txx(5),
 						y, -1, -1, "DEPLOY FLARE",
 						color, NANO_FONT, eng_deploy_flare_button_pressed, (void *) 0);
 	snis_button_set_sound(eu->deploy_flare, UISND14);
+	snis_button_set_hover_color(eu->deploy_flare, hover_color);
 	eu->custom_button = snis_button_init(snis_button_get_x(eu->deploy_flare) +
 						snis_button_get_width(eu->deploy_flare) + txx(5),
 						y, -1, -1, "CUSTOM BUTTON",
 						color, NANO_FONT, eng_custom_button_pressed, (void *) 0);
 	snis_button_set_sound(eu->custom_button, UISND14);
+	snis_button_set_hover_color(eu->custom_button, hover_color);
 	color = UI_COLOR(eng_power_meter);
 	eu->shield_slider = snis_slider_init(20, y += yinc, powersliderlen, sh, color,
 				"PWR SHIELDS", "0", "100", 0.0, 255.0,
@@ -15234,6 +15158,13 @@ static void show_engineering(void)
 		sng_abs_xy_draw_string(buffer, PICO_FONT, txx(350), txy(192) + font_lineheight[PICO_FONT]);
 	}
 
+	if (o->tsd.ship.warp_core_status != WARP_CORE_STATUS_GOOD) {
+		if (timer & 0x8) {
+			sng_set_foreground(UI_COLOR(eng_warning));
+			sng_abs_xy_draw_string("WARP CORE EJECTED", NANO_FONT, txx(600), txy(435));
+		}
+	}
+
 	show_common_screen("ENGINEERING");
 }
 
@@ -15503,6 +15434,19 @@ static void sci_align_to_ship_pressed(__attribute__((unused)) void *x)
 		transmit_adjust_control_input((uint8_t) 0, OPCODE_ADJUST_CONTROL_ALIGN_SCIBALL_TO_SHIP);
 }
 
+static void sci_auto_sweep_button_pressed(__attribute__((unused)) void *x)
+{
+	struct snis_entity *o;
+
+	o = find_my_ship();
+	if (!o)
+		return;
+	if (o->tsd.ship.sci_auto_sweep == 0)
+		transmit_adjust_control_input((uint8_t) 1, OPCODE_ADJUST_CONTROL_SCI_AUTO_SWEEP);
+	else
+		transmit_adjust_control_input((uint8_t) 0, OPCODE_ADJUST_CONTROL_SCI_AUTO_SWEEP);
+}
+
 static void sci_threed_pressed(__attribute__((unused)) void *x)
 {
 	queue_to_server(snis_opcode_pkt("bb", OPCODE_SCI_DETAILS,
@@ -15648,6 +15592,8 @@ static void init_science_ui(void)
 	sci_ui.low_tractor_power_timer = 0;
 	sci_ui.align_sciball_to_ship = 0;
 
+	const int hover_color = UI_COLOR(sci_button_hover);
+
 	sci_ui.scizoom = snis_slider_init(szx, szy, szw, szh, UI_COLOR(sci_slider), "RANGE", "0", "100",
 				0.0, 100.0, sample_scizoom, do_scizoom);
 	snis_slider_set_label_font(sci_ui.scizoom, NANO_FONT);
@@ -15659,30 +15605,48 @@ static void init_science_ui(void)
 	sci_ui.launch_mining_bot_button = snis_button_init(mbbx, mbby, mbbw, mbbh, M_"INING BOT",
 			UI_COLOR(sci_button), NANO_FONT, sci_mining_bot_pressed, (void *) 0);
 	snis_button_set_sound(sci_ui.launch_mining_bot_button, UISND13);
+	snis_button_set_hover_color(sci_ui.launch_mining_bot_button, hover_color);
 	sci_ui.custom_button = snis_button_init(cbbx, cbby, -1, -1, "CUSTOM BUTTON", UI_COLOR(sci_button),
 						NANO_FONT, sci_custom_button_pressed, (void *) 0);
+	snis_button_set_hover_color(sci_ui.custom_button, hover_color);
 	snis_button_set_sound(sci_ui.custom_button, UISND14);
 	sci_ui.tractor_button = snis_button_init(trbx, trby, trbw, trbh, T_"RACTOR",
 			UI_COLOR(sci_button), NANO_FONT, sci_tractor_pressed, (void *) 0);
+	snis_button_set_hover_color(sci_ui.tractor_button, hover_color);
 	snis_button_set_sound(sci_ui.tractor_button, UISND14);
 	sci_ui.waypoints_button = snis_button_init(wpx, wpy, wpw, wph, W_"AYPOINTS",
 			UI_COLOR(sci_button), NANO_FONT, sci_waypoints_pressed, (void *) 0);
+	snis_button_set_hover_color(sci_ui.waypoints_button, hover_color);
 	snis_button_set_sound(sci_ui.waypoints_button, UISND15);
 	sci_ui.sciplane_button = snis_button_init(scpx, scpy, scpw, scph, S_"RS",
 			UI_COLOR(sci_button), NANO_FONT, sci_sciplane_pressed, (void *) 0);
+	snis_button_set_hover_color(sci_ui.sciplane_button, hover_color);
 	snis_button_set_sound(sci_ui.sciplane_button, UISND16);
 	sci_ui.threed_button = snis_button_init(thdx, thdy, thdw, thdh, L_"RS",
 			UI_COLOR(sci_button), NANO_FONT, sci_threed_pressed, (void *) 0);
+	snis_button_set_hover_color(sci_ui.threed_button, hover_color);
 	snis_button_set_sound(sci_ui.threed_button, UISND17);
 	sci_ui.details_button = snis_button_init(detx, dety, detw, deth, D_"ETAILS",
 			UI_COLOR(sci_button), NANO_FONT, sci_details_pressed, (void *) 0);
+	snis_button_set_hover_color(sci_ui.details_button, hover_color);
 	snis_button_set_sound(sci_ui.details_button, UISND18);
+
 	sci_ui.align_to_ship_button = snis_button_init(atsx, atsy, atsw, atsh, "ALIGN TO SHIP",
 			UI_COLOR(sci_button), NANO_FONT, sci_align_to_ship_pressed, (void *) 0);
+	snis_button_set_hover_color(sci_ui.align_to_ship_button, hover_color);
 	snis_button_set_checkbox_function(sci_ui.align_to_ship_button,
 					snis_button_generic_checkbox_function,
 					&sci_ui.align_sciball_to_ship);
 	snis_button_set_sound(sci_ui.align_to_ship_button, UISND19);
+
+	/* Occupies same screen sapce as ALIGN TO SHIP, but only one shows at a time */
+	sci_ui.sci_auto_sweep_button = snis_button_init(atsx, atsy, atsw, atsh, "AUTO SWEEP",
+			UI_COLOR(sci_button), NANO_FONT, sci_auto_sweep_button_pressed, (void *) 0);
+	snis_button_set_hover_color(sci_ui.sci_auto_sweep_button, hover_color);
+	snis_button_set_checkbox_function(sci_ui.sci_auto_sweep_button,
+					snis_button_generic_checkbox_function,
+					&sci_ui.sci_auto_sweep);
+	snis_button_set_sound(sci_ui.sci_auto_sweep_button, UISND19);
 
 	sci_ui.menu = create_pull_down_menu(NANO_FONT, SCREEN_WIDTH);
 	pull_down_menu_set_color(sci_ui.menu, UI_COLOR(sci_pull_down_menu));
@@ -15703,6 +15667,8 @@ static void init_science_ui(void)
 	ui_add_button(sci_ui.align_to_ship_button, DISPLAYMODE_SCIENCE,
 				"ALIGN LONG RANGE SCANNERS TO SHIP'S ORIENTATION");
 	ui_hide_widget(sci_ui.align_to_ship_button);
+	ui_add_button(sci_ui.sci_auto_sweep_button, DISPLAYMODE_SCIENCE,
+				"AUTOMATICALLY SWEEP THE SCIENCE BEAM");
 	sciecx = entity_context_new(50, 50);
 	sciballecx = entity_context_new(5000, 1000);
 	sciplane_tween = tween_init(500);
@@ -15725,6 +15691,7 @@ static void init_science_ui(void)
 	sci_ui.add_waypoint_button = snis_button_init(txx(3 * 135 + 20), txy(100),
 				100 * SCREEN_WIDTH / 800, wph, "ADD WAYPOINT",
 				UI_COLOR(sci_button), NANO_FONT, science_add_waypoint_pressed, NULL);
+	snis_button_set_hover_color(sci_ui.add_waypoint_button, hover_color);
 	snis_button_set_sound(sci_ui.add_waypoint_button, UISND20);
 	ui_add_button(sci_ui.add_waypoint_button, DISPLAYMODE_SCIENCE,
 			"ADDS A WAYPOINT AT SPECIFIED X, Y, Z");
@@ -15734,6 +15701,7 @@ static void init_science_ui(void)
 				100 * SCREEN_WIDTH / 800, wph, "CURRENT POSITION",
 				UI_COLOR(sci_button), NANO_FONT, science_add_current_pos_pressed, NULL);
 	snis_button_set_sound(sci_ui.add_current_pos_button, UISND21);
+	snis_button_set_hover_color(sci_ui.add_current_pos_button, hover_color);
 	ui_add_button(sci_ui.add_current_pos_button, DISPLAYMODE_SCIENCE,
 			"ADD THE SHIP'S CURRENT POSITION AS A WAYPOINT");
 	ui_hide_widget(sci_ui.add_current_pos_button);
@@ -15744,12 +15712,14 @@ static void init_science_ui(void)
 				UI_COLOR(sci_button), NANO_FONT, science_clear_waypoint_pressed,
 				&sci_ui.clear_waypoint_button[i]);
 		snis_button_set_sound(sci_ui.clear_waypoint_button[i], UISND22);
+		snis_button_set_hover_color(sci_ui.clear_waypoint_button[i], hover_color);
 		ui_add_button(sci_ui.clear_waypoint_button[i], DISPLAYMODE_SCIENCE, "DELETE THIS WAYPOINT");
 		ui_hide_widget(sci_ui.clear_waypoint_button[i]);
 		sci_ui.select_waypoint_button[i] = snis_button_init(txx(500), txy(25 * i) + txy(200),
 				40 * SCREEN_WIDTH / 800, wph, "SELECT",
 				UI_COLOR(sci_button), NANO_FONT, science_select_waypoint_pressed,
 				&sci_ui.select_waypoint_button[i]);
+		snis_button_set_hover_color(sci_ui.select_waypoint_button[i], hover_color);
 		snis_button_set_sound(sci_ui.select_waypoint_button[i], UISND23);
 		ui_add_button(sci_ui.select_waypoint_button[i], DISPLAYMODE_SCIENCE, "SELECT THIS WAYPOINT");
 		ui_hide_widget(sci_ui.select_waypoint_button[i]);
@@ -16161,80 +16131,98 @@ static void init_comms_ui(void)
 	int y = txy(5);
 	int bw = txx(70);
 	int bh = txy(25);
-	int button_color = UI_COLOR(comms_button);
+	const int button_color = UI_COLOR(comms_button);
+	const int hover_color = UI_COLOR(comms_button_hover);
 	int text_color = UI_COLOR(comms_text);
 	int red_alert_color = UI_COLOR(comms_red_alert);
 	float crypt_alphax, crypt_alphay;
 
 	comms_ui.comms_onscreen_button = snis_button_init(x, y, bw, bh, "COMMS", button_color,
 			NANO_FONT, comms_screen_button_pressed, (void *) 0);
+	snis_button_set_hover_color(comms_ui.comms_onscreen_button, hover_color);
 	snis_button_set_sound(comms_ui.comms_onscreen_button, UISND9);
 	x += bw;
 	comms_ui.nav_onscreen_button = snis_button_init(x, y, bw, bh, "NAV", button_color,
 			NANO_FONT, comms_screen_button_pressed, (void *) 1);
+	snis_button_set_hover_color(comms_ui.nav_onscreen_button, hover_color);
 	snis_button_set_sound(comms_ui.nav_onscreen_button, UISND10);
 	x += bw;
 	comms_ui.weap_onscreen_button = snis_button_init(x, y, bw, bh, "WEAP", button_color,
 			NANO_FONT, comms_screen_button_pressed, (void *) 2);
+	snis_button_set_hover_color(comms_ui.weap_onscreen_button, hover_color);
 	snis_button_set_sound(comms_ui.weap_onscreen_button, UISND11);
 	x += bw;
 	comms_ui.eng_onscreen_button = snis_button_init(x, y, bw, bh, "ENG", button_color,
 			NANO_FONT, comms_screen_button_pressed, (void *) 3);
+	snis_button_set_hover_color(comms_ui.eng_onscreen_button, hover_color);
 	snis_button_set_sound(comms_ui.eng_onscreen_button, UISND12);
 	x += bw;
 	comms_ui.damcon_onscreen_button = snis_button_init(x, y, bw, bh, "DAMCON", button_color,
 			NANO_FONT, comms_screen_button_pressed, (void *) 4);
+	snis_button_set_hover_color(comms_ui.damcon_onscreen_button, hover_color);
 	snis_button_set_sound(comms_ui.damcon_onscreen_button, UISND13);
 	x += bw;
 	comms_ui.sci_onscreen_button = snis_button_init(x, y, bw, bh, "SCI", button_color,
 			NANO_FONT, comms_screen_button_pressed, (void *) 5);
+	snis_button_set_hover_color(comms_ui.sci_onscreen_button, hover_color);
 	snis_button_set_sound(comms_ui.sci_onscreen_button, UISND14);
 	x += bw;
 	comms_ui.main_onscreen_button = snis_button_init(x, y, bw, bh, "MAIN", button_color,
 			NANO_FONT, comms_screen_button_pressed, (void *) 6);
+	snis_button_set_hover_color(comms_ui.main_onscreen_button, hover_color);
 	snis_button_set_sound(comms_ui.main_onscreen_button, UISND15);
 	x += bw;
 	comms_ui.custom_button = snis_button_init(x, y, bw, bh, "CUSTOM BUTTON", button_color,
 			NANO_FONT, comms_custom_button_pressed, (void *) 0);
+	snis_button_set_hover_color(comms_ui.custom_button, hover_color);
 	snis_button_set_sound(comms_ui.custom_button, UISND16);
 	x = txx(140);
 	y = txy(30);
 	comms_ui.hail_button = snis_button_init(x, y, bw, bh, "/HAIL", button_color,
 			NANO_FONT, comms_hail_button_pressed, (void *) 0);
+	snis_button_set_hover_color(comms_ui.hail_button, hover_color);
 	snis_button_set_sound(comms_ui.hail_button, UISND15);
 	x += bw;
 	comms_ui.channel_button = snis_button_init(x, y, bw, bh, "/CHANNEL", button_color,
 			NANO_FONT, comms_channel_button_pressed, (void *) 0);
+	snis_button_set_hover_color(comms_ui.channel_button, hover_color);
 	snis_button_set_sound(comms_ui.channel_button, UISND15);
 	x += bw;
 	comms_ui.manifest_button = snis_button_init(x, y, bw, bh, "/MANIFEST", button_color,
 			NANO_FONT, comms_manifest_button_pressed, (void *) 0);
+	snis_button_set_hover_color(comms_ui.manifest_button, hover_color);
 	snis_button_set_sound(comms_ui.manifest_button, UISND15);
 	x += bw;
 	comms_ui.computer_button = snis_button_init(x, y, bw, bh, "/COMPUTER", button_color,
 			NANO_FONT, comms_computer_button_pressed, (void *) 0);
+	snis_button_set_hover_color(comms_ui.computer_button, hover_color);
 	snis_button_set_sound(comms_ui.computer_button, UISND15);
 	x += bw;
 	comms_ui.eject_button = snis_button_init(x, y, bw, bh, "/EJECT", button_color,
 			NANO_FONT, comms_eject_button_pressed, (void *) 0);
+	snis_button_set_hover_color(comms_ui.eject_button, hover_color);
 	snis_button_set_sound(comms_ui.eject_button, UISND15);
 	x += bw;
 	comms_ui.help_button = snis_button_init(x, y, bw, bh, "/HELP", button_color,
 			NANO_FONT, comms_help_button_pressed, (void *) 0);
+	snis_button_set_hover_color(comms_ui.help_button, hover_color);
 	snis_button_set_sound(comms_ui.help_button, UISND15);
 	x += bw;
 	comms_ui.about_button = snis_button_init(x, y, bw, bh, "/ABOUT", button_color,
 			NANO_FONT, comms_about_button_pressed, (void *) 0);
+	snis_button_set_hover_color(comms_ui.about_button, hover_color);
 	snis_button_set_sound(comms_ui.about_button, UISND15);
 	x += bw;
 	comms_ui.cryptanalysis_button = snis_button_init(x, y, bw, bh, "CRYPTO", button_color,
 			NANO_FONT, comms_cryptanalysis_button_pressed, (void *) 0);
+	snis_button_set_hover_color(comms_ui.cryptanalysis_button, hover_color);
 	snis_button_set_sound(comms_ui.cryptanalysis_button, UISND16);
 
 	x = SCREEN_WIDTH - txx(150);
 	y = SCREEN_HEIGHT - 60;
 	comms_ui.mainscreen_comms = snis_button_init(x, y, txx(80), bh, "MAIN SCREEN", button_color,
 			NANO_FONT, comms_main_screen_pressed, NULL);
+	snis_button_set_hover_color(comms_ui.mainscreen_comms, hover_color);
 	snis_button_set_checkbox_function(comms_ui.mainscreen_comms,
 					snis_button_generic_checkbox_function,
 					&main_screen_text.comms_on_mainscreen);
@@ -16242,10 +16230,12 @@ static void init_comms_ui(void)
 	y -= bh + 4;
 	comms_ui.hail_mining_bot_button = snis_button_init(x, y, txx(80), bh, "MINING BOT", button_color,
 			NANO_FONT, comms_hail_mining_bot_pressed, NULL);
+	snis_button_set_hover_color(comms_ui.hail_mining_bot_button, hover_color);
 	snis_button_set_sound(comms_ui.hail_mining_bot_button, UISND16);
 	y -= bh + 4;
 	comms_ui.red_alert_button = snis_button_init(x, y, txx(80), bh, "RED ALERT", red_alert_color,
 			NANO_FONT, comms_screen_red_alert_pressed, NULL);
+	snis_button_set_hover_color(comms_ui.red_alert_button, hover_color);
 	snis_button_set_checkbox_function(comms_ui.red_alert_button,
 					snis_button_generic_checkbox_function,
 					&red_alert_mode);
@@ -16263,6 +16253,7 @@ static void init_comms_ui(void)
 	comms_ui.comms_transmit_button = snis_button_init(txx(10), txy(560), -1, txy(30),
 			"TRANSMIT", button_color,
 			TINY_FONT, comms_transmit_button_pressed, NULL);
+	snis_button_set_hover_color(comms_ui.comms_transmit_button, hover_color);
 	snis_button_set_sound(comms_ui.comms_transmit_button, UISND18);
 	comms_ui.mainzoom_slider = snis_slider_init(txx(180), txy(560), txx(380), txy(15),
 				UI_COLOR(comms_slider), "ZOOM",
@@ -17116,7 +17107,7 @@ static void draw_science_data(struct snis_entity *ship, struct snis_entity *o, i
 	if (o || waypoint_index != -1) {
 		range = dist3d(dx, dy, dz);
 		if (update_display)
-			dejittered_range = (range + last_range / 2); /* avg of last 2 for some hysteresis */
+			dejittered_range = 0.5 * (range + last_range); /* avg of last 2 for some hysteresis */
 		snprintf(buffer, sizeof(buffer), "RANGE: %8.2lf", dejittered_range);
 	} else {
 		snprintf(buffer, sizeof(buffer), "RANGE:");
@@ -17507,7 +17498,7 @@ static void show_3d_science(struct snis_entity *o, int current_zoom)
 	int cx, cy, r;
 	double zoom;
 
-	/* mirror align_sciball_to_ship to sci_ui */
+	/* mirror align_sciball_to_ship and sci_auto_sweep to sci_ui */
 	pthread_mutex_lock(&universe_mutex);
 	sci_ui.align_sciball_to_ship = o->tsd.ship.align_sciball_to_ship;
 	pthread_mutex_unlock(&universe_mutex);
@@ -18703,6 +18694,10 @@ static struct tweakable_var_descriptor client_tweak[] = {
 		&suppress_warp_hash, 'i', 0.0, 0.0, 0.0, 0, 1, 0, 0 },
 	{ "VSYNC", "VSYNC MODE, -1 = ADAPTIVE VSYNC, 1 = VSYNC ON, 0 = VSYNC OFF",
 		&vsync_mode, 'i', 0.0, 0.0, 0.0, -1, 1, 1, 0, },
+	{ "MF_COCKPIT", "1 - DISPLAY COCKPIT, 0 - DON'T DISPLAY COCKPIT",
+		&mf_cockpit, 'i', 0.0, 0.0, 0.0, 0, 1, 0, 0, },
+	{ "LEAVE_NO_ORPHANS", "1: KILL ALL SERVER PROCESSES ON EXIT IF RUNNING INSIDE CONTAINER",
+		&leave_no_orphans, 'i', 0.0, 0.0, 0.0, 0, 1, 0, 0, },
 	{ NULL, NULL, NULL, '\0', 0.0, 0.0, 0.0, 0, 0, 0, 0 },
 };
 
@@ -19456,6 +19451,7 @@ static void add_submenu_from_file(struct pull_down_menu *pdm, char *column,
 static void init_demon_ui(void)
 {
 	int i, x, y, dy, n;
+	const int hover_color = UI_COLOR(demon_hover_button);
 
 	demon_ui.ux1 = 0;
 	demon_ui.uy1 = 0;
@@ -19485,66 +19481,82 @@ static void init_demon_ui(void)
 	demon_ui.demon_home_button = snis_button_init(x, y + dy * n++, txx(70), txy(20),
 			"HOME", UI_COLOR(demon_deselected_button),
 			NANO_FONT, demon_home_button_pressed, NULL);
+	snis_button_set_hover_color(demon_ui.demon_home_button, hover_color);
 	snis_button_set_sound(demon_ui.demon_home_button, UISND29);
 	demon_ui.demon_ship_button = snis_button_init(x, y + dy * n++, txx(70), txy(20),
 			"SHIP", UI_COLOR(demon_deselected_button),
 			NANO_FONT, demon_ship_button_pressed, (void *) (intptr_t) 255);
+	snis_button_set_hover_color(demon_ui.demon_ship_button, hover_color);
 	snis_button_set_sound(demon_ui.demon_ship_button, UISND28);
 	demon_ui.demon_starbase_button = snis_button_init(x, y + dy * n++, txx(70), txy(20),
 			"STARBASE", UI_COLOR(demon_deselected_button),
 			NANO_FONT, demon_starbase_button_pressed, NULL);
+	snis_button_set_hover_color(demon_ui.demon_starbase_button, hover_color);
 	snis_button_set_sound(demon_ui.demon_starbase_button, UISND27);
 	demon_ui.demon_planet_button = snis_button_init(x, y + dy * n++, txx(70), txy(20),
 			"PLANET", UI_COLOR(demon_deselected_button),
 			NANO_FONT, demon_planet_button_pressed, NULL);
+	snis_button_set_hover_color(demon_ui.demon_planet_button, hover_color);
 	snis_button_set_sound(demon_ui.demon_planet_button, UISND26);
 	demon_ui.demon_black_hole_button = snis_button_init(x, y + dy * n++, txx(70), txy(20),
 			"BLACK HOLE", UI_COLOR(demon_deselected_button),
 			NANO_FONT, demon_black_hole_button_pressed, NULL);
+	snis_button_set_hover_color(demon_ui.demon_black_hole_button, hover_color);
 	snis_button_set_sound(demon_ui.demon_planet_button, UISND26);
 	demon_ui.demon_asteroid_button = snis_button_init(x, y + dy * n++, txx(70), txy(20),
 			"ASTEROID", UI_COLOR(demon_deselected_button),
 			NANO_FONT, demon_asteroid_button_pressed, NULL);
+	snis_button_set_hover_color(demon_ui.demon_asteroid_button, hover_color);
 	snis_button_set_sound(demon_ui.demon_asteroid_button, UISND25);
 	demon_ui.demon_nebula_button = snis_button_init(x, y + dy * n++, txx(70), txy(20),
 			"NEBULA", UI_COLOR(demon_deselected_button),
 			NANO_FONT, demon_nebula_button_pressed, NULL);
+	snis_button_set_hover_color(demon_ui.demon_nebula_button, hover_color);
 	snis_button_set_sound(demon_ui.demon_nebula_button, UISND24);
 	demon_ui.demon_spacemonster_button = snis_button_init(x, y + dy * n++, txx(70), txy(20),
 			"MONSTER", UI_COLOR(demon_deselected_button),
 			NANO_FONT, demon_spacemonster_button_pressed, NULL);
+	snis_button_set_hover_color(demon_ui.demon_spacemonster_button, hover_color);
 	snis_button_set_sound(demon_ui.demon_spacemonster_button, UISND23);
 	demon_ui.demon_captain_button = snis_button_init(x, y + dy * n++, txx(70), txy(20),
 			"CAPTAIN", UI_COLOR(demon_deselected_button),
 			NANO_FONT, demon_captain_button_pressed, NULL);
+	snis_button_set_hover_color(demon_ui.demon_captain_button, hover_color);
 	snis_button_set_sound(demon_ui.demon_captain_button, UISND22);
 	demon_ui.demon_delete_button = snis_button_init(x, y + dy * n++, txx(70), txy(20),
 			"DELETE", UI_COLOR(demon_deselected_button),
 			NANO_FONT, demon_delete_button_pressed, NULL);
+	snis_button_set_hover_color(demon_ui.demon_delete_button, hover_color);
 	snis_button_set_sound(demon_ui.demon_delete_button, UISND21);
 	demon_ui.demon_select_none_button = snis_button_init(x, y + dy * n++, txx(70), txy(20),
 			"SELECT NONE", UI_COLOR(demon_deselected_button),
 			NANO_FONT, demon_select_none_button_pressed, NULL);
+	snis_button_set_hover_color(demon_ui.demon_select_none_button, hover_color);
 	snis_button_set_sound(demon_ui.demon_select_none_button, UISND20);
 	demon_ui.demon_torpedo_button = snis_button_init(x, y + dy * n++, txx(70), txy(20),
 			"TORPEDO", UI_COLOR(demon_deselected_button),
 			NANO_FONT, demon_torpedo_button_pressed, NULL);
+	snis_button_set_hover_color(demon_ui.demon_torpedo_button, hover_color);
 	snis_button_set_sound(demon_ui.demon_torpedo_button, UISND19);
 	demon_ui.demon_phaser_button = snis_button_init(x, y + dy * n++, txx(70), txy(20),
 			"PHASER", UI_COLOR(demon_deselected_button),
 			NANO_FONT, demon_phaser_button_pressed, NULL);
+	snis_button_set_hover_color(demon_ui.demon_phaser_button, hover_color);
 	snis_button_set_sound(demon_ui.demon_phaser_button, UISND18);
 	demon_ui.demon_2d3d_button = snis_button_init(x, y + dy * n++, txx(70), txy(20),
 			"2D/3D", UI_COLOR(demon_deselected_button),
 			NANO_FONT, demon_2d3d_button_pressed, NULL);
+	snis_button_set_hover_color(demon_ui.demon_2d3d_button, hover_color);
 	snis_button_set_sound(demon_ui.demon_2d3d_button, UISND17);
 	demon_ui.demon_move_button = snis_button_init(x, y + dy * n++, txx(70), txy(20),
 			"MOVE", UI_COLOR(demon_deselected_button),
 			NANO_FONT, demon_move_button_pressed, NULL);
+	snis_button_set_hover_color(demon_ui.demon_move_button, hover_color);
 	snis_button_set_sound(demon_ui.demon_move_button, UISND16);
 	demon_ui.demon_scale_button = snis_button_init(x, y + dy * n++, txx(70), txy(20),
 			"EXAG SCALE", UI_COLOR(demon_deselected_button),
 			NANO_FONT, demon_scale_button_pressed, NULL);
+	snis_button_set_hover_color(demon_ui.demon_scale_button, hover_color);
 	snis_button_set_checkbox_function(demon_ui.demon_scale_button,
 			snis_button_generic_checkbox_function,
 			&demon_ui.exaggerated_scale_active);
@@ -19552,6 +19564,7 @@ static void init_demon_ui(void)
 	demon_ui.demon_console_button = snis_button_init(x, y + dy * n++, txx(70), txy(20),
 			"CONSOLE", UI_COLOR(demon_deselected_button),
 			NANO_FONT, demon_console_pressed, NULL);
+	snis_button_set_hover_color(demon_ui.demon_console_button, hover_color);
 	snis_button_set_checkbox_function(demon_ui.demon_console_button,
 			snis_button_generic_checkbox_function,
 			&demon_ui.console_active);
@@ -20610,11 +20623,13 @@ static void show_warp_limbo_screen(void)
 		break;
 	case DISPLAYMODE_WEAPONS:
 		show_manual_weapons();
+		ui_element_list_maybe_change_hover_state(uiobjs, mouse.x, mouse.y);
 		ui_element_list_draw(uiobjs);
 		ui_element_list_maybe_draw_tooltips(uiobjs, mouse.x, mouse.y);
 		break;
 	case DISPLAYMODE_DEMON:
 		show_demon();
+		ui_element_list_maybe_change_hover_state(uiobjs, mouse.x, mouse.y);
 		ui_element_list_draw(uiobjs);
 		ui_element_list_maybe_draw_tooltips(uiobjs, mouse.x, mouse.y);
 		break;
@@ -20724,25 +20739,40 @@ static void browser_button_pressed(void *v)
 {
 	int rc;
 	char *site = v;
-	char cmd[1000];
+	char cmd[2000];
 
-	snprintf(cmd, sizeof(cmd), "google-chrome %s &", site);
-	rc = system(cmd);
-	if (rc == 0)
+	if (running_in_container) { /* We can't open a browser from within the container */
+		rc = SDL_SetClipboardText(site);
+		if (rc != 0) /* best we can do is copy the URL to the clipboard. */
+			text_to_speech("Failed to copy URL to clipboard.");
+		else
+			text_to_speech("Copied URL to clipboard.");
 		return;
-	snprintf(cmd, sizeof(cmd), "firefox %s &", site);
+	}
+	snprintf(cmd, sizeof(cmd), "xdg-open %s || google-chrome %s || firefox %s", site, site, site);
 	rc = system(cmd);
-	if (rc == 0)
+	/* We can't really tell if the above command works or not, unfortunately. */
+	if (rc == 0 || (rc == -1 && errno == ECHILD))
 		return;
+	text_to_speech("Failed to open browser.");
+	rc = SDL_SetClipboardText(site);
+	if (rc != 0) /* best we can do is copy the URL to the clipboard. */
+		text_to_speech("Failed to copy URL to clipboard.");
+	else
+		text_to_speech("Copied URL to clipboard.");
+	return;
 }
 
 static struct button *init_net_checkbox_button(int x, int *y, char *txt,
-			button_function bf, void *cookie, int (*checkbox_function)(void *))
+			button_function bf, void *cookie, int (*checkbox_function)(void *),
+			int button_color, int disabled_color, int hover_color)
 {
 	struct button *b;
-	b = snis_button_init(x, *y, txx(140), txy(18), txt, UI_COLOR(network_setup_role),
+	b = snis_button_init(x, *y, txx(140), txy(18), txt, button_color,
 			NANO_FONT, bf, cookie);
 	snis_button_set_checkbox_function(b, checkbox_function, cookie);
+	snis_button_set_disabled_color(b, disabled_color);
+	snis_button_set_hover_color(b, hover_color);
 	*y = *y + txy(18);
 	return b;
 }
@@ -20796,13 +20826,14 @@ static void network_checkbox_pressed(void *x)
 	}
 }
 
-static struct button *init_net_role_button(int x, int *y, char *txt, int *value)
+static struct button *init_net_role_button(int x, int *y, char *txt, int *value,
+			int button_color, int disabled_color, int hover_color)
 {
 	return init_net_checkbox_button(x, y, txt, network_checkbox_pressed, value,
-			snis_button_generic_checkbox_function);
+			snis_button_generic_checkbox_function, button_color, disabled_color, hover_color);
 }
 
-static void init_net_role_buttons(struct network_setup_ui *nsu)
+static void init_net_role_buttons(struct network_setup_ui *nsu, int button_color, int disabled_color, int hover_color)
 {
 	int x, y;
 
@@ -20819,19 +20850,29 @@ static void init_net_role_buttons(struct network_setup_ui *nsu)
 	nsu->role_damcon_v = 1;
 	nsu->role_demon_v = 1;
 	nsu->role_text_to_speech_v = 1;
-	nsu->role_main = init_net_role_button(x, &y, "MAIN SCREEN ROLE", &nsu->role_main_v);
-	nsu->role_nav = init_net_role_button(x, &y, "NAVIGATION ROLE", &nsu->role_nav_v);
-	nsu->role_weap = init_net_role_button(x, &y, "WEAPONS ROLE", &nsu->role_weap_v);
-	nsu->role_eng = init_net_role_button(x, &y, "ENGINEERING ROLE", &nsu->role_eng_v);
-	nsu->role_damcon = init_net_role_button(x, &y, "DAMCON ROLE", &nsu->role_damcon_v);
-	nsu->role_sci = init_net_role_button(x, &y, "SCIENCE ROLE", &nsu->role_sci_v);
-	nsu->role_comms = init_net_role_button(x, &y, "COMMUNICATIONS ROLE", &nsu->role_comms_v);
-	nsu->role_sound = init_net_role_button(x, &y, "SOUND SERVER ROLE", &nsu->role_sound_v);
-	nsu->role_projector = init_net_role_button(x, &y, "PROJECTOR ROLE", &nsu->role_projector_v);
-	nsu->role_demon = init_net_role_button(x, &y, "DEMON MODE",
-							&nsu->role_demon_v);
+	nsu->role_main = init_net_role_button(x, &y, "MAIN SCREEN ROLE", &nsu->role_main_v,
+						button_color, disabled_color, hover_color);
+	nsu->role_nav = init_net_role_button(x, &y, "NAVIGATION ROLE", &nsu->role_nav_v,
+						button_color, disabled_color, hover_color);
+	nsu->role_weap = init_net_role_button(x, &y, "WEAPONS ROLE", &nsu->role_weap_v,
+						button_color, disabled_color, hover_color);
+	nsu->role_eng = init_net_role_button(x, &y, "ENGINEERING ROLE", &nsu->role_eng_v,
+						button_color, disabled_color, hover_color);
+	nsu->role_damcon = init_net_role_button(x, &y, "DAMCON ROLE", &nsu->role_damcon_v,
+						button_color, disabled_color, hover_color);
+	nsu->role_sci = init_net_role_button(x, &y, "SCIENCE ROLE", &nsu->role_sci_v,
+						button_color, disabled_color, hover_color);
+	nsu->role_comms = init_net_role_button(x, &y, "COMMUNICATIONS ROLE", &nsu->role_comms_v,
+						button_color, disabled_color, hover_color);
+	nsu->role_sound = init_net_role_button(x, &y, "SOUND SERVER ROLE", &nsu->role_sound_v,
+						button_color, disabled_color, hover_color);
+	nsu->role_projector = init_net_role_button(x, &y, "PROJECTOR ROLE", &nsu->role_projector_v,
+						button_color, disabled_color, hover_color);
+	nsu->role_demon = init_net_role_button(x, &y, "DEMON MODE", &nsu->role_demon_v,
+						button_color, disabled_color, hover_color);
 	nsu->role_text_to_speech = init_net_role_button(x, &y, "TEXT TO SPEECH",
-							&nsu->role_text_to_speech_v);
+							&nsu->role_text_to_speech_v,
+						button_color, disabled_color, hover_color);
 	ui_add_button(nsu->role_main, DISPLAYMODE_NETWORK_SETUP,
 			"WHETHER THIS TERMINAL SHOULD ACT AS MAIN SCREEN.\n"
 			"IT IS BEST TO HAVE ONLY ONE MAIN SCREEN TERMINAL\n"
@@ -20964,7 +21005,8 @@ static int faction_checkbox(void *cookie)
 	return net_setup_ui.faction_checkbox_v[i];
 }
 
-static void init_join_create_buttons(struct network_setup_ui *nsu)
+static void init_join_create_buttons(struct network_setup_ui *nsu,
+			int button_color, int disabled_color, int hover_color)
 {
 	nsu->create_ship_v = 1;
 	nsu->join_ship_v = 0;
@@ -20972,16 +21014,18 @@ static void init_join_create_buttons(struct network_setup_ui *nsu)
 	int y = txy(400);
 	nsu->create_ship_checkbox = init_net_checkbox_button(x, &y,
 						"CREATE SHIP", create_ship_checkbox_cb,
-						nsu, create_ship_checkbox);
+						nsu, create_ship_checkbox, button_color, disabled_color, hover_color);
 	nsu->join_ship_checkbox = init_net_checkbox_button(x, &y, "JOIN SHIP",
-						join_ship_checkbox_cb, nsu, join_ship_checkbox);
+						join_ship_checkbox_cb, nsu, join_ship_checkbox,
+						 button_color, disabled_color, hover_color);
 	ui_add_button(nsu->create_ship_checkbox, DISPLAYMODE_NETWORK_SETUP,
 			"SELECT THIS IF YOU WISH TO CREATE A NEW SHIP FOR THE FIRST TIME");
 	ui_add_button(nsu->join_ship_checkbox, DISPLAYMODE_NETWORK_SETUP,
 			"SELECT THIS IF YOU WISH TO JOIN A SHIP ALREADY IN PLAY");
 }
 
-static void init_faction_buttons(struct network_setup_ui *nsu)
+static void init_faction_buttons(struct network_setup_ui *nsu,
+			int button_color, int disabled_color, int hover_color)
 {
 	int i, n;
 	int x = txx(450);
@@ -20995,7 +21039,8 @@ static void init_faction_buttons(struct network_setup_ui *nsu)
 		n = MAX_FACTIONS;
 	for (i = 0; i < n;  i++) {
 		nsu->faction_checkbox[i] = init_net_checkbox_button(x, &y, faction_name(i),
-					faction_checkbox_cb, (void *) (intptr_t) i, faction_checkbox);
+					faction_checkbox_cb, (void *) (intptr_t) i, faction_checkbox,
+					button_color, disabled_color, hover_color);
 		ui_add_button(nsu->faction_checkbox[i], DISPLAYMODE_NETWORK_SETUP, "");
 	}
 	hide_faction_checkboxes(nsu);
@@ -21008,9 +21053,9 @@ static void init_net_setup_ui(void)
 	int yinc = txy(50);
 	int left = txx(20);
 	int input_color = UI_COLOR(network_setup_input);
-	int active_button_color = UI_COLOR(network_setup_active);
-	int inactive_button_color = UI_COLOR(network_setup_inactive);
-	int selected_color = UI_COLOR(network_setup_selected);
+	int button_color = UI_COLOR(network_setup_active);
+	int disabled_color = UI_COLOR(network_setup_inactive);
+	int hover_color = UI_COLOR(network_setup_selected);
 
 	char *preferred_shipname = snis_prefs_read_default_ship_name(xdg_base_ctx);
 
@@ -21042,6 +21087,7 @@ static void init_net_setup_ui(void)
 					use_default_lobby_port_checkbox_pressed, &use_default_lobby_port);
 	snis_button_set_checkbox_function(net_setup_ui.default_lobby_port_checkbox,
 					snis_button_generic_checkbox_function, &use_default_lobby_port);
+	snis_button_set_hover_color(net_setup_ui.default_lobby_port_checkbox, hover_color);
 	net_setup_ui.lobbyport =
 		snis_text_input_box_init(left, y + yinc * 2, txy(30), txx(100), input_color, TINY_FONT,
 					net_setup_ui.lobbyportstr, sizeof(net_setup_ui.lobbyportstr), &timer, NULL, NULL);
@@ -21057,34 +21103,41 @@ static void init_net_setup_ui(void)
 					NULL, NULL);
 	y += yinc;
 	net_setup_ui.connect_to_lobby =
-		snis_button_init(left, y, -1, -1, "ENTER LOBBY xxxxxxxxxxxxxxx", inactive_button_color,
+		snis_button_init(left, y, -1, -1, "ENTER LOBBY xxxxxxxxxxxxxxx", button_color,
 			TINY_FONT, connect_to_lobby_button_pressed, NULL);
+	snis_button_set_disabled_color(net_setup_ui.connect_to_lobby, disabled_color);
+	snis_button_set_hover_color(net_setup_ui.connect_to_lobby, hover_color);
 	net_setup_ui.connect_to_snis_server =
-		snis_button_init(left, y, -1, -1, "CONNECT TO SNIS SERVER", active_button_color,
+		snis_button_init(left, y, -1, -1, "CONNECT TO SNIS SERVER", button_color,
 			TINY_FONT, connect_to_snis_server_button_pressed, NULL);
 	snis_button_set_disabled_color(net_setup_ui.connect_to_snis_server, RED);
+	snis_button_set_hover_color(net_setup_ui.connect_to_snis_server, hover_color);
 	net_setup_ui.launcher_button =
 		snis_button_init(left + txx(300), y, -1, -1, "PROCESS LAUNCHER",
-			active_button_color,
+			button_color,
 			TINY_FONT, launcher_button_pressed, NULL);
+	snis_button_set_hover_color(net_setup_ui.launcher_button, hover_color);
 	net_setup_ui.website_button =
 		snis_button_init(left + txx(500), y, -1, -1, "WEBSITE",
-			active_button_color,
+			button_color,
 			TINY_FONT, browser_button_pressed, "http://spacenerdsinspace.com");
+	snis_button_set_hover_color(net_setup_ui.website_button, hover_color);
 	net_setup_ui.forum_button =
 		snis_button_init(left + txx(600), y, -1, -1, "FORUM",
-			active_button_color,
+			button_color,
 			TINY_FONT, browser_button_pressed, "http://spacenerdsinspace.com/forum.html");
+	snis_button_set_hover_color(net_setup_ui.forum_button, hover_color);
 	net_setup_ui.support_button =
 		snis_button_init(left + txx(700), y, -1, -1, "DONATE",
-			active_button_color,
+			button_color,
 			TINY_FONT, browser_button_pressed, "http://spacenerdsinspace.com/donate.html");
+	snis_button_set_hover_color(net_setup_ui.support_button, hover_color);
 	net_setup_ui.menu = create_pull_down_menu(NANO_FONT, SCREEN_WIDTH);
-	pull_down_menu_set_color(net_setup_ui.menu, active_button_color);
-	pull_down_menu_set_highlight_color(net_setup_ui.menu, selected_color);
-	init_net_role_buttons(&net_setup_ui);
-	init_join_create_buttons(&net_setup_ui);
-	init_faction_buttons(&net_setup_ui);
+	pull_down_menu_set_color(net_setup_ui.menu, button_color);
+	pull_down_menu_set_highlight_color(net_setup_ui.menu, button_color);
+	init_net_role_buttons(&net_setup_ui, button_color, disabled_color, hover_color);
+	init_join_create_buttons(&net_setup_ui, button_color, disabled_color, hover_color);
+	init_faction_buttons(&net_setup_ui, button_color, disabled_color, hover_color);
 	snis_prefs_read_checkbox_defaults(xdg_base_ctx, &net_setup_ui.role_main_v, &net_setup_ui.role_nav_v,
 					&net_setup_ui.role_weap_v, &net_setup_ui.role_eng_v,
 					&net_setup_ui.role_damcon_v,
@@ -21103,12 +21156,24 @@ static void init_net_setup_ui(void)
 			"CONNECT TO THE LOBBY SERVER");
 	ui_add_button(net_setup_ui.launcher_button, DISPLAYMODE_NETWORK_SETUP,
 			"GO BACK TO THE SNIS PROCESS LAUNCHER SCREEN");
-	ui_add_button(net_setup_ui.website_button, DISPLAYMODE_NETWORK_SETUP,
-			"SPACE NERDS IN SPACE WEBSITE");
-	ui_add_button(net_setup_ui.forum_button, DISPLAYMODE_NETWORK_SETUP,
-			"SPACE NERDS IN SPACE FORUM ON BRIDGESIM.NET");
-	ui_add_button(net_setup_ui.support_button, DISPLAYMODE_NETWORK_SETUP,
-			"HELP SUPPORT SPACE NERDS IN SPACE DEVELOPMENT");
+	if (running_in_container) {
+		ui_add_button(net_setup_ui.website_button, DISPLAYMODE_NETWORK_SETUP,
+				"COPY URL OF SPACE NERDS IN SPACE WEBSITE TO CLIPBOARD");
+		ui_add_button(net_setup_ui.forum_button, DISPLAYMODE_NETWORK_SETUP,
+				"COPY URL OF SPACE NERDS IN SPACE\n"
+				"DISCUSSIONS ON GITHUB TO CLIPBOARD");
+		ui_add_button(net_setup_ui.support_button, DISPLAYMODE_NETWORK_SETUP,
+				"COPY URL OF SPACE NERDS IN SPACE\n"
+				"DONATION SITE TO CLIPBOARD");
+	} else {
+		ui_add_button(net_setup_ui.website_button, DISPLAYMODE_NETWORK_SETUP,
+				"VISIT SPACE NERDS IN SPACE WEB SITE");
+		ui_add_button(net_setup_ui.forum_button, DISPLAYMODE_NETWORK_SETUP,
+				"VISIT SPACE NERDS IN SPACE\n"
+				"DISCUSSIONS ON GITHUB");
+		ui_add_button(net_setup_ui.support_button, DISPLAYMODE_NETWORK_SETUP,
+				"VISIT SPACE NERDS IN SPACE DONATION WEB SITE");
+	}
 
 	/* note: the order of these is important for TAB key focus advance */
 	ui_add_text_input_box(net_setup_ui.lobbyservername, DISPLAYMODE_NETWORK_SETUP);
@@ -21197,11 +21262,11 @@ static void show_network_setup(void)
 		if (strcmp(net_setup_ui.shipname, "") != 0 &&
 			strcmp(net_setup_ui.password, "") != 0) {
 			if (strcmp(net_setup_ui.lobbyname, "") != 0)
-				snis_button_set_color(net_setup_ui.connect_to_lobby, UI_COLOR(network_setup_active));
+				snis_button_enable(net_setup_ui.connect_to_lobby);
 			else
-				snis_button_set_color(net_setup_ui.connect_to_lobby, UI_COLOR(network_setup_inactive));
+				snis_button_disable(net_setup_ui.connect_to_lobby);
 		} else {
-			snis_button_set_color(net_setup_ui.connect_to_lobby, UI_COLOR(network_setup_inactive));
+			snis_button_disable(net_setup_ui.connect_to_lobby);
 		}
 	}
 }
@@ -21258,6 +21323,13 @@ static void start_snis_server_btn_pressed(__attribute__((unused)) void *x)
 	write_to_forker(FORKER_START_SNIS_SERVER);
 }
 
+static void start_servers_btn_pressed(__attribute__((unused)) void *x)
+{
+	start_ssgl_btn_pressed(NULL);
+	start_snis_multiverse_btn_pressed(NULL);
+	start_snis_server_btn_pressed(NULL);
+}
+
 static void stop_forker_process(void)
 {
 	write_to_forker(FORKER_QUIT);
@@ -21282,15 +21354,22 @@ static void connect_client_btn_pressed(__attribute__((unused)) void *x)
 	displaymode = DISPLAYMODE_NETWORK_SETUP;
 }
 
+static void really_quit(void);
+
 static void launcher_quit_btn_pressed(__attribute__((unused)) void *x)
 {
+	if (running_in_container && leave_no_orphans) {
+		/* Don't want to leave server processes orphaned in stupid flatpak container */
+		start_snis_process_terminator((void *) 1);
+		ssgl_sleep(1);
+	}
 	stop_forker_process();
+	really_quit();
 	exit(0);
 }
 
 static void launcher_restart_btn_pressed(__attribute__((unused)) void *x)
 {
-
 	write_to_forker(FORKER_RESTART_SNIS_CLIENT);
 	ssgl_sleep(3);
 	stop_forker_process();
@@ -21301,27 +21380,6 @@ static void launcher_options_btn_pressed(__attribute__((unused)) void *x)
 {
 	displaymode = DISPLAYMODE_OPTIONS;
 }
-
-static struct options_ui {
-	struct button *launcher_btn;
-	struct label *client_opts, *multiverse_opts, *server_opts;
-	struct button *allow_remote_networks_btn;
-	struct button *autowrangle_btn;
-	struct button *mv_fixed_port_number_btn; /* mv_ means multiverse here. */
-	struct button *ss_default_port_range_btn; /* ss_ means snis_server here. */
-	struct button *ss_allow_remote_networks_btn;
-	struct button *no_lobby_btn;
-	struct button *solarsystem_enforcement;
-	struct label *lobbyhost_label;
-	struct label *lobbyport_label;
-	struct snis_text_input_box *lobbyhost_input;
-	struct snis_text_input_box *lobbyport_input;
-	struct snis_text_input_box *mv_port_number_input;
-	struct snis_text_input_box *ss_port_range_input;
-	struct button *NAT_ghetto_mode_btn;
-	char mv_port_number_text[15];
-	char ss_port_range_text[15];
-} options_ui;
 
 static void options_port_range_pressed(char *has_port_range, void *widget)
 {
@@ -21411,13 +21469,15 @@ static int options_solarsystem_enforcement_status(__attribute((unused)) void *x)
 static void init_options_ui(void)
 {
 	float x, y;
-	int color = UI_COLOR(launcher_button);
+	int color = UI_COLOR(options_button);
+	int hover_color = UI_COLOR(options_button_hover);
 
 	x = txx(20);
 	y = txy(550);
 	options_ui.launcher_btn =
 		snis_button_init(x, y, -1, -1, "BACK TO PROCESS LAUNCHER", color,
 			TINY_FONT, launcher_button_pressed, NULL);
+	snis_button_set_hover_color(options_ui.launcher_btn, hover_color);
 
 	y = txy(60);
 	options_ui.multiverse_opts = snis_label_init(x, y, "MULTIVERSE OPTIONS", color, TINY_FONT);
@@ -21429,6 +21489,7 @@ static void init_options_ui(void)
 	snis_button_set_checkbox_function(options_ui.mv_fixed_port_number_btn,
 					options_mv_port_number_status, NULL);
 	snis_button_set_visible_border(options_ui.mv_fixed_port_number_btn, 0);
+	snis_button_set_hover_color(options_ui.mv_fixed_port_number_btn, hover_color);
 
 	options_ui.mv_port_number_input = snis_text_input_box_init(x + txx(150), y, txy(20), txx(100),
 					color, NANO_FONT, options_ui.mv_port_number_text,
@@ -21440,6 +21501,7 @@ static void init_options_ui(void)
 	snis_button_set_checkbox_function(options_ui.allow_remote_networks_btn,
 					options_allow_remote_networks_status, NULL);
 	snis_button_set_visible_border(options_ui.allow_remote_networks_btn, 0);
+	snis_button_set_hover_color(options_ui.allow_remote_networks_btn, hover_color);
 	y += txx(20);
 
 	options_ui.autowrangle_btn = snis_button_init(x, y, -1, -1, "WRANGLE SNIS SERVERS", color,
@@ -21447,6 +21509,7 @@ static void init_options_ui(void)
 	snis_button_set_checkbox_function(options_ui.autowrangle_btn,
 					options_autowrangle_btn_status, NULL);
 	snis_button_set_visible_border(options_ui.autowrangle_btn, 0);
+	snis_button_set_hover_color(options_ui.autowrangle_btn, hover_color);
 
 	x -= txx(10);
 	y = txy(50 + 180);
@@ -21459,6 +21522,7 @@ static void init_options_ui(void)
 	snis_button_set_checkbox_function(options_ui.ss_default_port_range_btn,
 					options_ss_default_port_range_status, NULL);
 	snis_button_set_visible_border(options_ui.ss_default_port_range_btn, 0);
+	snis_button_set_hover_color(options_ui.ss_default_port_range_btn, hover_color);
 
 	options_ui.ss_port_range_input = snis_text_input_box_init(x + txx(150), y, txy(20), txx(100),
 					color, NANO_FONT, options_ui.ss_port_range_text,
@@ -21470,6 +21534,7 @@ static void init_options_ui(void)
 	snis_button_set_checkbox_function(options_ui.ss_allow_remote_networks_btn,
 					options_ss_allow_remote_networks_status, NULL);
 	snis_button_set_visible_border(options_ui.ss_allow_remote_networks_btn, 0);
+	snis_button_set_hover_color(options_ui.ss_allow_remote_networks_btn, hover_color);
 	y += txx(20);
 
 
@@ -21485,6 +21550,7 @@ static void init_options_ui(void)
 	snis_button_set_checkbox_function(options_ui.no_lobby_btn,
 					options_no_lobby_btn_status, &avoid_lobby);
 	snis_button_set_visible_border(options_ui.no_lobby_btn, 0);
+	snis_button_set_hover_color(options_ui.no_lobby_btn, hover_color);
 
 	options_ui.solarsystem_enforcement = snis_button_init(x + txy(400), y, -1, -1,
 				"ENFORCE CORRECT STAR SYSTEM", color, NANO_FONT,
@@ -21493,6 +21559,7 @@ static void init_options_ui(void)
 				options_solarsystem_enforcement_status,
 				&disable_solarsystem_enforcement);
 	snis_button_set_visible_border(options_ui.solarsystem_enforcement, 0);
+	snis_button_set_hover_color(options_ui.solarsystem_enforcement, hover_color);
 
 	y += txy(30);
 
@@ -21512,6 +21579,15 @@ static void init_options_ui(void)
 	snis_button_set_checkbox_function(options_ui.NAT_ghetto_mode_btn,
 				snis_button_generic_checkbox_function, &NAT_ghetto_mode);
 	snis_button_set_visible_border(options_ui.NAT_ghetto_mode_btn, 0);
+	snis_button_set_hover_color(options_ui.NAT_ghetto_mode_btn, hover_color);
+
+	options_ui.leave_no_orphans_btn = snis_button_init(x + txx(200), y, -1, -1,
+			"LEAVE NO ORPHANED PROCESSES", color,
+			NANO_FONT, snis_button_generic_checkbox_toggler, &leave_no_orphans);
+	snis_button_set_checkbox_function(options_ui.leave_no_orphans_btn,
+				snis_button_generic_checkbox_function, &leave_no_orphans);
+	snis_button_set_visible_border(options_ui.leave_no_orphans_btn, 0);
+	snis_button_set_hover_color(options_ui.leave_no_orphans_btn, hover_color);
 
 	ui_add_button(options_ui.launcher_btn, DISPLAYMODE_OPTIONS,
 			"GO BACK TO THE SNIS PROCESS LAUNCHER SCREEN");
@@ -21567,6 +21643,10 @@ static void init_options_ui(void)
 		"ON THE SAME HOST AS THE LOBBY AND MAYBE IT IS ONLY BECAUSE OF NETWORK\n"
 		"ADDRESS TRANSLATION (NAT) THAT SSGL_SERVER HAS THE WRONG IP ADDRESSES\n");
 
+	ui_add_button(options_ui.leave_no_orphans_btn, DISPLAYMODE_OPTIONS,
+		"IF RUNNING IN A CONTAINER SUCH AS A FLATPAK OR APPIMAGE,\n"
+		"DO NOT LEAVE SERVER PROCESSES RUNNING IF THE USER QUITS\n"
+		"THE SNIS_CLIENT APPLICATION.");
 	ui_add_label(options_ui.lobbyhost_label, DISPLAYMODE_OPTIONS);
 	ui_add_text_input_box(options_ui.lobbyhost_input, DISPLAYMODE_OPTIONS);
 	ui_set_widget_tooltip(options_ui.lobbyhost_input, "ENTER LOBBY HOST NAME OR IP ADDRESS");
@@ -21574,27 +21654,6 @@ static void init_options_ui(void)
 	ui_add_text_input_box(options_ui.lobbyport_input, DISPLAYMODE_OPTIONS);
 	ui_set_widget_tooltip(options_ui.lobbyport_input, "ENTER LOBBY PORT NUMBER");
 }
-
-static struct launcher_ui {
-	struct button *start_ssgl_btn;
-	struct button *start_snis_multiverse_btn;
-	struct button *autowrangle_checkbox;
-	struct button *start_snis_server_btn;
-	struct button *connect_client_btn;
-	struct button *stop_all_snis_btn;
-	struct button *update_assets_btn;
-	struct button *options_btn;
-	struct button *quit_btn;
-	struct gauge *ssgl_gauge;
-	struct gauge *multiverse_gauge;
-	struct gauge *snis_server_gauge;
-	struct gauge *snis_client_gauge;
-	struct button *restart_btn;
-	int ssgl_count;
-	int multiverse_count;
-	int snis_server_count;
-	int snis_client_count;
-} launcher_ui;
 
 static void launcher_update_assets_btn_pressed(__attribute__((unused)) void *x)
 {
@@ -21628,59 +21687,132 @@ static void init_launcher_ui(void)
 	x = txx(100);
 	y = txy(100);
 	int active_button_color = UI_COLOR(launcher_button);
+	int hover_color = UI_COLOR(launcher_button_hover);
 
-	launcher_ui.start_ssgl_btn = snis_button_init(x, y, -1, -1, "START LOBBY SERVER",
-				active_button_color, TINY_FONT, start_ssgl_btn_pressed, 0);
-	snis_button_set_disabled_color(launcher_ui.start_ssgl_btn, active_button_color);
-	y += txy(40);
-	launcher_ui.start_snis_multiverse_btn = snis_button_init(x, y, -1, -1, "START SNIS MULTIVERSE SERVER",
-				active_button_color, TINY_FONT, start_snis_multiverse_btn_pressed, NULL);
-	snis_button_set_disabled_color(launcher_ui.start_snis_multiverse_btn, active_button_color);
-	y += txy(40);
-	launcher_ui.start_snis_server_btn = snis_button_init(x, y, -1, -1, "START SNIS SERVER",
-				active_button_color, TINY_FONT, start_snis_server_btn_pressed, 0);
-	snis_button_set_disabled_color(launcher_ui.start_snis_server_btn, active_button_color);
+	launcher_ui.start_servers_btn = snis_button_init(x, y, -1, -1, "START SERVERS",
+				active_button_color, TINY_FONT, start_servers_btn_pressed, 0);
+	snis_button_set_disabled_color(launcher_ui.start_servers_btn, UI_COLOR(launcher_button_disabled));
+	snis_button_set_hover_color(launcher_ui.start_servers_btn, hover_color);
+
 	y += txy(40);
 	launcher_ui.connect_client_btn = snis_button_init(x, y, -1, -1, "CONNECT CLIENT TO SNIS SERVER",
 				active_button_color, TINY_FONT, connect_client_btn_pressed, 0);
+	snis_button_set_hover_color(launcher_ui.connect_client_btn, hover_color);
 	snis_button_resize_when_label_changes(launcher_ui.connect_client_btn, 1);
 	y += txy(40);
 	launcher_ui.stop_all_snis_btn = snis_button_init(x, y, -1, -1, "STOP ALL SERVER PROCESSES",
 				active_button_color, TINY_FONT, start_snis_process_terminator, 0);
+	snis_button_set_hover_color(launcher_ui.stop_all_snis_btn, hover_color);
 	y += txy(40);
 	launcher_ui.update_assets_btn = snis_button_init(x, y, -1, -1, "UPDATE ASSETS",
 				active_button_color, TINY_FONT, launcher_update_assets_btn_pressed, 0);
-	snis_button_set_disabled_color(launcher_ui.update_assets_btn, active_button_color);
+	snis_button_set_disabled_color(launcher_ui.update_assets_btn, UI_COLOR(launcher_button_disabled));
+	snis_button_set_hover_color(launcher_ui.update_assets_btn, hover_color);
 	y += txy(40);
 	launcher_ui.options_btn = snis_button_init(x, y, -1, -1, "OPTIONS . . .",
 				active_button_color, TINY_FONT, launcher_options_btn_pressed, 0);
+	snis_button_set_hover_color(launcher_ui.options_btn, hover_color);
 	y += txy(40);
 	launcher_ui.quit_btn = snis_button_init(x, y, -1, -1, "QUIT (SERVER PROCESSES CONTINUE)",
 				active_button_color, TINY_FONT, launcher_quit_btn_pressed, 0);
 	snis_button_resize_when_label_changes(launcher_ui.quit_btn, 1);
+	snis_button_set_hover_color(launcher_ui.quit_btn, hover_color);
 	y += txy(40);
 	launcher_ui.restart_btn = snis_button_init(x, y, -1, -1, "RESTART SNIS CLIENT",
 				active_button_color, TINY_FONT, launcher_restart_btn_pressed, 0);
+	snis_button_set_hover_color(launcher_ui.restart_btn, hover_color);
 
-	launcher_ui.ssgl_gauge = gauge_init(txx(450), txy(100), 150, 0.0, 100.0, -120.0 * M_PI / 180.0,
+	launcher_ui.ssgl_gauge = gauge_init(txx(550), txy(100), 150, 0.0, 100.0, -120.0 * M_PI / 180.0,
 			120.0 * 2.0 * M_PI / 180.0, UI_COLOR(launcher_gauge_needle), UI_COLOR(launcher_gauge),
 			10, "LOBBY", sample_ssglcount);
 	gauge_set_fonts(launcher_ui.ssgl_gauge, NANO_FONT, NANO_FONT);
 
-	launcher_ui.multiverse_gauge = gauge_init(txx(600), txy(100), 150, 0.0, 100.0, -120.0 * M_PI / 180.0,
+	launcher_ui.multiverse_gauge = gauge_init(txx(700), txy(100), 150, 0.0, 100.0, -120.0 * M_PI / 180.0,
 			120.0 * 2.0 * M_PI / 180.0, UI_COLOR(launcher_gauge_needle), UI_COLOR(launcher_gauge),
 			10, "MULTIVERSE", sample_multiversecount);
 	gauge_set_fonts(launcher_ui.multiverse_gauge, NANO_FONT, NANO_FONT);
 
-	launcher_ui.snis_server_gauge = gauge_init(txx(450), txy(300), 150, 0.0, 10.0, -120.0 * M_PI / 180.0,
+	launcher_ui.snis_server_gauge = gauge_init(txx(550), txy(300), 150, 0.0, 10.0, -120.0 * M_PI / 180.0,
 			120.0 * 2.0 * M_PI / 180.0, UI_COLOR(launcher_gauge_needle), UI_COLOR(launcher_gauge),
 			10, "SNIS SERVER", sample_snis_servercount);
 	gauge_set_fonts(launcher_ui.snis_server_gauge, NANO_FONT, NANO_FONT);
-	launcher_ui.snis_client_gauge = gauge_init(txx(600), txy(300), 150, 0.0, 10.0, -120.0 * M_PI / 180.0,
+	launcher_ui.snis_client_gauge = gauge_init(txx(700), txy(300), 150, 0.0, 10.0, -120.0 * M_PI / 180.0,
 			120.0 * 2.0 * M_PI / 180.0, UI_COLOR(launcher_gauge_needle), UI_COLOR(launcher_gauge),
 			10, "SNIS CLIENT", sample_snis_clientcount);
 	gauge_set_fonts(launcher_ui.snis_client_gauge, NANO_FONT, NANO_FONT);
 
+	y = txy(550);
+	launcher_ui.website_button =
+		snis_button_init(txx(500), y, -1, -1, "WEBSITE",
+			active_button_color,
+			TINY_FONT, browser_button_pressed, "http://spacenerdsinspace.com");
+	snis_button_set_hover_color(launcher_ui.website_button, hover_color);
+	launcher_ui.forum_button =
+		snis_button_init(txx(600), y, -1, -1, "FORUM",
+			active_button_color,
+			TINY_FONT, browser_button_pressed, "http://spacenerdsinspace.com/forum.html");
+	snis_button_set_hover_color(launcher_ui.forum_button, hover_color);
+	launcher_ui.support_button =
+		snis_button_init(txx(700), y, -1, -1, "DONATE",
+			active_button_color,
+			TINY_FONT, browser_button_pressed, "http://spacenerdsinspace.com/donate.html");
+	snis_button_set_hover_color(launcher_ui.support_button, hover_color);
+
+	launcher_ui.menu = create_pull_down_menu(NANO_FONT, SCREEN_WIDTH);
+	pull_down_menu_set_color(launcher_ui.menu, active_button_color);
+	pull_down_menu_set_highlight_color(launcher_ui.menu, hover_color);
+	pull_down_menu_set_disabled_color(launcher_ui.menu, UI_COLOR(launcher_button_disabled));
+	pull_down_menu_set_tooltip_drawing_function(launcher_ui.menu, draw_tooltip);
+	pull_down_menu_set_gravity(launcher_ui.menu, 0);
+	pull_down_menu_add_column(launcher_ui.menu, "SNIS");
+	pull_down_menu_add_row(launcher_ui.menu, "SNIS",
+					"START SNIS LOBBY PROCESS (SSGL_SERVER)",
+					start_ssgl_btn_pressed, NULL);
+	pull_down_menu_add_row(launcher_ui.menu, "SNIS",
+					"START SNIS MULTIVERSE PROCESS",
+					start_snis_multiverse_btn_pressed, NULL);
+	pull_down_menu_add_row(launcher_ui.menu, "SNIS",
+					"START SNIS SERVER PROCESS",
+					start_snis_server_btn_pressed, NULL);
+
+	pull_down_menu_add_tooltip(launcher_ui.menu, "SNIS", "START SNIS LOBBY PROCESS (SSGL_SERVER)",
+					"START SSGL_SERVER PROCESS\n"
+					"YOU NEED EXACTLY ONE SNIS LOBBY PROCESS RUNNING\n"
+					"ON THE NETWORK.\n\n"
+
+					"IF YOU ARE HOSTING THE SESSION, YOU NEED TO RUN THIS,\n"
+					"OTHERWISE IF YOU ARE CONNECTING TO A REMOTE SESSION,\n"
+					"YOU DO NOT NEED TO RUN THIS.");
+	pull_down_menu_add_tooltip(launcher_ui.menu, "SNIS", "START SNIS MULTIVERSE PROCESS",
+			"YOU NEED EXACTLY ONE SNIS MULTIVERSE PROCESS RUNNING\n"
+			"ON THE NETWORK.\n\n"
+
+			"IF YOU ARE HOSTING THE SESSION, AND YOU WANT MULTIPLE\n"
+			"STAR SYSTEMS YOU CAN TRAVEL BETWEEN WITH WARP GATES,\n"
+			"YOU NEED TO RUN THIS,\n\n"
+
+			"OTHERWISE IF YOU ARE CONNECTING TO A REMOTE SESSION,\n"
+			"OR RUNNING A SINGLE INSTANCE OF SNIS SERVER THAT\n"
+			"CLIENTS CONNECT DIRECTLY TO WITHOUT USING THE LOBBY,\n"
+			"THEN YOU DO NOT NEED TO RUN THIS.");
+	pull_down_menu_add_tooltip(launcher_ui.menu, "SNIS", "START SNIS SERVER PROCESS",
+			"IF YOU ARE NOT HOSTING A SESSION BUT CONNECTING TO A\n"
+			"REMOTE SESSION, YOU DO NOT NEED THIS.\n"
+			"IF SNIS MULTIVERSE HAS ALREADY STARTED SOME SNIS SERVERS\n"
+			"YOU DON'T NEED TO MANUALLY START ONE.  IF IT HASN'T, WHICH\n"
+			"MAY HAPPEN IF YOU DIDN'T CHECK 'AUTOWRANGLE' ABOVE, OR IF\n"
+			"THERE IS NO PLAYER SHIP CURRENTLY LOCATED IN ANY STAR SYSTEM\n"
+			"YOU WILL NEED TO START ONE SNIS_SERVER INSTANCE MANUALLY.\n\n"
+
+			"AND OF COURSE IF YOU ARE NOT USING THE LOBBY (SEE OPTIONS)\n"
+			"THEN YOU NEED TO START A SNIS_SERVER YOURSELF.\n");
+
+	ui_add_button(launcher_ui.start_servers_btn, DISPLAYMODE_LAUNCHER,
+			"START ALL THE NECESSARY SERVER PROCESSES:\n"
+			"SSGL_SERVER, SNIS_MULTIVERSE, AND SNIS_SERVER\n"
+			"(IF YOU WANT TO START THEM INDIVIDUALLY USE THE\n"
+			"MENU IN THE UPPER LEFT CORNER OF THE SCREEN)");
+#if 0
 	ui_add_button(launcher_ui.start_ssgl_btn, DISPLAYMODE_LAUNCHER,
 			"START SNIS LOBBY SERVER PROCESS\n\n"
 			"YOU NEED EXACTLY ONE SNIS LOBBY PROCESS RUNNING\n"
@@ -21716,6 +21848,7 @@ static void init_launcher_ui(void)
 
 			"AND OF COURSE IF YOU ARE NOT USING THE LOBBY (SEE OPTIONS)\n"
 			"THEN YOU NEED TO START A SNIS_SERVER YOURSELF.\n");
+#endif
 	ui_add_button(launcher_ui.connect_client_btn, DISPLAYMODE_LAUNCHER,
 			"CONNECT SNIS CLIENT TO LOBBY OR TO SNIS SERVER\n\n"
 
@@ -21759,6 +21892,23 @@ static void init_launcher_ui(void)
 	ui_add_gauge(launcher_ui.snis_server_gauge, DISPLAYMODE_LAUNCHER);
 	ui_add_gauge(launcher_ui.snis_client_gauge, DISPLAYMODE_LAUNCHER);
 
+	if (running_in_container) {
+		ui_add_button(launcher_ui.website_button, DISPLAYMODE_LAUNCHER,
+				"COPY URL OF SPACE NERDS IN SPACE WEB SITE TO CLIPBOARD");
+		ui_add_button(launcher_ui.forum_button, DISPLAYMODE_LAUNCHER,
+				"COPY URL OF SPACE NERDS IN SPACE DISCUSSIONS\n"
+				"ON GITHUB TO CLIPBOARD");
+		ui_add_button(launcher_ui.support_button, DISPLAYMODE_LAUNCHER,
+				"COPY URL OF SPACE NERDS IN SPACE DONATION WEB SITE TO CLIPBOARD");
+	} else {
+		ui_add_button(launcher_ui.website_button, DISPLAYMODE_LAUNCHER,
+				"DON'T KNOW WHAT THIS GAME IS ALL ABOUT?\n"
+				"WANT TO LEARN MORE?  VISIT HTTPS://SPACENERDSINSPACE.COM");
+		ui_add_button(launcher_ui.forum_button, DISPLAYMODE_LAUNCHER,
+				"VISIT SPACE NERDS IN SPACE DISCUSSIONS ON GITHUB");
+		ui_add_button(launcher_ui.support_button, DISPLAYMODE_LAUNCHER,
+				"VISIT SPACE NERDS IN SPACE DONATION WEB SITE");
+	}
 	ui_set_widget_tooltip(launcher_ui.ssgl_gauge,
 			"SNIS LOBBY SERVER GAUGE\n\n"
 
@@ -21780,6 +21930,7 @@ static void init_launcher_ui(void)
 			"THIS GAUGE SHOWS THE NUMBER OF SNIS CLIENT PROCESSES RUNNING LOCALLY\n"
 			"ON THIS MACHINE.");
 	ui_hide_widget(launcher_ui.restart_btn); /* only unhides if new assets are available */
+	ui_add_pull_down_menu(launcher_ui.menu, DISPLAYMODE_LAUNCHER); /* needs to be last */
 
 	launcher_ui.ssgl_count = 0;
 	launcher_ui.multiverse_count = 0;
@@ -21929,29 +22080,32 @@ static void show_launcher(void)
 {
 	static int framecounter = 0;
 
-	if (avoid_lobby) {
-		snis_button_disable(launcher_ui.start_ssgl_btn);
+	if (avoid_lobby || (strcasecmp(child_process_options.lobbyhost, "localhost") != 0 &&
+		strcasecmp(child_process_options.lobbyhost, "127.0.0.1") != 0)) {
+		snis_button_disable(launcher_ui.start_servers_btn);
+		pull_down_menu_item_disable(launcher_ui.menu,
+			"SNIS", "START SNIS LOBBY PROCESS (SSGL_SERVER)");
 		snis_button_set_label(launcher_ui.connect_client_btn, "CONNECT CLIENT TO SNIS SERVER");
 	} else {
-		snis_button_enable(launcher_ui.start_ssgl_btn);
+		snis_button_enable(launcher_ui.start_servers_btn);
+		pull_down_menu_item_enable(launcher_ui.menu,
+			"SNIS", "START SNIS LOBBY PROCESS (SSGL_SERVER)");
 		snis_button_set_label(launcher_ui.connect_client_btn, "CONNECT CLIENT TO LOBBY");
 	}
 
 	if (multiverse_options_are_correct() && !avoid_lobby)
-		snis_button_enable(launcher_ui.start_snis_multiverse_btn);
+		pull_down_menu_item_enable(launcher_ui.menu,
+			"SNIS", "START SNIS MULTIVERSE PROCESS");
 	else
-		snis_button_disable(launcher_ui.start_snis_multiverse_btn);
+		pull_down_menu_item_disable(launcher_ui.menu,
+			"SNIS", "START SNIS MULTIVERSE PROCESS");
 
 	if (snis_server_options_are_correct())
-		snis_button_enable(launcher_ui.start_snis_server_btn);
+		pull_down_menu_item_enable(launcher_ui.menu,
+			"SNIS", "START SNIS SERVER PROCESS");
 	else
-		snis_button_disable(launcher_ui.start_snis_server_btn);
-
-	if (strcasecmp(child_process_options.lobbyhost, "localhost") != 0 &&
-		strcasecmp(child_process_options.lobbyhost, "127.0.0.1") != 0)
-		snis_button_disable(launcher_ui.start_ssgl_btn);
-	else
-		snis_button_enable(launcher_ui.start_ssgl_btn);
+		pull_down_menu_item_disable(launcher_ui.menu,
+			"SNIS", "START SNIS SERVER PROCESS");
 
 	framecounter++;
 	if ((framecounter % 60) == 0) {
@@ -21961,7 +22115,10 @@ static void show_launcher(void)
 		if (launcher_ui.ssgl_count +
 			launcher_ui.snis_server_count +
 			launcher_ui.multiverse_count > 0) {
-			snis_button_set_label(launcher_ui.quit_btn, "QUIT (SERVER PROCESSES CONTINUE)");
+			if (running_in_container && leave_no_orphans)
+				snis_button_set_label(launcher_ui.quit_btn, "QUIT");
+			else
+				snis_button_set_label(launcher_ui.quit_btn, "QUIT (SERVER PROCESSES CONTINUE)");
 		} else {
 			snis_button_set_label(launcher_ui.quit_btn, "QUIT");
 		}
@@ -22204,6 +22361,7 @@ static char *help_text[] = {
 	ESC_OR_F1_HELP_TEXT,
 
 #include /* 13 */ "help_text_network_setup_screen.txt"
+#include /* 14 */ "help_text_launcher_screen.txt"
 
 };
 
@@ -22463,9 +22621,13 @@ static int main_da_expose(SDL_Window *window)
 		if (!(o = find_my_ship())) {
 			char msg[100];
 			if (how_long_to_wait == -1)
-				how_long_to_wait = 4 * frame_rate_hz;
+				how_long_to_wait = 2 * frame_rate_hz;
 			if (how_long_to_wait > 0) {
-				snprintf(msg, sizeof(msg) - 1,
+				if (switch_with_redirection)
+					snprintf(msg, sizeof(msg) - 1,
+						"WRONG STAR SYSTEM BUDDY, REDIRECTING . . .");
+				else
+					snprintf(msg, sizeof(msg) - 1,
 						"PREPARE FOR THE JUMP TO LIGHTSPEED, SPACE NERD");
 				how_long_to_wait--;
 			}
@@ -22570,6 +22732,7 @@ static int main_da_expose(SDL_Window *window)
 		show_fonttest();
 		break;
 	}
+	ui_element_list_maybe_change_hover_state(uiobjs, mouse.x, mouse.y);
 	ui_element_list_draw(uiobjs);
 	ui_element_list_maybe_draw_tooltips(uiobjs, mouse.x, mouse.y);
 
@@ -22599,8 +22762,6 @@ end_of_drawing:
 
 	return 0;
 }
-
-static void really_quit(void);
 
 static void maybe_play_rocket_sample(void)
 {
@@ -23628,7 +23789,6 @@ static void really_quit(void)
 	for (i = 0; i < njoysticks; i++)
 		close_joystick(joystick_fd[i]);
 	stop_text_to_speech_thread();
-	exit(1); /* probably bad form... oh well. */
 }
 
 static void usage(void)
@@ -24368,6 +24528,8 @@ static void setup_joysticks(void)
 	set_joystick_button_fn(joystick_cfg, "sci-down-arrow", do_joystick_science_down_arrow);
 	set_joystick_button_fn(joystick_cfg, "cycle-station-forward", cycle_displaymode_forward);
 	set_joystick_button_fn(joystick_cfg, "cycle-station-backward", cycle_displaymode_backward);
+	set_joystick_button_fn(joystick_cfg, "sci-next-target", sci_next_target_pressed);
+	set_joystick_button_fn(joystick_cfg, "sci-prev-target", sci_prev_target_pressed);
 	snprintf(joystick_config_file, sizeof(joystick_config_file), "%s/joystick_config.txt", asset_dir);
 	read_joystick_config(joystick_cfg, joystick_config_file, joystick_name, njoysticks);
 
@@ -24422,6 +24584,7 @@ static void init_meshes(void)
 	}
 
 	turret_mesh = snis_read_model(d, "laser_turret.stl");
+	mf_cockpit_mesh = snis_read_model(d, "mf-cockpit.stl");
 	turret_base_mesh = snis_read_model(d, "laser_turret_base.stl");
 	ship_turret_mesh = snis_read_model(d, "spaceship_turret.stl");
 	ship_turret_base_mesh = snis_read_model(d, "spaceship_turret_base.stl");
@@ -25544,11 +25707,61 @@ static void maybe_download_assets(void)
 		fork_update_assets(0, !auto_download_assets);
 }
 
+static void check_if_running_in_container(void)
+{
+	FILE *f = NULL;
+	char *c;
+	char buffer[256];
+
+	pid_t pid = getpid();
+	if (pid == 1) { /* If our pid is 1, we're definitely inside a container */
+		running_in_container = 1;
+		return;
+	}
+
+	/* First check obvious flatpak and appimage cases */
+	char *container = getenv("FLATPAK_ID");
+	if (!container || strcmp(container, "") == 0)
+		container = getenv("APPIMAGE");
+
+	if (container && strcmp(container, "") != 0) {
+		running_in_container = 1;
+		return;
+	}
+
+	/* Now check selinux stuff ... */
+	/* can't use slurp_file() because stat() doesn't return size of /proc files */
+	f = fopen("/proc/self/attr/current", "r");
+	if (!f) {
+		/* Can't open this file?  Maybe it's BSD or mac or something. */
+		running_in_container = 0;
+		return;
+	}
+	c = fgets(buffer, sizeof(buffer), f);
+	if (!c) {
+		fprintf(stderr, "Failed to read /proc/self/attr/current: %s\n", strerror(errno));
+		fclose(f);
+		running_in_container = 0;
+		return;
+	}
+	fclose(f);
+	/* I'm not 100% sure this accurately detects whether we're containerized.
+	 * I think if we find "unconfined", we're not in a container, but it may be
+	 * the case that there can be something else and we aren't in a container.
+	 */
+	if (strncmp(c, "unconfined", 10) != 0) {
+		running_in_container = 1;
+		return;
+	}
+	running_in_container = 0;
+}
+
 static char **saved_argv;
 
 int main(int argc, char *argv[])
 {
 	refuse_to_run_as_root("snis_client");
+	check_if_running_in_container();
 	child_process_options = snis_process_options_default();
 	save_args(argc, argv, &saved_argv);
 	print_args(argc, argv);
@@ -25744,6 +25957,10 @@ int main(int argc, char *argv[])
 		}
 	}
 
+	if (running_in_container && leave_no_orphans) {
+		start_snis_process_terminator((void *) 1);
+		ssgl_sleep(1);
+	}
 	really_quit();
 	return 0;
 }

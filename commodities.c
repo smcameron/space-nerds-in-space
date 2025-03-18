@@ -408,6 +408,17 @@ int ncommodity_categories(void)
 	return ncategories;
 }
 
+void flatten_commodity(struct commodity *c, struct flattened_commodity *fc)
+{
+	snprintf(fc->name, sizeof(fc->name), "%s", c->name);
+	snprintf(fc->unit, sizeof(fc->unit), "%s", c->unit);
+	snprintf(fc->scans_as, sizeof(fc->scans_as), "%s", c->scans_as);
+	snprintf(fc->category, sizeof(fc->category), "%d", c->category);
+	snprintf(fc->base_price, sizeof(fc->base_price), "%g", c->base_price);
+	snprintf(fc->volatility, sizeof(fc->volatility), "%g", c->volatility);
+	snprintf(fc->legality, sizeof(fc->legality), "%g", c->legality);
+}
+
 #ifdef TESTCOMMODITIES
 
 #include "arraysize.h"
@@ -425,6 +436,23 @@ static int test_price(struct commodity *c, float e, float g, float t)
 	}
 	printf("%s %s %s %0.2f %0.2f %0.2f %3.2f\n", c->name, c->unit, c->scans_as, e, t, g, p);
 	return 0;
+}
+
+static void print_flattened_commodity(struct flattened_commodity *fc)
+{
+	printf("\"%s\", \"%s\", \"%s\", \"%s\", \"%s\", \"%s\", \"%s\"\n",
+		fc->name, fc->unit, fc->scans_as, fc->category, fc->base_price,
+		fc->volatility, fc->legality);
+}
+
+static void test_flatten_commodities(struct commodity *c, int ncommodities)
+{
+	struct flattened_commodity fc;
+	for (int i = 0; i < ncommodities; i++) {
+		flatten_commodity(&c[i], &fc);
+		printf("%4d: ", i);
+		print_flattened_commodity(&fc);
+	}
 }
 
 int main(int argc, char *argv[])
@@ -474,6 +502,7 @@ int main(int argc, char *argv[])
 		}
 		printf("========================\n");
 	}
+	test_flatten_commodities(c, ncommodities);
 	if (sum)
 		printf("%d price failures\n", sum);
 	return sum;

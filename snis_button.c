@@ -17,7 +17,7 @@ struct button {
 	int x, y, width, height;
 	char label[80];
 	int enabled;
-	int color;
+	int color, hover_color;
 	int disabled_color;
 	int font;
 	int long_press_timer;
@@ -31,6 +31,7 @@ struct button {
 	unsigned char button_press_feedback_counter;
 	int visible_border;
 	int resize_when_label_changes;
+	int hover_state;
 };
 
 char *snis_button_get_label(struct button *b)
@@ -72,11 +73,13 @@ struct button *snis_button_init(int x, int y, int width, int height,
 	b->y = y;
 	b->width = width;
 	b->height = height;
+	b->font = font; /* this must happen before setting the label */
+	b->resize_when_label_changes = 0; /* must happen before setting label */
 	snis_button_set_label(b, label);
 	b->label[sizeof(b->label) - 1] = '\0';
 	b->color = color;
 	b->disabled_color = color;
-	b->font = font;
+	b->hover_color = color;
 	b->button_release = button_release;
 	b->cookie = cookie;
 	b->checkbox_function = NULL;
@@ -89,7 +92,7 @@ struct button *snis_button_init(int x, int y, int width, int height,
 	b->visible_border = 1;
 	if (b->width < 0 || b->height < 0)
 		snis_button_compute_dimensions(b);
-	b->resize_when_label_changes = 0;
+	b->hover_state = 0;
 	return b;
 }
 
@@ -134,7 +137,9 @@ void snis_button_draw(struct button *b)
 	if (b->height < 0 || b->width < 0)
 		snis_button_compute_dimensions(b);
 
-	if (b->enabled)
+	if (b->enabled && b->hover_state)
+		sng_set_foreground(b->hover_color);
+	else if (b->enabled)
 		sng_set_foreground(b->color);
 	else
 		sng_set_foreground(b->disabled_color);
@@ -227,6 +232,11 @@ void snis_button_set_color(struct button *b, int color)
 	b->color = color;
 }
 
+void snis_button_set_hover_color(struct button *b, int color)
+{
+	b->hover_color = color;
+}
+
 void snis_button_set_disabled_color(struct button *b, int color)
 {
 	b->disabled_color = color;
@@ -305,5 +315,10 @@ void snis_button_generic_checkbox_toggler(void *x)
 {
 	int *y = x;
 	*y = !*y;
+}
+
+void snis_button_set_mouse_hover(struct button *b, int state)
+{
+	b->hover_state = state;
 }
 
