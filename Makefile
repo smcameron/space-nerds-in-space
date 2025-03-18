@@ -1642,7 +1642,10 @@ run-fuzz-read-commodities:	fuzz_read_commodities put-cpu-in-hi-performance-mode
 put-cpu-in-hi-performance-mode:
 	(cd /sys/devices/system/cpu && echo performance | sudo tee cpu*/cpufreq/scaling_governor)
 
-${METAINFOFILE}:	${METAINFOFILE_TEMPLATE} snis_version.h
-	./make_metainfo_file ${METAINFOFILE_TEMPLATE} > ${METAINFOFILE}
+${METAINFOFILE}:	${METAINFOFILE_TEMPLATE} snis_version.h FORCE
+	@echo "  METAINFO"
+	@./make_metainfo_file ${METAINFOFILE_TEMPLATE} > ${METAINFOFILE}
+
+FORCE:
 
 include Makefile.depend
