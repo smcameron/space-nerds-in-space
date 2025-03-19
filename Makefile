@@ -1424,7 +1424,7 @@ $(OD)/snis_test_audio.o:	snis_test_audio.c Makefile ${SNDOBJS} ${OGGOBJ} ${ODT}
 bin/snis_test_audio:	${OD}/snis_test_audio.o ${SNDLIBS} Makefile ${BIN} ${OD}/mathutils.o ${OD}/mtwist.o
 	$(CC) ${MYCFLAGS} -o bin/snis_test_audio ${OD}/snis_test_audio.o ${SNDOBJS} ${OGGOBJ} ${SNDLIBS} ${OD}/mathutils.o ${OD}/mtwist.o -lm -lbsd
 
-install:	${BINPROGS} ${MAN1PAGES} ${MAN6PAGES} ${SSGL}
+install:	${BINPROGS} ${MAN1PAGES} ${MAN6PAGES} ${SSGL} ${METAINFOFILE}
 	@# First check that PREFIX is sane, and esp. that it's not pointed at source
 	@mkdir -p ${DESTDIR}${PREFIX}
 	@touch ${DESTDIR}${PREFIX}/.canary-in-the-coal-mine.canary
