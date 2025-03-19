@@ -189,13 +189,11 @@ fwf {
 <p><ol>
 <li>Acquire necessary hardware (some linux machines, network switch, cables, projector, stereo, etc.)
 <li>Clone git repository or obtain source tarball and unpack it.
-<li>Install dependencies (run <fwf>util/install_dependencies</fwf> on apt-based systems)
+<li>Install dependencies
 <li>Build the code (type "<fwf>make</fwf>")
-<li>Download additional art assets (type "<fwf>bin/snis_launcher</fwf>", then choose
-</ol>
-option 1, "Check for asset updates and set up assets".)
-<ol>
-<li>Run the game (type "<fwf>bin/snis_launcher</fwf>")
+<li>Run the game (type "<fwf>bin/snis_client</fwf>")
+<li>Download additional art assets
+<li>Restart <fwf>snis_client</fwf>
 </ol>
 
 
@@ -312,7 +310,7 @@ performs its job satisfactorily, you can advance to Step 3.
  #
  sudo apt-get install libopus-dev; # used for voice-chat feature
  sudo apt-get install libopus0; # used for voice-chat feature
- 
+
  # (The following are optional)
  sudo apt-get install espeak; # optional alternative to libttspico-utils
  sudo apt-get install alsa-utils; # optional alternative to sox, for "aplay" command
@@ -340,39 +338,6 @@ you will want the following packages:
 
 <p>The above list may be incomplete, and these are the package names on mint 17.3 / ubuntu,
 so may be different on RPM based systems.
-
-<blockquote>
- NOTE: Later, the Makefile will download the Opus library source (
- https://archive.mozilla.org/pub/opus/opus-1.3.1.tar.gz).  This library is used
- for the voice chat feature. If you intend to build on a machine which does not
- have internet access, or for whatever reason do not want the makefile to download
- this library at build time, you can download it yourself beforehand. Or you can
- modify the Makefile and change "WITHVOICECHAT=yes" at the top of the file to
- "WITHVOICECHAT=no" and it will not download this library (and you won't have the
- voice chat feature.)
-</blockquote>
-
-<blockquote>
- NOTE: problems building on SuSE Leap 15.1. The following problems/solutions have
- been conveyed to me regarding SuSE Leap 15.1. This information is not very complete or
- accurate, but it is the best I have for now.  Please feel free to send me
- improvements to these instructions.
- See <a href="https://github.com/smcameron/space-nerds-in-space/issues/222">Bug 222</a>
-</blockquote>
-
-
-<p><ol>
-<li>Need to install pkg-config and pkg-config_files.
-<li>Need to set pkg-config-path environment variable
-<li>All references to lua 5.2 in the Makefile need to be changed to lua 5.3.
-   Note, we only compiled snis_client (via "make bin/snis_client") which shouldn't
-   need lua at all. I don't know if the differences between lua 5.3 and lua 5.2 are
-   significant enough to break things. I normally use lua 5.2 on my systems.
-   <a href="http://www.lua.org/manual/5.3/readme.html#changes">Changes to Lua 5.3</a>
-<ul>
-<li> at a quick glance I didn't see anything that I think will be problematic.
-</ul>
-</ol>
 
 <p><a name="step3buildthecode"><h2>Step 3: Build the Code</h2></a>
 
@@ -445,96 +410,67 @@ requires the additional step of running:
 
 <p>to copy assets into ~/.local/share/space-nerds-in-space.
 
-<p><a name="step5downloadadditionalassets"><h2>Step 5: Download additional assets</h2></a>
-
-<p>If you skipped step 4 and didn't build the openscad models, they will be downloaded
-in this step, along with some other things. This step requires an internet connection.
-If you performed step 4, you may skip this step though it is not recommended,
-as you will be missing some additional solarsystem assets. As a non-root user:
+<p><a name="step5runthegame"><h2>Step 5: Run the game</h2></a>
 
 <p><pre>
 <blockquote>
-  bin/snis_launcher
+ bin/snis_client
 </blockquote>
 </pre>
 
-<p>Then choose option 1, "Check for asset updates and set up assets".  This will copy assets
-to (by default) into $HOME/.local/share/space-nerds-in-space/ and download additional assets
-over the internet.
+<p>You should see something like this:
 
+<p> <img src="doc/images/missing-assets.png" alt="SNIS Client complains about missing assets">
+
+<p>There are art assets not included in the source code.  Click the UPDATE ASSETS
+button to fetch the assets.
+
+<p> <img src="doc/images/downloading-assets.png" alt="SNIS Client fetching assets">
+
+<p>After a few minutes, the assets will finish downloading. Then you can press the
+RESTART SNIS CLIENT button to use the newly acquired assets.
+
+<p> <img src="doc/images/restart-snis-client.png" alt="Restart SNIS Client">
+
+<p>Next, start the game servers (<fwf>snis_server</fwf>, <fwf>snis_multiverse</fwf>, and <fwf>ssgl_server</fwf>) by
+clicking the START SERVERS button.
+
+<p> <img src="doc/images/start-servers.png" alt="Start SNIS server processes">
+
+<p>Next, connect to the lobby.
+
+<p> <img src="doc/images/connect-client.png" alt="Connect to the lobby">
+
+<p>Here is the Network Setup screen.  Choose your ship name and password, and check
+the MAIN SCREEN role, then click the ENTER LOBBY LOCALHOST button.
+
+<p> <img src="doc/images/network-setup.png" alt="Network Setup screen">
+
+<p>Now you will see the lobby screen, with a single snis server running.  Click on this and
+the CONNECT TO SERVER button.
+
+<p> <img src="doc/images/lobby.png" alt="SNIS Lobby">
+
+<p>Finally, you are playing the game.  First you will see the MAIN VIEW -- the view out of
+the window of your spacecraft.
+
+<p> <img src="doc/images/main-view.png" alt="MAIN VIEW">
+
+<p>In your brand new spacecraft, nothing is turned on. Press F4 to go to the ENGINEERING screen,
+then click on the '1' to activate the first preset which gives power and coolant to all the
+ship's systems.
+
+<p> <img src="doc/images/engineering.png" alt="ENGINEERING">
+
+<p>Press F2 to go to NAVIGATION.  In the upper right corner of the screen is a vertical
+slider that controls the thrusters of your ship. Click on it to begin moving forward.
+
+<p> <img src="doc/images/navigation.png" alt="NAVIGATION">
 
 <!-- DO NOT EDIT THE BUILD INSTRUCTIONS ABOVE -->
 <!-- THEY ARE AUTOMATICALLY GENERATED FROM README.md on the master branch -->
-<!-- by using tinymd2html. https://github.com/smcameron/tinymd2html -->
 
-<h2><a name="singlemachineinstructions">Step 6. Run the Game on a single system (Try this before trying multiplayer)</a></h2>
-<p>Type (as a non-root user):
-<blockquote>
-<pre>
-   $ bin/snis_launcher 
-   
-        Welcome to Space Nerds In Space
-   
-   ------------------------------------------------------------
-   No SNIS processes are currently running.
-   ------------------------------------------------------------
-   
-      1. Check for asset updates and set up assets
-      2. Launch SNIS lobby server
-	   The lobby server allows clients to find servers
-	   There should be one lobby server total.
-      3. Launch SNIS multiverse server
-	   The multiverse server stores player ship data
-	   and optionally may automatically start and stop
-	   snis_server instances.  There should be at most one
-	   multiverse server.
-      4. Launch SNIS server
-	   There should be one snis server per solarsystem.
-	   There should be at least one instance of snis_server.
-	   If multiverse server is automatically starting/stopping
-	   snis_server instances, you can skip this option.
-      5. Launch SNIS client process
-	   There should be one snis client process per player
-	   plus one more per ship for the main screen.
-      6. Stop all SNIS clients
-      7. Stop all SNIS servers
-      8. Stop all SNIS clients and servers
-      9. Options
-      0. Quit
-      Choose [0-10]: _
-</pre>
-<p>Choose option 2, then option 3, then option 4 (taking defaults for
-any questions you might be asked.)  If you start SNIS multiverse without
-"autowrangling", then it will not start SNIS server instances automatically
-and you will have to do this yourself (option 4).
-</blockquote>
-<p>
-After awhile, you should see a screen that looks something like this:
-<p align=center><img src="network-setup.jpg", width=85%, alt="Image of a typical network setup">
-
-<ol>
-<li>Click on the MAIN SCREEN ROLE checkbox to be sure it is checked.
-<li>The <em>very first</em> time you run it, leave the CREATE SHIP box
-checked.  On subsequent runs, make sure CREATE SHIP is not checked.
-<li>Enter the name of your ship in the "SHIP NAME" field.
-<li>Choose a password for your ship and enter it in the PASSWORD field.
-(Note: the passwords are not cryptographically secure.)
-<li>Click the "ENTER LOBBY ..." button in the lower left part of the screen
-</ol>
-<p>Once connected to the lobby, you should see something like this:
-<p align=center><img src="lobby1.jpg", width=85%, alt="Image of the lobby screen">
-<p>Click on the white text "KARADO".  When you do that, you should see:
-<p align=center><img src="lobby2.jpg", width=85%, "Image of the lobby screen with selection made">
-<p>Click on the "CONNECT TO SERVER" button on the right side of the screen.
-After you do that, you should briefly see this:
-<p align=center><img src="connecting.jpg", "Image of connecting screen">
-<p>and then this should quickly be replaced be an "out the window" view
-of space, as below, the "main screen" view of Space Nerds In Space.  It may not look
-exactly like this as your ship will be placed in a semi-random location facing
-an arbitrary direction.  If you've gotten this far, congratulations, you're doing
-better than most.
-<p align=center><img src="out-the-window.jpg", width=85%, alt="Image of out the window view">
-<h2>Step 6. Play around</h2>
+<h2>Step 5. Play around</h2>
 <h3><a name="controls">Keyboard Controls</b></h3>
 <p>The function keys are used to switch between screens, except for F1, which is the 'help' key.
 <ul>
@@ -1270,261 +1206,11 @@ to communicate with one another frequently changes, and if there is a mismatch, 
 be able to talk to each other (in fact, will refuse to talk to one another most likely.)
 Generally this means you should use the latest version from git on all computers.
 </ol>
-<h3>Step 3.  Setting up the <b>Main Computer</b></h3>
-<p>There is a script to help with setting up: <b>snis_launcher</b>.
-<ol>
-<li>Log into the <b>Main Computer</b> as a non-root user and run <b>snis_launcher</b>.  You should
-see something like this (assuming your username is capnkirk):
-<blockquote>
-<pre>
-capnkirk@enterprise ~ $ cd github/space-nerds-in-space
-capnkirk@enterprise ~/github/space-nerds-in-space $ bin/snis_launcher
+<p>The main difference between the "main computer" and the bridge stations is that only
+the main computer needs to run the various server processes.  The regular bridge stations
+do not need to run the server processes, but they will need to type the main computer's
+host name or IP address into the NETWORK SETUP screen.
 
-        Welcome to Space Nerds In Space
-   
-   ------------------------------------------------------------
-   No SNIS processes are currently running.
-   ------------------------------------------------------------
-   
-      1. Check for asset updates and set up assets
-      2. Launch SNIS lobby server
-	   The lobby server allows clients to find servers
-	   There should be one lobby server total.
-      3. Launch SNIS multiverse server
-	   The multiverse server stores player ship data
-	   and optionally may automatically start and stop
-	   snis_server instances.  There should be at most one
-	   multiverse server.
-      4. Launch SNIS server
-	   There should be one snis server per solarsystem.
-	   There should be at least one instance of snis_server.
-	   If multiverse server is automatically starting/stopping
-	   snis_server instances, you can skip this option.
-      5. Launch SNIS client process
-	   There should be one snis client process per player
-	   plus one more per ship for the main screen.
-      6. Stop all SNIS clients
-      7. Stop all SNIS servers
-      8. Stop all SNIS clients and servers
-      9. Options
-      0. Quit
-      Choose [0-10]: _
-</pre>
-</blockquote>
-<li>Select <b>2</b> to start the lobby server.  You should see something like this:
-<blockquote>
-<pre>
-Starting the lobby server
-
-
-     Welcome to Space Nerds In Space
-
-------------------------------------------------------------
-The following SNIS processes are running:
-        LOBBY SERVER -- capnkirk  6290  0.0  0.0  17232  2024 ?        Ssl  12:01   0:00 ./bin/ssgl_server
-------------------------------------------------------------
-</pre>
-</blockquote>
-And then the menu will be displayed again.
-<li>Choose <b>3</b> to start <b>snis_multiverse</b>.
-If you want snis_multiverse to automatically start snis_server
-instances as needed, answer "Y" when it asks you about this.
-You should see something like this:
-<blockquote>
-<pre>
-     Welcome to Space Nerds In Space
-
-------------------------------------------------------------
-The following SNIS processes are running:
-        LOBBY SERVER -- capnkirk  6290  0.0  0.0  25428  2024 ?        Ssl  12:01   0:00 ./bin/ssgl_server
-   MULTIVERSE SERVER -- capnkirk  6313  0.0  0.0 170188  1724 pts/7    Sl+  12:03   0:00 ./bin/snis_multiverse localhost nickname narnia
-------------------------------------------------------------
-</pre>
-</blockquote>
-and then the menu again.
-<li>If you chose not to have snis_multiverse automatically start
-snis server instances, choose <b>4</b> to start the <b>snis_server</b> process.
-You should see something like this:
-<blockquote>
-<pre>
-Choose a solar system:
-   default
-   default2
-   karado
-   polaris
-   sirius
-Enter the name of the solarsystem:
-</pre>
-</blockquote>
-Type in the name of the solarsystem you want.
-You should see something like this:
-<blockquote>
-<pre>
-Enter the name of the solarsystem: default2
-Using solar system default2
-
-     Welcome to Space Nerds In Space
-
-------------------------------------------------------------
-The following SNIS processes are running:
-        LOBBY SERVER -- capnkirk  6290  0.0  0.0  99160  2024 ?        Ssl  12:01   0:00 ./bin/ssgl_server
-   MULTIVERSE SERVER -- capnkirk  6313  0.0  0.0 170188  2856 pts/7    Sl+  12:03   0:00 ./bin/snis_multiverse localhost nickname narnia
-         SNIS SERVER -- capnkirk  6459  1.0  0.0 260608  9724 pts/7    Sl+  12:09   0:00 ./bin/snis_server -l localhost -g SPACENERDS -L DEFAULT2 x --enable-enscript -m narnia -s default2
-------------------------------------------------------------
-</pre>
-</blockquote>
-You can repeat this step to start multiple instances of <b>snis_server</b> with
-different solar systems manually.
-<li>Choose <b>5</b> to start a <b>snis_client</b>.  This will be what runs the "Main Screen".
-You should briefly see something like:
-<blockquote>
-<pre>
-Starting snis_client
-
-
-     Welcome to Space Nerds In Space
-
-------------------------------------------------------------
-The following SNIS processes are running:
-        LOBBY SERVER -- capnkirk  6290  0.0  0.0  99160  2024 ?        Ssl  12:01   0:00 ./bin/ssgl_server
-   MULTIVERSE SERVER -- capnkirk  6313  0.0  0.0 186580  2856 pts/7    Sl+  12:03   0:00 ./bin/snis_multiverse localhost nickname narnia
-         SNIS SERVER -- capnkirk  6459  1.5  0.0 277000 11772 pts/7    Sl+  12:09   0:04 ./bin/snis_server -l localhost -g SPACENERDS -L DEFAULT2 x --enable-enscript -m narnia -s default2
-         SNIS CLIENT -- capnkirk  6583 94.0  0.9 708860 114848 pts/7   Rl+  12:14   0:00 ./bin/snis_client --fullscreen
-------------------------------------------------------------
-</pre>
-</blockquote>
-This will quickly be covered over by the graphical display of the snis_client process which will look like this:
-<p align=center><img src="network-setup.jpg", width=85%, alt="network setup screen">
-Make sure the MAIN SCREEN checkbox is checked.
-<ul>
-<li>If this is the very first time you have run the game, or if you intend to create a new
-ship with a name you have never used before, then check the "CREATE SHIP" checkbox.  Otherwise
-leave the CREATE SHIP checkbox unchecked.
-<li>Leave the "JOIN SHIP" checkbox unchecked.
-<li>Since ssgl_server is running on the same system as snis_client (our <b>Main Computer</b>),
-it is fine to leave the LOBBY SERVER NAME OR IP ADDRESS field as "localhost".
-<li>Enter your ship's name and password (these you make up.)
-<li>Click on either of the ENTER LOBBY buttons.
-You should then see something like this, with one line for each <b>snis_server</b>
-that you started (in this case, one.):
-<p align=center><img src="lobby1.jpg", width=85%, alt="The lobby screen">
-</ul>
-<li>Click on the white text "DEFAULT2".  When you do that, you should see:
-<p align=center><img src="lobby2.jpg", width=85%, alt="The lobby screen">
-<li>Click on the "CONNECT TO SERVER" button on the right side of the screen.
-After you do that, you should briefly see this:
-<p align=center><img src="connecting.jpg", alt="The connecting screen">
-<p>and after a short time, you should see the "main view", something like this:
-<p align=center><img src="out-the-window.jpg", width=85%, alt="the main view">
-<li>Arrange things so this main view is appearing via your projector
-or big TV.
-<li>Choose <b>0</b> to exit the <b>snis_launcher</b> script.
-<li>Make a note of the IP address(es) of the system running ssgl_server
-(our <b>Main Computer</b>).  Run
-<blockquote>
-<pre>
-capnkirk@enterprise$ ifconfig | grep 'inet addr'
-          inet addr:<b>10.0.0.3</b>  Bcast:10.0.0.255  Mask:255.255.255.0
-          inet addr:<b>127.0.0.1</b>  Mask:255.0.0.0
-          inet addr:<b>10.236.226.31</b>  Bcast:10.255.255.255  Mask:255.224.0.0
-</pre>
-</blockquote>
-</ol>
-<h3>Step 4.  Setting up the <b>Bridge Stations</b></h3>
-<p>Repeat the following steps for each bridge station.
-<ol>
-<li>Run <b>snis_launcher</b>. You should see:
-<blockquote>
-<pre>
-capnkirk@enterprise $ bin/snis_launcher
-   
-        Welcome to Space Nerds In Space
-   
-   ------------------------------------------------------------
-   No SNIS processes are currently running.
-   ------------------------------------------------------------
-   
-      1. Check for asset updates and set up assets
-      2. Launch SNIS lobby server
-	   The lobby server allows clients to find servers
-	   There should be one lobby server total.
-      3. Launch SNIS multiverse server
-	   The multiverse server stores player ship data
-	   and optionally may automatically start and stop
-	   snis_server instances.  There should be at most one
-	   multiverse server.
-      4. Launch SNIS server
-	   There should be one snis server per solarsystem.
-	   There should be at least one instance of snis_server.
-	   If multiverse server is automatically starting/stopping
-	   snis_server instances, you can skip this option.
-      5. Launch SNIS client process
-	   There should be one snis client process per player
-	   plus one more per ship for the main screen.
-      6. Stop all SNIS clients
-      7. Stop all SNIS servers
-      8. Stop all SNIS clients and servers
-      9. Options
-      0. Quit
-      Choose [0-10]: _
-</pre>
-</blockquote>
-Note that it shows "No SNIS processes are currently running."  This
-is because this is a different computer (not the <b>Main Computer</b>).
-<li>Choose <b>5</b> to start <b>snis_client</b>.  You should briefly see something like this:
-<blockquote>
-<pre>
-Starting snis_client
-
-
-     Welcome to Space Nerds In Space
-
-------------------------------------------------------------
-The following SNIS processes are running:
-         SNIS CLIENT -- capnkirk  7247 98.0  1.1 748036 142528 pts/7   Rl+  12:38   0:00 ./bin/snis_client --fullscreen
---------------------------------------------------
-</pre>
-</blockquote>
-which will quickly be covered up by the network setup screen, something like this:
-<p align=center><img src="network-setup.jpg", width=85%, alt="The network setup screen">
-<ul>
-<li>Make sure MAIN SCREEN checkbox is <b>not</b> checked.
-<li>Make sure SOUND SERVER ROLE checkbox is <b>not</b> checked.
-<li>Make sure TEXT TO SPEECH checkbox is <b>not</b> checked.
-<li>Make sure CREATE SHIP checkbox is <b>not</b> checked.
-<li>Make sure JOIN SHIP checkbox <b>is checked</b>.
-<li>You may want to restrict each station to specific roles
-<li>If you hover your mouse in the upper left hand corner of the screen
-a small menu with the detected lobby servers will appear. You can select
-the detected lobby host here by clicking on it..
-<li>If the lobby is not autodetected, for LOBBY SERVER NAME OR IP
-ADDRESS enter the IP address that you noted for the <b>MAIN COMPUTER</b> in step 10, above.
-<li>For SHIP NAME and PASSWORD, enter the same name and password
-you used for the <b>Main Computer</b> setup in step 5 above.
-<li>Click the ENTER LOBBY XXX.XXX.XXX.XXX button if the lobby is autodetected,
-otherwise use the 2nd ENTER LOBBY button to choose the lobby with the IP
-address you have typed in.
-You should then see something like this, with one line for each <b>snis_server</b>
-that you started (in this case, one.):
-<p align=center><img src="lobby1.jpg", width=85%, alt="The lobby screen">
-</ul>
-<li>Click on the white text "DEFAULT2".  When you do that, you should see:
-<p align=center><img src="lobby2.jpg", width=85%, alt="The lobby screen">
-<li>Click on the "CONNECT TO SERVER" button on the right side of the screen.
-After you do that, you should see the snis_client graphical display appear.
-Which screen it ends up on depends on what ROLES were selected on the
-network setup screen.
-<li>Use the function keys to select the appropriate station for this
-console (e.g. if you mean for this to be the NAVIGATION station, press F2).
-</ul>
-</ol>
-<p>That's it for the bridge station setup.  Repeat for each station.
-<p>To use the voice chat feature, you can press and hold F12 and whatever
-your microphone records will be transmitted to the other terminals on your
-ship.  If you press and hold ctrl-F12, then whatever your microphone records
-will be transmitted to all other terminals on all ships in the current
-snis_server instance.
-<hr>
 <h1><a name="updateinstructions">Updating Space Nerds In Space</a></h1>
 <p>Suppose you have set up Space Nerds In Space previously but development has
 moved on and now what's in github and on the assets server is newer than what you
@@ -1539,9 +1225,10 @@ with the latest stuff?
 	git checkout master;		# Just in case you switched branches
 	make mostly-clean;		# Let's start fresh
 	git pull;			# Fetch the new code from github
-	make;				# Build everything
-	make update-assets;		# Fetch any new or updated art
+	make mostly-clean;		# clean up
+	make
 </pre>
+<p>Art assets can be updated by clicking the UPDATE ASSETS button in snis_client.
 
 <hr>
 <h1><a name="speech-recognition">Talking to "The Computer" (how to set up speech recognition)</a></h1>
@@ -1803,8 +1490,8 @@ it works.
 <p>Or you made a ship, and you want to delete it. You cannot recover the
 password, or recover the ship. You can delete the ship and make a new one
 with the same name though.
-First, make sure the game is not running. Use snis_launcher and select the
-"Stop all SNIS processes" option on the system that is running <b>snis_multiverse</b>.
+First, make sure the game is not running. Use snis_client and click the
+"Stop all SNIS processes" button on the system that is running <b>snis_multiverse</b>.
 Then, on the system that runs <b>snis_multiverse</b>, look for a directory called
 <b>snisdb</b>. Let's say you named your ship <b>enterprise</b>, and you want
 to delete it and create a new one with the same name.
