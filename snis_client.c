@@ -25859,7 +25859,7 @@ int main(int argc, char *argv[])
 	SDL_GLContext gl_context = SDL_GL_CreateContext(window);
 	(void) gl_context;
 	setup_screen_parameters(window);
-	SDL_SetWindowSize(window, SCREEN_WIDTH, SCREEN_HEIGHT);
+	SDL_SetWindowSize(window, (int) (0.8 * SCREEN_WIDTH), (int) (0.8 * SCREEN_HEIGHT));
 	window_manager_can_constrain_aspect_ratio =
 		(constrain_aspect_ratio_via_xlib(window, SCREEN_WIDTH, SCREEN_HEIGHT) == 0);
 	init_colors();
