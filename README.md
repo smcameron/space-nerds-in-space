@@ -54,11 +54,11 @@ Here's a quick preview of the build instructions detailed below:
 
 0. Acquire necessary hardware (some linux machines, network switch, cables, projector, stereo, etc.)
 1. Clone git repository or obtain source tarball and unpack it.
-2. Install dependencies (run `util/install_dependencies` on apt-based systems)
+2. Install dependencies
 3. Build the code (type "`make`")
-4. Download additional art assets (type "`bin/snis_launcher`", then choose
-option 1, "Check for asset updates and set up assets".)
-5. Run the game (type "`bin/snis_launcher`")
+5. Run the game (type "`bin/snis_client`")
+6. Download additional art assets
+7. Restart `snis_client`
 
 
 [Here is a long, boring video demonstrating how to install](https://www.youtube.com/watch?v=tCokfUtZOqw)
@@ -159,7 +159,7 @@ performs its job satisfactorily, you can advance to Step 3.
 > #
 > sudo apt-get install libopus-dev; # used for voice-chat feature
 > sudo apt-get install libopus0; # used for voice-chat feature
-> 
+>
 > # (The following are optional)
 > sudo apt-get install espeak; # optional alternative to libttspico-utils
 > sudo apt-get install alsa-utils; # optional alternative to sox, for "aplay" command
@@ -184,31 +184,6 @@ you will want the following packages:
 
 The above list may be incomplete, and these are the package names on mint 17.3 / ubuntu,
 so may be different on RPM based systems.
-
-> NOTE: Later, the Makefile will download the Opus library source (
-> https://archive.mozilla.org/pub/opus/opus-1.3.1.tar.gz).  This library is used
-> for the voice chat feature. If you intend to build on a machine which does not
-> have internet access, or for whatever reason do not want the makefile to download
-> this library at build time, you can download it yourself beforehand. Or you can
-> modify the Makefile and change "WITHVOICECHAT=yes" at the top of the file to
-> "WITHVOICECHAT=no" and it will not download this library (and you won't have the
-> voice chat feature.)
-
-> NOTE: problems building on SuSE Leap 15.1. The following problems/solutions have
-> been conveyed to me regarding SuSE Leap 15.1. This information is not very complete or
-> accurate, but it is the best I have for now.  Please feel free to send me
-> improvements to these instructions.
-> See [Bug 222](https://github.com/smcameron/space-nerds-in-space/issues/222)
-
-
-1. Need to install pkg-config and pkg-config_files.
-2. Need to set pkg-config-path environment variable
-3. All references to lua 5.2 in the Makefile need to be changed to lua 5.3.
-   Note, we only compiled snis_client (via "make bin/snis_client") which shouldn't
-   need lua at all. I don't know if the differences between lua 5.3 and lua 5.2 are
-   significant enough to break things. I normally use lua 5.2 on my systems.
-   [Changes to Lua 5.3](http://www.lua.org/manual/5.3/readme.html#changes)
-   -- at a quick glance I didn't see anything that I think will be problematic.
 
 ## Step 3: Build the Code
 
@@ -271,18 +246,58 @@ requires the additional step of running:
 
 to copy assets into ~/.local/share/space-nerds-in-space.
 
-## Step 5: Download additional assets
-
-If you skipped step 4 and didn't build the openscad models, they will be downloaded
-in this step, along with some other things. This step requires an internet connection.
-If you performed step 4, you may skip this step though it is not recommended,
-as you will be missing some additional solarsystem assets. As a non-root user:
+## Step 5: Run the game
 
 ```
->  bin/snis_launcher
+> bin/snis_client
 ```
 
-Then choose option 1, "Check for asset updates and set up assets".  This will copy assets
-to (by default) into $HOME/.local/share/space-nerds-in-space/ and download additional assets
-over the internet.
+You should see something like this:
+
+![SNIS Client complains about missing assets](doc/images/missing-assets.png)
+
+There are art assets not included in the source code.  Click the UPDATE ASSETS
+button to fetch the assets.
+
+![SNIS Client fetching assets](doc/images/downloading-assets.png)
+
+After a few minutes, the assets will finish downloading. Then you can press the
+RESTART SNIS CLIENT button to use the newly acquired assets.
+
+![Restart SNIS Client](doc/images/restart-snis-client.png)
+
+Next, start the game servers (`snis_server`, `snis_multiverse`, and `ssgl_server`) by
+clicking the START SERVERS button.
+
+![Start SNIS server processes](doc/images/start-servers.png)
+
+Next, connect to the lobby.
+
+![Connect to the lobby](doc/images/connect-client.png)
+
+Here is the Network Setup screen.  Choose your ship name and password, and check
+the MAIN SCREEN role, then click the ENTER LOBBY LOCALHOST button.
+
+![Network Setup screen](doc/images/network-setup.png)
+
+Now you will see the lobby screen, with a single snis server running.  Click on this and
+the CONNECT TO SERVER button.
+
+![SNIS Lobby](doc/images/lobby.png)
+
+Finally, you are playing the game.  First you will see the MAIN VIEW -- the view out of
+the window of your spacecraft.
+
+![MAIN VIEW](doc/images/main-view.png)
+
+In your brand new spacecraft, nothing is turned on. Press F4 to go to the ENGINEERING screen,
+then click on the '1' to activate the first preset which gives power and coolant to all the
+ship's systems.
+
+![ENGINEERING](doc/images/engineering.png)
+
+Press F2 to go to NAVIGATION.  In the upper right corner of the screen is a vertical
+slider that controls the thrusters of your ship. Click on it to begin moving forward.
+
+![NAVIGATION](doc/images/navigation.png)
 
