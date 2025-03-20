@@ -41,13 +41,15 @@
   <screenshots>
     <screenshot type="default">
       <image>https://spacenerdsinspace.com/snis-asset-archives/screenshots/Screenshot%20from%202025-02-03%2011-04-59.png</image>
+      <caption>View of the weapons officer's screen.</caption>
     </screenshot>
      <screenshot type="default">
       <image>https://spacenerdsinspace.com/snis-asset-archives/screenshots/Screenshot%20from%202025-02-03%2011-05-50.png</image>
+      <caption>View of the navigation officer's screen.</caption>
     </screenshot>
-
      <screenshot type="default">
       <image>https://spacenerdsinspace.com/snis-asset-archives/screenshots/Screenshot%20from%202025-02-03%2011-08-35.png</image>
+      <caption>View of the science officer's screen.</caption>
     </screenshot>
   </screenshots>
 </component>
