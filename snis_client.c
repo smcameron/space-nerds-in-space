@@ -17817,11 +17817,6 @@ static void request_universe_timestamp(void)
 	queue_to_server(snis_opcode_pkt("b", OPCODE_REQUEST_UNIVERSE_TIMESTAMP));
 }
 
-static void toggle_demon_safe_mode(void)
-{
-	queue_to_server(snis_opcode_pkt("b", OPCODE_TOGGLE_DEMON_SAFE_MODE));
-}
-
 static int ux_to_usersx(double ux, float x1, float x2)
 {
 	return (((ux + 0.5 * XKNOWN_DIM) - x1) / (x2 - x1)) * SCREEN_WIDTH;
@@ -18421,7 +18416,6 @@ static struct demon_cmd_def {
 	{ "CLEAR-ALL", "DELETE ALL OBJECTS EXCEPT HUMAN CONTROLLED SHIPS" },
 	{ "LUA", "RUN SPECIFIED SERVER-SIDE LUA SCRIPT" },
 	{ "AIDEBUG", "TOGGLES AI DEBUGGING INFO" },
-	{ "SAFEMODE", "TOGGLES SAFE MODE (prevents enemies from attacking)" },
 	{ "HELP", "PRINT THIS HELP INFORMATION" },
 	{ "ENSCRIPT", "SAVE (PARTIALLY) UNIVERSE STATE TO LUA SCRIPT" },
 	{ "TTS", "TEXT-TO-SPEECH TO SPECIFIED SHIP. E.G.: TTS SHIPNAME: HELLO" },
@@ -18959,32 +18953,31 @@ static int construct_demon_command(char *input, char *errmsg)
 			break;
 		case 10: toggle_demon_ai_debug_mode();
 			break;
-		case 11: toggle_demon_safe_mode();
-			break;
-		case 12: demon_help_mode = 1; 
+		case 11:
+			demon_help_mode = 1;
 			add_demon_cmd_help_to_console(demon_cmd, ARRAYSIZE(demon_cmd));
 			send_lua_script_packet_to_server("HELP");
 			break;
-		case 13:
+		case 12:
 			if (!saveptr || strlen(saveptr) == 0)
 				goto error;
 			send_enscript_packet_to_server(saveptr);
 			break;
-		case 14:
+		case 13:
 			if (!saveptr || strlen(saveptr) == 0)
 				goto error;
 			send_text_to_speech_packet_to_server(original + (saveptr - input));
 			break;
-		case 15: /* enable real-time-strategy mode */
+		case 14: /* enable real-time-strategy mode */
 			send_rtsmode_change_to_server(1);
 			break;
-		case 16: /* disable real-time-strategy mode */
+		case 15: /* disable real-time-strategy mode */
 			send_rtsmode_change_to_server(0);
 			break;
-		case 17: /* activate demon console */
+		case 16: /* activate demon console */
 			demon_ui.console_active = !demon_ui.console_active;
 			break;
-		case 18: /* Set tweakable variable possibly client side, possibly server side. */
+		case 17: /* Set tweakable variable possibly client side, possibly server side. */
 			uppercase(original);
 			switch (set_clientside_variable(original, 1)) {
 			case TWEAK_UNKNOWN_VARIABLE:
@@ -18994,37 +18987,37 @@ static int construct_demon_command(char *input, char *errmsg)
 				break;
 			}
 			break;
-		case 19: /* "VARS", list tweakable vars */
+		case 18: /* "VARS", list tweakable vars */
 			uppercase(original);
 			tweakable_vars_list(client_tweak, original, ARRAYSIZE(client_tweak), print_demon_console_msg);
 			send_lua_script_packet_to_server(original);
 			break;
-		case 20: /* "DESCRIBE", describe a tweakable variable */
+		case 19: /* "DESCRIBE", describe a tweakable variable */
 			uppercase(original);
 			rc = tweakable_var_describe(client_tweak, ARRAYSIZE(client_tweak), original,
 							print_demon_console_msg, 1);
 			if (rc == TWEAK_UNKNOWN_VARIABLE)
 				send_lua_script_packet_to_server(original);
 			break;
-		case 21: /* client side dump object */
+		case 20: /* client side dump object */
 			uppercase(original);
 			copy = expand_demon_selection_string(original);
 			client_side_dump(copy);
 			free(copy);
 			break;
-		case 22: /* FOLLOW object */
+		case 21: /* FOLLOW object */
 			uppercase(original);
 			copy = expand_demon_selection_string(original);
 			client_demon_follow(copy);
 			free(copy);
 			break;
-		case 23: /* RELOAD_SHADERS */
+		case 22: /* RELOAD_SHADERS */
 			reload_shaders = 1;
 			break;
-		case 24:
+		case 23:
 			ui_element_list_reset_position_offsets(uiobjs);
 			break;
-		case 25: { /* tweaks */
+		case 24: { /* tweaks */
 			print_demon_console_color_msg(WHITE, "--- CLIENT SIDE TWEAKS ---");
 			int count = tweakable_vars_print_tweaked_vars(client_tweak, ARRAYSIZE(client_tweak),
 					print_demon_console_msg);

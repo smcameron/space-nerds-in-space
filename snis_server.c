@@ -682,7 +682,7 @@ static int starmap_dirty = 0;
 
 static struct planetary_ring_data planetary_ring_data[NPLANETARY_RING_MATERIALS];
 
-static int safe_mode = 0; /* prevents enemies from attacking if set */
+static int safe_mode = 0; /* prevents enemies from attacking if set, tweakable */
 
 static char *asset_dir;
 
@@ -19466,6 +19466,8 @@ static struct tweakable_var_descriptor server_tweak[] = {
 		&starbase_docking_perm_dist, 'i', 0.0, 0.0, 0.0, -1, 1000000, STARBASE_DOCKING_PERM_DIST, 0 },
 	{ "WARP_CORE_COUNTDOWN", "10 - 3000, 10ths OF SECONDS BEFORE EJECTED WARP CORE EXPLODES",
 		&warp_core_countdown, 'i', 0.0, 0.0, 0.0, 10, 3000, WARP_CORE_COUNTDOWN, 0 },
+	{ "SAFE_MODE", "0 - 1: IF SET TO 1 NO SHIPS ATTACK, AND YOU WON'T RUN OUT OF FUEL.",
+		&safe_mode, 'i', 0.0, 0.0, 0.0, 0, 1, 0, 0 },
 	{ NULL, NULL, NULL, '\0', 0.0, 0.0, 0.0, 0, 0, 0, 0 },
 };
 
@@ -21668,19 +21670,6 @@ static int process_build_info(struct game_client *c)
 	if (c->build_info[x])
 		free(c->build_info[x]);
 	c->build_info[x] = strdup((char *) data);
-	return 0;
-}
-
-static int process_toggle_demon_safe_mode(void)
-{
-	safe_mode = !safe_mode;
-	if (safe_mode) {
-		snis_queue_add_global_text_to_speech("Safe mode enabled.");
-		send_demon_console_msg("SAFE MODE ENABLED.");
-	} else {
-		snis_queue_add_global_text_to_speech("Safe mode disabled.");
-		send_demon_console_msg("SAFE MODE DISABLED.");
-	}
 	return 0;
 }
 
@@ -24362,9 +24351,6 @@ static void process_instructions_from_client(struct game_client *c)
 			break;
 		case OPCODE_TOGGLE_DEMON_AI_DEBUG_MODE:
 			process_toggle_demon_ai_debug_mode(c);
-			break;
-		case OPCODE_TOGGLE_DEMON_SAFE_MODE:
-			process_toggle_demon_safe_mode();
 			break;
 		case OPCODE_EXEC_LUA_SCRIPT:
 			rc = process_exec_lua_script(c);
