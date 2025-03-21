@@ -18691,7 +18691,7 @@ static struct tweakable_var_descriptor client_tweak[] = {
 	{ "MF_COCKPIT", "1 - DISPLAY COCKPIT, 0 - DON'T DISPLAY COCKPIT",
 		&mf_cockpit, 'i', 0.0, 0.0, 0.0, 0, 1, 0, 0, },
 	{ "LEAVE_NO_ORPHANS", "1: KILL ALL SERVER PROCESSES ON EXIT IF RUNNING INSIDE CONTAINER",
-		&leave_no_orphans, 'i', 0.0, 0.0, 0.0, 0, 1, 0, 0, },
+		&leave_no_orphans, 'i', 0.0, 0.0, 0.0, 0, 1, 1, 0, },
 	{ NULL, NULL, NULL, '\0', 0.0, 0.0, 0.0, 0, 0, 0, 0 },
 };
 
