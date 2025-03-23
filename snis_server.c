@@ -1967,7 +1967,7 @@ static void respawn_object(struct snis_entity *o)
 	uint32_t hp;
 	int nmatching_warpgates, ignore_faction, skip_warpgate;
 	const int n = snis_object_pool_highest_object(pool);
-	int warpgate[NWARPGATES];
+	int warpgate[MAX_WARPGATES_PER_STAR_SYSTEM];
 	int nwarpgates;
 	union vec3 axis, vel;
 
@@ -13968,6 +13968,7 @@ static int add_planet(double x, double y, double z, float radius, uint8_t securi
 	union quat orientation, ninety, axial_tilt;
 	union vec3 axis;
 	float angle;
+	uint8_t habitability;
 
 	i = add_generic_object(x, y, z, 0, 0, 0, 0, OBJTYPE_PLANET);
 	if (i < 0)
@@ -14008,21 +14009,26 @@ static int add_planet(double x, double y, double z, float radius, uint8_t securi
 		sst = (uint8_t) choose_planet_texture_of_type(type);
 	go[i].tsd.planet.solarsystem_planet_type = sst;
 
-	/* Enforce planet sizes based on planet type */
+	/* Enforce planet sizes based on planet type, and set habitability */
 	if (strcmp(solarsystem_assets->planet_type[sst], "rocky") == 0) {
 		minr = MIN_ROCKY_RADIUS;
 		maxr = MAX_ROCKY_RADIUS;
+		/* TODO: should take atmosphere into account for habitability */
+		habitability = snis_randn(100) + 100;
 	} else if (strcmp(solarsystem_assets->planet_type[sst], "earthlike") == 0) {
 		minr = MIN_EARTHLIKE_RADIUS;
 		maxr = MAX_EARTHLIKE_RADIUS;
+		habitability = snis_randn(85) + 170;
 	} else if (strcmp(solarsystem_assets->planet_type[sst], "gas-giant") == 0) {
 		minr = MIN_GAS_GIANT_RADIUS;
 		maxr = MAX_GAS_GIANT_RADIUS;
+		habitability = snis_randn(50) + 0;
 	} else {
 		fprintf(stderr, "snis_server:%s:%d: Unexpected planet type '%s'\n",
 			__FILE__, __LINE__, solarsystem_assets->planet_type[sst]);
 		minr = MIN_PLANET_RADIUS;
 		maxr = MAX_PLANET_RADIUS;
+		habitability = snis_randn(50) + 0;
 	}
 	if (radius < minr || radius > maxr)
 		radius = (float) snis_randn(maxr - minr) + minr;
@@ -14037,6 +14043,7 @@ static int add_planet(double x, double y, double z, float radius, uint8_t securi
 	go[i].tsd.planet.atmosphere_b = solarsystem_assets->atmosphere_color[sst].b;
 	go[i].tsd.planet.atmosphere_scale = 1.02;
 	go[i].tsd.planet.atmosphere_brightness = solarsystem_assets->atmosphere_brightness[sst];
+	go[i].tsd.planet.habitability = habitability;
 
 	return i;
 }
@@ -14437,40 +14444,48 @@ static int add_warpgate(double x, double y, double z,
 	return i;
 }
 
+static int planets_by_habitability(const void *a, const void *b)
+{
+	const int *i = a;
+	const int *j = b;
+
+	/* Sorting from most habitable to least, so big numbers come before small numbers */
+	if (go[*i].tsd.planet.habitability > go[*j].tsd.planet.habitability)
+		return -1;
+	if (go[*i].tsd.planet.habitability < go[*j].tsd.planet.habitability)
+		return 1;
+	return 0;
+}
+
 static void add_warpgates(void)
 {
-	int i, j, k, planet_index;
+	int i, k;
 	double x, y, z;
+	int planet[NPLANETS];
+	int nplanets = 0;
 
-	for (i = 0; i < NWARPGATES; i++) {
-		int p = 0;
-		int found = 0;
-		for (j = 0; j <= snis_object_pool_highest_object(pool); j++) {
-			if (go[j].type == OBJTYPE_PLANET)
-				p++;
-			if (p == i + 1) {
-				float dx, dy, dz;
-				random_point_on_sphere(go[j].tsd.planet.radius * 1.3 + 400.0f +
-						snis_randn(400), &dx, &dy, &dz);
-				x = go[j].x + dx;
-				y = go[j].y + dy;
-				z = go[j].z + dz;
-				found = 1;
-				planet_index = j;
-				break;
-			}
-		}
-		if (!found)  {
-			/* If we get here, it's a bug... */
-			printf("Nonfatal bug at %s:%d\n", __FILE__, __LINE__);
-			random_object_coordinates_yrange(&x, &y, &z, 1000);
-			planet_index = -1;
-		}
+	/* Find all the planet indices */
+	for (i = 0; i <= snis_object_pool_highest_object(pool); i++)
+		if (go[i].alive && go[i].type == OBJTYPE_PLANET)
+			planet[nplanets++] = i;
+
+	/* Sort planets from most to least habitable, warp gates are near the most habitable planets */
+	qsort(planet, nplanets, sizeof(planet[0]), planets_by_habitability);
+
+	for (i = 0; i < MAX_WARPGATES_PER_STAR_SYSTEM; i++) {
+		int p = planet[i];
+		float dx, dy, dz;
+		random_point_on_sphere(go[p].tsd.planet.radius * 1.3 + 400.0f + snis_randn(400), &dx, &dy, &dz);
+		x = go[p].x + dx;
+		y = go[p].y + dy;
+		z = go[p].z + dz;
 		k = add_warpgate(x, y, z, 0.0, 0.0, 0.0, i);
 		if (k > 0) {
 			/* Set the faction of the warp gate to match the planet */
-			if (found && planet_index > 0)
-				go[k].sdata.faction = go[planet_index].sdata.faction;
+			if (p > 0)
+				go[k].sdata.faction = go[p].sdata.faction;
+			/* Make planet security high, otherwise all the warp gate traffic fights too much */
+			go[p].tsd.planet.security = HIGH_SECURITY;
 		}
 	}
 }

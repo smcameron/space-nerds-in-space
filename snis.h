@@ -79,7 +79,8 @@
 #define NEBULA_RADIUS 5000
 #define MIN_NEBULA_RADIUS 200
 #define NDERELICTS 20
-#define NWARPGATES NPLANETS
+#define MAX_WARPGATES_PER_STAR_SYSTEM 3
+
 /* Maximum distance between solarsystems that can be warpgated
  * Note, this is on a completely different dimension than all other
  * positions in the game.
@@ -905,6 +906,7 @@ struct planet_data {
 	union quat rotational_velocity;
 	uint32_t time_left_to_build;
 	uint8_t build_unit_type;
+	uint8_t habitability; /* divide by 255.0 to get scale from 0.0 to 1.0 */
 };
 
 struct warpgate_data {
