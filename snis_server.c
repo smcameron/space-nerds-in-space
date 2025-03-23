@@ -16193,12 +16193,12 @@ static void npc_send_parts_menu(char *npcname, struct npc_bot_state *botstate)
 }
 
 static void parts_buying_npc_bot(struct snis_entity *o, int bridge,
-		char *name, char *msg)
+		__attribute__((unused)) char *name, char *msg)
 {
 	int i, rc, selection;
 	char sel;
 	float range2;
-	char *n = o->sdata.name;
+	char *sbname;
 	struct snis_entity *ship;
 	struct npc_bot_state *botstate = &bridgelist[bridge].npcbot;
 	uint32_t channel = botstate->channel;
@@ -16212,17 +16212,23 @@ static void parts_buying_npc_bot(struct snis_entity *o, int bridge,
 	}
 	ship = &go[i];
 
+	i = lookup_by_id(botstate->object_id);
+	if (i < 0)
+		sbname = "SB-??";
+	else
+		sbname = go[i].sdata.name;
+
 	range2 = dist3dsqrd(ship->x - o->x, ship->y - o->y, ship->z - o->z);
 
 	rc = sscanf(msg, "%c", (char *) &sel);
 	if (rc != 1) {
-		npc_send_parts_menu(name, botstate);
+		npc_send_parts_menu(sbname, botstate);
 		return;
 	}
 	selection = sel;
 	if (selection == '0') {
 		botstate->special_bot = NULL;
-		send_to_npcbot(bridge, name, ""); /* poke generic bot so he says something */
+		send_to_npcbot(bridge, sbname, ""); /* poke generic bot so he says something */
 		return;
 	}
 	selection = toupper(selection);
@@ -16232,23 +16238,23 @@ static void parts_buying_npc_bot(struct snis_entity *o, int bridge,
 		selection = -1;
 
 	if (selection == -1) {
-		npc_send_parts_menu(name, botstate);
+		npc_send_parts_menu(sbname, botstate);
 		return;
 	}
 
 	/* check transporter range */
 	if (range2 > TRANSPORTER_RANGE * TRANSPORTER_RANGE) {
-		send_comms_packet(o, n, channel,
+		send_comms_packet(o, sbname, channel,
 			" TRANSACTION NOT POSSIBLE - TRANSPORTER RANGE EXCEEDED");
 		return;
 	}
 	price = o->tsd.starbase.part_price[botstate->parts_menu * DAMCON_PARTS_PER_SYSTEM + selection];
 	if (price > ship->tsd.ship.wallet) {
-		send_comms_packet(o, n, channel, " INSUFFICIENT FUNDS");
+		send_comms_packet(o, sbname, channel, " INSUFFICIENT FUNDS");
 		return;
 	}
 	ship->tsd.ship.wallet -= price;
-	send_comms_packet(o, n, channel, " THANK YOU FOR YOUR PURCHASE.");
+	send_comms_packet(o, sbname, channel, " THANK YOU FOR YOUR PURCHASE.");
 	instantly_repair_damcon_part(&bridgelist[bridge].damcon, botstate->parts_menu, selection); /* "buy" the part. */
 }
 
@@ -16257,10 +16263,14 @@ static void npc_menu_item_buy_parts(struct npc_menu_item *item,
 {
 	struct bridge_data *b;
 	int i, bridge;
+	struct snis_entity *sb;
+	char *sbname;
 
 	i = lookup_by_id(botstate->object_id);
 	if (i < 0)
 		return;
+	sb = &go[i];
+	sbname = go[i].sdata.name;
 
 	/* find our bridge... */
 	b = container_of(botstate, struct bridge_data, npcbot);
@@ -16269,7 +16279,7 @@ static void npc_menu_item_buy_parts(struct npc_menu_item *item,
 	botstate->parts_menu = (item - &repairs_and_fuel_menu[0] - 1) %
 				(DAMCON_SYSTEM_COUNT - 1);
 	botstate->special_bot = parts_buying_npc_bot;
-	botstate->special_bot(&go[i], bridge, (char *) b->shipname, "");
+	botstate->special_bot(sb, bridge, sbname, "");
 }
 
 static void npc_menu_item_full_repair_resupply(__attribute__((unused)) struct npc_menu_item *item,
@@ -17724,7 +17734,7 @@ static void npc_menu_item_request_dock(__attribute__((unused)) struct npc_menu_i
 }
 
 static void warp_gate_ticket_buying_npc_bot(__attribute__((unused)) struct snis_entity *o, int bridge,
-		char *name, char *msg)
+		__attribute__((unused)) char *name, char *msg)
 {
 	struct npc_bot_state *botstate = &bridgelist[bridge].npcbot;
 	struct ssgl_game_server *gameserver = NULL;
@@ -17740,6 +17750,7 @@ static void warp_gate_ticket_buying_npc_bot(__attribute__((unused)) struct snis_
 	if (i < 0)
 		return;
 	sb = &go[i];
+	char *sbname = sb->sdata.name;
 
 	if (server_tracker_get_server_list(server_tracker, &gameserver, &nservers) != 0
 		|| nservers <= 1) {
@@ -17747,14 +17758,14 @@ static void warp_gate_ticket_buying_npc_bot(__attribute__((unused)) struct snis_
 		 * nservers <= 1 rather than <= 0 because if there's only 1 server,
 		 * then we must already be in it, and there's no place else for us to go.
 		 */
-		send_comms_packet(sb, name, ch, "SORRY, NO WARP-GATE TICKETS AVAILABLE\n");
+		send_comms_packet(sb, sbname, ch, "SORRY, NO WARP-GATE TICKETS AVAILABLE\n");
 		if (gameserver)
 			free(gameserver);
 		bridgelist[bridge].npcbot.special_bot = NULL; /* deactivate warpgate ticket bot */
 		return;
 	}
-	send_comms_packet(sb, name, ch, "WARP-GATE TICKETS:\n");
-	send_comms_packet(sb, name, ch, "------------------\n");
+	send_comms_packet(sb, sbname, ch, "WARP-GATE TICKETS:\n");
+	send_comms_packet(sb, sbname, ch, "------------------\n");
 
 	/* Find our solarsystem */
 	int len = strlen(solarsystem_name);
@@ -17796,21 +17807,21 @@ static void warp_gate_ticket_buying_npc_bot(__attribute__((unused)) struct snis_
 			if (dist < SNIS_WARP_GATE_THRESHOLD) {
 				sslist[nsslist] = i;
 				nsslist++;
-				send_comms_packet(sb, name, ch, "%3d: %s\n", nsslist, gameserver[i].location);
+				send_comms_packet(sb, sbname, ch, "%3d: %s\n", nsslist, gameserver[i].location);
 			}
 		}
 	}
 	if (nsslist == 0)
-		send_comms_packet(sb, name, ch, "NO WARP-GATE TICKETS AVAILABLE\n");
-	send_comms_packet(sb, name, ch, "------------------\n");
-	send_comms_packet(sb, name, ch, "  0: PREVIOUS MENU\n");
+		send_comms_packet(sb, sbname, ch, "NO WARP-GATE TICKETS AVAILABLE\n");
+	send_comms_packet(sb, sbname, ch, "------------------\n");
+	send_comms_packet(sb, sbname, ch, "  0: PREVIOUS MENU\n");
 	rc = sscanf(msg, "%d", &selection);
 	if (rc != 1)
 		selection = -1;
 	if (selection == 0) {
 		bridgelist[bridge].npcbot.special_bot = NULL; /* deactivate warpgate ticket bot */
 		free(gameserver);
-		send_to_npcbot(bridge, name, ""); /* poke generic bot so he says something */
+		send_to_npcbot(bridge, sbname, ""); /* poke generic bot so he says something */
 		return;
 	}
 	if (selection < 1 || selection > nsslist) {
@@ -17824,12 +17835,12 @@ static void warp_gate_ticket_buying_npc_bot(__attribute__((unused)) struct snis_
 		return;
 	}
 	if (bridgelist[bridge].warp_gate_ticket.ipaddr == 0) { /* no current ticket held */
-		send_comms_packet(sb, name, ch, "WARP-GATE TICKET TO %s BOOKED\n",
+		send_comms_packet(sb, sbname, ch, "WARP-GATE TICKET TO %s BOOKED\n",
 					gameserver[selection].location);
 	} else {
-		send_comms_packet(sb, name, ch, "WARP-GATE TICKET TO %s EXCHANGED\n",
+		send_comms_packet(sb, sbname, ch, "WARP-GATE TICKET TO %s EXCHANGED\n",
 			bridgelist[bridge].warp_gate_ticket.location);
-		send_comms_packet(sb, name, ch, "FOR WARP-GATE TICKET TO %s\n",
+		send_comms_packet(sb, sbname, ch, "FOR WARP-GATE TICKET TO %s\n",
 			gameserver[selection].location);
 	}
 	bridgelist[bridge].warp_gate_ticket = gameserver[selection];
@@ -17846,13 +17857,13 @@ static void warp_gate_ticket_buying_npc_bot(__attribute__((unused)) struct snis_
 				strncat(warp_gate_list, wg, bytes_remaining);
 		}
 	}
-	send_comms_packet(sb, name, ch, "YOU MAY TRANSIT VIA ANY OF THE FOLLOWING WARP GATES:\n");
-	send_comms_packet(sb, name, ch, "[%s ]", warp_gate_list);
+	send_comms_packet(sb, sbname, ch, "YOU MAY TRANSIT VIA ANY OF THE FOLLOWING WARP GATES:\n");
+	send_comms_packet(sb, sbname, ch, "[%s ]", warp_gate_list);
 	free(gameserver);
 }
 
 static void npc_menu_item_warp_gate_tickets(__attribute__((unused)) struct npc_menu_item *item,
-				char *npcname, struct npc_bot_state *botstate)
+				__attribute__((unused)) char *npcname, struct npc_bot_state *botstate)
 {
 	struct snis_entity *o;
 	struct bridge_data *b = container_of(botstate, struct bridge_data, npcbot);
@@ -17861,12 +17872,12 @@ static void npc_menu_item_warp_gate_tickets(__attribute__((unused)) struct npc_m
 	fprintf(stderr, "%s: npc_menu_item_warp_gate_tickets called for %s\n",
 			logprefix(), b->shipname);
 
-	i = lookup_by_id(b->shipid);
+	i = lookup_by_id(botstate->object_id);
 	if (i < 0)
 		return;
 	o = &go[i];
 	botstate->special_bot = warp_gate_ticket_buying_npc_bot;
-	botstate->special_bot(o, bridge, npcname, "");
+	botstate->special_bot(o, bridge, o->sdata.name, "");
 }
 
 static void push_tow_mode(struct snis_entity *tow_ship, uint32_t disabled_ship,
