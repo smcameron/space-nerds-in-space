@@ -13619,37 +13619,44 @@ static int add_missile(double x, double y, double z, double vx, double vy, doubl
 	return i;
 }
 
+static int planets_by_habitability(const void *a, const void *b)
+{
+	const int *i = a;
+	const int *j = b;
+
+	/* Sorting from most habitable to least, so big numbers come before small numbers */
+	if (go[*i].tsd.planet.habitability > go[*j].tsd.planet.habitability)
+		return -1;
+	if (go[*i].tsd.planet.habitability < go[*j].tsd.planet.habitability)
+		return 1;
+	return 0;
+}
+
 static void add_starbases(void)
 {
-	int i, j, p, found;
+	int i, p;
 	double x, y, z;
 	uint32_t assoc_planet_id;
+	int planet[NPLANETS];
+	int nplanets = 0;
+
+	/* Find all the planet indices */
+	for (i = 0; i <= snis_object_pool_highest_object(pool); i++)
+		if (go[i].alive && go[i].type == OBJTYPE_PLANET)
+			planet[nplanets++] = i;
+
+	/* Sort planets from most to least habitable, star bases are near the most habitable planets */
+	qsort(planet, nplanets, sizeof(planet[0]), planets_by_habitability);
 
 	for (i = 0; i < NBASES; i++) {
-		if (i < NPLANETS) {
-			p = 0;
-			found = 0;
-			for (j = 0; j <= snis_object_pool_highest_object(pool); j++) {
-				if (go[j].type == OBJTYPE_PLANET)
-					p++;
-				if (p == i + 1) {
-					float dx, dy, dz;
-					random_point_on_sphere(go[j].tsd.planet.radius * 1.3 + 400.0f +
-							snis_randn(400), &dx, &dy, &dz);
-					x = go[j].x + dx;
-					y = go[j].y + dy;
-					z = go[j].z + dz;
-					found = 1;
-					assoc_planet_id = go[j].id;
-					break;
-				}
-			}
-			if (!found)  {
-				/* If we get here, it's a bug... */
-				printf("Nonfatal bug at %s:%d\n", __FILE__, __LINE__);
-				random_object_coordinates_yrange(&x, &y, &z, 1000);
-				assoc_planet_id = (uint32_t) -1;
-			}
+		if (i < (2 * NPLANETS) / 3) {
+			p = planet[i];
+			float dx, dy, dz;
+			random_point_on_sphere(go[p].tsd.planet.radius * 1.3 + 400.0f + snis_randn(400), &dx, &dy, &dz);
+			x = go[p].x + dx;
+			y = go[p].y + dy;
+			z = go[p].z + dz;
+			assoc_planet_id = go[p].id;
 		} else {
 			random_object_coordinates_yrange(&x, &y, &z, 1000);
 			assoc_planet_id = (uint32_t) -1;
@@ -14442,19 +14449,6 @@ static int add_warpgate(double x, double y, double z,
 	 * some other places related to toroidal collision detection.
 	 */
 	return i;
-}
-
-static int planets_by_habitability(const void *a, const void *b)
-{
-	const int *i = a;
-	const int *j = b;
-
-	/* Sorting from most habitable to least, so big numbers come before small numbers */
-	if (go[*i].tsd.planet.habitability > go[*j].tsd.planet.habitability)
-		return -1;
-	if (go[*i].tsd.planet.habitability < go[*j].tsd.planet.habitability)
-		return 1;
-	return 0;
 }
 
 static void add_warpgates(void)

@@ -98,7 +98,7 @@
 #define NATMOSPHERE_TYPES 100
 #define ATMOSPHERE_TYPE_GEN_SEED 31415927
 #define MIN_PLANET_SEPARATION (UNIVERSE_DIM / 10.0)
-#define NBASES (NPLANETS + 10)
+#define NBASES ((2 * NPLANETS / 3) + 5)
 
 #define OBJTYPE_BRIDGE 9 /* players */
 #define OBJTYPE_NPCSHIP 1 /* computer controlled ships */
