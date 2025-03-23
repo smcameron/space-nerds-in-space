@@ -607,6 +607,7 @@ static struct bridge_data {
 					/* See process_role_onscreen() */
 	struct ssgl_game_server warp_gate_ticket; /* ssgl server entry of the snis_server to which player has */
 					/* bought a warp gate ticket. */
+	int warp_gate_ticket_even_odd;  /* odd warp gates allow access to odd adjacent star systems, & even to even */
 	unsigned char pwdhash[PWDHASHLEN]; /* hash of ship name+password+salt, used to identify ships */
 					/* to/from multiverse server */
 	int verified; /* whether this bridge has verified with multiverse server */
@@ -9040,7 +9041,30 @@ static int player_attempt_warpgate_jump(struct snis_entity *warpgate, struct sni
 			send_comms_packet(warpgate, warpgate->sdata.name, bridgelist[b].comms_channel,
 				"NO WARP GATE TICKET DETECTED, WARP GATE PASSAGE DENIED, SORRY.");
 		}
+
 		return 0;
+	}
+	/* Odd warp gates allow access to odd adjacent star systems, and even to even */
+	int wgn = -1;
+	int rc = sscanf(warpgate->sdata.name, "WG-%02d", &wgn);
+
+	/* if we fail to scan the warp gate number from the name, assume it's some custom Lua script
+	 * warpgate and let them through.
+	 */
+	if (rc == 1) {
+		/* Standard warp gate, enforce even/odd destination */
+		if ((wgn % 2) != bridgelist[b].warp_gate_ticket_even_odd) {
+			static uint32_t last_transit_msg_time = 0;
+			/* Throttle this message to once per 30secs... should be per-bridge, but, eh. */
+			/* FIXME: what happens when universe_timestamp rolls over? */
+			if (last_transit_msg_time < universe_timestamp - 300) {
+				last_transit_msg_time = universe_timestamp;
+				send_comms_packet(warpgate, warpgate->sdata.name, bridgelist[b].comms_channel,
+					"SORRY, WARP GATE %s DOES NOT SERVICE TRANSIT TO %s.",
+					warpgate->sdata.name, bridgelist[b].warp_gate_ticket.location);
+			}
+			return 0;
+		}
 	}
 	pb = packed_buffer_allocate(3 + 20);
 	packed_buffer_append(pb, "bb", OPCODE_SWITCH_SERVER,
@@ -17809,6 +17833,21 @@ static void warp_gate_ticket_buying_npc_bot(__attribute__((unused)) struct snis_
 			gameserver[selection].location);
 	}
 	bridgelist[bridge].warp_gate_ticket = gameserver[selection];
+	bridgelist[bridge].warp_gate_ticket_even_odd = (selection % 2);
+	char warp_gate_list[100];
+	warp_gate_list[0] = '\0';
+	for (int i = 0; i < MAX_WARPGATES_PER_STAR_SYSTEM; i++) {
+		char wg[10];
+		if ((i % 2) == bridgelist[bridge].warp_gate_ticket_even_odd) {
+			snprintf(wg, sizeof(wg), " WG-%02d", i);
+			int n = strlen(warp_gate_list);
+			int bytes_remaining = (int) sizeof(warp_gate_list) - n - 1;
+			if (bytes_remaining > (int) strlen(wg))
+				strncat(warp_gate_list, wg, bytes_remaining);
+		}
+	}
+	send_comms_packet(sb, name, ch, "YOU MAY TRANSIT VIA ANY OF THE FOLLOWING WARP GATES:\n");
+	send_comms_packet(sb, name, ch, "[%s ]", warp_gate_list);
 	free(gameserver);
 }
 
