@@ -20703,6 +20703,7 @@ static void connect_to_lobby_button_pressed(__attribute__((unused)) void *unused
 	rc = sscanf(net_setup_ui.lobbyportstr, "%d", &lobbyport);
 	if (rc != 1 || use_default_lobby_port)
 		lobbyport = -1; /* let ssgl use default 2914 or $SSGL_PORT if set */
+	done_with_lobby = 0; /* Reset to 0 (might be 1 if we've connected to a server previously) */
 	connect_to_lobby();
 }
 
