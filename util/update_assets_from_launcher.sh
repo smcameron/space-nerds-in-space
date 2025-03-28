@@ -13,7 +13,7 @@ fi
 
 if [ "$SNIS_DB_DIR" = "" ]
 then
-	SNIS_DB_DIR="$XDG_DATA_HOME"
+	SNIS_DB_DIR="$XDG_DATA_HOME/space-nerds-in-space"
 	if [ "$SNIS_DB_DIR" = "" ]
 	then
 		SNIS_DB_DIR="$HOME/.local/share/space-nerds-in-space"
