@@ -13,14 +13,15 @@ fi
 
 if [ "$SNIS_DB_DIR" = "" ]
 then
-	SNIS_DB_DIR="$XDG_DATA_HOME"
-	if [ "$SNIS_DB_DIR" = "" ]
+	if [ "$XDG_DATA_HOME" != "" -a -d "$XDG_DATA_HOME" ]
 	then
+		SNIS_DB_DIR="$XDG_DATA_HOME/space-nerds-in-space"
+	else
 		SNIS_DB_DIR="$HOME/.local/share/space-nerds-in-space"
-		if [ ! -d "$SNIS_DB_DIR" ]
-		then
-			mkdir -p "$SNIS_DB_DIR"
-		fi
+	fi
+	if [ ! -d "$SNIS_DB_DIR" ]
+	then
+		mkdir -p "$SNIS_DB_DIR"
 	fi
 fi
 export SNIS_DB_DIR
