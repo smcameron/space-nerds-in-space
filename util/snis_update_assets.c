@@ -36,6 +36,7 @@ This file is part of Spacenerds In Space.
 #include <openssl/md5.h>
 #include <getopt.h>
 #include <dirent.h>
+#include <SDL.h>
 
 #include "../string-utils.h"
 
@@ -50,14 +51,21 @@ static struct option long_options[] = {
 	{"srcdir", required_argument, 0, 's' },
 	{"force", no_argument, 0, 'f' },
 	{"verbose", no_argument, 0, 'V'},
+	{"show-progress", no_argument, 0, 'p' },
 	{0, 0, 0, 0 },
 };
+
+static SDL_Window *window = NULL;
+static SDL_Renderer *renderer = NULL;
+static int window_width = 600;
+static int window_height = 100;
 
 static int dry_run = 0;
 static char *destdir = NULL;
 static char *srcdir = NULL;
 static int force_option = 0;
 static int verbose = 0;
+static int show_progress = 0;
 
 static int updated_files = 0;
 static int new_files = 0;
@@ -67,6 +75,29 @@ static struct directory_list {
 	int nnames;
 	int nslots;
 } dir_list = { NULL, 0, 0 };
+
+static void update_progress_indicator(void)
+{
+	static int progress = 0;
+
+	if (!show_progress || !window || !renderer)
+		return;
+	SDL_RenderClear(renderer);
+
+	/* Draw a black rectangle */
+	SDL_Rect black_rect = {0, 0, window_width, window_height};
+	SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+	SDL_RenderFillRect(renderer, &black_rect);
+
+	SDL_Rect progress_indicator = { progress, 0, 10, window_height };
+	SDL_SetRenderDrawColor(renderer, 0, 128, 0, 255);
+	SDL_RenderFillRect(renderer, &progress_indicator);
+	SDL_RenderPresent(renderer);
+
+	progress = progress + 5;
+	if (progress >= window_width - 10)
+		progress = 0;
+}
 
 static int lookup_dir_name(struct directory_list *dir_list, char *name)
 {
@@ -316,6 +347,9 @@ static int copy_file(char *src, char *dest)
 static int fetch_asset(CURL *curl, char *asset_filename)
 {
 	char url[PATH_MAX + 1000];
+
+	update_progress_indicator();
+
 	int rc = make_parent_directories(asset_filename);
 	if (rc != 0)
 		return rc;
@@ -425,7 +459,7 @@ static void process_cmdline_options(int argc, char *argv[])
 	while (1) {
 		option_index = 0;
 
-		c = getopt_long(argc, argv, "D:fV", long_options, &option_index);
+		c = getopt_long(argc, argv, "D:fpV", long_options, &option_index);
 		if (c == -1)
 			break;
 		switch (c) {
@@ -447,6 +481,9 @@ static void process_cmdline_options(int argc, char *argv[])
 			break;
 		case 'V':
 			verbose = 1;
+			break;
+		case 'p':
+			show_progress = 1;
 			break;
 		default:
 			break;
@@ -548,6 +585,25 @@ static int build_local_manifest(char *manifest_filename)
 	return rc;
 }
 
+static void set_up_progress_bar(void)
+{
+	if (!show_progress)
+		return;
+	printf("Setting up progress bar\n");
+	window = SDL_CreateWindow("Space Nerds in Space - Setting up assets",
+		SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, window_width, window_height, 0);
+	if (!window) {
+		fprintf(stderr, "Could not create window: %s\n", SDL_GetError());
+		return;
+	}
+	renderer = SDL_CreateRenderer(window, -1, 0);
+	if (!renderer) {
+		fprintf(stderr, "Could not create SDL renderer: %s\n", SDL_GetError());
+		return;
+	}
+	SDL_SetRenderDrawColor(renderer, 0, 128, 0, 255);
+}
+
 #ifndef FUZZ_TESTING
 
 int main(int argc, char *argv[])
@@ -559,7 +615,6 @@ int main(int argc, char *argv[])
 	char answer[100];
 
 	process_cmdline_options(argc, argv);
-
 	if (!force_option) {
 		printf("Asset directory is %s\n", destdir);
 		printf("Are you sure you wish to proceeed with setting up assets (y/n)? ");
@@ -602,6 +657,7 @@ int main(int argc, char *argv[])
 		fprintf(stderr, "Changed current directory to %s\n", destdir);
 	}
 
+	set_up_progress_bar();
 	process_manifest(curl, manifest_filename);
 	unlink(manifest_filename);
 	free(manifest_filename);
@@ -614,6 +670,7 @@ out:
 			dry_run ? "Would have created new" : "New", new_files);
 	free_directory_list(&dir_list);
 	free(srcdir);
+
 	return rc;
 }
 

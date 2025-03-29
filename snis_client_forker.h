@@ -11,7 +11,7 @@
 #define FORKER_RESTART_SNIS_CLIENT 'R'
 #define FORKER_UPDATE_PROCESS_OPTIONS 'U'
 
-void fork_update_assets(int background_task, int local_only);
+void fork_update_assets(int background_task, int local_only, int show_progress);
 void forker_process_start(int *pipe_to_forker_process, char **saved_argv);
 
 #endif

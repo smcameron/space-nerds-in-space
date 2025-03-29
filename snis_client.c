@@ -25698,7 +25698,7 @@ static void maybe_download_assets(void)
 	/* fprintf(stderr, "stat -> %d, %d, %d, %s, auto_dl = %d\n",
 		rc, errno, ENOENT, strerror(errno), auto_download_assets); */
 	if (rc < 0 && errno == ENOENT)
-		fork_update_assets(0, !auto_download_assets);
+		fork_update_assets(0, !auto_download_assets, 1);
 }
 
 static void check_if_running_in_container(void)

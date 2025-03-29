@@ -323,7 +323,7 @@ static void fork_restart_snis_client(char **saved_argv)
 	}
 }
 
-void fork_update_assets(int background_task, int local_only)
+void fork_update_assets(int background_task, int local_only, int show_progress)
 {
 	char *executable_path = get_executable_path();
 	char cmd[PATH_MAX * 2];
@@ -369,8 +369,9 @@ void fork_update_assets(int background_task, int local_only)
 	}
 	free(logdirname);
 
-	snprintf(cmd, sizeof(cmd), "%s %s > %s 2>&1 %s", update_assets,
+	snprintf(cmd, sizeof(cmd), "%s %s %s > %s 2>&1 %s", update_assets,
 				local_only ? "localonly" : "",
+				show_progress ? "showprogress" : "",
 				logfilename, background_task ? "&" : "");
 
 	fprintf(stderr, "Asset updating command: %s\n", cmd);
@@ -457,7 +458,7 @@ void forker_process_start(int *pipe_to_forker_process, char **saved_argv)
 					fork_snis_process_terminator(1);
 					break;
 				case FORKER_UPDATE_ASSETS:
-					fork_update_assets(1, 0);
+					fork_update_assets(1, 0, 0);
 					break;
 				case FORKER_KILL_SERVERS:
 					fork_snis_process_terminator(0);

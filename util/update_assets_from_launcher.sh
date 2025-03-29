@@ -2,8 +2,30 @@
 
 # This script is meant to be invoked only by snis_client
 
-ask="$1"
-localonly="$2"
+ask=""
+localonly=""
+showprogress=""
+
+while  [ "$#" -gt "0" ]
+do
+	opt="$1"
+	case "$opt" in
+	dontask)
+		ask="dontask"
+		;;
+	localonly)
+		localonly="localonly"
+		;;
+	showprogress)
+		showprogress="--show-progress"
+		;;
+	*)
+		echo "Unknown option $opt" 1>&2
+		exit 1;
+		;;
+	esac
+	shift;
+done
 
 if [ "$(id -u)" = "0" ]
 then
@@ -117,13 +139,13 @@ then
 	exit 1
 fi
 
-${SNIS_UPDATE_ASSETS} --force --destdir "$SNIS_ASSET_DIR_ROOT" --srcdir ./share/snis ;
+${SNIS_UPDATE_ASSETS} $showprogress --force --destdir "$SNIS_ASSET_DIR_ROOT" --srcdir ./share/snis ;
 # download assets from spacenerdsinspace.com
 
 if [ "$localonly" != "localonly" ]
 then
 	echo "Downloading remote assets from asset server..."
-	${SNIS_UPDATE_ASSETS} --force --destdir "$SNIS_ASSET_DIR_ROOT" ;
+	${SNIS_UPDATE_ASSETS} $showprogress --force --destdir "$SNIS_ASSET_DIR_ROOT" ;
 	# only update this for internet updates, not localonly updates.
 	date '+%s' > "${SNIS_ASSET_DIR_ROOT}/last_asset_update_time.txt"
 fi

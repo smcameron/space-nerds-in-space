@@ -1548,7 +1548,8 @@ bin/check-endianness:	check-endianness.c Makefile ${BIN}
 	$(Q)$(CC) -o bin/check-endianness check-endianness.c
 
 bin/snis_update_assets:	util/snis_update_assets.c string-utils.o
-	$(Q)$(CC) ${MYCFLAGS} -o bin/snis_update_assets util/snis_update_assets.c string-utils.o -lcrypto -lcurl
+	$(Q)$(CC) ${MYCFLAGS} ${SDLCFLAGS} -o bin/snis_update_assets util/snis_update_assets.c \
+		string-utils.o ${SDLLIBS} -lcrypto -lcurl
 
 build_info.h: bin/check-endianness snis.h gather_build_info Makefile
 	@echo "  GATHER BUILD INFO"
