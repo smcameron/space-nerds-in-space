@@ -1547,7 +1547,7 @@ bin/check-endianness:	check-endianness.c Makefile ${BIN}
 	@echo "  COMPILE check-endianness.c"
 	$(Q)$(CC) -o bin/check-endianness check-endianness.c
 
-bin/snis_update_assets:	util/snis_update_assets.c string-utils.o
+bin/snis_update_assets:	util/snis_update_assets.c string-utils.o util/progress_image.h
 	$(Q)$(CC) ${MYCFLAGS} ${SDLCFLAGS} -o bin/snis_update_assets util/snis_update_assets.c \
 		string-utils.o ${SDLLIBS} -lcrypto -lcurl
 

@@ -39,6 +39,7 @@ This file is part of Spacenerds In Space.
 #include <SDL.h>
 
 #include "../string-utils.h"
+#include "progress_image.h"
 
 #define SNIS_ASSET_URL "https://spacenerdsinspace.com/snis-assets/"
 #define ASSETS_BASE_DIR "share/snis"
@@ -57,8 +58,9 @@ static struct option long_options[] = {
 
 static SDL_Window *window = NULL;
 static SDL_Renderer *renderer = NULL;
-static int window_width = 600;
-static int window_height = 100;
+static SDL_Texture *image = NULL;
+static int window_width;
+static int window_height;
 
 static int dry_run = 0;
 static char *destdir = NULL;
@@ -92,6 +94,10 @@ static void update_progress_indicator(void)
 	SDL_Rect progress_indicator = { progress, 0, 10, window_height };
 	SDL_SetRenderDrawColor(renderer, 0, 128, 0, 255);
 	SDL_RenderFillRect(renderer, &progress_indicator);
+
+	if (image)
+		SDL_RenderCopy(renderer, image, NULL, NULL);
+
 	SDL_RenderPresent(renderer);
 
 	progress = progress + 5;
@@ -589,6 +595,10 @@ static void set_up_progress_bar(void)
 {
 	if (!show_progress)
 		return;
+
+	window_width = setting_up_assets.w;
+	window_height = setting_up_assets.h;
+
 	printf("Setting up progress bar\n");
 	window = SDL_CreateWindow("Space Nerds in Space - Setting up assets",
 		SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, window_width, window_height, 0);
@@ -601,7 +611,12 @@ static void set_up_progress_bar(void)
 		fprintf(stderr, "Could not create SDL renderer: %s\n", SDL_GetError());
 		return;
 	}
-	SDL_SetRenderDrawColor(renderer, 0, 128, 0, 255);
+	image = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ABGR8888, SDL_TEXTUREACCESS_STATIC,
+					setting_up_assets.w, setting_up_assets.h);
+	if (image) {
+		SDL_UpdateTexture(image, NULL, setting_up_assets.bytes, setting_up_assets.w * 4);
+		SDL_SetTextureBlendMode(image, SDL_BLENDMODE_BLEND);
+	}
 }
 
 #ifndef FUZZ_TESTING
