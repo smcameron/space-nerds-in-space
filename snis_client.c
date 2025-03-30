@@ -24441,6 +24441,7 @@ static void setup_joysticks(void)
 	int rc, i;
 	char *joystick_name[MAX_JOYSTICKS];
 	char joystick_config_file[PATH_MAX];
+	char custom_joystick_config_file[PATH_MAX];
 
 	rc = discover_joysticks(&joysticks_found, &njoysticks);
 	if (rc)
@@ -24525,7 +24526,22 @@ static void setup_joysticks(void)
 	set_joystick_button_fn(joystick_cfg, "sci-next-target", sci_next_target_pressed);
 	set_joystick_button_fn(joystick_cfg, "sci-prev-target", sci_prev_target_pressed);
 	snprintf(joystick_config_file, sizeof(joystick_config_file), "%s/joystick_config.txt", asset_dir);
-	read_joystick_config(joystick_cfg, joystick_config_file, joystick_name, njoysticks);
+	snprintf(custom_joystick_config_file, sizeof(joystick_config_file), "%s/custom_joystick_config.txt", asset_dir);
+
+	struct stat statbuf;
+	rc = stat(custom_joystick_config_file, &statbuf);
+	if (rc == 0) { /* If there is a custom joystick config file, read that one. */
+		errno = 0;
+		rc = read_joystick_config(joystick_cfg, custom_joystick_config_file, joystick_name, njoysticks);
+		if (rc != 0) {
+			fprintf(stderr, "Error(s) reading %s: %s\n", custom_joystick_config_file, strerror(errno));
+		}
+	} else { /* otherwise fall back to the stock joystick config file */
+		errno = 0;
+		rc = read_joystick_config(joystick_cfg, joystick_config_file, joystick_name, njoysticks);
+		if (rc)
+			fprintf(stderr, "Error(s) reading %s: %s\n", joystick_config_file, strerror(errno));
+	}
 
 	if (njoysticks > 0)
 		check_for_screensaver();
@@ -24891,11 +24907,14 @@ static void figure_aspect_ratio(SDL_Window *window, int requested_x, int request
 
 static void init_colors(void)
 {
-	char color_file[PATH_MAX];
+	char color_file[PATH_MAX], custom_color_file[PATH_MAX];
 	char *alternate = getenv("SNIS_COLORS");
 	if (alternate && strlen(alternate) + strlen(asset_dir) < PATH_MAX - 3) {
 		snprintf(color_file, sizeof(color_file), "%s/%s", asset_dir, alternate);
+		custom_color_file[0] = '\0';
 	} else {
+		if (strlen(asset_dir) + strlen("custom_user_colors.cfg") < PATH_MAX - 3)
+			snprintf(custom_color_file, sizeof(color_file), "%s/%s", asset_dir, "custom_user_colors.cfg");
 		if (strlen(asset_dir) + strlen("user_colors.cfg") < PATH_MAX - 3)
 			snprintf(color_file, sizeof(color_file), "%s/%s", asset_dir, "user_colors.cfg");
 		else {
@@ -24903,7 +24922,17 @@ static void init_colors(void)
 			return;
 		}
 	}
-	sng_setup_colors(color_file);
+
+	if (custom_color_file[0] == '\0')
+		sng_setup_colors(color_file);
+	else {
+		struct stat statbuf;
+		int rc = stat(custom_color_file, &statbuf);
+		if (rc == 0)
+			sng_setup_colors(custom_color_file);
+		else
+			sng_setup_colors(color_file);
+	}
 }
 
 static void check_lobby_serverhost_options(void)

@@ -738,6 +738,7 @@ static void sng_read_user_colors(char *filename)
 	user_color = malloc(sizeof(*user_color) * MAX_USER_COLORS);
 	memset(user_color, 0, sizeof(*user_color) * MAX_USER_COLORS);
 
+	fprintf(stderr, "snis_client: Reading user color config file %s\n", filename);
 	f = fopen(filename, "r");
 	if (!f) {
 		fprintf(stderr, "Cannot open %s: %s\n", filename, strerror(errno));

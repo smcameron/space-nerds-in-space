@@ -2,6 +2,13 @@
 # Joystick config file for Space Nerds In Space
 # The code that reads this file is in joystick_config.c
 #
+# BEWARE: if you customize this file, it is in danger of being
+# overwritten whenever you update the sofware. To avoid this, copy
+# this file to "custom_joystick_config.txt", and then modify that
+# file.  SNIS will use the custom_joystick_config.txt file instead
+# of joystick_config.txt if it exists, and custom_joystick_config.txt
+# will not be overwritten when the software is updated.
+#
 # If you add any new joystick configs to this file, please
 # consider forwarding the new config to stephenmcameron@gmail.com
 #

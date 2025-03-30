@@ -339,6 +339,7 @@ int read_joystick_config(struct joystick_config *cfg, char *filename, char *joys
 	int rc, ln = 0;
 	int current_device = -1;
 
+	fprintf(stderr, "Reading joystick config file %s\n", filename);
 	f = fopen(filename, "r");
 	if (!f) {
 		fprintf(stderr, "Cannot open '%s': %s\n", filename, strerror(errno));

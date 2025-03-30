@@ -1,4 +1,4 @@
-.TH SPACE-NERDS-IN-SPACE "6" "FEBRUARY 2025" "snis_client" "Games"
+.TH SPACE-NERDS-IN-SPACE "6" "MARCH 2025" "snis_client" "Games"
 .SH NAME
 snis_client \- Multi player cooperative star ship bridge simulator (client) 
 .SH SYNOPSIS
@@ -180,6 +180,8 @@ are read.  By default, "share/snis" is used.
 .PP
 SNIS_COLORS if set, the file $SNIS_ASSET_DIR/$SNIS_COLORS is read to obtain
 color information instead of reading the default file of $SNIS_ASSET_DIR/user_colors.cfg
+Additionally, if $SNIS_ASSET_DIR/custom_user_colors.cfg exists it will be read instead of
+over user_colors.cfg, as the latter is in danger of being overwritten by software updates.
 .PP
 SNIS_SUPPRESS_RENDER_TO_TEXTURE if set, suppresses the use of OpenGL's render to texture
 feature even if the driver claims to support it.
@@ -242,8 +244,14 @@ Replacement models should have the same deviation in orientation.  Note: likely
 this system does not yet work well when SNIS_ASSET_DIR has a value that
 deviates from the default.
 .PP
-$SNIS_ASSET_DIR/joystick_config.txt, joystick configuration file. The format
-of this file is as follows.
+$SNIS_ASSET_DIR/joystick_config.txt and $SNIS_ASSET_DIR/custom_joystick_config.txt:
+joystick configuration files.  If custom_joystick_config.txt exists, it will be used,
+otherwise joystick_config.txt will be used.  If you wish to customize the joystick
+configuration, you should start by copying joystick_config.txt to custom_joystick_config.txt
+and modify the latter. The joystick_config.txt file is in danger of being overwritten
+by software updates, while custom_joystick_config.txt is not.
+.PP
+The format of these files are as follows.
 .PP
 A "device:" line begins the configuration for a new device (i.e. a particular kind of joystick).
 The device names on the "device:" lines are regular expressions which should match
@@ -505,8 +513,10 @@ Additionally, the word "all" may be used to indicate the key-action assocation
 should be in effect on all stations.
 
 .PP
-$SNIS_ASSET_DIR/user_colors.cfg allows customizing of the colors of nearlly all UI
-elements.  The file contains comments describing its format. In brief, there are
+$SNIS_ASSET_DIR/custom_user_colors.cfg, if it exists, allows customizing of the
+colors of nearlly all UI elements.  If it does not exist, $SNIS_ASSET_DIR/user_colors.cfg
+is used.  If you wish to customize the colors, start by copying user_colors.cfg to
+custom_user_colors.cfg. The file contains comments describing its format. In brief, there are
 three types of lines.  A comment is a line beginning with a '#' or containing only
 whitespace, and is ignored.  A 'color' line begins with the word 'color', which is
 followed by a user supplied name (eg: 'purple') then a space, then a color definition
