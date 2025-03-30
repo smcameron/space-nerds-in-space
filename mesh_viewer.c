@@ -153,23 +153,30 @@ static char *help_text =
 	"  - s TOGGLE AUTO-SPIN MODE\n"
 	"  - n TURN AUTO_SPIN ON FOR 10 FRAMES\n"
 	"  - + SPEED UP RATE OF SPIN\n"
-	"  - - SLOW DOWN RATE OF SPIN\n"
+	"  - - SLOW DOWN RATE OF SPIN\n\n"
+	"  THE VECTOR AT THE BOTTOM OF THE SCREEN IS FROM THE CENTER OF\n"
+	"  THE MODEL TOWARDS THE SCREEN (TOWARDS YOU) IN MODEL SPACE.\n"
+	"  THE INTENT OF THIS IS THAT YOU CAN USE IT TO PLACE THINGS ON\n"
+	"  SAY A PLANET SURFACE BY ROTATING THE PLANET SO THAT THE AREA\n"
+	"  ON THE SURFACE YOU WANT TO PLACE SOMETHING FACES YOU, THEN USE\n"
+	"  THE VECTOR IN MODEL SPACE TO BE ABLE TO PLACE WHATEVER THERE.\n\n"
 	"PRESS F1 TO EXIT HELP\n";
 
 static void draw_help_text(const char *text)
 {
 	int line = 0;
 	int i, y = 70;
-	char buffer[256];
+	char buffer[1024];
 	int buflen = 0;
 	int helpmodeline = 0;
+	const int maxlines = 40;
 
 	strcpy(buffer, "");
 
 	i = 0;
 	do {
 		if (text[i] == '\n' || text[i] == '\0') {
-			if (line >= helpmodeline && line < helpmodeline + 20) {
+			if (line >= helpmodeline && line < helpmodeline + maxlines) {
 				buffer[buflen] = '\0';
 				sng_abs_xy_draw_string(buffer, TINY_FONT, 60, y);
 				y += 19;
@@ -181,7 +188,7 @@ static void draw_help_text(const char *text)
 				i++;
 				continue;
 			} else {
-				if (line >= helpmodeline + 20)
+				if (line >= helpmodeline + maxlines)
 					break;
 			}
 		}
@@ -664,6 +671,25 @@ static void scroll_warpgate_texture(void)
 	warpgate_effect_material.warp_gate_effect.u2 = u2;
 }
 
+static void show_vector_to_face_user(union quat *orientation)
+{
+	/* Show vector to rotate from 1, 0, 0 to whatever is facing the user.  This is meant
+	 * to be used to place objects on a particular position on a planet, say.
+	 */
+	union vec3 at_user_in_model_space;
+	union vec3 at_user = { { 1.0, 0.0, 0.0, }, };
+	union quat q;
+
+	quat_inverse(&q, orientation);
+	quat_rot_vec(&at_user_in_model_space, &at_user, &q);
+
+	char buffer[100];
+	snprintf(buffer, sizeof(buffer), "V = { %g, %g, %g }",
+			at_user_in_model_space.v.x, at_user_in_model_space.v.y, at_user_in_model_space.v.z);
+	sng_set_foreground(WHITE);
+	sng_abs_xy_draw_string(buffer, SMALL_FONT, 10, SCREEN_HEIGHT - 10);
+}
+
 #define FRAME_INDEX_MAX 10
 
 static void draw_screen(void)
@@ -786,6 +812,8 @@ static void draw_screen(void)
 	if (!no_skybox)
 		render_skybox(cx);
 	render_entities(cx);
+
+	show_vector_to_face_user(&lobby_orientation);
 
 	remove_all_entity(cx);
 
