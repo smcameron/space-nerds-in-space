@@ -25125,14 +25125,6 @@ static void process_options(int argc, char *argv[])
 		case 'x':
 			skip_splash_screen = 1;
 			break;
-		case 'y':
-			if (!optarg)
-				usage();
-			rc = scanf(optarg, "%d", &y);
-			if (rc != 1)
-				usage();
-			requested_aspect_y = y;
-			break;
 		case '*':
 			if (!optarg)
 				usage();
