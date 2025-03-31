@@ -697,15 +697,24 @@ else
 COMPSPECCFLAGS=-Wno-gnu-folding-constant
 endif
 
+# Some of these compiler options are cargo-culted from
+#   https://best.openssf.org/Compiler-Hardening-Guides/Compiler-Options-Hardening-Guide-for-C-and-C++.html
+#   There's a lot of work we need to do before we can turn on -Wconversion though.
+#
+# -fexceptions is called out for C code using glibc pthreads.
+#
 MYCFLAGS=-DDESTDIR=${DESTDIR} -DPREFIX=${PREFIX} ${DEBUGFLAG} ${PROFILEFLAG} \
 	${OPTIMIZEFLAG} ${ASANFLAG} ${UBSANFLAG}\
-	--pedantic -Wall -Wextra ${STOP_ON_WARN} -pthread -std=gnu99 ${RDYNAMIC} \
+	--pedantic -Wall -Wextra -Wformat -Wformat=2 -Werror=format-security ${STOP_ON_WARN} -pthread -std=gnu99 ${RDYNAMIC} \
 	$(CFLAGS) -Wvla \
 	-DUSE_SNIS_XWINDOWS_HACKS=${USE_SNIS_XWINDOWS_HACKS} -fno-common \
-	-D_FORTIFY_SOURCE=2 -fsanitize=bounds \
+	-U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=3 -fsanitize=bounds \
 	-Warray-bounds \
-	-fstack-protector-strong -Wimplicit-fallthrough \
-	${COMPSPECCFLAGS} -Wstrict-prototypes
+	-fstack-clash-protection -fstack-protector-strong -Wimplicit-fallthrough \
+	-Wl,-z,nodlopen -Wl,-z,noexecstack \
+	-Wl,-z,relro -Wl,-z,now \
+	-Wl,--as-needed -Wl,--no-copy-dt-needed-entries \
+	${COMPSPECCFLAGS} -Wstrict-prototypes -fexceptions
 
 ifeq (${SERVERSONLY},0)
 VORBISFLAGS:=$(subst -I,-isystem ,$(shell $(PKG_CONFIG) --cflags vorbisfile))

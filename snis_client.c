@@ -6753,7 +6753,6 @@ static int process_comm_transmission(void)
 	uint8_t length, enciphered;
 	int i, e, j, rc, n;
 	uint32_t comms_channel;
-	const char *channel_change_pattern = COMMS_CHANNEL_CHANGE_MSG " %u";
 	char *channel_change_msg;
 	char enc_msg[80];
 	const int linewidth = 75;
@@ -6782,7 +6781,7 @@ static int process_comm_transmission(void)
 		 */
 		channel_change_msg = strstr(string, COMMS_CHANNEL_CHANGE_MSG);
 		if (channel_change_msg) {
-			n = sscanf(channel_change_msg, channel_change_pattern, &comms_channel);
+			n = sscanf(channel_change_msg, COMMS_CHANNEL_CHANGE_MSG " %u", &comms_channel);
 			if (n == 1)
 				comms_ui.channel = comms_channel;
 		}
