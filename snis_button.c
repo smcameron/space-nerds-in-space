@@ -50,7 +50,7 @@ static void snis_button_compute_dimensions(struct button *b)
 	if (b->height < 0)
 		b->height = emheight * 1.8;
 	if (b->width < 0 || b->resize_when_label_changes)
-		b->width = 1.0 * fabs(x2 - x1) + emwidth * 1.8;
+		b->width = 1.0 * fabs(x2 - x1) + emwidth * (1.8 + !!(b->checkbox_function != NULL));
 }
 
 void snis_button_set_label(struct button *b, char *label)
@@ -292,6 +292,7 @@ void snis_button_set_checkbox_function(struct button *b, int (*checkbox_function
 {
 	b->checkbox_function = checkbox_function;
 	b->checkbox_cookie = cookie;
+	snis_button_compute_dimensions(b);
 }
 
 void snis_button_set_long_press_function(struct button *b, button_function long_press_function, void *cookie)
