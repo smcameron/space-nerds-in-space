@@ -51,6 +51,7 @@
 	"	return dont_tonemap * color + vec4(u_FilmicTonemapping * x, color.a);\n" \
 	"}\n\n"
 
+#define DEBUG_NORMALS 0
 #define TEX_RELOAD_DELAY 1.0
 #define CUBEMAP_TEX_RELOAD_DELAY 1.0
 #define MAX_LOADED_TEXTURES 80
@@ -216,12 +217,14 @@ void mesh_graph_dev_init(struct mesh *m)
 		struct vertex_buffer_data *g_v_buffer_data = malloc(v_size);
 		struct vertex_triangle_buffer_data *g_vt_buffer_data = malloc(vt_size);
 
+#if DEBUG_NORMALS
 		float normal_line_length = m->radius / 20.0;
 		size_t nl_size = sizeof(struct vertex_buffer_data) * m->ntriangles * 3 * 2;
 		struct vertex_buffer_data *g_nl_buffer_data = malloc(nl_size * 3);
 		memset(g_nl_buffer_data, 0, nl_size * 3);
 		struct vertex_buffer_data *g_tl_buffer_data = &g_nl_buffer_data[m->ntriangles * 3 * 2];
 		struct vertex_buffer_data *g_bl_buffer_data = &g_nl_buffer_data[m->ntriangles * 3 * 2 * 2];
+#endif
 
 		ptr->ntriangles = m->ntriangles;
 		ptr->npoints = m->ntriangles * 3; /* can be rendered as a point cloud too */
@@ -282,6 +285,7 @@ void mesh_graph_dev_init(struct mesh *m)
 					g_vt_buffer_data[v_index].texture_coord.v.y = 0;
 				}
 
+#if DEBUG_NORMALS
 				/* draw a line for each vertex normal, tangent, and bitangent */
 				int nl_index = i * 6 + j * 2;
 
@@ -318,18 +322,23 @@ void mesh_graph_dev_init(struct mesh *m)
 					m->t[i].v[j]->y + normal_line_length * m->t[i].vbitangent[j].y;
 				g_bl_buffer_data[nl_index + 1].position.v.z =
 					m->t[i].v[j]->z + normal_line_length * m->t[i].vbitangent[j].z;
+#endif
 			}
 		}
 
 		LOAD_BUFFER(GL_ARRAY_BUFFER, ptr->vertex_buffer, v_size, g_v_buffer_data);
 		LOAD_BUFFER(GL_ARRAY_BUFFER, ptr->triangle_vertex_buffer, vt_size, g_vt_buffer_data);
+#if DEBUG_NORMALS
 		LOAD_BUFFER(GL_ARRAY_BUFFER, ptr->triangle_normal_lines_buffer, nl_size, g_nl_buffer_data);
 		LOAD_BUFFER(GL_ARRAY_BUFFER, ptr->triangle_tangent_lines_buffer, nl_size, g_tl_buffer_data);
 		LOAD_BUFFER(GL_ARRAY_BUFFER, ptr->triangle_bitangent_lines_buffer, nl_size, g_bl_buffer_data);
+#endif
 
 		free(g_v_buffer_data);
 		free(g_vt_buffer_data);
+#if DEBUG_NORMALS
 		free(g_nl_buffer_data);
+#endif
 
 		/* setup the line buffers used for wireframe */
 		size_t wfl_size = sizeof(struct vertex_wireframe_line_buffer_data) * m->ntriangles * 3 * 2;
@@ -1274,6 +1283,7 @@ static void add_vertex_2d(float x, float y, struct graph_dev_color *color, GLuby
 	sgc.nvertex_2d += 1;
 }
 
+#if DEBUG_NORMALS
 static void graph_dev_draw_normal_lines(const struct mat44 *mat_mvp, struct mesh *m, struct mesh_gl_info *ptr)
 {
 	glEnable(GL_DEPTH_TEST);
@@ -1329,6 +1339,7 @@ static void graph_dev_draw_normal_lines(const struct mat44 *mat_mvp, struct mesh
 
 	glDisable(GL_DEPTH_TEST);
 }
+#endif
 
 struct raster_texture_params {
 	struct graph_dev_gl_textured_shader *shader;
@@ -1562,9 +1573,11 @@ static void graph_dev_raster_texture(struct raster_texture_params *p)
 		glDisable(GL_BLEND);
 	}
 
+#if DEBUG_NORMALS
 	if (draw_normal_lines) {
 		graph_dev_draw_normal_lines(p->mat_mvp, p->m, ptr);
 	}
+#endif
 }
 
 static void graph_dev_raster_single_color_lit(const struct mat44 *mat_mvp, const struct mat44 *mat_mv,
@@ -1630,9 +1643,11 @@ static void graph_dev_raster_single_color_lit(const struct mat44 *mat_mvp, const
 	if (draw_polygon_as_lines)
 		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
+#if DEBUG_NORMALS
 	if (draw_normal_lines) {
 		graph_dev_draw_normal_lines(mat_mvp, m, ptr);
 	}
+#endif
 }
 
 static void graph_dev_raster_atmosphere(const struct mat44 *mat_mvp, const struct mat44 *mat_mv,
@@ -1737,9 +1752,11 @@ static void graph_dev_raster_atmosphere(const struct mat44 *mat_mvp, const struc
 	if (draw_polygon_as_lines)
 		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
+#if DEBUG_NORMALS
 	if (draw_normal_lines) {
 		graph_dev_draw_normal_lines(mat_mvp, m, ptr);
 	}
+#endif
 }
 
 static void graph_dev_raster_filled_wireframe_mesh(const struct mat44 *mat_mvp, struct mesh *m,
@@ -1828,9 +1845,11 @@ static void graph_dev_raster_filled_wireframe_mesh(const struct mat44 *mat_mvp, 
 	glDisable(GL_DEPTH_TEST);
 	glDisable(GL_CULL_FACE);
 
+#if DEBUG_NORMALS
 	if (draw_normal_lines) {
 		graph_dev_draw_normal_lines(mat_mvp, m, ptr);
 	}
+#endif
 }
 
 static void graph_dev_raster_trans_wireframe_mesh(struct graph_dev_gl_trans_wireframe_shader *shader,
@@ -1920,9 +1939,11 @@ static void graph_dev_raster_trans_wireframe_mesh(struct graph_dev_gl_trans_wire
 
 	glDisable(GL_DEPTH_TEST);
 
+#if DEBUG_NORMALS
 	if (draw_normal_lines) {
 		graph_dev_draw_normal_lines(mat_mvp, m, ptr);
 	}
+#endif
 }
 
 static void graph_dev_raster_line_mesh(struct entity *e, const struct mat44 *mat_mvp, struct mesh *m,
@@ -4455,7 +4476,12 @@ void graph_dev_display_debug_menu_show(void)
 	sng_set_foreground(WHITE);
 	graph_dev_draw_rectangle(0, 10, 30, 370 * sgc.x_scale, 265);
 
+#if DEBUG_NORMALS
 	debug_menu_draw_item("VERTEX NORM/TAN/BITAN (RGB)", 0, 0, draw_normal_lines);
+#else
+	debug_menu_draw_item("VERTEX NORM/TAN/BITAN (RGB)", 0, 1, draw_normal_lines);
+#endif
+	sng_set_foreground(WHITE);
 	debug_menu_draw_item("BILLBOARD WIREFRAME", 1, 0, draw_billboard_wireframe);
 	debug_menu_draw_item("POLYGON AS LINE", 2, 0, draw_polygon_as_lines);
 	debug_menu_draw_item("NO MSAA", 3, 0, draw_msaa_samples == 0);
@@ -4487,8 +4513,10 @@ static int selected_debug_item_checkbox(int n, int x, int y, int *toggle)
 
 int graph_dev_graph_dev_debug_menu_click(int x, int y)
 {
+#if DEBUG_NORMALS
 	if (selected_debug_item_checkbox(0, x, y, &draw_normal_lines))
 		return 1;
+#endif
 	if (selected_debug_item_checkbox(1, x, y, &draw_billboard_wireframe))
 		return 1;
 	if (selected_debug_item_checkbox(2, x, y, &draw_polygon_as_lines))
