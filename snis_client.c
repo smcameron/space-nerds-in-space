@@ -5593,7 +5593,7 @@ static int process_update_ship_packet(uint8_t opcode)
 	if (my_ship_id == o->id) {
 		update_emf_detector(emf_detector);
 		snis_button_set_label(nav_ui.trident_button, trident ? "RELATIVE" : "ABSOLUTE");
-		snis_button_set_label(nav_ui.starmap_button, nav_mode ? "NAV MODE" : "STARMAP");
+		snis_button_set_label(nav_ui.starmap_button, nav_mode ? "NAV MODE ("T_")" : "S"T_"ARMAP");
 		if (!o->tsd.ship.reverse && reverse)
 			wwviaudio_add_sound(REVERSE_SOUND);
 	}
@@ -12708,12 +12708,11 @@ static void init_nav_ui(void)
 	y += button_y_spacing;
 	nav_ui.docking_magnets_button = snis_button_init(SCREEN_WIDTH - txx(nav_ui.gauge_radius * 2.2 + 10),
 					txy(nav_ui.gauge_radius * 2 + y),
-					-1, -1, "MMAGNETS", button_color,
+					-1, -1, "MAGNETS ("X_")" , button_color,
 					NANO_FONT, docking_magnets_button_pressed, NULL);
 	snis_button_set_checkbox_function(nav_ui.docking_magnets_button,
 			nav_ui_docking_magnets_active,
 			NULL);
-	snis_button_set_label(nav_ui.docking_magnets_button, "MAGNETS");
 	snis_button_set_sound(nav_ui.docking_magnets_button, UISND5);
 	snis_button_set_hover_color(nav_ui.docking_magnets_button, hover_color);
 	y += button_y_spacing;
@@ -12725,20 +12724,19 @@ static void init_nav_ui(void)
 	snis_button_set_hover_color(nav_ui.standard_orbit_button, hover_color);
 	y += button_y_spacing;
 	nav_ui.starmap_button = snis_button_init(SCREEN_WIDTH - txx(nav_ui.gauge_radius * 2.2 + 10),
-					txy(nav_ui.gauge_radius * 2 + y), -1, -1, "STAR MAP",
+					txy(nav_ui.gauge_radius * 2 + y), -1, 30, "STAR MAP  ",
 					button_color,
 					NANO_FONT, nav_starmap_button_pressed, NULL);
 	snis_button_set_sound(nav_ui.starmap_button, UISND7);
 	snis_button_set_hover_color(nav_ui.starmap_button, hover_color);
 	y += button_y_spacing;
 	nav_ui.lights_button = snis_button_init(SCREEN_WIDTH - txx(nav_ui.gauge_radius * 2.2 + 10),
-					txy(nav_ui.gauge_radius * 2 + y), -1, -1, "MLIGHTS",
+					txy(nav_ui.gauge_radius * 2 + y), -1, -1, "L"I_"GHTS",
 					button_color,
 					NANO_FONT, nav_lights_button_pressed, NULL);
 	snis_button_set_checkbox_function(nav_ui.lights_button,
 			nav_ui_lights_active,
 			NULL);
-	snis_button_set_label(nav_ui.lights_button, "LIGHTS");
 	snis_button_set_sound(nav_ui.lights_button, UISND7);
 	snis_button_set_hover_color(nav_ui.lights_button, hover_color);
 	y += button_y_spacing;
