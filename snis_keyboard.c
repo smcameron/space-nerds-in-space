@@ -339,7 +339,7 @@ void init_keymap(void)
 	ffmapkey(nav | mainscreen | weap, SDLK_PAGEUP, keyrollright);
 
 	mapkey(nav | mainscreen | weap, SDLK_i, key_invert_vertical);
-	ffmapkey(all, SDLK_PAUSE, key_toggle_frame_stats);
+	mapkey(all, SDLK_g, key_toggle_frame_stats);
 	mapkey(weap | mainscreen, SDLK_f, key_toggle_space_dust);
 
 	mapkey(sci, SDLK_k, keysciball_rollleft);

@@ -4721,8 +4721,11 @@ static int key_press_cb(SDL_Window *window, SDL_Keysym *keysym, int key_repeat)
 			fake_stars_timer = frame_rate_hz;
 			return TRUE;
 	case key_toggle_frame_stats:
-			display_frame_stats = (display_frame_stats + 1) % 3;
-			return TRUE;
+			if (control_key_pressed) {
+				display_frame_stats = (display_frame_stats + 1) % 3;
+				return TRUE;
+			}
+			break;
         case keyfullscreen: {
 			if (fullscreen) {
 				SDL_SetWindowFullscreen(window, 0);
