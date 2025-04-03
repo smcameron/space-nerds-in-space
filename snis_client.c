@@ -12710,6 +12710,7 @@ static void init_nav_ui(void)
 					txy(nav_ui.gauge_radius * 2 + y),
 					-1, -1, "MAGNETS ("X_")" , button_color,
 					NANO_FONT, docking_magnets_button_pressed, NULL);
+	snis_button_resize_when_label_changes(nav_ui.docking_magnets_button, 1);
 	snis_button_set_checkbox_function(nav_ui.docking_magnets_button,
 			nav_ui_docking_magnets_active,
 			NULL);
@@ -12734,6 +12735,7 @@ static void init_nav_ui(void)
 					txy(nav_ui.gauge_radius * 2 + y), -1, -1, "L"I_"GHTS",
 					button_color,
 					NANO_FONT, nav_lights_button_pressed, NULL);
+	snis_button_resize_when_label_changes(nav_ui.lights_button, 1);
 	snis_button_set_checkbox_function(nav_ui.lights_button,
 			nav_ui_lights_active,
 			NULL);
@@ -15670,6 +15672,7 @@ static void init_science_ui(void)
 	/* Occupies same screen sapce as ALIGN TO SHIP, but only one shows at a time */
 	sci_ui.sci_auto_sweep_button = snis_button_init(atsx, atsy, -1, -1, "AUTO SWEEP",
 			UI_COLOR(sci_button), NANO_FONT, sci_auto_sweep_button_pressed, (void *) 0);
+	snis_button_resize_when_label_changes(sci_ui.sci_auto_sweep_button, 1);
 	snis_button_set_hover_color(sci_ui.sci_auto_sweep_button, hover_color);
 	snis_button_set_checkbox_function(sci_ui.sci_auto_sweep_button,
 					snis_button_generic_checkbox_function,
