@@ -15670,7 +15670,7 @@ static void init_science_ui(void)
 	snis_button_set_sound(sci_ui.align_to_ship_button, UISND19);
 
 	/* Occupies same screen sapce as ALIGN TO SHIP, but only one shows at a time */
-	sci_ui.sci_auto_sweep_button = snis_button_init(atsx, atsy, atsw, atsh, "AUTO SWEEP",
+	sci_ui.sci_auto_sweep_button = snis_button_init(atsx, atsy, -1, -1, "AUTO SWEEP",
 			UI_COLOR(sci_button), NANO_FONT, sci_auto_sweep_button_pressed, (void *) 0);
 	snis_button_set_hover_color(sci_ui.sci_auto_sweep_button, hover_color);
 	snis_button_set_checkbox_function(sci_ui.sci_auto_sweep_button,
