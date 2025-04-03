@@ -290,6 +290,7 @@ static float text_to_speech_volume = 0.329412;
 
 static int fullscreen = 0;
 static int in_the_process_of_quitting = 0;
+static struct timeval began_to_quit_time;
 static int quit_disconnect_button_present = 0;
 #define QUIT_SELECTION_QUIT 0
 #define QUIT_SELECTION_CONTINUE 1
@@ -4680,15 +4681,41 @@ static int key_press_cb(SDL_Window *window, SDL_Keysym *keysym, int key_repeat)
 	}
 
 	if (in_the_process_of_quitting) {
-		if (keysym->sym == SDLK_q) {
-			current_quit_selection = QUIT_SELECTION_QUIT;
-			quit_continue_or_disconnect();
-		} else if (keysym->sym == SDLK_c) {
-			current_quit_selection = QUIT_SELECTION_CONTINUE;
-			quit_continue_or_disconnect();
-		} else if (keysym->sym == SDLK_d && quit_disconnect_button_present) {
-			current_quit_selection = QUIT_SELECTION_DISCONNECT;
-			quit_continue_or_disconnect();
+
+		/* Hack alert!  The INSERT key on my laptop rapidly produces the following key events:
+		 *
+		 * key press scancode = 0x0000001b (27)
+		 * key press scancode = 0x00000071 (113)
+		 * key press scancode = 0x400000e2 (1073742050)
+		 * key press scancode = 0x400000e3 (1073742051)
+		 * key press scancode = 0x0000001b (27)
+		 * key press scancode = 0x400000e2 (1073742050)
+		 * key press scancode = 0x00000071 (113)
+		 *
+		 * 27 and 113 are ESCAPE and 'q' respectively, which will quit the game.
+		 * Consequently we must be sure that some amount of time elapses between
+		 * the ESCAPE and the 'q' (1/10th second should do) before actually quitting.
+		 *
+		 */
+		struct timeval now;
+
+		gettimeofday(&now, NULL);
+		double elapsed_time_ms = timeval_difference(began_to_quit_time, now);
+		if (elapsed_time_ms > 100) {
+			/* At least 100 ms between ESCAPE and next key, so they mean it. */
+			if (keysym->sym == SDLK_q) {
+				current_quit_selection = QUIT_SELECTION_QUIT;
+				quit_continue_or_disconnect();
+			} else if (keysym->sym == SDLK_c) {
+				current_quit_selection = QUIT_SELECTION_CONTINUE;
+				quit_continue_or_disconnect();
+			} else if (keysym->sym == SDLK_d && quit_disconnect_button_present) {
+				current_quit_selection = QUIT_SELECTION_DISCONNECT;
+				quit_continue_or_disconnect();
+			}
+		} else {
+			/* ESCAPE followed by 'q' in less than 1/10th second, probably INS key, so ignore */
+			in_the_process_of_quitting = 0;
 		}
 	}
 
@@ -4745,6 +4772,7 @@ static int key_press_cb(SDL_Window *window, SDL_Keysym *keysym, int key_repeat)
 			}
 			in_the_process_of_quitting = !in_the_process_of_quitting;
 			if (in_the_process_of_quitting) {
+				gettimeofday(&began_to_quit_time, NULL);
 				/* Clear focus from text widgets so they don't eat the keystrokes */
 				ui_element_list_clear_focus(uiobjs);
 			}
