@@ -1,6 +1,24 @@
 Here be ideas about what might or might not be added into the game
 at some point.
 
+Thu 01 May 2025 05:38:22 AM EDT
+-------------------------------
+
+I wonder if it might be possible to leverage ffmpeg to make a quick and dirty
+implementation of the typical star trek video call from bridge to bridge.  For
+example, this will record video to stdout, rapidly encoded suitable for
+streaming (I think):
+
+ffmpeg -f v4l2 -i /dev/video0 -f pulse -i default -c:v libx264 -preset ultrafast -pix_fmt yuv420p -c:a aac -b:a 128k -f flv -
+
+Could use popen() read from that, blast it to snis_server, snis_server could
+blast it to a remote client, and vice versa, and voila, a video call is
+implemented.
+
+There are C APIs too, if quick and dirty is not quick enough or too dirty,
+https://ffmpeg.org/doxygen/5.1/index.html
+
+
 Sat 01 Mar 2025 04:42:28 PM EST
 -------------------------------
 
