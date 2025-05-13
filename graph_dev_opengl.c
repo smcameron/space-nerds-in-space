@@ -4491,7 +4491,7 @@ void graph_dev_display_debug_menu_show(void)
 				draw_msaa_samples == 2 && draw_render_to_texture);
 	debug_menu_draw_item("4x MSAA", 5, max_samples < 4 || !draw_render_to_texture,
 				draw_msaa_samples == 4 && draw_render_to_texture);
-	debug_menu_draw_item("RENDER TO TEXTURE", 6, draw_msaa_samples > 0, draw_render_to_texture);
+	debug_menu_draw_item("RENDER TO TEXTURE", 6, 0, draw_render_to_texture);
 	debug_menu_draw_item("SMAA", 7, !draw_render_to_texture,
 									draw_smaa);
 	debug_menu_draw_item("SMAA DEBUG EDGE", 8, !draw_smaa, draw_smaa_edge);
@@ -4526,12 +4526,12 @@ int graph_dev_graph_dev_debug_menu_click(int x, int y)
 		return 1;
 	}
 	if (selected_debug_item_checkbox(4, x, y, NULL)) {
-		if (msaa_max_samples() >= 2)
+		if (msaa_max_samples() >= 2 && draw_render_to_texture)
 			draw_msaa_samples = 2;
 		return 1;
 	}
 	if (selected_debug_item_checkbox(5, x, y, NULL)) {
-		if (msaa_max_samples() >= 4)
+		if (msaa_max_samples() >= 4 && draw_render_to_texture)
 			draw_msaa_samples = 4;
 		return 1;
 	}
@@ -4546,14 +4546,19 @@ int graph_dev_graph_dev_debug_menu_click(int x, int y)
 		return 1;
 	}
 	if (selected_debug_item_checkbox(7, x, y, &draw_smaa))
-		return 1;
+		if (draw_render_to_texture)
+			return 1;
 	if (selected_debug_item_checkbox(8, x, y, &draw_smaa_edge)) {
-		draw_smaa_blend = 0;
-		return 1;
+		if (draw_render_to_texture) {
+			draw_smaa_blend = 0;
+			return 1;
+		}
 	}
 	if (selected_debug_item_checkbox(9, x, y, &draw_smaa_blend)) {
-		draw_smaa_edge = 0;
-		return 1;
+		if (draw_render_to_texture) {
+			draw_smaa_edge = 0;
+			return 1;
+		}
 	}
 	if (selected_debug_item_checkbox(10, x, y, &draw_atmospheres))
 		return 1;
