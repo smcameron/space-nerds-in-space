@@ -686,6 +686,7 @@ static struct planetary_ring_data planetary_ring_data[NPLANETARY_RING_MATERIALS]
 static int safe_mode = 0; /* prevents enemies from attacking if set, tweakable */
 
 static char *asset_dir;
+static char *asset_dir_lua;
 
 static struct replacement_asset replacement_assets;
 
@@ -19137,8 +19138,9 @@ static int process_enscript_command(struct game_client *c)
 	}
 
 	/* TODO: Send this client side instead of storing server side. */
-#define LUASCRIPTDIR STRPREFIX(DESTDIR) STRPREFIX(PREFIX) "/share/snis/luascripts"
-	snprintf(scriptname, sizeof(scriptname) - 1, "%s/%s", LUASCRIPTDIR, txt);
+//#define asset_dir_lua STRPREFIX(DESTDIR) STRPREFIX(PREFIX) "/share/snis/luascripts"
+
+	snprintf(scriptname, sizeof(scriptname) - 1, "%s/%s", asset_dir_lua, txt);
 
 	/* Open the file only if it doesn't already exist.
 	 * Using a combo of open + fdopen here rather than just fopen
@@ -20068,9 +20070,9 @@ static void list_lua_scripts(void)
 	int i, j, n;
 	char helpstring[256];
 
-	n = scandir(LUASCRIPTDIR, &namelist, filter_lua_scripts_and_dirs, alphasort);
+	n = scandir(asset_dir_lua, &namelist, filter_lua_scripts_and_dirs, alphasort);
 	if (n < 0) {
-		send_demon_console_msg("%s: %s\n", LUASCRIPTDIR, "", strerror(errno));
+		send_demon_console_msg("%s: %s\n", asset_dir_lua, "", strerror(errno));
 		return;
 	}
 	send_demon_console_color_msg(WHITE, "LUA SCRIPTS:");
@@ -20078,7 +20080,7 @@ static void list_lua_scripts(void)
 	for (i = 0; i < n; i++) {
 		if (namelist[i]->d_type == DT_REG) { /* regular file? */
 			strcpy(helpstring, "");
-			get_lua_script_help_string(LUASCRIPTDIR, "", namelist[i]->d_name,
+			get_lua_script_help_string(asset_dir_lua, "", namelist[i]->d_name,
 							helpstring, sizeof(helpstring));
 			send_demon_console_msg("- %s %s", namelist[i]->d_name, helpstring);
 		} else if (namelist[i]->d_type == DT_DIR) { /* directory? */
@@ -20086,7 +20088,7 @@ static void list_lua_scripts(void)
 			char path[PATH_MAX];
 			int sn;
 
-			snprintf(path, sizeof(path) - 1, "%s/%s", LUASCRIPTDIR, namelist[i]->d_name);
+			snprintf(path, sizeof(path) - 1, "%s/%s", asset_dir_lua, namelist[i]->d_name);
 			sn = scandir(path, &subnamelist, filter_lua_scripts_and_dirs, alphasort);
 			if (sn < 0) {
 				send_demon_console_msg("%s: %s\n", path, strerror(errno));
@@ -20099,7 +20101,7 @@ static void list_lua_scripts(void)
 					continue;
 				}
 				strcpy(helpstring, "");
-				get_lua_script_help_string(LUASCRIPTDIR, namelist[i]->d_name, subnamelist[j]->d_name,
+				get_lua_script_help_string(asset_dir_lua, namelist[i]->d_name, subnamelist[j]->d_name,
 						helpstring, sizeof(helpstring));
 				send_demon_console_msg("- %s/%s %s", namelist[i]->d_name,
 								subnamelist[j]->d_name, helpstring);
@@ -27092,19 +27094,19 @@ static char *find_lua_script(char *base_script_name)
 	int n, i, rc;
 
 	/* First, try the obvious. */
-	snprintf(path, sizeof(path) - 1, "%s/%s.LUA", LUASCRIPTDIR, base_script_name);
+	snprintf(path, sizeof(path) - 1, "%s/%s.LUA", asset_dir_lua, base_script_name);
 	rc = stat(path, &statbuf);
 	if (rc == 0)
 		return strdup(path);
 
 	/* Maybe it's in a subdirectory */
-	n = scandir(LUASCRIPTDIR, &namelist, filter_directories, alphasort);
+	n = scandir(asset_dir_lua, &namelist, filter_directories, alphasort);
 	if (n < 0) {
-		send_demon_console_color_msg(YELLOW, "FAILED TO SCAN %s: %s", LUASCRIPTDIR, strerror(errno));
+		send_demon_console_color_msg(YELLOW, "FAILED TO SCAN %s: %s", asset_dir_lua, strerror(errno));
 		return NULL;
 	}
 	for (i = 0; i < n; i++) {
-		snprintf(path, sizeof(path) - 1, "%s/%s/%s.LUA", LUASCRIPTDIR,
+		snprintf(path, sizeof(path) - 1, "%s/%s/%s.LUA", asset_dir_lua,
 				namelist[i]->d_name, base_script_name);
 		rc = stat(path, &statbuf);
 		free(namelist[i]);
@@ -32253,14 +32255,17 @@ int main(int argc, char *argv[])
 	ignore_signal(SIGINT);
 	ignore_signal(SIGHUP);
 	take_your_locale_and_shove_it();
-
 	process_options(argc, argv);
 
 #ifndef __APPLE__
 	if (trap_nans)
 		feenableexcept(FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW);
 #endif
+
 	asset_dir = override_asset_dir();
+	char *result = malloc(strlen(asset_dir) + strlen("/luascripts") + 1); // +1 for the null-terminator
+    strcpy(result, asset_dir);
+    asset_dir_lua = strcat(result, "/luascripts");
 	read_replacement_assets(&replacement_assets, asset_dir);
 	set_random_seed(-1);
 	init_natural_language_system();

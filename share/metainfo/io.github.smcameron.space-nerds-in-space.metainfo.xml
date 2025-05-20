@@ -1,0 +1,55 @@
+<component type="desktop-application">
+  <id>io.github.smcameron.space-nerds-in-space</id>
+
+  <name>Space Nerds in Space</name>
+  <summary>Spaceship bridge simulator</summary>
+
+  <url type="homepage">https://smcameron.github.io/space-nerds-in-space</url>
+
+  <content_rating type="oars-1.0">
+    <content_attribute id="social-chat">moderate</content_attribute>
+  </content_rating>
+
+<developer id="io.github.smcameron.space-nerds-in-space"><name>Stephen M. Cameron</name></developer>
+
+<icon type="remote">https://spacenerdsinspace.com/snis-asset-archives/io.github.smcameron.space-nerds-in-space.svg</icon>
+
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>GPL-2.0-or-later</project_license>
+  <releases>
+  <release version="1.0.8" date="2025-05-20" type="stable"/>
+  </releases>
+  <description>
+    <p>
+      Space Nerds In Space is an open source (GPLv2) cooperative multiplayer starship simulator for linux. So go out and get together with a crew of your linux-nerd friends and their computers in a room with a projector or TV, and go forth and explore the galaxy.
+    </p>
+    <p>
+    Space Nerds In Space allows you to man the various bridge controls of a starship. You can play Space Nerds In Space alone or with friends, but you really need a crew of 2 or more players to master a starship.
+      </p>
+    <p>
+      Various stations are Captain (Main Screen), Helms, Weapons, Communications, Science/Scanning, and Engineering/Repair.
+    </p>
+    <p>
+      Note that unlike many other fine bridge simulators, Space Nerds In Space is fully 3D.
+    </p>
+    <p>Space Nerds In Space also has an option where someone can take the role of dungeon master and modify the game universe in progress.</p>
+    <p>There are warp gates, nebula that block sensors and allow you to hide, mining, courier missions, and of course many hostiles. Creating your own scriptable missions in lua is possible and encouraged. And much, much more.</p>
+  </description>
+
+  <launchable type="desktop-id">io.github.smcameron.space-nerds-in-space.desktop</launchable>
+
+  <screenshots>
+    <screenshot type="default">
+      <image>https://spacenerdsinspace.com/snis-asset-archives/screenshots/Screenshot%20from%202025-02-03%2011-04-59.png</image>
+      <caption>View of the weapons officer's screen.</caption>
+    </screenshot>
+     <screenshot type="default">
+      <image>https://spacenerdsinspace.com/snis-asset-archives/screenshots/Screenshot%20from%202025-02-03%2011-05-50.png</image>
+      <caption>View of the navigation officer's screen.</caption>
+    </screenshot>
+     <screenshot type="default">
+      <image>https://spacenerdsinspace.com/snis-asset-archives/screenshots/Screenshot%20from%202025-02-03%2011-08-35.png</image>
+      <caption>View of the science officer's screen.</caption>
+    </screenshot>
+  </screenshots>
+</component>
