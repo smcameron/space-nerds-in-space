@@ -6,6 +6,7 @@
 #include <assert.h>
 #include <sys/stat.h>
 #include <limits.h>
+#include <pthread.h>
 
 #include "shader.h"
 #include "vertex.h"
@@ -55,6 +56,13 @@
 #define TEX_RELOAD_DELAY 1.0
 #define CUBEMAP_TEX_RELOAD_DELAY 1.0
 #define MAX_LOADED_TEXTURES 80
+
+/* This texture_finished_loading[] array is indexed by texture name from glGenTextures()
+ * which is sketchy as hell, but seems to work.
+ */
+static unsigned char texture_finished_loading[MAX_LOADED_TEXTURES] = { 0 };
+pthread_mutex_t finished_loading_mutex = PTHREAD_MUTEX_INITIALIZER;
+
 struct loaded_texture {
 	GLuint texture_id;
 	char *filename;
@@ -166,6 +174,21 @@ struct vertex_particle_buffer_data {
 	GLubyte end_tint_color[3];
 	GLubyte end_apm[2];
 };
+
+static void graph_dev_gen_texture(int count, GLuint *texture_name)
+{
+	glGenTextures(count, texture_name);
+
+	/* Using texture names as index into an array is a sketchy as hell, should
+	 * probably use a hash table instead, as I don't think the texture names
+	 * are guaranteed to be small integers from 0 ... number-of-textures though
+	 * in practice, they appear to behave in that way.
+	 */
+	pthread_mutex_lock(&finished_loading_mutex);
+	for (int i = 0; i < count; i++)
+		texture_finished_loading[texture_name[i]] = 0;
+	pthread_mutex_unlock(&finished_loading_mutex);
+}
 
 void mesh_graph_dev_cleanup(struct mesh *m)
 {
@@ -3752,14 +3775,14 @@ static void setup_smaa_effect(struct graph_dev_smaa_effect *effect)
 	shader->texture1_id = glGetUniformLocation(shader->program_id, "u_BlendTex");
 	glUniform1i(shader->texture1_id, 1);
 
-	glGenTextures(1, &effect->edge_target.color0_texture);
+	graph_dev_gen_texture(1, &effect->edge_target.color0_texture);
 	glBindTexture(GL_TEXTURE_2D, effect->edge_target.color0_texture);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
-	glGenTextures(1, &effect->blend_target.color0_texture);
+	graph_dev_gen_texture(1, &effect->blend_target.color0_texture);
 	glBindTexture(GL_TEXTURE_2D, effect->blend_target.color0_texture);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
@@ -3769,7 +3792,7 @@ static void setup_smaa_effect(struct graph_dev_smaa_effect *effect)
 	/* include file defines sizes and areaTexBytes of the area texture */
 #include "share/snis/textures/AreaTex.h"
 
-	glGenTextures(1, &effect->area_tex);
+	graph_dev_gen_texture(1, &effect->area_tex);
 	glBindTexture(GL_TEXTURE_2D, effect->area_tex);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
@@ -3781,7 +3804,7 @@ static void setup_smaa_effect(struct graph_dev_smaa_effect *effect)
 	/* include file defines sizes and searchTexBytes of the search texture */
 #include "share/snis/textures/SearchTex.h"
 
-	glGenTextures(1, &effect->search_tex);
+	graph_dev_gen_texture(1, &effect->search_tex);
 	glBindTexture(GL_TEXTURE_2D, effect->search_tex);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
@@ -3815,7 +3838,7 @@ static void setup_2d(void)
 
 	/* render 2d to seperate fbo if supported */
 	if (fbo_render_to_texture_supported()) {
-		glGenTextures(1, &render_target_2d.color0_texture);
+		graph_dev_gen_texture(1, &render_target_2d.color0_texture);
 		glBindTexture(GL_TEXTURE_2D, render_target_2d.color0_texture);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
@@ -3955,7 +3978,7 @@ int graph_dev_setup(const char *shader_dir)
 	}
 
 	if (fbo_render_to_texture_supported()) {
-		glGenTextures(1, &post_target0.color0_texture);
+		graph_dev_gen_texture(1, &post_target0.color0_texture);
 		glBindTexture(GL_TEXTURE_2D, post_target0.color0_texture);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
@@ -3973,7 +3996,7 @@ int graph_dev_setup(const char *shader_dir)
 		glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER,
 			post_target0.depth_buffer);
 
-		glGenTextures(1, &post_target1.color0_texture);
+		graph_dev_gen_texture(1, &post_target1.color0_texture);
 		glBindTexture(GL_TEXTURE_2D, post_target1.color0_texture);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
@@ -4012,6 +4035,10 @@ static int load_cubemap_texture_id(
 		GL_TEXTURE_CUBE_MAP_POSITIVE_Z, GL_TEXTURE_CUBE_MAP_NEGATIVE_Z };
 	GLint colorspace;
 
+	pthread_mutex_lock(&finished_loading_mutex);
+	texture_finished_loading[cube_texture_id] = 1;
+	pthread_mutex_unlock(&finished_loading_mutex);
+
 	glBindTexture(GL_TEXTURE_CUBE_MAP, cube_texture_id);
 	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
@@ -4049,6 +4076,9 @@ static int load_cubemap_texture_id(
 		}
 	}
 	glGenerateMipmap(GL_TEXTURE_CUBE_MAP);
+	pthread_mutex_lock(&finished_loading_mutex);
+	texture_finished_loading[cube_texture_id] = 1;
+	pthread_mutex_unlock(&finished_loading_mutex);
 	return 0;
 }
 
@@ -4168,7 +4198,7 @@ unsigned int graph_dev_load_cubemap_texture(
 	}
 
 	GLuint cube_texture_id;
-	glGenTextures(1, &cube_texture_id);
+	graph_dev_gen_texture(1, &cube_texture_id);
 
 	if (load_cubemap_texture_id(cube_texture_id, is_inside, linear_colorspace, tex_filenames)) {
 		glDeleteTextures(1, &cube_texture_id);
@@ -4218,6 +4248,10 @@ static int load_texture_id(GLuint texture_number, const char *filename, int use_
 	int tw, th, hasAlpha = 1;
 	GLint colorspace;
 
+	pthread_mutex_lock(&finished_loading_mutex);
+	texture_finished_loading[texture_number] = 0;
+	pthread_mutex_unlock(&finished_loading_mutex);
+
 	if (linear_colorspace)
 		colorspace = hasAlpha ? GL_RGBA8 : GL_RGB8;
 	else
@@ -4247,6 +4281,9 @@ static int load_texture_id(GLuint texture_number, const char *filename, int use_
 		free(image_data);
 		if (use_mipmaps)
 			glGenerateMipmap(GL_TEXTURE_2D);
+		pthread_mutex_lock(&finished_loading_mutex);
+		texture_finished_loading[texture_number] = 1;
+		pthread_mutex_unlock(&finished_loading_mutex);
 		return 0;
 	}
 	fprintf(stderr, "Unable to load texture '%s': %s\n", filename, whynotz);
@@ -4298,7 +4335,7 @@ static unsigned int graph_dev_load_texture_and_mipmap(const char *filename, int 
 	}
 
 	GLuint texture_number;
-	glGenTextures(1, &texture_number);
+	graph_dev_gen_texture(1, &texture_number);
 
 	if (load_texture_id(texture_number, filename, use_mipmaps, linear_colorspace)) {
 		glDeleteTextures(1, &texture_number);
@@ -4597,4 +4634,14 @@ void graph_dev_set_no_texture_mode()
 			__FILE__, __func__, __LINE__);
 		fflush(stderr);
 	}
+}
+
+int graph_dev_texture_ready(int i)
+{
+	if (i < 0 || i >= MAX_LOADED_TEXTURES)
+		return 0;
+	pthread_mutex_lock(&finished_loading_mutex);
+	int x = texture_finished_loading[i];
+	pthread_mutex_unlock(&finished_loading_mutex);
+	return x;
 }
