@@ -55,7 +55,7 @@
 #define DEBUG_NORMALS 0
 #define TEX_RELOAD_DELAY 1.0
 #define CUBEMAP_TEX_RELOAD_DELAY 1.0
-#define MAX_LOADED_TEXTURES 80
+#define MAX_LOADED_TEXTURES 100
 
 /* This texture_finished_loading[] array is indexed by texture name from glGenTextures()
  * which is sketchy as hell, but seems to work.
@@ -1394,6 +1394,7 @@ struct raster_texture_params {
 	union vec3 *sun_color;
 	float u1, v1;
 	float width;
+	int textures_not_ready;
 };
 
 static void graph_dev_raster_texture(struct raster_texture_params *p)
@@ -1403,6 +1404,9 @@ static void graph_dev_raster_texture(struct raster_texture_params *p)
 	enable_3d_viewport();
 
 	if (!p->m->graph_ptr)
+		return;
+
+	if (p->textures_not_ready)
 		return;
 
 	struct mesh_gl_info *ptr = p->m->graph_ptr;
@@ -2184,6 +2188,7 @@ static void graph_dev_draw_nebula(const struct mat44 *mat_mvp, const struct mat4
 		rtp.triangle_color = &mt->tint;
 		rtp.alpha = alpha;
 		rtp.texture_number = mt->texture_id[i];
+		rtp.textures_not_ready = !graph_dev_texture_ready(rtp.texture_number);
 		rtp.do_cullface = 0;
 		rtp.do_blend = 1;
 		rtp.ambient = 0.1;
@@ -2471,6 +2476,10 @@ static void graph_dev_raster_triangle_mesh(struct entity_context *cx, struct ent
 			rtp.normalmap_id = mt->normalmap_id;
 			rtp.do_cullface = 1;
 
+			rtp.textures_not_ready = !graph_dev_textures_ready(
+				(int []) {rtp.texture_number, rtp.emit_texture_number,
+						rtp.normalmap_id, -1 });
+
 			if (rtp.emit_texture_number > 0 && rtp.normalmap_id > 0)
 				rtp.shader = &textured_lit_emit_normal_shader;
 			else if (rtp.normalmap_id > 0)
@@ -2494,6 +2503,9 @@ static void graph_dev_raster_triangle_mesh(struct entity_context *cx, struct ent
 			rtp.alpha = 1.0;
 			rtp.emit_texture_number = 0;
 			rtp.normalmap_id = 0;
+			rtp.textures_not_ready = !graph_dev_textures_ready(
+				(int []) { rtp.texture_number, rtp.emit_texture_number,
+						rtp.normalmap_id, -1});
 			}
 			break;
 		case MATERIAL_WARP_GATE_EFFECT: {
@@ -2507,6 +2519,7 @@ static void graph_dev_raster_triangle_mesh(struct entity_context *cx, struct ent
 			rtp.do_cullface = 0;
 			rtp.do_blend = 1;
 			rtp.alpha = 1.0;
+			rtp.textures_not_ready = !graph_dev_texture_ready(rtp.texture_number);
 			}
 			break;
 		case MATERIAL_TEXTURE_MAPPED_UNLIT: {
@@ -2519,9 +2532,11 @@ static void graph_dev_raster_triangle_mesh(struct entity_context *cx, struct ent
 			rtp.do_blend = mt->do_blend;
 			rtp.alpha = mt->alpha;
 			texture_tint = mt->tint;
+			rtp.textures_not_ready = !graph_dev_texture_ready(rtp.texture_number);
 			}
 			break;
 		case MATERIAL_ATMOSPHERE: {
+			rtp.textures_not_ready = 0; /* assume textures are ready until proven otherwise */
 			rtp.do_blend = 1;
 			rtp.alpha = entity_get_alpha(e);
 			if (e->material_ptr->atmosphere.brightness)
@@ -2543,6 +2558,7 @@ static void graph_dev_raster_triangle_mesh(struct entity_context *cx, struct ent
 				rtp.ring_outer_radius = ring_mt->outer_radius;
 
 				shadow_annulus.texture_id = ring_mt->texture_id;
+				rtp.textures_not_ready = !graph_dev_texture_ready(ring_mt->texture_id);
 				shadow_annulus.tint_color = ring_mt->tint;
 				shadow_annulus.alpha = ring_mt->alpha;
 
@@ -2570,10 +2586,13 @@ static void graph_dev_raster_triangle_mesh(struct entity_context *cx, struct ent
 		case MATERIAL_ALPHA_BY_NORMAL: {
 			struct material_alpha_by_normal *mt = &e->material_ptr->alpha_by_normal;
 			rtp.texture_number = mt->texture_id;
-			if (mt->texture_id > 0)
+			if (mt->texture_id > 0) {
 				rtp.shader = &textured_alpha_by_normal_shader;
-			else
+				rtp.textures_not_ready = !graph_dev_texture_ready(rtp.texture_number);
+			} else {
 				rtp.shader = &alpha_by_normal_shader;
+				rtp.textures_not_ready = 0;
+			}
 			rtp.do_blend = 1;
 			rtp.alpha = mt->alpha;
 			rtp.do_cullface = mt->do_cullface;
@@ -2590,6 +2609,7 @@ static void graph_dev_raster_triangle_mesh(struct entity_context *cx, struct ent
 			rtp.do_blend = mt->do_blend;
 			rtp.alpha = mt->alpha;
 			texture_tint = mt->tint;
+			rtp.textures_not_ready = !graph_dev_texture_ready(rtp.texture_number);
 			}
 			break;
 		case MATERIAL_TEXTURED_SHIELD: {
@@ -2599,6 +2619,7 @@ static void graph_dev_raster_triangle_mesh(struct entity_context *cx, struct ent
 			rtp.do_blend = 1;
 			rtp.alpha = entity_get_alpha(e);
 			rtp.do_cullface = 0;
+			rtp.textures_not_ready = !graph_dev_texture_ready(rtp.texture_number);
 			}
 			break;
 		case MATERIAL_TEXTURED_PLANET: {
@@ -2611,8 +2632,11 @@ static void graph_dev_raster_triangle_mesh(struct entity_context *cx, struct ent
 			sun_color.v.x = mt->sun_color_r;
 			sun_color.v.y = mt->sun_color_g;
 			sun_color.v.z = mt->sun_color_b;
+			rtp.textures_not_ready = !graph_dev_textures_ready(
+				(int []) {rtp.texture_number, rtp.normalmap_id, -1});
 
-			if (mt->ring_material && mt->ring_material->type == MATERIAL_TEXTURED_PLANET_RING) {
+			if (mt->ring_material &&
+				mt->ring_material->type == MATERIAL_TEXTURED_PLANET_RING) {
 				if (rtp.normalmap_id <= 0) {
 					rtp.shader = &textured_cubemap_lit_with_annulus_shadow_shader;
 				} else if (graph_dev_planet_specularity)  {
@@ -2632,6 +2656,9 @@ static void graph_dev_raster_triangle_mesh(struct entity_context *cx, struct ent
 				shadow_annulus.texture_id = ring_mt->texture_id;
 				shadow_annulus.tint_color = ring_mt->tint;
 				shadow_annulus.alpha = ring_mt->alpha;
+
+				rtp.textures_not_ready |=
+					!graph_dev_texture_ready(shadow_annulus.texture_id);
 
 				/* ring is at the center of our mesh */
 				union vec4 sphere_pos = { { 0, 0, 0, 1 } };
@@ -2670,6 +2697,7 @@ static void graph_dev_raster_triangle_mesh(struct entity_context *cx, struct ent
 			rtp.ring_texture_v = mt->texture_v;
 			rtp.ring_inner_radius = mt->inner_radius;
 			rtp.ring_outer_radius = mt->outer_radius;
+			rtp.textures_not_ready = !graph_dev_texture_ready(rtp.texture_number);
 
 			/* planet is at the center of our mesh */
 			union vec4 sphere_pos = { { 0, 0, 0, 1 } };
@@ -2723,11 +2751,11 @@ static void graph_dev_raster_triangle_mesh(struct entity_context *cx, struct ent
 
 				graph_dev_raster_texture(&rtp);
 			} else {
-				if (atmosphere)
+				if (atmosphere && !rtp.textures_not_ready)
 					graph_dev_raster_atmosphere(rtp.mat_mvp, rtp.mat_mv, rtp.mat_normal,
 						e->m, &atmosphere_color, eye_light_pos, rtp.alpha,
 						&shadow_annulus, rtp.ring_texture_v, rtp.atmosphere_brightness);
-				else
+				else if (!rtp.textures_not_ready)
 					graph_dev_raster_single_color_lit(rtp.mat_mvp, rtp.mat_mv,
 						rtp.mat_normal, e->m, &triangle_color, eye_light_pos,
 						e->in_shade, cx->ambient);
@@ -4640,8 +4668,25 @@ int graph_dev_texture_ready(int i)
 {
 	if (i < 0 || i >= MAX_LOADED_TEXTURES)
 		return 0;
+	if (i == 0)
+		return 1;
 	pthread_mutex_lock(&finished_loading_mutex);
 	int x = texture_finished_loading[i];
 	pthread_mutex_unlock(&finished_loading_mutex);
 	return x;
+}
+
+int graph_dev_textures_ready(int *tids)
+{
+	pthread_mutex_lock(&finished_loading_mutex);
+	for (int i = 0; tids[i] != -1; i++) {
+		if (tids[i] == 0)
+			continue;
+		if (!texture_finished_loading[tids[i]]) {
+			pthread_mutex_unlock(&finished_loading_mutex);
+			return 0;
+		}
+	}
+	pthread_mutex_unlock(&finished_loading_mutex);
+	return 1;
 }

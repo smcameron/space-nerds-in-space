@@ -111,6 +111,7 @@ extern void graph_dev_set_error_texture(const char *error_texture_png);
 extern void graph_dev_set_no_texture_mode(void);
 
 extern int graph_dev_texture_ready(int i);
+extern int graph_dev_textures_ready(int *i);
 
 #endif
 
