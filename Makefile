@@ -568,7 +568,7 @@ _COMMONCLIENTOBJS= snis_ui_element.o snis_font.o snis_text_input.o \
 	quat.o vec4.o thrust_attachment.o docking_port.o ui_colors.o snis_keyboard.o solarsystem_config.o \
 	pronunciation.o snis_preferences.o snis_pull_down_menu.o snis_client_debug.o starmap_adjacency.o \
 	shape_collision.o oriented_bounding_box.o xdg_base_dir_spec.o snis_voice_chat.o read_menu_file.o \
-	snis_client_forker.o snis_process_options.o
+	snis_client_forker.o snis_process_options.o workqueue.o
 COMMONCLIENTOBJS=${COMMONOBJS} ${OGGOBJ} ${SNDOBJS} $(patsubst %,$(OD)/%,${_COMMONCLIENTOBJS}) 
 
 _CLIENTOBJS= shader.o graph_dev_opengl.o opengl_cap.o snis_graph.o snis_client.o joystick_config.o snis_xwindows_hacks.o png_utils.o
@@ -1221,6 +1221,9 @@ $(OD)/fleet.o:	fleet.c Makefile ${ODT}
 	$(Q)$(COMPILE)
 
 $(OD)/png_utils.o:	png_utils.c png_utils.h Makefile ${ODT}
+	$(Q)$(COMPILE)
+
+$(OD)/workqueue.o:	workqueue.c workqueue.h Makefile ${ODT}
 	$(Q)$(COMPILE)
 
 $(OD)/c-is-the-locale.o:	c-is-the-locale.c ${ODT}
