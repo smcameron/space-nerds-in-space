@@ -113,5 +113,23 @@ extern void graph_dev_set_no_texture_mode(void);
 extern int graph_dev_texture_ready(int i);
 extern int graph_dev_textures_ready(int *i);
 
+struct graph_dev_image_load_request {
+#define GRAPH_DEV_IMAGE_LOAD 1
+#define GRAPH_DEV_CUBEMAP_LOAD 2
+	int request_type;
+	/* inputs */
+	const char *filename[6]; /* 6 for cubemaps, normal requests only use 1 */
+	int flipVertical, flipHorizontal, pre_multiply_alpha;
+
+	/* outputs */
+	char *image_data[6]; /* 6 for cubemaps, normal requests only use 1 */
+	int w, h, hasAlpha;
+	char whynot[256];
+};
+
+void graph_dev_set_up_image_loader_work_queues(void);
+
+struct graph_dev_image_load_request *graph_dev_get_completed_image_load_request(void);
+
 #endif
 

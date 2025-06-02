@@ -25837,6 +25837,7 @@ int main(int argc, char *argv[])
 	if (start_sdl())
 		return 1;
 
+	graph_dev_set_up_image_loader_work_queues();
 	setup_sound();
 	snis_opcode_def_init();
 	memset(&main_screen_text, 0, sizeof(main_screen_text));

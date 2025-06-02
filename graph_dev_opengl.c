@@ -25,6 +25,7 @@
 #include "snis_typeface.h"
 #include "opengl_cap.h"
 #include "png_utils.h"
+#include "workqueue.h"
 
 #define OPENGL_VERSION_STRING "#version 120\n"
 #define UNIVERSAL_SHADER_HEADER \
@@ -56,6 +57,11 @@
 #define TEX_RELOAD_DELAY 1.0
 #define CUBEMAP_TEX_RELOAD_DELAY 1.0
 #define MAX_LOADED_TEXTURES 100
+
+#define IMAGE_LOADER_QUEUE_DEPTH 100
+#define IMAGE_LOADER_THREAD_COUNT 4
+static struct work_queue *image_loader_wq = NULL; /* queue of requests to load PNG images */
+static struct work_queue *loaded_images_wq = NULL; /* queue of decoded image data to upload to GPU */
 
 /* This texture_finished_loading[] array is indexed by texture name from glGenTextures()
  * which is sketchy as hell, but seems to work.
@@ -4690,3 +4696,56 @@ int graph_dev_textures_ready(int *tids)
 	pthread_mutex_unlock(&finished_loading_mutex);
 	return 1;
 }
+
+static void process_image_load_request_normal(struct graph_dev_image_load_request *r)
+{
+	r->image_data[0] = png_utils_read_png_image(r->filename[0],
+				r->flipVertical, r->flipHorizontal, r->pre_multiply_alpha,
+				&r->w, &r->h, &r->hasAlpha, r->whynot, sizeof(r->whynot));
+	if (!r->image_data[0]) {
+		fprintf(stderr, "Failed to decode image file '%s: %s\n",
+			r->filename[0], r->whynot);
+		free(r);
+		return;
+	}
+	/* Put the data on the queue for the main thread to upload to the GPU */
+	work_queue_enqueue(loaded_images_wq, r);
+}
+
+static void process_image_load_request_cubemap(struct graph_dev_image_load_request *r)
+{
+	fprintf(stderr, "Cubemap image load request not yet implemented\n");
+	free(r);
+}
+
+/* Process a request to load an image */
+static void process_image_load_request(void *work)
+{
+	struct graph_dev_image_load_request *r = work;
+	switch (r->request_type) {
+	case GRAPH_DEV_IMAGE_LOAD:
+		process_image_load_request_normal(r);
+		break;
+	case GRAPH_DEV_CUBEMAP_LOAD:
+		process_image_load_request_cubemap(r);
+		break;
+	default:
+		fprintf(stderr, "Bad image load request type %d, discarding\n", r->request_type);
+		free(r);
+		break;
+	}
+}
+
+/* Set up work queue for loading texture data concurrently with main loop */
+void graph_dev_set_up_image_loader_work_queues(void)
+{
+	image_loader_wq = work_queue_init("png-decode", IMAGE_LOADER_QUEUE_DEPTH,
+		IMAGE_LOADER_THREAD_COUNT, process_image_load_request);
+	loaded_images_wq = work_queue_init("txtr2gpu", IMAGE_LOADER_QUEUE_DEPTH, 0, NULL);
+}
+
+struct graph_dev_image_load_request *graph_dev_get_completed_image_load_request(void)
+{
+	return (struct graph_dev_image_load_request *) work_queue_dequeue(loaded_images_wq);
+}
+
