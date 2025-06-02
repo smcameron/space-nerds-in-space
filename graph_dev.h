@@ -72,6 +72,14 @@ extern int graph_dev_load_skybox_texture(
 	const char *texture_filename_pos_z,
 	const char *texture_filename_neg_z);
 
+extern int graph_dev_load_skybox_texture_deferred(
+	const char *texture_filename_pos_x,
+	const char *texture_filename_neg_x,
+	const char *texture_filename_pos_y,
+	const char *texture_filename_neg_y,
+	const char *texture_filename_pos_z,
+	const char *texture_filename_neg_z);
+
 extern unsigned int graph_dev_load_cubemap_texture(
 	int is_inside,
 	int linear_colorspace,
@@ -81,6 +89,16 @@ extern unsigned int graph_dev_load_cubemap_texture(
         const char *texture_filename_neg_y,
         const char *texture_filename_pos_z,
         const char *texture_filename_neg_z);
+
+extern unsigned int graph_dev_load_cubemap_texture_deferred(
+	int is_inside,
+	int linear_colorspace,
+	const char *texture_filename_pos_x,
+	const char *texture_filename_neg_x,
+	const char *texture_filename_pos_y,
+	const char *texture_filename_neg_y,
+	const char *texture_filename_pos_z,
+	const char *texture_filename_neg_z);
 
 struct graph_dev_image_load_request {
 #define GRAPH_DEV_IMAGE_LOAD 1
@@ -94,7 +112,8 @@ struct graph_dev_image_load_request {
 
 	/* outputs */
 	char *image_data[6]; /* 6 for cubemaps, normal requests only use 1 */
-	int w, h, hasAlpha;
+	int w[6], h[6], hasAlpha[6];
+	int is_inside; /* used by cubemaps for skybox vs. planet */
 	char whynot[256];
 };
 
