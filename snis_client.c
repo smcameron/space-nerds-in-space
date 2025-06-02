@@ -22575,6 +22575,29 @@ static void maybe_set_vsync_mode(void)
 	old_vsync_mode = vsync_mode;
 }
 
+/* Send any textures that have just completed PNG decoding to the gpu */
+static void send_new_textures_to_gpu(void)
+{
+	struct graph_dev_image_load_request *r;
+
+	do {
+		r  = graph_dev_get_completed_image_load_request();
+		if (!r)
+			return;
+
+		switch (r->request_type) {
+		case GRAPH_DEV_IMAGE_LOAD:
+		case GRAPH_DEV_CUBEMAP_LOAD:
+			(void) graph_dev_texture_to_gpu(r);
+			break;
+		default:
+			fprintf(stderr, "Unknown graph dev image load request type %d\n",
+				r->request_type);
+			break;
+		}
+	} while (1);
+}
+
 static int main_da_expose(SDL_Window *window)
 {
 	static double last_frame_time = 0;
@@ -22607,6 +22630,9 @@ static int main_da_expose(SDL_Window *window)
 	maybe_set_vsync_mode();
 
 	load_textures();
+
+	/* If some concurrently loading texture data finished, send it to the GPU */
+	send_new_textures_to_gpu();
 
 	graph_dev_start_frame();
 
@@ -22960,7 +22986,7 @@ static unsigned int load_texture(char *filename, int linear_colorspace)
 	char fname[PATH_MAX + 1];
 
 	snprintf(fname, sizeof(fname), "%s/%s", asset_dir, filename);
-	return graph_dev_load_texture(replacement_asset_lookup(fname, &replacement_assets), linear_colorspace);
+	return graph_dev_load_texture_deferred(replacement_asset_lookup(fname, &replacement_assets), linear_colorspace);
 }
 
 static unsigned int load_texture_no_mipmaps(char *filename, int linear_colorspace)
@@ -22968,7 +22994,7 @@ static unsigned int load_texture_no_mipmaps(char *filename, int linear_colorspac
 	char fname[PATH_MAX + 1];
 
 	snprintf(fname, sizeof(fname), "%s/%s", asset_dir, filename);
-	return graph_dev_load_texture_no_mipmaps(replacement_asset_lookup(fname,
+	return graph_dev_load_texture_deferred_no_mipmaps(replacement_asset_lookup(fname,
 				&replacement_assets), linear_colorspace);
 }
 

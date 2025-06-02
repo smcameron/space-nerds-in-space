@@ -4324,7 +4324,7 @@ static int load_texture_id(GLuint texture_number, const char *filename, int use_
 	return -1;
 }
 
-/* Load image data to GPU, image_data is freed */
+/* Load image data to GPU, image_data is not freed */
 static int texture_to_gpu_id(GLuint texture_number, char *image_data,
 		int w, int h, int hasAlpha, int use_mipmaps, int linear_colorspace)
 {
@@ -4352,7 +4352,6 @@ static int texture_to_gpu_id(GLuint texture_number, char *image_data,
 
 	glTexImage2D(GL_TEXTURE_2D, 0, colorspace, w, h, 0,
 			(hasAlpha ? GL_RGBA : GL_RGB), GL_UNSIGNED_BYTE, image_data);
-	free(image_data);
 	if (use_mipmaps)
 		glGenerateMipmap(GL_TEXTURE_2D);
 	pthread_mutex_lock(&finished_loading_mutex);
@@ -4426,82 +4425,44 @@ static unsigned int graph_dev_load_texture_and_mipmap(const char *filename, int 
 	return (unsigned int) texture_number;
 }
 
-static unsigned int graph_dev_texture_to_gpu_and_mipmap(const char *filename,
-			char *image_data, int w, int h, int hasAlpha,
-			int use_mipmaps, int linear_colorspace)
+void graph_dev_free_image_load_request(struct graph_dev_image_load_request *r)
 {
-	int i;
-
-	/* See if we already loaded this texture */
-	for (i = 0; i < nloaded_textures; i++) {
-		if (strcmp(filename, loaded_textures[i].filename) == 0) {
-			loaded_textures[i].expired = 0;
-			return loaded_textures[i].texture_id;
-		}
+	if (!r)
+		return;
+	for (int i = 0; i < 6; i++) {
+		if (r->filename[i])
+			free(r->filename[i]);
+		if (r->image_data[i])
+			free(r->image_data[i]);
 	}
+	free(r);
+}
 
-	/* See if we can re-use an expired texture id */
-	for (i = 0; i < nloaded_textures; i++) {
-		if (loaded_textures[i].expired) {
-			glBindTexture(GL_TEXTURE_2D, 0);
-			glDeleteTextures(1, &loaded_textures[i].texture_id);
-			fprintf(stderr, "Replacing %s with %s\n", loaded_textures[i].filename, filename);
-			if (load_texture_id(loaded_textures[i].texture_id, filename, use_mipmaps, linear_colorspace)) {
-				fprintf(stderr, "Failed to load texture from '%s'\n", filename);
-				return 0;
-			}
-			if (loaded_textures[i].filename)
-				free(loaded_textures[i].filename);
-			loaded_textures[i].filename = strdup(filename);
-			loaded_textures[i].mtime = get_file_modify_time(filename);
-			loaded_textures[i].last_mtime_change = 0;
-			loaded_textures[i].expired = 0;
-			loaded_textures[i].use_mipmaps = use_mipmaps;
-			loaded_textures[i].linear_colorspace = linear_colorspace;
-			return loaded_textures[i].texture_id;
-		}
-	}
-
-	if (nloaded_textures >= MAX_LOADED_TEXTURES) {
-		printf("Unable to load texture '%s': max of %d textures are already loaded\n",
-			filename, nloaded_textures);
+unsigned int graph_dev_texture_to_gpu(struct graph_dev_image_load_request *r)
+{
+	if (texture_to_gpu_id(r->texture_id, r->image_data[0], r->w, r->h, r->hasAlpha,
+				r->use_mipmaps, r->linear_colorspace)) {
+		glDeleteTextures(1, (GLuint *) &r->texture_id);
+		fprintf(stderr, "Failed to load texture to gpu from '%s'\n", r->filename[0]);
 		return 0;
 	}
 
-	GLuint texture_number;
-	graph_dev_gen_texture(1, &texture_number);
-
-	if (texture_to_gpu_id(texture_number, image_data, w, h, hasAlpha, use_mipmaps, linear_colorspace)) {
-		glDeleteTextures(1, &texture_number);
-		fprintf(stderr, "Failed to load texture to gpu from '%s'\n", filename);
-		return 0;
-	}
-
-	loaded_textures[nloaded_textures].texture_id = texture_number;
-	loaded_textures[nloaded_textures].filename = strdup(filename);
-	loaded_textures[nloaded_textures].mtime = get_file_modify_time(filename);
+	loaded_textures[nloaded_textures].texture_id = r->texture_id;
+	loaded_textures[nloaded_textures].filename = strdup(r->filename[0]);
+	loaded_textures[nloaded_textures].mtime = get_file_modify_time(r->filename[0]);
 	loaded_textures[nloaded_textures].last_mtime_change = 0;
 	loaded_textures[nloaded_textures].expired = 0;
-	loaded_textures[nloaded_textures].use_mipmaps = use_mipmaps;
-	loaded_textures[nloaded_textures].linear_colorspace = linear_colorspace;
+	loaded_textures[nloaded_textures].use_mipmaps = r->use_mipmaps;
+	loaded_textures[nloaded_textures].linear_colorspace = r->linear_colorspace;
 
 	nloaded_textures++;
 
-	return (unsigned int) texture_number;
-}
-
-unsigned int graph_dev_texture_to_gpu(const char *filename, char *image_data,
-			int w, int h, int hasAlpha, int linear_colorspace)
-{
-	return graph_dev_texture_to_gpu_and_mipmap(filename, image_data,
-				w, h, hasAlpha, 1, linear_colorspace);
-}
-
-unsigned int graph_dev_texture_to_gpu_no_mipmaps(const char *filename, char *image_data,
-			int w, int h, int hasAlpha, int linear_colorspace)
-{
-	return graph_dev_texture_to_gpu_and_mipmap(filename, image_data,
-				w, h, hasAlpha, 0, linear_colorspace);
+	int tid = r->texture_id;
+	graph_dev_free_image_load_request(r);
+	pthread_mutex_lock(&finished_loading_mutex);
+	texture_finished_loading[tid] = 1;
+	pthread_mutex_unlock(&finished_loading_mutex);
+	return (unsigned int) tid;
 }
 
 unsigned int graph_dev_load_texture(const char *filename, int linear_colorspace)
@@ -4819,7 +4780,7 @@ static void process_image_load_request_normal(struct graph_dev_image_load_reques
 	if (!r->image_data[0]) {
 		fprintf(stderr, "Failed to decode image file '%s: %s\n",
 			r->filename[0], r->whynot);
-		free(r);
+		graph_dev_free_image_load_request(r);
 		return;
 	}
 	/* Put the data on the queue for the main thread to upload to the GPU */
@@ -4829,7 +4790,7 @@ static void process_image_load_request_normal(struct graph_dev_image_load_reques
 static void process_image_load_request_cubemap(struct graph_dev_image_load_request *r)
 {
 	fprintf(stderr, "Cubemap image load request not yet implemented\n");
-	free(r);
+	graph_dev_free_image_load_request(r);
 }
 
 /* Process a request to load an image */
@@ -4845,7 +4806,7 @@ static void process_image_load_request(void *work)
 		break;
 	default:
 		fprintf(stderr, "Bad image load request type %d, discarding\n", r->request_type);
-		free(r);
+		graph_dev_free_image_load_request(r);
 		break;
 	}
 }
@@ -4861,5 +4822,80 @@ void graph_dev_set_up_image_loader_work_queues(void)
 struct graph_dev_image_load_request *graph_dev_get_completed_image_load_request(void)
 {
 	return (struct graph_dev_image_load_request *) work_queue_dequeue(loaded_images_wq);
+}
+
+/* Enqueue request to load a texture.  The texture will be loaded in another thread,
+ * and the image data will appear in the loaded_images_wq work queue later on where
+ * the main rendering thread can upload it to the GPU
+ */
+static unsigned int graph_dev_load_texture_deferred_helper(const char *filename, int linear_colorspace, int use_mipmaps)
+{
+	GLuint texture_id;
+	int i;
+
+	/* See if we already loaded this texture */
+	for (i = 0; i < nloaded_textures; i++) {
+		if (strcmp(filename, loaded_textures[i].filename) == 0) {
+			loaded_textures[i].expired = 0;
+			return loaded_textures[i].texture_id;
+		}
+	}
+
+	/* See if we can re-use an expired texture id */
+	int reusing_expired_texture_id = 0;
+	for (i = 0; i < nloaded_textures; i++) {
+		if (loaded_textures[i].expired) {
+			glBindTexture(GL_TEXTURE_2D, 0);
+			glDeleteTextures(1, &loaded_textures[i].texture_id);
+			fprintf(stderr, "Replacing %s with %s\n", loaded_textures[i].filename, filename);
+#if 0
+			if (load_texture_id(loaded_textures[i].texture_id, filename, use_mipmaps, linear_colorspace)) {
+				fprintf(stderr, "Failed to load texture from '%s'\n", filename);
+				return 0;
+			}
+#endif
+			if (loaded_textures[i].filename)
+				free(loaded_textures[i].filename);
+			loaded_textures[i].filename = strdup(filename);
+			loaded_textures[i].mtime = get_file_modify_time(filename);
+			loaded_textures[i].last_mtime_change = 0;
+			loaded_textures[i].expired = 0;
+			loaded_textures[i].use_mipmaps = use_mipmaps;
+			loaded_textures[i].linear_colorspace = linear_colorspace;
+			texture_id = loaded_textures[i].texture_id;
+			pthread_mutex_lock(&finished_loading_mutex);
+			texture_finished_loading[texture_id] = 0;
+			pthread_mutex_unlock(&finished_loading_mutex);
+			reusing_expired_texture_id = 1;
+			break;
+		}
+	}
+
+	if (!reusing_expired_texture_id)
+		graph_dev_gen_texture(1, &texture_id);
+
+	/* Queue up the image load request */
+	struct graph_dev_image_load_request *r = calloc(1, sizeof(*r));
+	r->texture_id = (int) texture_id;
+	r->request_type = GRAPH_DEV_IMAGE_LOAD;
+	r->filename[0] = strdup(filename);
+	r->flipVertical = 1;
+	r->flipHorizontal = 0;
+	r->pre_multiply_alpha = 1;
+	r->linear_colorspace = linear_colorspace;
+	r->use_mipmaps = use_mipmaps;
+
+	work_queue_enqueue(image_loader_wq, r);
+	return texture_id;
+}
+
+unsigned int graph_dev_load_texture_deferred(const char *filename, int linear_colorspace)
+{
+	return graph_dev_load_texture_deferred_helper(filename, linear_colorspace, 1);
+}
+
+unsigned int graph_dev_load_texture_deferred_no_mipmaps(const char *filename, int linear_colorspace)
+{
+	return graph_dev_load_texture_deferred_helper(filename, linear_colorspace, 0);
 }
 
