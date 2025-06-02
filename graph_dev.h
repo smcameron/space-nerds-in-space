@@ -84,6 +84,10 @@ extern unsigned int graph_dev_load_cubemap_texture(
 
 extern unsigned int graph_dev_load_texture(const char *filename, int linear_colorspace);
 extern unsigned int graph_dev_load_texture_no_mipmaps(const char *filename, int linear_colorspace);
+extern unsigned int graph_dev_texture_to_gpu(const char *filename, char *image_data,
+				int w, int h, int hasAlpha, int linear_colorspace);
+extern unsigned int graph_dev_texture_to_gpu_no_mipmaps(const char *filename, char *image_data,
+				int w, int h, int hasAlpha, int linear_colorspace);
 extern const char *graph_dev_get_texture_filename(unsigned int);
 extern void graph_dev_draw_skybox(const struct mat44 *mat_vp);
 extern int graph_dev_reload_changed_textures(void);

@@ -4324,6 +4324,42 @@ static int load_texture_id(GLuint texture_number, const char *filename, int use_
 	return -1;
 }
 
+/* Load image data to GPU, image_data is freed */
+static int texture_to_gpu_id(GLuint texture_number, char *image_data,
+		int w, int h, int hasAlpha, int use_mipmaps, int linear_colorspace)
+{
+	GLint colorspace;
+
+	if (!image_data) {
+		fprintf(stderr, "texture_to_gpu_id: NULL image data\n");
+		return -1;
+	}
+
+	if (linear_colorspace)
+		colorspace = hasAlpha ? GL_RGBA8 : GL_RGB8;
+	else
+		colorspace = hasAlpha ? GL_SRGB8_ALPHA8 : GL_SRGB8;
+
+	glBindTexture(GL_TEXTURE_2D, texture_number);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	if (use_mipmaps)
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+	else
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+
+	glTexImage2D(GL_TEXTURE_2D, 0, colorspace, w, h, 0,
+			(hasAlpha ? GL_RGBA : GL_RGB), GL_UNSIGNED_BYTE, image_data);
+	free(image_data);
+	if (use_mipmaps)
+		glGenerateMipmap(GL_TEXTURE_2D);
+	pthread_mutex_lock(&finished_loading_mutex);
+	texture_finished_loading[texture_number] = 1;
+	pthread_mutex_unlock(&finished_loading_mutex);
+	return 0;
+}
 
 /* returning unsigned int instead of GLuint so as not to leak opengl types out
  * Kind of ugly, but should not be dangerous.
@@ -4388,6 +4424,84 @@ static unsigned int graph_dev_load_texture_and_mipmap(const char *filename, int 
 	nloaded_textures++;
 
 	return (unsigned int) texture_number;
+}
+
+static unsigned int graph_dev_texture_to_gpu_and_mipmap(const char *filename,
+			char *image_data, int w, int h, int hasAlpha,
+			int use_mipmaps, int linear_colorspace)
+{
+	int i;
+
+	/* See if we already loaded this texture */
+	for (i = 0; i < nloaded_textures; i++) {
+		if (strcmp(filename, loaded_textures[i].filename) == 0) {
+			loaded_textures[i].expired = 0;
+			return loaded_textures[i].texture_id;
+		}
+	}
+
+	/* See if we can re-use an expired texture id */
+	for (i = 0; i < nloaded_textures; i++) {
+		if (loaded_textures[i].expired) {
+			glBindTexture(GL_TEXTURE_2D, 0);
+			glDeleteTextures(1, &loaded_textures[i].texture_id);
+			fprintf(stderr, "Replacing %s with %s\n", loaded_textures[i].filename, filename);
+			if (load_texture_id(loaded_textures[i].texture_id, filename, use_mipmaps, linear_colorspace)) {
+				fprintf(stderr, "Failed to load texture from '%s'\n", filename);
+				return 0;
+			}
+			if (loaded_textures[i].filename)
+				free(loaded_textures[i].filename);
+			loaded_textures[i].filename = strdup(filename);
+			loaded_textures[i].mtime = get_file_modify_time(filename);
+			loaded_textures[i].last_mtime_change = 0;
+			loaded_textures[i].expired = 0;
+			loaded_textures[i].use_mipmaps = use_mipmaps;
+			loaded_textures[i].linear_colorspace = linear_colorspace;
+			return loaded_textures[i].texture_id;
+		}
+	}
+
+	if (nloaded_textures >= MAX_LOADED_TEXTURES) {
+		printf("Unable to load texture '%s': max of %d textures are already loaded\n",
+			filename, nloaded_textures);
+		return 0;
+	}
+
+	GLuint texture_number;
+	graph_dev_gen_texture(1, &texture_number);
+
+	if (texture_to_gpu_id(texture_number, image_data, w, h, hasAlpha, use_mipmaps, linear_colorspace)) {
+		glDeleteTextures(1, &texture_number);
+		fprintf(stderr, "Failed to load texture to gpu from '%s'\n", filename);
+		return 0;
+	}
+
+	loaded_textures[nloaded_textures].texture_id = texture_number;
+	loaded_textures[nloaded_textures].filename = strdup(filename);
+	loaded_textures[nloaded_textures].mtime = get_file_modify_time(filename);
+	loaded_textures[nloaded_textures].last_mtime_change = 0;
+	loaded_textures[nloaded_textures].expired = 0;
+	loaded_textures[nloaded_textures].use_mipmaps = use_mipmaps;
+	loaded_textures[nloaded_textures].linear_colorspace = linear_colorspace;
+
+	nloaded_textures++;
+
+	return (unsigned int) texture_number;
+}
+
+unsigned int graph_dev_texture_to_gpu(const char *filename, char *image_data,
+			int w, int h, int hasAlpha, int linear_colorspace)
+{
+	return graph_dev_texture_to_gpu_and_mipmap(filename, image_data,
+				w, h, hasAlpha, 1, linear_colorspace);
+}
+
+unsigned int graph_dev_texture_to_gpu_no_mipmaps(const char *filename, char *image_data,
+			int w, int h, int hasAlpha, int linear_colorspace)
+{
+	return graph_dev_texture_to_gpu_and_mipmap(filename, image_data,
+				w, h, hasAlpha, 0, linear_colorspace);
 }
 
 unsigned int graph_dev_load_texture(const char *filename, int linear_colorspace)
