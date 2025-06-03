@@ -155,9 +155,5 @@ extern int graph_dev_textures_ready(int *i);
 
 void graph_dev_free_image_load_request(struct graph_dev_image_load_request *r);
 
-void graph_dev_set_up_image_loader_work_queues(void);
-
-struct graph_dev_image_load_request *graph_dev_get_completed_image_load_request(void);
-
 #endif
 

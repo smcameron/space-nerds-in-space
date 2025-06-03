@@ -2956,10 +2956,8 @@ static void graph_dev_raster_full_screen_effect(struct graph_dev_gl_fs_effect_sh
 /* If any textures loads (PNG decoding) have completed, send them to the GPU */
 static void graph_dev_send_completed_textures_to_gpu(void)
 {
-	struct graph_dev_image_load_request *r;
-
 	do {
-		r  = graph_dev_get_completed_image_load_request();
+		struct graph_dev_image_load_request *r = work_queue_dequeue(loaded_images_wq);
 		if (!r)
 			return;
 
@@ -4001,6 +3999,63 @@ void graph_dev_reload_all_shaders(void)
 		setup_smaa_effect(&smaa_effect);
 }
 
+static void process_image_load_request_normal(struct graph_dev_image_load_request *r)
+{
+	r->image_data[0] = png_utils_read_png_image(r->filename[0],
+				r->flipVertical, r->flipHorizontal, r->pre_multiply_alpha,
+				&r->w[0], &r->h[0], &r->hasAlpha[0], r->whynot, sizeof(r->whynot));
+	if (!r->image_data[0]) {
+		fprintf(stderr, "Failed to decode image file '%s: %s\n",
+			r->filename[0], r->whynot);
+		graph_dev_free_image_load_request(r);
+		return;
+	}
+	/* Put the data on the queue for the main thread to upload to the GPU */
+	work_queue_enqueue(loaded_images_wq, r);
+}
+
+static void process_image_load_request_cubemap(struct graph_dev_image_load_request *r)
+{
+	for (int i = 0; i < 6; i++) {
+		r->image_data[i] = png_utils_read_png_image(r->filename[i], 0, r->is_inside, 1,
+			&r->w[i], &r->h[i], &r->hasAlpha[i], r->whynot, sizeof(r->whynot));
+		if (!r->image_data[i]) {
+			fprintf(stderr, "Failed to decode image file '%s: %s\n",
+				r->filename[i], r->whynot);
+			graph_dev_free_image_load_request(r);
+			return;
+		}
+	}
+	/* Put the data on the queue for the main thread to upload to the GPU */
+	work_queue_enqueue(loaded_images_wq, r);
+}
+
+/* Process a request to load an image */
+static void process_image_load_request(void *work)
+{
+	struct graph_dev_image_load_request *r = work;
+	switch (r->request_type) {
+	case GRAPH_DEV_IMAGE_LOAD:
+		process_image_load_request_normal(r);
+		break;
+	case GRAPH_DEV_CUBEMAP_LOAD:
+		process_image_load_request_cubemap(r);
+		break;
+	default:
+		fprintf(stderr, "Bad image load request type %d, discarding\n", r->request_type);
+		graph_dev_free_image_load_request(r);
+		break;
+	}
+}
+
+/* Set up work queues for loading texture data concurrently with main loop */
+static void graph_dev_set_up_image_loader_work_queues(void)
+{
+	image_loader_wq = work_queue_init("png-decode", IMAGE_LOADER_QUEUE_DEPTH,
+		IMAGE_LOADER_THREAD_COUNT, process_image_load_request);
+	loaded_images_wq = work_queue_init("txtr2gpu", IMAGE_LOADER_QUEUE_DEPTH, 0, NULL);
+}
+
 int graph_dev_setup(const char *shader_dir)
 {
 	glewExperimental = GL_TRUE; /* OSX apparently needs glewExperimental */
@@ -4089,6 +4144,8 @@ int graph_dev_setup(const char *shader_dir)
 
 	setup_2d();
 	setup_3d();
+
+	graph_dev_set_up_image_loader_work_queues();
 
 	return 0;
 }
@@ -4998,68 +5055,6 @@ int graph_dev_textures_ready(int *tids)
 	}
 	pthread_mutex_unlock(&finished_loading_mutex);
 	return 1;
-}
-
-static void process_image_load_request_normal(struct graph_dev_image_load_request *r)
-{
-	r->image_data[0] = png_utils_read_png_image(r->filename[0],
-				r->flipVertical, r->flipHorizontal, r->pre_multiply_alpha,
-				&r->w[0], &r->h[0], &r->hasAlpha[0], r->whynot, sizeof(r->whynot));
-	if (!r->image_data[0]) {
-		fprintf(stderr, "Failed to decode image file '%s: %s\n",
-			r->filename[0], r->whynot);
-		graph_dev_free_image_load_request(r);
-		return;
-	}
-	/* Put the data on the queue for the main thread to upload to the GPU */
-	work_queue_enqueue(loaded_images_wq, r);
-}
-
-static void process_image_load_request_cubemap(struct graph_dev_image_load_request *r)
-{
-	for (int i = 0; i < 6; i++) {
-		r->image_data[i] = png_utils_read_png_image(r->filename[i], 0, r->is_inside, 1,
-			&r->w[i], &r->h[i], &r->hasAlpha[i], r->whynot, sizeof(r->whynot));
-		if (!r->image_data[i]) {
-			fprintf(stderr, "Failed to decode image file '%s: %s\n",
-				r->filename[i], r->whynot);
-			graph_dev_free_image_load_request(r);
-			return;
-		}
-	}
-	/* Put the data on the queue for the main thread to upload to the GPU */
-	work_queue_enqueue(loaded_images_wq, r);
-}
-
-/* Process a request to load an image */
-static void process_image_load_request(void *work)
-{
-	struct graph_dev_image_load_request *r = work;
-	switch (r->request_type) {
-	case GRAPH_DEV_IMAGE_LOAD:
-		process_image_load_request_normal(r);
-		break;
-	case GRAPH_DEV_CUBEMAP_LOAD:
-		process_image_load_request_cubemap(r);
-		break;
-	default:
-		fprintf(stderr, "Bad image load request type %d, discarding\n", r->request_type);
-		graph_dev_free_image_load_request(r);
-		break;
-	}
-}
-
-/* Set up work queue for loading texture data concurrently with main loop */
-void graph_dev_set_up_image_loader_work_queues(void)
-{
-	image_loader_wq = work_queue_init("png-decode", IMAGE_LOADER_QUEUE_DEPTH,
-		IMAGE_LOADER_THREAD_COUNT, process_image_load_request);
-	loaded_images_wq = work_queue_init("txtr2gpu", IMAGE_LOADER_QUEUE_DEPTH, 0, NULL);
-}
-
-struct graph_dev_image_load_request *graph_dev_get_completed_image_load_request(void)
-{
-	return (struct graph_dev_image_load_request *) work_queue_dequeue(loaded_images_wq);
 }
 
 /* Enqueue request to load a texture.  The texture will be loaded in another thread,
