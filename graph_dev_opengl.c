@@ -3999,6 +3999,16 @@ void graph_dev_reload_all_shaders(void)
 		setup_smaa_effect(&smaa_effect);
 }
 
+static void enqueue_image_load_request(struct graph_dev_image_load_request *r)
+{
+	work_queue_enqueue(image_loader_wq, r);
+}
+
+static void enqueue_image_load_completion(struct graph_dev_image_load_request *r)
+{
+	work_queue_enqueue(loaded_images_wq, r);
+}
+
 static void process_image_load_request_normal(struct graph_dev_image_load_request *r)
 {
 	r->image_data[0] = png_utils_read_png_image(r->filename[0],
@@ -4011,7 +4021,7 @@ static void process_image_load_request_normal(struct graph_dev_image_load_reques
 		return;
 	}
 	/* Put the data on the queue for the main thread to upload to the GPU */
-	work_queue_enqueue(loaded_images_wq, r);
+	enqueue_image_load_completion(r);
 }
 
 static void process_image_load_request_cubemap(struct graph_dev_image_load_request *r)
@@ -4027,7 +4037,7 @@ static void process_image_load_request_cubemap(struct graph_dev_image_load_reque
 		}
 	}
 	/* Put the data on the queue for the main thread to upload to the GPU */
-	work_queue_enqueue(loaded_images_wq, r);
+	enqueue_image_load_completion(r);
 }
 
 /* Process a request to load an image */
@@ -4179,11 +4189,31 @@ static int cubemap_texture_to_gpu(struct graph_dev_image_load_request *r)
 				(r->hasAlpha[i] ? GL_RGBA : GL_RGB), GL_UNSIGNED_BYTE, image_data);
 	}
 	glGenerateMipmap(GL_TEXTURE_CUBE_MAP);
-	GLuint tid = r->texture_id;
-	graph_dev_free_image_load_request(r);
+
 	pthread_mutex_lock(&finished_loading_mutex);
+
+	/* Are we re-using a texture name or making a new one? */
+	int n;
+	if (r->loaded_texture_index == -1)
+		n = nloaded_cubemap_textures;
+	else
+		n = r->loaded_texture_index;
+	loaded_cubemap_textures[n].texture_id = r->texture_id;
+	loaded_cubemap_textures[n].is_inside = r->is_inside;
+	loaded_cubemap_textures[n].linear_colorspace = r->linear_colorspace;
+	for (i = 0; i < NCUBEMAP_TEXTURES; i++) {
+		if (loaded_cubemap_textures[n].filename[i])
+			free(loaded_cubemap_textures[n].filename[i]);
+		loaded_cubemap_textures[n].filename[i] = strdup(r->filename[i]);
+	}
+	if (r->loaded_texture_index == -1)
+		nloaded_cubemap_textures++;
+
+	GLuint tid = r->texture_id;
 	texture_finished_loading[tid] = 1;
+
 	pthread_mutex_unlock(&finished_loading_mutex);
+	graph_dev_free_image_load_request(r);
 	return 0;
 }
 
@@ -4255,6 +4285,7 @@ unsigned int graph_dev_load_cubemap_texture_deferred(
 	const char *texture_filename_pos_z,
 	const char *texture_filename_neg_z)
 {
+	int loaded_texture_index = -1;
 	const char *tex_filenames[] = {
 		texture_filename_pos_x, texture_filename_neg_x,
 		texture_filename_pos_y, texture_filename_neg_y,
@@ -4262,6 +4293,7 @@ unsigned int graph_dev_load_cubemap_texture_deferred(
 
 	int i, j;
 	/* Check if we already loaded this texture */
+	pthread_mutex_lock(&finished_loading_mutex);
 	for (i = 0; i < nloaded_cubemap_textures; i++) {
 		if (loaded_cubemap_textures[i].is_inside == is_inside) {
 			int match = 1;
@@ -4273,6 +4305,7 @@ unsigned int graph_dev_load_cubemap_texture_deferred(
 			}
 			if (match) {
 				loaded_cubemap_textures[i].expired = 0;
+				pthread_mutex_unlock(&finished_loading_mutex);
 				return loaded_cubemap_textures[i].texture_id;
 			}
 		}
@@ -4283,11 +4316,8 @@ unsigned int graph_dev_load_cubemap_texture_deferred(
 	for (i = 0; i < nloaded_cubemap_textures; i++) {
 		if (loaded_cubemap_textures[i].expired) {
 			cube_texture_id = loaded_cubemap_textures[i].texture_id;
+			loaded_texture_index = i;
 			glDeleteTextures(1, &cube_texture_id);
-#if 0
-			if (load_cubemap_texture_id(cube_texture_id, is_inside, linear_colorspace, tex_filenames))
-				return 0;
-#endif
 			loaded_cubemap_textures[i].is_inside = is_inside;
 			loaded_cubemap_textures[i].expired = 0;
 			for (j = 0; j < NCUBEMAP_TEXTURES; j++) {
@@ -4309,21 +4339,14 @@ unsigned int graph_dev_load_cubemap_texture_deferred(
 	}
 
 	if (cube_texture_id == (GLuint) -1)
-		graph_dev_gen_texture(1, &cube_texture_id);
+		graph_dev_gen_texture_no_lock(1, &cube_texture_id);
 
-	loaded_cubemap_textures[nloaded_cubemap_textures].texture_id = cube_texture_id;
-	loaded_cubemap_textures[nloaded_cubemap_textures].is_inside = is_inside;
-	loaded_cubemap_textures[nloaded_cubemap_textures].linear_colorspace = linear_colorspace;
-	for (i = 0; i < NCUBEMAP_TEXTURES; i++)
-		loaded_cubemap_textures[nloaded_cubemap_textures].filename[i] = strdup(tex_filenames[i]);
-	nloaded_cubemap_textures++;
-
-	pthread_mutex_lock(&finished_loading_mutex);
 	texture_finished_loading[cube_texture_id] = 0;
 	pthread_mutex_unlock(&finished_loading_mutex);
 
 	struct graph_dev_image_load_request *r = calloc(1, sizeof(*r));
 	r->texture_id = cube_texture_id;
+	r->loaded_texture_index = loaded_texture_index;
 	r->request_type = GRAPH_DEV_CUBEMAP_LOAD;
 	r->is_inside = is_inside;
 	r->linear_colorspace = linear_colorspace;
@@ -4334,10 +4357,9 @@ unsigned int graph_dev_load_cubemap_texture_deferred(
 	r->pre_multiply_alpha = 1;
 	r->use_mipmaps = 1;
 
-	work_queue_enqueue(image_loader_wq, r);
+	enqueue_image_load_request(r);
 	return (unsigned int) cube_texture_id;
 }
-
 
 static time_t get_file_modify_time(const char *filename)
 {
@@ -4368,7 +4390,6 @@ int graph_dev_reload_cubemap_textures(void)
 		r[i]->is_inside = loaded_cubemap_textures[i].is_inside;
 		r[i]->linear_colorspace = loaded_cubemap_textures[i].linear_colorspace;
 		for (int j = 0; j < 6; j++) {
-			/* FIXME: pretty sure we're leaking here */
 			r[i]->filename[j] = strdup(loaded_cubemap_textures[i].filename[j]);
 		}
 		r[i]->flipVertical = 1;
@@ -4381,7 +4402,7 @@ int graph_dev_reload_cubemap_textures(void)
 
 	/* Submit list of requests to work queue */
 	for (int i = 0; i < n; i++)
-		work_queue_enqueue(image_loader_wq, r[i]);
+		enqueue_image_load_request(r[i]);
 	/* the indivdual pointers within r[] will get freed after the work is processed
 	 * but we need to free r itself now.
 	 */
@@ -4448,15 +4469,19 @@ unsigned int graph_dev_texture_to_gpu(struct graph_dev_image_load_request *r)
 	}
 
 	pthread_mutex_lock(&finished_loading_mutex);
-	loaded_textures[nloaded_textures].texture_id = r->texture_id;
-	loaded_textures[nloaded_textures].filename = strdup(r->filename[0]);
-	loaded_textures[nloaded_textures].mtime = get_file_modify_time(r->filename[0]);
-	loaded_textures[nloaded_textures].last_mtime_change = 0;
-	loaded_textures[nloaded_textures].expired = 0;
-	loaded_textures[nloaded_textures].use_mipmaps = r->use_mipmaps;
-	loaded_textures[nloaded_textures].linear_colorspace = r->linear_colorspace;
+	int n = (r->loaded_texture_index != -1) ?  r->loaded_texture_index : nloaded_textures;
+	loaded_textures[n].texture_id = r->texture_id;
+	if (loaded_textures[n].filename)
+		free(loaded_textures[n].filename);
+	loaded_textures[n].filename = strdup(r->filename[0]);
+	loaded_textures[n].mtime = get_file_modify_time(r->filename[0]);
+	loaded_textures[n].last_mtime_change = 0;
+	loaded_textures[n].expired = 0;
+	loaded_textures[n].use_mipmaps = r->use_mipmaps;
+	loaded_textures[n].linear_colorspace = r->linear_colorspace;
 
-	nloaded_textures++;
+	if (r->loaded_texture_index == -1)
+		nloaded_textures++;
 	int tid = r->texture_id;
 	texture_finished_loading[tid] = 1;
 	pthread_mutex_unlock(&finished_loading_mutex);
@@ -4496,6 +4521,7 @@ int graph_dev_reload_textures(void)
 	for (i = 0; i < n; i++) {
 		r[i] = calloc(1, sizeof(*r[i]));
 		r[i]->texture_id = loaded_textures[i].texture_id;
+		r[i]->loaded_texture_index = i;
 		r[i]->request_type = GRAPH_DEV_IMAGE_LOAD;
 		r[i]->filename[0] = strdup(loaded_textures[i].filename);
 		r[i]->flipVertical = 1;
@@ -4508,7 +4534,7 @@ int graph_dev_reload_textures(void)
 
 	/* Submit the list of requests to re-load all the textures to work queue */
 	for (int i = 0; i < n; i++)
-		work_queue_enqueue(image_loader_wq, r[i]);
+		enqueue_image_load_request(r[i]);
 
 	/* the indivdual pointers within r[] will get freed after the work is processed
 	 * but we need to free r itself now.
@@ -4534,6 +4560,7 @@ int graph_dev_reload_changed_textures(void)
 			printf("reloading texture '%s'\n", loaded_textures[i].filename);
 			r[n] = calloc(1, sizeof(*r[n]));
 			r[n]->texture_id = loaded_textures[i].texture_id;
+			r[n]->loaded_texture_index = i;
 			r[n]->request_type = GRAPH_DEV_IMAGE_LOAD;
 			r[n]->filename[0] = strdup(loaded_textures[i].filename);
 			r[n]->flipVertical = 1;
@@ -4549,7 +4576,7 @@ int graph_dev_reload_changed_textures(void)
 
 	/* Submit list of requests to image loader work queue */
 	for (int i = 0; i < n; i++)
-		work_queue_enqueue(image_loader_wq, r[i]);
+		enqueue_image_load_request(r[i]);
 
 	/* the indivdual pointers within r[] will get freed after the work is processed
 	 * but we need to free r itself now.
@@ -4577,13 +4604,12 @@ int graph_dev_reload_changed_cubemap_textures(void)
 			loaded_cubemap_textures[i].last_mtime_change = 0;
 			r[n] = calloc(1, sizeof(*r[n]));
 			r[n]->texture_id = loaded_cubemap_textures[i].texture_id;
+			r[n]->loaded_texture_index = i;
 			r[n]->request_type = GRAPH_DEV_CUBEMAP_LOAD;
 			r[n]->is_inside = loaded_cubemap_textures[i].is_inside;
 			r[n]->linear_colorspace = loaded_cubemap_textures[i].linear_colorspace;
-			for (int j = 0; j < 6; j++) {
-				/* FIXME: pretty sure we're leaking here */
+			for (int j = 0; j < 6; j++)
 				r[n]->filename[j] = strdup(loaded_cubemap_textures[i].filename[j]);
-			}
 			r[n]->flipVertical = 1;
 			r[n]->flipHorizontal = 0;
 			r[n]->pre_multiply_alpha = 1;
@@ -4594,7 +4620,7 @@ int graph_dev_reload_changed_cubemap_textures(void)
 	pthread_mutex_unlock(&finished_loading_mutex);
 
 	for (int i = 0; i < n; i++)
-		work_queue_enqueue(image_loader_wq, r[i]);
+		enqueue_image_load_request(r[i]);
 	free(r);
 	return 0;
 }
@@ -4856,6 +4882,7 @@ static unsigned int graph_dev_load_texture_deferred_helper(const char *filename,
 
 	/* See if we can re-use an expired texture id */
 	int reusing_expired_texture_id = 0;
+	int index = -1;
 	for (i = 0; i < nloaded_textures; i++) {
 		if (loaded_textures[i].expired) {
 			glBindTexture(GL_TEXTURE_2D, 0);
@@ -4872,6 +4899,7 @@ static unsigned int graph_dev_load_texture_deferred_helper(const char *filename,
 			texture_id = loaded_textures[i].texture_id;
 			texture_finished_loading[texture_id] = 0;
 			reusing_expired_texture_id = 1;
+			index = i;
 			break;
 		}
 	}
@@ -4883,6 +4911,7 @@ static unsigned int graph_dev_load_texture_deferred_helper(const char *filename,
 	/* Queue up the image load request */
 	struct graph_dev_image_load_request *r = calloc(1, sizeof(*r));
 	r->texture_id = (int) texture_id;
+	r->loaded_texture_index = index;
 	r->request_type = GRAPH_DEV_IMAGE_LOAD;
 	r->filename[0] = strdup(filename);
 	r->flipVertical = 1;
@@ -4891,7 +4920,7 @@ static unsigned int graph_dev_load_texture_deferred_helper(const char *filename,
 	r->linear_colorspace = linear_colorspace;
 	r->use_mipmaps = use_mipmaps;
 
-	work_queue_enqueue(image_loader_wq, r);
+	enqueue_image_load_request(r);
 	return texture_id;
 }
 

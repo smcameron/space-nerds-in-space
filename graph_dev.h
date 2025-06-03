@@ -97,6 +97,7 @@ struct graph_dev_image_load_request {
 	int w[6], h[6], hasAlpha[6];
 	int is_inside; /* used by cubemaps for skybox vs. planet */
 	char whynot[256];
+	int loaded_texture_index;
 };
 
 extern unsigned int graph_dev_load_texture_deferred(const char *filename, int linear_colorspace);
