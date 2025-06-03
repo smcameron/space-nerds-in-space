@@ -181,7 +181,7 @@ struct vertex_particle_buffer_data {
 	GLubyte end_apm[2];
 };
 
-static void graph_dev_gen_texture(int count, GLuint *texture_name)
+static void graph_dev_gen_texture_maybe_lock(int count, GLuint *texture_name, int lock)
 {
 	glGenTextures(count, texture_name);
 
@@ -190,10 +190,22 @@ static void graph_dev_gen_texture(int count, GLuint *texture_name)
 	 * are guaranteed to be small integers from 0 ... number-of-textures though
 	 * in practice, they appear to behave in that way.
 	 */
-	pthread_mutex_lock(&finished_loading_mutex);
+	if (lock)
+		pthread_mutex_lock(&finished_loading_mutex);
 	for (int i = 0; i < count; i++)
 		texture_finished_loading[texture_name[i]] = 0;
-	pthread_mutex_unlock(&finished_loading_mutex);
+	if (lock)
+		pthread_mutex_unlock(&finished_loading_mutex);
+}
+
+static void graph_dev_gen_texture(int count, GLuint *texture_name)
+{
+	graph_dev_gen_texture_maybe_lock(count, texture_name, 1);
+}
+
+static void graph_dev_gen_texture_no_lock(int count, GLuint *texture_name)
+{
+	graph_dev_gen_texture_maybe_lock(count, texture_name, 0);
 }
 
 void mesh_graph_dev_cleanup(struct mesh *m)
@@ -4157,21 +4169,26 @@ void graph_dev_expire_all_textures(void)
 {
 	int i;
 
+	pthread_mutex_lock(&finished_loading_mutex);
 	for (i = 0; i < nloaded_textures; i++)
 		loaded_textures[i].expired = 1;
 	for (i = 0; i < nloaded_cubemap_textures; i++)
 		loaded_cubemap_textures[i].expired = 1;
+	pthread_mutex_unlock(&finished_loading_mutex);
 }
 
 void graph_dev_expire_texture(char *filename)
 {
 	int i;
 
+	pthread_mutex_lock(&finished_loading_mutex);
 	for (i = 0; i < nloaded_textures; i++)
 		if (strcmp(loaded_textures[i].filename, filename) == 0) {
 			loaded_textures[i].expired = 1;
+			pthread_mutex_unlock(&finished_loading_mutex);
 			return;
 		}
+	pthread_mutex_unlock(&finished_loading_mutex);
 }
 
 void graph_dev_expire_cubemap_texture(int is_inside,
@@ -4412,6 +4429,8 @@ int graph_dev_reload_cubemap_textures(void)
 /* If linear_colorspace is true, tell OPENGL to use GL_RGB8 or GL_RGBA8, otherwise, GL_SRGB8 or GL_SRGB8_ALPHA8,
  * In general use linear_colorspace = 0 for diffuse (albedo), emission, specular (if we had those),
  * linear_colorspace = 1 for normal maps.
+ *
+ * finished_loading_mutex should be held when calling this.
  */
 static int load_texture_id(GLuint texture_number, const char *filename, int use_mipmaps, int linear_colorspace)
 {
@@ -4420,9 +4439,7 @@ static int load_texture_id(GLuint texture_number, const char *filename, int use_
 	int tw, th, hasAlpha = 1;
 	GLint colorspace;
 
-	pthread_mutex_lock(&finished_loading_mutex);
 	texture_finished_loading[texture_number] = 0;
-	pthread_mutex_unlock(&finished_loading_mutex);
 
 	if (linear_colorspace)
 		colorspace = hasAlpha ? GL_RGBA8 : GL_RGB8;
@@ -4453,9 +4470,7 @@ static int load_texture_id(GLuint texture_number, const char *filename, int use_
 		free(image_data);
 		if (use_mipmaps)
 			glGenerateMipmap(GL_TEXTURE_2D);
-		pthread_mutex_lock(&finished_loading_mutex);
 		texture_finished_loading[texture_number] = 1;
-		pthread_mutex_unlock(&finished_loading_mutex);
 		return 0;
 	}
 	fprintf(stderr, "Unable to load texture '%s': %s\n", filename, whynotz);
@@ -4492,24 +4507,26 @@ static int texture_to_gpu_id(GLuint texture_number, char *image_data,
 			(hasAlpha ? GL_RGBA : GL_RGB), GL_UNSIGNED_BYTE, image_data);
 	if (use_mipmaps)
 		glGenerateMipmap(GL_TEXTURE_2D);
-	pthread_mutex_lock(&finished_loading_mutex);
-	texture_finished_loading[texture_number] = 1;
-	pthread_mutex_unlock(&finished_loading_mutex);
 	return 0;
 }
 
 /* returning unsigned int instead of GLuint so as not to leak opengl types out
  * Kind of ugly, but should not be dangerous.
+ *
+ * This function is deprecated
  */
 static unsigned int graph_dev_load_texture_and_mipmap(const char *filename, int use_mipmaps, int linear_colorspace)
 {
 	int i;
 
 	/* See if we already loaded this texture */
+	pthread_mutex_lock(&finished_loading_mutex);
 	for (i = 0; i < nloaded_textures; i++) {
 		if (strcmp(filename, loaded_textures[i].filename) == 0) {
 			loaded_textures[i].expired = 0;
-			return loaded_textures[i].texture_id;
+			int id = (int) loaded_textures[i].texture_id;
+			pthread_mutex_unlock(&finished_loading_mutex);
+			return id;
 		}
 	}
 
@@ -4521,6 +4538,7 @@ static unsigned int graph_dev_load_texture_and_mipmap(const char *filename, int 
 			fprintf(stderr, "Replacing %s with %s\n", loaded_textures[i].filename, filename);
 			if (load_texture_id(loaded_textures[i].texture_id, filename, use_mipmaps, linear_colorspace)) {
 				fprintf(stderr, "Failed to load texture from '%s'\n", filename);
+				pthread_mutex_unlock(&finished_loading_mutex);
 				return 0;
 			}
 			if (loaded_textures[i].filename)
@@ -4531,6 +4549,7 @@ static unsigned int graph_dev_load_texture_and_mipmap(const char *filename, int 
 			loaded_textures[i].expired = 0;
 			loaded_textures[i].use_mipmaps = use_mipmaps;
 			loaded_textures[i].linear_colorspace = linear_colorspace;
+			pthread_mutex_unlock(&finished_loading_mutex);
 			return loaded_textures[i].texture_id;
 		}
 	}
@@ -4538,15 +4557,17 @@ static unsigned int graph_dev_load_texture_and_mipmap(const char *filename, int 
 	if (nloaded_textures >= MAX_LOADED_TEXTURES) {
 		printf("Unable to load texture '%s': max of %d textures are already loaded\n",
 			filename, nloaded_textures);
+		pthread_mutex_unlock(&finished_loading_mutex);
 		return 0;
 	}
 
 	GLuint texture_number;
-	graph_dev_gen_texture(1, &texture_number);
+	graph_dev_gen_texture_no_lock(1, &texture_number);
 
 	if (load_texture_id(texture_number, filename, use_mipmaps, linear_colorspace)) {
 		glDeleteTextures(1, &texture_number);
 		fprintf(stderr, "Failed to load texture from '%s'\n", filename);
+		pthread_mutex_unlock(&finished_loading_mutex);
 		return 0;
 	}
 
@@ -4559,6 +4580,7 @@ static unsigned int graph_dev_load_texture_and_mipmap(const char *filename, int 
 	loaded_textures[nloaded_textures].linear_colorspace = linear_colorspace;
 
 	nloaded_textures++;
+	pthread_mutex_unlock(&finished_loading_mutex);
 
 	return (unsigned int) texture_number;
 }
@@ -4588,6 +4610,7 @@ unsigned int graph_dev_texture_to_gpu(struct graph_dev_image_load_request *r)
 		return 0;
 	}
 
+	pthread_mutex_lock(&finished_loading_mutex);
 	loaded_textures[nloaded_textures].texture_id = r->texture_id;
 	loaded_textures[nloaded_textures].filename = strdup(r->filename[0]);
 	loaded_textures[nloaded_textures].mtime = get_file_modify_time(r->filename[0]);
@@ -4597,12 +4620,10 @@ unsigned int graph_dev_texture_to_gpu(struct graph_dev_image_load_request *r)
 	loaded_textures[nloaded_textures].linear_colorspace = r->linear_colorspace;
 
 	nloaded_textures++;
-
 	int tid = r->texture_id;
-	graph_dev_free_image_load_request(r);
-	pthread_mutex_lock(&finished_loading_mutex);
 	texture_finished_loading[tid] = 1;
 	pthread_mutex_unlock(&finished_loading_mutex);
+	graph_dev_free_image_load_request(r);
 	return (unsigned int) tid;
 }
 
@@ -4619,16 +4640,33 @@ unsigned int graph_dev_load_texture_no_mipmaps(const char *filename, int linear_
 const char *graph_dev_get_texture_filename(unsigned int texture_id)
 {
 	int i;
+	pthread_mutex_lock(&finished_loading_mutex);
 	for (i = 0; i < nloaded_textures; i++) {
 		if (texture_id == loaded_textures[i].texture_id) {
-			return loaded_textures[i].filename;
+			char *fname = loaded_textures[i].filename;
+			pthread_mutex_unlock(&finished_loading_mutex);
+			/* FIXME: Racy to allow this to be used, why do I need this?
+			 * digging into it, it appears only to be used (eventually) by
+			 * material_nebula_write_to_file(), which isn't used anywhere?
+			 * Probably used at one point to create the data in
+			 * share/snis/material/nebula*.mat
+			 */
+			return fname;
 		}
 	}
+	pthread_mutex_unlock(&finished_loading_mutex);
 	return "";
 }
 
 int graph_dev_reload_textures(void)
 {
+	/* Plan of attack to fix the race inherent here:
+	 *
+	 * 1. lock finished_loading_mutex
+	 * 2. Build array of graph_dev_image_load_request based on current textures
+	 * 3. unlock finished_loading_mutex
+	 * 4. submit array of requests to work queue
+	 */
 	int i;
 	for (i = 0; i < nloaded_textures; i++) {
 		load_texture_id(loaded_textures[i].texture_id, loaded_textures[i].filename,
@@ -4639,6 +4677,7 @@ int graph_dev_reload_textures(void)
 
 int graph_dev_reload_changed_textures(void)
 {
+	/* similar plan of attack to fix races here as graph_dev_reload_textures */
 	int i;
 	for (i = 0; i < nloaded_textures; i++) {
 		time_t mtime = get_file_modify_time(loaded_textures[i].filename);
@@ -4659,6 +4698,7 @@ int graph_dev_reload_changed_textures(void)
 /* returns 0 on success */
 int graph_dev_reload_changed_cubemap_textures(void)
 {
+	/* similar plan of attack to fix races here as graph_dev_reload_textures */
 	int i, failed = 0;
 	for (i = 0; i < nloaded_cubemap_textures; i++) {
 		time_t mtime = get_file_modify_time(loaded_cubemap_textures[i].filename[5]);
@@ -5007,10 +5047,13 @@ static unsigned int graph_dev_load_texture_deferred_helper(const char *filename,
 	int i;
 
 	/* See if we already loaded this texture */
+	pthread_mutex_lock(&finished_loading_mutex);
 	for (i = 0; i < nloaded_textures; i++) {
 		if (strcmp(filename, loaded_textures[i].filename) == 0) {
 			loaded_textures[i].expired = 0;
-			return loaded_textures[i].texture_id;
+			int tid = (int) loaded_textures[i].texture_id;
+			pthread_mutex_unlock(&finished_loading_mutex);
+			return tid;
 		}
 	}
 
@@ -5021,12 +5064,6 @@ static unsigned int graph_dev_load_texture_deferred_helper(const char *filename,
 			glBindTexture(GL_TEXTURE_2D, 0);
 			glDeleteTextures(1, &loaded_textures[i].texture_id);
 			fprintf(stderr, "Replacing %s with %s\n", loaded_textures[i].filename, filename);
-#if 0
-			if (load_texture_id(loaded_textures[i].texture_id, filename, use_mipmaps, linear_colorspace)) {
-				fprintf(stderr, "Failed to load texture from '%s'\n", filename);
-				return 0;
-			}
-#endif
 			if (loaded_textures[i].filename)
 				free(loaded_textures[i].filename);
 			loaded_textures[i].filename = strdup(filename);
@@ -5036,16 +5073,15 @@ static unsigned int graph_dev_load_texture_deferred_helper(const char *filename,
 			loaded_textures[i].use_mipmaps = use_mipmaps;
 			loaded_textures[i].linear_colorspace = linear_colorspace;
 			texture_id = loaded_textures[i].texture_id;
-			pthread_mutex_lock(&finished_loading_mutex);
 			texture_finished_loading[texture_id] = 0;
-			pthread_mutex_unlock(&finished_loading_mutex);
 			reusing_expired_texture_id = 1;
 			break;
 		}
 	}
 
 	if (!reusing_expired_texture_id)
-		graph_dev_gen_texture(1, &texture_id);
+		graph_dev_gen_texture_no_lock(1, &texture_id);
+	pthread_mutex_unlock(&finished_loading_mutex);
 
 	/* Queue up the image load request */
 	struct graph_dev_image_load_request *r = calloc(1, sizeof(*r));
