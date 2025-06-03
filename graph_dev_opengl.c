@@ -56,9 +56,9 @@
 #define DEBUG_NORMALS 0
 #define TEX_RELOAD_DELAY 1.0
 #define CUBEMAP_TEX_RELOAD_DELAY 1.0
-#define MAX_LOADED_TEXTURES 100
+#define MAX_LOADED_TEXTURES 300
 
-#define IMAGE_LOADER_QUEUE_DEPTH 100
+#define IMAGE_LOADER_QUEUE_DEPTH 300
 #define IMAGE_LOADER_THREAD_COUNT 4
 static struct work_queue *image_loader_wq = NULL; /* queue of requests to load PNG images */
 static struct work_queue *loaded_images_wq = NULL; /* queue of decoded image data to upload to GPU */
