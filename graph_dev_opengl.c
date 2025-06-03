@@ -2953,8 +2953,33 @@ static void graph_dev_raster_full_screen_effect(struct graph_dev_gl_fs_effect_sh
 	glUseProgram(0);
 }
 
+/* If any textures loads (PNG decoding) have completed, send them to the GPU */
+static void graph_dev_send_completed_textures_to_gpu(void)
+{
+	struct graph_dev_image_load_request *r;
+
+	do {
+		r  = graph_dev_get_completed_image_load_request();
+		if (!r)
+			return;
+
+		switch (r->request_type) {
+		case GRAPH_DEV_IMAGE_LOAD:
+		case GRAPH_DEV_CUBEMAP_LOAD:
+			(void) graph_dev_texture_to_gpu(r);
+			break;
+		default:
+			fprintf(stderr, "Unknown graph dev image load request type %d\n",
+				r->request_type);
+			break;
+		}
+	} while (1);
+}
+
 void graph_dev_start_frame(void)
 {
+	graph_dev_send_completed_textures_to_gpu();
+
 	/* reset viewport to whole screen */
 	sgc.active_vp = 0;
 	VIEWPORT(0, 0, sgc.screen_x, sgc.screen_y);
