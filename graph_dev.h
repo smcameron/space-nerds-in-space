@@ -64,7 +64,7 @@ extern void graph_dev_draw_point(float x, float y);
 extern void graph_dev_draw_arc(int filled, float x, float y, float width, float height,
 	float angle1, float angle2);
 
-extern int graph_dev_load_skybox_texture_deferred(
+extern int graph_dev_load_skybox_texture(
 	const char *texture_filename_pos_x,
 	const char *texture_filename_neg_x,
 	const char *texture_filename_pos_y,
@@ -72,7 +72,7 @@ extern int graph_dev_load_skybox_texture_deferred(
 	const char *texture_filename_pos_z,
 	const char *texture_filename_neg_z);
 
-extern unsigned int graph_dev_load_cubemap_texture_deferred(
+extern unsigned int graph_dev_load_cubemap_texture(
 	int is_inside,
 	int linear_colorspace,
 	const char *texture_filename_pos_x,
@@ -100,8 +100,8 @@ struct graph_dev_image_load_request {
 	int loaded_texture_index;
 };
 
-extern unsigned int graph_dev_load_texture_deferred(const char *filename, int linear_colorspace);
-extern unsigned int graph_dev_load_texture_deferred_no_mipmaps(const char *filename, int linear_colorspace);
+extern unsigned int graph_dev_load_texture(const char *filename, int linear_colorspace);
+extern unsigned int graph_dev_load_texture_no_mipmaps(const char *filename, int linear_colorspace);
 extern unsigned int graph_dev_texture_to_gpu(struct graph_dev_image_load_request *r);
 extern unsigned int graph_dev_texture_to_gpu_no_mipmaps(int texture_id, const char *filename, char *image_data,
 				int w, int h, int hasAlpha, int linear_colorspace);

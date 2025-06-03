@@ -1126,15 +1126,15 @@ struct mesh *read_obj_file(char *file_name)
 
 				mtl = malloc(sizeof(*mtl));
 				material_init_texture_mapped(mtl);
-				mtl->texture_mapped.texture_id = graph_dev_load_texture_deferred(maybe_replace_asset(tfile), 0);
+				mtl->texture_mapped.texture_id = graph_dev_load_texture(maybe_replace_asset(tfile), 0);
 				if (strcmp(efile, "") != 0)
 					mtl->texture_mapped.emit_texture_id =
-						graph_dev_load_texture_deferred(maybe_replace_asset(efile), 0);
+						graph_dev_load_texture(maybe_replace_asset(efile), 0);
 				if (strcmp(nfile, "") == 0)
 					search_for_normalmap_file(filename, nfile, sizeof(nfile));
 				if (strcmp(nfile, "") != 0) {
 					mtl->texture_mapped.normalmap_id =
-						graph_dev_load_texture_deferred(maybe_replace_asset(nfile), 1);
+						graph_dev_load_texture(maybe_replace_asset(nfile), 1);
 				}
 				m->material = mtl;
 			}

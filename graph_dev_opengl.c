@@ -4275,7 +4275,7 @@ void graph_dev_expire_cubemap_texture(int is_inside,
 	}
 }
 
-unsigned int graph_dev_load_cubemap_texture_deferred(
+unsigned int graph_dev_load_cubemap_texture(
 	int is_inside,
 	int linear_colorspace,
 	const char *texture_filename_pos_x,
@@ -4321,7 +4321,7 @@ unsigned int graph_dev_load_cubemap_texture_deferred(
 			loaded_cubemap_textures[i].is_inside = is_inside;
 			loaded_cubemap_textures[i].expired = 0;
 			for (j = 0; j < NCUBEMAP_TEXTURES; j++) {
-				fprintf(stderr, "Replacing %s with %s (deferred)\n",
+				fprintf(stderr, "Replacing %s with %s\n",
 					loaded_cubemap_textures[i].filename[j], tex_filenames[j]);
 				if (loaded_cubemap_textures[i].filename[j])
 					free(loaded_cubemap_textures[i].filename[j]);
@@ -4626,7 +4626,7 @@ int graph_dev_reload_changed_cubemap_textures(void)
 }
 
 /* returns 0 on success, -1 otherwise */
-int graph_dev_load_skybox_texture_deferred(
+int graph_dev_load_skybox_texture(
 	const char *texture_filename_pos_x,
 	const char *texture_filename_neg_x,
 	const char *texture_filename_pos_y,
@@ -4634,7 +4634,7 @@ int graph_dev_load_skybox_texture_deferred(
 	const char *texture_filename_pos_z,
 	const char *texture_filename_neg_z)
 {
-	skybox_shader.cube_texture_id = graph_dev_load_cubemap_texture_deferred(1, 0, texture_filename_pos_x,
+	skybox_shader.cube_texture_id = graph_dev_load_cubemap_texture(1, 0, texture_filename_pos_x,
 		texture_filename_neg_x, texture_filename_pos_y, texture_filename_neg_y, texture_filename_pos_z,
 		texture_filename_neg_z);
 
@@ -4864,7 +4864,7 @@ int graph_dev_textures_ready(int *tids)
  * and the image data will appear in the loaded_images_wq work queue later on where
  * the main rendering thread can upload it to the GPU
  */
-static unsigned int graph_dev_load_texture_deferred_helper(const char *filename, int linear_colorspace, int use_mipmaps)
+static unsigned int graph_dev_load_texture_helper(const char *filename, int linear_colorspace, int use_mipmaps)
 {
 	GLuint texture_id;
 	int i;
@@ -4924,13 +4924,13 @@ static unsigned int graph_dev_load_texture_deferred_helper(const char *filename,
 	return texture_id;
 }
 
-unsigned int graph_dev_load_texture_deferred(const char *filename, int linear_colorspace)
+unsigned int graph_dev_load_texture(const char *filename, int linear_colorspace)
 {
-	return graph_dev_load_texture_deferred_helper(filename, linear_colorspace, 1);
+	return graph_dev_load_texture_helper(filename, linear_colorspace, 1);
 }
 
-unsigned int graph_dev_load_texture_deferred_no_mipmaps(const char *filename, int linear_colorspace)
+unsigned int graph_dev_load_texture_no_mipmaps(const char *filename, int linear_colorspace)
 {
-	return graph_dev_load_texture_deferred_helper(filename, linear_colorspace, 0);
+	return graph_dev_load_texture_helper(filename, linear_colorspace, 0);
 }
 

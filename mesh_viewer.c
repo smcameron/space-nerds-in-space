@@ -911,7 +911,7 @@ static unsigned int load_cubemap_textures(int is_inside, int linear_colorspace, 
 	for (i = 0; i < 6; i++)
 		sprintf(filename[i], "%s%d.png", filenameprefix, i);
 
-	return graph_dev_load_cubemap_texture_deferred(is_inside, linear_colorspace,
+	return graph_dev_load_cubemap_texture(is_inside, linear_colorspace,
 			maybe_replace_asset(filename[1]),
 			maybe_replace_asset(filename[3]),
 			maybe_replace_asset(filename[4]),
@@ -934,7 +934,7 @@ static void setup_skybox(char *skybox_prefix)
 			sprintf(filename[i], "%s%d.png", skyboxfile, i);
 	}
 
-	graph_dev_load_skybox_texture_deferred(maybe_replace_asset(filename[3]),
+	graph_dev_load_skybox_texture(maybe_replace_asset(filename[3]),
 					maybe_replace_asset(filename[1]),
 					maybe_replace_asset(filename[4]),
 					maybe_replace_asset(filename[5]),
@@ -1264,7 +1264,7 @@ int main(int argc, char *argv[])
 		atmosphere_mesh = NULL;
 		material_init_textured_particle(&green_phaser_material);
 		green_phaser_material.textured_particle.texture_id =
-			graph_dev_load_texture_deferred(maybe_replace_asset("share/snis/textures/green-burst.png"), 0);
+			graph_dev_load_texture(maybe_replace_asset("share/snis/textures/green-burst.png"), 0);
 		green_phaser_material.textured_particle.radius = 0.75;
 		green_phaser_material.textured_particle.time_base = 0.25;
 	} else if (planet_mode) {
@@ -1295,7 +1295,7 @@ int main(int argc, char *argv[])
 		target_mesh = init_thrust_mesh(70, 200, 1.3);
 		material_init_textured_particle(&thrust_material);
 		thrust_material.textured_particle.texture_id =
-			graph_dev_load_texture_deferred(maybe_replace_asset(thrustfile), 0);
+			graph_dev_load_texture(maybe_replace_asset(thrustfile), 0);
 		thrust_material.textured_particle.radius = 1.5;
 		thrust_material.textured_particle.time_base = 0.1;
 	} else if (turret_mode) {
@@ -1306,7 +1306,7 @@ int main(int argc, char *argv[])
 		target_mesh = mesh_fabricate_disc(1.0, 32);
 		material_init_warp_gate_effect(&warpgate_effect_material);
 		warpgate_effect_material.texture_mapped_unlit.texture_id =
-			graph_dev_load_texture_deferred(maybe_replace_asset("share/snis/textures/warp-tunnel.png"), 0);
+			graph_dev_load_texture(maybe_replace_asset("share/snis/textures/warp-tunnel.png"), 0);
 		warpgate_effect_material.texture_mapped_unlit.do_cullface = 0;
 		warpgate_effect_material.texture_mapped_unlit.do_blend = 1;
 		warpgate_effect_material.texture_mapped_unlit.alpha = 1.0;
@@ -1322,10 +1322,10 @@ int main(int argc, char *argv[])
 			mesh_set_mikktspace_tangents_and_bitangents(target_mesh);
 			material_init_texture_mapped(&cyl_albedo);
 			cyl_albedo.texture_mapped.texture_id =
-				graph_dev_load_texture_deferred(maybe_replace_asset(cylinder_albedo), 0);
+				graph_dev_load_texture(maybe_replace_asset(cylinder_albedo), 0);
 			if (normalmapname && cyl_albedo.texture_mapped.normalmap_id <= 0)
 				cyl_albedo.texture_mapped.normalmap_id =
-					graph_dev_load_texture_deferred(maybe_replace_asset(normalmapname), 1);
+					graph_dev_load_texture(maybe_replace_asset(normalmapname), 1);
 		}
 		if (cylinder_emit && cylinder_albedo) {
 			if (cylindrical_axis == 0)
@@ -1336,10 +1336,10 @@ int main(int argc, char *argv[])
 				mesh_cylindrical_xy_uv_map(target_mesh);
 			mesh_set_mikktspace_tangents_and_bitangents(target_mesh);
 			cyl_albedo.texture_mapped.emit_texture_id =
-				graph_dev_load_texture_deferred(maybe_replace_asset(cylinder_emit), 0);
+				graph_dev_load_texture(maybe_replace_asset(cylinder_emit), 0);
 			if (normalmapname && cyl_albedo.texture_mapped.normalmap_id <= 0)
 				cyl_albedo.texture_mapped.normalmap_id =
-					graph_dev_load_texture_deferred(maybe_replace_asset(normalmapname), 1);
+					graph_dev_load_texture(maybe_replace_asset(normalmapname), 1);
 		}
 		if (use_alpha_by_normal) {
 			material_init_alpha_by_normal(&alpha_by_normal);
@@ -1352,10 +1352,10 @@ int main(int argc, char *argv[])
 		if (diffusename) {
 			material_init_texture_mapped(&diffuse_material);
 			diffuse_material.texture_mapped.texture_id =
-				graph_dev_load_texture_deferred(maybe_replace_asset(diffusename), 0);
+				graph_dev_load_texture(maybe_replace_asset(diffusename), 0);
 			if (normalmapname)
 				diffuse_material.texture_mapped.normalmap_id =
-					graph_dev_load_texture_deferred(maybe_replace_asset(normalmapname), 1);
+					graph_dev_load_texture(maybe_replace_asset(normalmapname), 1);
 		}
 		atmosphere_mesh = NULL;
 	}
@@ -1370,7 +1370,7 @@ int main(int argc, char *argv[])
 	material_init_texture_mapped_unlit(&light_material);
 	light_material.billboard_type = MATERIAL_BILLBOARD_TYPE_SCREEN;
 	light_material.texture_mapped_unlit.texture_id =
-			graph_dev_load_texture_deferred(maybe_replace_asset("share/snis/textures/sun.png"), 0);
+			graph_dev_load_texture(maybe_replace_asset("share/snis/textures/sun.png"), 0);
 	light_material.texture_mapped_unlit.do_blend = 1;
 
 	light_mesh->material = &light_material;

@@ -22960,7 +22960,7 @@ static unsigned int load_texture(char *filename, int linear_colorspace)
 	char fname[PATH_MAX + 1];
 
 	snprintf(fname, sizeof(fname), "%s/%s", asset_dir, filename);
-	return graph_dev_load_texture_deferred(replacement_asset_lookup(fname, &replacement_assets), linear_colorspace);
+	return graph_dev_load_texture(replacement_asset_lookup(fname, &replacement_assets), linear_colorspace);
 }
 
 static unsigned int load_texture_no_mipmaps(char *filename, int linear_colorspace)
@@ -22968,7 +22968,7 @@ static unsigned int load_texture_no_mipmaps(char *filename, int linear_colorspac
 	char fname[PATH_MAX + 1];
 
 	snprintf(fname, sizeof(fname), "%s/%s", asset_dir, filename);
-	return graph_dev_load_texture_deferred_no_mipmaps(replacement_asset_lookup(fname,
+	return graph_dev_load_texture_no_mipmaps(replacement_asset_lookup(fname,
 				&replacement_assets), linear_colorspace);
 }
 
@@ -23008,7 +23008,7 @@ static unsigned int load_cubemap_textures(int is_inside, char *filenameprefix, i
 		snprintf(fname, sizeof(fname), "%s/%s%d.png", asset_dir, filenameprefix, i);
 		strcpy(filename[i], replacement_asset_lookup(fname, &replacement_assets));
 	}
-	return graph_dev_load_cubemap_texture_deferred(is_inside, linear_colorspace,
+	return graph_dev_load_cubemap_texture(is_inside, linear_colorspace,
 					filename[1], filename[3], filename[4],
 					filename[5], filename[0], filename[2]);
 }
@@ -23062,7 +23062,7 @@ static void load_skybox_textures(char *filenameprefix)
 		snprintf(fname, sizeof(fname), "%s/%s%d.png", asset_dir, filenameprefix, i);
 		strcpy(filename[i], replacement_asset_lookup(fname, &replacement_assets));
 	}
-	graph_dev_load_skybox_texture_deferred(filename[3], filename[1], filename[4],
+	graph_dev_load_skybox_texture(filename[3], filename[1], filename[4],
 					filename[5], filename[0], filename[2]);
 }
 
