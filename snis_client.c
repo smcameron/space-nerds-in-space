@@ -784,6 +784,7 @@ static char switch_server_location_string[20] = { 0 };
 static int switch_warp_gate_number = -1;
 static int switch_with_redirection = 0;
 static int switched_server2 = -1;
+static int displaymode_before_switch = -1;
 static int writer_thread_should_die = 0;
 static int writer_thread_alive = 0;
 static int connected_to_gameserver = 0;
@@ -8601,6 +8602,14 @@ static int role_to_displaymode(uint32_t role)
 {
 	int displaymode, j;
 
+	/* If we're coming through a warp gate, don't mess with the displaymode */
+	if (displaymode_before_switch != -1 && (displaymode_before_switch & role)) {
+		displaymode = displaymode_before_switch;
+		displaymode_before_switch = -1;
+		return displaymode;
+	}
+
+	/* We're not coming through a warp gate, we've just started up the game */
 	displaymode = DISPLAYMODE_MAINSCREEN;
 	for (j = 0; j < 32; j++) {
 		if ((1 << j) & role) {
@@ -22947,6 +22956,7 @@ int advance_game(void)
 		/* this is a hack */
 		switched_server2 = switched_server;
 		switched_server = -1;
+		displaymode_before_switch = displaymode;
 		displaymode = DISPLAYMODE_LOBBYSCREEN;
 	}
 	pthread_mutex_unlock(&to_server_queue_event_mutex);
