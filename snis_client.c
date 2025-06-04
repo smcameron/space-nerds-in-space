@@ -363,6 +363,7 @@ static volatile int displaymode = DISPLAYMODE_LOBBYSCREEN;
 static volatile int helpmode = 0;
 static volatile float weapons_camera_shake = 0.0f; 
 static volatile float main_camera_shake = 0.0f;
+static volatile float warp_gate_camera_shake = 0.0f;
 static int terminal_reboot_timer = 0;
 static int terminal_reboot_time = 120; /* ticks */
 static float impulse_camera_shake = 1.0; /* tweakable */
@@ -8403,6 +8404,7 @@ static void *gameserver_reader(__attribute__((unused)) void *arg)
 			close(gameserver_sock);
 			gameserver_sock = -1;
 			connected_to_gameserver = 0;
+			warp_gate_camera_shake = 1.0;
 			return NULL;
 		case OPCODE_TEXTSCREEN_OP:
 			rc = process_textscreen_op();
@@ -9653,6 +9655,11 @@ static void show_weapons_camera_view(void)
 	union vec3 cam_pos = turret_pos;
 	vec3_add_self(&cam_pos, &view_offset);
 
+	if (warp_gate_camera_shake > weapons_camera_shake) {
+		weapons_camera_shake = warp_gate_camera_shake;
+		warp_gate_camera_shake *= 0.95;
+	}
+
 	if (weapons_camera_shake > 0.05) {
 		float ryaw, rpitch;
 
@@ -10052,6 +10059,11 @@ static void show_mainscreen(void)
 			float new_camera_shake = impulse_camera_shake * 0.25 * (impulse_power - 220.0) / 35.0;
 			if (new_camera_shake > main_camera_shake)
 				main_camera_shake = new_camera_shake;
+		}
+
+		if (main_camera_shake < warp_gate_camera_shake) {
+			main_camera_shake = warp_gate_camera_shake;
+			warp_gate_camera_shake = 0.95 * warp_gate_camera_shake;
 		}
 
 		if (main_camera_shake > 0.05 && vp == o) {
