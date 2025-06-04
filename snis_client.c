@@ -8066,7 +8066,7 @@ static void stop_gameserver_writer_thread(void)
 			break;
 		pthread_mutex_unlock(&to_server_queue_event_mutex);
 		fprintf(stderr, "stop_gameserver_writer_thread 3, alive = %d\n", alive);
-		sleep(1);
+		ssgl_msleep(1);
 	} while (1);
 	writer_thread_should_die = 0;
 	pthread_mutex_unlock(&to_server_queue_event_mutex);
