@@ -26,13 +26,22 @@
 
 static const float ZERO_TOLERANCE = 0.000001f;
 
-union vec3* vec3_copy(union vec3 *vo, const union vec3 *vi)
+union vec3 *vec3_copy(union vec3 *restrict vo, const union vec3 *restrict vi)
 {
 	memcpy(vo, vi, sizeof(union vec3));
 	return vo;
 }
 
-void quat_init(union quat *q, const union vec3 *acc, const union vec3 *mag)
+/* Not quite sure what this is, or what the parameters "acc" and "mag" are meant to be.
+ * Possibly measurements from accelerometer (measuring gravity, so pitch and roll)
+ * and compass (measuring yaw) in a quadcopter flight controller?
+ *
+ * Although if roll or pitch were too severe, then the compass would no longer be
+ * oriented in the x-y plane... though the code does seem to maybe account for that?
+ *
+ * Anyway, I don't use this anywhere. -- steve
+ */
+void quaternion_init(union quat *q, const union vec3 *acc, const union vec3 *mag)
 {
 	float ax = acc->v.x;
 	float ay = acc->v.y;
@@ -87,7 +96,8 @@ void quat_init_axis_v(union quat *q, const union vec3 *v, float a)
 	quat_init_axis(q, v->v.x, v->v.y, v->v.z, a);
 }
 
-void quat_to_axis(const union quat *q, float *x, float *y, float *z, float *a)
+void quat_to_axis(const union quat *restrict q,
+	float *restrict x, float *restrict y, float *restrict z, float *restrict a)
 {
 	/* see: http://www.euclideanspace.com/maths/geometry/rotations
 	   /conversions/quaternionToAngle/index.htm */
@@ -107,24 +117,24 @@ void quat_to_axis(const union quat *q, float *x, float *y, float *z, float *a)
 	}
 }
 
-void quat_to_axis_v(const union quat *q, union vec3 *v, float *a)
+void quat_to_axis_v(const union quat *restrict q, union vec3 *restrict v, float *restrict a)
 {
 	quat_to_axis(q, &v->v.x, &v->v.y, &v->v.z, a);
 }
 
-float quat_dot(const union quat *q1, const union quat *q2)
+float quat_dot(const union quat *restrict q1, const union quat *restrict q2)
 {
 	return q1->vec[0] * q2->vec[0] + q1->vec[1] * q2->vec[1] + q1->vec[2] * q2->vec[2] + q1->vec[3] * q2->vec[3];
 }
 
-void quat_rot_vec_self(union vec3 *v, const union quat *q)
+void quat_rot_vec_self(union vec3 *restrict v, const union quat *restrict q)
 {
 	union vec3 vo;
 	quat_rot_vec(&vo, v, q);
 	vec3_copy(v, &vo);
 }
 
-void quat_rot_vec(union vec3 *vo, const union vec3 *vi, const union quat *q)
+void quat_rot_vec(union vec3 *restrict vo, const union vec3 *restrict vi, const union quat *restrict q)
 {
 	/* see: https://github.com/qsnake/ase/blob/master/ase/quaternions.py */
 	const float vx = vi->v.x, vy = vi->v.y, vz = vi->v.z;
@@ -137,7 +147,7 @@ void quat_rot_vec(union vec3 *vo, const union vec3 *vi, const union quat *q)
 	vo->v.z = (qww - qxx - qyy + qzz) * vz + 2 * ((qxz - qwy) * vx + (qyz + qwx) * vy);
 }
 
-void quat_copy(union quat *qo, const union quat *qi)
+void quat_copy(union quat *restrict qo, const union quat *restrict qi)
 {
 	if (qo != qi)
 		memcpy(qo, qi, sizeof(union quat));
@@ -152,7 +162,7 @@ float quat_len(const union quat *q)
 	return sqrtf(s);
 }
 
-void quat_inverse(union quat *q_out, const union quat *q_in)
+void quat_inverse(union quat *restrict q_out, const union quat *restrict q_in)
 {
 	q_out->v.x = -q_in->v.x;
 	q_out->v.y = -q_in->v.y;
@@ -160,7 +170,8 @@ void quat_inverse(union quat *q_out, const union quat *q_in)
 	q_out->v.w = q_in->v.w;
 }
 
-union quat *quat_conjugate(union quat *qo, union quat *rotation, union quat *new_coord_system)
+union quat *quat_conjugate(union quat *restrict qo,
+		union quat *restrict rotation, union quat *restrict new_coord_system)
 {
 	union quat temp, inverse;
 
@@ -180,7 +191,8 @@ union vec3* heading_mark_to_vec3(float r, double heading, double mark, union vec
 }
 
 /* heading is around y from x at zero torwards -z, heading is up/down from xz plane */
-void vec3_to_heading_mark(const union vec3 *dir, double *r, double *heading, double *mark)
+void vec3_to_heading_mark(const union vec3 *restrict dir, double *restrict r,
+			double *restrict heading, double *restrict mark)
 {
 	*heading = normalize_euler_0_2pi(atan2(-dir->v.z,dir->v.x));
 	float dist = sqrt(dir->v.x*dir->v.x + dir->v.y*dir->v.y + dir->v.z*dir->v.z);
@@ -192,14 +204,14 @@ void vec3_to_heading_mark(const union vec3 *dir, double *r, double *heading, dou
 		*r = dist;
 }
 
-void quat_to_heading_mark(const union quat *q, double *heading, double *mark)
+void quat_to_heading_mark(const union quat *restrict q, double *restrict heading, double *restrict mark)
 {
 	union vec3 dir = {{1,0,0}};
 	quat_rot_vec_self(&dir, q);
 	vec3_to_heading_mark(&dir, 0, heading, mark);
 }
 
-void quat_to_euler(union euler *euler, const union quat *quat)
+void quat_to_euler(union euler *restrict euler, const union quat *restrict quat)
 {
 	const float x = quat->v.x, y = quat->v.y, z = quat->v.z, w = quat->v.w;
 	const float ww = w * w, xx = x * x, yy = y * y, zz = z * z;
@@ -208,7 +220,7 @@ void quat_to_euler(union euler *euler, const union quat *quat)
 	euler->a.roll = atan2f(2.f * (y * z + x * w), -xx - yy + zz + ww);
 }
 
-void quat_mul(union quat *o, const union quat *q1, const union quat *q2)
+void quat_mul(union quat *o, const union quat *restrict q1, const union quat *restrict q2)
 {
 	/* see: http://www.euclideanspace.com/maths/algebra/
 	   realNormedAlgebra/quaternions/code/index.htm#mul */
@@ -219,7 +231,7 @@ void quat_mul(union quat *o, const union quat *q1, const union quat *q2)
 }
 
 /* q = q * qi */
-void quat_mul_self(union quat *q, const union quat *qi)
+void quat_mul_self(union quat *restrict q, const union quat *restrict qi)
 {
 	union quat qo;
 	quat_mul(&qo, q, qi);
@@ -227,14 +239,14 @@ void quat_mul_self(union quat *q, const union quat *qi)
 }
 
 /* q = qi * q */
-void quat_mul_self_right(const union quat *qi, union quat *q)
+void quat_mul_self_right(const union quat *restrict qi, union quat *restrict q)
 {
 	union quat qo;
 	quat_mul(&qo, qi, q);
 	*q = qo;
 }
 
-void quat_add(union quat *o, const union quat *q1, const union quat *q2)
+void quat_add(union quat *restrict o, const union quat *restrict q1, const union quat *restrict q2)
 {
 	/* see: http://www.euclideanspace.com/maths/algebra/
 	   realNormedAlgebra/quaternions/code/index.htm#add */
@@ -244,7 +256,7 @@ void quat_add(union quat *o, const union quat *q1, const union quat *q2)
 	o->v.w = q1->v.w + q2->v.w;
 }
 
-void quat_add_to(union quat *o, const union quat *q)
+void quat_add_to(union quat *restrict o, const union quat *restrict q)
 {
 	union quat tmp;
 
@@ -285,7 +297,7 @@ float normalize_euler_0_2pi(float a)
 }
 
 /* m is pointer to array of 16 floats in row major order */
-void quat_to_rh_rot_matrix(const union quat *q, float *m)
+void quat_to_rh_rot_matrix(const union quat *restrict q, float *restrict m)
 {
 	union quat qn;
 	float qw, qx, qy, qz;
@@ -319,7 +331,7 @@ void quat_to_rh_rot_matrix(const union quat *q, float *m)
 }
 
 /* m is pointer to array of 16 doubles in row major order */
-void quat_to_rh_rot_matrix_fd(const union quat *q, double *m)
+void quat_to_rh_rot_matrix_fd(const union quat *restrict q, double *restrict m)
 {
 	union quat qn;
 	double qw, qx, qy, qz;
@@ -353,7 +365,7 @@ void quat_to_rh_rot_matrix_fd(const union quat *q, double *m)
 }
 
 
-void quat_to_lh_rot_matrix(const union quat *q, float *m)
+void quat_to_lh_rot_matrix(const union quat *restrict q, float *restrict m)
 {
 	union quat qn;
 	float qw, qx, qy, qz;
@@ -407,7 +419,7 @@ void random_axis_quat(union quat *q, float angle)
 	quat_init_axis_v(q, &v, angle);
 }
 
-void consistent_random_axis_quat(struct mtwist_state *mt, union quat *q, float angle)
+void consistent_random_axis_quat(struct mtwist_state *restrict mt, union quat *restrict q, float angle)
 {
 	union vec3 v;
 
@@ -440,7 +452,7 @@ union vec3* vec3_add(union vec3 *vo, const union vec3 *v1, const union vec3 *v2)
 	return vo;
 }
 
-union vec3* vec3_add_self(union vec3 *v1, const union vec3 *v2)
+union vec3 *vec3_add_self(union vec3 *v1, const union vec3 *restrict v2)
 {
 	return vec3_add(v1, v1, v2);
 }
@@ -520,7 +532,7 @@ float vec3_dot(const union vec3 *v1, const union vec3 *v2)
 	return v1->vec[0] * v2->vec[0] + v1->vec[1] * v2->vec[1] + v1->vec[2] * v2->vec[2];
 }
 
-union vec3* vec3_cross(union vec3 *vo, const union vec3 *v1, const union vec3 *v2)
+union vec3 *vec3_cross(union vec3 *restrict vo, const union vec3 *restrict v1, const union vec3 *restrict v2)
 {
 	vo->vec[0] = v1->vec[1]*v2->vec[2] - v1->vec[2]*v2->vec[1];
 	vo->vec[1] = v1->vec[2]*v2->vec[0] - v1->vec[0]*v2->vec[2];
@@ -594,8 +606,8 @@ void vec3_print(const char *prefix, const union vec3 *v)
 
 #if 1
 /* Calculate the quaternion to rotate from vector u to vector v */
-void quat_from_u2v(union quat *q, const union vec3 *u, const union vec3 *v,
-		__attribute__((unused)) const union vec3 *up)
+void quat_from_u2v(union quat *restrict q, const union vec3 *restrict u, const union vec3 *restrict v,
+		__attribute__((unused)) const union vec3 *restrict up)
 {
 	/* See: http://lolengine.net/blog/2013/09/18/beautiful-maths-quaternion-from-vectors */
 	union vec3 w;
@@ -653,7 +665,8 @@ void quat_from_u2v(union quat *q, const union vec3 *u, const union vec3 *v, cons
 }
 #endif
 
-union quat *quat_lerp(union quat *qo, const union quat *qfrom, const union quat *qto, float t)
+union quat *quat_lerp(union quat *restrict qo,
+	const union quat *restrict qfrom, const union quat *restrict qto, float t)
 {
 	double cosom = quat_dot(qfrom, qto);
 
@@ -739,7 +752,7 @@ union quat *quat_slerp(union quat *qo, const union quat *qfrom, const union quat
 	return qo;
 }
 
-union vec3* vec3_lerp(union vec3* vo, const union vec3* vfrom, const union vec3* vto, double t)
+union vec3 *vec3_lerp(union vec3 *vo, const union vec3 *vfrom, const union vec3 *vto, double t)
 {
 	vo->v.x = vfrom->v.x + t * (vto->v.x - vfrom->v.x);
 	vo->v.y = vfrom->v.y + t * (vto->v.y - vfrom->v.y);
@@ -792,7 +805,8 @@ union quat *quat_apply_relative_yaw_pitch(union quat *q, double yaw, double pitc
 	return q;
 }
 
-void quat_decompose_twist_swing(const union quat *q, const union vec3 *v1, union quat *twist, union quat *swing)
+void quat_decompose_twist_swing(const union quat *restrict q,
+		const union vec3 *restrict v1, union quat *restrict twist, union quat *restrict swing)
 {
 	union vec3 v2;
 	quat_rot_vec(&v2, v1, q);
@@ -803,7 +817,8 @@ void quat_decompose_twist_swing(const union quat *q, const union vec3 *v1, union
 	quat_mul(twist, q, &swing_inverse);
 }
 
-void quat_decompose_swing_twist(const union quat *q, const union vec3 *v1, union quat *swing, union quat *twist)
+void quat_decompose_swing_twist(const union quat *restrict q,
+		const union vec3 *restrict v1, union quat *restrict swing, union quat *restrict twist)
 {
 	union vec3 v2;
 	quat_rot_vec(&v2, v1, q);

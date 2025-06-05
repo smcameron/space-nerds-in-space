@@ -74,7 +74,7 @@ union euler {
 void vec3_init(union vec3 *vo, float x, float y, float z);
 
 /* copy vector vi to vo */
-union vec3 *vec3_copy(union vec3 *vo, const union vec3 *vi);
+union vec3 *vec3_copy(union vec3 *restrict vo, const union vec3 *restrict vi);
 
 float vec3_cwise_min(const union vec3 *v);
 
@@ -84,7 +84,7 @@ float vec3_cwise_max(const union vec3 *v);
 union vec3 *vec3_add(union vec3 *vo, const union vec3 *v1, const union vec3 *v2);
 
 /* v1 = v1 + v2, return v1 */
-union vec3 *vec3_add_self(union vec3 *v1, const union vec3 *v2);
+union vec3 *vec3_add_self(union vec3 *v1, const union vec3 *restrict v2);
 
 /* v1 = v1 + (x,y,z), return v1 */
 union vec3 *vec3_add_c_self(union vec3 *v1, float x, float y, float z);
@@ -149,25 +149,26 @@ void quat_init_axis(union quat *q, float x, float y, float z, float a);
 void quat_init_axis_v(union quat *q, const union vec3 *v, float a);
 
 /* decompose a quaternion into an axis angle using floats */
-void quat_to_axis(const union quat *q, float *x, float *y, float *z, float *a);
+void quat_to_axis(const union quat *restrict q,
+		float *restrict x, float *restrict y, float *restrict z, float *restrict a);
 
 /* decompose a quaternion into an axis angle using vector */
-void quat_to_axis_v(const union quat *q, union vec3 *v, float *a);
+void quat_to_axis_v(const union quat *restrict q, union vec3 *restrict v, float *restrict a);
 
 /* quaternion dot product q1 . q2 */
 float quat_dot(const union quat *q1, const union quat *q2);
 
 /* rotate vector vi via unit quaternion q and put result into vector vo */
-void quat_rot_vec(union vec3 *vo, const union vec3 *vi, const union quat *q);
+void quat_rot_vec(union vec3 *restrict vo, const union vec3 *restrict vi, const union quat *restrict q);
 
 /* rotate vector v_in in-place via unit quaternion quat */
-void quat_rot_vec_self(union vec3 *v, const union quat *q);
+void quat_rot_vec_self(union vec3 *restrict v, const union quat *restrict q);
 
 /* returns len of quaternion */
 float quat_len(const union quat *q);
 
 /* copy quaternion qi to qo */
-void quat_copy(union quat *qo, const union quat *qi);
+void quat_copy(union quat *restrict qo, const union quat *restrict qi);
 
 /* qo = qi * f */
 void quat_scale(union quat *qo, const union quat *qi, float f);
@@ -176,16 +177,17 @@ void quat_scale(union quat *qo, const union quat *qi, float f);
 void quat_scale_self(union quat *q, float f);
 
 /* Change a quaternion's coordinate system */
-union quat *quat_conjugate(union quat *qo, union quat *rotation, union quat *new_coord_system);
+union quat *quat_conjugate(union quat *restrict qo, union quat *restrict rotation,
+				union quat *restrict new_coord_system);
 
 /* Compute the inverse of a unit quaternion */
-void quat_inverse(union quat *qo, const union quat *qi);
+void quat_inverse(union quat *restrict qo, const union quat *restrict qi);
 
 /* o = q1 + q2 */
-void quat_add(union quat *qo, const union quat *q1, const union quat *q2);
+void quat_add(union quat *restrict qo, const union quat *restrict q1, const union quat *restrict q2);
 
 /* o += q */
-void quat_add_self(union quat *o, const union quat *q);
+void quat_add_self(union quat *restrict o, const union quat *restrict q);
 
 /* o = q1 * q2 */
 void quat_mul(union quat *o, const union quat *q1, const union quat *q2);
@@ -209,31 +211,33 @@ void quat_to_euler(union euler *e, const union quat *q);
    heading as angle around y axis with zero at {1,0,0), positive toward -z, 0 to 2pi
    mark as angle from xz plane with zero at xz plane, positive toward +y, pi/2 to -pi/2 */
 union vec3* heading_mark_to_vec3(float r, double heading, double mark, union vec3 *dir);
-void vec3_to_heading_mark(const union vec3 *dir, double *r, double *heading, double *mark);
-void quat_to_heading_mark(const union quat *q, double *heading, double *mark);
+void vec3_to_heading_mark(const union vec3 *restrict dir,
+		double *restrict r, double *restrict heading, double *restrict mark);
+void quat_to_heading_mark(const union quat *restrict q, double *restrict heading, double *restrict mark);
 
 /* normalize angle */
 float normalize_euler_0_2pi(float a);
 
 /* m is pointer to array of 16 floats in column major order */
-void quat_to_lh_rot_matrix(const union quat *q, float *m); /* quat to left handed rotation matrix */
-void quat_to_rh_rot_matrix(const union quat *q, float *m); /* quat to right handed rotation matrix */
-void quat_to_rh_rot_matrix_fd(const union quat *q, double *m); /* quat to right handed rotation matrix */
+void quat_to_lh_rot_matrix(const union quat *restrict q, float *restrict m); /* quat to left handed rot matrix */
+void quat_to_rh_rot_matrix(const union quat *restrict q, float *restrict m); /* quat to right handed rot matrix */
+void quat_to_rh_rot_matrix_fd(const union quat *restrict q, double *restrict m); /* quat to right handed rot matrix */
 
 /* Create a random quaternion */
 void random_quat(union quat *q);
 /* Create a random quaternion axis with specified rotation */
 void random_axis_quat(union quat *q, float angle);
-void consistent_random_axis_quat(struct mtwist_state *mt, union quat *q, float angle);
+void consistent_random_axis_quat(struct mtwist_state *restrict mt, union quat *restrict q, float angle);
 
 /* returns square of the length of a vector */
 float vec3_len2(const union vec3 *v);
 
 /* Calculate the quaternion to rotate from vector u to vector v */
-void quat_from_u2v(union quat *q, const union vec3 *u, const union vec3 *v, const union vec3 *up);
+void quat_from_u2v(union quat *restrict q, const union vec3 *restrict u,
+	const union vec3 *restrict v, const union vec3 *restrict up);
 
 /* Calculate the quaternion to rotate from unit_vector u to unit_vector v */
-void quat_from_unit_u2v(union quat *q, union vec3 *u, union vec3 *v);
+void quat_from_unit_u2v(union quat *restrict q, union vec3 *restrict u, union vec3 *restrict v);
 
 /* calculate normalized linear quaternion interpolation */
 union quat* quat_nlerp(union quat *qo, const union quat *qfrom, const union quat *qto, float t);
@@ -242,7 +246,8 @@ union quat* quat_nlerp(union quat *qo, const union quat *qfrom, const union quat
 union quat* quat_slerp(union quat *qo, const union quat *qfrom, const union quat *qto, float t);
 
 /* calculate vec3 linear interpolation */
-union vec3* vec3_lerp(union vec3* vo, const union vec3* vfrom, const union vec3* vto, double t);
+union vec3 *vec3_lerp(union vec3 *vo,
+	const union vec3 *vfrom, const union vec3 *vto, double t);
 
 /* Apply incremental yaw, pitch and roll relative to the quaternion.
  * For example, if the quaternion represents an orientation of a ship,
@@ -259,8 +264,10 @@ union quat *quat_apply_relative_yaw_pitch(union quat *q, double yaw, double pitc
 /* decompose a quaternion into a rotation (swing) perpendicular to v1 and a rotation (twist) around v1 */
 /* For example, if you have a turret mounted horizontally that can rotate around a vertical axis, and has */
 /* another horizontal axis, then twist corresponds to azimuth, and swing corresponds to elevation. */
-void quat_decompose_twist_swing(const union quat *q, const union vec3 *v1, union quat *twist, union quat *swing);
-void quat_decompose_swing_twist(const union quat *q, const union vec3 *v1, union quat *swing, union quat *twist);
+void quat_decompose_twist_swing(const union quat *restrict q, const union vec3 *restrict v1,
+		union quat *restrict twist, union quat *restrict swing);
+void quat_decompose_swing_twist(const union quat *restrict q,
+		const union vec3 *restrict v1, union quat *restrict swing, union quat *restrict twist);
 
 int sphere_line_segment_intersection(const union vec3 *v0, const union vec3 *v1, const union vec3 *center, double r, union vec3 *vo0, union vec3 *vo1);
 
