@@ -694,6 +694,17 @@ fixed size PCM audio data off a queue, encodes via libopus, and transmits them
 to snis_server to be forwarded to other clients. See the section below about
 <a href="#voicechat">voice chat</a>.
 
+<h4><a name="snisclientpngdecodethread">PNG decoding threads</a></h4>
+
+<p>There is a generic work queue system in workqueue.h and workqueue.c.
+At the moment this work queue system is only used for decoding PNGs. There
+two work queues, one for decoding PNG files, which has 4 associated threads
+for decoding PNG files, and one for uploading decoded image data to the GPU.
+This 2nd work queue does not have any generic threads associated with it, instead
+the main rendering threads consumes items from this queue because only the main
+rendering thread has the OpenGL context to be able to do so.  The work queues
+are created in graph_dev_init(), and the various functions in graph_dev_opengl.c
+that load textures put work items into the png decoding queue.
 
 <h3><a name="rendering">Rendering</a></h3>
 
@@ -797,14 +808,17 @@ what shader to use for a given mesh.
 
 <p>Models are loaded with read_mesh() in mesh.c, called from snis_read_model() in snis_client.c.
 snis_read_model() is called many times from init_meshes() to read all the meshes for the game.
-Note that init_meshes() is called from main_da_configure(), which is a bit strange. This is because
-when reading the meshes, it will be performing some OpenGL calls to map textures, etc. and all
-these OpenGL calls must be done from the thread with the opengl context (here I must wave my hands a bit,
-as I don't quite remember the details, it may be <em>possible</em> to do some OpenGL calls from
-another thread, but there are some complications that I don't remember, and so we just do it from
-this thread.  TODO: figure these details out better.)
+Note that init_meshes() is called from main_da_configure(), which is a bit strange. This was because
+when reading the meshes, it was performing some OpenGL calls to map textures, etc. and all
+these OpenGL calls must be done from the thread with the opengl context.
 
-<p>
+<p>As of June 2025, the PNG decoding duties have been split apart from the main rendering
+thread.  Instead, the main rendering thread requests PNG files to be loaded by putting
+requests on a work queue serviced by worker threads.  Those worker threads decode the PNG
+files and pass the requests to a completion queue.  The main rendering thread consumes
+items from the completion queue and uploads the decoded image data to the GPU.  The point of
+doing it this way is so that the main rendering thread is not blocked during the time consuming
+process of reading and decoding the PNG files.
 
 <h4><a name="usingrenderer">Using the Renderer</a></h4>
 
@@ -2870,6 +2884,8 @@ The intended use is to sample the textures for gas giants to produce a reasonabl
 color for the atmosphere effect.</td></tr>
 <tr><td>vec4.c, vec4.h</td><td>Defines union vec4 and some operations on them</td></tr>
 <tr><td>vertex.h</td><td>Defines struct vertex</td></tr>
+<tr><td>workqueue.c, workqueue.h</td><td>Generic work queue and thread pool implementation. Used mainly
+for decoding PNG files outside the main rendering thread.</td></tr>
 <tr><td>wwviaudio.c, wwviaudio.h</td><td>The main audio library used to mix and playback many concurrent audio streams, based on portaudio</td></tr>
 </table>
 </body>
