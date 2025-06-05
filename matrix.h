@@ -59,62 +59,64 @@ struct mat31 {
 	float m[3];
 };
 
-GLOBAL struct mat33 *mat44_to_mat33_ff(const struct mat44 *src, struct mat33 *output);
+GLOBAL struct mat33 *mat44_to_mat33_ff(const struct mat44 *restrict src, struct mat33 *restrict output);
 
-GLOBAL struct mat33d *mat44_to_mat33_dd(const struct mat44d *src, struct mat33d *output);
+GLOBAL struct mat33d *mat44_to_mat33_dd(const struct mat44d *restrict src, struct mat33d *restrict output);
 
-GLOBAL struct mat44d *mat33_to_mat44_dd(const struct mat33d *src, struct mat44d *output);
+GLOBAL struct mat44d *mat33_to_mat44_dd(const struct mat33d *restrict src, struct mat44d *restrict output);
 
-GLOBAL struct mat33 *mat33_inverse_transpose_ff(const struct mat33 *src, struct mat33 *output);
+GLOBAL struct mat33 *mat33_inverse_transpose_ff(const struct mat33 *restrict src, struct mat33 *restrict output);
 
-GLOBAL struct mat33 *mat33_transpose(const struct mat33 *src, struct mat33 *output);
+GLOBAL struct mat33 *mat33_transpose(const struct mat33 *restrict src, struct mat33 *restrict output);
 
-GLOBAL struct mat33d *mat33_transpose_dd(const struct mat33d *src, struct mat33d *output);
+GLOBAL struct mat33d *mat33_transpose_dd(const struct mat33d *restrict src, struct mat33d *restrict output);
 
-GLOBAL void mat33_product(const struct mat33 *lhs, const struct mat33 *rhs, struct mat33 *output);
+GLOBAL void mat33_product(const struct mat33 *restrict lhs, const struct mat33 *restrict rhs,
+				struct mat33 *restrict output);
 
-GLOBAL void mat33_product_ddf(const struct mat33d *lhs, const struct mat33d *rhs, struct mat33 *output);
+GLOBAL void mat33_product_ddf(const struct mat33d *restrict lhs, const struct mat33d *restrict rhs,
+				struct mat33 *restrict output);
 
 GLOBAL void mat33_x_vec3(const struct mat33 *lhs, const union vec3 *rhs,
 				union vec3 *output);
 
-GLOBAL void mat44_convert_df(const struct mat44d *src, struct mat44 *output);
+GLOBAL void mat44_convert_df(const struct mat44d *restrict src, struct mat44 *restrict output);
 
-GLOBAL void mat44_product(const struct mat44 *lhs, const struct mat44 *rhs,
-				struct mat44 *output);
+GLOBAL void mat44_product(const struct mat44 *restrict lhs, const struct mat44 *restrict rhs,
+				struct mat44 *restrict output);
 
-GLOBAL void mat44_product_ddd(const struct mat44d *lhs, const struct mat44d *rhs,
-				struct mat44d *output);
+GLOBAL void mat44_product_ddd(const struct mat44d *restrict lhs, const struct mat44d *restrict rhs,
+				struct mat44d *restrict output);
 
-GLOBAL void mat44_product_ddf(const struct mat44d *lhs, const struct mat44d *rhs,
-				struct mat44 *output);
+GLOBAL void mat44_product_ddf(const struct mat44d *restrict lhs, const struct mat44d *restrict rhs,
+				struct mat44 *restrict output);
 
-GLOBAL void mat44_x_mat41(const struct mat44 *lhs, const struct mat41 *rhs,
-				struct mat41 *output);
+GLOBAL void mat44_x_mat41(const struct mat44 *restrict lhs, const struct mat41 *restrict rhs,
+				struct mat41 *restrict output);
 
-GLOBAL void mat44_x_mat41_dff(const struct mat44d *lhs, const struct mat41 *rhs,
-				struct mat41 *output);
+GLOBAL void mat44_x_mat41_dff(const struct mat44d *restrict lhs, const struct mat41 *restrict rhs,
+				struct mat41 *restrict output);
 
-GLOBAL void mat44_x_vec4_dff(const struct mat44d *lhs, const union vec4 *rhs,
-				union vec4 *output);
+GLOBAL void mat44_x_vec4_dff(const struct mat44d *restrict lhs, const union vec4 *restrict rhs,
+				union vec4 *restrict output);
 
-GLOBAL void mat41_x_mat44(const struct mat41 *lhs, const struct mat44 *rhs,
-				struct mat41 *output);
+GLOBAL void mat41_x_mat44(const struct mat41 *restrict lhs, const struct mat44 *restrict rhs,
+				struct mat41 *restrict output);
 
-GLOBAL void mat44_x_vec4(const struct mat44 *lhs, const union vec4 *rhs,
-				union vec4 *output);
+GLOBAL void mat44_x_vec4(const struct mat44 *restrict lhs, const union vec4 *restrict rhs,
+				union vec4 *restrict output);
 
-GLOBAL void mat44_x_vec4_into_vec3(const struct mat44 *lhs, const union vec4 *rhs,
-				union vec3 *output);
+GLOBAL void mat44_x_vec4_into_vec3(const struct mat44 *restrict lhs, const union vec4 *restrict rhs,
+				union vec3 *restrict output);
 
-GLOBAL void mat44_x_vec4_into_vec3_dff(const struct mat44d *lhs, const union vec4 *rhs,
-				union vec3 *output);
+GLOBAL void mat44_x_vec4_into_vec3_dff(const struct mat44d *restrict lhs, const union vec4 *restrict rhs,
+				union vec3 *restrict output);
 
 GLOBAL void normalize_vector(struct mat41 *v, struct mat41 *output);
-GLOBAL void mat41_cross_mat41(struct mat41 *v1, struct mat41 *v2, struct mat41 *output);
+GLOBAL void mat41_cross_mat41(struct mat41 *restrict v1, struct mat41 *restrict v2, struct mat41 *restrict output);
 GLOBAL void print44(struct mat44 *m);
 GLOBAL void print41(struct mat41 *m);
-GLOBAL float mat41_dot_mat41(struct mat41 *m1, struct mat41 *m2);
+GLOBAL float mat41_dot_mat41(struct mat41 *restrict m1, struct mat41 *restrict m2);
 GLOBAL float dist3d(float dx, float dy, float dz);
 GLOBAL float dist3dsqrd(float dx, float dy, float dz);
 

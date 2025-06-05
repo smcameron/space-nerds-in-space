@@ -28,7 +28,7 @@
 #include "quat.h"
 #include "vec4.h"
 
-struct mat33 *mat44_to_mat33_ff(const struct mat44 *src, struct mat33 *output)
+struct mat33 *mat44_to_mat33_ff(const struct mat44 *restrict src, struct mat33 *restrict output)
 {
 	int i, j;
 
@@ -38,7 +38,7 @@ struct mat33 *mat44_to_mat33_ff(const struct mat44 *src, struct mat33 *output)
 	return output;
 }
 
-struct mat33d *mat44_to_mat33_dd(const struct mat44d *src, struct mat33d *output)
+struct mat33d *mat44_to_mat33_dd(const struct mat44d *restrict src, struct mat33d *restrict output)
 {
 	int i, j;
 
@@ -48,7 +48,7 @@ struct mat33d *mat44_to_mat33_dd(const struct mat44d *src, struct mat33d *output
 	return output;
 }
 
-struct mat44d *mat33_to_mat44_dd(const struct mat33d *src, struct mat44d *output)
+struct mat44d *mat33_to_mat44_dd(const struct mat33d *restrict src, struct mat44d *restrict output)
 {
 	int i, j;
 
@@ -68,7 +68,7 @@ struct mat44d *mat33_to_mat44_dd(const struct mat33d *src, struct mat44d *output
 	return output;
 }
 
-struct mat33 *mat33_transpose(const struct mat33 *src, struct mat33 *output)
+struct mat33 *mat33_transpose(const struct mat33 *restrict src, struct mat33 *restrict output)
 {
 	int i, j;
 
@@ -78,7 +78,7 @@ struct mat33 *mat33_transpose(const struct mat33 *src, struct mat33 *output)
 	return output;
 }
 
-struct mat33d *mat33_transpose_dd(const struct mat33d *src, struct mat33d *output)
+struct mat33d *mat33_transpose_dd(const struct mat33d *restrict src, struct mat33d *restrict output)
 {
 	int i, j;
 
@@ -88,7 +88,7 @@ struct mat33d *mat33_transpose_dd(const struct mat33d *src, struct mat33d *outpu
 	return output;
 }
 
-struct mat33 *mat33_inverse_transpose_ff(const struct mat33 *src, struct mat33 *output)
+struct mat33 *mat33_inverse_transpose_ff(const struct mat33 *restrict src, struct mat33 *restrict output)
 {
 	float determinant =
 		+ src->m[0][0] * (src->m[1][1] * src->m[2][2] - src->m[1][2] * src->m[2][1])
@@ -107,8 +107,8 @@ struct mat33 *mat33_inverse_transpose_ff(const struct mat33 *src, struct mat33 *
 	return output;
 }
 
-void mat33_x_vec3(const struct mat33 *lhs, const union vec3 *rhs,
-				union vec3 *output)
+void mat33_x_vec3(const struct mat33 *restrict lhs, const union vec3 *restrict rhs,
+				union vec3 *restrict output)
 {
 	int row, col;
 
@@ -120,7 +120,7 @@ void mat33_x_vec3(const struct mat33 *lhs, const union vec3 *rhs,
 }
 
 
-void mat44_convert_df(const struct mat44d *src, struct mat44 *output)
+void mat44_convert_df(const struct mat44d *restrict src, struct mat44 *restrict output)
 {
 	int i, j;
 
@@ -130,8 +130,8 @@ void mat44_convert_df(const struct mat44d *src, struct mat44 *output)
 
 }
 
-void mat33_product(const struct mat33 *lhs, const struct mat33 *rhs,
-			struct mat33 *output)
+void mat33_product(const struct mat33 *restrict lhs, const struct mat33 *restrict rhs,
+			struct mat33 *restrict output)
 {
 	int i, j, k;
 
@@ -144,7 +144,8 @@ void mat33_product(const struct mat33 *lhs, const struct mat33 *rhs,
 	}
 }
 
-void mat33_product_ddf(const struct mat33d *lhs, const struct mat33d *rhs, struct mat33 *output)
+void mat33_product_ddf(const struct mat33d *restrict lhs, const struct mat33d *restrict rhs,
+				struct mat33 *restrict output)
 {
 	int i, j, k;
 
@@ -176,8 +177,8 @@ void mat33_product_ddf(const struct mat33d *lhs, const struct mat33d *rhs, struc
  *
  */
 
-void mat44_product(const struct mat44 *lhs, const struct mat44 *rhs,
-			struct mat44 *output)
+void mat44_product(const struct mat44 *restrict lhs, const struct mat44 *restrict rhs,
+			struct mat44 *restrict output)
 {
 	int i, j, k;
 
@@ -190,8 +191,8 @@ void mat44_product(const struct mat44 *lhs, const struct mat44 *rhs,
 	}
 }
 
-void mat44_product_ddd(const struct mat44d *lhs, const struct mat44d *rhs,
-                                struct mat44d *output)
+void mat44_product_ddd(const struct mat44d *restrict lhs, const struct mat44d *restrict rhs,
+			struct mat44d *restrict output)
 {
 	int i, j, k;
 
@@ -204,8 +205,8 @@ void mat44_product_ddd(const struct mat44d *lhs, const struct mat44d *rhs,
 	}
 }
 
-void mat44_product_ddf(const struct mat44d *lhs, const struct mat44d *rhs,
-                                struct mat44 *output)
+void mat44_product_ddf(const struct mat44d *restrict lhs, const struct mat44d *restrict rhs,
+			struct mat44 *restrict output)
 {
 	int i, j, k;
 
@@ -220,8 +221,8 @@ void mat44_product_ddf(const struct mat44d *lhs, const struct mat44d *rhs,
 }
 
 /* for post muliplication, mat44 must be column major and stored column major order */
-void mat44_x_mat41(const struct mat44 *lhs, const struct mat41 *rhs,
-				struct mat41 *output)
+void mat44_x_mat41(const struct mat44 *restrict lhs, const struct mat41 *restrict rhs,
+				struct mat41 *restrict output)
 {
 	/*
 	     lhs         rhs     output
@@ -245,8 +246,8 @@ void mat44_x_mat41(const struct mat44 *lhs, const struct mat41 *rhs,
 }
 
 /* see mat44_x_mat41 */
-void mat44_x_mat41_dff(const struct mat44d *lhs, const struct mat41 *rhs,
-                                struct mat41 *output)
+void mat44_x_mat41_dff(const struct mat44d *restrict lhs, const struct mat41 *restrict rhs,
+			struct mat41 *restrict output)
 {
 	int row, col;
 
@@ -259,8 +260,8 @@ void mat44_x_mat41_dff(const struct mat44d *lhs, const struct mat41 *rhs,
 }
 
 /* see mat44_x_mat41 */
-void mat44_x_vec4_dff(const struct mat44d *lhs, const union vec4 *rhs,
-				union vec4 *output)
+void mat44_x_vec4_dff(const struct mat44d *restrict lhs, const union vec4 *restrict rhs,
+				union vec4 *restrict output)
 {
 	int row, col;
 
@@ -273,8 +274,8 @@ void mat44_x_vec4_dff(const struct mat44d *lhs, const union vec4 *rhs,
 }
 
 /* see mat44_x_mat41 */
-void mat44_x_vec4(const struct mat44 *lhs, const union vec4 *rhs,
-				union vec4 *output)
+void mat44_x_vec4(const struct mat44 *restrict lhs, const union vec4 *restrict rhs,
+				union vec4 *restrict output)
 {
 	int row, col;
 
@@ -286,8 +287,8 @@ void mat44_x_vec4(const struct mat44 *lhs, const union vec4 *rhs,
 }
 
 /* see mat44_x_mat41 */
-void mat44_x_vec4_into_vec3(const struct mat44 *lhs, const union vec4 *rhs,
-				union vec3 *output)
+void mat44_x_vec4_into_vec3(const struct mat44 *restrict lhs, const union vec4 *restrict rhs,
+				union vec3 *restrict output)
 {
 	int row, col;
 
@@ -299,8 +300,8 @@ void mat44_x_vec4_into_vec3(const struct mat44 *lhs, const union vec4 *rhs,
 }
 
 /* see mat44_x_mat41 */
-void mat44_x_vec4_into_vec3_dff(const struct mat44d *lhs, const union vec4 *rhs,
-				union vec3 *output)
+void mat44_x_vec4_into_vec3_dff(const struct mat44d *restrict lhs, const union vec4 *restrict rhs,
+				union vec3 *restrict output)
 {
 	int row, col;
 
@@ -313,8 +314,8 @@ void mat44_x_vec4_into_vec3_dff(const struct mat44d *lhs, const union vec4 *rhs,
 }
 
 /* for pre muliplication, mat44 must be row major and stored row major order */
-void mat41_x_mat44(const struct mat41 *lhs, const struct mat44 *rhs,
-				struct mat41 *output)
+void mat41_x_mat44(const struct mat41 *restrict lhs, const struct mat44 *restrict rhs,
+				struct mat41 *restrict output)
 {
 	/*
 
@@ -358,7 +359,7 @@ void normalize_vector(struct mat41 *v, struct mat41 *output)
 	output->m[2] = v->m[2] / d;
 }
 
-void mat41_cross_mat41(struct mat41 *v1, struct mat41 *v2, struct mat41 *output)
+void mat41_cross_mat41(struct mat41 *restrict v1, struct mat41 *restrict v2, struct mat41 *restrict output)
 {
 	/* A x B = (a2b3 - a3b2, a3b1 - a1b3, a1b2 - a2b1); a vector quantity */
 	output->m[0] = v1->m[1] * v2->m[2] - v1->m[2] * v2->m[1];
@@ -380,7 +381,7 @@ void print41(struct mat41 *m)
 	printf("%lf %lf %lf %lf\n", m->m[0], m->m[1], m->m[2], m->m[3]);
 }
 
-float mat41_dot_mat41(struct mat41 *m1, struct mat41 *m2)
+float mat41_dot_mat41(struct mat41 *restrict m1, struct mat41 *restrict m2)
 {
 	return m1->m[0] * m2->m[0] + m1->m[1] * m2->m[1] + m1->m[2] * m2->m[2];
 }
