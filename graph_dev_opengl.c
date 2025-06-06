@@ -4934,3 +4934,11 @@ unsigned int graph_dev_load_texture_no_mipmaps(const char *filename, int linear_
 	return graph_dev_load_texture_helper(filename, linear_colorspace, 0);
 }
 
+/* Call this early on to wipe out garbage otherwise left in the window */
+void graph_dev_clear_window(void)
+{
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+	glClear(GL_COLOR_BUFFER_BIT);
+}
+

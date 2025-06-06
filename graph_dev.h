@@ -136,5 +136,7 @@ extern int graph_dev_textures_ready(int *i);
 
 void graph_dev_free_image_load_request(struct graph_dev_image_load_request *r);
 
+void graph_dev_clear_window(void);
+
 #endif
 
