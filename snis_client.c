@@ -25985,6 +25985,11 @@ int main(int argc, char *argv[])
 	double nextDrawTime = currentTime + delta[use_60_fps];
 
 	SDL_ShowWindow(window);
+
+	/* if we don't clear the window, garbage will be visible for a brief moment */
+	graph_dev_clear_window();
+	SDL_GL_SwapWindow(window);
+
 	while (1) {
 		currentTime = time_now_double();
 
