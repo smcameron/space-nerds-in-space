@@ -21470,6 +21470,12 @@ static void options_ss_allow_remote_networks_pressed(__attribute__((unused)) voi
 			!child_process_options.snis_server.allow_remote_networks;
 }
 
+static void options_ss_enable_enscript_pressed(__attribute__((unused)) void *x)
+{
+	child_process_options.snis_server.enable_enscript =
+			!child_process_options.snis_server.enable_enscript;
+}
+
 static int options_allow_remote_networks_status(__attribute__((unused)) void *x)
 {
 	return child_process_options.snis_multiverse.allow_remote_networks;
@@ -21478,6 +21484,11 @@ static int options_allow_remote_networks_status(__attribute__((unused)) void *x)
 static int options_ss_allow_remote_networks_status(__attribute__((unused)) void *x)
 {
 	return child_process_options.snis_server.allow_remote_networks;
+}
+
+static int options_ss_enable_enscript_status(__attribute__((unused)) void *x)
+{
+	return child_process_options.snis_server.enable_enscript;
 }
 
 static void options_autowrangle_btn_pressed(__attribute__((unused)) void *x)
@@ -21583,6 +21594,13 @@ static void init_options_ui(void)
 	snis_button_set_hover_color(options_ui.ss_allow_remote_networks_btn, hover_color);
 	y += txx(20);
 
+	options_ui.ss_enable_enscript_btn = snis_button_init(x, y, -1, -1, "ENABLE ENSCRIPT", color,
+			NANO_FONT, options_ss_enable_enscript_pressed, NULL);
+	snis_button_set_checkbox_function(options_ui.ss_enable_enscript_btn,
+					options_ss_enable_enscript_status, NULL);
+	snis_button_set_visible_border(options_ui.ss_enable_enscript_btn, 0);
+	snis_button_set_hover_color(options_ui.ss_enable_enscript_btn, hover_color);
+	y += txx(20);
 
 	y = txy(50 + 180 + 180);
 	x -= txx(10);
@@ -21665,6 +21683,10 @@ static void init_options_ui(void)
 		"THIS BOX SO CONNECTIONS FROM REMOTE NETWORKS ARE PERMITTED.\n"
 		"IF YOU ARE PLAYING THIS GAME ON A LAN WITH NO REMOTE PLAYERS\n"
 		"YOU SHOULD LEAVE IT UNCHECKED\n");
+	ui_add_button(options_ui.ss_enable_enscript_btn, DISPLAYMODE_OPTIONS,
+		"ALLOW USE OF 'ENSCRIPT' COMMAND ON DEMON CONSOLE TO SAVE CURRENT\n"
+		"STATE TO A LUA SCRIPT ON THE SNIS_SERVER HOST.  YOU SHOULD NOT\n"
+		"NORMALLY ENABLE THIS UNLESS YOU ARE DEVELOPING MISSION SCRIPTS.");
 	ui_add_button(options_ui.ss_default_port_range_btn, DISPLAYMODE_OPTIONS,
 		"USE IANA DYNAMIC PORT RANGE 49152-65535");
 	ui_add_text_input_box(options_ui.ss_port_range_input, DISPLAYMODE_OPTIONS);

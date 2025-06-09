@@ -344,6 +344,7 @@ struct options_ui {
 	struct button *mv_fixed_port_number_btn; /* mv_ means multiverse here. */
 	struct button *ss_default_port_range_btn; /* ss_ means snis_server here. */
 	struct button *ss_allow_remote_networks_btn;
+	struct button *ss_enable_enscript_btn;
 	struct button *no_lobby_btn;
 	struct button *solarsystem_enforcement;
 	struct label *lobbyhost_label;

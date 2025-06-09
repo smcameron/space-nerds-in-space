@@ -138,6 +138,8 @@ static char **build_snis_server_argv(char *server)
 		argc += 1;
 	if (options.snis_server.NAT_ghetto_mode)
 		argc += 1;
+	if (options.snis_server.enable_enscript)
+		argc += 1;
 
 	argv = calloc(argc, sizeof(char *));
 
@@ -156,6 +158,8 @@ static char **build_snis_server_argv(char *server)
 	}
 	if (options.snis_server.NAT_ghetto_mode)
 		argv[i++] = strdup("-g");
+	if (options.snis_server.enable_enscript)
+		argv[i++] = strdup("-e");
 
 	argv[i++] = strdup("-l");
 	argv[i++] = strdup(options.lobbyhost);
