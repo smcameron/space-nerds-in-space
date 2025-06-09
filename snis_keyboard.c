@@ -1,4 +1,5 @@
 #include <stdlib.h>
+#include <stdint.h>
 #include <string.h>
 #include <limits.h>
 #include <errno.h>
@@ -26,6 +27,8 @@ const char *displaymode_name[] = {
 	"connecting",
 	"connected",
 	"network_setup",
+	"launcher",
+	"options"
 };
 
 struct keyname_value_entry keyname_value_map[] = {
@@ -236,7 +239,7 @@ void zero_keymaps(void)
 	memset(ffkeymap, 0, sizeof(ffkeymap));
 }
 
-static void mapkey(int displaymodes, unsigned int keysym, enum keyaction key)
+static void mapkey(uint32_t displaymodes, unsigned int keysym, enum keyaction key)
 {
 	int i;
 
@@ -245,7 +248,7 @@ static void mapkey(int displaymodes, unsigned int keysym, enum keyaction key)
 		return;
 	}
 	for (i = 0; i < DISPLAYMODE_COUNT; i++) {
-		if (displaymodes & (0x1 << i))
+		if (displaymodes & (0x1ULL << i))
 			keymap[i][keysym] = key; /* map key on this station */
 		else
 			continue;
@@ -253,12 +256,12 @@ static void mapkey(int displaymodes, unsigned int keysym, enum keyaction key)
 }
 
 
-static void ffmapkey(int displaymodes, unsigned int keysym, enum keyaction key)
+static void ffmapkey(uint32_t displaymodes, unsigned int keysym, enum keyaction key)
 {
 	int i;
 
 	for (i = 0; i < DISPLAYMODE_COUNT; i++) {
-		if (displaymodes & (0x1 << i))
+		if (displaymodes & (0x1ULL << i))
 			ffkeymap[i][keysym & 0x00ff] = key; /* map key on this station */
 		else
 			continue;
@@ -268,16 +271,15 @@ static void ffmapkey(int displaymodes, unsigned int keysym, enum keyaction key)
 
 void init_keymap(void)
 {
-
-	const unsigned short all = 0x07fff; /* all 15 displaymodes */
-	const unsigned short nav = 1 << DISPLAYMODE_NAVIGATION;
-	const unsigned short weap = 1 << DISPLAYMODE_WEAPONS;
-	const unsigned short eng = 1 << DISPLAYMODE_ENGINEERING;
-	const unsigned short damcon = 1 << DISPLAYMODE_DAMCON;
-	const unsigned short sci = 1 << DISPLAYMODE_SCIENCE;
-	const unsigned short comms = 1 << DISPLAYMODE_COMMS;
-	const unsigned short mainscreen = 1 << DISPLAYMODE_MAINSCREEN;
-	const unsigned short demon = 1 << DISPLAYMODE_DEMON;
+	const uint32_t all = 0x0ffff; /* all 16 displaymodes */
+	const uint32_t nav = 1 << DISPLAYMODE_NAVIGATION;
+	const uint32_t weap = 1 << DISPLAYMODE_WEAPONS;
+	const uint32_t eng = 1 << DISPLAYMODE_ENGINEERING;
+	const uint32_t damcon = 1 << DISPLAYMODE_DAMCON;
+	const uint32_t sci = 1 << DISPLAYMODE_SCIENCE;
+	const uint32_t comms = 1 << DISPLAYMODE_COMMS;
+	const uint32_t mainscreen = 1 << DISPLAYMODE_MAINSCREEN;
+	const uint32_t demon = 1 << DISPLAYMODE_DEMON;
 
 	zero_keymaps();
 
@@ -433,18 +435,18 @@ int remapkey(char *stations, char *keyname, char *actionname)
 	enum keyaction i;
 	unsigned int j;
 	int index;
-	int displaymodes = 0;
+	uint32_t displaymodes = 0;
 
 	BUILD_ASSERT(ARRAYSIZE(keyactionstring) == NKEYSTATES);
 
 	if (strcmp(stations, "all") == 0) {
-		displaymodes = 0x3fff;
+		displaymodes = 0x0ffffULL;
 	} else {
 		for (i = 0; i < ARRAYSIZE(displaymode_name); i++) {
 			char *x = strstr(stations, displaymode_name[i]);
 			if (!x)
 				continue;
-			displaymodes |= (1 << i);
+			displaymodes |= (1ULL << i);
 		}
 	}
 
