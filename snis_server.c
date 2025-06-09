@@ -1186,6 +1186,7 @@ static void fire_lua_proximity_checks(void)
 				this = lua_proximity_check;
 				lua_proximity_check = next;
 			}
+			i = next;
 			free_lua_proximity_check(&this);
 			continue;
 		}
