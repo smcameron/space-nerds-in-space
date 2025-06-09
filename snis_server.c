@@ -3623,6 +3623,7 @@ static void push_mining_bot_mode(struct snis_entity *miner, uint32_t parent_ship
 	miner->tsd.ship.ai[n].u.mining_bot.orphan_time = 0;
 	miner->tsd.ship.ai[n].u.mining_bot.towing = 0;
 	miner->tsd.ship.ai[n].u.mining_bot.towed_object = (uint32_t) -1;
+	miner->tsd.ship.ai[n].u.mining_bot.reached_destination = 0;
 	random_quat(&miner->tsd.ship.ai[n].u.mining_bot.orbital_orientation);
 }
 
@@ -6648,6 +6649,7 @@ static void ai_mining_mode_mine_asteroid(struct snis_entity *o, struct ai_mining
 	} else {
 		ai->orphan_time = 0;
 		int channel = bridgelist[b].npcbot.channel;
+		ai->reached_destination = 1;
 		switch (asteroid->type) {
 		case OBJTYPE_ASTEROID:
 			ai_trace(o->id, "MINING COMPLETE, RETURNING TO SHIP");
@@ -6674,6 +6676,20 @@ static void ai_mining_mode_mine_asteroid(struct snis_entity *o, struct ai_mining
 			} else {
 				send_comms_packet(o, o->sdata.name, channel,
 					"*** SHIPS IDENTIFICATION CHIP NOT FOUND ***");
+			}
+			if (asteroid->tsd.derelict.ships_log) {
+				send_comms_packet(o, o->sdata.name, channel,
+					"*** RECOVERED PARTIAL SHIPS LOGS FROM %s ***", asteroid->sdata.name);
+				send_comms_packet(o, o->sdata.name, channel,
+					asteroid->tsd.derelict.ships_log);
+				send_comms_packet(o, o->sdata.name, channel,
+					"*** END OF PARTIAL SHIP'S LOG FROM %s ***\n", asteroid->sdata.name);
+				schedule_callback2(event_callback, &callback_schedule,
+							"ships-logs-recovered-event", (double) asteroid->id,
+								(double) ai->parent_ship);
+			} else {
+				send_comms_packet(o, o->sdata.name, channel,
+					"*** SHIPS LOGS NOT FOUND ***");
 			}
 			break;
 		default:
@@ -16793,9 +16809,7 @@ static void npc_menu_item_mining_bot_status_report(__attribute__((unused)) struc
 			/* FIXME: This ai->mode test is a little imprecise about whether we've recovered
 			 * the logs. But, maybe it's good enough.
 			 */
-			if (ai->mode == MINING_MODE_RETURN_TO_PARENT ||
-				ai->mode == MINING_MODE_STOW_BOT ||
-				ai->mode == MINING_MODE_STANDBY_TO_TRANSPORT_ORE) {
+			if (ai->reached_destination) {
 				/* This is a bug, because if we recovered the ship's log, we should not require
 				 * the ship to exist. The bug is, we left the ships log on the ship
 				 * instead of making a copy of it. */
@@ -16820,9 +16834,9 @@ static void npc_menu_item_mining_bot_status_report(__attribute__((unused)) struc
 					} while (n > 0);
 					send_comms_packet(miner, npcname, channel,
 						"*** END OF PARTIAL SHIP'S LOG FROM %s ***\n", asteroid->sdata.name);
-					schedule_callback2(event_callback, &callback_schedule,
-								"ships-logs-recovered-event", (double) asteroid->id,
-								parent ? (double) parent->id : -1.0);
+					/* Don't send ships-logs-recovered-event here, that was already done in
+					 * ai_mining_mode_mine_asteroid() when we "mined" the derelict.
+					 */
 				} else {
 					if (asteroid)
 						send_comms_packet(miner, npcname, channel,

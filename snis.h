@@ -307,6 +307,7 @@ struct ai_mining_bot_data {
 	uint8_t fuel;
 	uint8_t object_or_waypoint; /* >= 128 means waypoint, < 128 means the object type */
 	uint8_t towing;
+	uint8_t reached_destination; /* initially false, true when the mining bot reaches its destination. */
 	uint32_t towed_object;
 #define MINING_BOT_WAYPOINT_PROXIMITY 400
 	double wpx, wpy, wpz; /* waypoint coordinates */
