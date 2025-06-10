@@ -297,6 +297,11 @@ performs its job satisfactorily, you can advance to Step 3.
  sudo apt-get install liblua5.2-dev;
  sudo apt-get install libglew-dev;
  sudo apt-get install libttspico-utils; # optional, for text to speech
+ # Even better than libttspico is nanotts https://github.com/smcameron/nanotts
+ # which is my version nanotts which is a version of pico2wave with a better
+ # user interface. (original nanotts is here: https://github.com/gmn/nanotts
+ # I just added a man page, and improved the Makefile to user PREFIX and DESTDIR)
+ # Both nanotts and libttspico are *far* superior to espeak.
  sudo apt-get install sox; # for "play" command, used by text to speech
  sudo apt-get install libcrypt-dev; # used by bin/snis_update_assets
  sudo apt-get install libcurl-dev; # used by bin/snis_update_assets
