@@ -3825,6 +3825,16 @@ static void setup_patrol_route(struct snis_entity *o)
 		do {
 			int j;
 			p[i] = pick_random_patrol_destination(o, &v[i]);
+			if (p[i] == NULL) {
+				/* This can happen if there are no planets or starbases.
+				 * For now just punt and make the ship "hang out".
+				 */
+				ai_trace(o->id, "NO SUITABLE DESTINATIONS -> HANGOUT");
+				o->tsd.ship.ai[n].ai_mode = AI_MODE_HANGOUT;
+				o->tsd.ship.ai[n].u.hangout.time_to_go = 255;
+				o->tsd.ship.desired_velocity = 0;
+				return;
+			}
 			if (i == 0) /* First pick cannot be a duplicate */
 				break;
 			/* check to see if we've already picked this destination */
