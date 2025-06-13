@@ -1,4 +1,4 @@
-/* 
+/*
 	(C) Copyright 2007,2008, Stephen M. Cameron.
 
 	This file is part of Space Nerds In Space.
@@ -32,7 +32,7 @@ typedef unsigned char stroke_t;
 
 /**************************
 
-	Here's how this works, there's a 3x7 grid. on which the
+	Here's how this works, there's a 5x7 grid. on which the
 	letters are drawn, as below.
 
 		0   1   2   3   4
@@ -56,12 +56,12 @@ typedef unsigned char stroke_t;
 
 	The grid numbers can be decoded into (x,y) coords like:
 
-	x = ((n % 3) * xscale);
-	y = (x/3) * yscale;      truncating division. 
+	x = ((n % 5) * xscale);
+	y = (x/5) * yscale;      truncating division.
 
 	use decode_glyph[] to get x and y values -- see below
 
-	Inspired Fluid Concepts and Creative Analogies, p. 420-421,
+	Inspired by "Fluid Concepts and Creative Analogies", p. 420-421,
 	chapter 10, "Letter Spirit: Esthetic Perception and Creative Play
 	in the Rich Microcosm of the Roman Alphabet", by Douglas Hofstadter
 	and Gary McGraw
@@ -501,7 +501,7 @@ static struct my_point_t decode_glyph[] = {
 	{ 4, 3 },
 };
 
-/* This converts a stroke_t, which is a sort of slightly compressed coding 
+/* This converts a stroke_t, which is a sort of slightly compressed coding
  * of how to draw a letter, lifted from Hofstadter's book, and converts it
  * into a set of line segments and breaks, like all the other objects in
  * the game, while also scaling it by some amount.  It is used in making
@@ -525,8 +525,6 @@ static struct my_vect_obj *prerender_glyph(stroke_t g[], float xscale, float ysc
 			x = LINE_BREAK;
 			y = LINE_BREAK;
 		} else {
-			/* x = ((g[i] % 3) * xscale);*/
-			/* y = ((g[i]/3)-4) * yscale ;     // truncating division.*/
 			x = decode_glyph[g[i]].x * xscale;
 			y = decode_glyph[g[i]].y * yscale;
 			/* printf("x=%d, y=%d\n", x,y); */
