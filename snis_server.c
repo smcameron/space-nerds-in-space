@@ -10830,8 +10830,6 @@ static void orbit_starbase(struct snis_entity *o)
 	union vec3 pos, *orbit;
 	union quat q;
 
-	if (!starbases_orbit)
-		return;
 	if (o->tsd.starbase.associated_planet_id == -1)
 		return;
 	i = lookup_by_id(o->tsd.starbase.associated_planet_id);
@@ -10845,6 +10843,27 @@ static void orbit_starbase(struct snis_entity *o)
 		o->tsd.starbase.associated_planet_id = -1;
 		return;
 	}
+
+	/* Check if the starbase is too close the planet, this can happen if you enscript the universe,
+	 * then re-load it, the planet radii may be different, possibly engulfing starbases, making
+	 * them inaccessible to the player.
+	 */
+	double dist = dist3dsqrd(go[i].x - o->x, go[i].y - o->y, go[i].z - o->z);
+	if (dist < (1.2 * go[i].tsd.planet.radius) * (1.2 * go[i].tsd.planet.radius)) {
+		/* starbase might be engulfed by planet, so let's fix it. */
+		union vec3 v;
+		v.v.x = o->x - go[i].x;
+		v.v.y = o->y - go[i].y;
+		v.v.z = o->z - go[i].z;
+		vec3_normalize_self(&v);
+		vec3_mul_self(&v, go[i].tsd.planet.radius * 1.3);
+		o->x = go[i].x + v.v.x;
+		o->y = go[i].y + v.v.y;
+		o->z = go[i].z + v.v.z;
+	}
+
+	if (!starbases_orbit)
+		return;
 	/* Compute the new position in the orbit */
 	pos.v.x = 1.0;
 	pos.v.y = 0.0;
