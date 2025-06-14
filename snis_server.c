@@ -16000,7 +16000,7 @@ static void meta_comms_inventory(char *name, struct game_client *c, char *txt)
 	for (i = 0; i < npassengers; i++) {
 		if (passenger[i].location == ship->id) {
 			int x = lookup_by_id(passenger[i].destination);
-			send_comms_packet(NULL, name, ch, "%2d. FARE %4d DEST: %10s (%s SYSTEM) NAME: %30s\n",
+			send_comms_packet(NULL, name, ch, "%2d. FARE %4d DEST: %10s (%s) : %20s\n",
 					passenger_count + 1, passenger[i].fare,
 					x < 0 ? "UNKNOWN" : go[x].sdata.name,
 					passenger[i].solarsystem,
