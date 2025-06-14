@@ -22792,6 +22792,29 @@ static int l_terminal_effect(lua_State *l)
 	return 0;
 }
 
+static int l_lookup_by_name(lua_State *l)
+{
+	const char *name = luaL_checkstring(l, 1);
+	int found = -1;
+
+	pthread_mutex_lock(&universe_mutex);
+	for (int i = 0; i <= snis_object_pool_highest_object(pool); i++) {
+		struct snis_entity *o = &go[i];
+		if (!o->alive)
+			continue;
+		if (strcasecmp(name, o->sdata.name) == 0) {
+			found = i;
+			break;
+		}
+	}
+	pthread_mutex_unlock(&universe_mutex);
+	if (found == -1)
+		lua_pushnil(l);
+	else
+		lua_pushnumber(l, (double) go[found].id);
+	return 1;
+}
+
 static int process_create_item(struct game_client *c)
 {
 	unsigned char buffer[16];
@@ -27056,6 +27079,7 @@ static void setup_lua(void)
 	add_lua_callable_fn(l_computer_command, "computer_command");
 	add_lua_callable_fn(l_issue_docking_clearance, "issue_docking_clearance");
 	add_lua_callable_fn(l_terminal_effect, "terminal_effect");
+	add_lua_callable_fn(l_lookup_by_name, "lookup_by_name");
 }
 
 static void print_lua_error_message(char *error_context, char *lua_command)

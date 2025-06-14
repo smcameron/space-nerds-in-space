@@ -263,6 +263,10 @@ id = add_spacemonster(name, x, y, z) - adds spacemonster at x,y,z with specified
 id1, id2 = add_wormhole_pair(x1, y1, z1, x2, y2, z2) - adds connected wormholes at the
 	specified location, returns -1 for a wormhole id that fails to create.
 
+id = lookup_by_name(name) - lookup an object by name
+	returns the id of the first object found with the specified name, or nil if there
+	is no object with the specified name.
+
 x,y,z = get_object_location(object_id); -- x,y,z location coordinates of specified object.
 	If the object_id does not exist (anymore), x,y,z will be nil.
 
