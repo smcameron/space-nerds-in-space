@@ -22849,6 +22849,41 @@ static int l_set_plot_armor(lua_State *l)
 	return 0;
 }
 
+static int l_get_science_selection(lua_State *l)
+{
+	const double id = luaL_checknumber(l, 1);
+	uint32_t ship_id = (uint32_t) id;
+
+	pthread_mutex_lock(&universe_mutex);
+	int i = lookup_by_id(ship_id);
+	if (i < 0) {
+		pthread_mutex_unlock(&universe_mutex);
+		send_demon_console_msg("get_science_selection: BAD SHIP ID: %u", ship_id);
+		lua_pushnil(l);
+		return 1;
+	}
+	if (go[i].type != OBJTYPE_BRIDGE) {
+		pthread_mutex_unlock(&universe_mutex);
+		send_demon_console_msg("get_science_selection: ID IS NOT BRIDGE: %u", ship_id);
+		lua_pushnil(l);
+		return 1;
+	}
+	int b = lookup_bridge_by_shipid(ship_id);
+	if (b < 0) {
+		pthread_mutex_unlock(&universe_mutex);
+		send_demon_console_msg("get_science_selection: Failed to lookup bridge", ship_id);
+		lua_pushnil(l);
+		return 1;
+	}
+	uint32_t selection = bridgelist[b].science_selection;
+	pthread_mutex_unlock(&universe_mutex);
+	if (selection == (uint32_t) -1)
+		lua_pushnil(l);
+	else
+		lua_pushnumber(l, selection);
+	return 1;
+}
+
 static int process_create_item(struct game_client *c)
 {
 	unsigned char buffer[16];
@@ -27115,6 +27150,7 @@ static void setup_lua(void)
 	add_lua_callable_fn(l_terminal_effect, "terminal_effect");
 	add_lua_callable_fn(l_lookup_by_name, "lookup_by_name");
 	add_lua_callable_fn(l_set_plot_armor, "set_plot_armor");
+	add_lua_callable_fn(l_get_science_selection, "get_science_selection");
 }
 
 static void print_lua_error_message(char *error_context, char *lua_command)

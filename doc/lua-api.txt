@@ -745,6 +745,10 @@ attach_science_text(id, text)
 	kryptonite", to an asteroid object, and then this would be displayed when the object is
 	scanned by science.
 
+id = get_science_selection(player_ship_id);
+	returns the id of whatever object SCIENCE has currently selected. If nothing is selected
+	nil is returned.
+
 add_explosion(x, y, z, v, nsparks, time, victim_type, explosion_type);
 	Adds an explosion into the simulation with (nsparks) sparks, traveling at
 	velocity related to (v), lasting (time) ticks (30th sec). The explosion is
