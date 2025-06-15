@@ -3487,6 +3487,12 @@ static void push_attack_mode(struct snis_entity *attacker, uint32_t victim_id, i
 		return;
 	}
 
+	/* Protect plot armored NPC ships and starbases from being attacked. */
+	if (go[i].type == OBJTYPE_NPCSHIP && go[i].tsd.ship.plot_armor)
+		return;
+	if (go[i].type == OBJTYPE_STARBASE && go[i].tsd.starbase.plot_armor)
+		return;
+
 	if (go[i].type == OBJTYPE_NPCSHIP || go[i].type == OBJTYPE_BRIDGE) {
 		if (attacker->tsd.ship.ai[0].ai_mode != AI_MODE_COP) {
 			if (go[i].type == OBJTYPE_NPCSHIP &&
@@ -22815,6 +22821,34 @@ static int l_lookup_by_name(lua_State *l)
 	return 1;
 }
 
+static int l_set_plot_armor(lua_State *l)
+{
+	const double id = luaL_checknumber(l, 1);
+	const double value = luaL_checknumber(l, 2);
+	uint32_t ship_id = (uint32_t) id;
+	uint8_t v = (uint8_t) value;
+	v = !!v;
+
+	pthread_mutex_lock(&universe_mutex);
+	int i = lookup_by_id(ship_id);
+	if (i < 0) {
+		pthread_mutex_unlock(&universe_mutex);
+		send_demon_console_msg("set_plot_armor: BAD SHIP ID: %u", ship_id);
+		return 0;
+	}
+	if (go[i].type == OBJTYPE_NPCSHIP) {
+		go[i].tsd.ship.plot_armor = v;
+	} else if (go[i].type == OBJTYPE_NPCSHIP) {
+		go[i].tsd.starbase.plot_armor = v;
+	} else {
+		pthread_mutex_unlock(&universe_mutex);
+		send_demon_console_msg("set_plot_armor: ID IS NOT NPC SHIP OR STARBASE: %u", ship_id);
+		return 0;
+	}
+	pthread_mutex_unlock(&universe_mutex);
+	return 0;
+}
+
 static int process_create_item(struct game_client *c)
 {
 	unsigned char buffer[16];
@@ -27080,6 +27114,7 @@ static void setup_lua(void)
 	add_lua_callable_fn(l_issue_docking_clearance, "issue_docking_clearance");
 	add_lua_callable_fn(l_terminal_effect, "terminal_effect");
 	add_lua_callable_fn(l_lookup_by_name, "lookup_by_name");
+	add_lua_callable_fn(l_set_plot_armor, "set_plot_armor");
 }
 
 static void print_lua_error_message(char *error_context, char *lua_command)

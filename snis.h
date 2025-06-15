@@ -645,6 +645,7 @@ struct ship_data {
 	/* Which system (weapons, shields, warp drive, etc.) of player ships to target damage on */
 	uint8_t targeted_system;
 	uint32_t last_seen_near;
+	uint8_t plot_armor; /* to keep NPC ships from attacking ships that are key to the plot */
 #endif
 };
 
@@ -695,6 +696,7 @@ struct starbase_data {
 	union vec3 orbital_axis;	/* Axis of rotation about planet */
 	float orbital_angle;		/* position in orbit, radians */
 	float orbital_velocity;		/* Rate of orbit, radians / tick */
+	uint8_t plot_armor;
 #endif
 };
 

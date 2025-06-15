@@ -204,6 +204,11 @@ id = add_ship(name, x, y, z, type, faction, auto_respawn) -- adds a ship to the
         universe of the specified type and faction at the specified locations.  If
         adding ship failed, nil is returned.
 
+set_plot_armor(id, value) -- sets plot armor on specified NPC ship or starbase to value
+	the value may be 0 (no plot armor), or 1 (plot armor).  NPC ships will not attack
+	any victim that has plot armor set to 1.  In this way you can prevent your
+	NPC ships or starbases which are "key to the plot" from being attacked by NPC ships.
+
 id = add_asteroid(x, y, z) -- adds an asteroid at the specified location
 	(it will orbit around the center of the universe). Returns the ID of the
 	asteroid, or nil if it fails.
