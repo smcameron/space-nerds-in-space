@@ -7374,12 +7374,17 @@ static void text_to_speech(char *text)
 /* Trigger text to speech to explain why a selected ROLE is not active on this terminal */
 static void explain_denied_role(char *role_name)
 {
-	char speech[4096];
+	static int already_played_back = 0;
 
-	snprintf(speech, sizeof(speech), "The %s role is not active on this terminal. "
-			"If you want to activate it, press escape and disconnect, then reconnect after "
-			"selecting the %s role on the network setup screen.", role_name, role_name);
-	text_to_speech(speech);
+	if (!already_played_back) {
+		/* Only play this once.  It's super annoying to accidentally trigger it all the time */
+		char speech[1024];
+		already_played_back = 1;
+		snprintf(speech, sizeof(speech), "The %s role is not active on this terminal. "
+				"If you want to activate it, press escape and disconnect, then reconnect after "
+				"selecting the %s role on the network setup screen.", role_name, role_name);
+		text_to_speech(speech);
+	}
 }
 
 static int process_natural_language_request(void)
