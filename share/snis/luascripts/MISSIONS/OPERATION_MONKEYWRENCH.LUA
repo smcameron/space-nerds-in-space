@@ -601,7 +601,7 @@ function add_attacker(i)
 	x = x + px;
 	y = y + py;
 	z = z + pz;
-	attacker[i] = add_ship(generate_ship_name(), x, y, z, 18, 0, 0);
+	attacker[i] = add_ship(generate_ship_name(), x, y, z, 18, 3, 0);
 	ai_push_attack(attacker[i], player_ids[1]);
 	register_timer_callback("maintain_attacker_focus", 200, 0);
 end
