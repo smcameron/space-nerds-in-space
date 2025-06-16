@@ -5,14 +5,16 @@ player_ids = get_player_ship_ids();
 reset_player_ship(player_ids[1]);
 starbase0 = -1;
 mission_stage = 0;
-encrypted_message_time = 60 * secs;
-summon_to_base_time = 90 * secs;
+summon_to_base_time = 15 * secs;
 player_orders_time = 10 * secs;
 bruiser_msg_time = 90 * secs;
+encrypted_message_time = 60 * secs;
 second_pierce_msg_time = 90 * secs;
 players_took_passengers = 0;
 commendations_msg_time = 30 * secs;
 epilogue_msg_time = 30 * secs;
+govt_revenge_msg_time = 60 * secs;
+govt_attack_time = 30 * secs;
 num_attackers = 5;
 
 function setup_universe()
@@ -367,6 +369,7 @@ function message_from_bruiser()
 	comms_transmission(bruiser, "");
 	comms_transmission(bruiser, "CAPTAIN ZELLICK OUT.");
         comms_transmission(bruiser, "------------------");
+	register_timer_callback("encrypted_message_to_pierce", encrypted_message_time, 0)
 	register_timer_callback("second_message_from_pierce", second_pierce_msg_time, 0);
 	move_object(bruiser, 500000, 500000, 500000); -- get Bruiser out of here
 end
@@ -625,7 +628,7 @@ function revenge_of_the_govt()
         comms_transmission(starbase[1], "EARNED FOR YOUR TRAITOROUS ACTIONS!");
         comms_transmission(starbase[1], "ADMIRAL PIERCE OUT!");
         comms_transmission(starbase[1], "------------------");
-	register_timer_callback("revenge_of_the_govt2", 30, 0)
+	register_timer_callback("revenge_of_the_govt2", govt_attack_time, 0)
 end
 
 delivered_passengers = 0;
@@ -633,14 +636,13 @@ function handle_passenger_disembarked(passenger_no, destination_id)
 	if passenger_no >= 0 and passenger_no <= 7 and destination_id == starbase[2] then
 		delivered_passengers = delivered_passengers + 1;
 		if (delivered_passengers == 8) then
-			register_timer_callback("revenge_of_the_govt", 60, 0)
+			register_timer_callback("revenge_of_the_govt", govt_revenge_msg_time, 0)
 		end
 	end
 end
 
 text_to_speech(player_ids[1], "Begin mission: Operation monkey wrench");
 setup_custom_buttons();
-register_timer_callback("encrypted_message_to_pierce", encrypted_message_time, 0)
 register_timer_callback("summon_to_base", summon_to_base_time, 0)
 register_callback("player-docked-event", "player_docked_callback");
 register_proximity_callback("approaching_aurore", aurore, player_ids[1], 10000);
