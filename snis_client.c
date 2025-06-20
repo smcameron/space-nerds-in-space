@@ -23886,7 +23886,27 @@ static void read_ogg_clip(int sound, char *directory, char *filename)
 	char path[PATH_MAX];
 
 	snprintf(path, sizeof(path), "%s/sounds/%s", directory, filename);
-	wwviaudio_read_ogg_clip(sound, replacement_asset_lookup(path, &replacement_assets));
+	int rc = wwviaudio_read_ogg_clip(sound, replacement_asset_lookup(path, &replacement_assets));
+
+	if (rc != 0) {
+		fprintf(stderr, "Failed to read audio file: %s\n", path);
+	}
+}
+
+static void read_ogg_clip_with_alternate(int sound, char *directory, char *filename, char *alternate_filename)
+{
+	char path[PATH_MAX];
+
+	snprintf(path, sizeof(path), "%s/sounds/%s", directory, filename);
+	int rc = wwviaudio_read_ogg_clip(sound, replacement_asset_lookup(path, &replacement_assets));
+	if (rc != 0) { /* try alternate */
+		fprintf(stderr, "Failed to read audio file %s, trying alternate\n", path);
+		snprintf(path, sizeof(path), "%s/sounds/%s", directory, alternate_filename);
+		rc = wwviaudio_read_ogg_clip(sound, replacement_asset_lookup(path, &replacement_assets));
+		if (rc != 0) {
+			fprintf(stderr, "Failed to read audio file %s\n", path);
+		}
+	}
 }
 
 static int read_ship_types(void)
@@ -24015,6 +24035,7 @@ static void read_sound_clips(void)
 	read_ogg_clip(CLEAR_TO_DEPART, d, "wombat-clear-to-depart.ogg");
 	read_ogg_clip(TERMINAL_REBOOT, d, "term_reboot.ogg");
 	read_ogg_clip(TERMINAL_READY, d, "term_ready.ogg");
+	read_ogg_clip_with_alternate(PHOTON_TORPEDO_FIRE, d, "photon-torpedo-fire.ogg", "bigshotlaser.ogg");
 	printf("Done.\n");
 }
 

@@ -23906,7 +23906,7 @@ static int process_request_torpedo(struct game_client *c)
 	add_torpedo(ship->x, ship->y, ship->z,
 			velocity.v.x, velocity.v.y, velocity.v.z, ship->id, TARGET_ALL_SYSTEMS);
 	ship->tsd.ship.torpedoes_loaded--;
-	snis_queue_add_sound(LASER_FIRE_SOUND, ROLE_SOUNDSERVER, ship->id);
+	snis_queue_add_sound(PHOTON_TORPEDO_FIRE, ROLE_SOUNDSERVER, ship->id);
 	pthread_mutex_unlock(&universe_mutex);
 	return 0;
 
