@@ -41,7 +41,7 @@
 #include "shape_collision.h"
 
 #define DEFAULT_SOLAR_SYSTEM "default"
-#define SNIS_PROTOCOL_VERSION "SNIS066"
+#define SNIS_PROTOCOL_VERSION "SNIS067"
 #define COMMON_MTWIST_SEED 97872
 /* dimensions of the "known" universe */
 #define XKNOWN_DIM 600000.0
@@ -614,6 +614,10 @@ struct ship_data {
 	uint8_t comms_crypto_mode;	/* 1 = comms crypto screen is on, 0 = normal comms */
 	uint8_t passenger_berths;	/* count of passenger berths */
 	uint8_t mining_bots;		/* count of mining bots */
+#define GOOD_DOCKING_PORT_ALIGNMENT 0.85;
+#define GOOD_DOCKING_PORT_VDIFF 100.0;
+	float docking_port_alignment;	/* dot product of ship vector with docking port vector */
+	float docking_port_vdiff;	/* magnitude of difference between ship/docking port vel vectors */
 	uint32_t orbiting_object_id;	/* Object ID of planet when in "standard orbit" */
 	char mining_bot_name[20];	/* Name of ship's mining bot */
 	float nav_damping_suppression;	/* 1.0 means suppress nav orientation damping, used on */
@@ -788,6 +792,7 @@ struct docking_port_data {
 	uint32_t docked_guy;
 	uint8_t portnumber;
 	uint8_t model; /* which starbase model */
+	union vec3 vel; /* velocity of docking port (calculated by verlet integration) */
 };
 
 struct derelict_data {

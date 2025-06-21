@@ -70,7 +70,7 @@ int snis_opcode_def_init(void)
 {
 	int rc = 0;
 
-	rc |= init_opcode_def(OPCODE_UPDATE_SHIP, "bwwhSSSRRRwRRbbbwwbbbbbbbbbbbbwQQQQSSSbB8bbbww");
+	rc |= init_opcode_def(OPCODE_UPDATE_SHIP, "bwwhSSSRRRwRRbbbwwbbbbbbbbbbbbwQQQQSSSbB8bbbwwbSS");
 	rc |= init_opcode_def(OPCODE_UPDATE_STARBASE, "bwwSSSQbbbbwbb");
 	rc |= init_opcode_def(OPCODE_UPDATE_LASER, "bwwwbSSSQ");
 	rc |= init_opcode_def(OPCODE_UPDATE_TORPEDO, "bwwwSSS");

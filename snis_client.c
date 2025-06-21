@@ -5466,6 +5466,7 @@ static int process_update_ship_packet(uint8_t opcode)
 	double dx, dy, dz, dyawvel, dpitchvel, drollvel;
 	double dsheading, dbeamwidth;
 	double hgax, hgay, hgaz; /* high gain antenna aim */
+	double docking_port_alignment, docking_port_vdiff;
 	int rc;
 	int type = opcode == OPCODE_UPDATE_SHIP ? OBJTYPE_BRIDGE : OBJTYPE_NPCSHIP;
 	uint8_t tloading, tloaded, throttle, rpm, temp, scizoom, weapzoom, navzoom,
@@ -5496,7 +5497,7 @@ static int process_update_ship_packet(uint8_t opcode)
 				&torpedoes,
 				&dsheading,
 				&dbeamwidth);
-	packed_buffer_extract(&pb, "bbbwwbbbbbbbbbbbbwQQQQSSSbB8bbbwwb",
+	packed_buffer_extract(&pb, "bbbwwbbbbbbbbbbbbwQQQQSSSbB8bbbwwbSS",
 			&tloading, &throttle, &rpm, &fuel, &oxygen, &temp,
 			&scizoom, &weapzoom, &navzoom, &mainzoom,
 			&warpdrive,
@@ -5512,7 +5513,9 @@ static int process_update_ship_packet(uint8_t opcode)
 			&exterior_lights, &alarms_silenced, &missile_lock_detected,
 			&align_sciball_to_ship,
 			&comms_crypto_mode, &rts_active_button, &wallet,
-			&viewpoint_object, &sci_auto_sweep);
+			&viewpoint_object, &sci_auto_sweep,
+			&docking_port_alignment, (int32_t) 1000000,
+			&docking_port_vdiff, (int32_t) 1000000);
 	tloaded = (tloading >> 4) & 0x0f;
 	tloading = tloading & 0x0f;
 	quat_to_euler(&ypr, &orientation);	
@@ -5602,6 +5605,8 @@ static int process_update_ship_packet(uint8_t opcode)
 	o->tsd.ship.reverse = reverse;
 	o->tsd.ship.ai[0].u.attack.victim_id = victim_id;
 	o->tsd.ship.comms_crypto_mode = comms_crypto_mode;
+	o->tsd.ship.docking_port_alignment = (float) docking_port_alignment / 100000.0f;
+	o->tsd.ship.docking_port_vdiff = (float) docking_port_vdiff / 100000.0f;
 	rc = 0;
 out:
 	pthread_mutex_unlock(&universe_mutex);
@@ -14199,6 +14204,28 @@ static void draw_3d_nav_display(void)
 		sng_set_foreground(UI_COLOR(nav_entity_label));
 		snprintf(buf, sizeof(buf), "WARP FIELD ERROR: %3.2f%%", error_fraction * 100.0 + jitter);
 		sng_abs_xy_draw_string(buf, NANO_FONT, txx(540), txy(130));
+	}
+
+	/* Draw docking port alignment and relative velocity values */
+	if (o->tsd.ship.docking_magnets) {
+		float alignment = o->tsd.ship.docking_port_alignment;
+		float vdiff = o->tsd.ship.docking_port_vdiff;
+		if (fabsf(o->tsd.ship.docking_port_alignment) > 0.000001 ||
+			fabsf(o->tsd.ship.docking_port_vdiff) > 0.000001) {
+			char buf[64];
+			snprintf(buf, sizeof(buf), "DOCKING ALIGNMENT: %g", fabsf(alignment));
+			if (alignment > 0)
+				sng_set_foreground(UI_COLOR(nav_entity_label));
+			else
+				sng_set_foreground(UI_COLOR(nav_warning));
+			sng_abs_xy_draw_string(buf, NANO_FONT, txx(10), txy(300));
+			snprintf(buf, sizeof(buf), "REL VELOCITY: %g", fabsf(vdiff));
+			if (vdiff > 0)
+				sng_set_foreground(UI_COLOR(nav_entity_label));
+			else
+				sng_set_foreground(UI_COLOR(nav_warning));
+			sng_abs_xy_draw_string(buf, NANO_FONT, txx(10), txy(310));
+		}
 	}
 
 	pthread_mutex_unlock(&universe_mutex);

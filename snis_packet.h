@@ -333,6 +333,8 @@ struct update_ship_packet {
 	uint32_t wallet;
 	uint32_t viewpoint_object;
 	uint8_t sci_auto_sweep;
+	uint32_t docking_port_alignment;
+	uint32_t docking_port_vdiff;
 };
 
 struct ship_sdata_packet {

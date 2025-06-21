@@ -203,6 +203,8 @@ static float bandwidth_throttle_distance = (XKNOWN_DIM / 3); /* How far before o
 static int distant_update_period = 20; /* Distant objects are updated only after */
 				       /* this many ticks. tweakable */
 static int docking_by_faction = 0;
+static int min_docking_alignment = 0.8; /* tweakable */
+static int max_docking_vdiff = 2.0; /* tweakable */
 static int starbase_docking_perm_dist = STARBASE_DOCKING_PERM_DIST;
 static int npc_ship_count = 250; /* tweakable.  Used by universe regeneration */
 static int asteroid_count = 200; /* tweakable.  Used by universe regeneration */
@@ -9117,6 +9119,15 @@ static void player_attempt_dock_with_starbase(struct snis_entity *docking_port,
 
 	if (docking_port->tsd.docking_port.docked_guy == player->id) /* already docked? */
 		return;
+	/* Check that the player has docked with sufficient skill */
+	if (player->tsd.ship.docking_port_vdiff > max_docking_vdiff) {
+		/* TODO: provide some kind of feedback */
+		return;
+	}
+	if (player->tsd.ship.docking_port_alignment < min_docking_alignment) {
+		/* TODO: provide some kind of feedback */
+		return;
+	}
 
 	int b = lookup_bridge_by_shipid(player->id);
 	if (b < 0 || b >= nbridges) {
@@ -9305,6 +9316,24 @@ static void player_collision_detection(void *player, void *object)
 		/* Prevent nearby cargo containers from disappearing */
 		if (dist2 < SCIENCE_SHORT_RANGE * SCIENCE_SHORT_RANGE)
 			t->alive = CARGO_CONTAINER_LIFETIME;
+	}
+	if (t->type == OBJTYPE_DOCKING_PORT && dist2 < 300.0 * 300.0) {
+		union vec3 player_velocity, vel_diff;
+
+		/* check player ship velocity delta */
+		player_velocity.v.x = o->vx;
+		player_velocity.v.y = o->vy;
+		player_velocity.v.z = o->vz;
+		vec3_sub(&vel_diff, &t->tsd.docking_port.vel, &player_velocity);
+		o->tsd.ship.docking_port_vdiff = vec3_magnitude(&vel_diff);
+
+		/* Check player alignment */
+		union vec3 unit_vec = { { 1.0, 0.0, 0.0, }, };
+		union vec3 docking_port_vec, player_vec;
+
+		quat_rot_vec(&docking_port_vec, &unit_vec, &t->orientation);
+		quat_rot_vec(&player_vec, &unit_vec, &o->orientation);
+		o->tsd.ship.docking_port_alignment = vec3_dot(&player_vec, &docking_port_vec);
 	}
 	if (t->type == OBJTYPE_DOCKING_PORT && dist2 < 50.0 * 50.0) {
 		if (o->tsd.ship.docking_magnets) {
@@ -9953,6 +9982,8 @@ static void update_player_position_and_velocity(struct snis_entity *o)
 	set_object_location(o, o->x + o->vx, o->y + o->vy, o->z + o->vz);
 
 	previous_security = o->tsd.ship.in_secure_area;
+	o->tsd.ship.docking_port_alignment = 0.0;
+	o->tsd.ship.docking_port_vdiff = 0.0;
 	o->tsd.ship.in_secure_area = 0;  /* player_collision_detection fills this in. */
 	space_partition_process(space_partition, o, o->x, o->z, o,
 				player_collision_detection);
@@ -10804,11 +10835,19 @@ static void starbase_update_docking_ports(struct snis_entity *o)
 		if (d < 0)
 			continue;
 		port = &go[d];
+		union vec3 old_pos;
+		old_pos.v.x = port->x;
+		old_pos.v.y = port->y;
+		old_pos.v.z = port->z;
 		pos = docking_port_info[model]->port[i].pos;
 		quat_rot_vec_self(&pos, &o->orientation);
 		quat_mul(&port->orientation, &o->orientation,
 			 &docking_port_info[model]->port[i].orientation);
 		set_object_location(port, pos.v.x + o->x, pos.v.y + o->y, pos.v.z + o->z);
+		/* calculate docking port velocity for use in judging player's docking attempt. */
+		port->tsd.docking_port.vel.v.x = port->x - old_pos.v.x;
+		port->tsd.docking_port.vel.v.y = port->y - old_pos.v.y;
+		port->tsd.docking_port.vel.v.z = port->z - old_pos.v.z;
 		port->timestamp = universe_timestamp;
 	}
 }
@@ -11709,7 +11748,9 @@ static void init_player(struct snis_entity *o)
 	o->tsd.ship.desired_hg_ant_aim.v.y = 0.0;
 	o->tsd.ship.desired_hg_ant_aim.v.z = 0.0;
 	o->tsd.ship.sci_auto_sweep = 0;
-	/* Fill in .tsd.ship.in_secure_area with correct value. */
+	o->tsd.ship.docking_port_alignment = 0.0;
+	o->tsd.ship.docking_port_vdiff = 0.0;
+	/* Fill in .tsd.ship.in_secure_area with correct value, and docking port stuff. */
 	space_partition_process(space_partition, o, o->x, o->z, o, player_collision_detection);
 }
 
@@ -11776,6 +11817,8 @@ static void respawn_player(struct snis_entity *o, uint8_t warpgate_number)
 		}
 		set_object_location(o, x, y, z);
 	}
+	o->tsd.ship.docking_port_alignment = 0.0;
+	o->tsd.ship.docking_port_vdiff = 0.0;
 	/* Fill in .tsd.ship.in_secure_area with correct value. */
 	space_partition_process(space_partition, o, o->x, o->z, o, player_collision_detection);
 
@@ -19577,6 +19620,10 @@ static struct tweakable_var_descriptor server_tweak[] = {
 		&warp_core_countdown, 'i', 0.0, 0.0, 0.0, 10, 3000, WARP_CORE_COUNTDOWN, 0 },
 	{ "SAFE_MODE", "0 - 1: IF SET TO 1 NO SHIPS ATTACK, AND YOU WON'T RUN OUT OF FUEL.",
 		&safe_mode, 'i', 0.0, 0.0, 0.0, 0, 1, 0, 0 },
+	{ "MAX_DOCKING_VDIFF", "MAXIMUM ALLOWABLE VELOCITY DIFFERENCE FOR SUCCESSFUL DOCKING",
+		&max_docking_vdiff, 'f', 0.1, 1000.0, 2.0, 0, 0, 0, 0 },
+	{ "MIN_DOCKING_ALIGNMENT", "MAXIMUM ALLOWABLE VELOCITY DIFFERENCE FOR SUCCESSFUL DOCKING",
+		&min_docking_alignment, 'f', 0.8, 0.0, 1.0, 0, 0, 0, 0 },
 	{ NULL, NULL, NULL, '\0', 0.0, 0.0, 0.0, 0, 0, 0, 0 },
 };
 
@@ -25763,11 +25810,18 @@ static void send_update_ship_packet(struct game_client *c,
 	tloading = tloading | (tloaded << 4);
 	wallet = (uint32_t) o->tsd.ship.wallet;
 
+	float vdiff = o->tsd.ship.docking_port_vdiff;
+	if (vdiff > max_docking_vdiff)
+		vdiff = -vdiff; /* negative to signal "bad" to the client */
+	float alignment = o->tsd.ship.docking_port_alignment;
+	if (alignment < min_docking_alignment)
+		alignment = -alignment; /* negative to signal "bad" to the client */
+
 	pb = packed_buffer_allocate(sizeof(struct update_ship_packet));
 	packed_buffer_append(pb, "bwwhSSS", opcode, o->id, o->timestamp, o->alive,
 			o->x, (int32_t) UNIVERSE_DIM, o->y, (int32_t) UNIVERSE_DIM,
 			o->z, (int32_t) UNIVERSE_DIM);
-	packed_buffer_append(pb, "RRRwRRbbbwwbbbbbbbbbbbbwQQQQSSSbB8bbbwwb",
+	packed_buffer_append(pb, "RRRwRRbbbwwbbbbbbbbbbbbwQQQQSSSbB8bbbwwbSS",
 			o->tsd.ship.yaw_velocity,
 			o->tsd.ship.pitch_velocity,
 			o->tsd.ship.roll_velocity,
@@ -25803,7 +25857,9 @@ static void send_update_ship_packet(struct game_client *c,
 			o->tsd.ship.comms_crypto_mode,
 			o->tsd.ship.rts_active_button,
 			wallet, o->tsd.ship.viewpoint_object,
-			o->tsd.ship.sci_auto_sweep);
+			o->tsd.ship.sci_auto_sweep,
+			alignment * 100000, (int32_t) 1000000,
+			vdiff * 100000, (int32_t) 1000000);
 	pb_queue_to_client(c, pb);
 
 	/* now that we've sent the accumulated value, clear the emf_detector to the noise floor */
