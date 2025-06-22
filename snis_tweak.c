@@ -80,7 +80,7 @@ int tweak_variable(struct tweakable_var_descriptor *tweak, int count, char *cmd,
 	}
 	switch (v->type) {
 	case 'f':
-		if (strcmp(valuestr, "DEFAULT") == 0) {
+		if (strcasecmp(valuestr, "DEFAULT") == 0) {
 			f = v->defaultf;
 		} else {
 			rc = sscanf(valuestr, "%f", &f);
@@ -100,7 +100,7 @@ int tweak_variable(struct tweakable_var_descriptor *tweak, int count, char *cmd,
 			snprintf(msg, msgsize, "%s SET TO %f", variable, f);
 		break;
 	case 'b':
-		if (strcmp(valuestr, "DEFAULT") == 0) {
+		if (strcasecmp(valuestr, "DEFAULT") == 0) {
 			b = v->defaulti;
 		} else {
 			rc = sscanf(valuestr, "%hhu", &b);
@@ -119,7 +119,7 @@ int tweak_variable(struct tweakable_var_descriptor *tweak, int count, char *cmd,
 			snprintf(msg, msgsize, "%s SET TO %hhu", variable, b);
 		break;
 	case 'i':
-		if (strcmp(valuestr, "DEFAULT") == 0) {
+		if (strcasecmp(valuestr, "DEFAULT") == 0) {
 			i = v->defaulti;
 		} else {
 			rc = sscanf(valuestr, "%d", &i);
