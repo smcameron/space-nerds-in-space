@@ -9121,11 +9121,13 @@ static void player_attempt_dock_with_starbase(struct snis_entity *docking_port,
 		return;
 	/* Check that the player has docked with sufficient skill */
 	if (player->tsd.ship.docking_port_vdiff > max_docking_vdiff) {
-		/* TODO: provide some kind of feedback */
+		do_collision_impulse(player, docking_port);
+		snis_queue_add_sound(SPACEMONSTER_SLAP, ROLE_SOUNDSERVER, player->id);
 		return;
 	}
 	if (player->tsd.ship.docking_port_alignment < min_docking_alignment) {
-		/* TODO: provide some kind of feedback */
+		do_collision_impulse(player, docking_port);
+		snis_queue_add_sound(SPACEMONSTER_SLAP, ROLE_SOUNDSERVER, player->id);
 		return;
 	}
 
@@ -9345,6 +9347,8 @@ static void player_collision_detection(void *player, void *object)
 				snis_queue_add_text_to_speech(
 					"If you are attempting to dock perhaps you should turn on the docking magnets.",
 					ROLE_TEXT_TO_SPEECH, o->id);
+			do_collision_impulse(o, t);
+			snis_queue_add_sound(SPACEMONSTER_SLAP, ROLE_SOUNDSERVER, o->id);
 		}
 	}
 	if (t->type == OBJTYPE_WARPGATE && dist2 < 110.0 * 110.0) {
