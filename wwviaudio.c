@@ -458,6 +458,9 @@ static int wwviaudio_add_sound_segment_to_slot(int which_sound, int which_slot, 
 	unsigned int i;
 	int start, stop;
 
+	if (which_sound < 0 || which_sound >= allocated_sound_clips)
+		return -1;
+
 	if (!sound_working)
 		return 0;
 
