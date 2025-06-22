@@ -203,8 +203,8 @@ static float bandwidth_throttle_distance = (XKNOWN_DIM / 3); /* How far before o
 static int distant_update_period = 20; /* Distant objects are updated only after */
 				       /* this many ticks. tweakable */
 static int docking_by_faction = 0;
-static int min_docking_alignment = 0.8; /* tweakable */
-static int max_docking_vdiff = 2.0; /* tweakable */
+static float min_docking_alignment = 0.8; /* tweakable */
+static float max_docking_vdiff = 2.0; /* tweakable */
 static int starbase_docking_perm_dist = STARBASE_DOCKING_PERM_DIST;
 static int npc_ship_count = 250; /* tweakable.  Used by universe regeneration */
 static int asteroid_count = 200; /* tweakable.  Used by universe regeneration */
@@ -19627,7 +19627,7 @@ static struct tweakable_var_descriptor server_tweak[] = {
 	{ "MAX_DOCKING_VDIFF", "MAXIMUM ALLOWABLE VELOCITY DIFFERENCE FOR SUCCESSFUL DOCKING",
 		&max_docking_vdiff, 'f', 0.1, 1000.0, 2.0, 0, 0, 0, 0 },
 	{ "MIN_DOCKING_ALIGNMENT", "MAXIMUM ALLOWABLE VELOCITY DIFFERENCE FOR SUCCESSFUL DOCKING",
-		&min_docking_alignment, 'f', 0.8, 0.0, 1.0, 0, 0, 0, 0 },
+		&min_docking_alignment, 'f', 0.0, 1.0, 0.8, 0, 0, 0, 0 },
 	{ NULL, NULL, NULL, '\0', 0.0, 0.0, 0.0, 0, 0, 0, 0 },
 };
 
