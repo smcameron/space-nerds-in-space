@@ -10,6 +10,7 @@ enum planetary_atmosphere_type {
 	marslike_atmosphere_type = 2,
 	gas_giant_atmosphere_type = 3,
 	titanlike_atmosphere_type = 4,
+	ice_giant_atmosphere_type = 5,
 };
 
 extern struct atmospheric_compound_entry {

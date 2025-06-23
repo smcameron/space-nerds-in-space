@@ -14,6 +14,7 @@ static const char * const atmosphere_type_name[] = {
 	"MARS-CLASS",
 	"GAS-GIANT",
 	"TITAN-CLASS",
+	"ICE-GIANT",
 };
 
 static int first_random_atmosphere = 0;
@@ -335,7 +336,7 @@ void planetary_atmosphere_model_init_models(uint32_t seed, int num_atmospheres_p
 	planetary_atmosphere_profile_add_minor(saturn_atmosphere_model, "ETHANE", 7);
 
 	uranus_atmosphere_model = planetary_atmosphere_profile_new("uranuslike",
-					gas_giant_atmosphere_type, 49.0, 9e5, NULL);
+					ice_giant_atmosphere_type, 49.0, 9e5, NULL);
 	planetary_atmosphere_profile_add_major(uranus_atmosphere_model, "HYDROGEN", 0.965);
 	planetary_atmosphere_profile_add_major(uranus_atmosphere_model, "HELIUM", 0.027);
 	planetary_atmosphere_profile_add_major(uranus_atmosphere_model, "METHANE", 0.023);
@@ -349,7 +350,7 @@ void planetary_atmosphere_model_init_models(uint32_t seed, int num_atmospheres_p
 	planetary_atmosphere_profile_add_minor(uranus_atmosphere_model, "CARBON MONOXIDE", 12);
 
 	neptune_atmosphere_model = planetary_atmosphere_profile_new("neptunelike",
-					gas_giant_atmosphere_type, 72.0, 1e7, NULL);
+					ice_giant_atmosphere_type, 72.0, 1e7, NULL);
 	planetary_atmosphere_profile_add_major(neptune_atmosphere_model, "HYDROGEN", 0.8);
 	planetary_atmosphere_profile_add_major(neptune_atmosphere_model, "HELIUM", 0.19);
 	planetary_atmosphere_profile_add_major(neptune_atmosphere_model, "METHANE", 0.015);
@@ -379,17 +380,15 @@ void planetary_atmosphere_model_init_models(uint32_t seed, int num_atmospheres_p
 
 	first_random_atmosphere = planetary_atmosphere_profile_index(titan_atmosphere_model) + 1;
 
-	int error = num_atmos_per_type - (4 * (num_atmos_per_type / 4));
 	add_random_atmospheres(mt, earthlike_atmosphere_type, earth_atmosphere_model, num_atmos_per_type, 0);
 	add_random_atmospheres(mt, venuslike_atmosphere_type, venus_atmosphere_model, num_atmos_per_type, 0);
 	add_random_atmospheres(mt, marslike_atmosphere_type, mars_atmosphere_model, num_atmos_per_type, 0);
-	add_random_atmospheres(mt, gas_giant_atmosphere_type, jupiter_atmosphere_model, num_atmos_per_type / 4, 0);
-	add_random_atmospheres(mt, gas_giant_atmosphere_type, neptune_atmosphere_model, num_atmos_per_type / 4,
-				1 * num_atmos_per_type / 4);
-	add_random_atmospheres(mt, gas_giant_atmosphere_type, uranus_atmosphere_model, num_atmos_per_type / 4,
-				2 * num_atmos_per_type / 4);
-	add_random_atmospheres(mt, gas_giant_atmosphere_type, saturn_atmosphere_model, num_atmos_per_type / 4 + error,
-				3 * num_atmos_per_type / 4);
+	add_random_atmospheres(mt, gas_giant_atmosphere_type, jupiter_atmosphere_model, num_atmos_per_type / 2, 0);
+	add_random_atmospheres(mt, gas_giant_atmosphere_type, saturn_atmosphere_model,
+				num_atmos_per_type / 2, num_atmos_per_type / 2);
+	add_random_atmospheres(mt, ice_giant_atmosphere_type, neptune_atmosphere_model, num_atmos_per_type / 2, 0);
+	add_random_atmospheres(mt, ice_giant_atmosphere_type, uranus_atmosphere_model,
+				num_atmos_per_type / 2, num_atmos_per_type / 2);
 	add_random_atmospheres(mt, titanlike_atmosphere_type, titan_atmosphere_model, num_atmos_per_type, 0);
 }
 

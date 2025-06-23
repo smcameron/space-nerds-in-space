@@ -7,6 +7,7 @@ enum planet_type {
 	planet_type_rocky,
 	planet_type_earthlike,
 	planet_type_gas_giant,
+	planet_type_ice_giant,
 };
 
 extern enum planet_type planet_type_from_string(char *s);

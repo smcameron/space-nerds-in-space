@@ -14056,6 +14056,8 @@ static int select_atmospheric_profile(struct snis_entity *planet)
 		atm_type = earthlike_atmosphere_type;
 	else if (strcmp(solarsystem_assets->planet_type[planet_type], "gas-giant") == 0)
 		atm_type = gas_giant_atmosphere_type;
+	else if (strcmp(solarsystem_assets->planet_type[planet_type], "ice-giant") == 0)
+		atm_type = ice_giant_atmosphere_type;
 	else
 		atm_type = gas_giant_atmosphere_type;
 	return random_planetary_atmosphere_by_type(NULL, atm_type, atm_instance);
@@ -14084,7 +14086,7 @@ static int choose_planet_texture_of_type(int planet_type)
 	int i;
 	int ntextures = solarsystem_assets->nplanet_textures;
 	int n = snis_randn(100) % ntextures;
-	const char *ptypes[] = { "earthlike", "gas-giant", "rocky" };
+	const char *ptypes[] = { "earthlike", "gas-giant", "rocky", "ice-giant" };
 
 	planet_type %= 3;
 
@@ -14156,6 +14158,10 @@ static int add_planet(double x, double y, double z, float radius, uint8_t securi
 	} else if (strcmp(solarsystem_assets->planet_type[sst], "gas-giant") == 0) {
 		minr = MIN_GAS_GIANT_RADIUS;
 		maxr = MAX_GAS_GIANT_RADIUS;
+		habitability = snis_randn(50) + 0;
+	} else if (strcmp(solarsystem_assets->planet_type[sst], "ice-giant") == 0) {
+		minr = MIN_ICE_GIANT_RADIUS;
+		maxr = MAX_ICE_GIANT_RADIUS;
 		habitability = snis_randn(50) + 0;
 	} else {
 		fprintf(stderr, "snis_server:%s:%d: Unexpected planet type '%s'\n",

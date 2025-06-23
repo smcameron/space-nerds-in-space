@@ -43,7 +43,8 @@ static void sanity_check(char *filename, struct solarsystem_asset_spec *ss)
 	for (i = 0; i < ss->nplanet_textures; i++) {
 		if (strcmp(ss->planet_type[i], "rocky") != 0 &&
 			strcmp(ss->planet_type[i], "earthlike") != 0 &&
-			strcmp(ss->planet_type[i], "gas-giant")) {
+			strcmp(ss->planet_type[i], "gas-giant") != 0 &&
+			strcmp(ss->planet_type[i], "ice-giant") != 0) {
 			fprintf(stderr, "%s: unknown planet type '%s'\n", filename, ss->planet_type[i]);
 		}
 		if (strcmp(ss->planet_type[i], "rocky") != 0 &&

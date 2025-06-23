@@ -757,6 +757,15 @@ static char *Gas_Giant[] = {
 	"giant planet",
 };
 
+static char *Ice_Giant[] = {
+	"ice giant",
+	"icy world",
+	"ice planet",
+	"world",
+	"huge world",
+	"giant planet",
+};
+
 static char *Rocky_Planet[] = {
 	"rocky planet",
 	"rocky world",
@@ -841,6 +850,16 @@ static char *GasGiantClimate[] = {
 	"wondrous",
 	"amazing",
 	"hydrogenous",
+};
+
+static char *IcyClimate[] = {
+	"cold",
+	"gigantic",
+	"beautiful",
+	"striking",
+	"gorgeous",
+	"ammonia laden",
+	"watery",
 };
 
 static char *RockyClimate[] = {
@@ -1498,6 +1517,7 @@ SELECT_WORD_FN(destroyed, Destroyed)
 SELECT_WORD_FN(character_title, Title)
 SELECT_WORD_FN(beautiful, Beautiful)
 SELECT_WORD_FN(gas_giant, Gas_Giant)
+SELECT_WORD_FN(ice_giant, Ice_Giant)
 SELECT_WORD_FN(uninhabitable, Uninhabitable)
 SELECT_WORD_FN(however, However)
 SELECT_WORD_FN(rocky_planet, Rocky_Planet)
@@ -1567,6 +1587,8 @@ static char *climate(struct mtwist_state *mt, enum planet_type ptype)
 		return random_word(mt, Climate, ARRAYSIZE(Climate));
 	case planet_type_rocky:
 		return random_word(mt, RockyClimate, ARRAYSIZE(RockyClimate));
+	case planet_type_ice_giant:
+		return random_word(mt, IcyClimate, ARRAYSIZE(IcyClimate));
 	default:
 		break;
 	}
@@ -1630,6 +1652,14 @@ void planet_description(struct mtwist_state *mt, char *buffer, int buflen,
 				culture(mt),
 				do_avoid, terrible(mt), product(mt),
 				bring_your(mt), traveling_accessory(mt));
+		break;
+	case planet_type_ice_giant:
+			snprintf(buffer, buflen,
+			"This %s %s is %s %s there is an orbiting starbase which %s %s %s %s %s and %s %s %s %s. %s the %s %s. %s %s.\n",
+			beautiful(mt), ice_giant(mt), uninhabitable(mt), however(mt), known_for(mt),
+			producing(mt), exceptional(mt), qnationality(mt), product(mt), known_for(mt),
+			exceptional(mt), qnationality(mt), culture(mt),
+			do_avoid, terrible(mt), product(mt), bring_your(mt), traveling_accessory(mt));
 		break;
 	}
 	break_lines(buffer, line_len);
@@ -1804,6 +1834,8 @@ enum planet_type planet_type_from_string(char *s)
 		return planet_type_earthlike;
 	if (strcmp(s, "rocky") == 0)
 		return planet_type_rocky;
+	if (strcmp(s, "ice-giant") == 0)
+		return planet_type_ice_giant;
 	return planet_type_rocky;
 }
 
@@ -1843,7 +1875,7 @@ static void set_random_seed(struct mtwist_state **mt)
 enum planet_type PlanetType(struct mtwist_state *mt)
 {
 	int x;
-	x = (int) (((double) mtwist_next(mt) / (double) (0xffffffff)) * 3);
+	x = (int) (((double) mtwist_next(mt) / (double) (0xffffffff)) * 4);
 	return (enum planet_type) x;
 }
 
