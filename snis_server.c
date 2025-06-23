@@ -9004,7 +9004,7 @@ static int starbase_expecting_docker(struct snis_entity *starbase, uint32_t dock
 	return 0;
 }
 
-static void set_nominal_coolant_levels(struct snis_entity *o)
+static void set_nominal_coolant_and_power_levels(struct snis_entity *o)
 {
 	/* Set nominal cooling levels in case things are hot, so they cool down */
 	o->tsd.ship.coolant_data.maneuvering.r2 = 128;
@@ -9017,6 +9017,9 @@ static void set_nominal_coolant_levels(struct snis_entity *o)
 	o->tsd.ship.coolant_data.tractor.r2 = 128;
 	o->tsd.ship.power_data.lifesupport.r2	= 230; /* don't turn off the air */
 	o->tsd.ship.coolant_data.lifesupport.r2	= 255;
+
+	/* This keeps ship from complaining about low power levels every time we dock at a starbase. */
+	o->tsd.ship.power_data.maneuvering.r2 = 15;
 }
 
 static void init_power_model(struct snis_entity *o);
@@ -9047,7 +9050,7 @@ static void do_docking_action(struct snis_entity *ship, struct snis_entity *star
 	 */
 	init_power_model(ship);
 	init_coolant_model(ship);
-	set_nominal_coolant_levels(ship);
+	set_nominal_coolant_and_power_levels(ship);
 
 	ship->timestamp = universe_timestamp;
 	snis_queue_add_sound(DOCKING_SOUND, ROLE_ALL, ship->id);
