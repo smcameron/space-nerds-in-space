@@ -615,7 +615,7 @@ struct ship_data {
 	uint8_t passenger_berths;	/* count of passenger berths */
 	uint8_t mining_bots;		/* count of mining bots */
 #define GOOD_DOCKING_PORT_ALIGNMENT 0.85;
-#define GOOD_DOCKING_PORT_VDIFF 100.0;
+#define GOOD_DOCKING_PORT_VDIFF 5.0
 	float docking_port_alignment;	/* dot product of ship vector with docking port vector */
 	float docking_port_vdiff;	/* magnitude of difference between ship/docking port vel vectors */
 	uint32_t orbiting_object_id;	/* Object ID of planet when in "standard orbit" */

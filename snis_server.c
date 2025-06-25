@@ -204,7 +204,7 @@ static int distant_update_period = 20; /* Distant objects are updated only after
 				       /* this many ticks. tweakable */
 static int docking_by_faction = 0;
 static float min_docking_alignment = 0.8; /* tweakable */
-static float max_docking_vdiff = 2.0; /* tweakable */
+static float max_docking_vdiff = GOOD_DOCKING_PORT_VDIFF; /* tweakable */
 static int starbase_docking_perm_dist = STARBASE_DOCKING_PERM_DIST;
 static int npc_ship_count = 250; /* tweakable.  Used by universe regeneration */
 static int asteroid_count = 200; /* tweakable.  Used by universe regeneration */
@@ -19634,7 +19634,7 @@ static struct tweakable_var_descriptor server_tweak[] = {
 	{ "SAFE_MODE", "0 - 1: IF SET TO 1 NO SHIPS ATTACK, AND YOU WON'T RUN OUT OF FUEL.",
 		&safe_mode, 'i', 0.0, 0.0, 0.0, 0, 1, 0, 0 },
 	{ "MAX_DOCKING_VDIFF", "MAXIMUM ALLOWABLE VELOCITY DIFFERENCE FOR SUCCESSFUL DOCKING",
-		&max_docking_vdiff, 'f', 0.1, 1000.0, 2.0, 0, 0, 0, 0 },
+		&max_docking_vdiff, 'f', 0.1, 1000.0, GOOD_DOCKING_PORT_VDIFF, 0, 0, 0, 0 },
 	{ "MIN_DOCKING_ALIGNMENT", "MAXIMUM ALLOWABLE VELOCITY DIFFERENCE FOR SUCCESSFUL DOCKING",
 		&min_docking_alignment, 'f', 0.0, 1.0, 0.8, 0, 0, 0, 0 },
 	{ NULL, NULL, NULL, '\0', 0.0, 0.0, 0.0, 0, 0, 0, 0 },
