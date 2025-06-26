@@ -9581,91 +9581,100 @@ static void update_player_orientation(struct snis_entity *o)
 	double v;
 
 	/* This is where "standard orbit" is implemented */
-	if (o->tsd.ship.orbiting_object_id != 0xffffffff) {
+	if (o->tsd.ship.orbiting_object_id == 0xffffffff)
+		goto skip_standard_orbit;
 
-		/* If we're moving too slowly, numerical problems result */
-		v = sqrt(o->vx * o->vx + o->vy * o->vy + o->vz * o->vz);
-		if (v < 0.01) {
-			o->tsd.ship.orbiting_object_id = 0xffffffff;
-			goto skip_standard_orbit;
-		}
-
-		i = lookup_by_id(o->tsd.ship.orbiting_object_id);
-		if (i < 0) {
-			o->tsd.ship.orbiting_object_id = 0xffffffff;
-		} else {
-			/* Find where we would like to be pointed for "standard orbit"
-			 * Take vector P, from planet to us, and make it the standard length.
-			 * Take velocity vector V, project to be parallel to surface of sphere,
-			 * then scale to some constant fraction of planet radius (2.5 degrees, say).
-			 * Add V to P to produce D.  This is where we want to aim.
-			 */
-			union vec3 p, d, direction, right, up, desired_up;
-			union quat new_orientation, up_adjustment, adjusted_orientation;
-
-			planet = &go[i];
-			p.v.x = o->x - planet->x;
-			p.v.y = o->y - planet->y;
-			p.v.z = o->z - planet->z;
-			vec3_normalize_self(&p);
-			vec3_mul_self(&p, planet->tsd.planet.radius * standard_orbit);
-			d.v.x = o->vx;
-			d.v.y = o->vy;
-			d.v.z = o->vz;
-			vec3_add_self(&d, &p);
-			vec3_normalize_self(&d);
-			vec3_mul_self(&d, planet->tsd.planet.radius * standard_orbit);
-			vec3_sub_self(&d, &p);
-			vec3_normalize_self(&d);
-			vec3_mul_self(&d, planet->tsd.planet.radius * 2.5 / M_PI); /* 2.5 degrees */
-			vec3_add_self(&d, &p);
-			d.v.x += planet->x;
-			d.v.y += planet->y;
-			d.v.z += planet->z;
-
-			/* Compute new orientation to point us at d */
-			/* Calculate new desired orientation of ship pointing towards destination */
-			if (o->tsd.ship.reverse)
-				right.v.x = -1.0; /* backwards */
-			else
-				right.v.x = 1.0;
-			right.v.y = 0.0;
-			right.v.z = 0.0;
-
-			direction.v.x = d.v.x - o->x;
-			direction.v.y = d.v.y - o->y;
-			direction.v.z = d.v.z - o->z;
-			vec3_normalize_self(&direction);
-
-			quat_from_u2v(&new_orientation, &right, &direction, NULL);
-
-			/* new_orientation is at least pointing in the right direction, but
-			 * "up" in that orientation is not necessarily "correct" yet.
-			 * We want "up" to be perpendicular to direction, and parallel to
-			 * a plane tangent to the sphere at the closest point.
-			 */
-			vec3_normalize_self(&p);
-			vec3_cross(&desired_up, &p, &direction); /* p is vector from planet to player */
-			vec3_normalize_self(&desired_up);
-
-			/* Find up in the "new_orientation" */
-			up.v.x = 0.0;
-			up.v.y = 1.0;
-			up.v.z = 0.0;
-			quat_rot_vec_self(&up, &new_orientation);
-
-			/* Find the rotation from up in the new orientation to the desired up */
-			quat_from_u2v(&up_adjustment, &up, &desired_up, NULL);
-			quat_normalize_self(&up_adjustment);
-
-			/* Adjust new orientation to have the desired up direction */
-			quat_mul(&adjusted_orientation, &up_adjustment, &new_orientation);
-			quat_normalize_self(&adjusted_orientation);
-
-			o->tsd.ship.computer_desired_orientation = adjusted_orientation;
-			o->tsd.ship.computer_steering_time_left = 50; /* let the computer steer */
-		}
+	/* If we're moving too slowly, numerical problems result */
+	v = sqrt(o->vx * o->vx + o->vy * o->vy + o->vz * o->vz);
+	if (v < 0.01) {
+		o->tsd.ship.orbiting_object_id = 0xffffffff;
+		goto skip_standard_orbit;
 	}
+
+	i = lookup_by_id(o->tsd.ship.orbiting_object_id);
+	if (i < 0) {
+		o->tsd.ship.orbiting_object_id = 0xffffffff;
+		goto skip_standard_orbit;
+	}
+	/* Find where we would like to be pointed for "standard orbit"
+	 * Take vector P, from planet to us, and make it the standard length.
+	 * Take velocity vector V, project to be parallel to surface of sphere,
+	 * then scale to some constant fraction of planet radius (2.5 degrees, say).
+	 * Add V to P to produce D.  This is where we want to aim.
+	 */
+	union vec3 p, d, direction, right, up, desired_up;
+	union quat new_orientation, up_adjustment, adjusted_orientation;
+
+	planet = &go[i];
+	p.v.x = o->x - planet->x;
+	p.v.y = o->y - planet->y;
+	p.v.z = o->z - planet->z;
+
+	/* If too far away, leave standard orbit.  Can happen via moving player ship via demon screen */
+	float dist_to_planet = planet->tsd.planet.radius * standard_orbit * 3.00;
+	dist_to_planet = dist_to_planet * dist_to_planet;
+	if (dist3dsqrd(p.v.x, p.v.y, p.v.z) > dist_to_planet) {
+		o->tsd.ship.orbiting_object_id = 0xffffffff;
+		goto skip_standard_orbit;
+	}
+	vec3_normalize_self(&p);
+	vec3_mul_self(&p, planet->tsd.planet.radius * standard_orbit);
+	d.v.x = o->vx;
+	d.v.y = o->vy;
+	d.v.z = o->vz;
+	vec3_add_self(&d, &p);
+	vec3_normalize_self(&d);
+	vec3_mul_self(&d, planet->tsd.planet.radius * standard_orbit);
+	vec3_sub_self(&d, &p);
+	vec3_normalize_self(&d);
+	vec3_mul_self(&d, planet->tsd.planet.radius * 2.5 / M_PI); /* 2.5 degrees */
+	vec3_add_self(&d, &p);
+	d.v.x += planet->x;
+	d.v.y += planet->y;
+	d.v.z += planet->z;
+
+	/* Compute new orientation to point us at d */
+	/* Calculate new desired orientation of ship pointing towards destination */
+	if (o->tsd.ship.reverse)
+		right.v.x = -1.0; /* backwards */
+	else
+		right.v.x = 1.0;
+	right.v.y = 0.0;
+	right.v.z = 0.0;
+
+	direction.v.x = d.v.x - o->x;
+	direction.v.y = d.v.y - o->y;
+	direction.v.z = d.v.z - o->z;
+	vec3_normalize_self(&direction);
+
+	quat_from_u2v(&new_orientation, &right, &direction, NULL);
+
+	/* new_orientation is at least pointing in the right direction, but
+	 * "up" in that orientation is not necessarily "correct" yet.
+	 * We want "up" to be perpendicular to direction, and parallel to
+	 * a plane tangent to the sphere at the closest point.
+	 */
+	vec3_normalize_self(&p);
+	vec3_cross(&desired_up, &p, &direction); /* p is vector from planet to player */
+	vec3_normalize_self(&desired_up);
+
+	/* Find up in the "new_orientation" */
+	up.v.x = 0.0;
+	up.v.y = 1.0;
+	up.v.z = 0.0;
+	quat_rot_vec_self(&up, &new_orientation);
+
+	/* Find the rotation from up in the new orientation to the desired up */
+	quat_from_u2v(&up_adjustment, &up, &desired_up, NULL);
+	quat_normalize_self(&up_adjustment);
+
+	/* Adjust new orientation to have the desired up direction */
+	quat_mul(&adjusted_orientation, &up_adjustment, &new_orientation);
+	quat_normalize_self(&adjusted_orientation);
+
+	o->tsd.ship.computer_desired_orientation = adjusted_orientation;
+	o->tsd.ship.computer_steering_time_left = 50; /* let the computer steer */
+
 skip_standard_orbit:
 
 	if (o->tsd.ship.computer_steering_time_left > 0) {
