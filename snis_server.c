@@ -13544,7 +13544,7 @@ static void tractorbeam_move(struct snis_entity *o)
 {
 	int tid, oid;
 	struct snis_entity *target, *origin;
-	union vec3 to_object, nto_object, desired_object_loc, tractor_vec, tractor_velocity, tractorer_velocity;
+	union vec3 to_object, nto_object, desired_object_loc;
 	double dist;
 	float authority, inauthority;
 
@@ -13572,18 +13572,46 @@ static void tractorbeam_move(struct snis_entity *o)
 		return;
 	}
 
-	/* Make unit vector pointing to object */
+	/* to_object is vector from ship to object */
 	to_object.v.x = target->x - origin->x;
 	to_object.v.y = target->y - origin->y;
 	to_object.v.z = target->z - origin->z;
+	nto_object = to_object; /* nto_object is normalized vector to object */
 
 	/* Find desired location of object */
-	nto_object = to_object;
 	vec3_normalize_self(&nto_object);
 	vec3_mul(&desired_object_loc, &nto_object, TRACTOR_BEAM_IDEAL_DIST);
+	desired_object_loc.v.x += origin->x;
+	desired_object_loc.v.y += origin->y;
+	desired_object_loc.v.z += origin->z;
 
-	/* Find vector from current object position towards desired position */ 
-	vec3_sub(&tractor_vec, &desired_object_loc, &to_object);
+	/* Find the desired velocity of the object at its current location
+	 * The further away it is from the desired location, the more we want it
+	 * moving towards the desired location.  The closer to the desired location
+	 * the slower we want it moving towards the desired location.
+	 * For now, ignore the velocity of the player's ship in this calculation.
+	 */
+
+	union vec3 target_location;
+	target_location.v.x = target->x;
+	target_location.v.y = target->y;
+	target_location.v.z = target->z;
+
+	union vec3 desired_velocity;
+	vec3_sub(&desired_velocity, &desired_object_loc, &target_location);
+	vec3_mul_self(&desired_velocity, 0.05);
+
+	/* Cap the desired velocity at some maximum */
+	float dvmag = vec3_magnitude(&desired_velocity);
+	if (dvmag > TRACTOR_BEAM_MAX_VEL) {
+		vec3_normalize_self(&desired_velocity);
+		vec3_mul_self(&desired_velocity, TRACTOR_BEAM_MAX_VEL);
+	}
+
+	/* Add player's velocity into desired velocity to make it relative to the player */
+	desired_velocity.v.x += origin->vx;
+	desired_velocity.v.y += origin->vy;
+	desired_velocity.v.y += origin->vy;
 
 	/* Find how much authority we have over the tractored object */
 	switch (target->type) {
@@ -13606,8 +13634,8 @@ static void tractorbeam_move(struct snis_entity *o)
 	case OBJTYPE_WARP_CORE:
 	case OBJTYPE_MISSILE:
 	case OBJTYPE_CARGO_CONTAINER:
-		authority = 0.95;
-		inauthority = 0.05;
+		authority = 0.98;
+		inauthority = 0.02;
 		break;
 	case OBJTYPE_DERELICT:
 		authority = ship_type[origin->tsd.derelict.shiptype].relative_mass /
@@ -13623,27 +13651,34 @@ static void tractorbeam_move(struct snis_entity *o)
 	}
 	authority = authority * ((float) origin->tsd.ship.power_data.tractor.i / 255.0);
 	inauthority = inauthority * ((float) origin->tsd.ship.power_data.tractor.i / 255.0);
+#if 0
 	authority *= 3.0; /* empirically tweaked */
 	inauthority *= 3.0; /* empirically tweaked */
+#endif
 
-	/* Find how much velocity to impart to tractored object and tractorer */
-	dist = vec3_magnitude(&tractor_vec);
-	if (dist > MAX_TRACTOR_VELOCITY)
-		dist = MAX_TRACTOR_VELOCITY;
-	vec3_normalize_self(&tractor_vec);
-	vec3_mul(&tractor_velocity, &tractor_vec, dist * authority);
-	vec3_mul(&tractorer_velocity, &tractor_vec, -dist * inauthority);
+	union vec3 delta_v;
+	union vec3 target_v;
+	union vec3 tractored_delta_v;
+	union vec3 player_delta_v;
+	target_v.v.x = target->vx;
+	target_v.v.y = target->vy;
+	target_v.v.z = target->vz;
 
-	/* move tractored object */
-	target->vx += tractor_velocity.v.x;
-	target->vy += tractor_velocity.v.y;
-	target->vz += tractor_velocity.v.z;
+	vec3_sub(&delta_v, &desired_velocity, &target_v);
+	vec3_mul(&tractored_delta_v, &delta_v, 0.5 * authority);
+	vec3_mul(&player_delta_v, &delta_v, -0.5 * inauthority);
 
-	/* Move tractorer */
-	origin->vx += tractorer_velocity.v.x;
-	origin->vy += tractorer_velocity.v.y;
-	origin->vz += tractorer_velocity.v.z;
+	/* update tractored object velocity */
+	target->vx += tractored_delta_v.v.x;
+	target->vy += tractored_delta_v.v.y;
+	target->vz += tractored_delta_v.v.z;
 
+	/* update player ship velocity */
+	origin->vx += player_delta_v.v.x;
+	origin->vy += player_delta_v.v.y;
+	origin->vz += player_delta_v.v.z;
+
+	/* apply velocities to positions (move tractored object and player ship) */
 	target->x += target->vx;
 	target->y += target->vy;
 	target->z += target->vz;

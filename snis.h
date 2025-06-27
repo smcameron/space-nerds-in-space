@@ -577,9 +577,9 @@ struct ship_data {
 #define ENEMY_LASER_FIRE_INTERVAL (6 * 10)	/* 6 seconds */
 	int32_t next_missile_time;		/* rate limits NPC missile firing */
 #define ENEMY_MISSILE_FIRE_INTERVAL (12 * 10)	/* 12 seconds */
+#define TRACTOR_BEAM_MAX_VEL (100.0)
 #define MAX_TRACTOR_DIST 5000.0 /* TODO: tweak this */
-#define TRACTOR_BEAM_IDEAL_DIST 200.0 /* TODO: tweak this */
-#define MAX_TRACTOR_VELOCITY 10.0
+#define TRACTOR_BEAM_IDEAL_DIST 75.0 /* TODO: tweak this */
 	uint32_t tractor_beam;	/* player ship only: 0xffffffff means tractor beam is off.  Otherwise it holds */
 				/* the ID of the object being tractored */
 				/* For the mining bot, the tractor beam is overloaded to hold the ID of */

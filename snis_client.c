@@ -15751,7 +15751,15 @@ static void init_science_ui(void)
 	ui_add_button(sci_ui.launch_mining_bot_button, DISPLAYMODE_SCIENCE,
 			"LAUNCH THE MINING ROBOT TOWARDS SELECTED TARGET");
 	ui_add_button(sci_ui.custom_button, DISPLAYMODE_SCIENCE, "CUSTOM BUTTON");
-	ui_add_button(sci_ui.tractor_button, DISPLAYMODE_SCIENCE, "TOGGLE THE TRACTOR BEAM ON OR OFF");
+	ui_add_button(sci_ui.tractor_button, DISPLAYMODE_SCIENCE,
+			"TOGGLE THE TRACTOR BEAM ON OR OFF\n\n"
+			"YOU MUST BE WITHIN 5000 UNITS OF THE\n"
+			"OBJECT BEING TRACTORED. LARGER OBJECTS\n"
+			"WILL CAUSE YOUR SHIP TO MOVE, RATHER THAN\n"
+			"THE OBJECT ITSELF.  WHEN CAPTURING CARGO\n"
+			"CONTAINERS, TRACTOR IT CLOSE BY, STOP THE\n"
+			"SHIP, THEN RELEASE FROM THE TRACTOR, THEN\n"
+			"CAPTURE THE CONTAINER");
 	ui_add_button(sci_ui.threed_button, DISPLAYMODE_SCIENCE, "SELECT LONG RANGE SCANNERS");
 	ui_add_button(sci_ui.sciplane_button, DISPLAYMODE_SCIENCE, "SELECT SHORT RANGE SCANNERS");
 	ui_add_button(sci_ui.waypoints_button, DISPLAYMODE_SCIENCE, "MANAGE WAYPOINTS");
