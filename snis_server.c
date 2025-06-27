@@ -13638,7 +13638,7 @@ static void tractorbeam_move(struct snis_entity *o)
 		inauthority = 0.02;
 		break;
 	case OBJTYPE_DERELICT:
-		authority = ship_type[origin->tsd.derelict.shiptype].relative_mass /
+		authority = ship_type[origin->tsd.ship.shiptype].relative_mass /
 				ship_type[target->tsd.derelict.shiptype].relative_mass;
 		inauthority = 1.0 - authority;
 		break;
@@ -13651,10 +13651,6 @@ static void tractorbeam_move(struct snis_entity *o)
 	}
 	authority = authority * ((float) origin->tsd.ship.power_data.tractor.i / 255.0);
 	inauthority = inauthority * ((float) origin->tsd.ship.power_data.tractor.i / 255.0);
-#if 0
-	authority *= 3.0; /* empirically tweaked */
-	inauthority *= 3.0; /* empirically tweaked */
-#endif
 
 	union vec3 delta_v;
 	union vec3 target_v;
