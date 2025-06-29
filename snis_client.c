@@ -9969,6 +9969,32 @@ static void adjust_main_view_azimuth_angle(union quat *cam_orientation)
 	quat_mul_self(cam_orientation, &az);
 }
 
+static void draw_docking_port_alignment_and_rel_vel(struct snis_entity *o)
+{
+	if (!o->tsd.ship.docking_magnets)
+		return;
+
+	/* Draw docking port alignment and relative velocity values */
+	float alignment = o->tsd.ship.docking_port_alignment;
+	float vdiff = o->tsd.ship.docking_port_vdiff;
+	if (fabsf(o->tsd.ship.docking_port_alignment) <= 0.000001 &&
+		fabsf(o->tsd.ship.docking_port_vdiff) <= 0.000001)
+		return;
+	char buf[64];
+	snprintf(buf, sizeof(buf), "DOCKING ALIGNMENT: %g", fabsf(alignment));
+	if (alignment > 0)
+		sng_set_foreground(UI_COLOR(nav_entity_label));
+	else
+		sng_set_foreground(UI_COLOR(nav_warning));
+	sng_abs_xy_draw_string(buf, NANO_FONT, txx(10), txy(300));
+	snprintf(buf, sizeof(buf), "REL VELOCITY: %g", fabsf(vdiff));
+	if (vdiff > 0)
+		sng_set_foreground(UI_COLOR(nav_entity_label));
+	else
+		sng_set_foreground(UI_COLOR(nav_warning));
+	sng_abs_xy_draw_string(buf, NANO_FONT, txx(10), txy(310));
+}
+
 static void show_mainscreen(void)
 {
 	const float min_angle_of_view = 5.0 * M_PI / 180.0;
@@ -10153,6 +10179,7 @@ static void show_mainscreen(void)
 	if (vp == o)
 		draw_main_screen_text();
 	draw_nav_main_idiot_lights(o, UI_COLOR(main_warning));
+	draw_docking_port_alignment_and_rel_vel(o);
 	pthread_mutex_unlock(&universe_mutex);
 	if (vp == o)
 		show_common_screen("");
@@ -14213,28 +14240,7 @@ static void draw_3d_nav_display(void)
 		sng_abs_xy_draw_string(buf, NANO_FONT, txx(540), txy(130));
 	}
 
-	/* Draw docking port alignment and relative velocity values */
-	if (o->tsd.ship.docking_magnets) {
-		float alignment = o->tsd.ship.docking_port_alignment;
-		float vdiff = o->tsd.ship.docking_port_vdiff;
-		if (fabsf(o->tsd.ship.docking_port_alignment) > 0.000001 ||
-			fabsf(o->tsd.ship.docking_port_vdiff) > 0.000001) {
-			char buf[64];
-			snprintf(buf, sizeof(buf), "DOCKING ALIGNMENT: %g", fabsf(alignment));
-			if (alignment > 0)
-				sng_set_foreground(UI_COLOR(nav_entity_label));
-			else
-				sng_set_foreground(UI_COLOR(nav_warning));
-			sng_abs_xy_draw_string(buf, NANO_FONT, txx(10), txy(300));
-			snprintf(buf, sizeof(buf), "REL VELOCITY: %g", fabsf(vdiff));
-			if (vdiff > 0)
-				sng_set_foreground(UI_COLOR(nav_entity_label));
-			else
-				sng_set_foreground(UI_COLOR(nav_warning));
-			sng_abs_xy_draw_string(buf, NANO_FONT, txx(10), txy(310));
-		}
-	}
-
+	draw_docking_port_alignment_and_rel_vel(o);
 	pthread_mutex_unlock(&universe_mutex);
 
 	remove_all_entity(instrumentecx);
