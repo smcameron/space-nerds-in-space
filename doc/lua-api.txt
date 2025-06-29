@@ -665,6 +665,8 @@ reset_player_ship(player_ship_id) -- resets the player ship to healthy status wi
 	player_ids = get_player_ship_ids();
 	reset_player_ship(player_ids[1]);
 
+refuel_player_ship(player_ship_id) -- replenishes fuel of player ship
+
 add_turret(parent_id, x, y, z, firing_interval) -- adds a turret onto the specified
 	object at the specified offset with specified firing interval (10ths of secs).
 	Returns the ID of the turret, or nil on failure.

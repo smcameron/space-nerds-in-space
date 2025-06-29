@@ -19307,14 +19307,15 @@ static void demon_utility_button_pressed(void *x)
 	char *scriptname = (char *) x;
 	char command[256];
 
-	if (strncmp(x, "RESETBRIDGE", 11) == 0) {
+	/* Well, this is kind of disgusting... */
+	if (strncmp(x, "RESETBRIDGE", 11) == 0 || strncmp(x, "REFUELBRIDGE", 12) == 0) {
 		struct snis_entity *o;
 
 		o = find_my_ship();
 		if (!o) {
 			return;
 		}
-		snprintf(command, sizeof(command), "RESETBRIDGE %u", o->id);
+		snprintf(command, sizeof(command), "%s %u", scriptname, o->id);
 		scriptname = command;
 	}
 	send_lua_script_packet_to_server(scriptname);

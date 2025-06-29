@@ -21328,6 +21328,11 @@ static void reset_player_ship(struct snis_entity *o)
 	o->timestamp = universe_timestamp;
 }
 
+static void refuel_player_ship(struct snis_entity *o)
+{
+	o->tsd.ship.fuel = UINT_MAX;
+}
+
 static void initialize_rts_ai(void)
 {
 	rts_ai.active = 0;
@@ -22328,6 +22333,30 @@ static int l_reset_player_ship(lua_State *l)
 	if (o->type != OBJTYPE_BRIDGE)
 		goto out;
 	reset_player_ship(o);
+	pthread_mutex_unlock(&universe_mutex);
+	lua_pushnumber(l, 0.0);
+	return 1;
+out:
+	pthread_mutex_unlock(&universe_mutex);
+	lua_pushnil(l);
+	return 1;
+}
+
+static int l_refuel_player_ship(lua_State *l)
+{
+	const double lua_oid = luaL_checknumber(l, 1);
+	struct snis_entity *o;
+	uint32_t oid = (uint32_t) lua_oid;
+	int i;
+
+	pthread_mutex_lock(&universe_mutex);
+	i = lookup_by_id(oid);
+	if (i < 0)
+		goto out;
+	o = &go[i];
+	if (o->type != OBJTYPE_BRIDGE)
+		goto out;
+	refuel_player_ship(o);
 	pthread_mutex_unlock(&universe_mutex);
 	lua_pushnumber(l, 0.0);
 	return 1;
@@ -27228,6 +27257,7 @@ static void setup_lua(void)
 	add_lua_callable_fn(l_set_commodity_contents, "set_commodity_contents");
 	add_lua_callable_fn(l_add_commodity, "add_commodity");
 	add_lua_callable_fn(l_reset_player_ship, "reset_player_ship");
+	add_lua_callable_fn(l_refuel_player_ship, "refuel_player_ship");
 	add_lua_callable_fn(l_show_menu, "show_menu");
 	add_lua_callable_fn(l_add_turret, "add_turret");
 	add_lua_callable_fn(l_add_block, "add_block");
