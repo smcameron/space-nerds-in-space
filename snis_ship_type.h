@@ -48,6 +48,7 @@ struct ship_type_entry {
 	float relative_mass;
 	float mass_kg;
 	uint8_t max_shield_strength;
+	float scrap_value;
 };
 
 struct ship_type_entry *snis_read_ship_types(char *filename, int *count);

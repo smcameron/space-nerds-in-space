@@ -17603,11 +17603,15 @@ static void npc_menu_item_scrap_derelict_hull(__attribute__((unused)) struct npc
 	/* At this point, they've docked and they have a derelict hull tractored,
 	 * so make the exchange.
 	 */
-	send_comms_packet(sb, npcname, ch,
-			"YOU'VE GOT A DEAL. $2500 WILL BE DEPOSITED IN YOUR ACCOUNT.");
 	ship->tsd.ship.tractor_beam = (uint32_t) -1;
 	delete_from_clients_and_server(hull);
-	ship->tsd.ship.wallet += 2500.0; /* TODO: diffrnt hulls should have diffrnt values? */
+	int stype = hull->tsd.derelict.shiptype;
+	float scrap_value = 2500.0;
+	if (stype >= 0 && stype < nshiptypes)
+		scrap_value = ship_type[stype].scrap_value;
+	send_comms_packet(sb, npcname, ch,
+			"YOU'VE GOT A DEAL. $%.0f WILL BE DEPOSITED IN YOUR ACCOUNT.", scrap_value);
+	ship->tsd.ship.wallet += scrap_value;
 	pthread_mutex_unlock(&universe_mutex);
 	return;
 }

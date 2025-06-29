@@ -15,6 +15,7 @@
 #	has missiles: 1
 #	extra scaling: 1.0
 #	relative mass: 1.0
+#	scrap_value: 2500.0
 #	x rotation:
 #	y rotation:
 #	z rotation:
@@ -40,6 +41,7 @@ ship type {
 	has missiles: 1
 	extra scaling: 1.0
 	relative mass: 1.0
+	scrap_value: 2500.0
 }
 
 ship type {
@@ -56,6 +58,7 @@ ship type {
 	has missiles: 1
 	extra scaling: 1.0
 	relative mass: 2.0
+	scrap_value: 5000.0
 }
 
 ship type {
@@ -72,6 +75,7 @@ ship type {
 	has torpedoes: 0
 	extra scaling: 1.0
 	relative mass: 1.1
+	scrap_value: 2700.0
 }
 
 ship type {
@@ -88,6 +92,7 @@ ship type {
 	has missiles: 0
 	extra scaling: 1.0
 	relative mass: 9.5
+	scrap_value: 7000.0
 }
 
 ship type {
@@ -104,6 +109,7 @@ ship type {
 	has missiles: 0
 	extra scaling: 1.0
 	relative mass: 4.0
+	scrap_value: 6500.0
 }
 
 ship type {
@@ -120,6 +126,7 @@ ship type {
 	has missiles: 1
 	extra scaling: 1.0
 	relative mass: 3.5
+	scrap_value: 5000.0
 }
 
 ship type {
@@ -136,6 +143,7 @@ ship type {
 	has missiles: 1
 	extra scaling: 1.0
 	relative mass: 1.2
+	scrap_value: 2700.0
 }
 
 ship type {
@@ -152,6 +160,7 @@ ship type {
 	has missiles: 0
 	extra scaling: 1.0
 	relative mass: 0.2
+	scrap_value: 500.0
 }
 
 ship type {
@@ -168,6 +177,7 @@ ship type {
 	has missiles: 0
 	extra scaling: 1.0
 	relative mass: 1.2
+	scrap_value: 2550.0
 }
 
 ship type {
@@ -184,6 +194,7 @@ ship type {
 	has missiles: 1
 	extra scaling: 1.0
 	relative mass: 1.6
+	scrap_value: 3500.0
 }
 
 ship type {
@@ -200,6 +211,7 @@ ship type {
 	has missiles: 1
 	extra scaling: 1.0
 	relative mass: 1.7
+	scrap_value: 3800.0
 }
 
 ship type {
@@ -216,6 +228,7 @@ ship type {
 	has missiles: 1
 	extra scaling: 1.0
 	relative mass: 1.0
+	scrap_value: 2550.0
 }
 
 ship type {
@@ -232,6 +245,7 @@ ship type {
 	has missiles: 1
 	extra scaling: 1.0
 	relative mass: 3.1
+	scrap_value: 7500.0
 }
 
 ship type {
@@ -248,6 +262,7 @@ ship type {
 	has missiles: 0
 	extra scaling: 1.0
 	relative mass: 5.1
+	scrap_value: 9000.0
 }
 
 ship type {
@@ -264,6 +279,7 @@ ship type {
 	has missiles: 1
 	extra scaling: 1.0
 	relative mass: 3.3
+	scrap_value: 6500.0
 }
 
 ship type {
@@ -280,6 +296,7 @@ ship type {
 	has missiles: 1
 	extra scaling: 1.0
 	relative mass: 1.5
+	scrap_value: 3200.0
 }
 
 ship type {
@@ -296,6 +313,7 @@ ship type {
 	has missiles: 1
 	extra scaling: 1.0
 	relative mass: 1.7
+	scrap_value: 4100.0
 }
 
 ship type {
@@ -312,6 +330,7 @@ ship type {
 	has missiles: 1
 	extra scaling: 1.0
 	relative mass: 1.0
+	scrap_value: 2450.0
 	x rotation: -90.0
 	y rotation: 90.0
 }
@@ -330,6 +349,7 @@ ship type {
 	has missiles: 1
 	extra scaling: 3.0
 	relative mass: 3.9
+	scrap_value: 6900
 }
 
 ship type {
@@ -346,6 +366,7 @@ ship type {
 	has missiles: 1
 	extra scaling: 1.0
 	relative mass: 0.52
+	scrap_value: 1800
 }
 
 ship type {
@@ -362,6 +383,7 @@ ship type {
 	has missiles: 1
 	extra scaling: 1.0
 	relative mass: 2.1
+	scrap_value: 4900
 }
 
 ship type {
@@ -378,6 +400,7 @@ ship type {
 	has missiles: 0
 	extra scaling: 1.0
 	relative mass: 0.2
+	scrap_value: 480
 }
 
 ship type {
@@ -394,5 +417,6 @@ ship type {
 	has missiles: 1
 	extra scaling: 1.0
 	relative mass: 9.1
+	scrap_value: 12000
 }
 

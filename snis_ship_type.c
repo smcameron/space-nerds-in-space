@@ -94,6 +94,8 @@ struct ship_type_entry *snis_read_ship_types(char *filename, int *count)
 	int has_lasers, has_torpedoes, has_missiles;
 	float relative_mass;
 	int errorcount = 0;
+#define DEFAULT_SCRAP_VALUE 2500.0f
+	float scrap_value = DEFAULT_SCRAP_VALUE;
 
 	nalloced = 30;
 	st = malloc(sizeof(*st) * nalloced);
@@ -197,6 +199,8 @@ struct ship_type_entry *snis_read_ship_types(char *filename, int *count)
 			errorcount += parse_float_field(&extra_scaling, filename, line, linecount);
 		} else if (has_prefix("relative mass:", line)) {
 			errorcount += parse_float_field(&relative_mass, filename, line, linecount);
+		} else if (has_prefix("scrap_value:", line)) {
+			errorcount += parse_float_field(&scrap_value, filename, line, linecount);
 		} else if (has_prefix("x rotation:", line)) {
 			if (!parse_float_field(&rot[nrots], filename, line, linecount)) {
 				axis[nrots] = 'x';
@@ -284,6 +288,7 @@ struct ship_type_entry *snis_read_ship_types(char *filename, int *count)
 			st[n].extra_scaling = extra_scaling;
 			st[n].relative_mass = relative_mass;
 			st[n].mass_kg = relative_mass * 330000.0; /* max takeoff weight of 747 in kg */
+			st[n].scrap_value = scrap_value;
 
 			st[n].nrotations = nrots;
 			for (i = 0; i < nrots; i++) {
