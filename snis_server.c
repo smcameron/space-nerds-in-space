@@ -329,6 +329,8 @@ static void npc_menu_item_eject_passengers(struct npc_menu_item *item,
 				char *npcname, struct npc_bot_state *botstate);
 static void npc_menu_item_collect_bounties(struct npc_menu_item *item,
 				char *npcname, struct npc_bot_state *botstate);
+static void npc_menu_item_scrap_derelict_hull(struct npc_menu_item *item,
+				char *npcname, struct npc_bot_state *botstate);
 static void npc_menu_item_list_bounties(struct npc_menu_item *item,
 				char *npcname, struct npc_bot_state *botstate);
 static void npc_menu_item_sign_off(struct npc_menu_item *item,
@@ -412,6 +414,7 @@ static struct npc_menu_item cargo_and_passengers_menu[] = {
 	{ "QUERY SHIP REGISTRATIONS", 0, 0, npc_menu_item_query_ship_registration },
 	{ "LIST BOUNTIES", 0, 0, npc_menu_item_list_bounties },
 	{ "COLLECT BOUNTIES", 0, 0, npc_menu_item_collect_bounties },
+	{ "SCRAP DERELICT HULL", 0, 0, npc_menu_item_scrap_derelict_hull },
 	{ 0, 0, 0, 0 }, /* mark end of menu items */
 };
 
@@ -17531,6 +17534,84 @@ static void npc_menu_item_board_passengers(__attribute__((unused)) struct npc_me
 	botstate->special_bot(sb, bridge, (char *) b->shipname, "");
 }
 
+static void npc_menu_item_scrap_derelict_hull(__attribute__((unused)) struct npc_menu_item *item,
+					char *npcname, struct npc_bot_state *botstate)
+{
+	struct snis_entity *sb, *ship, *hull;
+	uint32_t ch = botstate->channel;
+	struct bridge_data *b = container_of(botstate, struct bridge_data, npcbot);
+
+	pthread_mutex_lock(&universe_mutex);
+	int i = lookup_by_id(botstate->object_id);
+	if (i < 0) {
+		pthread_mutex_unlock(&universe_mutex);
+		printf("nonfatal bug in %s at %s:%d\n", __func__, __FILE__, __LINE__);
+		return;
+	}
+	sb = &go[i];
+
+	i = lookup_by_id(b->shipid);
+	if (i < 0) {
+		pthread_mutex_unlock(&universe_mutex);
+		printf("nonfatal bug in %s at %s:%d\n", __func__, __FILE__, __LINE__);
+		return;
+	}
+	ship = &go[i];
+
+	/* Check that they have docked */
+	if (!ship_is_docked(ship->id, sb)) {
+		send_comms_packet(sb, npcname, ch,
+				" YOU MUST BE DOCKED TO SCRAP A DERELICT HULL.");
+		pthread_mutex_unlock(&universe_mutex);
+		return;
+	}
+
+	/* Check that they have something tractored ... */
+	if (ship->tsd.ship.tractor_beam == (uint32_t) -1) {
+		send_comms_packet(sb, npcname, ch,
+				" WHAT HULL?  YOU'VE GOT NOTHING IN YOUR TRACTOR BEAM.");
+		pthread_mutex_unlock(&universe_mutex);
+		return;
+	}
+
+	/* Find the tractor beam object */
+	int tb = -1;
+	for (int j = 0; j <= snis_object_pool_highest_object(pool); j++) {
+		if (go[j].alive && go[j].type == OBJTYPE_TRACTORBEAM &&
+			go[j].tsd.laserbeam.origin == ship->id) {
+			tb = j;
+			break;
+		}
+	}
+	if (tb < 0) {
+		send_comms_packet(sb, npcname, ch,
+			"YOU'VE GOT NO SCRAP HULL IN YOUR TRACTOR BEAM THAT I CAN SEE.");
+		pthread_mutex_unlock(&universe_mutex);
+		return;
+	}
+
+	/* Check that what they have tractored is a derelict hull */
+	i = lookup_by_id(go[tb].tsd.laserbeam.target);
+	if (i < 0 || go[i].type != OBJTYPE_DERELICT) {
+		send_comms_packet(sb, npcname, ch,
+			"WHATEVER YOU'VE GOT IN YOUR TRACTOR DOES'NT LOOK LIKE A DERELICT HULL.");
+		pthread_mutex_unlock(&universe_mutex);
+		return;
+	}
+	hull = &go[i];
+
+	/* At this point, they've docked and they have a derelict hull tractored,
+	 * so make the exchange.
+	 */
+	send_comms_packet(sb, npcname, ch,
+			"YOU'VE GOT A DEAL. $2500 WILL BE DEPOSITED IN YOUR ACCOUNT.");
+	ship->tsd.ship.tractor_beam = (uint32_t) -1;
+	delete_from_clients_and_server(hull);
+	ship->tsd.ship.wallet += 2500.0; /* TODO: diffrnt hulls should have diffrnt values? */
+	pthread_mutex_unlock(&universe_mutex);
+	return;
+}
+
 static void npc_menu_item_collect_bounties(__attribute__((unused)) struct npc_menu_item *item,
 					char *npcname, struct npc_bot_state *botstate)
 {
@@ -19717,7 +19798,7 @@ static uint32_t verify_role(uint32_t role)
 	/* Enforce that if a client has ROLE_PROJECTOR, it has all onscreen roles */
 	if (role & ROLE_PROJECTOR)
 		role |= onscreen_roles;
-	
+
 	role = role | ROLE_DEMON; /* always have demon, otherwise you can get into trouble. */
 	return role;
 }
