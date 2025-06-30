@@ -9353,8 +9353,13 @@ static void player_collision_detection(void *player, void *object)
 				snis_queue_add_text_to_speech(
 					"If you are attempting to dock perhaps you should turn on the docking magnets.",
 					ROLE_TEXT_TO_SPEECH, o->id);
-			do_collision_impulse(o, t);
-			snis_queue_add_sound(SPACEMONSTER_SLAP, ROLE_SOUNDSERVER, o->id);
+			/* They have 5 secs after undocking to leave without getting slapped */
+			if (bn >= 0 && universe_timestamp > bridgelist[bn].last_docked_time + 50) {
+				do_collision_impulse(o, t);
+				snis_queue_add_sound(SPACEMONSTER_SLAP, ROLE_SOUNDSERVER, o->id);
+				/* Don't slap them more than once per 5 seconds */
+				bridgelist[bn].last_docked_time = universe_timestamp;
+			}
 		}
 	}
 	if (t->type == OBJTYPE_WARPGATE && dist2 < 110.0 * 110.0) {
