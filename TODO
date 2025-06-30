@@ -395,14 +395,19 @@ NICE TO HAVE:
   Actually, only mesh_viewer uses this texture reloading system, so it's not
   really a priority.
 
-* Allow snis_client to do the disk i/o part of reloading textures in another
+* (DONE) Allow snis_client to do the disk i/o part of reloading textures in another
   thread.  Right now, when we're traversing a warp gate, it's loading a bunch
   of per-solarsystem textures from the main thread, calling load_textures() from
   main_da_expose(), which it has to do that from the main thread.  But the disk
   i/o part could be done in another thread.  This would allow some transition
   thing, like some kind of warp gate effect to be animated.  Right now, it doesn't
   update the display at all once it calls load_textures() until load_textures()
-  returns -- which can take several seconds.
+  returns -- which can take several seconds.  (THIS IS COMPLETE).  Now there is a
+  work queue system, and texture load requests go through the work queue system,
+  which does file loading and PNG decoding via a worker thread pool which completes
+  requests asynchronously, and entities which rely on textures not yet finished
+  loading are not rendered until the asset load request is marked complete by a
+  worker thread.
 
 * This is an interesting article about using doubles rather than floats for translations
   to avoid jitteriness when far from the origin without having a floating origin (means,
