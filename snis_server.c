@@ -26010,7 +26010,7 @@ static void send_update_ship_packet(struct game_client *c,
 	if (vdiff > max_docking_vdiff)
 		vdiff = -vdiff; /* negative to signal "bad" to the client */
 	float alignment = o->tsd.ship.docking_port_alignment;
-	if (alignment < min_docking_alignment)
+	if (alignment < min_docking_alignment && alignment >= 0.0)
 		alignment = -alignment; /* negative to signal "bad" to the client */
 
 	pb = packed_buffer_allocate(sizeof(struct update_ship_packet));
