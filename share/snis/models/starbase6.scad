@@ -40,7 +40,7 @@ module capball(angle)
 {
 	rotate(a = angle, v = [0, 0, 1])
 		translate(v = [6, 0, -15])
-			sphere(r = 4, center = true);
+			sphere(r = 4);
 }
 
 module mushroom_cap()
@@ -48,7 +48,7 @@ module mushroom_cap()
 	union() {
 		difference() {
 			scale(v = [1, 1, 0.3])
-				sphere(r = 30, center = true);
+				sphere(r = 30);
 			cylinder(h = 50, r1 = 1, r2 = 6, center = true);
 			translate(v = [0, 0, -4.6])
 				cylinder(h = 6.5, r1 = 40, r2 = 40, center = true);
@@ -59,7 +59,7 @@ module mushroom_cap()
 			translate(v = [0, 0, 7]) {
 				difference() {
 					scale(v = [0.7, 0.7, 0.2])
-						sphere(r = 30, center = true);
+						sphere(r = 30);
 					/* cylinder(h = 50, r1 = 8, r2 = 8, center = true); */
 					translate(v = [0, 0, -4.6])
 						cylinder(h = 6.5, r1 = 40, r2 = 40, center = true);
@@ -73,7 +73,7 @@ module central_shaft()
 {
 	translate(v = [0, 0, -20])
 		scale(v = [0.05, 0.05, 1])
-			sphere(r = 50, center = true);
+			sphere(r = 50);
 }
 
 module capholes()
@@ -124,6 +124,16 @@ module basetanks()
 	basetank(4 * 360 / 5);
 }
 
+module docking_port_connector(x, y, z, rx, ry, rz, angle)
+{
+	translate(v = [x, y, z])
+		rotate(v = [rx, ry, rz], a = angle) {
+			cylinder(h = 8, r1 = 1, r2 = 1, center = true);
+			translate(v = [0, 0, -4])
+				sphere(r = 1);
+		}
+}
+
 scale(v = [3.0, 3.0, 3.0]) {
 	union() {
 		difference() {
@@ -140,15 +150,19 @@ scale(v = [3.0, 3.0, 3.0]) {
 		basetanks();
 		central_shaft();
 		antenna();
+		docking_port_connector(-62 / 3, -4 / 3, -27 / 3, 0, 1, 0, 65);
+		docking_port_connector(62 / 3, 4 / 3, -27 / 3, 0, 1, 0, -65);
+		docking_port_connector(4 / 3, -62 / 3, -27 / 3, 1, 0, 0, -65);
+		docking_port_connector(-4 / 3, 62 / 3, -27 / 3, 1, 0, 0, 65);
 	}
 }
 
 use <imposter_docking_port.scad>;
 docking_ports = false;
 if (docking_ports) {
-	docking_port(-62, 0, -21, 0, 0, 1, 0, 0.2);
-	docking_port(62, 0, -21, 0, 0, 1, 180, 0.2);
-	docking_port(0, 62, -21, 0, 0, 1, -90, 0.2);
-	docking_port(0, -62, -21, 0, 0, 1, 90, 0.2);
+	docking_port(-72, 0, -31, 0, 0, 1,-90, 0.2);
+	docking_port(72, 0, -31, 0, 0, 1, 90, 0.2);
+	docking_port(0, 72, -31, 0, 0, 1, 180, 0.2);
+	docking_port(0, -72, -31, 0, 0, 1, 0, 0.2);
 }
 
