@@ -13190,10 +13190,30 @@ static void starbase_maybe_associate_nearby_planet(struct snis_entity *sb)
 	sb->tsd.starbase.associated_planet_id = go[p].id;
 }
 
-static int add_starbase(double x, double y, double z,
+static void add_docking_ports_to_starbase(struct snis_entity *sb)
+{
+	int model = sb->id % nstarbase_models;
+	if (docking_port_info[model]) {
+		for (int j = 0; j < docking_port_info[model]->nports; j++) {
+			int dpi = add_docking_port(sb->id, j);
+			if (dpi >= 0) {
+				sb->tsd.starbase.docking_port[j] = go[dpi].id;
+				if (go[dpi].type != OBJTYPE_DOCKING_PORT) {
+					fprintf(stderr,
+						"docking port is wrong type model=%d, port = %d\n",
+						model, j);
+				}
+			}
+			sb->tsd.starbase.expected_docker[j] = -1;
+			sb->tsd.starbase.expected_docker_timer[j] = 0;
+		}
+	}
+}
+
+static int add_starbase_without_docking_ports(double x, double y, double z,
 			double vx, double vz, double heading, int n, uint32_t assoc_planet_id)
 {
-	int i, j, model;
+	int i;
 	char registration[100];
 
 	i = add_generic_object(x, y, z, vx, 0.0, vz, heading, OBJTYPE_STARBASE);
@@ -13225,22 +13245,6 @@ static int add_starbase(double x, double y, double z,
 	init_starbase_market(&go[i]);
 	snprintf(go[i].sdata.name, sizeof(go[i].sdata.name), "SB-%02d", n);
 
-	model = go[i].id % nstarbase_models;
-	if (docking_port_info[model]) {
-		for (j = 0; j < docking_port_info[model]->nports; j++) {
-			int dpi = add_docking_port(go[i].id, j);
-			if (dpi >= 0) {
-				go[i].tsd.starbase.docking_port[j] = go[dpi].id;
-				if (go[dpi].type != OBJTYPE_DOCKING_PORT) {
-					fprintf(stderr,
-						"docking port is wrong type model=%d, port = %d\n",
-						model, j);
-				}
-			}
-			go[i].tsd.starbase.expected_docker[j] = -1;
-			go[i].tsd.starbase.expected_docker_timer[j] = 0;
-		}
-	}
 	setup_randomized_starbase_orbit(&go[i]);
 	snprintf(registration, sizeof(registration) - 1, "SPACE STATION");
 	ship_registry_add_owner(&ship_registry, go[i].id,
@@ -13249,6 +13253,15 @@ static int add_starbase(double x, double y, double z,
 	add_transport_contract_shipping_location(go[i].id);
 
 	return i;
+}
+
+static int add_starbase(double x, double y, double z,
+			double vx, double vz, double heading, int n, uint32_t assoc_planet_id)
+{
+	int sb = add_starbase_without_docking_ports(x, y, z, vx, vz, heading, n, assoc_planet_id);
+	if (sb >= 0)
+		add_docking_ports_to_starbase(&go[sb]);
+	return sb;
 }
 
 static int l_add_starbase(lua_State *l)
@@ -13814,6 +13827,7 @@ static void add_starbases(void)
 	uint32_t assoc_planet_id;
 	int planet[NPLANETS];
 	int nplanets = 0;
+	int sb[NBASES];
 
 	/* Find all the planet indices */
 	for (i = 0; i <= snis_object_pool_highest_object(pool); i++)
@@ -13836,8 +13850,18 @@ static void add_starbases(void)
 			random_object_coordinates_yrange(&x, &y, &z, 1000);
 			assoc_planet_id = (uint32_t) -1;
 		}
-		add_starbase(x, y, z, 0.0, 0.0, 0.0, i, assoc_planet_id);
+		/* We add the starbases without docking ports so the IDs will be consecutive so we will
+		 * utilize all the starbase models (which are chosen via (ID % number of models)
+		 * If we added the docking ports to the starbases as we go, the IDs would skip over
+		 * some models.
+		 */
+		sb[i] = add_starbase_without_docking_ports(x, y, z, 0.0, 0.0, 0.0, i, assoc_planet_id);
 	}
+
+	/* Now add docking ports to all the starbases we just made */
+	for (i = 0; i < NBASES; i++)
+		if (sb[i] >= 0)
+			add_docking_ports_to_starbase(&go[sb[i]]);
 }
 
 static int nebula_too_close(double ix[], double iy[], double iz[], int n)
