@@ -17354,6 +17354,26 @@ static void science_details_draw_atmosphere_data(struct planetary_atmosphere_pro
 	}
 }
 
+static int planet_has_starbase(struct snis_entity *planet)
+{
+	pthread_mutex_lock(&universe_mutex);
+	for (int i = 0; i <= snis_object_pool_highest_object(pool); i++) {
+		if (!go[i].alive)
+			continue;
+		if (go[i].type != OBJTYPE_STARBASE)
+			continue;
+		float dist2 = dist3dsqrd(go[i].x - planet->x,
+						go[i].y - planet->y,
+						go[i].z - planet->z);
+		if (dist2 < 4.0 * planet->tsd.planet.radius * planet->tsd.planet.radius) {
+			pthread_mutex_unlock(&universe_mutex);
+			return 1;
+		}
+	}
+	pthread_mutex_unlock(&universe_mutex);
+	return 0;
+}
+
 static void draw_science_details(void)
 {
 	struct entity *e = NULL;
@@ -17439,7 +17459,7 @@ static void draw_science_details(void)
 		static uint32_t last = 0xffffffff;
 		struct mtwist_state *mt;
 		static char planet_desc[500];
-		char tmpbuf[60];
+		char tmpbuf[80];
 		int i, len, j;
 		char *planet_type_str;
 		enum planet_type pt;
@@ -17465,7 +17485,8 @@ static void draw_science_details(void)
 				planet_desc[i] = toupper(planet_desc[i]);
 		} else if (p->description_seed != last) {
 			mt = mtwist_init(p->description_seed);
-			planet_description(mt, planet_desc, 500, 40, pt);
+			int has_starbase = planet_has_starbase(curr_science_guy);
+			planet_description(mt, planet_desc, 500, 60, pt, has_starbase);
 			last = p->description_seed;
 			mtwist_free(mt);
 			for (i = 0; planet_desc[i] != '\0'; i++)

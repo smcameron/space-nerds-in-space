@@ -806,6 +806,10 @@ static char *Uninhabitable[] = {
 	"not inhabitable",
 	"extremely unwelcoming",
 	"severe and harsh",
+	"depressingly vacant of life",
+	"harsh in the extreme, visited only by a few self-abasing monks of backwards religious sects",
+	"optimally hostile, every aspect of the climate seems devised to prevent the emergence of even the hardiest of extremophiles.",
+	"what might be called \"geologically enthusiastic\", as there's no stable place to stand while not enjoying the climate.",
 };
 
 static char *However[] = {
@@ -1621,7 +1625,7 @@ static char *post_nominal_letters(struct mtwist_state *mt)
 }
 
 void planet_description(struct mtwist_state *mt, char *buffer, int buflen,
-			int line_len, enum planet_type ptype)
+			int line_len, enum planet_type ptype, int has_starbase)
 {
 	char do_avoid[100];
 
@@ -1629,20 +1633,32 @@ void planet_description(struct mtwist_state *mt, char *buffer, int buflen,
 	do_avoid[0] = toupper(do_avoid[0]);
 	switch (ptype) {
 	case planet_type_rocky:
-		snprintf(buffer, buflen,
+		if (has_starbase) {
+			snprintf(buffer, buflen,
 			"This %s %s is %s %s there is an orbiting starbase which %s %s %s %s %s and %s %s %s %s. %s the %s %s. %s %s.\n",
 			barren(mt), rocky_planet(mt), uninhabitable(mt), however(mt), known_for(mt),
 			producing(mt), exceptional(mt), qnationality(mt), product(mt), known_for(mt),
 			exceptional(mt), qnationality(mt), culture(mt),
 			do_avoid, terrible(mt), product(mt), bring_your(mt), traveling_accessory(mt));
+		} else {
+			snprintf(buffer, buflen,
+			"This %s %s is %s\n",
+			barren(mt), rocky_planet(mt), uninhabitable(mt));
+		}
 		break;
 	case planet_type_gas_giant:
-		snprintf(buffer, buflen,
+		if (has_starbase) {
+			snprintf(buffer, buflen,
 			"This %s %s is %s %s there is an orbiting starbase which %s %s %s %s %s and %s %s %s %s. %s the %s %s. %s %s.\n",
 			beautiful(mt), gas_giant(mt), uninhabitable(mt), however(mt), known_for(mt),
 			producing(mt), exceptional(mt), qnationality(mt), product(mt), known_for(mt),
 			exceptional(mt), qnationality(mt), culture(mt),
 			do_avoid, terrible(mt), product(mt), bring_your(mt), traveling_accessory(mt));
+		} else {
+			snprintf(buffer, buflen,
+				"This %s %s is %s\n",
+				beautiful(mt), gas_giant(mt), uninhabitable(mt));
+		}
 		break;
 	case planet_type_earthlike:
 		snprintf(buffer, buflen, "This %s %s %s %s %s %s %s and %s %s %s %s. %s the %s %s.  %s %s.\n",
@@ -1654,12 +1670,18 @@ void planet_description(struct mtwist_state *mt, char *buffer, int buflen,
 				bring_your(mt), traveling_accessory(mt));
 		break;
 	case planet_type_ice_giant:
+		if (has_starbase) {
 			snprintf(buffer, buflen,
 			"This %s %s is %s %s there is an orbiting starbase which %s %s %s %s %s and %s %s %s %s. %s the %s %s. %s %s.\n",
 			beautiful(mt), ice_giant(mt), uninhabitable(mt), however(mt), known_for(mt),
 			producing(mt), exceptional(mt), qnationality(mt), product(mt), known_for(mt),
 			exceptional(mt), qnationality(mt), culture(mt),
 			do_avoid, terrible(mt), product(mt), bring_your(mt), traveling_accessory(mt));
+		} else {
+			snprintf(buffer, buflen,
+			"This %s %s is %s\n",
+			beautiful(mt), ice_giant(mt), uninhabitable(mt));
+		}
 		break;
 	}
 	break_lines(buffer, line_len);
@@ -1971,7 +1993,7 @@ int main(int argc, char *argv[])
 		}
 		if (planet_mode) {
 			pt = PlanetType(mt);
-			planet_description(mt, buffer, sizeof(buffer) - 1, 60, pt);
+			planet_description(mt, buffer, sizeof(buffer) - 1, 60, pt, i % 2);
 			printf("%s\n", buffer);
 		}
 		if (warning_mode) {

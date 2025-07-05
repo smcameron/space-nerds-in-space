@@ -27986,6 +27986,16 @@ static char *nl_get_object_name(struct snis_entity *o)
 	}
 }
 
+static int planet_has_starbase(struct snis_entity *planet)
+{
+	for (int i = 0; i <= snis_object_pool_highest_object(pool); i++) {
+		if (go[i].alive && go[i].type == OBJTYPE_STARBASE &&
+			((uint32_t) go[i].tsd.starbase.associated_planet_id) == planet->id)
+			return 1;
+	}
+	return 0;
+}
+
 static void nl_describe_game_object(struct game_client *c, uint32_t id)
 {
 	int i;
@@ -28011,7 +28021,9 @@ static void nl_describe_game_object(struct game_client *c, uint32_t id)
 			mt = mtwist_init(go[i].tsd.planet.description_seed);
 			ss_planet_type = go[i].tsd.planet.solarsystem_planet_type;
 			planet_type_str = solarsystem_assets->planet_type[ss_planet_type];
-			planet_description(mt, description, 250, 254, planet_type_from_string(planet_type_str));
+			planet_description(mt, description, 250, 254,
+				planet_type_from_string(planet_type_str),
+				planet_has_starbase(&go[i]));
 			mtwist_free(mt);
 		}
 		pthread_mutex_unlock(&universe_mutex);
