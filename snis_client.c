@@ -9838,6 +9838,7 @@ static struct entity *main_view_add_cockpit_entity(struct snis_entity *o)
 	if (cockpit_entity) {
 		update_entity_scale(cockpit_entity, 0.5);
 		update_entity_orientation(cockpit_entity, &o->orientation);
+		entity_set_in_shade(cockpit_entity, (float) 0.9 * (o->shading_planet != NULL) + 0.1);
 	}
 	return cockpit_entity;
 }
