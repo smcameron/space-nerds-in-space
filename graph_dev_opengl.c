@@ -4291,13 +4291,12 @@ unsigned int graph_dev_load_cubemap_texture(
 		texture_filename_pos_y, texture_filename_neg_y,
 		texture_filename_pos_z, texture_filename_neg_z };
 
-	int i, j;
 	/* Check if we already loaded this texture */
 	pthread_mutex_lock(&finished_loading_mutex);
-	for (i = 0; i < nloaded_cubemap_textures; i++) {
+	for (int i = 0; i < nloaded_cubemap_textures; i++) {
 		if (loaded_cubemap_textures[i].is_inside == is_inside) {
 			int match = 1;
-			for (j = 0; j < NCUBEMAP_TEXTURES; j++) {
+			for (int j = 0; j < NCUBEMAP_TEXTURES; j++) {
 				if (strcmp(tex_filenames[j], loaded_cubemap_textures[i].filename[j]) != 0) {
 					match = 0;
 					break;
@@ -4313,14 +4312,14 @@ unsigned int graph_dev_load_cubemap_texture(
 
 	/* See if we can re-use an expired texture */
 	GLuint cube_texture_id = (GLuint) -1;
-	for (i = 0; i < nloaded_cubemap_textures; i++) {
+	for (int i = 0; i < nloaded_cubemap_textures; i++) {
 		if (loaded_cubemap_textures[i].expired) {
 			cube_texture_id = loaded_cubemap_textures[i].texture_id;
 			loaded_texture_index = i;
 			glDeleteTextures(1, &cube_texture_id);
 			loaded_cubemap_textures[i].is_inside = is_inside;
 			loaded_cubemap_textures[i].expired = 0;
-			for (j = 0; j < NCUBEMAP_TEXTURES; j++) {
+			for (int j = 0; j < NCUBEMAP_TEXTURES; j++) {
 				fprintf(stderr, "Replacing %s with %s\n",
 					loaded_cubemap_textures[i].filename[j], tex_filenames[j]);
 				if (loaded_cubemap_textures[i].filename[j])
