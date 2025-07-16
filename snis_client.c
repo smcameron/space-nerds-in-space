@@ -2476,7 +2476,6 @@ static void add_docking_ports_to_starbase(struct snis_entity *sb)
 	for (i = 0; i < dp->nports; i++) {
 		struct entity *e;
 		union vec3 pos = dp->port[i].pos;
-		int m = dp->docking_port_model;
 		e = add_entity(ecx, docking_port_mesh[m], pos.v.x, pos.v.y, pos.v.z, SHIP_COLOR);
 		if (!e)
 			continue;
