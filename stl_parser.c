@@ -1386,10 +1386,9 @@ struct mesh *read_oolite_dat_file(char *file_name)
 			calculate_triangle_normal(&m->t[m->ntriangles]); /* Just calc the triangle normal ourself. */
 			m->ntriangles++;
 		} else if (mode == 3) { /* texture mode */
-			char filename[PATH_MAX];
 			float u[3], v[3];
-			rc = sscanf(line, "%s%*[ ,]%*f%*[ ,]%*f%*[ ,]%f%*[ ,]%f%*[ ,]%f%*[ ,]%f%*[ ,]%f%*[ ,]%f",
-				filename, &u[0], &v[0], &u[1], &v[1], &u[2], &v[2]);
+			rc = sscanf(line, "%*s%*[ ,]%*f%*[ ,]%*f%*[ ,]%f%*[ ,]%f%*[ ,]%f%*[ ,]%f%*[ ,]%f%*[ ,]%f",
+				&u[0], &v[0], &u[1], &v[1], &u[2], &v[2]);
 			if (rc != 7) {
 				fprintf(stderr, "%s:%d:%s: bad texture line\n", filename, lineno, line);
 				goto error;
