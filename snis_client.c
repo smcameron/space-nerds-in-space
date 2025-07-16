@@ -5969,7 +5969,7 @@ static int process_load_skybox(void)
 	return 0;
 }
 
-static int process_cycle_camera_point_of_view(unsigned char *camera_mode)
+static int process_cycle_camera_point_of_view(unsigned char *cam_mode)
 {
 	int rc;
 	unsigned char buffer[10];
@@ -5979,7 +5979,7 @@ static int process_cycle_camera_point_of_view(unsigned char *camera_mode)
 	if (rc != 0)
 		return rc;
 	pthread_mutex_lock(&universe_mutex);
-	*camera_mode = new_mode % 5;
+	*cam_mode = new_mode % 5;
 	pthread_mutex_unlock(&universe_mutex);
 	return 0;
 }
