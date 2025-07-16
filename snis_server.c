@@ -13039,22 +13039,21 @@ static void add_turrets_to_block_face(int parent_id, int face, int rows, int col
 		double row = i;
 		double rowfactor = 0.5 + row - 0.5 * rows;
 		for (j = 0; j < cols; j++) {
-			int block;
 			double col = j;
 			double colfactor = 0.5 + col - 0.5 * cols;
 			x = rowfactor * xrowstep + colfactor * xcolstep + xo;
 			y = rowfactor * yrowstep + colfactor * ycolstep + yo;
 			z = rowfactor * zrowstep + colfactor * zcolstep + zo;
-			block = add_subblock(parent_id, 1.0, platformsx, platformsy, platformsz,
+			int blk = add_subblock(parent_id, 1.0, platformsx, platformsy, platformsz,
 						x + platformxo, y + platformyo, z + platformzo, 1,
 						SHAPE_CUBOID);
-			if (block >= 0) {
-				printf("ADDING TURRET parent = %d, %lf, %lf, %lf\n", go[block].id, x, y, z); 
-				add_turret(go[block].id, 0, 0, 0,
+			if (blk >= 0) {
+				printf("ADDING TURRET parent = %d, %lf, %lf, %lf\n", go[blk].id, x, y, z);
+				add_turret(go[blk].id, 0, 0, 0,
 						platformsx * 0.65 * xoff[face],
 						platformsy * 0.65 * yoff[face],
 						platformsz * 0.65 * zoff[face], rest_orientation, up, -1);
-				go[block].tsd.block.health = 121; /* mortal */
+				go[blk].tsd.block.health = 121; /* mortal */
 			}
 		}
 	}
