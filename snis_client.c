@@ -11161,8 +11161,7 @@ static void draw_sciplane_display(struct snis_entity *o, double range)
 	add_basis_ring(instrumentecx, o->x, o->y, o->z, 0.0f, 0.0f, 1.0f, 90.0f * M_PI / 180.0, range * 0.98,
 							UI_COLOR(sci_basis_ring_3));
 
-	int i;
-	for (i = 0; i < 2; ++i) {
+	for (int i = 0; i < 2; ++i) {
 		int color;
 		union quat ind_orientation;
 		if (i == 0) {
