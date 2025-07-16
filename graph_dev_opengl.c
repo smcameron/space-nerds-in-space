@@ -2006,26 +2006,26 @@ static void graph_dev_raster_line_mesh(struct entity *e, const struct mat44 *mat
 	GLuint vertex_position_id;
 
 	if (e->material_ptr && e->material_ptr->type == MATERIAL_COLOR_BY_W) {
-		struct material_color_by_w *m = &e->material_ptr->color_by_w;
+		struct material_color_by_w *mc = &e->material_ptr->color_by_w;
 
 		glUseProgram(color_by_w_shader.program_id);
 
 		glUniformMatrix4fv(color_by_w_shader.mvp_id, 1, GL_FALSE, &mat_mvp->m[0][0]);
 
-		struct sng_color near_color = sng_get_color(m->near_color);
+		struct sng_color near_color = sng_get_color(mc->near_color);
 		glUniform3f(color_by_w_shader.near_color_id, near_color.red,
 			near_color.green, near_color.blue);
-		glUniform1f(color_by_w_shader.near_w_id, m->near_w);
+		glUniform1f(color_by_w_shader.near_w_id, mc->near_w);
 
-		struct sng_color center_color = sng_get_color(m->center_color);
+		struct sng_color center_color = sng_get_color(mc->center_color);
 		glUniform3f(color_by_w_shader.center_color_id, center_color.red,
 			center_color.green, center_color.blue);
-		glUniform1f(color_by_w_shader.center_w_id, m->center_w);
+		glUniform1f(color_by_w_shader.center_w_id, mc->center_w);
 
-		struct sng_color far_color = sng_get_color(m->far_color);
+		struct sng_color far_color = sng_get_color(mc->far_color);
 		glUniform3f(color_by_w_shader.far_color_id, far_color.red,
 			far_color.green, far_color.blue);
-		glUniform1f(color_by_w_shader.far_w_id, m->far_w);
+		glUniform1f(color_by_w_shader.far_w_id, mc->far_w);
 
 		vertex_position_id = color_by_w_shader.position_id;
 	} else {
