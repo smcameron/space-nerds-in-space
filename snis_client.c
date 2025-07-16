@@ -24630,7 +24630,7 @@ static void setup_joysticks(void)
 			/* pull all the events off the joystick */
 			memset(&jss[i].button, 0, sizeof(jss[i].button));
 			memset(&jss[i].axis, 0, sizeof(jss[i].axis));
-			int rc = get_joystick_state(joystick_fd[i], &jss[i]);
+			rc = get_joystick_state(joystick_fd[i], &jss[i]);
 			if (rc != 0) {
 				printf("Joystick '%s' not sending events, ignoring...\n", joysticks_found[i].name);
 				close_joystick(joystick_fd[i]);
