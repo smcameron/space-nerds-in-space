@@ -32608,14 +32608,14 @@ static void init_meshes(void)
 	mesh_scale(low_poly_sphere_mesh, 0.5);
 }
 
-static void read_replacement_assets(struct replacement_asset *r, char *asset_dir)
+static void read_replacement_assets(struct replacement_asset *r, char *asset_directory)
 {
 	int rc;
 	char p[PATH_MAX];
 
-	sprintf(p, "%s/replacement_assets.txt", asset_dir);
+	sprintf(p, "%s/replacement_assets.txt", asset_directory);
 	errno = 0;
-	rc = replacement_asset_read(p, asset_dir, r);
+	rc = replacement_asset_read(p, asset_directory, r);
 	if (rc < 0 && errno != EEXIST)
 		fprintf(stderr, "%s: Warning:  %s\n", p, strerror(errno));
 }
