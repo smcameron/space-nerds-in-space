@@ -461,7 +461,7 @@ static int restore_bridge_info(const char *filename, struct bridge_info *b, unsi
 	char *contents;
 	int rc;
 	void *base_address[] = { &b->entity, b };
-	char starsystem[100];
+	char system[100];
 	char *nextline;
 
 	contents = slurp_file(filename, NULL);
@@ -473,9 +473,9 @@ static int restore_bridge_info(const char *filename, struct bridge_info *b, unsi
 	 * We need to be careful not to overwrite the starsystem with old data.
 	 */
 	memset(b->starsystem_name, 0, sizeof(b->starsystem_name));
-	rc = sscanf(contents, "starsystem:%s", starsystem);
+	rc = sscanf(contents, "starsystem:%s", system);
 	if (rc == 1) {
-		snprintf(b->starsystem_name, sizeof(b->starsystem_name) - 1, "%s", starsystem);
+		snprintf(b->starsystem_name, sizeof(b->starsystem_name) - 1, "%s", system);
 		nextline = strchr(contents, '\n');
 		rc = key_value_parse_lines(snis_entity_kvs, nextline + 1, base_address);
 	} else {
@@ -1108,9 +1108,9 @@ bad_client:
 	ss->socket = -1;
 }
 
-static void *starsystem_read_thread(void /* struct starsystem_info */ *starsystem)
+static void *starsystem_read_thread(void /* struct starsystem_info */ *system)
 {
-	struct starsystem_info *ss = (struct starsystem_info *) starsystem;
+	struct starsystem_info *ss = (struct starsystem_info *) system;
 
 	lock_get_starsystem(ss);
 	while (1) {
@@ -1167,9 +1167,9 @@ badclient:
 	ss->socket = -1;
 }
 
-static void *starsystem_write_thread(void /* struct starsystem_info */ *starsystem)
+static void *starsystem_write_thread(void /* struct starsystem_info */ *system)
 {
-	struct starsystem_info *ss = (struct starsystem_info *) starsystem;
+	struct starsystem_info *ss = (struct starsystem_info *) system;
 
 	lock_get_starsystem(ss);
 	while (1) {
