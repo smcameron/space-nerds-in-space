@@ -3610,7 +3610,6 @@ static void push_mining_bot_mode(struct snis_entity *miner, uint32_t parent_ship
 		i = lookup_by_id(asteroid_id);
 		if (i < 0)
 			return;
-		int n = miner->tsd.ship.nai_entries;
 		if (n >= MAX_AI_STACK_ENTRIES)
 			return;
 		miner->tsd.ship.nai_entries++;
