@@ -354,7 +354,7 @@ float commodity_calculate_price(struct commodity *c,
 	return price;
 }
 
-int add_commodity(struct commodity **c, int *ncommodities, const char *category, const char *name, const char *unit,
+int add_commodity(struct commodity **c, int *ncommodities, const char *category_name, const char *name, const char *unit,
 			const char *scans_as, float base_price, float volatility, float legality, int odds)
 {
 	struct commodity *newc;
@@ -367,7 +367,7 @@ int add_commodity(struct commodity **c, int *ncommodities, const char *category,
 	*c = newc;
 	newc = &(*c)[n - 1];
 
-	newc->category = lookup_category(category);
+	newc->category = lookup_category(category_name);
 	strlcpy(newc->name, name, sizeof(newc->name));
 	strlcpy(newc->unit, unit, sizeof(newc->unit));
 	strlcpy(newc->scans_as, scans_as, sizeof(newc->scans_as));
