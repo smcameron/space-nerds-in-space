@@ -27176,7 +27176,6 @@ static void move_objects(double absolute_time, int discontinuity)
 	universe_timestamp++;
 	universe_timestamp_absolute = absolute_time;
 	static uint32_t multiverse_update_time = 0;
-	int b;
 
 	if (discontinuity) {
 		for (i = 0; i < nclients; i++)
@@ -27191,7 +27190,7 @@ static void move_objects(double absolute_time, int discontinuity)
 				faction_population[go[i].sdata.faction]++;
 			}
 			if (go[i].type == OBJTYPE_BRIDGE)  {
-				b = lookup_bridge_by_shipid(go[i].id);
+				int b = lookup_bridge_by_shipid(go[i].id);
 				if (b >= 0 && (universe_timestamp >= multiverse_update_time ||
 					(!bridgelist[b].verified && !bridgelist[b].requested_verification)))
 					update_multiverse(&go[i]);
