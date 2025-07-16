@@ -5155,14 +5155,14 @@ static int lobby_lookup_server_by_location(char *location)
 
 static void ui_hide_widget(void *widget);
 static void ui_unhide_widget(void *widget);
-static void ui_set_widget_displaymode(void *widget, int displaymode)
+static void ui_set_widget_displaymode(void *widget, int display_mode)
 {
 	struct ui_element *uie;
 
 	uie = widget_to_ui_element(uiobjs, widget);
 	if (!uie)
 		return;
-	ui_element_set_displaymode(uie, displaymode);
+	ui_element_set_displaymode(uie, display_mode);
 }
 
 static void ui_set_widget_tooltip(void *widget, char *tooltip)
