@@ -1891,7 +1891,7 @@ static void spacemonster_move_tentacles(struct snis_entity *o)
 	mtwist_free(mt);
 }
 
-static void init_spacemonster_data(struct snis_entity *o, __attribute__((unused)) float tentacle_scale)
+static void init_spacemonster_data(struct snis_entity *o)
 {
 	int i, j, ntentacles;
 	struct entity *parent;
@@ -1948,9 +1948,8 @@ static int update_spacemonster(uint32_t id, uint32_t timestamp, double x, double
 
 	i = lookup_object_by_id(id);
 	if (i < 0) {
-		float tentacle_scale, head_scale;
+		float head_scale;
 
-		tentacle_scale = 0.5 + (float) tentacle_size / 255.0;
 		head_scale = 0.5 + (float) head_size / 255.0;
 		e = add_entity(ecx, spacemonster_mesh, x, y, z, SPACEMONSTER_COLOR);
 		if (e) {
@@ -1966,7 +1965,7 @@ static int update_spacemonster(uint32_t id, uint32_t timestamp, double x, double
 		go[i].entity = e;
 		go[i].tsd.spacemonster.seed = seed;
 		go[i].move = spacemonster_move_tentacles;
-		init_spacemonster_data(&go[i], tentacle_scale);
+		init_spacemonster_data(&go[i]);
 		/* Now update the orientation */
 		update_generic_object(i, timestamp, x, y, z, 0, 0, 0, orientation, 1);
 	} else {
