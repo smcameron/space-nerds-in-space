@@ -17383,7 +17383,6 @@ static void draw_science_details(void)
 	float angle;
 	union quat orientation;
 	int y, yinc = 15 * SCREEN_HEIGHT / 600;
-	int i;
 	int sdf = NANO_FONT;
 
 	if (science_cam_timer < 1000)
@@ -17461,7 +17460,7 @@ static void draw_science_details(void)
 		struct mtwist_state *mt;
 		static char planet_desc[500];
 		char tmpbuf[80];
-		int i, len, j;
+		int len, j;
 		char *planet_type_str;
 		enum planet_type pt;
 		struct planetary_atmosphere_profile *atm =
@@ -17482,7 +17481,7 @@ static void draw_science_details(void)
 		if (p->custom_description) {
 			strlcpy(planet_desc, p->custom_description, 256);
 			planet_desc[256] = '\0';
-			for (i = 0; planet_desc[i] != '\0'; i++)
+			for (int i = 0; planet_desc[i] != '\0'; i++)
 				planet_desc[i] = toupper(planet_desc[i]);
 		} else if (p->description_seed != last) {
 			mt = mtwist_init(p->description_seed);
@@ -17490,7 +17489,7 @@ static void draw_science_details(void)
 			planet_description(mt, planet_desc, 500, 60, pt, has_starbase);
 			last = p->description_seed;
 			mtwist_free(mt);
-			for (i = 0; planet_desc[i] != '\0'; i++)
+			for (int i = 0; planet_desc[i] != '\0'; i++)
 				planet_desc[i] = toupper(planet_desc[i]);
 		}
 		snprintf(buf, sizeof(buf), "GOVERNMENT: %s", government_name[p->government]);
@@ -17522,7 +17521,7 @@ static void draw_science_details(void)
 		/* break planet_desc into multiple lines */
 		len = strlen(planet_desc);
 		j = 0;
-		for (i = 0; i <= len; i++) {
+		for (int i = 0; i <= len; i++) {
 			if (planet_desc[i] == '\n' || planet_desc[i] == '\0') {
 				tmpbuf[j] = '\0';
 				sng_abs_xy_draw_string(tmpbuf, sdf, 10, y);
@@ -17568,7 +17567,7 @@ static void draw_science_details(void)
 		sng_abs_xy_draw_string(buf, sdf, 10, y);
 		y += yinc;
 
-		for (i = 0; i < ship_type[s->shiptype].ncargo_bays; i++) {
+		for (int i = 0; i < ship_type[s->shiptype].ncargo_bays; i++) {
 			struct cargo_container_contents *cbc = &s->cargo[i].contents;
 			if (cbc->item < 0 || cbc->qty <= 0.0)
 				continue;
