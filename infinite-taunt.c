@@ -1618,7 +1618,6 @@ static void break_lines(char *buffer, int line_len)
 
 static char *post_nominal_letters(struct mtwist_state *mt)
 {
-	static char *nothing = "";
 	if (mtwist_int(mt, 100) < 85)
 		return nothing; 
 	return random_word(mt, PostNominalLetters, ARRAYSIZE(PostNominalLetters));
