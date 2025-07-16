@@ -16866,22 +16866,21 @@ static void npc_menu_item_mining_bot_cam(__attribute__((unused)) struct npc_menu
 static void npc_menu_item_mining_bot_status_report(__attribute__((unused)) struct npc_menu_item *item,
 				char *npcname, struct npc_bot_state *botstate)
 {
-	int i;
 	uint32_t channel = botstate->channel;
 	float gold, platinum, germanium, uranium, total, fuel, oxygen;
 	struct snis_entity *miner, *asteroid, *parent;
 	struct ai_mining_bot_data *ai;
 	float dist, dist_to_parent;
 
-	i = lookup_by_id(botstate->object_id);
-	if (i < 0)
+	int index = lookup_by_id(botstate->object_id);
+	if (index < 0)
 		return;
-	miner = &go[i];
+	miner = &go[index];
 	ai = &miner->tsd.ship.ai[0].u.mining_bot;
 	if (ai->object_or_waypoint < 128) {
-		i = lookup_by_id(ai->asteroid);
-		if (i >= 0) {
-			asteroid = &go[i];
+		index = lookup_by_id(ai->asteroid);
+		if (index >= 0) {
+			asteroid = &go[index];
 			dist = object_dist(asteroid, miner);
 		} else {
 			asteroid = NULL;
@@ -16892,12 +16891,12 @@ static void npc_menu_item_mining_bot_status_report(__attribute__((unused)) struc
 		dist = dist3d(ai->wpx - miner->x, ai->wpy - miner->y, ai->wpz - miner->z);
 	}
 
-	i = lookup_by_id(ai->parent_ship);
-	if (i < 0) {
+	index = lookup_by_id(ai->parent_ship);
+	if (index < 0) {
 		parent = NULL;
 		dist_to_parent = -1;
 	} else {
-		parent = &go[i];
+		parent = &go[index];
 		dist_to_parent =
 			dist3d(parent->x - miner->x, parent->y - miner->y, parent->z - miner->z);
 	}
@@ -16979,14 +16978,14 @@ static void npc_menu_item_mining_bot_status_report(__attribute__((unused)) struc
 				 * the ship to exist. The bug is, we left the ships log on the ship
 				 * instead of making a copy of it. */
 				if (asteroid && asteroid->tsd.derelict.ships_log) {
-					int i, n;
+					int n;
 					char m[50];
 
 					send_comms_packet(miner, npcname, channel,
 							"*** RECOVERED PARTIAL SHIPS LOG FROM %s ***\n",
 							asteroid->sdata.name);
 					n = strlen(asteroid->tsd.derelict.ships_log);
-					i = 0;
+					int i = 0;
 					do {
 						int len;
 						memset(m, 0, sizeof(m));
