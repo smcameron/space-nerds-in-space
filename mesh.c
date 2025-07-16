@@ -595,11 +595,11 @@ void mesh_set_spherical_vertex_normals(struct mesh *m)
 		m->t[i].n.y = normal.v.y;
 		m->t[i].n.z = normal.v.z;
 		for (j = 0; j < 3; j++) {
-			union vec3 normal = { { m->t[i].v[j]->x, m->t[i].v[j]->y, m->t[i].v[j]->z } };
-			vec3_normalize_self(&normal);
-			m->t[i].vnormal[j].x = normal.v.x;
-			m->t[i].vnormal[j].y = normal.v.y;
-			m->t[i].vnormal[j].z = normal.v.z;
+			union vec3 vertex_normal = { { m->t[i].v[j]->x, m->t[i].v[j]->y, m->t[i].v[j]->z } };
+			vec3_normalize_self(&vertex_normal);
+			m->t[i].vnormal[j].x = vertex_normal.v.x;
+			m->t[i].vnormal[j].y = vertex_normal.v.y;
+			m->t[i].vnormal[j].z = vertex_normal.v.z;
 		}
 	}
 }
@@ -2332,15 +2332,15 @@ static void triangle_rotate_normals(struct triangle *t, union quat *q)
 	union vec3 vo;
 	int i;
 
-	union vec3 vi = { { t->n.x, t->n.y, t->n.z } };
-	quat_rot_vec(&vo, &vi, q);
+	union vec3 triangle_normal = { { t->n.x, t->n.y, t->n.z } };
+	quat_rot_vec(&vo, &triangle_normal, q);
 	t->n.x = vo.v.x;
 	t->n.y = vo.v.y;
 	t->n.z = vo.v.z;
 
 	for (i = 0; i < 3; i++) {
-		union vec3 vi = { { t->vnormal[i].x, t->vnormal[i].y, t->vnormal[i].z } };
-		quat_rot_vec(&vo, &vi, q);
+		union vec3 vertex_normal = { { t->vnormal[i].x, t->vnormal[i].y, t->vnormal[i].z } };
+		quat_rot_vec(&vo, &vertex_normal, q);
 		t->vnormal[i].x = vo.v.x;
 		t->vnormal[i].y = vo.v.y;
 		t->vnormal[i].z = vo.v.z;
@@ -2400,17 +2400,16 @@ struct mesh *mesh_tube(float h, float r, float nfaces)
 	m->ntriangles = ntris;
 
 	for (i = 0; i < ntris; i++) {
-		union vec3 normal;
-		normal = compute_triangle_normal(&m->t[i]);
-		m->t[i].n.x = normal.v.x;
-		m->t[i].n.y = normal.v.y;
-		m->t[i].n.z = normal.v.z;
+		union vec3 triangle_normal = compute_triangle_normal(&m->t[i]);
+		m->t[i].n.x = triangle_normal.v.x;
+		m->t[i].n.y = triangle_normal.v.y;
+		m->t[i].n.z = triangle_normal.v.z;
 		for (j = 0; j < 3; j++) {
-			union vec3 normal = { { 0, -m->t[i].v[j]->y, -m->t[i].v[j]->z } };
-			vec3_normalize_self(&normal);
-			m->t[i].vnormal[j].x = normal.v.x;
-			m->t[i].vnormal[j].y = normal.v.y;
-			m->t[i].vnormal[j].z = normal.v.z;
+			union vec3 vertex_normal = { { 0, -m->t[i].v[j]->y, -m->t[i].v[j]->z } };
+			vec3_normalize_self(&vertex_normal);
+			m->t[i].vnormal[j].x = vertex_normal.v.x;
+			m->t[i].vnormal[j].y = vertex_normal.v.y;
+			m->t[i].vnormal[j].z = vertex_normal.v.z;
 		}
 	}
 	mesh_set_flat_shading_vertex_normals(m);
