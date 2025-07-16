@@ -715,7 +715,7 @@ MYCFLAGS=-DDESTDIR=${DESTDIR} -DPREFIX=${PREFIX} ${DEBUGFLAG} ${PROFILEFLAG} \
 	-Wl,-z,nodlopen -Wl,-z,noexecstack \
 	-Wl,-z,relro -Wl,-z,now \
 	-Wl,--as-needed -Wl,--no-copy-dt-needed-entries \
-	${COMPSPECCFLAGS} -Wstrict-prototypes -fexceptions
+	${COMPSPECCFLAGS} -Wstrict-prototypes -fexceptions -Wshadow
 
 ifeq (${SERVERSONLY},0)
 VORBISFLAGS:=$(subst -I,-isystem ,$(shell $(PKG_CONFIG) --cflags vorbisfile))
