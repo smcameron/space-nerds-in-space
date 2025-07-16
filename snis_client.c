@@ -6122,7 +6122,7 @@ static void init_planetary_atmospheres(void)
 static void reload_per_solarsystem_textures(char *old_solarsystem,
 						struct solarsystem_asset_spec *old_assets,
 						struct solarsystem_asset_spec *new_assets);
-static int read_solarsystem_config(const char *solarsystem_name,
+static int read_solarsystem_config(const char *system_name,
 	struct solarsystem_asset_spec **assets);
 static int process_set_solarsystem(void)
 {
@@ -23260,14 +23260,14 @@ static int main_da_configure(SDL_Window *window)
 	return TRUE;
 }
 
-static int read_solarsystem_config(const char *solarsystem_name,
+static int read_solarsystem_config(const char *system_name,
 	struct solarsystem_asset_spec **assets)
 {
 	char path[PATH_MAX];
 
 	printf("Reading solarsystem specifications...");
 	fflush(stdout);
-	snprintf(path, sizeof(path), "%s/solarsystems/%s/assets.txt", asset_dir, solarsystem_name);
+	snprintf(path, sizeof(path), "%s/solarsystems/%s/assets.txt", asset_dir, system_name);
 	if (*assets)
 		solarsystem_asset_spec_free(*assets);
 	*assets = solarsystem_asset_spec_read(replacement_asset_lookup(path, &replacement_assets));
