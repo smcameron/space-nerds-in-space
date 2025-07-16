@@ -4965,7 +4965,7 @@ static void spacemonster_flee(struct snis_entity *o)
 	if (o->tsd.spacemonster.decision_age == 0) { /* Have just decided to flee? */
 		count = 0;
 		for (i = 0; i < o->tsd.spacemonster.nantagonists; i++) {
-			union vec3 v, total;
+			union vec3 v;
 			n = lookup_by_id(o->tsd.spacemonster.antagonist[i]);
 			if (n < 0)
 				continue;
@@ -4981,10 +4981,12 @@ static void spacemonster_flee(struct snis_entity *o)
 		if (count > 0 && snis_randn(1000) < 750) {
 			vec3_normalize_self(&total);
 			vec3_mul_self(&total, spacemonster_flee_dist);
-			o->tsd.spacemonster.dest = total;
 		} else {
 			random_point_on_sphere(spacemonster_flee_dist, &total.v.x, &total.v.y, &total.v.z);
 		}
+		o->tsd.spacemonster.dest.v.x = total.v.x + o->x;
+		o->tsd.spacemonster.dest.v.y = total.v.y + o->y;
+		o->tsd.spacemonster.dest.v.z = total.v.z + o->z;
 	}
 	o->tsd.spacemonster.decision_age++;
 }
