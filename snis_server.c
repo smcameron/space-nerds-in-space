@@ -19115,7 +19115,7 @@ static int process_check_opcode_format(struct game_client *c)
 
 static int process_set_waypoint(struct game_client *c)
 {
-	int i, rc;
+	int rc;
 	uint8_t subcode, row;
 	double value[3];
 	unsigned char buffer[20];
@@ -19144,7 +19144,7 @@ static int process_set_waypoint(struct game_client *c)
 		}
 		/* If any RTS ships were headed to this waypoint, it is gone now. */
 		if (rts_mode) {
-			for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
+			for (int i = 0; i <= snis_object_pool_highest_object(pool); i++) {
 				struct snis_entity *s = &go[i];
 				if (s->alive && s->type == OBJTYPE_NPCSHIP &&
 					s->sdata.faction == o->sdata.faction &&
