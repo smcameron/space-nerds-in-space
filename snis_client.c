@@ -20162,9 +20162,9 @@ static void show_demon_3d(void)
 		if (demon_ui.captain_of != (uint32_t) -1) {
 			o = &go[demon_ui.captain_of];
 		} else {
-			int i = lookup_object_by_id(demon_ui.follow_id);
-			if (i >= 0)
-				o = &go[i];
+			int index = lookup_object_by_id(demon_ui.follow_id);
+			if (index >= 0)
+				o = &go[index];
 			else
 				o = NULL;
 		}
