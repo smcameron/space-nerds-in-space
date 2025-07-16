@@ -11788,8 +11788,8 @@ static void clear_bridge_waypoints(int bridge)
 
 static void respawn_player(struct snis_entity *o, uint8_t warpgate_number)
 {
-	int b, i, found;
-	double x, y, z, a1, a2, rf;
+	int b;
+	double a1, a2, rf;
 	char mining_bot_name[20];
 	static struct mtwist_state *mt = NULL;
 	if (!mt)
@@ -11797,7 +11797,7 @@ static void respawn_player(struct snis_entity *o, uint8_t warpgate_number)
 
 	/* Find a friendly location to respawn... */
 	if (warpgate_number != (uint8_t) -1) {
-		for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
+		for (int i = 0; i <= snis_object_pool_highest_object(pool); i++) {
 			struct snis_entity *f = &go[i];
 			if (!f->alive || f->type != OBJTYPE_WARPGATE)
 				continue;
@@ -11809,8 +11809,8 @@ static void respawn_player(struct snis_entity *o, uint8_t warpgate_number)
 		}
 	}
 
-	found = 0;
-	for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
+	int found = 0;
+	for (int i = 0; i <= snis_object_pool_highest_object(pool); i++) {
 		struct snis_entity *f = &go[i];
 
 		if (!f->alive || f->type != OBJTYPE_PLANET)
@@ -11823,9 +11823,9 @@ static void respawn_player(struct snis_entity *o, uint8_t warpgate_number)
 		a1 = snis_randn(360) * M_PI / 180;
 		a2 = snis_randn(360) * M_PI / 180;
 		rf = 2.0 + (double) snis_randn(1000) / 2000.0;
-		x = f->x + cos(a1) * f->tsd.planet.radius * rf;
-		y = f->y + sin(a1) * f->tsd.planet.radius * rf;
-		z = f->z + sin(a2) * f->tsd.planet.radius * rf;
+		double x = f->x + cos(a1) * f->tsd.planet.radius * rf;
+		double y = f->y + sin(a1) * f->tsd.planet.radius * rf;
+		double z = f->z + sin(a2) * f->tsd.planet.radius * rf;
 		set_object_location(o, x, y, z);
 		printf("found!\n");
 		found = 1;
