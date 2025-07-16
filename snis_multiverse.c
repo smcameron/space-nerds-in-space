@@ -1600,13 +1600,13 @@ static struct option long_options[] = {
 	{ 0, 0, 0, 0 },
 };
 
-static void parse_options(int argc, char *argv[], char **lobby, char **nick, char **location)
+static void parse_options(int argc, char *argv[], char **lobby_name, char **nick_name, char **location_name)
 {
 	int c, rc, v, v2;
 
-	*lobby = NULL;
-	*location = NULL;
-	*nick = NULL;
+	*lobby_name = NULL;
+	*location_name = NULL;
+	*nick_name = NULL;
 
 	if ((argc < 4) &&
 		(argc != 2 || (strcmp(argv[1], "--acknowledgments") != 0 &&
@@ -1634,13 +1634,13 @@ static void parse_options(int argc, char *argv[], char **lobby, char **nick, cha
 			usage(); /* no return */
 			break;
 		case 'l':
-			*lobby = optarg;
+			*lobby_name = optarg;
 			break;
 		case 'L':
-			*location = optarg;
+			*location_name = optarg;
 			break;
 		case 'n':
-			*nick = optarg;
+			*nick_name = optarg;
 			break;
 		case 'v':
 			printf("snis_multiverse ");
@@ -1699,7 +1699,7 @@ static void parse_options(int argc, char *argv[], char **lobby, char **nick, cha
 	if (allow_remote_networks)
 		fprintf(stderr, "snis_multiverse: WARNING: Allowing remote network clients!\n");
 
-	if (!*lobby || !*nick || !*location)
+	if (!*lobby_name || !*nick_name || !*location_name)
 		usage(); /* no return */
 }
 
