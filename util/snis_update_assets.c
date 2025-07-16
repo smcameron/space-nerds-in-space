@@ -333,7 +333,7 @@ static int copy_file(char *src, char *dest)
 	int fd = open(dest, O_TRUNC | O_WRONLY | O_CREAT, 0644);
 	do {
 
-		int rc = write(fd, &buffer[bytes_written], bytes_to_write);
+		rc = write(fd, &buffer[bytes_written], bytes_to_write);
 		if (rc >= 0) {
 			bytes_written += rc;
 			bytes_to_write -= rc;
