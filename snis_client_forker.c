@@ -391,14 +391,14 @@ void fork_update_assets(int background_task, int local_only, int show_progress)
 	free(update_assets);
 }
 
-static int forker_read_options_from_pipe(int pipefd, struct snis_process_options *options)
+static int forker_read_options_from_pipe(int pipefd, struct snis_process_options *process_options)
 {
 	int rc;
 	int bytes_read, bytes_to_read;
 
-	char *c = (char *) options;
+	char *c = (char *) process_options;
 	bytes_read = 0;
-	bytes_to_read = sizeof(*options);
+	bytes_to_read = sizeof(*process_options);
 
 	do {
 		rc = read(pipefd, c, bytes_to_read);
