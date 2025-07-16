@@ -23288,12 +23288,12 @@ static struct mesh **allocate_starbase_mesh_ptrs(int nstarbase_meshes)
 	return m;
 }
 
-static void init_thrust_material(struct material *thrust_material, char *image_filename)
+static void init_thrust_material(struct material *thrust_mat, char *image_filename)
 {
-	material_init_textured_particle(thrust_material);
-	thrust_material->textured_particle.texture_id = load_texture(image_filename, 0);
-	thrust_material->textured_particle.radius = 1.5;
-	thrust_material->textured_particle.time_base = 0.1;
+	material_init_textured_particle(thrust_mat);
+	thrust_mat->textured_particle.texture_id = load_texture(image_filename, 0);
+	thrust_mat->textured_particle.radius = 1.5;
+	thrust_mat->textured_particle.time_base = 0.1;
 }
 
 static void update_splash_progress(int progress)
