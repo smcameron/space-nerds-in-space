@@ -22634,19 +22634,19 @@ static void draw_quit_screen(void)
 
 #define FRAME_INDEX_MAX 10
 
-static void do_display_frame_stats(const float frame_rates[], const float frame_times[], const int nframes)
+static void do_display_frame_stats(const float frame_rates[], const float frame_times[], const int num_frames)
 {
 /* This works out to either 29 or 58 FPS */
 #define ACCEPTABLE_FRAME_RATE (frame_rate_hz - 1.0 - use_60_fps)
 	float avg_frame_rate = 0;
 	float avg_frame_time = 0;
 	int i;
-	for (i = 0; i < nframes; i++) {
+	for (i = 0; i < num_frames; i++) {
 		avg_frame_rate += frame_rates[i];
 		avg_frame_time += frame_times[i];
 	}
-	avg_frame_rate /= (float) nframes;
-	avg_frame_time /= (float) nframes;
+	avg_frame_rate /= (float) num_frames;
+	avg_frame_time /= (float) num_frames;
 
 	if (display_frame_stats > 0 || avg_frame_rate > 1.0 / ACCEPTABLE_FRAME_RATE) {
 		if (avg_frame_rate <= 1.0 / ACCEPTABLE_FRAME_RATE)
