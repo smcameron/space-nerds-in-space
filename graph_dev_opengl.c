@@ -4512,13 +4512,11 @@ const char *graph_dev_get_texture_filename(unsigned int texture_id)
 
 int graph_dev_reload_textures(void)
 {
-	int i;
-
 	/* Build a list of requests to re-load all the textures */
 	pthread_mutex_lock(&finished_loading_mutex);
 	int n = nloaded_textures;
 	struct graph_dev_image_load_request **r = calloc(n, sizeof(*r));
-	for (i = 0; i < n; i++) {
+	for (int i = 0; i < n; i++) {
 		r[i] = calloc(1, sizeof(*r[i]));
 		r[i]->texture_id = loaded_textures[i].texture_id;
 		r[i]->loaded_texture_index = i;
