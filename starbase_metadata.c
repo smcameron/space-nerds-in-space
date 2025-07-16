@@ -43,7 +43,7 @@ int read_starbase_model_metadata(char *asset_dir, char *filename, int *nstarbase
 	FILE *f;
 	char path[PATH_MAX], model_file[PATH_MAX], docking_port_file[PATH_MAX], line[256];
 	char *s;
-	int i, total_len, rc, lineno, np, pc;
+	int total_len, rc, lineno, np, pc;
 	const int max_starbase_models = 100;
 
 	printf("Reading starbase model specifications...");
@@ -114,7 +114,7 @@ int read_starbase_model_metadata(char *asset_dir, char *filename, int *nstarbase
 				goto bailout;
 			}
 			snprintf(path, PATH_MAX, "%s/models/%s", asset_dir, model_file);
-			i = strlen(path);
+			int i = strlen(path);
 			while (i >= 0 && path[i] != '.') {
 				path[i] = '\0';
 				i--;
@@ -136,7 +136,7 @@ int read_starbase_model_metadata(char *asset_dir, char *filename, int *nstarbase
 				goto bailout;
 			}
 			snprintf(path, PATH_MAX, "%s/models/%s", asset_dir, model_file);
-			i = strlen(path);
+			int i = strlen(path);
 			while (i >= 0 && path[i] != '/') {
 				path[i] = '\0';
 				i--;
@@ -159,8 +159,7 @@ int read_starbase_model_metadata(char *asset_dir, char *filename, int *nstarbase
 bailout:
 	fclose(f);
 	if (*starbase_metadata) {
-		int i;
-		for (i = 0; i < pc; i++) {
+		for (int i = 0; i < pc; i++) {
 			if ((*starbase_metadata)[i].model_file) {
 				free((*starbase_metadata)[i].model_file);
 				(*starbase_metadata)[i].model_file = NULL;
