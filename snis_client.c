@@ -6777,10 +6777,10 @@ static int cipher_freq_compare(const void *a, const void *b)
 }
 
 /* Sort the letters of the enciphered message by frequency */
-static void sort_cipher_alpha_by_freq(char cipher_alpha_by_freq[])
+static void sort_cipher_alpha_by_freq(char alpha_by_freq[])
 {
-	memcpy(cipher_alpha_by_freq, "ABCDEFGHIJKLMNOPQRSTUVWXYZ", 27);
-	qsort(cipher_alpha_by_freq, 26, 1, cipher_freq_compare);
+	memcpy(alpha_by_freq, "ABCDEFGHIJKLMNOPQRSTUVWXYZ", 27);
+	qsort(alpha_by_freq, 26, 1, cipher_freq_compare);
 }
 
 static void main_screen_add_text(char *msg);
