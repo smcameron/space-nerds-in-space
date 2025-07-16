@@ -8610,21 +8610,21 @@ static void *gameserver_writer(__attribute__((unused)) void *arg)
 	return NULL;
 }
 
-static int role_to_displaymode(uint32_t role)
+static int role_to_displaymode(uint32_t the_role)
 {
-	int displaymode, j;
+	int display_mode, j;
 
 	/* If we're coming through a warp gate, don't mess with the displaymode */
-	if (displaymode_before_switch != -1 && (displaymode_before_switch & role)) {
-		displaymode = displaymode_before_switch;
+	if (displaymode_before_switch != -1 && (displaymode_before_switch & the_role)) {
+		display_mode = displaymode_before_switch;
 		displaymode_before_switch = -1;
-		return displaymode;
+		return display_mode;
 	}
 
 	/* We're not coming through a warp gate, we've just started up the game */
-	displaymode = DISPLAYMODE_MAINSCREEN;
+	display_mode = DISPLAYMODE_MAINSCREEN;
 	for (j = 0; j < 32; j++) {
-		if ((1 << j) & role) {
+		if ((1 << j) & the_role) {
 			switch ((1 << j)) {
 			case ROLE_MAIN:
 				return DISPLAYMODE_MAINSCREEN;
@@ -8645,7 +8645,7 @@ static int role_to_displaymode(uint32_t role)
 			}
 		}
 	}
-	return displaymode;
+	return display_mode;
 }
 
 static void request_universe_timestamp(void);
