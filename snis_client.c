@@ -23848,7 +23848,7 @@ static int main_da_motion_notify(SDL_Window *window, SDL_MouseMotionEvent *event
 			queue_to_server(snis_opcode_pkt("bRR", OPCODE_REQUEST_WEAPONS_YAW_PITCH,
 						yaw, pitch));
 		} else { /* Captured mouse */
-			int yaw, pitch, v;
+			int v;
 			const int dead_threshold = 2;
 			const int fine_threshold = 7;
 			if (mouse.deltax < -dead_threshold) {
