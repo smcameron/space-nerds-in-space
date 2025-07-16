@@ -1552,12 +1552,12 @@ static void checkpoint_data(void)
 	pthread_mutex_unlock(&data_mutex);
 }
 
-static void create_database_root_or_die(char *database_root)
+static void create_database_root_or_die(char *db_root)
 {
-	if (mkdir(database_root, database_mode) != 0) {
+	if (mkdir(db_root, database_mode) != 0) {
 		if (errno != EEXIST) {
 			fprintf(stderr, "snis_multiverse: Can't mkdir %s: %s\n",
-				database_root, strerror(errno));
+				db_root, strerror(errno));
 			exit(1);
 		}
 	}
