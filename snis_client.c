@@ -401,7 +401,7 @@ static struct client_network_stats {
 
 static int nframes = 0;
 static int timer = 0;
-static struct timeval start_time, end_time;
+static struct timeval program_start_time, program_end_time;
 #define UNIVERSE_TICKS_PER_SECOND 10
 static double universe_timestamp_offset = 0;
 
@@ -23917,14 +23917,14 @@ static void really_quit(void)
 	if (netstats.elapsed_seconds < 1)
 		netstats.elapsed_seconds = 1;
 
-	gettimeofday(&end_time, NULL);
+	gettimeofday(&program_end_time, NULL);
 
-	seconds = (0.0 + end_time.tv_sec - start_time.tv_sec);
+	seconds = (0.0 + program_end_time.tv_sec - program_start_time.tv_sec);
 	if (seconds < 1.0)
 		seconds = 1.0;
 
 	printf("%d frames / %d seconds, %g frames/sec\n",
-		nframes, (int) (end_time.tv_sec - start_time.tv_sec),
+		nframes, (int) (program_end_time.tv_sec - program_start_time.tv_sec),
 		(0.0 + nframes) / seconds);
 	printf("server netstats: %"PRIu64" bytes sent, %"PRIu64" bytes recd, secs = %"PRIu64", bw = %"PRIu64" bytes/sec\n",
 			netstats.bytes_sent, netstats.bytes_recd, (uint64_t) netstats.elapsed_seconds,
@@ -25691,7 +25691,7 @@ static void __attribute__((noreturn)) splash_screen_fn(int pipefd)
 	double elapsed_time_ms;
 	int no_previous_loading_time;
 	struct sigaction sa;
-	struct itimerval timer;
+	struct itimerval itimer;
 
 	gettimeofday(&start_time, NULL);
 
@@ -25739,12 +25739,12 @@ static void __attribute__((noreturn)) splash_screen_fn(int pipefd)
 	sigaction(SIGALRM, &sa, NULL);
 
 	/* Configure timer to fire at 10Hz */
-	timer.it_value.tv_sec = 0;
-	timer.it_value.tv_usec = 100000;
-	timer.it_interval.tv_sec = 0;
-	timer.it_interval.tv_usec = 100000;
+	itimer.it_value.tv_sec = 0;
+	itimer.it_value.tv_usec = 100000;
+	itimer.it_interval.tv_sec = 0;
+	itimer.it_interval.tv_usec = 100000;
 
-	setitimer(ITIMER_REAL, &timer, NULL);
+	setitimer(ITIMER_REAL, &itimer, NULL);
 
 	do {
 		int bytesleft, i;
@@ -25807,7 +25807,7 @@ update_progress:
 out:
 	if (exitcode == 0) {
 		gettimeofday(&current_time, NULL);
-		elapsed_time_ms = timeval_difference(start_time, current_time);
+		elapsed_time_ms = timeval_difference(program_start_time, current_time);
 		save_loading_time(elapsed_time_ms);
 	}
 	if (splash_screen_pixels)
@@ -26053,7 +26053,7 @@ int main(int argc, char *argv[])
 	sng_set_foreground(WHITE);
 	snis_typefaces_init_with_scaling((float) SCREEN_WIDTH / 1050.0, (float) SCREEN_HEIGHT / 500.0);
 
-	gettimeofday(&start_time, NULL);
+	gettimeofday(&program_start_time, NULL);
 	universe_timestamp_offset = time_now_double(); /* until we get real time from server */
 
 	snis_slider_set_sound(SLIDER_SOUND);
