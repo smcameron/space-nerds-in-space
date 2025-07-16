@@ -6570,7 +6570,7 @@ static void ai_mining_mode_mine_asteroid(struct snis_entity *o, struct ai_mining
 	union quat new_orientation;
 	const float slerp_rate = 0.05;
 	float dx, dy, dz;
-	int n, chance;
+	int chance;
 
 	int i = lookup_by_id(ai->asteroid);
 	if (i < 0) {
@@ -6591,7 +6591,7 @@ static void ai_mining_mode_mine_asteroid(struct snis_entity *o, struct ai_mining
 	asteroid = &go[i];
 	radius = estimate_asteroid_radius(asteroid->id) * 0.8;
 	vec3_mul_self(&offset, radius);
-	n = o->tsd.ship.nai_entries - 1;
+	int n = o->tsd.ship.nai_entries - 1;
 	quat_rot_vec_self(&offset, &o->tsd.ship.ai[n].u.mining_bot.orbital_orientation);
 	quat_rot_vec_self(&offset, &asteroid->orientation);
 
@@ -6616,17 +6616,16 @@ static void ai_mining_mode_mine_asteroid(struct snis_entity *o, struct ai_mining
 		if (chance < 20) {
 			int total = (int) ((float) snis_randn(100) *
 				(float) asteroid->tsd.asteroid.preciousmetals / 255.0);
-			int n;
-
-			n = snis_randn(total); total -= n;
-			update_mineral_amount(&ai->germanium, n);
-			n = snis_randn(total); total -= n;
-			update_mineral_amount(&ai->gold, n);
-			n = snis_randn(total); total -= n;
-			update_mineral_amount(&ai->platinum, n);
-			n = snis_randn(total); total -= n;
-			update_mineral_amount(&ai->uranium, n);
-			n = snis_randn(total); total -= n;
+			int mineral_amount;
+			mineral_amount = snis_randn(total); total -= mineral_amount;
+			update_mineral_amount(&ai->germanium, mineral_amount);
+			mineral_amount = snis_randn(total); total -= mineral_amount;
+			update_mineral_amount(&ai->gold, mineral_amount);
+			mineral_amount = snis_randn(total); total -= mineral_amount;
+			update_mineral_amount(&ai->platinum, mineral_amount);
+			mineral_amount = snis_randn(total); total -= mineral_amount;
+			update_mineral_amount(&ai->uranium, mineral_amount);
+			mineral_amount = snis_randn(total); total -= mineral_amount;
 			(void) total; /* To suppress scan-build complaining about dead stores */
 		}
 		if (chance < 80) {
@@ -6641,21 +6640,21 @@ static void ai_mining_mode_mine_asteroid(struct snis_entity *o, struct ai_mining
 	case OBJTYPE_DERELICT:
 		chance = snis_randn(1000);
 		if (chance < 20) {
-			n = snis_randn(10);
-			if (n > asteroid->tsd.derelict.fuel)
-				n = asteroid->tsd.derelict.fuel;
-			asteroid->tsd.derelict.fuel -= n;
-			if (ai->fuel + n < 255)
-				ai->fuel += n;
+			int fuel_amount = snis_randn(10);
+			if (fuel_amount > asteroid->tsd.derelict.fuel)
+				fuel_amount = asteroid->tsd.derelict.fuel;
+			asteroid->tsd.derelict.fuel -= fuel_amount;
+			if (ai->fuel + fuel_amount < 255)
+				ai->fuel += fuel_amount;
 			else
 				ai->fuel = 255;
 		} else if (chance < 40) {
-			n = snis_randn(10);
-			if (n > asteroid->tsd.derelict.oxygen)
-				n = asteroid->tsd.derelict.oxygen;
-			asteroid->tsd.derelict.oxygen -= n;
-			if (ai->oxygen + n < 255)
-				ai->oxygen += n;
+			int oxygen_amount = snis_randn(10);
+			if (oxygen_amount > asteroid->tsd.derelict.oxygen)
+				oxygen_amount = asteroid->tsd.derelict.oxygen;
+			asteroid->tsd.derelict.oxygen -= oxygen_amount;
+			if (ai->oxygen + oxygen_amount < 255)
+				ai->oxygen += oxygen_amount;
 			else
 				ai->oxygen = 255;
 		}
