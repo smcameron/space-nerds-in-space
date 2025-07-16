@@ -11129,7 +11129,7 @@ static void starbase_move(struct snis_entity *o)
 {
 	char location[50];
 	int64_t then, now;
-	int i, j, model;
+	int model;
 	int fired_at_player = 0;
 	static struct mtwist_state *mt = NULL;
 
@@ -11152,7 +11152,7 @@ static void starbase_move(struct snis_entity *o)
 		send_comms_packet(o, "-  ", 0, "LOCATION %s", location);
 	}
 
-	for (i = 0; i < o->tsd.starbase.nattackers; i++) {
+	for (int i = 0; i < o->tsd.starbase.nattackers; i++) {
 		int j;
 		struct snis_entity *a;
 
@@ -11225,10 +11225,10 @@ static void starbase_move(struct snis_entity *o)
 	/* expire the expected dockers and repair ships at docking ports */
 	model = o->id % nstarbase_models;
 	if (docking_port_info[model]) {
-		for (j = 0; j < docking_port_info[model]->nports; j++) {
+		for (int i = 0; i < docking_port_info[model]->nports; i++) {
 
 			/* Repair any ship docked at this docking port */
-			uint32_t id = docking_port_resident(o->tsd.starbase.docking_port[j]);
+			uint32_t id = docking_port_resident(o->tsd.starbase.docking_port[i]);
 			if (id != (uint32_t) -1) {
 				/* TODO: make this safe */
 				int bn = lookup_bridge_by_shipid(id);
@@ -11237,21 +11237,21 @@ static void starbase_move(struct snis_entity *o)
 			}
 
 			/* Expire docking permission for any expected dockers that are late */
-			if (o->tsd.starbase.expected_docker[j] == -1)
+			if (o->tsd.starbase.expected_docker[i] == -1)
 				continue;
-			id = o->tsd.starbase.expected_docker[j];
-			if (o->tsd.starbase.expected_docker_timer[j] > 0)
-				o->tsd.starbase.expected_docker_timer[j]--;
-			if (o->tsd.starbase.expected_docker_timer[j] > 0)
+			id = o->tsd.starbase.expected_docker[i];
+			if (o->tsd.starbase.expected_docker_timer[i] > 0)
+				o->tsd.starbase.expected_docker_timer[i]--;
+			if (o->tsd.starbase.expected_docker_timer[i] > 0)
 				continue;
 			/* TODO: make this safe */
 			int bn = lookup_bridge_by_shipid(id);
 			if (bn < 0)
 				continue;
 			struct bridge_data *b = &bridgelist[bn];
-			if (docking_port_resident(o->tsd.starbase.docking_port[j]) == b->shipid)
+			if (docking_port_resident(o->tsd.starbase.docking_port[i]) == b->shipid)
 				continue; /* Do not expire docking permission on a docked ship */
-			o->tsd.starbase.expected_docker[j] = -1;
+			o->tsd.starbase.expected_docker[i] = -1;
 			send_comms_packet(o, o->sdata.name, b->npcbot.channel,
 				"%s, PERMISSION TO DOCK EXPIRED.", b->shipname);
 			snis_queue_add_sound(PERMISSION_TO_DOCK_EXPIRED, ROLE_NAVIGATION, b->shipid);
