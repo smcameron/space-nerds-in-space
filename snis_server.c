@@ -27769,12 +27769,12 @@ static int read_factions(void)
 	return 0;
 }
 
-static struct solarsystem_asset_spec *read_solarsystem_assets(char *solarsystem_name)
+static struct solarsystem_asset_spec *read_solarsystem_assets(char *system_name)
 {
 	char path[PATH_MAX];
 	struct solarsystem_asset_spec *s;
 
-	snprintf(path, sizeof(path), "%s/solarsystems/%s/assets.txt", asset_dir, solarsystem_name);
+	snprintf(path, sizeof(path), "%s/solarsystems/%s/assets.txt", asset_dir, system_name);
 
 	s = solarsystem_asset_spec_read(replacement_asset_lookup(path, &replacement_assets));
 	if (!s) {
