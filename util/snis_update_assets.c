@@ -76,7 +76,7 @@ static struct directory_list {
 	char **name;
 	int nnames;
 	int nslots;
-} dir_list = { NULL, 0, 0 };
+} directory_list = { NULL, 0, 0 };
 
 static void update_progress_indicator(void)
 {
@@ -257,24 +257,27 @@ static int make_parent_directories(char *asset_filename)
 			strcat(path, t);
 
 			/* Check if we already created this directory */
-			int dirnum = lookup_dir_name(&dir_list, path);
+			int dirnum = lookup_dir_name(&directory_list, path);
 			if (dirnum >= 0)
 				continue; /* we did */
 
 			if (dry_run) {
 				printf("%s: Would create directory %s\n", P, path);
-				(void) remember_dir_name(&dir_list, path); /* so we don't keep trying to create it */
+				/* so we don't keep trying to create it */
+				(void) remember_dir_name(&directory_list, path);
 				continue;
 			}
 			errno = 0;
 			int rc = mkdir(path, 0775);
 			if (rc && errno == EEXIST) {
-				(void) remember_dir_name(&dir_list, path); /* so we don't keep trying to create it */
+				/* so we don't keep trying to create it */
+				(void) remember_dir_name(&directory_list, path);
 				continue;
 			}
 			if (!rc && errno == 0) {
 				printf("%s: Created directory %s\n", P, path);
-				(void) remember_dir_name(&dir_list, path); /* so we don't keep trying to create it */
+				/* so we don't keep trying to create it */
+				(void) remember_dir_name(&directory_list, path);
 				continue;
 			}
 			fprintf(stderr, "%s: failed to create directory %s: %s\n", P, path, strerror(errno)); {
@@ -683,7 +686,7 @@ out:
 	printf("%s files: %d\n%s files: %d\n",
 			dry_run ? "Would have updated" : "Updated", updated_files,
 			dry_run ? "Would have created new" : "New", new_files);
-	free_directory_list(&dir_list);
+	free_directory_list(&directory_list);
 	free(srcdir);
 
 	return rc;
