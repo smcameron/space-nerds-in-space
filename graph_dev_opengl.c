@@ -4371,7 +4371,7 @@ static time_t get_file_modify_time(const char *filename)
 
 int graph_dev_reload_cubemap_textures(void)
 {
-	int i, failed = 0;
+	int failed = 0;
 
 	/* Build a list of requests to reload all the cubemap textures */
 	pthread_mutex_lock(&finished_loading_mutex);
@@ -4381,7 +4381,7 @@ int graph_dev_reload_cubemap_textures(void)
 		pthread_mutex_unlock(&finished_loading_mutex);
 		return -1;
 	}
-	for (i = 0; i < n; i++) {
+	for (int i = 0; i < n; i++) {
 		r[i] = calloc(1, sizeof(*r[i]));
 		if (!r[i])
 			continue;
