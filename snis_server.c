@@ -7355,7 +7355,6 @@ static void ai_rts_resupply(struct snis_entity *o)
 {
 	int i, n, sn;
 	struct snis_entity *u;
-	double dist;
 
 	n = o->tsd.ship.nai_entries - 1;
 	if (n < 0 || o->tsd.ship.ai[n].ai_mode != AI_MODE_RTS_RESUPPLY) {
@@ -7402,7 +7401,7 @@ static void ai_rts_resupply(struct snis_entity *o)
 		return;
 	}
 	u = &go[i];
-	dist = ai_ship_travel_towards(o, u->x, u->y, u->z);
+	double dist = ai_ship_travel_towards(o, u->x, u->y, u->z);
 	if (has_arrived_at_destination(o, dist)) { /* Refuel the ship */
 		int unit_type = ship_type[o->tsd.ship.shiptype].rts_unit_type;
 		u->tsd.ship.fuel = rts_unit_type(unit_type)->fuel_capacity;
