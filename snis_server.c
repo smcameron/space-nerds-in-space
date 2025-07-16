@@ -25495,9 +25495,9 @@ static void simulate_slow_server(__attribute__((unused)) int x)
 #define simulate_slow_server(x)
 #endif
 	
-static void *per_client_write_thread(__attribute__((unused)) void /* struct game_client */ *client)
+static void *per_client_write_thread(void /* struct game_client */ *snis_client)
 {
-	struct game_client *c = (struct game_client *) client;
+	struct game_client *c = (struct game_client *) snis_client;
 	int bridge_status;
 	struct packed_buffer *pb;
 
