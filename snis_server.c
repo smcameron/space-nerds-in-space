@@ -31858,12 +31858,12 @@ static int process_multiverse_update_bridge_cargo(struct multiverse_server_info 
 		pthread_mutex_unlock(&universe_mutex);
 		return -1;
 	}
-	int i = lookup_by_id(bridgelist[b].shipid);
-	if (i < 0) {
+	int index = lookup_by_id(bridgelist[b].shipid);
+	if (index < 0) {
 		pthread_mutex_unlock(&universe_mutex);
 		return -1;
 	}
-	o = &go[i];
+	o = &go[index];
 
 	rc = snis_readsocket(msi->sock, &len, sizeof(len));
 	if (rc < 0) {
@@ -31940,9 +31940,9 @@ static int process_multiverse_update_bridge_cargo(struct multiverse_server_info 
 			memset(&o->tsd.ship.cargo[i], 0, sizeof(o->tsd.ship.cargo[i]));
 			o->tsd.ship.cargo[i].contents.item = -1; /* empty */
 		} else {
-			float tmp;
 			int ci = lookup_commodity(commodity, ncommodities, fc.name);
 			if (ci >= 0) {
+				float tmp;
 				o->tsd.ship.cargo[i].contents.item = ci;
 				rc = sscanf(qty, "%g", &tmp);
 				if (rc != 1)
