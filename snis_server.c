@@ -24906,9 +24906,9 @@ orderly_client_shutdown:
 	return;
 }
 
-static void *per_client_read_thread(void /* struct game_client */ *client)
+static void *per_client_read_thread(void /* struct game_client */ *snis_client)
 {
-	struct game_client *c = (struct game_client *) client;
+	struct game_client *c = (struct game_client *) snis_client;
 
 	/* Wait for client[] array to get fully updated before proceeding. */
 	client_lock();
