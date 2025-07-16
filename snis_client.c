@@ -14084,13 +14084,13 @@ static void draw_3d_nav_display(void)
 				update_entity_non_uniform_scale(contact, sizex, sizey, sizez);
 				update_entity_orientation(contact, &go[i].orientation);
 				for (j = 0; j < 2; j++) {
-					struct entity *e;
-					e = add_entity(instrumentecx, cylindrically_mapped_sphere_mesh,
+					struct entity *ent;
+					ent = add_entity(instrumentecx, cylindrically_mapped_sphere_mesh,
 							go[i].x + 0.5 * (1.0 - (j * 2.0)) * sizex,
 							go[i].y + 0, go[i].z + 0, UI_COLOR(nav_ship));
 					if (e) {
-						update_entity_scale(e, sizey);
-						update_entity_orientation(e, &go[i].orientation);
+						update_entity_scale(ent, sizey);
+						update_entity_orientation(ent, &go[i].orientation);
 					}
 				}
 				break;
@@ -14172,44 +14172,45 @@ static void draw_3d_nav_display(void)
 	for (i = 0; i <= get_entity_count(instrumentecx); i++) {
 		float sx, sy;
 		char buffer[100];
-		struct entity *e;
-		struct snis_entity *o;
+		struct entity *ent;
+		struct snis_entity *snis_object;
 		double *wp;
 		char **arrowlabel;
 		int waypoint_diff, arrow_label_diff;
 
-		e = get_entity(instrumentecx, i);
-		if (!e)
+		ent = get_entity(instrumentecx, i);
+		if (!ent)
 			continue;
-		if (!entity_onscreen(e))
+		if (!entity_onscreen(ent))
 			continue;
-		o = entity_get_user_data(e);
-		if (!o)
+		snis_object = entity_get_user_data(ent);
+		if (!snis_object)
 			continue; 
 
 		/* Check if it is a waypoint rather than an object.
 		 * This is a little gross, we do it by checking if the
 		 * pointer is within the array containing the waypoints.
+		 * (FIXME: This is probably undefined behavior, actually.)
 		 */
-		wp = (double *) o;
+		wp = (double *) snis_object;
 		waypoint_diff = wp - &sci_ui.waypoint[0][0];
-		arrowlabel = (char **) o;
+		arrowlabel = (char **) snis_object;
 		arrow_label_diff = arrowlabel - &arrow_label[0];
 		if (waypoint_diff >= 0 && waypoint_diff < 3 * MAXWAYPOINTS) {
 			/* It is a waypoint */
 			waypoint_diff = waypoint_diff / 3;
-			entity_get_screen_coords(e, &sx, &sy);
+			entity_get_screen_coords(ent, &sx, &sy);
 			snprintf(buffer, sizeof(buffer), "WAYPOINT-%02d", waypoint_diff);
 			sng_abs_xy_draw_string(buffer, NANO_FONT, sx + 10, sy - 15);
 		} else if (arrow_label_diff >= 0 && arrow_label_diff < 4) { /* Arrow head */
-			entity_get_screen_coords(e, &sx, &sy);
+			entity_get_screen_coords(ent, &sx, &sy);
 			snprintf(buffer, sizeof(buffer), "%s", *arrowlabel);
 			sng_abs_xy_draw_string(buffer, NANO_FONT, sx + 10, sy - 15);
 		} else {
 			/* It is not a waypoint */
-			entity_get_screen_coords(e, &sx, &sy);
-			if (o->sdata.science_data_known) {
-				snprintf(buffer, sizeof(buffer), "%s", o->sdata.name);
+			entity_get_screen_coords(ent, &sx, &sy);
+			if (snis_object->sdata.science_data_known) {
+				snprintf(buffer, sizeof(buffer), "%s", snis_object->sdata.name);
 				sng_abs_xy_draw_string(buffer, NANO_FONT, sx + 10, sy - 15);
 			}
 		}
