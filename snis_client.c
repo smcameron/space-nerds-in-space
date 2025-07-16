@@ -9412,7 +9412,7 @@ static void add_ship_thrust_entities(struct entity *thrust_entity[],
 	add_thrust_entities(thrust_entity, nthrust_ports, cx, e, ap, impulse, thrust_material_index);
 }
 
-static void update_warp_tunnel(struct snis_entity *o, struct entity **warp_tunnel)
+static void update_warp_tunnel(struct snis_entity *o, struct entity **warptunnel)
 {
 	static int first_time = 1;
 	static union vec3 lastp;
@@ -9446,9 +9446,9 @@ static void update_warp_tunnel(struct snis_entity *o, struct entity **warp_tunne
 	 */
 	thistime = universe_timestamp();
 	if (thistime - lasttime > 0.5) {
-		if (*warp_tunnel) {
-			remove_entity(ecx, *warp_tunnel);
-			*warp_tunnel = NULL;
+		if (*warptunnel) {
+			remove_entity(ecx, *warptunnel);
+			*warptunnel = NULL;
 		}
 		lasttime = thistime;
 		return;
@@ -9456,9 +9456,9 @@ static void update_warp_tunnel(struct snis_entity *o, struct entity **warp_tunne
 	lasttime = thistime;
 
 	if (m <= MAX_PLAYER_VELOCITY) {
-		if (*warp_tunnel) {
-			remove_entity(ecx, *warp_tunnel);
-			*warp_tunnel = NULL;
+		if (*warptunnel) {
+			remove_entity(ecx, *warptunnel);
+			*warptunnel = NULL;
 		}
 		return;
 	}
@@ -9467,22 +9467,22 @@ static void update_warp_tunnel(struct snis_entity *o, struct entity **warp_tunne
 		m = 2500;
 	float new_alpha = max_alpha * ((m - MAX_PLAYER_VELOCITY * 1.5) /
 					(2500 - MAX_PLAYER_VELOCITY * 1.5));
-	if (*warp_tunnel == NULL) {
+	if (*warptunnel == NULL) {
 		union vec3 down_x_axis = { { 1, 0, 0 } };
 		union vec3 up = { {0, 1, 0} };
 		union quat orientation;
 		vec3_normalize_self(&v);
 		quat_from_u2v(&orientation, &down_x_axis, &warp_tunnel_direction, &up);
-		*warp_tunnel = add_entity(ecx, warp_tunnel_mesh, o->x, o->y, o->z, SHIP_COLOR);
-		if (*warp_tunnel) {
-			update_entity_material(*warp_tunnel, &warp_tunnel_material);
-			update_entity_orientation(*warp_tunnel, &orientation);
+		*warptunnel = add_entity(ecx, warp_tunnel_mesh, o->x, o->y, o->z, SHIP_COLOR);
+		if (*warptunnel) {
+			update_entity_material(*warptunnel, &warp_tunnel_material);
+			update_entity_orientation(*warptunnel, &orientation);
 		} else {
 			return;
 		}
 	}
-	if (*warp_tunnel) {
-		entity_update_alpha(*warp_tunnel, new_alpha);
+	if (*warptunnel) {
+		entity_update_alpha(*warptunnel, new_alpha);
 		warp_tunnel_material.texture_mapped_unlit.alpha = new_alpha;
 	}
 }
