@@ -811,10 +811,10 @@ static void synchronous_update_lobby_info(void)
 	struct ssgl_game_server *game_server = NULL;
 	struct ssgl_client_filter filter;
 	lobby_count = 0;
-	char lobbyerror[255];
+	char lobby_error[255];
 
 	/* Loop, trying to connect to the lobby server... */
-	strcpy(lobbyerror, "");
+	lobby_error[0] = '\0';
 	while (1 && lobby_count < MAX_LOBBY_TRIES) {
 		fprintf(stderr, "snis_client: synchronous connecting to lobby %s:%d\n", lobbyhost, lobbyport);
 		sock = ssgl_gameclient_connect_to_lobby_port(lobbyhost, lobbyport);
@@ -824,10 +824,10 @@ static void synchronous_update_lobby_info(void)
 			break;
 		}
 		if (errno)
-			snprintf(lobbyerror, sizeof(lobbyerror), "%s (%d)", strerror(errno), errno);
+			snprintf(lobby_error, sizeof(lobby_error), "%s (%d)", strerror(errno), errno);
 		else
-			snprintf(lobbyerror, sizeof(lobbyerror), "%s (%d)", gai_strerror(sock), sock);
-		fprintf(stderr, "snis_client: synchronous lobby connection failed: %s\n", lobbyerror);
+			snprintf(lobby_error, sizeof(lobby_error), "%s (%d)", gai_strerror(sock), sock);
+		fprintf(stderr, "snis_client: synchronous lobby connection failed: %s\n", lobby_error);
 		ssgl_sleep(5);
 	}
 
@@ -836,7 +836,7 @@ static void synchronous_update_lobby_info(void)
 		goto outta_here;
 	}
 
-	strcpy(lobbyerror, "");
+	lobby_error[0] = '\0';
 
 	/* Ok, we've connected to the lobby server... */
 
@@ -845,9 +845,9 @@ static void synchronous_update_lobby_info(void)
 
 	rc = ssgl_recv_game_servers(sock, &game_server, &game_server_count, &filter);
 	if (rc) {
-		snprintf(lobbyerror, sizeof(lobbyerror), "ssgl_recv_game_servers failed: %s\n", strerror(errno));
+		snprintf(lobby_error, sizeof(lobby_error), "ssgl_recv_game_servers failed: %s\n", strerror(errno));
 		fprintf(stderr, "snis_client: synchronous lobby connection: ssgl_recv_game_server failed: %s\n",
-			lobbyerror);
+			lobby_error);
 		goto handle_error;
 	}
 
