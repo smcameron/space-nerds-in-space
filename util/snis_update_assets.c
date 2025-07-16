@@ -421,9 +421,9 @@ static int process_manifest(CURL *curl, char *manifest_filename)
 #ifndef FUZZ_TESTING
 			/* See if the file already exists */
 			struct stat statbuf;
-			int rc = stat(asset_filename, &statbuf);
+			int statrc = stat(asset_filename, &statbuf);
 
-			if (rc == 0) { /* file exists? */
+			if (statrc == 0) { /* file exists? */
 				char *computed_md5sum = compute_md5_sum(asset_filename);
 				if (strcmp(computed_md5sum, md5sum) != 0) {
 					if (verbose)
