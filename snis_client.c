@@ -10676,7 +10676,7 @@ static void snis_draw_3d_string(struct entity_context *cx, char *string, int fon
 		sng_abs_xy_draw_string(string, font, sx, sy);
 }
 
-static void draw_3d_mark_arc(struct entity_context *ecx,
+static void draw_3d_mark_arc(struct entity_context *ectx,
 			const union vec3 *center, float r, float heading, float mark)
 {
 	/* break arc into max 5 degree segments */
@@ -10690,13 +10690,13 @@ static void draw_3d_mark_arc(struct entity_context *ecx,
 		vec3_add_self(&p2, center);
 
 		if (i != 0) {
-			snis_draw_3d_line(ecx, p1.v.x, p1.v.y, p1.v.z, p2.v.x, p2.v.y, p2.v.z);
+			snis_draw_3d_line(ectx, p1.v.x, p1.v.y, p1.v.z, p2.v.x, p2.v.y, p2.v.z);
 		}
 		p1 = p2;
 	}
 }
 
-static void add_basis_ring(struct entity_context *ecx, float x, float y, float z,
+static void add_basis_ring(struct entity_context *entity_context, float x, float y, float z,
 		float ax, float ay, float az, float angle, float r, int color);
 
 enum {
@@ -11549,7 +11549,7 @@ static void draw_sciplane_display(struct snis_entity *o, double range)
 	remove_all_entity(instrumentecx);
 }
 
-static void add_basis_ring(struct entity_context *ecx, float x, float y, float z,
+static void add_basis_ring(struct entity_context *ectx, float x, float y, float z,
 		float ax, float ay, float az, float angle, float r, int color)
 {
 	union quat q;
@@ -11562,14 +11562,14 @@ static void add_basis_ring(struct entity_context *ecx, float x, float y, float z
 	}
 
 	quat_init_axis(&q, ax, ay, az, angle);
-	e = add_entity(ecx, ring_mesh, x, y, z, color);
+	e = add_entity(ectx, ring_mesh, x, y, z, color);
 	if (e) {
 		update_entity_scale(e, r);
 		update_entity_orientation(e, &q);
 	}
 }
 
-static void add_scanner_beam_orange_slice(struct entity_context *ecx,
+static void add_scanner_beam_orange_slice(struct entity_context *entity_context,
 					struct snis_entity *o, float r, int color)
 {
 	static struct mesh *orange_slice = 0;
@@ -11591,20 +11591,20 @@ static void add_scanner_beam_orange_slice(struct entity_context *ecx,
 			o->tsd.ship.sci_heading + o->tsd.ship.sci_beam_width / 2.0 + M_PI / 2.0 + jitter_offset);
 	quat_init_axis(&q3, 0.0f, 1.0f, 0.0f,
 			o->tsd.ship.sci_heading + o->tsd.ship.sci_beam_width / 2.0 + M_PI / 2.0 - scanner_offset);
-	e = add_entity(ecx, orange_slice, o->x, o->y, o->z, color);
+	e = add_entity(entity_context, orange_slice, o->x, o->y, o->z, color);
 	if (e) {
 		quat_mul(&q4, &q1, &q);
 		update_entity_orientation(e, &q4);
 		update_entity_scale(e, r);
 	}
 
-	e = add_entity(ecx, orange_slice, o->x, o->y, o->z, color);
+	e = add_entity(entity_context, orange_slice, o->x, o->y, o->z, color);
 	if (e) {
 		quat_mul(&q4, &q2, &q);
 		update_entity_orientation(e, &q4);
 		update_entity_scale(e, r);
 	}
-	e = add_entity(ecx, orange_slice, o->x, o->y, o->z, color);
+	e = add_entity(entity_context, orange_slice, o->x, o->y, o->z, color);
 	if (e) {
 		quat_mul(&q4, &q3, &q);
 		update_entity_orientation(e, &q4);
