@@ -757,16 +757,16 @@ void snis_nl_clear_current_topic(struct snis_nl_context *ctx)
 }
 
 void snis_nl_set_current_topic(struct snis_nl_context *ctx,
-	int part_of_speech, char *word, union snis_nl_extra_data extra_data)
+	int p_o_s, char *word, union snis_nl_extra_data extra_data)
 {
 	int i;
 
 	snis_nl_clear_current_topic(ctx);
-	if (part_of_speech != POS_EXTERNAL_NOUN) {
+	if (p_o_s != POS_EXTERNAL_NOUN) {
 		for (i = 0; ctx->dictionary[i].word != NULL; i++) {
 			if (strcmp(ctx->dictionary[i].word, word) != 0)
 				continue;
-			if (part_of_speech != ctx->dictionary[i].p_o_s)
+			if (p_o_s != ctx->dictionary[i].p_o_s)
 				continue;
 			break;
 		}
@@ -776,9 +776,9 @@ void snis_nl_set_current_topic(struct snis_nl_context *ctx,
 		}
 	}
 	/* TODO make synonyms work here? */
-	ctx->current_topic.part_of_speech = part_of_speech;
+	ctx->current_topic.part_of_speech = p_o_s;
 	ctx->current_topic.word = strdup(word);
-	if (part_of_speech == POS_EXTERNAL_NOUN)
+	if (p_o_s == POS_EXTERNAL_NOUN)
 		ctx->current_topic.meaning = -1;
 	else
 		ctx->current_topic.meaning = i;
@@ -1062,7 +1062,7 @@ static void snis_nl_dumpvocab(struct snis_nl_context *ctx,
 }
 
 static void generic_add_dictionary_word(struct snis_nl_context *ctx,
-						char *word, char *canonical_word, int part_of_speech,
+						char *word, char *canonical_word, int p_o_s,
 						char *syntax, snis_nl_verb_function action)
 {
 	struct dictionary_entry *de;
@@ -1082,7 +1082,7 @@ static void generic_add_dictionary_word(struct snis_nl_context *ctx,
 	memset(de, 0, sizeof(*de));
 	de->word = strdup(word);
 	de->canonical_word = strdup(canonical_word);
-	de->p_o_s = part_of_speech;
+	de->p_o_s = p_o_s;
 	if (de->p_o_s == POS_VERB) {
 		de->verb.syntax = syntax;
 		de->verb.fn = action;
@@ -1096,9 +1096,9 @@ void snis_nl_add_dictionary_verb(struct snis_nl_context *ctx,
 	generic_add_dictionary_word(ctx, word, canonical_word, POS_VERB, syntax, action);
 }
 
-void snis_nl_add_dictionary_word(struct snis_nl_context *ctx, char *word, char *canonical_word, int part_of_speech)
+void snis_nl_add_dictionary_word(struct snis_nl_context *ctx, char *word, char *canonical_word, int p_o_s)
 {
-	generic_add_dictionary_word(ctx, word, canonical_word, part_of_speech, NULL, NULL);
+	generic_add_dictionary_word(ctx, word, canonical_word, p_o_s, NULL, NULL);
 }
 
 void snis_nl_add_external_lookup(struct snis_nl_context *ctx, snis_nl_external_noun_lookup lookup)
