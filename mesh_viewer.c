@@ -942,19 +942,19 @@ static void setup_skybox(char *skybox_prefix)
 					maybe_replace_asset(filename[2]));
 }
 
-__attribute__((noreturn)) void usage(char *program)
+__attribute__((noreturn)) void usage(char *program_name)
 {
 	fprintf(stderr, "Usage:\n");
 	fprintf(stderr, "%s -p <planet-texture> [ -i icosohedrion-subdivision] [ -n <normal-map-texture> ]\n",
-			program);
+			program_name);
 	fprintf(stderr, "           [ -r replacement_assets.txt ]\n");
-	fprintf(stderr, " %s -m <mesh-file> [ -c cubemap-texture- ]\n", program);
-	fprintf(stderr, " %s --burstrod\n", program);
-	fprintf(stderr, " %s --thrust <image-file>\n", program);
-	fprintf(stderr, " %s --turret <turret-model> --turretbase <turret-base-model>\n", program);
-	fprintf(stderr, " %s --cylindrical <cylindrical-texture-map>\n", program);
-	fprintf(stderr, " %s -m <mesh-file> --emittance <cylindrical-emittance-map>\n", program);
-	fprintf(stderr, " %s --warpgate\n", program);
+	fprintf(stderr, " %s -m <mesh-file> [ -c cubemap-texture- ]\n", program_name);
+	fprintf(stderr, " %s --burstrod\n", program_name);
+	fprintf(stderr, " %s --thrust <image-file>\n", program_name);
+	fprintf(stderr, " %s --turret <turret-model> --turretbase <turret-base-model>\n", program_name);
+	fprintf(stderr, " %s --cylindrical <cylindrical-texture-map>\n", program_name);
+	fprintf(stderr, " %s -m <mesh-file> --emittance <cylindrical-emittance-map>\n", program_name);
+	fprintf(stderr, " %s --warpgate\n", program_name);
 	fprintf(stderr, "             (emittance requires --cylindrical to be set)\n");
 	exit(-1);
 }
