@@ -424,7 +424,7 @@ static int forker_read_options_from_pipe(int pipefd, struct snis_process_options
  *
  * We then can command this thing via a pipe.
  */
-void forker_process_start(int *pipe_to_forker_process, char **saved_argv)
+void forker_process_start(int *pipe_to_forker_proc, char **saved_argv)
 {
 	int rc, pipefd[2];
 	char ch;
@@ -496,7 +496,7 @@ exit_forker_process:
 
 	/* Parent process */
 	close(pipefd[0]); /* close the read side of the pipe */
-	*pipe_to_forker_process = pipefd[1];
+	*pipe_to_forker_proc = pipefd[1];
 
 }
 
