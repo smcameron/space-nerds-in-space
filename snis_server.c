@@ -32100,12 +32100,12 @@ static int process_multiverse_update_bridge_passengers(struct multiverse_server_
 		pthread_mutex_unlock(&universe_mutex);
 		return -1;
 	}
-	int i = lookup_by_id(bridgelist[b].shipid);
-	if (i < 0) {
+	int index = lookup_by_id(bridgelist[b].shipid);
+	if (index < 0) {
 		pthread_mutex_unlock(&universe_mutex);
 		return -1;
 	}
-	o = &go[i];
+	o = &go[index];
 
 	rc = snis_readsocket(msi->sock, &len, sizeof(len));
 	if (rc < 0) {
