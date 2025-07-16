@@ -18000,7 +18000,7 @@ static void warp_gate_ticket_buying_npc_bot(__attribute__((unused)) struct snis_
 {
 	struct npc_bot_state *botstate = &bridgelist[bridge].npcbot;
 	struct ssgl_game_server *gameserver = NULL;
-	int selection, rc, i, nservers;
+	int selection, rc, nservers;
 	int ch = bridgelist[bridge].npcbot.channel;
 	double ssx, ssy, ssz; /* our solarsystem's position */
 	double dx, dy, dz;
@@ -18008,10 +18008,10 @@ static void warp_gate_ticket_buying_npc_bot(__attribute__((unused)) struct snis_
 	int nsslist = 0;
 	struct snis_entity *sb;
 
-	i = lookup_by_id(botstate->object_id);
-	if (i < 0)
+	int index = lookup_by_id(botstate->object_id);
+	if (index < 0)
 		return;
-	sb = &go[i];
+	sb = &go[index];
 	char *sbname = sb->sdata.name;
 
 	if (server_tracker_get_server_list(server_tracker, &gameserver, &nservers) != 0
@@ -18036,7 +18036,7 @@ static void warp_gate_ticket_buying_npc_bot(__attribute__((unused)) struct snis_
 	ssx = 0.0;
 	ssy = 0.0;
 	ssz = 0.0;
-	for (i = 0; i < nservers; i++) {
+	for (int i = 0; i < nservers; i++) {
 		if (strncasecmp(gameserver[i].location, solarsystem_name, len) == 0) {
 			rc = sscanf(gameserver[i].game_instance, "%lf %lf %lf", &ssx, &ssy, &ssz);
 			if (rc != 3) {
@@ -18050,7 +18050,7 @@ static void warp_gate_ticket_buying_npc_bot(__attribute__((unused)) struct snis_
 			break;
 		}
 	}
-	for (i = 0; i < nservers; i++) {
+	for (int i = 0; i < nservers; i++) {
 		/* Do not list the solarsystem we're already in */
 		if (strncasecmp(gameserver[i].location, solarsystem_name, len) != 0) {
 			rc = sscanf(gameserver[i].game_instance, "%lf %lf %lf", &dx, &dy, &dz);
