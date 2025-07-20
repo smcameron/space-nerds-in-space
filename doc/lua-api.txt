@@ -1052,6 +1052,49 @@ terminal_effect(ship_id, role, effect)
 
 	Note: MAIN SCREEN and WEAPONS do not reboot (it's too annoying and non-sensical).
 
+comms_menu_create("menu text", "callback_function");
+
+	Creates a new comms menu and returns the menu number.  At most 10 such menus may be
+	created, and the numbers return will be between 0 and 9.  The menu text is newline
+	delimted.
+
+	Example:
+
+
+		menu = comms_menu_create(
+			"1. item one\n" ..
+			"2. item two\n" ..
+			"3. item three\n" ..
+			"4. item four", "menu_callback_function");
+
+		function menu_callback_function(choice, ship_id)
+			demon_print("Choice " .. tostring(choice) .. " made by " .. to_string(ship_id));
+			comms_menu_destroy(menu);
+		end
+
+comms_menu_invoke(menu_number, player_ship_id)
+
+	Invokes a COMMS menu previously create via comms_menu_create();
+	When a choice from the menu is made by the COMMS officer, the callback_function
+	is called with the choice as a parameter, an integer with 0 being the first item
+	in the menu.
+
+	Example:
+
+	menu = comms_menu_create("0. item zero\n1. item one\n2. item two");
+
+	function menu_callback(n, ship_id)
+		io.write("User " .. tostring(ship_id) .. " chose item " .. tostring(n));
+		comms_menu_destroy(menu);
+	end
+
+	comms_menu_invoke(menu, "menu_callback");
+
+comms_menu_destroy(menu)
+
+	Destroys a COMMS menu previously created with comms_menu_create();
+
+
 INTERACTIVE FICTION:
 
 There is a Lua library to help with creating Zork-like interactive fiction missions controlled by

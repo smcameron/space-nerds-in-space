@@ -301,6 +301,13 @@ static int prev_collect_opcode_stats = 0;
 static int collect_opcode_stats = 0;
 static double opcode_stats_start_time;
 
+#define MAX_LUA_COMMS_MENUS 10
+static struct lua_comms_menu {
+	int nitems;
+	char **item;
+	char *lua_callback;
+} lua_comms_menu[MAX_LUA_COMMS_MENUS];
+
 struct npc_bot_state;
 struct npc_menu_item;
 typedef void (*npc_menu_func)(struct npc_menu_item *item,
@@ -373,6 +380,7 @@ struct npc_bot_state {
 	int parts_menu;
 	int cargo_category;
 	struct npc_menu_item *current_menu;
+	int lua_menu;
 	npc_special_bot_fn special_bot; /* for special case interactions, non-standard menus, etc. */
 };
 
@@ -23142,6 +23150,164 @@ static int l_get_science_selection(lua_State *l)
 	return 1;
 }
 
+static int l_comms_menu_create(lua_State *l)
+{
+	pthread_mutex_lock(&universe_mutex);
+	/* Find a free menu slot */
+	int menunum = -1;
+	for (int i = 0; i < MAX_LUA_COMMS_MENUS; i++) {
+		if (lua_comms_menu[i].item == NULL) {
+			menunum = i;
+			break;
+		}
+	}
+	if (menunum == -1) {
+		pthread_mutex_unlock(&universe_mutex);
+		lua_pushnil(l);
+		return 1;
+	}
+	const char *lua_menutext = luaL_checkstring(l, 1);
+	const char *lua_callback = luaL_checkstring(l, 2);
+	lua_comms_menu[menunum].lua_callback = strdup(lua_callback);
+	char *menutext = strdup(lua_menutext);
+	int count = 0;
+	/* count items in menu text separated by new lines ... */
+	for (int i = 0; 1; i++) {
+		if (menutext[i] == '\n' || menutext[i] == '\0') {
+			count++;
+		}
+		if (menutext[i] == '\0')
+			break;
+	}
+	/* Allocate space for the menu items. */
+	lua_comms_menu[menunum].item = malloc(sizeof(lua_comms_menu[0].item[0]) * count);
+	/* Copy the menu items into the menu */
+	char *src = menutext;
+	int n = 0;
+	for (int i = 0; 1; i++) {
+		int end = (menutext[i] == '\0');
+		if (menutext[i] == '\n' || menutext[i] == '\0') {
+			menutext[i] = '\0';
+			lua_comms_menu[menunum].item[n] = strdup(src);
+			n++;
+			if (!end)
+				src = &menutext[i + 1];
+		}
+		if (end)
+			break;
+	}
+	lua_comms_menu[menunum].nitems = n;
+	lua_pushnumber(l, (double) menunum);
+	pthread_mutex_unlock(&universe_mutex);
+	free(menutext);
+	return 1;
+}
+
+void npc_lua_comms_menu(__attribute__((unused)) struct snis_entity *o,
+		int bridge_index, __attribute__((unused)) char *from, char *msg)
+{
+	int menunum = bridgelist[bridge_index].npcbot.lua_menu;
+	int channel = bridgelist[bridge_index].comms_channel;
+	if (menunum < 0 || menunum >= MAX_LUA_COMMS_MENUS)
+		return;
+	int choice;
+	int rc = sscanf(msg, "%d", &choice);
+	if (rc != 1) {
+		/* print the menu */
+		for (int i = 0; i < lua_comms_menu[menunum].nitems; i++) {
+			send_comms_packet(NULL, "", channel, "%s", lua_comms_menu[menunum].item[i]);
+		}
+		return;
+	}
+	if (rc == 1) {
+		if (lua_comms_menu[menunum].lua_callback == NULL)
+			return;
+		if (choice > lua_comms_menu[menunum].nitems || choice < 1)
+			return;
+		choice--;
+		lua_getglobal(lua_state, lua_comms_menu[menunum].lua_callback);
+		lua_pushnumber(lua_state, (double) choice);
+		lua_pushnumber(lua_state, (double) bridgelist[bridge_index].shipid);
+		do_lua_pcall(lua_comms_menu[menunum].lua_callback, lua_state, 2);
+		bridgelist[bridge_index].npcbot.special_bot = NULL;
+		bridgelist[bridge_index].npcbot.lua_menu = -1;
+	}
+}
+
+static int l_comms_menu_invoke(lua_State *l)
+{
+	double n = luaL_checknumber(l, 1);
+	int menunum = (int) n;
+	double iddbl = luaL_checknumber(l, 2);
+	int id = (uint32_t) iddbl;
+
+	/* Check the range of the menu num we're asking to invoke ... */
+	if (menunum < 0 || menunum >= MAX_LUA_COMMS_MENUS) {
+		lua_pushnil(l);
+		return 1;
+	}
+
+	/* Check that the menu we're invoking is allocated */
+	pthread_mutex_lock(&universe_mutex);
+	if (lua_comms_menu[menunum].item == NULL) {
+		pthread_mutex_unlock(&universe_mutex);
+		lua_pushnil(l);
+		return 1;
+	}
+
+	/* Find the bridge we're addressing ... */
+	int b = lookup_bridge_by_shipid(id);
+	if (b < 0) {
+		pthread_mutex_unlock(&universe_mutex);
+		lua_pushnil(l);
+		return 1;
+	}
+
+	bridgelist[b].npcbot.lua_menu = menunum;
+	bridgelist[b].npcbot.special_bot = npc_lua_comms_menu;
+	bridgelist[b].npcbot.object_id = id;
+	bridgelist[b].npcbot.channel = bridgelist[b].comms_channel;
+	npc_lua_comms_menu(NULL, b, "", "");
+
+	pthread_mutex_unlock(&universe_mutex);
+	lua_pushnil(l);
+	return 1;
+}
+
+static int l_comms_menu_destroy(lua_State *l)
+{
+	double n = luaL_checknumber(l, 1);
+	int menunum = (int) n;
+
+	/* Check the range of the menu num we're asking to destroy ... */
+	if (menunum < 0 || menunum >= MAX_LUA_COMMS_MENUS) {
+		lua_pushnil(l);
+		return 1;
+	}
+
+	/* Check that the menu we're asking to destroy is actually allocated */
+	pthread_mutex_lock(&universe_mutex);
+	if (lua_comms_menu[menunum].item == NULL) {
+		pthread_mutex_unlock(&universe_mutex);
+		lua_pushnil(l);
+		return 1;
+	}
+
+	/* Free the menu data */
+	for (int i = 0; i < lua_comms_menu[menunum].nitems; i++) {
+		free(lua_comms_menu[menunum].item[i]);
+		lua_comms_menu[menunum].item[i] = NULL;
+	}
+	free(lua_comms_menu[menunum].item);
+	free(lua_comms_menu[menunum].lua_callback);
+	lua_comms_menu[menunum].nitems = 0;
+	lua_comms_menu[menunum].item = NULL;
+	lua_comms_menu[menunum].lua_callback = NULL;
+	pthread_mutex_unlock(&universe_mutex);
+	lua_pushnumber(l, (double) 0.0);
+	return 1;
+}
+
 static int process_create_item(struct game_client *c)
 {
 	unsigned char buffer[16];
@@ -27418,6 +27584,9 @@ static void setup_lua(void)
 	add_lua_callable_fn(l_lookup_by_name, "lookup_by_name");
 	add_lua_callable_fn(l_set_plot_armor, "set_plot_armor");
 	add_lua_callable_fn(l_get_science_selection, "get_science_selection");
+	add_lua_callable_fn(l_comms_menu_create, "comms_menu_create");
+	add_lua_callable_fn(l_comms_menu_invoke, "comms_menu_invoke");
+	add_lua_callable_fn(l_comms_menu_destroy, "comms_menu_destroy");
 }
 
 static void print_lua_error_message(char *error_context, char *lua_command)
