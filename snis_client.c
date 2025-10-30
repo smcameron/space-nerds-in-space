@@ -12820,7 +12820,7 @@ static void init_nav_ui(void)
 			NANO_FONT, trident_button_pressed, NULL);
 	snis_button_set_sound(nav_ui.trident_button, UISND9);
 	snis_button_set_hover_color(nav_ui.trident_button, hover_color);
-	nav_ui.computer_button = snis_button_init(txx(4), txy(570), -1, -1, "COMPUTER", UI_COLOR(nav_button),
+	nav_ui.computer_button = snis_button_init(txx(4), txy(540), -1, -1, "COMPUTER", UI_COLOR(nav_button),
 			NANO_FONT, nav_computer_button_pressed, NULL);
 	snis_button_set_sound(nav_ui.computer_button, UISND10);
 	snis_button_set_hover_color(nav_ui.computer_button, hover_color);
