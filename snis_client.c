@@ -4816,8 +4816,9 @@ static int key_press_cb(SDL_Window *window, SDL_Keysym *keysym, int key_repeat)
 	case key_camera_mode:
 		if (displaymode == DISPLAYMODE_MAINSCREEN)
 			do_mainscreen_camera_mode();
-		else if (displaymode == DISPLAYMODE_NAVIGATION && !nav_ui_computer_active())
-			do_nav_camera_mode();
+		else if (displaymode == DISPLAYMODE_NAVIGATION && !nav_ui_computer_active()
+			&& !nav_ui_computer_active())
+				do_nav_camera_mode();
 		break;
 	case keyf1:
 		helpmode = !helpmode;
@@ -4954,34 +4955,44 @@ static int key_press_cb(SDL_Window *window, SDL_Keysym *keysym, int key_repeat)
 		demon_ui.console_active = !demon_ui.console_active;
 		break;
 	case key_increase_warp:
-		snis_slider_nudge(nav_ui.warp_slider, 0.05, 0);
+		if (!nav_ui_computer_active())
+			snis_slider_nudge(nav_ui.warp_slider, 0.05, 0);
 		break;
 	case key_decrease_warp:
-		snis_slider_nudge(nav_ui.warp_slider, -0.05, 0);
+		if (!nav_ui_computer_active())
+			snis_slider_nudge(nav_ui.warp_slider, -0.05, 0);
 		break;
 	case key_engage_warp:
-		engage_warp_button_pressed((void *) 0);
+		if (!nav_ui_computer_active())
+			engage_warp_button_pressed((void *) 0);
 		break;
 	case key_increase_impulse:
-		snis_slider_nudge(nav_ui.throttle_slider, 0.05, 0);
+		if (!nav_ui_computer_active())
+			snis_slider_nudge(nav_ui.throttle_slider, 0.05, 0);
 		break;
 	case key_decrease_impulse:
-		snis_slider_nudge(nav_ui.throttle_slider, -0.05, 0);
+		if (!nav_ui_computer_active())
+			snis_slider_nudge(nav_ui.throttle_slider, -0.05, 0);
 		break;
 	case keyreverse:
-		reverse_button_pressed((void *) 0);
+		if (!nav_ui_computer_active())
+			reverse_button_pressed((void *) 0);
 		break;
 	case key_docking_magnets:
-		docking_magnets_button_pressed((void *) 0);
+		if (!nav_ui_computer_active())
+			docking_magnets_button_pressed((void *) 0);
 		break;
 	case key_exterior_lights:
-		nav_lights_button_pressed((void *) 0);
+		if (!nav_ui_computer_active())
+			nav_lights_button_pressed((void *) 0);
 		break;
 	case key_standard_orbit:
-		standard_orbit_button_pressed((void *) 0);
+		if (!nav_ui_computer_active())
+			standard_orbit_button_pressed((void *) 0);
 		break;
 	case key_starmap:
-		nav_starmap_button_pressed((void *) 0);
+		if (!nav_ui_computer_active())
+			nav_starmap_button_pressed((void *) 0);
 		break;
 	case key_weap_wavelen_0:
 	case key_weap_wavelen_1:
