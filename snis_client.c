@@ -12682,9 +12682,11 @@ static double sample_warpdrive(void);
 
 static void nav_computer_button_pressed(__attribute__((unused)) void *s)
 {
-	nav_ui.computer_active = 1;
-	ui_hide_widget(nav_ui.computer_button);
-	ui_unhide_widget(nav_ui.computer_input);
+	nav_ui.computer_active = !nav_ui.computer_active;
+	if (nav_ui.computer_active)
+		ui_unhide_widget(nav_ui.computer_input);
+	else
+		ui_hide_widget(nav_ui.computer_input);
 }
 
 static void nav_camera_pos_button_pressed(__attribute__((unused)) void *s)
