@@ -12770,7 +12770,7 @@ static void init_nav_ui(void)
 	y = 3 * button_y_spacing;
 	nav_ui.engage_warp_button = snis_button_init(SCREEN_WIDTH - txx(nav_ui.gauge_radius * 2.2 + 10),
 					txy(nav_ui.gauge_radius * 2 + y),
-					-1, -1, "ENGAGE WARP (/)", button_color,
+					txx(80), -1, "ENGAGE WARP " slash_, button_color,
 					NANO_FONT, engage_warp_button_pressed, NULL);
 	snis_button_set_sound(nav_ui.engage_warp_button, UISND4);
 	snis_button_set_hover_color(nav_ui.engage_warp_button, hover_color);
