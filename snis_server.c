@@ -5391,9 +5391,8 @@ static void update_towed_ship(struct snis_entity *o)
 	disabled_ship = &go[i];
 	quat_rot_vec_self(&towing_offset, &o->orientation);
 	disabled_ship->orientation = o->orientation;
-	disabled_ship->x = o->x + towing_offset.v.x;
-	disabled_ship->y = o->y + towing_offset.v.y;
-	disabled_ship->z = o->z + towing_offset.v.z;
+	set_object_location(disabled_ship,
+		o->x + towing_offset.v.x, o->y + towing_offset.v.y, o->z + towing_offset.v.z);
 	disabled_ship->timestamp = universe_timestamp;
 }
 
