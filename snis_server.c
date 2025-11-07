@@ -18164,9 +18164,9 @@ static void push_tow_mode(struct snis_entity *tow_ship, uint32_t disabled_ship,
 }
 
 /* Returns index into go[] of nearest tow ship to player o, bridge b
- * or -1 if no tow ships available or if a tow ship is already on its
- * way.  *already_en_route will be set to 1 if a tow ship was already
- * on its way, 0 otherwise.
+ * or -1 if no tow ships available.
+ * If the tow ship is already on its way, *already_en_route will be set to
+ * 1, 0 otherwise.
  */
 static int find_nearest_tow_ship(struct snis_entity *o, struct bridge_data *b, int *already_en_route)
 {
@@ -18187,7 +18187,7 @@ static int find_nearest_tow_ship(struct snis_entity *o, struct bridge_data *b, i
 			/* Check to see if there's a tow ship already en route to this player */
 			if (go[i].tsd.ship.ai[n].u.tow_ship.disabled_ship == b->shipid) {
 				*already_en_route = 1;
-				return -1;
+				return i;
 			}
 			continue;
 		}
@@ -18228,10 +18228,10 @@ static void npc_menu_item_towing_service(__attribute__((unused)) struct npc_menu
 	sb = &go[i];
 
 	nearest_tow_ship = find_nearest_tow_ship(o, b, &already_en_route);
-	if (nearest_tow_ship == -1 && already_en_route) {
+	if (nearest_tow_ship != -1 && already_en_route) {
 		send_comms_packet(sb, npcname, channel,
 			"%s, THE MANTIS TOW SHIP %s IS ALREADY EN ROUTE",
-			b->shipname, go[i].sdata.name);
+			b->shipname, go[nearest_tow_ship].sdata.name);
 		goto out;
 	}
 	if (nearest_tow_ship == -1) { /* No tow ships, or all tow ships busy */
