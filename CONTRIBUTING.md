@@ -100,6 +100,20 @@ device-io-sample-1.c.  All you have to do is write a little program to monitor
 and gather inputs from your hardware devices however you like, then feed them
 to snis_client via the couple of functions in snis-device-io.o.
 
+AI Policy
+---------
+
+In general, AI generated content is not permitted, with some small possible
+exceptions.  The reason for this is that machine generated artifacts are not
+copyrightable and fall into the public domain.  For this reason incorporating
+public domain changes into a GPL licensed file is forbidden.  One possible
+exception could be made on a per file basis and a case by case basis for
+ancillary files.  For example, if there is an AI generated or partially
+generated script that is more or less self contained and isolated from other
+parts of the game, and not central to the game code, it might be permitted
+provided that the file is clearly marked as AI generated content and clearly
+marked as being in the public domain.
+
 Coding Style
 ------------
 
