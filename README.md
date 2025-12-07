@@ -60,8 +60,9 @@ Here's a quick preview of the build instructions detailed below:
 6. Download additional art assets
 7. Restart `snis_client`
 
-
 [Here is a long, boring video demonstrating how to install](https://www.youtube.com/watch?v=tCokfUtZOqw)
+
+Alternatively, if you run on other OS than linux, or if you do not (or cannot) install the necessary dependencies over your whole system, you can build and use a ready to play [Docker](https://www.docker.com/) image. See [Docker Install](#alternative-docker-install)
 
 ## Step 0: Acquire Hardware and OS
 
@@ -301,3 +302,33 @@ slider that controls the thrusters of your ship. Click on it to begin moving for
 
 ![NAVIGATION](doc/images/navigation.png)
 
+## Alternative: Docker install
+### Step 0: Make sure you have Docker installed
+See https://docs.docker.com/engine/install
+
+Additionally, you might want to install **nvidia-container-toolkit** to make use of you NVidia GPU.
+
+### Step 1: Download the Source Code
+
+```bash
+git clone --depth 1 https://github.com/smcameron/space-nerds-in-space.git
+cd space-nerds-in-space
+```
+
+### Step 2: Build the image
+```bash
+docker build -t snis:latest -f Dockerfile .
+```
+
+### Step 3: Run the client
+```bash
+xhost +local:root
+
+docker run --rm -it \
+    --net=host \
+    --gpus all \
+    --device /dev/dri \
+    -e DISPLAY=$DISPLAY \
+    -v /tmp/.X11-unix:/tmp/.X11-unix \
+    snis:latest
+```
