@@ -83,17 +83,26 @@ void quat_init_axis(union quat *q, float x, float y, float z, float a)
 {
 	/* see: http://www.euclideanspace.com/maths/geometry/rotations
 	   /conversions/angleToQuaternion/index.htm */
+	union vec3 v;
+
+	v.v.x = x;
+	v.v.y = y;
+	v.v.z = z;
+	vec3_normalize_self(&v);
+
 	float a2 = a * 0.5f;
 	float s = sin(a2);
-	q->v.x = x * s;
-	q->v.y = y * s;
-	q->v.z = z * s;
+	q->v.x = v.v.x * s;
+	q->v.y = v.v.y * s;
+	q->v.z = v.v.z * s;
 	q->v.w = cos(a2);
 }
 
 void quat_init_axis_v(union quat *q, const union vec3 *v, float a)
 {
-	quat_init_axis(q, v->v.x, v->v.y, v->v.z, a);
+	union vec3 v2 = *v;
+	vec3_normalize_self(&v2);
+	quat_init_axis(q, v2.v.x, v2.v.y, v2.v.z, a);
 }
 
 void quat_to_axis(const union quat *restrict q,
