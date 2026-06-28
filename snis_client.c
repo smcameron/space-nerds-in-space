@@ -24818,7 +24818,6 @@ static void init_meshes(void)
 	}
 
 	unit_cube_mesh = mesh_unit_cube(2);
-	mesh_scale(unit_cube_mesh, 0.5);
 	mesh_unit_cube_uv_map(unit_cube_mesh);
 
 #ifndef WITHOUTOPENGL

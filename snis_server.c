@@ -32766,8 +32766,6 @@ static void servers_changed_cb(__attribute__((unused)) void *cookie)
 static void init_meshes(void)
 {
 	unit_cube_mesh = mesh_unit_cube(1);
-	/* The "unit" cube is 1 unit in *radius* -- we need one with 0.5 unit radius. */
-	mesh_scale(unit_cube_mesh, 0.5);
 	low_poly_sphere_mesh = mesh_unit_icosphere(4);
 	mesh_scale(low_poly_sphere_mesh, 0.5);
 }
