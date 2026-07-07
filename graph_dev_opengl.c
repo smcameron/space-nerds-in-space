@@ -10,6 +10,7 @@
 #include <glad/gl.h>
 #include <SDL.h>
 
+#include "arraysize.h"
 #include "shader.h"
 #include "vertex.h"
 #include "triangle.h"
@@ -29,11 +30,6 @@
 #include "png_utils.h"
 #include "snis_profile.h"
 #include "workqueue.h"
-
-/* helper function for sizing*/
-#ifndef ARRAY_ELEMENTS
-#define ARRAY_ELEMENTS(x) (sizeof(x)/sizeof((x)[0]))
-#endif
 
 
 #define OPENGL_VERSION_STRING "#version 150\n"
@@ -1251,7 +1247,7 @@ static void enable_2d_viewport(void)
 		} else if (sgc.fbo_current != 0) {
 			static const GLenum drawBuffers[] = { GL_BACK };
 			glBindFramebuffer(GL_FRAMEBUFFER, 0);
-			glDrawBuffers(ARRAY_ELEMENTS(drawBuffers), drawBuffers);
+			glDrawBuffers(ARRAYSIZE(drawBuffers), drawBuffers);
 			sgc.fbo_current = 0;
 		}
 
@@ -1274,7 +1270,7 @@ static void enable_3d_viewport(void)
 		} else if (sgc.fbo_current != 0) {
 			static const GLenum drawBuffers[] = { GL_BACK };
 			glBindFramebuffer(GL_FRAMEBUFFER, 0);
-			glDrawBuffers(ARRAY_ELEMENTS(drawBuffers), drawBuffers);
+			glDrawBuffers(ARRAYSIZE(drawBuffers), drawBuffers);
 			sgc.fbo_current = 0;
 		}
 
@@ -4044,13 +4040,13 @@ static void setup_smaa_effect(struct graph_dev_smaa_effect *effect)
 
 	glGenFramebuffers(1, &effect->edge_target.fbo);
 	glBindFramebuffer(GL_FRAMEBUFFER, effect->edge_target.fbo);
-	glDrawBuffers(ARRAY_ELEMENTS(drawBuffers), drawBuffers);
+	glDrawBuffers(ARRAYSIZE(drawBuffers), drawBuffers);
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
 		effect->edge_target.color0_texture, 0);
 
 	glGenFramebuffers(1, &effect->blend_target.fbo);
 	glBindFramebuffer(GL_FRAMEBUFFER, effect->blend_target.fbo);
-	glDrawBuffers(ARRAY_ELEMENTS(drawBuffers), drawBuffers);
+	glDrawBuffers(ARRAYSIZE(drawBuffers), drawBuffers);
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
 		effect->blend_target.color0_texture, 0);
 }
@@ -4078,7 +4074,7 @@ static void setup_2d(void)
 
 		glGenFramebuffers(1, &render_target_2d.fbo);
 		glBindFramebuffer(GL_FRAMEBUFFER, render_target_2d.fbo);
-		glDrawBuffers(ARRAY_ELEMENTS(drawBuffers), drawBuffers);
+		glDrawBuffers(ARRAYSIZE(drawBuffers), drawBuffers);
 		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
 			render_target_2d.color0_texture, 0);
 	}
@@ -4313,7 +4309,7 @@ int graph_dev_setup(const char *asset_dir)
 
 		glGenFramebuffers(1, &post_target0.fbo);
 		glBindFramebuffer(GL_FRAMEBUFFER, post_target0.fbo);
-		glDrawBuffers(ARRAY_ELEMENTS(drawBuffers), drawBuffers);
+		glDrawBuffers(ARRAYSIZE(drawBuffers), drawBuffers);
 		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
 			post_target0.color0_texture, 0);
 		glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER,
@@ -4328,7 +4324,7 @@ int graph_dev_setup(const char *asset_dir)
 
 		glGenFramebuffers(1, &post_target1.fbo);
 		glBindFramebuffer(GL_FRAMEBUFFER, post_target1.fbo);
-		glDrawBuffers(ARRAY_ELEMENTS(drawBuffers), drawBuffers);
+		glDrawBuffers(ARRAYSIZE(drawBuffers), drawBuffers);
 		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
 			post_target1.color0_texture, 0);
 	}
