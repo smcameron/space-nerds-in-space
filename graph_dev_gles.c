@@ -4363,7 +4363,7 @@ int graph_dev_setup(const char *shader_dir)
 
 	if (shader_dir) {
 		strncpy(shader_directory, shader_dir, PATH_MAX);
-		strncat(shader_directory, "/shader-es", PATH_MAX);
+		strncat(shader_directory, "/shader-es", PATH_MAX - strlen(shader_directory));
 	} else {
 		strncpy(shader_directory, default_shader_directory, PATH_MAX);
 	}
