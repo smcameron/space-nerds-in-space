@@ -1188,6 +1188,24 @@ static void resize_fbo_if_needed(struct fbo_target *target)
 	PROFILE_ZONE_END();
 }
 
+/* if the GL driver supports it, discard the contents of the FBO to free up memory.
+ *
+ * This reliably messes up the currently bound FBO (to prevent incidental bugs from
+ * not anticipating the potential change), so you *must* rebind it after unless
+ * you're going to render into the freshly invalidated FBO immediately.
+ */
+static void maybe_discard_fbo_contents(struct fbo_target *fbo)
+{
+	static const GLenum attachments[2] = {
+		GL_COLOR_EXT,
+		GL_DEPTH_EXT,
+	};
+	glBindFramebuffer(GL_FRAMEBUFFER, fbo->fbo);
+	if (GLAD_GL_EXT_discard_framebuffer) {
+		glDiscardFramebufferEXT(GL_FRAMEBUFFER, (fbo->depth_buffer != 0) ? 2 : 1, attachments);
+	}
+}
+
 void graph_dev_set_screen_size(int width, int height)
 {
 	sgc.active_vp = 0;
@@ -3255,18 +3273,34 @@ void graph_dev_end_frame(void)
 			graph_dev_raster_full_screen_effect(&smaa_effect.neighborhood_shader,
 				post_target0.color0_texture, smaa_effect.blend_target.color0_texture, 0, 0, 1);
 
+
+			/* clean up the mess and select which buffer to show - debug options don't invalidate
+			 * the intermediate FBOs efficiently */
+			maybe_discard_fbo_contents(&post_target0);
+
 			if (draw_smaa_edge)
 				result_texture = smaa_effect.edge_target.color0_texture;
-			else if (draw_smaa_blend)
-				result_texture = smaa_effect.blend_target.color0_texture;
-			else
-				result_texture = post_target1.color0_texture;
+			else {
+				maybe_discard_fbo_contents(&smaa_effect.edge_target);
+				if (draw_smaa_blend) {
+					result_texture = smaa_effect.blend_target.color0_texture;
+				} else {
+					maybe_discard_fbo_contents(&smaa_effect.blend_target);
+					result_texture = post_target1.color0_texture;
+				}
+			}
+
 		} else {
 			result_texture = post_target0.color0_texture;
 		}
 
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 		graph_dev_raster_full_screen_effect(&fs_copy_shader, result_texture, 0, 0, 0, 1);
+
+		maybe_discard_fbo_contents(&post_target1);
+		/* discarding post_target0 a second time won't hurt here unless the
+		 * driver is *really* bad */
+		maybe_discard_fbo_contents(&post_target0);
 	}
 
 	if (render_target_2d.fbo != 0 && sgc.fbo_2d == render_target_2d.fbo) {
@@ -3277,6 +3311,8 @@ void graph_dev_end_frame(void)
 		BLEND_FUNC(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 		graph_dev_raster_full_screen_effect(&fs_copy_shader, render_target_2d.color0_texture, 0, 0, 0, 1);
 		glDisable(GL_BLEND);
+
+		maybe_discard_fbo_contents(&render_target_2d);
 	}
 
 	PROFILE_ZONE_END();
@@ -4337,6 +4373,10 @@ int graph_dev_setup(const char *shader_dir)
 
 	if (GLAD_GL_EXT_sRGB) {
 		fprintf(stderr, "WARNING: No hardware support for SRGB colorspace - will force linear.\n");
+	}
+
+	if (GLAD_GL_EXT_discard_framebuffer) {
+		fprintf(stderr, "Has hardware support for discarding framebuffers.\n");
 	}
 
 	int want8bit = 0;
