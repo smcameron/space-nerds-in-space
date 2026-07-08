@@ -4359,9 +4359,9 @@ static int cubemap_texture_to_gpu(struct graph_dev_image_load_request *r)
 		char *image_data = r->image_data[i];
 
 		if (r->linear_colorspace)
-			colorspace = r->hasAlpha ? GL_RGBA8 : GL_RGB8;
+			colorspace = r->hasAlpha[i] ? GL_RGBA8 : GL_RGB8;
 		else
-			colorspace = r->hasAlpha ? GL_SRGB8_ALPHA8 : GL_SRGB8;
+			colorspace = r->hasAlpha[i] ? GL_SRGB8_ALPHA8 : GL_SRGB8;
 		glTexImage2D(tex_pos[i], 0, colorspace, r->w[i], r->h[i], 0,
 				(r->hasAlpha[i] ? GL_RGBA : GL_RGB), GL_UNSIGNED_BYTE, image_data);
 	}
