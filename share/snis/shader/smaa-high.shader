@@ -22,6 +22,7 @@ uniform vec4 u_Viewport;
 
 #define SMAA_RT_METRICS u_Viewport
 #define SMAA_PRESET_HIGH
+#define SMAA_GLSL_3
 
 #if defined(INCLUDE_VS)
 #define SMAA_INCLUDE_PS 0

@@ -4,12 +4,6 @@
 set -e
 
 GLSLANGVALIDATOR=/usr/bin/glslangValidator
-GLSLVFLAGS_FS="-l -DINCLUDE_FS -S frag"
-GLSLVFLAGS_VS="-l -DINCLUDE_VS -S vert"
-
-FLAGS_GL_FS=("--glsl-version" "150")
-FLAGS_GL_VS=("--glsl-version" "150")
-FLAGS_ES_VS=("--glsl-version" "100")
 
 validate_es_vs() {
     echo "ES VS: $@"
@@ -41,7 +35,7 @@ validate_gl_both() {
     validate_gl_fs "$@"
 }
 
-cd "$(dirname "$0")"
+cd "$(dirname "$0")/.."
 
 # now actually validate.
 validate_es_both "share/snis/shader-es/alpha_by_normal.shader"
@@ -65,9 +59,9 @@ validate_es_vs "share/snis/shader-es/single-color-lit-per-vertex.vert"
 validate_es_vs "share/snis/shader-es/single_color.vert"
 validate_es_fs "share/snis/shader-es/skybox.frag"
 validate_es_vs "share/snis/shader-es/skybox.vert"
-#validate_es_both "share/snis/shader-es/smaa-high.shader" "share/snis/shader-es/SMAA.hlsl" "share/snis/shader-es/smaa-blend.shader" 
-#validate_es_both "share/snis/shader-es/smaa-high.shader" "share/snis/shader-es/SMAA.hlsl" "share/snis/shader-es/smaa-edge.shader"
-#validate_es_both "share/snis/shader-es/smaa-high.shader" "share/snis/shader-es/SMAA.hlsl" "share/snis/shader-es/smaa-neighborhood.shader"
+validate_es_both "share/snis/shader-es/smaa-high.shader" "share/snis/shader-es/SMAA.hlsl" "share/snis/shader-es/smaa-blend.shader"
+validate_es_both "share/snis/shader-es/smaa-high.shader" "share/snis/shader-es/SMAA.hlsl" "share/snis/shader-es/smaa-edge.shader"
+validate_es_both "share/snis/shader-es/smaa-high.shader" "share/snis/shader-es/SMAA.hlsl" "share/snis/shader-es/smaa-neighborhood.shader"
 validate_es_both "share/snis/shader-es/textured-and-lit-per-pixel.shader"
 validate_es_both "share/snis/shader-es/textured-and-lit-per-vertex.shader"
 validate_es_both "share/snis/shader-es/textured-cubemap-and-lit-with-annulus-shadow-per-pixel.shader"
@@ -106,9 +100,9 @@ validate_gl_vs "share/snis/shader/single-color-lit-per-vertex.vert"
 validate_gl_vs "share/snis/shader/single_color.vert"
 validate_gl_fs "share/snis/shader/skybox.frag"
 validate_gl_vs "share/snis/shader/skybox.vert"
-#validate_gl_both "share/snis/shader/smaa-high.shader" "share/snis/shader/SMAA.hlsl" "share/snis/shader/smaa-blend.shader" 
-#validate_gl_both "share/snis/shader/smaa-high.shader" "share/snis/shader/SMAA.hlsl" "share/snis/shader/smaa-edge.shader"
-#validate_gl_both "share/snis/shader/smaa-high.shader" "share/snis/shader/SMAA.hlsl" "share/snis/shader/smaa-neighborhood.shader"
+validate_gl_both "share/snis/shader/smaa-high.shader" "share/snis/shader/SMAA.hlsl" "share/snis/shader/smaa-blend.shader"
+validate_gl_both "share/snis/shader/smaa-high.shader" "share/snis/shader/SMAA.hlsl" "share/snis/shader/smaa-edge.shader"
+validate_gl_both "share/snis/shader/smaa-high.shader" "share/snis/shader/SMAA.hlsl" "share/snis/shader/smaa-neighborhood.shader"
 validate_gl_both "share/snis/shader/textured-and-lit-per-pixel.shader"
 validate_gl_both "share/snis/shader/textured-and-lit-per-vertex.shader"
 validate_gl_both "share/snis/shader/textured-cubemap-and-lit-with-annulus-shadow-per-pixel.shader"
