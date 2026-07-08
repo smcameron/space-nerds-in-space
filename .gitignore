@@ -44,3 +44,13 @@ fuzz_read_thrust_attachments
 fuzz_process_manifest build_info.h
 fuzz.out
 
+# libopus insitu build mess
+libopus.a
+/opus-*/**
+/opus-*.tar.gz
+
+# editor droppings
+*~
+\#*
+*.bak
+.vscode
