@@ -40,7 +40,7 @@ struct graph_dev_color { /* This exactly mimics GdkColor */
 	uint16_t blue;
 };
 
-extern int graph_dev_setup(const char *shader_dir);
+extern int graph_dev_setup(const char *asset_dir);
 extern void graph_dev_reload_all_shaders(void);
 extern void graph_dev_start_frame(void);
 extern void graph_dev_end_frame(void);

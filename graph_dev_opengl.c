@@ -113,7 +113,7 @@ static float tonemapping_gain = 1.18;
 int graph_dev_planet_specularity = 1;
 int graph_dev_atmosphere_ring_shadows = 1;
 static const char *default_shader_directory = "share/snis/shader";
-static char *shader_directory = NULL;
+static char shader_directory[PATH_MAX];
 
 struct mesh_gl_info {
 	/* common buffer to hold vertex positions */
@@ -4068,7 +4068,7 @@ static void graph_dev_set_up_image_loader_work_queues(void)
 	loaded_images_wq = work_queue_init("txtr2gpu", IMAGE_LOADER_QUEUE_DEPTH, 0, NULL);
 }
 
-int graph_dev_setup(const char *shader_dir)
+int graph_dev_setup(const char *asset_dir)
 {
 	glewExperimental = GL_TRUE; /* OSX apparently needs glewExperimental */
 
@@ -4091,13 +4091,14 @@ int graph_dev_setup(const char *shader_dir)
 	if (texture_srgb_supported())
 		printf("sRGB texture supported\n");
 
-	if (shader_dir) {
-		if (shader_directory && shader_directory != default_shader_directory)
-			free(shader_directory);
-		shader_directory = strdup(shader_dir);
+	if (asset_dir) {
+		strncpy(shader_directory, asset_dir, PATH_MAX);
+		strncat(shader_directory, "/shader", PATH_MAX - strlen(shader_directory));
 	} else {
-		shader_directory = (char *) default_shader_directory;
+		strncpy(shader_directory, default_shader_directory, PATH_MAX);
 	}
+
+	fprintf(stderr, "shader dir = %s\n", shader_directory);
 
 	glDepthFunc(GL_LESS);
 
