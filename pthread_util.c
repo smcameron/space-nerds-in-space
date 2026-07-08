@@ -25,6 +25,7 @@
 #include <string.h>
 
 #include "pthread_util.h"
+#include "snis_profile.h"
 
 struct pthread_setname_trampoline_args {
 	const char *thread_name;
@@ -43,6 +44,7 @@ void *pthread_setname_trampoline(void *args)
 	void *rc;
 
 	if (t_args->thread_name) {
+		PROFILE_SET_THREAD_NAME(t_args->thread_name);
 #ifdef __APPLE__
 		pthread_setname_np(t_args->thread_name);
 #else

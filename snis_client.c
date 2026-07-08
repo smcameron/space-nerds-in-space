@@ -145,6 +145,8 @@
 #include "net_utils.h"
 #include "snis_ui.h"
 
+#include "snis_profile.h"
+
 #define SHIP_COLOR CYAN
 #define STARBASE_COLOR RED
 #define WARPGATE_COLOR WHITE
@@ -22646,6 +22648,8 @@ static void draw_quit_screen(void)
 
 static void do_display_frame_stats(const float frame_rates[], const float frame_times[], const int num_frames)
 {
+	PROFILE_ZONE_START("do_display_frame_stats");
+
 /* This works out to either 29 or 58 FPS */
 #define ACCEPTABLE_FRAME_RATE (frame_rate_hz - 1.0 - use_60_fps)
 	float avg_frame_rate = 0;
@@ -22673,15 +22677,19 @@ static void do_display_frame_stats(const float frame_rates[], const float frame_
 	}
 	if (display_frame_stats > 1)
 		graph_dev_display_debug_menu_show();
+
+	PROFILE_ZONE_END();
 }
 
 static void maybe_reload_shaders(void)
 {
-	if (!reload_shaders)
-		return;
-	print_demon_console_msg("Reloading shaders\n");
-	graph_dev_reload_all_shaders();
-	reload_shaders = 0;
+	PROFILE_ZONE_START_A("maybe_reload_shaders", reload_shaders);
+	if (reload_shaders) {
+		print_demon_console_msg("Reloading shaders\n");
+		graph_dev_reload_all_shaders();
+		reload_shaders = 0;
+	}
+	PROFILE_ZONE_END();
 }
 
 static void maybe_set_vsync_mode(void)
@@ -22689,8 +22697,12 @@ static void maybe_set_vsync_mode(void)
 	static int old_vsync_mode = -3; /* so vsync_mode != old_vsync_mode first time through */
 	const char *vsync_name[] = { "ADAPTIVE VSYNC", "VSYNC OFF", "VSYNC ON" };
 
-	if (vsync_mode == old_vsync_mode)
+	PROFILE_ZONE_START("maybe_set_vsync_mode");
+
+	if (vsync_mode == old_vsync_mode) {
+		PROFILE_ZONE_END();
 		return;
+	}
 
 	if (vsync_mode < -1 || vsync_mode > 1) /* paranoia, this should never happen */
 		vsync_mode = 1;
@@ -22702,6 +22714,8 @@ static void maybe_set_vsync_mode(void)
 	}
 	print_demon_console_msg("VSYNC MODE IS NOW: %s\n", vsync_name[vsync_mode + 1]);
 	old_vsync_mode = vsync_mode;
+
+	PROFILE_ZONE_END();
 }
 
 static int main_da_expose(SDL_Window *window)
@@ -22714,6 +22728,9 @@ static int main_da_expose(SDL_Window *window)
 	int player_lost_rts;
 	int player_won_rts;
 	int i;
+
+	PROFILE_ZONE_START_A("main_da_expose", da_configured);
+
 #if 0
 	/* Not needed with SDL */
 
@@ -22723,6 +22740,7 @@ static int main_da_expose(SDL_Window *window)
 	 * to 1 when main_da_configure executes with a non-null gc.
 	 */
 	if (!da_configured) {
+		PROFILE_ZONE_END();
 		return 0;
 	}
 #endif
@@ -22736,6 +22754,8 @@ static int main_da_expose(SDL_Window *window)
 	maybe_set_vsync_mode();
 
 	load_textures();
+
+	PROFILE_FRAME_START("main");
 
 	graph_dev_start_frame();
 
@@ -22907,12 +22927,16 @@ end_of_drawing:
 	glFinish();
 	SDL_GL_SwapWindow(window);
 
+	PROFILE_FRAME_END("main");
+
 	double end_time = time_now_double();
 
 	frame_rates[frame_index] = start_time - last_frame_time;
 	frame_times[frame_index] = end_time - start_time;
 	frame_index = (frame_index + 1) % FRAME_INDEX_MAX;
 	last_frame_time = start_time;
+
+	PROFILE_ZONE_END();
 
 	return 0;
 }
@@ -23024,6 +23048,8 @@ int advance_game(void)
 	int time_to_switch_servers;
 	static int skip = 0;
 
+	PROFILE_ZONE_START_A("advance_game", skip);
+
 	/* Bit of a hack to enable 60 fps.  advance game now gets called at 60Hz always, but
 	 * skip every other update if we want to run the game at 30Hz.
 	 * Also, we increment timer only every other frame when running at 60 fps because
@@ -23032,6 +23058,7 @@ int advance_game(void)
 	if (!use_60_fps) {
 		if (skip) {
 			skip = !skip;
+			PROFILE_ZONE_END();
 			return TRUE;
 		}
 		frame_rate_hz = 30;
@@ -23057,8 +23084,10 @@ int advance_game(void)
 	adjust_audio_dynamic_range_compression();
 	adjust_tonemapping_gain();
 
-	if (in_the_process_of_quitting)
+	if (in_the_process_of_quitting) {
+		PROFILE_ZONE_END();
 		return TRUE;
+	}
 
 	pthread_mutex_lock(&universe_mutex);
 	move_sparks();
@@ -23081,6 +23110,8 @@ int advance_game(void)
 	}
 	pthread_mutex_unlock(&to_server_queue_event_mutex);
 	maybe_play_rocket_sample();
+
+	PROFILE_ZONE_END();
 
 	return TRUE;
 }
@@ -23632,11 +23663,14 @@ static void reload_per_solarsystem_textures(char *old_solarsystem,
 
 static void load_textures(void)
 {
+	PROFILE_ZONE_START("load_textures");
+
 	int loaded_something;
 	loaded_something = load_static_textures();
 	loaded_something += load_per_solarsystem_textures();
 	(void) loaded_something; /* To suppress scan-build from complaining about dead stores */
 
+	PROFILE_ZONE_END();
 #ifndef WITHOUTOPENGL
 	if (loaded_something)
 		glFinish();
@@ -25541,6 +25575,7 @@ static void handle_window_event(SDL_Window *window, SDL_Event event)
 
 static void process_events(SDL_Window *window)
 {
+	PROFILE_ZONE_START("process_events");
 	SDL_Event event;
 
 	/* Grab all the events off the queue. */
@@ -25582,6 +25617,7 @@ static void process_events(SDL_Window *window)
 			break;
 		}
 	}
+	PROFILE_ZONE_END();
 }
 
 static void enable_sdl_fullscreen_sanity(void)
@@ -26109,6 +26145,8 @@ int main(int argc, char *argv[])
 	SDL_GL_SwapWindow(window);
 
 	while (1) {
+		PROFILE_ZONE_START_CTX(profile_loopctx, "main::loop");
+
 		currentTime = time_now_double();
 
 		if (currentTime - nextTime > maxTimeBehind)
@@ -26143,6 +26181,8 @@ int main(int argc, char *argv[])
 			nextDrawTime += delta[use_60_fps];
 			nframes++;
 		}
+
+		PROFILE_ZONE_END_CTX(profile_loopctx);
 	}
 
 	if (running_in_container && leave_no_orphans) {

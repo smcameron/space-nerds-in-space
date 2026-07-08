@@ -21,7 +21,11 @@
 #ifndef INCLUDE_opengl_cap_h
 #define INCLUDE_opengl_cap_h
 
+#ifdef USE_GLES
+#include <glad/gles2.h>
+#else
 #include <glad/gl.h>
+#endif
 
 extern int msaa_framebuffer_supported(void);
 
