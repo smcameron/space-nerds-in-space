@@ -9,6 +9,8 @@
 #include "stacktrace.h"
 #include "string-utils.h"
 
+int abort_on_shader_failure = 0;
+
 static void print_glsl_code_context(char *code[], int code_fragments, int lineno, int charno)
 {
 	int i, j;
@@ -96,6 +98,7 @@ GLuint load_concat_shaders(const char *shader_directory,
 	const char *vertex_header, int nvertex_files, const char *vertex_file_path[],
 	const char *fragment_header, int nfragment_files, const char *fragment_file_path[])
 {
+	int failed = 0;
 	GLuint program_id = 0;
 	int i;
 #define MAX_VERTEX_FILES 5
@@ -174,6 +177,8 @@ GLuint load_concat_shaders(const char *shader_directory,
 	/* Check Vertex Shader */
 	glGetShaderiv(vertex_shader_id, GL_COMPILE_STATUS, &result);
 	if (result == GL_FALSE) {
+		failed = 1;
+
 		fprintf(stderr, "Vertex shader compile error in files:\n");
 		for (i = 0; i < nvertex_shader; i++) {
 			fprintf(stderr, "    %d: \"%s\"\n", i, vertex_shader_filename[i]);
@@ -198,6 +203,8 @@ GLuint load_concat_shaders(const char *shader_directory,
 	/* Check Fragment Shader */
 	glGetShaderiv(fragment_shader_id, GL_COMPILE_STATUS, &result);
 	if (result == GL_FALSE) {
+		failed = 1;
+
 		fprintf(stderr, "Fragment shader compile error in files:\n");
 		for (i = 0; i < nfragment_shader; i++) {
 			fprintf(stderr, "    %d: \"%s\"\n", i, fragment_shader_filename[i]);
@@ -224,6 +231,7 @@ GLuint load_concat_shaders(const char *shader_directory,
 	/* Check the program */
 	glGetProgramiv(program_id, GL_LINK_STATUS, &result);
 	if (result == GL_FALSE) {
+		failed = 1;
 		fprintf(stderr, "Shader link error in files:\n");
 		for (i = 0; i < nvertex_shader; i++) {
 			fprintf(stderr, "    vert %d: \"%s\"\n", i, vertex_shader_filename[i]);
@@ -260,6 +268,9 @@ cleanup:
 		free(fragment_shader_filename[i]);
 		free(fragment_shader_code[i]);
 	}
+
+	if (abort_on_shader_failure && failed)
+		abort();
 
 	return program_id;
 }
