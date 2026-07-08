@@ -18,14 +18,14 @@
 	along with Spacenerds in Space; if not, write to the Free Software
 	Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
+#include "snis_xwindows_hacks.h"
+
 #if USE_SNIS_XWINDOWS_HACKS
 #include <stdio.h>
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
 #include <X11/Xos.h>
 #include <SDL_syswm.h> /* for SDL_GetWindowWMInfo */
-
-#include "snis_xwindows_hacks.h"
 
 /* This is a series of hacks to make up for SDL2's deficiencies
  * when running under X11.
@@ -84,5 +84,9 @@ int constrain_aspect_ratio_via_xlib(SDL_Window *window, int w, int h)
 }
 
 #else
-void constrain_aspect_ratio_via_xlib() {}
+int
+constrain_aspect_ratio_via_xlib(SDL_Window *window, int w, int h)
+{
+	return 0;
+}
 #endif
