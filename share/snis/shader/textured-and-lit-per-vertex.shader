@@ -45,7 +45,7 @@
 
 	void main()
 	{
-		f_FragColor = vec4(v_LightColor) * texture(u_AlbedoTex, v_TexCoord);
+		f_FragColor = vec4(v_LightColor, 1.0f) * texture(u_AlbedoTex, v_TexCoord);
 
 		/* tint with alpha pre multiply */
 		f_FragColor.rgb *= u_TintColor.rgb;
