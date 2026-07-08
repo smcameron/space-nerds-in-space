@@ -3,7 +3,11 @@
 #include <string.h>
 #include <limits.h>
 
+#ifdef USE_GLES
+#include <glad/gles2.h>
+#else
 #include <glad/gl.h>
+#endif
 
 #include "shader.h"
 #include "stacktrace.h"

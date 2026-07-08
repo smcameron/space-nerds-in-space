@@ -222,6 +222,8 @@ You can also file a bug report if you think you have discovered a problem
 with the build process, or the instructions here.  I believe you will need a github
 account to file a bug report.
 
+If you're building for Raspberry Pi platform, you'll need to explicitly enable the GLES render by adding USE_GLES=1 to the end of the make line (ie: `make USE_GLES=1`)
+
 - [Click here to file a bug report](https://github.com/smcameron/space-nerds-in-space/issues)
 
 
