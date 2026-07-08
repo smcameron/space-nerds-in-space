@@ -1133,7 +1133,7 @@ static void print_framebuffer_error(void)
 		break;
 
 	case GL_FRAMEBUFFER_INCOMPLETE_ATTACHMENT:
-		printf("FBO Duplicate attachment.\n");
+		printf("FBO Incomplete attachment.\n");
 		break;
 
 	case GL_FRAMEBUFFER_INCOMPLETE_DRAW_BUFFER:
