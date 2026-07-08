@@ -1365,7 +1365,6 @@ static void draw_vertex_buffer_2d(void)
 		sgc.nvertex_2d = 0;
 
 		/* orphan this buffer so we don't get blocked on these draw commands */
-		glBindBuffer(GL_ARRAY_BUFFER, sgc.vertex_buffer_2d);
 		glBufferData(GL_ARRAY_BUFFER, VERTEX_BUFFER_2D_SIZE, 0, GL_STREAM_DRAW);
 	}
 	PROFILE_ZONE_END();
