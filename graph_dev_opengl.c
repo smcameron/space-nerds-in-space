@@ -4268,12 +4268,10 @@ int graph_dev_setup(const char *asset_dir)
 
 	glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
 
-	if (asset_dir) {
-		strncpy(shader_directory, asset_dir, PATH_MAX);
-		strncat(shader_directory, "/shader", PATH_MAX - strlen(shader_directory));
-	} else {
-		strncpy(shader_directory, default_shader_directory, PATH_MAX);
-	}
+	if (asset_dir)
+		snprintf(shader_directory, PATH_MAX, "%s/shader", asset_dir);
+	else
+		strlcpy(shader_directory, default_shader_directory, PATH_MAX);
 
 	fprintf(stderr, "shader dir = %s\n", shader_directory);
 

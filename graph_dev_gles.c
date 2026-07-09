@@ -4352,7 +4352,7 @@ static void graph_dev_set_up_image_loader_work_queues(void)
 	loaded_images_wq = work_queue_init("txtr2gpu", IMAGE_LOADER_QUEUE_DEPTH, 0, NULL);
 }
 
-int graph_dev_setup(const char *shader_dir)
+int graph_dev_setup(const char *asset_dir)
 {
 	if (!gladLoadGLES2((GLADloadfunc)SDL_GL_GetProcAddress)) {
 		fprintf(stderr, "Got error trying to bind GL ES\n");
@@ -4399,12 +4399,10 @@ int graph_dev_setup(const char *shader_dir)
 		}
 	}
 
-	if (shader_dir) {
-		strncpy(shader_directory, shader_dir, PATH_MAX);
-		strncat(shader_directory, "/shader-es", PATH_MAX - strlen(shader_directory));
-	} else {
-		strncpy(shader_directory, default_shader_directory, PATH_MAX);
-	}
+	if (asset_dir)
+		snprintf(shader_directory, PATH_MAX, "%s/shader-es", asset_dir);
+	else
+		strlcpy(shader_directory, default_shader_directory, PATH_MAX);
 
 	fprintf(stderr, "shader dir = %s\n", shader_directory);
 
