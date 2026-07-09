@@ -25,8 +25,10 @@ uniform float u_DotSize;
 uniform float u_DotPitch;
 uniform vec4 u_LineColor;
 
-varying float v_IsDotted;
-varying vec4 v_Dist;
+in float v_IsDotted;
+in vec4 v_Dist;
+
+out vec4 f_FragColor;
 
 void main(void)
 {
@@ -40,6 +42,6 @@ void main(void)
 		i = exp2(-2.0 * d * d);
 	}
 
-	gl_FragColor = mix(vec4(0.0), u_LineColor, i);
+	f_FragColor = mix(vec4(0.0), u_LineColor, i);
 }
 

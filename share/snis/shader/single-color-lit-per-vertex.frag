@@ -1,9 +1,11 @@
 
-varying vec3 v_Color;
+in vec3 v_Color;
+
+out vec4 f_FragColor;
 
 void main()
 {
-	gl_FragColor = vec4(v_Color,1);
-	gl_FragColor = filmic_tonemap(gl_FragColor);
+	f_FragColor = vec4(v_Color,1);
+	f_FragColor = filmic_tonemap(f_FragColor);
 }
 

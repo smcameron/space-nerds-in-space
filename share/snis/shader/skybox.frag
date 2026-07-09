@@ -1,9 +1,11 @@
 
-uniform samplerCube texture;
+uniform samplerCube s_texture;
 
-varying vec3 texCoord;
+in vec3 texCoord;
+
+out vec4 f_FragColor;
 
 void main (void) {
-	gl_FragColor = filmic_tonemap(textureCube(texture, texCoord));
+	f_FragColor = filmic_tonemap(texture(s_texture, texCoord));
 }
 

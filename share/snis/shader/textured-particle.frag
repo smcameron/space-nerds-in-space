@@ -1,11 +1,12 @@
 
 uniform sampler2D u_AlbedoTex;
 
-varying vec2 v_TexCoord;
-varying vec4 v_TintColor;
+in vec2 v_TexCoord;
+in vec4 v_TintColor;
+out vec4 f_FragColor;
 
 void main()
 {
-	gl_FragColor = filmic_tonemap(v_TintColor * texture2D(u_AlbedoTex, v_TexCoord));
+	f_FragColor = filmic_tonemap(v_TintColor * texture(u_AlbedoTex, v_TexCoord));
 }
 

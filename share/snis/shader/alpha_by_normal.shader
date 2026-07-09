@@ -2,10 +2,10 @@
 uniform float u_Invert;
 
 #if defined(INCLUDE_VS)
-	varying vec4 v_TintColor;
-	varying float v_EyeDot;
+	out vec4 v_TintColor;
+	out float v_EyeDot;
 	#if defined(TEXTURED_ALPHA_BY_NORMAL)
-	varying vec2 v_TexCoord;      // This will be passed into the fragment shader.
+	out vec2 v_TexCoord;      // This will be passed into the fragment shader.
 	#endif
 
 	uniform mat4 u_MVPMatrix;  // A constant representing the combined model/view/projection matrix.
@@ -13,10 +13,10 @@ uniform float u_Invert;
 	uniform vec4 u_TintColor;
 	uniform mat3 u_NormalMatrix;
 
-	attribute vec4 a_Position; // Per-vertex position information we will pass in.
-	attribute vec3 a_Normal;
+	in vec4 a_Position; // Per-vertex position information we will pass in.
+	in vec3 a_Normal;
 #if defined(TEXTURED_ALPHA_BY_NORMAL)
-	attribute vec2 a_TexCoord; // Per-vertex texture coord we will pass in.
+	in vec2 a_TexCoord; // Per-vertex texture coord we will pass in.
 #endif
 	void main()
 	{
@@ -38,32 +38,34 @@ uniform float u_Invert;
 #endif
 
 #if defined(INCLUDE_FS)
-	varying vec4 v_TintColor;
-	varying float v_EyeDot;
+	in vec4 v_TintColor;
+	in float v_EyeDot;
 	#if defined(TEXTURED_ALPHA_BY_NORMAL)
-	varying vec2 v_TexCoord;      // This will be passed into the fragment shader.
+	in vec2 v_TexCoord;      // This will be passed into the fragment shader.
 	#endif
 
 #if defined(TEXTURED_ALPHA_BY_NORMAL)
 	uniform sampler2D u_AlbedoTex;
 #endif
 
+	out vec4 f_FragColor;
+
 	void main()
 	{
 #if defined(TEXTURED_ALPHA_BY_NORMAL)
-		gl_FragColor = texture2D(u_AlbedoTex, v_TexCoord);
+		f_FragColor = texture(u_AlbedoTex, v_TexCoord);
 #else
-		gl_FragColor = vec4(1.0, 1.0, 1.0, 1.0);
+		f_FragColor = vec4(1.0, 1.0, 1.0, 1.0);
 #endif
-		gl_FragColor.rgb = vec3(1.0, 1.0, 1.0);
-		gl_FragColor.rgb *= v_TintColor.rgb; /* tint with alpha pre multiply */
+		f_FragColor.rgb = vec3(1.0, 1.0, 1.0);
+		f_FragColor.rgb *= v_TintColor.rgb; /* tint with alpha pre multiply */
 		/* This max/min gets rid of back faces (maps negatives to 0.0)) */
 		float factor = max(min(sign(v_EyeDot), v_EyeDot * v_EyeDot * v_EyeDot), 0.0);
 		float alpha = v_TintColor.a * (factor * u_Invert +
 			(1.0 - u_Invert) * (1.0 - factor));
-		gl_FragColor *= alpha;
-		// gl_FragColor *= v_TintColor.a * (v_EyeDot * (1.0 - u_Invert) + u_Invert * (1.0 - v_EyeDot));
-		// gl_FragColor *= v_TintColor.a * max((1.0 - abs(v_EyeDot)), 0.2);
+		f_FragColor *= alpha;
+		// f_FragColor *= v_TintColor.a * (v_EyeDot * (1.0 - u_Invert) + u_Invert * (1.0 - v_EyeDot));
+		// f_FragColor *= v_TintColor.a * max((1.0 - abs(v_EyeDot)), 0.2);
 	}
 #endif
 

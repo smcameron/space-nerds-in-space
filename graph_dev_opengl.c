@@ -1,13 +1,13 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <GL/glew.h>
 #include <math.h>
 #include <assert.h>
 #include <sys/stat.h>
 #include <limits.h>
 #include <pthread.h>
 
+#include <glad/gl.h>
 #include <SDL.h>
 
 #include "shader.h"
@@ -29,7 +29,13 @@
 #include "png_utils.h"
 #include "workqueue.h"
 
-#define OPENGL_VERSION_STRING "#version 120\n"
+/* helper function for sizing*/
+#ifndef ARRAY_ELEMENTS
+#define ARRAY_ELEMENTS(x) (sizeof(x)/sizeof((x)[0]))
+#endif
+
+
+#define OPENGL_VERSION_STRING "#version 150\n"
 #define UNIVERSAL_SHADER_HEADER \
 	OPENGL_VERSION_STRING
 
@@ -698,6 +704,7 @@ static void maybe_unload_shader(struct graph_dev_gl_shader_metadata *meta, GLuin
 struct graph_dev_gl_shader_common {
 	struct graph_dev_gl_shader_metadata meta;
 	GLuint program_id;
+	GLuint vao_id;
 };
 
 static GLuint drawstate_active_program = 0;
@@ -710,6 +717,7 @@ activate_shader(const void *vptr)
 		return;
 	}
 	glUseProgram(shader->program_id);
+	glBindVertexArray(shader->vao_id);
 
 	drawstate_active_program = shader->program_id;
 }
@@ -717,6 +725,7 @@ activate_shader(const void *vptr)
 struct graph_dev_gl_vertex_color_shader {
 	struct graph_dev_gl_shader_metadata meta;
 	GLuint program_id;
+	GLuint vao_id;
 	GLint mvp_matrix_id;
 	GLint vertex_position_id;
 	GLint vertex_color_id;
@@ -725,6 +734,7 @@ struct graph_dev_gl_vertex_color_shader {
 struct graph_dev_gl_single_color_lit_shader {
 	struct graph_dev_gl_shader_metadata meta;
 	GLuint program_id;
+	GLuint vao_id;
 	GLint mvp_matrix_id;
 	GLint mv_matrix_id;
 	GLint normal_matrix_id;
@@ -741,6 +751,7 @@ struct graph_dev_gl_single_color_lit_shader {
 struct graph_dev_gl_atmosphere_shader {
 	struct graph_dev_gl_shader_metadata meta;
 	GLuint program_id;
+	GLuint vao_id;
 	GLint mvp_matrix_id;
 	GLint mv_matrix_id;
 	GLint normal_matrix_id;
@@ -763,6 +774,7 @@ struct graph_dev_gl_atmosphere_shader {
 struct graph_dev_gl_filled_wireframe_shader {
 	struct graph_dev_gl_shader_metadata meta;
 	GLuint program_id;
+	GLuint vao_id;
 	GLint viewport_id;
 	GLint mvp_matrix_id;
 	GLint position_id;
@@ -777,6 +789,7 @@ struct graph_dev_gl_filled_wireframe_shader {
 struct graph_dev_gl_trans_wireframe_shader {
 	struct graph_dev_gl_shader_metadata meta;
 	GLuint program_id;
+	GLuint vao_id;
 	GLint mvp_matrix_id;
 	GLint mv_matrix_id;
 	GLint normal_matrix_id;
@@ -791,6 +804,7 @@ struct graph_dev_gl_trans_wireframe_shader {
 struct graph_dev_gl_single_color_shader {
 	struct graph_dev_gl_shader_metadata meta;
 	GLuint program_id;
+	GLuint vao_id;
 	GLint mvp_matrix_id;
 	GLint vertex_position_id;
 	GLint color_id;
@@ -799,6 +813,7 @@ struct graph_dev_gl_single_color_shader {
 struct graph_dev_gl_line_single_color_shader {
 	struct graph_dev_gl_shader_metadata meta;
 	GLuint program_id;
+	GLuint vao_id;
 	GLint mvp_matrix_id;
 	GLint viewport_id;
 	GLint multi_one_id;
@@ -813,6 +828,7 @@ struct graph_dev_gl_line_single_color_shader {
 struct graph_dev_gl_point_cloud_shader {
 	struct graph_dev_gl_shader_metadata meta;
 	GLuint program_id;
+	GLuint vao_id;
 	GLint mvp_matrix_id;
 	GLint vertex_position_id;
 	GLint point_size_id;
@@ -823,6 +839,7 @@ struct graph_dev_gl_point_cloud_shader {
 struct graph_dev_gl_skybox_shader {
 	struct graph_dev_gl_shader_metadata meta;
 	GLuint program_id;
+	GLuint vao_id;
 	GLint mvp_id;
 	GLint vertex_id;
 	GLint texture_id;
@@ -834,6 +851,7 @@ struct graph_dev_gl_skybox_shader {
 struct graph_dev_gl_color_by_w_shader {
 	struct graph_dev_gl_shader_metadata meta;
 	GLuint program_id;
+	GLuint vao_id;
 	GLint mvp_id;
 	GLint position_id;
 	GLint near_color_id;
@@ -847,6 +865,7 @@ struct graph_dev_gl_color_by_w_shader {
 struct graph_dev_gl_textured_shader {
 	struct graph_dev_gl_shader_metadata meta;
 	GLuint program_id;
+	GLuint vao_id;
 	GLint mvp_matrix_id;
 	GLint mv_matrix_id;
 	GLint normal_matrix_id;
@@ -910,6 +929,7 @@ struct shadow_annulus_data {
 struct graph_dev_gl_textured_particle_shader {
 	struct graph_dev_gl_shader_metadata meta;
 	GLuint program_id;
+	GLuint vao_id;
 	GLint mvp_matrix_id;
 	GLint camera_up_vec_id;
 	GLint camera_right_vec_id;
@@ -930,6 +950,7 @@ struct graph_dev_gl_textured_particle_shader {
 struct graph_dev_gl_fs_effect_shader { /* For full screen effect shaders */
 	struct graph_dev_gl_shader_metadata meta;
 	GLuint program_id;
+	GLuint vao_id;
 	GLint mvp_matrix_id;
 	GLint vertex_position_id;
 	GLint texture_coord_id;
@@ -3270,6 +3291,9 @@ static void setup_single_color_lit_shader(struct graph_dev_gl_single_color_lit_s
 				"single-color-lit-per-vertex.frag",
 				UNIVERSAL_SHADER_HEADER FILMIC_TONEMAPPING);
 
+	/* create the VAO for this shader */
+	glGenVertexArrays(1, &shader->vao_id);
+
 	/* Get a handle for our "MVP" uniform */
 	shader->mvp_matrix_id = glGetUniformLocation(shader->program_id, "u_MVPMatrix");
 	shader->mv_matrix_id = glGetUniformLocation(shader->program_id, "u_MVMatrix");
@@ -3296,6 +3320,9 @@ static void setup_atmosphere_shader(struct graph_dev_gl_atmosphere_shader *shade
 				with_ring_shadow ?
 				UNIVERSAL_SHADER_HEADER FILMIC_TONEMAPPING "\n#define USE_ANNULUS_SHADOW 1\n" :
 				UNIVERSAL_SHADER_HEADER FILMIC_TONEMAPPING);
+
+	/* create the VAO for this shader */
+	glGenVertexArrays(1, &shader->vao_id);
 
 	/* Get a handle for our "MVP" uniform */
 	shader->mvp_matrix_id = glGetUniformLocation(shader->program_id, "u_MVPMatrix");
@@ -3341,6 +3368,9 @@ static void setup_textured_shader(const char *basename, const char *defines,
 
 	shader->program_id = load_concat_shaders(shader_directory,
 				vert_header, 1, filenames, frag_header, 1, filenames);
+
+	/* create the VAO for this shader */
+	glGenVertexArrays(1, &shader->vao_id);
 
 	activate_shader(shader);
 
@@ -3424,6 +3454,9 @@ static void setup_textured_cubemap_shader(const char *basename, int use_normal_m
 
 	shader->program_id = load_concat_shaders(shader_directory,
 				vert_header, 1, filenames, frag_header, 1, filenames);
+	/* create the VAO for this shader */
+	glGenVertexArrays(1, &shader->vao_id);
+
 	activate_shader(shader);
 
 	/* Get a handle for our "MVP" uniform */
@@ -3484,6 +3517,8 @@ static void setup_filled_wireframe_shader(struct graph_dev_gl_filled_wireframe_s
 	shader->program_id = load_shaders(shader_directory,
 					"wireframe_filled.vert", "wireframe_filled.frag",
 					UNIVERSAL_SHADER_HEADER);
+	/* create the VAO for this shader */
+	glGenVertexArrays(1, &shader->vao_id);
 
 	shader->viewport_id = glGetUniformLocation(shader->program_id, "Viewport");
 	shader->mvp_matrix_id = glGetUniformLocation(shader->program_id, "ModelViewProjectionMatrix");
@@ -3509,6 +3544,8 @@ static void setup_trans_wireframe_shader(const char *basename, struct graph_dev_
 	/* Create and compile our GLSL program from the shaders */
 	shader->program_id = load_shaders(shader_directory, vert_filename, frag_filename,
 						UNIVERSAL_SHADER_HEADER);
+	/* create the VAO for this shader */
+	glGenVertexArrays(1, &shader->vao_id);
 
 	shader->mvp_matrix_id = glGetUniformLocation(shader->program_id, "u_MVPMatrix");
 	shader->mv_matrix_id = glGetUniformLocation(shader->program_id, "u_MVMatrix");
@@ -3527,6 +3564,8 @@ static void setup_single_color_shader(struct graph_dev_gl_single_color_shader *s
 	shader->program_id = load_shaders(shader_directory,
 				"single_color.vert", "single_color.frag",
 				UNIVERSAL_SHADER_HEADER);
+	/* create the VAO for this shader */
+	glGenVertexArrays(1, &shader->vao_id);
 
 	/* Get a handle for our "MVP" uniform */
 	shader->mvp_matrix_id = glGetUniformLocation(shader->program_id, "u_MVPMatrix");
@@ -3542,6 +3581,8 @@ static void setup_vertex_color_shader(struct graph_dev_gl_vertex_color_shader *s
 	shader->program_id = load_shaders(shader_directory,
 				"per_vertex_color.vert", "per_vertex_color.frag",
 				UNIVERSAL_SHADER_HEADER);
+	/* create the VAO for this shader */
+	glGenVertexArrays(1, &shader->vao_id);
 
 	shader->mvp_matrix_id = glGetUniformLocation(shader->program_id, "u_MVPMatrix");
 
@@ -3556,6 +3597,8 @@ static void setup_line_single_color_shader(struct graph_dev_gl_line_single_color
 	shader->program_id = load_shaders(shader_directory,
 				"line-single-color.vert", "line-single-color.frag",
 				UNIVERSAL_SHADER_HEADER);
+	/* create the VAO for this shader */
+	glGenVertexArrays(1, &shader->vao_id);
 
 	shader->mvp_matrix_id = glGetUniformLocation(shader->program_id, "u_MVPMatrix");
 	shader->viewport_id = glGetUniformLocation(shader->program_id, "u_Viewport");
@@ -3580,6 +3623,8 @@ static void setup_point_cloud_shader(const char *basename, struct graph_dev_gl_p
 	/* Create and compile our GLSL program from the shaders */
 	shader->program_id = load_shaders(shader_directory, vert_filename, frag_filename,
 				UNIVERSAL_SHADER_HEADER);
+	/* create the VAO for this shader */
+	glGenVertexArrays(1, &shader->vao_id);
 
 	/* Get a handle for our "MVP" uniform */
 	shader->mvp_matrix_id = glGetUniformLocation(shader->program_id, "u_MVPMatrix");
@@ -3597,6 +3642,8 @@ static void setup_color_by_w_shader(struct graph_dev_gl_color_by_w_shader *shade
 	/* Create and compile our GLSL program from the shaders */
 	shader->program_id = load_shaders(shader_directory, "color_by_w.vert", "color_by_w.frag",
 					UNIVERSAL_SHADER_HEADER);
+	/* create the VAO for this shader */
+	glGenVertexArrays(1, &shader->vao_id);
 
 	/* Get a handle for our "MVP" uniform */
 	shader->mvp_id = glGetUniformLocation(shader->program_id, "u_MVPMatrix");
@@ -3618,11 +3665,14 @@ static void setup_skybox_shader(struct graph_dev_gl_skybox_shader *shader)
 	/* Create and compile our GLSL program from the shaders */
 	shader->program_id = load_shaders(shader_directory, "skybox.vert", "skybox.frag",
 						UNIVERSAL_SHADER_HEADER FILMIC_TONEMAPPING);
+	/* create the VAO for this shader */
+	glGenVertexArrays(1, &shader->vao_id);
+
 	activate_shader(shader);
 
 	/* Get a handle for our "MVP" uniform */
 	shader->mvp_id = glGetUniformLocation(shader->program_id, "MVP");
-	shader->texture_id = glGetUniformLocation(shader->program_id, "texture");
+	shader->texture_id = glGetUniformLocation(shader->program_id, "s_texture");
 	shader->filmic_tonemapping_id = glGetUniformLocation(shader->program_id, "u_FilmicTonemapping");
 	shader->tonemapping_gain_id = glGetUniformLocation(shader->program_id, "u_TonemappingGain");
 	glUniform1i(shader->texture_id, 0);
@@ -3722,6 +3772,9 @@ static void setup_textured_particle_shader(struct graph_dev_gl_textured_particle
 	shader->program_id = load_shaders(shader_directory,
 				"textured-particle.vert", "textured-particle.frag",
 				UNIVERSAL_SHADER_HEADER FILMIC_TONEMAPPING);
+	/* create the VAO for this shader */
+	glGenVertexArrays(1, &shader->vao_id);
+
 	activate_shader(shader);
 
 	shader->mvp_matrix_id = glGetUniformLocation(shader->program_id, "u_MVPMatrix");
@@ -3747,10 +3800,10 @@ static void setup_fs_effect_shader(const char *basename,
 	struct graph_dev_gl_fs_effect_shader *shader)
 {
 	const char *vert_header =
-		OPENGL_VERSION_STRING
+		UNIVERSAL_SHADER_HEADER
 		"#define INCLUDE_VS 1\n";
 	const char *frag_header =
-		OPENGL_VERSION_STRING
+		UNIVERSAL_SHADER_HEADER
 		"#define INCLUDE_FS 1\n";
 
 	/* Create and compile our GLSL program from the shaders */
@@ -3762,6 +3815,9 @@ static void setup_fs_effect_shader(const char *basename,
 	maybe_unload_shader(&shader->meta, &shader->program_id);
 	shader->program_id = load_concat_shaders(shader_directory, vert_header, 1, filenames,
 		frag_header, 1, filenames);
+	/* create the VAO for this shader */
+	glGenVertexArrays(1, &shader->vao_id);
+
 	activate_shader(shader);
 
 	shader->mvp_matrix_id = glGetUniformLocation(shader->program_id, "u_MVPMatrix");
@@ -3787,32 +3843,22 @@ static void setup_smaa_effect_shader(const char *basename, struct graph_dev_gl_f
 
 	const char *vert_header;
 	const char *frag_header;
-	if (GLEW_VERSION_3_0) {
-		vert_header =
-			"#version 130\n"
-			"#define INCLUDE_VS 1\n"
-			"#define SMAA_GLSL_3\n";
-		frag_header =
-			"#version 130\n"
-			"#define INCLUDE_FS 1\n"
-			"#define SMAA_GLSL_3\n";
-	} else {
-		/* fall back to OGL 2.1 */
-		vert_header =
-			"#version 120\n"
-			"#define INCLUDE_VS 1\n"
-			"#define SMAA_GLSL_2\n";
-		frag_header =
-			"#version 120\n"
-			"#define INCLUDE_FS 1\n"
-			"#define SMAA_GLSL_2\n";
-	}
+	vert_header =
+		"#version 150\n"
+		"#define INCLUDE_VS 1\n"
+		"#define SMAA_GLSL_3\n";
+	frag_header =
+		"#version 150\n"
+		"#define INCLUDE_FS 1\n"
+		"#define SMAA_GLSL_3\n";
 
 	const char *filenames[] = { "smaa-high.shader", "SMAA.hlsl", shader_filename };
 
 	maybe_unload_shader(&shader->meta, &shader->program_id);
 	shader->program_id = load_concat_shaders(shader_directory,
 				vert_header, 3, filenames, frag_header, 3, filenames);
+	/* create the VAO for this shader */
+	glGenVertexArrays(1, &shader->vao_id);
 
 	shader->mvp_matrix_id = glGetUniformLocation(shader->program_id, "u_MVPMatrix");
 	shader->vertex_position_id = glGetAttribLocation(shader->program_id, "a_Position");
@@ -3878,8 +3924,8 @@ static void setup_smaa_effect(struct graph_dev_smaa_effect *effect)
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_LUMINANCE8_ALPHA8, (GLsizei)AREATEX_WIDTH, (GLsizei)AREATEX_HEIGHT, 0,
-		GL_LUMINANCE_ALPHA, GL_UNSIGNED_BYTE, areaTexBytes);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RG8, (GLsizei)AREATEX_WIDTH, (GLsizei)AREATEX_HEIGHT, 0,
+		GL_RG, GL_UNSIGNED_BYTE, areaTexBytes);
 
 	/* include file defines sizes and searchTexBytes of the search texture */
 #include "share/snis/textures/SearchTex.h"
@@ -3890,7 +3936,7 @@ static void setup_smaa_effect(struct graph_dev_smaa_effect *effect)
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB8, (GLsizei)SEARCHTEX_WIDTH, (GLsizei)SEARCHTEX_HEIGHT, 0,
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_R8, (GLsizei)SEARCHTEX_WIDTH, (GLsizei)SEARCHTEX_HEIGHT, 0,
 		GL_RED, GL_UNSIGNED_BYTE, searchTexBytes);
 
 	glGenFramebuffers(1, &effect->edge_target.fbo);
@@ -4079,20 +4125,25 @@ static void graph_dev_set_up_image_loader_work_queues(void)
 
 int graph_dev_setup(const char *asset_dir)
 {
-	glewExperimental = GL_TRUE; /* OSX apparently needs glewExperimental */
-
-	if (glewInit() != GLEW_OK) {
-		fprintf(stderr, "Failed to initialize GLEW\n");
+	if (!gladLoadGL((GLADloadfunc)SDL_GL_GetProcAddress)) {
+		fprintf(stderr, "Got error trying to bind GL\n");
 		return -1;
 	}
-	if (!GLEW_VERSION_2_1) {
-		fprintf(stderr, "Need atleast OpenGL 2.1\n");
+	printf("Initialized GLAD\n");
+
+	const char *version = (const char *)glGetString(GL_VERSION);
+	const char *vendor = (const char *)glGetString(GL_VENDOR);
+	const char *renderer = (const char *)glGetString(GL_RENDERER);
+	const char *glslversion = (const char *)glGetString(GL_SHADING_LANGUAGE_VERSION);
+	fprintf(stderr, "OpenGL: Version:  %s\n", version);
+	fprintf(stderr, "        Vendor:   %s\n", vendor);
+	fprintf(stderr, "        Renderer: %s\n", renderer);
+	fprintf(stderr, "        Shader Language Version: %s\n", glslversion);
+
+	if (!GLAD_GL_VERSION_3_1) {
+		fprintf(stderr, "Need at least OpenGL 3.1\n");
 		return -1;
 	}
-	printf("Initialized GLEW\n");
-
-	if (GLEW_VERSION_3_0)
-		printf("OpenGL 3.0 available\n");
 
 	if (framebuffer_srgb_supported())
 		printf("sRGB framebuffer supported\n");
@@ -4955,14 +5006,17 @@ void graph_dev_prepare_for_window(uint32_t *window_flags)
 	SDL_GL_SetAttribute(SDL_GL_RED_SIZE, 5);
 	SDL_GL_SetAttribute(SDL_GL_GREEN_SIZE, 5);
 	SDL_GL_SetAttribute(SDL_GL_BLUE_SIZE, 5);
-	/* SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 16); */
+	SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
 	SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
 	SDL_GL_SetAttribute(SDL_GL_MULTISAMPLEBUFFERS, 0);
 	SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, 0);
+	SDL_GL_SetAttribute(SDL_GL_FRAMEBUFFER_SRGB_CAPABLE, 1);
 
-	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 2);
-	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 0);
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 2);
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
+	/* allow context upgrading (macOS, etc) */
+	/* SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, SDL_GL_CONTEXT_FORWARD_COMPATIBLE_FLAG); */
 
 	*window_flags = *window_flags | SDL_WINDOW_OPENGL;
 }

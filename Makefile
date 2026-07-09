@@ -524,8 +524,9 @@ PNGCFLAGS:=$(shell $(PKG_CONFIG) --cflags libpng)
 SDLLIBS:=$(shell $(SDL2_CONFIG) --libs)
 SDLCFLAGS:=$(shell $(SDL2_CONFIG) --cflags)
 
-GLEWLIBS:=$(shell $(PKG_CONFIG) --libs-only-l glew)
-GLEWCFLAGS:=$(shell $(PKG_CONFIG) --cflags glew)
+GLADLIBS=
+GLADCFLAGS=-Iextern/glad/include
+GRAPH_OBJS=glad-gl.o graph_dev_opengl.o opengl_cap.o
 endif
 
 ifeq ($(OSX), 0)
@@ -571,10 +572,10 @@ _COMMONCLIENTOBJS= snis_ui_element.o snis_font.o snis_text_input.o \
 	snis_client_forker.o snis_process_options.o workqueue.o
 COMMONCLIENTOBJS=${COMMONOBJS} ${OGGOBJ} ${SNDOBJS} $(patsubst %,$(OD)/%,${_COMMONCLIENTOBJS}) 
 
-_CLIENTOBJS= shader.o graph_dev_opengl.o opengl_cap.o snis_graph.o snis_client.o joystick_config.o snis_xwindows_hacks.o png_utils.o
+_CLIENTOBJS= shader.o ${GRAPH_OBJS} snis_graph.o snis_client.o joystick_config.o snis_xwindows_hacks.o png_utils.o
 CLIENTOBJS=${COMMONCLIENTOBJS} $(patsubst %,$(OD)/%,${_CLIENTOBJS})
 
-_SDLCLIENTOBJS=shader.o graph_dev_opengl.o opengl_cap.o snis_graph.o mesh_viewer.o \
+_SDLCLIENTOBJS=shader.o ${GRAPH_OBJS} snis_graph.o mesh_viewer.o \
 				png_utils.o turret_aimer.o quat.o mathutils.o mesh.o \
 				mtwist.o material.o entity.o snis_alloc.o matrix.o stacktrace.o stl_parser.o \
 				snis_typeface.o snis_font.o string-utils.o ui_colors.o liang-barsky.o \
@@ -593,7 +594,7 @@ X11LIBS=$(shell $(PKG_CONFIG) --libs x11)
 X11CFLAGS=$(shell $(PKG_CONFIG) --cflags x11)
 
 SSGL=ssgl/libssglclient.a
-LIBS=-Lssgl -lssglclient -ldl -lm ${PNGLIBS} ${GLEWLIBS}
+LIBS=${GLADLIBS} -Lssgl -lssglclient -ldl -lm ${PNGLIBS}
 SERVERLIBS=-Lssgl -lssglclient ${LRTLIB} -ldl -lm ${LUALIBS} ${CRYPTLIBS}
 MULTIVERSELIBS=-Lssgl -lssglclient ${LRTLIB} -ldl -lm ${CRYPTLIBS}
 #
@@ -752,7 +753,7 @@ endif
 
 COMPILE=$(ECHO) '  COMPILE' $< && $(CC) ${MYCFLAGS} ${LUACFLAGS} -c -o $@ $<
 VORBISCOMPILE=$(ECHO) '  COMPILE' $< && $(CC) ${MYCFLAGS} ${VORBISFLAGS} ${SNDFLAGS} -c -o $@ $<
-SDLCOMPILE=$(ECHO) '  COMPILE' $< && $(CC) ${MYCFLAGS} ${SDLCFLAGS} ${X11CFLAGS} -c -o $@ $<
+SDLCOMPILE=$(ECHO) '  COMPILE' $< && $(CC) ${MYCFLAGS} ${GLADCFLAGS} ${SDLCFLAGS} ${X11CFLAGS} -c -o $@ $<
 SNISSERVERDBGCOMPILE=$(ECHO) '  COMPILE' $< && $(CC) -DSNIS_SERVER_DATA ${MYCFLAGS} ${LUACFLAGS} -c -o $(OD)/snis_server_debug.o $<
 SNISCLIENTDBGCOMPILE=$(ECHO) '  COMPILE' $< && $(CC) -DSNIS_CLIENT_DATA ${MYCFLAGS} ${LUACFLAGS} -c -o $(OD)/snis_client_debug.o $<
 
@@ -852,7 +853,7 @@ $(OD)/material.o : material.c Makefile ${ODT}
 	$(Q)$(SDLCOMPILE)
 
 $(OD)/shader.o : shader.c Makefile ${ODT}
-	$(Q)$(COMPILE)
+	$(Q)$(COMPILE) ${GLADCFLAGS}
 
 %.stl:	%.scad
 	$(Q)$(OPENSCAD)
@@ -862,6 +863,9 @@ $(OD)/shader.o : shader.c Makefile ${ODT}
 
 %.docking_ports.h: %.scad
 	$(Q)$(EXTRACTDOCKINGPORTS)
+
+$(OD)/glad-gl.o:	extern/glad/src/gl.c
+	$(Q)$(COMPILE) -Iextern/glad/include
 
 $(OD)/thrust_attachment.o:	thrust_attachment.c thrust_attachment.h Makefile ${ODT}
 	$(Q)$(COMPILE)

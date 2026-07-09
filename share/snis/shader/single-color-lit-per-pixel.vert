@@ -5,12 +5,12 @@ uniform mat3 u_NormalMatrix;
 uniform vec3 u_Color;          // Per-object color information we will pass in.
 uniform int u_in_shade;
 
-attribute vec4 a_Position;     // Per-vertex position information we will pass in.
-attribute vec3 a_Normal;       // Per-vertex normal information we will pass in.
+in vec4 a_Position;     // Per-vertex position information we will pass in.
+in vec3 a_Normal;       // Per-vertex normal information we will pass in.
 
-varying vec3 v_Position;       // This will be passed into the fragment shader.
-varying vec3 v_Color;          // This will be passed into the fragment shader.
-varying vec3 v_Normal;         // This will be passed into the fragment shader.
+out vec3 v_Position;       // This will be passed into the fragment shader.
+out vec3 v_Color;          // This will be passed into the fragment shader.
+out vec3 v_Normal;         // This will be passed into the fragment shader.
 
 // The entry point for our vertex shader.
 void main()

@@ -2,10 +2,12 @@
 uniform vec3 u_LightPos;       // The position of the light in eye space.
 uniform int u_in_shade;        // 0 means not full shade, 1 means full shade
 
-varying vec3 v_Position;       // Interpolated position for this fragment.
-varying vec3 v_Color;          // This is the color from the vertex shader interpolated across the triangle per fragment
-varying vec3 v_Normal;         // Interpolated normal for this fragment.
+in vec3 v_Position;       // Interpolated position for this fragment.
+in vec3 v_Color;          // This is the color from the vertex shader interpolated across the triangle per fragment
+in vec3 v_Normal;         // Interpolated normal for this fragment.
 uniform float u_Ambient;       // ambient light.  0.1 is an ok value
+
+out vec4 f_FragColor;
 
 void main()
 {
@@ -23,7 +25,7 @@ void main()
 	float diffuse = max(dot, u_Ambient);
 
 	// Multiply the color by the diffuse illumination level to get final output color.
-	gl_FragColor = vec4(v_Color * diffuse, 1.0);
-	gl_FragColor = filmic_tonemap(gl_FragColor);
+	f_FragColor = vec4(v_Color * diffuse, 1.0);
+	f_FragColor = filmic_tonemap(f_FragColor);
 }
 

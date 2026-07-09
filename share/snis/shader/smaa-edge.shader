@@ -19,13 +19,13 @@
 */
 
 #if defined(INCLUDE_VS)
-	varying vec2 v_TexCoord;
-	varying vec4 v_Offset[3];
+	out vec2 v_TexCoord;
+	out vec4 v_Offset[3];
 
 	uniform mat4 u_MVPMatrix;
 
-	attribute vec4 a_Position;
-	attribute vec2 a_TexCoord;
+	in vec4 a_Position;
+	in vec2 a_TexCoord;
 
 	void main()
 	{
@@ -37,14 +37,16 @@
 #endif
 
 #if defined(INCLUDE_FS)
-	varying vec2 v_TexCoord;
-	varying vec4 v_Offset[3];
+	in vec2 v_TexCoord;
+	in vec4 v_Offset[3];
 
 	uniform sampler2D u_AlbedoTex;
 
+	out vec4 f_FragColor;
+
 	void main()
 	{
-		gl_FragColor = vec4(SMAAColorEdgeDetectionPS(v_TexCoord, v_Offset,
+		f_FragColor = vec4(SMAAColorEdgeDetectionPS(v_TexCoord, v_Offset,
 			u_AlbedoTex), 0.0, 1.0);
 	}
 #endif

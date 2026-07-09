@@ -24,17 +24,17 @@
 
 
 #if defined(INCLUDE_VS)
-	attribute vec4 a_Position; // Per-vertex position information we will pass in.
-	attribute vec2 a_TexCoord; // Per-vertex texture coord we will pass in.
-	attribute vec3 a_Normal;   // Per-vertex normal we pass in.
+	in vec4 a_Position; // Per-vertex position information we will pass in.
+	in vec2 a_TexCoord; // Per-vertex texture coord we will pass in.
+	in vec3 a_Normal;   // Per-vertex normal we pass in.
 
-	varying vec4 v_TintColor;
-	varying vec2 v_TexCoord;
-	varying vec3 v_Position;		// Fragment position in eye space
-	varying vec3 v_LightDir;		// normalized vector from fragment to light in eye space
-	varying float v_darkside_shading;	// Shading multiplier for ring, 1.0 on light side, 0.2 on dark side
-	varying vec3 v_Normal;			// Normal at fragment (i.e. normal to the ring plane)
-	varying float v_sameside;		// 1.0 if eye and light are on same side of ring plane, 0.0 otherwise
+	out vec4 v_TintColor;
+	out vec2 v_TexCoord;
+	out vec3 v_Position;		// Fragment position in eye space
+	out vec3 v_LightDir;		// normalized vector from fragment to light in eye space
+	out float v_darkside_shading;	// Shading multiplier for ring, 1.0 on light side, 0.2 on dark side
+	out vec3 v_Normal;			// Normal at fragment (i.e. normal to the ring plane)
+	out float v_sameside;		// 1.0 if eye and light are on same side of ring plane, 0.0 otherwise
 
 	uniform mat4 u_MVMatrix;  // A constant representing the combined model/view matrix.
 	uniform mat4 u_MVPMatrix;  // A constant representing the combined model/view/projection matrix.
@@ -72,18 +72,20 @@
 #endif
 
 #if defined(INCLUDE_FS)
-	varying vec4 v_TintColor;
-	varying vec2 v_TexCoord;
-	varying vec3 v_Position;		// Fragment position in eye space
-	varying vec3 v_LightDir;		// normalized vector from fragment to light in eye space
-	varying float v_darkside_shading;	// Shading multiplier for ring, 1.0 on light side, 0.2 on dark side
-	varying vec3 v_Normal;			// Normal at fragment (i.e. normal to the ring plane)
-	varying float v_sameside;		// 1.0 if eye and light are on same side of ring plane, 0.0 otherwise
+	in vec4 v_TintColor;
+	in vec2 v_TexCoord;
+	in vec3 v_Position;		// Fragment position in eye space
+	in vec3 v_LightDir;		// normalized vector from fragment to light in eye space
+	in float v_darkside_shading;	// Shading multiplier for ring, 1.0 on light side, 0.2 on dark side
+	in vec3 v_Normal;			// Normal at fragment (i.e. normal to the ring plane)
+	in float v_sameside;		// 1.0 if eye and light are on same side of ring plane, 0.0 otherwise
 
 	uniform sampler2D u_AlbedoTex;
 	uniform vec4 u_Sphere; /* eye space occluding sphere, x,y,z = center, w = radius^2 */
 	uniform float u_ring_inner_radius;
 	uniform float u_ring_outer_radius;
+
+	out vec4 f_FragColor;
 
 	float map(in float x, float min1, float max1, float min2, float max2)
 	{
@@ -106,10 +108,10 @@
 
 		float sqrt_disc = sqrt(disc);
 		float t0 = (-b - sqrt_disc) / 2.0;
-		if (t0 >= 0)
+		if (t0 >= 0.0)
 			return in_shadow;
 		float t1 = (-b + sqrt_disc) / 2.0;
-		return 1.0 - (max(sign(t1), 0));	// if (t1 >= 0) return 0.0; else return 1.0;
+		return 1.0 - (max(sign(t1), 0.0));	// if (t1 >= 0) return 0.0; else return 1.0;
 	}
 
 	void main()
@@ -135,19 +137,19 @@
                 // blinn phong half vector specular
                 vec3 view_dir = normalize(-v_Position);
                 vec3 half_dir = normalize(v_LightDir + view_dir);
-                float n_dot_h = max(0, dot(v_Normal, half_dir));
-                float n_dot_h2 = max(0, dot(-v_Normal, half_dir)); /* Consider both sides */
+                float n_dot_h = max(0.0, dot(v_Normal, half_dir));
+                float n_dot_h2 = max(0.0, dot(-v_Normal, half_dir)); /* Consider both sides */
                 n_dot_h = max(n_dot_h, n_dot_h2);
                 float spec = pow(n_dot_h, shininess);
 
-		gl_FragColor = shadow_tint * texture2D(u_AlbedoTex, txcoord);
-		gl_FragColor.rgb *= v_darkside_shading + (0.5 * (1.0 - v_darkside_shading) * 0.5 * abs(gl_FragColor.a - 0.5));
-		gl_FragColor.rgb += not_in_shadow * v_sameside * spec * spec_color * gl_FragColor.a;
+		f_FragColor = shadow_tint * texture(u_AlbedoTex, txcoord);
+		f_FragColor.rgb *= v_darkside_shading + (0.5 * (1.0 - v_darkside_shading) * 0.5 * abs(f_FragColor.a - 0.5));
+		f_FragColor.rgb += not_in_shadow * v_sameside * spec * spec_color * f_FragColor.a;
 
 		/* tint with alpha pre multiply */
-		gl_FragColor.rgb *= v_TintColor.rgb;
-		gl_FragColor *= v_TintColor.a;
-		gl_FragColor = filmic_tonemap(gl_FragColor);
+		f_FragColor.rgb *= v_TintColor.rgb;
+		f_FragColor *= v_TintColor.a;
+		f_FragColor = filmic_tonemap(f_FragColor);
 	}
 #endif
 
