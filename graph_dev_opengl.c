@@ -700,11 +700,18 @@ struct graph_dev_gl_shader_common {
 	GLuint program_id;
 };
 
+static GLuint drawstate_active_program = 0;
+
 static void
 activate_shader(const void *vptr)
 {
 	const struct graph_dev_gl_shader_common *shader = (const struct graph_dev_gl_shader_common *)vptr;
+	if (drawstate_active_program == shader->program_id) {
+		return;
+	}
 	glUseProgram(shader->program_id);
+
+	drawstate_active_program = shader->program_id;
 }
 
 struct graph_dev_gl_vertex_color_shader {
