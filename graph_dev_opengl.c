@@ -3994,7 +3994,7 @@ static void setup_3d(void)
 
 	glGenBuffers(1, &sgc.gl_info_3d_line.line_vertex_buffer);
 	glBindBuffer(GL_ARRAY_BUFFER, sgc.gl_info_3d_line.line_vertex_buffer);
-	glBufferData(GL_ARRAY_BUFFER, 0, 0, GL_STATIC_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, 0, 0, GL_STREAM_DRAW);
 
 	sgc.texture_unit_active = 0;
 	memset(sgc.texture_unit_bind, 0, sizeof(sgc.texture_unit_bind));
