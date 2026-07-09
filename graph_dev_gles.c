@@ -1197,8 +1197,8 @@ static void resize_fbo_if_needed(struct fbo_target *target)
 static void maybe_discard_fbo_contents(struct fbo_target *fbo)
 {
 	static const GLenum attachments[2] = {
-		GL_COLOR_EXT,
-		GL_DEPTH_EXT,
+		GL_COLOR_ATTACHMENT0,
+		GL_DEPTH_ATTACHMENT,
 	};
 	glBindFramebuffer(GL_FRAMEBUFFER, fbo->fbo);
 	if (GLAD_GL_EXT_discard_framebuffer) {
