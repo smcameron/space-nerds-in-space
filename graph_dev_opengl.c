@@ -695,6 +695,18 @@ static void maybe_unload_shader(struct graph_dev_gl_shader_metadata *meta, GLuin
 	*meta->program_id = -1;
 }
 
+struct graph_dev_gl_shader_common {
+	struct graph_dev_gl_shader_metadata meta;
+	GLuint program_id;
+};
+
+static void
+activate_shader(const void *vptr)
+{
+	const struct graph_dev_gl_shader_common *shader = (const struct graph_dev_gl_shader_common *)vptr;
+	glUseProgram(shader->program_id);
+}
+
 struct graph_dev_gl_vertex_color_shader {
 	struct graph_dev_gl_shader_metadata meta;
 	GLuint program_id;
@@ -1224,7 +1236,7 @@ static void draw_vertex_buffer_2d(void)
 		glBufferSubData(GL_ARRAY_BUFFER, 0, sgc.nvertex_2d * sizeof(struct vertex_color_buffer_data),
 			sgc.vertex_data_2d);
 
-		glUseProgram(vertex_color_shader.program_id);
+		activate_shader(&vertex_color_shader);
 
 		glUniformMatrix4fv(vertex_color_shader.mvp_matrix_id, 1, GL_FALSE, &sgc.ortho_2d_mvp.m[0][0]);
 
@@ -1330,7 +1342,7 @@ static void graph_dev_draw_normal_lines(const struct mat44 *mat_mvp, struct mesh
 {
 	glEnable(GL_DEPTH_TEST);
 
-	glUseProgram(single_color_shader.program_id);
+	activate_shader(&simple_color_shader);
 
 	glUniformMatrix4fv(single_color_shader.mvp_matrix_id, 1, GL_FALSE, &mat_mvp->m[0][0]);
 
@@ -1445,7 +1457,7 @@ static void graph_dev_raster_texture(struct raster_texture_params *p)
 		BLEND_FUNC(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
 	}
 
-	glUseProgram(shader->program_id);
+	activate_shader(shader);
 
 	if (shader->texture_2d_id >= 0)
 		BIND_TEXTURE(GL_TEXTURE0, GL_TEXTURE_2D, p->texture_number);
@@ -1640,7 +1652,7 @@ static void graph_dev_raster_single_color_lit(const struct mat44 *mat_mvp, const
 	if (draw_polygon_as_lines)
 		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
-	glUseProgram(single_color_lit_shader.program_id);
+	activate_shader(&single_color_lit_shader);
 
 	glUniformMatrix4fv(single_color_lit_shader.mv_matrix_id, 1, GL_FALSE, &mat_mv->m[0][0]);
 	glUniformMatrix4fv(single_color_lit_shader.mvp_matrix_id, 1, GL_FALSE, &mat_mvp->m[0][0]);
@@ -1722,7 +1734,7 @@ static void graph_dev_raster_atmosphere(const struct mat44 *mat_mvp, const struc
 	if (ring_texture_v >= 0.0 && graph_dev_atmosphere_ring_shadows) {
 		/* Set up uniforms for ring shadow */
 		shader = &atmosphere_with_annulus_shadow_shader;
-		glUseProgram(shader->program_id);
+		activate_shader(shader);
 		if (shadow_annulus->texture_id > 0 && shader->shadow_annulus_texture_id > 0)
 			BIND_TEXTURE(GL_TEXTURE0, GL_TEXTURE_2D, shadow_annulus->texture_id);
 
@@ -1747,7 +1759,7 @@ static void graph_dev_raster_atmosphere(const struct mat44 *mat_mvp, const struc
 
 	} else {
 		shader = &atmosphere_shader;
-		glUseProgram(shader->program_id);
+		activate_shader(shader);
 	}
 
 	glUniform1f(shader->atmosphere_brightness_id, atmosphere_brightness);
@@ -1814,7 +1826,7 @@ static void graph_dev_raster_filled_wireframe_mesh(const struct mat44 *mat_mvp, 
 	glEnable(GL_DEPTH_TEST);
 	glEnable(GL_CULL_FACE);
 
-	glUseProgram(filled_wireframe_shader.program_id);
+	activate_shader(&filled_wireframe_shader);
 
 	glUniform2f(filled_wireframe_shader.viewport_id, sgc.vp_width_3d, sgc.vp_height_3d);
 	glUniformMatrix4fv(filled_wireframe_shader.mvp_matrix_id, 1, GL_FALSE, &mat_mvp->m[0][0]);
@@ -1910,7 +1922,8 @@ static void graph_dev_raster_trans_wireframe_mesh(struct graph_dev_gl_trans_wire
 	if (do_cullface) {
 		assert(shader);
 		assert(clip_sphere);
-		glUseProgram(shader->program_id);
+
+		activate_shader(shader);
 
 		glUniformMatrix4fv(shader->mvp_matrix_id, 1, GL_FALSE, &mat_mvp->m[0][0]);
 		glUniformMatrix4fv(shader->mv_matrix_id, 1, GL_FALSE, &mat_mv->m[0][0]);
@@ -1949,7 +1962,7 @@ static void graph_dev_raster_trans_wireframe_mesh(struct graph_dev_gl_trans_wire
 
 	} else {
 		/* don't cullface so just render with single color shader */
-		glUseProgram(single_color_shader.program_id);
+		activate_shader(&single_color_shader);
 
 		glUniformMatrix4fv(single_color_shader.mvp_matrix_id, 1, GL_FALSE, &mat_mvp->m[0][0]);
 		glUniform4f(single_color_shader.color_id, line_color->red,
@@ -2002,7 +2015,7 @@ static void graph_dev_raster_line_mesh(struct entity *e, const struct mat44 *mat
 	if (e->material_ptr && e->material_ptr->type == MATERIAL_COLOR_BY_W) {
 		struct material_color_by_w *mc = &e->material_ptr->color_by_w;
 
-		glUseProgram(color_by_w_shader.program_id);
+		activate_shader(&color_by_w_shader);
 
 		glUniformMatrix4fv(color_by_w_shader.mvp_id, 1, GL_FALSE, &mat_mvp->m[0][0]);
 
@@ -2023,7 +2036,7 @@ static void graph_dev_raster_line_mesh(struct entity *e, const struct mat44 *mat
 
 		vertex_position_id = color_by_w_shader.position_id;
 	} else {
-		glUseProgram(line_single_color_shader.program_id);
+		activate_shader(&line_single_color_shader);
 
 		glUniformMatrix4fv(line_single_color_shader.mvp_matrix_id, 1, GL_FALSE, &mat_mvp->m[0][0]);
 		glUniform2f(line_single_color_shader.viewport_id, sgc.vp_width_3d, sgc.vp_height_3d);
@@ -2114,7 +2127,7 @@ void graph_dev_raster_point_cloud_mesh(struct graph_dev_gl_point_cloud_shader *s
 		BLEND_FUNC(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
 	}
 
-	glUseProgram(shader->program_id);
+	activate_shader(shader);
 
 	glUniformMatrix4fv(shader->mvp_matrix_id, 1, GL_FALSE, &mat_mvp->m[0][0]);
 	glUniform1f(shader->point_size_id, pointSize);
@@ -2235,7 +2248,7 @@ static void graph_dev_raster_particle_animation(struct entity *e,
 	glEnable(GL_BLEND);
 	BLEND_FUNC(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
 
-	glUseProgram(textured_particle_shader.program_id);
+	activate_shader(&textured_particle_shader);
 
 	glUniformMatrix4fv(textured_particle_shader.mvp_matrix_id, 1, GL_FALSE, &transform->mvp.m[0][0]);
 
@@ -2889,7 +2902,7 @@ static void graph_dev_raster_full_screen_effect(struct graph_dev_gl_fs_effect_sh
 {
 	static const struct mat44 mat_identity = { { { 1, 0, 0, 0}, { 0, 1, 0, 0 }, { 0, 0, 1, 0}, { 0, 0, 0, 1} } };
 
-	glUseProgram(shader->program_id);
+	activate_shader(shader);
 
 	if (texture0_id > 0 && shader->texture0_id >= 0) {
 		BIND_TEXTURE(GL_TEXTURE0, GL_TEXTURE_2D, texture0_id);
@@ -3321,7 +3334,8 @@ static void setup_textured_shader(const char *basename, const char *defines,
 
 	shader->program_id = load_concat_shaders(shader_directory,
 				vert_header, 1, filenames, frag_header, 1, filenames);
-	glUseProgram(shader->program_id);
+
+	activate_shader(shader);
 
 	shader->mvp_matrix_id = glGetUniformLocation(shader->program_id, "u_MVPMatrix");
 	shader->mv_matrix_id = glGetUniformLocation(shader->program_id, "u_MVMatrix");
@@ -3403,7 +3417,7 @@ static void setup_textured_cubemap_shader(const char *basename, int use_normal_m
 
 	shader->program_id = load_concat_shaders(shader_directory,
 				vert_header, 1, filenames, frag_header, 1, filenames);
-	glUseProgram(shader->program_id);
+	activate_shader(shader);
 
 	/* Get a handle for our "MVP" uniform */
 	shader->mvp_matrix_id = glGetUniformLocation(shader->program_id, "u_MVPMatrix");
@@ -3597,7 +3611,7 @@ static void setup_skybox_shader(struct graph_dev_gl_skybox_shader *shader)
 	/* Create and compile our GLSL program from the shaders */
 	shader->program_id = load_shaders(shader_directory, "skybox.vert", "skybox.frag",
 						UNIVERSAL_SHADER_HEADER FILMIC_TONEMAPPING);
-	glUseProgram(shader->program_id);
+	activate_shader(shader);
 
 	/* Get a handle for our "MVP" uniform */
 	shader->mvp_id = glGetUniformLocation(shader->program_id, "MVP");
@@ -3701,7 +3715,7 @@ static void setup_textured_particle_shader(struct graph_dev_gl_textured_particle
 	shader->program_id = load_shaders(shader_directory,
 				"textured-particle.vert", "textured-particle.frag",
 				UNIVERSAL_SHADER_HEADER FILMIC_TONEMAPPING);
-	glUseProgram(shader->program_id);
+	activate_shader(shader);
 
 	shader->mvp_matrix_id = glGetUniformLocation(shader->program_id, "u_MVPMatrix");
 	shader->camera_up_vec_id = glGetUniformLocation(shader->program_id, "u_CameraUpVec");
@@ -3741,7 +3755,7 @@ static void setup_fs_effect_shader(const char *basename,
 	maybe_unload_shader(&shader->meta, &shader->program_id);
 	shader->program_id = load_concat_shaders(shader_directory, vert_header, 1, filenames,
 		frag_header, 1, filenames);
-	glUseProgram(shader->program_id);
+	activate_shader(shader);
 
 	shader->mvp_matrix_id = glGetUniformLocation(shader->program_id, "u_MVPMatrix");
 	shader->vertex_position_id = glGetAttribLocation(shader->program_id, "a_Position");
@@ -3810,14 +3824,14 @@ static void setup_smaa_effect(struct graph_dev_smaa_effect *effect)
 	shader = &effect->edge_shader;
 	setup_smaa_effect_shader("smaa-edge", shader);
 
-	glUseProgram(shader->program_id);
+	activate_shader(shader);
 	shader->texture0_id = glGetUniformLocation(shader->program_id, "u_AlbedoTex");
 	glUniform1i(shader->texture0_id, 0);
 
 	shader = &effect->blend_shader;
 	setup_smaa_effect_shader("smaa-blend", shader);
 
-	glUseProgram(shader->program_id);
+	activate_shader(shader);
 	shader->texture0_id = glGetUniformLocation(shader->program_id, "u_EdgeTex");
 	glUniform1i(shader->texture0_id, 0);
 	shader->texture1_id = glGetUniformLocation(shader->program_id, "u_AreaTex");
@@ -3828,7 +3842,7 @@ static void setup_smaa_effect(struct graph_dev_smaa_effect *effect)
 	shader = &effect->neighborhood_shader;
 	setup_smaa_effect_shader("smaa-neighborhood", shader);
 
-	glUseProgram(shader->program_id);
+	activate_shader(shader);
 	shader->texture0_id = glGetUniformLocation(shader->program_id, "u_AlbedoTex");
 	glUniform1i(shader->texture0_id, 0);
 	shader->texture1_id = glGetUniformLocation(shader->program_id, "u_BlendTex");
@@ -4645,7 +4659,7 @@ void graph_dev_draw_skybox(const struct mat44 *mat_vp)
 	glDisable(GL_DEPTH_TEST);
 	glDisable(GL_CULL_FACE);
 
-	glUseProgram(skybox_shader.program_id);
+	activate_shader(&skybox_shader);
 
 	BIND_TEXTURE(GL_TEXTURE0, GL_TEXTURE_CUBE_MAP, skybox_shader.cube_texture_id);
 
