@@ -1173,7 +1173,7 @@ static void resize_fbo_if_needed(struct fbo_target *target)
 		if (target->depth_buffer > 0) {
 			glBindRenderbuffer(GL_RENDERBUFFER, target->depth_buffer);
 			glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, sgc.screen_x, sgc.screen_y);
-			glFramebufferRenderbuffer(GL_RENDERBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, target->depth_buffer);
+			glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, target->depth_buffer);
 		}
 
 		glBindFramebuffer(GL_DRAW_FRAMEBUFFER, target->fbo);
