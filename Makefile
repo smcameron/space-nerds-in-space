@@ -1153,7 +1153,7 @@ $(OD)/snis_bin_dir.o:	snis_bin_dir.c snis_bin_dir.h ${ODT}
 	$(Q)$(COMPILE)
 
 $(OD)/stl_parser.o:	stl_parser.c Makefile ${ODT}
-	$(Q)$(COMPILE)
+	$(Q)$(COMPILE) ${SDLCFLAGS}
 
 bin/stl_parser:	stl_parser.c $(OD)/matrix.o $(OD)/mesh.o $(OD)/mathutils.o $(OD)/quat.o $(OD)/mtwist.o \
 		$(OD)/open-simplex-noise.o mikktspace/mikktspace.o \

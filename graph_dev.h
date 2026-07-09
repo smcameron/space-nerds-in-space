@@ -23,6 +23,7 @@
 #define INCLUDE_graph_device_H
 
 #include <stdint.h>
+#include <SDL.h>
 
 struct mesh;
 struct entity_context;
@@ -99,6 +100,14 @@ struct graph_dev_image_load_request {
 	char whynot[256];
 	int loaded_texture_index;
 };
+
+/** called before SDL is asked to create the window - can be used to preset
+ * driver specific hints, etc.
+ *
+ * @param flags pointer to the window flags to be used - can be mutated.
+*/
+extern void graph_dev_prepare_for_window(uint32_t *window_flags);
+extern void graph_dev_create_context(SDL_Window *window);
 
 extern unsigned int graph_dev_load_texture(const char *filename, int linear_colorspace);
 extern unsigned int graph_dev_load_texture_no_mipmaps(const char *filename, int linear_colorspace);

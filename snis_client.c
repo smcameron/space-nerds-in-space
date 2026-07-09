@@ -26032,28 +26032,20 @@ int main(int argc, char *argv[])
 	read_keymap_config_file(xdg_base_ctx);
 	update_splash_progress(9);
 
-	SDL_GL_SetAttribute(SDL_GL_RED_SIZE, 5);
-	SDL_GL_SetAttribute(SDL_GL_GREEN_SIZE, 5);
-	SDL_GL_SetAttribute(SDL_GL_BLUE_SIZE, 5);
-	/* SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 16); */
-	SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
-	SDL_GL_SetAttribute(SDL_GL_MULTISAMPLEBUFFERS, 0);
-	SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, 0);
-
-	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 2);
-	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 0);
-	SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
+	uint32_t windowFlags = SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIDDEN;
+	graph_dev_prepare_for_window(&windowFlags);
 
 	SDL_Window *window = SDL_CreateWindow("Space Nerds in Space",
 		SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
-		0, 0, SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIDDEN);
+		0, 0, windowFlags);
 	if (!window) {
 		fprintf(stderr, "Could not create window: %s\n", SDL_GetError());
 		exit(1);
 	}
 	update_splash_progress(12);
-	SDL_GLContext gl_context = SDL_GL_CreateContext(window);
-	(void) gl_context;
+
+	graph_dev_create_context(window);
+
 	setup_screen_parameters(window);
 	SDL_SetWindowSize(window, (int) (0.8 * SCREEN_WIDTH), (int) (0.8 * SCREEN_HEIGHT));
 	window_manager_can_constrain_aspect_ratio =
