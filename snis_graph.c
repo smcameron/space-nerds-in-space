@@ -8,7 +8,11 @@
 #include <string.h>
 #include <assert.h>
 #ifndef WITHOUTOPENGL
+#ifdef USE_GLES
+#include <glad/gles2.h>
+#else
 #include <glad/gl.h>
+#endif
 #include <png.h>
 #endif
 

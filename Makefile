@@ -9,6 +9,7 @@ USE_SNIS_XWINDOWS_HACKS=1
 PKG_CONFIG?=pkg-config
 SDL2_CONFIG?=sdl2-config
 SERVERSONLY ?= 0
+USE_GLES?=0
 
 # use "make OSX=1" for mac
 OSX=0
@@ -535,9 +536,15 @@ PNGCFLAGS:=$(shell $(PKG_CONFIG) --cflags libpng)
 SDLLIBS:=$(shell $(SDL2_CONFIG) --libs)
 SDLCFLAGS:=$(shell $(SDL2_CONFIG) --cflags)
 
+ifeq (${USE_GLES},0)
 GLADLIBS=
 GLADCFLAGS=-Iextern/glad/include
 GRAPH_OBJS=glad-gl.o graph_dev_opengl.o opengl_cap.o
+else
+GLADLIBS=
+GLADCFLAGS=-Iextern/glad-es/include -DUSE_GLES=1
+GRAPH_OBJS=glad-gles2.o graph_dev_gles.o gles_cap.o
+endif
 endif
 
 ifeq ($(OSX), 0)
@@ -857,6 +864,15 @@ $(OD)/graph_dev_opengl.o : graph_dev_opengl.c graph_dev.h shader.h vertex.h tria
 $(OD)/opengl_cap.o : opengl_cap.c Makefile ${ODT}
 	$(Q)$(SDLCOMPILE)
 
+$(OD)/graph_dev_gles.o : graph_dev_gles.c graph_dev.h shader.h vertex.h triangle.h \
+		mtwist.h mathutils.h matrix.h quat.h mesh.h vec4.h snis_graph.h graph_dev.h \
+		material.h entity.h entity_private.h snis_typeface.h opengl_cap.h png_utils.h \
+		Makefile ${ODT}
+	$(Q)$(SDLCOMPILE)
+
+$(OD)/gles_cap.o : gles_cap.c Makefile ${ODT}
+	$(Q)$(SDLCOMPILE)
+
 $(OD)/graph_dev_mesh_stub.o:	graph_dev_mesh_stub.c graph_dev_mesh_stub.h ${ODT}
 	$(Q)$(COMPILE)
 
@@ -874,6 +890,9 @@ $(OD)/shader.o : shader.c Makefile ${ODT}
 
 %.docking_ports.h: %.scad
 	$(Q)$(EXTRACTDOCKINGPORTS)
+
+$(OD)/glad-gles2.o:	extern/glad-es/src/gles2.c
+	$(Q)$(COMPILE) -Iextern/glad-es/include
 
 $(OD)/glad-gl.o:	extern/glad/src/gl.c
 	$(Q)$(COMPILE) -Iextern/glad/include
