@@ -3200,8 +3200,6 @@ void graph_dev_start_frame(void)
 	} else
 		sgc.fbo_2d = 0;
 
-	glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
-
 	if (draw_msaa_samples > 0 && msaa.fbo > 0) {
 
 		glEnable(GL_MULTISAMPLE);
@@ -4366,6 +4364,8 @@ int graph_dev_setup(const char *asset_dir)
 
 	if (texture_srgb_supported())
 		printf("sRGB texture supported\n");
+
+	glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
 
 	if (asset_dir)
 		snprintf(shader_directory, sizeof(shader_directory), "%s/shader", asset_dir);
