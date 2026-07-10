@@ -3999,12 +3999,10 @@ static void setup_smaa_effect_shader(const char *basename, struct graph_dev_gl_f
 	const char *frag_header;
 	vert_header =
 		"#version 150\n"
-		"#define INCLUDE_VS 1\n"
-		"#define SMAA_GLSL_3\n";
+		"#define INCLUDE_VS 1\n";
 	frag_header =
 		"#version 150\n"
-		"#define INCLUDE_FS 1\n"
-		"#define SMAA_GLSL_3\n";
+		"#define INCLUDE_FS 1\n";
 
 	const char *filenames[] = { "smaa-high.shader", "SMAA.hlsl", shader_filename };
 
