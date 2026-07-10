@@ -51,6 +51,17 @@ else
 ASANFLAG=
 endif
 
+# Hack for raspberry pi, had some trouble getting -fsanitize=bounds to compile
+# There is probably a better way to do this.
+MYARCH=$(shell arch)
+ifeq (${MYARCH},aarch64)
+BOUNDSFLAGS=
+UBSANFLAG=
+ASANFLAG=
+else
+BOUNDSFLAGS=-fsanitize=bounds
+endif
+
 # object fild directory
 OD=object_files
 
@@ -710,7 +721,7 @@ MYCFLAGS=-DDESTDIR=${DESTDIR} -DPREFIX=${PREFIX} ${DEBUGFLAG} ${PROFILEFLAG} \
 	--pedantic -Wall -Wextra -Wformat -Wformat=2 -Werror=format-security ${STOP_ON_WARN} -pthread -std=gnu99 ${RDYNAMIC} \
 	$(CFLAGS) -Wvla \
 	-DUSE_SNIS_XWINDOWS_HACKS=${USE_SNIS_XWINDOWS_HACKS} -fno-common \
-	-U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=3 -fsanitize=bounds \
+	-U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=3 ${BOUNDSFLAGS}\
 	-Warray-bounds \
 	-fstack-clash-protection -fstack-protector-strong -Wimplicit-fallthrough \
 	-Wl,-z,nodlopen -Wl,-z,noexecstack \
@@ -1218,7 +1229,7 @@ $(OD)/transport_contract.o:	transport_contract.c transport_contract.h Makefile $
 bin/test_transport_contract:	transport_contract.c transport_contract.h ${OD}/commodities.o \
 				${OD}/names.o ${OD}/mtwist.o ${OD}/string-utils.o ${OD}/infinite-taunt.o \
 				${ODT} ${BIN}
-	$(CC) -g ${ASANFLAG} ${UBFLAG} -fsanitize=bounds -DTEST_TRANSPORT_CONTRACT=1 \
+	$(CC) -g ${ASANFLAG} ${UBFLAG} ${BOUNDSFLAGS} -DTEST_TRANSPORT_CONTRACT=1 \
 			-o bin/test_transport_contract transport_contract.c \
 			${OD}/commodities.o ${OD}/names.o ${OD}/mtwist.o ${OD}/string-utils.o ${OD}/infinite-taunt.o
 
@@ -1314,7 +1325,7 @@ $(OD)/snis_nl.o:	snis_nl.c snis_nl.h Makefile ${ODT}
 	$(Q)$(COMPILE)
 
 snis_nl:	snis_nl.o ${OD}/string-utils.o ${OD}/spelled_numbers.o
-	$(CC) -fsanitize=bounds -g -DTEST_NL -o snis_nl ${OD}/string-utils.o ${OD}/spelled_numbers.o snis_nl.c
+	$(CC) ${BOUNDSFLAGS} -g -DTEST_NL -o snis_nl ${OD}/string-utils.o ${OD}/spelled_numbers.o snis_nl.c
 
 $(OD)/spelled_numbers.o:	spelled_numbers.c spelled_numbers.h Makefile ${ODT}
 	$(Q)$(COMPILE)
