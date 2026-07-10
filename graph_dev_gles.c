@@ -10,6 +10,7 @@
 #include <glad/gles2.h>
 #include <SDL.h>
 
+#include "arraysize.h"
 #include "shader.h"
 #include "vertex.h"
 #include "triangle.h"
@@ -30,11 +31,6 @@
 #include "snis_profile.h"
 #include "workqueue.h"
 #include "string-utils.h"
-
-/* helper function for sizing*/
-#ifndef ARRAY_ELEMENTS
-#define ARRAY_ELEMENTS(x) (sizeof(x)/sizeof((x)[0]))
-#endif
 
 
 #define OPENGL_VERSION_STRING "#version 100\n"
@@ -4402,7 +4398,7 @@ int graph_dev_setup(const char *asset_dir)
 	int want8bit = 0;
 	int bitWidth = 0;
 	static const SDL_GLattr attrs[] = { SDL_GL_RED_SIZE, SDL_GL_GREEN_SIZE, SDL_GL_BLUE_SIZE };
-	for (unsigned idx = 0; idx < ARRAY_ELEMENTS(attrs); idx++) {
+	for (unsigned idx = 0; idx < ARRAYSIZE(attrs); idx++) {
 		SDL_GL_GetAttribute(attrs[idx], &bitWidth);
 		if (bitWidth > 4) {
 			want8bit = 1;
