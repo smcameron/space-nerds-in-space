@@ -1293,7 +1293,6 @@ static void draw_vertex_buffer_2d(void)
 
 		glDisableVertexAttribArray(vertex_color_shader.vertex_position_id);
 		glDisableVertexAttribArray(vertex_color_shader.vertex_color_id);
-		glUseProgram(0);
 
 		/* orphan this buffer so we don't get blocked on these draw commands */
 		glBindBuffer(GL_ARRAY_BUFFER, sgc.vertex_buffer_2d);
@@ -1379,7 +1378,6 @@ static void graph_dev_draw_normal_lines(const struct mat44 *mat_mvp, struct mesh
 	glDrawArrays(GL_LINES, 0, m->ntriangles * 3 * 2);
 
 	glDisableVertexAttribArray(single_color_shader.vertex_position_id);
-	glUseProgram(0);
 
 	glDisable(GL_DEPTH_TEST);
 }
@@ -1609,7 +1607,6 @@ static void graph_dev_raster_texture(struct raster_texture_params *p)
 		glDisableVertexAttribArray(shader->vertex_bitangent_id);
 	if (shader->texture_coord_id >= 0)
 		glDisableVertexAttribArray(shader->texture_coord_id);
-	glUseProgram(0);
 
 	glDisable(GL_DEPTH_TEST);
 	if (p->do_cullface)
@@ -1684,7 +1681,6 @@ static void graph_dev_raster_single_color_lit(const struct mat44 *mat_mvp, const
 
 	glDisableVertexAttribArray(single_color_lit_shader.vertex_position_id);
 	glDisableVertexAttribArray(single_color_lit_shader.vertex_normal_id);
-	glUseProgram(0);
 
 	glDisable(GL_DEPTH_TEST);
 	glDisable(GL_CULL_FACE);
@@ -1792,7 +1788,6 @@ static void graph_dev_raster_atmosphere(const struct mat44 *mat_mvp, const struc
 
 	glDisableVertexAttribArray(shader->vertex_position_id);
 	glDisableVertexAttribArray(shader->vertex_normal_id);
-	glUseProgram(0);
 
 	glDisable(GL_DEPTH_TEST);
 	glDisable(GL_CULL_FACE);
@@ -1888,7 +1883,6 @@ static void graph_dev_raster_filled_wireframe_mesh(const struct mat44 *mat_mvp, 
 	glDrawArrays(GL_TRIANGLES, 0, ptr->ntriangles*3);
 
 	glDisableVertexAttribArray(filled_wireframe_shader.position_id);
-	glUseProgram(0);
 
 	glDisable(GL_DEPTH_TEST);
 	glDisable(GL_CULL_FACE);
@@ -1982,8 +1976,6 @@ static void graph_dev_raster_trans_wireframe_mesh(struct graph_dev_gl_trans_wire
 	} else {
 		glDisableVertexAttribArray(single_color_shader.vertex_position_id);
 	}
-
-	glUseProgram(0);
 
 	glDisable(GL_DEPTH_TEST);
 
@@ -2098,7 +2090,6 @@ static void graph_dev_raster_line_mesh(struct entity *e, const struct mat44 *mat
 		glDisableVertexAttribArray(line_single_color_shader.line_vertex0_id);
 		glDisableVertexAttribArray(line_single_color_shader.line_vertex1_id);
 	}
-	glUseProgram(0);
 
 	glDisable(GL_DEPTH_TEST);
 }
@@ -2150,7 +2141,6 @@ void graph_dev_raster_point_cloud_mesh(struct graph_dev_gl_point_cloud_shader *s
 	glDrawArrays(GL_POINTS, 0, ptr->npoints);
 
 	glDisableVertexAttribArray(shader->vertex_position_id);
-	glUseProgram(0);
 
 	glDisable(GL_DEPTH_TEST);
 	glDisable(GL_VERTEX_PROGRAM_POINT_SIZE);
@@ -2374,7 +2364,6 @@ static void graph_dev_raster_particle_animation(struct entity *e,
 	glDisableVertexAttribArray(textured_particle_shader.end_position_id);
 	glDisableVertexAttribArray(textured_particle_shader.end_tint_color_id);
 	glDisableVertexAttribArray(textured_particle_shader.end_apm_id);
-	glUseProgram(0);
 
 	glDisable(GL_DEPTH_TEST);
 	glDepthMask(GL_TRUE);
@@ -2953,7 +2942,6 @@ static void graph_dev_raster_full_screen_effect(struct graph_dev_gl_fs_effect_sh
 
 	glDisableVertexAttribArray(shader->vertex_position_id);
 	glDisableVertexAttribArray(shader->texture_coord_id);
-	glUseProgram(0);
 }
 
 /* If any textures loads (PNG decoding) have completed, send them to the GPU */
@@ -4680,7 +4668,6 @@ void graph_dev_draw_skybox(const struct mat44 *mat_vp)
 	glDrawArrays(GL_TRIANGLES, 0, cubemap_cube.nvertices);
 
 	glDisableVertexAttribArray(skybox_shader.vertex_id);
-	glUseProgram(0);
 	glDepthMask(GL_TRUE);
 	glEnable(GL_DEPTH_TEST);
 	glEnable(GL_CULL_FACE);
