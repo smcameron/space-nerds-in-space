@@ -22110,10 +22110,10 @@ static int get_process_count(char *pattern)
 		return 0;
 	char *s = fgets(buffer, sizeof(buffer), f);
 	if (!s) {
-		fclose(f);
+		pclose(f);
 		return 0;
 	}
-	fclose(f);
+	pclose(f);
 	int rc = sscanf(buffer, "%d", &value);
 	if (rc == 1)
 		return value;
