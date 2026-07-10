@@ -17,7 +17,7 @@ void main()
 	float dot = dot(v_Normal, lightVector);
 
 	// mimic the original snis software render lighting
-	dot = (1.0 - u_in_shade) * ((dot + 1.0) / 2.0);
+	dot = (1.0 - float(u_in_shade)) * ((dot + 1.0) / 2.0);
 
 	// ambient light
 	float diffuse = max(dot, u_Ambient);
