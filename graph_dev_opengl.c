@@ -3144,6 +3144,8 @@ void graph_dev_start_frame(void)
 	sgc.active_vp = 0;
 	VIEWPORT(0, 0, sgc.screen_x, sgc.screen_y);
 
+	glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
+
 	if (draw_render_to_texture && render_target_2d.fbo > 0) {
 		resize_fbo_if_needed(&render_target_2d);
 		sgc.fbo_2d = render_target_2d.fbo;
