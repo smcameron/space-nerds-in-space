@@ -1213,17 +1213,27 @@ static void resize_fbo_if_needed(struct fbo_target *target)
 {
 	PROFILE_ZONE_START("resize_fbo_if_needed");
 
+	glBindFramebuffer(GL_FRAMEBUFFER, target->fbo);
+
 	if (target->width != sgc.screen_x || target->height != sgc.screen_y) {
+		fprintf(stderr, "Resizing FBO %d attachments to %d x %d\n", target->fbo, sgc.screen_x, sgc.screen_y);
+
 		/* need to resize the fbo attachments */
 		if (target->color0_texture > 0) {
 			glBindTexture(GL_TEXTURE_2D, target->color0_texture);
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8,
-				sgc.screen_x, sgc.screen_y, 0, GL_RGB, GL_UNSIGNED_BYTE, 0);
+			if (GLAD_GL_ARB_texture_storage) {
+				glTexStorage2D(GL_TEXTURE_2D, 1, GL_RGBA8, sgc.screen_x, sgc.screen_y);
+			} else {
+				glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8,
+					sgc.screen_x, sgc.screen_y, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+			}
+			glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, target->color0_texture, 0);
 		}
 
 		if (target->depth_buffer > 0) {
 			glBindRenderbuffer(GL_RENDERBUFFER, target->depth_buffer);
 			glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, sgc.screen_x, sgc.screen_y);
+			glFramebufferRenderbuffer(GL_RENDERBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, target->depth_buffer);
 		}
 
 		glBindFramebuffer(GL_DRAW_FRAMEBUFFER, target->fbo);
