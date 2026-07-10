@@ -141,7 +141,6 @@
  *         SMAA_HLSL_3
  *         SMAA_HLSL_4
  *         SMAA_HLSL_4_1
- *         SMAA_GLSL_2 *
  *         SMAA_GLSL_3 *
  *         SMAA_GLSL_4 *
  *
@@ -497,7 +496,7 @@
 // Texture Access Defines
 
 #ifndef SMAA_AREATEX_SELECT
-#if defined(SMAA_GLSL_2) || defined(SMAA_HLSL_3)
+#if defined(SMAA_HLSL_3)
 #define SMAA_AREATEX_SELECT(sample) sample.ra
 #else
 #define SMAA_AREATEX_SELECT(sample) sample.rg
@@ -557,26 +556,15 @@ SamplerState PointSampler { Filter = MIN_MAG_MIP_POINT; AddressU = Clamp; Addres
 #define SMAAGather(tex, coord) tex.Gather(LinearSampler, coord, 0)
 #endif
 #endif
-#if defined(SMAA_GLSL_2) || defined(SMAA_GLSL_3) || defined(SMAA_GLSL_4)
+#if defined(SMAA_GLSL_3) || defined(SMAA_GLSL_4)
 #define SMAATexture2D(tex) sampler2D tex
 #define SMAATexturePass2D(tex) tex
-#if defined(SMAA_GLSL_2)
-#define SMAASampleLevelZero(tex, coord) texture2D(tex, coord)
-#define SMAASampleLevelZeroPoint(tex, coord) texture2D(tex, coord)
-#define SMAASample(tex, coord) texture2D(tex, coord)
-#define SMAASamplePoint(tex, coord) texture2D(tex, coord)
-#define SMAASampleLevelZeroOffset(tex, coord, offset) texture2D(tex, coord + offset * SMAA_RT_METRICS.xy)
-#define SMAASampleOffset(tex, coord, offset) texture2D(tex, coord + offset * SMAA_RT_METRICS.xy)
-#define round(x) (floor((x) + 0.5))
-#endif
-#if defined(SMAA_GLSL_3) || defined(SMAA_GLSL_4)
 #define SMAASampleLevelZero(tex, coord) textureLod(tex, coord, 0.0)
 #define SMAASampleLevelZeroPoint(tex, coord) textureLod(tex, coord, 0.0)
 #define SMAASampleLevelZeroOffset(tex, coord, offset) textureLodOffset(tex, coord, 0.0, offset)
 #define SMAASample(tex, coord) texture(tex, coord)
 #define SMAASamplePoint(tex, coord) texture(tex, coord)
 #define SMAASampleOffset(tex, coord, offset) texture(tex, coord, offset)
-#endif
 #define SMAA_FLATTEN
 #define SMAA_BRANCH
 #define lerp(a, b, t) mix(a, b, t)
@@ -598,7 +586,7 @@ SamplerState PointSampler { Filter = MIN_MAG_MIP_POINT; AddressU = Clamp; Addres
 #define bool4 bvec4
 #endif
 
-#if !defined(SMAA_HLSL_3) && !defined(SMAA_HLSL_4) && !defined(SMAA_HLSL_4_1) && !defined(SMAA_GLSL_2) && !defined(SMAA_GLSL_3) && !defined(SMAA_GLSL_4) && !defined(SMAA_CUSTOM_SL)
+#if !defined(SMAA_HLSL_3) && !defined(SMAA_HLSL_4) && !defined(SMAA_HLSL_4_1) && !defined(SMAA_GLSL_3) && !defined(SMAA_GLSL_4) && !defined(SMAA_CUSTOM_SL)
 #error you must define the shading language: SMAA_HLSL_*, SMAA_GLSL_* or SMAA_CUSTOM_SL
 #endif
 
