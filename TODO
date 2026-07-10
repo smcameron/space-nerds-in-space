@@ -431,3 +431,16 @@ NICE TO HAVE:
   in accordance with XDG dir spec for runtime usage.  snis_update_assets could check for
   updates periodically (probably the first run, plus on startup if more than a week has
   elapsed, or on user demand.)  Something like that.
+
+* Consider factoring out common code duplicated within graph_dev_gles.c and graph_dev_opengl.c
+
+	$ diff graph_dev_opengl.c graph_dev_gles.c | diffstat
+	 unknown |  421 +++++++++++++++++++++++++++++++++++++++++-----------------------
+	 1 file changed, 272 insertions(+), 149 deletions(-)
+	$ wc -l graph_dev_opengl.c graph_dev_gles.c
+	  5213 graph_dev_opengl.c
+	  5336 graph_dev_gles.c
+	 10549 total
+
+  Each of those files is around 5k lines, but they differ by only a few hundred lines.
+
