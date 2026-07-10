@@ -22924,7 +22924,6 @@ static int main_da_expose(SDL_Window *window)
 end_of_drawing:
 
 	graph_dev_end_frame();
-	glFinish();
 	SDL_GL_SwapWindow(window);
 
 	PROFILE_FRAME_END("main");
@@ -23671,10 +23670,6 @@ static void load_textures(void)
 	(void) loaded_something; /* To suppress scan-build from complaining about dead stores */
 
 	PROFILE_ZONE_END();
-#ifndef WITHOUTOPENGL
-	if (loaded_something)
-		glFinish();
-#endif
 }
 
 static int main_da_button_press(SDL_MouseButtonEvent *event)
