@@ -72,11 +72,71 @@
 static struct work_queue *image_loader_wq = NULL; /* queue of requests to load PNG images */
 static struct work_queue *loaded_images_wq = NULL; /* queue of decoded image data to upload to GPU */
 
-/* This texture_finished_loading[] array is indexed by texture name from glGenTextures()
- * which is sketchy as hell, but seems to work.
- */
-static unsigned char texture_finished_loading[MAX_LOADED_TEXTURES] = { 0 };
+struct texture_loading_status {
+	GLuint texture_id;
+	unsigned char finished_loading;
+	unsigned char in_use;
+};
+static struct texture_loading_status texture_load_status[MAX_LOADED_TEXTURES] = { 0 };
 pthread_mutex_t finished_loading_mutex = PTHREAD_MUTEX_INITIALIZER;
+
+/* return true if a texture is finished loading. finished_loading_mutex must be held. */
+static int texture_finished_loading(GLuint texture_name)
+{
+	for (int i = 0; i < MAX_LOADED_TEXTURES; i++)
+		if (texture_load_status[i].in_use && texture_load_status[i].texture_id == texture_name)
+			return texture_load_status[i].finished_loading;
+	return 0;
+}
+
+static void set_texture_load_status(GLuint texture_name, unsigned char load_status)
+{
+	/* finished_loading_mutex must be held. */
+	int first_unused = -1;
+	for (int i = 0; i < MAX_LOADED_TEXTURES; i++) {
+		if (first_unused == -1 && texture_load_status[i].in_use == 0) {
+			first_unused = i;
+			continue;
+		}
+		if (texture_load_status[i].in_use && texture_load_status[i].texture_id == texture_name) {
+			texture_load_status[i].finished_loading = load_status;
+			return;
+		}
+	}
+	if (first_unused != -1) {
+		texture_load_status[first_unused].texture_id = texture_name;
+		texture_load_status[first_unused].in_use = 1;
+		texture_load_status[first_unused].finished_loading = load_status;
+		return;
+	}
+	fprintf(stderr, "Too many textures at %s:%d\n", __FILE__, __LINE__);
+	abort();
+}
+
+static void mark_texture_load_pending(GLuint texture_name)
+{
+	/* finished_loading_mutex must be held. */
+	set_texture_load_status(texture_name, 0);
+}
+
+static void mark_texture_load_complete(GLuint texture_name)
+{
+	/* finished_loading_mutex must be held. */
+	set_texture_load_status(texture_name, 1);
+}
+
+static void mark_texture_load_unused(GLuint texture_name)
+{
+	/* finished_loading_mutex must be held. */
+	for (int i = 0; i < MAX_LOADED_TEXTURES; i++) {
+		if (texture_load_status[i].in_use && texture_load_status[i].texture_id == texture_name) {
+			texture_load_status[i].in_use = 0;
+			texture_load_status[i].texture_id = -1;
+			texture_load_status[i].finished_loading = 0;
+			break;
+		}
+	}
+}
 
 struct loaded_texture {
 	GLuint texture_id;
@@ -194,15 +254,10 @@ static void graph_dev_gen_texture_maybe_lock(int count, GLuint *texture_name, in
 {
 	glGenTextures(count, texture_name);
 
-	/* Using texture names as index into an array is a sketchy as hell, should
-	 * probably use a hash table instead, as I don't think the texture names
-	 * are guaranteed to be small integers from 0 ... number-of-textures though
-	 * in practice, they appear to behave in that way.
-	 */
 	if (lock)
 		pthread_mutex_lock(&finished_loading_mutex);
 	for (int i = 0; i < count; i++)
-		texture_finished_loading[texture_name[i]] = 0;
+		mark_texture_load_pending(texture_name[i]);
 	if (lock)
 		pthread_mutex_unlock(&finished_loading_mutex);
 }
@@ -4272,7 +4327,7 @@ static int cubemap_texture_to_gpu(struct graph_dev_image_load_request *r)
 		nloaded_cubemap_textures++;
 
 	GLuint tid = r->texture_id;
-	texture_finished_loading[tid] = 1;
+	mark_texture_load_complete(tid);
 
 	pthread_mutex_unlock(&finished_loading_mutex);
 	graph_dev_free_image_load_request(r);
@@ -4372,7 +4427,7 @@ unsigned int graph_dev_load_cubemap_texture(
 		}
 	}
 
-	/* See if we can re-use an expired texture */
+	/* See if we can re-use an expired texture (not the texture name itself though) */
 	GLuint cube_texture_id = (GLuint) -1;
 	for (int i = 0; i < nloaded_cubemap_textures; i++) {
 		if (loaded_cubemap_textures[i].expired) {
@@ -4399,10 +4454,12 @@ unsigned int graph_dev_load_cubemap_texture(
 		return 0;
 	}
 
-	if (cube_texture_id == (GLuint) -1)
-		graph_dev_gen_texture_no_lock(1, &cube_texture_id);
+	if (cube_texture_id != (GLuint) -1)
+		mark_texture_load_unused(cube_texture_id);
+	cube_texture_id = -1;
+	graph_dev_gen_texture_no_lock(1, &cube_texture_id);
 
-	texture_finished_loading[cube_texture_id] = 0;
+	mark_texture_load_pending(cube_texture_id);
 	pthread_mutex_unlock(&finished_loading_mutex);
 
 	struct graph_dev_image_load_request *r = calloc(1, sizeof(*r));
@@ -4544,7 +4601,7 @@ unsigned int graph_dev_texture_to_gpu(struct graph_dev_image_load_request *r)
 	if (r->loaded_texture_index == -1)
 		nloaded_textures++;
 	int tid = r->texture_id;
-	texture_finished_loading[tid] = 1;
+	mark_texture_load_complete(tid);
 	pthread_mutex_unlock(&finished_loading_mutex);
 	graph_dev_free_image_load_request(r);
 	return (unsigned int) tid;
@@ -4898,7 +4955,7 @@ int graph_dev_texture_ready(int i)
 	if (i == 0)
 		return 1;
 	pthread_mutex_lock(&finished_loading_mutex);
-	int x = texture_finished_loading[i];
+	int x = texture_finished_loading(i);
 	pthread_mutex_unlock(&finished_loading_mutex);
 	return x;
 }
@@ -4909,7 +4966,7 @@ int graph_dev_textures_ready(int *tids)
 	for (int i = 0; tids[i] != -1; i++) {
 		if (tids[i] == 0)
 			continue;
-		if (!texture_finished_loading[tids[i]]) {
+		if (!texture_finished_loading(tids[i])) {
 			pthread_mutex_unlock(&finished_loading_mutex);
 			return 0;
 		}
@@ -4938,8 +4995,7 @@ static unsigned int graph_dev_load_texture_helper(const char *filename, int line
 		}
 	}
 
-	/* See if we can re-use an expired texture id */
-	int reusing_expired_texture_id = 0;
+	/* See if we can re-use an expired texture id (not the actual texture_name though) */
 	int index = -1;
 	for (i = 0; i < nloaded_textures; i++) {
 		if (loaded_textures[i].expired) {
@@ -4955,15 +5011,14 @@ static unsigned int graph_dev_load_texture_helper(const char *filename, int line
 			loaded_textures[i].use_mipmaps = use_mipmaps;
 			loaded_textures[i].linear_colorspace = linear_colorspace;
 			texture_id = loaded_textures[i].texture_id;
-			texture_finished_loading[texture_id] = 0;
-			reusing_expired_texture_id = 1;
+			mark_texture_load_unused(texture_id);
 			index = i;
 			break;
 		}
 	}
 
-	if (!reusing_expired_texture_id)
-		graph_dev_gen_texture_no_lock(1, &texture_id);
+	graph_dev_gen_texture_no_lock(1, &texture_id);
+	mark_texture_load_pending(texture_id);
 	pthread_mutex_unlock(&finished_loading_mutex);
 
 	/* Queue up the image load request */
