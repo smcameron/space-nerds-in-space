@@ -1267,8 +1267,9 @@ static void enable_2d_viewport(void)
 				sgc.fbo_current = sgc.fbo_2d;
 			}
 		} else if (sgc.fbo_current != 0) {
+			static const GLenum drawBuffers[] = { GL_BACK };
 			glBindFramebuffer(GL_FRAMEBUFFER, 0);
-			glDrawBuffer(GL_BACK);
+			glDrawBuffers(ARRAY_ELEMENTS(drawBuffers), drawBuffers);
 			sgc.fbo_current = 0;
 		}
 
@@ -1287,8 +1288,9 @@ static void enable_3d_viewport(void)
 				sgc.fbo_current = sgc.fbo_3d;
 			}
 		} else if (sgc.fbo_current != 0) {
+			static const GLenum drawBuffers[] = { GL_BACK };
 			glBindFramebuffer(GL_FRAMEBUFFER, 0);
-			glDrawBuffer(GL_BACK);
+			glDrawBuffers(ARRAY_ELEMENTS(drawBuffers), drawBuffers);
 			sgc.fbo_current = 0;
 		}
 
@@ -3929,6 +3931,7 @@ static void setup_smaa_effect_shader(const char *basename, struct graph_dev_gl_f
 static void setup_smaa_effect(struct graph_dev_smaa_effect *effect)
 {
 	struct graph_dev_gl_fs_effect_shader *shader;
+	static const GLenum drawBuffers[] = { GL_COLOR_ATTACHMENT0 };
 
 	shader = &effect->edge_shader;
 	setup_smaa_effect_shader("smaa-edge", shader);
@@ -3997,13 +4000,13 @@ static void setup_smaa_effect(struct graph_dev_smaa_effect *effect)
 
 	glGenFramebuffers(1, &effect->edge_target.fbo);
 	glBindFramebuffer(GL_FRAMEBUFFER, effect->edge_target.fbo);
-	glDrawBuffer(GL_COLOR_ATTACHMENT0);
+	glDrawBuffers(ARRAY_ELEMENTS(drawBuffers), drawBuffers);
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
 		effect->edge_target.color0_texture, 0);
 
 	glGenFramebuffers(1, &effect->blend_target.fbo);
 	glBindFramebuffer(GL_FRAMEBUFFER, effect->blend_target.fbo);
-	glDrawBuffer(GL_COLOR_ATTACHMENT0);
+	glDrawBuffers(ARRAY_ELEMENTS(drawBuffers), drawBuffers);
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
 		effect->blend_target.color0_texture, 0);
 }
@@ -4020,6 +4023,8 @@ static void setup_2d(void)
 
 	/* render 2d to seperate fbo if supported */
 	if (fbo_render_to_texture_supported()) {
+		static const GLenum drawBuffers[] = {GL_COLOR_ATTACHMENT0};
+
 		graph_dev_gen_texture(1, &render_target_2d.color0_texture);
 		glBindTexture(GL_TEXTURE_2D, render_target_2d.color0_texture);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
@@ -4029,7 +4034,7 @@ static void setup_2d(void)
 
 		glGenFramebuffers(1, &render_target_2d.fbo);
 		glBindFramebuffer(GL_FRAMEBUFFER, render_target_2d.fbo);
-		glDrawBuffer(GL_COLOR_ATTACHMENT0);
+		glDrawBuffers(ARRAY_ELEMENTS(drawBuffers), drawBuffers);
 		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
 			render_target_2d.color0_texture, 0);
 	}
@@ -4231,6 +4236,7 @@ int graph_dev_setup(const char *asset_dir)
 	}
 
 	if (fbo_render_to_texture_supported()) {
+		static GLenum drawBuffers[] = { GL_COLOR_ATTACHMENT0 };
 		graph_dev_gen_texture(1, &post_target0.color0_texture);
 		glBindTexture(GL_TEXTURE_2D, post_target0.color0_texture);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
@@ -4243,7 +4249,7 @@ int graph_dev_setup(const char *asset_dir)
 
 		glGenFramebuffers(1, &post_target0.fbo);
 		glBindFramebuffer(GL_FRAMEBUFFER, post_target0.fbo);
-		glDrawBuffer(GL_COLOR_ATTACHMENT0);
+		glDrawBuffers(ARRAY_ELEMENTS(drawBuffers), drawBuffers);
 		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
 			post_target0.color0_texture, 0);
 		glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER,
@@ -4258,7 +4264,7 @@ int graph_dev_setup(const char *asset_dir)
 
 		glGenFramebuffers(1, &post_target1.fbo);
 		glBindFramebuffer(GL_FRAMEBUFFER, post_target1.fbo);
-		glDrawBuffer(GL_COLOR_ATTACHMENT0);
+		glDrawBuffers(ARRAY_ELEMENTS(drawBuffers), drawBuffers);
 		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
 			post_target1.color0_texture, 0);
 	}
