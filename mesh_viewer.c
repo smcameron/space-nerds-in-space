@@ -1252,7 +1252,7 @@ int main(int argc, char *argv[])
 
 	snis_typefaces_init();
 	sng_set_font_family(0);
-	graph_dev_setup("share/snis/shader");
+	graph_dev_setup(NULL);
 	setup_skybox("orange-haze");
 
 	SDL_SetWindowSize(screen, real_screen_width, real_screen_height);
