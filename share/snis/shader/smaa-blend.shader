@@ -19,14 +19,14 @@
 */
 
 #if defined(INCLUDE_VS)
-	varying vec2 v_TexCoord;
-	varying vec2 v_PixCoord;
-	varying vec4 v_Offset[3];
+	out vec2 v_TexCoord;
+	out vec2 v_PixCoord;
+	out vec4 v_Offset[3];
 
 	uniform mat4 u_MVPMatrix;
 
-	attribute vec4 a_Position;
-	attribute vec2 a_TexCoord;
+	in vec4 a_Position;
+	in vec2 a_TexCoord;
 
 	void main()
 	{
@@ -38,17 +38,18 @@
 #endif
 
 #if defined(INCLUDE_FS)
-	varying vec2 v_TexCoord;
-	varying vec2 v_PixCoord;
-	varying vec4 v_Offset[3];
+	in vec2 v_TexCoord;
+	in vec2 v_PixCoord;
+	in vec4 v_Offset[3];
 	uniform sampler2D u_EdgeTex;
 	uniform sampler2D u_AreaTex;
 	uniform sampler2D u_SearchTex;
+	out vec4 f_FragColor;
 
 	void main()
 	{
-		gl_FragColor = SMAABlendingWeightCalculationPS(v_TexCoord, v_PixCoord, v_Offset,
-			u_EdgeTex, u_AreaTex, u_SearchTex, ivec4(0));
+		f_FragColor = SMAABlendingWeightCalculationPS(v_TexCoord, v_PixCoord, v_Offset,
+			u_EdgeTex, u_AreaTex, u_SearchTex, vec4(0));
 	}
 #endif
 

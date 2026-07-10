@@ -10,10 +10,10 @@ uniform float u_Ambient;   // Ambient light, 0.1 is ok value
 
 uniform vec3 u_LightPos;   // The position of the light in eye space.
 
-attribute vec4 a_Position; // Per-vertex position information we will pass in.
-attribute vec3 a_Normal;   // Per-vertex normal information we will pass in.
+in vec4 a_Position; // Per-vertex position information we will pass in.
+in vec3 a_Normal;   // Per-vertex normal information we will pass in.
 
-varying vec3 v_Color;      // This will be passed into the fragment shader.
+out vec3 v_Color;      // This will be passed into the fragment shader.
 
 void main()                // The entry point for our vertex shader.
 {
@@ -28,13 +28,13 @@ void main()                // The entry point for our vertex shader.
 
 	// Calculate the dot product of the light vector and vertex normal. If the normal and light vector are
 	// pointing in the same direction then it will get max illumination.
-	float dot = (1 - u_in_shade) * dot(modelViewNormal, lightVector);
+	float dotV = (1.0 - u_in_shade) * dot(modelViewNormal, lightVector);
 
 	// mimic the original snis software render lighting
-	/* dot = (dot + 1.0) / 2.0; */
+	/* dotV = (dotV + 1.0) / 2.0; */
 
 	// ambient
-	float diffuse = max(dot, u_Ambient);
+	float diffuse = max(dotV, u_Ambient);
 
 	// Multiply the color by the illumination level. It will be interpolated across the triangle.
 	v_Color = u_Color * diffuse;

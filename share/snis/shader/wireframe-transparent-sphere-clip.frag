@@ -3,18 +3,20 @@ uniform vec3 u_Color; // Per-object color information we will pass in.
 uniform vec4 u_ClipSphere; // clipping sphere, w=radius squared
 uniform float u_ClipSphereRadiusFade; // percent fade to black distance past clip radius
 
-varying vec2 v_FragRadius; // this fragments distance to sphere center
-varying float v_EyeDot;
-varying float v_ClipSphereDot;
+in vec2 v_FragRadius; // this fragments distance to sphere center
+in float v_EyeDot;
+in float v_ClipSphereDot;
+
+out vec4 f_FragColor;
 
 #define CULL_BACKFACE_CLIP_AND_CAMERA 0
 
 void main()
 {
 #if CULL_BACKFACE_CLIP_AND_CAMERA
-	if (v_EyeDot <= 0 && v_ClipSphereDot <= 0)
+	if (v_EyeDot <= 0.0 && v_ClipSphereDot <= 0.0)
 #else
-	if (v_EyeDot <= 0)
+	if (v_EyeDot <= 0.0)
 #endif
 		discard;
 
@@ -26,6 +28,6 @@ void main()
 
 	float t = clamp(1.0 - (frag_radius - u_ClipSphere.w) / (u_ClipSphere.w * u_ClipSphereRadiusFade), 0.0, 1.0);
 
-	gl_FragColor = vec4(mix(vec3(0), u_Color, t), 1);
+	f_FragColor = vec4(mix(vec3(0), u_Color, t), 1.0);
 }
 

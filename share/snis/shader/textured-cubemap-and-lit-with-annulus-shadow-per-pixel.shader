@@ -21,25 +21,25 @@
 		Jeremy Van Grinsven, Stephen M. Cameron
 */
 #if defined(INCLUDE_VS)
-	varying vec3 v_Position;
-	varying vec3 v_Normal;
-	varying vec3 v_TexCoord;
+	out vec3 v_Position;
+	out vec3 v_Normal;
+	out vec3 v_TexCoord;
 
 	#if defined(USE_NORMAL_MAP)
-	varying vec3 v_Tangent;
-	varying vec3 v_BiTangent;
-	varying mat3 tbn;
+	out vec3 v_Tangent;
+	out vec3 v_BiTangent;
+	out mat3 tbn;
 	#endif
 
 	uniform mat4 u_MVPMatrix;  // A constant representing the combined model/view/projection matrix.
 	uniform mat4 u_MVMatrix;   // A constant representing the combined model/view matrix.
 	uniform mat3 u_NormalMatrix;
 
-	attribute vec4 a_Position; // Per-vertex position information we will pass in.
-	attribute vec3 a_Normal;   // Per-vertex normal, tangent, and bitangent information we will pass in.
+	in vec4 a_Position; // Per-vertex position information we will pass in.
+	in vec3 a_Normal;   // Per-vertex normal, tangent, and bitangent information we will pass in.
 #if defined(USE_NORMAL_MAP)
-	attribute vec3 a_Tangent;
-	attribute vec3 a_BiTangent;
+	in vec3 a_Tangent;
+	in vec3 a_BiTangent;
 #endif
 
 	void main()
@@ -64,14 +64,14 @@
 #endif
 
 #if defined(INCLUDE_FS)
-	varying vec3 v_Position;
-	varying vec3 v_Normal;
-	varying vec3 v_TexCoord;
+	in vec3 v_Position;
+	in vec3 v_Normal;
+	in vec3 v_TexCoord;
 
 	#if defined(USE_NORMAL_MAP)
-	varying vec3 v_Tangent;
-	varying vec3 v_BiTangent;
-	varying mat3 tbn;
+	in vec3 v_Tangent;
+	in vec3 v_BiTangent;
+	in mat3 tbn;
 	#endif
 
 	uniform samplerCube u_AlbedoTex;
@@ -101,7 +101,7 @@
 		if (abs(denom) > 0.000001) {
 			vec3 plane_dir = plane_pos - ray_pos;
 			t = dot(plane_normal, plane_dir) / denom;
-			return t >= 0;
+			return t >= 0.0;
 		}
 		return false;
 	}
@@ -109,7 +109,7 @@
 	bool intersect_disc(vec3 disc_normal, vec3 disc_center, float r_squared, vec3 ray_pos,
 		vec3 ray_dir, out float dist2)
 	{
-		float t = 0;
+		float t = 0.0;
 		if (intersect_plane(disc_normal, disc_center, ray_pos, ray_dir, t)) {
 			vec3 plane_intersect = ray_pos + ray_dir * t;
 			vec3 v = plane_intersect - disc_center;
@@ -119,6 +119,8 @@
 		return false;
 	}
 #endif
+
+	out vec4 f_FragColor;
 
 	void main()
 	{
@@ -142,7 +144,7 @@
 				float u = (sqrt(intersect_r_squared) - ir) /
 						(u_AnnulusRadius.z - ir);
 
-				vec4 ring_color = u_AnnulusTintColor * texture2D(u_AnnulusAlbedoTex, vec2(u, u_ring_texture_v));
+				vec4 ring_color = u_AnnulusTintColor * texture(u_AnnulusAlbedoTex, vec2(u, u_ring_texture_v));
 
 				/* how much we will shadow based on transparancy, so 1.0=no shadow, 0.0=full */
 				shadow  = 1.0 - ring_color.a;
@@ -151,7 +153,7 @@
 #endif
 
 #if defined(USE_NORMAL_MAP)
-		vec3 norm_sample = normalize(textureCube(u_NormalMapTex, v_TexCoord).xyz * 2.0 - 1.0);
+		vec3 norm_sample = normalize(texture(u_NormalMapTex, v_TexCoord).xyz * 2.0 - 1.0);
 		vec3 pixel_normal = tbn * norm_sample;
 		float normal_map_shadow = max(0.0, dot(pixel_normal, light_dir));
 		float diffuse = max(shadow * normal_map_shadow, u_Ambient);
@@ -165,7 +167,7 @@
                 // blinn phong half vector specular
                 vec3 view_dir = normalize(-v_Position);
                 vec3 half_dir = normalize(light_dir + view_dir);
-                float n_dot_h = max(0, clamp(dot(v_Normal, half_dir), 0.0, 1.0));
+                float n_dot_h = max(0.0, clamp(dot(v_Normal, half_dir), 0.0, 1.0));
 #if defined(USE_SPECULAR)
 		float SpecularPower = 512.0;
 		float SpecularIntensity = 0.9;
@@ -197,19 +199,19 @@
 #endif
 
 
-		gl_FragColor = textureCube(u_AlbedoTex, v_TexCoord);
+		f_FragColor = texture(u_AlbedoTex, v_TexCoord);
 #if defined(USE_SPECULAR)
 		vec3 white = vec3(1.0, 1.0, 1.0);
-		float not_clouds = 1.0 - smoothstep(0.8, 1.0, dot(gl_FragColor.rgb, white));
-		float mostly_blue = smoothstep(0.75, 0.8, dot(normalize(u_WaterColor), normalize(gl_FragColor.rgb)));
-		gl_FragColor.rgb += specular_color * mostly_blue * not_clouds;
+		float not_clouds = 1.0 - smoothstep(0.8, 1.0, dot(f_FragColor.rgb, white));
+		float mostly_blue = smoothstep(0.75, 0.8, dot(normalize(u_WaterColor), normalize(f_FragColor.rgb)));
+		f_FragColor.rgb += specular_color * mostly_blue * not_clouds;
 #endif
-		gl_FragColor.rgb *= diffuse;
+		f_FragColor.rgb *= diffuse;
 
 		/* tint with alpha pre multiply */
-		gl_FragColor.rgb *= u_TintColor.rgb;
-		gl_FragColor *= u_TintColor.a;
-		gl_FragColor = filmic_tonemap(gl_FragColor);
+		f_FragColor.rgb *= u_TintColor.rgb;
+		f_FragColor *= u_TintColor.a;
+		f_FragColor = filmic_tonemap(f_FragColor);
 	}
 #endif
 

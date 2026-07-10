@@ -20,10 +20,12 @@
  *  Alexandros Frantzis (glmark2)
  */
 
-varying vec4 dist;
+in vec4 dist;
 
 uniform vec3 line_color;
 uniform vec3 triangle_color;
+
+out vec4 f_FragColor;
 
 void main(void)
 {
@@ -35,6 +37,6 @@ void main(void)
 	// Get the intensity of the wireframe line
 	float i = exp2(-2.0 * d * d);
 
-	gl_FragColor = vec4(mix(triangle_color, line_color, i), 1.0);
+	f_FragColor = vec4(mix(triangle_color, line_color, i), 1.0);
 }
 

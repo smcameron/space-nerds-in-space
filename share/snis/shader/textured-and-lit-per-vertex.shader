@@ -1,17 +1,17 @@
 
 
 #if defined(INCLUDE_VS)
-	varying vec3 v_LightColor;
-	varying vec2 v_TexCoord;
+	out vec3 v_LightColor;
+	out vec2 v_TexCoord;
 	uniform mat4 u_MVPMatrix;  // A constant representing the combined model/view/projection matrix.
 	uniform mat4 u_MVMatrix;   // A constant representing the combined model/view matrix.
 	uniform mat3 u_NormalMatrix;
 	uniform vec3 u_LightPos;   // The position of the light in eye space.
 	uniform float u_Ambient;
 
-	attribute vec4 a_Position; // Per-vertex position information we will pass in.
-	attribute vec3 a_Normal;   // Per-vertex normal information we will pass in.
-	attribute vec2 a_TexCoord; // Per-vertex texture coord we will pass in.
+	in vec4 a_Position; // Per-vertex position information we will pass in.
+	in vec3 a_Normal;   // Per-vertex normal information we will pass in.
+	in vec2 a_TexCoord; // Per-vertex texture coord we will pass in.
 
 	void main()
 	{
@@ -37,18 +37,19 @@
 #endif
 
 #if defined(INCLUDE_FS)
-	varying vec3 v_LightColor;
-	varying vec2 v_TexCoord;
+	in vec3 v_LightColor;
+	in vec2 v_TexCoord;
 	uniform sampler2D u_AlbedoTex;
 	uniform vec4 u_TintColor;
+	out vec4 f_FragColor;
 
 	void main()
 	{
-		gl_FragColor = vec4(v_LightColor) * texture2D(u_AlbedoTex, v_TexCoord);
+		f_FragColor = vec4(v_LightColor) * texture(u_AlbedoTex, v_TexCoord);
 
 		/* tint with alpha pre multiply */
-		gl_FragColor.rgb *= u_TintColor.rgb;
-		gl_FragColor *= u_TintColor.a;
+		f_FragColor.rgb *= u_TintColor.rgb;
+		f_FragColor *= u_TintColor.a;
 	}
 #endif
 

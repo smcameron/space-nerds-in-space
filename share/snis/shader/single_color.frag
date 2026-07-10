@@ -1,8 +1,9 @@
 
 uniform vec4 u_Color;      // Per-object color information we will pass in.
+out vec4 f_FragColor;
 
 void main()
 {
-	gl_FragColor = u_Color;
+	f_FragColor = u_Color;
 }
 

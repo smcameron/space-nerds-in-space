@@ -3,7 +3,7 @@
 #include <string.h>
 #include <limits.h>
 
-#include <GL/glew.h>
+#include <glad/gl.h>
 
 #include "shader.h"
 #include "stacktrace.h"

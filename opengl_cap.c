@@ -18,7 +18,7 @@
 	foundation, inc., 51 franklin st, fifth floor, boston, ma  02110-1301  usa
 */
 
-#include <GL/glew.h>
+#include <glad/gl.h>
 #include "opengl_cap.h"
 
 #include <stdlib.h>
@@ -34,7 +34,7 @@ int msaa_framebuffer_supported()
 	}
 	if (suppress)
 		return 0;
-	return GLEW_ARB_multisample;
+	return GLAD_GL_ARB_multisample;
 }
 
 int msaa_render_to_fbo_supported()
@@ -48,7 +48,7 @@ int msaa_render_to_fbo_supported()
 	}
 	if (suppress)
 		return 0;
-	return GLEW_EXT_framebuffer_multisample && msaa_max_samples() > 0;
+	return msaa_max_samples() > 0;
 }
 
 int msaa_max_samples()
@@ -69,28 +69,17 @@ int fbo_render_to_texture_supported()
 	}
 	if (suppress)
 		return 0;
-	return GLEW_EXT_framebuffer_object && GLEW_EXT_framebuffer_blit;
+	return 1;
 }
 
 int framebuffer_srgb_supported()
 {
-	/* see if extension exists */
-	if (!GLEW_EXT_framebuffer_sRGB)
-		return 0;
-
-	/* test the current framebuffer if it is capable */
-	GLboolean boolmode;
-	glGetBooleanv(GL_FRAMEBUFFER_SRGB_CAPABLE_EXT, &boolmode);
-	GLenum ret = glGetError();
-	if (ret != 0)
-		return 0;
-
-	return boolmode;
+	return 1;
 }
 
 int texture_srgb_supported()
 {
-	return GLEW_EXT_texture_sRGB;
+	return 1;
 }
 
 

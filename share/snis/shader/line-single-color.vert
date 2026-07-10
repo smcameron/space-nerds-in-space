@@ -24,14 +24,14 @@
 uniform mat4 u_MVPMatrix;
 uniform vec2 u_Viewport;
 
-attribute vec4 a_MultiOne;
-attribute vec4 a_Position;
+in vec4 a_MultiOne;
+in vec4 a_Position;
 // Coordinates of the line vertices this vertex belongs to
-attribute vec4 a_LineVertex0;
-attribute vec4 a_LineVertex1;
+in vec4 a_LineVertex0;
+in vec4 a_LineVertex1;
 
-varying float v_IsDotted;
-varying vec4 v_Dist;
+out float v_IsDotted;
+out vec4 v_Dist;
 
 void main(void)
 {

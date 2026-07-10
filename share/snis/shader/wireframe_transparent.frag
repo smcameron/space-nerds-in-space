@@ -1,13 +1,15 @@
 
 uniform vec3 u_Color;      // Per-object color information we will pass in.
 
-varying float v_EyeDot;
+in float v_EyeDot;
+
+out vec4 f_FragColor;
 
 void main()
 {
-	if (v_EyeDot <= 0)
+	if (v_EyeDot <= 0.0)
 		discard;
 
-	gl_FragColor = vec4(u_Color, 1);
+	f_FragColor = vec4(u_Color, 1);
 }
 

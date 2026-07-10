@@ -8,7 +8,7 @@
 #include <string.h>
 #include <assert.h>
 #ifndef WITHOUTOPENGL
-#include <GL/glew.h>
+#include <glad/gl.h>
 #include <png.h>
 #endif
 

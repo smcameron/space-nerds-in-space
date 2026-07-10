@@ -19,13 +19,13 @@
 */
 
 #if defined(INCLUDE_VS)
-	varying vec2 v_TexCoord;
-	varying vec4 v_Offset;
+	out vec2 v_TexCoord;
+	out vec4 v_Offset;
 
 	uniform mat4 u_MVPMatrix;
 
-	attribute vec4 a_Position;
-	attribute vec2 a_TexCoord;
+	in vec4 a_Position;
+	in vec2 a_TexCoord;
 
 	void main()
 	{
@@ -37,14 +37,15 @@
 #endif
 
 #if defined(INCLUDE_FS)
-	varying vec2 v_TexCoord;
-	varying vec4 v_Offset;
+	in vec2 v_TexCoord;
+	in vec4 v_Offset;
 	uniform sampler2D u_AlbedoTex;
 	uniform sampler2D u_BlendTex;
+	out vec4 f_FragColor;
 
 	void main()
 	{
-		gl_FragColor = SMAANeighborhoodBlendingPS(v_TexCoord, v_Offset, u_AlbedoTex,
+		f_FragColor = SMAANeighborhoodBlendingPS(v_TexCoord, v_Offset, u_AlbedoTex,
 			u_BlendTex);
 	}
 #endif

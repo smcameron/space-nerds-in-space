@@ -3,9 +3,11 @@ uniform vec3 u_LightPos;       // The position of the light in eye space.
 uniform float u_Alpha;		// Relative alpha, 0.0 - 1.0.
 uniform float u_atmosphere_brightness; // 0.0 - 1.0, default 0.5  Brightness of atmosphere
 
-varying vec3 v_Position;       // Interpolated position for this fragment.
-varying vec3 v_Color;          // This is the color from the vertex shader interpolated across the triangle per fragment
-varying vec3 v_Normal;         // Interpolated normal for this fragment.
+in vec3 v_Position;       // Interpolated position for this fragment.
+in vec3 v_Color;          // This is the color from the vertex shader interpolated across the triangle per fragment
+in vec3 v_Normal;         // Interpolated normal for this fragment.
+
+out vec4 f_FragColor;
 
 float map(in float x, float min1, float max1, float min2, float max2)
 {
@@ -26,7 +28,7 @@ float map(in float x, float min1, float max1, float min2, float max2)
 		if (abs(denom) > 0.000001) {
 			vec3 plane_dir = plane_pos - ray_pos;
 			t = dot(plane_normal, plane_dir) / denom;
-			return t >= 0;
+			return t >= 0.0;
 		}
 		return false;
 	}
@@ -34,7 +36,7 @@ float map(in float x, float min1, float max1, float min2, float max2)
 	bool intersect_disc(vec3 disc_normal, vec3 disc_center, float r_squared, vec3 ray_pos,
 		vec3 ray_dir, out float dist2)
 	{
-		float t = 0;
+		float t = 0.0;
 		if (intersect_plane(disc_normal, disc_center, ray_pos, ray_dir, t)) {
 			vec3 plane_intersect = ray_pos + ray_dir * t;
 			vec3 v = plane_intersect - disc_center;
@@ -87,7 +89,7 @@ void main()
 			float u = (sqrt(intersect_r_squared) - ir) /
 					(u_AnnulusRadius.z - ir);
 
-			vec4 ring_color = u_AnnulusTintColor * texture2D(u_AnnulusAlbedoTex, vec2(u, u_ring_texture_v));
+			vec4 ring_color = u_AnnulusTintColor * texture(u_AnnulusAlbedoTex, vec2(u, u_ring_texture_v));
 
 			/* how much we will shadow based on transparancy, so 1.0=no shadow, 0.0=full */
 			ring_shadow  = 1.0 - ring_color.a;
@@ -101,7 +103,7 @@ void main()
 	/* This transparency just doesn't seem to work like I want it to. */
 	/* fragcolor.a = min(fragcolor.a, smoothstep(0.7, 1.0, ring_shadow) * ring_shadow); */ /* atmosphere becomes more transparent in shadow */
 	fragcolor.rgb *= map(ring_shadow, 0.0, 1.0, 0.8, 1.0);
-	gl_FragColor = fragcolor;
-	gl_FragColor = filmic_tonemap(gl_FragColor);
+	f_FragColor = fragcolor;
+	f_FragColor = filmic_tonemap(f_FragColor);
 }
 
