@@ -23814,6 +23814,9 @@ static int process_save_engineering_preset(struct game_client *c)
 	if (rc)
 		return rc;
 
+	if (preset >= ENG_PRESET_NUMBER) /* Make sure preset is within array bounds */
+		return -1;
+
 	int i;
 
 	pthread_mutex_lock(&universe_mutex);
