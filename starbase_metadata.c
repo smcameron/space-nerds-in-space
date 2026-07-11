@@ -76,6 +76,10 @@ int read_starbase_model_metadata(char *asset_dir, char *filename, int *nstarbase
 					path, lineno);
 				goto bailout;
 			}
+			if (np < 1) {
+				fprintf(stderr, "Need at least one starbase model\n");
+				goto bailout;
+			}
 			if (np > max_starbase_models) {
 				fprintf(stderr,
 					"Too many starbase models (%d), capping to %d\n",
@@ -92,6 +96,11 @@ int read_starbase_model_metadata(char *asset_dir, char *filename, int *nstarbase
 		if (rc != 2) {
 			fprintf(stderr, "%s:%d bad starbase model specification\n",
 					path, lineno);
+			goto bailout;
+		}
+		if (pc >= np) {
+			fprintf(stderr, "More starbase models than declared, max = %d, declared = %d\n",
+				max_starbase_models, np);
 			goto bailout;
 		}
 		(*starbase_metadata)[pc].model_file = strdup(model_file);
@@ -151,6 +160,10 @@ int read_starbase_model_metadata(char *asset_dir, char *filename, int *nstarbase
 		(*starbase_metadata)[pc++].docking_port_file = strdup(path);
 		if (pc > max_starbase_models)
 			break;
+	}
+	if (pc != np) {
+		fprintf(stderr, "Number of starbase models does not match number declared: %d vs %d\n", pc, np);
+		goto bailout;
 	}
 	fclose(f);
 	printf("done\n");
