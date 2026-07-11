@@ -1070,6 +1070,7 @@ struct mesh *read_obj_file(char *file_name)
 	m->l = NULL;
 	m->tex = NULL;
 	m->graph_ptr = 0;
+	m->material = NULL;
 
 	continuation = 0;
 	while (!feof(f)) {
