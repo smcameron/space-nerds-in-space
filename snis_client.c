@@ -1541,6 +1541,10 @@ static int update_ship_sdata(uint32_t id, uint8_t subclass, char *name,
 	i = lookup_object_by_id(id);
 	if (i < 0)
 		return i;
+	if (subclass > nshiptypes - 1) {
+		fprintf(stderr, "Bad subclass %d in update_ship_sdata, zeroing.\n", subclass);
+		subclass = 0;
+	}
 	go[i].sdata.subclass = subclass;
 	go[i].sdata.shield_strength = shield_strength;
 	go[i].sdata.shield_wavelength = shield_wavelength;
