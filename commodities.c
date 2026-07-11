@@ -288,8 +288,15 @@ struct commodity *read_commodities(char *filename, int *ncommodities)
 		rc = parse_line(filename, line, ln, &c);
 		switch (rc) {
 		case 0:
-			clist[n] = c;
-			n++;
+			if (n < MAX_COMMODITIES) {
+				clist[n] = c;
+				n++;
+				if (n >= MAX_COMMODITIES) {
+					fprintf(stderr, "Reached maximum number of commodities %d.\n", MAX_COMMODITIES);
+					fclose(f);
+					goto finish;
+				}
+			}
 			continue;
 		case 1: /* comment */
 			continue;
@@ -300,6 +307,7 @@ struct commodity *read_commodities(char *filename, int *ncommodities)
 			return NULL;
 		}
 	}
+finish:
 	*ncommodities = n;
 	fclose(f);
 	sanity_test_commodities(clist, *ncommodities);
