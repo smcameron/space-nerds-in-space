@@ -2327,6 +2327,14 @@ static void planet_move(struct snis_entity *planet)
 	add_planetary_lightning(planet);
 }
 
+static void enforce_bounds_u8(uint8_t *v, size_t max_value)
+{
+	if (*v > max_value) {
+		stacktrace("Out of range value received from server\n");
+		*v = 0;
+	}
+}
+
 static int update_planet(uint32_t id, uint32_t timestamp, double x, double y, double z,
 				union quat *orientation, double r, uint8_t government,
 				uint8_t tech_level, uint8_t economy, uint32_t dseed, int hasring,
@@ -2419,6 +2427,12 @@ static int update_planet(uint32_t id, uint32_t timestamp, double x, double y, do
 	} else {
 		update_generic_object(i, timestamp, x, y, z, 0.0, 0.0, 0.0, NULL, 1);
 	}
+
+	/* Enforce bounds on quantities used as array indices */
+	enforce_bounds_u8(&government, ARRAYSIZE(government_name) - 1);
+	enforce_bounds_u8(&tech_level, ARRAYSIZE(tech_level_name) - 1);
+	enforce_bounds_u8(&economy, ARRAYSIZE(economy_name) - 1);
+
 	go[i].tsd.planet.government = government;
 	go[i].tsd.planet.tech_level = tech_level;
 	go[i].tsd.planet.economy = economy;
