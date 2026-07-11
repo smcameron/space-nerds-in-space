@@ -21595,6 +21595,10 @@ static int process_rts_func_comms_button(struct game_client *c)
 		return rc;
 	pthread_mutex_lock(&universe_mutex);
 	int ship = lookup_by_id(bridgelist[c->bridge].shipid);
+	if (ship < 0) {
+		pthread_mutex_unlock(&universe_mutex);
+		return -1;
+	}
 	if (go[ship].tsd.ship.rts_active_button != rts_button_number)
 		go[ship].tsd.ship.rts_active_button = rts_button_number;
 	else
