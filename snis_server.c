@@ -21361,7 +21361,7 @@ static int process_comms_mainscreen(struct game_client *c)
 
 static int process_demon_command(struct game_client *c)
 {
-	unsigned char buffer[sizeof(struct demon_cmd_packet) + 255 * sizeof(uint32_t)];
+	unsigned char buffer[sizeof(struct demon_cmd_packet) + 2 * 255 * sizeof(uint32_t)];
 	struct packed_buffer pb;
 	int i, rc;
 	uint32_t ix, iz;
