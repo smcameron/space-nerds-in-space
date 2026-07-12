@@ -4466,8 +4466,10 @@ static void sci_next_prev_target_pressed(int direction)
 	pthread_mutex_lock(&universe_mutex);
 
 	struct snis_entity *our_ship = find_my_ship();
-	if (!our_ship)
+	if (!our_ship) {
+		pthread_mutex_unlock(&universe_mutex);
 		return;
+	}
 
 	double range = (MAX_SCIENCE_SCREEN_RADIUS - MIN_SCIENCE_SCREEN_RADIUS) *
 			(our_ship->tsd.ship.scizoom / 255.0) + MIN_SCIENCE_SCREEN_RADIUS;
@@ -4499,8 +4501,10 @@ static void sci_next_prev_target_pressed(int direction)
 		ncandidates++;
 	}
 
-	if (ncandidates == 0)
+	if (ncandidates == 0) {
+		pthread_mutex_unlock(&universe_mutex);
 		return;
+	}
 
 	/* Sort all the candidate science targets by bearing */
 #if defined(__APPLE__)  || defined(__FreeBSD__)
