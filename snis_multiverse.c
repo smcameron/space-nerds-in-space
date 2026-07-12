@@ -473,7 +473,8 @@ static int restore_bridge_info(const char *filename, struct bridge_info *b, unsi
 	 * We need to be careful not to overwrite the starsystem with old data.
 	 */
 	memset(b->starsystem_name, 0, sizeof(b->starsystem_name));
-	rc = sscanf(contents, "starsystem:%s", system);
+	BUILD_ASSERT(sizeof(system) == 100);
+	rc = sscanf(contents, "starsystem:%100s", system);
 	if (rc == 1) {
 		snprintf(b->starsystem_name, sizeof(b->starsystem_name) - 1, "%s", system);
 		nextline = strchr(contents, '\n');
