@@ -25,6 +25,7 @@
 
 #include "string-utils.h"
 #include "solarsystem_config.h"
+#include "build_bug_on.h"
 
 static void free_string_ptr(char **x)
 {
@@ -149,7 +150,10 @@ struct solarsystem_asset_spec *solarsystem_asset_spec_read(char *filename)
 			a->sun_color.g = 255;
 			a->sun_color.b = 179;
 			field = get_field(line);
-			rc = sscanf(field, "%s %s %s %hhu %hhu %hhu", word1, word2, word3, &r, &g, &b);
+			BUILD_ASSERT(sizeof(word1) == 1000);
+			BUILD_ASSERT(sizeof(word2) == 1000);
+			BUILD_ASSERT(sizeof(word3) == 1000);
+			rc = sscanf(field, "%1000s %1000s %1000s %hhu %hhu %hhu", word1, word2, word3, &r, &g, &b);
 			if (rc == 6) {
 				a->planet_texture[planet_textures_read] = strdup(word1);
 				a->planet_normalmap[planet_textures_read] = strdup(word2);
@@ -160,7 +164,7 @@ struct solarsystem_asset_spec *solarsystem_asset_spec_read(char *filename)
 				planet_textures_read++;
 				continue;
 			}
-			rc = sscanf(field, "%s %s %hhu %hhu %hhu", word1, word2, &r, &g, &b);
+			rc = sscanf(field, "%1000s %1000s %hhu %hhu %hhu", word1, word2, &r, &g, &b);
 			if (rc == 5) {
 				a->planet_texture[planet_textures_read] = strdup(word1);
 				a->planet_type[planet_textures_read] = strdup(word2);
@@ -171,7 +175,7 @@ struct solarsystem_asset_spec *solarsystem_asset_spec_read(char *filename)
 				planet_textures_read++;
 				continue;
 			}
-			rc = sscanf(field, "%s %s %s", word1, word2, word3);
+			rc = sscanf(field, "%1000s %1000s %1000s", word1, word2, word3);
 			if (rc == 3) {
 				a->planet_texture[planet_textures_read] = strdup(word1);
 				a->planet_normalmap[planet_textures_read] = strdup(word2);
@@ -182,7 +186,7 @@ struct solarsystem_asset_spec *solarsystem_asset_spec_read(char *filename)
 				planet_textures_read++;
 				continue;
 			}
-			rc = sscanf(field, "%s %s", word1, word2);
+			rc = sscanf(field, "%1000s %1000s", word1, word2);
 			if (rc == 2) { /* old style, no normal map */
 				a->planet_texture[planet_textures_read] = strdup(word1);
 				a->planet_normalmap[planet_textures_read] = strdup("no-normal-map");
