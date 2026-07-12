@@ -152,7 +152,7 @@ static void translate_mode_names(char *line)
 	char modename[255];
 
 	/* Find the first word after "mode" */
-	rc = sscanf(line, " mode %s%*[^	 ]", modename);
+	rc = sscanf(line, " mode %255s%*[^	 ]", modename);
 	if (rc != 1)
 		return;
 
@@ -184,16 +184,17 @@ static int parse_joystick_cfg_line(struct joystick_config *cfg, char *filename, 
 	char *joysticks_found[], int njoysticks_found, int *current_device)
 {
 	int rc;
+	/* if you change the size of device[] or function[], change the corresponding sscanf() calls below */
 	char device[1000];
-	int axis, button, invert, deadzone;
 	char function[1000];
+	int axis, button, invert, deadzone;
 	joystick_axis_fn jaf;
 	joystick_button_fn jbf;
 	static int mode = -1;
 	int tmpmode;
 	unsigned char dummy;
 
-	rc = sscanf(line, "device: %s", device);
+	rc = sscanf(line, "device: %1000s", device);
 	if (rc == 1) {
 		int i;
 
@@ -217,19 +218,19 @@ static int parse_joystick_cfg_line(struct joystick_config *cfg, char *filename, 
 	}
 
 	invert = 1; /* not inverted */
-	rc = sscanf(line, " mode %d invert axis %d %s %d", &mode, &axis, function, &deadzone);
+	rc = sscanf(line, " mode %d invert axis %d %1000s %d", &mode, &axis, function, &deadzone);
 	if (rc >= 3)
 		invert = -1; /* inverted */
 	else
-		rc = sscanf(line, " mode %d axis %d %s %d", &mode, &axis, function, &deadzone);
+		rc = sscanf(line, " mode %d axis %d %1000s %d", &mode, &axis, function, &deadzone);
 
 	/* Maybe mode is implicit */
 	if (rc < 3 && mode >= 0) {
-		rc = sscanf(line, " invert axis %d %s %d", &axis, function, &deadzone);
+		rc = sscanf(line, " invert axis %d %1000s %d", &axis, function, &deadzone);
 		if (rc >= 2)
 			invert = -1; /* inverted */
 		else
-			rc = sscanf(line, " axis %d %s %d", &axis, function, &deadzone);
+			rc = sscanf(line, " axis %d %1000s %d", &axis, function, &deadzone);
 		if (rc >= 2)
 			rc++; /* plus 1 for the implicit "mode" */
 	}
@@ -269,11 +270,11 @@ static int parse_joystick_cfg_line(struct joystick_config *cfg, char *filename, 
 		}
 		return 0;
 	}
-	rc = sscanf(line, " mode %d button %d %s", &mode, &button, function);
+	rc = sscanf(line, " mode %d button %d %1000s", &mode, &button, function);
 
 	/* Maybe mode is implicit */
 	if (rc != 3 && mode >= 0) {
-		rc = sscanf(line, " button %d %s", &button, function);
+		rc = sscanf(line, " button %d %1000s", &button, function);
 		if (rc >= 2)
 			rc++; /* plus 1 for implicit mode */
 	}
