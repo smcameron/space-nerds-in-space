@@ -204,8 +204,15 @@ static int wwviaudio_read_ogg_clip_internal(int clipnum, char *filename)
 	if (clipnum >= allocated_sound_clips || clipnum < 0)
 		return -1;
 
-	if (clip[clipnum].sample != NULL) /* overwriting a previously read clip...? */
+	if (clip[clipnum].sample != NULL) { /* overwriting a previously read clip...? */
 		free(clip[clipnum].sample);
+		/* NULL it out so that if the following wwviaudio_read_ogg... fails, it won't
+		 * contain the old pointer */
+		clip[clipnum].sample = NULL;
+	}
+	/* TODO: There is a danger that the audio playing thread could be reading what
+	 *  we just free'd.  Mitigate that somehow.
+	 */
 
 	return wwviaudio_read_ogg_clip_into_allocated_buffer(filename, &clip[clipnum].sample,
 					&clip[clipnum].nsamples);
