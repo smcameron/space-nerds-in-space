@@ -17,8 +17,6 @@
 #include "snis_marshal.h"
 #undef DEFINE_SNIS_MARSHAL_GLOBALS
 
-#include "stacktrace.h"
-
 #define MAX_FRACTIONAL 0x7FFFFFFFFFFFFFFFLL /* 2^63 - 1 */
 #define RADIANS_SCALE (31415927)
 
