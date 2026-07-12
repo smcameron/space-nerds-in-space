@@ -31989,14 +31989,20 @@ static int process_multiverse_verification(struct multiverse_server_info *msi)
 
 			/* Get the right solarsystem name */
 			rc = snis_readsocket(msi->sock, &len, 2);
+			if (rc) {
+				pthread_mutex_unlock(&universe_mutex);
+				return rc;
+			}
 			len = ntohs(len);  /* ugly... */
-			if (rc)
-				return rc;
-			if (len > SSGL_LOCATIONSIZE)
+			if (len > SSGL_LOCATIONSIZE) {
+				pthread_mutex_unlock(&universe_mutex);
 				return -1;
+			}
 			rc = snis_readsocket(msi->sock, resident_solarsystem, len);
-			if (rc)
+			if (rc) {
+				pthread_mutex_unlock(&universe_mutex);
 				return rc;
+			}
 			resident_solarsystem[len] = '\0';
 			snprintf(bridgelist[b].resident_solarsystem, sizeof(bridgelist[b].resident_solarsystem),
 					"%s", resident_solarsystem);
