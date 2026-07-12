@@ -11,6 +11,7 @@
 #include <ctype.h>
 
 #include "stacktrace.h"
+#include "arraysize.h"
 
 #define DEFINE_SNIS_MARSHAL_GLOBALS
 #include "snis_marshal.h"
@@ -288,6 +289,11 @@ struct packed_buffer *packed_buffer_queue_combine(struct packed_buffer_queue *pb
 			packed_buffer_check(answer);
 			packed_buffer_free(i->buffer);
 			pbq->head = i->next;
+			free(i);
+		} else {
+			/* empty buffer, shouldn't happen, but if it does, handle it */
+			pbq->head = i->next;
+			packed_buffer_free(i->buffer);
 			free(i);
 		}
 	}
