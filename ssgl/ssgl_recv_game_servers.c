@@ -62,6 +62,11 @@ int ssgl_recv_game_servers(int sock,
 
 	if (*server_count > 0) {
 		*server_list = malloc(sizeof(**server_list) * *server_count);
+		if (!*server_list) { /* Well, that sucks. */
+			fprintf(stderr, "ssgl_recv_game_servers: out of memory\n");
+			fflush(stderr);
+			abort();
+		}
 		rc = ssgl_readsocket(sock, *server_list, sizeof(**server_list) * *server_count); 
 		if (rc) {
 			free(*server_list);
