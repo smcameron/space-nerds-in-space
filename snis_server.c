@@ -7993,8 +7993,10 @@ static struct snis_damcon_entity *find_nearest_damcon_waypoint(struct damcon_dat
 			nearest_dist = dist;
 		}
 	}
-	if (nearest < 0)
+	if (nearest < 0) {
+		fprintf(stderr, "find_nearest_damcon_waypoint: failed to find nearest waypoint\n");
 		return NULL;
+	}
 	return &d->o[nearest];
 }
 
@@ -8139,8 +8141,10 @@ static struct snis_damcon_entity *find_robot_goal(struct damcon_data *d)
 	/* Is the robot carrying something? */
 	if (d->robot->tsd.robot.cargo_id != ROBOT_CARGO_EMPTY) {
 		i = lookup_by_damcon_id(d, d->robot->tsd.robot.cargo_id);
-		if (i < 0)
+		if (i < 0) {
+			fprintf(stderr, "find_robot_goal: failed to lookup robot cargo.\n");
 			return NULL;
+		}
 		part = &d->o[i];
 		if (part->tsd.part.damage >= DAMCON_EASY_REPAIR_THRESHOLD) {
 			/* have to take it to the repair station */
@@ -8150,8 +8154,10 @@ static struct snis_damcon_entity *find_robot_goal(struct damcon_data *d)
 			next_state = DAMCON_ROBOT_REPAIR;
 		} else {
 			socket = find_socket_for_part(d, part);
-			if (!socket)
+			if (!socket) {
+				fprintf(stderr, "find_robot_goal: failed to find socket for part.\n");
 				return NULL;
+			}
 			waypoint = find_nearest_damcon_waypoint_to_obj(d, socket);
 			next_state = DAMCON_ROBOT_REPLACE;
 		}
@@ -8266,6 +8272,10 @@ static void damcon_robot_think(struct snis_damcon_entity *o, struct damcon_data 
 	case  DAMCON_ROBOT_DECIDE_LTG:
 		start = find_nearest_damcon_waypoint_to_obj(d, d->robot);
 		goal = find_robot_goal(d);
+		if (!goal) {
+			fprintf(stderr, "find_robot_goal returned NULL unexpectedly in damcon_robot_think.\n");
+			abort();
+		}
 		d->robot->tsd.robot.long_term_goal_x = goal->x;
 		d->robot->tsd.robot.long_term_goal_y = goal->y;
 		path = a_star(d, start, goal, snis_object_pool_highest_object(d->pool),
