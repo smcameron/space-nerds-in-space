@@ -19868,17 +19868,18 @@ static void server_builtin_setrole(char *cmd)
 	uint32_t role, newrole;
 	char rolestr[255];
 
-	rc = sscanf(cmd, "ROLE %d +%s", &c, rolestr);
+	BUILD_ASSERT(sizeof(rolestr) == 255);
+	rc = sscanf(cmd, "ROLE %d +%255s", &c, rolestr);
 	if (rc == 2) {
 		/* Add a new role to a client */
 		mode = 0;
 	} else {
-		rc = sscanf(cmd, "ROLE %d -%s", &c, rolestr);
+		rc = sscanf(cmd, "ROLE %d -%255s", &c, rolestr);
 		if (rc == 2) {
 			/* Subtract a role from a client */
 			mode = 1;
 		} else {
-			rc = sscanf(cmd, "ROLE %d %s", &c, rolestr);
+			rc = sscanf(cmd, "ROLE %d %255s", &c, rolestr);
 			if (rc == 2) {
 				/* set a client to have a single role */
 				mode = 2;
@@ -20114,7 +20115,8 @@ static void server_builtin_find(char *cmd)
 	char name[100];
 	int i, rc;
 
-	rc = sscanf(cmd, "%*s %s", name);
+	BUILD_ASSERT(sizeof(name) == 100);
+	rc = sscanf(cmd, "%*s %100s", name);
 	if (rc != 1) {
 		send_demon_console_color_msg(YELLOW, "INVALID FIND COMMAND");
 		return;
