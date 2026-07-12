@@ -28,6 +28,7 @@
 #include "starbase_metadata.h"
 #include "string-utils.h"
 #include "arraysize.h"
+#include "build_bug_on.h"
 
 static char *starbase_model_names[] = {
 	"S-CLASS SPACE STATION",
@@ -92,7 +93,8 @@ int read_starbase_model_metadata(char *asset_dir, char *filename, int *nstarbase
 				sizeof(**starbase_metadata) * np);
 			continue;
 		}
-		rc = sscanf(s, "%s %s", model_file, docking_port_file);
+		BUILD_ASSERT(PATH_MAX == 4096);
+		rc = sscanf(s, "%4096s %4096s", model_file, docking_port_file);
 		if (rc != 2) {
 			fprintf(stderr, "%s:%d bad starbase model specification\n",
 					path, lineno);
