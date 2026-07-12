@@ -29,6 +29,7 @@
 #include "snis_tweak.h"
 #include "arraysize.h"
 #include "string-utils.h"
+#include "build_bug_on.h"
 
 int find_tweakable_var_descriptor(struct tweakable_var_descriptor *desc, int count, char *name)
 {
@@ -216,7 +217,8 @@ int tweakable_var_describe(struct tweakable_var_descriptor *tweak, int count, ch
 		printfn("DESCRIBE: BAD COMMAND '%s'", cmd);
 		return TWEAK_BAD_SYNTAX;
 	}
-	rc = sscanf(arg, "%s", variable);
+	BUILD_ASSERT(sizeof(variable) == 255);
+	rc = sscanf(arg, "%255s", variable);
 	if (rc != 1) {
 		printfn("DESCRIBE: INVALID USAGE. USE E.G., DESCRIBE MAX_PLAYER_VELOCITY");
 		return TWEAK_BAD_SYNTAX;
