@@ -1378,7 +1378,7 @@ mostly-clean:
 	${MANSRCDIR}/snis_test_audio.1.gz bin/test_transport_contract bin/test_stringutils \
 	bin/yoke-test-program fuzz_obj_parser fuzz_snis_read_ship_types fuzz_solarsystem_asset_spec_read \
 	fuzz_read_thrust_attachments fuzz_process_manifest build_info.h fuzz_read_joystick_config \
-	fuzz_read_commodities fuzz_read_starbase_metadata ${METAINFOFILE}
+	fuzz_read_commodities fuzz_read_starbase_metadata fuzz_read_docking_port_attachments ${METAINFOFILE}
 	rm -f ${BIN}
 	rm -fr opus-1.3.1
 	rm -f libopus.a
@@ -1641,6 +1641,10 @@ fuzz_read_starbase_metadata:	fuzz_read_starbase_metadata.c
 	afl-clang-fast -g3 -fsanitize=address,undefined fuzz_read_starbase_metadata.c \
 		-lm -o fuzz_read_starbase_metadata
 
+fuzz_read_docking_port_attachments:	fuzz_read_docking_port_attachments.c
+	afl-clang-fast -g3 -fsanitize=address,undefined fuzz_read_docking_port_attachments.c \
+		-lm -o fuzz_read_docking_port_attachments
+
 fuzz_read_thrust_attachments:	fuzz_read_thrust_attachments.c
 	afl-clang-fast -g3 -fsanitize=address,undefined fuzz_read_thrust_attachments.c \
 		-lm -o fuzz_read_thrust_attachments
@@ -1697,6 +1701,11 @@ run-fuzz-read-starbase-metadata:	fuzz_read_starbase_metadata put-cpu-in-hi-perfo
 	/bin/rm -fr fuzz.out
 	afl-fuzz -T "Fuzzing read starbase metadata" -i fuzztests/read_starbase_metadata \
 		-o fuzz.out -- ./fuzz_read_starbase_metadata
+
+run-fuzz-read-docking-port-attachments:	fuzz_read_docking_port_attachments put-cpu-in-hi-performance-mode
+	/bin/rm -fr fuzz.out
+	afl-fuzz -T "Fuzzing read docking port attachments" -i fuzztests/read_docking_port_attachments \
+		-o fuzz.out -- ./fuzz_read_docking_port_attachments
 
 put-cpu-in-hi-performance-mode:
 	(cd /sys/devices/system/cpu && echo performance | sudo tee cpu*/cpufreq/scaling_governor)
