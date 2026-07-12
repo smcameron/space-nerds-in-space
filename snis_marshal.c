@@ -54,7 +54,7 @@ static void packed_buffer_check(struct packed_buffer *pb)
 			pb->buffer_cursor, pb->buffer_size);
 		packed_buffer_print("sanity violation", pb);
 		stacktrace("pb->buffer_cursor > pb->buffer_size\n");
-		assert((uint32_t) (pb)->buffer_cursor <= (pb)->buffer_size);
+		abort();
 	}
 }
 
@@ -163,14 +163,23 @@ int packed_buffer_append_string(struct packed_buffer *pb, unsigned char *str, un
 int packed_buffer_extract_string(struct packed_buffer *pb, char *buffer, int buflen)
 {
 	unsigned short len;
+	int bytes_to_copy;
 
+	if ((uint32_t) pb->buffer_cursor + sizeof(len) > pb->buffer_size) {
+		stacktrace("packed_buffer_extract_string(): buffer size is too small to hold string length");
+		abort();
+	}
 	memcpy(&len, &pb->buffer[pb->buffer_cursor], sizeof(len));
-	len = ntohs(len);
-	if (len < buflen)
-		buflen = len;
 	pb->buffer_cursor += sizeof(len);
+	len = ntohs(len);
+	bytes_to_copy = (len < buflen) ? len : buflen;
+	if (((uint32_t) (pb->buffer_cursor + bytes_to_copy)) > pb->buffer_size) {
+		stacktrace("packed_buffer_extract_string(): claimed length of string is longer than buffer size");
+		bytes_to_copy = pb->buffer_size - pb->buffer_cursor;
+	}
 	packed_buffer_check(pb);
-	memcpy(buffer, &pb->buffer[pb->buffer_cursor], len > buflen ? buflen : len); 
+	memcpy(buffer, &pb->buffer[pb->buffer_cursor], bytes_to_copy);
+	buffer[bytes_to_copy - 1] = '\0'; /* Guarantee NUL termination, even if it truncates */
 	pb->buffer_cursor += len;	
 	packed_buffer_check(pb);
 	return len > buflen ? buflen : len;
