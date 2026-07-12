@@ -35,6 +35,7 @@
 #include "string-utils.h"
 #include "snis_client_forker.h"
 #include "snis_process_options.h"
+#include "arraysize.h"
 
 static int pipe_to_forker_process;
 
@@ -266,6 +267,7 @@ static void fork_snis_process_terminator(int clients_too)
 {
 	pid_t process_list[1024];
 	pid_t my_pid;
+	int failed_to_killem_all;
 	int npids = 0;
 	#define SERVER_PATTERN "'/ssgl_server|/snis_multiverse|/snis_server'"
 	#define ALL_SNIS_PATTERN "'/ssgl_server|/snis_multiverse|/snis_server|snis_client'"
@@ -273,9 +275,12 @@ static void fork_snis_process_terminator(int clients_too)
 
 	my_pid = getpid();
 
+
 	fprintf(stderr, "snis_client: Terminating all SNIS server processes\n");
 	FILE *f;
 
+kill_some_more:
+	failed_to_killem_all = 0;
 	if (clients_too)
 		f = popen("ps ax | egrep " ALL_SNIS_PATTERN " | grep -v grep", "r");
 	else
@@ -297,7 +302,13 @@ static void fork_snis_process_terminator(int clients_too)
 			continue;
 		fprintf(stderr, "%s", buffer);
 		process_list[npids++] = pid;
+		if ((size_t) npids >= ARRAYSIZE(process_list)) {
+			fprintf(stderr, "snis_client_forker: more than 1000 processes... that's weird.\n");
+			failed_to_killem_all = 1;
+			break;
+		}
 	} while (1);
+	pclose(f);
 
 	/* ... and Destroy!  \m/ Kill'em All \m/ */
 	for (int i = 0; i < npids; i++) {
@@ -307,6 +318,11 @@ static void fork_snis_process_terminator(int clients_too)
 			}
 		}
 	}
+
+	npids = 0;
+	if (failed_to_killem_all)
+		goto kill_some_more;
+
 	if (clients_too)
 		exit(0); /* "There's one more chip."  Taps forehead. */
 }
