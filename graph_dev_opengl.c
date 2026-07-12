@@ -4578,6 +4578,7 @@ unsigned int graph_dev_load_cubemap_texture(
 	if (nloaded_cubemap_textures >= MAX_LOADED_CUBEMAP_TEXTURES) {
 		printf("Unable to load cubemap texture '%s': max of %d textures are already loaded\n",
 			texture_filename_pos_x, nloaded_cubemap_textures);
+		pthread_mutex_unlock(&finished_loading_mutex);
 		return 0;
 	}
 
