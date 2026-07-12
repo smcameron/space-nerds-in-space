@@ -28,6 +28,7 @@
 #include "snis_graph.h"
 #include "material.h"
 #include "graph_dev.h"
+#include "build_bug_on.h"
 
 static unsigned int load_texture(const char *asset_dir, char *filename, int linear_colorspace)
 {
@@ -69,8 +70,9 @@ int material_nebula_read_from_file(const char *asset_dir, const char *filename,
 	}
 
 	for (i = 0; i < MATERIAL_NEBULA_NPLANES; i++) {
-		char texture_filename[PATH_MAX+1];
-		rc = fscanf(f, "texture %s\n", texture_filename);
+		char texture_filename[PATH_MAX];
+		BUILD_ASSERT(sizeof(texture_filename) == 4096);
+		rc = fscanf(f, "texture %4096s\n", texture_filename);
 		if (rc != 1) {
 			fprintf(stderr, "material_nebula: Error reading 'texture' from file '%s'\n", full_filename);
 			fclose(f);
