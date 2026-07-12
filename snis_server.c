@@ -21723,10 +21723,10 @@ static int process_rts_func_command_unit(struct game_client *c)
 	case AI_MODE_RTS_MOVE_TO_WAYPOINT:
 		b = c->bridge;
 		if (b < 0 && b >= nclients)
-			return 0;
+			goto out;
 		if (bridgelist[b].selected_waypoint < 0 ||
 			bridgelist[b].selected_waypoint >= bridgelist[b].nwaypoints)
-			return 0;
+			goto out;
 		ship->tsd.ship.ai[0].u.goto_waypoint.waypoint = bridgelist[b].selected_waypoint;
 		ship->tsd.ship.ai[0].u.goto_waypoint.bridge_ship_id = bridgelist[b].shipid;
 		goto common;
