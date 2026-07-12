@@ -104,10 +104,23 @@ int packed_buffer_append_u64(struct packed_buffer *pb, uint64_t value)
 	return 0;
 }
 
+static void check_can_extract_bytes(struct packed_buffer *pb, uint32_t nbytes)
+{
+	uint32_t curs = pb->buffer_cursor;
+
+	if (curs + nbytes <= pb->buffer_size)
+		return;
+	fprintf(stderr, "Attempt to extract %u bytes from buffer sized %u, cursor at %u\n",
+			nbytes, pb->buffer_size, curs);
+	stacktrace("Bad packed buffer extraction attempt");
+	abort();
+}
+
 uint16_t packed_buffer_extract_u16(struct packed_buffer *pb)
 {
 	uint16_t value;
 
+	check_can_extract_bytes(pb, sizeof(value));
 	memcpy(&value, &pb->buffer[pb->buffer_cursor], sizeof(value));
 	pb->buffer_cursor += sizeof(value);
 	packed_buffer_check(pb);
@@ -117,6 +130,7 @@ uint16_t packed_buffer_extract_u16(struct packed_buffer *pb)
 
 uint8_t packed_buffer_extract_u8(struct packed_buffer *pb)
 {
+	check_can_extract_bytes(pb, 1);
 	uint8_t *c = (uint8_t *) &pb->buffer[pb->buffer_cursor];
 	pb->buffer_cursor += 1;
 	packed_buffer_check(pb);
@@ -127,6 +141,7 @@ uint32_t packed_buffer_extract_u32(struct packed_buffer *pb)
 {
 	uint32_t value;
 
+	check_can_extract_bytes(pb, sizeof(value));
 	memcpy(&value, &pb->buffer[pb->buffer_cursor], sizeof(value));
 	pb->buffer_cursor += sizeof(value);
 	packed_buffer_check(pb);
@@ -138,6 +153,7 @@ uint64_t packed_buffer_extract_u64(struct packed_buffer *pb)
 {
 	uint64_t value;
 
+	check_can_extract_bytes(pb, sizeof(value));
 	memcpy(&value, &pb->buffer[pb->buffer_cursor], sizeof(value));
 	pb->buffer_cursor += sizeof(value);
 	packed_buffer_check(pb);
@@ -195,6 +211,7 @@ int packed_buffer_append_raw(struct packed_buffer *pb, const char *buffer, unsig
 
 int packed_buffer_extract_raw(struct packed_buffer *pb, char *buffer, unsigned short len)
 {
+	check_can_extract_bytes(pb, len);
 	memcpy(buffer, &pb->buffer[pb->buffer_cursor], len);
 	pb->buffer_cursor += len;
 	packed_buffer_check(pb);
@@ -477,6 +494,7 @@ void packed_buffer_extract_quat(struct packed_buffer *pb, float q[])
 	int i;
 	int16_t v;
 
+	check_can_extract_bytes(pb, 4 * sizeof(v));
 	for (i = 0; i < 4; i++) {
 		/* need the memcpy for alignment reasons (not on x86, but for others) */
 		memcpy(&v, &pb->buffer[pb->buffer_cursor], sizeof(v));
