@@ -67,7 +67,7 @@ static void ssgl_exit(char *reason, int code)
 static void get_peer_name(int connection, char *buffer)
 {
 	struct sockaddr_in peer;
-	socklen_t addrlen;
+	socklen_t addrlen = sizeof(peer);
 	int rc;
 
 	memset(&peer, 0, sizeof(peer));
