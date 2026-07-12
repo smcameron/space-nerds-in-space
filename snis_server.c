@@ -18084,6 +18084,15 @@ static void warp_gate_ticket_buying_npc_bot(__attribute__((unused)) struct snis_
 				send_comms_packet(sb, sbname, ch, "%3d: %s\n", nsslist, gameserver[i].location);
 			}
 		}
+		if ((size_t) nsslist >= ARRAYSIZE(sslist)) {
+			/* Should never happen because the galaxy is constructed such that
+			 * only a few solar systems should be nearby to each other, never 100.
+			 * See: util/generate_solarsystem_positions.c
+			 *
+			 * Just the same, we shouldn't overflow sslist[] if somehow it does happen.
+			 */
+			break;
+		}
 	}
 	if (nsslist == 0)
 		send_comms_packet(sb, sbname, ch, "NO WARP-GATE TICKETS AVAILABLE\n");
