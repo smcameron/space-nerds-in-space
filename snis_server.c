@@ -18201,13 +18201,15 @@ static int find_nearest_tow_ship(struct snis_entity *o, struct bridge_data *b, i
 			continue;
 		/* Check to see if this tow ship is already en route someplace */
 		int n = go[i].tsd.ship.nai_entries - 1;
-		if (go[i].tsd.ship.ai[n].ai_mode == AI_MODE_TOW_SHIP) {
-			/* Check to see if there's a tow ship already en route to this player */
-			if (go[i].tsd.ship.ai[n].u.tow_ship.disabled_ship == b->shipid) {
-				*already_en_route = 1;
-				return i;
+		if (n >= 0) {
+			if (go[i].tsd.ship.ai[n].ai_mode == AI_MODE_TOW_SHIP) {
+				/* Check to see if there's a tow ship already en route to this player */
+				if (go[i].tsd.ship.ai[n].u.tow_ship.disabled_ship == b->shipid) {
+					*already_en_route = 1;
+					return i;
+				}
+				continue;
 			}
-			continue;
 		}
 		/* Tow ship is not busy, see how far away */
 		double dx, dy, dz, dist;
