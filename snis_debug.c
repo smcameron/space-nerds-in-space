@@ -25,6 +25,7 @@
 #include "snis_debug.h"
 #include "ship_registration.h"
 #include "corporations.h"
+#include "build_bug_on.h"
 
 static char *label = "";
 
@@ -76,7 +77,8 @@ void snis_debug_dump(char *cmd, struct snis_entity go[], int nstarbase_models,
 	char arg2[256];
 	static uint32_t last_object = (uint32_t) -1;
 
-	rc = sscanf(cmd, "%*s %s", arg2);
+	BUILD_ASSERT(sizeof(arg2) == 256);
+	rc = sscanf(cmd, "%*s %256s", arg2);
 	if (rc == 1 && strcasecmp(arg2, "registry") == 0 && registry) {
 		dump_registry(printfn, registry);
 		return;
