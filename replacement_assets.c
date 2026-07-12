@@ -24,6 +24,7 @@
 #include <limits.h>
 
 #include "replacement_assets.h"
+#include "build_bug_on.h"
 
 static char *fixup_asset_dir(char *s, struct replacement_asset *ra)
 {
@@ -84,7 +85,9 @@ int replacement_asset_read(char *replacement_list_filename, char *asset_dir,
 			continue;
 		memset(f1, 0, sizeof(f1));
 		memset(f2, 0, sizeof(f2));
-		rc = sscanf(line, "%s%*[	 ]%s", f1, f2);
+		BUILD_ASSERT(sizeof(f1) == 1000);
+		BUILD_ASSERT(sizeof(f2) == 1000);
+		rc = sscanf(line, "%1000s%*[	 ]%1000s", f1, f2);
 		if (rc != 2) {
 			fprintf(stderr, "%s: syntax error at line %d\n", replacement_list_filename, ln);
 			continue;
