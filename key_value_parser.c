@@ -47,8 +47,10 @@ static char *strdup_to_newline(const char *input)
 	if (i == 0)
 		return NULL;
 	copy = malloc(i + 1);
-	memcpy(copy, input, i);
-	copy[i] = '\0';
+	if (copy) {
+		memcpy(copy, input, i);
+		copy[i] = '\0';
+	}
 	return copy;
 }
 
@@ -253,6 +255,8 @@ int key_value_parse_line(const struct key_value_specification *kvs, const char *
 	int rc;
 
 	char *tmpline = strdup_to_newline(line);
+	if (!tmpline) /* line was blank? */
+		return 0;
 	for (k = (struct key_value_specification *) kvs; k->key != NULL; k++) {
 		rc = key_value_parse_line_with_key(k, tmpline, base_address);
 		if (rc > 0) /* key does not match */
