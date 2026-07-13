@@ -18569,9 +18569,6 @@ static struct demon_cmd_def {
 	{ "TWEAKS", "SHOW WHICH VARIABLES HAVE BEEN TWEAKED" },
 	{ "NAME", "NAME CURRENTLY SELECTED GROUP OF OBJECTS" },
 	{ "ATTACK", "ATTACK G1 G2 - COMMAND GROUP G1 to ATTACK GROUP G2" },
-	{ "GOTO", "COMMAND SELECTED SHIP TO GOTO NAMED LOCATION" },
-	{ "PATROL", "NOT IMPLEMENTED" },
-	{ "HALT", "NOT IMPLEMENTED" },
 	{ "IDENTIFY", "SELECT NAMED GROUP" },
 	{ "SAY", "CAUSE CURRENTLY CAPTAINED SHIP TO TRANSMIT WHAT YOU LIKE" },
 	{ "CLEAR-ALL", "DELETE ALL OBJECTS EXCEPT HUMAN CONTROLLED SHIPS" },
@@ -19011,31 +19008,7 @@ static int construct_demon_command(char *input, char *errmsg)
 			packed_buffer_queue_add(&to_server_queue, pb, &to_server_queue_mutex);
 			wakeup_gameserver_writer();
 			break; 
-		case 3: /* goto */
-			s = strtok_r(NULL, DEMON_CMD_DELIM, &saveptr);
-			if (s == NULL) {
-				sprintf(errmsg, "missing argument to goto command");
-				goto error;
-			}
-			print_demon_console_color_msg(YELLOW, "GOTO COMMAND IS NOT IMPLEMENTED");
-			break; 
-		case 4: /* patrol */
-			s = strtok_r(NULL, DEMON_CMD_DELIM, &saveptr);
-			if (s == NULL) {
-				sprintf(errmsg, "missing argument to patrol command");
-				goto error;
-			}
-			print_demon_console_color_msg(YELLOW, "PATROL COMMAND IS NOT IMPLEMENTED");
-			break; 
-		case 5: /* halt */
-			s = strtok_r(NULL, DEMON_CMD_DELIM, &saveptr);
-			if (s == NULL) {
-				sprintf(errmsg, "missing argument to halt command");
-				goto error;
-			}
-			print_demon_console_color_msg(YELLOW, "HALT COMMAND IS NOT IMPLEMENTED");
-			break; 
-		case 6: /* identify */
+		case 3: /* identify */
 			s = strtok_r(NULL, DEMON_CMD_DELIM, &saveptr);
 			if (s == NULL) {
 				sprintf(errmsg, "missing argument to identify command");
@@ -19052,45 +19025,47 @@ static int construct_demon_command(char *input, char *errmsg)
 			}
 			demon_ui.nselected = demon_group[g].nids;
 			break; 
-		case 7: /* say */
+		case 4: /* say */
 			if (!saveptr || strlen(saveptr) == 0)
 				goto error;
 			send_demon_comms_packet_to_server(saveptr);
 			break;
-		case 8: send_demon_clear_all_packet_to_server();
+		case 5: /* clear-all */
+			send_demon_clear_all_packet_to_server();
 			break;
-		case 9:
+		case 6: /* LUA */
 			if (!saveptr || strlen(saveptr) == 0)
 				goto error;
 			send_lua_script_packet_to_server(saveptr);
 			break;
-		case 10: toggle_demon_ai_debug_mode();
+		case 7: /* AIDEBUG */
+			toggle_demon_ai_debug_mode();
 			break;
-		case 11:
+		case 8: /* HELP */
 			demon_help_mode = 1;
 			add_demon_cmd_help_to_console(demon_cmd, ARRAYSIZE(demon_cmd));
 			send_lua_script_packet_to_server("HELP");
 			break;
-		case 12:
+		case 9: /* ENSCRIPT */
 			if (!saveptr || strlen(saveptr) == 0)
 				goto error;
 			send_enscript_packet_to_server(saveptr);
 			break;
-		case 13:
+		case 10: /* TTS */
 			if (!saveptr || strlen(saveptr) == 0)
 				goto error;
 			send_text_to_speech_packet_to_server(original + (saveptr - input));
 			break;
-		case 14: /* enable real-time-strategy mode */
+		case 11: /* enable real-time-strategy mode */
 			send_rtsmode_change_to_server(1);
 			break;
-		case 15: /* disable real-time-strategy mode */
+		case 12: /* disable real-time-strategy mode */
 			send_rtsmode_change_to_server(0);
 			break;
-		case 16: /* activate demon console */
+		case 13: /* activate demon console */
 			demon_ui.console_active = !demon_ui.console_active;
 			break;
-		case 17: /* Set tweakable variable possibly client side, possibly server side. */
+		case 14: /* Set tweakable variable possibly client side, possibly server side. */
 			uppercase(original);
 			switch (set_clientside_variable(original, 1)) {
 			case TWEAK_UNKNOWN_VARIABLE:
@@ -19100,34 +19075,34 @@ static int construct_demon_command(char *input, char *errmsg)
 				break;
 			}
 			break;
-		case 18: /* "VARS", list tweakable vars */
+		case 15: /* "VARS", list tweakable vars */
 			uppercase(original);
 			tweakable_vars_list(client_tweak, original, ARRAYSIZE(client_tweak), print_demon_console_msg);
 			send_lua_script_packet_to_server(original);
 			break;
-		case 19: /* "DESCRIBE", describe a tweakable variable */
+		case 16: /* "DESCRIBE", describe a tweakable variable */
 			uppercase(original);
 			rc = tweakable_var_describe(client_tweak, ARRAYSIZE(client_tweak), original,
 							print_demon_console_msg, 1);
 			if (rc == TWEAK_UNKNOWN_VARIABLE)
 				send_lua_script_packet_to_server(original);
 			break;
-		case 20: /* client side dump object */
+		case 17: /* client side dump object */
 			uppercase(original);
 			copy = expand_demon_selection_string(original);
 			client_side_dump(copy);
 			free(copy);
 			break;
-		case 21: /* FOLLOW object */
+		case 18: /* FOLLOW object */
 			uppercase(original);
 			copy = expand_demon_selection_string(original);
 			client_demon_follow(copy);
 			free(copy);
 			break;
-		case 22: /* RELOAD_SHADERS */
+		case 19: /* RELOAD_SHADERS */
 			reload_shaders = 1;
 			break;
-		case 23:
+		case 20: /* reset_ui_pos */
 			ui_element_list_reset_position_offsets(uiobjs);
 			break;
 		default: /* unknown, maybe it's a builtin server command or a lua script */
