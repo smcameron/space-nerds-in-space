@@ -27,6 +27,7 @@
 #include "commodities.h"
 #include "string-utils.h"
 #include "nonuniform_random_sampler.h"
+#include "build_bug_on.h"
 
 #define DEBUG_COMMODITIES 0
 
@@ -60,7 +61,9 @@ static int add_category(char *c)
 		fprintf(stderr, "Too many categories, dropping '%s'\n", c);
 		return -1;
 	}
-	rc = sscanf(c, "category: %[a-zA-Z ], %[a-zA-Z ], %f, %f, %f", name, desc, &e, &g, &t);
+	BUILD_ASSERT(sizeof(name) == 100);
+	BUILD_ASSERT(sizeof(desc) == 100);
+	rc = sscanf(c, "category: %100[a-zA-Z ], %100[a-zA-Z ], %f, %f, %f", name, desc, &e, &g, &t);
 	if (rc != 5) {
 		fprintf(stderr, "Bad category: '%s'\n", c);
 		return -1;
