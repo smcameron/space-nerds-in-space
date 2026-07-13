@@ -18761,7 +18761,9 @@ static void meta_comms_antenna(__attribute__((unused)) char *name, struct game_c
 		mark *= M_PI / 180.0;
 		bearing = math_angle_to_game_angle(bearing);
 		heading_mark_to_vec3(1.0, bearing, mark, &dir);
+		pthread_mutex_lock(&universe_mutex);
 		go[c->ship_index].tsd.ship.desired_hg_ant_aim = dir;
+		pthread_mutex_unlock(&universe_mutex);
 	}
 }
 
