@@ -18566,7 +18566,7 @@ static struct demon_cmd_def {
 	 * and remove all knowledge on the client side and eliminate special command
 	 * specific opcodes, which would be a good thing.
 	 */
-	{ "MARK", "MARK LOCATION WITH A NAME" },
+	{ "TWEAKS", "SHOW WHICH VARIABLES HAVE BEEN TWEAKED" },
 	{ "NAME", "NAME CURRENTLY SELECTED GROUP OF OBJECTS" },
 	{ "ATTACK", "ATTACK G1 G2 - COMMAND GROUP G1 to ATTACK GROUP G2" },
 	{ "GOTO", "COMMAND SELECTED SHIP TO GOTO NAMED LOCATION" },
@@ -18590,7 +18590,6 @@ static struct demon_cmd_def {
 	{ "FOLLOW", "FOLLOW AN OBJECT" },
 	{ "RELOAD_SHADERS", "RELOAD ALL GLSL SHADERS" },
 	{ "RESET_UI_POS", "RESET POSITIONS OF ALL UI ELEMENTS TO DEFAULTS" },
-	{ "TWEAKS", "SHOW WHICH VARIABLES HAVE BEEN TWEAKED" },
 	/* Note: Server builtin command help isn't here, it's in the server code,
 	 * elicited by a call to "send_lua_script_packet_to_server("HELP")"
 	 */
@@ -18638,46 +18637,12 @@ static struct demon_group {
 } demon_group[26];
 static int ndemon_groups = 0;
 
-static struct demon_location {
-	char name[100];
-	double x, z;
-} demon_location[26];
-static int ndemon_locations = 0;
-
-static int get_demon_location_var(char *name)
-{
-	int i;
-	struct demon_location *dl;
-
-	for (i = 0; i < ndemon_locations; i++) {
-		if (strcmp(demon_location[i].name, name) == 0)
-			return i;
-	}
-	if (ndemon_locations >= 26)
-		return -1;
-	dl = &demon_location[ndemon_locations];
-	strcpy(dl->name, name);
-	ndemon_locations++;
-	return ndemon_locations - 1;
-}
-
 static int lookup_demon_group(char *name)
 {
 	int i;
 
 	for (i = 0; i < ndemon_groups; i++) {
 		if (strcmp(demon_group[i].name, name) == 0)
-			return i;
-	}
-	return -1;
-}
-
-static int lookup_demon_location(char *name)
-{
-	int i;
-
-	for (i = 0; i < ndemon_locations; i++) {
-		if (strcmp(demon_location[i].name, name) == 0)
 			return i;
 	}
 	return -1;
@@ -18947,7 +18912,7 @@ static char *expand_demon_selection_string(char *input)
 static int construct_demon_command(char *input, char *errmsg)
 {
 	char *s;
-	int i, l, g, g2, v;
+	int i, g, g2, v;
 	char *saveptr;
 	struct packed_buffer *pb;
 	int idcount;
@@ -18979,20 +18944,16 @@ static int construct_demon_command(char *input, char *errmsg)
 	}
 
 	switch (v) {
-		case 0: /* mark */
-			s = strtok_r(NULL, DEMON_CMD_DELIM, &saveptr);
-			if (s == NULL) {
-				sprintf(errmsg, "missing argument to mark command");
-				goto error;
-			}
-			l = get_demon_location_var(s); 
-			if (l < 0) {
-				sprintf(errmsg, "out of location variables");
-				goto error;
-			}
-			demon_location[l].x = demon_ui.selectedx;
-			demon_location[l].z = demon_ui.selectedz;
+		case 0: { /* tweaks */
+			print_demon_console_color_msg(WHITE, "--- CLIENT SIDE TWEAKS ---");
+			int count = tweakable_vars_print_tweaked_vars(client_tweak, ARRAYSIZE(client_tweak),
+					print_demon_console_msg);
+			if (count == 0)
+				print_demon_console_msg("  NONE");
+			print_demon_console_color_msg(WHITE, "--- SERVER SIDE TWEAKS ---");
+			send_lua_script_packet_to_server("TWEAKS");
 			break;
+		}
 		case 1: /* select */
 			s = strtok_r(NULL, DEMON_CMD_DELIM, &saveptr);
 			if (s == NULL) {
@@ -19081,15 +19042,6 @@ static int construct_demon_command(char *input, char *errmsg)
 				goto error;
 			}
 			g = lookup_demon_group(s);
-			if (g < 0) {
-				l = lookup_demon_location(s);
-				if (l < 0) { 
-					sprintf(errmsg, "No such group or location '%s'\n", s);
-					goto error;
-				}
-				demon_ui.selectedx = demon_location[l].x;
-				demon_ui.selectedz = demon_location[l].z;
-			}
 			for (i = 0; i < demon_group[g].nids; i++) {
 				int n;
 				demon_ui.selected_id[i] = demon_group[g].id[i];
@@ -19178,16 +19130,6 @@ static int construct_demon_command(char *input, char *errmsg)
 		case 23:
 			ui_element_list_reset_position_offsets(uiobjs);
 			break;
-		case 24: { /* tweaks */
-			print_demon_console_color_msg(WHITE, "--- CLIENT SIDE TWEAKS ---");
-			int count = tweakable_vars_print_tweaked_vars(client_tweak, ARRAYSIZE(client_tweak),
-					print_demon_console_msg);
-			if (count == 0)
-				print_demon_console_msg("  NONE");
-			print_demon_console_color_msg(WHITE, "--- SERVER SIDE TWEAKS ---");
-			send_lua_script_packet_to_server("TWEAKS");
-			break;
-		}
 		default: /* unknown, maybe it's a builtin server command or a lua script */
 			uppercase(original);
 			copy = expand_demon_selection_string(original);
