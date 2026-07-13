@@ -806,6 +806,10 @@ static void do_action(struct snis_nl_context *ctx,
 	argc = 0;
 	for (i = 0; i < limit; i++) {
 		struct nl_token *t = token[i];
+
+		if (p->meaning[i] < 0 || p->meaning[i] >= MAX_MEANINGS)
+			continue; /* Skip unknown words */
+
 		if (t->pos[p->meaning[i]] == POS_VERB) {
 			if (vf != NULL) {
 				vf(ctx, argc, argv, pos, extra_data);
