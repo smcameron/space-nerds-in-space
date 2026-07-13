@@ -983,7 +983,7 @@ static int extract_meaning(struct snis_nl_context *ctx,
 			ctx->error_function(ctx);
 		rc = -1;
 	}
-	parse_machine_free_list(p);
+	parse_machine_free_list(list);
 	return rc;
 }
 
