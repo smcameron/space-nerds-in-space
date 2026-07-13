@@ -6434,6 +6434,7 @@ static int process_ship_sdata_packet(void)
 			&shwidth, &shdepth, &faction, &lifeform_count, &flags,
 			name, (unsigned short) sizeof(name));
 	pthread_mutex_lock(&universe_mutex);
+	name[NAMESIZE - 1] = '\0'; /* ensure NUL termination */
 	update_ship_sdata(id, subclass, name, shstrength, shwavelength, shwidth, shdepth, faction,
 				lifeform_count, flags);
 	pthread_mutex_unlock(&universe_mutex);
