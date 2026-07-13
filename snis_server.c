@@ -23437,10 +23437,12 @@ static int process_robot_auto_manual(struct game_client *c)
 	if (rc)
 		return rc;
 	new_mode = !!new_mode;
+	pthread_mutex_lock(&universe_mutex);
 	d = &bridgelist[c->bridge].damcon;
 	d->robot->tsd.robot.autonomous_mode = new_mode;
 	d->robot->tsd.robot.robot_state = DAMCON_ROBOT_DECIDE_LTG;
 	d->robot->version++;
+	pthread_mutex_unlock(&universe_mutex);
 	return 0;
 }
 
