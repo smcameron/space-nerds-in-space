@@ -371,6 +371,12 @@ int add_commodity(struct commodity **c, int *ncommodities, const char *category_
 	struct commodity *newc;
 	int n = *ncommodities + 1;
 
+	int cat = lookup_category(category_name);
+	if (cat < 0) {
+		fprintf(stderr, "add_commodity: Unknown commodity category '%s', ignoring.\n", category_name);
+		return -1;
+	}
+
 	/* TODO: Batch reallocs instead of doing it every single time. */
 	newc = realloc(*c, n * sizeof(newc[0]));
 	if (!newc)
@@ -378,7 +384,7 @@ int add_commodity(struct commodity **c, int *ncommodities, const char *category_
 	*c = newc;
 	newc = &(*c)[n - 1];
 
-	newc->category = lookup_category(category_name);
+	newc->category = cat;
 	strlcpy(newc->name, name, sizeof(newc->name));
 	strlcpy(newc->unit, unit, sizeof(newc->unit));
 	strlcpy(newc->scans_as, scans_as, sizeof(newc->scans_as));
