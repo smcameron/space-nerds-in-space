@@ -13724,6 +13724,7 @@ static int add_laserbeam(uint32_t origin, uint32_t target, int alive, uint8_t ta
 {
 	int i, s, ti, oi;
 	struct snis_entity *o, *t;
+	uint8_t phaser_charge, phaser_wavelength;
 
 	i = add_generic_object(0, 0, 0, 0, 0, 0, 0, OBJTYPE_LASERBEAM);
 	if (i < 0)
@@ -13734,9 +13735,18 @@ static int add_laserbeam(uint32_t origin, uint32_t target, int alive, uint8_t ta
 	go[i].tsd.laserbeam.origin = origin;
 	go[i].tsd.laserbeam.target = target;
 	s = lookup_by_id(origin);
-	go[i].tsd.laserbeam.power = go[s].tsd.ship.phaser_charge;
-	go[s].tsd.ship.phaser_charge = 0;
-	go[i].tsd.laserbeam.wavelength = go[s].tsd.ship.phaser_wavelength;
+	if (s < 0)
+		return -1;
+
+	phaser_charge = 100;
+	phaser_wavelength = 128;
+	if (go[s].type == OBJTYPE_NPCSHIP || go[s].type == OBJTYPE_BRIDGE) {
+		phaser_charge = go[s].tsd.ship.phaser_charge;
+		phaser_wavelength = go[s].tsd.ship.phaser_charge;
+		go[s].tsd.ship.phaser_charge = 0; /* firing ship needs to recharge laser now */
+	}
+	go[i].tsd.laserbeam.power = phaser_charge;
+	go[i].tsd.laserbeam.wavelength = phaser_wavelength;
 	go[i].tsd.laserbeam.mining_laser = 0;
 	go[i].tsd.laserbeam.targeted_system = targeted_system;
 	ti = lookup_by_id(target);
@@ -13749,6 +13759,10 @@ static int add_laserbeam(uint32_t origin, uint32_t target, int alive, uint8_t ta
 	t = &go[ti];
 	if (t->type != OBJTYPE_BRIDGE && t->type != OBJTYPE_NPCSHIP && t->type != OBJTYPE_STARBASE)
 		return i;
+
+	/* If origin is a starbase, tune beam to target shield wavelength */
+	if (o->type == OBJTYPE_STARBASE && (t->type == OBJTYPE_NPCSHIP || t->type == OBJTYPE_BRIDGE))
+		go[i].tsd.laserbeam.wavelength = t->sdata.shield_wavelength;
 
 	union vec3 impact_point;
 
