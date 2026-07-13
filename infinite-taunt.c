@@ -1486,6 +1486,8 @@ static char *random_word(struct mtwist_state *mt, char *w[], int nwords)
 	int x;
 
 	x = (int) (((double) mtwist_next(mt) / (double) (0xffffffff)) * nwords);
+	if (x == nwords)
+		x--;
 	return w[x];
 }
 
