@@ -351,6 +351,13 @@ static void add_bump(union vec3 p, float r, float h)
 	totalbumps++;
 }
 
+static float randfloat_to_crater_radius(float rf)
+{
+	/* Map range 0.00001 to 1.0 to range 53.5 to 1.0 according to power law */
+	return -0.3 * log10f(rf) * 35.0 + 1.0f;
+}
+
+
 static void add_crater(int i, union vec3 p, float r, float h)
 {
 	struct bump *b;
@@ -371,8 +378,11 @@ static void add_crater(int i, union vec3 p, float r, float h)
 	b->samplew = 1024;
 	b->sampleh = 1024;
 	b->sample_bytes_per_row = 3 * b->samplew;
-	crater_r = (0.5 * (snis_random_float)() + 1.0);
-	crater_r = (-logf(1.0 - crater_r) / 10.0) * 35.0 + 1.0;
+
+	float rf = (0.5 * snis_random_float() + 0.5);
+	if (rf < 0.0001)
+		rf = 0.0001; /* avoid infinity when we take the log of rf later */
+	crater_r = randfloat_to_crater_radius(rf);
 	create_crater_heightmap((unsigned char *) b->sampledata, 1024, 1024, 512, 512, (int) crater_r, 6);
 	quat_from_u2v(&b->texelq, &p, &right_at_ya, &up);
 }
