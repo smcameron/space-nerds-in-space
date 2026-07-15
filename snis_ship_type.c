@@ -134,8 +134,11 @@ struct ship_type_entry *snis_read_ship_types(char *filename, int *count)
 	while (!feof(f)) {
 		x = fgets(line, sizeof(line) - 1, f);
 		if (!x) {
+			int en = errno;
 			if (feof(f))
 				break;
+			fprintf(stderr, "%s: Error reading file: %s\n", filename, strerror(en));
+			break;
 		}
 		if (strlen(line) == 0)
 			continue;
