@@ -574,8 +574,12 @@ int wwviaudio_add_one_shot_sound(char *filename)
 	one_shot_busy = 1;
 	pthread_mutex_unlock(&one_shot_mutex);
 	rc = wwviaudio_read_ogg_clip_internal(allocated_sound_clips - 1, filename);
-	if (rc)
+	if (rc) {
+		pthread_mutex_lock(&one_shot_mutex);
+		one_shot_busy = 0;
+		pthread_mutex_unlock(&one_shot_mutex);
 		return rc;
+	}
 	return wwviaudio_add_sound_segment_to_slot(allocated_sound_clips - 1, WWVIAUDIO_ANY_SLOT,
 				1.0, 1.0, 0.0, 1.0, one_shot_sound_cb, NULL);
 }
