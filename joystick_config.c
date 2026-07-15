@@ -285,7 +285,7 @@ static int parse_joystick_cfg_line(struct joystick_config *cfg, char *filename, 
 				filename, ln, mode, MAX_MODES - 1);
 			return 0; /* just keep going. */
 		}
-		if (button < 0 || button > MAX_BUTTONS) {
+		if (button < 0 || button >= MAX_BUTTONS) {
 			fprintf(stderr, "%s:%d Bad button %d (must be between 0 and %d)\n",
 				filename, ln, button, MAX_BUTTONS - 1);
 			return 0; /* just keep going. */
