@@ -759,8 +759,14 @@ static void sng_read_user_colors(char *filename)
 		rc = parse_user_color_line(filename, line, ln, &entry);
 		switch (rc) {
 		case 0:
-			user_color[nuser_color_entries] = entry;
-			nuser_color_entries++;
+			if (nuser_color_entries < MAX_USER_COLORS) {
+				user_color[nuser_color_entries] = entry;
+				nuser_color_entries++;
+			} else {
+				fprintf(stderr, "%s: Too many user colors, capped at %d.\n",
+						filename, MAX_USER_COLORS);
+				break;
+			}
 			continue;
 		case 1: /* comment */
 			continue;
