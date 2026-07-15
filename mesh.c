@@ -106,7 +106,7 @@ void mesh_random_uv_map(struct mesh *m)
 	if (m->tex)
 		free(m->tex);
 	m->tex = malloc(sizeof(*m->tex) * m->ntriangles * 3);
-	if (!m)
+	if (!m->tex)
 		return;
 	for (i = 0; i < m->ntriangles; i++) {
 		float u1, v1, u2, v2, u3, v3;
