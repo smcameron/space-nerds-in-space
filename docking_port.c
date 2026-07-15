@@ -66,6 +66,7 @@ struct docking_port_attachment_point *read_docking_port_attachments(char *filena
 				filename, line, rc);
 			fprintf(stderr, "line was: '%s'\n", buffer);
 			fprintf(stderr, "(sorry this file format is so persnickety)\n");
+			goto error_out;
 		}
 		answer->docking_port_model = model;
 		answer->port[i].scale = scale * scaling_factor;
