@@ -261,8 +261,8 @@ void ui_element_list_button_release(struct ui_element_list *list, int x, int y)
 				candidate->button_release(candidate->element, x, y);
 			}
 		} else {
-			if (candidate->button_press(candidate->element, x, y))
-				ui_set_focus(list, e);
+			if (candidate->button_release(candidate->element, x, y))
+				ui_set_focus(list, candidate);
 		}
 	}
 }
