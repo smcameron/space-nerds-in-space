@@ -71,28 +71,28 @@ static int samplew, sampleh, samplea, sample_bytes_per_row;
 static float minn, maxn; /* min and max noise values encountered */
 static float crater_min_height, crater_max_height;
 
-static unsigned char get_sampledata(int x, int y, int bytes_per_row, char *sampledata)
+static unsigned char get_sampledata(int x, int y, int bytes_per_row, char *sample_data)
 {
 	int p;
 	unsigned char *c;
 
 	p = y * bytes_per_row + x * 3;
-	c = (unsigned char *) &sampledata[p];
+	c = (unsigned char *) &sample_data[p];
 	return *c;
 }
 
-static void set_sampledata(int x, int y, int bytes_per_row, char *sampledata, unsigned char value)
+static void set_sampledata(int x, int y, int bytes_per_row, char *sample_data, unsigned char value)
 {
 	int i, p;
 	unsigned char *c;
 
 	p = y * bytes_per_row + x * 3;
-	c = (unsigned char *) &sampledata[p];
+	c = (unsigned char *) &sample_data[p];
 	for (i = 0; i < 3; i++)
 		c[i] = value;
 }
 
-static void scale_sampledata(char *sampledata, int samplew, int sampleh, int sample_bytes_per_row)
+static void scale_sampledata(char *sample_data, int sample_w, int sample_h, int bytes_per_row)
 {
 	int x, y;
 	float lowest, highest, diff;
@@ -100,9 +100,9 @@ static void scale_sampledata(char *sampledata, int samplew, int sampleh, int sam
 	highest = 0;
 
 	printf("Scaling sample height data\n");
-	for (y = 0; y < sampleh; y++) {
-		for (x = 0; x < samplew; x++) {
-			unsigned char c = get_sampledata(x, y, sample_bytes_per_row, sampledata);
+	for (y = 0; y < sample_h; y++) {
+		for (x = 0; x < sample_w; x++) {
+			unsigned char c = get_sampledata(x, y, bytes_per_row, sample_data);
 			if (c > highest)
 				highest = c;
 			if (c < lowest)
@@ -110,14 +110,14 @@ static void scale_sampledata(char *sampledata, int samplew, int sampleh, int sam
 		}
 	}
 	diff = (highest - lowest);
-	for (y = 0; y < sampleh; y++) {
-		for (x = 0; x < samplew; x++) {
-			unsigned char c = get_sampledata(x, y, sample_bytes_per_row, sampledata);
+	for (y = 0; y < sample_h; y++) {
+		for (x = 0; x < sample_w; x++) {
+			unsigned char c = get_sampledata(x, y, bytes_per_row, sample_data);
 			float v = c;
 			v = v - lowest;
 			v = 100 + 155.0 * v / diff;
 			c = (unsigned char) v;
-			set_sampledata(x, y, sample_bytes_per_row, sampledata, c);
+			set_sampledata(x, y, bytes_per_row, sample_data, c);
 		}
 	}
 	printf("scale sampledata done\n");
@@ -137,40 +137,40 @@ static inline float fbmnoise4(float x, float y, float z)
 }
 
 /* convert from cubemap coords to cartesian coords on surface of sphere */
-static union vec3 fij_to_xyz(int f, int i, int j, const int dim)
+static union vec3 fij_to_xyz(int f, int i, int j, const int dimension)
 {
 	union vec3 answer;
 
 	switch (f) {
 	case 0:
-		answer.v.x = (float) (i - dim / 2) / (float) dim;
-		answer.v.y = -(float) (j - dim / 2) / (float) dim;
+		answer.v.x = (float) (i - dimension / 2) / (float) dimension;
+		answer.v.y = -(float) (j - dimension / 2) / (float) dimension;
 		answer.v.z = 0.5;
 		break;
 	case 1:
 		answer.v.x = 0.5;
-		answer.v.y = -(float) (j - dim / 2) / (float) dim;
-		answer.v.z = -(float) (i - dim / 2) / (float) dim;
+		answer.v.y = -(float) (j - dimension / 2) / (float) dimension;
+		answer.v.z = -(float) (i - dimension / 2) / (float) dimension;
 		break;
 	case 2:
-		answer.v.x = -(float) (i - dim / 2) / (float) dim;
-		answer.v.y = -(float) (j - dim / 2) / (float) dim;
+		answer.v.x = -(float) (i - dimension / 2) / (float) dimension;
+		answer.v.y = -(float) (j - dimension / 2) / (float) dimension;
 		answer.v.z = -0.5;
 		break;
 	case 3:
 		answer.v.x = -0.5;
-		answer.v.y = -(float) (j - dim / 2) / (float) dim;
-		answer.v.z = (float) (i - dim / 2) / (float) dim;
+		answer.v.y = -(float) (j - dimension / 2) / (float) dimension;
+		answer.v.z = (float) (i - dimension / 2) / (float) dimension;
 		break;
 	case 4:
-		answer.v.x = (float) (i - dim / 2) / (float) dim;
+		answer.v.x = (float) (i - dimension / 2) / (float) dimension;
 		answer.v.y = 0.5;
-		answer.v.z = (float) (j - dim / 2) / (float) dim;
+		answer.v.z = (float) (j - dimension / 2) / (float) dimension;
 		break;
 	case 5:
-		answer.v.x = (float) (i - dim / 2) / (float) dim;
+		answer.v.x = (float) (i - dimension / 2) / (float) dimension;
 		answer.v.y = -0.5;
-		answer.v.z = -(float) (j - dim / 2) / (float) dim;
+		answer.v.z = -(float) (j - dimension / 2) / (float) dimension;
 		break;
 	}
 	vec3_normalize_self(&answer);
@@ -279,7 +279,7 @@ static void *render_bumps_on_face_fn(void *info)
 	return NULL;
 }
 
-static void multithread_face_render(render_on_face_fn render, struct bump *bumplist, int bumpcount)
+static void multithread_face_render(render_on_face_fn render, struct bump *bump_list, int bumpcount)
 {
 	int rc, f;
 	void *status;
@@ -287,7 +287,7 @@ static void multithread_face_render(render_on_face_fn render, struct bump *bumpl
 
 	for (f = 0; f < 6; f++) {
 		t[f].f = f;
-		t[f].bumplist = bumplist;
+		t[f].bumplist = bump_list;
 		t[f].bumpcount = bumpcount;
 		rc = create_thread(&t[f].thread, render, &t[f], "face-render", 0);
 		if (rc)
@@ -295,7 +295,7 @@ static void multithread_face_render(render_on_face_fn render, struct bump *bumpl
 					__func__, strerror(errno));
 	}
 	for (f = 0; f < 6; f++) {
-		int rc = pthread_join(t[f].thread, &status);
+		rc = pthread_join(t[f].thread, &status);
 		if (rc)
 			fprintf(stderr, "%s: pthread_join failed: %s\n",
 				__func__, strerror(errno));
@@ -378,12 +378,12 @@ static void add_crater(int i, union vec3 p, float r, float h)
 }
 
 static void recursive_add_bump(union vec3 pos, float r, float h,
-				float shrink, float rlimit)
+				float shrink, float r_limit)
 {
 	float hoffset;
 
 	add_bump(pos, r, h);
-	if (r * shrink < rlimit)
+	if (r * shrink < r_limit)
 		return;
 	for (int i = 0; i < nbumps; i++) {
 		union vec3 d;
@@ -393,11 +393,11 @@ static void recursive_add_bump(union vec3 pos, float r, float h,
 		vec3_add_self(&d, &pos);
 		vec3_normalize_self(&d);
 		hoffset = snis_random_float() * h * shrink * 0.5;
-		recursive_add_bump(d, r * shrink, h * (shrink + 0.5 * (1.0 - shrink)) + hoffset, shrink, rlimit);
+		recursive_add_bump(d, r * shrink, h * (shrink + 0.5 * (1.0 - shrink)) + hoffset, shrink, r_limit);
 	}
 }
 
-static void add_bumps(const int initial_bumps)
+static void add_bumps(const int initialbumps)
 {
 	int i;
 	float h;
@@ -407,7 +407,7 @@ static void add_bumps(const int initial_bumps)
 	else
 		h = 0.1 * MAXDIM / dim;
 	printf("adding bumps:");
-	for (i = 0; i < initial_bumps; i++) {
+	for (i = 0; i < initialbumps; i++) {
 		union vec3 p;
 		float r = 0.5 * (snis_random_float() + 1.0f) * initial_bump_size;
 
@@ -500,11 +500,11 @@ static void paint_height_maps(float min, float max)
 	}
 }
 
-static void set_sealevel(float fraction_land)
+static void set_sealevel(float frac_land)
 {
 	int i, cutoff, so_far = 0;
 
-	cutoff = (int) ((1.0 - fraction_land) * 6.0 * dim * dim);
+	cutoff = (int) ((1.0 - frac_land) * 6.0 * dim * dim);
 	for (i = 0; i < 256; i++) {
 		so_far += height_histogram[i];
 		if (so_far >= cutoff) {
