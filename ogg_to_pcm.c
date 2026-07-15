@@ -80,13 +80,13 @@ int ogg_to_pcm(char *infile, int16_t **pcmbuffer,
 		*nsamples = ov_pcm_total(&vf, 0);
 
 	*pcmbuffer = (void *) malloc(sizeof(int16_t) * *nsamples * *nchannels);
-	memset(*pcmbuffer, 0, sizeof(int16_t) * *nsamples * *nchannels);
 	if (*pcmbuffer == NULL) {
 		fprintf(stderr, "%s:%d: Failed to allocate memory for '%s'\n",
 			__FILE__, __LINE__, infile);
 		ov_clear(&vf);
 		return -1;
 	}
+	memset(*pcmbuffer, 0, sizeof(int16_t) * *nsamples * *nchannels);
 	bufferptr = (unsigned char *) *pcmbuffer;
 
 	while ((ret = ov_read(&vf, buf, sizeof(buf), endian[0] == 0x01, bits/8, 1, &bs)) != 0) {
