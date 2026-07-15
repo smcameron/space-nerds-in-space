@@ -480,6 +480,8 @@ static int wwviaudio_add_sound_segment_to_slot(int which_sound, int which_slot, 
 		return 0;
 	if (end <= begin)
 		return 0;
+	if ((int) (begin * clip[which_sound].nsamples) ==  (int) (end * clip[which_sound].nsamples))
+		return 0;
 	if (begin < 0.0)
 		begin = 0.0;
 	if (end > 1.0)
