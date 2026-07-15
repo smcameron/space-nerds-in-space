@@ -61,7 +61,7 @@ int material_nebula_read_from_file(const char *asset_dir, const char *filename,
 	nebula->type = MATERIAL_NEBULA;
 	nebula->billboard_type = MATERIAL_BILLBOARD_TYPE_NONE;
 	nebula->rotate_randomly = 0;
-	sprintf(full_filename, "%s/materials/%s", asset_dir, filename);
+	snprintf(full_filename, sizeof(full_filename), "%s/materials/%s", asset_dir, filename);
 
 	f = fopen(full_filename, "r");
 	if (!f) {
@@ -115,7 +115,7 @@ int material_nebula_write_to_file(const char *asset_dir, const char *filename,
 	char full_filename[PATH_MAX + 1];
 	struct material_nebula *mt = &nebula->nebula;
 
-	sprintf(full_filename, "%s/materials/%s", asset_dir, filename);
+	snprintf(full_filename, sizeof(full_filename), "%s/materials/%s", asset_dir, filename);
 
 	f = fopen(full_filename, "w");
 	if (!f) {
