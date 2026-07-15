@@ -522,18 +522,18 @@ static void color_output(int f, int p, float r, float n)
 
 	if (r > sealevel) {
 		y = (r - sealevel) / (1.0 - sealevel);
-		colorindex = (int) (y * landh);
+		colorindex = (int) (y * (landh - 1));
 		colorindex = colorindex * landbpr;
-		colorindex = colorindex + 3 * (int) (n * landw);
+		colorindex = colorindex + 3 * (int) (n * (landw - 1));
 		output_image[f][p + 0] = land[colorindex + 0];
 		output_image[f][p + 1] = land[colorindex + 1];
 		output_image[f][p + 2] = land[colorindex + 2];
 		return;
 	}
 	y = r / sealevel;
-	colorindex = (int) (y * waterh);
+	colorindex = (int) (y * (waterh - 1));
 	colorindex = colorindex * waterbpr;
-	colorindex = colorindex + 3 * (int) (n * waterw);
+	colorindex = colorindex + 3 * (int) (n * (waterw - 1));
 	output_image[f][p + 0] = water[colorindex + 0];
 	output_image[f][p + 1] = water[colorindex + 1];
 	output_image[f][p + 2] = water[colorindex + 2];
