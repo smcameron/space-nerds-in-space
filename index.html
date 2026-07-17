@@ -295,13 +295,8 @@ performs its job satisfactorily, you can advance to Step 3.
  sudo apt-get install libsdl2-dev;
  sudo apt-get install libsdl2-2.0-0;
  sudo apt-get install liblua5.2-dev;
- sudo apt-get install libglew-dev;
  sudo apt-get install libttspico-utils; # optional, for text to speech
- # Even better than libttspico is nanotts https://github.com/smcameron/nanotts
- # which is my version nanotts which is a version of pico2wave with a better
- # user interface. (original nanotts is here: https://github.com/gmn/nanotts
- # I just added a man page, and improved the Makefile to user PREFIX and DESTDIR)
- # Both nanotts and libttspico are *far* superior to espeak.
+ # Note: even better than libttspico is https://github.com/gmn/nanotts
  sudo apt-get install sox; # for "play" command, used by text to speech
  sudo apt-get install libcrypt-dev; # used by bin/snis_update_assets
  sudo apt-get install libcurl-dev; # used by bin/snis_update_assets
@@ -359,6 +354,16 @@ downloaded the zip file), and type (as a non-root user):
 </blockquote>
 </pre>
 
+<p>Note, if you are building on a Raspberry Pi, you probably want to use
+OpenGLES, which is now supported (circa July 2026) rather than OpenGL.
+To compile with OpenGLES do (as a non-root user):
+
+<p><pre>
+<blockquote>
+ make USE_GLES=1
+</blockquote>
+</pre>
+
 <p>You should see quite a lot of output, like this:
 
 <p><pre>
@@ -386,6 +391,8 @@ for you.
 <p>You can also file a bug report if you think you have discovered a problem
 with the build process, or the instructions here.  I believe you will need a github
 account to file a bug report.
+
+<p>If you're building for Raspberry Pi platform, you'll need to explicitly enable the GLES render by adding USE_GLES=1 to the end of the make line (ie: <fwf>make USE_GLES=1</fwf>)
 
 <p><ul>
 <li><a href="https://github.com/smcameron/space-nerds-in-space/issues">Click here to file a bug report</a>
@@ -476,6 +483,7 @@ slider that controls the thrusters of your ship. Click on it to begin moving for
 
 <!-- DO NOT EDIT THE BUILD INSTRUCTIONS ABOVE -->
 <!-- THEY ARE AUTOMATICALLY GENERATED FROM README.md on the master branch -->
+<!-- by using tinymd2html. https://github.com/smcameron/tinymd2html -->
 
 <h2>Step 5. Play around</h2>
 <h3><a name="controls">Keyboard Controls</b></h3>
