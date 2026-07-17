@@ -1342,7 +1342,7 @@ static void set_object_velocity(struct snis_entity *o, double vx, double vy, dou
 	o->vz = vz;
 }
 
-static void get_peer_name(int connection, char *buffer)
+static void get_peer_name(int connection, char *buffer, size_t buffersize)
 {
 	struct sockaddr_in *peer;
 	struct sockaddr p = { 0 };
@@ -1358,10 +1358,10 @@ static void get_peer_name(int connection, char *buffer)
 	if (rc != 0) {
 		/* this happens quite a lot, so SSGL_INFO... */
 		snis_log(SNIS_INFO, "getpeername failed: %s\n", strerror(errno));
-		sprintf(buffer, "(UNKNOWN)");
+		snprintf(buffer, buffersize, "(UNKNOWN)");
 		return;
 	}
-	sprintf(buffer, "%s:%hu", inet_ntoa(peer->sin_addr), ntohs(peer->sin_port));
+	snprintf(buffer, buffersize, "%s:%hu", inet_ntoa(peer->sin_addr), ntohs(peer->sin_port));
 }
 
 static char *logprefixstr = NULL;
@@ -1384,7 +1384,7 @@ static void log_client_info(__attribute__((unused)) int level, int connection, c
 		return;
 
 	memset(client_ip, 0, sizeof(client_ip));
-	get_peer_name(connection, client_ip);
+	get_peer_name(connection, client_ip, sizeof(client_ip));
 	fprintf(stderr, "%s: %s: %s", logprefix(), client_ip, info);
 }
 
@@ -28765,7 +28765,7 @@ static int nl_calculate_ship_rotation(struct game_client *c,
 					__attribute__((unused)) int argc, char *argv[],
 					__attribute__((unused)) int pos[],
 					union snis_nl_extra_data extra_data[],
-					int direction, int amount, char *reply,
+					int direction, int amount, char *reply, size_t replysize,
 					union quat *rotation)
 {
 	float degrees = extra_data[amount].number.value;
@@ -28776,23 +28776,23 @@ static int nl_calculate_ship_rotation(struct game_client *c,
 	if (strcasecmp(argv[direction], "starboard") == 0 ||
 		strcasecmp(argv[direction], "right") == 0) {
 		quat_init_axis(rotation, 0, 1, 0, -degrees * M_PI / 180.0);
-		sprintf(reply, "rotating %3.0f degrees to starboard", degrees);
+		snprintf(reply, replysize, "rotating %3.0f degrees to starboard", degrees);
 	} else if (strcasecmp(argv[direction], "port") == 0 ||
 			strcasecmp(argv[direction], "left") == 0) {
 		quat_init_axis(rotation, 0, 1, 0, degrees * M_PI / 180.0);
-		sprintf(reply, "rotating %3.0f degrees to port", degrees);
+		snprintf(reply, replysize, "rotating %3.0f degrees to port", degrees);
 	} else if (strcasecmp(argv[direction], "clockwise") == 0) {
 		quat_init_axis(rotation, 1, 0, 0, degrees * M_PI / 180.0);
-		sprintf(reply, "rolling %3.0f degrees clockwise", degrees);
+		snprintf(reply, replysize, "rolling %3.0f degrees clockwise", degrees);
 	} else if (strcasecmp(argv[direction], "counterclockwise") == 0) {
 		quat_init_axis(rotation, 1, 0, 0, -degrees * M_PI / 180.0);
-		sprintf(reply, "rolling %3.0f degrees counter clockwise", degrees);
+		snprintf(reply, replysize, "rolling %3.0f degrees counter clockwise", degrees);
 	} else if (strcasecmp(argv[direction], "up") == 0) {
 		quat_init_axis(rotation, 0, 0, 1, degrees * M_PI / 180.0);
-		sprintf(reply, "pitching %3.0f degrees up", degrees);
+		snprintf(reply, replysize, "pitching %3.0f degrees up", degrees);
 	} else if (strcasecmp(argv[direction], "down") == 0) {
 		quat_init_axis(rotation, 0, 0, 1, -degrees * M_PI / 180.0);
-		sprintf(reply, "pitching %3.0f degrees down", degrees);
+		snprintf(reply, replysize, "pitching %3.0f degrees down", degrees);
 	} else {
 		queue_add_text_to_speech(c, "Sorry, I do not understand which direction you want to turn.");
 		return -1;
@@ -28817,7 +28817,7 @@ static void nl_turn_aq(struct snis_nl_context *ctx,
 		goto no_understand;
 
 	if (nl_calculate_ship_rotation(c, argc, argv, pos, extra_data,
-					adj, number, reply, &rotation))
+					adj, number, reply, sizeof(reply), &rotation))
 		return;
 
 	nl_rotate_ship(c, &rotation);
@@ -28845,7 +28845,7 @@ static void nl_turn_qa(struct snis_nl_context *ctx,
 		goto no_understand;
 
 	if (nl_calculate_ship_rotation(c, argc, argv, pos, extra_data,
-					adj, number, reply, &rotation))
+					adj, number, reply, sizeof(reply), &rotation))
 		return;
 
 	nl_rotate_ship(c, &rotation);
@@ -29090,7 +29090,7 @@ static void nl_turn_aqa(struct snis_nl_context *ctx,
 	}
 
 	if (nl_calculate_ship_rotation(c, argc, argv, pos, extra_data,
-					direction, amount, reply, &rotation))
+					direction, amount, reply, sizeof(reply), &rotation))
 		return;
 	nl_rotate_ship(c, &rotation);
 	queue_add_text_to_speech(c, reply);
@@ -29126,7 +29126,7 @@ static void nl_turn_qaa(struct snis_nl_context *ctx,
 	}
 
 	if (nl_calculate_ship_rotation(c, argc, argv, pos, extra_data,
-					direction, amount, reply, &rotation))
+					direction, amount, reply, sizeof(reply), &rotation))
 		return;
 	nl_rotate_ship(c, &rotation);
 	queue_add_text_to_speech(c, reply);
@@ -32829,7 +32829,7 @@ static void read_replacement_assets(struct replacement_asset *r, char *asset_dir
 	int rc;
 	char p[PATH_MAX];
 
-	sprintf(p, "%s/replacement_assets.txt", asset_directory);
+	snprintf(p, sizeof(p), "%s/replacement_assets.txt", asset_directory);
 	errno = 0;
 	rc = replacement_asset_read(p, asset_directory, r);
 	if (rc < 0 && errno != EEXIST)
