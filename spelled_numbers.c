@@ -102,9 +102,9 @@ static int straight_replace_entry(char *input, struct number_map_entry *e)
 	m = strstr(input, e->name);
 	if (m) {
 		if (e->value < 1.0 && e->value > 0.0)
-			sprintf(replacement, "%0.2f", e->value);
+			snprintf(replacement, sizeof(replacement), "%0.2f", e->value);
 		else
-			sprintf(replacement, "%.0f", e->value);
+			snprintf(replacement, sizeof(replacement), "%.0f", e->value);
 		if (strcmp(e->name, "percent") == 0)
 			strcpy(replacement, "");
 		len = strlen(replacement);
@@ -301,7 +301,7 @@ static int combine_numeric_values_once(char *input)
 		} else {
 			v3 = v1 + v2;
 		}
-		sprintf(new_number, "%d", v3);
+		snprintf(new_number, sizeof(new_number), "%d", v3);
 		/* printf("v3 = %d\n", v3); */
 		replace_segment(input, fs, se, new_number);
 		/* printf("after rplacement input = '%s'\n", input); */
