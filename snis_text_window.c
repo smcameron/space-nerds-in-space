@@ -188,7 +188,7 @@ void text_window_draw(struct text_window *tw)
 #if 0
 	{
 		char tmpbuf[100];
-		sprintf(tmpbuf, "FE %d, LE %d, TOP %d, VIS %d\n",
+		snprintf(tmpbuf, sizeof(tmpbuf), "FE %d, LE %d, TOP %d, VIS %d\n",
 			tw->first_entry, tw->last_entry, tw->top_line, tw->visible_lines);
 		sng_abs_xy_draw_string(tmpbuf, tw->font, tw->x, tw->y - tw->lineheight);
 	}
