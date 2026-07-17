@@ -17793,7 +17793,7 @@ static void npc_menu_item_collect_bounties(__attribute__((unused)) struct npc_me
 	if (count != b->nship_id_chips)
 		send_comms_packet(sb, npcname, ch, " COLLECTED %d SHIP ID CHIPS", b->nship_id_chips - count);
 	b->nship_id_chips = count;
-	send_comms_packet(sb, npcname, ch, " THANK YOU FOR YOUR SERVICE", total);
+	send_comms_packet(sb, npcname, ch, " THANK YOU FOR YOUR SERVICE");
 	pthread_mutex_unlock(&universe_mutex);
 }
 
