@@ -35,7 +35,6 @@ apt_min_packages()
 	libsdl2-dev
 	libsdl2-2.0-0
 	liblua5.2-dev
-	libglew-dev
 	libttspico-utils
 	libcrypt-dev
 	libssl-dev
