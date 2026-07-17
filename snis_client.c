@@ -18891,7 +18891,7 @@ static char *expand_demon_selection_string(char *input)
 
 
 	for (i = 0; i < demon_ui.nselected; i++) {
-		sprintf(number, "%d", demon_ui.selected_id[i]);
+		snprintf(number, sizeof(number), "%d", demon_ui.selected_id[i]);
 		l = strlen(buffer);
 		n = sizeof(buffer) - l - 2;
 		if (n <= 0)
@@ -18907,7 +18907,7 @@ static char *expand_demon_selection_string(char *input)
 	return newinput;
 }
 
-static int construct_demon_command(char *input, char *errmsg)
+static int construct_demon_command(char *input, char *errmsg, size_t errmsgsize)
 {
 	char *s;
 	int i, g, g2, v;
@@ -18955,12 +18955,12 @@ static int construct_demon_command(char *input, char *errmsg)
 		case 1: /* select */
 			s = strtok_r(NULL, DEMON_CMD_DELIM, &saveptr);
 			if (s == NULL) {
-				sprintf(errmsg, "missing argument to name command");
+				snprintf(errmsg, errmsgsize, "missing argument to name command");
 				goto error;
 			}
 			g = get_demon_group_var(s); 
 			if (g < 0) {
-				sprintf(errmsg, "out of group variables");
+				snprintf(errmsg, errmsgsize, "out of group variables");
 				goto error;
 			}
 			set_demon_group(g);
@@ -18968,22 +18968,22 @@ static int construct_demon_command(char *input, char *errmsg)
 		case 2: /* attack */
 			s = strtok_r(NULL, DEMON_CMD_DELIM, &saveptr);
 			if (s == NULL) {
-				sprintf(errmsg, "missing 1st argument to attack command");
+				snprintf(errmsg, errmsgsize, "missing 1st argument to attack command");
 				goto error;
 			}
 			g = lookup_demon_group(s);
 			if (g < 0) {
-				sprintf(errmsg, "No such group '%s'", s);
+				snprintf(errmsg, errmsgsize, "No such group '%s'", s);
 				goto error;
 			}
 			s = strtok_r(NULL, DEMON_CMD_DELIM, &saveptr);
 			if (s == NULL) {
-				sprintf(errmsg, "missing 2nd argument to attack command");
+				snprintf(errmsg, errmsgsize, "missing 2nd argument to attack command");
 				goto error;
 			}
 			g2 = lookup_demon_group(s);
 			if (g2 < 0) {
-				sprintf(errmsg, "no such group '%s'", s);
+				snprintf(errmsg, errmsgsize, "no such group '%s'", s);
 				goto error;
 			}
 			/* TODO - finish this */
@@ -19012,7 +19012,7 @@ static int construct_demon_command(char *input, char *errmsg)
 		case 3: /* identify */
 			s = strtok_r(NULL, DEMON_CMD_DELIM, &saveptr);
 			if (s == NULL) {
-				sprintf(errmsg, "missing argument to identify command");
+				snprintf(errmsg, errmsgsize, "missing argument to identify command");
 				goto error;
 			}
 			g = lookup_demon_group(s);
@@ -19151,7 +19151,8 @@ static void send_demon_text_command(char *command)
 		return;
 	clear_empty_demon_variables();
 	strcpy(demon_ui.error_msg, "");
-	rc = construct_demon_command(trim_whitespace(command), demon_ui.error_msg);
+	rc = construct_demon_command(trim_whitespace(command),
+				demon_ui.error_msg, sizeof(demon_ui.error_msg));
 	if (rc)
 		print_demon_console_msg(demon_ui.error_msg);
 }
