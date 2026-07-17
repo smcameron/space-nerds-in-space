@@ -16591,8 +16591,8 @@ static void starbase_registration_query_npc_bot(struct snis_entity *o, int bridg
 				c = lookup_by_id(ship_registry.entry[i].id);
 				if (c < 0)
 					continue;
-				if (go[c].type != OBJTYPE_STARBASE && go[i].type != OBJTYPE_BRIDGE &&
-							go[i].type != OBJTYPE_NPCSHIP)
+				if (go[c].type != OBJTYPE_STARBASE && go[c].type != OBJTYPE_BRIDGE &&
+							go[c].type != OBJTYPE_NPCSHIP)
 					continue;
 				if (strncasecmp(msg, go[c].sdata.name, strlen(msg)) != 0)
 					continue;
