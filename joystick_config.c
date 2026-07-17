@@ -149,7 +149,7 @@ static void translate_mode_names(char *line)
 		{ "damcon", 7 },
 		{ "all", MODE_ALL },
 	};
-	char modename[255];
+	char modename[256];
 
 	/* Find the first word after "mode" */
 	rc = sscanf(line, " mode %255s%*[^	 ]", modename);
@@ -194,7 +194,7 @@ static int parse_joystick_cfg_line(struct joystick_config *cfg, char *filename, 
 	int tmpmode;
 	unsigned char dummy;
 
-	rc = sscanf(line, "device: %1000s", device);
+	rc = sscanf(line, "device: %999s", device);
 	if (rc == 1) {
 		int i;
 
@@ -218,19 +218,19 @@ static int parse_joystick_cfg_line(struct joystick_config *cfg, char *filename, 
 	}
 
 	invert = 1; /* not inverted */
-	rc = sscanf(line, " mode %d invert axis %d %1000s %d", &mode, &axis, function, &deadzone);
+	rc = sscanf(line, " mode %d invert axis %d %999s %d", &mode, &axis, function, &deadzone);
 	if (rc >= 3)
 		invert = -1; /* inverted */
 	else
-		rc = sscanf(line, " mode %d axis %d %1000s %d", &mode, &axis, function, &deadzone);
+		rc = sscanf(line, " mode %d axis %d %999s %d", &mode, &axis, function, &deadzone);
 
 	/* Maybe mode is implicit */
 	if (rc < 3 && mode >= 0) {
-		rc = sscanf(line, " invert axis %d %1000s %d", &axis, function, &deadzone);
+		rc = sscanf(line, " invert axis %d %999s %d", &axis, function, &deadzone);
 		if (rc >= 2)
 			invert = -1; /* inverted */
 		else
-			rc = sscanf(line, " axis %d %1000s %d", &axis, function, &deadzone);
+			rc = sscanf(line, " axis %d %999s %d", &axis, function, &deadzone);
 		if (rc >= 2)
 			rc++; /* plus 1 for the implicit "mode" */
 	}
@@ -270,11 +270,11 @@ static int parse_joystick_cfg_line(struct joystick_config *cfg, char *filename, 
 		}
 		return 0;
 	}
-	rc = sscanf(line, " mode %d button %d %1000s", &mode, &button, function);
+	rc = sscanf(line, " mode %d button %d %999s", &mode, &button, function);
 
 	/* Maybe mode is implicit */
 	if (rc != 3 && mode >= 0) {
-		rc = sscanf(line, " button %d %1000s", &button, function);
+		rc = sscanf(line, " button %d %999s", &button, function);
 		if (rc >= 2)
 			rc++; /* plus 1 for implicit mode */
 	}

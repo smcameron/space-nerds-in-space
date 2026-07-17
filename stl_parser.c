@@ -926,12 +926,12 @@ static void parse_mtllib(char *parentfilename, char *mtllib_line, char *tfile,
 	BUILD_ASSERT(PATH_MAX == 4096);
 	dname = dir_name(parentfilename);
 
-	/* Putting the 4096 in here is a little nuts, as mtllib is at
+	/* Putting the 4095 in here is a little nuts, as mtllib is at
 	 * most 1000 chars from read_obj_file(), but doing so should satisfy
 	 * tools that are looking for approximately "scanf(.*%s)" as
 	 * being potential buffer overflows.
 	 */
-	rc = sscanf(mtllib_line, "mtllib %4096s", fname);
+	rc = sscanf(mtllib_line, "mtllib %4095s", fname);
 	if (rc != 1) {
 		free(dname);
 		fprintf(stderr, "Failed to parse '%s:%s'\n", parentfilename, mtllib_line);
@@ -962,13 +962,13 @@ static void parse_mtllib(char *parentfilename, char *mtllib_line, char *tfile,
 		 * one we find to be the only one.
 		 */
 		if (!tfile[0] && strncmp(ln, "map_Kd ", 7) == 0) {
-			rc = sscanf(ln, "map_Kd %4096s", texturefile);
+			rc = sscanf(ln, "map_Kd %4095s", texturefile);
 			if (rc != 1)
 				continue;
 			snprintf(tfile, tfilelen, "%s%s", dname, texturefile);
 		}
 		if (!efile[0] && strncmp(ln, "map_Ke ", 7) == 0) {
-			rc = sscanf(ln, "map_Ke %4096s", texturefile);
+			rc = sscanf(ln, "map_Ke %4095s", texturefile);
 			if (rc != 1)
 				continue;
 			snprintf(efile, efilelen, "%s%s", dname, texturefile);
@@ -977,7 +977,7 @@ static void parse_mtllib(char *parentfilename, char *mtllib_line, char *tfile,
 		 * normal maps, only bump maps, which the latter are fairly useless.
 		 */
 		if (!nfile[0] && strncmp(ln, "norm ", 5) == 0) {
-			rc = sscanf(ln, "norm %4096s", texturefile);
+			rc = sscanf(ln, "norm %4095s", texturefile);
 			if (rc != 1)
 				continue;
 			snprintf(nfile, nfilelen, "%s%s", dname, texturefile);

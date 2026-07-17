@@ -474,7 +474,7 @@ static int restore_bridge_info(const char *filename, struct bridge_info *b, unsi
 	 */
 	memset(b->starsystem_name, 0, sizeof(b->starsystem_name));
 	BUILD_ASSERT(sizeof(system) == 100);
-	rc = sscanf(contents, "starsystem:%100s", system);
+	rc = sscanf(contents, "starsystem:%99s", system);
 	if (rc == 1) {
 		snprintf(b->starsystem_name, sizeof(b->starsystem_name) - 1, "%s", system);
 		nextline = strchr(contents, '\n');

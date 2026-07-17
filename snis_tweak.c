@@ -218,7 +218,7 @@ int tweakable_var_describe(struct tweakable_var_descriptor *tweak, int count, ch
 		return TWEAK_BAD_SYNTAX;
 	}
 	BUILD_ASSERT(sizeof(variable) == 255);
-	rc = sscanf(arg, "%255s", variable);
+	rc = sscanf(arg, "%254s", variable);
 	if (rc != 1) {
 		printfn("DESCRIBE: INVALID USAGE. USE E.G., DESCRIBE MAX_PLAYER_VELOCITY");
 		return TWEAK_BAD_SYNTAX;

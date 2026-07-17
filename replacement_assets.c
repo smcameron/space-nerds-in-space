@@ -87,7 +87,7 @@ int replacement_asset_read(char *replacement_list_filename, char *asset_dir,
 		memset(f2, 0, sizeof(f2));
 		BUILD_ASSERT(sizeof(f1) == 1000);
 		BUILD_ASSERT(sizeof(f2) == 1000);
-		rc = sscanf(line, "%1000s%*[	 ]%1000s", f1, f2);
+		rc = sscanf(line, "%999s%*[	 ]%999s", f1, f2);
 		if (rc != 2) {
 			fprintf(stderr, "%s: syntax error at line %d\n", replacement_list_filename, ln);
 			continue;

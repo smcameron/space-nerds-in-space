@@ -94,7 +94,7 @@ int read_starbase_model_metadata(char *asset_dir, char *filename, int *nstarbase
 			continue;
 		}
 		BUILD_ASSERT(PATH_MAX == 4096);
-		rc = sscanf(s, "%4096s %4096s", model_file, docking_port_file);
+		rc = sscanf(s, "%4095s %4095s", model_file, docking_port_file);
 		if (rc != 2) {
 			fprintf(stderr, "%s:%d bad starbase model specification\n",
 					path, lineno);

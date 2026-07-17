@@ -499,7 +499,7 @@ void read_keymap_config_file(struct xdg_base_context *xdg_base_ctx)
 		BUILD_ASSERT(sizeof(stations) == 256);
 		BUILD_ASSERT(sizeof(keyname) == 256);
 		BUILD_ASSERT(sizeof(actionname) == 256);
-		rc = sscanf(s, "map %256s %256s %256s", stations, keyname, actionname);
+		rc = sscanf(s, "map %255s %255s %255s", stations, keyname, actionname);
 		if (rc == 3) {
 			if (remapkey(stations, keyname, actionname) == 0)
 				continue;

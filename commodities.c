@@ -63,7 +63,7 @@ static int add_category(char *c)
 	}
 	BUILD_ASSERT(sizeof(name) == 100);
 	BUILD_ASSERT(sizeof(desc) == 100);
-	rc = sscanf(c, "category: %100[a-zA-Z ], %100[a-zA-Z ], %f, %f, %f", name, desc, &e, &g, &t);
+	rc = sscanf(c, "category: %99[a-zA-Z ], %99[a-zA-Z ], %f, %f, %f", name, desc, &e, &g, &t);
 	if (rc != 5) {
 		fprintf(stderr, "Bad category: '%s'\n", c);
 		return -1;

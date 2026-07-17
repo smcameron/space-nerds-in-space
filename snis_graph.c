@@ -675,6 +675,10 @@ static int parse_user_color_line(char *filename, char *line, int ln,
 	unsigned int r, g, b;
 	char name[100], ui_component[100], colorname[100];
 
+	BUILD_ASSERT(sizeof(name) == 100);
+	BUILD_ASSERT(sizeof(ui_component) == 100);
+	BUILD_ASSERT(sizeof(colorname) == 100);
+
 	if (line[0] == '#')
 		return 1; /* comment */
 
@@ -685,7 +689,7 @@ static int parse_user_color_line(char *filename, char *line, int ln,
 		return 1; /* comment (blank line) */
 
 	memset(name, 0, sizeof(name));
-	rc = sscanf(line, "color %[^	 ] #%02x%02x%02x",
+	rc = sscanf(line, "color %99[^	 ] #%02x%02x%02x",
 			name, &r, &g, &b);
 	if (rc == 4) {
 		name[19] = '\0';
@@ -698,7 +702,7 @@ static int parse_user_color_line(char *filename, char *line, int ln,
 		}
 		return 0;
 	} else {
-		rc = sscanf(line, "%[^	 ] #%02x%02x%02x",
+		rc = sscanf(line, "%99[^	 ] #%02x%02x%02x",
 				ui_component, &r, &g, &b);
 		if (rc == 4) {
 			e->index = sng_add_user_color(r, g, b);
@@ -710,7 +714,7 @@ static int parse_user_color_line(char *filename, char *line, int ln,
 			modify_ui_color(ui_component, e->index);
 			return 0;
 		} else {
-			rc = sscanf(line, "%[^	 ] %[^	 ]",
+			rc = sscanf(line, "%99[^	 ] %99[^	 ]",
 				ui_component, colorname);
 			if (rc == 2) {
 				e->index = lookup_user_color(colorname);

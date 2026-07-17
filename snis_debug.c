@@ -78,7 +78,7 @@ void snis_debug_dump(char *cmd, struct snis_entity go[], int nstarbase_models,
 	static uint32_t last_object = (uint32_t) -1;
 
 	BUILD_ASSERT(sizeof(arg2) == 256);
-	rc = sscanf(cmd, "%*s %256s", arg2);
+	rc = sscanf(cmd, "%*s %255s", arg2);
 	if (rc == 1 && strcasecmp(arg2, "registry") == 0 && registry) {
 		dump_registry(printfn, registry);
 		return;
