@@ -21065,6 +21065,10 @@ static int l_set_player_damage(lua_State *l)
 	if (value < 0 || value > 255)
 		goto error;
 	b = lookup_bridge_by_shipid(o->id);
+	if (b < 0 || b >= nbridges) {
+		send_demon_console_msg("set_player_damage: failed to find bridge with ID %u\n", o->id);
+		goto error;
+	}
 	bvalue = (uint8_t) value;
 	if (strncmp(system, "shield", 6) == 0) {
 		damage_delta =
@@ -21134,8 +21138,6 @@ error:
 	return 1;
 
 distribute_damage:
-
-	assert(b >= 0 && b < nbridges);
 	if (fabs(ftotal) < 0.0001)
 		distribute_damage_to_damcon_system_parts(&bridgelist[b].damcon,
 				damage_delta, system_number);
