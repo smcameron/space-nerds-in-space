@@ -134,7 +134,7 @@ void gauge_draw(struct gauge *g)
 		y2 = (y2 + g->y);
 		y3 = (y3 + g->y);
 		sng_current_draw_line(x1, y1, x2, y2);
-		sprintf(buf2, "%1.0lf", v / g->multiplier);
+		snprintf(buf2, sizeof(buf2), "%1.0lf", v / g->multiplier);
 		v += inc;
 		sng_center_xy_draw_string(buf2, g->dial_font, x3, y3);
 	}
@@ -142,7 +142,7 @@ void gauge_draw(struct gauge *g)
 			g->x, (g->y + (g->r * 0.5)));
 	value = (g->sample() + g->last_value[0]) / 2.0;
 	g->last_value[0] = value;
-	sprintf(buffer, "%4.2lf", value);
+	snprintf(buffer, sizeof(buffer), "%4.2lf", value);
 	sng_center_xy_draw_string(buffer, g->label_font,
 			g->x, (g->y + (g->r * 0.5)) + 15);
 
