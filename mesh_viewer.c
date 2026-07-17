@@ -1284,6 +1284,8 @@ int main(int argc, char *argv[])
 		atmosphere_material.atmosphere.brightness_modifier = 1.0;
 	} else if (cubemap_mode) {
 		target_mesh = snis_read_model(filename);
+		if (!target_mesh)
+			exit(1);
 		atmosphere_mesh = NULL;
 		material_init_textured_planet(&planet_material);
 		planet_material.textured_planet.texture_id = load_cubemap_textures(0, 0,
@@ -1302,7 +1304,11 @@ int main(int argc, char *argv[])
 		thrust_material.textured_particle.time_base = 0.1;
 	} else if (turret_mode) {
 		target_mesh = snis_read_model(turret_model);
+		if (!target_mesh)
+			exit(1);
 		turret_base_mesh = snis_read_model(turret_base_model);
+		if (!turret_base_mesh)
+			exit(1);
 		atmosphere_mesh = NULL;
 	} else if (warpgate_mode) {
 		target_mesh = mesh_fabricate_disc(1.0, 32);
@@ -1314,6 +1320,8 @@ int main(int argc, char *argv[])
 		warpgate_effect_material.texture_mapped_unlit.alpha = 1.0;
 	} else { /* just ordinary model mode */
 		target_mesh = snis_read_model(filename);
+		if (!target_mesh)
+			exit(1);
 		if (cylinder_albedo) {
 			if (cylindrical_axis == 0)
 				mesh_cylindrical_yz_uv_map(target_mesh);
