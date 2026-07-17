@@ -142,7 +142,6 @@ performs its job satisfactorily, you can advance to Step 3.
 > sudo apt-get install libsdl2-dev;
 > sudo apt-get install libsdl2-2.0-0;
 > sudo apt-get install liblua5.2-dev;
-> sudo apt-get install libglew-dev;
 > sudo apt-get install libttspico-utils; # optional, for text to speech
 > sudo apt-get install sox; # for "play" command, used by text to speech
 > sudo apt-get install libcrypt-dev; # used by bin/snis_update_assets
@@ -194,6 +193,14 @@ downloaded the zip file), and type (as a non-root user):
 
 ```
 > make
+```
+
+Note, if you are building on a Raspberry Pi, you probably want to use
+OpenGLES, which is now supported (circa July 2026) rather than OpenGL.
+To compile with OpenGLES do (as a non-root user):
+
+```
+> make USE_GLES=1
 ```
 
 You should see quite a lot of output, like this:
