@@ -186,8 +186,8 @@ void snis_scaling_strip_chart_draw(struct scaling_strip_chart *sc)
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wformat-nonliteral"
-	sprintf(toplabel, format_string(sc->top), sc->top);
-	sprintf(bottomlabel, format_string(sc->bottom), sc->bottom);
+	snprintf(toplabel, sizeof(toplabel), format_string(sc->top), sc->top);
+	snprintf(bottomlabel, sizeof(bottomlabel), format_string(sc->bottom), sc->bottom);
 #pragma GCC diagnostic pop
 
 	for (i = 0; i < sc->history_size; i++) {
@@ -204,7 +204,7 @@ void snis_scaling_strip_chart_draw(struct scaling_strip_chart *sc)
 		if (i == sc->history_size - 1) {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wformat-nonliteral"
-			sprintf(valuelabel, format_string(sc->history[index]), sc->history[index]);
+			snprintf(valuelabel, sizeof(valuelabel), format_string(sc->history[index]), sc->history[index]);
 #pragma GCC diagnostic pop
 			sng_set_foreground(sc->warn_color);
 			sng_abs_xy_draw_string(valuelabel, sc->font, ox + w + 5,
