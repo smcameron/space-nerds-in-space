@@ -37,7 +37,7 @@ static char *fixup_asset_dir(char *s, struct replacement_asset *ra)
 	x = strstr(s, asset_dir_pattern);
 	if (!x)
 		return s;
-	sprintf(answer, "%s/%s", ra->asset_dir, s + 10);
+	snprintf(answer, sizeof(answer), "%s/%s", ra->asset_dir, s + 10);
 	return strdup(answer);
 }
 
