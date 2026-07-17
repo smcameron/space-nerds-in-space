@@ -143,6 +143,7 @@ performs its job satisfactorily, you can advance to Step 3.
 > sudo apt-get install libsdl2-2.0-0;
 > sudo apt-get install liblua5.2-dev;
 > sudo apt-get install libttspico-utils; # optional, for text to speech
+# Note: even better than libttspico is https://github.com/gmn/nanotts
 > sudo apt-get install sox; # for "play" command, used by text to speech
 > sudo apt-get install libcrypt-dev; # used by bin/snis_update_assets
 > sudo apt-get install libcurl-dev; # used by bin/snis_update_assets
