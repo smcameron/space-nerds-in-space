@@ -4836,7 +4836,7 @@ static void maybe_find_spacemonster_a_home(struct snis_entity *o)
 		if (!go[i].alive || go[i].type != OBJTYPE_NEBULA)
 			continue;
 		home_nebula--;
-		if (home_nebula == 0) {
+		if (home_nebula == 1) {
 			o->tsd.spacemonster.home = go[i].id;
 			return;
 		}
