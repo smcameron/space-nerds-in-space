@@ -292,7 +292,7 @@ static void construct_starmap(void)
 	int i, n;
 	char path[PATH_MAX];
 
-	sprintf(path, "%s/%s", asset_dir, "solarsystems");
+	snprintf(path, sizeof(path), "%s/%s", asset_dir, "solarsystems");
 	n = scandir(replacement_asset_lookup(path, &replacement_assets), &namelist, NULL, alphasort);
 	if (n < 0) {
 		fprintf(stderr, "snis_multiverse: scandir(%s): %s\n", path, strerror(errno));
@@ -495,7 +495,7 @@ static void usage(void)
 	exit(1);
 }
 
-static void get_peer_name(int connection, char *buffer)
+static void get_peer_name(int connection, char *buffer, size_t buffersize)
 {
 	struct sockaddr_in *peer;
 	struct sockaddr p = { 0 };
@@ -511,10 +511,10 @@ static void get_peer_name(int connection, char *buffer)
 	if (rc != 0) {
 		/* this happens quite a lot, so SSGL_INFO... */
 		snis_log(SNIS_INFO, "getpeername failed: %s\n", strerror(errno));
-		sprintf(buffer, "(UNKNOWN)");
+		snprintf(buffer, buffersize, "(UNKNOWN)");
 		return;
 	}
-	sprintf(buffer, "%s:%hu", inet_ntoa(peer->sin_addr), ntohs(peer->sin_port));
+	snprintf(buffer, buffersize, "%s:%hu", inet_ntoa(peer->sin_addr), ntohs(peer->sin_port));
 }
 
 static void log_client_info(int level, int connection, char *info)
@@ -525,7 +525,7 @@ static void log_client_info(int level, int connection, char *info)
 		return;
 
 	memset(client_ip, 0, sizeof(client_ip));
-	get_peer_name(connection, client_ip);
+	get_peer_name(connection, client_ip, sizeof(client_ip));
 	fprintf(stderr, "snis_multiverse: connection from %s: %s",
 			client_ip, info);
 }
