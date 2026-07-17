@@ -236,7 +236,7 @@ static void take_picture(char *filename)
 static void take_snapshot(void)
 {
 	char filename[100];
-	sprintf(filename, "mesh-viewer-snapshot-%05d.png", snapshot_number);
+	snprintf(filename, sizeof(filename), "mesh-viewer-snapshot-%05d.png", snapshot_number);
 	snapshot_number++;
 	take_picture(filename);
 }
@@ -832,11 +832,11 @@ static void draw_screen(void)
 		sng_set_foreground(WHITE);
 		char stat_buffer[30];
 		if (avg_frame_rate != 0)
-			sprintf(stat_buffer, "fps %5.2f", 1.0 / avg_frame_rate);
+			snprintf(stat_buffer, sizeof(stat_buffer), "fps %5.2f", 1.0 / avg_frame_rate);
 		else
-			sprintf(stat_buffer, "fps ?????.??");
+			snprintf(stat_buffer, sizeof(stat_buffer), "fps ?????.??");
 		sng_abs_xy_draw_string(stat_buffer, NANO_FONT, 2, 10);
-		sprintf(stat_buffer, "t %0.2f ms", avg_frame_time * 1000.0);
+		snprintf(stat_buffer, sizeof(stat_buffer), "t %0.2f ms", avg_frame_time * 1000.0);
 		sng_abs_xy_draw_string(stat_buffer, NANO_FONT, 92, 10);
 	}
 	if (display_frame_stats > 1)
@@ -907,7 +907,7 @@ static unsigned int load_cubemap_textures(int is_inside, int linear_colorspace, 
 	char filename[6][PATH_MAX + 1];
 
 	for (i = 0; i < 6; i++)
-		sprintf(filename[i], "%s%d.png", filenameprefix, i);
+		snprintf(filename[i], sizeof(filename[i]), "%s%d.png", filenameprefix, i);
 
 	return graph_dev_load_cubemap_texture(is_inside, linear_colorspace,
 			maybe_replace_asset(filename[1]),
@@ -926,10 +926,10 @@ static void setup_skybox(char *skybox_prefix)
 
 	if (!skyboxfile) {
 		for (i = 0; i < 6; i++)
-			sprintf(filename[i], "%s/%s%d.png", asset_dir, skybox_prefix, i);
+			snprintf(filename[i], sizeof(filename[i]), "%s/%s%d.png", asset_dir, skybox_prefix, i);
 	} else {
 		for (i = 0; i < 6; i++)
-			sprintf(filename[i], "%s%d.png", skyboxfile, i);
+			snprintf(filename[i], sizeof(filename[i]), "%s%d.png", skyboxfile, i);
 	}
 
 	graph_dev_load_skybox_texture(maybe_replace_asset(filename[3]),
