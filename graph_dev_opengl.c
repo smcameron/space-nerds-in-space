@@ -3590,12 +3590,12 @@ static void setup_textured_cubemap_shader(const char *basename, int use_normal_m
 	char vert_header[1024];
 	char frag_header[1024];
 
-	sprintf(vert_header, "%s\n%s\n%s\n%s\n%s\n",
+	snprintf(vert_header, sizeof(vert_header), "%s\n%s\n%s\n%s\n%s\n",
 		UNIVERSAL_SHADER_HEADER, "#define INCLUDE_VS 1\n",
 			use_normal_map ? "#define USE_NORMAL_MAP 1\n" : "\n",
 			use_specular ? "#define USE_SPECULAR 1\n" : "\n",
 			use_annulus_shadow ? "#define USE_ANNULUS_SHADOW 1\n" : "\n");
-	sprintf(frag_header, "%s\n%s\n%s\n%s\n%s\n",
+	snprintf(frag_header, sizeof(frag_header), "%s\n%s\n%s\n%s\n%s\n",
 		UNIVERSAL_SHADER_HEADER FILMIC_TONEMAPPING, "#define INCLUDE_FS 1\n",
 			use_normal_map ? "#define USE_NORMAL_MAP 1\n" : "\n",
 			use_specular ? "#define USE_SPECULAR 1\n" : "\n",
