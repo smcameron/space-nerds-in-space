@@ -64,7 +64,7 @@ static void ssgl_exit(char *reason, int code)
 	exit(code);
 }
 
-static void get_peer_name(int connection, char *buffer)
+static void get_peer_name(int connection, char *buffer, size_t buffersize)
 {
 	struct sockaddr_in peer;
 	socklen_t addrlen = sizeof(peer);
@@ -76,17 +76,17 @@ static void get_peer_name(int connection, char *buffer)
 	if (rc != 0) {
 		/* this happens quite a lot, so SSGL_INFO... */
 		ssgl_log(SSGL_INFO, "getpeername failed: %s\n", strerror(errno));
-		sprintf(buffer, "(UNKNOWN)");
+		snprintf(buffer, buffersize, "(UNKNOWN)");
 		return;
 	}
-	sprintf(buffer, "%s:%hu", inet_ntoa(peer.sin_addr), ntohs(peer.sin_port));
+	snprintf(buffer, buffersize, "%s:%hu", inet_ntoa(peer.sin_addr), ntohs(peer.sin_port));
 }
 
 static void log_disconnect(int level, int connection, char *reason)
 {
 	char client_ip[50];
 
-	get_peer_name(connection, client_ip);
+	get_peer_name(connection, client_ip, sizeof(client_ip));
 	ssgl_log(level, "ssgl_server: Disconnecting from %s, reason: %s\n",
 			client_ip, reason);
 }
@@ -303,7 +303,7 @@ static void service_game_client(int connection)
 	int nentries, i, rc, be_nentries;
 	char client_ip[100];
 
-	get_peer_name(connection, client_ip);
+	get_peer_name(connection, client_ip, sizeof(client_ip));
 	ssgl_log(SSGL_INFO, "ssgl_server: new game client %s\n", client_ip);
 
 	while (1) {
@@ -425,7 +425,7 @@ static void service(int connection, struct sockaddr_in remote_addr, socklen_t re
 	threadinfo->remote_addr = remote_addr;
 	threadinfo->remote_addr_len = remote_addr_len;
 
-	get_peer_name(connection, client_ip);
+	get_peer_name(connection, client_ip, sizeof(client_ip));
 	ssgl_log(SSGL_INFO, "ssgl_server: New connection from %s\n", client_ip);
 
 	pthread_attr_init(&attr);
