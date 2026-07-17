@@ -263,7 +263,7 @@ static void add_random_atmospheres(struct mtwist_state *mt, enum planetary_atmos
 	char name[30];
 
 	for (i = 0; i < count; i++) {
-		sprintf(name, "%s-%d", atmosphere_type_name[t], i + offset);
+		snprintf(name, sizeof(name), "%s-%d", atmosphere_type_name[t], i + offset);
 		p = planetary_atmosphere_profile_new(name, t, 0.0, 0.0, model);
 		planetary_atmosphere_profile_perturb(mt,  p);
 	}
@@ -407,14 +407,14 @@ void planetary_atmosphere_profile_print(struct planetary_atmosphere_profile *p)
 		int compound = p->major_compound[i];
 		char *name = atmospheric_compound[compound].name;
 		char *symbol = atmospheric_compound[compound].symbol;
-		sprintf(compound_name, "%s (%s)", name, symbol);
+		snprintf(compound_name, sizeof(compound_name), "%s (%s)", name, symbol);
 		printf("%30s: %3.2f%%\n", compound_name, p->major_fraction[i] * 100.0);
 	}
 	for (i = 0; i < p->nminor; i++) {
 		int compound = p->minor_compound[i];
 		char *name = atmospheric_compound[compound].name;
 		char *symbol = atmospheric_compound[compound].symbol;
-		sprintf(compound_name, "%s (%s)", name, symbol);
+		snprintf(compound_name, sizeof(compound_name), "%s (%s)", name, symbol);
 		printf("%30s: %4.2f ppm\n", compound_name, p->minor_ppm[i]);
 	}
 	printf("\n");
