@@ -72,8 +72,8 @@ int main(int argc, char *argv[])
 			fprintf(stderr, "Length of argv[1] is too long, buster.\n");
 			return 1;
 		}
-		sprintf(inputfilename, "%s%d.png", argv[1], i);
-		sprintf(outputfilename, "%s-masked%d.png", argv[1], i);
+		snprintf(inputfilename, sizeof(inputfilename), "%s%d.png", argv[1], i);
+		snprintf(outputfilename, sizeof(outputfilename), "%s-masked%d.png", argv[1], i);
 		printf("Processing %s -> %s\n", inputfilename, outputfilename);
 		input_image = png_utils_read_png_image(inputfilename, 0, 0, 0,
 						&width, &height, &has_alpha, whynot, sizeof(whynot));
