@@ -8810,6 +8810,11 @@ static int do_overheating_damage(struct snis_entity *o)
 		return 0;
 
 	b = lookup_bridge_by_shipid(o->id);
+	if (b < 0) {
+		fprintf(stderr, "do_overheating_damage: failed to lookup bridge for ship id %u\n", o->id);
+		return 0;
+	}
+
 	d = &bridgelist[b].damcon;
 	
 
