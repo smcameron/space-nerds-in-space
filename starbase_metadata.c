@@ -50,7 +50,7 @@ int read_starbase_model_metadata(char *asset_dir, char *filename, int *nstarbase
 	printf("Reading starbase model specifications...");
 	*nstarbase_models = -1;
 	fflush(stdout);
-	sprintf(path, "%s/%s", asset_dir, filename);
+	snprintf(path, sizeof(path), "%s/%s", asset_dir, filename);
 	f = fopen(path, "r");
 	if (!f) {
 		fprintf(stderr, "open: %s: %s\n", path, strerror(errno));
