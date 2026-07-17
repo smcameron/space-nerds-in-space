@@ -13,7 +13,7 @@ void remove_single_quotes(char *text);
 int strchrcount(char *s, int c); /* returns count of occurrences of c within s */
 size_t strlcpy(char *dest, const char *src, size_t n);
 
-void format_function_pointer(char *buffer, void (*function_pointer)(void));
+void format_function_pointer(char *buffer, size_t buffersize, void (*function_pointer)(void));
 
 /* Given a string of the form "xxxxx : yyyyy", return "yyyyy"
  * Basically, return the part of the string after the colon,

@@ -7,6 +7,7 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <errno.h>
+#include "stacktrace.h"
 
 #include "fallthrough.h"
 
@@ -224,11 +225,16 @@ size_t strlcpy(char *dest, const char *src, size_t n)
 }
 
 /* Printing a pointer to a function via %p is forbidden by ISO C, so we have this BS instead: */
-void format_function_pointer(char *buffer, void (*function_pointer)(void))
+void format_function_pointer(char *buffer, size_t buffersize, void (*function_pointer)(void))
 {
 	int direction = 0x01020304;
 	int i, p, start, end;
 	char *endian = (char *) &direction;
+
+	if (buffersize < 2 + sizeof(function_pointer) * 2 + 1) {
+		stacktrace("Buffer too small in format_function_pointer\n");
+		abort();
+	}
 
 	if (endian[0] == 0x01) { /* big endian */
 		direction = 1;
@@ -239,10 +245,17 @@ void format_function_pointer(char *buffer, void (*function_pointer)(void))
 		start = sizeof(function_pointer) - 1;
 		end = -1;
 	}
-	sprintf(buffer, "0x");
+	buffer[0] = '0';
+	buffer[1] = 'x';
 	p = 1;
+	const char *hexdigit = "0123456789ABCDEF";
 	for (i = start; i != end; i += direction) {
-		sprintf(&buffer[p * 2], "%02X", ((unsigned char *) &function_pointer)[i]);
+		unsigned char byte = ((unsigned char *) &function_pointer)[i];
+		unsigned char hi_nyb = (byte & 0xf0) >> 4;
+		unsigned char lo_nyb = byte & 0x0f;
+		buffer[p * 2] = hexdigit[hi_nyb];
+		buffer[p * 2 + 1] = hexdigit[lo_nyb];
+		buffer[p * 2 + 2] = '\0';
 		p++;
 	}
 }

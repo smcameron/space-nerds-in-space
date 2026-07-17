@@ -1042,8 +1042,8 @@ util/sample_image_colors:	util/sample_image_colors.o ${OD}/png_utils.o
 $(OD)/util/generate_solarsystem_positions.o:	util/generate_solarsystem_positions.c ${OD}/string-utils.o ${ODT}
 	$(Q)$(COMPILE)
 
-util/generate_solarsystem_positions:	util/generate_solarsystem_positions.o ${OD}/string-utils.o
-	$(CC) ${MYCFLAGS} -o $@ util/generate_solarsystem_positions.o ${OD}/string-utils.o -lm
+util/generate_solarsystem_positions:	util/generate_solarsystem_positions.o ${OD}/string-utils.o ${OD}/stacktrace.o
+	$(CC) ${MYCFLAGS} -o $@ util/generate_solarsystem_positions.o ${OD}/string-utils.o ${OD}/stacktrace.o -lm
 
 $(OD)/snis_socket_io.o:	snis_socket_io.c Makefile ${ODT}
 	$(Q)$(COMPILE)
@@ -1267,7 +1267,7 @@ $(OD)/c-is-the-locale.o:	c-is-the-locale.c ${ODT}
 $(OD)/commodities.o:	commodities.c Makefile ${ODT}
 	$(Q)$(COMPILE)
 
-$(OD)/string-utils.o:	string-utils.c Makefile ${ODT}
+$(OD)/string-utils.o:	string-utils.c string-utils.h stacktrace.h Makefile ${ODT}
 	$(Q)$(COMPILE)
 
 $(OD)/read_menu_file.o:	read_menu_file.c read_menu_file.h string-utils.h Makefile ${ODT}
@@ -1413,9 +1413,9 @@ bin/yoke-test-program:	yoke-test-program.c ${OD}/snis-device-io.o ${OD}/string-u
 	$(CC) -Wall -Wextra --pedantic -pthread -o bin/yoke-test-program ${OD}/string-utils.o \
 	${OD}/snis-device-io.o ${OD}/pthread_util.o yoke-test-program.c -Lssgl -lssglclient
 
-bin/snis_arduino: snis_arduino.c ${OD}/snis-device-io.o ${OD}/string-utils.o ${BIN}
+bin/snis_arduino: snis_arduino.c ${OD}/snis-device-io.o ${OD}/string-utils.o ${OD}/stacktrace.o ${BIN}
 	$(CC) ${ASANFLAG} ${UBSANFLAG} -Wall -Wextra --pedantic -pthread -o bin/snis_arduino \
-			${OD}/snis-device-io.o ${OD}/string-utils.o snis_arduino.c
+			${OD}/snis-device-io.o ${OD}/string-utils.o ${OD}/stacktrace.o snis_arduino.c
 
 $(OD)/nonuniform_random_sampler.o:	nonuniform_random_sampler.c nonuniform_random_sampler.h ${ODT}
 	$(Q)$(COMPILE)
@@ -1595,9 +1595,9 @@ bin/check-endianness:	check-endianness.c Makefile ${BIN}
 	@echo "  COMPILE check-endianness.c"
 	$(Q)$(CC) -o bin/check-endianness check-endianness.c
 
-bin/snis_update_assets:	util/snis_update_assets.c ${OD}/string-utils.o util/progress_image.h
+bin/snis_update_assets:	util/snis_update_assets.c ${OD}/string-utils.o ${OD}/stacktrace.o util/progress_image.h
 	$(Q)$(CC) ${MYCFLAGS} ${SDLCFLAGS} -o bin/snis_update_assets util/snis_update_assets.c \
-		${OD}/string-utils.o ${SDLLIBS} -lcrypto -lcurl
+		${OD}/string-utils.o ${OD}/stacktrace.o ${SDLLIBS} -lcrypto -lcurl
 
 build_info.h: bin/check-endianness snis.h gather_build_info Makefile
 	@echo "  GATHER BUILD INFO"

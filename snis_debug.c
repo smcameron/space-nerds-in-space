@@ -117,7 +117,7 @@ void snis_debug_dump(char *cmd, struct snis_entity go[], int nstarbase_models,
 	printfn("-- TIMESTAMP = %u", o->timestamp);
 #endif
 	printfn("-- RESPAWN TIME = %u", o->respawn_time);
-	format_function_pointer(fnptraddr, (void (*)(void)) o->move);
+	format_function_pointer(fnptraddr, sizeof(fnptraddr), (void (*)(void)) o->move);
 	printfn("-- MOVE FN %s", fnptraddr);
 	printfn("-- SDATA NAME = %s", o->sdata.name);
 	printfn("-- SDATA SCIENCE TEXT = %s", o->sdata.science_text ? o->sdata.science_text : "NULL");
