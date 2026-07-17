@@ -210,7 +210,7 @@ try_a_new_point:
 		}
 
 		/* Add the new point */
-		sprintf(ss[nsolarsystems].name, "solarsystem %d", i);
+		snprintf(ss[nsolarsystems].name, sizeof(ss[0].name), "solarsystem %d", i);
 		ss[nsolarsystems].x = x;
 		ss[nsolarsystems].y = y;
 		ss[nsolarsystems].z = z;
