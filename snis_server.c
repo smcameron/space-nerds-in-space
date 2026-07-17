@@ -5032,7 +5032,7 @@ static void spacemonster_play(struct snis_entity *o)
 		o->tsd.spacemonster.dvy = v.v.y;
 		o->tsd.spacemonster.dvz = v.v.z;
 	} else if (snis_randn(1000) < 50) {
-			random_point_on_sphere(1.0, &v.v.x, &v.v.y, &v.v.y);
+			random_point_on_sphere(1.0, &v.v.x, &v.v.y, &v.v.z);
 			vec3_mul_self(&v, max_spacemonster_velocity);
 			o->tsd.spacemonster.dvx = v.v.x;
 			o->tsd.spacemonster.dvy = v.v.y;
