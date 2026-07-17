@@ -1309,8 +1309,9 @@ $(OD)/planetary_atmosphere.o:	planetary_atmosphere.c Makefile ${ODT}
 $(OD)/planetary_ring_data.o:	planetary_ring_data.c planetary_ring_data.h mtwist.h Makefile ${ODT}
 	$(Q)$(COMPILE)
 
-test_planetary_atmosphere:	planetary_atmosphere.c mtwist.o Makefile
-	$(CC) -g -DTEST_PLANETARY_ATMOSPHERE_PROFILE -o test_planetary_atmosphere planetary_atmosphere.c mtwist.o
+test_planetary_atmosphere:	planetary_atmosphere.c ${OD}/mtwist.o Makefile
+	$(CC) -g -DTEST_PLANETARY_ATMOSPHERE_PROFILE -o test_planetary_atmosphere \
+		planetary_atmosphere.c ${OD}/mtwist.o
 
 $(OD)/key_value_parser.o:	key_value_parser.c key_value_parser.h Makefile ${ODT}
 	$(Q)$(COMPILE)
@@ -1352,8 +1353,8 @@ $(OD)/spelled_numbers.o:	spelled_numbers.c spelled_numbers.h Makefile ${ODT}
 $(OD)/scipher.o:	scipher.c scipher.h mathutils.h
 	$(Q)$(COMPILE)
 
-test_scipher:	scipher.c scipher.h mathutils.o mtwist.o
-	$(CC) -g -fsanitize=address -DTEST_SCIPHER -o test_scipher scipher.c mathutils.o mtwist.o -lm
+test_scipher:	scipher.c scipher.h ${OD}/mathutils.o ${OD}/mtwist.o
+	$(CC) -g -fsanitize=address -DTEST_SCIPHER -o test_scipher scipher.c ${OD}/mathutils.o ${OD}/mtwist.o -lm
 
 spelled_numbers:	spelled_numbers.c
 	$(CC) -g -DSPELLED_NUMBERS_TEST_CASE -o spelled_numbers spelled_numbers.c -lm
@@ -1594,9 +1595,9 @@ bin/check-endianness:	check-endianness.c Makefile ${BIN}
 	@echo "  COMPILE check-endianness.c"
 	$(Q)$(CC) -o bin/check-endianness check-endianness.c
 
-bin/snis_update_assets:	util/snis_update_assets.c string-utils.o util/progress_image.h
+bin/snis_update_assets:	util/snis_update_assets.c ${OD}/string-utils.o util/progress_image.h
 	$(Q)$(CC) ${MYCFLAGS} ${SDLCFLAGS} -o bin/snis_update_assets util/snis_update_assets.c \
-		string-utils.o ${SDLLIBS} -lcrypto -lcurl
+		${OD}/string-utils.o ${SDLLIBS} -lcrypto -lcurl
 
 build_info.h: bin/check-endianness snis.h gather_build_info Makefile
 	@echo "  GATHER BUILD INFO"
