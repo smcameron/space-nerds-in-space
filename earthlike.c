@@ -628,7 +628,7 @@ static void save_images(const char *prefix, unsigned char *image[])
 	char fname[PATH_MAX];
 
 	for (i = 0; i < 6; i++) {
-		sprintf(fname, "%s%d.png", prefix, i);
+		snprintf(fname, sizeof(fname), "%s%d.png", prefix, i);
 		if (png_utils_write_png_image(fname, image[i], dim, dim, 1, 0))
 			fprintf(stderr, "Failed to write %s\n", fname);
 	}
