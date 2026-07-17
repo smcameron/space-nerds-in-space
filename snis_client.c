@@ -18897,10 +18897,12 @@ static char *expand_demon_selection_string(char *input)
 		if (n <= 0)
 			break;
 		strncat(buffer, number, n);
-		strncat(buffer, " ", n - 1);
+		l = strlen(buffer);
+		n = sizeof(buffer) - l - 2;
+		strncat(buffer, " ", n);
 	}
 	buffer[999] = '\0';
-	newinput = calloc(strlen(input) + strlen(buffer), 1);
+	newinput = calloc(strlen(input) + strlen(buffer) + 1, 1);
 	strlcpy(newinput, input, sel - input + 1);
 	strncat(newinput, buffer, sizeof(newinput) - strlen(newinput) - 1);
 	strncat(newinput, sel + 4, sizeof(newinput) - strlen(newinput) - 1);
