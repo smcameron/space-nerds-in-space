@@ -13448,6 +13448,9 @@ static int add_laser(double x, double y, double z,
 {
 	int i, s;
 
+	s = lookup_by_id(ship_id);
+	if (s < 0)
+		return -1;
 	i = add_generic_object(x, y, z, vx, vy, vz, 0.0, OBJTYPE_LASER);
 	if (i < 0)
 		return i;
@@ -13455,7 +13458,6 @@ static int add_laser(double x, double y, double z,
 	go[i].alive = LASER_LIFETIME;
 	go[i].tsd.laser.ship_id = ship_id;
 	go[i].tsd.laser.targeted_system = targeted_system;
-	s = lookup_by_id(ship_id);
 	if (go[s].type == OBJTYPE_BRIDGE || go[s].type == OBJTYPE_NPCSHIP) {
 		go[i].tsd.laser.power = go[s].tsd.ship.phaser_charge;
 		go[i].tsd.laser.wavelength = go[s].tsd.ship.phaser_wavelength;
