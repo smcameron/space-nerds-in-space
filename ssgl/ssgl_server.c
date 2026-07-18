@@ -435,7 +435,7 @@ static void service(int connection, struct sockaddr_in remote_addr, socklen_t re
 	if (rc) {
 		ssgl_log(SSGL_ERROR, "ssgl_server: pthread_create failed for %s, rc = %d, errno = %d\n",
 			client_ip, rc, errno); 
-		shutdown(SHUT_RDWR, threadinfo->connection);
+		shutdown(threadinfo->connection, SHUT_RDWR);
 		close(threadinfo->connection);
 		free(threadinfo);
 	}
