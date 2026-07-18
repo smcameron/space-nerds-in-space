@@ -122,13 +122,13 @@ static union vec3 fij_to_xyz(int f, int i, int j, const int dim)
 #endif
 
 /* convert from cartesian coords on surface of a sphere to cubemap coords */
-static struct fij xyz_to_fij(const union vec3 *p, const int dim)
+static struct fij xyz_to_fij(const union vec3 *p, const int dimension)
 {
 	struct fij answer;
 	union vec3 t;
 	int f, i, j;
 	float d;
-	const float fdim = (float) dim;
+	const float fdim = (float) dimension;
 
 	vec3_normalize(&t, p);
 
@@ -198,23 +198,23 @@ static struct fij xyz_to_fij(const union vec3 *p, const int dim)
 		answer.f = 5;
 	if (answer.i < 0)
 		answer.i = 0;
-	else if (answer.i >= dim)
-		answer.i = dim - 1;
+	else if (answer.i >= dimension)
+		answer.i = dimension - 1;
 	if (answer.j < 0)
 		answer.j = 0;
-	else if (answer.j >= dim)
-		answer.j = dim - 1;
+	else if (answer.j >= dimension)
+		answer.j = dimension - 1;
 
 	return answer;
 }
 
-static void allocate_output_images(int dim)
+static void allocate_output_images(int dimension)
 {
 	int i;
 
 	for (i = 0; i < 6; i++) {
-		output_image[i] = malloc(4 * dim * dim);
-		memset(output_image[i], 0, 4 * dim * dim);
+		output_image[i] = malloc(4 * dimension * dimension);
+		memset(output_image[i], 0, 4 * dimension * dimension);
 		if (((intptr_t) output_image[i] & 0x03) != 0) {
 			/* TODO: just align the damn thing ourself if need be.  It
 			 * shouldn't happen, and in my experience, doesn't happen. But,
@@ -293,21 +293,21 @@ static uint8_t *strip_alpha(uint8_t *input_image, int width, int height)
 	return newimage;
 }
 
-static float random_star_radius(struct mtwist_state *mt)
+static float random_star_radius(struct mtwist_state *mtstate)
 {
 	/* TODO: something better */
-	float r = mtwist_float(mt);
+	float r = mtwist_float(mtstate);
 	return r * r * 8.0;
 }
 
-static void generate_star(struct mtwist_state *mt)
+static void generate_star(struct mtwist_state *mtstate)
 {
 	union vec3 position;
 	struct fij p;
 	uint32_t *image;
-	float radius = random_star_radius(mt);
+	float radius = random_star_radius(mtstate);
 	float alpha;
-	int colorx = mtwist_float(mt) * (starcolorwidth - 1);
+	int colorx = mtwist_float(mtstate) * (starcolorwidth - 1);
 	int colory;
 	int i;
 	union vec3 xaxis = { { 1.0, 0.0, 0.0 } };
@@ -321,11 +321,11 @@ static void generate_star(struct mtwist_state *mt)
 	uint8_t a, r, g, b;
 	int samples = samples_per_star * radius * radius * M_PI;
 
-	consistent_random_point_on_sphere(mt, 1.0, &position.v.x, &position.v.y, &position.v.z);
+	consistent_random_point_on_sphere(mtstate, 1.0, &position.v.x, &position.v.y, &position.v.z);
 
 	for (i = 0; i < samples; i++) {
-		angle = mtwist_float(mt) * 2.0 * M_PI;
-		dist = mtwist_float(mt) * radius;
+		angle = mtwist_float(mtstate) * 2.0 * M_PI;
+		dist = mtwist_float(mtstate) * radius;
 
 		jitter.v.x = 0;
 		jitter.v.y = sin(angle) * dist;
@@ -364,12 +364,12 @@ static void generate_star(struct mtwist_state *mt)
 	}
 }
 
-static void generate_stars(struct mtwist_state *mt)
+static void generate_stars(struct mtwist_state *mtstate)
 {
 	int i;
 
 	for (i = 0; i < nstars; i++)
-		generate_star(mt);
+		generate_star(mtstate);
 }
 
 uint8_t *half_scale_rgb(uint8_t *input, const int width, const int height)
