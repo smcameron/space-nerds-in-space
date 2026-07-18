@@ -248,13 +248,19 @@ static uint32_t get_pixel_rgb(uint8_t *image, const int width, const int height,
 	uint32_t c;
 	uint8_t *p;
 
-	p = &image[(y * width + x) * 3];
+	if (x < 0 || x >= width || y < 0 || y >= height)
+		return 0xff << 24 | 255 << 16 | 105 << 8 | 180; /* hot pink */
+	int index = (y * width + x) * 3;
+	p = &image[index];
 	c = 0xff << 24 | p[0] << 16 | p[1] << 8 | p[2];
 	return c;
 }
 
 static void set_pixel_rgb(uint8_t *image, const int width, const int height, int x, int y, uint32_t color)
 {
+	if (x < 0 || x >= width || y < 0 || y >= height)
+		return;
+
 	uint8_t *p = &image[(y * width + x) * 3];
 	p[0] = (color >> 16) & 0xff;
 	p[1] = (color >> 8) & 0xff;
@@ -263,11 +269,15 @@ static void set_pixel_rgb(uint8_t *image, const int width, const int height, int
 
 static uint32_t get_pixel_rgba(uint32_t *image, const int width, const int height, int x, int y)
 {
+	if (x < 0 || x >= width || y < 0 || y >= height)
+		return 0xff << 24 | 255 << 16 | 105 << 8 | 180; /* hot pink */
 	return image[y * width + x];
 }
 
 static void set_pixel_rgba(uint32_t *image, const int width, const int height, int x, int y, uint32_t value)
 {
+	if (x < 0 || x >= width || y < 0 || y >= height)
+		return;
 	image[y * width + x] = value;
 }
 
