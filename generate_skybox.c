@@ -234,6 +234,7 @@ static void read_starcolors(void)
 	/* This image is a 64x64 pixel image with white at the top, and gradients
 	 * to various colors as you move towards the bottom.
 	 */
+	printf("Reading star colors\n");
 	starcolors = (uint8_t *) png_utils_read_png_image("starcolors.png", 0, 0, 0,
 				&starcolorwidth, &starcolorheight, &starcoloralpha,
 				msg, sizeof(msg) - 1);
@@ -378,6 +379,7 @@ static void generate_stars(struct mtwist_state *mtstate)
 {
 	int i;
 
+	printf("Generating stars\n");
 	for (i = 0; i < nstars; i++)
 		generate_star(mtstate);
 }
@@ -424,8 +426,10 @@ static void save_output_images(void)
 	char filename[PATH_MAX];
 	uint8_t *stripped, *half;
 
+	printf("Saving skybox images to:\n");
 	for (i = 0; i < 6; i++) {
 		snprintf(filename, sizeof(filename) - 1, "%s%d.png", "skybox", i);
+		printf("  %s\n", filename);
 		stripped = strip_alpha(output_image[i], dim, dim);
 		half = half_scale_rgb(stripped, dim, dim);
 		rc = png_utils_write_png_image(filename, half, dim / 2, dim / 2, 0, 0);
