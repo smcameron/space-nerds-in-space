@@ -265,6 +265,17 @@ static void extract_starmap_entry(char *path, char *starname)
 	char *starlocation;
 	float x, y, z;
 
+	if (nstarmap_entries >= MAXSTARMAPENTRIES) {
+		fprintf(stderr, "%s:%d: Too many starmap entries (max = %d).\n",
+			__FILE__, __LINE__, MAXSTARMAPENTRIES);
+		return;
+	}
+	if (nstarmap_entries < 0) {
+		fprintf(stderr, "%s:%d: nstarmap_entries unexpectedly < 0, resetting to zero\n",
+			__FILE__, __LINE__);
+		abort();
+	}
+
 	printf("Extracting starmap entry from %s... ", path);
 	content = slurp_file(path, &bytes);
 	if (!content)
