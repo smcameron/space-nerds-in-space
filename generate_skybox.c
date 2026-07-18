@@ -307,7 +307,7 @@ static void generate_star(struct mtwist_state *mt)
 	uint32_t *image;
 	float radius = random_star_radius(mt);
 	float alpha;
-	int colorx = mtwist_float(mt) * starcolorwidth;
+	int colorx = mtwist_float(mt) * (starcolorwidth - 1);
 	int colory;
 	int i;
 	union vec3 xaxis = { { 1.0, 0.0, 0.0 } };
@@ -345,7 +345,7 @@ static void generate_star(struct mtwist_state *mt)
 		undercolor.b = (pixel & 0xff) / 255.0;
 		undercolor.a = 1.0;
 
-		colory = (dist / radius) * starcolorheight;
+		colory = (dist / radius) * (starcolorheight - 1);
 		starcolorpixel = get_pixel_rgb(starcolors, starcolorwidth, starcolorheight, colorx, colory);
 		alpha = clampf((radius - dist) / radius, 0.0, 1.0);
 		overcolor.a = alpha * alpha;
