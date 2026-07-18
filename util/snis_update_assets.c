@@ -1,7 +1,7 @@
 /*
 	Copyright (C) 2025 Stephen M. Cameron
 	Author: Stephen M. Cameron
-This file is part of Spacenerds In Space.
+	This file is part of Spacenerds In Space.
 
 	Spacenerds in Space is free software; you can redistribute it and/or modify
 	it under the terms of the GNU General Public License as published by
@@ -458,6 +458,14 @@ static void usage(void)
 {
 	fprintf(stderr, "\n%s: usage:\n", P);
 	fprintf(stderr, "%s [ --verbose ] [ --force ] [ --dry-run ] [ --srcdir dir ] --destdir dir\n\n", P);
+	fprintf(stderr, "Example usage:\n\n");
+	fprintf(stderr, "  Note: use --dry-run instead of --force if you just want to see what will happen.\n\n");
+	fprintf(stderr, "  To copy from ./share/snis to ~/.local/share/space-nerds-in-space:\n\n");
+	fprintf(stderr, "    bin/snis_update_assets --force --destdir ~/.local/share/space-nerds-in-space \\\n"
+			"        --srcdir ./share/snis\n\n");
+	fprintf(stderr, "  To download extra assets from spacenerdsinspace.com:\n\n");
+	fprintf(stderr, "    bin/snis_update_assets --force --destdir ~/.local/share/space-nerds-in-space\n\n");
+
 	exit(1);
 }
 
