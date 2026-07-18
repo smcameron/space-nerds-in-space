@@ -544,6 +544,7 @@ int ui_element_list_restore_position_offsets(struct ui_element_list *list, struc
 		rc = sscanf(line, "%d %d\n", &a, &b);
 		if (rc != 2) {
 			fprintf(stderr, "Bad line in snis_ui_position_offsets.txt: %d:%s\n", lc, line);
+			fclose(f);
 			return -1;
 		}
 		list->element->xoffset = a;
