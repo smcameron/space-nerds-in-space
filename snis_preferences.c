@@ -143,8 +143,10 @@ void snis_prefs_read_client_tweaks(struct xdg_base_context *cx,
 		}
 		/* remove the newline */
 		i = strlen(buffer);
-		buffer[i - 1] = '\0';
-		uppercase(buffer);
+		if (i > 0) {
+			buffer[i - 1] = '\0';
+			uppercase(buffer);
+		}
 		tweak_fn(buffer, 0);
 	} while (1);
 	fclose(f);
