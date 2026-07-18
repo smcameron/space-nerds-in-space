@@ -100,6 +100,7 @@ struct entity *add_entity(struct entity_context *cx,
 	cx->entity_list[n].sx = -1;
 	cx->entity_list[n].sy = -1;
 	cx->entity_list[n].onscreen = 0;
+	cx->entity_list[n].no_cast_shadow = 0;
 	if (m && m->material)
 		update_entity_material(&cx->entity_list[n], m->material);
 
@@ -215,6 +216,11 @@ float entity_get_scale(struct entity *e)
 void update_entity_scale(struct entity *e, float scale)
 {
 	vec3_init(&e->e_scale, scale, scale, scale);
+}
+
+void update_entity_shadow_casting(struct entity *e, int casts_shadow)
+{
+	e->no_cast_shadow = !casts_shadow;
 }
 
 void entity_get_non_uniform_scale(struct entity *e, float *x_scale, float *y_scale, float *z_scale)
@@ -894,9 +900,9 @@ static float shadow_map_max_distance = 4000.0;
 
 /* Phase 1 cascaded shadow mapping: fit a single orthographic shadow frustum to the
  * camera view frustum (clamped to shadow_map_max_distance) and build the world-space
- * -> light clip-space matrix.  The sun is a point light at the world origin, so the
- * light direction is taken from the origin toward the region center and treated as
- * directional.  Returns 1 on success, 0 if the configuration is degenerate. */
+ * -> light clip-space matrix.  The light source is whatever set_lighting() configured
+ * (cx->light) -- the sun at the world origin in normal play -- and is treated as
+ * directional over the shadowed region.  Returns 1 on success, 0 if degenerate. */
 static int compute_shadow_light_matrix(struct entity_context *cx, struct mat44d *world_to_lightclip)
 {
 	struct camera_info *cam = &cx->camera;
@@ -948,14 +954,18 @@ static int compute_shadow_light_matrix(struct entity_context *cx, struct mat44d 
 		}
 	}
 
-	/* Region center and light direction (sun is at the world origin). */
+	/* Region center: the average of the frustum corners. */
 	union vec3 center;
 	vec3_init(&center, 0, 0, 0);
 	for (i = 0; i < 8; i++)
 		vec3_add_self(&center, &corners[i]);
 	vec3_mul_self(&center, 1.0f / 8.0f);
 
-	union vec3 ldir = center; /* direction from origin (sun) toward the region */
+	/* Light direction: from the configured light source (cx->light, the sun at the
+	 * world origin in normal play) toward the region center, treated as directional. */
+	union vec3 light_pos, ldir;
+	vec3_init(&light_pos, cx->light.m[0], cx->light.m[1], cx->light.m[2]);
+	vec3_sub(&ldir, &center, &light_pos);
 	if (vec3_dot(&ldir, &ldir) < 1e-6)
 		return 0;
 	vec3_normalize_self(&ldir);
@@ -1011,11 +1021,15 @@ static int compute_shadow_light_matrix(struct entity_context *cx, struct mat44d 
 
 	/* Forward is -ldir, so points in front of the light have negative view z.
 	 * Convert to positive ortho near/far distances and extend the near plane toward
-	 * the light so casters between the light and the region still cast shadows. */
-	double ortho_near = -zmax - (double) shadow_map_max_distance;
-	double ortho_far = -zmin + 1.0;
+	 * the light by roughly one scene depth so casters just in front of the region
+	 * still cast, without wasting depth-buffer precision on a huge fixed range. */
+	double zrange = zmax - zmin;
+	if (zrange < 1e-6)
+		return 0;
+	double ortho_near = -zmax - zrange;
+	double ortho_far = -zmin + 0.01 * zrange;
 	double l = xmin, r = xmax, b = ymin, t = ymax;
-	if (ortho_far - ortho_near < 1.0 || r - l < 1e-6 || t - b < 1e-6)
+	if (ortho_far - ortho_near < 1e-6 || r - l < 1e-6 || t - b < 1e-6)
 		return 0;
 
 	struct mat44d ortho = {{ { 0 } } };
@@ -1051,6 +1065,8 @@ static void render_shadow_map(struct entity_context *cx)
 			continue;
 		struct entity *e = &cx->entity_list[j];
 		if (e->m == NULL || e->m->geometry_mode != MESH_GEOMETRY_TRIANGLES)
+			continue;
+		if (e->no_cast_shadow)
 			continue;
 		update_entity_child_state(e);
 		if (!e->visible)

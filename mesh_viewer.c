@@ -803,8 +803,12 @@ static void draw_screen(void)
 		render_line(cx, light_dir.v.x, light_dir.v.y, light_dir.v.z, 0, 0, 0);
 
 		e = add_entity(cx, light_mesh, light_dir.v.x, light_dir.v.y, light_dir.v.z, WHITE);
+		if (e)
+			update_entity_shadow_casting(e, 0); /* the light indicator must not cast a shadow */
 	} else {
 		e = add_entity(cx, light_mesh, light_pos.v.x, light_pos.v.y, light_pos.v.z, WHITE);
+		if (e)
+			update_entity_shadow_casting(e, 0); /* the light indicator must not cast a shadow */
 	}
 
 	if (!no_skybox)

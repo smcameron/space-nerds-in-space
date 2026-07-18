@@ -44,6 +44,7 @@ GLOBAL union quat *entity_get_orientation(struct entity *e);
 GLOBAL void entity_get_pos(struct entity *e, float *x, float *y, float *z);
 GLOBAL float entity_get_scale(struct entity *e);
 GLOBAL void update_entity_scale(struct entity *e, float scale);
+GLOBAL void update_entity_shadow_casting(struct entity *e, int casts_shadow);
 GLOBAL void entity_get_non_uniform_scale(struct entity *e, float *x_scale, float *y_scale, float *z_scale);
 GLOBAL void update_entity_non_uniform_scale(struct entity *e, float x_scale, float y_scale, float z_scale);
 GLOBAL void update_entity_color(struct entity *e, int color);

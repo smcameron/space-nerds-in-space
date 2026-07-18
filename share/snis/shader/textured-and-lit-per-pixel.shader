@@ -29,6 +29,11 @@ uniform float u_SpecularIntensity; /* between 0 and 1, 1 is very shiny, 0 is fla
 	uniform mat4 u_MVMatrix;
 	uniform mat3 u_NormalMatrix;
 
+	#ifdef USE_CSM
+		out vec4 v_ShadowCoord;
+		uniform mat4 u_ShadowMVP;
+	#endif
+
 	in vec4 a_Position;
 	#if !defined(USE_CUBEMAP)
 		in vec2 a_TexCoord;
@@ -53,6 +58,9 @@ uniform float u_SpecularIntensity; /* between 0 and 1, 1 is very shiny, 0 is fla
 			v_TexCoord = a_Position;
 		#else
 			v_TexCoord = a_TexCoord;
+		#endif
+		#ifdef USE_CSM
+			v_ShadowCoord = u_ShadowMVP * a_Position;
 		#endif
 		gl_Position = u_MVPMatrix * a_Position;
 	}
@@ -94,11 +102,36 @@ uniform float u_SpecularIntensity; /* between 0 and 1, 1 is very shiny, 0 is fla
 
 	out vec4 f_FragColor;
 
+	#ifdef USE_CSM
+		in vec4 v_ShadowCoord;
+		uniform sampler2DShadow u_ShadowMap;
+		uniform int u_ShadowMapEnabled; /* 0 when no shadow map is available this frame */
+		uniform int u_ShadowDebug;      /* 1 to visualize the shadow factor */
+
+		/* Returns 1.0 for fully lit, 0.0 for fully shadowed. */
+		float csm_shadow_factor()
+		{
+			if (u_ShadowMapEnabled == 0)
+				return 1.0;
+			vec3 sc = v_ShadowCoord.xyz / v_ShadowCoord.w;
+			sc = sc * 0.5 + 0.5;
+			if (sc.x < 0.0 || sc.x > 1.0 || sc.y < 0.0 || sc.y > 1.0 || sc.z > 1.0)
+				return 1.0;
+			return texture(u_ShadowMap, sc);
+		}
+	#endif
+
 	void main()
 	{
 		UV_TYPE uv = v_TexCoord;
 
 		vec3 light_dir = normalize(u_LightPos - v_Position);
+
+		#ifdef USE_CSM
+			float shadow = csm_shadow_factor();
+		#else
+			float shadow = 1.0;
+		#endif
 
 		#ifdef USE_NORMAL_MAP
 			// Hmm, this still needs work.
@@ -112,8 +145,9 @@ uniform float u_SpecularIntensity; /* between 0 and 1, 1 is very shiny, 0 is fla
 		// albedo from texture
 		vec4 albedo = texture(u_AlbedoTex, uv);
 
-		// diffuse is light dot normal
-		float diffuse = max(u_Ambient, (1.0 - u_in_shade) * clamp(dot(normal, light_dir), 0.0, 1.0));
+		// diffuse is light dot normal (shadowed direct term with an ambient floor)
+		float direct = (1.0 - u_in_shade) * clamp(dot(normal, light_dir), 0.0, 1.0);
+		float diffuse = max(u_Ambient, direct * shadow);
 
 		// base diffuse color
 		vec3 color = albedo.rgb * u_LightColor * diffuse;
@@ -128,7 +162,7 @@ uniform float u_SpecularIntensity; /* between 0 and 1, 1 is very shiny, 0 is fla
 			float n_dot_h = max(0.0, clamp(dot(normal, half_dir), 0.0, 1.0));
 			float spec = pow(n_dot_h, u_SpecularPower);
 
-			color += u_SpecularColor * u_SpecularIntensity * spec;
+			color += u_SpecularColor * u_SpecularIntensity * spec * shadow;
 		#endif
 
 		f_FragColor = clamp(vec4(color, albedo.a), 0.0, 1.0);
@@ -137,6 +171,24 @@ uniform float u_SpecularIntensity; /* between 0 and 1, 1 is very shiny, 0 is fla
 		f_FragColor.rgb *= u_TintColor.rgb;
 		f_FragColor *= u_TintColor.a;
 		f_FragColor = filmic_tonemap(f_FragColor);
+
+		#ifdef USE_CSM
+			if (u_ShadowDebug == 1) {
+				/* Shadow factor: white = lit, black = shadowed. */
+				f_FragColor = vec4(vec3(shadow), 1.0);
+			} else if (u_ShadowDebug == 2) {
+				/* Shadow map coverage: blue = outside the shadow map footprint,
+				 * red/green gradient = the shadow map's [0,1] uv inside it. */
+				vec3 sc = v_ShadowCoord.xyz / v_ShadowCoord.w;
+				sc = sc * 0.5 + 0.5;
+				if (u_ShadowMapEnabled == 0)
+					f_FragColor = vec4(0.3, 0.3, 0.0, 1.0);
+				else if (sc.x < 0.0 || sc.x > 1.0 || sc.y < 0.0 || sc.y > 1.0)
+					f_FragColor = vec4(0.0, 0.0, 0.4, 1.0);
+				else
+					f_FragColor = vec4(sc.x, sc.y, 0.0, 1.0);
+			}
+		#endif
 	}
 #endif
 

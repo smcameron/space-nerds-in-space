@@ -48,6 +48,7 @@ struct entity {
 	int entity_child_index;
 	float in_shade;
 	int e_visible;
+	int no_cast_shadow; /* if set, this entity is not rendered into the shadow map */
 	unsigned char onscreen; /* if screen coords are valid */
 };
 

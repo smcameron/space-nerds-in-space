@@ -179,7 +179,11 @@ int graph_dev_atmosphere_ring_shadows = 1;
 
 /* Cascaded shadow mapping state (Phase 1: a single shadow map). */
 int graph_dev_shadow_map_enabled = 1;
+static int graph_dev_shadow_map_debug; /* 1 to visualize the shadow factor (SNIS_SHADOW_DEBUG) */
 #define SHADOW_MAP_TEXTURE_SIZE 2048
+/* Texture unit 2 is unused by the lit shaders (0=albedo, 1=emit, 3=normalmap) and is
+ * within the BIND_TEXTURE cache range (units 0-3). */
+#define SHADOW_MAP_TEXTURE_UNIT GL_TEXTURE2
 static GLuint shadow_map_fbo;
 static GLuint shadow_map_texture;
 static int shadow_map_ready; /* 1 if a shadow map was rendered this frame */
@@ -996,6 +1000,12 @@ struct graph_dev_gl_textured_shader {
 	GLint sun_color; /* Used for specular calculations by planet shader */
 	GLint u1v1; /* Used by planetary lightning shader */
 	GLint texture_width; /* Used by planetary lightning shader */
+
+	/* Cascaded shadow mapping (USE_CSM variants only). */
+	GLint shadow_mvp_id;         /* model -> light clip space */
+	GLint shadow_map_id;         /* shadow map sampler */
+	GLint shadow_map_enabled_id; /* 1 when a shadow map is available this frame */
+	GLint shadow_debug_id;       /* 1 to visualize the shadow factor */
 };
 
 struct clip_sphere_data {
@@ -1546,6 +1556,7 @@ struct raster_texture_params {
 	const struct mat44 *mat_mvp;			/* model view projection matrix */
 	const struct mat44 *mat_mv;			/* model view matrix */
 	const struct mat33 *mat_normal;			/* Used to get normal vectors into eye space */
+	const struct mat44d *model;			/* model matrix (for shadow map lookup) */
 	struct mesh *m;
 	struct sng_color *triangle_color;
 	float alpha;
@@ -1697,6 +1708,25 @@ static void graph_dev_raster_texture(struct raster_texture_params *p)
 			p->shadow_annulus->r2, p->shadow_annulus->r2 * p->shadow_annulus->r2);
 	}
 
+	/* Cascaded shadow map (USE_CSM shader variants). */
+	if (shader->shadow_map_enabled_id >= 0) {
+		int use_shadow = graph_dev_shadow_map_enabled && shadow_map_ready && p->model != NULL;
+		glUniform1i(shader->shadow_map_enabled_id, use_shadow);
+		if (shader->shadow_debug_id >= 0)
+			glUniform1i(shader->shadow_debug_id, graph_dev_shadow_map_debug);
+		if (use_shadow) {
+			struct mat44d shadow_mvp_d;
+			struct mat44 shadow_mvp;
+
+			mat44_product_ddd(&shadow_world_to_lightclip, p->model, &shadow_mvp_d);
+			mat44_convert_df(&shadow_mvp_d, &shadow_mvp);
+			glUniformMatrix4fv(shader->shadow_mvp_id, 1, GL_FALSE, &shadow_mvp.m[0][0]);
+
+			BIND_TEXTURE(SHADOW_MAP_TEXTURE_UNIT, GL_TEXTURE_2D, shadow_map_texture);
+			glUniform1i(shader->shadow_map_id, SHADOW_MAP_TEXTURE_UNIT - GL_TEXTURE0);
+		}
+	}
+
 	glEnableVertexAttribArray(shader->vertex_position_id);
 	glBindBuffer(GL_ARRAY_BUFFER, ptr->vertex_buffer);
 	glVertexAttribPointer(
@@ -1822,9 +1852,8 @@ static void graph_dev_raster_single_color_lit(const struct mat44 *mat_mvp, const
 		mat44_convert_df(&shadow_mvp_d, &shadow_mvp);
 		glUniformMatrix4fv(shader->shadow_mvp_id, 1, GL_FALSE, &shadow_mvp.m[0][0]);
 
-		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_2D, shadow_map_texture);
-		glUniform1i(shader->shadow_map_id, 0);
+		BIND_TEXTURE(SHADOW_MAP_TEXTURE_UNIT, GL_TEXTURE_2D, shadow_map_texture);
+		glUniform1i(shader->shadow_map_id, SHADOW_MAP_TEXTURE_UNIT - GL_TEXTURE0);
 	}
 
 	glEnableVertexAttribArray(shader->vertex_position_id);
@@ -2633,6 +2662,7 @@ static void graph_dev_raster_triangle_mesh(struct entity_context *cx, struct ent
 
 	rtp.mat_mvp = &transform->mvp;
 	rtp.mat_mv = &transform->mv;
+	rtp.model = &transform->m;
 	rtp.mat_normal = &transform->normal;
 	rtp.ring_texture_v = 0.0f;
 	rtp.ring_inner_radius = 1.0f;
@@ -3755,6 +3785,12 @@ static void setup_textured_shader(const char *basename, const char *defines,
 	shader->ambient_id = glGetUniformLocation(shader->program_id, "u_Ambient");
 	shader->filmic_tonemapping_id = glGetUniformLocation(shader->program_id, "u_FilmicTonemapping");
 	shader->tonemapping_gain_id = glGetUniformLocation(shader->program_id, "u_TonemappingGain");
+
+	/* Cascaded shadow mapping uniforms; -1 (ignored) for non-USE_CSM variants. */
+	shader->shadow_mvp_id = glGetUniformLocation(shader->program_id, "u_ShadowMVP");
+	shader->shadow_map_id = glGetUniformLocation(shader->program_id, "u_ShadowMap");
+	shader->shadow_map_enabled_id = glGetUniformLocation(shader->program_id, "u_ShadowMapEnabled");
+	shader->shadow_debug_id = glGetUniformLocation(shader->program_id, "u_ShadowDebug");
 }
 
 static void setup_textured_cubemap_shader(const char *basename, int use_normal_map,
@@ -4356,16 +4392,21 @@ void graph_dev_reload_all_shaders(void)
 	setup_textured_shader("textured-with-sphere-shadow-per-pixel", UNIVERSAL_SHADER_HEADER FILMIC_TONEMAPPING,
 				&textured_with_sphere_shadow_shader);
 	setup_textured_shader("textured-and-lit-per-pixel",
-				UNIVERSAL_SHADER_HEADER FILMIC_TONEMAPPING, &textured_lit_shader);
+				UNIVERSAL_SHADER_HEADER FILMIC_TONEMAPPING
+				"#define USE_CSM 1\n", &textured_lit_shader);
 	setup_textured_shader("textured-and-lit-per-pixel",
-				UNIVERSAL_SHADER_HEADER FILMIC_TONEMAPPING "#define USE_EMIT_MAP",
+				UNIVERSAL_SHADER_HEADER FILMIC_TONEMAPPING
+				"#define USE_EMIT_MAP\n"
+				"#define USE_CSM 1\n",
 				&textured_lit_emit_shader);
 	setup_textured_shader("textured-and-lit-per-pixel", UNIVERSAL_SHADER_HEADER FILMIC_TONEMAPPING
 				"#define USE_EMIT_MAP\n"
-				"#define USE_NORMAL_MAP 1\n",
+				"#define USE_NORMAL_MAP 1\n"
+				"#define USE_CSM 1\n",
 				&textured_lit_emit_normal_shader);
 	setup_textured_shader("textured-and-lit-per-pixel", UNIVERSAL_SHADER_HEADER FILMIC_TONEMAPPING
-				"#define USE_NORMAL_MAP 1\n",
+				"#define USE_NORMAL_MAP 1\n"
+				"#define USE_CSM 1\n",
 				&textured_lit_normal_shader);
 	setup_textured_cubemap_shader("textured-cubemap-and-lit-with-annulus-shadow-per-pixel", 0, 0, 0,
 					&textured_cubemap_lit_shader);
@@ -4561,6 +4602,10 @@ int graph_dev_setup(const char *asset_dir)
 			post_target1.color0_texture, 0);
 	}
 
+	{
+		const char *sdbg = getenv("SNIS_SHADOW_DEBUG");
+		graph_dev_shadow_map_debug = sdbg ? atoi(sdbg) : 0;
+	}
 	if (graph_dev_shadow_map_enabled)
 		setup_shadow_map_fbo();
 
