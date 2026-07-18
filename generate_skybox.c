@@ -418,7 +418,7 @@ uint8_t *half_scale_rgb(uint8_t *input, const int width, const int height)
 	return new;
 }
 
-static void save_output_images()
+static void save_output_images(void)
 {
 	int i, rc;
 	char filename[PATH_MAX];
