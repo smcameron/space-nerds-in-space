@@ -15,6 +15,13 @@ in vec3 a_Normal;   // Per-vertex normal information we will pass in.
 
 out vec3 v_Color;      // This will be passed into the fragment shader.
 
+#ifdef USE_CSM
+uniform mat4 u_ShadowMVP;  // Maps model space to the light's clip space.
+out vec4 v_ShadowCoord;    // Fragment position in the light's clip space.
+out float v_LightLevel;    // Unshadowed diffuse light level.
+out vec3 v_BaseColor;      // Unlit object color.
+#endif
+
 void main()                // The entry point for our vertex shader.
 {
 	// Transform the vertex into eye space.
@@ -38,6 +45,14 @@ void main()                // The entry point for our vertex shader.
 
 	// Multiply the color by the illumination level. It will be interpolated across the triangle.
 	v_Color = u_Color * diffuse;
+
+#ifdef USE_CSM
+	// Pass the raw lighting terms so the fragment shader can modulate the diffuse
+	// contribution by the per-fragment shadow factor.
+	v_LightLevel = dotV;
+	v_BaseColor = u_Color;
+	v_ShadowCoord = u_ShadowMVP * a_Position;
+#endif
 
 	// gl_Position is a special variable used to store the final position.
 	// Multiply the vertex by the matrix to get the final point in normalized screen coordinates.

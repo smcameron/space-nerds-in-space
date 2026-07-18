@@ -176,6 +176,7 @@ static int filmic_tonemapping = 1;
 static float tonemapping_gain = 1.18;
 int graph_dev_planet_specularity = 1;
 int graph_dev_atmosphere_ring_shadows = 1;
+int graph_dev_shadow_map_enabled = 0; /* Shadow maps are not supported on the GLES backend. */
 static const char *default_shader_directory = "share/snis/shader-es";
 static char shader_directory[PATH_MAX];
 
@@ -3379,6 +3380,27 @@ void graph_dev_clear_depth_bit(void)
 	PROFILE_ZONE_START("graph_dev_clear_depth_bit");
 	glClear(GL_DEPTH_BUFFER_BIT);
 	PROFILE_ZONE_END();
+}
+
+/* Cascaded shadow mapping is not implemented on the GLES backend; these are
+ * no-op stubs so the shared entity.c links, and shadows are simply disabled. */
+void graph_dev_set_shadow_light_matrix(const struct mat44d *world_to_lightclip)
+{
+	(void) world_to_lightclip;
+}
+
+void graph_dev_shadow_map_begin(void)
+{
+}
+
+void graph_dev_draw_shadow_caster(const struct mat44d *model, struct mesh *m)
+{
+	(void) model;
+	(void) m;
+}
+
+void graph_dev_shadow_map_end(void)
+{
 }
 
 void graph_dev_draw_line(float x1, float y1, float x2, float y2)

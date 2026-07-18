@@ -379,6 +379,8 @@ SHADERS=${SHADERSRCDIR}/atmosphere.frag \
 	${SHADERSRCDIR}/atmosphere.vert \
 	${SHADERSRCDIR}/color_by_w.frag \
 	${SHADERSRCDIR}/color_by_w.vert \
+	${SHADERSRCDIR}/csm_depth.frag \
+	${SHADERSRCDIR}/csm_depth.vert \
 	${SHADERSRCDIR}/fs-effect-copy.shader \
 	${SHADERSRCDIR}/line-single-color.frag \
 	${SHADERSRCDIR}/line-single-color.vert \

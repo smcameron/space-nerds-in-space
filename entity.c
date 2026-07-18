@@ -33,6 +33,7 @@
 #include "vertex.h"
 #include "triangle.h"
 #include "quat.h"
+#include "vec4.h"
 #include "mesh.h"
 #include "stl_parser.h"
 #include "snis_graph.h"
@@ -886,6 +887,182 @@ static void update_entity_child_state(struct entity *e)
 }
 
 
+/* Shadow "camera" fits its orthographic frustum to the view frustum, but the far
+ * plane used for shadowing is clamped to this distance so that shadow texels stay
+ * usefully small.  Cascades (a later phase) will extend the useful range. */
+static float shadow_map_max_distance = 4000.0;
+
+/* Phase 1 cascaded shadow mapping: fit a single orthographic shadow frustum to the
+ * camera view frustum (clamped to shadow_map_max_distance) and build the world-space
+ * -> light clip-space matrix.  The sun is a point light at the world origin, so the
+ * light direction is taken from the origin toward the region center and treated as
+ * directional.  Returns 1 on success, 0 if the configuration is degenerate. */
+static int compute_shadow_light_matrix(struct entity_context *cx, struct mat44d *world_to_lightclip)
+{
+	struct camera_info *cam = &cx->camera;
+	union vec3 cpos, look, up0, n, u, v;
+	int i;
+
+	vec3_init(&cpos, cam->x, cam->y, cam->z);
+	vec3_init(&look, cam->lx - cam->x, cam->ly - cam->y, cam->lz - cam->z);
+	if (vec3_dot(&look, &look) < 1e-12)
+		return 0;
+	vec3_normalize_self(&look);
+	n = look;
+	vec3_init(&up0, cam->ux, cam->uy, cam->uz);
+	vec3_cross(&u, &n, &up0);
+	if (vec3_dot(&u, &u) < 1e-12)
+		return 0;
+	vec3_normalize_self(&u);
+	vec3_cross(&v, &u, &n);
+	vec3_normalize_self(&v);
+
+	float aspect = (float) cam->xvpixels / (float) cam->yvpixels;
+	float near_d = cam->near;
+	float far_d = cam->far;
+	if (far_d > shadow_map_max_distance)
+		far_d = shadow_map_max_distance;
+	if (far_d <= near_d)
+		return 0;
+
+	/* Eight corners of the (clamped) view frustum in world space. */
+	union vec3 corners[8];
+	int ci = 0;
+	float dist[2] = { near_d, far_d };
+	int di, sx, sy;
+	for (di = 0; di < 2; di++) {
+		float d = dist[di];
+		float h = tanf(cam->angle_of_view * 0.5f) * d;
+		float w = aspect * h;
+		for (sy = -1; sy <= 1; sy += 2) {
+			for (sx = -1; sx <= 1; sx += 2) {
+				union vec3 corner, tmp;
+				vec3_mul(&corner, &n, d);
+				vec3_mul(&tmp, &u, w * sx);
+				vec3_add_self(&corner, &tmp);
+				vec3_mul(&tmp, &v, h * sy);
+				vec3_add_self(&corner, &tmp);
+				vec3_add_self(&corner, &cpos);
+				corners[ci++] = corner;
+			}
+		}
+	}
+
+	/* Region center and light direction (sun is at the world origin). */
+	union vec3 center;
+	vec3_init(&center, 0, 0, 0);
+	for (i = 0; i < 8; i++)
+		vec3_add_self(&center, &corners[i]);
+	vec3_mul_self(&center, 1.0f / 8.0f);
+
+	union vec3 ldir = center; /* direction from origin (sun) toward the region */
+	if (vec3_dot(&ldir, &ldir) < 1e-6)
+		return 0;
+	vec3_normalize_self(&ldir);
+
+	/* Light view basis (mirrors the camera look-at construction in
+	 * calculate_camera_transform_near_far()). */
+	union vec3 lup, lu, lv;
+	vec3_init(&lup, 0, 1, 0);
+	if (fabsf(vec3_dot(&ldir, &lup)) > 0.99f)
+		vec3_init(&lup, 1, 0, 0);
+	vec3_cross(&lu, &ldir, &lup);
+	vec3_normalize_self(&lu);
+	vec3_cross(&lv, &lu, &ldir);
+	vec3_normalize_self(&lv);
+
+	/* World -> light view: rotation (rows lu, lv, -ldir) composed with translate(-center). */
+	struct mat44d lrot = {{
+		{ lu.v.x, lv.v.x, -ldir.v.x, 0 },
+		{ lu.v.y, lv.v.y, -ldir.v.y, 0 },
+		{ lu.v.z, lv.v.z, -ldir.v.z, 0 },
+		{ 0, 0, 0, 1 } } };
+	struct mat44d ltrans = {{
+		{ 1, 0, 0, 0 },
+		{ 0, 1, 0, 0 },
+		{ 0, 0, 1, 0 },
+		{ -center.v.x, -center.v.y, -center.v.z, 1 } } };
+	struct mat44d lview;
+	mat44_product_ddd(&lrot, &ltrans, &lview);
+
+	/* AABB of the frustum corners in light view space. */
+	double xmin = 1e30, xmax = -1e30, ymin = 1e30, ymax = -1e30, zmin = 1e30, zmax = -1e30;
+	for (i = 0; i < 8; i++) {
+		union vec4 cw;
+		union vec3 cv;
+		cw.v.x = corners[i].v.x;
+		cw.v.y = corners[i].v.y;
+		cw.v.z = corners[i].v.z;
+		cw.v.w = 1.0;
+		mat44_x_vec4_into_vec3_dff(&lview, &cw, &cv);
+		if (cv.v.x < xmin)
+			xmin = cv.v.x;
+		if (cv.v.x > xmax)
+			xmax = cv.v.x;
+		if (cv.v.y < ymin)
+			ymin = cv.v.y;
+		if (cv.v.y > ymax)
+			ymax = cv.v.y;
+		if (cv.v.z < zmin)
+			zmin = cv.v.z;
+		if (cv.v.z > zmax)
+			zmax = cv.v.z;
+	}
+
+	/* Forward is -ldir, so points in front of the light have negative view z.
+	 * Convert to positive ortho near/far distances and extend the near plane toward
+	 * the light so casters between the light and the region still cast shadows. */
+	double ortho_near = -zmax - (double) shadow_map_max_distance;
+	double ortho_far = -zmin + 1.0;
+	double l = xmin, r = xmax, b = ymin, t = ymax;
+	if (ortho_far - ortho_near < 1.0 || r - l < 1e-6 || t - b < 1e-6)
+		return 0;
+
+	struct mat44d ortho = {{ { 0 } } };
+	ortho.m[0][0] = 2.0 / (r - l);
+	ortho.m[1][1] = 2.0 / (t - b);
+	ortho.m[2][2] = -2.0 / (ortho_far - ortho_near);
+	ortho.m[3][0] = -(r + l) / (r - l);
+	ortho.m[3][1] = -(t + b) / (t - b);
+	ortho.m[3][2] = -(ortho_far + ortho_near) / (ortho_far - ortho_near);
+	ortho.m[3][3] = 1.0;
+
+	mat44_product_ddd(&ortho, &lview, world_to_lightclip);
+	return 1;
+}
+
+/* Render all triangle-mesh shadow casters into the shadow map from the light's view. */
+static void render_shadow_map(struct entity_context *cx)
+{
+	struct mat44d world_to_lightclip;
+	int j, n;
+
+	if (!graph_dev_shadow_map_enabled)
+		return;
+	if (!compute_shadow_light_matrix(cx, &world_to_lightclip))
+		return;
+
+	graph_dev_set_shadow_light_matrix(&world_to_lightclip);
+	graph_dev_shadow_map_begin();
+
+	n = snis_object_pool_highest_object(cx->entity_pool);
+	for (j = 0; j <= n; j++) {
+		if (!snis_object_pool_is_allocated(cx->entity_pool, j))
+			continue;
+		struct entity *e = &cx->entity_list[j];
+		if (e->m == NULL || e->m->geometry_mode != MESH_GEOMETRY_TRIANGLES)
+			continue;
+		update_entity_child_state(e);
+		if (!e->visible)
+			continue;
+		struct entity_transform transform;
+		calculate_model_matrices(&cx->camera, &cx->camera.frustum, e, &transform);
+		graph_dev_draw_shadow_caster(&transform.m, e->m);
+	}
+
+	graph_dev_shadow_map_end();
+}
+
 void render_entities(struct entity_context *cx)
 {
 	int i, j, k, n;
@@ -894,6 +1071,9 @@ void render_entities(struct entity_context *cx)
 	sng_set_3d_viewport(cx->window_offset_x, cx->window_offset_y, c->xvpixels, c->yvpixels);
 
 	calculate_camera_transform(cx);
+
+	/* Render the shadow map before drawing the scene so lit shaders can sample it. */
+	render_shadow_map(cx);
 
 	/* see if the fake stars have wandered outside of our immediate area */
 	if (cx->nfakestars > 0) {

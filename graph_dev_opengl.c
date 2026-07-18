@@ -176,6 +176,17 @@ static int filmic_tonemapping = 1;
 static float tonemapping_gain = 1.18;
 int graph_dev_planet_specularity = 1;
 int graph_dev_atmosphere_ring_shadows = 1;
+
+/* Cascaded shadow mapping state (Phase 1: a single shadow map). */
+int graph_dev_shadow_map_enabled = 1;
+#define SHADOW_MAP_TEXTURE_SIZE 2048
+static GLuint shadow_map_fbo;
+static GLuint shadow_map_texture;
+static int shadow_map_ready; /* 1 if a shadow map was rendered this frame */
+static struct mat44d shadow_world_to_lightclip;
+static GLint saved_shadow_viewport[4];
+static GLint saved_shadow_fbo;
+
 static const char *default_shader_directory = "share/snis/shader";
 static char shader_directory[PATH_MAX];
 
@@ -815,6 +826,17 @@ struct graph_dev_gl_single_color_lit_shader {
 	GLint ambient_id;
 	GLint filmic_tonemapping_id;
 	GLint tonemapping_gain_id;
+	GLint shadow_mvp_id;   /* model -> light clip space (USE_CSM only) */
+	GLint shadow_map_id;   /* shadow map sampler (USE_CSM only) */
+};
+
+/* Depth-only shader used to render the shadow map from the light's viewpoint. */
+struct graph_dev_gl_shadow_depth_shader {
+	struct graph_dev_gl_shader_metadata meta;
+	GLuint program_id;
+	GLuint vao_id;
+	GLint shadow_mvp_id;
+	GLint vertex_position_id;
 };
 
 struct graph_dev_gl_atmosphere_shader {
@@ -1054,6 +1076,8 @@ struct graph_dev_smaa_effect {
 
 /* store all the shader parameters */
 static struct graph_dev_gl_single_color_lit_shader single_color_lit_shader;
+static struct graph_dev_gl_single_color_lit_shader single_color_lit_shadow_shader;
+static struct graph_dev_gl_shadow_depth_shader shadow_depth_shader;
 static struct graph_dev_gl_atmosphere_shader atmosphere_shader;
 static struct graph_dev_gl_atmosphere_shader atmosphere_with_annulus_shadow_shader;
 static struct graph_dev_gl_trans_wireframe_shader trans_wireframe_shader;
@@ -1752,7 +1776,8 @@ static void graph_dev_raster_texture(struct raster_texture_params *p)
 }
 
 static void graph_dev_raster_single_color_lit(const struct mat44 *mat_mvp, const struct mat44 *mat_mv,
-	const struct mat33 *mat_normal, struct mesh *m, struct sng_color *triangle_color, union vec3 *eye_light_pos,
+	const struct mat33 *mat_normal, const struct mat44d *model,
+	struct mesh *m, struct sng_color *triangle_color, union vec3 *eye_light_pos,
 	float in_shade, float ambient)
 {
 	PROFILE_ZONE_START("graph_dev_raster_single_color_lit");
@@ -1765,29 +1790,47 @@ static void graph_dev_raster_single_color_lit(const struct mat44 *mat_mvp, const
 
 	struct mesh_gl_info *ptr = m->graph_ptr;
 
+	/* Use the shadow-receiving variant only if a shadow map was rendered this frame. */
+	int use_shadow = graph_dev_shadow_map_enabled && shadow_map_ready && model != NULL;
+	struct graph_dev_gl_single_color_lit_shader *shader =
+		use_shadow ? &single_color_lit_shadow_shader : &single_color_lit_shader;
+
 	glEnable(GL_DEPTH_TEST);
 	glEnable(GL_CULL_FACE);
 	if (draw_polygon_as_lines)
 		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
-	activate_shader(&single_color_lit_shader);
+	activate_shader(shader);
 
-	glUniformMatrix4fv(single_color_lit_shader.mv_matrix_id, 1, GL_FALSE, &mat_mv->m[0][0]);
-	glUniformMatrix4fv(single_color_lit_shader.mvp_matrix_id, 1, GL_FALSE, &mat_mvp->m[0][0]);
-	glUniformMatrix3fv(single_color_lit_shader.normal_matrix_id, 1, GL_FALSE, &mat_normal->m[0][0]);
+	glUniformMatrix4fv(shader->mv_matrix_id, 1, GL_FALSE, &mat_mv->m[0][0]);
+	glUniformMatrix4fv(shader->mvp_matrix_id, 1, GL_FALSE, &mat_mvp->m[0][0]);
+	glUniformMatrix3fv(shader->normal_matrix_id, 1, GL_FALSE, &mat_normal->m[0][0]);
 
-	glUniform3f(single_color_lit_shader.color_id, triangle_color->red,
+	glUniform3f(shader->color_id, triangle_color->red,
 		triangle_color->green, triangle_color->blue);
-	glUniform3f(single_color_lit_shader.light_pos_id, eye_light_pos->v.x, eye_light_pos->v.y, eye_light_pos->v.z);
-	glUniform1f(single_color_lit_shader.in_shade_id, in_shade);
-	glUniform1f(single_color_lit_shader.ambient_id, ambient);
-	glUniform1f(single_color_lit_shader.filmic_tonemapping_id, (float) filmic_tonemapping);
-	glUniform1f(single_color_lit_shader.tonemapping_gain_id, tonemapping_gain);
+	glUniform3f(shader->light_pos_id, eye_light_pos->v.x, eye_light_pos->v.y, eye_light_pos->v.z);
+	glUniform1f(shader->in_shade_id, in_shade);
+	glUniform1f(shader->ambient_id, ambient);
+	glUniform1f(shader->filmic_tonemapping_id, (float) filmic_tonemapping);
+	glUniform1f(shader->tonemapping_gain_id, tonemapping_gain);
 
-	glEnableVertexAttribArray(single_color_lit_shader.vertex_position_id);
+	if (use_shadow) {
+		struct mat44d shadow_mvp_d;
+		struct mat44 shadow_mvp;
+
+		mat44_product_ddd(&shadow_world_to_lightclip, model, &shadow_mvp_d);
+		mat44_convert_df(&shadow_mvp_d, &shadow_mvp);
+		glUniformMatrix4fv(shader->shadow_mvp_id, 1, GL_FALSE, &shadow_mvp.m[0][0]);
+
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, shadow_map_texture);
+		glUniform1i(shader->shadow_map_id, 0);
+	}
+
+	glEnableVertexAttribArray(shader->vertex_position_id);
 	glBindBuffer(GL_ARRAY_BUFFER, ptr->vertex_buffer);
 	glVertexAttribPointer(
-		single_color_lit_shader.vertex_position_id, /* The attribute we want to configure */
+		shader->vertex_position_id, /* The attribute we want to configure */
 		3,                           /* size */
 		GL_FLOAT,                    /* type */
 		GL_FALSE,                    /* normalized? */
@@ -1795,10 +1838,10 @@ static void graph_dev_raster_single_color_lit(const struct mat44 *mat_mvp, const
 		(void *)offsetof(struct vertex_buffer_data, position.v.x) /* array buffer offset */
 	);
 
-	glEnableVertexAttribArray(single_color_lit_shader.vertex_normal_id);
+	glEnableVertexAttribArray(shader->vertex_normal_id);
 	glBindBuffer(GL_ARRAY_BUFFER, ptr->triangle_vertex_buffer);
 	glVertexAttribPointer(
-		single_color_lit_shader.vertex_normal_id,  /* The attribute we want to configure */
+		shader->vertex_normal_id,  /* The attribute we want to configure */
 		3,                            /* size */
 		GL_FLOAT,                     /* type */
 		GL_FALSE,                     /* normalized? */
@@ -2927,7 +2970,7 @@ static void graph_dev_raster_triangle_mesh(struct entity_context *cx, struct ent
 						&shadow_annulus, rtp.ring_texture_v, rtp.atmosphere_brightness);
 				else if (!rtp.textures_not_ready)
 					graph_dev_raster_single_color_lit(rtp.mat_mvp, rtp.mat_mv,
-						rtp.mat_normal, e->m, &triangle_color, eye_light_pos,
+						rtp.mat_normal, &transform->m, e->m, &triangle_color, eye_light_pos,
 						e->in_shade, cx->ambient);
 			}
 		}
@@ -3145,6 +3188,9 @@ void graph_dev_start_frame(void)
 
 	graph_dev_send_completed_textures_to_gpu();
 
+	/* A fresh frame has no shadow map yet; render_entities may render one. */
+	shadow_map_ready = 0;
+
 	/* reset viewport to whole screen */
 	sgc.active_vp = 0;
 	VIEWPORT(0, 0, sgc.screen_x, sgc.screen_y);
@@ -3290,6 +3336,82 @@ void graph_dev_clear_depth_bit(void)
 	PROFILE_ZONE_END();
 }
 
+void graph_dev_set_shadow_light_matrix(const struct mat44d *world_to_lightclip)
+{
+	shadow_world_to_lightclip = *world_to_lightclip;
+}
+
+void graph_dev_shadow_map_begin(void)
+{
+	if (!graph_dev_shadow_map_enabled)
+		return;
+
+	PROFILE_ZONE_START("graph_dev_shadow_map_begin");
+
+	/* Remember the framebuffer and viewport the caller was using so we can
+	 * restore them when the shadow pass is done. */
+	glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &saved_shadow_fbo);
+	glGetIntegerv(GL_VIEWPORT, saved_shadow_viewport);
+
+	glBindFramebuffer(GL_FRAMEBUFFER, shadow_map_fbo);
+	glViewport(0, 0, SHADOW_MAP_TEXTURE_SIZE, SHADOW_MAP_TEXTURE_SIZE);
+	glClear(GL_DEPTH_BUFFER_BIT);
+
+	glEnable(GL_DEPTH_TEST);
+	glDepthMask(GL_TRUE);
+	glEnable(GL_CULL_FACE);
+	/* Slope-scaled depth bias to keep surfaces from shadowing themselves (acne). */
+	glEnable(GL_POLYGON_OFFSET_FILL);
+	glPolygonOffset(2.0f, 4.0f);
+
+	activate_shader(&shadow_depth_shader);
+
+	PROFILE_ZONE_END();
+}
+
+void graph_dev_draw_shadow_caster(const struct mat44d *model, struct mesh *m)
+{
+	if (!graph_dev_shadow_map_enabled)
+		return;
+	if (!m->graph_ptr)
+		return;
+
+	struct mesh_gl_info *ptr = m->graph_ptr;
+	struct mat44d shadow_mvp_d;
+	struct mat44 shadow_mvp;
+
+	mat44_product_ddd(&shadow_world_to_lightclip, model, &shadow_mvp_d);
+	mat44_convert_df(&shadow_mvp_d, &shadow_mvp);
+
+	glUniformMatrix4fv(shadow_depth_shader.shadow_mvp_id, 1, GL_FALSE, &shadow_mvp.m[0][0]);
+
+	glEnableVertexAttribArray(shadow_depth_shader.vertex_position_id);
+	glBindBuffer(GL_ARRAY_BUFFER, ptr->vertex_buffer);
+	glVertexAttribPointer(
+		shadow_depth_shader.vertex_position_id,
+		3, GL_FLOAT, GL_FALSE,
+		sizeof(struct vertex_buffer_data),
+		(void *)offsetof(struct vertex_buffer_data, position.v.x));
+
+	glDrawArrays(GL_TRIANGLES, 0, m->ntriangles * 3);
+}
+
+void graph_dev_shadow_map_end(void)
+{
+	if (!graph_dev_shadow_map_enabled)
+		return;
+
+	glDisable(GL_POLYGON_OFFSET_FILL);
+	glPolygonOffset(0.0f, 0.0f);
+
+	/* Restore the caller's framebuffer and viewport. */
+	glBindFramebuffer(GL_FRAMEBUFFER, saved_shadow_fbo);
+	glViewport(saved_shadow_viewport[0], saved_shadow_viewport[1],
+		saved_shadow_viewport[2], saved_shadow_viewport[3]);
+
+	shadow_map_ready = 1;
+}
+
 void graph_dev_draw_line(float x1, float y1, float x2, float y2)
 {
 	PROFILE_ZONE_START("graph_dev_draw_line");
@@ -3430,7 +3552,7 @@ void graph_dev_draw_arc(int filled, float x, float y, float width, float height,
 	PROFILE_ZONE_END();
 }
 
-static void setup_single_color_lit_shader(struct graph_dev_gl_single_color_lit_shader *shader)
+static void setup_single_color_lit_shader(struct graph_dev_gl_single_color_lit_shader *shader, int with_shadow)
 {
 
 	maybe_unload_shader(&shader->meta, &shader->program_id);
@@ -3443,6 +3565,8 @@ static void setup_single_color_lit_shader(struct graph_dev_gl_single_color_lit_s
 	shader->program_id = load_shaders(shader_directory,
 				"single-color-lit-per-vertex.vert",
 				"single-color-lit-per-vertex.frag",
+				with_shadow ?
+				UNIVERSAL_SHADER_HEADER FILMIC_TONEMAPPING "#define USE_CSM 1\n" :
 				UNIVERSAL_SHADER_HEADER FILMIC_TONEMAPPING);
 
 	/* create the VAO for this shader */
@@ -3462,6 +3586,60 @@ static void setup_single_color_lit_shader(struct graph_dev_gl_single_color_lit_s
 	shader->ambient_id = glGetUniformLocation(shader->program_id, "u_Ambient");
 	shader->filmic_tonemapping_id = glGetUniformLocation(shader->program_id, "u_FilmicTonemapping");
 	shader->tonemapping_gain_id = glGetUniformLocation(shader->program_id, "u_TonemappingGain");
+
+	shader->shadow_mvp_id = -1;
+	shader->shadow_map_id = -1;
+	if (with_shadow) {
+		shader->shadow_mvp_id = glGetUniformLocation(shader->program_id, "u_ShadowMVP");
+		shader->shadow_map_id = glGetUniformLocation(shader->program_id, "u_ShadowMap");
+	}
+}
+
+static void setup_shadow_depth_shader(struct graph_dev_gl_shadow_depth_shader *shader)
+{
+	maybe_unload_shader(&shader->meta, &shader->program_id);
+
+	shader->program_id = load_shaders(shader_directory,
+				"csm_depth.vert", "csm_depth.frag",
+				UNIVERSAL_SHADER_HEADER);
+
+	glGenVertexArrays(1, &shader->vao_id);
+
+	shader->shadow_mvp_id = glGetUniformLocation(shader->program_id, "u_ShadowMVP");
+	shader->vertex_position_id = glGetAttribLocation(shader->program_id, "a_Position");
+}
+
+/* Create the depth-texture framebuffer used to render the shadow map. */
+static void setup_shadow_map_fbo(void)
+{
+	glGenTextures(1, &shadow_map_texture);
+	glBindTexture(GL_TEXTURE_2D, shadow_map_texture);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT24,
+		SHADOW_MAP_TEXTURE_SIZE, SHADOW_MAP_TEXTURE_SIZE, 0,
+		GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	/* Configure hardware depth comparison so the sampler2DShadow returns a
+	 * 0..1 lit factor (with GL_LINEAR this gives cheap 2x2 PCF). */
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_REF_TO_TEXTURE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_FUNC, GL_LEQUAL);
+
+	glGenFramebuffers(1, &shadow_map_fbo);
+	glBindFramebuffer(GL_FRAMEBUFFER, shadow_map_fbo);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, shadow_map_texture, 0);
+	/* Depth-only: no color attachments. */
+	glDrawBuffer(GL_NONE);
+	glReadBuffer(GL_NONE);
+
+	GLenum status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+	if (status != GL_FRAMEBUFFER_COMPLETE) {
+		fprintf(stderr, "Shadow map FBO incomplete, disabling shadows\n");
+		print_framebuffer_error();
+		graph_dev_shadow_map_enabled = 0;
+	}
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
 static void setup_atmosphere_shader(struct graph_dev_gl_atmosphere_shader *shader, int with_ring_shadow)
@@ -4160,7 +4338,9 @@ void graph_dev_reload_all_shaders(void)
 {
 	PROFILE_ZONE_START("graph_dev_reload_all_shaders");
 
-	setup_single_color_lit_shader(&single_color_lit_shader);
+	setup_single_color_lit_shader(&single_color_lit_shader, 0);
+	setup_single_color_lit_shader(&single_color_lit_shadow_shader, 1);
+	setup_shadow_depth_shader(&shadow_depth_shader);
 	setup_atmosphere_shader(&atmosphere_shader, 0);
 	setup_atmosphere_shader(&atmosphere_with_annulus_shadow_shader, 1);
 	setup_trans_wireframe_shader("wireframe_transparent", &trans_wireframe_shader);
@@ -4380,6 +4560,9 @@ int graph_dev_setup(const char *asset_dir)
 		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
 			post_target1.color0_texture, 0);
 	}
+
+	if (graph_dev_shadow_map_enabled)
+		setup_shadow_map_fbo();
 
 	graph_dev_reload_all_shaders();
 

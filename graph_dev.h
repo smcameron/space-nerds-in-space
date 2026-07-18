@@ -31,6 +31,7 @@ struct entity;
 struct entity_transform;
 union vec3;
 struct mat44;
+struct mat44d;
 struct mat33;
 
 struct graph_dev_color { /* This exactly mimics GdkColor */
@@ -49,6 +50,17 @@ extern void graph_dev_set_screen_size(int width, int height);
 extern void graph_dev_set_extent_scale(float x_scale, float y_scale);
 extern void graph_dev_set_3d_viewport(int x_offset, int y_offset, int width, int height);
 extern void graph_dev_clear_depth_bit(void);
+
+/* Cascaded shadow mapping.  graph_dev_shadow_map_enabled is 1 to render and
+ * receive shadow maps, 0 to disable (e.g. the GLES backend).  The caller
+ * (render_entities) computes a world-space -> light clip-space matrix, then
+ * renders each shadow caster's model matrix into the shadow map between
+ * graph_dev_shadow_map_begin() and graph_dev_shadow_map_end(). */
+extern int graph_dev_shadow_map_enabled;
+extern void graph_dev_set_shadow_light_matrix(const struct mat44d *world_to_lightclip);
+extern void graph_dev_shadow_map_begin(void);
+extern void graph_dev_draw_shadow_caster(const struct mat44d *model, struct mesh *m);
+extern void graph_dev_shadow_map_end(void);
 
 #define GRAPH_DEV_RENDER_FAR_TO_NEAR 0
 #define GRAPH_DEV_RENDER_NEAR_TO_FAR 1
