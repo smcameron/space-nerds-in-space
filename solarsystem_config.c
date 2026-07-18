@@ -247,8 +247,8 @@ struct solarsystem_asset_spec *solarsystem_asset_spec_read(char *filename)
 				goto bad_line;
 			}
 			a->water_color[planet_textures_read - 1].r = r;
-			a->water_color[planet_textures_read - 1].r = g;
-			a->water_color[planet_textures_read - 1].r = b;
+			a->water_color[planet_textures_read - 1].g = g;
+			a->water_color[planet_textures_read - 1].b = b;
 			continue;
 		} else if (has_prefix("sun color:", line)) {
 			unsigned char r, g, b;
