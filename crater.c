@@ -59,6 +59,8 @@ static void add_cone(unsigned char *image, int imagew, int imageh, int x, int y,
 				continue;
 			index = 3 * (iy * imagew + ix);
 			n = (float) image[index] + h;
+			if (n > 255.0)
+				n = 255.0;
 			image[index] = (unsigned char) n;
 			image[index + 1] = image[index];
 			image[index + 2] = image[index];
