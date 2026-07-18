@@ -218,10 +218,24 @@ static inline void distort_vertex(union vec3 *v, float d, struct bump *b)
 	vec3_mul_self(&texelv, b->ts);
 	x = (int) texelv.v.x + b->tx;
 	y = (int) texelv.v.y + b->ty;
+
+#if 1
+	/* Clamp x, y to in range values */
+	if (x < 0)
+		x = 0;
+	if (y < 0)
+		y = 0;
+	if (x >= b->samplew)
+		x = b->samplew - 1;
+	if (y >= b->sampleh)
+		y = b->sampleh - 1;
+#else
 	if (x < 0 || x >= b->samplew || y < 0 || y >= b->sampleh) {
-		printf("out of range (%d, %d)\n", x, y);
+		printf("out of range (%d, %d) vs ((%d,%d) - (%d,%d))\n",
+				x, y, 0, b->samplew - 1, 0, b->sampleh - 1);
 		return;
 	}
+#endif
 	p = y * b->sample_bytes_per_row + x * 3;
 	c = (unsigned char *) &b->sampledata[p];
 	m = (float) *c;
