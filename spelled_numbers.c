@@ -355,7 +355,7 @@ static int frac_to_words(float number, char *buffer, int buflen, int max_decimal
 		if (rc < 0)
 			return -1;
 		x += rc;
-		buflen -= x;
+		buflen -= rc;
 		if (buflen < 2)
 			return -1;
 	}
