@@ -437,7 +437,7 @@ static void save_output_images(void)
 	}
 }
 
-int main(int argc, char *argv[])
+int main(__attribute__((unused)) int argc, __attribute__((unused)) char *argv[])
 {
 	read_starcolors();
 	allocate_output_images(dim);
