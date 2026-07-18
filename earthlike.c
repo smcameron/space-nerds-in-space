@@ -218,7 +218,7 @@ static inline void distort_vertex(union vec3 *v, float d, struct bump *b)
 	vec3_mul_self(&texelv, b->ts);
 	x = (int) texelv.v.x + b->tx;
 	y = (int) texelv.v.y + b->ty;
-	if (x < 0 || x > b->samplew || y < 0 || y > b->sampleh) {
+	if (x < 0 || x >= b->samplew || y < 0 || y >= b->sampleh) {
 		printf("out of range (%d, %d)\n", x, y);
 		return;
 	}
@@ -530,7 +530,7 @@ static void color_output(int f, int p, float r, float n)
 	int colorindex;
 
 
-	if (r > sealevel) {
+	if (r > sealevel || sealevel < 0.000001) {
 		y = (r - sealevel) / (1.0 - sealevel);
 		colorindex = (int) (y * (landh - 1));
 		colorindex = colorindex * landbpr;
