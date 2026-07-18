@@ -208,6 +208,9 @@ size_t strlcpy(char *dest, const char *src, size_t n)
 {
 	size_t i;
 
+	if (n == 0)
+		return 0;
+
 	for (i = 0;; i++) {
 		if (i < n)
 			dest[i] = src[i];
