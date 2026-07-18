@@ -19,6 +19,8 @@ struct faction {
 #define DEFAULT_FACTION_HOSTILITY 0.03f
 };
 
+static const char unknown_faction[] = "UNKNOWN FACTION";
+
 static struct faction *fact;
 static int nfacts;
 
@@ -162,11 +164,15 @@ void snis_free_factions(void)
 
 char *faction_name(int faction_number)
 {
+	if (faction_number < 0 || faction_number >= nfacts)
+		return (char *) unknown_faction;
 	return fact[faction_number].name;
 }
 
 union vec3 faction_center(int faction_number)
 {
+	if (faction_number < 0 || faction_number >= nfacts)
+		return (union vec3) { { 0.0, 0.0, 0.0 } };
 	return fact[faction_number].center;
 }
 
