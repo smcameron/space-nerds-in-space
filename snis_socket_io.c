@@ -40,7 +40,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 #include "snis_socket_io.h"
 
 #define MAX_DEBUGGABLE_SOCKETS 100
-static int protocol_debugging_enabled = 1;
+static int protocol_debugging_enabled = 0; /* off by default, call snis_protocol_debugging(1); to enable */
 struct debug_buf {
 		int len;
 		unsigned char buf[100];
