@@ -273,7 +273,7 @@ struct ship_type_entry *snis_read_ship_types(char *filename, int *count)
 				return st;
 			}
 			st[n].model_file = strdup(model_file);
-			if (!st[n].class) {
+			if (!st[n].model_file) {
 				fprintf(stderr, "out of memory at %s:%d\n", __FILE__, __LINE__);
 				*count = n;
 				return st;
