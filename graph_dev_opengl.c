@@ -192,8 +192,8 @@ static float graph_dev_shadow_blend = 0.0f;
 /* Slope-scaled polygon-offset bias applied while rendering the shadow map depth pass. */
 static float shadow_polygon_offset_factor = 2.0f;
 static float shadow_polygon_offset_units = 4.0f;
-#define SHADOW_MAP_TEXTURE_SIZE 2048
-#define MAX_SHADOW_CASCADES 4
+#define SHADOW_MAP_TEXTURE_SIZE 4096
+#define MAX_SHADOW_CASCADES 6
 /* Largest PCF kernel half-width the lit shaders will loop over (radius 3 -> 7x7). */
 #define CSM_PCF_MAX_RADIUS 3
 #define CSM_STR_(x) #x
@@ -209,6 +209,7 @@ static float shadow_polygon_offset_units = 4.0f;
 #define SHADOW_MAP_TEXTURE_UNIT GL_TEXTURE2
 static GLuint shadow_map_fbo;
 static GLuint shadow_map_texture; /* GL_TEXTURE_2D_ARRAY, one layer per cascade */
+static int shadow_map_layers; /* layers currently allocated; grown/shrunk to the cascade count */
 static int shadow_map_ready; /* 1 if a shadow map was rendered this frame */
 static int shadow_map_num_cascades = MAX_SHADOW_CASCADES;
 static struct mat44d shadow_cascade_w2l[MAX_SHADOW_CASCADES]; /* world -> cascade light clip */
@@ -219,6 +220,7 @@ static GLint saved_shadow_viewport[4];
 static GLint saved_shadow_fbo;
 static void upload_shadow_receive_uniforms(GLint shadow_mvp_id, GLint num_cascades_id,
 	GLint shadow_map_id, const struct mat44d *model);
+static void ensure_shadow_map_layers(int n);
 
 static const char *default_shader_directory = "share/snis/shader";
 static char shader_directory[PATH_MAX];
@@ -3414,6 +3416,7 @@ void graph_dev_set_shadow_cascades(const struct mat44d *world_to_lightclip, int 
 
 	if (n > MAX_SHADOW_CASCADES)
 		n = MAX_SHADOW_CASCADES;
+	ensure_shadow_map_layers(n); /* size the texture array to the cascade count in use */
 	shadow_map_num_cascades = n;
 	for (i = 0; i < n; i++)
 		shadow_cascade_w2l[i] = world_to_lightclip[i];
@@ -3788,14 +3791,34 @@ static void setup_shadow_depth_shader(struct graph_dev_gl_shadow_depth_shader *s
 }
 
 /* Create the depth-texture framebuffer used to render the shadow map. */
+/* (Re)allocate the shadow depth texture array to hold n cascade layers.  The count only
+ * changes when the cascade tunable does, so this is a no-op on almost every frame; sizing to
+ * the actual count keeps memory proportional to cascades used rather than paying for the max
+ * (at 4096^2 x 4 bytes a layer that is ~64MB each). */
+static void ensure_shadow_map_layers(int n)
+{
+	if (n < 1)
+		n = 1;
+	if (n > MAX_SHADOW_CASCADES)
+		n = MAX_SHADOW_CASCADES;
+	if (n == shadow_map_layers)
+		return;
+	glBindTexture(GL_TEXTURE_2D_ARRAY, shadow_map_texture);
+	glTexImage3D(GL_TEXTURE_2D_ARRAY, 0, GL_DEPTH_COMPONENT24,
+		SHADOW_MAP_TEXTURE_SIZE, SHADOW_MAP_TEXTURE_SIZE, n, 0,
+		GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
+	shadow_map_layers = n;
+}
+
 static void setup_shadow_map_fbo(void)
 {
-	/* One depth texture array, one layer per cascade. */
+	/* One depth texture array, one layer per cascade (grown to the cascade count later). */
 	glGenTextures(1, &shadow_map_texture);
 	glBindTexture(GL_TEXTURE_2D_ARRAY, shadow_map_texture);
 	glTexImage3D(GL_TEXTURE_2D_ARRAY, 0, GL_DEPTH_COMPONENT24,
 		SHADOW_MAP_TEXTURE_SIZE, SHADOW_MAP_TEXTURE_SIZE, MAX_SHADOW_CASCADES, 0,
 		GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
+	shadow_map_layers = MAX_SHADOW_CASCADES;
 	glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);

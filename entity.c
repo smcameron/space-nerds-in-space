@@ -894,10 +894,10 @@ static void update_entity_child_state(struct entity *e)
 
 
 /* Must not exceed MAX_SHADOW_CASCADES in graph_dev_opengl.c. */
-#define MAX_ENTITY_SHADOW_CASCADES 4
+#define MAX_ENTITY_SHADOW_CASCADES 6
 /* Must match SHADOW_MAP_TEXTURE_SIZE in graph_dev_opengl.c; used to snap each cascade's ortho
  * window to texel increments so shadow texels do not swim as the camera moves. */
-#define ENTITY_SHADOW_MAP_TEXTURE_SIZE 2048
+#define ENTITY_SHADOW_MAP_TEXTURE_SIZE 4096
 
 /* The shadow cascades cover the view frustum only out to this distance, beyond which
  * objects neither cast nor receive shadows (keeps shadow texels usefully small). */
