@@ -900,9 +900,13 @@ static void update_entity_child_state(struct entity *e)
  * objects neither cast nor receive shadows (keeps shadow texels usefully small). */
 static float shadow_map_max_distance = 4000.0;
 /* Number of shadow cascades and the split-scheme blend (0 = uniform spacing, 1 = fully
- * logarithmic).  Logarithmic packs resolution near the camera where it matters most. */
-static int shadow_map_num_cascades = MAX_ENTITY_SHADOW_CASCADES;
-static float shadow_map_split_lambda = 0.75;
+ * logarithmic).  Logarithmic packs resolution near the camera where it matters most.
+ * The shadow map covers only a camera-local region (shadow_map_max_distance), so two
+ * cascades over that modest depth range keep texels small without the seams and coarse far
+ * cascades that a full-frustum scheme needed; lambda is near the middle since log vs. uniform
+ * barely differ over so short a range. */
+static int shadow_map_num_cascades = 2;
+static float shadow_map_split_lambda = 0.5;
 
 /* Fit an orthographic shadow frustum to the slice of the camera view frustum between
  * near_d and far_d, and build the world-space -> light clip-space matrix for that cascade.

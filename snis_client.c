@@ -2375,6 +2375,11 @@ static int update_planet(uint32_t id, uint32_t timestamp, double x, double y, do
 			update_entity_scale(e, r);
 			update_entity_material(e, &planet_material[m]);
 			entity_set_low_poly_mesh(e, sphere_lp_mesh);
+			/* Planets do not cast into the shadow map: planet->ship shadowing is done
+			 * analytically (update_shading_planet), and a planet-sized caster in a
+			 * camera-local cascade would otherwise black out whole ships.  Ships also
+			 * never cast onto planets (planets do not receive the shadow map). */
+			update_entity_shadow_casting(e, 0);
 		}
 
 
@@ -2391,6 +2396,7 @@ static int update_planet(uint32_t id, uint32_t timestamp, double x, double y, do
 				/* child ring will inherit position and scale from planet */
 				update_entity_parent(ecx, ring, e);
 				entity_set_low_poly_mesh(ring, planetary_ring_lp_mesh);
+				update_entity_shadow_casting(ring, 0); /* see planet: no CSM casting */
 			}
 		}
 		i = add_generic_object(id, timestamp, x, y, z, 0.0, 0.0, 0.0,
@@ -2403,6 +2409,7 @@ static int update_planet(uint32_t id, uint32_t timestamp, double x, double y, do
 			go[i].tsd.planet.atmosphere = atm;
 			if (atm) {
 				update_entity_scale(atm, atm_scale);
+				update_entity_shadow_casting(atm, 0); /* see planet: no CSM casting */
 				entity_update_alpha(atm, 0.5);
 				material_init_atmosphere(&go[i].tsd.planet.atm_material);
 				go[i].tsd.planet.atm_material.atmosphere.r = (float) atm_r / 255.0f;
