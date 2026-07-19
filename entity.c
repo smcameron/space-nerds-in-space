@@ -895,6 +895,9 @@ static void update_entity_child_state(struct entity *e)
 
 /* Must not exceed MAX_SHADOW_CASCADES in graph_dev_opengl.c. */
 #define MAX_ENTITY_SHADOW_CASCADES 4
+/* Must match SHADOW_MAP_TEXTURE_SIZE in graph_dev_opengl.c; used to snap each cascade's ortho
+ * window to texel increments so shadow texels do not swim as the camera moves. */
+#define ENTITY_SHADOW_MAP_TEXTURE_SIZE 2048
 
 /* The shadow cascades cover the view frustum only out to this distance, beyond which
  * objects neither cast nor receive shadows (keeps shadow texels usefully small). */
@@ -988,7 +991,45 @@ static int compute_shadow_light_matrix(struct entity_context *cx, float near_d, 
 	vec3_cross(&lv, &lu, &ldir);
 	vec3_normalize_self(&lv);
 
-	/* World -> light view: rotation (rows lu, lv, -ldir) composed with translate(-center). */
+	/* Fit a bounding sphere to the frustum corners instead of an AABB: because the camera
+	 * frustum is rigid, the sphere's radius is invariant to camera rotation, so the ortho
+	 * window keeps a fixed size and its texels do not resize/swim as the view turns (which is
+	 * what made the two cascades disagree off-axis). */
+	double radius = 0.0;
+	for (i = 0; i < 8; i++) {
+		union vec3 d;
+		double rd;
+
+		vec3_sub(&d, &corners[i], &center);
+		rd = vec3_magnitude(&d);
+		if (rd > radius)
+			radius = rd;
+	}
+	if (radius < 1e-6)
+		return 0;
+
+	/* Snap the window centre to whole-texel increments along the light's right/up axes, on a
+	 * grid anchored at the world origin, so a given world point always lands on the same texel
+	 * -- eliminating the sub-texel drift between cascades and the shimmer as the camera moves.
+	 * Do the snap in the light basis, then reconstruct the snapped centre in world space so the
+	 * light-view translation keeps the math camera-relative (small coordinates) for precision. */
+	union vec3 neg_ldir;
+	vec3_mul(&neg_ldir, &ldir, -1.0);
+	double texel = 2.0 * radius / (double) ENTITY_SHADOW_MAP_TEXTURE_SIZE;
+	double cx_l = vec3_dot(&center, &lu);
+	double cy_l = vec3_dot(&center, &lv);
+	double cz_l = vec3_dot(&center, &neg_ldir);
+	cx_l = round(cx_l / texel) * texel;
+	cy_l = round(cy_l / texel) * texel;
+
+	union vec3 snapped_center, tmp;
+	vec3_mul(&snapped_center, &lu, cx_l);
+	vec3_mul(&tmp, &lv, cy_l);
+	vec3_add_self(&snapped_center, &tmp);
+	vec3_mul(&tmp, &neg_ldir, cz_l);
+	vec3_add_self(&snapped_center, &tmp);
+
+	/* World -> light view: rotation (rows lu, lv, -ldir) composed with translate(-snapped). */
 	struct mat44d lrot = {{
 		{ lu.v.x, lv.v.x, -ldir.v.x, 0 },
 		{ lu.v.y, lv.v.y, -ldir.v.y, 0 },
@@ -998,12 +1039,12 @@ static int compute_shadow_light_matrix(struct entity_context *cx, float near_d, 
 		{ 1, 0, 0, 0 },
 		{ 0, 1, 0, 0 },
 		{ 0, 0, 1, 0 },
-		{ -center.v.x, -center.v.y, -center.v.z, 1 } } };
+		{ -snapped_center.v.x, -snapped_center.v.y, -snapped_center.v.z, 1 } } };
 	struct mat44d lview;
 	mat44_product_ddd(&lrot, &ltrans, &lview);
 
-	/* AABB of the frustum corners in light view space. */
-	double xmin = 1e30, xmax = -1e30, ymin = 1e30, ymax = -1e30, zmin = 1e30, zmax = -1e30;
+	/* z extent of the corners in this light view (x/y come from the fixed-size sphere). */
+	double zmin = 1e30, zmax = -1e30;
 	for (i = 0; i < 8; i++) {
 		union vec4 cw;
 		union vec3 cv;
@@ -1012,14 +1053,6 @@ static int compute_shadow_light_matrix(struct entity_context *cx, float near_d, 
 		cw.v.z = corners[i].v.z;
 		cw.v.w = 1.0;
 		mat44_x_vec4_into_vec3_dff(&lview, &cw, &cv);
-		if (cv.v.x < xmin)
-			xmin = cv.v.x;
-		if (cv.v.x > xmax)
-			xmax = cv.v.x;
-		if (cv.v.y < ymin)
-			ymin = cv.v.y;
-		if (cv.v.y > ymax)
-			ymax = cv.v.y;
 		if (cv.v.z < zmin)
 			zmin = cv.v.z;
 		if (cv.v.z > zmax)
@@ -1029,14 +1062,18 @@ static int compute_shadow_light_matrix(struct entity_context *cx, float near_d, 
 	/* Forward is -ldir, so points in front of the light have negative view z.
 	 * Convert to positive ortho near/far distances and extend the near plane toward
 	 * the light by roughly one scene depth so casters just in front of the region
-	 * still cast, without wasting depth-buffer precision on a huge fixed range. */
+	 * still cast, without wasting depth-buffer precision on a huge fixed range.  The x/y
+	 * window is the (snapped) sphere, one texel larger each side to absorb the snap offset. */
 	double zrange = zmax - zmin;
 	if (zrange < 1e-6)
 		return 0;
 	double ortho_near = -zmax - zrange;
 	double ortho_far = -zmin + 0.01 * zrange;
-	double l = xmin, r = xmax, b = ymin, t = ymax;
-	if (ortho_far - ortho_near < 1e-6 || r - l < 1e-6 || t - b < 1e-6)
+	double l = -radius - texel;
+	double r = radius + texel;
+	double b = -radius - texel;
+	double t = radius + texel;
+	if (ortho_far - ortho_near < 1e-6)
 		return 0;
 
 	struct mat44d ortho = {{ { 0 } } };
