@@ -130,6 +130,15 @@ static float sun_distance = 90000.0;
 static float sun_radius = 2812.5; /* = default star_diameter (5625) / 2 */
 static float deepest_planet_shade = 0.0; /* deepest analytic ship shading this frame, for the HUD */
 
+/* The sun is drawn as the game's sun billboard: the default sun texture on a camera-facing
+ * quad.  Only ~87 of the texture's 512 px width is the star's disc; the rest is bloom.  We
+ * scale the billboard so that 87-px core renders at the star's diameter (2 * sun_radius). */
+#define SUN_BILLBOARD_SIZE 30000.0 /* world-unit width of the unscaled billboard (full 512 px) */
+#define SUN_TEXTURE_WIDTH 512.0
+#define SUN_TEXTURE_CORE_PIXELS 87.0
+static struct mesh *sun_billboard_mesh;
+static struct material sun_material;
+
 /* Planet-shadow test controls (independent of the CSM depth-map shadows). */
 enum planet_shade_mode { PLANET_SHADE_SOFT, PLANET_SHADE_BINARY, PLANET_SHADE_OFF };
 static int planet_shade_mode = PLANET_SHADE_SOFT;
@@ -795,14 +804,17 @@ static void draw_screen(void)
 		}
 	}
 
-	/* A small unlit marker sphere at the sun's true angular size, so its position and how
-	 * far it has swung behind the planet are visible.  It must not cast shadows. */
-	if (planet_mesh) {
-		struct entity *e = add_entity(cx, planet_mesh, sun_pos.v.x, sun_pos.v.y, sun_pos.v.z, YELLOW);
+	/* The sun billboard, scaled so its ~87-px core renders at the star's diameter (with the
+	 * bloom spilling beyond).  It must not cast shadows. */
+	if (sun_billboard_mesh) {
+		struct entity *e = add_entity(cx, sun_billboard_mesh,
+				sun_pos.v.x, sun_pos.v.y, sun_pos.v.z, WHITE);
 		if (e) {
-			update_entity_scale(e, sun_radius);
+			float billboard_wu = 2.0 * sun_radius * SUN_TEXTURE_WIDTH / SUN_TEXTURE_CORE_PIXELS;
+
+			update_entity_scale(e, billboard_wu / SUN_BILLBOARD_SIZE);
+			update_entity_material(e, &sun_material);
 			update_entity_shadow_casting(e, 0);
-			entity_set_in_shade(e, 0.0);
 		}
 	}
 
@@ -1086,6 +1098,16 @@ static void setup_skybox(const char *skybox_prefix)
 					filename[5], filename[0], filename[2]);
 }
 
+static void setup_sun_billboard(void)
+{
+	sun_billboard_mesh = mesh_fabricate_billboard(SUN_BILLBOARD_SIZE, SUN_BILLBOARD_SIZE);
+	material_init_texture_mapped_unlit(&sun_material);
+	sun_material.billboard_type = MATERIAL_BILLBOARD_TYPE_SPHERICAL;
+	sun_material.texture_mapped_unlit.texture_id =
+		graph_dev_load_texture("share/snis/textures/sun.png", 0);
+	sun_material.texture_mapped_unlit.do_blend = 1;
+}
+
 int main(int argc, char *argv[])
 {
 	setlocale(LC_ALL, "C");
@@ -1121,6 +1143,7 @@ int main(int argc, char *argv[])
 	sng_set_font_family(0);
 	graph_dev_setup(NULL);
 	setup_skybox("orange-haze");
+	setup_sun_billboard();
 
 	SDL_SetWindowSize(screen, real_screen_width, real_screen_height);
 	window_manager_can_constrain_aspect_ratio =
