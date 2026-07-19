@@ -97,6 +97,17 @@ static float move_speed; /* per-frame translation, derived from scene_scale */
 static int controlled_slot = -1;
 static int ship_slots[MAX_SCENE_OBJECTS]; /* scene[] indices of ships, in possess order */
 static int ship_slot_count;
+
+/* Arcade "atmospheric" flight for the possessed ship: it flies where its nose points, with
+ * throttle acceleration and drag (momentum) rather than realistic 6-DOF space flight.  The
+ * chase camera trails behind and above and eases toward its target, catching up to the ship's
+ * heading faster the quicker you go. */
+static float ship_speed;      /* current speed along the nose, world units per frame */
+static float ship_max_speed;  /* set from the scene scale in build_scene */
+static float ship_accel;      /* throttle acceleration per frame */
+static union vec3 chase_cam_pos;
+static union quat chase_cam_orientation = IDENTITY_QUAT_INITIALIZER;
+static int chase_initialized;  /* 0 to snap the chase cam on the first possessed frame */
 static float mouse_sensitivity = 0.003;
 static float roll_rate = 0.02;
 static float ambient_light = 0.015; /* match snis_client's default so lighting mirrors the game */
@@ -219,16 +230,35 @@ static struct scene_object *add_scene_object(enum scene_object_kind kind, struct
 	return o;
 }
 
-/* Phase 1: a hardcoded scene (config-file loading arrives in phase 2).  A cluster of
- * flat-shaded ships sitting above a large flat-shaded planet, so ships cast shadows onto
- * the planet and self-shadow.  Flat-shaded meshes use the single_color_lit shader, which
- * is the CSM receive path proven in phases 1-2. */
-static const char * const phase1_ship_models[] = {
-	"share/snis/models/wombat/snis3006.obj",
-	"share/snis/models/disruptor/disruptor.obj",
-	"share/snis/models/enforcer/enforcer.obj",
-	"share/snis/models/conqueror/conqueror.obj",
+/* The scene's ships.  Each model is authored in its own frame; the game brings it into the
+ * nose-along-+x / up-along-+y game frame with per-model rotations from ship_types.txt, so we
+ * replicate those here (only the wombat needs any) or the possessed ship faces the wrong way.
+ * Angles are passed to quat_init_axis() exactly as the game does. */
+struct lab_ship_model {
+	const char *path;
+	char axis[3];   /* rotation axes applied in order (matching ship_types.txt) */
+	float angle[3]; /* matching angles, in the same units the game feeds quat_init_axis() */
+	int nrot;
 };
+static const struct lab_ship_model phase1_ship_models[] = {
+	{ "share/snis/models/wombat/snis3006.obj", { 'x', 'y' }, { -90.0, 90.0 }, 2 },
+	{ "share/snis/models/disruptor/disruptor.obj", { 0 }, { 0 }, 0 },
+	{ "share/snis/models/enforcer/enforcer.obj", { 0 }, { 0 }, 0 },
+	{ "share/snis/models/conqueror/conqueror.obj", { 0 }, { 0 }, 0 },
+};
+
+static void apply_model_rotations(struct mesh *m, const struct lab_ship_model *spec)
+{
+	int j;
+
+	for (j = 0; j < spec->nrot; j++) {
+		union quat q;
+
+		quat_init_axis(&q, (float) (spec->axis[j] == 'x'), (float) (spec->axis[j] == 'y'),
+				(float) (spec->axis[j] == 'z'), spec->angle[j]);
+		mesh_rotate(m, &q);
+	}
+}
 
 static void build_scene(void)
 {
@@ -239,9 +269,10 @@ static void build_scene(void)
 	float spacing;
 
 	for (i = 0; i < nships; i++) {
-		ship_mesh[i] = snis_read_model((char *) phase1_ship_models[i]);
+		ship_mesh[i] = snis_read_model((char *) phase1_ship_models[i].path);
 		if (!ship_mesh[i])
 			exit(1);
+		apply_model_rotations(ship_mesh[i], &phase1_ship_models[i]);
 		if (ship_mesh[i]->radius > max_radius)
 			max_radius = ship_mesh[i]->radius;
 	}
@@ -303,6 +334,10 @@ static void build_scene(void)
 	}
 
 	move_speed = spacing * 0.02;
+	/* Possessed-ship flight: a slower top speed than the free camera so a ship can be eased
+	 * through the narrow penumbra band, reached over about a second of throttle. */
+	ship_max_speed = spacing * 0.008;
+	ship_accel = ship_max_speed * 0.06;
 
 	/* Seed the shadow tunables to the game's local-scope defaults; all remain adjustable
 	 * live.  Coverage spans only the ship cluster (a few thousand units) rather than the
@@ -367,16 +402,12 @@ static void quat_rotate_local(union quat *o, float ax, float ay, float az, float
 	quat_normalize_self(o);
 }
 
-/* 6-DOF fly controls (WASD/RF translate, Q/E roll, right-drag mouse yaw/pitch) applied to the
- * given position and orientation.  Used for the free camera and for a possessed ship. */
-static void fly_controls(union vec3 *pos, union quat *orientation, float speed)
+/* Yaw/pitch/roll an orientation from the right-drag mouse and Q/E, shared by the free camera
+ * and the possessed ship. */
+static void apply_look_controls(union quat *orientation)
 {
 	const Uint8 *keys = SDL_GetKeyboardState(NULL);
-	union vec3 fwd, up, right, step;
 	float roll = 0.0;
-
-	if (keys[SDL_SCANCODE_LSHIFT] || keys[SDL_SCANCODE_RSHIFT])
-		speed *= 5.0;
 
 	quat_rotate_local(orientation, 0.0, 1.0, 0.0, -mouse_accum_dx * mouse_sensitivity);
 	quat_rotate_local(orientation, 0.0, 0.0, 1.0, -mouse_accum_dy * mouse_sensitivity);
@@ -388,7 +419,18 @@ static void fly_controls(union vec3 *pos, union quat *orientation, float speed)
 	if (keys[SDL_SCANCODE_E])
 		roll -= roll_rate;
 	quat_rotate_local(orientation, 1.0, 0.0, 0.0, roll);
+}
 
+/* Free-fly camera: look controls plus WASD/RF translation along its own basis. */
+static void fly_controls(union vec3 *pos, union quat *orientation, float speed)
+{
+	const Uint8 *keys = SDL_GetKeyboardState(NULL);
+	union vec3 fwd, up, right, step;
+
+	if (keys[SDL_SCANCODE_LSHIFT] || keys[SDL_SCANCODE_RSHIFT])
+		speed *= 5.0;
+
+	apply_look_controls(orientation);
 	camera_basis(orientation, &fwd, &up, &right);
 
 	if (keys[SDL_SCANCODE_W]) {
@@ -411,26 +453,80 @@ static void fly_controls(union vec3 *pos, union quat *orientation, float speed)
 	}
 }
 
+/* Arcade flight for a possessed ship: turn with the mouse/Q-E, throttle with W (forward) and
+ * S (brake/reverse), coast with drag, and move along the nose.  The ship goes where it points
+ * (atmosphere-like) but keeps momentum. */
+static void fly_ship(struct scene_object *ship)
+{
+	const Uint8 *keys = SDL_GetKeyboardState(NULL);
+	union vec3 fwd, up, right, step;
+
+	apply_look_controls(&ship->orientation);
+
+	if (keys[SDL_SCANCODE_W])
+		ship_speed += ship_accel;
+	if (keys[SDL_SCANCODE_S])
+		ship_speed -= ship_accel * 1.5; /* brake / reverse harder than it accelerates */
+	ship_speed *= 0.985;                    /* drag: coast to a stop when off the throttle */
+	if (ship_speed > ship_max_speed)
+		ship_speed = ship_max_speed;
+	if (ship_speed < -ship_max_speed * 0.4) /* reverse is slower than forward */
+		ship_speed = -ship_max_speed * 0.4;
+
+	camera_basis(&ship->orientation, &fwd, &up, &right);
+	step = fwd; vec3_mul_self(&step, ship_speed); vec3_add_self(&ship->pos, &step);
+}
+
 /* Drive whatever is currently controlled.  Free camera: fly the camera directly.  A possessed
- * ship: fly the ship and chase it from behind and above with the camera locked to its heading,
- * so flying a ship through the planet's penumbra updates its analytic shade live. */
+ * ship: fly the ship and trail it with a lagging third-person chase camera, so flying a ship
+ * through the planet's penumbra updates its analytic shade live. */
 static void update_camera(void)
 {
+	struct scene_object *ship;
+	union vec3 fwd, up, right, target_pos, aim, look_dir, offset;
+	union quat target_orientation;
+	union vec3 base_fwd = { { 1.0, 0.0, 0.0 } };
+	union vec3 world_up = { { 0.0, 1.0, 0.0 } };
+	float dist, lift, catchup, speed_frac;
+
 	if (controlled_slot < 0 || controlled_slot >= ship_slot_count) {
 		fly_controls(&cam_pos, &cam_orientation, move_speed);
 		return;
 	}
-	{
-		struct scene_object *ship = &scene[ship_slots[controlled_slot]];
-		union vec3 fwd, up, right, offset;
 
-		fly_controls(&ship->pos, &ship->orientation, move_speed);
-		camera_basis(&ship->orientation, &fwd, &up, &right);
-		cam_pos = ship->pos;
-		offset = fwd; vec3_mul_self(&offset, -scene_scale * 3.0); vec3_add_self(&cam_pos, &offset);
-		offset = up; vec3_mul_self(&offset, scene_scale * 1.0); vec3_add_self(&cam_pos, &offset);
-		cam_orientation = ship->orientation;
+	ship = &scene[ship_slots[controlled_slot]];
+	fly_ship(ship);
+
+	/* Chase-cam target: behind and above the ship, looking at a point a little below it so the
+	 * ship sits slightly above centre of frame rather than at the bottom. */
+	camera_basis(&ship->orientation, &fwd, &up, &right);
+	dist = scene_scale * 0.75; /* a quarter of the earlier framing distance */
+	lift = scene_scale * 0.30;
+	target_pos = ship->pos;
+	offset = fwd; vec3_mul_self(&offset, -dist); vec3_add_self(&target_pos, &offset);
+	offset = up; vec3_mul_self(&offset, lift); vec3_add_self(&target_pos, &offset);
+	aim = ship->pos;
+	offset = up; vec3_mul_self(&offset, -lift * 0.35); vec3_add_self(&aim, &offset);
+	vec3_sub(&look_dir, &aim, &target_pos);
+	vec3_normalize_self(&look_dir);
+	quat_from_u2v(&target_orientation, &base_fwd, &look_dir, &world_up);
+
+	if (!chase_initialized) {
+		chase_cam_pos = target_pos;
+		chase_cam_orientation = target_orientation;
+		chase_initialized = 1;
+	} else {
+		/* Ease toward the target; catch up to the ship's heading faster the quicker it moves,
+		 * so the camera lags on gentle drifts but stays behind a fast ship. */
+		union quat prev_orientation = chase_cam_orientation;
+
+		speed_frac = ship_max_speed > 0.0 ? fabsf(ship_speed) / ship_max_speed : 0.0;
+		catchup = 0.05 + 0.45 * speed_frac;
+		vec3_lerp(&chase_cam_pos, &chase_cam_pos, &target_pos, 0.2);
+		quat_nlerp(&chase_cam_orientation, &prev_orientation, &target_orientation, catchup);
 	}
+	cam_pos = chase_cam_pos;
+	cam_orientation = chase_cam_orientation;
 }
 
 /* Sweep the sun around the scene centre with the arrow keys (azimuth/elevation) and derive
@@ -466,15 +562,18 @@ static void update_sun(void)
 static char *help_text =
 	"SHADOW LAB\n\n"
 	"  A sandbox for iterating on the cascaded shadow mapping shaders.\n\n"
-	"  FLY CONTROLS (FREE CAMERA, OR A POSSESSED SHIP)\n"
+	"  FREE CAMERA\n"
 	"  - W / S            MOVE FORWARD / BACK\n"
 	"  - A / D            STRAFE LEFT / RIGHT\n"
 	"  - R / F            MOVE UP / DOWN\n"
 	"  - Q / E            ROLL LEFT / RIGHT\n"
 	"  - HOLD RIGHT MOUSE MOVE MOUSE TO LOOK AROUND\n"
-	"  - SHIFT            MOVE FASTER\n"
-	"  - TAB              POSSESS NEXT SHIP / RETURN TO FREE CAMERA\n"
-	"                     (FLY A SHIP THROUGH THE PENUMBRA; THE CAMERA CHASES IT)\n\n"
+	"  - SHIFT            MOVE FASTER\n\n"
+	"  POSSESSED SHIP (TAB TO POSSESS NEXT SHIP / RETURN TO FREE CAMERA)\n"
+	"  - W / S            THROTTLE FORWARD / BRAKE-REVERSE (MOMENTUM + DRAG)\n"
+	"  - Q / E            ROLL;  RIGHT-DRAG MOUSE TO STEER (YAW / PITCH)\n"
+	"  - THE SHIP FLIES WHERE ITS NOSE POINTS; A CHASE CAM TRAILS IT.  FLY A SHIP\n"
+	"    THROUGH THE PENUMBRA TO WATCH ITS SHADE (PANEL) RAMP LIT -> UMBRA.\n\n"
 	"  SUN (ANALYTIC PLANET UMBRA / PENUMBRA)\n"
 	"  - ARROW KEYS       ORBIT SUN AZIMUTH / ELEVATION (SHIFT = FASTER)\n"
 	"  - U / O            SUN DISTANCE CLOSER / FARTHER\n"
@@ -560,8 +659,9 @@ static void draw_hud(void)
 		snprintf(buffer, sizeof(buffer), "CONTROL FREE CAMERA (TAB)   CAM (%.0f, %.0f, %.0f)",
 			cam_pos.v.x, cam_pos.v.y, cam_pos.v.z);
 	else
-		snprintf(buffer, sizeof(buffer), "CONTROL SHIP %d (TAB)   CAM (%.0f, %.0f, %.0f)",
-			controlled_slot, cam_pos.v.x, cam_pos.v.y, cam_pos.v.z);
+		snprintf(buffer, sizeof(buffer), "CONTROL SHIP %d (TAB)   SPEED %.0f%%   W/S THROTTLE",
+			controlled_slot,
+			ship_max_speed > 0.0 ? 100.0 * ship_speed / ship_max_speed : 0.0);
 	sng_abs_xy_draw_string(buffer, TINY_FONT, 10, y); y += dy;
 	snprintf(buffer, sizeof(buffer), "SUN AZ %.0f EL %.0f DIST %.0f RADIUS %.0f",
 		radians_to_degrees(sun_azimuth), radians_to_degrees(sun_elevation),
@@ -802,6 +902,8 @@ static void handle_key_down(SDL_Keysym *keysym)
 		controlled_slot++;
 		if (controlled_slot >= ship_slot_count)
 			controlled_slot = -1;
+		ship_speed = 0.0;       /* start from rest */
+		chase_initialized = 0;  /* snap the chase cam on the first frame, then lag */
 		break;
 	case SDLK_3: /* planet smaller */
 		if (planet_index >= 0)
