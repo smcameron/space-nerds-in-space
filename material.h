@@ -43,6 +43,7 @@ struct entity;
 #define MATERIAL_ALPHA_BY_NORMAL 14
 #define MATERIAL_PLANETARY_LIGHTNING 15
 #define MATERIAL_WARP_GATE_EFFECT 16
+#define MATERIAL_SUN 17
 
 #define MATERIAL_BILLBOARD_TYPE_NONE 0
 #define MATERIAL_BILLBOARD_TYPE_SCREEN 1
@@ -82,6 +83,19 @@ struct material_texture_cubemap {
 	int do_blend;
 	float alpha;
 	struct sng_color tint;
+};
+
+/* A star drawn as a camera-facing billboard: a solid-colour disc plus a screen-scale bloom,
+ * both computed procedurally in the sun shader.  disc_radius is the disc's radius in the
+ * billboard's 0..0.5 UV space and is set per frame (from sun world radius / billboard world
+ * size) so the disc stays world-scale while the billboard is sized to the bloom's screen
+ * extent. */
+struct material_sun {
+	struct sng_color color;       /* disc colour */
+	struct sng_color bloom_color; /* additive bloom colour */
+	float disc_radius;            /* disc radius in UV (0..0.5), set per frame */
+	float bloom_intensity;
+	float bloom_falloff;          /* higher = tighter bloom */
 };
 
 #define MATERIAL_NEBULA_NPLANES 6
@@ -170,6 +184,7 @@ struct material {
 		struct material_alpha_by_normal alpha_by_normal;
 		struct material_planetary_lightning planetary_lightning;
 		struct material_warp_gate_effect warp_gate_effect;
+		struct material_sun sun;
 	};
 	int type;
 	int billboard_type;
@@ -178,6 +193,7 @@ struct material {
 
 extern void material_init_texture_mapped(struct material *m);
 extern void material_init_texture_mapped_unlit(struct material *m);
+extern void material_init_sun(struct material *m);
 extern void material_init_texture_cubemap(struct material *m);
 extern void material_init_nebula(struct material *m);
 extern void material_init_textured_particle(struct material *m);

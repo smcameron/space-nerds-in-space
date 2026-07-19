@@ -151,6 +151,18 @@ void material_init_texture_mapped(struct material *m)
 	m->rotate_randomly = 0;
 }
 
+void material_init_sun(struct material *m)
+{
+	m->type = MATERIAL_SUN;
+	m->billboard_type = MATERIAL_BILLBOARD_TYPE_SPHERICAL;
+	m->sun.color = sng_get_color(WHITE);
+	m->sun.bloom_color = sng_get_color(WHITE);
+	m->sun.disc_radius = 0.1;
+	m->sun.bloom_intensity = 1.0;
+	m->sun.bloom_falloff = 3.0;
+	m->rotate_randomly = 0;
+}
+
 void material_init_texture_mapped_unlit(struct material *m)
 {
 	m->type = MATERIAL_TEXTURE_MAPPED_UNLIT;

@@ -845,6 +845,20 @@ struct graph_dev_gl_vertex_color_shader {
 	GLint vertex_color_id;
 };
 
+struct graph_dev_gl_sun_shader {
+	struct graph_dev_gl_shader_metadata meta;
+	GLuint program_id;
+	GLuint vao_id;
+	GLint mvp_matrix_id;
+	GLint vertex_position_id;
+	GLint texture_coord_id;
+	GLint color_id;
+	GLint bloom_color_id;
+	GLint disc_radius_id;
+	GLint bloom_intensity_id;
+	GLint bloom_falloff_id;
+};
+
 struct graph_dev_gl_single_color_lit_shader {
 	struct graph_dev_gl_shader_metadata meta;
 	GLuint program_id;
@@ -1136,6 +1150,7 @@ static struct graph_dev_gl_filled_wireframe_shader filled_wireframe_shader;
 static struct graph_dev_gl_single_color_shader single_color_shader;
 static struct graph_dev_gl_line_single_color_shader line_single_color_shader;
 static struct graph_dev_gl_vertex_color_shader vertex_color_shader;
+static struct graph_dev_gl_sun_shader sun_shader;
 static struct graph_dev_gl_point_cloud_shader point_cloud_shader;
 static struct graph_dev_gl_skybox_shader skybox_shader;
 static struct graph_dev_gl_color_by_w_shader color_by_w_shader;
@@ -2668,6 +2683,7 @@ extern int graph_dev_entity_render_order(struct entity *e)
 	case MATERIAL_ALPHA_BY_NORMAL:
 	case MATERIAL_PLANETARY_LIGHTNING:
 	case MATERIAL_WARP_GATE_EFFECT:
+	case MATERIAL_SUN:
 		does_blending = 1;
 		break;
 	case MATERIAL_TEXTURE_MAPPED_UNLIT:
@@ -2682,6 +2698,50 @@ extern int graph_dev_entity_render_order(struct entity *e)
 		return GRAPH_DEV_RENDER_FAR_TO_NEAR;
 	else
 		return GRAPH_DEV_RENDER_NEAR_TO_FAR;
+}
+
+/* Draw a star billboard: a world-scale solid disc plus a screen-scale additive bloom, both
+ * computed procedurally by the sun shader.  The disc radius (in UV) is taken from the material,
+ * which the caller sets per frame from the star's world radius over the billboard's world size. */
+static void graph_dev_raster_sun(const struct mat44 *mat_mvp, struct mesh *m, struct material *material)
+{
+	struct mesh_gl_info *ptr = m->graph_ptr;
+	struct material_sun *sun = &material->sun;
+
+	glEnable(GL_DEPTH_TEST);
+	glDepthMask(GL_FALSE); /* blended: test against depth but do not write it */
+	glEnable(GL_BLEND);
+	BLEND_FUNC(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
+
+	activate_shader(&sun_shader);
+
+	glUniformMatrix4fv(sun_shader.mvp_matrix_id, 1, GL_FALSE, &mat_mvp->m[0][0]);
+	glUniform3f(sun_shader.color_id, sun->color.red, sun->color.green, sun->color.blue);
+	glUniform3f(sun_shader.bloom_color_id, sun->bloom_color.red, sun->bloom_color.green,
+		sun->bloom_color.blue);
+	glUniform1f(sun_shader.disc_radius_id, sun->disc_radius);
+	glUniform1f(sun_shader.bloom_intensity_id, sun->bloom_intensity);
+	glUniform1f(sun_shader.bloom_falloff_id, sun->bloom_falloff);
+
+	glEnableVertexAttribArray(sun_shader.vertex_position_id);
+	glBindBuffer(GL_ARRAY_BUFFER, ptr->vertex_buffer);
+	glVertexAttribPointer(sun_shader.vertex_position_id, 3, GL_FLOAT, GL_FALSE,
+		sizeof(struct vertex_buffer_data),
+		(void *) offsetof(struct vertex_buffer_data, position.v.x));
+
+	if (sun_shader.texture_coord_id >= 0) {
+		glEnableVertexAttribArray(sun_shader.texture_coord_id);
+		glBindBuffer(GL_ARRAY_BUFFER, ptr->triangle_vertex_buffer);
+		glVertexAttribPointer(sun_shader.texture_coord_id, 2, GL_FLOAT, GL_TRUE,
+			sizeof(struct vertex_triangle_buffer_data),
+			(void *) offsetof(struct vertex_triangle_buffer_data, texture_coord.v.x));
+	}
+
+	glDrawArrays(GL_TRIANGLES, 0, m->ntriangles * 3);
+
+	glDisable(GL_DEPTH_TEST);
+	glDepthMask(GL_TRUE);
+	glDisable(GL_BLEND);
 }
 
 static void graph_dev_raster_triangle_mesh(struct entity_context *cx, struct entity *e,
@@ -2701,6 +2761,7 @@ static void graph_dev_raster_triangle_mesh(struct entity_context *cx, struct ent
 				|| (e->render_style & RENDER_WIREFRAME);
 
 	int atmosphere = 0;
+	int is_sun = 0;
 	struct sng_color texture_tint = { 1.0, 1.0, 1.0 };
 
 	rtp.mat_mvp = &transform->mvp;
@@ -2820,6 +2881,10 @@ static void graph_dev_raster_triangle_mesh(struct entity_context *cx, struct ent
 			texture_tint = mt->tint;
 			rtp.textures_not_ready = !graph_dev_texture_ready(rtp.texture_number);
 			}
+			break;
+		case MATERIAL_SUN:
+			/* Handled by graph_dev_raster_sun() below; rtp.shader stays NULL. */
+			is_sun = 1;
 			break;
 		case MATERIAL_ATMOSPHERE: {
 			rtp.textures_not_ready = 0; /* assume textures are ready until proven otherwise */
@@ -3037,7 +3102,9 @@ static void graph_dev_raster_triangle_mesh(struct entity_context *cx, struct ent
 
 				graph_dev_raster_texture(&rtp);
 			} else {
-				if (atmosphere && !rtp.textures_not_ready)
+				if (is_sun)
+					graph_dev_raster_sun(rtp.mat_mvp, e->m, e->material_ptr);
+				else if (atmosphere && !rtp.textures_not_ready)
 					graph_dev_raster_atmosphere(rtp.mat_mvp, rtp.mat_mv, rtp.mat_normal,
 						e->m, &atmosphere_color, eye_light_pos, rtp.alpha,
 						&shadow_annulus, rtp.ring_texture_v, rtp.atmosphere_brightness);
@@ -4134,6 +4201,23 @@ static void setup_vertex_color_shader(struct graph_dev_gl_vertex_color_shader *s
 	shader->vertex_color_id = glGetAttribLocation(shader->program_id, "a_Color");
 }
 
+static void setup_sun_shader(struct graph_dev_gl_sun_shader *shader)
+{
+	maybe_unload_shader(&shader->meta, &shader->program_id);
+	shader->program_id = load_shaders(shader_directory,
+				"sun.vert", "sun.frag", UNIVERSAL_SHADER_HEADER);
+	glGenVertexArrays(1, &shader->vao_id);
+
+	shader->mvp_matrix_id = glGetUniformLocation(shader->program_id, "u_MVPMatrix");
+	shader->vertex_position_id = glGetAttribLocation(shader->program_id, "a_Position");
+	shader->texture_coord_id = glGetAttribLocation(shader->program_id, "a_TexCoord");
+	shader->color_id = glGetUniformLocation(shader->program_id, "u_Color");
+	shader->bloom_color_id = glGetUniformLocation(shader->program_id, "u_BloomColor");
+	shader->disc_radius_id = glGetUniformLocation(shader->program_id, "u_DiscRadius");
+	shader->bloom_intensity_id = glGetUniformLocation(shader->program_id, "u_BloomIntensity");
+	shader->bloom_falloff_id = glGetUniformLocation(shader->program_id, "u_BloomFalloff");
+}
+
 static void setup_line_single_color_shader(struct graph_dev_gl_line_single_color_shader *shader)
 {
 	maybe_unload_shader(&shader->meta, &shader->program_id);
@@ -4560,6 +4644,7 @@ void graph_dev_reload_all_shaders(void)
 	setup_filled_wireframe_shader(&filled_wireframe_shader);
 	setup_single_color_shader(&single_color_shader);
 	setup_vertex_color_shader(&vertex_color_shader);
+	setup_sun_shader(&sun_shader);
 	setup_line_single_color_shader(&line_single_color_shader);
 	setup_point_cloud_shader("point_cloud", &point_cloud_shader);
 	setup_color_by_w_shader(&color_by_w_shader);
