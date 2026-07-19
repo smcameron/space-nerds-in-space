@@ -259,6 +259,11 @@ static void build_scene(void)
 				0.0, -planet_r - spacing * 1.5, spacing * 0.5, planet_r, GRAY50);
 		if (p) {
 			p->color = GRAY50;
+			/* The planet must not cast into the CSM depth map: planet->ship shadowing is
+			 * handled analytically (in_shade), and a planet-sized hard-edged caster in the
+			 * shadow map otherwise sweeps across and blacks out whole ships as the cascades
+			 * refit.  This matches the plan's "planets cast never" policy. */
+			p->no_cast_shadow = 1;
 			scene_center = p->pos; /* orbit the sun about the planet */
 			sun_distance = planet_r * 12.0;
 		}
