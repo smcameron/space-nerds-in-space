@@ -135,9 +135,12 @@ static float deepest_planet_shade = 0.0; /* deepest analytic ship shading this f
  * fraction of the camera distance) but never smaller than the disc, and the shader's disc
  * radius is set each frame from sun_radius / billboard size so the disc stays world-scale
  * (grows as you approach) while the bloom stays a constant apparent size. */
-#define SUN_BLOOM_APPARENT 0.4 /* the sun billboard's on-screen size as a fraction of camera distance */
+static float sun_bloom_apparent = 0.4; /* sun billboard on-screen size as a fraction of camera distance */
 static struct mesh *sun_mesh;
 static struct material sun_material;
+/* Disc/bloom colour presets cycled with 'j'. */
+static const int sun_color_presets[] = { WHITE, YELLOW, AMBER, ORANGE, ORANGERED };
+static int sun_color_preset;
 
 /* Planet-shadow test controls (independent of the CSM depth-map shadows). */
 enum planet_shade_mode { PLANET_SHADE_SOFT, PLANET_SHADE_BINARY, PLANET_SHADE_OFF };
@@ -610,6 +613,10 @@ static char *help_text =
 	"  - ARROW KEYS       ORBIT SUN AZIMUTH / ELEVATION (SHIFT = FASTER)\n"
 	"  - U / O            SUN DISTANCE CLOSER / FARTHER\n"
 	"  - G / H            SUN RADIUS SMALLER / LARGER (WIDER RADIUS = WIDER PENUMBRA)\n"
+	"  - T / Y            SUN BLOOM DIMMER / BRIGHTER\n"
+	"  - C / V            SUN BLOOM FALLOFF LOOSER / TIGHTER\n"
+	"  - Z / X            SUN ON-SCREEN SIZE SMALLER / LARGER\n"
+	"  - J                CYCLE SUN COLOUR (WHITE/YELLOW/AMBER/ORANGE/ORANGERED)\n"
 	"  - P                CYCLE PLANET SHADE MODE: SOFT / BINARY / OFF\n"
 	"  - B                TOGGLE THE PER-SHIP SHADE PANEL\n"
 	"  - 3 / 4            PLANET RADIUS SMALLER / LARGER\n"
@@ -698,6 +705,9 @@ static void draw_hud(void)
 	snprintf(buffer, sizeof(buffer), "SUN AZ %.0f EL %.0f DIST %.0f RADIUS %.0f",
 		radians_to_degrees(sun_azimuth), radians_to_degrees(sun_elevation),
 		sun_distance, sun_radius);
+	sng_abs_xy_draw_string(buffer, TINY_FONT, 10, y); y += dy;
+	snprintf(buffer, sizeof(buffer), "SUN BLOOM INTENSITY %.2f FALLOFF %.2f SIZE %.2f",
+		sun_material.sun.bloom_intensity, sun_material.sun.bloom_falloff, sun_bloom_apparent);
 	sng_abs_xy_draw_string(buffer, TINY_FONT, 10, y); y += dy;
 	if (planet_index >= 0) {
 		float pr = scene[planet_index].scale;
@@ -814,7 +824,7 @@ static void draw_screen(void)
 
 		vec3_sub(&to_cam, &sun_pos, &cam_pos);
 		cam_dist = vec3_magnitude(&to_cam);
-		billboard_world = SUN_BLOOM_APPARENT * cam_dist;
+		billboard_world = sun_bloom_apparent * cam_dist;
 		if (billboard_world < 2.0 * sun_radius)
 			billboard_world = 2.0 * sun_radius;
 		sun_material.sun.disc_radius = sun_radius / billboard_world;
@@ -933,6 +943,32 @@ static void handle_key_down(SDL_Keysym *keysym)
 		break;
 	case SDLK_h:
 		sun_radius *= 1.111111;
+		break;
+	case SDLK_t: /* bloom dimmer */
+		sun_material.sun.bloom_intensity *= 0.9;
+		break;
+	case SDLK_y: /* bloom brighter */
+		sun_material.sun.bloom_intensity *= 1.111111;
+		break;
+	case SDLK_c: /* bloom falloff looser (bigger glow) */
+		sun_material.sun.bloom_falloff *= 0.9;
+		if (sun_material.sun.bloom_falloff < 0.1)
+			sun_material.sun.bloom_falloff = 0.1;
+		break;
+	case SDLK_v: /* bloom falloff tighter */
+		sun_material.sun.bloom_falloff *= 1.111111;
+		break;
+	case SDLK_z: /* sun/bloom on-screen size smaller */
+		sun_bloom_apparent *= 0.9;
+		break;
+	case SDLK_x: /* sun/bloom on-screen size larger */
+		sun_bloom_apparent *= 1.111111;
+		break;
+	case SDLK_j: /* cycle disc/bloom colour */
+		sun_color_preset = (sun_color_preset + 1) %
+			(int) (sizeof(sun_color_presets) / sizeof(sun_color_presets[0]));
+		sun_material.sun.color = sng_get_color(sun_color_presets[sun_color_preset]);
+		sun_material.sun.bloom_color = sng_get_color(sun_color_presets[sun_color_preset]);
 		break;
 	case SDLK_p:
 		planet_shade_mode = (planet_shade_mode + 1) % 3;
