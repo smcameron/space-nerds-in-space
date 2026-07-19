@@ -105,9 +105,11 @@ static int ship_slot_count;
 static float ship_speed;      /* current speed along the nose, world units per frame */
 static float ship_max_speed;  /* set from the scene scale in build_scene */
 static float ship_accel;      /* throttle acceleration per frame */
-static union vec3 chase_cam_pos;
+/* The chase rig's orientation trails the ship's a little; the camera is placed behind and
+ * above within this (lagged) frame and looks at the ship, so a turn briefly shows the ship
+ * from the side before the camera swings in behind it. */
 static union quat chase_cam_orientation = IDENTITY_QUAT_INITIALIZER;
-static int chase_initialized;  /* 0 to snap the chase cam on the first possessed frame */
+static int chase_initialized;  /* 0 to snap the rig to the ship on the first possessed frame */
 static float mouse_sensitivity = 0.003;
 static float roll_rate = 0.02;
 static float ambient_light = 0.015; /* match snis_client's default so lighting mirrors the game */
@@ -483,11 +485,9 @@ static void fly_ship(struct scene_object *ship)
 static void update_camera(void)
 {
 	struct scene_object *ship;
-	union vec3 fwd, up, right, target_pos, aim, look_dir, offset;
-	union quat target_orientation;
+	union vec3 fwd, up, right, aim, look_dir, offset;
 	union vec3 base_fwd = { { 1.0, 0.0, 0.0 } };
-	union vec3 world_up = { { 0.0, 1.0, 0.0 } };
-	float dist, lift, catchup, speed_frac;
+	float dist, lift;
 
 	if (controlled_slot < 0 || controlled_slot >= ship_slot_count) {
 		fly_controls(&cam_pos, &cam_orientation, move_speed);
@@ -497,36 +497,32 @@ static void update_camera(void)
 	ship = &scene[ship_slots[controlled_slot]];
 	fly_ship(ship);
 
-	/* Chase-cam target: behind and above the ship, looking at a point a little below it so the
-	 * ship sits slightly above centre of frame rather than at the bottom. */
-	camera_basis(&ship->orientation, &fwd, &up, &right);
-	dist = scene_scale * 0.75; /* a quarter of the earlier framing distance */
-	lift = scene_scale * 0.30;
-	target_pos = ship->pos;
-	offset = fwd; vec3_mul_self(&offset, -dist); vec3_add_self(&target_pos, &offset);
-	offset = up; vec3_mul_self(&offset, lift); vec3_add_self(&target_pos, &offset);
-	aim = ship->pos;
-	offset = up; vec3_mul_self(&offset, -lift * 0.35); vec3_add_self(&aim, &offset);
-	vec3_sub(&look_dir, &aim, &target_pos);
-	vec3_normalize_self(&look_dir);
-	quat_from_u2v(&target_orientation, &base_fwd, &look_dir, &world_up);
-
+	/* The rig orientation trails the ship's by a small fixed amount (the lag), snapping to it
+	 * on the first possessed frame.  Everything below is derived from this one frame, so the
+	 * camera stays on the behind-and-above axis rather than drifting off to one side. */
 	if (!chase_initialized) {
-		chase_cam_pos = target_pos;
-		chase_cam_orientation = target_orientation;
+		chase_cam_orientation = ship->orientation;
 		chase_initialized = 1;
 	} else {
-		/* Ease toward the target; catch up to the ship's heading faster the quicker it moves,
-		 * so the camera lags on gentle drifts but stays behind a fast ship. */
-		union quat prev_orientation = chase_cam_orientation;
+		union quat prev = chase_cam_orientation;
 
-		speed_frac = ship_max_speed > 0.0 ? fabsf(ship_speed) / ship_max_speed : 0.0;
-		catchup = 0.05 + 0.45 * speed_frac;
-		vec3_lerp(&chase_cam_pos, &chase_cam_pos, &target_pos, 0.2);
-		quat_nlerp(&chase_cam_orientation, &prev_orientation, &target_orientation, catchup);
+		quat_nlerp(&chase_cam_orientation, &prev, &ship->orientation, 0.15);
 	}
-	cam_pos = chase_cam_pos;
-	cam_orientation = chase_cam_orientation;
+
+	/* Behind and above the ship in the lagged rig frame, looking at the ship (aimed a little
+	 * low so it sits slightly above centre) with the rig's own up so the view banks with it.
+	 * A turn briefly shows the ship from the side until the rig swings in behind. */
+	camera_basis(&chase_cam_orientation, &fwd, &up, &right);
+	dist = scene_scale * 0.5;
+	lift = scene_scale * 0.18;
+	cam_pos = ship->pos;
+	offset = fwd; vec3_mul_self(&offset, -dist); vec3_add_self(&cam_pos, &offset);
+	offset = up; vec3_mul_self(&offset, lift); vec3_add_self(&cam_pos, &offset);
+	aim = ship->pos;
+	offset = up; vec3_mul_self(&offset, -lift * 0.4); vec3_add_self(&aim, &offset);
+	vec3_sub(&look_dir, &aim, &cam_pos);
+	vec3_normalize_self(&look_dir);
+	quat_from_u2v(&cam_orientation, &base_fwd, &look_dir, &up);
 }
 
 /* Sweep the sun around the scene centre with the arrow keys (azimuth/elevation) and derive
