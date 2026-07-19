@@ -248,7 +248,7 @@ static struct scene_object *add_scene_object(enum scene_object_kind kind, struct
 struct lab_ship_model {
 	const char *path;
 	char axis[3];   /* rotation axes applied in order (matching ship_types.txt) */
-	float angle[3]; /* matching angles, in the same units the game feeds quat_init_axis() */
+	float angle[3]; /* matching angles in degrees, as written in ship_types.txt */
 	int nrot;
 };
 static const struct lab_ship_model phase1_ship_models[] = {
@@ -264,9 +264,10 @@ static void apply_model_rotations(struct mesh *m, const struct lab_ship_model *s
 
 	for (j = 0; j < spec->nrot; j++) {
 		union quat q;
+		float radians = spec->angle[j] * M_PI / 180.0; /* ship_types.txt angles are degrees */
 
 		quat_init_axis(&q, (float) (spec->axis[j] == 'x'), (float) (spec->axis[j] == 'y'),
-				(float) (spec->axis[j] == 'z'), spec->angle[j]);
+				(float) (spec->axis[j] == 'z'), radians);
 		mesh_rotate(m, &q);
 	}
 }
@@ -302,15 +303,14 @@ static void build_scene(void)
 	 * into the umbra. */
 	planet_mesh = mesh_unit_spherified_cube(64);
 	if (planet_mesh) {
-		float planet_r = spacing * 0.42;
-		/* Place the planet below the tight ship cluster.  The penumbra's spatial width grows
-		 * with the ships' distance from the planet, so a cluster set a couple of ship-spacings
-		 * off a small planet gives a wide, soft terminator that the cluster spans, without an
-		 * extreme sun; hugging the planet gives a near-sharp edge.  These values balance a
-		 * roughly plausible scale against seeing the effect; all are adjustable live (planet
-		 * radius/distance 3/4, 5/6; sun distance/radius U/O, G/H). */
+		/* Absolute values tuned to balance a roughly plausible scale against seeing the
+		 * effect: a 1000-unit planet 2500 below the cluster, lit by a 4000-unit sun at
+		 * 40000.  The penumbra's spatial width grows with the ships' distance from the
+		 * planet, so the cluster spans a soft terminator without an extreme sun.  All are
+		 * adjustable live (planet radius/distance 3/4, 5/6; sun distance/radius U/O, G/H). */
+		float planet_r = 500.0;
 		struct scene_object *p = add_scene_object(SCENE_PLANET, planet_mesh, NULL,
-				0.0, -spacing * 2.33, 0.0, planet_r, GRAY50);
+				0.0, -2500.0, 0.0, planet_r, GRAY50);
 		if (p) {
 			p->color = GRAY50;
 			/* The planet must not cast into the CSM depth map: planet->ship shadowing is
@@ -320,8 +320,8 @@ static void build_scene(void)
 			p->no_cast_shadow = 1;
 			planet_index = (int) (p - scene);
 			scene_center = p->pos; /* orbit the sun about the planet */
-			sun_distance = spacing * 36.7; /* ~44000 at the default cluster scale */
-			sun_radius = spacing * 3.33;   /* ~4000: sun ~5 deg angular radius */
+			sun_distance = 40000.0;
+			sun_radius = 2000.0; /* 4000-unit diameter */
 		}
 	}
 
