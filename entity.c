@@ -971,11 +971,17 @@ static int compute_shadow_light_matrix(struct entity_context *cx, float near_d, 
 		vec3_add_self(&center, &corners[i]);
 	vec3_mul_self(&center, 1.0f / 8.0f);
 
-	/* Light direction: from the configured light source (cx->light, the sun at the
-	 * world origin in normal play) toward the region center, treated as directional. */
-	union vec3 light_pos, ldir;
+	/* Light direction: from the configured light source (cx->light, the sun at the world
+	 * origin in normal play) toward a single shared reference point -- the camera position --
+	 * so every cascade uses the SAME direction.  The sun is a finite-distance point light, so
+	 * taking the direction to each cascade's own center instead would give the cascades
+	 * slightly different light angles and project the same shadow to different places, an
+	 * offset that is visible off the light axis and vanishes when the cascade centers line up
+	 * along the sun ray.  A directional-light approximation must hold the direction constant. */
+	union vec3 light_pos, ldir, ref;
 	vec3_init(&light_pos, cx->light.m[0], cx->light.m[1], cx->light.m[2]);
-	vec3_sub(&ldir, &center, &light_pos);
+	vec3_init(&ref, cam->x, cam->y, cam->z);
+	vec3_sub(&ldir, &ref, &light_pos);
 	if (vec3_dot(&ldir, &ldir) < 1e-6)
 		return 0;
 	vec3_normalize_self(&ldir);
