@@ -901,15 +901,13 @@ static void update_entity_child_state(struct entity *e)
 
 /* The shadow cascades cover the view frustum only out to this distance, beyond which
  * objects neither cast nor receive shadows (keeps shadow texels usefully small). */
-static float shadow_map_max_distance = 4000.0;
+static float shadow_map_max_distance = 4500.0;
 /* Number of shadow cascades and the split-scheme blend (0 = uniform spacing, 1 = fully
- * logarithmic).  Logarithmic packs resolution near the camera where it matters most.
- * The shadow map covers only a camera-local region (shadow_map_max_distance), so two
- * cascades over that modest depth range keep texels small without the seams and coarse far
- * cascades that a full-frustum scheme needed; lambda is near the middle since log vs. uniform
- * barely differ over so short a range. */
-static int shadow_map_num_cascades = 2;
-static float shadow_map_split_lambda = 0.5;
+ * logarithmic).  Logarithmic packs resolution near the camera where it matters most.  These
+ * defaults (six cascades, lambda 0.6 over camera-local coverage) were tuned in shadow_lab for
+ * crisp near shadows that still reach distance; all remain runtime-tunable. */
+static int shadow_map_num_cascades = 6;
+static float shadow_map_split_lambda = 0.6;
 
 /* Fit an orthographic shadow frustum to the slice of the camera view frustum between
  * near_d and far_d, and build the world-space -> light clip-space matrix for that cascade.

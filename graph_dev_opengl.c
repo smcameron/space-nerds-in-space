@@ -185,12 +185,11 @@ static int graph_dev_shadow_map_debug; /* shadow debug visualization mode (SNIS_
  * roughly constant in world space).  0 = single 2x2 hardware tap. */
 static int graph_dev_shadow_pcf_radius = 1;
 /* Cross-cascade blend band width as a fraction of each cascade's far distance (0 disables).
- * Off by default: with only two camera-local cascades of similar texel size the boundary is
- * hard to see, and blending two differently-biased cascades produces a visible double-shadow
- * in the band.  Raise it (in-tool) only if a cascade seam actually shows. */
-static float graph_dev_shadow_blend = 0.0f;
+ * A small band hides the seam between cascades and, at the outer coverage edge, fades the
+ * last cascade to lit as it runs out of shadow map.  Tuned in shadow_lab. */
+static float graph_dev_shadow_blend = 0.2f;
 /* Slope-scaled polygon-offset bias applied while rendering the shadow map depth pass. */
-static float shadow_polygon_offset_factor = 2.0f;
+static float shadow_polygon_offset_factor = 2.5f;
 static float shadow_polygon_offset_units = 4.0f;
 #define SHADOW_MAP_TEXTURE_SIZE 4096
 #define MAX_SHADOW_CASCADES 6
