@@ -1050,6 +1050,9 @@ struct snis_entity {
 				/* point to the planet that casts the shadow on the object. Otherwise null */
 				/* See calls to entity_set_in_shade() in snis_client.c, and in_shade parameter */
 				/* of graph_dev_raster_texture() in graph_dev_opengl.c */
+	float planet_shade_fraction;	/* how much of the sun's disc shading_planet blocks as seen from */
+				/* this object, 0.0 (fully lit) to 1.0 (in the umbra). See */
+				/* update_shading_planet() in snis_client.c */
 #endif
 	char ai[6];		/* really hacky NPC AI debug data */
 };

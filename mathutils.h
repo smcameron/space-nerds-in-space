@@ -97,6 +97,10 @@ GLOBAL void perpendicular_line_from_two_points(double x1, double y1, double x2, 
 GLOBAL int circle_from_three_points(double x1, double y1, double x2, double y2, double x3, double y3,
 		double *x, double *y, double *r);
 
+/* Return the fraction (0.0 - 1.0) of a disc of radius a covered by an overlapping disc of
+   radius b whose center is a distance d from the center of the first disc */
+GLOBAL double disc_occlusion_fraction(double a, double b, double d);
+
 /* Return random point on surface of sphere of given radius */
 GLOBAL void random_point_on_sphere(float radius, float *x, float *y, float *z);
 GLOBAL void consistent_random_point_on_sphere(struct mtwist_state *mt,

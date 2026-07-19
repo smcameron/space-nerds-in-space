@@ -289,6 +289,36 @@ int circle_from_three_points(double x1, double y1, double x2, double y2, double 
 	return 0;
 }
 
+/* Returns the fraction, between 0.0 and 1.0, of a disc of radius a which is covered by an
+ * overlapping disc of radius b whose center is a distance d from the center of the first
+ * disc.  Intended for computing how much of the sun's disc is blocked by a planet as seen
+ * from some position (with angular radii for a and b and angular separation for d), to get
+ * a soft umbra/penumbra shadow attenuation factor.
+ */
+double disc_occlusion_fraction(double a, double b, double d)
+{
+	double a2, b2, d2, ca, cb, area;
+
+	if (a <= 0.0)
+		return 1.0; /* Degenerate disc is entirely covered */
+	if (b <= 0.0 || d >= a + b)
+		return 0.0; /* No overlap */
+	if (d <= fabs(b - a)) { /* One disc entirely contains the other */
+		if (b >= a)
+			return 1.0;
+		return (b * b) / (a * a);
+	}
+	/* Partial overlap: area of the lens formed by the two intersecting circles */
+	a2 = a * a;
+	b2 = b * b;
+	d2 = d * d;
+	ca = acos(clamp((d2 + a2 - b2) / (2.0 * d * a), -1.0, 1.0));
+	cb = acos(clamp((d2 + b2 - a2) / (2.0 * d * b), -1.0, 1.0));
+	area = a2 * ca + b2 * cb -
+		0.5 * sqrt((-d + a + b) * (d + a - b) * (d - a + b) * (d + a + b));
+	return area / (M_PI * a2);
+}
+
 /*
  * Pick random point on the surface of sphere of given radius with
  * uniform distribution (harder than I initially thought).

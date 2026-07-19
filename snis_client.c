@@ -373,6 +373,10 @@ static unsigned char camera_mode;
 static unsigned char nav_camera_mode;
 static unsigned char nav_has_computer_button = 0; /* tweakable */
 static unsigned char planets_shade_other_objects = 1; /* tweakable */
+static float star_radius = 5625.0 / 2.0; /* world-unit radius of the sun, from solarsystem assets. */
+					/* Used for planet umbra/penumbra shadow calculations. Tweakable. */
+static float sun_billboard_scale = 1.0; /* scales sun_mesh so the star renders star_diameter units wide */
+#define SUN_BILLBOARD_SIZE 30000.0 /* world-unit width of the unscaled sun billboard mesh */
 static int main_nav_hybrid = 0; /* tweakable */
 static float explosion_multiplier = 5.0; /* tweakable */
 static float main_view_azimuth_angle = 0.0; /* tweakable */
@@ -3137,46 +3141,67 @@ static void calculate_planetary_altitude(struct snis_entity *o)
 	}
 }
 
-/* check if a planet is between two points */
-static struct snis_entity *planet_between_points(union vec3 *ray_origin, union vec3 *target)
+/* in_shade lighting factor for an object: 0.1 when fully lit (the traditional baseline)
+ * ramping up to 1.0 when the sun is completely blocked by a planet. */
+static float object_in_shade(struct snis_entity *o)
 {
-	int i;
-	union vec3 ray_direction, sphere_origin;
-	float target_dist;
-	float planet_dist;
-
-	vec3_sub(&ray_direction, target, ray_origin);
-	target_dist = vec3_magnitude(&ray_direction);
-	vec3_normalize_self(&ray_direction);
-
-	for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
-		if (!go[i].alive)
-			continue;
-		if (go[i].type != OBJTYPE_PLANET)
-			continue;
-		sphere_origin.v.x = go[i].x;
-		sphere_origin.v.y = go[i].y;
-		sphere_origin.v.z = go[i].z;
-		if (!ray_intersects_sphere(ray_origin, &ray_direction,
-						&sphere_origin,
-						go[i].tsd.planet.radius))
-			continue;
-		planet_dist = dist3d(sphere_origin.v.x - ray_origin->v.x,
-					sphere_origin.v.y - ray_origin->v.y,
-					sphere_origin.v.z - ray_origin->v.z);
-		if (planet_dist < target_dist) /* planet blocks... */
-			return &go[i];
-	}
-	return NULL; /* no planets blocking */
+	return 0.1 + 0.9 * o->planet_shade_fraction;
 }
 
+/* Compute how much of the sun's disc each planet blocks as seen from object o and record
+ * the deepest such shading (0.0 = fully lit, 1.0 = fully in the umbra).  The penumbra
+ * falls out of the angular overlap of the sun's and the planet's discs: the attenuation
+ * ramps smoothly as the planet covers more of the sun, and far enough behind the planet
+ * the planet's disc appears smaller than the sun's, so the umbra cone has a finite
+ * length, with no special cases needed.
+ */
 static void update_shading_planet(struct snis_entity *o)
 {
-	union vec3 p1, p2;
+	int i;
+	union vec3 to_sun, to_planet;
+	float sun_dist, planet_dist;
+	double alpha_sun, alpha_planet, theta, occlusion, deepest;
+	struct snis_entity *blocker = NULL;
 
-	if (!planets_shade_other_objects) {
-		o->shading_planet = NULL;
-		return;
+	o->shading_planet = NULL;
+	o->planet_shade_fraction = 0.0;
+	if (planets_shade_other_objects) {
+		to_sun.v.x = SUNX - o->x;
+		to_sun.v.y = SUNY - o->y;
+		to_sun.v.z = SUNZ - o->z;
+		sun_dist = vec3_magnitude(&to_sun);
+		if (sun_dist > 0.0) {
+			alpha_sun = asin(clamp(star_radius / sun_dist, 0.0, 1.0));
+			deepest = 0.0;
+			for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
+				if (!go[i].alive)
+					continue;
+				if (go[i].type != OBJTYPE_PLANET)
+					continue;
+				to_planet.v.x = go[i].x - o->x;
+				to_planet.v.y = go[i].y - o->y;
+				to_planet.v.z = go[i].z - o->z;
+				planet_dist = vec3_magnitude(&to_planet);
+				if (planet_dist >= sun_dist) /* planet is farther away than the sun */
+					continue;
+				if (planet_dist <= go[i].tsd.planet.radius) {
+					occlusion = 1.0; /* inside the planet */
+				} else {
+					alpha_planet = asin(clamp(go[i].tsd.planet.radius / planet_dist,
+									0.0, 1.0));
+					theta = acos(clamp(vec3_dot(&to_sun, &to_planet) /
+								(sun_dist * planet_dist), -1.0, 1.0));
+					occlusion = disc_occlusion_fraction(alpha_sun, alpha_planet, theta);
+				}
+				if (occlusion > deepest) {
+					deepest = occlusion;
+					blocker = &go[i];
+				}
+			}
+			o->planet_shade_fraction = deepest;
+			if (deepest > 0.5) /* sun mostly hidden, e.g. suppresses the lens flare */
+				o->shading_planet = blocker;
+		}
 	}
 
 	if (!o->entity)
@@ -3188,15 +3213,7 @@ static void update_shading_planet(struct snis_entity *o)
 		return;
 	}
 
-	p1.v.x = o->x;
-	p1.v.y = o->y;
-	p1.v.z = o->z;
-	p2.v.x = SUNX;
-	p2.v.y = SUNY;
-	p2.v.z = SUNZ;
-
-	o->shading_planet = planet_between_points(&p1, &p2);
-	entity_set_in_shade(o->entity, (float) 0.9 * (o->shading_planet != NULL) + 0.1);
+	entity_set_in_shade(o->entity, object_in_shade(o));
 }
 
 static void move_objects(void)
@@ -9752,7 +9769,7 @@ static void show_weapons_camera_view(void)
 		update_entity_orientation(o->entity, &o->orientation);
 		entity_update_emit_intensity(o->entity, current_lights);
 		set_render_style(o->entity, RENDER_NORMAL);
-		entity_set_in_shade(o->entity, 0.9 * (o->shading_planet != NULL) + 0.1);
+		entity_set_in_shade(o->entity, object_in_shade(o));
 	}
 
 	/* Add our turret into the mix */
@@ -9766,7 +9783,7 @@ static void show_weapons_camera_view(void)
 	if (turret_entity) {
 		update_entity_orientation(turret_entity, &camera_orientation);
 		set_render_style(turret_entity, RENDER_NORMAL);
-		entity_set_in_shade(turret_entity, 0.9 * (o->shading_planet != NULL) + 0.1);
+		entity_set_in_shade(turret_entity, object_in_shade(o));
 	}
 
 	if (o->entity && !o->tsd.ship.reverse)
@@ -9881,7 +9898,7 @@ static struct entity *main_view_add_cockpit_entity(struct snis_entity *o)
 	if (cockpit_entity) {
 		update_entity_scale(cockpit_entity, 0.5);
 		update_entity_orientation(cockpit_entity, &o->orientation);
-		entity_set_in_shade(cockpit_entity, (float) 0.9 * (o->shading_planet != NULL) + 0.1);
+		entity_set_in_shade(cockpit_entity, object_in_shade(o));
 	}
 	return cockpit_entity;
 }
@@ -9901,7 +9918,7 @@ static struct entity *main_view_add_player_ship_entity(struct snis_entity *o)
 	current_lights += (desired_lights - current_lights) * 0.05;
 	update_entity_orientation(player_ship, &o->orientation);
 	entity_update_emit_intensity(player_ship, current_lights);
-	entity_set_in_shade(player_ship, 0.9 * (o->shading_planet != NULL) + 0.1);
+	entity_set_in_shade(player_ship, object_in_shade(o));
 
 	struct entity *turret_base = add_entity(ecx, ship_turret_base_mesh,
 		-4 * SHIP_MESH_SCALE, 5.45 * SHIP_MESH_SCALE, 0 * SHIP_MESH_SCALE,
@@ -9910,7 +9927,7 @@ static struct entity *main_view_add_player_ship_entity(struct snis_entity *o)
 	if (turret_base) {
 		update_entity_orientation(turret_base, &identity_quat);
 		update_entity_parent(ecx, turret_base, player_ship);
-		entity_set_in_shade(turret_base, 0.9 * (o->shading_planet != NULL) + 0.1);
+		entity_set_in_shade(turret_base, object_in_shade(o));
 	}
 
 	struct entity *turret = add_entity(ecx, ship_turret_mesh, 0, 0, 0, SHIP_COLOR);
@@ -9920,7 +9937,7 @@ static struct entity *main_view_add_player_ship_entity(struct snis_entity *o)
 		update_entity_orientation(turret, &o->tsd.ship.weap_orientation);
 		if (turret_base)
 			update_entity_parent(ecx, turret, turret_base);
-		entity_set_in_shade(turret, 0.9 * (o->shading_planet != NULL) + 0.1);
+		entity_set_in_shade(turret, object_in_shade(o));
 	}
 	if (!o->tsd.ship.reverse)
 		add_ship_thrust_entities(NULL, NULL, ecx, player_ship, o->tsd.ship.shiptype,
@@ -18756,6 +18773,8 @@ static struct tweakable_var_descriptor client_tweak[] = {
 		&nav_has_computer_button, 'i', 0.0, 0.0, 0.0, 0, 1, 0, 0 },
 	{ "PLANETS_SHADE_OTHER_OBJECTS", "0 OR 1 TO ENABLE/DISABLE PLANET SHADOWS ON OTHER OBJECTS",
 		&planets_shade_other_objects, 'i', 0.0, 0.0, 0.0, 0, 1, 1, 0 },
+	{ "STAR_RADIUS", "WORLD UNIT RADIUS OF THE SUN FOR PLANET SHADOW CALCULATIONS",
+		&star_radius, 'f', 1.0, 100000.0, 2812.5, 0, 0, 0, 0 },
 	{ "PLANET_SPECULARITY", "0 OR 1 TO ENABLE/DISABLE PLANET_SPECULARITY",
 		&graph_dev_planet_specularity, 'i', 0.0, 0.0, 0.0, 0, 1, 1, 0 },
 	{ "MAIN_NAV_HYBRID", "0 OR 1 TO ENABLE/DISABLE MAINSCREEN/NAV HYBRID",
@@ -23239,6 +23258,7 @@ static int main_da_configure(SDL_Window *window)
 		struct entity *e = add_entity(ecx, sun_mesh, SUNX, SUNY, SUNZ, WHITE);
 		if (e) {
 			update_entity_material(e, &sun_material);
+			update_entity_scale(e, sun_billboard_scale);
 			sun_entity = e;
 		}
 
@@ -23506,6 +23526,38 @@ static int load_static_textures(void)
 	return 1;
 }
 
+/* Set star_radius and scale the sun billboard from the solarsystem's star diameter
+ * (in world units and in texture pixels, both from assets.txt).  The billboard must be
+ * star_diameter * texture_width / star_diameter_pixels world units wide for the star's
+ * disc within the texture to render star_diameter units wide.  sun_texture_path is
+ * relative to the asset dir.
+ */
+static void update_sun_size(char *sun_texture_path)
+{
+	char png_path[PATH_MAX + 1];
+	char whynot[256];
+	char *pixels;
+	int w = 0, h = 0, hasalpha = 0;
+	float texture_width = 512.0;
+	float billboard_size;
+
+	snprintf(png_path, sizeof(png_path), "%s/%s", asset_dir, sun_texture_path);
+	pixels = png_utils_read_png_image(replacement_asset_lookup(png_path, &replacement_assets),
+						0, 0, 0, &w, &h, &hasalpha, whynot, sizeof(whynot));
+	if (pixels) {
+		free(pixels);
+		texture_width = w;
+	} else {
+		fprintf(stderr, "snis_client: failed to size sun texture %s: %s\n", png_path, whynot);
+	}
+	star_radius = 0.5 * solarsystem_assets->star_diameter;
+	billboard_size = solarsystem_assets->star_diameter * texture_width /
+				solarsystem_assets->star_diameter_pixels;
+	sun_billboard_scale = billboard_size / SUN_BILLBOARD_SIZE;
+	if (sun_entity)
+		update_entity_scale(sun_entity, sun_billboard_scale);
+}
+
 static int load_per_solarsystem_textures(void)
 {
 	int i, j;
@@ -23531,6 +23583,7 @@ static int load_per_solarsystem_textures(void)
 	snprintf(path, sizeof(path), "solarsystems/%s/%s", solarsystem_name, solarsystem_assets->sun_texture);
 	sun_material.texture_mapped_unlit.texture_id = load_texture(path, 0);
 	sun_material.texture_mapped_unlit.do_blend = 1;
+	update_sun_size(path);
 
 	update_splash_progress(60);
 	for (i = 0; i < solarsystem_assets->nplanet_textures; i++) {
@@ -24892,7 +24945,7 @@ static void init_meshes(void)
 	update_splash_progress(95);
 	docking_port_mesh[DOCKING_PORT_INVISIBLE_MODEL] = snis_read_model(d, "tetrahedron.stl");
 	nebula_mesh = mesh_fabricate_billboard(2, 2);
-	sun_mesh = mesh_fabricate_billboard(30000, 30000);
+	sun_mesh = mesh_fabricate_billboard(SUN_BILLBOARD_SIZE, SUN_BILLBOARD_SIZE);
 	unit_quad = mesh_fabricate_billboard(1, 1);
 	thrust_animation_mesh = init_thrust_mesh(70, 200, 1.3);
 	warpgate_mesh = snis_read_model(d, "warpgate.stl");

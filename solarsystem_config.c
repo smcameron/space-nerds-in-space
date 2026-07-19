@@ -80,6 +80,10 @@ struct solarsystem_asset_spec *solarsystem_asset_spec_read(char *filename)
 	a = malloc(sizeof(*a));
 	memset(a, 0, sizeof(*a));
 	a->random_seed = -1; /* no seed */
+	/* Defaults chosen so a 512 pixel wide sun texture yields the traditional
+	 * 30000 unit sun billboard: 5625 * 512 / 96 = 30000. */
+	a->star_diameter_pixels = 96.0;
+	a->star_diameter = 5625.0;
 
 	while (!feof(f)) {
 		l = fgets(line, 1000, f);
@@ -274,6 +278,30 @@ struct solarsystem_asset_spec *solarsystem_asset_spec_read(char *filename)
 				goto bad_line;
 			}
 			a->skybox_prefix = strdup(get_field(line));
+			continue;
+		} else if (has_prefix("star diameter pixels:", line)) {
+			float value;
+
+			field = get_field(line);
+			rc = sscanf(field, "%f", &value);
+			if (rc != 1 || value <= 0.0) {
+				fprintf(stderr, "%s:line %d: bad star diameter pixels specification.\n",
+					filename, ln);
+				goto bad_line;
+			}
+			a->star_diameter_pixels = value;
+			continue;
+		} else if (has_prefix("star diameter:", line)) {
+			float value;
+
+			field = get_field(line);
+			rc = sscanf(field, "%f", &value);
+			if (rc != 1 || value <= 0.0) {
+				fprintf(stderr, "%s:line %d: bad star diameter specification.\n",
+					filename, ln);
+				goto bad_line;
+			}
+			a->star_diameter = value;
 			continue;
 		} else if (has_prefix("star location:", line)) {
 			/* On the client, this info will be overridden by info from the lobby,
