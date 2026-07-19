@@ -98,10 +98,58 @@ static int mouse_look_active = 0;
 static float mouse_accum_dx = 0.0;
 static float mouse_accum_dy = 0.0;
 
-/* Sun.  Phase 1 keeps it at a fixed world position; orbit controls arrive in phase 3. */
+/* Sun.  Stored as an orbit (azimuth/elevation/distance) about the scene centre so it can be
+ * swept live with the arrow keys; sun_pos is derived from it each frame.  sun_radius is the
+ * star's world-unit radius that drives the analytic planet-shadow penumbra (mirrors
+ * snis_client's star_radius). */
+static union vec3 scene_center = { { 0.0, 0.0, 0.0 } };
 static union vec3 sun_pos = { { 40000.0, 60000.0, 30000.0 } };
+static float sun_azimuth = 0.6;
+static float sun_elevation = 0.5;
+static float sun_distance = 90000.0;
+static float sun_radius = 2812.5; /* = default star_diameter (5625) / 2 */
+static float deepest_planet_shade = 0.0; /* deepest analytic ship shading this frame, for the HUD */
 
 static struct mesh *planet_mesh;
+
+/* Analytic planet umbra/penumbra shading, mirroring snis_client's update_shading_planet():
+ * returns the deepest fraction (0.0 = fully lit, 1.0 = full umbra) of the sun's disc that any
+ * scene planet blocks as seen from pos, via the angular overlap of the two discs. */
+static float compute_planet_shade_fraction(const union vec3 *pos)
+{
+	int i;
+	union vec3 to_sun, to_planet;
+	float sun_dist, planet_dist;
+	double alpha_sun, alpha_planet, theta, occlusion, deepest;
+
+	vec3_sub(&to_sun, &sun_pos, (union vec3 *) pos);
+	sun_dist = vec3_magnitude(&to_sun);
+	if (sun_dist <= 0.0)
+		return 0.0;
+	alpha_sun = asin(clamp(sun_radius / sun_dist, 0.0, 1.0));
+	deepest = 0.0;
+	for (i = 0; i < scene_object_count; i++) {
+		struct scene_object *p = &scene[i];
+
+		if (p->kind != SCENE_PLANET)
+			continue;
+		vec3_sub(&to_planet, &p->pos, (union vec3 *) pos);
+		planet_dist = vec3_magnitude(&to_planet);
+		if (planet_dist >= sun_dist) /* planet is farther away than the sun */
+			continue;
+		if (planet_dist <= p->scale) { /* inside the planet (scale holds its radius) */
+			occlusion = 1.0;
+		} else {
+			alpha_planet = asin(clamp(p->scale / planet_dist, 0.0, 1.0));
+			theta = acos(clamp(vec3_dot(&to_sun, &to_planet) /
+						(sun_dist * planet_dist), -1.0, 1.0));
+			occlusion = disc_occlusion_fraction(alpha_sun, alpha_planet, theta);
+		}
+		if (occlusion > deepest)
+			deepest = occlusion;
+	}
+	return (float) deepest;
+}
 
 static struct mesh *snis_read_model(char *path)
 {
@@ -178,14 +226,20 @@ static void build_scene(void)
 		spacing = 1200.0;
 	scene_scale = spacing;
 
-	/* A big flat-shaded planet below the ships to act as a shadow-receiving surface. */
+	/* A big flat-shaded planet below the ships to act as a shadow-receiving surface, and the
+	 * occluder for the analytic planet umbra/penumbra test.  The ships sit just above its
+	 * surface, so lowering the sun (down arrow) swings the planet between the sun and the
+	 * ships and sweeps them through the penumbra into the umbra. */
 	planet_mesh = mesh_unit_spherified_cube(64);
 	if (planet_mesh) {
 		float planet_r = spacing * 6.0;
 		struct scene_object *p = add_scene_object(SCENE_PLANET, planet_mesh, NULL,
 				0.0, -planet_r - spacing * 1.5, spacing * 0.5, planet_r, GRAY50);
-		if (p)
+		if (p) {
 			p->color = GRAY50;
+			scene_center = p->pos; /* orbit the sun about the planet */
+			sun_distance = planet_r * 12.0;
+		}
 	}
 
 	/* Ships arranged in a rough diamond so shadows fall across neighbors and the planet. */
@@ -307,6 +361,36 @@ static void update_camera(void)
 	}
 }
 
+/* Sweep the sun around the scene centre with the arrow keys (azimuth/elevation) and derive
+ * its world position.  Held continuously for a smooth sweep through the planet's penumbra. */
+static void update_sun(void)
+{
+	const Uint8 *keys = SDL_GetKeyboardState(NULL);
+	float rate = 0.01;
+	float ce, se;
+
+	if (keys[SDL_SCANCODE_LSHIFT] || keys[SDL_SCANCODE_RSHIFT])
+		rate *= 4.0;
+	if (keys[SDL_SCANCODE_LEFT])
+		sun_azimuth -= rate;
+	if (keys[SDL_SCANCODE_RIGHT])
+		sun_azimuth += rate;
+	if (keys[SDL_SCANCODE_UP])
+		sun_elevation += rate;
+	if (keys[SDL_SCANCODE_DOWN])
+		sun_elevation -= rate;
+	if (sun_elevation > 1.55)
+		sun_elevation = 1.55;
+	if (sun_elevation < -1.55)
+		sun_elevation = -1.55;
+
+	ce = cosf(sun_elevation);
+	se = sinf(sun_elevation);
+	sun_pos.v.x = scene_center.v.x + sun_distance * ce * cosf(sun_azimuth);
+	sun_pos.v.y = scene_center.v.y + sun_distance * se;
+	sun_pos.v.z = scene_center.v.z + sun_distance * ce * sinf(sun_azimuth);
+}
+
 static char *help_text =
 	"SHADOW LAB\n\n"
 	"  A sandbox for iterating on the cascaded shadow mapping shaders.\n\n"
@@ -317,6 +401,13 @@ static char *help_text =
 	"  - Q / E            ROLL LEFT / RIGHT\n"
 	"  - HOLD RIGHT MOUSE MOVE MOUSE TO LOOK AROUND\n"
 	"  - SHIFT            MOVE FASTER\n\n"
+	"  SUN (ANALYTIC PLANET UMBRA / PENUMBRA)\n"
+	"  - ARROW KEYS       ORBIT SUN AZIMUTH / ELEVATION (SHIFT = FASTER)\n"
+	"  - U / O            SUN DISTANCE CLOSER / FARTHER\n"
+	"  - G / H            SUN RADIUS SMALLER / LARGER (WIDER RADIUS = WIDER PENUMBRA)\n"
+	"  - LOWER THE SUN (DOWN ARROW) TO SWING THE PLANET BETWEEN IT AND THE SHIPS;\n"
+	"    THE SHIPS FADE SMOOTHLY THROUGH THE PENUMBRA INTO FULL UMBRA.\n"
+	"    'PLANET SHADE' IN THE HUD READS 0.00 LIT TO 1.00 FULLY SHADOWED.\n\n"
 	"  SHADOWS\n"
 	"  - \\                TOGGLE SHADOWS ON / OFF\n"
 	"  - 0 / 1 / 2        DEBUG: OFF / SHADOW-FACTOR / CASCADE-INDEX\n"
@@ -381,7 +472,9 @@ static void draw_hud(void)
 	sng_abs_xy_draw_string("SHADOW LAB - F1 FOR HELP", NANO_FONT, 10, 20);
 	snprintf(buffer, sizeof(buffer), "CAM (%.0f, %.0f, %.0f)", cam_pos.v.x, cam_pos.v.y, cam_pos.v.z);
 	sng_abs_xy_draw_string(buffer, NANO_FONT, 10, 35);
-	snprintf(buffer, sizeof(buffer), "SUN (%.0f, %.0f, %.0f)", sun_pos.v.x, sun_pos.v.y, sun_pos.v.z);
+	snprintf(buffer, sizeof(buffer), "SUN AZ %.0f EL %.0f DIST %.0f RADIUS %.0f   PLANET SHADE %.2f",
+		radians_to_degrees(sun_azimuth), radians_to_degrees(sun_elevation),
+		sun_distance, sun_radius, deepest_planet_shade);
 	sng_abs_xy_draw_string(buffer, NANO_FONT, 10, 50);
 	snprintf(buffer, sizeof(buffer), "SHADOWS %s   DEBUG %s",
 		graph_dev_shadow_map_enabled ? "ON" : "OFF",
@@ -416,6 +509,7 @@ static void draw_screen(void)
 	set_ambient_light(cx, ambient_light);
 
 	update_camera();
+	update_sun();
 
 	camera_basis(&cam_orientation, &fwd, &up, &right);
 	vec3_add(&at, &cam_pos, &fwd);
@@ -429,6 +523,7 @@ static void draw_screen(void)
 	set_lighting(cx, sun_pos.v.x, sun_pos.v.y, sun_pos.v.z);
 	calculate_camera_transform(cx);
 
+	deepest_planet_shade = 0.0;
 	for (i = 0; i < scene_object_count; i++) {
 		struct scene_object *o = &scene[i];
 		struct entity *e = add_entity(cx, o->mesh, o->pos.v.x, o->pos.v.y, o->pos.v.z, o->color);
@@ -440,6 +535,25 @@ static void draw_screen(void)
 			update_entity_material(e, o->material);
 		if (o->no_cast_shadow)
 			update_entity_shadow_casting(e, 0);
+		/* Ships receive the analytic planet umbra/penumbra shading; the planet is lit by
+		 * its own terminator (surface normal vs. sun) and needs no in-shade term. */
+		if (o->kind == SCENE_SHIP) {
+			float frac = compute_planet_shade_fraction(&o->pos);
+			entity_set_in_shade(e, 0.1 + 0.9 * frac);
+			if (frac > deepest_planet_shade)
+				deepest_planet_shade = frac;
+		}
+	}
+
+	/* A small unlit marker sphere at the sun's true angular size, so its position and how
+	 * far it has swung behind the planet are visible.  It must not cast shadows. */
+	if (planet_mesh) {
+		struct entity *e = add_entity(cx, planet_mesh, sun_pos.v.x, sun_pos.v.y, sun_pos.v.z, YELLOW);
+		if (e) {
+			update_entity_scale(e, sun_radius);
+			update_entity_shadow_casting(e, 0);
+			entity_set_in_shade(e, 0.0);
+		}
 	}
 
 	render_skybox(cx);
@@ -535,6 +649,20 @@ static void handle_key_down(SDL_Keysym *keysym)
 		break;
 	case SDLK_l:
 		graph_dev_set_shadow_blend(graph_dev_get_shadow_blend() + 0.02);
+		break;
+	case SDLK_u:
+		sun_distance *= 0.9;
+		break;
+	case SDLK_o:
+		sun_distance *= 1.111111;
+		break;
+	case SDLK_g:
+		sun_radius *= 0.9;
+		if (sun_radius < 1.0)
+			sun_radius = 1.0;
+		break;
+	case SDLK_h:
+		sun_radius *= 1.111111;
 		break;
 	default:
 		break;
