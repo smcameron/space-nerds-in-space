@@ -130,14 +130,12 @@ static float sun_distance = 90000.0;
 static float sun_radius = 2812.5; /* = default star_diameter (5625) / 2 */
 static float deepest_planet_shade = 0.0; /* deepest analytic ship shading this frame, for the HUD */
 
-/* The sun texture bundles the star's ~87-px disc and its bloom out to ~512 px with no fully
- * transparent region until the texture edge, so it cannot be cropped to a clean round disc
- * (any sub-crop shows a bright square).  Draw the whole texture on one camera-facing billboard
- * sized so the 87-px core renders at the star's diameter (2 * sun_radius) -- which grows
- * correctly as you approach -- but cap its world size at a fraction of the camera distance so
- * its apparent size (disc and bloom together) stops ballooning up close. */
-#define SUN_TEXTURE_SPAN (512.0 / 87.0) /* full texture width as a multiple of the disc */
-#define SUN_MAX_APPARENT 0.4            /* sun world size <= this * distance to camera */
+/* The sun is drawn with the dedicated sun shader (MATERIAL_SUN): a world-scale solid disc plus
+ * a screen-scale procedural bloom.  The billboard is sized to the bloom's on-screen extent (a
+ * fraction of the camera distance) but never smaller than the disc, and the shader's disc
+ * radius is set each frame from sun_radius / billboard size so the disc stays world-scale
+ * (grows as you approach) while the bloom stays a constant apparent size. */
+#define SUN_BLOOM_APPARENT 0.4 /* the sun billboard's on-screen size as a fraction of camera distance */
 static struct mesh *sun_mesh;
 static struct material sun_material;
 
@@ -806,21 +804,23 @@ static void draw_screen(void)
 		}
 	}
 
-	/* The sun billboard: the 87-px core renders at the star's diameter when far, capped in
-	 * apparent size so it does not balloon up close.  It must not cast shadows. */
+	/* The sun (MATERIAL_SUN): billboard sized to the bloom's screen extent but never smaller
+	 * than the disc; the shader's disc radius is set from sun_radius / billboard size so the
+	 * disc is world-scale and the bloom is screen-scale.  It must not cast shadows. */
 	if (sun_mesh) {
 		union vec3 to_cam;
-		float cam_dist, sun_size;
+		float cam_dist, billboard_world;
 		struct entity *e;
 
 		vec3_sub(&to_cam, &sun_pos, &cam_pos);
 		cam_dist = vec3_magnitude(&to_cam);
-		sun_size = 2.0 * sun_radius * SUN_TEXTURE_SPAN;
-		if (sun_size > cam_dist * SUN_MAX_APPARENT)
-			sun_size = cam_dist * SUN_MAX_APPARENT;
+		billboard_world = SUN_BLOOM_APPARENT * cam_dist;
+		if (billboard_world < 2.0 * sun_radius)
+			billboard_world = 2.0 * sun_radius;
+		sun_material.sun.disc_radius = sun_radius / billboard_world;
 		e = add_entity(cx, sun_mesh, sun_pos.v.x, sun_pos.v.y, sun_pos.v.z, WHITE);
 		if (e) {
-			update_entity_scale(e, sun_size);
+			update_entity_scale(e, billboard_world);
 			update_entity_material(e, &sun_material);
 			update_entity_shadow_casting(e, 0);
 		}
@@ -1109,11 +1109,11 @@ static void setup_skybox(const char *skybox_prefix)
 static void setup_sun_billboard(void)
 {
 	sun_mesh = mesh_fabricate_billboard(1.0, 1.0); /* unit billboard, scaled to size per frame */
-	material_init_texture_mapped_unlit(&sun_material);
-	sun_material.billboard_type = MATERIAL_BILLBOARD_TYPE_SPHERICAL;
-	sun_material.texture_mapped_unlit.texture_id =
-		graph_dev_load_texture("share/snis/textures/sun.png", 0);
-	sun_material.texture_mapped_unlit.do_blend = 1;
+	material_init_sun(&sun_material);
+	sun_material.sun.color = sng_get_color(WHITE);
+	sun_material.sun.bloom_color = sng_get_color(WHITE);
+	sun_material.sun.bloom_intensity = 1.0;
+	sun_material.sun.bloom_falloff = 3.0;
 }
 
 int main(int argc, char *argv[])
