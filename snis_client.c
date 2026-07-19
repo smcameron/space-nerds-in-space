@@ -3141,11 +3141,13 @@ static void calculate_planetary_altitude(struct snis_entity *o)
 	}
 }
 
-/* in_shade lighting factor for an object: 0.1 when fully lit (the traditional baseline)
- * ramping up to 1.0 when the sun is completely blocked by a planet. */
+/* in_shade lighting factor for an object: 0.0 when fully lit ramping up to 1.0 when the sun
+ * is completely blocked by a planet.  The lit shaders use this as a float multiplier
+ * (1.0 - u_in_shade), so the intermediate penumbra values attenuate the diffuse term
+ * smoothly; the ambient term still provides the floor in full umbra. */
 static float object_in_shade(struct snis_entity *o)
 {
-	return 0.1 + 0.9 * o->planet_shade_fraction;
+	return o->planet_shade_fraction;
 }
 
 /* Compute how much of the sun's disc each planet blocks as seen from object o and record

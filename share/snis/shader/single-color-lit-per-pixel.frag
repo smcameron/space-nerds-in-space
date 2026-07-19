@@ -1,6 +1,6 @@
 
 uniform vec3 u_LightPos;       // The position of the light in eye space.
-uniform int u_in_shade;        // 0 means not full shade, 1 means full shade
+uniform float u_in_shade;      // 0.0 means not in shade, 1.0 means full shade (penumbra in between)
 
 in vec3 v_Position;       // Interpolated position for this fragment.
 in vec3 v_Color;          // This is the color from the vertex shader interpolated across the triangle per fragment
