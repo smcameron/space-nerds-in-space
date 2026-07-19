@@ -113,8 +113,15 @@ static float deepest_planet_shade = 0.0; /* deepest analytic ship shading this f
 /* Planet-shadow test controls (independent of the CSM depth-map shadows). */
 enum planet_shade_mode { PLANET_SHADE_SOFT, PLANET_SHADE_BINARY, PLANET_SHADE_OFF };
 static int planet_shade_mode = PLANET_SHADE_SOFT;
-static int planet_shade_debug = 0; /* tint ships by lit/penumbra/umbra state so the band is obvious */
+static int show_shade_panel = 1; /* per-ship lit/penumbra/umbra readout (viewing-independent) */
 static const char * const planet_shade_mode_name[] = { "SOFT", "BINARY", "OFF" };
+
+/* Per-ship analytic shade this frame, recorded during the draw loop for the HUD panel.  The
+ * in_shade term only darkens a ship's sun-facing side, which is often hidden behind the
+ * planet in an umbra test, so this numeric readout is the reliable way to see the mode
+ * (SOFT ramps through the penumbra; BINARY jumps at 0.5; OFF stays 0). */
+static float ship_shade[MAX_SCENE_OBJECTS];
+static int ship_shade_count;
 
 static struct mesh *planet_mesh;
 
@@ -421,11 +428,13 @@ static char *help_text =
 	"  - U / O            SUN DISTANCE CLOSER / FARTHER\n"
 	"  - G / H            SUN RADIUS SMALLER / LARGER (WIDER RADIUS = WIDER PENUMBRA)\n"
 	"  - P                CYCLE PLANET SHADE MODE: SOFT / BINARY / OFF\n"
-	"  - B                TOGGLE STATE TINT (WHITE=LIT AMBER=PENUMBRA RED=UMBRA)\n"
-	"  - LOWER THE SUN (DOWN ARROW) TO SWING THE PLANET BETWEEN IT AND THE SHIPS;\n"
-	"    THE SHIPS FADE SMOOTHLY THROUGH THE PENUMBRA INTO FULL UMBRA.\n"
-	"    'PLANET SHADE' IN THE HUD READS 0.00 LIT TO 1.00 FULLY SHADOWED.\n"
-	"    COMPARE SOFT VS BINARY (P) TO SEE THE PENUMBRA THE OLD HACK OMITTED.\n\n"
+	"  - B                TOGGLE THE PER-SHIP SHADE PANEL\n"
+	"  - LOWER THE SUN (DOWN ARROW) TO SWING THE PLANET BETWEEN IT AND THE SHIPS.\n"
+	"    NOTE: in_shade ONLY DARKENS A SHIP'S SUN-FACING SIDE, WHICH IS HIDDEN\n"
+	"    BEHIND THE PLANET IN A DIRECT UMBRA TEST - THE DARKENING YOU SEE THERE IS\n"
+	"    THE ORDINARY DAY/NIGHT TERMINATOR.  WATCH THE PER-SHIP PANEL: SOFT RAMPS\n"
+	"    THROUGH THE PENUMBRA, BINARY JUMPS AT 0.5, OFF STAYS 0.  TO SEE IT ON THE\n"
+	"    HULL, VIEW A SHIP'S SUN-FACING FLANK NEAR THE SHADOW EDGE (OBLIQUE ANGLE).\n\n"
 	"  SHADOWS\n"
 	"  - \\                TOGGLE SHADOWS ON / OFF\n"
 	"  - 0 / 1 / 2        DEBUG: OFF / SHADOW-FACTOR / CASCADE-INDEX\n"
@@ -498,9 +507,8 @@ static void draw_hud(void)
 		radians_to_degrees(sun_azimuth), radians_to_degrees(sun_elevation),
 		sun_distance, sun_radius);
 	sng_abs_xy_draw_string(buffer, TINY_FONT, 10, y); y += dy;
-	snprintf(buffer, sizeof(buffer), "PLANET SHADE %s: %s (%.2f)  %s",
-		planet_shade_mode_name[planet_shade_mode], state, deepest_planet_shade,
-		planet_shade_debug ? "[STATE TINT ON]" : "");
+	snprintf(buffer, sizeof(buffer), "PLANET SHADE MODE %s   DEEPEST %s (%.2f)",
+		planet_shade_mode_name[planet_shade_mode], state, deepest_planet_shade);
 	sng_abs_xy_draw_string(buffer, TINY_FONT, 10, y); y += dy;
 	snprintf(buffer, sizeof(buffer), "SHADOWS %s   DEBUG %s",
 		graph_dev_shadow_map_enabled ? "ON" : "OFF",
@@ -515,6 +523,28 @@ static void draw_hud(void)
 		2 * graph_dev_get_shadow_pcf_radius() + 1, 2 * graph_dev_get_shadow_pcf_radius() + 1,
 		graph_dev_get_shadow_blend());
 	sng_abs_xy_draw_string(buffer, TINY_FONT, 10, y); y += dy;
+
+	/* Per-ship analytic shade, colour-coded by state.  This is the reliable readout: the
+	 * in_shade darkening lands on each ship's sun-facing side, which is usually hidden
+	 * behind the planet during an umbra test, so the render alone can look unchanged. */
+	if (show_shade_panel) {
+		int s;
+
+		y += dy / 2;
+		sng_set_foreground(WHITE);
+		sng_abs_xy_draw_string("SHIP SHADE (0.00 LIT .. 1.00 UMBRA):", TINY_FONT, 10, y);
+		y += dy;
+		for (s = 0; s < ship_shade_count; s++) {
+			float f = ship_shade[s];
+			const char *st = f >= 0.999 ? "UMBRA" : f > 0.001 ? "PENUMBRA" : "LIT";
+
+			sng_set_foreground(f >= 0.999 ? RED : f > 0.001 ? AMBER : GREEN);
+			snprintf(buffer, sizeof(buffer), "  SHIP %d: %.2f  %s", s, f, st);
+			sng_abs_xy_draw_string(buffer, TINY_FONT, 10, y);
+			y += dy;
+		}
+		sng_set_foreground(WHITE);
+	}
 }
 
 static struct entity_context *cx;
@@ -550,6 +580,7 @@ static void draw_screen(void)
 	calculate_camera_transform(cx);
 
 	deepest_planet_shade = 0.0;
+	ship_shade_count = 0;
 	for (i = 0; i < scene_object_count; i++) {
 		struct scene_object *o = &scene[i];
 		struct entity *e = add_entity(cx, o->mesh, o->pos.v.x, o->pos.v.y, o->pos.v.z, o->color);
@@ -566,21 +597,11 @@ static void draw_screen(void)
 		 * (surface normal vs. sun) and needs no in-shade term. */
 		if (o->kind == SCENE_SHIP) {
 			float frac = compute_planet_shade_fraction(&o->pos);
+			entity_set_in_shade(e, frac);
 			if (frac > deepest_planet_shade)
 				deepest_planet_shade = frac;
-			if (planet_shade_debug) {
-				/* Tint by state, fully lit, so the penumbra band reads clearly:
-				 * white = lit, amber = penumbra, red = umbra. */
-				int c = WHITE;
-				if (frac >= 0.999)
-					c = RED;
-				else if (frac > 0.001)
-					c = AMBER;
-				update_entity_color(e, c);
-				entity_set_in_shade(e, 0.0);
-			} else {
-				entity_set_in_shade(e, frac);
-			}
+			if (ship_shade_count < MAX_SCENE_OBJECTS)
+				ship_shade[ship_shade_count++] = frac;
 		}
 	}
 
@@ -707,7 +728,7 @@ static void handle_key_down(SDL_Keysym *keysym)
 		planet_shade_mode = (planet_shade_mode + 1) % 3;
 		break;
 	case SDLK_b:
-		planet_shade_debug = !planet_shade_debug;
+		show_shade_panel = !show_shade_panel;
 		break;
 	default:
 		break;
