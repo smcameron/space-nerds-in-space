@@ -1,0 +1,752 @@
+/*
+	shadow_lab: a standalone scene sandbox for iterating on the cascaded shadow
+	mapping (CSM) shaders.  It loads a small scene of ships and a planet, lets you
+	fly a free camera around, and (in later phases) possess ships, orbit the sun,
+	and toggle the shadow debug views live.  It is deliberately not a physically
+	plausible simulation; it exists only to make the shadow shaders quick to evaluate.
+
+	THIS FILE IS AI-GENERATED AND IS PLACED IN THE PUBLIC DOMAIN.
+
+	This is a self-contained ancillary tool: it links the SNIS engine but adds no
+	logic to the core game.  Per CONTRIBUTING.md, AI-generated ancillary tooling is
+	permitted when clearly marked as such and dedicated to the public domain.  The
+	author(s) disclaim all copyright and neighboring rights to this file to the
+	fullest extent permitted by law.
+*/
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <math.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <unistd.h>
+#include <errno.h>
+#include <limits.h>
+#include <getopt.h>
+#include <locale.h>
+
+#ifdef __APPLE__
+#include <SDL2.h>
+#else
+#include <SDL.h>
+#endif
+
+#include "mtwist.h"
+#include "vertex.h"
+#include "snis_graph.h"
+#include "graph_dev.h"
+#include "quat.h"
+#include "material.h"
+#include "entity.h"
+#include "mesh.h"
+#include "stl_parser.h"
+#include "mathutils.h"
+#include "snis_typeface.h"
+#include "snis_cardinal_colors.h"
+#include "opengl_cap.h"
+#include "build_info.h"
+#include "png_utils.h"
+#include "snis_xwindows_hacks.h"
+
+#define DEFAULT_FOV (40.0 * M_PI / 180.0)
+#define FPS 60
+
+static int SCREEN_WIDTH = 1600;
+static int SCREEN_HEIGHT = 900;
+static int screen_offset_x;
+static int screen_offset_y;
+static int window_manager_can_constrain_aspect_ratio = 0;
+static float original_aspect_ratio;
+static int time_to_set_window_size = 0;
+static int real_screen_width;
+static int real_screen_height;
+static char *program;
+static float FOV = DEFAULT_FOV;
+static int display_frame_stats = 1;
+static int frame_counter = 0;
+static int reload_shaders = 0;
+static int helpmode = 0;
+static SDL_Window *screen;
+
+/* The scene.  A fixed-capacity list of objects rebuilt into the entity context each frame. */
+#define MAX_SCENE_OBJECTS 64
+enum scene_object_kind { SCENE_SHIP, SCENE_PLANET };
+struct scene_object {
+	enum scene_object_kind kind;
+	struct mesh *mesh;
+	struct material *material;
+	union vec3 pos;
+	union quat orientation;
+	float scale;
+	int color;
+	int no_cast_shadow;
+};
+static struct scene_object scene[MAX_SCENE_OBJECTS];
+static int scene_object_count;
+static float scene_scale = 1000.0; /* characteristic spacing of the scene, set at load time */
+
+/* Free-fly camera. */
+static union vec3 cam_pos = { { -2500.0, 1500.0, -2500.0 } };
+static union quat cam_orientation = IDENTITY_QUAT_INITIALIZER;
+static float move_speed; /* per-frame translation, derived from scene_scale */
+static float mouse_sensitivity = 0.003;
+static float roll_rate = 0.02;
+static float ambient_light = 0.015; /* match snis_client's default so lighting mirrors the game */
+static int shadow_debug_mode = 0;   /* 0 = off, 1 = shadow factor, 2 = cascade index */
+static int mouse_look_active = 0;
+static float mouse_accum_dx = 0.0;
+static float mouse_accum_dy = 0.0;
+
+/* Sun.  Phase 1 keeps it at a fixed world position; orbit controls arrive in phase 3. */
+static union vec3 sun_pos = { { 40000.0, 60000.0, 30000.0 } };
+
+static struct mesh *planet_mesh;
+
+static struct mesh *snis_read_model(char *path)
+{
+	float minx, miny, minz, maxx, maxy, maxz;
+	struct mesh *m;
+
+	m = read_mesh(path);
+	if (!m) {
+		fprintf(stderr, "shadow_lab: bad mesh file '%s'\n", path);
+		return NULL;
+	}
+	mesh_aabb(m, &minx, &miny, &minz, &maxx, &maxy, &maxz);
+	printf("%s aabb = (%f,%f,%f), (%f, %f, %f) radius=%f\n",
+		path, minx, miny, minz, maxx, maxy, maxz, m->radius);
+	return m;
+}
+
+static struct scene_object *add_scene_object(enum scene_object_kind kind, struct mesh *m,
+		struct material *material, float x, float y, float z, float scale, int color)
+{
+	struct scene_object *o;
+
+	if (scene_object_count >= MAX_SCENE_OBJECTS) {
+		fprintf(stderr, "shadow_lab: too many scene objects (max %d)\n", MAX_SCENE_OBJECTS);
+		return NULL;
+	}
+	o = &scene[scene_object_count++];
+	o->kind = kind;
+	o->mesh = m;
+	o->material = material;
+	o->pos.v.x = x;
+	o->pos.v.y = y;
+	o->pos.v.z = z;
+	o->orientation = (union quat) IDENTITY_QUAT_INITIALIZER;
+	o->scale = scale;
+	o->color = color;
+	o->no_cast_shadow = 0;
+	return o;
+}
+
+/* Phase 1: a hardcoded scene (config-file loading arrives in phase 2).  A cluster of
+ * flat-shaded ships sitting above a large flat-shaded planet, so ships cast shadows onto
+ * the planet and self-shadow.  Flat-shaded meshes use the single_color_lit shader, which
+ * is the CSM receive path proven in phases 1-2. */
+static const char * const phase1_ship_models[] = {
+	"share/snis/models/wombat/snis3006.obj",
+	"share/snis/models/disruptor/disruptor.obj",
+	"share/snis/models/enforcer/enforcer.obj",
+	"share/snis/models/conqueror/conqueror.obj",
+};
+
+static void build_scene(void)
+{
+	int i;
+	int nships = sizeof(phase1_ship_models) / sizeof(phase1_ship_models[0]);
+	struct mesh *ship_mesh[8];
+	float max_radius = 0.0;
+	float spacing;
+
+	for (i = 0; i < nships; i++) {
+		ship_mesh[i] = snis_read_model((char *) phase1_ship_models[i]);
+		if (!ship_mesh[i])
+			exit(1);
+		if (ship_mesh[i]->radius > max_radius)
+			max_radius = ship_mesh[i]->radius;
+	}
+
+	/* Space the ships out relative to the largest one, but keep the cluster inside the
+	 * shadow map's coverage distance so all cascades are exercised at once. */
+	spacing = max_radius * 4.0;
+	if (spacing < 120.0)
+		spacing = 120.0;
+	if (spacing > 1200.0)
+		spacing = 1200.0;
+	scene_scale = spacing;
+
+	/* A big flat-shaded planet below the ships to act as a shadow-receiving surface. */
+	planet_mesh = mesh_unit_spherified_cube(64);
+	if (planet_mesh) {
+		float planet_r = spacing * 6.0;
+		struct scene_object *p = add_scene_object(SCENE_PLANET, planet_mesh, NULL,
+				0.0, -planet_r - spacing * 1.5, spacing * 0.5, planet_r, GRAY50);
+		if (p)
+			p->color = GRAY50;
+	}
+
+	/* Ships arranged in a rough diamond so shadows fall across neighbors and the planet. */
+	add_scene_object(SCENE_SHIP, ship_mesh[0 % nships], NULL, 0.0, 0.0, 0.0, 1.0, WHITE);
+	if (nships > 1)
+		add_scene_object(SCENE_SHIP, ship_mesh[1], NULL, spacing, spacing * 0.3, 0.0, 1.0, AMBER);
+	if (nships > 2)
+		add_scene_object(SCENE_SHIP, ship_mesh[2], NULL, -spacing * 0.6, spacing * 0.1, spacing, 1.0, WHITE);
+	if (nships > 3)
+		add_scene_object(SCENE_SHIP, ship_mesh[3], NULL, spacing * 0.4, -spacing * 0.4,
+					spacing * 1.4, 1.0, WHITE);
+
+	move_speed = spacing * 0.02;
+
+	/* Seed the shadow tunables with values that looked good during manual exploration;
+	 * all of them remain adjustable live.  Coverage is set near the view frustum far
+	 * plane so shadow reach matches what is visible. */
+	set_shadow_map_max_distance(spacing * 400.0);
+	set_shadow_map_split_lambda(0.85);
+	graph_dev_set_shadow_bias(4.0, 4.0);
+	graph_dev_set_shadow_pcf_radius(2);
+	graph_dev_set_shadow_blend(0.1);
+
+	/* Aim the camera at the ship cluster from behind and above. */
+	{
+		union vec3 base_fwd = { { 1.0, 0.0, 0.0 } };
+		union vec3 up = { { 0.0, 1.0, 0.0 } };
+		union vec3 desired_fwd;
+
+		cam_pos.v.x = -2.0 * spacing;
+		cam_pos.v.y = 1.3 * spacing;
+		cam_pos.v.z = -2.0 * spacing;
+		vec3_sub(&desired_fwd, &(union vec3){ { 0.0, 0.0, 0.0 } }, &cam_pos);
+		vec3_normalize_self(&desired_fwd);
+		quat_from_u2v(&cam_orientation, &base_fwd, &desired_fwd, &up);
+	}
+}
+
+/* Extract the camera's forward/up/right basis vectors from its orientation quaternion. */
+static void camera_basis(const union quat *o, union vec3 *fwd, union vec3 *up, union vec3 *right)
+{
+	fwd->v.x = 1.0; fwd->v.y = 0.0; fwd->v.z = 0.0;
+	up->v.x = 0.0; up->v.y = 1.0; up->v.z = 0.0;
+	right->v.x = 0.0; right->v.y = 0.0; right->v.z = 1.0;
+	quat_rot_vec_self(fwd, o);
+	quat_rot_vec_self(up, o);
+	quat_rot_vec_self(right, o);
+}
+
+/* Apply a rotation of 'angle' radians about a body-frame axis to the camera orientation. */
+static void adjust_shadow_bias(float dfactor, float dunits)
+{
+	float factor, units;
+
+	graph_dev_get_shadow_bias(&factor, &units);
+	factor += dfactor;
+	units += dunits;
+	if (factor < 0.0)
+		factor = 0.0;
+	if (units < 0.0)
+		units = 0.0;
+	graph_dev_set_shadow_bias(factor, units);
+}
+
+static void camera_rotate_local(float ax, float ay, float az, float angle)
+{
+	union quat delta;
+
+	if (angle == 0.0)
+		return;
+	quat_init_axis(&delta, ax, ay, az, angle);
+	quat_mul(&cam_orientation, &cam_orientation, &delta);
+	quat_normalize_self(&cam_orientation);
+}
+
+static void update_camera(void)
+{
+	const Uint8 *keys = SDL_GetKeyboardState(NULL);
+	union vec3 fwd, up, right, step;
+	float speed = move_speed;
+	float roll = 0.0;
+
+	if (keys[SDL_SCANCODE_LSHIFT] || keys[SDL_SCANCODE_RSHIFT])
+		speed *= 5.0;
+
+	/* Mouse look (accumulated while the right button is held): yaw about local up,
+	 * pitch about local right. */
+	camera_rotate_local(0.0, 1.0, 0.0, -mouse_accum_dx * mouse_sensitivity);
+	camera_rotate_local(0.0, 0.0, 1.0, -mouse_accum_dy * mouse_sensitivity);
+	mouse_accum_dx = 0.0;
+	mouse_accum_dy = 0.0;
+
+	/* Roll about local forward. */
+	if (keys[SDL_SCANCODE_Q])
+		roll += roll_rate;
+	if (keys[SDL_SCANCODE_E])
+		roll -= roll_rate;
+	camera_rotate_local(1.0, 0.0, 0.0, roll);
+
+	camera_basis(&cam_orientation, &fwd, &up, &right);
+
+	if (keys[SDL_SCANCODE_W]) {
+		step = fwd; vec3_mul_self(&step, speed); vec3_add_self(&cam_pos, &step);
+	}
+	if (keys[SDL_SCANCODE_S]) {
+		step = fwd; vec3_mul_self(&step, -speed); vec3_add_self(&cam_pos, &step);
+	}
+	if (keys[SDL_SCANCODE_D]) {
+		step = right; vec3_mul_self(&step, speed); vec3_add_self(&cam_pos, &step);
+	}
+	if (keys[SDL_SCANCODE_A]) {
+		step = right; vec3_mul_self(&step, -speed); vec3_add_self(&cam_pos, &step);
+	}
+	if (keys[SDL_SCANCODE_R]) {
+		step = up; vec3_mul_self(&step, speed); vec3_add_self(&cam_pos, &step);
+	}
+	if (keys[SDL_SCANCODE_F]) {
+		step = up; vec3_mul_self(&step, -speed); vec3_add_self(&cam_pos, &step);
+	}
+}
+
+static char *help_text =
+	"SHADOW LAB\n\n"
+	"  A sandbox for iterating on the cascaded shadow mapping shaders.\n\n"
+	"  CAMERA (FREE-FLY)\n"
+	"  - W / S            MOVE FORWARD / BACK\n"
+	"  - A / D            STRAFE LEFT / RIGHT\n"
+	"  - R / F            MOVE UP / DOWN\n"
+	"  - Q / E            ROLL LEFT / RIGHT\n"
+	"  - HOLD RIGHT MOUSE MOVE MOUSE TO LOOK AROUND\n"
+	"  - SHIFT            MOVE FASTER\n\n"
+	"  SHADOWS\n"
+	"  - \\                TOGGLE SHADOWS ON / OFF\n"
+	"  - 0 / 1 / 2        DEBUG: OFF / SHADOW-FACTOR / CASCADE-INDEX\n"
+	"  - [ / ]            SHADOW COVERAGE DISTANCE DOWN / UP\n"
+	"  - - / =            CASCADE COUNT DOWN / UP (1-4)\n"
+	"  - ; / '            SPLIT LAMBDA DOWN / UP (log vs uniform)\n"
+	"  - , / .            DEPTH-BIAS SLOPE DOWN / UP\n"
+	"  - n / m            PCF NEAR KERNEL SMALLER / LARGER (tapers per cascade)\n"
+	"  - k / l            CROSS-CASCADE BLEND BAND SMALLER / LARGER\n\n"
+	"  OTHER\n"
+	"  - F1               TOGGLE THIS HELP\n"
+	"  - F10              RELOAD SHADERS\n"
+	"  - F11              TOGGLE FULLSCREEN\n"
+	"  - ESC              QUIT\n\n"
+	"  CASCADE-INDEX TINT: red=0 (nearest) green=1 blue=2 yellow=3 gray=none\n\n"
+	"PRESS F1 TO EXIT HELP\n";
+
+static void draw_help_text(const char *text)
+{
+	int line = 0;
+	int i, y = 70;
+	char buffer[1024];
+	int buflen = 0;
+
+	buffer[0] = '\0';
+	i = 0;
+	do {
+		if (text[i] == '\n' || text[i] == '\0') {
+			buffer[buflen] = '\0';
+			sng_abs_xy_draw_string(buffer, TINY_FONT, 60, y);
+			y += 19;
+			buffer[0] = '\0';
+			buflen = 0;
+			line++;
+			if (text[i] == '\0')
+				break;
+			i++;
+			continue;
+		}
+		buffer[buflen++] = text[i++];
+	} while (1);
+}
+
+static void draw_help_screen(void)
+{
+	sng_set_foreground(BLACK);
+	sng_current_draw_rectangle(1, 50, 50, SCREEN_WIDTH - 100, SCREEN_HEIGHT - 100);
+	sng_set_foreground(GREEN);
+	sng_current_draw_rectangle(0, 50, 50, SCREEN_WIDTH - 100, SCREEN_HEIGHT - 100);
+	draw_help_text(help_text);
+}
+
+static void draw_hud(void)
+{
+	char buffer[128];
+	float bias_factor;
+	static const char * const debug_name[] = { "OFF", "SHADOW-FACTOR", "CASCADE-INDEX" };
+
+	graph_dev_get_shadow_bias(&bias_factor, NULL);
+
+	sng_set_foreground(WHITE);
+	sng_abs_xy_draw_string("SHADOW LAB - F1 FOR HELP", NANO_FONT, 10, 20);
+	snprintf(buffer, sizeof(buffer), "CAM (%.0f, %.0f, %.0f)", cam_pos.v.x, cam_pos.v.y, cam_pos.v.z);
+	sng_abs_xy_draw_string(buffer, NANO_FONT, 10, 35);
+	snprintf(buffer, sizeof(buffer), "SUN (%.0f, %.0f, %.0f)", sun_pos.v.x, sun_pos.v.y, sun_pos.v.z);
+	sng_abs_xy_draw_string(buffer, NANO_FONT, 10, 50);
+	snprintf(buffer, sizeof(buffer), "SHADOWS %s   DEBUG %s",
+		graph_dev_shadow_map_enabled ? "ON" : "OFF",
+		debug_name[shadow_debug_mode % 3]);
+	sng_abs_xy_draw_string(buffer, NANO_FONT, 10, 65);
+	snprintf(buffer, sizeof(buffer), "COVERAGE %.0f  CASCADES %d  LAMBDA %.2f",
+		get_shadow_map_max_distance(), get_shadow_map_num_cascades(),
+		get_shadow_map_split_lambda());
+	sng_abs_xy_draw_string(buffer, NANO_FONT, 10, 80);
+	snprintf(buffer, sizeof(buffer), "BIAS slope %.1f   PCF near %dx%d (per-cascade)   BLEND %.2f",
+		bias_factor,
+		2 * graph_dev_get_shadow_pcf_radius() + 1, 2 * graph_dev_get_shadow_pcf_radius() + 1,
+		graph_dev_get_shadow_blend());
+	sng_abs_xy_draw_string(buffer, NANO_FONT, 10, 95);
+}
+
+static struct entity_context *cx;
+
+static void draw_screen(void)
+{
+	int i;
+	union vec3 fwd, up, right, at;
+	float near_plane, far_plane;
+
+	glClearColor(0.0, 0.0, 0.0, 0.0);
+	graph_dev_start_frame();
+
+	if (!cx) {
+		cx = entity_context_new(MAX_SCENE_OBJECTS + 8, 8);
+		set_renderer(cx, FLATSHADING_RENDERER);
+	}
+	set_ambient_light(cx, ambient_light);
+
+	update_camera();
+
+	camera_basis(&cam_orientation, &fwd, &up, &right);
+	vec3_add(&at, &cam_pos, &fwd);
+
+	near_plane = 1.0;
+	far_plane = scene_scale * 200.0;
+	camera_set_parameters(cx, near_plane, far_plane, SCREEN_WIDTH, SCREEN_HEIGHT, FOV);
+	camera_set_pos(cx, cam_pos.v.x, cam_pos.v.y, cam_pos.v.z);
+	camera_look_at(cx, at.v.x, at.v.y, at.v.z);
+	camera_assign_up_direction(cx, up.v.x, up.v.y, up.v.z);
+	set_lighting(cx, sun_pos.v.x, sun_pos.v.y, sun_pos.v.z);
+	calculate_camera_transform(cx);
+
+	for (i = 0; i < scene_object_count; i++) {
+		struct scene_object *o = &scene[i];
+		struct entity *e = add_entity(cx, o->mesh, o->pos.v.x, o->pos.v.y, o->pos.v.z, o->color);
+		if (!e)
+			continue;
+		update_entity_orientation(e, &o->orientation);
+		update_entity_scale(e, o->scale);
+		if (o->material)
+			update_entity_material(e, o->material);
+		if (o->no_cast_shadow)
+			update_entity_shadow_casting(e, 0);
+	}
+
+	render_skybox(cx);
+	render_entities(cx);
+	remove_all_entity(cx);
+
+	draw_hud();
+	if (helpmode)
+		draw_help_screen();
+
+	graph_dev_end_frame();
+	glFinish();
+	SDL_GL_SwapWindow(screen);
+	frame_counter++;
+}
+
+static void quit(int code)
+{
+	SDL_Quit();
+	exit(code);
+}
+
+static void handle_key_down(SDL_Keysym *keysym)
+{
+	static int fullscreen = 0;
+
+	switch (keysym->sym) {
+	case SDLK_F1:
+		helpmode = !helpmode;
+		break;
+	case SDLK_F10:
+		reload_shaders = 1;
+		break;
+	case SDLK_F11:
+		fullscreen = !fullscreen;
+		SDL_SetWindowFullscreen(screen, fullscreen * SDL_WINDOW_FULLSCREEN_DESKTOP);
+		break;
+	case SDLK_ESCAPE:
+		quit(0);
+		break;
+	case SDLK_PAUSE:
+		display_frame_stats = (display_frame_stats + 1) % 3;
+		break;
+	case SDLK_BACKSLASH:
+		graph_dev_shadow_map_enabled = !graph_dev_shadow_map_enabled;
+		break;
+	case SDLK_0:
+		shadow_debug_mode = 0;
+		graph_dev_set_shadow_debug(shadow_debug_mode);
+		break;
+	case SDLK_1:
+		shadow_debug_mode = 1;
+		graph_dev_set_shadow_debug(shadow_debug_mode);
+		break;
+	case SDLK_2:
+		shadow_debug_mode = 2;
+		graph_dev_set_shadow_debug(shadow_debug_mode);
+		break;
+	case SDLK_LEFTBRACKET:
+		set_shadow_map_max_distance(get_shadow_map_max_distance() * 0.8);
+		break;
+	case SDLK_RIGHTBRACKET:
+		set_shadow_map_max_distance(get_shadow_map_max_distance() * 1.25);
+		break;
+	case SDLK_MINUS:
+	case SDLK_KP_MINUS:
+		set_shadow_map_num_cascades(get_shadow_map_num_cascades() - 1);
+		break;
+	case SDLK_EQUALS:
+	case SDLK_KP_PLUS:
+		set_shadow_map_num_cascades(get_shadow_map_num_cascades() + 1);
+		break;
+	case SDLK_SEMICOLON:
+		set_shadow_map_split_lambda(get_shadow_map_split_lambda() - 0.05);
+		break;
+	case SDLK_QUOTE:
+		set_shadow_map_split_lambda(get_shadow_map_split_lambda() + 0.05);
+		break;
+	case SDLK_COMMA:
+		adjust_shadow_bias(-0.5, 0.0);
+		break;
+	case SDLK_PERIOD:
+		adjust_shadow_bias(0.5, 0.0);
+		break;
+	case SDLK_n:
+		graph_dev_set_shadow_pcf_radius(graph_dev_get_shadow_pcf_radius() - 1);
+		break;
+	case SDLK_m:
+		graph_dev_set_shadow_pcf_radius(graph_dev_get_shadow_pcf_radius() + 1);
+		break;
+	case SDLK_k:
+		graph_dev_set_shadow_blend(graph_dev_get_shadow_blend() - 0.02);
+		break;
+	case SDLK_l:
+		graph_dev_set_shadow_blend(graph_dev_get_shadow_blend() + 0.02);
+		break;
+	default:
+		break;
+	}
+}
+
+static void set_mouse_look(int active)
+{
+	if (active == mouse_look_active)
+		return;
+	mouse_look_active = active;
+	SDL_SetRelativeMouseMode(active ? SDL_TRUE : SDL_FALSE);
+	mouse_accum_dx = 0.0;
+	mouse_accum_dy = 0.0;
+}
+
+static void process_events(void)
+{
+	SDL_Event event;
+
+	while (SDL_PollEvent(&event)) {
+		switch (event.type) {
+		case SDL_KEYDOWN:
+			handle_key_down(&event.key.keysym);
+			break;
+		case SDL_QUIT:
+			quit(0);
+			break;
+		case SDL_WINDOWEVENT:
+			if (event.window.event == SDL_WINDOWEVENT_RESIZED ||
+				event.window.event == SDL_WINDOWEVENT_SIZE_CHANGED) {
+				if (window_manager_can_constrain_aspect_ratio) {
+					SDL_GL_GetDrawableSize(screen,
+						&real_screen_width, &real_screen_height);
+				} else {
+					int width, height;
+
+					SDL_GL_GetDrawableSize(screen, &width, &height);
+					if (real_screen_width != width || real_screen_height != height) {
+						real_screen_width = width;
+						real_screen_height = height;
+						time_to_set_window_size = 1;
+					}
+				}
+				sng_set_screen_size(real_screen_width, real_screen_height);
+			}
+			break;
+		case SDL_MOUSEBUTTONDOWN:
+			if (event.button.button == SDL_BUTTON_RIGHT)
+				set_mouse_look(1);
+			break;
+		case SDL_MOUSEBUTTONUP:
+			if (event.button.button == SDL_BUTTON_RIGHT)
+				set_mouse_look(0);
+			break;
+		case SDL_MOUSEMOTION:
+			if (mouse_look_active) {
+				mouse_accum_dx += event.motion.xrel;
+				mouse_accum_dy += event.motion.yrel;
+			}
+			break;
+		}
+	}
+}
+
+static void enable_sdl_fullscreen_sanity(void)
+{
+	setenv("SDL_VIDEO_MINIMIZE_ON_FOCUS_LOSS", "0", 0);
+}
+
+static void figure_aspect_ratio(SDL_Window *window, int requested_x, int requested_y,
+				int *x, int *y)
+{
+	SDL_GL_GetDrawableSize(window, &real_screen_width, &real_screen_height);
+	*x = real_screen_width;
+	*y = real_screen_height;
+	screen_offset_x = 0;
+	screen_offset_y = 0;
+
+	int sw, sh, monitors;
+	SDL_Rect bounds;
+
+	monitors = SDL_GetNumVideoDisplays();
+	if (monitors < 0)
+		return;
+
+	SDL_GetDisplayBounds(0, &bounds);
+	sw = bounds.w;
+	sh = bounds.h;
+	screen_offset_x = bounds.x;
+	screen_offset_y = bounds.y;
+
+	if (requested_x <= 0 || requested_y <= 0) {
+		*x = sw;
+		*y = sh;
+		return;
+	}
+	if (requested_x > requested_y) {
+		*x = sw;
+		*y = (int) ((double) sw * (double) requested_y / (double) requested_x);
+		if (*y > sh) {
+			*y = sh;
+			*x = (int) ((double) sh * (double) requested_x / (double) requested_y);
+		}
+	} else {
+		*y = sh;
+		*x = (int) ((double) sh * (double) requested_x / (double) requested_y);
+		if (*x > sw) {
+			*y = (int) ((double) sw * (double) requested_y / (double) requested_x);
+			*x = sw;
+		}
+	}
+}
+
+static void maybe_resize_window(SDL_Window *window)
+{
+	if (window_manager_can_constrain_aspect_ratio)
+		return;
+	if (!time_to_set_window_size)
+		return;
+	SDL_SetWindowSize(window, real_screen_width, real_screen_height);
+	time_to_set_window_size = 0;
+}
+
+static void setup_skybox(const char *skybox_prefix)
+{
+	const char *asset_dir = "share/snis/textures";
+	int i;
+	char filename[6][PATH_MAX + 1];
+
+	for (i = 0; i < 6; i++)
+		snprintf(filename[i], sizeof(filename[i]), "%s/%s%d.png", asset_dir, skybox_prefix, i);
+
+	graph_dev_load_skybox_texture(filename[3], filename[1], filename[4],
+					filename[5], filename[0], filename[2]);
+}
+
+int main(int argc, char *argv[])
+{
+	setlocale(LC_ALL, "C");
+	program = argc >= 0 ? argv[0] : "shadow_lab";
+	enable_sdl_fullscreen_sanity();
+
+	if (SDL_Init(SDL_INIT_VIDEO) < 0) {
+		fprintf(stderr, "SDL_Init failed: %s\n", SDL_GetError());
+		quit(1);
+	}
+
+	uint32_t windowFlags = SDL_WINDOW_RESIZABLE;
+	graph_dev_prepare_for_window(&windowFlags);
+
+	screen = SDL_CreateWindow("Shadow Lab", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
+			3 * SCREEN_WIDTH / 4, 3 * SCREEN_HEIGHT / 4, SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
+	if (!screen) {
+		fprintf(stderr, "SDL_CreateWindow failed: %s\n", SDL_GetError());
+		quit(1);
+	}
+
+	graph_dev_create_context(screen);
+
+	figure_aspect_ratio(screen, -1, -1, &real_screen_width, &real_screen_height);
+	SCREEN_WIDTH = real_screen_width;
+	SCREEN_HEIGHT = real_screen_height;
+	real_screen_width = (3 * real_screen_width) / 4;
+	real_screen_height = (3 * real_screen_height) / 4;
+	original_aspect_ratio = (float) real_screen_width / (float) real_screen_height;
+
+	sng_setup_colors(NULL);
+	snis_typefaces_init();
+	sng_set_font_family(0);
+	graph_dev_setup(NULL);
+	setup_skybox("orange-haze");
+
+	SDL_SetWindowSize(screen, real_screen_width, real_screen_height);
+	window_manager_can_constrain_aspect_ratio =
+		(constrain_aspect_ratio_via_xlib(screen, SCREEN_WIDTH, SCREEN_HEIGHT) == 0);
+	sng_set_extent_size(SCREEN_WIDTH, SCREEN_HEIGHT);
+	sng_set_screen_size(real_screen_width, real_screen_height);
+	sng_set_clip_window(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+
+	build_scene();
+
+	const double maxTimeBehind = 0.5;
+	double delta = 1.0 / (double) FPS;
+	unsigned long frame = 0;
+	double currentTime = time_now_double();
+	double nextTime = currentTime + delta;
+
+	while (1) {
+		currentTime = time_now_double();
+		if (currentTime - nextTime > maxTimeBehind)
+			nextTime = currentTime;
+
+		if (currentTime >= nextTime) {
+			nextTime += delta;
+			process_events();
+			draw_screen();
+			if (frame % FPS == 0) {
+				graph_dev_reload_changed_textures();
+				graph_dev_reload_changed_cubemap_textures();
+			}
+			if (reload_shaders) {
+				graph_dev_reload_all_shaders();
+				reload_shaders = 0;
+			}
+			frame++;
+		} else {
+			double timeToSleep = nextTime - currentTime;
+			if (timeToSleep > 0)
+				sleep_double(timeToSleep);
+		}
+		maybe_resize_window(screen);
+	}
+	return 0;
+}

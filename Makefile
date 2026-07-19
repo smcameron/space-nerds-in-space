@@ -603,6 +603,14 @@ _SDLCLIENTOBJS=shader.o ${GRAPH_OBJS} snis_graph.o mesh_viewer.o \
 				snis_xwindows_hacks.o workqueue.o pthread_util.o
 SDLCLIENTOBJS=$(patsubst %,$(OD)/%,${_SDLCLIENTOBJS}) mikktspace/mikktspace.o
 
+_SHADOWLABOBJS=shader.o ${GRAPH_OBJS} snis_graph.o shadow_lab.o \
+				png_utils.o turret_aimer.o quat.o mathutils.o mesh.o \
+				mtwist.o material.o entity.o snis_alloc.o matrix.o stacktrace.o stl_parser.o \
+				snis_typeface.o snis_font.o string-utils.o ui_colors.o liang-barsky.o \
+				bline.o vec4.o open-simplex-noise.o replacement_assets.o \
+				snis_xwindows_hacks.o workqueue.o pthread_util.o
+SHADOWLABOBJS=$(patsubst %,$(OD)/%,${_SHADOWLABOBJS}) mikktspace/mikktspace.o
+
 _NEBULANOISEOBJS=nebula_noise.o open-simplex-noise.o png_utils.o
 NEBULANOISEOBJS=$(patsubst %,$(OD)/%,${_NEBULANOISEOBJS})
 NEBULANOISELIBS=-lm ${PNGLIBS}
@@ -640,7 +648,7 @@ SERVERPROGS=bin/ssgl_server bin/snis_server bin/snis_multiverse
 BINPROGS=${SERVERPROGS} bin/snis_client bin/snis_text_to_speech.sh \
 		bin/lsssgl bin/snis_arduino bin/snis_launcher \
 		bin/snis_update_assets bin/update_assets_from_launcher.sh
-UTILPROGS=util/mask_clouds util/cloud-mask-normalmap bin/mesh_viewer util/sample_image_colors \
+UTILPROGS=util/mask_clouds util/cloud-mask-normalmap bin/mesh_viewer bin/shadow_lab util/sample_image_colors \
 		util/generate_solarsystem_positions bin/nebula_noise bin/generate_skybox bin/earthlike
 
 # model directory
@@ -779,6 +787,7 @@ SNISCLIENTDBGCOMPILE=$(ECHO) '  COMPILE' $< && $(CC) -DSNIS_CLIENT_DATA ${MYCFLA
 
 CLIENTLINK=$(ECHO) '  LINK' $@ && $(CC) ${MYCFLAGS} ${SNDFLAGS} -o $@ ${X11LIBS} ${SDLCFLAGS} ${CLIENTOBJS} ${SDLLIBS} ${LIBS} ${SNDLIBS} $(LDFLAGS) ${LIBOPUS} ${X11LIBS}
 SDLCLIENTLINK=$(ECHO) '  LINK' $@ && $(CC) ${MYCFLAGS} ${SNDFLAGS} -o $@ ${SDLCFLAGS} ${SDLCLIENTOBJS} ${SDLLIBS} ${LIBS} ${SNDLIBS} $(LDFLAGS) ${X11LIBS}
+SHADOWLABLINK=$(ECHO) '  LINK' $@ && $(CC) ${MYCFLAGS} ${SNDFLAGS} -o $@ ${SDLCFLAGS} ${SHADOWLABOBJS} ${SDLLIBS} ${LIBS} ${SNDLIBS} $(LDFLAGS) ${X11LIBS}
 SERVERLINK=$(ECHO) '  LINK' $@ && $(CC) ${MYCFLAGS} -o $@ ${SERVEROBJS} ${SERVERLIBS} $(LDFLAGS)
 MULTIVERSELINK=$(ECHO) '  LINK' $@ && $(CC) ${MYCFLAGS} -o $@ ${MULTIVERSEOBJS} ${MULTIVERSELIBS} $(LDFLAGS)
 NEBULANOISELINK=$(ECHO) '  LINK' $@ && $(CC) ${MYCFLAGS} -o $@ ${NEBULANOISEOBJS} ${NEBULANOISELIBS} $(LDFLAGS)
@@ -830,7 +839,7 @@ ${BIN}:
 
 # Rule to prevent common error of trying to "make foo" instead of "make bin/foo"
 BINARY_NAMES=snis_client snis_server snis_limited_client snis_multiverse nebula_noise \
-	generate_skybox ssgl_server lsssgl snis_text_to_speech.sh mesh_viewer earthlike \
+	generate_skybox ssgl_server lsssgl snis_text_to_speech.sh mesh_viewer shadow_lab earthlike \
 	infinite-taunt names stl_parser test_key_value_parser test-matrix test-space-partition \
 	test-marshal test-quat test-fleet test-mtwist device-io-sample-1 test-nonuniform-random-sampler \
 	test-commodities test-obj-parser test_solarsystem_config test_crater print_ship_attributes \
@@ -1008,6 +1017,9 @@ $(OD)/snis_client.o:	snis_client.c Makefile build_info.h ui_colors.h snis_ui.h $
 $(OD)/mesh_viewer.o:	mesh_viewer.c Makefile build_info.h ${ODT}
 	$(Q)$(SDLCOMPILE)
 
+$(OD)/shadow_lab.o:	shadow_lab.c Makefile build_info.h ${ODT}
+	$(Q)$(SDLCOMPILE)
+
 # simplexnoise1234.o:	simplexnoise1234.c Makefile build_info.h
 #	$(Q)$(COMPILE)
 
@@ -1105,6 +1117,9 @@ bin/snis_text_to_speech.sh:	snis_text_to_speech.sh ${BIN}
 
 bin/mesh_viewer:	${SDLCLIENTOBJS} ${SSGL} Makefile ${BIN}
 	$(Q)$(SDLCLIENTLINK)
+
+bin/shadow_lab:	${SHADOWLABOBJS} ${SSGL} Makefile ${BIN}
+	$(Q)$(SHADOWLABLINK)
 
 bin/earthlike:	${OD}/earthlike.o ${ELOBJS} Makefile ${BIN}
 	$(Q)$(ELLINK)
