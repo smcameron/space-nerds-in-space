@@ -615,7 +615,7 @@ static char *help_text =
 	"  - G / H            SUN RADIUS SMALLER / LARGER (WIDER RADIUS = WIDER PENUMBRA)\n"
 	"  - T / Y            SUN BLOOM DIMMER / BRIGHTER\n"
 	"  - C / V            SUN BLOOM FALLOFF LOOSER / TIGHTER\n"
-	"  - Z / X            SUN ON-SCREEN SIZE SMALLER / LARGER\n"
+	"  - Z / X            SUN BLOOM SCREEN EXTENT SMALLER / LARGER (DISC STAYS PHYSICAL)\n"
 	"  - J                CYCLE SUN COLOUR (WHITE/YELLOW/AMBER/ORANGE/ORANGERED)\n"
 	"  - P                CYCLE PLANET SHADE MODE: SOFT / BINARY / OFF\n"
 	"  - B                TOGGLE THE PER-SHIP SHADE PANEL\n"
@@ -706,7 +706,7 @@ static void draw_hud(void)
 		radians_to_degrees(sun_azimuth), radians_to_degrees(sun_elevation),
 		sun_distance, sun_radius);
 	sng_abs_xy_draw_string(buffer, TINY_FONT, 10, y); y += dy;
-	snprintf(buffer, sizeof(buffer), "SUN BLOOM INTENSITY %.2f FALLOFF %.2f SIZE %.2f",
+	snprintf(buffer, sizeof(buffer), "SUN BLOOM INTENSITY %.2f FALLOFF %.2f SCREEN EXTENT %.2f",
 		sun_material.sun.bloom_intensity, sun_material.sun.bloom_falloff, sun_bloom_apparent);
 	sng_abs_xy_draw_string(buffer, TINY_FONT, 10, y); y += dy;
 	if (planet_index >= 0) {
