@@ -3718,9 +3718,9 @@ static void setup_textured_shader(const char *basename, const char *defines,
 	memset(shader, 0xff, sizeof(*shader)); /* set all attributes to -1 */
 	shader->meta.program_id = &shader->program_id; /* Work around what that memset just did. */
 
-	char vert_header[512];
+	char vert_header[1024];
 	snprintf(vert_header, sizeof(vert_header), "%s\n#define INCLUDE_VS 1\n", defines);
-	char frag_header[512];
+	char frag_header[1024];
 	snprintf(frag_header, sizeof(frag_header), "%s\n#define INCLUDE_FS 1\n", defines);
 
 	char shader_filename[PATH_MAX];
