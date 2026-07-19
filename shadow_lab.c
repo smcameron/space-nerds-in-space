@@ -84,6 +84,7 @@ struct scene_object {
 };
 static struct scene_object scene[MAX_SCENE_OBJECTS];
 static int scene_object_count;
+static int planet_index = -1; /* scene[] index of the planet, for live radius/distance edits */
 static float scene_scale = 1000.0; /* characteristic spacing of the scene, set at load time */
 
 /* Free-fly camera. */
@@ -254,9 +255,13 @@ static void build_scene(void)
 	 * ships and sweeps them through the penumbra into the umbra. */
 	planet_mesh = mesh_unit_spherified_cube(64);
 	if (planet_mesh) {
-		float planet_r = spacing * 6.0;
+		float planet_r = spacing * 4.0;
+		/* Place the planet well below the tight ship cluster.  The penumbra's spatial width
+		 * grows with the ships' distance from the planet, so a far cluster + modest planet
+		 * gives a wide, soft terminator without needing an extreme sun; hugging the planet
+		 * gives a near-sharp edge.  Radius and distance are adjustable live (keys 3/4, 5/6). */
 		struct scene_object *p = add_scene_object(SCENE_PLANET, planet_mesh, NULL,
-				0.0, -planet_r - spacing * 1.5, spacing * 0.5, planet_r, GRAY50);
+				0.0, -spacing * 16.0, 0.0, planet_r, GRAY50);
 		if (p) {
 			p->color = GRAY50;
 			/* The planet must not cast into the CSM depth map: planet->ship shadowing is
@@ -264,20 +269,24 @@ static void build_scene(void)
 			 * shadow map otherwise sweeps across and blacks out whole ships as the cascades
 			 * refit.  This matches the plan's "planets cast never" policy. */
 			p->no_cast_shadow = 1;
+			planet_index = (int) (p - scene);
 			scene_center = p->pos; /* orbit the sun about the planet */
-			sun_distance = planet_r * 12.0;
+			sun_distance = spacing * 32.0;
+			sun_radius = spacing * 8.0; /* ~14 deg angular radius: a nicely wide penumbra */
 		}
 	}
 
-	/* Ships arranged in a rough diamond so shadows fall across neighbors and the planet. */
+	/* A tight ship cluster so several ships sit inside the penumbra band at once and shadow
+	 * each other for the CSM test. */
 	add_scene_object(SCENE_SHIP, ship_mesh[0 % nships], NULL, 0.0, 0.0, 0.0, 1.0, WHITE);
 	if (nships > 1)
-		add_scene_object(SCENE_SHIP, ship_mesh[1], NULL, spacing, spacing * 0.3, 0.0, 1.0, AMBER);
+		add_scene_object(SCENE_SHIP, ship_mesh[1], NULL, spacing * 0.6, spacing * 0.2, 0.0, 1.0, AMBER);
 	if (nships > 2)
-		add_scene_object(SCENE_SHIP, ship_mesh[2], NULL, -spacing * 0.6, spacing * 0.1, spacing, 1.0, WHITE);
+		add_scene_object(SCENE_SHIP, ship_mesh[2], NULL,
+				-spacing * 0.4, spacing * 0.05, spacing * 0.6, 1.0, WHITE);
 	if (nships > 3)
-		add_scene_object(SCENE_SHIP, ship_mesh[3], NULL, spacing * 0.4, -spacing * 0.4,
-					spacing * 1.4, 1.0, WHITE);
+		add_scene_object(SCENE_SHIP, ship_mesh[3], NULL,
+				spacing * 0.25, -spacing * 0.25, spacing * 0.8, 1.0, WHITE);
 
 	move_speed = spacing * 0.02;
 
@@ -436,6 +445,9 @@ static char *help_text =
 	"  - G / H            SUN RADIUS SMALLER / LARGER (WIDER RADIUS = WIDER PENUMBRA)\n"
 	"  - P                CYCLE PLANET SHADE MODE: SOFT / BINARY / OFF\n"
 	"  - B                TOGGLE THE PER-SHIP SHADE PANEL\n"
+	"  - 3 / 4            PLANET RADIUS SMALLER / LARGER\n"
+	"  - 5 / 6            PLANET CLOSER / FARTHER FROM THE SHIP CLUSTER\n"
+	"                     (FARTHER + TIGHTER CLUSTER = WIDER, SOFTER PENUMBRA)\n"
 	"  - LOWER THE SUN (DOWN ARROW) TO SWING THE PLANET BETWEEN IT AND THE SHIPS.\n"
 	"    NOTE: in_shade ONLY DARKENS A SHIP'S SUN-FACING SIDE, WHICH IS HIDDEN\n"
 	"    BEHIND THE PLANET IN A DIRECT UMBRA TEST - THE DARKENING YOU SEE THERE IS\n"
@@ -514,6 +526,13 @@ static void draw_hud(void)
 		radians_to_degrees(sun_azimuth), radians_to_degrees(sun_elevation),
 		sun_distance, sun_radius);
 	sng_abs_xy_draw_string(buffer, TINY_FONT, 10, y); y += dy;
+	if (planet_index >= 0) {
+		float pr = scene[planet_index].scale;
+		float pd = -scene[planet_index].pos.v.y; /* cluster sits near the origin */
+
+		snprintf(buffer, sizeof(buffer), "PLANET R %.0f  DIST %.0f  GAP %.0f", pr, pd, pd - pr);
+		sng_abs_xy_draw_string(buffer, TINY_FONT, 10, y); y += dy;
+	}
 	snprintf(buffer, sizeof(buffer), "PLANET SHADE MODE %s   DEEPEST %s (%.2f)",
 		planet_shade_mode_name[planet_shade_mode], state, deepest_planet_shade);
 	sng_abs_xy_draw_string(buffer, TINY_FONT, 10, y); y += dy;
@@ -736,6 +755,28 @@ static void handle_key_down(SDL_Keysym *keysym)
 		break;
 	case SDLK_b:
 		show_shade_panel = !show_shade_panel;
+		break;
+	case SDLK_3: /* planet smaller */
+		if (planet_index >= 0)
+			scene[planet_index].scale *= 0.9;
+		break;
+	case SDLK_4: /* planet larger */
+		if (planet_index >= 0)
+			scene[planet_index].scale *= 1.111111;
+		break;
+	case SDLK_5: /* planet closer to the ship cluster */
+		if (planet_index >= 0) {
+			scene[planet_index].pos.v.y += scene_scale * 2.0;
+			if (scene[planet_index].pos.v.y > -scene[planet_index].scale * 1.5)
+				scene[planet_index].pos.v.y = -scene[planet_index].scale * 1.5;
+			scene_center = scene[planet_index].pos;
+		}
+		break;
+	case SDLK_6: /* planet farther from the ship cluster */
+		if (planet_index >= 0) {
+			scene[planet_index].pos.v.y -= scene_scale * 2.0;
+			scene_center = scene[planet_index].pos;
+		}
 		break;
 	default:
 		break;
