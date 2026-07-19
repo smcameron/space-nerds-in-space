@@ -91,6 +91,12 @@ static float scene_scale = 1000.0; /* characteristic spacing of the scene, set a
 static union vec3 cam_pos = { { -2500.0, 1500.0, -2500.0 } };
 static union quat cam_orientation = IDENTITY_QUAT_INITIALIZER;
 static float move_speed; /* per-frame translation, derived from scene_scale */
+
+/* Possession: the fly controls drive either the free camera (slot -1) or one ship, which the
+ * camera then chases.  Tab cycles free camera -> ship 0 -> ... -> free camera. */
+static int controlled_slot = -1;
+static int ship_slots[MAX_SCENE_OBJECTS]; /* scene[] indices of ships, in possess order */
+static int ship_slot_count;
 static float mouse_sensitivity = 0.003;
 static float roll_rate = 0.02;
 static float ambient_light = 0.015; /* match snis_client's default so lighting mirrors the game */
@@ -249,19 +255,20 @@ static void build_scene(void)
 		spacing = 1200.0;
 	scene_scale = spacing;
 
-	/* A big flat-shaded planet below the ships to act as a shadow-receiving surface, and the
-	 * occluder for the analytic planet umbra/penumbra test.  The ships sit just above its
-	 * surface, so lowering the sun (down arrow) swings the planet between the sun and the
-	 * ships and sweeps them through the penumbra into the umbra. */
+	/* The occluder for the analytic planet umbra/penumbra test: lowering the sun (down arrow)
+	 * swings it between the sun and the ship cluster, sweeping the ships through the penumbra
+	 * into the umbra. */
 	planet_mesh = mesh_unit_spherified_cube(64);
 	if (planet_mesh) {
-		float planet_r = spacing * 4.0;
-		/* Place the planet well below the tight ship cluster.  The penumbra's spatial width
-		 * grows with the ships' distance from the planet, so a far cluster + modest planet
-		 * gives a wide, soft terminator without needing an extreme sun; hugging the planet
-		 * gives a near-sharp edge.  Radius and distance are adjustable live (keys 3/4, 5/6). */
+		float planet_r = spacing * 0.42;
+		/* Place the planet below the tight ship cluster.  The penumbra's spatial width grows
+		 * with the ships' distance from the planet, so a cluster set a couple of ship-spacings
+		 * off a small planet gives a wide, soft terminator that the cluster spans, without an
+		 * extreme sun; hugging the planet gives a near-sharp edge.  These values balance a
+		 * roughly plausible scale against seeing the effect; all are adjustable live (planet
+		 * radius/distance 3/4, 5/6; sun distance/radius U/O, G/H). */
 		struct scene_object *p = add_scene_object(SCENE_PLANET, planet_mesh, NULL,
-				0.0, -spacing * 16.0, 0.0, planet_r, GRAY50);
+				0.0, -spacing * 2.33, 0.0, planet_r, GRAY50);
 		if (p) {
 			p->color = GRAY50;
 			/* The planet must not cast into the CSM depth map: planet->ship shadowing is
@@ -271,8 +278,8 @@ static void build_scene(void)
 			p->no_cast_shadow = 1;
 			planet_index = (int) (p - scene);
 			scene_center = p->pos; /* orbit the sun about the planet */
-			sun_distance = spacing * 32.0;
-			sun_radius = spacing * 8.0; /* ~14 deg angular radius: a nicely wide penumbra */
+			sun_distance = spacing * 36.7; /* ~44000 at the default cluster scale */
+			sun_radius = spacing * 3.33;   /* ~4000: sun ~5 deg angular radius */
 		}
 	}
 
@@ -287,6 +294,13 @@ static void build_scene(void)
 	if (nships > 3)
 		add_scene_object(SCENE_SHIP, ship_mesh[3], NULL,
 				spacing * 0.25, -spacing * 0.25, spacing * 0.8, 1.0, WHITE);
+
+	/* Record the ships, in order, as the possess-cycle slots. */
+	ship_slot_count = 0;
+	for (i = 0; i < scene_object_count; i++) {
+		if (scene[i].kind == SCENE_SHIP && ship_slot_count < MAX_SCENE_OBJECTS)
+			ship_slots[ship_slot_count++] = i;
+	}
 
 	move_speed = spacing * 0.02;
 
@@ -342,60 +356,80 @@ static void adjust_shadow_bias(float dfactor, float dunits)
 	graph_dev_set_shadow_bias(factor, units);
 }
 
-static void camera_rotate_local(float ax, float ay, float az, float angle)
+static void quat_rotate_local(union quat *o, float ax, float ay, float az, float angle)
 {
 	union quat delta;
 
 	if (angle == 0.0)
 		return;
 	quat_init_axis(&delta, ax, ay, az, angle);
-	quat_mul(&cam_orientation, &cam_orientation, &delta);
-	quat_normalize_self(&cam_orientation);
+	quat_mul(o, o, &delta);
+	quat_normalize_self(o);
 }
 
-static void update_camera(void)
+/* 6-DOF fly controls (WASD/RF translate, Q/E roll, right-drag mouse yaw/pitch) applied to the
+ * given position and orientation.  Used for the free camera and for a possessed ship. */
+static void fly_controls(union vec3 *pos, union quat *orientation, float speed)
 {
 	const Uint8 *keys = SDL_GetKeyboardState(NULL);
 	union vec3 fwd, up, right, step;
-	float speed = move_speed;
 	float roll = 0.0;
 
 	if (keys[SDL_SCANCODE_LSHIFT] || keys[SDL_SCANCODE_RSHIFT])
 		speed *= 5.0;
 
-	/* Mouse look (accumulated while the right button is held): yaw about local up,
-	 * pitch about local right. */
-	camera_rotate_local(0.0, 1.0, 0.0, -mouse_accum_dx * mouse_sensitivity);
-	camera_rotate_local(0.0, 0.0, 1.0, -mouse_accum_dy * mouse_sensitivity);
+	quat_rotate_local(orientation, 0.0, 1.0, 0.0, -mouse_accum_dx * mouse_sensitivity);
+	quat_rotate_local(orientation, 0.0, 0.0, 1.0, -mouse_accum_dy * mouse_sensitivity);
 	mouse_accum_dx = 0.0;
 	mouse_accum_dy = 0.0;
 
-	/* Roll about local forward. */
 	if (keys[SDL_SCANCODE_Q])
 		roll += roll_rate;
 	if (keys[SDL_SCANCODE_E])
 		roll -= roll_rate;
-	camera_rotate_local(1.0, 0.0, 0.0, roll);
+	quat_rotate_local(orientation, 1.0, 0.0, 0.0, roll);
 
-	camera_basis(&cam_orientation, &fwd, &up, &right);
+	camera_basis(orientation, &fwd, &up, &right);
 
 	if (keys[SDL_SCANCODE_W]) {
-		step = fwd; vec3_mul_self(&step, speed); vec3_add_self(&cam_pos, &step);
+		step = fwd; vec3_mul_self(&step, speed); vec3_add_self(pos, &step);
 	}
 	if (keys[SDL_SCANCODE_S]) {
-		step = fwd; vec3_mul_self(&step, -speed); vec3_add_self(&cam_pos, &step);
+		step = fwd; vec3_mul_self(&step, -speed); vec3_add_self(pos, &step);
 	}
 	if (keys[SDL_SCANCODE_D]) {
-		step = right; vec3_mul_self(&step, speed); vec3_add_self(&cam_pos, &step);
+		step = right; vec3_mul_self(&step, speed); vec3_add_self(pos, &step);
 	}
 	if (keys[SDL_SCANCODE_A]) {
-		step = right; vec3_mul_self(&step, -speed); vec3_add_self(&cam_pos, &step);
+		step = right; vec3_mul_self(&step, -speed); vec3_add_self(pos, &step);
 	}
 	if (keys[SDL_SCANCODE_R]) {
-		step = up; vec3_mul_self(&step, speed); vec3_add_self(&cam_pos, &step);
+		step = up; vec3_mul_self(&step, speed); vec3_add_self(pos, &step);
 	}
 	if (keys[SDL_SCANCODE_F]) {
-		step = up; vec3_mul_self(&step, -speed); vec3_add_self(&cam_pos, &step);
+		step = up; vec3_mul_self(&step, -speed); vec3_add_self(pos, &step);
+	}
+}
+
+/* Drive whatever is currently controlled.  Free camera: fly the camera directly.  A possessed
+ * ship: fly the ship and chase it from behind and above with the camera locked to its heading,
+ * so flying a ship through the planet's penumbra updates its analytic shade live. */
+static void update_camera(void)
+{
+	if (controlled_slot < 0 || controlled_slot >= ship_slot_count) {
+		fly_controls(&cam_pos, &cam_orientation, move_speed);
+		return;
+	}
+	{
+		struct scene_object *ship = &scene[ship_slots[controlled_slot]];
+		union vec3 fwd, up, right, offset;
+
+		fly_controls(&ship->pos, &ship->orientation, move_speed);
+		camera_basis(&ship->orientation, &fwd, &up, &right);
+		cam_pos = ship->pos;
+		offset = fwd; vec3_mul_self(&offset, -scene_scale * 3.0); vec3_add_self(&cam_pos, &offset);
+		offset = up; vec3_mul_self(&offset, scene_scale * 1.0); vec3_add_self(&cam_pos, &offset);
+		cam_orientation = ship->orientation;
 	}
 }
 
@@ -432,13 +466,15 @@ static void update_sun(void)
 static char *help_text =
 	"SHADOW LAB\n\n"
 	"  A sandbox for iterating on the cascaded shadow mapping shaders.\n\n"
-	"  CAMERA (FREE-FLY)\n"
+	"  FLY CONTROLS (FREE CAMERA, OR A POSSESSED SHIP)\n"
 	"  - W / S            MOVE FORWARD / BACK\n"
 	"  - A / D            STRAFE LEFT / RIGHT\n"
 	"  - R / F            MOVE UP / DOWN\n"
 	"  - Q / E            ROLL LEFT / RIGHT\n"
 	"  - HOLD RIGHT MOUSE MOVE MOUSE TO LOOK AROUND\n"
-	"  - SHIFT            MOVE FASTER\n\n"
+	"  - SHIFT            MOVE FASTER\n"
+	"  - TAB              POSSESS NEXT SHIP / RETURN TO FREE CAMERA\n"
+	"                     (FLY A SHIP THROUGH THE PENUMBRA; THE CAMERA CHASES IT)\n\n"
 	"  SUN (ANALYTIC PLANET UMBRA / PENUMBRA)\n"
 	"  - ARROW KEYS       ORBIT SUN AZIMUTH / ELEVATION (SHIFT = FASTER)\n"
 	"  - U / O            SUN DISTANCE CLOSER / FARTHER\n"
@@ -520,7 +556,12 @@ static void draw_hud(void)
 
 	sng_set_foreground(WHITE);
 	sng_abs_xy_draw_string("SHADOW LAB - F1 FOR HELP", TINY_FONT, 10, y); y += dy;
-	snprintf(buffer, sizeof(buffer), "CAM (%.0f, %.0f, %.0f)", cam_pos.v.x, cam_pos.v.y, cam_pos.v.z);
+	if (controlled_slot < 0)
+		snprintf(buffer, sizeof(buffer), "CONTROL FREE CAMERA (TAB)   CAM (%.0f, %.0f, %.0f)",
+			cam_pos.v.x, cam_pos.v.y, cam_pos.v.z);
+	else
+		snprintf(buffer, sizeof(buffer), "CONTROL SHIP %d (TAB)   CAM (%.0f, %.0f, %.0f)",
+			controlled_slot, cam_pos.v.x, cam_pos.v.y, cam_pos.v.z);
 	sng_abs_xy_draw_string(buffer, TINY_FONT, 10, y); y += dy;
 	snprintf(buffer, sizeof(buffer), "SUN AZ %.0f EL %.0f DIST %.0f RADIUS %.0f",
 		radians_to_degrees(sun_azimuth), radians_to_degrees(sun_elevation),
@@ -755,6 +796,12 @@ static void handle_key_down(SDL_Keysym *keysym)
 		break;
 	case SDLK_b:
 		show_shade_panel = !show_shade_panel;
+		break;
+	case SDLK_TAB:
+		/* Cycle: free camera -> ship 0 -> ... -> last ship -> free camera. */
+		controlled_slot++;
+		if (controlled_slot >= ship_slot_count)
+			controlled_slot = -1;
 		break;
 	case SDLK_3: /* planet smaller */
 		if (planet_index >= 0)
