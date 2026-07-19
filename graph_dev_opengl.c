@@ -179,17 +179,43 @@ int graph_dev_atmosphere_ring_shadows = 1;
 
 /* Cascaded shadow mapping state (Phase 1: a single shadow map). */
 int graph_dev_shadow_map_enabled = 1;
-static int graph_dev_shadow_map_debug; /* 1 to visualize the shadow factor (SNIS_SHADOW_DEBUG) */
+static int graph_dev_shadow_map_debug; /* shadow debug visualization mode (SNIS_SHADOW_DEBUG) */
+/* PCF kernel half-width used for the nearest cascade; each farther cascade steps down by
+ * one (so near shadows get a wide kernel, far shadows a narrow one, keeping the penumbra
+ * roughly constant in world space).  0 = single 2x2 hardware tap. */
+static int graph_dev_shadow_pcf_radius = 1;
+/* Cross-cascade blend band width as a fraction of each cascade's far distance (0 disables). */
+static float graph_dev_shadow_blend = 0.1f;
+/* Slope-scaled polygon-offset bias applied while rendering the shadow map depth pass. */
+static float shadow_polygon_offset_factor = 2.0f;
+static float shadow_polygon_offset_units = 4.0f;
 #define SHADOW_MAP_TEXTURE_SIZE 2048
+#define MAX_SHADOW_CASCADES 4
+/* Largest PCF kernel half-width the lit shaders will loop over (radius 3 -> 7x7). */
+#define CSM_PCF_MAX_RADIUS 3
+#define CSM_STR_(x) #x
+#define CSM_STR(x) CSM_STR_(x)
+/* Injected into the lit shaders so C and GLSL agree on the cascade array size, shadow map
+ * resolution (for PCF texel steps), and the maximum PCF loop bound. */
+#define SHADOW_CASCADES_HEADER \
+	"#define MAX_SHADOW_CASCADES " CSM_STR(MAX_SHADOW_CASCADES) "\n" \
+	"#define SHADOW_MAP_SIZE " CSM_STR(SHADOW_MAP_TEXTURE_SIZE) "\n" \
+	"#define CSM_PCF_MAX_RADIUS " CSM_STR(CSM_PCF_MAX_RADIUS) "\n"
 /* Texture unit 2 is unused by the lit shaders (0=albedo, 1=emit, 3=normalmap) and is
  * within the BIND_TEXTURE cache range (units 0-3). */
 #define SHADOW_MAP_TEXTURE_UNIT GL_TEXTURE2
 static GLuint shadow_map_fbo;
-static GLuint shadow_map_texture;
+static GLuint shadow_map_texture; /* GL_TEXTURE_2D_ARRAY, one layer per cascade */
 static int shadow_map_ready; /* 1 if a shadow map was rendered this frame */
-static struct mat44d shadow_world_to_lightclip;
+static int shadow_map_num_cascades = MAX_SHADOW_CASCADES;
+static struct mat44d shadow_cascade_w2l[MAX_SHADOW_CASCADES]; /* world -> cascade light clip */
+static struct mat44d shadow_current_w2l; /* the cascade currently being rendered */
+/* Per-frame cascade split far-distances (view space) for depth-based cascade selection. */
+static float shadow_cascade_split_far[MAX_SHADOW_CASCADES];
 static GLint saved_shadow_viewport[4];
 static GLint saved_shadow_fbo;
+static void upload_shadow_receive_uniforms(GLint shadow_mvp_id, GLint num_cascades_id,
+	GLint shadow_map_id, const struct mat44d *model);
 
 static const char *default_shader_directory = "share/snis/shader";
 static char shader_directory[PATH_MAX];
@@ -830,8 +856,14 @@ struct graph_dev_gl_single_color_lit_shader {
 	GLint ambient_id;
 	GLint filmic_tonemapping_id;
 	GLint tonemapping_gain_id;
-	GLint shadow_mvp_id;   /* model -> light clip space (USE_CSM only) */
-	GLint shadow_map_id;   /* shadow map sampler (USE_CSM only) */
+	GLint shadow_mvp_id;         /* model -> light clip space, per cascade (USE_CSM only) */
+	GLint shadow_map_id;         /* shadow map array sampler (USE_CSM only) */
+	GLint num_cascades_id;       /* number of active cascades (USE_CSM only) */
+	GLint shadow_map_enabled_id; /* 1 when a shadow map is available this frame (USE_CSM only) */
+	GLint shadow_debug_id;       /* shadow debug visualization mode (USE_CSM only) */
+	GLint shadow_pcf_radius_id;  /* PCF kernel half-width for the nearest cascade (USE_CSM only) */
+	GLint cascade_split_far_id;  /* per-cascade view-space far distances (USE_CSM only) */
+	GLint shadow_blend_id;       /* cross-cascade blend band fraction (USE_CSM only) */
 };
 
 /* Depth-only shader used to render the shadow map from the light's viewpoint. */
@@ -1002,10 +1034,14 @@ struct graph_dev_gl_textured_shader {
 	GLint texture_width; /* Used by planetary lightning shader */
 
 	/* Cascaded shadow mapping (USE_CSM variants only). */
-	GLint shadow_mvp_id;         /* model -> light clip space */
-	GLint shadow_map_id;         /* shadow map sampler */
+	GLint shadow_mvp_id;         /* model -> light clip space, per cascade */
+	GLint shadow_map_id;         /* shadow map array sampler */
+	GLint num_cascades_id;       /* number of active cascades */
 	GLint shadow_map_enabled_id; /* 1 when a shadow map is available this frame */
 	GLint shadow_debug_id;       /* 1 to visualize the shadow factor */
+	GLint shadow_pcf_radius_id;  /* PCF kernel half-width for the nearest cascade */
+	GLint cascade_split_far_id;  /* per-cascade view-space far distances */
+	GLint shadow_blend_id;       /* cross-cascade blend band fraction */
 };
 
 struct clip_sphere_data {
@@ -1714,17 +1750,16 @@ static void graph_dev_raster_texture(struct raster_texture_params *p)
 		glUniform1i(shader->shadow_map_enabled_id, use_shadow);
 		if (shader->shadow_debug_id >= 0)
 			glUniform1i(shader->shadow_debug_id, graph_dev_shadow_map_debug);
-		if (use_shadow) {
-			struct mat44d shadow_mvp_d;
-			struct mat44 shadow_mvp;
-
-			mat44_product_ddd(&shadow_world_to_lightclip, p->model, &shadow_mvp_d);
-			mat44_convert_df(&shadow_mvp_d, &shadow_mvp);
-			glUniformMatrix4fv(shader->shadow_mvp_id, 1, GL_FALSE, &shadow_mvp.m[0][0]);
-
-			BIND_TEXTURE(SHADOW_MAP_TEXTURE_UNIT, GL_TEXTURE_2D, shadow_map_texture);
-			glUniform1i(shader->shadow_map_id, SHADOW_MAP_TEXTURE_UNIT - GL_TEXTURE0);
-		}
+		if (shader->shadow_pcf_radius_id >= 0)
+			glUniform1i(shader->shadow_pcf_radius_id, graph_dev_shadow_pcf_radius);
+		if (shader->cascade_split_far_id >= 0)
+			glUniform1fv(shader->cascade_split_far_id, shadow_map_num_cascades,
+				shadow_cascade_split_far);
+		if (shader->shadow_blend_id >= 0)
+			glUniform1f(shader->shadow_blend_id, graph_dev_shadow_blend);
+		if (use_shadow)
+			upload_shadow_receive_uniforms(shader->shadow_mvp_id, shader->num_cascades_id,
+				shader->shadow_map_id, p->model);
 	}
 
 	glEnableVertexAttribArray(shader->vertex_position_id);
@@ -1845,15 +1880,19 @@ static void graph_dev_raster_single_color_lit(const struct mat44 *mat_mvp, const
 	glUniform1f(shader->tonemapping_gain_id, tonemapping_gain);
 
 	if (use_shadow) {
-		struct mat44d shadow_mvp_d;
-		struct mat44 shadow_mvp;
-
-		mat44_product_ddd(&shadow_world_to_lightclip, model, &shadow_mvp_d);
-		mat44_convert_df(&shadow_mvp_d, &shadow_mvp);
-		glUniformMatrix4fv(shader->shadow_mvp_id, 1, GL_FALSE, &shadow_mvp.m[0][0]);
-
-		BIND_TEXTURE(SHADOW_MAP_TEXTURE_UNIT, GL_TEXTURE_2D, shadow_map_texture);
-		glUniform1i(shader->shadow_map_id, SHADOW_MAP_TEXTURE_UNIT - GL_TEXTURE0);
+		if (shader->shadow_map_enabled_id >= 0)
+			glUniform1i(shader->shadow_map_enabled_id, use_shadow);
+		if (shader->shadow_debug_id >= 0)
+			glUniform1i(shader->shadow_debug_id, graph_dev_shadow_map_debug);
+		if (shader->shadow_pcf_radius_id >= 0)
+			glUniform1i(shader->shadow_pcf_radius_id, graph_dev_shadow_pcf_radius);
+		if (shader->cascade_split_far_id >= 0)
+			glUniform1fv(shader->cascade_split_far_id, shadow_map_num_cascades,
+				shadow_cascade_split_far);
+		if (shader->shadow_blend_id >= 0)
+			glUniform1f(shader->shadow_blend_id, graph_dev_shadow_blend);
+		upload_shadow_receive_uniforms(shader->shadow_mvp_id, shader->num_cascades_id,
+			shader->shadow_map_id, model);
 	}
 
 	glEnableVertexAttribArray(shader->vertex_position_id);
@@ -3366,9 +3405,15 @@ void graph_dev_clear_depth_bit(void)
 	PROFILE_ZONE_END();
 }
 
-void graph_dev_set_shadow_light_matrix(const struct mat44d *world_to_lightclip)
+void graph_dev_set_shadow_cascades(const struct mat44d *world_to_lightclip, int n)
 {
-	shadow_world_to_lightclip = *world_to_lightclip;
+	int i;
+
+	if (n > MAX_SHADOW_CASCADES)
+		n = MAX_SHADOW_CASCADES;
+	shadow_map_num_cascades = n;
+	for (i = 0; i < n; i++)
+		shadow_cascade_w2l[i] = world_to_lightclip[i];
 }
 
 void graph_dev_shadow_map_begin(void)
@@ -3385,18 +3430,30 @@ void graph_dev_shadow_map_begin(void)
 
 	glBindFramebuffer(GL_FRAMEBUFFER, shadow_map_fbo);
 	glViewport(0, 0, SHADOW_MAP_TEXTURE_SIZE, SHADOW_MAP_TEXTURE_SIZE);
-	glClear(GL_DEPTH_BUFFER_BIT);
 
 	glEnable(GL_DEPTH_TEST);
 	glDepthMask(GL_TRUE);
 	glEnable(GL_CULL_FACE);
 	/* Slope-scaled depth bias to keep surfaces from shadowing themselves (acne). */
 	glEnable(GL_POLYGON_OFFSET_FILL);
-	glPolygonOffset(2.0f, 4.0f);
+	glPolygonOffset(shadow_polygon_offset_factor, shadow_polygon_offset_units);
 
 	activate_shader(&shadow_depth_shader);
 
 	PROFILE_ZONE_END();
+}
+
+void graph_dev_shadow_map_set_cascade(int cascade)
+{
+	if (!graph_dev_shadow_map_enabled)
+		return;
+	if (cascade < 0 || cascade >= shadow_map_num_cascades)
+		return;
+
+	/* Render subsequent casters into this cascade's texture-array layer. */
+	glFramebufferTextureLayer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, shadow_map_texture, 0, cascade);
+	glClear(GL_DEPTH_BUFFER_BIT);
+	shadow_current_w2l = shadow_cascade_w2l[cascade];
 }
 
 void graph_dev_draw_shadow_caster(const struct mat44d *model, struct mesh *m)
@@ -3410,7 +3467,7 @@ void graph_dev_draw_shadow_caster(const struct mat44d *model, struct mesh *m)
 	struct mat44d shadow_mvp_d;
 	struct mat44 shadow_mvp;
 
-	mat44_product_ddd(&shadow_world_to_lightclip, model, &shadow_mvp_d);
+	mat44_product_ddd(&shadow_current_w2l, model, &shadow_mvp_d);
 	mat44_convert_df(&shadow_mvp_d, &shadow_mvp);
 
 	glUniformMatrix4fv(shadow_depth_shader.shadow_mvp_id, 1, GL_FALSE, &shadow_mvp.m[0][0]);
@@ -3440,6 +3497,83 @@ void graph_dev_shadow_map_end(void)
 		saved_shadow_viewport[2], saved_shadow_viewport[3]);
 
 	shadow_map_ready = 1;
+}
+
+void graph_dev_set_shadow_debug(int mode)
+{
+	graph_dev_shadow_map_debug = mode;
+}
+
+void graph_dev_set_shadow_pcf_radius(int radius)
+{
+	if (radius < 0)
+		radius = 0;
+	if (radius > CSM_PCF_MAX_RADIUS)
+		radius = CSM_PCF_MAX_RADIUS;
+	graph_dev_shadow_pcf_radius = radius;
+}
+
+int graph_dev_get_shadow_pcf_radius(void)
+{
+	return graph_dev_shadow_pcf_radius;
+}
+
+void graph_dev_set_shadow_cascade_splits(const float *split_far, int n)
+{
+	int i;
+
+	if (n > MAX_SHADOW_CASCADES)
+		n = MAX_SHADOW_CASCADES;
+	for (i = 0; i < n; i++)
+		shadow_cascade_split_far[i] = split_far[i];
+}
+
+void graph_dev_set_shadow_blend(float fraction)
+{
+	if (fraction < 0.0f)
+		fraction = 0.0f;
+	if (fraction > 0.5f)
+		fraction = 0.5f;
+	graph_dev_shadow_blend = fraction;
+}
+
+float graph_dev_get_shadow_blend(void)
+{
+	return graph_dev_shadow_blend;
+}
+
+void graph_dev_set_shadow_bias(float factor, float units)
+{
+	shadow_polygon_offset_factor = factor;
+	shadow_polygon_offset_units = units;
+}
+
+void graph_dev_get_shadow_bias(float *factor, float *units)
+{
+	if (factor)
+		*factor = shadow_polygon_offset_factor;
+	if (units)
+		*units = shadow_polygon_offset_units;
+}
+
+/* Upload the per-object cascade shadow matrices (world_to_lightclip[k] * model) and bind
+ * the shadow map array for a lit shader that receives shadows. */
+static void upload_shadow_receive_uniforms(GLint shadow_mvp_id, GLint num_cascades_id,
+	GLint shadow_map_id, const struct mat44d *model)
+{
+	struct mat44 mvp[MAX_SHADOW_CASCADES];
+	int i;
+
+	for (i = 0; i < shadow_map_num_cascades; i++) {
+		struct mat44d mvp_d;
+		mat44_product_ddd(&shadow_cascade_w2l[i], model, &mvp_d);
+		mat44_convert_df(&mvp_d, &mvp[i]);
+	}
+	glUniformMatrix4fv(shadow_mvp_id, shadow_map_num_cascades, GL_FALSE, &mvp[0].m[0][0]);
+	if (num_cascades_id >= 0)
+		glUniform1i(num_cascades_id, shadow_map_num_cascades);
+	BIND_TEXTURE(SHADOW_MAP_TEXTURE_UNIT, GL_TEXTURE_2D_ARRAY, shadow_map_texture);
+	glUniform1i(shadow_map_id, SHADOW_MAP_TEXTURE_UNIT - GL_TEXTURE0);
 }
 
 void graph_dev_draw_line(float x1, float y1, float x2, float y2)
@@ -3596,7 +3730,8 @@ static void setup_single_color_lit_shader(struct graph_dev_gl_single_color_lit_s
 				"single-color-lit-per-vertex.vert",
 				"single-color-lit-per-vertex.frag",
 				with_shadow ?
-				UNIVERSAL_SHADER_HEADER FILMIC_TONEMAPPING "#define USE_CSM 1\n" :
+				UNIVERSAL_SHADER_HEADER FILMIC_TONEMAPPING
+					SHADOW_CASCADES_HEADER "#define USE_CSM 1\n" :
 				UNIVERSAL_SHADER_HEADER FILMIC_TONEMAPPING);
 
 	/* create the VAO for this shader */
@@ -3619,9 +3754,19 @@ static void setup_single_color_lit_shader(struct graph_dev_gl_single_color_lit_s
 
 	shader->shadow_mvp_id = -1;
 	shader->shadow_map_id = -1;
+	shader->num_cascades_id = -1;
+	shader->shadow_map_enabled_id = -1;
+	shader->shadow_debug_id = -1;
+	shader->shadow_pcf_radius_id = -1;
 	if (with_shadow) {
 		shader->shadow_mvp_id = glGetUniformLocation(shader->program_id, "u_ShadowMVP");
 		shader->shadow_map_id = glGetUniformLocation(shader->program_id, "u_ShadowMap");
+		shader->num_cascades_id = glGetUniformLocation(shader->program_id, "u_NumCascades");
+		shader->shadow_map_enabled_id = glGetUniformLocation(shader->program_id, "u_ShadowMapEnabled");
+		shader->shadow_debug_id = glGetUniformLocation(shader->program_id, "u_ShadowDebug");
+		shader->shadow_pcf_radius_id = glGetUniformLocation(shader->program_id, "u_ShadowPcfRadius");
+		shader->cascade_split_far_id = glGetUniformLocation(shader->program_id, "u_CascadeSplitFar");
+		shader->shadow_blend_id = glGetUniformLocation(shader->program_id, "u_ShadowBlend");
 	}
 }
 
@@ -3642,23 +3787,25 @@ static void setup_shadow_depth_shader(struct graph_dev_gl_shadow_depth_shader *s
 /* Create the depth-texture framebuffer used to render the shadow map. */
 static void setup_shadow_map_fbo(void)
 {
+	/* One depth texture array, one layer per cascade. */
 	glGenTextures(1, &shadow_map_texture);
-	glBindTexture(GL_TEXTURE_2D, shadow_map_texture);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT24,
-		SHADOW_MAP_TEXTURE_SIZE, SHADOW_MAP_TEXTURE_SIZE, 0,
+	glBindTexture(GL_TEXTURE_2D_ARRAY, shadow_map_texture);
+	glTexImage3D(GL_TEXTURE_2D_ARRAY, 0, GL_DEPTH_COMPONENT24,
+		SHADOW_MAP_TEXTURE_SIZE, SHADOW_MAP_TEXTURE_SIZE, MAX_SHADOW_CASCADES, 0,
 		GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-	/* Configure hardware depth comparison so the sampler2DShadow returns a
+	glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	/* Configure hardware depth comparison so the sampler2DArrayShadow returns a
 	 * 0..1 lit factor (with GL_LINEAR this gives cheap 2x2 PCF). */
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_REF_TO_TEXTURE);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_FUNC, GL_LEQUAL);
+	glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_REF_TO_TEXTURE);
+	glTexParameteri(GL_TEXTURE_2D_ARRAY, GL_TEXTURE_COMPARE_FUNC, GL_LEQUAL);
 
 	glGenFramebuffers(1, &shadow_map_fbo);
 	glBindFramebuffer(GL_FRAMEBUFFER, shadow_map_fbo);
-	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, shadow_map_texture, 0);
+	/* A specific layer is attached per-cascade at render time. */
+	glFramebufferTextureLayer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, shadow_map_texture, 0, 0);
 	/* Depth-only: no color attachments. */
 	glDrawBuffer(GL_NONE);
 	glReadBuffer(GL_NONE);
@@ -3789,8 +3936,12 @@ static void setup_textured_shader(const char *basename, const char *defines,
 	/* Cascaded shadow mapping uniforms; -1 (ignored) for non-USE_CSM variants. */
 	shader->shadow_mvp_id = glGetUniformLocation(shader->program_id, "u_ShadowMVP");
 	shader->shadow_map_id = glGetUniformLocation(shader->program_id, "u_ShadowMap");
+	shader->num_cascades_id = glGetUniformLocation(shader->program_id, "u_NumCascades");
 	shader->shadow_map_enabled_id = glGetUniformLocation(shader->program_id, "u_ShadowMapEnabled");
 	shader->shadow_debug_id = glGetUniformLocation(shader->program_id, "u_ShadowDebug");
+	shader->shadow_pcf_radius_id = glGetUniformLocation(shader->program_id, "u_ShadowPcfRadius");
+	shader->cascade_split_far_id = glGetUniformLocation(shader->program_id, "u_CascadeSplitFar");
+	shader->shadow_blend_id = glGetUniformLocation(shader->program_id, "u_ShadowBlend");
 }
 
 static void setup_textured_cubemap_shader(const char *basename, int use_normal_map,
@@ -4392,19 +4543,21 @@ void graph_dev_reload_all_shaders(void)
 	setup_textured_shader("textured-with-sphere-shadow-per-pixel", UNIVERSAL_SHADER_HEADER FILMIC_TONEMAPPING,
 				&textured_with_sphere_shadow_shader);
 	setup_textured_shader("textured-and-lit-per-pixel",
-				UNIVERSAL_SHADER_HEADER FILMIC_TONEMAPPING
+				UNIVERSAL_SHADER_HEADER FILMIC_TONEMAPPING SHADOW_CASCADES_HEADER
 				"#define USE_CSM 1\n", &textured_lit_shader);
 	setup_textured_shader("textured-and-lit-per-pixel",
-				UNIVERSAL_SHADER_HEADER FILMIC_TONEMAPPING
+				UNIVERSAL_SHADER_HEADER FILMIC_TONEMAPPING SHADOW_CASCADES_HEADER
 				"#define USE_EMIT_MAP\n"
 				"#define USE_CSM 1\n",
 				&textured_lit_emit_shader);
 	setup_textured_shader("textured-and-lit-per-pixel", UNIVERSAL_SHADER_HEADER FILMIC_TONEMAPPING
+				SHADOW_CASCADES_HEADER
 				"#define USE_EMIT_MAP\n"
 				"#define USE_NORMAL_MAP 1\n"
 				"#define USE_CSM 1\n",
 				&textured_lit_emit_normal_shader);
 	setup_textured_shader("textured-and-lit-per-pixel", UNIVERSAL_SHADER_HEADER FILMIC_TONEMAPPING
+				SHADOW_CASCADES_HEADER
 				"#define USE_NORMAL_MAP 1\n"
 				"#define USE_CSM 1\n",
 				&textured_lit_normal_shader);

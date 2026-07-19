@@ -71,6 +71,14 @@ GLOBAL void camera_get_parameters(struct entity_context *cx,
 GLOBAL void camera_set_orientation(struct entity_context *cx, union quat *q);
 GLOBAL void set_lighting(struct entity_context *cx, double x, double y, double z);
 GLOBAL void set_ambient_light(struct entity_context *cx, float ambient);
+
+/* Cascaded-shadow-map coverage tunables (global). */
+GLOBAL void set_shadow_map_max_distance(float distance);
+GLOBAL float get_shadow_map_max_distance(void);
+GLOBAL void set_shadow_map_num_cascades(int n);
+GLOBAL int get_shadow_map_num_cascades(void);
+GLOBAL void set_shadow_map_split_lambda(float lambda);
+GLOBAL float get_shadow_map_split_lambda(void);
 GLOBAL void entity_init_fake_stars(struct entity_context *cx, int nstars, float radius);
 GLOBAL void entity_free_fake_stars(struct entity_context *cx);
 GLOBAL void set_renderer(struct entity_context *cx, int renderer);

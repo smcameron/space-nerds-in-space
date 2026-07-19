@@ -3384,13 +3384,19 @@ void graph_dev_clear_depth_bit(void)
 
 /* Cascaded shadow mapping is not implemented on the GLES backend; these are
  * no-op stubs so the shared entity.c links, and shadows are simply disabled. */
-void graph_dev_set_shadow_light_matrix(const struct mat44d *world_to_lightclip)
+void graph_dev_set_shadow_cascades(const struct mat44d *world_to_lightclip, int n)
 {
 	(void) world_to_lightclip;
+	(void) n;
 }
 
 void graph_dev_shadow_map_begin(void)
 {
+}
+
+void graph_dev_shadow_map_set_cascade(int cascade)
+{
+	(void) cascade;
 }
 
 void graph_dev_draw_shadow_caster(const struct mat44d *model, struct mesh *m)
@@ -3401,6 +3407,51 @@ void graph_dev_draw_shadow_caster(const struct mat44d *model, struct mesh *m)
 
 void graph_dev_shadow_map_end(void)
 {
+}
+
+void graph_dev_set_shadow_debug(int mode)
+{
+	(void) mode;
+}
+
+void graph_dev_set_shadow_bias(float factor, float units)
+{
+	(void) factor;
+	(void) units;
+}
+
+void graph_dev_get_shadow_bias(float *factor, float *units)
+{
+	if (factor)
+		*factor = 0.0f;
+	if (units)
+		*units = 0.0f;
+}
+
+void graph_dev_set_shadow_pcf_radius(int radius)
+{
+	(void) radius;
+}
+
+int graph_dev_get_shadow_pcf_radius(void)
+{
+	return 0;
+}
+
+void graph_dev_set_shadow_cascade_splits(const float *split_far, int n)
+{
+	(void) split_far;
+	(void) n;
+}
+
+void graph_dev_set_shadow_blend(float fraction)
+{
+	(void) fraction;
+}
+
+float graph_dev_get_shadow_blend(void)
+{
+	return 0.0f;
 }
 
 void graph_dev_draw_line(float x1, float y1, float x2, float y2)

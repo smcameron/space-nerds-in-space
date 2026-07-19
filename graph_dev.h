@@ -53,14 +53,37 @@ extern void graph_dev_clear_depth_bit(void);
 
 /* Cascaded shadow mapping.  graph_dev_shadow_map_enabled is 1 to render and
  * receive shadow maps, 0 to disable (e.g. the GLES backend).  The caller
- * (render_entities) computes a world-space -> light clip-space matrix, then
- * renders each shadow caster's model matrix into the shadow map between
- * graph_dev_shadow_map_begin() and graph_dev_shadow_map_end(). */
+ * (render_entities) computes one world-space -> light clip-space matrix per
+ * cascade and passes them via graph_dev_set_shadow_cascades(); it then renders
+ * the casters into each cascade between graph_dev_shadow_map_begin() and
+ * graph_dev_shadow_map_end(), selecting the target cascade layer with
+ * graph_dev_shadow_map_set_cascade() before drawing that cascade's casters. */
 extern int graph_dev_shadow_map_enabled;
-extern void graph_dev_set_shadow_light_matrix(const struct mat44d *world_to_lightclip);
+extern void graph_dev_set_shadow_cascades(const struct mat44d *world_to_lightclip, int n);
 extern void graph_dev_shadow_map_begin(void);
+extern void graph_dev_shadow_map_set_cascade(int cascade);
 extern void graph_dev_draw_shadow_caster(const struct mat44d *model, struct mesh *m);
 extern void graph_dev_shadow_map_end(void);
+/* Shadow debug visualization: 0 = off, 1 = shadow factor (white lit / black shadowed),
+ * 2 = cascade index tint.  Normally driven by the SNIS_SHADOW_DEBUG env var; this lets
+ * tools (e.g. shadow_lab) change it at runtime. */
+extern void graph_dev_set_shadow_debug(int mode);
+/* Depth-pass slope-scaled polygon-offset bias used when rendering the shadow map.
+ * Exposed so shadow-acne / peter-panning can be tuned interactively.  Defaults 2.0, 4.0. */
+extern void graph_dev_set_shadow_bias(float factor, float units);
+extern void graph_dev_get_shadow_bias(float *factor, float *units);
+/* PCF kernel half-width when sampling the shadow map: 0 = single (2x2 hardware) tap,
+ * 1 = 3x3, 2 = 5x5, up to a shader-defined maximum.  Softens edges and hides
+ * undersampling on coarse far cascades. */
+extern void graph_dev_set_shadow_pcf_radius(int radius);
+extern int graph_dev_get_shadow_pcf_radius(void);
+/* Per-frame cascade split far-distances (view space), used for depth-based cascade
+ * selection and cross-cascade blending in the lit shaders. */
+extern void graph_dev_set_shadow_cascade_splits(const float *split_far, int n);
+/* Cross-cascade blend band as a fraction (0..~0.3) of each cascade's far distance;
+ * 0 disables blending (hard cascade boundaries). */
+extern void graph_dev_set_shadow_blend(float fraction);
+extern float graph_dev_get_shadow_blend(void);
 
 #define GRAPH_DEV_RENDER_FAR_TO_NEAR 0
 #define GRAPH_DEV_RENDER_NEAR_TO_FAR 1

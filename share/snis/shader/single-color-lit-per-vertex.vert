@@ -16,10 +16,12 @@ in vec3 a_Normal;   // Per-vertex normal information we will pass in.
 out vec3 v_Color;      // This will be passed into the fragment shader.
 
 #ifdef USE_CSM
-uniform mat4 u_ShadowMVP;  // Maps model space to the light's clip space.
-out vec4 v_ShadowCoord;    // Fragment position in the light's clip space.
+uniform mat4 u_ShadowMVP[MAX_SHADOW_CASCADES];  // Maps model space to each cascade's clip space.
+uniform int u_NumCascades;
+out vec4 v_ShadowCoord[MAX_SHADOW_CASCADES];     // Fragment position in each cascade's clip space.
 out float v_LightLevel;    // Unshadowed diffuse light level.
 out vec3 v_BaseColor;      // Unlit object color.
+out float v_ViewDepth;     // Positive view-space distance, for cascade selection.
 #endif
 
 void main()                // The entry point for our vertex shader.
@@ -51,7 +53,9 @@ void main()                // The entry point for our vertex shader.
 	// contribution by the per-fragment shadow factor.
 	v_LightLevel = dotV;
 	v_BaseColor = u_Color;
-	v_ShadowCoord = u_ShadowMVP * a_Position;
+	v_ViewDepth = -modelViewVertex.z;
+	for (int csm_i = 0; csm_i < u_NumCascades; csm_i++)
+		v_ShadowCoord[csm_i] = u_ShadowMVP[csm_i] * a_Position;
 #endif
 
 	// gl_Position is a special variable used to store the final position.

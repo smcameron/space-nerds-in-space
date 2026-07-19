@@ -893,17 +893,24 @@ static void update_entity_child_state(struct entity *e)
 }
 
 
-/* Shadow "camera" fits its orthographic frustum to the view frustum, but the far
- * plane used for shadowing is clamped to this distance so that shadow texels stay
- * usefully small.  Cascades (a later phase) will extend the useful range. */
-static float shadow_map_max_distance = 4000.0;
+/* Must not exceed MAX_SHADOW_CASCADES in graph_dev_opengl.c. */
+#define MAX_ENTITY_SHADOW_CASCADES 4
 
-/* Phase 1 cascaded shadow mapping: fit a single orthographic shadow frustum to the
- * camera view frustum (clamped to shadow_map_max_distance) and build the world-space
- * -> light clip-space matrix.  The light source is whatever set_lighting() configured
- * (cx->light) -- the sun at the world origin in normal play -- and is treated as
- * directional over the shadowed region.  Returns 1 on success, 0 if degenerate. */
-static int compute_shadow_light_matrix(struct entity_context *cx, struct mat44d *world_to_lightclip)
+/* The shadow cascades cover the view frustum only out to this distance, beyond which
+ * objects neither cast nor receive shadows (keeps shadow texels usefully small). */
+static float shadow_map_max_distance = 4000.0;
+/* Number of shadow cascades and the split-scheme blend (0 = uniform spacing, 1 = fully
+ * logarithmic).  Logarithmic packs resolution near the camera where it matters most. */
+static int shadow_map_num_cascades = MAX_ENTITY_SHADOW_CASCADES;
+static float shadow_map_split_lambda = 0.75;
+
+/* Fit an orthographic shadow frustum to the slice of the camera view frustum between
+ * near_d and far_d, and build the world-space -> light clip-space matrix for that cascade.
+ * The light source is whatever set_lighting() configured (cx->light) -- the sun at the
+ * world origin in normal play -- and is treated as directional over the slice.  Returns
+ * 1 on success, 0 if degenerate. */
+static int compute_shadow_light_matrix(struct entity_context *cx, float near_d, float far_d,
+	struct mat44d *world_to_lightclip)
 {
 	struct camera_info *cam = &cx->camera;
 	union vec3 cpos, look, up0, n, u, v;
@@ -924,10 +931,6 @@ static int compute_shadow_light_matrix(struct entity_context *cx, struct mat44d 
 	vec3_normalize_self(&v);
 
 	float aspect = (float) cam->xvpixels / (float) cam->yvpixels;
-	float near_d = cam->near;
-	float far_d = cam->far;
-	if (far_d > shadow_map_max_distance)
-		far_d = shadow_map_max_distance;
 	if (far_d <= near_d)
 		return 0;
 
@@ -1045,35 +1048,78 @@ static int compute_shadow_light_matrix(struct entity_context *cx, struct mat44d 
 	return 1;
 }
 
-/* Render all triangle-mesh shadow casters into the shadow map from the light's view. */
+/* Compute the cascade split distances (the far edge of each cascade) using the practical
+ * split scheme: a blend of logarithmic and uniform spacing over [near, far]. */
+static void compute_cascade_splits(float near_d, float far_d, int num_cascades, float *split_far)
+{
+	int i;
+
+	for (i = 0; i < num_cascades; i++) {
+		float p = (float) (i + 1) / (float) num_cascades;
+		float log_split = near_d * powf(far_d / near_d, p);
+		float uni_split = near_d + (far_d - near_d) * p;
+		split_far[i] = shadow_map_split_lambda * log_split +
+				(1.0f - shadow_map_split_lambda) * uni_split;
+	}
+}
+
+/* Render all triangle-mesh shadow casters into each cascade of the shadow map. */
 static void render_shadow_map(struct entity_context *cx)
 {
-	struct mat44d world_to_lightclip;
-	int j, n;
+	struct mat44d cascade_w2l[MAX_ENTITY_SHADOW_CASCADES];
+	float split_far[MAX_ENTITY_SHADOW_CASCADES];
+	int num_cascades, valid_cascades;
+	int j, k, n;
 
 	if (!graph_dev_shadow_map_enabled)
 		return;
-	if (!compute_shadow_light_matrix(cx, &world_to_lightclip))
+
+	num_cascades = shadow_map_num_cascades;
+	if (num_cascades > MAX_ENTITY_SHADOW_CASCADES)
+		num_cascades = MAX_ENTITY_SHADOW_CASCADES;
+	if (num_cascades < 1)
+		num_cascades = 1;
+
+	float near_d = cx->camera.near;
+	float far_d = cx->camera.far;
+	if (far_d > shadow_map_max_distance)
+		far_d = shadow_map_max_distance;
+	if (far_d <= near_d)
 		return;
 
-	graph_dev_set_shadow_light_matrix(&world_to_lightclip);
+	compute_cascade_splits(near_d, far_d, num_cascades, split_far);
+
+	/* Build a light matrix for each cascade slice.  A degenerate slice aborts shadows. */
+	float slice_near = near_d;
+	for (k = 0; k < num_cascades; k++) {
+		if (!compute_shadow_light_matrix(cx, slice_near, split_far[k], &cascade_w2l[k]))
+			return;
+		slice_near = split_far[k];
+	}
+	valid_cascades = num_cascades;
+
+	graph_dev_set_shadow_cascades(cascade_w2l, valid_cascades);
+	graph_dev_set_shadow_cascade_splits(split_far, valid_cascades);
 	graph_dev_shadow_map_begin();
 
-	n = snis_object_pool_highest_object(cx->entity_pool);
-	for (j = 0; j <= n; j++) {
-		if (!snis_object_pool_is_allocated(cx->entity_pool, j))
-			continue;
-		struct entity *e = &cx->entity_list[j];
-		if (e->m == NULL || e->m->geometry_mode != MESH_GEOMETRY_TRIANGLES)
-			continue;
-		if (e->no_cast_shadow)
-			continue;
-		update_entity_child_state(e);
-		if (!e->visible)
-			continue;
-		struct entity_transform transform;
-		calculate_model_matrices(&cx->camera, &cx->camera.frustum, e, &transform);
-		graph_dev_draw_shadow_caster(&transform.m, e->m);
+	for (k = 0; k < valid_cascades; k++) {
+		graph_dev_shadow_map_set_cascade(k);
+		n = snis_object_pool_highest_object(cx->entity_pool);
+		for (j = 0; j <= n; j++) {
+			if (!snis_object_pool_is_allocated(cx->entity_pool, j))
+				continue;
+			struct entity *e = &cx->entity_list[j];
+			if (e->m == NULL || e->m->geometry_mode != MESH_GEOMETRY_TRIANGLES)
+				continue;
+			if (e->no_cast_shadow)
+				continue;
+			update_entity_child_state(e);
+			if (!e->visible)
+				continue;
+			struct entity_transform transform;
+			calculate_model_matrices(&cx->camera, &cx->camera.frustum, e, &transform);
+			graph_dev_draw_shadow_caster(&transform.m, e->m);
+		}
 	}
 
 	graph_dev_shadow_map_end();
@@ -1470,6 +1516,48 @@ void set_lighting(struct entity_context *cx, double x, double y, double z)
 void set_ambient_light(struct entity_context *cx, float ambient)
 {
 	cx->ambient = ambient;
+}
+
+/* Cascaded-shadow-map coverage tunables (global, not per-context).  Exposed so tools like
+ * shadow_lab (and eventually the client's tweakable-variables table) can adjust the
+ * near-crisp / far-coarse tradeoff at runtime. */
+void set_shadow_map_max_distance(float distance)
+{
+	if (distance > 0.0f)
+		shadow_map_max_distance = distance;
+}
+
+float get_shadow_map_max_distance(void)
+{
+	return shadow_map_max_distance;
+}
+
+void set_shadow_map_num_cascades(int n)
+{
+	if (n < 1)
+		n = 1;
+	if (n > MAX_ENTITY_SHADOW_CASCADES)
+		n = MAX_ENTITY_SHADOW_CASCADES;
+	shadow_map_num_cascades = n;
+}
+
+int get_shadow_map_num_cascades(void)
+{
+	return shadow_map_num_cascades;
+}
+
+void set_shadow_map_split_lambda(float lambda)
+{
+	if (lambda < 0.0f)
+		lambda = 0.0f;
+	if (lambda > 1.0f)
+		lambda = 1.0f;
+	shadow_map_split_lambda = lambda;
+}
+
+float get_shadow_map_split_lambda(void)
+{
+	return shadow_map_split_lambda;
 }
 
 struct mesh *entity_get_mesh(struct entity *e)
