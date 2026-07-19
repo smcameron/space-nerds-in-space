@@ -114,6 +114,10 @@ void main()
 			cc = vec3(0.3, 0.3, 1.0);
 		else if (csm_cascade == 3)
 			cc = vec3(1.0, 1.0, 0.3);
+		else if (csm_cascade == 4)
+			cc = vec3(0.3, 1.0, 1.0);
+		else if (csm_cascade == 5)
+			cc = vec3(1.0, 0.3, 1.0);
 		else
 			cc = vec3(0.15);
 		f_FragColor = vec4(cc * max(lit, 0.4), 1.0);

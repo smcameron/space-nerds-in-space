@@ -637,7 +637,7 @@ static char *help_text =
 	"  - F10              RELOAD SHADERS\n"
 	"  - F11              TOGGLE FULLSCREEN\n"
 	"  - ESC              QUIT\n\n"
-	"  CASCADE-INDEX TINT: red=0 (nearest) green=1 blue=2 yellow=3; 4/5 and none=gray\n\n"
+	"  CASCADE-INDEX TINT: red=0 (nearest) green=1 blue=2 yellow=3 cyan=4 magenta=5 gray=none\n\n"
 	"PRESS F1 TO EXIT HELP\n";
 
 static void draw_help_text(const char *text)

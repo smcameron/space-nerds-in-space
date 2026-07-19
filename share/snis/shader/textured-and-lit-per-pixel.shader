@@ -241,7 +241,7 @@ uniform float u_SpecularIntensity; /* between 0 and 1, 1 is very shiny, 0 is fla
 				f_FragColor = vec4(vec3(shadow), 1.0);
 			} else if (u_ShadowDebug == 2) {
 				/* Cascade index: red=0 (nearest), green=1, blue=2, yellow=3,
-				 * gray = outside all cascades.  Darkened where shadowed. */
+				 * cyan=4, magenta=5, gray = outside all cascades.  Darkened where shadowed. */
 				vec3 cc;
 				if (csm_cascade == 0)
 					cc = vec3(1.0, 0.3, 0.3);
@@ -251,6 +251,10 @@ uniform float u_SpecularIntensity; /* between 0 and 1, 1 is very shiny, 0 is fla
 					cc = vec3(0.3, 0.3, 1.0);
 				else if (csm_cascade == 3)
 					cc = vec3(1.0, 1.0, 0.3);
+				else if (csm_cascade == 4)
+					cc = vec3(0.3, 1.0, 1.0);
+				else if (csm_cascade == 5)
+					cc = vec3(1.0, 0.3, 1.0);
 				else
 					cc = vec3(0.15);
 				f_FragColor = vec4(cc * max(shadow, 0.4), 1.0);
