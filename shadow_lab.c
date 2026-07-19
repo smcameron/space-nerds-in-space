@@ -352,16 +352,16 @@ static void build_scene(void)
 	ship_max_speed = spacing * 0.008;
 	ship_accel = ship_max_speed * 0.06;
 
-	/* Seed the shadow tunables to the game's local-scope defaults; all remain adjustable
-	 * live.  Coverage spans only the ship cluster (a few thousand units) rather than the
-	 * whole view: the planet is excluded from the shadow map, so nothing far away needs to
-	 * cast or receive.  Two cascades over that short range keep texels small with no seam. */
-	set_shadow_map_max_distance(spacing * 8.0);
-	set_shadow_map_num_cascades(2);
-	set_shadow_map_split_lambda(0.5);
-	graph_dev_set_shadow_bias(2.0, 4.0);
+	/* Seed the shadow tunables to the values tuned here (and now the game defaults); all
+	 * remain adjustable live.  Six cascades with a mild log split over ~4500 units of
+	 * camera-local coverage give crisp near shadows that still reach distance; a small blend
+	 * band hides the cascade seams and fades the last cascade to lit at the coverage edge. */
+	set_shadow_map_max_distance(4500.0);
+	set_shadow_map_num_cascades(6);
+	set_shadow_map_split_lambda(0.6);
+	graph_dev_set_shadow_bias(2.5, 4.0);
 	graph_dev_set_shadow_pcf_radius(1);
-	graph_dev_set_shadow_blend(0.0);
+	graph_dev_set_shadow_blend(0.2);
 
 	/* Aim the camera at the ship cluster from behind and above. */
 	{
