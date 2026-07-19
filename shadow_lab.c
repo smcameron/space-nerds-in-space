@@ -110,6 +110,12 @@ static float sun_distance = 90000.0;
 static float sun_radius = 2812.5; /* = default star_diameter (5625) / 2 */
 static float deepest_planet_shade = 0.0; /* deepest analytic ship shading this frame, for the HUD */
 
+/* Planet-shadow test controls (independent of the CSM depth-map shadows). */
+enum planet_shade_mode { PLANET_SHADE_SOFT, PLANET_SHADE_BINARY, PLANET_SHADE_OFF };
+static int planet_shade_mode = PLANET_SHADE_SOFT;
+static int planet_shade_debug = 0; /* tint ships by lit/penumbra/umbra state so the band is obvious */
+static const char * const planet_shade_mode_name[] = { "SOFT", "BINARY", "OFF" };
+
 static struct mesh *planet_mesh;
 
 /* Analytic planet umbra/penumbra shading, mirroring snis_client's update_shading_planet():
@@ -148,7 +154,16 @@ static float compute_planet_shade_fraction(const union vec3 *pos)
 		if (occlusion > deepest)
 			deepest = occlusion;
 	}
-	return (float) deepest;
+
+	switch (planet_shade_mode) {
+	case PLANET_SHADE_BINARY: /* the old hack: a hard on/off at half occlusion */
+		return deepest > 0.5 ? 1.0 : 0.0;
+	case PLANET_SHADE_OFF:
+		return 0.0;
+	case PLANET_SHADE_SOFT:
+	default:
+		return (float) deepest;
+	}
 }
 
 static struct mesh *snis_read_model(char *path)
@@ -405,9 +420,12 @@ static char *help_text =
 	"  - ARROW KEYS       ORBIT SUN AZIMUTH / ELEVATION (SHIFT = FASTER)\n"
 	"  - U / O            SUN DISTANCE CLOSER / FARTHER\n"
 	"  - G / H            SUN RADIUS SMALLER / LARGER (WIDER RADIUS = WIDER PENUMBRA)\n"
+	"  - P                CYCLE PLANET SHADE MODE: SOFT / BINARY / OFF\n"
+	"  - B                TOGGLE STATE TINT (WHITE=LIT AMBER=PENUMBRA RED=UMBRA)\n"
 	"  - LOWER THE SUN (DOWN ARROW) TO SWING THE PLANET BETWEEN IT AND THE SHIPS;\n"
 	"    THE SHIPS FADE SMOOTHLY THROUGH THE PENUMBRA INTO FULL UMBRA.\n"
-	"    'PLANET SHADE' IN THE HUD READS 0.00 LIT TO 1.00 FULLY SHADOWED.\n\n"
+	"    'PLANET SHADE' IN THE HUD READS 0.00 LIT TO 1.00 FULLY SHADOWED.\n"
+	"    COMPARE SOFT VS BINARY (P) TO SEE THE PENUMBRA THE OLD HACK OMITTED.\n\n"
 	"  SHADOWS\n"
 	"  - \\                TOGGLE SHADOWS ON / OFF\n"
 	"  - 0 / 1 / 2        DEBUG: OFF / SHADOW-FACTOR / CASCADE-INDEX\n"
@@ -462,33 +480,41 @@ static void draw_help_screen(void)
 
 static void draw_hud(void)
 {
-	char buffer[128];
+	char buffer[160];
 	float bias_factor;
+	int y = 24;
+	const int dy = 24;
 	static const char * const debug_name[] = { "OFF", "SHADOW-FACTOR", "CASCADE-INDEX" };
+	const char *state = deepest_planet_shade >= 0.999 ? "UMBRA" :
+				deepest_planet_shade > 0.001 ? "PENUMBRA" : "LIT";
 
 	graph_dev_get_shadow_bias(&bias_factor, NULL);
 
 	sng_set_foreground(WHITE);
-	sng_abs_xy_draw_string("SHADOW LAB - F1 FOR HELP", NANO_FONT, 10, 20);
+	sng_abs_xy_draw_string("SHADOW LAB - F1 FOR HELP", TINY_FONT, 10, y); y += dy;
 	snprintf(buffer, sizeof(buffer), "CAM (%.0f, %.0f, %.0f)", cam_pos.v.x, cam_pos.v.y, cam_pos.v.z);
-	sng_abs_xy_draw_string(buffer, NANO_FONT, 10, 35);
-	snprintf(buffer, sizeof(buffer), "SUN AZ %.0f EL %.0f DIST %.0f RADIUS %.0f   PLANET SHADE %.2f",
+	sng_abs_xy_draw_string(buffer, TINY_FONT, 10, y); y += dy;
+	snprintf(buffer, sizeof(buffer), "SUN AZ %.0f EL %.0f DIST %.0f RADIUS %.0f",
 		radians_to_degrees(sun_azimuth), radians_to_degrees(sun_elevation),
-		sun_distance, sun_radius, deepest_planet_shade);
-	sng_abs_xy_draw_string(buffer, NANO_FONT, 10, 50);
+		sun_distance, sun_radius);
+	sng_abs_xy_draw_string(buffer, TINY_FONT, 10, y); y += dy;
+	snprintf(buffer, sizeof(buffer), "PLANET SHADE %s: %s (%.2f)  %s",
+		planet_shade_mode_name[planet_shade_mode], state, deepest_planet_shade,
+		planet_shade_debug ? "[STATE TINT ON]" : "");
+	sng_abs_xy_draw_string(buffer, TINY_FONT, 10, y); y += dy;
 	snprintf(buffer, sizeof(buffer), "SHADOWS %s   DEBUG %s",
 		graph_dev_shadow_map_enabled ? "ON" : "OFF",
 		debug_name[shadow_debug_mode % 3]);
-	sng_abs_xy_draw_string(buffer, NANO_FONT, 10, 65);
+	sng_abs_xy_draw_string(buffer, TINY_FONT, 10, y); y += dy;
 	snprintf(buffer, sizeof(buffer), "COVERAGE %.0f  CASCADES %d  LAMBDA %.2f",
 		get_shadow_map_max_distance(), get_shadow_map_num_cascades(),
 		get_shadow_map_split_lambda());
-	sng_abs_xy_draw_string(buffer, NANO_FONT, 10, 80);
-	snprintf(buffer, sizeof(buffer), "BIAS slope %.1f   PCF near %dx%d (per-cascade)   BLEND %.2f",
+	sng_abs_xy_draw_string(buffer, TINY_FONT, 10, y); y += dy;
+	snprintf(buffer, sizeof(buffer), "BIAS slope %.1f   PCF %dx%d   BLEND %.2f",
 		bias_factor,
 		2 * graph_dev_get_shadow_pcf_radius() + 1, 2 * graph_dev_get_shadow_pcf_radius() + 1,
 		graph_dev_get_shadow_blend());
-	sng_abs_xy_draw_string(buffer, NANO_FONT, 10, 95);
+	sng_abs_xy_draw_string(buffer, TINY_FONT, 10, y); y += dy;
 }
 
 static struct entity_context *cx;
@@ -535,13 +561,26 @@ static void draw_screen(void)
 			update_entity_material(e, o->material);
 		if (o->no_cast_shadow)
 			update_entity_shadow_casting(e, 0);
-		/* Ships receive the analytic planet umbra/penumbra shading; the planet is lit by
-		 * its own terminator (surface normal vs. sun) and needs no in-shade term. */
+		/* Ships receive the analytic planet umbra/penumbra shading (0.0 lit .. 1.0 umbra),
+		 * matching snis_client's object_in_shade(); the planet is lit by its own terminator
+		 * (surface normal vs. sun) and needs no in-shade term. */
 		if (o->kind == SCENE_SHIP) {
 			float frac = compute_planet_shade_fraction(&o->pos);
-			entity_set_in_shade(e, 0.1 + 0.9 * frac);
 			if (frac > deepest_planet_shade)
 				deepest_planet_shade = frac;
+			if (planet_shade_debug) {
+				/* Tint by state, fully lit, so the penumbra band reads clearly:
+				 * white = lit, amber = penumbra, red = umbra. */
+				int c = WHITE;
+				if (frac >= 0.999)
+					c = RED;
+				else if (frac > 0.001)
+					c = AMBER;
+				update_entity_color(e, c);
+				entity_set_in_shade(e, 0.0);
+			} else {
+				entity_set_in_shade(e, frac);
+			}
 		}
 	}
 
@@ -663,6 +702,12 @@ static void handle_key_down(SDL_Keysym *keysym)
 		break;
 	case SDLK_h:
 		sun_radius *= 1.111111;
+		break;
+	case SDLK_p:
+		planet_shade_mode = (planet_shade_mode + 1) % 3;
+		break;
+	case SDLK_b:
+		planet_shade_debug = !planet_shade_debug;
 		break;
 	default:
 		break;
