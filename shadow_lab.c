@@ -627,7 +627,7 @@ static char *help_text =
 	"  - \\                TOGGLE SHADOWS ON / OFF\n"
 	"  - 0 / 1 / 2        DEBUG: OFF / SHADOW-FACTOR / CASCADE-INDEX\n"
 	"  - [ / ]            SHADOW COVERAGE DISTANCE DOWN / UP\n"
-	"  - - / =            CASCADE COUNT DOWN / UP (1-4)\n"
+	"  - - / =            CASCADE COUNT DOWN / UP (1-6)\n"
 	"  - ; / '            SPLIT LAMBDA DOWN / UP (log vs uniform)\n"
 	"  - , / .            DEPTH-BIAS SLOPE DOWN / UP\n"
 	"  - n / m            PCF NEAR KERNEL SMALLER / LARGER (tapers per cascade)\n"
@@ -637,7 +637,7 @@ static char *help_text =
 	"  - F10              RELOAD SHADERS\n"
 	"  - F11              TOGGLE FULLSCREEN\n"
 	"  - ESC              QUIT\n\n"
-	"  CASCADE-INDEX TINT: red=0 (nearest) green=1 blue=2 yellow=3 gray=none\n\n"
+	"  CASCADE-INDEX TINT: red=0 (nearest) green=1 blue=2 yellow=3; 4/5 and none=gray\n\n"
 	"PRESS F1 TO EXIT HELP\n";
 
 static void draw_help_text(const char *text)
