@@ -404,6 +404,19 @@ static void quat_rotate_local(union quat *o, float ax, float ay, float az, float
 	quat_normalize_self(o);
 }
 
+/* Rotate about a world-space axis (pre-multiply), for aircraft-style yaw that turns the
+ * heading without accumulating roll the way a local-axis yaw does. */
+static void quat_rotate_world(union quat *o, float ax, float ay, float az, float angle)
+{
+	union quat delta;
+
+	if (angle == 0.0)
+		return;
+	quat_init_axis(&delta, ax, ay, az, angle);
+	quat_mul(o, &delta, o);
+	quat_normalize_self(o);
+}
+
 /* Yaw/pitch/roll an orientation from the right-drag mouse and Q/E, shared by the free camera
  * and the possessed ship. */
 static void apply_look_controls(union quat *orientation)
@@ -462,8 +475,19 @@ static void fly_ship(struct scene_object *ship)
 {
 	const Uint8 *keys = SDL_GetKeyboardState(NULL);
 	union vec3 fwd, up, right, step;
+	float roll = 0.0;
 
-	apply_look_controls(&ship->orientation);
+	/* Aircraft-style steering: yaw about world up (heading, no roll drift), pitch about the
+	 * ship's own right axis, and roll only when asked.  Right-drag mouse steers. */
+	quat_rotate_world(&ship->orientation, 0.0, 1.0, 0.0, -mouse_accum_dx * mouse_sensitivity);
+	quat_rotate_local(&ship->orientation, 0.0, 0.0, 1.0, -mouse_accum_dy * mouse_sensitivity);
+	mouse_accum_dx = 0.0;
+	mouse_accum_dy = 0.0;
+	if (keys[SDL_SCANCODE_Q])
+		roll += roll_rate;
+	if (keys[SDL_SCANCODE_E])
+		roll -= roll_rate;
+	quat_rotate_local(&ship->orientation, 1.0, 0.0, 0.0, roll);
 
 	if (keys[SDL_SCANCODE_W])
 		ship_speed += ship_accel;
@@ -518,8 +542,11 @@ static void update_camera(void)
 	cam_pos = ship->pos;
 	offset = fwd; vec3_mul_self(&offset, -dist); vec3_add_self(&cam_pos, &offset);
 	offset = up; vec3_mul_self(&offset, lift); vec3_add_self(&cam_pos, &offset);
+	/* Aim ahead of the ship (and a little down) so the space in front of it is centred and
+	 * clearly visible, with the ship itself sitting in the lower part of the frame. */
 	aim = ship->pos;
-	offset = up; vec3_mul_self(&offset, -lift * 0.4); vec3_add_self(&aim, &offset);
+	offset = fwd; vec3_mul_self(&offset, dist * 0.8); vec3_add_self(&aim, &offset);
+	offset = up; vec3_mul_self(&offset, -lift * 0.2); vec3_add_self(&aim, &offset);
 	vec3_sub(&look_dir, &aim, &cam_pos);
 	vec3_normalize_self(&look_dir);
 	quat_from_u2v(&cam_orientation, &base_fwd, &look_dir, &up);
