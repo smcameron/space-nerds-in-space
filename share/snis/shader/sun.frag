@@ -22,32 +22,32 @@ void main()
 	float edge = max(u_EdgeSoftness * u_DiscRadius, 0.001);
 	float core = 1.0 - smoothstep(u_DiscRadius - edge, u_DiscRadius + edge, r);
 
-	/* Bloom: a soft glow reaching outward from the disc edge.  Butterworth falloff
-	 * 1/(1 + d^k) with d = (distance past the disc edge) / u_BloomRadius: at d = 1 the glow is
-	 * always 0.5 regardless of k, so u_BloomRadius alone sets the half-brightness radius (how far
-	 * it reaches) and u_BloomFalloff (k) sets only the edge sharpness -- the two are orthogonal.
-	 * Only the annulus outside the disc is visible, so it reads as a limb glow that fades out. */
-	float d = max(r - u_DiscRadius, 0.0) / max(u_BloomRadius, 0.0001);
-	float glow = 1.0 / (1.0 + pow(d, u_BloomFalloff));
-	/* Fade to zero before the billboard edge so a low sharpness does not hard-clip. */
-	float x = clamp((r - u_DiscRadius) / max(0.5 - u_DiscRadius, 0.0001), 0.0, 1.0);
-	float bloom = glow * (1.0 - smoothstep(0.7, 1.0, x));
+	/* Bloom: a compact soft glow reaching outward from the disc edge, half-brightness at
+	 * u_BloomRadius and exactly zero by u_BloomRadius * (1 + w).  It has no tail, so there is no
+	 * separate outer fade/window to read as a second glow.  u_BloomRadius alone sets the
+	 * half-brightness radius (how far it reaches) and u_BloomFalloff sets only the transition
+	 * width w = 1/(1 + falloff) (edge sharpness); the 50% point stays at u_BloomRadius either
+	 * way, so the two controls are orthogonal.  Only the annulus outside the disc is visible. */
+	float e = max(r - u_DiscRadius, 0.0);
+	float w = 1.0 / (1.0 + u_BloomFalloff);
+	float bloom = 1.0 - smoothstep(u_BloomRadius * (1.0 - w), u_BloomRadius * (1.0 + w), e);
 
-	/* Core emission: white-hot at the centre grading to the star's colour at the limb.  The
-	 * centre brightness saturates every channel through the tonemap (-> white); toward the limb
-	 * the brightness falls to ~1 so the blackbody colour shows.  u_CoreBrightness sets how bright
-	 * the centre is, and therefore how far the white-hot region spreads toward the limb.  A flat
-	 * core instead would pin red and green to white everywhere and only let blue vary, giving an
-	 * abrupt white->yellow snap as the star cools -- this gradient keeps the limb colour smooth. */
+	/* Core emission: white-hot at the centre grading to the star's colour at the limb.  A high
+	 * centre brightness drives every channel above 1 so it clamps to white; toward the limb the
+	 * brightness falls to ~1 so the blackbody colour shows.  u_CoreBrightness sets how bright the
+	 * centre is and therefore how far the white-hot region spreads.  A flat core instead pins red
+	 * and green to white everywhere; the gradient keeps the limb colour smooth as the star cools. */
 	float disc_t = clamp(r / max(u_DiscRadius, 0.0001), 0.0, 1.0);
 	float core_level = 1.0 + (u_CoreBrightness - 1.0) * (1.0 - disc_t) * (1.0 - disc_t);
 	vec3 core_emission = u_Color * core_level;
 	vec3 bloom_emission = u_Color * u_BloomBrightness * bloom;
 
 	/* Inside the disc show the opaque core; outside show the additive bloom (premultiplied-alpha
-	 * blend set up by the caller).  Pushed through the shared filmic tonemap so the hot centre
-	 * clips toward white consistently with the rest of the scene. */
+	 * blend set up by the caller).  Clamp per channel rather than tonemapping: a bright channel
+	 * saturates to white (the hot centre) while the dim limb keeps its true hue -- a per-channel
+	 * tonemap would boost midtones and shift the colour yellow, and its x^2 term overflows to
+	 * NaN at extreme brightness. */
 	vec3 emission = mix(bloom_emission, core_emission, core);
 	float coverage = clamp(core, 0.0, 1.0);
-	f_FragColor = filmic_tonemap(vec4(emission, coverage));
+	f_FragColor = clamp(vec4(emission, coverage), 0.0, 1.0);
 }

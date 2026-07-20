@@ -859,8 +859,6 @@ struct graph_dev_gl_sun_shader {
 	GLint bloom_brightness_id;
 	GLint bloom_radius_id;
 	GLint bloom_falloff_id;
-	GLint filmic_tonemapping_id;
-	GLint tonemapping_gain_id;
 };
 
 struct graph_dev_gl_single_color_lit_shader {
@@ -2727,8 +2725,6 @@ static void graph_dev_raster_sun(const struct mat44 *mat_mvp, struct mesh *m, st
 	glUniform1f(sun_shader.bloom_brightness_id, sun->bloom_brightness);
 	glUniform1f(sun_shader.bloom_radius_id, sun->bloom_radius);
 	glUniform1f(sun_shader.bloom_falloff_id, sun->bloom_falloff);
-	glUniform1f(sun_shader.filmic_tonemapping_id, (float) filmic_tonemapping);
-	glUniform1f(sun_shader.tonemapping_gain_id, tonemapping_gain);
 
 	glEnableVertexAttribArray(sun_shader.vertex_position_id);
 	glBindBuffer(GL_ARRAY_BUFFER, ptr->vertex_buffer);
@@ -4212,7 +4208,7 @@ static void setup_sun_shader(struct graph_dev_gl_sun_shader *shader)
 {
 	maybe_unload_shader(&shader->meta, &shader->program_id);
 	shader->program_id = load_shaders(shader_directory,
-				"sun.vert", "sun.frag", UNIVERSAL_SHADER_HEADER FILMIC_TONEMAPPING);
+				"sun.vert", "sun.frag", UNIVERSAL_SHADER_HEADER);
 	glGenVertexArrays(1, &shader->vao_id);
 
 	shader->mvp_matrix_id = glGetUniformLocation(shader->program_id, "u_MVPMatrix");
@@ -4225,8 +4221,6 @@ static void setup_sun_shader(struct graph_dev_gl_sun_shader *shader)
 	shader->bloom_brightness_id = glGetUniformLocation(shader->program_id, "u_BloomBrightness");
 	shader->bloom_radius_id = glGetUniformLocation(shader->program_id, "u_BloomRadius");
 	shader->bloom_falloff_id = glGetUniformLocation(shader->program_id, "u_BloomFalloff");
-	shader->filmic_tonemapping_id = glGetUniformLocation(shader->program_id, "u_FilmicTonemapping");
-	shader->tonemapping_gain_id = glGetUniformLocation(shader->program_id, "u_TonemappingGain");
 }
 
 static void setup_line_single_color_shader(struct graph_dev_gl_line_single_color_shader *shader)

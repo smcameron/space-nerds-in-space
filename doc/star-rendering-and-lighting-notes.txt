@@ -18,11 +18,22 @@ desaturates toward white on its own.  This single fact shapes the sun design.
 1. The sun ("MATERIAL_SUN"): procedural emission through the shared tonemap
 --------------------------------------------------------------------------
 A camera-facing billboard drawn with a dedicated shader (share/snis/shader/
-sun.{vert,frag}).  The whole star is one EMISSION field, not stacked layers:
+sun.{vert,frag}).  The star is an EMISSION field, clamped per channel:
 
-    emission = blackbody(T) * (core_brightness * coreProfile(r)
-                               + bloom_brightness * bloomProfile(r))
-    f_FragColor = filmic_tonemap(vec4(emission, coverage))
+    core_level(r) = 1 + (core_brightness - 1) * (1 - r/disc_radius)^2  (centre->limb)
+    emission = mix(blackbody(T) * bloom_brightness * bloomProfile(r),  (outside disc)
+                   blackbody(T) * core_level(r),                        (inside disc)
+                   disc_coverage(r))
+    f_FragColor = clamp(vec4(emission, disc_coverage), 0, 1)
+
+Note: emission was first pushed through the shared filmic_tonemap (for a
+white-hot core consistent with the scene), but a PER-CHANNEL filmic curve
+boosts midtones and shifts the star's colour yellow (orange -> yellow), and
+its x^2 term overflows to NaN at extreme core brightness.  A plain per-channel
+clamp gives the same white-hot core (bright channels saturate to white) while
+preserving the limb hue and never overflowing, so the sun clamps instead of
+tonemapping.  The white-hot core comes from the radial core_level gradient, not
+from the tonemap.
 
   - coreProfile: ~flat inside the disc, soft edge at the disc radius.
   - bloomProfile: from the disc EDGE outward (not the centre, or it hides behind

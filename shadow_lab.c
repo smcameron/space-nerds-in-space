@@ -996,6 +996,8 @@ static void handle_key_down(SDL_Keysym *keysym)
 		break;
 	case SDLK_i: /* core brighter (more white-hot spread) */
 		sun_material.sun.core_brightness *= 1.111111;
+		if (sun_material.sun.core_brightness > 100.0)
+			sun_material.sun.core_brightness = 100.0;
 		break;
 	case SDLK_t: /* bloom dimmer */
 		sun_material.sun.bloom_brightness *= 0.9;
