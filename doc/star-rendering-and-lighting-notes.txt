@@ -36,10 +36,25 @@ tonemapping.  The white-hot core comes from the radial core_level gradient, not
 from the tonemap.
 
   - coreProfile: ~flat inside the disc, soft edge at the disc radius.
-  - bloomProfile: from the disc EDGE outward (not the centre, or it hides behind
-    the growing disc), pow(1 - t, bloom_gamma).
+  - bloomProfile: a SINGLE monotonic falloff from the disc EDGE outward (not the
+    centre, or it hides behind the growing disc): with d = (r - disc_radius) /
+    bloom_radius clamped to [0,1], bloom = pow(1 - d, bloom_falloff).  It reaches
+    exactly zero at r = disc_radius + bloom_radius -- no plateau and no tail, so it
+    cannot read as a second ring or a screen-filling wash.  bloom_radius sets ONLY
+    the reach and bloom_falloff sets ONLY the shape (orthogonal controls).
   - coverage (alpha): the core is opaque (hides background); the bloom is additive
     (adds light).  Premultiplied-alpha blend (GL_ONE, GL_ONE_MINUS_SRC_ALPHA).
+  - The caller must size the billboard to just contain disc + bloom (disc_radius +
+    bloom_radius < 0.5 in UV) so the whole falloff is on-screen.  An earlier version
+    sized the billboard from the bloom's screen fraction with a large window
+    multiplier; at large radius that inflated the billboard so much that only the
+    bloom's flat centre remained on-screen -- the falloff (sharpness) then appeared
+    to do nothing and the glow appeared to grow with radius.  Keep the billboard
+    bounded to disc + bloom.
+  - bloom_brightness = 1.0 matches the disc-edge brightness, so the glow joins the
+    limb with no brightness step (a step reads as a Mach-band "dark ring"); a value
+    of exactly 0 must remove the bloom entirely (do not let a *0.9 control asymptote
+    to a residual glow).
 
 Why this shape:
   - Feeding HDR-range emission through the SAME filmic tonemap the rest of the

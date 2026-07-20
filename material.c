@@ -157,9 +157,13 @@ void material_init_sun(struct material *m)
 	m->billboard_type = MATERIAL_BILLBOARD_TYPE_SPHERICAL;
 	m->sun.color = sng_get_color(WHITE);
 	m->sun.disc_radius = 0.1;
-	m->sun.edge_softness = 0.15;
+	m->sun.edge_softness = 0.03; /* limb width as a fraction of the disc radius; this is an alpha fade at
+				     * the rim (semi-transparent by nature), so keep it small -- just enough
+				     * to antialias the edge, not a wide see-through gradient */
 	m->sun.core_brightness = 4.0;
-	m->sun.bloom_brightness = 1.5;
+	m->sun.bloom_brightness = 0.6; /* dimmer than the disc, so the opaque disc reads as a solid body and the
+					* glow is clearly a fainter halo around it (1.0 would match the disc edge and
+					* make a flat-core disc dissolve into the glow) */
 	m->sun.bloom_radius = 0.05;
 	m->sun.bloom_falloff = 2.5;
 	m->rotate_randomly = 0;
