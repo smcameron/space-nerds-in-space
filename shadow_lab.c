@@ -136,11 +136,40 @@ static float deepest_planet_shade = 0.0; /* deepest analytic ship shading this f
  * radius is set each frame from sun_radius / billboard size so the disc stays world-scale
  * (grows as you approach) while the bloom stays a constant apparent size. */
 static float sun_bloom_apparent = 0.4; /* sun billboard on-screen size as a fraction of camera distance */
+static float sun_temperature = 5800.0; /* Kelvin; sets the star's blackbody colour */
 static struct mesh *sun_mesh;
 static struct material sun_material;
-/* Disc/bloom colour presets cycled with 'j'. */
-static const int sun_color_presets[] = { WHITE, YELLOW, AMBER, ORANGE, ORANGERED };
-static int sun_color_preset;
+
+/* Blackbody colour approximation (Tanner Helland), Kelvin -> RGB 0..1.  Good enough to preview
+ * star colours from cool red (~2500K) through white to hot blue (~30000K). */
+static void blackbody_color(float kelvin, float *r, float *g, float *b)
+{
+	float t = kelvin / 100.0;
+	float rr, gg, bb;
+
+	if (t <= 66.0) {
+		rr = 255.0;
+		gg = 99.4708025861 * logf(t) - 161.1195681661;
+	} else {
+		rr = 329.698727446 * powf(t - 60.0, -0.1332047592);
+		gg = 288.1221695283 * powf(t - 60.0, -0.0755148492);
+	}
+	if (t >= 66.0)
+		bb = 255.0;
+	else if (t <= 19.0)
+		bb = 0.0;
+	else
+		bb = 138.5177312231 * logf(t - 10.0) - 305.0447927307;
+	*r = clampf(rr, 0.0, 255.0) / 255.0;
+	*g = clampf(gg, 0.0, 255.0) / 255.0;
+	*b = clampf(bb, 0.0, 255.0) / 255.0;
+}
+
+static void update_sun_color(void)
+{
+	blackbody_color(sun_temperature, &sun_material.sun.color.red,
+			&sun_material.sun.color.green, &sun_material.sun.color.blue);
+}
 
 /* Planet-shadow test controls (independent of the CSM depth-map shadows). */
 enum planet_shade_mode { PLANET_SHADE_SOFT, PLANET_SHADE_BINARY, PLANET_SHADE_OFF };
@@ -613,10 +642,11 @@ static char *help_text =
 	"  - ARROW KEYS       ORBIT SUN AZIMUTH / ELEVATION (SHIFT = FASTER)\n"
 	"  - U / O            SUN DISTANCE CLOSER / FARTHER\n"
 	"  - G / H            SUN RADIUS SMALLER / LARGER (WIDER RADIUS = WIDER PENUMBRA)\n"
+	"  - 7 / 8            STAR TEMPERATURE COOLER / HOTTER (BLACKBODY COLOUR)\n"
+	"  - 9 / I            SUN CORE BRIGHTNESS DIMMER / BRIGHTER (WHITE-HOT SPREAD)\n"
 	"  - T / Y            SUN BLOOM DIMMER / BRIGHTER\n"
 	"  - C / V            SUN BLOOM FALLOFF LOOSER / TIGHTER\n"
 	"  - Z / X            SUN BLOOM SCREEN EXTENT SMALLER / LARGER (DISC STAYS PHYSICAL)\n"
-	"  - J                CYCLE SUN COLOUR (WHITE/YELLOW/AMBER/ORANGE/ORANGERED)\n"
 	"  - P                CYCLE PLANET SHADE MODE: SOFT / BINARY / OFF\n"
 	"  - B                TOGGLE THE PER-SHIP SHADE PANEL\n"
 	"  - 3 / 4            PLANET RADIUS SMALLER / LARGER\n"
@@ -706,8 +736,9 @@ static void draw_hud(void)
 		radians_to_degrees(sun_azimuth), radians_to_degrees(sun_elevation),
 		sun_distance, sun_radius);
 	sng_abs_xy_draw_string(buffer, TINY_FONT, 10, y); y += dy;
-	snprintf(buffer, sizeof(buffer), "SUN BLOOM INTENSITY %.2f FALLOFF %.2f SCREEN EXTENT %.2f",
-		sun_material.sun.bloom_intensity, sun_material.sun.bloom_falloff, sun_bloom_apparent);
+	snprintf(buffer, sizeof(buffer), "SUN %.0fK  CORE %.1f  BLOOM %.1f FALLOFF %.2f EXTENT %.2f",
+		sun_temperature, sun_material.sun.core_brightness, sun_material.sun.bloom_brightness,
+		sun_material.sun.bloom_falloff, sun_bloom_apparent);
 	sng_abs_xy_draw_string(buffer, TINY_FONT, 10, y); y += dy;
 	if (planet_index >= 0) {
 		float pr = scene[planet_index].scale;
@@ -945,11 +976,29 @@ static void handle_key_down(SDL_Keysym *keysym)
 	case SDLK_h:
 		sun_radius *= 1.111111;
 		break;
+	case SDLK_7: /* cooler (redder) star */
+		sun_temperature *= 0.95;
+		if (sun_temperature < 1000.0)
+			sun_temperature = 1000.0;
+		update_sun_color();
+		break;
+	case SDLK_8: /* hotter (bluer) star */
+		sun_temperature *= 1.0526316;
+		if (sun_temperature > 40000.0)
+			sun_temperature = 40000.0;
+		update_sun_color();
+		break;
+	case SDLK_9: /* core dimmer (less white-hot spread) */
+		sun_material.sun.core_brightness *= 0.9;
+		break;
+	case SDLK_i: /* core brighter (more white-hot spread) */
+		sun_material.sun.core_brightness *= 1.111111;
+		break;
 	case SDLK_t: /* bloom dimmer */
-		sun_material.sun.bloom_intensity *= 0.9;
+		sun_material.sun.bloom_brightness *= 0.9;
 		break;
 	case SDLK_y: /* bloom brighter */
-		sun_material.sun.bloom_intensity *= 1.111111;
+		sun_material.sun.bloom_brightness *= 1.111111;
 		break;
 	case SDLK_c: /* bloom falloff looser (bigger glow) */
 		sun_material.sun.bloom_falloff *= 0.9;
@@ -959,17 +1008,11 @@ static void handle_key_down(SDL_Keysym *keysym)
 	case SDLK_v: /* bloom falloff tighter */
 		sun_material.sun.bloom_falloff *= 1.111111;
 		break;
-	case SDLK_z: /* sun/bloom on-screen size smaller */
+	case SDLK_z: /* bloom screen extent smaller */
 		sun_bloom_apparent *= 0.9;
 		break;
-	case SDLK_x: /* sun/bloom on-screen size larger */
+	case SDLK_x: /* bloom screen extent larger */
 		sun_bloom_apparent *= 1.111111;
-		break;
-	case SDLK_j: /* cycle disc/bloom colour */
-		sun_color_preset = (sun_color_preset + 1) %
-			(int) (sizeof(sun_color_presets) / sizeof(sun_color_presets[0]));
-		sun_material.sun.color = sng_get_color(sun_color_presets[sun_color_preset]);
-		sun_material.sun.bloom_color = sng_get_color(sun_color_presets[sun_color_preset]);
 		break;
 	case SDLK_p:
 		planet_shade_mode = (planet_shade_mode + 1) % 3;
@@ -1147,10 +1190,7 @@ static void setup_sun_billboard(void)
 {
 	sun_mesh = mesh_fabricate_billboard(1.0, 1.0); /* unit billboard, scaled to size per frame */
 	material_init_sun(&sun_material);
-	sun_material.sun.color = sng_get_color(WHITE);
-	sun_material.sun.bloom_color = sng_get_color(WHITE);
-	sun_material.sun.bloom_intensity = 1.0;
-	sun_material.sun.bloom_falloff = 3.0;
+	update_sun_color(); /* blackbody colour from sun_temperature */
 }
 
 int main(int argc, char *argv[])
