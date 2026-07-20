@@ -981,8 +981,8 @@ static void handle_key_down(SDL_Keysym *keysym)
 		break;
 	case SDLK_7: /* cooler (redder) star */
 		sun_temperature *= 0.95;
-		if (sun_temperature < 1000.0)
-			sun_temperature = 1000.0;
+		if (sun_temperature < 1900.0) /* blackbody blue channel cuts off below here */
+			sun_temperature = 1900.0;
 		update_sun_color();
 		break;
 	case SDLK_8: /* hotter (bluer) star */
