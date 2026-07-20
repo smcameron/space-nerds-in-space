@@ -20,10 +20,13 @@ void main()
 	float edge = 0.01 + 0.25 * u_DiscRadius;
 	float disc = 1.0 - smoothstep(u_DiscRadius, u_DiscRadius + edge, r);
 
-	/* Additive bloom falling off from the centre to the billboard edge.  The billboard is
-	 * sized to the bloom's screen extent, so the bloom stays screen-scale. */
-	float br = clamp(1.0 - r / 0.5, 0.0, 1.0);
-	float bloom = pow(br, u_BloomFalloff) * u_BloomIntensity;
+	/* Additive bloom running from the disc edge (u_DiscRadius) out to the billboard edge (0.5),
+	 * brightest at the edge and fading outward.  Starting it at the disc edge (rather than the
+	 * centre) keeps it from hiding behind the disc as the disc grows; the caller sizes the
+	 * billboard so this ring is a constant on-screen width, so the bloom stays screen-scale. */
+	float bloom_span = max(0.5 - u_DiscRadius, 0.001);
+	float bloom_t = clamp((r - u_DiscRadius) / bloom_span, 0.0, 1.0);
+	float bloom = pow(1.0 - bloom_t, u_BloomFalloff) * u_BloomIntensity;
 
 	vec3 color = u_Color * disc + u_BloomColor * bloom;
 	float a = clamp(disc + bloom, 0.0, 1.0);

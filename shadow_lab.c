@@ -824,9 +824,10 @@ static void draw_screen(void)
 
 		vec3_sub(&to_cam, &sun_pos, &cam_pos);
 		cam_dist = vec3_magnitude(&to_cam);
-		billboard_world = sun_bloom_apparent * cam_dist;
-		if (billboard_world < 2.0 * sun_radius)
-			billboard_world = 2.0 * sun_radius;
+		/* Billboard = the disc (2 * sun_radius) plus a bloom ring on each side whose apparent
+		 * extent (sun_bloom_apparent) is constant, so the bloom always starts at the disc edge
+		 * and keeps a fixed on-screen width whatever the distance to the sun. */
+		billboard_world = 2.0 * sun_radius + 2.0 * sun_bloom_apparent * cam_dist;
 		sun_material.sun.disc_radius = sun_radius / billboard_world;
 		e = add_entity(cx, sun_mesh, sun_pos.v.x, sun_pos.v.y, sun_pos.v.z, WHITE);
 		if (e) {
