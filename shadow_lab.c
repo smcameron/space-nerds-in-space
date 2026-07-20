@@ -135,8 +135,9 @@ static float deepest_planet_shade = 0.0; /* deepest analytic ship shading this f
  * fraction of the camera distance) but never smaller than the disc, and the shader's disc
  * radius is set each frame from sun_radius / billboard size so the disc stays world-scale
  * (grows as you approach) while the bloom stays a constant apparent size. */
-#define SUN_BLOOM_WINDOW 4.0 /* billboard extends this many bloom half-radii past the disc edge */
-static float sun_bloom_apparent = 0.1; /* bloom half-brightness radius as a fraction of camera distance */
+#define SUN_BILLBOARD_MARGIN 1.1 /* billboard is this much larger than disc + bloom, so both fit with a
+				   * small transparent border and the whole falloff is on-screen */
+static float sun_bloom_apparent = 0.1; /* bloom reach (where it hits zero) as a fraction of camera distance */
 static float sun_temperature = 5800.0; /* Kelvin; sets the star's blackbody colour */
 static struct mesh *sun_mesh;
 static struct material sun_material;
@@ -648,6 +649,7 @@ static char *help_text =
 	"  - T / Y            SUN BLOOM DIMMER / BRIGHTER\n"
 	"  - C / V            SUN BLOOM EDGE SOFTER / SHARPER (CURVATURE, RADIUS UNCHANGED)\n"
 	"  - Z / X            SUN BLOOM RADIUS SMALLER / LARGER (REACH; DISC STAYS PHYSICAL)\n"
+	"  - J                CYCLE SUN DISC EDGE SOFTNESS (LIMB WIDTH; ALPHA FADE, SO SEMI-TRANSPARENT)\n"
 	"  - P                CYCLE PLANET SHADE MODE: SOFT / BINARY / OFF\n"
 	"  - B                TOGGLE THE PER-SHIP SHADE PANEL\n"
 	"  - 3 / 4            PLANET RADIUS SMALLER / LARGER\n"
@@ -737,9 +739,9 @@ static void draw_hud(void)
 		radians_to_degrees(sun_azimuth), radians_to_degrees(sun_elevation),
 		sun_distance, sun_radius);
 	sng_abs_xy_draw_string(buffer, TINY_FONT, 10, y); y += dy;
-	snprintf(buffer, sizeof(buffer), "SUN %.0fK  CORE %.1f  BLOOM %.1f SHARP %.2f RADIUS %.2f",
+	snprintf(buffer, sizeof(buffer), "SUN %.0fK  CORE %.1f  BLOOM %.1f SHARP %.2f RADIUS %.2f EDGE %.2f",
 		sun_temperature, sun_material.sun.core_brightness, sun_material.sun.bloom_brightness,
-		sun_material.sun.bloom_falloff, sun_bloom_apparent);
+		sun_material.sun.bloom_falloff, sun_bloom_apparent, sun_material.sun.edge_softness);
 	sng_abs_xy_draw_string(buffer, TINY_FONT, 10, y); y += dy;
 	if (planet_index >= 0) {
 		float pr = scene[planet_index].scale;
@@ -851,18 +853,21 @@ static void draw_screen(void)
 	 * disc is world-scale and the bloom is screen-scale.  It must not cast shadows. */
 	if (sun_mesh) {
 		union vec3 to_cam;
-		float cam_dist, billboard_world;
+		float cam_dist, billboard_world, bloom_world;
 		struct entity *e;
 
 		vec3_sub(&to_cam, &sun_pos, &cam_pos);
 		cam_dist = vec3_magnitude(&to_cam);
-		/* Billboard = the disc (2 * sun_radius) plus a bloom margin.  sun_bloom_apparent is the
-		 * bloom's half-brightness radius (constant on screen); the billboard reaches a few of
-		 * those past the disc edge (SUN_BLOOM_WINDOW) to hold the glow's tail.  disc_radius and
-		 * bloom_radius are handed to the shader in the billboard's UV space. */
-		billboard_world = 2.0 * sun_radius + 2.0 * SUN_BLOOM_WINDOW * sun_bloom_apparent * cam_dist;
+		/* Size the billboard to just contain the disc plus the bloom's reach, with a small margin.
+		 * sun_bloom_apparent is the bloom's reach as a fraction of camera distance (constant on
+		 * screen); bloom_world is that reach in world units.  The billboard spans 2 * margin *
+		 * (sun_radius + bloom_world), so disc_radius + bloom_radius = 1 / (2 * margin) < 0.5 in UV:
+		 * the entire glow is visible and the RADIUS control no longer inflates the billboard without
+		 * bound (which used to leave only the bloom's flat centre on screen). */
+		bloom_world = sun_bloom_apparent * cam_dist;
+		billboard_world = 2.0 * SUN_BILLBOARD_MARGIN * (sun_radius + bloom_world);
 		sun_material.sun.disc_radius = sun_radius / billboard_world;
-		sun_material.sun.bloom_radius = sun_bloom_apparent * cam_dist / billboard_world;
+		sun_material.sun.bloom_radius = bloom_world / billboard_world;
 		e = add_entity(cx, sun_mesh, sun_pos.v.x, sun_pos.v.y, sun_pos.v.z, WHITE);
 		if (e) {
 			update_entity_scale(e, billboard_world);
@@ -991,24 +996,33 @@ static void handle_key_down(SDL_Keysym *keysym)
 			sun_temperature = 40000.0;
 		update_sun_color();
 		break;
-	case SDLK_9: /* core dimmer (less white-hot spread) */
+	case SDLK_9: /* core dimmer (less white-hot spread); floor at 1.0 so the centre never goes
+		      * below the limb (a value < 1 inverts the gradient and darkens the middle) */
 		sun_material.sun.core_brightness *= 0.9;
+		if (sun_material.sun.core_brightness < 1.0)
+			sun_material.sun.core_brightness = 1.0;
 		break;
 	case SDLK_i: /* core brighter (more white-hot spread) */
 		sun_material.sun.core_brightness *= 1.111111;
 		if (sun_material.sun.core_brightness > 100.0)
 			sun_material.sun.core_brightness = 100.0;
 		break;
-	case SDLK_t: /* bloom dimmer */
+	case SDLK_t: /* bloom dimmer (snaps to a true zero so the glow can be turned fully off) */
 		sun_material.sun.bloom_brightness *= 0.9;
+		if (sun_material.sun.bloom_brightness < 0.05)
+			sun_material.sun.bloom_brightness = 0.0;
 		break;
-	case SDLK_y: /* bloom brighter */
-		sun_material.sun.bloom_brightness *= 1.111111;
+	case SDLK_y: /* bloom brighter (recover from a true zero) */
+		if (sun_material.sun.bloom_brightness < 0.05)
+			sun_material.sun.bloom_brightness = 0.1;
+		else
+			sun_material.sun.bloom_brightness *= 1.111111;
 		break;
-	case SDLK_c: /* bloom edge softer (lower k), radius unchanged */
+	case SDLK_c: /* bloom edge softer (lower k), radius unchanged; floor at 0.5 -- below that even
+		      * the smoothstep bloom drops nearly vertically at its outer edge (a hard outer ring) */
 		sun_material.sun.bloom_falloff *= 0.9;
-		if (sun_material.sun.bloom_falloff < 0.1)
-			sun_material.sun.bloom_falloff = 0.1;
+		if (sun_material.sun.bloom_falloff < 0.5)
+			sun_material.sun.bloom_falloff = 0.5;
 		break;
 	case SDLK_v: /* bloom edge sharper (higher k) */
 		sun_material.sun.bloom_falloff *= 1.111111;
@@ -1016,8 +1030,17 @@ static void handle_key_down(SDL_Keysym *keysym)
 	case SDLK_z: /* bloom radius (reach) smaller */
 		sun_bloom_apparent *= 0.9;
 		break;
-	case SDLK_x: /* bloom radius (reach) larger */
+	case SDLK_x: /* bloom radius (reach) larger; cap it so the billboard cannot inflate past the
+		      * point where the opaque disc shrinks to a speck in a screen-filling glow */
 		sun_bloom_apparent *= 1.111111;
+		if (sun_bloom_apparent > 2.0)
+			sun_bloom_apparent = 2.0;
+		break;
+	case SDLK_j: /* cycle the disc edge softness (limb width); it is the alpha fade at the rim, so
+		      * it is semi-transparent by nature -- wrap back to a small value past 0.2 */
+		sun_material.sun.edge_softness *= 1.4;
+		if (sun_material.sun.edge_softness > 0.2)
+			sun_material.sun.edge_softness = 0.01;
 		break;
 	case SDLK_p:
 		planet_shade_mode = (planet_shade_mode + 1) % 3;
