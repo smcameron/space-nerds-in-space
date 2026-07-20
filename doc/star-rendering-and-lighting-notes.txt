@@ -1,0 +1,121 @@
+Star rendering and star-coloured lighting: design notes
+========================================================
+
+THESE NOTES ARE AI-GENERATED AND PLACED IN THE PUBLIC DOMAIN, recorded for
+review.  They capture design decisions and deferred ideas from the shadow-
+mapping / sun-rendering work so the choices (and the roads not taken) are not
+lost.  Nothing here is binding; it is a record for a future decision.
+
+Context
+-------
+The renderer has no HDR framebuffer, no bloom post-pass, and no auto-exposure.
+It tonemaps PER SHADER with a filmic (Uncharted-2) curve (filmic_tonemap in
+graph_dev_opengl.c, gain ~1.18) and writes to an 8-bit buffer.  That curve
+asymptotes to ~1.18 per channel, so a bright, saturated colour driven through it
+desaturates toward white on its own.  This single fact shapes the sun design.
+
+
+1. The sun ("MATERIAL_SUN"): procedural emission through the shared tonemap
+--------------------------------------------------------------------------
+A camera-facing billboard drawn with a dedicated shader (share/snis/shader/
+sun.{vert,frag}).  The whole star is one EMISSION field, not stacked layers:
+
+    emission = blackbody(T) * (core_brightness * coreProfile(r)
+                               + bloom_brightness * bloomProfile(r))
+    f_FragColor = filmic_tonemap(vec4(emission, coverage))
+
+  - coreProfile: ~flat inside the disc, soft edge at the disc radius.
+  - bloomProfile: from the disc EDGE outward (not the centre, or it hides behind
+    the growing disc), pow(1 - t, bloom_gamma).
+  - coverage (alpha): the core is opaque (hides background); the bloom is additive
+    (adds light).  Premultiplied-alpha blend (GL_ONE, GL_ONE_MINUS_SRC_ALPHA).
+
+Why this shape:
+  - Feeding HDR-range emission through the SAME filmic tonemap the rest of the
+    scene uses makes the white-hot core fall out for free and stay consistent
+    with everything else: crank core_brightness and the centre clips to white
+    while the limb keeps the star's colour.  No separate "white layer" needed.
+  - The disc size is always the physical star size (2 * star radius, world-scale);
+    only the bloom is screen-scale.
+
+Star colour from temperature (blackbody):
+  - Colour is a blackbody chromaticity from a Kelvin temperature (~2500K red
+    dwarf .. ~30000K O/B blue), not discrete presets.  A cheap Kelvin->RGB
+    approximation (Tanner Helland) is enough.  Caveats: the blackbody locus goes
+    red -> dark, never magenta ("dim magenta" for sub-stellar bodies is artistic
+    licence); a star actually lighting a system realistically stays within the
+    ~2500-30000K band.
+
+Controls (tuned in shadow_lab, then baked as defaults): temperature, core
+brightness, disc edge softness, bloom screen width, bloom gamma/falloff, bloom
+brightness.
+
+Promotion to the game: swap the game's sun_material to material_init_sun with the
+disc colour from each solar system's sun colour (or a per-system temperature), and
+add a GLES fallback (route MATERIAL_SUN to the existing textured billboard on the
+Pi, which has no case for it yet).  The blackbody Kelvin->RGB helper should move
+from shadow_lab to a shared util at that point.
+
+
+2. Decision: procedural sun now vs. true HDR + screen-space bloom later
+-----------------------------------------------------------------------
+True HDR (render to an FP16 buffer, extract/blur/composite bloom, one final
+tonemap, optional luminance-based auto-exposure) is the architecturally correct,
+better-looking answer:
+  - one bloom system for ALL bright sources (sun, thrusters, weapons, explosions,
+    specular, bright stars), correctly screen-space at any distance/angle;
+  - real auto-exposure (dim everything else when the sun is in view) for free;
+  - and the one qualitative win procedural cannot match: the sun's glow spills
+    over objects IN FRONT of it (a ship silhouetted against the sun, light past a
+    station's edge), because the bloom lives in the image, not on the sun's quad.
+
+But in THIS codebase it is a renderer refactor with wide blast radius:
+  - filmic_tonemap must be removed from ~20 lit shaders across both backends and
+    both shader dirs (otherwise values are pre-compressed and there is no HDR
+    headroom for bloom);
+  - an FP16 target has to survive the two-pass depth-boundary split in
+    render_entities(), the CSM pre-pass, and the blended billboards;
+  - new passes (bright-extract, down/up-sample, blur, composite, tonemap);
+  - GLES/RPi fill-rate cost (likely desktop-only, i.e. another twin path);
+  - it re-tonemaps the ENTIRE game, so it is the project owner's aesthetic call.
+
+Decision: ship the procedural sun now.  It is isolated, previewable, tunable, and
+FORWARD-COMPATIBLE -- its output is just blackbody(T) * intensity, so under a
+future HDR pipeline you delete the per-object bloom and per-object tonemap and let
+the star emit those same high intensities into the HDR buffer.  The per-object
+"emission -> filmic_tonemap" is deliberately a per-object mini-HDR: the stepping
+stone.  Do not gate the sun (or the shadow branch) on the HDR refactor; pitch HDR
+separately if the whole-scene payoff is judged worth the cost.
+
+
+3. Follow-up: star-coloured diffuse light and inverse-tinted ambient
+--------------------------------------------------------------------
+Tint the direct (diffuse) light SLIGHTLY toward the star's colour, and tint the
+ambient / shaded term SLIGHTLY toward the opposite (complement): a red star ->
+faintly red sunlight and faintly cyan shadow; a blue star -> faintly blue light
+and faintly warm shadow.  This is the classic warm-light / cool-shadow art
+technique and it reads as far richer for very little cost.
+
+Honesty check: in atmosphere this is physical (sunlight vs. blue-sky fill); in
+vacuum there is no sky, so the cool ambient is pure stylisation -- fine, but do not
+over-apply (a few percent) or it looks cartoonish.  Mechanism: derive the two
+tints from the star's blackbody colour (ambient tint = a desaturated complement),
+multiply them into the existing diffuse and ambient terms in the lit shaders (the
+lighting is already there; this is a small tint, not new lighting).  Best done
+after the sun itself looks right; test in shadow_lab against the temperature slider.
+
+
+4. Follow-up (capture only; highest risk): fake HDR via sun screen coverage
+---------------------------------------------------------------------------
+Idea: reduce the brightness of everything except the sun based on how much of the
+screen the sun billboard covers (small weight for the bloom region, large for the
+core), to fake the sun feeling brighter than the display's maximum.
+
+This is really eye/camera AUTO-EXPOSURE.  Risks: it is global (needs an exposure
+multiplier threaded through every lit shader before tonemap -- invasive); screen
+coverage is a crude proxy (real auto-exposure integrates scene luminance); and
+without temporal adaptation it will PULSE as the sun enters/leaves view or the
+camera turns.  Bloom + white-hot core already buy most of the "blinding" feel for
+a fraction of the risk.  Recommendation: park it; if ever done, do it as proper
+luminance-based auto-exposure on an HDR buffer (see section 2), not as a
+sun-coverage hack.
