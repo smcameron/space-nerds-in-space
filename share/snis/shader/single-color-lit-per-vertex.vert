@@ -8,6 +8,12 @@ uniform float u_in_shade;  // 1.0 means in full shade.  0.0 means not in shade.
 			   // e.g. a ship shaded by a planet
 uniform float u_Ambient;   // Ambient light, 0.1 is ok value
 
+/* Star-coloured lighting: white sunlight tinted toward the star's colour, and the absolute
+ * (complement-tinted) shaded colour that supersedes the scalar u_Ambient in the combine below.
+ * Renderer defaults (light = white, ambient = vec3(u_Ambient)) reproduce the untinted look. */
+uniform vec3 u_LightColor;
+uniform vec3 u_AmbientColor;
+
 uniform vec3 u_LightPos;   // The position of the light in eye space.
 
 in vec4 a_Position; // Per-vertex position information we will pass in.
@@ -42,11 +48,10 @@ void main()                // The entry point for our vertex shader.
 	// mimic the original snis software render lighting
 	/* dotV = (dotV + 1.0) / 2.0; */
 
-	// ambient
-	float diffuse = max(dotV, u_Ambient);
-
-	// Multiply the color by the illumination level. It will be interpolated across the triangle.
-	v_Color = u_Color * diffuse;
+	// Combine the star-tinted direct light with the absolute complement-tinted ambient,
+	// per channel (supersedes the old scalar max(dotV, u_Ambient)).
+	// It will be interpolated across the triangle.
+	v_Color = u_Color * max(u_AmbientColor, u_LightColor * max(dotV, 0.0));
 
 #ifdef USE_CSM
 	// Pass the raw lighting terms so the fragment shader can modulate the diffuse

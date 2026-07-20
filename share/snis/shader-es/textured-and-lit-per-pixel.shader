@@ -74,7 +74,12 @@ uniform float u_SpecularIntensity; /* between 0 and 1, 1 is very shiny, 0 is fla
 
 	uniform TEX_SAMPLER u_AlbedoTex;
 	uniform vec3 u_LightPos;
-	vec3 u_LightColor = vec3(1);
+	/* Star-coloured lighting: white sunlight tinted toward the star's colour, and the
+	 * absolute (complement-tinted) shaded colour that supersedes the old scalar u_Ambient
+	 * in the combine below.  Defaults from the renderer (light = white, ambient =
+	 * vec3(u_Ambient)) reproduce the untinted look. */
+	uniform vec3 u_LightColor;
+	uniform vec3 u_AmbientColor;
 	uniform vec4 u_TintColor;
 	uniform float u_in_shade;
 	uniform float u_Ambient;
@@ -112,11 +117,12 @@ uniform float u_SpecularIntensity; /* between 0 and 1, 1 is very shiny, 0 is fla
 		// albedo from texture
 		vec4 albedo = TEX_READ(u_AlbedoTex, uv);
 
-		// diffuse is light dot normal
-		float diffuse = max(u_Ambient, (1.0 - u_in_shade) * clamp(dot(normal, light_dir), 0.0, 1.0));
+		// diffuse is light dot normal; the star-tinted sunlight and the absolute
+		// complement-tinted ambient are combined per channel (no CSM shadow term on ES).
+		float direct = (1.0 - u_in_shade) * clamp(dot(normal, light_dir), 0.0, 1.0);
 
 		// base diffuse color
-		vec3 color = albedo.rgb * u_LightColor * diffuse;
+		vec3 color = albedo.rgb * max(u_AmbientColor, u_LightColor * direct);
 
 		#ifdef USE_EMIT_MAP
 			color = max(color, u_EmitIntensity * TEX_READ(u_EmitTex, uv).rgb);
@@ -128,7 +134,9 @@ uniform float u_SpecularIntensity; /* between 0 and 1, 1 is very shiny, 0 is fla
 			float n_dot_h = max(0.0, clamp(dot(normal, half_dir), 0.0, 1.0));
 			float spec = pow(n_dot_h, u_SpecularPower);
 
-			color += u_SpecularColor * u_SpecularIntensity * spec;
+			// A specular highlight is a reflection of the light source, so it carries the
+			// star-tinted light colour (not the surface albedo).
+			color += u_LightColor * u_SpecularColor * u_SpecularIntensity * spec;
 		#endif
 
 		gl_FragColor = clamp(vec4(color, albedo.a), 0.0, 1.0);

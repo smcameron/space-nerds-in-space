@@ -98,6 +98,15 @@ struct entity_context {
 	float window_offset_x, window_offset_y;
 	float ambient;
 
+	/* Star-coloured lighting: the star's colour (0..1 rgb) and two strengths, from
+	 * which the lit shaders' star-tinted light colour and complementary ambient
+	 * colour are derived per frame (see star_light.c / set_star_light_tint()).  The
+	 * defaults -- white star, strengths 0 -- reproduce the untinted look exactly:
+	 * the light colour stays white and the ambient colour stays vec3(ambient). */
+	float star_color[3];
+	float star_tint_strength;
+	float star_shadow_contrast;
+
 	/* Screen size of model at which we switch between lo/hi poly models, if available */
 	/* Possibly this threshold should be per mesh, rather than per entity context. */
 	float hi_lo_poly_pixel_threshold;

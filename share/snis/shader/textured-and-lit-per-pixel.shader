@@ -82,7 +82,12 @@ uniform float u_SpecularIntensity; /* between 0 and 1, 1 is very shiny, 0 is fla
 
 	uniform TEX_SAMPLER u_AlbedoTex;
 	uniform vec3 u_LightPos;
-	vec3 u_LightColor = vec3(1);
+	/* Star-coloured lighting: white sunlight tinted toward the star's colour, and the
+	 * absolute (complement-tinted) shaded colour that supersedes the old scalar u_Ambient
+	 * in the combine below.  Defaults from the renderer (light = white, ambient =
+	 * vec3(u_Ambient)) reproduce the untinted look. */
+	uniform vec3 u_LightColor;
+	uniform vec3 u_AmbientColor;
 	uniform vec4 u_TintColor;
 	uniform float u_in_shade;
 	uniform float u_Ambient;
@@ -208,12 +213,13 @@ uniform float u_SpecularIntensity; /* between 0 and 1, 1 is very shiny, 0 is fla
 		// albedo from texture
 		vec4 albedo = texture(u_AlbedoTex, uv);
 
-		// diffuse is light dot normal (shadowed direct term with an ambient floor)
+		// diffuse is light dot normal (shadowed direct term); the star-tinted sunlight and the
+		// absolute complement-tinted ambient are combined per channel so the lit faces lean
+		// toward the star colour and the shaded faces toward its complement.
 		float direct = (1.0 - u_in_shade) * clamp(dot(normal, light_dir), 0.0, 1.0);
-		float diffuse = max(u_Ambient, direct * shadow);
 
 		// base diffuse color
-		vec3 color = albedo.rgb * u_LightColor * diffuse;
+		vec3 color = albedo.rgb * max(u_AmbientColor, u_LightColor * direct * shadow);
 
 		#ifdef USE_EMIT_MAP
 			color = max(color, u_EmitIntensity * texture(u_EmitTex, uv).rgb);
@@ -225,7 +231,10 @@ uniform float u_SpecularIntensity; /* between 0 and 1, 1 is very shiny, 0 is fla
 			float n_dot_h = max(0.0, clamp(dot(normal, half_dir), 0.0, 1.0));
 			float spec = pow(n_dot_h, u_SpecularPower);
 
-			color += u_SpecularColor * u_SpecularIntensity * spec * shadow;
+			// A specular highlight is a reflection of the light source, so it carries the
+			// star-tinted light colour (not the surface albedo) -- keeps highlights coherent
+			// with the diffuse tint while staying brighter than the body.
+			color += u_LightColor * u_SpecularColor * u_SpecularIntensity * spec * shadow;
 		#endif
 
 		f_FragColor = clamp(vec4(color, albedo.a), 0.0, 1.0);

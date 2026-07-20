@@ -12,6 +12,10 @@ uniform int u_ShadowPcfRadius;  /* PCF kernel half-width for the nearest cascade
 uniform float u_CascadeSplitFar[MAX_SHADOW_CASCADES]; /* view-space far distance per cascade */
 uniform float u_ShadowBlend;    /* cross-cascade blend band, fraction of far distance */
 uniform float u_Ambient;
+/* Star-coloured lighting (see the .vert): star-tinted light and absolute complement-tinted
+ * ambient, superseding the scalar u_Ambient in the shadowed combine below. */
+uniform vec3 u_LightColor;
+uniform vec3 u_AmbientColor;
 in vec4 v_ShadowCoord[MAX_SHADOW_CASCADES];
 in float v_LightLevel;
 in vec3 v_BaseColor;
@@ -91,7 +95,7 @@ void main()
 #ifdef USE_CSM
 	int csm_cascade;
 	float lit = csm_shadow_factor(csm_cascade);
-	float diffuse = max(v_LightLevel * lit, u_Ambient);
+	vec3 diffuse = max(u_AmbientColor, u_LightColor * max(v_LightLevel * lit, 0.0));
 	f_FragColor = vec4(v_BaseColor * diffuse, 1.0);
 #else
 	f_FragColor = vec4(v_Color, 1);

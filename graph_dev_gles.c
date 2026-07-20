@@ -25,6 +25,7 @@
 #include "material.h"
 #include "entity.h"
 #include "entity_private.h"
+#include "star_light.h"
 #include "snis_typeface.h"
 #include "opengl_cap.h"
 #include "png_utils.h"
@@ -819,6 +820,8 @@ struct graph_dev_gl_single_color_lit_shader {
 	GLint color_id;
 	GLint in_shade_id;
 	GLint ambient_id;
+	GLint light_color_id;   /* star-tinted direct light colour (u_LightColor) */
+	GLint ambient_color_id; /* absolute, complement-tinted ambient colour (u_AmbientColor) */
 	GLint filmic_tonemapping_id;
 	GLint tonemapping_gain_id;
 };
@@ -960,6 +963,8 @@ struct graph_dev_gl_textured_shader {
 	GLint specular_power_id;
 	GLint specular_intensity_id;
 	GLint ambient_id;
+	GLint light_color_id;   /* star-tinted direct light colour (u_LightColor) */
+	GLint ambient_color_id; /* absolute, complement-tinted ambient colour (u_AmbientColor) */
 	GLint filmic_tonemapping_id;
 	GLint tonemapping_gain_id;
 
@@ -1553,6 +1558,8 @@ struct raster_texture_params {
 	GLuint normalmap_id;
 	struct shadow_sphere_data *shadow_sphere;
 	struct shadow_annulus_data *shadow_annulus;
+	float light_color[3];		/* star-tinted direct light colour (u_LightColor) */
+	float ambient_color[3];		/* absolute, complement-tinted ambient colour (u_AmbientColor) */
 	int do_cullface;
 	int do_blend;
 	float ring_texture_v;
@@ -1571,6 +1578,16 @@ struct raster_texture_params {
 	float width;
 	int textures_not_ready;
 };
+
+/* Derive this frame's star-tinted light colour and complementary ambient colour from the
+ * entity context (see star_light.c).  With the default white star and zero strengths this
+ * yields light = white and ambient = vec3(cx->ambient) -- i.e. the untinted look. */
+static void graph_dev_compute_star_light(const struct entity_context *cx,
+	float light_color[3], float ambient_color[3])
+{
+	star_light_colors(cx->star_color, cx->ambient, cx->star_tint_strength,
+		cx->star_shadow_contrast, light_color, ambient_color);
+}
 
 static void graph_dev_raster_texture(struct raster_texture_params *p)
 {
@@ -1613,6 +1630,11 @@ static void graph_dev_raster_texture(struct raster_texture_params *p)
 
 	if (shader->ambient_id >= 0)
 		glUniform1f(shader->ambient_id, p->ambient);
+	if (shader->light_color_id >= 0)
+		glUniform3f(shader->light_color_id, p->light_color[0], p->light_color[1], p->light_color[2]);
+	if (shader->ambient_color_id >= 0)
+		glUniform3f(shader->ambient_color_id, p->ambient_color[0], p->ambient_color[1],
+			p->ambient_color[2]);
 	if (shader->filmic_tonemapping_id >= 0)
 		glUniform1f(shader->filmic_tonemapping_id, (float) filmic_tonemapping);
 	if (shader->tonemapping_gain_id >= 0)
@@ -1783,7 +1805,7 @@ static void graph_dev_raster_texture(struct raster_texture_params *p)
 
 static void graph_dev_raster_single_color_lit(const struct mat44 *mat_mvp, const struct mat44 *mat_mv,
 	const struct mat33 *mat_normal, struct mesh *m, struct sng_color *triangle_color, union vec3 *eye_light_pos,
-	float in_shade, float ambient)
+	float in_shade, float ambient, const float light_color[3], const float ambient_color[3])
 {
 	PROFILE_ZONE_START("graph_dev_raster_single_color_lit");
 	enable_3d_viewport();
@@ -1808,6 +1830,12 @@ static void graph_dev_raster_single_color_lit(const struct mat44 *mat_mvp, const
 	glUniform3f(single_color_lit_shader.light_pos_id, eye_light_pos->v.x, eye_light_pos->v.y, eye_light_pos->v.z);
 	glUniform1f(single_color_lit_shader.in_shade_id, in_shade);
 	glUniform1f(single_color_lit_shader.ambient_id, ambient);
+	if (single_color_lit_shader.light_color_id >= 0)
+		glUniform3f(single_color_lit_shader.light_color_id,
+			light_color[0], light_color[1], light_color[2]);
+	if (single_color_lit_shader.ambient_color_id >= 0)
+		glUniform3f(single_color_lit_shader.ambient_color_id,
+			ambient_color[0], ambient_color[1], ambient_color[2]);
 	glUniform1f(single_color_lit_shader.filmic_tonemapping_id, (float) filmic_tonemapping);
 	glUniform1f(single_color_lit_shader.tonemapping_gain_id, tonemapping_gain);
 
@@ -2983,17 +3011,22 @@ static void graph_dev_raster_triangle_mesh(struct entity_context *cx, struct ent
 				rtp.water_color = &water_color;
 				rtp.sun_color = &sun_color;
 				rtp.ambient = cx->ambient;
+				graph_dev_compute_star_light(cx, rtp.light_color, rtp.ambient_color);
 
 				graph_dev_raster_texture(&rtp);
 			} else {
-				if (atmosphere && !rtp.textures_not_ready)
+				if (atmosphere && !rtp.textures_not_ready) {
 					graph_dev_raster_atmosphere(rtp.mat_mvp, rtp.mat_mv, rtp.mat_normal,
 						e->m, &atmosphere_color, eye_light_pos, rtp.alpha,
 						&shadow_annulus, rtp.ring_texture_v, rtp.atmosphere_brightness);
-				else if (!rtp.textures_not_ready)
+				} else if (!rtp.textures_not_ready) {
+					float light_color[3], ambient_color[3];
+
+					graph_dev_compute_star_light(cx, light_color, ambient_color);
 					graph_dev_raster_single_color_lit(rtp.mat_mvp, rtp.mat_mv,
 						rtp.mat_normal, e->m, &triangle_color, eye_light_pos,
-						e->in_shade, cx->ambient);
+						e->in_shade, cx->ambient, light_color, ambient_color);
+				}
 			}
 		}
 	} else if (outline_triangle) {
@@ -3626,6 +3659,8 @@ static void setup_single_color_lit_shader(struct graph_dev_gl_single_color_lit_s
 	shader->color_id = glGetUniformLocation(shader->program_id, "u_Color");
 	shader->in_shade_id = glGetUniformLocation(shader->program_id, "u_in_shade");
 	shader->ambient_id = glGetUniformLocation(shader->program_id, "u_Ambient");
+	shader->light_color_id = glGetUniformLocation(shader->program_id, "u_LightColor");
+	shader->ambient_color_id = glGetUniformLocation(shader->program_id, "u_AmbientColor");
 	shader->filmic_tonemapping_id = glGetUniformLocation(shader->program_id, "u_FilmicTonemapping");
 	shader->tonemapping_gain_id = glGetUniformLocation(shader->program_id, "u_TonemappingGain");
 }
@@ -3745,6 +3780,8 @@ static void setup_textured_shader(const char *basename, const char *defines,
 
 	shader->shadow_sphere_id = glGetUniformLocation(shader->program_id, "u_Sphere");
 	shader->ambient_id = glGetUniformLocation(shader->program_id, "u_Ambient");
+	shader->light_color_id = glGetUniformLocation(shader->program_id, "u_LightColor");
+	shader->ambient_color_id = glGetUniformLocation(shader->program_id, "u_AmbientColor");
 	shader->filmic_tonemapping_id = glGetUniformLocation(shader->program_id, "u_FilmicTonemapping");
 	shader->tonemapping_gain_id = glGetUniformLocation(shader->program_id, "u_TonemappingGain");
 }
@@ -3830,6 +3867,8 @@ static void setup_textured_cubemap_shader(const char *basename, int use_normal_m
 	shader->shadow_annulus_radius_id = glGetUniformLocation(shader->program_id, "u_AnnulusRadius");
 	shader->shadow_annulus_tint_color_id = glGetUniformLocation(shader->program_id, "u_AnnulusTintColor");
 	shader->ambient_id = glGetUniformLocation(shader->program_id, "u_Ambient");
+	shader->light_color_id = glGetUniformLocation(shader->program_id, "u_LightColor");
+	shader->ambient_color_id = glGetUniformLocation(shader->program_id, "u_AmbientColor");
 	shader->filmic_tonemapping_id = glGetUniformLocation(shader->program_id, "u_FilmicTonemapping");
 	shader->tonemapping_gain_id = glGetUniformLocation(shader->program_id, "u_TonemappingGain");
 }

@@ -1472,6 +1472,11 @@ struct entity_context *entity_context_new(int maxobjs, int maxchildren)
 	set_window_offset(cx, 0.0, 0.0);
 	cx->nfakestars = 0;
 	cx->hi_lo_poly_pixel_threshold = 100.0;
+	cx->star_color[0] = 1.0;
+	cx->star_color[1] = 1.0;
+	cx->star_color[2] = 1.0;
+	cx->star_tint_strength = 0.0;
+	cx->star_shadow_contrast = 0.0;
 	return cx;
 }
 
@@ -1561,6 +1566,22 @@ void set_lighting(struct entity_context *cx, double x, double y, double z)
 void set_ambient_light(struct entity_context *cx, float ambient)
 {
 	cx->ambient = ambient;
+}
+
+/* Star-coloured lighting: tint the direct (sun-lit) term of lit objects toward the star's
+ * colour (r, g, b) by strength tint_k, and their ambient/shaded term toward the star's
+ * complement, deepening it for blue stars by contrast_q (see star_light.c).  tint_k = 0 and
+ * contrast_q = 0 restore the untinted look.  The renderer derives the actual light/ambient
+ * colours from these plus cx->ambient at draw time, so callers may set the ambient level and
+ * this tint in either order. */
+void set_star_light_tint(struct entity_context *cx, float r, float g, float b,
+			float tint_k, float contrast_q)
+{
+	cx->star_color[0] = r;
+	cx->star_color[1] = g;
+	cx->star_color[2] = b;
+	cx->star_tint_strength = tint_k;
+	cx->star_shadow_contrast = contrast_q;
 }
 
 /* Cascaded-shadow-map coverage tunables (global, not per-context).  Exposed so tools like
