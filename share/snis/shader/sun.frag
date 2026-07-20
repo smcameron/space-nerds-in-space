@@ -16,7 +16,7 @@ void main()
 	/* Distance from the billboard centre in UV space (0 at centre, ~0.5 at the edge). */
 	float r = length(v_TexCoord - vec2(0.5));
 
-	/* Core: flat inside the disc with a soft edge at u_DiscRadius.  The disc radius is set per
+	/* Disc coverage: opaque inside u_DiscRadius with a soft edge.  The disc radius is set per
 	 * frame from the star's world radius over the billboard size, so the disc is world-scale
 	 * (grows as the camera approaches). */
 	float edge = max(u_EdgeSoftness * u_DiscRadius, 0.001);
@@ -33,11 +33,21 @@ void main()
 	float x = clamp((r - u_DiscRadius) / max(0.5 - u_DiscRadius, 0.0001), 0.0, 1.0);
 	float bloom = glow * (1.0 - smoothstep(0.7, 1.0, x));
 
-	/* One emission field pushed through the shared filmic tonemap: the bright core clips toward
-	 * white while the limb and bloom keep the star's colour, consistent with the rest of the
-	 * scene.  Coverage is opaque over the core (hides the background) and additive in the bloom
-	 * (adds light) via the premultiplied-alpha blend the caller sets up. */
-	vec3 emission = u_Color * (u_CoreBrightness * core + u_BloomBrightness * bloom);
+	/* Core emission: white-hot at the centre grading to the star's colour at the limb.  The
+	 * centre brightness saturates every channel through the tonemap (-> white); toward the limb
+	 * the brightness falls to ~1 so the blackbody colour shows.  u_CoreBrightness sets how bright
+	 * the centre is, and therefore how far the white-hot region spreads toward the limb.  A flat
+	 * core instead would pin red and green to white everywhere and only let blue vary, giving an
+	 * abrupt white->yellow snap as the star cools -- this gradient keeps the limb colour smooth. */
+	float disc_t = clamp(r / max(u_DiscRadius, 0.0001), 0.0, 1.0);
+	float core_level = 1.0 + (u_CoreBrightness - 1.0) * (1.0 - disc_t) * (1.0 - disc_t);
+	vec3 core_emission = u_Color * core_level;
+	vec3 bloom_emission = u_Color * u_BloomBrightness * bloom;
+
+	/* Inside the disc show the opaque core; outside show the additive bloom (premultiplied-alpha
+	 * blend set up by the caller).  Pushed through the shared filmic tonemap so the hot centre
+	 * clips toward white consistently with the rest of the scene. */
+	vec3 emission = mix(bloom_emission, core_emission, core);
 	float coverage = clamp(core, 0.0, 1.0);
 	f_FragColor = filmic_tonemap(vec4(emission, coverage));
 }
