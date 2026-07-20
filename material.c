@@ -160,7 +160,8 @@ void material_init_sun(struct material *m)
 	m->sun.edge_softness = 0.15;
 	m->sun.core_brightness = 4.0;
 	m->sun.bloom_brightness = 1.5;
-	m->sun.bloom_falloff = 3.0;
+	m->sun.bloom_radius = 0.05;
+	m->sun.bloom_falloff = 2.5;
 	m->rotate_randomly = 0;
 }
 

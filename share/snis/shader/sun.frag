@@ -4,7 +4,8 @@ uniform float u_DiscRadius;    // disc radius in UV (0..0.5); world-scale, set p
 uniform float u_EdgeSoftness;  // disc edge softness as a fraction of the disc radius
 uniform float u_CoreBrightness; // core emission scale (HDR; whitens via the tonemap)
 uniform float u_BloomBrightness;
-uniform float u_BloomFalloff;   // bloom gamma (higher = tighter)
+uniform float u_BloomRadius;    // bloom half-brightness radius in UV, from the disc edge
+uniform float u_BloomFalloff;   // bloom edge sharpness: exponent k of 1/(1 + d^k)
 
 in vec2 v_TexCoord;
 
@@ -21,12 +22,16 @@ void main()
 	float edge = max(u_EdgeSoftness * u_DiscRadius, 0.001);
 	float core = 1.0 - smoothstep(u_DiscRadius - edge, u_DiscRadius + edge, r);
 
-	/* Bloom: from the disc edge outward to the billboard edge (0.5), brightest at the edge.
-	 * The caller sizes the billboard so this ring is a constant on-screen width, so the bloom
-	 * stays screen-scale. */
-	float bloom_span = max(0.5 - u_DiscRadius, 0.001);
-	float bloom_t = clamp((r - u_DiscRadius) / bloom_span, 0.0, 1.0);
-	float bloom = pow(1.0 - bloom_t, u_BloomFalloff);
+	/* Bloom: a soft glow reaching outward from the disc edge.  Butterworth falloff
+	 * 1/(1 + d^k) with d = (distance past the disc edge) / u_BloomRadius: at d = 1 the glow is
+	 * always 0.5 regardless of k, so u_BloomRadius alone sets the half-brightness radius (how far
+	 * it reaches) and u_BloomFalloff (k) sets only the edge sharpness -- the two are orthogonal.
+	 * Only the annulus outside the disc is visible, so it reads as a limb glow that fades out. */
+	float d = max(r - u_DiscRadius, 0.0) / max(u_BloomRadius, 0.0001);
+	float glow = 1.0 / (1.0 + pow(d, u_BloomFalloff));
+	/* Fade to zero before the billboard edge so a low sharpness does not hard-clip. */
+	float x = clamp((r - u_DiscRadius) / max(0.5 - u_DiscRadius, 0.0001), 0.0, 1.0);
+	float bloom = glow * (1.0 - smoothstep(0.7, 1.0, x));
 
 	/* One emission field pushed through the shared filmic tonemap: the bright core clips toward
 	 * white while the limb and bloom keep the star's colour, consistent with the rest of the

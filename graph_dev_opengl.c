@@ -857,6 +857,7 @@ struct graph_dev_gl_sun_shader {
 	GLint edge_softness_id;
 	GLint core_brightness_id;
 	GLint bloom_brightness_id;
+	GLint bloom_radius_id;
 	GLint bloom_falloff_id;
 	GLint filmic_tonemapping_id;
 	GLint tonemapping_gain_id;
@@ -2724,6 +2725,7 @@ static void graph_dev_raster_sun(const struct mat44 *mat_mvp, struct mesh *m, st
 	glUniform1f(sun_shader.edge_softness_id, sun->edge_softness);
 	glUniform1f(sun_shader.core_brightness_id, sun->core_brightness);
 	glUniform1f(sun_shader.bloom_brightness_id, sun->bloom_brightness);
+	glUniform1f(sun_shader.bloom_radius_id, sun->bloom_radius);
 	glUniform1f(sun_shader.bloom_falloff_id, sun->bloom_falloff);
 	glUniform1f(sun_shader.filmic_tonemapping_id, (float) filmic_tonemapping);
 	glUniform1f(sun_shader.tonemapping_gain_id, tonemapping_gain);
@@ -4221,6 +4223,7 @@ static void setup_sun_shader(struct graph_dev_gl_sun_shader *shader)
 	shader->edge_softness_id = glGetUniformLocation(shader->program_id, "u_EdgeSoftness");
 	shader->core_brightness_id = glGetUniformLocation(shader->program_id, "u_CoreBrightness");
 	shader->bloom_brightness_id = glGetUniformLocation(shader->program_id, "u_BloomBrightness");
+	shader->bloom_radius_id = glGetUniformLocation(shader->program_id, "u_BloomRadius");
 	shader->bloom_falloff_id = glGetUniformLocation(shader->program_id, "u_BloomFalloff");
 	shader->filmic_tonemapping_id = glGetUniformLocation(shader->program_id, "u_FilmicTonemapping");
 	shader->tonemapping_gain_id = glGetUniformLocation(shader->program_id, "u_TonemappingGain");

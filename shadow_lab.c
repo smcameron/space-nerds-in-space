@@ -135,7 +135,8 @@ static float deepest_planet_shade = 0.0; /* deepest analytic ship shading this f
  * fraction of the camera distance) but never smaller than the disc, and the shader's disc
  * radius is set each frame from sun_radius / billboard size so the disc stays world-scale
  * (grows as you approach) while the bloom stays a constant apparent size. */
-static float sun_bloom_apparent = 0.4; /* sun billboard on-screen size as a fraction of camera distance */
+#define SUN_BLOOM_WINDOW 4.0 /* billboard extends this many bloom half-radii past the disc edge */
+static float sun_bloom_apparent = 0.1; /* bloom half-brightness radius as a fraction of camera distance */
 static float sun_temperature = 5800.0; /* Kelvin; sets the star's blackbody colour */
 static struct mesh *sun_mesh;
 static struct material sun_material;
@@ -645,8 +646,8 @@ static char *help_text =
 	"  - 7 / 8            STAR TEMPERATURE COOLER / HOTTER (BLACKBODY COLOUR)\n"
 	"  - 9 / I            SUN CORE BRIGHTNESS DIMMER / BRIGHTER (WHITE-HOT SPREAD)\n"
 	"  - T / Y            SUN BLOOM DIMMER / BRIGHTER\n"
-	"  - C / V            SUN BLOOM FALLOFF LOOSER / TIGHTER\n"
-	"  - Z / X            SUN BLOOM SCREEN EXTENT SMALLER / LARGER (DISC STAYS PHYSICAL)\n"
+	"  - C / V            SUN BLOOM EDGE SOFTER / SHARPER (CURVATURE, RADIUS UNCHANGED)\n"
+	"  - Z / X            SUN BLOOM RADIUS SMALLER / LARGER (REACH; DISC STAYS PHYSICAL)\n"
 	"  - P                CYCLE PLANET SHADE MODE: SOFT / BINARY / OFF\n"
 	"  - B                TOGGLE THE PER-SHIP SHADE PANEL\n"
 	"  - 3 / 4            PLANET RADIUS SMALLER / LARGER\n"
@@ -736,7 +737,7 @@ static void draw_hud(void)
 		radians_to_degrees(sun_azimuth), radians_to_degrees(sun_elevation),
 		sun_distance, sun_radius);
 	sng_abs_xy_draw_string(buffer, TINY_FONT, 10, y); y += dy;
-	snprintf(buffer, sizeof(buffer), "SUN %.0fK  CORE %.1f  BLOOM %.1f FALLOFF %.2f EXTENT %.2f",
+	snprintf(buffer, sizeof(buffer), "SUN %.0fK  CORE %.1f  BLOOM %.1f SHARP %.2f RADIUS %.2f",
 		sun_temperature, sun_material.sun.core_brightness, sun_material.sun.bloom_brightness,
 		sun_material.sun.bloom_falloff, sun_bloom_apparent);
 	sng_abs_xy_draw_string(buffer, TINY_FONT, 10, y); y += dy;
@@ -855,11 +856,13 @@ static void draw_screen(void)
 
 		vec3_sub(&to_cam, &sun_pos, &cam_pos);
 		cam_dist = vec3_magnitude(&to_cam);
-		/* Billboard = the disc (2 * sun_radius) plus a bloom ring on each side whose apparent
-		 * extent (sun_bloom_apparent) is constant, so the bloom always starts at the disc edge
-		 * and keeps a fixed on-screen width whatever the distance to the sun. */
-		billboard_world = 2.0 * sun_radius + 2.0 * sun_bloom_apparent * cam_dist;
+		/* Billboard = the disc (2 * sun_radius) plus a bloom margin.  sun_bloom_apparent is the
+		 * bloom's half-brightness radius (constant on screen); the billboard reaches a few of
+		 * those past the disc edge (SUN_BLOOM_WINDOW) to hold the glow's tail.  disc_radius and
+		 * bloom_radius are handed to the shader in the billboard's UV space. */
+		billboard_world = 2.0 * sun_radius + 2.0 * SUN_BLOOM_WINDOW * sun_bloom_apparent * cam_dist;
 		sun_material.sun.disc_radius = sun_radius / billboard_world;
+		sun_material.sun.bloom_radius = sun_bloom_apparent * cam_dist / billboard_world;
 		e = add_entity(cx, sun_mesh, sun_pos.v.x, sun_pos.v.y, sun_pos.v.z, WHITE);
 		if (e) {
 			update_entity_scale(e, billboard_world);
@@ -1000,18 +1003,18 @@ static void handle_key_down(SDL_Keysym *keysym)
 	case SDLK_y: /* bloom brighter */
 		sun_material.sun.bloom_brightness *= 1.111111;
 		break;
-	case SDLK_c: /* bloom falloff looser (bigger glow) */
+	case SDLK_c: /* bloom edge softer (lower k), radius unchanged */
 		sun_material.sun.bloom_falloff *= 0.9;
 		if (sun_material.sun.bloom_falloff < 0.1)
 			sun_material.sun.bloom_falloff = 0.1;
 		break;
-	case SDLK_v: /* bloom falloff tighter */
+	case SDLK_v: /* bloom edge sharper (higher k) */
 		sun_material.sun.bloom_falloff *= 1.111111;
 		break;
-	case SDLK_z: /* bloom screen extent smaller */
+	case SDLK_z: /* bloom radius (reach) smaller */
 		sun_bloom_apparent *= 0.9;
 		break;
-	case SDLK_x: /* bloom screen extent larger */
+	case SDLK_x: /* bloom radius (reach) larger */
 		sun_bloom_apparent *= 1.111111;
 		break;
 	case SDLK_p:

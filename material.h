@@ -97,7 +97,8 @@ struct material_sun {
 	float edge_softness;     /* disc edge softness, as a fraction of the disc radius */
 	float core_brightness;   /* core emission scale (HDR; whitens via the tonemap) */
 	float bloom_brightness;  /* bloom emission scale */
-	float bloom_falloff;     /* bloom gamma (higher = tighter) */
+	float bloom_radius;      /* bloom half-brightness radius in UV (from the disc edge), per frame */
+	float bloom_falloff;     /* bloom edge sharpness: exponent k of the 1/(1 + d^k) falloff */
 };
 
 #define MATERIAL_NEBULA_NPLANES 6
