@@ -112,7 +112,9 @@ static union quat chase_cam_orientation = IDENTITY_QUAT_INITIALIZER;
 static int chase_initialized;  /* 0 to snap the rig to the ship on the first possessed frame */
 static float mouse_sensitivity = 0.003;
 static float roll_rate = 0.02;
-static float ambient_light = 0.015; /* match snis_client's default so lighting mirrors the game */
+static float ambient_light = 0.04; /* raised from the game's 0.015 while tuning the star-light
+				    * tint here (u_AmbientColor supersedes the scalar ambient, so this
+				    * is the real ambient floor); the game promotion keeps 0.015 */
 static int shadow_debug_mode = 0;   /* 0 = off, 1 = shadow factor, 2 = cascade index */
 static int mouse_look_active = 0;
 static float mouse_accum_dx = 0.0;
@@ -139,6 +141,13 @@ static float deepest_planet_shade = 0.0; /* deepest analytic ship shading this f
 				   * small transparent border and the whole falloff is on-screen */
 static float sun_bloom_apparent = 0.1; /* bloom reach (where it hits zero) as a fraction of camera distance */
 static float sun_temperature = 5800.0; /* Kelvin; sets the star's blackbody colour */
+
+/* Star-coloured lighting (see star_light.c / set_star_light_tint()): tint every lit object's
+ * sun-lit term toward the star's colour by sun_tint_strength, and its shaded/ambient term toward
+ * the star's complement, deepening it for blue stars by sun_shadow_contrast.  Both 0 = the old
+ * untinted look.  Tuned in the star_light_preview tool at an albedo ~0.35. */
+static float sun_tint_strength = 0.45;
+static float sun_shadow_contrast = 2.3;
 static struct mesh *sun_mesh;
 static struct material sun_material;
 
@@ -645,7 +654,9 @@ static char *help_text =
 	"  - U / O            SUN DISTANCE CLOSER / FARTHER\n"
 	"  - G / H            SUN RADIUS SMALLER / LARGER (WIDER RADIUS = WIDER PENUMBRA)\n"
 	"  - 7 / 8            STAR TEMPERATURE COOLER / HOTTER (BLACKBODY COLOUR)\n"
+	"  - SHIFT+7 / SHIFT+8  STAR-LIGHT TINT WEAKER / STRONGER (LIT->STAR, SHADE->COMPLEMENT)\n"
 	"  - 9 / I            SUN CORE BRIGHTNESS DIMMER / BRIGHTER (WHITE-HOT SPREAD)\n"
+	"  - SHIFT+9 / SHIFT+I  PAST-WHITE SHADOW CONTRAST WEAKER / STRONGER (DEEPENS BLUE-STAR SHADOWS)\n"
 	"  - T / Y            SUN BLOOM DIMMER / BRIGHTER\n"
 	"  - C / V            SUN BLOOM EDGE SOFTER / SHARPER (CURVATURE, RADIUS UNCHANGED)\n"
 	"  - Z / X            SUN BLOOM RADIUS SMALLER / LARGER (REACH; DISC STAYS PHYSICAL)\n"
@@ -665,6 +676,7 @@ static char *help_text =
 	"  - \\                TOGGLE SHADOWS ON / OFF\n"
 	"  - 0 / 1 / 2        DEBUG: OFF / SHADOW-FACTOR / CASCADE-INDEX\n"
 	"  - [ / ]            SHADOW COVERAGE DISTANCE DOWN / UP\n"
+	"  - SHIFT+[ / SHIFT+]  AMBIENT (SHADED-SIDE) FLOOR DOWN / UP\n"
 	"  - - / =            CASCADE COUNT DOWN / UP (1-6)\n"
 	"  - ; / '            SPLIT LAMBDA DOWN / UP (log vs uniform)\n"
 	"  - , / .            DEPTH-BIAS SLOPE DOWN / UP\n"
@@ -743,6 +755,9 @@ static void draw_hud(void)
 		sun_temperature, sun_material.sun.core_brightness, sun_material.sun.bloom_brightness,
 		sun_material.sun.bloom_falloff, sun_bloom_apparent, sun_material.sun.edge_softness);
 	sng_abs_xy_draw_string(buffer, TINY_FONT, 10, y); y += dy;
+	snprintf(buffer, sizeof(buffer), "STAR-LIGHT TINT %.2f  CONTRAST %.2f  AMBIENT %.3f",
+		sun_tint_strength, sun_shadow_contrast, ambient_light);
+	sng_abs_xy_draw_string(buffer, TINY_FONT, 10, y); y += dy;
 	if (planet_index >= 0) {
 		float pr = scene[planet_index].scale;
 		float pd = -scene[planet_index].pos.v.y; /* cluster sits near the origin */
@@ -806,6 +821,10 @@ static void draw_screen(void)
 		set_renderer(cx, FLATSHADING_RENDERER);
 	}
 	set_ambient_light(cx, ambient_light);
+	/* Derive the star-tinted light / complementary ambient from the current star colour and the
+	 * live tint/contrast knobs (Shift+7/8 and Shift+9/i).  Uses cx->ambient set just above. */
+	set_star_light_tint(cx, sun_material.sun.color.red, sun_material.sun.color.green,
+		sun_material.sun.color.blue, sun_tint_strength, sun_shadow_contrast);
 
 	update_camera();
 	update_sun();
@@ -932,11 +951,23 @@ static void handle_key_down(SDL_Keysym *keysym)
 		shadow_debug_mode = 2;
 		graph_dev_set_shadow_debug(shadow_debug_mode);
 		break;
-	case SDLK_LEFTBRACKET:
-		set_shadow_map_max_distance(get_shadow_map_max_distance() * 0.8);
+	case SDLK_LEFTBRACKET: /* Shift = lower the ambient (shaded-side) floor */
+		if (keysym->mod & KMOD_SHIFT) {
+			ambient_light -= 0.005;
+			if (ambient_light < 0.0)
+				ambient_light = 0.0;
+		} else {
+			set_shadow_map_max_distance(get_shadow_map_max_distance() * 0.8);
+		}
 		break;
-	case SDLK_RIGHTBRACKET:
-		set_shadow_map_max_distance(get_shadow_map_max_distance() * 1.25);
+	case SDLK_RIGHTBRACKET: /* Shift = raise the ambient (shaded-side) floor */
+		if (keysym->mod & KMOD_SHIFT) {
+			ambient_light += 0.005;
+			if (ambient_light > 1.0)
+				ambient_light = 1.0;
+		} else {
+			set_shadow_map_max_distance(get_shadow_map_max_distance() * 1.25);
+		}
 		break;
 	case SDLK_MINUS:
 	case SDLK_KP_MINUS:
@@ -984,28 +1015,53 @@ static void handle_key_down(SDL_Keysym *keysym)
 	case SDLK_h:
 		sun_radius *= 1.111111;
 		break;
-	case SDLK_7: /* cooler (redder) star */
-		sun_temperature *= 0.95;
-		if (sun_temperature < 1900.0) /* blackbody blue channel cuts off below here */
-			sun_temperature = 1900.0;
-		update_sun_color();
+	case SDLK_7: /* cooler (redder) star; Shift = weaker star-light tint */
+		if (keysym->mod & KMOD_SHIFT) {
+			sun_tint_strength -= 0.02;
+			if (sun_tint_strength < 0.0)
+				sun_tint_strength = 0.0;
+		} else {
+			sun_temperature *= 0.95;
+			if (sun_temperature < 1900.0) /* blackbody blue channel cuts off below here */
+				sun_temperature = 1900.0;
+			update_sun_color();
+		}
 		break;
-	case SDLK_8: /* hotter (bluer) star */
-		sun_temperature *= 1.0526316;
-		if (sun_temperature > 40000.0)
-			sun_temperature = 40000.0;
-		update_sun_color();
+	case SDLK_8: /* hotter (bluer) star; Shift = stronger star-light tint */
+		if (keysym->mod & KMOD_SHIFT) {
+			sun_tint_strength += 0.02;
+			if (sun_tint_strength > 1.0)
+				sun_tint_strength = 1.0;
+		} else {
+			sun_temperature *= 1.0526316;
+			if (sun_temperature > 40000.0)
+				sun_temperature = 40000.0;
+			update_sun_color();
+		}
 		break;
 	case SDLK_9: /* core dimmer (less white-hot spread); floor at 1.0 so the centre never goes
-		      * below the limb (a value < 1 inverts the gradient and darkens the middle) */
-		sun_material.sun.core_brightness *= 0.9;
-		if (sun_material.sun.core_brightness < 1.0)
-			sun_material.sun.core_brightness = 1.0;
+		      * below the limb (a value < 1 inverts the gradient and darkens the middle).
+		      * Shift = weaker past-white shadow contrast */
+		if (keysym->mod & KMOD_SHIFT) {
+			sun_shadow_contrast -= 0.05;
+			if (sun_shadow_contrast < 0.0)
+				sun_shadow_contrast = 0.0;
+		} else {
+			sun_material.sun.core_brightness *= 0.9;
+			if (sun_material.sun.core_brightness < 1.0)
+				sun_material.sun.core_brightness = 1.0;
+		}
 		break;
-	case SDLK_i: /* core brighter (more white-hot spread) */
-		sun_material.sun.core_brightness *= 1.111111;
-		if (sun_material.sun.core_brightness > 100.0)
-			sun_material.sun.core_brightness = 100.0;
+	case SDLK_i: /* core brighter (more white-hot spread); Shift = stronger past-white shadow contrast */
+		if (keysym->mod & KMOD_SHIFT) {
+			sun_shadow_contrast += 0.05;
+			if (sun_shadow_contrast > 3.0)
+				sun_shadow_contrast = 3.0;
+		} else {
+			sun_material.sun.core_brightness *= 1.111111;
+			if (sun_material.sun.core_brightness > 100.0)
+				sun_material.sun.core_brightness = 100.0;
+		}
 		break;
 	case SDLK_t: /* bloom dimmer (snaps to a true zero so the glow can be turned fully off) */
 		sun_material.sun.bloom_brightness *= 0.9;
@@ -1255,6 +1311,9 @@ int main(int argc, char *argv[])
 	snis_typefaces_init();
 	sng_set_font_family(0);
 	graph_dev_setup(NULL);
+	/* Match the game's tonemapping gain (graph_dev defaults to 1.18; snis_client uses 1.10),
+	 * so the star-light tint looks the same here as it will in game. */
+	graph_dev_set_tonemapping_gain(1.10);
 	setup_skybox("orange-haze");
 	setup_sun_billboard();
 
