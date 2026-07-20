@@ -853,10 +853,13 @@ struct graph_dev_gl_sun_shader {
 	GLint vertex_position_id;
 	GLint texture_coord_id;
 	GLint color_id;
-	GLint bloom_color_id;
 	GLint disc_radius_id;
-	GLint bloom_intensity_id;
+	GLint edge_softness_id;
+	GLint core_brightness_id;
+	GLint bloom_brightness_id;
 	GLint bloom_falloff_id;
+	GLint filmic_tonemapping_id;
+	GLint tonemapping_gain_id;
 };
 
 struct graph_dev_gl_single_color_lit_shader {
@@ -2717,11 +2720,13 @@ static void graph_dev_raster_sun(const struct mat44 *mat_mvp, struct mesh *m, st
 
 	glUniformMatrix4fv(sun_shader.mvp_matrix_id, 1, GL_FALSE, &mat_mvp->m[0][0]);
 	glUniform3f(sun_shader.color_id, sun->color.red, sun->color.green, sun->color.blue);
-	glUniform3f(sun_shader.bloom_color_id, sun->bloom_color.red, sun->bloom_color.green,
-		sun->bloom_color.blue);
 	glUniform1f(sun_shader.disc_radius_id, sun->disc_radius);
-	glUniform1f(sun_shader.bloom_intensity_id, sun->bloom_intensity);
+	glUniform1f(sun_shader.edge_softness_id, sun->edge_softness);
+	glUniform1f(sun_shader.core_brightness_id, sun->core_brightness);
+	glUniform1f(sun_shader.bloom_brightness_id, sun->bloom_brightness);
 	glUniform1f(sun_shader.bloom_falloff_id, sun->bloom_falloff);
+	glUniform1f(sun_shader.filmic_tonemapping_id, (float) filmic_tonemapping);
+	glUniform1f(sun_shader.tonemapping_gain_id, tonemapping_gain);
 
 	glEnableVertexAttribArray(sun_shader.vertex_position_id);
 	glBindBuffer(GL_ARRAY_BUFFER, ptr->vertex_buffer);
@@ -4205,17 +4210,20 @@ static void setup_sun_shader(struct graph_dev_gl_sun_shader *shader)
 {
 	maybe_unload_shader(&shader->meta, &shader->program_id);
 	shader->program_id = load_shaders(shader_directory,
-				"sun.vert", "sun.frag", UNIVERSAL_SHADER_HEADER);
+				"sun.vert", "sun.frag", UNIVERSAL_SHADER_HEADER FILMIC_TONEMAPPING);
 	glGenVertexArrays(1, &shader->vao_id);
 
 	shader->mvp_matrix_id = glGetUniformLocation(shader->program_id, "u_MVPMatrix");
 	shader->vertex_position_id = glGetAttribLocation(shader->program_id, "a_Position");
 	shader->texture_coord_id = glGetAttribLocation(shader->program_id, "a_TexCoord");
 	shader->color_id = glGetUniformLocation(shader->program_id, "u_Color");
-	shader->bloom_color_id = glGetUniformLocation(shader->program_id, "u_BloomColor");
 	shader->disc_radius_id = glGetUniformLocation(shader->program_id, "u_DiscRadius");
-	shader->bloom_intensity_id = glGetUniformLocation(shader->program_id, "u_BloomIntensity");
+	shader->edge_softness_id = glGetUniformLocation(shader->program_id, "u_EdgeSoftness");
+	shader->core_brightness_id = glGetUniformLocation(shader->program_id, "u_CoreBrightness");
+	shader->bloom_brightness_id = glGetUniformLocation(shader->program_id, "u_BloomBrightness");
 	shader->bloom_falloff_id = glGetUniformLocation(shader->program_id, "u_BloomFalloff");
+	shader->filmic_tonemapping_id = glGetUniformLocation(shader->program_id, "u_FilmicTonemapping");
+	shader->tonemapping_gain_id = glGetUniformLocation(shader->program_id, "u_TonemappingGain");
 }
 
 static void setup_line_single_color_shader(struct graph_dev_gl_line_single_color_shader *shader)

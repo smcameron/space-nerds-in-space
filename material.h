@@ -85,17 +85,19 @@ struct material_texture_cubemap {
 	struct sng_color tint;
 };
 
-/* A star drawn as a camera-facing billboard: a solid-colour disc plus a screen-scale bloom,
- * both computed procedurally in the sun shader.  disc_radius is the disc's radius in the
- * billboard's 0..0.5 UV space and is set per frame (from sun world radius / billboard world
- * size) so the disc stays world-scale while the billboard is sized to the bloom's screen
- * extent. */
+/* A star drawn as a camera-facing billboard.  The whole star is one emission field --
+ * blackbody colour times a radial intensity (bright flat core, then a bloom from the disc edge
+ * out) -- pushed through the shared filmic tonemap, so the hot core desaturates to white while
+ * the limb and bloom keep the star's colour.  disc_radius is the disc's radius in the
+ * billboard's 0..0.5 UV space, set per frame (star world radius / billboard world size) so the
+ * disc stays world-scale while the billboard is sized to the bloom's screen extent. */
 struct material_sun {
-	struct sng_color color;       /* disc colour */
-	struct sng_color bloom_color; /* additive bloom colour */
-	float disc_radius;            /* disc radius in UV (0..0.5), set per frame */
-	float bloom_intensity;
-	float bloom_falloff;          /* higher = tighter bloom */
+	struct sng_color color;  /* blackbody colour from the star's temperature */
+	float disc_radius;       /* disc radius in UV (0..0.5), set per frame */
+	float edge_softness;     /* disc edge softness, as a fraction of the disc radius */
+	float core_brightness;   /* core emission scale (HDR; whitens via the tonemap) */
+	float bloom_brightness;  /* bloom emission scale */
+	float bloom_falloff;     /* bloom gamma (higher = tighter) */
 };
 
 #define MATERIAL_NEBULA_NPLANES 6

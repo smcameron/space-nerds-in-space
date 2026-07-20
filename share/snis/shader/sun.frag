@@ -1,9 +1,10 @@
 
-uniform vec3 u_Color;         // disc colour
-uniform vec3 u_BloomColor;    // additive bloom colour
-uniform float u_DiscRadius;   // disc radius in UV (0..0.5); world-scale, set per frame
-uniform float u_BloomIntensity;
-uniform float u_BloomFalloff;  // higher = tighter bloom
+uniform vec3 u_Color;          // blackbody colour from the star's temperature
+uniform float u_DiscRadius;    // disc radius in UV (0..0.5); world-scale, set per frame
+uniform float u_EdgeSoftness;  // disc edge softness as a fraction of the disc radius
+uniform float u_CoreBrightness; // core emission scale (HDR; whitens via the tonemap)
+uniform float u_BloomBrightness;
+uniform float u_BloomFalloff;   // bloom gamma (higher = tighter)
 
 in vec2 v_TexCoord;
 
@@ -14,21 +15,24 @@ void main()
 	/* Distance from the billboard centre in UV space (0 at centre, ~0.5 at the edge). */
 	float r = length(v_TexCoord - vec2(0.5));
 
-	/* Solid disc within u_DiscRadius, with a short soft edge.  The disc radius is set per
-	 * frame from the sun's world radius over the billboard's world size, so the disc stays
-	 * world-scale (grows as the camera approaches). */
-	float edge = 0.01 + 0.25 * u_DiscRadius;
-	float disc = 1.0 - smoothstep(u_DiscRadius, u_DiscRadius + edge, r);
+	/* Core: flat inside the disc with a soft edge at u_DiscRadius.  The disc radius is set per
+	 * frame from the star's world radius over the billboard size, so the disc is world-scale
+	 * (grows as the camera approaches). */
+	float edge = max(u_EdgeSoftness * u_DiscRadius, 0.001);
+	float core = 1.0 - smoothstep(u_DiscRadius - edge, u_DiscRadius + edge, r);
 
-	/* Additive bloom running from the disc edge (u_DiscRadius) out to the billboard edge (0.5),
-	 * brightest at the edge and fading outward.  Starting it at the disc edge (rather than the
-	 * centre) keeps it from hiding behind the disc as the disc grows; the caller sizes the
-	 * billboard so this ring is a constant on-screen width, so the bloom stays screen-scale. */
+	/* Bloom: from the disc edge outward to the billboard edge (0.5), brightest at the edge.
+	 * The caller sizes the billboard so this ring is a constant on-screen width, so the bloom
+	 * stays screen-scale. */
 	float bloom_span = max(0.5 - u_DiscRadius, 0.001);
 	float bloom_t = clamp((r - u_DiscRadius) / bloom_span, 0.0, 1.0);
-	float bloom = pow(1.0 - bloom_t, u_BloomFalloff) * u_BloomIntensity;
+	float bloom = pow(1.0 - bloom_t, u_BloomFalloff);
 
-	vec3 color = u_Color * disc + u_BloomColor * bloom;
-	float a = clamp(disc + bloom, 0.0, 1.0);
-	f_FragColor = vec4(color, a);
+	/* One emission field pushed through the shared filmic tonemap: the bright core clips toward
+	 * white while the limb and bloom keep the star's colour, consistent with the rest of the
+	 * scene.  Coverage is opaque over the core (hides the background) and additive in the bloom
+	 * (adds light) via the premultiplied-alpha blend the caller sets up. */
+	vec3 emission = u_Color * (u_CoreBrightness * core + u_BloomBrightness * bloom);
+	float coverage = clamp(core, 0.0, 1.0);
+	f_FragColor = filmic_tonemap(vec4(emission, coverage));
 }
