@@ -56,8 +56,9 @@ static int snapshot_number = 0;
 #define NCOLS 256 /* colour bins across the width; each is a flat vertical stripe */
 
 /* Live knobs (defaults mirror the intended shadow_lab starting values). */
-static float tint_k = 0.2f;
-static float contrast_q = 0.3f;
+static float light_tint = 0.45f;
+static float dark_tint = 0.06f;
+static float contrast_q = 1.25f;
 static float ambient = 0.015f;
 
 /* Game filmic tonemap preview.  The lit shaders in game end with filmic_tonemap()
@@ -153,7 +154,7 @@ static void strip_color(enum strip_kind kind, float kelvin, float out[3])
 	float star[3], light[3], amb[3];
 
 	star_light_blackbody_color(kelvin, &star[0], &star[1], &star[2]);
-	star_light_colors(star, ambient, tint_k, contrast_q, light, amb);
+	star_light_colors(star, ambient, light_tint, dark_tint, contrast_q, light, amb);
 
 	switch (kind) {
 	case STRIP_WHITE:
@@ -259,8 +260,9 @@ static void draw_header(void)
 	sng_abs_xy_draw_string("STAR-LIGHT PREVIEW - F1 FOR HELP", TINY_FONT, 10, y);
 	y += dy;
 
-	snprintf(buf, sizeof(buf), "TINT k %.3f   CONTRAST q %.3f   AMBIENT A %.4f   ALBEDO %.2f",
-		tint_k, contrast_q, ambient, surface_albedo);
+	snprintf(buf, sizeof(buf),
+		"LIGHT-TINT %.3f   DARK-TINT %.3f   CONTRAST %.3f   AMBIENT %.4f   ALBEDO %.2f",
+		light_tint, dark_tint, contrast_q, ambient, surface_albedo);
 	sng_abs_xy_draw_string(buf, TINY_FONT, 10, y);
 	y += dy;
 
@@ -278,7 +280,7 @@ static void draw_header(void)
 		float star[3], light[3], amb[3];
 
 		star_light_blackbody_color(t, &star[0], &star[1], &star[2]);
-		star_light_colors(star, ambient, tint_k, contrast_q, light, amb);
+		star_light_colors(star, ambient, light_tint, dark_tint, contrast_q, light, amb);
 		snprintf(buf, sizeof(buf),
 			"CURSOR %.0fK  star %.2f %.2f %.2f  light %.2f %.2f %.2f  dark %.3f %.3f %.3f (linear uniforms)",
 			t, star[0], star[1], star[2],
@@ -297,13 +299,14 @@ static const char * const help_text[] = {
 	"DARK   = shaded/ambient colour tinted toward the star's complement, deepened for blue stars.",
 	"STAR   = the star's own blackbody colour.",
 	"",
-	"LEFT / RIGHT   decrease / increase TINT k",
-	"DOWN / UP      decrease / increase CONTRAST q",
-	"[ / ]          decrease / increase AMBIENT A",
-	", / .          decrease / increase surface ALBEDO (1.0 = white, lower = grey hull)",
-	"T              toggle the game filmic tonemap (LIGHT/DARK strips)",
-	"- / =          decrease / increase the tonemap gain",
-	"0              reset k, q, A, albedo to defaults",
+	"LEFT / RIGHT         decrease / increase LIGHT tint",
+	"SHIFT+LEFT / RIGHT   decrease / increase DARK tint",
+	"DOWN / UP            decrease / increase CONTRAST q",
+	"[ / ]                decrease / increase AMBIENT A",
+	", / .                decrease / increase surface ALBEDO (1.0 = white, lower = grey hull)",
+	"T                    toggle the game filmic tonemap (LIGHT/DARK strips)",
+	"- / =                decrease / increase the tonemap gain",
+	"0                    reset tints, q, A, albedo to defaults",
 	"P              save a PNG snapshot",
 	"F1             toggle this help",
 	"ESC / Q        quit",
@@ -377,11 +380,17 @@ static void handle_key_down(SDL_Keysym *keysym)
 	case SDLK_q:
 		quit(0);
 		break;
-	case SDLK_LEFT:
-		tint_k = clampf(tint_k - 0.01f, 0.0f, 1.0f);
+	case SDLK_LEFT: /* Shift = dark tint, else light tint */
+		if (keysym->mod & KMOD_SHIFT)
+			dark_tint = clampf(dark_tint - 0.01f, 0.0f, 1.0f);
+		else
+			light_tint = clampf(light_tint - 0.01f, 0.0f, 1.0f);
 		break;
 	case SDLK_RIGHT:
-		tint_k = clampf(tint_k + 0.01f, 0.0f, 1.0f);
+		if (keysym->mod & KMOD_SHIFT)
+			dark_tint = clampf(dark_tint + 0.01f, 0.0f, 1.0f);
+		else
+			light_tint = clampf(light_tint + 0.01f, 0.0f, 1.0f);
 		break;
 	case SDLK_DOWN:
 		contrast_q = clampf(contrast_q - 0.02f, 0.0f, 3.0f);
@@ -402,8 +411,9 @@ static void handle_key_down(SDL_Keysym *keysym)
 		surface_albedo = clampf(surface_albedo + 0.05f, 0.05f, 1.0f);
 		break;
 	case SDLK_0:
-		tint_k = 0.2f;
-		contrast_q = 0.3f;
+		light_tint = 0.45f;
+		dark_tint = 0.06f;
+		contrast_q = 1.25f;
 		ambient = 0.015f;
 		surface_albedo = 1.0f;
 		break;

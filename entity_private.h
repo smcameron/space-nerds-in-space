@@ -104,7 +104,8 @@ struct entity_context {
 	 * defaults -- white star, strengths 0 -- reproduce the untinted look exactly:
 	 * the light colour stays white and the ambient colour stays vec3(ambient). */
 	float star_color[3];
-	float star_tint_strength;
+	float star_light_tint;
+	float star_dark_tint;
 	float star_shadow_contrast;
 
 	/* Screen size of model at which we switch between lo/hi poly models, if available */

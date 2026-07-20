@@ -11,22 +11,24 @@
 /*
 	Given a star's linear RGB colour (0..1), the scene's scalar ambient level
 	`ambient` (the existing dark-grey ambient, applied to all three channels),
-	and two adjustable strengths -- tint `tint_k` (how far the light leans toward
-	the star colour and the ambient toward its complement) and contrast
-	`contrast_q` (how much a past-white / blue star deepens the shadows) --
-	compute:
+	and three adjustable strengths -- `light_tint` (how far the sunlit term leans
+	toward the star colour), `dark_tint` (how far the shaded term leans toward the
+	star's complement), and `contrast_q` (how much a past-white / blue star deepens
+	the shadows) -- compute:
 
 	  out_light[3] = white sunlight tinted toward the star colour.
 	  out_ambient[3] = the absolute shaded/ambient colour: the dark ambient
-	  mixed toward the star's complement for hue, then rescaled so its
-	  luminance matches `ambient` (so the shadow stays dark rather than
-	  taking on the complement's brightness), then deepened for blue stars.
+	  mixed toward the star's complement for hue, then rescaled so its Oklab
+	  lightness matches `ambient` (so the shadow stays as dark as the neutral
+	  ambient rather than taking on the complement's brightness), then deepened
+	  for blue stars.
 
-	With tint_k == 0 and contrast_q == 0 this yields out_light = {1,1,1} and
-	out_ambient = {ambient, ambient, ambient} -- identical to the untinted look.
+	With light_tint == 0, dark_tint == 0 and contrast_q == 0 this yields
+	out_light = {1,1,1} and out_ambient = {ambient, ambient, ambient} -- identical
+	to the untinted look.
 */
 void star_light_colors(const float star_rgb[3], float ambient,
-			float tint_k, float contrast_q,
+			float light_tint, float dark_tint, float contrast_q,
 			float out_light[3], float out_ambient[3]);
 
 /*

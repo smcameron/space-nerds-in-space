@@ -1585,8 +1585,8 @@ struct raster_texture_params {
 static void graph_dev_compute_star_light(const struct entity_context *cx,
 	float light_color[3], float ambient_color[3])
 {
-	star_light_colors(cx->star_color, cx->ambient, cx->star_tint_strength,
-		cx->star_shadow_contrast, light_color, ambient_color);
+	star_light_colors(cx->star_color, cx->ambient, cx->star_light_tint,
+		cx->star_dark_tint, cx->star_shadow_contrast, light_color, ambient_color);
 }
 
 static void graph_dev_raster_texture(struct raster_texture_params *p)
