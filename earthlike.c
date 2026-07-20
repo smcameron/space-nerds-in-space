@@ -629,6 +629,12 @@ static char *load_image(const char *filename, int *w, int *h, int *a, int *bytes
 		fprintf(stderr, "%s: cannot load image: %s\n", filename, msg);
 		exit(1);
 	}
+
+	if (*a) {
+		/* TODO: support input image with alpha channel */
+		fprintf(stderr, "earthlike: %s: input image with alpha channel not supported\n", filename);
+		exit(1);
+	}
 	*bytes_per_row = *w * 3;
 	/* align to 4 byte boundary */
 	if (*bytes_per_row & 0x03)
