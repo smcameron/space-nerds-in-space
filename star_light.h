@@ -18,7 +18,9 @@
 
 	  out_light[3] = white sunlight tinted toward the star colour.
 	  out_ambient[3] = the absolute shaded/ambient colour: the dark ambient
-	  tinted toward the star's complement, then deepened for blue stars.
+	  mixed toward the star's complement for hue, then rescaled so its
+	  luminance matches `ambient` (so the shadow stays dark rather than
+	  taking on the complement's brightness), then deepened for blue stars.
 
 	With tint_k == 0 and contrast_q == 0 this yields out_light = {1,1,1} and
 	out_ambient = {ambient, ambient, ambient} -- identical to the untinted look.
