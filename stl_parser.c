@@ -1081,6 +1081,7 @@ struct mesh *read_obj_file(char *file_name)
 	m->material = NULL;
 
 	continuation = 0;
+	line[0] = '\0';
 	while (!feof(f)) {
 		char *d = line;
 		/* read a line... */
