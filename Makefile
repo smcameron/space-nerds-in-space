@@ -541,11 +541,11 @@ SDLCFLAGS:=$(shell $(SDL2_CONFIG) --cflags)
 ifeq (${USE_GLES},0)
 GLADLIBS=
 GLADCFLAGS=-Iextern/glad/include
-GRAPH_OBJS=glad-gl.o graph_dev_opengl.o opengl_cap.o
+GRAPH_OBJS=glad-gl.o graph_dev_opengl.o opengl_cap.o star_light.o
 else
 GLADLIBS=
 GLADCFLAGS=-Iextern/glad-es/include -DUSE_GLES=1
-GRAPH_OBJS=glad-gles2.o graph_dev_gles.o gles_cap.o
+GRAPH_OBJS=glad-gles2.o graph_dev_gles.o gles_cap.o star_light.o
 endif
 endif
 
@@ -611,6 +611,14 @@ _SHADOWLABOBJS=shader.o ${GRAPH_OBJS} snis_graph.o shadow_lab.o \
 				snis_xwindows_hacks.o workqueue.o pthread_util.o
 SHADOWLABOBJS=$(patsubst %,$(OD)/%,${_SHADOWLABOBJS}) mikktspace/mikktspace.o
 
+_STARLIGHTPREVIEWOBJS=shader.o ${GRAPH_OBJS} snis_graph.o star_light_preview.o \
+				png_utils.o turret_aimer.o quat.o mathutils.o mesh.o \
+				mtwist.o material.o entity.o snis_alloc.o matrix.o stacktrace.o stl_parser.o \
+				snis_typeface.o snis_font.o string-utils.o ui_colors.o liang-barsky.o \
+				bline.o vec4.o open-simplex-noise.o replacement_assets.o \
+				snis_xwindows_hacks.o workqueue.o pthread_util.o
+STARLIGHTPREVIEWOBJS=$(patsubst %,$(OD)/%,${_STARLIGHTPREVIEWOBJS}) mikktspace/mikktspace.o
+
 _NEBULANOISEOBJS=nebula_noise.o open-simplex-noise.o png_utils.o
 NEBULANOISEOBJS=$(patsubst %,$(OD)/%,${_NEBULANOISEOBJS})
 NEBULANOISELIBS=-lm ${PNGLIBS}
@@ -648,7 +656,7 @@ SERVERPROGS=bin/ssgl_server bin/snis_server bin/snis_multiverse
 BINPROGS=${SERVERPROGS} bin/snis_client bin/snis_text_to_speech.sh \
 		bin/lsssgl bin/snis_arduino bin/snis_launcher \
 		bin/snis_update_assets bin/update_assets_from_launcher.sh
-UTILPROGS=util/mask_clouds util/cloud-mask-normalmap bin/mesh_viewer bin/shadow_lab util/sample_image_colors \
+UTILPROGS=util/mask_clouds util/cloud-mask-normalmap bin/mesh_viewer bin/shadow_lab bin/star_light_preview util/sample_image_colors \
 		util/generate_solarsystem_positions bin/nebula_noise bin/generate_skybox bin/earthlike
 
 # model directory
@@ -788,6 +796,7 @@ SNISCLIENTDBGCOMPILE=$(ECHO) '  COMPILE' $< && $(CC) -DSNIS_CLIENT_DATA ${MYCFLA
 CLIENTLINK=$(ECHO) '  LINK' $@ && $(CC) ${MYCFLAGS} ${SNDFLAGS} -o $@ ${X11LIBS} ${SDLCFLAGS} ${CLIENTOBJS} ${SDLLIBS} ${LIBS} ${SNDLIBS} $(LDFLAGS) ${LIBOPUS} ${X11LIBS}
 SDLCLIENTLINK=$(ECHO) '  LINK' $@ && $(CC) ${MYCFLAGS} ${SNDFLAGS} -o $@ ${SDLCFLAGS} ${SDLCLIENTOBJS} ${SDLLIBS} ${LIBS} ${SNDLIBS} $(LDFLAGS) ${X11LIBS}
 SHADOWLABLINK=$(ECHO) '  LINK' $@ && $(CC) ${MYCFLAGS} ${SNDFLAGS} -o $@ ${SDLCFLAGS} ${SHADOWLABOBJS} ${SDLLIBS} ${LIBS} ${SNDLIBS} $(LDFLAGS) ${X11LIBS}
+STARLIGHTPREVIEWLINK=$(ECHO) '  LINK' $@ && $(CC) ${MYCFLAGS} ${SNDFLAGS} -o $@ ${SDLCFLAGS} ${STARLIGHTPREVIEWOBJS} ${SDLLIBS} ${LIBS} ${SNDLIBS} $(LDFLAGS) ${X11LIBS}
 SERVERLINK=$(ECHO) '  LINK' $@ && $(CC) ${MYCFLAGS} -o $@ ${SERVEROBJS} ${SERVERLIBS} $(LDFLAGS)
 MULTIVERSELINK=$(ECHO) '  LINK' $@ && $(CC) ${MYCFLAGS} -o $@ ${MULTIVERSEOBJS} ${MULTIVERSELIBS} $(LDFLAGS)
 NEBULANOISELINK=$(ECHO) '  LINK' $@ && $(CC) ${MYCFLAGS} -o $@ ${NEBULANOISEOBJS} ${NEBULANOISELIBS} $(LDFLAGS)
@@ -839,7 +848,7 @@ ${BIN}:
 
 # Rule to prevent common error of trying to "make foo" instead of "make bin/foo"
 BINARY_NAMES=snis_client snis_server snis_limited_client snis_multiverse nebula_noise \
-	generate_skybox ssgl_server lsssgl snis_text_to_speech.sh mesh_viewer shadow_lab earthlike \
+	generate_skybox ssgl_server lsssgl snis_text_to_speech.sh mesh_viewer shadow_lab star_light_preview earthlike \
 	infinite-taunt names stl_parser test_key_value_parser test-matrix test-space-partition \
 	test-marshal test-quat test-fleet test-mtwist device-io-sample-1 test-nonuniform-random-sampler \
 	test-commodities test-obj-parser test_solarsystem_config test_crater print_ship_attributes \
@@ -1020,6 +1029,12 @@ $(OD)/mesh_viewer.o:	mesh_viewer.c Makefile build_info.h ${ODT}
 $(OD)/shadow_lab.o:	shadow_lab.c Makefile build_info.h ${ODT}
 	$(Q)$(SDLCOMPILE)
 
+$(OD)/star_light_preview.o:	star_light_preview.c star_light.h Makefile build_info.h ${ODT}
+	$(Q)$(SDLCOMPILE)
+
+$(OD)/star_light.o:	star_light.c star_light.h Makefile ${ODT}
+	$(Q)$(COMPILE)
+
 # simplexnoise1234.o:	simplexnoise1234.c Makefile build_info.h
 #	$(Q)$(COMPILE)
 
@@ -1120,6 +1135,9 @@ bin/mesh_viewer:	${SDLCLIENTOBJS} ${SSGL} Makefile ${BIN}
 
 bin/shadow_lab:	${SHADOWLABOBJS} ${SSGL} Makefile ${BIN}
 	$(Q)$(SHADOWLABLINK)
+
+bin/star_light_preview:	${STARLIGHTPREVIEWOBJS} ${SSGL} Makefile ${BIN}
+	$(Q)$(STARLIGHTPREVIEWLINK)
 
 bin/earthlike:	${OD}/earthlike.o ${ELOBJS} Makefile ${BIN}
 	$(Q)$(ELLINK)
