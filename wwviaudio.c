@@ -60,6 +60,7 @@ static int one_shot_busy = 0;
 static pthread_mutex_t one_shot_mutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t recording_mutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t audio_chain_mutex[WWVIAUDIO_CHAIN_COUNT];
+static pthread_mutex_t main_audio_mutex = PTHREAD_MUTEX_INITIALIZER;
 static int busy_recording = 0;
 static unsigned int mixer_cycle_count = 0;
 static float compressor_threshold = 0.5;
@@ -204,16 +205,18 @@ static int wwviaudio_read_ogg_clip_internal(int clipnum, char *filename)
 	if (clipnum >= allocated_sound_clips || clipnum < 0)
 		return -1;
 
+	/* Make sure the clip is not currently being played */
+	pthread_mutex_lock(&main_audio_mutex);
+	if (clip[clipnum].active)
+		clip[clipnum].active = 0;
+	pthread_mutex_unlock(&main_audio_mutex);
+
 	if (clip[clipnum].sample != NULL) { /* overwriting a previously read clip...? */
 		free(clip[clipnum].sample);
 		/* NULL it out so that if the following wwviaudio_read_ogg... fails, it won't
 		 * contain the old pointer */
 		clip[clipnum].sample = NULL;
 	}
-	/* TODO: There is a danger that the audio playing thread could be reading what
-	 *  we just free'd.  Mitigate that somehow.
-	 */
-
 	return wwviaudio_read_ogg_clip_into_allocated_buffer(filename, &clip[clipnum].sample,
 					&clip[clipnum].nsamples);
 }
@@ -273,6 +276,7 @@ static int wwviaudio_mixer_loop(__attribute__ ((unused)) const void *inputBuffer
 	for (i = 0; i < framesPerBuffer; i++) {
 		struct audio_queue_entry *q;
 		output = 0.0;
+		pthread_mutex_lock(&main_audio_mutex);
 		for (j = 0; j < max_concurrent_sounds; j++) {
 			q = &audio_queue[j];
 			if (!q->active || q->sample == NULL)
@@ -312,7 +316,9 @@ static int wwviaudio_mixer_loop(__attribute__ ((unused)) const void *inputBuffer
 			}
 		}
 		*out++ = compress_dyn_range((float) output, cthreshold, climit);
+		pthread_mutex_unlock(&main_audio_mutex);
         }
+	pthread_mutex_lock(&main_audio_mutex);
 	for (i = 0; i < max_concurrent_sounds; i++) {
 		struct audio_queue_entry *q = &audio_queue[i];
 		if (!q->active)
@@ -320,10 +326,14 @@ static int wwviaudio_mixer_loop(__attribute__ ((unused)) const void *inputBuffer
 		q->pos += framesPerBuffer;
 		if (q->pos >= q->nsamples) {
 			q->active = 0;
-			if (q->callback)
+			if (q->callback) {
+				pthread_mutex_unlock(&main_audio_mutex);
 				q->callback(q->cookie);
+				pthread_mutex_lock(&main_audio_mutex);
+			}
 		}
 	}
+	pthread_mutex_unlock(&main_audio_mutex);
 	return 0; /* we're never finished */
 }
 
@@ -488,11 +498,11 @@ static int wwviaudio_add_sound_segment_to_slot(int which_sound, int which_slot, 
 		end = 1.0;
 
 	if (which_slot != WWVIAUDIO_ANY_SLOT) {
+		pthread_mutex_lock(&main_audio_mutex);
 		if (audio_queue[which_slot].active)
 			audio_queue[which_slot].active = 0;
 		audio_queue[which_slot].pos = 0;
 		audio_queue[which_slot].nsamples = 0;
-		/* would like to put a memory barrier here. */
 		start = clip[which_sound].nsamples * begin;
 		stop = clip[which_sound].nsamples * end;
 		audio_queue[which_slot].pos = start;
@@ -503,10 +513,11 @@ static int wwviaudio_add_sound_segment_to_slot(int which_sound, int which_slot, 
 		audio_queue[which_slot].volume = initial_volume;
 		audio_queue[which_slot].delta_volume = (target_volume - initial_volume) / (stop - start);
 		audio_queue[which_slot].next = NULL;
-		/* would like to put a memory barrier here. */
 		audio_queue[which_slot].active = 1;
+		pthread_mutex_unlock(&main_audio_mutex);
 		return which_slot;
 	}
+	pthread_mutex_lock(&main_audio_mutex);
 	for (i=1;i<max_concurrent_sounds;i++) {
 		if (audio_queue[i].active == 0) {
 			start = clip[which_sound].nsamples * begin;
@@ -523,6 +534,7 @@ static int wwviaudio_add_sound_segment_to_slot(int which_sound, int which_slot, 
 			break;
 		}
 	}
+	pthread_mutex_unlock(&main_audio_mutex);
 	return (i >= max_concurrent_sounds) ? -1 : (int) i;
 }
 
@@ -633,6 +645,7 @@ void wwviaudio_add_sound_low_priority(int which_sound)
 	if (!sound_working)
 		return;
 	last_slot = -1;
+	pthread_mutex_lock(&main_audio_mutex);
 	for (i = 1; i < max_concurrent_sounds; i++)
 		if (audio_queue[i].active == 0) {
 			last_slot = i;
@@ -641,8 +654,10 @@ void wwviaudio_add_sound_low_priority(int which_sound)
 				break;
 	}
 
-	if (empty_slots < 5)
+	if (empty_slots < 5) {
+		pthread_mutex_unlock(&main_audio_mutex);
 		return;
+	}
 	
 	i = (unsigned int) last_slot;
 
@@ -656,6 +671,7 @@ void wwviaudio_add_sound_low_priority(int which_sound)
 		audio_queue[i].cookie = NULL;
 		audio_queue[i].active = 1;
 	}
+	pthread_mutex_unlock(&main_audio_mutex);
 	return;
 }
 
@@ -664,7 +680,9 @@ void wwviaudio_cancel_sound(int queue_entry)
 {
 	if (!sound_working)
 		return;
+	pthread_mutex_lock(&main_audio_mutex);
 	audio_queue[queue_entry].active = 0;
+	pthread_mutex_unlock(&main_audio_mutex);
 }
 
 void wwviaudio_cancel_music(void)
@@ -677,8 +695,10 @@ void wwviaudio_cancel_all_sounds(void)
 	unsigned int i;
 	if (!sound_working)
 		return;
+	pthread_mutex_lock(&main_audio_mutex);
 	for (i = 0; i < max_concurrent_sounds; i++)
 		audio_queue[i].active = 0;
+	pthread_mutex_unlock(&main_audio_mutex);
 }
 
 int wwviaudio_set_sound_device(int device)
