@@ -731,7 +731,7 @@ static int fixup_vertex_indices(int v[], int n)
 			v[i]--;
 		} else {
 			if (v[i] < 0) {/* convert negative numbers to array indices */
-				v[i] = n - v[i];
+				v[i] = n + v[i];
 			} else {
 				fprintf(stderr, "Face contains illegal vertex 0.\n");
 				return -1;
