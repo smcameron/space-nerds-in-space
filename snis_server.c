@@ -21770,7 +21770,7 @@ static int process_rts_func_command_unit(struct game_client *c)
 		goto common;
 	case AI_MODE_RTS_MOVE_TO_WAYPOINT:
 		b = c->bridge;
-		if (b < 0 && b >= nclients)
+		if (b < 0 || b >= nclients)
 			goto out;
 		if (bridgelist[b].selected_waypoint < 0 ||
 			bridgelist[b].selected_waypoint >= bridgelist[b].nwaypoints)
@@ -25551,7 +25551,7 @@ static void queue_up_client_volume_update(struct game_client *c)
 	struct bridge_data *b;
 	uint8_t new_volume;
 
-	if (c->bridge < 0 && c->bridge >= nbridges)
+	if (c->bridge < 0 || c->bridge >= nbridges)
 		return;
 	b  = &bridgelist[c->bridge];
 	if (universe_timestamp - b->text_to_speech_volume_timestamp > 3)
@@ -25565,7 +25565,7 @@ static void queue_up_client_custom_buttons(struct game_client *c)
 	struct bridge_data *b;
 	int i;
 
-	if (c->bridge < 0 && c->bridge >= nbridges)
+	if (c->bridge < 0 || c->bridge >= nbridges)
 		return;
 	b  = &bridgelist[c->bridge];
 	if ((universe_timestamp % 10) != 0) /* Update at 1 Hz */
@@ -25598,7 +25598,7 @@ static void queue_up_client_cipher_update(struct game_client *c)
 	struct bridge_data *b;
 	struct packed_buffer *pb;
 
-	if (c->bridge < 0 && c->bridge >= nbridges)
+	if (c->bridge < 0 || c->bridge >= nbridges)
 		return;
 	b  = &bridgelist[c->bridge];
 	if ((universe_timestamp % 10) != 0) /* Update at 1 Hz */
@@ -28935,7 +28935,7 @@ static void nl_set_volume(struct game_client *c, __attribute__((unused)) char *w
 		value = 1.0;
 	if (value < 0.0)
 		value = 0.0;
-	if (c->bridge < 0 && c->bridge >= nbridges) {
+	if (c->bridge < 0 || c->bridge >= nbridges) {
 		queue_add_text_to_speech(c, "I can't seem to do that right now.");
 		return;
 	}
