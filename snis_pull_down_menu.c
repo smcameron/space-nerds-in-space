@@ -133,6 +133,7 @@ void pull_down_menu_update_mouse_pos(struct pull_down_menu *m, int physical_x, i
 	int old_col = m->current_col;
 	int new_col = m->current_col;
 
+	pthread_mutex_lock(&m->mutex);
 	m->current_physical_x = physical_x;
 	m->current_physical_y = physical_y;
 	if (m->gravity) {
@@ -170,6 +171,7 @@ void pull_down_menu_update_mouse_pos(struct pull_down_menu *m, int physical_x, i
 	}
 	m->current_col = new_col;
 	m->current_row = new_row;
+	pthread_mutex_unlock(&m->mutex);
 }
 
 struct pull_down_menu *create_pull_down_menu(int font, int screen_width)
