@@ -7,6 +7,7 @@
 #include "mtwist.c"
 #include "mathutils.c"
 #include "quat.c"
+#include "stacktrace.c"
 #include "docking_port.c"
 
 #define ARRAYSIZE(x) (sizeof(x) / sizeof((x)[0]))

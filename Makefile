@@ -1624,7 +1624,7 @@ libopus.a:	opus-1.3.1
 	(cd opus-1.3.1 && ./configure && make && cp ./.libs/libopus.a ..)
 
 fuzz_obj_parser:	fuzz_obj_parser.c
-	afl-clang-fast -g3 -fsanitize=address,undefined fuzz_obj_parser.c -lm -o fuzz_obj_parser
+	afl-clang-fast -g3 -fsanitize=address,undefined fuzz_obj_parser.c -I/usr/include/SDL2 -lm -o fuzz_obj_parser
 
 fuzz_snis_read_ship_types:	fuzz_snis_read_ship_types.c
 	afl-clang-fast -g3 -fsanitize=address,undefined fuzz_snis_read_ship_types.c \
@@ -1655,7 +1655,7 @@ fuzz_solarsystem_asset_spec_read:	fuzz_solarsystem_asset_spec_read.c
 		-lm -o fuzz_solarsystem_asset_spec_read
 
 fuzz_process_manifest:	fuzz_process_manifest.c util/snis_update_assets.c Makefile
-	afl-clang-fast -g3 -fsanitize=address,undefined fuzz_process_manifest.c \
+	afl-clang-fast -g3 -fsanitize=address,undefined -I/usr/include/SDL2 fuzz_process_manifest.c \
 		-lm -o fuzz_process_manifest -lcrypto
 
 run-fuzz-obj-parser:	fuzz_obj_parser put-cpu-in-hi-performance-mode

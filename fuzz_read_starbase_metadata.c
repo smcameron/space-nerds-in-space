@@ -5,6 +5,7 @@
 
 #include "string-utils.c"
 #include "starbase_metadata.c"
+#include "stacktrace.c"
 
 struct docking_port_attachment_point;
 

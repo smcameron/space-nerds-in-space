@@ -5,6 +5,7 @@
 
 #include "string-utils.c"
 #include "commodities.c"
+#include "stacktrace.c"
 
 #define ARRAYSIZE(x) (sizeof(x) / sizeof((x)[0]))
 

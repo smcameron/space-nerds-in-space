@@ -7,6 +7,7 @@
 
 #include "string-utils.c"
 #include "joystick_config.c"
+#include "stacktrace.c"
 
 #define ARRAYSIZE(x) (sizeof(x) / sizeof((x)[0]))
 
