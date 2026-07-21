@@ -46,6 +46,27 @@ GLOBAL int snis_rand(void); /* like rand() */
 GLOBAL void snis_srand(unsigned seed); /* like srand() */
 GLOBAL int snis_randn(int n); /* returns n * snis_rand() / SNIS_RAND_MAX */
 GLOBAL float snis_random_float(void); /* return random number -1 <= n <= 1 */
+
+/* This is a simple pseudorandom number generator.
+ * See https://en.wikipedia.org/wiki/Xorshift#Example_implementation.
+ *
+ * How to use it:
+ *
+ * Initialize your state variable to a random seed... should not be zero, should contain
+ * a fair number of 1 bits and a fair number of 0 bits.
+ *
+ * unsigned int my_state = 0xa5a5a5a5; // For example.
+ *
+ * Then you can do something like this:
+ *
+ * int random_number_between_0_and_1000(void)
+ * {
+ *    return (xorshift(&my_state) % 1000);
+ * }
+ *
+ */
+uint32_t xorshift(unsigned int *state);
+
 GLOBAL void normalize_angle(double *angle);
 GLOBAL double interpolate(double x, double x1, double y1, double x2, double y2);
 GLOBAL double table_interp(double x, const double xv[], const double yv[], int nv);

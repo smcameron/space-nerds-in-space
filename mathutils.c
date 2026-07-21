@@ -80,12 +80,27 @@ double hypot3d(double x, double y, double z)
 	return sqrt(x * x + y * y + z * z);
 }
 
-static uint32_t snis_rand_next = 1;
+/* George Marsaglia's xorshift PRNG algorithm,
+ * see: https://en.wikipedia.org/wiki/Xorshift#Example_implementation
+ *
+ * The state word must be initialized to non-zero
+ */
+uint32_t xorshift(uint32_t *state)
+{
+	/* Algorithm "xor" from p. 4 of Marsaglia, "Xorshift RNGs" */
+	uint32_t x = *state;
+	x ^= x << 13;
+	x ^= x >> 17;
+	x ^= x << 5;
+	*state = x;
+	return x;
+}
+
+static uint32_t snis_rand_next = 0xa5a5a5a5;
 
 int snis_rand(void)
 {
-	snis_rand_next = snis_rand_next * 1103515245 + 12345;
-	return ((unsigned) (snis_rand_next / 65536) % 32768);
+	return xorshift(&snis_rand_next) % 32768;
 }
 
 void snis_srand(unsigned seed)
@@ -95,7 +110,9 @@ void snis_srand(unsigned seed)
 
 int snis_randn(int n)
 {
-	return n * snis_rand() / (SNIS_RAND_MAX + 1);
+	if (n == 0)
+		return 0;
+	return (xorshift(&snis_rand_next) & 0x7fffffff) % n;
 }
 
 float snis_random_float(void)
