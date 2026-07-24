@@ -1108,6 +1108,32 @@ static void compute_cascade_splits(float near_d, float far_d, int num_cascades, 
 	}
 }
 
+/* Only opaque, lit surfaces belong in the shadow map.  The depth pass ignores materials, so
+ * anything drawn into it casts a fully opaque shadow.  Emissive or blended geometry -- thrust
+ * flares and plumes, sparks, nebulae, wormholes, the warp tunnel, the sun billboard -- is not
+ * an occluder, and most of it is a camera-facing billboard sitting right against the hull it
+ * is attached to, so casting from it drops a solid slab of shadow across nearby ships and
+ * starbases.  Entities with no material use the default lit shader and do cast. */
+static int entity_casts_shadow(struct entity *e)
+{
+	struct material *m = e->material_ptr;
+
+	if (e->no_cast_shadow)
+		return 0;
+	if (!m)
+		return 1;
+	if (m->billboard_type != MATERIAL_BILLBOARD_TYPE_NONE)
+		return 0;
+	switch (m->type) {
+	case MATERIAL_COLOR:
+	case MATERIAL_TEXTURE_MAPPED:
+	case MATERIAL_TEXTURE_CUBEMAP:
+		return 1;
+	default:
+		return 0;
+	}
+}
+
 /* Render all triangle-mesh shadow casters into each cascade of the shadow map. */
 static void render_shadow_map(struct entity_context *cx)
 {
@@ -1156,7 +1182,7 @@ static void render_shadow_map(struct entity_context *cx)
 			struct entity *e = &cx->entity_list[j];
 			if (e->m == NULL || e->m->geometry_mode != MESH_GEOMETRY_TRIANGLES)
 				continue;
-			if (e->no_cast_shadow)
+			if (!entity_casts_shadow(e))
 				continue;
 			update_entity_child_state(e);
 			if (!e->visible)
