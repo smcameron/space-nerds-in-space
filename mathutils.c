@@ -299,8 +299,15 @@ double disc_occlusion_fraction(double a, double b, double d)
 {
 	double a2, b2, d2, ca, cb, area;
 
-	if (a <= 0.0)
-		return 1.0; /* Degenerate disc is entirely covered */
+	if (a <= 0.0) {
+		/* Degenerate first disc: a point, covered only if it lies within the second disc.
+		 * This is the point-light case, and it must still depend on d: returning "covered"
+		 * unconditionally would put every object in full shade whenever any occluder is
+		 * nearer than the light, no matter where it sits in the sky. */
+		if (b <= 0.0)
+			return 0.0;
+		return d < b ? 1.0 : 0.0;
+	}
 	if (b <= 0.0 || d >= a + b)
 		return 0.0; /* No overlap */
 	if (d <= fabs(b - a)) { /* One disc entirely contains the other */
