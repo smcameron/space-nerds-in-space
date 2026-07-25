@@ -900,14 +900,24 @@ static void update_entity_child_state(struct entity *e)
 #define ENTITY_SHADOW_MAP_TEXTURE_SIZE 4096
 
 /* The shadow cascades cover the view frustum only out to this distance, beyond which
- * objects neither cast nor receive shadows (keeps shadow texels usefully small). */
-static float shadow_map_max_distance = 4500.0;
+ * objects neither cast nor receive shadows (keeps shadow texels usefully small).  Sized to
+ * take in a starbase (~210 unit radius) and the largest asteroids (~640) at the ranges they
+ * are actually seen from; with a logarithmic split this costs almost nothing near the camera. */
+static float shadow_map_max_distance = 14000.0;
 /* Number of shadow cascades and the split-scheme blend (0 = uniform spacing, 1 = fully
- * logarithmic).  Logarithmic packs resolution near the camera where it matters most.  These
- * defaults (six cascades, lambda 0.6 over camera-local coverage) were tuned in shadow_lab for
- * crisp near shadows that still reach distance; all remain runtime-tunable. */
+ * logarithmic).
+ *
+ * Lambda must be 1.0.  Shadow quality is best measured in shadow texels per screen pixel,
+ * which works out to 2 * d * tan(fov / 2) / (height * texel): holding it constant as the
+ * viewing distance d changes requires texel to be proportional to d, and only a purely
+ * logarithmic split puts the cascade far distances in the geometric progression that gives
+ * that.  Any uniform component breaks the proportionality, and it does so violently -- the
+ * uniform term here is around 200x the logarithmic one, so even lambda 0.99 leaves cascade 0
+ * three times larger than it should be, and the old 0.6 left it nearly a hundred times too
+ * large.  The visible symptom was shadow quality collapsing as you approached an object,
+ * worst of all in the gun turret view where the camera sits a few units from the hull. */
 static int shadow_map_num_cascades = 6;
-static float shadow_map_split_lambda = 0.6;
+static float shadow_map_split_lambda = 1.0;
 
 /* Fit an orthographic shadow frustum to the slice of the camera view frustum between
  * near_d and far_d, and build the world-space -> light clip-space matrix for that cascade.
