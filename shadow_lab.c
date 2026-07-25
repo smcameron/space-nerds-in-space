@@ -83,9 +83,12 @@ struct scene_object {
 	/* Heading angles, in radians.  orientation is rebuilt from these rather than being
 	 * rotated in place; see orientation_from_angles(). */
 	float yaw, pitch, roll;
-	/* Where a gun turret sits on this model, in its own (already scaled) coordinates.
-	 * Derived from the hull's bounding box, so it works for any ship. */
+	/* This ship's gun turret: where it sits on the hull, in the model's own (already
+	 * scaled) coordinates, and where it is currently aimed.  Every ship carries its own,
+	 * so possessing a different ship aims a different turret and the others hold their
+	 * aim.  See turret_mount_point(). */
 	union vec3 turret_mount;
+	float turret_azimuth, turret_elevation;
 	float scale;
 	int color;
 	int no_cast_shadow;
@@ -135,8 +138,7 @@ static int chase_initialized;  /* 0 to snap the rig to the ship on the first pos
  * the nose, sitting just clear of the top surface.  The two fractions below reproduce the
  * game's authored position on the wombat to the centimetre, and place the turret sensibly on
  * hulls of any size or shape. */
-#define TURRET_MOUNT_LENGTHWISE (0.325) /* fraction of the hull's length, from the tail */
-#define TURRET_MOUNT_CLEARANCE (0.028)  /* lift above the hull, as a fraction of its height */
+#define TURRET_MOUNT_LENGTHWISE (0.325) /* station along the hull, as a fraction from the tail */
 #define TURRET_EYE_LIFT (0.75 * SHIP_MESH_SCALE)  /* view_offset, in the turret's own frame */
 #define TURRET_NEAR_PLANE (1.6666 * SHIP_MESH_SCALE) /* NEAR_CAMERA_PLANE * SHIP_MESH_SCALE */
 #define TURRET_FOV (45.0 * M_PI / 180.0)          /* ANGLE_OF_VIEW, at zoom 0 */
@@ -151,15 +153,7 @@ static int turret_view = 0;    /* 1 = look through the possessed ship's turret *
  * before it can swing down through the hull it is bolted to. */
 #define TURRET_ELEVATION_LOWER_LIMIT (-30.0 * M_PI / 180.0) /* snis_server.c turret_move() */
 #define TURRET_ELEVATION_UPPER_LIMIT (90.0 * M_PI / 180.0)
-static float turret_azimuth, turret_elevation;
-static union quat turret_orientation = IDENTITY_QUAT_INITIALIZER;
 static struct mesh *turret_mesh;
-/* Which ship carries the turret.  Deliberately independent of possession, so you can leave
- * turret view, fly the free camera around, and watch the turret's shadow track across the
- * hull from outside -- the turret is the caster under test, and it has to stay put to be
- * observed.  It follows the possessed ship, and stays behind when you drop back to the free
- * camera.  Slot 0 (the wombat) is the ship the mount point is authored for. */
-static int turret_ship_slot;
 
 static float mouse_sensitivity = 0.003;
 static float roll_rate = 0.02;
@@ -339,6 +333,50 @@ static struct mesh *read_optional_model(const char *relative_path)
 	return m;
 }
 
+/* Work out where a gun turret sits on a hull.
+ *
+ * The game has nothing to read here: no turret mount appears in ship_types.txt or in any asset
+ * file (the .scad_params.h files next to the models are thrust attachment points, for engine
+ * flares).  snis_client simply hardcodes the position, in two places with slightly different
+ * values, and gets away with it because only the player's ship ever carries a turret.
+ *
+ * So derive it.  Pick a station a third of the way back from the nose, on the centreline, and
+ * find the top of the hull *there* -- not the top of the bounding box, which on a hull that
+ * tapers or carries a tall fin elsewhere can be far above the surface at that station, leaving
+ * the turret floating in mid air.  The conqueror is 2.2 units adrift that way.  Then lift by
+ * the distance from the turret model's origin to its underside, so it rests on the skin rather
+ * than sinking into it.  On the wombat this lands within a centimetre of the position the game
+ * hardcodes for it. */
+static void turret_mount_point(struct mesh *hull, union vec3 *mount)
+{
+	float minx, miny, minz, maxx, maxy, maxz;
+	float station, window, top, underside;
+	int i, found = 0;
+
+	mesh_aabb(hull, &minx, &miny, &minz, &maxx, &maxy, &maxz);
+	station = minx + TURRET_MOUNT_LENGTHWISE * (maxx - minx);
+	window = 0.08 * (maxx - minx);
+
+	/* Highest point of the hull near that station, close to the centreline. */
+	top = maxy;
+	for (i = 0; i < hull->nvertices; i++) {
+		if (fabsf(hull->v[i].x - station) > window || fabsf(hull->v[i].z) > window)
+			continue;
+		if (!found || hull->v[i].y > top)
+			top = hull->v[i].y;
+		found = 1;
+	}
+
+	underside = 0.0;
+	if (turret_mesh) {
+		float tminx, tminy, tminz, tmaxx, tmaxy, tmaxz;
+
+		mesh_aabb(turret_mesh, &tminx, &tminy, &tminz, &tmaxx, &tmaxy, &tmaxz);
+		underside = -tminy;
+	}
+	vec3_init(mount, station, top + underside, 0.0);
+}
+
 static struct scene_object *add_scene_object(enum scene_object_kind kind, struct mesh *m,
 		struct material *material, float x, float y, float z, float scale, int color)
 {
@@ -359,16 +397,11 @@ static struct scene_object *add_scene_object(enum scene_object_kind kind, struct
 	o->yaw = 0.0;
 	o->pitch = 0.0;
 	o->roll = 0.0;
+	o->turret_azimuth = 0.0;
+	o->turret_elevation = 0.0;
 	vec3_init(&o->turret_mount, 0.0, 0.0, 0.0);
-	if (kind == SCENE_SHIP && m) {
-		float minx, miny, minz, maxx, maxy, maxz;
-
-		mesh_aabb(m, &minx, &miny, &minz, &maxx, &maxy, &maxz);
-		vec3_init(&o->turret_mount,
-			minx + TURRET_MOUNT_LENGTHWISE * (maxx - minx),
-			maxy + TURRET_MOUNT_CLEARANCE * (maxy - miny),
-			0.0);
-	}
+	if (kind == SCENE_SHIP && m)
+		turret_mount_point(m, &o->turret_mount);
 	o->scale = scale;
 	o->color = color;
 	o->no_cast_shadow = 0;
@@ -808,15 +841,18 @@ static void update_camera(void)
 		 * without mouse steering.  Consume the mouse motion here so fly_ship() does not
 		 * also apply it.  Elevation is clamped to the turret's real travel, so the barrel
 		 * cannot be swung down through the hull. */
-		turret_azimuth -= mouse_accum_dx * mouse_sensitivity;
-		turret_elevation -= mouse_accum_dy * mouse_sensitivity;
-		if (turret_elevation < TURRET_ELEVATION_LOWER_LIMIT)
-			turret_elevation = TURRET_ELEVATION_LOWER_LIMIT;
-		if (turret_elevation > TURRET_ELEVATION_UPPER_LIMIT)
-			turret_elevation = TURRET_ELEVATION_UPPER_LIMIT;
+		union quat turret_orientation;
+
+		ship->turret_azimuth -= mouse_accum_dx * mouse_sensitivity;
+		ship->turret_elevation -= mouse_accum_dy * mouse_sensitivity;
+		if (ship->turret_elevation < TURRET_ELEVATION_LOWER_LIMIT)
+			ship->turret_elevation = TURRET_ELEVATION_LOWER_LIMIT;
+		if (ship->turret_elevation > TURRET_ELEVATION_UPPER_LIMIT)
+			ship->turret_elevation = TURRET_ELEVATION_UPPER_LIMIT;
 		mouse_accum_dx = 0.0;
 		mouse_accum_dy = 0.0;
-		orientation_from_angles(&turret_orientation, turret_azimuth, turret_elevation, 0.0);
+		orientation_from_angles(&turret_orientation, ship->turret_azimuth,
+					ship->turret_elevation, 0.0);
 		fly_ship(ship, 0);
 
 		/* Exactly snis_client's show_weapons_camera_view(): the camera orientation is the
@@ -915,8 +951,8 @@ static char *help_text =
 	"    STATION.  W/S THROTTLE, Q/E ROLL, ARROW KEYS SWING THE SUN VS YOUR AIM.\n"
 	"  - COPIES snis_client's show_weapons_camera_view(): MOUNT, EYE OFFSET, NEAR\n"
 	"    PLANE 0.83, 45 DEG FOV.  ONLY VIEW WITH THE CAMERA INSIDE THE CASTER.\n"
-	"  - THE TURRET STAYS MOUNTED AND KEEPS ITS AIM WHEN YOU LEAVE TURRET VIEW, SO\n"
-	"    YOU CAN TAB TO THE FREE CAMERA AND WATCH ITS SHADOW FROM OUTSIDE.\n"
+	"  - EVERY SHIP CARRIES ITS OWN TURRET AND KEEPS ITS AIM, SO YOU CAN AIM ONE, TAB\n"
+	"    TO THE FREE CAMERA AND WATCH ITS SHADOW TRACK THE HULL FROM OUTSIDE.\n"
 	"  - CASCADE 0 HUD LINE: TEXEL IS THE FINEST SHADOW THE MAP HOLDS (TURRET IS ~0.8\n"
 	"    UNITS THICK).  AIM-TO-SUN MATTERS: THE ORTHO BOX IS FITTED ONLY 1% PAST THE\n"
 	"    FRUSTUM'S FAR-FROM-LIGHT CORNER.  16:9 HERE VS 4:3 IN GAME MAKES LAB TEXELS\n"
@@ -1246,16 +1282,18 @@ static void draw_screen(void)
 	 * exists to test: about 0.8 world units thick once scaled, against a cascade texel of
 	 * roughly 0.13 and a slope-scaled depth bias of comparable size.  Mounted for both the
 	 * chase and turret views so it can be inspected from outside and then looked through. */
-	if (turret_mesh && turret_ship_slot >= 0 && turret_ship_slot < ship_slot_count) {
-		struct scene_object *ship = &scene[ship_slots[turret_ship_slot]];
+	for (i = 0; turret_mesh && i < ship_slot_count; i++) {
+		struct scene_object *ship = &scene[ship_slots[i]];
 		union vec3 mount = ship->turret_mount;
 		union vec3 turret_pos;
-		union quat turret_world;
+		union quat turret_local, turret_world;
 		struct entity *e;
 
 		quat_rot_vec_self(&mount, &ship->orientation);
 		vec3_add(&turret_pos, &ship->pos, &mount);
-		quat_mul(&turret_world, &ship->orientation, &turret_orientation);
+		orientation_from_angles(&turret_local, ship->turret_azimuth,
+					ship->turret_elevation, 0.0);
+		quat_mul(&turret_world, &ship->orientation, &turret_local);
 		e = add_entity(cx, turret_mesh, turret_pos.v.x, turret_pos.v.y, turret_pos.v.z,
 				CYAN); /* snis_client's SHIP_COLOR */
 		if (e) {
@@ -1528,8 +1566,6 @@ static void handle_key_down(SDL_Keysym *keysym)
 		chase_initialized = 0;  /* snap the chase cam on the first frame, then lag */
 		if (controlled_slot < 0)
 			turret_view = 0; /* the free camera has no turret to look through */
-		else
-			turret_ship_slot = controlled_slot; /* the turret follows, and then stays */
 		break;
 	case SDLK_3: /* planet smaller */
 		if (planet_index >= 0)
