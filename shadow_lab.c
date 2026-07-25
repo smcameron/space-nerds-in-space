@@ -83,6 +83,9 @@ struct scene_object {
 	/* Heading angles, in radians.  orientation is rebuilt from these rather than being
 	 * rotated in place; see orientation_from_angles(). */
 	float yaw, pitch, roll;
+	/* Where a gun turret sits on this model, in its own (already scaled) coordinates.
+	 * Derived from the hull's bounding box, so it works for any ship. */
+	union vec3 turret_mount;
 	float scale;
 	int color;
 	int no_cast_shadow;
@@ -126,9 +129,14 @@ static int chase_initialized;  /* 0 to snap the rig to the ship on the first pos
  * view.  Everything here mirrors snis_client.c: the mount point, the eye offset above the
  * turret, the near plane and the field of view.  The values are quoted rather than shared
  * because they are #defines private to snis_client.c. */
-#define TURRET_MOUNT_X (-4.0 * SHIP_MESH_SCALE)   /* snis_client.c show_weapons_camera_view() */
-#define TURRET_MOUNT_Y (5.45 * SHIP_MESH_SCALE)
-#define TURRET_MOUNT_Z (0.0 * SHIP_MESH_SCALE)
+/* snis_client hardcodes the mount at (-4, 5.45, 0) * SHIP_MESH_SCALE, because the game only
+ * ever puts a turret on the player's ship.  Here any ship can be possessed, so derive the
+ * mount from the hull's bounding box instead: on the centreline, a third of the way back from
+ * the nose, sitting just clear of the top surface.  The two fractions below reproduce the
+ * game's authored position on the wombat to the centimetre, and place the turret sensibly on
+ * hulls of any size or shape. */
+#define TURRET_MOUNT_LENGTHWISE (0.325) /* fraction of the hull's length, from the tail */
+#define TURRET_MOUNT_CLEARANCE (0.028)  /* lift above the hull, as a fraction of its height */
 #define TURRET_EYE_LIFT (0.75 * SHIP_MESH_SCALE)  /* view_offset, in the turret's own frame */
 #define TURRET_NEAR_PLANE (1.6666 * SHIP_MESH_SCALE) /* NEAR_CAMERA_PLANE * SHIP_MESH_SCALE */
 #define TURRET_FOV (45.0 * M_PI / 180.0)          /* ANGLE_OF_VIEW, at zoom 0 */
@@ -351,6 +359,16 @@ static struct scene_object *add_scene_object(enum scene_object_kind kind, struct
 	o->yaw = 0.0;
 	o->pitch = 0.0;
 	o->roll = 0.0;
+	vec3_init(&o->turret_mount, 0.0, 0.0, 0.0);
+	if (kind == SCENE_SHIP && m) {
+		float minx, miny, minz, maxx, maxy, maxz;
+
+		mesh_aabb(m, &minx, &miny, &minz, &maxx, &maxy, &maxz);
+		vec3_init(&o->turret_mount,
+			minx + TURRET_MOUNT_LENGTHWISE * (maxx - minx),
+			maxy + TURRET_MOUNT_CLEARANCE * (maxy - miny),
+			0.0);
+	}
 	o->scale = scale;
 	o->color = color;
 	o->no_cast_shadow = 0;
@@ -783,7 +801,7 @@ static void update_camera(void)
 	ship = &scene[ship_slots[controlled_slot]];
 
 	if (turret_view) {
-		union vec3 mount = { { TURRET_MOUNT_X, TURRET_MOUNT_Y, TURRET_MOUNT_Z } };
+		union vec3 mount = ship->turret_mount;
 		union vec3 eye = { { 0.0, TURRET_EYE_LIFT, 0.0 } };
 
 		/* Aim the turret with the mouse, in the ship's local frame, then fly the ship
@@ -1230,7 +1248,7 @@ static void draw_screen(void)
 	 * chase and turret views so it can be inspected from outside and then looked through. */
 	if (turret_mesh && turret_ship_slot >= 0 && turret_ship_slot < ship_slot_count) {
 		struct scene_object *ship = &scene[ship_slots[turret_ship_slot]];
-		union vec3 mount = { { TURRET_MOUNT_X, TURRET_MOUNT_Y, TURRET_MOUNT_Z } };
+		union vec3 mount = ship->turret_mount;
 		union vec3 turret_pos;
 		union quat turret_world;
 		struct entity *e;
