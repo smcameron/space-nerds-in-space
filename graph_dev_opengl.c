@@ -4081,7 +4081,7 @@ static void setup_textured_shader(const char *basename, const char *defines,
 }
 
 static void setup_textured_cubemap_shader(const char *basename, int use_normal_map,
-				int use_specular, int use_annulus_shadow,
+				int use_specular, int use_annulus_shadow, int use_csm,
 				struct graph_dev_gl_textured_shader *shader)
 {
 	maybe_unload_shader(&shader->meta, &shader->program_id);
@@ -4091,24 +4091,26 @@ static void setup_textured_cubemap_shader(const char *basename, int use_normal_m
 	char vert_header[1024];
 	char frag_header[1024];
 
-	snprintf(vert_header, sizeof(vert_header), "%s\n%s\n%s\n%s\n%s\n",
+	snprintf(vert_header, sizeof(vert_header), "%s\n%s\n%s\n%s\n%s\n%s\n",
 		UNIVERSAL_SHADER_HEADER, "#define INCLUDE_VS 1\n",
 			use_normal_map ? "#define USE_NORMAL_MAP 1\n" : "\n",
 			use_specular ? "#define USE_SPECULAR 1\n" : "\n",
-			use_annulus_shadow ? "#define USE_ANNULUS_SHADOW 1\n" : "\n");
-	snprintf(frag_header, sizeof(frag_header), "%s\n%s\n%s\n%s\n%s\n",
+			use_annulus_shadow ? "#define USE_ANNULUS_SHADOW 1\n" : "\n",
+			use_csm ? SHADOW_CASCADES_HEADER "#define USE_CSM 1\n" : "\n");
+	snprintf(frag_header, sizeof(frag_header), "%s\n%s\n%s\n%s\n%s\n%s\n",
 		UNIVERSAL_SHADER_HEADER FILMIC_TONEMAPPING, "#define INCLUDE_FS 1\n",
 			use_normal_map ? "#define USE_NORMAL_MAP 1\n" : "\n",
 			use_specular ? "#define USE_SPECULAR 1\n" : "\n",
-			use_annulus_shadow ? "#define USE_ANNULUS_SHADOW 1\n" : "\n");
+			use_annulus_shadow ? "#define USE_ANNULUS_SHADOW 1\n" : "\n",
+			use_csm ? SHADOW_CASCADES_HEADER "#define USE_CSM 1\n" : "\n");
 
 	char shader_filename[PATH_MAX];
 	snprintf(shader_filename, sizeof(shader_filename), "%s.shader", basename);
 
-	const char *filenames[] = { shader_filename };
+	const char *filenames[] = { CSM_SHADER_FILE, shader_filename };
 
 	shader->program_id = load_concat_shaders(shader_directory,
-				vert_header, 1, filenames, frag_header, 1, filenames);
+				vert_header, 2, filenames, frag_header, 2, filenames);
 	/* create the VAO for this shader */
 	glGenVertexArrays(1, &shader->vao_id);
 
@@ -4128,6 +4130,18 @@ static void setup_textured_cubemap_shader(const char *basename, int use_normal_m
 	}
 	shader->texture_2d_id = -1;
 	shader->normalmap_id = -1;
+	if (use_csm) {
+		shader->shadow_mvp_id = glGetUniformLocation(shader->program_id, "u_ShadowMVP");
+		shader->shadow_map_id = glGetUniformLocation(shader->program_id, "u_ShadowMap");
+		shader->num_cascades_id = glGetUniformLocation(shader->program_id, "u_NumCascades");
+		shader->shadow_map_enabled_id = glGetUniformLocation(shader->program_id, "u_ShadowMapEnabled");
+		shader->shadow_debug_id = glGetUniformLocation(shader->program_id, "u_ShadowDebug");
+		shader->shadow_pcf_radius_id = glGetUniformLocation(shader->program_id, "u_ShadowPcfRadius");
+		shader->cascade_split_far_id = glGetUniformLocation(shader->program_id, "u_CascadeSplitFar");
+		shader->shadow_blend_id = glGetUniformLocation(shader->program_id, "u_ShadowBlend");
+	} else {
+		shader->shadow_map_enabled_id = -1;
+	}
 	shader->tint_color_id = glGetUniformLocation(shader->program_id, "u_TintColor");
 	shader->ring_texture_v_id = glGetUniformLocation(shader->program_id, "u_ring_texture_v");
 	if (shader->ring_texture_v_id >= 0)
@@ -4719,19 +4733,19 @@ void graph_dev_reload_all_shaders(void)
 				"#define USE_NORMAL_MAP 1\n"
 				"#define USE_CSM 1\n",
 				&textured_lit_normal_shader);
-	setup_textured_cubemap_shader("textured-cubemap-and-lit-with-annulus-shadow-per-pixel", 0, 0, 0,
+	setup_textured_cubemap_shader("textured-cubemap-and-lit-with-annulus-shadow-per-pixel", 0, 0, 0, 1,
 					&textured_cubemap_lit_shader);
-	setup_textured_cubemap_shader("textured-cubemap-and-lit-with-annulus-shadow-per-pixel", 1, 0, 0,
+	setup_textured_cubemap_shader("textured-cubemap-and-lit-with-annulus-shadow-per-pixel", 1, 0, 0, 1,
 					&textured_cubemap_lit_normal_map_shader);
-	setup_textured_cubemap_shader("textured-cubemap-shield-per-pixel", 0, 0, 0,
+	setup_textured_cubemap_shader("textured-cubemap-shield-per-pixel", 0, 0, 0, 0,
 					&textured_cubemap_shield_shader);
-	setup_textured_cubemap_shader("textured-cubemap-and-lit-with-annulus-shadow-per-pixel", 0, 0, 1,
+	setup_textured_cubemap_shader("textured-cubemap-and-lit-with-annulus-shadow-per-pixel", 0, 0, 1, 1,
 					&textured_cubemap_lit_with_annulus_shadow_shader);
-	setup_textured_cubemap_shader("textured-cubemap-and-lit-with-annulus-shadow-per-pixel", 1, 0, 1,
+	setup_textured_cubemap_shader("textured-cubemap-and-lit-with-annulus-shadow-per-pixel", 1, 0, 1, 1,
 					&textured_cubemap_normal_mapped_lit_with_annulus_shadow_shader);
-	setup_textured_cubemap_shader("textured-cubemap-and-lit-with-annulus-shadow-per-pixel", 1, 1, 1,
+	setup_textured_cubemap_shader("textured-cubemap-and-lit-with-annulus-shadow-per-pixel", 1, 1, 1, 1,
 					&textured_cubemap_normal_mapped_lit_with_annulus_shadow_specular_shader);
-	setup_textured_cubemap_shader("textured-cubemap-and-lit-with-annulus-shadow-per-pixel", 1, 1, 0,
+	setup_textured_cubemap_shader("textured-cubemap-and-lit-with-annulus-shadow-per-pixel", 1, 1, 0, 1,
 					&textured_cubemap_normal_mapped_lit_specular_shader);
 	setup_textured_particle_shader(&textured_particle_shader);
 	setup_fs_effect_shader("fs-effect-copy", &fs_copy_shader);

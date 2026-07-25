@@ -57,6 +57,10 @@
 
 		v_TexCoord = a_Position.xyz;
 
+#if defined(USE_CSM)
+		csm_set_shadow_coords(a_Position);
+#endif
+
 		/* gl_Position is a special variable used to store the final position.
 		   Multiply the vertex by the matrix to get the final point in normalized screen coordinates. */
 		gl_Position = u_MVPMatrix * a_Position;
@@ -152,6 +156,15 @@
 		}
 #endif
 
+#if defined(USE_CSM)
+		/* Fold in the cascaded shadow map.  This multiplies rather than assigns because the
+		 * ring shadow above is a separate occluder: both are fractions of the light that
+		 * reaches this fragment, so they compose.  v_Position is eye-space, so the
+		 * view-space distance that selects the cascade is -z. */
+		int csm_cascade;
+		shadow *= csm_shadow_factor(csm_cascade, -v_Position.z);
+#endif
+
 #if defined(USE_NORMAL_MAP)
 		vec3 norm_sample = normalize(texture(u_NormalMapTex, v_TexCoord).xyz * 2.0 - 1.0);
 		vec3 pixel_normal = tbn * norm_sample;
@@ -212,6 +225,10 @@
 		f_FragColor.rgb *= u_TintColor.rgb;
 		f_FragColor *= u_TintColor.a;
 		f_FragColor = filmic_tonemap(f_FragColor);
+
+#if defined(USE_CSM)
+		f_FragColor = csm_debug_color(f_FragColor, csm_cascade, shadow);
+#endif
 	}
 #endif
 
