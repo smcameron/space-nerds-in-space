@@ -24,8 +24,8 @@ function big_ship(x, y, z, s)
 	door2 = add_block(e, s * (-8 - 15 * door_open), s * 0, s * 9.7, s * 17, s * 40, s * 5, 1, 0, 0, 0, t, block);
 
 	-- top walls
-	add_block(e, s * 33, s * 0, s * 10, s * 33, s * 40, s * 5, t, block);
-	add_block(e, s * -33, s * 0, s * 10, s * 33, s * 40, s * 5, t, block);
+	add_block(e, s * 33, s * 0, s * 10, s * 33, s * 40, s * 5, 1, 0, 0, 0, t, block);
+	add_block(e, s * -33, s * 0, s * 10, s * 33, s * 40, s * 5, 1, 0, 0, 0, t, block);
 
 	add_block(e, s * 0, s * -30, s * -6, s * 100, s * 40, s * 5, 1, 0, 0, -17.0 * math.pi / 180.0, t, block);
 	add_block(e, s * 0, s * -30, s * 6, s * 100, s * 40, s * 5, 1, 0, 0, 17.0 * math.pi / 180.0, t, block);
