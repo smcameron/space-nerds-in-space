@@ -3179,15 +3179,24 @@ static void update_shading_planet(struct snis_entity *o)
 		return;
 	}
 
+	if (!o->entity)
+		return;
+
+	/* Guard against divide by zero in planet_between_points(), below */
+	if (fabs(o->x - SUNX) < 0.1 && fabs(o->y - SUNY) < 0.1 && fabs(o->z - SUNZ) < 0.1) {
+		entity_set_in_shade(o->entity, 0);
+		return;
+	}
+
 	p1.v.x = o->x;
 	p1.v.y = o->y;
 	p1.v.z = o->z;
 	p2.v.x = SUNX;
 	p2.v.y = SUNY;
 	p2.v.z = SUNZ;
+
 	o->shading_planet = planet_between_points(&p1, &p2);
-	if (o->entity)
-		entity_set_in_shade(o->entity, (float) 0.9 * (o->shading_planet != NULL) + 0.1);
+	entity_set_in_shade(o->entity, (float) 0.9 * (o->shading_planet != NULL) + 0.1);
 }
 
 static void move_objects(void)
