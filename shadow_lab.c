@@ -80,6 +80,9 @@ struct scene_object {
 	struct material *material;
 	union vec3 pos;
 	union quat orientation;
+	/* Heading angles, in radians.  orientation is rebuilt from these rather than being
+	 * rotated in place; see orientation_from_angles(). */
+	float yaw, pitch, roll;
 	float scale;
 	int color;
 	int no_cast_shadow;
@@ -92,6 +95,9 @@ static float scene_scale = 1000.0; /* characteristic spacing of the scene, set a
 /* Free-fly camera. */
 static union vec3 cam_pos = { { -2500.0, 1500.0, -2500.0 } };
 static union quat cam_orientation = IDENTITY_QUAT_INITIALIZER;
+/* The camera's heading, which cam_orientation is rebuilt from each frame.  See
+ * orientation_from_angles() for why the orientation is not rotated in place. */
+static float cam_yaw, cam_pitch, cam_roll;
 static float move_speed; /* per-frame translation, derived from scene_scale */
 
 /* Possession: the fly controls drive either the free camera (slot -1) or one ship, which the
@@ -129,7 +135,15 @@ static int chase_initialized;  /* 0 to snap the rig to the ship on the first pos
 static int turret_view = 0;    /* 1 = look through the possessed ship's turret */
 /* The turret's aim in the ship's local frame, i.e. snis_client's weap_orientation.  The mouse
  * drives this instead of the ship's heading while in turret view, exactly as the weapons
- * station works: the gunner aims, they do not steer. */
+ * station works: the gunner aims, they do not steer.
+ *
+ * A turret has two degrees of freedom and no roll, so it is held as azimuth and elevation and
+ * the quaternion is rebuilt from them.  That also makes its travel limits expressible: the
+ * elevation range is the game's, from snis_server.c's turret_move(), which stops the barrel
+ * before it can swing down through the hull it is bolted to. */
+#define TURRET_ELEVATION_LOWER_LIMIT (-30.0 * M_PI / 180.0) /* snis_server.c turret_move() */
+#define TURRET_ELEVATION_UPPER_LIMIT (90.0 * M_PI / 180.0)
+static float turret_azimuth, turret_elevation;
 static union quat turret_orientation = IDENTITY_QUAT_INITIALIZER;
 static struct mesh *turret_mesh;
 /* Which ship carries the turret.  Deliberately independent of possession, so you can leave
@@ -334,6 +348,9 @@ static struct scene_object *add_scene_object(enum scene_object_kind kind, struct
 	o->pos.v.y = y;
 	o->pos.v.z = z;
 	o->orientation = (union quat) IDENTITY_QUAT_INITIALIZER;
+	o->yaw = 0.0;
+	o->pitch = 0.0;
+	o->roll = 0.0;
 	o->scale = scale;
 	o->color = color;
 	o->no_cast_shadow = 0;
@@ -581,6 +598,41 @@ static void build_scene(void)
 	}
 }
 
+/* Build an orientation from heading angles, in the basis camera_basis() uses: yaw about up
+ * (+y), then pitch about the yawed right axis (+z), then roll about the nose (+x).
+ *
+ * Everything that is aimed here keeps its angles as scalars and calls this each frame, rather
+ * than rotating a stored quaternion by the frame's mouse delta.  Composing incremental
+ * rotations does not commute, so moving the mouse in a circle does not return to where it
+ * started -- it leaves a little roll behind every lap, which is what made the horizon tilt.
+ * Rebuilding from angles has no history to accumulate error in, and it makes the turret's
+ * limits expressible, since they are limits on the angles.  (The representation was already
+ * quaternions; it was the integration that drifted, not the quaternions.) */
+static void orientation_from_angles(union quat *q, float yaw, float pitch, float roll)
+{
+	union quat qy, qp, qr;
+
+	quat_init_axis(&qy, 0.0, 1.0, 0.0, yaw);
+	quat_init_axis(&qp, 0.0, 0.0, 1.0, pitch);
+	quat_init_axis(&qr, 1.0, 0.0, 0.0, roll);
+	quat_mul(q, &qy, &qp);
+	quat_mul_self(q, &qr);
+	quat_normalize_self(q);
+}
+
+/* Pitch has to stop short of straight up or down: at exactly +/-90 degrees yaw and roll act on
+ * the same axis and the heading becomes ambiguous. */
+#define MAX_PITCH (89.0 * M_PI / 180.0)
+
+static float clamp_pitch(float pitch)
+{
+	if (pitch > MAX_PITCH)
+		return MAX_PITCH;
+	if (pitch < -MAX_PITCH)
+		return -MAX_PITCH;
+	return pitch;
+}
+
 /* Extract the camera's forward/up/right basis vectors from its orientation quaternion. */
 static void camera_basis(const union quat *o, union vec3 *fwd, union vec3 *up, union vec3 *right)
 {
@@ -620,47 +672,23 @@ static void adjust_split_lambda(float delta)
 	set_shadow_map_split_lambda(roundf(lambda * 100.0f) / 100.0f);
 }
 
-static void quat_rotate_local(union quat *o, float ax, float ay, float az, float angle)
-{
-	union quat delta;
-
-	if (angle == 0.0)
-		return;
-	quat_init_axis(&delta, ax, ay, az, angle);
-	quat_mul(o, o, &delta);
-	quat_normalize_self(o);
-}
-
-/* Rotate about a world-space axis (pre-multiply), for aircraft-style yaw that turns the
- * heading without accumulating roll the way a local-axis yaw does. */
-static void quat_rotate_world(union quat *o, float ax, float ay, float az, float angle)
-{
-	union quat delta;
-
-	if (angle == 0.0)
-		return;
-	quat_init_axis(&delta, ax, ay, az, angle);
-	quat_mul(o, &delta, o);
-	quat_normalize_self(o);
-}
-
-/* Yaw/pitch/roll an orientation from the right-drag mouse and Q/E, shared by the free camera
- * and the possessed ship. */
-static void apply_look_controls(union quat *orientation)
+/* Steer from the right-drag mouse and Q/E, shared by the free camera and the possessed ship.
+ * Accumulates into the caller's angles and rebuilds the orientation from them. */
+static void apply_look_controls(union quat *orientation, float *yaw, float *pitch, float *roll)
 {
 	const Uint8 *keys = SDL_GetKeyboardState(NULL);
-	float roll = 0.0;
 
-	quat_rotate_local(orientation, 0.0, 1.0, 0.0, -mouse_accum_dx * mouse_sensitivity);
-	quat_rotate_local(orientation, 0.0, 0.0, 1.0, -mouse_accum_dy * mouse_sensitivity);
+	*yaw -= mouse_accum_dx * mouse_sensitivity;
+	*pitch = clamp_pitch(*pitch - mouse_accum_dy * mouse_sensitivity);
 	mouse_accum_dx = 0.0;
 	mouse_accum_dy = 0.0;
 
 	if (keys[SDL_SCANCODE_Q])
-		roll += roll_rate;
+		*roll += roll_rate;
 	if (keys[SDL_SCANCODE_E])
-		roll -= roll_rate;
-	quat_rotate_local(orientation, 1.0, 0.0, 0.0, roll);
+		*roll -= roll_rate;
+
+	orientation_from_angles(orientation, *yaw, *pitch, *roll);
 }
 
 /* Free-fly camera: look controls plus WASD/RF translation along its own basis. */
@@ -672,7 +700,7 @@ static void fly_controls(union vec3 *pos, union quat *orientation, float speed)
 	if (keys[SDL_SCANCODE_LSHIFT] || keys[SDL_SCANCODE_RSHIFT])
 		speed *= 5.0;
 
-	apply_look_controls(orientation);
+	apply_look_controls(orientation, &cam_yaw, &cam_pitch, &cam_roll);
 	camera_basis(orientation, &fwd, &up, &right);
 
 	if (keys[SDL_SCANCODE_W]) {
@@ -702,25 +730,19 @@ static void fly_ship(struct scene_object *ship, int steer_with_mouse)
 {
 	const Uint8 *keys = SDL_GetKeyboardState(NULL);
 	union vec3 fwd, up, right, step;
-	float roll = 0.0;
 
-	/* Aircraft-style steering: yaw about world up (heading, no roll drift), pitch about the
-	 * ship's own right axis, and roll only when asked.  Right-drag mouse steers -- except in
-	 * turret view, where the mouse aims the turret instead and the caller has already
-	 * consumed the accumulated motion. */
+	/* Steer the ship by its heading angles.  In turret view the mouse aims the turret
+	 * instead, and the caller has already consumed the accumulated motion, so only roll
+	 * and throttle apply. */
 	if (steer_with_mouse) {
-		quat_rotate_world(&ship->orientation, 0.0, 1.0, 0.0,
-					-mouse_accum_dx * mouse_sensitivity);
-		quat_rotate_local(&ship->orientation, 0.0, 0.0, 1.0,
-					-mouse_accum_dy * mouse_sensitivity);
-		mouse_accum_dx = 0.0;
-		mouse_accum_dy = 0.0;
+		apply_look_controls(&ship->orientation, &ship->yaw, &ship->pitch, &ship->roll);
+	} else {
+		if (keys[SDL_SCANCODE_Q])
+			ship->roll += roll_rate;
+		if (keys[SDL_SCANCODE_E])
+			ship->roll -= roll_rate;
+		orientation_from_angles(&ship->orientation, ship->yaw, ship->pitch, ship->roll);
 	}
-	if (keys[SDL_SCANCODE_Q])
-		roll += roll_rate;
-	if (keys[SDL_SCANCODE_E])
-		roll -= roll_rate;
-	quat_rotate_local(&ship->orientation, 1.0, 0.0, 0.0, roll);
 
 	if (keys[SDL_SCANCODE_W])
 		ship_speed += ship_accel;
@@ -766,13 +788,17 @@ static void update_camera(void)
 
 		/* Aim the turret with the mouse, in the ship's local frame, then fly the ship
 		 * without mouse steering.  Consume the mouse motion here so fly_ship() does not
-		 * also apply it. */
-		quat_rotate_local(&turret_orientation, 0.0, 1.0, 0.0,
-					-mouse_accum_dx * mouse_sensitivity);
-		quat_rotate_local(&turret_orientation, 0.0, 0.0, 1.0,
-					-mouse_accum_dy * mouse_sensitivity);
+		 * also apply it.  Elevation is clamped to the turret's real travel, so the barrel
+		 * cannot be swung down through the hull. */
+		turret_azimuth -= mouse_accum_dx * mouse_sensitivity;
+		turret_elevation -= mouse_accum_dy * mouse_sensitivity;
+		if (turret_elevation < TURRET_ELEVATION_LOWER_LIMIT)
+			turret_elevation = TURRET_ELEVATION_LOWER_LIMIT;
+		if (turret_elevation > TURRET_ELEVATION_UPPER_LIMIT)
+			turret_elevation = TURRET_ELEVATION_UPPER_LIMIT;
 		mouse_accum_dx = 0.0;
 		mouse_accum_dy = 0.0;
+		orientation_from_angles(&turret_orientation, turret_azimuth, turret_elevation, 0.0);
 		fly_ship(ship, 0);
 
 		/* Exactly snis_client's show_weapons_camera_view(): the camera orientation is the
