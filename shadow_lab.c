@@ -655,7 +655,7 @@ static void build_scene(void)
 	set_shadow_map_max_distance(14000.0);
 	set_shadow_map_num_cascades(6);
 	set_shadow_map_split_lambda(1.0);
-	graph_dev_set_shadow_bias(2.5, 4.0);
+	graph_dev_set_shadow_bias(2.0, 4.0);
 	graph_dev_set_shadow_pcf_radius(1);
 	graph_dev_set_shadow_blend(0.2);
 

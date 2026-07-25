@@ -195,7 +195,12 @@ static float graph_dev_shadow_blend = 0.2f;
  * detaching shadows from their casters.  0 disables it. */
 static float graph_dev_shadow_normal_offset = 1.5f;
 /* Slope-scaled polygon-offset bias applied while rendering the shadow map depth pass. */
-static float shadow_polygon_offset_factor = 2.5f;
+/* Depth-pass polygon offset.  The slope term is the backstop for shadow acne where the
+ * normal-offset bias cannot help: that lifts the lookup along the shading normal, which on a
+ * coarse hull with averaged vertex normals can point well away from the facet it stands for,
+ * so part of the lift goes sideways instead of clear of the surface.  2.0 is enough margin for
+ * those meshes and costs about half a screen pixel of shadow detachment at 45 degrees. */
+static float shadow_polygon_offset_factor = 2.0f;
 static float shadow_polygon_offset_units = 4.0f;
 #define SHADOW_MAP_TEXTURE_SIZE 4096
 #define MAX_SHADOW_CASCADES 6
