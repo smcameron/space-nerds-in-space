@@ -1063,15 +1063,31 @@ static int compute_shadow_light_matrix(struct entity_context *cx, float near_d, 
 			zmax = cv.v.z;
 	}
 
-	/* Forward is -ldir, so points in front of the light have negative view z.
-	 * Convert to positive ortho near/far distances and extend the near plane toward
-	 * the light by roughly one scene depth so casters just in front of the region
-	 * still cast, without wasting depth-buffer precision on a huge fixed range.  The x/y
+	/* Forward is -ldir, so points in front of the light have negative view z.  Convert to
+	 * positive ortho near/far distances.
+	 *
+	 * The near plane has to reach from this cascade's region back toward the light far enough
+	 * to catch every caster that could shadow it, and casters are routinely much further away
+	 * than the region is deep -- a starbase or a large asteroid hundreds of units off.  Padding
+	 * by the region's own depth, as this used to, tied the maximum caster distance to the
+	 * cascade's size, so making the near cascades smaller (to win back near-field resolution)
+	 * silently stopped distant occluders casting into them.  Pad by the shadow coverage
+	 * distance instead: that is the documented reach of the whole shadow system, and it does
+	 * not move when the split scheme changes.
+	 *
+	 * The far plane needs no such padding.  A caster further from the light than every point of
+	 * the region cannot occlude any of them, and every visible receiver lies inside the frustum
+	 * slice and so within the corners' own z extent; a small margin for interpolation error is
+	 * enough.
+	 *
+	 * The cost is shadow-map depth precision: the range is now about the coverage distance
+	 * rather than a few cascade depths, which over a 24-bit depth buffer still resolves to
+	 * ~3e-4 world units at the default 4500 -- far below the smallest cascade's texel.  The x/y
 	 * window is the (snapped) sphere, one texel larger each side to absorb the snap offset. */
 	double zrange = zmax - zmin;
 	if (zrange < 1e-6)
 		return 0;
-	double ortho_near = -zmax - zrange;
+	double ortho_near = -zmax - shadow_map_max_distance;
 	double ortho_far = -zmin + 0.01 * zrange;
 	double l = -radius - texel;
 	double r = radius + texel;
