@@ -34,6 +34,7 @@
 
 #include "mtwist.h"
 #include "vertex.h"
+#include "triangle.h"
 #include "open-simplex-noise.h"
 #include "snis_ship_type.h"
 #include "snis_graph.h"
@@ -333,6 +334,43 @@ static struct mesh *read_optional_model(const char *relative_path)
 	return m;
 }
 
+/* Highest point of the hull directly above (px, pz): drop a vertical ray through the model and
+ * keep the highest triangle it hits.  Returns 0 if the ray misses the hull entirely.
+ *
+ * Sampling nearby vertices instead is not good enough.  On a coarse hull -- the conqueror is
+ * 465 vertices for a 70 unit ship -- the triangle actually covering the mount point can have
+ * all three of its corners outside any sensible sampling window, so the sampled height comes
+ * out below the real surface and the turret ends up buried in the hull. */
+static int hull_top_above(struct mesh *hull, float px, float pz, float *top)
+{
+	int i, found = 0;
+	float best = 0.0;
+
+	for (i = 0; i < hull->ntriangles; i++) {
+		struct vertex *a = hull->t[i].v[0];
+		struct vertex *b = hull->t[i].v[1];
+		struct vertex *c = hull->t[i].v[2];
+		float l1, l2, l3, y;
+		/* Barycentric coordinates of (px, pz) in the triangle seen from above. */
+		float d = (b->z - c->z) * (a->x - c->x) + (c->x - b->x) * (a->z - c->z);
+
+		if (fabsf(d) < 1e-9)
+			continue; /* edge-on in plan view, so it covers no area to hit */
+		l1 = ((b->z - c->z) * (px - c->x) + (c->x - b->x) * (pz - c->z)) / d;
+		l2 = ((c->z - a->z) * (px - c->x) + (a->x - c->x) * (pz - c->z)) / d;
+		l3 = 1.0 - l1 - l2;
+		if (l1 < 0.0 || l2 < 0.0 || l3 < 0.0)
+			continue; /* the ray passes outside this triangle */
+		y = l1 * a->y + l2 * b->y + l3 * c->y;
+		if (!found || y > best) {
+			best = y;
+			found = 1;
+		}
+	}
+	*top = best;
+	return found;
+}
+
 /* Work out where a gun turret sits on a hull.
  *
  * The game has nothing to read here: no turret mount appears in ship_types.txt or in any asset
@@ -340,32 +378,19 @@ static struct mesh *read_optional_model(const char *relative_path)
  * flares).  snis_client simply hardcodes the position, in two places with slightly different
  * values, and gets away with it because only the player's ship ever carries a turret.
  *
- * So derive it.  Pick a station a third of the way back from the nose, on the centreline, and
- * find the top of the hull *there* -- not the top of the bounding box, which on a hull that
- * tapers or carries a tall fin elsewhere can be far above the surface at that station, leaving
- * the turret floating in mid air.  The conqueror is 2.2 units adrift that way.  Then lift by
- * the distance from the turret model's origin to its underside, so it rests on the skin rather
- * than sinking into it.  On the wombat this lands within a centimetre of the position the game
- * hardcodes for it. */
+ * So derive it.  Pick a station a third of the way back from the nose, on the centreline, find
+ * the hull's surface directly above that point, and lift by the distance from the turret
+ * model's origin to its underside so it rests on the skin rather than sinking into it.  On the
+ * wombat this lands within a couple of centimetres of the position the game hardcodes. */
 static void turret_mount_point(struct mesh *hull, union vec3 *mount)
 {
 	float minx, miny, minz, maxx, maxy, maxz;
-	float station, window, top, underside;
-	int i, found = 0;
+	float station, top, underside;
 
 	mesh_aabb(hull, &minx, &miny, &minz, &maxx, &maxy, &maxz);
 	station = minx + TURRET_MOUNT_LENGTHWISE * (maxx - minx);
-	window = 0.08 * (maxx - minx);
-
-	/* Highest point of the hull near that station, close to the centreline. */
-	top = maxy;
-	for (i = 0; i < hull->nvertices; i++) {
-		if (fabsf(hull->v[i].x - station) > window || fabsf(hull->v[i].z) > window)
-			continue;
-		if (!found || hull->v[i].y > top)
-			top = hull->v[i].y;
-		found = 1;
-	}
+	if (!hull_top_above(hull, station, 0.0, &top))
+		top = maxy; /* nothing above that point; fall back to the bounding box */
 
 	underside = 0.0;
 	if (turret_mesh) {
