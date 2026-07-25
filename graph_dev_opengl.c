@@ -204,6 +204,9 @@ static float shadow_polygon_offset_units = 4.0f;
 	"#define MAX_SHADOW_CASCADES " CSM_STR(MAX_SHADOW_CASCADES) "\n" \
 	"#define SHADOW_MAP_SIZE " CSM_STR(SHADOW_MAP_TEXTURE_SIZE) "\n" \
 	"#define CSM_PCF_MAX_RADIUS " CSM_STR(CSM_PCF_MAX_RADIUS) "\n"
+/* Shared cascaded-shadow-map GLSL, concatenated ahead of every shader built by
+ * setup_textured_shader() and setup_textured_cubemap_shader().  Inert without USE_CSM. */
+#define CSM_SHADER_FILE "csm.shader"
 /* Texture unit 2 is unused by the lit shaders (0=albedo, 1=emit, 3=normalmap) and is
  * within the BIND_TEXTURE cache range (units 0-3). */
 #define SHADOW_MAP_TEXTURE_UNIT GL_TEXTURE2
@@ -4001,10 +4004,13 @@ static void setup_textured_shader(const char *basename, const char *defines,
 	char shader_filename[PATH_MAX];
 	snprintf(shader_filename, sizeof(shader_filename), "%s.shader", basename);
 
-	const char *filenames[] = { shader_filename };
+	/* csm.shader is concatenated ahead of the shader proper so its cascade helpers are
+	 * declared before use.  It is entirely inside #ifdef USE_CSM, so shaders built without
+	 * that define get nothing from it. */
+	const char *filenames[] = { CSM_SHADER_FILE, shader_filename };
 
 	shader->program_id = load_concat_shaders(shader_directory,
-				vert_header, 1, filenames, frag_header, 1, filenames);
+				vert_header, 2, filenames, frag_header, 2, filenames);
 
 	/* create the VAO for this shader */
 	glGenVertexArrays(1, &shader->vao_id);
