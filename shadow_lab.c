@@ -34,6 +34,8 @@
 
 #include "mtwist.h"
 #include "vertex.h"
+#include "open-simplex-noise.h"
+#include "snis_ship_type.h"
 #include "snis_graph.h"
 #include "graph_dev.h"
 #include "quat.h"
@@ -71,7 +73,7 @@ static SDL_Window *screen;
 
 /* The scene.  A fixed-capacity list of objects rebuilt into the entity context each frame. */
 #define MAX_SCENE_OBJECTS 64
-enum scene_object_kind { SCENE_SHIP, SCENE_PLANET };
+enum scene_object_kind { SCENE_SHIP, SCENE_PLANET, SCENE_ASTEROID, SCENE_STARBASE };
 struct scene_object {
 	enum scene_object_kind kind;
 	struct mesh *mesh;
@@ -110,6 +112,33 @@ static float ship_accel;      /* throttle acceleration per frame */
  * from the side before the camera swings in behind it. */
 static union quat chase_cam_orientation = IDENTITY_QUAT_INITIALIZER;
 static int chase_initialized;  /* 0 to snap the rig to the ship on the first possessed frame */
+
+/* Turret view (F2 while possessing a ship): a faithful copy of the gun turret rig that
+ * snis_client's show_weapons_camera_view() sets up, so the CSM can be evaluated at the scale
+ * the gunner actually sees.  This is the one view in the game where the camera sits *inside*
+ * the shadow-casting geometry, so it stresses the cascade fit differently from every other
+ * view.  Everything here mirrors snis_client.c: the mount point, the eye offset above the
+ * turret, the near plane and the field of view.  The values are quoted rather than shared
+ * because they are #defines private to snis_client.c. */
+#define TURRET_MOUNT_X (-4.0 * SHIP_MESH_SCALE)   /* snis_client.c show_weapons_camera_view() */
+#define TURRET_MOUNT_Y (5.45 * SHIP_MESH_SCALE)
+#define TURRET_MOUNT_Z (0.0 * SHIP_MESH_SCALE)
+#define TURRET_EYE_LIFT (0.75 * SHIP_MESH_SCALE)  /* view_offset, in the turret's own frame */
+#define TURRET_NEAR_PLANE (1.6666 * SHIP_MESH_SCALE) /* NEAR_CAMERA_PLANE * SHIP_MESH_SCALE */
+#define TURRET_FOV (45.0 * M_PI / 180.0)          /* ANGLE_OF_VIEW, at zoom 0 */
+static int turret_view = 0;    /* 1 = look through the possessed ship's turret */
+/* The turret's aim in the ship's local frame, i.e. snis_client's weap_orientation.  The mouse
+ * drives this instead of the ship's heading while in turret view, exactly as the weapons
+ * station works: the gunner aims, they do not steer. */
+static union quat turret_orientation = IDENTITY_QUAT_INITIALIZER;
+static struct mesh *turret_mesh;
+/* Which ship carries the turret.  Deliberately independent of possession, so you can leave
+ * turret view, fly the free camera around, and watch the turret's shadow track across the
+ * hull from outside -- the turret is the caster under test, and it has to stay put to be
+ * observed.  It follows the possessed ship, and stays behind when you drop back to the free
+ * camera.  Slot 0 (the wombat) is the ship the mount point is authored for. */
+static int turret_ship_slot;
+
 static float mouse_sensitivity = 0.003;
 static float roll_rate = 0.02;
 static float ambient_light = 0.015; /* match snis_client's default so lighting mirrors the game */
@@ -195,6 +224,9 @@ static float ship_shade[MAX_SCENE_OBJECTS];
 static int ship_shade_count;
 
 static struct mesh *planet_mesh;
+static struct mesh *starbase_mesh;
+static struct mesh *asteroid_mesh;
+static struct material asteroid_material;
 
 /* Analytic planet umbra/penumbra shading, mirroring snis_client's update_shading_planet():
  * returns the deepest fraction (0.0 = fully lit, 1.0 = full umbra) of the sun's disc that any
@@ -260,6 +292,31 @@ static struct mesh *snis_read_model(char *path)
 	return m;
 }
 
+/* Load a model that may not be present, quietly.  The ship .obj models live in the source
+ * tree, but the downloaded art assets (the turret .stl among them) only exist under the
+ * user's asset directory, so try the working directory first and fall back to that.  Returns
+ * NULL rather than exiting: every caller of this treats the model as optional. */
+static struct mesh *read_optional_model(const char *relative_path)
+{
+	char path[PATH_MAX];
+	const char *home;
+	struct mesh *m;
+
+	m = read_mesh((char *) relative_path);
+	if (m)
+		return m;
+
+	home = getenv("HOME");
+	if (!home)
+		return NULL;
+	snprintf(path, sizeof(path), "%s/.local/share/space-nerds-in-space/%s", home,
+			relative_path);
+	m = read_mesh(path);
+	if (!m)
+		fprintf(stderr, "shadow_lab: optional model '%s' not found\n", relative_path);
+	return m;
+}
+
 static struct scene_object *add_scene_object(enum scene_object_kind kind, struct mesh *m,
 		struct material *material, float x, float y, float z, float scale, int color)
 {
@@ -293,6 +350,28 @@ struct lab_ship_model {
 	float angle[3]; /* matching angles in degrees, as written in ship_types.txt */
 	int nrot;
 };
+/* The rest of the game's world-scale ladder.  Shadow tuning has to hold across all of it, not
+ * just at ship scale, so the scene carries one of each.  Every factor below is quoted from the
+ * game so the lab measures what the game renders:
+ *
+ *   turret          spaceship_turret.stl x SHIP_MESH_SCALE       ->     0.8 units thick
+ *   player ship     wombat x SHIP_MESH_SCALE                     ->    15 unit radius
+ *   starbase        starbase mesh x STARBASE_SCALE_FACTOR        ->   210 unit radius
+ *   asteroid        asteroid.stl x { 3, 10, 20 }                 ->  96 / 319 / 639 radius
+ *
+ * That is a range of nearly 800:1 between the smallest caster and the largest.  Asteroids are
+ * the extreme case: NASTEROID_SCALES (snis.h) is a *count* of three entity scales, applied in
+ * snis_client.c as "s ? s * 10 : 3.0" for s in 0..2 -- so the largest asteroid has a radius
+ * over 40x the player ship's, and its diameter is a third of the entire shadow coverage
+ * distance.  Starbases instead take their factor at mesh load, like ships do. */
+#define STARBASE_SCALE_FACTOR (2.0)   /* snis.h */
+#define ASTEROID_SCALE_SMALL (3.0)    /* snis_client.c: s ? s * 10 : 3.0, for s = 0, 1, 2 */
+#define ASTEROID_SCALE_MEDIUM (10.0)
+#define ASTEROID_SCALE_LARGE (20.0)
+/* Matches snis_client's init_meshes(), which distorts the asteroid models with this seed. */
+#define ASTEROID_NOISE_SEED (77374223LL)
+#define ASTEROID_DISTORTION (0.25)
+
 static const struct lab_ship_model phase1_ship_models[] = {
 	{ "share/snis/models/wombat/snis3006.obj", { 'x', 'y' }, { -90.0, 90.0 }, 2 },
 	{ "share/snis/models/disruptor/disruptor.obj", { 0 }, { 0 }, 0 },
@@ -314,6 +393,23 @@ static void apply_model_rotations(struct mesh *m, const struct lab_ship_model *s
 	}
 }
 
+/* Asteroids are cubemap-textured in the game rather than uv-mapped, so they need the same
+ * six-file cubemap load snis_client does.  The face ordering is snis_client's
+ * load_cubemap_textures(): SNIS numbers its cube faces differently from OpenGL, hence the
+ * shuffle.  Returns 0 if the textures are missing, which leaves the asteroid untextured. */
+static unsigned int load_cubemap(const char *prefix)
+{
+	const char *asset_dir = "share/snis/textures";
+	char filename[6][PATH_MAX + 1];
+	int i;
+
+	for (i = 0; i < 6; i++)
+		snprintf(filename[i], sizeof(filename[i]), "%s/%s%d.png", asset_dir, prefix, i);
+
+	return graph_dev_load_cubemap_texture(0, 0, filename[1], filename[3], filename[4],
+						filename[5], filename[0], filename[2]);
+}
+
 static void build_scene(void)
 {
 	int i;
@@ -327,9 +423,23 @@ static void build_scene(void)
 		if (!ship_mesh[i])
 			exit(1);
 		apply_model_rotations(ship_mesh[i], &phase1_ship_models[i]);
+		/* Match snis_client's model load (see its init_meshes(): mesh_scale(ship_mesh_map[i],
+		 * SHIP_MESH_SCALE * extra_scaling)).  Without this the lab's ships are twice their
+		 * in-game size, and since the shadow tunables below are absolute world-unit values,
+		 * every shadow-resolution result measured here would be twice as good as the game's.
+		 * extra_scaling is per ship type in ship_types.txt and is not modelled here. */
+		mesh_scale(ship_mesh[i], SHIP_MESH_SCALE);
 		if (ship_mesh[i]->radius > max_radius)
 			max_radius = ship_mesh[i]->radius;
 	}
+
+	/* The gun turret, mounted on the possessed ship in turret view.  snis_client scales this
+	 * by SHIP_MESH_SCALE at load too, and the turret mount point above is expressed in the
+	 * same already-scaled world units.  Optional: the turret view still works without it,
+	 * just with no close-up caster, so a missing model must not kill the lab. */
+	turret_mesh = read_optional_model("share/snis/models/spaceship_turret.stl");
+	if (turret_mesh)
+		mesh_scale(turret_mesh, SHIP_MESH_SCALE);
 
 	/* Space the ships out relative to the largest one, but keep the cluster inside the
 	 * shadow map's coverage distance so all cascades are exercised at once. */
@@ -345,14 +455,19 @@ static void build_scene(void)
 	 * into the umbra. */
 	planet_mesh = mesh_unit_spherified_cube(64);
 	if (planet_mesh) {
-		/* Absolute values tuned to balance a roughly plausible scale against seeing the
-		 * effect: a 1000-unit planet 2500 below the cluster, lit by a 4000-unit sun at
-		 * 40000.  The penumbra's spatial width grows with the ships' distance from the
-		 * planet, so the cluster spans a soft terminator without an extreme sun.  All are
+		/* Game-legal absolute sizes and distances, so what is measured here transfers to
+		 * the game.  disc_occlusion_fraction() takes only angular quantities, so the
+		 * penumbra depends on the sun's and planet's *angular* radii and their angular
+		 * separation -- nothing spatial survives.  The star is snis_client's default
+		 * (star_diameter 5625, so radius 2812.5) at a game-typical 100000; the planet is
+		 * MIN_PLANET_RADIUS (800, snis.h).  That leaves the ship->planet distance as the
+		 * single tuned dial: 3570 puts the penumbra band at roughly the ship cluster's
+		 * span, so several ships straddle the terminator at once.  Umbra still forms
+		 * easily (planet subtends ~12.8 degrees against the sun's ~1.6).  All are
 		 * adjustable live (planet radius/distance 3/4, 5/6; sun distance/radius U/O, G/H). */
-		float planet_r = 500.0;
+		float planet_r = 800.0;
 		struct scene_object *p = add_scene_object(SCENE_PLANET, planet_mesh, NULL,
-				0.0, -2500.0, 0.0, planet_r, GRAY50);
+				0.0, -3570.0, 0.0, planet_r, GRAY50);
 		if (p) {
 			p->color = GRAY50;
 			/* The planet must not cast into the CSM depth map: planet->ship shadowing is
@@ -362,8 +477,8 @@ static void build_scene(void)
 			p->no_cast_shadow = 1;
 			planet_index = (int) (p - scene);
 			scene_center = p->pos; /* orbit the sun about the planet */
-			sun_distance = 40000.0;
-			sun_radius = 2000.0; /* 4000-unit diameter */
+			sun_distance = 100000.0; /* game-typical; SUN_DIST_LIMIT is 30000 (snis.h) */
+			sun_radius = 2812.5;     /* = snis_client's default star_diameter (5625) / 2 */
 		}
 	}
 
@@ -379,6 +494,52 @@ static void build_scene(void)
 		add_scene_object(SCENE_SHIP, ship_mesh[3], NULL,
 				spacing * 0.25, -spacing * 0.25, spacing * 0.8, 1.0, WHITE);
 
+	/* A starbase and the three asteroid scales, at their true game sizes, spread far enough
+	 * apart not to intersect.  These exist to check that one CSM calibration holds across the
+	 * whole size ladder: fly up to each and compare the HUD's cascade texel against the
+	 * feature you are looking at.  They are ordinary opaque casters, so they also shadow each
+	 * other and the ships.  Positions are absolute, as they are in the game. */
+	/* The first entry in the game's starbase_models.txt, and an .obj, so read_obj_file()
+	 * builds its texture-mapped material from starbase.mtl and it renders as it does in
+	 * game.  (The .stl starbases later in that list carry no material at all.) */
+	starbase_mesh = read_optional_model("share/snis/models/starbase/starbase.obj");
+	if (starbase_mesh) {
+		mesh_scale(starbase_mesh, STARBASE_SCALE_FACTOR);
+		add_scene_object(SCENE_STARBASE, starbase_mesh, NULL, 700.0, 0.0, 0.0, 1.0, RED);
+	}
+
+	asteroid_mesh = read_optional_model("share/snis/models/asteroid.stl");
+	if (asteroid_mesh) {
+		struct osn_context *osn;
+		struct material *mat;
+
+		/* snis_client distorts the asteroid models at load and re-averages their normals;
+		 * do the same so the surface detail that self-shadows is the game's, not a
+		 * smooth STL. */
+		if (open_simplex_noise(ASTEROID_NOISE_SEED, &osn) == 0) {
+			mesh_distort(asteroid_mesh, ASTEROID_DISTORTION, osn);
+			open_simplex_noise_free(osn);
+		}
+		mesh_set_average_vertex_normals(asteroid_mesh);
+		/* mesh_scale() and mesh_distort() re-upload the mesh themselves, but
+		 * mesh_set_average_vertex_normals() does not, so the smoothed normals have to be
+		 * pushed explicitly or the GPU keeps the STL's flat per-face ones and the asteroid
+		 * renders faceted.  snis_client's init_meshes() ends the same sequence this way. */
+		mesh_graph_dev_init(asteroid_mesh);
+
+		/* The .stl carries no material, so supply the cubemap one the game uses. */
+		material_init_texture_cubemap(&asteroid_material);
+		asteroid_material.texture_cubemap.texture_id = load_cubemap("asteroid1-");
+		mat = asteroid_material.texture_cubemap.texture_id ? &asteroid_material : NULL;
+
+		add_scene_object(SCENE_ASTEROID, asteroid_mesh, mat, -450.0, 0.0, 350.0,
+				ASTEROID_SCALE_SMALL, AMBER);
+		add_scene_object(SCENE_ASTEROID, asteroid_mesh, mat, 300.0, 0.0, -900.0,
+				ASTEROID_SCALE_MEDIUM, AMBER);
+		add_scene_object(SCENE_ASTEROID, asteroid_mesh, mat, -1600.0, 0.0, 1400.0,
+				ASTEROID_SCALE_LARGE, AMBER);
+	}
+
 	/* Record the ships, in order, as the possess-cycle slots. */
 	ship_slot_count = 0;
 	for (i = 0; i < scene_object_count; i++) {
@@ -393,12 +554,14 @@ static void build_scene(void)
 	ship_accel = ship_max_speed * 0.06;
 
 	/* Seed the shadow tunables to the values tuned here (and now the game defaults); all
-	 * remain adjustable live.  Six cascades with a mild log split over ~4500 units of
-	 * camera-local coverage give crisp near shadows that still reach distance; a small blend
-	 * band hides the cascade seams and fades the last cascade to lit at the coverage edge. */
-	set_shadow_map_max_distance(4500.0);
+	 * remain adjustable live.  Six cascades split purely logarithmically (lambda 1.0, see
+	 * entity.c) hold shadow quality roughly constant with viewing distance, which is what
+	 * lets the coverage reach 14000 -- far enough for a starbase or a large asteroid -- for
+	 * almost no cost near the camera.  A small blend band hides the cascade seams and fades
+	 * the last cascade to lit at the coverage edge. */
+	set_shadow_map_max_distance(14000.0);
 	set_shadow_map_num_cascades(6);
-	set_shadow_map_split_lambda(0.6);
+	set_shadow_map_split_lambda(1.0);
 	graph_dev_set_shadow_bias(2.5, 4.0);
 	graph_dev_set_shadow_pcf_radius(1);
 	graph_dev_set_shadow_blend(0.2);
@@ -442,6 +605,19 @@ static void adjust_shadow_bias(float dfactor, float dunits)
 	if (units < 0.0)
 		units = 0.0;
 	graph_dev_set_shadow_bias(factor, units);
+}
+
+/* Step the cascade split lambda, snapping to the step grid so repeated presses cannot
+ * accumulate floating-point drift.  The step is deliberately fine: in compute_cascade_splits()
+ * the uniform term is around 200x the logarithmic one, so lambda spends its whole range being
+ * dominated by uniform spacing and only the last stretch below 1.0 does anything interesting
+ * -- and 1.0 exactly, a pure logarithmic split, has to be reachable.  Shift steps coarsely to
+ * cross the dead zone quickly. */
+static void adjust_split_lambda(float delta)
+{
+	float lambda = get_shadow_map_split_lambda() + delta;
+
+	set_shadow_map_split_lambda(roundf(lambda * 100.0f) / 100.0f);
 }
 
 static void quat_rotate_local(union quat *o, float ax, float ay, float az, float angle)
@@ -522,18 +698,24 @@ static void fly_controls(union vec3 *pos, union quat *orientation, float speed)
 /* Arcade flight for a possessed ship: turn with the mouse/Q-E, throttle with W (forward) and
  * S (brake/reverse), coast with drag, and move along the nose.  The ship goes where it points
  * (atmosphere-like) but keeps momentum. */
-static void fly_ship(struct scene_object *ship)
+static void fly_ship(struct scene_object *ship, int steer_with_mouse)
 {
 	const Uint8 *keys = SDL_GetKeyboardState(NULL);
 	union vec3 fwd, up, right, step;
 	float roll = 0.0;
 
 	/* Aircraft-style steering: yaw about world up (heading, no roll drift), pitch about the
-	 * ship's own right axis, and roll only when asked.  Right-drag mouse steers. */
-	quat_rotate_world(&ship->orientation, 0.0, 1.0, 0.0, -mouse_accum_dx * mouse_sensitivity);
-	quat_rotate_local(&ship->orientation, 0.0, 0.0, 1.0, -mouse_accum_dy * mouse_sensitivity);
-	mouse_accum_dx = 0.0;
-	mouse_accum_dy = 0.0;
+	 * ship's own right axis, and roll only when asked.  Right-drag mouse steers -- except in
+	 * turret view, where the mouse aims the turret instead and the caller has already
+	 * consumed the accumulated motion. */
+	if (steer_with_mouse) {
+		quat_rotate_world(&ship->orientation, 0.0, 1.0, 0.0,
+					-mouse_accum_dx * mouse_sensitivity);
+		quat_rotate_local(&ship->orientation, 0.0, 0.0, 1.0,
+					-mouse_accum_dy * mouse_sensitivity);
+		mouse_accum_dx = 0.0;
+		mouse_accum_dy = 0.0;
+	}
 	if (keys[SDL_SCANCODE_Q])
 		roll += roll_rate;
 	if (keys[SDL_SCANCODE_E])
@@ -554,6 +736,13 @@ static void fly_ship(struct scene_object *ship)
 	step = fwd; vec3_mul_self(&step, ship_speed); vec3_add_self(&ship->pos, &step);
 }
 
+/* Is the turret rig actually in use?  turret_view is only meaningful while a ship is
+ * possessed; the free camera has no turret to look through. */
+static int turret_view_active(void)
+{
+	return turret_view && controlled_slot >= 0 && controlled_slot < ship_slot_count;
+}
+
 /* Drive whatever is currently controlled.  Free camera: fly the camera directly.  A possessed
  * ship: fly the ship and trail it with a lagging third-person chase camera, so flying a ship
  * through the planet's penumbra updates its analytic shade live. */
@@ -570,7 +759,35 @@ static void update_camera(void)
 	}
 
 	ship = &scene[ship_slots[controlled_slot]];
-	fly_ship(ship);
+
+	if (turret_view) {
+		union vec3 mount = { { TURRET_MOUNT_X, TURRET_MOUNT_Y, TURRET_MOUNT_Z } };
+		union vec3 eye = { { 0.0, TURRET_EYE_LIFT, 0.0 } };
+
+		/* Aim the turret with the mouse, in the ship's local frame, then fly the ship
+		 * without mouse steering.  Consume the mouse motion here so fly_ship() does not
+		 * also apply it. */
+		quat_rotate_local(&turret_orientation, 0.0, 1.0, 0.0,
+					-mouse_accum_dx * mouse_sensitivity);
+		quat_rotate_local(&turret_orientation, 0.0, 0.0, 1.0,
+					-mouse_accum_dy * mouse_sensitivity);
+		mouse_accum_dx = 0.0;
+		mouse_accum_dy = 0.0;
+		fly_ship(ship, 0);
+
+		/* Exactly snis_client's show_weapons_camera_view(): the camera orientation is the
+		 * ship's composed with the turret's, the mount point is in ship-local coordinates,
+		 * and the eye sits a little above the turret in the turret's own frame. */
+		quat_mul(&cam_orientation, &ship->orientation, &turret_orientation);
+		quat_rot_vec_self(&mount, &ship->orientation);
+		quat_rot_vec_self(&eye, &cam_orientation);
+		vec3_add(&cam_pos, &ship->pos, &mount);
+		vec3_add_self(&cam_pos, &eye);
+		chase_initialized = 0; /* re-snap the chase rig when we drop back out */
+		return;
+	}
+
+	fly_ship(ship, 1);
 
 	/* The rig orientation trails the ship's by a small fixed amount (the lag), snapping to it
 	 * on the first possessed frame.  Everything below is derived from this one frame, so the
@@ -648,6 +865,18 @@ static char *help_text =
 	"  - Q / E            ROLL;  RIGHT-DRAG MOUSE TO STEER (YAW / PITCH)\n"
 	"  - THE SHIP FLIES WHERE ITS NOSE POINTS; A CHASE CAM TRAILS IT.  FLY A SHIP\n"
 	"    THROUGH THE PENUMBRA TO WATCH ITS SHADE (PANEL) RAMP LIT -> UMBRA.\n\n"
+	"  GUN TURRET VIEW (F2 WHILE POSSESSING A SHIP)\n"
+	"  - F2               TOGGLE TURRET / CHASE VIEW\n"
+	"  - RIGHT-DRAG AIMS THE TURRET; THE SHIP DOES NOT STEER, AS AT THE REAL WEAPONS\n"
+	"    STATION.  W/S THROTTLE, Q/E ROLL, ARROW KEYS SWING THE SUN VS YOUR AIM.\n"
+	"  - COPIES snis_client's show_weapons_camera_view(): MOUNT, EYE OFFSET, NEAR\n"
+	"    PLANE 0.83, 45 DEG FOV.  ONLY VIEW WITH THE CAMERA INSIDE THE CASTER.\n"
+	"  - THE TURRET STAYS MOUNTED AND KEEPS ITS AIM WHEN YOU LEAVE TURRET VIEW, SO\n"
+	"    YOU CAN TAB TO THE FREE CAMERA AND WATCH ITS SHADOW FROM OUTSIDE.\n"
+	"  - CASCADE 0 HUD LINE: TEXEL IS THE FINEST SHADOW THE MAP HOLDS (TURRET IS ~0.8\n"
+	"    UNITS THICK).  AIM-TO-SUN MATTERS: THE ORTHO BOX IS FITTED ONLY 1% PAST THE\n"
+	"    FRUSTUM'S FAR-FROM-LIGHT CORNER.  16:9 HERE VS 4:3 IN GAME MAKES LAB TEXELS\n"
+	"    ~15 PERCENT COARSER; THE HUD SHOWS THIS WINDOW'S TRUE FIGURE.\n\n"
 	"  SUN (ANALYTIC PLANET UMBRA / PENUMBRA)\n"
 	"  - ARROW KEYS       ORBIT SUN AZIMUTH / ELEVATION (SHIFT = FASTER)\n"
 	"  - U / O            SUN DISTANCE CLOSER / FARTHER\n"
@@ -668,17 +897,15 @@ static char *help_text =
 	"                     (FARTHER + TIGHTER CLUSTER = WIDER, SOFTER PENUMBRA)\n"
 	"  - LOWER THE SUN (DOWN ARROW) TO SWING THE PLANET BETWEEN IT AND THE SHIPS.\n"
 	"    NOTE: in_shade ONLY DARKENS A SHIP'S SUN-FACING SIDE, WHICH IS HIDDEN\n"
-	"    BEHIND THE PLANET IN A DIRECT UMBRA TEST - THE DARKENING YOU SEE THERE IS\n"
-	"    THE ORDINARY DAY/NIGHT TERMINATOR.  WATCH THE PER-SHIP PANEL: SOFT RAMPS\n"
-	"    THROUGH THE PENUMBRA, BINARY JUMPS AT 0.5, OFF STAYS 0.  TO SEE IT ON THE\n"
-	"    HULL, VIEW A SHIP'S SUN-FACING FLANK NEAR THE SHADOW EDGE (OBLIQUE ANGLE).\n\n"
+	"    BEHIND THE PLANET IN A DIRECT UMBRA TEST.  WATCH THE PER-SHIP PANEL: SOFT\n"
+	"    RAMPS THROUGH THE PENUMBRA, BINARY JUMPS AT 0.5, OFF STAYS 0.\n\n"
 	"  SHADOWS\n"
 	"  - \\                TOGGLE SHADOWS ON / OFF\n"
 	"  - 0 / 1 / 2        DEBUG: OFF / SHADOW-FACTOR / CASCADE-INDEX\n"
 	"  - [ / ]            SHADOW COVERAGE DISTANCE DOWN / UP\n"
 	"  - SHIFT+[ / SHIFT+]  AMBIENT (SHADED-SIDE) FLOOR DOWN / UP\n"
 	"  - - / =            CASCADE COUNT DOWN / UP (1-6)\n"
-	"  - ; / '            SPLIT LAMBDA DOWN / UP (log vs uniform)\n"
+	"  - ; / '            SPLIT LAMBDA DOWN / UP BY 0.01 (SHIFT = 0.1); 1.0 = PURE LOG\n"
 	"  - , / .            DEPTH-BIAS SLOPE DOWN / UP\n"
 	"  - n / m            PCF NEAR KERNEL SMALLER / LARGER (tapers per cascade)\n"
 	"  - k / l            CROSS-CASCADE BLEND BAND SMALLER / LARGER\n\n"
@@ -725,6 +952,52 @@ static void draw_help_screen(void)
 	draw_help_text(help_text);
 }
 
+/* Recompute what entity.c's compute_cascade_splits() and compute_shadow_light_matrix() will
+ * derive for the nearest cascade, so the HUD can report the shadow map's actual world-space
+ * resolution.  Duplicated here rather than exported from entity.c to keep this lab tool from
+ * adding surface area to the core engine; it must track entity.c if the split scheme changes.
+ *
+ * split0 is the far edge of cascade 0, radius is its bounding sphere (which sets the ortho
+ * window), and texel is that window divided by the shadow map's resolution -- the smallest
+ * shadow feature the map can represent.  Compare it against the size of what you expect to
+ * cast: the turret is about 0.8 world units thick. */
+#define LAB_SHADOW_MAP_TEXTURE_SIZE 4096 /* must match entity.c's ENTITY_SHADOW_MAP_TEXTURE_SIZE */
+static void compute_cascade0_stats(float near_d, float fov, float *split0, float *radius,
+					float *texel)
+{
+	float far_d = get_shadow_map_max_distance();
+	int n = get_shadow_map_num_cascades();
+	float lambda = get_shadow_map_split_lambda();
+	float aspect = (float) SCREEN_WIDTH / (float) SCREEN_HEIGHT;
+	float p, log_split, uni_split, cz, hn, wn, hf, wf, dn, df;
+
+	if (n < 1)
+		n = 1;
+	if (far_d <= near_d) {
+		*split0 = 0.0;
+		*radius = 0.0;
+		*texel = 0.0;
+		return;
+	}
+	p = 1.0 / (float) n;
+	log_split = near_d * powf(far_d / near_d, p);
+	uni_split = near_d + (far_d - near_d) * p;
+	*split0 = lambda * log_split + (1.0 - lambda) * uni_split;
+
+	/* Bounding sphere of the frustum slice [near_d, split0].  The centre is the mean of the
+	 * eight corners, which for a symmetric frustum lies on the view axis midway between the
+	 * two caps, so only the distance to a near and a far corner is needed. */
+	hn = tanf(fov * 0.5) * near_d;
+	wn = aspect * hn;
+	hf = tanf(fov * 0.5) * (*split0);
+	wf = aspect * hf;
+	cz = 0.5 * (near_d + *split0);
+	dn = sqrtf(wn * wn + hn * hn + (near_d - cz) * (near_d - cz));
+	df = sqrtf(wf * wf + hf * hf + (*split0 - cz) * (*split0 - cz));
+	*radius = dn > df ? dn : df;
+	*texel = 2.0 * *radius / (float) LAB_SHADOW_MAP_TEXTURE_SIZE;
+}
+
 static void draw_hud(void)
 {
 	char buffer[160];
@@ -743,9 +1016,11 @@ static void draw_hud(void)
 		snprintf(buffer, sizeof(buffer), "CONTROL FREE CAMERA (TAB)   CAM (%.0f, %.0f, %.0f)",
 			cam_pos.v.x, cam_pos.v.y, cam_pos.v.z);
 	else
-		snprintf(buffer, sizeof(buffer), "CONTROL SHIP %d (TAB)   SPEED %.0f%%   W/S THROTTLE",
+		snprintf(buffer, sizeof(buffer),
+			"CONTROL SHIP %d (TAB)   SPEED %.0f%%   W/S THROTTLE   VIEW %s (F2)",
 			controlled_slot,
-			ship_max_speed > 0.0 ? 100.0 * ship_speed / ship_max_speed : 0.0);
+			ship_max_speed > 0.0 ? 100.0 * ship_speed / ship_max_speed : 0.0,
+			turret_view_active() ? "TURRET" : "CHASE");
 	sng_abs_xy_draw_string(buffer, TINY_FONT, 10, y); y += dy;
 	snprintf(buffer, sizeof(buffer), "SUN AZ %.0f EL %.0f DIST %.0f RADIUS %.0f",
 		radians_to_degrees(sun_azimuth), radians_to_degrees(sun_elevation),
@@ -783,6 +1058,33 @@ static void draw_hud(void)
 		graph_dev_get_shadow_blend());
 	sng_abs_xy_draw_string(buffer, TINY_FONT, 10, y); y += dy;
 
+	/* Cascade 0's world-space resolution, and how close the aim is to the sun.  These are the
+	 * two numbers that decide whether a small close-up caster registers at all: TEXEL is the
+	 * finest shadow feature the map can hold (the turret is ~0.8 units thick), and the ortho
+	 * volume is fitted only 1% past the frustum's far-from-light corner, so geometry behind
+	 * the camera drops out of the map as AIM-TO-SUN goes small. */
+	{
+		float split0, radius, texel, near_d, fov, aim_deg;
+		union vec3 fwd, up, right, to_sun;
+
+		if (turret_view_active()) {
+			near_d = TURRET_NEAR_PLANE;
+			fov = TURRET_FOV;
+		} else {
+			near_d = 1.0;
+			fov = FOV;
+		}
+		compute_cascade0_stats(near_d, fov, &split0, &radius, &texel);
+		camera_basis(&cam_orientation, &fwd, &up, &right);
+		vec3_sub(&to_sun, &sun_pos, &cam_pos);
+		vec3_normalize_self(&to_sun);
+		aim_deg = radians_to_degrees(acosf(clampf(vec3_dot(&fwd, &to_sun), -1.0, 1.0)));
+		snprintf(buffer, sizeof(buffer),
+			"CASCADE 0  FAR %.1f  RADIUS %.1f  TEXEL %.4f   AIM-TO-SUN %.0f DEG",
+			split0, radius, texel, aim_deg);
+		sng_abs_xy_draw_string(buffer, TINY_FONT, 10, y); y += dy;
+	}
+
 	/* Per-ship analytic shade, colour-coded by state.  This is the reliable readout: the
 	 * in_shade darkening lands on each ship's sun-facing side, which is usually hidden
 	 * behind the planet during an umbra test, so the render alone can look unchanged. */
@@ -812,7 +1114,7 @@ static void draw_screen(void)
 {
 	int i;
 	union vec3 fwd, up, right, at;
-	float near_plane, far_plane;
+	float near_plane, far_plane, fov;
 
 	glClearColor(0.0, 0.0, 0.0, 0.0);
 	graph_dev_start_frame();
@@ -833,9 +1135,28 @@ static void draw_screen(void)
 	camera_basis(&cam_orientation, &fwd, &up, &right);
 	vec3_add(&at, &cam_pos, &fwd);
 
-	near_plane = 1.0;
-	far_plane = scene_scale * 200.0;
-	camera_set_parameters(cx, near_plane, far_plane, SCREEN_WIDTH, SCREEN_HEIGHT, FOV);
+	/* In turret view, match the game's weapons-station camera exactly: the near plane feeds
+	 * the cascade split scheme, so using the lab's own 1.0 here would measure a frustum the
+	 * gunner never sees. */
+	if (turret_view_active()) {
+		near_plane = TURRET_NEAR_PLANE;
+		fov = TURRET_FOV;
+	} else {
+		near_plane = 1.0;
+		fov = FOV;
+	}
+	/* The far plane must enclose the sun, which is a normal entity at its true distance and is
+	 * frustum-culled like everything else -- entity.c exempts nothing, not even planets and
+	 * stars.  snis_client simply sets the far plane to the whole universe (FAR_CAMERA_PLANE =
+	 * XKNOWN_DIM) and relies on render_entities() splitting the draw into two depth passes to
+	 * keep precision usable across that range; do the same here rather than deriving the far
+	 * plane from the scene's size, which silently clipped the star once the ships were scaled
+	 * down.  This does not affect the shadow cascades: render_shadow_map() clamps its own far
+	 * distance to the shadow coverage distance. */
+	far_plane = 2.0 * (vec3_dist(&cam_pos, &sun_pos) + sun_radius);
+	if (far_plane < scene_scale * 200.0)
+		far_plane = scene_scale * 200.0;
+	camera_set_parameters(cx, near_plane, far_plane, SCREEN_WIDTH, SCREEN_HEIGHT, fov);
 	camera_set_pos(cx, cam_pos.v.x, cam_pos.v.y, cam_pos.v.z);
 	camera_look_at(cx, at.v.x, at.v.y, at.v.z);
 	camera_assign_up_direction(cx, up.v.x, up.v.y, up.v.z);
@@ -851,20 +1172,51 @@ static void draw_screen(void)
 			continue;
 		update_entity_orientation(e, &o->orientation);
 		update_entity_scale(e, o->scale);
+		/* Prefer the scene object's own material, then fall back to whatever the model
+		 * brought with it.  read_obj_file() builds a texture-mapped material from the .obj's
+		 * mtllib, but add_entity() starts every entity with a null material_ptr, so without
+		 * this the .obj models render untextured -- which is how the ships and the starbase
+		 * had been rendering.  .stl models carry no material and need one supplied. */
 		if (o->material)
 			update_entity_material(e, o->material);
+		else if (o->mesh && o->mesh->material)
+			update_entity_material(e, o->mesh->material);
 		if (o->no_cast_shadow)
 			update_entity_shadow_casting(e, 0);
-		/* Ships receive the analytic planet umbra/penumbra shading (0.0 lit .. 1.0 umbra),
-		 * matching snis_client's object_in_shade(); the planet is lit by its own terminator
-		 * (surface normal vs. sun) and needs no in-shade term. */
-		if (o->kind == SCENE_SHIP) {
+		/* Everything but the planet receives the analytic planet umbra/penumbra shading
+		 * (0.0 lit .. 1.0 umbra), matching snis_client's object_in_shade(); the planet is
+		 * lit by its own terminator (surface normal vs. sun) and needs no in-shade term.
+		 * Only ships are listed in the HUD shade panel, which is a per-ship readout. */
+		if (o->kind != SCENE_PLANET) {
 			float frac = compute_planet_shade_fraction(&o->pos);
+
 			entity_set_in_shade(e, frac);
 			if (frac > deepest_planet_shade)
 				deepest_planet_shade = frac;
-			if (ship_shade_count < MAX_SCENE_OBJECTS)
+			if (o->kind == SCENE_SHIP && ship_shade_count < MAX_SCENE_OBJECTS)
 				ship_shade[ship_shade_count++] = frac;
+		}
+	}
+
+	/* The possessed ship's gun turret.  This is the small close-up caster the turret view
+	 * exists to test: about 0.8 world units thick once scaled, against a cascade texel of
+	 * roughly 0.13 and a slope-scaled depth bias of comparable size.  Mounted for both the
+	 * chase and turret views so it can be inspected from outside and then looked through. */
+	if (turret_mesh && turret_ship_slot >= 0 && turret_ship_slot < ship_slot_count) {
+		struct scene_object *ship = &scene[ship_slots[turret_ship_slot]];
+		union vec3 mount = { { TURRET_MOUNT_X, TURRET_MOUNT_Y, TURRET_MOUNT_Z } };
+		union vec3 turret_pos;
+		union quat turret_world;
+		struct entity *e;
+
+		quat_rot_vec_self(&mount, &ship->orientation);
+		vec3_add(&turret_pos, &ship->pos, &mount);
+		quat_mul(&turret_world, &ship->orientation, &turret_orientation);
+		e = add_entity(cx, turret_mesh, turret_pos.v.x, turret_pos.v.y, turret_pos.v.z,
+				CYAN); /* snis_client's SHIP_COLOR */
+		if (e) {
+			update_entity_orientation(e, &turret_world);
+			entity_set_in_shade(e, compute_planet_shade_fraction(&ship->pos));
 		}
 	}
 
@@ -924,6 +1276,12 @@ static void handle_key_down(SDL_Keysym *keysym)
 	case SDLK_F1:
 		helpmode = !helpmode;
 		break;
+	case SDLK_F2:
+		/* Look through the possessed ship's gun turret.  Meaningless without a ship, so
+		 * ignore it in free-camera mode rather than leaving a latched flag behind. */
+		if (controlled_slot >= 0)
+			turret_view = !turret_view;
+		break;
 	case SDLK_F10:
 		reload_shaders = 1;
 		break;
@@ -979,10 +1337,10 @@ static void handle_key_down(SDL_Keysym *keysym)
 		set_shadow_map_num_cascades(get_shadow_map_num_cascades() + 1);
 		break;
 	case SDLK_SEMICOLON:
-		set_shadow_map_split_lambda(get_shadow_map_split_lambda() - 0.05);
+		adjust_split_lambda((keysym->mod & KMOD_SHIFT) ? -0.1 : -0.01);
 		break;
 	case SDLK_QUOTE:
-		set_shadow_map_split_lambda(get_shadow_map_split_lambda() + 0.05);
+		adjust_split_lambda((keysym->mod & KMOD_SHIFT) ? 0.1 : 0.01);
 		break;
 	case SDLK_COMMA:
 		adjust_shadow_bias(-0.5, 0.0);
@@ -1124,6 +1482,10 @@ static void handle_key_down(SDL_Keysym *keysym)
 			controlled_slot = -1;
 		ship_speed = 0.0;       /* start from rest */
 		chase_initialized = 0;  /* snap the chase cam on the first frame, then lag */
+		if (controlled_slot < 0)
+			turret_view = 0; /* the free camera has no turret to look through */
+		else
+			turret_ship_slot = controlled_slot; /* the turret follows, and then stays */
 		break;
 	case SDLK_3: /* planet smaller */
 		if (planet_index >= 0)
