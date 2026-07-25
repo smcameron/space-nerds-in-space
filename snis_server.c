@@ -12930,6 +12930,11 @@ static int l_add_block(lua_State *l)
 		lua_pushnil(l);
 		return 1;
 	}
+	if (fabs(rotx) < 0.00001 && fabs(roty) < 0.00001 && fabs(rotz) < 0.00001) {
+		send_demon_console_msg("l_add_block(): Bad zero quaternion axis.");
+		lua_pushnil(l);
+		return 1;
+	}
 	quat_init_axis(&rotation, rotx, roty, rotz, angle);
 
 	parent_id = (int) rid;
