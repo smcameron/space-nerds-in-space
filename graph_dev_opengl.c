@@ -5482,9 +5482,9 @@ static void debug_menu_draw_item(char *item, int itemnumber, int grayed, int che
 void graph_dev_display_debug_menu_show(void)
 {
 	sng_set_foreground(BLACK);
-	graph_dev_draw_rectangle(1, 10, 30, 370 * sgc.x_scale, 265);
+	graph_dev_draw_rectangle(1, 10, 30, 370 * sgc.x_scale, 285);
 	sng_set_foreground(WHITE);
-	graph_dev_draw_rectangle(0, 10, 30, 370 * sgc.x_scale, 265);
+	graph_dev_draw_rectangle(0, 10, 30, 370 * sgc.x_scale, 285);
 
 #if DEBUG_NORMALS
 	debug_menu_draw_item("VERTEX NORM/TAN/BITAN (RGB)", 0, 0, draw_normal_lines);
@@ -5509,6 +5509,7 @@ void graph_dev_display_debug_menu_show(void)
 	debug_menu_draw_item("PLANETARY ATMOSPHERES", 10, 0, draw_atmospheres);
 	debug_menu_draw_item("PLANET SPECULARITY", 11, 0, graph_dev_planet_specularity);
 	debug_menu_draw_item("FILMIC TONEMAPPING", 12, 0, filmic_tonemapping);
+	debug_menu_draw_item("CASCADED SHADOW MAPPING", 13, 0, graph_dev_shadow_map_enabled);
 }
 
 static int selected_debug_item_checkbox(int n, int x, int y, int *toggle)
@@ -5575,6 +5576,8 @@ int graph_dev_graph_dev_debug_menu_click(int x, int y)
 	if (selected_debug_item_checkbox(11, x, y, &graph_dev_planet_specularity))
 		return 1;
 	if (selected_debug_item_checkbox(12, x, y, &filmic_tonemapping))
+		return 1;
+	if (selected_debug_item_checkbox(13, x, y, &graph_dev_shadow_map_enabled))
 		return 1;
 	return 0;
 }
