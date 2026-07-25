@@ -72,6 +72,12 @@ extern void graph_dev_set_shadow_debug(int mode);
  * Exposed so shadow-acne / peter-panning can be tuned interactively.  Defaults 2.0, 4.0. */
 extern void graph_dev_set_shadow_bias(float factor, float units);
 extern void graph_dev_get_shadow_bias(float *factor, float *units);
+/* Normal-offset bias, in shadow-map texels: the shadow lookup is lifted off the surface along
+ * its normal, scaled by how steeply the light strikes it.  Suppresses shadow acne at grazing
+ * angles without the peter-panning the depth-pass slope bias causes, because it does not move
+ * the sample along the light ray.  0 disables it; default 1.5. */
+extern void graph_dev_set_shadow_normal_offset(float texels);
+extern float graph_dev_get_shadow_normal_offset(void);
 /* PCF kernel half-width when sampling the shadow map: 0 = single (2x2 hardware) tap,
  * 1 = 3x3, 2 = 5x5, up to a shader-defined maximum.  Softens edges and hides
  * undersampling on coarse far cascades. */

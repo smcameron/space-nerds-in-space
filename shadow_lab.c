@@ -1012,6 +1012,8 @@ static char *help_text =
 	"  - - / =            CASCADE COUNT DOWN / UP (1-6)\n"
 	"  - ; / '            SPLIT LAMBDA DOWN / UP BY 0.01 (SHIFT = 0.1); 1.0 = PURE LOG\n"
 	"  - , / .            DEPTH-BIAS SLOPE DOWN / UP\n"
+	"  - SHIFT+, / SHIFT+.  NORMAL-OFFSET BIAS DOWN / UP (TEXELS; KILLS GRAZING ACNE\n"
+	"                     WITHOUT DETACHING SHADOWS)\n"
 	"  - n / m            PCF NEAR KERNEL SMALLER / LARGER (tapers per cascade)\n"
 	"  - k / l            CROSS-CASCADE BLEND BAND SMALLER / LARGER\n\n"
 	"  OTHER\n"
@@ -1157,8 +1159,9 @@ static void draw_hud(void)
 		get_shadow_map_max_distance(), get_shadow_map_num_cascades(),
 		get_shadow_map_split_lambda());
 	sng_abs_xy_draw_string(buffer, TINY_FONT, 10, y); y += dy;
-	snprintf(buffer, sizeof(buffer), "BIAS slope %.1f   PCF %dx%d   BLEND %.2f",
-		bias_factor,
+	snprintf(buffer, sizeof(buffer),
+		"BIAS slope %.1f  NORMAL-OFFSET %.2f texels   PCF %dx%d   BLEND %.2f",
+		bias_factor, graph_dev_get_shadow_normal_offset(),
 		2 * graph_dev_get_shadow_pcf_radius() + 1, 2 * graph_dev_get_shadow_pcf_radius() + 1,
 		graph_dev_get_shadow_blend());
 	sng_abs_xy_draw_string(buffer, TINY_FONT, 10, y); y += dy;
@@ -1450,10 +1453,18 @@ static void handle_key_down(SDL_Keysym *keysym)
 		adjust_split_lambda((keysym->mod & KMOD_SHIFT) ? 0.1 : 0.01);
 		break;
 	case SDLK_COMMA:
-		adjust_shadow_bias(-0.5, 0.0);
+		if (keysym->mod & KMOD_SHIFT)
+			graph_dev_set_shadow_normal_offset(
+				graph_dev_get_shadow_normal_offset() - 0.25);
+		else
+			adjust_shadow_bias(-0.5, 0.0);
 		break;
 	case SDLK_PERIOD:
-		adjust_shadow_bias(0.5, 0.0);
+		if (keysym->mod & KMOD_SHIFT)
+			graph_dev_set_shadow_normal_offset(
+				graph_dev_get_shadow_normal_offset() + 0.25);
+		else
+			adjust_shadow_bias(0.5, 0.0);
 		break;
 	case SDLK_n:
 		graph_dev_set_shadow_pcf_radius(graph_dev_get_shadow_pcf_radius() - 1);

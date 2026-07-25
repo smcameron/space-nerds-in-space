@@ -29,7 +29,12 @@ uniform float u_SpecularIntensity; /* between 0 and 1, 1 is very shiny, 0 is fla
 	uniform mat4 u_MVMatrix;
 	uniform mat3 u_NormalMatrix;
 
-	/* Cascaded shadow map varyings and helpers come from csm.shader. */
+	/* Cascaded shadow map varyings and helpers come from csm.shader.  u_LightPos is
+	 * declared in both stages: the fragment shader lights with it, and the vertex shader
+	 * needs it to work out how steeply the light strikes each vertex. */
+	#ifdef USE_CSM
+		uniform vec3 u_LightPos;
+	#endif
 
 	in vec4 a_Position;
 	#if !defined(USE_CUBEMAP)
@@ -57,7 +62,8 @@ uniform float u_SpecularIntensity; /* between 0 and 1, 1 is very shiny, 0 is fla
 			v_TexCoord = a_TexCoord;
 		#endif
 		#ifdef USE_CSM
-			csm_set_shadow_coords(a_Position);
+			csm_set_shadow_coords(a_Position, normalize(a_Normal),
+				csm_grazing(v_Normal, u_LightPos - v_Position));
 		#endif
 		gl_Position = u_MVPMatrix * a_Position;
 	}

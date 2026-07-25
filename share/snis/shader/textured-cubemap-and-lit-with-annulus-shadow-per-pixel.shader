@@ -35,6 +35,12 @@
 	uniform mat4 u_MVMatrix;   // A constant representing the combined model/view matrix.
 	uniform mat3 u_NormalMatrix;
 
+#if defined(USE_CSM)
+	/* Also declared in the fragment stage, which lights with it; the vertex stage needs it
+	 * to work out how steeply the light strikes each vertex. */
+	uniform vec3 u_LightPos;
+#endif
+
 	in vec4 a_Position; // Per-vertex position information we will pass in.
 	in vec3 a_Normal;   // Per-vertex normal, tangent, and bitangent information we will pass in.
 #if defined(USE_NORMAL_MAP)
@@ -58,7 +64,8 @@
 		v_TexCoord = a_Position.xyz;
 
 #if defined(USE_CSM)
-		csm_set_shadow_coords(a_Position);
+		csm_set_shadow_coords(a_Position, normalize(a_Normal),
+			csm_grazing(v_Normal, u_LightPos - v_Position));
 #endif
 
 		/* gl_Position is a special variable used to store the final position.

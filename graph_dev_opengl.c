@@ -189,6 +189,11 @@ static int graph_dev_shadow_pcf_radius = 1;
  * A small band hides the seam between cascades and, at the outer coverage edge, fades the
  * last cascade to lit as it runs out of shadow map.  Tuned in shadow_lab. */
 static float graph_dev_shadow_blend = 0.2f;
+/* Normal-offset bias, in shadow-map texels: how far the shadow lookup is lifted off the
+ * surface along its normal before being projected into the map.  Unlike the depth-pass slope
+ * bias this does not move the sample along the light ray, so it suppresses acne without
+ * detaching shadows from their casters.  0 disables it. */
+static float graph_dev_shadow_normal_offset = 1.5f;
 /* Slope-scaled polygon-offset bias applied while rendering the shadow map depth pass. */
 static float shadow_polygon_offset_factor = 2.5f;
 static float shadow_polygon_offset_units = 4.0f;
@@ -222,7 +227,7 @@ static float shadow_cascade_split_far[MAX_SHADOW_CASCADES];
 static GLint saved_shadow_viewport[4];
 static GLint saved_shadow_fbo;
 static void upload_shadow_receive_uniforms(GLint shadow_mvp_id, GLint num_cascades_id,
-	GLint shadow_map_id, const struct mat44d *model);
+	GLint shadow_map_id, GLint shadow_normal_offset_id, const struct mat44d *model);
 static void ensure_shadow_map_layers(int n);
 
 static const char *default_shader_directory = "share/snis/shader";
@@ -890,6 +895,7 @@ struct graph_dev_gl_single_color_lit_shader {
 	GLint shadow_pcf_radius_id;  /* PCF kernel half-width for the nearest cascade (USE_CSM only) */
 	GLint cascade_split_far_id;  /* per-cascade view-space far distances (USE_CSM only) */
 	GLint shadow_blend_id;       /* cross-cascade blend band fraction (USE_CSM only) */
+	GLint shadow_normal_offset_id; /* per-cascade normal-offset lift, model units (USE_CSM) */
 };
 
 /* Depth-only shader used to render the shadow map from the light's viewpoint. */
@@ -1070,6 +1076,7 @@ struct graph_dev_gl_textured_shader {
 	GLint shadow_pcf_radius_id;  /* PCF kernel half-width for the nearest cascade */
 	GLint cascade_split_far_id;  /* per-cascade view-space far distances */
 	GLint shadow_blend_id;       /* cross-cascade blend band fraction */
+	GLint shadow_normal_offset_id; /* per-cascade normal-offset lift, in model units */
 };
 
 struct clip_sphere_data {
@@ -1805,7 +1812,7 @@ static void graph_dev_raster_texture(struct raster_texture_params *p)
 			glUniform1f(shader->shadow_blend_id, graph_dev_shadow_blend);
 		if (use_shadow)
 			upload_shadow_receive_uniforms(shader->shadow_mvp_id, shader->num_cascades_id,
-				shader->shadow_map_id, p->model);
+				shader->shadow_map_id, shader->shadow_normal_offset_id, p->model);
 	}
 
 	glEnableVertexAttribArray(shader->vertex_position_id);
@@ -1942,7 +1949,7 @@ static void graph_dev_raster_single_color_lit(const struct mat44 *mat_mvp, const
 		if (shader->shadow_blend_id >= 0)
 			glUniform1f(shader->shadow_blend_id, graph_dev_shadow_blend);
 		upload_shadow_receive_uniforms(shader->shadow_mvp_id, shader->num_cascades_id,
-			shader->shadow_map_id, model);
+			shader->shadow_map_id, shader->shadow_normal_offset_id, model);
 	}
 
 	glEnableVertexAttribArray(shader->vertex_position_id);
@@ -3613,6 +3620,18 @@ void graph_dev_set_shadow_debug(int mode)
 	graph_dev_shadow_map_debug = mode;
 }
 
+void graph_dev_set_shadow_normal_offset(float texels)
+{
+	if (texels < 0.0f)
+		texels = 0.0f;
+	graph_dev_shadow_normal_offset = texels;
+}
+
+float graph_dev_get_shadow_normal_offset(void)
+{
+	return graph_dev_shadow_normal_offset;
+}
+
 void graph_dev_set_shadow_pcf_radius(int radius)
 {
 	if (radius < 0)
@@ -3667,18 +3686,50 @@ void graph_dev_get_shadow_bias(float *factor, float *units)
 
 /* Upload the per-object cascade shadow matrices (world_to_lightclip[k] * model) and bind
  * the shadow map array for a lit shader that receives shadows. */
+/* Length of the vector a unit model-space x axis maps to, which for the uniform scales this
+ * renderer uses is the model's scale factor.  Used to express a world-space distance in the
+ * model's own units. */
+static double model_matrix_scale(const struct mat44d *model)
+{
+	double x = model->m[0][0], y = model->m[1][0], z = model->m[2][0];
+	double s = sqrt(x * x + y * y + z * z);
+
+	return s > 1e-9 ? s : 1.0;
+}
+
+/* World-space size of one shadow-map texel in a cascade, recovered from its world-to-light
+ * clip matrix: the x row scales the ortho window's width down to clip space, so its length is
+ * 2 / width, and the texel is that width divided by the map's resolution. */
+static double cascade_texel_size(const struct mat44d *w2l)
+{
+	double x = w2l->m[0][0], y = w2l->m[1][0], z = w2l->m[2][0];
+	double s = sqrt(x * x + y * y + z * z);
+
+	if (s < 1e-12)
+		return 0.0;
+	return 2.0 / (s * (double) SHADOW_MAP_TEXTURE_SIZE);
+}
+
 static void upload_shadow_receive_uniforms(GLint shadow_mvp_id, GLint num_cascades_id,
-	GLint shadow_map_id, const struct mat44d *model)
+	GLint shadow_map_id, GLint shadow_normal_offset_id, const struct mat44d *model)
 {
 	struct mat44 mvp[MAX_SHADOW_CASCADES];
+	float normal_offset[MAX_SHADOW_CASCADES];
+	double scale = model_matrix_scale(model);
 	int i;
 
 	for (i = 0; i < shadow_map_num_cascades; i++) {
 		struct mat44d mvp_d;
 		mat44_product_ddd(&shadow_cascade_w2l[i], model, &mvp_d);
 		mat44_convert_df(&mvp_d, &mvp[i]);
+		/* The shader lifts along a model-space normal, so convert the lift -- which is a
+		 * number of world-space texels -- into this model's units. */
+		normal_offset[i] = (float) (graph_dev_shadow_normal_offset *
+			cascade_texel_size(&shadow_cascade_w2l[i]) / scale);
 	}
 	glUniformMatrix4fv(shadow_mvp_id, shadow_map_num_cascades, GL_FALSE, &mvp[0].m[0][0]);
+	if (shadow_normal_offset_id >= 0)
+		glUniform1fv(shadow_normal_offset_id, shadow_map_num_cascades, normal_offset);
 	if (num_cascades_id >= 0)
 		glUniform1i(num_cascades_id, shadow_map_num_cascades);
 	BIND_TEXTURE(SHADOW_MAP_TEXTURE_UNIT, GL_TEXTURE_2D_ARRAY, shadow_map_texture);
@@ -3878,6 +3929,8 @@ static void setup_single_color_lit_shader(struct graph_dev_gl_single_color_lit_s
 		shader->shadow_pcf_radius_id = glGetUniformLocation(shader->program_id, "u_ShadowPcfRadius");
 		shader->cascade_split_far_id = glGetUniformLocation(shader->program_id, "u_CascadeSplitFar");
 		shader->shadow_blend_id = glGetUniformLocation(shader->program_id, "u_ShadowBlend");
+		shader->shadow_normal_offset_id = glGetUniformLocation(shader->program_id,
+								"u_ShadowNormalOffset");
 	}
 }
 
@@ -4139,6 +4192,8 @@ static void setup_textured_cubemap_shader(const char *basename, int use_normal_m
 		shader->shadow_pcf_radius_id = glGetUniformLocation(shader->program_id, "u_ShadowPcfRadius");
 		shader->cascade_split_far_id = glGetUniformLocation(shader->program_id, "u_CascadeSplitFar");
 		shader->shadow_blend_id = glGetUniformLocation(shader->program_id, "u_ShadowBlend");
+		shader->shadow_normal_offset_id = glGetUniformLocation(shader->program_id,
+								"u_ShadowNormalOffset");
 	} else {
 		shader->shadow_map_enabled_id = -1;
 	}

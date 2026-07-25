@@ -23,12 +23,39 @@
 	out vec4 v_ShadowCoord[MAX_SHADOW_CASCADES];
 	uniform mat4 u_ShadowMVP[MAX_SHADOW_CASCADES];
 	uniform int u_NumCascades;
+	/* Normal-offset bias: how far to lift the shadow lookup off the surface, per cascade,
+	 * in this model's own units (the renderer converts from world units using the model's
+	 * scale, so a mesh drawn at any scale gets the same lift in world terms). */
+	uniform float u_ShadowNormalOffset[MAX_SHADOW_CASCADES];
 
-	/* Project a model-space vertex into every active cascade's light clip space. */
-	void csm_set_shadow_coords(vec4 model_position)
+	/* Project a model-space vertex into every active cascade's light clip space.
+	 *
+	 * The lookup point is lifted off the surface along its normal first.  Shadow acne comes
+	 * from a surface sampling its own depth in a texel whose stored depth was taken a little
+	 * way across the surface, and the shallower the light strikes the surface the further
+	 * across a texel spans -- at 85 degrees a texel covers about eleven times the ground it
+	 * would head-on, which is why grazing light is where acne lives.  Lifting along the
+	 * normal moves the sample clear of the surface without moving it along the light ray, so
+	 * unlike the depth-pass slope bias it does not detach the shadow from whatever casts it.
+	 *
+	 * grazing is sin(angle between the surface normal and the light), so the lift is zero
+	 * for light striking head-on and greatest where it rakes across the surface. */
+	void csm_set_shadow_coords(vec4 model_position, vec3 model_normal, float grazing)
 	{
-		for (int csm_i = 0; csm_i < u_NumCascades; csm_i++)
-			v_ShadowCoord[csm_i] = u_ShadowMVP[csm_i] * model_position;
+		for (int csm_i = 0; csm_i < u_NumCascades; csm_i++) {
+			vec4 p = model_position;
+
+			p.xyz += model_normal * (u_ShadowNormalOffset[csm_i] * grazing);
+			v_ShadowCoord[csm_i] = u_ShadowMVP[csm_i] * p;
+		}
+	}
+
+	/* sin of the angle between a surface normal and the light, both in the same space. */
+	float csm_grazing(vec3 normal, vec3 light_dir)
+	{
+		float ndotl = clamp(dot(normalize(normal), normalize(light_dir)), 0.0, 1.0);
+
+		return sqrt(1.0 - ndotl * ndotl);
 	}
 
 #endif

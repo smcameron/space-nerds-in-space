@@ -3471,6 +3471,16 @@ int graph_dev_get_shadow_pcf_radius(void)
 	return 0;
 }
 
+void graph_dev_set_shadow_normal_offset(float texels)
+{
+	(void) texels;
+}
+
+float graph_dev_get_shadow_normal_offset(void)
+{
+	return 0.0;
+}
+
 void graph_dev_set_shadow_cascade_splits(const float *split_far, int n)
 {
 	(void) split_far;
