@@ -1014,7 +1014,7 @@ static char *help_text =
 	"  - , / .            DEPTH-BIAS SLOPE DOWN / UP\n"
 	"  - SHIFT+, / SHIFT+.  NORMAL-OFFSET BIAS DOWN / UP (TEXELS; KILLS GRAZING ACNE\n"
 	"                     WITHOUT DETACHING SHADOWS)\n"
-	"  - n / m            PCF NEAR KERNEL SMALLER / LARGER (tapers per cascade)\n"
+	"  - n / m            PCF KERNEL SMALLER / LARGER (1x1 TO 7x7, ALL CASCADES)\n"
 	"  - k / l            CROSS-CASCADE BLEND BAND SMALLER / LARGER\n\n"
 	"  OTHER\n"
 	"  - F1               TOGGLE THIS HELP\n"

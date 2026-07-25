@@ -79,8 +79,9 @@ extern void graph_dev_get_shadow_bias(float *factor, float *units);
 extern void graph_dev_set_shadow_normal_offset(float texels);
 extern float graph_dev_get_shadow_normal_offset(void);
 /* PCF kernel half-width when sampling the shadow map: 0 = single (2x2 hardware) tap,
- * 1 = 3x3, 2 = 5x5, up to a shader-defined maximum.  Softens edges and hides
- * undersampling on coarse far cascades. */
+ * 1 = 3x3, 2 = 5x5, up to a shader-defined maximum.  Applied in every cascade: with a
+ * logarithmic split each cascade's texel is proportional to the distance it covers, so a
+ * fixed radius in texels is a fixed penumbra on screen. */
 extern void graph_dev_set_shadow_pcf_radius(int radius);
 extern int graph_dev_get_shadow_pcf_radius(void);
 /* Per-frame cascade split far-distances (view space), used for depth-based cascade

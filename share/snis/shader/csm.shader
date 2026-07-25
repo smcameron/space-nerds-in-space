@@ -95,15 +95,18 @@
 		return sum / count;
 	}
 
-	/* Sample one cascade's lit factor (1.0 if outside its footprint).  The PCF radius
-	 * tapers by one per cascade so the world-space penumbra stays ~constant. */
+	/* Sample one cascade's lit factor (1.0 if outside its footprint).
+	 *
+	 * The same kernel is used in every cascade.  With a logarithmic split each cascade's
+	 * texel is proportional to the distance it covers, so a fixed radius in texels is a
+	 * fixed size on screen, which is what a penumbra should be. */
 	float csm_sample(int cascade)
 	{
 		vec3 sc = v_ShadowCoord[cascade].xyz / v_ShadowCoord[cascade].w;
 		sc = sc * 0.5 + 0.5;
 		if (sc.x < 0.0 || sc.x > 1.0 || sc.y < 0.0 || sc.y > 1.0 || sc.z > 1.0)
 			return 1.0;
-		int radius = u_ShadowPcfRadius - cascade;
+		int radius = u_ShadowPcfRadius;
 		if (radius < 0)
 			radius = 0;
 		if (radius > CSM_PCF_MAX_RADIUS)
