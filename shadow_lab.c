@@ -72,6 +72,7 @@ static int display_frame_stats = 1;
 static int frame_counter = 0;
 static int reload_shaders = 0;
 static int helpmode = 0;
+static int help_page = 0;
 static SDL_Window *screen;
 
 /* The scene.  A fixed-capacity list of objects rebuilt into the entity context each frame. */
@@ -1210,8 +1211,9 @@ static void update_black_holes(void)
 }
 
 /* Split into chunks purely because a single literal this long is past what C99 requires a
- * compiler to accept (4095 characters); draw_help_screen() draws them back to back, so the
- * split point is arbitrary and only the total matters. */
+ * compiler to accept (4095 characters).  The chunk boundaries are NOT page breaks: help_walk()
+ * counts lines straight through them, so the split point is arbitrary and only the total
+ * matters, and a page break can land anywhere. */
 static const char * const help_text[] = {
 	"SHADOW LAB\n\n"
 	"  A sandbox for iterating on the cascaded shadow mapping shaders.\n\n"
@@ -1330,57 +1332,97 @@ static const char * const help_text[] = {
 	"  - n / m            PCF KERNEL SMALLER / LARGER (1x1 TO 7x7, ALL CASCADES)\n"
 	"  - k / l            CROSS-CASCADE BLEND BAND SMALLER / LARGER\n\n"
 	"  OTHER\n"
-	"  - F1               TOGGLE THIS HELP\n"
+	"  - F1               SHOW THIS HELP, THEN PAGE THROUGH IT, THEN CLOSE IT\n"
 	"  - F10              RELOAD SHADERS\n"
 	"  - F11              TOGGLE FULLSCREEN\n"
-	"  - ESC              QUIT\n\n"
+	"  - ESC              CLOSE THIS HELP, OR QUIT WHEN IT IS NOT UP\n\n"
 	"  CASCADE-INDEX TINT: red=0 (nearest) green=1 blue=2 yellow=3 cyan=4 magenta=5 gray=none\n\n"
-	"PRESS F1 TO EXIT HELP\n",
+	,
 };
 
-/* Draws one chunk of the help text starting at y, and returns where the next chunk picks up. */
-static int draw_help_text(const char *text, int y)
-{
-	int line = 0;
-	int i;
-	char buffer[1024];
-	int buflen = 0;
+#define HELP_LINE_HEIGHT 19
 
-	buffer[0] = '\0';
-	i = 0;
-	do {
-		if (text[i] == '\n' || text[i] == '\0') {
-			/* At the terminator, only emit a line if one was actually accumulated:
-			 * chunks end with a newline, and drawing the empty remainder would leave a
-			 * stray blank line at every chunk boundary. */
-			if (text[i] == '\n' || buflen > 0) {
-				buffer[buflen] = '\0';
-				sng_abs_xy_draw_string(buffer, TINY_FONT, 60, y);
-				y += 19;
-				line++;
+/* Walks every line of the help text, counting straight through the chunk boundaries, and
+ * returns the total.  When draw is set, the lines in [first, last) are also drawn, starting at
+ * y -- so the pass that lays a page out is the same one that counts the lines, and the two
+ * cannot disagree about where a page ends. */
+static int help_walk(int draw, int first, int last, int y)
+{
+	unsigned int chunk;
+	int line = 0;
+
+	for (chunk = 0; chunk < ARRAYSIZE(help_text); chunk++) {
+		const char *text = help_text[chunk];
+		char buffer[1024];
+		int buflen = 0;
+		int i = 0;
+
+		do {
+			if (text[i] == '\n' || text[i] == '\0') {
+				/* At the terminator, only emit a line if one was actually
+				 * accumulated: chunks end with a newline, and drawing the empty
+				 * remainder would leave a stray blank line at every boundary. */
+				if (text[i] == '\n' || buflen > 0) {
+					if (draw && line >= first && line < last) {
+						buffer[buflen] = '\0';
+						sng_abs_xy_draw_string(buffer, TINY_FONT, 60, y);
+						y += HELP_LINE_HEIGHT;
+					}
+					line++;
+				}
+				buflen = 0;
+				if (text[i] == '\0')
+					break;
+				i++;
+				continue;
 			}
-			buffer[0] = '\0';
-			buflen = 0;
-			if (text[i] == '\0')
-				break;
+			if (buflen < (int) sizeof(buffer) - 1)
+				buffer[buflen++] = text[i];
 			i++;
-			continue;
-		}
-		buffer[buflen++] = text[i++];
-	} while (1);
-	return y;
+		} while (1);
+	}
+	return line;
+}
+
+/* How many lines fit between the top of the text and the footer.  SCREEN_HEIGHT is the fixed
+ * drawing extent, not the window -- a resize rescales the output rather than changing the
+ * coordinate space -- so this is constant in practice.  It is computed rather than hardcoded so
+ * that it stays right if the box inset or the line height is ever changed. */
+static int help_lines_per_page(void)
+{
+	int usable = SCREEN_HEIGHT - 140 - HELP_LINE_HEIGHT; /* box inset, top pad, footer */
+	int n = usable / HELP_LINE_HEIGHT;
+
+	return n < 1 ? 1 : n;
+}
+
+static int help_page_count(void)
+{
+	int total = help_walk(0, 0, 0, 0);
+	int per = help_lines_per_page();
+
+	return total > 0 ? (total + per - 1) / per : 1;
 }
 
 static void draw_help_screen(void)
 {
-	int i, y;
+	char buffer[80];
+	int per = help_lines_per_page();
+	int pages = help_page_count();
+
+	if (help_page >= pages) /* belt and braces; the page count does not change at runtime */
+		help_page = pages - 1;
 
 	sng_set_foreground(BLACK);
 	sng_current_draw_rectangle(1, 50, 50, SCREEN_WIDTH - 100, SCREEN_HEIGHT - 100);
 	sng_set_foreground(GREEN);
 	sng_current_draw_rectangle(0, 50, 50, SCREEN_WIDTH - 100, SCREEN_HEIGHT - 100);
-	for (i = 0, y = 70; i < (int) ARRAYSIZE(help_text); i++)
-		y = draw_help_text(help_text[i], y);
+	help_walk(1, help_page * per, (help_page + 1) * per, 70);
+
+	snprintf(buffer, sizeof(buffer), "PAGE %d OF %d   F1 %s   ESC CLOSES HELP",
+		help_page + 1, pages,
+		help_page + 1 < pages ? "NEXT PAGE" : "CLOSES HELP");
+	sng_abs_xy_draw_string(buffer, TINY_FONT, 60, SCREEN_HEIGHT - 62);
 }
 
 /* Recompute what entity.c's compute_cascade_splits() and compute_shadow_light_matrix() will
@@ -1782,7 +1824,17 @@ static void handle_key_down(SDL_Keysym *keysym)
 
 	switch (keysym->sym) {
 	case SDLK_F1:
-		helpmode = !helpmode;
+		/* F1 opens the help, then pages through it, then closes it -- so repeatedly
+		 * pressing the key that brought the help up eventually puts it away again,
+		 * without needing a second key to leaf through it. */
+		if (!helpmode) {
+			helpmode = 1;
+			help_page = 0;
+		} else if (help_page + 1 < help_page_count()) {
+			help_page++;
+		} else {
+			helpmode = 0;
+		}
 		break;
 	case SDLK_F2:
 		/* Look through the possessed ship's gun turret.  Meaningless without a ship, so
@@ -1798,7 +1850,13 @@ static void handle_key_down(SDL_Keysym *keysym)
 		SDL_SetWindowFullscreen(screen, fullscreen * SDL_WINDOW_FULLSCREEN_DESKTOP);
 		break;
 	case SDLK_ESCAPE:
-		quit(0);
+		/* Esc dismisses the help if it is up, and only quits otherwise.  Reaching for Esc
+		 * to close the help is the reflex, and having that drop the whole lab -- losing
+		 * every live tweak with it -- is a rotten trade for one keystroke. */
+		if (helpmode)
+			helpmode = 0;
+		else
+			quit(0);
 		break;
 	case SDLK_PAUSE:
 		display_frame_stats = (display_frame_stats + 1) % 3;
