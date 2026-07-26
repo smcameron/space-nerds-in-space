@@ -188,7 +188,14 @@ static float deepest_planet_shade = 0.0; /* deepest analytic ship shading this f
 #define SUN_BILLBOARD_MARGIN 1.1 /* billboard is this much larger than disc + bloom, so both fit with a
 				   * small transparent border and the whole falloff is on-screen */
 static float sun_bloom_apparent = 0.1; /* bloom reach (where it hits zero) as a fraction of camera distance */
-static float sun_temperature = 5800.0; /* Kelvin; sets the star's blackbody colour */
+static float sun_temperature = 5980.0; /* Kelvin; sets the star's blackbody colour.  A fit of sun.png's
+					* glow hue to the blackbody locus lands on 5980K, which is
+					* long-standing default was already the texture's colour. */
+static float sun_bloom_reach_radii = 0.0; /* last frame's bloom reach in star radii, for the HUD.  This is
+					   * the reach expressed the way the TEXTURE expresses it -- a
+					   * multiple of the star's radius rather than of the camera
+					   * distance -- so it is the number to compare against the
+					   * texture's measured 3.73 when matching the two. */
 
 /* Star-coloured lighting (see star_light.c / set_star_light_tint()): tint every lit object's
  * sun-lit term toward the star's colour by sun_light_tint, its shaded/ambient term toward the
@@ -199,6 +206,29 @@ static float sun_dark_tint = 0.06;
 static float sun_shadow_contrast = 1.25;
 static struct mesh *sun_mesh;
 static struct material sun_material;
+
+/* The textured-billboard sun -- what snis_client draws today -- kept here alongside the shader
+ * sun purely so the two can be compared.  The shader's parameters are meant to REPRODUCE this
+ * image, so being able to flip between them in place (or stand them side by side) is what makes
+ * the fit checkable rather than a matter of opinion.
+ *
+ * Built exactly as snis_client's load_per_solarsystem_textures() builds it: texture mapped
+ * unlit, spherical billboard, alpha blended.  Sized by snis_client's update_sun_size() rule --
+ * 2 * sun_radius * texture_width / sun_texture_disc_pixels world units -- so the star's disc
+ * WITHIN the texture comes out 2 * sun_radius across, the same size as the shader's disc.  The
+ * rest of the texture is glow, which is why this billboard is so much larger than the star.
+ *
+ * The two differ in kind, not just in tuning: the texture is entirely world-scale, so its glow
+ * grows as you approach, while the shader's bloom is screen-scale and holds a constant apparent
+ * size.  They can only agree at one camera distance.
+ */
+enum sun_style { SUN_STYLE_SHADER, SUN_STYLE_TEXTURE, SUN_STYLE_SIDE_BY_SIDE };
+static const char * const sun_style_name[] = { "SHADER", "TEXTURE", "SIDE BY SIDE" };
+static int sun_style = SUN_STYLE_SHADER;
+static struct material sun_texture_material;
+static float sun_texture_width = 512.0;		/* pixels, read from the PNG header */
+static float sun_texture_disc_pixels = 96.0;	/* diameter of the disc within the texture, in pixels;
+						 * solarsystem_config's star_diameter_pixels default */
 
 /* The black holes, for iterating on the skybox's gravitational lensing (see
  * graph_dev_set_gravitational_lenses() and share/snis/shader/skybox.frag).  Off by default:
@@ -1222,6 +1252,19 @@ static const char * const help_text[] = {
 	"  - U / O            SUN DISTANCE CLOSER / FARTHER\n"
 	"  - SHIFT+U / SHIFT+O  PAST-WHITE SHADOW CONTRAST WEAKER / STRONGER (DEEPENS BLUE-STAR SHADOWS)\n"
 	"  - G / H            SUN RADIUS SMALLER / LARGER (WIDER RADIUS = WIDER PENUMBRA)\n"
+	"  - F3 / SHIFT+F3    CYCLE SUN STYLE: SHADER / TEXTURE / SIDE BY SIDE\n"
+	"                     THE TEXTURE IS WHAT THE GAME DRAWS TODAY (sun.png ON A PLAIN\n"
+	"                     BILLBOARD).  THE SHADER'S SETTINGS ARE MEANT TO REPRODUCE IT,\n"
+	"                     SO FLIP BETWEEN THEM IN PLACE TO CHECK THE MATCH -- A FLICKER\n"
+	"                     SHOWS UP DIFFERENCES A SIDE-BY-SIDE LETS THE EYE AVERAGE AWAY.\n"
+	"                     THEY CAN ONLY AGREE AT ONE CAMERA DISTANCE: THE TEXTURE IS\n"
+	"                     ENTIRELY WORLD-SCALE, SO ITS GLOW GROWS AS YOU CLOSE IN, WHILE\n"
+	"                     THE SHADER'S BLOOM HOLDS A CONSTANT APPARENT SIZE.  THE TEXTURE\n"
+	"                     ALSO HAS STARBURST RAYS THE SHADER HAS NO TERM FOR.\n"
+	"  - SHIFT+G / SHIFT+H  SUN TEXTURE DISC WIDTH IN PIXELS SMALLER / LARGER\n"
+	"                     (solarsystem_config's star diameter pixels: HOW MUCH OF THE\n"
+	"                     TEXTURE IS STAR RATHER THAN GLOW.  RAISING IT SHRINKS THE\n"
+	"                     BILLBOARD FOR THE SAME STAR, SO THE TEXTURE'S GLOW SHRINKS TOO.)\n"
 	"  - 7 / 8            STAR TEMPERATURE COOLER / HOTTER (BLACKBODY COLOUR)\n"
 	"  - SHIFT+7 / SHIFT+8  LIGHT (SUN-LIT) TINT WEAKER / STRONGER (LIT FACES -> STAR COLOUR)\n"
 	"  - 9 / I            SUN CORE BRIGHTNESS DIMMER / BRIGHTER (WHITE-HOT SPREAD)\n"
@@ -1245,6 +1288,7 @@ static const char * const help_text[] = {
 	"  - 3 / 4            PLANET RADIUS SMALLER / LARGER\n"
 	"  - 5 / 6            PLANET CLOSER / FARTHER FROM THE SHIP CLUSTER\n"
 	"                     (FARTHER + TIGHTER CLUSTER = WIDER, SOFTER PENUMBRA)\n"
+	,
 	"  - LOWER THE SUN (DOWN ARROW) TO SWING THE PLANET BETWEEN IT AND THE SHIPS.\n"
 	"    NOTE: in_shade ONLY DARKENS A SHIP'S SUN-FACING SIDE, WHICH IS HIDDEN\n"
 	"    BEHIND THE PLANET IN A DIRECT UMBRA TEST.  WATCH THE PER-SHIP PANEL: SOFT\n"
@@ -1447,6 +1491,92 @@ static void compute_cascade0_stats(float near_d, float fov, float *split0, float
 	*texel = 2.0 * *radius / (float) LAB_SHADOW_MAP_TEXTURE_SIZE;
 }
 
+/* The shader sun's billboard spans the world-scale disc plus the screen-scale bloom's reach,
+ * with a small margin.  sun_bloom_apparent is that reach as a fraction of the camera distance
+ * (so it is constant on screen); bloom_world is the same reach in world units.  Sizing the
+ * billboard this way keeps disc_radius + bloom_radius = 1 / (2 * margin) < 0.5 in UV, so the
+ * whole falloff is on screen and the RADIUS control cannot inflate the billboard without bound
+ * (which used to leave only the bloom's flat centre visible, making SHARP appear to do nothing).
+ */
+static float shader_sun_billboard_size(float cam_dist)
+{
+	return 2.0 * SUN_BILLBOARD_MARGIN * (sun_radius + sun_bloom_apparent * cam_dist);
+}
+
+/* snis_client's update_sun_size() rule: scale the texture so the disc drawn inside it comes out
+ * 2 * sun_radius world units across. */
+static float texture_sun_billboard_size(void)
+{
+	if (sun_texture_disc_pixels < 1.0)
+		return 2.0 * sun_radius;
+	return 2.0 * sun_radius * sun_texture_width / sun_texture_disc_pixels;
+}
+
+static void add_sun_entity(struct entity_context *cx, const union vec3 *pos,
+				struct material *m, float billboard_world)
+{
+	struct entity *e = add_entity(cx, sun_mesh, pos->v.x, pos->v.y, pos->v.z, WHITE);
+
+	if (e) {
+		update_entity_scale(e, billboard_world);
+		update_entity_material(e, m);
+		update_entity_shadow_casting(e, 0); /* a star must not cast into the shadow map */
+	}
+}
+
+/* Draw the sun in the current style.  SIDE BY SIDE displaces the two billboards perpendicular
+ * to the line of sight so both are visible at once -- only the DRAWN positions move, the light
+ * still comes from sun_pos, so the scene's lighting and shadows are unaffected.  Flipping
+ * between SHADER and TEXTURE in place (the other two styles) is the more sensitive comparison,
+ * since a flicker shows up differences that a side-by-side lets the eye average away.
+ */
+static void draw_sun(struct entity_context *cx, const union vec3 *camera_pos)
+{
+	union vec3 to_sun, right, offset, pos;
+	float cam_dist, shader_size, texture_size, separation;
+
+	if (!sun_mesh)
+		return;
+
+	vec3_sub(&to_sun, &sun_pos, camera_pos);
+	cam_dist = vec3_magnitude(&to_sun);
+	shader_size = shader_sun_billboard_size(cam_dist);
+	texture_size = texture_sun_billboard_size();
+	sun_material.sun.disc_radius = sun_radius / shader_size;
+	sun_material.sun.bloom_radius = (sun_bloom_apparent * cam_dist) / shader_size;
+	sun_bloom_reach_radii = (sun_bloom_apparent * cam_dist) / sun_radius;
+
+	if (sun_style != SUN_STYLE_SIDE_BY_SIDE) {
+		if (sun_style == SUN_STYLE_TEXTURE)
+			add_sun_entity(cx, &sun_pos, &sun_texture_material, texture_size);
+		else
+			add_sun_entity(cx, &sun_pos, &sun_material, shader_size);
+		return;
+	}
+
+	/* Half the larger billboard either side of sun_pos, so the two do not overlap whichever
+	 * is bigger.  If the sun is straight up the perpendicular is degenerate; fall back to
+	 * drawing the shader sun alone rather than stacking them on top of each other. */
+	right.v.x = 0.0;
+	right.v.y = 1.0;
+	right.v.z = 0.0;
+	vec3_cross(&offset, &to_sun, &right);
+	if (vec3_magnitude(&offset) < 0.0001) {
+		add_sun_entity(cx, &sun_pos, &sun_material, shader_size);
+		return;
+	}
+	vec3_normalize_self(&offset);
+	separation = 0.55 * (shader_size > texture_size ? shader_size : texture_size);
+
+	vec3_mul(&right, &offset, -separation);
+	vec3_add(&pos, &sun_pos, &right);
+	add_sun_entity(cx, &pos, &sun_material, shader_size);
+
+	vec3_mul(&right, &offset, separation);
+	vec3_add(&pos, &sun_pos, &right);
+	add_sun_entity(cx, &pos, &sun_texture_material, texture_size);
+}
+
 static void draw_hud(void)
 {
 	char buffer[160];
@@ -1478,6 +1608,11 @@ static void draw_hud(void)
 	snprintf(buffer, sizeof(buffer), "SUN %.0fK  CORE %.1f  BLOOM %.1f SHARP %.2f RADIUS %.2f EDGE %.2f",
 		sun_temperature, sun_material.sun.core_brightness, sun_material.sun.bloom_brightness,
 		sun_material.sun.bloom_falloff, sun_bloom_apparent, sun_material.sun.edge_softness);
+	sng_abs_xy_draw_string(buffer, TINY_FONT, 10, y); y += dy;
+	snprintf(buffer, sizeof(buffer),
+		"SUN STYLE %s (F3)   TEXTURE %.0fPX  DISC %.0fPX   BLOOM REACH %.2f RADII (TEXTURE IS 3.73)",
+		sun_style_name[sun_style], sun_texture_width, sun_texture_disc_pixels,
+		sun_bloom_reach_radii);
 	sng_abs_xy_draw_string(buffer, TINY_FONT, 10, y); y += dy;
 	snprintf(buffer, sizeof(buffer),
 		"STAR-LIGHT  LIGHT-TINT %.2f  DARK-TINT %.2f  CONTRAST %.2f  AMBIENT %.3f",
@@ -1736,33 +1871,7 @@ static void draw_screen(void)
 		}
 	}
 
-	/* The sun (MATERIAL_SUN): billboard sized to the bloom's screen extent but never smaller
-	 * than the disc; the shader's disc radius is set from sun_radius / billboard size so the
-	 * disc is world-scale and the bloom is screen-scale.  It must not cast shadows. */
-	if (sun_mesh) {
-		union vec3 to_cam;
-		float cam_dist, billboard_world, bloom_world;
-		struct entity *e;
-
-		vec3_sub(&to_cam, &sun_pos, &cam_pos);
-		cam_dist = vec3_magnitude(&to_cam);
-		/* Size the billboard to just contain the disc plus the bloom's reach, with a small margin.
-		 * sun_bloom_apparent is the bloom's reach as a fraction of camera distance (constant on
-		 * screen); bloom_world is that reach in world units.  The billboard spans 2 * margin *
-		 * (sun_radius + bloom_world), so disc_radius + bloom_radius = 1 / (2 * margin) < 0.5 in UV:
-		 * the entire glow is visible and the RADIUS control no longer inflates the billboard without
-		 * bound (which used to leave only the bloom's flat centre on screen). */
-		bloom_world = sun_bloom_apparent * cam_dist;
-		billboard_world = 2.0 * SUN_BILLBOARD_MARGIN * (sun_radius + bloom_world);
-		sun_material.sun.disc_radius = sun_radius / billboard_world;
-		sun_material.sun.bloom_radius = bloom_world / billboard_world;
-		e = add_entity(cx, sun_mesh, sun_pos.v.x, sun_pos.v.y, sun_pos.v.z, WHITE);
-		if (e) {
-			update_entity_scale(e, billboard_world);
-			update_entity_material(e, &sun_material);
-			update_entity_shadow_casting(e, 0);
-		}
-	}
+	draw_sun(cx, &cam_pos);
 
 #if MOVING_STARFIELD
 	if (!star_field_initialized) {
@@ -1817,6 +1926,16 @@ static void handle_key_down(SDL_Keysym *keysym)
 		 * ignore it in free-camera mode rather than leaving a latched flag behind. */
 		if (controlled_slot >= 0)
 			turret_view = !turret_view;
+		break;
+	case SDLK_F3:
+		/* Cycle the sun's rendering style for the A/B: the shader, the game's texture, or
+		 * both side by side.  Shift cycles backwards, so a two-way flip between any pair
+		 * of adjacent styles is F3 / Shift-F3. */
+		if (keysym->mod & KMOD_SHIFT)
+			sun_style = (sun_style + ARRAYSIZE(sun_style_name) - 1) %
+					ARRAYSIZE(sun_style_name);
+		else
+			sun_style = (sun_style + 1) % ARRAYSIZE(sun_style_name);
 		break;
 	case SDLK_F10:
 		reload_shaders = 1;
@@ -2043,13 +2162,29 @@ static void handle_key_down(SDL_Keysym *keysym)
 				black_hole_swirl = 4.0;
 		}
 		break;
-	case SDLK_g:
-		sun_radius *= 0.9;
-		if (sun_radius < 1.0)
-			sun_radius = 1.0;
+	case SDLK_g: /* Shift = the disc within the sun texture is fewer pixels across */
+		if (keysym->mod & KMOD_SHIFT) {
+			sun_texture_disc_pixels -= 4.0;
+			if (sun_texture_disc_pixels < 4.0)
+				sun_texture_disc_pixels = 4.0;
+		} else {
+			sun_radius *= 0.9;
+			if (sun_radius < 1.0)
+				sun_radius = 1.0;
+		}
 		break;
-	case SDLK_h:
-		sun_radius *= 1.111111;
+	case SDLK_h: /* Shift = the disc within the sun texture is more pixels across */
+		if (keysym->mod & KMOD_SHIFT) {
+			/* Larger disc = smaller billboard for the same star, so the texture's glow
+			 * shrinks with it.  This is the dial that decides how much of the texture is
+			 * star and how much is glow, and getting it wrong is what made the textured
+			 * sun's bloom look enormous. */
+			sun_texture_disc_pixels += 4.0;
+			if (sun_texture_disc_pixels > sun_texture_width)
+				sun_texture_disc_pixels = sun_texture_width;
+		} else {
+			sun_radius *= 1.111111;
+		}
 		break;
 	case SDLK_7: /* cooler (redder) star; Shift = weaker light (sun-lit) tint */
 		if (keysym->mod & KMOD_SHIFT) {
@@ -2334,9 +2469,39 @@ static void setup_skybox(const char *skybox_prefix)
 
 static void setup_sun_billboard(void)
 {
+	const char *sun_texture = "share/snis/textures/sun.png";
+	char whynot[256];
+	char *pixels;
+	int w = 0, h = 0, hasalpha = 0;
+
 	sun_mesh = mesh_fabricate_billboard(1.0, 1.0); /* unit billboard, scaled to size per frame */
 	material_init_sun(&sun_material);
 	update_sun_color(); /* blackbody colour from sun_temperature */
+
+	/* Start from the least-squares fit of the glow term to sun.png's measured radial profile
+	 * (doc/star-rendering-and-lighting-notes.txt section 5), so the A/B opens on the candidate
+	 * match rather than on material.c's generic defaults.  These are a numerical fit over area;
+	 * the eye weights the bright limb far more heavily, so they are a starting point to be
+	 * confirmed by flipping F3, not a verdict. */
+	sun_material.sun.bloom_brightness = 0.62;
+	sun_material.sun.bloom_falloff = 1.32;
+
+	/* The game's textured sun, for the A/B comparison. */
+	material_init_texture_mapped_unlit(&sun_texture_material);
+	sun_texture_material.billboard_type = MATERIAL_BILLBOARD_TYPE_SPHERICAL;
+	sun_texture_material.texture_mapped_unlit.texture_id = graph_dev_load_texture(sun_texture, 0);
+	sun_texture_material.texture_mapped_unlit.do_blend = 1;
+
+	/* The billboard's size depends on the texture's width, so read it from the PNG header
+	 * rather than assuming 512, exactly as snis_client's update_sun_size() does. */
+	pixels = png_utils_read_png_image(sun_texture, 0, 0, 0, &w, &h, &hasalpha,
+						whynot, sizeof(whynot));
+	if (pixels) {
+		free(pixels);
+		sun_texture_width = w;
+	} else {
+		fprintf(stderr, "shadow_lab: failed to size sun texture %s: %s\n", sun_texture, whynot);
+	}
 }
 
 int main(int argc, char *argv[])

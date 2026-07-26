@@ -145,3 +145,75 @@ camera turns.  Bloom + white-hot core already buy most of the "blinding" feel fo
 a fraction of the risk.  Recommendation: park it; if ever done, do it as proper
 luminance-based auto-exposure on an HDR buffer (see section 2), not as a
 sun-coverage hack.
+
+
+5. Fitting the shader's parameters to the existing sun.png
+----------------------------------------------------------
+The procedural sun is not meant to look like a NEW star; it is meant to reproduce
+the one the game already draws, so that switching a solar system over to it is a
+change of mechanism and not a change of art direction.  sun.png is therefore the
+reference, and the shader's defaults were fitted to it rather than chosen by eye.
+
+Measuring the texture (512x512 RGBA, premultiplied by its own alpha so the numbers
+compare directly against the shader's premultiplied output):
+
+  - There is NO SHARP DISC EDGE.  Alpha is 255 out to r = 42 px, then ramps down
+    gradually and does not cross 50% until r = 85, while the raw RGB stays clipped
+    at 255 well past r = 60.  "The disc radius" is therefore a matter of which
+    criterion you pick, and the criteria disagree by a factor of two.
+  - The one that is not arbitrary is the game's own: star_diameter_pixels says the
+    disc is 96 px across, so its radius is 48.  That is the number the billboard
+    is scaled by, so it IS the disc as far as the renderer is concerned, and
+    anchoring the fit there keeps the shader's disc the same size as the texture's.
+    It also happens to fit best (see below).
+  - Inside it the RGB is flat clipped white -- the disc is white-hot with no hue.
+    That is what core_brightness reproduces; any value large enough to drive every
+    channel past the soft knee will do, so it is not really a fitted parameter.
+    4.0 is comfortably past it.
+  - The glow falls monotonically to zero at r = 227 px.  Reach = 227 - 48 = 179 px
+    = 3.73 star radii.
+  - Hue through the glow: R 1.000, G 1.000, B 0.905.  The closest Tanner Helland
+    blackbody is 5980 K, residual 0.002.
+
+Least-squares fit of the shader's glow term
+
+    bloom = pow(1 - smoothstep(0, 1, d), k),  d = (r - disc) / reach
+
+over the glow band, with the limb transition excluded:
+
+    bloom_radius (reach) 3.73 star radii   <- pinned to the measured zero crossing
+    bloom_brightness     0.62
+    bloom_falloff        1.32
+    temperature          5980 K
+    residual             8.8/255 RMS (about 3.5 percent)
+
+Anchoring on the alpha-saturation radius (42) instead gives 4.40 radii / 0.67 /
+1.36 at a worse residual of 10.4, and anchoring on a 90%-of-peak brightness
+criterion (47) gives 3.83 / 0.62 / 1.30 at 8.7 -- so the fit is not very sensitive
+to the choice, but the game's own 48 is both the most defensible and among the
+best.  Letting the reach float fits marginally better still, but only by pushing
+it past the point where the glow actually reaches zero; that is the optimiser
+papering over a shape mismatch, not a better description.
+
+What does NOT fit, and will not:
+
+  - The residual is systematic, not noise.  The texture is BRIGHTER than the
+    shader just past the limb, DIMMER in the mid-glow, and brighter again in the
+    far tail: it has a sharper knee and a fatter tail than pow(1 - smoothstep(d), k)
+    can make.  A few percent, so it reads as a slightly different falloff, not as a
+    different star.  Adding a term to close it is not worth a new uniform.
+  - The texture has STARBURST RAYS.  The shader is radially symmetric and has no
+    term for them.  This is the one visible difference between the two, and the
+    game's existing lens flare (show_lens_flare()) already plays much the same
+    visual role, so the rays are not obviously a loss.
+  - The texture is entirely world-scale: its glow grows as the camera closes in.
+    The shader's bloom is screen-scale and holds a constant apparent size.  THE
+    TWO CAN ONLY AGREE AT ONE CAMERA DISTANCE.  To match at distance D, set the
+    reach to 3.73 * star_radius / D.  This is a real behavioural difference and
+    the reason the procedural sun is worth having: a world-scale glow that swells
+    to fill the screen on approach is the artifact, not the feature.
+
+These are a NUMERICAL fit against the image, and they are a starting point, not a
+verdict: the eye weights the bright limb far more heavily than a least-squares fit
+over area does.  Confirm them in shadow_lab (F3 cycles shader / texture / side by
+side) before baking them into any solar system's assets.txt.
