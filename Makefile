@@ -1439,14 +1439,14 @@ bin/test-marshal:	snis_marshal.c ${OD}/stacktrace.o Makefile ${BIN}
 	$(CC) -DTEST_MARSHAL -o bin/test-marshal snis_marshal.c ${OD}/stacktrace.o
 
 bin/test-quat:	test-quat.c ${OD}/quat.o ${OD}/matrix.o ${OD}/mathutils.o ${OD}/mtwist.o Makefile ${BIN}
-	$(CC) -Wall -Wextra --pedantic -o bin/test-quat test-quat.c ${OD}/quat.o ${OD}/matrix.o ${OD}/mathutils.o ${OD}/mtwist.o -lm
+	$(CC) ${BOUNDSFLAGS} -Wall -Wextra --pedantic -o bin/test-quat test-quat.c ${OD}/quat.o ${OD}/matrix.o ${OD}/mathutils.o ${OD}/mtwist.o -lm
 
 bin/test-fleet: ${OD}/quat.o ${OD}/fleet.o ${OD}/mathutils.o ${OD}/mtwist.o Makefile ${BIN}
 	$(CC) -DTESTFLEET=1 -c -o ${OD}/test-fleet.o fleet.c
-	$(CC) -DTESTFLEET=1 -o bin/test-fleet ${OD}/test-fleet.o ${OD}/mathutils.o ${OD}/quat.o ${OD}/mtwist.o -lm
+	$(CC) ${BOUNDSFLAGS} -DTESTFLEET=1 -o bin/test-fleet ${OD}/test-fleet.o ${OD}/mathutils.o ${OD}/quat.o ${OD}/mtwist.o -lm
 
 bin/test-mtwist: ${OD}/mtwist.o test-mtwist.c Makefile ${BIN}
-	$(CC) -o bin/test-mtwist ${OD}/mtwist.o test-mtwist.c
+	$(CC) ${BOUNDSFLAGS} -o bin/test-mtwist ${OD}/mtwist.o test-mtwist.c
 
 $(OD)/snis-device-io.o:	snis-device-io.h snis-device-io.c Makefile ${ODT}
 	$(CC) -Wall -Wextra --pedantic -pthread -c -o ${OD}/snis-device-io.o snis-device-io.c
@@ -1472,7 +1472,7 @@ bin/test_nonuniform_random_sampler:	nonuniform_random_sampler.c ${OD}/mathutils.
 
 bin/test-commodities:	${OD}/commodities.o Makefile ${OD}/string-utils.o ${BIN}
 	$(CC) -DTESTCOMMODITIES=1 -O3 -c commodities.c -o ${OD}/test-commodities.o
-	$(CC) -DTESTCOMMODITIES=1 -o bin/test-commodities ${OD}/string-utils.o ${OD}/test-commodities.o
+	$(CC) ${BOUNDSFLAGS} -DTESTCOMMODITIES=1 -o bin/test-commodities ${OD}/string-utils.o ${OD}/test-commodities.o ${OD}/stacktrace.o
 
 bin/test-obj-parser:	test-obj-parser.c mikktspace/mikktspace.o ${OD}/string-utils.o ${OD}/stl_parser.o ${OD}/mesh.o \
 		${OD}/mtwist.o ${OD}/mathutils.o ${OD}/matrix.o ${OD}/quat.o ${OD}/open-simplex-noise.o ${OD}/stacktrace.o Makefile ${BIN}
@@ -1483,8 +1483,8 @@ bin/test-obj-parser:	test-obj-parser.c mikktspace/mikktspace.o ${OD}/string-util
 test:	bin/test-matrix bin/test-mathutils bin/test-space-partition bin/test-marshal bin/test-quat bin/test-fleet bin/test-mtwist bin/test-commodities bin/test_solarsystem_config
 	/bin/true	# Prevent make from running "$(CC) test.o".
 
-bin/test_solarsystem_config:	test_solarsystem_config.c ${OD}/solarsystem_config.o ${OD}/string-utils.o ${BIN}
-	$(CC) -o $@ $< ${OD}/solarsystem_config.o ${OD}/string-utils.o
+bin/test_solarsystem_config:	test_solarsystem_config.c ${OD}/solarsystem_config.o ${OD}/string-utils.o ${OD}/stacktrace.o ${BIN}
+	$(CC) ${BOUNDSFLAGS} -o $@ $< ${OD}/solarsystem_config.o ${OD}/string-utils.o ${OD}/stacktrace.o
 
 bin/test_crater:	$(OD)/test_crater.o $(OD)/crater.o $(OD)/mathutils.o $(OD)/mtwist.o ${OD}/png_utils.o ${BIN}
 	$(CC) -o $@ ${PNGCFLAGS} $(OD)/test_crater.o $(OD)/crater.o $(OD)/mtwist.o ${OD}/png_utils.o ${PNGLIBS} $(OD)/mathutils.o -lm
