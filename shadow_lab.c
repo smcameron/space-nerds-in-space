@@ -48,6 +48,7 @@
 #include "mathutils.h"
 #include "snis_typeface.h"
 #include "snis_cardinal_colors.h"
+#include "star_light.h"
 #include "opengl_cap.h"
 #include "build_info.h"
 #include "png_utils.h"
@@ -291,34 +292,9 @@ static int black_hole_slot(int scene_index)
 	return -1;
 }
 
-/* Blackbody colour approximation (Tanner Helland), Kelvin -> RGB 0..1.  Good enough to preview
- * star colours from cool red (~2500K) through white to hot blue (~30000K). */
-static void blackbody_color(float kelvin, float *r, float *g, float *b)
-{
-	float t = kelvin / 100.0;
-	float rr, gg, bb;
-
-	if (t <= 66.0) {
-		rr = 255.0;
-		gg = 99.4708025861 * logf(t) - 161.1195681661;
-	} else {
-		rr = 329.698727446 * powf(t - 60.0, -0.1332047592);
-		gg = 288.1221695283 * powf(t - 60.0, -0.0755148492);
-	}
-	if (t >= 66.0)
-		bb = 255.0;
-	else if (t <= 19.0)
-		bb = 0.0;
-	else
-		bb = 138.5177312231 * logf(t - 10.0) - 305.0447927307;
-	*r = clampf(rr, 0.0, 255.0) / 255.0;
-	*g = clampf(gg, 0.0, 255.0) / 255.0;
-	*b = clampf(bb, 0.0, 255.0) / 255.0;
-}
-
 static void update_sun_color(void)
 {
-	blackbody_color(sun_temperature, &sun_material.sun.color.red,
+	star_light_blackbody_color(sun_temperature, &sun_material.sun.color.red,
 			&sun_material.sun.color.green, &sun_material.sun.color.blue);
 }
 
