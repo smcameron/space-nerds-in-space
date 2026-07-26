@@ -118,7 +118,7 @@ If you submit AI generated code, you must:
 4. Add your Signed-off-by tag to attest to the points of the
    Developer's Certificate of Origin (see below).
 
-Additionally, you should add an "Assisted-by;" tag, e.g.:
+Additionally, you should add an "Assisted-by:" tag, e.g.:
 
 	Assisted-by: Claude Opus 5
 
