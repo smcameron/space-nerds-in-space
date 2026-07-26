@@ -84,6 +84,9 @@ struct solarsystem_asset_spec *solarsystem_asset_spec_read(char *filename)
 	 * 30000 unit sun billboard: 5625 * 512 / 96 = 30000. */
 	a->star_diameter_pixels = 96.0;
 	a->star_diameter = 5625.0;
+	a->sun_color.r = 255;
+	a->sun_color.g = 255;
+	a->sun_color.b = 179;
 
 	while (!feof(f)) {
 		l = fgets(line, 1000, f);
@@ -150,9 +153,6 @@ struct solarsystem_asset_spec *solarsystem_asset_spec_read(char *filename)
 			a->water_color[planet_textures_read].r = 25; /* default values for r,g,b water color */
 			a->water_color[planet_textures_read].g = 76; /* May be overridden later */
 			a->water_color[planet_textures_read].b = 255;
-			a->sun_color.r = 255;
-			a->sun_color.g = 255;
-			a->sun_color.b = 179;
 			field = get_field(line);
 			BUILD_ASSERT(sizeof(word1) == 1000);
 			BUILD_ASSERT(sizeof(word2) == 1000);
@@ -212,7 +212,8 @@ struct solarsystem_asset_spec *solarsystem_asset_spec_read(char *filename)
 				"%s:line %d: expected planet texture prefix, [ planet normal map prefix ], and planet type\n",
 				filename, ln);
 			goto bad_line;
-		} else if (has_prefix("atmosphere brightness:", line)) {
+		} else if (has_prefix("atmosphere brightness:", line) ||
+				has_prefix("atmosphere_brightness:", line)) { /* assets.txt may vary */
 			float value;
 			if (a->nplanet_textures == 0) {
 				fprintf(stderr,
@@ -404,10 +405,16 @@ void solarsystem_asset_spec_free(struct solarsystem_asset_spec *s)
 	}
 	if (s->atmosphere_color)
 		free(s->atmosphere_color);
+	if (s->water_color)
+		free(s->water_color);
+	if (s->atmosphere_brightness)
+		free(s->atmosphere_brightness);
 	s->planet_texture = NULL;
 	s->planet_normalmap = NULL;
 	s->planet_type = NULL;
 	s->atmosphere_color = NULL;
+	s->water_color = NULL;
+	s->atmosphere_brightness = NULL;
 	free(s);
 }
 

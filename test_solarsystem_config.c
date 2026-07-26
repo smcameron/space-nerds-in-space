@@ -22,12 +22,17 @@ int test_solarsystem_config(char *filename)
 
 	fprintf(stderr, "s->sun_texture = '%s'\n", s->sun_texture);
 	fprintf(stderr, "s->skybox_prefix = '%s'\n", s->skybox_prefix);
+	fprintf(stderr, "s->sun_color = %hhu, %hhu, %hhu\n",
+		s->sun_color.r, s->sun_color.g, s->sun_color.b);
 	fprintf(stderr, "s->nplanet_textures = %d\n", s->nplanet_textures);
 	for (i = 0; i < s->nplanet_textures; i++) {
 		fprintf(stderr, "s->planet_texture[%d] = '%s'\n", i, s->planet_texture[i]);
 		fprintf(stderr, "s->planet_normalmap[%d] = '%s'\n", i, s->planet_normalmap[i]);
 		fprintf(stderr, "s->planet_type[%d] = '%s'\n", i, s->planet_type[i]);
+		fprintf(stderr, "s->atmosphere_brightness[%d] = %f\n", i, s->atmosphere_brightness[i]);
 	}
+	fprintf(stderr, "%d errors, %d warnings\n", s->spec_errors, s->spec_warnings);
+	solarsystem_asset_spec_free(s);
 	return 0;
 }
 
