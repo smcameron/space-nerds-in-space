@@ -103,16 +103,31 @@ to snis_client via the couple of functions in snis-device-io.o.
 AI Policy
 ---------
 
-In general, AI generated content is not permitted, with some small possible
-exceptions.  The reason for this is that machine generated artifacts are not
-copyrightable and fall into the public domain.  For this reason incorporating
-public domain changes into a GPL licensed file is forbidden.  One possible
-exception could be made on a per file basis and a case by case basis for
-ancillary files.  For example, if there is an AI generated or partially
-generated script that is more or less self contained and isolated from other
-parts of the game, and not central to the game code, it might be permitted
-provided that the file is clearly marked as AI generated content and clearly
-marked as being in the public domain.
+Code written by AI coding assistants is permitted on a case by case basis.
+The code must be compatible with the GPL v. 2.0.  The code must be signed
+off by a human who attests to the points of the Developer's Certificate of
+Origin, as described below. An AI agent must not add a Signed-off-by tag as
+it cannot really attest to anything.
+
+If you submit AI generated code, you must:
+
+1. Review and test the code thoroughly
+2. Ensure compliance with the license
+3. Take full responsibility for the code. If you don't understand
+   the code, do not submit it.
+4. Add your Signed-off-by tag to attest to the points of the
+   Developer's Certificate of Origin (see below).
+
+Additionally, you should add an "Assisted-by;" tag, e.g.:
+
+	Assisted-by: Claude Opus 5
+
+The above policy pertains to AI generated code.
+
+When it comes to AI generated art assets (images, textures, 3D models,
+normal maps, sound effects, music, voice acting, etc.), I have not yet
+made up my mind what to do about those. We will cross that bridge when
+we come to it.
 
 Coding Style
 ------------
