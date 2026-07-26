@@ -9913,7 +9913,7 @@ static struct entity *main_view_add_cockpit_entity(struct snis_entity *o)
 }
 
 /* Add player ship entity into the scene for some camera modes */
-static struct entity *main_view_add_player_ship_entity(struct snis_entity *o)
+static struct entity *main_view_add_player_ship_entity(struct snis_entity *o, int render_style)
 {
 	struct entity *player_ship;
 	static float current_lights = 1.0;
@@ -9928,6 +9928,7 @@ static struct entity *main_view_add_player_ship_entity(struct snis_entity *o)
 	update_entity_orientation(player_ship, &o->orientation);
 	entity_update_emit_intensity(player_ship, current_lights);
 	entity_set_in_shade(player_ship, object_in_shade(o));
+	set_render_style(player_ship, render_style);
 
 	struct entity *turret_base = add_entity(ecx, ship_turret_base_mesh,
 		-4 * SHIP_MESH_SCALE, 5.45 * SHIP_MESH_SCALE, 0 * SHIP_MESH_SCALE,
@@ -9937,6 +9938,7 @@ static struct entity *main_view_add_player_ship_entity(struct snis_entity *o)
 		update_entity_orientation(turret_base, &identity_quat);
 		update_entity_parent(ecx, turret_base, player_ship);
 		entity_set_in_shade(turret_base, object_in_shade(o));
+		set_render_style(turret_base, render_style);
 	}
 
 	struct entity *turret = add_entity(ecx, ship_turret_mesh, 0, 0, 0, SHIP_COLOR);
@@ -9947,6 +9949,7 @@ static struct entity *main_view_add_player_ship_entity(struct snis_entity *o)
 		if (turret_base)
 			update_entity_parent(ecx, turret, turret_base);
 		entity_set_in_shade(turret, object_in_shade(o));
+		set_render_style(turret, render_style);
 	}
 	if (!o->tsd.ship.reverse)
 		add_ship_thrust_entities(NULL, NULL, ecx, player_ship, o->tsd.ship.shiptype,
@@ -10134,14 +10137,18 @@ static void show_mainscreen(void)
 		}
 
 		union vec3 desired_cam_offset;
+		int player_ship_render_style;
+
+		player_ship_render_style = RENDER_NORMAL;
 
 		switch (camera_mode) {
 		case 0:
 			vec3_init(&desired_cam_offset, 0, 0, 0);
 			if (mf_cockpit)
 				cockpit_entity = main_view_add_cockpit_entity(o);
+			player_ship_render_style = RENDER_NORMAL;
 			if (vp == o)
-				break;
+				player_ship_render_style = RENDER_SHADOWS_ONLY;
 			FALLTHROUGH;
 		case 1:
 		case 2: {
@@ -10149,7 +10156,7 @@ static void show_mainscreen(void)
 				vec3_mul_self(&desired_cam_offset,
 						200.0f * camera_mode * SHIP_MESH_SCALE);
 				quat_rot_vec_self(&desired_cam_offset, &camera_orientation);
-				player_ship = main_view_add_player_ship_entity(o);
+				player_ship = main_view_add_player_ship_entity(o, player_ship_render_style);
 			}
 			break;
 		}
@@ -10189,7 +10196,7 @@ static void show_mainscreen(void)
 		cam_pos.v.y = 0;
 		cam_pos.v.z = 0;
 		update_external_camera_position_and_orientation(first_frame, &cam_pos, &camera_orientation);
-		player_ship = main_view_add_player_ship_entity(o);
+		player_ship = main_view_add_player_ship_entity(o, RENDER_NORMAL);
 		/* if (mf_cockpit)
 			cockpit_entity = main_view_add_cockpit_entity(o); // for debugging the cockpit */
 	}
