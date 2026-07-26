@@ -158,6 +158,34 @@ extern unsigned int graph_dev_texture_to_gpu_no_mipmaps(int texture_id, const ch
 				int w, int h, int hasAlpha, int linear_colorspace);
 extern const char *graph_dev_get_texture_filename(unsigned int);
 extern void graph_dev_draw_skybox(const struct mat44 *mat_vp);
+
+/* Gravitational lensing of the skybox.  Each lens bends the starfield around a black hole:
+ * an Einstein ring, tangentially smeared arcs outside it, and an inverted second image
+ * within.  The opaque disc itself is not drawn here -- it is the black hole's own billboard,
+ * drawn as an ordinary entity after the skybox, which is also what covers the singularity at
+ * the centre of the mapping.
+ *
+ * The caller works out the geometry, since it is the only one that knows where the camera and
+ * the black holes are; graph_dev just hands the numbers to the shader.  Slots beyond n are
+ * disabled by zeroing their Einstein radius, so unused ones cost nothing but a loop iteration.
+ */
+#define MAX_GRAVITATIONAL_LENSES 3
+/* Prepended to the skybox shader so its uniform arrays are sized from the constant above
+ * rather than from a second copy of the number that could drift away from it. */
+#define GRAVITATIONAL_LENS_STRINGIFY_(x) #x
+#define GRAVITATIONAL_LENS_STRINGIFY(x) GRAVITATIONAL_LENS_STRINGIFY_(x)
+#define GRAVITATIONAL_LENS_HEADER \
+	"#define MAX_GRAVITATIONAL_LENSES " \
+	GRAVITATIONAL_LENS_STRINGIFY(MAX_GRAVITATIONAL_LENSES) "\n"
+struct graph_dev_gravitational_lens {
+	float direction[3];	/* unit vector from the camera toward the lens, world space */
+	float einstein_radius;	/* angular Einstein radius, radians; <= 0 disables the slot */
+	float shadow_radius;	/* angular radius of the opaque disc, radians */
+	float swirl;		/* signed frame-dragging strength; 0 for none */
+	float ring_glow;	/* Einstein ring's own emission; 0 for bare lensed starlight */
+};
+extern void graph_dev_set_gravitational_lenses(int n,
+			const struct graph_dev_gravitational_lens *lens);
 extern int graph_dev_reload_changed_textures(void);
 extern int graph_dev_reload_changed_cubemap_textures(void);
 extern void graph_dev_expire_all_textures(void);

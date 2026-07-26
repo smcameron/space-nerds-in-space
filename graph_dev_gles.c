@@ -924,6 +924,8 @@ struct graph_dev_gl_skybox_shader {
 	GLuint cube_texture_id;
 	GLint filmic_tonemapping_id;
 	GLint tonemapping_gain_id;
+	GLint lens_dir_id;
+	GLint lens_params_id;
 };
 
 struct graph_dev_gl_color_by_w_shader {
@@ -1075,6 +1077,32 @@ static struct graph_dev_gl_line_single_color_shader line_single_color_shader;
 static struct graph_dev_gl_vertex_color_shader vertex_color_shader;
 static struct graph_dev_gl_point_cloud_shader point_cloud_shader;
 static struct graph_dev_gl_skybox_shader skybox_shader;
+
+/* Gravitational lenses bending the skybox, packed the way the shader's uniform arrays want
+ * them.  Active lenses are packed first and the remaining slots keep a zero Einstein radius,
+ * which the shader treats as contributing nothing -- see graph_dev_set_gravitational_lenses()
+ * below and share/snis/shader-es/skybox.frag. */
+static GLfloat gravitational_lens_dir[MAX_GRAVITATIONAL_LENSES * 3];
+static GLfloat gravitational_lens_params[MAX_GRAVITATIONAL_LENSES * 4];
+
+void graph_dev_set_gravitational_lenses(int n, const struct graph_dev_gravitational_lens *lens)
+{
+	int i;
+
+	if (n > MAX_GRAVITATIONAL_LENSES)
+		n = MAX_GRAVITATIONAL_LENSES;
+	memset(gravitational_lens_dir, 0, sizeof(gravitational_lens_dir));
+	memset(gravitational_lens_params, 0, sizeof(gravitational_lens_params));
+	for (i = 0; i < n; i++) {
+		gravitational_lens_dir[i * 3 + 0] = lens[i].direction[0];
+		gravitational_lens_dir[i * 3 + 1] = lens[i].direction[1];
+		gravitational_lens_dir[i * 3 + 2] = lens[i].direction[2];
+		gravitational_lens_params[i * 4 + 0] = lens[i].einstein_radius;
+		gravitational_lens_params[i * 4 + 1] = lens[i].shadow_radius;
+		gravitational_lens_params[i * 4 + 2] = lens[i].swirl;
+		gravitational_lens_params[i * 4 + 3] = lens[i].ring_glow;
+	}
+}
 static struct graph_dev_gl_color_by_w_shader color_by_w_shader;
 static struct graph_dev_gl_textured_shader textured_shader;
 static struct graph_dev_gl_textured_shader planetary_lightning_shader;
@@ -4082,6 +4110,8 @@ static void setup_skybox_shader(struct graph_dev_gl_skybox_shader *shader)
 	shader->texture_id = glGetUniformLocation(shader->program_id, "s_texture");
 	shader->filmic_tonemapping_id = glGetUniformLocation(shader->program_id, "u_FilmicTonemapping");
 	shader->tonemapping_gain_id = glGetUniformLocation(shader->program_id, "u_TonemappingGain");
+	shader->lens_dir_id = glGetUniformLocation(shader->program_id, "u_LensDir");
+	shader->lens_params_id = glGetUniformLocation(shader->program_id, "u_LensParams");
 	glUniform1i(shader->texture_id, 0);
 
 	/* Get a handle for our buffers */
@@ -5178,6 +5208,11 @@ void graph_dev_draw_skybox(const struct mat44 *mat_vp)
 		glUniform1f(skybox_shader.filmic_tonemapping_id, (float) filmic_tonemapping);
 	if (skybox_shader.tonemapping_gain_id >= 0)
 		glUniform1f(skybox_shader.tonemapping_gain_id, tonemapping_gain);
+	if (skybox_shader.lens_dir_id >= 0)
+		glUniform3fv(skybox_shader.lens_dir_id, MAX_GRAVITATIONAL_LENSES, gravitational_lens_dir);
+	if (skybox_shader.lens_params_id >= 0)
+		glUniform4fv(skybox_shader.lens_params_id, MAX_GRAVITATIONAL_LENSES,
+				gravitational_lens_params);
 
 	glEnableVertexAttribArray(skybox_shader.vertex_id);
 	glBindBuffer(GL_ARRAY_BUFFER, cubemap_cube.vertex_buffer);
