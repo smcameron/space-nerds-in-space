@@ -282,6 +282,7 @@ our $signature_tags = qr{(?xi:
 	Reviewed-by:|
 	Reported-by:|
 	Suggested-by:|
+	Assisted-by:|
 	To:|
 	Cc:
 )};
@@ -1621,6 +1622,15 @@ sub process {
 			if (!defined $space_after || $space_after ne " ") {
 				WARN("BAD_SIGN_OFF",
 				     "Use a single space after $ucfirst_sign_off\n" . $herecurr);
+			}
+
+			# Assisted-by uses AGENT_NAME:MODEL_VERSION format, not email
+			if ($sign_off =~ /^Assisted-by:/i) {
+				if ($email !~ /^\w+/) {
+					WARN("BAD_SIGN_OFF",
+					     "Assisted-by expects some words after the colon\n" . $herecurr);
+				}
+				next;
 			}
 
 			my ($email_name, $email_address, $comment) = parse_email($email);
