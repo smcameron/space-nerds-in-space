@@ -1423,6 +1423,8 @@ void render_entities(struct entity_context *cx)
 			/* near to far first, usually opaque geometry */
 			for (j = 0; j < cx->nnear_to_far_entity_depth; j++) {
 				struct entity *e = &cx->entity_list[cx->near_to_far_entity_depth[j]];
+				if (e->render_style & RENDER_SHADOWS_ONLY)
+					continue; /* don't render objects that exist only to cast shadows */
 				if (e)
 					render_entity(cx, f, e, (union vec3 *)&camera_light_pos.m[0]);
 			}
@@ -1430,6 +1432,8 @@ void render_entities(struct entity_context *cx)
 			/* then far to near, usually blended geometry and software renderer */
 			for (j = 0; j < cx->nfar_to_near_entity_depth; j++) {
 				struct entity *e = &cx->entity_list[cx->far_to_near_entity_depth[j]];
+				if (e->render_style & RENDER_SHADOWS_ONLY)
+					continue; /* don't render objects that exist only to cast shadows */
 				if (e)
 					render_entity(cx, f, e, (union vec3 *)&camera_light_pos.m[0]);
 			}
