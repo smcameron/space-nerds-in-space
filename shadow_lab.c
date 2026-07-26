@@ -50,6 +50,7 @@
 #include "opengl_cap.h"
 #include "build_info.h"
 #include "png_utils.h"
+#include "arraysize.h"
 #include "snis_xwindows_hacks.h"
 
 #define DEFAULT_FOV (40.0 * M_PI / 180.0)
@@ -74,7 +75,7 @@ static SDL_Window *screen;
 
 /* The scene.  A fixed-capacity list of objects rebuilt into the entity context each frame. */
 #define MAX_SCENE_OBJECTS 64
-enum scene_object_kind { SCENE_SHIP, SCENE_PLANET, SCENE_ASTEROID, SCENE_STARBASE };
+enum scene_object_kind { SCENE_SHIP, SCENE_PLANET, SCENE_ASTEROID, SCENE_STARBASE, SCENE_BLACK_HOLE };
 struct scene_object {
 	enum scene_object_kind kind;
 	struct mesh *mesh;
@@ -195,6 +196,42 @@ static float sun_dark_tint = 0.06;
 static float sun_shadow_contrast = 1.25;
 static struct mesh *sun_mesh;
 static struct material sun_material;
+
+/* The black hole, for iterating on the skybox's gravitational lensing (see
+ * graph_dev_set_gravitational_lenses() and share/snis/shader/skybox.frag).  Off by default:
+ * this is a shadow lab, and an extra body in the sky would get in the way of the work it
+ * already does.
+ *
+ * It is parked ANTI-SOLAR -- directly away from the sun as seen from the ship cluster.  Putting
+ * it in front of the sun is the tempting choice and the wrong one: the sun is a 3D entity drawn
+ * after the skybox, so it is not lensed at all, and all an eclipse buys you is the sun's bloom
+ * washing over the very region where the ring and the arcs live.  Anti-solar puts it against
+ * the darkest part of the sky with nothing competing, and it stays there as the arrow keys
+ * swing the sun.
+ *
+ * The radius is game-legal (MIN/MAX_BLACK_HOLE_RADIUS is 500..2000, snis.h) and the distance
+ * is an order beyond the planet's 3570, so the apparent size is representative of the game
+ * rather than of whatever happens to look good here.  lens_strength is the Einstein radius as
+ * a multiple of the disc's apparent radius.
+ *
+ * These values were tuned by eye here and are the ones the game should start from.  They are
+ * deliberately restrained: the thing should read as an absence, found by the way the starfield
+ * bends around it and by the hole it punches in that field, not by glowing.  At radius 500 and
+ * 25000 out the disc is only about 1.2 degrees across, which is small enough that you notice
+ * the distortion before you notice the object -- which is the point.  The two ring emissions
+ * are turned right down for the same reason; brighter and it starts to look like an ordinary
+ * lit object rather than a hole. */
+#define BLACK_HOLE_BILLBOARD_MARGIN 1.25 /* billboard is this much larger than the horizon, so the
+					  * photon-ring glow outside it is not clipped at the quad */
+static int black_hole_enabled = 0;
+static float black_hole_radius = 500.0;
+static float black_hole_distance = 25000.0;
+static float black_hole_lens_strength = 1.7;
+static float black_hole_swirl = 0.1;
+static float black_hole_ring_glow = 0.04; /* Einstein ring's emission, in skybox.frag */
+static int black_hole_index = -1; /* scene[] index, for the live position/scale updates */
+static struct mesh *black_hole_mesh;
+static struct material black_hole_material;
 
 /* Blackbody colour approximation (Tanner Helland), Kelvin -> RGB 0..1.  Good enough to preview
  * star colours from cool red (~2500K) through white to hot blue (~30000K). */
@@ -633,6 +670,27 @@ static void build_scene(void)
 				ASTEROID_SCALE_LARGE, AMBER);
 	}
 
+	/* The black hole: a camera-facing billboard carrying the procedural event-horizon material
+	 * (MATERIAL_BLACK_HOLE), rather than snis_client's painted textures/black_hole.png.  The
+	 * disc's edge has to sit at a known angle for the lensing to line up against it, which a
+	 * blob whose alpha fades out wherever the artwork says cannot do -- see black_hole.frag.
+	 * Position and scale are refreshed every frame by update_black_hole(), so the values here
+	 * only have to be non-degenerate.  It must not cast into the CSM depth map -- a caster
+	 * this size sweeping across would black out the whole scene, the same reason the planet
+	 * is excluded. */
+	black_hole_mesh = mesh_fabricate_billboard(1.0, 1.0);
+	if (black_hole_mesh) {
+		struct scene_object *bh;
+
+		material_init_black_hole(&black_hole_material);
+		bh = add_scene_object(SCENE_BLACK_HOLE, black_hole_mesh, &black_hole_material,
+				0.0, 0.0, 0.0, 2.0 * black_hole_radius, WHITE);
+		if (bh) {
+			bh->no_cast_shadow = 1;
+			black_hole_index = (int) (bh - scene);
+		}
+	}
+
 	/* Record the ships, in order, as the possess-cycle slots. */
 	ship_slot_count = 0;
 	for (i = 0; i < scene_object_count; i++) {
@@ -955,7 +1013,73 @@ static void update_sun(void)
 	sun_pos.v.z = scene_center.v.z + sun_distance * ce * sinf(sun_azimuth);
 }
 
-static char *help_text =
+/* Park the black hole on the line from the ship cluster out to the sun, so it keeps the sun
+ * behind it as update_sun() swings the sun around, and hand the lensing geometry to the
+ * skybox shader.
+ *
+ * The shader wants angles, not positions: theta_obj is the disc's apparent angular radius, the
+ * Einstein radius is a multiple of it (which is what puts the ring outside the disc rather than
+ * buried under it), and the disc radius doubles as the shader's floor on theta -- the mapping
+ * is singular at dead centre, and the billboard drawn over it is what hides that. */
+static void update_black_hole(void)
+{
+	struct graph_dev_gravitational_lens lens;
+	union vec3 to_hole, anchor;
+	float dist, theta_obj;
+
+	if (black_hole_index < 0) {
+		graph_dev_set_gravitational_lenses(0, NULL);
+		return;
+	}
+
+	/* Anti-solar, anchored on the ship cluster at the origin rather than on scene_center (the
+	 * planet, 3570 away): the cluster is where you actually watch this from, so aiming from
+	 * there is what keeps the sun squarely behind the camera instead of merely behind the
+	 * planet.  See the note by the globals for why anti-solar and not in front of the sun.
+	 *
+	 * Kept up to date even while the hole is switched off, so that switching it on has a
+	 * current position to aim the camera at rather than wherever it was last left. */
+	vec3_init(&anchor, 0.0, 0.0, 0.0);
+	vec3_sub(&to_hole, &anchor, &sun_pos);
+	vec3_normalize_self(&to_hole);
+	vec3_mul_self(&to_hole, black_hole_distance);
+	vec3_add(&scene[black_hole_index].pos, &anchor, &to_hole);
+	/* The billboard is sized a little past the horizon so the photon-ring glow has somewhere
+	 * to go instead of being clipped at the quad's edge; the disc's UV radius is scaled back
+	 * by the same margin so the horizon itself stays exactly black_hole_radius across.  That
+	 * is what makes the disc's apparent radius equal the shadow_radius handed to the lens
+	 * below, which is the whole reason for drawing it procedurally. */
+	scene[black_hole_index].scale = 2.0 * BLACK_HOLE_BILLBOARD_MARGIN * black_hole_radius;
+	black_hole_material.black_hole.disc_radius = 0.5 / BLACK_HOLE_BILLBOARD_MARGIN;
+
+	if (!black_hole_enabled) {
+		graph_dev_set_gravitational_lenses(0, NULL);
+		return;
+	}
+
+	vec3_sub(&to_hole, &scene[black_hole_index].pos, &cam_pos);
+	dist = vec3_magnitude(&to_hole);
+	if (dist <= black_hole_radius) { /* inside it; there is no sensible lens to describe */
+		graph_dev_set_gravitational_lenses(0, NULL);
+		return;
+	}
+	vec3_normalize_self(&to_hole);
+
+	lens.direction[0] = to_hole.v.x;
+	lens.direction[1] = to_hole.v.y;
+	lens.direction[2] = to_hole.v.z;
+	theta_obj = atan2f(black_hole_radius, dist);
+	lens.einstein_radius = black_hole_lens_strength * theta_obj;
+	lens.shadow_radius = theta_obj;
+	lens.swirl = black_hole_swirl;
+	lens.ring_glow = black_hole_ring_glow;
+	graph_dev_set_gravitational_lenses(1, &lens);
+}
+
+/* Split into chunks purely because a single literal this long is past what C99 requires a
+ * compiler to accept (4095 characters); draw_help_screen() draws them back to back, so the
+ * split point is arbitrary and only the total matters. */
+static const char * const help_text[] = {
 	"SHADOW LAB\n\n"
 	"  A sandbox for iterating on the cascaded shadow mapping shaders.\n\n"
 	"  FREE CAMERA\n"
@@ -1004,6 +1128,27 @@ static char *help_text =
 	"    NOTE: in_shade ONLY DARKENS A SHIP'S SUN-FACING SIDE, WHICH IS HIDDEN\n"
 	"    BEHIND THE PLANET IN A DIRECT UMBRA TEST.  WATCH THE PER-SHIP PANEL: SOFT\n"
 	"    RAMPS THROUGH THE PENUMBRA, BINARY JUMPS AT 0.5, OFF STAYS 0.\n\n"
+	,
+	"  BLACK HOLE (SKYBOX GRAVITATIONAL LENSING)\n"
+	"  - `                TOGGLE ON / OFF (AIMS THE FREE CAMERA AT IT AS IT COMES ON)\n"
+	"  - HOME / END       BLACK HOLE CLOSER / FARTHER\n"
+	"  - SHIFT+HOME / SHIFT+END  HOLE RADIUS SMALLER / LARGER (CLAMPED TO THE GAME'S\n"
+	"                     LEGAL 500..2000)\n"
+	"  - / / SHIFT+/      LENS STRENGTH DOWN / UP (EINSTEIN RADIUS AS A MULTIPLE OF THE\n"
+	"                     DISC; BELOW 1.0 THE RING HIDES INSIDE THE DISC)\n"
+	"  - PGDN / PGUP      FRAME-DRAG SWIRL DOWN / UP (SPIRALS THE ARCS; 0 = NONE)\n"
+	"  - INS / DEL        PHOTON RING DIMMER / BRIGHTER (THE DISC'S OWN RIM)\n"
+	"  - SHIFT+INS / SHIFT+DEL  PHOTON RING TIGHTER / WIDER\n"
+	"  - SHIFT+PGDN / SHIFT+PGUP  EINSTEIN RING DIMMER / BRIGHTER (THE LENSED ONE,\n"
+	"                     OUT IN THE SKYBOX -- A DIFFERENT RING AT A DIFFERENT RADIUS)\n"
+	"  - PARKED ANTI-SOLAR, DIRECTLY AWAY FROM THE SUN, SO NOTHING COMPETES WITH IT:\n"
+	"    THE SUN IS NOT LENSED (IT IS AN ENTITY DRAWN AFTER THE SKYBOX), SO PUTTING\n"
+	"    IT BEHIND THE HOLE WOULD ONLY WASH THE RING OUT WITH BLOOM.\n"
+	"  - THE DISC IS A BILLBOARD RUNNING black_hole.frag -- PROCEDURAL, SO ITS EDGE\n"
+	"    LANDS AT EXACTLY THE ANGLE THE LENSING FLOORS ITS DEFLECTION AT.  THE RING,\n"
+	"    THE ARCS AND THE INVERTED SECOND IMAGE INSIDE THE RING ALL COME OUT OF ONE\n"
+	"    TERM IN skybox.frag AND ARE NOT DRAWN.  HUD SHOWS DISC / RING IN DEGREES:\n"
+	"    THOSE ARE WHAT TRANSFER TO THE GAME, NOT THE DISTANCE.\n\n"
 	"  SHADOWS\n"
 	"  - \\                TOGGLE SHADOWS ON / OFF\n"
 	"  - 0 / 1 / 2        DEBUG: OFF / SHADOW-FACTOR / CASCADE-INDEX\n"
@@ -1022,12 +1167,14 @@ static char *help_text =
 	"  - F11              TOGGLE FULLSCREEN\n"
 	"  - ESC              QUIT\n\n"
 	"  CASCADE-INDEX TINT: red=0 (nearest) green=1 blue=2 yellow=3 cyan=4 magenta=5 gray=none\n\n"
-	"PRESS F1 TO EXIT HELP\n";
+	"PRESS F1 TO EXIT HELP\n",
+};
 
-static void draw_help_text(const char *text)
+/* Draws one chunk of the help text starting at y, and returns where the next chunk picks up. */
+static int draw_help_text(const char *text, int y)
 {
 	int line = 0;
-	int i, y = 70;
+	int i;
 	char buffer[1024];
 	int buflen = 0;
 
@@ -1035,12 +1182,17 @@ static void draw_help_text(const char *text)
 	i = 0;
 	do {
 		if (text[i] == '\n' || text[i] == '\0') {
-			buffer[buflen] = '\0';
-			sng_abs_xy_draw_string(buffer, TINY_FONT, 60, y);
-			y += 19;
+			/* At the terminator, only emit a line if one was actually accumulated:
+			 * chunks end with a newline, and drawing the empty remainder would leave a
+			 * stray blank line at every chunk boundary. */
+			if (text[i] == '\n' || buflen > 0) {
+				buffer[buflen] = '\0';
+				sng_abs_xy_draw_string(buffer, TINY_FONT, 60, y);
+				y += 19;
+				line++;
+			}
 			buffer[0] = '\0';
 			buflen = 0;
-			line++;
 			if (text[i] == '\0')
 				break;
 			i++;
@@ -1048,15 +1200,19 @@ static void draw_help_text(const char *text)
 		}
 		buffer[buflen++] = text[i++];
 	} while (1);
+	return y;
 }
 
 static void draw_help_screen(void)
 {
+	int i, y;
+
 	sng_set_foreground(BLACK);
 	sng_current_draw_rectangle(1, 50, 50, SCREEN_WIDTH - 100, SCREEN_HEIGHT - 100);
 	sng_set_foreground(GREEN);
 	sng_current_draw_rectangle(0, 50, 50, SCREEN_WIDTH - 100, SCREEN_HEIGHT - 100);
-	draw_help_text(help_text);
+	for (i = 0, y = 70; i < (int) ARRAYSIZE(help_text); i++)
+		y = draw_help_text(help_text[i], y);
 }
 
 /* Recompute what entity.c's compute_cascade_splits() and compute_shadow_light_matrix() will
@@ -1146,6 +1302,27 @@ static void draw_hud(void)
 		float pd = -scene[planet_index].pos.v.y; /* cluster sits near the origin */
 
 		snprintf(buffer, sizeof(buffer), "PLANET R %.0f  DIST %.0f  GAP %.0f", pr, pd, pd - pr);
+		sng_abs_xy_draw_string(buffer, TINY_FONT, 10, y); y += dy;
+	}
+	if (black_hole_index >= 0) {
+		/* DISC and RING are the apparent angular sizes, in degrees: they are what the
+		 * lensing is actually made of, and the only numbers here that transfer to the
+		 * game unchanged, since distance and radius do not survive the projection. */
+		float dist = vec3_dist(&cam_pos, &scene[black_hole_index].pos);
+		float disc = radians_to_degrees(atan2f(black_hole_radius, dist > 1.0 ? dist : 1.0));
+
+		snprintf(buffer, sizeof(buffer),
+			"BLACK HOLE %s (`)  R %.0f  DIST %.0f  DISC %.2f DEG  RING %.2f DEG  "
+			"STRENGTH %.1f  SWIRL %.1f",
+			black_hole_enabled ? "ON" : "OFF", black_hole_radius, black_hole_distance,
+			disc, disc * black_hole_lens_strength, black_hole_lens_strength,
+			black_hole_swirl);
+		sng_abs_xy_draw_string(buffer, TINY_FONT, 10, y); y += dy;
+		snprintf(buffer, sizeof(buffer),
+			"BLACK HOLE  PHOTON-RING %.2f WIDTH %.3f  EINSTEIN-RING %.2f  EDGE %.3f",
+			black_hole_material.black_hole.ring_brightness,
+			black_hole_material.black_hole.ring_width, black_hole_ring_glow,
+			black_hole_material.black_hole.edge_softness);
 		sng_abs_xy_draw_string(buffer, TINY_FONT, 10, y); y += dy;
 	}
 	snprintf(buffer, sizeof(buffer), "PLANET SHADE MODE %s   DEEPEST %s (%.2f)",
@@ -1239,6 +1416,7 @@ static void draw_screen(void)
 
 	update_camera();
 	update_sun();
+	update_black_hole(); /* after update_sun(): it is parked on the line out to the sun */
 
 	camera_basis(&cam_orientation, &fwd, &up, &right);
 	vec3_add(&at, &cam_pos, &fwd);
@@ -1275,7 +1453,11 @@ static void draw_screen(void)
 	ship_shade_count = 0;
 	for (i = 0; i < scene_object_count; i++) {
 		struct scene_object *o = &scene[i];
-		struct entity *e = add_entity(cx, o->mesh, o->pos.v.x, o->pos.v.y, o->pos.v.z, o->color);
+		struct entity *e;
+
+		if (o->kind == SCENE_BLACK_HOLE && !black_hole_enabled)
+			continue;
+		e = add_entity(cx, o->mesh, o->pos.v.x, o->pos.v.y, o->pos.v.z, o->color);
 		if (!e)
 			continue;
 		update_entity_orientation(e, &o->orientation);
@@ -1294,8 +1476,11 @@ static void draw_screen(void)
 		/* Everything but the planet receives the analytic planet umbra/penumbra shading
 		 * (0.0 lit .. 1.0 umbra), matching snis_client's object_in_shade(); the planet is
 		 * lit by its own terminator (surface normal vs. sun) and needs no in-shade term.
-		 * Only ships are listed in the HUD shade panel, which is a per-ship readout. */
-		if (o->kind != SCENE_PLANET) {
+		 * Only ships are listed in the HUD shade panel, which is a per-ship readout.
+		 * The black hole is excluded too: it is an unlit billboard that the shading would
+		 * not touch anyway, and letting it into deepest_planet_shade would report a number
+		 * about the scenery rather than about the scene. */
+		if (o->kind != SCENE_PLANET && o->kind != SCENE_BLACK_HOLE) {
 			float frac = compute_planet_shade_fraction(&o->pos);
 
 			entity_set_in_shade(e, frac);
@@ -1494,6 +1679,112 @@ static void handle_key_down(SDL_Keysym *keysym)
 				sun_shadow_contrast = 3.0;
 		} else {
 			sun_distance *= 1.111111;
+		}
+		break;
+	case SDLK_BACKQUOTE:
+		black_hole_enabled = !black_hole_enabled;
+		/* Swing the free camera onto it as it comes on, or you switch it on and see
+		 * nothing: it is parked out along the sun's bearing, which is nowhere near where
+		 * the camera starts out looking.  Aim by the angle scalars rather than by
+		 * cam_orientation, because apply_look_controls() rebuilds the orientation from
+		 * them every frame and would throw away anything written to the quaternion.
+		 * Leave a possessed ship's camera alone -- it is rigged to the ship. */
+		if (black_hole_enabled && black_hole_index >= 0 && controlled_slot < 0) {
+			union vec3 d;
+
+			vec3_sub(&d, &scene[black_hole_index].pos, &cam_pos);
+			vec3_normalize_self(&d);
+			/* Inverse of orientation_from_angles() acting on the +x base heading:
+			 * fwd = (cos(pitch)cos(yaw), sin(pitch), -cos(pitch)sin(yaw)). */
+			cam_pitch = clamp_pitch(asinf(d.v.y));
+			cam_yaw = atan2f(-d.v.z, d.v.x);
+			cam_roll = 0.0;
+		}
+		break;
+	case SDLK_HOME: /* closer, so it looms larger; Shift = smaller hole */
+		if (keysym->mod & KMOD_SHIFT) {
+			black_hole_radius *= 0.9;
+			/* MIN_BLACK_HOLE_RADIUS (snis.h): below this is not a size the game can
+			 * actually produce, so tuning against it would not transfer. */
+			if (black_hole_radius < 500.0)
+				black_hole_radius = 500.0;
+		} else {
+			black_hole_distance *= 0.9;
+			if (black_hole_distance < 2.0 * black_hole_radius)
+				black_hole_distance = 2.0 * black_hole_radius;
+		}
+		break;
+	case SDLK_END: /* farther; Shift = larger hole (MAX_BLACK_HOLE_RADIUS) */
+		if (keysym->mod & KMOD_SHIFT) {
+			black_hole_radius *= 1.111111;
+			if (black_hole_radius > 2000.0)
+				black_hole_radius = 2000.0;
+		} else {
+			black_hole_distance *= 1.111111;
+		}
+		break;
+	case SDLK_INSERT: /* photon ring (the disc's own rim) dimmer; Shift = tighter to the disc */
+		if (keysym->mod & KMOD_SHIFT) {
+			black_hole_material.black_hole.ring_width *= 0.9;
+			if (black_hole_material.black_hole.ring_width < 0.005)
+				black_hole_material.black_hole.ring_width = 0.005;
+		} else {
+			black_hole_material.black_hole.ring_brightness *= 0.9;
+			if (black_hole_material.black_hole.ring_brightness < 0.02)
+				black_hole_material.black_hole.ring_brightness = 0.0;
+		}
+		break;
+	case SDLK_DELETE: /* photon ring brighter (recovers from a true zero); Shift = wider */
+		if (keysym->mod & KMOD_SHIFT) {
+			black_hole_material.black_hole.ring_width *= 1.111111;
+			if (black_hole_material.black_hole.ring_width > 0.5)
+				black_hole_material.black_hole.ring_width = 0.5;
+		} else {
+			if (black_hole_material.black_hole.ring_brightness < 0.02)
+				black_hole_material.black_hole.ring_brightness = 0.02;
+			else
+				black_hole_material.black_hole.ring_brightness *= 1.111111;
+			if (black_hole_material.black_hole.ring_brightness > 8.0)
+				black_hole_material.black_hole.ring_brightness = 8.0;
+		}
+		break;
+	case SDLK_SLASH: /* Einstein radius as a multiple of the disc; Shift = larger */
+		if (keysym->mod & KMOD_SHIFT) {
+			black_hole_lens_strength += 0.1;
+			if (black_hole_lens_strength > 6.0)
+				black_hole_lens_strength = 6.0;
+		} else {
+			black_hole_lens_strength -= 0.1;
+			/* Below 1.0 the ring falls inside the disc and is simply not visible. */
+			if (black_hole_lens_strength < 0.0)
+				black_hole_lens_strength = 0.0;
+		}
+		break;
+	case SDLK_PAGEDOWN: /* frame dragging: negative and positive swirl are mirror images.
+			     * Shift = dimmer Einstein ring (the lensed one, out in the skybox;
+			     * distinct from the disc's own rim on INSERT/DELETE) */
+		if (keysym->mod & KMOD_SHIFT) {
+			black_hole_ring_glow *= 0.9;
+			if (black_hole_ring_glow < 0.01)
+				black_hole_ring_glow = 0.0;
+		} else {
+			black_hole_swirl -= 0.1;
+			if (black_hole_swirl < -4.0)
+				black_hole_swirl = -4.0;
+		}
+		break;
+	case SDLK_PAGEUP: /* Shift = brighter Einstein ring (recovers from a true zero) */
+		if (keysym->mod & KMOD_SHIFT) {
+			if (black_hole_ring_glow < 0.01)
+				black_hole_ring_glow = 0.01;
+			else
+				black_hole_ring_glow *= 1.111111;
+			if (black_hole_ring_glow > 4.0)
+				black_hole_ring_glow = 4.0;
+		} else {
+			black_hole_swirl += 0.1;
+			if (black_hole_swirl > 4.0)
+				black_hole_swirl = 4.0;
 		}
 		break;
 	case SDLK_g:
