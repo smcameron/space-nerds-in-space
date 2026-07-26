@@ -5,14 +5,27 @@ set -e
 
 GLSLANGVALIDATOR=/usr/bin/glslangValidator
 
+cd "$(dirname "$0")/.."
+
+# The engine prepends GRAVITATIONAL_LENS_HEADER to the skybox shader, so validating it needs
+# the same define or its uniform arrays have no size.  Read the count out of graph_dev.h
+# rather than repeating it here -- keeping the shader and the C constant from drifting apart
+# is the entire reason that header exists.  The other shaders do not use it, but an unused
+# define costs nothing and passing it everywhere keeps this script simple.
+LENS_DEFINE="-DMAX_GRAVITATIONAL_LENSES=$(sed -n \
+    's/^#define MAX_GRAVITATIONAL_LENSES[ \t]\+\([0-9]\+\).*/\1/p' graph_dev.h)"
+
 validate_es_vs() {
     echo "ES VS: $@"
-    cat "share/snis/shader-es/filmic.glsl" "$@" | ${GLSLANGVALIDATOR} -l -DINCLUDE_VS --glsl-version 100 --stdin -S vert
+    cat "share/snis/shader-es/filmic.glsl" "$@" | \
+        ${GLSLANGVALIDATOR} -l -DINCLUDE_VS ${LENS_DEFINE} --glsl-version 100 --stdin -S vert
 }
 
 validate_es_fs() {
     echo "ES FS: $@"
-    cat "share/snis/shader-es/filmic.glsl" "$@" | ${GLSLANGVALIDATOR} -l -DINCLUDE_FS --glsl-version 100 "-Pprecision highp float;" --stdin -S frag
+    cat "share/snis/shader-es/filmic.glsl" "$@" | \
+        ${GLSLANGVALIDATOR} -l -DINCLUDE_FS ${LENS_DEFINE} --glsl-version 100 \
+        "-Pprecision highp float;" --stdin -S frag
 }
 
 validate_es_both() {
@@ -22,20 +35,20 @@ validate_es_both() {
 
 validate_gl_vs() {
     echo "GS VS: $@"
-    cat "share/snis/shader/filmic.glsl" "$@" | ${GLSLANGVALIDATOR} -l -DINCLUDE_VS --glsl-version 150 --stdin -S vert
+    cat "share/snis/shader/filmic.glsl" "$@" | \
+        ${GLSLANGVALIDATOR} -l -DINCLUDE_VS ${LENS_DEFINE} --glsl-version 150 --stdin -S vert
 }
 
 validate_gl_fs() {
     echo "GS FS: $@"
-    cat "share/snis/shader/filmic.glsl" "$@" | ${GLSLANGVALIDATOR} -l -DINCLUDE_FS --glsl-version 150 --stdin -S frag
+    cat "share/snis/shader/filmic.glsl" "$@" | \
+        ${GLSLANGVALIDATOR} -l -DINCLUDE_FS ${LENS_DEFINE} --glsl-version 150 --stdin -S frag
 }
 
 validate_gl_both() {
     validate_gl_vs "$@"
     validate_gl_fs "$@"
 }
-
-cd "$(dirname "$0")/.."
 
 # now actually validate.
 validate_es_both "share/snis/shader-es/alpha_by_normal.shader"
