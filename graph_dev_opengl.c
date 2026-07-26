@@ -1242,6 +1242,24 @@ static struct graph_dev_gl_context {
 	GLsizei vp_width, vp_height;
 } sgc;
 
+/* The image loader uploads finished textures with bare glBindTexture() calls, outside the
+ * BIND_TEXTURE discipline above, and it does so between draws whenever an asynchronous load
+ * completes.  That leaves the cache claiming one texture is on the active unit while the upload
+ * has since bound a different one to that unit, and the next BIND_TEXTURE asking for the cached
+ * id then skips its bind and the draw samples whatever the upload left behind.
+ *
+ * The visible symptom is a cubemap arriving mid-scene and briefly replacing the skybox with
+ * itself -- an asteroid's rock texture wrapped around the whole sky for a frame or two, until
+ * something else binds to that unit and resyncs the cache by accident.
+ *
+ * So: once an upload has finished with the binding, tell the cache what it actually left on the
+ * active unit, which keeps the cache true rather than merely forcing the next bind.
+ */
+static void note_texture_bound_outside_cache(GLuint tex_id)
+{
+	sgc.texture_unit_bind[sgc.texture_unit_active] = tex_id;
+}
+
 #define BIND_TEXTURE(tex_unit, tex_type, tex_id) \
 	do { \
 		PROFILE_ZONE_START("BIND_TEXTURE"); \
@@ -5038,6 +5056,7 @@ static int cubemap_texture_to_gpu(struct graph_dev_image_load_request *r)
 				(r->hasAlpha[i] ? GL_RGBA : GL_RGB), GL_UNSIGNED_BYTE, image_data);
 	}
 	glGenerateMipmap(GL_TEXTURE_CUBE_MAP);
+	note_texture_bound_outside_cache(r->texture_id);
 
 	pthread_mutex_lock(&finished_loading_mutex);
 
@@ -5299,6 +5318,7 @@ static int texture_to_gpu_id(GLuint texture_number, char *image_data,
 			(hasAlpha ? GL_RGBA : GL_RGB), GL_UNSIGNED_BYTE, image_data);
 	if (use_mipmaps)
 		glGenerateMipmap(GL_TEXTURE_2D);
+	note_texture_bound_outside_cache(texture_number);
 	return 0;
 }
 
