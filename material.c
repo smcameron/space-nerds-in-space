@@ -303,3 +303,23 @@ void material_init_warp_gate_effect(struct material *m)
 	m->warp_gate_effect.u2 = 0.01;
 	m->rotate_randomly = 0;
 }
+
+void material_init_black_hole(struct material *m)
+{
+	m->type = MATERIAL_BLACK_HOLE;
+	m->billboard_type = MATERIAL_BILLBOARD_TYPE_SPHERICAL;
+	m->black_hole.disc_radius = 0.4;  /* set per frame; see BLACK_HOLE_BILLBOARD_MARGIN */
+	m->black_hole.edge_softness = 0.01; /* just enough ramp to antialias the rim, no more: the
+					     * whole point of drawing this procedurally is that the
+					     * edge sits at a known angle, and a wide fade would put
+					     * it back where it was with the painted blob */
+	/* Deliberately faint.  A black hole should read as an absence -- found by the way the
+	 * starfield bends around it and by the hole it punches in that field, not by glowing.  A
+	 * bright rim makes it look like an ordinary lit object with a highlight, so this is set
+	 * just high enough to define the horizon's edge against a dark sky and no higher.  Tuned
+	 * by eye in shadow_lab. */
+	m->black_hole.ring_brightness = 0.2;
+	m->black_hole.ring_width = 0.05;
+	m->black_hole.ring_color = sng_get_color(WHITE);
+	m->rotate_randomly = 0;
+}

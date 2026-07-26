@@ -44,6 +44,7 @@ struct entity;
 #define MATERIAL_PLANETARY_LIGHTNING 15
 #define MATERIAL_WARP_GATE_EFFECT 16
 #define MATERIAL_SUN 17
+#define MATERIAL_BLACK_HOLE 18
 
 #define MATERIAL_BILLBOARD_TYPE_NONE 0
 #define MATERIAL_BILLBOARD_TYPE_SCREEN 1
@@ -99,6 +100,24 @@ struct material_sun {
 	float bloom_brightness;  /* bloom emission scale */
 	float bloom_radius;      /* bloom half-brightness radius in UV (from the disc edge), per frame */
 	float bloom_falloff;     /* bloom edge sharpness: exponent k of the 1/(1 + d^k) falloff */
+};
+
+/* An event horizon: a flat, wholly opaque black disc, plus a thin bright rim standing in for the
+ * photon ring.  Drawn procedurally rather than from a texture because the disc's edge has to
+ * land at a known angle -- the skybox's gravitational lensing floors its deflection at exactly
+ * this radius and relies on the disc to cover the singularity there (see
+ * graph_dev_set_gravitational_lenses()).  A painted blob's edge is wherever its alpha happens to
+ * fade out, which is both fuzzy and resolution-bound; this one is exact at any zoom.
+ *
+ * disc_radius is in the billboard's 0..0.5 UV space.  Size the billboard a little larger than
+ * the disc (see BLACK_HOLE_BILLBOARD_MARGIN in shadow_lab.c) so the rim and its glow have
+ * somewhere to go instead of being clipped at the quad's edge. */
+struct material_black_hole {
+	float disc_radius;      /* disc radius in UV (0..0.5), set per frame */
+	float edge_softness;    /* rim ramp width as a fraction of the disc radius */
+	float ring_brightness;  /* photon-ring rim emission scale; 0 for a bare disc */
+	float ring_width;       /* rim glow width as a fraction of the disc radius */
+	struct sng_color ring_color;
 };
 
 #define MATERIAL_NEBULA_NPLANES 6
@@ -188,6 +207,7 @@ struct material {
 		struct material_planetary_lightning planetary_lightning;
 		struct material_warp_gate_effect warp_gate_effect;
 		struct material_sun sun;
+		struct material_black_hole black_hole;
 	};
 	int type;
 	int billboard_type;
@@ -197,6 +217,7 @@ struct material {
 extern void material_init_texture_mapped(struct material *m);
 extern void material_init_texture_mapped_unlit(struct material *m);
 extern void material_init_sun(struct material *m);
+extern void material_init_black_hole(struct material *m);
 extern void material_init_texture_cubemap(struct material *m);
 extern void material_init_nebula(struct material *m);
 extern void material_init_textured_particle(struct material *m);

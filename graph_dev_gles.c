@@ -914,6 +914,20 @@ struct graph_dev_gl_point_cloud_shader {
 	GLint time_id;
 };
 
+struct graph_dev_gl_black_hole_shader {
+	struct graph_dev_gl_shader_metadata meta;
+	GLuint program_id;
+	GLuint vao_id;
+	GLint mvp_matrix_id;
+	GLint vertex_position_id;
+	GLint texture_coord_id;
+	GLint disc_radius_id;
+	GLint edge_softness_id;
+	GLint ring_brightness_id;
+	GLint ring_width_id;
+	GLint ring_color_id;
+};
+
 struct graph_dev_gl_skybox_shader {
 	struct graph_dev_gl_shader_metadata meta;
 	GLuint program_id;
@@ -1076,6 +1090,7 @@ static struct graph_dev_gl_single_color_shader single_color_shader;
 static struct graph_dev_gl_line_single_color_shader line_single_color_shader;
 static struct graph_dev_gl_vertex_color_shader vertex_color_shader;
 static struct graph_dev_gl_point_cloud_shader point_cloud_shader;
+static struct graph_dev_gl_black_hole_shader black_hole_shader;
 static struct graph_dev_gl_skybox_shader skybox_shader;
 
 /* Gravitational lenses bending the skybox, packed the way the shader's uniform arrays want
@@ -2692,6 +2707,7 @@ extern int graph_dev_entity_render_order(struct entity *e)
 	case MATERIAL_ALPHA_BY_NORMAL:
 	case MATERIAL_PLANETARY_LIGHTNING:
 	case MATERIAL_WARP_GATE_EFFECT:
+	case MATERIAL_BLACK_HOLE:
 		does_blending = 1;
 		break;
 	case MATERIAL_TEXTURE_MAPPED_UNLIT:
@@ -2708,6 +2724,54 @@ extern int graph_dev_entity_render_order(struct entity *e)
 		return GRAPH_DEV_RENDER_NEAR_TO_FAR;
 }
 
+/* Draw an event horizon: an opaque black disc with a thin bright rim, computed procedurally by
+ * the black hole shader.  The disc radius (in UV) comes from the material and the caller sets it
+ * per frame, so the disc stays world-scale while the billboard is sized a little larger to leave
+ * the rim glow somewhere to go. */
+static void graph_dev_raster_black_hole(const struct mat44 *mat_mvp, struct mesh *m,
+					struct material *material)
+{
+	struct mesh_gl_info *ptr = m->graph_ptr;
+	struct material_black_hole *bh = &material->black_hole;
+
+	glEnable(GL_DEPTH_TEST);
+	/* Blended, so no depth write -- but the disc is opaque, and the far-to-near ordering
+	 * graph_dev_render_order() gives it is what keeps things behind it hidden. */
+	glDepthMask(GL_FALSE);
+	glEnable(GL_BLEND);
+	BLEND_FUNC(GL_ONE, GL_ONE_MINUS_SRC_ALPHA); /* premultiplied; see black_hole.frag */
+
+	activate_shader(&black_hole_shader);
+
+	glUniformMatrix4fv(black_hole_shader.mvp_matrix_id, 1, GL_FALSE, &mat_mvp->m[0][0]);
+	glUniform1f(black_hole_shader.disc_radius_id, bh->disc_radius);
+	glUniform1f(black_hole_shader.edge_softness_id, bh->edge_softness);
+	glUniform1f(black_hole_shader.ring_brightness_id, bh->ring_brightness);
+	glUniform1f(black_hole_shader.ring_width_id, bh->ring_width);
+	glUniform3f(black_hole_shader.ring_color_id, bh->ring_color.red, bh->ring_color.green,
+			bh->ring_color.blue);
+
+	glEnableVertexAttribArray(black_hole_shader.vertex_position_id);
+	glBindBuffer(GL_ARRAY_BUFFER, ptr->vertex_buffer);
+	glVertexAttribPointer(black_hole_shader.vertex_position_id, 3, GL_FLOAT, GL_FALSE,
+		sizeof(struct vertex_buffer_data),
+		(void *) offsetof(struct vertex_buffer_data, position.v.x));
+
+	if (black_hole_shader.texture_coord_id >= 0) {
+		glEnableVertexAttribArray(black_hole_shader.texture_coord_id);
+		glBindBuffer(GL_ARRAY_BUFFER, ptr->triangle_vertex_buffer);
+		glVertexAttribPointer(black_hole_shader.texture_coord_id, 2, GL_FLOAT, GL_TRUE,
+			sizeof(struct vertex_triangle_buffer_data),
+			(void *) offsetof(struct vertex_triangle_buffer_data, texture_coord.v.x));
+	}
+
+	glDrawArrays(GL_TRIANGLES, 0, m->ntriangles * 3);
+
+	glDisable(GL_DEPTH_TEST);
+	glDepthMask(GL_TRUE);
+	glDisable(GL_BLEND);
+}
+
 static void graph_dev_raster_triangle_mesh(struct entity_context *cx, struct entity *e,
 	union vec3 *eye_light_pos, const struct entity_transform *transform, struct sng_color *line_color)
 {
@@ -2718,6 +2782,7 @@ static void graph_dev_raster_triangle_mesh(struct entity_context *cx, struct ent
 	struct sng_color atmosphere_color = { 0 };
 	union vec3 water_color;
 	union vec3 sun_color;
+	int is_black_hole = 0;
 
 	int filled_triangle = ((c->renderer & FLATSHADING_RENDERER) || (c->renderer & BLACK_TRIS))
 				&& !(e->render_style & RENDER_NO_FILL);
@@ -2830,6 +2895,10 @@ static void graph_dev_raster_triangle_mesh(struct entity_context *cx, struct ent
 			rtp.alpha = 1.0;
 			rtp.textures_not_ready = !graph_dev_texture_ready(rtp.texture_number);
 			}
+			break;
+		case MATERIAL_BLACK_HOLE:
+			/* Handled by graph_dev_raster_black_hole() below; rtp.shader stays NULL. */
+			is_black_hole = 1;
 			break;
 		case MATERIAL_TEXTURE_MAPPED_UNLIT: {
 			rtp.shader = &textured_shader;
@@ -3061,7 +3130,9 @@ static void graph_dev_raster_triangle_mesh(struct entity_context *cx, struct ent
 
 				graph_dev_raster_texture(&rtp);
 			} else {
-				if (atmosphere && !rtp.textures_not_ready) {
+				if (is_black_hole) {
+					graph_dev_raster_black_hole(rtp.mat_mvp, e->m, e->material_ptr);
+				} else if (atmosphere && !rtp.textures_not_ready) {
 					graph_dev_raster_atmosphere(rtp.mat_mvp, rtp.mat_mv, rtp.mat_normal,
 						e->m, &atmosphere_color, eye_light_pos, rtp.alpha,
 						&shadow_annulus, rtp.ring_texture_v, rtp.atmosphere_brightness);
@@ -4092,12 +4163,31 @@ static void setup_color_by_w_shader(struct graph_dev_gl_color_by_w_shader *shade
 }
 
 
+static void setup_black_hole_shader(struct graph_dev_gl_black_hole_shader *shader)
+{
+	maybe_unload_shader(&shader->meta, &shader->program_id);
+	shader->program_id = load_shaders(shader_directory,
+				"black_hole.vert", "black_hole.frag", UNIVERSAL_SHADER_HEADER);
+	if (GLES_HAS_VAO)
+		glGenVertexArraysOES(1, &shader->vao_id);
+
+	shader->mvp_matrix_id = glGetUniformLocation(shader->program_id, "u_MVPMatrix");
+	shader->vertex_position_id = glGetAttribLocation(shader->program_id, "a_Position");
+	shader->texture_coord_id = glGetAttribLocation(shader->program_id, "a_TexCoord");
+	shader->disc_radius_id = glGetUniformLocation(shader->program_id, "u_DiscRadius");
+	shader->edge_softness_id = glGetUniformLocation(shader->program_id, "u_EdgeSoftness");
+	shader->ring_brightness_id = glGetUniformLocation(shader->program_id, "u_RingBrightness");
+	shader->ring_width_id = glGetUniformLocation(shader->program_id, "u_RingWidth");
+	shader->ring_color_id = glGetUniformLocation(shader->program_id, "u_RingColor");
+}
+
 static void setup_skybox_shader(struct graph_dev_gl_skybox_shader *shader)
 {
 	maybe_unload_shader(&shader->meta, &shader->program_id);
 	/* Create and compile our GLSL program from the shaders */
 	shader->program_id = load_shaders(shader_directory, "skybox.vert", "skybox.frag",
-						UNIVERSAL_SHADER_HEADER FILMIC_TONEMAPPING);
+						UNIVERSAL_SHADER_HEADER FILMIC_TONEMAPPING
+						GRAVITATIONAL_LENS_HEADER);
 	/* create the VAO for this shader */
 	if (GLES_HAS_VAO) {
 		glGenVertexArraysOES(1, &shader->vao_id);
@@ -4456,6 +4546,7 @@ void graph_dev_reload_all_shaders(void)
 	setup_point_cloud_shader("point_cloud", &point_cloud_shader);
 	setup_color_by_w_shader(&color_by_w_shader);
 	setup_skybox_shader(&skybox_shader);
+	setup_black_hole_shader(&black_hole_shader);
 	setup_textured_shader("textured", UNIVERSAL_SHADER_HEADER FILMIC_TONEMAPPING, &textured_shader);
 	setup_textured_shader("textured-with-sphere-shadow-per-pixel", UNIVERSAL_SHADER_HEADER FILMIC_TONEMAPPING,
 				&textured_with_sphere_shadow_shader);
