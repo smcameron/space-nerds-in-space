@@ -78,7 +78,8 @@ static SDL_Window *screen;
 
 /* The scene.  A fixed-capacity list of objects rebuilt into the entity context each frame. */
 #define MAX_SCENE_OBJECTS 64
-enum scene_object_kind { SCENE_SHIP, SCENE_PLANET, SCENE_ASTEROID, SCENE_STARBASE, SCENE_BLACK_HOLE };
+enum scene_object_kind { SCENE_SHIP, SCENE_PLANET, SCENE_ATMOSPHERE, SCENE_ASTEROID,
+				SCENE_STARBASE, SCENE_BLACK_HOLE };
 struct scene_object {
 	enum scene_object_kind kind;
 	struct mesh *mesh;
@@ -94,6 +95,9 @@ struct scene_object {
 	 * aim.  See turret_mount_point(). */
 	union vec3 turret_mount;
 	float turret_azimuth, turret_elevation;
+	/* Entity alpha.  Only the atmosphere shell uses anything but 1.0; snis_client draws it
+	 * at 0.5, and MATERIAL_ATMOSPHERE multiplies its own u_Alpha by this. */
+	float alpha;
 	float scale;
 	int color;
 	int no_cast_shadow;
@@ -345,6 +349,10 @@ static struct mesh *planet_mesh;
 static struct mesh *starbase_mesh;
 static struct mesh *asteroid_mesh;
 static struct material asteroid_material;
+static struct material planet_material;
+static struct material atmosphere_material;
+/* MATERIAL_ATMOSPHERE takes a POINTER to this, so it has to outlive build_scene(). */
+static float atmosphere_brightness = 1.0;
 
 /* Analytic planet umbra/penumbra shading, mirroring snis_client's update_shading_planet():
  * returns the deepest fraction (0.0 = fully lit, 1.0 = full umbra) of the sun's disc that any
@@ -531,6 +539,7 @@ static struct scene_object *add_scene_object(enum scene_object_kind kind, struct
 	o->scale = scale;
 	o->color = color;
 	o->no_cast_shadow = 0;
+	o->alpha = 1.0;
 	return o;
 }
 
@@ -660,8 +669,37 @@ static void build_scene(void)
 		 * easily (planet subtends ~12.8 degrees against the sun's ~1.6).  All are
 		 * adjustable live (planet radius/distance 3/4, 5/6; sun distance/radius U/O, G/H). */
 		float planet_r = 800.0;
-		struct scene_object *p = add_scene_object(SCENE_PLANET, planet_mesh, NULL,
+		struct material *pmat;
+		struct scene_object *p, *atm;
+
+		/* Use the game's textured-planet material, not a bare mesh.  A NULL material falls
+		 * through to single_color_lit_shader, which is one of the few shaders that always
+		 * honoured the star light tint -- so a grey sphere here responded to the tint while
+		 * the game's actual planets, on the cubemap shader, ignored it entirely.  That let
+		 * star light tint be tuned against a preview no planet in the game rendered like.
+		 * Keep this on the real material so the discrepancy cannot come back. */
+		material_init_textured_planet(&planet_material);
+		planet_material.textured_planet.texture_id = load_cubemap("planet-texture4-");
+		pmat = planet_material.textured_planet.texture_id ? &planet_material : NULL;
+		p = add_scene_object(SCENE_PLANET, planet_mesh, pmat,
 				0.0, -3570.0, 0.0, planet_r, GRAY50);
+
+		/* The atmosphere shell, built the way snis_client builds it (see the has_atmosphere
+		 * branch of update_planet()): a slightly larger sphere at alpha 0.5 carrying
+		 * MATERIAL_ATMOSPHERE.  It is here for the same reason the planet now carries its
+		 * real material -- the atmosphere is tinted by the star's colour, and a preview
+		 * that omits it cannot show a purple star leaving a white halo. */
+		material_init_atmosphere(&atmosphere_material);
+		atmosphere_material.atmosphere.brightness = &atmosphere_brightness;
+		atmosphere_material.atmosphere.brightness_modifier = 1.0;
+		atmosphere_material.atmosphere.ring_material = NULL;
+		atm = add_scene_object(SCENE_ATMOSPHERE, planet_mesh, &atmosphere_material,
+				0.0, -3570.0, 0.0, planet_r * atmosphere_material.atmosphere.scale,
+				WHITE);
+		if (atm) {
+			atm->alpha = 0.5;
+			atm->no_cast_shadow = 1;
+		}
 		if (p) {
 			p->color = GRAY50;
 			/* The planet must not cast into the CSM depth map: planet->ship shadowing is
@@ -1829,6 +1867,8 @@ static void draw_screen(void)
 			update_entity_material(e, o->mesh->material);
 		if (o->no_cast_shadow)
 			update_entity_shadow_casting(e, 0);
+		if (o->alpha < 1.0)
+			entity_update_alpha(e, o->alpha);
 		/* Everything but the planet receives the analytic planet umbra/penumbra shading
 		 * (0.0 lit .. 1.0 umbra), matching snis_client's object_in_shade(); the planet is
 		 * lit by its own terminator (surface normal vs. sun) and needs no in-shade term.
@@ -1836,7 +1876,8 @@ static void draw_screen(void)
 		 * The black hole is excluded too: it is an unlit billboard that the shading would
 		 * not touch anyway, and letting it into deepest_planet_shade would report a number
 		 * about the scenery rather than about the scene. */
-		if (o->kind != SCENE_PLANET && o->kind != SCENE_BLACK_HOLE) {
+		if (o->kind != SCENE_PLANET && o->kind != SCENE_ATMOSPHERE &&
+				o->kind != SCENE_BLACK_HOLE) {
 			float frac = compute_planet_shade_fraction(&o->pos);
 
 			entity_set_in_shade(e, frac);
