@@ -125,9 +125,21 @@ static int ship_slot_count;
  * throttle acceleration and drag (momentum) rather than realistic 6-DOF space flight.  The
  * chase camera trails behind and above and eases toward its target, catching up to the ship's
  * heading faster the quicker you go. */
-static float ship_speed;      /* current speed along the nose, world units per frame */
+static float ship_speed;      /* current speed along the nose, world units per SECOND */
 static float ship_max_speed;  /* set from the scene scale in build_scene */
-static float ship_accel;      /* throttle acceleration per frame */
+static float ship_accel;      /* throttle acceleration, units per second per second */
+/* Seconds since the previous frame.  Every rate below is per second and is scaled by this,
+ * so the lab flies the same on any machine.  It used to be per FRAME, which made every
+ * speed a function of how fast the host could draw -- fine for eyeballing a shadow, useless
+ * for tuning anything whose look depends on how fast you are travelling. */
+static float frame_dt = 1.0f / (float) FPS;
+/* Multiplier on every flight speed.  The lab's speeds are derived from its own scene scale,
+ * which is a couple of hundred units across -- right for easing a ship through a penumbra
+ * band, and about fourteen times slower than the game's ship, which does 900 units/sec
+ * (MAX_PLAYER_VELOCITY 30 per tick at 30Hz).  The star field is tuned in tens of thousands
+ * of units, so judging its drift needs the game's speed, not the lab's.  Rather than pick
+ * one and break the other, make it a dial and put the resulting speed on the HUD. */
+static float speed_scale = 1.0;
 /* The chase rig's orientation trails the ship's a little; the camera is placed behind and
  * above within this (lagged) frame and looks at the ship, so a turn briefly shows the ship
  * from the side before the camera swings in behind it. */
@@ -165,7 +177,7 @@ static int turret_view = 0;    /* 1 = look through the possessed ship's turret *
 static struct mesh *turret_mesh;
 
 static float mouse_sensitivity = 0.003;
-static float roll_rate = 0.02;
+static float roll_rate = 0.02f * (float) FPS; /* radians per second */
 static float ambient_light = 0.015; /* match snis_client's default so lighting mirrors the game */
 static int shadow_debug_mode = 0;   /* 0 = off, 1 = shadow factor, 2 = cascade index */
 static int mouse_look_active = 0;
@@ -300,6 +312,17 @@ static float black_hole_ring_glow = 0.04; /* Einstein ring's emission, in black_
 static int nstar_field_stars;
 static float star_field_radius = 8750.0;
 static int star_field_initialized;
+/* snis.h MAX_PLAYER_VELOCITY (30 per tick) at the game's 30Hz tick, so the HUD can say how
+ * fast a star drifts for a player rather than only for this camera. */
+#define SNIS_TOP_SPEED_PER_SECOND (30.0 * 30.0)
+/* Measured camera speed, in world units per second, and the star drift it produces.
+ *
+ * These have to be measured rather than assumed.  The free camera moves move_speed per
+ * FRAME (scene_scale * 0.02, so 24 units at the usual spacing), five times that with shift,
+ * and nothing caps the frame rate -- so the lab's camera runs at tens of thousands of units
+ * per second, tens of times the game's 900.  Quoting the game's figure on the HUD made the
+ * radius look like it bought far more than it did. */
+static float measured_cam_speed; /* of whatever is being flown, units per second */
 static int black_hole_index[NUM_LAB_BLACK_HOLES]; /* scene[] indices, for position/scale updates */
 static int black_hole_lensed[NUM_LAB_BLACK_HOLES]; /* won a lens slot this frame; HUD readout */
 static float black_hole_coverage[NUM_LAB_BLACK_HOLES]; /* fraction of the window it distorts */
@@ -812,11 +835,13 @@ static void build_scene(void)
 			ship_slots[ship_slot_count++] = i;
 	}
 
-	move_speed = spacing * 0.02;
+	/* Per second, not per frame.  The 60 keeps the feel these had when they were
+	 * per-frame values at the loop's 60fps. */
+	move_speed = spacing * 0.02 * FPS;
 	/* Possessed-ship flight: a slower top speed than the free camera so a ship can be eased
 	 * through the narrow penumbra band, reached over about a second of throttle. */
-	ship_max_speed = spacing * 0.008;
-	ship_accel = ship_max_speed * 0.06;
+	ship_max_speed = spacing * 0.008 * FPS;
+	ship_accel = ship_max_speed * 0.06 * FPS;
 
 	/* Seed the shadow tunables to the values tuned here (and now the game defaults); all
 	 * remain adjustable live.  Six cascades split purely logarithmically (lambda 1.0, see
@@ -932,9 +957,9 @@ static void apply_look_controls(union quat *orientation, float *yaw, float *pitc
 	mouse_accum_dy = 0.0;
 
 	if (keys[SDL_SCANCODE_Q])
-		*roll += roll_rate;
+		*roll += roll_rate * frame_dt;
 	if (keys[SDL_SCANCODE_E])
-		*roll -= roll_rate;
+		*roll -= roll_rate * frame_dt;
 
 	orientation_from_angles(orientation, *yaw, *pitch, *roll);
 }
@@ -947,6 +972,7 @@ static void fly_controls(union vec3 *pos, union quat *orientation, float speed)
 
 	if (keys[SDL_SCANCODE_LSHIFT] || keys[SDL_SCANCODE_RSHIFT])
 		speed *= 5.0;
+	speed *= speed_scale * frame_dt;
 
 	apply_look_controls(orientation, &cam_yaw, &cam_pitch, &cam_roll);
 	camera_basis(orientation, &fwd, &up, &right);
@@ -986,24 +1012,27 @@ static void fly_ship(struct scene_object *ship, int steer_with_mouse)
 		apply_look_controls(&ship->orientation, &ship->yaw, &ship->pitch, &ship->roll);
 	} else {
 		if (keys[SDL_SCANCODE_Q])
-			ship->roll += roll_rate;
+			ship->roll += roll_rate * frame_dt;
 		if (keys[SDL_SCANCODE_E])
-			ship->roll -= roll_rate;
+			ship->roll -= roll_rate * frame_dt;
 		orientation_from_angles(&ship->orientation, ship->yaw, ship->pitch, ship->roll);
 	}
 
 	if (keys[SDL_SCANCODE_W])
-		ship_speed += ship_accel;
+		ship_speed += ship_accel * frame_dt;
 	if (keys[SDL_SCANCODE_S])
-		ship_speed -= ship_accel * 1.5; /* brake / reverse harder than it accelerates */
-	ship_speed *= 0.985;                    /* drag: coast to a stop when off the throttle */
+		ship_speed -= ship_accel * 1.5 * frame_dt; /* brake harder than it accelerates */
+	/* Drag, as a rate rather than a per-frame factor: 0.985 per frame at 60fps is a time
+	 * constant of about 1.1 seconds, and powf keeps that constant whatever the frame rate. */
+	ship_speed *= powf(0.985f, frame_dt * (float) FPS);
 	if (ship_speed > ship_max_speed)
 		ship_speed = ship_max_speed;
 	if (ship_speed < -ship_max_speed * 0.4) /* reverse is slower than forward */
 		ship_speed = -ship_max_speed * 0.4;
 
 	camera_basis(&ship->orientation, &fwd, &up, &right);
-	step = fwd; vec3_mul_self(&step, ship_speed); vec3_add_self(&ship->pos, &step);
+	step = fwd; vec3_mul_self(&step, ship_speed * speed_scale * frame_dt);
+	vec3_add_self(&ship->pos, &step);
 }
 
 /* Is the turret rig actually in use?  turret_view is only meaningful while a ship is
@@ -1323,6 +1352,9 @@ static const char * const help_text[] = {
 	"                     IS A CEILING ON DRIFT: PARALLAX RATE IS SPEED OVER DISTANCE, SO NO\n"
 	"                     STAR SWEEPS FASTER THAN SPEED/NEAREST HOWEVER LONG YOU FLY AT IT.\n"
 	"                     TOO LOW AND THE SKY BECOMES FALLING SNOW.\n"
+	"  - F7 / SHIFT+F7    FLIGHT SPEED SLOWER / FASTER.  THE LAB'S SPEEDS COME FROM ITS\n"
+	"                     OWN SCENE SCALE AND ARE SOME 14x SLOWER THAN THE GAME'S SHIP;\n"
+	"                     RAISE THIS TO JUDGE THE STAR FIELD AT THE SPEED PLAYERS FLY.\n"
 	"  - 3 / 4            PLANET RADIUS SMALLER / LARGER\n"
 	"  - 5 / 6            PLANET CLOSER / FARTHER FROM THE SHIP CLUSTER\n"
 	"                     (FARTHER + TIGHTER CLUSTER = WIDER, SOFTER PENUMBRA)\n"
@@ -1762,6 +1794,19 @@ static void draw_hud(void)
 		nstar_field_stars ? "ON" : "OFF", nstar_field_stars, star_field_radius,
 		3.0 * star_field_radius);
 	sng_abs_xy_draw_string(buffer, TINY_FONT, 10, y); y += dy;
+	/* Both numbers, because they are far apart: this camera is not the game's ship, and
+	 * tuning the radius against the drift you can see here would set it for a vehicle that
+	 * does not exist. */
+	snprintf(buffer, sizeof(buffer),
+		"  MAX DRIFT %5.2f DEG/S AT THIS LAB'S %6.0f U/S   |   %.2f DEG/S AT THE GAME'S "
+		"%.0f U/S   |   SPEED x%.2f (F7/SHIFT+F7)",
+		star_field_radius > 0.0 ?
+			measured_cam_speed / star_field_radius * 180.0 / M_PI : 0.0,
+		measured_cam_speed,
+		star_field_radius > 0.0 ?
+			SNIS_TOP_SPEED_PER_SECOND / star_field_radius * 180.0 / M_PI : 0.0,
+		SNIS_TOP_SPEED_PER_SECOND, speed_scale);
+	sng_abs_xy_draw_string(buffer, TINY_FONT, 10, y); y += dy;
 
 	if (show_shade_panel) {
 		int s;
@@ -1804,7 +1849,50 @@ static void draw_screen(void)
 	set_star_light_tint(cx, sun_material.sun.color.red, sun_material.sun.color.green,
 		sun_material.sun.color.blue, sun_light_tint, sun_dark_tint, sun_shadow_contrast);
 
+	/* Frame delta, measured BEFORE anything moves, so this frame's motion uses the time
+	 * this frame actually took.  Clamped: a stall, a resize or a breakpoint would otherwise
+	 * teleport whatever is being flown halfway across the scene on the next frame. */
+	{
+		static double prev_time;
+		static int have_prev;
+		double now = time_now_double();
+
+		if (have_prev && now > prev_time)
+			frame_dt = (float) (now - prev_time);
+		else
+			frame_dt = 1.0f / (float) FPS;
+		if (frame_dt > 0.25f)
+			frame_dt = 0.25f;
+		prev_time = now;
+		have_prev = 1;
+	}
+
 	update_camera();
+	{
+		/* Measure whatever is being FLOWN, not the camera.  Possessing a ship puts a
+		 * lagging chase camera behind it, so the camera's speed trails the ship's
+		 * through every throttle change and only agrees in steady flight -- which is
+		 * exactly when you are not looking at the number. */
+		static union vec3 prev_pos;
+		static int have_prev;
+		union vec3 pos, d;
+
+		if (controlled_slot >= 0 && controlled_slot < ship_slot_count)
+			pos = scene[ship_slots[controlled_slot]].pos;
+		else
+			pos = cam_pos;
+
+		if (have_prev && frame_dt > 0.0) {
+			float inst;
+
+			vec3_sub(&d, &pos, &prev_pos);
+			inst = vec3_magnitude(&d) / frame_dt;
+			/* Smoothed, or the readout flickers too fast to read. */
+			measured_cam_speed += (inst - measured_cam_speed) * 0.1;
+		}
+		prev_pos = pos;
+		have_prev = 1;
+	}
 	update_sun();
 	update_black_holes(); /* after update_sun(): they are parked around the line out to the sun */
 
@@ -2324,6 +2412,16 @@ static void handle_key_down(SDL_Keysym *keysym)
 			nstar_field_stars = nstar_field_stars ? 0 : 32000;
 		}
 		star_field_initialized = 0;
+		break;
+	case SDLK_F7: /* flight speed scale down / up (Shift).  See speed_scale. */
+		if (keysym->mod & KMOD_SHIFT)
+			speed_scale *= 1.5;
+		else
+			speed_scale /= 1.5;
+		if (speed_scale < 0.05)
+			speed_scale = 0.05;
+		if (speed_scale > 200.0)
+			speed_scale = 200.0;
 		break;
 	case SDLK_F6: /* nearest star closer / further (Shift).  Sets how fast the field can drift,
 		       * which is what decides whether it reads as a sky or as falling snow. */
