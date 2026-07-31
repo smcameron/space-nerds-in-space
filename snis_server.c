@@ -11828,9 +11828,11 @@ static void respawn_player(struct snis_entity *o, uint8_t warpgate_number)
 		}
 	}
 
-	int found = 0;
+	struct snis_entity *first_choice = NULL;
+	struct snis_entity *second_choice = NULL;
+	struct snis_entity *f;
 	for (int i = 0; i <= snis_object_pool_highest_object(pool); i++) {
-		struct snis_entity *f = &go[i];
+		f = &go[i];
 
 		if (!f->alive || f->type != OBJTYPE_PLANET)
 			continue;
@@ -11838,6 +11840,25 @@ static void respawn_player(struct snis_entity *o, uint8_t warpgate_number)
 		if (f->tsd.planet.security != HIGH_SECURITY)
 			continue;
 
+		second_choice = f;
+		/* Check if there's a starbase near by */
+		for (int j = 0; j <= snis_object_pool_highest_object(pool); j++) {
+			struct snis_entity *sb = &go[j];
+			if (!sb->alive || sb->type != OBJTYPE_STARBASE)
+				continue;
+			if (sb->tsd.starbase.associated_planet_id != (int) f->id)
+				continue;
+			first_choice = f;
+			break;
+		}
+		if (first_choice)
+			break;
+	}
+
+	f = first_choice; /* high security planet with starbase */
+	if (!f)
+		f = second_choice; /* high security planet without starbase */
+	if (f) {
 		/* put player near friendly planet at dist of 2 radii plus a bit. */
 		a1 = snis_randn(360) * M_PI / 180;
 		a2 = snis_randn(360) * M_PI / 180;
@@ -11847,10 +11868,7 @@ static void respawn_player(struct snis_entity *o, uint8_t warpgate_number)
 		double z = f->z + sin(a2) * f->tsd.planet.radius * rf;
 		set_object_location(o, x, y, z);
 		printf("found!\n");
-		found = 1;
-		break;
-	}
-	if (!found) { /* It's a lonely universe.  Roll the dice. */
+	} else { /* Third choice. It's a lonely universe.  Roll the dice. */
 		double x, y, z;
 		for (int i = 0; i < 100; i++) {
 			x = XKNOWN_DIM * (double) rand() / (double) RAND_MAX;
