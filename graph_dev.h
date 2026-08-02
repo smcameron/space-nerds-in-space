@@ -168,6 +168,12 @@ extern void graph_dev_draw_skybox(const struct mat44 *mat_vp);
  * The caller works out the geometry, since it is the only one that knows where the camera and
  * the black holes are; graph_dev just hands the numbers to the shader.  Slots beyond n are
  * disabled by zeroing their Einstein radius, so unused ones cost nothing but a loop iteration.
+ *
+ * The caller must pass the lenses sorted nearest first.  The shader bends each ray by one lens
+ * at a time in slot order, so that a far hole lenses an image the near ones have already moved
+ * rather than the two deflections merely adding; that is only right if the slots run in the
+ * order the light meets them.  Distance itself is never needed here, only the ordering, which
+ * is why there is no distance field below.
  */
 #define MAX_GRAVITATIONAL_LENSES 3
 /* Prepended to the skybox shader so its uniform arrays are sized from the constant above

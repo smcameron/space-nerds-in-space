@@ -1114,9 +1114,11 @@ static void update_black_holes(void)
 		struct graph_dev_gravitational_lens lens;
 		float coverage;		/* fraction of the window its distortion falls on */
 		float einstein;		/* only a tie-break; see the selection below */
+		float distance;		/* camera to hole, for ordering the slots once chosen */
 		int hole;
 	} cand[NUM_LAB_BLACK_HOLES];
 	int taken[NUM_LAB_BLACK_HOLES];
+	int chosen[MAX_GRAVITATIONAL_LENSES];
 	union vec3 antisolar, base_up, base_right, to_hole, anchor, fwd, up, right;
 	float fov, tan_half_y, tan_half_x, pixels_per_radian, half_size;
 	int i, n, ncand = 0;
@@ -1242,6 +1244,7 @@ static void update_black_holes(void)
 		cand[ncand].lens.swirl = black_hole_swirl_of(i);
 		cand[ncand].coverage = black_hole_coverage[i];
 		cand[ncand].einstein = einstein;
+		cand[ncand].distance = dist;
 		cand[ncand].hole = i;
 		ncand++;
 	}
@@ -1265,9 +1268,23 @@ static void update_black_holes(void)
 		if (best < 0)
 			break;
 		taken[best] = 1;
-		lens[n] = cand[best].lens;
+		chosen[n] = best;
 		black_hole_lensed[cand[best].hole] = 1;
 	}
+
+	/* Which holes get a slot is one question, in what order they go into the slots is another.
+	 * The shader bends the ray by one lens at a time, so the slots have to run in the order the
+	 * light meets them -- nearest first -- or a far hole ends up lensing the sky as though the
+	 * near hole in front of it were not there.  Insertion sort: n is at most three. */
+	for (i = 1; i < n; i++) {
+		int c = chosen[i], j;
+
+		for (j = i; j > 0 && cand[chosen[j - 1]].distance > cand[c].distance; j--)
+			chosen[j] = chosen[j - 1];
+		chosen[j] = c;
+	}
+	for (i = 0; i < n; i++)
+		lens[i] = cand[chosen[i]].lens;
 	graph_dev_set_gravitational_lenses(n, n ? lens : NULL);
 }
 
@@ -1339,6 +1356,12 @@ static const char * const help_text[] = {
 	"    ORDER AS THE ANGULAR EINSTEIN RADIUS, WHICH IS NOT THE SAME AS BY DISTANCE:\n"
 	"    RADIUS RUNS 500..2000, SO A LARGE FAR HOLE CAN SUBTEND MORE SKY THAN A SMALL\n"
 	"    NEAR ONE -- WHICH IS WHAT HOLES 1 AND 2 SHOW.\n"
+	"  - WHICH HOLES GET SLOTS IS RANKED BY COVERAGE, BUT THE SLOTS THEMSELVES ARE FILLED\n"
+	"    NEAREST FIRST, BECAUSE THE SHADER BENDS THE RAY BY ONE HOLE AT A TIME IN SLOT\n"
+	"    ORDER.  SO A FAR HOLE LENSES SKY THE NEAR ONE HAS ALREADY MOVED, RATHER THAN THE\n"
+	"    TWO DEFLECTIONS MERELY ADDING.  THIS ONLY SHOWS WHERE TWO HOLES' DISTORTIONS\n"
+	"    OVERLAP -- AS 1 AND 2 DO -- AND IT DOES NOT FIX THE DISC-OVER-ARCS NOTE ABOVE,\n"
+	"    WHICH IS AN OCCLUSION PROBLEM, NOT AN ORDERING ONE.\n"
 	"  - HOME / END       HOLE 0 CLOSER / FARTHER (HOLE 0 ONLY; THE REST STAY PUT SO THE\n"
 	"                     1 / 2 OVERLAP HOLDS STILL WHILE YOU TUNE)\n"
 	"  - SHIFT+HOME / SHIFT+END  HOLE 0 RADIUS SMALLER / LARGER (CLAMPED TO THE GAME'S\n"
@@ -1360,6 +1383,9 @@ static const char * const help_text[] = {
 	"    THE INVERTED SECOND IMAGE INSIDE THE RING ARE NOT DRAWN AT ALL: THEY COME\n"
 	"    OUT OF ONE TERM IN skybox.frag, AND THEY ARE WHAT A SLOT ACTUALLY BUYS.\n"
 	"    HUD SHOWS DISC / RING IN DEGREES: THOSE TRANSFER TO THE GAME, NOT DISTANCE.\n\n"
+	/* Split here only to keep each string literal under the 4095 characters ISO C99
+	 * guarantees; the chunks are drawn one after another, so this is not a page break. */
+	,
 	"  SHADOWS\n"
 	"  - \\                TOGGLE SHADOWS ON / OFF\n"
 	"  - 0 / 1 / 2        DEBUG: OFF / SHADOW-FACTOR / CASCADE-INDEX\n"

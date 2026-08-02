@@ -5,7 +5,10 @@ uniform samplerCube s_texture;
  * u_LensParams[i] is (angular Einstein radius, angular radius of the opaque disc, swirl).  A
  * slot with a zero Einstein radius contributes exactly nothing, which is how unused ones are
  * disabled: GLSL ES 1.00 wants a constant loop bound, so every slot is always visited and
- * there is nothing to branch around.  See graph_dev_set_gravitational_lenses(). */
+ * there is nothing to branch around.  See graph_dev_set_gravitational_lenses().
+ *
+ * The slots arrive sorted nearest hole first, which is what lets the loop below deflect the ray
+ * one hole at a time in the order it would really meet them. */
 uniform vec3 u_LensDir[MAX_GRAVITATIONAL_LENSES];
 uniform vec3 u_LensParams[MAX_GRAVITATIONAL_LENSES];
 
@@ -15,7 +18,6 @@ out vec4 f_FragColor;
 
 void main (void) {
 	vec3 dir = normalize(texCoord);
-	vec3 disp = vec3(0.0);
 	int i;
 
 	/* Uniform, so the branch is coherent across the whole draw: with no black hole in view
@@ -53,12 +55,19 @@ void main (void) {
 			 * carrying the sample across to the far side, which is the inverted second
 			 * image -- no branch and no second texture fetch for any of it.
 			 *
-			 * Accumulating a displacement and normalizing once at the end (rather than
-			 * bending dir per lens) is what lets several lenses superpose without any
-			 * data-dependent control flow, which GLSL ES 1.00 will not give us. */
-			disp -= axis * (esq / (theta * max(length(axis), 0.0001)));
+			 * Applied to dir in place, so each hole bends a ray that the nearer holes
+			 * have already bent -- the multi-plane lens equation, walked outward from
+			 * the eye, which is why the caller sorts the slots by distance.  Summing
+			 * every hole's deflection against the one undeflected direction instead
+			 * would be cheaper by a normalize or two, but it would make two holes in
+			 * line with each other simply add up, when what should happen is that the
+			 * far one lenses an image the near one has already moved.  A dependency
+			 * chain, not a branch: the loop bound stays constant and nothing here is
+			 * data-dependent control flow, so GLSL ES 1.00 is still happy, and a slot
+			 * with einstein == 0 still contributes an exactly zero deflection and
+			 * leaves dir untouched. */
+			dir = normalize(dir - axis * (esq / (theta * max(length(axis), 0.0001))));
 		}
-		dir = normalize(dir + disp);
 	}
 
 	f_FragColor = filmic_tonemap(texture(s_texture, dir));
