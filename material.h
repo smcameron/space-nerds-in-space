@@ -110,10 +110,12 @@ struct material_sun {
  * fade out, which is both fuzzy and resolution-bound; this one is exact at any zoom.
  *
  * disc_radius is in the billboard's 0..0.5 UV space.  Size the billboard a little larger than
- * the disc (see BLACK_HOLE_BILLBOARD_MARGIN in shadow_lab.c) so the rim and its glow have
- * somewhere to go instead of being clipped at the quad's edge. */
+ * the disc, by BLACK_HOLE_BILLBOARD_MARGIN below, so the rim and its glow have somewhere to go
+ * instead of being clipped at the quad's edge. */
+#define BLACK_HOLE_BILLBOARD_MARGIN 1.25 /* billboard is this much larger than the horizon, so the
+					  * photon-ring glow outside it is not clipped at the quad */
 struct material_black_hole {
-	float disc_radius;      /* disc radius in UV (0..0.5), set per frame */
+	float disc_radius;      /* disc radius in UV (0..0.5); 0.5 / BLACK_HOLE_BILLBOARD_MARGIN */
 	float edge_softness;    /* rim ramp width as a fraction of the disc radius */
 	float ring_brightness;  /* photon-ring rim emission scale; 0 for a bare disc */
 	float ring_width;       /* rim glow width as a fraction of the disc radius */

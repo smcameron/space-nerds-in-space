@@ -308,7 +308,7 @@ void material_init_black_hole(struct material *m)
 {
 	m->type = MATERIAL_BLACK_HOLE;
 	m->billboard_type = MATERIAL_BILLBOARD_TYPE_SPHERICAL;
-	m->black_hole.disc_radius = 0.4;  /* set per frame; see BLACK_HOLE_BILLBOARD_MARGIN */
+	m->black_hole.disc_radius = 0.4;  /* overwritten by the caller; see BLACK_HOLE_BILLBOARD_MARGIN */
 	m->black_hole.edge_softness = 0.01; /* just enough ramp to antialias the rim, no more: the
 					     * whole point of drawing this procedurally is that the
 					     * edge sits at a known angle, and a wide fade would put
