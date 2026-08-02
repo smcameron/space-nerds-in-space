@@ -101,6 +101,11 @@ GLOBAL int circle_from_three_points(double x1, double y1, double x2, double y2, 
    radius b whose center is a distance d from the center of the first disc */
 GLOBAL double disc_occlusion_fraction(double a, double b, double d);
 
+/* Return the area of the intersection of a disc of radius r centered at (cx, cy) with the
+   axis aligned rectangle (x1, y1) - (x2, y2).  Exact, and zero if the two do not meet. */
+GLOBAL double disc_rectangle_intersection_area(double cx, double cy, double r,
+		double x1, double y1, double x2, double y2);
+
 /* Return random point on surface of sphere of given radius */
 GLOBAL void random_point_on_sphere(float radius, float *x, float *y, float *z);
 GLOBAL void consistent_random_point_on_sphere(struct mtwist_state *mt,

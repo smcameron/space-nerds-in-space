@@ -326,6 +326,61 @@ double disc_occlusion_fraction(double a, double b, double d)
 	return area / (M_PI * a2);
 }
 
+/* Area of the part of a disc of radius r centered at the origin that lies in the box
+ * (0, 0) - (x, y), for x and y both non-negative.  Helper for
+ * disc_rectangle_intersection_area() below.
+ */
+static double disc_corner_area(double r, double x, double y)
+{
+	double x0;
+
+	/* Past the disc's edge the box's own side stops bounding anything, so pull it in.  This
+	 * is also what makes the x * x + y * y test below mean "the corner is inside the disc"
+	 * rather than "the corner would be, if the disc were bigger". */
+	if (x > r)
+		x = r;
+	if (y > r)
+		y = r;
+	if (x <= 0.0 || y <= 0.0)
+		return 0.0;
+	if (x * x + y * y <= r * r)
+		return x * y; /* Box corner inside the disc: the box is the whole intersection */
+	/* The disc's edge crosses the box.  Left of x0 the box's top edge is the lower bound and
+	 * the strip is a rectangle; right of it the disc's edge is, and the strip is the integral
+	 * of sqrt(r^2 - u^2). */
+	x0 = sqrt(r * r - y * y);
+	return y * x0 + 0.5 * (x * sqrt(r * r - x * x) + r * r * asin(x / r)) -
+		0.5 * (x0 * y + r * r * asin(x0 / r));
+}
+
+/* Area of the intersection of a disc of radius r centered at (cx, cy) with the axis aligned
+ * rectangle (x1, y1) - (x2, y2).  Intended for scoring how much of the screen an effect
+ * actually covers, where a body half off the edge of the window should count for half of what
+ * it would count for in the middle.
+ *
+ * Inclusion-exclusion over the rectangle's four corners, each measured from the disc's center.
+ * disc_corner_area() only handles the positive quadrant, so a corner's contribution is the
+ * area of its absolute position times the sign of the quadrant it fell in -- the disc is
+ * symmetric about both axes, so that reflection is free.
+ */
+double disc_rectangle_intersection_area(double cx, double cy, double r,
+		double x1, double y1, double x2, double y2)
+{
+	double a, b, c, d;
+
+	if (r <= 0.0 || x2 <= x1 || y2 <= y1)
+		return 0.0;
+	x1 -= cx;
+	x2 -= cx;
+	y1 -= cy;
+	y2 -= cy;
+	a = copysign(1.0, x2) * copysign(1.0, y2) * disc_corner_area(r, fabs(x2), fabs(y2));
+	b = copysign(1.0, x1) * copysign(1.0, y2) * disc_corner_area(r, fabs(x1), fabs(y2));
+	c = copysign(1.0, x2) * copysign(1.0, y1) * disc_corner_area(r, fabs(x2), fabs(y1));
+	d = copysign(1.0, x1) * copysign(1.0, y1) * disc_corner_area(r, fabs(x1), fabs(y1));
+	return a - b - c + d;
+}
+
 /*
  * Pick random point on the surface of sphere of given radius with
  * uniform distribution (harder than I initially thought).
@@ -591,3 +646,87 @@ double point_to_line_dist(double lx1, double ly1, double lx2, double ly2, double
 	double normal_length = hypot(lx1 - lx2, ly1 - ly2);
 	return fabs((px - lx1) * (ly2 - ly1) - (py - ly1) * (lx2 - lx1)) / normal_length;
 }
+
+#ifdef TEST_MATHUTILS
+
+static int failures;
+
+static void check(const char *what, double got, double expected, double tolerance)
+{
+	if (fabs(got - expected) <= tolerance) {
+		printf("ok       %-52s %12.6f\n", what, got);
+		return;
+	}
+	printf("FAILED   %-52s %12.6f (expected %.6f +/- %g)\n", what, got, expected, tolerance);
+	failures++;
+}
+
+/* Same area by brute force: count grid cells whose center is inside both shapes.  The error is
+ * dominated by the cells the disc's edge cuts, so it goes as the step size times the perimeter.
+ */
+static double disc_rectangle_area_by_quadrature(double cx, double cy, double r,
+		double x1, double y1, double x2, double y2)
+{
+	const double step = 0.002;
+	double x, y, area = 0.0;
+
+	for (x = x1 + 0.5 * step; x < x2; x += step)
+		for (y = y1 + 0.5 * step; y < y2; y += step)
+			if ((x - cx) * (x - cx) + (y - cy) * (y - cy) <= r * r)
+				area += step * step;
+	return area;
+}
+
+static void check_against_quadrature(const char *what, double cx, double cy, double r,
+		double x1, double y1, double x2, double y2)
+{
+	check(what, disc_rectangle_intersection_area(cx, cy, r, x1, y1, x2, y2),
+		disc_rectangle_area_by_quadrature(cx, cy, r, x1, y1, x2, y2), 0.01);
+}
+
+static void test_disc_rectangle_intersection_area(void)
+{
+	/* The cases with a closed form.  A rectangle from -10 to 10 is far larger than a disc of
+	 * radius 1, so an edge through the disc's center halves it and a corner quarters it. */
+	check("disc inside rectangle", disc_rectangle_intersection_area(0, 0, 1, -10, -10, 10, 10),
+		M_PI, 1e-9);
+	check("rectangle inside disc", disc_rectangle_intersection_area(0, 0, 10, -1, -2, 1, 2),
+		8.0, 1e-9);
+	check("disc clear of rectangle", disc_rectangle_intersection_area(0, 0, 1, 5, 5, 10, 10),
+		0.0, 1e-9);
+	check("disc touching rectangle", disc_rectangle_intersection_area(0, 0, 1, 1, -10, 10, 10),
+		0.0, 1e-9);
+	check("disc on rectangle edge", disc_rectangle_intersection_area(0, 0, 1, 0, -10, 10, 10),
+		0.5 * M_PI, 1e-9);
+	check("disc on rectangle corner", disc_rectangle_intersection_area(0, 0, 1, 0, 0, 10, 10),
+		0.25 * M_PI, 1e-9);
+	check("disc on rectangle corner, mirrored",
+		disc_rectangle_intersection_area(0, 0, 1, -10, -10, 0, 0), 0.25 * M_PI, 1e-9);
+	check("degenerate radius", disc_rectangle_intersection_area(0, 0, 0, -10, -10, 10, 10),
+		0.0, 1e-9);
+	check("degenerate rectangle", disc_rectangle_intersection_area(0, 0, 1, 3, 3, 3, 3),
+		0.0, 1e-9);
+
+	/* The awkward geometry -- an edge or a corner cutting the disc off center -- has no
+	 * closed form worth writing twice, so check it numerically instead. */
+	check_against_quadrature("edge cutting disc off center", 0, 0, 1, -0.3, -10, 10, 10);
+	check_against_quadrature("corner inside disc", 0, 0, 1, -0.4, -0.7, 10, 10);
+	check_against_quadrature("corner outside disc", 0, 0, 1, 0.6, 0.7, 10, 10);
+	check_against_quadrature("two opposite edges cutting", 0, 0, 1, -0.5, -10, 0.25, 10);
+	check_against_quadrature("band missing both caps", 0, 0, 1, -10, -0.2, 10, 0.4);
+	check_against_quadrature("rectangle off center entirely", 2.0, 1.0, 1.5, 1.0, 0.5, 3.5, 2.5);
+	check_against_quadrature("all four corners outside disc", 0, 0, 1, -0.5, -0.5, 0.5, 0.5);
+}
+
+int main(__attribute__((unused)) int argc, __attribute__((unused)) char *argv[])
+{
+	test_disc_rectangle_intersection_area();
+	if (failures) {
+		printf("%d failure%s\n", failures, failures == 1 ? "" : "s");
+		return 1;
+	}
+	printf("all tests passed\n");
+	return 0;
+}
+
+#endif

@@ -1358,6 +1358,9 @@ bin/test_key_value_parser:	key_value_parser.c key_value_parser.h Makefile ${BIN}
 bin/test-matrix:	matrix.c Makefile ${BIN}
 	$(CC) ${MYCFLAGS} -DTEST_MATRIX -o bin/test-matrix matrix.c -lm
 
+bin/test-mathutils:	mathutils.c mathutils.h Makefile ${BIN} ${OD}/mtwist.o
+	$(CC) ${MYCFLAGS} -DTEST_MATHUTILS -o bin/test-mathutils mathutils.c ${OD}/mtwist.o -lm
+
 bin/test_stringutils:	test_stringutils.c Makefile ${BIN} ${ODT} ${OD}/string-utils.o
 	$(CC) ${MYCFLAGS} -g -o bin/test_stringutils test_stringutils.c ${OD}/string-utils.o
 
@@ -1407,7 +1410,7 @@ mostly-clean:
 	bin/nebula_noise bin/generate_skybox bin/names bin/infinite-taunt bin/stl_parser \
 	bin/test-obj-parser bin/test-commodities bin/test_nonuniform_random_sampler bin/test-marshal \
 	bin/test-quat bin/test-fleet bin/test-mtwist bin/snis-device-io-sample-1 bin/check-endianness \
-	${OD}/*.o ${ODT} bin/test-matrix  bin/test_solarsystem_config  bin/test-space-partition \
+	${OD}/*.o ${ODT} bin/test-matrix bin/test-mathutils bin/test_solarsystem_config  bin/test-space-partition \
 	bin/device-io-sample-1 bin/print_ship_attributes bin/snis_test_audio bin/test_crater \
 	bin/test_key_value_parser bin/test_snis_dmx test_scipher bin/test_snis_ship_type wwviaudio_basic_test \
 	${MANSRCDIR}/earthlike.1.gz  ${MANSRCDIR}/snis_client.6.gz  ${MANSRCDIR}/snis_server.6.gz  \
@@ -1468,7 +1471,7 @@ bin/test-obj-parser:	test-obj-parser.c mikktspace/mikktspace.o ${OD}/string-util
 		${OD}/mathutils.o ${OD}/matrix.o ${OD}/mesh.o ${OD}/quat.o ${OD}/open-simplex-noise.o ${OD}/stacktrace.o \
 		-lm test-obj-parser.c
 
-test:	bin/test-matrix bin/test-space-partition bin/test-marshal bin/test-quat bin/test-fleet bin/test-mtwist bin/test-commodities bin/test_solarsystem_config
+test:	bin/test-matrix bin/test-mathutils bin/test-space-partition bin/test-marshal bin/test-quat bin/test-fleet bin/test-mtwist bin/test-commodities bin/test_solarsystem_config
 	/bin/true	# Prevent make from running "$(CC) test.o".
 
 bin/test_solarsystem_config:	test_solarsystem_config.c ${OD}/solarsystem_config.o ${OD}/string-utils.o ${BIN}
