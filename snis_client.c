@@ -676,6 +676,15 @@ static struct material lens_flare_ghost_material;
 static struct material lens_flare_halo_material;
 static struct material anamorphic_flare_material;
 static struct material black_hole_material;
+/* Einstein radius as a multiple of the event horizon radius.  Tuned by eye in shadow_lab, which
+ * exists to tune exactly this; its "/" key walks the same number.  Everything about a hole's
+ * appearance scales from it: the Einstein ring's radius on the billboard, how far past the
+ * horizon the quad has to reach, and the deflection the skybox shader applies. */
+#define BLACK_HOLE_LENS_STRENGTH 1.7
+/* Billboard half-size as a multiple of the horizon radius, from
+ * material_black_hole_set_geometry().  Held here because update_black_hole() has to scale every
+ * hole's entity by it, and it is a constant once the material is built. */
+static float black_hole_billboard_half_size = 1.0;
 static struct material spacemonster_tentacle_material;
 static struct material spacemonster_material;
 static struct material warpgate_material;
@@ -2299,7 +2308,17 @@ static int update_black_hole(uint32_t id, uint32_t timestamp, double x, double y
 		e = add_entity(ecx, unit_quad, x, y, z, BLACK_HOLE_COLOR);
 		if (e) {
 			update_entity_material(e, &black_hole_material);
-			update_entity_scale(e, 2.0 * r);
+			/* The quad stands off past the outermost ring so the Einstein ring's glow is
+			 * not clipped square at its edge, and the material's UV radii are scaled back
+			 * by the same factor, so the horizon itself still comes out exactly 2 * r
+			 * across.  That is what makes the disc's apparent radius equal the
+			 * shadow_radius handed to the lens in update_black_hole_lenses(), which is
+			 * the whole reason for drawing it procedurally: the two must agree or the
+			 * lensing will not line up against the disc's edge. */
+			update_entity_scale(e, 2.0 * black_hole_billboard_half_size * r);
+			/* A caster this size sweeping across would black out the whole scene, the
+			 * same reason the planet is excluded from the shadow map. */
+			update_entity_shadow_casting(e, 0);
 		}
 		i = add_generic_object(id, timestamp, x, y, z, 0.0, 0.0, 0.0,
 					&orientation, OBJTYPE_BLACK_HOLE, 1, e);
@@ -23501,10 +23520,16 @@ static int load_static_textures(void)
 	load_texture_mapped_material(&small_block_material, "textures/spaceplate_small.png",
 				"textures/spaceplate_small_emit.png");
 
-	load_texture_mapped_unlit_material(&black_hole_material, "textures/black_hole.png",
-			MATERIAL_BILLBOARD_TYPE_SPHERICAL, 0);
-	black_hole_material.texture_mapped_unlit.do_cullface = 0;
-	black_hole_material.texture_mapped_unlit.alpha = 1.0;
+	/* Procedural (MATERIAL_BLACK_HOLE) rather than the painted textures/black_hole.png.  The
+	 * disc's edge has to land at a known angle, because that is where the skybox's lensing
+	 * floors its deflection and relies on the disc to cover the singularity; a painted blob's
+	 * edge is wherever its alpha happens to fade out, which is both fuzzy and resolution-bound.
+	 * One material serves every hole, since the radii inside it are ratios in the billboard's
+	 * UV space rather than absolute sizes -- see material_black_hole_set_geometry(), which also
+	 * hands back the billboard scale that goes with them. */
+	material_init_black_hole(&black_hole_material);
+	black_hole_billboard_half_size =
+		material_black_hole_set_geometry(&black_hole_material, BLACK_HOLE_LENS_STRENGTH);
 
 	load_texture_mapped_material(&spacemonster_tentacle_material, "textures/spacemonster_tentacle_texture.png",
 				"textures/spacemonster_tentacle_emit.png");
