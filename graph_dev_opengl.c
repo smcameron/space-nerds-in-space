@@ -180,6 +180,13 @@ int graph_dev_atmosphere_ring_shadows = 1;
 
 /* Cascaded shadow mapping state (Phase 1: a single shadow map). */
 int graph_dev_shadow_map_enabled = 1;
+
+/* graph_dev_planets_receive_csm_shadows: If 1, planets will use the CSM
+ * variants of the textured cubemap shaders, if 0, they will use the
+ * non-CSM variants.
+ */
+static int graph_dev_planets_receive_csm_shadows = 0;
+
 static int graph_dev_shadow_map_debug; /* shadow debug visualization mode (SNIS_SHADOW_DEBUG) */
 /* PCF kernel half-width used for the nearest cascade; each farther cascade steps down by
  * one (so near shadows get a wide kernel, far shadows a narrow one, keeping the penumbra
@@ -1227,13 +1234,22 @@ static struct graph_dev_gl_textured_shader textured_lit_shader;
 static struct graph_dev_gl_textured_shader textured_lit_emit_shader;
 static struct graph_dev_gl_textured_shader textured_lit_emit_normal_shader;
 static struct graph_dev_gl_textured_shader textured_lit_normal_shader;
-static struct graph_dev_gl_textured_shader textured_cubemap_lit_shader;
-static struct graph_dev_gl_textured_shader textured_cubemap_lit_normal_map_shader;
 static struct graph_dev_gl_textured_shader textured_cubemap_shield_shader;
+
+/* 6 pairs of textured cubemap shaders, one with CSM shadows, one without, with combos of other features */
+static struct graph_dev_gl_textured_shader textured_cubemap_lit_shader;
+static struct graph_dev_gl_textured_shader textured_cubemap_lit_shadow_shader;
+static struct graph_dev_gl_textured_shader textured_cubemap_lit_normal_map_shader;
+static struct graph_dev_gl_textured_shader textured_cubemap_lit_normal_map_shadow_shader;
+static struct graph_dev_gl_textured_shader textured_cubemap_lit_with_annulus_shader;
 static struct graph_dev_gl_textured_shader textured_cubemap_lit_with_annulus_shadow_shader;
+static struct graph_dev_gl_textured_shader textured_cubemap_normal_mapped_lit_with_annulus_shader;
 static struct graph_dev_gl_textured_shader textured_cubemap_normal_mapped_lit_with_annulus_shadow_shader;
+static struct graph_dev_gl_textured_shader textured_cubemap_normal_mapped_lit_with_annulus_specular_shader;
 static struct graph_dev_gl_textured_shader textured_cubemap_normal_mapped_lit_with_annulus_shadow_specular_shader;
 static struct graph_dev_gl_textured_shader textured_cubemap_normal_mapped_lit_specular_shader;
+static struct graph_dev_gl_textured_shader textured_cubemap_normal_mapped_lit_specular_shadow_shader;
+
 static struct graph_dev_gl_textured_particle_shader textured_particle_shader;
 static struct graph_dev_gl_textured_shader alpha_by_normal_shader;
 static struct graph_dev_gl_textured_shader textured_alpha_by_normal_shader;
@@ -3148,13 +3164,24 @@ static void graph_dev_raster_triangle_mesh(struct entity_context *cx, struct ent
 			if (mt->ring_material &&
 				mt->ring_material->type == MATERIAL_TEXTURED_PLANET_RING) {
 				if (rtp.normalmap_id <= 0) {
-					rtp.shader = &textured_cubemap_lit_with_annulus_shadow_shader;
+					if (graph_dev_planets_receive_csm_shadows)
+						rtp.shader = &textured_cubemap_lit_with_annulus_shadow_shader;
+					else
+						rtp.shader = &textured_cubemap_lit_with_annulus_shader;
 				} else if (graph_dev_planet_specularity)  {
-					rtp.shader =
-					&textured_cubemap_normal_mapped_lit_with_annulus_shadow_specular_shader;
+					if (graph_dev_planets_receive_csm_shadows)
+						rtp.shader =
+							&textured_cubemap_normal_mapped_lit_with_annulus_shadow_specular_shader;
+					else
+						rtp.shader =
+							&textured_cubemap_normal_mapped_lit_with_annulus_specular_shader;
 				} else {
-					rtp.shader =
-						&textured_cubemap_normal_mapped_lit_with_annulus_shadow_shader;
+					if (graph_dev_planets_receive_csm_shadows)
+						rtp.shader =
+							&textured_cubemap_normal_mapped_lit_with_annulus_shadow_shader;
+					else
+						rtp.shader =
+							&textured_cubemap_normal_mapped_lit_with_annulus_shader;
 				}
 
 				struct material_textured_planet_ring *ring_mt =
@@ -3183,13 +3210,23 @@ static void graph_dev_raster_triangle_mesh(struct entity_context *cx, struct ent
 			} else {
 				if (rtp.normalmap_id > 0) {
 					if (graph_dev_planet_specularity) {
-						rtp.shader =
-							&textured_cubemap_normal_mapped_lit_specular_shader;
+						if (graph_dev_planets_receive_csm_shadows)
+							rtp.shader =
+								&textured_cubemap_normal_mapped_lit_specular_shadow_shader;
+						else
+							rtp.shader =
+								&textured_cubemap_normal_mapped_lit_specular_shader;
 					} else {
-						rtp.shader = &textured_cubemap_lit_normal_map_shader;
+						if (graph_dev_planets_receive_csm_shadows)
+							rtp.shader = &textured_cubemap_lit_normal_map_shader;
+						else
+							rtp.shader = &textured_cubemap_lit_normal_map_shadow_shader;
 					}
 				} else {
-					rtp.shader = &textured_cubemap_lit_shader;
+					if (graph_dev_planets_receive_csm_shadows)
+						rtp.shader = &textured_cubemap_lit_shadow_shader;
+					else
+						rtp.shader = &textured_cubemap_lit_shader;
 				}
 			}
 			}
@@ -4931,12 +4968,13 @@ void graph_dev_reload_all_shaders(void)
 				"#define USE_NORMAL_MAP 1\n"
 				"#define USE_CSM 1\n",
 				&textured_lit_normal_shader);
-	setup_textured_cubemap_shader("textured-cubemap-and-lit-with-annulus-shadow-per-pixel", 0, 0, 0, 1,
-					&textured_cubemap_lit_shader);
-	setup_textured_cubemap_shader("textured-cubemap-and-lit-with-annulus-shadow-per-pixel", 1, 0, 0, 1,
-					&textured_cubemap_lit_normal_map_shader);
 	setup_textured_cubemap_shader("textured-cubemap-shield-per-pixel", 0, 0, 0, 0,
 					&textured_cubemap_shield_shader);
+	/* Set up CSM textured cubemap shaders */
+	setup_textured_cubemap_shader("textured-cubemap-and-lit-with-annulus-shadow-per-pixel", 0, 0, 0, 1,
+					&textured_cubemap_lit_shadow_shader);
+	setup_textured_cubemap_shader("textured-cubemap-and-lit-with-annulus-shadow-per-pixel", 1, 0, 0, 1,
+					&textured_cubemap_lit_normal_map_shadow_shader);
 	setup_textured_cubemap_shader("textured-cubemap-and-lit-with-annulus-shadow-per-pixel", 0, 0, 1, 1,
 					&textured_cubemap_lit_with_annulus_shadow_shader);
 	setup_textured_cubemap_shader("textured-cubemap-and-lit-with-annulus-shadow-per-pixel", 1, 0, 1, 1,
@@ -4944,7 +4982,21 @@ void graph_dev_reload_all_shaders(void)
 	setup_textured_cubemap_shader("textured-cubemap-and-lit-with-annulus-shadow-per-pixel", 1, 1, 1, 1,
 					&textured_cubemap_normal_mapped_lit_with_annulus_shadow_specular_shader);
 	setup_textured_cubemap_shader("textured-cubemap-and-lit-with-annulus-shadow-per-pixel", 1, 1, 0, 1,
+					&textured_cubemap_normal_mapped_lit_specular_shadow_shader);
+	/* Set up non-CSM textured cubemap shaders */
+	setup_textured_cubemap_shader("textured-cubemap-and-lit-with-annulus-shadow-per-pixel", 0, 0, 0, 0,
+					&textured_cubemap_lit_shadow_shader);
+	setup_textured_cubemap_shader("textured-cubemap-and-lit-with-annulus-shadow-per-pixel", 1, 0, 0, 0,
+					&textured_cubemap_lit_normal_map_shadow_shader);
+	setup_textured_cubemap_shader("textured-cubemap-and-lit-with-annulus-shadow-per-pixel", 0, 0, 1, 0,
+					&textured_cubemap_lit_with_annulus_shader);
+	setup_textured_cubemap_shader("textured-cubemap-and-lit-with-annulus-shadow-per-pixel", 1, 0, 1, 0,
+					&textured_cubemap_normal_mapped_lit_with_annulus_shader);
+	setup_textured_cubemap_shader("textured-cubemap-and-lit-with-annulus-shadow-per-pixel", 1, 1, 1, 0,
+					&textured_cubemap_normal_mapped_lit_with_annulus_specular_shader);
+	setup_textured_cubemap_shader("textured-cubemap-and-lit-with-annulus-shadow-per-pixel", 1, 1, 0, 0,
 					&textured_cubemap_normal_mapped_lit_specular_shader);
+
 	setup_textured_particle_shader(&textured_particle_shader);
 	setup_fs_effect_shader("fs-effect-copy", &fs_copy_shader);
 	setup_textured_shader("alpha_by_normal", UNIVERSAL_SHADER_HEADER, &alpha_by_normal_shader);
@@ -5707,9 +5759,9 @@ static void debug_menu_draw_item(char *item, int itemnumber, int grayed, int che
 void graph_dev_display_debug_menu_show(void)
 {
 	sng_set_foreground(BLACK);
-	graph_dev_draw_rectangle(1, 10, 30, 370 * sgc.x_scale, 285);
+	graph_dev_draw_rectangle(1, 10, 30, 370 * sgc.x_scale, 305);
 	sng_set_foreground(WHITE);
-	graph_dev_draw_rectangle(0, 10, 30, 370 * sgc.x_scale, 285);
+	graph_dev_draw_rectangle(0, 10, 30, 370 * sgc.x_scale, 305);
 
 #if DEBUG_NORMALS
 	debug_menu_draw_item("VERTEX NORM/TAN/BITAN (RGB)", 0, 0, draw_normal_lines);
@@ -5735,6 +5787,7 @@ void graph_dev_display_debug_menu_show(void)
 	debug_menu_draw_item("PLANET SPECULARITY", 11, 0, graph_dev_planet_specularity);
 	debug_menu_draw_item("FILMIC TONEMAPPING", 12, 0, filmic_tonemapping);
 	debug_menu_draw_item("CASCADED SHADOW MAPPING", 13, 0, graph_dev_shadow_map_enabled);
+	debug_menu_draw_item("PLANETS RECV CSM SHADOWS", 14, 0, graph_dev_planets_receive_csm_shadows);
 }
 
 static int selected_debug_item_checkbox(int n, int x, int y, int *toggle)
@@ -5803,6 +5856,8 @@ int graph_dev_graph_dev_debug_menu_click(int x, int y)
 	if (selected_debug_item_checkbox(12, x, y, &filmic_tonemapping))
 		return 1;
 	if (selected_debug_item_checkbox(13, x, y, &graph_dev_shadow_map_enabled))
+		return 1;
+	if (selected_debug_item_checkbox(14, x, y, &graph_dev_planets_receive_csm_shadows))
 		return 1;
 	return 0;
 }
