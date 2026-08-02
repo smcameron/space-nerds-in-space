@@ -3127,7 +3127,10 @@ static void graph_dev_raster_triangle_mesh(struct entity_context *cx, struct ent
 			break;
 			}
 		case MATERIAL_TEXTURE_CUBEMAP: {
-			rtp.shader = &textured_cubemap_lit_shader;
+			/* As of 2026-08-02 only asteroids in SNIS use MATERIAL_TEXTURE_CUBEMAP,
+			 * and we want asteroids to be able to receive CSM shadows.
+			 */
+			rtp.shader = &textured_cubemap_lit_shadow_shader;
 
 			struct material_texture_cubemap *mt = &e->material_ptr->texture_cubemap;
 			rtp.texture_number = mt->texture_id;
