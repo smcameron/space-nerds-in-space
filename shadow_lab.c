@@ -254,6 +254,16 @@ static float black_hole_swirl = 0.1;
 static float black_hole_ring_glow = 0.04; /* Einstein ring's emission, in skybox.frag */
 static int black_hole_index[NUM_LAB_BLACK_HOLES]; /* scene[] indices, for position/scale updates */
 static int black_hole_lensed[NUM_LAB_BLACK_HOLES]; /* won a lens slot this frame; HUD readout */
+static float black_hole_coverage[NUM_LAB_BLACK_HOLES]; /* fraction of the window it distorts */
+
+/* How far out the distortion is worth counting, as a multiple of the Einstein radius.  The
+ * deflection is einstein^2 / theta, so it has no outer edge to find: it just thins out forever,
+ * and asking where some percentile of it lies has no answer, since the effect integrated over
+ * the sky diverges.  A cutoff has to be chosen, so choose it by what can be seen: by three
+ * Einstein radii out the sky is displaced by a third of one, which is where the arcs stop being
+ * arcs and become a faint smear.  Only the ranking depends on this, and only when a hole is
+ * near the edge of the window: a hole fully in view scores as its area either way. */
+#define BLACK_HOLE_LENS_EXTENT 3.0
 static struct mesh *black_hole_mesh;
 static struct material black_hole_material;
 
@@ -1102,15 +1112,18 @@ static void update_black_holes(void)
 	struct graph_dev_gravitational_lens lens[MAX_GRAVITATIONAL_LENSES];
 	struct lens_candidate {
 		struct graph_dev_gravitational_lens lens;
-		float einstein;
+		float coverage;		/* fraction of the window its distortion falls on */
+		float einstein;		/* only a tie-break; see the selection below */
 		int hole;
 	} cand[NUM_LAB_BLACK_HOLES];
 	int taken[NUM_LAB_BLACK_HOLES];
 	union vec3 antisolar, base_up, base_right, to_hole, anchor, fwd, up, right;
+	float fov, tan_half_y, tan_half_x, pixels_per_radian;
 	int i, n, ncand = 0;
 
 	for (i = 0; i < NUM_LAB_BLACK_HOLES; i++) {
 		black_hole_lensed[i] = 0;
+		black_hole_coverage[i] = 0.0;
 		taken[i] = 0;
 	}
 
@@ -1164,9 +1177,16 @@ static void update_black_holes(void)
 	}
 
 	camera_basis(&cam_orientation, &fwd, &up, &right);
+	/* The same frustum render_scene() is about to set up, since the whole point of the score
+	 * below is where things land in this window.  Zooming into the turret view narrows the
+	 * field of view and so changes which holes are worth a slot. */
+	fov = turret_view_active() ? TURRET_FOV : FOV;
+	tan_half_y = tanf(0.5 * fov);
+	tan_half_x = tan_half_y * (float) SCREEN_WIDTH / (float) SCREEN_HEIGHT;
+	pixels_per_radian = 0.5 * (float) SCREEN_HEIGHT / tan_half_y;
 
 	for (i = 0; i < black_hole_count; i++) {
-		float dist, theta_obj;
+		float dist, theta_obj, einstein, x, y, z, sx, sy, extent;
 
 		if (black_hole_index[i] < 0)
 			continue;
@@ -1175,36 +1195,67 @@ static void update_black_holes(void)
 		if (dist <= black_hole_radius[i]) /* inside it; no sensible lens to describe */
 			continue;
 		vec3_normalize_self(&to_hole);
-		/* Behind the camera: no effect on screen, so it must not take a slot from one in
-		 * front.  A plain hemisphere test, not a frustum test.  The deflection reaches only
-		 * a few Einstein radii, which is a few degrees, and the half-field of view is well
-		 * under 90 degrees, so nothing whose lensing could reach the screen is cut here. */
-		if (vec3_dot(&to_hole, &fwd) <= 0.0)
+		z = vec3_dot(&to_hole, &fwd);
+		if (z <= 0.0) /* behind the camera; nothing to project and nothing to see */
 			continue;
 
 		theta_obj = atan2f(black_hole_radius[i], dist);
+		einstein = black_hole_lens_strength * theta_obj;
+
+		/* Score by how much of the window the distortion actually falls on, not by how big
+		 * the hole is: a slot spent on a hole that is off the edge, or mostly off it, buys
+		 * nothing, and the hole you are looking straight at should have one.  The distortion
+		 * is a disc of BLACK_HOLE_LENS_EXTENT Einstein radii about the hole, so project the
+		 * hole and clip that disc to the window.
+		 *
+		 * The disc's radius is taken as an angle times a constant pixels-per-radian, which is
+		 * exact only on the view axis and stretches away from it; the center is projected
+		 * properly.  Since this decides a ranking and not a rendering, that is close enough --
+		 * and it is what keeps a hole just barely in front of the camera, whose projection
+		 * runs off to infinity, from scoring anything.
+		 *
+		 * Note that a hole entirely in view scores pi * (extent * einstein)^2, so ranking by
+		 * coverage agrees with ranking by Einstein radius whenever nothing is clipped.  This
+		 * only changes which hole wins at the edges of the window, which is where the old
+		 * ranking got it wrong. */
+		x = vec3_dot(&to_hole, &right);
+		y = vec3_dot(&to_hole, &up);
+		sx = (0.5 + 0.5 * (x / z) / tan_half_x) * (float) SCREEN_WIDTH;
+		sy = (0.5 - 0.5 * (y / z) / tan_half_y) * (float) SCREEN_HEIGHT;
+		extent = BLACK_HOLE_LENS_EXTENT * einstein * pixels_per_radian;
+		black_hole_coverage[i] = disc_rectangle_intersection_area(sx, sy, extent,
+				0.0, 0.0, SCREEN_WIDTH, SCREEN_HEIGHT) /
+					((float) SCREEN_WIDTH * (float) SCREEN_HEIGHT);
+		if (black_hole_coverage[i] <= 0.0)
+			continue;
+
 		cand[ncand].lens.direction[0] = to_hole.v.x;
 		cand[ncand].lens.direction[1] = to_hole.v.y;
 		cand[ncand].lens.direction[2] = to_hole.v.z;
-		cand[ncand].lens.einstein_radius = black_hole_lens_strength * theta_obj;
+		cand[ncand].lens.einstein_radius = einstein;
 		cand[ncand].lens.shadow_radius = theta_obj;
 		cand[ncand].lens.swirl = black_hole_swirl_of(i);
 		cand[ncand].lens.ring_glow = black_hole_ring_glow;
-		cand[ncand].einstein = cand[ncand].lens.einstein_radius;
+		cand[ncand].coverage = black_hole_coverage[i];
+		cand[ncand].einstein = einstein;
 		cand[ncand].hole = i;
 		ncand++;
 	}
 
-	/* Take the best few by Einstein radius.  A selection scan rather than a sort: with a
-	 * handful of candidates and three slots this is shorter and easier to read than anything
-	 * cleverer, and snis_client will be choosing from no more than this either. */
+	/* Take the best few by screen coverage, breaking ties on Einstein radius -- two holes close
+	 * enough to flood the window both score 1.0, and then the bigger one should win.  A
+	 * selection scan rather than a sort: with a handful of candidates and three slots this is
+	 * shorter and easier to read than anything cleverer, and snis_client will be choosing from
+	 * no more than this either. */
 	for (n = 0; n < MAX_GRAVITATIONAL_LENSES && n < ncand; n++) {
 		int best = -1;
 
 		for (i = 0; i < ncand; i++) {
 			if (taken[i])
 				continue;
-			if (best < 0 || cand[i].einstein > cand[best].einstein)
+			if (best < 0 || cand[i].coverage > cand[best].coverage ||
+				(cand[i].coverage == cand[best].coverage &&
+					cand[i].einstein > cand[best].einstein))
 				best = i;
 		}
 		if (best < 0)
@@ -1278,9 +1329,12 @@ static const char * const help_text[] = {
 	"                     SCREEN AT MISMATCHED DEPTH ON PURPOSE: THE NEAR ONE'S ARCS ARE\n"
 	"                     WRONGLY COVERED BY THE FAR ONE'S DISC, BECAUSE THE LENSING IS\n"
 	"                     A DISTORTION OF THE SKYBOX AND SO HAS NO DEPTH OF ITS OWN.\n"
-	"  - SELECTION RANKS BY ANGULAR EINSTEIN RADIUS, NOT BY DISTANCE, AND DROPS ANYTHING\n"
-	"    BEHIND THE CAMERA.  RADIUS RUNS 500..2000, SO A LARGE FAR HOLE CAN SUBTEND MORE\n"
-	"    SKY THAN A SMALL NEAR ONE -- WHICH IS WHAT HOLES 1 AND 2 SHOW.\n"
+	"  - SELECTION RANKS BY HOW MUCH OF THE WINDOW EACH HOLE'S DISTORTION FALLS ON, SHOWN\n"
+	"    AS A PERCENTAGE IN THE HUD, SO A HOLE OFF THE EDGE OR HALF OFF IT DOES NOT TAKE\n"
+	"    A SLOT FROM THE ONE YOU ARE LOOKING AT.  WITH NOTHING CLIPPED THIS IS THE SAME\n"
+	"    ORDER AS THE ANGULAR EINSTEIN RADIUS, WHICH IS NOT THE SAME AS BY DISTANCE:\n"
+	"    RADIUS RUNS 500..2000, SO A LARGE FAR HOLE CAN SUBTEND MORE SKY THAN A SMALL\n"
+	"    NEAR ONE -- WHICH IS WHAT HOLES 1 AND 2 SHOW.\n"
 	"  - HOME / END       HOLE 0 CLOSER / FARTHER (HOLE 0 ONLY; THE REST STAY PUT SO THE\n"
 	"                     1 / 2 OVERLAP HOLDS STILL WHILE YOU TUNE)\n"
 	"  - SHIFT+HOME / SHIFT+END  HOLE 0 RADIUS SMALLER / LARGER (CLAMPED TO THE GAME'S\n"
@@ -1477,10 +1531,12 @@ static void draw_hud(void)
 			black_hole_material.black_hole.ring_width, black_hole_ring_glow,
 			black_hole_material.black_hole.edge_softness);
 		sng_abs_xy_draw_string(buffer, TINY_FONT, 10, y); y += dy;
-		/* One entry per live hole: the angular size the selection ranks on, and whether it
-		 * won one of the shader's slots.  A hole marked --- still draws its disc and photon
-		 * ring, it just does not bend the sky -- which is the degradation the game will show
-		 * when a mission puts more holes in view than there are slots to lens them with. */
+		/* One entry per live hole: the Einstein radius in degrees, the percentage of the
+		 * window its distortion falls on -- which is what the selection ranks on -- and
+		 * whether it won one of the shader's slots.  A hole marked --- still draws its disc
+		 * and photon ring, it just does not bend the sky, which is the degradation the game
+		 * will show when a mission puts more holes in view than there are slots to lens them
+		 * with.  A hole off the edge of the window reads 0% and never takes a slot. */
 		len = snprintf(buffer, sizeof(buffer), "BLACK HOLES %d OF %d (SHIFT+`)  %d LENS SLOTS ",
 				black_hole_count, NUM_LAB_BLACK_HOLES, MAX_GRAVITATIONAL_LENSES);
 		for (i = 0; i < black_hole_count && len > 0 && (size_t) len < sizeof(buffer); i++) {
@@ -1490,8 +1546,9 @@ static void draw_hud(void)
 				continue;
 			d = vec3_dist(&cam_pos, &scene[black_hole_index[i]].pos);
 			deg = radians_to_degrees(atan2f(black_hole_radius[i], d > 1.0 ? d : 1.0));
-			len += snprintf(buffer + len, sizeof(buffer) - len, " [%d]%.2f%s", i,
+			len += snprintf(buffer + len, sizeof(buffer) - len, " [%d]%.2fDEG %.0f%%%s", i,
 					deg * black_hole_lens_strength,
+					100.0 * black_hole_coverage[i],
 					black_hole_lensed[i] ? "LENS" : "---");
 		}
 		sng_abs_xy_draw_string(buffer, TINY_FONT, 10, y); y += dy;
