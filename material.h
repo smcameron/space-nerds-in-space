@@ -109,18 +109,36 @@ struct material_sun {
  * graph_dev_set_gravitational_lenses()).  A painted blob's edge is wherever its alpha happens to
  * fade out, which is both fuzzy and resolution-bound; this one is exact at any zoom.
  *
- * disc_radius is in the billboard's 0..0.5 UV space.  Size the billboard a little larger than
- * the disc, by BLACK_HOLE_BILLBOARD_MARGIN below, so the rim and its glow have somewhere to go
- * instead of being clipped at the quad's edge. */
-#define BLACK_HOLE_BILLBOARD_MARGIN 1.25 /* billboard is this much larger than the horizon, so the
-					  * photon-ring glow outside it is not clipped at the quad */
+ * The Einstein ring is drawn here too, out at lens_strength disc radii, even though the arcs
+ * that go with it belong to the skybox and only appear for a hole holding one of the shader's
+ * lens slots.  Otherwise a hole that loses its slot loses its halo as well, and reads as a
+ * different sort of object rather than as the same one drawn more cheaply.
+ *
+ * Both radii are in the billboard's 0..0.5 UV space, and the quad has to be sized to hold the
+ * outer one and its glow -- see material_black_hole_set_geometry(), which works both out
+ * together, since getting them to disagree is exactly the bug this material exists to avoid. */
 struct material_black_hole {
-	float disc_radius;      /* disc radius in UV (0..0.5); 0.5 / BLACK_HOLE_BILLBOARD_MARGIN */
+	float disc_radius;      /* event horizon radius in UV (0..0.5) */
 	float edge_softness;    /* rim ramp width as a fraction of the disc radius */
 	float ring_brightness;  /* photon-ring rim emission scale; 0 for a bare disc */
 	float ring_width;       /* rim glow width as a fraction of the disc radius */
+	float einstein_radius;  /* Einstein ring radius in UV (0..0.5); 0 to leave it out */
+	float glow_brightness;  /* Einstein ring emission scale; 0 for no halo */
+	float glow_width;       /* Einstein ring width as a fraction of the Einstein radius */
 	struct sng_color ring_color;
 };
+
+/* Set disc_radius and einstein_radius for a hole whose Einstein radius is lens_strength times
+ * its horizon radius, and return the billboard's half-size as a multiple of that horizon radius,
+ * which is what the caller scales the entity by:
+ *
+ *	update_entity_scale(e, 2.0 * material_black_hole_set_geometry(m, strength) * radius);
+ *
+ * The quad has to stand off past the outermost ring by BLACK_HOLE_BILLBOARD_MARGIN or the glow
+ * is cut square at the quad's edge; how far out that is depends on the lens strength, which is
+ * why this is a function and not a constant. */
+#define BLACK_HOLE_BILLBOARD_MARGIN 1.5
+extern float material_black_hole_set_geometry(struct material *m, float lens_strength);
 
 #define MATERIAL_NEBULA_NPLANES 6
 

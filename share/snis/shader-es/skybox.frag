@@ -2,8 +2,7 @@
 uniform samplerCube s_texture;
 
 /* Gravitational lensing.  u_LensDir[i] is a unit vector from the camera toward a black hole;
- * u_LensParams[i] is (angular Einstein radius, angular radius of the opaque disc, swirl, ring
- * glow).  A
+ * u_LensParams[i] is (angular Einstein radius, angular radius of the opaque disc, swirl).  A
  * slot with a zero Einstein radius contributes exactly nothing, which is how unused ones are
  * disabled: GLSL ES 1.00 wants a constant loop bound, so every slot is always visited and
  * there is nothing to branch around.  See graph_dev_set_gravitational_lenses().
@@ -11,20 +10,13 @@ uniform samplerCube s_texture;
  * Kept structurally identical to share/snis/shader/skybox.frag so the two stay easy to diff;
  * only the dialect differs (varying/gl_FragColor/textureCube). */
 uniform vec3 u_LensDir[MAX_GRAVITATIONAL_LENSES];
-uniform vec4 u_LensParams[MAX_GRAVITATIONAL_LENSES];
-
-/* The ring's own light, so it reads as a ring rather than as smeared stars.  Width is a
- * fraction of the Einstein radius, so the glow scales with the hole as you approach it; the
- * strength is per-lens and comes in through u_LensParams[i].w. */
-const float ring_glow_width = 0.06;
-const vec3 ring_glow_color = vec3(0.75, 0.85, 1.0);
+uniform vec3 u_LensParams[MAX_GRAVITATIONAL_LENSES];
 
 varying vec3 texCoord;
 
 void main (void) {
 	vec3 dir = normalize(texCoord);
 	vec3 disp = vec3(0.0);
-	float glow = 0.0;
 	int i;
 
 	/* Uniform, so the branch is coherent across the whole draw: with no black hole in view
@@ -66,18 +58,9 @@ void main (void) {
 			 * bending dir per lens) is what lets several lenses superpose without any
 			 * data-dependent control flow, which GLSL ES 1.00 will not give us. */
 			disp -= axis * (esq / (theta * max(length(axis), 0.0001)));
-
-			/* Lorentzian, peaked on the ring.  The +epsilon is what lets a disabled slot
-			 * fall out cleanly: einstein == 0 zeroes the numerator without ever dividing
-			 * by zero. */
-			float dr = theta - einstein;
-			float w = ring_glow_width * einstein;
-			glow += u_LensParams[i].w * (w * w) / (dr * dr + w * w + 0.00000001);
 		}
 		dir = normalize(dir + disp);
 	}
 
 	gl_FragColor = filmic_tonemap(textureCube(s_texture, dir));
-	/* After the tonemap, so the ring is not crushed back down into the starfield. */
-	gl_FragColor.rgb += ring_glow_color * glow;
 }

@@ -308,7 +308,7 @@ void material_init_black_hole(struct material *m)
 {
 	m->type = MATERIAL_BLACK_HOLE;
 	m->billboard_type = MATERIAL_BILLBOARD_TYPE_SPHERICAL;
-	m->black_hole.disc_radius = 0.4;  /* overwritten by the caller; see BLACK_HOLE_BILLBOARD_MARGIN */
+	m->black_hole.disc_radius = 0.4;  /* overwritten by material_black_hole_set_geometry() */
 	m->black_hole.edge_softness = 0.01; /* just enough ramp to antialias the rim, no more: the
 					     * whole point of drawing this procedurally is that the
 					     * edge sits at a known angle, and a wide fade would put
@@ -320,6 +320,27 @@ void material_init_black_hole(struct material *m)
 	 * by eye in shadow_lab. */
 	m->black_hole.ring_brightness = 0.2;
 	m->black_hole.ring_width = 0.05;
+	/* The Einstein ring.  Left out until material_black_hole_set_geometry() says how far out it
+	 * belongs, since that depends on the lens strength and not on the material.  The brightness
+	 * and width carry over the values the lensed skybox used to draw it with. */
+	m->black_hole.einstein_radius = 0.0;
+	m->black_hole.glow_brightness = 0.04;
+	m->black_hole.glow_width = 0.06;
 	m->black_hole.ring_color = sng_get_color(WHITE);
 	m->rotate_randomly = 0;
+}
+
+float material_black_hole_set_geometry(struct material *m, float lens_strength)
+{
+	/* Below a lens strength of 1 the Einstein ring falls inside the horizon and is covered by
+	 * the disc, so the horizon is the outermost thing the quad has to hold.  Taking the larger
+	 * of the two keeps the billboard from collapsing onto the disc in that case. */
+	float outer = lens_strength > 1.0 ? lens_strength : 1.0;
+	float half_size = BLACK_HOLE_BILLBOARD_MARGIN * outer;
+
+	/* Half the quad spans half_size horizon radii and reaches UV 0.5, so a feature at k horizon
+	 * radii sits at 0.5 * k / half_size. */
+	m->black_hole.disc_radius = 0.5 / half_size;
+	m->black_hole.einstein_radius = 0.5 * lens_strength / half_size;
+	return half_size;
 }

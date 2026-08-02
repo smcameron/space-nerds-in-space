@@ -251,7 +251,7 @@ static float black_hole_radius[NUM_LAB_BLACK_HOLES];
 static float black_hole_distance[NUM_LAB_BLACK_HOLES];
 static float black_hole_lens_strength = 1.7;
 static float black_hole_swirl = 0.1;
-static float black_hole_ring_glow = 0.04; /* Einstein ring's emission, in skybox.frag */
+static float black_hole_ring_glow = 0.04; /* Einstein ring's emission, in black_hole.frag */
 static int black_hole_index[NUM_LAB_BLACK_HOLES]; /* scene[] indices, for position/scale updates */
 static int black_hole_lensed[NUM_LAB_BLACK_HOLES]; /* won a lens slot this frame; HUD readout */
 static float black_hole_coverage[NUM_LAB_BLACK_HOLES]; /* fraction of the window it distorts */
@@ -738,14 +738,14 @@ static void build_scene(void)
 	 *
 	 * All of them share one material and one mesh.  disc_radius is a ratio in the billboard's
 	 * UV space rather than an absolute size, so the same value serves every hole whatever its
-	 * radius; snis_client will share a single material the same way.  Since the margin is a
-	 * constant here it is set once rather than per frame. */
+	 * radius; snis_client will share a single material the same way.  Those radii and the
+	 * matching billboard scale are set together by update_black_holes(), since the lens strength
+	 * they depend on can be changed while running. */
 	for (i = 0; i < NUM_LAB_BLACK_HOLES; i++)
 		black_hole_index[i] = -1;
 	black_hole_mesh = mesh_fabricate_billboard(1.0, 1.0);
 	if (black_hole_mesh) {
 		material_init_black_hole(&black_hole_material);
-		black_hole_material.black_hole.disc_radius = 0.5 / BLACK_HOLE_BILLBOARD_MARGIN;
 		for (i = 0; i < NUM_LAB_BLACK_HOLES; i++) {
 			struct scene_object *bh;
 
@@ -1118,7 +1118,7 @@ static void update_black_holes(void)
 	} cand[NUM_LAB_BLACK_HOLES];
 	int taken[NUM_LAB_BLACK_HOLES];
 	union vec3 antisolar, base_up, base_right, to_hole, anchor, fwd, up, right;
-	float fov, tan_half_y, tan_half_x, pixels_per_radian;
+	float fov, tan_half_y, tan_half_x, pixels_per_radian, half_size;
 	int i, n, ncand = 0;
 
 	for (i = 0; i < NUM_LAB_BLACK_HOLES; i++) {
@@ -1148,6 +1148,12 @@ static void update_black_holes(void)
 	vec3_cross(&base_up, &base_right, &antisolar);
 	vec3_normalize_self(&base_up);
 
+	/* All the holes share one material, so the geometry is worked out once here rather than per
+	 * hole.  It has to be redone every frame even so, because the lens strength is a live knob
+	 * (SHIFT+PAGEUP / SHIFT+PAGEDOWN) and it is what puts the Einstein ring at its radius. */
+	half_size = material_black_hole_set_geometry(&black_hole_material, black_hole_lens_strength);
+	black_hole_material.black_hole.glow_brightness = black_hole_ring_glow;
+
 	for (i = 0; i < NUM_LAB_BLACK_HOLES; i++) {
 		union quat q;
 		union vec3 dir;
@@ -1161,14 +1167,13 @@ static void update_black_holes(void)
 		quat_rot_vec_self(&dir, &q);
 		vec3_mul_self(&dir, black_hole_distance[i]);
 		vec3_add(&scene[black_hole_index[i]].pos, &anchor, &dir);
-		/* The billboard is sized a little past the horizon so the photon-ring glow has
-		 * somewhere to go instead of being clipped at the quad's edge; the disc's UV radius
-		 * is scaled back by the same margin (once, at setup) so the horizon itself stays
-		 * exactly black_hole_radius across.  That is what makes the disc's apparent radius
-		 * equal the shadow_radius handed to the lens below, which is the whole reason for
-		 * drawing it procedurally. */
-		scene[black_hole_index[i]].scale =
-			2.0 * BLACK_HOLE_BILLBOARD_MARGIN * black_hole_radius[i];
+		/* The billboard stands off past the outermost ring so the glow has somewhere to go
+		 * instead of being clipped at the quad's edge, and the UV radii inside the material
+		 * are scaled back by the same factor so the horizon itself stays exactly
+		 * black_hole_radius across.  That is what makes the disc's apparent radius equal the
+		 * shadow_radius handed to the lens below, which is the whole reason for drawing it
+		 * procedurally -- so both come from the one call above and cannot drift apart. */
+		scene[black_hole_index[i]].scale = 2.0 * half_size * black_hole_radius[i];
 	}
 
 	if (!black_hole_enabled) {
@@ -1235,7 +1240,6 @@ static void update_black_holes(void)
 		cand[ncand].lens.einstein_radius = einstein;
 		cand[ncand].lens.shadow_radius = theta_obj;
 		cand[ncand].lens.swirl = black_hole_swirl_of(i);
-		cand[ncand].lens.ring_glow = black_hole_ring_glow;
 		cand[ncand].coverage = black_hole_coverage[i];
 		cand[ncand].einstein = einstein;
 		cand[ncand].hole = i;
@@ -1344,16 +1348,18 @@ static const char * const help_text[] = {
 	"  - PGDN / PGUP      FRAME-DRAG SWIRL DOWN / UP (SPIRALS THE ARCS; 0 = NONE)\n"
 	"  - INS / DEL        PHOTON RING DIMMER / BRIGHTER (THE DISC'S OWN RIM)\n"
 	"  - SHIFT+INS / SHIFT+DEL  PHOTON RING TIGHTER / WIDER\n"
-	"  - SHIFT+PGDN / SHIFT+PGUP  EINSTEIN RING DIMMER / BRIGHTER (THE LENSED ONE,\n"
-	"                     OUT IN THE SKYBOX -- A DIFFERENT RING AT A DIFFERENT RADIUS)\n"
+	"  - SHIFT+PGDN / SHIFT+PGUP  EINSTEIN RING DIMMER / BRIGHTER (THE OUTER RING, AT\n"
+	"                     THE LENS STRENGTH TIMES THE HORIZON RADIUS -- A DIFFERENT\n"
+	"                     RING AT A DIFFERENT RADIUS FROM THE PHOTON RING ABOVE)\n"
 	"  - PARKED ANTI-SOLAR, DIRECTLY AWAY FROM THE SUN, SO NOTHING COMPETES WITH THEM:\n"
 	"    THE SUN IS NOT LENSED (IT IS AN ENTITY DRAWN AFTER THE SKYBOX), SO PUTTING\n"
 	"    IT BEHIND A HOLE WOULD ONLY WASH THE RING OUT WITH BLOOM.\n"
 	"  - THE DISC IS A BILLBOARD RUNNING black_hole.frag -- PROCEDURAL, SO ITS EDGE\n"
-	"    LANDS AT EXACTLY THE ANGLE THE LENSING FLOORS ITS DEFLECTION AT.  THE RING,\n"
-	"    THE ARCS AND THE INVERTED SECOND IMAGE INSIDE THE RING ALL COME OUT OF ONE\n"
-	"    TERM IN skybox.frag AND ARE NOT DRAWN.  HUD SHOWS DISC / RING IN DEGREES:\n"
-	"    THOSE ARE WHAT TRANSFER TO THE GAME, NOT THE DISTANCE.\n\n"
+	"    LANDS AT EXACTLY THE ANGLE THE LENSING FLOORS ITS DEFLECTION AT.  IT DRAWS\n"
+	"    BOTH RINGS, SO A HOLE WITH NO LENS SLOT STILL WEARS ITS HALO.  THE ARCS AND\n"
+	"    THE INVERTED SECOND IMAGE INSIDE THE RING ARE NOT DRAWN AT ALL: THEY COME\n"
+	"    OUT OF ONE TERM IN skybox.frag, AND THEY ARE WHAT A SLOT ACTUALLY BUYS.\n"
+	"    HUD SHOWS DISC / RING IN DEGREES: THOSE TRANSFER TO THE GAME, NOT DISTANCE.\n\n"
 	"  SHADOWS\n"
 	"  - \\                TOGGLE SHADOWS ON / OFF\n"
 	"  - 0 / 1 / 2        DEBUG: OFF / SHADOW-FACTOR / CASCADE-INDEX\n"
@@ -2002,7 +2008,7 @@ static void handle_key_down(SDL_Keysym *keysym)
 		}
 		break;
 	case SDLK_PAGEDOWN: /* frame dragging: negative and positive swirl are mirror images.
-			     * Shift = dimmer Einstein ring (the lensed one, out in the skybox;
+			     * Shift = dimmer Einstein ring (the outer one, drawn on the billboard;
 			     * distinct from the disc's own rim on INSERT/DELETE) */
 		if (keysym->mod & KMOD_SHIFT) {
 			black_hole_ring_glow *= 0.9;

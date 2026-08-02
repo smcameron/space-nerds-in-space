@@ -182,7 +182,6 @@ struct graph_dev_gravitational_lens {
 	float einstein_radius;	/* angular Einstein radius, radians; <= 0 disables the slot */
 	float shadow_radius;	/* angular radius of the opaque disc, radians */
 	float swirl;		/* signed frame-dragging strength; 0 for none */
-	float ring_glow;	/* Einstein ring's own emission; 0 for bare lensed starlight */
 };
 extern void graph_dev_set_gravitational_lenses(int n,
 			const struct graph_dev_gravitational_lens *lens);

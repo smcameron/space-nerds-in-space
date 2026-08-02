@@ -925,6 +925,9 @@ struct graph_dev_gl_black_hole_shader {
 	GLint edge_softness_id;
 	GLint ring_brightness_id;
 	GLint ring_width_id;
+	GLint einstein_radius_id;
+	GLint glow_brightness_id;
+	GLint glow_width_id;
 	GLint ring_color_id;
 };
 
@@ -1098,7 +1101,7 @@ static struct graph_dev_gl_skybox_shader skybox_shader;
  * which the shader treats as contributing nothing -- see graph_dev_set_gravitational_lenses()
  * below and share/snis/shader-es/skybox.frag. */
 static GLfloat gravitational_lens_dir[MAX_GRAVITATIONAL_LENSES * 3];
-static GLfloat gravitational_lens_params[MAX_GRAVITATIONAL_LENSES * 4];
+static GLfloat gravitational_lens_params[MAX_GRAVITATIONAL_LENSES * 3];
 
 void graph_dev_set_gravitational_lenses(int n, const struct graph_dev_gravitational_lens *lens)
 {
@@ -1112,10 +1115,9 @@ void graph_dev_set_gravitational_lenses(int n, const struct graph_dev_gravitatio
 		gravitational_lens_dir[i * 3 + 0] = lens[i].direction[0];
 		gravitational_lens_dir[i * 3 + 1] = lens[i].direction[1];
 		gravitational_lens_dir[i * 3 + 2] = lens[i].direction[2];
-		gravitational_lens_params[i * 4 + 0] = lens[i].einstein_radius;
-		gravitational_lens_params[i * 4 + 1] = lens[i].shadow_radius;
-		gravitational_lens_params[i * 4 + 2] = lens[i].swirl;
-		gravitational_lens_params[i * 4 + 3] = lens[i].ring_glow;
+		gravitational_lens_params[i * 3 + 0] = lens[i].einstein_radius;
+		gravitational_lens_params[i * 3 + 1] = lens[i].shadow_radius;
+		gravitational_lens_params[i * 3 + 2] = lens[i].swirl;
 	}
 }
 static struct graph_dev_gl_color_by_w_shader color_by_w_shader;
@@ -2748,6 +2750,9 @@ static void graph_dev_raster_black_hole(const struct mat44 *mat_mvp, struct mesh
 	glUniform1f(black_hole_shader.edge_softness_id, bh->edge_softness);
 	glUniform1f(black_hole_shader.ring_brightness_id, bh->ring_brightness);
 	glUniform1f(black_hole_shader.ring_width_id, bh->ring_width);
+	glUniform1f(black_hole_shader.einstein_radius_id, bh->einstein_radius);
+	glUniform1f(black_hole_shader.glow_brightness_id, bh->glow_brightness);
+	glUniform1f(black_hole_shader.glow_width_id, bh->glow_width);
 	glUniform3f(black_hole_shader.ring_color_id, bh->ring_color.red, bh->ring_color.green,
 			bh->ring_color.blue);
 
@@ -4178,6 +4183,9 @@ static void setup_black_hole_shader(struct graph_dev_gl_black_hole_shader *shade
 	shader->edge_softness_id = glGetUniformLocation(shader->program_id, "u_EdgeSoftness");
 	shader->ring_brightness_id = glGetUniformLocation(shader->program_id, "u_RingBrightness");
 	shader->ring_width_id = glGetUniformLocation(shader->program_id, "u_RingWidth");
+	shader->einstein_radius_id = glGetUniformLocation(shader->program_id, "u_EinsteinRadius");
+	shader->glow_brightness_id = glGetUniformLocation(shader->program_id, "u_GlowBrightness");
+	shader->glow_width_id = glGetUniformLocation(shader->program_id, "u_GlowWidth");
 	shader->ring_color_id = glGetUniformLocation(shader->program_id, "u_RingColor");
 }
 
@@ -5302,7 +5310,7 @@ void graph_dev_draw_skybox(const struct mat44 *mat_vp)
 	if (skybox_shader.lens_dir_id >= 0)
 		glUniform3fv(skybox_shader.lens_dir_id, MAX_GRAVITATIONAL_LENSES, gravitational_lens_dir);
 	if (skybox_shader.lens_params_id >= 0)
-		glUniform4fv(skybox_shader.lens_params_id, MAX_GRAVITATIONAL_LENSES,
+		glUniform3fv(skybox_shader.lens_params_id, MAX_GRAVITATIONAL_LENSES,
 				gravitational_lens_params);
 
 	glEnableVertexAttribArray(skybox_shader.vertex_id);
