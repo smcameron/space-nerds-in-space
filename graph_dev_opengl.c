@@ -4985,9 +4985,9 @@ void graph_dev_reload_all_shaders(void)
 					&textured_cubemap_normal_mapped_lit_specular_shadow_shader);
 	/* Set up non-CSM textured cubemap shaders */
 	setup_textured_cubemap_shader("textured-cubemap-and-lit-with-annulus-shadow-per-pixel", 0, 0, 0, 0,
-					&textured_cubemap_lit_shadow_shader);
+					&textured_cubemap_lit_shader);
 	setup_textured_cubemap_shader("textured-cubemap-and-lit-with-annulus-shadow-per-pixel", 1, 0, 0, 0,
-					&textured_cubemap_lit_normal_map_shadow_shader);
+					&textured_cubemap_lit_normal_map_shader);
 	setup_textured_cubemap_shader("textured-cubemap-and-lit-with-annulus-shadow-per-pixel", 0, 0, 1, 0,
 					&textured_cubemap_lit_with_annulus_shader);
 	setup_textured_cubemap_shader("textured-cubemap-and-lit-with-annulus-shadow-per-pixel", 1, 0, 1, 0,
