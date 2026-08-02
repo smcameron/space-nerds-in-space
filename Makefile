@@ -592,7 +592,8 @@ _COMMONCLIENTOBJS= snis_ui_element.o snis_font.o snis_text_input.o \
 	snis_client_forker.o snis_process_options.o workqueue.o
 COMMONCLIENTOBJS=${COMMONOBJS} ${OGGOBJ} ${SNDOBJS} $(patsubst %,$(OD)/%,${_COMMONCLIENTOBJS}) 
 
-_CLIENTOBJS= shader.o ${GRAPH_OBJS} snis_graph.o snis_client.o joystick_config.o snis_xwindows_hacks.o png_utils.o
+_CLIENTOBJS= shader.o ${GRAPH_OBJS} snis_graph.o snis_client.o joystick_config.o snis_xwindows_hacks.o png_utils.o \
+				black_hole_lens.o
 CLIENTOBJS=${COMMONCLIENTOBJS} $(patsubst %,$(OD)/%,${_CLIENTOBJS})
 
 _SDLCLIENTOBJS=shader.o ${GRAPH_OBJS} snis_graph.o mesh_viewer.o \
@@ -608,7 +609,7 @@ _SHADOWLABOBJS=shader.o ${GRAPH_OBJS} snis_graph.o shadow_lab.o \
 				mtwist.o material.o entity.o snis_alloc.o matrix.o stacktrace.o stl_parser.o \
 				snis_typeface.o snis_font.o string-utils.o ui_colors.o liang-barsky.o \
 				bline.o vec4.o open-simplex-noise.o replacement_assets.o \
-				snis_xwindows_hacks.o workqueue.o pthread_util.o
+				snis_xwindows_hacks.o workqueue.o pthread_util.o black_hole_lens.o
 SHADOWLABOBJS=$(patsubst %,$(OD)/%,${_SHADOWLABOBJS}) mikktspace/mikktspace.o
 
 _STARLIGHTPREVIEWOBJS=shader.o ${GRAPH_OBJS} snis_graph.o star_light_preview.o \
@@ -1094,6 +1095,11 @@ $(OD)/snis_font.o:	snis_font.c Makefile ${ODT}
 
 $(OD)/mathutils.o:	mathutils.c Makefile ${ODT}
 	$(Q)$(COMPILE)
+
+# SDLCOMPILE because black_hole_lens.h includes graph_dev.h, for the lens struct it fills in,
+# and graph_dev.h pulls in SDL.h.
+$(OD)/black_hole_lens.o:	black_hole_lens.c black_hole_lens.h graph_dev.h quat.h mathutils.h ${ODT}
+	$(Q)$(SDLCOMPILE)
 
 $(OD)/crater.o:	crater.c crater.h Makefile ${ODT}
 	$(Q)$(COMPILE)

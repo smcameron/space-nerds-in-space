@@ -120,6 +120,7 @@
 #include "entity.h"
 #include "matrix.h"
 #include "graph_dev.h"
+#include "black_hole_lens.h"
 #include "ui_colors.h"
 #include "pthread_util.h"
 #include "snis_tweak.h"
@@ -9699,156 +9700,52 @@ static void adjust_weapons_azimuth_angle(union quat *cam_orientation)
 	quat_mul_self(cam_orientation, &az);
 }
 
-/* How far out a hole's distortion is worth counting, as a multiple of its Einstein radius.  The
- * deflection is einstein^2 / theta, so it has no outer edge to find: it just thins out forever,
- * and integrated over the sky it diverges, so a cutoff has to be chosen.  By three Einstein radii
- * the sky is displaced by a third of one, which is where the arcs stop being arcs and become a
- * faint smear.  Only the ranking depends on this, and only for a hole near the edge of the view. */
-#define BLACK_HOLE_LENS_EXTENT 3.0
-/* Base frame-dragging strength, before the per-hole variation below. */
+/* Einstein radius as a multiple of the event horizon radius, and the base frame-dragging
+ * strength.  Both tuned by eye in shadow_lab, which exists to tune exactly these. */
 #define BLACK_HOLE_SWIRL 0.1
 static int black_hole_lensing = 1; /* tweakable */
 
-/* Which way a given hole spins, derived from its object id rather than sent by the server, so
- * that every bridge agrees without spending a protocol field on it.  The magnitude is varied a
- * little too, so a cluster of holes does not all spiral identically.  Matches shadow_lab's
- * black_hole_swirl_of(), which walks hole indices 0..4 through the same arithmetic. */
-static float black_hole_swirl_of(uint32_t id)
-{
-	float mag = BLACK_HOLE_SWIRL * (1.0 - 0.4 * (float) (id % 5) / 4.0);
-
-	return (id & 1) ? -mag : mag;
-}
-
-/* Point the skybox shader's lens slots at the black holes worth spending them on.
- *
- * There are MAX_GRAVITATIONAL_LENSES (3) slots and a solar system can hold more holes than that
- * -- NBLACK_HOLES of them to start with, plus whatever a mission script adds -- so which ones get
- * lensed has to be chosen every frame.  A hole that misses out still draws its disc and both of
- * its rings; it just does not bend the sky, which is a subtle degradation rather than a change of
- * object.
- *
- * Ranked by how much of the window each hole's distortion actually falls on, so a slot is not
- * spent on a hole that is off the edge or mostly off it while the one dead ahead goes without.
- * The geometry here mirrors shadow_lab's update_black_holes(), which is where it was worked out
- * and where it can be seen: the two are separate on purpose, since the lab carries live tuning
- * knobs and a HUD that have no place in the client, but the projection and the scoring must stay
- * in step or the lab stops predicting what the game will do. */
+/* Point the skybox shader's lens slots at the black holes worth spending them on.  The choosing
+ * is in black_hole_lens_select(); all this does is gather the holes out of go[] and hand the
+ * result to graph_dev.  See black_hole_lens.h for what the ranking and the ordering are for. */
 static void update_black_hole_lenses(const union vec3 *cam_pos,
 					const union quat *cam_orientation, float fov)
 {
 	struct graph_dev_gravitational_lens lens[MAX_GRAVITATIONAL_LENSES];
-	struct lens_candidate {
-		struct graph_dev_gravitational_lens lens;
-		float coverage;		/* fraction of the window its distortion falls on */
-		float einstein;		/* only a tie-break; see below */
-		float distance;		/* camera to hole, for ordering the slots once chosen */
-	} best[MAX_GRAVITATIONAL_LENSES], c;
-	union vec3 fwd, up, right, to_hole;
-	float tan_half_y, tan_half_x, pixels_per_radian;
-	int i, j, n, nbest = 0;
+	struct black_hole_lens_hole hole[MAX_BLACK_HOLE_LENS_CANDIDATES];
+	struct black_hole_lens_view view;
+	int i, n, nholes = 0;
 
 	if (!black_hole_lensing) {
 		graph_dev_set_gravitational_lenses(0, NULL);
 		return;
 	}
 
-	fwd.v.x = 1.0; fwd.v.y = 0.0; fwd.v.z = 0.0;
-	up.v.x = 0.0; up.v.y = 1.0; up.v.z = 0.0;
-	right.v.x = 0.0; right.v.y = 0.0; right.v.z = 1.0;
-	quat_rot_vec_self(&fwd, cam_orientation);
-	quat_rot_vec_self(&up, cam_orientation);
-	quat_rot_vec_self(&right, cam_orientation);
-
-	/* The same frustum the view is about to be rendered with; angle_of_view is the vertical
-	 * field of view, so zooming changes which holes are worth a slot. */
-	tan_half_y = tanf(0.5 * fov);
-	tan_half_x = tan_half_y * (float) SCREEN_WIDTH / (float) SCREEN_HEIGHT;
-	pixels_per_radian = 0.5 * (float) SCREEN_HEIGHT / tan_half_y;
-
-	/* Scored under the lock rather than copied out first: there are only ever a handful of
-	 * holes, the work per hole is a few dozen flops, and render_entities() below holds this
-	 * same mutex for far longer. */
+	/* Gathered under the lock, scored outside it: the selection is pure arithmetic on this
+	 * copy, and there is no reason to hold the universe mutex across it. */
 	pthread_mutex_lock(&universe_mutex);
 	for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
-		float dist, theta_obj, einstein, x, y, z, sx, sy, extent, coverage, radius;
-		union vec3 hole_pos;
-
 		if (!go[i].alive || go[i].type != OBJTYPE_BLACK_HOLE)
 			continue;
-		hole_pos.v.x = go[i].x;
-		hole_pos.v.y = go[i].y;
-		hole_pos.v.z = go[i].z;
-		radius = go[i].tsd.black_hole.radius;
-
-		vec3_sub(&to_hole, &hole_pos, cam_pos);
-		dist = vec3_magnitude(&to_hole);
-		if (dist <= radius) /* inside it; no sensible lens to describe */
-			continue;
-		vec3_normalize_self(&to_hole);
-		z = vec3_dot(&to_hole, &fwd);
-		if (z <= 0.0) /* behind the camera; nothing to project and nothing to see */
-			continue;
-
-		theta_obj = atan2f(radius, dist);
-		einstein = BLACK_HOLE_LENS_STRENGTH * theta_obj;
-
-		/* Project the hole and clip the disc of its distortion to the window.  The disc's
-		 * radius is an angle times a constant pixels-per-radian, exact only on the view axis
-		 * and stretched away from it; since this decides a ranking and not a rendering that
-		 * is close enough, and it is what keeps a hole just barely in front of the camera,
-		 * whose projection runs off to infinity, from scoring anything. */
-		x = vec3_dot(&to_hole, &right);
-		y = vec3_dot(&to_hole, &up);
-		sx = (0.5 + 0.5 * (x / z) / tan_half_x) * (float) SCREEN_WIDTH;
-		sy = (0.5 - 0.5 * (y / z) / tan_half_y) * (float) SCREEN_HEIGHT;
-		extent = BLACK_HOLE_LENS_EXTENT * einstein * pixels_per_radian;
-		coverage = disc_rectangle_intersection_area(sx, sy, extent,
-				0.0, 0.0, SCREEN_WIDTH, SCREEN_HEIGHT) /
-					((float) SCREEN_WIDTH * (float) SCREEN_HEIGHT);
-		if (coverage <= 0.0)
-			continue;
-
-		c.lens.direction[0] = to_hole.v.x;
-		c.lens.direction[1] = to_hole.v.y;
-		c.lens.direction[2] = to_hole.v.z;
-		c.lens.einstein_radius = einstein;
-		c.lens.shadow_radius = theta_obj;
-		c.lens.swirl = black_hole_swirl_of(go[i].id);
-		c.coverage = coverage;
-		c.einstein = einstein;
-		c.distance = dist;
-
-		/* Keep the best few by coverage, breaking ties on Einstein radius -- two holes close
-		 * enough to flood the window both score 1.0, and then the bigger one should win.  An
-		 * insertion into a list of three rather than a sort of everything, so however many
-		 * holes a mission script puts in the sky costs one pass and no allocation. */
-		if (nbest < MAX_GRAVITATIONAL_LENSES)
-			nbest++;
-		else if (coverage < best[nbest - 1].coverage ||
-			(coverage == best[nbest - 1].coverage &&
-				einstein <= best[nbest - 1].einstein))
-			continue;
-		for (j = nbest - 1; j > 0 && (best[j - 1].coverage < c.coverage ||
-				(best[j - 1].coverage == c.coverage &&
-					best[j - 1].einstein < c.einstein)); j--)
-			best[j] = best[j - 1];
-		best[j] = c;
+		if (nholes >= MAX_BLACK_HOLE_LENS_CANDIDATES)
+			break;
+		hole[nholes].pos.v.x = go[i].x;
+		hole[nholes].pos.v.y = go[i].y;
+		hole[nholes].pos.v.z = go[i].z;
+		hole[nholes].radius = go[i].tsd.black_hole.radius;
+		hole[nholes].id = go[i].id;
+		nholes++;
 	}
 	pthread_mutex_unlock(&universe_mutex);
 
-	/* Which holes get a slot is one question, what order they go into the slots is another.
-	 * The shader bends the ray by one lens at a time in slot order, so they have to run in the
-	 * order the light meets them -- nearest first -- or a far hole lenses the sky as though the
-	 * near hole in front of it were not there.  Insertion sort: nbest is at most three. */
-	for (i = 1; i < nbest; i++) {
-		c = best[i];
-		for (j = i; j > 0 && best[j - 1].distance > c.distance; j--)
-			best[j] = best[j - 1];
-		best[j] = c;
-	}
-	for (n = 0; n < nbest; n++)
-		lens[n] = best[n].lens;
+	view.cam_pos = *cam_pos;
+	view.cam_orientation = *cam_orientation;
+	view.fov = fov;
+	view.screen_width = SCREEN_WIDTH;
+	view.screen_height = SCREEN_HEIGHT;
+
+	n = black_hole_lens_select(hole, nholes, &view, BLACK_HOLE_LENS_STRENGTH,
+					BLACK_HOLE_SWIRL, lens, NULL, NULL);
 	graph_dev_set_gravitational_lenses(n, n ? lens : NULL);
 }
 

@@ -39,6 +39,7 @@
 #include "snis_ship_type.h"
 #include "snis_graph.h"
 #include "graph_dev.h"
+#include "black_hole_lens.h"
 #include "quat.h"
 #include "material.h"
 #include "entity.h"
@@ -266,18 +267,6 @@ static float black_hole_coverage[NUM_LAB_BLACK_HOLES]; /* fraction of the window
 #define BLACK_HOLE_LENS_EXTENT 3.0
 static struct mesh *black_hole_mesh;
 static struct material black_hole_material;
-
-/* Frame dragging, signed and varied per hole, so several of them do not all spiral the same
- * way.  Hole 0 gets the knob's value exactly, so PGUP/PGDN feel unchanged from when there was
- * only one; the rest alternate handedness and fall off a little.  snis_client will do the same
- * thing from the object id, so that every bridge agrees on which way a given hole turns. */
-static float black_hole_swirl_of(int i)
-{
-	float mag = black_hole_swirl *
-		(1.0 - 0.4 * (float) (i % NUM_LAB_BLACK_HOLES) / (NUM_LAB_BLACK_HOLES - 1));
-
-	return (i & 1) ? -mag : mag;
-}
 
 /* Which black hole a scene slot is, or -1.  A scan, because there are five of them. */
 static int black_hole_slot(int scene_index)
@@ -1110,23 +1099,18 @@ static void update_sun(void)
 static void update_black_holes(void)
 {
 	struct graph_dev_gravitational_lens lens[MAX_GRAVITATIONAL_LENSES];
-	struct lens_candidate {
-		struct graph_dev_gravitational_lens lens;
-		float coverage;		/* fraction of the window its distortion falls on */
-		float einstein;		/* only a tie-break; see the selection below */
-		float distance;		/* camera to hole, for ordering the slots once chosen */
-		int hole;
-	} cand[NUM_LAB_BLACK_HOLES];
-	int taken[NUM_LAB_BLACK_HOLES];
+	struct black_hole_lens_hole hole[NUM_LAB_BLACK_HOLES];
+	struct black_hole_lens_view view;
+	float coverage[NUM_LAB_BLACK_HOLES];
 	int chosen[MAX_GRAVITATIONAL_LENSES];
-	union vec3 antisolar, base_up, base_right, to_hole, anchor, fwd, up, right;
-	float fov, tan_half_y, tan_half_x, pixels_per_radian, half_size;
-	int i, n, ncand = 0;
+	int map[NUM_LAB_BLACK_HOLES]; /* compacted hole -> layout slot, for the HUD */
+	union vec3 antisolar, base_up, base_right, anchor;
+	float half_size;
+	int i, n, nholes = 0;
 
 	for (i = 0; i < NUM_LAB_BLACK_HOLES; i++) {
 		black_hole_lensed[i] = 0;
 		black_hole_coverage[i] = 0.0;
-		taken[i] = 0;
 	}
 
 	/* Anti-solar, anchored on the ship cluster at the origin rather than on scene_center (the
@@ -1183,108 +1167,35 @@ static void update_black_holes(void)
 		return;
 	}
 
-	camera_basis(&cam_orientation, &fwd, &up, &right);
-	/* The same frustum render_scene() is about to set up, since the whole point of the score
-	 * below is where things land in this window.  Zooming into the turret view narrows the
-	 * field of view and so changes which holes are worth a slot. */
-	fov = turret_view_active() ? TURRET_FOV : FOV;
-	tan_half_y = tanf(0.5 * fov);
-	tan_half_x = tan_half_y * (float) SCREEN_WIDTH / (float) SCREEN_HEIGHT;
-	pixels_per_radian = 0.5 * (float) SCREEN_HEIGHT / tan_half_y;
+	/* The same frustum render_scene() is about to set up, since the whole point of the scoring
+	 * is where things land in this window.  Zooming into the turret view narrows the field of
+	 * view and so changes which holes are worth a slot. */
+	view.cam_pos = cam_pos;
+	view.cam_orientation = cam_orientation;
+	view.fov = turret_view_active() ? TURRET_FOV : FOV;
+	view.screen_width = SCREEN_WIDTH;
+	view.screen_height = SCREEN_HEIGHT;
 
+	/* Compact the live holes down, since a slot in the layout can be empty.  The id handed to
+	 * the selector is the hole's own index, which is what its swirl has always been derived
+	 * from, and map[] carries the index back for the HUD. */
 	for (i = 0; i < black_hole_count; i++) {
-		float dist, theta_obj, einstein, x, y, z, sx, sy, extent;
-
 		if (black_hole_index[i] < 0)
 			continue;
-		vec3_sub(&to_hole, &scene[black_hole_index[i]].pos, &cam_pos);
-		dist = vec3_magnitude(&to_hole);
-		if (dist <= black_hole_radius[i]) /* inside it; no sensible lens to describe */
-			continue;
-		vec3_normalize_self(&to_hole);
-		z = vec3_dot(&to_hole, &fwd);
-		if (z <= 0.0) /* behind the camera; nothing to project and nothing to see */
-			continue;
-
-		theta_obj = atan2f(black_hole_radius[i], dist);
-		einstein = black_hole_lens_strength * theta_obj;
-
-		/* Score by how much of the window the distortion actually falls on, not by how big
-		 * the hole is: a slot spent on a hole that is off the edge, or mostly off it, buys
-		 * nothing, and the hole you are looking straight at should have one.  The distortion
-		 * is a disc of BLACK_HOLE_LENS_EXTENT Einstein radii about the hole, so project the
-		 * hole and clip that disc to the window.
-		 *
-		 * The disc's radius is taken as an angle times a constant pixels-per-radian, which is
-		 * exact only on the view axis and stretches away from it; the center is projected
-		 * properly.  Since this decides a ranking and not a rendering, that is close enough --
-		 * and it is what keeps a hole just barely in front of the camera, whose projection
-		 * runs off to infinity, from scoring anything.
-		 *
-		 * Note that a hole entirely in view scores pi * (extent * einstein)^2, so ranking by
-		 * coverage agrees with ranking by Einstein radius whenever nothing is clipped.  This
-		 * only changes which hole wins at the edges of the window, which is where the old
-		 * ranking got it wrong. */
-		x = vec3_dot(&to_hole, &right);
-		y = vec3_dot(&to_hole, &up);
-		sx = (0.5 + 0.5 * (x / z) / tan_half_x) * (float) SCREEN_WIDTH;
-		sy = (0.5 - 0.5 * (y / z) / tan_half_y) * (float) SCREEN_HEIGHT;
-		extent = BLACK_HOLE_LENS_EXTENT * einstein * pixels_per_radian;
-		black_hole_coverage[i] = disc_rectangle_intersection_area(sx, sy, extent,
-				0.0, 0.0, SCREEN_WIDTH, SCREEN_HEIGHT) /
-					((float) SCREEN_WIDTH * (float) SCREEN_HEIGHT);
-		if (black_hole_coverage[i] <= 0.0)
-			continue;
-
-		cand[ncand].lens.direction[0] = to_hole.v.x;
-		cand[ncand].lens.direction[1] = to_hole.v.y;
-		cand[ncand].lens.direction[2] = to_hole.v.z;
-		cand[ncand].lens.einstein_radius = einstein;
-		cand[ncand].lens.shadow_radius = theta_obj;
-		cand[ncand].lens.swirl = black_hole_swirl_of(i);
-		cand[ncand].coverage = black_hole_coverage[i];
-		cand[ncand].einstein = einstein;
-		cand[ncand].distance = dist;
-		cand[ncand].hole = i;
-		ncand++;
+		hole[nholes].pos = scene[black_hole_index[i]].pos;
+		hole[nholes].radius = black_hole_radius[i];
+		hole[nholes].id = i;
+		map[nholes] = i;
+		nholes++;
 	}
 
-	/* Take the best few by screen coverage, breaking ties on Einstein radius -- two holes close
-	 * enough to flood the window both score 1.0, and then the bigger one should win.  A
-	 * selection scan rather than a sort: with a handful of candidates and three slots this is
-	 * shorter and easier to read than anything cleverer, and snis_client will be choosing from
-	 * no more than this either. */
-	for (n = 0; n < MAX_GRAVITATIONAL_LENSES && n < ncand; n++) {
-		int best = -1;
+	n = black_hole_lens_select(hole, nholes, &view, black_hole_lens_strength, black_hole_swirl,
+					lens, chosen, coverage);
 
-		for (i = 0; i < ncand; i++) {
-			if (taken[i])
-				continue;
-			if (best < 0 || cand[i].coverage > cand[best].coverage ||
-				(cand[i].coverage == cand[best].coverage &&
-					cand[i].einstein > cand[best].einstein))
-				best = i;
-		}
-		if (best < 0)
-			break;
-		taken[best] = 1;
-		chosen[n] = best;
-		black_hole_lensed[cand[best].hole] = 1;
-	}
-
-	/* Which holes get a slot is one question, in what order they go into the slots is another.
-	 * The shader bends the ray by one lens at a time, so the slots have to run in the order the
-	 * light meets them -- nearest first -- or a far hole ends up lensing the sky as though the
-	 * near hole in front of it were not there.  Insertion sort: n is at most three. */
-	for (i = 1; i < n; i++) {
-		int c = chosen[i], j;
-
-		for (j = i; j > 0 && cand[chosen[j - 1]].distance > cand[c].distance; j--)
-			chosen[j] = chosen[j - 1];
-		chosen[j] = c;
-	}
+	for (i = 0; i < nholes; i++)
+		black_hole_coverage[map[i]] = coverage[i];
 	for (i = 0; i < n; i++)
-		lens[i] = cand[chosen[i]].lens;
+		black_hole_lensed[map[chosen[i]]] = 1;
 	graph_dev_set_gravitational_lenses(n, n ? lens : NULL);
 }
 
