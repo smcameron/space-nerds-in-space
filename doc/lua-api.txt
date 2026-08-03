@@ -72,16 +72,27 @@ TIPS ON DEBUGGING YOUR LUA SCRIPTS:
 Space Nerds In Space lua inteface:
 
 Locations in space nerds in space:
-	x,y,z coords, (0,0,0) is the upper left of the known universe,
-	Most of the action is more or less confined to the x-z plane.
-	Positive x is to the right, negative x is to the left
-	Positive z is out of the screen, negative z is into the screen,
-	Positive y is up, negative y is down.
+	x,y,z coords, (0,0,0) is the center of the star system, and is
+	the location of the central star.  The play area extends 300000
+	units from (0,0,0) up, down, left, right, fore and aft.  That is,
+	coordinates range from (-300000, -300000, -300000) to
+	(300000, 300000, 300000).
 
-	Note: that to the player within the game, the z and y coords are swapped,
-	so that *to the player*, positive y is out of the screen, negative y into the
-	screen, and positive z is up, negative z is down.  (See user_coords() function
-	below.)
+	Positive x is to the right, negative x is to the left
+	Positive y is up, negative y is down,
+	Positive z is out of the screen, negative z is into the screen.
+	That is to say, it is a right handed coordinate system.
+
+	You can visualize this by running:
+	bin/mesh_viewer -m ~/.local/share/space-nerds-in-space/share/snis/models/axis.stl
+
+	The Demon Screen "Home" view is from (0, big positive number, 0) with the
+	camera pointed towards (0, 0, 0), looking along the Y axis in the negative y
+	direction. Positive X is up, positive Z is to the right.  You can tell by the
+	color of the small axes on the edges, where +X,+Y,+Z maps to R G B.  That is to
+	say, the red axes indicate the direction of positive X, the bright green axes
+	indicate the direction of positive Y and the blue axes indicate the direction
+	of positive Z.
 
 	TBD function to return size of known universe?
 
@@ -465,6 +476,8 @@ load_skybox(ship_id, filenameprefix) -- loads a new skybox composed of six image
 
 ux,uy,uz = user_coords(x, y, z) -- returns user (player) coordinates given program coordinates.
 	(this really just swaps y and z. ux == x, uy == z, uz == y).
+	user_coords() is deprecated, do not use this. We no longer present coords to
+	the user which swap y and z.
 
 ai_push_patrol(id, nwaypoints, x, y, z, x2, y2, z2, x3, y3, z3, ... )
 	set up a patrol route (up to 5 waypoints) for ship with specified id.
