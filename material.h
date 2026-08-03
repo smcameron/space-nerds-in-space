@@ -93,13 +93,17 @@ struct material_texture_cubemap {
  * billboard's 0..0.5 UV space, set per frame (star world radius / billboard world size) so the
  * disc stays world-scale while the billboard is sized to the bloom's screen extent. */
 struct material_sun {
-	struct sng_color color;  /* blackbody colour from the star's temperature */
+	struct sng_color color;  /* the star's chromaticity, brightest channel 1 */
+	float brightness;        /* surface brightness in LINEAR HDR units, from the temperature */
 	float disc_radius;       /* disc radius in UV (0..0.5), set per frame */
-	float edge_softness;     /* disc edge softness, as a fraction of the disc radius */
-	float core_brightness;   /* core emission scale (HDR; whitens via the tonemap) */
-	float bloom_brightness;  /* bloom emission scale */
-	float bloom_radius;      /* bloom half-brightness radius in UV (from the disc edge), per frame */
-	float bloom_falloff;     /* bloom edge sharpness: exponent k of the 1/(1 + d^k) falloff */
+	float edge_softness;     /* limb softness of the ALPHA only, as a fraction of the disc radius */
+	/* The two below describe the OPTICS, not the star: one setting serves every star, because
+	 * the power-law point spread function is scale free and brightness alone moves where it
+	 * crosses white.  They are material fields rather than shader constants only so shadow_lab
+	 * can tune them.  There is no amplitude any more -- the profile IS the star's disc convolved
+	 * with the PSF, normalised to 1 at the centre, so its overall level is just the brightness. */
+	float psf_width;         /* point spread width, in star radii */
+	float psf_falloff;       /* power-law exponent of the PSF's tail */
 };
 
 /* An event horizon: a flat, wholly opaque black disc, plus a thin bright rim standing in for the

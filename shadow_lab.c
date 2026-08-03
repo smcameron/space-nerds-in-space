@@ -20,6 +20,7 @@
 #include <math.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <dirent.h>
 #include <unistd.h>
 #include <errno.h>
 #include <limits.h>
@@ -49,6 +50,9 @@
 #include "snis_typeface.h"
 #include "snis_cardinal_colors.h"
 #include "star_light.h"
+#include "solarsystem_config.h"
+#include "snis_asset_dir.h"
+#include "string-utils.h"
 #include "opengl_cap.h"
 #include "build_info.h"
 #include "png_utils.h"
@@ -105,6 +109,10 @@ struct scene_object {
 static struct scene_object scene[MAX_SCENE_OBJECTS];
 static int scene_object_count;
 static int planet_index = -1; /* scene[] index of the planet, for live radius/distance edits */
+/* scene[] index of the atmosphere shell.  snis_client parents the shell to the planet
+ * (update_entity_parent() in its update_planet()) so it inherits position and scale; the lab
+ * builds a flat scene[] with no parenting, so update_atmosphere() slaves it by hand instead. */
+static int atmosphere_index = -1;
 static float scene_scale = 1000.0; /* characteristic spacing of the scene, set at load time */
 
 /* Free-fly camera. */
@@ -201,17 +209,12 @@ static float deepest_planet_shade = 0.0; /* deepest analytic ship shading this f
  * fraction of the camera distance) but never smaller than the disc, and the shader's disc
  * radius is set each frame from sun_radius / billboard size so the disc stays world-scale
  * (grows as you approach) while the bloom stays a constant apparent size. */
-#define SUN_BILLBOARD_MARGIN 1.1 /* billboard is this much larger than disc + bloom, so both fit with a
-				   * small transparent border and the whole falloff is on-screen */
-static float sun_bloom_apparent = 0.1; /* bloom reach (where it hits zero) as a fraction of camera distance */
+#define SUN_BILLBOARD_MARGIN 1.1 /* billboard is this much larger than the glow's visible extent, so the
+				   * falloff is never clipped off square at the quad's edge */
 static float sun_temperature = 5980.0; /* Kelvin; sets the star's blackbody colour.  A fit of sun.png's
 					* glow hue to the blackbody locus lands on 5980K, which is
 					* long-standing default was already the texture's colour. */
-static float sun_bloom_reach_radii = 0.0; /* last frame's bloom reach in star radii, for the HUD.  This is
-					   * the reach expressed the way the TEXTURE expresses it -- a
-					   * multiple of the star's radius rather than of the camera
-					   * distance -- so it is the number to compare against the
-					   * texture's measured 3.73 when matching the two. */
+static float sun_glow_extent = 1.0; /* last frame's glow extent in star radii, for the HUD */
 
 /* Star-coloured lighting (see star_light.c / set_star_light_tint()): tint every lit object's
  * sun-lit term toward the star's colour by sun_light_tint, its shaded/ambient term toward the
@@ -238,6 +241,26 @@ static struct material sun_material;
  * grows as you approach, while the shader's bloom is screen-scale and holds a constant apparent
  * size.  They can only agree at one camera distance.
  */
+/* The solar system being previewed.  Every system ships its own sun texture and its own star
+ * parameters, and they differ enormously -- discs from 50 to 140 px, temperatures from a red
+ * dwarf to a blue giant -- so tuning the shader against one of them says nothing about the
+ * others.  Being able to step through the lot is what makes the parameters checkable.
+ *
+ * Configs are read from solarsystem_dir and IMAGES from asset_dir, which are usually the same
+ * place but need not be: while pre-seeding parameters the configs live in a scratch directory
+ * that holds no artwork, so the two are resolved separately.
+ */
+#define MAX_LAB_SOLARSYSTEMS 64
+static char asset_dir[PATH_MAX + 1];
+static char solarsystem_dir[PATH_MAX + 1];
+static char *solarsystem_name[MAX_LAB_SOLARSYSTEMS];
+static int nsolarsystems;
+static int current_solarsystem = -1;
+static struct solarsystem_asset_spec *solarsystem_assets;
+
+/* Defined down with the other asset loading, but reached from the key handler above it. */
+static void cycle_solarsystem(int delta);
+
 enum sun_style { SUN_STYLE_SHADER, SUN_STYLE_TEXTURE, SUN_STYLE_SIDE_BY_SIDE };
 static const char * const sun_style_name[] = { "SHADER", "TEXTURE", "SIDE BY SIDE" };
 static int sun_style = SUN_STYLE_SHADER;
@@ -349,9 +372,11 @@ static int black_hole_slot(int scene_index)
 	return -1;
 }
 
+static float sun_tint[3] = { 1.0, 1.0, 1.0 }; /* off-locus deviation; see solarsystem_config.h */
+
 static void update_sun_color(void)
 {
-	star_light_blackbody_color(sun_temperature, &sun_material.sun.color.red,
+	star_light_tinted_blackbody_color(sun_temperature, sun_tint, &sun_material.sun.color.red,
 			&sun_material.sun.color.green, &sun_material.sun.color.blue);
 }
 
@@ -441,28 +466,18 @@ static struct mesh *snis_read_model(char *path)
 	return m;
 }
 
-/* Load a model that may not be present, quietly.  The ship .obj models live in the source
- * tree, but the downloaded art assets (the turret .stl among them) only exist under the
- * user's asset directory, so try the working directory first and fall back to that.  Returns
- * NULL rather than exiting: every caller of this treats the model as optional. */
+/* Load a model that may not be present, quietly.  Not every model is in every asset tree --
+ * the source tree carries the ship .obj models but almost none of the downloaded art -- so
+ * this returns NULL rather than exiting; every caller treats the model as optional. */
 static struct mesh *read_optional_model(const char *relative_path)
 {
 	char path[PATH_MAX];
-	const char *home;
 	struct mesh *m;
 
-	m = read_mesh((char *) relative_path);
-	if (m)
-		return m;
-
-	home = getenv("HOME");
-	if (!home)
-		return NULL;
-	snprintf(path, sizeof(path), "%s/.local/share/space-nerds-in-space/%s", home,
-			relative_path);
+	snprintf(path, sizeof(path), "%s/%s", asset_dir, relative_path);
 	m = read_mesh(path);
 	if (!m)
-		fprintf(stderr, "shadow_lab: optional model '%s' not found\n", relative_path);
+		fprintf(stderr, "shadow_lab: optional model '%s' not found\n", path);
 	return m;
 }
 
@@ -599,10 +614,10 @@ struct lab_ship_model {
 #define ASTEROID_DISTORTION (0.25)
 
 static const struct lab_ship_model phase1_ship_models[] = {
-	{ "share/snis/models/wombat/snis3006.obj", { 'x', 'y' }, { -90.0, 90.0 }, 2 },
-	{ "share/snis/models/disruptor/disruptor.obj", { 0 }, { 0 }, 0 },
-	{ "share/snis/models/enforcer/enforcer.obj", { 0 }, { 0 }, 0 },
-	{ "share/snis/models/conqueror/conqueror.obj", { 0 }, { 0 }, 0 },
+	{ "models/wombat/snis3006.obj", { 'x', 'y' }, { -90.0, 90.0 }, 2 },
+	{ "models/disruptor/disruptor.obj", { 0 }, { 0 }, 0 },
+	{ "models/enforcer/enforcer.obj", { 0 }, { 0 }, 0 },
+	{ "models/conqueror/conqueror.obj", { 0 }, { 0 }, 0 },
 };
 
 static void apply_model_rotations(struct mesh *m, const struct lab_ship_model *spec)
@@ -625,12 +640,11 @@ static void apply_model_rotations(struct mesh *m, const struct lab_ship_model *s
  * shuffle.  Returns 0 if the textures are missing, which leaves the asteroid untextured. */
 static unsigned int load_cubemap(const char *prefix)
 {
-	const char *asset_dir = "share/snis/textures";
 	char filename[6][PATH_MAX + 1];
 	int i;
 
 	for (i = 0; i < 6; i++)
-		snprintf(filename[i], sizeof(filename[i]), "%s/%s%d.png", asset_dir, prefix, i);
+		snprintf(filename[i], sizeof(filename[i]), "%s/textures/%s%d.png", asset_dir, prefix, i);
 
 	return graph_dev_load_cubemap_texture(0, 0, filename[1], filename[3], filename[4],
 						filename[5], filename[0], filename[2]);
@@ -645,7 +659,10 @@ static void build_scene(void)
 	float spacing;
 
 	for (i = 0; i < nships; i++) {
-		ship_mesh[i] = snis_read_model((char *) phase1_ship_models[i].path);
+		char path[PATH_MAX];
+
+		snprintf(path, sizeof(path), "%s/%s", asset_dir, phase1_ship_models[i].path);
+		ship_mesh[i] = snis_read_model(path);
 		if (!ship_mesh[i])
 			exit(1);
 		apply_model_rotations(ship_mesh[i], &phase1_ship_models[i]);
@@ -663,7 +680,7 @@ static void build_scene(void)
 	 * by SHIP_MESH_SCALE at load too, and the turret mount point above is expressed in the
 	 * same already-scaled world units.  Optional: the turret view still works without it,
 	 * just with no close-up caster, so a missing model must not kill the lab. */
-	turret_mesh = read_optional_model("share/snis/models/spaceship_turret.stl");
+	turret_mesh = read_optional_model("models/spaceship_turret.stl");
 	if (turret_mesh)
 		mesh_scale(turret_mesh, SHIP_MESH_SCALE);
 
@@ -722,6 +739,7 @@ static void build_scene(void)
 		if (atm) {
 			atm->alpha = 0.5;
 			atm->no_cast_shadow = 1;
+			atmosphere_index = (int) (atm - scene);
 		}
 		if (p) {
 			p->color = GRAY50;
@@ -733,7 +751,14 @@ static void build_scene(void)
 			planet_index = (int) (p - scene);
 			scene_center = p->pos; /* orbit the sun about the planet */
 			sun_distance = 100000.0; /* game-typical; SUN_DIST_LIMIT is 30000 (snis.h) */
-			sun_radius = 2812.5;     /* = snis_client's default star_diameter (5625) / 2 */
+			/* NOT sun_radius.  How far the star sits from the cluster is this scene's
+			 * business, but how big it is belongs to the solar system, and
+			 * load_solarsystem() has already worked it out from the config by the time
+			 * we get here.  Setting it here threw that away, so every system opened with
+			 * the default 2812.5 star whatever its config said -- and then jumped to the
+			 * right size the moment you stepped to the next system, since cycling runs
+			 * load_solarsystem() without build_scene().  The static initialiser still
+			 * supplies the default when there is no config at all. */
 		}
 	}
 
@@ -757,13 +782,13 @@ static void build_scene(void)
 	/* The first entry in the game's starbase_models.txt, and an .obj, so read_obj_file()
 	 * builds its texture-mapped material from starbase.mtl and it renders as it does in
 	 * game.  (The .stl starbases later in that list carry no material at all.) */
-	starbase_mesh = read_optional_model("share/snis/models/starbase/starbase.obj");
+	starbase_mesh = read_optional_model("models/starbase/starbase.obj");
 	if (starbase_mesh) {
 		mesh_scale(starbase_mesh, STARBASE_SCALE_FACTOR);
 		add_scene_object(SCENE_STARBASE, starbase_mesh, NULL, 700.0, 0.0, 0.0, 1.0, RED);
 	}
 
-	asteroid_mesh = read_optional_model("share/snis/models/asteroid.stl");
+	asteroid_mesh = read_optional_model("models/asteroid.stl");
 	if (asteroid_mesh) {
 		struct osn_context *osn;
 		struct material *mat;
@@ -1283,6 +1308,21 @@ static void update_black_holes(void)
 	graph_dev_set_gravitational_lenses(n, n ? lens : NULL);
 }
 
+/* Keep the atmosphere shell wrapped around the planet.  The planet's radius and distance are
+ * both editable live (keys 3/4 and 5/6), and the shell is a plain scene[] entry rather than a
+ * child entity, so nothing would otherwise follow those edits: the halo kept its build-time
+ * size while the planet grew or shrank inside it, and stayed behind when the planet moved.
+ * Refreshed every frame, in the manner of update_black_hole(), so that any future edit to the
+ * planet is picked up without having to remember to touch the shell too. */
+static void update_atmosphere(void)
+{
+	if (planet_index < 0 || atmosphere_index < 0)
+		return;
+	scene[atmosphere_index].pos = scene[planet_index].pos;
+	scene[atmosphere_index].scale = scene[planet_index].scale *
+					atmosphere_material.atmosphere.scale;
+}
+
 /* Split into chunks purely because a single literal this long is past what C99 requires a
  * compiler to accept (4095 characters).  The chunk boundaries are NOT page breaks: help_walk()
  * counts lines straight through them, so the split point is arbitrary and only the total
@@ -1297,11 +1337,13 @@ static const char * const help_text[] = {
 	"  - Q / E            ROLL LEFT / RIGHT\n"
 	"  - HOLD RIGHT MOUSE MOVE MOUSE TO LOOK AROUND\n"
 	"  - SHIFT            MOVE FASTER\n\n"
+	,
 	"  POSSESSED SHIP (TAB TO POSSESS NEXT SHIP / RETURN TO FREE CAMERA)\n"
 	"  - W / S            THROTTLE FORWARD / BRAKE-REVERSE (MOMENTUM + DRAG)\n"
 	"  - Q / E            ROLL;  RIGHT-DRAG MOUSE TO STEER (YAW / PITCH)\n"
 	"  - THE SHIP FLIES WHERE ITS NOSE POINTS; A CHASE CAM TRAILS IT.  FLY A SHIP\n"
 	"    THROUGH THE PENUMBRA TO WATCH ITS SHADE (PANEL) RAMP LIT -> UMBRA.\n\n"
+	,
 	"  GUN TURRET VIEW (F2 WHILE POSSESSING A SHIP)\n"
 	"  - F2               TOGGLE TURRET / CHASE VIEW\n"
 	"  - RIGHT-DRAG AIMS THE TURRET; THE SHIP DOES NOT STEER, AS AT THE REAL WEAPONS\n"
@@ -1314,11 +1356,21 @@ static const char * const help_text[] = {
 	"    UNITS THICK).  AIM-TO-SUN MATTERS: THE ORTHO BOX IS FITTED ONLY 1% PAST THE\n"
 	"    FRUSTUM'S FAR-FROM-LIGHT CORNER.  16:9 HERE VS 4:3 IN GAME MAKES LAB TEXELS\n"
 	"    ~15 PERCENT COARSER; THE HUD SHOWS THIS WINDOW'S TRUE FIGURE.\n\n"
+	,
 	"  SUN (ANALYTIC PLANET UMBRA / PENUMBRA)\n"
 	"  - ARROW KEYS       ORBIT SUN AZIMUTH / ELEVATION (SHIFT = FASTER)\n"
 	"  - U / O            SUN DISTANCE CLOSER / FARTHER\n"
 	"  - SHIFT+U / SHIFT+O  PAST-WHITE SHADOW CONTRAST WEAKER / STRONGER (DEEPENS BLUE-STAR SHADOWS)\n"
 	"  - G / H            SUN RADIUS SMALLER / LARGER (WIDER RADIUS = WIDER PENUMBRA)\n"
+	"  - F4 / SHIFT+F4    NEXT / PREVIOUS SOLAR SYSTEM\n"
+	"                     THE HUD SAYS WHETHER THE STAR PARAMETERS CAME FROM THE SYSTEM'S\n"
+	"                     OWN CONFIG OR ARE JUST DEFAULTS.  IF THEY ARE DEFAULTS, EVERY\n"
+	"                     SHADER SUN WILL LOOK ALIKE NO MATTER WHICH SYSTEM YOU ARE ON --\n"
+	"                     RUN WITH --solarsystem-dir POINTING AT CONFIGS THAT SET THEM.\n"
+	"                     EACH ONE SHIPS ITS OWN SUN TEXTURE AND ITS OWN STAR PARAMETERS,\n"
+	"                     AND THEY VARY WIDELY -- DISCS FROM 50 TO 140 PX, TEMPERATURES\n"
+	"                     FROM A RED DWARF TO A BLUE GIANT.  PARAMETERS FITTED TO ONE SAY\n"
+	"                     NOTHING ABOUT THE REST, SO STEP THROUGH THEM ALL.\n"
 	"  - F3 / SHIFT+F3    CYCLE SUN STYLE: SHADER / TEXTURE / SIDE BY SIDE\n"
 	"                     THE TEXTURE IS WHAT THE GAME DRAWS TODAY (sun.png ON A PLAIN\n"
 	"                     BILLBOARD).  THE SHADER'S SETTINGS ARE MEANT TO REPRODUCE IT,\n"
@@ -1326,20 +1378,46 @@ static const char * const help_text[] = {
 	"                     SHOWS UP DIFFERENCES A SIDE-BY-SIDE LETS THE EYE AVERAGE AWAY.\n"
 	"                     THEY CAN ONLY AGREE AT ONE CAMERA DISTANCE: THE TEXTURE IS\n"
 	"                     ENTIRELY WORLD-SCALE, SO ITS GLOW GROWS AS YOU CLOSE IN, WHILE\n"
-	"                     THE SHADER'S BLOOM HOLDS A CONSTANT APPARENT SIZE.  THE TEXTURE\n"
+	"                     THE SHADER'S GLOW IS SIZED BY THE STAR'S BRIGHTNESS.  THE TEXTURE\n"
 	"                     ALSO HAS STARBURST RAYS THE SHADER HAS NO TERM FOR.\n"
 	"  - SHIFT+G / SHIFT+H  SUN TEXTURE DISC WIDTH IN PIXELS SMALLER / LARGER\n"
 	"                     (solarsystem_config's star diameter pixels: HOW MUCH OF THE\n"
 	"                     TEXTURE IS STAR RATHER THAN GLOW.  RAISING IT SHRINKS THE\n"
 	"                     BILLBOARD FOR THE SAME STAR, SO THE TEXTURE'S GLOW SHRINKS TOO.)\n"
-	"  - 7 / 8            STAR TEMPERATURE COOLER / HOTTER (BLACKBODY COLOUR)\n"
+	"  - THE HUD HAS TWO SUN LINES.  STAR IS THIS SOLAR SYSTEM'S, AND IS WHAT GOES IN ITS\n"
+	"    assets.txt.  OPTICS IS SHARED BY EVERY STAR AND IS NOT PER SOLAR SYSTEM -- CHANGE IT\n"
+	"    ONLY IF EVERY STAR LOOKS WRONG THE SAME WAY.  EACH FIELD NAMES THE KEY THAT MOVES IT.\n"
+	"\n"
+	"  STAR -- WHAT TO WRITE DOWN PER SOLAR SYSTEM\n"
+	"  - 7 / 8            HUD 'TEMP': STAR TEMPERATURE COOLER / HOTTER.\n"
+	"                     COLOUR ONLY.  IT NO LONGER SETS BRIGHTNESS -- THAT IS WHY IT USED TO\n"
+	"                     FIGHT THE TINT.  PICK IT TO MATCH THE HUE, NOTHING ELSE.\n"
+	"  - Z / X            HUD 'BRIGHTNESS': DIMMER / BRIGHTER (SHIFT = COARSE, HALVE / DOUBLE).\n"
+	"                     LINEAR HDR SURFACE BRIGHTNESS.  THIS IS WHAT SETS HOW BIG THE WHITE-HOT\n"
+	"                     CORE AND THE GLOW ARE.  SPANS SIX DECADES, HENCE THE COARSE STEP.\n"
+	"  - J                HUD 'EDGE': CYCLE THE DISC'S LIMB WIDTH (ALPHA FADE AT THE RIM, SO\n"
+	"                     SEMI-TRANSPARENT; KEEP IT SMALL -- JUST ENOUGH TO ANTIALIAS).\n"
+	"  - HUD 'TINT' IS NOT ADJUSTABLE HERE.  IT IS MEASURED FROM THE SUN TEXTURE AND CORRECTS\n"
+	"    FOR HUES THE BLACKBODY LOCUS CANNOT REACH.  REPORT THE TEMPERATURE YOU CHOSE AND IT\n"
+	"    CAN BE RE-DERIVED; A TEMPERATURE CHANGE INVALIDATES THE OLD TINT.\n"
+	"\n"
+	,
+	"  OPTICS -- SHARED, ONLY CHANGE IF EVERY STAR IS WRONG\n"
+	"  - T / Y            HUD 'W': POINT SPREAD WIDTH IN STAR RADII, NARROWER / WIDER\n"
+	"  - C / V            HUD 'P': POWER-LAW TAIL EXPONENT, SHALLOWER / STEEPER\n"
+	"                     THERE IS NO AMPLITUDE ANY MORE: THE PROFILE IS NORMALISED TO 1 AT\n"
+	"                     THE STAR'S CENTRE, SO ITS LEVEL IS THE BRIGHTNESS AND NOTHING ELSE.\n"
+	"                     THE STAR HAS NO DIFFRACTION SPIKES: SEE THE COMMENT IN sun.frag FOR\n"
+	"                     WHY TWO ATTEMPTS AT THEM WERE BOTH REJECTED.\n"
+	"                     A POWER LAW IS SCALE FREE, SO ONE SETTING SERVES EVERY STAR:\n"
+	"                     BRIGHTNESS ALONE MOVES WHERE IT CROSSES WHITE.  GLOW EXTENT ON THE\n"
+	"                     HUD IS DERIVED, NOT SET -- IT IS WHERE THE GLOW STOPS BEING VISIBLE.\n"
+	"\n"
+	"  OTHER SUN CONTROLS\n"
 	"  - SHIFT+7 / SHIFT+8  LIGHT (SUN-LIT) TINT WEAKER / STRONGER (LIT FACES -> STAR COLOUR)\n"
-	"  - 9 / I            SUN CORE BRIGHTNESS DIMMER / BRIGHTER (WHITE-HOT SPREAD)\n"
 	"  - SHIFT+9 / SHIFT+I  DARK (SHADED) TINT WEAKER / STRONGER (SHADED FACES -> COMPLEMENT)\n"
-	"  - T / Y            SUN BLOOM DIMMER / BRIGHTER\n"
-	"  - C / V            SUN BLOOM EDGE SOFTER / SHARPER (CURVATURE, RADIUS UNCHANGED)\n"
-	"  - Z / X            SUN BLOOM RADIUS SMALLER / LARGER (REACH; DISC STAYS PHYSICAL)\n"
-	"  - J                CYCLE SUN DISC EDGE SOFTNESS (LIMB WIDTH; ALPHA FADE, SO SEMI-TRANSPARENT)\n"
+	"  - SHIFT+U / SHIFT+O  PAST-WHITE SHADOW CONTRAST WEAKER / STRONGER (DEEPENS BLUE-STAR SHADOWS)\n"
+	,
 	"  - P                CYCLE PLANET SHADE MODE: SOFT / BINARY / OFF\n"
 	"  - B                TOGGLE THE PER-SHIP SHADE PANEL\n"
 	"  - F5 / SHIFT+F5    STAR FIELD OFF / ON; SHIFT DOUBLES HOW MANY STARS\n"
@@ -1358,7 +1436,6 @@ static const char * const help_text[] = {
 	"  - 3 / 4            PLANET RADIUS SMALLER / LARGER\n"
 	"  - 5 / 6            PLANET CLOSER / FARTHER FROM THE SHIP CLUSTER\n"
 	"                     (FARTHER + TIGHTER CLUSTER = WIDER, SOFTER PENUMBRA)\n"
-	,
 	"  - LOWER THE SUN (DOWN ARROW) TO SWING THE PLANET BETWEEN IT AND THE SHIPS.\n"
 	"    NOTE: in_shade ONLY DARKENS A SHIP'S SUN-FACING SIDE, WHICH IS HIDDEN\n"
 	"    BEHIND THE PLANET IN A DIRECT UMBRA TEST.  WATCH THE PER-SHIP PANEL: SOFT\n"
@@ -1421,6 +1498,7 @@ static const char * const help_text[] = {
 	"                     WITHOUT DETACHING SHADOWS)\n"
 	"  - n / m            PCF KERNEL SMALLER / LARGER (1x1 TO 7x7, ALL CASCADES)\n"
 	"  - k / l            CROSS-CASCADE BLEND BAND SMALLER / LARGER\n\n"
+	,
 	"  OTHER\n"
 	"  - F1               SHOW THIS HELP, THEN PAGE THROUGH IT, THEN CLOSE IT\n"
 	"  - F10              RELOAD SHADERS\n"
@@ -1561,16 +1639,15 @@ static void compute_cascade0_stats(float near_d, float fov, float *split0, float
 	*texel = 2.0 * *radius / (float) LAB_SHADOW_MAP_TEXTURE_SIZE;
 }
 
-/* The shader sun's billboard spans the world-scale disc plus the screen-scale bloom's reach,
- * with a small margin.  sun_bloom_apparent is that reach as a fraction of the camera distance
- * (so it is constant on screen); bloom_world is the same reach in world units.  Sizing the
- * billboard this way keeps disc_radius + bloom_radius = 1 / (2 * margin) < 0.5 in UV, so the
- * whole falloff is on screen and the RADIUS control cannot inflate the billboard without bound
- * (which used to leave only the bloom's flat centre visible, making SHARP appear to do nothing).
- */
-static float shader_sun_billboard_size(float cam_dist)
+/* The star's glow is a power law with no hard edge, so the billboard is sized from where the glow
+ * stops being visible rather than from a nominal reach.  A hotter star is brighter, so its glow
+ * carries further and its billboard grows: apparent size follows temperature, which is the whole
+ * point of driving the star from its temperature. */
+static float shader_sun_billboard_size(void)
 {
-	return 2.0 * SUN_BILLBOARD_MARGIN * (sun_radius + sun_bloom_apparent * cam_dist);
+	sun_glow_extent = star_light_glow_extent(sun_material.sun.brightness,
+			sun_material.sun.psf_width, sun_material.sun.psf_falloff);
+	return 2.0 * SUN_BILLBOARD_MARGIN * sun_radius * sun_glow_extent;
 }
 
 /* snis_client's update_sun_size() rule: scale the texture so the disc drawn inside it comes out
@@ -1603,18 +1680,17 @@ static void add_sun_entity(struct entity_context *cx, const union vec3 *pos,
 static void draw_sun(struct entity_context *cx, const union vec3 *camera_pos)
 {
 	union vec3 to_sun, right, offset, pos;
-	float cam_dist, shader_size, texture_size, separation;
+	float shader_size, texture_size, separation;
 
 	if (!sun_mesh)
 		return;
 
+	/* Both suns are world-scale now, so neither size depends on the camera; the direction is
+	 * still needed to lay them out side by side. */
 	vec3_sub(&to_sun, &sun_pos, camera_pos);
-	cam_dist = vec3_magnitude(&to_sun);
-	shader_size = shader_sun_billboard_size(cam_dist);
+	shader_size = shader_sun_billboard_size();
 	texture_size = texture_sun_billboard_size();
 	sun_material.sun.disc_radius = sun_radius / shader_size;
-	sun_material.sun.bloom_radius = (sun_bloom_apparent * cam_dist) / shader_size;
-	sun_bloom_reach_radii = (sun_bloom_apparent * cam_dist) / sun_radius;
 
 	if (sun_style != SUN_STYLE_SIDE_BY_SIDE) {
 		if (sun_style == SUN_STYLE_TEXTURE)
@@ -1675,14 +1751,28 @@ static void draw_hud(void)
 		radians_to_degrees(sun_azimuth), radians_to_degrees(sun_elevation),
 		sun_distance, sun_radius);
 	sng_abs_xy_draw_string(buffer, TINY_FONT, 10, y); y += dy;
-	snprintf(buffer, sizeof(buffer), "SUN %.0fK  CORE %.1f  BLOOM %.1f SHARP %.2f RADIUS %.2f EDGE %.2f",
-		sun_temperature, sun_material.sun.core_brightness, sun_material.sun.bloom_brightness,
-		sun_material.sun.bloom_falloff, sun_bloom_apparent, sun_material.sun.edge_softness);
+	/* Split deliberately: the first line is THIS STAR and belongs in its assets.txt, the
+	 * second is the OPTICS and is shared by every star.  Each field names the key that moves
+	 * it, so a tuned value can be read straight off and written down. */
+	snprintf(buffer, sizeof(buffer),
+		"STAR   TEMP %.0fK (7/8)   BRIGHTNESS %.0f (Z/X)   EDGE %.2f (J)   TINT %.3f/%.3f/%.3f",
+		sun_temperature, sun_material.sun.brightness, sun_material.sun.edge_softness,
+		sun_tint[0], sun_tint[1], sun_tint[2]);
 	sng_abs_xy_draw_string(buffer, TINY_FONT, 10, y); y += dy;
 	snprintf(buffer, sizeof(buffer),
-		"SUN STYLE %s (F3)   TEXTURE %.0fPX  DISC %.0fPX   BLOOM REACH %.2f RADII (TEXTURE IS 3.73)",
+		"OPTICS W %.3f (T/Y)   P %.2f (C/V)   [SHARED BY EVERY STAR]   GLOW EXTENT %.2fR",
+		sun_material.sun.psf_width, sun_material.sun.psf_falloff, sun_glow_extent);
+	sng_abs_xy_draw_string(buffer, TINY_FONT, 10, y); y += dy;
+	snprintf(buffer, sizeof(buffer),
+		"SUN STYLE %s (F3)   TEXTURE %.0fPX  DISC %.0fPX   GLOW EXTENT %.2f RADII",
 		sun_style_name[sun_style], sun_texture_width, sun_texture_disc_pixels,
-		sun_bloom_reach_radii);
+		sun_glow_extent);
+	sng_abs_xy_draw_string(buffer, TINY_FONT, 10, y); y += dy;
+	snprintf(buffer, sizeof(buffer), "SOLARSYSTEM %s (F4)   %d OF %d   STAR DIAMETER %.0f   %s",
+		current_solarsystem >= 0 ? solarsystem_name[current_solarsystem] : "-",
+		current_solarsystem + 1, nsolarsystems, 2.0 * sun_radius,
+		solarsystem_assets && solarsystem_assets->star_keys_specified ?
+			"STAR PARAMS FROM CONFIG" : "STAR PARAMS ARE DEFAULTS -- SEE --solarsystem-dir");
 	sng_abs_xy_draw_string(buffer, TINY_FONT, 10, y); y += dy;
 	snprintf(buffer, sizeof(buffer),
 		"STAR-LIGHT  LIGHT-TINT %.2f  DARK-TINT %.2f  CONTRAST %.2f  AMBIENT %.3f",
@@ -1895,6 +1985,7 @@ static void draw_screen(void)
 	}
 	update_sun();
 	update_black_holes(); /* after update_sun(): they are parked around the line out to the sun */
+	update_atmosphere();
 
 	camera_basis(&cam_orientation, &fwd, &up, &right);
 	vec3_add(&at, &cam_pos, &fwd);
@@ -2065,6 +2156,12 @@ static void handle_key_down(SDL_Keysym *keysym)
 					ARRAYSIZE(sun_style_name);
 		else
 			sun_style = (sun_style + 1) % ARRAYSIZE(sun_style_name);
+		break;
+	case SDLK_F4:
+		/* Step through the solar systems.  Each ships its own sun texture and its own
+		 * star parameters, so this is what shows whether a set of parameters holds up
+		 * across the lot or only suits the one it was fitted to. */
+		cycle_solarsystem((keysym->mod & KMOD_SHIFT) ? -1 : 1);
 		break;
 	case SDLK_F10:
 		reload_shaders = 1;
@@ -2339,64 +2436,55 @@ static void handle_key_down(SDL_Keysym *keysym)
 			update_sun_color();
 		}
 		break;
-	case SDLK_9: /* core dimmer (less white-hot spread); floor at 1.0 so the centre never goes
-		      * below the limb (a value < 1 inverts the gradient and darkens the middle).
-		      * Shift = weaker dark (shaded) tint */
-		if (keysym->mod & KMOD_SHIFT) {
-			sun_dark_tint -= 0.01;
-			if (sun_dark_tint < 0.0)
-				sun_dark_tint = 0.0;
-		} else {
-			sun_material.sun.core_brightness *= 0.9;
-			if (sun_material.sun.core_brightness < 1.0)
-				sun_material.sun.core_brightness = 1.0;
-		}
+	case SDLK_9: /* weaker dark (shaded) tint.  There is no optics amplitude to tune any more:
+		      * the emission profile is normalised to 1 at the star's centre, so its level
+		      * is the brightness and nothing else. */
+		sun_dark_tint -= 0.01;
+		if (sun_dark_tint < 0.0)
+			sun_dark_tint = 0.0;
 		break;
-	case SDLK_i: /* core brighter (more white-hot spread); Shift = stronger dark (shaded) tint */
-		if (keysym->mod & KMOD_SHIFT) {
-			sun_dark_tint += 0.01;
-			if (sun_dark_tint > 1.0)
-				sun_dark_tint = 1.0;
-		} else {
-			sun_material.sun.core_brightness *= 1.111111;
-			if (sun_material.sun.core_brightness > 100.0)
-				sun_material.sun.core_brightness = 100.0;
-		}
+	case SDLK_i: /* stronger dark (shaded) tint */
+		sun_dark_tint += 0.01;
+		if (sun_dark_tint > 1.0)
+			sun_dark_tint = 1.0;
 		break;
-	case SDLK_t: /* bloom dimmer (snaps to a true zero so the glow can be turned fully off) */
-		sun_material.sun.bloom_brightness *= 0.9;
-		if (sun_material.sun.bloom_brightness < 0.05)
-			sun_material.sun.bloom_brightness = 0.0;
+	case SDLK_t: /* OPTICS W down -- a tighter point spread, so the star falls off sooner */
+		sun_material.sun.psf_width *= 0.9;
+		if (sun_material.sun.psf_width < 0.05)
+			sun_material.sun.psf_width = 0.05;
 		break;
-	case SDLK_y: /* bloom brighter (recover from a true zero) */
-		if (sun_material.sun.bloom_brightness < 0.05)
-			sun_material.sun.bloom_brightness = 0.1;
-		else
-			sun_material.sun.bloom_brightness *= 1.111111;
+	case SDLK_y: /* OPTICS W up */
+		sun_material.sun.psf_width *= 1.111111;
+		if (sun_material.sun.psf_width > 4.0)
+			sun_material.sun.psf_width = 4.0;
 		break;
-	case SDLK_c: /* bloom edge softer (lower k), radius unchanged; floor at 0.5 -- below that even
-		      * the smoothstep bloom drops nearly vertically at its outer edge (a hard outer ring) */
-		sun_material.sun.bloom_falloff *= 0.9;
-		if (sun_material.sun.bloom_falloff < 0.5)
-			sun_material.sun.bloom_falloff = 0.5;
+	case SDLK_c: /* OPTICS P down -- shallower tail, so the glow reaches further for a given
+		      * brightness.  Floored: below about 1.5 the tail never really ends */
+		sun_material.sun.psf_falloff *= 0.95;
+		if (sun_material.sun.psf_falloff < 1.5)
+			sun_material.sun.psf_falloff = 1.5;
 		break;
-	case SDLK_v: /* bloom edge sharper (higher k) */
-		sun_material.sun.bloom_falloff *= 1.111111;
+	case SDLK_v: /* OPTICS P up -- steeper tail, glow pulls in tighter */
+		sun_material.sun.psf_falloff *= 1.0526;
+		if (sun_material.sun.psf_falloff > 12.0)
+			sun_material.sun.psf_falloff = 12.0;
 		break;
-	case SDLK_z: /* bloom radius (reach) smaller */
-		sun_bloom_apparent *= 0.9;
-		break;
-	case SDLK_x: /* bloom radius (reach) larger; cap it so the billboard cannot inflate past the
-		      * point where the opaque disc shrinks to a speck in a screen-filling glow */
-		sun_bloom_apparent *= 1.111111;
-		if (sun_bloom_apparent > 2.0)
-			sun_bloom_apparent = 2.0;
-		break;
-	case SDLK_j: /* cycle the disc edge softness (limb width); it is the alpha fade at the rim, so
+	case SDLK_j: /* cycle EDGE, the disc's limb width; it is the alpha fade at the rim, so
 		      * it is semi-transparent by nature -- wrap back to a small value past 0.2 */
 		sun_material.sun.edge_softness *= 1.4;
 		if (sun_material.sun.edge_softness > 0.2)
 			sun_material.sun.edge_softness = 0.01;
+		break;
+	case SDLK_z: /* BRIGHTNESS down.  Multiplicative, and coarse under Shift, because this
+		      * spans six decades: a red dwarf and a blue giant are 10^4 apart. */
+		sun_material.sun.brightness *= (keysym->mod & KMOD_SHIFT) ? 0.5 : 0.9;
+		if (sun_material.sun.brightness < 1.0)
+			sun_material.sun.brightness = 1.0;
+		break;
+	case SDLK_x: /* BRIGHTNESS up */
+		sun_material.sun.brightness *= (keysym->mod & KMOD_SHIFT) ? 2.0 : 1.111111;
+		if (sun_material.sun.brightness > 1e9)
+			sun_material.sun.brightness = 1e9;
 		break;
 	case SDLK_p:
 		planet_shade_mode = (planet_shade_mode + 1) % 3;
@@ -2593,60 +2681,218 @@ static void maybe_resize_window(SDL_Window *window)
 	time_to_set_window_size = 0;
 }
 
+/* Resolve a path from a solar system's assets.txt.  They are relative to the system's own
+ * directory and routinely climb out of it (the default system's sun is ../../textures/sun.png),
+ * so they are joined to the system directory and left for the OS to flatten. */
+static void solarsystem_asset_path(char *out, size_t outlen, const char *name, const char *relative)
+{
+	snprintf(out, outlen, "%s/solarsystems/%s/%s", asset_dir, name, relative);
+}
+
 static void setup_skybox(const char *skybox_prefix)
 {
-	const char *asset_dir = "share/snis/textures";
 	int i;
 	char filename[6][PATH_MAX + 1];
 
-	for (i = 0; i < 6; i++)
-		snprintf(filename[i], sizeof(filename[i]), "%s/%s%d.png", asset_dir, skybox_prefix, i);
+	for (i = 0; i < 6; i++) {
+		char rel[PATH_MAX + 1];
+
+		snprintf(rel, sizeof(rel), "%s%d.png", skybox_prefix, i);
+		solarsystem_asset_path(filename[i], sizeof(filename[i]),
+					solarsystem_name[current_solarsystem], rel);
+	}
 
 	graph_dev_load_skybox_texture(filename[3], filename[1], filename[4],
 					filename[5], filename[0], filename[2]);
 }
 
-static void setup_sun_billboard(void)
+/* Find the solar systems available under solarsystem_dir.  Sorted, so the cycle order is stable
+ * from run to run and a given key press always lands on the same star. */
+static int compare_solarsystem_names(const void *a, const void *b)
 {
-	const char *sun_texture = "share/snis/textures/sun.png";
-	char whynot[256];
+	return strcmp(*(const char * const *) a, *(const char * const *) b);
+}
+
+static void discover_solarsystems(void)
+{
+	char path[PATH_MAX + 1];
+	struct dirent *entry;
+	DIR *dir;
+
+	snprintf(path, sizeof(path), "%s/solarsystems", solarsystem_dir);
+	dir = opendir(path);
+	if (!dir) {
+		fprintf(stderr, "shadow_lab: %s: %s\n", path, strerror(errno));
+		return;
+	}
+	while ((entry = readdir(dir)) != NULL && nsolarsystems < MAX_LAB_SOLARSYSTEMS) {
+		char cfg[PATH_MAX + 1];
+		struct stat sb;
+
+		if (entry->d_name[0] == '.')
+			continue;
+		snprintf(cfg, sizeof(cfg), "%s/%s/assets.txt", path, entry->d_name);
+		if (stat(cfg, &sb) != 0 || !S_ISREG(sb.st_mode))
+			continue;
+		solarsystem_name[nsolarsystems++] = strdup(entry->d_name);
+	}
+	closedir(dir);
+	qsort(solarsystem_name, nsolarsystems, sizeof(solarsystem_name[0]),
+		compare_solarsystem_names);
+}
+
+/* Load one solar system: its star's parameters, its sun texture and its skybox.  Called at
+ * startup and again whenever the system is cycled, so everything it touches must be safe to
+ * replace at runtime. */
+static void load_solarsystem(int index)
+{
+	char cfg[PATH_MAX + 1], texture[PATH_MAX + 1], whynot[256];
+	struct solarsystem_asset_spec *spec;
+	int first_load = current_solarsystem < 0;
 	char *pixels;
 	int w = 0, h = 0, hasalpha = 0;
 
+	if (index < 0 || index >= nsolarsystems)
+		return;
+	snprintf(cfg, sizeof(cfg), "%s/solarsystems/%s/assets.txt",
+		solarsystem_dir, solarsystem_name[index]);
+	spec = solarsystem_asset_spec_read(cfg);
+	if (!spec) {
+		fprintf(stderr, "shadow_lab: could not read %s, keeping the current system\n", cfg);
+		return;
+	}
+	if (solarsystem_assets)
+		solarsystem_asset_spec_free(solarsystem_assets);
+	solarsystem_assets = spec;
+	current_solarsystem = index;
+
+	/* The star's own parameters.  sun_radius drives the analytic planet penumbra as well as
+	 * the drawn disc, so it has to follow the config or the shadow stops matching the star. */
+	sun_texture_disc_pixels = spec->star_diameter_pixels;
+	sun_temperature = spec->star_temperature;
+	sun_material.sun.brightness = spec->star_brightness_specified ? spec->star_brightness :
+			star_light_star_brightness(spec->star_temperature);
+	memcpy(sun_tint, spec->star_tint, sizeof(sun_tint));
+	sun_material.sun.edge_softness = spec->sun_edge_softness;
+	/* The sun style is a VIEW setting here, not a property of the star: SIDE BY SIDE has no
+	 * equivalent in a config at all, and having the view flip out from under you every time
+	 * you stepped to the next system would defeat the point of stepping through them.  Take
+	 * the config's choice as the opening view, then leave it under F3's control. */
+	if (first_load)
+		sun_style = spec->sun_style == SOLARSYSTEM_SUN_STYLE_TEXTURE ?
+				SUN_STYLE_TEXTURE : SUN_STYLE_SHADER;
+	update_sun_color();
+
+
+	if (spec->sun_texture) {
+		solarsystem_asset_path(texture, sizeof(texture),
+					solarsystem_name[index], spec->sun_texture);
+		sun_texture_material.texture_mapped_unlit.texture_id =
+			graph_dev_load_texture(texture, 0);
+		pixels = png_utils_read_png_image(texture, 0, 0, 0, &w, &h, &hasalpha,
+							whynot, sizeof(whynot));
+		if (pixels) {
+			free(pixels);
+			sun_texture_width = w;
+		} else {
+			fprintf(stderr, "shadow_lab: failed to size sun texture %s: %s\n",
+				texture, whynot);
+		}
+	}
+	/* After the texture, because a config that does not state its star's size has it
+	 * inferred from that texture's width. */
+	sun_radius = 0.5 * solarsystem_star_diameter(spec, sun_texture_width);
+
+	if (spec->skybox_prefix)
+		setup_skybox(spec->skybox_prefix);
+
+	/* Worth saying out loud once.  A tree whose configs predate the star keys gives every
+	 * system the same defaults, so the shader sun looks identical everywhere while the
+	 * textured one changes -- which reads as a bug in the shader rather than as missing
+	 * configuration. */
+	if (first_load && spec->star_keys_specified == 0)
+		fprintf(stderr,
+			"shadow_lab: %s sets no star parameters, so the defaults apply.  If every\n"
+			"            system's shader sun looks alike, that is why -- point\n"
+			"            --solarsystem-dir at configs that set them.\n", cfg);
+}
+
+static void cycle_solarsystem(int delta)
+{
+	if (nsolarsystems < 1)
+		return;
+	load_solarsystem((current_solarsystem + delta + nsolarsystems) % nsolarsystems);
+}
+
+/* Build both suns, then let load_solarsystem() fill in the parameters and the texture.  The
+ * values set here are only what a system's config does not override; every shipped one does. */
+static void setup_sun_billboard(void)
+{
 	sun_mesh = mesh_fabricate_billboard(1.0, 1.0); /* unit billboard, scaled to size per frame */
 	material_init_sun(&sun_material);
 	update_sun_color(); /* blackbody colour from sun_temperature */
 
-	/* Start from the least-squares fit of the glow term to sun.png's measured radial profile
-	 * (doc/star-rendering-and-lighting-notes.txt section 5), so the A/B opens on the candidate
-	 * match rather than on material.c's generic defaults.  These are a numerical fit over area;
-	 * the eye weights the bright limb far more heavily, so they are a starting point to be
-	 * confirmed by flipping F3, not a verdict. */
-	sun_material.sun.bloom_brightness = 0.62;
-	sun_material.sun.bloom_falloff = 1.32;
-
 	/* The game's textured sun, for the A/B comparison. */
 	material_init_texture_mapped_unlit(&sun_texture_material);
 	sun_texture_material.billboard_type = MATERIAL_BILLBOARD_TYPE_SPHERICAL;
-	sun_texture_material.texture_mapped_unlit.texture_id = graph_dev_load_texture(sun_texture, 0);
 	sun_texture_material.texture_mapped_unlit.do_blend = 1;
+}
 
-	/* The billboard's size depends on the texture's width, so read it from the PNG header
-	 * rather than assuming 512, exactly as snis_client's update_sun_size() does. */
-	pixels = png_utils_read_png_image(sun_texture, 0, 0, 0, &w, &h, &hasalpha,
-						whynot, sizeof(whynot));
-	if (pixels) {
-		free(pixels);
-		sun_texture_width = w;
-	} else {
-		fprintf(stderr, "shadow_lab: failed to size sun texture %s: %s\n", sun_texture, whynot);
+static void usage(void)
+{
+	fprintf(stderr,
+		"usage: shadow_lab [--asset-dir DIR] [--solarsystem-dir DIR] [--solarsystem NAME]\n"
+		"  --asset-dir DIR        where the artwork lives.  Defaults to the same place the\n"
+		"                         game looks (SNIS_ASSET_DIR, then XDG_DATA_HOME, then\n"
+		"                         ~/.local/share/space-nerds-in-space/share/snis).\n"
+		"  --solarsystem-dir DIR  where to read solarsystems/NAME/assets.txt from, when that\n"
+		"                         is not the asset dir -- for previewing configs being\n"
+		"                         edited outside the asset tree.  Images still come from\n"
+		"                         the asset dir.\n"
+		"  --solarsystem NAME     which solar system to open on.  Default: the first found.\n");
+	exit(1);
+}
+
+static void parse_options(int argc, char *argv[], const char **want_solarsystem)
+{
+	static struct option options[] = {
+		{ "asset-dir", required_argument, NULL, 'a' },
+		{ "solarsystem-dir", required_argument, NULL, 'd' },
+		{ "solarsystem", required_argument, NULL, 's' },
+		{ "help", no_argument, NULL, 'h' },
+		{ NULL, 0, NULL, 0 },
+	};
+	const char *override_dir = NULL;
+	int c;
+
+	strlcpy(asset_dir, override_asset_dir(), sizeof(asset_dir));
+	while ((c = getopt_long(argc, argv, "a:d:s:h", options, NULL)) != -1) {
+		switch (c) {
+		case 'a':
+			strlcpy(asset_dir, optarg, sizeof(asset_dir));
+			break;
+		case 'd':
+			override_dir = optarg;
+			break;
+		case 's':
+			*want_solarsystem = optarg;
+			break;
+		default:
+			usage();
+		}
 	}
+	/* Configs default to living beside the artwork; --solarsystem-dir splits them apart. */
+	strlcpy(solarsystem_dir, override_dir ? override_dir : asset_dir, sizeof(solarsystem_dir));
 }
 
 int main(int argc, char *argv[])
 {
+	const char *want_solarsystem = NULL;
+	int i, start = 0;
+
 	setlocale(LC_ALL, "C");
 	program = argc >= 0 ? argv[0] : "shadow_lab";
+	parse_options(argc, argv, &want_solarsystem);
 	enable_sdl_fullscreen_sanity();
 
 	if (SDL_Init(SDL_INIT_VIDEO) < 0) {
@@ -2680,8 +2926,23 @@ int main(int argc, char *argv[])
 	/* Match the game's tonemapping gain (graph_dev defaults to 1.18; snis_client uses 1.10),
 	 * so the star-light tint looks the same here as it will in game. */
 	graph_dev_set_tonemapping_gain(1.10);
-	setup_skybox("orange-haze");
 	setup_sun_billboard();
+
+	discover_solarsystems();
+	if (nsolarsystems == 0) {
+		fprintf(stderr, "shadow_lab: no solar systems under %s/solarsystems\n",
+			solarsystem_dir);
+		quit(1);
+	}
+	if (want_solarsystem) {
+		for (i = 0; i < nsolarsystems; i++)
+			if (strcmp(solarsystem_name[i], want_solarsystem) == 0)
+				start = i;
+		if (strcmp(solarsystem_name[start], want_solarsystem) != 0)
+			fprintf(stderr, "shadow_lab: no solar system '%s', using '%s'\n",
+				want_solarsystem, solarsystem_name[start]);
+	}
+	load_solarsystem(start);
 
 	SDL_SetWindowSize(screen, real_screen_width, real_screen_height);
 	window_manager_can_constrain_aspect_ratio =

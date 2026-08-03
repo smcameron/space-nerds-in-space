@@ -108,3 +108,48 @@ void star_light_blackbody_color(float kelvin, float *r, float *g, float *b)
 	*g = clampf_local(gg, 0.0f, 255.0f) / 255.0f;
 	*b = clampf_local(bb, 0.0f, 255.0f) / 255.0f;
 }
+
+void star_light_tinted_blackbody_color(float kelvin, const float tint[3],
+					float *r, float *g, float *b)
+{
+	float c[3], max;
+	int i;
+
+	star_light_blackbody_color(kelvin, &c[0], &c[1], &c[2]);
+	for (i = 0; i < 3; i++)
+		c[i] *= tint ? tint[i] : 1.0;
+	max = c[0] > c[1] ? c[0] : c[1];
+	if (c[2] > max)
+		max = c[2];
+	if (max > 0.0) {
+		for (i = 0; i < 3; i++)
+			c[i] /= max;
+	}
+	*r = c[0];
+	*g = c[1];
+	*b = c[2];
+}
+
+float star_light_star_brightness(float kelvin)
+{
+	float t = kelvin / STAR_LIGHT_REFERENCE_KELVIN;
+
+	if (t <= 0.0f)
+		return 0.0f;
+	return STAR_LIGHT_REFERENCE_BRIGHTNESS * t * t * t * t;
+}
+
+float star_light_glow_extent(float brightness, float psf_width, float psf_falloff)
+{
+	/* The star is brightness / (1 + (s/w)^p), with s in star radii.  Solve for the radius at
+	 * which it drops below one 255th of white, which is where it stops mattering to an 8-bit
+	 * display.  Never less than the disc itself. */
+	const float visible = 1.0f / 255.0f;
+	float ratio, extent;
+
+	if (brightness <= visible || psf_falloff <= 0.0f || psf_width <= 0.0f)
+		return 1.0f;
+	ratio = brightness / visible - 1.0f;
+	extent = psf_width * powf(ratio, 1.0f / psf_falloff);
+	return extent < 1.0f ? 1.0f : extent;
+}

@@ -924,12 +924,13 @@ struct graph_dev_gl_sun_shader {
 	GLint vertex_position_id;
 	GLint texture_coord_id;
 	GLint color_id;
+	GLint brightness_id;
 	GLint disc_radius_id;
 	GLint edge_softness_id;
-	GLint core_brightness_id;
-	GLint bloom_brightness_id;
-	GLint bloom_radius_id;
-	GLint bloom_falloff_id;
+	GLint psf_width_id;
+	GLint psf_falloff_id;
+	GLint filmic_tonemapping_id;
+	GLint tonemapping_gain_id;
 };
 
 struct graph_dev_gl_black_hole_shader {
@@ -2760,9 +2761,10 @@ extern int graph_dev_entity_render_order(struct entity *e)
 		return GRAPH_DEV_RENDER_NEAR_TO_FAR;
 }
 
-/* Draw a star billboard: a world-scale solid disc plus a screen-scale additive bloom, both
- * computed procedurally by the sun shader.  The disc radius (in UV) is taken from the material,
- * which the caller sets per frame from the star's world radius over the billboard's world size. */
+/* Draw a star billboard: one procedurally computed profile -- the star's disc already convolved
+ * with the optics' point spread function -- plus its diffraction spikes.  The disc radius (in UV)
+ * is taken from the material, which the caller sets per frame from the star's world radius over
+ * the billboard's world size; the shader divides by it to work in star radii. */
 static void graph_dev_raster_sun(const struct mat44 *mat_mvp, struct mesh *m, struct material *material)
 {
 	struct mesh_gl_info *ptr = m->graph_ptr;
@@ -2777,12 +2779,14 @@ static void graph_dev_raster_sun(const struct mat44 *mat_mvp, struct mesh *m, st
 
 	glUniformMatrix4fv(sun_shader.mvp_matrix_id, 1, GL_FALSE, &mat_mvp->m[0][0]);
 	glUniform3f(sun_shader.color_id, sun->color.red, sun->color.green, sun->color.blue);
+	glUniform1f(sun_shader.brightness_id, sun->brightness);
 	glUniform1f(sun_shader.disc_radius_id, sun->disc_radius);
 	glUniform1f(sun_shader.edge_softness_id, sun->edge_softness);
-	glUniform1f(sun_shader.core_brightness_id, sun->core_brightness);
-	glUniform1f(sun_shader.bloom_brightness_id, sun->bloom_brightness);
-	glUniform1f(sun_shader.bloom_radius_id, sun->bloom_radius);
-	glUniform1f(sun_shader.bloom_falloff_id, sun->bloom_falloff);
+	glUniform1f(sun_shader.psf_width_id, sun->psf_width);
+	glUniform1f(sun_shader.psf_falloff_id, sun->psf_falloff);
+	/* The star is built in linear HDR and tonemapped here, exactly as the lit shaders do it. */
+	glUniform1f(sun_shader.filmic_tonemapping_id, (float) filmic_tonemapping);
+	glUniform1f(sun_shader.tonemapping_gain_id, tonemapping_gain);
 
 	glEnableVertexAttribArray(sun_shader.vertex_position_id);
 	glBindBuffer(GL_ARRAY_BUFFER, ptr->vertex_buffer);
@@ -4260,7 +4264,7 @@ static void setup_sun_shader(struct graph_dev_gl_sun_shader *shader)
 {
 	maybe_unload_shader(&shader->meta, &shader->program_id);
 	shader->program_id = load_shaders(shader_directory,
-				"sun.vert", "sun.frag", UNIVERSAL_SHADER_HEADER);
+				"sun.vert", "sun.frag", UNIVERSAL_SHADER_HEADER FILMIC_TONEMAPPING);
 	if (GLES_HAS_VAO)
 		glGenVertexArraysOES(1, &shader->vao_id);
 
@@ -4268,12 +4272,13 @@ static void setup_sun_shader(struct graph_dev_gl_sun_shader *shader)
 	shader->vertex_position_id = glGetAttribLocation(shader->program_id, "a_Position");
 	shader->texture_coord_id = glGetAttribLocation(shader->program_id, "a_TexCoord");
 	shader->color_id = glGetUniformLocation(shader->program_id, "u_Color");
+	shader->brightness_id = glGetUniformLocation(shader->program_id, "u_Brightness");
 	shader->disc_radius_id = glGetUniformLocation(shader->program_id, "u_DiscRadius");
 	shader->edge_softness_id = glGetUniformLocation(shader->program_id, "u_EdgeSoftness");
-	shader->core_brightness_id = glGetUniformLocation(shader->program_id, "u_CoreBrightness");
-	shader->bloom_brightness_id = glGetUniformLocation(shader->program_id, "u_BloomBrightness");
-	shader->bloom_radius_id = glGetUniformLocation(shader->program_id, "u_BloomRadius");
-	shader->bloom_falloff_id = glGetUniformLocation(shader->program_id, "u_BloomFalloff");
+	shader->psf_width_id = glGetUniformLocation(shader->program_id, "u_PsfWidth");
+	shader->psf_falloff_id = glGetUniformLocation(shader->program_id, "u_PsfFalloff");
+	shader->filmic_tonemapping_id = glGetUniformLocation(shader->program_id, "u_FilmicTonemapping");
+	shader->tonemapping_gain_id = glGetUniformLocation(shader->program_id, "u_TonemappingGain");
 }
 
 static void setup_black_hole_shader(struct graph_dev_gl_black_hole_shader *shader)

@@ -612,7 +612,8 @@ _SHADOWLABOBJS=shader.o ${GRAPH_OBJS} snis_graph.o shadow_lab.o \
 				mtwist.o material.o entity.o snis_alloc.o matrix.o stacktrace.o stl_parser.o \
 				snis_typeface.o snis_font.o string-utils.o ui_colors.o liang-barsky.o \
 				bline.o vec4.o open-simplex-noise.o replacement_assets.o \
-				snis_xwindows_hacks.o workqueue.o pthread_util.o black_hole_lens.o
+				snis_xwindows_hacks.o workqueue.o pthread_util.o black_hole_lens.o \
+				solarsystem_config.o snis_asset_dir.o
 SHADOWLABOBJS=$(patsubst %,$(OD)/%,${_SHADOWLABOBJS}) mikktspace/mikktspace.o
 
 _STARLIGHTPREVIEWOBJS=shader.o ${GRAPH_OBJS} snis_graph.o star_light_preview.o \

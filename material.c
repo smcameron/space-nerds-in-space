@@ -29,6 +29,7 @@
 #include "material.h"
 #include "graph_dev.h"
 #include "build_bug_on.h"
+#include "star_light.h"
 
 static unsigned int load_texture(const char *asset_dir, char *filename, int linear_colorspace)
 {
@@ -156,16 +157,17 @@ void material_init_sun(struct material *m)
 	m->type = MATERIAL_SUN;
 	m->billboard_type = MATERIAL_BILLBOARD_TYPE_SPHERICAL;
 	m->sun.color = sng_get_color(WHITE);
+	m->sun.brightness = STAR_LIGHT_REFERENCE_BRIGHTNESS; /* a sun-like star; set from temperature */
 	m->sun.disc_radius = 0.1;
-	m->sun.edge_softness = 0.03; /* limb width as a fraction of the disc radius; this is an alpha fade at
-				     * the rim (semi-transparent by nature), so keep it small -- just enough
-				     * to antialias the edge, not a wide see-through gradient */
-	m->sun.core_brightness = 4.0;
-	m->sun.bloom_brightness = 0.6; /* dimmer than the disc, so the opaque disc reads as a solid body and the
-					* glow is clearly a fainter halo around it (1.0 would match the disc edge and
-					* make a flat-core disc dissolve into the glow) */
-	m->sun.bloom_radius = 0.05;
-	m->sun.bloom_falloff = 2.5;
+	m->sun.edge_softness = 0.01; /* alpha fade at the rim, so keep it small -- just enough to
+				     * antialias the edge.  It no longer affects the emission at all:
+				     * while that is multiplied by the brightness, anything above
+				     * 1/brightness clips to white, so softening the emission's edge
+				     * only grew the white disc.  See sun.frag. */
+	/* Fitted jointly against all nine shipped sun textures, with each star's brightness free:
+	 * see section 5 of doc/star-rendering-and-lighting-notes.txt.  One setting for every star. */
+	m->sun.psf_width = 0.673;
+	m->sun.psf_falloff = 4.15;
 	m->rotate_randomly = 0;
 }
 
