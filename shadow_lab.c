@@ -253,6 +253,17 @@ static float black_hole_distance[NUM_LAB_BLACK_HOLES];
 static float black_hole_lens_strength = 1.7;
 static float black_hole_swirl = 0.1;
 static float black_hole_ring_glow = 0.04; /* Einstein ring's emission, in black_hole.frag */
+
+/* The star field: distant stars, a separate thing from snis_client's space dust.  The dust
+ * fills a sphere the camera sits inside and streaks past to sell speed; the field is held at
+ * arm's length so it cannot streak, and reads as a sky.  Off by default -- this is a shadow
+ * lab, and a sky full of points is one more thing between the eye and the shadows.
+ *
+ * The radius is the CLOSEST a star may come, so it is really a drift-rate dial: parallax rate
+ * is speed over distance, so no star sweeps faster than speed/radius. */
+static int nstar_field_stars;
+static float star_field_radius = 8750.0;
+static int star_field_initialized;
 static int black_hole_index[NUM_LAB_BLACK_HOLES]; /* scene[] indices, for position/scale updates */
 static int black_hole_lensed[NUM_LAB_BLACK_HOLES]; /* won a lens slot this frame; HUD readout */
 static float black_hole_coverage[NUM_LAB_BLACK_HOLES]; /* fraction of the window it distorts */
@@ -1243,6 +1254,16 @@ static const char * const help_text[] = {
 	"  - J                CYCLE SUN DISC EDGE SOFTNESS (LIMB WIDTH; ALPHA FADE, SO SEMI-TRANSPARENT)\n"
 	"  - P                CYCLE PLANET SHADE MODE: SOFT / BINARY / OFF\n"
 	"  - B                TOGGLE THE PER-SHIP SHADE PANEL\n"
+	"  - F5 / SHIFT+F5    STAR FIELD OFF / ON; SHIFT DOUBLES HOW MANY STARS\n"
+	"                     DISTANT STARS, NOT THE GAME'S SPACE DUST -- THE TWO ARE SEPARATE\n"
+	"                     AND EITHER MAY BE UP.  DUST FILLS A SPHERE YOU SIT INSIDE AND\n"
+	"                     STREAKS PAST TO SELL SPEED; THE FIELD IS HELD FAR ENOUGH OFF THAT\n"
+	"                     IT CANNOT STREAK, AND READS AS A SKY.\n"
+	"  - F6 / SHIFT+F6    NEAREST STAR CLOSER / FURTHER\n"
+	"                     THE HUD'S NEAREST IS A FLOOR ON DISTANCE, NOT A CEILING, AND SO\n"
+	"                     IS A CEILING ON DRIFT: PARALLAX RATE IS SPEED OVER DISTANCE, SO NO\n"
+	"                     STAR SWEEPS FASTER THAN SPEED/NEAREST HOWEVER LONG YOU FLY AT IT.\n"
+	"                     TOO LOW AND THE SKY BECOMES FALLING SNOW.\n"
 	"  - 3 / 4            PLANET RADIUS SMALLER / LARGER\n"
 	"  - 5 / 6            PLANET CLOSER / FARTHER FROM THE SHIP CLUSTER\n"
 	"                     (FARTHER + TIGHTER CLUSTER = WIDER, SOFTER PENUMBRA)\n"
@@ -1543,6 +1564,14 @@ static void draw_hud(void)
 	/* Per-ship analytic shade, colour-coded by state.  This is the reliable readout: the
 	 * in_shade darkening lands on each ship's sun-facing side, which is usually hidden
 	 * behind the planet during an umbra test, so the render alone can look unchanged. */
+	/* The radius is reported as the two faces of the shell it really describes, since a bare
+	 * "radius" reads as an outer bound and it is a floor. */
+	snprintf(buffer, sizeof(buffer),
+		"STAR FIELD %s (F5)  STARS %d  NEAREST %.0f  FURTHEST %.0f (F6)",
+		nstar_field_stars ? "ON" : "OFF", nstar_field_stars, star_field_radius,
+		3.0 * star_field_radius);
+	sng_abs_xy_draw_string(buffer, TINY_FONT, 10, y); y += dy;
+
 	if (show_shade_panel) {
 		int s;
 
@@ -1716,6 +1745,16 @@ static void draw_screen(void)
 			update_entity_shadow_casting(e, 0);
 		}
 	}
+
+#if MOVING_STARFIELD
+	if (!star_field_initialized) {
+		star_field_initialized = 1;
+		entity_init_star_field(cx, nstar_field_stars, star_field_radius);
+	}
+	/* The lab rebuilds its scene every frame, so the field's entity has to be put back --
+	 * reusing the mesh, so the stars keep their world positions and the sky holds still. */
+	entity_readd_star_field(cx);
+#endif
 
 	render_skybox(cx);
 	render_entities(cx);
@@ -2063,6 +2102,30 @@ static void handle_key_down(SDL_Keysym *keysym)
 		break;
 	case SDLK_p:
 		planet_shade_mode = (planet_shade_mode + 1) % 3;
+		break;
+	case SDLK_F5: /* star field off / on; Shift = twice as many.  A function key because every
+		       * letter is taken: WASD/QE/RF are continuous movement, polled through
+		       * SDL_GetKeyboardState() rather than appearing in this switch. */
+		if (keysym->mod & KMOD_SHIFT) {
+			nstar_field_stars = nstar_field_stars ? nstar_field_stars * 2 : 1000;
+			if (nstar_field_stars > 64000)
+				nstar_field_stars = 64000;
+		} else {
+			nstar_field_stars = nstar_field_stars ? 0 : 32000;
+		}
+		star_field_initialized = 0;
+		break;
+	case SDLK_F6: /* nearest star closer / further (Shift).  Sets how fast the field can drift,
+		       * which is what decides whether it reads as a sky or as falling snow. */
+		if (keysym->mod & KMOD_SHIFT)
+			star_field_radius *= 1.25;
+		else
+			star_field_radius *= 0.8;
+		if (star_field_radius < 200.0)
+			star_field_radius = 200.0;
+		if (star_field_radius > 1000000.0)
+			star_field_radius = 1000000.0;
+		star_field_initialized = 0;
 		break;
 	case SDLK_b:
 		show_shade_panel = !show_shade_panel;
