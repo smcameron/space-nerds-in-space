@@ -27,9 +27,9 @@
 #include "quat.h"
 #include "snis_graph.h"
 #include "material.h"
+#include "star_light.h"
 #include "graph_dev.h"
 #include "build_bug_on.h"
-#include "star_light.h"
 
 static unsigned int load_texture(const char *asset_dir, char *filename, int linear_colorspace)
 {
@@ -228,9 +228,6 @@ void material_init_textured_planet(struct material *m)
 	m->textured_planet.water_color_r = 0.1;
 	m->textured_planet.water_color_g = 0.33;
 	m->textured_planet.water_color_b = 1.0;
-	m->textured_planet.sun_color_r = 1.0;
-	m->textured_planet.sun_color_g = 1.0;
-	m->textured_planet.sun_color_b = 0.7;
 	m->rotate_randomly = 0;
 }
 

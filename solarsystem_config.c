@@ -116,9 +116,6 @@ struct solarsystem_asset_spec *solarsystem_asset_spec_read(char *filename)
 	 * for callers that cannot measure the texture; solarsystem_star_diameter() infers it. */
 	a->star_diameter_pixels = 96.0;
 	a->star_diameter = 5625.0;
-	a->sun_color.r = 255;
-	a->sun_color.g = 255;
-	a->sun_color.b = 179;
 	/* Star rendering defaults.  These are a least-squares fit of the sun shader to the shipped
 	 * sun.png.  The STYLE defaults to the original textured billboard, so a system that says
 	 * nothing renders exactly as it always has and nothing changes for anyone who has not
@@ -307,15 +304,26 @@ struct solarsystem_asset_spec *solarsystem_asset_spec_read(char *filename)
 			a->water_color[planet_textures_read - 1].b = b;
 			continue;
 		} else if (has_prefix("sun color:", line)) {
+			/* DEPRECATED and ignored.  This was a second, hand-written statement of the
+			 * star's colour, used for nothing but the specular highlight on planets.  The
+			 * star's actual colour now comes from "star temperature" and "star tint", and
+			 * reaches planets through the ordinary star-tinted lighting, so this only
+			 * offered a way to disagree with the star -- which several shipped systems
+			 * did, two of them giving a warm star a blue-white glint.
+			 *
+			 * Still accepted rather than rejected, because it appears in asset bundles
+			 * already in the wild and an unrecognised key is an error.  Parsed only far
+			 * enough to tell a stale key from a malformed one. */
 			unsigned char r, g, b;
 			rc = sscanf(line, "sun color: %hhu, %hhu, %hhu", &r, &g, &b);
 			if (rc != 3) {
 				fprintf(stderr, "%s:line %d: bad sun color specification.\n", filename, ln);
 				goto bad_line;
 			}
-			a->sun_color.r = r;
-			a->sun_color.g = g;
-			a->sun_color.b = b;
+			fprintf(stderr,
+				"%s:line %d: 'sun color' is deprecated and ignored, the star's colour comes from 'star temperature' and 'star tint'.\n",
+				filename, ln);
+			a->spec_warnings++;
 			continue;
 		} else if (has_prefix("sun texture:", line)) {
 			if (a->sun_texture != NULL) {

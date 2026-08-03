@@ -46,7 +46,6 @@ struct solarsystem_asset_spec {
 	int nplanet_textures;
 	int spec_errors, spec_warnings;
 	int random_seed;
-	struct atmosphere_color_rgb sun_color; /* for use in specular calculations */
 	float star_diameter_pixels; /* diameter of the star's visible disc within the sun texture, in pixels */
 	float star_diameter; /* diameter of the star in world units (e.g. for planet shadow calculations) */
 	int star_diameter_specified; /* 0 means star_diameter was inferred, not stated; see below */

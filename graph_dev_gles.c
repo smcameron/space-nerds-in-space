@@ -173,6 +173,13 @@ static int draw_smaa = 0;
 static int draw_smaa_edge = 0;
 static int draw_smaa_blend = 0;
 static int draw_atmospheres = 1;
+/* How far a planet's shaded side is dimmed relative to everything else on the same shader.
+ * u_AmbientColor is sized for hulls and asteroids, where the ambient floor is a legibility
+ * affordance -- you have to see the ship you are flying and the rock you are about to hit.
+ * A planet is a large airless body whose night side really does go nearly black, and it is
+ * never something you need to read detail off, so it can afford the honest answer. */
+#define PLANET_AMBIENT_SCALE (2.0f / 3.0f)
+
 static int filmic_tonemapping = 1;
 static float tonemapping_gain = 1.18;
 int graph_dev_planet_specularity = 1;
@@ -1003,6 +1010,7 @@ struct graph_dev_gl_textured_shader {
 	GLint ambient_id;
 	GLint light_color_id;   /* star-tinted direct light colour (u_LightColor) */
 	GLint ambient_color_id; /* absolute, complement-tinted ambient colour (u_AmbientColor) */
+	GLint ambient_scale_id; /* scale on the shaded floor (u_AmbientScale); planets dim it */
 	GLint filmic_tonemapping_id;
 	GLint tonemapping_gain_id;
 
@@ -1020,7 +1028,6 @@ struct graph_dev_gl_textured_shader {
 	GLint invert; /* used by alpha_by_normal shader */
 	GLint in_shade;
 	GLint water_color; /* Used for specular calculations by planet shader */
-	GLint sun_color; /* Used for specular calculations by planet shader */
 	GLint u1v1; /* Used by planetary lightning shader */
 	GLint texture_width; /* Used by planetary lightning shader */
 };
@@ -1643,6 +1650,7 @@ struct raster_texture_params {
 	struct shadow_annulus_data *shadow_annulus;
 	float light_color[3];		/* star-tinted direct light colour (u_LightColor) */
 	float ambient_color[3];		/* absolute, complement-tinted ambient colour (u_AmbientColor) */
+	float ambient_scale;		/* scale on the shaded floor; 1.0 unless a planet dims it */
 	int do_cullface;
 	int do_blend;
 	float ring_texture_v;
@@ -1656,7 +1664,6 @@ struct raster_texture_params {
 	float in_shade;
 	float atmosphere_brightness;
 	union vec3 *water_color;
-	union vec3 *sun_color;
 	float u1, v1;
 	float width;
 	int textures_not_ready;
@@ -1718,6 +1725,8 @@ static void graph_dev_raster_texture(struct raster_texture_params *p)
 	if (shader->ambient_color_id >= 0)
 		glUniform3f(shader->ambient_color_id, p->ambient_color[0], p->ambient_color[1],
 			p->ambient_color[2]);
+	if (shader->ambient_scale_id >= 0)
+		glUniform1f(shader->ambient_scale_id, p->ambient_scale);
 	if (shader->filmic_tonemapping_id >= 0)
 		glUniform1f(shader->filmic_tonemapping_id, (float) filmic_tonemapping);
 	if (shader->tonemapping_gain_id >= 0)
@@ -1761,8 +1770,6 @@ static void graph_dev_raster_texture(struct raster_texture_params *p)
 		glUniform1f(shader->in_shade, p->in_shade);
 	if (shader->water_color >= 0 && p->water_color)
 		glUniform3f(shader->water_color, p->water_color->v.x, p->water_color->v.y, p->water_color->v.z);
-	if (shader->sun_color >= 0 && p->sun_color)
-		glUniform3f(shader->sun_color, p->sun_color->v.x, p->sun_color->v.y, p->sun_color->v.z);
 	if (shader->u1v1 >= 0)
 		glUniform2f(shader->u1v1, p->u1, p->v1);
 	if (shader->texture_width >= 0)
@@ -2499,6 +2506,9 @@ static void graph_dev_draw_nebula(const struct mat44 *mat_mvp, const struct mat4
 	struct material_nebula *mt = &e->material_ptr->nebula;
 	struct raster_texture_params rtp = { 0 };
 
+	/* Neutral unless a material dims it; see u_AmbientScale in the cubemap shader. */
+	rtp.ambient_scale = 1.0;
+
 	/* transform model origin into camera space */
 	union vec4 ent_pos = { { 0.0, 0.0, 0.0, 1.0 } };
 	union vec4 camera_ent_pos_4;
@@ -2867,9 +2877,11 @@ static void graph_dev_raster_triangle_mesh(struct entity_context *cx, struct ent
 
 	struct camera_info *c = &cx->camera;
 	struct raster_texture_params rtp = { 0 };
+
+	/* Neutral unless a material dims it; see u_AmbientScale in the cubemap shader. */
+	rtp.ambient_scale = 1.0;
 	struct sng_color atmosphere_color = { 0 };
 	union vec3 water_color;
-	union vec3 sun_color;
 	int is_sun = 0;
 	int is_black_hole = 0;
 
@@ -2913,9 +2925,6 @@ static void graph_dev_raster_triangle_mesh(struct entity_context *cx, struct ent
 	water_color.v.x = 0.0; /* These will be set by planet material */
 	water_color.v.y = 0.0;
 	water_color.v.z = 0.0;
-	sun_color.v.x = 0.0;
-	sun_color.v.y = 0.0;
-	sun_color.v.z = 0.0;
 
 	struct graph_dev_gl_trans_wireframe_shader *wireframe_trans_shader = &trans_wireframe_shader;
 
@@ -3095,14 +3104,12 @@ static void graph_dev_raster_triangle_mesh(struct entity_context *cx, struct ent
 			break;
 		case MATERIAL_TEXTURED_PLANET: {
 			struct material_textured_planet *mt = &e->material_ptr->textured_planet;
+			rtp.ambient_scale = PLANET_AMBIENT_SCALE;
 			rtp.texture_number = mt->texture_id;
 			rtp.normalmap_id = mt->normalmap_id;
 			water_color.v.x = mt->water_color_r;
 			water_color.v.y = mt->water_color_g;
 			water_color.v.z = mt->water_color_b;
-			sun_color.v.x = mt->sun_color_r;
-			sun_color.v.y = mt->sun_color_g;
-			sun_color.v.z = mt->sun_color_b;
 			rtp.textures_not_ready = !graph_dev_textures_ready(
 				(int []) {rtp.texture_number, rtp.normalmap_id, -1});
 
@@ -3217,7 +3224,6 @@ static void graph_dev_raster_triangle_mesh(struct entity_context *cx, struct ent
 				rtp.shadow_annulus = &shadow_annulus;
 				rtp.in_shade = e->in_shade;
 				rtp.water_color = &water_color;
-				rtp.sun_color = &sun_color;
 				rtp.ambient = cx->ambient;
 				graph_dev_compute_star_light(cx, rtp.light_color, rtp.ambient_color);
 
@@ -3990,7 +3996,6 @@ static void setup_textured_shader(const char *basename, const char *defines,
 	shader->invert = glGetUniformLocation(shader->program_id, "u_Invert");
 	shader->in_shade = glGetUniformLocation(shader->program_id, "u_in_shade");
 	shader->water_color = glGetUniformLocation(shader->program_id, "u_WaterColor");
-	shader->sun_color = glGetUniformLocation(shader->program_id, "u_SunColor");
 	shader->u1v1 = glGetUniformLocation(shader->program_id, "u_u1v1");
 	shader->texture_width = glGetUniformLocation(shader->program_id, "u_width");
 
@@ -4004,6 +4009,7 @@ static void setup_textured_shader(const char *basename, const char *defines,
 	shader->ambient_id = glGetUniformLocation(shader->program_id, "u_Ambient");
 	shader->light_color_id = glGetUniformLocation(shader->program_id, "u_LightColor");
 	shader->ambient_color_id = glGetUniformLocation(shader->program_id, "u_AmbientColor");
+	shader->ambient_scale_id = glGetUniformLocation(shader->program_id, "u_AmbientScale");
 	shader->filmic_tonemapping_id = glGetUniformLocation(shader->program_id, "u_FilmicTonemapping");
 	shader->tonemapping_gain_id = glGetUniformLocation(shader->program_id, "u_TonemappingGain");
 }
@@ -4072,9 +4078,6 @@ static void setup_textured_cubemap_shader(const char *basename, int use_normal_m
 	shader->water_color = glGetUniformLocation(shader->program_id, "u_WaterColor");
 	if (shader->water_color >= 0)
 		glUniform3f(shader->water_color, 0.1, 0.3, 1.0); /* mostly blue */
-	shader->sun_color = glGetUniformLocation(shader->program_id, "u_SunColor");
-	if (shader->sun_color >= 0)
-		glUniform3f(shader->sun_color, 1.0, 1.0, 0.7);
 
 	/* Get a handle for our buffers */
 	shader->vertex_position_id = glGetAttribLocation(shader->program_id, "a_Position");
@@ -4091,6 +4094,7 @@ static void setup_textured_cubemap_shader(const char *basename, int use_normal_m
 	shader->ambient_id = glGetUniformLocation(shader->program_id, "u_Ambient");
 	shader->light_color_id = glGetUniformLocation(shader->program_id, "u_LightColor");
 	shader->ambient_color_id = glGetUniformLocation(shader->program_id, "u_AmbientColor");
+	shader->ambient_scale_id = glGetUniformLocation(shader->program_id, "u_AmbientScale");
 	shader->filmic_tonemapping_id = glGetUniformLocation(shader->program_id, "u_FilmicTonemapping");
 	shader->tonemapping_gain_id = glGetUniformLocation(shader->program_id, "u_TonemappingGain");
 }
