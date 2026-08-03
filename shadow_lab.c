@@ -218,11 +218,11 @@ static float sun_glow_extent = 1.0; /* last frame's glow extent in star radii, f
 
 /* Star-coloured lighting (see star_light.c / set_star_light_tint()): tint every lit object's
  * sun-lit term toward the star's colour by sun_light_tint, its shaded/ambient term toward the
- * star's complement by sun_dark_tint, and deepen the shadow for blue stars by sun_shadow_contrast.
+ * star's complement by sun_dark_tint, and darken the shaded side by sun_shadow_darkening.
  * All three 0 = the old untinted look. */
 static float sun_light_tint = 0.45;
 static float sun_dark_tint = 0.06;
-static float sun_shadow_contrast = 1.25;
+static float sun_shadow_darkening = 0.0;
 static struct mesh *sun_mesh;
 static struct material sun_material;
 
@@ -1360,7 +1360,7 @@ static const char * const help_text[] = {
 	"  SUN (ANALYTIC PLANET UMBRA / PENUMBRA)\n"
 	"  - ARROW KEYS       ORBIT SUN AZIMUTH / ELEVATION (SHIFT = FASTER)\n"
 	"  - U / O            SUN DISTANCE CLOSER / FARTHER\n"
-	"  - SHIFT+U / SHIFT+O  PAST-WHITE SHADOW CONTRAST WEAKER / STRONGER (DEEPENS BLUE-STAR SHADOWS)\n"
+	"  - SHIFT+U / SHIFT+O  SHADOW DARKENING LESS / MORE (APPLIES TO EVERY STAR)\n"
 	"  - G / H            SUN RADIUS SMALLER / LARGER (WIDER RADIUS = WIDER PENUMBRA)\n"
 	"  - F4 / SHIFT+F4    NEXT / PREVIOUS SOLAR SYSTEM\n"
 	"                     THE HUD SAYS WHETHER THE STAR PARAMETERS CAME FROM THE SYSTEM'S\n"
@@ -1416,7 +1416,7 @@ static const char * const help_text[] = {
 	"  OTHER SUN CONTROLS\n"
 	"  - SHIFT+7 / SHIFT+8  LIGHT (SUN-LIT) TINT WEAKER / STRONGER (LIT FACES -> STAR COLOUR)\n"
 	"  - SHIFT+9 / SHIFT+I  DARK (SHADED) TINT WEAKER / STRONGER (SHADED FACES -> COMPLEMENT)\n"
-	"  - SHIFT+U / SHIFT+O  PAST-WHITE SHADOW CONTRAST WEAKER / STRONGER (DEEPENS BLUE-STAR SHADOWS)\n"
+	"  - SHIFT+U / SHIFT+O  SHADOW DARKENING LESS / MORE (APPLIES TO EVERY STAR)\n"
 	,
 	"  - P                CYCLE PLANET SHADE MODE: SOFT / BINARY / OFF\n"
 	"  - B                TOGGLE THE PER-SHIP SHADE PANEL\n"
@@ -1775,8 +1775,8 @@ static void draw_hud(void)
 			"STAR PARAMS FROM CONFIG" : "STAR PARAMS ARE DEFAULTS -- SEE --solarsystem-dir");
 	sng_abs_xy_draw_string(buffer, TINY_FONT, 10, y); y += dy;
 	snprintf(buffer, sizeof(buffer),
-		"STAR-LIGHT  LIGHT-TINT %.2f  DARK-TINT %.2f  CONTRAST %.2f  AMBIENT %.3f",
-		sun_light_tint, sun_dark_tint, sun_shadow_contrast, ambient_light);
+		"STAR-LIGHT  LIGHT-TINT %.2f  DARK-TINT %.2f  DARKENING %.2f  AMBIENT %.3f",
+		sun_light_tint, sun_dark_tint, sun_shadow_darkening, ambient_light);
 	sng_abs_xy_draw_string(buffer, TINY_FONT, 10, y); y += dy;
 	if (planet_index >= 0) {
 		float pr = scene[planet_index].scale;
@@ -1935,9 +1935,9 @@ static void draw_screen(void)
 	}
 	set_ambient_light(cx, ambient_light);
 	/* Derive the star-tinted light / complementary ambient from the current star colour and the
-	 * live tint/contrast knobs (Shift+7/8 and Shift+9/i).  Uses cx->ambient set just above. */
+	 * live tint/darkening knobs (Shift+7/8 and Shift+9/i).  Uses cx->ambient set just above. */
 	set_star_light_tint(cx, sun_material.sun.color.red, sun_material.sun.color.green,
-		sun_material.sun.color.blue, sun_light_tint, sun_dark_tint, sun_shadow_contrast);
+		sun_material.sun.color.blue, sun_light_tint, sun_dark_tint, sun_shadow_darkening);
 
 	/* Frame delta, measured BEFORE anything moves, so this frame's motion uses the time
 	 * this frame actually took.  Clamped: a stall, a resize or a breakpoint would otherwise
@@ -2255,20 +2255,20 @@ static void handle_key_down(SDL_Keysym *keysym)
 	case SDLK_l:
 		graph_dev_set_shadow_blend(graph_dev_get_shadow_blend() + 0.02);
 		break;
-	case SDLK_u: /* Shift = weaker past-white shadow contrast */
+	case SDLK_u: /* Shift = less shadow darkening */
 		if (keysym->mod & KMOD_SHIFT) {
-			sun_shadow_contrast -= 0.05;
-			if (sun_shadow_contrast < 0.0)
-				sun_shadow_contrast = 0.0;
+			sun_shadow_darkening -= 0.02;
+			if (sun_shadow_darkening < 0.0)
+				sun_shadow_darkening = 0.0;
 		} else {
 			sun_distance *= 0.9;
 		}
 		break;
-	case SDLK_o: /* Shift = stronger past-white shadow contrast */
+	case SDLK_o: /* Shift = more shadow darkening */
 		if (keysym->mod & KMOD_SHIFT) {
-			sun_shadow_contrast += 0.05;
-			if (sun_shadow_contrast > 3.0)
-				sun_shadow_contrast = 3.0;
+			sun_shadow_darkening += 0.02;
+			if (sun_shadow_darkening > 1.0)
+				sun_shadow_darkening = 1.0;
 		} else {
 			sun_distance *= 1.111111;
 		}

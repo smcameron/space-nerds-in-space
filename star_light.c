@@ -38,17 +38,14 @@ static float oklab_lightness(float r, float g, float b)
 }
 
 void star_light_colors(const float star_rgb[3], float ambient,
-			float light_tint, float dark_tint, float contrast_q,
+			float light_tint, float dark_tint, float shadow_darkening,
 			float out_light[3], float out_ambient[3])
 {
 	int i;
 	float mixed[3];
 	float mix_l, target_l, scale;
-	/* blueness: 0 at or below the white point, growing as the star goes blue
-	 * (its blue channel exceeds its red channel).  Drives the past-white
-	 * contrast term. */
-	float blueness = clampf_local(star_rgb[2] - star_rgb[0], 0.0f, 1.0f);
-	float contrast = 1.0f - blueness * contrast_q;
+	/* Unconditional: every star's shadows can be darkened, not just blue ones. */
+	float darken = 1.0f - clampf_local(shadow_darkening, 0.0f, 1.0f);
 
 	/* Shaded term, in two steps.  First the mix: the dark ambient floor mixed toward
 	 * the star's full complement by dark_tint.  This picks the right HUE (a red star
@@ -80,9 +77,10 @@ void star_light_colors(const float star_rgb[3], float ambient,
 		float s = star_rgb[i];
 		/* light: white sunlight tinted toward the star colour. */
 		out_light[i] = (1.0f - light_tint) * 1.0f + light_tint * s;
-		/* ambient: the hue-preserving, lightness-matched shadow, then deepened for
-		 * blue stars.  dark_tint = 0 or a white star leaves it at vec3(ambient). */
-		out_ambient[i] = mixed[i] * scale * contrast;
+		/* ambient: the hue-preserving, lightness-matched shadow, then darkened.
+		 * dark_tint = 0 or a white star leaves the hue neutral; shadow_darkening = 0
+		 * leaves the level at vec3(ambient). */
+		out_ambient[i] = mixed[i] * scale * darken;
 	}
 }
 

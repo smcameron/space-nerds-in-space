@@ -122,7 +122,7 @@ struct entity_context {
 	float star_color[3];
 	float star_light_tint;
 	float star_dark_tint;
-	float star_shadow_contrast;
+	float star_shadow_darkening;
 
 	/* Screen size of model at which we switch between lo/hi poly models, if available */
 	/* Possibly this threshold should be per mesh, rather than per entity context. */

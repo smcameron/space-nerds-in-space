@@ -13,8 +13,8 @@
 	`ambient` (the existing dark-grey ambient, applied to all three channels),
 	and three adjustable strengths -- `light_tint` (how far the sunlit term leans
 	toward the star colour), `dark_tint` (how far the shaded term leans toward the
-	star's complement), and `contrast_q` (how much a past-white / blue star deepens
-	the shadows) -- compute:
+	star's complement), and `shadow_darkening` (how far the shaded term is darkened,
+	0 for not at all) -- compute:
 
 	  out_light[3] = white sunlight tinted toward the star colour.
 	  out_ambient[3] = the absolute shaded/ambient colour: the dark ambient
@@ -23,12 +23,22 @@
 	  ambient rather than taking on the complement's brightness), then deepened
 	  for blue stars.
 
-	With light_tint == 0, dark_tint == 0 and contrast_q == 0 this yields
+	`shadow_darkening` is unconditional: it applies to every star, not only to blue
+	ones.  It used to be scaled by how far past the white point the star sat, which
+	made it inert for anything at or below white -- most stars -- and, once star
+	colours could be tinted off the blackbody locus, let a purely artistic hue choice
+	move the scene's brightness.  Deciding how dark a system's shadows are is now the
+	caller's business.
+
+	It multiplies the shaded term AFTER the lightness match, so it darkens without
+	disturbing the hue that dark_tint picked.
+
+	With light_tint == 0, dark_tint == 0 and shadow_darkening == 0 this yields
 	out_light = {1,1,1} and out_ambient = {ambient, ambient, ambient} -- identical
 	to the untinted look.
 */
 void star_light_colors(const float star_rgb[3], float ambient,
-			float light_tint, float dark_tint, float contrast_q,
+			float light_tint, float dark_tint, float shadow_darkening,
 			float out_light[3], float out_ambient[3]);
 
 /*

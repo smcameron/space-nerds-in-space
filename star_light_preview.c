@@ -58,7 +58,7 @@ static int snapshot_number = 0;
 /* Live knobs (defaults mirror the intended shadow_lab starting values). */
 static float light_tint = 0.45f;
 static float dark_tint = 0.06f;
-static float contrast_q = 1.25f;
+static float shadow_darkening = 0.0f;
 static float ambient = 0.015f;
 
 /* Game filmic tonemap preview.  The lit shaders in game end with filmic_tonemap()
@@ -154,7 +154,7 @@ static void strip_color(enum strip_kind kind, float kelvin, float out[3])
 	float star[3], light[3], amb[3];
 
 	star_light_blackbody_color(kelvin, &star[0], &star[1], &star[2]);
-	star_light_colors(star, ambient, light_tint, dark_tint, contrast_q, light, amb);
+	star_light_colors(star, ambient, light_tint, dark_tint, shadow_darkening, light, amb);
 
 	switch (kind) {
 	case STRIP_WHITE:
@@ -261,8 +261,8 @@ static void draw_header(void)
 	y += dy;
 
 	snprintf(buf, sizeof(buf),
-		"LIGHT-TINT %.3f   DARK-TINT %.3f   CONTRAST %.3f   AMBIENT %.4f   ALBEDO %.2f",
-		light_tint, dark_tint, contrast_q, ambient, surface_albedo);
+		"LIGHT-TINT %.3f   DARK-TINT %.3f   DARKENING %.3f   AMBIENT %.4f   ALBEDO %.2f",
+		light_tint, dark_tint, shadow_darkening, ambient, surface_albedo);
 	sng_abs_xy_draw_string(buf, TINY_FONT, 10, y);
 	y += dy;
 
@@ -280,7 +280,7 @@ static void draw_header(void)
 		float star[3], light[3], amb[3];
 
 		star_light_blackbody_color(t, &star[0], &star[1], &star[2]);
-		star_light_colors(star, ambient, light_tint, dark_tint, contrast_q, light, amb);
+		star_light_colors(star, ambient, light_tint, dark_tint, shadow_darkening, light, amb);
 		snprintf(buf, sizeof(buf),
 			"CURSOR %.0fK  star %.2f %.2f %.2f  light %.2f %.2f %.2f  dark %.3f %.3f %.3f (linear uniforms)",
 			t, star[0], star[1], star[2],
@@ -301,7 +301,7 @@ static const char * const help_text[] = {
 	"",
 	"LEFT / RIGHT         decrease / increase LIGHT tint",
 	"SHIFT+LEFT / RIGHT   decrease / increase DARK tint",
-	"DOWN / UP            decrease / increase CONTRAST q",
+	"DOWN / UP            decrease / increase SHADOW DARKENING",
 	"[ / ]                decrease / increase AMBIENT A",
 	", / .                decrease / increase surface ALBEDO (1.0 = white, lower = grey hull)",
 	"T                    toggle the game filmic tonemap (LIGHT/DARK strips)",
@@ -393,10 +393,10 @@ static void handle_key_down(SDL_Keysym *keysym)
 			light_tint = clampf(light_tint + 0.01f, 0.0f, 1.0f);
 		break;
 	case SDLK_DOWN:
-		contrast_q = clampf(contrast_q - 0.02f, 0.0f, 3.0f);
+		shadow_darkening = clampf(shadow_darkening - 0.02f, 0.0f, 1.0f);
 		break;
 	case SDLK_UP:
-		contrast_q = clampf(contrast_q + 0.02f, 0.0f, 3.0f);
+		shadow_darkening = clampf(shadow_darkening + 0.02f, 0.0f, 1.0f);
 		break;
 	case SDLK_LEFTBRACKET:
 		ambient = clampf(ambient - 0.005f, 0.0f, 1.0f);
@@ -413,7 +413,7 @@ static void handle_key_down(SDL_Keysym *keysym)
 	case SDLK_0:
 		light_tint = 0.45f;
 		dark_tint = 0.06f;
-		contrast_q = 1.25f;
+		shadow_darkening = 0.0f;
 		ambient = 0.015f;
 		surface_albedo = 1.0f;
 		break;
