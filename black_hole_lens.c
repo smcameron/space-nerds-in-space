@@ -159,7 +159,17 @@ int black_hole_lens_select(const struct black_hole_lens_hole *hole, int nholes,
 	 * near hole in front of it were not there.  Insertion sort: nbest is at most three. */
 	for (i = 1; i < nbest; i++) {
 		c = best[i];
-		for (j = i; j > 0 && best[j - 1].distance > c.distance; j--)
+#if 0
+		/* This sort order is "correct", but closer black holes can distort so much
+		 * that the distortion field of farther black holes is pulled out from behind
+		 * the "disc" of the black hole, which the disc is not distorted.
+		 * Reversing the sort order prevents that, and still looks cool, if not
+		 * physically correct.
+		 */
+		for (j = i; j > 0 && best[j - 1].distance > c.distance; j--) /* Correct, but looks weird */
+#else
+		for (j = i; j > 0 && best[j - 1].distance < c.distance; j--) /* Incorrect, but looks cool. */
+#endif
 			best[j] = best[j - 1];
 		best[j] = c;
 	}
