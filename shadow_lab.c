@@ -192,6 +192,15 @@ static int mouse_look_active = 0;
 static float mouse_accum_dx = 0.0;
 static float mouse_accum_dy = 0.0;
 
+/* Which parameter mode is up, or -1 to fly.  See the parameter grid further down: the modes
+ * borrow the movement keys, so nearly every continuously-polled control has to ask first. */
+static int active_lab_mode = -1;
+
+static int lab_tuning(void)
+{
+	return active_lab_mode >= 0;
+}
+
 /* Sun.  Stored as an orbit (azimuth/elevation/distance) about the scene centre so it can be
  * swept live with the arrow keys; sun_pos is derived from it each frame.  sun_radius is the
  * star's world-unit radius that drives the analytic planet-shadow penumbra (mirrors
@@ -317,7 +326,7 @@ static const struct black_hole_layout {
 };
 static int black_hole_enabled = 0;
 static int black_hole_count = 1; /* how many are live, 1..NUM_LAB_BLACK_HOLES; Shift+` cycles */
-/* Per-hole, seeded from the layout.  Only hole 0 is live-tunable (HOME/END): it is the
+/* Per-hole, seeded from the layout.  Only hole 0 is live-tunable: it is the
  * reference, and leaving the rest fixed keeps the deliberate 1/2 overlap steady while you tune. */
 static float black_hole_radius[NUM_LAB_BLACK_HOLES];
 static float black_hole_distance[NUM_LAB_BLACK_HOLES];
@@ -942,34 +951,6 @@ static void camera_basis(const union quat *o, union vec3 *fwd, union vec3 *up, u
 	quat_rot_vec_self(right, o);
 }
 
-/* Apply a rotation of 'angle' radians about a body-frame axis to the camera orientation. */
-static void adjust_shadow_bias(float dfactor, float dunits)
-{
-	float factor, units;
-
-	graph_dev_get_shadow_bias(&factor, &units);
-	factor += dfactor;
-	units += dunits;
-	if (factor < 0.0)
-		factor = 0.0;
-	if (units < 0.0)
-		units = 0.0;
-	graph_dev_set_shadow_bias(factor, units);
-}
-
-/* Step the cascade split lambda, snapping to the step grid so repeated presses cannot
- * accumulate floating-point drift.  The step is deliberately fine: in compute_cascade_splits()
- * the uniform term is around 200x the logarithmic one, so lambda spends its whole range being
- * dominated by uniform spacing and only the last stretch below 1.0 does anything interesting
- * -- and 1.0 exactly, a pure logarithmic split, has to be reachable.  Shift steps coarsely to
- * cross the dead zone quickly. */
-static void adjust_split_lambda(float delta)
-{
-	float lambda = get_shadow_map_split_lambda() + delta;
-
-	set_shadow_map_split_lambda(roundf(lambda * 100.0f) / 100.0f);
-}
-
 /* Steer from the right-drag mouse and Q/E, shared by the free camera and the possessed ship.
  * Accumulates into the caller's angles and rebuilds the orientation from them. */
 static void apply_look_controls(union quat *orientation, float *yaw, float *pitch, float *roll)
@@ -981,10 +962,15 @@ static void apply_look_controls(union quat *orientation, float *yaw, float *pitc
 	mouse_accum_dx = 0.0;
 	mouse_accum_dy = 0.0;
 
-	if (keys[SDL_SCANCODE_Q])
-		*roll += roll_rate * frame_dt;
-	if (keys[SDL_SCANCODE_E])
-		*roll -= roll_rate * frame_dt;
+	/* Q and E are roll only while nothing is being tuned; a parameter mode owns the whole
+	 * left hand.  The mouse is never taken away, so the view can still be aimed at whatever
+	 * the value being tuned is supposed to change. */
+	if (!lab_tuning()) {
+		if (keys[SDL_SCANCODE_Q])
+			*roll += roll_rate * frame_dt;
+		if (keys[SDL_SCANCODE_E])
+			*roll -= roll_rate * frame_dt;
+	}
 
 	orientation_from_angles(orientation, *yaw, *pitch, *roll);
 }
@@ -1001,6 +987,9 @@ static void fly_controls(union vec3 *pos, union quat *orientation, float speed)
 
 	apply_look_controls(orientation, &cam_yaw, &cam_pitch, &cam_roll);
 	camera_basis(orientation, &fwd, &up, &right);
+
+	if (lab_tuning())
+		return; /* WASD/RF are the parameter grid while a mode is up */
 
 	if (keys[SDL_SCANCODE_W]) {
 		step = fwd; vec3_mul_self(&step, speed); vec3_add_self(pos, &step);
@@ -1036,17 +1025,24 @@ static void fly_ship(struct scene_object *ship, int steer_with_mouse)
 	if (steer_with_mouse) {
 		apply_look_controls(&ship->orientation, &ship->yaw, &ship->pitch, &ship->roll);
 	} else {
-		if (keys[SDL_SCANCODE_Q])
-			ship->roll += roll_rate * frame_dt;
-		if (keys[SDL_SCANCODE_E])
-			ship->roll -= roll_rate * frame_dt;
+		if (!lab_tuning()) {
+			if (keys[SDL_SCANCODE_Q])
+				ship->roll += roll_rate * frame_dt;
+			if (keys[SDL_SCANCODE_E])
+				ship->roll -= roll_rate * frame_dt;
+		}
 		orientation_from_angles(&ship->orientation, ship->yaw, ship->pitch, ship->roll);
 	}
 
-	if (keys[SDL_SCANCODE_W])
-		ship_speed += ship_accel * frame_dt;
-	if (keys[SDL_SCANCODE_S])
-		ship_speed -= ship_accel * 1.5 * frame_dt; /* brake harder than it accelerates */
+	/* The throttle is on the grid's keys too, so it stops responding while a mode is up.
+	 * Momentum and drag carry on, which is what makes it safe: the ship coasts to a stop
+	 * rather than freezing mid-flight. */
+	if (!lab_tuning()) {
+		if (keys[SDL_SCANCODE_W])
+			ship_speed += ship_accel * frame_dt;
+		if (keys[SDL_SCANCODE_S])
+			ship_speed -= ship_accel * 1.5 * frame_dt; /* brake harder than it speeds up */
+	}
 	/* Drag, as a rate rather than a per-frame factor: 0.985 per frame at 60fps is a time
 	 * constant of about 1.1 seconds, and powf keeps that constant whatever the frame rate. */
 	ship_speed *= powf(0.985f, frame_dt * (float) FPS);
@@ -1245,7 +1241,7 @@ static void update_black_holes(void)
 
 	/* All the holes share one material, so the geometry is worked out once here rather than per
 	 * hole.  It has to be redone every frame even so, because the lens strength is a live knob
-	 * (SHIFT+PAGEUP / SHIFT+PAGEDOWN) and it is what puts the Einstein ring at its radius. */
+	 * (the SKY mode's EINSTEIN) and it is what puts the Einstein ring at its radius. */
 	half_size = material_black_hole_set_geometry(&black_hole_material, black_hole_lens_strength);
 	black_hole_material.black_hole.glow_brightness = black_hole_ring_glow;
 
@@ -1329,127 +1325,111 @@ static void update_atmosphere(void)
  * matters, and a page break can land anywhere. */
 static const char * const help_text[] = {
 	"SHADOW LAB\n\n"
-	"  A sandbox for iterating on the cascaded shadow mapping shaders.\n\n"
-	"  FREE CAMERA\n"
-	"  - W / S            MOVE FORWARD / BACK\n"
+	"  A sandbox for iterating on the cascaded shadow mapping shaders, the star, and the\n"
+	"  lighting they share.\n\n"
+	"  HOW THE CONTROLS WORK\n"
+	"  - AN F-KEY PUTS UP A MODE.  THE SAME KEY AGAIN DROPS BACK TO FLYING.\n"
+	"  - WHILE A MODE IS UP THE LEFT HAND IS A GRID OF INCREASE / DECREASE PAIRS, THE SAME\n"
+	"    SIX COLUMNS IN EVERY MODE.  THE BANNER UNDER THE TITLE NAMES WHAT EACH PAIR DOES\n"
+	"    AND SHOWS ITS VALUE, SO NOTHING HERE HAS TO BE MEMORISED.\n"
+	"        1/Q  2/W  3/E  4/R  5/T  6/Y      (TOP ROW: 1-6 UP, Q-Y DOWN)\n"
+	"        A/Z  S/X  D/C  F/V  G/B  H/N      (HOME ROW: A-H UP, Z-N DOWN)\n"
+	"  - SHIFT            A COARSE STEP (FIVE AT ONCE), IN EVERY MODE, ON EVERY PAIR\n"
+	"  - TRANSLATION AND ROLL ARE SUSPENDED WHILE A MODE IS UP, SINCE THE GRID IS SITTING\n"
+	"    ON WASD/QE/RF.  MOUSE-LOOK AND THE SUN'S ARROW KEYS STAY LIVE IN EVERY MODE, SO\n"
+	"    YOU CAN AIM THE VIEW AND SWING THE SUN WHILE TUNING.  DROP OUT OF THE MODE TO FLY.\n\n"
+	,
+	"  FLYING (WHEN NO MODE IS UP)\n"
+	"  - W / S            MOVE FORWARD / BACK   (POSSESSED SHIP: THROTTLE / BRAKE-REVERSE)\n"
 	"  - A / D            STRAFE LEFT / RIGHT\n"
 	"  - R / F            MOVE UP / DOWN\n"
 	"  - Q / E            ROLL LEFT / RIGHT\n"
-	"  - HOLD RIGHT MOUSE MOVE MOUSE TO LOOK AROUND\n"
-	"  - SHIFT            MOVE FASTER\n\n"
-	,
-	"  POSSESSED SHIP (TAB TO POSSESS NEXT SHIP / RETURN TO FREE CAMERA)\n"
-	"  - W / S            THROTTLE FORWARD / BRAKE-REVERSE (MOMENTUM + DRAG)\n"
-	"  - Q / E            ROLL;  RIGHT-DRAG MOUSE TO STEER (YAW / PITCH)\n"
-	"  - THE SHIP FLIES WHERE ITS NOSE POINTS; A CHASE CAM TRAILS IT.  FLY A SHIP\n"
-	"    THROUGH THE PENUMBRA TO WATCH ITS SHADE (PANEL) RAMP LIT -> UMBRA.\n\n"
-	,
-	"  GUN TURRET VIEW (F2 WHILE POSSESSING A SHIP)\n"
-	"  - F2               TOGGLE TURRET / CHASE VIEW\n"
+	"  - HOLD RIGHT MOUSE MOVE MOUSE TO LOOK AROUND (STEERS THE SHIP WHEN POSSESSING ONE)\n"
+	"  - SHIFT            MOVE FASTER\n"
+	"  - TAB              POSSESS THE NEXT SHIP, THEN BACK TO THE FREE CAMERA\n"
+	"  - SHIFT+TAB        TOGGLE TURRET / CHASE VIEW WHILE POSSESSING A SHIP\n"
+	"  - [ / ]            PREVIOUS / NEXT SOLAR SYSTEM\n"
+	"  - THE SHIP FLIES WHERE ITS NOSE POINTS AND KEEPS MOMENTUM; A CHASE CAM TRAILS IT.\n"
+	"    FLY ONE THROUGH THE PENUMBRA TO WATCH ITS SHADE RAMP LIT -> UMBRA ON THE PANEL.\n\n"
+	"  GUN TURRET VIEW\n"
 	"  - RIGHT-DRAG AIMS THE TURRET; THE SHIP DOES NOT STEER, AS AT THE REAL WEAPONS\n"
 	"    STATION.  W/S THROTTLE, Q/E ROLL, ARROW KEYS SWING THE SUN VS YOUR AIM.\n"
 	"  - COPIES snis_client's show_weapons_camera_view(): MOUNT, EYE OFFSET, NEAR\n"
 	"    PLANE 0.83, 45 DEG FOV.  ONLY VIEW WITH THE CAMERA INSIDE THE CASTER.\n"
 	"  - EVERY SHIP CARRIES ITS OWN TURRET AND KEEPS ITS AIM, SO YOU CAN AIM ONE, TAB\n"
-	"    TO THE FREE CAMERA AND WATCH ITS SHADOW TRACK THE HULL FROM OUTSIDE.\n"
-	"  - CASCADE 0 HUD LINE: TEXEL IS THE FINEST SHADOW THE MAP HOLDS (TURRET IS ~0.8\n"
-	"    UNITS THICK).  AIM-TO-SUN MATTERS: THE ORTHO BOX IS FITTED ONLY 1% PAST THE\n"
-	"    FRUSTUM'S FAR-FROM-LIGHT CORNER.  16:9 HERE VS 4:3 IN GAME MAKES LAB TEXELS\n"
-	"    ~15 PERCENT COARSER; THE HUD SHOWS THIS WINDOW'S TRUE FIGURE.\n\n"
+	"    TO THE FREE CAMERA AND WATCH ITS SHADOW TRACK THE HULL FROM OUTSIDE.\n\n"
 	,
-	"  SUN (ANALYTIC PLANET UMBRA / PENUMBRA)\n"
-	"  - ARROW KEYS       ORBIT SUN AZIMUTH / ELEVATION (SHIFT = FASTER)\n"
-	"  - U / O            SUN DISTANCE CLOSER / FARTHER\n"
-	"  - SHIFT+U / SHIFT+O  SHADOW DARKENING LESS / MORE (APPLIES TO EVERY STAR)\n"
-	"  - G / H            SUN RADIUS SMALLER / LARGER (WIDER RADIUS = WIDER PENUMBRA)\n"
-	"  - F4 / SHIFT+F4    NEXT / PREVIOUS SOLAR SYSTEM\n"
-	"                     THE HUD SAYS WHETHER THE STAR PARAMETERS CAME FROM THE SYSTEM'S\n"
-	"                     OWN CONFIG OR ARE JUST DEFAULTS.  IF THEY ARE DEFAULTS, EVERY\n"
-	"                     SHADER SUN WILL LOOK ALIKE NO MATTER WHICH SYSTEM YOU ARE ON --\n"
-	"                     RUN WITH --solarsystem-dir POINTING AT CONFIGS THAT SET THEM.\n"
-	"                     EACH ONE SHIPS ITS OWN SUN TEXTURE AND ITS OWN STAR PARAMETERS,\n"
-	"                     AND THEY VARY WIDELY -- DISCS FROM 50 TO 140 PX, TEMPERATURES\n"
-	"                     FROM A RED DWARF TO A BLUE GIANT.  PARAMETERS FITTED TO ONE SAY\n"
-	"                     NOTHING ABOUT THE REST, SO STEP THROUGH THEM ALL.\n"
-	"  - F3 / SHIFT+F3    CYCLE SUN STYLE: SHADER / TEXTURE / SIDE BY SIDE\n"
-	"                     THE TEXTURE IS WHAT THE GAME DRAWS TODAY (sun.png ON A PLAIN\n"
-	"                     BILLBOARD).  THE SHADER'S SETTINGS ARE MEANT TO REPRODUCE IT,\n"
-	"                     SO FLIP BETWEEN THEM IN PLACE TO CHECK THE MATCH -- A FLICKER\n"
-	"                     SHOWS UP DIFFERENCES A SIDE-BY-SIDE LETS THE EYE AVERAGE AWAY.\n"
-	"                     THEY CAN ONLY AGREE AT ONE CAMERA DISTANCE: THE TEXTURE IS\n"
-	"                     ENTIRELY WORLD-SCALE, SO ITS GLOW GROWS AS YOU CLOSE IN, WHILE\n"
-	"                     THE SHADER'S GLOW IS SIZED BY THE STAR'S BRIGHTNESS.  THE TEXTURE\n"
-	"                     ALSO HAS STARBURST RAYS THE SHADER HAS NO TERM FOR.\n"
-	"  - SHIFT+G / SHIFT+H  SUN TEXTURE DISC WIDTH IN PIXELS SMALLER / LARGER\n"
-	"                     (solarsystem_config's star diameter pixels: HOW MUCH OF THE\n"
-	"                     TEXTURE IS STAR RATHER THAN GLOW.  RAISING IT SHRINKS THE\n"
-	"                     BILLBOARD FOR THE SAME STAR, SO THE TEXTURE'S GLOW SHRINKS TOO.)\n"
-	"  - THE HUD HAS TWO SUN LINES.  STAR IS THIS SOLAR SYSTEM'S, AND IS WHAT GOES IN ITS\n"
-	"    assets.txt.  OPTICS IS SHARED BY EVERY STAR AND IS NOT PER SOLAR SYSTEM -- CHANGE IT\n"
-	"    ONLY IF EVERY STAR LOOKS WRONG THE SAME WAY.  EACH FIELD NAMES THE KEY THAT MOVES IT.\n"
-	"\n"
-	"  STAR -- WHAT TO WRITE DOWN PER SOLAR SYSTEM\n"
-	"  - 7 / 8            HUD 'TEMP': STAR TEMPERATURE COOLER / HOTTER.\n"
-	"                     COLOUR ONLY.  IT NO LONGER SETS BRIGHTNESS -- THAT IS WHY IT USED TO\n"
-	"                     FIGHT THE TINT.  PICK IT TO MATCH THE HUE, NOTHING ELSE.\n"
-	"  - Z / X            HUD 'BRIGHTNESS': DIMMER / BRIGHTER (SHIFT = COARSE, HALVE / DOUBLE).\n"
-	"                     LINEAR HDR SURFACE BRIGHTNESS.  THIS IS WHAT SETS HOW BIG THE WHITE-HOT\n"
-	"                     CORE AND THE GLOW ARE.  SPANS SIX DECADES, HENCE THE COARSE STEP.\n"
-	"  - J                HUD 'EDGE': CYCLE THE DISC'S LIMB WIDTH (ALPHA FADE AT THE RIM, SO\n"
-	"                     SEMI-TRANSPARENT; KEEP IT SMALL -- JUST ENOUGH TO ANTIALIAS).\n"
-	"  - HUD 'TINT' IS NOT ADJUSTABLE HERE.  IT IS MEASURED FROM THE SUN TEXTURE AND CORRECTS\n"
-	"    FOR HUES THE BLACKBODY LOCUS CANNOT REACH.  REPORT THE TEMPERATURE YOU CHOSE AND IT\n"
-	"    CAN BE RE-DERIVED; A TEMPERATURE CHANGE INVALIDATES THE OLD TINT.\n"
-	"\n"
+	"  F2 SHADOW MODE\n"
+	"  - COVERAGE IS HOW FAR THE CASCADES REACH; CASCADES AND LAMBDA DECIDE HOW THAT\n"
+	"    DISTANCE IS DIVIDED UP.  LAMBDA 1.0 IS A PURE LOGARITHMIC SPLIT, AND THE STEP IS\n"
+	"    FINE BECAUSE ONLY THE LAST STRETCH BELOW 1.0 DOES ANYTHING INTERESTING.\n"
+	"  - BIAS-SLOPE PUSHES THE DEPTH PASS AWAY ALONG THE LIGHT RAY, WHICH DETACHES\n"
+	"    SHADOWS FROM THEIR CASTERS IF OVERDONE.  NORMAL-OFF LIFTS THE LOOKUP ALONG THE\n"
+	"    SURFACE NORMAL INSTEAD, IN TEXELS, WHICH KILLS GRAZING ACNE WITHOUT DETACHING.\n"
+	"  - PCF-RADIUS IS THE FILTER HALF-WIDTH IN TEXELS, APPLIED IN EVERY CASCADE; WITH A\n"
+	"    LOGARITHMIC SPLIT A FIXED RADIUS IS A FIXED PENUMBRA ON SCREEN.\n"
+	"  - BLEND IS THE CROSS-CASCADE BAND; 0 GIVES HARD CASCADE BOUNDARIES.\n"
+	"  - CASCADE-INDEX TINT: red=0 (nearest) green=1 blue=2 yellow=3 cyan=4 magenta=5\n"
+	"    gray=none.  THE HUD'S CASCADE 0 LINE GIVES THE TEXEL SIZE -- THE FINEST SHADOW\n"
+	"    THE MAP CAN HOLD (THE TURRET IS ~0.8 UNITS THICK).  AIM-TO-SUN MATTERS: THE\n"
+	"    ORTHO BOX IS FITTED ONLY 1% PAST THE FRUSTUM'S FAR-FROM-LIGHT CORNER.  16:9 HERE\n"
+	"    VS 4:3 IN GAME MAKES LAB TEXELS ~15 PERCENT COARSER; THE HUD SHOWS THIS WINDOW'S\n"
+	"    TRUE FIGURE.\n\n"
 	,
-	"  OPTICS -- SHARED, ONLY CHANGE IF EVERY STAR IS WRONG\n"
-	"  - T / Y            HUD 'W': POINT SPREAD WIDTH IN STAR RADII, NARROWER / WIDER\n"
-	"  - C / V            HUD 'P': POWER-LAW TAIL EXPONENT, SHALLOWER / STEEPER\n"
-	"                     THERE IS NO AMPLITUDE ANY MORE: THE PROFILE IS NORMALISED TO 1 AT\n"
-	"                     THE STAR'S CENTRE, SO ITS LEVEL IS THE BRIGHTNESS AND NOTHING ELSE.\n"
-	"                     THE STAR HAS NO DIFFRACTION SPIKES: SEE THE COMMENT IN sun.frag FOR\n"
-	"                     WHY TWO ATTEMPTS AT THEM WERE BOTH REJECTED.\n"
-	"                     A POWER LAW IS SCALE FREE, SO ONE SETTING SERVES EVERY STAR:\n"
-	"                     BRIGHTNESS ALONE MOVES WHERE IT CROSSES WHITE.  GLOW EXTENT ON THE\n"
-	"                     HUD IS DERIVED, NOT SET -- IT IS WHERE THE GLOW STOPS BEING VISIBLE.\n"
-	"\n"
-	"  OTHER SUN CONTROLS\n"
-	"  - SHIFT+7 / SHIFT+8  LIGHT (SUN-LIT) TINT WEAKER / STRONGER (LIT FACES -> STAR COLOUR)\n"
-	"  - SHIFT+9 / SHIFT+I  DARK (SHADED) TINT WEAKER / STRONGER (SHADED FACES -> COMPLEMENT)\n"
-	"  - SHIFT+U / SHIFT+O  SHADOW DARKENING LESS / MORE (APPLIES TO EVERY STAR)\n"
+	"  F3 SUN MODE\n"
+	"  - THE HUD HAS TWO SUN LINES.  STAR IS THIS SOLAR SYSTEM'S AND IS WHAT GOES IN ITS\n"
+	"    assets.txt.  OPTICS IS SHARED BY EVERY STAR -- CHANGE IT ONLY IF EVERY STAR LOOKS\n"
+	"    WRONG THE SAME WAY.\n"
+	"  - STYLE CYCLES SHADER / TEXTURE / SIDE BY SIDE.  THE TEXTURE IS WHAT THE GAME DRAWS\n"
+	"    TODAY (sun.png ON A PLAIN BILLBOARD) AND THE SHADER'S SETTINGS ARE MEANT TO\n"
+	"    REPRODUCE IT, SO FLIP BETWEEN THEM IN PLACE TO CHECK THE MATCH -- A FLICKER SHOWS\n"
+	"    UP DIFFERENCES A SIDE-BY-SIDE LETS THE EYE AVERAGE AWAY.  THEY CAN ONLY AGREE AT\n"
+	"    ONE CAMERA DISTANCE: THE TEXTURE IS ENTIRELY WORLD-SCALE, SO ITS GLOW GROWS AS YOU\n"
+	"    CLOSE IN, WHILE THE SHADER'S GLOW IS SIZED BY THE STAR'S BRIGHTNESS.  THE TEXTURE\n"
+	"    ALSO HAS STARBURST RAYS THE SHADER HAS NO TERM FOR.\n"
+	"  - TEMPERATURE IS COLOUR ONLY.  IT NO LONGER SETS BRIGHTNESS -- THAT IS WHY IT USED\n"
+	"    TO FIGHT THE TINT.  PICK IT TO MATCH THE HUE, NOTHING ELSE.\n"
+	"  - BRIGHTNESS IS THE LINEAR HDR SURFACE BRIGHTNESS, AND IS WHAT SETS HOW BIG THE\n"
+	"    WHITE-HOT CORE AND THE GLOW ARE.  IT SPANS SIX DECADES, SO USE SHIFT.\n"
+	"  - EDGE IS THE DISC'S LIMB WIDTH, AN ALPHA FADE AT THE RIM.  KEEP IT SMALL -- JUST\n"
+	"    ENOUGH TO ANTIALIAS.\n"
+	"  - PSF-W AND PSF-P ARE THE POINT SPREAD'S WIDTH IN STAR RADII AND ITS POWER-LAW TAIL.\n"
+	"    THERE IS NO AMPLITUDE: THE PROFILE IS NORMALISED TO 1 AT THE STAR'S CENTRE, SO ITS\n"
+	"    LEVEL IS THE BRIGHTNESS AND NOTHING ELSE.  A POWER LAW IS SCALE FREE, SO ONE\n"
+	"    SETTING SERVES EVERY STAR AND BRIGHTNESS ALONE MOVES WHERE IT CROSSES WHITE.\n"
+	"    GLOW EXTENT ON THE HUD IS DERIVED, NOT SET.  THE STAR HAS NO DIFFRACTION SPIKES:\n"
+	"    SEE THE COMMENT IN sun.frag FOR WHY TWO ATTEMPTS AT THEM WERE BOTH REJECTED.\n"
+	"  - DISC-PX IS solarsystem_config's \"star diameter pixels\": HOW MUCH OF THE TEXTURE IS\n"
+	"    STAR RATHER THAN GLOW.  RAISING IT SHRINKS THE BILLBOARD FOR THE SAME STAR, SO THE\n"
+	"    TEXTURE'S GLOW SHRINKS TOO.\n"
+	"  - HUD 'TINT' IS NOT ADJUSTABLE HERE.  IT IS MEASURED FROM THE SUN TEXTURE AND\n"
+	"    CORRECTS FOR HUES THE BLACKBODY LOCUS CANNOT REACH.  REPORT THE TEMPERATURE YOU\n"
+	"    CHOSE AND IT CAN BE RE-DERIVED; A TEMPERATURE CHANGE INVALIDATES THE OLD TINT.\n"
+	"  - [ / ] STEP THROUGH THE SOLAR SYSTEMS.  THE HUD SAYS WHETHER THE STAR PARAMETERS\n"
+	"    CAME FROM THE SYSTEM'S OWN CONFIG OR ARE JUST DEFAULTS.  IF THEY ARE DEFAULTS,\n"
+	"    EVERY SHADER SUN WILL LOOK ALIKE NO MATTER WHICH SYSTEM YOU ARE ON -- RUN WITH\n"
+	"    --solarsystem-dir POINTING AT CONFIGS THAT SET THEM.  EACH SYSTEM SHIPS ITS OWN\n"
+	"    SUN TEXTURE AND ITS OWN STAR PARAMETERS, AND THEY VARY WIDELY: DISCS FROM 50 TO\n"
+	"    140 PX, TEMPERATURES FROM A RED DWARF TO A BLUE GIANT.  PARAMETERS FITTED TO ONE\n"
+	"    SAY NOTHING ABOUT THE REST, SO STEP THROUGH THEM ALL.\n\n"
 	,
-	"  - P                CYCLE PLANET SHADE MODE: SOFT / BINARY / OFF\n"
-	"  - B                TOGGLE THE PER-SHIP SHADE PANEL\n"
-	"  - F5 / SHIFT+F5    STAR FIELD OFF / ON; SHIFT DOUBLES HOW MANY STARS\n"
-	"                     DISTANT STARS, NOT THE GAME'S SPACE DUST -- THE TWO ARE SEPARATE\n"
-	"                     AND EITHER MAY BE UP.  DUST FILLS A SPHERE YOU SIT INSIDE AND\n"
-	"                     STREAKS PAST TO SELL SPEED; THE FIELD IS HELD FAR ENOUGH OFF THAT\n"
-	"                     IT CANNOT STREAK, AND READS AS A SKY.\n"
-	"  - F6 / SHIFT+F6    NEAREST STAR CLOSER / FURTHER\n"
-	"                     THE HUD'S NEAREST IS A FLOOR ON DISTANCE, NOT A CEILING, AND SO\n"
-	"                     IS A CEILING ON DRIFT: PARALLAX RATE IS SPEED OVER DISTANCE, SO NO\n"
-	"                     STAR SWEEPS FASTER THAN SPEED/NEAREST HOWEVER LONG YOU FLY AT IT.\n"
-	"                     TOO LOW AND THE SKY BECOMES FALLING SNOW.\n"
-	"  - F7 / SHIFT+F7    FLIGHT SPEED SLOWER / FASTER.  THE LAB'S SPEEDS COME FROM ITS\n"
-	"                     OWN SCENE SCALE AND ARE SOME 14x SLOWER THAN THE GAME'S SHIP;\n"
-	"                     RAISE THIS TO JUDGE THE STAR FIELD AT THE SPEED PLAYERS FLY.\n"
-	"  - 3 / 4            PLANET RADIUS SMALLER / LARGER\n"
-	"  - 5 / 6            PLANET CLOSER / FARTHER FROM THE SHIP CLUSTER\n"
-	"                     (FARTHER + TIGHTER CLUSTER = WIDER, SOFTER PENUMBRA)\n"
-	"  - LOWER THE SUN (DOWN ARROW) TO SWING THE PLANET BETWEEN IT AND THE SHIPS.\n"
-	"    NOTE: in_shade ONLY DARKENS A SHIP'S SUN-FACING SIDE, WHICH IS HIDDEN\n"
-	"    BEHIND THE PLANET IN A DIRECT UMBRA TEST.  WATCH THE PER-SHIP PANEL: SOFT\n"
-	"    RAMPS THROUGH THE PENUMBRA, BINARY JUMPS AT 0.5, OFF STAYS 0.\n\n"
+	"  F4 SKY MODE: STAR FIELD\n"
+	"  - STARS IS HOW MANY, AND DROPS TO A TRUE ZERO TO SWITCH THE FIELD OFF.  THESE ARE\n"
+	"    DISTANT STARS, NOT THE GAME'S SPACE DUST -- THE TWO ARE SEPARATE AND EITHER MAY BE\n"
+	"    UP.  DUST FILLS A SPHERE YOU SIT INSIDE AND STREAKS PAST TO SELL SPEED; THE FIELD\n"
+	"    IS HELD FAR ENOUGH OFF THAT IT CANNOT STREAK, AND READS AS A SKY.\n"
+	"  - NEAREST IS A FLOOR ON DISTANCE, NOT A CEILING, AND SO IS A CEILING ON DRIFT:\n"
+	"    PARALLAX RATE IS SPEED OVER DISTANCE, SO NO STAR SWEEPS FASTER THAN SPEED/NEAREST\n"
+	"    HOWEVER LONG YOU FLY AT IT.  TOO LOW AND THE SKY BECOMES FALLING SNOW.  JUDGE IT\n"
+	"    AT THE SPEED PLAYERS FLY -- RAISE SPEED IN F5 SCENE MODE.\n\n"
 	,
-	"  BLACK HOLES (SKYBOX GRAVITATIONAL LENSING)\n"
-	"  - `                TOGGLE ON / OFF (AIMS THE FREE CAMERA AT HOLE 0 AS IT COMES ON)\n"
-	"  - SHIFT+`          CYCLE HOW MANY ARE UP, 1 TO 5.  THE SHADER HAS ONLY 3 LENS\n"
-	"                     SLOTS, SO PAST 3 THE SELECTION BINDS AND THE HUD MARKS EACH\n"
-	"                     HOLE LENS OR ---.  A --- HOLE STILL DRAWS ITS DISC AND PHOTON\n"
-	"                     RING, IT JUST DOES NOT BEND THE SKY.  HOLES 1 AND 2 OVERLAP ON\n"
-	"                     SCREEN AT MISMATCHED DEPTH ON PURPOSE: THE NEAR ONE'S ARCS ARE\n"
-	"                     WRONGLY COVERED BY THE FAR ONE'S DISC, BECAUSE THE LENSING IS\n"
-	"                     A DISTORTION OF THE SKYBOX AND SO HAS NO DEPTH OF ITS OWN.\n"
+	"  F4 SKY MODE: BLACK HOLES (SKYBOX GRAVITATIONAL LENSING)\n"
+	"  - HOW-MANY CYCLES HOW MANY ARE UP, 1 TO 5.  THE SHADER HAS ONLY 3 LENS SLOTS, SO\n"
+	"    PAST 3 THE SELECTION BINDS AND THE HUD MARKS EACH HOLE LENS OR ---.  A --- HOLE\n"
+	"    STILL DRAWS ITS DISC AND PHOTON RING, IT JUST DOES NOT BEND THE SKY.  HOLES 1 AND\n"
+	"    2 OVERLAP ON SCREEN AT MISMATCHED DEPTH ON PURPOSE: THE NEAR ONE'S ARCS ARE\n"
+	"    WRONGLY COVERED BY THE FAR ONE'S DISC, BECAUSE THE LENSING IS A DISTORTION OF THE\n"
+	"    SKYBOX AND SO HAS NO DEPTH OF ITS OWN.\n"
 	"  - SELECTION RANKS BY HOW MUCH OF THE WINDOW EACH HOLE'S DISTORTION FALLS ON, SHOWN\n"
 	"    AS A PERCENTAGE IN THE HUD, SO A HOLE OFF THE EDGE OR HALF OFF IT DOES NOT TAKE\n"
 	"    A SLOT FROM THE ONE YOU ARE LOOKING AT.  WITH NOTHING CLIPPED THIS IS THE SAME\n"
@@ -1462,49 +1442,48 @@ static const char * const help_text[] = {
 	"    TWO DEFLECTIONS MERELY ADDING.  THIS ONLY SHOWS WHERE TWO HOLES' DISTORTIONS\n"
 	"    OVERLAP -- AS 1 AND 2 DO -- AND IT DOES NOT FIX THE DISC-OVER-ARCS NOTE ABOVE,\n"
 	"    WHICH IS AN OCCLUSION PROBLEM, NOT AN ORDERING ONE.\n"
-	"  - HOME / END       HOLE 0 CLOSER / FARTHER (HOLE 0 ONLY; THE REST STAY PUT SO THE\n"
-	"                     1 / 2 OVERLAP HOLDS STILL WHILE YOU TUNE)\n"
-	"  - SHIFT+HOME / SHIFT+END  HOLE 0 RADIUS SMALLER / LARGER (CLAMPED TO THE GAME'S\n"
-	"                     LEGAL 500..2000)\n"
-	"  - / / SHIFT+/      LENS STRENGTH DOWN / UP (EINSTEIN RADIUS AS A MULTIPLE OF THE\n"
-	"                     DISC; BELOW 1.0 THE RING HIDES INSIDE THE DISC)\n"
-	"  - PGDN / PGUP      FRAME-DRAG SWIRL DOWN / UP (SPIRALS THE ARCS; 0 = NONE)\n"
-	"  - INS / DEL        PHOTON RING DIMMER / BRIGHTER (THE DISC'S OWN RIM)\n"
-	"  - SHIFT+INS / SHIFT+DEL  PHOTON RING TIGHTER / WIDER\n"
-	"  - SHIFT+PGDN / SHIFT+PGUP  EINSTEIN RING DIMMER / BRIGHTER (THE OUTER RING, AT\n"
-	"                     THE LENS STRENGTH TIMES THE HORIZON RADIUS -- A DIFFERENT\n"
-	"                     RING AT A DIFFERENT RADIUS FROM THE PHOTON RING ABOVE)\n"
+	/* Split here only to keep each string literal under the 4095 characters ISO C99
+	 * guarantees; the chunks are drawn one after another, so this is not a page break. */
+	,
+	"  - HOLE0-DIST AND HOLE0-R MOVE AND SIZE HOLE 0 ONLY.  THE REST STAY PUT SO THE 1 / 2\n"
+	"    OVERLAP HOLDS STILL WHILE YOU TUNE.  THE RADIUS IS CLAMPED TO THE GAME'S LEGAL\n"
+	"    500..2000, SINCE OUTSIDE THAT IS NOT A SIZE THE GAME CAN PRODUCE.\n"
+	"  - LENS-STR IS THE EINSTEIN RADIUS AS A MULTIPLE OF THE DISC; BELOW 1.0 THE RING\n"
+	"    HIDES INSIDE THE DISC.  SWIRL SPIRALS THE ARCS (FRAME DRAGGING); 0 IS NONE.\n"
+	"  - PHOTON-RING AND PHOTON-WIDE ARE THE DISC'S OWN RIM.  EINSTEIN IS THE OUTER RING,\n"
+	"    AT LENS-STR TIMES THE HORIZON RADIUS -- A DIFFERENT RING AT A DIFFERENT RADIUS.\n"
 	"  - PARKED ANTI-SOLAR, DIRECTLY AWAY FROM THE SUN, SO NOTHING COMPETES WITH THEM:\n"
 	"    THE SUN IS NOT LENSED (IT IS AN ENTITY DRAWN AFTER THE SKYBOX), SO PUTTING\n"
-	"    IT BEHIND A HOLE WOULD ONLY WASH THE RING OUT WITH BLOOM.\n"
+	"    IT BEHIND A HOLE WOULD ONLY WASH THE RING OUT WITH GLARE.\n"
 	"  - THE DISC IS A BILLBOARD RUNNING black_hole.frag -- PROCEDURAL, SO ITS EDGE\n"
 	"    LANDS AT EXACTLY THE ANGLE THE LENSING FLOORS ITS DEFLECTION AT.  IT DRAWS\n"
 	"    BOTH RINGS, SO A HOLE WITH NO LENS SLOT STILL WEARS ITS HALO.  THE ARCS AND\n"
 	"    THE INVERTED SECOND IMAGE INSIDE THE RING ARE NOT DRAWN AT ALL: THEY COME\n"
 	"    OUT OF ONE TERM IN skybox.frag, AND THEY ARE WHAT A SLOT ACTUALLY BUYS.\n"
 	"    HUD SHOWS DISC / RING IN DEGREES: THOSE TRANSFER TO THE GAME, NOT DISTANCE.\n\n"
-	/* Split here only to keep each string literal under the 4095 characters ISO C99
-	 * guarantees; the chunks are drawn one after another, so this is not a page break. */
 	,
-	"  SHADOWS\n"
-	"  - \\                TOGGLE SHADOWS ON / OFF\n"
-	"  - 0 / 1 / 2        DEBUG: OFF / SHADOW-FACTOR / CASCADE-INDEX\n"
-	"  - [ / ]            SHADOW COVERAGE DISTANCE DOWN / UP\n"
-	"  - SHIFT+[ / SHIFT+]  AMBIENT (SHADED-SIDE) FLOOR DOWN / UP\n"
-	"  - - / =            CASCADE COUNT DOWN / UP (1-6)\n"
-	"  - ; / '            SPLIT LAMBDA DOWN / UP BY 0.01 (SHIFT = 0.1); 1.0 = PURE LOG\n"
-	"  - , / .            DEPTH-BIAS SLOPE DOWN / UP\n"
-	"  - SHIFT+, / SHIFT+.  NORMAL-OFFSET BIAS DOWN / UP (TEXELS; KILLS GRAZING ACNE\n"
-	"                     WITHOUT DETACHING SHADOWS)\n"
-	"  - n / m            PCF KERNEL SMALLER / LARGER (1x1 TO 7x7, ALL CASCADES)\n"
-	"  - k / l            CROSS-CASCADE BLEND BAND SMALLER / LARGER\n\n"
-	,
+	"  F5 SCENE MODE\n"
+	"  - PLANET-R AND PLANET-DIST SIZE THE PLANET AND MOVE IT AWAY FROM THE SHIP CLUSTER.\n"
+	"    FARTHER, WITH A TIGHTER CLUSTER, GIVES A WIDER AND SOFTER PENUMBRA.  LOWER THE SUN\n"
+	"    (DOWN ARROW) TO SWING THE PLANET BETWEEN IT AND THE SHIPS.\n"
+	"  - SPEED SCALES FLIGHT.  THE LAB'S SPEEDS COME FROM ITS OWN SCENE SCALE AND ARE SOME\n"
+	"    14x SLOWER THAN THE GAME'S SHIP; RAISE THIS TO JUDGE THE STAR FIELD AT THE SPEED\n"
+	"    PLAYERS FLY.\n\n"
+	"  F6 SHADE MODE\n"
+	"  - PLANET-MODE: SOFT RAMPS THROUGH THE PENUMBRA, BINARY JUMPS AT 0.5, OFF STAYS 0.\n"
+	"  - BODY-PANEL TOGGLES THE PER-SHIP LIT / PENUMBRA / UMBRA READOUT.  WATCH IT RATHER\n"
+	"    THAN THE HULLS: in_shade ONLY DARKENS A SHIP'S SUN-FACING SIDE, WHICH IS HIDDEN\n"
+	"    BEHIND THE PLANET IN A DIRECT UMBRA TEST, SO A CORRECT SHADE CAN BE INVISIBLE.\n"
+	"  - LIGHT-TINT LEANS LIT FACES TOWARD THE STAR'S COLOUR, DARK-TINT LEANS SHADED ONES\n"
+	"    TOWARD ITS COMPLEMENT, AND DARKENING DEEPENS THE SHADED SIDE.  ALL THREE AT 0 IS\n"
+	"    THE FLAT UNTINTED LIGHTING THE GAME HAD BEFORE.  AMBIENT IS THE FLOOR THEY WORK\n"
+	"    FROM, AND MATCHES snis_client's DEFAULT.\n\n"
 	"  OTHER\n"
 	"  - F1               SHOW THIS HELP, THEN PAGE THROUGH IT, THEN CLOSE IT\n"
 	"  - F10              RELOAD SHADERS\n"
 	"  - F11              TOGGLE FULLSCREEN\n"
+	"  - PAUSE            CYCLE THE FRAME-STATS READOUT\n"
 	"  - ESC              CLOSE THIS HELP, OR QUIT WHEN IT IS NOT UP\n\n"
-	"  CASCADE-INDEX TINT: red=0 (nearest) green=1 blue=2 yellow=3 cyan=4 magenta=5 gray=none\n\n"
 	,
 };
 
@@ -1723,6 +1702,450 @@ static void draw_sun(struct entity_context *cx, const union vec3 *camera_pos)
 	add_sun_entity(cx, &pos, &sun_texture_material, texture_size);
 }
 
+/* The parameter grid.
+ *
+ * The lab had grown one keystroke per knob, then two once Shift had to carry a second meaning,
+ * until nearly every letter on the keyboard did something and none of it could be guessed.  The
+ * modes fix that by giving up something instead of taking more: only one group of parameters is
+ * bound at a time, so the same twelve key pairs serve every group.
+ *
+ * A mode key toggles its mode, and while a mode is up the left hand becomes a grid of
+ * increase/decrease pairs -- the same six columns in every mode, so the muscle memory carries
+ * over.  Translation and roll go away while tuning, since the grid is sitting on their keys.
+ * Mouse-look and the sun's arrow keys stay live in every mode, so the view can be aimed and the
+ * sun swept while a value is being tuned -- which is what makes giving up translation an
+ * acceptable trade.
+ *
+ * It is table-driven so the key handling, the on-screen banner and the help text cannot drift
+ * apart: all three are generated from the one table.  A parameter reaches its value either
+ * through a pointer or through a getter/setter pair, because the shadow map's knobs live behind
+ * accessors in graph_dev and several of them clamp or recompute on write.  Integers behind
+ * accessors go through float shims rather than earning a kind of their own.
+ */
+
+#define LAB_GRID_COLUMNS 6
+#define LAB_GRID_SLOTS (LAB_GRID_COLUMNS * 2)
+
+static const int lab_grid_inc_key[LAB_GRID_SLOTS] = {
+	SDLK_1, SDLK_2, SDLK_3, SDLK_4, SDLK_5, SDLK_6,
+	SDLK_a, SDLK_s, SDLK_d, SDLK_f, SDLK_g, SDLK_h,
+};
+static const int lab_grid_dec_key[LAB_GRID_SLOTS] = {
+	SDLK_q, SDLK_w, SDLK_e, SDLK_r, SDLK_t, SDLK_y,
+	SDLK_z, SDLK_x, SDLK_c, SDLK_v, SDLK_b, SDLK_n,
+};
+static const char * const lab_grid_label[LAB_GRID_SLOTS] = {
+	"1/Q", "2/W", "3/E", "4/R", "5/T", "6/Y",
+	"A/Z", "S/X", "D/C", "F/V", "G/B", "H/N",
+};
+
+enum lab_param_kind {
+	LAB_PARAM_MUL,		/* scale by step; for quantities with no natural zero */
+	LAB_PARAM_MUL_ZERO,	/* as MUL, but drops to a true 0 below lo and recovers to lo */
+	LAB_PARAM_ADD,		/* add step */
+	LAB_PARAM_ENUM,		/* cycle an int through names[] */
+};
+
+struct lab_param {
+	const char *name;
+	enum lab_param_kind kind;
+	int decimals;			/* how many to print the value to */
+	float *value;			/* direct access ... */
+	float (*get)(void);		/* ... or through an accessor pair */
+	void (*set)(float);
+	int *ivalue;			/* ENUM */
+	const char * const *names;	/* ENUM */
+	int nnames;			/* ENUM */
+	float step;			/* multiplier for MUL/MUL_ZERO, increment for ADD */
+	float lo, hi;			/* clamped after every step */
+	void (*changed)(void);		/* run after a change lands */
+};
+
+struct lab_mode {
+	const char *name;
+	int key;			/* the F-key that toggles it */
+	const struct lab_param *param;
+	int nparams;
+};
+
+static const char * const lab_off_on[] = { "OFF", "ON" };
+static const char * const lab_shadow_debug_name[] = { "OFF", "SHADOW-FACTOR", "CASCADE-INDEX" };
+
+/* Shims.  Everything reachable only through an accessor pair, an int, or a clamp that depends
+ * on some other value ends up here rather than in the tables. */
+
+static float lab_get_cascades(void)
+{
+	return get_shadow_map_num_cascades();
+}
+
+static void lab_set_cascades(float v)
+{
+	set_shadow_map_num_cascades((int) roundf(v));
+}
+
+static float lab_get_pcf(void)
+{
+	return graph_dev_get_shadow_pcf_radius();
+}
+
+static void lab_set_pcf(float v)
+{
+	graph_dev_set_shadow_pcf_radius((int) roundf(v));
+}
+
+static float lab_get_bias_slope(void)
+{
+	float factor;
+
+	graph_dev_get_shadow_bias(&factor, NULL);
+	return factor;
+}
+
+static void lab_set_bias_slope(float v)
+{
+	float units;
+
+	/* Only the slope-scaled factor is on the grid; the constant units term keeps whatever it
+	 * has, since it was never worth a slot of its own. */
+	graph_dev_get_shadow_bias(NULL, &units);
+	graph_dev_set_shadow_bias(v, units);
+}
+
+/* The split lambda is rounded to two places on the way in, as the old ;/' keys did: it is read
+ * off the HUD and written into a config, and 0.9500000001 helps nobody. */
+static void lab_set_split_lambda(float v)
+{
+	set_shadow_map_split_lambda(roundf(v * 100.0f) / 100.0f);
+}
+
+static void lab_shadow_debug_changed(void)
+{
+	graph_dev_set_shadow_debug(shadow_debug_mode);
+}
+
+/* The star field is rebuilt rather than resized, so anything that changes its shape just marks
+ * it stale and lets draw_screen() lay it out again. */
+static void lab_star_field_changed(void)
+{
+	star_field_initialized = 0;
+}
+
+static float lab_get_star_count(void)
+{
+	return nstar_field_stars;
+}
+
+static void lab_set_star_count(float v)
+{
+	nstar_field_stars = (int) roundf(v);
+}
+
+static float lab_get_black_hole_count(void)
+{
+	return black_hole_count;
+}
+
+static void lab_set_black_hole_count(float v)
+{
+	black_hole_count = (int) roundf(v);
+}
+
+static float lab_get_hole_distance(void)
+{
+	return black_hole_distance[0];
+}
+
+static void lab_set_hole_distance(float v)
+{
+	black_hole_distance[0] = v;
+}
+
+/* The disc within the sun texture, in pixels.  Clamped against the texture's own width, which
+ * is not known until the PNG has been read, so it cannot be a constant in the table. */
+static float lab_get_texture_disc_pixels(void)
+{
+	return sun_texture_disc_pixels;
+}
+
+static void lab_set_texture_disc_pixels(float v)
+{
+	if (v > sun_texture_width)
+		v = sun_texture_width;
+	sun_texture_disc_pixels = v;
+}
+
+static float lab_get_planet_radius(void)
+{
+	return planet_index >= 0 ? scene[planet_index].scale : 0.0;
+}
+
+static void lab_set_planet_radius(float v)
+{
+	if (planet_index >= 0)
+		scene[planet_index].scale = v;
+}
+
+/* The planet sits out along -Y from the ship cluster near the origin, and the sun orbits
+ * whatever it is nearest, so moving it moves the scene centre with it. */
+static float lab_get_planet_distance(void)
+{
+	return planet_index >= 0 ? -scene[planet_index].pos.v.y : 0.0;
+}
+
+static void lab_set_planet_distance(float v)
+{
+	float floor_distance;
+
+	if (planet_index < 0)
+		return;
+	/* Never let the planet swallow the ship cluster sitting near the origin. */
+	floor_distance = scene[planet_index].scale * 1.5;
+	if (v < floor_distance)
+		v = floor_distance;
+	scene[planet_index].pos.v.y = -v;
+	scene_center = scene[planet_index].pos;
+}
+
+static const struct lab_param shadow_param[] = {
+	{ .name = "SHADOWS", .kind = LAB_PARAM_ENUM, .ivalue = &graph_dev_shadow_map_enabled,
+	  .names = lab_off_on, .nnames = 2 },
+	{ .name = "DEBUG", .kind = LAB_PARAM_ENUM, .ivalue = &shadow_debug_mode,
+	  .names = lab_shadow_debug_name, .nnames = 3, .changed = lab_shadow_debug_changed },
+	{ .name = "COVERAGE", .kind = LAB_PARAM_MUL, .decimals = 0,
+	  .get = get_shadow_map_max_distance, .set = set_shadow_map_max_distance,
+	  .step = 1.25, .lo = 100.0, .hi = 1000000.0 },
+	{ .name = "CASCADES", .kind = LAB_PARAM_ADD, .decimals = 0,
+	  .get = lab_get_cascades, .set = lab_set_cascades, .step = 1.0, .lo = 1.0, .hi = 16.0 },
+	{ .name = "LAMBDA", .kind = LAB_PARAM_ADD, .decimals = 2,
+	  /* A deliberately fine step: in compute_cascade_splits() the uniform term is around
+	   * 200x the logarithmic one, so lambda spends most of its range dominated by uniform
+	   * spacing and only the last stretch below 1.0 does anything interesting -- and 1.0
+	   * exactly, a pure logarithmic split, has to be reachable.  Shift crosses the dead
+	   * zone quickly. */
+	  .get = get_shadow_map_split_lambda, .set = lab_set_split_lambda,
+	  .step = 0.01, .lo = 0.0, .hi = 1.0 },
+	{ .name = "BIAS-SLOPE", .kind = LAB_PARAM_ADD, .decimals = 1,
+	  .get = lab_get_bias_slope, .set = lab_set_bias_slope, .step = 0.5, .lo = 0.0, .hi = 100.0 },
+	{ .name = "NORMAL-OFF", .kind = LAB_PARAM_ADD, .decimals = 2,
+	  .get = graph_dev_get_shadow_normal_offset, .set = graph_dev_set_shadow_normal_offset,
+	  .step = 0.25, .lo = 0.0, .hi = 20.0 },
+	{ .name = "PCF-RADIUS", .kind = LAB_PARAM_ADD, .decimals = 0,
+	  .get = lab_get_pcf, .set = lab_set_pcf, .step = 1.0, .lo = 0.0, .hi = 8.0 },
+	{ .name = "BLEND", .kind = LAB_PARAM_ADD, .decimals = 2,
+	  .get = graph_dev_get_shadow_blend, .set = graph_dev_set_shadow_blend,
+	  .step = 0.02, .lo = 0.0, .hi = 1.0 },
+};
+
+static const struct lab_param sun_param[] = {
+	{ .name = "STYLE", .kind = LAB_PARAM_ENUM, .ivalue = &sun_style,
+	  .names = sun_style_name, .nnames = ARRAYSIZE(sun_style_name) },
+	{ .name = "TEMPERATURE", .kind = LAB_PARAM_MUL, .decimals = 0, .value = &sun_temperature,
+	  /* 1900K is where the blackbody approximation's blue channel cuts off. */
+	  .step = 1.0526316, .lo = 1900.0, .hi = 40000.0, .changed = update_sun_color },
+	{ .name = "BRIGHTNESS", .kind = LAB_PARAM_MUL, .decimals = 1,
+	  /* Linear HDR surface brightness, spanning six decades, which is why the coarse step
+	   * matters here more than anywhere else on the grid. */
+	  .value = &sun_material.sun.brightness, .step = 1.111111, .lo = 0.01, .hi = 1e6 },
+	{ .name = "EDGE", .kind = LAB_PARAM_MUL, .decimals = 3,
+	  /* The limb's alpha fade.  Keep it small: it is antialiasing, not a feature. */
+	  .value = &sun_material.sun.edge_softness, .step = 1.4, .lo = 0.005, .hi = 0.2 },
+	{ .name = "PSF-W", .kind = LAB_PARAM_MUL, .decimals = 3,
+	  /* Point-spread width in star radii.  Shared by every star; see the HUD's OPTICS line. */
+	  .value = &sun_material.sun.psf_width, .step = 1.111111, .lo = 0.05, .hi = 4.0 },
+	{ .name = "PSF-P", .kind = LAB_PARAM_MUL, .decimals = 2,
+	  /* Power-law tail exponent.  A power law is scale free, so one setting serves every
+	   * star and brightness alone decides where the glow crosses white. */
+	  .value = &sun_material.sun.psf_falloff, .step = 1.0526, .lo = 1.5, .hi = 12.0 },
+	{ .name = "DISC-PX", .kind = LAB_PARAM_ADD, .decimals = 0,
+	  /* solarsystem_config's "star diameter pixels": how much of the sun texture is star
+	   * rather than glow.  Raising it shrinks the billboard for the same star, so the
+	   * texture's glow shrinks with it. */
+	  .get = lab_get_texture_disc_pixels, .set = lab_set_texture_disc_pixels,
+	  .step = 4.0, .lo = 4.0, .hi = 4096.0 },
+	{ .name = "SUN-RADIUS", .kind = LAB_PARAM_MUL, .decimals = 0, .value = &sun_radius,
+	  .step = 1.111111, .lo = 1.0, .hi = 100000.0 },
+	{ .name = "SUN-DIST", .kind = LAB_PARAM_MUL, .decimals = 0, .value = &sun_distance,
+	  .step = 1.111111, .lo = 1000.0, .hi = 10000000.0 },
+};
+
+static const struct lab_param sky_param[] = {
+	{ .name = "STARS", .kind = LAB_PARAM_MUL_ZERO, .decimals = 0,
+	  .get = lab_get_star_count, .set = lab_set_star_count,
+	  .step = 2.0, .lo = 1000.0, .hi = 64000.0, .changed = lab_star_field_changed },
+	{ .name = "NEAREST", .kind = LAB_PARAM_MUL, .decimals = 0, .value = &star_field_radius,
+	  .step = 1.25, .lo = 200.0, .hi = 1000000.0, .changed = lab_star_field_changed },
+	{ .name = "BLACK-HOLES", .kind = LAB_PARAM_ENUM, .ivalue = &black_hole_enabled,
+	  .names = lab_off_on, .nnames = 2 },
+	{ .name = "HOW-MANY", .kind = LAB_PARAM_ADD, .decimals = 0,
+	  .get = lab_get_black_hole_count, .set = lab_set_black_hole_count,
+	  .step = 1.0, .lo = 1.0, .hi = (float) NUM_LAB_BLACK_HOLES },
+	/* Hole 0 only.  It is the reference the layout was tuned against, and leaving the rest
+	 * fixed keeps the deliberate 1/2 overlap steady while you move it. */
+	{ .name = "HOLE0-DIST", .kind = LAB_PARAM_MUL, .decimals = 0,
+	  .get = lab_get_hole_distance, .set = lab_set_hole_distance,
+	  .step = 1.111111, .lo = 1.0, .hi = 10000000.0 },
+	{ .name = "HOLE0-R", .kind = LAB_PARAM_MUL, .decimals = 0, .value = &black_hole_radius[0],
+	  /* MIN/MAX_BLACK_HOLE_RADIUS (snis.h): outside this is not a size the game can produce,
+	   * so tuning against it would not transfer. */
+	  .step = 1.111111, .lo = 500.0, .hi = 2000.0 },
+	{ .name = "PHOTON-RING", .kind = LAB_PARAM_MUL_ZERO, .decimals = 2,
+	  .value = &black_hole_material.black_hole.ring_brightness,
+	  .step = 1.111111, .lo = 0.02, .hi = 8.0 },
+	{ .name = "PHOTON-WIDE", .kind = LAB_PARAM_MUL, .decimals = 3,
+	  .value = &black_hole_material.black_hole.ring_width,
+	  .step = 1.111111, .lo = 0.005, .hi = 0.5 },
+	{ .name = "EINSTEIN", .kind = LAB_PARAM_MUL_ZERO, .decimals = 3,
+	  .value = &black_hole_ring_glow, .step = 1.111111, .lo = 0.01, .hi = 4.0 },
+	{ .name = "LENS-STR", .kind = LAB_PARAM_ADD, .decimals = 1,
+	  /* Below 1.0 the Einstein ring falls inside the disc and is simply not visible. */
+	  .value = &black_hole_lens_strength, .step = 0.1, .lo = 0.0, .hi = 6.0 },
+	{ .name = "SWIRL", .kind = LAB_PARAM_ADD, .decimals = 1, .value = &black_hole_swirl,
+	  .step = 0.1, .lo = -4.0, .hi = 4.0 },
+};
+
+static const struct lab_param scene_param[] = {
+	{ .name = "PLANET-R", .kind = LAB_PARAM_MUL, .decimals = 0,
+	  .get = lab_get_planet_radius, .set = lab_set_planet_radius,
+	  .step = 1.111111, .lo = 10.0, .hi = 100000.0 },
+	{ .name = "PLANET-DIST", .kind = LAB_PARAM_MUL, .decimals = 0,
+	  /* Farther, with a tighter cluster, gives a wider and softer penumbra. */
+	  .get = lab_get_planet_distance, .set = lab_set_planet_distance,
+	  .step = 1.111111, .lo = 1.0, .hi = 10000000.0 },
+	{ .name = "SPEED", .kind = LAB_PARAM_MUL, .decimals = 2, .value = &speed_scale,
+	  /* The lab's own scene scale gives speeds some 14x slower than the game's ship; raise
+	   * this to judge the star field at the speed players actually fly. */
+	  .step = 1.5, .lo = 0.05, .hi = 200.0 },
+};
+
+static const struct lab_param shade_param[] = {
+	{ .name = "PLANET-MODE", .kind = LAB_PARAM_ENUM, .ivalue = &planet_shade_mode,
+	  .names = planet_shade_mode_name, .nnames = 3 },
+	{ .name = "BODY-PANEL", .kind = LAB_PARAM_ENUM, .ivalue = &show_shade_panel,
+	  .names = lab_off_on, .nnames = 2 },
+	{ .name = "AMBIENT", .kind = LAB_PARAM_ADD, .decimals = 3, .value = &ambient_light,
+	  .step = 0.005, .lo = 0.0, .hi = 1.0 },
+	{ .name = "LIGHT-TINT", .kind = LAB_PARAM_ADD, .decimals = 2, .value = &sun_light_tint,
+	  .step = 0.01, .lo = 0.0, .hi = 1.0 },
+	{ .name = "DARK-TINT", .kind = LAB_PARAM_ADD, .decimals = 2, .value = &sun_dark_tint,
+	  .step = 0.01, .lo = 0.0, .hi = 1.0 },
+	{ .name = "DARKENING", .kind = LAB_PARAM_ADD, .decimals = 2,
+	  .value = &sun_shadow_darkening, .step = 0.02, .lo = 0.0, .hi = 1.0 },
+};
+
+#define LAB_MODE(n, k, p) { .name = (n), .key = (k), .param = (p), \
+				.nparams = ARRAYSIZE(p) }
+
+static const struct lab_mode lab_mode[] = {
+	LAB_MODE("SHADOW", SDLK_F2, shadow_param),
+	LAB_MODE("SUN", SDLK_F3, sun_param),
+	LAB_MODE("SKY", SDLK_F4, sky_param),
+	LAB_MODE("SCENE", SDLK_F5, scene_param),
+	LAB_MODE("SHADE", SDLK_F6, shade_param),
+};
+#define LAB_NMODES ARRAYSIZE(lab_mode)
+
+/* One step of one parameter.  Shift repeats the step rather than using a second, larger step,
+ * so "coarse" means the same thing for a multiplier as for an increment and no parameter needs
+ * to carry two step sizes. */
+static void lab_param_step(const struct lab_param *p, int dir, int coarse)
+{
+	float v;
+	int i, repeat;
+
+	if (p->kind == LAB_PARAM_ENUM) {
+		/* Cycling is already its own coarse step: repeating it would only walk further
+		 * round a ring of two or three, which is not a bigger change, just a stranger one. */
+		*p->ivalue = (*p->ivalue + (dir > 0 ? 1 : p->nnames - 1)) % p->nnames;
+		if (p->changed)
+			p->changed();
+		return;
+	}
+
+	v = p->get ? p->get() : *p->value;
+	repeat = coarse ? 5 : 1;
+	for (i = 0; i < repeat; i++) {
+		if (p->kind == LAB_PARAM_ADD)
+			v += dir > 0 ? p->step : -p->step;
+		else if (dir > 0 && v <= 0.0)
+			v = p->lo;	/* MUL_ZERO climbing back out of a true zero */
+		else
+			v = dir > 0 ? v * p->step : v / p->step;
+		if (v > p->hi)
+			v = p->hi;
+		if (v < p->lo)
+			v = p->kind == LAB_PARAM_MUL_ZERO ? 0.0 : p->lo;
+	}
+	if (p->set)
+		p->set(v);
+	else
+		*p->value = v;
+	if (p->changed)
+		p->changed();
+}
+
+/* Print a parameter's current value.  The precision is an int rather than a printf format
+ * because -Wformat=2 rejects a non-literal format string. */
+static void lab_param_value(const struct lab_param *p, char *buf, size_t len)
+{
+	float v;
+
+	if (p->kind == LAB_PARAM_ENUM) {
+		snprintf(buf, len, "%s", p->names[*p->ivalue % p->nnames]);
+		return;
+	}
+	v = p->get ? p->get() : *p->value;
+	switch (p->decimals) {
+	case 0:
+		snprintf(buf, len, "%.0f", v);
+		break;
+	case 1:
+		snprintf(buf, len, "%.1f", v);
+		break;
+	case 3:
+		snprintf(buf, len, "%.3f", v);
+		break;
+	default:
+		snprintf(buf, len, "%.2f", v);
+		break;
+	}
+}
+
+/* The active mode's parameters, four to a row as KEY NAME VALUE.  Returns the next free y. */
+static int draw_mode_banner(int y, int dy)
+{
+	char buffer[256];
+	char value[32];
+	const struct lab_mode *m;
+	int i, len;
+
+	if (!lab_tuning())
+		return y;
+	m = &lab_mode[active_lab_mode];
+	sng_set_foreground(AMBER);
+	snprintf(buffer, sizeof(buffer),
+		"%s MODE - SHIFT FOR A COARSE STEP - F%d AGAIN TO FLY",
+		m->name, m->key - SDLK_F1 + 1);
+	sng_abs_xy_draw_string(buffer, TINY_FONT, 10, y);
+	y += dy;
+	buffer[0] = '\0';
+	len = 0;
+	for (i = 0; i < m->nparams; i++) {
+		lab_param_value(&m->param[i], value, sizeof(value));
+		if (len >= 0 && (size_t) len < sizeof(buffer))
+			len += snprintf(buffer + len, sizeof(buffer) - len, "%-3s %-12s %-9s ",
+					lab_grid_label[i], m->param[i].name, value);
+		if (i % 4 == 3 || i == m->nparams - 1) {
+			sng_abs_xy_draw_string(buffer, TINY_FONT, 10, y);
+			y += dy;
+			buffer[0] = '\0';
+			len = 0;
+		}
+	}
+	sng_set_foreground(WHITE);
+	return y;
+}
+
 static void draw_hud(void)
 {
 	char buffer[160];
@@ -1736,13 +2159,15 @@ static void draw_hud(void)
 	graph_dev_get_shadow_bias(&bias_factor, NULL);
 
 	sng_set_foreground(WHITE);
-	sng_abs_xy_draw_string("SHADOW LAB - F1 FOR HELP", TINY_FONT, 10, y); y += dy;
+	sng_abs_xy_draw_string("SHADOW LAB - F1 HELP  F2 SHADOW  F3 SUN  F4 SKY  F5 SCENE  F6 SHADE",
+		TINY_FONT, 10, y); y += dy;
+	y = draw_mode_banner(y, dy);
 	if (controlled_slot < 0)
 		snprintf(buffer, sizeof(buffer), "CONTROL FREE CAMERA (TAB)   CAM (%.0f, %.0f, %.0f)",
 			cam_pos.v.x, cam_pos.v.y, cam_pos.v.z);
 	else
 		snprintf(buffer, sizeof(buffer),
-			"CONTROL SHIP %d (TAB)   SPEED %.0f%%   W/S THROTTLE   VIEW %s (F2)",
+			"CONTROL SHIP %d (TAB)   SPEED %.0f%%   W/S THROTTLE   VIEW %s (SHIFT+TAB)",
 			controlled_slot,
 			ship_max_speed > 0.0 ? 100.0 * ship_speed / ship_max_speed : 0.0,
 			turret_view_active() ? "TURRET" : "CHASE");
@@ -1755,20 +2180,20 @@ static void draw_hud(void)
 	 * second is the OPTICS and is shared by every star.  Each field names the key that moves
 	 * it, so a tuned value can be read straight off and written down. */
 	snprintf(buffer, sizeof(buffer),
-		"STAR   TEMP %.0fK (7/8)   BRIGHTNESS %.0f (Z/X)   EDGE %.2f (J)   TINT %.3f/%.3f/%.3f",
+		"STAR   TEMP %.0fK   BRIGHTNESS %.0f   EDGE %.2f   TINT %.3f/%.3f/%.3f",
 		sun_temperature, sun_material.sun.brightness, sun_material.sun.edge_softness,
 		sun_tint[0], sun_tint[1], sun_tint[2]);
 	sng_abs_xy_draw_string(buffer, TINY_FONT, 10, y); y += dy;
 	snprintf(buffer, sizeof(buffer),
-		"OPTICS W %.3f (T/Y)   P %.2f (C/V)   [SHARED BY EVERY STAR]   GLOW EXTENT %.2fR",
+		"OPTICS W %.3f   P %.2f   [SHARED BY EVERY STAR]   GLOW EXTENT %.2fR",
 		sun_material.sun.psf_width, sun_material.sun.psf_falloff, sun_glow_extent);
 	sng_abs_xy_draw_string(buffer, TINY_FONT, 10, y); y += dy;
 	snprintf(buffer, sizeof(buffer),
-		"SUN STYLE %s (F3)   TEXTURE %.0fPX  DISC %.0fPX   GLOW EXTENT %.2f RADII",
+		"SUN STYLE %s   TEXTURE %.0fPX  DISC %.0fPX   GLOW EXTENT %.2f RADII",
 		sun_style_name[sun_style], sun_texture_width, sun_texture_disc_pixels,
 		sun_glow_extent);
 	sng_abs_xy_draw_string(buffer, TINY_FONT, 10, y); y += dy;
-	snprintf(buffer, sizeof(buffer), "SOLARSYSTEM %s (F4)   %d OF %d   STAR DIAMETER %.0f   %s",
+	snprintf(buffer, sizeof(buffer), "SOLARSYSTEM %s ([/])   %d OF %d   STAR DIAMETER %.0f   %s",
 		current_solarsystem >= 0 ? solarsystem_name[current_solarsystem] : "-",
 		current_solarsystem + 1, nsolarsystems, 2.0 * sun_radius,
 		solarsystem_assets && solarsystem_assets->star_keys_specified ?
@@ -1789,13 +2214,13 @@ static void draw_hud(void)
 		/* DISC and RING are the apparent angular sizes, in degrees: they are what the
 		 * lensing is actually made of, and the only numbers here that transfer to the
 		 * game unchanged, since distance and radius do not survive the projection.
-		 * This first line is hole 0, the one HOME/END tune. */
+		 * This first line is hole 0, the one the SKY mode tunes. */
 		float dist = vec3_dist(&cam_pos, &scene[black_hole_index[0]].pos);
 		float disc = radians_to_degrees(atan2f(black_hole_radius[0], dist > 1.0 ? dist : 1.0));
 		int i, len;
 
 		snprintf(buffer, sizeof(buffer),
-			"BLACK HOLE %s (`)  R %.0f  DIST %.0f  DISC %.2f DEG  RING %.2f DEG  "
+			"BLACK HOLE %s  R %.0f  DIST %.0f  DISC %.2f DEG  RING %.2f DEG  "
 			"STRENGTH %.1f  SWIRL %.1f",
 			black_hole_enabled ? "ON" : "OFF", black_hole_radius[0],
 			black_hole_distance[0], disc, disc * black_hole_lens_strength,
@@ -1813,7 +2238,7 @@ static void draw_hud(void)
 		 * and photon ring, it just does not bend the sky, which is the degradation the game
 		 * will show when a mission puts more holes in view than there are slots to lens them
 		 * with.  A hole off the edge of the window reads 0% and never takes a slot. */
-		len = snprintf(buffer, sizeof(buffer), "BLACK HOLES %d OF %d (SHIFT+`)  %d LENS SLOTS ",
+		len = snprintf(buffer, sizeof(buffer), "BLACK HOLES %d OF %d  %d LENS SLOTS ",
 				black_hole_count, NUM_LAB_BLACK_HOLES, MAX_GRAVITATIONAL_LENSES);
 		for (i = 0; i < black_hole_count && len > 0 && (size_t) len < sizeof(buffer); i++) {
 			float d, deg;
@@ -1880,7 +2305,7 @@ static void draw_hud(void)
 	/* The radius is reported as the two faces of the shell it really describes, since a bare
 	 * "radius" reads as an outer bound and it is a floor. */
 	snprintf(buffer, sizeof(buffer),
-		"STAR FIELD %s (F5)  STARS %d  NEAREST %.0f  FURTHEST %.0f (F6)",
+		"STAR FIELD %s  STARS %d  NEAREST %.0f  FURTHEST %.0f",
 		nstar_field_stars ? "ON" : "OFF", nstar_field_stars, star_field_radius,
 		3.0 * star_field_radius);
 	sng_abs_xy_draw_string(buffer, TINY_FONT, 10, y); y += dy;
@@ -1889,7 +2314,7 @@ static void draw_hud(void)
 	 * does not exist. */
 	snprintf(buffer, sizeof(buffer),
 		"  MAX DRIFT %5.2f DEG/S AT THIS LAB'S %6.0f U/S   |   %.2f DEG/S AT THE GAME'S "
-		"%.0f U/S   |   SPEED x%.2f (F7/SHIFT+F7)",
+		"%.0f U/S   |   SPEED x%.2f",
 		star_field_radius > 0.0 ?
 			measured_cam_speed / star_field_radius * 180.0 / M_PI : 0.0,
 		measured_cam_speed,
@@ -2126,6 +2551,33 @@ static void quit(int code)
 static void handle_key_down(SDL_Keysym *keysym)
 {
 	static int fullscreen = 0;
+	int i;
+
+	/* Mode select.  A mode key toggles, so pressing the live mode's own key drops back to
+	 * flying -- which is what makes it safe for a mode to borrow the movement keys. */
+	for (i = 0; i < (int) LAB_NMODES; i++) {
+		if (keysym->sym != lab_mode[i].key)
+			continue;
+		active_lab_mode = (active_lab_mode == i) ? -1 : i;
+		return;
+	}
+
+	/* The parameter grid.  Only bound while a mode is up; otherwise these keys fly. */
+	if (lab_tuning()) {
+		const struct lab_mode *m = &lab_mode[active_lab_mode];
+		int coarse = (keysym->mod & KMOD_SHIFT) != 0;
+
+		for (i = 0; i < m->nparams && i < LAB_GRID_SLOTS; i++) {
+			if (keysym->sym == lab_grid_inc_key[i]) {
+				lab_param_step(&m->param[i], 1, coarse);
+				return;
+			}
+			if (keysym->sym == lab_grid_dec_key[i]) {
+				lab_param_step(&m->param[i], -1, coarse);
+				return;
+			}
+		}
+	}
 
 	switch (keysym->sym) {
 	case SDLK_F1:
@@ -2140,28 +2592,6 @@ static void handle_key_down(SDL_Keysym *keysym)
 		} else {
 			helpmode = 0;
 		}
-		break;
-	case SDLK_F2:
-		/* Look through the possessed ship's gun turret.  Meaningless without a ship, so
-		 * ignore it in free-camera mode rather than leaving a latched flag behind. */
-		if (controlled_slot >= 0)
-			turret_view = !turret_view;
-		break;
-	case SDLK_F3:
-		/* Cycle the sun's rendering style for the A/B: the shader, the game's texture, or
-		 * both side by side.  Shift cycles backwards, so a two-way flip between any pair
-		 * of adjacent styles is F3 / Shift-F3. */
-		if (keysym->mod & KMOD_SHIFT)
-			sun_style = (sun_style + ARRAYSIZE(sun_style_name) - 1) %
-					ARRAYSIZE(sun_style_name);
-		else
-			sun_style = (sun_style + 1) % ARRAYSIZE(sun_style_name);
-		break;
-	case SDLK_F4:
-		/* Step through the solar systems.  Each ships its own sun texture and its own
-		 * star parameters, so this is what shows whether a set of parameters holds up
-		 * across the lot or only suits the one it was fitted to. */
-		cycle_solarsystem((keysym->mod & KMOD_SHIFT) ? -1 : 1);
 		break;
 	case SDLK_F10:
 		reload_shaders = 1;
@@ -2182,351 +2612,25 @@ static void handle_key_down(SDL_Keysym *keysym)
 	case SDLK_PAUSE:
 		display_frame_stats = (display_frame_stats + 1) % 3;
 		break;
-	case SDLK_BACKSLASH:
-		graph_dev_shadow_map_enabled = !graph_dev_shadow_map_enabled;
+	case SDLK_LEFTBRACKET:
+		/* Step through the solar systems.  Each ships its own sun texture and its own
+		 * star parameters, so this is what shows whether a set of parameters holds up
+		 * across the lot or only suits the one it was fitted to.  Off the grid because it
+		 * replaces every value on the SUN mode's row at once: it is which scene you are
+		 * in, like TAB, rather than a knob within one. */
+		cycle_solarsystem(-1);
 		break;
-	case SDLK_0:
-		shadow_debug_mode = 0;
-		graph_dev_set_shadow_debug(shadow_debug_mode);
-		break;
-	case SDLK_1:
-		shadow_debug_mode = 1;
-		graph_dev_set_shadow_debug(shadow_debug_mode);
-		break;
-	case SDLK_2:
-		shadow_debug_mode = 2;
-		graph_dev_set_shadow_debug(shadow_debug_mode);
-		break;
-	case SDLK_LEFTBRACKET: /* Shift = lower the ambient (shaded-side) floor */
-		if (keysym->mod & KMOD_SHIFT) {
-			ambient_light -= 0.005;
-			if (ambient_light < 0.0)
-				ambient_light = 0.0;
-		} else {
-			set_shadow_map_max_distance(get_shadow_map_max_distance() * 0.8);
-		}
-		break;
-	case SDLK_RIGHTBRACKET: /* Shift = raise the ambient (shaded-side) floor */
-		if (keysym->mod & KMOD_SHIFT) {
-			ambient_light += 0.005;
-			if (ambient_light > 1.0)
-				ambient_light = 1.0;
-		} else {
-			set_shadow_map_max_distance(get_shadow_map_max_distance() * 1.25);
-		}
-		break;
-	case SDLK_MINUS:
-	case SDLK_KP_MINUS:
-		set_shadow_map_num_cascades(get_shadow_map_num_cascades() - 1);
-		break;
-	case SDLK_EQUALS:
-	case SDLK_KP_PLUS:
-		set_shadow_map_num_cascades(get_shadow_map_num_cascades() + 1);
-		break;
-	case SDLK_SEMICOLON:
-		adjust_split_lambda((keysym->mod & KMOD_SHIFT) ? -0.1 : -0.01);
-		break;
-	case SDLK_QUOTE:
-		adjust_split_lambda((keysym->mod & KMOD_SHIFT) ? 0.1 : 0.01);
-		break;
-	case SDLK_COMMA:
-		if (keysym->mod & KMOD_SHIFT)
-			graph_dev_set_shadow_normal_offset(
-				graph_dev_get_shadow_normal_offset() - 0.25);
-		else
-			adjust_shadow_bias(-0.5, 0.0);
-		break;
-	case SDLK_PERIOD:
-		if (keysym->mod & KMOD_SHIFT)
-			graph_dev_set_shadow_normal_offset(
-				graph_dev_get_shadow_normal_offset() + 0.25);
-		else
-			adjust_shadow_bias(0.5, 0.0);
-		break;
-	case SDLK_n:
-		graph_dev_set_shadow_pcf_radius(graph_dev_get_shadow_pcf_radius() - 1);
-		break;
-	case SDLK_m:
-		graph_dev_set_shadow_pcf_radius(graph_dev_get_shadow_pcf_radius() + 1);
-		break;
-	case SDLK_k:
-		graph_dev_set_shadow_blend(graph_dev_get_shadow_blend() - 0.02);
-		break;
-	case SDLK_l:
-		graph_dev_set_shadow_blend(graph_dev_get_shadow_blend() + 0.02);
-		break;
-	case SDLK_u: /* Shift = less shadow darkening */
-		if (keysym->mod & KMOD_SHIFT) {
-			sun_shadow_darkening -= 0.02;
-			if (sun_shadow_darkening < 0.0)
-				sun_shadow_darkening = 0.0;
-		} else {
-			sun_distance *= 0.9;
-		}
-		break;
-	case SDLK_o: /* Shift = more shadow darkening */
-		if (keysym->mod & KMOD_SHIFT) {
-			sun_shadow_darkening += 0.02;
-			if (sun_shadow_darkening > 1.0)
-				sun_shadow_darkening = 1.0;
-		} else {
-			sun_distance *= 1.111111;
-		}
-		break;
-	case SDLK_BACKQUOTE:
-		/* Shift cycles how many are up, 1..NUM_LAB_BLACK_HOLES, leaving the on/off state
-		 * alone.  Five against three lens slots is what makes the selection bind, and the
-		 * overlapping pair only exists once you are past two. */
-		if (keysym->mod & KMOD_SHIFT) {
-			black_hole_count = black_hole_count % NUM_LAB_BLACK_HOLES + 1;
-			break;
-		}
-		black_hole_enabled = !black_hole_enabled;
-		/* Swing the free camera onto hole 0 as they come on, or you switch them on and see
-		 * nothing: they are parked out along the sun's bearing, which is nowhere near where
-		 * the camera starts out looking.  Aim by the angle scalars rather than by
-		 * cam_orientation, because apply_look_controls() rebuilds the orientation from
-		 * them every frame and would throw away anything written to the quaternion.
-		 * Leave a possessed ship's camera alone -- it is rigged to the ship. */
-		if (black_hole_enabled && black_hole_index[0] >= 0 && controlled_slot < 0) {
-			union vec3 d;
-
-			vec3_sub(&d, &scene[black_hole_index[0]].pos, &cam_pos);
-			vec3_normalize_self(&d);
-			/* Inverse of orientation_from_angles() acting on the +x base heading:
-			 * fwd = (cos(pitch)cos(yaw), sin(pitch), -cos(pitch)sin(yaw)). */
-			cam_pitch = clamp_pitch(asinf(d.v.y));
-			cam_yaw = atan2f(-d.v.z, d.v.x);
-			cam_roll = 0.0;
-		}
-		break;
-	/* HOME/END tune hole 0 only.  It is the reference the values above were set against, and
-	 * leaving the others fixed keeps the deliberate 1/2 overlap steady while you move it. */
-	case SDLK_HOME: /* closer, so it looms larger; Shift = smaller hole */
-		if (keysym->mod & KMOD_SHIFT) {
-			black_hole_radius[0] *= 0.9;
-			/* MIN_BLACK_HOLE_RADIUS (snis.h): below this is not a size the game can
-			 * actually produce, so tuning against it would not transfer. */
-			if (black_hole_radius[0] < 500.0)
-				black_hole_radius[0] = 500.0;
-		} else {
-			black_hole_distance[0] *= 0.9;
-			if (black_hole_distance[0] < 2.0 * black_hole_radius[0])
-				black_hole_distance[0] = 2.0 * black_hole_radius[0];
-		}
-		break;
-	case SDLK_END: /* farther; Shift = larger hole (MAX_BLACK_HOLE_RADIUS) */
-		if (keysym->mod & KMOD_SHIFT) {
-			black_hole_radius[0] *= 1.111111;
-			if (black_hole_radius[0] > 2000.0)
-				black_hole_radius[0] = 2000.0;
-		} else {
-			black_hole_distance[0] *= 1.111111;
-		}
-		break;
-	case SDLK_INSERT: /* photon ring (the disc's own rim) dimmer; Shift = tighter to the disc */
-		if (keysym->mod & KMOD_SHIFT) {
-			black_hole_material.black_hole.ring_width *= 0.9;
-			if (black_hole_material.black_hole.ring_width < 0.005)
-				black_hole_material.black_hole.ring_width = 0.005;
-		} else {
-			black_hole_material.black_hole.ring_brightness *= 0.9;
-			if (black_hole_material.black_hole.ring_brightness < 0.02)
-				black_hole_material.black_hole.ring_brightness = 0.0;
-		}
-		break;
-	case SDLK_DELETE: /* photon ring brighter (recovers from a true zero); Shift = wider */
-		if (keysym->mod & KMOD_SHIFT) {
-			black_hole_material.black_hole.ring_width *= 1.111111;
-			if (black_hole_material.black_hole.ring_width > 0.5)
-				black_hole_material.black_hole.ring_width = 0.5;
-		} else {
-			if (black_hole_material.black_hole.ring_brightness < 0.02)
-				black_hole_material.black_hole.ring_brightness = 0.02;
-			else
-				black_hole_material.black_hole.ring_brightness *= 1.111111;
-			if (black_hole_material.black_hole.ring_brightness > 8.0)
-				black_hole_material.black_hole.ring_brightness = 8.0;
-		}
-		break;
-	case SDLK_SLASH: /* Einstein radius as a multiple of the disc; Shift = larger */
-		if (keysym->mod & KMOD_SHIFT) {
-			black_hole_lens_strength += 0.1;
-			if (black_hole_lens_strength > 6.0)
-				black_hole_lens_strength = 6.0;
-		} else {
-			black_hole_lens_strength -= 0.1;
-			/* Below 1.0 the ring falls inside the disc and is simply not visible. */
-			if (black_hole_lens_strength < 0.0)
-				black_hole_lens_strength = 0.0;
-		}
-		break;
-	case SDLK_PAGEDOWN: /* frame dragging: negative and positive swirl are mirror images.
-			     * Shift = dimmer Einstein ring (the outer one, drawn on the billboard;
-			     * distinct from the disc's own rim on INSERT/DELETE) */
-		if (keysym->mod & KMOD_SHIFT) {
-			black_hole_ring_glow *= 0.9;
-			if (black_hole_ring_glow < 0.01)
-				black_hole_ring_glow = 0.0;
-		} else {
-			black_hole_swirl -= 0.1;
-			if (black_hole_swirl < -4.0)
-				black_hole_swirl = -4.0;
-		}
-		break;
-	case SDLK_PAGEUP: /* Shift = brighter Einstein ring (recovers from a true zero) */
-		if (keysym->mod & KMOD_SHIFT) {
-			if (black_hole_ring_glow < 0.01)
-				black_hole_ring_glow = 0.01;
-			else
-				black_hole_ring_glow *= 1.111111;
-			if (black_hole_ring_glow > 4.0)
-				black_hole_ring_glow = 4.0;
-		} else {
-			black_hole_swirl += 0.1;
-			if (black_hole_swirl > 4.0)
-				black_hole_swirl = 4.0;
-		}
-		break;
-	case SDLK_g: /* Shift = the disc within the sun texture is fewer pixels across */
-		if (keysym->mod & KMOD_SHIFT) {
-			sun_texture_disc_pixels -= 4.0;
-			if (sun_texture_disc_pixels < 4.0)
-				sun_texture_disc_pixels = 4.0;
-		} else {
-			sun_radius *= 0.9;
-			if (sun_radius < 1.0)
-				sun_radius = 1.0;
-		}
-		break;
-	case SDLK_h: /* Shift = the disc within the sun texture is more pixels across */
-		if (keysym->mod & KMOD_SHIFT) {
-			/* Larger disc = smaller billboard for the same star, so the texture's glow
-			 * shrinks with it.  This is the dial that decides how much of the texture is
-			 * star and how much is glow, and getting it wrong is what made the textured
-			 * sun's bloom look enormous. */
-			sun_texture_disc_pixels += 4.0;
-			if (sun_texture_disc_pixels > sun_texture_width)
-				sun_texture_disc_pixels = sun_texture_width;
-		} else {
-			sun_radius *= 1.111111;
-		}
-		break;
-	case SDLK_7: /* cooler (redder) star; Shift = weaker light (sun-lit) tint */
-		if (keysym->mod & KMOD_SHIFT) {
-			sun_light_tint -= 0.01;
-			if (sun_light_tint < 0.0)
-				sun_light_tint = 0.0;
-		} else {
-			sun_temperature *= 0.95;
-			if (sun_temperature < 1900.0) /* blackbody blue channel cuts off below here */
-				sun_temperature = 1900.0;
-			update_sun_color();
-		}
-		break;
-	case SDLK_8: /* hotter (bluer) star; Shift = stronger light (sun-lit) tint */
-		if (keysym->mod & KMOD_SHIFT) {
-			sun_light_tint += 0.01;
-			if (sun_light_tint > 1.0)
-				sun_light_tint = 1.0;
-		} else {
-			sun_temperature *= 1.0526316;
-			if (sun_temperature > 40000.0)
-				sun_temperature = 40000.0;
-			update_sun_color();
-		}
-		break;
-	case SDLK_9: /* weaker dark (shaded) tint.  There is no optics amplitude to tune any more:
-		      * the emission profile is normalised to 1 at the star's centre, so its level
-		      * is the brightness and nothing else. */
-		sun_dark_tint -= 0.01;
-		if (sun_dark_tint < 0.0)
-			sun_dark_tint = 0.0;
-		break;
-	case SDLK_i: /* stronger dark (shaded) tint */
-		sun_dark_tint += 0.01;
-		if (sun_dark_tint > 1.0)
-			sun_dark_tint = 1.0;
-		break;
-	case SDLK_t: /* OPTICS W down -- a tighter point spread, so the star falls off sooner */
-		sun_material.sun.psf_width *= 0.9;
-		if (sun_material.sun.psf_width < 0.05)
-			sun_material.sun.psf_width = 0.05;
-		break;
-	case SDLK_y: /* OPTICS W up */
-		sun_material.sun.psf_width *= 1.111111;
-		if (sun_material.sun.psf_width > 4.0)
-			sun_material.sun.psf_width = 4.0;
-		break;
-	case SDLK_c: /* OPTICS P down -- shallower tail, so the glow reaches further for a given
-		      * brightness.  Floored: below about 1.5 the tail never really ends */
-		sun_material.sun.psf_falloff *= 0.95;
-		if (sun_material.sun.psf_falloff < 1.5)
-			sun_material.sun.psf_falloff = 1.5;
-		break;
-	case SDLK_v: /* OPTICS P up -- steeper tail, glow pulls in tighter */
-		sun_material.sun.psf_falloff *= 1.0526;
-		if (sun_material.sun.psf_falloff > 12.0)
-			sun_material.sun.psf_falloff = 12.0;
-		break;
-	case SDLK_j: /* cycle EDGE, the disc's limb width; it is the alpha fade at the rim, so
-		      * it is semi-transparent by nature -- wrap back to a small value past 0.2 */
-		sun_material.sun.edge_softness *= 1.4;
-		if (sun_material.sun.edge_softness > 0.2)
-			sun_material.sun.edge_softness = 0.01;
-		break;
-	case SDLK_z: /* BRIGHTNESS down.  Multiplicative, and coarse under Shift, because this
-		      * spans six decades: a red dwarf and a blue giant are 10^4 apart. */
-		sun_material.sun.brightness *= (keysym->mod & KMOD_SHIFT) ? 0.5 : 0.9;
-		if (sun_material.sun.brightness < 1.0)
-			sun_material.sun.brightness = 1.0;
-		break;
-	case SDLK_x: /* BRIGHTNESS up */
-		sun_material.sun.brightness *= (keysym->mod & KMOD_SHIFT) ? 2.0 : 1.111111;
-		if (sun_material.sun.brightness > 1e9)
-			sun_material.sun.brightness = 1e9;
-		break;
-	case SDLK_p:
-		planet_shade_mode = (planet_shade_mode + 1) % 3;
-		break;
-	case SDLK_F5: /* star field off / on; Shift = twice as many.  A function key because every
-		       * letter is taken: WASD/QE/RF are continuous movement, polled through
-		       * SDL_GetKeyboardState() rather than appearing in this switch. */
-		if (keysym->mod & KMOD_SHIFT) {
-			nstar_field_stars = nstar_field_stars ? nstar_field_stars * 2 : 1000;
-			if (nstar_field_stars > 64000)
-				nstar_field_stars = 64000;
-		} else {
-			nstar_field_stars = nstar_field_stars ? 0 : 32000;
-		}
-		star_field_initialized = 0;
-		break;
-	case SDLK_F7: /* flight speed scale down / up (Shift).  See speed_scale. */
-		if (keysym->mod & KMOD_SHIFT)
-			speed_scale *= 1.5;
-		else
-			speed_scale /= 1.5;
-		if (speed_scale < 0.05)
-			speed_scale = 0.05;
-		if (speed_scale > 200.0)
-			speed_scale = 200.0;
-		break;
-	case SDLK_F6: /* nearest star closer / further (Shift).  Sets how fast the field can drift,
-		       * which is what decides whether it reads as a sky or as falling snow. */
-		if (keysym->mod & KMOD_SHIFT)
-			star_field_radius *= 1.25;
-		else
-			star_field_radius *= 0.8;
-		if (star_field_radius < 200.0)
-			star_field_radius = 200.0;
-		if (star_field_radius > 1000000.0)
-			star_field_radius = 1000000.0;
-		star_field_initialized = 0;
-		break;
-	case SDLK_b:
-		show_shade_panel = !show_shade_panel;
+	case SDLK_RIGHTBRACKET:
+		cycle_solarsystem(1);
 		break;
 	case SDLK_TAB:
+		/* Shift looks through the possessed ship's gun turret.  Meaningless without a ship,
+		 * so ignore it in free-camera mode rather than leaving a latched flag behind. */
+		if (keysym->mod & KMOD_SHIFT) {
+			if (controlled_slot >= 0)
+				turret_view = !turret_view;
+			break;
+		}
 		/* Cycle: free camera -> ship 0 -> ... -> last ship -> free camera. */
 		controlled_slot++;
 		if (controlled_slot >= ship_slot_count)
@@ -2535,28 +2639,6 @@ static void handle_key_down(SDL_Keysym *keysym)
 		chase_initialized = 0;  /* snap the chase cam on the first frame, then lag */
 		if (controlled_slot < 0)
 			turret_view = 0; /* the free camera has no turret to look through */
-		break;
-	case SDLK_3: /* planet smaller */
-		if (planet_index >= 0)
-			scene[planet_index].scale *= 0.9;
-		break;
-	case SDLK_4: /* planet larger */
-		if (planet_index >= 0)
-			scene[planet_index].scale *= 1.111111;
-		break;
-	case SDLK_5: /* planet closer to the ship cluster */
-		if (planet_index >= 0) {
-			scene[planet_index].pos.v.y += scene_scale * 2.0;
-			if (scene[planet_index].pos.v.y > -scene[planet_index].scale * 1.5)
-				scene[planet_index].pos.v.y = -scene[planet_index].scale * 1.5;
-			scene_center = scene[planet_index].pos;
-		}
-		break;
-	case SDLK_6: /* planet farther from the ship cluster */
-		if (planet_index >= 0) {
-			scene[planet_index].pos.v.y -= scene_scale * 2.0;
-			scene_center = scene[planet_index].pos;
-		}
 		break;
 	default:
 		break;
