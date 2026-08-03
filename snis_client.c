@@ -20205,7 +20205,14 @@ static void show_demon_3d(void)
 			for (k = 0; k < 10; k++) {
 				float z = (k * XKNOWN_DIM / 10.0) - XKNOWN_DIM / 2.0 + (XKNOWN_DIM / 20.0);
 				struct entity *e;
-				e = add_entity(instrumentecx, demon3d_axes_mesh, x, y, z, UI_COLOR(demon_axes));
+				int axes_color = UI_COLOR(demon_axes);
+				if (i == 9)
+					axes_color = RED; /* indicate positive X direction */
+				else if (j == 9)
+					axes_color = GREEN; /* indicate positive Y direction */
+				else if (k == 9)
+					axes_color = BLUE; /* indicate positive Z direction */
+				e = add_entity(instrumentecx, demon3d_axes_mesh, x, y, z, axes_color);
 				if (((i == 9 || i == 0) + (j == 9 || j == 0) + (k == 9 || k == 0)) == 3) {
 					update_entity_scale(e, 3.0);
 					update_entity_color(e, UI_COLOR(demon_default));
