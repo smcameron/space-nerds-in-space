@@ -22,8 +22,16 @@ int test_solarsystem_config(char *filename)
 
 	fprintf(stderr, "s->sun_texture = '%s'\n", s->sun_texture);
 	fprintf(stderr, "s->skybox_prefix = '%s'\n", s->skybox_prefix);
-	fprintf(stderr, "s->sun_color = %hhu, %hhu, %hhu\n",
-		s->sun_color.r, s->sun_color.g, s->sun_color.b);
+	fprintf(stderr, "s->star_diameter = %f\n", s->star_diameter);
+	fprintf(stderr, "s->star_diameter_pixels = %f\n", s->star_diameter_pixels);
+	fprintf(stderr, "s->sun_style = %d\n", s->sun_style);
+	fprintf(stderr, "s->star_temperature = %f\n", s->star_temperature);
+	fprintf(stderr, "s->star_brightness = %f (specified %d)\n",
+		s->star_brightness, s->star_brightness_specified);
+	fprintf(stderr, "s->star_tint = %f %f %f\n",
+		s->star_tint[0], s->star_tint[1], s->star_tint[2]);
+	fprintf(stderr, "s->sun_edge_softness = %f\n", s->sun_edge_softness);
+	fprintf(stderr, "s->star_keys_specified = %d\n", s->star_keys_specified);
 	fprintf(stderr, "s->nplanet_textures = %d\n", s->nplanet_textures);
 	for (i = 0; i < s->nplanet_textures; i++) {
 		fprintf(stderr, "s->planet_texture[%d] = '%s'\n", i, s->planet_texture[i]);

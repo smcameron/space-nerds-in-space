@@ -37,6 +37,28 @@ static void free_string_ptr(char **x)
 	}
 }
 
+/* Parse one "key: value" line as a float and range check it.  Returns 0 on success, or -1 with a
+ * message already printed, so the caller can just goto bad_line.  The star and sun keys all have
+ * this shape, and spelling each one out was three times the code and three times the places to
+ * get the error message wrong. */
+static int parse_float_field(char *filename, int ln, char *line, const char *what,
+				float min, float max, float *result)
+{
+	float value;
+
+	if (sscanf(get_field(line), "%f", &value) != 1) {
+		fprintf(stderr, "%s:line %d: bad %s specification.\n", filename, ln, what);
+		return -1;
+	}
+	if (value < min || value > max) {
+		fprintf(stderr, "%s:line %d: %s must be between %g and %g.\n",
+			filename, ln, what, min, max);
+		return -1;
+	}
+	*result = value;
+	return 0;
+}
+
 static void sanity_check(char *filename, struct solarsystem_asset_spec *ss)
 {
 	int i;
@@ -57,6 +79,15 @@ static void sanity_check(char *filename, struct solarsystem_asset_spec *ss)
 			ss->spec_warnings++;
 		}
 	}
+}
+
+float solarsystem_star_diameter(const struct solarsystem_asset_spec *a, float texture_width)
+{
+	if (a->star_diameter_specified)
+		return a->star_diameter;
+	if (texture_width <= 0.0 || a->star_diameter_pixels <= 0.0)
+		return a->star_diameter;
+	return a->star_diameter_pixels * SOLARSYSTEM_SUN_BILLBOARD_SIZE / texture_width;
 }
 
 struct solarsystem_asset_spec *solarsystem_asset_spec_read(char *filename)
@@ -81,12 +112,26 @@ struct solarsystem_asset_spec *solarsystem_asset_spec_read(char *filename)
 	memset(a, 0, sizeof(*a));
 	a->random_seed = -1; /* no seed */
 	/* Defaults chosen so a 512 pixel wide sun texture yields the traditional
-	 * 30000 unit sun billboard: 5625 * 512 / 96 = 30000. */
+	 * 30000 unit sun billboard: 5625 * 512 / 96 = 30000.  star_diameter is only a fallback
+	 * for callers that cannot measure the texture; solarsystem_star_diameter() infers it. */
 	a->star_diameter_pixels = 96.0;
 	a->star_diameter = 5625.0;
 	a->sun_color.r = 255;
 	a->sun_color.g = 255;
 	a->sun_color.b = 179;
+	/* Star rendering defaults.  These are a least-squares fit of the sun shader to the shipped
+	 * sun.png.  The STYLE defaults to the original textured billboard, so a system that says
+	 * nothing renders exactly as it always has and nothing changes for anyone who has not
+	 * asked for it; "sun style: shader" opts a system in, and SUN_STYLE on the demon console
+	 * flips it live.  The rest are what a system that opts in gets if it says nothing else.
+	 * The derivation, and what could not be matched, are in doc/star-rendering-and-lighting-notes.txt. */
+	a->sun_style = SOLARSYSTEM_SUN_STYLE_TEXTURE;
+	a->star_temperature = 5980.0;	/* fitted to the shipped sun.png */
+	a->star_tint[0] = 1.0;		/* no deviation from the blackbody colour */
+	a->star_tint[1] = 1.0;
+	a->star_tint[2] = 1.0;
+	a->sun_edge_softness = 0.01;
+	/* Star-coloured lighting, as tuned in shadow_lab.  All three at 0 = the old untinted look. */
 
 	while (!feof(f)) {
 		l = fgets(line, 1000, f);
@@ -291,6 +336,7 @@ struct solarsystem_asset_spec *solarsystem_asset_spec_read(char *filename)
 				goto bad_line;
 			}
 			a->star_diameter_pixels = value;
+			a->star_keys_specified++;
 			continue;
 		} else if (has_prefix("star diameter:", line)) {
 			float value;
@@ -303,6 +349,60 @@ struct solarsystem_asset_spec *solarsystem_asset_spec_read(char *filename)
 				goto bad_line;
 			}
 			a->star_diameter = value;
+			a->star_diameter_specified = 1;
+			continue;
+		} else if (has_prefix("sun style:", line)) {
+			field = get_field(line);
+			if (strcmp(field, "shader") == 0) {
+				a->sun_style = SOLARSYSTEM_SUN_STYLE_SHADER;
+			} else if (strcmp(field, "texture") == 0) {
+				a->sun_style = SOLARSYSTEM_SUN_STYLE_TEXTURE;
+			} else {
+				fprintf(stderr, "%s:line %d: sun style must be 'shader' or 'texture'.\n",
+					filename, ln);
+				goto bad_line;
+			}
+			a->star_keys_specified++;
+			continue;
+		} else if (has_prefix("star brightness:", line)) {
+			if (parse_float_field(filename, ln, line, "star brightness",
+						0.0, 1e9, &a->star_brightness))
+				goto bad_line;
+			a->star_brightness_specified = 1;
+			a->star_keys_specified++;
+			continue;
+		} else if (has_prefix("star temperature:", line)) {
+			/* The blackbody locus only describes stars over roughly this range: below it
+			 * the colour goes red then simply dark, and above it stops changing. */
+			if (parse_float_field(filename, ln, line, "star temperature",
+						1900.0, 40000.0, &a->star_temperature))
+				goto bad_line;
+			a->star_keys_specified++;
+			continue;
+		} else if (has_prefix("star tint:", line)) {
+			float r, g, b;
+
+			field = get_field(line);
+			if (sscanf(field, "%f %f %f", &r, &g, &b) != 3) {
+				fprintf(stderr, "%s:line %d: bad star tint specification.\n",
+					filename, ln);
+				goto bad_line;
+			}
+			if (r < 0.0 || r > 4.0 || g < 0.0 || g > 4.0 || b < 0.0 || b > 4.0) {
+				fprintf(stderr, "%s:line %d: star tint channels must be 0 to 4.\n",
+					filename, ln);
+				goto bad_line;
+			}
+			a->star_tint[0] = r;
+			a->star_tint[1] = g;
+			a->star_tint[2] = b;
+			a->star_keys_specified++;
+			continue;
+		} else if (has_prefix("sun edge softness:", line)) {
+			if (parse_float_field(filename, ln, line, "sun edge softness",
+						0.0, 1.0, &a->sun_edge_softness))
+				goto bad_line;
+			a->star_keys_specified++;
 			continue;
 		} else if (has_prefix("star location:", line)) {
 			/* On the client, this info will be overridden by info from the lobby,
@@ -428,6 +528,17 @@ static void print_solarsystem_config(char *name, struct solarsystem_asset_spec *
 	printf("Solarsystem %s:\n", name);
 	printf("  Sun texture: %s\n", ss->sun_texture);
 	printf("  skybox prefix: %s\n", ss->skybox_prefix);
+	printf("  sun style: %s\n",
+		ss->sun_style == SOLARSYSTEM_SUN_STYLE_SHADER ? "shader" : "texture");
+	printf("  star temperature: %g K, tint: %g %g %g\n", ss->star_temperature,
+		ss->star_tint[0], ss->star_tint[1], ss->star_tint[2]);
+	printf("  star brightness: %s%g\n", ss->star_brightness_specified ? "" : "(from temperature) ",
+		ss->star_brightness);
+	printf("  star diameter: %g (%g px in the texture)\n",
+		ss->star_diameter, ss->star_diameter_pixels);
+	printf("  sun edge softness: %g\n", ss->sun_edge_softness);
+	printf("  star keys specified: %d%s\n", ss->star_keys_specified,
+		ss->star_keys_specified ? "" : " (every star value above is a default)");
 	printf("  nplanet textures: %d\n", ss->nplanet_textures);
 
 	for (i = 0; i < ss->nplanet_textures; i++) {
