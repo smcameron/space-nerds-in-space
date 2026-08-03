@@ -118,6 +118,7 @@
 #include "mesh.h"
 #include "stl_parser.h"
 #include "entity.h"
+#include "star_light.h"
 #include "matrix.h"
 #include "graph_dev.h"
 #include "black_hole_lens.h"
@@ -394,7 +395,41 @@ static unsigned char planets_shade_other_objects = 1; /* tweakable */
 static float star_radius = 5625.0 / 2.0; /* world-unit radius of the sun, from solarsystem assets. */
 					/* Used for planet umbra/penumbra shadow calculations. Tweakable. */
 static float sun_billboard_scale = 1.0; /* scales sun_mesh so the star renders star_diameter units wide */
-#define SUN_BILLBOARD_SIZE 30000.0 /* world-unit width of the unscaled sun billboard mesh */
+/* World-unit width of the unscaled sun billboard mesh.  Shared with solarsystem_config, which
+ * infers a star's size from this same number when a config does not state one. */
+#define SUN_BILLBOARD_SIZE SOLARSYSTEM_SUN_BILLBOARD_SIZE
+
+/* How the star is drawn.  SUN_STYLE_TEXTURE is the original textured billboard, with everything
+ * about the star's look baked into sun.png; SUN_STYLE_SHADER draws it procedurally instead
+ * (MATERIAL_SUN, share/snis/shader/sun.frag), parameterised by the values below.  Each solar
+ * system picks a style and its parameters in its assets.txt; all of it is also tweakable live
+ * from the demon console, which is how you A/B the two without restarting.
+ *
+ * Loading a solar system overwrites the parameters below from its config.  SUN_STYLE is the
+ * exception: a flip of it is meant to stick, so that A/B-ing the two renderers survives a warp
+ * gate rather than snapping back at every system boundary.  sun_style_from_config remembers
+ * what the last config asked for, and the new config is only obeyed if the value still matches
+ * it -- that is, if nobody has touched the tweakable since.  Startup needs nothing special:
+ * snis_prefs_read_client_tweaks() runs after the first read_solarsystem_config(), so a saved
+ * tweak lands last and is then held by the same rule.
+ */
+#define SUN_STYLE_TEXTURE SOLARSYSTEM_SUN_STYLE_TEXTURE
+#define SUN_STYLE_SHADER SOLARSYSTEM_SUN_STYLE_SHADER
+static int sun_style = SUN_STYLE_TEXTURE;	/* tweakable */
+static int sun_style_from_config = SUN_STYLE_TEXTURE;
+static float star_temperature = 5980.0;		/* tweakable, Kelvin */
+/* Per-channel deviation from the blackbody colour, for stars whose art is off the locus (a
+ * magenta or green cast that no temperature can produce).  Feeds the disc and the light alike,
+ * so a purple star lights the scene purple.  Not tweakable: it is a property of the artwork,
+ * not a dial worth turning at runtime. */
+static float star_tint[3] = { 1.0, 1.0, 1.0 };
+/* Surface brightness in linear HDR units.  Follows the temperature unless the solar system says
+ * otherwise; see solarsystem_config.h for why the two are separable. */
+static float star_brightness = STAR_LIGHT_REFERENCE_BRIGHTNESS;	/* tweakable */
+static float sun_edge_softness = 0.03;		/* tweakable */
+/* The billboard is sized to just contain the disc plus the glow's visible extent, with a small
+ * border, so the falloff is never clipped off square at the quad's edge. */
+#define SUN_SHADER_BILLBOARD_MARGIN 1.1
 static int main_nav_hybrid = 0; /* tweakable */
 static float explosion_multiplier = 5.0; /* tweakable */
 static float main_view_azimuth_angle = 0.0; /* tweakable */
@@ -689,7 +724,8 @@ static struct material flare_material;
 static struct material blackhole_spark_material;
 static struct material laserflash_material;
 static struct material warp_effect_material;
-static struct material sun_material;
+static struct material sun_material;		/* the textured billboard (SUN_STYLE_TEXTURE) */
+static struct material sun_shader_material;	/* the procedural star (SUN_STYLE_SHADER) */
 static struct material lens_flare_ghost_material;
 static struct material lens_flare_halo_material;
 static struct material anamorphic_flare_material;
@@ -9597,6 +9633,50 @@ static void update_warp_tunnel(struct snis_entity *o, struct entity **warptunnel
 	}
 }
 
+/* Size and dress the sun's billboard for this frame.
+ *
+ * The textured style needs nothing per frame: the texture is entirely world-scale, so the one
+ * scale update_sun_size() works out at solar-system load holds at any camera distance.  Setting
+ * the material anyway costs nothing and is what lets the demon console flip SUN_STYLE live.
+ *
+ * The shader style does need it.  Its glow is a power law with no hard edge, so how far the star
+ * reaches depends on how bright it is, and the quad has to be sized to contain that reach: too
+ * small and the falloff is clipped off square at the quad's edge, which reads as a dark box
+ * around the star.  Both the world size and the disc's share of it are worked out below.  None
+ * of it depends on the camera -- the star is world-scale, and the tonemapper does the rest.
+ */
+static void update_sun_entity(void)
+{
+	float glow_extent, billboard_world;
+
+	if (!sun_entity)
+		return;
+	if (sun_style != SUN_STYLE_SHADER) {
+		update_entity_material(sun_entity, &sun_material);
+		update_entity_scale(sun_entity, sun_billboard_scale);
+		return;
+	}
+
+	star_light_tinted_blackbody_color(star_temperature, star_tint,
+			&sun_shader_material.sun.color.red,
+			&sun_shader_material.sun.color.green, &sun_shader_material.sun.color.blue);
+	sun_shader_material.sun.brightness = star_brightness;
+	sun_shader_material.sun.edge_softness = sun_edge_softness;
+
+	/* Sized from where the glow stops being visible at all.  A hotter star is brighter, so its
+	 * glow reaches further and its billboard grows -- which is the whole point: apparent size
+	 * follows temperature. */
+	glow_extent = star_light_glow_extent(sun_shader_material.sun.brightness,
+			sun_shader_material.sun.psf_width,
+			sun_shader_material.sun.psf_falloff);
+	billboard_world = 2.0 * SUN_SHADER_BILLBOARD_MARGIN * star_radius * glow_extent;
+	sun_shader_material.sun.disc_radius = star_radius / billboard_world;
+
+	update_entity_material(sun_entity, &sun_shader_material);
+	/* sun_mesh is SUN_BILLBOARD_SIZE units wide and the scale multiplies that. */
+	update_entity_scale(sun_entity, billboard_world / SUN_BILLBOARD_SIZE);
+}
+
 static void show_lens_flare(struct snis_entity *o, union vec3 *camera_pos, union quat *camera_orientation)
 {
 #ifndef WITHOUTOPENGL
@@ -9865,6 +9945,7 @@ static void show_weapons_camera_view(void)
 	set_window_offset(ecx, 0, 0);
 	set_lighting(ecx, SUNX, SUNY, SUNZ);
 	set_ambient_light(ecx, ambient_light);
+	update_sun_entity();
 	calculate_camera_transform(ecx);
 	entity_context_set_hi_lo_poly_pixel_threshold(ecx, low_poly_threshold);
 
@@ -10325,6 +10406,7 @@ static void show_mainscreen(void)
 	set_window_offset(ecx, 0, 0);
 	set_lighting(ecx, SUNX, SUNY, SUNZ);
 	set_ambient_light(ecx, ambient_light);
+	update_sun_entity();
 	calculate_camera_transform(ecx);
 	entity_context_set_hi_lo_poly_pixel_threshold(ecx, low_poly_threshold);
 
@@ -18915,6 +18997,14 @@ static struct tweakable_var_descriptor client_tweak[] = {
 		&planets_shade_other_objects, 'i', 0.0, 0.0, 0.0, 0, 1, 1, 0 },
 	{ "STAR_RADIUS", "WORLD UNIT RADIUS OF THE SUN FOR PLANET SHADOW CALCULATIONS",
 		&star_radius, 'f', 1.0, 100000.0, 2812.5, 0, 0, 0, 0 },
+	{ "SUN_STYLE", "0 OR 1 TO DRAW THE STAR AS A TEXTURE OR WITH THE SUN SHADER",
+		&sun_style, 'i', 0.0, 0.0, 0.0, 0, 1, 1, 0 },
+	{ "STAR_TEMPERATURE", "1900 TO 40000 KELVIN - BLACKBODY COLOUR OF THE STAR AND ITS LIGHT",
+		&star_temperature, 'f', 1900.0, 40000.0, 5980.0, 0, 0, 0, 0 },
+	{ "STAR_BRIGHTNESS", "LINEAR HDR SURFACE BRIGHTNESS - SETS THE WHITE CORE AND GLOW SIZE",
+		&star_brightness, 'f', 0.0, 1e9, 3000.0, 0, 0, 0, 0 },
+	{ "SUN_EDGE_SOFTNESS", "0.0 TO 1.0 - LIMB WIDTH AS A FRACTION OF THE DISC RADIUS",
+		&sun_edge_softness, 'f', 0.0, 1.0, 0.03, 0, 0, 0, 0 },
 	{ "PLANET_SPECULARITY", "0 OR 1 TO ENABLE/DISABLE PLANET_SPECULARITY",
 		&graph_dev_planet_specularity, 'i', 0.0, 0.0, 0.0, 0, 1, 1, 0 },
 	{ "MAIN_NAV_HYBRID", "0 OR 1 TO ENABLE/DISABLE MAINSCREEN/NAV HYBRID",
@@ -23699,7 +23789,7 @@ static void update_sun_size(char *sun_texture_path)
 	char *pixels;
 	int w = 0, h = 0, hasalpha = 0;
 	float texture_width = 512.0;
-	float billboard_size;
+	float star_diameter, billboard_size;
 
 	snprintf(png_path, sizeof(png_path), "%s/%s", asset_dir, sun_texture_path);
 	pixels = png_utils_read_png_image(replacement_asset_lookup(png_path, &replacement_assets),
@@ -23710,9 +23800,12 @@ static void update_sun_size(char *sun_texture_path)
 	} else {
 		fprintf(stderr, "snis_client: failed to size sun texture %s: %s\n", png_path, whynot);
 	}
-	star_radius = 0.5 * solarsystem_assets->star_diameter;
-	billboard_size = solarsystem_assets->star_diameter * texture_width /
-				solarsystem_assets->star_diameter_pixels;
+	/* A config that states its star's size is believed; otherwise it is inferred from the
+	 * texture, which holds the billboard at its traditional size and so keeps a solar system
+	 * that only measured its own sun texture looking exactly as it always has. */
+	star_diameter = solarsystem_star_diameter(solarsystem_assets, texture_width);
+	star_radius = 0.5 * star_diameter;
+	billboard_size = star_diameter * texture_width / solarsystem_assets->star_diameter_pixels;
 	sun_billboard_scale = billboard_size / SUN_BILLBOARD_SIZE;
 	if (sun_entity)
 		update_entity_scale(sun_entity, sun_billboard_scale);
@@ -23744,6 +23837,22 @@ static int load_per_solarsystem_textures(void)
 	sun_material.texture_mapped_unlit.texture_id = load_texture(path, 0);
 	sun_material.texture_mapped_unlit.do_blend = 1;
 	update_sun_size(path);
+
+	/* The procedural star.  Its per-frame values (colour, disc radius) are set by
+	 * update_sun_entity(); everything here is just the solar system's choice of parameters
+	 * taking effect, overwriting any demon-console tweaks from the system we came from.
+	 * SUN_STYLE is deliberately not one of those: see the comment on sun_style_from_config. */
+	material_init_sun(&sun_shader_material);
+	sun_shader_material.billboard_type = MATERIAL_BILLBOARD_TYPE_SPHERICAL;
+	if (sun_style == sun_style_from_config)
+		sun_style = solarsystem_assets->sun_style;
+	sun_style_from_config = solarsystem_assets->sun_style;
+	star_temperature = solarsystem_assets->star_temperature;
+	memcpy(star_tint, solarsystem_assets->star_tint, sizeof(star_tint));
+	star_brightness = solarsystem_assets->star_brightness_specified ?
+			solarsystem_assets->star_brightness :
+			star_light_star_brightness(solarsystem_assets->star_temperature);
+	sun_edge_softness = solarsystem_assets->sun_edge_softness;
 
 	update_splash_progress(60);
 	for (i = 0; i < solarsystem_assets->nplanet_textures; i++) {
