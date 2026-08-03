@@ -852,6 +852,8 @@ struct graph_dev_gl_atmosphere_shader {
 	GLint shadow_annulus_tint_color_id;
 	GLint ring_texture_v_id;
 	GLint atmosphere_brightness_id;
+	GLint light_color_id;   /* star-tinted direct light colour (u_LightColor) */
+	GLint ambient_color_id; /* absolute, complement-tinted ambient colour (u_AmbientColor) */
 	GLint filmic_tonemapping_id;
 	GLint tonemapping_gain_id;
 };
@@ -1972,7 +1974,8 @@ static void graph_dev_raster_single_color_lit(const struct mat44 *mat_mvp, const
 static void graph_dev_raster_atmosphere(const struct mat44 *mat_mvp, const struct mat44 *mat_mv,
 	const struct mat33 *mat_normal,
 	struct mesh *m, struct sng_color *triangle_color, union vec3 *eye_light_pos, GLfloat alpha,
-	struct shadow_annulus_data *shadow_annulus, float ring_texture_v, float atmosphere_brightness)
+	struct shadow_annulus_data *shadow_annulus, float ring_texture_v, float atmosphere_brightness,
+	const float light_color[3], const float ambient_color[3])
 {
 	PROFILE_ZONE_START("graph_dev_raster_atmosphere");
 
@@ -2031,6 +2034,11 @@ static void graph_dev_raster_atmosphere(const struct mat44 *mat_mvp, const struc
 	}
 
 	glUniform1f(shader->atmosphere_brightness_id, atmosphere_brightness);
+	if (shader->light_color_id >= 0)
+		glUniform3f(shader->light_color_id, light_color[0], light_color[1], light_color[2]);
+	if (shader->ambient_color_id >= 0)
+		glUniform3f(shader->ambient_color_id, ambient_color[0], ambient_color[1],
+				ambient_color[2]);
 	glUniformMatrix4fv(shader->mv_matrix_id, 1, GL_FALSE, &mat_mv->m[0][0]);
 	glUniformMatrix4fv(shader->mvp_matrix_id, 1, GL_FALSE, &mat_mvp->m[0][0]);
 	glUniformMatrix3fv(shader->normal_matrix_id, 1, GL_FALSE, &mat_normal->m[0][0]);
@@ -3234,9 +3242,13 @@ static void graph_dev_raster_triangle_mesh(struct entity_context *cx, struct ent
 				} else if (is_black_hole) {
 					graph_dev_raster_black_hole(rtp.mat_mvp, e->m, e->material_ptr);
 				} else if (atmosphere && !rtp.textures_not_ready) {
+					float light_color[3], ambient_color[3];
+
+					graph_dev_compute_star_light(cx, light_color, ambient_color);
 					graph_dev_raster_atmosphere(rtp.mat_mvp, rtp.mat_mv, rtp.mat_normal,
 						e->m, &atmosphere_color, eye_light_pos, rtp.alpha,
-						&shadow_annulus, rtp.ring_texture_v, rtp.atmosphere_brightness);
+						&shadow_annulus, rtp.ring_texture_v, rtp.atmosphere_brightness,
+						light_color, ambient_color);
 				} else if (!rtp.textures_not_ready) {
 					float light_color[3], ambient_color[3];
 
@@ -3915,6 +3927,8 @@ static void setup_atmosphere_shader(struct graph_dev_gl_atmosphere_shader *shade
 	shader->normal_matrix_id = glGetUniformLocation(shader->program_id, "u_NormalMatrix");
 	shader->light_pos_id = glGetUniformLocation(shader->program_id, "u_LightPos");
 	shader->atmosphere_brightness_id = glGetUniformLocation(shader->program_id, "u_atmosphere_brightness");
+	shader->light_color_id = glGetUniformLocation(shader->program_id, "u_LightColor");
+	shader->ambient_color_id = glGetUniformLocation(shader->program_id, "u_AmbientColor");
 
 	/* Get a handle for our buffers */
 	shader->vertex_position_id = glGetAttribLocation(shader->program_id, "a_Position");
