@@ -96,6 +96,17 @@ struct entity_context {
 	int ndust_motes; /* = 0; */
 	float space_dust_radius;
 #endif
+
+	/* The star field is a separate cloud from the space dust above, and the two are
+	 * independent: either, both or neither may be up.  They only look alike.  The dust
+	 * fills a sphere the camera sits inside and is meant to streak past; the star field
+	 * is held at arm's length so that it cannot. */
+	struct entity *star_field;
+	struct mesh *star_field_mesh;
+	int nstar_field; /* = 0; */
+	float star_field_radius;
+	union vec3 star_field_last_camera;
+	int star_field_have_last_camera;
 	struct mat41 light;
 	float window_offset_x, window_offset_y;
 	float ambient;

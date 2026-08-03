@@ -868,6 +868,26 @@ void calculate_camera_transform(struct entity_context *cx)
 static void reposition_space_dust(struct entity_context *cx, struct vertex *fs, float radius);
 #endif
 
+/* The radius passed to entity_init_star_field() is the CLOSEST a star may come, not the
+ * furthest it may be.  That is the useful way round: parallax rate is speed over distance,
+ * so a floor on the distance is a ceiling on the drift, and the radius becomes a promise
+ * that no star will sweep faster than speed/radius no matter where it is or how long you
+ * fly toward it.
+ *
+ * Read the other way -- radius as an outer bound, which is what the space dust does -- there
+ * is no floor at all, and any star ahead keeps closing for as long as you fly at it.  Those
+ * are the ones that streak, which is exactly what the dust is for and exactly what a star
+ * field must not do.
+ *
+ * Stars therefore live in a shell between radius and STAR_FIELD_OUTER times it, and are
+ * recycled when they leave through EITHER face.  The shell is deep because BOTH faces need
+ * a fade wide enough to be invisible: a star leaving through the near face is just as
+ * abrupt as one arriving at the far face. */
+#define STAR_FIELD_OUTER 3.0
+
+static void reposition_star_field_star(struct entity_context *cx, struct vertex *fs, float radius,
+					int initial);
+
 static void update_entity_child_state(struct entity *e)
 {
 	int visible = e->e_visible;
@@ -1252,6 +1272,30 @@ void render_entities(struct entity_context *cx)
 	}
 #endif
 
+	/* The star field recycles on both faces, unlike the space dust above, which only
+	 * recycles stars that have fallen behind.  Recycling on the NEAR face is what enforces
+	 * the distance floor: without it a star ahead closes for as long as you fly at it and
+	 * ends up sweeping past however far out the field began. */
+	if (cx->nstar_field > 0) {
+		float inner2 = cx->star_field_radius * cx->star_field_radius;
+		float outer = cx->star_field_radius * STAR_FIELD_OUTER;
+		float outer2 = outer * outer;
+
+		for (int i = 0; i < cx->nstar_field; i++) {
+			struct vertex *fs = &cx->star_field_mesh->v[i];
+
+			float dist2 = dist3dsqrd(c->x - fs->x, c->y - fs->y, c->z - fs->z);
+
+			if (dist2 > outer2 || dist2 < inner2)
+				reposition_star_field_star(cx, fs, cx->star_field_radius, 0);
+		}
+		mesh_graph_dev_init(cx->star_field_mesh);
+		cx->star_field_last_camera.v.x = c->x;
+		cx->star_field_last_camera.v.y = c->y;
+		cx->star_field_last_camera.v.z = c->z;
+		cx->star_field_have_last_camera = 1;
+	}
+
 	/* For better depth buffer precision do the draw in multiple (two) passes based on the
 	 * dynamic range of near/far, and clear the depth buffer between passes. A good rule of
 	 * thumb is to have far / near < 10000 on 24-bit depth buffer.  At the boundary between
@@ -1292,6 +1336,32 @@ void render_entities(struct entity_context *cx)
 			/* the additional 0.1% is to render a little farther to cover seam */
 	}
 
+	/* The star field, drawn once here rather than as an ordinary entity.
+	 *
+	 * Its mesh radius is INT_MAX, since the stars surround the camera and no bounding
+	 * sphere describes them, so sphere_in_frustum() puts it in BOTH render passes: every
+	 * star would be drawn twice, and the near pass draws after the depth buffer is cleared,
+	 * so the second copy would land on top of everything the far pass had drawn -- the sun
+	 * included.  Sorting cannot fix that; the field is not at a depth.
+	 *
+	 * So draw it once, first, with the depth test off entirely.  These are meant to read as
+	 * distant stars whatever their geometry says, and the geometry only ever says anything
+	 * because parallax needs a finite distance to work with.  Everything else draws over
+	 * them afterwards, which is what being behind everything means.
+	 *
+	 * The space dust is deliberately NOT drawn this way: it is meant to be among the scene,
+	 * occluded by what it passes behind, so it stays on the ordinary entity path. */
+	if (cx->star_field && cx->nstar_field > 0 && cx->star_field_mesh) {
+		struct entity_transform st;
+		struct mat44d id = { { { 1, 0, 0, 0 }, { 0, 1, 0, 0 },
+					{ 0, 0, 1, 0 }, { 0, 0, 0, 1 } } };
+
+		st.m = id;
+		st.vp = &c->frustum.vp_matrix;
+		mat44_product_ddf(st.vp, &st.m, &st.mvp);
+		graph_dev_draw_star_field(cx, &st.mvp);
+	}
+
 	int pass;
 	for (pass = 0; pass < n_passes; pass++) {
 
@@ -1316,6 +1386,10 @@ void render_entities(struct entity_context *cx)
 			struct entity *e = &cx->entity_list[j];
 
 			if (e->m == NULL)
+				continue;
+
+			/* Already drawn above, before the passes and without depth. */
+			if (e == cx->star_field)
 				continue;
 
 			/* clear on the first pass and accumulate the state */
@@ -1533,6 +1607,11 @@ struct entity_context *entity_context_new(int maxobjs, int maxchildren)
 #if SPACEDUST
 	cx->ndust_motes = 0;
 #endif
+	cx->star_field = 0;
+	cx->star_field_mesh = 0;
+	cx->nstar_field = 0;
+	cx->star_field_radius = 0.0;
+	cx->star_field_have_last_camera = 0;
 	cx->hi_lo_poly_pixel_threshold = 100.0;
 	cx->star_color[0] = 1.0;
 	cx->star_color[1] = 1.0;
@@ -1603,6 +1682,114 @@ void entity_free_space_dust(struct entity_context *cx)
 	cx->space_dust_mesh = 0;
 }
 #endif /* SPACEDUST */
+
+/* Where a recycled star is put back: hard against the outer face, where the far fade is
+ * still zero, so it creeps into view rather than appearing part-lit. */
+#define STAR_FIELD_RECYCLE_OUTER 0.97
+
+/* Put a star on the shell, biased toward the direction the camera is travelling.
+ *
+ * A star leaves the shell by falling behind, so putting it back in a uniformly random
+ * direction lets it reappear beside or ahead of the camera at the near face, popping into
+ * view.  Weighting the placement toward the leading hemisphere puts it back where parallax
+ * would actually bring one in: far ahead, drifting backward.  The weighting is soft rather
+ * than a hard restriction to that hemisphere, which would drain a visible hole astern.
+ *
+ * With no motion recorded yet there is no leading direction, so fall back to uniform. */
+static void reposition_star_field_star(struct entity_context *cx, struct vertex *fs, float radius,
+					int initial)
+{
+	float dist3dsqrd, r, len, u;
+	union vec3 dir, travel;
+
+	random_point_in_sphere(radius, &dir.v.x, &dir.v.y, &dir.v.z, &dist3dsqrd);
+	len = sqrtf(dist3dsqrd);
+	if (len < 1e-6) {
+		dir.v.x = 1.0;
+		dir.v.y = 0.0;
+		dir.v.z = 0.0;
+	} else {
+		vec3_mul_self(&dir, 1.0 / len);
+	}
+
+	if (!initial && cx->star_field_have_last_camera) {
+		travel.v.x = cx->camera.x - cx->star_field_last_camera.v.x;
+		travel.v.y = cx->camera.y - cx->star_field_last_camera.v.y;
+		travel.v.z = cx->camera.z - cx->star_field_last_camera.v.z;
+		if (vec3_magnitude(&travel) > 1e-6) {
+			vec3_normalize_self(&travel);
+			vec3_mul_self(&travel, 0.6);
+			vec3_add_self(&dir, &travel);
+			vec3_normalize_self(&dir);
+		}
+	}
+
+	/* Filled evenly over the shell's depth so the sky is populated the moment it is
+	 * switched on; recycled hard against the outer face so it fades in. */
+	u = fabsf(snis_random_float());
+	if (initial)
+		r = radius * (1.0 + (STAR_FIELD_OUTER - 1.0) * u);
+	else
+		r = radius * STAR_FIELD_OUTER * (STAR_FIELD_RECYCLE_OUTER +
+						(1.0 - STAR_FIELD_RECYCLE_OUTER) * u);
+	fs->x = cx->camera.x + dir.v.x * r;
+	fs->y = cx->camera.y + dir.v.y * r;
+	fs->z = cx->camera.z + dir.v.z * r;
+}
+
+/* Fill a shell around the camera with stars.  radius is the nearest they may come; see the
+ * note on STAR_FIELD_OUTER. */
+void entity_init_star_field(struct entity_context *cx, int nstars, float radius)
+{
+	int i;
+
+	if (cx->nstar_field > 0)
+		entity_free_star_field(cx);
+
+	cx->nstar_field = nstars;
+	if (nstars == 0)
+		return;
+	cx->star_field_radius = radius;
+
+	cx->star_field_mesh = calloc(1, sizeof(*cx->star_field_mesh));
+	cx->star_field_mesh->geometry_mode = MESH_GEOMETRY_POINTS;
+	cx->star_field_mesh->nvertices = nstars;
+	cx->star_field_mesh->v = calloc(1, sizeof(*cx->star_field_mesh->v) * nstars);
+	/* No good way to calculate this: the stars surround the camera and move with it, so
+	   no bounding sphere describes them.  Nothing sorts on it -- the field is drawn
+	   before the passes -- but the entity code expects a radius. */
+	cx->star_field_mesh->radius = INT_MAX;
+
+	for (i = 0; i < nstars; i++)
+		reposition_star_field_star(cx, &cx->star_field_mesh->v[i], radius, 1);
+	mesh_graph_dev_init(cx->star_field_mesh);
+
+	cx->star_field_mesh->material = 0;
+
+	cx->star_field = add_entity(cx, cx->star_field_mesh, 0, 0, 0, GRAY75);
+}
+
+/* Put the star field entity back after a remove_all_entity(), reusing the existing mesh so
+ * the stars keep the world positions they had -- rebuilding would re-roll the whole sky, and
+ * a sky that changes every time the scene is rebuilt is not a sky.  A no-op if the field is
+ * off, was never built, or is already present. */
+void entity_readd_star_field(struct entity_context *cx)
+{
+	if (cx->nstar_field <= 0 || !cx->star_field_mesh || cx->star_field)
+		return;
+	cx->star_field = add_entity(cx, cx->star_field_mesh, 0, 0, 0, GRAY75);
+}
+
+void entity_free_star_field(struct entity_context *cx)
+{
+	cx->nstar_field = 0;
+	cx->star_field_have_last_camera = 0;
+	if (cx->star_field)
+		remove_entity(cx, cx->star_field);
+	cx->star_field = 0;
+	mesh_free(cx->star_field_mesh);
+	cx->star_field_mesh = 0;
+}
 
 void set_renderer(struct entity_context *cx, int renderer)
 {

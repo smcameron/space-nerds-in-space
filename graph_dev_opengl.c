@@ -5722,6 +5722,31 @@ int graph_dev_load_skybox_texture(
 }
 
 
+/* The star field, drawn once before the scene with the depth test off.  The fade is zero at
+ * both faces of the shell and full across the middle third, so stars recycling in and out at
+ * the boundaries are never seen to do it; see the STAR_FIELD_OUTER note in entity.c for why
+ * the radius is a floor rather than a ceiling. */
+void graph_dev_draw_star_field(struct entity_context *cx, const struct mat44 *mat_mvp)
+{
+	float camera_pos[3], fade_params[4];
+	struct sng_color color = sng_get_color(GRAY75);
+	float r = cx->star_field_radius;
+
+	if (!cx->star_field_mesh || cx->nstar_field <= 0 || r <= 0.0)
+		return;
+
+	camera_pos[0] = cx->camera.x;
+	camera_pos[1] = cx->camera.y;
+	camera_pos[2] = cx->camera.z;
+	fade_params[0] = 1.00 * r;
+	fade_params[1] = 1.50 * r;
+	fade_params[2] = 2.00 * r;
+	fade_params[3] = 3.00 * r;
+
+	graph_dev_raster_point_cloud_mesh(&point_cloud_shader, mat_mvp, cx->star_field_mesh,
+				&color, 1.0, 2.0, 1, camera_pos, fade_params, 1);
+}
+
 void graph_dev_draw_skybox(const struct mat44 *mat_vp)
 {
 	if (!graph_dev_texture_ready(skybox_shader.cube_texture_id))
