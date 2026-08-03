@@ -11871,9 +11871,9 @@ static void respawn_player(struct snis_entity *o, uint8_t warpgate_number)
 	} else { /* Third choice. It's a lonely universe.  Roll the dice. */
 		double x, y, z;
 		for (int i = 0; i < 100; i++) {
-			x = XKNOWN_DIM * (double) rand() / (double) RAND_MAX;
-			y = 0;
-			z = ZKNOWN_DIM * (double) rand() / (double) RAND_MAX;
+			x = XKNOWN_DIM * (double) rand() / (double) RAND_MAX - XKNOWN_DIM / 2.0;
+			y = XKNOWN_DIM * (double) rand() / (double) RAND_MAX - XKNOWN_DIM / 2.0;
+			z = XKNOWN_DIM * (double) rand() / (double) RAND_MAX - XKNOWN_DIM / 2.0;
 			if (dist3d(x - SUNX, y - SUNY, z - SUNZ) > SUN_DIST_LIMIT)
 				break;
 		}
