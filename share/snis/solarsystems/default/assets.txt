@@ -20,3 +20,26 @@ sun texture: ../../textures/sun.png
 skybox texture: ../../textures/orange-haze
 star location: 0 0 0
 
+# --- the star, described for the procedural renderer ---
+# Nothing here changes how this system looks: with no "sun style" line it keeps the
+# textured billboard it has always had.  These are what the star becomes if you flip
+# SET SUN_STYLE = 1 on the demon console, fitted to ../../textures/sun.png so that the
+# two look as alike as the shader's terms allow.  See
+# doc/star-rendering-and-lighting-notes.txt for the derivation.
+#
+# Width of the star's visible disc within the texture.  This also sets the star's world
+# size, since there is no "star diameter" line: pixels * 30000 / texture_width.
+star diameter pixels: 80
+# Colour matched to the texture's glow: the temperature is the nearest blackbody, the
+# tint is whatever the locus cannot reach.
+star temperature: 5150
+star tint: 0.904 1.000 0.892
+# Set so the star's half-light radius matches the texture's.  Note the scale: brightness
+# multiplies a profile peaking at 1, so values predating the PSF rework are ~50x too big.
+star brightness: 27
+#
+# "star light tint", "star dark tint" and "star shadow darkening" are deliberately absent:
+# they default to 0, which is the untinted lighting this system has always had.  A system
+# that wants to be lit by the colour of its own star sets them; 0.45 / 0.06 / 0 is what
+# shadow_lab settled on.
+
