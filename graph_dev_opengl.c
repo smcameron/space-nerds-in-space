@@ -1022,6 +1022,8 @@ struct graph_dev_gl_point_cloud_shader {
 	GLint point_size_id;
 	GLint color_id;
 	GLint time_id;
+	GLint camera_pos_id;  /* world-space eye, for a per-point distance fade */
+	GLint fade_params_id; /* (near0, near1, far0, far1); w <= 0 leaves points flat */
 };
 
 struct graph_dev_gl_skybox_shader {
@@ -2499,9 +2501,13 @@ static void graph_dev_raster_line_mesh(struct entity *e, const struct mat44 *mat
 	PROFILE_ZONE_END();
 }
 
+/* camera_pos and fade_params are optional: pass NULL for both and the points come out flat,
+ * the same size and the same colour, which is what every point cloud but the star field
+ * wants.  no_depth_test draws without testing or writing depth, for a cloud that is meant to
+ * sit behind the whole scene rather than at a depth of its own. */
 void graph_dev_raster_point_cloud_mesh(struct graph_dev_gl_point_cloud_shader *shader,
 	const struct mat44 *mat_mvp, struct mesh *m, struct sng_color *point_color, float alpha, float pointSize,
-	int do_blend)
+	int do_blend, const float camera_pos[3], const float fade_params[4], int no_depth_test)
 {
 	PROFILE_ZONE_START("graph_dev_raster_point_cloud_mesh");
 
@@ -2514,7 +2520,8 @@ void graph_dev_raster_point_cloud_mesh(struct graph_dev_gl_point_cloud_shader *s
 
 	struct mesh_gl_info *ptr = m->graph_ptr;
 
-	glEnable(GL_DEPTH_TEST);
+	if (!no_depth_test)
+		glEnable(GL_DEPTH_TEST);
 	glEnable(GL_VERTEX_PROGRAM_POINT_SIZE);
 
 	if (do_blend) {
@@ -2535,6 +2542,14 @@ void graph_dev_raster_point_cloud_mesh(struct graph_dev_gl_point_cloud_shader *s
 		float time = fmod(time_now_double(), 1.0);
 		glUniform1f(shader->time_id, time);
 	}
+
+	if (shader->camera_pos_id >= 0)
+		glUniform3f(shader->camera_pos_id, camera_pos ? camera_pos[0] : 0.0,
+				camera_pos ? camera_pos[1] : 0.0, camera_pos ? camera_pos[2] : 0.0);
+	if (shader->fade_params_id >= 0)
+		glUniform4f(shader->fade_params_id, fade_params ? fade_params[0] : 0.0,
+				fade_params ? fade_params[1] : 0.0, fade_params ? fade_params[2] : 0.0,
+				fade_params ? fade_params[3] : 0.0);
 
 	glEnableVertexAttribArray(shader->vertex_position_id);
 	glBindBuffer(GL_ARRAY_BUFFER, ptr->vertex_buffer);
@@ -2784,7 +2799,8 @@ static void graph_dev_raster_particle_animation(struct entity *e,
 		graph_dev_raster_line_mesh(e, &transform->mvp, e->m, &white);
 
 		struct sng_color red = sng_get_color(RED);
-		graph_dev_raster_point_cloud_mesh(&point_cloud_shader, &transform->mvp, e->m, &red, 1.0, 3.0, 0);
+		graph_dev_raster_point_cloud_mesh(&point_cloud_shader, &transform->mvp, e->m, &red, 1.0, 3.0, 0,
+			NULL, NULL, 0);
 	}
 
 	PROFILE_ZONE_END();
@@ -3371,7 +3387,7 @@ void graph_dev_draw_entity(struct entity_context *cx, struct entity *e, union ve
 			shader = &point_cloud_shader;
 
 			graph_dev_raster_point_cloud_mesh(shader, &transform->mvp, e->m, &line_color, alpha, point_size,
-				do_blend);
+				do_blend, NULL, NULL, 0);
 		}
 		break;
 	case MESH_GEOMETRY_PARTICLE_ANIMATION:
@@ -4566,6 +4582,8 @@ static void setup_point_cloud_shader(const char *basename, struct graph_dev_gl_p
 	shader->point_size_id = glGetUniformLocation(shader->program_id, "u_PointSize");
 	shader->color_id = glGetUniformLocation(shader->program_id, "u_Color");
 	shader->time_id = glGetUniformLocation(shader->program_id, "u_Time");
+	shader->camera_pos_id = glGetUniformLocation(shader->program_id, "u_CameraPos");
+	shader->fade_params_id = glGetUniformLocation(shader->program_id, "u_FadeParams");
 }
 
 static void setup_color_by_w_shader(struct graph_dev_gl_color_by_w_shader *shader)
