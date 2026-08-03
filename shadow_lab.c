@@ -2774,6 +2774,9 @@ static void load_solarsystem(int index)
 			star_light_star_brightness(spec->star_temperature);
 	memcpy(sun_tint, spec->star_tint, sizeof(sun_tint));
 	sun_material.sun.edge_softness = spec->sun_edge_softness;
+	sun_light_tint = spec->star_light_tint;
+	sun_dark_tint = spec->star_dark_tint;
+	sun_shadow_darkening = spec->star_shadow_darkening;
 	/* The sun style is a VIEW setting here, not a property of the star: SIDE BY SIDE has no
 	 * equivalent in a config at all, and having the view flip out from under you every time
 	 * you stepped to the next system would defeat the point of stepping through them.  Take

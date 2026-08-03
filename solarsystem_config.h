@@ -82,6 +82,15 @@ struct solarsystem_asset_spec {
 	float star_brightness;
 	int star_brightness_specified; /* 0 means follow the temperature */
 
+	/* Star-coloured lighting (star_light.c).  All three at 0 reproduces the untinted look. */
+	float star_light_tint;		/* how far lit surfaces lean toward the star's colour */
+	float star_dark_tint;		/* how far shaded surfaces lean toward its complement */
+	/* How far the shaded side is darkened, 0 for not at all.  Unconditional -- it applies to
+	 * every star, unlike its predecessor, which only bit on stars past the white point and so
+	 * was inert for most of them.  A plain number a system sets for whatever reason it likes:
+	 * nothing infers it from the star's colour or temperature any more. */
+	float star_shadow_darkening;
+
 	/* How many of the star rendering keys above the file actually set.  Zero means every
 	 * value here is a default, which matters because the defaults are fitted to one
 	 * particular sun texture: a system that says nothing gets that star's parameters

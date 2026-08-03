@@ -131,7 +131,13 @@ struct solarsystem_asset_spec *solarsystem_asset_spec_read(char *filename)
 	a->star_tint[1] = 1.0;
 	a->star_tint[2] = 1.0;
 	a->sun_edge_softness = 0.01;
-	/* Star-coloured lighting, as tuned in shadow_lab.  All three at 0 = the old untinted look. */
+	/* Star-coloured lighting.  All three default to 0, which is exactly the flat white light
+	 * and grey ambient the game has always had: a system opts into being lit by its star the
+	 * same way it opts into the procedural disc, by saying so.  The values shadow_lab settled
+	 * on are 0.45 / 0.06 / 0. */
+	a->star_light_tint = 0.0;
+	a->star_dark_tint = 0.0;
+	a->star_shadow_darkening = 0.0;
 
 	while (!feof(f)) {
 		l = fgets(line, 1000, f);
@@ -404,6 +410,24 @@ struct solarsystem_asset_spec *solarsystem_asset_spec_read(char *filename)
 				goto bad_line;
 			a->star_keys_specified++;
 			continue;
+		} else if (has_prefix("star light tint:", line)) {
+			if (parse_float_field(filename, ln, line, "star light tint",
+						0.0, 1.0, &a->star_light_tint))
+				goto bad_line;
+			a->star_keys_specified++;
+			continue;
+		} else if (has_prefix("star dark tint:", line)) {
+			if (parse_float_field(filename, ln, line, "star dark tint",
+						0.0, 1.0, &a->star_dark_tint))
+				goto bad_line;
+			a->star_keys_specified++;
+			continue;
+		} else if (has_prefix("star shadow darkening:", line)) {
+			if (parse_float_field(filename, ln, line, "star shadow darkening",
+						0.0, 1.0, &a->star_shadow_darkening))
+				goto bad_line;
+			a->star_keys_specified++;
+			continue;
 		} else if (has_prefix("star location:", line)) {
 			/* On the client, this info will be overridden by info from the lobby,
 			 * On the server, this info is authoritative.
@@ -537,6 +561,8 @@ static void print_solarsystem_config(char *name, struct solarsystem_asset_spec *
 	printf("  star diameter: %g (%g px in the texture)\n",
 		ss->star_diameter, ss->star_diameter_pixels);
 	printf("  sun edge softness: %g\n", ss->sun_edge_softness);
+	printf("  star light tint: %g, dark tint: %g, shadow darkening: %g\n",
+		ss->star_light_tint, ss->star_dark_tint, ss->star_shadow_darkening);
 	printf("  star keys specified: %d%s\n", ss->star_keys_specified,
 		ss->star_keys_specified ? "" : " (every star value above is a default)");
 	printf("  nplanet textures: %d\n", ss->nplanet_textures);

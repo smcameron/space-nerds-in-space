@@ -31,6 +31,9 @@ int test_solarsystem_config(char *filename)
 	fprintf(stderr, "s->star_tint = %f %f %f\n",
 		s->star_tint[0], s->star_tint[1], s->star_tint[2]);
 	fprintf(stderr, "s->sun_edge_softness = %f\n", s->sun_edge_softness);
+	fprintf(stderr, "s->star_light_tint = %f\n", s->star_light_tint);
+	fprintf(stderr, "s->star_dark_tint = %f\n", s->star_dark_tint);
+	fprintf(stderr, "s->star_shadow_darkening = %f\n", s->star_shadow_darkening);
 	fprintf(stderr, "s->star_keys_specified = %d\n", s->star_keys_specified);
 	fprintf(stderr, "s->nplanet_textures = %d\n", s->nplanet_textures);
 	for (i = 0; i < s->nplanet_textures; i++) {
