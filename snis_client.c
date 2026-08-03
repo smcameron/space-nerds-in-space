@@ -430,6 +430,13 @@ static float sun_edge_softness = 0.03;		/* tweakable */
 /* The billboard is sized to just contain the disc plus the glow's visible extent, with a small
  * border, so the falloff is never clipped off square at the quad's edge. */
 #define SUN_SHADER_BILLBOARD_MARGIN 1.1
+
+/* Star-coloured lighting (star_light.c): tint lit surfaces toward the star's colour, shaded
+ * ones toward its complement, and darken the shaded side.  All three at 0 is exactly the
+ * untinted look the game had before. */
+static float star_light_tint = 0.0;		/* tweakable */
+static float star_dark_tint = 0.0;		/* tweakable */
+static float star_shadow_darkening = 0.0;	/* tweakable */
 static int main_nav_hybrid = 0; /* tweakable */
 static float explosion_multiplier = 5.0; /* tweakable */
 static float main_view_azimuth_angle = 0.0; /* tweakable */
@@ -9677,6 +9684,17 @@ static void update_sun_entity(void)
 	update_entity_scale(sun_entity, billboard_world / SUN_BILLBOARD_SIZE);
 }
 
+/* Tint the scene's lighting by the star's colour.  All three strengths at 0 reproduces the
+ * untinted white light and grey ambient the game used before, so this is a no-op until a solar
+ * system (or the demon console) asks for it. */
+static void update_star_lighting(void)
+{
+	float r, g, b;
+
+	star_light_tinted_blackbody_color(star_temperature, star_tint, &r, &g, &b);
+	set_star_light_tint(ecx, r, g, b, star_light_tint, star_dark_tint, star_shadow_darkening);
+}
+
 static void show_lens_flare(struct snis_entity *o, union vec3 *camera_pos, union quat *camera_orientation)
 {
 #ifndef WITHOUTOPENGL
@@ -9945,6 +9963,7 @@ static void show_weapons_camera_view(void)
 	set_window_offset(ecx, 0, 0);
 	set_lighting(ecx, SUNX, SUNY, SUNZ);
 	set_ambient_light(ecx, ambient_light);
+	update_star_lighting();
 	update_sun_entity();
 	calculate_camera_transform(ecx);
 	entity_context_set_hi_lo_poly_pixel_threshold(ecx, low_poly_threshold);
@@ -10406,6 +10425,7 @@ static void show_mainscreen(void)
 	set_window_offset(ecx, 0, 0);
 	set_lighting(ecx, SUNX, SUNY, SUNZ);
 	set_ambient_light(ecx, ambient_light);
+	update_star_lighting();
 	update_sun_entity();
 	calculate_camera_transform(ecx);
 	entity_context_set_hi_lo_poly_pixel_threshold(ecx, low_poly_threshold);
@@ -19005,6 +19025,12 @@ static struct tweakable_var_descriptor client_tweak[] = {
 		&star_brightness, 'f', 0.0, 1e9, 3000.0, 0, 0, 0, 0 },
 	{ "SUN_EDGE_SOFTNESS", "0.0 TO 1.0 - LIMB WIDTH AS A FRACTION OF THE DISC RADIUS",
 		&sun_edge_softness, 'f', 0.0, 1.0, 0.03, 0, 0, 0, 0 },
+	{ "STAR_LIGHT_TINT", "0.0 TO 1.0 - HOW FAR LIT SURFACES LEAN TOWARD THE STAR'S COLOUR",
+		&star_light_tint, 'f', 0.0, 1.0, 0.0, 0, 0, 0, 0 },
+	{ "STAR_DARK_TINT", "0.0 TO 1.0 - HOW FAR SHADED SURFACES LEAN TOWARD ITS COMPLEMENT",
+		&star_dark_tint, 'f', 0.0, 1.0, 0.0, 0, 0, 0, 0 },
+	{ "STAR_SHADOW_DARKENING", "0.0 TO 1.0 - HOW FAR THE SHADED SIDE IS DARKENED, 0 FOR NOT AT ALL",
+		&star_shadow_darkening, 'f', 0.0, 1.0, 0.0, 0, 0, 0, 0 },
 	{ "PLANET_SPECULARITY", "0 OR 1 TO ENABLE/DISABLE PLANET_SPECULARITY",
 		&graph_dev_planet_specularity, 'i', 0.0, 0.0, 0.0, 0, 1, 1, 0 },
 	{ "MAIN_NAV_HYBRID", "0 OR 1 TO ENABLE/DISABLE MAINSCREEN/NAV HYBRID",
@@ -23853,6 +23879,9 @@ static int load_per_solarsystem_textures(void)
 			solarsystem_assets->star_brightness :
 			star_light_star_brightness(solarsystem_assets->star_temperature);
 	sun_edge_softness = solarsystem_assets->sun_edge_softness;
+	star_light_tint = solarsystem_assets->star_light_tint;
+	star_dark_tint = solarsystem_assets->star_dark_tint;
+	star_shadow_darkening = solarsystem_assets->star_shadow_darkening;
 
 	update_splash_progress(60);
 	for (i = 0; i < solarsystem_assets->nplanet_textures; i++) {
