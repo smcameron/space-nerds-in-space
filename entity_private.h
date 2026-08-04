@@ -90,10 +90,12 @@ struct entity_context {
 	int *far_to_near_entity_depth; /* array [maxobjs] */
 	int *near_to_far_entity_depth; /* array [maxobjs] */
 	struct camera_info camera;
-	struct entity *fake_stars;
-	struct mesh *fake_stars_mesh;
-	int nfakestars; /* = 0; */
-	float fakestars_radius;
+#if SPACEDUST
+	struct entity *space_dust;
+	struct mesh *space_dust_mesh;
+	int ndust_motes; /* = 0; */
+	float space_dust_radius;
+#endif
 	struct mat41 light;
 	float window_offset_x, window_offset_y;
 	float ambient;

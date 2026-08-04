@@ -353,9 +353,11 @@ static int science_cam_timer = 0;
 
 static int suppress_rocket_noise = 0;		/* tweakable */
 static float rocket_noise_volume = 1.0;		/* tweakable */
-static int ecx_fake_stars_initialized = 0;
-static int nfake_stars = 0;
-static volatile int fake_stars_timer = 0;
+#if SPACEDUST
+static int ecx_space_dust_initialized = 0;
+static int ndust_motes= 0;
+static volatile int space_dust_timer = 0;
+#endif
 static volatile int credits_screen_active = 0;
 static int watermark_active = 0;
 
@@ -4819,12 +4821,14 @@ static int key_press_cb(SDL_Window *window, SDL_Keysym *keysym, int key_repeat)
 			sci_mining_bot_pressed((void *) 0);
 			break;
 	case key_toggle_space_dust:
-			if (nfake_stars == 0)
-				nfake_stars = 2000;
+#if SPACEDUST
+			if (ndust_motes == 0)
+				ndust_motes = 2000;
 			else
-				nfake_stars = 0;
-			ecx_fake_stars_initialized = 0;
-			fake_stars_timer = frame_rate_hz;
+				ndust_motes = 0;
+			ecx_space_dust_initialized = 0;
+			space_dust_timer = frame_rate_hz;
+#endif
 			return TRUE;
 	case key_toggle_frame_stats:
 			if (control_key_pressed) {
@@ -9270,16 +9274,18 @@ static void show_common_screen(char *title)
 			sng_center_xy_draw_string("MOUSE MODE = CAPTURED",
 					SMALL_FONT, SCREEN_WIDTH / 2, SCREEN_HEIGHT / 3);
 	}
-	if (fake_stars_timer) {
+#if SPACEDUST
+	if (space_dust_timer) {
 		sng_set_foreground(UI_COLOR(special_options));
-		fake_stars_timer--;
-		if (nfake_stars > 0)
+		space_dust_timer--;
+		if (ndust_motes > 0)
 			sng_center_xy_draw_string("SPACE DUST ENABLED",
 					SMALL_FONT, SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2);
 		else
 			sng_center_xy_draw_string("SPACE DUST DISABLED",
 					SMALL_FONT, SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2);
 	}
+#endif
 
 	if (missing_assets_detected) {
 		sng_set_foreground(UI_COLOR(launcher_missing_assets));
@@ -9828,10 +9834,12 @@ static void show_weapons_camera_view(void)
 	entity_context_set_hi_lo_poly_pixel_threshold(ecx, low_poly_threshold);
 
 	sng_set_foreground(GREEN);
-	if (!ecx_fake_stars_initialized) {
-		ecx_fake_stars_initialized = 1;
-		entity_init_fake_stars(ecx, nfake_stars, 300.0f * 10.0f);
+#if SPACEDUST
+	if (!ecx_space_dust_initialized) {
+		ecx_space_dust_initialized = 1;
+		entity_init_space_dust(ecx, ndust_motes, 300.0f * 10.0f);
 	}
+#endif
 
 	update_black_hole_lenses(&cam_pos, &adjusted_cam_orientation, angle_of_view);
 	render_skybox(ecx);
@@ -10282,10 +10290,12 @@ static void show_mainscreen(void)
 	entity_context_set_hi_lo_poly_pixel_threshold(ecx, low_poly_threshold);
 
 	sng_set_foreground(GREEN);
-	if (!ecx_fake_stars_initialized) {
-		ecx_fake_stars_initialized = 1;
-		entity_init_fake_stars(ecx, nfake_stars, 300.0f * 10.0f);
+#if SPACEDUST
+	if (!ecx_space_dust_initialized) {
+		ecx_space_dust_initialized = 1;
+		entity_init_space_dust(ecx, ndust_motes, 300.0f * 10.0f);
 	}
+#endif
 
 	update_black_hole_lenses(&cam_pos, &camera_orientation, angle_of_view);
 	render_skybox(ecx);

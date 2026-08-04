@@ -864,7 +864,9 @@ void calculate_camera_transform(struct entity_context *cx)
 	calculate_camera_transform_near_far(&cx->camera, &cx->camera.frustum, cx->camera.near, cx->camera.far);
 }
 
-static void reposition_fake_star(struct entity_context *cx, struct vertex *fs, float radius);
+#if SPACEDUST
+static void reposition_space_dust(struct entity_context *cx, struct vertex *fs, float radius);
+#endif
 
 static void update_entity_child_state(struct entity *e)
 {
@@ -1224,7 +1226,7 @@ static void render_shadow_map(struct entity_context *cx)
 
 void render_entities(struct entity_context *cx)
 {
-	int i, j, k, n;
+	int j, k, n;
 	struct camera_info *c = &cx->camera;
 
 	sng_set_3d_viewport(cx->window_offset_x, cx->window_offset_y, c->xvpixels, c->yvpixels);
@@ -1234,19 +1236,21 @@ void render_entities(struct entity_context *cx)
 	/* Render the shadow map before drawing the scene so lit shaders can sample it. */
 	render_shadow_map(cx);
 
-	/* see if the fake stars have wandered outside of our immediate area */
-	if (cx->nfakestars > 0) {
-		float r2 = cx->fakestars_radius * cx->fakestars_radius;
-		for (i = 0; i < cx->nfakestars; i++) {
-			struct vertex *fs = &cx->fake_stars_mesh->v[i];
+#if SPACEDUST
+	/* see if the space dust have wandered outside of our immediate area */
+	if (cx->ndust_motes > 0) {
+		float r2 = cx->space_dust_radius * cx->space_dust_radius;
+		for (int i = 0; i < cx->ndust_motes; i++) {
+			struct vertex *fs = &cx->space_dust_mesh->v[i];
 
 			float dist2 = dist3dsqrd(c->x - fs->x, c->y - fs->y, c->z - fs->z);
 
 			if (dist2 > r2)
-				reposition_fake_star(cx, fs, cx->fakestars_radius);
+				reposition_space_dust(cx, fs, cx->space_dust_radius);
 		}
-		mesh_graph_dev_init(cx->fake_stars_mesh);
+		mesh_graph_dev_init(cx->space_dust_mesh);
 	}
+#endif
 
 	/* For better depth buffer precision do the draw in multiple (two) passes based on the
 	 * dynamic range of near/far, and clear the depth buffer between passes. A good rule of
@@ -1368,7 +1372,7 @@ void render_entities(struct entity_context *cx)
 				float zdist = vec3_dot(&camera_to_entity, &camera_look);
 				if (zdist < 0)
 					continue; /* behind camera, ignore (should already be frustum culled). */
-				if (e->m->geometry_mode == MESH_GEOMETRY_POINTS) /* Ignore fake stars, etc. */
+				if (e->m->geometry_mode == MESH_GEOMETRY_POINTS) /* Ignore space dust, etc. */
 					continue;
 				if (e->m->radius * max_scale >= 299999.0)
 					continue; /* Hack to ignore warp tunnels (r=300000) */
@@ -1526,7 +1530,9 @@ struct entity_context *entity_context_new(int maxobjs, int maxchildren)
 	set_lighting(cx, 0, 0, 0);
 	camera_assign_up_direction(cx, 0.0, 1.0, 0.0);
 	set_window_offset(cx, 0.0, 0.0);
-	cx->nfakestars = 0;
+#if SPACEDUST
+	cx->ndust_motes = 0;
+#endif
 	cx->hi_lo_poly_pixel_threshold = 100.0;
 	cx->star_color[0] = 1.0;
 	cx->star_color[1] = 1.0;
@@ -1545,8 +1551,9 @@ void entity_context_free(struct entity_context *cx)
 	free(cx);
 }
 
+#if SPACEDUST
 /* Re-position a star randomly on the surface of sphere of given radius */
-static void reposition_fake_star(struct entity_context *cx, struct vertex *fs, float radius)
+static void reposition_space_dust(struct entity_context *cx, struct vertex *fs, float radius)
 {
 	/* I tried "on" sphere here, but I like the look of "in" better. */
 	float dist3dsqrd;
@@ -1557,44 +1564,45 @@ static void reposition_fake_star(struct entity_context *cx, struct vertex *fs, f
 }
 
 /* fill a sphere of specified radius with randomly placed stars */
-void entity_init_fake_stars(struct entity_context *cx, int nstars, float radius)
+void entity_init_space_dust(struct entity_context *cx, int ndust_motes, float radius)
 {
 	int i;
-	if (cx->nfakestars > 0)
-		entity_free_fake_stars(cx);
+	if (cx->ndust_motes > 0)
+		entity_free_space_dust(cx);
 
-	cx->nfakestars = nstars;
-	if (nstars == 0)
+	cx->ndust_motes = ndust_motes;
+	if (ndust_motes == 0)
 		return;
-	cx->fakestars_radius = radius;
+	cx->space_dust_radius = radius;
 
-	cx->fake_stars_mesh = calloc(1, sizeof(*cx->fake_stars_mesh));
-	cx->fake_stars_mesh->geometry_mode = MESH_GEOMETRY_POINTS;
-	cx->fake_stars_mesh->nvertices = nstars;
-	cx->fake_stars_mesh->v = calloc(1, sizeof(*cx->fake_stars_mesh->v) * nstars);
+	cx->space_dust_mesh = calloc(1, sizeof(*cx->space_dust_mesh));
+	cx->space_dust_mesh->geometry_mode = MESH_GEOMETRY_POINTS;
+	cx->space_dust_mesh->nvertices = ndust_motes;
+	cx->space_dust_mesh->v = calloc(1, sizeof(*cx->space_dust_mesh->v) * ndust_motes);
 	/* no good way to calculate this as the origin is always 0,0 and the stars move
 	   in space relative to the camera */
-	cx->fake_stars_mesh->radius = INT_MAX;
+	cx->space_dust_mesh->radius = INT_MAX;
 
-	for (i = 0; i < nstars; i++) {
-		reposition_fake_star(cx, &cx->fake_stars_mesh->v[i], radius);
+	for (i = 0; i < ndust_motes; i++) {
+		reposition_space_dust(cx, &cx->space_dust_mesh->v[i], radius);
 	}
-	mesh_graph_dev_init(cx->fake_stars_mesh);
+	mesh_graph_dev_init(cx->space_dust_mesh);
 
-	cx->fake_stars_mesh->material = 0;
+	cx->space_dust_mesh->material = 0;
 
-	cx->fake_stars = add_entity(cx, cx->fake_stars_mesh, 0, 0, 0, GRAY75);
+	cx->space_dust = add_entity(cx, cx->space_dust_mesh, 0, 0, 0, GRAY75);
 }
 
-void entity_free_fake_stars(struct entity_context *cx)
+void entity_free_space_dust(struct entity_context *cx)
 {
-	cx->nfakestars = 0;
-	if (cx->fake_stars)
-		remove_entity(cx, cx->fake_stars);
-	cx->fake_stars = 0;
-	mesh_free(cx->fake_stars_mesh);
-	cx->fake_stars_mesh = 0;
+	cx->ndust_motes = 0;
+	if (cx->space_dust)
+		remove_entity(cx, cx->space_dust);
+	cx->space_dust = 0;
+	mesh_free(cx->space_dust_mesh);
+	cx->space_dust_mesh = 0;
 }
+#endif /* SPACEDUST */
 
 void set_renderer(struct entity_context *cx, int renderer)
 {
