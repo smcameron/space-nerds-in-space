@@ -90,6 +90,23 @@ extern void graph_dev_set_shadow_cascade_splits(const float *split_far, int n);
 /* Cross-cascade blend band as a fraction (0..~0.3) of each cascade's far distance;
  * 0 disables blending (hard cascade boundaries). */
 extern void graph_dev_set_shadow_blend(float fraction);
+
+/* How an entity's in-shade value pulls its ambient down as well as its direct light.
+ *
+ * Ambient stands in for light bounced off everything else in the neighbourhood, so a body deep
+ * in a shadow that covers the whole neighbourhood should receive less of it -- there is less
+ * lit surface around to do the bouncing.  Without this, a fully shadowed body still sits at the
+ * full ambient floor and the shadow can never look like more than a flat grey wash.
+ *
+ * The ramp runs on the entity's RAW in-shade value, which may exceed 1: entity_set_in_shade()
+ * takes an unclipped figure so that a deliberately overstated shadow has somewhere to put its
+ * surplus, and the direct term is clipped separately when it reaches the shader.  Ambient is
+ * left alone up to `lo`, falls to `floor` times its natural value by `hi`, and stays there.
+ *
+ * floor = 1.0 disables it, which is the default: this changes how every lit thing in the game
+ * looks, so it stays inert until something asks for it. */
+extern void graph_dev_set_shade_ambient_ramp(float lo, float hi, float floor);
+extern void graph_dev_get_shade_ambient_ramp(float *lo, float *hi, float *floor);
 extern float graph_dev_get_shadow_blend(void);
 
 #define GRAPH_DEV_RENDER_FAR_TO_NEAR 0

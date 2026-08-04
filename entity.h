@@ -136,6 +136,11 @@ GLOBAL float entity_get_alpha(struct entity *e);
 GLOBAL void entity_update_alpha(struct entity *e, float alpha);
 GLOBAL void entity_update_emit_intensity(struct entity *e, float intensity);
 GLOBAL float entity_get_emit_intensity(struct entity *e);
+/* How much of the star is hidden from this entity by something between the two: 0.0 lit, 1.0
+ * wholly hidden.  Values ABOVE 1.0 are allowed and meaningful.  The direct light is clipped
+ * when it reaches the shader, so anything past 1.0 makes no further difference there, but the
+ * surplus drives the ambient ramp (see graph_dev_set_shade_ambient_ramp()), which is how a
+ * deliberately overstated shadow gets to look deeper than merely unlit. */
 GLOBAL float entity_get_in_shade(struct entity *e);
 GLOBAL void entity_set_in_shade(struct entity *e, float in_shade);
 GLOBAL void entity_context_set_hi_lo_poly_pixel_threshold(struct entity_context *cx, float pixel_threshold);

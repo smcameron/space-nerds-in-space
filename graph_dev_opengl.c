@@ -2956,6 +2956,40 @@ static void graph_dev_raster_black_hole(const struct mat44 *mat_mvp, struct mesh
 	glDepthMask(GL_TRUE);
 	glDisable(GL_BLEND);
 }
+/* See graph_dev.h.  Inert by default (floor 1.0): pulling ambient down changes how every lit
+ * thing in the game looks, so nothing happens until a caller asks for it. */
+static float shade_ambient_lo = 0.5;
+static float shade_ambient_hi = 1.5;
+static float shade_ambient_floor = 1.0;
+
+void graph_dev_set_shade_ambient_ramp(float lo, float hi, float floor)
+{
+	shade_ambient_lo = lo;
+	shade_ambient_hi = hi;
+	shade_ambient_floor = clampf(floor, 0.0, 1.0);
+}
+
+void graph_dev_get_shade_ambient_ramp(float *lo, float *hi, float *floor)
+{
+	if (lo)
+		*lo = shade_ambient_lo;
+	if (hi)
+		*hi = shade_ambient_hi;
+	if (floor)
+		*floor = shade_ambient_floor;
+}
+
+/* What to multiply an entity's ambient by, given its raw (unclipped) in-shade value. */
+static float shade_ambient_scale(float in_shade)
+{
+	float t;
+
+	if (shade_ambient_floor >= 1.0 || shade_ambient_hi <= shade_ambient_lo)
+		return 1.0;
+	t = clampf((in_shade - shade_ambient_lo) / (shade_ambient_hi - shade_ambient_lo), 0.0, 1.0);
+	return 1.0 + t * (shade_ambient_floor - 1.0);
+}
+
 
 static void graph_dev_raster_triangle_mesh(struct entity_context *cx, struct entity *e,
 	union vec3 *eye_light_pos, const struct entity_transform *transform, struct sng_color *line_color)
@@ -2978,6 +3012,7 @@ static void graph_dev_raster_triangle_mesh(struct entity_context *cx, struct ent
 	int atmosphere = 0;
 	int is_sun = 0;
 	int is_black_hole = 0;
+	float shade_scale = 1.0; /* the shadow's pull on ambient; not rtp.ambient_scale */
 	struct sng_color texture_tint = { 1.0, 1.0, 1.0 };
 
 	rtp.mat_mvp = &transform->mvp;
@@ -3334,10 +3369,19 @@ static void graph_dev_raster_triangle_mesh(struct entity_context *cx, struct ent
 				rtp.eye_light_pos = eye_light_pos;
 				rtp.shadow_sphere = &shadow_sphere;
 				rtp.shadow_annulus = &shadow_annulus;
-				rtp.in_shade = e->in_shade;
+				/* The shaders' direct term wants this clipped; the ambient ramp
+				 * wants the raw figure, since a deliberately overstated shadow
+				 * puts its surplus there.  See graph_dev_set_shade_ambient_ramp(). */
+				rtp.in_shade = clampf(e->in_shade, 0.0, 1.0);
 				rtp.water_color = &water_color;
-				rtp.ambient = cx->ambient;
+				shade_scale = shade_ambient_scale(e->in_shade);
+				rtp.ambient = cx->ambient * shade_scale;
 				graph_dev_compute_star_light(cx, rtp.light_color, rtp.ambient_color);
+				/* The textured shaders floor on the star-tinted ambient COLOUR rather
+				 * than on the scalar above, so that has to come down with it. */
+				rtp.ambient_color[0] *= shade_scale;
+				rtp.ambient_color[1] *= shade_scale;
+				rtp.ambient_color[2] *= shade_scale;
 
 				graph_dev_raster_texture(&rtp);
 			} else {
@@ -3357,9 +3401,14 @@ static void graph_dev_raster_triangle_mesh(struct entity_context *cx, struct ent
 					float light_color[3], ambient_color[3];
 
 					graph_dev_compute_star_light(cx, light_color, ambient_color);
+					shade_scale = shade_ambient_scale(e->in_shade);
+					ambient_color[0] *= shade_scale;
+					ambient_color[1] *= shade_scale;
+					ambient_color[2] *= shade_scale;
 					graph_dev_raster_single_color_lit(rtp.mat_mvp, rtp.mat_mv,
 						rtp.mat_normal, &transform->m, e->m, &triangle_color, eye_light_pos,
-						e->in_shade, cx->ambient, light_color, ambient_color);
+						clampf(e->in_shade, 0.0, 1.0), cx->ambient * shade_scale,
+						light_color, ambient_color);
 				}
 			}
 		}
@@ -3860,6 +3909,7 @@ void graph_dev_set_shadow_cascade_splits(const float *split_far, int n)
 	for (i = 0; i < n; i++)
 		shadow_cascade_split_far[i] = split_far[i];
 }
+
 
 void graph_dev_set_shadow_blend(float fraction)
 {
