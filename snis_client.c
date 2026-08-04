@@ -358,6 +358,8 @@ static int ecx_space_dust_initialized = 0;
 static int ndust_motes= 0;
 static volatile int space_dust_timer = 0;
 #endif
+
+#if MOVING_STARFIELD
 /* The star field is a separate thing from the space dust above, and the two are independent:
  * the dust streaks past to give a sense of speed, the star field holds still to give a sense
  * of a sky, and either, both or neither may be up.  Off by default -- it changes how the game
@@ -369,6 +371,8 @@ static int star_field_stars = 32000;		/* tweakable */
 static float star_field_radius = 8750.0;	/* tweakable */
 static int star_field_applied = -1;
 static float star_field_radius_applied = -1.0;
+#endif
+
 static volatile int credits_screen_active = 0;
 static int watermark_active = 0;
 
@@ -9766,6 +9770,7 @@ static void update_black_hole_lenses(const union vec3 *cam_pos,
 	graph_dev_set_gravitational_lenses(n, n ? lens : NULL);
 }
 
+#if MOVING_STARFIELD
 /* Build or tear down the star field to match the tweakables.
  *
  * The tweak system writes the variables straight into memory with no callback, so there is
@@ -9783,6 +9788,7 @@ static void maybe_rebuild_star_field(void)
 	star_field_applied = want;
 	star_field_radius_applied = star_field_radius;
 }
+#endif
 
 static void show_weapons_camera_view(void)
 {
@@ -9869,7 +9875,10 @@ static void show_weapons_camera_view(void)
 		entity_init_space_dust(ecx, ndust_motes, 300.0f * 10.0f);
 	}
 #endif
+
+#if MOVING_STARFIELD
 	maybe_rebuild_star_field();
+#endif
 
 	update_black_hole_lenses(&cam_pos, &adjusted_cam_orientation, angle_of_view);
 	render_skybox(ecx);
@@ -10326,7 +10335,10 @@ static void show_mainscreen(void)
 		entity_init_space_dust(ecx, ndust_motes, 300.0f * 10.0f);
 	}
 #endif
+
+#if MOVING_STARFIELD
 	maybe_rebuild_star_field();
+#endif
 
 	update_black_hole_lenses(&cam_pos, &camera_orientation, angle_of_view);
 	render_skybox(ecx);
@@ -18923,12 +18935,14 @@ static struct tweakable_var_descriptor client_tweak[] = {
 		&graph_dev_atmosphere_ring_shadows, 'i', 0.0, 0.0, 0.0, 0, 1, 1, 0 },
 	{ "BLACK_HOLE_LENSING", "0 OR 1 TO DISABLE OR ENABLE GRAVITATIONAL LENSING OF THE SKYBOX",
 		&black_hole_lensing, 'i', 0.0, 0.0, 0.0, 0, 1, 1, 0 },
+#if MOVING_STARFIELD
 	{ "STAR_FIELD", "0 OR 1 - DISTANT STARS.  SEPARATE FROM THE SPACE DUST; BOTH MAY BE ON",
 		&star_field, 'i', 0.0, 0.0, 0.0, 0, 1, 0, 0 },
 	{ "STAR_FIELD_STARS", "100 TO 64000 - HOW MANY STARS ARE IN THE FIELD",
 		&star_field_stars, 'i', 0.0, 0.0, 0.0, 100, 64000, 32000, 0 },
 	{ "STAR_FIELD_RADIUS", "200 TO 1000000 - HOW CLOSE A STAR MAY COME; A CEILING ON DRIFT RATE",
 		&star_field_radius, 'f', 200.0, 1000000.0, 8750.0, 0, 0, 0, 0 },
+#endif
 	{ "XJOYSTICK_THRESHOLD", "0 TO 64000 - SETS BOUNDARY BETWEEN FINE AND COARSE",
 		&xjoystick_threshold, 'i', 0.0, 0.0, 0.0, 0, 64000, 23000, 0 },
 	{ "YJOYSTICK_THRESHOLD", "0 TO 64000 - SETS BOUNDARY BETWEEN FINE AND COARSE",

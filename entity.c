@@ -868,6 +868,7 @@ void calculate_camera_transform(struct entity_context *cx)
 static void reposition_space_dust(struct entity_context *cx, struct vertex *fs, float radius);
 #endif
 
+#if MOVING_STARFIELD
 /* The radius passed to entity_init_star_field() is the CLOSEST a star may come, not the
  * furthest it may be.  That is the useful way round: parallax rate is speed over distance,
  * so a floor on the distance is a ceiling on the drift, and the radius becomes a promise
@@ -887,6 +888,7 @@ static void reposition_space_dust(struct entity_context *cx, struct vertex *fs, 
 
 static void reposition_star_field_star(struct entity_context *cx, struct vertex *fs, float radius,
 					int initial);
+#endif
 
 static void update_entity_child_state(struct entity *e)
 {
@@ -1272,6 +1274,7 @@ void render_entities(struct entity_context *cx)
 	}
 #endif
 
+#if MOVING_STARFIELD
 	/* The star field recycles on both faces, unlike the space dust above, which only
 	 * recycles stars that have fallen behind.  Recycling on the NEAR face is what enforces
 	 * the distance floor: without it a star ahead closes for as long as you fly at it and
@@ -1295,6 +1298,7 @@ void render_entities(struct entity_context *cx)
 		cx->star_field_last_camera.v.z = c->z;
 		cx->star_field_have_last_camera = 1;
 	}
+#endif
 
 	/* For better depth buffer precision do the draw in multiple (two) passes based on the
 	 * dynamic range of near/far, and clear the depth buffer between passes. A good rule of
@@ -1336,6 +1340,7 @@ void render_entities(struct entity_context *cx)
 			/* the additional 0.1% is to render a little farther to cover seam */
 	}
 
+#if MOVING_STARFIELD
 	/* The star field, drawn once here rather than as an ordinary entity.
 	 *
 	 * Its mesh radius is INT_MAX, since the stars surround the camera and no bounding
@@ -1361,6 +1366,7 @@ void render_entities(struct entity_context *cx)
 		mat44_product_ddf(st.vp, &st.m, &st.mvp);
 		graph_dev_draw_star_field(cx, &st.mvp);
 	}
+#endif
 
 	int pass;
 	for (pass = 0; pass < n_passes; pass++) {
@@ -1388,9 +1394,11 @@ void render_entities(struct entity_context *cx)
 			if (e->m == NULL)
 				continue;
 
+#if MOVING_STARFIELD
 			/* Already drawn above, before the passes and without depth. */
 			if (e == cx->star_field)
 				continue;
+#endif
 
 			/* clear on the first pass and accumulate the state */
 			if (pass == 0) {
@@ -1607,11 +1615,15 @@ struct entity_context *entity_context_new(int maxobjs, int maxchildren)
 #if SPACEDUST
 	cx->ndust_motes = 0;
 #endif
+
+#if MOVING_STARFIELD
 	cx->star_field = 0;
 	cx->star_field_mesh = 0;
 	cx->nstar_field = 0;
 	cx->star_field_radius = 0.0;
 	cx->star_field_have_last_camera = 0;
+#endif
+
 	cx->hi_lo_poly_pixel_threshold = 100.0;
 	cx->star_color[0] = 1.0;
 	cx->star_color[1] = 1.0;
@@ -1683,6 +1695,7 @@ void entity_free_space_dust(struct entity_context *cx)
 }
 #endif /* SPACEDUST */
 
+#if MOVING_STARFIELD
 /* Where a recycled star is put back: hard against the outer face, where the far fade is
  * still zero, so it creeps into view rather than appearing part-lit. */
 #define STAR_FIELD_RECYCLE_OUTER 0.97
@@ -1790,6 +1803,7 @@ void entity_free_star_field(struct entity_context *cx)
 	mesh_free(cx->star_field_mesh);
 	cx->star_field_mesh = 0;
 }
+#endif /* MOVING_STARFIELD */
 
 void set_renderer(struct entity_context *cx, int renderer)
 {

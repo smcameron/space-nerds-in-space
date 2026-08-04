@@ -158,8 +158,11 @@ extern unsigned int graph_dev_texture_to_gpu_no_mipmaps(int texture_id, const ch
 				int w, int h, int hasAlpha, int linear_colorspace);
 extern const char *graph_dev_get_texture_filename(unsigned int);
 extern void graph_dev_draw_skybox(const struct mat44 *mat_vp);
+
+#if MOVING_STARFIELD
 /* Draws the star field once, without depth, before the scene.  A no-op if no field is up. */
 extern void graph_dev_draw_star_field(struct entity_context *cx, const struct mat44 *mat_mvp);
+#endif
 
 /* Gravitational lensing of the skybox.  Each lens bends the starfield around a black hole:
  * an Einstein ring, tangentially smeared arcs outside it, and an inverted second image

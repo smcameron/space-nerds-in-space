@@ -5722,6 +5722,7 @@ int graph_dev_load_skybox_texture(
 }
 
 
+#if MOVING_STARFIELD
 /* The star field, drawn once before the scene with the depth test off.  The fade is zero at
  * both faces of the shell and full across the middle third, so stars recycling in and out at
  * the boundaries are never seen to do it; see the STAR_FIELD_OUTER note in entity.c for why
@@ -5746,6 +5747,7 @@ void graph_dev_draw_star_field(struct entity_context *cx, const struct mat44 *ma
 	graph_dev_raster_point_cloud_mesh(&point_cloud_shader, mat_mvp, cx->star_field_mesh,
 				&color, 1.0, 2.0, 1, camera_pos, fade_params, 1);
 }
+#endif
 
 void graph_dev_draw_skybox(const struct mat44 *mat_vp)
 {

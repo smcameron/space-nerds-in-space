@@ -85,6 +85,8 @@ GLOBAL float get_shadow_map_split_lambda(void);
 GLOBAL void entity_init_space_dust(struct entity_context *cx, int nstars, float radius);
 GLOBAL void entity_free_space_dust(struct entity_context *cx);
 #endif
+
+#if MOVING_STARFIELD
 /* The star field is a second, independent cloud, unrelated to the space dust above except
  * that both are made of points.  radius is the CLOSEST a star may come to the camera, not
  * the furthest: parallax rate is speed over distance, so a floor on the distance is a
@@ -96,6 +98,8 @@ GLOBAL void entity_init_star_field(struct entity_context *cx, int nstars, float 
  * were.  A no-op if the field is off or already present. */
 GLOBAL void entity_readd_star_field(struct entity_context *cx);
 GLOBAL void entity_free_star_field(struct entity_context *cx);
+#endif 
+
 GLOBAL void set_renderer(struct entity_context *cx, int renderer);
 GLOBAL int get_renderer(struct entity_context *cx);
 #define WIREFRAME_RENDERER (1 << 0)

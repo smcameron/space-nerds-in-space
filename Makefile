@@ -64,6 +64,7 @@ BOUNDSFLAGS=-fsanitize=bounds
 endif
 
 SPACEDUST=-DSPACEDUST
+MOVING_STARFIELD=-DMOVING_STARFIELD
 
 # object fild directory
 OD=object_files
@@ -745,7 +746,7 @@ endif
 # -fexceptions is called out for C code using glibc pthreads.
 #
 MYCFLAGS=-DDESTDIR=${DESTDIR} -DPREFIX=${PREFIX} ${DEBUGFLAG} ${PROFILEFLAG} \
-	${OPTIMIZEFLAG} ${ASANFLAG} ${UBSANFLAG} ${SPACEDUST}\
+	${OPTIMIZEFLAG} ${ASANFLAG} ${UBSANFLAG} ${SPACEDUST} ${MOVING_STARFIELD}\
 	--pedantic -Wall -Wextra -Wformat -Wformat=2 -Werror=format-security ${STOP_ON_WARN} -pthread -std=gnu99 ${RDYNAMIC} \
 	$(CFLAGS) -Wvla \
 	-DUSE_SNIS_XWINDOWS_HACKS=${USE_SNIS_XWINDOWS_HACKS} -fno-common \
