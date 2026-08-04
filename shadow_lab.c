@@ -113,6 +113,10 @@ static int planet_index = -1; /* scene[] index of the planet, for live radius/di
  * (update_entity_parent() in its update_planet()) so it inherits position and scale; the lab
  * builds a flat scene[] with no parenting, so update_atmosphere() slaves it by hand instead. */
 static int atmosphere_index = -1;
+/* Unit bearing of the tunable planet in the ecliptic, set at build time.  The distance dial
+ * slides it along this line, so moving it cannot change which way it lies relative to the
+ * other planet -- the bearing separation between the two is the whole point of having two. */
+static union vec3 planet_bearing = { { 1.0, 0.0, 0.0 } };
 static float scene_scale = 1000.0; /* characteristic spacing of the scene, set at load time */
 
 /* Free-fly camera. */
@@ -208,7 +212,9 @@ static int lab_tuning(void)
 static union vec3 scene_center = { { 0.0, 0.0, 0.0 } };
 static union vec3 sun_pos = { { 40000.0, 60000.0, 30000.0 } };
 static float sun_azimuth = 0.6;
-static float sun_elevation = 0.5;
+/* Elevation 0 puts the sun in the ecliptic, level with the planets and the ship cluster, so
+ * azimuth alone drags a planet across it. */
+static float sun_elevation = 0.0;
 static float sun_distance = 90000.0;
 static float sun_radius = 2812.5; /* = default star_diameter (5625) / 2 */
 static float deepest_planet_shade = 0.0; /* deepest analytic ship shading this frame, for the HUD */
@@ -702,9 +708,21 @@ static void build_scene(void)
 		spacing = 1200.0;
 	scene_scale = spacing;
 
-	/* The occluder for the analytic planet umbra/penumbra test: lowering the sun (down arrow)
-	 * swings it between the sun and the ship cluster, sweeping the ships through the penumbra
-	 * into the umbra. */
+	/* The occluders for the analytic planet umbra/penumbra test.  Both lie in the ecliptic --
+	 * the XZ plane through the ship cluster, perpendicular to the +Y polar axis -- so that
+	 * swinging the sun's azimuth (left/right arrows) drags each of them in turn between the
+	 * sun and the cluster, sweeping the ships through the penumbra into the umbra.
+	 *
+	 * The single planet used to sit on the -Y axis with the sun orbiting IT rather than the
+	 * ships, which put the one interesting body directly on the pole and made an eclipse a
+	 * two-handed job.  An ecliptic costs nothing for the shadow work -- disc_occlusion_fraction()
+	 * takes only angular quantities, so nothing spatial survives it -- and it is what any body
+	 * orbiting the star has to share if a shadow cast from near the star is to sweep across it.
+	 *
+	 * The second planet is bigger and further out on a different bearing.  Two of them is what
+	 * makes a shadow cast from the star legible: one body going dark could be anything, but two
+	 * going dark a few seconds apart, in the order their bearings predict, can only be
+	 * something sweeping past the star. */
 	planet_mesh = mesh_unit_spherified_cube(64);
 	if (planet_mesh) {
 		/* Game-legal absolute sizes and distances, so what is measured here transfers to
@@ -715,11 +733,20 @@ static void build_scene(void)
 		 * MIN_PLANET_RADIUS (800, snis.h).  That leaves the ship->planet distance as the
 		 * single tuned dial: 3570 puts the penumbra band at roughly the ship cluster's
 		 * span, so several ships straddle the terminator at once.  Umbra still forms
-		 * easily (planet subtends ~12.8 degrees against the sun's ~1.6).  All are
-		 * adjustable live (planet radius/distance 3/4, 5/6; sun distance/radius U/O, G/H). */
-		float planet_r = 800.0;
+		 * easily (planet subtends ~12.8 degrees against the sun's ~1.6).  Radius and
+		 * distance are both live on the SCENE mode's grid, as are the sun's on SUN. */
+		static const struct {
+			float azimuth;	/* bearing in the ecliptic, radians */
+			float distance;
+			float radius;
+		} planet_layout[] = {
+			{ 0.0, 3570.0, 800.0 },	 /* the umbra-test planet; the tuned one */
+			{ 1.4, 9000.0, 1200.0 },
+		};
+		float planet_r = planet_layout[0].radius;
 		struct material *pmat;
 		struct scene_object *p, *atm;
+		unsigned int n;
 
 		/* Use the game's textured-planet material, not a bare mesh.  A NULL material falls
 		 * through to single_color_lit_shader, which is one of the few shaders that always
@@ -731,7 +758,7 @@ static void build_scene(void)
 		planet_material.textured_planet.texture_id = load_cubemap("planet-texture4-");
 		pmat = planet_material.textured_planet.texture_id ? &planet_material : NULL;
 		p = add_scene_object(SCENE_PLANET, planet_mesh, pmat,
-				0.0, -3570.0, 0.0, planet_r, GRAY50);
+				planet_layout[0].distance, 0.0, 0.0, planet_r, GRAY50);
 
 		/* The atmosphere shell, built the way snis_client builds it (see the has_atmosphere
 		 * branch of update_planet()): a slightly larger sphere at alpha 0.5 carrying
@@ -743,8 +770,8 @@ static void build_scene(void)
 		atmosphere_material.atmosphere.brightness_modifier = 1.0;
 		atmosphere_material.atmosphere.ring_material = NULL;
 		atm = add_scene_object(SCENE_ATMOSPHERE, planet_mesh, &atmosphere_material,
-				0.0, -3570.0, 0.0, planet_r * atmosphere_material.atmosphere.scale,
-				WHITE);
+				planet_layout[0].distance, 0.0, 0.0,
+				planet_r * atmosphere_material.atmosphere.scale, WHITE);
 		if (atm) {
 			atm->alpha = 0.5;
 			atm->no_cast_shadow = 1;
@@ -758,17 +785,36 @@ static void build_scene(void)
 			 * refit.  This matches the plan's "planets cast never" policy. */
 			p->no_cast_shadow = 1;
 			planet_index = (int) (p - scene);
-			scene_center = p->pos; /* orbit the sun about the planet */
-			sun_distance = 100000.0; /* game-typical; SUN_DIST_LIMIT is 30000 (snis.h) */
-			/* NOT sun_radius.  How far the star sits from the cluster is this scene's
-			 * business, but how big it is belongs to the solar system, and
-			 * load_solarsystem() has already worked it out from the config by the time
-			 * we get here.  Setting it here threw that away, so every system opened with
-			 * the default 2812.5 star whatever its config said -- and then jumped to the
-			 * right size the moment you stepped to the next system, since cycling runs
-			 * load_solarsystem() without build_scene().  The static initialiser still
-			 * supplies the default when there is no config at all. */
+			vec3_init(&planet_bearing, cosf(planet_layout[0].azimuth), 0.0,
+					sinf(planet_layout[0].azimuth));
 		}
+		/* The rest of the layout.  Only the first is live-tunable; leaving the others
+		 * fixed keeps the bearing separation steady while the first one is moved. */
+		for (n = 1; n < ARRAYSIZE(planet_layout); n++) {
+			struct scene_object *q;
+			float x = planet_layout[n].distance * cosf(planet_layout[n].azimuth);
+			float z = planet_layout[n].distance * sinf(planet_layout[n].azimuth);
+
+			q = add_scene_object(SCENE_PLANET, planet_mesh, pmat,
+						x, 0.0, z, planet_layout[n].radius, GRAY50);
+			if (!q)
+				continue;
+			q->color = GRAY50;
+			q->no_cast_shadow = 1;
+		}
+		/* The sun orbits the ship cluster at the origin, not the planet: with everything
+		 * in one plane, azimuth alone now drags each planet in turn across the star. */
+		scene_center.v.x = 0.0;
+		scene_center.v.y = 0.0;
+		scene_center.v.z = 0.0;
+		sun_distance = 100000.0; /* game-typical; SUN_DIST_LIMIT is 30000 (snis.h) */
+		/* NOT sun_radius.  How far the star sits from the cluster is this scene's business,
+		 * but how big it is belongs to the solar system, and load_solarsystem() has already
+		 * worked it out from the config by the time we get here.  Setting it here threw that
+		 * away, so every system opened with the default 2812.5 star whatever its config said
+		 * -- and then jumped to the right size the moment you stepped to the next system,
+		 * since cycling runs load_solarsystem() without build_scene().  The static
+		 * initialiser still supplies the default when there is no config at all. */
 	}
 
 	/* A tight ship cluster so several ships sit inside the penumbra band at once and shadow
@@ -1464,8 +1510,11 @@ static const char * const help_text[] = {
 	,
 	"  F5 SCENE MODE\n"
 	"  - PLANET-R AND PLANET-DIST SIZE THE PLANET AND MOVE IT AWAY FROM THE SHIP CLUSTER.\n"
-	"    FARTHER, WITH A TIGHTER CLUSTER, GIVES A WIDER AND SOFTER PENUMBRA.  LOWER THE SUN\n"
-	"    (DOWN ARROW) TO SWING THE PLANET BETWEEN IT AND THE SHIPS.\n"
+	"    FARTHER, WITH A TIGHTER CLUSTER, GIVES A WIDER AND SOFTER PENUMBRA.\n"
+	"  - BOTH TEST PLANETS AND THE SHIP CLUSTER LIE IN THE ECLIPTIC (THE XZ PLANE, SQUARE TO\n"
+	"    THE +Y POLE), SO SWEEPING THE SUN'S AZIMUTH (LEFT/RIGHT ARROWS) DRAGS EACH PLANET\n"
+	"    IN TURN BETWEEN THE SUN AND THE SHIPS.  ONLY THE NEAR ONE IS TUNABLE; THE FAR ONE\n"
+	"    STAYS PUT SO THE BEARING SEPARATION BETWEEN THEM HOLDS STILL.\n"
 	"  - SPEED SCALES FLIGHT.  THE LAB'S SPEEDS COME FROM ITS OWN SCENE SCALE AND ARE SOME\n"
 	"    14x SLOWER THAN THE GAME'S SHIP; RAISE THIS TO JUDGE THE STAR FIELD AT THE SPEED\n"
 	"    PLAYERS FLY.\n\n"
@@ -1886,11 +1935,11 @@ static void lab_set_planet_radius(float v)
 		scene[planet_index].scale = v;
 }
 
-/* The planet sits out along -Y from the ship cluster near the origin, and the sun orbits
- * whatever it is nearest, so moving it moves the scene centre with it. */
+/* The planet slides along its own bearing in the ecliptic, away from the ship cluster at the
+ * origin.  The sun orbits the cluster, not the planet, so this does not move the scene centre. */
 static float lab_get_planet_distance(void)
 {
-	return planet_index >= 0 ? -scene[planet_index].pos.v.y : 0.0;
+	return planet_index >= 0 ? vec3_magnitude(&scene[planet_index].pos) : 0.0;
 }
 
 static void lab_set_planet_distance(float v)
@@ -1903,8 +1952,8 @@ static void lab_set_planet_distance(float v)
 	floor_distance = scene[planet_index].scale * 1.5;
 	if (v < floor_distance)
 		v = floor_distance;
-	scene[planet_index].pos.v.y = -v;
-	scene_center = scene[planet_index].pos;
+	scene[planet_index].pos = planet_bearing;
+	vec3_mul_self(&scene[planet_index].pos, v);
 }
 
 static const struct lab_param shadow_param[] = {
