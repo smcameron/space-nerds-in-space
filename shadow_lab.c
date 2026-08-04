@@ -717,9 +717,8 @@ static void build_scene(void)
 	}
 
 	/* The black holes: camera-facing billboards carrying the procedural event-horizon material
-	 * (MATERIAL_BLACK_HOLE), rather than snis_client's painted textures/black_hole.png.  The
-	 * disc's edge has to sit at a known angle for the lensing to line up against it, which a
-	 * blob whose alpha fades out wherever the artwork says cannot do -- see black_hole.frag.
+	 * (MATERIAL_BLACK_HOLE). The disc's edge has to sit at a known angle for the lensing to
+	 * line up against it -- see black_hole.frag.
 	 * Positions and scales are refreshed every frame by update_black_holes(), so the values
 	 * here only have to be non-degenerate.  They must not cast into the CSM depth map -- a
 	 * caster this size sweeping across would black out the whole scene, the same reason the

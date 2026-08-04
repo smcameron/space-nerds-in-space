@@ -23574,10 +23574,7 @@ static int load_static_textures(void)
 	load_texture_mapped_material(&small_block_material, "textures/spaceplate_small.png",
 				"textures/spaceplate_small_emit.png");
 
-	/* Procedural (MATERIAL_BLACK_HOLE) rather than the painted textures/black_hole.png.  The
-	 * disc's edge has to land at a known angle, because that is where the skybox's lensing
-	 * floors its deflection and relies on the disc to cover the singularity; a painted blob's
-	 * edge is wherever its alpha happens to fade out, which is both fuzzy and resolution-bound.
+	/* Procedural (MATERIAL_BLACK_HOLE)
 	 * One material serves every hole, since the radii inside it are ratios in the billboard's
 	 * UV space rather than absolute sizes -- see material_black_hole_set_geometry(), which also
 	 * hands back the billboard scale that goes with them. */
