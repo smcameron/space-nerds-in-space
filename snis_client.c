@@ -3370,6 +3370,9 @@ static void move_objects(void)
 		case OBJTYPE_ASTEROID:
 			move_object(timestamp, o, &interpolate_generic_object);
 			spin_asteroid(timestamp, o);
+			/* The reason this used to do nothing: an asteroid draws through the
+			 * cubemap shader, which never declared u_in_shade, so the value was
+			 * uploaded and dropped on the floor.  The shader takes it now. */
 			update_shading_planet(o);
 			break;
 		case OBJTYPE_WARP_CORE:

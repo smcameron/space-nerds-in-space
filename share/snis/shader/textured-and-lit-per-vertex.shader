@@ -8,6 +8,7 @@
 	uniform mat3 u_NormalMatrix;
 	uniform vec3 u_LightPos;   // The position of the light in eye space.
 	uniform float u_Ambient;
+	uniform float u_in_shade;  // 0.0 lit, 1.0 fully hidden from the star (penumbra between)
 
 	in vec4 a_Position; // Per-vertex position information we will pass in.
 	in vec3 a_Normal;   // Per-vertex normal information we will pass in.
@@ -26,7 +27,7 @@
 
 		// Calculate the dot product of the light vector and vertex normal. If the normal and light vector are
 		// pointing in the same direction then it will get max illumination.
-		float diffuse = max(u_Ambient, dot(normal, light_dir));
+		float diffuse = max(u_Ambient, (1.0 - u_in_shade) * dot(normal, light_dir));
 
 		// Multiply the color by the illumination level. It will be interpolated across the triangle.
 		v_LightColor = vec3(diffuse);

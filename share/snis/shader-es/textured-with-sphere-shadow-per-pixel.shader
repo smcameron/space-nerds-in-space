@@ -81,6 +81,7 @@
 	varying float v_sameside;		// 1.0 if eye and light are on same side of ring plane, 0.0 otherwise
 
 	uniform sampler2D u_AlbedoTex;
+	uniform float u_in_shade;  // 0.0 lit, 1.0 fully hidden from the star (penumbra between)
 	uniform vec4 u_Sphere; /* eye space occluding sphere, x,y,z = center, w = radius^2 */
 	uniform float u_ring_inner_radius;
 	uniform float u_ring_outer_radius;
@@ -143,6 +144,11 @@
 		gl_FragColor = shadow_tint * texture2D(u_AlbedoTex, txcoord);
 		gl_FragColor.rgb *= v_darkside_shading + (0.5 * (1.0 - v_darkside_shading) * 0.5 * abs(gl_FragColor.a - 0.5));
 		gl_FragColor.rgb += not_in_shadow * v_sameside * spec * spec_color * gl_FragColor.a;
+
+		/* Whatever fraction of the star is hidden from here by another body -- a planet's
+		 * umbra, or a ring around the star -- dims everything this ring reflects, the
+		 * specular highlight along with the rest. */
+		gl_FragColor.rgb *= 1.0 - u_in_shade;
 
 		/* tint with alpha pre multiply */
 		gl_FragColor.rgb *= v_TintColor.rgb;

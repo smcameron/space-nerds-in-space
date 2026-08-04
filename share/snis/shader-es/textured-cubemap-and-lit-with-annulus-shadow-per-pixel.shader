@@ -78,6 +78,7 @@
 	uniform vec4 u_TintColor;
 	uniform vec3 u_LightPos;   // The position of the light in eye space.
 	uniform float u_Ambient;
+	uniform float u_in_shade;  // 0.0 lit, 1.0 fully hidden from the star (penumbra between)
 
 #if defined(USE_NORMAL_MAP)
 	uniform samplerCube u_NormalMapTex;
@@ -146,7 +147,12 @@ uniform float u_AmbientScale;
 		   pointing in the same direction then it will get max illumination. */
 		float direct = dot(normalize(v_Normal), light_dir);
 
-		float shadow = 1.0;
+		/* Start from whatever fraction of the star is not hidden by some body between here
+		 * and it -- a planet's umbra, or a ring around the star.  It belongs in shadow
+		 * rather than beside it because it is the same kind of quantity as the two
+		 * occluders folded in below, and being first means everything downstream, specular
+		 * included, dims with it. */
+		float shadow = 1.0 - u_in_shade;
 
 #if defined(USE_ANNULUS_SHADOW)
 		float intersect_r_squared;
