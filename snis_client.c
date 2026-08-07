@@ -2394,6 +2394,8 @@ static int update_black_hole(uint32_t id, uint32_t timestamp, double x, double y
 	} else {
 		update_generic_object(i, timestamp, x, y, z, 0.0, 0.0, 0.0, NULL, 1);
 	}
+	if (go[i].entity)
+		update_entity_pos(go[i].entity, x, y, z);
 	set_object_location(&go[i], x, y, z);
 	go[i].tsd.black_hole.radius = r;
 	return 0;
