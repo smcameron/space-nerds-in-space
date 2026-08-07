@@ -10167,7 +10167,7 @@ static struct entity *main_view_add_player_ship_entity(struct snis_entity *o, in
 		entity_set_in_shade(turret, object_in_shade(o));
 		set_render_style(turret, render_style);
 	}
-	if (!o->tsd.ship.reverse)
+	if (!o->tsd.ship.reverse && !(render_style & RENDER_SHADOWS_ONLY))
 		add_ship_thrust_entities(NULL, NULL, ecx, player_ship, o->tsd.ship.shiptype,
 				o->tsd.ship.power_data.impulse.i, 0);
 	return player_ship;
