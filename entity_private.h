@@ -50,11 +50,18 @@ struct entity {
 	int e_visible;
 	int no_cast_shadow; /* if set, this entity is not rendered into the shadow map */
 	unsigned char onscreen; /* if screen coords are valid */
+#define CHECK_ENTITY_CHILD_LIST_FOR_CYCLES 1
+#if CHECK_ENTITY_CHILD_LIST_FOR_CYCLES
+	int visited;
+#endif
 };
 
 struct entity_child {
 	int child_entity_index;
 	int next_entity_child_index;
+#if CHECK_ENTITY_CHILD_LIST_FOR_CYCLES
+	int visited;
+#endif
 };
 
 struct frustum {

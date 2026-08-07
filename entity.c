@@ -40,6 +40,7 @@
 #include "material.h"
 #include "entity.h"
 #include "mathutils.h"
+#include "stacktrace.h"
 
 #include "my_point.h"
 #include "snis_font.h"
@@ -101,22 +102,78 @@ struct entity *add_entity(struct entity_context *cx,
 	cx->entity_list[n].sy = -1;
 	cx->entity_list[n].onscreen = 0;
 	cx->entity_list[n].no_cast_shadow = 0;
+#if CHECK_ENTITY_CHILD_LIST_FOR_CYCLES
+	cx->entity_list[n].visited = 0;
+#endif
 	if (m && m->material)
 		update_entity_material(&cx->entity_list[n], m->material);
 
 	return &cx->entity_list[n];
 }
 
+static void check_entity_child_list_for_cycles(int line, struct entity_context *cx, struct entity *e)
+{
+#if CHECK_ENTITY_CHILD_LIST_FOR_CYCLES
+	int child = e->entity_child_index;
+	struct entity_child *this_ec = NULL;
+
+	if (child < 0)
+		return;
+	/* Walk the list setting visited flags, checking for visited nodes first
+	 * If we encounter a visited flag, we found a cycle
+	 */
+	do {
+		if (child < 0)
+			break;
+		this_ec = &cx->entity_child_list[child];
+		if (this_ec->visited) {
+			fprintf(stderr, "Cycle in entity child list detected, entity.c:%d\n", line);
+			stacktrace("Cycle in entity child list detected\n");
+			abort();
+		}
+		if (this_ec->child_entity_index >= 0) {
+			if (cx->entity_list[this_ec->child_entity_index].visited) {
+				fprintf(stderr,
+					"Duplicate entity in entity list detected, entity.c:%d\n", line);
+				stacktrace("Duplicate entity in entity child list detected\n");
+				abort();
+			}
+			cx->entity_list[this_ec->child_entity_index].visited = 1;
+		}
+		this_ec->visited = 1;
+		cx->entity_list[this_ec->child_entity_index].visited = 1;
+		child = this_ec->next_entity_child_index;
+	} while (1);
+
+	child = e->entity_child_index;
+	do { /* Walk the list and clear all the visited flags */
+		if (child < 0)
+			break;
+		this_ec = &cx->entity_child_list[child];
+		if (this_ec->child_entity_index >= 0)
+			cx->entity_list[this_ec->child_entity_index].visited = 0;
+		this_ec->visited = 0;
+		child = this_ec->next_entity_child_index;
+	} while (1);
+#endif
+}
+
 static void remove_entity_children(struct entity_context *cx, struct entity *e)
 {
+	check_entity_child_list_for_cycles(__LINE__, cx, e);
 	int entity_child_index = e->entity_child_index;
 
 	while (entity_child_index >= 0) {
 		struct entity_child *this_ec = &cx->entity_child_list[entity_child_index];
 		struct entity *this_child = &cx->entity_list[this_ec->child_entity_index];
 
-		if (this_child->entity_child_index >= 0)
+		if (this_child->entity_child_index >= 0) {
+			if (this_child == e) {
+				fprintf(stderr, "this_child == e in remove_entity_children\n");
+				abort();
+			}
 			remove_entity_children(cx, this_child);
+		}
 		snis_object_pool_free_object(cx->entity_pool, this_ec->child_entity_index);
 
 		int next_entity_child_index = this_ec->next_entity_child_index;
@@ -125,6 +182,7 @@ static void remove_entity_children(struct entity_context *cx, struct entity *e)
 		entity_child_index = next_entity_child_index;
 	}
 	e->entity_child_index = -1;
+	check_entity_child_list_for_cycles(__LINE__, cx, e);
 }
 
 void remove_entity(struct entity_context *cx, struct entity *e)
@@ -137,6 +195,7 @@ void remove_entity(struct entity_context *cx, struct entity *e)
 		remove_entity_children(cx, e);
 	index = e - &cx->entity_list[0];
 	snis_object_pool_free_object(cx->entity_pool, index);
+	check_entity_child_list_for_cycles(__LINE__, cx, e);
 }
 
 void remove_all_entity(struct entity_context *cx)
@@ -147,6 +206,7 @@ void remove_all_entity(struct entity_context *cx)
 
 void update_entity_parent(struct entity_context *cx, struct entity *child, struct entity *parent)
 {
+	check_entity_child_list_for_cycles(__LINE__, cx, parent);
 	if (child->parent == parent)
 		return;
 
@@ -160,6 +220,11 @@ void update_entity_parent(struct entity_context *cx, struct entity *child, struc
 			printf("entity_child_pool exhausted at %s:%d\n", __FILE__, __LINE__);
 			return;
 		}
+#if CHECK_ENTITY_CHILD_LIST_FOR_CYCLES
+		cx->entity_child_list[new_entity_child_index].visited = 0;
+#endif
+		cx->entity_child_list[new_entity_child_index].next_entity_child_index = -1;
+		cx->entity_child_list[new_entity_child_index].child_entity_index = -1;
 	}
 
 	if (child->parent) {
@@ -196,6 +261,7 @@ void update_entity_parent(struct entity_context *cx, struct entity *child, struc
 		new_ec->next_entity_child_index = parent->entity_child_index;
 		parent->entity_child_index = new_entity_child_index;
 	}
+	check_entity_child_list_for_cycles(__LINE__, cx, parent);
 }
 
 void update_entity_pos(struct entity *e, float x, float y, float z)
