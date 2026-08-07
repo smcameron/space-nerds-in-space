@@ -50,6 +50,7 @@ struct entity {
 	int e_visible;
 	int no_cast_shadow; /* if set, this entity is not rendered into the shadow map */
 	unsigned char onscreen; /* if screen coords are valid */
+	int being_removed;
 #define CHECK_ENTITY_CHILD_LIST_FOR_CYCLES 1
 #if CHECK_ENTITY_CHILD_LIST_FOR_CYCLES
 	int visited;

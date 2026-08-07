@@ -102,6 +102,7 @@ struct entity *add_entity(struct entity_context *cx,
 	cx->entity_list[n].sy = -1;
 	cx->entity_list[n].onscreen = 0;
 	cx->entity_list[n].no_cast_shadow = 0;
+	cx->entity_list[n].being_removed = 0;
 #if CHECK_ENTITY_CHILD_LIST_FOR_CYCLES
 	cx->entity_list[n].visited = 0;
 #endif
@@ -158,10 +159,45 @@ static void check_entity_child_list_for_cycles(int line, struct entity_context *
 #endif
 }
 
+/* We need to call this when removing an entity that is a child of
+ * another entity which is not also being removed, and when updating
+ * an entity's parent if the entity already had a parent.
+ */
+static void remove_child_from_parent(struct entity_context *cx,
+				struct entity *child, struct entity *parent)
+{
+	/* index of child into cx->entity_list[] */
+	int child_index = child - cx->entity_list;
+
+	/* index into cx->child_entity_list[] */
+	int entity_child_index = parent->entity_child_index;
+	struct entity_child *last_ec = 0;
+
+	while (entity_child_index >= 0) {
+		struct entity_child *this_ec = &cx->entity_child_list[entity_child_index];
+		if (this_ec->child_entity_index == child_index) {
+			/* we found the child, fix the list */
+			if (!last_ec) /* first link */
+				child->parent->entity_child_index = this_ec->next_entity_child_index;
+			else
+				last_ec->next_entity_child_index = this_ec->next_entity_child_index;
+
+			snis_object_pool_free_object(cx->entity_child_pool, entity_child_index);
+
+			break; /* found the child, done */
+		}
+		entity_child_index = this_ec->next_entity_child_index;
+		last_ec = this_ec;
+	}
+}
+
 static void remove_entity_children(struct entity_context *cx, struct entity *e)
 {
 	check_entity_child_list_for_cycles(__LINE__, cx, e);
 	int entity_child_index = e->entity_child_index;
+
+	if (e->parent && !e->parent->being_removed)
+		remove_child_from_parent(cx, e, e->parent);
 
 	while (entity_child_index >= 0) {
 		struct entity_child *this_ec = &cx->entity_child_list[entity_child_index];
@@ -191,8 +227,10 @@ void remove_entity(struct entity_context *cx, struct entity *e)
 
 	if (!e)
 		return;
+	e->being_removed = 1; /* let entity children know they don't have to unlink from parent */
 	if (e->entity_child_index >= 0)
 		remove_entity_children(cx, e);
+	e->being_removed = 0;
 	index = e - &cx->entity_list[0];
 	snis_object_pool_free_object(cx->entity_pool, index);
 	check_entity_child_list_for_cycles(__LINE__, cx, e);
@@ -227,31 +265,10 @@ void update_entity_parent(struct entity_context *cx, struct entity *child, struc
 		cx->entity_child_list[new_entity_child_index].child_entity_index = -1;
 	}
 
-	if (child->parent) {
-		/* remove this child out of the old parent child_entity_list */
-		int entity_child_index = child->parent->entity_child_index;
-		struct entity_child *last_ec = 0;
+	if (child->parent) /* Unlink the old parent, if any */
+		remove_child_from_parent(cx, child, child->parent);
 
-		while (entity_child_index >= 0) {
-			struct entity_child *this_ec = &cx->entity_child_list[entity_child_index];
-			if (this_ec->child_entity_index == child_index) {
-				/* we found the child, fix the list */
-				if (!last_ec) /* first link */
-					child->parent->entity_child_index = this_ec->next_entity_child_index;
-				else
-					last_ec->next_entity_child_index = this_ec->next_entity_child_index;
-
-				snis_object_pool_free_object(cx->entity_child_pool, entity_child_index);
-
-				break; /* found the child, done */
-			}
-			entity_child_index = this_ec->next_entity_child_index;
-			last_ec = this_ec;
-		}
-	}
-
-	child->parent = parent;
-
+	child->parent = parent; /* link the new parent */
 	if (parent) {
 		/* add child into new parent child_entity_list */
 		struct entity_child *new_ec = &cx->entity_child_list[new_entity_child_index];
