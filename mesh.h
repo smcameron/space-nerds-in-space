@@ -65,6 +65,7 @@ struct mesh {
 	struct material *material; /* for now just one material */
 	void *graph_ptr;
 	float radius;
+	char name[256]; /* For debugging, if there are problems, we can tell what sort of mesh. */
 };
 
 GLOBAL float mesh_compute_radius(struct mesh *m);
@@ -122,6 +123,9 @@ GLOBAL int mesh_nearest_vertex(struct mesh *m, float x, float y, float z, float 
 
 /* Return axis aligned bounding box for a mesh in min[x,y,z], max[x,y,z] */
 GLOBAL void mesh_aabb(struct mesh *m, float *minx, float *miny, float *minz, float *maxx, float *maxy, float *maxz);
+
+GLOBAL void mesh_set_name(struct mesh *m, char *name);
+GLOBAL char *mesh_name(struct mesh *m);
 
 #undef GLOBAL
 #endif

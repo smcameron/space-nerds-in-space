@@ -339,6 +339,7 @@ static void copy_mesh_contents(struct mesh *copy, struct mesh *original)
 		copy->material = malloc(sizeof(*copy->material));
 		*copy->material = *original->material;
 	}
+	snprintf(copy->name, sizeof(copy->name), "%s", original->name);
 	mesh_graph_dev_init(copy);
 }
 
@@ -410,6 +411,7 @@ struct mesh *init_circle_mesh(double x, double z, double r, int npoints, double 
 	my_mesh->l[0].end = &my_mesh->v[my_mesh->nvertices - 1];
 	my_mesh->l[0].flag = MESH_LINE_STRIP;
 
+	mesh_set_name(my_mesh, "circle");
 	mesh_graph_dev_init(my_mesh);
 	return my_mesh;
 }
@@ -453,6 +455,7 @@ struct mesh *init_radar_circle_xz_plane_mesh(double x, double z, double r, int t
 		mesh_add_line_last_2(my_mesh, MESH_LINE_DOTTED);
 	}
 
+	mesh_set_name(my_mesh, "radar circle xz plane");
 	mesh_graph_dev_init(my_mesh);
 	return my_mesh;
 }
@@ -487,6 +490,7 @@ struct mesh *init_line_mesh(double x1, double y1, double z1, double x2, double y
 	my_mesh->l[0].end = &my_mesh->v[1];
 	my_mesh->l[0].flag = 0;
 
+	mesh_set_name(my_mesh, "line mesh");
 	mesh_graph_dev_init(my_mesh);
 	return my_mesh;
 }
@@ -544,6 +548,7 @@ struct mesh *mesh_fabricate_axes(void)
 	my_mesh->l[2].flag = 0;
 	my_mesh->radius = 1.0;
 
+	mesh_set_name(my_mesh, "axes");
 	mesh_graph_dev_init(my_mesh);
 	return my_mesh;
 }
@@ -939,6 +944,7 @@ struct mesh *mesh_fabricate_crossbeam(float length, float radius)
 
 	mesh_compute_radius(m);
 	mesh_set_flat_shading_vertex_normals(m);
+	mesh_set_name(m, "crossbeam");
 	mesh_graph_dev_init(m);
 
 	return m;
@@ -1014,6 +1020,7 @@ struct mesh *mesh_fabricate_disc(float radius, int nslices)
 
 	m->radius = mesh_compute_radius(m);
 	mesh_set_flat_shading_vertex_normals(m);
+	mesh_set_name(m, "disc");
 	mesh_graph_dev_init(m);
 
 	return m;
@@ -1093,6 +1100,7 @@ struct mesh *mesh_fabricate_billboard_with_uv_map(float width, float height, flo
 
 	m->radius = mesh_compute_radius(m);
 	mesh_set_flat_shading_vertex_normals(m);
+	mesh_set_name(m, "billboard w/ uv map");
 	mesh_graph_dev_init(m);
 
 	return m;
@@ -1320,6 +1328,7 @@ struct mesh *mesh_unit_icosahedron(void)
 
 	m->radius = mesh_compute_radius(m);
 	mesh_set_flat_shading_vertex_normals(m);
+	mesh_set_name(m, "icosahedron");
 	mesh_graph_dev_init(m);
 
 	return m;
@@ -1443,6 +1452,7 @@ struct mesh *mesh_unit_icosphere(int subdivisions)
 	mesh_free(m2);
 	mesh_set_spherical_vertex_normals(m3);
 	mesh_set_spherical_cubemap_tangent_and_bitangent(m3);
+	mesh_set_name(m3, "icosphere");
 	mesh_graph_dev_init(m3);
 	return m3;
 }
@@ -1633,6 +1643,7 @@ struct mesh *mesh_unit_cube(int subdivisions)
 	m->nlines = 0;
 	m->radius = mesh_compute_radius(m);
 	mesh_scale_helper(m, 0.5); /* Scale the cube to be 1 unit per side */
+	mesh_set_name(m, "unit cube");
 	mesh_graph_dev_init(m);
 	return m;
 bail:
@@ -1666,6 +1677,7 @@ struct mesh *mesh_unit_spherified_cube(int subdivisions)
 	mesh_sample_spherical_cubemap_tangent_and_bitangent(m);
 	m->nlines = 0;
 	m->radius = mesh_compute_radius(m);
+	mesh_set_name(m, "spherified cube");
 	mesh_graph_dev_init(m);
 	return m;
 }
@@ -2059,6 +2071,7 @@ void mesh_unit_cube_uv_map(struct mesh *m)
 		}
 		mesh_set_triangle_texture_coords(m, i, u0, v0, u1, v1, u2, v2);
 	}
+	mesh_set_name(m, "unit cube w/ uv map");
 	mesh_graph_dev_init(m);
 }
 
@@ -2119,6 +2132,7 @@ struct mesh *mesh_fabricate_planetary_ring(float ir, float or, int nvertices)
 	}
 	m->radius = mesh_compute_radius(m);
 	mesh_set_flat_shading_vertex_normals(m);
+	mesh_set_name(m, "planetary ring");
 	mesh_uv_map_planetary_ring(m);
 	return m;
 bail:
@@ -2262,6 +2276,7 @@ struct mesh *init_thrust_mesh(int streaks, double h, double r1)
 	struct mesh *optimized_mesh = mesh_duplicate(my_mesh);
 	mesh_free(my_mesh);
 
+	mesh_set_name(optimized_mesh, "thrust mesh");
 	return optimized_mesh;
 }
 
@@ -2312,6 +2327,7 @@ struct mesh *init_burst_rod_mesh(int streaks, double h, double r1, double r2)
 		my_mesh->l[line_index].time_offset = fabs(snis_random_float());
 	}
 
+	mesh_set_name(my_mesh, "burst rod");
 	mesh_graph_dev_init(my_mesh);
 	return my_mesh;
 }
@@ -2431,6 +2447,7 @@ struct mesh *mesh_tube(float h, float r, float nfaces)
 	}
 	m->nlines = 0;
 	m->radius = mesh_compute_radius(m);
+	mesh_set_name(m, "tube");
 	mesh_graph_dev_init(m);
 	return m;
 }
@@ -2638,3 +2655,16 @@ void mesh_set_mikktspace_tangents_and_bitangents(struct mesh *m)
 	mikktspace_context.m_pUserData = m;
 	genTangSpaceDefault(&mikktspace_context);
 }
+
+void mesh_set_name(struct mesh *m, char *name)
+{
+	snprintf(m->name, sizeof(m->name), "%s", name);
+}
+
+char *mesh_name(struct mesh *m)
+{
+	if (!m)
+		return "NULL mesh ptr";
+	return m->name;
+}
+
