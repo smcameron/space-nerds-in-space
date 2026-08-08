@@ -9915,8 +9915,11 @@ static void show_weapons_camera_view(void)
 		weapons_camera_shake = 0;
 	}
 
-	if (!(o = find_my_ship()))
+	pthread_mutex_lock(&universe_mutex);
+	if (!(o = find_my_ship())) {
+		pthread_mutex_unlock(&universe_mutex);
 		return;
+	}
 
 	snis_slider_set_input(weapons.wavelen_slider, o->tsd.ship.phaser_wavelength / 255.0);
 	update_warp_tunnel(o, &warp_tunnel);
@@ -9971,6 +9974,8 @@ static void show_weapons_camera_view(void)
 	update_sun_entity();
 	calculate_camera_transform(ecx);
 	entity_context_set_hi_lo_poly_pixel_threshold(ecx, low_poly_threshold);
+
+	pthread_mutex_unlock(&universe_mutex);
 
 	sng_set_foreground(GREEN);
 #if SPACEDUST
@@ -10305,8 +10310,11 @@ static void show_mainscreen(void)
 	double impulse_power;
 	struct entity *cockpit_entity = NULL;
 
-	if (!(o = find_my_ship()))
+	pthread_mutex_lock(&universe_mutex);
+	if (!(o = find_my_ship())) {
+		pthread_mutex_unlock(&universe_mutex);
 		return;
+	}
 	vp = o;
 
 	/* Set up for alternate viewpoint (e.g. mining robot camera) */
@@ -10433,6 +10441,8 @@ static void show_mainscreen(void)
 	update_sun_entity();
 	calculate_camera_transform(ecx);
 	entity_context_set_hi_lo_poly_pixel_threshold(ecx, low_poly_threshold);
+
+	pthread_mutex_unlock(&universe_mutex);
 
 	sng_set_foreground(GREEN);
 #if SPACEDUST
@@ -15434,8 +15444,11 @@ static void show_engineering(void)
 	double fuel_rate_per_sec, fuel_secs, fuel_mins;
 	double fuel_time;
 
-	if (!(o = find_my_ship()))
+	pthread_mutex_lock(&universe_mutex);
+	if (!(o = find_my_ship())) {
+		pthread_mutex_unlock(&universe_mutex);
 		return;
+	}
 
 	snis_slider_set_input(eng_ui.shield_slider, o->tsd.ship.power_data.shields.r2 / 255.0);
 	snis_slider_set_input(eng_ui.phaserbanks_slider, o->tsd.ship.power_data.phasers.r2 / 255.0);
@@ -15569,6 +15582,7 @@ static void show_engineering(void)
 			sng_abs_xy_draw_string("WARP CORE EJECTED", NANO_FONT, txx(600), txy(435));
 		}
 	}
+	pthread_mutex_unlock(&universe_mutex);
 
 	show_common_screen("ENGINEERING");
 }
@@ -17953,8 +17967,11 @@ static void show_science(void)
 	double zoom;
 	static int current_zoom = 0;
 
-	if (!(o = find_my_ship()))
+	pthread_mutex_lock(&universe_mutex);
+	if (!(o = find_my_ship())) {
+		pthread_mutex_unlock(&universe_mutex);
 		return;
+	}
 
 	snis_slider_set_input(sci_ui.scizoom, o->tsd.ship.scizoom/255.0 );
 
@@ -17962,6 +17979,7 @@ static void show_science(void)
 
 	sng_set_foreground(UI_COLOR(sci_coords));
 	draw_science_location_indicator(o);
+	pthread_mutex_unlock(&universe_mutex);
 	zoom = (MAX_SCIENCE_SCREEN_RADIUS - MIN_SCIENCE_SCREEN_RADIUS) *
 			(current_zoom / 255.0) + MIN_SCIENCE_SCREEN_RADIUS;
 	sng_set_foreground(DARKGREEN); /* zzzz check this */
@@ -17984,6 +18002,7 @@ static void show_science(void)
 		draw_science_data(o, curr_science_guy, curr_science_waypoint);
 		break;
 	}
+	pthread_mutex_lock(&universe_mutex);
 	if (o->tsd.ship.power_data.sensors.i < idiot_light_threshold && (timer & 0x08)) {
 		sng_set_foreground(UI_COLOR(sci_warning));
 		sng_center_xy_draw_string("LOW SENSOR POWER", NANO_FONT, SCREEN_WIDTH / 2, txy(27));
@@ -17999,6 +18018,7 @@ static void show_science(void)
 		}
 		sci_ui.low_tractor_power_timer--;
 	}
+	pthread_mutex_unlock(&universe_mutex);
 	populate_science_pull_down_menu();
 	show_common_screen("SCIENCE");
 }
@@ -23040,8 +23060,12 @@ static int main_da_expose(SDL_Window *window)
 	}
 
 	if (displaymode < DISPLAYMODE_FONTTEST) {
-		if (!(o = find_my_ship())) {
+		pthread_mutex_lock(&universe_mutex);
+		o = find_my_ship();
+		if (!o) {
 			char msg[100];
+
+			pthread_mutex_unlock(&universe_mutex);
 			if (how_long_to_wait == -1)
 				how_long_to_wait = 2 * frame_rate_hz;
 			if (how_long_to_wait > 0) {
@@ -23065,6 +23089,7 @@ static int main_da_expose(SDL_Window *window)
 			how_long_to_wait = frame_rate_hz * 4; /* 4 seconds */
 		}
 		if (o->alive == 0 && displaymode != DISPLAYMODE_DEMON) {
+			pthread_mutex_unlock(&universe_mutex);
 			red_alert_mode = 0;
 			show_death_screen();
 			if (in_the_process_of_quitting)
@@ -23085,13 +23110,16 @@ static int main_da_expose(SDL_Window *window)
 			if (player_lost_rts)
 				player_won_rts = 0;
 			if (player_lost_rts) {
+				pthread_mutex_unlock(&universe_mutex);
 				show_rts_loss_screen();
 				goto end_of_drawing;
 			} else if (player_won_rts) {
+				pthread_mutex_unlock(&universe_mutex);
 				show_rts_win_screen();
 				goto end_of_drawing;
 			}
 		}
+		pthread_mutex_unlock(&universe_mutex);
 	}
 	maybe_grab_or_ungrab_mouse();
 	switch (displaymode) {
