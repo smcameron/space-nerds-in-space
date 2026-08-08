@@ -45,7 +45,7 @@ struct entity {
 	union vec3 e_scale;
 	union quat e_orientation;
 	struct entity *parent;
-	int entity_child_index;
+	int entity_child_index; /* Index into cx->entity_child_list[] */
 	float in_shade;
 	int e_visible;
 	int no_cast_shadow; /* if set, this entity is not rendered into the shadow map */
@@ -58,8 +58,8 @@ struct entity {
 };
 
 struct entity_child {
-	int child_entity_index;
-	int next_entity_child_index;
+	int child_entity_index;		/* Index into cx->entity_list[] */
+	int next_entity_child_index;	/* Index into cx->entity_child_list[] */
 #if CHECK_ENTITY_CHILD_LIST_FOR_CYCLES
 	int visited;
 #endif

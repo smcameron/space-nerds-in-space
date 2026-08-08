@@ -112,6 +112,39 @@ struct entity *add_entity(struct entity_context *cx,
 	return &cx->entity_list[n];
 }
 
+static void debug_duplicate_entity_list_entries(struct entity_context *cx,
+			struct entity *e, int duplicate_list_index)
+{
+#if CHECK_ENTITY_CHILD_LIST_FOR_CYCLES
+	int child = e->entity_child_index;
+	struct entity_child *this_ec = NULL;
+	int loop_count = 0;
+	fprintf(stderr, "Debugging entity with duplicate entry in child list:\n");
+	fprintf(stderr, "Entity %lu: '%s'\n", e - cx->entity_list, mesh_name(e->m));
+
+	/* Walk the list, printing it out, and printing out info about the entity.  */
+	fprintf(stderr, "%-4s %-20s %-20s\n", "list pos", "entity[] index", "next child index");
+	fprintf(stderr, "%-4s %-20s %-20s\n", "----", "----------------", "----------------");
+	do {
+		if (child < 0)
+			break;
+		this_ec = &cx->entity_child_list[child];
+		fprintf(stderr, "%-4d %-20d %-20d %s\n",
+				loop_count, this_ec->child_entity_index,
+				this_ec->next_entity_child_index,
+				child == duplicate_list_index ? "(Duplicate)" : "");
+		if (this_ec->child_entity_index >= 0) {
+			fprintf(stderr, "Entity %d: '%s'\n", this_ec->child_entity_index,
+				mesh_name(cx->entity_list[this_ec->child_entity_index].m));
+		}
+		child = this_ec->next_entity_child_index;
+		loop_count++;
+	} while (loop_count < 20);
+	if (loop_count >= 20)
+		fprintf(stderr, "Bailed out on maximum loop count\n");
+#endif
+}
+
 static void check_entity_child_list_for_cycles(int line, struct entity_context *cx, struct entity *e)
 {
 #if CHECK_ENTITY_CHILD_LIST_FOR_CYCLES
@@ -137,7 +170,7 @@ static void check_entity_child_list_for_cycles(int line, struct entity_context *
 				fprintf(stderr,
 					"Duplicate entity in entity list detected, entity.c:%d\n", line);
 				stacktrace("Duplicate entity in entity child list detected\n");
-				abort();
+				debug_duplicate_entity_list_entries(cx, e, this_ec->child_entity_index);
 			}
 			cx->entity_list[this_ec->child_entity_index].visited = 1;
 		}
