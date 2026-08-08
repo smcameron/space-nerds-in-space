@@ -25124,6 +25124,7 @@ static void init_meshes(void)
 		read_thrust_attachments(missile_thrust_attachment_path, SHIP_MESH_SCALE);
 #ifndef WITHOUTOPENGL
 	torpedo_mesh = mesh_fabricate_billboard(50.0f, 50.0f);
+	mesh_set_name(torpedo_mesh, "torpedo mesh");
 #else
 	torpedo_mesh = torpedo_nav_mesh;
 #endif

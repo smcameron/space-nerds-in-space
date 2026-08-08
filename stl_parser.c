@@ -564,6 +564,7 @@ struct mesh *read_stl_file(char *filename)
 	free_vertex_owners(owners, facetcount * 3);
 
 	mesh_graph_dev_init(my_mesh);
+	mesh_set_name(my_mesh, filename);
 	return my_mesh;
 
 error:
@@ -1191,6 +1192,7 @@ struct mesh *read_obj_file(char *file_name)
 	}
 	/* TODO: if obj file actually contains tangents/bitangents, we should use those. */
 	mesh_set_reasonable_tangents_and_bitangents(m);
+	mesh_set_name(m, filename);
 	mesh_graph_dev_init(m);
 	fclose(f);
 	return m;
@@ -1442,6 +1444,7 @@ struct mesh *read_oolite_dat_file(char *file_name)
 	mesh_graph_dev_init(m);
 	fclose(f);
 
+	mesh_set_name(m, filename);
 	return m;
 error:
 	free_mesh(m);
@@ -1472,6 +1475,7 @@ void print_mesh(struct mesh *m)
 {
 	int i;
 
+	printf("mesh name: %s\n", m->name);
 	printf("Triangles ntriangles=%d\n", m->ntriangles);
 
 	for (i = 0; i < m->ntriangles; ++i) {
