@@ -71,8 +71,8 @@ int material_nebula_read_from_file(const char *asset_dir, const char *filename,
 	}
 
 	for (i = 0; i < MATERIAL_NEBULA_NPLANES; i++) {
-		char texture_filename[PATH_MAX];
-		BUILD_ASSERT(sizeof(texture_filename) == 4096);
+		char texture_filename[PATH_MAX + 1];
+		BUILD_ASSERT(sizeof(texture_filename) == 4097);
 		rc = fscanf(f, "texture %4096s\n", texture_filename);
 		if (rc != 1) {
 			fprintf(stderr, "material_nebula: Error reading 'texture' from file '%s'\n", full_filename);
