@@ -372,6 +372,7 @@ struct launcher_ui {
 	struct gauge *snis_client_gauge;
 	struct button *restart_btn;
 	struct button *website_button;
+	struct button *release_notes_button;
 	struct button *forum_button;
 	struct button *support_button;
 	struct pull_down_menu *menu;

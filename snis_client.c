@@ -22166,6 +22166,12 @@ static void init_launcher_ui(void)
 	gauge_set_fonts(launcher_ui.snis_client_gauge, NANO_FONT, NANO_FONT);
 
 	y = txy(550);
+	launcher_ui.release_notes_button =
+		snis_button_init(txx(340), y, -1, -1, "RELEASE NOTES",
+			active_button_color,
+			TINY_FONT, browser_button_pressed,
+				"http://github.com/smcameron/space-nerds-in-space/releases");
+	snis_button_set_hover_color(launcher_ui.release_notes_button, hover_color);
 	launcher_ui.website_button =
 		snis_button_init(txx(500), y, -1, -1, "WEBSITE",
 			active_button_color,
@@ -22317,6 +22323,8 @@ static void init_launcher_ui(void)
 	ui_add_gauge(launcher_ui.snis_client_gauge, DISPLAYMODE_LAUNCHER);
 
 	if (running_in_container) {
+		ui_add_button(launcher_ui.release_notes_button, DISPLAYMODE_LAUNCHER,
+				"COPY URL OF SPACE NERDS IN SPACE RELEASE NOTES TO CLIPBOARD");
 		ui_add_button(launcher_ui.website_button, DISPLAYMODE_LAUNCHER,
 				"COPY URL OF SPACE NERDS IN SPACE WEB SITE TO CLIPBOARD");
 		ui_add_button(launcher_ui.forum_button, DISPLAYMODE_LAUNCHER,
@@ -22325,6 +22333,8 @@ static void init_launcher_ui(void)
 		ui_add_button(launcher_ui.support_button, DISPLAYMODE_LAUNCHER,
 				"COPY URL OF SPACE NERDS IN SPACE DONATION WEB SITE TO CLIPBOARD");
 	} else {
+		ui_add_button(launcher_ui.release_notes_button, DISPLAYMODE_LAUNCHER,
+				"VIEW RELEASE NOTES");
 		ui_add_button(launcher_ui.website_button, DISPLAYMODE_LAUNCHER,
 				"DON'T KNOW WHAT THIS GAME IS ALL ABOUT?\n"
 				"WANT TO LEARN MORE?  VISIT HTTPS://SPACENERDSINSPACE.COM");
