@@ -47,6 +47,7 @@ GLOBAL void ignore_sigpipe(void);
 GLOBAL void snis_collect_netstats(struct network_stats *ns);
 GLOBAL void snis_protocol_debugging(int enable);
 GLOBAL void snis_print_last_buffer(char *title, int socket);
+GLOBAL int snis_create_unix_dgram_socket(const char *path);
 #undef GLOBAL
 #endif
 

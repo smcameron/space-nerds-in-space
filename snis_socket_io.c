@@ -29,12 +29,15 @@ OTHER DEALINGS IN THE SOFTWARE.
 #include <sys/types.h>
 #include <unistd.h>
 #include <sys/socket.h>
+#include <sys/un.h>
 #include <errno.h>
 #include <string.h>
 #include <signal.h>
 #include <stdint.h>
 #include <sys/time.h>
 #include <stdlib.h>
+
+#include "string-utils.h"
 
 #define DEFINE_SNIS_SOCKET_IO_GLOBALS
 #include "snis_socket_io.h"
@@ -162,4 +165,48 @@ void snis_print_last_buffer(char *title, int socket)
 	for (i = 0; i < dbgbuf[socket]->len; i++)
 		fprintf(stderr, "%02x ", dbgbuf[socket]->buf[i]);
 	fprintf(stderr, "\n");
+}
+
+/* Creates and binds a Unix Domain Datagram socket to the given path.
+ *
+ * @param path The filesystem path for the socket.
+ * @return Socket file descriptor on success, or -1 on error.
+ */
+int snis_create_unix_dgram_socket(const char *path)
+{
+	struct sockaddr_un addr;
+
+	if (!path || path[0] == '\0') {
+		fprintf(stderr, "Error: Invalid socket path\n");
+		return -1;
+	}
+
+	/* Check path length to prevent buffer overflow */
+	if (strlen(path) >= sizeof(addr.sun_path)) {
+		fprintf(stderr, "Error: Socket path is too long\n");
+		return -1;
+	}
+
+	/* Create the Unix domain datagram socket */
+	int sockfd = socket(AF_UNIX, SOCK_DGRAM, 0);
+	if (sockfd < 0) {
+		fprintf(stderr, "UNIX domain dgram socket creation failed\n");
+		return -1;
+	}
+
+	/* Prepare the sockaddr_un structure */
+	memset(&addr, 0, sizeof(struct sockaddr_un));
+	addr.sun_family = AF_UNIX;
+	strlcpy(addr.sun_path, path, sizeof(addr.sun_path));
+
+	/* Unlink existing socket file if it already exists */
+	unlink(path);
+
+	/* Bind the socket to the filesystem path */
+	if (bind(sockfd, (struct sockaddr *)&addr, sizeof(struct sockaddr_un)) < 0) {
+		fprintf(stderr, "bind failed");
+		close(sockfd);
+		return -1;
+	}
+	return sockfd;
 }

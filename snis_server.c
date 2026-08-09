@@ -35,6 +35,7 @@
 #include <netinet/ip.h>
 #include <arpa/inet.h>
 #include <sys/socket.h>
+#include <sys/un.h>
 #include <netdb.h>
 #include <ifaddrs.h>
 #include <errno.h>
@@ -683,6 +684,9 @@ static struct server_tracker *server_tracker;
 static int snis_log_level = 2;
 static struct ship_type_entry *ship_type;
 static int nshiptypes;
+static int demon_console_unix_dgram_socket = -1;
+static char demon_console_socket_name[110] = { 0 };
+static char demon_console_reader_socket_name[110] = { 0 };
 
 /*
  * Starmap entries -- these are locations of star systems
@@ -15593,6 +15597,8 @@ static int process_request_thrust(struct game_client *c)
 }
 #endif
 
+static void send_buffer_via_unix_dgram_socket(int fd, const char *buf, int color);
+
 static void send_demon_console_msg_helper(int color, const char *msg)
 {
 	int length, start, bytes_to_copy, bytes_to_newline;
@@ -15623,6 +15629,7 @@ static void send_demon_console_msg_helper(int color, const char *msg)
 
 		memcpy(buf, &msg[start], bytes_to_copy);
 		buf[bytes_to_copy] = '\0';
+		send_buffer_via_unix_dgram_socket(demon_console_unix_dgram_socket, buf, color);
 		pb = packed_buffer_allocate(4 + strlen(buf));
 		packed_buffer_append(pb, "bbbb", OPCODE_CONSOLE_OP, OPCODE_CONSOLE_SUBCMD_ADD_TEXT, color, strlen(buf));
 		packed_buffer_append_raw(pb, buf, strlen(buf));
@@ -27546,6 +27553,50 @@ static void open_log_file(void)
 	}
 }
 
+/* Creates a unix domain UDB socket nameed /tmp/snis-console.sysname,
+ * where sysname is the solar system name.
+ */
+static int open_demon_console_unix_dgram_socket(char *sysname)
+{
+	snprintf(demon_console_socket_name, sizeof(demon_console_socket_name),
+			"/tmp/snis-console.%s", sysname);
+	snprintf(demon_console_reader_socket_name, sizeof(demon_console_reader_socket_name),
+			"/tmp/snis-console-rdr.%s", sysname);
+	return snis_create_unix_dgram_socket(demon_console_socket_name);
+}
+
+static void send_buffer_via_unix_dgram_socket(int fd, const char *buf, int color)
+{
+	uint8_t packet[DEMON_CONSOLE_MSG_MAX + 5];
+	size_t len = strlen(buf);
+	uint32_t netcolor = htonl(color);
+
+	if (len > DEMON_CONSOLE_MSG_MAX)
+		len = DEMON_CONSOLE_MSG_MAX;
+
+	packet[0] = (uint8_t) len;	/* First byte is the length of the string, */
+	memcpy(&packet[2], &netcolor, sizeof(netcolor));
+	memcpy(&packet[5], buf, len);	/* followed by the string contents */
+
+
+	/* Prepare the destination sockaddr_un structure */
+	struct sockaddr_un destination;
+	memset(&destination, 0, sizeof(destination));
+	destination.sun_family = AF_UNIX;
+	strlcpy(destination.sun_path, demon_console_reader_socket_name, sizeof(destination.sun_path));
+
+	sendto(fd, packet, len + 1, 0, (struct sockaddr *) &destination, sizeof(destination));
+}
+
+/* Close the demon console unix UDP socket and unlink the socket name from the filesystem */
+static void close_demon_console_socket(int fd)
+{
+	if (fd >= 0)
+		close(fd);
+	if (strncmp(demon_console_socket_name, "", sizeof(demon_console_socket_name)) != 0)
+		unlink(demon_console_socket_name);
+}
+
 static void add_lua_callable_fn(int (*fn)(lua_State *l), char *lua_fn_name)
 {
 	lua_pushcfunction(lua_state, fn);
@@ -31703,6 +31754,7 @@ static void sigterm_handler(__attribute__((unused)) int sig,
 	int rc;
 
 	cleanup_lockfile();
+	close_demon_console_socket(demon_console_unix_dgram_socket);
 
 	/* Need to check return value of write() here even though we can't do
 	 * anything with that info at this point, otherwise the compiler complains
@@ -32957,6 +33009,7 @@ int main(int argc, char *argv[])
 	}
 
 	open_log_file();
+	demon_console_unix_dgram_socket = open_demon_console_unix_dgram_socket(solarsystem_name);
 
 	setup_lua();
 	snis_protocol_debugging(1);
@@ -33040,6 +33093,7 @@ int main(int argc, char *argv[])
 	lua_teardown();
 
 	snis_close_logfile();
+	close_demon_console_socket(demon_console_unix_dgram_socket);
 
 	return 0;
 }
