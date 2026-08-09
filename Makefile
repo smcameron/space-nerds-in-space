@@ -659,7 +659,7 @@ MULTIVERSELIBS=-Lssgl -lssglclient ${LRTLIB} -ldl -lm ${CRYPTLIBS}
 
 SERVERPROGS=bin/ssgl_server bin/snis_server bin/snis_multiverse
 BINPROGS=${SERVERPROGS} bin/snis_client bin/snis_text_to_speech.sh \
-		bin/lsssgl bin/snis_arduino bin/snis_launcher \
+		bin/lsssgl bin/snis_arduino bin/snis_launcher bin/snis-console \
 		bin/snis_update_assets bin/update_assets_from_launcher.sh
 UTILPROGS=util/mask_clouds util/cloud-mask-normalmap bin/mesh_viewer bin/shadow_lab bin/star_light_preview util/sample_image_colors \
 		util/generate_solarsystem_positions bin/nebula_noise bin/generate_skybox bin/earthlike
@@ -1464,6 +1464,12 @@ bin/yoke-test-program:	yoke-test-program.c ${OD}/snis-device-io.o ${OD}/string-u
 bin/snis_arduino: snis_arduino.c ${OD}/snis-device-io.o ${OD}/string-utils.o ${OD}/stacktrace.o ${BIN}
 	$(CC) ${ASANFLAG} ${UBSANFLAG} -Wall -Wextra --pedantic -pthread -o bin/snis_arduino \
 			${OD}/snis-device-io.o ${OD}/string-utils.o ${OD}/stacktrace.o snis_arduino.c
+
+${OD}/snis-console.o:	snis-console.c string-utils.h
+	$(CC) ${ASANFLAG} ${UBSANFLAG} -Wall -Wextra --pedantic -pthread -c -o ${OD}/snis-console.o snis-console.c
+
+bin/snis-console:	${OD}/snis-console.o ${OD}/string-utils.o ${OD}/stacktrace.o ${BIN}
+	$(CC) -pthread -o bin/snis-console ${OD}/snis-console.o ${OD}/string-utils.o ${OD}/stacktrace.o -lncurses
 
 $(OD)/nonuniform_random_sampler.o:	nonuniform_random_sampler.c nonuniform_random_sampler.h ${ODT}
 	$(Q)$(COMPILE)
