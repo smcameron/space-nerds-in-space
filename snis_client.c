@@ -24966,14 +24966,22 @@ static void setup_input_fifo(char *fifoname, char *threadname,
 #define SNIS_NL_FIFO "/tmp/snis-natural-language-fifo"
 static void setup_natural_language_fifo(void)
 {
-	setup_input_fifo(SNIS_NL_FIFO, "snis-nl-fifo", &natural_language_thread,
+	char fifoname[100];
+	pid_t pid = getpid();
+
+	snprintf(fifoname, sizeof(fifoname), "%s.%d", SNIS_NL_FIFO, pid);
+	setup_input_fifo(fifoname, "snis-nl-fifo", &natural_language_thread,
 				send_natural_language_request_to_server);
 }
 
 #define SNIS_DEMON_FIFO "/tmp/snis-demon-fifo"
 static void setup_demon_fifo(void)
 {
-	setup_input_fifo(SNIS_DEMON_FIFO, "snisdemonfifo", &demon_fifo_thread,
+	char fifoname[100];
+	pid_t pid = getpid();
+
+	snprintf(fifoname, sizeof(fifoname), "%s.%d", SNIS_DEMON_FIFO, pid);
+	setup_input_fifo(fifoname, "snisdemonfifo", &demon_fifo_thread,
 				send_demon_text_command);
 }
 
