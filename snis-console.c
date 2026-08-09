@@ -23,6 +23,7 @@
 #include <arpa/inet.h>
 
 #include "string-utils.h"
+#include "snis_cardinal_colors.h"
 
 #define MAX_CONSOLES 128
 #define MAX_MSG_LEN 256
@@ -30,11 +31,16 @@
 #define PREFIX "snis-console."
 #define PREFIX_LEN 13
 
+struct textline {
+	char *text;
+	int color_pair;
+};
+
 struct console {
 	char name[256];          /* e.g., "snis-console.1234" */
 	char socket_path[512];   /* e.g., "/tmp/snis-console.1234" */
 	int sockfd;
-	char *lines[MAX_LINES];
+	struct textline lines[MAX_LINES];
 	int line_count;
 	int active;
 };
@@ -49,8 +55,27 @@ static int running = 1;
 
 /* Forward declarations */
 static void redraw_ui(void);
+static void add_line(struct console *c, const char *msg, uint32_t color);
 
-static void add_line(struct console *c, const char *msg);
+static int map_color_to_pair(uint32_t color)
+{
+	switch (color) {
+	case BLACK:         return 1;
+	case WHITE:         return 2;
+	case YELLOW:
+	case AMBER:
+	case LIGHT_AMBER:   return 3;
+	case RED:
+	case ORANGE:
+	case DARKRED:
+	case ORANGERED:     return 4;
+	case MAGENTA:       return 5;
+	case DARKGREEN:
+	case LIMEGREEN:     return 6;
+	case DARKTURQUOISE: return 7;
+	default:            return 0; /* Default ncurses color pair */
+	}
+}
 
 static char *tail_end_of_name(char *n)
 {
@@ -169,7 +194,7 @@ void *discovery_loop(void *arg)
 			close(consoles[i].sockfd);
 
 			for (int l = 0; l < consoles[i].line_count; l++)
-				free(consoles[i].lines[l]);
+				free(consoles[i].lines[l].text);
 
 			consoles[i].active = 0;
 			active_count--;
@@ -192,14 +217,19 @@ void *discovery_loop(void *arg)
 }
 
 /* Helper to append a line of text to a console log buffer */
-static void add_line(struct console *c, const char *msg)
+static void add_line(struct console *c, const char *msg, uint32_t color)
 {
+	int pair = map_color_to_pair(color);
+
 	if (c->line_count < MAX_LINES) {
-		c->lines[c->line_count++] = strdup(msg);
+		c->lines[c->line_count].text = strdup(msg);
+		c->lines[c->line_count].color_pair = pair;
+		c->line_count++;
 	} else {
-		free(c->lines[0]);
-		memmove(&c->lines[0], &c->lines[1], sizeof(char *) * (MAX_LINES - 1));
-		c->lines[MAX_LINES - 1] = strdup(msg);
+		free(c->lines[0].text);
+		memmove(&c->lines[0], &c->lines[1], sizeof(struct textline) * (MAX_LINES - 1));
+		c->lines[MAX_LINES - 1].text = strdup(msg);
+		c->lines[MAX_LINES - 1].color_pair = pair;
 	}
 }
 
@@ -248,7 +278,11 @@ static void redraw_ui(void)
 
 		int row = 2;
 		for (int l = start_line; l < c->line_count; l++) {
-			mvprintw(row++, 0, "%.*s", max_x, c->lines[l]);
+			if (c->lines[l].color_pair > 0)
+				attron(COLOR_PAIR(c->lines[l].color_pair));
+			mvprintw(row++, 0, "%.*s", max_x, c->lines[l].text);
+			if (c->lines[l].color_pair > 0)
+				attroff(COLOR_PAIR(c->lines[l].color_pair));
 		}
 	}
 
@@ -270,6 +304,19 @@ int main(void)
 	keypad(stdscr, TRUE);
 	curs_set(0);
 	timeout(100); /* 100ms non-blocking wgetch */
+
+	if (has_colors()) {
+		start_color();
+		if (can_change_color())
+			init_color(COLOR_BLACK, 0, 0, 0); /* we want black, not gray */
+		init_pair(1, COLOR_GREEN, COLOR_BLACK);
+		init_pair(2, COLOR_WHITE, COLOR_BLACK);
+		init_pair(3, COLOR_YELLOW, COLOR_BLACK);
+		init_pair(4, COLOR_RED, COLOR_BLACK);
+		init_pair(5, COLOR_MAGENTA, COLOR_BLACK);
+		init_pair(6, COLOR_GREEN, COLOR_BLACK);
+		init_pair(7, COLOR_CYAN, COLOR_BLACK);
+	}
 
 	memset(consoles, 0, sizeof(consoles));
 
@@ -302,7 +349,7 @@ int main(void)
 					memcpy(msg, &buf[5], len);
 					msg[len] = '\0';
 
-					add_line(&consoles[i], msg);
+					add_line(&consoles[i], msg, color);
 					if (i == current_idx) {
 						redraw_ui();
 					}
@@ -361,7 +408,7 @@ int main(void)
 		}
 		close(consoles[i].sockfd);
 		for (int l = 0; l < consoles[i].line_count; l++) {
-			free(consoles[i].lines[l]);
+			free(consoles[i].lines[l].text);
 		}
 	}
 

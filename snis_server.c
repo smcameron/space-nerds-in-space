@@ -27585,7 +27585,7 @@ static void send_buffer_via_unix_dgram_socket(int fd, const char *buf, int color
 	destination.sun_family = AF_UNIX;
 	strlcpy(destination.sun_path, demon_console_reader_socket_name, sizeof(destination.sun_path));
 
-	sendto(fd, packet, len + 1, 0, (struct sockaddr *) &destination, sizeof(destination));
+	sendto(fd, packet, len + 5, 0, (struct sockaddr *) &destination, sizeof(destination));
 }
 
 /* Close the demon console unix UDP socket and unlink the socket name from the filesystem */
