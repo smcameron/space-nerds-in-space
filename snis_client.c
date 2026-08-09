@@ -24275,6 +24275,8 @@ static int main_da_motion_notify(SDL_Window *window, SDL_MouseMotionEvent *event
 	return TRUE;
 }
 
+static void cleanup_fifos(void);
+
 static void really_quit(void)
 {
 	int i;
@@ -24303,6 +24305,7 @@ static void really_quit(void)
 	for (i = 0; i < njoysticks; i++)
 		close_joystick(joystick_fd[i]);
 	stop_text_to_speech_thread();
+	cleanup_fifos();
 }
 
 static void usage(void)
@@ -24983,6 +24986,17 @@ static void setup_demon_fifo(void)
 	snprintf(fifoname, sizeof(fifoname), "%s.%d", SNIS_DEMON_FIFO, pid);
 	setup_input_fifo(fifoname, "snisdemonfifo", &demon_fifo_thread,
 				send_demon_text_command);
+}
+
+static void cleanup_fifos(void)
+{
+	char fifoname[100];
+	pid_t pid = getpid();
+
+	snprintf(fifoname, sizeof(fifoname), "%s.%d", SNIS_NL_FIFO, pid);
+	remove(fifoname);
+	snprintf(fifoname, sizeof(fifoname), "%s.%d", SNIS_DEMON_FIFO, pid);
+	remove(fifoname);
 }
 
 static void setup_joysticks(void)
@@ -26448,6 +26462,7 @@ int main(int argc, char *argv[])
 	setup_physical_io_socket();
 	setup_natural_language_fifo();
 	setup_demon_fifo();
+	atexit(cleanup_fifos);
 	setup_text_to_speech_thread();
 	voice_chat_setup_threads();
 	ecx = entity_context_new(5000, 5000);
