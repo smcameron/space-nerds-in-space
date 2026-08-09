@@ -643,11 +643,12 @@ a serial port connected to a home-made set of controls instead.
 
 <h4><a name="snisclientnlprocthread">Natural language processing thread</a></h4>
 
-<p>This thread is responsible for monitoring the fifo /tmp/snis-natural-language-fifo for
-natural language text commands, and forwarding such commands to snis_server.
+<p>This thread is responsible for monitoring the fifo /tmp/snis-natural-language-fifo.PID
+for natural language text commands, and forwarding such commands to snis_server. "PID"
+is of course replaced with the process ID of the main thread of snis_client.
 
 <p>This thread is started by setup_natural_language_fifo(), called from main() in snis_client.c.
-It monitors a fifo (see mkfifo(3)), /tmp/snis-natural-language-fifo for natural language requests.
+It monitors a fifo (see mkfifo(3)), /tmp/snis-natural-language-fifo.PID for natural language requests.
 The main thread function is monitor_input_fifo(). This thread has some per-thread data passed in
 arg, which contains a struct input_fifo_thread_data, which contains a function pointer (process_input)
 used to process data from the fifo.  In the case of this thread, that process_input points to
@@ -655,11 +656,12 @@ send_natural_language_request_to_server(), which sends the commands to snis_serv
 
 <h4><a name="snisclientdemoncmdthread">Demon command thread</a></h4>
 
-<p>This thread is responsible for monitoring the fifo /tmp/snis-demon-fifo for
-demon screen text commands, and forwarding such commands to snis_server.
+<p>This thread is responsible for monitoring the fifo /tmp/snis-demon-fifo.PID for
+demon screen text commands, and forwarding such commands to snis_server.  "PID" is
+of course replaced with the process ID of the main thread of snis_client.
 
 <p>This thread is started by setup_demon_fifo(), called from main() in snis_client.c.
-It monitors a fifo (see mkfifo(3)), /tmp/snis-demon-fifo for demon text requests.
+It monitors a fifo (see mkfifo(3)), /tmp/snis-demon-fifo.PID for demon text requests.
 The main thread function is monitor_input_fifo(). This thread has some per-thread data passed in
 arg, which contains a struct input_fifo_thread_data, which contains a function pointer (process_input)
 used to process data from the fifo.  In the case of this thread, that process_input points to
@@ -1121,7 +1123,7 @@ with the audio hardware.
 
 <p>Pocketsphinx (running as a separate process) or some other speech recognition system
 can be used to talk to "the computer" onboard the ship. The output of the speech recognizer
-is fed into a fifo /tmp/snis-natural-language-fifo, where it is then processed as already
+is fed into a fifo /tmp/snis-natural-language-fifo.PID, where it is then processed as already
 <a href="#snisclientnlprocthread">described above</a>.
 
 <p>For more details about how this works, see this set of slides:
