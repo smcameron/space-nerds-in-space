@@ -16101,9 +16101,12 @@ static void meta_comms_about(__attribute__((unused)) char *name, struct game_cli
 {
 	int i;
 	const char *abouttxt[] = {
+		"--------------------------",
 		"Space Nerds In Space is free software",
 		"Source code can be found here:",
 		"https://github.com/smcameron/space-nerds-in-space",
+		"See: https://github.com/smcameron/space-nerds-in-space/releases",
+		"     for release notes.",
 		"--------------------------",
 		0,
 	};
@@ -16123,7 +16126,6 @@ static void meta_comms_about(__attribute__((unused)) char *name, struct game_cli
 	send_comms_packet(NULL, "", bridgelist[c->bridge].comms_channel, BUILD_INFO_STRING1);
 	send_comms_packet(NULL, "", bridgelist[c->bridge].comms_channel, BUILD_INFO_STRING2);
 	send_comms_packet(NULL, "", bridgelist[c->bridge].comms_channel, BUILD_INFO_STRING5);
-	send_comms_packet(NULL, "", bridgelist[c->bridge].comms_channel, "--------------------------");
 	for (i = 0; abouttxt[i]; i++)
 		send_comms_packet(NULL, "", bridgelist[c->bridge].comms_channel, abouttxt[i]);
 }
