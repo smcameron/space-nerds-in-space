@@ -48,6 +48,7 @@ struct console {
 static struct console consoles[MAX_CONSOLES];
 static int active_count = 0;
 static int current_idx = -1;
+static int screen_dirty = 1;
 
 static pthread_mutex_t data_mutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_t discovery_thread;
@@ -176,7 +177,7 @@ void *discovery_loop(void *arg)
 
 				if (current_idx == -1)
 					current_idx = i;
-				redraw_ui();
+				screen_dirty = 1;
 				break;
 			}
 		}
@@ -208,8 +209,11 @@ void *discovery_loop(void *arg)
 					}
 				}
 			}
-			redraw_ui();
+			screen_dirty = 1;
 		}
+
+		if (screen_dirty)
+			redraw_ui();
 
 		pthread_mutex_unlock(&data_mutex);
 	}
@@ -293,6 +297,7 @@ static void redraw_ui(void)
 	attroff(A_REVERSE);
 
 	refresh();
+	screen_dirty = 0;
 }
 
 int main(void)
@@ -351,11 +356,12 @@ int main(void)
 
 					add_line(&consoles[i], msg, color);
 					if (i == current_idx) {
-						redraw_ui();
+						screen_dirty = 1;
 					}
 				}
 			}
 		}
+
 
 		pthread_mutex_unlock(&data_mutex);
 
@@ -378,7 +384,7 @@ int main(void)
 				do {
 					current_idx = (current_idx + 1) % MAX_CONSOLES;
 				} while (!consoles[current_idx].active);
-				redraw_ui();
+				screen_dirty = 1;
 			}
 			break;
 		case KEY_LEFT:
@@ -387,10 +393,12 @@ int main(void)
 				do {
 					current_idx = (current_idx - 1 + MAX_CONSOLES) % MAX_CONSOLES;
 				} while (!consoles[current_idx].active);
-				redraw_ui();
+				screen_dirty = 1;
 			}
 			break;
 		}
+		if (screen_dirty)
+			redraw_ui();
 		pthread_mutex_unlock(&data_mutex);
 	}
 
