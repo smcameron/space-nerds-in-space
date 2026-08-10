@@ -484,6 +484,19 @@ get_more:
 					/* Append line to console log using standard white text (0 or pair) */
 					add_line(c, c->input_buf, DARKTURQUOISE);
 
+					/* Construct destination address dynamically for /tmp/snis-console.xxx */
+					struct sockaddr_un dest_addr;
+					memset(&dest_addr, 0, sizeof(dest_addr));
+					dest_addr.sun_family = AF_UNIX;
+
+					char *tab_name = tail_end_of_name(c->name);
+					if (tab_name) {
+						snprintf(dest_addr.sun_path, sizeof(dest_addr.sun_path),
+								"/tmp/snis-console.%s", tab_name);
+						sendto(c->sockfd, c->input_buf, c->input_len, 0,
+						       (struct sockaddr *) &dest_addr, sizeof(dest_addr));
+					}
+
 					/* Reset input buffer */
 					c->input_buf[0] = '\0';
 					c->input_len = 0;
