@@ -21,6 +21,7 @@
 #include <errno.h>
 #include <ncurses.h>
 #include <arpa/inet.h>
+#include <poll.h>
 
 #include "string-utils.h"
 #include "snis_cardinal_colors.h"
@@ -376,53 +377,88 @@ int main(void)
 
 	/* Main UI and I/O event loop */
 	while (still_running()) {
+		struct pollfd fds[MAX_CONSOLES + 1];
+		int nfds = 0;
+		struct console *c = NULL;
+
 		pthread_mutex_lock(&data_mutex);
 
-		/* Poll sockets for incoming datagrams */
+		/* Add STDIN (keyboard) to poll set */
+		fds[0].fd = STDIN_FILENO;
+		fds[0].events = POLLIN;
+		nfds = 1;
+
+		/* Map multiplexed fds back to console array indices */
+		int fd_to_console_map[MAX_CONSOLES + 1];
+		fd_to_console_map[0] = -1;
+
+		/* Add all active console sockets to poll set */
 		for (int i = 0; i < MAX_CONSOLES; i++) {
-			if (!consoles[i].active)
+			if (consoles[i].active) {
+				fds[nfds].fd = consoles[i].sockfd;
+				fds[nfds].events = POLLIN;
+				fd_to_console_map[nfds] = i;
+				nfds++;
+			}
+		}
+
+		pthread_mutex_unlock(&data_mutex);
+
+		/* Block here until activity happens on keyboard OR sockets (500ms timeout) */
+		int poll_res = poll(fds, nfds, 500);
+		if (poll_res < 0) {
+			if (errno == EINTR)
+				continue;
+			break;
+		}
+
+		pthread_mutex_lock(&data_mutex);
+
+		/* Check for incoming data on sockets */
+		for (int i = 1; i < nfds; i++) {
+			if (!(fds[i].revents & POLLIN))
+				continue;
+
+			int c_idx = fd_to_console_map[i];
+			if (!consoles[c_idx].active)
 				continue;
 
 			unsigned char buf[MAX_MSG_LEN + 2];
 			ssize_t bytes_read;
-get_more:
-			bytes_read = recv(consoles[i].sockfd, buf, sizeof(buf), MSG_DONTWAIT);
 
-			if (bytes_read > 0) {
+			while ((bytes_read = recv(consoles[c_idx].sockfd, buf, sizeof(buf), MSG_DONTWAIT)) > 0) {
 				unsigned char len = buf[0];
 				uint32_t color;
 				memcpy(&color, &buf[1], sizeof(color));
 				color = ntohl(color);
-				if (bytes_read >= len + 1) {
-					char msg[MAX_MSG_LEN + 1];
-					memcpy(msg, &buf[5], len);
-					msg[len] = '\0';
 
-					add_line(&consoles[i], msg, color);
-					if (i == current_idx) {
-						screen_dirty = 1;
-					}
-				}
-				goto get_more;
+				if (bytes_read < len + 1)
+					continue;
+
+				char msg[MAX_MSG_LEN + 1];
+				memcpy(msg, &buf[5], len);
+				msg[len] = '\0';
+
+				add_line(&consoles[c_idx], msg, color);
+				if (c_idx == current_idx)
+					screen_dirty = 1;
 			}
 		}
 
+		/* Check for stdin / user keyboard input */
+		if (!(fds[0].revents & POLLIN))
+			goto finished_keyboard_input;
 
-		pthread_mutex_unlock(&data_mutex);
-
-		/* Handle keyboard navigation */
 		int ch = getch();
 		if (ch == ERR)
-			continue;
+			goto finished_keyboard_input;
 
-		pthread_mutex_lock(&data_mutex);
 		switch (ch) {
 		case 033: /* Escape key */
 			running = 0;
 			break;
 		case '\t':
 		case KEY_RIGHT:
-			/* Next console tab */
 			if (active_count > 0) {
 				do {
 					current_idx = (current_idx + 1) % MAX_CONSOLES;
@@ -431,7 +467,6 @@ get_more:
 			}
 			break;
 		case KEY_LEFT:
-			/* Previous console tab */
 			if (active_count > 0) {
 				do {
 					current_idx = (current_idx - 1 + MAX_CONSOLES) % MAX_CONSOLES;
@@ -453,23 +488,21 @@ get_more:
 				}
 			}
 			break;
-		case KEY_PPAGE: /* Page Up */
+		case KEY_PPAGE:
 			if (current_idx >= 0 && consoles[current_idx].active) {
 				int max_y, max_x;
 				(void) max_x;
 				getmaxyx(stdscr, max_y, max_x);
-				int page_size = max_y - 3;
-				consoles[current_idx].scroll_offset += page_size;
+				consoles[current_idx].scroll_offset += (max_y - 3);
 				screen_dirty = 1;
 			}
 			break;
-		case KEY_NPAGE: /* Page Down */
+		case KEY_NPAGE:
 			if (current_idx >= 0 && consoles[current_idx].active) {
 				int max_y, max_x;
 				(void) max_x;
 				getmaxyx(stdscr, max_y, max_x);
-				int page_size = max_y - 3;
-				consoles[current_idx].scroll_offset -= page_size;
+				consoles[current_idx].scroll_offset -= (max_y - 3);
 				if (consoles[current_idx].scroll_offset < 0) {
 					consoles[current_idx].scroll_offset = 0;
 				}
@@ -479,61 +512,59 @@ get_more:
 		case '\n':
 		case '\r':
 		case KEY_ENTER:
-			if (current_idx >= 0 && consoles[current_idx].active) {
-				struct console *c = &consoles[current_idx];
-				if (c->input_len > 0) {
-					/* Append line to console log using standard white text (0 or pair) */
-					add_line(c, c->input_buf, DARKTURQUOISE);
+			if (current_idx < 0 || !consoles[current_idx].active)
+				break;
+			c = &consoles[current_idx];
+			if (c->input_len <= 0)
+				break;
+			add_line(c, c->input_buf, DARKTURQUOISE);
 
-					/* Construct destination address dynamically for /tmp/snis-console.xxx */
-					struct sockaddr_un dest_addr;
-					memset(&dest_addr, 0, sizeof(dest_addr));
-					dest_addr.sun_family = AF_UNIX;
+			struct sockaddr_un dest_addr;
+			memset(&dest_addr, 0, sizeof(dest_addr));
+			dest_addr.sun_family = AF_UNIX;
 
-					char *tab_name = tail_end_of_name(c->name);
-					if (tab_name) {
-						snprintf(dest_addr.sun_path, sizeof(dest_addr.sun_path),
-								"/tmp/snis-console.%s", tab_name);
-						sendto(c->sockfd, c->input_buf, c->input_len, 0,
-						       (struct sockaddr *) &dest_addr, sizeof(dest_addr));
-					}
-
-					/* Reset input buffer */
-					c->input_buf[0] = '\0';
-					c->input_len = 0;
-
-					/* Reset scroll to bottom when submitting new input */
-					c->scroll_offset = 0;
-					screen_dirty = 1;
-				}
+			char *tab_name = tail_end_of_name(c->name);
+			if (tab_name) {
+				snprintf(dest_addr.sun_path, sizeof(dest_addr.sun_path),
+						"/tmp/snis-console.%s", tab_name);
+				sendto(c->sockfd, c->input_buf, c->input_len, 0,
+					   (struct sockaddr *)&dest_addr, sizeof(dest_addr));
 			}
+
+			c->input_buf[0] = '\0';
+			c->input_len = 0;
+			c->scroll_offset = 0;
+			screen_dirty = 1;
 			break;
 		case KEY_BACKSPACE:
 		case 127:
 		case '\b':
-			if (current_idx >= 0 && consoles[current_idx].active) {
-				struct console *c = &consoles[current_idx];
-				if (c->input_len > 0) {
-					c->input_len--;
-					c->input_buf[c->input_len] = '\0';
-					screen_dirty = 1;
-				}
+			if (current_idx < 0 || !consoles[current_idx].active)
+				break;
+			c = &consoles[current_idx];
+			if (c->input_len > 0) {
+				c->input_len--;
+				c->input_buf[c->input_len] = '\0';
+				screen_dirty = 1;
 			}
 			break;
 		default:
-			/* Handle printable ASCII characters */
-			if (current_idx >= 0 && consoles[current_idx].active) {
-				struct console *c = &consoles[current_idx];
-				if (ch >= 32 && ch <= 126 && c->input_len < 80) {
-					c->input_buf[c->input_len++] = (char)ch;
-					c->input_buf[c->input_len] = '\0';
-					screen_dirty = 1;
-				}
+			if (current_idx < 0 || !consoles[current_idx].active)
+				break;
+			c = &consoles[current_idx];
+			if (ch >= 32 && ch <= 126 && c->input_len < 80) {
+				c->input_buf[c->input_len++] = (char)ch;
+				c->input_buf[c->input_len] = '\0';
+				screen_dirty = 1;
 			}
 			break;
 		}
+
+finished_keyboard_input:
+
 		if (screen_dirty)
 			redraw_ui();
+
 		pthread_mutex_unlock(&data_mutex);
 	}
 
