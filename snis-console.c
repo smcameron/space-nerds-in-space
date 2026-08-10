@@ -342,7 +342,9 @@ int main(void)
 				continue;
 
 			unsigned char buf[MAX_MSG_LEN + 2];
-			ssize_t bytes_read = recv(consoles[i].sockfd, buf, sizeof(buf), MSG_DONTWAIT);
+			ssize_t bytes_read;
+get_more:
+			bytes_read = recv(consoles[i].sockfd, buf, sizeof(buf), MSG_DONTWAIT);
 
 			if (bytes_read > 0) {
 				unsigned char len = buf[0];
@@ -359,6 +361,7 @@ int main(void)
 						screen_dirty = 1;
 					}
 				}
+				goto get_more;
 			}
 		}
 
