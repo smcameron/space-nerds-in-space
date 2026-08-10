@@ -684,9 +684,17 @@ static struct server_tracker *server_tracker;
 static int snis_log_level = 2;
 static struct ship_type_entry *ship_type;
 static int nshiptypes;
-static int demon_console_unix_dgram_socket = -1;
+
+/* snis-console related stuff */
+pthread_t snis_console_reader_thread;
+static int demon_console_unix_dgram_socket = -1; /* snis_server transmits from and recvs via this socket */
+
+/* e.g.: "/tmp/snis-console.karado" snis_server sends from this */
 static char demon_console_socket_name[110] = { 0 };
+
+/* e.g.: "/tmp/snis-console-rdr.karado", snis_server sends to/recvs from */
 static char demon_console_reader_socket_name[110] = { 0 };
+/* End snis-console related stuff */
 
 /*
  * Starmap entries -- these are locations of star systems
@@ -27595,6 +27603,35 @@ static void send_buffer_via_unix_dgram_socket(int fd, const char *buf, int color
 	sendto(fd, packet, len + 5, 0, (struct sockaddr *) &destination, sizeof(destination));
 }
 
+/* This recvs demon commands from a unix datagram socket, cmds sent by snis-console program. */
+static void *snis_console_reader(void *x)
+{
+	(void)x;
+	char buffer[256];
+	ssize_t bytes_received;
+
+	while (1) {
+		/* Reserve 1 byte for null termination */
+		bytes_received = recv(demon_console_unix_dgram_socket, buffer, sizeof(buffer) - 1, 0);
+
+		if (bytes_received < 0) {
+			fprintf(stderr, "recv failed on demon_console_unix_dgram_socket");
+			break;
+		}
+		buffer[bytes_received] = '\0'; /* null-terminat string */
+		uppercase(buffer);
+		process_demon_command_string(buffer);
+	}
+	return NULL;
+}
+
+static void start_snis_console_reader_thread(void)
+{
+	demon_console_unix_dgram_socket = open_demon_console_unix_dgram_socket(solarsystem_name);
+	if (demon_console_unix_dgram_socket >= 0)
+		(void) create_thread(&snis_console_reader_thread, snis_console_reader, NULL, "sniscnslrdr", 1);
+}
+
 /* Close the demon console unix UDP socket and unlink the socket name from the filesystem */
 static void close_demon_console_socket(int fd)
 {
@@ -33016,7 +33053,7 @@ int main(int argc, char *argv[])
 	}
 
 	open_log_file();
-	demon_console_unix_dgram_socket = open_demon_console_unix_dgram_socket(solarsystem_name);
+	start_snis_console_reader_thread();
 
 	setup_lua();
 	snis_protocol_debugging(1);
