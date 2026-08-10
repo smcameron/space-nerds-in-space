@@ -42,6 +42,7 @@ struct console {
 	int sockfd;
 	struct textline lines[MAX_LINES];
 	int line_count;
+	int scroll_offset; /* 0 = pinned to bottom/latest */
 	int active;
 };
 
@@ -171,6 +172,7 @@ void *discovery_loop(void *arg)
 				strlcpy(consoles[i].socket_path, full_path, sizeof(consoles[i].socket_path));
 				consoles[i].sockfd = fd;
 				consoles[i].line_count = 0;
+				consoles[i].scroll_offset = 0;
 				consoles[i].active = 1;
 				found_mask[i] = 1;
 				active_count++;
@@ -278,10 +280,27 @@ static void redraw_ui(void)
 	if (current_idx >= 0 && consoles[current_idx].active) {
 		struct console *c = &consoles[current_idx];
 		int display_height = max_y - 3; /* Exclude tab bar, separator, status bar */
-		int start_line = c->line_count > display_height ? c->line_count - display_height : 0;
+
+		/* Clamp scroll offset to valid bounds */
+		int max_scroll = c->line_count - display_height;
+		if (max_scroll < 0)
+			max_scroll = 0;
+		if (c->scroll_offset > max_scroll)
+			c->scroll_offset = max_scroll;
+		if (c->scroll_offset < 0)
+			c->scroll_offset = 0;
+
+		/* Calculate rendering start line based on scroll_offset */
+		int start_line = c->line_count - display_height - c->scroll_offset;
+		if (start_line < 0)
+			start_line = 0;
+
+		int end_line = start_line + display_height;
+		if (end_line > c->line_count)
+			end_line = c->line_count;
 
 		int row = 2;
-		for (int l = start_line; l < c->line_count; l++) {
+		for (int l = start_line; l < end_line; l++) {
 			if (c->lines[l].color_pair > 0)
 				attron(COLOR_PAIR(c->lines[l].color_pair));
 			mvprintw(row++, 0, "%.*s", max_x, c->lines[l].text);
@@ -293,7 +312,8 @@ static void redraw_ui(void)
 	/* 3. Draw Status / Help Line */
 	attron(A_REVERSE);
 	mvhline(max_y - 1, 0, ' ', max_x);
-	mvprintw(max_y - 1, 0, " [< / > or TAB] Switch Consoles | [q] Quit | Active: %d", active_count);
+	mvprintw(max_y - 1, 0, " [<-/->/TAB] Switch | [Up/Down/PgUp/PgDn] Scroll | [q] Quit | Active: %d",
+				active_count);
 	attroff(A_REVERSE);
 
 	refresh();
@@ -396,6 +416,43 @@ get_more:
 				do {
 					current_idx = (current_idx - 1 + MAX_CONSOLES) % MAX_CONSOLES;
 				} while (!consoles[current_idx].active);
+				screen_dirty = 1;
+			}
+			break;
+		case KEY_UP:
+			if (current_idx >= 0 && consoles[current_idx].active) {
+				consoles[current_idx].scroll_offset++;
+				screen_dirty = 1;
+			}
+			break;
+		case KEY_DOWN:
+			if (current_idx >= 0 && consoles[current_idx].active) {
+				if (consoles[current_idx].scroll_offset > 0) {
+					consoles[current_idx].scroll_offset--;
+					screen_dirty = 1;
+				}
+			}
+			break;
+		case KEY_PPAGE: /* Page Up */
+			if (current_idx >= 0 && consoles[current_idx].active) {
+				int max_y, max_x;
+				(void) max_x;
+				getmaxyx(stdscr, max_y, max_x);
+				int page_size = max_y - 3;
+				consoles[current_idx].scroll_offset += page_size;
+				screen_dirty = 1;
+			}
+			break;
+		case KEY_NPAGE: /* Page Down */
+			if (current_idx >= 0 && consoles[current_idx].active) {
+				int max_y, max_x;
+				(void) max_x;
+				getmaxyx(stdscr, max_y, max_x);
+				int page_size = max_y - 3;
+				consoles[current_idx].scroll_offset -= page_size;
+				if (consoles[current_idx].scroll_offset < 0) {
+					consoles[current_idx].scroll_offset = 0;
+				}
 				screen_dirty = 1;
 			}
 			break;
