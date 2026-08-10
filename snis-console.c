@@ -222,6 +222,7 @@ void *discovery_loop(void *arg)
 			redraw_ui();
 
 		pthread_mutex_unlock(&data_mutex);
+		sleep(2);
 	}
 	return NULL;
 }
