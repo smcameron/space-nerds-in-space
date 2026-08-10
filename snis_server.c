@@ -20467,15 +20467,44 @@ static void server_builtin_help(__attribute__((unused)) char *cmd)
 	list_lua_scripts();
 }
 
+static void process_demon_command_string(char *txt)
+{
+	char *trimmed_cmd;
+	char firstword[300];
+	int wordlen;
+
+	trimmed_cmd = trim_whitespace(txt);
+	memset(firstword, 0, sizeof(firstword));
+	for (int i = 0; trimmed_cmd[i] != '\0'; i++) {
+		if (trimmed_cmd[i] == ' ')
+			break;
+		firstword[i] = trimmed_cmd[i];
+	}
+	wordlen = strlen(firstword);
+	if (wordlen == 0) { /* shouldn't happen */
+		send_demon_console_color_msg(YELLOW, "MALFORMED (EMPTY) COMMAND");
+		return;
+	}
+	/* See if it's a server builtin command, wordlen limit allows abbreviated commands */
+	for (int i = 0; (size_t) i < ARRAYSIZE(server_builtin); i++) {
+		if (strncmp(firstword, server_builtin[i].cmd, wordlen) == 0) {
+			server_builtin[i].fn(txt);
+			return;
+		}
+	}
+
+	pthread_mutex_lock(&universe_mutex);
+	enqueue_lua_command(txt); /* queue up for execution by main thread. */
+	pthread_mutex_unlock(&universe_mutex);
+	return;
+}
+
 static int process_exec_lua_script(struct game_client *c)
 {
 	unsigned char buffer[sizeof(struct lua_script_packet)];
 	char txt[300];
-	int i, rc;
+	int rc;
 	uint8_t len;
-	char firstword[300];
-	int wordlen;
-	char *trimmed_cmd;
 
 	rc = read_and_unpack_buffer(c, buffer, "b", &len);
 	if (rc)
@@ -20484,29 +20513,7 @@ static int process_exec_lua_script(struct game_client *c)
 	if (rc)
 		return rc;
 	txt[len] = '\0';
-	trimmed_cmd = trim_whitespace(txt);
-	memset(firstword, 0, sizeof(firstword));
-	for (i = 0; trimmed_cmd[i] != '\0'; i++) {
-		if (trimmed_cmd[i] == ' ')
-			break;
-		firstword[i] = trimmed_cmd[i];
-	}
-	wordlen = strlen(firstword);
-	if (wordlen == 0) { /* shouldn't happen */
-		send_demon_console_color_msg(YELLOW, "MALFORMED (EMPTY) COMMAND");
-		return 0;
-	}
-	/* See if it's a server builtin command, wordlen limit allows abbreviated commands */
-	for (i = 0; (size_t) i < ARRAYSIZE(server_builtin); i++) {
-		if (strncmp(firstword, server_builtin[i].cmd, wordlen) == 0) {
-			server_builtin[i].fn(txt);
-			return 0;
-		}
-	}
-
-	pthread_mutex_lock(&universe_mutex);
-	enqueue_lua_command(txt); /* queue up for execution by main thread. */
-	pthread_mutex_unlock(&universe_mutex);
+	process_demon_command_string(txt);
 	return 0;
 }
 
