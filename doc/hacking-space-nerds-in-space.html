@@ -61,7 +61,6 @@ way around the code.
 <li><a href="#snisclientnlprocthread">natural language processing thread</a>
 <li><a href="#snisclientdemoncmdthread">demon command thread</a>
 <li><a href="#snisclientmainthread">Main thread</a>
-<li><a href="#snisclientmainthread">Main thread</a>
 <li><a href="#snisclientvoicechatdecodethread">Voice Chat Decoding thread</a>
 <li><a href="#snisclientvoicechatencodethread">Voice Chat Encoding thread</a>
 </ol>
@@ -118,6 +117,7 @@ way around the code.
 <li><a href="#snisserverssglthr">SSGL thread</a>
 <li><a href="#snisserversrvrtrkr">Server Tracker thread</a>
 <li><a href="#snisservermainthr">Main thread</a>
+<li><a href="#snissrvconsolethr">SNIS console thread</a>
 </ol>
 <li><a href="#snisserverplayership">Player ship systems</a>
 <ol>
@@ -157,6 +157,7 @@ way around the code.
 <li><a href="#ssgldatastruct">SSGL Main data structures</a>
 <li><a href="#ssglserverthr">SSGL Server threads</a>
 </ol>
+<li><a href="#snisconsole">SNIS console</a>
 <li><a href="#buildsystem">Build System</a>
 <ol>
 <li><a href="#dependencies">Prerequisites (dependencies)</a>
@@ -1841,6 +1842,14 @@ When the number of bridges in a snis_server instance drops to zero, and the snis
 instance is not adjacent to any other snis_server instance with at least one bridge
 running, then snis_multiverse can safely shut down that snis_server instance.)
 
+<h4><a name="snissrvconsolethr">SNIS console thread</a></h4>
+
+<p>The snis console thread runs the function snis_server.c:snis_console_reader(),
+which reads from a UNIX domain datagram socket named "/tmp/snis-console.xxx",
+where "xxx" is the name of the solarsystem for this snis_server.  Commands come
+from snis-console, and processed as if they were typed on the DEMON screen of
+snis_client.
+
 <h3><a name="snisserverplayership">Player ship systems</a></h3>
 
 <h4><a name="snisserverpwrcool">Power and coolant models</a></h4>
@@ -2671,6 +2680,33 @@ ssgl_lobby_descriptor advertising the IP address and tcp port of itself (ssgl_se
 that clients may more easily find it.
 
 <p>
+<h2><a name="snisconsole">SNIS Console</a></h2>,
+<h3>Overview</h3>
+<p>snis-console operates in the terminal, and presents each snis_server it discovers in
+a tab.  Within each tab, a log of the DEMON screen for one snis_server instance is
+presented, and you can type commands to interact with it.
+
+<p>The motivation behind snis-console was the desire to support multi-snis_server mission
+scripts.  Without snis-console, if you want to trigger Lua scripts on multiple snis_servers,
+you have to login to each one with a ship, and use the demon console of snis_client to
+trigger the Lua scripts.  With snis-console, you can interact with each snis_server from
+a single program without having to create a ship or login.
+
+<p>SNIS console is an ncurses program which allows you to interact with multiple SNIS server
+processes at once.  It is not a network program, so it can only interact with local snis_server
+instances.  Communication between snis-console and snis_server instances occurs through UNIX
+domain datagram sockets in /tmp.  Sockets named /tmp/snis-console.xxx, where "xxx" is
+replaced by the solarsystem name belong to snis_server, and sockets named
+/tmp/snis-console-rdr.xxx belong to snis-console.
+
+<h3>Design of SNIS console</h3>
+<p>The design of snis-console is fairly simple.  There are two threads, one thread is concerned
+with discovering snis_server instances, which it does by periodically scanning /tmp looking for
+UNIX domain sockets of the form "/tmp/snis-console.*".  The other thread is concerned with
+reading data from each of the snis_servers and placing whatever is read in a buffer to be displayed
+under the appropriate tab, capturing what the user types, and sending commands the user types
+to the appropriate snis_server instance.
+
 <h2><a name="buildsystem">Build System</a></h2>
 
 <h3><a name="dependencies">Prerequisites (dependencies)</a></h3>
