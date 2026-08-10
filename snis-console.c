@@ -44,6 +44,10 @@ struct console {
 	int line_count;
 	int scroll_offset; /* 0 = pinned to bottom/latest */
 	int active;
+
+	/* Input pane buffer */
+	char input_buf[81];      /* Max 80 characters + null terminator */
+	int input_len;
 };
 
 static struct console consoles[MAX_CONSOLES];
@@ -279,7 +283,14 @@ static void redraw_ui(void)
 	/* 2. Draw Active Console Messages */
 	if (current_idx >= 0 && consoles[current_idx].active) {
 		struct console *c = &consoles[current_idx];
-		int display_height = max_y - 3; /* Exclude tab bar, separator, status bar */
+
+		/* Display height is reduced by 4:
+		 * Row 0: Tab Bar
+		 * Row 1: Blank Separator / Header
+		 * Row max_y - 2: Input Field Pane (1 line)
+		 * Row max_y - 1: Status / Help Line
+		 */
+		int display_height = max_y - 4;
 
 		/* Clamp scroll offset to valid bounds */
 		int max_scroll = c->line_count - display_height;
@@ -307,6 +318,10 @@ static void redraw_ui(void)
 			if (c->lines[l].color_pair > 0)
 				attroff(COLOR_PAIR(c->lines[l].color_pair));
 		}
+
+		/* Draw 1-line Input Pane */
+		int input_row = max_y - 2;
+		mvprintw(input_row, 0, "> %-80s", c->input_buf);
 	}
 
 	/* 3. Draw Status / Help Line */
@@ -315,6 +330,12 @@ static void redraw_ui(void)
 	mvprintw(max_y - 1, 0, " [<-/->/TAB] Switch | [Up/Down/PgUp/PgDn] Scroll | [q] Quit | Active: %d",
 				active_count);
 	attroff(A_REVERSE);
+
+	/* Position physical ncurses cursor at current prompt input offset */
+	if (current_idx >= 0 && consoles[current_idx].active) {
+		struct console *c = &consoles[current_idx];
+		move(max_y - 2, 2 + c->input_len);
+	}
 
 	refresh();
 	screen_dirty = 0;
@@ -327,7 +348,7 @@ int main(void)
 	cbreak();
 	noecho();
 	keypad(stdscr, TRUE);
-	curs_set(0);
+	curs_set(1);
 	timeout(100); /* 100ms non-blocking wgetch */
 
 	if (has_colors()) {
@@ -395,8 +416,6 @@ get_more:
 
 		pthread_mutex_lock(&data_mutex);
 		switch (ch) {
-		case 'q':
-		case 'Q':
 		case 033: /* Escape key */
 			running = 0;
 			break;
@@ -454,6 +473,48 @@ get_more:
 					consoles[current_idx].scroll_offset = 0;
 				}
 				screen_dirty = 1;
+			}
+			break;
+		case '\n':
+		case '\r':
+		case KEY_ENTER:
+			if (current_idx >= 0 && consoles[current_idx].active) {
+				struct console *c = &consoles[current_idx];
+				if (c->input_len > 0) {
+					/* Append line to console log using standard white text (0 or pair) */
+					add_line(c, c->input_buf, DARKTURQUOISE);
+
+					/* Reset input buffer */
+					c->input_buf[0] = '\0';
+					c->input_len = 0;
+
+					/* Reset scroll to bottom when submitting new input */
+					c->scroll_offset = 0;
+					screen_dirty = 1;
+				}
+			}
+			break;
+		case KEY_BACKSPACE:
+		case 127:
+		case '\b':
+			if (current_idx >= 0 && consoles[current_idx].active) {
+				struct console *c = &consoles[current_idx];
+				if (c->input_len > 0) {
+					c->input_len--;
+					c->input_buf[c->input_len] = '\0';
+					screen_dirty = 1;
+				}
+			}
+			break;
+		default:
+			/* Handle printable ASCII characters */
+			if (current_idx >= 0 && consoles[current_idx].active) {
+				struct console *c = &consoles[current_idx];
+				if (ch >= 32 && ch <= 126 && c->input_len < 80) {
+					c->input_buf[c->input_len++] = (char)ch;
+					c->input_buf[c->input_len] = '\0';
+					screen_dirty = 1;
+				}
 			}
 			break;
 		}
