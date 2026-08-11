@@ -95,7 +95,8 @@ Too much to list, but here's a list anyway:
 
 * Setup screen
   Try to make it more intuitive for people who are seeing it for
-  the first time ever.
+  the first time ever.   Partially done: Addition of process launcher
+  screen improves things somewhat.
 
 * write some kind of guide to hacking, to make it easier for others to
   contribute to this codebase.
@@ -151,13 +152,11 @@ Too much to list, but here's a list anyway:
 
 * 3D out the window view
   Fade distant objects to black
-  Implement shadow mapping (very very hard.)
+  Implement shadow mapping (very very hard.)  Done!!!! By Chalkwalk, with the help of claude code!!!
 	  http://www.opengl-tutorial.org/intermediate-tutorials/tutorial-16-shadow-mapping/
 	  https://gamedev.stackexchange.com/questions/73851/how-do-i-fit-the-camera-frustum-inside-directional-light-space
 	  https://en.wikipedia.org/wiki/Shadow_mapping
   Implement PBR (very very hard).
-
-* comms screen:
 
 * Damage control screen:
   Make the various components of the systems less generic
@@ -223,8 +222,7 @@ NICE TO HAVE:
   The sunspots, corona, etc are overkill, but the lens flare, the way
   it comes around the edge of a planet, etc, all look really good.
 
-* Make black hole shader better.  Right now it's just a billboard with a
-  fuzzy black disc on it.
+* Make black hole shader better.  Done!!! by chalkwalk via claude code.
 
 * Add a Real Time Strategy game into SNIS.
   Partially done.  But a long way to go before it's reasonable.
@@ -314,7 +312,7 @@ NICE TO HAVE:
 * Improve black hole behavior.
 
   Gravitational attraction as currently implemented is kind of ... meh.  Not very
-  black-hole-like. Rendering of black holes is currently crap.
+  black-hole-like.
 
 * Add more special things, like comets, anomalies of some kind, just generally
   interesting stuff of one sort or another.  I.e., go all Dwarf Fortress on this
@@ -331,6 +329,8 @@ NICE TO HAVE:
   as a way of rendering nebula.  See: http://spaceengine.org/news/blog161008/
   See: http://iquilezles.org/www/articles/distfunctions/distfunctions.htm
   for a load of signed-distance-field functions for various primitives.
+  Update: Chalkwalk attempted ray-marched nebula, got some interesting results, but
+  performance was a bit of a problem, to say the least (no surprise there, really.)
 
 * Get better models, or properly uv-map and texture models we do have. Scrap the
   more terrible models.
@@ -373,6 +373,9 @@ NICE TO HAVE:
   fopen_and_fetch(), and these would attempt a local [f]open(), and if that doesn't
   work, fetch the file, then re-do the [f]open(). That way client installation should
   be simpler, and scenarios could get their files distributed on-demand.
+
+  This is partly done... from the process launcher screen it is possible to "update assets",
+  but it does not attempt to fetch assets dynamically while playing the game.
 
 * The client currently knows many demon screen commands and many of them are implemented
   with custom opcodes sent to the server. Recently, server-side builtin demon commands
@@ -431,6 +434,7 @@ NICE TO HAVE:
   in accordance with XDG dir spec for runtime usage.  snis_update_assets could check for
   updates periodically (probably the first run, plus on startup if more than a week has
   elapsed, or on user demand.)  Something like that.
+  (I think this is mostly or even all done, to accomodate the flatpak stuff.)
 
 * Consider factoring out common code duplicated within graph_dev_gles.c and graph_dev_opengl.c
 
