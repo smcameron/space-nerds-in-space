@@ -39,6 +39,7 @@ apt_min_packages()
 	libcrypt-dev
 	libssl-dev
 	libcurl-dev
+	libncurses-dev
 	sox"
 }
 

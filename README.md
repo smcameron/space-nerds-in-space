@@ -147,6 +147,7 @@ performs its job satisfactorily, you can advance to Step 3.
 > sudo apt-get install sox; # for "play" command, used by text to speech
 > sudo apt-get install libcrypt-dev; # used by bin/snis_update_assets
 > sudo apt-get install libcurl-dev; # used by bin/snis_update_assets
+> sudo apt-get install libncurses-dev; # used by bin/snis-console
 > 
 > You might also need these in addition or instead of some of the above:
 >
