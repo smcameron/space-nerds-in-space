@@ -450,11 +450,11 @@ static void handle_keyboard_input(struct pollfd fds[], int *dirty)
 
 	/* Check for stdin / user keyboard input */
 	if (!(fds[0].revents & POLLIN))
-		goto finished_keyboard_input;
+		return;
 
 	int ch = getch();
 	if (ch == ERR)
-		goto finished_keyboard_input;
+		return;
 
 	switch (ch) {
 	case 033: /* Escape key */
@@ -562,9 +562,6 @@ static void handle_keyboard_input(struct pollfd fds[], int *dirty)
 		}
 		break;
 	}
-
-finished_keyboard_input:
-	return;
 }
 
 static void clean_up(void)
