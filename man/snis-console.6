@@ -1,0 +1,30 @@
+.TH SPACE-NERDS-IN-SPACE "1" "AUGUST 2026" "snis-console" "Games"
+.SH NAME
+snis-console \- terminal application to interact with multiple snis_server instances at once
+.SH SYNOPSIS
+.B snis-console
+
+.SH DESCRIPTION
+.\" Add any additional description here
+.PP
+snis-console allows you to see output of the "DEMON" console of multiple
+snis_server instances at once, and also to send commands to snis_server
+instances.
+.SH OPTIONS
+.TP
+snis-console has no options.
+.SH EXAMPLE
+.TP
+.B snis-console
+.SH FILES
+.PP
+.PP
+/tmp/snis-console-rdr.* - UNIX domain datagram sockets created by snis-console
+.PP
+/tmp/snis-console.* - UNIX domain datagram sockets created by snis_server
+.SH SEE ALSO
+.PP
+snis_client(6), ssgl_server(6), snis_multiverse(6), lsssgl(1).
+.SH AUTHOR
+Written by Stephen M. Cameron
+.br

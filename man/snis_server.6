@@ -1,4 +1,4 @@
-.TH SPACE-NERDS-IN-SPACE "6" "Feb 2025" "snis_server" "Games"
+.TH SPACE-NERDS-IN-SPACE "6" "AUGUST 2026" "snis_server" "Games"
 .SH NAME
 snis_server \- Multi player cooperative star ship bridge simulator (server) 
 .SH SYNOPSIS
@@ -137,6 +137,9 @@ screen, A.LUA will be executed. If A.LUA didn't exist, then X/A.LUA
 would be executed.  You can differentate by typing, e.g. "z/a" on
 the demon screen to execute Z/A.LUA.
 .PP
+/tmp/snis-console.* -- UNIX domain datagram sockets for communication
+with snis-console
+.PP
 .SH ENVIRONMENT VARIABLES
 .PP
 SNISRAND can be set to a random seed to affect universe generation
@@ -159,7 +162,7 @@ variable can be set to any IP address on the network on which
 ssgl_server is reachable so that the correct network interface is chosen.
 .SH SEE ALSO
 .PP
-snis_client(6), ssgl_server(6), snis_multiverse(6), lsssgl(1).
+snis_client(6), ssgl_server(6), snis_multiverse(6), snis-console(6), lsssgl(1).
 .SH GOOD LUCK
 .PP
 You'll need it.
