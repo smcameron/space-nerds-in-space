@@ -51,17 +51,17 @@ struct console {
 	int input_len;
 };
 
-static struct console consoles[MAX_CONSOLES];
-static int active_count = 0;
-static int current_idx = -1;
-static int screen_dirty = 1;
+static struct console consoles[MAX_CONSOLES] = { 0 };
+static int active_count = 0; /* count of active snis_servers detected */
+static int current_idx = -1; /* current snis server being displayed */
+static int screen_dirty = 1; /* Screen needs redrawing? */
 
 static pthread_mutex_t data_mutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_t discovery_thread;
 static int running = 1;
 
 /* Forward declarations */
-static void redraw_ui(void);
+static void maybe_redraw_ui(int *dirty);
 static void add_line(struct console *c, const char *msg, uint32_t color);
 
 static int map_color_to_pair(uint32_t color)
@@ -219,8 +219,7 @@ void *discovery_loop(void *arg)
 			screen_dirty = 1;
 		}
 
-		if (screen_dirty)
-			redraw_ui();
+		maybe_redraw_ui(&screen_dirty);
 
 		pthread_mutex_unlock(&data_mutex);
 		sleep(2);
@@ -246,8 +245,12 @@ static void add_line(struct console *c, const char *msg, uint32_t color)
 }
 
 /* Renders tab bar, active log view, and status bar */
-static void redraw_ui(void)
+static void maybe_redraw_ui(int *dirty)
 {
+
+	if (!*dirty)
+		return;
+
 	erase();
 	int max_y, max_x;
 	getmaxyx(stdscr, max_y, max_x);
@@ -340,10 +343,10 @@ static void redraw_ui(void)
 	}
 
 	refresh();
-	screen_dirty = 0;
+	*dirty = 0;
 }
 
-int main(void)
+static void initialize_ncurses(void)
 {
 	/* Initialize ncurses */
 	initscr();
@@ -365,209 +368,207 @@ int main(void)
 		init_pair(6, COLOR_GREEN, COLOR_BLACK);
 		init_pair(7, COLOR_CYAN, COLOR_BLACK);
 	}
+}
 
-	memset(consoles, 0, sizeof(consoles));
+/* Set up array of file descriptors for use by poll() and fd_to_console_map[].
+ * Must hold data_mutex
+ */
+static void set_up_file_descriptors(struct pollfd fds[], int fd_to_console_map[], int *nfds, int maxfds)
+{
+	/* Add STDIN (keyboard) to poll set */
+	fds[0].fd = STDIN_FILENO;
+	fds[0].events = POLLIN;
+	*nfds = 1;
 
-	/* Start background discovery thread */
-	if (pthread_create(&discovery_thread, NULL, discovery_loop, NULL) != 0) {
-		endwin();
-		fprintf(stderr, "Failed to create discovery thread\n");
-		return 1;
+	fd_to_console_map[0] = -1;
+
+	/* Add all active console sockets to poll set */
+	for (int i = 0; i < maxfds; i++) {
+		if (consoles[i].active) {
+			fds[*nfds].fd = consoles[i].sockfd;
+			fds[*nfds].events = POLLIN;
+			fd_to_console_map[*nfds] = i;
+			(*nfds)++;
+		}
 	}
+}
 
-	/* Main UI and I/O event loop */
-	while (still_running()) {
-		struct pollfd fds[MAX_CONSOLES + 1];
-		int nfds = 0;
-		struct console *c = NULL;
+/* Wait for something to happen on any of the file descriptors */
+#define POLL_ERROR 0
+#define POLL_INTERRUPTED -1
+#define POLL_COMPLETE 1
+static int wait_for_action_on_fds(struct pollfd fds[], int nfds)
+{
+	int poll_res;
 
-		pthread_mutex_lock(&data_mutex);
+	/* Block here until activity happens on keyboard OR sockets (500ms timeout) */
+	poll_res = poll(fds, nfds, 500);
+	if (poll_res < 0) {
+		if (errno == EINTR)
+			return POLL_INTERRUPTED;
+		return POLL_ERROR;
+	}
+	return POLL_COMPLETE;
+}
 
-		/* Add STDIN (keyboard) to poll set */
-		fds[0].fd = STDIN_FILENO;
-		fds[0].events = POLLIN;
-		nfds = 1;
+static void handle_incoming_data_on_sockets(struct pollfd fds[], int fd_to_console_map[], int nfds, int *dirty)
+{
+	for (int i = 1; i < nfds; i++) {
+		if (!(fds[i].revents & POLLIN))
+			continue;
 
-		/* Map multiplexed fds back to console array indices */
-		int fd_to_console_map[MAX_CONSOLES + 1];
-		fd_to_console_map[0] = -1;
+		int c_idx = fd_to_console_map[i];
+		if (!consoles[c_idx].active)
+			continue;
 
-		/* Add all active console sockets to poll set */
-		for (int i = 0; i < MAX_CONSOLES; i++) {
-			if (consoles[i].active) {
-				fds[nfds].fd = consoles[i].sockfd;
-				fds[nfds].events = POLLIN;
-				fd_to_console_map[nfds] = i;
-				nfds++;
-			}
-		}
+		unsigned char buf[MAX_MSG_LEN + 2];
+		ssize_t bytes_read;
 
-		pthread_mutex_unlock(&data_mutex);
+		while ((bytes_read = recv(consoles[c_idx].sockfd, buf, sizeof(buf), MSG_DONTWAIT)) > 0) {
+			unsigned char len = buf[0];
+			uint32_t color;
+			memcpy(&color, &buf[1], sizeof(color));
+			color = ntohl(color);
 
-		/* Block here until activity happens on keyboard OR sockets (500ms timeout) */
-		int poll_res = poll(fds, nfds, 500);
-		if (poll_res < 0) {
-			if (errno == EINTR)
-				continue;
-			break;
-		}
-
-		pthread_mutex_lock(&data_mutex);
-
-		/* Check for incoming data on sockets */
-		for (int i = 1; i < nfds; i++) {
-			if (!(fds[i].revents & POLLIN))
+			if (bytes_read < len + 1)
 				continue;
 
-			int c_idx = fd_to_console_map[i];
-			if (!consoles[c_idx].active)
-				continue;
+			char msg[MAX_MSG_LEN + 1];
+			memcpy(msg, &buf[5], len);
+			msg[len] = '\0';
 
-			unsigned char buf[MAX_MSG_LEN + 2];
-			ssize_t bytes_read;
+			add_line(&consoles[c_idx], msg, color);
+			if (c_idx == current_idx)
+				*dirty = 1;
+		}
+	}
+}
 
-			while ((bytes_read = recv(consoles[c_idx].sockfd, buf, sizeof(buf), MSG_DONTWAIT)) > 0) {
-				unsigned char len = buf[0];
-				uint32_t color;
-				memcpy(&color, &buf[1], sizeof(color));
-				color = ntohl(color);
+static void handle_keyboard_input(struct pollfd fds[], int *dirty)
+{
+	struct console *c = NULL;
 
-				if (bytes_read < len + 1)
-					continue;
+	/* Check for stdin / user keyboard input */
+	if (!(fds[0].revents & POLLIN))
+		goto finished_keyboard_input;
 
-				char msg[MAX_MSG_LEN + 1];
-				memcpy(msg, &buf[5], len);
-				msg[len] = '\0';
+	int ch = getch();
+	if (ch == ERR)
+		goto finished_keyboard_input;
 
-				add_line(&consoles[c_idx], msg, color);
-				if (c_idx == current_idx)
-					screen_dirty = 1;
+	switch (ch) {
+	case 033: /* Escape key */
+		running = 0;
+		break;
+	case '\t':
+	case KEY_RIGHT:
+		if (active_count > 0) {
+			do {
+				current_idx = (current_idx + 1) % MAX_CONSOLES;
+			} while (!consoles[current_idx].active);
+			*dirty = 1;
+		}
+		break;
+	case KEY_LEFT:
+		if (active_count > 0) {
+			do {
+				current_idx = (current_idx - 1 + MAX_CONSOLES) % MAX_CONSOLES;
+			} while (!consoles[current_idx].active);
+			*dirty = 1;
+		}
+		break;
+	case KEY_UP:
+		if (current_idx >= 0 && consoles[current_idx].active) {
+			consoles[current_idx].scroll_offset++;
+			*dirty = 1;
+		}
+		break;
+	case KEY_DOWN:
+		if (current_idx >= 0 && consoles[current_idx].active) {
+			if (consoles[current_idx].scroll_offset > 0) {
+				consoles[current_idx].scroll_offset--;
+				*dirty = 1;
 			}
 		}
-
-		/* Check for stdin / user keyboard input */
-		if (!(fds[0].revents & POLLIN))
-			goto finished_keyboard_input;
-
-		int ch = getch();
-		if (ch == ERR)
-			goto finished_keyboard_input;
-
-		switch (ch) {
-		case 033: /* Escape key */
-			running = 0;
-			break;
-		case '\t':
-		case KEY_RIGHT:
-			if (active_count > 0) {
-				do {
-					current_idx = (current_idx + 1) % MAX_CONSOLES;
-				} while (!consoles[current_idx].active);
-				screen_dirty = 1;
-			}
-			break;
-		case KEY_LEFT:
-			if (active_count > 0) {
-				do {
-					current_idx = (current_idx - 1 + MAX_CONSOLES) % MAX_CONSOLES;
-				} while (!consoles[current_idx].active);
-				screen_dirty = 1;
-			}
-			break;
-		case KEY_UP:
-			if (current_idx >= 0 && consoles[current_idx].active) {
-				consoles[current_idx].scroll_offset++;
-				screen_dirty = 1;
-			}
-			break;
-		case KEY_DOWN:
-			if (current_idx >= 0 && consoles[current_idx].active) {
-				if (consoles[current_idx].scroll_offset > 0) {
-					consoles[current_idx].scroll_offset--;
-					screen_dirty = 1;
-				}
-			}
-			break;
-		case KEY_PPAGE:
-			if (current_idx >= 0 && consoles[current_idx].active) {
-				int max_y, max_x;
-				(void) max_x;
-				getmaxyx(stdscr, max_y, max_x);
-				consoles[current_idx].scroll_offset += (max_y - 3);
-				screen_dirty = 1;
-			}
-			break;
-		case KEY_NPAGE:
-			if (current_idx >= 0 && consoles[current_idx].active) {
-				int max_y, max_x;
-				(void) max_x;
-				getmaxyx(stdscr, max_y, max_x);
-				consoles[current_idx].scroll_offset -= (max_y - 3);
-				if (consoles[current_idx].scroll_offset < 0) {
-					consoles[current_idx].scroll_offset = 0;
-				}
-				screen_dirty = 1;
-			}
-			break;
-		case '\n':
-		case '\r':
-		case KEY_ENTER:
-			if (current_idx < 0 || !consoles[current_idx].active)
-				break;
-			c = &consoles[current_idx];
-			if (c->input_len <= 0)
-				break;
-			add_line(c, c->input_buf, DARKTURQUOISE);
-
-			struct sockaddr_un dest_addr;
-			memset(&dest_addr, 0, sizeof(dest_addr));
-			dest_addr.sun_family = AF_UNIX;
-
-			char *tab_name = tail_end_of_name(c->name);
-			if (tab_name) {
-				snprintf(dest_addr.sun_path, sizeof(dest_addr.sun_path),
-						"/tmp/snis-console.%s", tab_name);
-				sendto(c->sockfd, c->input_buf, c->input_len, 0,
-					   (struct sockaddr *)&dest_addr, sizeof(dest_addr));
-			}
-
-			c->input_buf[0] = '\0';
-			c->input_len = 0;
-			c->scroll_offset = 0;
-			screen_dirty = 1;
-			break;
-		case KEY_BACKSPACE:
-		case 127:
-		case '\b':
-			if (current_idx < 0 || !consoles[current_idx].active)
-				break;
-			c = &consoles[current_idx];
-			if (c->input_len > 0) {
-				c->input_len--;
-				c->input_buf[c->input_len] = '\0';
-				screen_dirty = 1;
-			}
-			break;
-		default:
-			if (current_idx < 0 || !consoles[current_idx].active)
-				break;
-			c = &consoles[current_idx];
-			if (ch >= 32 && ch <= 126 && c->input_len < 80) {
-				c->input_buf[c->input_len++] = (char)ch;
-				c->input_buf[c->input_len] = '\0';
-				screen_dirty = 1;
-			}
-			break;
+		break;
+	case KEY_PPAGE:
+		if (current_idx >= 0 && consoles[current_idx].active) {
+			int max_y, max_x;
+			(void) max_x;
+			getmaxyx(stdscr, max_y, max_x);
+			consoles[current_idx].scroll_offset += (max_y - 3);
+			*dirty = 1;
 		}
+		break;
+	case KEY_NPAGE:
+		if (current_idx >= 0 && consoles[current_idx].active) {
+			int max_y, max_x;
+			(void) max_x;
+			getmaxyx(stdscr, max_y, max_x);
+			consoles[current_idx].scroll_offset -= (max_y - 3);
+			if (consoles[current_idx].scroll_offset < 0) {
+				consoles[current_idx].scroll_offset = 0;
+			}
+			*dirty = 1;
+		}
+		break;
+	case '\n':
+	case '\r':
+	case KEY_ENTER:
+		if (current_idx < 0 || !consoles[current_idx].active)
+			break;
+		c = &consoles[current_idx];
+		if (c->input_len <= 0)
+			break;
+		add_line(c, c->input_buf, DARKTURQUOISE);
+
+		struct sockaddr_un dest_addr;
+		memset(&dest_addr, 0, sizeof(dest_addr));
+		dest_addr.sun_family = AF_UNIX;
+
+		char *tab_name = tail_end_of_name(c->name);
+		if (tab_name) {
+			snprintf(dest_addr.sun_path, sizeof(dest_addr.sun_path),
+					"/tmp/snis-console.%s", tab_name);
+			sendto(c->sockfd, c->input_buf, c->input_len, 0,
+				   (struct sockaddr *)&dest_addr, sizeof(dest_addr));
+		}
+
+		c->input_buf[0] = '\0';
+		c->input_len = 0;
+		c->scroll_offset = 0;
+		*dirty = 1;
+		break;
+	case KEY_BACKSPACE:
+	case 127:
+	case '\b':
+		if (current_idx < 0 || !consoles[current_idx].active)
+			break;
+		c = &consoles[current_idx];
+		if (c->input_len > 0) {
+			c->input_len--;
+			c->input_buf[c->input_len] = '\0';
+			*dirty = 1;
+		}
+		break;
+	default:
+		if (current_idx < 0 || !consoles[current_idx].active)
+			break;
+		c = &consoles[current_idx];
+		if (ch >= 32 && ch <= 126 && c->input_len < 80) {
+			c->input_buf[c->input_len++] = (char)ch;
+			c->input_buf[c->input_len] = '\0';
+			*dirty = 1;
+		}
+		break;
+	}
 
 finished_keyboard_input:
+	return;
+}
 
-		if (screen_dirty)
-			redraw_ui();
-
-		pthread_mutex_unlock(&data_mutex);
-	}
-
+static void clean_up(void)
+{
 	/* Clean up threads and terminal state */
 	pthread_join(discovery_thread, NULL);
 
@@ -585,8 +586,43 @@ finished_keyboard_input:
 			free(consoles[i].lines[l].text);
 		}
 	}
-
 	endwin();
+}
+
+int main(void)
+{
+	initialize_ncurses();
+
+	/* Start background discovery thread */
+	if (pthread_create(&discovery_thread, NULL, discovery_loop, NULL) != 0) {
+		endwin();
+		fprintf(stderr, "Failed to create discovery thread\n");
+		return 1;
+	}
+
+	/* Main UI and I/O event loop */
+	while (still_running()) {
+		struct pollfd fds[MAX_CONSOLES + 1];
+		int fd_to_console_map[MAX_CONSOLES + 1];
+		int nfds = 0;
+
+		pthread_mutex_lock(&data_mutex);
+		set_up_file_descriptors(fds, fd_to_console_map, &nfds, MAX_CONSOLES);
+		pthread_mutex_unlock(&data_mutex);
+
+		int rc = wait_for_action_on_fds(fds, nfds);
+		if (rc == POLL_INTERRUPTED)
+			continue;
+		if (rc == POLL_ERROR)
+			break;
+
+		pthread_mutex_lock(&data_mutex);
+		handle_incoming_data_on_sockets(fds, fd_to_console_map, nfds, &screen_dirty);
+		handle_keyboard_input(fds, &screen_dirty);
+		pthread_mutex_unlock(&data_mutex);
+		maybe_redraw_ui(&screen_dirty);
+	}
+	clean_up();
 	return 0;
 }
 
