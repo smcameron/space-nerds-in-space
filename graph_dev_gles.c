@@ -5819,3 +5819,14 @@ void graph_dev_create_context(SDL_Window *window)
 	}
 	(void) gl_context;
 }
+
+void graph_dev_shadow_map(int new_status)
+{
+	(void) new_status;
+}
+
+int graph_dev_shadow_map_status(void)
+{
+	return SHADOW_MAP_DISABLED;
+}
+

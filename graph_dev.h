@@ -58,7 +58,10 @@ extern void graph_dev_clear_depth_bit(void);
  * the casters into each cascade between graph_dev_shadow_map_begin() and
  * graph_dev_shadow_map_end(), selecting the target cascade layer with
  * graph_dev_shadow_map_set_cascade() before drawing that cascade's casters. */
-extern int graph_dev_shadow_map_enabled;
+#define SHADOW_MAP_DISABLED 0
+#define SHADOW_MAP_ENABLED 1
+extern void graph_dev_shadow_map(int status); /* enable/disable shadow map */
+extern int graph_dev_shadow_map_status(void); /* returns SHADOW_MAP_ENABLED or SHADOW_MAP_DISABLED */
 extern void graph_dev_set_shadow_cascades(const struct mat44d *world_to_lightclip, int n);
 extern void graph_dev_shadow_map_begin(void);
 extern void graph_dev_shadow_map_set_cascade(int cascade);

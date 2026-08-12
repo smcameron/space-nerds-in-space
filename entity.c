@@ -1308,7 +1308,7 @@ static void render_shadow_map(struct entity_context *cx)
 	int num_cascades, valid_cascades;
 	int j, k, n;
 
-	if (!graph_dev_shadow_map_enabled)
+	if (graph_dev_shadow_map_status() == SHADOW_MAP_DISABLED)
 		return;
 
 	num_cascades = shadow_map_num_cascades;

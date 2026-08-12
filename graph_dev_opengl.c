@@ -186,7 +186,7 @@ int graph_dev_planet_specularity = 1;
 int graph_dev_atmosphere_ring_shadows = 1;
 
 /* Cascaded shadow mapping state (Phase 1: a single shadow map). */
-int graph_dev_shadow_map_enabled = 1;
+int graph_dev_shadow_map_enabled = SHADOW_MAP_ENABLED;
 
 /* graph_dev_planets_receive_csm_shadows: If 1, planets will use the CSM
  * variants of the textured cubemap shaders, if 0, they will use the
@@ -6157,3 +6157,15 @@ void graph_dev_create_context(SDL_Window *window)
 	}
 	(void) gl_context;
 }
+
+void graph_dev_shadow_map(int new_status)
+{
+	graph_dev_shadow_map_enabled = !!new_status;
+}
+
+
+int graph_dev_shadow_map_status(void)
+{
+	return graph_dev_shadow_map_enabled;
+}
+
