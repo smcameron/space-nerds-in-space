@@ -23132,6 +23132,14 @@ static int main_da_expose(SDL_Window *window)
 		pthread_mutex_unlock(&universe_mutex);
 	}
 	maybe_grab_or_ungrab_mouse();
+
+	/* Save current shadow map enable status */
+	int restore_shadow_map = graph_dev_shadow_map_status();
+
+	/* Turn off shadows by default because most screens don't draw shadows */
+	/* We will turn it back on individually for the screens that draw shadows */
+	graph_dev_shadow_map(SHADOW_MAP_DISABLED);
+
 	switch (displaymode) {
 	case DISPLAYMODE_FONTTEST:
 		show_fonttest();
@@ -23149,19 +23157,23 @@ static int main_da_expose(SDL_Window *window)
 		show_connected_screen();
 		break;
 	case DISPLAYMODE_MAINSCREEN:
+		graph_dev_shadow_map(restore_shadow_map); /* mainscreen draws shadows, if enabled */
 		show_mainscreen();
 		break;
 	case DISPLAYMODE_NAVIGATION:
 		if (main_nav_hybrid) {
+			graph_dev_shadow_map(restore_shadow_map); /* mainscreen draws shadows, if enabled */
 			show_mainscreen();
 			/* Clear the depth buffer so that navigation elements don't
 			 * end up *behind* main screen elements (e.g. planets.)
 			 */
 			graph_dev_clear_depth_bit();
+			graph_dev_shadow_map(SHADOW_MAP_DISABLED);
 		}
 		show_navigation();
 		break;
 	case DISPLAYMODE_WEAPONS:
+		graph_dev_shadow_map(restore_shadow_map); /* weapons draws shadows, if enabled */
 		show_manual_weapons();
 		break;
 	case DISPLAYMODE_ENGINEERING:
@@ -23192,6 +23204,7 @@ static int main_da_expose(SDL_Window *window)
 		show_fonttest();
 		break;
 	}
+	graph_dev_shadow_map(restore_shadow_map); /* restore shadow map status */
 	ui_element_list_maybe_change_hover_state(uiobjs, mouse.x, mouse.y);
 	ui_element_list_draw(uiobjs);
 	ui_element_list_maybe_draw_tooltips(uiobjs, mouse.x, mouse.y);
