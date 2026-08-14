@@ -10,7 +10,12 @@ player_orders_time = 10 * secs;
 bruiser_msg_time = 90 * secs;
 encrypted_message_time = 60 * secs;
 second_pierce_msg_time = 90 * secs;
-players_took_passengers = 0;
+
+-- For tracking player actions:
+players_took_passengers = false;
+aurore_destroyed = false;
+delivered_passengers = 0; -- count of delivered passengers, there are 8 total.
+
 commendations_msg_time = 30 * secs;
 epilogue_msg_time = 30 * secs;
 govt_revenge_msg_time = 60 * secs;
@@ -470,6 +475,23 @@ function epilogue()
 		"SENTENCED TO DEATH.\n");
 end
 
+function epilogue2()
+	local name = get_object_name(player_ids[1]);
+	show_timed_text(-1, 90,
+		"EPILOGUE:\n" ..
+		"ALTHOUGH THE CAPTAIN AND CREW OF THE " .. name .. "\n" ..
+		"WERE AWARDED COMMENDATIONS AND MEDALS FOR\n" ..
+		"DESTROYING THE AURORE THAT DAY, IN A FEW YEARS\n" ..
+		"TIME, THE TERRIBLE REIGN OF QUAREAUX CAME TO AN\n" ..
+		"END. THE PASSENGERS OF THE AURORE TESTIFIED IN THE\n" ..
+		"TRIALS OF ADMIRAL PIERCE AND HIS CRONIES ABOUT THEIR\n" ..
+		"SLAVE RUNNING OPERATION AND ADMIRAL PIERCE AND SEVERAL\n" ..
+		"OTHERS WERE ULTIMATELY SENTENCED TO SPAGHETTIFICATION\n" ..
+		"AND WERE LOADED ABOARD AN OLD FREIGHTER AND SENT\n" ..
+		"INTO THE EVENT HORIZON OF A BLACK HOLE.\n");
+end
+
+
 function award_commendations()
 	local name = get_object_name(player_ids[1]);
         comms_transmission(starbase[1], "------------------");
@@ -488,13 +510,16 @@ function award_commendations()
         comms_transmission(starbase[1], "GOD BLESS THE CREW OF THE " .. name .. "!");
         comms_transmission(starbase[1], "AND GOD BLESS QUAREAUX!");
         comms_transmission(starbase[1], "ADMIRAL PIERCE OUT!");
-	register_timer_callback("epilogue", epilogue_msg_time, 0);
+	if (not players_took_passengers) then
+		register_timer_callback("epilogue", epilogue_msg_time, 0);
+	end
 end
 
 function handle_object_death_event(id)
 	if id == aurore then
 		demon_print("AURORA KILLED!");
 		register_timer_callback("award_commendations", commendations_msg_time, 0);
+		aurore_destroyed = true;
 	end
 	if id == player_ids[1] then
 		demon_print("PLAYER KILLED!");
@@ -553,8 +578,8 @@ end
 function science_custom_button_pressed()
 	local id = get_science_selection(player_ids[1]);
 
-	if (id == aurore and players_took_passengers == 0) then
-		players_took_passengers = 1;
+	if (id == aurore and not players_took_passengers) then
+		players_took_passengers = true;
 		text_to_speech(player_ids[1], "8 Passengers transported aboard from the vessel Aurore");
 		make_passenger(0, "DR. E. BROWN");
 		make_passenger(1, "MR. S. B. VON BLINN");
@@ -603,13 +628,13 @@ function add_attacker(i)
 	z = z + pz;
 	attacker[i] = add_ship(generate_ship_name(), x, y, z, 18, 3, 0);
 	ai_push_attack(attacker[i], player_ids[1]);
-	register_timer_callback("maintain_attacker_focus", 200, 0);
 end
 
 function revenge_of_the_govt2()
 	for i = 1,num_attackers,1 do
 		add_attacker(i);
 	end
+	register_timer_callback("maintain_attacker_focus", 200, 0);
 end
 
 function revenge_of_the_govt()
@@ -624,6 +649,7 @@ function revenge_of_the_govt()
         comms_transmission(starbase[1], "WE KNOW WHAT YOU HAVE DONE");
         comms_transmission(starbase[1], "YOU ARE ALL GUILTY OF DEFYING DIRECT");
         comms_transmission(starbase[1], "ORDERS OF THE PRESIDENT!");
+        comms_transmission(starbase[1], "YOU WERE SUPPOSED TO DESTROY THE AURORE!");
         comms_transmission(starbase[1], "YOU WILL NOT ESCAPE THE JUSTICE YOU HAVE");
         comms_transmission(starbase[1], "EARNED FOR YOUR TRAITOROUS ACTIONS!");
         comms_transmission(starbase[1], "ADMIRAL PIERCE OUT!");
@@ -631,12 +657,14 @@ function revenge_of_the_govt()
 	register_timer_callback("revenge_of_the_govt2", govt_attack_time, 0)
 end
 
-delivered_passengers = 0;
 function handle_passenger_disembarked(passenger_no, destination_id)
 	if passenger_no >= 0 and passenger_no <= 7 and destination_id == starbase[2] then
 		delivered_passengers = delivered_passengers + 1;
-		if (delivered_passengers == 8) then
+		if (delivered_passengers == 8 and not aurore_destroyed) then
 			register_timer_callback("revenge_of_the_govt", govt_revenge_msg_time, 0)
+		end
+		if (delivered_passengers == 8 and aurore_destroyed) then
+			register_timer_callback("epilogue2", epilogue_msg_time, 0);
 		end
 	end
 end
