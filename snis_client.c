@@ -6978,6 +6978,10 @@ static int process_comm_transmission(void)
 			if (n == 1)
 				comms_ui.channel = comms_channel;
 		}
+		comms_ui.unread_comms_message = 1;
+		struct snis_entity *o = find_my_ship();
+		if (o && o->tsd.ship.comms_crypto_mode)
+			wwviaudio_add_sound(QUINDAR_INTRO);
 		break;
 	case OPCODE_COMMS_ENCIPHERED:
 		text_window_add_color_text(comms_ui.tw, "ENCRYPTED MESSAGE RECIEVED", UI_COLOR(comms_encrypted));
@@ -16852,6 +16856,7 @@ static void init_comms_ui(void)
 		ui_add_text_input_box(comms_ui.crypt_alpha[i], DISPLAYMODE_COMMS);
 	comms_ui.channel = 0;
 	ui_set_widget_focus(uiobjs, comms_ui.comms_input);
+	comms_ui.unread_comms_message = 0;
 }
 
 static void comms_activate_rts_buttons(struct snis_entity *player_ship)
@@ -18103,10 +18108,18 @@ static void show_comms_cryptanalysis(struct snis_entity *o)
 	x = txx(10);
 	dx = txx(12);
 
+	snis_button_set_label(comms_ui.cryptanalysis_button, "COMMS");
 	key = scipher_make_key(cipher_key);
 
+	if (comms_ui.unread_comms_message) { /* Let player know if new comms messages present */
+		if (timer & 8) {
+			sng_set_foreground(UI_COLOR(comms_red_alert));
+			sng_center_xy_draw_string("NEW COMMS MESSAGES ARRIVED", TINY_FONT, 300, 50);
+		}
+	}
 	len = strlen(enciphered_text);
 	if (len == 0) {
+		sng_set_foreground(UI_COLOR(comms_text));
 		sng_center_xy_draw_string("NO ENCRYPTED MESSAGES AVAILABLE", TINY_FONT, 400, 300);
 		return;
 	}
@@ -18170,12 +18183,14 @@ static void show_comms(void)
 
 	update_comms_ui_visibility(o); /* switches between cryptanalysis and normal mode */
 
+	snis_button_set_label(comms_ui.cryptanalysis_button, "CRYPTO");
 	show_comms_cryptanalysis(o);
 
 	float shield_ind_x_center = txx(710);
 	float shield_ind_y_center = txy(485);
 
 	if (!o->tsd.ship.comms_crypto_mode) {
+		comms_ui.unread_comms_message = 0;
 		if (o->sdata.shield_strength < 15) {
 			sng_set_foreground(UI_COLOR(comms_warning));
 			sng_center_xy_draw_string("SHIELDS ARE DOWN", NANO_FONT,
@@ -24502,6 +24517,7 @@ static void read_sound_clips(void)
 	read_ogg_clip(TERMINAL_REBOOT, d, "term_reboot.ogg");
 	read_ogg_clip(TERMINAL_READY, d, "term_ready.ogg");
 	read_ogg_clip_with_alternate(PHOTON_TORPEDO_FIRE, d, "photon-torpedo-fire.ogg", "bigshotlaser.ogg");
+	read_ogg_clip(QUINDAR_INTRO, d, "quindar-intro.ogg");
 	printf("Done.\n");
 }
 

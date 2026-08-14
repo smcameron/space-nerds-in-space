@@ -280,6 +280,7 @@ struct comms_ui {
 	uint32_t channel;
 	struct strip_chart *emf_strip_chart;
 	struct slider *our_base_health, *enemy_base_health;
+	int unread_comms_message;
 };
 
 struct network_setup_ui {
