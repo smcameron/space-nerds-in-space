@@ -457,6 +457,7 @@ function very_near_aurore()
 	comms_transmission(aurore, "WE DESPERATELY NEED TO BE TRANSPORTED ABOARD YOUR SHIP");
 	comms_transmission(aurore, "DO YOU HAVE TRANSPORTER CAPABILITY?");
 	comms_transmission(aurore, "WE HAVE NO POWER AND LIFE SUPPORT SYSTEMS HAVE FAILED");
+	comms_transmission(aurore, "WE SEEK PASSAGE TO THE STARBASE ORBITING CORBU");
 	comms_transmission(aurore, "TIME IS OF THE ESSENCE.");
         comms_transmission(aurore, "------------------");
 end
