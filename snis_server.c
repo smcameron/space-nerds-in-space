@@ -3338,6 +3338,42 @@ static void buddies_join_the_fight(int fleet_number, struct snis_entity *victim,
 		buddy_join_the_fight(fleet_member_get_id(fleet_number, i), victim, recursion_level);
 }
 
+/* check if a planet is between two points */
+static struct snis_entity *planet_between_points(union vec3 *ray_origin, union vec3 *target)
+{
+	int i;
+	union vec3 ray_direction, sphere_origin;
+	float target_dist;
+	float planet_dist;
+
+	vec3_sub(&ray_direction, target, ray_origin);
+	target_dist = vec3_magnitude(&ray_direction);
+	vec3_normalize_self(&ray_direction);
+
+	for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
+		if (!go[i].alive)
+			continue;
+		if (go[i].type != OBJTYPE_PLANET)
+			continue;
+		sphere_origin.v.x = go[i].x;
+		sphere_origin.v.y = go[i].y;
+		sphere_origin.v.z = go[i].z;
+		if (!ray_intersects_sphere(ray_origin, &ray_direction,
+						&sphere_origin,
+						go[i].tsd.planet.radius * 1.05))
+			continue;
+		planet_dist = dist3d(sphere_origin.v.x - ray_origin->v.x,
+					sphere_origin.v.y - ray_origin->v.y,
+					sphere_origin.v.z - ray_origin->v.z);
+		if (planet_dist < target_dist) /* planet blocks... */
+			return &go[i];
+	}
+	return NULL; /* no planets blocking */
+}
+
+static float ai_ship_travel_towards(struct snis_entity *o,
+		float destx, float desty, float destz);
+
 static void calculate_attack_vector(struct snis_entity *o, int mindist, int maxdist)
 {
 	/* Assumptions: 
@@ -3356,10 +3392,31 @@ static void calculate_attack_vector(struct snis_entity *o, int mindist, int maxd
 	}
 
 	/* FIXME: do something smarter/better */
-	random_dpoint_on_sphere(snis_randn(maxdist - mindist) + mindist,
-					&o->tsd.ship.dox,
-					&o->tsd.ship.doy,
-					&o->tsd.ship.doz);
+#define MAX_NPC_DEST_TRIES 5
+	int count = 0;
+	do {
+		random_dpoint_on_sphere(snis_randn(maxdist - mindist) + mindist,
+						&o->tsd.ship.dox, &o->tsd.ship.doy, &o->tsd.ship.doz);
+
+		/* See if a planet is in the way */
+		union vec3 from, to;
+		from.v.x = o->x;
+		from.v.y = o->y;
+		from.v.z = o->z;
+		to.v.x = o->tsd.ship.dox;
+		to.v.y = o->tsd.ship.doy;
+		to.v.z = o->tsd.ship.doz;
+		count++;
+		struct snis_entity *pbp  = planet_between_points(&from, &to);
+		if (!pbp)
+			break; /* No planet in the way. */
+		count++;
+	} while (count < MAX_NPC_DEST_TRIES);
+
+	if (count >= MAX_NPC_DEST_TRIES) { /* Didn't find a way to get there without going through a planet? */
+		/* ai_ship_travel_towards will push a planet avoidance route if necessary. */
+		ai_ship_travel_towards(o, o->tsd.ship.dox, o->tsd.ship.doy, o->tsd.ship.doz);
+	}
 }
 
 /* Sets short term destination of a ship, tsd.ship.dox, doy, doz = x,y,z */
@@ -5440,39 +5497,6 @@ static void check_for_nearby_targets(struct snis_entity *o)
 	}
 }
 
-/* check if a planet is between two points */
-static struct snis_entity *planet_between_points(union vec3 *ray_origin, union vec3 *target)
-{
-	int i;
-	union vec3 ray_direction, sphere_origin;
-	float target_dist;
-	float planet_dist;
-
-	vec3_sub(&ray_direction, target, ray_origin);
-	target_dist = vec3_magnitude(&ray_direction);
-	vec3_normalize_self(&ray_direction);
-
-	for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
-		if (!go[i].alive)
-			continue;
-		if (go[i].type != OBJTYPE_PLANET)
-			continue;
-		sphere_origin.v.x = go[i].x;
-		sphere_origin.v.y = go[i].y;
-		sphere_origin.v.z = go[i].z;
-		if (!ray_intersects_sphere(ray_origin, &ray_direction,
-						&sphere_origin,
-						go[i].tsd.planet.radius * 1.05))
-			continue;
-		planet_dist = dist3d(sphere_origin.v.x - ray_origin->v.x,
-					sphere_origin.v.y - ray_origin->v.y,
-					sphere_origin.v.z - ray_origin->v.z);
-		if (planet_dist < target_dist) /* planet blocks... */
-			return &go[i];
-	}
-	return NULL; /* no planets blocking */
-}
-
 /* check if a planet is between two objects */
 static struct snis_entity *planet_between_objs(struct snis_entity *origin,
 				struct snis_entity *target)
@@ -5770,8 +5794,6 @@ static void ai_attack_mode_brain(struct snis_entity *o)
 		check_for_nearby_targets(o);
 }
 
-static float ai_ship_travel_towards(struct snis_entity *o,
-		float destx, float desty, float destz);
 static int add_flare(double x, double y, double z);
 static void ai_avoid_missile_brain(struct snis_entity *o)
 {
