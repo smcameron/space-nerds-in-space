@@ -4014,13 +4014,18 @@ static void pop_ai_stack(struct snis_entity *o)
 	struct ai_patrol_data *patrol;
 	struct ai_cop_data *cpatrol;
 
+
+	if (o->tsd.ship.nai_entries > 0)
+		o->tsd.ship.nai_entries--; /* pop top entry off the stack */
+	else
+		o->tsd.ship.nai_entries = 0; /* stack is already empty */
 	n = o->tsd.ship.nai_entries;
 	if (n <= 0) {
-		ship_figure_out_what_to_do(o);
+		ship_figure_out_what_to_do(o); /* put something on the empty stack and we're done. */
 		return;
 	}
-	o->tsd.ship.nai_entries--;
-	n = o->tsd.ship.nai_entries - 1;
+	n--; /* zero based array, so subtract one from number of entries to get index of top of stack. */
+	assert(n >= 0);
 	switch (o->tsd.ship.ai[n].ai_mode) {
 	case AI_MODE_ATTACK:
 		calculate_attack_vector(o, MIN_COMBAT_ATTACK_DIST,
