@@ -5690,6 +5690,8 @@ static void ai_attack_mode_brain(struct snis_entity *o)
 	if (o->tsd.ship.ai[n].u.attack.victim_id == -2) { /* victim was removed */
 		ai_trace(o->id, "POP ATTACK, VICTIM WAS REMOVED");
 		pop_ai_attack_mode(o);
+		if (o->tsd.ship.nai_entries <= 0)
+			ship_figure_out_what_to_do(o);
 		return;
 	}
 
@@ -5699,6 +5701,8 @@ static void ai_attack_mode_brain(struct snis_entity *o)
 		if (victim_id == -1) { /* no nearby victims */
 			ai_trace(o->id, "NO NEARBY VICTIM, POPPING ATTACK");
 			pop_ai_attack_mode(o);
+			if (o->tsd.ship.nai_entries <= 0)
+				ship_figure_out_what_to_do(o);
 			return;
 		}
 		o->tsd.ship.ai[n].u.attack.victim_id = victim_id;
@@ -5710,11 +5714,16 @@ static void ai_attack_mode_brain(struct snis_entity *o)
 	v = lookup_entity_by_id(o->tsd.ship.ai[n].u.attack.victim_id);
 	if (!v) {
 		ai_trace(o->id, "FAILED TO LOOKUP VICTIM %u", o->tsd.ship.ai[n].u.attack.victim_id);
+		pop_ai_attack_mode(o);
+		if (o->tsd.ship.nai_entries <= 0)
+			ship_figure_out_what_to_do(o);
 		return;
 	}
 	if (!v->alive) {
 		ai_trace(o->id, "VICTIM DEAD, POPPING ATTACK");
 		pop_ai_attack_mode(o);
+		if (o->tsd.ship.nai_entries <= 0)
+			ship_figure_out_what_to_do(o);
 		return;
 	}
 
@@ -5729,6 +5738,8 @@ static void ai_attack_mode_brain(struct snis_entity *o)
 		v->type != OBJTYPE_PLANET && v->type != OBJTYPE_STARBASE && !rts_mode) {
 		ai_trace(o->id, "VICTIM TOO FAR, POPPING ATTACK");
 		pop_ai_attack_mode(o);
+		if (o->tsd.ship.nai_entries <= 0)
+			ship_figure_out_what_to_do(o);
 		return;
 	}
 
@@ -5780,6 +5791,8 @@ static void ai_attack_mode_brain(struct snis_entity *o)
 	if (notacop && too_many_cops_around(o)) {
 		ai_trace(o->id, "TOO MANY COPS, POPPING ATTACK");
 		pop_ai_stack(o); /* forget about attacking... do something else */
+		if (o->tsd.ship.nai_entries <= 0)
+			ship_figure_out_what_to_do(o);
 		return;
 	}
 
