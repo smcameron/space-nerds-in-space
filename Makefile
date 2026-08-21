@@ -1165,12 +1165,12 @@ $(OD)/starbase-comms.o:	starbase-comms.c Makefile ${ODT}
 $(OD)/starbase_metadata.o:	starbase_metadata.c starbase_metadata.h Makefile ${ODT}
 	$(Q)$(COMPILE)
 
-${OD}/infinite-taunt.o:	infinite-taunt.c Makefile ${ODT}
+${OD}/infinite-taunt.o:	infinite-taunt.c infinite-taunt.h Makefile ${ODT}
 	$(Q)$(COMPILE)
 
-bin/infinite-taunt:	${OD}/infinite-taunt.o ${OD}/names.o ${OD}/mtwist.o ${OD}/string-utils.o Makefile ${BIN}
+bin/infinite-taunt:	${OD}/infinite-taunt.o ${OD}/names.o ${OD}/mtwist.o ${OD}/string-utils.o ${OD}/stacktrace.o Makefile ${BIN}
 	$(CC) -DTEST_TAUNT -o bin/infinite-taunt ${MYCFLAGS} ${OD}/mtwist.o infinite-taunt.c \
-			${OD}/names.o ${OD}/string-utils.o
+			${OD}/names.o ${OD}/string-utils.o ${OD}/stacktrace.o
 
 bin/names:	names.c names.h ${OD}/mtwist.o ${BIN}
 	$(CC) -DTEST_NAMES -o bin/names ${MYCFLAGS} ${OD}/mtwist.o names.c
