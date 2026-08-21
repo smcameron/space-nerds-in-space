@@ -2439,12 +2439,9 @@ static int update_planet(uint32_t id, uint32_t timestamp, double x, double y, do
 {
 	int i, m;
 	struct entity *e, *atm, *ring;
-	union quat rotational_velocity;
 
 	i = lookup_object_by_id(id);
 	if (i < 0) {
-		quat_init_axis(&rotational_velocity, 0.0, 0.0, 1.0, 0.03 * M_PI / 180.0);
-
 		/* each planet texture has other versions with a variation of the ring materials */
 		m = solarsystem_planet_type;
 		if (!hasring) {
@@ -2457,6 +2454,7 @@ static int update_planet(uint32_t id, uint32_t timestamp, double x, double y, do
 			update_entity_scale(e, r);
 			update_entity_material(e, &planet_material[m]);
 			entity_set_low_poly_mesh(e, sphere_lp_mesh);
+			update_entity_orientation(e, orientation);
 			/* Planets do not cast into the shadow map: planet->ship shadowing is done
 			 * analytically (update_shading_planet), and a planet-sized caster in a
 			 * camera-local cascade would otherwise black out whole ships.  Ships also
@@ -2485,7 +2483,6 @@ static int update_planet(uint32_t id, uint32_t timestamp, double x, double y, do
 					orientation, OBJTYPE_PLANET, 1, e);
 		if (i < 0)
 			return i;
-		go[i].tsd.planet.rotational_velocity = rotational_velocity;
 		if (has_atmosphere) {
 			atm = add_entity(ecx, sphere_mesh, 0.0f, 0.0f, 0.0f, WHITE);
 			go[i].tsd.planet.atmosphere = atm;
@@ -2518,7 +2515,7 @@ static int update_planet(uint32_t id, uint32_t timestamp, double x, double y, do
 		if (e)
 			update_entity_shadecolor(e, (i % NSHADECOLORS) + 1);
 	} else {
-		update_generic_object(i, timestamp, x, y, z, 0.0, 0.0, 0.0, NULL, 1);
+		update_generic_object(i, timestamp, x, y, z, 0.0, 0.0, 0.0, orientation, 1);
 	}
 
 	/* Enforce bounds on quantities used as array indices */
@@ -2873,28 +2870,6 @@ static inline void spin_cargo_container(double timestamp, struct snis_entity *o)
 static inline void spin_derelict(double timestamp, struct snis_entity *o)
 {
 	arbitrary_spin(timestamp, o, &o->tsd.derelict.rotational_velocity);
-}
-
-static inline void spin_planet(double timestamp, struct snis_entity *o)
-{
-	union quat spun, local_rotation, new_orientation;
-
-	/* For planets, o->orientation is constant, and tsd.planet.rotational_velocity is
-	 * some rotational velocity about the Z axis.  We calculate the amount of rotation
-	 * for the current time and then transform this into the coord system of the planet
-	 * and apply the new orientation to the entity only, leaving o->orientation alone.
-	 * Arguably this should be done on the server and o->orientation updated as normal,
-	 * but this saves a bit of bandwidth at the cost of being a little too clever.
-	 */
-	compute_arbitrary_spin(timestamp, &spun, &o->tsd.planet.rotational_velocity);
-	quat_conjugate(&local_rotation, &spun, &o->orientation);
-	quat_mul(&new_orientation, &local_rotation, &o->orientation);
-
-	/* we do not need to normalize new_orientation because we calculate it
-	 * fresh each time from o->orientation which is constant.
-	 */
-	if (o->entity)
-		update_entity_orientation(o->entity, &new_orientation);
 }
 
 typedef void(*interpolate_update_func)(double timestamp, struct snis_entity *o, int visible,
@@ -3405,7 +3380,6 @@ static void move_objects(void)
 			break;
 		case OBJTYPE_PLANET:
 			move_object(timestamp, o, &interpolate_oriented_object);
-			spin_planet(timestamp, o);
 			o->move(o);
 			break;
 		case OBJTYPE_SHIELD_EFFECT:

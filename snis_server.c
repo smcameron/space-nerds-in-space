@@ -1604,6 +1604,15 @@ static void black_hole_move(struct snis_entity *o)
 
 static void planet_move(struct snis_entity *o)
 {
+	union quat spun, local_rotation, new_orientation;
+
+	/* Spin the planet */
+	compute_arbitrary_spin(universe_timestamp, &spun, &o->tsd.planet.rotational_velocity);
+	quat_conjugate(&local_rotation, &spun, &o->tsd.planet.initial_orientation);
+	quat_mul(&new_orientation, &local_rotation, &o->tsd.planet.initial_orientation);
+	o->orientation = new_orientation; /* no need to normalize as .initial_orientation is held constant */
+	o->timestamp = universe_timestamp;
+
 	if (!rts_mode)
 		return;
 	if (o->tsd.planet.time_left_to_build == 0)
@@ -14321,6 +14330,10 @@ static int add_planet(double x, double y, double z, float radius, uint8_t securi
 	go[i].tsd.planet.tech_level = snis_randn(1000) % ARRAYSIZE(tech_level_name);
 	go[i].tsd.planet.description_seed = snis_rand();
 	go[i].tsd.planet.ring = snis_randn(100) < 20;
+	/* Save initial orientation and hold constant.  Used later to spin the planet, see planet_move(). */
+	go[i].tsd.planet.initial_orientation = go[i].orientation;
+	quat_init_axis(&go[i].tsd.planet.rotational_velocity, 0.0, 0.0, 1.0, 0.09 * M_PI / 180.0);
+
 	if (type < 0) /* choose type randomly */
 		sst = (uint8_t) (go[i].id % solarsystem_assets->nplanet_textures);
 	else	/* choose a random instance of the given type */

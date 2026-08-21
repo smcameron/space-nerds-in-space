@@ -41,7 +41,7 @@
 #include "shape_collision.h"
 
 #define DEFAULT_SOLAR_SYSTEM "default"
-#define SNIS_PROTOCOL_VERSION "SNIS068"
+#define SNIS_PROTOCOL_VERSION "SNIS069"
 #define COMMON_MTWIST_SEED 97872
 /* dimensions of the "known" universe */
 #define XKNOWN_DIM 600000.0
@@ -913,6 +913,7 @@ struct planet_data {
 	uint16_t contraband;
 	struct entity *atmosphere;
 	struct material atm_material;
+	union quat initial_orientation;
 	union quat rotational_velocity;
 	uint32_t time_left_to_build;
 	uint8_t build_unit_type;
