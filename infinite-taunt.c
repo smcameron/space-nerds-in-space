@@ -1922,7 +1922,7 @@ static void usage(char *program)
 	fprintf(stderr, "%s [ options ]\n", program);
 	fprintf(stderr, "Options are:\n");
 
-	for (i = 0; i < (int) ARRAYSIZE(long_options); i++)
+	for (i = 0; i < (int) ARRAYSIZE(long_options) - 1; i++)
 		fprintf(stderr, "  --%s\n", long_options[i].name);
 	exit(1);
 }
