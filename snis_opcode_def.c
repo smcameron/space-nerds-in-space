@@ -82,6 +82,7 @@ int snis_opcode_def_init(void)
 	rc |= init_opcode_subcode_def(OPCODE_TALKING_STICK, OPCODE_TALKING_STICK_REQUEST, "bb");
 	rc |= init_opcode_subcode_def(OPCODE_TALKING_STICK, OPCODE_TALKING_STICK_GRANT, "bb");
 	rc |= init_opcode_subcode_def(OPCODE_TALKING_STICK, OPCODE_TALKING_STICK_RELEASE, "bb");
+	rc |= init_opcode_def(OPCODE_UPDATE_CITY, "bwwwSSSQhhhb");
 	rc |= init_opcode_def(OPCODE_UPDATE_WARP_CORE, "bwwSSS");
 	rc |= init_opcode_def(OPCODE_DEMON_RTSMODE, "bb");
 	rc |= init_opcode_subcode_def(OPCODE_RTS_FUNC, OPCODE_RTS_FUNC_COMMS_BUTTON, "bbb");

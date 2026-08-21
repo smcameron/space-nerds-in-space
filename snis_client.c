@@ -2421,6 +2421,31 @@ static void enforce_bounds_u8(uint8_t *v, size_t max_value)
 	}
 }
 
+
+static int update_city(uint32_t id, uint32_t timestamp, uint32_t parent_id,
+				double x, double y, double z,
+				union quat *orientation, uint16_t latitude, uint16_t longitude,
+				uint16_t population, uint8_t city_texture)
+{
+	int i;
+
+	i = lookup_object_by_id(id);
+	if (i < 0) {
+		i = add_generic_object(id, timestamp, x, y, z, 0.0, 0.0, 0.0, orientation, OBJTYPE_CITY, 1, NULL);
+		if (i < 0)
+			return -1;
+	}
+	struct snis_entity *o = &go[i];
+	set_object_location(o, x, y, z);
+	o->orientation = *orientation;
+	o->tsd.city.parent_id = parent_id;
+	o->tsd.city.latitude = latitude;
+	o->tsd.city.longitude = longitude;
+	o->tsd.city.population = population;
+	o->tsd.city.city_texture = city_texture;
+	return i;
+}
+
 static int update_planet(uint32_t id, uint32_t timestamp, double x, double y, double z,
 				union quat *orientation, double r, uint8_t government,
 				uint8_t tech_level, uint8_t economy, uint32_t dseed, int hasring,
@@ -3381,6 +3406,9 @@ static void move_objects(void)
 		case OBJTYPE_PLANET:
 			move_object(timestamp, o, &interpolate_oriented_object);
 			o->move(o);
+			break;
+		case OBJTYPE_CITY:
+			move_object(timestamp, o, &interpolate_oriented_object);
 			break;
 		case OBJTYPE_SHIELD_EFFECT:
 			move_object(timestamp, o, &interpolate_generic_object);
@@ -7860,6 +7888,32 @@ static int process_update_planet_description(void)
 	return 0;
 }
 
+static int process_update_city_packet(void)
+{
+	unsigned char buffer[100];
+	uint32_t id, timestamp, parent_id;
+	double x, y, z;
+	union quat orientation;
+	uint16_t latitude, longitude, population;
+	uint8_t city_texture;
+
+	assert(sizeof(buffer) >= 39);
+	int rc = read_and_unpack_buffer(buffer, "wwwSSSQhhhb", &id, &timestamp,
+					&parent_id,
+					&x, (int32_t) UNIVERSE_DIM,
+					&y, (int32_t) UNIVERSE_DIM,
+					&z, (int32_t) UNIVERSE_DIM,
+					&orientation, &latitude, &longitude, &population,
+					&city_texture);
+	if (rc != 0)
+		return rc;
+	pthread_mutex_lock(&universe_mutex);
+	rc = update_city(id, timestamp, parent_id, x, y, z,
+			&orientation, latitude, longitude, population, city_texture);
+	pthread_mutex_unlock(&universe_mutex);
+	return (rc < 0);
+}
+
 static int process_update_planet_packet(void)
 {
 	unsigned char buffer[100];
@@ -8387,6 +8441,9 @@ static void *gameserver_reader(__attribute__((unused)) void *arg)
 			break;
 		case OPCODE_UPDATE_PLANET:
 			rc = process_update_planet_packet();
+			break;
+		case OPCODE_UPDATE_CITY:
+			rc = process_update_city_packet();
 			break;
 		case OPCODE_UPDATE_STARBASE:
 			rc = process_update_starbase_packet();

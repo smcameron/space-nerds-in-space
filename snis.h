@@ -41,7 +41,7 @@
 #include "shape_collision.h"
 
 #define DEFAULT_SOLAR_SYSTEM "default"
-#define SNIS_PROTOCOL_VERSION "SNIS069"
+#define SNIS_PROTOCOL_VERSION "SNIS070"
 #define COMMON_MTWIST_SEED 97872
 /* dimensions of the "known" universe */
 #define XKNOWN_DIM 600000.0
@@ -127,6 +127,9 @@
 #define OBJTYPE_BLACK_HOLE 25
 #define OBJTYPE_MISSILE 26
 #define OBJTYPE_FLARE 27
+#define OBJTYPE_CITY 28
+
+#define NCITY_TEXTURES 20
 
 #define SHIELD_EFFECT_LIFETIME 60
 
@@ -877,6 +880,15 @@ struct missile_data {
 #endif
 };
 
+struct city_data {
+	uint32_t parent_id;
+	uint16_t population; /* in 1000's */
+	int16_t latitude, longitude;
+	double dx, dy, dz; /* offset position from parent, used only server side */
+	union quat relative_orientation;
+	uint8_t city_texture; /* 0 to NCITY_TEXTURES-1 */
+};
+
 struct planet_data {
 	uint32_t description_seed;
 	char *custom_description;
@@ -984,6 +996,7 @@ union type_specific_data {
 	struct derelict_data derelict;
 	struct cargo_container_data cargo_container;
 	struct planet_data planet;
+	struct city_data city;
 	struct warp_effect_data warp_effect;
 	struct docking_port_data docking_port;
 	struct warpgate_data warpgate;

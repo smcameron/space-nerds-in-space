@@ -1602,6 +1602,32 @@ static void black_hole_move(struct snis_entity *o)
 	return;
 }
 
+static void city_move(struct snis_entity *o)
+{
+	struct snis_entity *parent;
+	union vec3 pos;
+	int i;
+
+	if (o->tsd.city.parent_id == (uint32_t) -1)
+		return;
+	i = lookup_by_id(o->tsd.city.parent_id);
+	if (i < 0)
+		return;
+	parent = &go[i];
+	pos.v.x = o->tsd.city.dx;
+	pos.v.y = o->tsd.city.dy;
+	pos.v.z = o->tsd.city.dz;
+	quat_rot_vec_self(&pos, &parent->orientation);
+	quat_mul(&o->orientation, &parent->orientation, &o->tsd.city.relative_orientation);
+	quat_normalize_self(&o->orientation);
+	o->vx = pos.v.x + parent->x - o->x;
+	o->vy = pos.v.y + parent->y - o->y;
+	o->vz = pos.v.z + parent->z - o->z;
+	set_object_location(o, pos.v.x + parent->x, pos.v.y + parent->y, pos.v.z + parent->z);
+	o->timestamp = universe_timestamp;
+	return;
+}
+
 static void planet_move(struct snis_entity *o)
 {
 	union quat spun, local_rotation, new_orientation;
@@ -11415,6 +11441,7 @@ static int add_generic_object(double x, double y, double z,
 	case OBJTYPE_DERELICT:
 	case OBJTYPE_PLANET:
 	case OBJTYPE_BLACK_HOLE:
+	case OBJTYPE_CITY:
 		random_name(mt, go[i].sdata.name, sizeof(go[i].sdata.name));
 		break;
 	default:
@@ -14288,6 +14315,49 @@ static int choose_planet_texture_of_type(int planet_type)
 	return (i + n) % solarsystem_assets->nplanet_textures;
 }
 
+static void add_city_to_planet(struct snis_entity *planet)
+{
+	int16_t latitude = snis_randn(140) - 70; /* plus or minus 70 degrees from equator */
+	int16_t longitude = snis_randn(360) - 180;
+
+	union quat latq, longq, combinedq;
+	union vec3 to_city = { { 1.0, 0.0, 0.0 } };
+
+	if (planet->type != OBJTYPE_PLANET)
+		return;
+
+	/* Multiply radius by 1.005 to put city slightly above surface */
+	vec3_mul_self(&to_city, planet->tsd.planet.radius * 1.005);
+
+	quat_init_axis(&longq, 0.0, 1.0, 0.0, longitude * M_PI / 180.0);
+	quat_init_axis(&latq, 0.0, 0.0, 1.0, latitude * M_PI / 180.0);
+	quat_mul(&combinedq, &longq, &latq);
+	quat_rot_vec_self(&to_city, &combinedq);
+
+	double x, y, z;
+	x = planet->x + to_city.v.x;
+	y = planet->y + to_city.v.y;
+	z = planet->z + to_city.v.z;
+
+	int i = add_generic_object(x, y, z, 0, 0, 0, 0, OBJTYPE_CITY);
+	if (i < 0)
+		return;
+
+	struct snis_entity *o = &go[i];
+
+	o->tsd.city.dx = to_city.v.x;
+	o->tsd.city.dy = to_city.v.y;
+	o->tsd.city.dz = to_city.v.z;
+	o->tsd.city.parent_id = planet->id;
+	o->tsd.city.latitude = latitude;
+	o->tsd.city.longitude = longitude;
+	o->tsd.city.population = snis_randn(58000) + 2000;
+	o->tsd.city.relative_orientation = combinedq;
+	o->tsd.city.city_texture = snis_randn(1000) % NCITY_TEXTURES;
+	o->orientation = combinedq;
+	o->move = city_move;
+}
+
 /* type here is -1 == random, 0 == earthlike, 1 == gas-giant, 2 == rocky */
 static int add_planet(double x, double y, double z, float radius, uint8_t security, int type)
 {
@@ -14379,6 +14449,14 @@ static int add_planet(double x, double y, double z, float radius, uint8_t securi
 	go[i].tsd.planet.atmosphere_scale = 1.02;
 	go[i].tsd.planet.atmosphere_brightness = solarsystem_assets->atmosphere_brightness[sst];
 	go[i].tsd.planet.habitability = habitability;
+
+	if (habitability <= 190)
+		return i;
+
+	/* Add cities to the planet */
+	int ncities = snis_randn(3) + 2;
+	for (int j = 0; j < ncities; j++)
+		add_city_to_planet(&go[i]);
 
 	return i;
 }
@@ -25342,6 +25420,8 @@ static void send_update_black_hole_packet(struct game_client *c,
 	struct snis_entity *o);
 static void send_update_planet_packet(struct game_client *c,
 	struct snis_entity *o);
+static void send_update_city_packet(struct game_client *c,
+	struct snis_entity *o);
 static void send_update_wormhole_packet(struct game_client *c,
 	struct snis_entity *o);
 static void send_update_starbase_packet(struct game_client *c,
@@ -25419,6 +25499,9 @@ static void queue_up_client_object_update(struct game_client *c, struct snis_ent
 		break;
 	case OBJTYPE_PLANET:
 		send_update_planet_packet(c, o);
+		break;
+	case OBJTYPE_CITY:
+		send_update_city_packet(c, o);
 		break;
 	case OBJTYPE_WORMHOLE:
 		send_update_wormhole_packet(c, o);
@@ -26520,6 +26603,21 @@ static void send_update_planet_packet(struct game_client *c,
 					o->tsd.planet.ring_selector,
 					o->tsd.planet.time_left_to_build,
 					o->tsd.planet.build_unit_type));
+}
+
+static void send_update_city_packet(struct game_client *c,
+	struct snis_entity *o)
+{
+	pb_queue_to_client(c, snis_opcode_pkt("bwwwSSSQhhhb", OPCODE_UPDATE_CITY,
+					o->id, o->timestamp, o->tsd.city.parent_id,
+					o->x, (int32_t) UNIVERSE_DIM,
+					o->y, (int32_t) UNIVERSE_DIM,
+					o->z, (int32_t) UNIVERSE_DIM,
+					&o->orientation,
+					o->tsd.city.latitude,
+					o->tsd.city.longitude,
+					o->tsd.city.population,
+					o->tsd.city.city_texture));
 }
 
 static void send_update_wormhole_packet(struct game_client *c,
