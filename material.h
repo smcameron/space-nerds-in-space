@@ -45,6 +45,7 @@ struct entity;
 #define MATERIAL_WARP_GATE_EFFECT 16
 #define MATERIAL_SUN 17
 #define MATERIAL_BLACK_HOLE 18
+#define MATERIAL_CITY 19
 
 #define MATERIAL_BILLBOARD_TYPE_NONE 0
 #define MATERIAL_BILLBOARD_TYPE_SCREEN 1
@@ -176,6 +177,11 @@ struct material_planetary_lightning {
 	float u1, v1, width;
 };
 
+struct material_city {
+	int texture_id;      /* diffuse atlas texture */
+	int emit_texture_id; /* emittance atlas texture */
+};
+
 struct material_textured_planet_ring {
 	int texture_id;
 	float alpha;
@@ -231,6 +237,7 @@ struct material {
 		struct material_warp_gate_effect warp_gate_effect;
 		struct material_sun sun;
 		struct material_black_hole black_hole;
+		struct material_city city;
 	};
 	int type;
 	int billboard_type;
@@ -252,6 +259,7 @@ extern void material_init_atmosphere(struct material *m);
 extern void material_init_alpha_by_normal(struct material *m);
 extern void material_init_planetary_lightning(struct material *m);
 extern void material_init_warp_gate_effect(struct material *m);
+extern void material_init_city(struct material *m);
 
 extern int material_nebula_read_from_file(const char *asset_dir, const char *filename,
 						struct material *nebula);

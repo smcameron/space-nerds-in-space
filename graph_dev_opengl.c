@@ -1250,6 +1250,12 @@ static struct graph_dev_gl_textured_shader textured_lit_emit_normal_shader;
 static struct graph_dev_gl_textured_shader textured_lit_normal_shader;
 static struct graph_dev_gl_textured_shader textured_cubemap_shield_shader;
 
+/* 4 variants of city shaders, with or without CSM, with or without ring shadows */
+static struct graph_dev_gl_textured_shader city_shader_no_csm_no_ring;
+static struct graph_dev_gl_textured_shader city_shader_csm_no_ring;
+static struct graph_dev_gl_textured_shader city_shader_no_csm_ring;
+static struct graph_dev_gl_textured_shader city_shader_csm_ring;
+
 /* 6 pairs of textured cubemap shaders, one with CSM shadows, one without, with combos of other features */
 static struct graph_dev_gl_textured_shader textured_cubemap_lit_shader;
 static struct graph_dev_gl_textured_shader textured_cubemap_lit_shadow_shader;
@@ -1750,7 +1756,7 @@ struct raster_texture_params {
 	float in_shade;
 	float atmosphere_brightness;
 	union vec3 *water_color;
-	float u1, v1;
+	float u1, v1, u2, v2;
 	float width;
 	int textures_not_ready;
 };
@@ -2842,6 +2848,7 @@ extern int graph_dev_entity_render_order(struct entity *e)
 	case MATERIAL_WARP_GATE_EFFECT:
 	case MATERIAL_SUN:
 	case MATERIAL_BLACK_HOLE:
+	case MATERIAL_CITY:
 		does_blending = 1;
 		break;
 	case MATERIAL_TEXTURE_MAPPED_UNLIT:
@@ -3226,6 +3233,59 @@ static void graph_dev_raster_triangle_mesh(struct entity_context *cx, struct ent
 			rtp.textures_not_ready = !graph_dev_texture_ready(rtp.texture_number);
 			}
 			break;
+		case MATERIAL_CITY: {
+			struct material_city *mt = &e->material_ptr->city;
+
+			rtp.ambient_scale = PLANET_AMBIENT_SCALE;
+			rtp.texture_number = mt->texture_id;
+			rtp.emit_texture_number = mt->emit_texture_id;
+			rtp.textures_not_ready = !graph_dev_textures_ready(
+				(int []) {rtp.texture_number, rtp.emit_texture_number, -1 });
+
+			struct entity *planet = e->parent;
+			if (planet) {
+				struct entity *ring_e = find_child_entity_with_material_type(cx, planet,
+							MATERIAL_TEXTURED_PLANET_RING);
+				struct material *ring = NULL;
+				if (ring_e)
+					ring = ring_e->material_ptr;
+
+				if (ring && ring->type == MATERIAL_TEXTURED_PLANET_RING) {
+					if (graph_dev_planets_receive_csm_shadows)
+						rtp.shader = &city_shader_csm_ring;
+					else
+						rtp.shader = &city_shader_no_csm_ring;
+				} else {
+					if (graph_dev_planets_receive_csm_shadows)
+						rtp.shader = &city_shader_csm_no_ring;
+					else
+						rtp.shader = &city_shader_no_csm_no_ring;
+				}
+
+				if (ring) {
+					struct material_textured_planet_ring *ring_mt =
+						&ring->textured_planet_ring;
+					rtp.ring_texture_v = ring_mt->texture_v;
+					rtp.ring_inner_radius = ring_mt->inner_radius;
+					rtp.ring_outer_radius = ring_mt->outer_radius;
+
+					shadow_annulus.texture_id = ring_mt->texture_id;
+					shadow_annulus.tint_color = ring_mt->tint;
+					shadow_annulus.alpha = ring_mt->alpha;
+
+					rtp.textures_not_ready |=
+						!graph_dev_texture_ready(shadow_annulus.texture_id);
+
+					camera_pos_from_mv_matrix(rtp.mat_mv, &shadow_annulus.eye_pos);
+
+					/* ring is the 2x to 3x of the planet scale, world space distance
+					   is the same in eye space as the view matrix does not scale */
+					shadow_annulus.r1 = vec3_cwise_max(&planet->scale) * rtp.ring_inner_radius;
+					shadow_annulus.r2 = vec3_cwise_max(&planet->scale) * rtp.ring_outer_radius;
+				}
+			}
+		}
+		break;
 		case MATERIAL_TEXTURED_PLANET: {
 			struct material_textured_planet *mt = &e->material_ptr->textured_planet;
 			rtp.ambient_scale = PLANET_AMBIENT_SCALE;
@@ -5099,6 +5159,22 @@ void graph_dev_reload_all_shaders(void)
 	setup_textured_shader("alpha_by_normal", UNIVERSAL_SHADER_HEADER "#define TEXTURED_ALPHA_BY_NORMAL",
 				&textured_alpha_by_normal_shader);
 	setup_textured_shader("planetary-lightning", UNIVERSAL_SHADER_HEADER, &planetary_lightning_shader);
+	setup_textured_shader("city", UNIVERSAL_SHADER_HEADER FILMIC_TONEMAPPING,
+				&city_shader_no_csm_no_ring);
+	setup_textured_shader("city",
+				UNIVERSAL_SHADER_HEADER FILMIC_TONEMAPPING
+				SHADOW_CASCADES_HEADER
+				"#define USE_CSM 1\n",
+				&city_shader_csm_no_ring);
+	setup_textured_shader("city", UNIVERSAL_SHADER_HEADER FILMIC_TONEMAPPING
+				"#define USE_ANNULUS_SHADOW 1\n" ,
+				&city_shader_no_csm_ring);
+	setup_textured_shader("city",
+				UNIVERSAL_SHADER_HEADER FILMIC_TONEMAPPING
+				SHADOW_CASCADES_HEADER
+				"#define USE_CSM 1\n"
+				"#define USE_ANNULUS_SHADOW 1\n" ,
+				&city_shader_csm_ring);
 	setup_textured_shader("warp-gate-effect", UNIVERSAL_SHADER_HEADER FILMIC_TONEMAPPING, &warp_gate_effect_shader);
 
 	if (fbo_render_to_texture_supported())

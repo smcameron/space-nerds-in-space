@@ -135,4 +135,5 @@ validate_gl_fs "share/snis/shader/wireframe_transparent.frag"
 validate_gl_fs "share/snis/shader/wireframe-transparent-sphere-clip.frag"
 validate_gl_vs "share/snis/shader/wireframe-transparent-sphere-clip.vert"
 validate_gl_vs "share/snis/shader/wireframe_transparent.vert"
+validate_gl_both "share/snis/shader/city.shader"
 

@@ -154,6 +154,7 @@
 #define WARPGATE_COLOR WHITE
 #define WORMHOLE_COLOR WHITE
 #define PLANET_COLOR GREEN
+#define CITY_COLOR WHITE
 #define BLACK_HOLE_COLOR WHITE
 #define ASTEROID_COLOR AMBER
 #define WARP_CORE_COLOR YELLOW
@@ -703,6 +704,10 @@ static struct entity *sun_entity = NULL;
 static int lens_flare_enabled = 1; /* tweakable */
 static float lens_flare_intensity = 0.15; /* tweakable */
 static float low_poly_threshold = 200.0; /* tweakable */
+
+static struct mesh *city_mesh[NCITY_TEXTURES] = { 0 };
+static struct material city_material = { 0 };
+
 #ifndef WITHOUTOPENGL
 static struct entity *lens_flare_halo = NULL;
 static struct entity *anamorphic_flare = NULL;
@@ -2423,11 +2428,12 @@ static void enforce_bounds_u8(uint8_t *v, size_t max_value)
 
 
 static int update_city(uint32_t id, uint32_t timestamp, uint32_t parent_id,
-				double x, double y, double z,
+				double x, double y, double z, double dx, double dy, double dz,
 				union quat *orientation, uint16_t latitude, uint16_t longitude,
 				uint16_t population, uint8_t city_texture)
 {
 	int i;
+	struct snis_entity *planet;
 
 	i = lookup_object_by_id(id);
 	if (i < 0) {
@@ -2435,14 +2441,46 @@ static int update_city(uint32_t id, uint32_t timestamp, uint32_t parent_id,
 		if (i < 0)
 			return -1;
 	}
+
+	/* Set up city snis_entity */
 	struct snis_entity *o = &go[i];
 	set_object_location(o, x, y, z);
 	o->orientation = *orientation;
+	o->tsd.city.dx = dx;
+	o->tsd.city.dy = dy;
+	o->tsd.city.dz = dz;
 	o->tsd.city.parent_id = parent_id;
 	o->tsd.city.latitude = latitude;
 	o->tsd.city.longitude = longitude;
 	o->tsd.city.population = population;
+	if (city_texture >= NCITY_TEXTURES)
+		city_texture %= NCITY_TEXTURES;
 	o->tsd.city.city_texture = city_texture;
+
+
+	if (!o->entity) {
+		/* Add city entity to snis_entity */
+		struct mesh *mesh = city_mesh[city_texture];
+		struct material *m = &city_material;
+		o->entity = add_entity(ecx, mesh, dx, dy, dz, CITY_COLOR);
+		if (o->entity)
+			update_entity_material(o->entity, m);
+	}
+
+	/* Set city parent entity to planet entity */
+	if (o->entity && !entity_parent(o->entity)) {
+		/* Find the planet the city is on */
+		planet = NULL;
+		int n = lookup_object_by_id(o->tsd.city.parent_id);
+		if (n >= 0)
+			planet = &go[n];
+		if (planet) {
+			update_entity_scale(o->entity, (500.0 + snis_randn(300)) *
+				planet->tsd.planet.radius / MAX_PLANET_RADIUS);
+			if (planet->entity)
+				update_entity_parent(ecx, o->entity, planet->entity);
+		}
+	}
 	return i;
 }
 
@@ -7892,23 +7930,26 @@ static int process_update_city_packet(void)
 {
 	unsigned char buffer[100];
 	uint32_t id, timestamp, parent_id;
-	double x, y, z;
+	double x, y, z, dx, dy, dz;
 	union quat orientation;
 	uint16_t latitude, longitude, population;
 	uint8_t city_texture;
 
-	assert(sizeof(buffer) >= 39);
-	int rc = read_and_unpack_buffer(buffer, "wwwSSSQhhhb", &id, &timestamp,
+	assert(sizeof(buffer) >= 51);
+	int rc = read_and_unpack_buffer(buffer, "wwwSSSSSSQhhhb", &id, &timestamp,
 					&parent_id,
 					&x, (int32_t) UNIVERSE_DIM,
 					&y, (int32_t) UNIVERSE_DIM,
 					&z, (int32_t) UNIVERSE_DIM,
+					&dx, (int32_t) UNIVERSE_DIM,
+					&dy, (int32_t) UNIVERSE_DIM,
+					&dz, (int32_t) UNIVERSE_DIM,
 					&orientation, &latitude, &longitude, &population,
 					&city_texture);
 	if (rc != 0)
 		return rc;
 	pthread_mutex_lock(&universe_mutex);
-	rc = update_city(id, timestamp, parent_id, x, y, z,
+	rc = update_city(id, timestamp, parent_id, x, y, z, dx, dy, dz,
 			&orientation, latitude, longitude, population, city_texture);
 	pthread_mutex_unlock(&universe_mutex);
 	return (rc < 0);
@@ -23897,6 +23938,10 @@ static int load_static_textures(void)
 				planetary_lightning_material[0].planetary_lightning.texture_id;
 	}
 
+	material_init_city(&city_material);
+	city_material.city.texture_id = load_texture("textures/cities-diffuse-map.png", 1);
+	city_material.city.emit_texture_id = load_texture("textures/cities-emittance-map.png", 1);
+
 	static_textures_loaded = 1;
 	update_splash_progress(65);
 
@@ -25210,6 +25255,27 @@ static struct mesh *make_derelict_mesh(struct mesh *source)
 	return m;
 }
 
+static void make_city_meshes(int ncols, int nrows, float img_width, float img_height)
+{
+	float width = img_width * ncols;
+	float height = img_height * nrows;
+	int row = 0;
+	int col = 0;
+	assert(ncols * nrows == NCITY_TEXTURES);
+	for (int i = 0; i < ncols * nrows; i++) {
+		float u1 = (col * img_width) / width;
+		float v1 = (row * img_height) / height;
+		float u2 = ((col + 1.0f) * img_width) / width;
+		float v2 = ((row + 1.0f) * img_height) / height;
+		col++;
+		if (col >= ncols) {
+			col = 0;
+			row++;
+		}
+		city_mesh[i] = mesh_fabricate_billboard_with_uv_map(1.0, 1.0, u1, v1, u2, v2);
+	}
+}
+
 static void init_meshes(void)
 {
 	int i;
@@ -25385,6 +25451,10 @@ static void init_meshes(void)
 		v2 = v1 + 0.25;
 		planetary_lightning_mesh[i] = mesh_fabricate_billboard_with_uv_map(1.0, 1.0, u1, v1, u2, v2);
 	}
+
+	/* Assume city textures are in an atlas 5 columns, 4 rows, each image 256x256. */
+	make_city_meshes(5, 4, 256.0f, 256.0f);
+
 	update_splash_progress(100);
 
 	open_simplex_noise_free(osn);

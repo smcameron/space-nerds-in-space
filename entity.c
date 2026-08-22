@@ -192,6 +192,11 @@ static void check_entity_child_list_for_cycles(int line, struct entity_context *
 #endif
 }
 
+struct entity *entity_parent(struct entity *e)
+{
+	return e->parent;
+}
+
 /* We need to call this when removing an entity that is a child of
  * another entity which is not also being removed, and when updating
  * an entity's parent if the entity already had a parent.
@@ -2253,5 +2258,21 @@ void entity_set_in_shade(struct entity *e, float in_shade)
 void entity_context_set_hi_lo_poly_pixel_threshold(struct entity_context *cx, float pixel_threshold)
 {
 	cx->hi_lo_poly_pixel_threshold = pixel_threshold;
+}
+
+struct entity *find_child_entity_with_material_type(struct entity_context *cx,
+						struct entity *e, int material_type)
+{
+#define NEXT_CHILD(c) (cx->entity_child_list[(c)].next_entity_child_index)
+
+	/* Walk the list of child entities looking for one with material of right type  */
+	for (int child = e->entity_child_index; child >= 0; child = NEXT_CHILD(child)) {
+		struct entity *ce = &cx->entity_list[child];
+		if (ce->material_ptr && ce->material_ptr->type == material_type)
+			return ce;
+	}
+	return NULL;
+
+#undef NEXT_CHILD
 }
 

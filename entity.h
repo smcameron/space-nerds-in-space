@@ -38,6 +38,7 @@ GLOBAL void remove_entity(struct entity_context *cx,
 	struct entity *e);
 GLOBAL void remove_all_entity(struct entity_context *cx);
 GLOBAL void update_entity_parent(struct entity_context *cx, struct entity *child, struct entity *parent);
+GLOBAL struct entity *entity_parent(struct entity *e);
 GLOBAL void update_entity_pos(struct entity *e, float x, float y, float z);
 GLOBAL void update_entity_orientation(struct entity *e, const union quat *orientation);
 GLOBAL union quat *entity_get_orientation(struct entity *e);
@@ -144,5 +145,7 @@ GLOBAL float entity_get_emit_intensity(struct entity *e);
 GLOBAL float entity_get_in_shade(struct entity *e);
 GLOBAL void entity_set_in_shade(struct entity *e, float in_shade);
 GLOBAL void entity_context_set_hi_lo_poly_pixel_threshold(struct entity_context *cx, float pixel_threshold);
+GLOBAL struct entity *find_child_entity_with_material_type(struct entity_context *cx,
+					struct entity *e, int material_type);
 
 #endif	
