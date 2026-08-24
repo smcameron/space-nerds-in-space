@@ -65,7 +65,7 @@ GLOBAL float snis_random_float(void); /* return random number -1 <= n <= 1 */
  * }
  *
  */
-uint32_t xorshift(unsigned int *state);
+uint32_t xorshift(uint32_t *state);
 
 GLOBAL void normalize_angle(double *angle);
 GLOBAL double interpolate(double x, double x1, double y1, double x2, double y2);
