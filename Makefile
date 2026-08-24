@@ -902,7 +902,8 @@ $(OD)/gles_cap.o : gles_cap.c Makefile ${ODT}
 $(OD)/graph_dev_mesh_stub.o:	graph_dev_mesh_stub.c graph_dev_mesh_stub.h ${ODT}
 	$(Q)$(COMPILE)
 
-$(OD)/material.o : material.c Makefile ${ODT}
+$(OD)/material.o: material.c mtwist.h quat.h snis_graph.h material.h star_light.h \
+			graph_dev.h build_bug_on.h Makefile ${ODT}
 	$(Q)$(SDLCOMPILE)
 
 $(OD)/shader.o : shader.c Makefile ${ODT}
