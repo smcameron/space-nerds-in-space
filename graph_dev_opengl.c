@@ -3165,9 +3165,7 @@ static void graph_dev_raster_triangle_mesh(struct entity_context *cx, struct ent
 				shadow_annulus.tint_color = ring_mt->tint;
 				shadow_annulus.alpha = ring_mt->alpha;
 
-				/* ring is at the center of our mesh */
-				union vec4 sphere_pos = { { 0, 0, 0, 1 } };
-				mat44_x_vec4_into_vec3(rtp.mat_mv, &sphere_pos, &shadow_annulus.eye_pos);
+				camera_pos_from_mv_matrix(rtp.mat_mv, &shadow_annulus.eye_pos);
 
 				/* ring is the 2x to 3x of the planet scale, world space distance
 				   is the same in eye space as the view matrix does not scale */
@@ -3275,9 +3273,7 @@ static void graph_dev_raster_triangle_mesh(struct entity_context *cx, struct ent
 				rtp.textures_not_ready |=
 					!graph_dev_texture_ready(shadow_annulus.texture_id);
 
-				/* ring is at the center of our mesh */
-				union vec4 sphere_pos = { { 0, 0, 0, 1 } };
-				mat44_x_vec4_into_vec3(rtp.mat_mv, &sphere_pos, &shadow_annulus.eye_pos);
+				camera_pos_from_mv_matrix(rtp.mat_mv, &shadow_annulus.eye_pos);
 
 				/* ring is the 2x to 3x of the planet scale, world space distance
 				   is the same in eye space as the view matrix does not scale */
@@ -3324,9 +3320,7 @@ static void graph_dev_raster_triangle_mesh(struct entity_context *cx, struct ent
 			rtp.ring_outer_radius = mt->outer_radius;
 			rtp.textures_not_ready = !graph_dev_texture_ready(rtp.texture_number);
 
-			/* planet is at the center of our mesh */
-			union vec4 sphere_pos = { { 0, 0, 0, 1 } };
-			mat44_x_vec4_into_vec3(rtp.mat_mv, &sphere_pos, &shadow_sphere.eye_pos);
+			camera_pos_from_mv_matrix(rtp.mat_mv, &shadow_sphere.eye_pos);
 
 			/* planet is the size of the ring scale, world space distance
 			   is the same in eye space as the view matrix does not scale */

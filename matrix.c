@@ -386,6 +386,21 @@ float mat41_dot_mat41(struct mat41 *restrict m1, struct mat41 *restrict m2)
 	return m1->m[0] * m2->m[0] + m1->m[1] * m2->m[1] + m1->m[2] * m2->m[2];
 }
 
+/* Extract camera position from model view matrix */
+void camera_pos_from_mv_matrix(const struct mat44 *restrict mv_mat, union vec3 *restrict output)
+{
+	/*
+	 * const union vec4 extract_camera_pos = { { 0, 0, 0, 1 } };
+	 * mat44_x_vec4_into_vec3(mv_mat, &extract_camera_pos, output);
+	 *
+	 * Don't waste time doing the above degenerate matrix multiply.
+	 * Instead, just yoink the parts we need.
+	 */
+	output->v.x = mv_mat->m[3][0];
+	output->v.y = mv_mat->m[3][1];
+	output->v.z = mv_mat->m[3][2];
+}
+
 #ifdef TEST_MATRIX
 #include <stdio.h>
 #include <math.h>

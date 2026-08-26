@@ -112,6 +112,9 @@ GLOBAL void mat44_x_vec4_into_vec3(const struct mat44 *restrict lhs, const union
 GLOBAL void mat44_x_vec4_into_vec3_dff(const struct mat44d *restrict lhs, const union vec4 *restrict rhs,
 				union vec3 *restrict output);
 
+/* Extract camera position from model view matrix */
+GLOBAL void camera_pos_from_mv_matrix(const struct mat44 *restrict mv_mat, union vec3 *restrict output);
+
 GLOBAL void normalize_vector(struct mat41 *v, struct mat41 *output);
 GLOBAL void mat41_cross_mat41(struct mat41 *restrict v1, struct mat41 *restrict v2, struct mat41 *restrict output);
 GLOBAL void print44(struct mat44 *m);
