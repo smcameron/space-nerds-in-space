@@ -2444,8 +2444,11 @@ static int update_city(uint32_t id, uint32_t timestamp, uint32_t parent_id,
 
 	/* Set up city snis_entity */
 	struct snis_entity *o = &go[i];
-	set_object_location(o, x, y, z);
-	o->orientation = *orientation;
+	float vx, vy, vz;
+	vx = x - o->x;
+	vy = y - o->y;
+	vz = z - o->z;
+	update_generic_object(i, timestamp, x, y, z, vx, vy, vz, orientation, 1);
 	o->tsd.city.dx = dx;
 	o->tsd.city.dy = dy;
 	o->tsd.city.dz = dz;
@@ -20620,6 +20623,11 @@ static void show_demon_3d(void)
 			draw_label = 1;
 			material = &white_material;
 			break;
+		case OBJTYPE_CITY:
+			color = RED;
+			draw_label = 0;
+			material = &red_material;
+			break;
 		case OBJTYPE_BLACK_HOLE:
 			color = UI_COLOR(demon_black_hole);
 			strcpy(label, o->sdata.name);
@@ -20741,6 +20749,14 @@ static void show_demon_3d(void)
 			}
 			transform_point(instrumentecx, o->x, o->y, o->z, &sx, &sy);
 			sng_abs_xy_draw_string(label, NANO_FONT, sx + 10, sy - 10);
+			break;
+		case OBJTYPE_CITY:
+			e = add_entity(instrumentecx, unit_cube_mesh, o->x, o->y, o->z, color);
+			if (e) {
+				update_entity_scale(e, 200.0f);
+				entity_set_user_data(e, o);
+				update_entity_material(e, &red_material);
+			}
 			break;
 		case OBJTYPE_BLACK_HOLE:
 			e = add_entity(instrumentecx, uv_sphere_mesh,  o->x, o->y, o->z, color);

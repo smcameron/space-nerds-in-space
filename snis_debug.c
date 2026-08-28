@@ -21,6 +21,7 @@
 
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
 
 #include "snis_debug.h"
 #include "ship_registration.h"
@@ -147,6 +148,18 @@ void snis_debug_dump(char *cmd, struct snis_entity go[], int nstarbase_models,
 		printfn("TORPEDOES: %u", o->tsd.ship.torpedoes);
 		printfn("MISSILES: %u", o->tsd.ship.missile_count);
 		printfn("FUEL: %u", o->tsd.ship.fuel);
+		break;
+	case OBJTYPE_CITY:
+		t = "CITY";
+		printfn("TYPE: %s", t);
+		printfn("PARENT ID: %u", o->tsd.city.parent_id);
+		printfn("POPULATION: %hu", o->tsd.city.population);
+		int lat = o->tsd.city.latitude;
+		int lng = o->tsd.city.longitude;
+		printfn("LAT/LONG: %hd %s, %hd %s",
+			abs(lat), lat < 0 ? "S" : "N", abs(lng), lng < 0 ? "W" : "E");
+		printfn("dx, dy, dz = (%f, %f, %f)", o->tsd.city.dx, o->tsd.city.dy, o->tsd.city.dz);
+		printfn("CITY TEXTURE: %hhu", o->tsd.city.city_texture);
 		break;
 	case OBJTYPE_NPCSHIP:
 		t = "NPC SHIP";
