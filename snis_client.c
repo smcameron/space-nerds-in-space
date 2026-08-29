@@ -17815,6 +17815,46 @@ static int planet_has_starbase(struct snis_entity *planet)
 	return 0;
 }
 
+static void science_add_city(__attribute__((unused)) struct snis_entity *planet,
+				struct snis_entity *city,
+				union quat *orientation, float plntradius,
+				float plntx, float plnty, float plntz)
+{
+	union vec3 p;
+	struct mesh *m = uv_sphere_mesh;
+
+	p.v.x = city->tsd.city.dx;
+	p.v.y = city->tsd.city.dy;
+	p.v.z = city->tsd.city.dz;
+	vec3_normalize_self(&p);
+	vec3_mul_self(&p, plntradius);
+	quat_rot_vec_self(&p, orientation);
+	p.v.x += plntx;
+	p.v.y += plnty;
+	p.v.z += plntz;
+
+	struct entity *e = add_entity(sciecx, m, p.v.x, p.v.y, p.v.z, UI_COLOR(sci_city));
+	update_entity_scale(e, 0.05f);
+}
+
+static void science_add_cities(struct snis_entity *planet, union quat *orientation,
+			float plntradius, float plntx, float plnty, float plntz)
+{
+	if (!planet || planet->type != OBJTYPE_PLANET)
+		return;
+	for (int i = 0; i <= snis_object_pool_highest_object(pool); i++) {
+		struct snis_entity *o = &go[i];
+		if (o->type != OBJTYPE_CITY)
+			continue;
+		if (!o->alive)
+			continue;
+		if (o->tsd.city.parent_id != planet->id)
+			continue;
+		science_add_city(planet, o, orientation, plntradius,
+			plntx, plnty, plntz);
+	}
+}
+
 static void draw_science_details(void)
 {
 	struct entity *e = NULL;
@@ -17852,6 +17892,9 @@ static void draw_science_details(void)
 			curr_science_guy->type == OBJTYPE_BLACK_HOLE) {
 			e = add_entity(sciecx, m, 0.0, -m->radius, m->radius * 0.2, UI_COLOR(sci_wireframe));
 			quat_init_axis(&orientation, 0.0, 0.0, 1.0, angle);
+			if (curr_science_guy->type == OBJTYPE_PLANET)
+				science_add_cities(curr_science_guy, &orientation, m->radius,
+						0.0, -m->radius, m->radius * 0.2);
 		} else {
 			e = add_entity(sciecx, m, 0.0, m->radius * 0.2, -m->radius, UI_COLOR(sci_wireframe));
 			quat_init_axis(&orientation, 0.0, 1.0, 0.0, angle);
@@ -17877,8 +17920,7 @@ static void draw_science_details(void)
 		set_lighting(sciecx, -m->radius * 4, 0, m->radius);
 		render_entities(sciecx);
 	}
-	if (e)
-		remove_entity(sciecx, e);
+	remove_all_entity(sciecx);
 
 	y = SCREEN_HEIGHT - 200 * SCREEN_HEIGHT / 600;
 	if (curr_science_guy->type == OBJTYPE_BRIDGE ||
