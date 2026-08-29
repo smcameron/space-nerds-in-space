@@ -3253,6 +3253,11 @@ static void graph_dev_raster_triangle_mesh(struct entity_context *cx, struct ent
 					ring = ring_e->material_ptr;
 			}
 
+			/* FIXME: we end up always using the no_csm_no_ring shader variant
+			 * because we don't use the child entity system here, because working
+			 * backwards to find the correct positioning and orientation proved
+			 * to be too difficult for me, and for my AI pals too.
+			 */
 			if (ring && ring->type == MATERIAL_TEXTURED_PLANET_RING) {
 				if (graph_dev_planets_receive_csm_shadows)
 					rtp.shader = &city_shader_csm_ring;
@@ -3284,6 +3289,7 @@ static void graph_dev_raster_triangle_mesh(struct entity_context *cx, struct ent
 				else
 					rtp.shader = &city_shader_no_csm_no_ring;
 			}
+			rtp.shader = &city_shader_no_csm_no_ring;
 		}
 		break;
 		case MATERIAL_TEXTURED_PLANET: {

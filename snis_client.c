@@ -2433,7 +2433,9 @@ static int update_city(uint32_t id, uint32_t timestamp, uint32_t parent_id,
 				uint16_t population, uint8_t city_texture)
 {
 	int i;
+#if 0
 	struct snis_entity *planet;
+#endif
 
 	i = lookup_object_by_id(id);
 	if (i < 0) {
@@ -2465,11 +2467,15 @@ static int update_city(uint32_t id, uint32_t timestamp, uint32_t parent_id,
 		/* Add city entity to snis_entity */
 		struct mesh *mesh = city_mesh[city_texture];
 		struct material *m = &city_material;
-		o->entity = add_entity(ecx, mesh, dx, dy, dz, CITY_COLOR);
-		if (o->entity)
+		o->entity = add_entity(ecx, mesh, x, y, z, CITY_COLOR);
+		if (o->entity) {
 			update_entity_material(o->entity, m);
+			update_entity_orientation(o->entity, orientation);
+			update_entity_scale(o->entity, 200.0f);
+		}
 	}
 
+#if 0
 	/* Set city parent entity to planet entity */
 	if (o->entity) {
 		/* Find the planet the city is on */
@@ -2504,6 +2510,7 @@ static int update_city(uint32_t id, uint32_t timestamp, uint32_t parent_id,
 			update_entity_scale(o->entity, 10.0f);
 		}
 	}
+#endif
 	return i;
 }
 
