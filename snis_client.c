@@ -2466,22 +2466,42 @@ static int update_city(uint32_t id, uint32_t timestamp, uint32_t parent_id,
 		struct mesh *mesh = city_mesh[city_texture];
 		struct material *m = &city_material;
 		o->entity = add_entity(ecx, mesh, dx, dy, dz, CITY_COLOR);
-		if (o->entity) {
+		if (o->entity)
 			update_entity_material(o->entity, m);
-			update_entity_scale(o->entity, 25.0);
-		}
 	}
 
 	/* Set city parent entity to planet entity */
-	if (o->entity && !entity_parent(o->entity)) {
+	if (o->entity) {
 		/* Find the planet the city is on */
 		planet = NULL;
 		int n = lookup_object_by_id(o->tsd.city.parent_id);
 		if (n >= 0)
 			planet = &go[n];
-		if (planet) {
-			if (planet->entity)
+		if (planet && planet->entity) {
+			if (!entity_parent(o->entity))
 				update_entity_parent(ecx, o->entity, planet->entity);
+
+			union quat inv_planet_orient, rel_orient;
+			union vec3 rel_pos;
+
+			rel_pos.v.x = x - planet->x;
+			rel_pos.v.y = y - planet->y;
+			rel_pos.v.z = z - planet->z;
+
+			quat_inverse(&inv_planet_orient, &planet->orientation);
+			quat_rot_vec_self(&rel_pos, &inv_planet_orient);
+
+			quat_mul(&rel_orient, &inv_planet_orient, orientation);
+
+			float city_scale = 10.0f;
+
+			update_entity_pos(o->entity, rel_pos.v.x, rel_pos.v.y, rel_pos.v.z);
+			update_entity_orientation(o->entity, &rel_orient);
+			update_entity_scale(o->entity, city_scale);
+		} else {
+			update_entity_pos(o->entity, x, y, z);
+			update_entity_orientation(o->entity, orientation);
+			update_entity_scale(o->entity, 10.0f);
 		}
 	}
 	return i;
