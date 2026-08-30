@@ -1641,8 +1641,8 @@ struct mesh *mesh_unit_cube(int subdivisions)
 
 	mesh_set_flat_shading_vertex_normals(m);
 	m->nlines = 0;
-	m->radius = mesh_compute_radius(m);
 	mesh_scale_helper(m, 0.5); /* Scale the cube to be 1 unit per side */
+	m->radius = mesh_compute_radius(m);
 	mesh_set_name(m, "unit cube");
 	mesh_graph_dev_init(m);
 	return m;
