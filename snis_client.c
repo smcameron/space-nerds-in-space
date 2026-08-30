@@ -10610,10 +10610,18 @@ static void show_mainscreen(void)
 	if (curr_science_guy && vp == o) {
 		float sx, sy;
 
-		if (curr_science_guy->alive && curr_science_guy->entity &&
-			entity_onscreen(curr_science_guy->entity)) {
-			entity_get_screen_coords(curr_science_guy->entity, &sx, &sy);
-			draw_targeting_indicator(sx, sy, UI_COLOR(main_sci_selection), 0, 1.0f, 2.0f);
+		if (curr_science_guy->alive && curr_science_guy->entity) {
+			if (curr_science_city && curr_science_city->alive) {
+				if (entity_onscreen(curr_science_city->entity)) {
+					entity_get_screen_coords(curr_science_city->entity, &sx, &sy);
+					draw_targeting_indicator(sx, sy, UI_COLOR(main_sci_selection), 0, 1.0f, 2.0f);
+				}
+			} else {
+				if (entity_onscreen(curr_science_guy->entity)) {
+					entity_get_screen_coords(curr_science_guy->entity, &sx, &sy);
+					draw_targeting_indicator(sx, sy, UI_COLOR(main_sci_selection), 0, 1.0f, 2.0f);
+				}
+			}
 		}
 	}
 
