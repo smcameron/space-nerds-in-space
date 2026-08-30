@@ -647,6 +647,52 @@ double point_to_line_dist(double lx1, double ly1, double lx2, double ly2, double
 	return fabs((px - lx1) * (ly2 - ly1) - (py - ly1) * (lx2 - lx1)) / normal_length;
 }
 
+/**
+ * Computes latitude and longitude for a point on a uv sphere.
+ *
+ * Right handed coordinate System (but not the usual one):
+ *   +x: Right
+ *   +z: Up (Z=0 is the equator x-y plane)
+ *   +y: Away from viewer (into of screen)
+ *
+ * The reason the usual coord system of +x = right, +y = up, +z = towards viewer
+ * is not used is because all of this lat/long stuff is used with the uv_sphere
+ * mesh which is radially symmetrical around the z axis, so z needs to be up
+ * on e.g. science.  (In hindsight, we should have rotated the model in openscad,
+ * or on loading, but we didn't. So this is the simplest fix.)
+ *
+ * @param x X coordinate of the point
+ * @param y Y coordinate of the point
+ * @param z Z coordinate of the point
+ * @param r Radius of the sphere (used for normalization)
+ * @param latitude, longitude: output
+ */
+void compute_lat_long(double x, double y, double z, double r, double *latitude, double *longitude)
+{
+	/* Prevent division by zero if r is 0 or point is at origin */
+	if (r <= 0.0) {
+		*latitude = 0.0;
+		*longitude = 0.0;
+		return;
+	}
+
+	/* Clamp z/r to [-1, 1] to avoid NaN from asin due to floating-point drift */
+	double normalized_z = z / r;
+	if (normalized_z > 1.0)
+		normalized_z = 1.0;
+	if (normalized_z < -1.0)
+		normalized_z = -1.0;
+
+	/* Latitude: angle above (+) or below (-) the x-y equator plane */
+	*latitude = asin(normalized_z);
+
+	/* Longitude: angle in the x-y plane.
+	 * Using atan2(x, z) sets +y as the 0-degree meridian,
+	 * with +x extending towards positive longitude (e.g., East).
+	 */
+	*longitude = atan2(x, y);
+}
+
 #ifdef TEST_MATHUTILS
 
 static int failures;
