@@ -92,6 +92,7 @@ struct ui_color_map {
 	struct ui_color_entry nav_projected_ring;
 	struct ui_color_entry nav_self;
 	struct ui_color_entry nav_entity;
+	struct ui_color_entry nav_city;
 	struct ui_color_entry nav_asteroid;
 	struct ui_color_entry nav_ship;
 	struct ui_color_entry nav_static;
@@ -323,6 +324,7 @@ GLOBAL struct ui_color_map_accessor {
 	.u.map.nav_projected_ring	= { DARKRED,		"nav-projected-ring" },
 	.u.map.nav_self			= { CYAN_FIXUP,		"nav-self" },
 	.u.map.nav_entity		= { GREEN_FIXUP,	"nav-entity" },
+	.u.map.nav_city			= { RED,		"nav-city" },
 	.u.map.nav_asteroid		= { DARKGREEN,		"nav-asteroid" },
 	.u.map.nav_ship			= { LIMEGREEN,		"nav-ship" },
 	.u.map.nav_static		= { -1,			"nav-static" },

@@ -14434,6 +14434,17 @@ static void draw_3d_nav_display(void)
 				}
 			}
 			break;
+		case OBJTYPE_CITY: {
+				contact = add_entity(instrumentecx, uv_sphere_mesh,
+							go[i].x, go[i].y, go[i].z, UI_COLOR(nav_city));
+				if (contact) {
+					set_render_style(contact, science_style);
+					entity_set_user_data(contact, &go[i]);
+					update_entity_scale(contact, cam_pos_scale * 300.0f);
+					update_entity_orientation(contact, entity_get_orientation(go[i].entity));
+				}
+			}
+			break;
 		case OBJTYPE_WORMHOLE:
 		case OBJTYPE_MISSILE:
 		case OBJTYPE_ASTEROID:
