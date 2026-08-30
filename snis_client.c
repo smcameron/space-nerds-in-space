@@ -828,6 +828,7 @@ static struct my_vect_obj placeholder_part;
 static struct my_vect_obj placeholder_part_spun[128];
 
 static struct snis_entity *curr_science_guy = NULL;
+static struct snis_entity *curr_science_city = NULL;
 static struct snis_entity *prev_science_guy = NULL;
 static uint32_t curr_science_waypoint = (uint32_t) -1;
 static uint32_t prev_science_waypoint = (uint32_t) -1;
@@ -6845,14 +6846,31 @@ static int process_sci_select_target_packet(void)
 	case OPCODE_SCI_SELECT_TARGET_TYPE_OBJECT:
 		if (id == (uint32_t) -1) { /* deselection */
 			curr_science_guy = NULL;
+			curr_science_city = NULL;
 			wwviaudio_add_sound(SCIENCE_DATA_ACQUIRED_SOUND);
 			return 0;
 		}
 		i = lookup_object_by_id(id);
 		if (i >= 0) {
-			if (curr_science_guy != &go[i])
-				science_cam_timer = 0; /* Make the model swoop in on the sci details screen */
-			curr_science_guy = &go[i];
+			if (go[i].type == OBJTYPE_CITY) {
+				/* look up planet */
+				int j = lookup_object_by_id(go[i].tsd.city.parent_id);
+				if (j >= 0) {
+					if (curr_science_guy != &go[j]) {
+						/* Make the model swoop in on the sci details screen */
+						science_cam_timer = 0;
+					}
+					curr_science_guy = &go[j]; /* select planet */
+					curr_science_city = &go[i]; /* and city */
+				}
+			} else {
+				if (curr_science_guy != &go[i]) {
+					/* Make the model swoop in on the sci details screen */
+					science_cam_timer = 0;
+				}
+				curr_science_city = NULL;
+				curr_science_guy = &go[i];
+			}
 			curr_science_waypoint = (uint32_t) -1;
 			prev_science_waypoint = (uint32_t) -1;
 			wwviaudio_add_sound(SCIENCE_DATA_ACQUIRED_SOUND);
@@ -10947,6 +10965,7 @@ static void science_menu_selection(void *x)
 {
 	intptr_t id = (intptr_t) x;
 	struct snis_entity *selected;
+	struct snis_entity *city = NULL;
 
 	pthread_mutex_lock(&universe_mutex);
 	selected = lookup_entity_by_id((uint32_t) id);
@@ -10954,10 +10973,20 @@ static void science_menu_selection(void *x)
 		pthread_mutex_unlock(&universe_mutex);
 		return;
 	}
-	if (curr_science_guy != selected)
-		request_sci_select_target(OPCODE_SCI_SELECT_TARGET_TYPE_OBJECT, selected->id);
+	if (selected->type == OBJTYPE_CITY) {
+		city = selected;
+		selected = lookup_entity_by_id(city->tsd.city.parent_id);
+		if (!selected) {
+			pthread_mutex_unlock(&universe_mutex);
+			return;
+		}
+	}
+	if (curr_science_guy != selected || curr_science_city != city)
+		request_sci_select_target(OPCODE_SCI_SELECT_TARGET_TYPE_OBJECT,
+						city ? city->id : selected->id);
 	else
-		request_sci_select_target(OPCODE_SCI_SELECT_TARGET_TYPE_OBJECT, (uint32_t) -1); /* deselect */
+		request_sci_select_target(OPCODE_SCI_SELECT_TARGET_TYPE_OBJECT,
+						(uint32_t) -1); /* deselect */
 	pthread_mutex_unlock(&universe_mutex);
 }
 
@@ -10972,6 +11001,7 @@ static void populate_science_pull_down_menu(void)
 	pull_down_menu_add_column(sci_ui.menu, "STARBASES");
 	pull_down_menu_add_column(sci_ui.menu, "WARPGATES");
 	pull_down_menu_add_column(sci_ui.menu, "PLANETS");
+	pull_down_menu_add_column(sci_ui.menu, "CITIES");
 	pull_down_menu_add_column(sci_ui.menu, "ASTEROIDS");
 
 	for (i = 0; i < nscience_guys; i++) {
@@ -11005,6 +11035,10 @@ static void populate_science_pull_down_menu(void)
 						o->sdata.name[0] == '\0' ? "UNKNOWN" : o->sdata.name,
 						science_menu_selection, (void *) (intptr_t) o->id);
 				break;
+			case OBJTYPE_CITY:
+				pull_down_menu_add_row(sci_ui.menu, "CITIES",
+						o->sdata.name[0] == '\0' ? "UNKNOWN" : o->sdata.name,
+						science_menu_selection, (void *) (intptr_t) o->id);
 			default:
 				break;
 			}
@@ -17459,7 +17493,8 @@ skip_data:
 	sng_abs_xy_draw_string("SHIELD PROFILE (NM)", NANO_FONT, x1 + (x2 - x1) / 4 - 10, y2 + txy(20));
 }
 
-static void draw_science_data(struct snis_entity *ship, struct snis_entity *o, int waypoint_index)
+static void draw_science_data(struct snis_entity *ship, struct snis_entity *o,
+				int waypoint_index, struct snis_entity *city)
 {
 	char buffer[40];
 	char buffer2[40];
@@ -17487,6 +17522,8 @@ static void draw_science_data(struct snis_entity *ship, struct snis_entity *o, i
 
 	if (!ship)
 		return;
+	if (city)
+		o = city;
 	x = SCIENCE_DATA_X + 10 * SCREEN_WIDTH / 800;
 	y = SCIENCE_DATA_Y + 15 * SCREEN_HEIGHT / 600;
 	sng_set_foreground(UI_COLOR(sci_wireframe));
@@ -17496,7 +17533,16 @@ static void draw_science_data(struct snis_entity *ship, struct snis_entity *o, i
 		snprintf(buffer, sizeof(buffer), "NAME: WAYPOINT-%02d", waypoint_index);
 		sng_abs_xy_draw_string(buffer, TINY_FONT, x, y);
 	} else {
-		snprintf(buffer, sizeof(buffer), "NAME: %s", o ? o->sdata.name : "NO SCAN TARGET SELECTED");
+		if (!o) {
+			snprintf(buffer, sizeof(buffer), "NO SCAN TARGET SELECTED");
+		} else {
+			if (o->type != OBJTYPE_CITY)
+				snprintf(buffer, sizeof(buffer), "NAME: %s", o->sdata.name);
+			else
+				snprintf(buffer, sizeof(buffer), "NAME: %s (%s)",
+					o->sdata.name,
+					curr_science_guy ? curr_science_guy->sdata.name : "UNKNOWN");
+		}
 		sng_abs_xy_draw_string(buffer, TINY_FONT, x, y);
 		if (o && (o->type == OBJTYPE_BRIDGE ||
 			o->type == OBJTYPE_NPCSHIP ||
@@ -17536,6 +17582,9 @@ static void draw_science_data(struct snis_entity *ship, struct snis_entity *o, i
 				snprintf(buffer, sizeof(buffer), "TYPE: %s", ship_type[o->sdata.subclass].class);
 			}
 			break;
+		case OBJTYPE_CITY:
+			snprintf(buffer, sizeof(buffer), "TYPE: %s", "CITY");
+			break;
 		case OBJTYPE_STARBASE:
 			snprintf(buffer, sizeof(buffer), "TYPE: %s", "STARBASE");
 			break;
@@ -17571,30 +17620,52 @@ static void draw_science_data(struct snis_entity *ship, struct snis_entity *o, i
 	y += yinc;
 	sng_abs_xy_draw_string(buffer, TINY_FONT, x, y);
 
-	if (o)
-		snprintf(buffer, sizeof(buffer), "X: %0.2lf", o->x);
-	else if (waypoint_index != -1)
-		snprintf(buffer, sizeof(buffer), "X: %0.2lf", sci_ui.waypoint[waypoint_index][0]);
-	else
-		snprintf(buffer, sizeof(buffer), "X:");
+	if (o) {
+		if (o->type != OBJTYPE_CITY)
+			snprintf(buffer, sizeof(buffer), "X: %0.2lf", o->x);
+		else
+			snprintf(buffer, sizeof(buffer), "X: %0.2lf POP: %dM",
+				o->x, o->tsd.city.population / 1000);
+	} else {
+		if (waypoint_index != -1)
+			snprintf(buffer, sizeof(buffer), "X: %0.2lf", sci_ui.waypoint[waypoint_index][0]);
+		else
+			snprintf(buffer, sizeof(buffer), "X:");
+	}
 	y += yinc;
 	sng_abs_xy_draw_string(buffer, TINY_FONT, x, y);
 
-	if (o)
-		snprintf(buffer, sizeof(buffer), "Y: %0.2lf", o->y);
-	else if (waypoint_index != -1)
-		snprintf(buffer, sizeof(buffer), "Y: %0.2lf", sci_ui.waypoint[waypoint_index][1]);
-	else
-		snprintf(buffer, sizeof(buffer), "Y:");
+	if (o) {
+		if (o->type != OBJTYPE_CITY)
+			snprintf(buffer, sizeof(buffer), "Y: %0.2lf", o->y);
+		else
+			snprintf(buffer, sizeof(buffer), "Y: %0.2lf LAT: %d %s",
+					o->y, abs(o->tsd.city.latitude),
+					o->tsd.city.latitude >= 0 ? "N" : "S");
+	} else {
+		if (waypoint_index != -1)
+			snprintf(buffer, sizeof(buffer), "Y: %0.2lf",
+				sci_ui.waypoint[waypoint_index][1]);
+		else
+			snprintf(buffer, sizeof(buffer), "Y:");
+	}
 	y += yinc;
 	sng_abs_xy_draw_string(buffer, TINY_FONT, x, y);
 
-	if (o)
-		snprintf(buffer, sizeof(buffer), "Z: %0.2lf", o->z);
-	else if (waypoint_index != -1)
-		snprintf(buffer, sizeof(buffer), "Z: %0.2lf", sci_ui.waypoint[waypoint_index][2]);
-	else
-		snprintf(buffer, sizeof(buffer), "Z:");
+	if (o) {
+		if (o->type != OBJTYPE_CITY)
+			snprintf(buffer, sizeof(buffer), "Z: %0.2lf", o->z);
+		else
+			snprintf(buffer, sizeof(buffer), "Z: %0.2lf LONG: %d %s", o->z,
+				abs(o->tsd.city.longitude),
+				o->tsd.city.longitude >= 0 ? "W" : "E");
+	} else {
+		if (waypoint_index != -1)
+			snprintf(buffer, sizeof(buffer), "Z: %0.2lf",
+				sci_ui.waypoint[waypoint_index][2]);
+		else
+			snprintf(buffer, sizeof(buffer), "Z:");
+	}
 	y += yinc;
 	sng_abs_xy_draw_string(buffer, TINY_FONT, x, y);
 
@@ -17833,7 +17904,8 @@ static void science_add_city(__attribute__((unused)) struct snis_entity *planet,
 	p.v.y += plnty;
 	p.v.z += plntz;
 
-	struct entity *e = add_entity(sciecx, m, p.v.x, p.v.y, p.v.z, UI_COLOR(sci_city));
+	struct entity *e = add_entity(sciecx, m, p.v.x, p.v.y, p.v.z,
+			city == curr_science_city ? UI_COLOR(sci_selected_city) : UI_COLOR(sci_city));
 	update_entity_scale(e, 0.05f);
 }
 
@@ -17849,6 +17921,8 @@ static void science_add_cities(struct snis_entity *planet, union quat *orientati
 		if (!o->alive)
 			continue;
 		if (o->tsd.city.parent_id != planet->id)
+			continue;
+		if (!o->sdata.science_data_known)
 			continue;
 		science_add_city(planet, o, orientation, plntradius,
 			plntx, plnty, plntz);
@@ -18152,14 +18226,14 @@ static void show_science(void)
 		break;
 	case SCI_DETAILS_MODE_DETAILS:
 		draw_science_details();
-		draw_science_data(o, curr_science_guy, curr_science_waypoint);
+		draw_science_data(o, curr_science_guy, curr_science_waypoint, curr_science_city);
 		break;
 	case SCI_DETAILS_MODE_THREED:
 		show_3d_science(o, current_zoom);
-		draw_science_data(o, curr_science_guy, curr_science_waypoint);
+		draw_science_data(o, curr_science_guy, curr_science_waypoint, curr_science_city);
 		break;
 	default: /* shouldn't happen */
-		draw_science_data(o, curr_science_guy, curr_science_waypoint);
+		draw_science_data(o, curr_science_guy, curr_science_waypoint, curr_science_city);
 		break;
 	}
 	pthread_mutex_lock(&universe_mutex);

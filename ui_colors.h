@@ -190,6 +190,7 @@ struct ui_color_map {
 	struct ui_color_entry sci_pull_down_menu;
 	struct ui_color_entry sci_pull_down_menu_selection;
 	struct ui_color_entry sci_city;
+	struct ui_color_entry sci_selected_city;
 
 	struct ui_color_entry science_graph_plot_strong;
 	struct ui_color_entry science_graph_plot_weak;
@@ -424,6 +425,7 @@ GLOBAL struct ui_color_map_accessor {
 	.u.map.sci_pull_down_menu_selection
 					= { YELLOW,		"sci-pull-down-menu-selection" },
 	.u.map.sci_city			= { RED,		"sci-city" },
+	.u.map.sci_selected_city	= { YELLOW,		"sci-selected-city" },
 
 	.u.map.science_graph_plot_strong = { LIMEGREEN,		"science-graph-plot-strong" },
 	.u.map.science_graph_plot_weak	= { RED,		"science-graph-plot-weak" },

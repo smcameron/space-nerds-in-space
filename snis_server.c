@@ -25583,6 +25583,7 @@ static void queue_up_client_object_sdata_update(struct game_client *c, struct sn
 	case OBJTYPE_WARP_CORE:
 	case OBJTYPE_BLACK_HOLE:
 	case OBJTYPE_WARPGATE:
+	case OBJTYPE_CITY:
 		send_update_sdata_packets(c, o);
 		break;
 	default:
