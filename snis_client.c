@@ -14259,9 +14259,12 @@ static void draw_3d_nav_display(void)
 				continue;
 
 			if (curr_science_guy) {
-				union vec3 sci_guy = { { curr_science_guy->x - o->x,
-							 curr_science_guy->y - o->y,
-							 curr_science_guy->z - o->z, } };
+				struct snis_entity *point = curr_science_guy;
+				if (curr_science_city)
+					point = curr_science_city; /* point at city if city selected */
+				union vec3 sci_guy = { { point->x - o->x,
+							 point->y - o->y,
+							 point->z - o->z, } };
 				quat_from_u2v(&ind_orientation, &xaxis, &sci_guy, &up);
 			} else {
 				union vec3 sci_wp = { { sci_ui.waypoint[curr_science_waypoint][0]  - o->x,
@@ -14585,7 +14588,9 @@ static void draw_3d_nav_display(void)
 			int draw_contact_offset_and_ring = 1;
 			float contact_scale = 1.0;
 
-			if (curr_science_guy == &go[i])
+			if (curr_science_guy == &go[i] && !curr_science_city)
+				science_entity = contact;
+			else if (curr_science_city == &go[i])
 				science_entity = contact;
 
 			update_entity_material(contact, &wireframe_material);
