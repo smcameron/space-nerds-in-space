@@ -10198,14 +10198,22 @@ static void show_weapons_camera_view(void)
 		draw_plane_radar(o, &camera_orientation, 0.5 * SCREEN_WIDTH, 0.8333 * SCREEN_HEIGHT,
 					0.125 * SCREEN_HEIGHT, XKNOWN_DIM * 0.02);
 
-		/* Draw science selector indicator on main screen */
+		/* Draw science selector indicator on weapons screen */
 		if (curr_science_guy) {
 			float sx, sy;
 
-			if (curr_science_guy->alive && curr_science_guy->entity &&
-				entity_onscreen(curr_science_guy->entity)) {
-				entity_get_screen_coords(curr_science_guy->entity, &sx, &sy);
-				draw_targeting_indicator(sx, sy, UI_COLOR(weap_sci_selection), 0, 1.0f, 2.0f);
+			if (curr_science_guy->alive && curr_science_guy->entity) {
+				if (curr_science_city && curr_science_city->entity) {
+					if (entity_onscreen(curr_science_city->entity)) {
+						entity_get_screen_coords(curr_science_city->entity, &sx, &sy);
+						draw_targeting_indicator(sx, sy, UI_COLOR(weap_sci_selection), 0, 1.0f, 2.0f);
+					}
+				} else {
+					if (entity_onscreen(curr_science_guy->entity)) {
+						entity_get_screen_coords(curr_science_guy->entity, &sx, &sy);
+						draw_targeting_indicator(sx, sy, UI_COLOR(weap_sci_selection), 0, 1.0f, 2.0f);
+					}
+				}
 			}
 		}
 
