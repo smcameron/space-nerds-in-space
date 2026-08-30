@@ -20753,7 +20753,9 @@ static void show_demon_3d(void)
 		case OBJTYPE_CITY:
 			e = add_entity(instrumentecx, unit_cube_mesh, o->x, o->y, o->z, color);
 			if (e) {
-				update_entity_scale(e, 200.0f);
+				update_entity_non_uniform_scale(e, 500.0f, 200.0f, 200.0f);
+				// update_entity_scale(e, 200.0f);
+				update_entity_orientation(e, &o->orientation);
 				entity_set_user_data(e, o);
 				update_entity_material(e, &red_material);
 			}

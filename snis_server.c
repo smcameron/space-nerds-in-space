@@ -1618,8 +1618,10 @@ static void city_move(struct snis_entity *o)
 	pos.v.y = o->tsd.city.dy;
 	pos.v.z = o->tsd.city.dz;
 	quat_rot_vec_self(&pos, &parent->orientation);
+
 	quat_mul(&o->orientation, &parent->orientation, &o->tsd.city.relative_orientation);
 	quat_normalize_self(&o->orientation);
+
 	o->vx = pos.v.x + parent->x - o->x;
 	o->vy = pos.v.y + parent->y - o->y;
 	o->vz = pos.v.z + parent->z - o->z;
@@ -14328,17 +14330,21 @@ static void add_city_to_planet(struct snis_entity *planet)
 	random_point_on_sphere(r, &p.v.x, &p.v.y, &p.v.z);
 	compute_lat_long(p.v.x, p.v.y, p.v.z, r, &latitude, &longitude);
 
-	union vec3 rightvec = { { 1.0, 0.0, 0.0 } };
-	union quat to_city;
-	quat_from_u2v(&to_city, &rightvec, &p, NULL);
+	union vec3 billboard_normal = { { 0.0, 0.0, 1.0 } };
 	union quat rel_orient;
+	quat_from_u2v(&rel_orient, &billboard_normal, &p, NULL);
 
-	quat_init_axis(&rel_orient, 0.0f, 1.0f, 0.0f, 0.5 * M_PI);
+	union quat initial_orient;
+	quat_mul(&initial_orient, &planet->orientation, &rel_orient);
+	quat_normalize_self(&initial_orient);
+
+	union vec3 world_pos = p;
+	quat_rot_vec_self(&world_pos, &planet->orientation);
 
 	double x, y, z;
-	x = planet->x + p.v.x;
-	y = planet->y + p.v.y;
-	z = planet->z + p.v.z;
+	x = planet->x + world_pos.v.x;
+	y = planet->y + world_pos.v.y;
+	z = planet->z + world_pos.v.z;
 	int i = add_generic_object(x, y, z, 0, 0, 0, 0, OBJTYPE_CITY);
 	if (i < 0)
 		return;
@@ -14354,7 +14360,7 @@ static void add_city_to_planet(struct snis_entity *planet)
 	o->tsd.city.population = snis_randn(58000) + 2000;
 	o->tsd.city.relative_orientation = rel_orient;
 	o->tsd.city.city_texture = snis_randn(1000) % NCITY_TEXTURES;
-	o->orientation = to_city;
+	o->orientation = initial_orient;
 	o->move = city_move;
 }
 
