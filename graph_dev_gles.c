@@ -1154,6 +1154,9 @@ static struct graph_dev_gl_textured_shader textured_shader;
 static struct graph_dev_gl_textured_shader planetary_lightning_shader;
 static struct graph_dev_gl_textured_shader warp_gate_effect_shader;
 static struct graph_dev_gl_textured_shader textured_with_sphere_shadow_shader;
+
+/* City shader: GLES never supports CSM; ring shadow support is deferred */
+static struct graph_dev_gl_textured_shader city_shader_no_csm_no_ring;
 static struct graph_dev_gl_textured_shader textured_lit_shader;
 static struct graph_dev_gl_textured_shader textured_lit_emit_shader;
 static struct graph_dev_gl_textured_shader textured_lit_emit_normal_shader;
@@ -2763,6 +2766,7 @@ extern int graph_dev_entity_render_order(struct entity *e)
 	case MATERIAL_WARP_GATE_EFFECT:
 	case MATERIAL_SUN:
 	case MATERIAL_BLACK_HOLE:
+	case MATERIAL_CITY:
 		does_blending = 1;
 		break;
 	case MATERIAL_TEXTURE_MAPPED_UNLIT:
@@ -3141,6 +3145,19 @@ static void graph_dev_raster_triangle_mesh(struct entity_context *cx, struct ent
 			rtp.alpha = entity_get_alpha(e);
 			rtp.do_cullface = 0;
 			rtp.textures_not_ready = !graph_dev_texture_ready(rtp.texture_number);
+			}
+			break;
+		case MATERIAL_CITY: {
+			struct material_city *mt = &e->material_ptr->city;
+
+			rtp.ambient_scale = PLANET_AMBIENT_SCALE;
+			rtp.texture_number = mt->texture_id;
+			rtp.emit_texture_number = mt->emit_texture_id;
+			rtp.do_blend = 1;
+			rtp.alpha = entity_get_alpha(e);
+			rtp.textures_not_ready = !graph_dev_textures_ready(
+				(int []) {rtp.texture_number, rtp.emit_texture_number, -1});
+			rtp.shader = &city_shader_no_csm_no_ring;
 			}
 			break;
 		case MATERIAL_TEXTURED_PLANET: {
@@ -4766,6 +4783,8 @@ void graph_dev_reload_all_shaders(void)
 	setup_textured_shader("alpha_by_normal", UNIVERSAL_SHADER_HEADER "#define TEXTURED_ALPHA_BY_NORMAL",
 				&textured_alpha_by_normal_shader);
 	setup_textured_shader("planetary-lightning", UNIVERSAL_SHADER_HEADER, &planetary_lightning_shader);
+	setup_textured_shader("city", UNIVERSAL_SHADER_HEADER FILMIC_TONEMAPPING,
+				&city_shader_no_csm_no_ring);
 	setup_textured_shader("warp-gate-effect", UNIVERSAL_SHADER_HEADER FILMIC_TONEMAPPING, &warp_gate_effect_shader);
 
 	if (fbo_render_to_texture_supported())
