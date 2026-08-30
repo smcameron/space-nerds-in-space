@@ -103,6 +103,7 @@ struct entity *add_entity(struct entity_context *cx,
 	cx->entity_list[n].onscreen = 0;
 	cx->entity_list[n].no_cast_shadow = 0;
 	cx->entity_list[n].being_removed = 0;
+	cx->entity_list[n].alpha = 1.0;
 #if CHECK_ENTITY_CHILD_LIST_FOR_CYCLES
 	cx->entity_list[n].visited = 0;
 #endif

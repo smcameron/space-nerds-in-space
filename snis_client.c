@@ -2463,8 +2463,10 @@ static int update_city(uint32_t id, uint32_t timestamp, uint32_t parent_id,
 		struct mesh *mesh = city_mesh[city_texture];
 		struct material *m = &city_material;
 		o->entity = add_entity(ecx, mesh, dx, dy, dz, CITY_COLOR);
-		if (o->entity)
+		if (o->entity) {
 			update_entity_material(o->entity, m);
+			update_entity_scale(o->entity, 25.0);
+		}
 	}
 
 	/* Set city parent entity to planet entity */
@@ -2475,8 +2477,6 @@ static int update_city(uint32_t id, uint32_t timestamp, uint32_t parent_id,
 		if (n >= 0)
 			planet = &go[n];
 		if (planet) {
-			update_entity_scale(o->entity, (500.0 + snis_randn(300)) *
-				planet->tsd.planet.radius / MAX_PLANET_RADIUS);
 			if (planet->entity)
 				update_entity_parent(ecx, o->entity, planet->entity);
 		}

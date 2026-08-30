@@ -14317,27 +14317,33 @@ static int choose_planet_texture_of_type(int planet_type)
 
 static void add_city_to_planet(struct snis_entity *planet)
 {
-	int16_t latitude = snis_randn(140) - 70; /* plus or minus 70 degrees from equator */
-	int16_t longitude = snis_randn(360) - 180;
-
-	union quat latq, longq, combinedq;
-	union vec3 to_city = { { 1.0, 0.0, 0.0 } };
+	double latitude, longitude;
+	double r;
+	union vec3 p;
 
 	if (planet->type != OBJTYPE_PLANET)
 		return;
 
-	/* Multiply radius by 1.005 to put city slightly above surface */
-	vec3_mul_self(&to_city, planet->tsd.planet.radius * 1.005);
+	r = planet->tsd.planet.radius * 1.2;
+	random_point_on_sphere(r, &p.v.x, &p.v.y, &p.v.z);
+	compute_lat_long(r, p.v.x, p.v.y, p.v.z, &latitude, &longitude);
 
-	quat_init_axis(&longq, 0.0, 1.0, 0.0, longitude * M_PI / 180.0);
-	quat_init_axis(&latq, 0.0, 0.0, 1.0, latitude * M_PI / 180.0);
-	quat_mul(&combinedq, &longq, &latq);
-	quat_rot_vec_self(&to_city, &combinedq);
+	union vec3 rightvec = { { 1.0, 0.0, 0.0 } };
+	union quat to_city;
+	quat_from_u2v(&to_city, &rightvec, &p, NULL);
+	union quat rel_orient;
+
+	quat_init_axis(&rel_orient, 0.0f, 1.0f, 0.0f, 0.5 * M_PI);
 
 	double x, y, z;
-	x = planet->x + to_city.v.x;
-	y = planet->y + to_city.v.y;
-	z = planet->z + to_city.v.z;
+#if 0
+	x = planet->x + p.v.x;
+	y = planet->y + p.v.y;
+	z = planet->z + p.v.z;
+#endif
+	x = p.v.x;
+	y = p.v.y;
+	z = p.v.z;
 
 	int i = add_generic_object(x, y, z, 0, 0, 0, 0, OBJTYPE_CITY);
 	if (i < 0)
@@ -14345,16 +14351,16 @@ static void add_city_to_planet(struct snis_entity *planet)
 
 	struct snis_entity *o = &go[i];
 
-	o->tsd.city.dx = to_city.v.x;
-	o->tsd.city.dy = to_city.v.y;
-	o->tsd.city.dz = to_city.v.z;
+	o->tsd.city.dx = p.v.x;
+	o->tsd.city.dy = p.v.y;
+	o->tsd.city.dz = p.v.z;
 	o->tsd.city.parent_id = planet->id;
 	o->tsd.city.latitude = latitude;
 	o->tsd.city.longitude = longitude;
 	o->tsd.city.population = snis_randn(58000) + 2000;
-	o->tsd.city.relative_orientation = combinedq;
+	o->tsd.city.relative_orientation = rel_orient;
 	o->tsd.city.city_texture = snis_randn(1000) % NCITY_TEXTURES;
-	o->orientation = combinedq;
+	o->orientation = to_city;
 	o->move = city_move;
 }
 

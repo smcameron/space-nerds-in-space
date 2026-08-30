@@ -3239,50 +3239,50 @@ static void graph_dev_raster_triangle_mesh(struct entity_context *cx, struct ent
 			rtp.ambient_scale = PLANET_AMBIENT_SCALE;
 			rtp.texture_number = mt->texture_id;
 			rtp.emit_texture_number = mt->emit_texture_id;
+			rtp.do_blend = 1;
+			rtp.alpha = entity_get_alpha(e);
 			rtp.textures_not_ready = !graph_dev_textures_ready(
 				(int []) {rtp.texture_number, rtp.emit_texture_number, -1 });
 
 			struct entity *planet = e->parent;
+			struct material *ring = NULL;
 			if (planet) {
 				struct entity *ring_e = find_child_entity_with_material_type(cx, planet,
 							MATERIAL_TEXTURED_PLANET_RING);
-				struct material *ring = NULL;
 				if (ring_e)
 					ring = ring_e->material_ptr;
+			}
 
-				if (ring && ring->type == MATERIAL_TEXTURED_PLANET_RING) {
-					if (graph_dev_planets_receive_csm_shadows)
-						rtp.shader = &city_shader_csm_ring;
-					else
-						rtp.shader = &city_shader_no_csm_ring;
-				} else {
-					if (graph_dev_planets_receive_csm_shadows)
-						rtp.shader = &city_shader_csm_no_ring;
-					else
-						rtp.shader = &city_shader_no_csm_no_ring;
-				}
+			if (ring && ring->type == MATERIAL_TEXTURED_PLANET_RING) {
+				if (graph_dev_planets_receive_csm_shadows)
+					rtp.shader = &city_shader_csm_ring;
+				else
+					rtp.shader = &city_shader_no_csm_ring;
 
-				if (ring) {
-					struct material_textured_planet_ring *ring_mt =
-						&ring->textured_planet_ring;
-					rtp.ring_texture_v = ring_mt->texture_v;
-					rtp.ring_inner_radius = ring_mt->inner_radius;
-					rtp.ring_outer_radius = ring_mt->outer_radius;
+				struct material_textured_planet_ring *ring_mt =
+					&ring->textured_planet_ring;
+				rtp.ring_texture_v = ring_mt->texture_v;
+				rtp.ring_inner_radius = ring_mt->inner_radius;
+				rtp.ring_outer_radius = ring_mt->outer_radius;
 
-					shadow_annulus.texture_id = ring_mt->texture_id;
-					shadow_annulus.tint_color = ring_mt->tint;
-					shadow_annulus.alpha = ring_mt->alpha;
+				shadow_annulus.texture_id = ring_mt->texture_id;
+				shadow_annulus.tint_color = ring_mt->tint;
+				shadow_annulus.alpha = ring_mt->alpha;
 
-					rtp.textures_not_ready |=
-						!graph_dev_texture_ready(shadow_annulus.texture_id);
+				rtp.textures_not_ready |=
+					!graph_dev_texture_ready(shadow_annulus.texture_id);
 
-					camera_pos_from_mv_matrix(rtp.mat_mv, &shadow_annulus.eye_pos);
+				camera_pos_from_mv_matrix(rtp.mat_mv, &shadow_annulus.eye_pos);
 
-					/* ring is the 2x to 3x of the planet scale, world space distance
-					   is the same in eye space as the view matrix does not scale */
-					shadow_annulus.r1 = vec3_cwise_max(&planet->scale) * rtp.ring_inner_radius;
-					shadow_annulus.r2 = vec3_cwise_max(&planet->scale) * rtp.ring_outer_radius;
-				}
+				/* ring is the 2x to 3x of the planet scale, world space distance
+				   is the same in eye space as the view matrix does not scale */
+				shadow_annulus.r1 = vec3_cwise_max(&planet->scale) * rtp.ring_inner_radius;
+				shadow_annulus.r2 = vec3_cwise_max(&planet->scale) * rtp.ring_outer_radius;
+			} else {
+				if (graph_dev_planets_receive_csm_shadows)
+					rtp.shader = &city_shader_csm_no_ring;
+				else
+					rtp.shader = &city_shader_no_csm_no_ring;
 			}
 		}
 		break;
@@ -4426,6 +4426,13 @@ static void setup_textured_shader(const char *basename, const char *defines,
 	shader->texture_coord_id = glGetAttribLocation(shader->program_id, "a_TexCoord");
 
 	shader->shadow_sphere_id = glGetUniformLocation(shader->program_id, "u_Sphere");
+	shader->shadow_annulus_texture_id = glGetUniformLocation(shader->program_id, "u_AnnulusAlbedoTex");
+	if (shader->shadow_annulus_texture_id >= 0)
+		glUniform1i(shader->shadow_annulus_texture_id, 1);
+	shader->shadow_annulus_center_id = glGetUniformLocation(shader->program_id, "u_AnnulusCenter");
+	shader->shadow_annulus_normal_id = glGetUniformLocation(shader->program_id, "u_AnnulusNormal");
+	shader->shadow_annulus_radius_id = glGetUniformLocation(shader->program_id, "u_AnnulusRadius");
+	shader->shadow_annulus_tint_color_id = glGetUniformLocation(shader->program_id, "u_AnnulusTintColor");
 	shader->ambient_id = glGetUniformLocation(shader->program_id, "u_Ambient");
 	shader->light_color_id = glGetUniformLocation(shader->program_id, "u_LightColor");
 	shader->ambient_color_id = glGetUniformLocation(shader->program_id, "u_AmbientColor");
