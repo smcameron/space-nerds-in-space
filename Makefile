@@ -1357,7 +1357,7 @@ $(OD)/planetary_ring_data.o:	planetary_ring_data.c planetary_ring_data.h mtwist.
 	$(Q)$(COMPILE)
 
 test_planetary_atmosphere:	planetary_atmosphere.c ${OD}/mtwist.o Makefile
-	$(CC) -g -DTEST_PLANETARY_ATMOSPHERE_PROFILE -o test_planetary_atmosphere \
+	$(CC) ${CFLAGS} ${UBSANFLAG} ${ASANFLAG} ${BOUNDSFLAGS} -g -DTEST_PLANETARY_ATMOSPHERE_PROFILE -o test_planetary_atmosphere \
 		planetary_atmosphere.c ${OD}/mtwist.o
 
 $(OD)/key_value_parser.o:	key_value_parser.c key_value_parser.h Makefile ${ODT}
