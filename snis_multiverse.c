@@ -1968,6 +1968,15 @@ static void wrangle_snis_server_processes(void)
 	for (i = 0; i < nbridges; i++) {
 		if (strcmp(ship[i].starsystem_name, "UNKNOWN") == 0)
 			continue;
+		time_t diff;
+		struct timeval now;
+		(void) gettimeofday(&now, NULL);
+		diff = now.tv_sec - ship[i].last_save_time.tv_sec;
+
+		/* Don't start server just because a bridge was there several days ago. */
+		if (diff > SESSION_RESUME_LIMIT)
+			continue;
+
 		found = 0;
 		for (j = 0; j < nbridge_locations; j++) {
 			if (strcmp(bridge_location[j], ship[i].starsystem_name) == 0) {
