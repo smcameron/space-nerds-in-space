@@ -38,6 +38,7 @@ persisted in a simple database by snis_multiverse.
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <sys/un.h>
 #include <netinet/in.h>
 #include <netinet/ip.h>
 #include <netinet/tcp.h>
@@ -80,6 +81,7 @@ persisted in a simple database by snis_multiverse.
 #include "snis_version.h"
 #include "build_info.h"
 #include "commodities.h"
+#include "arraysize.h"
 
 static char *asset_dir;
 static char *lobby, *nick, *location;
@@ -162,12 +164,25 @@ static struct replacement_asset replacement_assets;
 
 static char snis_multiverse_lockfile[PATH_MAX] = { 0 };
 
+
+/* snis-console related stuff */
+pthread_t snis_console_reader_thread;
+static int snis_console_unix_dgram_socket = -1; /* snis_multiverse transmits from and recvs via this socket */
+
+/* e.g.: "/tmp/snis-mltivrs.multiverse" snis_multiverse sends from this */
+static char snis_console_socket_name[110] = { 0 };
+
+/* e.g.: "/tmp/snis-console-rdr.multiverse", snis_multiverse sends to/recvs from */
+static char snis_console_reader_socket_name[110] = { 0 };
+/* End snis-console related stuff */
 static void cleanup_lockfile(void)
 {
 	/* This may be called from a signal handler, so do not call any non-reentrant functions */
 	if (snis_multiverse_lockfile[0] != '\0')
 		(void) rmdir(snis_multiverse_lockfile);
 }
+
+static void cleanup_console_socket(void);
 
 /* Clean up the lock file on SIGTERM.
  * TODO: figure out how to share this lockfile related code with the very similar but
@@ -181,6 +196,7 @@ static void sigterm_handler(__attribute__((unused)) int sig,
 	int rc;
 
 	cleanup_lockfile();
+	cleanup_console_socket();
 
 	/* Need to check return value of write() here even though we can't do
 	 * anything with that info at this point, otherwise the compiler complains
@@ -1991,6 +2007,179 @@ static void read_replacement_assets(struct replacement_asset *r, char *asset_dir
 		fprintf(stderr, "%s: Warning:  %s\n", p, strerror(errno));
 }
 
+
+/* Creates a unix domain datagram socket nameed /tmp/snis-console.sysname,
+ * where sysname is the solar system name.
+ */
+static int open_snis_console_unix_dgram_socket(char *sysname)
+{
+	snprintf(snis_console_socket_name, sizeof(snis_console_socket_name),
+			"/tmp/snis-mltivrs.%s", sysname);
+	snprintf(snis_console_reader_socket_name, sizeof(snis_console_reader_socket_name),
+			"/tmp/snis-console-rdr.%s", sysname);
+	return snis_create_unix_dgram_socket(snis_console_socket_name);
+}
+
+static void send_string_via_unix_dgram_socket(int fd, const char *buf, int color)
+{
+	uint8_t packet[DEMON_CONSOLE_MSG_MAX + 5];
+	size_t len = strlen(buf);
+	uint32_t netcolor = htonl(color);
+
+	if (len > DEMON_CONSOLE_MSG_MAX)
+		len = DEMON_CONSOLE_MSG_MAX;
+
+	packet[0] = (uint8_t) len;	/* First byte is the length of the string, */
+	memcpy(&packet[2], &netcolor, sizeof(netcolor));
+	memcpy(&packet[5], buf, len);	/* followed by the string contents */
+
+
+	/* Prepare the destination sockaddr_un structure */
+	struct sockaddr_un destination;
+	memset(&destination, 0, sizeof(destination));
+	destination.sun_family = AF_UNIX;
+	strlcpy(destination.sun_path, snis_console_reader_socket_name, sizeof(destination.sun_path));
+
+	fprintf(stderr, "Sending '%s' to snis-console\n", buf);
+	sendto(fd, packet, len + 5, 0, (struct sockaddr *) &destination, sizeof(destination));
+}
+
+static void send_to_snis_console(const char *string)
+{
+#define WHITE 1
+	send_string_via_unix_dgram_socket(snis_console_unix_dgram_socket, string, WHITE);
+}
+
+static void console_help(void);
+static void console_list_bridges(void);
+static void console_list_servers(void);
+static void console_debug(void);
+
+static struct console_command {
+	char *cmd;
+	void (*fn)(void);
+	char *help;
+} console_cmd[] = {
+	{ "HELP", console_help,			"    HELP: PRINT THIS HELP MESSAGE" },
+	{ "BRIDGES", console_list_bridges,	" BRIDGES: LIST BRIDGES" },
+	{ "SERVERS", console_list_servers,	" SERVERS: LIST SERVERS" },
+	{ "DEBUG", console_debug,	"   DEBUG: TOGGLE DEBUG FLAG" },
+};
+
+static void console_help(void)
+{
+	send_to_snis_console("MULTIVERSE CONSOLE COMMANDS");
+	send_to_snis_console("---------------------------");
+	for (int i = 0; i < (int) ARRAYSIZE(console_cmd); i++)
+		send_to_snis_console(console_cmd[i].help);
+	return;
+}
+
+static void console_list_bridges(void)
+{
+	char buffer[100];
+
+	send_to_snis_console("---------------------------");
+	send_to_snis_console("BRIDGES:");
+	send_to_snis_console("   #: SHIP-NAME STAR-SYSTEM");
+	send_to_snis_console("---------------------------");
+	pthread_mutex_lock(&data_mutex);
+	for (int i = 0; i < nbridges; i++) {
+		if (!ship[i].initialized)
+			snprintf(buffer, sizeof(buffer), " %3d: UNINITIALIZED", i);
+		else
+			snprintf(buffer, sizeof(buffer), " %3d: %s in %s", i,
+				ship[i].entity.sdata.name, ship[i].starsystem_name);
+		send_to_snis_console(buffer);
+	}
+	pthread_mutex_unlock(&data_mutex);
+	send_to_snis_console("---------------------------");
+}
+
+static void console_list_servers(void)
+{
+	char buffer[100];
+
+	send_to_snis_console("---------------------------------");
+	send_to_snis_console("SERVERS:");
+	send_to_snis_console(" #: server (bridge count)");
+	send_to_snis_console("---------------------------------");
+	pthread_mutex_lock(&service_mutex);
+	/* Set i to a free slot in starsystem[], or to nstarsystems if none free */
+	for (int i = 0; i < nstarsystems; i++) {
+		if (starsystem[i].refcount == 0)
+			continue;
+		snprintf(buffer, sizeof(buffer), "%3d: %s (%d)",
+			i, starsystem[i].starsystem_name, starsystem[i].bridge_count);
+		send_to_snis_console(buffer);
+	}
+	pthread_mutex_unlock(&service_mutex);
+	send_to_snis_console("---------------------------------");
+}
+
+static void console_debug(void)
+{
+	const char *dbgstat[] = { "DEBUG OFF", "DEBUG ON" };
+	debuglevel = !debuglevel;
+	send_to_snis_console(dbgstat[!!debuglevel]);
+}
+
+static void process_console_command_string(const char *buffer)
+{
+	for (int i = 0; i < (int) ARRAYSIZE(console_cmd); i++) {
+		if (strncmp(buffer, console_cmd[i].cmd, 15) == 0) {
+			console_cmd[i].fn();
+			return;
+		}
+	}
+	send_to_snis_console("UNKNOWN COMMAND (TYPE HELP FOR A LIST OF COMMANDS)");
+}
+
+/* This recvs demon commands from a unix datagram socket, cmds sent by snis-console program. */
+static void *snis_console_reader(void *x)
+{
+	(void)x;
+	char buffer[256];
+	ssize_t bytes_received;
+
+	while (1) {
+		/* Reserve 1 byte for null termination */
+		bytes_received = recv(snis_console_unix_dgram_socket, buffer, sizeof(buffer) - 1, 0);
+
+		if (bytes_received < 0) {
+			fprintf(stderr, "recv failed on snis_console_unix_dgram_socket");
+			break;
+		}
+		buffer[bytes_received] = '\0'; /* null-terminat string */
+		fprintf(stderr, "Recv'd '%s' from snis-console\n", buffer);
+		uppercase(buffer);
+		process_console_command_string(buffer);
+	}
+	return NULL;
+}
+
+static void start_snis_console_reader_thread(void)
+{
+	snis_console_unix_dgram_socket = open_snis_console_unix_dgram_socket("multiverse");
+	if (snis_console_unix_dgram_socket >= 0)
+		(void) create_thread(&snis_console_reader_thread, snis_console_reader, NULL, "sniscnslrdr", 1);
+	atexit(cleanup_console_socket);
+}
+
+/* Close the demon console unix datagram socket and unlink the socket name from the filesystem */
+static void close_snis_console_socket(int fd)
+{
+	if (fd >= 0)
+		close(fd);
+	if (strncmp(snis_console_socket_name, "", sizeof(snis_console_socket_name)) != 0)
+		unlink(snis_console_socket_name);
+}
+
+static void cleanup_console_socket(void)
+{
+	close_snis_console_socket(snis_console_unix_dgram_socket);
+}
+
 /* Also sets snis_db_dir... */
 static void maybe_override_database_root(void)
 {
@@ -2065,6 +2254,7 @@ int main(int argc, char *argv[])
 	}
 	snis_protocol_debugging(1);
 	ignore_sigpipe();
+	start_snis_console_reader_thread();
 	rc = start_listener_thread();
 	if (rc < 0) {
 		fprintf(stderr, "snis_multiverse: start_listener_thread() failed.\n");
@@ -2095,6 +2285,7 @@ int main(int argc, char *argv[])
 			checkpoint_data(); /* Checkpoint data every 30 secs */
 		i = (i + 1) % 5;
 	} while (1);
+	close_snis_console_socket(snis_console_unix_dgram_socket);
 	return 0;
 }
 

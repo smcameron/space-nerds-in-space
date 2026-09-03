@@ -27729,7 +27729,7 @@ static void open_log_file(void)
 	}
 }
 
-/* Creates a unix domain UDB socket nameed /tmp/snis-console.sysname,
+/* Creates a unix domain datagram socket nameed /tmp/snis-console.sysname,
  * where sysname is the solar system name.
  */
 static int open_demon_console_unix_dgram_socket(char *sysname)
@@ -27793,7 +27793,7 @@ static void start_snis_console_reader_thread(void)
 		(void) create_thread(&snis_console_reader_thread, snis_console_reader, NULL, "sniscnslrdr", 1);
 }
 
-/* Close the demon console unix UDP socket and unlink the socket name from the filesystem */
+/* Close the demon console unix datagram socket and unlink the socket name from the filesystem */
 static void close_demon_console_socket(int fd)
 {
 	if (fd >= 0)

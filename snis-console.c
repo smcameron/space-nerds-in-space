@@ -25,11 +25,14 @@
 
 #include "string-utils.h"
 #include "snis_cardinal_colors.h"
+#include "build_bug_on.h"
 
 #define MAX_CONSOLES 128
 #define MAX_MSG_LEN 256
 #define MAX_LINES 1000
 #define PREFIX "snis-console."
+#define MV_PREFIX "snis-mltivrs."
+/* PREFIX and MV_PREFIX must be the same length. */
 #define PREFIX_LEN 13
 
 struct textline {
@@ -121,7 +124,8 @@ void *discovery_loop(void *arg)
 
 		while ((entry = readdir(dir)) != NULL) {
 
-			if (strncmp(entry->d_name, PREFIX, PREFIX_LEN) != 0)
+			if (strncmp(entry->d_name, PREFIX, PREFIX_LEN) != 0 &&
+				strncmp(entry->d_name, MV_PREFIX, PREFIX_LEN) != 0)
 				continue;
 
 			char full_path[512];
@@ -528,8 +532,12 @@ static void handle_keyboard_input(struct pollfd fds[], int *dirty)
 
 		char *tab_name = tail_end_of_name(c->name);
 		if (tab_name) {
-			snprintf(dest_addr.sun_path, sizeof(dest_addr.sun_path),
-					"/tmp/snis-console.%s", tab_name);
+			if (strcmp(tab_name, "multiverse") == 0)
+				snprintf(dest_addr.sun_path, sizeof(dest_addr.sun_path),
+						"/tmp/snis-mltivrs.%s", tab_name);
+			else
+				snprintf(dest_addr.sun_path, sizeof(dest_addr.sun_path),
+						"/tmp/snis-console.%s", tab_name);
 			sendto(c->sockfd, c->input_buf, c->input_len, 0,
 				   (struct sockaddr *)&dest_addr, sizeof(dest_addr));
 		}
@@ -588,6 +596,8 @@ static void clean_up(void)
 
 int main(void)
 {
+	BUILD_ASSERT(sizeof(PREFIX) == sizeof(MV_PREFIX) && sizeof(PREFIX) == PREFIX_LEN + 1);
+
 	initialize_ncurses();
 
 	/* Start background discovery thread */
