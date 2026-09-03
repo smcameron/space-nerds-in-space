@@ -37,6 +37,7 @@ persisted in a simple database by snis_multiverse.
 #include <stdint.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <sys/time.h>
 #include <sys/socket.h>
 #include <sys/un.h>
 #include <netinet/in.h>
@@ -146,6 +147,8 @@ static struct bridge_info {
 	struct persistent_bridge_data persistent_bridge_data;
 	struct bridge_cargo cargo;
 	struct bridge_passengers passengers;
+	struct timeval last_update_time;
+	struct timeval last_save_time;
 } ship[MAX_BRIDGES];
 int nbridges = 0;
 
@@ -445,6 +448,7 @@ static int write_bridge_info(FILE *f, struct bridge_info *b)
 	BUILD_ASSERT(ENG_PRESET_NUMBER == 10);
 
 	fprintf(f, "starsystem:%s\n", b->starsystem_name);
+	fprintf(f, "last-update-time:%jd\n", (intmax_t) b->last_update_time.tv_sec);
 	return key_value_write_lines(f, snis_entity_kvs, base_address);
 }
 
@@ -534,10 +538,24 @@ static int restore_bridge_info(const char *filename, struct bridge_info *b, unsi
 	if (rc == 1) {
 		snprintf(b->starsystem_name, sizeof(b->starsystem_name) - 1, "%s", system);
 		nextline = strchr(contents, '\n');
+		intmax_t last_save_time;
+		rc = sscanf(nextline + 1, "last-update-time:%jd", &last_save_time);
+		if (rc == 1) {
+			fprintf(stderr, "last update time retrieved.");
+			char *nxt = strchr(nextline, '\n');
+			nextline = nxt;
+		} else {
+			fprintf(stderr, "last update time NOT retrieved, ZEROED.");
+			last_save_time = 0;
+		}
+		b->last_save_time.tv_sec = last_save_time;
+		b->last_save_time.tv_usec = 0;
 		rc = key_value_parse_lines(snis_entity_kvs, nextline + 1, base_address);
 	} else {
 		snprintf(b->starsystem_name, sizeof(b->starsystem_name) - 1, "%s", "UNKNOWN");
 		rc = key_value_parse_lines(snis_entity_kvs, contents, base_address);
+		b->last_save_time.tv_sec = 0;
+		b->last_save_time.tv_usec = 0;
 	}
 	free(contents);
 	return rc;
@@ -725,6 +743,10 @@ static int update_bridge(struct starsystem_info *ss)
 	unpack_bridge_update_packet(o, &ship[i].persistent_bridge_data, &pb);
 	ship[i].initialized = 1;
 
+	struct timeval tv;
+	(void) gettimeofday(&tv, NULL);
+	ship[i].last_update_time = tv;
+
 	/* Update the ship's starsystem */
 	snprintf(ship[i].starsystem_name, sizeof(ship[i].starsystem_name) - 1, "%s", ss->starsystem_name);
 
@@ -910,6 +932,10 @@ static int create_new_ship(unsigned char pwdhash[PWDHASHLEN])
 		return -1;
 	memset(&ship[nbridges], 0, sizeof(ship[nbridges]));
 	memcpy(ship[nbridges].pwdhash, pwdhash, PWDHASHLEN);
+	ship[nbridges].last_save_time.tv_sec = 0;
+	ship[nbridges].last_save_time.tv_usec = 0;
+	ship[nbridges].last_update_time.tv_sec = 0;
+	ship[nbridges].last_update_time.tv_usec = 0;
 	nbridges++;
 	fprintf(stderr, "snis_multiverse: added new bridge, nbridges = %d\n", nbridges);
 	return 0;
@@ -1604,8 +1630,13 @@ static void checkpoint_data(void)
 	int i;
 
 	pthread_mutex_lock(&data_mutex);
-	for (i = 0; i < nbridges; i++)
-		save_bridge_info(&ship[i]);
+	for (i = 0; i < nbridges; i++) {
+		/* Only save the bridge data if there is actually new data to save */
+		if (ship[i].last_update_time.tv_sec > ship[i].last_save_time.tv_sec) {
+			save_bridge_info(&ship[i]);
+			ship[i].last_save_time = ship[i].last_update_time;
+		}
+	}
 	pthread_mutex_unlock(&data_mutex);
 }
 
@@ -2075,9 +2106,18 @@ static void console_help(void)
 	return;
 }
 
+static void format_timeval(struct timeval *tv, char *output, size_t buflen)
+{
+	struct tm *timeinfo;
+
+	timeinfo = localtime(&tv->tv_sec);
+	strftime(output, buflen, "%Y-%m-%d %H:%M:%S", timeinfo);
+}
+
 static void console_list_bridges(void)
 {
 	char buffer[100];
+	char timestamp[50];
 
 	send_to_snis_console("---------------------------");
 	send_to_snis_console("BRIDGES:");
@@ -2090,6 +2130,12 @@ static void console_list_bridges(void)
 		else
 			snprintf(buffer, sizeof(buffer), " %3d: %s in %s", i,
 				ship[i].entity.sdata.name, ship[i].starsystem_name);
+		send_to_snis_console(buffer);
+		format_timeval(&ship[i].last_update_time, timestamp, sizeof(timestamp));
+		snprintf(buffer, sizeof(buffer), "     last update time: %s", timestamp);
+		send_to_snis_console(buffer);
+		format_timeval(&ship[i].last_save_time, timestamp, sizeof(timestamp));
+		snprintf(buffer, sizeof(buffer), "       last save time: %s", timestamp);
 		send_to_snis_console(buffer);
 	}
 	pthread_mutex_unlock(&data_mutex);
