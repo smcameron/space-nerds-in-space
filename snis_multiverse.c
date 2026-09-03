@@ -192,6 +192,26 @@ static void sigterm_handler(__attribute__((unused)) int sig,
 	_exit(1);
 }
 
+/* Toggle debuglevel on/off via SIGUSR1 */
+static void sigusr1_handler(__attribute__((unused)) int sig,
+			__attribute__((unused)) siginfo_t *siginfo,
+			__attribute__((unused)) void *context)
+{
+	static const char buffer1[] = "debuglevel set to 0.\n";
+	static const char buffer2[] = "debuglevel set to 1.\n";
+	int rc;
+
+	debuglevel = !debuglevel;
+	if (debuglevel)
+		rc = write(2, buffer2, sizeof(buffer2) - 1); /* Assuming fd 2 is still stderr */
+	else
+		rc = write(2, buffer1, sizeof(buffer1) - 1); /* Assuming fd 2 is still stderr */
+	if (rc < 0) {
+		/* Umm, write() to stderr failed?  Oh well, what can we do? */
+		_exit(2);
+	}
+}
+
 static void catch_sigterm(void)
 {
 	struct sigaction action;
@@ -201,6 +221,16 @@ static void catch_sigterm(void)
 	action.sa_flags = SA_SIGINFO;
 	if (sigaction(SIGTERM, &action, NULL) < 0)
 		fprintf(stderr, "%s: Failed to register SIGTERM handler.\n", "snis_multiverse");
+}
+
+static void catch_sigusr1(void)
+{
+	struct sigaction action;
+	memset(&action, 0, sizeof(action));
+	action.sa_sigaction = &sigusr1_handler;
+	action.sa_flags = SA_SIGINFO;
+	if (sigaction(SIGUSR1, &action, NULL) < 0)
+		fprintf(stderr, "%s: Failed to register SIGUSR1 handler.\n", "snis_multiverse");
 }
 
 static void ignore_signal(int sig)
@@ -222,7 +252,6 @@ static void create_lock_or_die(void)
 	int rc;
 
 	snprintf(snis_multiverse_lockfile, sizeof(snis_multiverse_lockfile) - 1, "/tmp/snis_multiverse_lock");
-	catch_sigterm();
 	rc = mkdir(snis_multiverse_lockfile, 0755);
 	if (rc != 0) {
 		fprintf(stderr, "%s: Failed to create lockdir %s, exiting.\n",
@@ -1801,18 +1830,30 @@ static void maybe_shutdown_snis_server(int n)
 	int i, rc;
 	uint8_t shutdown_opcode = SNISMV_OPCODE_SHUTDOWN_SNIS_SERVER;
 
-	if (snis_server_is_exempt(starmap[n].name))
+	if (debuglevel > 0)
+		fprintf(stderr, "Maybe shutting down %s ...\n", starmap[n].name);
+
+	if (snis_server_is_exempt(starmap[n].name)) {
+		if (debuglevel > 0)
+			fprintf(stderr, "Not shutting down %s (exempt)\n", starmap[n].name);
 		return;
+	}
 
 	pthread_mutex_lock(&service_mutex);
 	/* Check if snis_server for starmap[i].name is already not running ... */
 	for (i = 0; i < nstarsystems; i++) {
 		if (strcmp(starsystem[i].starsystem_name, starmap[n].name) == 0) {
 			if (starsystem[i].socket < 0) {
+				if (debuglevel > 0)
+					fprintf(stderr, "%s already not running (socket < 0)\n",
+						starsystem[i].starsystem_name);
 				pthread_mutex_unlock(&service_mutex);
 				return; /* It's already not running. */
 			}
 			if (!snis_server_lockfile_exists(starsystem[i].starsystem_name)) {
+				if (debuglevel > 0)
+					fprintf(stderr, "%s already not running (no lock file)\n",
+						starsystem[i].starsystem_name);
 				pthread_mutex_unlock(&service_mutex);
 				return; /* It's already not running */
 			}
@@ -1820,16 +1861,23 @@ static void maybe_shutdown_snis_server(int n)
 		}
 	}
 	if (i >= nstarsystems) {
+		if (debuglevel > 0)
+			fprintf(stderr, "%s not found in starsystem[], not shutting down\n", starmap[n].name);
 		pthread_mutex_unlock(&service_mutex);
 		return;
 	}
 	if (starsystem[i].shutdown_countdown == -1) {
 		starsystem[i].shutdown_countdown = 10;
-		fprintf(stderr, "snis_multiverse, STARTED SHUTDOWN COUNTER FOR snis_server %s, countdown = %d\n",
+		if (debuglevel > 0)
+			fprintf(stderr, "STARTED SHUTDOWN COUNTER FOR snis_server %s, countdown = %d\n",
 				starmap[n].name, starsystem[i].shutdown_countdown);
 	}
-	if (starsystem[i].shutdown_countdown > 0)
+	if (starsystem[i].shutdown_countdown > 0) {
 		starsystem[i].shutdown_countdown--;
+		if (debuglevel > 0)
+			fprintf(stderr, "%s shutdown countdown = %d\n",
+				starsystem[i].starsystem_name, starsystem[i].shutdown_countdown);
+	}
 	if (starsystem[i].shutdown_countdown > 0) {
 		pthread_mutex_unlock(&service_mutex);
 		return;
@@ -1871,6 +1919,11 @@ static void wrangle_snis_server_processes(void)
 			nbridge_locations++;
 		}
 	}
+	if (debuglevel > 0) {
+		fprintf(stderr, "STARSYSTEMS CONTAINING ACTIVE BRIDGES:\n");
+		for (i = 0; i < nbridge_locations; i++)
+			fprintf(stderr, "   %s\n", bridge_location[i]);
+	}
 	pthread_mutex_unlock(&data_mutex);
 
 	/* Make a map of active starsystems */
@@ -1910,13 +1963,17 @@ static void wrangle_snis_server_processes(void)
 		}
 	}
 
-	/* printf("snis_multiverse: ---------------------------\n"); */
+	if (debuglevel > 0)
+		fprintf(stderr, "snis_multiverse: ---------------------------\n");
 	for (i = 0; i < nstarmap_entries; i++) {
 		if (adj_starsystem[i]) {
-			/* printf("snis_multiverse: ACTIVE STAR SYSTEM %d '%s'\n", i, starmap[i].name); */
+			if (debuglevel > 0)
+				fprintf(stderr, "snis_multiverse: ACTIVE STAR SYSTEM %d '%s'\n", i, starmap[i].name);
 			maybe_startup_snis_server(i);
 		} else {
-			/* printf("snis_multiverse:        STAR SYSTEM %d '%s'\n", i, starmap[i].name); */
+			if (debuglevel > 0)
+				fprintf(stderr, "snis_multiverse:        STAR SYSTEM %d '%s' %s\n", i, starmap[i].name,
+					snis_server_is_exempt(starmap[i].name) ? "(Exempt)" : "");
 			maybe_shutdown_snis_server(i);
 		}
 	}
@@ -1992,6 +2049,8 @@ int main(int argc, char *argv[])
 	maybe_override_database_root();
 	asset_dir = override_asset_dir();
 	refuse_to_run_as_root("snis_multiverse");
+	catch_sigterm();
+	catch_sigusr1();
 	create_lock_or_die();
 	parse_options(argc, argv, &lobby, &nick, &location);
 	read_replacement_assets(&replacement_assets, asset_dir);
