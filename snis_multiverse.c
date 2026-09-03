@@ -149,6 +149,10 @@ static struct bridge_info {
 	struct bridge_passengers passengers;
 	struct timeval last_update_time;
 	struct timeval last_save_time;
+/* After 2 days, we assume you aren't resuming a session so do not
+ * enforce that you join the "correct" snis_server.
+ */
+#define SESSION_RESUME_LIMIT (2 * 60 * 60 * 24)
 } ship[MAX_BRIDGES];
 int nbridges = 0;
 
@@ -1072,12 +1076,22 @@ static int verify_existence(struct starsystem_info *ss, int should_already_exist
 				pass = SNISMV_VERIFICATION_RESPONSE_TOO_MANY_BRIDGES;
 		}
 	} else {
-		/* It exists, pass if it should exist, fail otherwise */
 		if (should_already_exist) {
+			/* Check that:
+			 * 1. We are in the right solarsystem (snis_server)
+			 * 2. or, we don't care about being in the right solarsystem
+			 * 3. or if we do care, that it is less than two days since
+			 *    we logged in.
+			 * In other words, if it's been more than 2 days, let them
+			 * log into any snis_server, not just the last one they used.
+			 */
+			struct timeval now;
+			(void) gettimeofday(&now, NULL);
+			time_t diff = now.tv_sec - ship[i].last_save_time.tv_sec;
 			fprintf(stderr, "snis_multiverse: hash %s exists, as expected.\n", printable_hash);
 			if (strcmp(ship[i].starsystem_name, ss->starsystem_name) != 0 &&
-				verify_solarsystem) {
-				pass = SNISMV_VERIFICATION_RESPONSE_WRONG_SOLARSYSTEM;
+				(verify_solarsystem && diff < SESSION_RESUME_LIMIT)) {
+					pass = SNISMV_VERIFICATION_RESPONSE_WRONG_SOLARSYSTEM;
 			} else {
 				pass = SNISMV_VERIFICATION_RESPONSE_PASS;
 				bd = &ship[i].persistent_bridge_data;
