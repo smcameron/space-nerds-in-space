@@ -2129,6 +2129,62 @@ static void console_help(void)
 	return;
 }
 
+#include <stdio.h>
+#include <sys/time.h>
+
+static inline char *plural(int64_t num)
+{
+	if (num == 1)
+		return "";
+	return "s";
+}
+
+static char *get_relative_time(const struct timeval *then, const struct timeval *now, char *buf, size_t buf_size)
+{
+	int64_t second = (int64_t) now->tv_sec - then->tv_sec;
+
+	/* Handle special case of the epoch */
+	if (then->tv_sec == 0) {
+		snprintf(buf, buf_size, "never");
+		return buf;
+	}
+
+	/* Handle edge case where 'then' is in the future */
+	if (second < 0) {
+		snprintf(buf, buf_size, "just now");
+		return buf;
+	}
+
+/* THEN() macro: x is int64_t, #x stringify's x, plural() adds an 's' if x != 1.
+ * so if x is minute, and minute == 3, then it formats "3 minutes ago",
+ * and if x is year, and year == 20, then it formats "20 years ago", etc.
+ */
+#define THEN(x) "%" PRId64 " " #x "%s ago", (x), plural((x))
+	if (second < 60) {
+		snprintf(buf, buf_size, THEN(second));
+	} else if (second < 3600) {
+		int64_t minute = second / 60;
+		snprintf(buf, buf_size, THEN(minute));
+	} else if (second < 86400) {
+		int64_t hour = second / 3600;
+		snprintf(buf, buf_size, THEN(hour));
+	} else if (second < 604800) {
+		int64_t day = second / 86400;
+		snprintf(buf, buf_size, THEN(day));
+	} else if (second < 2592000) { /* ~30 days */
+		int64_t week = second / 604800;
+		snprintf(buf, buf_size, THEN(week));
+	} else if (second < 31557600) { /* 365.25 days */
+		int64_t month = second / 2592000;
+		snprintf(buf, buf_size, THEN(month));
+	} else {
+		int64_t year = second / 31557600;
+		snprintf(buf, buf_size, THEN(year));
+	}
+#undef THEN
+	return buf;
+}
+
 static void format_timeval(struct timeval *tv, char *output, size_t buflen)
 {
 	struct tm *timeinfo;
@@ -2140,7 +2196,12 @@ static void format_timeval(struct timeval *tv, char *output, size_t buflen)
 static void console_list_bridges(void)
 {
 	char buffer[100];
+	char buffer2[200];
+	char buffer3[300];
 	char timestamp[50];
+	struct timeval now;
+
+	(void) gettimeofday(&now, NULL);
 
 	send_to_snis_console("---------------------------");
 	send_to_snis_console("BRIDGES:");
@@ -2156,10 +2217,14 @@ static void console_list_bridges(void)
 		send_to_snis_console(buffer);
 		format_timeval(&ship[i].last_update_time, timestamp, sizeof(timestamp));
 		snprintf(buffer, sizeof(buffer), "     last update time: %s", timestamp);
-		send_to_snis_console(buffer);
+		snprintf(buffer3, sizeof(buffer3), "%s (%s)",
+			buffer, get_relative_time(&ship[i].last_update_time, &now, buffer2, sizeof(buffer2)));
+		send_to_snis_console(buffer3);
 		format_timeval(&ship[i].last_save_time, timestamp, sizeof(timestamp));
 		snprintf(buffer, sizeof(buffer), "       last save time: %s", timestamp);
-		send_to_snis_console(buffer);
+		snprintf(buffer3, sizeof(buffer3), "%s (%s)",
+			buffer, get_relative_time(&ship[i].last_save_time, &now, buffer2, sizeof(buffer2)));
+		send_to_snis_console(buffer3);
 	}
 	pthread_mutex_unlock(&data_mutex);
 	send_to_snis_console("---------------------------");
