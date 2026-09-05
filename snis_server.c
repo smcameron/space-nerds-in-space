@@ -14765,6 +14765,7 @@ static void add_planets(void)
 	int i;
 	double x, y, z, radius, limit;
 	int count;
+	int planet_type = 0;
 
 	limit = MIN_PLANET_SEPARATION;
 	for (i = 0; i < NPLANETS; i++) {
@@ -14779,7 +14780,8 @@ static void add_planets(void)
 			printf("Minimum planet separation distance not attainable\n");
 		radius = (float) snis_randn(MAX_PLANET_RADIUS - MIN_PLANET_RADIUS) +
 						MIN_PLANET_RADIUS;
-		add_planet(x, y, z, radius, i < 4 ? HIGH_SECURITY : LOW_SECURITY, -1);
+		add_planet(x, y, z, radius, i < 4 ? HIGH_SECURITY : LOW_SECURITY, planet_type);
+		planet_type = (planet_type + 1) % solarsystem_assets->nplanet_textures;
 	}
 }
 
