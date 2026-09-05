@@ -59,6 +59,16 @@ Specify the nickname of this multiverse process.
 Specify the location of this multiverse process.
 (It's not really used for anything, nevertheless, it's required.)
 .TP
+\fB\--resume-limit, -r value-in-minutes\fR
+Specifies a session resume limit in minutes.  This value controls how long
+bridges within a specific snis_server are considered 'live' and used to
+determine if snis_server instances should be started or shutdown.  For instance
+if the session resume limit is 20 minutes, and a bridge was last seen present
+in the Zolon system 30 minutes ago, the Zolon snis_server instance will not
+be started up (or if it is already running, it may be shut down if no other
+active systems are only one hop away).  The default value is two days
+(172800 seconds).
+.TP
 \fB\--snis-server-portrange min:max\fR
 By default snis_server processes will be started using the dynamic port
 range 49152 - 65535.  This option allows specifying a different range,
