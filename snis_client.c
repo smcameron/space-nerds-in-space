@@ -9972,14 +9972,17 @@ static void update_black_hole_lenses(const union vec3 *cam_pos,
 	 * copy, and there is no reason to hold the universe mutex across it. */
 	pthread_mutex_lock(&universe_mutex);
 	for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
-		if (!go[i].alive || go[i].type != OBJTYPE_BLACK_HOLE)
+		if (!go[i].alive || (go[i].type != OBJTYPE_BLACK_HOLE && go[i].type != OBJTYPE_WARPGATE))
 			continue;
 		if (nholes >= MAX_BLACK_HOLE_LENS_CANDIDATES)
 			break;
 		hole[nholes].pos.v.x = go[i].x;
 		hole[nholes].pos.v.y = go[i].y;
 		hole[nholes].pos.v.z = go[i].z;
-		hole[nholes].radius = go[i].tsd.black_hole.radius;
+		if (go[i].type == OBJTYPE_BLACK_HOLE)
+			hole[nholes].radius = go[i].tsd.black_hole.radius;
+		else
+			hole[nholes].radius = 100.0f;
 		hole[nholes].id = go[i].id;
 		nholes++;
 	}
