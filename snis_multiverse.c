@@ -28,6 +28,10 @@ persisted in a simple database by snis_multiverse.
 
 *****************************************************************************/
 #define _GNU_SOURCE
+
+#include <stdio.h>
+#include <sys/time.h>
+
 #include "snis_multiverse.h"
 
 #include <stdio.h>
@@ -83,6 +87,7 @@ persisted in a simple database by snis_multiverse.
 #include "build_info.h"
 #include "commodities.h"
 #include "arraysize.h"
+
 
 static char *asset_dir;
 static char *lobby, *nick, *location;
@@ -149,12 +154,14 @@ static struct bridge_info {
 	struct bridge_passengers passengers;
 	struct timeval last_update_time;
 	struct timeval last_save_time;
+} ship[MAX_BRIDGES];
+int nbridges = 0;
+
 /* After 2 days, we assume you aren't resuming a session so do not
  * enforce that you join the "correct" snis_server.
  */
-#define SESSION_RESUME_LIMIT (2 * 60 * 60 * 24)
-} ship[MAX_BRIDGES];
-int nbridges = 0;
+#define DEFAULT_SESSION_RESUME_LIMIT (2 * 60 * 60 * 24)
+static int32_t session_resume_limit = DEFAULT_SESSION_RESUME_LIMIT;
 
 static char *exempt_server[MAX_STARSYSTEMS] = { 0 };
 static int nexempt_servers = 0;
@@ -568,7 +575,7 @@ static int restore_bridge_info(const char *filename, struct bridge_info *b, unsi
 static void usage(void)
 {
 	fprintf(stderr, "usage: snis_multiverse [--autowrangle] -l lobbyserver -n servernick \\\n");
-	fprintf(stderr, "          -L location [ --exempt snis-server-location]\n");
+	fprintf(stderr, "          -L location [ --exempt snis-server-location] [ -r resume-limit-minutes ]\n");
 	fprintf(stderr, "       snis_multiverse --acknowledgments\n");
 	exit(1);
 }
@@ -1090,7 +1097,7 @@ static int verify_existence(struct starsystem_info *ss, int should_already_exist
 			time_t diff = now.tv_sec - ship[i].last_save_time.tv_sec;
 			fprintf(stderr, "snis_multiverse: hash %s exists, as expected.\n", printable_hash);
 			if (strcmp(ship[i].starsystem_name, ss->starsystem_name) != 0 &&
-				(verify_solarsystem && diff < SESSION_RESUME_LIMIT)) {
+				(verify_solarsystem && diff < session_resume_limit)) {
 					pass = SNISMV_VERIFICATION_RESPONSE_WRONG_SOLARSYSTEM;
 			} else {
 				pass = SNISMV_VERIFICATION_RESPONSE_PASS;
@@ -1699,6 +1706,7 @@ static struct option long_options[] = {
 	{ "allow-remote-networks", no_argument, NULL, OPT_ALLOW_REMOTE_NETWORKS },
 	{ "port", required_argument, NULL, 'p' },
 	{ "snis-server-portrange", required_argument, NULL, OPT_SNIS_SERVER_PORT_RANGE },
+	{ "resume-limit", required_argument, NULL, 'r' },
 	{ 0, 0, 0, 0 },
 };
 
@@ -1743,6 +1751,20 @@ static void parse_options(int argc, char *argv[], char **lobby_name, char **nick
 			break;
 		case 'n':
 			*nick_name = optarg;
+			break;
+		case 'r':
+			rc = sscanf(optarg, "%d", &v);
+			if (rc == 1) {
+				if (v < 0 || v > INT_MAX / 60)
+					v = INT_MAX;
+				else
+					v = v * 60;
+				session_resume_limit = v;
+				fprintf(stderr, "snis_multiverse: Session resume limit set to %d seconds\n",
+							session_resume_limit);
+			} else {
+				usage();
+			}
 			break;
 		case 'v':
 			printf("snis_multiverse ");
@@ -1974,7 +1996,7 @@ static void wrangle_snis_server_processes(void)
 		diff = now.tv_sec - ship[i].last_save_time.tv_sec;
 
 		/* Don't start server just because a bridge was there several days ago. */
-		if (diff > SESSION_RESUME_LIMIT)
+		if (diff > session_resume_limit)
 			continue;
 
 		found = 0;
@@ -2104,23 +2126,25 @@ static void send_to_snis_console(const char *string)
 	send_string_via_unix_dgram_socket(snis_console_unix_dgram_socket, string, WHITE);
 }
 
-static void console_help(void);
-static void console_list_bridges(void);
-static void console_list_servers(void);
-static void console_debug(void);
+static void console_help(const char *cmd);
+static void console_list_bridges(const char *cmd);
+static void console_list_servers(const char *cmd);
+static void console_debug(const char *cmd);
+static void console_resume_limit(const char *cmd);
 
 static struct console_command {
 	char *cmd;
-	void (*fn)(void);
+	void (*fn)(const char *command);
 	char *help;
 } console_cmd[] = {
 	{ "HELP", console_help,			"    HELP: PRINT THIS HELP MESSAGE" },
 	{ "BRIDGES", console_list_bridges,	" BRIDGES: LIST BRIDGES" },
 	{ "SERVERS", console_list_servers,	" SERVERS: LIST SERVERS" },
 	{ "DEBUG", console_debug,	"   DEBUG: TOGGLE DEBUG FLAG" },
+	{ "RESUME-LIMIT", console_resume_limit,	" RESUME-LIMIT: SET TIME IN MINUTES FOR SESSION RESUMING" },
 };
 
-static void console_help(void)
+static void console_help(__attribute__((unused)) const char *cmd)
 {
 	send_to_snis_console("MULTIVERSE CONSOLE COMMANDS");
 	send_to_snis_console("---------------------------");
@@ -2128,9 +2152,6 @@ static void console_help(void)
 		send_to_snis_console(console_cmd[i].help);
 	return;
 }
-
-#include <stdio.h>
-#include <sys/time.h>
 
 static inline char *plural(int64_t num)
 {
@@ -2193,7 +2214,7 @@ static void format_timeval(struct timeval *tv, char *output, size_t buflen)
 	strftime(output, buflen, "%Y-%m-%d %H:%M:%S", timeinfo);
 }
 
-static void console_list_bridges(void)
+static void console_list_bridges(__attribute__((unused)) const char *cmd)
 {
 	char buffer[100];
 	char buffer2[200];
@@ -2230,7 +2251,7 @@ static void console_list_bridges(void)
 	send_to_snis_console("---------------------------");
 }
 
-static void console_list_servers(void)
+static void console_list_servers(__attribute__((unused)) const char *cmd)
 {
 	char buffer[100];
 
@@ -2251,18 +2272,45 @@ static void console_list_servers(void)
 	send_to_snis_console("---------------------------------");
 }
 
-static void console_debug(void)
+static void console_debug(__attribute__((unused)) const char *command)
 {
 	const char *dbgstat[] = { "DEBUG OFF", "DEBUG ON" };
 	debuglevel = !debuglevel;
 	send_to_snis_console(dbgstat[!!debuglevel]);
 }
 
+static void console_resume_limit(const char *cmd)
+{
+	/* TODO: we should use snis_tweak.[ch] for tweakable variables */
+	int rc, v;
+	char buffer[100];
+
+	rc = sscanf(cmd, "RESUME-LIMIT %d", &v);
+	if (rc != 1) {
+		send_to_snis_console("BAD SESSION-RESUME COMMAND, EXPECTED NUMBER OF MINUTES");
+		return;
+	}
+	if (v < 0 || v > INT_MAX / 60)
+		v = INT_MAX;
+	else
+		v = v * 60;
+	session_resume_limit = v;
+	snprintf(buffer, sizeof(buffer), "SESSION RESUME LIMIT SET TO %d seconds\n",
+				session_resume_limit);
+	send_to_snis_console(buffer);
+}
+
 static void process_console_command_string(const char *buffer)
 {
+	char word[16];
+
+	memset(word, 0, sizeof(word));
+	for (int i = 0; i < 15 && buffer[i] != '\0' && buffer[i] != ' '; i++)
+		word[i] = buffer[i];
+
 	for (int i = 0; i < (int) ARRAYSIZE(console_cmd); i++) {
-		if (strncmp(buffer, console_cmd[i].cmd, 15) == 0) {
-			console_cmd[i].fn();
+		if (strncmp(word, console_cmd[i].cmd, 15) == 0) {
+			console_cmd[i].fn(buffer);
 			return;
 		}
 	}
