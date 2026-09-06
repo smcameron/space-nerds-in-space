@@ -912,6 +912,14 @@ get_passenger_location(n) -- gets passenger location
 	Returns:
 	ID of the starbase or player ship where the passenger is currently located.
 
+set_passenger_destination(n, solarsystem, destination_name, fare)
+	Parameters:
+	n: the passenger number (0 - 80)
+	solarsystem: the string name of the solarsystem of the destination.
+	destination_name: the string name of the passenger destination.  The
+		destination does is not required to exist.
+	fare: The fare the player should get upon delivering the passenger.
+
 set_planet_description(planet_id, description) -- set the description of a planet.
 	Parameters:
 	planet_id: number, the ID of the planet

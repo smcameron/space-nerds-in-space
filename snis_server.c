@@ -23064,6 +23064,48 @@ static int l_ai_trace(lua_State *l)
 	return 0;
 }
 
+static int l_set_passenger_destination(lua_State *l)
+{
+	const double pidx = luaL_checknumber(l, 1);
+	const char *dest_solarsystem = luaL_checkstring(l, 2);
+	const char *destination = luaL_checkstring(l, 3);
+	const double dfare = luaL_checknumber(l, 4);
+	int pass = (int) pidx;
+
+	if (pass < 0 || pass > MAX_PASSENGERS) {
+		send_demon_console_msg("SET_PASSENGER_DESTINATION: PASSENGER OUT OF RANGE (0 - %d): %d",
+			MAX_PASSENGERS, pass);
+		return 0;
+	}
+	pthread_mutex_lock(&universe_mutex);
+	struct passenger_data *p = &passenger[pass];
+	snprintf(p->solarsystem, sizeof(p->solarsystem), "%s", dest_solarsystem);
+	snprintf(p->destination_name, sizeof(p->destination_name), "%s", destination);
+	uppercase(p->solarsystem);
+	uppercase(p->destination_name);
+	p->destination = (uint32_t) -1;
+	if (strncasecmp(p->solarsystem, solarsystem_name, sizeof(p->solarsystem)) == 0) {
+		for (int i = 0; i <= snis_object_pool_highest_object(pool); i++) {
+			struct snis_entity *o = &go[i];
+			if (o->alive && o->type == OBJTYPE_STARBASE &&
+					strncasecmp(o->sdata.name, p->destination_name,
+							sizeof(o->sdata.name)) == 0) {
+				uppercase(p->destination_name);
+				p->destination = o->id;
+				break;
+			}
+		}
+	}
+	if (dfare > (double) MAX_PASSENGER_FARE)
+		p->fare = MAX_PASSENGER_FARE;
+	else if (dfare < 0.0)
+		p->fare = 0;
+	else
+		p->fare = (uint32_t) dfare;
+	pthread_mutex_unlock(&universe_mutex);
+	return 0;
+}
+
 static int l_get_passenger_location(lua_State *l)
 {
 	const double pidx = luaL_checknumber(l, 1);
@@ -27920,6 +27962,7 @@ static void setup_lua(void)
 	add_lua_callable_fn(l_ai_trace, "ai_trace");
 	add_lua_callable_fn(l_create_passenger, "create_passenger");
 	add_lua_callable_fn(l_set_passenger_location, "set_passenger_location");
+	add_lua_callable_fn(l_set_passenger_destination, "set_passenger_destination");
 	add_lua_callable_fn(l_get_passenger_location, "get_passenger_location");
 	add_lua_callable_fn(l_set_planet_description, "set_planet_description");
 	add_lua_callable_fn(l_set_planet_government, "set_planet_government");

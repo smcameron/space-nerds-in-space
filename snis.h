@@ -1193,6 +1193,7 @@ struct damcon_data {
 #define MAX_TRANSPORT_CONTRACTS 100
 #define MAX_PASSENGERS (NBASES * 5)
 #define PASSENGER_BERTHS 8
+#define MAX_PASSENGER_FARE 100000
 struct passenger_data {
 	char name[50];
 	char solarsystem[20];
