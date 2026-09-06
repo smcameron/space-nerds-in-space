@@ -856,7 +856,7 @@ ${BIN}:
 BINARY_NAMES=snis_client snis_server snis_limited_client snis_multiverse nebula_noise \
 	generate_skybox ssgl_server lsssgl snis_text_to_speech.sh mesh_viewer shadow_lab star_light_preview earthlike \
 	infinite-taunt names stl_parser test_key_value_parser test-matrix test-space-partition \
-	test-marshal test-quat test-fleet test-mtwist device-io-sample-1 test-nonuniform-random-sampler \
+	test_marshal test-quat test-fleet test-mtwist device-io-sample-1 test-nonuniform-random-sampler \
 	test-commodities test-obj-parser test_solarsystem_config test_crater print_ship_attributes \
 	test_snis_dmx snis_test_audio check-endianness test_stringutils yoke-test-program
 ${BINARY_NAMES}:
@@ -1388,8 +1388,8 @@ $(OD)/snis_hash.o:	snis_hash.c snis_hash.h Makefile ${ODT}
 test_snis_crypt:	snis_hash.c snis_hash.h
 	$(CC) -DTEST_SNIS_CRYPT -o test_snis_crypt snis_hash.c ${CRYPTLIBS}
 
-test_marshal:	snis_marshal.c snis_marshal.h stacktrace.o
-	$(CC) -DTEST_MARSHAL -o test_marshal stacktrace.o snis_marshal.c
+bin/test_marshal:	snis_marshal.c snis_marshal.h stacktrace.o ${OD}/string-utils.o Makefile
+	$(CC) -DTEST_MARSHAL -o bin/test_marshal stacktrace.o snis_marshal.c ${OD}/string-utils.o
 
 $(OD)/snis_nl.o:	snis_nl.c snis_nl.h Makefile ${ODT}
 	$(Q)$(COMPILE)
@@ -1420,7 +1420,7 @@ mostly-clean:
 	${BINPROGS} ${UTILPROGS} ${ELOBJS} stl_parser snis_limited_client.c \
 	test-space-partition snis_test_audio.o snis_test_audio joystick_test local_termios2.h \
 	bin/nebula_noise bin/generate_skybox bin/names bin/infinite-taunt bin/stl_parser \
-	bin/test-obj-parser bin/test-commodities bin/test_nonuniform_random_sampler bin/test-marshal \
+	bin/test-obj-parser bin/test-commodities bin/test_nonuniform_random_sampler bin/test_marshal \
 	bin/test-quat bin/test-fleet bin/test-mtwist bin/snis-device-io-sample-1 bin/check-endianness \
 	${OD}/*.o ${ODT} bin/test-matrix bin/test-mathutils bin/test_solarsystem_config  bin/test-space-partition \
 	bin/device-io-sample-1 bin/print_ship_attributes bin/snis_test_audio bin/test_crater \
@@ -1437,9 +1437,6 @@ mostly-clean:
 	rm -fr ${OD}
 	( cd ssgl && ${MAKE} clean )
 	( cd mikktspace && ${MAKE} clean )
-
-bin/test-marshal:	snis_marshal.c ${OD}/stacktrace.o Makefile ${BIN}
-	$(CC) -DTEST_MARSHAL -o bin/test-marshal snis_marshal.c ${OD}/stacktrace.o
 
 bin/test-quat:	test-quat.c ${OD}/quat.o ${OD}/matrix.o ${OD}/mathutils.o ${OD}/mtwist.o Makefile ${BIN}
 	$(CC) ${BOUNDSFLAGS} -Wall -Wextra --pedantic -o bin/test-quat test-quat.c ${OD}/quat.o ${OD}/matrix.o ${OD}/mathutils.o ${OD}/mtwist.o -lm
@@ -1479,7 +1476,7 @@ $(OD)/nonuniform_random_sampler.o:	nonuniform_random_sampler.c nonuniform_random
 bin/test_nonuniform_random_sampler:	nonuniform_random_sampler.c ${OD}/mathutils.o ${OD}/mtwist.o ${BIN}
 	$(CC) -D TEST_NONUNIFORM_SAMPLER -o bin/test_nonuniform_random_sampler ${OD}/mtwist.o ${OD}/mathutils.o -lm nonuniform_random_sampler.c
 
-bin/test-commodities:	${OD}/commodities.o Makefile ${OD}/string-utils.o ${BIN}
+bin/test-commodities:	${OD}/commodities.o Makefile ${OD}/string-utils.o ${BIN} ${OD}/stacktrace.o
 	$(CC) -DTESTCOMMODITIES=1 -O3 -c commodities.c -o ${OD}/test-commodities.o
 	$(CC) ${BOUNDSFLAGS} -DTESTCOMMODITIES=1 -o bin/test-commodities ${OD}/string-utils.o ${OD}/test-commodities.o ${OD}/stacktrace.o
 
@@ -1489,7 +1486,8 @@ bin/test-obj-parser:	test-obj-parser.c mikktspace/mikktspace.o ${OD}/string-util
 		${OD}/mathutils.o ${OD}/matrix.o ${OD}/mesh.o ${OD}/quat.o ${OD}/open-simplex-noise.o ${OD}/stacktrace.o \
 		-lm test-obj-parser.c
 
-test:	bin/test-matrix bin/test-mathutils bin/test-space-partition bin/test-marshal bin/test-quat bin/test-fleet bin/test-mtwist bin/test-commodities bin/test_solarsystem_config
+test:	bin/test-matrix bin/test-mathutils bin/test-space-partition bin/test_marshal bin/test-quat bin/test-fleet \
+	bin/test-mtwist bin/test-commodities bin/test_solarsystem_config
 	/bin/true	# Prevent make from running "$(CC) test.o".
 
 bin/test_solarsystem_config:	test_solarsystem_config.c ${OD}/solarsystem_config.o ${OD}/string-utils.o ${OD}/stacktrace.o ${BIN}
@@ -1634,7 +1632,7 @@ uninstall:
 	${UPDATE_DESKTOP}
 
 clean:	mostly-clean
-	rm -f ${MODELS} test_marshal test_crater
+	rm -f ${MODELS} bin/test_marshal test_crater
 	rm -f opus-1.3.1.tar.gz
 
 depend:

@@ -190,6 +190,9 @@ int packed_buffer_extract_string(struct packed_buffer *pb, char *buffer, int buf
 	bytes_to_copy = (len < buflen) ? len : buflen;
 	if (((uint32_t) (pb->buffer_cursor + bytes_to_copy)) > pb->buffer_size) {
 		stacktrace("packed_buffer_extract_string(): claimed length of string is longer than buffer size");
+		fprintf(stderr, "bytes_to_copy = %d\n", bytes_to_copy);
+		fprintf(stderr, "buffer_cursor = %d\n", pb->buffer_cursor);
+		fprintf(stderr, "buffer_size = %u\n", pb->buffer_size);
 		bytes_to_copy = pb->buffer_size - pb->buffer_cursor;
 	}
 	packed_buffer_check(pb);
@@ -882,7 +885,69 @@ int packed_buffer_length(struct packed_buffer *pb)
 }
 
 #ifdef TEST_MARSHAL
-static void test_bit_fields(void)
+#include "string-utils.h"
+
+static void test_packed_buffers(int *failures)
+{
+	struct packed_buffer *pb;
+
+	struct test_struct {
+		uint8_t a;
+		uint16_t b;
+		uint32_t c;
+		double x;
+		char buffer[100];
+	} ts, ts2;
+
+	int sz = sizeof(ts.a) +
+		sizeof(ts.b) +
+		sizeof(ts.c) + 4 + 2 + 100;
+
+	ts.a = 199;
+	ts.b = 32001;
+	ts.c = 1234512345;
+	ts.x = 1.99;
+	memset(ts.buffer, 0, sizeof(ts.buffer));
+	strlcpy(ts.buffer, "THIS IS A TEST", sizeof(ts.buffer));
+
+	pb = packed_buffer_allocate(sz);
+	int rc = packed_buffer_append(pb, "bhwSs", ts.a, ts.b, ts.c, ts.x, (int32_t) 600000, ts.buffer);
+	if (rc != 0) {
+		fprintf(stderr, "packed_buffer_append failed\n");
+		*failures += 1;
+	}
+
+	pb->buffer_cursor = 0; /* Reset cursor for unpacking. */
+	rc = packed_buffer_extract(pb, "bhwSs", &ts2.a, &ts2.b, &ts2.c, &ts2.x, (int32_t) 600000,
+					ts2.buffer, sizeof(ts2.buffer));
+	if (rc != 0) {
+		fprintf(stderr, "packed_buffer_extract failed\n");
+		*failures += 1;
+	}
+	if (ts.a != ts2.a) {
+		fprintf(stderr, "packed buffer mismatch on byte, expected %hhu, got %hhu\n", ts.a, ts2.a);
+		(*failures)++;
+	}
+	if (ts.b != ts2.b) {
+		fprintf(stderr, "packed buffer mismatch on short, expected %hu, got %hu\n", ts.b, ts2.b);
+		(*failures)++;
+	}
+	if (ts.c != ts2.c) {
+		fprintf(stderr, "packed buffer mismatch on word, expected %u, got %u\n", ts.c, ts2.c);
+		(*failures)++;
+	}
+	if (fabs(ts.x - ts2.x) > 0.02) { /* this error seems kind of big. */
+		fprintf(stderr, "packed buffer mismatch on double, expected %g, got %g\n", ts.x, ts2.x);
+		(*failures)++;
+	}
+	if (strcmp(ts.buffer, ts2.buffer) != 0) {
+		fprintf(stderr, "packed buffer mismatch on string, expected '%s', got '%s'\n", ts.buffer, ts2.buffer);
+		(*failures)++;
+	}
+	packed_buffer_free(pb);
+}
+
+static void test_bit_fields(int *failures)
 {
 	int i, j;
 	uint8_t b[8];
@@ -944,6 +1009,7 @@ static void test_bit_fields(void)
 		printf("Bit fields passed all tests\n");
 	else
 		fprintf(stderr, "Bit fields failed %d tests\n", err_count);
+	*failures += err_count;
 }
 
 int main(int argc, char *argv[])
@@ -951,6 +1017,7 @@ int main(int argc, char *argv[])
 
 	float x;
 	int i, j;
+	int failures = 0;
 
 	for (x = -1.0; x <= 1.0; x += 0.0001) {
 		printf("Qtos32(%f) = %d\n", x, Qtos32(x));
@@ -959,7 +1026,7 @@ int main(int argc, char *argv[])
 		printf("Qtos32(s32toQ(%f) = %d\n", x, Qtos32(s32toQ(x)));
 		if (fabs(s32toQ(Qtos32(x)) - x) > 0.00001) {
 			printf("FAIL!!!\n");
-			return -1;
+			failures++;
 		}
 	}
 
@@ -1003,10 +1070,15 @@ int main(int argc, char *argv[])
 	printf("Max radians error = %g\n", max_error);
 	if (max_diff > 6 || min_diff < 5) { /* these limits determined empirically */
 		printf("Something's wrong with the radians conversions.\n");
+		failures++;
 	}
 
 	/* Test bit fields */
-	test_bit_fields();
+	test_bit_fields(&failures);
+	test_packed_buffers(&failures);
+	printf("Total failures: %d\n", failures);
+	if (failures > 0)
+		return -1;
 	return 0;
 }
 #endif
