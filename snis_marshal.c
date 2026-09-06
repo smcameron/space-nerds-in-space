@@ -194,7 +194,7 @@ int packed_buffer_extract_string(struct packed_buffer *pb, char *buffer, int buf
 	}
 	packed_buffer_check(pb);
 	memcpy(buffer, &pb->buffer[pb->buffer_cursor], bytes_to_copy);
-	buffer[bytes_to_copy - 1] = '\0'; /* Guarantee NUL termination, even if it truncates */
+	buffer[bytes_to_copy] = '\0'; /* Guarantee NUL termination, even if it truncates */
 	pb->buffer_cursor += len;	
 	packed_buffer_check(pb);
 	return len > buflen ? buflen : len;
