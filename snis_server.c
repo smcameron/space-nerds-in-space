@@ -11763,7 +11763,7 @@ static void gradually_repair_damcon_systems(struct snis_entity *sb, struct bridg
 	o->tsd.ship.damage_data_dirty = 1;
 }
 	
-static void update_passenger(int i, int nstarbases);
+static void init_passenger(int i, int nstarbases);
 static int count_starbases(void);
 
 
@@ -11865,7 +11865,7 @@ static void init_player(struct snis_entity *o)
 	/* Clear any passengers off the ship */
 	for (i = 0; i < MAX_PASSENGERS; i++)
 		if (passenger[i].location == o->id)
-			update_passenger(i, nstarbases);
+			init_passenger(i, nstarbases);
 	o->tsd.ship.lifeform_count = 5; /* because there are 5 stations: nav, weap, eng+damcon, sci, comms */
 	o->tsd.ship.viewpoint_object = o->id;
 	quat_init_axis(&o->tsd.ship.sciball_orientation, 1, 0, 0, 0);
@@ -12035,7 +12035,7 @@ static void random_object_coordinates_yrange(double *x, double *y, double *z, in
 	*z = p.v.z;
 }
 
-static uint32_t nth_starbase(int n);
+static struct snis_entity *nth_starbase(int n);
 static int commodity_sample(void);
 static int add_ship(int faction, int shiptype, int auto_respawn)
 {
@@ -12121,12 +12121,15 @@ static int add_ship(int faction, int shiptype, int auto_respawn)
 		ship_registry_add_owner(&ship_registry, go[i].id, snis_randn(ncorporations()));
 		if (snis_randn(1000) <= 1000.0 * bounty_chance) {
 			char crime[100];
+			struct snis_entity *sb = NULL;
 			generate_crime(mt, crime, sizeof(crime) - 1);
 			uppercase(crime);
-			ship_registry_add_bounty(&ship_registry, go[i].id, crime,
-				1000.0 + snis_randn(10) * 100.0,
-				nth_starbase(snis_randn(NBASES)));
-			go[i].sdata.flags |= SDATA_FLAGS_BOUNTY_OFFERED;
+			sb = nth_starbase(snis_randn(NBASES));
+			if (sb) {
+				ship_registry_add_bounty(&ship_registry, go[i].id, crime,
+					1000.0 + snis_randn(10) * 100.0, sb->id);
+				go[i].sdata.flags |= SDATA_FLAGS_BOUNTY_OFFERED;
+			}
 		}
 	}
 	ship_registry_add_entry(&ship_registry, go[i].id, SHIP_REG_TYPE_REGISTRATION, registration);
@@ -14947,7 +14950,7 @@ static void add_spacemonsters(void)
 	}
 }
 
-static uint32_t nth_starbase(int n)
+static struct snis_entity *nth_starbase(int n)
 {
 	int nstarbases = 0;
 	int i;
@@ -14957,11 +14960,11 @@ static uint32_t nth_starbase(int n)
 			if (go[i].type == OBJTYPE_STARBASE) {
 				nstarbases++;
 				if (nstarbases - 1 == n)
-					return go[i].id;
+					return &go[i];
 			}
 		}
 		if (nstarbases == 0)
-			return (uint32_t) -1;
+			return NULL;
 
 		/* If n > number of starbase, we will make n = n modulo nstarbases and try again. */
 		n = n % nstarbases;
@@ -14994,18 +14997,35 @@ static int compute_fare(uint32_t src, uint32_t dest)
 	return (int) (fare_noise + min_fare + (vec3_magnitude(&travel) * 2170.0 / XKNOWN_DIM));
 }
 
-static void update_passenger(int i, int nstarbases)
+/* Procedurally set a passengers name, location, destination, and fare */
+static void init_passenger(int i, int nstarbases)
 {
 	static struct mtwist_state *mt = NULL;
 	if (!mt)
 		mt = mtwist_init(mtwist_seed);
 	character_name(mt, passenger[i].name,  sizeof(passenger[i].name) - 1);
-	passenger[i].location = nth_starbase(snis_randn(nstarbases));
+	struct snis_entity *loc = nth_starbase(snis_randn(nstarbases));
+	if (loc)
+		passenger[i].location = loc->id;
+	else
+		passenger[i].location = (uint32_t) -1;
 	snprintf(passenger[i].solarsystem, sizeof(passenger[i].solarsystem), "%s", solarsystem_name);
+	struct snis_entity *dest = NULL;
 	do {
-		passenger[i].destination = nth_starbase(snis_randn(nstarbases));
+		dest = nth_starbase(snis_randn(nstarbases));
+		if (dest)
+			passenger[i].destination = dest->id;
+		else
+			passenger[i].destination = (uint32_t) -1;
 	} while (passenger[i].destination == passenger[i].location && nstarbases > 1);
-	passenger[i].fare = compute_fare(passenger[i].location, passenger[i].destination);
+	if (dest == NULL) {
+		passenger[i].destination_name[0] = '\0';
+		passenger[i].fare = 0;
+	} else {
+		snprintf(passenger[i].destination_name, sizeof(passenger[i].destination_name),
+				"%s", dest->sdata.name);
+		passenger[i].fare = compute_fare(passenger[i].location, passenger[i].destination);
+	}
 }
 
 static int count_starbases(void)
@@ -15025,7 +15045,7 @@ static void add_passengers(void)
 
 	nstarbases = count_starbases();
 	for (i = 0; i < MAX_PASSENGERS; i++)
-		update_passenger(i, nstarbases);
+		init_passenger(i, nstarbases);
 	npassengers = MAX_PASSENGERS;
 }
 
@@ -16341,10 +16361,9 @@ static void meta_comms_inventory(char *name, struct game_client *c, char *txt)
 	send_comms_packet(NULL, name, ch, " PASSENGER LIST:");
 	for (i = 0; i < npassengers; i++) {
 		if (passenger[i].location == ship->id) {
-			int x = lookup_by_id(passenger[i].destination);
 			send_comms_packet(NULL, name, ch, "%2d. FARE %4d DEST: %10s (%s) : %20s\n",
 					passenger_count + 1, passenger[i].fare,
-					x < 0 ? "UNKNOWN" : go[x].sdata.name,
+					passenger[i].destination_name,
 					passenger[i].solarsystem,
 					passenger[i].name);
 			passenger_count++;
@@ -17607,11 +17626,9 @@ static void starbase_passenger_boarding_npc_bot(struct snis_entity *sb, int brid
 		count = 0;
 		for (i = 0; i < npassengers; i++) {
 			if (passenger[i].location == sb->id) {
-				int d = lookup_by_id(passenger[i].destination);
-				char *dest = d < 0 ? "unknown" : go[d].sdata.name;
 				count++;
 				send_comms_packet(sb, npcname, ch, "  %2d: DEST: %12s  FARE: $%5d  NAME: %s\n",
-					count, dest, passenger[i].fare, passenger[i].name);
+					count, passenger[i].destination_name, passenger[i].fare, passenger[i].name);
 			}
 		}
 		if (count == 0)
@@ -17699,7 +17716,7 @@ static void npc_menu_item_eject_passengers(__attribute__((unused)) struct npc_me
 						passenger[i].fare, passenger[i].name);
 			ship->tsd.ship.wallet += passenger[i].fare;
 			/* passenger disembarks, ceases to be a passenger, replace with new one */
-			update_passenger(i, nstarbases);
+			init_passenger(i, nstarbases);
 			schedule_callback2(event_callback, &callback_schedule,
 						"passenger-disembarked", (double) i, (double) sb->id);
 			continue;
@@ -17713,7 +17730,7 @@ static void npc_menu_item_eject_passengers(__attribute__((unused)) struct npc_me
 			ship->tsd.ship.wallet -= passenger[i].fare;
 			ship->tsd.ship.lifeform_count--;
 			/* passenger ejected, ceases to be a passenger, replace with new one */
-			update_passenger(i, nstarbases);
+			init_passenger(i, nstarbases);
 			schedule_callback2(event_callback, &callback_schedule,
 						"passenger-ejected", (double) i, (double) sb->id);
 		}
@@ -17753,7 +17770,7 @@ static void npc_menu_item_disembark_passengers(__attribute__((unused)) struct np
 			ship->tsd.ship.wallet += passenger[i].fare;
 			ship->tsd.ship.lifeform_count--;
 			/* passenger disembarks, ceases to be a passenger, replace with new one */
-			update_passenger(i, nstarbases);
+			init_passenger(i, nstarbases);
 			schedule_callback2(event_callback, &callback_schedule,
 						"passenger-disembarked", (double) i, (double) sb->id);
 		}
@@ -23252,6 +23269,8 @@ static int l_create_passenger(lua_State *l)
 	snprintf(passenger[p].solarsystem, sizeof(passenger[p].solarsystem), "%s", solarsystem_name);
 	passenger[p].location = go[location].id;
 	passenger[p].destination = go[destination].id;
+	snprintf(passenger[p].destination_name, sizeof(passenger[p].destination_name), "%s",
+				go[destination].sdata.name);
 	passenger[p].fare = fare;
 	pthread_mutex_unlock(&universe_mutex);
 	return 0;
@@ -32564,7 +32583,9 @@ static void unflatten_passenger(struct snis_entity *our_ship, struct flattened_p
 			snprintf(passenger[snatched].name, sizeof(passenger[snatched].name), "%s", fp->name);
 			snprintf(passenger[snatched].solarsystem, sizeof(passenger[snatched].solarsystem),
 					"%s", fp->solarsystem);
-
+			snprintf(passenger[snatched].destination_name,
+				sizeof(passenger[snatched].destination_name), "%s",
+					fp->dest);
 			passenger[snatched].destination = (uint32_t) -1;
 			for (int j = 0; j <= snis_object_pool_highest_object(pool); j++) {
 				if (go[j].type != OBJTYPE_STARBASE)
@@ -32574,8 +32595,7 @@ static void unflatten_passenger(struct snis_entity *our_ship, struct flattened_p
 					break;
 				}
 			}
-			if (passenger[snatched].destination == (uint32_t) -1)
-				passenger[snatched].destination = nth_starbase(snis_randn(NBASES));
+			/* passenger->destination is allowed to be -1, in case his dest is in another solarsystem */
 
 			rc = sscanf(fp->fare, "%d", &fare);
 			if (rc == 1)

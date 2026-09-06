@@ -1196,6 +1196,7 @@ struct damcon_data {
 struct passenger_data {
 	char name[50];
 	char solarsystem[20];
+	char destination_name[20];
 	uint32_t location, destination;
 	uint32_t fare;
 };
