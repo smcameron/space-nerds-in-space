@@ -2214,6 +2214,21 @@ static void format_timeval(struct timeval *tv, char *output, size_t buflen)
 	strftime(output, buflen, "%Y-%m-%d %H:%M:%S", timeinfo);
 }
 
+static void send_passenger_data_to_snis_console(int bridge_num)
+{
+	struct bridge_info *b = &ship[bridge_num];
+	struct bridge_passengers *p = &b->passengers;
+	char buffer[100];
+
+	send_to_snis_console("     PASSENGERS:");
+	for (int i = 0; i < (int) p->passengers_aboard; i++) {
+		struct flattened_passenger *fp = &p->fp[i];
+		snprintf(buffer, sizeof(buffer), "        %d: '%s' '%s' '%s' '%s'",
+			i, fp->name, fp->solarsystem, fp->dest, fp->fare);
+		send_to_snis_console(buffer);
+	}
+}
+
 static void console_list_bridges(__attribute__((unused)) const char *cmd)
 {
 	char buffer[100];
@@ -2246,6 +2261,7 @@ static void console_list_bridges(__attribute__((unused)) const char *cmd)
 		snprintf(buffer3, sizeof(buffer3), "%s (%s)",
 			buffer, get_relative_time(&ship[i].last_save_time, &now, buffer2, sizeof(buffer2)));
 		send_to_snis_console(buffer3);
+		send_passenger_data_to_snis_console(i);
 	}
 	pthread_mutex_unlock(&data_mutex);
 	send_to_snis_console("---------------------------");
