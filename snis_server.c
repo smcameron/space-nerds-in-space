@@ -23243,7 +23243,7 @@ static int l_create_passenger(lua_State *l)
 		send_demon_console_msg("CREATE_PASSENGER: BAD DESTINATION ID %u", id32);
 		return 0;
 	}
-	if (go[location].type != OBJTYPE_STARBASE) {
+	if (go[destination].type != OBJTYPE_STARBASE) {
 		pthread_mutex_unlock(&universe_mutex);
 		send_demon_console_msg("CREATE_PASSENGER: INAPPROPRIATE DESTINATION ID %u", id32);
 		return 0;
