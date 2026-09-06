@@ -27544,11 +27544,7 @@ static void flatten_passengers(uint32_t ship_id, struct flattened_passenger fp[]
 		snprintf(fp[npa].solarsystem, sizeof(fp[npa].solarsystem), "%s", passenger[i].solarsystem);
 		snprintf(fp[npa].fare, sizeof(fp[npa].fare), "%d", passenger[i].fare);
 
-		int idx = lookup_by_id(passenger[i].destination);
-		if (idx < 0)
-			snprintf(fp[npa].dest, sizeof(fp[npa].dest), "UNKNOWN");
-		else
-			snprintf(fp[npa].dest, sizeof(fp[npa].dest), "%s", go[idx].sdata.name);
+		snprintf(fp[npa].dest, sizeof(fp[npa].dest), "%s", passenger[i].destination_name);
 		npa++;
 	}
 	*passengers_aboard = npa;
