@@ -16151,6 +16151,7 @@ static int process_select_subscreen(struct game_client *c)
 	/* just turn it around and fan it out to all the right places */
 	if (new_details > OPCODE_MAX_SUBSCREEN)
 		new_details = 0;
+	fprintf(stderr, "Mirroring select subscreen %hhu\n", new_details);
 	send_packet_to_requestor_plus_role_on_a_bridge(c, 
 			snis_opcode_pkt("bb", OPCODE_SELECT_SUBSCREEN,
 			new_details), ROLE_PROJECTOR);

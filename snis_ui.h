@@ -153,6 +153,8 @@ struct engineering_ui {
 	struct gauge *temp_gauge;
 	struct gauge *oxygen_gauge;
 	struct button *damcon_button;
+	struct button *transporter_button;
+	struct button *engineering_button;
 	struct button *preset_buttons[ENG_PRESET_NUMBER];
 	struct timeval preset_press_time[ENG_PRESET_NUMBER];
 	struct button *preset_save_button;
@@ -202,6 +204,9 @@ struct engineering_ui {
 	int selected_subsystem;
 	int selected_preset;
 	int gauge_radius;
+#define ENG_ENGINEERING_SUBSCREEN 0
+#define ENG_TRANSPORTER_SUBSCREEN 1
+	int subscreen;
 };
 
 struct science_ui {

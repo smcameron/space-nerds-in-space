@@ -6798,15 +6798,107 @@ static void science_deactivate_waypoints_widgets(void)
 	}
 }
 
+static void hide_or_unhide_engineering_widgets(int hide)
+{
+	void (*hide_or_unhide)(void *widget) = hide ? ui_hide_widget : ui_unhide_widget;
+
+	fprintf(stderr, "%s engineering widgets.\n", hide ? "hiding" : "unhiding");
+
+	hide_or_unhide(eng_ui.fuel_gauge);
+	hide_or_unhide(eng_ui.amp_gauge);
+	hide_or_unhide(eng_ui.voltage_gauge);
+	hide_or_unhide(eng_ui.temp_gauge);
+	hide_or_unhide(eng_ui.oxygen_gauge);
+	hide_or_unhide(eng_ui.transporter_button);
+	for (int i = 0; i < ENG_PRESET_NUMBER; i++)
+		hide_or_unhide(eng_ui.preset_buttons[i]);
+	hide_or_unhide(eng_ui.preset_save_button);
+	hide_or_unhide(eng_ui.silence_alarms);
+	hide_or_unhide(eng_ui.deploy_flare);
+	hide_or_unhide(eng_ui.custom_button);
+	hide_or_unhide(eng_ui.shield_slider);
+	hide_or_unhide(eng_ui.shield_coolant_slider);
+	hide_or_unhide(eng_ui.maneuvering_slider);
+	hide_or_unhide(eng_ui.maneuvering_coolant_slider);
+	hide_or_unhide(eng_ui.warp_slider);
+	hide_or_unhide(eng_ui.warp_coolant_slider);
+	hide_or_unhide(eng_ui.impulse_slider);
+	hide_or_unhide(eng_ui.impulse_coolant_slider);
+	hide_or_unhide(eng_ui.sensors_slider);
+	hide_or_unhide(eng_ui.sensors_coolant_slider);
+	hide_or_unhide(eng_ui.comm_slider);
+	hide_or_unhide(eng_ui.comm_coolant_slider);
+	hide_or_unhide(eng_ui.phaserbanks_slider);
+	hide_or_unhide(eng_ui.phaserbanks_coolant_slider);
+	hide_or_unhide(eng_ui.tractor_slider);
+	hide_or_unhide(eng_ui.tractor_coolant_slider);
+	hide_or_unhide(eng_ui.lifesupport_slider);
+	hide_or_unhide(eng_ui.lifesupport_coolant_slider);
+	hide_or_unhide(eng_ui.shield_control_slider);
+
+	hide_or_unhide(eng_ui.shield_damage);
+	hide_or_unhide(eng_ui.impulse_damage);
+	hide_or_unhide(eng_ui.warp_damage);
+	hide_or_unhide(eng_ui.maneuvering_damage);
+	hide_or_unhide(eng_ui.phaser_banks_damage);
+	hide_or_unhide(eng_ui.sensors_damage);
+	hide_or_unhide(eng_ui.comms_damage);
+	hide_or_unhide(eng_ui.tractor_damage);
+	hide_or_unhide(eng_ui.lifesupport_damage);
+
+	hide_or_unhide(eng_ui.shield_temperature);
+	hide_or_unhide(eng_ui.impulse_temperature);
+	hide_or_unhide(eng_ui.warp_temperature);
+	hide_or_unhide(eng_ui.maneuvering_temperature);
+	hide_or_unhide(eng_ui.phaser_banks_temperature);
+	hide_or_unhide(eng_ui.sensors_temperature);
+	hide_or_unhide(eng_ui.comms_temperature);
+	hide_or_unhide(eng_ui.tractor_temperature);
+	hide_or_unhide(eng_ui.lifesupport_temperature);
+}
+
+static void hide_or_unhide_transporter_widgets(int hide)
+{
+	void (*hide_or_unhide)(void *widget) = hide ? ui_hide_widget : ui_unhide_widget;
+
+	hide_or_unhide(eng_ui.engineering_button);
+}
+
+/* Hide engineering widgets when switching to transporter screen */
+static void hide_engineering_widgets(void)
+{
+	hide_or_unhide_engineering_widgets(1);
+}
+
+/* Hide transporter widgets when switching to engineering screen */
+static void hide_transporter_widgets(void)
+{
+	hide_or_unhide_transporter_widgets(1);
+}
+
+/* unhide engineering widgets when switching from transporter screen */
+static void unhide_engineering_widgets(void)
+{
+	hide_or_unhide_engineering_widgets(0);
+}
+
+/* unhide transporter widgets when switching from engineering screen */
+static void unhide_transporter_widgets(void)
+{
+	hide_or_unhide_transporter_widgets(0);
+}
+
 static int process_select_subscreen(void)
 {
 	unsigned char buffer[10];
 	uint8_t new_details;
 	int rc;
 
+	fprintf(stderr, "select subscreen opcode received\n");
 	rc = read_and_unpack_buffer(buffer, "b", &new_details);
 	if (rc != 0)
 		return rc;
+	fprintf(stderr, "select subscreen opcode received, new_details = %hhu\n", new_details);
 	switch (new_details) {
 	case OPCODE_SCI_DETAILS_MODE_THREED:
 		sci_ui.details_mode = new_details;
@@ -6839,6 +6931,18 @@ static int process_select_subscreen(void)
 		science_activate_waypoints_widgets();
 		ui_hide_widget(sci_ui.align_to_ship_button);
 		ui_hide_widget(sci_ui.sci_auto_sweep_button);
+		break;
+	case OPCODE_SUBSCREEN_TRANSPORTER:
+		fprintf(stderr, "Setting up widgets for transporter\n");
+		hide_engineering_widgets();
+		unhide_transporter_widgets();
+		eng_ui.subscreen = ENG_TRANSPORTER_SUBSCREEN;
+		break;
+	case OPCODE_SUBSCREEN_ENGINEERING:
+		fprintf(stderr, "Setting up widgets for engineering\n");
+		unhide_engineering_widgets();
+		hide_transporter_widgets();
+		eng_ui.subscreen = ENG_ENGINEERING_SUBSCREEN;
 		break;
 	default:
 		break;
@@ -15154,6 +15258,19 @@ static void damcon_button_pressed(__attribute__((unused)) void *x)
 	displaymode = DISPLAYMODE_DAMCON;
 }
 
+static void transporter_button_pressed(__attribute__((unused)) void *x)
+{
+	fprintf(stderr, "transporter button pressed\n");
+	queue_to_server(snis_opcode_pkt("bb", OPCODE_SELECT_SUBSCREEN,
+		(unsigned char) OPCODE_SUBSCREEN_TRANSPORTER));
+}
+
+static void engineering_button_pressed(__attribute__((unused)) void *x)
+{
+	queue_to_server(snis_opcode_pkt("bb", OPCODE_SELECT_SUBSCREEN,
+		(unsigned char) OPCODE_SUBSCREEN_ENGINEERING));
+}
+
 static void silence_alarms_pressed(__attribute__((unused)) void *x)
 {
 	struct snis_entity *o = find_my_ship();
@@ -15295,6 +15412,15 @@ static void init_engineering_ui(void)
 						color, NANO_FONT, silence_alarms_pressed, (void *) 0);
 	snis_button_set_sound(eu->silence_alarms, UISND13);
 	snis_button_set_hover_color(eu->silence_alarms, hover_color);
+	/* Engineering and transporter buttons occupy the same space on the screen, but only one is displayed */
+	eu->engineering_button = snis_button_init(txx(630), txy(520), -1, txy(25),
+						"ENGINEERING", color,
+						NANO_FONT, engineering_button_pressed, (void *) 0);
+	snis_button_set_hover_color(eu->engineering_button, hover_color);
+	eu->transporter_button = snis_button_init(txx(630), txy(520), -1, txy(25),
+						"TRANSPORTER CONTROL", color,
+						NANO_FONT, transporter_button_pressed, (void *) 0);
+	snis_button_set_hover_color(eu->transporter_button, hover_color);
 	eu->damcon_button = snis_button_init(txx(630), txy(550), -1, txy(25),
 						"DAMAGE CONTROL", color,
 						NANO_FONT, damcon_button_pressed, (void *) 0);
@@ -15435,6 +15561,10 @@ static void init_engineering_ui(void)
 				"INDICATES AMOUNT OF OXYGEN\n"
 				"REMAINING UNTIL DANGEROUSLY LOW");
 	ui_add_button(eu->damcon_button, dm, "SWITCH TO THE DAMAGE CONTROL SCREEN");
+	ui_add_button(eu->engineering_button, dm, "SWITCH TO THE ENGINEERING SCREEN");
+	ui_hide_widget(eng_ui.engineering_button);
+	ui_add_button(eu->transporter_button, dm, "SWITCH TO THE TRANSPORTER CONTROL SCREEN");
+	eu->subscreen = ENG_ENGINEERING_SUBSCREEN;
 	for (i = 0; i < ENG_PRESET_NUMBER; ++i) {
 		snprintf(preset_txt, sizeof(preset_txt), "SELECT ENGINEERING PRESET %d\n"
 			"PRESS AND HOLD FOR 2 SECONDS TO SAVE\n"
@@ -15626,6 +15756,20 @@ static int engineering_warnings_active(void)
 		snis_slider_alarm_triggered(eng_ui.maneuvering_damage) ||
 		snis_slider_alarm_triggered(eng_ui.tractor_damage) ||
 		snis_slider_alarm_triggered(eng_ui.lifesupport_damage);
+}
+
+static void show_transporter(void)
+{
+	struct snis_entity *o;
+
+	pthread_mutex_lock(&universe_mutex);
+	if (!(o = find_my_ship())) {
+		pthread_mutex_unlock(&universe_mutex);
+		return;
+	}
+	pthread_mutex_unlock(&universe_mutex);
+
+	show_common_screen("TRANSPORTER CONTROL");
 }
 
 static void show_engineering(void)
@@ -23533,7 +23677,14 @@ static int main_da_expose(SDL_Window *window)
 		show_manual_weapons();
 		break;
 	case DISPLAYMODE_ENGINEERING:
-		show_engineering();
+		switch (eng_ui.subscreen) {
+		case ENG_ENGINEERING_SUBSCREEN:
+			show_engineering();
+			break;
+		case ENG_TRANSPORTER_SUBSCREEN:
+			show_transporter();
+			break;
+		}
 		break;
 	case DISPLAYMODE_SCIENCE:
 		show_science();
