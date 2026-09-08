@@ -16139,7 +16139,7 @@ static int process_role_onscreen(struct game_client *c)
 	return 0;
 }
 
-static int process_sci_details(struct game_client *c)
+static int process_select_subscreen(struct game_client *c)
 {
 	unsigned char buffer[10];
 	uint8_t new_details;
@@ -16149,10 +16149,10 @@ static int process_sci_details(struct game_client *c)
 	if (rc)
 		return rc;
 	/* just turn it around and fan it out to all the right places */
-	if (new_details > 4)
+	if (new_details > OPCODE_MAX_SUBSCREEN)
 		new_details = 0;
 	send_packet_to_requestor_plus_role_on_a_bridge(c, 
-			snis_opcode_pkt("bb", OPCODE_SCI_DETAILS,
+			snis_opcode_pkt("bb", OPCODE_SELECT_SUBSCREEN,
 			new_details), ROLE_PROJECTOR);
 	return 0;
 }
@@ -25189,8 +25189,8 @@ static void process_instructions_from_client(struct game_client *c)
 			if (rc)
 				goto protocol_error;
 			break;
-		case OPCODE_SCI_DETAILS:
-			rc = process_sci_details(c);
+		case OPCODE_SELECT_SUBSCREEN:
+			rc = process_select_subscreen(c);
 			if (rc)
 				goto protocol_error;
 			break;
@@ -30914,15 +30914,15 @@ static void nl_shortlong_range_scan(struct snis_nl_context *ctx,
 		goto no_understand;
 
 	if (strcasecmp("long range scan", argv[verb]) == 0)
-		mode = SCI_DETAILS_MODE_THREED;
+		mode = OPCODE_SCI_DETAILS_MODE_THREED;
 	else if (strcasecmp("short range scan", argv[verb]) == 0)
-		mode = SCI_DETAILS_MODE_SCIPLANE;
+		mode = OPCODE_SCI_DETAILS_MODE_SCIPLANE;
 	else if (strcasecmp("details", argv[verb]) == 0)
-		mode = SCI_DETAILS_MODE_DETAILS;
+		mode = OPCODE_SCI_DETAILS_MODE_DETAILS;
 	else
 		goto no_understand;
 	send_packet_to_all_clients_on_a_bridge(c->shipid,
-			snis_opcode_pkt("bb", OPCODE_SCI_DETAILS, mode), ROLE_ALL | ROLE_SCIENCE);
+			snis_opcode_pkt("bb", OPCODE_SELECT_SUBSCREEN, mode), ROLE_ALL | ROLE_SCIENCE);
 	return;
 
 no_understand:

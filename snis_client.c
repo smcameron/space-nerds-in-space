@@ -6798,7 +6798,7 @@ static void science_deactivate_waypoints_widgets(void)
 	}
 }
 
-static int process_sci_details(void)
+static int process_select_subscreen(void)
 {
 	unsigned char buffer[10];
 	uint8_t new_details;
@@ -6807,34 +6807,40 @@ static int process_sci_details(void)
 	rc = read_and_unpack_buffer(buffer, "b", &new_details);
 	if (rc != 0)
 		return rc;
-	sci_ui.details_mode = new_details;
-	if (new_details == 0)
-		new_details = SCI_DETAILS_MODE_SCIPLANE;
 	switch (new_details) {
-	case SCI_DETAILS_MODE_THREED:
+	case OPCODE_SCI_DETAILS_MODE_THREED:
+		sci_ui.details_mode = new_details;
+		if (new_details == 0)
+			new_details = OPCODE_SCI_DETAILS_MODE_SCIPLANE;
 		science_deactivate_waypoints_widgets();
 		ui_unhide_widget(sci_ui.align_to_ship_button);
 		ui_hide_widget(sci_ui.sci_auto_sweep_button);
 		break;
-	case SCI_DETAILS_MODE_DETAILS:
+	case OPCODE_SCI_DETAILS_MODE_DETAILS:
+		sci_ui.details_mode = new_details;
+		if (new_details == 0)
+			new_details = OPCODE_SCI_DETAILS_MODE_SCIPLANE;
 		science_deactivate_waypoints_widgets();
 		ui_hide_widget(sci_ui.align_to_ship_button);
 		ui_hide_widget(sci_ui.sci_auto_sweep_button);
 		break;
-	case SCI_DETAILS_MODE_SCIPLANE:
+	case OPCODE_SCI_DETAILS_MODE_SCIPLANE:
+		sci_ui.details_mode = new_details;
+		if (new_details == 0)
+			new_details = OPCODE_SCI_DETAILS_MODE_SCIPLANE;
 		science_deactivate_waypoints_widgets();
 		ui_hide_widget(sci_ui.align_to_ship_button);
 		ui_unhide_widget(sci_ui.sci_auto_sweep_button);
 		break;
-	case SCI_DETAILS_MODE_WAYPOINTS:
+	case OPCODE_SCI_DETAILS_MODE_WAYPOINTS:
+		sci_ui.details_mode = new_details;
+		if (new_details == 0)
+			new_details = OPCODE_SCI_DETAILS_MODE_SCIPLANE;
 		science_activate_waypoints_widgets();
 		ui_hide_widget(sci_ui.align_to_ship_button);
 		ui_hide_widget(sci_ui.sci_auto_sweep_button);
 		break;
 	default:
-		science_deactivate_waypoints_widgets();
-		ui_hide_widget(sci_ui.align_to_ship_button);
-		ui_unhide_widget(sci_ui.sci_auto_sweep_button);
 		break;
 	}
 
@@ -8601,8 +8607,8 @@ static void *gameserver_reader(__attribute__((unused)) void *arg)
 		case OPCODE_SCI_SELECT_TARGET:
 			rc = process_sci_select_target_packet();
 			break;
-		case OPCODE_SCI_DETAILS:
-			rc = process_sci_details();
+		case OPCODE_SELECT_SUBSCREEN:
+			rc = process_select_subscreen();
 			break;
 		case OPCODE_UPDATE_DAMAGE:
 			rc = process_ship_damage_packet(1);
@@ -16019,14 +16025,14 @@ static void show_damcon(void)
 
 static void sci_details_pressed(__attribute__((unused)) void *x)
 {
-	queue_to_server(snis_opcode_pkt("bb", OPCODE_SCI_DETAILS,
-		(unsigned char) SCI_DETAILS_MODE_DETAILS));
+	queue_to_server(snis_opcode_pkt("bb", OPCODE_SELECT_SUBSCREEN,
+		(unsigned char) OPCODE_SCI_DETAILS_MODE_DETAILS));
 }
 
 static void sci_waypoints_pressed(__attribute__((unused)) void *x)
 {
-	queue_to_server(snis_opcode_pkt("bb", OPCODE_SCI_DETAILS,
-		(unsigned char) SCI_DETAILS_MODE_WAYPOINTS));
+	queue_to_server(snis_opcode_pkt("bb", OPCODE_SELECT_SUBSCREEN,
+		(unsigned char) OPCODE_SCI_DETAILS_MODE_WAYPOINTS));
 }
 
 static void sci_align_to_ship_pressed(__attribute__((unused)) void *x)
@@ -16057,14 +16063,14 @@ static void sci_auto_sweep_button_pressed(__attribute__((unused)) void *x)
 
 static void sci_threed_pressed(__attribute__((unused)) void *x)
 {
-	queue_to_server(snis_opcode_pkt("bb", OPCODE_SCI_DETAILS,
-		(unsigned char) SCI_DETAILS_MODE_THREED));
+	queue_to_server(snis_opcode_pkt("bb", OPCODE_SELECT_SUBSCREEN,
+		(unsigned char) OPCODE_SCI_DETAILS_MODE_THREED));
 }
 
 static void sci_sciplane_pressed(__attribute__((unused)) void *x)
 {
-	queue_to_server(snis_opcode_pkt("bb", OPCODE_SCI_DETAILS,
-		(unsigned char) SCI_DETAILS_MODE_SCIPLANE));
+	queue_to_server(snis_opcode_pkt("bb", OPCODE_SELECT_SUBSCREEN,
+		(unsigned char) OPCODE_SCI_DETAILS_MODE_SCIPLANE));
 }
 
 static void sci_tractor_pressed(__attribute__((unused)) void *x)
@@ -16289,7 +16295,7 @@ static void init_science_ui(void)
 	sciecx = entity_context_new(50, 50);
 	sciballecx = entity_context_new(5000, 1000);
 	sciplane_tween = tween_init(500);
-	sci_ui.details_mode = SCI_DETAILS_MODE_SCIPLANE;
+	sci_ui.details_mode = OPCODE_SCI_DETAILS_MODE_SCIPLANE;
 
 	for (i = 0; i < 3; i++) {
 		sci_ui.waypoint_input[i] =
@@ -17252,7 +17258,7 @@ static void science_mouse_rotate(int x, int y)
 	int finex = 2 * control_key_pressed;
 	int finey = 2 * control_key_pressed;
 
-	if (sci_ui.details_mode != SCI_DETAILS_MODE_THREED)
+	if (sci_ui.details_mode != OPCODE_SCI_DETAILS_MODE_THREED)
 		return;
 
 	/* get the distance the x and y coords are from the balls center */
@@ -17317,7 +17323,7 @@ static void science_mouse_click_rotate(int x, int y)
 	int8_t yawval, pitchval;
 	int i, yawcount, pitchcount;
 
-	if (sci_ui.details_mode != SCI_DETAILS_MODE_THREED)
+	if (sci_ui.details_mode != OPCODE_SCI_DETAILS_MODE_THREED)
 		return;
 	dx = x - SCIENCE_SCOPE_CX;
 	dy = y - SCIENCE_SCOPE_CY;
@@ -17363,7 +17369,7 @@ static void science_button_held(int button, int x, int y)
 
 	switch (button) {
 	case 2:
-		if (sci_ui.details_mode == SCI_DETAILS_MODE_THREED) {
+		if (sci_ui.details_mode == OPCODE_SCI_DETAILS_MODE_THREED) {
 			/* Throttle back the traffic to avoid flooding network */
 			if (timer % traffic_throttle != 0)
 				break;
@@ -17392,7 +17398,7 @@ static void science_button_release(int button, int x, int y)
 	}
 
 	/* In DETAILS mode showing a planet, check for clicks on city blips */
-	if (sci_ui.details_mode == SCI_DETAILS_MODE_DETAILS &&
+	if (sci_ui.details_mode == OPCODE_SCI_DETAILS_MODE_DETAILS &&
 		curr_science_guy && curr_science_guy->type == OBJTYPE_PLANET) {
 		struct snis_entity *closest_city = NULL;
 		int city_mindist = -1;
@@ -17851,7 +17857,7 @@ static void draw_science_waypoints(void)
 	int i;
 	int x, y;
 
-	if (sci_ui.details_mode != SCI_DETAILS_MODE_WAYPOINTS)
+	if (sci_ui.details_mode != OPCODE_SCI_DETAILS_MODE_WAYPOINTS)
 		return;
 	for (i = 0; i < sci_ui.nwaypoints; i++) {
 		ui_unhide_widget(sci_ui.clear_waypoint_button[i]);
@@ -18309,17 +18315,17 @@ static void show_science(void)
 			(current_zoom / 255.0) + MIN_SCIENCE_SCREEN_RADIUS;
 	sng_set_foreground(DARKGREEN); /* zzzz check this */
 	switch (sci_ui.details_mode) {
-	case SCI_DETAILS_MODE_SCIPLANE:
+	case OPCODE_SCI_DETAILS_MODE_SCIPLANE:
 		draw_sciplane_display(o, zoom);
 		break;
-	case SCI_DETAILS_MODE_WAYPOINTS:
+	case OPCODE_SCI_DETAILS_MODE_WAYPOINTS:
 		draw_science_waypoints();
 		break;
-	case SCI_DETAILS_MODE_DETAILS:
+	case OPCODE_SCI_DETAILS_MODE_DETAILS:
 		draw_science_details();
 		draw_science_data(o, curr_science_guy, curr_science_waypoint, curr_science_city);
 		break;
-	case SCI_DETAILS_MODE_THREED:
+	case OPCODE_SCI_DETAILS_MODE_THREED:
 		show_3d_science(o, current_zoom);
 		draw_science_data(o, curr_science_guy, curr_science_waypoint, curr_science_city);
 		break;

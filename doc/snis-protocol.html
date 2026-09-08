@@ -484,7 +484,7 @@ An authoritative list of opcodes may be found in snis_packet.h
 <tr><td>OPCODE_REQUEST_REVERSE</td><td>172</td></tr>
 <tr><td>OPCODE_UPDATE_LASERBEAM</td><td>173</td></tr>
 <tr><td>OPCODE_WEAP_SELECT_TARGET (not used)</td><td>174</td></tr>
-<tr><td>OPCODE_SCI_DETAILS</td><td>175</td></tr>
+<tr><td>OPCODE_SELECT_SUBSCREEN</td><td>175</td></tr>
 <tr><td>OPCODE_PROXIMITY_ALERT</td><td>176</td></tr>
 <tr><td>OPCODE_COLLISION_NOTIFICATION</td><td>177</td></tr>
 <tr><td>OPCODE_UPDATE_DERELICT</td><td>178</td></tr>
@@ -1795,16 +1795,24 @@ This is triggered via the Demon Screen. Allowable item types are:
 <tr><td>1</td><td>w</td><td>Object ID</td></tr>
 </table>
 
-<h4>175 Science Details</h4> (bidirectional)
+<h4>175 Select Subscreen</h4> (bidirectional)
 
-Initiated by the client and fanned out by the server to requestor
+<p>Initiated by the client and fanned out by the server to requestor
 client plus clients on the same bridge with role main.
 
 <p align=center><table border=1, width=60%>
 <tr><td>Offset</td><td>Data Type</td><td>Value</td><td>Scale</td></tr>
 <tr><td>0</td><td>b</td><td>175</td></tr>
-<tr><td>1</td><td>b</td><td>new science mode (0 = Long Range Scanner, 1 = Details, 2 = Short Range Scanner)</td></tr>
+<tr><td>1</td><td>b</td><td>New subscreen</td></tr>
 </table>
+
+<p>Values for new subscreen are:
+<ol>
+<li>SCIENCE: Long Range Scanner
+<li>SCIENCE: Details mode
+<li>SCIENCE: Short Range Scanners
+<li>SCIENCE: Waypoints
+</ol>
 
 <h4>176 Proximity Alert</h4> (Server to Client)
 <p align=center><table border=1, width=60%>

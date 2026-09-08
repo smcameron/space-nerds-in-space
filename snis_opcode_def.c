@@ -220,7 +220,7 @@ int snis_opcode_def_init(void)
 	rc |= init_opcode_def(OPCODE_REQUEST_REVERSE, "bwb");
 	rc |= init_opcode_def(OPCODE_UPDATE_LASERBEAM, "bwwww");
 	rc |= init_opcode_def(OPCODE_WEAP_SELECT_TARGET , "bw");
-	rc |= init_opcode_def(OPCODE_SCI_DETAILS, "bb");
+	rc |= init_opcode_def(OPCODE_SELECT_SUBSCREEN, "bb");
 	rc |= init_opcode_def(OPCODE_PROXIMITY_ALERT, "b");
 	rc |= init_opcode_def(OPCODE_COLLISION_NOTIFICATION, "b");
 	rc |= init_opcode_def(OPCODE_UPDATE_DERELICT, "bwwSSSbbbw");
