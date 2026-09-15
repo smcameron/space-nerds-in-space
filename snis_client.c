@@ -833,6 +833,16 @@ static struct snis_entity *prev_science_guy = NULL;
 static uint32_t curr_science_waypoint = (uint32_t) -1;
 static uint32_t prev_science_waypoint = (uint32_t) -1;
 
+/* Array tracking screen positions of cities shown in science details view */
+struct science_detail_city_data {
+	int sx, sy;
+	struct snis_entity *city;
+};
+#define MAX_SCIENCE_DETAIL_CITIES 20
+static struct science_detail_city_data science_detail_city[MAX_SCIENCE_DETAIL_CITIES];
+static int nscience_detail_cities = 0;
+
+
 static struct rts_planet_data {
 	uint16_t health;
 	uint32_t id;
@@ -11003,6 +11013,10 @@ static void science_menu_selection(void *x)
 	if (curr_science_guy != selected || curr_science_city != city)
 		request_sci_select_target(OPCODE_SCI_SELECT_TARGET_TYPE_OBJECT,
 						city ? city->id : selected->id);
+	else if (curr_science_city == city && city != NULL)
+		/* Deselecting city makes the selection go to the planet */
+		request_sci_select_target(OPCODE_SCI_SELECT_TARGET_TYPE_OBJECT,
+						city->tsd.city.parent_id);
 	else
 		request_sci_select_target(OPCODE_SCI_SELECT_TARGET_TYPE_OBJECT,
 						(uint32_t) -1); /* deselect */
@@ -17377,6 +17391,30 @@ static void science_button_release(int button, int x, int y)
 		return;
 	}
 
+	/* In DETAILS mode showing a planet, check for clicks on city blips */
+	if (sci_ui.details_mode == SCI_DETAILS_MODE_DETAILS &&
+		curr_science_guy && curr_science_guy->type == OBJTYPE_PLANET) {
+		struct snis_entity *closest_city = NULL;
+		int city_mindist = -1;
+		pthread_mutex_lock(&universe_mutex);
+		for (i = 0; i < nscience_detail_cities; i++) {
+			xdist = x - science_detail_city[i].sx;
+			ydist = y - science_detail_city[i].sy;
+			dist2 = xdist * xdist + ydist * ydist;
+			if (dist2 < SCIDIST2) {
+				if (dist2 < city_mindist || city_mindist == -1) {
+					closest_city = science_detail_city[i].city;
+					city_mindist = dist2;
+				}
+			}
+		}
+		pthread_mutex_unlock(&universe_mutex);
+		if (closest_city) {
+			science_menu_selection((void *) (intptr_t) closest_city->id);
+			return;
+		}
+	}
+
 	selected = NULL;
 	mindist = -1;
 	pthread_mutex_lock(&universe_mutex);
@@ -17930,6 +17968,8 @@ static void science_add_city(__attribute__((unused)) struct snis_entity *planet,
 
 	struct entity *e = add_entity(sciecx, m, p.v.x, p.v.y, p.v.z,
 			city == curr_science_city ? UI_COLOR(sci_selected_city) : UI_COLOR(sci_city));
+	if (e)
+		entity_set_user_data(e, city);
 	update_entity_scale(e, 0.05f);
 }
 
@@ -18017,6 +18057,33 @@ static void draw_science_details(void)
 					SCREEN_WIDTH, SCREEN_HEIGHT, ANGLE_OF_VIEW * M_PI / 180.0);
 		set_lighting(sciecx, -m->radius * 4, 0, m->radius);
 		render_entities(sciecx);
+		/* Record screen positions of city entities for mouse picking */
+		nscience_detail_cities = 0;
+		if (curr_science_guy->type == OBJTYPE_PLANET) {
+			int nents = get_entity_count(sciecx);
+			int j;
+			for (j = 0; j <= nents; j++) {
+				struct entity *ce = get_entity(sciecx, j);
+				struct snis_entity *city;
+				float sx, sy;
+				if (!ce)
+					continue;
+				city = entity_get_user_data(ce);
+				if (!city)
+					continue;
+				if (city->type != OBJTYPE_CITY)
+					continue;
+				if (!entity_onscreen(ce))
+					continue;
+				if (nscience_detail_cities >= MAX_SCIENCE_DETAIL_CITIES)
+					break;
+				entity_get_screen_coords(ce, &sx, &sy);
+				science_detail_city[nscience_detail_cities].sx = (int) sx;
+				science_detail_city[nscience_detail_cities].sy = (int) sy;
+				science_detail_city[nscience_detail_cities].city = city;
+				nscience_detail_cities++;
+			}
+		}
 	}
 	remove_all_entity(sciecx);
 
