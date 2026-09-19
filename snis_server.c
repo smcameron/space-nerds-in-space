@@ -12641,6 +12641,14 @@ static int add_cargo_container(double x, double y, double z, double vx, double v
 	go[i].tsd.cargo_container.contents.item = item;
 	go[i].tsd.cargo_container.contents.qty = qty;
 	go[i].tsd.cargo_container.persistent = persistent & 0xff;
+	{
+		static struct mtwist_state *mt = NULL;
+		if (!mt)
+			mt = mtwist_init(mtwist_seed);
+		transporter_tag_generate(mt,
+			go[i].tsd.cargo_container.transporter_tag,
+			TRANSPORTER_TAG_LEN);
+	}
 	return i;
 }
 
@@ -15024,6 +15032,8 @@ static void init_passenger(int i, int nstarbases)
 				"%s", dest->sdata.name);
 		passenger[i].fare = compute_fare(passenger[i].location, passenger[i].destination);
 	}
+	transporter_tag_generate(mt, passenger[i].transporter_tag,
+					TRANSPORTER_TAG_LEN);
 }
 
 static int count_starbases(void)

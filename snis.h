@@ -42,6 +42,7 @@
 
 #define DEFAULT_SOLAR_SYSTEM "default"
 #define SNIS_PROTOCOL_VERSION "SNIS072"
+#define TRANSPORTER_TAG_LEN 5
 #define COMMON_MTWIST_SEED 97872
 /* dimensions of the "known" universe */
 #define XKNOWN_DIM 600000.0
@@ -781,6 +782,7 @@ struct cargo_container_data {
 	union quat rotational_velocity;
 	struct cargo_container_contents contents;
 	uint8_t persistent;
+	char transporter_tag[TRANSPORTER_TAG_LEN + 1]; /* 5 chars + nul */
 };
 
 struct warp_effect_data {
@@ -1201,6 +1203,7 @@ struct passenger_data {
 	char destination_name[20];
 	uint32_t location, destination;
 	uint32_t fare;
+	char transporter_tag[TRANSPORTER_TAG_LEN + 1]; /* 5 chars + nul */
 };
 
 /* For waypoints that players can set */

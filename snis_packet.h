@@ -752,6 +752,7 @@ struct flattened_passenger {
 	char fare[20];
 	char dest[20]; /* usually matches sdata.name */
 	char solarsystem[20];
+	char transporter_tag[6]; /* TRANSPORTER_TAG_LEN + 1 */
 };
 
 #define DEMON_CONSOLE_MSG_MAX 80

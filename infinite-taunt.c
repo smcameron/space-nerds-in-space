@@ -1884,6 +1884,19 @@ void generate_crime(struct mtwist_state *mt, char *buffer, int buflen)
 	}
 }
 
+void transporter_tag_generate(struct mtwist_state *mt, char *tag, int taglen)
+{
+	/* Generate a tag using A-Z, 0-9 */
+	static const char charset[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+	int i;
+
+	if (taglen < 1)
+		return;
+	for (i = 0; i < taglen; i++)
+		tag[i] = charset[mtwist_next(mt) % (sizeof(charset) - 1)];
+	tag[taglen] = '\0';
+}
+
 #ifdef TEST_TAUNT
 #include "mtwist.h"
 #include <sys/time.h>
