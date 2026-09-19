@@ -920,6 +920,32 @@ set_passenger_destination(n, solarsystem, destination_name, fare)
 		destination does is not required to exist.
 	fare: The fare the player should get upon delivering the passenger.
 
+set_passenger_transporter_tag(name_or_index, tag) -- sets a passenger's transporter tag
+	Parameters:
+	name_or_index: string name of the passenger, or integer passenger number (0 - 80).
+	tag: 5-character string containing characters 'A'-'Z' or '0'-'9'.
+	Returns:
+	0 on success, -1 if passenger not found or index out of range.
+
+get_passenger_transporter_tag(name_or_index) -- gets a passenger's transporter tag
+	Parameters:
+	name_or_index: string name of the passenger, or integer passenger number (0 - 80).
+	Returns:
+	The 5-character transporter tag string, or nil if not found.
+
+set_cargo_container_transporter_tag(id, tag) -- sets a cargo container's transporter tag
+	Parameters:
+	id: number, the entity ID of the cargo container.
+	tag: 5-character string containing characters 'A'-'Z' or '0'-'9'.
+	Returns:
+	0 on success, -1 if not found or not a cargo container.
+
+get_cargo_container_transporter_tag(id) -- gets a cargo container's transporter tag
+	Parameters:
+	id: number, the entity ID of the cargo container.
+	Returns:
+	The 5-character transporter tag string, or nil if not found.
+
 set_planet_description(planet_id, description) -- set the description of a planet.
 	Parameters:
 	planet_id: number, the ID of the planet

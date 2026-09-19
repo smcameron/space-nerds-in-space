@@ -23135,6 +23135,146 @@ static int l_get_passenger_location(lua_State *l)
 	return 1;
 }
 
+static int set_passenger_transporter_tag_by_name(const char *name,
+						const char *tag)
+{
+	int i;
+
+	pthread_mutex_lock(&universe_mutex);
+	for (i = 0; i < npassengers; i++) {
+		if (strcasecmp(passenger[i].name, name) == 0) {
+			strlcpy(passenger[i].transporter_tag, tag,
+				sizeof(passenger[i].transporter_tag));
+			uppercase(passenger[i].transporter_tag);
+			pthread_mutex_unlock(&universe_mutex);
+			return 0;
+		}
+	}
+	pthread_mutex_unlock(&universe_mutex);
+	return -1;
+}
+
+static int set_passenger_transporter_tag_by_index(int p, const char *tag)
+{
+	if (p < 0 || p >= MAX_PASSENGERS)
+		return -1;
+	pthread_mutex_lock(&universe_mutex);
+	strlcpy(passenger[p].transporter_tag, tag,
+		sizeof(passenger[p].transporter_tag));
+	uppercase(passenger[p].transporter_tag);
+	pthread_mutex_unlock(&universe_mutex);
+	return 0;
+}
+
+static int set_cargo_container_transporter_tag_by_id(uint32_t id,
+						const char *tag)
+{
+	int i;
+
+	pthread_mutex_lock(&universe_mutex);
+	i = lookup_by_id(id);
+	if (i < 0 || go[i].type != OBJTYPE_CARGO_CONTAINER) {
+		pthread_mutex_unlock(&universe_mutex);
+		return -1;
+	}
+	strlcpy(go[i].tsd.cargo_container.transporter_tag, tag,
+		sizeof(go[i].tsd.cargo_container.transporter_tag));
+	uppercase(go[i].tsd.cargo_container.transporter_tag);
+	pthread_mutex_unlock(&universe_mutex);
+	return 0;
+}
+
+static int l_set_passenger_transporter_tag(lua_State *l)
+{
+	const char *tag;
+	int rc = -1;
+
+	if (lua_isnumber(l, 1)) {
+		int p = (int) lua_tonumber(l, 1);
+
+		tag = luaL_checkstring(l, 2);
+		rc = set_passenger_transporter_tag_by_index(p, tag);
+	} else if (lua_isstring(l, 1)) {
+		const char *name = lua_tostring(l, 1);
+
+		tag = luaL_checkstring(l, 2);
+		rc = set_passenger_transporter_tag_by_name(name, tag);
+	}
+	lua_pushnumber(l, rc);
+	return 1;
+}
+
+static int l_get_passenger_transporter_tag(lua_State *l)
+{
+	int i;
+	char tag[TRANSPORTER_TAG_LEN + 1];
+	int found = 0;
+
+	pthread_mutex_lock(&universe_mutex);
+	if (lua_isnumber(l, 1)) {
+		int p = (int) lua_tonumber(l, 1);
+
+		if (p >= 0 && p < MAX_PASSENGERS) {
+			strlcpy(tag, passenger[p].transporter_tag,
+				sizeof(tag));
+			found = 1;
+		}
+	} else if (lua_isstring(l, 1)) {
+		const char *name = lua_tostring(l, 1);
+
+		for (i = 0; i < npassengers; i++) {
+			if (strcasecmp(passenger[i].name, name) == 0) {
+				strlcpy(tag, passenger[i].transporter_tag,
+					sizeof(tag));
+				found = 1;
+				break;
+			}
+		}
+	}
+	pthread_mutex_unlock(&universe_mutex);
+
+	if (found) {
+		lua_pushstring(l, tag);
+		return 1;
+	}
+	lua_pushnil(l);
+	return 1;
+}
+
+static int l_set_cargo_container_transporter_tag(lua_State *l)
+{
+	uint32_t id = (uint32_t) luaL_checknumber(l, 1);
+	const char *tag = luaL_checkstring(l, 2);
+	int rc = set_cargo_container_transporter_tag_by_id(id, tag);
+
+	lua_pushnumber(l, rc);
+	return 1;
+}
+
+static int l_get_cargo_container_transporter_tag(lua_State *l)
+{
+	uint32_t id = (uint32_t) luaL_checknumber(l, 1);
+	int i;
+	char tag[TRANSPORTER_TAG_LEN + 1];
+	int found = 0;
+
+	pthread_mutex_lock(&universe_mutex);
+	i = lookup_by_id(id);
+	if (i >= 0 && go[i].type == OBJTYPE_CARGO_CONTAINER) {
+		strlcpy(tag, go[i].tsd.cargo_container.transporter_tag,
+			sizeof(tag));
+		found = 1;
+	}
+	pthread_mutex_unlock(&universe_mutex);
+
+	if (found) {
+		lua_pushstring(l, tag);
+		return 1;
+	}
+	lua_pushnil(l);
+	return 1;
+}
+
 static int l_set_planet_description(lua_State *l)
 {
 	const double planet_id = luaL_checknumber(l, 1);
@@ -23325,6 +23465,14 @@ static int l_create_passenger(lua_State *l)
 	snprintf(passenger[p].destination_name, sizeof(passenger[p].destination_name), "%s",
 				go[destination].sdata.name);
 	passenger[p].fare = fare;
+	{
+		static struct mtwist_state *mt;
+
+		if (!mt)
+			mt = mtwist_init(mtwist_seed);
+		transporter_tag_generate(mt, passenger[p].transporter_tag,
+					TRANSPORTER_TAG_LEN);
+	}
 	pthread_mutex_unlock(&universe_mutex);
 	return 0;
 }
@@ -27977,6 +28125,10 @@ static void setup_lua(void)
 	add_lua_callable_fn(l_set_passenger_location, "set_passenger_location");
 	add_lua_callable_fn(l_set_passenger_destination, "set_passenger_destination");
 	add_lua_callable_fn(l_get_passenger_location, "get_passenger_location");
+	add_lua_callable_fn(l_set_passenger_transporter_tag, "set_passenger_transporter_tag");
+	add_lua_callable_fn(l_get_passenger_transporter_tag, "get_passenger_transporter_tag");
+	add_lua_callable_fn(l_set_cargo_container_transporter_tag, "set_cargo_container_transporter_tag");
+	add_lua_callable_fn(l_get_cargo_container_transporter_tag, "get_cargo_container_transporter_tag");
 	add_lua_callable_fn(l_set_planet_description, "set_planet_description");
 	add_lua_callable_fn(l_set_planet_government, "set_planet_government");
 	add_lua_callable_fn(l_set_planet_tech_level, "set_planet_tech_level");
