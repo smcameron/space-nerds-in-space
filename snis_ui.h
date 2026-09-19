@@ -171,8 +171,8 @@ struct engineering_ui {
 	struct slider *impulse_coolant_slider;
 	struct slider *sensors_slider;
 	struct slider *sensors_coolant_slider;
-	struct slider *comm_slider;
-	struct slider *comm_coolant_slider;
+	struct slider *transporter_slider;
+	struct slider *transporter_coolant_slider;
 	struct slider *phaserbanks_slider;
 	struct slider *phaserbanks_coolant_slider;
 	struct slider *tractor_slider;
@@ -187,7 +187,7 @@ struct engineering_ui {
 	struct slider *maneuvering_damage;
 	struct slider *phaser_banks_damage;
 	struct slider *sensors_damage;
-	struct slider *comms_damage;
+	struct slider *transporter_damage;
 	struct slider *tractor_damage;
 	struct slider *lifesupport_damage;
 
@@ -197,7 +197,7 @@ struct engineering_ui {
 	struct slider *maneuvering_temperature;
 	struct slider *phaser_banks_temperature;
 	struct slider *sensors_temperature;
-	struct slider *comms_temperature;
+	struct slider *transporter_temperature;
 	struct slider *tractor_temperature;
 	struct slider *lifesupport_temperature;
 

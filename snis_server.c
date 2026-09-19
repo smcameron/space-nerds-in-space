@@ -2497,8 +2497,6 @@ static float comms_transmission_strength(struct snis_entity *transmitter, struct
 		quat_rot_vec_self(&antenna_dir, &transmitter->tsd.ship.current_hg_ant_orientation);
 		signal_strength = vec3_dot(&antenna_dir, &transmitter->tsd.ship.desired_hg_ant_aim) -
 					max_blocking_factor;
-		/* Account for comms power */
-		signal_strength *= 2.0 * (float) (transmitter->tsd.ship.power_data.comms.i) / 255.0;
 	} else {
 		signal_strength = 1.0 - max_blocking_factor;
 	}
@@ -3062,9 +3060,9 @@ static void calculate_torpedolike_damage(struct snis_entity *target, double weap
 			target->tsd.ship.damage.sensors_damage = roll_damage(d, 3 * twp, ss,
 					target->tsd.ship.damage.sensors_damage, DAMCON_TYPE_SENSORARRAY);
 			break;
-		case DAMCON_TYPE_COMMUNICATIONS:
-			target->tsd.ship.damage.comms_damage = roll_damage(d, 3 * twp, ss,
-					target->tsd.ship.damage.comms_damage, DAMCON_TYPE_COMMUNICATIONS);
+		case DAMCON_TYPE_TRANSPORTER:
+			target->tsd.ship.damage.transporter_damage = roll_damage(d, 3 * twp, ss,
+					target->tsd.ship.damage.transporter_damage, DAMCON_TYPE_TRANSPORTER);
 			break;
 		case DAMCON_TYPE_TRACTORSYSTEM:
 			target->tsd.ship.damage.tractor_damage = roll_damage(d, 3 * twp, ss,
@@ -3092,8 +3090,8 @@ static void calculate_torpedolike_damage(struct snis_entity *target, double weap
 				target->tsd.ship.damage.phaser_banks_damage, DAMCON_TYPE_PHASERBANK);
 		target->tsd.ship.damage.sensors_damage = roll_damage(d, twp, ss,
 				target->tsd.ship.damage.sensors_damage, DAMCON_TYPE_SENSORARRAY);
-		target->tsd.ship.damage.comms_damage = roll_damage(d, twp, ss,
-				target->tsd.ship.damage.comms_damage, DAMCON_TYPE_COMMUNICATIONS);
+		target->tsd.ship.damage.transporter_damage = roll_damage(d, twp, ss,
+				target->tsd.ship.damage.transporter_damage, DAMCON_TYPE_TRANSPORTER);
 		target->tsd.ship.damage.tractor_damage = roll_damage(d, twp, ss,
 				target->tsd.ship.damage.tractor_damage, DAMCON_TYPE_TRACTORSYSTEM);
 		target->tsd.ship.damage.lifesupport_damage = roll_damage(d, twp, ss,
@@ -3174,8 +3172,8 @@ static void calculate_laser_damage(struct snis_entity *o, uint8_t wavelength, fl
 		o->respawn_time = universe_timestamp + player_respawn_time * 10;
 		o->alive = 0;
 	}
-	if (o->type == OBJTYPE_BRIDGE) { /* small fraction of time reboot terminals if comms has damage */
-		if (o->tsd.ship.damage.comms_damage >= 20 && snis_randn(1000) < damage_reboot_chance)
+	if (o->type == OBJTYPE_BRIDGE) { /* small fraction of time reboot terminals if transporter has damage */
+		if (o->tsd.ship.damage.transporter_damage >= 20 && snis_randn(1000) < damage_reboot_chance)
 			reboot_random_terminals(o);
 	}
 }
@@ -7984,7 +7982,7 @@ static int robot_collision_detect(struct snis_damcon_entity *o,
 				break;
 			case DAMCON_TYPE_WARPDRIVE:
 			case DAMCON_TYPE_SENSORARRAY:
-			case DAMCON_TYPE_COMMUNICATIONS:
+			case DAMCON_TYPE_TRANSPORTER:
 			case DAMCON_TYPE_PHASERBANK:
 			case DAMCON_TYPE_IMPULSE:
 			case DAMCON_TYPE_MANEUVERING:
@@ -8674,7 +8672,7 @@ static void do_power_model_computations(struct snis_entity *o)
 #define PHASERS_POWER_DEVICE 2
 #define MANEUVERING_POWER_DEVICE 3
 #define SHIELDS_POWER_DEVICE 4
-#define COMMS_POWER_DEVICE 5
+#define TRANSPORTER_POWER_DEVICE 5
 #define IMPULSE_POWER_DEVICE 6
 #define TRACTOR_POWER_DEVICE 7
 #define LIFESUPPORT_POWER_DEVICE 8
@@ -8702,9 +8700,9 @@ static void do_power_model_computations(struct snis_entity *o)
 	power_device_set_damage(device, (float) o->tsd.ship.damage.shield_damage / 255.0f);
 	o->tsd.ship.power_data.shields.i = device_power_byte_form(device);
 
-	device = power_model_get_device(m, COMMS_POWER_DEVICE);
-	power_device_set_damage(device, (float) o->tsd.ship.damage.comms_damage / 255.0f);
-	o->tsd.ship.power_data.comms.i = device_power_byte_form(device);
+	device = power_model_get_device(m, TRANSPORTER_POWER_DEVICE);
+	power_device_set_damage(device, (float) o->tsd.ship.damage.transporter_damage / 255.0f);
+	o->tsd.ship.power_data.transporter.i = device_power_byte_form(device);
 
 	device = power_model_get_device(m, IMPULSE_POWER_DEVICE);
 	power_device_set_damage(device, (float) o->tsd.ship.damage.impulse_damage / 255.0f);
@@ -8744,8 +8742,8 @@ static void do_coolant_model_computations(struct snis_entity *o)
 	device = power_model_get_device(m, SHIELDS_POWER_DEVICE);
 	o->tsd.ship.coolant_data.shields.i = device_power_byte_form(device);
 
-	device = power_model_get_device(m, COMMS_POWER_DEVICE);
-	o->tsd.ship.coolant_data.comms.i = device_power_byte_form(device);
+	device = power_model_get_device(m, TRANSPORTER_POWER_DEVICE);
+	o->tsd.ship.coolant_data.transporter.i = device_power_byte_form(device);
 
 	device = power_model_get_device(m, IMPULSE_POWER_DEVICE);
 	o->tsd.ship.coolant_data.impulse.i = device_power_byte_form(device);
@@ -8817,9 +8815,9 @@ static void do_temperature_computations(struct snis_entity *o)
 	calc_temperature_change(o->tsd.ship.power_data.shields.i,
 			o->tsd.ship.coolant_data.shields.i,
 			&o->tsd.ship.temperature_data.shield_damage);
-	calc_temperature_change(o->tsd.ship.power_data.comms.i,
-			o->tsd.ship.coolant_data.comms.i,
-			&o->tsd.ship.temperature_data.comms_damage);
+	calc_temperature_change(o->tsd.ship.power_data.transporter.i,
+			o->tsd.ship.coolant_data.transporter.i,
+			&o->tsd.ship.temperature_data.transporter_damage);
 	calc_temperature_change(o->tsd.ship.power_data.impulse.i,
 			o->tsd.ship.coolant_data.impulse.i,
 			&o->tsd.ship.temperature_data.impulse_damage);
@@ -8917,8 +8915,8 @@ static int do_overheating_damage(struct snis_entity *o)
 			o->tsd.ship.temperature_data.maneuvering_damage);
 	damage_was_done += calc_overheat_damage(o, d, &o->tsd.ship.damage.shield_damage,
 			o->tsd.ship.temperature_data.shield_damage);
-	damage_was_done += calc_overheat_damage(o, d, &o->tsd.ship.damage.comms_damage,
-			o->tsd.ship.temperature_data.comms_damage);
+	damage_was_done += calc_overheat_damage(o, d, &o->tsd.ship.damage.transporter_damage,
+			o->tsd.ship.temperature_data.transporter_damage);
 	damage_was_done += calc_overheat_damage(o, d, &o->tsd.ship.damage.impulse_damage,
 			o->tsd.ship.temperature_data.impulse_damage);
 	damage_was_done += calc_overheat_damage(o, d, &o->tsd.ship.damage.tractor_damage,
@@ -9124,7 +9122,7 @@ static void set_nominal_coolant_and_power_levels(struct snis_entity *o)
 	o->tsd.ship.coolant_data.warp.r2 = 128;
 	o->tsd.ship.coolant_data.impulse.r2 = 128;
 	o->tsd.ship.coolant_data.sensors.r2 = 128;
-	o->tsd.ship.coolant_data.comms.r2 = 128;
+	o->tsd.ship.coolant_data.transporter.r2 = 128;
 	o->tsd.ship.coolant_data.phasers.r2 = 128;
 	o->tsd.ship.coolant_data.shields.r2 = 128;
 	o->tsd.ship.coolant_data.tractor.r2 = 128;
@@ -10179,7 +10177,7 @@ static int do_sunburn_damage(struct snis_entity *o)
 			(uint8_t) (sunburn * 255.0));
 	damage_was_done += calc_sunburn_damage(o, d, &o->tsd.ship.damage.shield_damage,
 			(uint8_t) (sunburn * 255.0));
-	damage_was_done += calc_sunburn_damage(o, d, &o->tsd.ship.damage.comms_damage,
+	damage_was_done += calc_sunburn_damage(o, d, &o->tsd.ship.damage.transporter_damage,
 			(uint8_t) (sunburn * 255.0));
 	damage_was_done += calc_sunburn_damage(o, d, &o->tsd.ship.damage.warp_damage,
 			(uint8_t) (sunburn * 255.0));
@@ -10326,7 +10324,7 @@ deselect:
 
 static void maybe_reboot_terminals(struct snis_entity *player_ship)
 {
-	if (player_ship->tsd.ship.damage.comms_damage < 150)
+	if (player_ship->tsd.ship.damage.transporter_damage < 150)
 		return;
 	if (snis_randn(60 * 10 * 4) != 5) /* About once every 4 minutes reboot some stuff */
 		return;
@@ -11074,7 +11072,7 @@ static void rollup_damcon_systems_into_overall_damage(struct snis_entity *o, str
 	o->tsd.ship.damage.maneuvering_damage = (uint8_t) (new_damage[3] / DAMCON_PARTS_PER_SYSTEM);
 	o->tsd.ship.damage.phaser_banks_damage = (uint8_t) (new_damage[4] / DAMCON_PARTS_PER_SYSTEM);
 	o->tsd.ship.damage.sensors_damage = (uint8_t) (new_damage[5] / DAMCON_PARTS_PER_SYSTEM);
-	o->tsd.ship.damage.comms_damage = (uint8_t) (new_damage[6] / DAMCON_PARTS_PER_SYSTEM);
+	o->tsd.ship.damage.transporter_damage = (uint8_t) (new_damage[6] / DAMCON_PARTS_PER_SYSTEM);
 	o->tsd.ship.damage.tractor_damage = (uint8_t) (new_damage[7] / DAMCON_PARTS_PER_SYSTEM);
 	o->tsd.ship.damage.lifesupport_damage = (uint8_t) (new_damage[8] / DAMCON_PARTS_PER_SYSTEM);
 }
@@ -11492,9 +11490,9 @@ DECLARE_POWER_MODEL_SAMPLER(maneuvering, power_data, r3) /* declares sample_powe
 DECLARE_POWER_MODEL_SAMPLER(shields, power_data, r1) /* declares sample_power_data_shields_r1 */
 DECLARE_POWER_MODEL_SAMPLER(shields, power_data, r2) /* declares sample_power_data_shields_r2 */
 DECLARE_POWER_MODEL_SAMPLER(shields, power_data, r3) /* declares sample_power_data_shields_r3 */
-DECLARE_POWER_MODEL_SAMPLER(comms, power_data, r1) /* declares sample_power_data_comms_r1 */
-DECLARE_POWER_MODEL_SAMPLER(comms, power_data, r2) /* declares sample_power_data_comms_r2 */
-DECLARE_POWER_MODEL_SAMPLER(comms, power_data, r3) /* declares sample_power_data_comms_r3 */
+DECLARE_POWER_MODEL_SAMPLER(transporter, power_data, r1) /* declares sample_power_data_transporter_r1 */
+DECLARE_POWER_MODEL_SAMPLER(transporter, power_data, r2) /* declares sample_power_data_transporter_r2 */
+DECLARE_POWER_MODEL_SAMPLER(transporter, power_data, r3) /* declares sample_power_data_transporter_r3 */
 DECLARE_POWER_MODEL_SAMPLER(impulse, power_data, r1) /* declares sample_power_data_impulse_r1 */
 DECLARE_POWER_MODEL_SAMPLER(impulse, power_data, r2) /* declares sample_power_data_impulse_r2 */
 DECLARE_POWER_MODEL_SAMPLER(impulse, power_data, r3) /* declares sample_power_data_impulse_r3 */
@@ -11520,9 +11518,9 @@ DECLARE_POWER_MODEL_SAMPLER(maneuvering, coolant_data, r3) /* declares sample_co
 DECLARE_POWER_MODEL_SAMPLER(shields, coolant_data, r1) /* declares sample_coolant_data_shields_r1 */
 DECLARE_POWER_MODEL_SAMPLER(shields, coolant_data, r2) /* declares sample_coolant_data_shields_r2 */
 DECLARE_POWER_MODEL_SAMPLER(shields, coolant_data, r3) /* declares sample_coolant_data_shields_r3 */
-DECLARE_POWER_MODEL_SAMPLER(comms, coolant_data, r1) /* declares sample_coolant_data_comms_r1 */
-DECLARE_POWER_MODEL_SAMPLER(comms, coolant_data, r2) /* declares sample_coolant_data_comms_r2 */
-DECLARE_POWER_MODEL_SAMPLER(comms, coolant_data, r3) /* declares sample_coolant_data_comms_r3 */
+DECLARE_POWER_MODEL_SAMPLER(transporter, coolant_data, r1) /* declares sample_coolant_data_transporter_r1 */
+DECLARE_POWER_MODEL_SAMPLER(transporter, coolant_data, r2) /* declares sample_coolant_data_transporter_r2 */
+DECLARE_POWER_MODEL_SAMPLER(transporter, coolant_data, r3) /* declares sample_coolant_data_transporter_r3 */
 DECLARE_POWER_MODEL_SAMPLER(impulse, coolant_data, r1) /* declares sample_coolant_data_impulse_r1 */
 DECLARE_POWER_MODEL_SAMPLER(impulse, coolant_data, r2) /* declares sample_coolant_data_impulse_r2 */
 DECLARE_POWER_MODEL_SAMPLER(impulse, coolant_data, r3) /* declares sample_coolant_data_impulse_r3 */
@@ -11596,11 +11594,11 @@ static void init_power_model(struct snis_entity *o)
 	d = new_power_device(o, POWERFUNCS(shields));
 	power_model_add_device(pm, d);
 
-	/* Comms */
-	pd->comms.r1 = 255;
-	pd->comms.r2 = 0;
-	pd->comms.r3 = 200;
-	d = new_power_device(o, POWERFUNCS(comms));
+	/* Transporter */
+	pd->transporter.r1 = 255;
+	pd->transporter.r2 = 0;
+	pd->transporter.r3 = 200;
+	d = new_power_device(o, POWERFUNCS(transporter));
 	power_model_add_device(pm, d);
 
 	/* Impulse */
@@ -11675,11 +11673,11 @@ static void init_coolant_model(struct snis_entity *o)
 	d = new_power_device(o, COOLANTFUNCS(shields));
 	power_model_add_device(pm, d);
 
-	/* Comms */
-	pd->comms.r1 = 255;
-	pd->comms.r2 = 0;
-	pd->comms.r3 = 200;
-	d = new_power_device(o, COOLANTFUNCS(comms));
+	/* Transporter */
+	pd->transporter.r1 = 255;
+	pd->transporter.r2 = 0;
+	pd->transporter.r3 = 200;
+	d = new_power_device(o, COOLANTFUNCS(transporter));
 	power_model_add_device(pm, d);
 
 	/* Impulse */
@@ -15190,7 +15188,7 @@ static int inside_damcon_system(struct damcon_data *d, int x, int y)
 		case DAMCON_TYPE_MANEUVERING:
 		case DAMCON_TYPE_PHASERBANK:
 		case DAMCON_TYPE_SENSORARRAY:
-		case DAMCON_TYPE_COMMUNICATIONS:
+		case DAMCON_TYPE_TRANSPORTER:
 		case DAMCON_TYPE_TRACTORSYSTEM:
 		case DAMCON_TYPE_REPAIR_STATION:
 			break;
@@ -15277,8 +15275,8 @@ static void add_damcon_systems(struct damcon_data *d)
 	add_damcon_sockets(d, x, y, DAMCON_TYPE_SENSORARRAY, 1);
 	y += dy;
 	d->o[i].version++;
-	i = add_generic_damcon_object(d, x, y, DAMCON_TYPE_COMMUNICATIONS, NULL);
-	add_damcon_sockets(d, x, y, DAMCON_TYPE_COMMUNICATIONS, 1);
+	i = add_generic_damcon_object(d, x, y, DAMCON_TYPE_TRANSPORTER, NULL);
+	add_damcon_sockets(d, x, y, DAMCON_TYPE_TRANSPORTER, 1);
 	x = 2 * DAMCONXDIM / 3 - DAMCONXDIM / 2;
 	y = dy - DAMCONYDIM / 2;
 	d->o[i].version++;
@@ -21316,11 +21314,12 @@ static int l_set_player_damage(lua_State *l)
 		system_number = DAMCON_TYPE_SENSORARRAY;
 		goto distribute_damage;
 	}
-	if (strncmp(system, "comms", 5) == 0) {
+	if (strncmp(system, "transporter", 11) == 0 ||
+	    strncmp(system, "comms", 5) == 0) {
 		damage_delta =
-			(int) bvalue - (int) o->tsd.ship.damage.comms_damage;
-		o->tsd.ship.damage.comms_damage = bvalue;
-		system_number = DAMCON_TYPE_COMMUNICATIONS;
+			(int) bvalue - (int) o->tsd.ship.damage.transporter_damage;
+		o->tsd.ship.damage.transporter_damage = bvalue;
+		system_number = DAMCON_TYPE_TRANSPORTER;
 		goto distribute_damage;
 	}
 	if (strncmp(system, "tractor", 7) == 0) {
@@ -21430,8 +21429,9 @@ static int l_get_player_damage(lua_State *l)
 		bvalue = o->tsd.ship.damage.sensors_damage;
 		goto done;
 	}
-	if (strncmp(system, "comms", 5) == 0) {
-		bvalue = o->tsd.ship.damage.comms_damage;
+	if (strncmp(system, "transporter", 11) == 0 ||
+	    strncmp(system, "comms", 5) == 0) {
+		bvalue = o->tsd.ship.damage.transporter_damage;
 		goto done;
 	}
 	if (strncmp(system, "tractor", 7) == 0) {
@@ -24052,9 +24052,9 @@ static int process_adjust_control_input(struct game_client *c)
 	case OPCODE_ADJUST_CONTROL_PHASERBANKS_PWR:
 		return process_adjust_control_bytevalue(c, id,
 			offsetof(struct snis_entity, tsd.ship.power_data.phasers.r2), v, no_limit);
-	case OPCODE_ADJUST_CONTROL_COMMS_PWR:
+	case OPCODE_ADJUST_CONTROL_TRANSPORTER_PWR:
 		return process_adjust_control_bytevalue(c, id,
-			offsetof(struct snis_entity, tsd.ship.power_data.comms.r2), v, no_limit);
+			offsetof(struct snis_entity, tsd.ship.power_data.transporter.r2), v, no_limit);
 	case OPCODE_ADJUST_CONTROL_MANEUVERING_COOLANT:
 		return process_adjust_control_bytevalue(c, id,
 			offsetof(struct snis_entity, tsd.ship.coolant_data.maneuvering.r2), v, no_limit);
@@ -24079,9 +24079,9 @@ static int process_adjust_control_input(struct game_client *c)
 	case OPCODE_ADJUST_CONTROL_PHASERBANKS_COOLANT:
 		return process_adjust_control_bytevalue(c, id,
 			offsetof(struct snis_entity, tsd.ship.coolant_data.phasers.r2), v, no_limit);
-	case OPCODE_ADJUST_CONTROL_COMMS_COOLANT:
+	case OPCODE_ADJUST_CONTROL_TRANSPORTER_COOLANT:
 		return process_adjust_control_bytevalue(c, id,
-			offsetof(struct snis_entity, tsd.ship.coolant_data.comms.r2), v, no_limit);
+			offsetof(struct snis_entity, tsd.ship.coolant_data.transporter.r2), v, no_limit);
 	case OPCODE_ADJUST_CONTROL_EXTERIOR_LIGHTS:
 		return process_adjust_control_bytevalue(c, id,
 			offsetof(struct snis_entity, tsd.ship.exterior_lights), v, no_limit);
@@ -24136,7 +24136,7 @@ static int process_save_engineering_preset(struct game_client *c)
 	bd->engineering_preset[preset][1] = go[i].tsd.ship.power_data.warp.r2;
 	bd->engineering_preset[preset][2] = go[i].tsd.ship.power_data.impulse.r2;
 	bd->engineering_preset[preset][3] = go[i].tsd.ship.power_data.sensors.r2;
-	bd->engineering_preset[preset][4] = go[i].tsd.ship.power_data.comms.r2;
+	bd->engineering_preset[preset][4] = go[i].tsd.ship.power_data.transporter.r2;
 	bd->engineering_preset[preset][5] = go[i].tsd.ship.power_data.phasers.r2;
 	bd->engineering_preset[preset][6] = go[i].tsd.ship.power_data.shields.r2;
 	bd->engineering_preset[preset][7] = go[i].tsd.ship.power_data.tractor.r2;
@@ -24145,7 +24145,7 @@ static int process_save_engineering_preset(struct game_client *c)
 	bd->engineering_preset[preset][10] = go[i].tsd.ship.coolant_data.warp.r2;
 	bd->engineering_preset[preset][11] = go[i].tsd.ship.coolant_data.impulse.r2;
 	bd->engineering_preset[preset][12] = go[i].tsd.ship.coolant_data.sensors.r2;
-	bd->engineering_preset[preset][13] = go[i].tsd.ship.coolant_data.comms.r2;
+	bd->engineering_preset[preset][13] = go[i].tsd.ship.coolant_data.transporter.r2;
 	bd->engineering_preset[preset][14] = go[i].tsd.ship.coolant_data.phasers.r2;
 	bd->engineering_preset[preset][15] = go[i].tsd.ship.coolant_data.shields.r2;
 	bd->engineering_preset[preset][16] = go[i].tsd.ship.coolant_data.tractor.r2;
@@ -24185,7 +24185,7 @@ static int process_apply_engineering_preset(struct game_client *c)
 	go[i].tsd.ship.power_data.warp.r2		= bd->engineering_preset[preset][1];
 	go[i].tsd.ship.power_data.impulse.r2		= bd->engineering_preset[preset][2];
 	go[i].tsd.ship.power_data.sensors.r2		= bd->engineering_preset[preset][3];
-	go[i].tsd.ship.power_data.comms.r2		= bd->engineering_preset[preset][4];
+	go[i].tsd.ship.power_data.transporter.r2	= bd->engineering_preset[preset][4];
 	go[i].tsd.ship.power_data.phasers.r2		= bd->engineering_preset[preset][5];
 	go[i].tsd.ship.power_data.shields.r2		= bd->engineering_preset[preset][6];
 	go[i].tsd.ship.power_data.tractor.r2		= bd->engineering_preset[preset][7];
@@ -24194,7 +24194,7 @@ static int process_apply_engineering_preset(struct game_client *c)
 	go[i].tsd.ship.coolant_data.warp.r2		= bd->engineering_preset[preset][10];
 	go[i].tsd.ship.coolant_data.impulse.r2		= bd->engineering_preset[preset][11];
 	go[i].tsd.ship.coolant_data.sensors.r2		= bd->engineering_preset[preset][12];
-	go[i].tsd.ship.coolant_data.comms.r2		= bd->engineering_preset[preset][13];
+	go[i].tsd.ship.coolant_data.transporter.r2	= bd->engineering_preset[preset][13];
 	go[i].tsd.ship.coolant_data.phasers.r2		= bd->engineering_preset[preset][14];
 	go[i].tsd.ship.coolant_data.shields.r2		= bd->engineering_preset[preset][15];
 	go[i].tsd.ship.coolant_data.tractor.r2		= bd->engineering_preset[preset][16];
@@ -28460,6 +28460,15 @@ static void init_synonyms(struct snis_nl_context *ctx)
 	snis_nl_add_synonym(ctx, "impulse coolant", "impulse drive coolant");
 	snis_nl_add_synonym(ctx, "docking magnets", "docking system");
 	snis_nl_add_synonym(ctx, "comms", "communications");
+	snis_nl_add_synonym(ctx, "transporters", "transporter");
+	snis_nl_add_synonym(ctx, "teleporter", "transporter");
+	snis_nl_add_synonym(ctx, "teleporters", "transporter");
+	snis_nl_add_synonym(ctx, "transporters power", "transporter power");
+	snis_nl_add_synonym(ctx, "teleporter power", "transporter power");
+	snis_nl_add_synonym(ctx, "teleporters power", "transporter power");
+	snis_nl_add_synonym(ctx, "transporters coolant", "transporter coolant");
+	snis_nl_add_synonym(ctx, "teleporter coolant", "transporter coolant");
+	snis_nl_add_synonym(ctx, "teleporters coolant", "transporter coolant");
 	snis_nl_add_synonym(ctx, "counter clockwise", "counterclockwise");
 	snis_nl_add_synonym(ctx, "counter-clockwise", "counterclockwise");
 	snis_nl_add_synonym(ctx, "anti clockwise", "counterclockwise");
@@ -29554,9 +29563,9 @@ static void nl_set_sensor_power(struct game_client *c, char *word, float fractio
 	nl_set_controllable_byte_value(c, word, fraction, offset, no_limit);
 }
 
-static void nl_set_comms_power(struct game_client *c, char *word, float fraction)
+static void nl_set_transporter_power(struct game_client *c, char *word, float fraction)
 {
-	int offset = offsetof(struct snis_entity, tsd.ship.power_data.comms.r2);
+	int offset = offsetof(struct snis_entity, tsd.ship.power_data.transporter.r2);
 	nl_set_controllable_byte_value(c, word, fraction, offset, no_limit);
 }
 
@@ -29614,9 +29623,9 @@ static void nl_set_sensor_coolant(struct game_client *c, char *word, float fract
 	nl_set_controllable_byte_value(c, word, fraction, offset, no_limit);
 }
 
-static void nl_set_comms_coolant(struct game_client *c, char *word, float fraction)
+static void nl_set_transporter_coolant(struct game_client *c, char *word, float fraction)
 {
-	int offset = offsetof(struct snis_entity, tsd.ship.coolant_data.comms.r2);
+	int offset = offsetof(struct snis_entity, tsd.ship.coolant_data.transporter.r2);
 	nl_set_controllable_byte_value(c, word, fraction, offset, no_limit);
 }
 
@@ -29731,7 +29740,7 @@ static struct settable_thing_entry {
 	{ "maneuvering", nl_set_maneuvering_power, },
 	{ "sensors", nl_set_sensor_power, },
 	{ "sensor", nl_set_sensor_power, },
-	{ "communications", nl_set_comms_power, },
+	{ "transporter", nl_set_transporter_power, },
 	{ "phasers", nl_set_phaser_power, },
 	{ "shields", nl_set_shield_power, },
 	{ "tractor beam", nl_set_tractor_power, },
@@ -29747,7 +29756,7 @@ static struct settable_thing_entry nl_settable_coolant_thing[] = {
 	{ "maneuvering", nl_set_maneuvering_coolant, },
 	{ "sensors", nl_set_sensor_coolant, },
 	{ "sensor", nl_set_sensor_coolant, },
-	{ "communications", nl_set_comms_coolant, },
+	{ "transporter", nl_set_transporter_coolant, },
 	{ "phasers", nl_set_phaser_coolant, },
 	{ "shields", nl_set_shield_coolant, },
 	{ "tractor beam", nl_set_tractor_coolant, },
@@ -29763,7 +29772,7 @@ static struct settable_thing_entry nl_settable_thing[] = {
 	{ "impulse drive power", nl_set_impulse_power, },
 	{ "warp drive power", nl_set_warp_power, },
 	{ "sensor power", nl_set_sensor_power, },
-	{ "communications power", nl_set_comms_power, },
+	{ "transporter power", nl_set_transporter_power, },
 	{ "phaser power", nl_set_phaser_power, },
 	{ "weapons power", nl_set_phaser_power, },
 	{ "weapon power", nl_set_phaser_power, },
@@ -29775,7 +29784,7 @@ static struct settable_thing_entry nl_settable_thing[] = {
 	{ "impulse drive coolant", nl_set_impulse_coolant, },
 	{ "warp drive coolant", nl_set_warp_coolant, },
 	{ "sensor coolant", nl_set_sensor_coolant, },
-	{ "communications coolant", nl_set_comms_coolant, },
+	{ "transporter coolant", nl_set_transporter_coolant, },
 	{ "phaser coolant", nl_set_phaser_coolant, },
 	{ "weapons coolant", nl_set_phaser_coolant, },
 	{ "weapon coolant", nl_set_phaser_coolant, },
@@ -31090,8 +31099,8 @@ static void nl_damage_report(struct snis_nl_context *ctx,
 	snprintf(dr[2].system, sizeof(dr[2].system), "Warp drive");
 	dr[3].percent = (int) (100.0 * (1.0 - (float) o->tsd.ship.damage.phaser_banks_damage / 255.0));
 	snprintf(dr[3].system, sizeof(dr[3].system), "Phasers");
-	dr[4].percent = (int) (100.0 * (1.0 - (float) o->tsd.ship.damage.comms_damage / 255.0));
-	snprintf(dr[4].system, sizeof(dr[4].system), "Communications");
+	dr[4].percent = (int) (100.0 * (1.0 - (float) o->tsd.ship.damage.transporter_damage / 255.0));
+	snprintf(dr[4].system, sizeof(dr[4].system), "Transporter");
 	dr[5].percent = (int) (100.0 * (1.0 - (float) o->tsd.ship.damage.sensors_damage / 255.0));
 	snprintf(dr[5].system, sizeof(dr[5].system), "Sensors");
 	dr[6].percent = (int) (100.0 * (1.0 - (float) o->tsd.ship.damage.shield_damage / 255.0));
@@ -31420,10 +31429,10 @@ static const struct nl_test_case_entry {
 	{ "set sensor coolant to maximum", 0, },
 	{ "set tractor beam power to max", 0, },
 	{ "set tractor beam coolant to 100", 0, },
-	{ "set communications power to 100", 0, },
-	{ "set communications coolant to 100", 0, },
-	{ "set comms power to 100", 0, },
-	{ "set comms coolant to 100", 0, },
+	{ "set transporter power to 100", 0, },
+	{ "set transporter coolant to 100", 0, },
+	{ "set teleporter power to 100", 0, },
+	{ "set teleporter coolant to 100", 0, },
 	{ "set phaser power to 100", 0, },
 	{ "set phaser coolant to 100", 0, },
 	{ "set shields power to 100", 0, },
@@ -31712,7 +31721,7 @@ static void init_dictionary(struct snis_nl_context *ctx)
 	snis_nl_add_dictionary_word(ctx, "impulse drive power", "impulse drive power",	POS_NOUN);
 	snis_nl_add_dictionary_word(ctx, "sensor power", "sensor power",	POS_NOUN);
 	snis_nl_add_dictionary_word(ctx, "sensors power", "sensor power",	POS_NOUN);
-	snis_nl_add_dictionary_word(ctx, "communications power", "communications power",	POS_NOUN);
+	snis_nl_add_dictionary_word(ctx, "transporter power", "transporter power",	POS_NOUN);
 	snis_nl_add_dictionary_word(ctx, "phaser power", "phaser power",	POS_NOUN);
 	snis_nl_add_dictionary_word(ctx, "weapons power", "phaser power",	POS_NOUN);
 	snis_nl_add_dictionary_word(ctx, "weapon power", "phaser power",	POS_NOUN);
@@ -31726,7 +31735,7 @@ static void init_dictionary(struct snis_nl_context *ctx)
 	snis_nl_add_dictionary_word(ctx, "impulse drive coolant", "impulse drive coolant",	POS_NOUN);
 	snis_nl_add_dictionary_word(ctx, "sensor coolant", "sensor coolant",	POS_NOUN);
 	snis_nl_add_dictionary_word(ctx, "sensors coolant", "sensor coolant",	POS_NOUN);
-	snis_nl_add_dictionary_word(ctx, "communications coolant", "communications coolant",	POS_NOUN);
+	snis_nl_add_dictionary_word(ctx, "transporter coolant", "transporter coolant",	POS_NOUN);
 	snis_nl_add_dictionary_word(ctx, "phaser coolant", "phaser coolant",	POS_NOUN);
 	snis_nl_add_dictionary_word(ctx, "weapons coolant", "phaser coolant",	POS_NOUN);
 	snis_nl_add_dictionary_word(ctx, "weapon coolant", "phaser coolant",	POS_NOUN);
@@ -31766,6 +31775,7 @@ static void init_dictionary(struct snis_nl_context *ctx)
 	snis_nl_add_dictionary_word(ctx, "sensor",		"sensors",	POS_NOUN);
 	snis_nl_add_dictionary_word(ctx, "science",		"science",	POS_NOUN);
 	snis_nl_add_dictionary_word(ctx, "communications",	"communications", POS_NOUN);
+	snis_nl_add_dictionary_word(ctx, "transporter",		"transporter",	POS_NOUN);
 	snis_nl_add_dictionary_word(ctx, "enemy",		"enemy",	POS_NOUN);
 	snis_nl_add_dictionary_word(ctx, "derelict",		"derelict",	POS_NOUN);
 	snis_nl_add_dictionary_word(ctx, "computer",		"computer",	POS_NOUN);

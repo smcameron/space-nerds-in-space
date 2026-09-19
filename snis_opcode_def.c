@@ -149,7 +149,7 @@ int snis_opcode_def_init(void)
 	rc |= init_opcode_subcode_def(OPCODE_ADJUST_CONTROL_INPUT,
 			OPCODE_ADJUST_CONTROL_PHASERBANKS_PWR, "bbwb");
 	rc |= init_opcode_subcode_def(OPCODE_ADJUST_CONTROL_INPUT,
-			OPCODE_ADJUST_CONTROL_COMMS_PWR, "bbwb");
+			OPCODE_ADJUST_CONTROL_TRANSPORTER_PWR, "bbwb");
 	rc |= init_opcode_subcode_def(OPCODE_ADJUST_CONTROL_INPUT,
 			OPCODE_ADJUST_CONTROL_MANEUVERING_COOLANT, "bbwb");
 	rc |= init_opcode_subcode_def(OPCODE_ADJUST_CONTROL_INPUT,
@@ -159,7 +159,7 @@ int snis_opcode_def_init(void)
 	rc |= init_opcode_subcode_def(OPCODE_ADJUST_CONTROL_INPUT,
 			OPCODE_ADJUST_CONTROL_SHIELDS_COOLANT, "bbwb");
 	rc |= init_opcode_subcode_def(OPCODE_ADJUST_CONTROL_INPUT,
-			OPCODE_ADJUST_CONTROL_COMMS_COOLANT, "bbwb");
+			OPCODE_ADJUST_CONTROL_TRANSPORTER_COOLANT, "bbwb");
 	rc |= init_opcode_subcode_def(OPCODE_ADJUST_CONTROL_INPUT,
 			OPCODE_ADJUST_CONTROL_SENSORS_COOLANT, "bbwb");
 	rc |= init_opcode_subcode_def(OPCODE_ADJUST_CONTROL_INPUT,

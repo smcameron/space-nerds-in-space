@@ -947,7 +947,7 @@ forwards it back to each client.
 <tr><td>10</td><td>b</td><td>maneuvering damage</td></tr>
 <tr><td>11</td><td>b</td><td>phaser banks damage</td></tr>
 <tr><td>12</td><td>b</td><td>sensors damage</td></tr>
-<tr><td>13</td><td>b</td><td>comms damage</td></tr>
+<tr><td>13</td><td>b</td><td>transporter damage</td></tr>
 <tr><td>14</td><td>b</td><td>tractor damage</td></tr>
 </table>
 
@@ -975,7 +975,7 @@ It has many subcodes.
 <tr><td>ADJUST WARP PWR</td><td>12</td></tr>
 <tr><td>ADJUST SENSORS PWR</td><td>13</td></tr>
 <tr><td>ADJUST PHASERBANKS PWR</td><td>14</td></tr>
-<tr><td>ADJUST COMMS PWR</td><td>15</td></tr>
+<tr><td>ADJUST TRANSPORTER PWR</td><td>15</td></tr>
 <tr><td>ADJUST MANEUVERING COOLANT</td><td>16</td></tr>
 <tr><td>ADJUST TRACTOR COOLANT</td><td>17</td></tr>
 <tr><td>ADJUST LIFESUPPORT COOLANT</td><td>18</td></tr>
@@ -984,7 +984,7 @@ It has many subcodes.
 <tr><td>ADJUST WARP COOLANT</td><td>21</td></tr>
 <tr><td>ADJUST SENSORS COOLANT</td><td>22</td></tr>
 <tr><td>ADJUST PHASERBANKS COOLANT</td><td>23</td></tr>
-<tr><td>ADJUST COMMS COOLANT</td><td>24</td></tr>
+<tr><td>ADJUST TRANSPORTER COOLANT</td><td>24</td></tr>
 <tr><td>ADJUST EXTERIOR LIGHTS</td><td>25</td></tr>
 <tr><td>ADJUST SILENCE_ALARMS</td><td>26</td></tr>
 <tr><td>ADJUST FIRE MISSILE</td><td>27</td></tr>
@@ -1145,7 +1145,7 @@ have the same slider setting.
 <tr><td>6</td><td>b</td><td>power value</td></tr>
 </table>
 
-<h4>139/15 Request Comms Power</h4> (Client to Server)
+<h4>139/15 Request Transporter Power</h4> (Client to Server)
 
 <p align=center><table border=1, width=60%>
 <tr><td>Offset</td><td>Data Type</td><td>Value</td><td>Scale</td></tr>
@@ -1235,7 +1235,7 @@ have the same slider setting.
 <tr><td>6</td><td>b</td><td>coolant value</td></tr>
 </table>
 
-<h4>139/24 Request Comms Coolant</h4> (Client to Server)
+<h4>139/24 Request Transporter Coolant</h4> (Client to Server)
 
 <p align=center><table border=1, width=60%>
 <tr><td>Offset</td><td>Data Type</td><td>Value</td><td>Scale</td></tr>
@@ -1625,10 +1625,10 @@ consumption meters).
 <tr><td>20</td><td>b</td><td>Sensors R2</td></tr>
 <tr><td>21</td><td>b</td><td>Sensors R3</td></tr>
 <tr><td>22</td><td>b</td><td>Sensors Current</td></tr>
-<tr><td>23</td><td>b</td><td>Comms R1</td></tr>
-<tr><td>24</td><td>b</td><td>Comms R2</td></tr>
-<tr><td>25</td><td>b</td><td>Comms R3</td></tr>
-<tr><td>26</td><td>b</td><td>Comms Current</td></tr>
+<tr><td>23</td><td>b</td><td>Transporter R1</td></tr>
+<tr><td>24</td><td>b</td><td>Transporter R2</td></tr>
+<tr><td>25</td><td>b</td><td>Transporter R3</td></tr>
+<tr><td>26</td><td>b</td><td>Transporter Current</td></tr>
 <tr><td>27</td><td>b</td><td>Phasers R1</td></tr>
 <tr><td>28</td><td>b</td><td>Phasers R2</td></tr>
 <tr><td>29</td><td>b</td><td>Phasers R3</td></tr>
@@ -1984,10 +1984,10 @@ Coolant is modelled in the same way as power. See opcode 160.
 <tr><td>20</td><td>b</td><td>Sensors R2</td></tr>
 <tr><td>21</td><td>b</td><td>Sensors R3</td></tr>
 <tr><td>22</td><td>b</td><td>Sensors Coolant</td></tr>
-<tr><td>23</td><td>b</td><td>Comms R1</td></tr>
-<tr><td>24</td><td>b</td><td>Comms R2</td></tr>
-<tr><td>25</td><td>b</td><td>Comms R3</td></tr>
-<tr><td>26</td><td>b</td><td>Comms Coolant</td></tr>
+<tr><td>23</td><td>b</td><td>Transporter R1</td></tr>
+<tr><td>24</td><td>b</td><td>Transporter R2</td></tr>
+<tr><td>25</td><td>b</td><td>Transporter R3</td></tr>
+<tr><td>26</td><td>b</td><td>Transporter Coolant</td></tr>
 <tr><td>27</td><td>b</td><td>Phasers R1</td></tr>
 <tr><td>28</td><td>b</td><td>Phasers R2</td></tr>
 <tr><td>29</td><td>b</td><td>Phasers R3</td></tr>
@@ -2007,7 +2007,7 @@ Coolant is modelled in the same way as power. See opcode 160.
 <tr><td>10</td><td>b</td><td>maneuvering temperature</td></tr>
 <tr><td>11</td><td>b</td><td>phaser banks temperature</td></tr>
 <tr><td>12</td><td>b</td><td>sensors temperature</td></tr>
-<tr><td>13</td><td>b</td><td>comms temperature</td></tr>
+<tr><td>13</td><td>b</td><td>transporter temperature</td></tr>
 <tr><td>14</td><td>b</td><td>tractor temperature</td></tr>
 </table>
 
@@ -2037,7 +2037,7 @@ Same as opcode 136, but sound isn't triggered.
 <tr><td>10</td><td>b</td><td>maneuvering damage</td></tr>
 <tr><td>11</td><td>b</td><td>phaser banks damage</td></tr>
 <tr><td>12</td><td>b</td><td>sensors damage</td></tr>
-<tr><td>13</td><td>b</td><td>comms damage</td></tr>
+<tr><td>13</td><td>b</td><td>transporter damage</td></tr>
 <tr><td>14</td><td>b</td><td>tractor damage</td></tr>
 </table>
 

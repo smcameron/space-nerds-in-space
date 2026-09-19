@@ -367,10 +367,8 @@ set a course for the nearest waypoint
 set a course for the nearest worm hole
 set a course for the selected waypoint
 set a course for waypoint
-set comms coolant to
-set comms power to
-set communications coolant to
-set communications power to
+set transporter coolant to
+set transporter power to
 set impulse drive coolant to
 set impulse drive power to
 set impulse drive to

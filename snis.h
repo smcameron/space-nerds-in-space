@@ -41,7 +41,7 @@
 #include "shape_collision.h"
 
 #define DEFAULT_SOLAR_SYSTEM "default"
-#define SNIS_PROTOCOL_VERSION "SNIS071"
+#define SNIS_PROTOCOL_VERSION "SNIS072"
 #define COMMON_MTWIST_SEED 97872
 /* dimensions of the "known" universe */
 #define XKNOWN_DIM 600000.0
@@ -158,7 +158,7 @@ struct power_model_data {
 	struct power_model_device warp;
 	struct power_model_device impulse;
 	struct power_model_device sensors;
-	struct power_model_device comms;
+	struct power_model_device transporter;
 	struct power_model_device phasers;
 	struct power_model_device shields;
 	struct power_model_device tractor;
@@ -173,7 +173,7 @@ struct ship_damage_data {
 	uint8_t maneuvering_damage;
 	uint8_t phaser_banks_damage;
 	uint8_t sensors_damage;
-	uint8_t comms_damage;
+	uint8_t transporter_damage;
 	uint8_t tractor_damage;
 	uint8_t lifesupport_damage;
 };
@@ -638,11 +638,11 @@ struct ship_data {
 	union vec3 desired_hg_ant_aim; /* direction we would like high gain antenna to aim */
 #define COMMS_SHORT_RANGE 5000
 #define COMMS_LONG_RANGE_ANGLE (10.0 * M_PI / 180.0)
-/* If comms power is below Comms transmission strength threshold, then some
- * distortion of messages or dropping of comms messages may occur. The comms power
- * takes into account the aiming (or mis-aiming) of the high gain antenna, potential
- * occluders like planets, nebula, or black holes between transmitter and receiver,
- * as well as power to the comms system assigned from engineering.
+/* If comms transmission strength is below Comms transmission strength threshold,
+ * then some distortion of messages or dropping of comms messages may occur. The
+ * transmission strength takes into account the aiming (or mis-aiming) of the high
+ * gain antenna, and potential occluders like planets, nebula, or black holes
+ * between transmitter and receiver.
  */
 #define COMMS_TRANSMISSION_STRENGTH_THRESHOLD (0.3)
 /* For distances longer than COMMS_LONG_DISTANCE_THRESHOLD comms may not work perfectly. */
@@ -1085,7 +1085,8 @@ typedef void (*damcon_draw_function)(void *drawable, struct snis_damcon_entity *
 #define DAMCON_TYPE_MANEUVERING 3
 #define DAMCON_TYPE_PHASERBANK 4
 #define DAMCON_TYPE_SENSORARRAY 5
-#define DAMCON_TYPE_COMMUNICATIONS 6
+#define DAMCON_TYPE_TRANSPORTER 6
+#define DAMCON_TYPE_COMMUNICATIONS DAMCON_TYPE_TRANSPORTER
 #define DAMCON_TYPE_TRACTORSYSTEM 7
 #define DAMCON_TYPE_LIFESUPPORTSYSTEM 8
 #define DAMCON_TYPE_REPAIR_STATION 9

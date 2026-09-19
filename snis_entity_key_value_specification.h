@@ -91,7 +91,7 @@ struct key_value_specification snis_entity_kvs[] = {
 	UINT8_TSDFIELD(damage.maneuvering_damage),
 	UINT8_TSDFIELD(damage.phaser_banks_damage),
 	UINT8_TSDFIELD(damage.sensors_damage),
-	UINT8_TSDFIELD(damage.comms_damage),
+	UINT8_TSDFIELD(damage.transporter_damage),
 	UINT8_TSDFIELD(damage.tractor_damage),
 	UINT8_TSDFIELD(damage.lifesupport_damage),
 	/* TODO damcon data... */
@@ -119,10 +119,10 @@ struct key_value_specification snis_entity_kvs[] = {
 	UINT8_TSDFIELD(power_data.sensors.r3),
 	UINT8_TSDFIELD(power_data.sensors.i),
 
-	UINT8_TSDFIELD(power_data.comms.r1),
-	UINT8_TSDFIELD(power_data.comms.r2),
-	UINT8_TSDFIELD(power_data.comms.r3),
-	UINT8_TSDFIELD(power_data.comms.i),
+	UINT8_TSDFIELD(power_data.transporter.r1),
+	UINT8_TSDFIELD(power_data.transporter.r2),
+	UINT8_TSDFIELD(power_data.transporter.r3),
+	UINT8_TSDFIELD(power_data.transporter.i),
 
 	UINT8_TSDFIELD(power_data.phasers.r1),
 	UINT8_TSDFIELD(power_data.phasers.r2),
@@ -168,10 +168,10 @@ struct key_value_specification snis_entity_kvs[] = {
 	UINT8_TSDFIELD(coolant_data.sensors.r3),
 	UINT8_TSDFIELD(coolant_data.sensors.i),
 
-	UINT8_TSDFIELD(coolant_data.comms.r1),
-	UINT8_TSDFIELD(coolant_data.comms.r2),
-	UINT8_TSDFIELD(coolant_data.comms.r3),
-	UINT8_TSDFIELD(coolant_data.comms.i),
+	UINT8_TSDFIELD(coolant_data.transporter.r1),
+	UINT8_TSDFIELD(coolant_data.transporter.r2),
+	UINT8_TSDFIELD(coolant_data.transporter.r3),
+	UINT8_TSDFIELD(coolant_data.transporter.i),
 
 	UINT8_TSDFIELD(coolant_data.phasers.r1),
 	UINT8_TSDFIELD(coolant_data.phasers.r2),
@@ -202,7 +202,7 @@ struct key_value_specification snis_entity_kvs[] = {
 	UINT8_TSDFIELD(temperature_data.maneuvering_damage),
 	UINT8_TSDFIELD(temperature_data.phaser_banks_damage),
 	UINT8_TSDFIELD(temperature_data.sensors_damage),
-	UINT8_TSDFIELD(temperature_data.comms_damage),
+	UINT8_TSDFIELD(temperature_data.transporter_damage),
 	UINT8_TSDFIELD(temperature_data.tractor_damage),
 	UINT8_TSDFIELD(temperature_data.lifesupport_damage),
 	INT32_TSDFIELD(warp_time),

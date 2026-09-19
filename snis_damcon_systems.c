@@ -13,7 +13,7 @@ static char *damcon_system_names[] = {
 	"MANEUVERING",
 	"PHASER BANKS",
 	"SENSORS",
-	"COMMUNICATIONS",
+	"TRANSPORTER",
 	"TRACTOR BEAM",
 	"LIFE SUPPORT",
 	"REPAIR STATION",
@@ -27,7 +27,7 @@ static float damcon_part_price[][DAMCON_PARTS_PER_SYSTEM] = {
 	{ 300.0, 130.0, 79.0, },	/* maneuvering parts */
 	{ 250.0, 302.0, 179.0, },	/* Phaser bank parts */
 	{ 325.0, 269.0, 167.0, },	/* sensor system parts */
-	{ 75.0,	105.0, 211.0, },	/* communication system parts */
+	{ 75.0,	105.0, 211.0, },	/* transporter system parts */
 	{ 70.0, 350.0, 102.0, },	/* tractor beam system parts */
 	{ 370.0, 250.0, 590.0, },	/* life support system parts */
 	{ 0.0, 0.0, 0.0, },		/* repair station parts... special case, no parts. */
@@ -76,7 +76,7 @@ static char *damcon_part_names[][DAMCON_PARTS_PER_SYSTEM] = {
 		"SUBHARMONIC OMNI-STABILIZER",
 		"FURION-PHOTON TRANSFORMER ",
 	},
-	{	/* communication system parts */
+	{	/* transporter system parts */
 		"RADIONIC DETECTOR COIL",
 		/* "RADIONIC FIELD MODULATOR", */
 		/* "ANTENNA CONTROL MODULE", */

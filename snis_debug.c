@@ -142,7 +142,7 @@ void snis_debug_dump(char *cmd, struct snis_entity go[], int nstarbase_models,
 		printfn("MANEUVERING DAMAGE: %hhu", o->tsd.ship.damage.maneuvering_damage);
 		printfn("PHASER DAMAGE: %hhu", o->tsd.ship.damage.phaser_banks_damage);
 		printfn("SENSORS DAMAGE: %hhu", o->tsd.ship.damage.sensors_damage);
-		printfn("COMMS DAMAGE: %hhu", o->tsd.ship.damage.comms_damage);
+		printfn("TRANSPORTER DAMAGE: %hhu", o->tsd.ship.damage.transporter_damage);
 		printfn("TRACTOR DAMAGE: %hhu", o->tsd.ship.damage.tractor_damage);
 		printfn("LIFESUPPORT DAMAGE: %hhu", o->tsd.ship.damage.lifesupport_damage);
 		printfn("TORPEDOES: %u", o->tsd.ship.torpedoes);
