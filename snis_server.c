@@ -26607,12 +26607,17 @@ static void send_update_asteroid_minerals_packet(struct game_client *c,
 static void send_update_cargo_container_packet(struct game_client *c,
 	struct snis_entity *o)
 {
-	pb_queue_to_client(c, snis_opcode_pkt("bwwSSSwS", OPCODE_UPDATE_CARGO_CONTAINER, o->id, o->timestamp,
+	pb_queue_to_client(c, snis_opcode_pkt("bwwSSSwSbbbbb", OPCODE_UPDATE_CARGO_CONTAINER, o->id, o->timestamp,
 					o->x, (int32_t) UNIVERSE_DIM,
 					o->y, (int32_t) UNIVERSE_DIM,
 					o->z, (int32_t) UNIVERSE_DIM,
 					(uint32_t) o->tsd.cargo_container.contents.item,
-					o->tsd.cargo_container.contents.qty, (int32_t) 1000000));
+					o->tsd.cargo_container.contents.qty, (int32_t) 1000000,
+					o->tsd.cargo_container.transporter_tag[0],
+					o->tsd.cargo_container.transporter_tag[1],
+					o->tsd.cargo_container.transporter_tag[2],
+					o->tsd.cargo_container.transporter_tag[3],
+					o->tsd.cargo_container.transporter_tag[4]));
 }
 
 /* send_update_cargo_container_position omits the cargo container contents to save bandwidth */
@@ -27556,6 +27561,7 @@ static void flatten_passengers(uint32_t ship_id, struct flattened_passenger fp[]
 		snprintf(fp[npa].fare, sizeof(fp[npa].fare), "%d", passenger[i].fare);
 
 		snprintf(fp[npa].dest, sizeof(fp[npa].dest), "%s", passenger[i].destination_name);
+		snprintf(fp[npa].transporter_tag, sizeof(fp[npa].transporter_tag), "%s", passenger[i].transporter_tag);
 		npa++;
 	}
 	*passengers_aboard = npa;
@@ -32604,6 +32610,9 @@ static void unflatten_passenger(struct snis_entity *our_ship, struct flattened_p
 			found = 1;
 			passenger[i].location = our_ship->id;
 			snprintf(passenger[i].solarsystem, sizeof(passenger[i].solarsystem), "%s", fp->solarsystem);
+			snprintf(passenger[i].transporter_tag,
+				sizeof(passenger[i].transporter_tag), "%s",
+				fp->transporter_tag);
 
 			for (int j = 0; j <= snis_object_pool_highest_object(pool); j++) {
 				if (go[j].type != OBJTYPE_STARBASE)
@@ -32646,6 +32655,9 @@ static void unflatten_passenger(struct snis_entity *our_ship, struct flattened_p
 			snprintf(passenger[snatched].destination_name,
 				sizeof(passenger[snatched].destination_name), "%s",
 					fp->dest);
+			snprintf(passenger[snatched].transporter_tag,
+				sizeof(passenger[snatched].transporter_tag), "%s",
+					fp->transporter_tag);
 			passenger[snatched].destination = (uint32_t) -1;
 			for (int j = 0; j <= snis_object_pool_highest_object(pool); j++) {
 				if (go[j].type != OBJTYPE_STARBASE)
@@ -32744,6 +32756,9 @@ static int process_multiverse_update_bridge_passengers(struct multiverse_server_
 		if (rc < 0)
 			goto errorout;
 		rc = packed_buffer_extract(&pb, "s", fp.dest, sizeof(fp.dest));
+		if (rc < 0)
+			goto errorout;
+		rc = packed_buffer_extract(&pb, "s", fp.transporter_tag, sizeof(fp.transporter_tag));
 		if (rc < 0)
 			goto errorout;
 

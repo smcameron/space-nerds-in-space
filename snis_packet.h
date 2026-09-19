@@ -428,6 +428,7 @@ struct update_cargo_container_packet {
 	uint32_t x, y, z;
 	uint32_t item;
 	uint32_t qty;
+	char transporter_tag[5];
 };
 
 struct update_cargo_container_position {

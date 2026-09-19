@@ -922,6 +922,8 @@ static int update_bridge_passengers(struct starsystem_info *ss)
 			goto errorout;
 		if (packed_buffer_extract(&pb, "s", fp.dest, sizeof(fp.dest)) != 0)
 			goto errorout;
+		if (packed_buffer_extract(&pb, "s", fp.transporter_tag, sizeof(fp.transporter_tag)) != 0)
+			goto errorout;
 		ship[i].passengers.fp[j] = fp;
 	}
 	pthread_mutex_unlock(&data_mutex);
@@ -999,6 +1001,7 @@ static struct packed_buffer *build_outgoing_passenger_update_packet(struct bridg
 		packed_buffer_append(pb, "s", b->passengers.fp[i].solarsystem);
 		packed_buffer_append(pb, "s", b->passengers.fp[i].fare);
 		packed_buffer_append(pb, "s", b->passengers.fp[i].dest);
+		packed_buffer_append(pb, "s", b->passengers.fp[i].transporter_tag);
 	}
 
 	/* wrap the buffer so it's easier to read/unpack on the other side */
@@ -2223,8 +2226,8 @@ static void send_passenger_data_to_snis_console(int bridge_num)
 	send_to_snis_console("     PASSENGERS:");
 	for (int i = 0; i < (int) p->passengers_aboard; i++) {
 		struct flattened_passenger *fp = &p->fp[i];
-		snprintf(buffer, sizeof(buffer), "        %d: '%s' '%s' '%s' '%s'",
-			i, fp->name, fp->solarsystem, fp->dest, fp->fare);
+		snprintf(buffer, sizeof(buffer), "        %d: '%s' '%s' '%s' '%s' '%s'",
+			i, fp->name, fp->solarsystem, fp->dest, fp->fare, fp->transporter_tag);
 		send_to_snis_console(buffer);
 	}
 }

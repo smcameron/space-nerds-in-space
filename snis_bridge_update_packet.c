@@ -293,6 +293,7 @@ struct packed_buffer *build_passenger_update_packet(unsigned char *pwdhash,
 		packed_buffer_append(pb, "s", fp[i].solarsystem);
 		packed_buffer_append(pb, "s", fp[i].fare);
 		packed_buffer_append(pb, "s", fp[i].dest);
+		packed_buffer_append(pb, "s", fp[i].transporter_tag);
 	};
 
 	/* wrap the packet for easier unpacking in multiverse */

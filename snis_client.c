@@ -2315,7 +2315,7 @@ static int update_warp_core(uint32_t id, uint32_t timestamp, double x, double y,
 }
 
 static int update_cargo_container(uint32_t id, uint32_t timestamp, double x, double y, double z,
-		uint32_t item, double qty)
+		uint32_t item, double qty, const char *tag)
 {
 	int i;
 	struct entity *e;
@@ -2337,6 +2337,11 @@ static int update_cargo_container(uint32_t id, uint32_t timestamp, double x, dou
 		o->tsd.cargo_container.rotational_velocity = random_spin[id % NRANDOM_SPINS];
 		o->tsd.cargo_container.contents.item = item;
 		o->tsd.cargo_container.contents.qty = qty;
+		if (tag && tag[0] != '\0')
+			strlcpy(o->tsd.cargo_container.transporter_tag, tag,
+				sizeof(o->tsd.cargo_container.transporter_tag));
+		else
+			o->tsd.cargo_container.transporter_tag[0] = '\0';
 	} else {
 		double vx, vy, vz;
 
@@ -2344,8 +2349,13 @@ static int update_cargo_container(uint32_t id, uint32_t timestamp, double x, dou
 		vy = y - go[i].y;
 		vz = z - go[i].z;
 		update_generic_object(i, timestamp, x, y, z, vx, vy, vz, NULL, 1);
-		go[i].tsd.cargo_container.contents.item = item;
-		go[i].tsd.cargo_container.contents.qty = qty;
+		if (item != (uint32_t) -1) {
+			go[i].tsd.cargo_container.contents.item = item;
+			go[i].tsd.cargo_container.contents.qty = qty;
+		}
+		if (tag && tag[0] != '\0')
+			strlcpy(go[i].tsd.cargo_container.transporter_tag, tag,
+				sizeof(go[i].tsd.cargo_container.transporter_tag));
 	}
 	return 0;
 }
@@ -7949,18 +7959,21 @@ static int process_update_cargo_container_packet(void)
 	unsigned char buffer[100];
 	uint32_t id, timestamp, item;
 	double dx, dy, dz, qty;
+	uint8_t tag[6];
 	int rc;
 
 	assert(sizeof(buffer) > sizeof(struct update_cargo_container_packet) - sizeof(uint8_t));
-	rc = read_and_unpack_buffer(buffer, "wwSSSwS", &id, &timestamp,
+	rc = read_and_unpack_buffer(buffer, "wwSSSwSbbbbb", &id, &timestamp,
 			&dx, (int32_t) UNIVERSE_DIM,
-			&dy,(int32_t) UNIVERSE_DIM,
+			&dy, (int32_t) UNIVERSE_DIM,
 			&dz, (int32_t) UNIVERSE_DIM,
-			&item, &qty, (int32_t) 1000000);
+			&item, &qty, (int32_t) 1000000,
+			&tag[0], &tag[1], &tag[2], &tag[3], &tag[4]);
 	if (rc != 0)
 		return rc;
+	tag[5] = '\0';
 	pthread_mutex_lock(&universe_mutex);
-	rc = update_cargo_container(id, timestamp, dx, dy, dz, item, qty);
+	rc = update_cargo_container(id, timestamp, dx, dy, dz, item, qty, (char *) tag);
 	pthread_mutex_unlock(&universe_mutex);
 	return (rc < 0);
 } 
@@ -7975,12 +7988,12 @@ static int process_update_cargo_container_position(void)
 	assert(sizeof(buffer) > sizeof(struct update_cargo_container_position) - sizeof(uint8_t));
 	rc = read_and_unpack_buffer(buffer, "wwSSS", &id, &timestamp,
 			&dx, (int32_t) UNIVERSE_DIM,
-			&dy,(int32_t) UNIVERSE_DIM,
+			&dy, (int32_t) UNIVERSE_DIM,
 			&dz, (int32_t) UNIVERSE_DIM);
 	if (rc != 0)
 		return rc;
 	pthread_mutex_lock(&universe_mutex);
-	rc = update_cargo_container(id, timestamp, dx, dy, dz, -1, -1);
+	rc = update_cargo_container(id, timestamp, dx, dy, dz, -1, -1, NULL);
 	pthread_mutex_unlock(&universe_mutex);
 	return (rc < 0);
 } 

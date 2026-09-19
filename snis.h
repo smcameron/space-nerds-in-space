@@ -41,7 +41,7 @@
 #include "shape_collision.h"
 
 #define DEFAULT_SOLAR_SYSTEM "default"
-#define SNIS_PROTOCOL_VERSION "SNIS072"
+#define SNIS_PROTOCOL_VERSION "SNIS073"
 #define TRANSPORTER_TAG_LEN 5
 #define COMMON_MTWIST_SEED 97872
 /* dimensions of the "known" universe */

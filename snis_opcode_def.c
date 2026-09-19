@@ -248,7 +248,7 @@ int snis_opcode_def_init(void)
 	rc |= init_opcode_def(OPCODE_SILENT_UPDATE_DAMAGE, "n/a");
 	rc |= init_opcode_def(OPCODE_ECON_UPDATE_SHIP_DEBUG_AI, "bwwhSSSQbbbwbbbbSb");
 	rc |= init_opcode_def(OPCODE_TOGGLE_DEMON_AI_DEBUG_MODE, "b");
-	rc |= init_opcode_def(OPCODE_UPDATE_CARGO_CONTAINER, "bwwSSSwS");
+	rc |= init_opcode_def(OPCODE_UPDATE_CARGO_CONTAINER, "bwwSSSwSbbbbb");
 	rc |= init_opcode_def(OPCODE_UPDATE_CARGO_CONTAINER_POSITION, "bwwSSS");
 	rc |= init_opcode_def(OPCODE_CYCLE_MAINSCREEN_POINT_OF_VIEW, "bb");
 	rc |= init_opcode_def(OPCODE_REQUEST_UNIVERSE_TIMESTAMP, "b");
