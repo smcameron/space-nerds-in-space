@@ -18397,6 +18397,8 @@ static void draw_science_details(void)
 		}
 	} else if (curr_science_guy->type == OBJTYPE_CARGO_CONTAINER) {
 		struct cargo_container_contents *ccc = &curr_science_guy->tsd.cargo_container.contents;
+		struct cargo_container_data *ccd = &curr_science_guy->tsd.cargo_container;
+
 		snprintf(buf, sizeof(buf), "PROBABLE CONTENTS:");
 		sng_abs_xy_draw_string(buf, sdf, 10, y);
 		y += yinc;
@@ -18406,6 +18408,13 @@ static void draw_science_details(void)
 			sng_abs_xy_draw_string(buf, sdf, 10, y);
 		} else {
 			sng_abs_xy_draw_string("UNKNOWN", sdf, 10, y);
+		}
+		y += yinc;
+		if (ccd->transporter_tag[0] != '\0') {
+			snprintf(buf, sizeof(buf), "TRANSPORTER TAG: %s",
+				ccd->transporter_tag);
+			sng_abs_xy_draw_string(buf, sdf, 10, y);
+			y += yinc;
 		}
 	}
 }
