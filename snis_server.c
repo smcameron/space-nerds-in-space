@@ -10410,6 +10410,8 @@ static void update_flare_cooldown_timer(struct snis_entity *o)
 		bridgelist[bn].flare_cooldown--;
 }
 
+static void process_transporter_tick(struct snis_entity *o);
+
 static void player_move(struct snis_entity *o)
 {
 	int i, desired_rpm, desired_temp, diff;
@@ -10617,6 +10619,7 @@ static void player_move(struct snis_entity *o)
 	update_warp_ejection_countdown(o);
 
 	update_flare_cooldown_timer(o);
+	process_transporter_tick(o);
 
 	/* Missiles will set this to 10, here we decrement, and if no missiles are around, it will hit zero soon. */
 	if (o->tsd.ship.missile_lock_detected > 0)
@@ -11868,6 +11871,13 @@ static void init_player(struct snis_entity *o)
 	o->tsd.ship.viewpoint_object = o->id;
 	quat_init_axis(&o->tsd.ship.sciball_orientation, 1, 0, 0, 0);
 	quat_init_axis(&o->tsd.ship.weap_orientation, 1, 0, 0, 0);
+	o->tsd.ship.transporter_active = 0;
+	o->tsd.ship.transporter_direction = 0;
+	o->tsd.ship.transporter_progress = 0;
+	o->tsd.ship.transporter_timer = 0;
+	o->tsd.ship.transporter_target = (uint32_t) -1;
+	o->tsd.ship.transporter_passenger_index = -1;
+	memset(o->tsd.ship.transporter_tag, 0, sizeof(o->tsd.ship.transporter_tag));
 	memset(&o->tsd.ship.damage, 0, sizeof(o->tsd.ship.damage));
 	memset(&o->tsd.ship.temperature_data, 0, sizeof(o->tsd.ship.temperature_data));
 	init_power_model(o);
@@ -24362,20 +24372,364 @@ static int process_apply_engineering_preset(struct game_client *c)
 	return 0;
 }
 
+static void send_transporter_status(struct snis_entity *o, uint8_t status,
+				    uint8_t progress)
+{
+	send_packet_to_all_clients_on_a_bridge(o->id,
+		snis_opcode_pkt("bwbb", OPCODE_TRANSPORTER_STATUS,
+				o->id, status, progress), ROLE_ALL);
+}
+
+static void complete_transport(struct snis_entity *ship)
+{
+	int k;
+
+	if (ship->tsd.ship.transporter_direction ==
+	    OPCODE_TRANSPORTER_DIR_TO_SHIP) {
+		int target = lookup_by_id(ship->tsd.ship.transporter_target);
+
+		if (target >= 0 && go[target].alive &&
+		    go[target].type == OBJTYPE_CARGO_CONTAINER) {
+			scoop_up_cargo(ship, &go[target]);
+		} else {
+			int p = ship->tsd.ship.transporter_passenger_index;
+			int aboard = 0;
+
+			if (p < 0 || p >= npassengers)
+				return;
+
+			for (k = 0; k < npassengers; k++) {
+				if (passenger[k].location == ship->id)
+					aboard++;
+			}
+			if (aboard >= ship->tsd.ship.passenger_berths)
+				return;
+
+			passenger[p].location = ship->id;
+			ship->tsd.ship.lifeform_count++;
+			schedule_callback2(event_callback, &callback_schedule,
+					   "passenger-boarded",
+					   (double) p, (double) ship->id);
+		}
+	} else {
+		int p = ship->tsd.ship.transporter_passenger_index;
+		uint32_t dest_id = ship->tsd.ship.transporter_target;
+		int dest_idx = lookup_by_id(dest_id);
+		int nstarbases;
+
+		if (p < 0 || p >= npassengers)
+			return;
+		if (passenger[p].location != ship->id)
+			return;
+		if (dest_idx < 0 || !go[dest_idx].alive)
+			return;
+
+		if (passenger[p].destination == dest_id) {
+			ship->tsd.ship.wallet += passenger[p].fare;
+			ship->tsd.ship.lifeform_count--;
+			nstarbases = count_starbases();
+			init_passenger(p, nstarbases);
+			schedule_callback2(event_callback, &callback_schedule,
+					   "passenger-disembarked",
+					   (double) p, (double) dest_id);
+		} else {
+			passenger[p].location = dest_id;
+			ship->tsd.ship.lifeform_count--;
+			schedule_callback2(event_callback, &callback_schedule,
+					   "passenger-disembarked",
+					   (double) p, (double) dest_id);
+		}
+	}
+}
+
+static void process_transporter_tick(struct snis_entity *o)
+{
+	int t_idx;
+	double dist;
+
+	if (!o->tsd.ship.transporter_active)
+		return;
+
+	/* Check power */
+	if (o->tsd.ship.power_data.transporter.i <
+	    TRANSPORTER_POWER_THRESHOLD) {
+		o->tsd.ship.transporter_active = 0;
+		send_transporter_status(o, TRANSPORTER_STATUS_NO_POWER, 0);
+		return;
+	}
+
+	/* Check damage */
+	if (o->tsd.ship.damage.transporter_damage > 200) {
+		o->tsd.ship.transporter_active = 0;
+		send_transporter_status(o, TRANSPORTER_STATUS_FAILED, 0);
+		return;
+	}
+
+	/* Check target and range */
+	t_idx = lookup_by_id(o->tsd.ship.transporter_target);
+	if (t_idx < 0 || !go[t_idx].alive) {
+		o->tsd.ship.transporter_active = 0;
+		send_transporter_status(o, TRANSPORTER_STATUS_FAILED, 0);
+		return;
+	}
+
+	dist = object_dist(o, &go[t_idx]);
+	if (dist > TRANSPORTER_RANGE) {
+		o->tsd.ship.transporter_active = 0;
+		send_transporter_status(o, TRANSPORTER_STATUS_OUT_OF_RANGE, 0);
+		return;
+	}
+
+	o->tsd.ship.transporter_timer--;
+	o->tsd.ship.transporter_progress =
+		100 - (o->tsd.ship.transporter_timer * 100 /
+		       TRANSPORTER_DURATION);
+
+	send_transporter_status(o, TRANSPORTER_STATUS_IN_PROGRESS,
+				o->tsd.ship.transporter_progress);
+
+	if (o->tsd.ship.transporter_timer <= 0) {
+		int is_cargo = (go[t_idx].type == OBJTYPE_CARGO_CONTAINER);
+
+		complete_transport(o);
+		o->tsd.ship.transporter_active = 0;
+		send_transporter_status(o, TRANSPORTER_STATUS_COMPLETE, 100);
+		if (!is_cargo)
+			snis_queue_add_sound(TRANSPORTER_SOUND,
+					     ROLE_SOUNDSERVER, o->id);
+	}
+}
+
 static int process_request_transporter(struct game_client *c)
 {
-	int rc;
+	int rc, i, j, k, p;
 	uint32_t id;
 	uint8_t direction;
-	uint8_t tag[6];
+	uint8_t raw_tag[6];
+	char tag[TRANSPORTER_TAG_LEN + 1];
 	unsigned char buffer[20];
+	struct snis_entity *ship;
+	double dist;
 
 	rc = read_and_unpack_buffer(c, buffer, "wbbbbbb", &id, &direction,
-				&tag[0], &tag[1], &tag[2], &tag[3], &tag[4]);
+				    &raw_tag[0], &raw_tag[1], &raw_tag[2],
+				    &raw_tag[3], &raw_tag[4]);
 	if (rc)
 		return rc;
-	tag[5] = '\0';
-	return 0;
+
+	for (i = 0; i < TRANSPORTER_TAG_LEN; i++)
+		tag[i] = toupper((unsigned char) raw_tag[i]);
+	tag[TRANSPORTER_TAG_LEN] = '\0';
+
+	pthread_mutex_lock(&universe_mutex);
+	i = lookup_by_id(id);
+	if (i < 0 || !go[i].alive || go[i].type != OBJTYPE_BRIDGE) {
+		pthread_mutex_unlock(&universe_mutex);
+		return 0;
+	}
+	ship = &go[i];
+
+	if (ship->tsd.ship.transporter_active) {
+		send_transporter_status(ship, TRANSPORTER_STATUS_IN_PROGRESS,
+					ship->tsd.ship.transporter_progress);
+		pthread_mutex_unlock(&universe_mutex);
+		return 0;
+	}
+
+	/* Check power */
+	if (ship->tsd.ship.power_data.transporter.i <
+	    TRANSPORTER_POWER_THRESHOLD) {
+		send_transporter_status(ship, TRANSPORTER_STATUS_NO_POWER, 0);
+		pthread_mutex_unlock(&universe_mutex);
+		return 0;
+	}
+
+	/* Check damage */
+	if (ship->tsd.ship.damage.transporter_damage > 200) {
+		send_transporter_status(ship, TRANSPORTER_STATUS_FAILED, 0);
+		pthread_mutex_unlock(&universe_mutex);
+		return 0;
+	}
+
+	if (direction == OPCODE_TRANSPORTER_DIR_TO_SHIP) {
+		int found_cargo = -1;
+		int found_passenger = -1;
+
+		/* Check for matching cargo container */
+		for (j = 0; j <= snis_object_pool_highest_object(pool); j++) {
+			if (!go[j].alive || go[j].type != OBJTYPE_CARGO_CONTAINER)
+				continue;
+			if (strncmp(go[j].tsd.cargo_container.transporter_tag,
+				    tag, TRANSPORTER_TAG_LEN) == 0) {
+				found_cargo = j;
+				break;
+			}
+		}
+
+		if (found_cargo >= 0) {
+			int has_empty_bay = 0;
+
+			dist = object_dist(ship, &go[found_cargo]);
+			if (dist > TRANSPORTER_RANGE) {
+				send_transporter_status(ship,
+					TRANSPORTER_STATUS_OUT_OF_RANGE, 0);
+				pthread_mutex_unlock(&universe_mutex);
+				return 0;
+			}
+
+			for (k = 0; k < ship->tsd.ship.ncargo_bays; k++) {
+				if (ship->tsd.ship.cargo[k].contents.item == -1) {
+					has_empty_bay = 1;
+					break;
+				}
+			}
+			if (!has_empty_bay) {
+				send_transporter_status(ship,
+					TRANSPORTER_STATUS_NO_CAPACITY, 0);
+				pthread_mutex_unlock(&universe_mutex);
+				return 0;
+			}
+
+			ship->tsd.ship.transporter_active = 1;
+			ship->tsd.ship.transporter_direction = direction;
+			ship->tsd.ship.transporter_progress = 0;
+			ship->tsd.ship.transporter_timer = TRANSPORTER_DURATION;
+			ship->tsd.ship.transporter_target = go[found_cargo].id;
+			ship->tsd.ship.transporter_passenger_index = -1;
+			strlcpy(ship->tsd.ship.transporter_tag, tag,
+				sizeof(ship->tsd.ship.transporter_tag));
+			send_transporter_status(ship,
+				TRANSPORTER_STATUS_IN_PROGRESS, 0);
+			pthread_mutex_unlock(&universe_mutex);
+			return 0;
+		}
+
+		/* Check for matching passenger */
+		for (p = 0; p < npassengers; p++) {
+			if (strncmp(passenger[p].transporter_tag,
+				    tag, TRANSPORTER_TAG_LEN) == 0) {
+				found_passenger = p;
+				break;
+			}
+		}
+
+		if (found_passenger >= 0) {
+			int loc_idx;
+			int aboard = 0;
+
+			if (passenger[found_passenger].location == ship->id) {
+				send_transporter_status(ship,
+					TRANSPORTER_STATUS_FAILED, 0);
+				pthread_mutex_unlock(&universe_mutex);
+				return 0;
+			}
+
+			loc_idx = lookup_by_id(passenger[found_passenger].location);
+			if (loc_idx < 0 || !go[loc_idx].alive) {
+				send_transporter_status(ship,
+					TRANSPORTER_STATUS_TAG_NOT_FOUND, 0);
+				pthread_mutex_unlock(&universe_mutex);
+				return 0;
+			}
+
+			dist = object_dist(ship, &go[loc_idx]);
+			if (dist > TRANSPORTER_RANGE) {
+				send_transporter_status(ship,
+					TRANSPORTER_STATUS_OUT_OF_RANGE, 0);
+				pthread_mutex_unlock(&universe_mutex);
+				return 0;
+			}
+
+			for (k = 0; k < npassengers; k++) {
+				if (passenger[k].location == ship->id)
+					aboard++;
+			}
+			if (aboard >= ship->tsd.ship.passenger_berths) {
+				send_transporter_status(ship,
+					TRANSPORTER_STATUS_NO_CAPACITY, 0);
+				pthread_mutex_unlock(&universe_mutex);
+				return 0;
+			}
+
+			ship->tsd.ship.transporter_active = 1;
+			ship->tsd.ship.transporter_direction = direction;
+			ship->tsd.ship.transporter_progress = 0;
+			ship->tsd.ship.transporter_timer = TRANSPORTER_DURATION;
+			ship->tsd.ship.transporter_target = go[loc_idx].id;
+			ship->tsd.ship.transporter_passenger_index =
+				found_passenger;
+			strlcpy(ship->tsd.ship.transporter_tag, tag,
+				sizeof(ship->tsd.ship.transporter_tag));
+			send_transporter_status(ship,
+				TRANSPORTER_STATUS_IN_PROGRESS, 0);
+			pthread_mutex_unlock(&universe_mutex);
+			return 0;
+		}
+
+		send_transporter_status(ship,
+			TRANSPORTER_STATUS_TAG_NOT_FOUND, 0);
+		pthread_mutex_unlock(&universe_mutex);
+		return 0;
+
+	} else {
+		/* Direction: FROM SHIP */
+		int found_passenger = -1;
+		uint32_t sci_id;
+		int dest_idx;
+
+		for (p = 0; p < npassengers; p++) {
+			if (passenger[p].location == ship->id &&
+			    strncmp(passenger[p].transporter_tag,
+				    tag, TRANSPORTER_TAG_LEN) == 0) {
+				found_passenger = p;
+				break;
+			}
+		}
+
+		if (found_passenger < 0) {
+			send_transporter_status(ship,
+				TRANSPORTER_STATUS_TAG_NOT_FOUND, 0);
+			pthread_mutex_unlock(&universe_mutex);
+			return 0;
+		}
+
+		sci_id = bridgelist[c->bridge].science_selection;
+		if (sci_id == (uint32_t) -1) {
+			send_transporter_status(ship,
+				TRANSPORTER_STATUS_NO_TARGET, 0);
+			pthread_mutex_unlock(&universe_mutex);
+			return 0;
+		}
+
+		dest_idx = lookup_by_id(sci_id);
+		if (dest_idx < 0 || !go[dest_idx].alive) {
+			send_transporter_status(ship,
+				TRANSPORTER_STATUS_NO_TARGET, 0);
+			pthread_mutex_unlock(&universe_mutex);
+			return 0;
+		}
+
+		dist = object_dist(ship, &go[dest_idx]);
+		if (dist > TRANSPORTER_RANGE) {
+			send_transporter_status(ship,
+				TRANSPORTER_STATUS_OUT_OF_RANGE, 0);
+			pthread_mutex_unlock(&universe_mutex);
+			return 0;
+		}
+
+		ship->tsd.ship.transporter_active = 1;
+		ship->tsd.ship.transporter_direction = direction;
+		ship->tsd.ship.transporter_progress = 0;
+		ship->tsd.ship.transporter_timer = TRANSPORTER_DURATION;
+		ship->tsd.ship.transporter_target = go[dest_idx].id;
+		ship->tsd.ship.transporter_passenger_index = found_passenger;
+		strlcpy(ship->tsd.ship.transporter_tag, tag,
+			sizeof(ship->tsd.ship.transporter_tag));
+		send_transporter_status(ship,
+			TRANSPORTER_STATUS_IN_PROGRESS, 0);
+		pthread_mutex_unlock(&universe_mutex);
+		return 0;
+	}
 }
 
 static void send_initiate_warp_packet(struct game_client *c, int enough_oomph)

@@ -446,6 +446,8 @@ struct ship_data {
 #define MINIMUM_TURN_SPEED 5.0
 #define MAX_SLOW_TURN_ANGLE 2 /* degrees */
 #define TRANSPORTER_RANGE 1500.0f
+#define TRANSPORTER_DURATION 50   /* ticks (~5 seconds at 10Hz) */
+#define TRANSPORTER_POWER_THRESHOLD 25 /* minimum power level (out of 255) */
 #define BOUNTY_CHANCE (0.1)
 
 /* Max damage dealt per "hit"
@@ -654,6 +656,13 @@ struct ship_data {
 	uint8_t targeted_system;
 	uint32_t last_seen_near;
 	uint8_t plot_armor; /* to keep NPC ships from attacking ships that are key to the plot */
+	uint8_t transporter_active;   /* 1 = transport in progress */
+	uint8_t transporter_direction; /* 0 = from ship, 1 = to ship */
+	uint8_t transporter_progress; /* 0-100 */
+	int transporter_timer;        /* countdown ticks */
+	char transporter_tag[TRANSPORTER_TAG_LEN + 1];
+	uint32_t transporter_target;  /* entity id of matched target, or -1 */
+	int transporter_passenger_index; /* if target is a passenger */
 #endif
 };
 
