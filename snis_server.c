@@ -24362,6 +24362,22 @@ static int process_apply_engineering_preset(struct game_client *c)
 	return 0;
 }
 
+static int process_request_transporter(struct game_client *c)
+{
+	int rc;
+	uint32_t id;
+	uint8_t direction;
+	uint8_t tag[6];
+	unsigned char buffer[20];
+
+	rc = read_and_unpack_buffer(c, buffer, "wbbbbbb", &id, &direction,
+				&tag[0], &tag[1], &tag[2], &tag[3], &tag[4]);
+	if (rc)
+		return rc;
+	tag[5] = '\0';
+	return 0;
+}
+
 static void send_initiate_warp_packet(struct game_client *c, int enough_oomph)
 {
 	send_packet_to_all_clients_on_a_bridge(c->shipid,
@@ -25273,6 +25289,11 @@ static void process_instructions_from_client(struct game_client *c)
 			break;
 		case OPCODE_APPLY_ENGINEERING_PRESET:
 			rc = process_apply_engineering_preset(c);
+			if (rc)
+				goto protocol_error;
+			break;
+		case OPCODE_REQUEST_TRANSPORTER:
+			rc = process_request_transporter(c);
 			if (rc)
 				goto protocol_error;
 			break;

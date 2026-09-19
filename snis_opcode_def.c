@@ -292,6 +292,8 @@ int snis_opcode_def_init(void)
 	rc |= init_opcode_subcode_def(OPCODE_CLIENT_CONFIG, OPCODE_CLIENT_SET_PERMITTED_ROLES, "bbw");
 	rc |= init_opcode_def(OPCODE_SAVE_ENGINEERING_PRESET, "bwb");
 	rc |= init_opcode_def(OPCODE_APPLY_ENGINEERING_PRESET, "bwb");
+	rc |= init_opcode_def(OPCODE_REQUEST_TRANSPORTER, "bwbbbbbb");
+	rc |= init_opcode_def(OPCODE_TRANSPORTER_STATUS, "bwbb");
 	rc |= init_opcode_def(OPCODE_NOOP, "b");
 	return rc;
 }

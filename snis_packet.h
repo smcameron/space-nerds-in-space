@@ -270,7 +270,21 @@
 #define OPCODE_SAVE_ENGINEERING_PRESET		241
 #define OPCODE_APPLY_ENGINEERING_PRESET		242
 
-/* UNUSED OPCODE 243 */
+#define OPCODE_REQUEST_TRANSPORTER		243
+#define   OPCODE_TRANSPORTER_DIR_FROM_SHIP	0
+#define   OPCODE_TRANSPORTER_DIR_TO_SHIP	1
+#define OPCODE_TRANSPORTER_STATUS		244
+
+/* Transporter status codes */
+#define TRANSPORTER_STATUS_IDLE			0
+#define TRANSPORTER_STATUS_IN_PROGRESS		1
+#define TRANSPORTER_STATUS_COMPLETE		2
+#define TRANSPORTER_STATUS_NO_POWER		3
+#define TRANSPORTER_STATUS_OUT_OF_RANGE		4
+#define TRANSPORTER_STATUS_NO_CAPACITY		5
+#define TRANSPORTER_STATUS_TAG_NOT_FOUND	6
+#define TRANSPORTER_STATUS_NO_TARGET		7
+#define TRANSPORTER_STATUS_FAILED		8
 
 #define OPCODE_NOOP		0xff
 
@@ -739,6 +753,20 @@ struct request_mainscreen_view_change {
 	uint8_t view_mode;
 #define MAINSCREEN_VIEW_MODE_NORMAL 0
 #define MAINSCREEN_VIEW_MODE_WEAPONS 1
+};
+
+struct request_transporter_packet {
+	uint8_t opcode;
+	uint32_t ship_id;
+	uint8_t direction;
+	char tag[5];
+};
+
+struct transporter_status_packet {
+	uint8_t opcode;
+	uint32_t ship_id;
+	uint8_t status;
+	uint8_t progress;
 };
 
 struct opcode_format_descriptor {

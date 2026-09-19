@@ -8573,6 +8573,19 @@ static int process_talking_stick(void)
 	return 0;
 }
 
+static int process_transporter_status(void)
+{
+	unsigned char buffer[20];
+	uint32_t id;
+	uint8_t status, progress;
+	int rc;
+
+	rc = read_and_unpack_buffer(buffer, "wbb", &id, &status, &progress);
+	if (rc != 0)
+		return rc;
+	return 0;
+}
+
 static int process_custom_button(void);
 static int process_console_op(void);
 static int process_client_config(void);
@@ -8895,6 +8908,11 @@ static void *gameserver_reader(__attribute__((unused)) void *arg)
 			break;
 		case OPCODE_TALKING_STICK:
 			rc = process_talking_stick();
+			if (rc)
+				goto protocol_error;
+			break;
+		case OPCODE_TRANSPORTER_STATUS:
+			rc = process_transporter_status();
 			if (rc)
 				goto protocol_error;
 			break;
