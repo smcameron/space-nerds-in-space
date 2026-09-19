@@ -6872,6 +6872,10 @@ static void hide_or_unhide_transporter_widgets(int hide)
 	void (*hide_or_unhide)(void *widget) = hide ? ui_hide_widget : ui_unhide_widget;
 
 	hide_or_unhide(eng_ui.engineering_button);
+	hide_or_unhide(eng_ui.transporter_tag_input);
+	hide_or_unhide(eng_ui.transporter_to_ship_button);
+	hide_or_unhide(eng_ui.transporter_from_ship_button);
+	hide_or_unhide(eng_ui.transporter_energize_button);
 }
 
 /* Hide engineering widgets when switching to transporter screen */
@@ -8583,6 +8587,13 @@ static int process_transporter_status(void)
 	rc = read_and_unpack_buffer(buffer, "wbb", &id, &status, &progress);
 	if (rc != 0)
 		return rc;
+
+	if (eng_ui.transporter_status != TRANSPORTER_STATUS_IN_PROGRESS &&
+	    status == TRANSPORTER_STATUS_IN_PROGRESS)
+		wwviaudio_add_sound(TRANSPORTER_SOUND);
+
+	eng_ui.transporter_status = status;
+	eng_ui.transporter_progress = progress;
 	return 0;
 }
 
@@ -15302,6 +15313,60 @@ static void engineering_button_pressed(__attribute__((unused)) void *x)
 		(unsigned char) OPCODE_SUBSCREEN_ENGINEERING));
 }
 
+static int transporter_to_ship_checked(__attribute__((unused)) void *x)
+{
+	return eng_ui.transporter_direction == OPCODE_TRANSPORTER_DIR_TO_SHIP;
+}
+
+static int transporter_from_ship_checked(__attribute__((unused)) void *x)
+{
+	return eng_ui.transporter_direction == OPCODE_TRANSPORTER_DIR_FROM_SHIP;
+}
+
+static void transporter_to_ship_pressed(__attribute__((unused)) void *x)
+{
+	eng_ui.transporter_direction = OPCODE_TRANSPORTER_DIR_TO_SHIP;
+}
+
+static void transporter_from_ship_pressed(__attribute__((unused)) void *x)
+{
+	eng_ui.transporter_direction = OPCODE_TRANSPORTER_DIR_FROM_SHIP;
+}
+
+static void transporter_energize_pressed(__attribute__((unused)) void *x)
+{
+	struct snis_entity *o;
+	char *buf;
+	char tag[TRANSPORTER_TAG_LEN + 1];
+	int i;
+
+	pthread_mutex_lock(&universe_mutex);
+	o = find_my_ship();
+	if (!o) {
+		pthread_mutex_unlock(&universe_mutex);
+		return;
+	}
+	pthread_mutex_unlock(&universe_mutex);
+
+	buf = snis_text_input_box_get_buffer(eng_ui.transporter_tag_input);
+	memset(tag, ' ', TRANSPORTER_TAG_LEN);
+	tag[TRANSPORTER_TAG_LEN] = '\0';
+	if (buf) {
+		for (i = 0; i < TRANSPORTER_TAG_LEN && buf[i] != '\0'; i++)
+			tag[i] = toupper((unsigned char) buf[i]);
+	}
+
+	queue_to_server(snis_opcode_pkt("bwbbbbbb",
+					OPCODE_REQUEST_TRANSPORTER,
+					o->id,
+					(uint8_t) eng_ui.transporter_direction,
+					(uint8_t) tag[0],
+					(uint8_t) tag[1],
+					(uint8_t) tag[2],
+					(uint8_t) tag[3],
+					(uint8_t) tag[4]));
+}
+
 static void silence_alarms_pressed(__attribute__((unused)) void *x)
 {
 	struct snis_entity *o = find_my_ship();
@@ -15698,6 +15763,58 @@ static void init_engineering_ui(void)
 	ui_add_slider(eu->transporter_temperature, dm, NULL);
 	ui_add_slider(eu->tractor_temperature, dm, NULL);
 	ui_add_slider(eu->lifesupport_temperature, dm, NULL);
+
+	/* Transporter subscreen controls */
+	color = UI_COLOR(eng_button);
+	eu->transporter_direction = OPCODE_TRANSPORTER_DIR_TO_SHIP;
+	eu->transporter_status = TRANSPORTER_STATUS_IDLE;
+	eu->transporter_progress = 0;
+	eu->transporter_waveform_phase = 0;
+	memset(eu->transporter_tag_buffer, 0, sizeof(eu->transporter_tag_buffer));
+
+	eu->transporter_tag_input = snis_text_input_box_init(txx(240), txy(120),
+						txy(28), txx(120),
+						UI_COLOR(eng_button), NANO_FONT,
+						eu->transporter_tag_buffer,
+						sizeof(eu->transporter_tag_buffer),
+						&timer, NULL, NULL);
+	snis_text_input_box_set_return(eu->transporter_tag_input,
+				       transporter_energize_pressed);
+
+	eu->transporter_to_ship_button = snis_button_init(txx(60), txy(165),
+						-1, txy(25), "BEAM TO SHIP",
+						color, NANO_FONT,
+						transporter_to_ship_pressed, NULL);
+	snis_button_set_sound(eu->transporter_to_ship_button, UISND12);
+	snis_button_set_hover_color(eu->transporter_to_ship_button, hover_color);
+	snis_button_set_checkbox_function(eu->transporter_to_ship_button,
+					  transporter_to_ship_checked, NULL);
+
+	eu->transporter_from_ship_button = snis_button_init(txx(230), txy(165),
+						-1, txy(25), "BEAM FROM SHIP",
+						color, NANO_FONT,
+						transporter_from_ship_pressed, NULL);
+	snis_button_set_sound(eu->transporter_from_ship_button, UISND12);
+	snis_button_set_hover_color(eu->transporter_from_ship_button, hover_color);
+	snis_button_set_checkbox_function(eu->transporter_from_ship_button,
+					  transporter_from_ship_checked, NULL);
+
+	eu->transporter_energize_button = snis_button_init(txx(420), txy(165),
+						-1, txy(25), "ENERGIZE",
+						color, NANO_FONT,
+						transporter_energize_pressed, NULL);
+	snis_button_set_sound(eu->transporter_energize_button, UISND1);
+	snis_button_set_hover_color(eu->transporter_energize_button, hover_color);
+
+	ui_add_text_input_box(eu->transporter_tag_input, dm);
+	ui_add_button(eu->transporter_to_ship_button, dm,
+		      "SELECT TRANSPORT DIRECTION: BEAM TARGET TO SHIP");
+	ui_add_button(eu->transporter_from_ship_button, dm,
+		      "SELECT TRANSPORT DIRECTION: BEAM ABOARD PASSENGER OFF SHIP");
+	ui_add_button(eu->transporter_energize_button, dm,
+		      "ENERGIZE TRANSPORTER CONFINEMENT BEAM");
+
+	hide_transporter_widgets();
 }
 
 static void draw_tooltip_color(int mousex, int mousey, char *tooltip, int color)
@@ -15789,15 +15906,194 @@ static int engineering_warnings_active(void)
 		snis_slider_alarm_triggered(eng_ui.lifesupport_damage);
 }
 
+static void draw_transporter_waveform(int x, int y, int w, int h)
+{
+	int mid_y = y + h / 2;
+	int px, prev_x = -1, prev_y = -1;
+	int active = (eng_ui.transporter_status ==
+		      TRANSPORTER_STATUS_IN_PROGRESS);
+	float phase_step = active ? 0.08f : 0.02f;
+
+	eng_ui.transporter_waveform_phase++;
+
+	/* Outer border */
+	sng_set_foreground(UI_COLOR(eng_power_meter));
+	snis_draw_rectangle(0, x, y, w, h);
+
+	/* Label */
+	sng_abs_xy_draw_string("TRANSPORTER BUFFER / CONFINEMENT BEAM",
+				PICO_FONT, x + txx(10), y + txy(18));
+
+	/* Centerline grid */
+	sng_set_foreground(UI_COLOR(slider_black));
+	snis_draw_line(x + 2, mid_y, x + w - 2, mid_y);
+
+	/* Draw waveform */
+	if (active)
+		sng_set_foreground(UI_COLOR(eng_selected_button));
+	else
+		sng_set_foreground(UI_COLOR(eng_button));
+
+	for (px = x + 4; px < x + w - 4; px += 2) {
+		float t = (float)(px - x) / (float)w;
+		float env = sin(t * M_PI);
+		float phase = (float)eng_ui.transporter_waveform_phase *
+			      phase_step;
+		float val;
+		int py;
+
+		if (active) {
+			val = sin(t * 20.0 * M_PI + phase) * 0.6 +
+			      sin(t * 40.0 * M_PI - phase * 1.5) * 0.4;
+			py = mid_y - (int)(val * (h * 0.38) * env);
+		} else {
+			val = sin(t * 8.0 * M_PI + phase);
+			py = mid_y - (int)(val * (h * 0.10) * env);
+		}
+
+		if (prev_x >= 0)
+			snis_draw_line(prev_x, prev_y, px, py);
+		prev_x = px;
+		prev_y = py;
+	}
+}
+
 static void show_transporter(void)
 {
 	struct snis_entity *o;
+	int x, y, w, h;
+	char buf[128];
+	const char *status_str;
+	int status_color;
+	double dist;
+	int pwr, dmg, online;
 
 	pthread_mutex_lock(&universe_mutex);
-	if (!(o = find_my_ship())) {
+	o = find_my_ship();
+	if (!o) {
 		pthread_mutex_unlock(&universe_mutex);
 		return;
 	}
+
+	/* Label next to transporter tag input */
+	sng_set_foreground(UI_COLOR(eng_power_meter));
+	sng_abs_xy_draw_string("TRANSPORTER TAG:", NANO_FONT,
+				txx(60), txy(138));
+
+	/* Waveform display */
+	x = txx(60);
+	y = txy(205);
+	w = txx(680);
+	h = txy(140);
+	draw_transporter_waveform(x, y, w, h);
+
+	/* Status display */
+	switch (eng_ui.transporter_status) {
+	case TRANSPORTER_STATUS_IDLE:
+		status_str = "IDLE";
+		status_color = UI_COLOR(eng_power_meter);
+		break;
+	case TRANSPORTER_STATUS_IN_PROGRESS:
+		status_str = "IN PROGRESS - ENERGIZING PATTERN";
+		status_color = UI_COLOR(eng_caution_status);
+		break;
+	case TRANSPORTER_STATUS_COMPLETE:
+		status_str = "TRANSPORT COMPLETE";
+		status_color = UI_COLOR(eng_good_status);
+		break;
+	case TRANSPORTER_STATUS_NO_POWER:
+		status_str = "ERROR: INSUFFICIENT TRANSPORTER POWER";
+		status_color = UI_COLOR(eng_warning_status);
+		break;
+	case TRANSPORTER_STATUS_OUT_OF_RANGE:
+		status_str = "ERROR: TARGET OUT OF RANGE";
+		status_color = UI_COLOR(eng_warning_status);
+		break;
+	case TRANSPORTER_STATUS_NO_CAPACITY:
+		status_str = "ERROR: INSUFFICIENT BERTH OR CARGO CAPACITY";
+		status_color = UI_COLOR(eng_warning_status);
+		break;
+	case TRANSPORTER_STATUS_TAG_NOT_FOUND:
+		status_str = "ERROR: TRANSPORTER TAG NOT FOUND";
+		status_color = UI_COLOR(eng_warning_status);
+		break;
+	case TRANSPORTER_STATUS_NO_TARGET:
+		status_str = "ERROR: NO VALID TARGET SELECTED BY SCIENCE";
+		status_color = UI_COLOR(eng_warning_status);
+		break;
+	case TRANSPORTER_STATUS_FAILED:
+	default:
+		status_str = "ERROR: TRANSPORT OPERATION FAILED";
+		status_color = UI_COLOR(eng_warning_status);
+		break;
+	}
+
+	y = txy(365);
+	sng_set_foreground(status_color);
+	snprintf(buf, sizeof(buf), "STATUS: %s", status_str);
+	sng_abs_xy_draw_string(buf, NANO_FONT, x, y);
+
+	/* Progress bar */
+	y = txy(395);
+	sng_set_foreground(UI_COLOR(eng_power_meter));
+	snprintf(buf, sizeof(buf), "PROGRESS: %3d%%",
+		 eng_ui.transporter_progress);
+	sng_abs_xy_draw_string(buf, NANO_FONT, x, y + txy(14));
+
+	/* Progress bar rectangle */
+	snis_draw_rectangle(0, x + txx(180), y, txx(300), txy(18));
+	if (eng_ui.transporter_progress > 0) {
+		int prog_w = (txx(296) * eng_ui.transporter_progress) / 100;
+
+		sng_set_foreground(status_color);
+		snis_draw_rectangle(1, x + txx(182), y + txy(2),
+				    prog_w, txy(14));
+	}
+
+	/* Target information from science selection */
+	y = txy(435);
+	if (curr_science_guy && curr_science_guy->alive) {
+		dist = object_dist(o, curr_science_guy);
+		if (curr_science_guy->sdata.name[0] != '\0') {
+			snprintf(buf, sizeof(buf),
+				 "TARGET: %s   DISTANCE: %.0f   RANGE: %.0f   [%s]",
+				 curr_science_guy->sdata.name, dist,
+				 (double)TRANSPORTER_RANGE,
+				 dist <= TRANSPORTER_RANGE ?
+				 "IN RANGE" : "OUT OF RANGE");
+		} else {
+			snprintf(buf, sizeof(buf),
+				 "TARGET ID: %u   DISTANCE: %.0f   RANGE: %.0f   [%s]",
+				 curr_science_guy->id, dist,
+				 (double)TRANSPORTER_RANGE,
+				 dist <= TRANSPORTER_RANGE ?
+				 "IN RANGE" : "OUT OF RANGE");
+		}
+		sng_set_foreground(dist <= TRANSPORTER_RANGE ?
+					UI_COLOR(eng_good_status) :
+					UI_COLOR(eng_warning_status));
+		sng_abs_xy_draw_string(buf, PICO_FONT, x, y);
+	} else {
+		sng_set_foreground(UI_COLOR(eng_caution_status));
+		sng_abs_xy_draw_string(
+			"TARGET: NONE (SELECT TARGET ON SCIENCE STATION)",
+			PICO_FONT, x, y);
+	}
+
+	/* Transporter subsystem power and damage status */
+	y = txy(465);
+	pwr = o->tsd.ship.power_data.transporter.i;
+	dmg = o->tsd.ship.damage.transporter_damage;
+	online = (pwr >= 25 && dmg < 200);
+
+	snprintf(buf, sizeof(buf),
+		 "POWER: %d%%   HEALTH: %d%%   [%s]",
+		 (pwr * 100) / 255, ((255 - dmg) * 100) / 255,
+		 online ? "ONLINE" : "OFFLINE");
+	sng_set_foreground(online ? UI_COLOR(eng_good_status) :
+				    UI_COLOR(eng_warning_status));
+	sng_abs_xy_draw_string(buf, PICO_FONT, x, y);
+
 	pthread_mutex_unlock(&universe_mutex);
 
 	show_common_screen("TRANSPORTER CONTROL");

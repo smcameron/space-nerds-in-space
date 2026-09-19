@@ -207,6 +207,15 @@ struct engineering_ui {
 #define ENG_ENGINEERING_SUBSCREEN 0
 #define ENG_TRANSPORTER_SUBSCREEN 1
 	int subscreen;
+	struct snis_text_input_box *transporter_tag_input;
+	char transporter_tag_buffer[32];
+	struct button *transporter_to_ship_button;
+	struct button *transporter_from_ship_button;
+	struct button *transporter_energize_button;
+	int transporter_direction;
+	int transporter_status;
+	int transporter_progress;
+	int transporter_waveform_phase;
 };
 
 struct science_ui {
