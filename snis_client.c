@@ -24053,7 +24053,7 @@ static int main_da_expose(SDL_Window *window)
 	ui_element_list_maybe_draw_tooltips(uiobjs, mouse.x, mouse.y);
 
 	/* this has to come after ui_element_list_draw() to avoid getting clobbered */
-	if (displaymode == DISPLAYMODE_ENGINEERING)
+	if (displaymode == DISPLAYMODE_ENGINEERING && eng_ui.subscreen == ENG_ENGINEERING_SUBSCREEN)
 		show_engineering_damage_report(eng_ui.selected_subsystem);
 
 	if (helpmode)
