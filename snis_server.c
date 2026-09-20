@@ -11565,7 +11565,7 @@ static void init_power_model(struct snis_entity *o)
 	/* Warp */
 	pd->warp.r1 = 0;
 	pd->warp.r2 = 0;
-	pd->warp.r3 = 200;
+	pd->warp.r3 = 10; /* power hungry */
 	d = new_power_device(o, POWERFUNCS(warp));
 	power_model_add_device(pm, d);
 
@@ -11600,7 +11600,7 @@ static void init_power_model(struct snis_entity *o)
 	/* Transporter */
 	pd->transporter.r1 = 255;
 	pd->transporter.r2 = 0;
-	pd->transporter.r3 = 200;
+	pd->transporter.r3 = 10; /* power hungry */
 	d = new_power_device(o, POWERFUNCS(transporter));
 	power_model_add_device(pm, d);
 
