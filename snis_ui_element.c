@@ -85,7 +85,7 @@ void ui_element_draw(struct ui_element *element)
 
 void ui_element_maybe_draw_tooltip(struct ui_element *element, int mousex, int mousey)
 {
-	if (element->update_mouse_pos)
+	if (element->update_mouse_pos) /* Careful, this has side effects that affect pd menus */
 		element->update_mouse_pos(element->element, mousex, mousey);
 	if (!element->inside_fn) {
 		return;
@@ -96,6 +96,8 @@ void ui_element_maybe_draw_tooltip(struct ui_element *element, int mousex, int m
 		element->tooltip_timer = TOOLTIP_DELAY;
 		return;
 	}
+	if (element->hidden)
+		return;
 	if (element->tooltip_timer > 0)
 		element->tooltip_timer--;
 	if (element->tooltip_timer > 0)
