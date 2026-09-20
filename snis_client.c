@@ -14970,9 +14970,11 @@ static void show_navigation(void)
 	show_common_screen("NAV");
 }
 
+static void engineering_button_pressed(__attribute__((unused)) void *x);
 static void main_engineering_button_pressed(__attribute__((unused)) void *x)
 {
 	displaymode = DISPLAYMODE_ENGINEERING;
+	engineering_button_pressed(NULL);
 }
 
 static void robot_forward_button_pressed(__attribute__((unused)) void *x)
