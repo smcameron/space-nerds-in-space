@@ -11464,13 +11464,45 @@ static int add_generic_object(double x, double y, double z,
 	return i;
 }
 
+const struct power_model_fixed_value_data power_data_fixed_value  = {
+	/* -1 means user controllable, other values are constants */
+	.warp =		{ -1, -1, 10, },
+	.sensors =	{ -1, -1, 200, },
+	.phasers =	{ 255, -1, 200, },
+	.maneuvering =	{ 255, -1, 200, },
+	.shields =	{ -1, -1, 200, },
+	.transporter =	{ 255, -1, 10, },
+	.impulse =	{ -1, -1, 200, },
+	.tractor =	{ 255, -1, 200, },
+	.lifesupport =	{ 255, -1, 200, },
+};
+
+const struct power_model_fixed_value_data coolant_data_fixed_value  = {
+	.warp =		{ 255, -1, 200, },
+	.sensors =	{ 255, -1, 200, },
+	.phasers =	{ 255, -1, 200, },
+	.maneuvering =	{ 255, -1, 200, },
+	.shields =	{ 255, -1, 200, },
+	.transporter =	{ 255, -1, 200, },
+	.impulse =	{ 255, -1, 200, },
+	.tractor =	{ 255, -1, 200, },
+	.lifesupport =	{ 255, -1, 200, },
+};
+
 #define DECLARE_POWER_MODEL_SAMPLER(name, model, which) \
-static float sample_##model##_##name##_##which(void *cookie) \
+static float sample_##model##_##name##_r##which(void *cookie) \
 { \
 	struct snis_entity *o = cookie; \
-	float v = 255.0 - (float) o->tsd.ship.model.name.which; \
+	float rvalue; \
+	/* Prevent fixed values from getting clobbered via old data files */ \
+	float fvalue = (float) model##_fixed_value.name.r##which; \
+	if (fvalue < 0.0f) \
+		rvalue = (float) o->tsd.ship.model.name.r##which; \
+	else \
+		rvalue = fvalue; \
+	float v = 255.0 - rvalue; \
 \
-	if (v > 250.0) \
+	if (v > 250.0) /* device is effectively "off", high resistance to block all current. */ \
 		v = 10000.0; \
 	v =  v * 10000.0; \
 	return v; \
@@ -11478,61 +11510,61 @@ static float sample_##model##_##name##_##which(void *cookie) \
 	/* return (float) (256.0 - (float) o->tsd.ship.power_data.name.which) / 256.0; */  \
 }
 
-DECLARE_POWER_MODEL_SAMPLER(warp, power_data, r1) /* declares sample_power_data_warp_r1 */
-DECLARE_POWER_MODEL_SAMPLER(warp, power_data, r2) /* declares sample_power_data_warp_r2 */
-DECLARE_POWER_MODEL_SAMPLER(warp, power_data, r3) /* declares sample_power_data_warp_r3 */
-DECLARE_POWER_MODEL_SAMPLER(sensors, power_data, r1) /* declares sample_power_data_sensors_r1 */
-DECLARE_POWER_MODEL_SAMPLER(sensors, power_data, r2) /* declares sample_power_data_sensors_r2 */
-DECLARE_POWER_MODEL_SAMPLER(sensors, power_data, r3) /* declares sample_power_data_sensors_r3 */
-DECLARE_POWER_MODEL_SAMPLER(phasers, power_data, r1) /* declares sample_power_data_phasers_r1 */
-DECLARE_POWER_MODEL_SAMPLER(phasers, power_data, r2) /* declares sample_power_data_phasers_r2 */
-DECLARE_POWER_MODEL_SAMPLER(phasers, power_data, r3) /* declares sample_power_data_phasers_r3 */
-DECLARE_POWER_MODEL_SAMPLER(maneuvering, power_data, r1) /* declares sample_power_data_maneuvering_r1 */
-DECLARE_POWER_MODEL_SAMPLER(maneuvering, power_data, r2) /* declares sample_power_data_maneuvering_r2 */
-DECLARE_POWER_MODEL_SAMPLER(maneuvering, power_data, r3) /* declares sample_power_data_maneuvering_r3 */
-DECLARE_POWER_MODEL_SAMPLER(shields, power_data, r1) /* declares sample_power_data_shields_r1 */
-DECLARE_POWER_MODEL_SAMPLER(shields, power_data, r2) /* declares sample_power_data_shields_r2 */
-DECLARE_POWER_MODEL_SAMPLER(shields, power_data, r3) /* declares sample_power_data_shields_r3 */
-DECLARE_POWER_MODEL_SAMPLER(transporter, power_data, r1) /* declares sample_power_data_transporter_r1 */
-DECLARE_POWER_MODEL_SAMPLER(transporter, power_data, r2) /* declares sample_power_data_transporter_r2 */
-DECLARE_POWER_MODEL_SAMPLER(transporter, power_data, r3) /* declares sample_power_data_transporter_r3 */
-DECLARE_POWER_MODEL_SAMPLER(impulse, power_data, r1) /* declares sample_power_data_impulse_r1 */
-DECLARE_POWER_MODEL_SAMPLER(impulse, power_data, r2) /* declares sample_power_data_impulse_r2 */
-DECLARE_POWER_MODEL_SAMPLER(impulse, power_data, r3) /* declares sample_power_data_impulse_r3 */
-DECLARE_POWER_MODEL_SAMPLER(tractor, power_data, r1) /* declares sample_power_data_tractor_r1 */
-DECLARE_POWER_MODEL_SAMPLER(tractor, power_data, r2) /* declares sample_power_data_tractor_r2 */
-DECLARE_POWER_MODEL_SAMPLER(tractor, power_data, r3) /* declares sample_power_data_tractor_r3 */
-DECLARE_POWER_MODEL_SAMPLER(lifesupport, power_data, r1) /* declares sample_power_data_lifesupport_r1 */
-DECLARE_POWER_MODEL_SAMPLER(lifesupport, power_data, r2) /* declares sample_power_data_lifesupport_r2 */
-DECLARE_POWER_MODEL_SAMPLER(lifesupport, power_data, r3) /* declares sample_power_data_lifesupport_r3 */
+DECLARE_POWER_MODEL_SAMPLER(warp, power_data, 1) /* declares sample_power_data_warp_r1 */
+DECLARE_POWER_MODEL_SAMPLER(warp, power_data, 2) /* declares sample_power_data_warp_r2 */
+DECLARE_POWER_MODEL_SAMPLER(warp, power_data, 3) /* declares sample_power_data_warp_r3 */
+DECLARE_POWER_MODEL_SAMPLER(sensors, power_data, 1) /* declares sample_power_data_sensors_r1 */
+DECLARE_POWER_MODEL_SAMPLER(sensors, power_data, 2) /* declares sample_power_data_sensors_r2 */
+DECLARE_POWER_MODEL_SAMPLER(sensors, power_data, 3) /* declares sample_power_data_sensors_r3 */
+DECLARE_POWER_MODEL_SAMPLER(phasers, power_data, 1) /* declares sample_power_data_phasers_r1 */
+DECLARE_POWER_MODEL_SAMPLER(phasers, power_data, 2) /* declares sample_power_data_phasers_r2 */
+DECLARE_POWER_MODEL_SAMPLER(phasers, power_data, 3) /* declares sample_power_data_phasers_r3 */
+DECLARE_POWER_MODEL_SAMPLER(maneuvering, power_data, 1) /* declares sample_power_data_maneuvering_r1 */
+DECLARE_POWER_MODEL_SAMPLER(maneuvering, power_data, 2) /* declares sample_power_data_maneuvering_r2 */
+DECLARE_POWER_MODEL_SAMPLER(maneuvering, power_data, 3) /* declares sample_power_data_maneuvering_r3 */
+DECLARE_POWER_MODEL_SAMPLER(shields, power_data, 1) /* declares sample_power_data_shields_r1 */
+DECLARE_POWER_MODEL_SAMPLER(shields, power_data, 2) /* declares sample_power_data_shields_r2 */
+DECLARE_POWER_MODEL_SAMPLER(shields, power_data, 3) /* declares sample_power_data_shields_r3 */
+DECLARE_POWER_MODEL_SAMPLER(transporter, power_data, 1) /* declares sample_power_data_transporter_r1 */
+DECLARE_POWER_MODEL_SAMPLER(transporter, power_data, 2) /* declares sample_power_data_transporter_r2 */
+DECLARE_POWER_MODEL_SAMPLER(transporter, power_data, 3) /* declares sample_power_data_transporter_r3 */
+DECLARE_POWER_MODEL_SAMPLER(impulse, power_data, 1) /* declares sample_power_data_impulse_r1 */
+DECLARE_POWER_MODEL_SAMPLER(impulse, power_data, 2) /* declares sample_power_data_impulse_r2 */
+DECLARE_POWER_MODEL_SAMPLER(impulse, power_data, 3) /* declares sample_power_data_impulse_r3 */
+DECLARE_POWER_MODEL_SAMPLER(tractor, power_data, 1) /* declares sample_power_data_tractor_r1 */
+DECLARE_POWER_MODEL_SAMPLER(tractor, power_data, 2) /* declares sample_power_data_tractor_r2 */
+DECLARE_POWER_MODEL_SAMPLER(tractor, power_data, 3) /* declares sample_power_data_tractor_r3 */
+DECLARE_POWER_MODEL_SAMPLER(lifesupport, power_data, 1) /* declares sample_power_data_lifesupport_r1 */
+DECLARE_POWER_MODEL_SAMPLER(lifesupport, power_data, 2) /* declares sample_power_data_lifesupport_r2 */
+DECLARE_POWER_MODEL_SAMPLER(lifesupport, power_data, 3) /* declares sample_power_data_lifesupport_r3 */
 
-DECLARE_POWER_MODEL_SAMPLER(warp, coolant_data, r1) /* declares sample_coolant_data_warp_r1 */
-DECLARE_POWER_MODEL_SAMPLER(warp, coolant_data, r2) /* declares sample_coolant_data_warp_r2 */
-DECLARE_POWER_MODEL_SAMPLER(warp, coolant_data, r3) /* declares sample_coolant_data_warp_r3 */
-DECLARE_POWER_MODEL_SAMPLER(sensors, coolant_data, r1) /* declares sample_coolant_data_sensors_r1 */
-DECLARE_POWER_MODEL_SAMPLER(sensors, coolant_data, r2) /* declares sample_coolant_data_sensors_r2 */
-DECLARE_POWER_MODEL_SAMPLER(sensors, coolant_data, r3) /* declares sample_coolant_data_sensors_r3 */
-DECLARE_POWER_MODEL_SAMPLER(phasers, coolant_data, r1) /* declares sample_coolant_data_phasers_r1 */
-DECLARE_POWER_MODEL_SAMPLER(phasers, coolant_data, r2) /* declares sample_coolant_data_phasers_r2 */
-DECLARE_POWER_MODEL_SAMPLER(phasers, coolant_data, r3) /* declares sample_coolant_data_phasers_r3 */
-DECLARE_POWER_MODEL_SAMPLER(maneuvering, coolant_data, r1) /* declares sample_coolant_data_maneuvering_r1 */
-DECLARE_POWER_MODEL_SAMPLER(maneuvering, coolant_data, r2) /* declares sample_coolant_data_maneuvering_r2 */
-DECLARE_POWER_MODEL_SAMPLER(maneuvering, coolant_data, r3) /* declares sample_coolant_data_maneuvering_r3 */
-DECLARE_POWER_MODEL_SAMPLER(shields, coolant_data, r1) /* declares sample_coolant_data_shields_r1 */
-DECLARE_POWER_MODEL_SAMPLER(shields, coolant_data, r2) /* declares sample_coolant_data_shields_r2 */
-DECLARE_POWER_MODEL_SAMPLER(shields, coolant_data, r3) /* declares sample_coolant_data_shields_r3 */
-DECLARE_POWER_MODEL_SAMPLER(transporter, coolant_data, r1) /* declares sample_coolant_data_transporter_r1 */
-DECLARE_POWER_MODEL_SAMPLER(transporter, coolant_data, r2) /* declares sample_coolant_data_transporter_r2 */
-DECLARE_POWER_MODEL_SAMPLER(transporter, coolant_data, r3) /* declares sample_coolant_data_transporter_r3 */
-DECLARE_POWER_MODEL_SAMPLER(impulse, coolant_data, r1) /* declares sample_coolant_data_impulse_r1 */
-DECLARE_POWER_MODEL_SAMPLER(impulse, coolant_data, r2) /* declares sample_coolant_data_impulse_r2 */
-DECLARE_POWER_MODEL_SAMPLER(impulse, coolant_data, r3) /* declares sample_coolant_data_impulse_r3 */
-DECLARE_POWER_MODEL_SAMPLER(tractor, coolant_data, r1) /* declares sample_coolant_data_tractor_r1 */
-DECLARE_POWER_MODEL_SAMPLER(tractor, coolant_data, r2) /* declares sample_coolant_data_tractor_r2 */
-DECLARE_POWER_MODEL_SAMPLER(tractor, coolant_data, r3) /* declares sample_coolant_data_tractor_r3 */
-DECLARE_POWER_MODEL_SAMPLER(lifesupport, coolant_data, r1) /* declares sample_coolant_data_lifesupport_r1 */
-DECLARE_POWER_MODEL_SAMPLER(lifesupport, coolant_data, r2) /* declares sample_coolant_data_lifesupport_r2 */
-DECLARE_POWER_MODEL_SAMPLER(lifesupport, coolant_data, r3) /* declares sample_coolant_data_lifesupport_r3 */
+DECLARE_POWER_MODEL_SAMPLER(warp, coolant_data, 1) /* declares sample_coolant_data_warp_r1 */
+DECLARE_POWER_MODEL_SAMPLER(warp, coolant_data, 2) /* declares sample_coolant_data_warp_r2 */
+DECLARE_POWER_MODEL_SAMPLER(warp, coolant_data, 3) /* declares sample_coolant_data_warp_r3 */
+DECLARE_POWER_MODEL_SAMPLER(sensors, coolant_data, 1) /* declares sample_coolant_data_sensors_r1 */
+DECLARE_POWER_MODEL_SAMPLER(sensors, coolant_data, 2) /* declares sample_coolant_data_sensors_r2 */
+DECLARE_POWER_MODEL_SAMPLER(sensors, coolant_data, 3) /* declares sample_coolant_data_sensors_r3 */
+DECLARE_POWER_MODEL_SAMPLER(phasers, coolant_data, 1) /* declares sample_coolant_data_phasers_r1 */
+DECLARE_POWER_MODEL_SAMPLER(phasers, coolant_data, 2) /* declares sample_coolant_data_phasers_r2 */
+DECLARE_POWER_MODEL_SAMPLER(phasers, coolant_data, 3) /* declares sample_coolant_data_phasers_r3 */
+DECLARE_POWER_MODEL_SAMPLER(maneuvering, coolant_data, 1) /* declares sample_coolant_data_maneuvering_r1 */
+DECLARE_POWER_MODEL_SAMPLER(maneuvering, coolant_data, 2) /* declares sample_coolant_data_maneuvering_r2 */
+DECLARE_POWER_MODEL_SAMPLER(maneuvering, coolant_data, 3) /* declares sample_coolant_data_maneuvering_r3 */
+DECLARE_POWER_MODEL_SAMPLER(shields, coolant_data, 1) /* declares sample_coolant_data_shields_r1 */
+DECLARE_POWER_MODEL_SAMPLER(shields, coolant_data, 2) /* declares sample_coolant_data_shields_r2 */
+DECLARE_POWER_MODEL_SAMPLER(shields, coolant_data, 3) /* declares sample_coolant_data_shields_r3 */
+DECLARE_POWER_MODEL_SAMPLER(transporter, coolant_data, 1) /* declares sample_coolant_data_transporter_r1 */
+DECLARE_POWER_MODEL_SAMPLER(transporter, coolant_data, 2) /* declares sample_coolant_data_transporter_r2 */
+DECLARE_POWER_MODEL_SAMPLER(transporter, coolant_data, 3) /* declares sample_coolant_data_transporter_r3 */
+DECLARE_POWER_MODEL_SAMPLER(impulse, coolant_data, 1) /* declares sample_coolant_data_impulse_r1 */
+DECLARE_POWER_MODEL_SAMPLER(impulse, coolant_data, 2) /* declares sample_coolant_data_impulse_r2 */
+DECLARE_POWER_MODEL_SAMPLER(impulse, coolant_data, 3) /* declares sample_coolant_data_impulse_r3 */
+DECLARE_POWER_MODEL_SAMPLER(tractor, coolant_data, 1) /* declares sample_coolant_data_tractor_r1 */
+DECLARE_POWER_MODEL_SAMPLER(tractor, coolant_data, 2) /* declares sample_coolant_data_tractor_r2 */
+DECLARE_POWER_MODEL_SAMPLER(tractor, coolant_data, 3) /* declares sample_coolant_data_tractor_r3 */
+DECLARE_POWER_MODEL_SAMPLER(lifesupport, coolant_data, 1) /* declares sample_coolant_data_lifesupport_r1 */
+DECLARE_POWER_MODEL_SAMPLER(lifesupport, coolant_data, 2) /* declares sample_coolant_data_lifesupport_r2 */
+DECLARE_POWER_MODEL_SAMPLER(lifesupport, coolant_data, 3) /* declares sample_coolant_data_lifesupport_r3 */
 
 
 #define POWERFUNC(system, number) \

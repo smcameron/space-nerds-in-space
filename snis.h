@@ -150,7 +150,8 @@
 #define ENG_PRESET_NUMBER 10
 
 struct power_model_device {
-	uint8_t r1, r2, r3, i;
+	uint8_t r1, r2, r3; /* resistance values 0 - 255 */
+	uint8_t i; /* current */
 };
 
 /* This thing must contain only endian clean data -- single byte values only */
@@ -165,6 +166,27 @@ struct power_model_data {
 	struct power_model_device tractor;
 	struct power_model_device lifesupport;
 	uint8_t voltage;
+};
+
+/* Some values of the power_model_device are not user adjustable.
+ * The constant values are stored separately.  This is so that if
+ * we later adjust them, old values are not read from data files
+ * via multiverse.
+ */
+struct power_model_fixed_value {
+	int16_t r1, r2, r3;
+};
+
+struct power_model_fixed_value_data {
+	struct power_model_fixed_value maneuvering;
+	struct power_model_fixed_value warp;
+	struct power_model_fixed_value impulse;
+	struct power_model_fixed_value sensors;
+	struct power_model_fixed_value transporter;
+	struct power_model_fixed_value phasers;
+	struct power_model_fixed_value shields;
+	struct power_model_fixed_value tractor;
+	struct power_model_fixed_value lifesupport;
 };
 
 struct ship_damage_data {
