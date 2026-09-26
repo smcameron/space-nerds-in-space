@@ -113,6 +113,8 @@ GLOBAL void mesh_distort_and_random_uv_map(struct mesh *m, float distortion, str
 GLOBAL struct mesh *mesh_fabricate_planetary_ring(float ir, float or, int nvertices);
 GLOBAL struct mesh *init_thrust_mesh(int streaks, double h, double r1);
 GLOBAL struct mesh *init_burst_rod_mesh(int streaks, double h, double r1, double r2);
+GLOBAL struct mesh *init_exhaust_cone_mesh(int segments, int rings, float length,
+					float nozzle_radius, float tip_radius);
 GLOBAL void mesh_update_material(struct mesh *m, struct material *material);
 GLOBAL void mesh_rotate(struct mesh *m, union quat *q);
 GLOBAL struct mesh *mesh_tube(float h, float r, float nfaces);

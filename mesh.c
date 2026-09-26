@@ -2280,6 +2280,124 @@ struct mesh *init_thrust_mesh(int streaks, double h, double r1)
 	return optimized_mesh;
 }
 
+/* Build an exhaust cone mesh, which is a truncated hollow cone with no end caps.
+ *
+ * segments: number of segments around the circumference of the cone.
+ * rings: number of rings of segments to stack to build the cone.
+ * length: length of the cone
+ * nozzle_radius: radius of the large end of the cone.
+ * tip_radius: radius of the small end of the cone.
+ */
+struct mesh *init_exhaust_cone_mesh(int segments, int rings, float length,
+					float nozzle_radius, float tip_radius)
+{
+	struct mesh *m;
+	struct vertex *vn;
+	int nvertices, ntriangles;
+	int r, s, t_idx;
+	float da, dt;
+	float nlen, nx, ny_factor, nz_factor;
+
+	if (segments < 3 || rings < 1 || length <= 0.0f)
+		return NULL;
+
+	nvertices = (rings + 1) * (segments + 1);
+	ntriangles = rings * segments * 2;
+
+	m = allocate_mesh_for_copy(ntriangles, nvertices, 0, 1);
+	if (!m)
+		return NULL;
+
+	vn = malloc(sizeof(*vn) * nvertices);
+	if (!vn) {
+		mesh_free(m);
+		return NULL;
+	}
+
+	m->geometry_mode = MESH_GEOMETRY_TRIANGLES;
+	m->ntriangles = ntriangles;
+	m->nvertices = nvertices;
+	m->nlines = 0;
+
+	da = 2.0f * (float) M_PI / (float) segments;
+	dt = 1.0f / (float) rings;
+
+	/* Analytical outward normals for truncated cone along -X */
+	nlen = sqrtf((tip_radius - nozzle_radius) * (tip_radius - nozzle_radius) + length * length);
+	nx = (tip_radius - nozzle_radius) / nlen;
+	ny_factor = length / nlen;
+	nz_factor = length / nlen;
+
+	for (r = 0; r <= rings; r++) {
+		float t = (float)r * dt;
+		float x = -t * length;
+		float rad = nozzle_radius + t * (tip_radius - nozzle_radius);
+
+		for (s = 0; s <= segments; s++) {
+			float angle = (float)s * da;
+			int v_idx = r * (segments + 1) + s;
+
+			m->v[v_idx].x = x;
+			m->v[v_idx].y = rad * cos(angle);
+			m->v[v_idx].z = rad * sin(angle);
+
+			vn[v_idx].x = nx;
+			vn[v_idx].y = ny_factor * cos(angle);
+			vn[v_idx].z = nz_factor * sin(angle);
+		}
+	}
+
+	t_idx = 0;
+	for (r = 0; r < rings; r++) {
+		float u0 = (float)r * dt;
+		float u1 = (float)(r + 1) * dt;
+
+		for (s = 0; s < segments; s++) {
+			float v0 = (float)s / (float)segments;
+			float v1 = (float)(s + 1) / (float)segments;
+
+			int v00 = r * (segments + 1) + s;
+			int v01 = r * (segments + 1) + (s + 1);
+			int v10 = (r + 1) * (segments + 1) + s;
+			int v11 = (r + 1) * (segments + 1) + (s + 1);
+
+			/* Triangle 1 */
+			m->t[t_idx].v[0] = &m->v[v00];
+			m->t[t_idx].v[1] = &m->v[v10];
+			m->t[t_idx].v[2] = &m->v[v01];
+			m->t[t_idx].vnormal[0] = vn[v00];
+			m->t[t_idx].vnormal[1] = vn[v10];
+			m->t[t_idx].vnormal[2] = vn[v01];
+			mesh_set_triangle_texture_coords(m, t_idx,
+				u0, v0,
+				u1, v0,
+				u0, v1);
+			t_idx++;
+
+			/* Triangle 2 */
+			m->t[t_idx].v[0] = &m->v[v01];
+			m->t[t_idx].v[1] = &m->v[v10];
+			m->t[t_idx].v[2] = &m->v[v11];
+			m->t[t_idx].vnormal[0] = vn[v01];
+			m->t[t_idx].vnormal[1] = vn[v10];
+			m->t[t_idx].vnormal[2] = vn[v11];
+			mesh_set_triangle_texture_coords(m, t_idx,
+				u0, v1,
+				u1, v0,
+				u1, v1);
+			t_idx++;
+		}
+	}
+
+	free(vn);
+
+	m->radius = mesh_compute_radius(m);
+	mesh_set_name(m, "exhaust cone");
+	mesh_graph_dev_init(m);
+
+	return m;
+}
+
 struct mesh *init_burst_rod_mesh(int streaks, double h, double r1, double r2)
 {
 	struct mesh *my_mesh = malloc(sizeof(*my_mesh));
