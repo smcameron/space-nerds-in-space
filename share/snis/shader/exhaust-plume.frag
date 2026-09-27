@@ -73,10 +73,16 @@ void main()
 	float axial = v_TexCoord.x;
 	float angular = v_TexCoord.y;
 
-	/* Fade out towards the tip based on throttle (u_PlumeLength) */
+	/* Dynamic tip flutter: rapid per-frame length jitter and turbulent flutter */
+	float ang_rad = angular * 6.2831853;
+	float tip_jitter = hash21(vec2(floor(u_NoiseSeed), 41.7));
+	float tip_flutter = sin(ang_rad * 3.0 + u_NoiseSeed * 25.0) * 0.05 +
+			    cos(ang_rad * 5.0 - u_NoiseSeed * 18.0) * 0.03;
 	float max_len = max(u_PlumeLength, 0.05);
-	float axial_fade = 1.0 - smoothstep(max_len * 0.65, max_len, axial);
-	axial_fade *= (1.0 - smoothstep(0.85, 1.0, axial));
+	float dynamic_len = max_len * (0.86 + 0.22 * tip_jitter + tip_flutter);
+	float fade_start = dynamic_len * (0.55 + 0.12 * hash21(vec2(floor(u_NoiseSeed), 93.3)));
+	float axial_fade = 1.0 - smoothstep(fade_start, dynamic_len, axial);
+	axial_fade *= (1.0 - smoothstep(0.90, 1.0, axial));
 
 	/* Shock diamonds (repeating Mach discs inside the core) */
 	float spacing = max(u_DiamondSpacing, 0.04);
@@ -91,7 +97,7 @@ void main()
 	/* Falloff as shock diamonds dissipate down the plume */
 	float diamond_decay = pow(clamp(1.0 - axial / max_len, 0.0, 1.0), 1.2);
 	/* Per-frame procedural supersonic noise shimmer */
-	float ang_rad = angular * 6.2831853;
+	ang_rad = angular * 6.2831853;
 	vec2 np = vec2(axial * 30.0 - u_NoiseSeed * 45.0,
 		       sin(ang_rad) * 4.0 + cos(ang_rad) * 4.0 + u_NoiseSeed * 10.0);
 	float n = noise2d(np);
