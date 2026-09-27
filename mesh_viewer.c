@@ -1350,7 +1350,7 @@ int main(int argc, char *argv[])
 		thrust_material.textured_particle.radius = 1.5;
 		thrust_material.textured_particle.time_base = 0.1;
 	} else if (exhaust_mode) {
-		target_mesh = init_exhaust_cone_mesh(24, 16, 18.0f, 1.3f, 1.0f);
+		target_mesh = init_exhaust_cone_mesh(24, 16, 18.0f, 1.3f, 0.20f);
 		material_init_exhaust_plume(&exhaust_material);
 		exhaust_material.exhaust_plume.tint = (struct sng_color) { 0.4f, 0.65f, 1.0f };
 		exhaust_material.exhaust_plume.core_brightness = 1.0f;

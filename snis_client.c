@@ -26204,7 +26204,7 @@ static void init_meshes(void)
 	nebula_mesh = mesh_fabricate_billboard(2, 2);
 	sun_mesh = mesh_fabricate_billboard(SUN_BILLBOARD_SIZE, SUN_BILLBOARD_SIZE);
 	unit_quad = mesh_fabricate_billboard(1, 1);
-	thrust_animation_mesh = init_exhaust_cone_mesh(24, 16, 18.0f, 1.3f, 1.0f);
+	thrust_animation_mesh = init_exhaust_cone_mesh(24, 16, 18.0f, 1.3f, 0.20f);
 	warpgate_mesh = snis_read_model(d, "warpgate.stl");
 	mesh_cylindrical_yz_uv_map(warpgate_mesh);
 	warpgate_effect_mesh = mesh_fabricate_disc(1.0, 32);
