@@ -907,6 +907,25 @@ struct graph_dev_gl_black_hole_shader {
 	GLint ring_color_id;
 };
 
+struct graph_dev_gl_exhaust_plume_shader {
+	struct graph_dev_gl_shader_metadata meta;
+	GLuint program_id;
+	GLuint vao_id;
+	GLint mvp_matrix_id;
+	GLint mv_matrix_id;
+	GLint vertex_position_id;
+	GLint vertex_normal_id;
+	GLint texture_coord_id;
+	GLint tint_color_id;
+	GLint core_brightness_id;
+	GLint plume_length_id;
+	GLint noise_seed_id;
+	GLint diamond_spacing_id;
+	GLint diamond_intensity_id;
+	GLint filmic_tonemapping_id;
+	GLint tonemapping_gain_id;
+};
+
 struct graph_dev_gl_single_color_lit_shader {
 	struct graph_dev_gl_shader_metadata meta;
 	GLuint program_id;
@@ -1212,6 +1231,7 @@ static struct graph_dev_gl_line_single_color_shader line_single_color_shader;
 static struct graph_dev_gl_vertex_color_shader vertex_color_shader;
 static struct graph_dev_gl_sun_shader sun_shader;
 static struct graph_dev_gl_black_hole_shader black_hole_shader;
+static struct graph_dev_gl_exhaust_plume_shader exhaust_plume_shader;
 static struct graph_dev_gl_point_cloud_shader point_cloud_shader;
 static struct graph_dev_gl_skybox_shader skybox_shader;
 
@@ -2849,6 +2869,7 @@ extern int graph_dev_entity_render_order(struct entity *e)
 	case MATERIAL_SUN:
 	case MATERIAL_BLACK_HOLE:
 	case MATERIAL_CITY:
+	case MATERIAL_EXHAUST_PLUME:
 		does_blending = 1;
 		break;
 	case MATERIAL_TEXTURE_MAPPED_UNLIT:
@@ -2963,6 +2984,70 @@ static void graph_dev_raster_black_hole(const struct mat44 *mat_mvp, struct mesh
 	glDepthMask(GL_TRUE);
 	glDisable(GL_BLEND);
 }
+
+static void graph_dev_raster_exhaust_plume(const struct mat44 *mat_mvp, const struct mat44 *mat_mv,
+					struct mesh *m, struct material *material)
+{
+	struct mesh_gl_info *ptr = m->graph_ptr;
+	struct material_exhaust_plume *plume = &material->exhaust_plume;
+
+	if (!ptr)
+		return;
+
+	glEnable(GL_DEPTH_TEST);
+	glDepthMask(GL_FALSE); /* blended: test against depth but do not write it */
+	glEnable(GL_BLEND);
+	BLEND_FUNC(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
+	glDisable(GL_CULL_FACE);
+
+	activate_shader(&exhaust_plume_shader);
+
+	glUniformMatrix4fv(exhaust_plume_shader.mvp_matrix_id, 1, GL_FALSE, &mat_mvp->m[0][0]);
+	if (exhaust_plume_shader.mv_matrix_id >= 0)
+		glUniformMatrix4fv(exhaust_plume_shader.mv_matrix_id, 1, GL_FALSE, &mat_mv->m[0][0]);
+	glUniform3f(exhaust_plume_shader.tint_color_id, plume->tint.red, plume->tint.green, plume->tint.blue);
+	glUniform1f(exhaust_plume_shader.core_brightness_id, plume->core_brightness);
+	glUniform1f(exhaust_plume_shader.plume_length_id, plume->plume_length);
+	glUniform1f(exhaust_plume_shader.noise_seed_id, plume->noise_seed);
+	glUniform1f(exhaust_plume_shader.diamond_spacing_id, plume->shock_diamond_spacing);
+	glUniform1f(exhaust_plume_shader.diamond_intensity_id, plume->shock_diamond_intensity);
+	glUniform1f(exhaust_plume_shader.filmic_tonemapping_id, (float) filmic_tonemapping);
+	glUniform1f(exhaust_plume_shader.tonemapping_gain_id, tonemapping_gain);
+
+	glEnableVertexAttribArray(exhaust_plume_shader.vertex_position_id);
+	glBindBuffer(GL_ARRAY_BUFFER, ptr->vertex_buffer);
+	glVertexAttribPointer(exhaust_plume_shader.vertex_position_id, 3, GL_FLOAT, GL_FALSE,
+		sizeof(struct vertex_buffer_data),
+		(void *) offsetof(struct vertex_buffer_data, position.v.x));
+
+	if (exhaust_plume_shader.vertex_normal_id >= 0) {
+		glEnableVertexAttribArray(exhaust_plume_shader.vertex_normal_id);
+		glBindBuffer(GL_ARRAY_BUFFER, ptr->triangle_vertex_buffer);
+		glVertexAttribPointer(exhaust_plume_shader.vertex_normal_id, 3, GL_FLOAT, GL_FALSE,
+			sizeof(struct vertex_triangle_buffer_data),
+			(void *) offsetof(struct vertex_triangle_buffer_data, normal.v.x));
+	}
+
+	if (exhaust_plume_shader.texture_coord_id >= 0) {
+		glEnableVertexAttribArray(exhaust_plume_shader.texture_coord_id);
+		glBindBuffer(GL_ARRAY_BUFFER, ptr->triangle_vertex_buffer);
+		glVertexAttribPointer(exhaust_plume_shader.texture_coord_id, 2, GL_FLOAT, GL_TRUE,
+			sizeof(struct vertex_triangle_buffer_data),
+			(void *) offsetof(struct vertex_triangle_buffer_data, texture_coord.v.x));
+	}
+
+	glDrawArrays(GL_TRIANGLES, 0, m->ntriangles * 3);
+
+	glDisableVertexAttribArray(exhaust_plume_shader.vertex_position_id);
+	if (exhaust_plume_shader.vertex_normal_id >= 0)
+		glDisableVertexAttribArray(exhaust_plume_shader.vertex_normal_id);
+	if (exhaust_plume_shader.texture_coord_id >= 0)
+		glDisableVertexAttribArray(exhaust_plume_shader.texture_coord_id);
+
+	glDisable(GL_DEPTH_TEST);
+	glDepthMask(GL_TRUE);
+	glDisable(GL_BLEND);
+}
 /* See graph_dev.h.  Inert by default (floor 1.0): pulling ambient down changes how every lit
  * thing in the game looks, so nothing happens until a caller asks for it. */
 static float shade_ambient_lo = 0.5;
@@ -3019,6 +3104,7 @@ static void graph_dev_raster_triangle_mesh(struct entity_context *cx, struct ent
 	int atmosphere = 0;
 	int is_sun = 0;
 	int is_black_hole = 0;
+	int is_exhaust_plume = 0;
 	float shade_scale = 1.0; /* the shadow's pull on ambient; not rtp.ambient_scale */
 	struct sng_color texture_tint = { 1.0, 1.0, 1.0 };
 
@@ -3144,6 +3230,10 @@ static void graph_dev_raster_triangle_mesh(struct entity_context *cx, struct ent
 		case MATERIAL_BLACK_HOLE:
 			/* Handled by graph_dev_raster_black_hole() below; rtp.shader stays NULL. */
 			is_black_hole = 1;
+			break;
+		case MATERIAL_EXHAUST_PLUME:
+			/* Handled by graph_dev_raster_exhaust_plume() below; rtp.shader stays NULL. */
+			is_exhaust_plume = 1;
 			break;
 		case MATERIAL_ATMOSPHERE: {
 			rtp.textures_not_ready = 0; /* assume textures are ready until proven otherwise */
@@ -3449,6 +3539,8 @@ static void graph_dev_raster_triangle_mesh(struct entity_context *cx, struct ent
 					graph_dev_raster_sun(rtp.mat_mvp, e->m, e->material_ptr);
 				} else if (is_black_hole) {
 					graph_dev_raster_black_hole(rtp.mat_mvp, e->m, e->material_ptr);
+				} else if (is_exhaust_plume) {
+					graph_dev_raster_exhaust_plume(rtp.mat_mvp, rtp.mat_mv, e->m, e->material_ptr);
 				} else if (atmosphere && !rtp.textures_not_ready) {
 					float light_color[3], ambient_color[3];
 
@@ -4678,6 +4770,29 @@ static void setup_black_hole_shader(struct graph_dev_gl_black_hole_shader *shade
 	shader->ring_color_id = glGetUniformLocation(shader->program_id, "u_RingColor");
 }
 
+static void setup_exhaust_plume_shader(struct graph_dev_gl_exhaust_plume_shader *shader)
+{
+	maybe_unload_shader(&shader->meta, &shader->program_id);
+	shader->program_id = load_shaders(shader_directory,
+				"exhaust-plume.vert", "exhaust-plume.frag",
+				UNIVERSAL_SHADER_HEADER FILMIC_TONEMAPPING);
+	glGenVertexArrays(1, &shader->vao_id);
+
+	shader->mvp_matrix_id = glGetUniformLocation(shader->program_id, "u_MVPMatrix");
+	shader->mv_matrix_id = glGetUniformLocation(shader->program_id, "u_MVMatrix");
+	shader->vertex_position_id = glGetAttribLocation(shader->program_id, "a_Position");
+	shader->vertex_normal_id = glGetAttribLocation(shader->program_id, "a_Normal");
+	shader->texture_coord_id = glGetAttribLocation(shader->program_id, "a_TexCoord");
+	shader->tint_color_id = glGetUniformLocation(shader->program_id, "u_TintColor");
+	shader->core_brightness_id = glGetUniformLocation(shader->program_id, "u_CoreBrightness");
+	shader->plume_length_id = glGetUniformLocation(shader->program_id, "u_PlumeLength");
+	shader->noise_seed_id = glGetUniformLocation(shader->program_id, "u_NoiseSeed");
+	shader->diamond_spacing_id = glGetUniformLocation(shader->program_id, "u_DiamondSpacing");
+	shader->diamond_intensity_id = glGetUniformLocation(shader->program_id, "u_DiamondIntensity");
+	shader->filmic_tonemapping_id = glGetUniformLocation(shader->program_id, "u_FilmicTonemapping");
+	shader->tonemapping_gain_id = glGetUniformLocation(shader->program_id, "u_TonemappingGain");
+}
+
 static void setup_line_single_color_shader(struct graph_dev_gl_line_single_color_shader *shader)
 {
 	maybe_unload_shader(&shader->meta, &shader->program_id);
@@ -5111,6 +5226,7 @@ void graph_dev_reload_all_shaders(void)
 	setup_vertex_color_shader(&vertex_color_shader);
 	setup_sun_shader(&sun_shader);
 	setup_black_hole_shader(&black_hole_shader);
+	setup_exhaust_plume_shader(&exhaust_plume_shader);
 	setup_line_single_color_shader(&line_single_color_shader);
 	setup_point_cloud_shader("point_cloud", &point_cloud_shader);
 	setup_color_by_w_shader(&color_by_w_shader);
