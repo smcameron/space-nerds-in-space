@@ -9806,8 +9806,14 @@ static void add_thrust_entities(struct entity *thrust_entity[],
 
 	assert((thrust_entity && nthrust_ports) || (!thrust_entity && !nthrust_ports));
 
-	/* 180 is about max current with preset and 5x is about right for max size */
-	float thrust_size = clampf(impulse / 36.0, 0.1, 5.0);
+	if (impulse <= 0) {
+		if (nthrust_ports)
+			*nthrust_ports = 0;
+		return;
+	}
+
+	/* 36 is standard cruise (1.0x), 180 is max power (3.5x) */
+	float thrust_size = clampf(impulse / 36.0f, 0.7f, 3.5f);
 
 	if (nthrust_ports)
 		*nthrust_ports = 0;
@@ -24188,6 +24194,7 @@ static void adjust_tonemapping_gain(void)
 
 int advance_game(void)
 {
+	int i;
 	int time_to_switch_servers;
 	static int skip = 0;
 
@@ -24218,6 +24225,9 @@ int advance_game(void)
 		if ((timer % 45) == 0 && (timer % (45 * 6)) < (45 * 3))
 			wwviaudio_add_sound(RED_ALERT_SOUND);
 	}
+
+	for (i = 0; i < NTHRUSTMATERIALS; i++)
+		thrust_material[i].exhaust_plume.noise_seed = snis_random_float();
 
 	deal_with_joysticks();
 	deal_with_keyboard();
@@ -24471,12 +24481,15 @@ static struct mesh **allocate_starbase_mesh_ptrs(int nstarbase_meshes)
 	return m;
 }
 
-static void init_thrust_material(struct material *thrust_mat, char *image_filename)
+static void init_thrust_material(struct material *thrust_mat, struct sng_color tint)
 {
-	material_init_textured_particle(thrust_mat);
-	thrust_mat->textured_particle.texture_id = load_texture(image_filename, 0);
-	thrust_mat->textured_particle.radius = 1.5;
-	thrust_mat->textured_particle.time_base = 0.1;
+	material_init_exhaust_plume(thrust_mat);
+	thrust_mat->exhaust_plume.tint = tint;
+	thrust_mat->exhaust_plume.core_brightness = 1.0f;
+	thrust_mat->exhaust_plume.plume_length = 1.0f;
+	thrust_mat->exhaust_plume.noise_seed = 0.0f;
+	thrust_mat->exhaust_plume.shock_diamond_spacing = 0.12f;
+	thrust_mat->exhaust_plume.shock_diamond_intensity = 1.5f;
 }
 
 static void update_splash_progress(int progress)
@@ -24601,11 +24614,11 @@ static int load_static_textures(void)
 	wormhole_material.texture_mapped_unlit.alpha = 0.5;
 
 	update_splash_progress(35);
-	init_thrust_material(&thrust_material[0], "textures/thrustblue.png");
-	init_thrust_material(&thrust_material[1], "textures/thrustred.png");
-	init_thrust_material(&thrust_material[2], "textures/thrustgreen.png");
-	init_thrust_material(&thrust_material[3], "textures/thrustyellow.png");
-	init_thrust_material(&thrust_material[4], "textures/thrustviolet.png");
+	init_thrust_material(&thrust_material[0], (struct sng_color) { 0.4f, 0.65f, 1.0f });
+	init_thrust_material(&thrust_material[1], (struct sng_color) { 1.0f, 0.45f, 0.25f });
+	init_thrust_material(&thrust_material[2], (struct sng_color) { 0.35f, 1.0f, 0.45f });
+	init_thrust_material(&thrust_material[3], (struct sng_color) { 1.0f, 0.85f, 0.3f });
+	init_thrust_material(&thrust_material[4], (struct sng_color) { 0.85f, 0.45f, 1.0f });
 
 	material_init_texture_mapped_unlit(&thrust_flare_material[0]);
 	thrust_flare_material[0].billboard_type = MATERIAL_BILLBOARD_TYPE_SPHERICAL;
@@ -26191,7 +26204,7 @@ static void init_meshes(void)
 	nebula_mesh = mesh_fabricate_billboard(2, 2);
 	sun_mesh = mesh_fabricate_billboard(SUN_BILLBOARD_SIZE, SUN_BILLBOARD_SIZE);
 	unit_quad = mesh_fabricate_billboard(1, 1);
-	thrust_animation_mesh = init_thrust_mesh(70, 200, 1.3);
+	thrust_animation_mesh = init_exhaust_cone_mesh(24, 16, 18.0f, 1.3f, 1.0f);
 	warpgate_mesh = snis_read_model(d, "warpgate.stl");
 	mesh_cylindrical_yz_uv_map(warpgate_mesh);
 	warpgate_effect_mesh = mesh_fabricate_disc(1.0, 32);
