@@ -95,6 +95,7 @@ static struct mesh *light_mesh;
 static struct material planet_material;
 static struct material green_phaser_material;
 static struct material thrust_material;
+static struct material exhaust_material;
 static struct material atmosphere_material;
 float atmosphere_brightness = 0.5;
 static struct material cyl_albedo;
@@ -105,6 +106,9 @@ static int planet_mode = 0;
 static int cubemap_mode = 0;
 static int burst_rod_mode = 0;
 static int thrust_mode = 0;
+static int exhaust_mode = 0;
+static float exhaust_throttle = 1.0f;
+static int exhaust_color_index = 0;
 static int turret_mode = 0;
 static int no_skybox = 0;
 static int warpgate_mode = 0;
@@ -330,14 +334,39 @@ static void handle_key_down(SDL_Keysym *keysym)
 		adjust_spinning(1.1);
 		break;
 	case SDLK_LEFTBRACKET:
+		if (exhaust_mode) {
+			exhaust_throttle -= 0.05f;
+			if (exhaust_throttle < 0.1f)
+				exhaust_throttle = 0.1f;
+			break;
+		}
 		atmosphere_brightness -= 0.05;
 		if (atmosphere_brightness < 0.0)
 			atmosphere_brightness = 0.0;
 		break;
 	case SDLK_RIGHTBRACKET:
+		if (exhaust_mode) {
+			exhaust_throttle += 0.05f;
+			if (exhaust_throttle > 3.0f)
+				exhaust_throttle = 3.0f;
+			break;
+		}
 		atmosphere_brightness += 0.05;
 		if (atmosphere_brightness > 1.0)
 			atmosphere_brightness = 1.0;
+		break;
+	case SDLK_t:
+		if (exhaust_mode) {
+			static const struct sng_color colors[5] = {
+				{ 0.4f, 0.65f, 1.0f },
+				{ 1.0f, 0.45f, 0.25f },
+				{ 0.35f, 1.0f, 0.45f },
+				{ 1.0f, 0.85f, 0.3f },
+				{ 0.85f, 0.45f, 1.0f },
+			};
+			exhaust_color_index = (exhaust_color_index + 1) % 5;
+			exhaust_material.exhaust_plume.tint = colors[exhaust_color_index];
+		}
 		break;
 	case SDLK_d:
 		distort_the_mesh(1);
@@ -633,7 +662,8 @@ static void process_events(void)
 static void check_modes(void)
 {
 	/* modes are mutually exclusive, ensure at most one is selected. */
-	int sum = planet_mode + cubemap_mode + burst_rod_mode + thrust_mode + turret_mode + warpgate_mode;
+	int sum = planet_mode + cubemap_mode + burst_rod_mode + thrust_mode +
+		turret_mode + warpgate_mode + exhaust_mode;
 	if (turret_mode) {
 		if (!turret_model) {
 			fprintf(stderr,
@@ -648,7 +678,7 @@ static void check_modes(void)
 	}
 	if (sum <= 1)
 		return;
-	fprintf(stderr, "mesh_viewer: burstrod, cubemap, planet, thrust, turret and warpgate\n");
+	fprintf(stderr, "mesh_viewer: burstrod, cubemap, exhaust, planet, thrust, turret and warpgate\n");
 	fprintf(stderr, "             modes are mutually exclusive.\n");
 	exit(1);
 }
@@ -738,7 +768,8 @@ static void draw_screen(void)
 
 	calculate_camera_transform(cx);
 
-	struct entity *e = add_entity(cx, target_mesh, 0, 0, 0, WHITE);
+	struct entity *e = add_entity(cx, target_mesh,
+				      exhaust_mode ? (9.0f * exhaust_throttle) : 0, 0, 0, WHITE);
 	struct entity *turret_base_entity = NULL;
 	struct entity *ae = NULL;
 	if (planet_mode) {
@@ -754,6 +785,11 @@ static void draw_screen(void)
 		update_entity_material(e, &green_phaser_material);
 	} else if (thrust_mode) {
 		update_entity_material(e, &thrust_material);
+	} else if (exhaust_mode) {
+		exhaust_material.exhaust_plume.noise_seed = snis_random_float();
+		exhaust_material.exhaust_plume.plume_length = clampf(exhaust_throttle, 0.1f, 1.0f);
+		update_entity_material(e, &exhaust_material);
+		update_entity_non_uniform_scale(e, exhaust_throttle, 1.0f, 1.0f);
 	} else if (cylinder_albedo) {
 		update_entity_material(e, &cyl_albedo);
 	} else if (diffusename) {
@@ -953,6 +989,7 @@ __attribute__((noreturn)) void usage(char *program_name)
 	fprintf(stderr, " %s -m <mesh-file> [ -c cubemap-texture- ]\n", program_name);
 	fprintf(stderr, " %s --burstrod\n", program_name);
 	fprintf(stderr, " %s --thrust <image-file>\n", program_name);
+	fprintf(stderr, " %s --exhaust\n", program_name);
 	fprintf(stderr, " %s --turret <turret-model> --turretbase <turret-base-model>\n", program_name);
 	fprintf(stderr, " %s --cylindrical <cylindrical-texture-map>\n", program_name);
 	fprintf(stderr, " %s -m <mesh-file> --emittance <cylindrical-emittance-map>\n", program_name);
@@ -989,6 +1026,7 @@ static struct option long_options[] = {
 	{ "normalmap", required_argument, NULL, 'n' },
 	{ "burstrod", no_argument, NULL, 'b' },
 	{ "thrust", required_argument, NULL, 't' },
+	{ "exhaust", no_argument, NULL, 'E' },
 	{ "skybox", required_argument, NULL, 's' },
 	{ "turret", required_argument, NULL, 'T' },
 	{ "alphabynormal", no_argument, NULL, 'A' },
@@ -1007,11 +1045,14 @@ static void process_options(int argc, char *argv[])
 	while (1) {
 		int option_index;
 
-		c = getopt_long(argc, argv, "IAB:T:bc:d:fC:KY:Z:e:hi:m:n:p:r:s:t:wW", long_options, &option_index);
+		c = getopt_long(argc, argv, "EIAB:T:bc:d:fC:KY:Z:e:hi:m:n:p:r:s:t:wW", long_options, &option_index);
 		if (c < 0) {
 			break;
 		}
 		switch (c) {
+		case 'E':
+			exhaust_mode = 1;
+			break;
 		case 'B':
 			turret_mode = 1;
 			turret_base_model = optarg;
@@ -1213,10 +1254,12 @@ int main(int argc, char *argv[])
 	}
 
 	filename = modelfile;
-	if (!filename && !(planet_mode || burst_rod_mode || thrust_mode || turret_mode || warpgate_mode))
+	if (!filename && !(planet_mode || burst_rod_mode || thrust_mode ||
+			turret_mode || warpgate_mode || exhaust_mode))
 		usage(program);
 
-	if (!planet_mode && !burst_rod_mode && !thrust_mode && !turret_mode && !warpgate_mode &&
+	if (!planet_mode && !burst_rod_mode && !thrust_mode &&
+			!turret_mode && !warpgate_mode && !exhaust_mode &&
 			stat(filename, &statbuf) != 0) {
 		fprintf(stderr, "%s: %s: %s\n", program, filename, strerror(errno));
 		exit(1);
@@ -1306,6 +1349,18 @@ int main(int argc, char *argv[])
 			graph_dev_load_texture(maybe_replace_asset(thrustfile), 0);
 		thrust_material.textured_particle.radius = 1.5;
 		thrust_material.textured_particle.time_base = 0.1;
+	} else if (exhaust_mode) {
+		target_mesh = init_exhaust_cone_mesh(24, 16, 18.0f, 1.3f, 1.0f);
+		material_init_exhaust_plume(&exhaust_material);
+		exhaust_material.exhaust_plume.tint = (struct sng_color) { 0.4f, 0.65f, 1.0f };
+		exhaust_material.exhaust_plume.core_brightness = 1.0f;
+		exhaust_material.exhaust_plume.plume_length = 1.0f;
+		exhaust_material.exhaust_plume.noise_seed = 0.0f;
+		exhaust_material.exhaust_plume.shock_diamond_spacing = 0.12f;
+		exhaust_material.exhaust_plume.shock_diamond_intensity = 1.5f;
+		atmosphere_mesh = NULL;
+		lobby_orientation = (union quat) { .q = { 0.7071f, 0.0f, 0.7071f, 0.0f } };
+		last_lobby_orientation = lobby_orientation;
 	} else if (turret_mode) {
 		target_mesh = snis_read_model(turret_model);
 		if (!target_mesh)
