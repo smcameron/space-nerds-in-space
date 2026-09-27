@@ -8,6 +8,7 @@ uniform float u_DiamondIntensity;
 varying vec2 v_TexCoord;
 varying vec3 v_ViewPos;
 varying vec3 v_Normal;
+varying vec3 v_ViewAxis;
 
 float hash21(vec2 p)
 {
@@ -32,12 +33,40 @@ void main()
 {
 	vec3 V = normalize(-v_ViewPos);
 	vec3 N = normalize(v_Normal);
-	float NdotV = abs(dot(N, V));
+	vec3 A = normalize(v_ViewAxis);
 
-	/* Soft edge fade eliminating hard polygon silhouette edges */
-	float edge_fade = smoothstep(0.0, 0.4, NdotV);
-	/* Cylinder optical depth increases towards the central axis */
-	float optical_depth = pow(NdotV, 0.6);
+	/* Camera view alignment with the plume axis:
+	 * 0.0 = broadside (view perpendicular to plume)
+	 * 1.0 = axial (view aligned along plume axis)
+	 */
+	float axial_align = abs(dot(A, V));
+
+	/* Decompose V and N into transverse components (perpendicular to A) */
+	vec3 V_perp = V - dot(V, A) * A;
+	float V_perp_len = length(V_perp);
+	vec3 V_perp_dir = V_perp_len > 0.001 ? (V_perp / V_perp_len) : vec3(0.0);
+
+	vec3 N_perp = N - dot(N, A) * A;
+	float N_perp_len = length(N_perp);
+	vec3 N_perp_dir = N_perp_len > 0.001 ? (N_perp / N_perp_len) : N;
+
+	/* Transverse profile across cylinder width:
+	 * 1.0 at projected centerline of plume, 0.0 at lateral silhouette edges.
+	 * In axial view (V_perp_len -> 0), entire cross-section is aligned with view.
+	 */
+	float transverse_NdotV = V_perp_len > 0.001 ? abs(dot(N_perp_dir, V_perp_dir)) : 1.0;
+
+	/* Lateral edge fade softens silhouette edges in broadside view */
+	float lateral_edge_fade = smoothstep(0.0, 0.35, transverse_NdotV);
+
+	/* When looking along the plume axis, camera looks down the column;
+	 * do not fade out the column when viewed end-on.
+	 */
+	float edge_fade = mix(lateral_edge_fade, 1.0, smoothstep(0.35, 0.85, axial_align));
+
+	/* Cylinder optical depth increases towards central axis and when looking down column */
+	float axial_depth_boost = 1.0 + 1.2 * pow(axial_align, 1.5);
+	float optical_depth = mix(pow(transverse_NdotV, 0.6), 1.0, pow(axial_align, 2.0)) * axial_depth_boost;
 
 	float axial = v_TexCoord.x;
 	float angular = v_TexCoord.y;
@@ -55,7 +84,7 @@ void main()
 	diamond_shape = pow(diamond_shape, 2.0);
 
 	/* Shock diamonds are concentrated inside the core */
-	float diamond_radial = pow(NdotV, 2.5);
+	float diamond_radial = mix(pow(transverse_NdotV, 2.5), 1.0, pow(axial_align, 2.0));
 
 	/* Falloff as shock diamonds dissipate down the plume */
 	float diamond_decay = pow(clamp(1.0 - axial / max_len, 0.0, 1.0), 1.2);
@@ -80,7 +109,7 @@ void main()
 	vec3 mantle_emission = mantle_color * mantle_brightness;
 
 	/* Shock diamond core: white-hot center blending into faction tint */
-	float core_hot = pow(diamond_shape, 2.5) * pow(NdotV, 3.5) * diamond_decay;
+	float core_hot = pow(diamond_shape, 2.5) * diamond_radial * diamond_decay;
 	vec3 diamond_color = mix(u_TintColor, vec3(1.0, 1.0, 1.0), clamp(core_hot * 1.5, 0.0, 1.0));
 	vec3 shock_emission = diamond_color * (shock * 1.3);
 
