@@ -90,22 +90,26 @@ void main()
 
 	/* Falloff as shock diamonds dissipate down the plume */
 	float diamond_decay = pow(clamp(1.0 - axial / max_len, 0.0, 1.0), 1.2);
-	float shock = diamond_shape * diamond_radial * diamond_decay * u_DiamondIntensity;
+	/* Per-frame procedural supersonic noise shimmer */
+	float ang_rad = angular * 6.2831853;
+	vec2 np = vec2(axial * 30.0 - u_NoiseSeed * 45.0,
+		       sin(ang_rad) * 4.0 + cos(ang_rad) * 4.0 + u_NoiseSeed * 10.0);
+	float n = noise2d(np);
+	float grain = hash21(vec2(axial * 150.0 + u_NoiseSeed * 73.1,
+				  sin(ang_rad) * 60.0 + cos(ang_rad) * 60.0 + u_NoiseSeed * 91.3));
+	float noise_mix = 0.62 * n + 0.38 * grain;
+	float shimmer = 0.55 + 0.90 * noise_mix;
+
+	/* Shock diamond turbulence shimmer */
+	float shock_shimmer = 0.80 + 0.40 * grain;
+	float shock = diamond_shape * diamond_radial * diamond_decay * u_DiamondIntensity * shock_shimmer;
 
 	/* Warm incandescent nozzle glow at the engine exhaust rim */
 	float nozzle_glow = clamp(1.0 - axial * 14.0, 0.0, 1.0);
 	nozzle_glow = pow(nozzle_glow, 2.2);
 	vec3 nozzle_color = vec3(1.0, 0.65, 0.35);
 
-	/* Per-frame procedural supersonic noise shimmer */
-	float ang_rad = angular * 6.2831853;
-	vec2 np = vec2(axial * 25.0 - u_NoiseSeed * 35.0, sin(ang_rad) * 3.5 + cos(ang_rad) * 3.5);
-	float n = noise2d(np);
-	float grain = hash21(vec2(axial * 120.0 + u_NoiseSeed * 67.3,
-				  sin(ang_rad) * 50.0 + cos(ang_rad) * 40.0 + u_NoiseSeed * 91.1));
-	float shimmer = 0.85 + 0.3 * (0.65 * n + 0.35 * grain);
-
-	/* Saturated gas mantle in faction tint */
+	/* Saturated gas mantle in faction tint with pronounced turbulence */
 	vec3 mantle_color = u_TintColor;
 	float mantle_brightness = (0.28 + 0.22 * optical_depth) * u_CoreBrightness * shimmer;
 	vec3 mantle_emission = mantle_color * mantle_brightness;
@@ -119,8 +123,9 @@ void main()
 	vec3 emission = (mantle_emission + shock_emission + nozzle_color * nozzle_glow * 1.4) *
 			axial_fade * edge_fade;
 
-	/* Translucent alpha allowing background to show through the gas */
-	float gas_alpha = (0.32 * optical_depth + 0.38 * shock + 0.5 * nozzle_glow) *
+	/* Translucent alpha modulated by gas turbulence density variations */
+	float alpha_shimmer = 0.65 + 0.70 * noise_mix;
+	float gas_alpha = (0.32 * optical_depth * alpha_shimmer + 0.38 * shock + 0.5 * nozzle_glow) *
 			  axial_fade * edge_fade;
 	float alpha = clamp(gas_alpha, 0.0, 1.0);
 
