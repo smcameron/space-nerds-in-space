@@ -46,6 +46,7 @@ struct entity;
 #define MATERIAL_SUN 17
 #define MATERIAL_BLACK_HOLE 18
 #define MATERIAL_CITY 19
+#define MATERIAL_EXHAUST_PLUME 20
 
 #define MATERIAL_BILLBOARD_TYPE_NONE 0
 #define MATERIAL_BILLBOARD_TYPE_SCREEN 1
@@ -219,6 +220,15 @@ struct material_warp_gate_effect {
 	float u1, u2;  /* For scrolling texture */
 };
 
+struct material_exhaust_plume {
+	struct sng_color tint;
+	float core_brightness;
+	float plume_length;
+	float noise_seed;
+	float shock_diamond_spacing;
+	float shock_diamond_intensity;
+};
+
 struct material {
 	__extension__ union {
 		struct material_color_by_w color_by_w;
@@ -238,6 +248,7 @@ struct material {
 		struct material_sun sun;
 		struct material_black_hole black_hole;
 		struct material_city city;
+		struct material_exhaust_plume exhaust_plume;
 	};
 	int type;
 	int billboard_type;
@@ -260,6 +271,7 @@ extern void material_init_alpha_by_normal(struct material *m);
 extern void material_init_planetary_lightning(struct material *m);
 extern void material_init_warp_gate_effect(struct material *m);
 extern void material_init_city(struct material *m);
+extern void material_init_exhaust_plume(struct material *m);
 
 extern int material_nebula_read_from_file(const char *asset_dir, const char *filename,
 						struct material *nebula);

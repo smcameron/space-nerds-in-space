@@ -351,3 +351,16 @@ float material_black_hole_set_geometry(struct material *m, float lens_strength)
 	m->black_hole.einstein_radius = 0.5 * lens_strength / half_size;
 	return half_size;
 }
+
+void material_init_exhaust_plume(struct material *m)
+{
+	m->type = MATERIAL_EXHAUST_PLUME;
+	m->billboard_type = MATERIAL_BILLBOARD_TYPE_NONE;
+	m->rotate_randomly = 0;
+	m->exhaust_plume.tint = sng_get_color(WHITE);
+	m->exhaust_plume.core_brightness = 1.0f;
+	m->exhaust_plume.plume_length = 1.0f;
+	m->exhaust_plume.noise_seed = 0.0f;
+	m->exhaust_plume.shock_diamond_spacing = 0.12f;
+	m->exhaust_plume.shock_diamond_intensity = 1.5f;
+}
