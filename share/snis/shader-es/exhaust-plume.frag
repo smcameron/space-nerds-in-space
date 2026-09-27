@@ -115,13 +115,13 @@ void main()
 
 	/* Saturated gas mantle in faction tint with pronounced turbulence */
 	vec3 mantle_color = u_TintColor;
-	float mantle_brightness = (0.28 + 0.22 * optical_depth) * u_CoreBrightness * shimmer;
+	float mantle_brightness = (0.44 + 0.30 * optical_depth) * u_CoreBrightness * shimmer;
 	vec3 mantle_emission = mantle_color * mantle_brightness;
 
 	/* Shock diamond core: white-hot center blending into faction tint */
 	float core_hot = pow(diamond_shape, 2.5) * diamond_radial * diamond_decay;
 	vec3 diamond_color = mix(u_TintColor, vec3(1.0, 1.0, 1.0), clamp(core_hot * 1.5, 0.0, 1.0));
-	vec3 shock_emission = diamond_color * (shock * 1.3);
+	vec3 shock_emission = diamond_color * (shock * 0.65);
 
 	/* Combined emission */
 	vec3 emission = (mantle_emission + shock_emission + nozzle_color * nozzle_glow * 1.4) *
@@ -129,7 +129,7 @@ void main()
 
 	/* Translucent alpha modulated by gas turbulence density variations */
 	float alpha_shimmer = 0.65 + 0.70 * noise_mix;
-	float gas_alpha = (0.32 * optical_depth * alpha_shimmer + 0.38 * shock + 0.5 * nozzle_glow) *
+	float gas_alpha = (0.36 * optical_depth * alpha_shimmer + 0.25 * shock + 0.5 * nozzle_glow) *
 			  axial_fade * edge_fade;
 	float alpha = clamp(gas_alpha, 0.0, 1.0);
 
