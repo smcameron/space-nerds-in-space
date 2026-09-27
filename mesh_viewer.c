@@ -109,6 +109,42 @@ static int thrust_mode = 0;
 static int exhaust_mode = 0;
 static float exhaust_throttle = 1.0f;
 static int exhaust_color_index = 0;
+static char *exhaust_tint_name = NULL;
+
+struct exhaust_tint {
+	const char *name;
+	struct sng_color tint;
+};
+
+static const struct exhaust_tint exhaust_tints[] = {
+	{ "blue",   { 0.15f, 0.45f, 1.0f } },
+	{ "orange", { 1.0f,  0.40f, 0.05f } },
+	{ "green",  { 0.15f, 1.0f,  0.30f } },
+	{ "gold",   { 1.0f,  0.75f, 0.10f } },
+	{ "purple", { 0.75f, 0.20f, 1.0f } },
+	{ "red",    { 1.0f,  0.15f, 0.05f } },
+	{ "white",  { 0.85f, 0.90f, 1.0f } },
+};
+#define NUM_EXHAUST_TINTS ((int)(sizeof(exhaust_tints) / sizeof(exhaust_tints[0])))
+
+static int find_exhaust_tint_index(const char *name)
+{
+	int i;
+
+	if (!name)
+		return 0;
+	for (i = 0; i < NUM_EXHAUST_TINTS; i++) {
+		if (strcasecmp(name, exhaust_tints[i].name) == 0)
+			return i;
+	}
+	if (isdigit(name[0])) {
+		int val = atoi(name);
+
+		if (val >= 0 && val < NUM_EXHAUST_TINTS)
+			return val;
+	}
+	return -1;
+}
 static int turret_mode = 0;
 static int no_skybox = 0;
 static int warpgate_mode = 0;
@@ -357,15 +393,8 @@ static void handle_key_down(SDL_Keysym *keysym)
 		break;
 	case SDLK_t:
 		if (exhaust_mode) {
-			static const struct sng_color colors[5] = {
-				{ 0.4f, 0.65f, 1.0f },
-				{ 1.0f, 0.45f, 0.25f },
-				{ 0.35f, 1.0f, 0.45f },
-				{ 1.0f, 0.85f, 0.3f },
-				{ 0.85f, 0.45f, 1.0f },
-			};
-			exhaust_color_index = (exhaust_color_index + 1) % 5;
-			exhaust_material.exhaust_plume.tint = colors[exhaust_color_index];
+			exhaust_color_index = (exhaust_color_index + 1) % NUM_EXHAUST_TINTS;
+			exhaust_material.exhaust_plume.tint = exhaust_tints[exhaust_color_index].tint;
 		}
 		break;
 	case SDLK_d:
@@ -989,7 +1018,7 @@ __attribute__((noreturn)) void usage(char *program_name)
 	fprintf(stderr, " %s -m <mesh-file> [ -c cubemap-texture- ]\n", program_name);
 	fprintf(stderr, " %s --burstrod\n", program_name);
 	fprintf(stderr, " %s --thrust <image-file>\n", program_name);
-	fprintf(stderr, " %s --exhaust\n", program_name);
+	fprintf(stderr, " %s --exhaust [blue|orange|green|gold|purple|red|white]\n", program_name);
 	fprintf(stderr, " %s --turret <turret-model> --turretbase <turret-base-model>\n", program_name);
 	fprintf(stderr, " %s --cylindrical <cylindrical-texture-map>\n", program_name);
 	fprintf(stderr, " %s -m <mesh-file> --emittance <cylindrical-emittance-map>\n", program_name);
@@ -1026,7 +1055,7 @@ static struct option long_options[] = {
 	{ "normalmap", required_argument, NULL, 'n' },
 	{ "burstrod", no_argument, NULL, 'b' },
 	{ "thrust", required_argument, NULL, 't' },
-	{ "exhaust", no_argument, NULL, 'E' },
+	{ "exhaust", optional_argument, NULL, 'E' },
 	{ "skybox", required_argument, NULL, 's' },
 	{ "turret", required_argument, NULL, 'T' },
 	{ "alphabynormal", no_argument, NULL, 'A' },
@@ -1045,13 +1074,19 @@ static void process_options(int argc, char *argv[])
 	while (1) {
 		int option_index;
 
-		c = getopt_long(argc, argv, "EIAB:T:bc:d:fC:KY:Z:e:hi:m:n:p:r:s:t:wW", long_options, &option_index);
+		c = getopt_long(argc, argv, "E::IAB:T:bc:d:fC:KY:Z:e:hi:m:n:p:r:s:t:wW", long_options, &option_index);
 		if (c < 0) {
 			break;
 		}
 		switch (c) {
 		case 'E':
 			exhaust_mode = 1;
+			if (optarg) {
+				exhaust_tint_name = optarg;
+			} else if (optind < argc && argv[optind][0] != '-') {
+				if (find_exhaust_tint_index(argv[optind]) >= 0)
+					exhaust_tint_name = argv[optind++];
+			}
 			break;
 		case 'B':
 			turret_mode = 1;
@@ -1350,9 +1385,23 @@ int main(int argc, char *argv[])
 		thrust_material.textured_particle.radius = 1.5;
 		thrust_material.textured_particle.time_base = 0.1;
 	} else if (exhaust_mode) {
+		int tint_idx = 0;
+
+		if (exhaust_tint_name) {
+			int found = find_exhaust_tint_index(exhaust_tint_name);
+
+			if (found >= 0) {
+				tint_idx = found;
+			} else {
+				fprintf(stderr,
+					"mesh_viewer: unknown exhaust tint '%s', defaulting to '%s'\n",
+					exhaust_tint_name, exhaust_tints[0].name);
+			}
+		}
+		exhaust_color_index = tint_idx;
 		target_mesh = init_exhaust_cone_mesh(24, 16, 18.0f, 1.3f, 0.20f);
 		material_init_exhaust_plume(&exhaust_material);
-		exhaust_material.exhaust_plume.tint = (struct sng_color) { 0.4f, 0.65f, 1.0f };
+		exhaust_material.exhaust_plume.tint = exhaust_tints[exhaust_color_index].tint;
 		exhaust_material.exhaust_plume.core_brightness = 1.0f;
 		exhaust_material.exhaust_plume.plume_length = 1.0f;
 		exhaust_material.exhaust_plume.noise_seed = 0.0f;

@@ -111,9 +111,9 @@ void main()
 	float shock = diamond_shape * diamond_radial * diamond_decay * u_DiamondIntensity * shock_shimmer;
 
 	/* Warm incandescent nozzle glow at the engine exhaust rim */
-	float nozzle_glow = clamp(1.0 - axial * 14.0, 0.0, 1.0);
-	nozzle_glow = pow(nozzle_glow, 2.2);
-	vec3 nozzle_color = vec3(1.0, 0.65, 0.35);
+	float nozzle_glow = clamp(1.0 - axial * 4.5, 0.0, 1.0);
+	nozzle_glow = pow(nozzle_glow, 1.5);
+	vec3 nozzle_color = vec3(1.0, 0.38, 0.06);
 
 	/* Saturated gas mantle in faction tint with pronounced turbulence */
 	vec3 mantle_color = u_TintColor;
@@ -125,8 +125,12 @@ void main()
 	vec3 diamond_color = mix(u_TintColor, vec3(1.0, 1.0, 1.0), clamp(core_hot * 1.5, 0.0, 1.0));
 	vec3 shock_emission = diamond_color * (shock * 0.65);
 
+	/* Warm incandescent combustion glow smoothly transitions into mantle color */
+	vec3 base_glow = nozzle_color * (nozzle_glow * 1.6);
+	vec3 blended_mantle = mix(mantle_emission, base_glow, nozzle_glow * 0.85);
+
 	/* Combined emission */
-	vec3 emission = (mantle_emission + shock_emission + nozzle_color * nozzle_glow * 1.4) *
+	vec3 emission = (blended_mantle + shock_emission + nozzle_color * (nozzle_glow * 0.8)) *
 			axial_fade * edge_fade;
 
 	/* Translucent alpha modulated by gas turbulence density variations */
