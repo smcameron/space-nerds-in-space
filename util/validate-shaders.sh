@@ -92,6 +92,8 @@ validate_es_fs "share/snis/shader-es/wireframe_transparent.frag"
 validate_es_fs "share/snis/shader-es/wireframe-transparent-sphere-clip.frag"
 validate_es_vs "share/snis/shader-es/wireframe-transparent-sphere-clip.vert"
 validate_es_vs "share/snis/shader-es/wireframe_transparent.vert"
+validate_es_vs "share/snis/shader-es/exhaust-plume.vert"
+validate_es_fs "share/snis/shader-es/exhaust-plume.frag"
 
 # now actually validate.
 validate_gl_both "share/snis/shader/alpha_by_normal.shader"
@@ -136,4 +138,6 @@ validate_gl_fs "share/snis/shader/wireframe-transparent-sphere-clip.frag"
 validate_gl_vs "share/snis/shader/wireframe-transparent-sphere-clip.vert"
 validate_gl_vs "share/snis/shader/wireframe_transparent.vert"
 validate_gl_both "share/snis/shader/city.shader"
+validate_gl_vs "share/snis/shader/exhaust-plume.vert"
+validate_gl_fs "share/snis/shader/exhaust-plume.frag"
 
