@@ -1,4 +1,4 @@
-.TH SPACE-NERDS-IN-SPACE "6" "Feb 2017" "mesh_viewer" "Games"
+.TH SPACE-NERDS-IN-SPACE "6" "Sep 2026" "mesh_viewer" "Games"
 .SH NAME
 mesh_viewer \- a utility for viewing models for "Space Nerds In Space."
 .SH SYNOPSIS
@@ -9,6 +9,8 @@ mesh_viewer \- a utility for viewing models for "Space Nerds In Space."
 .B mesh_viewer [ -b ]
 .br
 .B mesh_viewer [ -t thrustimage.png ]
+.br
+.B mesh_viewer [ -E | --exhaust [tint] ]
 .SH DESCRIPTION
 .\" Add any additional description here
 .warn 511
@@ -41,11 +43,19 @@ faces parallel to the YZ plane. This can only be specified in combination with t
 -C option, because there is only one uv-mapping used for both the ambient and
 emittance textures, so if either is cylindrical, both must be cylindrical.
 .TP
+\fB-E, --exhaust\fR [\fItint\fR]
+Invoke "exhaust" mode to preview rocket engine exhaust plume rendering and
+shock diamond effects. An optional \fItint\fR name may be specified to choose
+the plume color: \fBblue\fR (default), \fBorange\fR, \fBgreen\fR, \fBgold\fR,
+\fBpurple\fR, \fBred\fR, or \fBwhite\fR. Alternatively, a numeric index from
+0 to 6 may be provided. No model file is required in this mode.
+.TP
 \fB-T, --turret\fR turret-model
 Set "turret-mode" and specify the model for the turret.
 In "turret mode", two models are required, the turret, and the turret
 base. (See the --turretbase option, above.) The turret is animated to
 always try to point at the light source.
+.TP
 \fB\-p\fR
 Invoke "planet" mode.  In this case, the filename is actually a partial filename,
 and six png files are expected to exist with the given partial filename with the
@@ -73,7 +83,7 @@ Invoke "thrust" mode.  This means the model is constructed and a particle system
 is created to show a rocket thrust animation.  The image used for the animation
 is thrust-image-file, which must be an RGBA png file, typically 128x128 pixels.
 .SH BASIC OPERATION
-.TP
+.PP
 Drag with the right mouse button pressed to rotate the model.  Drag with the
 right mouse button pressed and the CTRL key pressed to rotate the light source.
 Use the mouse wheel to zoom in and out on the model.
@@ -81,26 +91,33 @@ Use the mouse wheel to zoom in and out on the model.
 .TP
 The 'a' key toggles atmosphere rendering on and off (planet mode only).
 .TP
-The 'f' key will record a snapshot in 'mesh-viewer-snapshot.png'
+The 'f' key toggles periodic snapshotting to files named 'mesh-viewer-snapshot-xxxxx.png'.
 .TP
 The 'n' key enables autospin for 10 frames of animation then turns it off.  This is useful for capturing screenshots from which to create animated gifs.
 .TP
-The 'P' key will toggle periodic snapshotting to files named 'mesh-viewer-snapshot-xxxxx.png'
+The 'p' key records a snapshot in 'mesh-viewer-snapshot-xxxxx.png'.
 .TP
 The 's' key toggles auto-spin on and off.  When enabled, autospin will cause the model to continue smoothly spinning in the direction it is rotated with the mouse.
 .TP
+The 't' key cycles through available exhaust plume tint colors (exhaust mode only).
+.TP
+The '[' and ']' keys decrease or increase exhaust throttle and plume length (exhaust mode), or atmosphere brightness (planet mode).
+.TP
 The '+' and '-' keys allow speeding up or slowing down the rate of the spin.
 .TP
-The ESC key exits mesh_viewer.
-.SH
-EXAMPLES
+The 'F1' key toggles the on-screen help display.
 .TP
+The ESC key exits mesh_viewer.
+.SH EXAMPLES
+.PP
 Here are some sample invocations of mesh viewer:
   ./mesh_viewer -p share/snis/textures/planet-texture0-
   ./mesh_viewer -m share/snis/models/wombat/snis3006.obj
   ./mesh_viewer -m share/snis/models/starbase5.stl
   ./mesh_viewer -m share/snis/models/asteroid3.stl -c share/snis/textures/asteroid1-
   ./mesh_viewer -p myplanet -n myplanet-normalmap -s myalternate-skybox
+  ./mesh_viewer --exhaust
+  ./mesh_viewer --exhaust orange
 .SH SEE ALSO
 .PP
 snis_client(6), ssgl_server(6), snis_server(6)
