@@ -3628,6 +3628,32 @@ void graph_dev_start_frame(void)
 {
 	PROFILE_ZONE_START("graph_dev_start_frame");
 
+	/* RESYNCHRONISE THE CACHED BLEND STATE, because the cache is only true while nothing else
+	 * touches the context.
+	 *
+	 * BLEND_FUNC (graph_dev/context.h) skips glBlendFunc when sgc already records the pair
+	 * being asked for, which is worth doing and is safe exactly as long as graph_dev is the
+	 * only thing drawing.  It is not: anything sharing the GL context and calling glBlendFunc
+	 * directly -- a lab's HUD, an overlay, a debug tool -- leaves the cache claiming a state
+	 * the driver no longer has, and every later BLEND_FUNC for that pair is then skipped as
+	 * redundant when it is the one call that would have fixed things.
+	 *
+	 * The symptom is worth recording, because it looks nothing like a blend bug.  With the
+	 * func left at (SRC_ALPHA, ONE_MINUS_SRC_ALPHA), the star's two GLARE passes emit alpha
+	 * zero -- they are premultiplied, the colour is emission and the alpha is only the disc's
+	 * coverage -- so they multiply to nothing and vanish, leaving the disc pass alone.  The
+	 * star renders as a hard white circle with no glow whatever, which reads as the sun shader
+	 * not running at all.  It cost a long hunt through asset paths, shader loading and depth
+	 * state before the actual cause, and it only appeared when the HUD was drawn, so every
+	 * --no-hud screenshot taken to investigate it looked perfectly correct.
+	 *
+	 * One redundant glBlendFunc per frame is not a cost worth reasoning about.  Do this at the
+	 * top of the frame and the cache is honest for the rest of it however the context is
+	 * shared. */
+	glBlendFunc(GL_ONE, GL_ZERO);
+	sgc.src_blend_func = GL_ONE;
+	sgc.dest_blend_func = GL_ZERO;
+
 	graph_dev_send_completed_textures_to_gpu();
 
 	/* reset viewport to whole screen */
