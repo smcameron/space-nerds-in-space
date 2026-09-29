@@ -674,6 +674,43 @@ void quat_from_u2v(union quat *q, const union vec3 *u, const union vec3 *v, cons
 }
 #endif
 
+/* The rotation carrying the local axes onto an orthonormal frame.  See quat.h for why this is
+ * not quat_from_u2v() twice -- the short version being that the build above returns the identity
+ * for antipodal vectors, so a frame that sweeps through a full turn comes back unrotated twice
+ * per revolution. */
+void quat_from_basis(union quat *q, const union vec3 *x, const union vec3 *y, const union vec3 *z)
+{
+	float trace = x->v.x + y->v.y + z->v.z;
+	float s;
+
+	if (trace > 0.0) {
+		s = sqrtf(trace + 1.0) * 2.0;
+		q->v.w = 0.25 * s;
+		q->v.x = (y->v.z - z->v.y) / s;
+		q->v.y = (z->v.x - x->v.z) / s;
+		q->v.z = (x->v.y - y->v.x) / s;
+	} else if (x->v.x > y->v.y && x->v.x > z->v.z) {
+		s = sqrtf(1.0 + x->v.x - y->v.y - z->v.z) * 2.0;
+		q->v.w = (y->v.z - z->v.y) / s;
+		q->v.x = 0.25 * s;
+		q->v.y = (y->v.x + x->v.y) / s;
+		q->v.z = (z->v.x + x->v.z) / s;
+	} else if (y->v.y > z->v.z) {
+		s = sqrtf(1.0 + y->v.y - x->v.x - z->v.z) * 2.0;
+		q->v.w = (z->v.x - x->v.z) / s;
+		q->v.x = (y->v.x + x->v.y) / s;
+		q->v.y = 0.25 * s;
+		q->v.z = (z->v.y + y->v.z) / s;
+	} else {
+		s = sqrtf(1.0 + z->v.z - x->v.x - y->v.y) * 2.0;
+		q->v.w = (x->v.y - y->v.x) / s;
+		q->v.x = (z->v.x + x->v.z) / s;
+		q->v.y = (z->v.y + y->v.z) / s;
+		q->v.z = 0.25 * s;
+	}
+	quat_normalize_self(q);
+}
+
 union quat *quat_lerp(union quat *restrict qo,
 	const union quat *restrict qfrom, const union quat *restrict qto, float t)
 {

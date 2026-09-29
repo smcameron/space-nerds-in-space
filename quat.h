@@ -239,6 +239,21 @@ void quat_from_u2v(union quat *restrict q, const union vec3 *restrict u,
 /* Calculate the quaternion to rotate from unit_vector u to unit_vector v */
 void quat_from_unit_u2v(union quat *restrict q, union vec3 *restrict u, union vec3 *restrict v);
 
+/* The rotation carrying the local axes onto the given ORTHONORMAL frame: local +X onto x, +Y
+ * onto y, +Z onto z.  Shepperd's method -- form the rotation matrix whose columns are the three
+ * target axes, then read the quaternion off whichever diagonal term is largest, so the square
+ * root is never taken of something near zero.
+ *
+ * Not quat_from_u2v() twice, which is the obvious way and is wrong.  The build of that which is
+ * actually compiled (the lolengine one, below) has no answer for ANTIPODAL vectors: the cross
+ * product vanishes, the quaternion it assembles has zero length, and it gives up and returns the
+ * identity -- so the frame comes back unrotated rather than turned through half a circle.  It
+ * ignores its up argument, which is what the other build uses to resolve exactly that case.
+ * Anything whose frame sweeps through a full turn walks into that twice per revolution.
+ */
+void quat_from_basis(union quat *q, const union vec3 *x, const union vec3 *y,
+			const union vec3 *z);
+
 /* calculate normalized linear quaternion interpolation */
 union quat* quat_nlerp(union quat *qo, const union quat *qfrom, const union quat *qto, float t);
 

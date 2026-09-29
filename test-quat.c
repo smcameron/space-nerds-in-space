@@ -205,6 +205,71 @@ static void test1()
 	}
 }
 
+/* quat_from_basis() must carry the local axes onto the frame it is given, for EVERY frame --
+ * including the ones where a target axis is exactly opposite its local counterpart, which is the
+ * case quat_from_u2v() silently returns the identity for and the reason this function exists.
+ * So the antipodal frames are tested explicitly rather than left to chance among the random
+ * ones, which would find them roughly never. */
+static void test_quat_from_basis(void)
+{
+	static const union vec3 local[3] = {
+		{ { 1.0, 0.0, 0.0 } }, { { 0.0, 1.0, 0.0 } }, { { 0.0, 0.0, 1.0 } },
+	};
+	/* The identity, and the three half turns that reverse two axes apiece. */
+	static const float turned[4][3] = {
+		{ 1.0, 1.0, 1.0 }, { 1.0, -1.0, -1.0 }, { -1.0, 1.0, -1.0 }, { -1.0, -1.0, 1.0 },
+	};
+	int i, k, axis;
+
+	for (k = 0; k < 4; k++) {
+		union vec3 basis[3];
+		union quat q;
+
+		for (axis = 0; axis < 3; axis++) {
+			basis[axis] = local[axis];
+			basis[axis].v.x *= turned[k][axis];
+			basis[axis].v.y *= turned[k][axis];
+			basis[axis].v.z *= turned[k][axis];
+		}
+		quat_from_basis(&q, &basis[0], &basis[1], &basis[2]);
+		for (axis = 0; axis < 3; axis++) {
+			union vec3 got;
+
+			quat_rot_vec(&got, &local[axis], &q);
+			TESTIT(fabs(got.v.x - basis[axis].v.x) > 0.001,
+				"quat_from_basis half turn failed, x wrong\n");
+			TESTIT(fabs(got.v.y - basis[axis].v.y) > 0.001,
+				"quat_from_basis half turn failed, y wrong\n");
+			TESTIT(fabs(got.v.z - basis[axis].v.z) > 0.001,
+				"quat_from_basis half turn failed, z wrong\n");
+		}
+	}
+
+	/* And a thousand random right-handed frames, built by taking a random rotation and asking
+	 * for the frame it produces -- so the answer is known independently of the function. */
+	for (i = 0; i < 1000; i++) {
+		union vec3 basis[3];
+		union quat q, want;
+		int axis;
+
+		random_quat(&want);
+		for (axis = 0; axis < 3; axis++)
+			quat_rot_vec(&basis[axis], &local[axis], &want);
+		quat_from_basis(&q, &basis[0], &basis[1], &basis[2]);
+		for (axis = 0; axis < 3; axis++) {
+			union vec3 got;
+
+			quat_rot_vec(&got, &local[axis], &q);
+			TESTIT(fabs(got.v.x - basis[axis].v.x) > 0.001,
+				"quat_from_basis test failed, x wrong\n");
+			TESTIT(fabs(got.v.y - basis[axis].v.y) > 0.001,
+				"quat_from_basis test failed, y wrong\n");
+			TESTIT(fabs(got.v.z - basis[axis].v.z) > 0.001,
+				"quat_from_basis test failed, z wrong\n");
+		}
+	}
+}
+
 static void test_torus_dist(void)
 {
 	union vec3 p;
@@ -328,6 +393,7 @@ static void test_heading_mark_vec3(void)
 int main(__attribute__((unused)) int argc, __attribute__((unused))  char *argv[])
 {
 	test1();
+	test_quat_from_basis();
 	test_torus_dist();
 	test_heading_mark_vec3();
 	printf("%d tests failed, %d tests passed.\n", total_tests_failed,
