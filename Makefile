@@ -948,8 +948,8 @@ $(OD)/snis_preferences.o:	snis_preferences.c snis_preferences.h string-utils.h s
 $(OD)/solarsystem_config.o:	solarsystem_config.c solarsystem_config.h string-utils.h Makefile ${ODT}
 	$(Q)$(COMPILE)
 
-solarsystem_config_test: solarsystem_config.c ${OD}/string-utils.o ${ODT}
-	$(CC) ${MYCFLAGS} -DSOLARSYSTEM_CONFIG_TEST=1 -o $@ solarsystem_config.c ${OD}/string-utils.o
+solarsystem_config_test: solarsystem_config.c ${OD}/string-utils.o ${ODT} ${OD}/stacktrace.o
+	$(CC) ${MYCFLAGS} -DSOLARSYSTEM_CONFIG_TEST=1 -o $@ solarsystem_config.c ${OD}/string-utils.o ${OD}/stacktrace.o
 
 $(OD)/my_point.o:   my_point.c Makefile ${ODT}
 	$(Q)$(COMPILE)
@@ -1429,7 +1429,8 @@ mostly-clean:
 	${MANSRCDIR}/snis_test_audio.1.gz bin/test_transport_contract bin/test_stringutils \
 	bin/yoke-test-program fuzz_obj_parser fuzz_snis_read_ship_types fuzz_solarsystem_asset_spec_read \
 	fuzz_read_thrust_attachments fuzz_process_manifest build_info.h fuzz_read_joystick_config \
-	fuzz_read_commodities fuzz_read_starbase_metadata fuzz_read_docking_port_attachments ${METAINFOFILE}
+	fuzz_read_commodities fuzz_read_starbase_metadata fuzz_read_docking_port_attachments ${METAINFOFILE} \
+	solarsystem_config_test
 	rm -f ${BIN}
 	rm -fr opus-1.3.1
 	rm -f libopus.a

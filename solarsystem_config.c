@@ -50,7 +50,12 @@ static int parse_float_field(char *filename, int ln, char *line, const char *wha
 		fprintf(stderr, "%s:line %d: bad %s specification.\n", filename, ln, what);
 		return -1;
 	}
-	if (value < min || value > max) {
+	/* Written as the NEGATION of the in-range test rather than as the out-of-range one, because
+	 * sscanf("%f") happily accepts "nan" and "inf", and every comparison against a NaN is
+	 * false -- so "value < min || value > max" waves it straight through and a NaN lands in the
+	 * struct.  From there it spreads through everything computed from it, with nothing left
+	 * to say where it came from. */
+	if (!(value >= min && value <= max)) {
 		fprintf(stderr, "%s:line %d: %s must be between %g and %g.\n",
 			filename, ln, what, min, max);
 		return -1;
