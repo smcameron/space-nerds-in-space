@@ -206,6 +206,7 @@ Knobs:
 | `P=1` | Build with gprof profiling. |
 | `DOWNLOAD_OPUS=yes` | Have the Makefile fetch and build Opus if your distro lacks packages. |
 | `WITHVOICECHAT=no` | Build without voice chat. |
+| `USE_CCACHE=0` | Do not use ccache. It is used automatically when installed, which makes moving around in git history much cheaper. A `CC` of more than one word (`distcc gcc` and the like) is assumed to be a wrapper you set up deliberately, and is left alone. |
 
 ---
 

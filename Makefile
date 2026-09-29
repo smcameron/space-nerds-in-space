@@ -66,6 +66,32 @@ endif
 SPACEDUST=-DSPACEDUST
 MOVING_STARFIELD=-DMOVING_STARFIELD
 
+# If ccache is installed, use it. It makes hopping around in git history much
+# cheaper, because files that were merely touched do not get recompiled.
+# Say "make USE_CCACHE=0" to opt out.
+#
+# Only do this to a plain one-word CC. A CC of several words is already a
+# wrapper of some sort -- "ccache gcc", "distcc gcc", "icecc gcc" -- and
+# ccache(1) warns specifically against the "ccache anotherwrapper compiler"
+# form, so someone who has set that up gets left exactly as they arranged it.
+# A one-word CC that is itself a ccache symlink needs no such care: ccache
+# skips any candidate resolving back to itself when it looks up the compiler,
+# so it does not end up calling itself.
+USE_CCACHE ?= 1
+ifeq (${USE_CCACHE},1)
+ifeq (1,$(words ${CC}))
+ifeq (,$(findstring ccache,${CC}))
+CCACHE:=$(shell command -v ccache 2>/dev/null)
+ifneq (,${CCACHE})
+# "override", so that "make CC=clang" gets the cache too. A plain assignment is
+# ignored for a variable set on the command line, which would otherwise make
+# ccache appear or vanish depending on whether you said "make CC=x" or "CC=x make".
+override CC:=${CCACHE} ${CC}
+endif
+endif
+endif
+endif
+
 # object fild directory
 OD=object_files
 
