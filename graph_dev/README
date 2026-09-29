@@ -1,0 +1,57 @@
+graph_dev internals
+===================
+
+This directory is INSIDE the renderer.  Nothing outside graph_dev_opengl.c and
+graph_dev_gles.c should include these headers.
+
+The renderer's public interface is ../graph_dev.h, and it is the only part of
+this that snis_client, entity.c or a lab has any business calling.  What lives
+here is the part the two backends turned out to have in common -- the texture
+cache, the mesh cache, the window-level context and 2D drawing, and the shader
+setup that is the same on both GL versions.  It is shared so that there is one
+of each rather than two, not because it is an interface anybody should build
+on.
+
+There is deliberately no mechanism enforcing that.  The directory is the sign.
+
+Why any of it is here at all
+----------------------------
+graph_dev_opengl.c and graph_dev_gles.c are two implementations of one
+interface, and a good deal of what they contained was identical.  Some of that
+is genuine: rendering, where two lines that look alike can mean different
+things because desktop GL and GLES guarantee different things.  The rest was
+not, and two copies of code that must not diverge is a standing invitation for
+it to -- one of the differences found while doing this was `if (filled )`
+against `if (filled)`.
+
+In every case what actually blocked sharing was state or a macro, never the
+code: a context struct that was a file static in each backend, so there were
+two of it; shader structs defined twice; a preamble macro that differed by two
+string literals.
+
+The seam
+--------
+Six functions go the other way, supplied by whichever backend is linked:
+
+	graph_dev_cubemap_texture_to_gpu,   GLES spells its sRGB formats
+	graph_dev_texture_to_gpu_id         differently and has no
+	                                    GL_TEXTURE_WRAP_R
+
+	graph_dev_gen_vao,                  vertex array objects are core on
+	graph_dev_bind_vao,                 the desktop and an OES extension
+	graph_dev_unbind_vao                on GLES, with their own entry
+	                                    points and the possibility of
+	                                    being absent
+
+	graph_dev_select_draw_buffer        draw buffers are named explicitly
+	                                    on the desktop and cannot be named
+	                                    at all on GLES2
+
+Plus one compile-time choice, in context.h: the shader preamble, which is
+"#version 150" against "#version 100" and a precision qualifier.  These files
+are built once per build with the backend's own flags -- already how they pick
+a glad header -- so that stays a compile-time concatenation and no shader
+string is assembled any differently than it was.
+
+Keep the seam this narrow.  Anything needing a judgement about which GL is
+underneath belongs in a backend, not here.

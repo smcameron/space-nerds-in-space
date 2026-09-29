@@ -571,11 +571,11 @@ SDLCFLAGS:=$(shell $(SDL2_CONFIG) --cflags)
 ifeq (${USE_GLES},0)
 GLADLIBS=
 GLADCFLAGS=-Iextern/glad/include
-GRAPH_OBJS=glad-gl.o graph_dev_opengl.o opengl_cap.o star_light.o
+GRAPH_OBJS=glad-gl.o graph_dev_opengl.o graph_dev_texture_cache.o graph_dev_mesh_cache.o graph_dev_context.o graph_dev_shader_setup.o opengl_cap.o star_light.o
 else
 GLADLIBS=
 GLADCFLAGS=-Iextern/glad-es/include -DUSE_GLES=1
-GRAPH_OBJS=glad-gles2.o graph_dev_gles.o gles_cap.o star_light.o
+GRAPH_OBJS=glad-gles2.o graph_dev_gles.o graph_dev_texture_cache.o graph_dev_mesh_cache.o graph_dev_context.o graph_dev_shader_setup.o gles_cap.o star_light.o
 endif
 endif
 
@@ -785,6 +785,8 @@ MYCFLAGS=-DDESTDIR=${DESTDIR} -DPREFIX=${PREFIX} ${DEBUGFLAG} ${PROFILEFLAG} \
 	-Wl,-z,relro -Wl,-z,now \
 	-Wl,--as-needed -Wl,--no-copy-dt-needed-entries \
 	${COMPSPECCFLAGS} -Wstrict-prototypes -fexceptions -Wshadow
+# -I. so that headers under graph_dev/ can reach the ones at the top level.
+MYCFLAGS += -I.
 
 ifeq (${SERVERSONLY},0)
 VORBISFLAGS:=$(subst -I,-isystem ,$(shell $(PKG_CONFIG) --cflags vorbisfile))
@@ -913,13 +915,36 @@ $(OD)/graph_dev_opengl.o : graph_dev_opengl.c graph_dev.h shader.h vertex.h tria
 		Makefile ${ODT}
 	$(Q)$(SDLCOMPILE)
 
+# The texture cache, shared by both graph_dev backends.  Built with the same flags as
+# whichever one is in use, since USE_GLES decides which glad header it picks up.
+$(OD)/graph_dev_texture_cache.o : graph_dev/texture_cache.c graph_dev/texture_cache.h \
+		graph_dev.h png_utils.h snis_graph.h workqueue.h string-utils.h \
+		Makefile ${ODT}
+	$(Q)$(SDLCOMPILE)
+
+# The mesh cache, likewise.  Same reasoning, same flags.
+$(OD)/graph_dev_mesh_cache.o : graph_dev/mesh_cache.c graph_dev/mesh_cache.h mesh.h \
+		vertex.h triangle.h quat.h opengl_cap.h snis_profile.h Makefile ${ODT}
+	$(Q)$(SDLCOMPILE)
+
+# The shader setup that is the same on both GL versions.
+$(OD)/graph_dev_shader_setup.o : graph_dev/shader_setup.c graph_dev/shader_setup.h \
+		graph_dev/context.h shader.h Makefile ${ODT}
+	$(Q)$(SDLCOMPILE)
+
+# The shared renderer context and the 2D drawing that needs only it.
+$(OD)/graph_dev_context.o : graph_dev/context.c graph_dev/context.h graph_dev.h \
+		graph_dev/mesh_cache.h snis_graph.h star_light.h material.h entity.h \
+		entity_private.h matrix.h Makefile ${ODT}
+	$(Q)$(SDLCOMPILE)
+
 $(OD)/opengl_cap.o : opengl_cap.c Makefile ${ODT}
 	$(Q)$(SDLCOMPILE)
 
 $(OD)/graph_dev_gles.o : graph_dev_gles.c graph_dev.h shader.h vertex.h triangle.h \
 		mtwist.h mathutils.h matrix.h quat.h mesh.h vec4.h snis_graph.h graph_dev.h \
 		material.h entity.h entity_private.h snis_typeface.h opengl_cap.h png_utils.h \
-		Makefile ${ODT}
+		graph_dev/texture_cache.h graph_dev/mesh_cache.h graph_dev/context.h Makefile ${ODT}
 	$(Q)$(SDLCOMPILE)
 
 $(OD)/gles_cap.o : gles_cap.c Makefile ${ODT}

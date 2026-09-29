@@ -22,6 +22,10 @@
 #include "vec4.h"
 #include "snis_graph.h"
 #include "graph_dev.h"
+#include "graph_dev/texture_cache.h"
+#include "graph_dev/mesh_cache.h"
+#include "graph_dev/context.h"
+#include "graph_dev/shader_setup.h"
 #include "material.h"
 #include "entity.h"
 #include "entity_private.h"
@@ -34,135 +38,18 @@
 #include "string-utils.h"
 
 
-#define OPENGL_VERSION_STRING "#version 150\n"
-#define UNIVERSAL_SHADER_HEADER \
-	OPENGL_VERSION_STRING
 
-/*
- * Filmic tonemapping cribbed from oolite:
- *
- * 	gamma correction
- * 	using Jim Hejl's filmic tonemapping and gamma correction approximation.
- * 	Normally this would require HDR, but I think it works extremely well in Oolite.
- * 	Formula taken from https://www.gdcvault.com/play/1012351/Uncharted-2-HDR
- * 	jump to 27:40 in the video. Note the pow 1.0/2.2 is baked into these numbers
- *
- * Perhaps that it normally requires HDR is the reason it doesn't seem to look so
- * great in SNIS.
- */
-#define FILMIC_TONEMAPPING \
-	"uniform float u_FilmicTonemapping;\n" \
-	"uniform float u_TonemappingGain;\n" \
-	"vec4 filmic_tonemap(vec4 color) {\n" \
-	"	float dont_tonemap = 1.0 - u_FilmicTonemapping;\n" \
-	"	vec3 x = max(vec3(0.0), color.rgb - 0.004);\n" \
-	"	x = u_TonemappingGain * (x * (6.2 * x + 0.5)) / (x * (6.2 * x + 1.7) + 0.06);\n" \
-	"	return dont_tonemap * color + vec4(u_FilmicTonemapping * x, color.a);\n" \
-	"}\n\n"
 
 #define DEBUG_NORMALS 0
-#define TEX_RELOAD_DELAY 1.0
-#define CUBEMAP_TEX_RELOAD_DELAY 1.0
-#define MAX_LOADED_TEXTURES 300
 
-#define IMAGE_LOADER_QUEUE_DEPTH 300
-#define IMAGE_LOADER_THREAD_COUNT 4
-static struct work_queue *image_loader_wq = NULL; /* queue of requests to load PNG images */
-static struct work_queue *loaded_images_wq = NULL; /* queue of decoded image data to upload to GPU */
 
-struct texture_loading_status {
-	GLuint texture_id;
-	unsigned char finished_loading;
-	unsigned char in_use;
-};
-static struct texture_loading_status texture_load_status[MAX_LOADED_TEXTURES] = { 0 };
-pthread_mutex_t finished_loading_mutex = PTHREAD_MUTEX_INITIALIZER;
 
-/* return true if a texture is finished loading. finished_loading_mutex must be held. */
-static int texture_finished_loading(GLuint texture_name)
-{
-	for (int i = 0; i < MAX_LOADED_TEXTURES; i++)
-		if (texture_load_status[i].in_use && texture_load_status[i].texture_id == texture_name)
-			return texture_load_status[i].finished_loading;
-	return 0;
-}
 
-static void set_texture_load_status(GLuint texture_name, unsigned char load_status)
-{
-	/* finished_loading_mutex must be held. */
-	int first_unused = -1;
-	for (int i = 0; i < MAX_LOADED_TEXTURES; i++) {
-		if (first_unused == -1 && texture_load_status[i].in_use == 0) {
-			first_unused = i;
-			continue;
-		}
-		if (texture_load_status[i].in_use && texture_load_status[i].texture_id == texture_name) {
-			texture_load_status[i].finished_loading = load_status;
-			return;
-		}
-	}
-	if (first_unused != -1) {
-		texture_load_status[first_unused].texture_id = texture_name;
-		texture_load_status[first_unused].in_use = 1;
-		texture_load_status[first_unused].finished_loading = load_status;
-		return;
-	}
-	fprintf(stderr, "Too many textures at %s:%d\n", __FILE__, __LINE__);
-	abort();
-}
 
-static void mark_texture_load_pending(GLuint texture_name)
-{
-	/* finished_loading_mutex must be held. */
-	set_texture_load_status(texture_name, 0);
-}
 
-static void mark_texture_load_complete(GLuint texture_name)
-{
-	/* finished_loading_mutex must be held. */
-	set_texture_load_status(texture_name, 1);
-}
 
-static void mark_texture_load_unused(GLuint texture_name)
-{
-	/* finished_loading_mutex must be held. */
-	for (int i = 0; i < MAX_LOADED_TEXTURES; i++) {
-		if (texture_load_status[i].in_use && texture_load_status[i].texture_id == texture_name) {
-			texture_load_status[i].in_use = 0;
-			texture_load_status[i].texture_id = -1;
-			texture_load_status[i].finished_loading = 0;
-			break;
-		}
-	}
-}
 
-struct loaded_texture {
-	GLuint texture_id;
-	char *filename;
-	time_t mtime;
-	double last_mtime_change;
-	int expired;
-	int use_mipmaps;
-	int linear_colorspace;
-};
-static int nloaded_textures = 0;
-static struct loaded_texture loaded_textures[MAX_LOADED_TEXTURES];
-static char *error_texture_file = NULL;
-static int no_texture_mode = 0;
 
-#define NCUBEMAP_TEXTURES 6
-#define MAX_LOADED_CUBEMAP_TEXTURES 40
-struct loaded_cubemap_texture {
-	GLuint texture_id;
-	int is_inside;
-	char *filename[NCUBEMAP_TEXTURES];
-	time_t mtime;
-	double last_mtime_change;
-	int expired;
-	int linear_colorspace;
-};
-static int nloaded_cubemap_textures = 0;
-static struct loaded_cubemap_texture loaded_cubemap_textures[MAX_LOADED_CUBEMAP_TEXTURES];
 
 static int draw_normal_lines = 0;
 static int draw_billboard_wireframe = 0;
@@ -249,629 +136,23 @@ static void upload_shadow_receive_uniforms(GLint shadow_mvp_id, GLint num_cascad
 	GLint shadow_map_id, GLint shadow_normal_offset_id, const struct mat44d *model);
 static void ensure_shadow_map_layers(int n);
 
-static const char *default_shader_directory = "share/snis/shader";
-static char shader_directory[PATH_MAX];
 
-struct mesh_gl_info {
-	/* common buffer to hold vertex positions */
-	GLuint vertex_buffer;
 
-	int ntriangles;
-	/* uses vertex_buffer for data */
-	GLuint triangle_vertex_buffer;
 
-	GLuint triangle_normal_lines_buffer;
-	GLuint triangle_tangent_lines_buffer;
-	GLuint triangle_bitangent_lines_buffer;
 
-	int nwireframe_lines;
-	GLuint wireframe_lines_vertex_buffer;
 
-	int npoints;
-	/* uses vertex_buffer for data */
 
-	int nlines;
-	/* uses vertex_buffer for data */
-	GLuint line_vertex_buffer;
 
-	int nparticles;
-	GLuint particle_vertex_buffer;
-	GLuint particle_index_buffer;
-};
 
-struct vertex_buffer_data {
-	union vec3 position;
-};
 
-struct vertex_triangle_buffer_data {
-	union vec3 normal;
-	union vec3 tvertex0;
-	union vec3 tvertex1;
-	union vec3 tvertex2;
-	union vec3 wireframe_edge_mask;
-	union vec2 texture_coord;
-	union vec3 tangent;
-	union vec3 bitangent;
-};
 
-struct vertex_wireframe_line_buffer_data {
-	union vec3 position;
-	union vec3 normal;
-};
 
-struct vertex_line_buffer_data {
-	GLubyte multi_one[4];
-	union vec3 line_vertex0;
-	union vec3 line_vertex1;
-};
 
-struct vertex_color_buffer_data {
-	GLfloat position[2];
-	GLubyte color[4];
-};
 
-struct vertex_particle_buffer_data {
-	GLubyte multi_one[4];
-	union vec3 start_position;
-	GLubyte start_tint_color[3];
-	GLubyte start_apm[2];
-	union vec3 end_position;
-	GLubyte end_tint_color[3];
-	GLubyte end_apm[2];
-};
 
-static void graph_dev_gen_texture_maybe_lock(int count, GLuint *texture_name, int lock)
-{
-	PROFILE_ZONE_START("graph_dev_gen_texture_maybe_lock");
-	glGenTextures(count, texture_name);
 
-	if (lock)
-		pthread_mutex_lock(&finished_loading_mutex);
-	for (int i = 0; i < count; i++)
-		mark_texture_load_pending(texture_name[i]);
-	if (lock)
-		pthread_mutex_unlock(&finished_loading_mutex);
-	PROFILE_ZONE_END();
-}
 
-static void graph_dev_gen_texture(int count, GLuint *texture_name)
-{
-	PROFILE_ZONE_START("graph_dev_gen_texture");
-	graph_dev_gen_texture_maybe_lock(count, texture_name, 1);
-	PROFILE_ZONE_END();
-}
 
-static void graph_dev_gen_texture_no_lock(int count, GLuint *texture_name)
-{
-	PROFILE_ZONE_START("graph_dev_gen_texture_no_lock");
-	graph_dev_gen_texture_maybe_lock(count, texture_name, 0);
-	PROFILE_ZONE_END();
-}
-
-void mesh_graph_dev_cleanup(struct mesh *m)
-{
-	PROFILE_ZONE_START("mesh_graph_dev_cleanup");
-	if (m->graph_ptr) {
-		struct mesh_gl_info *ptr = m->graph_ptr;
-
-		glDeleteBuffers(1, &ptr->vertex_buffer);
-		glDeleteBuffers(1, &ptr->triangle_vertex_buffer);
-		glDeleteBuffers(1, &ptr->wireframe_lines_vertex_buffer);
-		glDeleteBuffers(1, &ptr->triangle_normal_lines_buffer);
-		glDeleteBuffers(1, &ptr->triangle_tangent_lines_buffer);
-		glDeleteBuffers(1, &ptr->triangle_bitangent_lines_buffer);
-		glDeleteBuffers(1, &ptr->line_vertex_buffer);
-		glDeleteBuffers(1, &ptr->particle_vertex_buffer);
-		glDeleteBuffers(1, &ptr->particle_index_buffer);
-
-		free(ptr);
-		m->graph_ptr = 0;
-	}
-	PROFILE_ZONE_END();
-}
-
-/* load/reload an array buffer using stream draw if it is being overwritten */
-#define LOAD_BUFFER(buffer_type, buffer_id, buffer_size, buffer_data) \
-	do { \
-		PROFILE_ZONE_START("LOAD_BUFFER"); \
-		GLenum usage; \
-		if ((buffer_id) == 0) { \
-			usage = GL_STATIC_DRAW; \
-			glGenBuffers(1, &(buffer_id)); \
-		} else \
-			usage = GL_STREAM_DRAW; \
-		glBindBuffer((buffer_type), (buffer_id)); \
-		glBufferData((buffer_type), (buffer_size), (buffer_data), usage); \
-		PROFILE_ZONE_END(); \
-	} while (0)
-
-void mesh_graph_dev_init(struct mesh *m)
-{
-	PROFILE_ZONE_START("mesh_graph_dev_init");
-
-	struct mesh_gl_info *ptr = m->graph_ptr;
-	if (!ptr) {
-		ptr = malloc(sizeof(struct mesh_gl_info));
-		memset(ptr, 0, sizeof(*ptr));
-		m->graph_ptr = ptr;
-	}
-
-	if (m->geometry_mode == MESH_GEOMETRY_TRIANGLES) {
-		/* setup the triangle mesh buffers */
-		int i;
-		size_t v_size = sizeof(struct vertex_buffer_data) * m->ntriangles * 3;
-		size_t vt_size = sizeof(struct vertex_triangle_buffer_data) * m->ntriangles * 3;
-		struct vertex_buffer_data *g_v_buffer_data = malloc(v_size);
-		struct vertex_triangle_buffer_data *g_vt_buffer_data = malloc(vt_size);
-
-#if DEBUG_NORMALS
-		float normal_line_length = m->radius / 20.0;
-		size_t nl_size = sizeof(struct vertex_buffer_data) * m->ntriangles * 3 * 2;
-		struct vertex_buffer_data *g_nl_buffer_data = malloc(nl_size * 3);
-		memset(g_nl_buffer_data, 0, nl_size * 3);
-		struct vertex_buffer_data *g_tl_buffer_data = &g_nl_buffer_data[m->ntriangles * 3 * 2];
-		struct vertex_buffer_data *g_bl_buffer_data = &g_nl_buffer_data[m->ntriangles * 3 * 2 * 2];
-#endif
-
-		ptr->ntriangles = m->ntriangles;
-		ptr->npoints = m->ntriangles * 3; /* can be rendered as a point cloud too */
-
-		for (i = 0; i < m->ntriangles; i++) {
-			int j = 0;
-			for (j = 0; j < 3; j++) {
-				int v_index = i * 3 + j;
-				g_v_buffer_data[v_index].position.v.x = m->t[i].v[j]->x;
-				g_v_buffer_data[v_index].position.v.y = m->t[i].v[j]->y;
-				g_v_buffer_data[v_index].position.v.z = m->t[i].v[j]->z;
-
-				g_vt_buffer_data[v_index].normal.v.x = m->t[i].vnormal[j].x;
-				g_vt_buffer_data[v_index].normal.v.y = m->t[i].vnormal[j].y;
-				g_vt_buffer_data[v_index].normal.v.z = m->t[i].vnormal[j].z;
-
-				g_vt_buffer_data[v_index].tvertex0.v.x = m->t[i].v[0]->x;
-				g_vt_buffer_data[v_index].tvertex0.v.y = m->t[i].v[0]->y;
-				g_vt_buffer_data[v_index].tvertex0.v.z = m->t[i].v[0]->z;
-
-				g_vt_buffer_data[v_index].tvertex1.v.x = m->t[i].v[1]->x;
-				g_vt_buffer_data[v_index].tvertex1.v.y = m->t[i].v[1]->y;
-				g_vt_buffer_data[v_index].tvertex1.v.z = m->t[i].v[1]->z;
-
-				g_vt_buffer_data[v_index].tvertex2.v.x = m->t[i].v[2]->x;
-				g_vt_buffer_data[v_index].tvertex2.v.y = m->t[i].v[2]->y;
-				g_vt_buffer_data[v_index].tvertex2.v.z = m->t[i].v[2]->z;
-
-				g_vt_buffer_data[v_index].tangent.v.x = m->t[i].vtangent[j].x;
-				g_vt_buffer_data[v_index].tangent.v.y = m->t[i].vtangent[j].y;
-				g_vt_buffer_data[v_index].tangent.v.z = m->t[i].vtangent[j].z;
-
-				g_vt_buffer_data[v_index].bitangent.v.x = m->t[i].vbitangent[j].x;
-				g_vt_buffer_data[v_index].bitangent.v.y = m->t[i].vbitangent[j].y;
-				g_vt_buffer_data[v_index].bitangent.v.z = m->t[i].vbitangent[j].z;
-
-				/* bias the edge distance to make the coplanar edges not draw */
-				if ((j == 1 || j == 2) && (m->t[i].flag & TRIANGLE_1_2_COPLANAR))
-					g_vt_buffer_data[v_index].wireframe_edge_mask.v.x = 1000;
-				else
-					g_vt_buffer_data[v_index].wireframe_edge_mask.v.x = 0;
-
-				if ((j == 0 || j == 2) && (m->t[i].flag & TRIANGLE_0_2_COPLANAR))
-					g_vt_buffer_data[v_index].wireframe_edge_mask.v.y = 1000;
-				else
-					g_vt_buffer_data[v_index].wireframe_edge_mask.v.y = 0;
-
-				if ((j == 0 || j == 1) && (m->t[i].flag & TRIANGLE_0_1_COPLANAR))
-					g_vt_buffer_data[v_index].wireframe_edge_mask.v.z = 1000;
-				else
-					g_vt_buffer_data[v_index].wireframe_edge_mask.v.z = 0;
-
-				if (m->tex) {
-					g_vt_buffer_data[v_index].texture_coord.v.x = m->tex[v_index].u;
-					g_vt_buffer_data[v_index].texture_coord.v.y = m->tex[v_index].v;
-				} else {
-					g_vt_buffer_data[v_index].texture_coord.v.x = 0;
-					g_vt_buffer_data[v_index].texture_coord.v.y = 0;
-				}
-
-#if DEBUG_NORMALS
-				/* draw a line for each vertex normal, tangent, and bitangent */
-				int nl_index = i * 6 + j * 2;
-
-				/* normal */
-				g_nl_buffer_data[nl_index].position.v.x = m->t[i].v[j]->x;
-				g_nl_buffer_data[nl_index].position.v.y = m->t[i].v[j]->y;
-				g_nl_buffer_data[nl_index].position.v.z = m->t[i].v[j]->z;
-
-				g_nl_buffer_data[nl_index + 1].position.v.x =
-					m->t[i].v[j]->x + normal_line_length * m->t[i].vnormal[j].x;
-				g_nl_buffer_data[nl_index + 1].position.v.y =
-					m->t[i].v[j]->y + normal_line_length * m->t[i].vnormal[j].y;
-				g_nl_buffer_data[nl_index + 1].position.v.z =
-					m->t[i].v[j]->z + normal_line_length * m->t[i].vnormal[j].z;
-
-				/* tangent */
-				g_tl_buffer_data[nl_index].position.v.x = m->t[i].v[j]->x;
-				g_tl_buffer_data[nl_index].position.v.y = m->t[i].v[j]->y;
-				g_tl_buffer_data[nl_index].position.v.z = m->t[i].v[j]->z;
-				g_tl_buffer_data[nl_index + 1].position.v.x =
-					m->t[i].v[j]->x + normal_line_length * m->t[i].vtangent[j].x;
-				g_tl_buffer_data[nl_index + 1].position.v.y =
-					m->t[i].v[j]->y + normal_line_length * m->t[i].vtangent[j].y;
-				g_tl_buffer_data[nl_index + 1].position.v.z =
-					m->t[i].v[j]->z + normal_line_length * m->t[i].vtangent[j].z;
-
-				/* bitangent */
-				g_bl_buffer_data[nl_index].position.v.x = m->t[i].v[j]->x;
-				g_bl_buffer_data[nl_index].position.v.y = m->t[i].v[j]->y;
-				g_bl_buffer_data[nl_index].position.v.z = m->t[i].v[j]->z;
-				g_bl_buffer_data[nl_index + 1].position.v.x =
-					m->t[i].v[j]->x + normal_line_length * m->t[i].vbitangent[j].x;
-				g_bl_buffer_data[nl_index + 1].position.v.y =
-					m->t[i].v[j]->y + normal_line_length * m->t[i].vbitangent[j].y;
-				g_bl_buffer_data[nl_index + 1].position.v.z =
-					m->t[i].v[j]->z + normal_line_length * m->t[i].vbitangent[j].z;
-#endif
-			}
-		}
-
-		LOAD_BUFFER(GL_ARRAY_BUFFER, ptr->vertex_buffer, v_size, g_v_buffer_data);
-		LOAD_BUFFER(GL_ARRAY_BUFFER, ptr->triangle_vertex_buffer, vt_size, g_vt_buffer_data);
-#if DEBUG_NORMALS
-		LOAD_BUFFER(GL_ARRAY_BUFFER, ptr->triangle_normal_lines_buffer, nl_size, g_nl_buffer_data);
-		LOAD_BUFFER(GL_ARRAY_BUFFER, ptr->triangle_tangent_lines_buffer, nl_size, g_tl_buffer_data);
-		LOAD_BUFFER(GL_ARRAY_BUFFER, ptr->triangle_bitangent_lines_buffer, nl_size, g_bl_buffer_data);
-#endif
-
-		free(g_v_buffer_data);
-		free(g_vt_buffer_data);
-#if DEBUG_NORMALS
-		free(g_nl_buffer_data);
-#endif
-
-		/* setup the line buffers used for wireframe */
-		size_t wfl_size = sizeof(struct vertex_wireframe_line_buffer_data) * m->ntriangles * 3 * 2;
-		struct vertex_wireframe_line_buffer_data *g_wfl_buffer_data = malloc(wfl_size);
-
-		/* map the edge combinatinos to the triangle coplanar flag */
-		static const int tri_coplaner_flags[3][3] = {
-			{0, TRIANGLE_0_1_COPLANAR, TRIANGLE_0_2_COPLANAR},
-			{TRIANGLE_0_1_COPLANAR, 0, TRIANGLE_1_2_COPLANAR},
-			{TRIANGLE_0_2_COPLANAR, TRIANGLE_1_2_COPLANAR, 0} };
-
-		ptr->nwireframe_lines = 0;
-
-		for (i = 0; i < m->ntriangles; i++) {
-			int j0 = 0;
-			for (j0 = 0; j0 < 3; j0++) {
-				int j1 = (j0 + 1) % 3;
-
-				if (!(m->t[i].flag & tri_coplaner_flags[j0][j1])) {
-					int index = 2 * ptr->nwireframe_lines;
-
-					/* add the line from vertex j0 to j1 */
-					g_wfl_buffer_data[index].position.v.x = m->t[i].v[j0]->x;
-					g_wfl_buffer_data[index].position.v.y = m->t[i].v[j0]->y;
-					g_wfl_buffer_data[index].position.v.z = m->t[i].v[j0]->z;
-
-					g_wfl_buffer_data[index + 1].position.v.x = m->t[i].v[j1]->x;
-					g_wfl_buffer_data[index + 1].position.v.y = m->t[i].v[j1]->y;
-					g_wfl_buffer_data[index + 1].position.v.z = m->t[i].v[j1]->z;
-
-					/* the line normal is the same as the triangle */
-					g_wfl_buffer_data[index].normal.v.x = m->t[i].n.x;
-					g_wfl_buffer_data[index].normal.v.y = m->t[i].n.y;
-					g_wfl_buffer_data[index].normal.v.z = m->t[i].n.z;
-					g_wfl_buffer_data[index + 1].normal.v.x = m->t[i].n.x;
-					g_wfl_buffer_data[index + 1].normal.v.y = m->t[i].n.y;
-					g_wfl_buffer_data[index + 1].normal.v.z = m->t[i].n.z;
-
-					ptr->nwireframe_lines++;
-				}
-			}
-		}
-
-		LOAD_BUFFER(GL_ARRAY_BUFFER, ptr->wireframe_lines_vertex_buffer,
-			sizeof(struct vertex_wireframe_line_buffer_data) * ptr->nwireframe_lines * 2,
-			g_wfl_buffer_data);
-
-		free(g_wfl_buffer_data);
-	}
-
-	if (m->geometry_mode == MESH_GEOMETRY_LINES || m->geometry_mode == MESH_GEOMETRY_PARTICLE_ANIMATION) {
-		/* setup the line buffers */
-		int i;
-		size_t v_size = sizeof(struct vertex_buffer_data) * m->nvertices * 2;
-		struct vertex_buffer_data *g_v_buffer_data = malloc(v_size);
-
-		size_t vl_size = sizeof(struct vertex_line_buffer_data) * m->nvertices * 2;
-		struct vertex_line_buffer_data *g_vl_buffer_data = malloc(vl_size);
-
-		ptr->nlines = 0;
-
-		for (i = 0; i < m->nlines; i++) {
-			struct vertex *vstart = m->l[i].start;
-			struct vertex *vend = m->l[i].end;
-
-			if (m->l[i].flag & MESH_LINE_STRIP) {
-				struct vertex *vcurr = vstart;
-				struct vertex *v1;
-
-				while (vcurr <= vend) {
-					struct vertex *v2 = vcurr;
-
-					if (v2 != vstart) {
-						int index = ptr->nlines * 2;
-						g_v_buffer_data[index].position.v.x = v1->x;
-						g_v_buffer_data[index].position.v.y = v1->y;
-						g_v_buffer_data[index].position.v.z = v1->z;
-
-						g_v_buffer_data[index + 1].position.v.x = v2->x;
-						g_v_buffer_data[index + 1].position.v.y = v2->y;
-						g_v_buffer_data[index + 1].position.v.z = v2->z;
-
-						g_vl_buffer_data[index].multi_one[0] =
-							g_vl_buffer_data[index + 1].multi_one[0] = 0; /* is dotted */
-
-						g_vl_buffer_data[index].line_vertex0.v.x =
-							g_vl_buffer_data[index + 1].line_vertex0.v.x = v1->x;
-						g_vl_buffer_data[index].line_vertex0.v.y =
-							g_vl_buffer_data[index + 1].line_vertex0.v.y = v1->y;
-						g_vl_buffer_data[index].line_vertex0.v.z =
-							g_vl_buffer_data[index + 1].line_vertex0.v.z = v1->z;
-
-						g_vl_buffer_data[index].line_vertex1.v.x =
-							g_vl_buffer_data[index + 1].line_vertex1.v.x = v2->x;
-						g_vl_buffer_data[index].line_vertex1.v.y =
-							g_vl_buffer_data[index + 1].line_vertex1.v.y = v2->y;
-						g_vl_buffer_data[index].line_vertex1.v.z =
-							g_vl_buffer_data[index + 1].line_vertex1.v.z = v2->z;
-
-						ptr->nlines++;
-					}
-					v1 = v2;
-					++vcurr;
-				}
-			} else {
-				int is_dotted = m->l[i].flag & MESH_LINE_DOTTED;
-
-				int index = ptr->nlines * 2;
-				g_v_buffer_data[index].position.v.x = vstart->x;
-				g_v_buffer_data[index].position.v.y = vstart->y;
-				g_v_buffer_data[index].position.v.z = vstart->z;
-
-				g_v_buffer_data[index + 1].position.v.x = vend->x;
-				g_v_buffer_data[index + 1].position.v.y = vend->y;
-				g_v_buffer_data[index + 1].position.v.z = vend->z;
-
-				g_vl_buffer_data[index].multi_one[0] =
-					g_vl_buffer_data[index + 1].multi_one[0] = is_dotted ? 255 : 0;
-
-				g_vl_buffer_data[index].line_vertex0.v.x =
-					g_vl_buffer_data[index + 1].line_vertex0.v.x = vstart->x;
-				g_vl_buffer_data[index].line_vertex0.v.y =
-					g_vl_buffer_data[index + 1].line_vertex0.v.y = vstart->y;
-				g_vl_buffer_data[index].line_vertex0.v.z =
-					g_vl_buffer_data[index + 1].line_vertex0.v.z = vstart->z;
-
-				g_vl_buffer_data[index].line_vertex1.v.x =
-					g_vl_buffer_data[index + 1].line_vertex1.v.x = vend->x;
-				g_vl_buffer_data[index].line_vertex1.v.y =
-					g_vl_buffer_data[index + 1].line_vertex1.v.y = vend->y;
-				g_vl_buffer_data[index].line_vertex1.v.z =
-					g_vl_buffer_data[index + 1].line_vertex1.v.z = vend->z;
-
-				ptr->nlines++;
-			}
-		}
-
-		LOAD_BUFFER(GL_ARRAY_BUFFER, ptr->vertex_buffer, sizeof(struct vertex_buffer_data) * 2 * ptr->nlines,
-			g_v_buffer_data);
-		LOAD_BUFFER(GL_ARRAY_BUFFER, ptr->line_vertex_buffer,
-			sizeof(struct vertex_line_buffer_data) * 2 * ptr->nlines, g_vl_buffer_data);
-
-		ptr->npoints = ptr->nlines * 2; /* can be rendered as a point cloud too */
-
-		free(g_v_buffer_data);
-		free(g_vl_buffer_data);
-	}
-
-	if (m->geometry_mode == MESH_GEOMETRY_POINTS) {
-		/* setup the point buffers */
-		size_t v_size = sizeof(struct vertex_buffer_data) * m->nvertices;
-		struct vertex_buffer_data *g_v_buffer_data = malloc(v_size);
-
-		ptr->npoints = m->nvertices;
-
-		int i;
-		for (i = 0; i < m->nvertices; i++) {
-			g_v_buffer_data[i].position.v.x = m->v[i].x;
-			g_v_buffer_data[i].position.v.y = m->v[i].y;
-			g_v_buffer_data[i].position.v.z = m->v[i].z;
-		}
-
-		LOAD_BUFFER(GL_ARRAY_BUFFER, ptr->vertex_buffer, v_size, g_v_buffer_data);
-
-		free(g_v_buffer_data);
-	}
-
-	if (m->geometry_mode == MESH_GEOMETRY_PARTICLE_ANIMATION) {
-		ptr->nparticles = m->nvertices / 2;
-
-		size_t v_size = sizeof(struct vertex_particle_buffer_data) * ptr->nparticles * 4;
-		struct vertex_particle_buffer_data *g_v_buffer_data = malloc(v_size);
-
-		size_t i_size = sizeof(GLushort) * ptr->nparticles * 6;
-		GLushort *g_i_buffer_data = malloc(i_size);
-
-		/* two triangles from four vertices
-		   V3 (0,1) +---+ V2 (1,1)
-			    +\  +
-			    + \ +
-			    +  \+
-		   V0 (0,0) +---+ V1 (1,0)
-		*/
-		int i;
-		for (i = 0; i < m->nvertices; i += 2) {
-			int v_index = i * 2;
-
-			GLubyte tint_red = (int)(m->l[i / 2].tint_color.red * 255) & 255;
-			GLubyte tint_green = (int)(m->l[i / 2].tint_color.green * 255) & 255;
-			GLubyte tint_blue = (int)(m->l[i / 2].tint_color.blue * 255) & 255;
-			GLubyte additivity = (int)(m->l[i / 2].additivity * 255) & 255;
-			GLubyte opacity = (int)(m->l[i / 2].opacity * 255) & 255;
-			GLubyte time_offset = (int)(m->l[i / 2].time_offset * 255) & 255;
-
-			/* texture coord is different for all four vertices */
-			g_v_buffer_data[v_index + 0].multi_one[0] = 0;
-			g_v_buffer_data[v_index + 0].multi_one[1] = 0;
-
-			g_v_buffer_data[v_index + 1].multi_one[0] = 255;
-			g_v_buffer_data[v_index + 1].multi_one[1] = 0;
-
-			g_v_buffer_data[v_index + 2].multi_one[0] = 255;
-			g_v_buffer_data[v_index + 2].multi_one[1] = 255;
-
-			g_v_buffer_data[v_index + 3].multi_one[0] = 0;
-			g_v_buffer_data[v_index + 3].multi_one[1] = 255;
-
-			g_v_buffer_data[v_index + 0].multi_one[2] =
-				g_v_buffer_data[v_index + 1].multi_one[2] =
-				g_v_buffer_data[v_index + 2].multi_one[2] =
-				g_v_buffer_data[v_index + 3].multi_one[2] = time_offset;
-
-			/* the rest of the attributes are the same for all four */
-			g_v_buffer_data[v_index + 0].start_position.v.x =
-				g_v_buffer_data[v_index + 1].start_position.v.x =
-				g_v_buffer_data[v_index + 2].start_position.v.x =
-				g_v_buffer_data[v_index + 3].start_position.v.x = m->v[i].x;
-			g_v_buffer_data[v_index + 0].start_position.v.y =
-				g_v_buffer_data[v_index + 1].start_position.v.y =
-				g_v_buffer_data[v_index + 2].start_position.v.y =
-				g_v_buffer_data[v_index + 3].start_position.v.y = m->v[i].y;
-			g_v_buffer_data[v_index + 0].start_position.v.z =
-				g_v_buffer_data[v_index + 1].start_position.v.z =
-				g_v_buffer_data[v_index + 2].start_position.v.z =
-				g_v_buffer_data[v_index + 3].start_position.v.z = m->v[i].z;
-
-			g_v_buffer_data[v_index + 0].start_tint_color[0] =
-				g_v_buffer_data[v_index + 1].start_tint_color[0] =
-				g_v_buffer_data[v_index + 2].start_tint_color[0] =
-				g_v_buffer_data[v_index + 3].start_tint_color[0] = tint_red;
-			g_v_buffer_data[v_index + 0].start_tint_color[1] =
-				g_v_buffer_data[v_index + 1].start_tint_color[1] =
-				g_v_buffer_data[v_index + 2].start_tint_color[1] =
-				g_v_buffer_data[v_index + 3].start_tint_color[1] = tint_green;
-			g_v_buffer_data[v_index + 0].start_tint_color[2] =
-				g_v_buffer_data[v_index + 1].start_tint_color[2] =
-				g_v_buffer_data[v_index + 2].start_tint_color[2] =
-				g_v_buffer_data[v_index + 3].start_tint_color[2] = tint_blue;
-
-			g_v_buffer_data[v_index + 0].start_apm[0] =
-				g_v_buffer_data[v_index + 1].start_apm[0] =
-				g_v_buffer_data[v_index + 2].start_apm[0] =
-				g_v_buffer_data[v_index + 3].start_apm[0] = additivity;
-			g_v_buffer_data[v_index + 0].start_apm[1] =
-				g_v_buffer_data[v_index + 1].start_apm[1] =
-				g_v_buffer_data[v_index + 2].start_apm[1] =
-				g_v_buffer_data[v_index + 3].start_apm[1] = opacity;
-
-			g_v_buffer_data[v_index + 0].end_position.v.x =
-				g_v_buffer_data[v_index + 1].end_position.v.x =
-				g_v_buffer_data[v_index + 2].end_position.v.x =
-				g_v_buffer_data[v_index + 3].end_position.v.x = m->v[i + 1].x;
-			g_v_buffer_data[v_index + 0].end_position.v.y =
-				g_v_buffer_data[v_index + 1].end_position.v.y =
-				g_v_buffer_data[v_index + 2].end_position.v.y =
-				g_v_buffer_data[v_index + 3].end_position.v.y = m->v[i + 1].y;
-			g_v_buffer_data[v_index + 0].end_position.v.z =
-				g_v_buffer_data[v_index + 1].end_position.v.z =
-				g_v_buffer_data[v_index + 2].end_position.v.z =
-				g_v_buffer_data[v_index + 3].end_position.v.z = m->v[i + 1].z;
-
-			g_v_buffer_data[v_index + 0].end_tint_color[0] =
-				g_v_buffer_data[v_index + 1].end_tint_color[0] =
-				g_v_buffer_data[v_index + 2].end_tint_color[0] =
-				g_v_buffer_data[v_index + 3].end_tint_color[0] = tint_red;
-			g_v_buffer_data[v_index + 0].end_tint_color[1] =
-				g_v_buffer_data[v_index + 1].end_tint_color[1] =
-				g_v_buffer_data[v_index + 2].end_tint_color[1] =
-				g_v_buffer_data[v_index + 3].end_tint_color[1] = tint_green;
-			g_v_buffer_data[v_index + 0].end_tint_color[2] =
-				g_v_buffer_data[v_index + 1].end_tint_color[2] =
-				g_v_buffer_data[v_index + 2].end_tint_color[2] =
-				g_v_buffer_data[v_index + 3].end_tint_color[2] = tint_blue;
-
-			g_v_buffer_data[v_index + 0].end_apm[0] =
-				g_v_buffer_data[v_index + 1].end_apm[0] =
-				g_v_buffer_data[v_index + 2].end_apm[0] =
-				g_v_buffer_data[v_index + 3].end_apm[0] = additivity;
-			g_v_buffer_data[v_index + 0].end_apm[1] =
-				g_v_buffer_data[v_index + 1].end_apm[1] =
-				g_v_buffer_data[v_index + 2].end_apm[1] =
-				g_v_buffer_data[v_index + 3].end_apm[1] = opacity;
-
-			/* setup six indices for our two triangles */
-			int i_index = i * 3;
-			g_i_buffer_data[i_index + 0] = v_index + 0;
-			g_i_buffer_data[i_index + 1] = v_index + 1;
-			g_i_buffer_data[i_index + 2] = v_index + 3;
-			g_i_buffer_data[i_index + 3] = v_index + 1;
-			g_i_buffer_data[i_index + 4] = v_index + 2;
-			g_i_buffer_data[i_index + 5] = v_index + 3;
-		}
-
-		LOAD_BUFFER(GL_ARRAY_BUFFER, ptr->particle_vertex_buffer, v_size, g_v_buffer_data);
-		LOAD_BUFFER(GL_ELEMENT_ARRAY_BUFFER, ptr->particle_index_buffer, i_size, g_i_buffer_data);
-
-		free(g_v_buffer_data);
-		free(g_i_buffer_data);
-	}
-
-	PROFILE_ZONE_END();
-}
-
-struct graph_dev_gl_shader_metadata {
-	GLuint *program_id;
-};
-
-static void maybe_unload_shader(struct graph_dev_gl_shader_metadata *meta, GLuint *program_id)
-{
-	PROFILE_ZONE_START("maybe_unload_shader");
-	if (meta->program_id && *meta->program_id != (GLuint) -1) /* Shader is currently loaded? */
-		glDeleteProgram(*meta->program_id); /* Unload shader */
-	meta->program_id = program_id;
-	*meta->program_id = -1;
-	PROFILE_ZONE_END();
-}
-
-struct graph_dev_gl_shader_common {
-	struct graph_dev_gl_shader_metadata meta;
-	GLuint program_id;
-	GLuint vao_id;
-};
-
-static GLuint drawstate_active_program = 0;
-
-static void
-activate_shader(const void *vptr)
-{
-	const struct graph_dev_gl_shader_common *shader = (const struct graph_dev_gl_shader_common *)vptr;
-	if (drawstate_active_program == shader->program_id) {
-		return;
-	}
-	glUseProgram(shader->program_id);
-	glBindVertexArray(shader->vao_id);
-
-	drawstate_active_program = shader->program_id;
-}
-
-struct graph_dev_gl_vertex_color_shader {
-	struct graph_dev_gl_shader_metadata meta;
-	GLuint program_id;
-	GLuint vao_id;
-	GLint mvp_matrix_id;
-	GLint vertex_position_id;
-	GLint vertex_color_id;
-};
 
 struct graph_dev_gl_sun_shader {
 	struct graph_dev_gl_shader_metadata meta;
@@ -886,42 +167,6 @@ struct graph_dev_gl_sun_shader {
 	GLint edge_softness_id;
 	GLint psf_width_id;
 	GLint psf_falloff_id;
-	GLint filmic_tonemapping_id;
-	GLint tonemapping_gain_id;
-};
-
-struct graph_dev_gl_black_hole_shader {
-	struct graph_dev_gl_shader_metadata meta;
-	GLuint program_id;
-	GLuint vao_id;
-	GLint mvp_matrix_id;
-	GLint vertex_position_id;
-	GLint texture_coord_id;
-	GLint disc_radius_id;
-	GLint edge_softness_id;
-	GLint ring_brightness_id;
-	GLint ring_width_id;
-	GLint einstein_radius_id;
-	GLint glow_brightness_id;
-	GLint glow_width_id;
-	GLint ring_color_id;
-};
-
-struct graph_dev_gl_exhaust_plume_shader {
-	struct graph_dev_gl_shader_metadata meta;
-	GLuint program_id;
-	GLuint vao_id;
-	GLint mvp_matrix_id;
-	GLint mv_matrix_id;
-	GLint vertex_position_id;
-	GLint vertex_normal_id;
-	GLint texture_coord_id;
-	GLint tint_color_id;
-	GLint core_brightness_id;
-	GLint plume_length_id;
-	GLint noise_seed_id;
-	GLint diamond_spacing_id;
-	GLint diamond_intensity_id;
 	GLint filmic_tonemapping_id;
 	GLint tonemapping_gain_id;
 };
@@ -963,125 +208,13 @@ struct graph_dev_gl_shadow_depth_shader {
 	GLint vertex_position_id;
 };
 
-struct graph_dev_gl_atmosphere_shader {
-	struct graph_dev_gl_shader_metadata meta;
-	GLuint program_id;
-	GLuint vao_id;
-	GLint mvp_matrix_id;
-	GLint mv_matrix_id;
-	GLint normal_matrix_id;
-	GLint vertex_position_id;
-	GLint vertex_normal_id;
-	GLint light_pos_id;
-	GLint color_id;
-	GLfloat alpha;
-	GLint shadow_annulus_texture_id;
-	GLint shadow_annulus_center_id;
-	GLint shadow_annulus_normal_id;
-	GLint shadow_annulus_radius_id;
-	GLint shadow_annulus_tint_color_id;
-	GLint ring_texture_v_id;
-	GLint atmosphere_brightness_id;
-	GLint light_color_id;   /* star-tinted direct light colour (u_LightColor) */
-	GLint ambient_color_id; /* absolute, complement-tinted ambient colour (u_AmbientColor) */
-	GLint filmic_tonemapping_id;
-	GLint tonemapping_gain_id;
-};
 
-struct graph_dev_gl_filled_wireframe_shader {
-	struct graph_dev_gl_shader_metadata meta;
-	GLuint program_id;
-	GLuint vao_id;
-	GLint viewport_id;
-	GLint mvp_matrix_id;
-	GLint position_id;
-	GLint tvertex0_id;
-	GLint tvertex1_id;
-	GLint tvertex2_id;
-	GLint edge_mask_id;
-	GLint line_color_id;
-	GLint triangle_color_id;
-};
 
-struct graph_dev_gl_trans_wireframe_shader {
-	struct graph_dev_gl_shader_metadata meta;
-	GLuint program_id;
-	GLuint vao_id;
-	GLint mvp_matrix_id;
-	GLint mv_matrix_id;
-	GLint normal_matrix_id;
-	GLint vertex_position_id;
-	GLint vertex_normal_id;
-	GLint color_id;
 
-	GLint clip_sphere_id;
-	GLint clip_sphere_radius_fade_id;
-};
 
-struct graph_dev_gl_single_color_shader {
-	struct graph_dev_gl_shader_metadata meta;
-	GLuint program_id;
-	GLuint vao_id;
-	GLint mvp_matrix_id;
-	GLint vertex_position_id;
-	GLint color_id;
-};
 
-struct graph_dev_gl_line_single_color_shader {
-	struct graph_dev_gl_shader_metadata meta;
-	GLuint program_id;
-	GLuint vao_id;
-	GLint mvp_matrix_id;
-	GLint viewport_id;
-	GLint multi_one_id;
-	GLint vertex_position_id;
-	GLint line_vertex0_id;
-	GLint line_vertex1_id;
-	GLint dot_size_id;
-	GLint dot_pitch_id;
-	GLint line_color_id;
-};
 
-struct graph_dev_gl_point_cloud_shader {
-	struct graph_dev_gl_shader_metadata meta;
-	GLuint program_id;
-	GLuint vao_id;
-	GLint mvp_matrix_id;
-	GLint vertex_position_id;
-	GLint point_size_id;
-	GLint color_id;
-	GLint time_id;
-	GLint camera_pos_id;  /* world-space eye, for a per-point distance fade */
-	GLint fade_params_id; /* (near0, near1, far0, far1); w <= 0 leaves points flat */
-};
 
-struct graph_dev_gl_skybox_shader {
-	struct graph_dev_gl_shader_metadata meta;
-	GLuint program_id;
-	GLuint vao_id;
-	GLint mvp_id;
-	GLint vertex_id;
-	GLint texture_id;
-	GLuint cube_texture_id;
-	GLint filmic_tonemapping_id;
-	GLint tonemapping_gain_id;
-	GLint lens_dir_id;
-	GLint lens_params_id;
-};
-
-struct graph_dev_gl_color_by_w_shader {
-	struct graph_dev_gl_shader_metadata meta;
-	GLuint program_id;
-	GLuint vao_id;
-	GLint mvp_id;
-	GLint position_id;
-	GLint near_color_id;
-	GLint near_w_id;
-	GLint center_color_id;
-	GLint center_w_id;
-	GLint far_color_id;
-	GLint far_w_id;
-};
 
 struct graph_dev_gl_textured_shader {
 	struct graph_dev_gl_shader_metadata meta;
@@ -1160,40 +293,7 @@ struct shadow_annulus_data {
 	float alpha;
 };
 
-struct graph_dev_gl_textured_particle_shader {
-	struct graph_dev_gl_shader_metadata meta;
-	GLuint program_id;
-	GLuint vao_id;
-	GLint mvp_matrix_id;
-	GLint camera_up_vec_id;
-	GLint camera_right_vec_id;
-	GLint time_id;
-	GLint radius_id;
-	GLint multi_one_id;
-	GLint start_position_id;
-	GLint start_tint_color_id;
-	GLint start_apm_id;
-	GLint end_position_id;
-	GLint end_tint_color_id;
-	GLint end_apm_id;
-	GLint texture_id; /* param to vertex shader */
-	GLint filmic_tonemapping_id;
-	GLint tonemapping_gain_id;
-};
 
-struct graph_dev_gl_fs_effect_shader { /* For full screen effect shaders */
-	struct graph_dev_gl_shader_metadata meta;
-	GLuint program_id;
-	GLuint vao_id;
-	GLint mvp_matrix_id;
-	GLint vertex_position_id;
-	GLint texture_coord_id;
-	GLint tint_color_id;
-	GLint viewport_id;
-	GLint texture0_id;
-	GLint texture1_id;
-	GLint texture2_id;
-};
 
 struct fbo_target {
 	GLuint fbo;
@@ -1301,63 +401,12 @@ static struct fbo_target post_target0 = { 0 };
 static struct fbo_target post_target1 = { 0 };
 static struct fbo_target render_target_2d = { 0 };
 
-struct graph_dev_primitive {
-	int nvertices;
-	GLuint vertex_buffer;
-	GLuint triangle_vertex_buffer;
-};
 
 static struct graph_dev_primitive cubemap_cube;
 static struct graph_dev_primitive textured_unit_quad;
 
-#define BUFFERED_VERTICES_2D 2000
-#define VERTEX_BUFFER_2D_SIZE (BUFFERED_VERTICES_2D*sizeof(struct vertex_color_buffer_data))
 
-static struct graph_dev_gl_context {
-	int screen_x, screen_y;
-	float x_scale, y_scale;
-	struct graph_dev_color *hue; /* current color */
-	int alpha_blend;
-	float alpha;
-	GLuint fbo_current;
 
-	int active_vp; /* 0=none, 1=2d, 2=3d */
-	int vp_x_3d, vp_y_3d, vp_width_3d, vp_height_3d;
-	GLuint fbo_2d;
-	struct mat44 ortho_2d_mvp;
-
-	int nvertex_2d;
-	GLbyte vertex_type_2d[BUFFERED_VERTICES_2D];
-	struct vertex_color_buffer_data vertex_data_2d[BUFFERED_VERTICES_2D];
-	GLuint vertex_buffer_2d;
-
-	struct mesh_gl_info gl_info_3d_line;
-	GLuint fbo_3d;
-	int texture_unit_active;
-	GLuint texture_unit_bind[4];
-	GLenum src_blend_func;
-	GLenum dest_blend_func;
-	GLint vp_x, vp_y;
-	GLsizei vp_width, vp_height;
-} sgc;
-
-/* The image loader uploads finished textures with bare glBindTexture() calls, outside the
- * BIND_TEXTURE discipline above, and it does so between draws whenever an asynchronous load
- * completes.  That leaves the cache claiming one texture is on the active unit while the upload
- * has since bound a different one to that unit, and the next BIND_TEXTURE asking for the cached
- * id then skips its bind and the draw samples whatever the upload left behind.
- *
- * The visible symptom is a cubemap arriving mid-scene and briefly replacing the skybox with
- * itself -- an asteroid's rock texture wrapped around the whole sky for a frame or two, until
- * something else binds to that unit and resyncs the cache by accident.
- *
- * So: once an upload has finished with the binding, tell the cache what it actually left on the
- * active unit, which keeps the cache true rather than merely forcing the next bind.
- */
-static void note_texture_bound_outside_cache(GLuint tex_id)
-{
-	sgc.texture_unit_bind[sgc.texture_unit_active] = tex_id;
-}
 
 #define BIND_TEXTURE(tex_unit, tex_type, tex_id) \
 	do { \
@@ -1374,16 +423,6 @@ static void note_texture_bound_outside_cache(GLuint tex_id)
 		PROFILE_ZONE_END(); \
 	} while (0)
 
-#define BLEND_FUNC(src_blend, dest_blend) \
-	do { \
-		PROFILE_ZONE_START("BLEND_FUNC"); \
-		if (sgc.src_blend_func != src_blend || sgc.dest_blend_func != dest_blend) { \
-			glBlendFunc(src_blend, dest_blend); \
-			sgc.src_blend_func = src_blend; \
-			sgc.dest_blend_func = dest_blend; \
-		} \
-		PROFILE_ZONE_END(); \
-	} while (0)
 
 #define VIEWPORT(x, y, width, height) \
 	do { \
@@ -1474,28 +513,6 @@ static void resize_fbo_if_needed(struct fbo_target *target)
 	PROFILE_ZONE_END();
 }
 
-void graph_dev_set_screen_size(int width, int height)
-{
-	sgc.active_vp = 0;
-	sgc.screen_x = width;
-	sgc.screen_y = height;
-}
-
-void graph_dev_set_extent_scale(float x_scale, float y_scale)
-{
-	sgc.x_scale = x_scale;
-	sgc.y_scale = y_scale;
-}
-
-void graph_dev_set_3d_viewport(int x_offset, int y_offset, int width, int height)
-{
-	sgc.active_vp = 0;
-	sgc.vp_x_3d = x_offset;
-	sgc.vp_y_3d = sgc.screen_y - height - y_offset;
-	sgc.vp_width_3d = width;
-	sgc.vp_height_3d = height;
-}
-
 static void enable_2d_viewport(void)
 {
 	PROFILE_ZONE_START("enable_2d_viewport");
@@ -1529,9 +546,8 @@ static void enable_2d_viewport(void)
 				sgc.fbo_current = sgc.fbo_2d;
 			}
 		} else if (sgc.fbo_current != 0) {
-			static const GLenum drawBuffers[] = { GL_BACK };
 			glBindFramebuffer(GL_FRAMEBUFFER, 0);
-			glDrawBuffers(ARRAYSIZE(drawBuffers), drawBuffers);
+			graph_dev_select_draw_buffer(GRAPH_DEV_DRAW_BUFFER_BACK);
 			sgc.fbo_current = 0;
 		}
 
@@ -1540,7 +556,7 @@ static void enable_2d_viewport(void)
 	PROFILE_ZONE_END();
 }
 
-static void enable_3d_viewport(void)
+void enable_3d_viewport(void)
 {
 	PROFILE_ZONE_START("enable_3d_viewport");
 	if (sgc.active_vp != 2) {
@@ -1552,9 +568,8 @@ static void enable_3d_viewport(void)
 				sgc.fbo_current = sgc.fbo_3d;
 			}
 		} else if (sgc.fbo_current != 0) {
-			static const GLenum drawBuffers[] = { GL_BACK };
 			glBindFramebuffer(GL_FRAMEBUFFER, 0);
-			glDrawBuffers(ARRAYSIZE(drawBuffers), drawBuffers);
+			graph_dev_select_draw_buffer(GRAPH_DEV_DRAW_BUFFER_BACK);
 			sgc.fbo_current = 0;
 		}
 
@@ -1564,19 +579,7 @@ static void enable_3d_viewport(void)
 }
 
 
-void graph_dev_set_color(struct graph_dev_color *color, float a)
-{
-	sgc.hue = color;
-
-	if (a >= 0) {
-		sgc.alpha_blend = 1;
-		sgc.alpha = a;
-	} else {
-		sgc.alpha_blend = 0;
-	}
-}
-
-static void draw_vertex_buffer_2d(void)
+void draw_vertex_buffer_2d(void)
 {
 	PROFILE_ZONE_START("draw_vertex_buffer_2d");
 	if (sgc.nvertex_2d > 0) {
@@ -1657,36 +660,6 @@ static void draw_vertex_buffer_2d(void)
 		/* orphan this buffer so we don't get blocked on these draw commands */
 		glBufferData(GL_ARRAY_BUFFER, VERTEX_BUFFER_2D_SIZE, 0, GL_STREAM_DRAW);
 	}
-	PROFILE_ZONE_END();
-}
-
-static void make_room_in_vertex_buffer_2d(int nvertices)
-{
-	PROFILE_ZONE_START("make_room_in_vertex_buffer_2d");
-	if (sgc.nvertex_2d + nvertices > BUFFERED_VERTICES_2D) {
-		/* buffer needs to be emptied to fit next batch */
-		draw_vertex_buffer_2d();
-	}
-	PROFILE_ZONE_END();
-}
-
-static void add_vertex_2d(float x, float y, struct graph_dev_color *color, GLubyte alpha, GLenum mode)
-{
-	PROFILE_ZONE_START("add_vertex_2d");
-	struct vertex_color_buffer_data *vertex = &sgc.vertex_data_2d[sgc.nvertex_2d];
-
-	/* setup the vertex and color */
-	vertex->position[0] = x;
-	vertex->position[1] = sgc.screen_y - y;
-
-	vertex->color[0] = color->red >> 8;
-	vertex->color[1] = color->green >> 8;
-	vertex->color[2] = color->blue >> 8;
-	vertex->color[3] = alpha;
-
-	sgc.vertex_type_2d[sgc.nvertex_2d] = mode;
-
-	sgc.nvertex_2d += 1;
 	PROFILE_ZONE_END();
 }
 
@@ -1784,13 +757,6 @@ struct raster_texture_params {
 /* Derive this frame's star-tinted light colour and complementary ambient colour from the
  * entity context (see star_light.c).  With the default white star and zero strengths this
  * yields light = white and ambient = vec3(cx->ambient) -- i.e. the untinted look. */
-static void graph_dev_compute_star_light(const struct entity_context *cx,
-	float light_color[3], float ambient_color[3])
-{
-	star_light_colors(cx->star_color, cx->ambient, cx->star_light_tint,
-		cx->star_dark_tint, cx->star_shadow_darkening, light_color, ambient_color);
-}
-
 static void graph_dev_raster_texture(struct raster_texture_params *p)
 {
 	PROFILE_ZONE_START("graph_dev_raster_texture");
@@ -2419,7 +1385,7 @@ static void graph_dev_raster_trans_wireframe_mesh(struct graph_dev_gl_trans_wire
 	PROFILE_ZONE_END();
 }
 
-static void graph_dev_raster_line_mesh(struct entity *e, const struct mat44 *mat_mvp, struct mesh *m,
+void graph_dev_raster_line_mesh(struct entity *e, const struct mat44 *mat_mvp, struct mesh *m,
 					struct sng_color *line_color)
 {
 	PROFILE_ZONE_START("graph_dev_raster_line_mesh");
@@ -2851,40 +1817,7 @@ static void graph_dev_raster_particle_animation(struct entity *e,
 	PROFILE_ZONE_END();
 }
 
-extern int graph_dev_entity_render_order(struct entity *e)
-{
-	int does_blending = 0;
 
-	if (!e->material_ptr)
-		return GRAPH_DEV_RENDER_NEAR_TO_FAR;
-
-	switch (e->material_ptr->type) {
-	case MATERIAL_NEBULA:
-	case MATERIAL_TEXTURED_PARTICLE:
-	case MATERIAL_TEXTURED_PLANET_RING:
-	case MATERIAL_TEXTURED_SHIELD:
-	case MATERIAL_ALPHA_BY_NORMAL:
-	case MATERIAL_PLANETARY_LIGHTNING:
-	case MATERIAL_WARP_GATE_EFFECT:
-	case MATERIAL_SUN:
-	case MATERIAL_BLACK_HOLE:
-	case MATERIAL_CITY:
-	case MATERIAL_EXHAUST_PLUME:
-		does_blending = 1;
-		break;
-	case MATERIAL_TEXTURE_MAPPED_UNLIT:
-		does_blending = e->material_ptr->texture_mapped_unlit.do_blend;
-		break;
-	case MATERIAL_TEXTURE_CUBEMAP:
-		does_blending = e->material_ptr->texture_cubemap.do_blend;
-		break;
-	}
-
-	if (does_blending)
-		return GRAPH_DEV_RENDER_FAR_TO_NEAR;
-	else
-		return GRAPH_DEV_RENDER_NEAR_TO_FAR;
-}
 
 /* Draw a star billboard: one procedurally computed profile -- the star's disc already convolved
  * with the optics' point spread function -- plus its diffraction spikes.  The disc radius (in UV)
@@ -3627,66 +2560,6 @@ void graph_dev_draw_entity(struct entity_context *cx, struct entity *e, union ve
 
 /* This implementation is ok for drawing a few times, but the performance
    will really suck as lines per frame goes up */
-void graph_dev_draw_3d_line(__attribute__((unused)) struct entity_context *cx, const struct mat44 *mat_vp,
-	float x1, float y1, float z1, float x2, float y2, float z2)
-{
-	PROFILE_ZONE_START("graph_dev_draw_3d_line");
-
-	draw_vertex_buffer_2d();
-
-	enable_3d_viewport();
-
-	/* setup fake line entity to render this */
-	struct vertex_buffer_data g_v_buffer_data[2];
-	g_v_buffer_data[0].position.v.x = x1;
-	g_v_buffer_data[0].position.v.y = y1;
-	g_v_buffer_data[0].position.v.z = z1;
-	g_v_buffer_data[1].position.v.x = x2;
-	g_v_buffer_data[1].position.v.y = y2;
-	g_v_buffer_data[1].position.v.z = z2;
-
-	struct vertex_line_buffer_data g_vl_buffer_data[2];
-
-	int is_dotted = 0;
-
-	g_vl_buffer_data[0].multi_one[0] =
-		g_vl_buffer_data[1].multi_one[0] = is_dotted ? 255 : 0;
-
-	g_vl_buffer_data[0].line_vertex0.v.x =
-		g_vl_buffer_data[1].line_vertex0.v.x = x1;
-	g_vl_buffer_data[0].line_vertex0.v.y =
-		g_vl_buffer_data[1].line_vertex0.v.y = y1;
-	g_vl_buffer_data[0].line_vertex0.v.z =
-		g_vl_buffer_data[1].line_vertex0.v.z = z1;
-
-	g_vl_buffer_data[0].line_vertex1.v.x =
-		g_vl_buffer_data[1].line_vertex1.v.x = x2;
-	g_vl_buffer_data[0].line_vertex1.v.y =
-		g_vl_buffer_data[1].line_vertex1.v.y = y2;
-	g_vl_buffer_data[0].line_vertex1.v.z =
-		g_vl_buffer_data[1].line_vertex1.v.z = z2;
-
-	sgc.gl_info_3d_line.nlines = 1;
-
-	glBindBuffer(GL_ARRAY_BUFFER, sgc.gl_info_3d_line.vertex_buffer);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(g_v_buffer_data), g_v_buffer_data, GL_STREAM_DRAW);
-
-	glBindBuffer(GL_ARRAY_BUFFER, sgc.gl_info_3d_line.line_vertex_buffer);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(g_vl_buffer_data), g_vl_buffer_data, GL_STREAM_DRAW);
-
-	struct mesh m;
-	m.graph_ptr = &sgc.gl_info_3d_line;
-
-	struct entity e;
-	e.material_ptr = 0;
-	e.m = &m;
-
-	struct sng_color line_color = sng_get_foreground();
-	graph_dev_raster_line_mesh(&e, mat_vp, &m, &line_color);
-
-	PROFILE_ZONE_END();
-}
-
 static void graph_dev_raster_full_screen_effect(struct graph_dev_gl_fs_effect_shader *shader, GLuint texture0_id,
 	GLuint texture1_id, GLuint texture2_id, const struct sng_color *tint_color, float alpha)
 {
@@ -3747,30 +2620,6 @@ static void graph_dev_raster_full_screen_effect(struct graph_dev_gl_fs_effect_sh
 	PROFILE_ZONE_END();
 }
 
-/* If any textures loads (PNG decoding) have completed, send them to the GPU */
-static void graph_dev_send_completed_textures_to_gpu(void)
-{
-	PROFILE_ZONE_START("graph_dev_send_completed_textures_to_gpu");
-	do {
-		struct graph_dev_image_load_request *r = work_queue_dequeue(loaded_images_wq);
-		if (!r) {
-			PROFILE_ZONE_END();
-			return;
-		}
-
-		switch (r->request_type) {
-		case GRAPH_DEV_IMAGE_LOAD:
-		case GRAPH_DEV_CUBEMAP_LOAD:
-			(void) graph_dev_texture_to_gpu(r);
-			break;
-		default:
-			fprintf(stderr, "Unknown graph dev image load request type %d\n",
-				r->request_type);
-			break;
-		}
-	} while (1);
-	/* unreachable */
-}
 
 void graph_dev_start_frame(void)
 {
@@ -3942,13 +2791,6 @@ void graph_dev_end_frame(void)
 		glDisable(GL_BLEND);
 	}
 
-	PROFILE_ZONE_END();
-}
-
-void graph_dev_clear_depth_bit(void)
-{
-	PROFILE_ZONE_START("graph_dev_clear_depth_bit");
-	glClear(GL_DEPTH_BUFFER_BIT);
 	PROFILE_ZONE_END();
 }
 
@@ -4169,146 +3011,6 @@ static void upload_shadow_receive_uniforms(GLint shadow_mvp_id, GLint num_cascad
 	glUniform1i(shadow_map_id, SHADOW_MAP_TEXTURE_UNIT - GL_TEXTURE0);
 }
 
-void graph_dev_draw_line(float x1, float y1, float x2, float y2)
-{
-	PROFILE_ZONE_START("graph_dev_draw_line");
-	make_room_in_vertex_buffer_2d(2);
-
-	add_vertex_2d(x1, y1, sgc.hue, 255, GL_LINES);
-	add_vertex_2d(x2, y2, sgc.hue, 255, GL_LINES);
-	PROFILE_ZONE_END();
-}
-
-void graph_dev_draw_rectangle(int filled, float x, float y, float width, float height)
-{
-	PROFILE_ZONE_START("graph_dev_draw_rectangle");
-
-	int x2, y2;
-	GLubyte alpha = 255;
-
-	x2 = x + width;
-	y2 = y + height;
-
-	glDisable(GL_DEPTH_TEST);
-	if (sgc.alpha_blend) {
-		/* must empty the vertex buffer to draw this primitive with blending */
-		draw_vertex_buffer_2d();
-
-		glEnable(GL_BLEND);
-		BLEND_FUNC(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-		alpha = 255 * sgc.alpha;
-	}
-
-	if (filled ) {
-		/* filled rectangle with two triangles
-		  0 ------- 1
-		    |\  1 |
-		    | \   |
-		    |  \  |
-		    |   \ |
-		    | 2  \|
-		  2 ------- 3
-		*/
-
-		make_room_in_vertex_buffer_2d(6);
-
-		/* triangle 1 = 0, 3, 1 */
-		add_vertex_2d(x, y, sgc.hue, alpha, GL_TRIANGLES);
-		add_vertex_2d(x2, y2, sgc.hue, alpha, GL_TRIANGLES);
-		add_vertex_2d(x2, y, sgc.hue, alpha, GL_TRIANGLES);
-
-		/* triangle 2 = 0, 2, 3 */
-		add_vertex_2d(x, y, sgc.hue, alpha, GL_TRIANGLES);
-		add_vertex_2d(x, y2, sgc.hue, alpha, GL_TRIANGLES);
-		add_vertex_2d(x2, y2, sgc.hue, alpha, GL_TRIANGLES);
-	} else {
-		/* not filled */
-		make_room_in_vertex_buffer_2d(5);
-
-		add_vertex_2d(x, y, sgc.hue, alpha, GL_LINE_STRIP);
-		add_vertex_2d(x2, y, sgc.hue, alpha, GL_LINE_STRIP);
-		add_vertex_2d(x2, y2, sgc.hue, alpha, GL_LINE_STRIP);
-		add_vertex_2d(x, y2, sgc.hue, alpha, GL_LINE_STRIP);
-		add_vertex_2d(x, y, sgc.hue, alpha, -1 /* primitive end */);
-	}
-
-	if (sgc.alpha_blend) {
-		/* must draw the vertex buffer to complete the blending */
-		draw_vertex_buffer_2d();
-
-		glDisable(GL_BLEND);
-	}
-	PROFILE_ZONE_END();
-}
-
-void graph_dev_draw_point(float x, float y)
-{
-	PROFILE_ZONE_START("graph_dev_draw_point");
-	make_room_in_vertex_buffer_2d(1);
-
-	add_vertex_2d(x, y, sgc.hue, 255, GL_POINTS);
-	PROFILE_ZONE_END();
-}
-
-void graph_dev_draw_arc(int filled, float x, float y, float width, float height, float angle1, float angle2)
-{
-	PROFILE_ZONE_START("graph_dev_draw_arc");
-	float max_angle_delta = 2.0 * M_PI / 180.0; /*some ratio to height and width? */
-	float rx = width/2.0;
-	float ry = height/2.0;
-	float cx = x + rx;
-	float cy = y + ry;
-
-	int i;
-
-	int segments = (int)((angle2 - angle1) / max_angle_delta) + 1;
-	float delta = (angle2 - angle1) / segments;
-
-	GLubyte alpha = 255;
-
-	if (sgc.alpha_blend) {
-		/* must empty the vertex buffer to draw this primitive with blending */
-		draw_vertex_buffer_2d();
-
-		glEnable(GL_BLEND);
-		BLEND_FUNC(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-		alpha = 255 * sgc.alpha;
-	}
-
-	if (filled)
-		make_room_in_vertex_buffer_2d(segments * 3);
-	else
-		make_room_in_vertex_buffer_2d(segments + 1);
-
-	float x1 = 0, y1 = 0;
-	for (i = 0; i <= segments; i++) {
-		float a = angle1 + delta * (float)i;
-		float x2 = cx + cos(a) * rx;
-		float y2 = cy + sin(a) * ry;
-
-		if (!filled || i > 0) {
-			if (filled) {
-				add_vertex_2d(x2, y2, sgc.hue, alpha, GL_TRIANGLES);
-				add_vertex_2d(x1, y1, sgc.hue, alpha, GL_TRIANGLES);
-				add_vertex_2d(cx, cy, sgc.hue, alpha, GL_TRIANGLES);
-			} else {
-				add_vertex_2d(x2, y2, sgc.hue, alpha, (i != segments ? GL_LINE_STRIP : -1));
-			}
-		}
-		x1 = x2;
-		y1 = y2;
-	}
-
-	if (sgc.alpha_blend) {
-		/* must draw the vertex buffer to complete the blending */
-		draw_vertex_buffer_2d();
-
-		glDisable(GL_BLEND);
-	}
-
-	PROFILE_ZONE_END();
-}
-
 static void setup_single_color_lit_shader(struct graph_dev_gl_single_color_lit_shader *shader, int with_shadow)
 {
 
@@ -4328,7 +3030,7 @@ static void setup_single_color_lit_shader(struct graph_dev_gl_single_color_lit_s
 				UNIVERSAL_SHADER_HEADER FILMIC_TONEMAPPING);
 
 	/* create the VAO for this shader */
-	glGenVertexArrays(1, &shader->vao_id);
+	graph_dev_gen_vao(&shader->vao_id);
 
 	/* Get a handle for our "MVP" uniform */
 	shader->mvp_matrix_id = glGetUniformLocation(shader->program_id, "u_MVPMatrix");
@@ -4375,7 +3077,7 @@ static void setup_shadow_depth_shader(struct graph_dev_gl_shadow_depth_shader *s
 				"csm_depth.vert", "csm_depth.frag",
 				UNIVERSAL_SHADER_HEADER);
 
-	glGenVertexArrays(1, &shader->vao_id);
+	graph_dev_gen_vao(&shader->vao_id);
 
 	shader->shadow_mvp_id = glGetUniformLocation(shader->program_id, "u_ShadowMVP");
 	shader->vertex_position_id = glGetAttribLocation(shader->program_id, "a_Position");
@@ -4436,47 +3138,6 @@ static void setup_shadow_map_fbo(void)
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
-static void setup_atmosphere_shader(struct graph_dev_gl_atmosphere_shader *shader, int with_ring_shadow)
-{
-
-	maybe_unload_shader(&shader->meta, &shader->program_id);
-	/* Create and compile our GLSL program from the shaders */
-	shader->program_id = load_shaders(shader_directory,
-				"atmosphere.vert", "atmosphere.frag",
-				with_ring_shadow ?
-				UNIVERSAL_SHADER_HEADER FILMIC_TONEMAPPING "\n#define USE_ANNULUS_SHADOW 1\n" :
-				UNIVERSAL_SHADER_HEADER FILMIC_TONEMAPPING);
-
-	/* create the VAO for this shader */
-	glGenVertexArrays(1, &shader->vao_id);
-
-	/* Get a handle for our "MVP" uniform */
-	shader->mvp_matrix_id = glGetUniformLocation(shader->program_id, "u_MVPMatrix");
-	shader->mv_matrix_id = glGetUniformLocation(shader->program_id, "u_MVMatrix");
-	shader->normal_matrix_id = glGetUniformLocation(shader->program_id, "u_NormalMatrix");
-	shader->light_pos_id = glGetUniformLocation(shader->program_id, "u_LightPos");
-	shader->atmosphere_brightness_id = glGetUniformLocation(shader->program_id, "u_atmosphere_brightness");
-	shader->light_color_id = glGetUniformLocation(shader->program_id, "u_LightColor");
-	shader->ambient_color_id = glGetUniformLocation(shader->program_id, "u_AmbientColor");
-
-	/* Get a handle for our buffers */
-	shader->vertex_position_id = glGetAttribLocation(shader->program_id, "a_Position");
-	shader->vertex_normal_id = glGetAttribLocation(shader->program_id, "a_Normal");
-	shader->color_id = glGetUniformLocation(shader->program_id, "u_Color");
-	shader->alpha = glGetUniformLocation(shader->program_id, "u_Alpha");
-	shader->filmic_tonemapping_id = glGetUniformLocation(shader->program_id, "u_FilmicTonemapping");
-	shader->tonemapping_gain_id = glGetUniformLocation(shader->program_id, "u_TonemappingGain");
-
-	if (with_ring_shadow) {
-		shader->shadow_annulus_texture_id = glGetUniformLocation(shader->program_id, "u_AnnulusAlbedoTex");
-		shader->shadow_annulus_center_id = glGetUniformLocation(shader->program_id, "u_AnnulusCenter");
-		shader->shadow_annulus_normal_id = glGetUniformLocation(shader->program_id, "u_AnnulusNormal");
-		shader->shadow_annulus_radius_id = glGetUniformLocation(shader->program_id, "u_AnnulusRadius");
-		shader->shadow_annulus_tint_color_id = glGetUniformLocation(shader->program_id, "u_AnnulusTintColor");
-		shader->ring_texture_v_id = glGetUniformLocation(shader->program_id, "u_ring_texture_v");
-	}
-}
-
 static void setup_textured_shader(const char *basename, const char *defines,
 	struct graph_dev_gl_textured_shader *shader)
 {
@@ -4501,7 +3162,7 @@ static void setup_textured_shader(const char *basename, const char *defines,
 				vert_header, 2, filenames, frag_header, 2, filenames);
 
 	/* create the VAO for this shader */
-	glGenVertexArrays(1, &shader->vao_id);
+	graph_dev_gen_vao(&shader->vao_id);
 
 	activate_shader(shader);
 
@@ -4607,7 +3268,7 @@ static void setup_textured_cubemap_shader(const char *basename, int use_normal_m
 	shader->program_id = load_concat_shaders(shader_directory,
 				vert_header, 2, filenames, frag_header, 2, filenames);
 	/* create the VAO for this shader */
-	glGenVertexArrays(1, &shader->vao_id);
+	graph_dev_gen_vao(&shader->vao_id);
 
 	activate_shader(shader);
 
@@ -4676,92 +3337,12 @@ static void setup_textured_cubemap_shader(const char *basename, int use_normal_m
 	shader->tonemapping_gain_id = glGetUniformLocation(shader->program_id, "u_TonemappingGain");
 }
 
-static void setup_filled_wireframe_shader(struct graph_dev_gl_filled_wireframe_shader *shader)
-{
-	maybe_unload_shader(&shader->meta, &shader->program_id);
-	/* Create and compile our GLSL program from the shaders */
-	shader->program_id = load_shaders(shader_directory,
-					"wireframe_filled.vert", "wireframe_filled.frag",
-					UNIVERSAL_SHADER_HEADER);
-	/* create the VAO for this shader */
-	glGenVertexArrays(1, &shader->vao_id);
-
-	shader->viewport_id = glGetUniformLocation(shader->program_id, "Viewport");
-	shader->mvp_matrix_id = glGetUniformLocation(shader->program_id, "ModelViewProjectionMatrix");
-
-	shader->position_id = glGetAttribLocation(shader->program_id, "position");
-	shader->tvertex0_id = glGetAttribLocation(shader->program_id, "tvertex0");
-	shader->tvertex1_id = glGetAttribLocation(shader->program_id, "tvertex1");
-	shader->tvertex2_id = glGetAttribLocation(shader->program_id, "tvertex2");
-	shader->edge_mask_id = glGetAttribLocation(shader->program_id, "edge_mask");
-
-	shader->line_color_id = glGetUniformLocation(shader->program_id, "line_color");
-	shader->triangle_color_id = glGetUniformLocation(shader->program_id, "triangle_color");
-}
-
-static void setup_trans_wireframe_shader(const char *basename, struct graph_dev_gl_trans_wireframe_shader *shader)
-{
-	char vert_filename[PATH_MAX];
-	char frag_filename[PATH_MAX];
-	snprintf(vert_filename, sizeof(vert_filename), "%s.vert", basename);
-	snprintf(frag_filename, sizeof(frag_filename), "%s.frag", basename);
-
-	maybe_unload_shader(&shader->meta, &shader->program_id);
-	/* Create and compile our GLSL program from the shaders */
-	shader->program_id = load_shaders(shader_directory, vert_filename, frag_filename,
-						UNIVERSAL_SHADER_HEADER);
-	/* create the VAO for this shader */
-	glGenVertexArrays(1, &shader->vao_id);
-
-	shader->mvp_matrix_id = glGetUniformLocation(shader->program_id, "u_MVPMatrix");
-	shader->mv_matrix_id = glGetUniformLocation(shader->program_id, "u_MVMatrix");
-	shader->normal_matrix_id = glGetUniformLocation(shader->program_id, "u_NormalMatrix");
-	shader->vertex_position_id = glGetAttribLocation(shader->program_id, "a_Position");
-	shader->vertex_normal_id = glGetAttribLocation(shader->program_id, "a_Normal");
-	shader->color_id = glGetUniformLocation(shader->program_id, "u_Color");
-	shader->clip_sphere_id = glGetUniformLocation(shader->program_id, "u_ClipSphere");
-	shader->clip_sphere_radius_fade_id = glGetUniformLocation(shader->program_id, "u_ClipSphereRadiusFade");
-}
-
-static void setup_single_color_shader(struct graph_dev_gl_single_color_shader *shader)
-{
-	maybe_unload_shader(&shader->meta, &shader->program_id);
-	/* Create and compile our GLSL program from the shaders */
-	shader->program_id = load_shaders(shader_directory,
-				"single_color.vert", "single_color.frag",
-				UNIVERSAL_SHADER_HEADER);
-	/* create the VAO for this shader */
-	glGenVertexArrays(1, &shader->vao_id);
-
-	/* Get a handle for our "MVP" uniform */
-	shader->mvp_matrix_id = glGetUniformLocation(shader->program_id, "u_MVPMatrix");
-
-	/* Get a handle for our buffers */
-	shader->vertex_position_id = glGetAttribLocation(shader->program_id, "a_Position");
-	shader->color_id = glGetUniformLocation(shader->program_id, "u_Color");
-}
-
-static void setup_vertex_color_shader(struct graph_dev_gl_vertex_color_shader *shader)
-{
-	maybe_unload_shader(&shader->meta, &shader->program_id);
-	shader->program_id = load_shaders(shader_directory,
-				"per_vertex_color.vert", "per_vertex_color.frag",
-				UNIVERSAL_SHADER_HEADER);
-	/* create the VAO for this shader */
-	glGenVertexArrays(1, &shader->vao_id);
-
-	shader->mvp_matrix_id = glGetUniformLocation(shader->program_id, "u_MVPMatrix");
-
-	shader->vertex_position_id = glGetAttribLocation(shader->program_id, "a_Position");
-	shader->vertex_color_id = glGetAttribLocation(shader->program_id, "a_Color");
-}
-
 static void setup_sun_shader(struct graph_dev_gl_sun_shader *shader)
 {
 	maybe_unload_shader(&shader->meta, &shader->program_id);
 	shader->program_id = load_shaders(shader_directory,
 				"sun.vert", "sun.frag", UNIVERSAL_SHADER_HEADER FILMIC_TONEMAPPING);
-	glGenVertexArrays(1, &shader->vao_id);
+	graph_dev_gen_vao(&shader->vao_id);
 
 	shader->mvp_matrix_id = glGetUniformLocation(shader->program_id, "u_MVPMatrix");
 	shader->vertex_position_id = glGetAttribLocation(shader->program_id, "a_Position");
@@ -4771,303 +3352,8 @@ static void setup_sun_shader(struct graph_dev_gl_sun_shader *shader)
 	shader->disc_radius_id = glGetUniformLocation(shader->program_id, "u_DiscRadius");
 	shader->edge_softness_id = glGetUniformLocation(shader->program_id, "u_EdgeSoftness");
 	shader->psf_width_id = glGetUniformLocation(shader->program_id, "u_PsfWidth");
-	shader->psf_falloff_id = glGetUniformLocation(shader->program_id, "u_PsfFalloff");
 	shader->filmic_tonemapping_id = glGetUniformLocation(shader->program_id, "u_FilmicTonemapping");
 	shader->tonemapping_gain_id = glGetUniformLocation(shader->program_id, "u_TonemappingGain");
-}
-
-static void setup_black_hole_shader(struct graph_dev_gl_black_hole_shader *shader)
-{
-	maybe_unload_shader(&shader->meta, &shader->program_id);
-	shader->program_id = load_shaders(shader_directory,
-				"black_hole.vert", "black_hole.frag", UNIVERSAL_SHADER_HEADER);
-	glGenVertexArrays(1, &shader->vao_id);
-
-	shader->mvp_matrix_id = glGetUniformLocation(shader->program_id, "u_MVPMatrix");
-	shader->vertex_position_id = glGetAttribLocation(shader->program_id, "a_Position");
-	shader->texture_coord_id = glGetAttribLocation(shader->program_id, "a_TexCoord");
-	shader->disc_radius_id = glGetUniformLocation(shader->program_id, "u_DiscRadius");
-	shader->edge_softness_id = glGetUniformLocation(shader->program_id, "u_EdgeSoftness");
-	shader->ring_brightness_id = glGetUniformLocation(shader->program_id, "u_RingBrightness");
-	shader->ring_width_id = glGetUniformLocation(shader->program_id, "u_RingWidth");
-	shader->einstein_radius_id = glGetUniformLocation(shader->program_id, "u_EinsteinRadius");
-	shader->glow_brightness_id = glGetUniformLocation(shader->program_id, "u_GlowBrightness");
-	shader->glow_width_id = glGetUniformLocation(shader->program_id, "u_GlowWidth");
-	shader->ring_color_id = glGetUniformLocation(shader->program_id, "u_RingColor");
-}
-
-static void setup_exhaust_plume_shader(struct graph_dev_gl_exhaust_plume_shader *shader)
-{
-	maybe_unload_shader(&shader->meta, &shader->program_id);
-	shader->program_id = load_shaders(shader_directory,
-				"exhaust-plume.vert", "exhaust-plume.frag",
-				UNIVERSAL_SHADER_HEADER FILMIC_TONEMAPPING);
-	glGenVertexArrays(1, &shader->vao_id);
-
-	shader->mvp_matrix_id = glGetUniformLocation(shader->program_id, "u_MVPMatrix");
-	shader->mv_matrix_id = glGetUniformLocation(shader->program_id, "u_MVMatrix");
-	shader->vertex_position_id = glGetAttribLocation(shader->program_id, "a_Position");
-	shader->vertex_normal_id = glGetAttribLocation(shader->program_id, "a_Normal");
-	shader->texture_coord_id = glGetAttribLocation(shader->program_id, "a_TexCoord");
-	shader->tint_color_id = glGetUniformLocation(shader->program_id, "u_TintColor");
-	shader->core_brightness_id = glGetUniformLocation(shader->program_id, "u_CoreBrightness");
-	shader->plume_length_id = glGetUniformLocation(shader->program_id, "u_PlumeLength");
-	shader->noise_seed_id = glGetUniformLocation(shader->program_id, "u_NoiseSeed");
-	shader->diamond_spacing_id = glGetUniformLocation(shader->program_id, "u_DiamondSpacing");
-	shader->diamond_intensity_id = glGetUniformLocation(shader->program_id, "u_DiamondIntensity");
-	shader->filmic_tonemapping_id = glGetUniformLocation(shader->program_id, "u_FilmicTonemapping");
-	shader->tonemapping_gain_id = glGetUniformLocation(shader->program_id, "u_TonemappingGain");
-}
-
-static void setup_line_single_color_shader(struct graph_dev_gl_line_single_color_shader *shader)
-{
-	maybe_unload_shader(&shader->meta, &shader->program_id);
-	/* Create and compile our GLSL program from the shaders */
-	shader->program_id = load_shaders(shader_directory,
-				"line-single-color.vert", "line-single-color.frag",
-				UNIVERSAL_SHADER_HEADER);
-	/* create the VAO for this shader */
-	glGenVertexArrays(1, &shader->vao_id);
-
-	shader->mvp_matrix_id = glGetUniformLocation(shader->program_id, "u_MVPMatrix");
-	shader->viewport_id = glGetUniformLocation(shader->program_id, "u_Viewport");
-	shader->dot_size_id = glGetUniformLocation(shader->program_id, "u_DotSize");
-	shader->dot_pitch_id = glGetUniformLocation(shader->program_id, "u_DotPitch");
-	shader->line_color_id = glGetUniformLocation(shader->program_id, "u_LineColor");
-
-	shader->multi_one_id = glGetAttribLocation(shader->program_id, "a_MultiOne");
-	shader->vertex_position_id = glGetAttribLocation(shader->program_id, "a_Position");
-	shader->line_vertex0_id = glGetAttribLocation(shader->program_id, "a_LineVertex0");
-	shader->line_vertex1_id = glGetAttribLocation(shader->program_id, "a_LineVertex1");
-}
-
-static void setup_point_cloud_shader(const char *basename, struct graph_dev_gl_point_cloud_shader *shader)
-{
-	char vert_filename[PATH_MAX];
-	char frag_filename[PATH_MAX];
-	snprintf(vert_filename, sizeof(vert_filename), "%s.vert", basename);
-	snprintf(frag_filename, sizeof(frag_filename), "%s.frag", basename);
-
-	maybe_unload_shader(&shader->meta, &shader->program_id);
-	/* Create and compile our GLSL program from the shaders */
-	shader->program_id = load_shaders(shader_directory, vert_filename, frag_filename,
-				UNIVERSAL_SHADER_HEADER);
-	/* create the VAO for this shader */
-	glGenVertexArrays(1, &shader->vao_id);
-
-	/* Get a handle for our "MVP" uniform */
-	shader->mvp_matrix_id = glGetUniformLocation(shader->program_id, "u_MVPMatrix");
-
-	/* Get a handle for our buffers */
-	shader->vertex_position_id = glGetAttribLocation(shader->program_id, "a_Position");
-	shader->point_size_id = glGetUniformLocation(shader->program_id, "u_PointSize");
-	shader->color_id = glGetUniformLocation(shader->program_id, "u_Color");
-	shader->time_id = glGetUniformLocation(shader->program_id, "u_Time");
-	shader->camera_pos_id = glGetUniformLocation(shader->program_id, "u_CameraPos");
-	shader->fade_params_id = glGetUniformLocation(shader->program_id, "u_FadeParams");
-}
-
-static void setup_color_by_w_shader(struct graph_dev_gl_color_by_w_shader *shader)
-{
-	maybe_unload_shader(&shader->meta, &shader->program_id);
-	/* Create and compile our GLSL program from the shaders */
-	shader->program_id = load_shaders(shader_directory, "color_by_w.vert", "color_by_w.frag",
-					UNIVERSAL_SHADER_HEADER);
-	/* create the VAO for this shader */
-	glGenVertexArrays(1, &shader->vao_id);
-
-	/* Get a handle for our "MVP" uniform */
-	shader->mvp_id = glGetUniformLocation(shader->program_id, "u_MVPMatrix");
-
-	/* Get a handle for our buffers */
-	shader->position_id = glGetAttribLocation(shader->program_id, "a_Position");
-	shader->near_color_id = glGetUniformLocation(shader->program_id, "u_NearColor");
-	shader->near_w_id = glGetUniformLocation(shader->program_id, "u_NearW");
-	shader->center_color_id = glGetUniformLocation(shader->program_id, "u_CenterColor");
-	shader->center_w_id = glGetUniformLocation(shader->program_id, "u_CenterW");
-	shader->far_color_id = glGetUniformLocation(shader->program_id, "u_FarColor");
-	shader->far_w_id = glGetUniformLocation(shader->program_id, "u_FarW");
-}
-
-
-static void setup_skybox_shader(struct graph_dev_gl_skybox_shader *shader)
-{
-	maybe_unload_shader(&shader->meta, &shader->program_id);
-	/* Create and compile our GLSL program from the shaders */
-	shader->program_id = load_shaders(shader_directory, "skybox.vert", "skybox.frag",
-						UNIVERSAL_SHADER_HEADER FILMIC_TONEMAPPING
-						GRAVITATIONAL_LENS_HEADER);
-	/* create the VAO for this shader */
-	glGenVertexArrays(1, &shader->vao_id);
-
-	activate_shader(shader);
-
-	/* Get a handle for our "MVP" uniform */
-	shader->mvp_id = glGetUniformLocation(shader->program_id, "MVP");
-	shader->texture_id = glGetUniformLocation(shader->program_id, "s_texture");
-	shader->filmic_tonemapping_id = glGetUniformLocation(shader->program_id, "u_FilmicTonemapping");
-	shader->tonemapping_gain_id = glGetUniformLocation(shader->program_id, "u_TonemappingGain");
-	shader->lens_dir_id = glGetUniformLocation(shader->program_id, "u_LensDir");
-	shader->lens_params_id = glGetUniformLocation(shader->program_id, "u_LensParams");
-	glUniform1i(shader->texture_id, 0);
-
-	/* Get a handle for our buffers */
-	shader->vertex_id = glGetAttribLocation(shader->program_id, "vertex");
-}
-
-static void setup_cubemap_cube(struct graph_dev_primitive *obj)
-{
-	/* cube vertices in triangle strip for vertex buffer object */
-	static const struct vertex_buffer_data cube_v_data[] = {
-		{ .position = { { -10.0f,  10.0f, -10.0f } } },
-		{ .position = { { -10.0f, -10.0f, -10.0f } } },
-		{ .position = { { 10.0f, -10.0f, -10.0f } } },
-		{ .position = { { 10.0f, -10.0f, -10.0f } } },
-		{ .position = { { 10.0f,  10.0f, -10.0f } } },
-		{ .position = { { -10.0f,  10.0f, -10.0f } } },
-
-		{ .position = { { -10.0f, -10.0f,  10.0f } } },
-		{ .position = { { -10.0f, -10.0f, -10.0f } } },
-		{ .position = { { -10.0f,  10.0f, -10.0f } } },
-		{ .position = { { -10.0f,  10.0f, -10.0f } } },
-		{ .position = { { -10.0f,  10.0f,  10.0f } } },
-		{ .position = { { -10.0f, -10.0f,  10.0f } } },
-
-		{ .position = { { 10.0f, -10.0f, -10.0f } } },
-		{ .position = { { 10.0f, -10.0f,  10.0f } } },
-		{ .position = { { 10.0f,  10.0f,  10.0f } } },
-		{ .position = { { 10.0f,  10.0f,  10.0f } } },
-		{ .position = { { 10.0f,  10.0f, -10.0f } } },
-		{ .position = { { 10.0f, -10.0f, -10.0f } } },
-
-		{ .position = { { -10.0f, -10.0f,  10.0f } } },
-		{ .position = { { -10.0f,  10.0f,  10.0f } } },
-		{ .position = { { 10.0f,  10.0f,  10.0f } } },
-		{ .position = { { 10.0f,  10.0f,  10.0f } } },
-		{ .position = { { 10.0f, -10.0f,  10.0f } } },
-		{ .position = { { -10.0f, -10.0f,  10.0f } } },
-
-		{ .position = { { -10.0f,  10.0f, -10.0f } } },
-		{ .position = { { 10.0f,  10.0f, -10.0f } } },
-		{ .position = { { 10.0f,  10.0f,  10.0f } } },
-		{ .position = { { 10.0f,  10.0f,  10.0f } } },
-		{ .position = { { -10.0f,  10.0f,  10.0f } } },
-		{ .position = { { -10.0f,  10.0f, -10.0f } } },
-
-		{ .position = { { -10.0f, -10.0f, -10.0f } } },
-		{ .position = { { -10.0f, -10.0f,  10.0f } } },
-		{ .position = { { 10.0f, -10.0f, -10.0f } } },
-		{ .position = { { 10.0f, -10.0f, -10.0f } } },
-		{ .position = { { -10.0f, -10.0f,  10.0f } } },
-		{ .position = { { 10.0f, -10.0f,  10.0f } } } };
-
-	glGenBuffers(1, &obj->vertex_buffer);
-	glBindBuffer(GL_ARRAY_BUFFER, obj->vertex_buffer);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(cube_v_data), cube_v_data, GL_STATIC_DRAW);
-
-	obj->nvertices = sizeof(cube_v_data)/sizeof(struct vertex_buffer_data);
-}
-
-static void setup_textured_unit_quad(struct graph_dev_primitive *obj)
-{
-	static const struct vertex_buffer_data quad_v_data[] = {
-		{ { { -1.0f, -1.0f, 0.0f } } },
-		{ { { 1.0f, 1.0f, 0.0f } } },
-		{ { { -1.0f, 1.0f, 0.0f } } },
-
-		{ { { -1.0f, -1.0f, 0.0f } } },
-		{ { { 1.0f, -1.0f, 0.0f } } },
-		{ { { 1.0f, 1.0f, 0.0f } } } };
-
-	static const struct vertex_triangle_buffer_data quad_vt_data[] = {
-		{ .texture_coord = { { 0.0f, 0.0f } } },
-		{ .texture_coord = { { 1.0f, 1.0f } } },
-		{ .texture_coord = { { 0.0f, 1.0f } } },
-
-		{ .texture_coord = { { 0.0f, 0.0f } } },
-		{ .texture_coord = { { 1.0f, 0.0f } } },
-		{ .texture_coord = { { 1.0f, 1.0f } } } };
-
-	glGenBuffers(1, &obj->vertex_buffer);
-	glBindBuffer(GL_ARRAY_BUFFER, obj->vertex_buffer);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(quad_v_data), quad_v_data, GL_STATIC_DRAW);
-
-	glGenBuffers(1, &obj->triangle_vertex_buffer);
-	glBindBuffer(GL_ARRAY_BUFFER, obj->triangle_vertex_buffer);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(quad_vt_data), quad_vt_data, GL_STATIC_DRAW);
-
-	obj->nvertices = sizeof(quad_v_data)/sizeof(struct vertex_buffer_data);
-}
-
-static void setup_textured_particle_shader(struct graph_dev_gl_textured_particle_shader *shader)
-{
-	maybe_unload_shader(&shader->meta, &shader->program_id);
-	/* Create and compile our GLSL program from the shaders */
-	shader->program_id = load_shaders(shader_directory,
-				"textured-particle.vert", "textured-particle.frag",
-				UNIVERSAL_SHADER_HEADER FILMIC_TONEMAPPING);
-	/* create the VAO for this shader */
-	glGenVertexArrays(1, &shader->vao_id);
-
-	activate_shader(shader);
-
-	shader->mvp_matrix_id = glGetUniformLocation(shader->program_id, "u_MVPMatrix");
-	shader->camera_up_vec_id = glGetUniformLocation(shader->program_id, "u_CameraUpVec");
-	shader->camera_right_vec_id = glGetUniformLocation(shader->program_id, "u_CameraRightVec");
-	shader->time_id = glGetUniformLocation(shader->program_id, "u_Time");
-	shader->radius_id = glGetUniformLocation(shader->program_id, "u_Radius");
-	shader->texture_id = glGetUniformLocation(shader->program_id, "u_AlbedoTex");
-	shader->filmic_tonemapping_id = glGetUniformLocation(shader->program_id, "u_FilmicTonemapping");
-	shader->tonemapping_gain_id = glGetUniformLocation(shader->program_id, "u_TonemappingGain");
-	glUniform1i(shader->texture_id, 0);
-
-	shader->multi_one_id = glGetAttribLocation(shader->program_id, "a_MultiOne");
-	shader->start_position_id = glGetAttribLocation(shader->program_id, "a_StartPosition");
-	shader->start_tint_color_id = glGetAttribLocation(shader->program_id, "a_StartTintColor");
-	shader->start_apm_id = glGetAttribLocation(shader->program_id, "a_StartAPM");
-	shader->end_position_id = glGetAttribLocation(shader->program_id, "a_EndPosition");
-	shader->end_tint_color_id = glGetAttribLocation(shader->program_id, "a_EndTintColor");
-	shader->end_apm_id = glGetAttribLocation(shader->program_id, "a_StartAPM");
-}
-
-static void setup_fs_effect_shader(const char *basename,
-	struct graph_dev_gl_fs_effect_shader *shader)
-{
-	const char *vert_header =
-		UNIVERSAL_SHADER_HEADER
-		"#define INCLUDE_VS 1\n";
-	const char *frag_header =
-		UNIVERSAL_SHADER_HEADER
-		"#define INCLUDE_FS 1\n";
-
-	/* Create and compile our GLSL program from the shaders */
-	char shader_filename[255];
-	snprintf(shader_filename, sizeof(shader_filename), "%s.shader", basename);
-
-	const char *filenames[] = { shader_filename };
-
-	maybe_unload_shader(&shader->meta, &shader->program_id);
-	shader->program_id = load_concat_shaders(shader_directory, vert_header, 1, filenames,
-		frag_header, 1, filenames);
-	/* create the VAO for this shader */
-	glGenVertexArrays(1, &shader->vao_id);
-
-	activate_shader(shader);
-
-	shader->mvp_matrix_id = glGetUniformLocation(shader->program_id, "u_MVPMatrix");
-	shader->vertex_position_id = glGetAttribLocation(shader->program_id, "a_Position");
-	shader->texture_coord_id = glGetAttribLocation(shader->program_id, "a_TexCoord");
-	shader->tint_color_id = glGetUniformLocation(shader->program_id, "u_TintColor");
-	shader->viewport_id = glGetUniformLocation(shader->program_id, "u_Viewport");
-	shader->texture0_id = glGetUniformLocation(shader->program_id, "texture0Sampler");
-	if (shader->texture0_id >= 0)
-		glUniform1i(shader->texture0_id, 0);
-	shader->texture1_id = glGetUniformLocation(shader->program_id, "texture1Sampler");
-	if (shader->texture1_id >= 0)
-		glUniform1i(shader->texture1_id, 1);
-	shader->texture2_id = glGetUniformLocation(shader->program_id, "texture2Sampler");
-	if (shader->texture2_id >= 0)
-		glUniform1i(shader->texture2_id, 2);
 }
 
 static void setup_smaa_effect_shader(const char *basename, struct graph_dev_gl_fs_effect_shader *shader)
@@ -5090,7 +3376,7 @@ static void setup_smaa_effect_shader(const char *basename, struct graph_dev_gl_f
 	shader->program_id = load_concat_shaders(shader_directory,
 				vert_header, 3, filenames, frag_header, 3, filenames);
 	/* create the VAO for this shader */
-	glGenVertexArrays(1, &shader->vao_id);
+	graph_dev_gen_vao(&shader->vao_id);
 
 	shader->mvp_matrix_id = glGetUniformLocation(shader->program_id, "u_MVPMatrix");
 	shader->vertex_position_id = glGetAttribLocation(shader->program_id, "a_Position");
@@ -5105,7 +3391,6 @@ static void setup_smaa_effect_shader(const char *basename, struct graph_dev_gl_f
 static void setup_smaa_effect(struct graph_dev_smaa_effect *effect)
 {
 	struct graph_dev_gl_fs_effect_shader *shader;
-	static const GLenum drawBuffers[] = { GL_COLOR_ATTACHMENT0 };
 
 	shader = &effect->edge_shader;
 	setup_smaa_effect_shader("smaa-edge", shader);
@@ -5174,15 +3459,38 @@ static void setup_smaa_effect(struct graph_dev_smaa_effect *effect)
 
 	glGenFramebuffers(1, &effect->edge_target.fbo);
 	glBindFramebuffer(GL_FRAMEBUFFER, effect->edge_target.fbo);
-	glDrawBuffers(ARRAYSIZE(drawBuffers), drawBuffers);
+	graph_dev_select_draw_buffer(GRAPH_DEV_DRAW_BUFFER_COLOR0);
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
 		effect->edge_target.color0_texture, 0);
 
 	glGenFramebuffers(1, &effect->blend_target.fbo);
 	glBindFramebuffer(GL_FRAMEBUFFER, effect->blend_target.fbo);
-	glDrawBuffers(ARRAYSIZE(drawBuffers), drawBuffers);
+	graph_dev_select_draw_buffer(GRAPH_DEV_DRAW_BUFFER_COLOR0);
 	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
 		effect->blend_target.color0_texture, 0);
+}
+
+void graph_dev_select_draw_buffer(int which)
+{
+	static const GLenum back[] = { GL_BACK };
+	static const GLenum color0[] = { GL_COLOR_ATTACHMENT0 };
+
+	glDrawBuffers(1, which == GRAPH_DEV_DRAW_BUFFER_BACK ? back : color0);
+}
+
+void graph_dev_gen_vao(GLuint *vao)
+{
+	glGenVertexArrays(1, vao);
+}
+
+void graph_dev_bind_vao(GLuint vao)
+{
+	glBindVertexArray(vao);
+}
+
+void graph_dev_unbind_vao(void)
+{
+	glBindVertexArray(0);
 }
 
 static void setup_2d(void)
@@ -5197,7 +3505,6 @@ static void setup_2d(void)
 
 	/* render 2d to seperate fbo if supported */
 	if (fbo_render_to_texture_supported()) {
-		static const GLenum drawBuffers[] = {GL_COLOR_ATTACHMENT0};
 
 		graph_dev_gen_texture(1, &render_target_2d.color0_texture);
 		glBindTexture(GL_TEXTURE_2D, render_target_2d.color0_texture);
@@ -5208,7 +3515,7 @@ static void setup_2d(void)
 
 		glGenFramebuffers(1, &render_target_2d.fbo);
 		glBindFramebuffer(GL_FRAMEBUFFER, render_target_2d.fbo);
-		glDrawBuffers(ARRAYSIZE(drawBuffers), drawBuffers);
+		graph_dev_select_draw_buffer(GRAPH_DEV_DRAW_BUFFER_COLOR0);
 		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
 			render_target_2d.color0_texture, 0);
 	}
@@ -5338,84 +3645,11 @@ void graph_dev_reload_all_shaders(void)
 	PROFILE_ZONE_END();
 }
 
-static void enqueue_image_load_request(struct graph_dev_image_load_request *r)
-{
-	PROFILE_ZONE_START("enqueue_image_load_request");
-	work_queue_enqueue(image_loader_wq, r);
-	PROFILE_ZONE_END();
-}
 
-static void enqueue_image_load_completion(struct graph_dev_image_load_request *r)
-{
-	PROFILE_ZONE_START("enqueue_image_load_completion");
-	work_queue_enqueue(loaded_images_wq, r);
-	PROFILE_ZONE_END();
-}
 
-static void process_image_load_request_normal(struct graph_dev_image_load_request *r)
-{
-	PROFILE_ZONE_START("process_image_load_request_normal");
-	r->image_data[0] = png_utils_read_png_image(r->filename[0],
-				r->flipVertical, r->flipHorizontal, r->pre_multiply_alpha,
-				&r->w[0], &r->h[0], &r->hasAlpha[0], r->whynot, sizeof(r->whynot));
-	if (!r->image_data[0]) {
-		fprintf(stderr, "Failed to decode image file '%s: %s\n",
-			r->filename[0], r->whynot);
-		graph_dev_free_image_load_request(r);
-		PROFILE_ZONE_END();
-		return;
-	}
-	/* Put the data on the queue for the main thread to upload to the GPU */
-	enqueue_image_load_completion(r);
-	PROFILE_ZONE_END();
-}
 
-static void process_image_load_request_cubemap(struct graph_dev_image_load_request *r)
-{
-	PROFILE_ZONE_START("process_image_load_request_cubemap");
-	for (int i = 0; i < 6; i++) {
-		r->image_data[i] = png_utils_read_png_image(r->filename[i], 0, r->is_inside, 1,
-			&r->w[i], &r->h[i], &r->hasAlpha[i], r->whynot, sizeof(r->whynot));
-		if (!r->image_data[i]) {
-			fprintf(stderr, "Failed to decode image file '%s: %s\n",
-				r->filename[i], r->whynot);
-			graph_dev_free_image_load_request(r);
-			PROFILE_ZONE_END();
-			return;
-		}
-	}
-	/* Put the data on the queue for the main thread to upload to the GPU */
-	enqueue_image_load_completion(r);
-	PROFILE_ZONE_END();
-}
 
-/* Process a request to load an image */
-static void process_image_load_request(void *work)
-{
-	PROFILE_ZONE_START("process_image_load_request");
-	struct graph_dev_image_load_request *r = work;
-	switch (r->request_type) {
-	case GRAPH_DEV_IMAGE_LOAD:
-		process_image_load_request_normal(r);
-		break;
-	case GRAPH_DEV_CUBEMAP_LOAD:
-		process_image_load_request_cubemap(r);
-		break;
-	default:
-		fprintf(stderr, "Bad image load request type %d, discarding\n", r->request_type);
-		graph_dev_free_image_load_request(r);
-		break;
-	}
-	PROFILE_ZONE_END();
-}
 
-/* Set up work queues for loading texture data concurrently with main loop */
-static void graph_dev_set_up_image_loader_work_queues(void)
-{
-	image_loader_wq = work_queue_init("png-decode", IMAGE_LOADER_QUEUE_DEPTH,
-		IMAGE_LOADER_THREAD_COUNT, process_image_load_request);
-	loaded_images_wq = work_queue_init("txtr2gpu", IMAGE_LOADER_QUEUE_DEPTH, 0, NULL);
-}
 
 int graph_dev_setup(const char *asset_dir)
 {
@@ -5450,7 +3684,7 @@ int graph_dev_setup(const char *asset_dir)
 	if (asset_dir)
 		snprintf(shader_directory, sizeof(shader_directory), "%s/shader", asset_dir);
 	else
-		strlcpy(shader_directory, default_shader_directory, sizeof(shader_directory));
+		strlcpy(shader_directory, GRAPH_DEV_DEFAULT_SHADER_DIRECTORY, sizeof(shader_directory));
 
 	fprintf(stderr, "shader dir = %s\n", shader_directory);
 
@@ -5471,7 +3705,6 @@ int graph_dev_setup(const char *asset_dir)
 	}
 
 	if (fbo_render_to_texture_supported()) {
-		static GLenum drawBuffers[] = { GL_COLOR_ATTACHMENT0 };
 		graph_dev_gen_texture(1, &post_target0.color0_texture);
 		glBindTexture(GL_TEXTURE_2D, post_target0.color0_texture);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
@@ -5484,7 +3717,7 @@ int graph_dev_setup(const char *asset_dir)
 
 		glGenFramebuffers(1, &post_target0.fbo);
 		glBindFramebuffer(GL_FRAMEBUFFER, post_target0.fbo);
-		glDrawBuffers(ARRAYSIZE(drawBuffers), drawBuffers);
+		graph_dev_select_draw_buffer(GRAPH_DEV_DRAW_BUFFER_COLOR0);
 		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
 			post_target0.color0_texture, 0);
 		glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER,
@@ -5499,7 +3732,7 @@ int graph_dev_setup(const char *asset_dir)
 
 		glGenFramebuffers(1, &post_target1.fbo);
 		glBindFramebuffer(GL_FRAMEBUFFER, post_target1.fbo);
-		glDrawBuffers(ARRAYSIZE(drawBuffers), drawBuffers);
+		graph_dev_select_draw_buffer(GRAPH_DEV_DRAW_BUFFER_COLOR0);
 		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
 			post_target1.color0_texture, 0);
 	}
@@ -5525,8 +3758,21 @@ int graph_dev_setup(const char *asset_dir)
 	return 0;
 }
 
+/* The image loader uploads finished textures with bare glBindTexture() calls, outside the
+ * BIND_TEXTURE discipline above, and it does so between draws whenever an asynchronous load
+ * completes.  That leaves the cache claiming one texture is on the active unit while the upload
+ * has since bound a different one to that unit, and the next BIND_TEXTURE asking for the cached
+ * id then skips its bind and the draw samples whatever the upload left behind.
+ *
+ * The visible symptom is a cubemap arriving mid-scene and briefly replacing the skybox with
+ * itself -- an asteroid's rock texture wrapped around the whole sky for a frame or two, until
+ * something else binds to that unit and resyncs the cache by accident.
+ *
+ * So: once an upload has finished with the binding, tell the cache what it actually left on the
+ * active unit, which keeps the cache true rather than merely forcing the next bind.
+ */
 /* returns zero on success, -1 otherwise */
-static int cubemap_texture_to_gpu(struct graph_dev_image_load_request *r)
+unsigned int graph_dev_cubemap_texture_to_gpu(struct graph_dev_image_load_request *r)
 {
 	PROFILE_ZONE_START("cubemap_texture_to_gpu");
 	static const GLint tex_pos[] = {
@@ -5585,210 +3831,10 @@ static int cubemap_texture_to_gpu(struct graph_dev_image_load_request *r)
 	return 0;
 }
 
-void graph_dev_expire_all_textures(void)
-{
-	int i;
-	PROFILE_ZONE_START("graph_dev_expire_all_textures");
 
-	pthread_mutex_lock(&finished_loading_mutex);
-	for (i = 0; i < nloaded_textures; i++)
-		loaded_textures[i].expired = 1;
-	for (i = 0; i < nloaded_cubemap_textures; i++)
-		loaded_cubemap_textures[i].expired = 1;
-	pthread_mutex_unlock(&finished_loading_mutex);
-
-	PROFILE_ZONE_END();
-}
-
-void graph_dev_expire_texture(char *filename)
-{
-	int i;
-	PROFILE_ZONE_START("graph_dev_expire_texture");
-
-	pthread_mutex_lock(&finished_loading_mutex);
-	for (i = 0; i < nloaded_textures; i++)
-		if (strcmp(loaded_textures[i].filename, filename) == 0) {
-			loaded_textures[i].expired = 1;
-			break;
-		}
-	pthread_mutex_unlock(&finished_loading_mutex);
-	PROFILE_ZONE_END();
-}
-
-void graph_dev_expire_cubemap_texture(int is_inside,
-					const char *texture_filename_pos_x,
-					const char *texture_filename_neg_x,
-					const char *texture_filename_pos_y,
-					const char *texture_filename_neg_y,
-					const char *texture_filename_pos_z,
-					const char *texture_filename_neg_z)
-{
-	int i, j;
-	PROFILE_ZONE_START("graph_dev_expire_cubemap_texture");
-
-	const char *tex_filenames[] = {
-		texture_filename_pos_x, texture_filename_neg_x,
-		texture_filename_pos_y, texture_filename_neg_y,
-		texture_filename_pos_z, texture_filename_neg_z };
-
-	for (i = 0; i < nloaded_cubemap_textures; i++) {
-		if (loaded_cubemap_textures[i].is_inside == is_inside) {
-			int match = 1;
-			for (j = 0; j < NCUBEMAP_TEXTURES; j++) {
-				if (strcmp(tex_filenames[j], loaded_cubemap_textures[i].filename[j]) != 0) {
-					match = 0;
-					break;
-				}
-			}
-			if (match) {
-				loaded_cubemap_textures[i].expired = 1;
-				PROFILE_ZONE_END();
-				return;
-			}
-		}
-	}
-	PROFILE_ZONE_END();
-}
-
-unsigned int graph_dev_load_cubemap_texture(
-	int is_inside,
-	int linear_colorspace,
-	const char *texture_filename_pos_x,
-	const char *texture_filename_neg_x,
-	const char *texture_filename_pos_y,
-	const char *texture_filename_neg_y,
-	const char *texture_filename_pos_z,
-	const char *texture_filename_neg_z)
-{
-	int loaded_texture_index = -1;
-	const char *tex_filenames[] = {
-		texture_filename_pos_x, texture_filename_neg_x,
-		texture_filename_pos_y, texture_filename_neg_y,
-		texture_filename_pos_z, texture_filename_neg_z };
-
-	/* Check if we already loaded this texture */
-	pthread_mutex_lock(&finished_loading_mutex);
-	for (int i = 0; i < nloaded_cubemap_textures; i++) {
-		if (loaded_cubemap_textures[i].is_inside == is_inside) {
-			int match = 1;
-			for (int j = 0; j < NCUBEMAP_TEXTURES; j++) {
-				if (strcmp(tex_filenames[j], loaded_cubemap_textures[i].filename[j]) != 0) {
-					match = 0;
-					break;
-				}
-			}
-			if (match) {
-				loaded_cubemap_textures[i].expired = 0;
-				pthread_mutex_unlock(&finished_loading_mutex);
-				return loaded_cubemap_textures[i].texture_id;
-			}
-		}
-	}
-
-	/* See if we can re-use an expired texture (not the texture name itself though) */
-	GLuint cube_texture_id = (GLuint) -1;
-	for (int i = 0; i < nloaded_cubemap_textures; i++) {
-		if (loaded_cubemap_textures[i].expired) {
-			cube_texture_id = loaded_cubemap_textures[i].texture_id;
-			loaded_texture_index = i;
-			glDeleteTextures(1, &cube_texture_id);
-			loaded_cubemap_textures[i].is_inside = is_inside;
-			loaded_cubemap_textures[i].expired = 0;
-			for (int j = 0; j < NCUBEMAP_TEXTURES; j++) {
-				fprintf(stderr, "Replacing %s with %s\n",
-					loaded_cubemap_textures[i].filename[j], tex_filenames[j]);
-				if (loaded_cubemap_textures[i].filename[j])
-					free(loaded_cubemap_textures[i].filename[j]);
-				loaded_cubemap_textures[i].filename[j] = strdup(tex_filenames[j]);
-			}
-			loaded_cubemap_textures[i].linear_colorspace = linear_colorspace;
-			break;
-		}
-	}
-
-	if (nloaded_cubemap_textures >= MAX_LOADED_CUBEMAP_TEXTURES) {
-		printf("Unable to load cubemap texture '%s': max of %d textures are already loaded\n",
-			texture_filename_pos_x, nloaded_cubemap_textures);
-		pthread_mutex_unlock(&finished_loading_mutex);
-		return 0;
-	}
-
-	if (cube_texture_id != (GLuint) -1)
-		mark_texture_load_unused(cube_texture_id);
-	cube_texture_id = -1;
-	graph_dev_gen_texture_no_lock(1, &cube_texture_id);
-
-	mark_texture_load_pending(cube_texture_id);
-	pthread_mutex_unlock(&finished_loading_mutex);
-
-	struct graph_dev_image_load_request *r = calloc(1, sizeof(*r));
-	r->texture_id = cube_texture_id;
-	r->loaded_texture_index = loaded_texture_index;
-	r->request_type = GRAPH_DEV_CUBEMAP_LOAD;
-	r->is_inside = is_inside;
-	r->linear_colorspace = linear_colorspace;
-	for (int i = 0; i < 6; i++)
-		r->filename[i] = strdup(tex_filenames[i]);
-	r->flipVertical = 1;
-	r->flipHorizontal = 0;
-	r->pre_multiply_alpha = 1;
-	r->use_mipmaps = 1;
-
-	enqueue_image_load_request(r);
-	return (unsigned int) cube_texture_id;
-}
-
-static time_t get_file_modify_time(const char *filename)
-{
-	struct stat s;
-	if (stat(filename, &s) != 0)
-		return 0;
-	return s.st_mtime;
-}
-
-int graph_dev_reload_cubemap_textures(void)
-{
-	int failed = 0;
-
-	/* Build a list of requests to reload all the cubemap textures */
-	pthread_mutex_lock(&finished_loading_mutex);
-	int n = nloaded_cubemap_textures;
-	struct graph_dev_image_load_request **r = calloc(n, sizeof(*r));
-	if (!r) {
-		pthread_mutex_unlock(&finished_loading_mutex);
-		return -1;
-	}
-	for (int i = 0; i < n; i++) {
-		r[i] = calloc(1, sizeof(*r[i]));
-		if (!r[i])
-			continue;
-		r[i]->texture_id = loaded_cubemap_textures[i].texture_id;
-		r[i]->request_type = GRAPH_DEV_CUBEMAP_LOAD;
-		r[i]->is_inside = loaded_cubemap_textures[i].is_inside;
-		r[i]->linear_colorspace = loaded_cubemap_textures[i].linear_colorspace;
-		for (int j = 0; j < 6; j++) {
-			r[i]->filename[j] = strdup(loaded_cubemap_textures[i].filename[j]);
-		}
-		r[i]->flipVertical = 1;
-		r[i]->flipHorizontal = 0;
-		r[i]->pre_multiply_alpha = 1;
-		r[i]->use_mipmaps = 1;
-
-	}
-	pthread_mutex_unlock(&finished_loading_mutex);
-
-	/* Submit list of requests to work queue */
-	for (int i = 0; i < n; i++)
-		enqueue_image_load_request(r[i]);
-	/* the indivdual pointers within r[] will get freed after the work is processed
-	 * but we need to free r itself now.
-	 */
-	free(r);
-	return failed;
-}
 
 /* Load image data to GPU, image_data is not freed */
-static int texture_to_gpu_id(GLuint texture_number, char *image_data,
+int graph_dev_texture_to_gpu_id(GLuint texture_number, char *image_data,
 		int w, int h, int hasAlpha, int use_mipmaps, int linear_colorspace)
 {
 	GLint colorspace;
@@ -5821,185 +3867,11 @@ static int texture_to_gpu_id(GLuint texture_number, char *image_data,
 	return 0;
 }
 
-void graph_dev_free_image_load_request(struct graph_dev_image_load_request *r)
-{
-	if (!r)
-		return;
-	for (int i = 0; i < 6; i++) {
-		if (r->filename[i])
-			free(r->filename[i]);
-		if (r->image_data[i])
-			free(r->image_data[i]);
-	}
-	free(r);
-}
 
-unsigned int graph_dev_texture_to_gpu(struct graph_dev_image_load_request *r)
-{
-	if (r->request_type == GRAPH_DEV_CUBEMAP_LOAD)
-		return cubemap_texture_to_gpu(r);
 
-	if (texture_to_gpu_id(r->texture_id, r->image_data[0], r->w[0], r->h[0], r->hasAlpha[0],
-				r->use_mipmaps, r->linear_colorspace)) {
-		glDeleteTextures(1, (GLuint *) &r->texture_id);
-		fprintf(stderr, "Failed to load texture to gpu from '%s'\n", r->filename[0]);
-		return 0;
-	}
 
-	pthread_mutex_lock(&finished_loading_mutex);
-	int n = (r->loaded_texture_index != -1) ?  r->loaded_texture_index : nloaded_textures;
-	loaded_textures[n].texture_id = r->texture_id;
-	if (loaded_textures[n].filename)
-		free(loaded_textures[n].filename);
-	loaded_textures[n].filename = strdup(r->filename[0]);
-	loaded_textures[n].mtime = get_file_modify_time(r->filename[0]);
-	loaded_textures[n].last_mtime_change = 0;
-	loaded_textures[n].expired = 0;
-	loaded_textures[n].use_mipmaps = r->use_mipmaps;
-	loaded_textures[n].linear_colorspace = r->linear_colorspace;
 
-	if (r->loaded_texture_index == -1)
-		nloaded_textures++;
-	int tid = r->texture_id;
-	mark_texture_load_complete(tid);
-	pthread_mutex_unlock(&finished_loading_mutex);
-	graph_dev_free_image_load_request(r);
-	return (unsigned int) tid;
-}
 
-const char *graph_dev_get_texture_filename(unsigned int texture_id)
-{
-	int i;
-	pthread_mutex_lock(&finished_loading_mutex);
-	for (i = 0; i < nloaded_textures; i++) {
-		if (texture_id == loaded_textures[i].texture_id) {
-			char *fname = loaded_textures[i].filename;
-			pthread_mutex_unlock(&finished_loading_mutex);
-			/* FIXME: Racy to allow this to be used, why do I need this?
-			 * digging into it, it appears only to be used (eventually) by
-			 * material_nebula_write_to_file(), which isn't used anywhere?
-			 * Probably used at one point to create the data in
-			 * share/snis/material/nebula*.mat
-			 */
-			return fname;
-		}
-	}
-	pthread_mutex_unlock(&finished_loading_mutex);
-	return "";
-}
-
-int graph_dev_reload_textures(void)
-{
-	/* Build a list of requests to re-load all the textures */
-	pthread_mutex_lock(&finished_loading_mutex);
-	int n = nloaded_textures;
-	struct graph_dev_image_load_request **r = calloc(n, sizeof(*r));
-	for (int i = 0; i < n; i++) {
-		r[i] = calloc(1, sizeof(*r[i]));
-		r[i]->texture_id = loaded_textures[i].texture_id;
-		r[i]->loaded_texture_index = i;
-		r[i]->request_type = GRAPH_DEV_IMAGE_LOAD;
-		r[i]->filename[0] = strdup(loaded_textures[i].filename);
-		r[i]->flipVertical = 1;
-		r[i]->flipHorizontal = 0;
-		r[i]->pre_multiply_alpha = 1;
-		r[i]->linear_colorspace = loaded_textures[i].linear_colorspace;
-		r[i]->use_mipmaps = loaded_textures[i].use_mipmaps;
-	}
-	pthread_mutex_unlock(&finished_loading_mutex);
-
-	/* Submit the list of requests to re-load all the textures to work queue */
-	for (int i = 0; i < n; i++)
-		enqueue_image_load_request(r[i]);
-
-	/* the indivdual pointers within r[] will get freed after the work is processed
-	 * but we need to free r itself now.
-	 */
-	free(r);
-	return 0;
-}
-
-int graph_dev_reload_changed_textures(void)
-{
-	int n = 0;
-
-	/* Build a list of requests to reload changed textures */
-	pthread_mutex_lock(&finished_loading_mutex);
-	struct graph_dev_image_load_request **r = calloc(nloaded_textures, sizeof(*r));
-	for (int i = 0; i < nloaded_textures; i++) {
-		time_t mtime = get_file_modify_time(loaded_textures[i].filename);
-		if (loaded_textures[i].mtime != mtime) {
-			loaded_textures[i].mtime = mtime;
-			loaded_textures[i].last_mtime_change = time_now_double();
-		} else if (loaded_textures[i].last_mtime_change > 0 &&
-			time_now_double() - loaded_textures[i].last_mtime_change >= TEX_RELOAD_DELAY) {
-			printf("reloading texture '%s'\n", loaded_textures[i].filename);
-			r[n] = calloc(1, sizeof(*r[n]));
-			r[n]->texture_id = loaded_textures[i].texture_id;
-			r[n]->loaded_texture_index = i;
-			r[n]->request_type = GRAPH_DEV_IMAGE_LOAD;
-			r[n]->filename[0] = strdup(loaded_textures[i].filename);
-			r[n]->flipVertical = 1;
-			r[n]->flipHorizontal = 0;
-			r[n]->pre_multiply_alpha = 1;
-			r[n]->linear_colorspace = loaded_textures[i].linear_colorspace;
-			r[n]->use_mipmaps = loaded_textures[i].use_mipmaps;
-			n++;
-			loaded_textures[i].last_mtime_change = 0;
-		}
-	}
-	pthread_mutex_unlock(&finished_loading_mutex);
-
-	/* Submit list of requests to image loader work queue */
-	for (int i = 0; i < n; i++)
-		enqueue_image_load_request(r[i]);
-
-	/* the indivdual pointers within r[] will get freed after the work is processed
-	 * but we need to free r itself now.
-	 */
-	free(r);
-
-	return 0;
-}
-
-int graph_dev_reload_changed_cubemap_textures(void)
-{
-	int n = 0;
-	pthread_mutex_lock(&finished_loading_mutex);
-	struct graph_dev_image_load_request **r = calloc(nloaded_cubemap_textures, sizeof(*r));
-	for (int i = 0; i < nloaded_cubemap_textures; i++) {
-		time_t mtime = get_file_modify_time(loaded_cubemap_textures[i].filename[5]);
-		if (loaded_cubemap_textures[i].mtime != mtime) {
-			loaded_cubemap_textures[i].mtime = mtime;
-			loaded_cubemap_textures[i].last_mtime_change = time_now_double();
-		} else if (loaded_cubemap_textures[i].last_mtime_change > 0 &&
-			time_now_double() - loaded_cubemap_textures[i].last_mtime_change >=
-					CUBEMAP_TEX_RELOAD_DELAY) {
-			printf("reloading cubemap texture '%s'\n",
-				loaded_cubemap_textures[i].filename[0]);
-			loaded_cubemap_textures[i].last_mtime_change = 0;
-			r[n] = calloc(1, sizeof(*r[n]));
-			r[n]->texture_id = loaded_cubemap_textures[i].texture_id;
-			r[n]->loaded_texture_index = i;
-			r[n]->request_type = GRAPH_DEV_CUBEMAP_LOAD;
-			r[n]->is_inside = loaded_cubemap_textures[i].is_inside;
-			r[n]->linear_colorspace = loaded_cubemap_textures[i].linear_colorspace;
-			for (int j = 0; j < 6; j++)
-				r[n]->filename[j] = strdup(loaded_cubemap_textures[i].filename[j]);
-			r[n]->flipVertical = 1;
-			r[n]->flipHorizontal = 0;
-			r[n]->pre_multiply_alpha = 1;
-			r[n]->use_mipmaps = 1;
-			n++;
-		}
-	}
-	pthread_mutex_unlock(&finished_loading_mutex);
-
-	for (int i = 0; i < n; i++)
-		enqueue_image_load_request(r[i]);
-	free(r);
-	return 0;
-}
 
 /* returns 0 on success, -1 otherwise */
 int graph_dev_load_skybox_texture(
@@ -6094,22 +3966,6 @@ void graph_dev_draw_skybox(const struct mat44 *mat_vp)
 	glEnable(GL_CULL_FACE);
 }
 
-static void debug_menu_draw_item(char *item, int itemnumber, int grayed, int checked)
-{
-	int x = 15;
-	int y = 35 + itemnumber * 20;
-
-	if (grayed)
-		sng_set_foreground(GRAY75);
-	else
-		sng_set_foreground(WHITE);
-
-	graph_dev_draw_rectangle(0, x, y, 15, 15);
-	if (checked)
-		graph_dev_draw_rectangle(1, x + 2, y + 2, 11, 11);
-	sng_abs_xy_draw_string(item, NANO_FONT, (x + 20) / sgc.x_scale, (y + 10) / sgc.y_scale);
-}
-
 void graph_dev_display_debug_menu_show(void)
 {
 	sng_set_foreground(BLACK);
@@ -6142,16 +3998,6 @@ void graph_dev_display_debug_menu_show(void)
 	debug_menu_draw_item("FILMIC TONEMAPPING", 12, 0, filmic_tonemapping);
 	debug_menu_draw_item("CASCADED SHADOW MAPPING", 13, 0, graph_dev_shadow_map_enabled);
 	debug_menu_draw_item("PLANETS RECV CSM SHADOWS", 14, 0, graph_dev_planets_receive_csm_shadows);
-}
-
-static int selected_debug_item_checkbox(int n, int x, int y, int *toggle)
-{
-	if (x > 15 && x < 35 && y >= 35 + n * 20 && y <= 50 + n * 20) {
-		if (toggle)
-			*toggle = !*toggle;
-		return 1;
-	}
-	return 0;
 }
 
 int graph_dev_graph_dev_debug_menu_click(int x, int y)
@@ -6216,143 +4062,20 @@ int graph_dev_graph_dev_debug_menu_click(int x, int y)
 	return 0;
 }
 
-void graph_dev_grab_framebuffer(unsigned char **buffer, int *width, int *height)
-{
-	*buffer = malloc(4 * sgc.screen_x * sgc.screen_y);
-	*width = sgc.screen_x;
-	*height = sgc.screen_y;
-	glReadPixels(0, 0, sgc.screen_x, sgc.screen_y,
-			GL_RGBA, GL_UNSIGNED_BYTE, *buffer);
-}
-
 void graph_dev_set_tonemapping_gain(float tmg)
 {
 	if (tmg >= MIN_TONEMAPPING_GAIN && tmg <= MAX_TONEMAPPING_GAIN)
 		tonemapping_gain = tmg;
 }
 
-void graph_dev_set_error_texture(const char *error_texture_png)
-{
-	error_texture_file = strdup(error_texture_png);
-}
 
-void graph_dev_set_no_texture_mode()
-{
-	no_texture_mode = 1;
-	if (!error_texture_file) {
-		fprintf(stderr, "BUG at %s:%s:%d: error_texture_file is not set, but no_texture_mode set\n",
-			__FILE__, __func__, __LINE__);
-		fflush(stderr);
-	}
-}
 
-int graph_dev_texture_ready(int i)
-{
-	if (i < 0 || i >= MAX_LOADED_TEXTURES)
-		return 0;
-	if (i == 0)
-		return 1;
-	pthread_mutex_lock(&finished_loading_mutex);
-	int x = texture_finished_loading(i);
-	pthread_mutex_unlock(&finished_loading_mutex);
-	return x;
-}
 
-int graph_dev_textures_ready(int *tids)
-{
-	pthread_mutex_lock(&finished_loading_mutex);
-	for (int i = 0; tids[i] != -1; i++) {
-		if (tids[i] == 0)
-			continue;
-		if (!texture_finished_loading(tids[i])) {
-			pthread_mutex_unlock(&finished_loading_mutex);
-			return 0;
-		}
-	}
-	pthread_mutex_unlock(&finished_loading_mutex);
-	return 1;
-}
 
-/* Enqueue request to load a texture.  The texture will be loaded in another thread,
- * and the image data will appear in the loaded_images_wq work queue later on where
- * the main rendering thread can upload it to the GPU
- */
-static unsigned int graph_dev_load_texture_helper(const char *filename, int linear_colorspace, int use_mipmaps)
-{
-	GLuint texture_id;
-	int i;
 
-	/* See if we already loaded this texture */
-	pthread_mutex_lock(&finished_loading_mutex);
-	for (i = 0; i < nloaded_textures; i++) {
-		if (strcmp(filename, loaded_textures[i].filename) == 0) {
-			loaded_textures[i].expired = 0;
-			int tid = (int) loaded_textures[i].texture_id;
-			pthread_mutex_unlock(&finished_loading_mutex);
-			return tid;
-		}
-	}
 
-	/* See if we can re-use an expired texture id (not the actual texture_name though) */
-	int index = -1;
-	for (i = 0; i < nloaded_textures; i++) {
-		if (loaded_textures[i].expired) {
-			glBindTexture(GL_TEXTURE_2D, 0);
-			glDeleteTextures(1, &loaded_textures[i].texture_id);
-			fprintf(stderr, "Replacing %s with %s\n", loaded_textures[i].filename, filename);
-			if (loaded_textures[i].filename)
-				free(loaded_textures[i].filename);
-			loaded_textures[i].filename = strdup(filename);
-			loaded_textures[i].mtime = get_file_modify_time(filename);
-			loaded_textures[i].last_mtime_change = 0;
-			loaded_textures[i].expired = 0;
-			loaded_textures[i].use_mipmaps = use_mipmaps;
-			loaded_textures[i].linear_colorspace = linear_colorspace;
-			texture_id = loaded_textures[i].texture_id;
-			mark_texture_load_unused(texture_id);
-			index = i;
-			break;
-		}
-	}
-
-	graph_dev_gen_texture_no_lock(1, &texture_id);
-	mark_texture_load_pending(texture_id);
-	pthread_mutex_unlock(&finished_loading_mutex);
-
-	/* Queue up the image load request */
-	struct graph_dev_image_load_request *r = calloc(1, sizeof(*r));
-	r->texture_id = (int) texture_id;
-	r->loaded_texture_index = index;
-	r->request_type = GRAPH_DEV_IMAGE_LOAD;
-	r->filename[0] = strdup(filename);
-	r->flipVertical = 1;
-	r->flipHorizontal = 0;
-	r->pre_multiply_alpha = 1;
-	r->linear_colorspace = linear_colorspace;
-	r->use_mipmaps = use_mipmaps;
-
-	enqueue_image_load_request(r);
-	return texture_id;
-}
-
-unsigned int graph_dev_load_texture(const char *filename, int linear_colorspace)
-{
-	return graph_dev_load_texture_helper(filename, linear_colorspace, 1);
-}
-
-unsigned int graph_dev_load_texture_no_mipmaps(const char *filename, int linear_colorspace)
-{
-	return graph_dev_load_texture_helper(filename, linear_colorspace, 0);
-}
 
 /* Call this early on to wipe out garbage otherwise left in the window */
-void graph_dev_clear_window(void)
-{
-	glBindFramebuffer(GL_FRAMEBUFFER, 0);
-	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-	glClear(GL_COLOR_BUFFER_BIT);
-}
-
 void graph_dev_prepare_for_window(uint32_t *window_flags)
 {
 	SDL_GL_SetAttribute(SDL_GL_RED_SIZE, 5);
