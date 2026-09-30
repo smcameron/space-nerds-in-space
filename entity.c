@@ -2031,9 +2031,14 @@ struct mesh *entity_get_mesh(struct entity *e)
 	return e->m;
 }
 
+/* The mesh e is drawn with, however large it is on screen: render_entities() picks e->m afresh
+ * from the high and low poly meshes each frame, so setting e->m alone lasts one frame.  Call
+ * entity_set_low_poly_mesh() after, to have a different one for when e is small. */
 void entity_set_mesh(struct entity *e, struct mesh *m)
 {
 	e->m = m;
+	e->high_poly = m;
+	e->low_poly = m;
 }
 
 struct mesh *entity_get_low_poly_mesh(struct entity *e)
