@@ -623,7 +623,7 @@ _COMMONCLIENTOBJS= snis_ui_element.o snis_font.o snis_text_input.o \
 COMMONCLIENTOBJS=${COMMONOBJS} ${OGGOBJ} ${SNDOBJS} $(patsubst %,$(OD)/%,${_COMMONCLIENTOBJS}) 
 
 _CLIENTOBJS= shader.o ${GRAPH_OBJS} snis_graph.o snis_client.o joystick_config.o snis_xwindows_hacks.o png_utils.o \
-				black_hole_lens.o
+				black_hole_lens.o mesh_fracture.o
 CLIENTOBJS=${COMMONCLIENTOBJS} $(patsubst %,$(OD)/%,${_CLIENTOBJS})
 
 _SDLCLIENTOBJS=shader.o ${GRAPH_OBJS} snis_graph.o mesh_viewer.o \
@@ -1158,6 +1158,10 @@ $(OD)/mathutils.o:	mathutils.c Makefile ${ODT}
 $(OD)/black_hole_lens.o:	black_hole_lens.c black_hole_lens.h graph_dev.h quat.h mathutils.h ${ODT}
 	$(Q)$(SDLCOMPILE)
 
+# Breaking a ship's hull into the pieces it leaves: see mesh_fracture.h.
+$(OD)/mesh_fracture.o:	mesh_fracture.c mesh_fracture.h mesh.h mtwist.h Makefile ${ODT}
+	$(Q)$(COMPILE)
+
 $(OD)/crater.o:	crater.c crater.h Makefile ${ODT}
 	$(Q)$(COMPILE)
 
@@ -1539,8 +1543,14 @@ bin/test-obj-parser:	test-obj-parser.c mikktspace/mikktspace.o ${OD}/string-util
 		-lm test-obj-parser.c
 
 test:	bin/test-matrix bin/test-mathutils bin/test-space-partition bin/test_marshal bin/test-quat bin/test-fleet \
-	bin/test-mtwist bin/test-commodities bin/test_solarsystem_config
+	bin/test-mtwist bin/test-commodities bin/test_solarsystem_config bin/test_mesh_fracture
 	/bin/true	# Prevent make from running "$(CC) test.o".
+
+MESH_FRACTURE_TEST_OBJS=${OD}/mesh_fracture.o ${OD}/mesh.o ${OD}/mtwist.o ${OD}/mathutils.o ${OD}/quat.o \
+	${OD}/matrix.o ${OD}/graph_dev_mesh_stub.o ${OD}/open-simplex-noise.o mikktspace/mikktspace.o
+
+bin/test_mesh_fracture:	test_mesh_fracture.c ${MESH_FRACTURE_TEST_OBJS} Makefile ${BIN}
+	$(CC) ${BOUNDSFLAGS} -Wall -Wextra -o $@ test_mesh_fracture.c ${MESH_FRACTURE_TEST_OBJS} -lm
 
 bin/test_solarsystem_config:	test_solarsystem_config.c ${OD}/solarsystem_config.o ${OD}/string-utils.o ${OD}/stacktrace.o ${BIN}
 	$(CC) ${BOUNDSFLAGS} -o $@ $< ${OD}/solarsystem_config.o ${OD}/string-utils.o ${OD}/stacktrace.o
