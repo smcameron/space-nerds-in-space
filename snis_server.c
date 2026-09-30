@@ -1824,14 +1824,23 @@ static void derelict_collision_detection(void *derelict, void *object)
 		d->alive = 1;
 }
 
+/* Ticks after it is made before a derelict is slowed for the mining bot: long enough for the
+ * debris of its ship's death to burn away on the clients -- the largest chunk's half minute, a
+ * little jitter, and the last of its smoke.  See ship_death_wreck_tuning.life and smoke_life. */
+#define DERELICT_DAMPING_DELAY (36 * 10)
+
 static void derelict_move(struct snis_entity *o)
 {
 	set_object_location(o, o->x + o->vx, o->y + o->vy, o->z + o->vz);
 	o->timestamp = universe_timestamp;
 
-	/* Unrealistic, but slow derelicts so the mining bot can catch them */
+	/* Unrealistic, but slow derelicts so the mining bot can catch them -- though not until the
+	 * debris of the ship's death has burned away.  The clients draw that debris flying on at the
+	 * ship's velocity; a wreck braked from the first tick would fall back through it, and out
+	 * of the back of its own debris field. */
 	float v = sqrtf(o->vx * o->vx + o->vy * o->vy + o->vz * o->vz);
-	if (v > ship_type[SHIP_CLASS_ASTEROIDMINER].max_speed * 0.8) {
+	if (universe_timestamp - o->tsd.derelict.born >= DERELICT_DAMPING_DELAY &&
+		v > ship_type[SHIP_CLASS_ASTEROIDMINER].max_speed * 0.8) {
 		o->vx *= 0.99;
 		o->vy *= 0.99;
 		o->vz *= 0.99;
