@@ -329,7 +329,7 @@ static void triangle_area_and_centroid(struct soup_tri *t)
 /* Build one piece's mesh from the soup triangles in cell, centred on their area-weighted
  * centroid. */
 static struct mesh *build_piece(const struct mesh *src, const struct soup *s, int cell,
-				float *offset, float *area)
+				float *offset, float *area, int defer_upload)
 {
 	struct mesh *m;
 	float cx = 0, cy = 0, cz = 0, total = 0;
@@ -434,7 +434,8 @@ static struct mesh *build_piece(const struct mesh *src, const struct soup *s, in
 	m->material = NULL;
 	m->radius = mesh_compute_radius(m);
 	snprintf(m->name, sizeof(m->name), "%.200s piece %d", src->name, cell);
-	mesh_graph_dev_init(m);
+	if (!defer_upload)
+		mesh_graph_dev_init(m);
 	return m;
 }
 
@@ -542,7 +543,8 @@ int mesh_fracture(const struct mesh *src, const struct mesh_fracture_params *par
 	free(seed_pos);
 
 	for (i = 0; i < npieces; i++) {
-		struct mesh *m = build_piece(src, &s, i, piece[count].offset, &piece[count].area);
+		struct mesh *m = build_piece(src, &s, i, piece[count].offset, &piece[count].area,
+						params->defer_upload);
 
 		if (!m) {
 			if (i == 0)

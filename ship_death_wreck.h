@@ -281,6 +281,12 @@ GLOBAL void ship_death_wreck_teardown(void);
  * ship_death_fracture_free() either way. */
 GLOBAL int ship_death_fracture_build(struct ship_death_fracture *fr, const struct mesh *ship,
 				uint32_t seed);
+/* The same, in two halves: the breaking, which touches no GPU and so may be done on any thread,
+ * and sending the pieces to the GPU, on the thread that draws.  Several fractures may be built
+ * at once on different threads; the tuning must not change meanwhile. */
+GLOBAL int ship_death_fracture_build_deferred(struct ship_death_fracture *fr,
+				const struct mesh *ship, uint32_t seed);
+GLOBAL void ship_death_fracture_upload(struct ship_death_fracture *fr);
 GLOBAL void ship_death_fracture_free(struct ship_death_fracture *fr);
 
 /* One death of the fractured ship, blown apart by fireball and flying as seed says.  0 on

@@ -58,6 +58,10 @@ struct mesh_fracture_params {
 	float jaggedness;	/* how far the tears wander, as a fraction of the hull's radius */
 	float grain;		/* longest triangle edge after subdividing, fraction of radius */
 	uint32_t seed;
+	/* Leave the pieces off the GPU: for breaking a ship on a thread other than the one that
+	 * draws, which then sends each piece with mesh_graph_dev_init().  0, the default, sends
+	 * them as they are made. */
+	int defer_upload;
 };
 
 struct mesh_fracture_piece {

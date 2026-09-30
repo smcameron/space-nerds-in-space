@@ -266,18 +266,61 @@ static void measure_flow(struct ship_death_fracture *fr, int i)
 	}
 }
 
-/* The vertex list being sorted, for by_edge_distance().  qsort offers no context pointer. */
-static const struct mesh *sorting;
+/* A vertex and its distance to the torn edge, for sorting by that distance -- nearest first, and
+ * in the order they are in the mesh where they tie -- with no global for qsort's comparison to
+ * look them up in, so fractures can be built on more than one thread. */
+struct edge_rank {
+	float w;
+	int i;
+};
 
 static int by_edge_distance(const void *a, const void *b)
 {
-	float wa = sorting->v[*(const int *) a].w;
-	float wb = sorting->v[*(const int *) b].w;
+	const struct edge_rank *ra = a, *rb = b;
 
-	return (wa > wb) - (wa < wb);
+	if (ra->w != rb->w)
+		return (ra->w > rb->w) - (ra->w < rb->w);
+	return (ra->i > rb->i) - (ra->i < rb->i);
+}
+
+static void order_by_edge_distance(const struct mesh *m, int *order)
+{
+	struct edge_rank *rank = malloc(sizeof(*rank) * m->nvertices);
+	int j;
+
+	if (!rank) {
+		for (j = 0; j < m->nvertices; j++)
+			order[j] = j;
+		return;
+	}
+	for (j = 0; j < m->nvertices; j++) {
+		rank[j].w = m->v[j].w;
+		rank[j].i = j;
+	}
+	qsort(rank, m->nvertices, sizeof(*rank), by_edge_distance);
+	for (j = 0; j < m->nvertices; j++)
+		order[j] = rank[j].i;
+	free(rank);
 }
 
 int ship_death_fracture_build(struct ship_death_fracture *fr, const struct mesh *ship,
+				uint32_t seed)
+{
+	int rc = ship_death_fracture_build_deferred(fr, ship, seed);
+
+	ship_death_fracture_upload(fr);
+	return rc;
+}
+
+void ship_death_fracture_upload(struct ship_death_fracture *fr)
+{
+	int i;
+
+	for (i = 0; i < fr->npieces; i++)
+		mesh_graph_dev_init(fr->piece[i].m);
+}
+
+int ship_death_fracture_build_deferred(struct ship_death_fracture *fr, const struct mesh *ship,
 				uint32_t seed)
 {
 	struct ship_death_wreck_tuning *tu = &ship_death_wreck_tuning;
@@ -291,6 +334,7 @@ int ship_death_fracture_build(struct ship_death_fracture *fr, const struct mesh 
 	params.jaggedness = tu->jaggedness;
 	params.grain = tu->grain;
 	params.seed = seed;
+	params.defer_upload = 1;
 	fr->npieces = mesh_fracture(ship, &params, fr->piece);
 
 	material_init_wreck(&fr->material);
@@ -313,10 +357,7 @@ int ship_death_fracture_build(struct ship_death_fracture *fr, const struct mesh 
 		fr->order[i] = malloc(sizeof(*fr->order[i]) * m->nvertices);
 		if (!fr->order[i])
 			continue;
-		for (j = 0; j < m->nvertices; j++)
-			fr->order[i][j] = j;
-		sorting = m;
-		qsort(fr->order[i], m->nvertices, sizeof(*fr->order[i]), by_edge_distance);
+		order_by_edge_distance(m, fr->order[i]);
 	}
 	for (i = 0; i < fr->npieces; i++) {
 		measure_centres(fr, i);
