@@ -744,6 +744,7 @@ been deleted, and the client should therefore delete their copy.
 <tr><td>0</td><td>b</td><td>113</td></tr>
 <tr><td>1</td><td>w</td><td>Object ID</td></tr>
 <tr><td>5</td><td>w</td><td>Timestamp</td></tr>
+<tr><td>9</td><td>w</td><td>related id: the black hole that caused it, or the ship that died, or -1</td></tr>
 <tr><td>13</td><td>S</td><td>x</td><td>UNIVERSE_DIM</td></tr>
 <tr><td>17</td><td>S</td><td>y</td><td>UNIVERSE_DIM</td></tr>
 <tr><td>21</td><td>S</td><td>z</td><td>UNIVERSE_DIM</td></tr>
@@ -752,7 +753,16 @@ been deleted, and the client should therefore delete their copy.
 <tr><td>29</td><td>h</td><td>explosion time</td></tr>
 <tr><td>31</td><td>b</td><td>victim type</td></tr>
 <tr><td>32</td><td>b</td><td>explosion type (0 = regular, 1 = blackhole)</td></tr>
+<tr><td>33</td><td>S</td><td>vx, per tick</td><td>EXPLOSION_VELOCITY_SCALE</td></tr>
+<tr><td>37</td><td>S</td><td>vy, per tick</td><td>EXPLOSION_VELOCITY_SCALE</td></tr>
+<tr><td>41</td><td>S</td><td>vz, per tick</td><td>EXPLOSION_VELOCITY_SCALE</td></tr>
+<tr><td>45</td><td>Q</td><td>orientation</td></tr>
+<tr><td>53</td><td>b</td><td>ship type</td></tr>
+<tr><td>54</td><td>b</td><td>flags: 1 = a ship's death, 2 = it left a derelict</td></tr>
 </table>
+<p>When the flags say a ship died, velocity, orientation and ship type are the ship's as it
+died, and related id is the ship's id; the ship itself is deleted at the same moment.
+Otherwise they are zero, identity and zero.
 
 <h4>114 Play Sound</h4> (Server to Client)
 <p>Sound numbers are defined in sounds.h
@@ -1836,6 +1846,10 @@ client plus clients on the same bridge with role main.
 <tr><td>13</td><td>S</td><td>y</td><td>UNIVERSE_DIM</td></tr>
 <tr><td>17</td><td>S</td><td>z</td><td>UNIVERSE_DIM</td></tr>
 <tr><td>21</td><td>b</td><td>ship type</td></tr>
+<tr><td>22</td><td>b</td><td>fuel</td></tr>
+<tr><td>23</td><td>b</td><td>oxygen</td></tr>
+<tr><td>24</td><td>w</td><td>original ship id</td></tr>
+<tr><td>28</td><td>Q</td><td>orientation</td></tr>
 </table>
 
 <h4>179 Demon Clear All</h4> (Client to Server)
