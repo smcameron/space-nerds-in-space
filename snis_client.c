@@ -122,6 +122,9 @@
 #include "matrix.h"
 #include "graph_dev.h"
 #include "black_hole_lens.h"
+#include "ship_death_fireball.h"
+#include "ship_death_shrapnel.h"
+#include "ship_death_wreck.h"
 #include "ui_colors.h"
 #include "pthread_util.h"
 #include "snis_tweak.h"
@@ -2381,6 +2384,7 @@ static int update_derelict(uint32_t id, uint32_t timestamp, double x, double y, 
 	go[i].tsd.derelict.fuel = fuel;
 	go[i].tsd.derelict.oxygen = oxygen;
 	go[i].tsd.derelict.orig_ship_id = orig_ship_id;
+	go[i].tsd.derelict.shiptype = ship_kind;
 	return 0;
 }
 
@@ -2981,6 +2985,383 @@ static inline void spin_cargo_container(double timestamp, struct snis_entity *o)
 	arbitrary_spin(timestamp, o, &o->tsd.cargo_container.rotational_velocity);
 }
 
+/* A SHIP'S DEATH: the fireball, the shrapnel it throws, and the ship broken into the derelict and
+ * chunks that burn away.  ship_death.h has the effect itself; this is the game's side of it --
+ * which way a ship breaks, where each death is, and each frame's drawables as entities.
+ *
+ * Every bridge screen draws a death the same way: the fracture is picked by the ship's type and
+ * the victim's id, the pieces and shards fly as the id says, and the clock runs from the
+ * server's timestamp.  The derelict, when there is one, is the server's object, drawn as the
+ * fracture's core; see ship_death_wreck.core_pose.
+ *
+ * Fractures are built the first time they are wanted, not at load: all of them for every ship
+ * type take seconds and millions of triangles, and a game sees a few.  They must be built here,
+ * on the thread that draws, since they are sent to the GPU; so the network thread only asks for
+ * a death, and the drawing starts it. */
+#define SHIP_DEATH_FRACTURES 4		/* ways each type of ship breaks */
+#define MAX_SHIP_DEATHS 8		/* at once; the oldest goes to make room */
+
+struct ship_fracture {
+	int state;			/* 0 not tried yet, 1 built, -1 failed */
+	struct ship_death_fracture fracture;
+	struct mesh *derelict;		/* the core, turning about the ship's origin, as the derelict does */
+	struct material cold;		/* the core's material long after */
+};
+static struct ship_fracture *ship_fracture;	/* nshiptypes * SHIP_DEATH_FRACTURES */
+static int ship_death_ready;		/* the renderer draws it and the modules are set up */
+
+struct ship_death_request {
+	uint32_t victim_id;
+	uint32_t flash;			/* universe timestamp, ticks */
+	int shiptype;
+	int leaves_derelict;
+	union vec3 pos;
+	union vec3 vel;			/* world units a tick */
+	union quat orientation;
+};
+static struct ship_death_request ship_death_request[MAX_SHIP_DEATHS];
+static int nship_death_requests;
+
+struct ship_death_instance {
+	int active;
+	struct ship_death_request r;
+	struct ship_fracture *sf;	/* NULL if the ship could not be broken: fire and shards only */
+	float end;			/* seconds after the flash that it is all over */
+	struct ship_death_fireball fireball;
+	struct ship_death_shrapnel shrapnel;
+	struct ship_death_wreck wreck;
+	/* This frame's: seconds since the flash, and the derelict, where it has got to. */
+	float t;
+	int derelict;			/* its index in go[], or -1 */
+	union vec3 derelict_pos;
+	union quat derelict_spin;
+	struct ship_death_frame frame;
+	struct entity *entity[SHIP_DEATH_MAX_DRAWABLES];
+	int nentities;
+};
+static struct ship_death_instance ship_death[MAX_SHIP_DEATHS];
+
+/* Once, at load, after the ship meshes: nothing is drawn by it unless this works. */
+static void setup_ship_death(void)
+{
+	if (!graph_dev_draws_ship_death())
+		return;
+	ship_fracture = calloc((size_t) nshiptypes * SHIP_DEATH_FRACTURES, sizeof(*ship_fracture));
+	if (!ship_fracture)
+		return;
+	if (ship_death_fireball_setup() != 0 || ship_death_shrapnel_setup() != 0 ||
+		ship_death_wreck_setup() != 0) {
+		fprintf(stderr, "snis_client: ship deaths could not be set up; sparks instead\n");
+		return;
+	}
+	ship_death_ready = 1;
+}
+
+/* How the ship of type shiptype whose id is id breaks, built if it has not been.  NULL if it
+ * cannot be. */
+static struct ship_fracture *get_ship_fracture(int shiptype, uint32_t id)
+{
+	struct ship_fracture *sf;
+	struct mesh_fracture_piece *core;
+	int i;
+
+	if (!ship_death_ready || shiptype < 0 || shiptype >= nshiptypes)
+		return NULL;
+	sf = &ship_fracture[shiptype * SHIP_DEATH_FRACTURES + id % SHIP_DEATH_FRACTURES];
+	if (sf->state != 0)
+		return sf->state > 0 ? sf : NULL;
+	sf->state = -1;
+	if (ship_death_fracture_build(&sf->fracture, ship_mesh_map[shiptype],
+				(uint32_t) (sf - ship_fracture) + 1) != 0)
+		goto fail;
+	/* The core is piece 0, about its own middle; the derelict turns about the ship's. */
+	core = &sf->fracture.piece[0];
+	sf->derelict = mesh_duplicate(core->m);
+	if (!sf->derelict)
+		goto fail;
+	for (i = 0; i < sf->derelict->nvertices; i++) {
+		sf->derelict->v[i].x += core->offset[0];
+		sf->derelict->v[i].y += core->offset[1];
+		sf->derelict->v[i].z += core->offset[2];
+	}
+	sf->derelict->radius = mesh_compute_radius(sf->derelict);
+	mesh_graph_dev_init(sf->derelict);
+	ship_death_fracture_cold_material(&sf->fracture, &sf->cold);
+	sf->state = 1;
+	return sf;
+fail:
+	ship_death_fracture_free(&sf->fracture);
+	return NULL;
+}
+
+/* A derelict is its ship's core, once the drawing thread has broken the ship: until then, and
+ * where the renderer cannot draw a wreck, it is the old derelict mesh. */
+static void derelict_wear_its_fracture(struct snis_entity *o)
+{
+	struct ship_fracture *sf;
+
+	if (!o->entity || !ship_death_ready)
+		return;
+	sf = get_ship_fracture(o->tsd.derelict.shiptype % nshiptypes, o->tsd.derelict.orig_ship_id);
+	if (!sf || entity_get_mesh(o->entity) == sf->derelict)
+		return;
+	entity_set_mesh(o->entity, sf->derelict);
+	update_entity_material(o->entity, &sf->cold);
+}
+
+/* A ship died: see EXPLOSION_FLAG_SHIP_DEATH.  From the network thread, holding universe_mutex;
+ * the drawing thread starts it.  Returns 0 if ship deaths are not drawn here, and the caller
+ * makes sparks instead. */
+static int request_ship_death(uint32_t victim_id, uint32_t flash, double x, double y, double z,
+				const union vec3 *v, const union quat *orientation, int shiptype,
+				int leaves_derelict)
+{
+	struct ship_death_request *r;
+
+	if (!ship_death_ready)
+		return 0;
+	if (nship_death_requests >= MAX_SHIP_DEATHS)
+		return 1;	/* more at once than can be drawn: this one goes unseen */
+	r = &ship_death_request[nship_death_requests++];
+	r->victim_id = victim_id;
+	r->flash = flash;
+	r->shiptype = shiptype % nshiptypes;
+	r->leaves_derelict = leaves_derelict;
+	vec3_init(&r->pos, x, y, z);
+	r->vel = *v;
+	r->orientation = *orientation;
+	return 1;
+}
+
+static void end_ship_death(struct ship_death_instance *d)
+{
+	int i;
+
+	if (!d->active)
+		return;
+	/* The derelict cools to its everyday look. */
+	i = d->derelict;
+	if (i >= 0 && go[i].alive && go[i].type == OBJTYPE_DERELICT && go[i].entity && d->sf &&
+			go[i].tsd.derelict.orig_ship_id == d->r.victim_id)
+		update_entity_material(go[i].entity, &d->sf->cold);
+	ship_death_shrapnel_fini(&d->shrapnel);
+	if (d->sf)
+		ship_death_wreck_fini(&d->wreck);
+	d->active = 0;
+}
+
+/* Where the derelict was, s seconds after the flash, and which way up: see
+ * ship_death_wreck.core_pose.  The server turns it from the ship's orientation by its own spin
+ * since the flash, so that is exact; where it is has only this frame's position to go on, so
+ * it is taken to have gone there from the flash in a straight line. */
+static int ship_death_core_pose(void *cookie, float s, union vec3 *pos, union quat *orientation)
+{
+	struct ship_death_instance *d = cookie;
+	union quat spun;
+	float f;
+
+	if (d->derelict < 0)
+		return 0;
+	f = d->t > 0.01f ? fminf(fmaxf(s / d->t, 0.0f), 1.0f) : 1.0f;
+	vec3_sub(pos, &d->derelict_pos, &d->r.pos);
+	vec3_mul_self(pos, f);
+	vec3_add_self(pos, &d->r.pos);
+	compute_arbitrary_spin((double) s * UNIVERSE_TICKS_PER_SECOND, &spun, &d->derelict_spin);
+	quat_mul(orientation, &spun, &d->r.orientation);
+	quat_normalize_self(orientation);
+	return 1;
+}
+
+static void start_ship_death(const struct ship_death_request *r)
+{
+	struct ship_death_instance *d = NULL;
+	int i;
+
+	for (i = 0; i < MAX_SHIP_DEATHS; i++)
+		if (!ship_death[i].active) {
+			d = &ship_death[i];
+			break;
+		}
+	if (!d) {
+		/* The oldest goes to make room. */
+		d = &ship_death[0];
+		for (i = 1; i < MAX_SHIP_DEATHS; i++)
+			if ((int32_t) (ship_death[i].r.flash - d->r.flash) < 0)
+				d = &ship_death[i];
+		end_ship_death(d);
+	}
+	d->r = *r;
+	d->derelict = -1;
+	ship_death_fireball_init(&d->fireball, &r->pos, ship_mesh_map[r->shiptype]->radius,
+				(float) (r->victim_id % 1000));
+	if (ship_death_shrapnel_init(&d->shrapnel, &d->fireball, r->victim_id) != 0)
+		return;
+	d->end = fmaxf(ship_death_fireball_tuning.lifetime, ship_death_shrapnel_end(&d->shrapnel));
+	d->sf = get_ship_fracture(r->shiptype, r->victim_id);
+	if (d->sf) {
+		if (ship_death_wreck_init(&d->wreck, &d->fireball, &d->sf->fracture,
+					r->victim_id) != 0) {
+			ship_death_shrapnel_fini(&d->shrapnel);
+			return;
+		}
+		d->wreck.orientation = r->orientation;
+		if (r->leaves_derelict) {
+			d->wreck.core_pose = ship_death_core_pose;
+			d->wreck.core_cookie = d;
+		}
+		d->end = fmaxf(d->end, ship_death_wreck_end(&d->wreck));
+	}
+	d->active = 1;
+}
+
+/* This frame's derelict of death d, if the server has told us of it yet. */
+static void find_ship_death_derelict(struct ship_death_instance *d)
+{
+	int i;
+
+	if (!d->r.leaves_derelict)
+		return;
+	i = d->derelict;
+	if (i < 0 || !go[i].alive || go[i].type != OBJTYPE_DERELICT ||
+			go[i].tsd.derelict.orig_ship_id != d->r.victim_id) {
+		d->derelict = -1;
+		for (i = 0; i <= snis_object_pool_highest_object(pool); i++)
+			if (go[i].alive && go[i].type == OBJTYPE_DERELICT &&
+					go[i].tsd.derelict.orig_ship_id == d->r.victim_id) {
+				d->derelict = i;
+				break;
+			}
+		if (d->derelict < 0)
+			return;
+	}
+	vec3_init(&d->derelict_pos, go[i].x, go[i].y, go[i].z);
+	d->derelict_spin = random_spin[go[i].id % NRANDOM_SPINS];
+}
+
+/* Where cx's camera sees from, as the ship_death modules want it. */
+static void ship_death_view_from_camera(struct entity_context *cx, struct ship_death_view *view)
+{
+	float x, y, z, lx, ly, lz, ux, uy, uz, near, far, angle_of_view;
+	int xvpixels, yvpixels;
+
+	camera_get_pos(cx, &x, &y, &z);
+	camera_get_look_at(cx, &lx, &ly, &lz);
+	camera_get_up_direction(cx, &ux, &uy, &uz);
+	camera_get_parameters(cx, &near, &far, &xvpixels, &yvpixels, &angle_of_view);
+	vec3_init(&view->eye, x, y, z);
+	vec3_init(&view->forward, lx - x, ly - y, lz - z);
+	if (vec3_magnitude(&view->forward) > 0.0f)
+		vec3_normalize_self(&view->forward);
+	else
+		vec3_init(&view->forward, 1.0f, 0.0f, 0.0f);
+	vec3_init(&view->up, ux, uy, uz);
+	view->pixels_per_unit = (float) yvpixels / (2.0f * tanf(0.5f * angle_of_view));
+}
+
+/* One death's drawables, as entities for this frame.  Returns 0 once the entities run out. */
+static int add_ship_death_frame(struct entity_context *cx, struct ship_death_instance *d)
+{
+	int i;
+
+	for (i = 0; i < d->frame.n; i++) {
+		struct ship_death_drawable *s = &d->frame.d[i];
+		struct entity *e;
+
+		/* Nothing else in the game has a second light; a wreck's piece carries it in its
+		 * material, which is its own. */
+		if (s->material && s->material->type == MATERIAL_WRECK) {
+			struct material_wreck *w = &s->material->wreck;
+
+			w->aux_light_pos[0] = s->aux_light_pos.v.x;
+			w->aux_light_pos[1] = s->aux_light_pos.v.y;
+			w->aux_light_pos[2] = s->aux_light_pos.v.z;
+			memcpy(w->aux_light_color, s->aux_light_color, sizeof(w->aux_light_color));
+			w->aux_light_wrap = s->aux_light_wrap;
+		}
+		/* A mesh whose contents change -- the particle batch, rebuilt every frame. */
+		if (s->mesh_generation)
+			mesh_graph_dev_init(s->m);
+		e = add_entity(cx, s->m, s->pos.v.x, s->pos.v.y, s->pos.v.z, WHITE);
+		if (!e)
+			return 0;
+		d->entity[d->nentities++] = e;
+		update_entity_orientation(e, &s->orientation);
+		update_entity_scale(e, s->scale);
+		if (s->material)
+			update_entity_material(e, s->material);
+		if (s->no_cast_shadow)
+			update_entity_shadow_casting(e, 0);
+	}
+	return 1;
+}
+
+/* Every ship's death this frame, into cx, before it is rendered; take them out again after with
+ * remove_ship_death_entities().  Holding universe_mutex. */
+static void add_ship_death_entities(struct entity_context *cx)
+{
+	struct ship_death_view view;
+	double now;
+	int i;
+
+	if (!ship_death_ready)
+		return;
+	for (i = 0; i < nship_death_requests; i++)
+		start_ship_death(&ship_death_request[i]);
+	nship_death_requests = 0;
+
+	ship_death_view_from_camera(cx, &view);
+	now = universe_timestamp();
+	for (i = 0; i < MAX_SHIP_DEATHS; i++) {
+		struct ship_death_instance *d = &ship_death[i];
+		union vec3 moved;
+
+		d->nentities = 0;
+		if (!d->active)
+			continue;
+		d->t = (float) ((now - (double) d->r.flash) / UNIVERSE_TICKS_PER_SECOND);
+		if (d->t < 0.0f)
+			d->t = 0.0f;
+		if (d->t > d->end) {
+			end_ship_death(d);
+			continue;
+		}
+		/* Everything it threw carries on at the ship's velocity; it is all worked out about
+		 * the fireball's centre. */
+		vec3_mul(&moved, &d->r.vel, d->t * UNIVERSE_TICKS_PER_SECOND);
+		vec3_add(&d->fireball.pos, &d->r.pos, &moved);
+		ship_death_fireball_set_age(&d->fireball,
+				fminf(d->t / ship_death_fireball_tuning.lifetime, 1.0f));
+
+		ship_death_frame_clear(&d->frame);
+		if (d->fireball.age < 1.0f)
+			ship_death_fireball_draw(&d->fireball, &d->frame);
+		ship_death_shrapnel_draw(&d->shrapnel, d->t, &view, &d->frame);
+		if (d->sf) {
+			find_ship_death_derelict(d);
+			ship_death_wreck_draw(&d->wreck, d->t, &view, &d->frame);
+			if (d->derelict >= 0 && go[d->derelict].entity) {
+				struct material *m = ship_death_wreck_core_material(&d->wreck);
+
+				derelict_wear_its_fracture(&go[d->derelict]);
+				update_entity_material(go[d->derelict].entity, m ? m : &d->sf->cold);
+			}
+		}
+		if (!add_ship_death_frame(cx, d))
+			break;
+	}
+}
+
+static void remove_ship_death_entities(struct entity_context *cx)
+{
+	int i, j;
+
+	for (i = 0; i < MAX_SHIP_DEATHS; i++) {
+		for (j = 0; j < ship_death[i].nentities; j++)
+			remove_entity(cx, ship_death[i].entity[j]);
+		ship_death[i].nentities = 0;
+	}
+}
+
 typedef void(*interpolate_update_func)(double timestamp, struct snis_entity *o, int visible,
 	int from_index, int to_index, float t);
 
@@ -3473,6 +3854,7 @@ static void move_objects(void)
 		case OBJTYPE_DERELICT:
 			/* The server turns it, from the way its ship was facing as it died. */
 			move_object(timestamp, o, &interpolate_oriented_object);
+			derelict_wear_its_fracture(o);
 			update_shading_planet(o);
 			break;
 		case OBJTYPE_LASERBEAM:
@@ -3814,6 +4196,11 @@ static int update_explosion(uint32_t id, uint32_t timestamp, uint32_t related_id
 		go[i].vz = v->v.z;
 		go[i].tsd.explosion.shiptype = shiptype;
 		go[i].tsd.explosion.flags = flags;
+		/* A ship's death is drawn as one, where the renderer can; sparks otherwise. */
+		if ((flags & EXPLOSION_FLAG_SHIP_DEATH) &&
+			request_ship_death(related_id, timestamp, x, y, z, v, orientation, shiptype,
+						!!(flags & EXPLOSION_FLAG_DERELICT)))
+			return 0;
 		do_explosion(related_id, x, y, z, nsparks, velocity, (int) time, victim_type, explosion_type);
 	}
 	return 0;
@@ -10332,7 +10719,9 @@ static void show_weapons_camera_view(void)
 				o->tsd.ship.shiptype, o->tsd.ship.power_data.impulse.i, 0);
 
 	show_lens_flare(o, &cam_pos, &adjusted_cam_orientation); /* this will be using data from last frame */
+	add_ship_death_entities(ecx);
 	render_entities(ecx);
+	remove_ship_death_entities(ecx);
 	remove_lens_flare_entities();
 
 	/* Show targeting aids */
@@ -10775,7 +11164,9 @@ static void show_mainscreen(void)
 
 	pthread_mutex_lock(&universe_mutex);
 	show_lens_flare(o, &cam_pos, &camera_orientation); /* this will be using data from last frame */
+	add_ship_death_entities(ecx);
 	render_entities(ecx);
+	remove_ship_death_entities(ecx);
 	remove_lens_flare_entities();
 
 	/* if we added the ship into the scene, remove it now */
@@ -26169,6 +26560,7 @@ static void init_meshes(void)
 		mesh_scale(ship_mesh_map[i], SHIP_MESH_SCALE * ship_type[i].extra_scaling);
 		derelict_mesh[i] = make_derelict_mesh(ship_mesh_map[i]);
 	}
+	setup_ship_death();
 	update_splash_progress(90);
 
 #ifndef WITHOUTOPENGL
