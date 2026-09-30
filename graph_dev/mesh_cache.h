@@ -55,6 +55,11 @@ struct vertex_triangle_buffer_data {
 	union vec2 texture_coord;
 	union vec3 tangent;
 	union vec3 bitangent;
+	/* The vertex's w, which the renderers otherwise ignore: a broken ship's pieces carry
+	 * each vertex's distance to the torn edge in it (see mesh_fracture.h), and a particle
+	 * batch its particles' kind and seed (see particle_batch.h).  Their shaders read it as
+	 * a_Edge; every other mesh has a value no shader reads. */
+	float w;
 };
 
 struct vertex_color_buffer_data {

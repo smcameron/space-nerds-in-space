@@ -358,6 +358,82 @@ void setup_exhaust_plume_shader(struct graph_dev_gl_exhaust_plume_shader *shader
 	shader->tonemapping_gain_id = glGetUniformLocation(shader->program_id, "u_TonemappingGain");
 }
 
+/* One of a ship's death's .shader files -- both stages in one, picked by INCLUDE_VS and
+ * INCLUDE_FS -- with the filmic tonemapper in front of it. */
+static GLuint load_ship_death_shader(const char *filename)
+{
+	const char *vert_header = UNIVERSAL_SHADER_HEADER "#define INCLUDE_VS 1\n"
+					FILMIC_TONEMAPPING;
+	const char *frag_header = UNIVERSAL_SHADER_HEADER "#define INCLUDE_FS 1\n"
+					FILMIC_TONEMAPPING;
+	const char *filenames[] = { filename };
+
+	return load_concat_shaders(shader_directory, vert_header, 1, filenames,
+				frag_header, 1, filenames);
+}
+
+void setup_shrapnel_shader(struct graph_dev_gl_shrapnel_shader *shader)
+{
+	GLuint id;
+
+	maybe_unload_shader(&shader->meta, &shader->program_id);
+	id = load_ship_death_shader("shrapnel.shader");
+	shader->program_id = id;
+	graph_dev_gen_vao(&shader->vao_id);
+
+	shader->mvp_matrix_id = glGetUniformLocation(id, "u_MVPMatrix");
+	shader->model_matrix_id = glGetUniformLocation(id, "u_ModelMatrix");
+	shader->vertex_position_id = glGetAttribLocation(id, "a_Position");
+	shader->vertex_normal_id = glGetAttribLocation(id, "a_Normal");
+	shader->light_pos_id = glGetUniformLocation(id, "u_LightPos");
+	shader->star_tint_id = glGetUniformLocation(id, "u_StarTint");
+	shader->ambient_id = glGetUniformLocation(id, "u_Ambient");
+	shader->blackbody_id = glGetUniformLocation(id, "u_Blackbody");
+	shader->temperature_id = glGetUniformLocation(id, "u_Temperature");
+	shader->brightness_id = glGetUniformLocation(id, "u_Brightness");
+	shader->albedo_id = glGetUniformLocation(id, "u_Albedo");
+	shader->filmic_tonemapping_id = glGetUniformLocation(id, "u_FilmicTonemapping");
+	shader->tonemapping_gain_id = glGetUniformLocation(id, "u_TonemappingGain");
+}
+
+void setup_wreck_shader(struct graph_dev_gl_wreck_shader *shader)
+{
+	GLuint id;
+
+	maybe_unload_shader(&shader->meta, &shader->program_id);
+	id = load_ship_death_shader("wreck.shader");
+	shader->program_id = id;
+	graph_dev_gen_vao(&shader->vao_id);
+
+	shader->mvp_matrix_id = glGetUniformLocation(id, "u_MVPMatrix");
+	shader->model_matrix_id = glGetUniformLocation(id, "u_ModelMatrix");
+	shader->vertex_position_id = glGetAttribLocation(id, "a_Position");
+	shader->vertex_normal_id = glGetAttribLocation(id, "a_Normal");
+	shader->texture_coord_id = glGetAttribLocation(id, "a_TexCoord");
+	shader->edge_id = glGetAttribLocation(id, "a_Edge");
+	shader->light_pos_id = glGetUniformLocation(id, "u_LightPos");
+	shader->star_tint_id = glGetUniformLocation(id, "u_StarTint");
+	shader->ambient_id = glGetUniformLocation(id, "u_Ambient");
+	shader->aux_light_pos_id = glGetUniformLocation(id, "u_AuxLightPos");
+	shader->aux_light_color_id = glGetUniformLocation(id, "u_AuxLightColor");
+	shader->aux_light_wrap_id = glGetUniformLocation(id, "u_AuxLightWrap");
+	shader->albedo_id = glGetUniformLocation(id, "u_Albedo");
+	shader->have_texture_id = glGetUniformLocation(id, "u_HaveTexture");
+	shader->blackbody_id = glGetUniformLocation(id, "u_Blackbody");
+	shader->interior_id = glGetUniformLocation(id, "u_Interior");
+	shader->scorch_id = glGetUniformLocation(id, "u_Scorch");
+	shader->edge_width_id = glGetUniformLocation(id, "u_EdgeWidth");
+	shader->edge_temp_id = glGetUniformLocation(id, "u_EdgeTemp");
+	shader->edge_brightness_id = glGetUniformLocation(id, "u_EdgeBrightness");
+	shader->hull_radius_id = glGetUniformLocation(id, "u_HullRadius");
+	shader->dissolve_id = glGetUniformLocation(id, "u_Dissolve");
+	shader->burn_glow_id = glGetUniformLocation(id, "u_BurnGlow");
+	shader->preheat_id = glGetUniformLocation(id, "u_Preheat");
+	shader->time_id = glGetUniformLocation(id, "u_Time");
+	shader->filmic_tonemapping_id = glGetUniformLocation(id, "u_FilmicTonemapping");
+	shader->tonemapping_gain_id = glGetUniformLocation(id, "u_TonemappingGain");
+}
+
 void setup_single_color_shader(struct graph_dev_gl_single_color_shader *shader)
 {
 	maybe_unload_shader(&shader->meta, &shader->program_id);

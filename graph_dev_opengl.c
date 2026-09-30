@@ -332,6 +332,10 @@ static struct graph_dev_gl_vertex_color_shader vertex_color_shader;
 static struct graph_dev_gl_sun_shader sun_shader;
 static struct graph_dev_gl_black_hole_shader black_hole_shader;
 static struct graph_dev_gl_exhaust_plume_shader exhaust_plume_shader;
+static struct graph_dev_gl_shrapnel_shader shrapnel_shader;
+static struct graph_dev_gl_wreck_shader wreck_shader;
+/* The blackbody colour ramp the ship's death burns along, as a texture: see bake_blackbody_lut(). */
+static GLuint blackbody_lut;
 static struct graph_dev_gl_point_cloud_shader point_cloud_shader;
 static struct graph_dev_gl_skybox_shader skybox_shader;
 
@@ -1981,6 +1985,186 @@ static void graph_dev_raster_exhaust_plume(const struct mat44 *mat_mvp, const st
 	glDepthMask(GL_TRUE);
 	glDisable(GL_BLEND);
 }
+/* THE BLACKBODY RAMP, baked from star_light_blackbody_color(): the same one the star is coloured
+ * from, so a temperature cannot mean one thing to the sun and another to a fireball.
+ *
+ * GL_RGB8 is not an approximation here: that function clamps each channel into [0,255]/255
+ * already, so a byte is exactly what it computed.  A 2D texture one texel high rather than a
+ * GL_TEXTURE_1D, because GLES has no 1D textures and these shaders have to survive the port; the
+ * shaders sample it at v = 0.5 so it never straddles the row.  The two ends of the range MUST
+ * agree with BLACKBODY_MIN_K and BLACKBODY_MAX_K in the shaders. */
+#define BLACKBODY_LUT_TEXELS 256
+#define BLACKBODY_LUT_MIN_K 1900.0f
+#define BLACKBODY_LUT_MAX_K 40000.0f
+
+static void bake_blackbody_lut(void)
+{
+	unsigned char texel[BLACKBODY_LUT_TEXELS * 3];
+	int i;
+
+	if (blackbody_lut)
+		return;
+	for (i = 0; i < BLACKBODY_LUT_TEXELS; i++) {
+		float kelvin = BLACKBODY_LUT_MIN_K + (BLACKBODY_LUT_MAX_K - BLACKBODY_LUT_MIN_K) *
+				((float) i / (float) (BLACKBODY_LUT_TEXELS - 1));
+		float r, g, b;
+
+		star_light_blackbody_color(kelvin, &r, &g, &b);
+		texel[i * 3 + 0] = (unsigned char) (r * 255.0f + 0.5f);
+		texel[i * 3 + 1] = (unsigned char) (g * 255.0f + 0.5f);
+		texel[i * 3 + 2] = (unsigned char) (b * 255.0f + 0.5f);
+	}
+	glGenTextures(1, &blackbody_lut);
+	glBindTexture(GL_TEXTURE_2D, blackbody_lut);
+	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB8, BLACKBODY_LUT_TEXELS, 1, 0, GL_RGB,
+			GL_UNSIGNED_BYTE, texel);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	glBindTexture(GL_TEXTURE_2D, 0);
+	/* The binding cache no longer knows what unit 0 holds. */
+	sgc.texture_unit_bind[0] = 0;
+}
+
+/* The star's light as the ship's death's shaders take it: in world space, its
+ * tinted colour, and the ambient. */
+struct ship_death_light {
+	float pos[3];
+	float tint[3];
+	float ambient;
+};
+
+/* Point a shader's attribute at a column of a mesh's buffers: position from the vertex buffer,
+ * everything else from the per-triangle-vertex one.  -1, for an attribute the shader does not
+ * use, is skipped. */
+static void ship_death_attribute(GLint id, struct mesh_gl_info *ptr, int size, size_t offset,
+				int from_triangle_buffer)
+{
+	if (id < 0)
+		return;
+	glEnableVertexAttribArray(id);
+	if (from_triangle_buffer) {
+		glBindBuffer(GL_ARRAY_BUFFER, ptr->triangle_vertex_buffer);
+		glVertexAttribPointer(id, size, GL_FLOAT, GL_FALSE,
+			sizeof(struct vertex_triangle_buffer_data), (void *) offset);
+	} else {
+		glBindBuffer(GL_ARRAY_BUFFER, ptr->vertex_buffer);
+		glVertexAttribPointer(id, size, GL_FLOAT, GL_FALSE,
+			sizeof(struct vertex_buffer_data), (void *) offset);
+	}
+}
+
+static void ship_death_attribute_off(GLint id)
+{
+	if (id >= 0)
+		glDisableVertexAttribArray(id);
+}
+
+/* One shard of shrapnel, or an ember off a burning chunk: dark metal lit by the star, glowing with
+ * its own heat.  Opaque and depth written, like any hull. */
+static void graph_dev_raster_shrapnel(const struct mat44 *mat_mvp, const struct mat44 *model,
+				struct mesh *m, struct material *material,
+				const struct ship_death_light *light)
+{
+	struct graph_dev_gl_shrapnel_shader *sh = &shrapnel_shader;
+	struct mesh_gl_info *ptr = m->graph_ptr;
+	struct material_shrapnel *mt = &material->shrapnel;
+
+	if (!ptr || sh->program_id == 0 || (GLint) sh->program_id == -1)
+		return;
+	enable_3d_viewport();
+	glEnable(GL_DEPTH_TEST);
+	glDepthMask(GL_TRUE);
+	glDisable(GL_BLEND);
+	glEnable(GL_CULL_FACE);
+	activate_shader(sh);
+	glUniformMatrix4fv(sh->mvp_matrix_id, 1, GL_FALSE, &mat_mvp->m[0][0]);
+	glUniformMatrix4fv(sh->model_matrix_id, 1, GL_FALSE, &model->m[0][0]);
+	glUniform3f(sh->light_pos_id, light->pos[0], light->pos[1], light->pos[2]);
+	glUniform3f(sh->star_tint_id, light->tint[0], light->tint[1], light->tint[2]);
+	glUniform1f(sh->ambient_id, light->ambient);
+	glUniform1f(sh->temperature_id, mt->temperature);
+	glUniform1f(sh->brightness_id, mt->brightness);
+	glUniform1f(sh->albedo_id, mt->albedo);
+	glUniform1f(sh->filmic_tonemapping_id, (float) filmic_tonemapping);
+	glUniform1f(sh->tonemapping_gain_id, tonemapping_gain);
+	BIND_TEXTURE(GL_TEXTURE0, GL_TEXTURE_2D, blackbody_lut);
+	glUniform1i(sh->blackbody_id, 0);
+
+	ship_death_attribute(sh->vertex_position_id, ptr, 3,
+			offsetof(struct vertex_buffer_data, position.v.x), 0);
+	ship_death_attribute(sh->vertex_normal_id, ptr, 3,
+			offsetof(struct vertex_triangle_buffer_data, normal.v.x), 1);
+	glDrawArrays(GL_TRIANGLES, 0, m->ntriangles * 3);
+	ship_death_attribute_off(sh->vertex_position_id);
+	ship_death_attribute_off(sh->vertex_normal_id);
+}
+
+/* One piece of a broken ship: an open shell of hull drawn two-sided, sooted and glowing along its
+ * tears, and eaten from them inward as it burns.  Opaque and depth written, like any hull. */
+static void graph_dev_raster_wreck(const struct mat44 *mat_mvp, const struct mat44 *model,
+				struct mesh *m, struct material *material,
+				const struct ship_death_light *light)
+{
+	struct graph_dev_gl_wreck_shader *sh = &wreck_shader;
+	struct mesh_gl_info *ptr = m->graph_ptr;
+	struct material_wreck *mt = &material->wreck;
+	int have_texture = mt->texture_id > 0 && graph_dev_texture_ready(mt->texture_id);
+
+	if (!ptr || sh->program_id == 0 || (GLint) sh->program_id == -1)
+		return;
+	enable_3d_viewport();
+	glEnable(GL_DEPTH_TEST);
+	glDepthMask(GL_TRUE);
+	glDisable(GL_BLEND);
+	glDisable(GL_CULL_FACE);	/* two-sided: the inside shows through the tear */
+	activate_shader(sh);
+	glUniformMatrix4fv(sh->mvp_matrix_id, 1, GL_FALSE, &mat_mvp->m[0][0]);
+	glUniformMatrix4fv(sh->model_matrix_id, 1, GL_FALSE, &model->m[0][0]);
+	glUniform3f(sh->light_pos_id, light->pos[0], light->pos[1], light->pos[2]);
+	glUniform3f(sh->star_tint_id, light->tint[0], light->tint[1], light->tint[2]);
+	glUniform1f(sh->ambient_id, light->ambient);
+	glUniform3f(sh->aux_light_pos_id, mt->aux_light_pos[0], mt->aux_light_pos[1],
+			mt->aux_light_pos[2]);
+	glUniform3f(sh->aux_light_color_id, mt->aux_light_color[0], mt->aux_light_color[1],
+			mt->aux_light_color[2]);
+	glUniform1f(sh->aux_light_wrap_id, mt->aux_light_wrap);
+	glUniform1f(sh->interior_id, mt->interior);
+	glUniform1f(sh->scorch_id, mt->scorch);
+	glUniform1f(sh->edge_width_id, mt->edge_width);
+	glUniform1f(sh->edge_temp_id, mt->edge_temp);
+	glUniform1f(sh->edge_brightness_id, mt->edge_brightness);
+	glUniform1f(sh->hull_radius_id, mt->hull_radius);
+	glUniform1f(sh->dissolve_id, mt->dissolve);
+	glUniform1f(sh->burn_glow_id, mt->burn_glow);
+	glUniform1f(sh->preheat_id, mt->preheat);
+	glUniform1f(sh->time_id, mt->time);
+	glUniform1f(sh->filmic_tonemapping_id, (float) filmic_tonemapping);
+	glUniform1f(sh->tonemapping_gain_id, tonemapping_gain);
+	if (have_texture)
+		BIND_TEXTURE(GL_TEXTURE0, GL_TEXTURE_2D, (GLuint) mt->texture_id);
+	glUniform1i(sh->albedo_id, 0);
+	glUniform1i(sh->have_texture_id, have_texture);
+	BIND_TEXTURE(GL_TEXTURE1, GL_TEXTURE_2D, blackbody_lut);
+	glUniform1i(sh->blackbody_id, 1);
+
+	ship_death_attribute(sh->vertex_position_id, ptr, 3,
+			offsetof(struct vertex_buffer_data, position.v.x), 0);
+	ship_death_attribute(sh->vertex_normal_id, ptr, 3,
+			offsetof(struct vertex_triangle_buffer_data, normal.v.x), 1);
+	ship_death_attribute(sh->texture_coord_id, ptr, 2,
+			offsetof(struct vertex_triangle_buffer_data, texture_coord.v.x), 1);
+	ship_death_attribute(sh->edge_id, ptr, 1, offsetof(struct vertex_triangle_buffer_data, w), 1);
+	glDrawArrays(GL_TRIANGLES, 0, m->ntriangles * 3);
+	ship_death_attribute_off(sh->vertex_position_id);
+	ship_death_attribute_off(sh->vertex_normal_id);
+	ship_death_attribute_off(sh->texture_coord_id);
+	ship_death_attribute_off(sh->edge_id);
+	glEnable(GL_CULL_FACE);
+}
+
 /* See graph_dev.h.  Inert by default (floor 1.0): pulling ambient down changes how every lit
  * thing in the game looks, so nothing happens until a caller asks for it. */
 static float shade_ambient_lo = 0.5;
@@ -2016,6 +2200,32 @@ static float shade_ambient_scale(float in_shade)
 }
 
 
+/* A ship's death, which takes the star's light its own way: see struct ship_death_light. */
+static void graph_dev_raster_ship_death(struct entity_context *cx,
+				const struct entity_transform *transform, struct entity *e)
+{
+	struct ship_death_light light;
+	float ambient_color[3];
+	struct mat44 model;
+
+	light.pos[0] = cx->light.m[0];
+	light.pos[1] = cx->light.m[1];
+	light.pos[2] = cx->light.m[2];
+	graph_dev_compute_star_light(cx, light.tint, ambient_color);
+	light.ambient = cx->ambient;
+	mat44_convert_df(&transform->m, &model);
+	switch (e->material_ptr->type) {
+	case MATERIAL_SHRAPNEL:
+		graph_dev_raster_shrapnel(&transform->mvp, &model, e->m, e->material_ptr, &light);
+		break;
+	case MATERIAL_WRECK:
+		graph_dev_raster_wreck(&transform->mvp, &model, e->m, e->material_ptr, &light);
+		break;
+	default:
+		break;
+	}
+}
+
 static void graph_dev_raster_triangle_mesh(struct entity_context *cx, struct entity *e,
 	union vec3 *eye_light_pos, const struct entity_transform *transform, struct sng_color *line_color)
 {
@@ -2038,6 +2248,7 @@ static void graph_dev_raster_triangle_mesh(struct entity_context *cx, struct ent
 	int is_sun = 0;
 	int is_black_hole = 0;
 	int is_exhaust_plume = 0;
+	int is_ship_death = 0;
 	float shade_scale = 1.0; /* the shadow's pull on ambient; not rtp.ambient_scale */
 	struct sng_color texture_tint = { 1.0, 1.0, 1.0 };
 
@@ -2167,6 +2378,11 @@ static void graph_dev_raster_triangle_mesh(struct entity_context *cx, struct ent
 		case MATERIAL_EXHAUST_PLUME:
 			/* Handled by graph_dev_raster_exhaust_plume() below; rtp.shader stays NULL. */
 			is_exhaust_plume = 1;
+			break;
+		case MATERIAL_SHRAPNEL:
+		case MATERIAL_WRECK:
+			/* A ship's death: handled by graph_dev_raster_ship_death() below. */
+			is_ship_death = 1;
 			break;
 		case MATERIAL_ATMOSPHERE: {
 			rtp.textures_not_ready = 0; /* assume textures are ready until proven otherwise */
@@ -2474,6 +2690,8 @@ static void graph_dev_raster_triangle_mesh(struct entity_context *cx, struct ent
 					graph_dev_raster_black_hole(rtp.mat_mvp, e->m, e->material_ptr);
 				} else if (is_exhaust_plume) {
 					graph_dev_raster_exhaust_plume(rtp.mat_mvp, rtp.mat_mv, e->m, e->material_ptr);
+				} else if (is_ship_death) {
+					graph_dev_raster_ship_death(cx, transform, e);
 				} else if (atmosphere && !rtp.textures_not_ready) {
 					float light_color[3], ambient_color[3];
 
@@ -3560,6 +3778,9 @@ void graph_dev_reload_all_shaders(void)
 	setup_sun_shader(&sun_shader);
 	setup_black_hole_shader(&black_hole_shader);
 	setup_exhaust_plume_shader(&exhaust_plume_shader);
+	setup_shrapnel_shader(&shrapnel_shader);
+	setup_wreck_shader(&wreck_shader);
+	bake_blackbody_lut();
 	setup_line_single_color_shader(&line_single_color_shader);
 	setup_point_cloud_shader("point_cloud", &point_cloud_shader);
 	setup_color_by_w_shader(&color_by_w_shader);

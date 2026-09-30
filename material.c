@@ -417,6 +417,9 @@ void material_init_wreck(struct material *m)
 	m->wreck.burn_glow = 1.0;
 	m->wreck.preheat = 0.04;
 	m->wreck.time = 0.0;
+	memset(m->wreck.aux_light_pos, 0, sizeof(m->wreck.aux_light_pos));
+	memset(m->wreck.aux_light_color, 0, sizeof(m->wreck.aux_light_color));
+	m->wreck.aux_light_wrap = 0.0;
 }
 
 void material_init_particles(struct material *m)

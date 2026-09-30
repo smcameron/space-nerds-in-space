@@ -303,6 +303,13 @@ struct material_wreck {
 	float burn_glow;	/* how hot the front runs, 0 to 1: dims as the burn slows */
 	float preheat;		/* width of the dull red zone ahead of the front, hull radii */
 	float time;		/* seconds, for the burning front's flicker; wrap it as it grows */
+	/* A second light, from the fire -- the fireball's, then the piece's own flames -- in world
+	 * space: where it is, its colour times its intensity (zero for none), and how far it wraps
+	 * round.  In the material rather than the entity because nothing else in the game has one,
+	 * and each piece has a material of its own anyway. */
+	float aux_light_pos[3];
+	float aux_light_color[3];
+	float aux_light_wrap;
 };
 
 /* A batch of smoke, flame and sparks off burning wreckage, all in one mesh built by

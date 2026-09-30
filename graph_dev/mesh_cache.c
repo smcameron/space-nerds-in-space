@@ -114,6 +114,8 @@ void mesh_graph_dev_init(struct mesh *m)
 				g_vt_buffer_data[v_index].bitangent.v.y = m->t[i].vbitangent[j].y;
 				g_vt_buffer_data[v_index].bitangent.v.z = m->t[i].vbitangent[j].z;
 
+				g_vt_buffer_data[v_index].w = m->t[i].v[j]->w;
+
 				/* bias the edge distance to make the coplanar edges not draw */
 				if ((j == 1 || j == 2) && (m->t[i].flag & TRIANGLE_1_2_COPLANAR))
 					g_vt_buffer_data[v_index].wireframe_edge_mask.v.x = 1000;

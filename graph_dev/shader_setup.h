@@ -181,6 +181,60 @@ struct graph_dev_gl_exhaust_plume_shader {
 	GLint tonemapping_gain_id;
 };
 
+/* A ship's death: see ship_death.h.  Its shaders take the light in world space: the star's
+ * position, its tinted colour and the ambient. */
+struct graph_dev_gl_shrapnel_shader {
+	struct graph_dev_gl_shader_metadata meta;
+	GLuint program_id;
+	GLuint vao_id;
+	GLint mvp_matrix_id;
+	GLint model_matrix_id;
+	GLint vertex_position_id;
+	GLint vertex_normal_id;
+	GLint light_pos_id;
+	GLint star_tint_id;
+	GLint ambient_id;
+	GLint blackbody_id;
+	GLint temperature_id;
+	GLint brightness_id;
+	GLint albedo_id;
+	GLint filmic_tonemapping_id;
+	GLint tonemapping_gain_id;
+};
+
+struct graph_dev_gl_wreck_shader {
+	struct graph_dev_gl_shader_metadata meta;
+	GLuint program_id;
+	GLuint vao_id;
+	GLint mvp_matrix_id;
+	GLint model_matrix_id;
+	GLint vertex_position_id;
+	GLint vertex_normal_id;
+	GLint texture_coord_id;
+	GLint edge_id;			/* a_Edge: the vertex's distance to the tear */
+	GLint light_pos_id;
+	GLint star_tint_id;
+	GLint ambient_id;
+	GLint aux_light_pos_id;
+	GLint aux_light_color_id;
+	GLint aux_light_wrap_id;
+	GLint albedo_id;		/* the hull's texture */
+	GLint have_texture_id;
+	GLint blackbody_id;
+	GLint interior_id;
+	GLint scorch_id;
+	GLint edge_width_id;
+	GLint edge_temp_id;
+	GLint edge_brightness_id;
+	GLint hull_radius_id;
+	GLint dissolve_id;
+	GLint burn_glow_id;
+	GLint preheat_id;
+	GLint time_id;
+	GLint filmic_tonemapping_id;
+	GLint tonemapping_gain_id;
+};
+
 struct graph_dev_gl_skybox_shader {
 	struct graph_dev_gl_shader_metadata meta;
 	GLuint program_id;
@@ -253,6 +307,8 @@ void setup_color_by_w_shader(struct graph_dev_gl_color_by_w_shader *shader);
 void setup_line_single_color_shader(struct graph_dev_gl_line_single_color_shader *shader);
 void setup_black_hole_shader(struct graph_dev_gl_black_hole_shader *shader);
 void setup_exhaust_plume_shader(struct graph_dev_gl_exhaust_plume_shader *shader);
+void setup_shrapnel_shader(struct graph_dev_gl_shrapnel_shader *shader);
+void setup_wreck_shader(struct graph_dev_gl_wreck_shader *shader);
 void setup_single_color_shader(struct graph_dev_gl_single_color_shader *shader);
 void setup_vertex_color_shader(struct graph_dev_gl_vertex_color_shader *shader);
 
