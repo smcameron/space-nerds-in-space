@@ -57,6 +57,10 @@ extern void graph_dev_clear_depth_bit(void);
  * drawn.  Where the depth cannot be read -- a multisampled target, or GLES -- the fireball does
  * without, and simply does not stop at what is inside it. */
 extern void graph_dev_capture_scene_depth(float near, float far);
+/* Draw the fireball at 1/n of the window's width and height and composite it back up: 2 is a
+ * quarter of the pixels, and most of the way from a frame rate that sags as the smoke fills the
+ * screen to one that does not.  1 is full resolution.  2 by default. */
+extern void graph_dev_set_volume_downsample(int n);
 
 /* Cascaded shadow mapping.  graph_dev_shadow_map_enabled is 1 to render and
  * receive shadow maps, 0 to disable (e.g. the GLES backend).  The caller

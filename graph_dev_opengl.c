@@ -336,6 +336,12 @@ static struct graph_dev_gl_shrapnel_shader shrapnel_shader;
 static struct graph_dev_gl_wreck_shader wreck_shader;
 static struct graph_dev_gl_particles_shader particles_shader;
 static struct graph_dev_gl_explosion_shader explosion_shader;
+static struct graph_dev_gl_volume_composite_shader volume_composite_shader;
+/* The reduced resolution target the fireball is drawn into before being laid back over the frame:
+ * see graph_dev_set_volume_downsample(). */
+static GLuint volume_fbo, volume_color;
+static int volume_w, volume_h;
+static int volume_downsample = 2;
 /* The opaque scene's depth, for the fireball: see graph_dev_capture_scene_depth().  far_depth is a
  * single texel at the far plane, for where the depth cannot be read: a fireball that does not stop
  * at what is inside it rather than one that stops at nothing. */
@@ -2270,6 +2276,45 @@ void graph_dev_capture_scene_depth(float near, float far)
 	scene_depth_valid = 1;
 }
 
+void graph_dev_set_volume_downsample(int n)
+{
+	volume_downsample = n < 1 ? 1 : n;
+}
+
+/* Make volume_fbo a colour target of w by h, remaking it only when the size changes.  Returns 0
+ * if it could not be made, and the caller then draws at full size. */
+static int volume_target(int w, int h)
+{
+	if (volume_fbo && volume_w == w && volume_h == h)
+		return 1;
+	if (!volume_fbo) {
+		glGenFramebuffers(1, &volume_fbo);
+		glGenTextures(1, &volume_color);
+	}
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, volume_color);
+	sgc.texture_unit_active = 0;
+	sgc.texture_unit_bind[0] = volume_color;
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	glBindFramebuffer(GL_FRAMEBUFFER, volume_fbo);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, volume_color, 0);
+	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
+		fprintf(stderr, "graph_dev: volume target incomplete; drawing the fireball full size\n");
+		glBindFramebuffer(GL_FRAMEBUFFER, sgc.fbo_current);
+		glDeleteFramebuffers(1, &volume_fbo);
+		volume_fbo = 0;
+		return 0;
+	}
+	glBindFramebuffer(GL_FRAMEBUFFER, sgc.fbo_current);
+	volume_w = w;
+	volume_h = h;
+	return 1;
+}
+
 static void make_far_depth_texture(void)
 {
 	GLuint far = 0xffffffff;
@@ -2285,20 +2330,44 @@ static void make_far_depth_texture(void)
 
 /* The fireball: a volume raymarched inside a camera facing billboard, premultiplied.  No depth
  * test: the quad sits on the ball's middle, and the march itself stops at what is solid, from the
- * depth taken after the opaque things were drawn. */
+ * depth taken after the opaque things were drawn.
+ *
+ * At a volume_downsample above 1 it is drawn into the reduced target -- the 3D viewport scaled
+ * down within it, cleared to nothing -- and the target is then laid back over the whole window
+ * with the same premultiplied blend: so it lands in the frame exactly where and as it would have,
+ * only with fewer pixels marched, and where the target is clear it changes nothing. */
 static void graph_dev_raster_explosion(struct entity_context *cx, const struct mat44 *mat_mvp,
 				const struct mat44 *model, struct mesh *m, struct material *material,
 				const struct ship_death_light *light)
 {
 	struct graph_dev_gl_explosion_shader *sh = &explosion_shader;
+	struct graph_dev_gl_volume_composite_shader *comp = &volume_composite_shader;
 	struct mesh_gl_info *ptr = m->graph_ptr;
 	struct material_explosion *mt = &material->explosion;
+	int n = volume_downsample, vw = sgc.screen_x, vh = sgc.screen_y, reduced = 0;
+	GLuint frame_fbo;
 	union vec3 forward;
 
 	if (!ptr || sh->program_id == 0 || (GLint) sh->program_id == -1)
 		return;
 	make_far_depth_texture();
 	enable_3d_viewport();
+	frame_fbo = sgc.fbo_current;
+	if (n > 1 && comp->program_id != 0 && (GLint) comp->program_id != -1) {
+		vw = (sgc.screen_x + n - 1) / n;
+		vh = (sgc.screen_y + n - 1) / n;
+		reduced = volume_target(vw, vh);
+		if (!reduced) {
+			vw = sgc.screen_x;
+			vh = sgc.screen_y;
+		}
+	}
+	if (reduced) {
+		glBindFramebuffer(GL_FRAMEBUFFER, volume_fbo);
+		glViewport(sgc.vp_x_3d / n, sgc.vp_y_3d / n, sgc.vp_width_3d / n, sgc.vp_height_3d / n);
+		glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
+		glClear(GL_COLOR_BUFFER_BIT);
+	}
 	glDisable(GL_DEPTH_TEST);
 	glDepthMask(GL_FALSE);
 	glEnable(GL_BLEND);
@@ -2333,7 +2402,7 @@ static void graph_dev_raster_explosion(struct entity_context *cx, const struct m
 	glUniform1i(sh->blackbody_id, 0);
 	bind_depth_texture(GL_TEXTURE2, scene_depth_valid ? scene_depth_texture : far_depth_texture);
 	glUniform1i(sh->scene_depth_id, 2);
-	glUniform2f(sh->viewport_id, (float) sgc.screen_x, (float) sgc.screen_y);
+	glUniform2f(sh->viewport_id, (float) vw, (float) vh);
 	glUniform2f(sh->near_far_id, scene_depth_near, scene_depth_far);
 	vec3_init(&forward, cx->camera.lx - cx->camera.x, cx->camera.ly - cx->camera.y,
 			cx->camera.lz - cx->camera.z);
@@ -2344,6 +2413,21 @@ static void graph_dev_raster_explosion(struct entity_context *cx, const struct m
 			offsetof(struct vertex_buffer_data, position.v.x), 0);
 	glDrawArrays(GL_TRIANGLES, 0, m->ntriangles * 3);
 	ship_death_attribute_off(sh->vertex_position_id);
+
+	if (reduced) {
+		glBindFramebuffer(GL_FRAMEBUFFER, frame_fbo);
+		glViewport(0, 0, sgc.screen_x, sgc.screen_y);
+		activate_shader(comp);
+		BIND_TEXTURE(GL_TEXTURE0, GL_TEXTURE_2D, volume_color);
+		glUniform1i(comp->volume_id, 0);
+		graph_dev_bind_vao(comp->vao_id);
+		glDrawArrays(GL_TRIANGLES, 0, 3);
+		graph_dev_unbind_vao();
+		/* The viewport was set behind the cache's back: make the next one set it again. */
+		sgc.active_vp = 0;
+		sgc.vp_width = -1;
+		enable_3d_viewport();
+	}
 	glEnable(GL_DEPTH_TEST);
 	glDepthMask(GL_TRUE);
 	glDisable(GL_BLEND);
@@ -3977,6 +4061,7 @@ void graph_dev_reload_all_shaders(void)
 	setup_wreck_shader(&wreck_shader);
 	setup_particles_shader(&particles_shader);
 	setup_explosion_shader(&explosion_shader);
+	setup_volume_composite_shader(&volume_composite_shader);
 	bake_blackbody_lut();
 	setup_line_single_color_shader(&line_single_color_shader);
 	setup_point_cloud_shader("point_cloud", &point_cloud_shader);

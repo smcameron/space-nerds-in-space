@@ -1905,6 +1905,11 @@ static float shade_ambient_lo = 0.5;
 static float shade_ambient_hi = 1.5;
 static float shade_ambient_floor = 1.0;
 
+void graph_dev_set_volume_downsample(int n)
+{
+	(void) n;
+}
+
 /* See graph_dev.h: GLES2 cannot read the depth buffer back, so the fireball does without. */
 void graph_dev_capture_scene_depth(float near, float far)
 {

@@ -296,6 +296,15 @@ struct graph_dev_gl_explosion_shader {
 	GLint tonemapping_gain_id;
 };
 
+/* The fireball drawn at reduced resolution, laid back over the frame.  See
+ * volume_composite.shader. */
+struct graph_dev_gl_volume_composite_shader {
+	struct graph_dev_gl_shader_metadata meta;
+	GLuint program_id;
+	GLuint vao_id;
+	GLint volume_id;
+};
+
 struct graph_dev_gl_skybox_shader {
 	struct graph_dev_gl_shader_metadata meta;
 	GLuint program_id;
@@ -372,6 +381,7 @@ void setup_shrapnel_shader(struct graph_dev_gl_shrapnel_shader *shader);
 void setup_wreck_shader(struct graph_dev_gl_wreck_shader *shader);
 void setup_particles_shader(struct graph_dev_gl_particles_shader *shader);
 void setup_explosion_shader(struct graph_dev_gl_explosion_shader *shader);
+void setup_volume_composite_shader(struct graph_dev_gl_volume_composite_shader *shader);
 void setup_single_color_shader(struct graph_dev_gl_single_color_shader *shader);
 void setup_vertex_color_shader(struct graph_dev_gl_vertex_color_shader *shader);
 

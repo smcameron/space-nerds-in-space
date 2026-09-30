@@ -502,6 +502,19 @@ void setup_explosion_shader(struct graph_dev_gl_explosion_shader *shader)
 	shader->tonemapping_gain_id = glGetUniformLocation(id, "u_TonemappingGain");
 }
 
+void setup_volume_composite_shader(struct graph_dev_gl_volume_composite_shader *shader)
+{
+	const char *vert_header = UNIVERSAL_SHADER_HEADER "#define INCLUDE_VS 1\n";
+	const char *frag_header = UNIVERSAL_SHADER_HEADER "#define INCLUDE_FS 1\n";
+	const char *filenames[] = { "volume_composite.shader" };
+
+	maybe_unload_shader(&shader->meta, &shader->program_id);
+	shader->program_id = load_concat_shaders(shader_directory, vert_header, 1, filenames,
+				frag_header, 1, filenames);
+	graph_dev_gen_vao(&shader->vao_id);
+	shader->volume_id = glGetUniformLocation(shader->program_id, "u_Volume");
+}
+
 void setup_single_color_shader(struct graph_dev_gl_single_color_shader *shader)
 {
 	maybe_unload_shader(&shader->meta, &shader->program_id);
