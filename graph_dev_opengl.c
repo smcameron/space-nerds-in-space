@@ -3854,6 +3854,7 @@ static void setup_sun_shader(struct graph_dev_gl_sun_shader *shader)
 	shader->disc_radius_id = glGetUniformLocation(shader->program_id, "u_DiscRadius");
 	shader->edge_softness_id = glGetUniformLocation(shader->program_id, "u_EdgeSoftness");
 	shader->psf_width_id = glGetUniformLocation(shader->program_id, "u_PsfWidth");
+	shader->psf_falloff_id = glGetUniformLocation(shader->program_id, "u_PsfFalloff");
 	shader->filmic_tonemapping_id = glGetUniformLocation(shader->program_id, "u_FilmicTonemapping");
 	shader->tonemapping_gain_id = glGetUniformLocation(shader->program_id, "u_TonemappingGain");
 }
