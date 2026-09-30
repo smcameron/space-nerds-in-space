@@ -171,6 +171,16 @@ int ship_death_shrapnel_init(struct ship_death_shrapnel *sh,
 	return 0;
 }
 
+float ship_death_shrapnel_end(const struct ship_death_shrapnel *sh)
+{
+	float end = 0.0f;
+	int i;
+
+	for (i = 0; i < sh->nshards; i++)
+		end = fmaxf(end, sh->shard[i].launch + sh->shard[i].life);
+	return end + ship_death_shrapnel_tuning.trail_life;
+}
+
 void ship_death_shrapnel_fini(struct ship_death_shrapnel *sh)
 {
 	particle_batch_free(sh->trail);

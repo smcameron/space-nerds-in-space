@@ -453,7 +453,7 @@ int ship_death_wreck_init(struct ship_death_wreck *w, const struct ship_death_fi
 	return 0;
 }
 
-const struct material *ship_death_wreck_core_material(const struct ship_death_wreck *w)
+struct material *ship_death_wreck_core_material(struct ship_death_wreck *w)
 {
 	int i;
 
@@ -1309,4 +1309,17 @@ void ship_death_wreck_draw(struct ship_death_wreck *w, float t, const struct shi
 		w->nflying++;
 	}
 	draw_smoke(w, t, view, fd);
+}
+
+float ship_death_wreck_end(const struct ship_death_wreck *w)
+{
+	struct ship_death_wreck_tuning *tu = &ship_death_wreck_tuning;
+	float end = smoulder_end();
+	int i;
+
+	for (i = 0; i < w->fracture->npieces; i++)
+		if (!w->fracture->piece[i].is_core)
+			end = fmaxf(end, w->motion[i].life);
+	return end + fmaxf(tu->smoke_life, fmaxf(tu->ember_life, fmaxf(tu->spark_life,
+				tu->flame_life)));
 }

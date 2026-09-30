@@ -141,6 +141,8 @@ GLOBAL void ship_death_shrapnel_teardown(void);
  * when done. */
 GLOBAL int ship_death_shrapnel_init(struct ship_death_shrapnel *sh,
 				const struct ship_death_fireball *fireball, uint32_t seed);
+/* Seconds after the flash by which the last shard, and its trail, is gone. */
+GLOBAL float ship_death_shrapnel_end(const struct ship_death_shrapnel *sh);
 GLOBAL void ship_death_shrapnel_fini(struct ship_death_shrapnel *sh);
 /* Draw them again from seed: after a change to the tuning, or to throw another lot. */
 GLOBAL void ship_death_shrapnel_generate(struct ship_death_shrapnel *sh, uint32_t seed);

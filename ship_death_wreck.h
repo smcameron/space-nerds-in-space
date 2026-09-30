@@ -296,10 +296,14 @@ GLOBAL void ship_death_wreck_plan(struct ship_death_wreck *w, uint32_t seed);
 GLOBAL void ship_death_wreck_draw(struct ship_death_wreck *w, float t,
 				const struct ship_death_view *view, struct ship_death_frame *f);
 
+/* Seconds after the flash by which the chunks, and everything off them and off the core, are
+ * gone: all that is left is the derelict, if there is one, cold. */
+GLOBAL float ship_death_wreck_end(const struct ship_death_wreck *w);
+
 /* With core_pose set: the material the caller should draw the derelict with this frame, the
  * edges' heat and the fire's light on it -- or NULL, for the cold one, when core_pose did not
  * know where the core was. */
-GLOBAL const struct material *ship_death_wreck_core_material(const struct ship_death_wreck *w);
+GLOBAL struct material *ship_death_wreck_core_material(struct ship_death_wreck *w);
 
 /* The wreck's material as this fracture wears it once it has cooled: the soot and the inside of
  * the hull, no glow.  For a derelict long after its ship died. */
