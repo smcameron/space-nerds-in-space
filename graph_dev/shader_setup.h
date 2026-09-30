@@ -235,6 +235,30 @@ struct graph_dev_gl_wreck_shader {
 	GLint tonemapping_gain_id;
 };
 
+/* A batch of smoke, flame and sparks: see particle_batch.h.  The mesh is already in world
+ * space and already faces the camera, and each vertex carries its particle's look. */
+struct graph_dev_gl_particles_shader {
+	struct graph_dev_gl_shader_metadata meta;
+	GLuint program_id;
+	GLuint vao_id;
+	GLint mvp_matrix_id;
+	GLint vertex_position_id;
+	GLint vertex_normal_id;		/* not a normal: (opacity, emission, kelvin) */
+	GLint texture_coord_id;		/* where on its quad, in radii */
+	GLint edge_id;			/* a_Edge: its kind, and its seed as a fraction */
+	GLint cam_right_id;
+	GLint cam_up_id;
+	GLint cam_back_id;
+	GLint light_pos_id;
+	GLint star_tint_id;
+	GLint ambient_id;
+	GLint albedo_id;
+	GLint time_id;
+	GLint blackbody_id;
+	GLint filmic_tonemapping_id;
+	GLint tonemapping_gain_id;
+};
+
 struct graph_dev_gl_skybox_shader {
 	struct graph_dev_gl_shader_metadata meta;
 	GLuint program_id;
@@ -309,6 +333,7 @@ void setup_black_hole_shader(struct graph_dev_gl_black_hole_shader *shader);
 void setup_exhaust_plume_shader(struct graph_dev_gl_exhaust_plume_shader *shader);
 void setup_shrapnel_shader(struct graph_dev_gl_shrapnel_shader *shader);
 void setup_wreck_shader(struct graph_dev_gl_wreck_shader *shader);
+void setup_particles_shader(struct graph_dev_gl_particles_shader *shader);
 void setup_single_color_shader(struct graph_dev_gl_single_color_shader *shader);
 void setup_vertex_color_shader(struct graph_dev_gl_vertex_color_shader *shader);
 

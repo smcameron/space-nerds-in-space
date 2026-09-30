@@ -434,6 +434,33 @@ void setup_wreck_shader(struct graph_dev_gl_wreck_shader *shader)
 	shader->tonemapping_gain_id = glGetUniformLocation(id, "u_TonemappingGain");
 }
 
+void setup_particles_shader(struct graph_dev_gl_particles_shader *shader)
+{
+	GLuint id;
+
+	maybe_unload_shader(&shader->meta, &shader->program_id);
+	id = load_ship_death_shader("particles.shader");
+	shader->program_id = id;
+	graph_dev_gen_vao(&shader->vao_id);
+
+	shader->mvp_matrix_id = glGetUniformLocation(id, "u_MVPMatrix");
+	shader->vertex_position_id = glGetAttribLocation(id, "a_Position");
+	shader->vertex_normal_id = glGetAttribLocation(id, "a_Normal");
+	shader->texture_coord_id = glGetAttribLocation(id, "a_TexCoord");
+	shader->edge_id = glGetAttribLocation(id, "a_Edge");
+	shader->cam_right_id = glGetUniformLocation(id, "u_CamRight");
+	shader->cam_up_id = glGetUniformLocation(id, "u_CamUp");
+	shader->cam_back_id = glGetUniformLocation(id, "u_CamBack");
+	shader->light_pos_id = glGetUniformLocation(id, "u_LightPos");
+	shader->star_tint_id = glGetUniformLocation(id, "u_StarTint");
+	shader->ambient_id = glGetUniformLocation(id, "u_Ambient");
+	shader->albedo_id = glGetUniformLocation(id, "u_Albedo");
+	shader->time_id = glGetUniformLocation(id, "u_Time");
+	shader->blackbody_id = glGetUniformLocation(id, "u_Blackbody");
+	shader->filmic_tonemapping_id = glGetUniformLocation(id, "u_FilmicTonemapping");
+	shader->tonemapping_gain_id = glGetUniformLocation(id, "u_TonemappingGain");
+}
+
 void setup_single_color_shader(struct graph_dev_gl_single_color_shader *shader)
 {
 	maybe_unload_shader(&shader->meta, &shader->program_id);

@@ -334,6 +334,7 @@ static struct graph_dev_gl_black_hole_shader black_hole_shader;
 static struct graph_dev_gl_exhaust_plume_shader exhaust_plume_shader;
 static struct graph_dev_gl_shrapnel_shader shrapnel_shader;
 static struct graph_dev_gl_wreck_shader wreck_shader;
+static struct graph_dev_gl_particles_shader particles_shader;
 /* The blackbody colour ramp the ship's death burns along, as a texture: see bake_blackbody_lut(). */
 static GLuint blackbody_lut;
 static struct graph_dev_gl_point_cloud_shader point_cloud_shader;
@@ -2165,6 +2166,57 @@ static void graph_dev_raster_wreck(const struct mat44 *mat_mvp, const struct mat
 	glEnable(GL_CULL_FACE);
 }
 
+/* A batch of smoke, flame and sparks, already in world space and already facing the camera; see
+ * particle_batch.h.  Premultiplied, depth tested against what is solid but writing none of its
+ * own, and not culled -- which way a quad is wound depends on where the camera stands.  The
+ * smoke's made-up sphere wants the camera's basis, which is the view matrix's first three rows. */
+static void graph_dev_raster_particles(const struct mat44 *mat_mvp, const struct mat44d *view,
+				struct mesh *m, struct material *material,
+				const struct ship_death_light *light)
+{
+	struct graph_dev_gl_particles_shader *sh = &particles_shader;
+	struct mesh_gl_info *ptr = m->graph_ptr;
+
+	if (!ptr || m->ntriangles == 0 || sh->program_id == 0 || (GLint) sh->program_id == -1)
+		return;
+	enable_3d_viewport();
+	glEnable(GL_DEPTH_TEST);
+	glDepthMask(GL_FALSE);
+	glEnable(GL_BLEND);
+	BLEND_FUNC(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
+	glDisable(GL_CULL_FACE);
+	activate_shader(sh);
+	glUniformMatrix4fv(sh->mvp_matrix_id, 1, GL_FALSE, &mat_mvp->m[0][0]);
+	glUniform3f(sh->cam_right_id, view->m[0][0], view->m[1][0], view->m[2][0]);
+	glUniform3f(sh->cam_up_id, view->m[0][1], view->m[1][1], view->m[2][1]);
+	glUniform3f(sh->cam_back_id, view->m[0][2], view->m[1][2], view->m[2][2]);
+	glUniform3f(sh->light_pos_id, light->pos[0], light->pos[1], light->pos[2]);
+	glUniform3f(sh->star_tint_id, light->tint[0], light->tint[1], light->tint[2]);
+	glUniform1f(sh->ambient_id, light->ambient);
+	glUniform1f(sh->albedo_id, material->particles.albedo);
+	glUniform1f(sh->time_id, material->particles.time);
+	glUniform1f(sh->filmic_tonemapping_id, (float) filmic_tonemapping);
+	glUniform1f(sh->tonemapping_gain_id, tonemapping_gain);
+	BIND_TEXTURE(GL_TEXTURE0, GL_TEXTURE_2D, blackbody_lut);
+	glUniform1i(sh->blackbody_id, 0);
+
+	ship_death_attribute(sh->vertex_position_id, ptr, 3,
+			offsetof(struct vertex_buffer_data, position.v.x), 0);
+	ship_death_attribute(sh->vertex_normal_id, ptr, 3,
+			offsetof(struct vertex_triangle_buffer_data, normal.v.x), 1);
+	ship_death_attribute(sh->texture_coord_id, ptr, 2,
+			offsetof(struct vertex_triangle_buffer_data, texture_coord.v.x), 1);
+	ship_death_attribute(sh->edge_id, ptr, 1, offsetof(struct vertex_triangle_buffer_data, w), 1);
+	glDrawArrays(GL_TRIANGLES, 0, m->ntriangles * 3);
+	ship_death_attribute_off(sh->vertex_position_id);
+	ship_death_attribute_off(sh->vertex_normal_id);
+	ship_death_attribute_off(sh->texture_coord_id);
+	ship_death_attribute_off(sh->edge_id);
+	glDepthMask(GL_TRUE);
+	glDisable(GL_BLEND);
+	glEnable(GL_CULL_FACE);
+}
+
 /* See graph_dev.h.  Inert by default (floor 1.0): pulling ambient down changes how every lit
  * thing in the game looks, so nothing happens until a caller asks for it. */
 static float shade_ambient_lo = 0.5;
@@ -2220,6 +2272,10 @@ static void graph_dev_raster_ship_death(struct entity_context *cx,
 		break;
 	case MATERIAL_WRECK:
 		graph_dev_raster_wreck(&transform->mvp, &model, e->m, e->material_ptr, &light);
+		break;
+	case MATERIAL_PARTICLES:
+		graph_dev_raster_particles(&transform->mvp, transform->v, e->m, e->material_ptr,
+					&light);
 		break;
 	default:
 		break;
@@ -2381,6 +2437,7 @@ static void graph_dev_raster_triangle_mesh(struct entity_context *cx, struct ent
 			break;
 		case MATERIAL_SHRAPNEL:
 		case MATERIAL_WRECK:
+		case MATERIAL_PARTICLES:
 			/* A ship's death: handled by graph_dev_raster_ship_death() below. */
 			is_ship_death = 1;
 			break;
@@ -3780,6 +3837,7 @@ void graph_dev_reload_all_shaders(void)
 	setup_exhaust_plume_shader(&exhaust_plume_shader);
 	setup_shrapnel_shader(&shrapnel_shader);
 	setup_wreck_shader(&wreck_shader);
+	setup_particles_shader(&particles_shader);
 	bake_blackbody_lut();
 	setup_line_single_color_shader(&line_single_color_shader);
 	setup_point_cloud_shader("point_cloud", &point_cloud_shader);
