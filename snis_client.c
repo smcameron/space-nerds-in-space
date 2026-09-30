@@ -122,6 +122,7 @@
 #include "matrix.h"
 #include "graph_dev.h"
 #include "black_hole_lens.h"
+#include "workqueue.h"
 #include "ship_death_fireball.h"
 #include "ship_death_shrapnel.h"
 #include "ship_death_wreck.h"
@@ -2994,20 +2995,37 @@ static inline void spin_cargo_container(double timestamp, struct snis_entity *o)
  * server's timestamp.  The derelict, when there is one, is the server's object, drawn as the
  * fracture's core; see ship_death_wreck.core_pose.
  *
- * Fractures are built the first time they are wanted, not at load: all of them for every ship
- * type take seconds and millions of triangles, and a game sees a few.  They must be built here,
- * on the thread that draws, since they are sent to the GPU; so the network thread only asks for
- * a death, and the drawing starts it. */
+ * Fractures are built as they are wanted, not at load: all of them for every ship type take
+ * seconds and millions of triangles, and a game sees a few.  They are wanted by a ship or a
+ * derelict near the player -- well before it could die in sight -- and by a death, if it came
+ * first.  A worker thread breaks the ship, and the thread that draws sends it to the GPU; until
+ * then a death is fire and shards, and its wreck joins it when the fracture comes, part way
+ * through, since everything about it is worked out from the clock.  Likewise the network thread
+ * only asks for a death, and the thread that draws starts it. */
 #define SHIP_DEATH_FRACTURES 4		/* ways each type of ship breaks */
 #define MAX_SHIP_DEATHS 8		/* at once; the oldest goes to make room */
+/* Nearer the player than this, a ship or derelict has its fracture made ready: far enough that a
+ * ship at full speed takes half a minute to cover it, and a derelict beyond it is a few pixels
+ * across, its old mesh as good as its new. */
+#define SHIP_FRACTURE_NEAR (8000.0)
+
+#define SHIP_FRACTURE_NONE 0		/* not asked for */
+#define SHIP_FRACTURE_QUEUED 1		/* the worker has it */
+#define SHIP_FRACTURE_BUILT 2		/* broken, waiting to go to the GPU */
+#define SHIP_FRACTURE_READY 3
+#define SHIP_FRACTURE_FAILED (-1)
 
 struct ship_fracture {
-	int state;			/* 0 not tried yet, 1 built, -1 failed */
+	int state;			/* under ship_fracture_mutex */
+	int shiptype;
+	uint32_t seed;
 	struct ship_death_fracture fracture;
 	struct mesh *derelict;		/* the core, turning about the ship's origin, as the derelict does */
 	struct material cold;		/* the core's material long after */
 };
 static struct ship_fracture *ship_fracture;	/* nshiptypes * SHIP_DEATH_FRACTURES */
+static pthread_mutex_t ship_fracture_mutex = PTHREAD_MUTEX_INITIALIZER;
+static struct work_queue *ship_fracture_queue;
 static int ship_death_ready;		/* the renderer draws it and the modules are set up */
 
 struct ship_death_request {
@@ -3041,6 +3059,42 @@ struct ship_death_instance {
 };
 static struct ship_death_instance ship_death[MAX_SHIP_DEATHS];
 
+static void set_ship_fracture_state(struct ship_fracture *sf, int state)
+{
+	pthread_mutex_lock(&ship_fracture_mutex);
+	sf->state = state;
+	pthread_mutex_unlock(&ship_fracture_mutex);
+}
+
+/* The worker: break the ship, touching no GPU. */
+static void build_ship_fracture(void *work)
+{
+	struct ship_fracture *sf = work;
+	struct mesh_fracture_piece *core;
+	int i;
+
+	if (ship_death_fracture_build_deferred(&sf->fracture, ship_mesh_map[sf->shiptype],
+				sf->seed) != 0)
+		goto fail;
+	/* The core is piece 0, about its own middle; the derelict turns about the ship's. */
+	core = &sf->fracture.piece[0];
+	sf->derelict = mesh_duplicate(core->m);
+	if (!sf->derelict)
+		goto fail;
+	for (i = 0; i < sf->derelict->nvertices; i++) {
+		sf->derelict->v[i].x += core->offset[0];
+		sf->derelict->v[i].y += core->offset[1];
+		sf->derelict->v[i].z += core->offset[2];
+	}
+	sf->derelict->radius = mesh_compute_radius(sf->derelict);
+	ship_death_fracture_cold_material(&sf->fracture, &sf->cold);
+	set_ship_fracture_state(sf, SHIP_FRACTURE_BUILT);
+	return;
+fail:
+	ship_death_fracture_free(&sf->fracture);
+	set_ship_fracture_state(sf, SHIP_FRACTURE_FAILED);
+}
+
 /* Once, at load, after the ship meshes: nothing is drawn by it unless this works. */
 static void setup_ship_death(void)
 {
@@ -3054,53 +3108,72 @@ static void setup_ship_death(void)
 		fprintf(stderr, "snis_client: ship deaths could not be set up; sparks instead\n");
 		return;
 	}
+	/* Deep enough for every fracture there is, each asked for once. */
+	ship_fracture_queue = work_queue_init("shipfracture",
+				nshiptypes * SHIP_DEATH_FRACTURES + 1, 1, build_ship_fracture);
+	if (!ship_fracture_queue)
+		return;
 	ship_death_ready = 1;
 }
 
-/* How the ship of type shiptype whose id is id breaks, built if it has not been.  NULL if it
- * cannot be. */
+/* How the ship of type shiptype whose id is id breaks, or NULL if it is not ready yet, when it
+ * is asked for, or cannot be made.  On the thread that draws. */
 static struct ship_fracture *get_ship_fracture(int shiptype, uint32_t id)
 {
 	struct ship_fracture *sf;
-	struct mesh_fracture_piece *core;
-	int i;
+	int state;
 
 	if (!ship_death_ready || shiptype < 0 || shiptype >= nshiptypes)
 		return NULL;
 	sf = &ship_fracture[shiptype * SHIP_DEATH_FRACTURES + id % SHIP_DEATH_FRACTURES];
-	if (sf->state != 0)
-		return sf->state > 0 ? sf : NULL;
-	sf->state = -1;
-	if (ship_death_fracture_build(&sf->fracture, ship_mesh_map[shiptype],
-				(uint32_t) (sf - ship_fracture) + 1) != 0)
-		goto fail;
-	/* The core is piece 0, about its own middle; the derelict turns about the ship's. */
-	core = &sf->fracture.piece[0];
-	sf->derelict = mesh_duplicate(core->m);
-	if (!sf->derelict)
-		goto fail;
-	for (i = 0; i < sf->derelict->nvertices; i++) {
-		sf->derelict->v[i].x += core->offset[0];
-		sf->derelict->v[i].y += core->offset[1];
-		sf->derelict->v[i].z += core->offset[2];
+	pthread_mutex_lock(&ship_fracture_mutex);
+	state = sf->state;
+	if (state == SHIP_FRACTURE_NONE)
+		sf->state = SHIP_FRACTURE_QUEUED;
+	pthread_mutex_unlock(&ship_fracture_mutex);
+
+	switch (state) {
+	case SHIP_FRACTURE_NONE:
+		sf->shiptype = shiptype;
+		sf->seed = (uint32_t) (sf - ship_fracture) + 1;
+		if (work_queue_enqueue(ship_fracture_queue, sf) != 0)
+			set_ship_fracture_state(sf, SHIP_FRACTURE_NONE);	/* again later */
+		return NULL;
+	case SHIP_FRACTURE_BUILT:
+		ship_death_fracture_upload(&sf->fracture);
+		mesh_graph_dev_init(sf->derelict);
+		set_ship_fracture_state(sf, SHIP_FRACTURE_READY);
+		return sf;
+	case SHIP_FRACTURE_READY:
+		return sf;
+	default:
+		return NULL;
 	}
-	sf->derelict->radius = mesh_compute_radius(sf->derelict);
-	mesh_graph_dev_init(sf->derelict);
-	ship_death_fracture_cold_material(&sf->fracture, &sf->cold);
-	sf->state = 1;
-	return sf;
-fail:
-	ship_death_fracture_free(&sf->fracture);
-	return NULL;
 }
 
-/* A derelict is its ship's core, once the drawing thread has broken the ship: until then, and
- * where the renderer cannot draw a wreck, it is the old derelict mesh. */
+/* Whether o is near enough the player to want its fracture ready. */
+static int near_enough_to_break(struct snis_entity *o)
+{
+	struct snis_entity *me = find_my_ship();
+
+	return me && dist3dsqrd(o->x - me->x, o->y - me->y, o->z - me->z) <
+			SHIP_FRACTURE_NEAR * SHIP_FRACTURE_NEAR;
+}
+
+/* A ship near the player, broken ahead of its death. */
+static void ready_ship_fracture(struct snis_entity *o)
+{
+	if (ship_death_ready && near_enough_to_break(o))
+		(void) get_ship_fracture(o->tsd.ship.shiptype % nshiptypes, o->id);
+}
+
+/* A derelict is its ship's core, once its ship has been broken: until then, far from the player,
+ * and where the renderer cannot draw a wreck, it is the old derelict mesh. */
 static void derelict_wear_its_fracture(struct snis_entity *o)
 {
 	struct ship_fracture *sf;
 
-	if (!o->entity || !ship_death_ready)
+	if (!o->entity || !ship_death_ready || !near_enough_to_break(o))
 		return;
 	sf = get_ship_fracture(o->tsd.derelict.shiptype % nshiptypes, o->tsd.derelict.orig_ship_id);
 	if (!sf || entity_get_mesh(o->entity) == sf->derelict)
@@ -3133,17 +3206,29 @@ static int request_ship_death(uint32_t victim_id, uint32_t flash, double x, doub
 	return 1;
 }
 
+/* Death d's derelict, if it is known and wears the fracture's core, or NULL.  Far from the
+ * player it keeps the old derelict mesh, and the wreck's material is not for that. */
+static struct entity *ship_death_derelict_entity(struct ship_death_instance *d)
+{
+	int i = d->derelict;
+
+	if (i < 0 || !d->sf || !go[i].alive || go[i].type != OBJTYPE_DERELICT || !go[i].entity ||
+			go[i].tsd.derelict.orig_ship_id != d->r.victim_id ||
+			entity_get_mesh(go[i].entity) != d->sf->derelict)
+		return NULL;
+	return go[i].entity;
+}
+
 static void end_ship_death(struct ship_death_instance *d)
 {
-	int i;
+	struct entity *e;
 
 	if (!d->active)
 		return;
 	/* The derelict cools to its everyday look. */
-	i = d->derelict;
-	if (i >= 0 && go[i].alive && go[i].type == OBJTYPE_DERELICT && go[i].entity && d->sf &&
-			go[i].tsd.derelict.orig_ship_id == d->r.victim_id)
-		update_entity_material(go[i].entity, &d->sf->cold);
+	e = ship_death_derelict_entity(d);
+	if (e)
+		update_entity_material(e, &d->sf->cold);
 	ship_death_shrapnel_fini(&d->shrapnel);
 	if (d->sf)
 		ship_death_wreck_fini(&d->wreck);
@@ -3197,21 +3282,28 @@ static void start_ship_death(const struct ship_death_request *r)
 	if (ship_death_shrapnel_init(&d->shrapnel, &d->fireball, r->victim_id) != 0)
 		return;
 	d->end = fmaxf(ship_death_fireball_tuning.lifetime, ship_death_shrapnel_end(&d->shrapnel));
-	d->sf = get_ship_fracture(r->shiptype, r->victim_id);
-	if (d->sf) {
-		if (ship_death_wreck_init(&d->wreck, &d->fireball, &d->sf->fracture,
-					r->victim_id) != 0) {
-			ship_death_shrapnel_fini(&d->shrapnel);
-			return;
-		}
-		d->wreck.orientation = r->orientation;
-		if (r->leaves_derelict) {
-			d->wreck.core_pose = ship_death_core_pose;
-			d->wreck.core_cookie = d;
-		}
-		d->end = fmaxf(d->end, ship_death_wreck_end(&d->wreck));
-	}
+	d->sf = NULL;
 	d->active = 1;
+}
+
+/* Death d's wreck, once its ship's fracture is ready: at once if it was, or part way through. */
+static void attach_ship_death_wreck(struct ship_death_instance *d)
+{
+	struct ship_fracture *sf = get_ship_fracture(d->r.shiptype, d->r.victim_id);
+
+	if (!sf)
+		return;
+	if (ship_death_wreck_init(&d->wreck, &d->fireball, &sf->fracture, d->r.victim_id) != 0) {
+		ship_death_wreck_fini(&d->wreck);
+		return;
+	}
+	d->sf = sf;
+	d->wreck.orientation = d->r.orientation;
+	if (d->r.leaves_derelict) {
+		d->wreck.core_pose = ship_death_core_pose;
+		d->wreck.core_cookie = d;
+	}
+	d->end = fmaxf(d->end, ship_death_wreck_end(&d->wreck));
 }
 
 /* This frame's derelict of death d, if the server has told us of it yet. */
@@ -3336,14 +3428,20 @@ static void add_ship_death_entities(struct entity_context *cx)
 		if (d->fireball.age < 1.0f)
 			ship_death_fireball_draw(&d->fireball, &d->frame);
 		ship_death_shrapnel_draw(&d->shrapnel, d->t, &view, &d->frame);
+		if (!d->sf)
+			attach_ship_death_wreck(d);
 		if (d->sf) {
+			struct entity *e;
+
 			find_ship_death_derelict(d);
 			ship_death_wreck_draw(&d->wreck, d->t, &view, &d->frame);
-			if (d->derelict >= 0 && go[d->derelict].entity) {
+			if (d->derelict >= 0)
+				derelict_wear_its_fracture(&go[d->derelict]);
+			e = ship_death_derelict_entity(d);
+			if (e) {
 				struct material *m = ship_death_wreck_core_material(&d->wreck);
 
-				derelict_wear_its_fracture(&go[d->derelict]);
-				update_entity_material(go[d->derelict].entity, m ? m : &d->sf->cold);
+				update_entity_material(e, m ? m : &d->sf->cold);
 			}
 		}
 		if (!add_ship_death_frame(cx, d))
@@ -3794,6 +3892,7 @@ static void move_objects(void)
 			move_object(timestamp, o, &interpolate_oriented_object);
 			ship_emit_sparks(o);
 			update_shading_planet(o);
+			ready_ship_fracture(o);
 			break;
 		case OBJTYPE_WORMHOLE:
 			move_object(timestamp, o, &interpolate_generic_object);
