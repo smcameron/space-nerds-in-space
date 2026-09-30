@@ -3015,6 +3015,18 @@ static inline void spin_cargo_container(double timestamp, struct snis_entity *o)
 #define SHIP_FRACTURE_READY 3
 #define SHIP_FRACTURE_FAILED (-1)
 
+/* HOW MANY ARE KEPT.  A fracture is 17 to 88 thousand triangles, and a triangle costs some 830
+ * bytes -- 470 on the CPU, 360 on the GPU -- so every one of them for every type of ship would be
+ * gigabytes.  Once the fractures on the GPU come to more than this many triangles, some 250 MB,
+ * the one least recently wanted goes to make room for the next: its derelicts go back to the old
+ * mesh, and it is broken again if it is wanted again.  One that is still being used is never
+ * dropped -- a death playing, or a derelict near the player that has asked for it in the last
+ * SHIP_FRACTURE_KEEP seconds -- so with enough deaths and derelicts about at once the budget is
+ * exceeded rather than a fracture thrown away and rebuilt over and over.  Getting ready for ships
+ * that have not died yet stays within it: see get_ship_fracture(). */
+#define SHIP_FRACTURE_BUDGET 300000
+#define SHIP_FRACTURE_KEEP (5.0)
+
 struct ship_fracture {
 	int state;			/* under ship_fracture_mutex */
 	int shiptype;
@@ -3022,8 +3034,13 @@ struct ship_fracture {
 	struct ship_death_fracture fracture;
 	struct mesh *derelict;		/* the core, turning about the ship's origin, as the derelict does */
 	struct material cold;		/* the core's material long after */
+	int ntriangles;			/* the pieces' and the derelict's, once on the GPU */
+	int wanted;			/* asked for other than ahead of time, since it was queued */
+	double last_wanted;		/* time_now_double() it was last asked for */
 };
 static struct ship_fracture *ship_fracture;	/* nshiptypes * SHIP_DEATH_FRACTURES */
+static int ship_fracture_triangles;		/* of all the SHIP_FRACTURE_READY ones */
+static int ship_fracture_building;		/* QUEUED or BUILT, under ship_fracture_mutex */
 static pthread_mutex_t ship_fracture_mutex = PTHREAD_MUTEX_INITIALIZER;
 static struct work_queue *ship_fracture_queue;
 static int ship_death_ready;		/* the renderer draws it and the modules are set up */
@@ -3066,6 +3083,15 @@ static void set_ship_fracture_state(struct ship_fracture *sf, int state)
 	pthread_mutex_unlock(&ship_fracture_mutex);
 }
 
+/* A build is over, and it is state now: no longer queued, and not waiting to go to the GPU. */
+static void finish_ship_fracture(struct ship_fracture *sf, int state)
+{
+	pthread_mutex_lock(&ship_fracture_mutex);
+	sf->state = state;
+	ship_fracture_building--;
+	pthread_mutex_unlock(&ship_fracture_mutex);
+}
+
 /* The worker: break the ship, touching no GPU. */
 static void build_ship_fracture(void *work)
 {
@@ -3088,11 +3114,12 @@ static void build_ship_fracture(void *work)
 	}
 	sf->derelict->radius = mesh_compute_radius(sf->derelict);
 	ship_death_fracture_cold_material(&sf->fracture, &sf->cold);
+	/* Still being built, as far as ship_fracture_building goes, until it is on the GPU. */
 	set_ship_fracture_state(sf, SHIP_FRACTURE_BUILT);
 	return;
 fail:
 	ship_death_fracture_free(&sf->fracture);
-	set_ship_fracture_state(sf, SHIP_FRACTURE_FAILED);
+	finish_ship_fracture(sf, SHIP_FRACTURE_FAILED);
 }
 
 /* Once, at load, after the ship meshes: nothing is drawn by it unless this works. */
@@ -3116,9 +3143,114 @@ static void setup_ship_death(void)
 	ship_death_ready = 1;
 }
 
+/* Whether sf is being used, and so must not be dropped: see SHIP_FRACTURE_BUDGET. */
+static int ship_fracture_in_use(struct ship_fracture *sf, double now)
+{
+	int i;
+
+	if (now - sf->last_wanted < SHIP_FRACTURE_KEEP)
+		return 1;
+	for (i = 0; i < MAX_SHIP_DEATHS; i++)
+		if (ship_death[i].active && ship_death[i].sf == sf)
+			return 1;
+	return 0;
+}
+
+/* Drop sf, putting any derelict that wears it back in the old mesh.  On the thread that draws,
+ * since it frees GPU buffers. */
+static void drop_ship_fracture(struct ship_fracture *sf)
+{
+	int i;
+
+	for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
+		struct snis_entity *o = &go[i];
+
+		if (!o->alive || o->type != OBJTYPE_DERELICT || !o->entity ||
+				entity_get_mesh(o->entity) != sf->derelict)
+			continue;
+		entity_set_mesh(o->entity, derelict_mesh[sf->shiptype]);
+		update_entity_material(o->entity, NULL);
+	}
+	ship_fracture_triangles -= sf->ntriangles;
+	ship_death_fracture_free(&sf->fracture);
+	mesh_free(sf->derelict);
+	sf->derelict = NULL;
+	sf->ntriangles = 0;
+	set_ship_fracture_state(sf, SHIP_FRACTURE_NONE);
+}
+
+/* Drop the least recently wanted fractures not in use until ntriangles more would fit in the
+ * budget, or there is nothing left that can go. */
+static void make_room_for_ship_fracture(int ntriangles)
+{
+	double now = time_now_double();
+
+	while (ship_fracture_triangles + ntriangles > SHIP_FRACTURE_BUDGET) {
+		struct ship_fracture *oldest = NULL;
+		int i;
+
+		pthread_mutex_lock(&ship_fracture_mutex);
+		for (i = 0; i < nshiptypes * SHIP_DEATH_FRACTURES; i++) {
+			struct ship_fracture *sf = &ship_fracture[i];
+
+			if (sf->state != SHIP_FRACTURE_READY || ship_fracture_in_use(sf, now))
+				continue;
+			if (!oldest || sf->last_wanted < oldest->last_wanted)
+				oldest = sf;
+		}
+		pthread_mutex_unlock(&ship_fracture_mutex);
+		if (!oldest)
+			return;
+		drop_ship_fracture(oldest);
+	}
+}
+
+/* Send a SHIP_FRACTURE_BUILT fracture to the GPU, making room for it first unless it was only
+ * got ready ahead of time: see get_ship_fracture(). */
+static void upload_ship_fracture(struct ship_fracture *sf)
+{
+	sf->ntriangles = sf->fracture.total_triangles + sf->derelict->ntriangles;
+	if (sf->wanted)
+		make_room_for_ship_fracture(sf->ntriangles);
+	sf->wanted = 0;
+	ship_death_fracture_upload(&sf->fracture);
+	mesh_graph_dev_init(sf->derelict);
+	ship_fracture_triangles += sf->ntriangles;
+	/* New, and so kept a moment whoever asked, or it could go the frame it came. */
+	sf->last_wanted = time_now_double();
+	finish_ship_fracture(sf, SHIP_FRACTURE_READY);
+}
+
+/* Once a frame: send whatever the worker has finished to the GPU, whether or not what asked for
+ * it still wants it -- a ship got ready for may have gone out of range meanwhile -- so that a
+ * finished build never sits counted as one in progress, holding up the next. */
+static void upload_built_ship_fractures(void)
+{
+	int i;
+
+	if (!ship_death_ready)
+		return;
+	for (i = 0; i < nshiptypes * SHIP_DEATH_FRACTURES; i++) {
+		struct ship_fracture *sf = &ship_fracture[i];
+		int built;
+
+		pthread_mutex_lock(&ship_fracture_mutex);
+		built = sf->state == SHIP_FRACTURE_BUILT;
+		pthread_mutex_unlock(&ship_fracture_mutex);
+		if (built)
+			upload_ship_fracture(sf);
+	}
+}
+
 /* How the ship of type shiptype whose id is id breaks, or NULL if it is not ready yet, when it
- * is asked for, or cannot be made.  On the thread that draws. */
-static struct ship_fracture *get_ship_fracture(int shiptype, uint32_t id)
+ * is asked for, or cannot be made.  On the thread that draws.
+ *
+ * AHEAD OF TIME, prewarm is 1: a ship near the player, which may never die.  Such a request is
+ * only a hint -- it is built only while there is room in the budget and nothing else is being
+ * built, it drops nothing to make room, and it does not count as using what it gets -- so however
+ * many different ships are about, getting ready for them holds at most one fracture over the
+ * budget. */
+static struct ship_fracture *get_ship_fracture(int shiptype, uint32_t id, int prewarm)
 {
 	struct ship_fracture *sf;
 	int state;
@@ -3128,23 +3260,34 @@ static struct ship_fracture *get_ship_fracture(int shiptype, uint32_t id)
 	sf = &ship_fracture[shiptype * SHIP_DEATH_FRACTURES + id % SHIP_DEATH_FRACTURES];
 	pthread_mutex_lock(&ship_fracture_mutex);
 	state = sf->state;
-	if (state == SHIP_FRACTURE_NONE)
+	/* Ahead of time, one at a time and only while there is room -- the room a build will
+	 * take is not known until it is done -- else not now. */
+	if (state == SHIP_FRACTURE_NONE && prewarm &&
+			(ship_fracture_triangles >= SHIP_FRACTURE_BUDGET || ship_fracture_building > 0)) {
+		state = SHIP_FRACTURE_FAILED;
+	} else if (state == SHIP_FRACTURE_NONE) {
 		sf->state = SHIP_FRACTURE_QUEUED;
+		ship_fracture_building++;
+	}
 	pthread_mutex_unlock(&ship_fracture_mutex);
+	/* Only this thread reads or writes it. */
+	if (!prewarm && (state == SHIP_FRACTURE_NONE || state == SHIP_FRACTURE_QUEUED ||
+			state == SHIP_FRACTURE_BUILT))
+		sf->wanted = 1;
 
 	switch (state) {
 	case SHIP_FRACTURE_NONE:
 		sf->shiptype = shiptype;
 		sf->seed = (uint32_t) (sf - ship_fracture) + 1;
 		if (work_queue_enqueue(ship_fracture_queue, sf) != 0)
-			set_ship_fracture_state(sf, SHIP_FRACTURE_NONE);	/* again later */
+			finish_ship_fracture(sf, SHIP_FRACTURE_NONE);	/* again later */
 		return NULL;
 	case SHIP_FRACTURE_BUILT:
-		ship_death_fracture_upload(&sf->fracture);
-		mesh_graph_dev_init(sf->derelict);
-		set_ship_fracture_state(sf, SHIP_FRACTURE_READY);
+		upload_ship_fracture(sf);
 		return sf;
 	case SHIP_FRACTURE_READY:
+		if (!prewarm)
+			sf->last_wanted = time_now_double();
 		return sf;
 	default:
 		return NULL;
@@ -3152,19 +3295,24 @@ static struct ship_fracture *get_ship_fracture(int shiptype, uint32_t id)
 }
 
 /* Whether o is near enough the player to want its fracture ready. */
-static int near_enough_to_break(struct snis_entity *o)
+static int near_enough_to_break_at(float x, float y, float z)
 {
 	struct snis_entity *me = find_my_ship();
 
-	return me && dist3dsqrd(o->x - me->x, o->y - me->y, o->z - me->z) <
+	return me && dist3dsqrd(x - me->x, y - me->y, z - me->z) <
 			SHIP_FRACTURE_NEAR * SHIP_FRACTURE_NEAR;
+}
+
+static int near_enough_to_break(struct snis_entity *o)
+{
+	return near_enough_to_break_at(o->x, o->y, o->z);
 }
 
 /* A ship near the player, broken ahead of its death. */
 static void ready_ship_fracture(struct snis_entity *o)
 {
 	if (ship_death_ready && near_enough_to_break(o))
-		(void) get_ship_fracture(o->tsd.ship.shiptype % nshiptypes, o->id);
+		(void) get_ship_fracture(o->tsd.ship.shiptype % nshiptypes, o->id, 1);
 }
 
 /* A derelict is its ship's core, once its ship has been broken: until then, far from the player,
@@ -3175,7 +3323,8 @@ static void derelict_wear_its_fracture(struct snis_entity *o)
 
 	if (!o->entity || !ship_death_ready || !near_enough_to_break(o))
 		return;
-	sf = get_ship_fracture(o->tsd.derelict.shiptype % nshiptypes, o->tsd.derelict.orig_ship_id);
+	sf = get_ship_fracture(o->tsd.derelict.shiptype % nshiptypes, o->tsd.derelict.orig_ship_id,
+				0);
 	if (!sf || entity_get_mesh(o->entity) == sf->derelict)
 		return;
 	entity_set_mesh(o->entity, sf->derelict);
@@ -3289,7 +3438,7 @@ static void start_ship_death(const struct ship_death_request *r)
 /* Death d's wreck, once its ship's fracture is ready: at once if it was, or part way through. */
 static void attach_ship_death_wreck(struct ship_death_instance *d)
 {
-	struct ship_fracture *sf = get_ship_fracture(d->r.shiptype, d->r.victim_id);
+	struct ship_fracture *sf = get_ship_fracture(d->r.shiptype, d->r.victim_id, 0);
 
 	if (!sf)
 		return;
@@ -3428,7 +3577,11 @@ static void add_ship_death_entities(struct entity_context *cx)
 		if (d->fireball.age < 1.0f)
 			ship_death_fireball_draw(&d->fireball, &d->frame);
 		ship_death_shrapnel_draw(&d->shrapnel, d->t, &view, &d->frame);
-		if (!d->sf)
+		/* Only near the player: a wreck across the system would hold its fracture for the
+		 * half minute it burns, and be seen by nobody.  Come near while it still burns and
+		 * it joins, where it would have been by then. */
+		if (!d->sf && near_enough_to_break_at(d->fireball.pos.v.x, d->fireball.pos.v.y,
+							d->fireball.pos.v.z))
 			attach_ship_death_wreck(d);
 		if (d->sf) {
 			struct entity *e;
@@ -24744,6 +24897,7 @@ int advance_game(void)
 	}
 
 	pthread_mutex_lock(&universe_mutex);
+	upload_built_ship_fractures();
 	move_sparks();
 	move_objects();
 	expire_starmap_entries();
