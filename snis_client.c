@@ -3009,6 +3009,12 @@ static inline void spin_cargo_container(double timestamp, struct snis_entity *o)
  * across, its old mesh as good as its new. */
 #define SHIP_FRACTURE_NEAR (8000.0)
 
+/* The client tweakable SHIP_DEATH_EFFECTS: how a ship's death is drawn on this screen. */
+#define SHIP_DEATH_EFFECTS_SPARKS 0	/* the old sparks, and the old derelicts */
+#define SHIP_DEATH_EFFECTS_FULL 1	/* fireball, shrapnel, and the ship broken into a wreck */
+#define SHIP_DEATH_EFFECTS_REDUCED 2	/* fireball and shrapnel; the old derelicts, no fractures */
+static int ship_death_effects = SHIP_DEATH_EFFECTS_FULL;	/* tweakable */
+
 #define SHIP_FRACTURE_NONE 0		/* not asked for */
 #define SHIP_FRACTURE_QUEUED 1		/* the worker has it */
 #define SHIP_FRACTURE_BUILT 2		/* broken, waiting to go to the GPU */
@@ -3255,7 +3261,8 @@ static struct ship_fracture *get_ship_fracture(int shiptype, uint32_t id, int pr
 	struct ship_fracture *sf;
 	int state;
 
-	if (!ship_death_ready || shiptype < 0 || shiptype >= nshiptypes)
+	if (!ship_death_ready || ship_death_effects != SHIP_DEATH_EFFECTS_FULL ||
+			shiptype < 0 || shiptype >= nshiptypes)
 		return NULL;
 	sf = &ship_fracture[shiptype * SHIP_DEATH_FRACTURES + id % SHIP_DEATH_FRACTURES];
 	pthread_mutex_lock(&ship_fracture_mutex);
@@ -3340,7 +3347,7 @@ static int request_ship_death(uint32_t victim_id, uint32_t flash, double x, doub
 {
 	struct ship_death_request *r;
 
-	if (!ship_death_ready)
+	if (!ship_death_ready || ship_death_effects == SHIP_DEATH_EFFECTS_SPARKS)
 		return 0;
 	if (nship_death_requests >= MAX_SHIP_DEATHS)
 		return 1;	/* more at once than can be drawn: this one goes unseen */
@@ -3382,6 +3389,37 @@ static void end_ship_death(struct ship_death_instance *d)
 	if (d->sf)
 		ship_death_wreck_fini(&d->wreck);
 	d->active = 0;
+}
+
+/* Once a frame, on the thread that draws.  When SHIP_DEATH_EFFECTS has changed, the deaths
+ * playing end -- they are only for show -- and away from the full effect every fracture is
+ * dropped, its derelicts going back to the old mesh.  In the full effect, whatever the worker has
+ * finished goes to the GPU. */
+static void ship_death_housekeeping(void)
+{
+	static int effects = SHIP_DEATH_EFFECTS_FULL;
+	int i;
+
+	if (!ship_death_ready)
+		return;
+	if (ship_death_effects != effects) {
+		effects = ship_death_effects;
+		nship_death_requests = 0;
+		for (i = 0; i < MAX_SHIP_DEATHS; i++)
+			end_ship_death(&ship_death[i]);
+		for (i = 0; effects != SHIP_DEATH_EFFECTS_FULL &&
+				i < nshiptypes * SHIP_DEATH_FRACTURES; i++) {
+			int ready;
+
+			pthread_mutex_lock(&ship_fracture_mutex);
+			ready = ship_fracture[i].state == SHIP_FRACTURE_READY;
+			pthread_mutex_unlock(&ship_fracture_mutex);
+			if (ready)
+				drop_ship_fracture(&ship_fracture[i]);
+		}
+	}
+	if (effects == SHIP_DEATH_EFFECTS_FULL)
+		upload_built_ship_fractures();
 }
 
 /* Where the derelict was, s seconds after the flash, and which way up: see
@@ -20558,6 +20596,8 @@ static struct tweakable_var_descriptor client_tweak[] = {
 		&graph_dev_atmosphere_ring_shadows, 'i', 0.0, 0.0, 0.0, 0, 1, 1, 0 },
 	{ "BLACK_HOLE_LENSING", "0 OR 1 TO DISABLE OR ENABLE GRAVITATIONAL LENSING OF THE SKYBOX",
 		&black_hole_lensing, 'i', 0.0, 0.0, 0.0, 0, 1, 1, 0 },
+	{ "SHIP_DEATH_EFFECTS", "0 SPARKS, 1 FIREBALL AND WRECK, 2 FIREBALL WITHOUT THE WRECK",
+		&ship_death_effects, 'i', 0.0, 0.0, 0.0, 0, 2, 1, 0 },
 #if MOVING_STARFIELD
 	{ "STAR_FIELD", "0 OR 1 - DISTANT STARS.  SEPARATE FROM THE SPACE DUST; BOTH MAY BE ON",
 		&star_field, 'i', 0.0, 0.0, 0.0, 0, 1, 0, 0 },
@@ -24897,7 +24937,7 @@ int advance_game(void)
 	}
 
 	pthread_mutex_lock(&universe_mutex);
-	upload_built_ship_fractures();
+	ship_death_housekeeping();
 	move_sparks();
 	move_objects();
 	expire_starmap_entries();
