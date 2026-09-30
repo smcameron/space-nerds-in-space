@@ -624,7 +624,7 @@ COMMONCLIENTOBJS=${COMMONOBJS} ${OGGOBJ} ${SNDOBJS} $(patsubst %,$(OD)/%,${_COMM
 
 _CLIENTOBJS= shader.o ${GRAPH_OBJS} snis_graph.o snis_client.o joystick_config.o snis_xwindows_hacks.o png_utils.o \
 				black_hole_lens.o mesh_fracture.o particle_batch.o ship_death.o \
-				ship_death_fireball.o
+				ship_death_fireball.o ship_death_shrapnel.o
 CLIENTOBJS=${COMMONCLIENTOBJS} $(patsubst %,$(OD)/%,${_CLIENTOBJS})
 
 _SDLCLIENTOBJS=shader.o ${GRAPH_OBJS} snis_graph.o mesh_viewer.o \
@@ -1174,6 +1174,10 @@ $(OD)/ship_death.o:	ship_death.c ship_death.h Makefile ${ODT}
 
 $(OD)/ship_death_fireball.o:	ship_death_fireball.c ship_death_fireball.h ship_death.h material.h \
 				Makefile ${ODT}
+	$(Q)$(COMPILE)
+
+$(OD)/ship_death_shrapnel.o:	ship_death_shrapnel.c ship_death_shrapnel.h ship_death_fireball.h \
+				ship_death.h particle_batch.h material.h Makefile ${ODT}
 	$(Q)$(COMPILE)
 
 $(OD)/crater.o:	crater.c crater.h Makefile ${ODT}

@@ -64,6 +64,15 @@ struct ship_death_drawable {
 
 #define SHIP_DEATH_MAX_DRAWABLES 256
 
+/* Where it is seen from: soft things face the camera and are sorted from it, and things too small
+ * to see from it are dropped. */
+struct ship_death_view {
+	union vec3 eye;
+	union vec3 forward;
+	union vec3 up;
+	float pixels_per_unit;	/* pixels across a world unit, at unit distance */
+};
+
 struct ship_death_frame {
 	struct ship_death_drawable d[SHIP_DEATH_MAX_DRAWABLES];
 	int n;
