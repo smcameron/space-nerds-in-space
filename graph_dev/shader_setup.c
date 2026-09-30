@@ -461,6 +461,47 @@ void setup_particles_shader(struct graph_dev_gl_particles_shader *shader)
 	shader->tonemapping_gain_id = glGetUniformLocation(id, "u_TonemappingGain");
 }
 
+void setup_explosion_shader(struct graph_dev_gl_explosion_shader *shader)
+{
+	GLuint id;
+
+	maybe_unload_shader(&shader->meta, &shader->program_id);
+	id = load_ship_death_shader("explosion.shader");
+	shader->program_id = id;
+	graph_dev_gen_vao(&shader->vao_id);
+
+	shader->mvp_matrix_id = glGetUniformLocation(id, "u_MVPMatrix");
+	shader->model_matrix_id = glGetUniformLocation(id, "u_ModelMatrix");
+	shader->vertex_position_id = glGetAttribLocation(id, "a_Position");
+	shader->eye_pos_id = glGetUniformLocation(id, "u_EyePos");
+	shader->light_pos_id = glGetUniformLocation(id, "u_LightPos");
+	shader->star_tint_id = glGetUniformLocation(id, "u_StarTint");
+	shader->ambient_id = glGetUniformLocation(id, "u_Ambient");
+	shader->blackbody_id = glGetUniformLocation(id, "u_Blackbody");
+	shader->age_id = glGetUniformLocation(id, "u_Age");
+	shader->seed_id = glGetUniformLocation(id, "u_Seed");
+	shader->peak_temp_id = glGetUniformLocation(id, "u_PeakTemp");
+	shader->cooling_id = glGetUniformLocation(id, "u_Cooling");
+	shader->brightness_id = glGetUniformLocation(id, "u_Brightness");
+	shader->radiance_id = glGetUniformLocation(id, "u_Radiance");
+	shader->density_id = glGetUniformLocation(id, "u_Density");
+	shader->edge_id = glGetUniformLocation(id, "u_Edge");
+	shader->lumpiness_id = glGetUniformLocation(id, "u_Lumpiness");
+	shader->frequency_id = glGetUniformLocation(id, "u_Frequency");
+	shader->roll_id = glGetUniformLocation(id, "u_Roll");
+	shader->smoke_start_id = glGetUniformLocation(id, "u_SmokeStart");
+	shader->smoke_albedo_id = glGetUniformLocation(id, "u_SmokeAlbedo");
+	shader->dilution_id = glGetUniformLocation(id, "u_Dilution");
+	shader->shred_id = glGetUniformLocation(id, "u_Shred");
+	shader->steps_id = glGetUniformLocation(id, "u_Steps");
+	shader->scene_depth_id = glGetUniformLocation(id, "u_SceneDepth");
+	shader->viewport_id = glGetUniformLocation(id, "u_Viewport");
+	shader->near_far_id = glGetUniformLocation(id, "u_NearFar");
+	shader->camera_forward_id = glGetUniformLocation(id, "u_CameraForward");
+	shader->filmic_tonemapping_id = glGetUniformLocation(id, "u_FilmicTonemapping");
+	shader->tonemapping_gain_id = glGetUniformLocation(id, "u_TonemappingGain");
+}
+
 void setup_single_color_shader(struct graph_dev_gl_single_color_shader *shader)
 {
 	maybe_unload_shader(&shader->meta, &shader->program_id);

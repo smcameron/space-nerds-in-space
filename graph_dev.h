@@ -50,6 +50,13 @@ extern void graph_dev_set_screen_size(int width, int height);
 extern void graph_dev_set_extent_scale(float x_scale, float y_scale);
 extern void graph_dev_set_3d_viewport(int x_offset, int y_offset, int width, int height);
 extern void graph_dev_clear_depth_bit(void);
+/* Take the depth buffer as it stands, the opaque things drawn and nothing blended yet, for the
+ * fireball: a raymarched volume that writes no depth, whose march has to stop at whatever solid
+ * thing is inside it.  near and far are this render pass's, to turn it back into distance.
+ * entity.c calls it between a pass's opaque and blended things, when a fireball is about to be
+ * drawn.  Where the depth cannot be read -- a multisampled target, or GLES -- the fireball does
+ * without, and simply does not stop at what is inside it. */
+extern void graph_dev_capture_scene_depth(float near, float far);
 
 /* Cascaded shadow mapping.  graph_dev_shadow_map_enabled is 1 to render and
  * receive shadow maps, 0 to disable (e.g. the GLES backend).  The caller

@@ -1637,6 +1637,17 @@ void render_entities(struct entity_context *cx)
 					render_entity(cx, f, e, (union vec3 *)&camera_light_pos.m[0]);
 			}
 
+			/* A fireball's march stops at solid things, so it wants their depth: take it
+			 * now, the opaque things drawn, if one is about to be. */
+			for (j = 0; j < cx->nfar_to_near_entity_depth; j++) {
+				struct entity *e = &cx->entity_list[cx->far_to_near_entity_depth[j]];
+
+				if (e->material_ptr && e->material_ptr->type == MATERIAL_EXPLOSION) {
+					graph_dev_capture_scene_depth(f->near, f->far);
+					break;
+				}
+			}
+
 			/* then far to near, usually blended geometry and software renderer */
 			for (j = 0; j < cx->nfar_to_near_entity_depth; j++) {
 				struct entity *e = &cx->entity_list[cx->far_to_near_entity_depth[j]];

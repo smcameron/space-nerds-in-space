@@ -259,6 +259,43 @@ struct graph_dev_gl_particles_shader {
 	GLint tonemapping_gain_id;
 };
 
+/* The fireball: a volume raymarched inside a camera facing billboard.  See explosion.shader. */
+struct graph_dev_gl_explosion_shader {
+	struct graph_dev_gl_shader_metadata meta;
+	GLuint program_id;
+	GLuint vao_id;
+	GLint mvp_matrix_id;
+	GLint model_matrix_id;
+	GLint vertex_position_id;
+	GLint eye_pos_id;
+	GLint light_pos_id;
+	GLint star_tint_id;
+	GLint ambient_id;
+	GLint blackbody_id;
+	GLint age_id;
+	GLint seed_id;
+	GLint peak_temp_id;
+	GLint cooling_id;
+	GLint brightness_id;
+	GLint radiance_id;
+	GLint density_id;
+	GLint edge_id;
+	GLint lumpiness_id;
+	GLint frequency_id;
+	GLint roll_id;
+	GLint smoke_start_id;
+	GLint smoke_albedo_id;
+	GLint dilution_id;
+	GLint shred_id;
+	GLint steps_id;
+	GLint scene_depth_id;
+	GLint viewport_id;
+	GLint near_far_id;
+	GLint camera_forward_id;
+	GLint filmic_tonemapping_id;
+	GLint tonemapping_gain_id;
+};
+
 struct graph_dev_gl_skybox_shader {
 	struct graph_dev_gl_shader_metadata meta;
 	GLuint program_id;
@@ -334,6 +371,7 @@ void setup_exhaust_plume_shader(struct graph_dev_gl_exhaust_plume_shader *shader
 void setup_shrapnel_shader(struct graph_dev_gl_shrapnel_shader *shader);
 void setup_wreck_shader(struct graph_dev_gl_wreck_shader *shader);
 void setup_particles_shader(struct graph_dev_gl_particles_shader *shader);
+void setup_explosion_shader(struct graph_dev_gl_explosion_shader *shader);
 void setup_single_color_shader(struct graph_dev_gl_single_color_shader *shader);
 void setup_vertex_color_shader(struct graph_dev_gl_vertex_color_shader *shader);
 

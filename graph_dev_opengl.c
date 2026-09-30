@@ -335,6 +335,13 @@ static struct graph_dev_gl_exhaust_plume_shader exhaust_plume_shader;
 static struct graph_dev_gl_shrapnel_shader shrapnel_shader;
 static struct graph_dev_gl_wreck_shader wreck_shader;
 static struct graph_dev_gl_particles_shader particles_shader;
+static struct graph_dev_gl_explosion_shader explosion_shader;
+/* The opaque scene's depth, for the fireball: see graph_dev_capture_scene_depth().  far_depth is a
+ * single texel at the far plane, for where the depth cannot be read: a fireball that does not stop
+ * at what is inside it rather than one that stops at nothing. */
+static GLuint scene_depth_texture, far_depth_texture;
+static int scene_depth_w, scene_depth_h, scene_depth_valid;
+static float scene_depth_near = 1.0f, scene_depth_far = 1000.0f;
 /* The blackbody colour ramp the ship's death burns along, as a texture: see bake_blackbody_lut(). */
 static GLuint blackbody_lut;
 static struct graph_dev_gl_point_cloud_shader point_cloud_shader;
@@ -2217,6 +2224,132 @@ static void graph_dev_raster_particles(const struct mat44 *mat_mvp, const struct
 	glEnable(GL_CULL_FACE);
 }
 
+static void bind_depth_texture(GLenum unit, GLuint texture)
+{
+	glActiveTexture(unit);
+	glBindTexture(GL_TEXTURE_2D, texture);
+	/* The binding cache no longer knows what this unit holds. */
+	sgc.texture_unit_active = unit - GL_TEXTURE0;
+	sgc.texture_unit_bind[unit - GL_TEXTURE0] = texture;
+}
+
+static void depth_texture_parameters(void)
+{
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+}
+
+/* See graph_dev.h.  A copy of the whole window's depth, since the shader looks it up by
+ * gl_FragCoord, which is in window coordinates whatever the 3D viewport is. */
+void graph_dev_capture_scene_depth(float near, float far)
+{
+	GLint sample_buffers = 0;
+
+	scene_depth_near = near;
+	scene_depth_far = far;
+	scene_depth_valid = 0;
+	enable_3d_viewport();
+	/* A multisampled depth buffer cannot be copied into a texture. */
+	glGetIntegerv(GL_SAMPLE_BUFFERS, &sample_buffers);
+	if (sample_buffers > 0)
+		return;
+	if (!scene_depth_texture || scene_depth_w != sgc.screen_x || scene_depth_h != sgc.screen_y) {
+		if (!scene_depth_texture)
+			glGenTextures(1, &scene_depth_texture);
+		bind_depth_texture(GL_TEXTURE2, scene_depth_texture);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT24, sgc.screen_x, sgc.screen_y, 0,
+				GL_DEPTH_COMPONENT, GL_UNSIGNED_INT, NULL);
+		depth_texture_parameters();
+		scene_depth_w = sgc.screen_x;
+		scene_depth_h = sgc.screen_y;
+	}
+	bind_depth_texture(GL_TEXTURE2, scene_depth_texture);
+	glCopyTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 0, 0, scene_depth_w, scene_depth_h);
+	scene_depth_valid = 1;
+}
+
+static void make_far_depth_texture(void)
+{
+	GLuint far = 0xffffffff;
+
+	if (far_depth_texture)
+		return;
+	glGenTextures(1, &far_depth_texture);
+	bind_depth_texture(GL_TEXTURE2, far_depth_texture);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT24, 1, 1, 0, GL_DEPTH_COMPONENT,
+			GL_UNSIGNED_INT, &far);
+	depth_texture_parameters();
+}
+
+/* The fireball: a volume raymarched inside a camera facing billboard, premultiplied.  No depth
+ * test: the quad sits on the ball's middle, and the march itself stops at what is solid, from the
+ * depth taken after the opaque things were drawn. */
+static void graph_dev_raster_explosion(struct entity_context *cx, const struct mat44 *mat_mvp,
+				const struct mat44 *model, struct mesh *m, struct material *material,
+				const struct ship_death_light *light)
+{
+	struct graph_dev_gl_explosion_shader *sh = &explosion_shader;
+	struct mesh_gl_info *ptr = m->graph_ptr;
+	struct material_explosion *mt = &material->explosion;
+	union vec3 forward;
+
+	if (!ptr || sh->program_id == 0 || (GLint) sh->program_id == -1)
+		return;
+	make_far_depth_texture();
+	enable_3d_viewport();
+	glDisable(GL_DEPTH_TEST);
+	glDepthMask(GL_FALSE);
+	glEnable(GL_BLEND);
+	BLEND_FUNC(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
+	glDisable(GL_CULL_FACE);
+	activate_shader(sh);
+	glUniformMatrix4fv(sh->mvp_matrix_id, 1, GL_FALSE, &mat_mvp->m[0][0]);
+	glUniformMatrix4fv(sh->model_matrix_id, 1, GL_FALSE, &model->m[0][0]);
+	glUniform3f(sh->eye_pos_id, cx->camera.x, cx->camera.y, cx->camera.z);
+	glUniform3f(sh->light_pos_id, light->pos[0], light->pos[1], light->pos[2]);
+	glUniform3f(sh->star_tint_id, light->tint[0], light->tint[1], light->tint[2]);
+	glUniform1f(sh->ambient_id, light->ambient);
+	glUniform1f(sh->age_id, mt->age);
+	glUniform1f(sh->seed_id, mt->seed);
+	glUniform1f(sh->peak_temp_id, mt->peak_temp);
+	glUniform1f(sh->cooling_id, mt->cooling);
+	glUniform1f(sh->brightness_id, mt->brightness);
+	glUniform1f(sh->radiance_id, mt->radiance);
+	glUniform1f(sh->density_id, mt->density);
+	glUniform1f(sh->edge_id, mt->edge);
+	glUniform1f(sh->lumpiness_id, mt->lumpiness);
+	glUniform1f(sh->frequency_id, mt->frequency);
+	glUniform1f(sh->roll_id, mt->roll);
+	glUniform1f(sh->smoke_start_id, mt->smoke_start);
+	glUniform1f(sh->smoke_albedo_id, mt->smoke_albedo);
+	glUniform1f(sh->dilution_id, mt->dilution);
+	glUniform1f(sh->shred_id, mt->shred);
+	glUniform1i(sh->steps_id, mt->steps);
+	glUniform1f(sh->filmic_tonemapping_id, (float) filmic_tonemapping);
+	glUniform1f(sh->tonemapping_gain_id, tonemapping_gain);
+	BIND_TEXTURE(GL_TEXTURE0, GL_TEXTURE_2D, blackbody_lut);
+	glUniform1i(sh->blackbody_id, 0);
+	bind_depth_texture(GL_TEXTURE2, scene_depth_valid ? scene_depth_texture : far_depth_texture);
+	glUniform1i(sh->scene_depth_id, 2);
+	glUniform2f(sh->viewport_id, (float) sgc.screen_x, (float) sgc.screen_y);
+	glUniform2f(sh->near_far_id, scene_depth_near, scene_depth_far);
+	vec3_init(&forward, cx->camera.lx - cx->camera.x, cx->camera.ly - cx->camera.y,
+			cx->camera.lz - cx->camera.z);
+	vec3_normalize_self(&forward);
+	glUniform3f(sh->camera_forward_id, forward.v.x, forward.v.y, forward.v.z);
+
+	ship_death_attribute(sh->vertex_position_id, ptr, 3,
+			offsetof(struct vertex_buffer_data, position.v.x), 0);
+	glDrawArrays(GL_TRIANGLES, 0, m->ntriangles * 3);
+	ship_death_attribute_off(sh->vertex_position_id);
+	glEnable(GL_DEPTH_TEST);
+	glDepthMask(GL_TRUE);
+	glDisable(GL_BLEND);
+	glEnable(GL_CULL_FACE);
+}
+
 /* See graph_dev.h.  Inert by default (floor 1.0): pulling ambient down changes how every lit
  * thing in the game looks, so nothing happens until a caller asks for it. */
 static float shade_ambient_lo = 0.5;
@@ -2275,6 +2408,10 @@ static void graph_dev_raster_ship_death(struct entity_context *cx,
 		break;
 	case MATERIAL_PARTICLES:
 		graph_dev_raster_particles(&transform->mvp, transform->v, e->m, e->material_ptr,
+					&light);
+		break;
+	case MATERIAL_EXPLOSION:
+		graph_dev_raster_explosion(cx, &transform->mvp, &model, e->m, e->material_ptr,
 					&light);
 		break;
 	default:
@@ -2438,6 +2575,7 @@ static void graph_dev_raster_triangle_mesh(struct entity_context *cx, struct ent
 		case MATERIAL_SHRAPNEL:
 		case MATERIAL_WRECK:
 		case MATERIAL_PARTICLES:
+		case MATERIAL_EXPLOSION:
 			/* A ship's death: handled by graph_dev_raster_ship_death() below. */
 			is_ship_death = 1;
 			break;
@@ -3838,6 +3976,7 @@ void graph_dev_reload_all_shaders(void)
 	setup_shrapnel_shader(&shrapnel_shader);
 	setup_wreck_shader(&wreck_shader);
 	setup_particles_shader(&particles_shader);
+	setup_explosion_shader(&explosion_shader);
 	bake_blackbody_lut();
 	setup_line_single_color_shader(&line_single_color_shader);
 	setup_point_cloud_shader("point_cloud", &point_cloud_shader);
