@@ -47,6 +47,7 @@ struct entity;
 #define MATERIAL_BLACK_HOLE 18
 #define MATERIAL_CITY 19
 #define MATERIAL_EXHAUST_PLUME 20
+#define MATERIAL_EXPLOSION 21
 
 #define MATERIAL_BILLBOARD_TYPE_NONE 0
 #define MATERIAL_BILLBOARD_TYPE_SCREEN 1
@@ -229,6 +230,46 @@ struct material_exhaust_plume {
 	float shock_diamond_intensity;
 };
 
+/* A ship's death: a fireball that cools into smoke and thins away to nothing.
+ *
+ * One raymarched volume inside a camera facing billboard.  The billboard's scale is the
+ * volume's current radius; the shape, the heat and the smoke are all worked out in the
+ * fragment shader from where a sample sits inside that sphere and how far through its life
+ * the explosion is.  The noise lives in the sphere's own unit coordinates, so the lumps grow
+ * with the ball rather than the ball expanding through a fixed field.
+ *
+ * age runs 0 to 1 over the whole life, and at 1 the density is exactly zero everywhere:
+ * erosion has eaten the last of the smoke.  That is what lets the caller simply stop drawing
+ * it at 1 with nothing popping out of view.
+ *
+ * Temperatures are kelvin, read through the same blackbody ramp as the star and the quasar, so
+ * a fireball and a star cannot disagree about what a temperature looks like.
+ */
+struct material_explosion {
+	float age;		/* 0 at the flash, 1 when the last smoke is gone */
+	float seed;		/* picks this explosion's noise; any value */
+	float peak_temp;	/* kelvin at the core, at the flash */
+	float cooling;		/* e-foldings of heat over the whole life */
+	float brightness;	/* linear HDR emission scale; over 1 is meant */
+	float radiance;		/* emission goes as heat to this power; 4 is physical but dims too soon */
+	float density;		/* extinction per unit radius of path, at full density */
+	float edge;		/* width of the ball's edge: small is hard, large a soft fade */
+	float lumpiness;	/* how far the billows cut into the ball, as a fraction of radius */
+	float frequency;	/* billows across the ball */
+	float roll;		/* how far the billows roll outward over the whole life */
+	float smoke_start;	/* age at which the smoke begins to thin */
+	float smoke_albedo;	/* how much starlight the smoke gives back */
+	/* How far the gas has thinned by spreading out, as a multiplier on density.  The caller
+	 * owns the expansion, so it works this out: in vacuum the gas coasts at constant speed,
+	 * and once the fire is out this is (radius then / radius now) cubed.  1 is undiluted. */
+	float dilution;
+	/* When the smoke tears into shreds, as the power the erosion climbs with over the smoke
+	 * phase: 2 holds it whole until late, 1 tears it steadily, below 1 early.  Whatever it
+	 * is, the erosion still arrives at the end, so nothing survives age 1. */
+	float shred;
+	int steps;		/* raymarch samples through the ball */
+};
+
 struct material {
 	__extension__ union {
 		struct material_color_by_w color_by_w;
@@ -249,6 +290,7 @@ struct material {
 		struct material_black_hole black_hole;
 		struct material_city city;
 		struct material_exhaust_plume exhaust_plume;
+		struct material_explosion explosion;
 	};
 	int type;
 	int billboard_type;
@@ -272,6 +314,7 @@ extern void material_init_planetary_lightning(struct material *m);
 extern void material_init_warp_gate_effect(struct material *m);
 extern void material_init_city(struct material *m);
 extern void material_init_exhaust_plume(struct material *m);
+extern void material_init_explosion(struct material *m);
 
 extern int material_nebula_read_from_file(const char *asset_dir, const char *filename,
 						struct material *nebula);

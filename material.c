@@ -364,3 +364,29 @@ void material_init_exhaust_plume(struct material *m)
 	m->exhaust_plume.shock_diamond_spacing = 0.12f;
 	m->exhaust_plume.shock_diamond_intensity = 1.5f;
 }
+
+void material_init_explosion(struct material *m)
+{
+	m->type = MATERIAL_EXPLOSION;
+	m->billboard_type = MATERIAL_BILLBOARD_TYPE_SPHERICAL;
+	m->rotate_randomly = 0;
+	m->explosion.age = 0.0;
+	m->explosion.seed = 0.0;
+	/* Blue-white at the flash -- hotter than any chemical fire, which is fair for a ship with
+	 * a reactor aboard -- falling through yellow and orange to a dull red just as the smoke
+	 * takes over. */
+	m->explosion.peak_temp = 10000.0;
+	m->explosion.cooling = 7.0;
+	m->explosion.brightness = 6.0;
+	m->explosion.radiance = 1.5;
+	m->explosion.density = 6.0;
+	m->explosion.edge = 0.08;
+	m->explosion.lumpiness = 0.35;
+	m->explosion.frequency = 3.0;
+	m->explosion.roll = 0.6;
+	m->explosion.smoke_start = 0.2;
+	m->explosion.smoke_albedo = 0.035;
+	m->explosion.dilution = 1.0;
+	m->explosion.shred = 0.75;
+	m->explosion.steps = 24;
+}
