@@ -1905,24 +1905,6 @@ static float shade_ambient_lo = 0.5;
 static float shade_ambient_hi = 1.5;
 static float shade_ambient_floor = 1.0;
 
-void graph_dev_set_volume_downsample(int n)
-{
-	(void) n;
-}
-
-/* Not yet: see graph_dev.h. */
-int graph_dev_draws_ship_death(void)
-{
-	return 0;
-}
-
-/* See graph_dev.h: GLES2 cannot read the depth buffer back, so the fireball does without. */
-void graph_dev_capture_scene_depth(float near, float far)
-{
-	(void) near;
-	(void) far;
-}
-
 void graph_dev_set_shade_ambient_ramp(float lo, float hi, float floor)
 {
 	shade_ambient_lo = lo;
@@ -1952,6 +1934,448 @@ static float shade_ambient_scale(float in_shade)
 }
 
 
+/* A SHIP'S DEATH on GLES: the fireball, the shrapnel, the wreck and the particle batch, as
+ * graph_dev_opengl.c draws them, tuned down for the smaller GPUs GLES runs on.
+ *
+ *  - The fireball is marched at a quarter of the width and height by default, a sixteenth of
+ *    the pixels, and at most 16 steps (EXPLOSION_MAX_STEPS in shader-es/explosion.shader).
+ *
+ *  - GLES2 cannot read the depth buffer back, so the fireball's march does not stop at a
+ *    solid thing inside it: see graph_dev_capture_scene_depth() below.
+ *
+ * Everything else -- the pieces, the shards, the smoke, flame and sparks -- is drawn as on the
+ * desktop, from the same shaders but for the GLSL version. */
+static struct graph_dev_gl_shrapnel_shader shrapnel_shader;
+static struct graph_dev_gl_wreck_shader wreck_shader;
+static struct graph_dev_gl_particles_shader particles_shader;
+static struct graph_dev_gl_explosion_shader explosion_shader;
+static struct graph_dev_gl_volume_composite_shader volume_composite_shader;
+static GLint volume_composite_corner_id = -1;
+static GLuint volume_composite_corners;
+
+static GLuint blackbody_lut;
+static int volume_downsample = 4;
+static GLuint volume_fbo, volume_color;
+static int volume_w, volume_h;
+
+void graph_dev_set_volume_downsample(int n)
+{
+	volume_downsample = n < 1 ? 1 : n;
+}
+
+int graph_dev_draws_ship_death(void)
+{
+	return 1;
+}
+
+/* See graph_dev.h: GLES2 cannot read the depth buffer back, so the fireball does without. */
+void graph_dev_capture_scene_depth(float near, float far)
+{
+	(void) near;
+	(void) far;
+}
+
+/* The blackbody ramp, as graph_dev_opengl.c's bake_blackbody_lut() makes it -- the two ends MUST
+ * agree with BLACKBODY_MIN_K and BLACKBODY_MAX_K in the shaders -- but GL_RGB, since GLES2 has
+ * no sized internal formats. */
+#define BLACKBODY_LUT_TEXELS 256
+#define BLACKBODY_LUT_MIN_K 1900.0f
+#define BLACKBODY_LUT_MAX_K 40000.0f
+
+static void bake_blackbody_lut(void)
+{
+	unsigned char texel[BLACKBODY_LUT_TEXELS * 3];
+	int i;
+
+	if (blackbody_lut)
+		return;
+	for (i = 0; i < BLACKBODY_LUT_TEXELS; i++) {
+		float kelvin = BLACKBODY_LUT_MIN_K + (BLACKBODY_LUT_MAX_K - BLACKBODY_LUT_MIN_K) *
+				((float) i / (float) (BLACKBODY_LUT_TEXELS - 1));
+		float r, g, b;
+
+		star_light_blackbody_color(kelvin, &r, &g, &b);
+		texel[i * 3 + 0] = (unsigned char) (r * 255.0f + 0.5f);
+		texel[i * 3 + 1] = (unsigned char) (g * 255.0f + 0.5f);
+		texel[i * 3 + 2] = (unsigned char) (b * 255.0f + 0.5f);
+	}
+	glGenTextures(1, &blackbody_lut);
+	glBindTexture(GL_TEXTURE_2D, blackbody_lut);
+	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, BLACKBODY_LUT_TEXELS, 1, 0, GL_RGB,
+			GL_UNSIGNED_BYTE, texel);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	glBindTexture(GL_TEXTURE_2D, 0);
+	/* The binding cache no longer knows what unit 0 holds. */
+	sgc.texture_unit_bind[0] = 0;
+}
+
+static void setup_ship_death_shaders(void)
+{
+	/* GLSL 100 has no gl_VertexID: the composite's one triangle comes from a buffer. */
+	static const GLfloat corner[] = { -1.0f, -1.0f, 3.0f, -1.0f, -1.0f, 3.0f };
+
+	setup_shrapnel_shader(&shrapnel_shader);
+	setup_wreck_shader(&wreck_shader);
+	setup_particles_shader(&particles_shader);
+	setup_explosion_shader(&explosion_shader);
+	setup_volume_composite_shader(&volume_composite_shader);
+	volume_composite_corner_id = glGetAttribLocation(volume_composite_shader.program_id,
+							"a_Corner");
+	if (!volume_composite_corners) {
+		glGenBuffers(1, &volume_composite_corners);
+		glBindBuffer(GL_ARRAY_BUFFER, volume_composite_corners);
+		glBufferData(GL_ARRAY_BUFFER, sizeof(corner), corner, GL_STATIC_DRAW);
+		glBindBuffer(GL_ARRAY_BUFFER, 0);
+	}
+	bake_blackbody_lut();
+}
+
+/* The star's light as the ship's death's shaders take it: in world space, its
+ * tinted colour, and the ambient. */
+struct ship_death_light {
+	float pos[3];
+	float tint[3];
+	float ambient;
+};
+
+/* Point a shader's attribute at a column of a mesh's buffers: position from the vertex buffer,
+ * everything else from the per-triangle-vertex one.  -1, for an attribute the shader does not
+ * use, is skipped. */
+static void ship_death_attribute(GLint id, struct mesh_gl_info *ptr, int size, size_t offset,
+				int from_triangle_buffer)
+{
+	if (id < 0)
+		return;
+	glEnableVertexAttribArray(id);
+	if (from_triangle_buffer) {
+		glBindBuffer(GL_ARRAY_BUFFER, ptr->triangle_vertex_buffer);
+		glVertexAttribPointer(id, size, GL_FLOAT, GL_FALSE,
+			sizeof(struct vertex_triangle_buffer_data), (void *) offset);
+	} else {
+		glBindBuffer(GL_ARRAY_BUFFER, ptr->vertex_buffer);
+		glVertexAttribPointer(id, size, GL_FLOAT, GL_FALSE,
+			sizeof(struct vertex_buffer_data), (void *) offset);
+	}
+}
+
+static void ship_death_attribute_off(GLint id)
+{
+	if (id >= 0)
+		glDisableVertexAttribArray(id);
+}
+
+static int ship_death_shader_ok(GLuint program_id)
+{
+	return program_id != 0 && (GLint) program_id != -1;
+}
+
+/* One shard of shrapnel, or an ember off a burning chunk.  Opaque and depth written. */
+static void graph_dev_raster_shrapnel(const struct mat44 *mat_mvp, const struct mat44 *model,
+				struct mesh *m, struct material *material,
+				const struct ship_death_light *light)
+{
+	struct graph_dev_gl_shrapnel_shader *sh = &shrapnel_shader;
+	struct mesh_gl_info *ptr = m->graph_ptr;
+	struct material_shrapnel *mt = &material->shrapnel;
+
+	if (!ptr || !ship_death_shader_ok(sh->program_id))
+		return;
+	enable_3d_viewport();
+	glEnable(GL_DEPTH_TEST);
+	glDepthMask(GL_TRUE);
+	glDisable(GL_BLEND);
+	glEnable(GL_CULL_FACE);
+	activate_shader(sh);
+	glUniformMatrix4fv(sh->mvp_matrix_id, 1, GL_FALSE, &mat_mvp->m[0][0]);
+	glUniformMatrix4fv(sh->model_matrix_id, 1, GL_FALSE, &model->m[0][0]);
+	glUniform3f(sh->light_pos_id, light->pos[0], light->pos[1], light->pos[2]);
+	glUniform3f(sh->star_tint_id, light->tint[0], light->tint[1], light->tint[2]);
+	glUniform1f(sh->ambient_id, light->ambient);
+	glUniform1f(sh->temperature_id, mt->temperature);
+	glUniform1f(sh->brightness_id, mt->brightness);
+	glUniform1f(sh->albedo_id, mt->albedo);
+	glUniform1f(sh->filmic_tonemapping_id, (float) filmic_tonemapping);
+	glUniform1f(sh->tonemapping_gain_id, tonemapping_gain);
+	BIND_TEXTURE(GL_TEXTURE0, GL_TEXTURE_2D, blackbody_lut);
+	glUniform1i(sh->blackbody_id, 0);
+
+	ship_death_attribute(sh->vertex_position_id, ptr, 3,
+			offsetof(struct vertex_buffer_data, position.v.x), 0);
+	ship_death_attribute(sh->vertex_normal_id, ptr, 3,
+			offsetof(struct vertex_triangle_buffer_data, normal.v.x), 1);
+	glDrawArrays(GL_TRIANGLES, 0, m->ntriangles * 3);
+	ship_death_attribute_off(sh->vertex_position_id);
+	ship_death_attribute_off(sh->vertex_normal_id);
+}
+
+/* One piece of a broken ship, drawn two-sided.  Opaque and depth written. */
+static void graph_dev_raster_wreck(const struct mat44 *mat_mvp, const struct mat44 *model,
+				struct mesh *m, struct material *material,
+				const struct ship_death_light *light)
+{
+	struct graph_dev_gl_wreck_shader *sh = &wreck_shader;
+	struct mesh_gl_info *ptr = m->graph_ptr;
+	struct material_wreck *mt = &material->wreck;
+	int have_texture = mt->texture_id > 0 && graph_dev_texture_ready(mt->texture_id);
+
+	if (!ptr || !ship_death_shader_ok(sh->program_id))
+		return;
+	enable_3d_viewport();
+	glEnable(GL_DEPTH_TEST);
+	glDepthMask(GL_TRUE);
+	glDisable(GL_BLEND);
+	glDisable(GL_CULL_FACE);	/* two-sided: the inside shows through the tear */
+	activate_shader(sh);
+	glUniformMatrix4fv(sh->mvp_matrix_id, 1, GL_FALSE, &mat_mvp->m[0][0]);
+	glUniformMatrix4fv(sh->model_matrix_id, 1, GL_FALSE, &model->m[0][0]);
+	glUniform3f(sh->light_pos_id, light->pos[0], light->pos[1], light->pos[2]);
+	glUniform3f(sh->star_tint_id, light->tint[0], light->tint[1], light->tint[2]);
+	glUniform1f(sh->ambient_id, light->ambient);
+	glUniform3f(sh->aux_light_pos_id, mt->aux_light_pos[0], mt->aux_light_pos[1],
+			mt->aux_light_pos[2]);
+	glUniform3f(sh->aux_light_color_id, mt->aux_light_color[0], mt->aux_light_color[1],
+			mt->aux_light_color[2]);
+	glUniform1f(sh->aux_light_wrap_id, mt->aux_light_wrap);
+	glUniform1f(sh->interior_id, mt->interior);
+	glUniform1f(sh->scorch_id, mt->scorch);
+	glUniform1f(sh->edge_width_id, mt->edge_width);
+	glUniform1f(sh->edge_temp_id, mt->edge_temp);
+	glUniform1f(sh->edge_brightness_id, mt->edge_brightness);
+	glUniform1f(sh->hull_radius_id, mt->hull_radius);
+	glUniform1f(sh->dissolve_id, mt->dissolve);
+	glUniform1f(sh->burn_glow_id, mt->burn_glow);
+	glUniform1f(sh->preheat_id, mt->preheat);
+	glUniform1f(sh->time_id, mt->time);
+	glUniform1f(sh->filmic_tonemapping_id, (float) filmic_tonemapping);
+	glUniform1f(sh->tonemapping_gain_id, tonemapping_gain);
+	if (have_texture)
+		BIND_TEXTURE(GL_TEXTURE0, GL_TEXTURE_2D, (GLuint) mt->texture_id);
+	glUniform1i(sh->albedo_id, 0);
+	glUniform1i(sh->have_texture_id, have_texture);
+	BIND_TEXTURE(GL_TEXTURE1, GL_TEXTURE_2D, blackbody_lut);
+	glUniform1i(sh->blackbody_id, 1);
+
+	ship_death_attribute(sh->vertex_position_id, ptr, 3,
+			offsetof(struct vertex_buffer_data, position.v.x), 0);
+	ship_death_attribute(sh->vertex_normal_id, ptr, 3,
+			offsetof(struct vertex_triangle_buffer_data, normal.v.x), 1);
+	ship_death_attribute(sh->texture_coord_id, ptr, 2,
+			offsetof(struct vertex_triangle_buffer_data, texture_coord.v.x), 1);
+	ship_death_attribute(sh->edge_id, ptr, 1, offsetof(struct vertex_triangle_buffer_data, w), 1);
+	glDrawArrays(GL_TRIANGLES, 0, m->ntriangles * 3);
+	ship_death_attribute_off(sh->vertex_position_id);
+	ship_death_attribute_off(sh->vertex_normal_id);
+	ship_death_attribute_off(sh->texture_coord_id);
+	ship_death_attribute_off(sh->edge_id);
+	glEnable(GL_CULL_FACE);
+}
+
+/* A batch of smoke, flame and sparks, already in world space and facing the camera.
+ * Premultiplied, depth tested but not written, unculled. */
+static void graph_dev_raster_particles(const struct mat44 *mat_mvp, const struct mat44d *view,
+				struct mesh *m, struct material *material,
+				const struct ship_death_light *light)
+{
+	struct graph_dev_gl_particles_shader *sh = &particles_shader;
+	struct mesh_gl_info *ptr = m->graph_ptr;
+
+	if (!ptr || m->ntriangles == 0 || !ship_death_shader_ok(sh->program_id))
+		return;
+	enable_3d_viewport();
+	glEnable(GL_DEPTH_TEST);
+	glDepthMask(GL_FALSE);
+	glEnable(GL_BLEND);
+	BLEND_FUNC(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
+	glDisable(GL_CULL_FACE);
+	activate_shader(sh);
+	glUniformMatrix4fv(sh->mvp_matrix_id, 1, GL_FALSE, &mat_mvp->m[0][0]);
+	glUniform3f(sh->cam_right_id, view->m[0][0], view->m[1][0], view->m[2][0]);
+	glUniform3f(sh->cam_up_id, view->m[0][1], view->m[1][1], view->m[2][1]);
+	glUniform3f(sh->cam_back_id, view->m[0][2], view->m[1][2], view->m[2][2]);
+	glUniform3f(sh->light_pos_id, light->pos[0], light->pos[1], light->pos[2]);
+	glUniform3f(sh->star_tint_id, light->tint[0], light->tint[1], light->tint[2]);
+	glUniform1f(sh->ambient_id, light->ambient);
+	glUniform1f(sh->albedo_id, material->particles.albedo);
+	glUniform1f(sh->time_id, material->particles.time);
+	glUniform1f(sh->filmic_tonemapping_id, (float) filmic_tonemapping);
+	glUniform1f(sh->tonemapping_gain_id, tonemapping_gain);
+	BIND_TEXTURE(GL_TEXTURE0, GL_TEXTURE_2D, blackbody_lut);
+	glUniform1i(sh->blackbody_id, 0);
+
+	ship_death_attribute(sh->vertex_position_id, ptr, 3,
+			offsetof(struct vertex_buffer_data, position.v.x), 0);
+	ship_death_attribute(sh->vertex_normal_id, ptr, 3,
+			offsetof(struct vertex_triangle_buffer_data, normal.v.x), 1);
+	ship_death_attribute(sh->texture_coord_id, ptr, 2,
+			offsetof(struct vertex_triangle_buffer_data, texture_coord.v.x), 1);
+	ship_death_attribute(sh->edge_id, ptr, 1, offsetof(struct vertex_triangle_buffer_data, w), 1);
+	glDrawArrays(GL_TRIANGLES, 0, m->ntriangles * 3);
+	ship_death_attribute_off(sh->vertex_position_id);
+	ship_death_attribute_off(sh->vertex_normal_id);
+	ship_death_attribute_off(sh->texture_coord_id);
+	ship_death_attribute_off(sh->edge_id);
+	glDepthMask(GL_TRUE);
+	glDisable(GL_BLEND);
+	glEnable(GL_CULL_FACE);
+}
+
+/* Make volume_fbo a colour target of w by h, remaking it only when the size changes.  Returns 0
+ * if it could not be made, and the caller then draws at full size. */
+static int volume_target(int w, int h)
+{
+	if (volume_fbo && volume_w == w && volume_h == h)
+		return 1;
+	if (!volume_fbo) {
+		glGenFramebuffers(1, &volume_fbo);
+		glGenTextures(1, &volume_color);
+	}
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, volume_color);
+	sgc.texture_unit_active = 0;
+	sgc.texture_unit_bind[0] = volume_color;
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	glBindFramebuffer(GL_FRAMEBUFFER, volume_fbo);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, volume_color, 0);
+	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
+		fprintf(stderr, "graph_dev: volume target incomplete; drawing the fireball full size\n");
+		glBindFramebuffer(GL_FRAMEBUFFER, sgc.fbo_current);
+		glDeleteFramebuffers(1, &volume_fbo);
+		volume_fbo = 0;
+		return 0;
+	}
+	glBindFramebuffer(GL_FRAMEBUFFER, sgc.fbo_current);
+	volume_w = w;
+	volume_h = h;
+	return 1;
+}
+
+/* The fireball, raymarched inside a camera facing billboard, premultiplied, and at a
+ * volume_downsample above 1 drawn into the reduced target and laid back over the window. */
+static void graph_dev_raster_explosion(struct entity_context *cx, const struct mat44 *mat_mvp,
+				const struct mat44 *model, struct mesh *m, struct material *material,
+				const struct ship_death_light *light)
+{
+	struct graph_dev_gl_explosion_shader *sh = &explosion_shader;
+	struct graph_dev_gl_volume_composite_shader *comp = &volume_composite_shader;
+	struct mesh_gl_info *ptr = m->graph_ptr;
+	struct material_explosion *mt = &material->explosion;
+	int n = volume_downsample, reduced = 0;
+	GLuint frame_fbo;
+
+	if (!ptr || !ship_death_shader_ok(sh->program_id))
+		return;
+	enable_3d_viewport();
+	frame_fbo = sgc.fbo_current;
+	if (n > 1 && ship_death_shader_ok(comp->program_id) && volume_composite_corner_id >= 0)
+		reduced = volume_target((sgc.screen_x + n - 1) / n, (sgc.screen_y + n - 1) / n);
+	if (reduced) {
+		glBindFramebuffer(GL_FRAMEBUFFER, volume_fbo);
+		glViewport(sgc.vp_x_3d / n, sgc.vp_y_3d / n, sgc.vp_width_3d / n, sgc.vp_height_3d / n);
+		glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
+		glClear(GL_COLOR_BUFFER_BIT);
+	}
+	glDisable(GL_DEPTH_TEST);
+	glDepthMask(GL_FALSE);
+	glEnable(GL_BLEND);
+	BLEND_FUNC(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
+	glDisable(GL_CULL_FACE);
+	activate_shader(sh);
+	glUniformMatrix4fv(sh->mvp_matrix_id, 1, GL_FALSE, &mat_mvp->m[0][0]);
+	glUniformMatrix4fv(sh->model_matrix_id, 1, GL_FALSE, &model->m[0][0]);
+	glUniform3f(sh->eye_pos_id, cx->camera.x, cx->camera.y, cx->camera.z);
+	glUniform3f(sh->light_pos_id, light->pos[0], light->pos[1], light->pos[2]);
+	glUniform3f(sh->star_tint_id, light->tint[0], light->tint[1], light->tint[2]);
+	glUniform1f(sh->ambient_id, light->ambient);
+	glUniform1f(sh->age_id, mt->age);
+	glUniform1f(sh->seed_id, mt->seed);
+	glUniform1f(sh->peak_temp_id, mt->peak_temp);
+	glUniform1f(sh->cooling_id, mt->cooling);
+	glUniform1f(sh->brightness_id, mt->brightness);
+	glUniform1f(sh->radiance_id, mt->radiance);
+	glUniform1f(sh->density_id, mt->density);
+	glUniform1f(sh->edge_id, mt->edge);
+	glUniform1f(sh->lumpiness_id, mt->lumpiness);
+	glUniform1f(sh->frequency_id, mt->frequency);
+	glUniform1f(sh->roll_id, mt->roll);
+	glUniform1f(sh->smoke_start_id, mt->smoke_start);
+	glUniform1f(sh->smoke_albedo_id, mt->smoke_albedo);
+	glUniform1f(sh->dilution_id, mt->dilution);
+	glUniform1f(sh->shred_id, mt->shred);
+	glUniform1i(sh->steps_id, mt->steps);
+	glUniform1f(sh->filmic_tonemapping_id, (float) filmic_tonemapping);
+	glUniform1f(sh->tonemapping_gain_id, tonemapping_gain);
+	BIND_TEXTURE(GL_TEXTURE0, GL_TEXTURE_2D, blackbody_lut);
+	glUniform1i(sh->blackbody_id, 0);
+
+	ship_death_attribute(sh->vertex_position_id, ptr, 3,
+			offsetof(struct vertex_buffer_data, position.v.x), 0);
+	glDrawArrays(GL_TRIANGLES, 0, m->ntriangles * 3);
+	ship_death_attribute_off(sh->vertex_position_id);
+
+	if (reduced) {
+		glBindFramebuffer(GL_FRAMEBUFFER, frame_fbo);
+		glViewport(0, 0, sgc.screen_x, sgc.screen_y);
+		activate_shader(comp);
+		BIND_TEXTURE(GL_TEXTURE0, GL_TEXTURE_2D, volume_color);
+		glUniform1i(comp->volume_id, 0);
+		glEnableVertexAttribArray(volume_composite_corner_id);
+		glBindBuffer(GL_ARRAY_BUFFER, volume_composite_corners);
+		glVertexAttribPointer(volume_composite_corner_id, 2, GL_FLOAT, GL_FALSE, 0, NULL);
+		glDrawArrays(GL_TRIANGLES, 0, 3);
+		glDisableVertexAttribArray(volume_composite_corner_id);
+		/* The viewport was set behind the cache's back: make the next one set it again. */
+		sgc.active_vp = 0;
+		sgc.vp_width = -1;
+		enable_3d_viewport();
+	}
+	glEnable(GL_DEPTH_TEST);
+	glDepthMask(GL_TRUE);
+	glDisable(GL_BLEND);
+	glEnable(GL_CULL_FACE);
+}
+
+/* A ship's death, which takes the star's light its own way: see struct ship_death_light. */
+static void graph_dev_raster_ship_death(struct entity_context *cx,
+				const struct entity_transform *transform, struct entity *e)
+{
+	struct ship_death_light light;
+	float ambient_color[3];
+	struct mat44 model;
+
+	light.pos[0] = cx->light.m[0];
+	light.pos[1] = cx->light.m[1];
+	light.pos[2] = cx->light.m[2];
+	graph_dev_compute_star_light(cx, light.tint, ambient_color);
+	light.ambient = cx->ambient;
+	mat44_convert_df(&transform->m, &model);
+	switch (e->material_ptr->type) {
+	case MATERIAL_SHRAPNEL:
+		graph_dev_raster_shrapnel(&transform->mvp, &model, e->m, e->material_ptr, &light);
+		break;
+	case MATERIAL_WRECK:
+		graph_dev_raster_wreck(&transform->mvp, &model, e->m, e->material_ptr, &light);
+		break;
+	case MATERIAL_PARTICLES:
+		graph_dev_raster_particles(&transform->mvp, transform->v, e->m, e->material_ptr,
+					&light);
+		break;
+	case MATERIAL_EXPLOSION:
+		graph_dev_raster_explosion(cx, &transform->mvp, &model, e->m, e->material_ptr,
+					&light);
+		break;
+	default:
+		break;
+	}
+}
+
 static void graph_dev_raster_triangle_mesh(struct entity_context *cx, struct entity *e,
 	union vec3 *eye_light_pos, const struct entity_transform *transform, struct sng_color *line_color)
 {
@@ -1967,6 +2391,7 @@ static void graph_dev_raster_triangle_mesh(struct entity_context *cx, struct ent
 	int is_sun = 0;
 	int is_black_hole = 0;
 	int is_exhaust_plume = 0;
+	int is_ship_death = 0;
 	float shade_scale = 1.0; /* the shadow's pull on ambient; not rtp.ambient_scale */
 
 	int filled_triangle = ((c->renderer & FLATSHADING_RENDERER) || (c->renderer & BLACK_TRIS))
@@ -2089,6 +2514,13 @@ static void graph_dev_raster_triangle_mesh(struct entity_context *cx, struct ent
 		case MATERIAL_EXHAUST_PLUME:
 			/* Handled by graph_dev_raster_exhaust_plume() below; rtp.shader stays NULL. */
 			is_exhaust_plume = 1;
+			break;
+		case MATERIAL_SHRAPNEL:
+		case MATERIAL_WRECK:
+		case MATERIAL_PARTICLES:
+		case MATERIAL_EXPLOSION:
+			/* A ship's death: handled by graph_dev_raster_ship_death() below. */
+			is_ship_death = 1;
 			break;
 		case MATERIAL_TEXTURE_MAPPED_UNLIT: {
 			rtp.shader = &textured_shader;
@@ -2339,6 +2771,8 @@ static void graph_dev_raster_triangle_mesh(struct entity_context *cx, struct ent
 					graph_dev_raster_black_hole(rtp.mat_mvp, e->m, e->material_ptr);
 				} else if (is_exhaust_plume) {
 					graph_dev_raster_exhaust_plume(rtp.mat_mvp, rtp.mat_mv, e->m, e->material_ptr);
+				} else if (is_ship_death) {
+					graph_dev_raster_ship_death(cx, transform, e);
 				} else if (atmosphere && !rtp.textures_not_ready) {
 					float light_color[3], ambient_color[3];
 
@@ -3187,6 +3621,7 @@ void graph_dev_reload_all_shaders(void)
 	setup_sun_shader(&sun_shader);
 	setup_black_hole_shader(&black_hole_shader);
 	setup_exhaust_plume_shader(&exhaust_plume_shader);
+	setup_ship_death_shaders();
 	setup_textured_shader("textured", UNIVERSAL_SHADER_HEADER FILMIC_TONEMAPPING, &textured_shader);
 	setup_textured_shader("textured-with-sphere-shadow-per-pixel", UNIVERSAL_SHADER_HEADER FILMIC_TONEMAPPING,
 				&textured_with_sphere_shadow_shader);
