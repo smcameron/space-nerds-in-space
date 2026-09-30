@@ -2281,6 +2281,11 @@ void graph_dev_set_volume_downsample(int n)
 	volume_downsample = n < 1 ? 1 : n;
 }
 
+int graph_dev_draws_ship_death(void)
+{
+	return 1;
+}
+
 /* Make volume_fbo a colour target of w by h, remaking it only when the size changes.  Returns 0
  * if it could not be made, and the caller then draws at full size. */
 static int volume_target(int w, int h)

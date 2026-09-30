@@ -1910,6 +1910,12 @@ void graph_dev_set_volume_downsample(int n)
 	(void) n;
 }
 
+/* Not yet: see graph_dev.h. */
+int graph_dev_draws_ship_death(void)
+{
+	return 0;
+}
+
 /* See graph_dev.h: GLES2 cannot read the depth buffer back, so the fireball does without. */
 void graph_dev_capture_scene_depth(float near, float far)
 {

@@ -61,6 +61,10 @@ extern void graph_dev_capture_scene_depth(float near, float far);
  * quarter of the pixels, and most of the way from a frame rate that sags as the smoke fills the
  * screen to one that does not.  1 is full resolution.  2 by default. */
 extern void graph_dev_set_volume_downsample(int n);
+/* 1 if this renderer draws a ship's death -- MATERIAL_EXPLOSION, _SHRAPNEL, _WRECK and _PARTICLES
+ * -- and 0 if not, when the client falls back to its sparks and its old derelicts.  The GLES
+ * backend does not yet. */
+extern int graph_dev_draws_ship_death(void);
 
 /* Cascaded shadow mapping.  graph_dev_shadow_map_enabled is 1 to render and
  * receive shadow maps, 0 to disable (e.g. the GLES backend).  The caller
