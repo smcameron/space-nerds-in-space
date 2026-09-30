@@ -49,6 +49,7 @@ struct entity;
 #define MATERIAL_EXHAUST_PLUME 20
 #define MATERIAL_EXPLOSION 21
 #define MATERIAL_SHRAPNEL 22
+#define MATERIAL_WRECK 23
 
 #define MATERIAL_BILLBOARD_TYPE_NONE 0
 #define MATERIAL_BILLBOARD_TYPE_SCREEN 1
@@ -280,6 +281,29 @@ struct material_shrapnel {
 	float albedo;		/* of the cold metal, lit by the star */
 };
 
+/* A piece of a broken ship: see mesh_fracture.h.  An open shell of hull, drawn two-sided -- its
+ * outside the ship's own texture, its inside, seen through the torn edge, a dark interior. */
+struct material_wreck {
+	int texture_id;		/* the ship's own; 0 for none */
+	float interior;		/* albedo of the inside of the hull */
+	/* ALONG THE TEAR.  Each vertex carries its distance to the torn edge, in hull radii (see
+	 * mesh_fracture.h), and these shade by it: soot a ragged band wide, and the edge itself
+	 * glowing like hot metal at edge_temp, which the caller lets fall as the wreck cools. */
+	float scorch;		/* width of the sooted band, hull radii */
+	float edge_width;	/* width of the glowing edge, hull radii */
+	float edge_temp;	/* kelvin; below about 900 it no longer glows */
+	float edge_brightness;	/* linear HDR emission scale at 2000K */
+	float hull_radius;	/* of the ship it came from, world units: the scale of the soot */
+	/* GOING AWAY.  A piece of debris at the end of its life is eaten away from its torn edges
+	 * inward, a hot front running ahead of the gap, rather than shrunk or faded -- it stays
+	 * opaque, so it needs no sorting.  This is how far in the front has got, in hull radii;
+	 * 0 is an intact piece. */
+	float dissolve;
+	float burn_glow;	/* how hot the front runs, 0 to 1: dims as the burn slows */
+	float preheat;		/* width of the dull red zone ahead of the front, hull radii */
+	float time;		/* seconds, for the burning front's flicker; wrap it as it grows */
+};
+
 struct material {
 	__extension__ union {
 		struct material_color_by_w color_by_w;
@@ -302,6 +326,7 @@ struct material {
 		struct material_exhaust_plume exhaust_plume;
 		struct material_explosion explosion;
 		struct material_shrapnel shrapnel;
+		struct material_wreck wreck;
 	};
 	int type;
 	int billboard_type;
@@ -327,6 +352,7 @@ extern void material_init_city(struct material *m);
 extern void material_init_exhaust_plume(struct material *m);
 extern void material_init_explosion(struct material *m);
 extern void material_init_shrapnel(struct material *m);
+extern void material_init_wreck(struct material *m);
 
 extern int material_nebula_read_from_file(const char *asset_dir, const char *filename,
 						struct material *nebula);

@@ -142,4 +142,5 @@ validate_gl_vs "share/snis/shader/wireframe_transparent.vert"
 validate_gl_both "share/snis/shader/city.shader"
 validate_gl_vs "share/snis/shader/exhaust-plume.vert"
 validate_gl_fs "share/snis/shader/exhaust-plume.frag"
+validate_gl_both "share/snis/shader/wreck.shader"
 

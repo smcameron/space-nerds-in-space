@@ -400,3 +400,21 @@ void material_init_shrapnel(struct material *m)
 	m->shrapnel.brightness = 4.0;
 	m->shrapnel.albedo = 0.25;
 }
+
+void material_init_wreck(struct material *m)
+{
+	m->type = MATERIAL_WRECK;
+	m->billboard_type = MATERIAL_BILLBOARD_TYPE_NONE;
+	m->rotate_randomly = 0;
+	m->wreck.texture_id = 0;
+	m->wreck.interior = 0.06;
+	m->wreck.scorch = 0.12;
+	m->wreck.edge_width = 0.012;
+	m->wreck.edge_temp = 0.0;	/* cold until the caller says otherwise */
+	m->wreck.edge_brightness = 3.0;
+	m->wreck.hull_radius = 1.0;
+	m->wreck.dissolve = 0.0;
+	m->wreck.burn_glow = 1.0;
+	m->wreck.preheat = 0.04;
+	m->wreck.time = 0.0;
+}
