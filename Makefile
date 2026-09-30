@@ -623,7 +623,8 @@ _COMMONCLIENTOBJS= snis_ui_element.o snis_font.o snis_text_input.o \
 COMMONCLIENTOBJS=${COMMONOBJS} ${OGGOBJ} ${SNDOBJS} $(patsubst %,$(OD)/%,${_COMMONCLIENTOBJS}) 
 
 _CLIENTOBJS= shader.o ${GRAPH_OBJS} snis_graph.o snis_client.o joystick_config.o snis_xwindows_hacks.o png_utils.o \
-				black_hole_lens.o mesh_fracture.o particle_batch.o
+				black_hole_lens.o mesh_fracture.o particle_batch.o ship_death.o \
+				ship_death_fireball.o
 CLIENTOBJS=${COMMONCLIENTOBJS} $(patsubst %,$(OD)/%,${_CLIENTOBJS})
 
 _SDLCLIENTOBJS=shader.o ${GRAPH_OBJS} snis_graph.o mesh_viewer.o \
@@ -1164,6 +1165,15 @@ $(OD)/mesh_fracture.o:	mesh_fracture.c mesh_fracture.h mesh.h mtwist.h Makefile 
 
 # Smoke, flame and sparks drawn as one mesh: see particle_batch.h.
 $(OD)/particle_batch.o:	particle_batch.c particle_batch.h mesh.h Makefile ${ODT}
+	$(Q)$(COMPILE)
+
+# A ship's death, and what it is made of: see ship_death.h.  None of them draws anything, so plain
+# COMPILE, clear of graph_dev.h and SDL.
+$(OD)/ship_death.o:	ship_death.c ship_death.h Makefile ${ODT}
+	$(Q)$(COMPILE)
+
+$(OD)/ship_death_fireball.o:	ship_death_fireball.c ship_death_fireball.h ship_death.h material.h \
+				Makefile ${ODT}
 	$(Q)$(COMPILE)
 
 $(OD)/crater.o:	crater.c crater.h Makefile ${ODT}
