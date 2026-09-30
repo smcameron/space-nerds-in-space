@@ -2361,7 +2361,8 @@ static int update_cargo_container(uint32_t id, uint32_t timestamp, double x, dou
 }
 
 static int update_derelict(uint32_t id, uint32_t timestamp, double x, double y, double z,
-				uint8_t ship_kind, uint8_t fuel, uint8_t oxygen, uint32_t orig_ship_id)
+				uint8_t ship_kind, uint8_t fuel, uint8_t oxygen, uint32_t orig_ship_id,
+				union quat *orientation)
 {
 	int i, m;
 	struct entity *e;
@@ -2371,12 +2372,11 @@ static int update_derelict(uint32_t id, uint32_t timestamp, double x, double y, 
 		m = ship_kind % nshiptypes;
 		e = add_entity(ecx, derelict_mesh[m], x, y, z, SHIP_COLOR);
 		i = add_generic_object(id, timestamp, x, y, z, 0.0, 0.0, 0.0,
-				&identity_quat, OBJTYPE_DERELICT, 1, e);
+				orientation, OBJTYPE_DERELICT, 1, e);
 		if (i < 0)
 			return i;
-		go[i].tsd.derelict.rotational_velocity = random_spin[id % NRANDOM_SPINS];
 	} else {
-		update_generic_object(i, timestamp, x, y, z, 0.0, 0.0, 0.0, NULL, 1);
+		update_generic_object(i, timestamp, x, y, z, 0.0, 0.0, 0.0, orientation, 1);
 	}
 	go[i].tsd.derelict.fuel = fuel;
 	go[i].tsd.derelict.oxygen = oxygen;
@@ -2981,11 +2981,6 @@ static inline void spin_cargo_container(double timestamp, struct snis_entity *o)
 	arbitrary_spin(timestamp, o, &o->tsd.cargo_container.rotational_velocity);
 }
 
-static inline void spin_derelict(double timestamp, struct snis_entity *o)
-{
-	arbitrary_spin(timestamp, o, &o->tsd.derelict.rotational_velocity);
-}
-
 typedef void(*interpolate_update_func)(double timestamp, struct snis_entity *o, int visible,
 	int from_index, int to_index, float t);
 
@@ -3476,8 +3471,8 @@ static void move_objects(void)
 			update_shading_planet(o);
 			break;
 		case OBJTYPE_DERELICT:
-			move_object(timestamp, o, &interpolate_generic_object);
-			spin_derelict(timestamp, o);
+			/* The server turns it, from the way its ship was facing as it died. */
+			move_object(timestamp, o, &interpolate_oriented_object);
 			update_shading_planet(o);
 			break;
 		case OBJTYPE_LASERBEAM:
@@ -3798,19 +3793,27 @@ static void do_explosion(uint32_t related_id, double x, double y, double z,
 static int update_explosion(uint32_t id, uint32_t timestamp, uint32_t related_id,
 		double x, double y, double z,
 		uint16_t nsparks, uint16_t velocity, uint16_t time, uint8_t victim_type,
-		uint8_t explosion_type)
+		uint8_t explosion_type, const union vec3 *v, union quat *orientation,
+		uint8_t shiptype, uint8_t flags)
 {
 	int i;
 	i = lookup_object_by_id(id);
 	if (i < 0) {
 		i = add_generic_object(id, timestamp, x, y, z, 0.0, 0.0, 0.0,
-					&identity_quat, OBJTYPE_EXPLOSION, 1, NULL);
+					orientation, OBJTYPE_EXPLOSION, 1, NULL);
 		if (i < 0)
 			return i;
 		go[i].tsd.explosion.nsparks = nsparks;
 		go[i].tsd.explosion.velocity = velocity;
 		go[i].tsd.explosion.explosion_type = explosion_type;
 		go[i].tsd.explosion.related_id = related_id;
+		/* A ship's death: the ship's velocity and type as it died.  See
+		 * EXPLOSION_FLAG_SHIP_DEATH. */
+		go[i].vx = v->v.x;
+		go[i].vy = v->v.y;
+		go[i].vz = v->v.z;
+		go[i].tsd.explosion.shiptype = shiptype;
+		go[i].tsd.explosion.flags = flags;
 		do_explosion(related_id, x, y, z, nsparks, velocity, (int) time, victim_type, explosion_type);
 	}
 	return 0;
@@ -8008,18 +8011,20 @@ static int process_update_derelict_packet(void)
 	uint32_t id, timestamp, orig_ship_id;
 	double dx, dy, dz;
 	uint8_t shiptype, fuel, oxygen;
+	union quat orientation;
 	int rc;
 
 	assert(sizeof(buffer) > sizeof(struct update_asteroid_packet) - sizeof(uint8_t));
-	rc = read_and_unpack_buffer(buffer, "wwSSSbbbw", &id, &timestamp,
+	rc = read_and_unpack_buffer(buffer, "wwSSSbbbwQ", &id, &timestamp,
 			&dx, (int32_t) UNIVERSE_DIM,
 			&dy,(int32_t) UNIVERSE_DIM,
 			&dz, (int32_t) UNIVERSE_DIM,
-			&shiptype, &fuel, &oxygen, &orig_ship_id);
+			&shiptype, &fuel, &oxygen, &orig_ship_id, &orientation);
 	if (rc != 0)
 		return rc;
 	pthread_mutex_lock(&universe_mutex);
-	rc = update_derelict(id, timestamp, dx, dy, dz, shiptype, fuel, oxygen, orig_ship_id);
+	rc = update_derelict(id, timestamp, dx, dy, dz, shiptype, fuel, oxygen, orig_ship_id,
+				&orientation);
 	pthread_mutex_unlock(&universe_mutex);
 	return (rc < 0);
 } 
@@ -8319,19 +8324,25 @@ static int process_update_explosion_packet(void)
 	uint32_t id, timestamp, related_id;
 	double dx, dy, dz;
 	uint16_t nsparks, velocity, time;
-	uint8_t victim_type, explosion_type;
+	uint8_t victim_type, explosion_type, shiptype, flags;
+	double vx, vy, vz;
+	union vec3 v;
+	union quat orientation;
 	int rc;
 
 	assert(sizeof(buffer) > sizeof(struct update_explosion_packet) - sizeof(uint8_t));
-	rc = read_and_unpack_buffer(buffer, "wwwSSShhhbb", &id, &timestamp, &related_id,
+	rc = read_and_unpack_buffer(buffer, "wwwSSShhhbbSSSQbb", &id, &timestamp, &related_id,
 		&dx, (int32_t) UNIVERSE_DIM, &dy, (int32_t) UNIVERSE_DIM,
 		&dz, (int32_t) UNIVERSE_DIM,
-		&nsparks, &velocity, &time, &victim_type, &explosion_type);
+		&nsparks, &velocity, &time, &victim_type, &explosion_type,
+		&vx, (int32_t) EXPLOSION_VELOCITY_SCALE, &vy, (int32_t) EXPLOSION_VELOCITY_SCALE,
+		&vz, (int32_t) EXPLOSION_VELOCITY_SCALE, &orientation, &shiptype, &flags);
 	if (rc != 0)
 		return rc;
+	vec3_init(&v, vx, vy, vz);
 	pthread_mutex_lock(&universe_mutex);
 	rc = update_explosion(id, timestamp, related_id, dx, dy, dz, nsparks, velocity, time,
-				victim_type, explosion_type);
+				victim_type, explosion_type, &v, &orientation, shiptype, flags);
 	pthread_mutex_unlock(&universe_mutex);
 	return (rc < 0);
 }

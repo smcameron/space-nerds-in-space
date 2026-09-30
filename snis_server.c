@@ -1772,6 +1772,8 @@ static void warp_core_collision_detection(void *o1, void *o2)
 
 static int add_explosion(double x, double y, double z, uint16_t velocity,
 				uint16_t nsparks, uint16_t time, uint8_t victim_type);
+static int add_death_explosion(struct snis_entity *victim, uint16_t velocity, uint16_t nsparks,
+				uint16_t time, int leaves_derelict);
 
 static void delete_from_clients_and_server(struct snis_entity *o);
 static void warp_core_move(struct snis_entity *o)
@@ -1833,6 +1835,15 @@ static void derelict_move(struct snis_entity *o)
 		o->vx *= 0.99;
 		o->vy *= 0.99;
 		o->vz *= 0.99;
+	}
+
+	{
+		union quat spun;
+
+		compute_arbitrary_spin((double) (universe_timestamp - o->tsd.derelict.born), &spun,
+					&o->tsd.derelict.rotational_velocity);
+		quat_mul(&o->orientation, &spun, &o->tsd.derelict.initial_orientation);
+		quat_normalize_self(&o->orientation);
 	}
 
 	if (o->tsd.derelict.persistent)
@@ -3764,6 +3775,11 @@ static int make_derelict(struct snis_entity *o)
 				o->vy + snis_random_float() * 2.0,
 				o->vz + snis_random_float() * 2.0,
 				o->tsd.ship.shiptype, o->sdata.faction, 0, o->id);
+	/* The way the ship was facing as it died, so the wreck is its ship. */
+	if (rc >= 0) {
+		go[rc].tsd.derelict.initial_orientation = o->orientation;
+		go[rc].orientation = o->orientation;
+	}
 	if (o->type == OBJTYPE_BRIDGE || o->type == OBJTYPE_NPCSHIP) {
 		for (i = 0; i < o->tsd.ship.ncargo_bays; i++) {
 			int item;
@@ -4320,7 +4336,8 @@ static void missile_collision_detection(void *context, void *entity)
 			if (target->type == OBJTYPE_NPCSHIP)
 				attack_your_attacker(target, lookup_entity_by_id(missile->tsd.missile.origin));
 			if (!target->alive) {
-				(void) add_explosion(target->x, target->y, target->z, 50, 150, 50, target->type);
+				(void) add_death_explosion(target, 50, 150, 50,
+							target->type == OBJTYPE_NPCSHIP);
 				/* TODO -- these should be different sounds */
 				/* make sound for players that got hit */
 				/* make sound for players that did the hitting */
@@ -4475,7 +4492,7 @@ static void torpedo_collision_detection(void *context, void *entity)
 	}
 
 	if (!t->alive) {
-		(void) add_explosion(t->x, t->y, t->z, 50, 150, 50, t->type);
+		(void) add_death_explosion(t, 50, 150, 50, t->type == OBJTYPE_NPCSHIP);
 		/* TODO -- these should be different sounds */
 		/* make sound for players that got hit */
 		/* make sound for players that did the hitting */
@@ -7898,7 +7915,7 @@ static void ship_move(struct snis_entity *o)
 		ca.worrythreshold = 400.0 * 400.0;
 	space_partition_process(space_partition, o, o->x, o->z, &ca, ship_collision_avoidance);
 	if (!o->alive) {
-		(void) add_explosion(o->x, o->y, o->z, 50, 150, 50, o->type);
+		(void) add_death_explosion(o, 50, 150, 50, 0);
 		respawn_object(o);
 		delete_from_clients_and_server(o);
 		return;
@@ -11386,6 +11403,10 @@ static void warpgate_move(struct snis_entity *o)
 
 static void explosion_move(struct snis_entity *o)
 {
+	/* A ship's death goes on at the ship's velocity.  The timestamp is left alone: the client
+	 * carries it on itself from the velocity it was first sent, so there is nothing to tell it
+	 * every tick. */
+	set_object_location(o, o->x + o->vx, o->y + o->vy, o->z + o->vz);
 	if (o->alive)
 		o->alive--;
 	if (o->alive == 0)
@@ -13509,6 +13530,33 @@ static int add_typed_explosion(uint32_t related_id,
 	go[i].tsd.explosion.victim_type = victim_type;
 	go[i].tsd.explosion.explosion_type = explosion_type;
 	go[i].tsd.explosion.related_id = related_id;
+	go[i].tsd.explosion.shiptype = 0;
+	go[i].tsd.explosion.flags = 0;
+	go[i].orientation = identity_quat;
+	return i;
+}
+
+/* An explosion for victim, and if victim is a ship dying, everything the client needs to draw the
+ * ship's death: see EXPLOSION_FLAG_SHIP_DEATH.  leaves_derelict says whether the caller makes one
+ * of it.  Returns what add_explosion() does. */
+static int add_death_explosion(struct snis_entity *victim, uint16_t velocity, uint16_t nsparks,
+				uint16_t time, int leaves_derelict)
+{
+	int i = add_explosion(victim->x, victim->y, victim->z, velocity, nsparks, time,
+				victim->type);
+
+	if (i < 0)
+		return i;
+	if (victim->type != OBJTYPE_NPCSHIP && victim->type != OBJTYPE_BRIDGE)
+		return i;
+	go[i].vx = victim->vx;
+	go[i].vy = victim->vy;
+	go[i].vz = victim->vz;
+	go[i].orientation = victim->orientation;
+	go[i].tsd.explosion.related_id = victim->id;
+	go[i].tsd.explosion.shiptype = victim->tsd.ship.shiptype;
+	go[i].tsd.explosion.flags = EXPLOSION_FLAG_SHIP_DEATH |
+			(leaves_derelict ? EXPLOSION_FLAG_DERELICT : 0);
 	return i;
 }
 
@@ -13724,7 +13772,7 @@ static void laserbeam_move(struct snis_entity *o)
 	}
 
 	if (!target->alive) {
-		(void) add_explosion(target->x, target->y, target->z, 50, 50, 50, ttype);
+		(void) add_death_explosion(target, 50, 50, 50, ttype == OBJTYPE_NPCSHIP);
 		/* TODO -- these should be different sounds */
 		/* make sound for players that got hit */
 		/* make sound for players that did the hitting */
@@ -14209,6 +14257,10 @@ static int add_derelict(const char *name, double x, double y, double z,
 	go[i].tsd.derelict.ships_log = NULL;
 	go[i].tsd.derelict.orig_ship_id = orig_ship_id;
 	go[i].tsd.derelict.ship_id_chip_present = 1;
+	go[i].tsd.derelict.rotational_velocity = random_spin[go[i].id % NRANDOM_SPINS];
+	go[i].tsd.derelict.initial_orientation = random_orientation[go[i].id % NRANDOM_ORIENTATIONS];
+	go[i].tsd.derelict.born = universe_timestamp;
+	go[i].orientation = go[i].tsd.derelict.initial_orientation;
 	if (ship_registry_ship_has_bounty(&ship_registry, orig_ship_id))
 		go[i].sdata.flags |= SDATA_FLAGS_BOUNTY_OFFERED;
 	return i;
@@ -14732,7 +14784,7 @@ static int l_destroy_ship(lua_State *l)
 		send_demon_console_msg("DESTROY_SHIP: OBJECT NOT AN NPC SHIP");
 		return 1;
 	}
-	(void) add_explosion(t->x, t->y, t->z, 50, 150, 50, t->type);
+	(void) add_death_explosion(t, 50, 150, 50, 1);
 	make_derelict(t);
 	respawn_object(t);
 	delete_from_clients_and_server(t);
@@ -27188,14 +27240,15 @@ static void send_update_cargo_container_position(struct game_client *c,
 static void send_update_derelict_packet(struct game_client *c,
 	struct snis_entity *o)
 {
-	pb_queue_to_client(c, snis_opcode_pkt("bwwSSSbbbw", OPCODE_UPDATE_DERELICT, o->id, o->timestamp,
+	pb_queue_to_client(c, snis_opcode_pkt("bwwSSSbbbwQ", OPCODE_UPDATE_DERELICT, o->id, o->timestamp,
 					o->x, (int32_t) UNIVERSE_DIM,
 					o->y, (int32_t) UNIVERSE_DIM,
 					o->z, (int32_t) UNIVERSE_DIM,
 					o->tsd.derelict.shiptype,
 					o->tsd.derelict.fuel,
 					o->tsd.derelict.oxygen,
-					o->tsd.derelict.orig_ship_id));
+					o->tsd.derelict.orig_ship_id,
+					&o->orientation.vec[0]));
 }
 
 
@@ -27324,13 +27377,19 @@ static void send_update_nebula_packet(struct game_client *c,
 static void send_update_explosion_packet(struct game_client *c,
 	struct snis_entity *o)
 {
-	pb_queue_to_client(c, snis_opcode_pkt("bwwwSSShhhbb", OPCODE_UPDATE_EXPLOSION, o->id, o->timestamp,
+	pb_queue_to_client(c, snis_opcode_pkt("bwwwSSShhhbbSSSQbb", OPCODE_UPDATE_EXPLOSION, o->id,
+				o->timestamp,
 				o->tsd.explosion.related_id,
 				o->x, (int32_t) UNIVERSE_DIM, o->y, (int32_t) UNIVERSE_DIM,
 				o->z, (int32_t) UNIVERSE_DIM,
 				o->tsd.explosion.nsparks, o->tsd.explosion.velocity,
 				o->tsd.explosion.time, o->tsd.explosion.victim_type,
-				o->tsd.explosion.explosion_type));
+				o->tsd.explosion.explosion_type,
+				o->vx, (int32_t) EXPLOSION_VELOCITY_SCALE,
+				o->vy, (int32_t) EXPLOSION_VELOCITY_SCALE,
+				o->vz, (int32_t) EXPLOSION_VELOCITY_SCALE,
+				&o->orientation.vec[0],
+				o->tsd.explosion.shiptype, o->tsd.explosion.flags));
 }
 
 static void send_update_flare_packet(struct game_client *c,

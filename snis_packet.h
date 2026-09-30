@@ -488,6 +488,10 @@ struct update_explosion_packet {
 	uint16_t time;
 	uint8_t victim_type;
 	uint8_t explosion_type;
+	uint32_t vx, vy, vz;
+	int16_t orientation[4];
+	uint8_t shiptype;
+	uint8_t flags;
 };
 
 struct update_flare_packet {

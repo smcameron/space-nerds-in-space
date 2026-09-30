@@ -41,7 +41,7 @@
 #include "shape_collision.h"
 
 #define DEFAULT_SOLAR_SYSTEM "default"
-#define SNIS_PROTOCOL_VERSION "SNIS073"
+#define SNIS_PROTOCOL_VERSION "SNIS074"
 #define TRANSPORTER_TAG_LEN 5
 #define COMMON_MTWIST_SEED 97872
 /* dimensions of the "known" universe */
@@ -780,7 +780,20 @@ struct explosion_data {
 	uint8_t explosion_type;
 #define EXPLOSION_TYPE_REGULAR 0
 #define EXPLOSION_TYPE_BLACKHOLE 1
+	/* A SHIP'S DEATH.  When the explosion is a ship dying, the client draws it from everything
+	 * it needs to know about the ship, carried here -- its type, and the explosion object's own
+	 * velocity and orientation, which are the ship's as it died -- since the ship itself is
+	 * deleted at the same moment and may be gone by the time the client hears of this.  The
+	 * victim's id is the explosion's related_id, and the seed everything cosmetic is drawn
+	 * from, so every bridge screen breaks the ship the same way.  See ship_death.h. */
+	uint8_t shiptype;
+	uint8_t flags;
+#define EXPLOSION_FLAG_SHIP_DEATH (1 << 0)	/* a ship died; the rest of this is meaningful */
+#define EXPLOSION_FLAG_DERELICT (1 << 1)	/* and left a derelict, orig_ship_id related_id */
 };
+
+/* The explosion's velocity on the wire: world units per tick, to this, either way. */
+#define EXPLOSION_VELOCITY_SCALE 1000
 
 #define FLARE_COUNT (10)
 #define FLARE_SPEED (50.0)
@@ -840,6 +853,11 @@ struct derelict_data {
 	uint8_t oxygen;
 	char *ships_log;
 	uint8_t ship_id_chip_present;
+	/* It turns from the way the ship was facing as it died: its orientation is its spin since
+	 * born, the universe_timestamp it was made at, on top of initial_orientation.  So a wreck is
+	 * seen the way up its ship was, on every screen. */
+	union quat initial_orientation;
+	uint32_t born;
 };
 
 struct wormhole_data {
