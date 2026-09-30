@@ -240,6 +240,20 @@ struct ship_death_wreck {
 	const struct ship_death_fireball *fireball;
 	const struct ship_death_fracture *fracture;
 	uint32_t seed;
+	/* THE SHIP'S FRAME.  The fracture is in the ship's own coordinates, and the ship died
+	 * facing this way, so the pieces and the way they fly are turned by it.  Identity unless
+	 * the caller says otherwise. */
+	union quat orientation;
+	/* THE DERELICT.  In the game the core is a real object, the server's: it goes where the
+	 * server says, not where the blast would have sent it, and the game draws it.  When
+	 * core_pose is set, the core is not put in the frame -- its material, heat and the fire's
+	 * light on it, is left for the caller: see ship_death_wreck_core_material() -- and
+	 * everything that comes off it asks core_pose where the ship's origin was, and which way
+	 * up, t seconds after the flash.  It returns 0 when it does not know, and then nothing
+	 * comes off the core. */
+	int (*core_pose)(void *cookie, float t, union vec3 *pos, union quat *orientation);
+	void *core_cookie;
+	int core_drawn;		/* this frame's: the core's material is good */
 	struct ship_death_piece_motion motion[SHIP_DEATH_WRECK_MAX_PIECES];
 	/* This frame's: the fracture's, with the edges' heat.  Then each piece's own copy, since
 	 * each dissolves on its own schedule. */
@@ -281,6 +295,16 @@ GLOBAL void ship_death_wreck_plan(struct ship_death_wreck *w, uint32_t seed);
  * frame. */
 GLOBAL void ship_death_wreck_draw(struct ship_death_wreck *w, float t,
 				const struct ship_death_view *view, struct ship_death_frame *f);
+
+/* With core_pose set: the material the caller should draw the derelict with this frame, the
+ * edges' heat and the fire's light on it -- or NULL, for the cold one, when core_pose did not
+ * know where the core was. */
+GLOBAL const struct material *ship_death_wreck_core_material(const struct ship_death_wreck *w);
+
+/* The wreck's material as this fracture wears it once it has cooled: the soot and the inside of
+ * the hull, no glow.  For a derelict long after its ship died. */
+GLOBAL void ship_death_fracture_cold_material(const struct ship_death_fracture *fr,
+				struct material *m);
 
 #undef GLOBAL
 #endif

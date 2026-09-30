@@ -438,6 +438,10 @@ int ship_death_wreck_init(struct ship_death_wreck *w, const struct ship_death_fi
 {
 	w->fireball = fireball;
 	w->fracture = fracture;
+	w->orientation = identity_quat;
+	w->core_pose = NULL;
+	w->core_cookie = NULL;
+	w->core_drawn = 0;
 	w->particles_generation = 0;
 	w->nembers = 0;
 	w->nflying = 0;
@@ -447,6 +451,31 @@ int ship_death_wreck_init(struct ship_death_wreck *w, const struct ship_death_fi
 		return -1;
 	ship_death_wreck_plan(w, seed);
 	return 0;
+}
+
+const struct material *ship_death_wreck_core_material(const struct ship_death_wreck *w)
+{
+	int i;
+
+	if (!w->core_drawn)
+		return NULL;
+	for (i = 0; i < w->fracture->npieces; i++)
+		if (w->fracture->piece[i].is_core)
+			return &w->piece_material[i];
+	return NULL;
+}
+
+void ship_death_fracture_cold_material(const struct ship_death_fracture *fr, struct material *m)
+{
+	struct ship_death_wreck_tuning *tu = &ship_death_wreck_tuning;
+
+	*m = fr->material;
+	m->wreck.interior = tu->interior;
+	m->wreck.scorch = tu->scorch;
+	m->wreck.edge_width = tu->edge_width;
+	m->wreck.edge_brightness = tu->edge_brightness;
+	m->wreck.edge_temp = 0.0f;
+	m->wreck.preheat = tu->preheat;
 }
 
 void ship_death_wreck_fini(struct ship_death_wreck *w)
@@ -516,15 +545,27 @@ static int piece_pose(const struct ship_death_wreck *w, int i, float t, union ve
 	float travel = ship_death_fireball_radius_at_time(w->fireball, t) -
 			ship_death_fireball_radius_at_time(w->fireball, 0.0f);
 	union vec3 out, now_com, turned;
+	union quat turned_q;
 
+	if (fr->piece[i].is_core && w->core_pose) {
+		/* The derelict, where the game says it is: its origin is the ship's. */
+		if (!w->core_pose(w->core_cookie, t, &out, orientation))
+			return 0;
+		vec3_init(&turned, fr->piece[i].offset[0], fr->piece[i].offset[1],
+				fr->piece[i].offset[2]);
+		quat_rot_vec(pos, &turned, orientation);
+		vec3_add_self(pos, &out);
+		return 1;
+	}
 	if (!fr->piece[i].is_core && t >= pm->life)
 		return 0;
+	/* Worked out in the ship's own frame, about the fireball's centre, and turned into the
+	 * world's at the end. */
 	/* The centre of mass's path, as if nothing had burned: where the whole piece's centroid --
 	 * the mesh's origin -- would be. */
 	vec3_init(pos, fr->piece[i].offset[0], fr->piece[i].offset[1], fr->piece[i].offset[2]);
 	vec3_mul(&out, &pm->dir, pm->speed * travel);
 	vec3_add_self(pos, &out);
-	vec3_add_self(pos, &w->fireball->pos);
 	quat_init_axis_v(orientation, &pm->axis, pm->spin * t);
 
 	if (!fr->piece[i].is_core && t > tu->burn_start) {
@@ -557,6 +598,10 @@ static int piece_pose(const struct ship_death_wreck *w, int i, float t, union ve
 		quat_rot_vec(&turned, &now_com, orientation);
 		vec3_sub_self(pos, &turned);
 	}
+	quat_rot_vec_self(pos, &w->orientation);
+	vec3_add_self(pos, &w->fireball->pos);
+	quat_mul(&turned_q, &w->orientation, orientation);
+	*orientation = turned_q;
 	return 1;
 }
 
@@ -1195,6 +1240,7 @@ void ship_death_wreck_draw(struct ship_death_wreck *w, float t, const struct shi
 	w->material.wreck.edge_brightness = tu->edge_brightness;
 	w->material.wreck.edge_temp = tu->edge_temp * expf(-fmaxf(t, 0.0f) / tu->edge_cooling);
 	w->nflying = 0;
+	w->core_drawn = 0;
 	for (i = 0; i < fr->npieces; i++)
 		w->piece_drawable[i] = -1;
 	for (i = 0; i < fr->npieces; i++) {
@@ -1212,7 +1258,9 @@ void ship_death_wreck_draw(struct ship_death_wreck *w, float t, const struct shi
 				vec3_mul_self(&out, tu->explode * ship_radius);
 				vec3_add_self(&pos, &out);
 			}
+			quat_rot_vec_self(&pos, &w->orientation);
 			vec3_add_self(&pos, &w->fireball->pos);
+			orientation = w->orientation;
 		} else {
 			/* Carried by the gas: its own fraction of the edge's travel, so it is still
 			 * at the flash, is swept up in the blast and then coasts. */
@@ -1235,6 +1283,22 @@ void ship_death_wreck_draw(struct ship_death_wreck *w, float t, const struct shi
 		/* Wrapped, so the flicker's noise coordinate keeps its precision however long it
 		 * runs; the jump once in a thousand seconds is a flicker like any other. */
 		w->piece_material[i].wreck.time = fmodf(fmaxf(t, 0.0f), 1000.0f) + (float) i * 17.0f;
+		if (fr->piece[i].is_core && w->core_pose) {
+			/* The game draws the derelict; it takes this material, lit by the fire. */
+			struct material_wreck *cm = &w->piece_material[i].wreck;
+			union vec3 light_pos;
+
+			vec3_init(&light_pos, 0.0f, 0.0f, 0.0f);
+			memset(cm->aux_light_color, 0, sizeof(cm->aux_light_color));
+			cm->aux_light_wrap = 0.0f;
+			ship_death_fireball_light(w->fireball, &pos, &light_pos, cm->aux_light_color,
+						&cm->aux_light_wrap);
+			cm->aux_light_pos[0] = light_pos.v.x;
+			cm->aux_light_pos[1] = light_pos.v.y;
+			cm->aux_light_pos[2] = light_pos.v.z;
+			w->core_drawn = 1;
+			continue;
+		}
 		d = ship_death_frame_add(fd, fr->piece[i].m, &w->piece_material[i], &pos, 1.0f);
 		if (!d)
 			break;
