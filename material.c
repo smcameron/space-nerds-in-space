@@ -418,3 +418,12 @@ void material_init_wreck(struct material *m)
 	m->wreck.preheat = 0.04;
 	m->wreck.time = 0.0;
 }
+
+void material_init_particles(struct material *m)
+{
+	m->type = MATERIAL_PARTICLES;
+	m->billboard_type = MATERIAL_BILLBOARD_TYPE_NONE;
+	m->rotate_randomly = 0;
+	m->particles.albedo = 0.12;
+	m->particles.time = 0.0;
+}
