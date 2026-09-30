@@ -1133,6 +1133,84 @@ struct mesh *mesh_fabricate_billboard(float width, float height)
 	return mesh_fabricate_billboard_with_uv_map(width, height, 0.0, 0.0, 1.0, 1.0);
 }
 
+#define SHARD_RING 5
+
+/* A jagged sliver of hull plate, for shrapnel: a double pyramid, long along x, whose ring and
+ * tips are all pulled about at random so that no two shards from different seeds are alike.
+ * Flat shaded, so every facet catches the light on its own.  The length is 1; the caller
+ * scales it.  Deterministic in mt, so every client that seeds alike builds alike. */
+struct mesh *mesh_fabricate_shard(struct mtwist_state *mt)
+{
+	struct mesh *m;
+	int i, j;
+
+	m = calloc(1, sizeof(*m));
+	if (!m)
+		return NULL;
+	m->nvertices = SHARD_RING + 2;
+	m->ntriangles = SHARD_RING * 2;
+	m->v = calloc(m->nvertices, sizeof(*m->v));
+	m->t = calloc(m->ntriangles, sizeof(*m->t));
+	if (!m->v || !m->t) {
+		free(m->v);
+		free(m->t);
+		free(m);
+		return NULL;
+	}
+	m->geometry_mode = MESH_GEOMETRY_TRIANGLES;
+
+	/* The two tips, off the axis a little so the shard is bent rather than a spindle. */
+	m->v[0].x = 0.5;
+	m->v[0].y = (mtwist_float(mt) - 0.5) * 0.15;
+	m->v[0].z = (mtwist_float(mt) - 0.5) * 0.15;
+	m->v[1].x = -0.3 - 0.2 * mtwist_float(mt);
+	m->v[1].y = (mtwist_float(mt) - 0.5) * 0.15;
+	m->v[1].z = (mtwist_float(mt) - 0.5) * 0.15;
+	/* The ring, flattened: a shard of plate is much thinner one way than the other. */
+	for (i = 0; i < SHARD_RING; i++) {
+		float a = 2.0 * M_PI * (i + 0.6 * (mtwist_float(mt) - 0.5)) / SHARD_RING;
+		float r = 0.08 + 0.12 * mtwist_float(mt);
+
+		m->v[2 + i].x = (mtwist_float(mt) - 0.5) * 0.3;
+		m->v[2 + i].y = cosf(a) * r;
+		m->v[2 + i].z = sinf(a) * r * 0.35;
+	}
+	for (i = 0; i < SHARD_RING; i++) {
+		struct vertex *a = &m->v[2 + i];
+		struct vertex *b = &m->v[2 + (i + 1) % SHARD_RING];
+
+		m->t[i * 2].v[0] = &m->v[0];
+		m->t[i * 2].v[1] = a;
+		m->t[i * 2].v[2] = b;
+		m->t[i * 2 + 1].v[0] = &m->v[1];
+		m->t[i * 2 + 1].v[1] = b;
+		m->t[i * 2 + 1].v[2] = a;
+	}
+	/* Whichever way the triangles came out wound, make every one face away from the middle. */
+	mesh_set_flat_shading_vertex_normals(m);
+	for (i = 0; i < m->ntriangles; i++) {
+		struct triangle *t = &m->t[i];
+		float cx = 0, cy = 0, cz = 0;
+
+		for (j = 0; j < 3; j++) {
+			cx += t->v[j]->x;
+			cy += t->v[j]->y;
+			cz += t->v[j]->z;
+		}
+		if (cx * t->n.x + cy * t->n.y + cz * t->n.z < 0) {
+			struct vertex *tmp = t->v[1];
+
+			t->v[1] = t->v[2];
+			t->v[2] = tmp;
+		}
+	}
+	mesh_set_flat_shading_vertex_normals(m);
+	m->radius = mesh_compute_radius(m);
+	snprintf(m->name, sizeof(m->name), "shard");
+	mesh_graph_dev_init(m);
+	return m;
+}
+
 static void normalize_sphere(struct mesh *m)
 {
 	int i;

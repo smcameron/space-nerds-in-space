@@ -390,3 +390,13 @@ void material_init_explosion(struct material *m)
 	m->explosion.shred = 0.75;
 	m->explosion.steps = 24;
 }
+
+void material_init_shrapnel(struct material *m)
+{
+	m->type = MATERIAL_SHRAPNEL;
+	m->billboard_type = MATERIAL_BILLBOARD_TYPE_NONE;
+	m->rotate_randomly = 0;
+	m->shrapnel.temperature = 4500.0;
+	m->shrapnel.brightness = 4.0;
+	m->shrapnel.albedo = 0.25;
+}

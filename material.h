@@ -48,6 +48,7 @@ struct entity;
 #define MATERIAL_CITY 19
 #define MATERIAL_EXHAUST_PLUME 20
 #define MATERIAL_EXPLOSION 21
+#define MATERIAL_SHRAPNEL 22
 
 #define MATERIAL_BILLBOARD_TYPE_NONE 0
 #define MATERIAL_BILLBOARD_TYPE_SCREEN 1
@@ -270,6 +271,15 @@ struct material_explosion {
 	int steps;		/* raymarch samples through the ball */
 };
 
+/* One shard of shrapnel: a dark metal sliver lit by the star, glowing with its own heat as it
+ * flies and cooling to nothing but metal.  One material per shard, since each is at its own
+ * temperature.  The glow reads the same blackbody ramp as the fireball it came out of. */
+struct material_shrapnel {
+	float temperature;	/* kelvin; below about 900 it no longer glows */
+	float brightness;	/* linear HDR emission scale at 2000K */
+	float albedo;		/* of the cold metal, lit by the star */
+};
+
 struct material {
 	__extension__ union {
 		struct material_color_by_w color_by_w;
@@ -291,6 +301,7 @@ struct material {
 		struct material_city city;
 		struct material_exhaust_plume exhaust_plume;
 		struct material_explosion explosion;
+		struct material_shrapnel shrapnel;
 	};
 	int type;
 	int billboard_type;
@@ -315,6 +326,7 @@ extern void material_init_warp_gate_effect(struct material *m);
 extern void material_init_city(struct material *m);
 extern void material_init_exhaust_plume(struct material *m);
 extern void material_init_explosion(struct material *m);
+extern void material_init_shrapnel(struct material *m);
 
 extern int material_nebula_read_from_file(const char *asset_dir, const char *filename,
 						struct material *nebula);
