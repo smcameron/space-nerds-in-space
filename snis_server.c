@@ -3776,13 +3776,42 @@ static int add_derelict(const char *name, double x, double y, double z,
 
 static int add_cargo_container(double x, double y, double z, double vx, double vy, double vz,
 				int item, float qty, int persistent);
+/* How fast a wreck drifts away from where its ship died, world units a tick, at most.
+ *
+ * The blast pushes on the middle of the ship from every side at once, so the pushes largely
+ * cancel: the wreck is left with only a small drift of its own, the ship's velocity aside.  The
+ * clients draw the debris flying out around it at a tenth to a half of a ship radius a second
+ * for the half minute it burns, and ships are 6 to 75 units in radius; this keeps a wreck inside
+ * its own debris field, where a kick of several ship radii a second would carry it out of it. */
+#define DERELICT_DRIFT (0.15)
+
+/* The wreck's drift, drawn from the dead ship's id -- the seed the clients break the ship by --
+ * so the same death always drifts the same way. */
+static void derelict_drift(uint32_t ship_id, union vec3 *drift)
+{
+	struct mtwist_state *mt = mtwist_init(ship_id * 2654435761u + 0x5eed);
+	float z, phi, rxy, speed;
+
+	if (!mt) {
+		vec3_init(drift, 0.0f, 0.0f, 0.0f);
+		return;
+	}
+	z = 2.0f * mtwist_float(mt) - 1.0f;
+	phi = 2.0f * (float) M_PI * mtwist_float(mt);
+	rxy = sqrtf(fmaxf(1.0f - z * z, 0.0f));
+	speed = (float) DERELICT_DRIFT * (0.5f + 0.5f * mtwist_float(mt));
+	vec3_init(drift, rxy * cosf(phi) * speed, rxy * sinf(phi) * speed, z * speed);
+	mtwist_free(mt);
+}
+
 static int make_derelict(struct snis_entity *o)
 {
 	int i, rc;
+	union vec3 drift;
+
+	derelict_drift(o->id, &drift);
 	rc = add_derelict(o->sdata.name, o->x, o->y, o->z,
-				o->vx + snis_random_float() * 2.0,
-				o->vy + snis_random_float() * 2.0,
-				o->vz + snis_random_float() * 2.0,
+				o->vx + drift.v.x, o->vy + drift.v.y, o->vz + drift.v.z,
 				o->tsd.ship.shiptype, o->sdata.faction, 0, o->id);
 	/* The way the ship was facing as it died, so the wreck is its ship. */
 	if (rc >= 0) {
