@@ -4807,7 +4807,7 @@ static void laser_collision_detection(void *context, void *entity)
 	}
 
 	if (!t->alive) {
-		(void) add_explosion(t->x, t->y, t->z, 50, 150, 50, t->type);
+		(void) add_death_explosion(t, 50, 150, 50, t->type == OBJTYPE_NPCSHIP);
 		/* TODO -- these should be different sounds */
 		/* make sound for players that got hit */
 		/* make sound for players that did the hitting */
