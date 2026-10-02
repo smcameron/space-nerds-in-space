@@ -3841,6 +3841,33 @@ static int make_derelict(struct snis_entity *o)
 	return rc;
 }
 
+/* How to present an NPC ship's death. */
+#define EXPLOSION_OLD_SPARKS	(1 << 0) /* large spark cloud, visible at distance */
+#define EXPLOSION_SHIP_DEATH	(1 << 1) /* detailed fireball + shrapnel + wreck */
+#define EXPLOSION_BOTH		(EXPLOSION_OLD_SPARKS | EXPLOSION_SHIP_DEATH)
+
+/*
+ * Destroy an NPC ship: trigger the requested explosion(s), spawn
+ * a derelict, trigger respawn, and remove the entity.
+ */
+static void destroy_npc_ship(struct snis_entity *victim,
+			     uint16_t explosion_velocity,
+			     uint16_t explosion_nsparks,
+			     uint16_t explosion_time,
+			     int explosion_style)
+{
+	if (explosion_style & EXPLOSION_SHIP_DEATH)
+		(void) add_death_explosion(victim, explosion_velocity,
+					   explosion_nsparks, explosion_time, 1);
+	if (explosion_style & EXPLOSION_OLD_SPARKS)
+		(void) add_explosion(victim->x, victim->y, victim->z,
+				     explosion_velocity, explosion_nsparks,
+				     explosion_time, victim->type);
+	make_derelict(victim);
+	respawn_object(victim);
+	delete_from_clients_and_server(victim);
+}
+
 struct potential_victim_info {
 	struct snis_entity *o;
 	double fightiness;
@@ -4374,19 +4401,18 @@ static void missile_collision_detection(void *context, void *entity)
 			if (target->type == OBJTYPE_NPCSHIP)
 				attack_your_attacker(target, lookup_entity_by_id(missile->tsd.missile.origin));
 			if (!target->alive) {
-				(void) add_death_explosion(target, 50, 150, 50,
-							target->type == OBJTYPE_NPCSHIP);
 				/* TODO -- these should be different sounds */
 				/* make sound for players that got hit */
 				/* make sound for players that did the hitting */
 				snis_queue_add_sound(EXPLOSION_SOUND, ROLE_SOUNDSERVER, missile->tsd.missile.target_id);
-				if (target->type != OBJTYPE_BRIDGE) {
-					if (target->type == OBJTYPE_NPCSHIP)
-						make_derelict(target);
+				if (target->type == OBJTYPE_BRIDGE) {
+					(void) add_death_explosion(target, 50, 150, 50, 0);
+					kill_player(target, 1);
+				} else if (target->type == OBJTYPE_NPCSHIP) {
+					destroy_npc_ship(target, 50, 150, 50, EXPLOSION_SHIP_DEATH);
+				} else {
 					respawn_object(target);
 					delete_from_clients_and_server(target);
-				} else {
-					kill_player(target, 1);
 				}
 				missile_explode(missile);
 			} else {
@@ -4530,7 +4556,6 @@ static void torpedo_collision_detection(void *context, void *entity)
 	}
 
 	if (!t->alive) {
-		(void) add_death_explosion(t, 50, 150, 50, t->type == OBJTYPE_NPCSHIP);
 		/* TODO -- these should be different sounds */
 		/* make sound for players that got hit */
 		/* make sound for players that did the hitting */
@@ -4540,14 +4565,15 @@ static void torpedo_collision_detection(void *context, void *entity)
 			if (i > 0)
 				pop_ai_attack_mode(&go[i]);
 		}
-		if (t->type != OBJTYPE_BRIDGE) {
-			if (t->type == OBJTYPE_NPCSHIP)
-				make_derelict(t);
+		if (t->type == OBJTYPE_BRIDGE) {
+			(void) add_death_explosion(t, 50, 150, 50, 0);
+			kill_player(t, 1);
+		} else if (t->type == OBJTYPE_NPCSHIP) {
+			destroy_npc_ship(t, 50, 150, 50, EXPLOSION_SHIP_DEATH);
+		} else {
+			(void) add_death_explosion(t, 50, 150, 50, 0);
 			respawn_object(t);
 			delete_from_clients_and_server(t);
-			
-		} else {
-			kill_player(t, 1);
 		}
 	} else {
 		(void) add_explosion(t->x, t->y, t->z, 50, 5, 5, t->type);
@@ -4807,19 +4833,20 @@ static void laser_collision_detection(void *context, void *entity)
 	}
 
 	if (!t->alive) {
-		(void) add_death_explosion(t, 50, 150, 50, t->type == OBJTYPE_NPCSHIP);
 		/* TODO -- these should be different sounds */
 		/* make sound for players that got hit */
 		/* make sound for players that did the hitting */
 		snis_queue_add_sound(EXPLOSION_SOUND,
 				ROLE_SOUNDSERVER, o->tsd.laser.ship_id);
-		if (t->type != OBJTYPE_BRIDGE) {
-			if (t->type == OBJTYPE_NPCSHIP)
-				make_derelict(t);
+		if (t->type == OBJTYPE_BRIDGE) {
+			(void) add_death_explosion(t, 50, 150, 50, 0);
+			kill_player(t, 1);
+		} else if (t->type == OBJTYPE_NPCSHIP) {
+			destroy_npc_ship(t, 50, 150, 50, EXPLOSION_SHIP_DEATH);
+		} else {
+			(void) add_death_explosion(t, 50, 150, 50, 0);
 			respawn_object(t);
 			delete_from_clients_and_server(t);
-		} else {
-			kill_player(t, 1);
 		}
 	} else {
 		(void) add_explosion(t->x, t->y, t->z, 50, 5, 5, t->type);
@@ -13810,7 +13837,6 @@ static void laserbeam_move(struct snis_entity *o)
 	}
 
 	if (!target->alive) {
-		(void) add_death_explosion(target, 50, 50, 50, ttype == OBJTYPE_NPCSHIP);
 		/* TODO -- these should be different sounds */
 		/* make sound for players that got hit */
 		/* make sound for players that did the hitting */
@@ -13818,13 +13844,15 @@ static void laserbeam_move(struct snis_entity *o)
 		if (origin->type == OBJTYPE_BRIDGE)
 			snis_queue_add_sound(EXPLOSION_SOUND,
 					ROLE_SOUNDSERVER, origin->id);
-		if (ttype != OBJTYPE_BRIDGE) {
-			if (ttype == OBJTYPE_NPCSHIP)
-				make_derelict(target);
+		if (ttype == OBJTYPE_BRIDGE) {
+			(void) add_death_explosion(target, 50, 50, 50, 0);
+			kill_player(target, 1);
+		} else if (ttype == OBJTYPE_NPCSHIP) {
+			destroy_npc_ship(target, 50, 50, 50, EXPLOSION_SHIP_DEATH);
+		} else {
+			(void) add_death_explosion(target, 50, 50, 50, 0);
 			respawn_object(target);
 			delete_from_clients_and_server(target);
-		} else {
-			kill_player(target, 1);
 		}
 	} else {
 		(void) add_explosion(target->x, target->y, target->z, 50, 5, 5, ttype);
@@ -14822,10 +14850,7 @@ static int l_destroy_ship(lua_State *l)
 		send_demon_console_msg("DESTROY_SHIP: OBJECT NOT AN NPC SHIP");
 		return 1;
 	}
-	(void) add_death_explosion(t, 50, 150, 50, 1);
-	make_derelict(t);
-	respawn_object(t);
-	delete_from_clients_and_server(t);
+	destroy_npc_ship(t, 50, 150, 50, EXPLOSION_SHIP_DEATH);
 	pthread_mutex_unlock(&universe_mutex);
 	lua_pushnumber(l, 0.0);
 	return 1;
