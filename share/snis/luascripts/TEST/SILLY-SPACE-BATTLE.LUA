@@ -85,7 +85,6 @@ end
 add_asteroids();
 
 if (player_ids[1]) then
-	load_skybox(player_ids[1], "orange-haze");
 	move_object(player_ids[1], px + 12000, py, pz + 12000);
 end
 if (player_ids[2]) then
