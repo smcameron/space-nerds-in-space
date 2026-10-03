@@ -78,6 +78,18 @@ int graph_dev_shadow_map_enabled = 0; /* Shadow maps are not supported on the GL
 
 static GLenum fbo_format = GL_RGBA4;
 
+#ifndef GL_SRGB8_ALPHA8
+#define GL_SRGB8_ALPHA8 0x8C43
+#endif
+
+enum srgb_texture_mode {
+	SRGB_MODE_NONE = 0,
+	SRGB_MODE_ES3,
+	SRGB_MODE_EXT,
+};
+
+static enum srgb_texture_mode srgb_mode = SRGB_MODE_NONE;
+
 
 
 
@@ -3675,23 +3687,53 @@ void graph_dev_reload_all_shaders(void)
 
 int graph_dev_setup(const char *asset_dir)
 {
-	if (!gladLoadGLES2((GLADloadfunc)SDL_GL_GetProcAddress)) {
+	int gles_version;
+	int gles_major = 0, gles_minor = 0;
+	const char *version;
+	const char *vendor;
+	const char *renderer;
+	const char *glslversion;
+	const char *p;
+
+	gles_version = gladLoadGLES2((GLADloadfunc)SDL_GL_GetProcAddress);
+	if (!gles_version) {
 		fprintf(stderr, "Got error trying to bind GL ES\n");
 		return -1;
 	}
 	printf("Initialized GLAD\n");
 
-	const char *version = (const char *)glGetString(GL_VERSION);
-	const char *vendor = (const char *)glGetString(GL_VENDOR);
-	const char *renderer = (const char *)glGetString(GL_RENDERER);
-	const char *glslversion = (const char *)glGetString(GL_SHADING_LANGUAGE_VERSION);
+	version = (const char *)glGetString(GL_VERSION);
+	vendor = (const char *)glGetString(GL_VENDOR);
+	renderer = (const char *)glGetString(GL_RENDERER);
+	glslversion = (const char *)glGetString(GL_SHADING_LANGUAGE_VERSION);
 	fprintf(stderr, "OpenGL ES: Version:  %s\n", version);
 	fprintf(stderr, "          Vendor:   %s\n", vendor);
 	fprintf(stderr, "          Renderer: %s\n", renderer);
 	fprintf(stderr, "          Shader Language Version: %s\n", glslversion);
 
-	if (!GLAD_GL_EXT_sRGB)
-		fprintf(stderr, "WARNING: No hardware support for SRGB colorspace - will force linear.\n");
+	if (version) {
+		p = strstr(version, "OpenGL ES ");
+		if (p) {
+			sscanf(p + 10, "%d.%d", &gles_major, &gles_minor);
+		} else {
+			p = strstr(version, "OpenGL ES-CM ");
+			if (p)
+				sscanf(p + 13, "%d.%d", &gles_major, &gles_minor);
+		}
+	}
+	if (gles_major == 0)
+		gles_major = GLAD_VERSION_MAJOR(gles_version);
+
+	if (gles_major >= 3) {
+		srgb_mode = SRGB_MODE_ES3;
+		printf("Using OpenGL ES 3.0 core sRGB textures\n");
+	} else if (GLAD_GL_EXT_sRGB) {
+		srgb_mode = SRGB_MODE_EXT;
+		printf("Using GL_EXT_sRGB extension for sRGB textures\n");
+	} else {
+		srgb_mode = SRGB_MODE_NONE;
+		fprintf(stderr, "WARNING: No hardware support for sRGB textures - will force linear.\n");
+	}
 
 	if (GLAD_GL_EXT_discard_framebuffer) {
 		fprintf(stderr, "Has hardware support for discarding framebuffers.\n");
@@ -3800,6 +3842,26 @@ int graph_dev_setup(const char *asset_dir)
  * So: once an upload has finished with the binding, tell the cache what it actually left on the
  * active unit, which keeps the cache true rather than merely forcing the next bind.
  */
+static unsigned char *rgb_to_rgba(const unsigned char *rgb, int npixels)
+{
+	unsigned char *rgba = malloc(npixels * 4);
+	const unsigned char *src = rgb;
+	unsigned char *dst = rgba;
+	int i;
+
+	if (!rgba)
+		return NULL;
+	for (i = 0; i < npixels; i++) {
+		dst[0] = src[0];
+		dst[1] = src[1];
+		dst[2] = src[2];
+		dst[3] = 255;
+		src += 3;
+		dst += 4;
+	}
+	return rgba;
+}
+
 /* returns zero on success, -1 otherwise */
 unsigned int graph_dev_cubemap_texture_to_gpu(struct graph_dev_image_load_request *r)
 {
@@ -3809,6 +3871,7 @@ unsigned int graph_dev_cubemap_texture_to_gpu(struct graph_dev_image_load_reques
 		GL_TEXTURE_CUBE_MAP_POSITIVE_Y, GL_TEXTURE_CUBE_MAP_NEGATIVE_Y,
 		GL_TEXTURE_CUBE_MAP_POSITIVE_Z, GL_TEXTURE_CUBE_MAP_NEGATIVE_Z };
 	GLint colorspace;
+	GLint format;
 
 	glBindTexture(GL_TEXTURE_CUBE_MAP, r->texture_id);
 	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
@@ -3820,13 +3883,32 @@ unsigned int graph_dev_cubemap_texture_to_gpu(struct graph_dev_image_load_reques
 	for (i = 0; i < NCUBEMAP_TEXTURES; i++) {
 		/* do horizontal invert if we are projecting on the inside */
 		char *image_data = r->image_data[i];
+		unsigned char *rgba = NULL;
+		void *upload_data = image_data;
 
-		if (r->linear_colorspace || !GLAD_GL_EXT_sRGB)
+		if (r->linear_colorspace) {
 			colorspace = r->hasAlpha[i] ? GL_RGBA : GL_RGB;
-		else
+			format = colorspace;
+		} else if (srgb_mode == SRGB_MODE_ES3) {
+			colorspace = GL_SRGB8_ALPHA8;
+			format = GL_RGBA;
+			if (!r->hasAlpha[i]) {
+				rgba = rgb_to_rgba((const unsigned char *)image_data, r->w[i] * r->h[i]);
+				if (rgba)
+					upload_data = rgba;
+				else
+					colorspace = GL_RGB;
+			}
+		} else if (srgb_mode == SRGB_MODE_EXT) {
 			colorspace = r->hasAlpha[i] ? GL_SRGB_ALPHA_EXT : GL_SRGB_EXT;
+			format = r->hasAlpha[i] ? GL_RGBA : GL_RGB;
+		} else {
+			colorspace = r->hasAlpha[i] ? GL_RGBA : GL_RGB;
+			format = colorspace;
+		}
 		glTexImage2D(tex_pos[i], 0, colorspace, r->w[i], r->h[i], 0,
-				(r->hasAlpha[i] ? GL_RGBA : GL_RGB), GL_UNSIGNED_BYTE, image_data);
+				format, GL_UNSIGNED_BYTE, upload_data);
+		free(rgba);
 	}
 	glGenerateMipmap(GL_TEXTURE_CUBE_MAP);
 	note_texture_bound_outside_cache(r->texture_id);
@@ -3866,16 +3948,35 @@ int graph_dev_texture_to_gpu_id(GLuint texture_number, char *image_data,
 		int w, int h, int hasAlpha, int use_mipmaps, int linear_colorspace)
 {
 	GLint colorspace;
+	GLint format;
+	unsigned char *rgba = NULL;
+	void *upload_data = image_data;
 
 	if (!image_data) {
 		fprintf(stderr, "texture_to_gpu_id: NULL image data\n");
 		return -1;
 	}
 
-	if (linear_colorspace || !GLAD_GL_EXT_sRGB)
+	if (linear_colorspace) {
 		colorspace = hasAlpha ? GL_RGBA : GL_RGB;
-	else
+		format = colorspace;
+	} else if (srgb_mode == SRGB_MODE_ES3) {
+		colorspace = GL_SRGB8_ALPHA8;
+		format = GL_RGBA;
+		if (!hasAlpha) {
+			rgba = rgb_to_rgba((const unsigned char *)image_data, w * h);
+			if (rgba)
+				upload_data = rgba;
+			else
+				colorspace = GL_RGB;
+		}
+	} else if (srgb_mode == SRGB_MODE_EXT) {
 		colorspace = hasAlpha ? GL_SRGB_ALPHA_EXT : GL_SRGB_EXT;
+		format = hasAlpha ? GL_RGBA : GL_RGB;
+	} else {
+		colorspace = hasAlpha ? GL_RGBA : GL_RGB;
+		format = colorspace;
+	}
 
 	glBindTexture(GL_TEXTURE_2D, texture_number);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
@@ -3887,12 +3988,14 @@ int graph_dev_texture_to_gpu_id(GLuint texture_number, char *image_data,
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 
 	glTexImage2D(GL_TEXTURE_2D, 0, colorspace, w, h, 0,
-			(hasAlpha ? GL_RGBA : GL_RGB), GL_UNSIGNED_BYTE, image_data);
+			format, GL_UNSIGNED_BYTE, upload_data);
+	free(rgba);
 	if (use_mipmaps)
 		glGenerateMipmap(GL_TEXTURE_2D);
 	note_texture_bound_outside_cache(texture_number);
 	return 0;
 }
+
 
 
 
@@ -4105,8 +4208,8 @@ void graph_dev_prepare_for_window(uint32_t *window_flags)
 	SDL_GL_SetAttribute(SDL_GL_BLUE_SIZE, 4);
 	SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 16);
 
-	/* for GLES, we claim ES 2.0 */
-	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 2);
+	/* Try ES 3.0 first; fall back to 2.0 in graph_dev_create_context if needed */
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 0);
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_ES);
 
@@ -4116,7 +4219,14 @@ void graph_dev_prepare_for_window(uint32_t *window_flags)
 void graph_dev_create_context(SDL_Window *window)
 {
 	SDL_GLContext gl_context = SDL_GL_CreateContext(window);
-	if (NULL == gl_context) {
+
+	if (!gl_context) {
+		/* Fall back to ES 2.0 */
+		SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 2);
+		SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 0);
+		gl_context = SDL_GL_CreateContext(window);
+	}
+	if (!gl_context) {
 		fprintf(stderr, "Couldn't create OpenGL ES Context: %s\n", SDL_GetError());
 		exit(1);
 	}

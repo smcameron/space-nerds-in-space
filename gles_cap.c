@@ -18,10 +18,11 @@
 	foundation, inc., 51 franklin st, fifth floor, boston, ma  02110-1301  usa
 */
 
-#include "opengl_cap.h"
-
+#include <stdio.h>
+#include <string.h>
 #include <stdlib.h>
 
+#include "opengl_cap.h"
 #include <glad/gles2.h>
 
 /* gles doesn't do MSAA in any way like GL - disable because we need to rework that code significnatly */
@@ -63,7 +64,16 @@ int framebuffer_srgb_supported()
 
 int texture_srgb_supported()
 {
-	return GLAD_GL_EXT_sRGB;
+	const char *version = (const char *)glGetString(GL_VERSION);
+	int major = 0;
+
+	if (version) {
+		const char *p = strstr(version, "OpenGL ES ");
+
+		if (p)
+			sscanf(p + 10, "%d", &major);
+	}
+	return (major >= 3) || GLAD_GL_EXT_sRGB;
 }
 
 
