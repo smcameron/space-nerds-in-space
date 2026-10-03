@@ -3872,10 +3872,17 @@ unsigned int graph_dev_cubemap_texture_to_gpu(struct graph_dev_image_load_reques
 		GL_TEXTURE_CUBE_MAP_POSITIVE_Z, GL_TEXTURE_CUBE_MAP_NEGATIVE_Z };
 	GLint colorspace;
 	GLint format;
+	int use_mipmaps = 1;
 
 	glBindTexture(GL_TEXTURE_CUBE_MAP, r->texture_id);
 	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+	if (srgb_mode == SRGB_MODE_EXT && !r->linear_colorspace) {
+		/* GL_EXT_sRGB does not support glGenerateMipmap */
+		use_mipmaps = 0;
+		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	} else {
+		glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+	}
 	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
@@ -3901,7 +3908,7 @@ unsigned int graph_dev_cubemap_texture_to_gpu(struct graph_dev_image_load_reques
 			}
 		} else if (srgb_mode == SRGB_MODE_EXT) {
 			colorspace = r->hasAlpha[i] ? GL_SRGB_ALPHA_EXT : GL_SRGB_EXT;
-			format = r->hasAlpha[i] ? GL_RGBA : GL_RGB;
+			format = colorspace;
 		} else {
 			colorspace = r->hasAlpha[i] ? GL_RGBA : GL_RGB;
 			format = colorspace;
@@ -3910,7 +3917,8 @@ unsigned int graph_dev_cubemap_texture_to_gpu(struct graph_dev_image_load_reques
 				format, GL_UNSIGNED_BYTE, upload_data);
 		free(rgba);
 	}
-	glGenerateMipmap(GL_TEXTURE_CUBE_MAP);
+	if (use_mipmaps)
+		glGenerateMipmap(GL_TEXTURE_CUBE_MAP);
 	note_texture_bound_outside_cache(r->texture_id);
 
 	pthread_mutex_lock(&finished_loading_mutex);
@@ -3972,7 +3980,9 @@ int graph_dev_texture_to_gpu_id(GLuint texture_number, char *image_data,
 		}
 	} else if (srgb_mode == SRGB_MODE_EXT) {
 		colorspace = hasAlpha ? GL_SRGB_ALPHA_EXT : GL_SRGB_EXT;
-		format = hasAlpha ? GL_RGBA : GL_RGB;
+		format = colorspace;
+		/* GL_EXT_sRGB does not support glGenerateMipmap */
+		use_mipmaps = 0;
 	} else {
 		colorspace = hasAlpha ? GL_RGBA : GL_RGB;
 		format = colorspace;
