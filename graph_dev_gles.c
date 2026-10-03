@@ -3690,9 +3690,8 @@ int graph_dev_setup(const char *asset_dir)
 	fprintf(stderr, "          Renderer: %s\n", renderer);
 	fprintf(stderr, "          Shader Language Version: %s\n", glslversion);
 
-	if (GLAD_GL_EXT_sRGB) {
+	if (!GLAD_GL_EXT_sRGB)
 		fprintf(stderr, "WARNING: No hardware support for SRGB colorspace - will force linear.\n");
-	}
 
 	if (GLAD_GL_EXT_discard_framebuffer) {
 		fprintf(stderr, "Has hardware support for discarding framebuffers.\n");
