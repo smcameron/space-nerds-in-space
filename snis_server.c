@@ -10032,8 +10032,8 @@ static void temper_velocity_change(struct snis_entity *o, union vec3 *desired_ve
 		vec3_mul_self(&newv1, vec3_magnitude(desired_velocity));
 		*desired_velocity = newv1;
 	} else { /* d2 is the larger cos == smaller angle */
-		vec3_normalize_self(&newv1);
-		vec3_mul_self(&newv1, vec3_magnitude(desired_velocity));
+		vec3_normalize_self(&newv2);
+		vec3_mul_self(&newv2, vec3_magnitude(desired_velocity));
 		*desired_velocity = newv2;
 	}
 }
