@@ -10128,7 +10128,8 @@ static void update_ship_position_and_velocity(struct snis_entity *o)
 	union vec3 curvel = { { o->vx, o->vy, o->vz } };
 	float dot = vec3_dot(&curvel, &desired_velocity);
 	if (o->tsd.ship.velocity < MINIMUM_TURN_SPEED &&
-		dot < cos(M_PI * MAX_SLOW_TURN_ANGLE / 180.0 && mode != AI_MODE_HANGOUT)) {
+	    mode != AI_MODE_HANGOUT &&
+	    dot < cos(M_PI * MAX_SLOW_TURN_ANGLE / 180.0)) {
 		/* Currently moving too slow and trying to turn too much, just go straight */
 		union vec3 rightvec;
 		rightvec.v.x = MINIMUM_TURN_SPEED * 1.05;
