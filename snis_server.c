@@ -5539,12 +5539,12 @@ static int is_being_towed(struct snis_entity *o)
 		if (go[i].tsd.ship.shiptype != SHIP_CLASS_MANTIS)
 			continue;
 		n = go[i].tsd.ship.nai_entries - 1;
-		for (j = n; n >= 0; n--) {
+		for (j = n; j >= 0; j--) {
 			if (go[i].tsd.ship.ai[j].ai_mode != AI_MODE_TOW_SHIP)
 				continue;
 			if (go[i].tsd.ship.ai[j].u.tow_ship.ship_connected &&
-				go[i].tsd.ship.ai[n].u.tow_ship.disabled_ship == o->id)
-					return i;
+			    go[i].tsd.ship.ai[j].u.tow_ship.disabled_ship == o->id)
+				return i;
 		}
 	}
 	return -1;
@@ -5554,16 +5554,17 @@ static int is_being_towed(struct snis_entity *o)
 static int ship_is_towing(struct snis_entity *o)
 {
 	int i, n;
+
 	if (o->type != OBJTYPE_NPCSHIP)
-		return 0;
+		return -1;
 	if (o->tsd.ship.shiptype != SHIP_CLASS_MANTIS)
-		return 0;
+		return -1;
 	n = o->tsd.ship.nai_entries - 1;
-	for (i = n; n >= 0; n--) {
+	for (i = n; i >= 0; i--) {
 		if (o->tsd.ship.ai[i].ai_mode != AI_MODE_TOW_SHIP)
 			continue;
 		if (o->tsd.ship.ai[i].u.tow_ship.ship_connected)
-			return lookup_by_id(o->tsd.ship.ai[n].u.tow_ship.disabled_ship);
+			return lookup_by_id(o->tsd.ship.ai[i].u.tow_ship.disabled_ship);
 	}
 	return -1;
 }
