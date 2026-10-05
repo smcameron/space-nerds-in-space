@@ -6251,9 +6251,9 @@ static void push_planet_avoidance_route(struct snis_entity *o,
 	p2e.v.z = endv->v.z - p.v.z;
 	r2 = vec3_magnitude(&p2e);
 	if (r2 > planet->tsd.planet.radius + max_altitude)
-		r1 = planet->tsd.planet.radius + max_altitude;
+		r2 = planet->tsd.planet.radius + max_altitude;
 	if (r2 < planet->tsd.planet.radius + min_altitude)
-		r1 = planet->tsd.planet.radius + min_altitude;
+		r2 = planet->tsd.planet.radius + min_altitude;
 	vec3_normalize_self(&p2e);
 
 	/* Figure a quaternion to rotate an arc around the planet from start to end */
