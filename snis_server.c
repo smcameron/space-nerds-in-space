@@ -10125,8 +10125,16 @@ static void update_ship_position_and_velocity(struct snis_entity *o)
 	ai_trace(o->id, "AFTER TEMPER DV = %f, %f, %f",
 			desired_velocity.v.x, desired_velocity.v.y, desired_velocity.v.z);
 
-	union vec3 curvel = { { o->vx, o->vy, o->vz } };
-	float dot = vec3_dot(&curvel, &desired_velocity);
+	union vec3 current_direction = { { 1.0f, 0.0f, 0.0f } };
+	union vec3 dv;
+	float dot = 1.0f;
+
+	if (vec3_magnitude(&desired_velocity) >= 0.01f) {
+		quat_rot_vec_self(&current_direction, &o->orientation);
+		vec3_normalize_self(&current_direction);
+		vec3_normalize(&dv, &desired_velocity);
+		dot = vec3_dot(&current_direction, &dv);
+	}
 	if (o->tsd.ship.velocity < MINIMUM_TURN_SPEED &&
 	    mode != AI_MODE_HANGOUT &&
 	    dot < cos(M_PI * MAX_SLOW_TURN_ANGLE / 180.0)) {
