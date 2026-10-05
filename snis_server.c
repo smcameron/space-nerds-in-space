@@ -6319,12 +6319,15 @@ static float ai_ship_travel_towards(struct snis_entity *o,
 		 * If we have just set a new destination, we want it to take effect right
 		 * away, not just within the (possibly) 400 secs of the above variety
 		 * injecting code.
+		 *
+		 * Both dest_discrepancy and dist2 are squared distances, so "more than
+		 * 5% of the distance away" means comparing against 0.05^2 * dist2.
 		 */
 		double dest_discrepancy = dist3dsqrd(
 					o->tsd.ship.dox - destx,
 					o->tsd.ship.doy - desty,
 					o->tsd.ship.doz - destz);
-		if (dest_discrepancy > 0.05 * dist2 * 0.05 * dist2) {
+		if (dest_discrepancy > 0.05 * 0.05 * dist2) {
 			set_ship_destination(o, destx, desty, destz);
 		}
 		/* sometimes just warp if it's too far... */
