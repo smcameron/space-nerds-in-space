@@ -2,17 +2,24 @@
 # List of starbase model assets within models/ subdir
 #
 # Format of each line is:
-# starbase-model-file docking-port-file
+# starbase-model-file docking-port-file [EASY|HARD]
 # if the docking-port-file is '!', then there is no dockng port file
 # if the docking-port-file is '-', then the docking port file has the
 # standard name, for blah.stl will be blah.docking_port.h
 #
+# The 3rd parameter is the docking difficulty, either EASY or HARD
+# EASY means the player is not required to match alignment and speed to dock
+# HARD means the player is required to match alignment and speed.
+# Some stations (starbase.obj) have docking ports such that matching the
+# speed is impossible (would require the player to fly sideways) and so
+# EASY mode allows docking to be done successfully.
+#
 
 starbase model count: 6
 
-starbase/starbase.obj ../starbase.docking_ports.h
-starbase2/starbase2.obj ../starbase2.docking_ports.h
-starbase3.stl -
-starbase4.stl -
-starbase5.stl -
-starbase6.stl -
+starbase/starbase.obj ../starbase.docking_ports.h EASY
+starbase2/starbase2.obj ../starbase2.docking_ports.h HARD
+starbase3.stl - HARD
+starbase4.stl - HARD
+starbase5.stl - HARD
+starbase6.stl - HARD

@@ -26,6 +26,9 @@
 struct starbase_file_metadata {
 	char *model_file;
 	char *docking_port_file;
+	uint8_t difficulty;  /* 0 = EASY = no alignment/speed matching, 1 = HARD = alignment/speed matching */
+#define DOCKING_PORT_EASY 0
+#define DOCKING_PORT_HARD 1
 };
 
 int read_starbase_model_metadata(char *asset_dir, char *filename, int *nstarbase_models,

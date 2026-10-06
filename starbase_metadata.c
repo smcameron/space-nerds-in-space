@@ -43,6 +43,7 @@ int read_starbase_model_metadata(char *asset_dir, char *filename, int *nstarbase
 {
 	FILE *f;
 	char path[PATH_MAX], model_file[PATH_MAX], docking_port_file[PATH_MAX], line[256];
+	char difficulty[11];
 	char *s;
 	int total_len, rc, lineno, np, pc;
 	const int max_starbase_models = 100;
@@ -94,8 +95,8 @@ int read_starbase_model_metadata(char *asset_dir, char *filename, int *nstarbase
 			continue;
 		}
 		BUILD_ASSERT(PATH_MAX == 4096);
-		rc = sscanf(s, "%4095s %4095s", model_file, docking_port_file);
-		if (rc != 2) {
+		rc = sscanf(s, "%4095s %4095s %10s", model_file, docking_port_file, difficulty);
+		if (rc != 3) {
 			fprintf(stderr, "%s:%d bad starbase model specification\n",
 					path, lineno);
 			goto bailout;
@@ -106,6 +107,15 @@ int read_starbase_model_metadata(char *asset_dir, char *filename, int *nstarbase
 			goto bailout;
 		}
 		(*starbase_metadata)[pc].model_file = strdup(model_file);
+		if (strncasecmp(difficulty, "EASY", 4) == 0)
+			(*starbase_metadata)[pc].difficulty = DOCKING_PORT_EASY;
+		else if (strncasecmp(difficulty, "HARD", 4) == 0)
+			(*starbase_metadata)[pc].difficulty = DOCKING_PORT_HARD;
+		else {
+			fprintf(stderr, "%s:%d: Bad docking difficulty: '%s', assuming 'HARD'\n",
+					path, lineno, difficulty);
+			(*starbase_metadata)[pc].difficulty = DOCKING_PORT_HARD;
+		}
 
 		if (strcmp(docking_port_file, "!") == 0) {
 			(*starbase_metadata)[pc].docking_port_file = NULL;

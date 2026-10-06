@@ -9319,18 +9319,19 @@ static void player_attempt_dock_with_starbase(struct snis_entity *docking_port,
 
 	if (docking_port->tsd.docking_port.docked_guy == player->id) /* already docked? */
 		return;
-	/* Check that the player has docked with sufficient skill */
-	if (player->tsd.ship.docking_port_vdiff > max_docking_vdiff) {
-		do_collision_impulse(player, docking_port);
-		snis_queue_add_sound(SPACEMONSTER_SLAP, ROLE_SOUNDSERVER, player->id);
-		return;
+	/* Check that the player has docked with sufficient skill if docking port requires skill */
+	if (docking_port->tsd.docking_port.difficulty == DOCKING_PORT_HARD) {
+		if (player->tsd.ship.docking_port_vdiff > max_docking_vdiff) {
+			do_collision_impulse(player, docking_port);
+			snis_queue_add_sound(SPACEMONSTER_SLAP, ROLE_SOUNDSERVER, player->id);
+			return;
+		}
+		if (player->tsd.ship.docking_port_alignment < min_docking_alignment) {
+			do_collision_impulse(player, docking_port);
+			snis_queue_add_sound(SPACEMONSTER_SLAP, ROLE_SOUNDSERVER, player->id);
+			return;
+		}
 	}
-	if (player->tsd.ship.docking_port_alignment < min_docking_alignment) {
-		do_collision_impulse(player, docking_port);
-		snis_queue_add_sound(SPACEMONSTER_SLAP, ROLE_SOUNDSERVER, player->id);
-		return;
-	}
-
 	int b = lookup_bridge_by_shipid(player->id);
 	if (b < 0 || b >= nbridges) {
 		/* player has no bridge??? */
@@ -13426,6 +13427,7 @@ static int add_docking_port(int parent_id, int portnumber)
 	go[i].tsd.docking_port.model = model;
 	go[i].tsd.docking_port.portnumber = portnumber;
 	go[i].tsd.docking_port.docked_guy = (uint32_t) -1;
+	go[i].tsd.docking_port.difficulty = starbase_metadata[model].difficulty;
 	go[i].timestamp = universe_timestamp;
 	return i;
 }

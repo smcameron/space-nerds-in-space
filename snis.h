@@ -842,6 +842,7 @@ struct docking_port_data {
 	uint8_t portnumber;
 	uint8_t model; /* which starbase model */
 	union vec3 vel; /* velocity of docking port (calculated by verlet integration) */
+	uint8_t difficulty;
 };
 
 struct derelict_data {
