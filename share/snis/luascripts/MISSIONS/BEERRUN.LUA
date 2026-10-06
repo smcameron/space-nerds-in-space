@@ -344,10 +344,13 @@ end
 function start_bet_offer()
 	comms_transmission(atlanta_sb, "---");
 	comms_transmission(atlanta_sb, "Breaker one-nine! Big Enos here aboard SB-19 Atlanta!");
-	comms_transmission(atlanta_sb, "My boy Little Enos and I got ourselves a terrible thirst and a big pile o' credits.");
-	comms_transmission(atlanta_sb, "We're wagerin' $" .. bet_amount .. " that nobody's got the grit to fly out to Golden City on Texarkana,");
-	comms_transmission(atlanta_sb, "load up 400 kegs of genuine Coors Beer, and haul it back here under " .. math.floor(time_limit_seconds / 60) .. " minutes!");
-	comms_transmission(atlanta_sb, "RULE IS SIMPLE: ALL ON IMPULSE POWER. ENGAGE WARP DRIVE ONCE, AND YOU FORFEIT $" .. bet_amount .. "!");
+	comms_transmission(atlanta_sb, "My boy Little Enos and I got ourselves a terrible thirst and a");
+	comms_transmission(atlanta_sb, "big pile o' credits. We're wagerin' $" .. bet_amount .. " that");
+	comms_transmission(atlanta_sb, "nobody's got the grit to fly out to Golden City on Texarkana,");
+	comms_transmission(atlanta_sb, "load up 400 kegs of genuine Coors Beer, and haul it back here");
+	comms_transmission(atlanta_sb, " under " .. math.floor(time_limit_seconds / 60) .. " minutes!");
+	comms_transmission(atlanta_sb, "RULE IS SIMPLE: ALL ON IMPULSE POWER. ENGAGE WARP DRIVE ONCE,");
+	comms_transmission(atlanta_sb, "hAND YOU FORFEIT $" .. bet_amount .. "!");
 	comms_transmission(atlanta_sb, "---");
 
 	menu = comms_menu_create(
@@ -363,8 +366,10 @@ function bet_menu_callback(choice, pid)
 		-- Accepted!
 		mission_state = "TO_PICKUP";
 		demon_print("BEERRUN: Bet accepted by player at " .. format_time(elapsed_seconds));
-		comms_transmission(atlanta_sb, "THAT'S THE SPIRIT! The clock is runnin' right now! Head for planet Texarkana!");
-		comms_transmission(atlanta_sb, "Golden City has the brew staged in orbital containers. Don't use warp or you owe us $" .. bet_amount .. "!");
+		comms_transmission(atlanta_sb, "THAT'S THE SPIRIT! The clock is runnin' right now!");
+		comms_transmission(atlanta_sb, "Head for planet Texarkana!");
+		comms_transmission(atlanta_sb, "Golden City has the brew staged in orbital containers.");
+		comms_transmission(atlanta_sb, "Don't use warp or you owe us $" .. bet_amount .. "!");
 		text_to_speech(player_id, "The bet is on. Maintain sublight impulse. Do not engage warp drive.");
 
 		-- Enable NAV countdown button (screen 0 = NAV)
@@ -565,7 +570,8 @@ function cargo_acquired_callback(pid, item_index, qty)
 		text_to_speech(player_id, "Beer loaded. Turn around and head for Atlanta. Watch for Beer Patrol.");
 
 		comms_channel_transmit("Brewmaster (Golden City)", 0, "The payload is aboard! Get goin', boy, before Buford catches your dust!");
-		comms_transmission(atlanta_sb, "Big Enos here! We see you got the suds loaded! Half the clock is tickin' away, bring 'em home!");
+		comms_transmission(atlanta_sb, "Big Enos here! We see you got the suds loaded!");
+		comms_transmission(atlanta_sb, "Half the clock is tickin' away, bring 'em home!");
 
 		-- Spawn the initial speed trap en route to Atlanta
 		spawn_speed_trap();
@@ -643,12 +649,15 @@ function mission_won()
 
 	comms_transmission(atlanta_sb, "===============================================");
 	comms_transmission(atlanta_sb, "YOU DID IT, YOU MAGNIFICENT BASTARDS! YOU DID IT!");
-	comms_transmission(atlanta_sb, "Cold Coors Beer right here in Atlanta, and not a drop of warp drive used!");
-	comms_transmission(atlanta_sb, "Here is your $" .. bet_amount .. "! Big Enos and Little Enos always pay their debts!");
+	comms_transmission(atlanta_sb, "Cold Coors Beer right here in Atlanta, and not a ");
+	comms_transmission(atlanta_sb, "drop of warp drive used!");
+	comms_transmission(atlanta_sb, "Here is your $" .. bet_amount .. "! Big Enos and");
+	comms_transmission(atlanta_sb, "Little Enos always pay their debts!");
 	comms_transmission(atlanta_sb, "===============================================");
 
 	if frogg_on_board then
-		comms_channel_transmit("Princess Frogg", 0, "We actually made it! Drinks are on Big Enos tonight!");
+		comms_channel_transmit("Princess Frogg", 0, "We actually made it! Drinks are ");
+		comms_channel_transmit("Princess_Frogg", 0, "on Big Enos tonight!");
 	end
 
 	set_custom_button_label(player_id, 0, "WINNER! +$80K");
@@ -669,20 +678,28 @@ function mission_lost(reason)
 	comms_transmission(atlanta_sb, "===============================================");
 	if reason == "WARP_USED" then
 		text_to_speech(player_id, "Warp drive engaged. Bet lost.");
-		comms_transmission(atlanta_sb, "CHEATER! Our sensors picked up your warp signature! The bet was NO WARP!");
-		comms_transmission(atlanta_sb, "That'll cost you $" .. bet_amount .. ", fair and square! Pay up!");
-		comms_channel_transmit("Sheriff Buford T. Justus", 0, "Hah! Caught 'em red-handed violatin' space transit statutes! Justice wins again!");
+		comms_transmission(atlanta_sb, "CHEATER! Our sensors picked up your warp");
+		comms_transmission(atlanta_sb, "signature! The bet was NO WARP!");
+		comms_transmission(atlanta_sb, "That'll cost you $" .. bet_amount .. ", fair");
+		comms_transmission(atlanta_sb, "and square! Pay up!");
+		comms_channel_transmit("Sheriff Buford T. Justus", 0, "Hah! Caught 'em red-handed violatin' space ");
+		comms_channel_transmit("transit statutes! Justice wins again!");
 	elseif reason == "TIMEOUT" then
 		text_to_speech(player_id, "Time has expired. Bet lost.");
-		comms_transmission(atlanta_sb, "TIME IS UP! The party is over and the beer ain't here!");
-		comms_transmission(atlanta_sb, "A bet's a bet! You owe Big Enos and Little Enos $" .. bet_amount .. "!");
+		comms_transmission(atlanta_sb, "TIME IS UP! The party is over and the ");
+		comms_transmission(atlanta_sb, "beer ain't here!");
+		comms_transmission(atlanta_sb, "A bet's a bet! You owe Big Enos and Little ");
+		comms_transmission(atlanta_sb, "Enos $" .. bet_amount .. "!");
 	elseif reason == "NO_BEER" then
 		text_to_speech(player_id, "Cargo bay empty. Where is the beer?");
-		comms_transmission(atlanta_sb, "You docked without the beer?! Where are the 400 kegs?!");
-		comms_transmission(atlanta_sb, "No beer, no win! Pay up the $" .. bet_amount .. "!");
+		comms_transmission(atlanta_sb, "You docked without the beer?! Where are ");
+		comms_transmission(atlanta_sb, "the 400 kegs?!");
+		comms_transmission(atlanta_sb, "No beer, no win!");
+		comms_transmission(atlanta_sb, "Pay up the $" .. bet_amount .. "!");
 	elseif reason == "PLAYER_DESTROYED" then
 		text_to_speech(player_id, "Ship destroyed. Mission failed.");
-		comms_transmission(atlanta_sb, "Looks like the Beer Patrol scrapped you! That's $" .. bet_amount .. " you owe us!");
+		comms_transmission(atlanta_sb, "Looks like the Beer Patrol scrapped you!");
+		comms_transmission(atlanta_sb, "That's $" .. bet_amount .. " you owe us!");
 	end
 	comms_transmission(atlanta_sb, "===============================================");
 
@@ -713,12 +730,15 @@ function mission_tick(cookie)
 
 	-- Time milestones & alerts
 	if time_remaining == math.floor(time_limit_seconds * 0.5) then
-		comms_transmission(atlanta_sb, "Little Enos here: Half your time is gone! Pick up the pace!");
+		comms_transmission(atlanta_sb, "Little Enos here: Half your time is gone!");
+		comms_transmission(atlanta_sb, "Pick up the pace!");
 	elseif time_remaining == math.floor(time_limit_seconds * 0.25) then
-		comms_transmission(atlanta_sb, "Big Enos: One quarter time left! You boys better have impulse pegged to the wall!");
+		comms_transmission(atlanta_sb, "Big Enos: One quarter time left!");
+		comms_transmission(atlanta_sb, "You boys better have impulse pegged to the wall!");
 	elseif time_remaining == 300 then
 		text_to_speech(player_id, "Five minutes remaining.");
-		comms_transmission(atlanta_sb, "FIVE MINUTES REMAINING! We can already taste that $" .. bet_amount .. "!");
+		comms_transmission(atlanta_sb, "FIVE MINUTES REMAINING!");
+		comms_transmission(atlanta_sb, "We can already taste that $" .. bet_amount .. "!");
 	elseif time_remaining == 60 then
 		text_to_speech(player_id, "One minute remaining.");
 		comms_transmission(atlanta_sb, "ONE MINUTE! You're runnin' out o' sky!");
@@ -737,7 +757,8 @@ function mission_tick(cookie)
 		dist_chapel = object_distance(player_id, chapel_sb);
 		if dist_chapel and dist_chapel < 25000 and not frogg_hailed then
 			frogg_hailed = true;
-			comms_channel_transmit("Princess Frogg", 0, "Breaker one-nine! Any ship passin' Chapel Station SB-7, can I hitch a ride out of here before Junior finds me?!");
+			comms_channel_transmit("Princess Frogg", 0, "Breaker one-nine! Any ship passin' Chapel Station SB-7");
+			comms_channel_transmit("Princess Frogg", 0, "can I hitch a ride out of here before Junior finds me?!");
 		end
 		check_frogg_boarded();
 	end
