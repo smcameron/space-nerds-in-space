@@ -97,9 +97,14 @@ int read_starbase_model_metadata(char *asset_dir, char *filename, int *nstarbase
 		BUILD_ASSERT(PATH_MAX == 4096);
 		rc = sscanf(s, "%4095s %4095s %10s", model_file, docking_port_file, difficulty);
 		if (rc != 3) {
-			fprintf(stderr, "%s:%d bad starbase model specification\n",
-					path, lineno);
-			goto bailout;
+			/* Maybe it's an old file without the difficulty parameter */
+			rc = sscanf(s, "%4095s %4095s", model_file, docking_port_file);
+			if (rc != 2) {
+				fprintf(stderr, "%s:%d bad starbase model specification\n",
+						path, lineno);
+				goto bailout;
+			}
+			strlcpy(difficulty, "HARD", sizeof(difficulty));
 		}
 		if (pc >= np) {
 			fprintf(stderr, "More starbase models than declared, max = %d, declared = %d\n",
