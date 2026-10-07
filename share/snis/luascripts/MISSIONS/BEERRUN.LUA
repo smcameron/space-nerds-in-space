@@ -733,6 +733,20 @@ function mission_tick(cookie)
 		set_custom_button_label(player_id, 0, "T-" .. format_time(time_remaining));
 	end
 
+	-- Audible time remaining announcements
+	if mission_state == "TO_PICKUP" or mission_state == "AT_PICKUP" or mission_state == "HAULING" then
+		if time_remaining > 0 and (time_remaining % 60 == 0) then
+			mins = math.floor(time_remaining / 60);
+			if (mins > 5 and mins % 5 == 0) or (mins <= 5 and mins >= 1) then
+				if mins == 1 then
+					text_to_speech(player_id, "1 minute remaining.");
+				else
+					text_to_speech(player_id, mins .. " minutes remaining.");
+				end
+			end
+		end
+	end
+
 	-- Time milestones & alerts
 	if time_remaining == math.floor(time_limit_seconds * 0.5) then
 		comms_transmission(atlanta_sb, "Little Enos here: Half your time is gone!");
@@ -740,12 +754,12 @@ function mission_tick(cookie)
 	elseif time_remaining == math.floor(time_limit_seconds * 0.25) then
 		comms_transmission(atlanta_sb, "Big Enos: One quarter time left!");
 		comms_transmission(atlanta_sb, "You boys better have impulse pegged to the wall!");
-	elseif time_remaining == 300 then
-		text_to_speech(player_id, "Five minutes remaining.");
+	end
+
+	if time_remaining == 300 then
 		comms_transmission(atlanta_sb, "FIVE MINUTES REMAINING!");
 		comms_transmission(atlanta_sb, "We can already taste that $" .. bet_amount .. "!");
 	elseif time_remaining == 60 then
-		text_to_speech(player_id, "One minute remaining.");
 		comms_transmission(atlanta_sb, "ONE MINUTE! You're runnin' out o' sky!");
 	elseif time_remaining <= 0 and (mission_state == "TO_PICKUP" or mission_state == "AT_PICKUP" or mission_state == "HAULING") then
 		mission_lost("TIMEOUT");
