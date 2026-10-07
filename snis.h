@@ -826,6 +826,7 @@ struct cargo_container_data {
 	union quat rotational_velocity;
 	struct cargo_container_contents contents;
 	uint8_t persistent;
+	uint8_t not_for_npc_ships;
 	char transporter_tag[TRANSPORTER_TAG_LEN + 1]; /* 5 chars + nul */
 };
 

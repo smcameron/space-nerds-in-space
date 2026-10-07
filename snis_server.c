@@ -6995,11 +6995,12 @@ static void ai_chase_cargo_mode_brain(struct snis_entity *o)
 		return;
 	}
 	cargo = &go[i];
-	if (cargo->type != OBJTYPE_CARGO_CONTAINER || !cargo->alive) {
+	if (cargo->type != OBJTYPE_CARGO_CONTAINER || !cargo->alive ||
+	    cargo->tsd.cargo_container.not_for_npc_ships) {
 		pop_ai_stack(o);
 		if (debug_npc_cargo_chasing)
-			send_demon_console_msg("%u POPPED AI CHASE CARGO - WRONG TYPE OR DEAD", o->id);
-		ai_trace(o->id, "POPPED AI CHASE CARGO - WRONG TYPE OR DEAD");
+			send_demon_console_msg("%u POPPED AI CHASE CARGO - WRONG TYPE, DEAD, OR NOT FOR NPCS", o->id);
+		ai_trace(o->id, "POPPED AI CHASE CARGO - WRONG TYPE, DEAD, OR NOT FOR NPCS");
 		return;
 	}
 	dist = object_dist(o, cargo);
@@ -7765,6 +7766,9 @@ static void maybe_chase_cargo_container(struct snis_entity *ship, struct snis_en
 	union vec3 cargo_vel;
 	float v, time;
 	union vec3 here, there;
+
+	if (cargo->tsd.cargo_container.not_for_npc_ships)
+		return;
 
 	nai = ship->tsd.ship.nai_entries - 1;
 	if (nai < 0)
@@ -12783,6 +12787,7 @@ static int add_cargo_container(double x, double y, double z, double vx, double v
 	go[i].tsd.cargo_container.contents.item = item;
 	go[i].tsd.cargo_container.contents.qty = qty;
 	go[i].tsd.cargo_container.persistent = persistent & 0xff;
+	go[i].tsd.cargo_container.not_for_npc_ships = 0;
 	{
 		static struct mtwist_state *mt = NULL;
 		if (!mt)
@@ -23447,6 +23452,36 @@ static int l_get_cargo_container_transporter_tag(lua_State *l)
 	return 1;
 }
 
+static int mark_cargo_container_not_for_npc_ships_by_id(uint32_t id, int value)
+{
+	int i;
+
+	pthread_mutex_lock(&universe_mutex);
+	i = lookup_by_id(id);
+	if (i < 0 || go[i].type != OBJTYPE_CARGO_CONTAINER) {
+		pthread_mutex_unlock(&universe_mutex);
+		return -1;
+	}
+	go[i].tsd.cargo_container.not_for_npc_ships = !!value;
+	pthread_mutex_unlock(&universe_mutex);
+	return 0;
+}
+
+static int l_mark_cargo_container_not_for_npc_ships(lua_State *l)
+{
+	uint32_t id = (uint32_t) luaL_checknumber(l, 1);
+	int value = 1;
+	int rc;
+
+	if (lua_gettop(l) >= 2)
+		value = (int) lua_tonumber(l, 2);
+
+	rc = mark_cargo_container_not_for_npc_ships_by_id(id, value);
+
+	lua_pushnumber(l, rc);
+	return 1;
+}
+
 static int l_set_planet_description(lua_State *l)
 {
 	const double planet_id = luaL_checknumber(l, 1);
@@ -28673,6 +28708,7 @@ static void setup_lua(void)
 	add_lua_callable_fn(l_get_passenger_transporter_tag, "get_passenger_transporter_tag");
 	add_lua_callable_fn(l_set_cargo_container_transporter_tag, "set_cargo_container_transporter_tag");
 	add_lua_callable_fn(l_get_cargo_container_transporter_tag, "get_cargo_container_transporter_tag");
+	add_lua_callable_fn(l_mark_cargo_container_not_for_npc_ships, "mark_cargo_container_not_for_npc_ships");
 	add_lua_callable_fn(l_set_planet_description, "set_planet_description");
 	add_lua_callable_fn(l_set_planet_government, "set_planet_government");
 	add_lua_callable_fn(l_set_planet_tech_level, "set_planet_tech_level");

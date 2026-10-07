@@ -516,6 +516,7 @@ void snis_debug_dump(char *cmd, struct snis_entity go[], int nstarbase_models,
 		printfn("ITEM: %d", o->tsd.cargo_container.contents.item);
 		printfn("QTY: %f", o->tsd.cargo_container.contents.qty);
 		printfn("PERSISTENT: %d", o->tsd.cargo_container.persistent);
+		printfn("NOT_FOR_NPC_SHIPS: %d", o->tsd.cargo_container.not_for_npc_ships);
 		break;
 	case OBJTYPE_WARP_EFFECT:
 		t = "WARP EFFECT";

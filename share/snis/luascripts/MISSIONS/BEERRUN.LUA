@@ -244,6 +244,7 @@ beer_z = texarkana_z + texarkana_r + 1800;
 
 beer_container_id = add_cargo_container(beer_x, beer_y, beer_z, 0, 0, 0);
 if beer_container_id then
+	mark_cargo_container_not_for_npc_ships(beer_container_id);
 	set_commodity_contents(beer_container_id, beer_cargo_index, 400.0);
 	set_cargo_container_transporter_tag(beer_container_id, beer_tag);
 	attach_science_text(beer_container_id,

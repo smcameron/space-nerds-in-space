@@ -946,6 +946,13 @@ get_cargo_container_transporter_tag(id) -- gets a cargo container's transporter 
 	Returns:
 	The 5-character transporter tag string, or nil if not found.
 
+mark_cargo_container_not_for_npc_ships(id, [value]) -- marks a cargo container so NPC ships will not chase or pick it up
+	Parameters:
+	id: number, the entity ID of the cargo container.
+	value: optional number, 1 to mark as not for NPC ships (default), 0 to allow NPC ships to chase it.
+	Returns:
+	0 on success, -1 if not found or not a cargo container.
+
 set_planet_description(planet_id, description) -- set the description of a planet.
 	Parameters:
 	planet_id: number, the ID of the planet
