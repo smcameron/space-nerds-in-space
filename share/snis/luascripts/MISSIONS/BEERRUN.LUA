@@ -43,11 +43,11 @@ atlanta_z = 100000;
 atlanta_r = 4500;
 sb19_number = 19;
 
--- Texarkana is in the negative X/Z quadrant (~141,000 units away)
-texarkana_x = -60000;
-texarkana_y = 500;
-texarkana_z = 0;
-texarkana_r = -60000;
+-- Texarkana, opposite the sun relative to atlanta
+texarkana_x = -62374;
+texarkana_y = 5428;
+texarkana_z = -47800;
+texarkana_r = 4254;
 
 -- Chapel station SB-7 (where Princess Frogg is stranded)
 chapel_x = 45000;
