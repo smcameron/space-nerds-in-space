@@ -554,9 +554,11 @@ function check_pickup_proximity()
 		mission_state = "AT_PICKUP";
 		demon_print("BEERRUN: Player arrived at Texarkana pickup at " .. format_time(elapsed_seconds));
 		comms_channel_transmit("Brewmaster (Golden City)", 0, "---");
-		comms_channel_transmit("Brewmaster (Golden City)", 0, "Atlanta hauler, we see you on approach! 400 kegs of cold Coors are staged in orbit.");
+		comms_channel_transmit("Brewmaster (Golden City)", 0, "Atlanta hauler, we see you on approach!");
+		comms_channel_transmit("Brewmaster (Golden City)", 0, "400 kegs of cold Coors are staged in orbit.");
 		comms_channel_transmit("Brewmaster (Golden City)", 0, "CONTAINER TRANSPORTER TAG IS '" .. beer_tag .. "'.");
-		comms_channel_transmit("Brewmaster (Golden City)", 0, "GET WITHIN TRANSPORTER RANGE (1500 units) AND ENERGIZE TO LOAD CARGO!");
+		comms_channel_transmit("Brewmaster (Golden City)", 0, "GET WITHIN TRANSPORTER RANGE (1500 units)");
+		comms_channel_transmit("Brewmaster (Golden City)", 0, "AND ENERGIZE TO LOAD CARGO!");
 		comms_channel_transmit("Brewmaster (Golden City)", 0, "---");
 		text_to_speech(player_id, "Brewery contacted. Transporter tag is " .. beer_tag .. ". Close to fifteen hundred units.");
 	end
@@ -570,7 +572,8 @@ function cargo_acquired_callback(pid, item_index, qty)
 		play_sound(player_id, "sounds/changescreen.ogg");
 		text_to_speech(player_id, "Beer loaded. Turn around and head for Atlanta. Watch for Beer Patrol.");
 
-		comms_channel_transmit("Brewmaster (Golden City)", 0, "The payload is aboard! Get goin', boy, before Buford catches your dust!");
+		comms_channel_transmit("Brewmaster (Golden City)", 0, "The payload is aboard!");
+		comms_channel_transmit("Brewmaster (Golden City)", 0, "Get goin', boy, before Buford catches yer ass!");
 		comms_transmission(atlanta_sb, "Big Enos here! We see you got the suds loaded!");
 		comms_transmission(atlanta_sb, "Half the clock is tickin' away, bring 'em home!");
 
@@ -683,8 +686,9 @@ function mission_lost(reason)
 		comms_transmission(atlanta_sb, "signature! The bet was NO WARP!");
 		comms_transmission(atlanta_sb, "That'll cost you $" .. bet_amount .. ", fair");
 		comms_transmission(atlanta_sb, "and square! Pay up!");
-		comms_channel_transmit("Sheriff Buford T. Justus", 0, "Hah! Caught 'em red-handed violatin' space ");
-		comms_channel_transmit("transit statutes! Justice wins again!");
+		comms_channel_transmit("Sheriff Buford T. Justus", 0, "Hah! Caught 'em red-handed");
+		comms_channel_transmit("Sheriff Buford T. Justus", 0, "violatin' space transit statutes!");
+		comms_channel_transmit("Sheriff Buford T. Justus", 0, "Justice wins again!");
 	elseif reason == "TIMEOUT" then
 		text_to_speech(player_id, "Time has expired. Bet lost.");
 		comms_transmission(atlanta_sb, "TIME IS UP! The party is over and the ");
@@ -692,8 +696,8 @@ function mission_lost(reason)
 		comms_transmission(atlanta_sb, "A bet's a bet! You owe Big Enos and Little ");
 		comms_transmission(atlanta_sb, "Enos $" .. bet_amount .. "!");
 	elseif reason == "NO_BEER" then
-		text_to_speech(player_id, "Cargo bay empty. Where is the beer?");
-		comms_transmission(atlanta_sb, "You docked without the beer?! Where are ");
+		text_to_speech(player_id, "Cargo bay contains no Coors?");
+		comms_transmission(atlanta_sb, "You docked without the Coors?! Where are ");
 		comms_transmission(atlanta_sb, "the 400 kegs?!");
 		comms_transmission(atlanta_sb, "No beer, no win!");
 		comms_transmission(atlanta_sb, "Pay up the $" .. bet_amount .. "!");
