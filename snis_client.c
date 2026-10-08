@@ -22031,6 +22031,13 @@ static void show_demon_3d(void)
 
 	pthread_mutex_lock(&universe_mutex);
 
+	struct entity *sun = add_entity(instrumentecx, torpedo_nav_mesh,
+					SUNX, SUNY, SUNZ, YELLOW);
+	if (sun) {
+		update_entity_material(sun, &yellow_material);
+		update_entity_scale(sun, star_radius * 0.1);
+	}
+
 	for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
 		struct entity *e = NULL;
 		struct snis_entity *o = &go[i];
