@@ -55,6 +55,25 @@ chapel_y = 700;
 chapel_z = 35000;
 sb7_number = 7;
 
+-- Additional sector worlds & starbases
+birmingham_x = -95000;
+birmingham_y = 300;
+birmingham_z = -15000;
+birmingham_r = 3900;
+sb2_number = 2;
+
+charlotte_x = 85000;
+charlotte_y = 600;
+charlotte_z = -75000;
+charlotte_r = 4200;
+sb3_number = 3;
+
+memphis_x = -70000;
+memphis_y = -400;
+memphis_z = 80000;
+memphis_r = 4800;
+sb8_number = 8;
+
 -- Obstacles on return leg (between Texarkana (0,0) and Atlanta (100k, 100k))
 speed_trap_x = 22000;
 speed_trap_y = 500;
@@ -321,6 +340,36 @@ set_planet_government(texarkana_planet, 5); -- Confederacy
 set_planet_tech_level(texarkana_planet, 5);  -- Space age
 set_planet_economy(texarkana_planet, 5);     -- Rich Agricultural
 
+-- Create Birmingham & Starbase 2
+birmingham_planet, birmingham_sb = add_planet_plus_starbase("BIRMINGHAM", birmingham_x, birmingham_y, birmingham_z,
+                                                            birmingham_r, 1, 2, sb2_number);
+set_planet_description(birmingham_planet,
+	"Rugged industrial colony known for heavy ore foundries, orbital ship\n" ..
+	"yards, and hard-working transport crews.");
+set_planet_government(birmingham_planet, 6); -- Democracy
+set_planet_tech_level(birmingham_planet, 5);  -- Space age
+set_planet_economy(birmingham_planet, 0);     -- Rich Industrial
+
+-- Create Charlotte & Starbase 3
+charlotte_planet, charlotte_sb = add_planet_plus_starbase("CHARLOTTE", charlotte_x, charlotte_y, charlotte_z,
+                                                          charlotte_r, 1, 0, sb3_number);
+set_planet_description(charlotte_planet,
+	"Sprawling banking and commerce hub of the eastern rim.\n" ..
+	"Freighters and merchant convoys arrive daily from across the sector.");
+set_planet_government(charlotte_planet, 6); -- Democracy
+set_planet_tech_level(charlotte_planet, 5);  -- Space age
+set_planet_economy(charlotte_planet, 0);     -- Rich Industrial
+
+-- Create Memphis & Starbase 8
+memphis_planet, memphis_sb = add_planet_plus_starbase("MEMPHIS", memphis_x, memphis_y, memphis_z,
+                                                      memphis_r, 1, 1, sb8_number);
+set_planet_description(memphis_planet,
+	"Vibrant cultural center orbiting a swirling golden gas giant.\n" ..
+	"A favorite shore leave stop for long-haul cargo haulers.");
+set_planet_government(memphis_planet, 6); -- Democracy
+set_planet_tech_level(memphis_planet, 5);  -- Space age
+set_planet_economy(memphis_planet, 5);     -- Rich Agricultural
+
 -- Chapel Station SB-7 (Princess Frogg's waypoint)
 chapel_sb = add_starbase(chapel_x, chapel_y, chapel_z, sb7_number);
 set_faction(chapel_sb, faction_neutral);
@@ -331,6 +380,12 @@ set_faction(atlanta_sb, faction_neutral);
 set_plot_armor(atlanta_sb, 1);
 set_faction(texarkana_sb, faction_neutral);
 set_plot_armor(texarkana_sb, 1);
+set_faction(birmingham_sb, faction_neutral);
+set_plot_armor(birmingham_sb, 1);
+set_faction(charlotte_sb, faction_neutral);
+set_plot_armor(charlotte_sb, 1);
+set_faction(memphis_sb, faction_neutral);
+set_plot_armor(memphis_sb, 1);
 
 -- Place the beer cargo container hovering right above Golden City on Texarkana
 beer_x = texarkana_x + texarkana_r + 2000;
@@ -379,6 +434,61 @@ nebula_id = add_nebula("MISSISSIPPI NEBULA", nebula_x, nebula_y, nebula_z, nebul
 -- A few neutral civilian freighters along the route for flavor
 add_ship("LONG HAULER 1", 30000, 400, 30000, ship_freighter, faction_neutral, 0);
 add_ship("WAYFARER 9", 70000, 600, 68000, ship_tanker, faction_neutral, 0);
+
+-- Background civilian and merchant traffic (unrelated to the beer run mission)
+traffic_ship_types = {
+	ship_freighter,
+	ship_tanker,
+	ship_cruiser,
+	ship_destroyer,
+	ship_scrambler,
+	ship_wombat,
+};
+traffic_factions = {
+	faction_neutral,
+	faction_wallunni,
+	faction_schaazbaut,
+	faction_vekkazi,
+};
+
+traffic_hubs = {
+	{ x = atlanta_x,    y = atlanta_y,    z = atlanta_z },
+	{ x = texarkana_x,  y = texarkana_y,  z = texarkana_z },
+	{ x = birmingham_x, y = birmingham_y, z = birmingham_z },
+	{ x = charlotte_x,  y = charlotte_y,  z = charlotte_z },
+	{ x = memphis_x,    y = memphis_y,    z = memphis_z },
+	{ x = chapel_x,     y = chapel_y,     z = chapel_z },
+};
+
+-- 30 ships distributed near planetary and station hubs (5 per hub)
+for _, hub in ipairs(traffic_hubs) do
+	for j = 1, 5 do
+		local stype = traffic_ship_types[math.random(1, #traffic_ship_types)];
+		local sfac = traffic_factions[math.random(1, #traffic_factions)];
+		local offset_r = math.random(7000, 22000);
+		local angle = math.random() * 2 * math.pi;
+		local sx = hub.x + math.cos(angle) * offset_r;
+		local sy = hub.y + math.random(-800, 800);
+		local sz = hub.z + math.sin(angle) * offset_r;
+		add_ship(generate_ship_name(), sx, sy, sz, stype, sfac, 0);
+	end
+end
+
+-- 20 ships scattered across sector shipping corridors
+for i = 1, 20 do
+	local stype = traffic_ship_types[math.random(1, #traffic_ship_types)];
+	local sfac = traffic_factions[math.random(1, #traffic_factions)];
+	local sx, sy, sz, dist_sun, dist_bh;
+	repeat
+		sx = math.random(-120000, 120000);
+		sy = math.random(-800, 800);
+		sz = math.random(-120000, 120000);
+		dist_sun = math.sqrt(sx * sx + sz * sz);
+		dist_bh = math.sqrt((sx - black_hole_x) * (sx - black_hole_x) +
+		                    (sz - black_hole_z) * (sz - black_hole_z));
+	until dist_sun > 35000 and dist_bh > 10000;
+	add_ship(generate_ship_name(), sx, sy, sz, stype, sfac, 0);
+end
 
 -- -------------------------------------------------------------
 -- SHIP INITIALIZATION
