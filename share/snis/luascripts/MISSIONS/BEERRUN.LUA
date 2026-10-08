@@ -143,42 +143,130 @@ end
 -- DIALOGUE TABLES (Humorous, original PG Southern-fried lines)
 -- -------------------------------------------------------------
 sheriff_alert_taunts = {
-	"What in the nine rings o' Saturn do you think you're pullin', boy?! Pull that rustbucket over right now!",
-	"Attention leadfoot: this is Sheriff Buford T. Justus of the Galactic Beer Patrol! Cut your impulse drives or I'll dismantle you piece by piece!",
-	"I got your scan, speeder! Nobody outruns Buford T. Justus in his own star sector, nobody!",
-	"You got ten seconds to surrender that bootleg cargo before my laser batteries introduce themselves to your hull!"
+	{
+		"What in the nine rings o' Saturn",
+		"do you think you're pullin', boy?!",
+		"Pull that rustbucket over right now!",
+	},
+	{
+		"Attention leadfoot: this is Sheriff",
+		"Buford T. Justus of the Galactic",
+		"Beer Patrol! Cut your impulse drives",
+		"or I'll dismantle you piece by piece!",
+	},
+	{
+		"I got your scan, speeder! Nobody",
+		"outruns Buford T. Justus in his",
+		"own star sector, nobody!",
+	},
+	{
+		"You got ten seconds to surrender",
+		"that bootleg cargo before my laser",
+		"batteries introduce themselves",
+		"to your hull!",
+	},
 };
 
 sheriff_chase_taunts = {
-	"Junior! Keep your useless eyes on their thermal trail and put down that planetary corndog!",
-	"You think you're slick slippin' through sublight, don't you? My grandma maneuvers better than that, and she's frozen in cryo-stasis!",
-	"When I catch up with you, I'm personally sendin' your captain to the penal moon o' Desolation!",
-	"There is no way, no way in the whole galaxy, that you came from my patrol sector!",
-	"Keep runnin', scofflaw! You're only addin' light-years onto your eventual sentence!"
+	{
+		"Junior! Keep your useless eyes on",
+		"their thermal trail and put down",
+		"that planetary corndog!",
+	},
+	{
+		"You think you're slick slippin'",
+		"through sublight, don't you? My",
+		"grandma maneuvers better than that,",
+		"and she's frozen in cryo-stasis!",
+	},
+	{
+		"When I catch up with you, I'm",
+		"personally sendin' your captain",
+		"to the penal moon o' Desolation!",
+	},
+	{
+		"There is no way, no way in the",
+		"whole galaxy, that you came from",
+		"my patrol sector!",
+	},
+	{
+		"Keep runnin', scofflaw! You're only",
+		"addin' light-years onto your",
+		"eventual sentence!",
+	},
 };
 
 sheriff_hit_taunts = {
-	"Ouch! You scratched my fresh patrol enamel, you no-good interstellar hoodlum!",
-	"Junior, that scoundrel just scorched my favorite port fin! Return fire before I disown you!",
-	"That did not hurt one bit! My armor's grade-A titanium alloy, you rascal!"
+	{
+		"Ouch! You scratched my fresh patrol",
+		"enamel, you no-good interstellar",
+		"hoodlum!",
+	},
+	{
+		"Junior, that scoundrel just scorched",
+		"my favorite port fin! Return fire",
+		"before I disown you!",
+	},
+	{
+		"That did not hurt one bit! My armor's",
+		"grade-A titanium alloy, you rascal!",
+	},
 };
 
 sheriff_nebula_taunts = {
-	"Where'd they go?! Junior, don't just stare at the purple gas clouds, tune the sensors!",
-	"Hidin' in space clouds like cowards! You can't stay in that ionizing soup forever, boy!",
-	"They're sneakin' through the dust! Sweep every grid, Junior, or you're walkin' home!"
+	{
+		"Where'd they go?! Junior, don't just",
+		"stare at the purple gas clouds,",
+		"tune the sensors!",
+	},
+	{
+		"Hidin' in space clouds like cowards!",
+		"You can't stay in that ionizing soup",
+		"forever, boy!",
+	},
+	{
+		"They're sneakin' through the dust!",
+		"Sweep every grid, Junior, or you're",
+		"walkin' home!",
+	},
 };
 
 sheriff_respawn_taunts = {
-	"You thought blowin' up my cruiser would shake me?! I commandeered another ship, boy! Justus never sleeps!",
-	"I'm back, you scamp! And this time I am person-ally offended! Prepare for boardin'!",
-	"Junior, grab the emergency steering lever! We're back in the hunt, leadfoot!"
+	{
+		"You thought blowin' up my cruiser",
+		"would shake me?! I commandeered",
+		"another ship, boy! Justus never",
+		"sleeps!",
+	},
+	{
+		"I'm back, you scamp! And this time",
+		"I am person-ally offended! Prepare",
+		"for boardin'!",
+	},
+	{
+		"Junior, grab the emergency steering",
+		"lever! We're back in the hunt,",
+		"leadfoot!",
+	},
 };
 
 sheriff_junior_lines = {
-	"Junior! If your brains was rocket propellant, you couldn't lift a peanut off the deck!",
-	"Junior, hush your mouth! A boy who can't target a sublight freighter don't get to speak on tactical comms!",
-	"I told your mother takin' you on patrol duty was a mistake, and by thunder I was right!"
+	{
+		"Junior! If your brains was rocket",
+		"propellant, you couldn't lift a",
+		"peanut off the deck!",
+	},
+	{
+		"Junior, hush your mouth! A boy who",
+		"can't target a sublight freighter",
+		"don't get to speak on tactical",
+		"comms!",
+	},
+	{
+		"I told your mother takin' you on",
+		"patrol duty was a mistake, and by",
+		"thunder I was right!",
+	},
 };
 
 function pick_random_line(tbl)
@@ -423,8 +511,10 @@ function alert_beer_patrol()
 	play_sound(player_id, "sounds/alarm_buzzer.ogg");
 	text_to_speech(player_id, "Alert. Galactic Beer Patrol ships approaching.");
 
-	line = pick_random_line(sheriff_alert_taunts);
-	comms_channel_transmit("Sheriff Buford T. Justus", 0, line);
+	lines = pick_random_line(sheriff_alert_taunts);
+	for _, l in ipairs(lines) do
+		comms_channel_transmit("Sheriff Buford T. Justus", 0, l);
+	end
 
 	if sheriff_ship_id then
 		ai_push_attack(sheriff_ship_id, player_id);
@@ -599,7 +689,10 @@ end
 function object_hit_callback(victim, shooter)
 	if victim == sheriff_ship_id and (elapsed_seconds - last_sheriff_hit_time > 15) then
 		last_sheriff_hit_time = elapsed_seconds;
-		comms_channel_transmit("Sheriff Buford T. Justus", 0, pick_random_line(sheriff_hit_taunts));
+		lines = pick_random_line(sheriff_hit_taunts);
+		for _, l in ipairs(lines) do
+			comms_channel_transmit("Sheriff Buford T. Justus", 0, l);
+		end
 	end
 end
 
@@ -837,7 +930,10 @@ function mission_tick(cookie)
 				sheriff_ship_id = add_ship("SHERIFF'S REPLACEMENT", px - 7000, py, pz - 7000, stype, faction_zarkon, 0);
 				set_plot_armor(sheriff_ship_id, 0);
 				ai_push_attack(sheriff_ship_id, player_id);
-				comms_channel_transmit("Sheriff Buford T. Justus", 0, pick_random_line(sheriff_respawn_taunts));
+				lines = pick_random_line(sheriff_respawn_taunts);
+				for _, l in ipairs(lines) do
+					comms_channel_transmit("Sheriff Buford T. Justus", 0, l);
+				end
 			end
 		end
 	end
@@ -848,7 +944,10 @@ function mission_tick(cookie)
 		if dist_neb and dist_neb < nebula_radius then
 			-- Inside nebula: Patrol gets confused!
 			if math.random(1, 40) == 1 then
-				comms_channel_transmit("Sheriff Buford T. Justus", 0, pick_random_line(sheriff_nebula_taunts));
+				lines = pick_random_line(sheriff_nebula_taunts);
+				for _, l in ipairs(lines) do
+					comms_channel_transmit("Sheriff Buford T. Justus", 0, l);
+				end
 			end
 			px, py, pz = get_object_location(player_id);
 			ai_push_patrol(sheriff_ship_id, 2, px + 2000, py, pz, px - 2000, py, pz);
@@ -857,9 +956,15 @@ function mission_tick(cookie)
 			ai_push_attack(sheriff_ship_id, player_id);
 			if (elapsed_seconds - last_sheriff_taunt_time > 75) and (math.random(1, 2) == 1) then
 				last_sheriff_taunt_time = elapsed_seconds;
-				comms_channel_transmit("Sheriff Buford T. Justus", 0, pick_random_line(sheriff_chase_taunts));
+				lines = pick_random_line(sheriff_chase_taunts);
+				for _, l in ipairs(lines) do
+					comms_channel_transmit("Sheriff Buford T. Justus", 0, l);
+				end
 				if math.random(1, 3) == 1 then
-					comms_channel_transmit("Sheriff Buford T. Justus", 0, pick_random_line(sheriff_junior_lines));
+					lines = pick_random_line(sheriff_junior_lines);
+					for _, l in ipairs(lines) do
+						comms_channel_transmit("Sheriff Buford T. Justus", 0, l);
+					end
 				end
 			end
 		end
