@@ -547,6 +547,7 @@ function intro_announcement()
 		"Time limit: " .. math.floor(time_limit_seconds / 60) .. " minutes. Prize: $" .. bet_amount .. "!");
 end
 
+bet_menu = nil;
 function start_bet_offer()
 	comms_transmission(atlanta_sb, "---");
 	comms_transmission(atlanta_sb, "Breaker one-nine! Big Enos here aboard SB-19 Atlanta!");
@@ -559,15 +560,17 @@ function start_bet_offer()
 	comms_transmission(atlanta_sb, "hAND YOU FORFEIT $" .. bet_amount .. "!");
 	comms_transmission(atlanta_sb, "---");
 
-	menu = comms_menu_create(
+	bet_menu = comms_menu_create(
 		"1. TAKE THE BET ($" .. bet_amount .. " on the line, NO WARP!)\n" ..
 		"2. DECLINE (Too risky for this crew)",
 		"bet_menu_callback");
-	comms_menu_invoke(menu, player_id);
+	comms_menu_invoke(bet_menu, player_id);
+	mission_state = "OFFERED";
 end
 
 function bet_menu_callback(choice, pid)
-	comms_menu_destroy(menu);
+	comms_menu_destroy(bet_menu);
+	bet_menu = nil;
 	if choice == 0 then
 		-- Accepted!
 		mission_state = "TO_PICKUP";
@@ -850,6 +853,23 @@ function player_docked_callback(pid, station_id)
 	end
 end
 
+function player_undocked_callback(pid, station_id)
+	if mission_state == "OFFERED" then
+		mission_state = "DECLINED"
+		if (bet_menu ~= nil) then
+			comms_menu_destroy(bet_menu);
+			bet_menu = nil;
+		end
+		comms_channel_transmit("Big Enos", 0, "I'll take the fact that you undocked");
+		comms_channel_transmit("Big Enos", 0, "without a reply to mean that yer too");
+		comms_channel_transmit("Big Enos", 0, "chicken to even answer and have declined");
+		comms_channel_transmit("Big Enos", 0, "by default. Well I am sure we can find a");
+		comms_channel_transmit("Big Enos", 0, "hauler that's got some balls!");
+		comms_channel_transmit("Big Enos", 0, "Over and out!");
+		demon_print("BEERRUN: Player declined the bet by default.");
+	end
+end
+
 -- -------------------------------------------------------------
 -- WIN / LOSE OUTCOMES
 -- -------------------------------------------------------------
@@ -1077,6 +1097,7 @@ end
 -- -------------------------------------------------------------
 function start_mission()
 	register_callback("player-docked-event", "player_docked_callback");
+	register_callback("player-undocked-event", "player_undocked_callback");
 	register_callback("cargo-container-acquired-event", "cargo_acquired_callback");
 	register_callback("custom-button-press-event", "custom_button_press_callback");
 	register_callback("object-hit-event", "object_hit_callback");
