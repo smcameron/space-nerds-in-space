@@ -10794,6 +10794,9 @@ static void docking_port_move(struct snis_entity *o)
 				bridgelist[bn].last_docked_time = universe_timestamp;
 				snis_queue_add_sound(CLEAR_TO_DEPART, ROLE_COMMS, docker->id);
 			}
+			schedule_callback2(event_callback, &callback_schedule,
+				"player-undocked-event", (double) docker->id,
+				(double) o->tsd.docking_port.parent);
 		}
 	}
 	quat_slerp(&new_orientation, &docker->orientation, &o->orientation, slerp_rate);
