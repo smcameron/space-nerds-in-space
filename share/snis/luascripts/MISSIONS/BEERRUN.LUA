@@ -273,6 +273,13 @@ function pick_random_line(tbl)
 	return tbl[math.random(1, #tbl)];
 end
 
+function transmit_random_taunt(transmitter_name, channel, taunt_tbl)
+	lines = pick_random_line(taunt_tbl);
+	for _, l in ipairs(lines) do
+		comms_channel_transmit(transmitter_name, channel, l);
+	end
+end
+
 -- -------------------------------------------------------------
 -- UNIVERSE GENERATION & PLACEMENT
 -- -------------------------------------------------------------
@@ -510,11 +517,7 @@ function alert_beer_patrol()
 
 	play_sound(player_id, "sounds/alarm_buzzer.ogg");
 	text_to_speech(player_id, "Alert. Galactic Beer Patrol ships approaching.");
-
-	lines = pick_random_line(sheriff_alert_taunts);
-	for _, l in ipairs(lines) do
-		comms_channel_transmit("Sheriff Buford T. Justus", 0, l);
-	end
+	transmit_random_taunt("Sheriff Buford T. Justus", 0, sheriff_alert_taunts);
 
 	if sheriff_ship_id then
 		ai_push_attack(sheriff_ship_id, player_id);
@@ -689,10 +692,7 @@ end
 function object_hit_callback(victim, shooter)
 	if victim == sheriff_ship_id and (elapsed_seconds - last_sheriff_hit_time > 15) then
 		last_sheriff_hit_time = elapsed_seconds;
-		lines = pick_random_line(sheriff_hit_taunts);
-		for _, l in ipairs(lines) do
-			comms_channel_transmit("Sheriff Buford T. Justus", 0, l);
-		end
+		transmit_random_taunt("Sheriff Buford T. Justus", 0, sherrif_hit_taunts);
 	end
 end
 
@@ -930,10 +930,7 @@ function mission_tick(cookie)
 				sheriff_ship_id = add_ship("SHERIFF'S REPLACEMENT", px - 7000, py, pz - 7000, stype, faction_zarkon, 0);
 				set_plot_armor(sheriff_ship_id, 0);
 				ai_push_attack(sheriff_ship_id, player_id);
-				lines = pick_random_line(sheriff_respawn_taunts);
-				for _, l in ipairs(lines) do
-					comms_channel_transmit("Sheriff Buford T. Justus", 0, l);
-				end
+				transmit_random_taunt("Sheriff Buford T. Justus", 0, sheriff_respawn_taunts);
 			end
 		end
 	end
@@ -944,10 +941,7 @@ function mission_tick(cookie)
 		if dist_neb and dist_neb < nebula_radius then
 			-- Inside nebula: Patrol gets confused!
 			if math.random(1, 40) == 1 then
-				lines = pick_random_line(sheriff_nebula_taunts);
-				for _, l in ipairs(lines) do
-					comms_channel_transmit("Sheriff Buford T. Justus", 0, l);
-				end
+				transmit_random_taunt("Sheriff Buford T. Justus", 0, sheriff_nebula_taunt);
 			end
 			px, py, pz = get_object_location(player_id);
 			ai_push_patrol(sheriff_ship_id, 2, px + 2000, py, pz, px - 2000, py, pz);
@@ -956,15 +950,9 @@ function mission_tick(cookie)
 			ai_push_attack(sheriff_ship_id, player_id);
 			if (elapsed_seconds - last_sheriff_taunt_time > 75) and (math.random(1, 2) == 1) then
 				last_sheriff_taunt_time = elapsed_seconds;
-				lines = pick_random_line(sheriff_chase_taunts);
-				for _, l in ipairs(lines) do
-					comms_channel_transmit("Sheriff Buford T. Justus", 0, l);
-				end
+				transmit_random_taunt("Sheriff Buford T. Justus", 0, sheriff_chase_taunts);
 				if math.random(1, 3) == 1 then
-					lines = pick_random_line(sheriff_junior_lines);
-					for _, l in ipairs(lines) do
-						comms_channel_transmit("Sheriff Buford T. Justus", 0, l);
-					end
+					transmit_random_taunt("Sheriff Buford T. Justus", 0, sheriff_junior_lines);
 				end
 			end
 		end
