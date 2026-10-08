@@ -439,7 +439,8 @@ function spawn_roadblock()
 	roadblock_tripped = true;
 	demon_print("BEERRUN: Roadblock spawned in front of Atlanta at " .. format_time(elapsed_seconds));
 
-	comms_channel_transmit("Galactic Beer Patrol", 0, "ROADBLOCK IN PLACE! All ships approachin' Atlanta, prepare for contraband inspection!");
+	comms_channel_transmit("Galactic Beer Patrol", 0, "ROADBLOCK IN PLACE! All ships approachin' Atlanta,");
+	comms_channel_transmit("Galactic Beer Patrol", 0, "prepare for contraband inspection!");
 	text_to_speech(player_id, "Warning. Roadblock detected ahead.");
 
 	rb1 = add_ship("PATROL INTERCEPTOR 1", roadblock_x, roadblock_y, roadblock_z, ship_enforcer, faction_zarkon, 0);
@@ -463,8 +464,11 @@ function check_frogg_boarded()
 		play_sound(player_id, "sounds/crewmember-has-joined.ogg");
 		text_to_speech(player_id, "Princess Frogg has boarded the ship.");
 
-		comms_channel_transmit("Princess Frogg", 0, "Thanks for the lift! I just left Junior standin' at the altar on Chapel Station.");
-		comms_channel_transmit("Princess Frogg", 0, "If Buford's deputies start crowdin' us, use the FROGG CB-19 button on COMMS! I've got trucker friends all over this sector!");
+		comms_channel_transmit("Princess Frogg", 0, "Thanks for the lift! I just left Junior standin'");
+		comms_channel_transmit("Princess Frogg", 0, "at the altar on Chapel Station.");
+		comms_channel_transmit("Princess Frogg", 0, "If Buford's deputies start crowdin' us, use");
+		comms_channel_transmit("Princess Frogg", 0, "the FROGG CB-19 button on COMMS!");
+		comms_channel_transmit("Princess Frogg", 0, "I've got trucker friends all over this sector!");
 
 		-- Enable Frogg convoy call button on COMMS (screen 5 = COMMS)
 		set_custom_button_label(player_id, 5, "FROGG: CB 19");
@@ -480,7 +484,8 @@ end
 
 function call_trucker_convoy()
 	if frogg_convoy_charges <= 0 then
-		comms_channel_transmit("Princess Frogg", 0, "All my trucker buddies are out of range now! We're on our own!");
+		comms_channel_transmit("Princess Frogg", 0, "All my trucker buddies are out of range");
+		comms_channel_transmit("Princess Frogg", 0, "now! We're on our own!");
 		return;
 	end
 	if frogg_convoy_cooldown > 0 then
@@ -498,8 +503,12 @@ function call_trucker_convoy()
 	px, py, pz = get_object_location(player_id);
 	if not px then return; end
 
-	comms_channel_transmit("Princess Frogg", 19, "Breaker breaker one-nine! Any big rigs got their ears on? We got Beer Patrol ridin' our tail!");
-	comms_channel_transmit("Big Bear", 19, "We copy you, Princess! Hang on, Snowman, the cavalry is droppin' out o' warp right now! 10-4!");
+	comms_channel_transmit("Princess Frogg", 19, "Breaker breaker one-nine!");
+	comms_channel_transmit("Princess Frogg", 19, "Any big rigs got their ears on?");
+	comms_channel_transmit("Princess Frogg", 19, "We got Beer Patrol ridin' our tail!");
+	comms_channel_transmit("Big Bear", 19, "We copy you, Princess! Hang on, Snowman,");
+	comms_channel_transmit("Big Bear", 19, "the cavalry is droppin' out o' warp");
+	comms_channel_transmit("Big Bear", 19, "right now! 10-4!");
 	text_to_speech(player_id, "Trucker convoy arriving on channel 19.");
 
 	convoy_ships[1] = add_ship("BIG BEAR (RIG)", px + 1500, py + 200, pz + 1000, ship_tanker, faction_wallunni, 0);
@@ -535,7 +544,9 @@ end
 function dismiss_convoy()
 	convoy_active = false;
 	demon_print("BEERRUN: Trucker convoy leaving at " .. format_time(elapsed_seconds));
-	comms_channel_transmit("Big Bear", 19, "We gotta hammer down and make our own delivery schedule, Princess! Keep that hammer down! Catch you on the flip-flop! 10-4!");
+	comms_channel_transmit("Big Bear", 19, "We gotta hammer down and make our own");
+	comms_channel_transmit("Big Bear", 19, "delivery schedule, Princess! Keep that\n");
+	comms_channel_transmit("Big Bear", 19, "hammer down! Catch you on the flip-flop! 10-4!");
 	for _, cship in pairs(convoy_ships) do
 		if cship then
 			delete_object(cship);
@@ -776,8 +787,9 @@ function mission_tick(cookie)
 		dist_chapel = object_distance(player_id, chapel_sb);
 		if dist_chapel and dist_chapel < 25000 and not frogg_hailed then
 			frogg_hailed = true;
-			comms_channel_transmit("Princess Frogg", 0, "Breaker one-nine! Any ship passin' Chapel Station SB-7");
-			comms_channel_transmit("Princess Frogg", 0, "can I hitch a ride out of here before Junior finds me?!");
+			comms_channel_transmit("Princess Frogg", 0, "Breaker one-nine! Any ship passin'");
+			comms_channel_transmit("Princess Frogg", 0, "Chapel Station SB-7 can I hitch a ride");
+			comms_channel_transmit("Princess Frogg", 0, "out of here before Junior finds me?!");
 		end
 		check_frogg_boarded();
 	end
