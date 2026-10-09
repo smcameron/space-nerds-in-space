@@ -29,7 +29,7 @@
 
 int main(int argc, char *argv[])
 {
-	int rc;
+	int rc, i;
 
 	(void) argc;
 	(void) argv;
@@ -42,19 +42,25 @@ int main(int argc, char *argv[])
 	snis_wled_handle_command(WLED_CMD_SOLID, 255, 0, 0, 0);
 
 	printf("Testing tick loop...\n");
-	for (int i = 0; i < 30; i++)
+	for (i = 0; i < 30; i++)
 		snis_wled_tick();
 
 	printf("Testing flash command (white flash explosion)...\n");
 	snis_wled_handle_command(WLED_CMD_FLASH, 255, 255, 255, 100);
 
-	for (int i = 0; i < 30; i++)
+	for (i = 0; i < 30; i++)
+		snis_wled_tick();
+
+	printf("Testing hit flash command (2000ms white flash)...\n");
+	snis_wled_handle_command(WLED_CMD_FLASH, 255, 255, 255, 2000);
+
+	for (i = 0; i < 70; i++)
 		snis_wled_tick();
 
 	printf("Testing off command...\n");
 	snis_wled_handle_command(WLED_CMD_OFF, 0, 0, 0, 0);
 
-	for (int i = 0; i < 5; i++)
+	for (i = 0; i < 5; i++)
 		snis_wled_tick();
 
 	printf("Testing shutdown...\n");

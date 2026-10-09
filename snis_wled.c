@@ -175,10 +175,12 @@ void snis_wled_flash(uint8_t r, uint8_t g, uint8_t b, uint16_t duration_ms)
 void snis_wled_off(void)
 {
 	wled_base_mode = WLED_CMD_OFF;
-	wled_current_mode = WLED_CMD_OFF;
-	wled_flash_ticks_remaining = 0;
-	wled_off_burst_count = 0;
-	send_wled_drgb_packet(0, 0, 0);
+	if (wled_current_mode != WLED_CMD_FLASH) {
+		wled_current_mode = WLED_CMD_OFF;
+		wled_flash_ticks_remaining = 0;
+		wled_off_burst_count = 0;
+		send_wled_drgb_packet(0, 0, 0);
+	}
 }
 
 void snis_wled_handle_command(uint8_t command, uint8_t r, uint8_t g, uint8_t b, uint16_t duration_ms)
@@ -207,11 +209,18 @@ void snis_wled_tick(void)
 		wled_flash_ticks_remaining--;
 		if (wled_flash_ticks_remaining <= 0) {
 			wled_current_mode = wled_base_mode;
+			wled_refresh_counter = 0;
 			if (wled_base_mode == WLED_CMD_SOLID) {
 				send_wled_drgb_packet(wled_base_r, wled_base_g, wled_base_b);
 			} else {
 				send_wled_drgb_packet(0, 0, 0);
 				wled_off_burst_count = 0;
+			}
+		} else {
+			wled_refresh_counter++;
+			if (wled_refresh_counter >= WLED_REFRESH_INTERVAL) {
+				wled_refresh_counter = 0;
+				send_wled_drgb_packet(wled_flash_r, wled_flash_g, wled_flash_b);
 			}
 		}
 		return;

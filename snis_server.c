@@ -2435,6 +2435,13 @@ static void send_packet_to_all_clients_on_a_bridge(uint32_t shipid, struct packe
 	send_packet_to_all_clients_on_a_bridge_except(shipid, pb, roles, NULL);
 }
 
+static void trigger_wled_hit_effect(uint32_t shipid)
+{
+	send_packet_to_all_clients_on_a_bridge(shipid,
+		snis_opcode_pkt("bbbbbh", OPCODE_WLED_COMMAND,
+			WLED_CMD_FLASH, 255, 255, 255, (uint16_t) 2000), ROLE_WLED);
+}
+
 static float comms_transmission_strength(struct snis_entity *transmitter, struct snis_entity *receiver)
 {
 	int i;
@@ -4546,6 +4553,8 @@ static void torpedo_collision_detection(void *context, void *entity)
 		send_ship_damage_packet(t);
 		send_detonate_packet(t, ix, iy, iz, impact_time, impact_fractional_time);
 		attack_your_attacker(t, lookup_entity_by_id(o->tsd.torpedo.ship_id));
+		if (t->type == OBJTYPE_BRIDGE)
+			trigger_wled_hit_effect(t->id);
 	} else if (t->type == OBJTYPE_ASTEROID || t->type == OBJTYPE_CARGO_CONTAINER) {
 		if (t->alive)
 			t->alive--;
@@ -4815,6 +4824,8 @@ static void laser_collision_detection(void *context, void *entity)
 		send_ship_damage_packet(t);
 		attack_your_attacker(t, lookup_entity_by_id(o->tsd.laser.ship_id));
 		send_detonate_packet(t, ix, iy, iz, impact_time, impact_fractional_time);
+		if (t->type == OBJTYPE_BRIDGE)
+			trigger_wled_hit_effect(t->id);
 	}
 
 	if (t->type == OBJTYPE_TURRET) {
@@ -13836,6 +13847,8 @@ static void laserbeam_move(struct snis_entity *o)
 		send_ship_damage_packet(target);
 		attack_your_attacker(target, lookup_entity_by_id(o->tsd.laserbeam.origin));
 		notify_the_cops(o, target);
+		if (ttype == OBJTYPE_BRIDGE)
+			trigger_wled_hit_effect(target->id);
 		break;
 	case OBJTYPE_TURRET:
 		calculate_laser_damage(target, o->tsd.laserbeam.wavelength,
