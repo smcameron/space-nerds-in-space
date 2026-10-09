@@ -22763,6 +22763,17 @@ static void use_default_lobby_port_checkbox_pressed(void *x)
 		ui_unhide_widget(net_setup_ui.lobbyport);
 }
 
+static void hide_or_unhide_wled_network_inputs(int wled_role)
+{
+	if (wled_role) {
+		ui_unhide_widget(net_setup_ui.wled_host_box);
+		ui_unhide_widget(net_setup_ui.wled_host_label);
+	} else {
+		ui_hide_widget(net_setup_ui.wled_host_box);
+		ui_hide_widget(net_setup_ui.wled_host_label);
+	}
+}
+
 static void network_checkbox_pressed(void *x)
 {
 	int *i = x;
@@ -22798,6 +22809,7 @@ static void network_checkbox_pressed(void *x)
 		net_setup_ui.role_comms_v = 1;
 		net_setup_ui.role_demon_v = 1;
 	}
+	hide_or_unhide_wled_network_inputs(net_setup_ui.role_wled_v);
 }
 
 static struct button *init_net_role_button(int x, int *y, char *txt, int *value,
@@ -22807,12 +22819,12 @@ static struct button *init_net_role_button(int x, int *y, char *txt, int *value,
 			snis_button_generic_checkbox_function, button_color, disabled_color, hover_color);
 }
 
-static void init_net_role_buttons(struct network_setup_ui *nsu, int button_color, int disabled_color, int hover_color)
+static int init_net_role_buttons(struct network_setup_ui *nsu, int button_color, int disabled_color, int hover_color)
 {
 	int x, y;
 
 	x = txx(620);
-	y = txy(330);
+	y = txy(250);
 
 	nsu->role_main_v = 0;
 	nsu->role_nav_v = 1;
@@ -22903,6 +22915,7 @@ static void init_net_role_buttons(struct network_setup_ui *nsu, int button_color
 			"WHETHER THIS TERMINAL CONTROLS WLED\n"
 			"LIGHTING FIXTURES VIA UDP FOR RED ALERT\n"
 			"AND OTHER BRIDGE LIGHTING EFFECTS.");
+	return y;
 }
 
 static void hide_faction_checkboxes(struct network_setup_ui *nsu)
@@ -23038,6 +23051,7 @@ static void init_net_setup_ui(void)
 	int button_color = UI_COLOR(network_setup_active);
 	int disabled_color = UI_COLOR(network_setup_inactive);
 	int hover_color = UI_COLOR(network_setup_selected);
+	int role_bottom_y;
 
 	char *preferred_shipname = snis_prefs_read_default_ship_name(xdg_base_ctx);
 
@@ -23128,14 +23142,14 @@ static void init_net_setup_ui(void)
 		else
 			strlcpy(net_setup_ui.wled_host, "127.0.0.1", sizeof(net_setup_ui.wled_host));
 	}
-	net_setup_ui.wled_host_box = snis_text_input_box_init(txx(620), txy(295),
+	role_bottom_y = init_net_role_buttons(&net_setup_ui, button_color, disabled_color, hover_color);
+	net_setup_ui.wled_host_label = snis_label_init(txx(620), role_bottom_y + txy(20),
+					"WLED IP / HOST", input_color, TINY_FONT);
+	net_setup_ui.wled_host_box = snis_text_input_box_init(txx(620), role_bottom_y + txy(38),
 					txy(25), txx(140), input_color, TINY_FONT,
 					net_setup_ui.wled_host, sizeof(net_setup_ui.wled_host) - 1,
 					&timer, NULL, NULL);
-	net_setup_ui.wled_host_label = snis_label_init(txx(620), txy(275),
-					"WLED IP / HOST", input_color, TINY_FONT);
 
-	init_net_role_buttons(&net_setup_ui, button_color, disabled_color, hover_color);
 	init_join_create_buttons(&net_setup_ui, button_color, disabled_color, hover_color);
 	init_faction_buttons(&net_setup_ui, button_color, disabled_color, hover_color);
 	snis_prefs_read_checkbox_defaults(xdg_base_ctx, &net_setup_ui.role_main_v, &net_setup_ui.role_nav_v,
@@ -23148,6 +23162,8 @@ static void init_net_setup_ui(void)
 					&net_setup_ui.role_wled_v,
 					&net_setup_ui.create_ship_v,
 					&net_setup_ui.join_ship_v);
+	if (role & ROLE_WLED)
+		net_setup_ui.role_wled_v = 1;
 	if (preferred_shipname) {
 		snis_text_input_box_set_contents(net_setup_ui.shipname_box, preferred_shipname);
 		net_setup_ui.create_ship_v = 0;
@@ -23195,6 +23211,7 @@ static void init_net_setup_ui(void)
 
 	ui_add_pull_down_menu(net_setup_ui.menu, DISPLAYMODE_NETWORK_SETUP); /* needs to be last */
 	ui_hide_widget(net_setup_ui.lobbyport);
+	hide_or_unhide_wled_network_inputs(net_setup_ui.role_wled_v);
 	if (no_launcher)
 		ui_hide_widget(net_setup_ui.launcher_button);
 } 
@@ -23274,6 +23291,7 @@ static void show_network_setup(void)
 			snis_button_disable(net_setup_ui.connect_to_lobby);
 		}
 	}
+	hide_or_unhide_wled_network_inputs(net_setup_ui.role_wled_v);
 }
 
 static void write_to_forker(char ch)
