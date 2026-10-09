@@ -549,6 +549,7 @@ An authoritative list of opcodes may be found in snis_packet.h
 <tr><td>OPCODE_LATENCY_CHECK</td><td>236</td></tr>
 <tr><td>OPCODE_CHECK_OPCODE_FORMAT</td><td>237</td</tr>
 <tr><td>OPCODE_REQUEST_STARMAP</td><td>238</td</tr>
+<tr><td>OPCODE_WLED_COMMAND</td><td>245</td></tr>
 <tr><td>OPCODE_NOOP</td><td>0xff</td></tr>
 </table>
 
@@ -2545,6 +2546,17 @@ array of waypoints.
 <tr><td>0</td><td>b</td><td>240</td></tr>
 <tr><td>1</td><td>b</td><td>5</td></tr>
 <tr><td>2</td><td>w</td><td>Which row is selected (0xffffffff means no row selected)</td></tr>
+</table>
+
+<h4>245 WLED COMMAND PACKET</h4> (Server to Client)
+<p align=center><table border=1, width=60%>
+<tr><td>Offset</td><td>Data Type</td><td>Value</td><td>Scale</td></tr>
+<tr><td>0</td><td>b</td><td>245</td></tr>
+<tr><td>1</td><td>b</td><td>Command (0 = off, 1 = solid color, 2 = flash)</td></tr>
+<tr><td>2</td><td>b</td><td>Red (0 - 255)</td></tr>
+<tr><td>3</td><td>b</td><td>Green (0 - 255)</td></tr>
+<tr><td>4</td><td>b</td><td>Blue (0 - 255)</td></tr>
+<tr><td>5</td><td>h</td><td>Duration in milliseconds (for flash command)</td></tr>
 </table>
 
 <h4>255 No-Op</h4>

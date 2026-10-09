@@ -103,6 +103,7 @@
 #include "snis_damcon_systems.h"
 #include "build_info.h"
 #include "snis-device-io.h"
+#include "snis_wled.h"
 #include "thrust_attachment.h"
 #include "starbase_metadata.h"
 #include "solarsystem_config.h"
@@ -5229,7 +5230,8 @@ static void deal_with_joysticks(void)
 
 static void deal_with_physical_io_devices(void)
 {
-	/* FIXME: fill this in. */
+	if (role & ROLE_WLED)
+		snis_wled_tick();
 }
 
 static int mouse_button_held(int button);
@@ -6838,6 +6840,21 @@ static int process_red_alert(void)
 	if (rc != 0)
 		return rc;
 	red_alert_mode = (alert_value != 0);
+	return 0;
+}
+
+static int process_wled_command(void)
+{
+	int rc;
+	unsigned char buffer[10];
+	uint8_t cmd, r, g, b;
+	uint16_t duration_ms;
+
+	rc = read_and_unpack_buffer(buffer, "bbbbh", &cmd, &r, &g, &b, &duration_ms);
+	if (rc != 0)
+		return rc;
+	if (role & ROLE_WLED)
+		snis_wled_handle_command(cmd, r, g, b, duration_ms);
 	return 0;
 }
 
@@ -9105,7 +9122,9 @@ static int process_client_id_packet(void)
 					net_setup_ui.role_comms_v, net_setup_ui.role_sound_v,
 					net_setup_ui.role_projector_v,
 					net_setup_ui.role_demon_v, net_setup_ui.role_text_to_speech_v,
+					net_setup_ui.role_wled_v,
 					net_setup_ui.create_ship_v, net_setup_ui.join_ship_v);
+	snis_prefs_save_wled_host(xdg_base_ctx, net_setup_ui.wled_host);
 	return 0;
 }
 
@@ -9480,6 +9499,9 @@ static void *gameserver_reader(__attribute__((unused)) void *arg)
 			break;
 		case OPCODE_REQUEST_REDALERT:
 			rc = process_red_alert();
+			break;
+		case OPCODE_WLED_COMMAND:
+			rc = process_wled_command();
 			break;
 		case OPCODE_COMMS_MAINSCREEN:
 			rc = process_comms_mainscreen();
@@ -22617,6 +22639,11 @@ static int get_ready_to_connect(void)
 	role |= (ROLE_DEMON * !!net_setup_ui.role_demon_v);
 	role |= (ROLE_TEXT_TO_SPEECH * !!net_setup_ui.role_text_to_speech_v);
 	role |= (ROLE_PROJECTOR * !!net_setup_ui.role_projector_v);
+	role |= (ROLE_WLED * !!net_setup_ui.role_wled_v);
+	if (role & ROLE_WLED) {
+		snis_wled_init(net_setup_ui.wled_host, WLED_DEFAULT_PORT);
+		snis_prefs_save_wled_host(xdg_base_ctx, net_setup_ui.wled_host);
+	}
 	if (role == 0)
 		role = ROLE_ALL;
 
@@ -22785,7 +22812,7 @@ static void init_net_role_buttons(struct network_setup_ui *nsu, int button_color
 	int x, y;
 
 	x = txx(620);
-	y = txy(345);
+	y = txy(330);
 
 	nsu->role_main_v = 0;
 	nsu->role_nav_v = 1;
@@ -22797,6 +22824,7 @@ static void init_net_role_buttons(struct network_setup_ui *nsu, int button_color
 	nsu->role_damcon_v = 1;
 	nsu->role_demon_v = 1;
 	nsu->role_text_to_speech_v = 1;
+	nsu->role_wled_v = 0;
 	nsu->role_main = init_net_role_button(x, &y, "MAIN SCREEN ROLE", &nsu->role_main_v,
 						button_color, disabled_color, hover_color);
 	nsu->role_nav = init_net_role_button(x, &y, "NAVIGATION ROLE", &nsu->role_nav_v,
@@ -22819,6 +22847,9 @@ static void init_net_role_buttons(struct network_setup_ui *nsu, int button_color
 						button_color, disabled_color, hover_color);
 	nsu->role_text_to_speech = init_net_role_button(x, &y, "TEXT TO SPEECH",
 							&nsu->role_text_to_speech_v,
+						button_color, disabled_color, hover_color);
+	nsu->role_wled = init_net_role_button(x, &y, "WLED LIGHTING ROLE",
+							&nsu->role_wled_v,
 						button_color, disabled_color, hover_color);
 	ui_add_button(nsu->role_main, DISPLAYMODE_NETWORK_SETUP,
 			"WHETHER THIS TERMINAL SHOULD ACT AS MAIN SCREEN.\n"
@@ -22868,6 +22899,10 @@ static void init_net_role_buttons(struct network_setup_ui *nsu, int button_color
 			"BE HEARD BY THE WHOLE CREW.  IT IS BEST\n"
 			"TO HAVE ONLY ONE TEXT TO SPEECH SERVER\n"
 			"PER BRIDGE");
+	ui_add_button(nsu->role_wled, DISPLAYMODE_NETWORK_SETUP,
+			"WHETHER THIS TERMINAL CONTROLS WLED\n"
+			"LIGHTING FIXTURES VIA UDP FOR RED ALERT\n"
+			"AND OTHER BRIDGE LIGHTING EFFECTS.");
 }
 
 static void hide_faction_checkboxes(struct network_setup_ui *nsu)
@@ -23082,6 +23117,24 @@ static void init_net_setup_ui(void)
 	net_setup_ui.menu = create_pull_down_menu(NANO_FONT, SCREEN_WIDTH);
 	pull_down_menu_set_color(net_setup_ui.menu, button_color);
 	pull_down_menu_set_highlight_color(net_setup_ui.menu, button_color);
+	char *saved_wled_host = snis_prefs_read_wled_host(xdg_base_ctx);
+	if (saved_wled_host) {
+		strlcpy(net_setup_ui.wled_host, saved_wled_host, sizeof(net_setup_ui.wled_host));
+		free(saved_wled_host);
+	} else {
+		char *env_wled = getenv("SNIS_WLED_HOST");
+		if (env_wled)
+			strlcpy(net_setup_ui.wled_host, env_wled, sizeof(net_setup_ui.wled_host));
+		else
+			strlcpy(net_setup_ui.wled_host, "127.0.0.1", sizeof(net_setup_ui.wled_host));
+	}
+	net_setup_ui.wled_host_box = snis_text_input_box_init(txx(620), txy(295),
+					txy(25), txx(140), input_color, TINY_FONT,
+					net_setup_ui.wled_host, sizeof(net_setup_ui.wled_host) - 1,
+					&timer, NULL, NULL);
+	net_setup_ui.wled_host_label = snis_label_init(txx(620), txy(275),
+					"WLED IP / HOST", input_color, TINY_FONT);
+
 	init_net_role_buttons(&net_setup_ui, button_color, disabled_color, hover_color);
 	init_join_create_buttons(&net_setup_ui, button_color, disabled_color, hover_color);
 	init_faction_buttons(&net_setup_ui, button_color, disabled_color, hover_color);
@@ -23091,7 +23144,9 @@ static void init_net_setup_ui(void)
 					&net_setup_ui.role_sci_v, &net_setup_ui.role_comms_v,
 					&net_setup_ui.role_sound_v, &net_setup_ui.role_projector_v,
 					&net_setup_ui.role_demon_v,
-					&net_setup_ui.role_text_to_speech_v, &net_setup_ui.create_ship_v,
+					&net_setup_ui.role_text_to_speech_v,
+					&net_setup_ui.role_wled_v,
+					&net_setup_ui.create_ship_v,
 					&net_setup_ui.join_ship_v);
 	if (preferred_shipname) {
 		snis_text_input_box_set_contents(net_setup_ui.shipname_box, preferred_shipname);
@@ -23134,6 +23189,9 @@ static void init_net_setup_ui(void)
 	ui_add_label(net_setup_ui.ss_port_label, DISPLAYMODE_NETWORK_SETUP);
 	ui_add_button(net_setup_ui.connect_to_snis_server, DISPLAYMODE_NETWORK_SETUP,
 			"CONNECT TO SNIS SERVER");
+
+	ui_add_text_input_box(net_setup_ui.wled_host_box, DISPLAYMODE_NETWORK_SETUP);
+	ui_add_label(net_setup_ui.wled_host_label, DISPLAYMODE_NETWORK_SETUP);
 
 	ui_add_pull_down_menu(net_setup_ui.menu, DISPLAYMODE_NETWORK_SETUP); /* needs to be last */
 	ui_hide_widget(net_setup_ui.lobbyport);
@@ -25893,6 +25951,8 @@ static void really_quit(void)
 		close_joystick(joystick_fd[i]);
 	stop_text_to_speech_thread();
 	cleanup_fifos();
+	if (role & ROLE_WLED)
+		snis_wled_shutdown();
 }
 
 static void usage(void)
@@ -27151,12 +27211,16 @@ static void acknowledgments(void)
 #define OPT_ACKNOWLEDGMENTS 1000
 #define NO_LAUNCHER 1001
 #define AUTO_DOWNLOAD_ASSETS 1002
+#define OPT_WLED 1003
+#define OPT_WLED_HOST 1004
 static struct option long_options[] = {
 	{ "allroles", no_argument, NULL, 'A' },
 	{ "acknowledgments", no_argument, NULL, OPT_ACKNOWLEDGMENTS },
 	{ "acknowledgements", no_argument, NULL, OPT_ACKNOWLEDGMENTS },
 	{ "soundserver", no_argument, NULL, 'a' },
 	{ "projector", no_argument, NULL, 'J' },
+	{ "wled", no_argument, NULL, OPT_WLED },
+	{ "wled-host", required_argument, NULL, OPT_WLED_HOST },
 	{ "comms", no_argument, NULL, 'C' },
 	{ "engineering", no_argument, NULL, 'E' },
 	{ "fullscreen", no_argument, NULL, 'f' },
@@ -27322,6 +27386,15 @@ static void process_options(int argc, char *argv[])
 			break;
 		case AUTO_DOWNLOAD_ASSETS:
 			auto_download_assets = 1;
+			break;
+		case OPT_WLED:
+			role |= ROLE_WLED;
+			net_setup_ui.role_wled_v = 1;
+			break;
+		case OPT_WLED_HOST:
+			if (!optarg)
+				usage();
+			strlcpy(net_setup_ui.wled_host, optarg, sizeof(net_setup_ui.wled_host));
 			break;
 		default:
 			usage();

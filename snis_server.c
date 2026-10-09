@@ -667,6 +667,7 @@ static struct bridge_data {
 	char resident_solarsystem[SSGL_LOCATIONSIZE];
 	int warp_core_ejection_armed;
 	int warp_core_ejection_confirm_countdown;
+	uint8_t red_alert_mode;
 } bridgelist[MAXCLIENTS];
 static int nbridges = 0;		/* Number of elements present in bridgelist[] */
 static int announce_players = 0; /* Announce new players via TTS? */
@@ -21767,8 +21768,19 @@ static int process_mainscreen_view_mode(struct game_client *c)
 
 static void set_red_alert_mode(struct game_client *c, unsigned char new_alert_mode)
 {
+	if (c->bridge >= 0 && c->bridge < nbridges)
+		bridgelist[c->bridge].red_alert_mode = !!new_alert_mode;
 	send_packet_to_all_clients_on_a_bridge(c->shipid,
 			snis_opcode_pkt("bb", OPCODE_REQUEST_REDALERT, new_alert_mode), ROLE_ALL);
+	if (new_alert_mode) {
+		send_packet_to_all_clients_on_a_bridge(c->shipid,
+				snis_opcode_pkt("bbbbbh", OPCODE_WLED_COMMAND,
+					WLED_CMD_SOLID, 255, 0, 0, (uint16_t) 0), ROLE_WLED);
+	} else {
+		send_packet_to_all_clients_on_a_bridge(c->shipid,
+				snis_opcode_pkt("bbbbbh", OPCODE_WLED_COMMAND,
+					WLED_CMD_OFF, 0, 0, 0, (uint16_t) 0), ROLE_WLED);
+	}
 	schedule_callback2(event_callback, &callback_schedule, "player-red-alert-status-event",
 				(double) c->shipid, (double) !!new_alert_mode);
 }
@@ -27795,6 +27807,18 @@ static int add_new_player(struct game_client *c, int enforce_solarsystem)
 	memset(c->go_clients, 0, sizeof(*c->go_clients) * MAXGAMEOBJS);
 	c->damcon_data_clients = malloc(sizeof(*c->damcon_data_clients) * MAXDAMCONENTITIES);
 	memset(c->damcon_data_clients, 0, sizeof(*c->damcon_data_clients) * MAXDAMCONENTITIES);
+
+	if (c->role & ROLE_WLED) {
+		if (bridgelist[c->bridge].red_alert_mode) {
+			pb_queue_to_client(c, snis_opcode_pkt("bbbbbh",
+					OPCODE_WLED_COMMAND, WLED_CMD_SOLID,
+					255, 0, 0, (uint16_t) 0));
+		} else {
+			pb_queue_to_client(c, snis_opcode_pkt("bbbbbh",
+					OPCODE_WLED_COMMAND, WLED_CMD_OFF,
+					0, 0, 0, (uint16_t) 0));
+		}
+	}
 
 	return 0;
 

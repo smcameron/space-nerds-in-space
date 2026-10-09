@@ -624,7 +624,7 @@ COMMONCLIENTOBJS=${COMMONOBJS} ${OGGOBJ} ${SNDOBJS} $(patsubst %,$(OD)/%,${_COMM
 
 _CLIENTOBJS= shader.o ${GRAPH_OBJS} snis_graph.o snis_client.o joystick_config.o snis_xwindows_hacks.o png_utils.o \
 				black_hole_lens.o mesh_fracture.o particle_batch.o ship_death.o \
-				ship_death_fireball.o ship_death_shrapnel.o ship_death_wreck.o
+				ship_death_fireball.o ship_death_shrapnel.o ship_death_wreck.o snis_wled.o
 CLIENTOBJS=${COMMONCLIENTOBJS} $(patsubst %,$(OD)/%,${_CLIENTOBJS})
 
 _SDLCLIENTOBJS=shader.o ${GRAPH_OBJS} snis_graph.o mesh_viewer.o \
@@ -1565,7 +1565,7 @@ bin/test-obj-parser:	test-obj-parser.c mikktspace/mikktspace.o ${OD}/string-util
 		-lm test-obj-parser.c
 
 test:	bin/test-matrix bin/test-mathutils bin/test-space-partition bin/test_marshal bin/test-quat bin/test-fleet \
-	bin/test-mtwist bin/test-commodities bin/test_solarsystem_config bin/test_mesh_fracture
+	bin/test-mtwist bin/test-commodities bin/test_solarsystem_config bin/test_mesh_fracture bin/test_wled
 	/bin/true	# Prevent make from running "$(CC) test.o".
 
 MESH_FRACTURE_TEST_OBJS=${OD}/mesh_fracture.o ${OD}/mesh.o ${OD}/mtwist.o ${OD}/mathutils.o ${OD}/quat.o \
@@ -1573,6 +1573,9 @@ MESH_FRACTURE_TEST_OBJS=${OD}/mesh_fracture.o ${OD}/mesh.o ${OD}/mtwist.o ${OD}/
 
 bin/test_mesh_fracture:	test_mesh_fracture.c ${MESH_FRACTURE_TEST_OBJS} Makefile ${BIN}
 	$(CC) ${BOUNDSFLAGS} -Wall -Wextra -o $@ test_mesh_fracture.c ${MESH_FRACTURE_TEST_OBJS} -lm
+
+bin/test_wled:	test_wled.c ${OD}/snis_wled.o Makefile ${BIN}
+	$(CC) ${BOUNDSFLAGS} -Wall -Wextra -I. -o $@ test_wled.c ${OD}/snis_wled.o
 
 bin/test_solarsystem_config:	test_solarsystem_config.c ${OD}/solarsystem_config.o ${OD}/string-utils.o ${OD}/stacktrace.o ${BIN}
 	$(CC) ${BOUNDSFLAGS} -o $@ $< ${OD}/solarsystem_config.o ${OD}/string-utils.o ${OD}/stacktrace.o
@@ -1599,6 +1602,9 @@ local_termios2.h:	termios2.h
 	$(Q)./check_for_termios2.sh
 
 $(OD)/snis_dmx.o:	snis_dmx.c snis_dmx.h Makefile local_termios2.h ${ODT}
+	$(Q)$(COMPILE)
+
+$(OD)/snis_wled.o:	snis_wled.c snis_wled.h Makefile ${ODT}
 	$(Q)$(COMPILE)
 
 bin/test_snis_dmx:	test_snis_dmx.c ${OD}/snis_dmx.o ${BIN}

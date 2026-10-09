@@ -319,6 +319,9 @@ struct network_setup_ui {
 	struct button *role_projector;
 	struct button *role_demon;
 	struct button *role_text_to_speech;
+	struct button *role_wled;
+	struct snis_text_input_box *wled_host_box;
+	struct label *wled_host_label;
 	struct button *join_ship_checkbox;
 	struct button *create_ship_checkbox;
 	struct button *faction_checkbox[MAX_FACTIONS];
@@ -338,6 +341,7 @@ struct network_setup_ui {
 	int role_demon_v;
 	int role_text_to_speech_v;
 	int role_projector_v;
+	int role_wled_v;
 	int create_ship_v;
 	int join_ship_v;
 	int faction_checkbox_v[MAX_FACTIONS];
@@ -348,6 +352,7 @@ struct network_setup_ui {
 	char solarsystem[60];
 	char shipname[SHIPNAME_LEN];
 	char password[PASSWORD_LEN];
+	char wled_host[64];
 	int selected_faction;
 };
 

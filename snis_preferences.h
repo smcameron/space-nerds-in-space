@@ -28,11 +28,15 @@ void snis_prefs_save_default_ship_name(struct xdg_base_context *cx, char *name);
 void snis_prefs_save_checkbox_defaults(struct xdg_base_context *cx, int role_main_v, int role_nav_v, int role_weap_v,
 					int role_eng_v, int role_damcon_v, int role_sci_v,
 					int role_comms_v, int role_sound_v, int role_projector_v, int role_demon_v,
-					int role_text_to_speech_v, int create_ship_v, int join_ship_v);
+					int role_text_to_speech_v, int role_wled_v,
+					int create_ship_v, int join_ship_v);
 void snis_prefs_read_checkbox_defaults(struct xdg_base_context *cx, int *role_main_v, int *role_nav_v, int *role_weap_v,
 					int *role_eng_v, int *role_damcon_v, int *role_sci_v,
 					int *role_comms_v, int *role_sound_v, int *role_projector_v, int *role_demon_v,
-					int *role_text_to_speech_v, int *create_ship_v, int *join_ship_v);
+					int *role_text_to_speech_v, int *role_wled_v,
+					int *create_ship_v, int *join_ship_v);
+char *snis_prefs_read_wled_host(struct xdg_base_context *cx);
+void snis_prefs_save_wled_host(struct xdg_base_context *cx, const char *host);
 void snis_prefs_read_client_tweaks(struct xdg_base_context *cx,
 		int (*tweak_fn)(char *cmd, int suppress_unknown_var_error));
 void snis_prefs_save_client_tweaks(struct xdg_base_context *cx, struct tweakable_var_descriptor *tweaks, int count);

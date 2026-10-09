@@ -286,6 +286,11 @@
 #define TRANSPORTER_STATUS_NO_TARGET		7
 #define TRANSPORTER_STATUS_FAILED		8
 
+#define OPCODE_WLED_COMMAND			245
+#define   WLED_CMD_OFF				0
+#define   WLED_CMD_SOLID			1
+#define   WLED_CMD_FLASH			2
+
 #define OPCODE_NOOP		0xff
 
 #define   ADD_PLAYER_ERROR_SHIP_ALREADY_EXISTS	0x01
@@ -601,6 +606,7 @@ struct request_thrust_packet {
 #define ROLE_SOUNDSERVER	(1 << DISPLAYMODE_FONTTEST)
 #define ROLE_TEXT_TO_SPEECH	(1 << 10)
 #define ROLE_PROJECTOR		(1 << 11)
+#define ROLE_WLED		(1 << 12)
 #define ROLE_ALL		((uint32_t) 0x0ffffffffff)
 
 
@@ -771,6 +777,15 @@ struct transporter_status_packet {
 	uint32_t ship_id;
 	uint8_t status;
 	uint8_t progress;
+};
+
+struct wled_command_packet {
+	uint8_t opcode;
+	uint8_t command;
+	uint8_t red;
+	uint8_t green;
+	uint8_t blue;
+	uint16_t duration_ms;
 };
 
 struct opcode_format_descriptor {
