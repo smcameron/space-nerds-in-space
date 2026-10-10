@@ -23148,6 +23148,20 @@ static int l_set_variable(lua_State *l)
 	return 0;
 }
 
+static int l_get_variable(lua_State *l)
+{
+	const char *name = luaL_checkstring(l, 1);
+	char output[100];
+
+	memset(output, 0, sizeof(output));
+	int rc = tweakable_var_get_value(server_tweak, ARRAYSIZE(server_tweak), name, output, sizeof(output));
+	if (rc >= 0)
+		lua_pushstring(l, output);
+	else
+		lua_pushnil(l);
+	return 1;
+}
+
 static int l_demon_print(lua_State *l)
 {
 	const char *str = luaL_checkstring(l, 1);
@@ -28733,6 +28747,7 @@ static void setup_lua(void)
 	add_lua_callable_fn(l_fire_missile, "fire_missile");
 	add_lua_callable_fn(l_regenerate_universe, "regenerate_universe");
 	add_lua_callable_fn(l_set_variable, "set_variable");
+	add_lua_callable_fn(l_get_variable, "get_variable");
 	add_lua_callable_fn(l_demon_print, "demon_print");
 	add_lua_callable_fn(l_add_bounty, "add_bounty");
 	add_lua_callable_fn(l_random_point_on_sphere, "random_point_on_sphere");

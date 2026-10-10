@@ -861,6 +861,14 @@ regenerate_universe(random_seed)
 	If random_seed is not -1, then this value is used as the new
 	random seed.
 
+get_variable(variable_name)
+	Returns the value of tweakable variable variable_name as a string, or nil
+	if no such variable exists.
+
+	Example:
+
+	value = get_variable("INVINCIBILITY");
+
 set_variable(variable_name, new_value)
 	Allows setting runtime adjustable variables. You can also set these
 	from the demon console (Type "console" to toggle the console on, then,
@@ -868,6 +876,10 @@ set_variable(variable_name, new_value)
 	to set a variable, or e.g., "describe max_player_velocity" to see a description
 	of a particular variable.) Note: the value "DEFAULT" may be used for new_value
 	to set a variable back to its default value.
+
+	Example:
+
+	set_variable("INVINCIBILITY", "1"); -- make the player invincible
 
 demon_print(string)
 	Output a string to the demon console
@@ -1045,7 +1057,7 @@ set_starbase_factions_allowed(starbase_id, faction_mask)
 	a bit field, with each bit indicating whether a particular faction is
 	permitted to dock.  The faction mask is only honored if the server side
 	tweakable variable "docking_by_faction" is non-zero (e.g. via
-	set_variable("docking_by_faction", 1);)  Returns 0 on success, nil on
+	set_variable("docking_by_faction", "1");)  Returns 0 on success, nil on
 	failure.
 
 generate_cipher_key()
