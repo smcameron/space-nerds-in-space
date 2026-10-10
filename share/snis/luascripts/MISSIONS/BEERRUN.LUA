@@ -502,8 +502,13 @@ for bay = 0, 7 do
 	set_commodity_contents(player_id, -1, 0, bay);
 end
 
+-- Mark player as invincible, so that if docking them to SB-19 drags them through
+-- a planet by accident, they don't die immediately.
+original_invinc = get_variable("INVINCIBILITY");
+set_variable("INVINCIBILITY", "1");
 -- Dock player at SB-19
 dock_player_to_starbase(player_id, atlanta_sb);
+-- player_docked_callback for player-docked-event will restore invincibility to original value.
 
 -- -------------------------------------------------------------
 -- UTILITY FUNCTIONS
@@ -835,6 +840,12 @@ end
 -- DOCKING AT DESTINATION (WIN / LOSE CHECK)
 -- -------------------------------------------------------------
 function player_docked_callback(pid, station_id)
+	invinc = get_variable("INVINCIBILITY");
+	if invinc == "1" and original_invinc ~= "1" then
+		demon_print("Restoring invincibility to " .. original_invinc);
+		set_variable("INVINCIBILITY", original_invinc);
+	end
+
 	if station_id == atlanta_sb and mission_state == "HAULING" and not mission_over then
 		has_beer, qty = check_beer_aboard(pid);
 		if has_beer and not warp_disqualified and time_remaining > 0 then
