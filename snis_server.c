@@ -1534,7 +1534,7 @@ static void kill_player(struct snis_entity *player, int with_explosion_sound)
 		player->alive = 0;
 		player->respawn_time = universe_timestamp + player_respawn_time * 10;
 		player->timestamp = universe_timestamp;
-		schedule_callback(event_callback, &callback_schedule, "player-death-callback", player->id);
+		schedule_callback(event_callback, &callback_schedule, "player-death-event", player->id);
 	}
 	if (with_explosion_sound)
 		snis_queue_add_sound(EXPLOSION_SOUND, ROLE_SOUNDSERVER, player->id);
