@@ -23040,8 +23040,13 @@ static int l_dock_player_to_starbase(lua_State *l)
 		if (go[i].type != OBJTYPE_DOCKING_PORT)
 			continue;
 		dp = &go[i];
-		if (!dp->alive || dp->tsd.docking_port.parent != starbase->id ||
-			dp->tsd.docking_port.docked_guy != (uint32_t) -1)
+		if (!dp->alive)
+			continue;
+		if (dp->tsd.docking_port.parent != starbase->id)
+			continue;
+		if (dp->tsd.docking_port.docked_guy == player->id) /* already docked? */
+			goto success;
+		if (dp->tsd.docking_port.docked_guy != (uint32_t) -1)
 			continue;
 		dp->tsd.docking_port.docked_guy = player->id; /* Dock player */
 		player->tsd.ship.docking_magnets = 1; /* Turn on docking magnets */
@@ -23052,6 +23057,7 @@ static int l_dock_player_to_starbase(lua_State *l)
 	if (docking_port)
 		do_docking_action(player, starbase, &bridgelist[b], starbase->sdata.name, docking_port);
 
+success:
 	pthread_mutex_unlock(&universe_mutex);
 	lua_pushnumber(l, 0.0);
 	return 1;
