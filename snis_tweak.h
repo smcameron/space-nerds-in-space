@@ -49,7 +49,7 @@ struct tweakable_var_descriptor {
  * return value: the index into desc[] of the variable with the specified name is returned
  *	unless it is not found, in which case -1 is returned.
  */
-int find_tweakable_var_descriptor(struct tweakable_var_descriptor *desc, int count, char *name);
+int find_tweakable_var_descriptor(struct tweakable_var_descriptor *desc, int count, const char *name);
 
 /* tweak_variable() updates a tweakable global with a new value, or returns the reason
  * why it could not be done.
@@ -119,5 +119,11 @@ void tweakable_vars_export_tweaked_vars(FILE *f, struct tweakable_var_descriptor
  */
 int tweakable_vars_print_tweaked_vars(struct tweakable_var_descriptor *tweak, int count,
 				void (*printfn)(const char *fmt, ...));
+
+/* Copy the value of tweakable variable var_name to output, limited by output_size, always null terminate
+ * returns length of output on success, -1 on error (e.g. if output_size <= 0, var_name doesn't exist).
+ */
+int tweakable_var_get_value(struct tweakable_var_descriptor *tweak, int count,
+				const char *var_name, char *output, int output_size);
 
 #endif

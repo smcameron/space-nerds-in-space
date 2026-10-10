@@ -31,7 +31,7 @@
 #include "string-utils.h"
 #include "build_bug_on.h"
 
-int find_tweakable_var_descriptor(struct tweakable_var_descriptor *desc, int count, char *name)
+int find_tweakable_var_descriptor(struct tweakable_var_descriptor *desc, int count, const char *name)
 {
 	int i;
 
@@ -145,6 +145,41 @@ int tweak_variable(struct tweakable_var_descriptor *tweak, int count, char *cmd,
 		return TWEAK_UNKNOWN_TYPE;
 	}
 	return 0;
+}
+
+
+/* Copy the value of tweakable variable var_name to output, limited by output_size, always null terminate
+ * returns length of output on success, -1 on error (e.g. if output_size <= 0, var_name doesn't exist).
+ */
+int tweakable_var_get_value(struct tweakable_var_descriptor *tweak, int count,
+				const char *var_name, char *output, int output_size)
+{
+	struct tweakable_var_descriptor *v;
+	int rc;
+	float *f;
+	uint8_t *c;
+	int32_t *i;
+
+	if (output_size <= 0)
+		return -1;
+	rc = find_tweakable_var_descriptor(tweak, count, var_name);
+	if (rc < 0)
+		return -1;
+	v = &tweak[rc];
+	switch (v->type) {
+	case 'f':
+		f = (float *) v->address;
+		return snprintf(output, (size_t) output_size, "%g", *f);
+	case 'b':
+		c = (uint8_t *) v->address;
+		return snprintf(output, (size_t) output_size, "%hhu", *c);
+	case 'i':
+		i = (int32_t *) v->address;
+		return snprintf(output, (size_t) output_size, "%d", *i);
+	default:
+		break;
+	}
+	return -1;
 }
 
 void tweakable_vars_list(struct tweakable_var_descriptor *tweak, char *regexp_pattern,
