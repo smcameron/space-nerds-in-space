@@ -9235,10 +9235,26 @@ static void set_nominal_coolant_and_power_levels(struct snis_entity *o)
 	o->tsd.ship.power_data.maneuvering.r2 = 15;
 }
 
+
+static double distance_from_ship_to_docking_port(struct snis_entity *ship, struct snis_entity *docking_port)
+{
+	union vec3 offset = { { -25, 0, 0 } };
+
+	quat_rot_vec_self(&offset, &ship->orientation);
+
+	double dx = ship->x + offset.v.x - docking_port->x;
+	double dy = ship->y + offset.v.y - docking_port->y;
+	double dz = ship->z + offset.v.z - docking_port->z;
+
+	double distance = sqrt(dx * dx + dy * dy + dz * dz);
+	return distance;
+}
+
 static void init_power_model(struct snis_entity *o);
 static void init_coolant_model(struct snis_entity *o);
+
 static void do_docking_action(struct snis_entity *ship, struct snis_entity *starbase,
-			struct bridge_data *b, char *npcname)
+			struct bridge_data *b, char *npcname, struct snis_entity *docking_port)
 {
 	int channel = b->npcbot.channel;
 
@@ -9268,8 +9284,18 @@ static void do_docking_action(struct snis_entity *ship, struct snis_entity *star
 	ship->timestamp = universe_timestamp;
 	snis_queue_add_sound(DOCKING_SOUND, ROLE_ALL, ship->id);
 	snis_queue_add_sound(WELCOME_TO_STARBASE, ROLE_NAVIGATION, ship->id);
-	schedule_callback2(event_callback, &callback_schedule,
+
+	/* If the player is too far away, don't schedule player-docked-event here, as docking_port_move
+	 * moves the ship over time and we need to wait until the ship is close to the docking
+	 * port before scheduling the event.
+	 */
+	double distance = distance_from_ship_to_docking_port(ship, docking_port);
+	if (distance <= 200)
+		schedule_callback2(event_callback, &callback_schedule,
 			"player-docked-event", (double) ship->id, starbase->id);
+	/* else, docking_port_move() will move the ship towards the docking port and when it
+	 * crosses the 200 boundary, will send the event.
+	 */
 }
 
 static int player_attempt_warpgate_jump(struct snis_entity *warpgate, struct snis_entity *player)
@@ -9373,7 +9399,7 @@ static void player_attempt_dock_with_starbase(struct snis_entity *docking_port,
 	}
 	if (docking_port->tsd.docking_port.docked_guy == (uint32_t) -1) {
 		docking_port->tsd.docking_port.docked_guy = player->id;
-		do_docking_action(player, sb, bridge, npcname);
+		do_docking_action(player, sb, bridge, npcname, docking_port);
 	} else {
 		if (rate_limit_docking_permission_denied(bridge)) {
 			send_comms_packet(sb, npcname, channel, "%s, YOU ARE NOT CLEARED FOR DOCKING\n",
@@ -10821,12 +10847,39 @@ static void docking_port_move(struct snis_entity *o)
 	dy = o->y + offset.v.y - docker->y;
 	dz = o->z + offset.v.z - docker->z;
 
+	double distance1 = sqrt(dx * dx + dy * dy + dz * dz);
+
 	/* damp motion a bit instead of just snapping. */
 	dx *= motion_damping_factor;
 	dy *= motion_damping_factor;
 	dz *= motion_damping_factor;
 
 	set_object_location(docker, docker->x + dx, docker->y + dy, docker->z + dz);
+
+	double dxb = o->x + offset.v.x - docker->x;
+	double dyb = o->y + offset.v.y - docker->y;
+	double dzb = o->z + offset.v.z - docker->z;
+	double distance2 = sqrt(dxb * dxb + dyb * dyb + dzb * dzb);
+
+	/* When we cross from distance >= 200 to distance < 200, schedule the player-docked-event.
+	 * We do it this way because the Lua API function dock_player_to_starbase() can drag the
+	 * player a long distance, possibly through a planet.  The lua script can turn on player
+	 * invincibility to prevent this dragging through a planet from accidentally killing the
+	 * player, but must not turn invincibility off until the player is close to the docking
+	 * port.  Hence this test.
+	 */
+	if (distance2 < 200 && distance1 >= 200) {
+		uint32_t pid = o->tsd.docking_port.parent;
+		int sbid = lookup_by_id(pid);
+		if (sbid >= 0) {
+			struct snis_entity *starbase = &go[sbid];
+			schedule_callback2(event_callback, &callback_schedule,
+				"player-docked-event", (double) docker->id, starbase->id);
+		} else {
+			fprintf(stderr, "%s:%s:%d: docking port has parent id: %u (failed to lookup)\n",
+				__FILE__, __func__,  __LINE__, sbid);
+		}
+	}
 
 	/* set velocity in accord with the movement we just did */
 	if (docker->tsd.ship.docking_magnets) {
@@ -22981,19 +23034,23 @@ static int l_dock_player_to_starbase(lua_State *l)
 			__FILE__, __LINE__);
 		goto failure;
 	}
+	struct snis_entity *dp = NULL;
+	docking_port = NULL;
 	for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
 		if (go[i].type != OBJTYPE_DOCKING_PORT)
 			continue;
-		docking_port = &go[i];
-		if (!docking_port->alive || docking_port->tsd.docking_port.parent != starbase->id ||
-			docking_port->tsd.docking_port.docked_guy != (uint32_t) -1)
+		dp = &go[i];
+		if (!dp->alive || dp->tsd.docking_port.parent != starbase->id ||
+			dp->tsd.docking_port.docked_guy != (uint32_t) -1)
 			continue;
-		docking_port->tsd.docking_port.docked_guy = player->id; /* Dock player */
+		dp->tsd.docking_port.docked_guy = player->id; /* Dock player */
 		player->tsd.ship.docking_magnets = 1; /* Turn on docking magnets */
+		docking_port = dp;
 		break;
 	}
 	/* docking_port_move() will move the player ship to the right place. */
-	do_docking_action(player, starbase, &bridgelist[b], starbase->sdata.name);
+	if (docking_port)
+		do_docking_action(player, starbase, &bridgelist[b], starbase->sdata.name, docking_port);
 
 	pthread_mutex_unlock(&universe_mutex);
 	lua_pushnumber(l, 0.0);
