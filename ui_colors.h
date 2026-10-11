@@ -191,6 +191,9 @@ struct ui_color_map {
 	struct ui_color_entry sci_pull_down_menu_selection;
 	struct ui_color_entry sci_city;
 	struct ui_color_entry sci_selected_city;
+	struct ui_color_entry sci_rad_flux_safe;
+	struct ui_color_entry sci_rad_flux_caution;
+	struct ui_color_entry sci_rad_flux_danger;
 
 	struct ui_color_entry science_graph_plot_strong;
 	struct ui_color_entry science_graph_plot_weak;
@@ -426,6 +429,9 @@ GLOBAL struct ui_color_map_accessor {
 					= { YELLOW,		"sci-pull-down-menu-selection" },
 	.u.map.sci_city			= { RED,		"sci-city" },
 	.u.map.sci_selected_city	= { YELLOW,		"sci-selected-city" },
+	.u.map.sci_rad_flux_safe	= { GREEN_FIXUP,	"sci-rad-flux-safe" },
+	.u.map.sci_rad_flux_caution	= { AMBER,		"sci-rad-flux-caution" },
+	.u.map.sci_rad_flux_danger	= { RED,		"sci-rad-flux-danger" },
 
 	.u.map.science_graph_plot_strong = { LIMEGREEN,		"science-graph-plot-strong" },
 	.u.map.science_graph_plot_weak	= { RED,		"science-graph-plot-weak" },

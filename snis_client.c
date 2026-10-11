@@ -19473,6 +19473,96 @@ static void draw_science_location_indicator(struct snis_entity *o)
 	snprintf(buf, sizeof(buf), "Z: %5.2lf", o->z);
 	sng_abs_xy_draw_string(buf, NANO_FONT, txx(555), txy(10));
 }
+
+/*
+ * Radiation flux from the star is reported as a percentage of the flux at
+ * SUN_DIST_LIMIT, which is where the server starts doing sunburn damage
+ * (see do_sunburn_damage() in snis_server.c).  So 100% means "damage begins
+ * here", and it falls off as the square of the distance from the star.
+ */
+#define RAD_FLUX_CAUTION_PERCENT 50.0 /* about 1.41 * SUN_DIST_LIMIT */
+#define RAD_FLUX_DANGER_PERCENT 100.0 /* exactly SUN_DIST_LIMIT */
+#define RAD_FLUX_TREND_DEADBAND 0.1 /* change in distance per server update */
+
+static double rad_flux_percent(double x, double y, double z)
+{
+	double d = dist3d(x - SUNX, y - SUNY, z - SUNZ);
+
+	if (d < 1.0)
+		d = 1.0;
+	return RAD_FLUX_DANGER_PERCENT * (SUN_DIST_LIMIT * SUN_DIST_LIMIT) / (d * d);
+}
+
+/* Returns 1 if radiation flux is increasing, -1 if decreasing, 0 if steady */
+static int rad_flux_trend(struct snis_entity *o)
+{
+	double d0, d1;
+
+	/* Use the last two positions from the server rather than the interpolated
+	 * position, so that the trend does not jitter from frame to frame.
+	 */
+	if (o->nupdates < 2)
+		return 0;
+	d0 = dist3d(o->r[0].v.x - SUNX, o->r[0].v.y - SUNY, o->r[0].v.z - SUNZ);
+	d1 = dist3d(o->r[1].v.x - SUNX, o->r[1].v.y - SUNY, o->r[1].v.z - SUNZ);
+	if (d1 - d0 > RAD_FLUX_TREND_DEADBAND)
+		return 1; /* getting closer to the star */
+	if (d0 - d1 > RAD_FLUX_TREND_DEADBAND)
+		return -1; /* getting farther from the star */
+	return 0;
+}
+
+static void draw_science_rad_flux_indicator(struct snis_entity *o)
+{
+	char buf[20];
+	double flux;
+	int trend, color, show_value;
+	float bbx1, bby1, bbx2, bby2;
+	float x, y, ax1, ax2, axc, top, bottom;
+	char *label = "RAD FLUX:";
+
+	flux = rad_flux_percent(o->x, o->y, o->z);
+	trend = rad_flux_trend(o);
+
+	show_value = 1;
+	if (flux >= RAD_FLUX_DANGER_PERCENT) {
+		color = UI_COLOR(sci_rad_flux_danger);
+		show_value = (timer & 0x08) != 0; /* flashing */
+	} else if (flux >= RAD_FLUX_CAUTION_PERCENT) {
+		color = UI_COLOR(sci_rad_flux_caution);
+	} else {
+		color = UI_COLOR(sci_rad_flux_safe);
+	}
+	sng_set_foreground(color);
+
+	x = txx(640);
+	y = txy(10);
+	sng_abs_xy_draw_string(label, NANO_FONT, x, y);
+	if (!show_value)
+		return;
+
+	/* Trend arrow goes between the label and the number */
+	sng_string_bounding_box(label, NANO_FONT, &bbx1, &bby1, &bbx2, &bby2);
+	ax1 = x + bbx2 + txx(4);
+	ax2 = ax1 + txx(6);
+	axc = 0.5 * (ax1 + ax2);
+	top = y + bby1;
+	bottom = y + bby2;
+	if (trend > 0) { /* up arrow */
+		sng_current_draw_line(ax1, bottom, axc, top);
+		sng_current_draw_line(axc, top, ax2, bottom);
+		sng_current_draw_line(ax2, bottom, ax1, bottom);
+	} else if (trend < 0) { /* down arrow */
+		sng_current_draw_line(ax1, top, axc, bottom);
+		sng_current_draw_line(axc, bottom, ax2, top);
+		sng_current_draw_line(ax2, top, ax1, top);
+	}
+
+	if (flux > 9999.9)
+		flux = 9999.9;
+	snprintf(buf, sizeof(buf), "%.1f%%", flux);
+	sng_abs_xy_draw_string(buf, NANO_FONT, ax2 + txx(4), y);
+}
  
 static void show_3d_science(struct snis_entity *o, int current_zoom)
 {
@@ -19512,6 +19602,7 @@ static void show_science(void)
 
 	sng_set_foreground(UI_COLOR(sci_coords));
 	draw_science_location_indicator(o);
+	draw_science_rad_flux_indicator(o);
 	pthread_mutex_unlock(&universe_mutex);
 	zoom = (MAX_SCIENCE_SCREEN_RADIUS - MIN_SCIENCE_SCREEN_RADIUS) *
 			(current_zoom / 255.0) + MIN_SCIENCE_SCREEN_RADIUS;
