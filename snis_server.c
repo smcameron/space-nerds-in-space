@@ -23817,12 +23817,10 @@ static int l_terminal_effect(lua_State *l)
 		send_packet_to_all_clients_on_a_bridge(ship_id,
 			snis_opcode_subcode_pkt("bbh", OPCODE_TERMINAL_EFFECT, effect,
 				(uint16_t) (5 * 30)), role);
-		pthread_mutex_unlock(&universe_mutex);
 		break;
 	case OPCODE_TERMINAL_EFFECT_REBOOT:
 		send_packet_to_all_clients_on_a_bridge(ship_id,
 			snis_opcode_subcode_pkt("bb", OPCODE_TERMINAL_EFFECT, effect), role);
-		pthread_mutex_unlock(&universe_mutex);
 		break;
 	default:
 		pthread_mutex_unlock(&universe_mutex);
