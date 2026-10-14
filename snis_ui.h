@@ -49,6 +49,7 @@ struct navigation_ui {
 struct damcon_ui {
 	struct label *robot_controls;
 	struct button *engineering_button;
+	struct button *transporter_button;
 	struct button *robot_forward_button;
 	struct button *robot_backward_button;
 	struct button *robot_left_button;

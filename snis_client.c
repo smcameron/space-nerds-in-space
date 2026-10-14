@@ -7509,8 +7509,6 @@ static void hide_or_unhide_engineering_widgets(int hide)
 {
 	void (*hide_or_unhide)(void *widget) = hide ? ui_hide_widget : ui_unhide_widget;
 
-	fprintf(stderr, "%s engineering widgets.\n", hide ? "hiding" : "unhiding");
-
 	hide_or_unhide(eng_ui.fuel_gauge);
 	hide_or_unhide(eng_ui.amp_gauge);
 	hide_or_unhide(eng_ui.voltage_gauge);
@@ -7605,11 +7603,9 @@ static int process_select_subscreen(void)
 	uint8_t new_details;
 	int rc;
 
-	fprintf(stderr, "select subscreen opcode received\n");
 	rc = read_and_unpack_buffer(buffer, "b", &new_details);
 	if (rc != 0)
 		return rc;
-	fprintf(stderr, "select subscreen opcode received, new_details = %hhu\n", new_details);
 	switch (new_details) {
 	case OPCODE_SCI_DETAILS_MODE_THREED:
 		sci_ui.details_mode = new_details;
@@ -7644,13 +7640,11 @@ static int process_select_subscreen(void)
 		ui_hide_widget(sci_ui.sci_auto_sweep_button);
 		break;
 	case OPCODE_SUBSCREEN_TRANSPORTER:
-		fprintf(stderr, "Setting up widgets for transporter\n");
 		hide_engineering_widgets();
 		unhide_transporter_widgets();
 		eng_ui.subscreen = ENG_TRANSPORTER_SUBSCREEN;
 		break;
 	case OPCODE_SUBSCREEN_ENGINEERING:
-		fprintf(stderr, "Setting up widgets for engineering\n");
 		unhide_engineering_widgets();
 		hide_transporter_widgets();
 		eng_ui.subscreen = ENG_ENGINEERING_SUBSCREEN;
@@ -15697,6 +15691,13 @@ static void main_engineering_button_pressed(__attribute__((unused)) void *x)
 	engineering_button_pressed(NULL);
 }
 
+static void transporter_button_pressed(__attribute__((unused)) void *x);
+static void main_transporter_button_pressed(__attribute__((unused)) void *x)
+{
+	displaymode = DISPLAYMODE_ENGINEERING;
+	transporter_button_pressed(NULL);
+}
+
 static void robot_forward_button_pressed(__attribute__((unused)) void *x)
 {
 	damcon_dirkey(0, -1);
@@ -15748,11 +15749,16 @@ static void damcon_custom_button_pressed(__attribute__((unused)) void *x)
 static void init_damcon_ui(void)
 {
 	int hover_color = UI_COLOR(damcon_button_hover);
-	damcon_ui.engineering_button = snis_button_init(txx(630), txy(550), -1, txy(25),
+	damcon_ui.engineering_button = snis_button_init(txx(630), txy(520), -1, txy(25),
 			"ENGINEERING", UI_COLOR(damcon_button),
 			NANO_FONT, main_engineering_button_pressed, (void *) 0);
 	snis_button_set_sound(damcon_ui.engineering_button, UISND11);
 	snis_button_set_hover_color(damcon_ui.engineering_button, hover_color);
+	damcon_ui.transporter_button = snis_button_init(txx(630), txy(550), -1, txy(25),
+			"TRANSPORTER CONTROL", UI_COLOR(damcon_button),
+			NANO_FONT, main_transporter_button_pressed, (void *) 0);
+	snis_button_set_sound(damcon_ui.transporter_button, UISND11);
+	snis_button_set_hover_color(damcon_ui.transporter_button, hover_color);
 	damcon_ui.robot_controls = snis_label_init(txx(630), txy(30), "ROBOT CONTROLS",
 							UI_COLOR(damcon_button), NANO_FONT);
 	damcon_ui.robot_forward_button = snis_button_init(txx(650), txy(60), txx(90), txy(25),
@@ -15794,6 +15800,7 @@ static void init_damcon_ui(void)
 	snis_button_set_sound(damcon_ui.eject_warp_core_button, UISND12); /* FIXME: custom sound here */
 
 	ui_add_button(damcon_ui.engineering_button, DISPLAYMODE_DAMCON, "SWITCH TO ENGINEERING SCREEN");
+	ui_add_button(damcon_ui.transporter_button, DISPLAYMODE_DAMCON, "SWITCH TO THE TRANSPORTER CONTROL SCREEN");
 	ui_add_button(damcon_ui.robot_forward_button, DISPLAYMODE_DAMCON, "MOVE THE ROBOT FORWARD");
 	ui_add_button(damcon_ui.robot_left_button, DISPLAYMODE_DAMCON, "TURN THE ROBOT LEFT");
 	ui_add_button(damcon_ui.robot_right_button, DISPLAYMODE_DAMCON, "TURN THE ROBOT RIGHT");
@@ -16024,7 +16031,6 @@ static void damcon_button_pressed(__attribute__((unused)) void *x)
 
 static void transporter_button_pressed(__attribute__((unused)) void *x)
 {
-	fprintf(stderr, "transporter button pressed\n");
 	queue_to_server(snis_opcode_pkt("bb", OPCODE_SELECT_SUBSCREEN,
 		(unsigned char) OPCODE_SUBSCREEN_TRANSPORTER));
 }
