@@ -5581,6 +5581,26 @@ static int ship_is_towing(struct snis_entity *o)
 	return -1;
 }
 
+/* Returns -1 if ship is not towing or attempting to tow anything,
+ * the index into go[] of the thing it's towing or attempting to tow otherwise
+ */
+static int ship_tow_target(struct snis_entity *o)
+{
+	int i, n;
+
+	if (o->type != OBJTYPE_NPCSHIP)
+		return -1;
+	if (o->tsd.ship.shiptype != SHIP_CLASS_MANTIS)
+		return -1;
+	n = o->tsd.ship.nai_entries - 1;
+	for (i = n; i >= 0; i--) {
+		if (o->tsd.ship.ai[i].ai_mode != AI_MODE_TOW_SHIP)
+			continue;
+		return lookup_by_id(o->tsd.ship.ai[i].u.tow_ship.disabled_ship);
+	}
+	return -1;
+}
+
 static void update_towed_ship(struct snis_entity *o)
 {
 	int i;
@@ -5597,6 +5617,9 @@ static void update_towed_ship(struct snis_entity *o)
 	disabled_ship->orientation = o->orientation;
 	set_object_location(disabled_ship,
 		o->x + towing_offset.v.x, o->y + towing_offset.v.y, o->z + towing_offset.v.z);
+	disabled_ship->vx = o->vx;
+	disabled_ship->vy = o->vy;
+	disabled_ship->vz = o->vz;
 	disabled_ship->timestamp = universe_timestamp;
 }
 
@@ -6971,6 +6994,10 @@ static void ai_tow_ship_mode_brain(struct snis_entity *o)
 			disabled_ship->x, disabled_ship->y, disabled_ship->z);
 		if (dist2 < (TOWING_PICKUP_DIST * TOWING_PICKUP_DIST)) {
 			o->tsd.ship.ai[n].u.tow_ship.ship_connected = 1;
+			disabled_ship->tsd.ship.velocity = 0;
+			disabled_ship->vx = 0;
+			disabled_ship->vy = 0;
+			disabled_ship->vz = 0;
 			snis_queue_add_sound(HULL_CREAK_0 + (snis_randn(1000) % NHULL_CREAK_SOUNDS),
 							ROLE_SOUNDSERVER, disabled_ship->id);
 			snis_queue_add_text_to_speech("Mantis tow ship has attached.",
@@ -7861,9 +7888,10 @@ static void ship_collision_avoidance(void *context, void *entity)
 	if (obstacle->type == OBJTYPE_SPARK) /* no point trying to avoid */
 		return;
 
-	/* Tow ship should not try to avoid thing it's towing */
+	/* Tow ship should not try to avoid thing it's towing or attempting to tow */
 	if (obstacle->type == OBJTYPE_NPCSHIP || obstacle->type == OBJTYPE_BRIDGE) {
-		int i = ship_is_towing(o);
+		int i = ship_tow_target(o);
+
 		if (i >= 0 && go[i].id == obstacle->id)
 			return;
 	}
