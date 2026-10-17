@@ -894,9 +894,11 @@ struct spacemonster_data {
 	uint32_t nearest_asteroid;
 	uint32_t nearest_spacemonster;
 	uint32_t nearest_ship;
+	uint32_t nearest_warp_core;
 	float spacemonster_dist;
 	float asteroid_dist;
 	float ship_dist;
+	float warp_core_dist;
 	union vec3 dest;
 	int decision_age;
 };

@@ -5158,6 +5158,15 @@ static void spacemonster_collision_process(void *context, void *entity)
 			}
 		}
 		break;
+	case OBJTYPE_WARP_CORE:
+		/* Ejected warp cores are irresistible to spacemonsters */
+		dist = object_dist(o, thing);
+		if (o->tsd.spacemonster.warp_core_dist < 0.0 ||
+			dist < o->tsd.spacemonster.warp_core_dist) {
+			o->tsd.spacemonster.warp_core_dist = dist;
+			o->tsd.spacemonster.nearest_warp_core = thing->id;
+		}
+		break;
 	case OBJTYPE_NEBULA:
 		break;
 	}
@@ -5278,11 +5287,50 @@ static void steer_away_from_other_spacemonster(struct snis_entity *o, float spee
 	o->tsd.spacemonster.dvz += steer.v.z;
 }
 
+static void spacemonster_intercept(struct snis_entity *o, struct snis_entity *target)
+{
+	union vec3 target_vel, to_obj, to_target;
+	float esttime;
+
+	target_vel.v.x = target->vx;
+	target_vel.v.y = target->vy;
+	target_vel.v.z = target->vz;
+	to_obj.v.x = target->x - o->x;
+	to_obj.v.y = target->y - o->y;
+	to_obj.v.z = target->z - o->z;
+	esttime = 0.75 * vec3_magnitude(&to_obj) / max_spacemonster_velocity;
+	vec3_mul_self(&target_vel, esttime);
+	vec3_add(&to_target, &to_obj, &target_vel);
+	vec3_normalize_self(&to_target);
+	vec3_mul_self(&to_target, max_spacemonster_velocity);
+	o->tsd.spacemonster.dvx = to_target.v.x;
+	o->tsd.spacemonster.dvy = to_target.v.y;
+	o->tsd.spacemonster.dvz = to_target.v.z;
+	steer_away_from_other_spacemonster(o, 0.5 * max_spacemonster_velocity);
+}
+
+/* Returns index of an ejected warp core within aggro radius, or -1 */
+static int spacemonster_nearby_warp_core(struct snis_entity *o)
+{
+	if (o->tsd.spacemonster.nearest_warp_core == (uint32_t) -1 ||
+		o->tsd.spacemonster.warp_core_dist < 0.0 ||
+		o->tsd.spacemonster.warp_core_dist > spacemonster_aggro_radius)
+		return -1;
+	return lookup_by_id(o->tsd.spacemonster.nearest_warp_core);
+}
+
 static void spacemonster_fight(struct snis_entity *o)
 {
 	int i;
-	union vec3 ship_vel, to_player, to_target;
-	float esttime;
+
+	/* An ejected warp core takes priority over any ship, so that a
+	 * player under attack may escape by ejecting the warp core.
+	 */
+	i = spacemonster_nearby_warp_core(o);
+	if (i >= 0) {
+		spacemonster_intercept(o, &go[i]);
+		return;
+	}
 
 	if (o->tsd.spacemonster.nearest_ship == (uint32_t) -1 ||
 		o->tsd.spacemonster.ship_dist < 0.0) {
@@ -5300,21 +5348,7 @@ static void spacemonster_fight(struct snis_entity *o)
 		o->tsd.spacemonster.fear = imax(o->tsd.spacemonster.fear - snis_randn(10), 0);
 		return;
 	}
-	ship_vel.v.x = go[i].vx;
-	ship_vel.v.y = go[i].vy;
-	ship_vel.v.z = go[i].vz;
-	to_player.v.x = go[i].x - o->x;
-	to_player.v.y = go[i].y - o->y;
-	to_player.v.z = go[i].z - o->z;
-	esttime = 0.75 * vec3_magnitude(&to_player) / max_spacemonster_velocity;
-	vec3_mul_self(&ship_vel, esttime);
-	vec3_add(&to_target, &to_player, &ship_vel);
-	vec3_normalize_self(&to_target);
-	vec3_mul_self(&to_target, max_spacemonster_velocity);
-	o->tsd.spacemonster.dvx = to_target.v.x;
-	o->tsd.spacemonster.dvy = to_target.v.y;
-	o->tsd.spacemonster.dvz = to_target.v.z;
-	steer_away_from_other_spacemonster(o, 0.5 * max_spacemonster_velocity);
+	spacemonster_intercept(o, &go[i]);
 }
 
 static void spacemonster_eat(struct snis_entity *o)
@@ -5405,6 +5439,8 @@ static void spacemonster_move(struct snis_entity *o)
 	o->tsd.spacemonster.nearest_spacemonster = (uint32_t) -1;
 	o->tsd.spacemonster.ship_dist = -1.0;
 	o->tsd.spacemonster.nearest_ship = (uint32_t) -1;
+	o->tsd.spacemonster.warp_core_dist = -1.0;
+	o->tsd.spacemonster.nearest_warp_core = (uint32_t) -1;
 	/* Re-acquire distance knowledge */
 	space_partition_process(space_partition, o, o->x, o->z, o,
 		spacemonster_collision_process);
@@ -12830,6 +12866,8 @@ static int add_spacemonster(double x, double y, double z)
 	go[i].tsd.spacemonster.health = 255;
 	go[i].tsd.spacemonster.hunger = 0;
 	go[i].tsd.spacemonster.nearest_spacemonster = -1;
+	go[i].tsd.spacemonster.nearest_warp_core = (uint32_t) -1;
+	go[i].tsd.spacemonster.warp_core_dist = -1.0;
 	go[i].tsd.spacemonster.toughness = snis_randn(50); /* out of 255 */
 	update_ship_orientation(&go[i]);
 
