@@ -91,7 +91,7 @@ chapel_z = 35000;
 sb7_number = 7;
 
 nebula_x = 75000;
-nebula_y = 500;
+nebula_y = 35000;
 nebula_z = 75000;
 nebula_radius = 12000;
 
