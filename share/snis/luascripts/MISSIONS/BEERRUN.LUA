@@ -30,7 +30,7 @@ clear_all();
 if debug then
 	time_limit_seconds = 45 * 60;   -- 45 minutes for debug
 else
-	time_limit_seconds = 28 * 60;   -- 28 minutes (~140k each way at 300 u/s + margin)
+	time_limit_seconds = 35 * 60;   -- 35 minutes
 end
 
 bet_amount = 80000;
