@@ -49,12 +49,6 @@ texarkana_y = 5428;
 texarkana_z = -47800;
 texarkana_r = 4254;
 
--- Chapel station SB-7 (where Princess Frogg is stranded)
-chapel_x = 45000;
-chapel_y = 35000;
-chapel_z = 35000;
-sb7_number = 7;
-
 -- Additional sector worlds & starbases
 birmingham_x = -95000;
 birmingham_y = 300;
@@ -85,10 +79,16 @@ asteroid_field_z = 50000;
 asteroid_field_radius = 16000;
 asteroid_field_count = 130;
 
-black_hole_x = 58000;
+black_hole_x = 68000;
 black_hole_y = 40000;
 black_hole_z = 46000;
-black_hole_radius = 1500;
+black_hole_radius = 1000;
+
+-- Chapel station SB-7 (where Princess Frogg is stranded)
+chapel_x = 45000;
+chapel_y = 35000;
+chapel_z = 35000;
+sb7_number = 7;
 
 nebula_x = 75000;
 nebula_y = 500;
