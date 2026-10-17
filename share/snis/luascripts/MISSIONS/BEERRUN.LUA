@@ -51,7 +51,7 @@ texarkana_r = 4254;
 
 -- Chapel station SB-7 (where Princess Frogg is stranded)
 chapel_x = 45000;
-chapel_y = 700;
+chapel_y = 35000;
 chapel_z = 35000;
 sb7_number = 7;
 
@@ -80,13 +80,13 @@ speed_trap_y = 500;
 speed_trap_z = 22000;
 
 asteroid_field_x = 50000;
-asteroid_field_y = 500;
+asteroid_field_y = 35000;
 asteroid_field_z = 50000;
 asteroid_field_radius = 16000;
 asteroid_field_count = 130;
 
 black_hole_x = 58000;
-black_hole_y = 400;
+black_hole_y = 40000;
 black_hole_z = 46000;
 black_hole_radius = 1500;
 
@@ -547,8 +547,10 @@ function intro_announcement()
 	show_timed_text(-1, 20,
 		"=== BEER RUN ===\n" ..
 		"A high-stakes wager by Big Enos & Little Enos.\n" ..
-		"Haul 400 kegs of Coors Beer from Texarkana back to Atlanta!\n" ..
-		"STRICT RULE: SUB-LIGHT IMPULSE ONLY. NO WARP DRIVE ALLOWED.\n" ..
+		"Haul 400 kegs of Coors Beer from Texarkana back to\n" ..
+		"Atlanta!\n" ..
+		"STRICT RULE: SUB-LIGHT IMPULSE ONLY.\n" ..
+		"NO WARP DRIVE ALLOWED.\n" ..
 		"Time limit: " .. math.floor(time_limit_seconds / 60) .. " minutes. Prize: $" .. bet_amount .. "!");
 end
 
