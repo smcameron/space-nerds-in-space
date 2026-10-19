@@ -38,6 +38,15 @@ code, do not submit it.* The practical obligation this puts on an agent is to wr
 the human can actually follow, and to explain what was written and why — clever and
 opaque is worse than plain and reviewable here.
 
+### Managing git commits
+
+Generally, the human commits to the repo, not the AI agent. Usually, stgit is
+being used to manage commits.  This means if you are making a change that
+requires multiple commits, you should pause between commits to allow the human
+to review the change and to "stg refresh" or otherwise commit and incorporate
+the current changes before proceeding with work intended for the next commit,
+and let the human know that is why you are pausing.
+
 ### Attribution
 
 When AI tools contribute, add an `Assisted-by:` tag naming the assistant:
