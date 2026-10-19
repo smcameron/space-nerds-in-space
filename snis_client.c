@@ -3176,7 +3176,7 @@ static void drop_ship_fracture(struct ship_fracture *sf)
 				entity_get_mesh(o->entity) != sf->derelict)
 			continue;
 		entity_set_mesh(o->entity, derelict_mesh[sf->shiptype]);
-		update_entity_material(o->entity, NULL);
+		update_entity_material(o->entity, derelict_mesh[sf->shiptype]->material);
 	}
 	ship_fracture_triangles -= sf->ntriangles;
 	ship_death_fracture_free(&sf->fracture);
@@ -26916,11 +26916,41 @@ static struct mesh *snis_read_model(char *directory, char *filename)
 	return m;
 }
 
-static struct mesh *make_derelict_mesh(struct mesh *source)
+static struct mesh *make_derelict_mesh(struct mesh *source, uint32_t seed)
 {
-	struct mesh *m = mesh_duplicate(source);
+	struct mesh_fracture_piece piece[8];
+	struct mesh_fracture_params params;
+	struct mesh *m;
+	int i, n;
 
-	mesh_derelict(m, 10.0);
+	params.npieces = 8;
+	params.core_fraction = 0.6f;
+	params.jaggedness = 0.08f;
+	params.grain = 0.035f;
+	params.seed = seed;
+	params.defer_upload = 1;
+	n = mesh_fracture(source, &params, piece);
+	if (n <= 0)
+		return mesh_duplicate(source);
+	for (i = 1; i < n; i++)
+		mesh_free(piece[i].m);
+
+	m = piece[0].m;
+	for (i = 0; i < m->nvertices; i++) {
+		m->v[i].x += piece[0].offset[0];
+		m->v[i].y += piece[0].offset[1];
+		m->v[i].z += piece[0].offset[2];
+	}
+	m->radius = mesh_compute_radius(m);
+	m->material = malloc(sizeof(*m->material));
+	if (m->material) {
+		material_init_wreck(m->material);
+		if (source->material && source->material->type == MATERIAL_TEXTURE_MAPPED)
+			m->material->wreck.texture_id =
+				source->material->texture_mapped.texture_id;
+		m->material->wreck.hull_radius = source->radius;
+	}
+	mesh_graph_dev_init(m);
 	return m;
 }
 
@@ -27054,7 +27084,7 @@ static void init_meshes(void)
 			mesh_rotate(ship_mesh_map[i], &q);
 		}
 		mesh_scale(ship_mesh_map[i], SHIP_MESH_SCALE * ship_type[i].extra_scaling);
-		derelict_mesh[i] = make_derelict_mesh(ship_mesh_map[i]);
+		derelict_mesh[i] = make_derelict_mesh(ship_mesh_map[i], (uint32_t) i + 1);
 	}
 	setup_ship_death();
 	update_splash_progress(90);
