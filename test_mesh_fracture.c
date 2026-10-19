@@ -126,6 +126,18 @@ int main(void)
 	CHECK(na > 0 && fabsf(a[0].area / hull - p.core_fraction) < 0.03f,
 		"core has %.3f of the hull, asked %.3f", na ? a[0].area / hull : 0.0f,
 		p.core_fraction);
+	{
+		int debris_tris = 0;
+
+		for (i = 1; i < na; i++)
+			debris_tris += a[i].m->ntriangles;
+		/* The core has 60% of the area (1.5x the debris's 40%), so uncoalesced it would
+		 * have ~1.5x as many triangles as all the debris combined; coalescing its interior
+		 * back to the source triangles leaves it with fewer than the debris. */
+		CHECK(na > 1 && a[0].m->ntriangles < debris_tris,
+			"core has %d triangles vs %d across debris", a[0].m->ntriangles,
+			debris_tris);
+	}
 
 	nb = mesh_fracture(sphere, &p, b);
 	CHECK(na == nb, "same seed, %d pieces then %d", na, nb);

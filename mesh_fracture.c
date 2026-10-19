@@ -99,32 +99,30 @@ static float split_ratio(const float *a, const float *b, uint32_t seed, int *swa
 	return 0.3f + 0.4f * (float) (h & 0xffff) / 65535.0f;
 }
 
-/* Split the triangle across its longest edge until no edge is longer than max_edge.  Splitting
- * the longest edge, rather than splitting in four, keeps slivers from getting thinner. */
-static int subdivide(struct soup *s, const struct soup_tri *t, float max_edge2, int depth,
-			uint32_t seed)
+static int longest_edge(const struct soup_tri *t, float *max_e2)
 {
-	struct soup_tri a, b;
-	float e[3], f;
-	int i, k, j0, j1, j2, swap;
+	float e[3];
+	int i = 0;
 
 	e[0] = dist2(t->p[0], t->p[1]);
 	e[1] = dist2(t->p[1], t->p[2]);
 	e[2] = dist2(t->p[2], t->p[0]);
-	i = 0;
 	if (e[1] > e[i])
 		i = 1;
 	if (e[2] > e[i])
 		i = 2;
-	if (e[i] <= max_edge2 || depth > 24)
-		return soup_add(s, t);
+	*max_e2 = e[i];
+	return i;
+}
 
-	/* The longest edge runs from j0 to j1; j2 is the vertex opposite it. */
-	j0 = i;
-	j1 = (i + 1) % 3;
-	j2 = (i + 2) % 3;
-	a = *t;
-	b = *t;
+static float split_triangle(const struct soup_tri *t, int i, uint32_t seed,
+				struct soup_tri *a, struct soup_tri *b)
+{
+	int k, j0 = i, j1 = (i + 1) % 3, swap;
+	float f;
+
+	*a = *t;
+	*b = *t;
 	/* f is the fraction of the way from j0 to j1. */
 	f = split_ratio(t->p[j0], t->p[j1], seed, &swap);
 	if (swap)
@@ -133,21 +131,104 @@ static int subdivide(struct soup *s, const struct soup_tri *t, float max_edge2, 
 		float mp = t->p[j0][k] + f * (t->p[j1][k] - t->p[j0][k]);
 		float mn = t->n[j0][k] + f * (t->n[j1][k] - t->n[j0][k]);
 
-		a.p[j1][k] = mp;
-		a.n[j1][k] = mn;
-		b.p[j0][k] = mp;
-		b.n[j0][k] = mn;
+		a->p[j1][k] = mp;
+		a->n[j1][k] = mn;
+		b->p[j0][k] = mp;
+		b->n[j0][k] = mn;
 	}
 	for (k = 0; k < 2; k++) {
 		float muv = t->uv[j0][k] + f * (t->uv[j1][k] - t->uv[j0][k]);
 
-		a.uv[j1][k] = muv;
-		b.uv[j0][k] = muv;
+		a->uv[j1][k] = muv;
+		b->uv[j0][k] = muv;
 	}
-	(void) j2;
+	return f;
+}
+
+/* Split the triangle across its longest edge until no edge is longer than max_edge.  Splitting
+ * the longest edge, rather than splitting in four, keeps slivers from getting thinner. */
+static int subdivide(struct soup *s, const struct soup_tri *t, float max_edge2, int depth,
+			uint32_t seed)
+{
+	struct soup_tri a, b;
+	float max_e2;
+	int i;
+
+	i = longest_edge(t, &max_e2);
+	if (max_e2 <= max_edge2 || depth > 24)
+		return soup_add(s, t);
+
+	(void) split_triangle(t, i, seed, &a, &b);
 	if (subdivide(s, &a, max_edge2, depth + 1, seed))
 		return -1;
 	return subdivide(s, &b, max_edge2, depth + 1, seed);
+}
+
+/* Walk the same subdivision tree for the core (cell 0), reassembling sibling triangles back into
+ * their parent wherever both belong to the core and are not needed for the glowing tear edge or
+ * non-linear scorch shading.  The core never dissolves inward, so interior triangles need not stay
+ * finely subdivided.  Returns 1 if the subtree collapsed to a single triangle at core->t[core->n - 1]
+ * that may itself be merged further up, 0 if it did not, or -1 on allocation failure. */
+static int coalesce_core_subdivide(struct soup *core, const struct soup *s, int *leaf_idx,
+				const struct soup_tri *t, float max_edge2, int depth,
+				uint32_t seed, float glow_limit, float scorch_limit,
+				float scorch_tol)
+{
+	struct soup_tri a, b, merged;
+	float max_e2, f;
+	int i, j0, j1, j2, mark, ca, cb;
+
+	i = longest_edge(t, &max_e2);
+	if (max_e2 <= max_edge2 || depth > 24) {
+		const struct soup_tri *leaf = &s->t[(*leaf_idx)++];
+
+		if (leaf->cell != 0)
+			return 0;
+		if (soup_add(core, leaf))
+			return -1;
+		return leaf->edge[0] >= glow_limit && leaf->edge[1] >= glow_limit &&
+			leaf->edge[2] >= glow_limit;
+	}
+
+	f = split_triangle(t, i, seed, &a, &b);
+	mark = core->n;
+	ca = coalesce_core_subdivide(core, s, leaf_idx, &a, max_edge2, depth + 1, seed,
+					glow_limit, scorch_limit, scorch_tol);
+	if (ca < 0)
+		return -1;
+	cb = coalesce_core_subdivide(core, s, leaf_idx, &b, max_edge2, depth + 1, seed,
+					glow_limit, scorch_limit, scorch_tol);
+	if (cb < 0)
+		return -1;
+	if (ca && cb) {
+		const struct soup_tri *ta = &core->t[mark];
+		const struct soup_tri *tb = &core->t[mark + 1];
+		float e0, e1, e2, emid, elerp;
+
+		j0 = i;
+		j1 = (i + 1) % 3;
+		j2 = (i + 2) % 3;
+		e0 = ta->edge[j0];
+		e1 = tb->edge[j1];
+		e2 = ta->edge[j2];
+		emid = ta->edge[j1];
+		elerp = e0 + f * (e1 - e0);
+		if ((e0 >= scorch_limit && e1 >= scorch_limit && e2 >= scorch_limit &&
+				emid >= scorch_limit) ||
+				fabsf(emid - elerp) <= scorch_tol) {
+			merged = *t;
+			merged.cell = 0;
+			merged.area = ta->area + tb->area;
+			merged.edge[j0] = e0;
+			merged.edge[j1] = e1;
+			merged.edge[j2] = e2;
+			core->n = mark;
+			if (soup_add(core, &merged))
+				return -1;
+			return 1;
+		}
+	}
+	return 0;
 }
 
 /* Integer hashing, so the noise is the same on every machine and compiler: the fracture must
@@ -439,10 +520,52 @@ static struct mesh *build_piece(const struct mesh *src, const struct soup *s, in
 	return m;
 }
 
+static void source_triangle_to_soup_tri(const struct mesh *src, int i, struct soup_tri *t)
+{
+	int j;
+
+	memset(t, 0, sizeof(*t));
+	for (j = 0; j < 3; j++) {
+		t->p[j][0] = src->t[i].v[j]->x;
+		t->p[j][1] = src->t[i].v[j]->y;
+		t->p[j][2] = src->t[i].v[j]->z;
+		t->n[j][0] = src->t[i].vnormal[j].x;
+		t->n[j][1] = src->t[i].vnormal[j].y;
+		t->n[j][2] = src->t[i].vnormal[j].z;
+		if (src->tex) {
+			t->uv[j][0] = src->tex[i * 3 + j].u;
+			t->uv[j][1] = src->tex[i * 3 + j].v;
+		}
+	}
+}
+
+static int coalesce_core(const struct mesh *src, const struct soup *s, float radius,
+			const struct mesh_fracture_params *params, struct soup *core)
+{
+	float max_edge2 = params->grain * radius * params->grain * radius;
+	/* In wreck.shader, u_EdgeWidth * (0.5 + ragged) reaches ~0.022 hull radii, and u_Scorch *
+	 * ragged reaches ~0.162.  Keep grain-sized triangles along the glowing tear, allow merges
+	 * across the scorch band where edge distance is nearly linear, and merge freely past it. */
+	float glow_limit = 0.025f * radius;
+	float scorch_limit = 0.165f * radius;
+	float scorch_tol = 0.015f * radius;
+	int i, leaf_idx = 0;
+
+	for (i = 0; i < src->ntriangles; i++) {
+		struct soup_tri t;
+
+		source_triangle_to_soup_tri(src, i, &t);
+		if (coalesce_core_subdivide(core, s, &leaf_idx, &t, max_edge2, 0, params->seed,
+						glow_limit, scorch_limit, scorch_tol) < 0)
+			return -1;
+	}
+	return 0;
+}
+
 int mesh_fracture(const struct mesh *src, const struct mesh_fracture_params *params,
 			struct mesh_fracture_piece *piece)
 {
-	struct soup s = { 0 };
+	struct soup s = { 0 }, core_soup = { 0 };
 	struct mtwist_state *mt;
 	float (*seed_pos)[3];
 	float total_area = 0.0f, radius, lo, hi, core_weight = 0.0f;
@@ -458,19 +581,7 @@ int mesh_fracture(const struct mesh *src, const struct mesh_fracture_params *par
 	for (i = 0; i < src->ntriangles; i++) {
 		struct soup_tri t;
 
-		memset(&t, 0, sizeof(t));
-		for (j = 0; j < 3; j++) {
-			t.p[j][0] = src->t[i].v[j]->x;
-			t.p[j][1] = src->t[i].v[j]->y;
-			t.p[j][2] = src->t[i].v[j]->z;
-			t.n[j][0] = src->t[i].vnormal[j].x;
-			t.n[j][1] = src->t[i].vnormal[j].y;
-			t.n[j][2] = src->t[i].vnormal[j].z;
-			if (src->tex) {
-				t.uv[j][0] = src->tex[i * 3 + j].u;
-				t.uv[j][1] = src->tex[i * 3 + j].v;
-			}
-		}
+		source_triangle_to_soup_tri(src, i, &t);
 		if (subdivide(&s, &t, params->grain * radius * params->grain * radius, 0,
 				params->seed)) {
 			free(s.t);
@@ -542,9 +653,16 @@ int mesh_fracture(const struct mesh *src, const struct mesh_fracture_params *par
 	measure_edges(&s, (const float (*)[3]) seed_pos, npieces, core_weight, radius, params);
 	free(seed_pos);
 
+	if (coalesce_core(src, &s, radius, params, &core_soup)) {
+		free(core_soup.t);
+		free(s.t);
+		return 0;
+	}
+
 	for (i = 0; i < npieces; i++) {
-		struct mesh *m = build_piece(src, &s, i, piece[count].offset, &piece[count].area,
-						params->defer_upload);
+		const struct soup *piece_soup = (i == 0) ? &core_soup : &s;
+		struct mesh *m = build_piece(src, piece_soup, i, piece[count].offset,
+						&piece[count].area, params->defer_upload);
 
 		if (!m) {
 			if (i == 0)
@@ -555,6 +673,7 @@ int mesh_fracture(const struct mesh *src, const struct mesh_fracture_params *par
 		piece[count].is_core = (i == 0);
 		count++;
 	}
+	free(core_soup.t);
 	free(s.t);
 	return count;
 }
