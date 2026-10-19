@@ -15302,7 +15302,6 @@ static void draw_3d_nav_display(void)
 
 		switch (go[i].type) {
 		case OBJTYPE_EXPLOSION:
-		case OBJTYPE_DERELICT:
 		case OBJTYPE_NEBULA:
 			break;
 		case OBJTYPE_TORPEDO: {
@@ -15381,6 +15380,7 @@ static void draw_3d_nav_display(void)
 				}
 			}
 			break;
+		case OBJTYPE_DERELICT:
 		case OBJTYPE_WORMHOLE:
 		case OBJTYPE_MISSILE:
 		case OBJTYPE_ASTEROID:
@@ -15506,6 +15506,7 @@ static void draw_3d_nav_display(void)
 				contact_scale = ((255.0 - current_zoom) / 255.0) * 3.0 + 1.0;
 				draw_contact_offset_and_ring = 0;
 				break;
+			case OBJTYPE_DERELICT:
 			case OBJTYPE_NPCSHIP:
 			case OBJTYPE_BRIDGE:
 				contact_scale = ship_mesh_map[SHIP_CLASS_CRUISER]->radius /
