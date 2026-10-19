@@ -1499,6 +1499,7 @@ mostly-clean:
 	bin/nebula_noise bin/generate_skybox bin/names bin/infinite-taunt bin/stl_parser \
 	bin/test-obj-parser bin/test-commodities bin/test_nonuniform_random_sampler bin/test_marshal \
 	bin/test-quat bin/test-fleet bin/test-mtwist bin/snis-device-io-sample-1 bin/check-endianness \
+	bin/test_wled bin/test_mesh_fracture \
 	${OD}/*.o ${ODT} bin/test-matrix bin/test-mathutils bin/test_solarsystem_config  bin/test-space-partition \
 	bin/device-io-sample-1 bin/print_ship_attributes bin/snis_test_audio bin/test_crater \
 	bin/test_key_value_parser bin/test_snis_dmx test_scipher bin/test_snis_ship_type wwviaudio_basic_test \
