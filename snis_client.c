@@ -20135,6 +20135,14 @@ static void demon_button_create_item(double x, double y, double z)
 		case DEMON_BUTTON_SPACEMONSTERMODE:
 			item_type = OBJTYPE_SPACEMONSTER;
 			break;
+		case DEMON_BUTTON_CARGOCONTAINERMODE:
+			item_type = OBJTYPE_CARGO_CONTAINER;
+			break;
+		case DEMON_BUTTON_DERELICTMODE:
+			item_type = OBJTYPE_DERELICT;
+			data1 = demon_ui.shiptype;
+			data2 = demon_ui.faction;
+			break;
 		default:
 			return;
 	}
@@ -21233,6 +21241,16 @@ static void demon_spacemonster_button_pressed(__attribute__((unused)) void *x)
 	demon_modebutton_pressed(DEMON_BUTTON_SPACEMONSTERMODE);
 }
 
+static void demon_cargo_container_button_pressed(__attribute__((unused)) void *x)
+{
+	demon_modebutton_pressed(DEMON_BUTTON_CARGOCONTAINERMODE);
+}
+
+static void demon_derelict_button_pressed(__attribute__((unused)) void *x)
+{
+	demon_modebutton_pressed(DEMON_BUTTON_DERELICTMODE);
+}
+
 static void demon_captain_button_pressed(__attribute__((unused)) void *x)
 {
 	demon_modebutton_pressed(DEMON_BUTTON_CAPTAINMODE);
@@ -21503,6 +21521,7 @@ static void init_demon_ui(void)
 	demon_ui.console_active = 0;
 	demon_ui.log_console = 0;
 	demon_ui.render_style = DEMON_UI_RENDER_STYLE_WIREFRAME;
+	demon_ui.shiptype = 0;
 	strcpy(demon_ui.error_msg, "");
 	memset(demon_ui.selected_id, 0, sizeof(demon_ui.selected_id));
 	demon_ui.demon_input = snis_text_input_box_init(txx(10), txy(550), txy(30), txx(550),
@@ -21696,6 +21715,8 @@ static void init_demon_ui(void)
 	pull_down_menu_add_row(demon_ui.menu, "ADD", "ASTEROID", demon_asteroid_button_pressed, NULL);
 	pull_down_menu_add_row(demon_ui.menu, "ADD", "SPACE MONSTER", demon_spacemonster_button_pressed, NULL);
 	pull_down_menu_add_row(demon_ui.menu, "ADD", "NEBULA", demon_nebula_button_pressed, NULL);
+	pull_down_menu_add_row(demon_ui.menu, "ADD", "CARGO CONTAINER", demon_cargo_container_button_pressed, NULL);
+	pull_down_menu_add_row(demon_ui.menu, "ADD", "DERELICT", demon_derelict_button_pressed, NULL);
 	pull_down_menu_add_column(demon_ui.menu, "SHIP");
 	for (i = 0; i < nshiptypes; i++)
 		pull_down_menu_add_row(demon_ui.menu, "SHIP", ship_type[i].class,

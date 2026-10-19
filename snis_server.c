@@ -24196,6 +24196,17 @@ static int process_create_item(struct game_client *c)
 	case OBJTYPE_SPACEMONSTER:
 		i = add_spacemonster(x, y, z);
 		break;
+	case OBJTYPE_CARGO_CONTAINER:
+		i = add_cargo_container(x, y, z, 0.0, 0.0, 0.0, -1, 0, 1);
+		break;
+	case OBJTYPE_DERELICT:
+		if (data1 >= nshiptypes)
+			data1 = snis_randn(nshiptypes);
+		random_name(mt, name, sizeof(name));
+		if (data2 >= nfactions())
+			data2 = snis_randn(nfactions());
+		i = add_derelict(name, x, y, z, 0.0, 0.0, 0.0, data1, data2, 1, (uint32_t) -1);
+		break;
 	default:
 		break;
 	}
