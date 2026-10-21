@@ -2201,6 +2201,30 @@ static void clear_ship_bounty_flags_on_starbase_death(uint32_t id)
 	}
 }
 
+static struct snis_entity *patrol_dest[MAXGAMEOBJS];
+static int npatrol_dests = 0;
+
+static void add_patrol_destination(struct snis_entity *o)
+{
+	if (npatrol_dests >= MAXGAMEOBJS)
+		return;
+	patrol_dest[npatrol_dests] = o;
+	npatrol_dests++;
+}
+
+static void remove_patrol_destination(struct snis_entity *o)
+{
+	int i;
+
+	for (i = 0; i < npatrol_dests; i++) {
+		if (patrol_dest[i] == o) {
+			patrol_dest[i] = patrol_dest[npatrol_dests - 1];
+			npatrol_dests--;
+			return;
+		}
+	}
+}
+
 static void delete_object(struct snis_entity *o)
 {
 	remove_space_partition_entry(space_partition, &o->partition);
@@ -2229,6 +2253,8 @@ static void delete_object(struct snis_entity *o)
 		free(o->tsd.planet.custom_description);
 		o->tsd.planet.custom_description = NULL;
 	}
+	if (o->type == OBJTYPE_PLANET || o->type == OBJTYPE_STARBASE)
+		remove_patrol_destination(o);
 
 	snis_object_pool_free_object(pool, go_index(o));
 	o->id = -1;
@@ -3970,27 +3996,10 @@ static struct snis_entity *pick_random_patrol_destination(struct snis_entity *sh
 {
 	union vec3 v;
 	struct snis_entity *o;
-	int i, count;
+	double dx, dy, dz;
 
-	/* FIXME: do something better here. */
-	count = 0;
-	while (1) {
-		i = snis_randn(snis_object_pool_highest_object(pool));
-		o = &go[i];
-		count++;
-		if (count > 1000) {
-			o = NULL;
-			break;
-		}
-		if (!o->alive)
-			continue;
-		if (o->type != OBJTYPE_PLANET && o->type != OBJTYPE_STARBASE)
-			continue;
-		break;
-	}
-	if (count <= 1000) {
-		double dx, dy, dz;
-
+	if (npatrol_dests > 0) {
+		o = patrol_dest[snis_randn(npatrol_dests)];
 		if (o->type == OBJTYPE_PLANET)
 			random_dpoint_on_sphere(o->tsd.planet.radius * 1.3, &dx, &dy, &dz);
 		else
@@ -4021,6 +4030,8 @@ static void setup_patrol_route(struct snis_entity *o)
 	o->tsd.ship.ai[n].ai_mode = AI_MODE_PATROL;
 
 	npoints = (snis_randn(100) % 3) + 3;
+	if (npatrol_dests > 1 && npoints > npatrol_dests)
+		npoints = npatrol_dests;
 	assert(npoints > 1 && npoints <= MAX_PATROL_POINTS);
 	patrol = &o->tsd.ship.ai[n].u.patrol;
 	patrol->npoints = npoints;
@@ -4033,6 +4044,7 @@ static void setup_patrol_route(struct snis_entity *o)
 	for (i = 0; i < npoints; i++) {
 		memset(&v[i], 0, sizeof(v[i]));
 		int duplicate;
+		int tries = 0;
 		do {
 			int j;
 			p[i] = pick_random_patrol_destination(o, &v[i]);
@@ -4046,7 +4058,7 @@ static void setup_patrol_route(struct snis_entity *o)
 				o->tsd.ship.desired_velocity = 0;
 				return;
 			}
-			if (i == 0) /* First pick cannot be a duplicate */
+			if (i == 0 || i >= npatrol_dests) /* First pick cannot be a duplicate */
 				break;
 			/* check to see if we've already picked this destination */
 			duplicate = 0;
@@ -4056,7 +4068,8 @@ static void setup_patrol_route(struct snis_entity *o)
 					break;
 				}
 			}
-		} while (duplicate);
+			tries++;
+		} while (duplicate && tries < 100);
 	}
 	for (i = 0; i < npoints; i++) {
 		patrol->p[i] = v[i];
@@ -11697,6 +11710,8 @@ static int add_generic_object(double x, double y, double z,
 	v.v.z = z;
 	go[i].sdata.faction = (uint8_t) nearest_faction(v);
 	quat_init_axis(&go[i].orientation, 0, 1, 0, heading);
+	if (type == OBJTYPE_PLANET || type == OBJTYPE_STARBASE)
+		add_patrol_destination(&go[i]);
 	return i;
 }
 
