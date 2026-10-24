@@ -315,10 +315,13 @@ static void copy_mesh_contents(struct mesh *copy, struct mesh *original)
 		*copy->material = *original->material;
 	}
 	snprintf(copy->name, sizeof(copy->name), "%s", original->name);
-	mesh_graph_dev_init(copy);
 }
 
-struct mesh *mesh_duplicate(struct mesh *original)
+/* Like mesh_duplicate(), but without mesh_graph_dev_init(), so safe on a thread
+ * that has no GL context.  The caller does mesh_graph_dev_init() later, on the
+ * thread that draws.
+ */
+struct mesh *mesh_duplicate_no_graph_dev(struct mesh *original)
 {
 	struct mesh *copy;
 
@@ -327,6 +330,16 @@ struct mesh *mesh_duplicate(struct mesh *original)
 	if (!copy)
 		return copy;
 	copy_mesh_contents(copy, original);
+	return copy;
+}
+
+struct mesh *mesh_duplicate(struct mesh *original)
+{
+	struct mesh *copy;
+
+	copy = mesh_duplicate_no_graph_dev(original);
+	if (copy)
+		mesh_graph_dev_init(copy);
 	return copy;
 }
 
@@ -1480,6 +1493,7 @@ static struct mesh *mesh_subdivide_icosphere(struct mesh *m, int subdivisions)
 	if (!m2)
 		return NULL;
 	copy_mesh_contents(m2, m);
+	mesh_graph_dev_init(m2);
 	mesh_free(m);
 
 	for (i = 0; i < ntris; i++)

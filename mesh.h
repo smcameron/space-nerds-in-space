@@ -72,6 +72,7 @@ GLOBAL float mesh_compute_radius(struct mesh *m);
 GLOBAL float mesh_compute_nonuniform_scaled_radius(struct mesh *m, double sx, double sy, double sz);
 GLOBAL void mesh_distort(struct mesh *m, float distortion, struct osn_context *osn);
 GLOBAL struct mesh *mesh_duplicate(struct mesh *original);
+GLOBAL struct mesh *mesh_duplicate_no_graph_dev(struct mesh *original);
 GLOBAL void mesh_scale(struct mesh *m, float scale);
 GLOBAL void mesh_add_point(struct mesh *m, float x, float y, float z);
 GLOBAL void mesh_add_line_last_2(struct mesh *m, int flag);

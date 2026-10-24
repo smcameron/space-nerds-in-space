@@ -3111,7 +3111,7 @@ static void build_ship_fracture(void *work)
 		goto fail;
 	/* The core is piece 0, about its own middle; the derelict turns about the ship's. */
 	core = &sf->fracture.piece[0];
-	sf->derelict = mesh_duplicate(core->m);
+	sf->derelict = mesh_duplicate_no_graph_dev(core->m);
 	if (!sf->derelict)
 		goto fail;
 	for (i = 0; i < sf->derelict->nvertices; i++) {
