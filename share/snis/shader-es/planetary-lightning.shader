@@ -28,8 +28,8 @@
 	void main()
 	{
 		gl_FragColor = texture2D(u_AlbedoTex, v_TexCoord);
-		vec2 center = vec2(u_u1v1.x + 0.5f * u_width, u_u1v1.y + 0.5f * u_width);
-		float d = (0.5f * u_width - length(v_TexCoord - center)) / (0.5 * u_width);
+		vec2 center = vec2(u_u1v1.x + 0.5 * u_width, u_u1v1.y + 0.5 * u_width);
+		float d = (0.5 * u_width - length(v_TexCoord - center)) / (0.5 * u_width);
 		gl_FragColor.rgb *= v_TintColor.rgb;
 		gl_FragColor *= v_TintColor.a;
 		gl_FragColor.rgb *= 0.5 * vec3(d, d, d);

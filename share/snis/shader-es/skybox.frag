@@ -19,12 +19,12 @@ varying vec3 texCoord;
 
 void main (void) {
 	vec3 dir = normalize(texCoord);
-	int i;
 
 	/* Uniform, so the branch is coherent across the whole draw: with no black hole in view
 	 * the skybox costs exactly what it always did.  The caller packs active lenses first. */
 	if (u_LensParams[0].x > 0.0) {
-		for (i = 0; i < MAX_GRAVITATIONAL_LENSES; i++) {
+		/* GLSL ES 1.00 (Appendix A) wants the loop index declared here.  WebGL enforces that. */
+		for (int i = 0; i < MAX_GRAVITATIONAL_LENSES; i++) {
 			vec3 b = u_LensDir[i];
 			float einstein = u_LensParams[i].x;
 			float esq = einstein * einstein;
