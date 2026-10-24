@@ -661,6 +661,10 @@ void pull_down_menu_add_from_file(struct pull_down_menu *pdm, char *column, char
 	struct menu_text *mt;
 
 	mt = read_menu_file(file);
+	if (!mt) {
+		fprintf(stderr, "Failed to read menu file '%s'\n", file);
+		return;
+	}
 	pull_down_menu_add_column(pdm, column);
 	for (i = 0; i < mt->count; i++) {
 		pull_down_menu_add_row(pdm, column, mt->menu_text[i], menu_button_fn, strdup(mt->script[i]));
