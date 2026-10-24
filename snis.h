@@ -230,6 +230,7 @@ struct damcon_data;
 #define AI_MODE_CATATONIC 11
 #define AI_MODE_AVOID_MISSILE 12
 #define AI_MODE_CHASE_CARGO 13
+#define AI_MODE_ASTEROID_MINER 14
 /* NOTE: These RTS modes must be contiguous and match the order in rts_unit_data.c order_data[] */
 #define AI_MODE_RTS_FIRST_COMMAND 111
 #define AI_MODE_RTS_STANDBY 111
@@ -254,7 +255,13 @@ static const char * const ai_mode_name[] = {
 	"COP",
 	"MINING BOT",
 	"TOW SHIP",
-	"RTS FIRST COMMAND",
+	"CATATONIC",
+	"AVOID MISSILE",
+	"CHASE CARGO",
+	"ASTEROID MINER",
+};
+
+static const char * const ai_rts_mode_name[] = {
 	"RTS STANDBY",
 	"RTS GUARD BASE",
 	"RTS ESCORT",
@@ -383,6 +390,20 @@ struct ai_rts_resupply {
 	uint32_t unit_to_resupply;
 };
 
+struct ai_asteroid_miner_data {
+	union quat orbital_orientation;
+	uint32_t asteroid_id;
+	uint32_t last_asteroid_id;
+	uint32_t starbase_id;
+	uint16_t countdown;
+	uint8_t mode;
+#define ASTEROID_MINER_SEEK_ASTEROID 0
+#define ASTEROID_MINER_APPROACH_ASTEROID 1
+#define ASTEROID_MINER_ORBIT_AND_MINE 2
+#define ASTEROID_MINER_TRAVEL_TO_STARBASE 3
+#define ASTEROID_MINER_UNLOAD_ORE 4
+};
+
 union ai_data {
 	struct ai_attack_data attack;
 	struct ai_avoid_missile_data avoid_missile;
@@ -394,6 +415,7 @@ union ai_data {
 	struct ai_mining_bot_data mining_bot;
 	struct ai_tow_ship_data tow_ship;
 	struct ai_chase_cargo_data chase_cargo;
+	struct ai_asteroid_miner_data asteroid_miner;
 	struct ai_rts_standby_data standby;
 	struct ai_rts_atk_near_enemy_data atk_near_enemy;
 	struct ai_rts_occupy_base_data occupy_base;

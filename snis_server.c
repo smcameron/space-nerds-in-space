@@ -2047,6 +2047,7 @@ static void queue_delete_oid(struct game_client *c, uint32_t oid)
 }
 
 static void push_cop_mode(struct snis_entity *cop);
+static void push_asteroid_miner_mode(struct snis_entity *miner);
 static void respawn_object(struct snis_entity *o)
 {
 	int i, j;
@@ -2073,6 +2074,17 @@ static void respawn_object(struct snis_entity *o)
 			remove_from_attack_lists(o->id);
 			break;
 		} /* else, not a cop, */
+
+		if (o->tsd.ship.ai[0].ai_mode == AI_MODE_ASTEROID_MINER) {
+			/* respawn asteroid miners as asteroid miners */
+			i = add_ship(o->sdata.faction, SHIP_CLASS_ASTEROIDMINER, 1);
+			if (i < 0)
+				break;
+			o = &go[i];
+			push_asteroid_miner_mode(o);
+			remove_from_attack_lists(o->id);
+			break;
+		}
 
 		i = add_ship(lowest_faction, snis_randn(nshiptypes), 1);
 		if (i < 0)
@@ -3804,6 +3816,18 @@ static void push_mining_bot_mode(struct snis_entity *miner, uint32_t parent_ship
 	random_quat(&miner->tsd.ship.ai[n].u.mining_bot.orbital_orientation);
 }
 
+static void push_asteroid_miner_mode(struct snis_entity *miner)
+{
+	miner->tsd.ship.nai_entries = 1;
+	miner->tsd.ship.ai[0].ai_mode = AI_MODE_ASTEROID_MINER;
+	miner->tsd.ship.ai[0].u.asteroid_miner.mode = ASTEROID_MINER_SEEK_ASTEROID;
+	miner->tsd.ship.ai[0].u.asteroid_miner.asteroid_id = (uint32_t) -1;
+	miner->tsd.ship.ai[0].u.asteroid_miner.last_asteroid_id = (uint32_t) -1;
+	miner->tsd.ship.ai[0].u.asteroid_miner.starbase_id = (uint32_t) -1;
+	miner->tsd.ship.ai[0].u.asteroid_miner.countdown = 0;
+	random_quat(&miner->tsd.ship.ai[0].u.asteroid_miner.orbital_orientation);
+}
+
 static int add_derelict(const char *name, double x, double y, double z,
 			double vx, double vy, double vz, int shiptype,
 			int the_faction, int persistent, uint32_t orig_ship_id);
@@ -4085,6 +4109,11 @@ static void ship_figure_out_what_to_do(struct snis_entity *o)
 	ai_trace(o->id, "FIGURING WHAT TO DO");
 	if (o->tsd.ship.nai_entries > 0)
 		return;
+	if (o->tsd.ship.shiptype == SHIP_CLASS_ASTEROIDMINER) {
+		ai_trace(o->id, "ASTEROID MINER");
+		push_asteroid_miner_mode(o);
+		return;
+	}
 	switch (snis_randn(100) % 3) {
 	case 0:
 	case 1:	
@@ -7193,6 +7222,289 @@ static void ai_mining_mode_brain(struct snis_entity *o)
 	}
 }
 
+static void ai_asteroid_miner_seek_asteroid(struct snis_entity *o,
+					    struct ai_asteroid_miner_data *ai)
+{
+	int i, j, count = 0;
+#define MAX_CANDIDATE_ASTEROIDS 5
+	struct {
+		int index;
+		double dist2;
+	} candidate[MAX_CANDIDATE_ASTEROIDS];
+
+	for (i = 0; i < MAX_CANDIDATE_ASTEROIDS; i++) {
+		candidate[i].index = -1;
+		candidate[i].dist2 = -1.0;
+	}
+
+	for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
+		double d2;
+
+		if (!go[i].alive || go[i].type != OBJTYPE_ASTEROID)
+			continue;
+		if (go[i].id == ai->last_asteroid_id)
+			continue;
+		d2 = dist3dsqrd(o->x - go[i].x, o->y - go[i].y, o->z - go[i].z);
+		for (j = 0; j < MAX_CANDIDATE_ASTEROIDS; j++) {
+			if (candidate[j].index == -1 || d2 < candidate[j].dist2) {
+				int k;
+
+				for (k = MAX_CANDIDATE_ASTEROIDS - 1; k > j; k--)
+					candidate[k] = candidate[k - 1];
+				candidate[j].index = i;
+				candidate[j].dist2 = d2;
+				if (count < MAX_CANDIDATE_ASTEROIDS)
+					count++;
+				break;
+			}
+		}
+	}
+
+	/* If all other asteroids are gone, allow re-mining the last asteroid */
+	if (count == 0 && ai->last_asteroid_id != (uint32_t) -1) {
+		int last = lookup_by_id(ai->last_asteroid_id);
+
+		if (last >= 0 && go[last].alive && go[last].type == OBJTYPE_ASTEROID) {
+			candidate[0].index = last;
+			count = 1;
+		}
+	}
+
+	if (count == 0) {
+		/* No asteroids in the system, fall back to normal patrol */
+		setup_patrol_route(o);
+		return;
+	}
+
+	int choice = snis_randn(count);
+
+	ai->asteroid_id = go[candidate[choice].index].id;
+	random_quat(&ai->orbital_orientation);
+	ai->mode = ASTEROID_MINER_APPROACH_ASTEROID;
+	ai_trace(o->id, "MINER TARGETED ASTEROID %u", ai->asteroid_id);
+}
+
+static void ai_asteroid_miner_approach_asteroid(struct snis_entity *o,
+						struct ai_asteroid_miner_data *ai)
+{
+	int i = lookup_by_id(ai->asteroid_id);
+
+	if (i < 0 || !go[i].alive || go[i].type != OBJTYPE_ASTEROID) {
+		ai->mode = ASTEROID_MINER_SEEK_ASTEROID;
+		return;
+	}
+
+	struct snis_entity *asteroid = &go[i];
+	float orbit_radius = 2.0f * estimate_asteroid_radius(asteroid->id) + 200.0f;
+	double dist2 = ai_ship_travel_towards(o, asteroid->x, asteroid->y, asteroid->z);
+
+	if (dist2 <= (orbit_radius * 1.25f) * (orbit_radius * 1.25f)) {
+		ai->mode = ASTEROID_MINER_ORBIT_AND_MINE;
+		ai->countdown = 300 + snis_randn(300);
+		ai_trace(o->id, "MINER COMMENCING ORBIT AND MINE ASTEROID %u", asteroid->id);
+	}
+}
+
+static void ai_asteroid_miner_orbit_and_mine(struct snis_entity *o,
+					     struct ai_asteroid_miner_data *ai)
+{
+	int i = lookup_by_id(ai->asteroid_id);
+
+	if (i < 0 || !go[i].alive || go[i].type != OBJTYPE_ASTEROID) {
+		if (ai->countdown < 200) {
+			int sb = find_nearest_object_of_type(o, OBJTYPE_STARBASE);
+
+			if (sb >= 0) {
+				ai->starbase_id = go[sb].id;
+				ai->mode = ASTEROID_MINER_TRAVEL_TO_STARBASE;
+				return;
+			}
+		}
+		ai->mode = ASTEROID_MINER_SEEK_ASTEROID;
+		return;
+	}
+
+	struct snis_entity *asteroid = &go[i];
+	float orbit_radius = 2.0f * estimate_asteroid_radius(asteroid->id) + 200.0f;
+
+	/* Orbital plane normal vector */
+	union vec3 up = { { 0.0f, 1.0f, 0.0f } };
+	union vec3 normal;
+
+	quat_rot_vec(&normal, &up, &ai->orbital_orientation);
+
+	/* Vector from asteroid to ship */
+	union vec3 p = { { (float) (o->x - asteroid->x),
+			   (float) (o->y - asteroid->y),
+			   (float) (o->z - asteroid->z) } };
+
+	/* Project p onto orbital plane: p_plane = p - (p . normal) * normal */
+	float dot = vec3_dot(&p, &normal);
+	union vec3 p_plane;
+
+	p_plane.v.x = p.v.x - dot * normal.v.x;
+	p_plane.v.y = p.v.y - dot * normal.v.y;
+	p_plane.v.z = p.v.z - dot * normal.v.z;
+
+	if (vec3_magnitude(&p_plane) < 0.01f) {
+		union vec3 right = { { 1.0f, 0.0f, 0.0f } };
+
+		quat_rot_vec(&p_plane, &right, &ai->orbital_orientation);
+	}
+	vec3_normalize_self(&p_plane);
+	vec3_mul_self(&p_plane, orbit_radius);
+
+	/* Rotate p_plane around normal by lead angle to find tangent target point */
+	union quat qrot;
+	union vec3 target_point;
+
+	quat_init_axis_v(&qrot, &normal, 35.0f * (float) M_PI / 180.0f);
+	quat_rot_vec(&target_point, &p_plane, &qrot);
+
+	set_ship_destination(o, asteroid->x + target_point.v.x,
+			     asteroid->y + target_point.v.y,
+			     asteroid->z + target_point.v.z);
+	o->tsd.ship.desired_velocity = 0.4 * ship_type[o->tsd.ship.shiptype].max_speed;
+
+	double d = dist3d(o->x - asteroid->x, o->y - asteroid->y, o->z - asteroid->z);
+
+	if (d <= LASER_RANGE && d <= orbit_radius * 1.5f) {
+		if (snis_randn(1000) < 80) {
+			union vec3 sparks_dir, sparks_offset;
+
+			add_mining_laserbeam(o->id, asteroid->id, MINING_LASER_DURATION);
+			sparks_dir.v.x = (float) (o->x - asteroid->x);
+			sparks_dir.v.y = (float) (o->y - asteroid->y);
+			sparks_dir.v.z = (float) (o->z - asteroid->z);
+			vec3_normalize_self(&sparks_dir);
+			vec3_mul(&sparks_offset, &sparks_dir,
+				 estimate_asteroid_radius(asteroid->id) * 0.8f);
+			(void) add_explosion(asteroid->x + sparks_offset.v.x,
+					     asteroid->y + sparks_offset.v.y,
+					     asteroid->z + sparks_offset.v.z,
+					     20, 20, 15, OBJTYPE_ASTEROID);
+		}
+	}
+
+	if (ai->countdown > 0)
+		ai->countdown--;
+
+	if (ai->countdown == 0) {
+		/* Load cargo bays with ore */
+		int ore_types[] = { 0, 1, 2, 3 }; /* GOLD, PLATINUM, GERMANIUM, URANIUM */
+		int cb;
+
+		for (cb = 0; cb < o->tsd.ship.ncargo_bays && cb < 2; cb++) {
+			int ore = ore_types[snis_randn(ARRAYSIZE(ore_types))];
+			float qty = 5.0f + (float) snis_randn(15);
+
+			o->tsd.ship.cargo[cb].contents.item = ore;
+			o->tsd.ship.cargo[cb].contents.qty = qty;
+			o->tsd.ship.cargo[cb].origin = asteroid->id;
+			o->tsd.ship.cargo[cb].dest = -1;
+			o->tsd.ship.cargo[cb].due_date = -1;
+			o->tsd.ship.cargo[cb].paid = 0.0f;
+		}
+
+		ai->last_asteroid_id = ai->asteroid_id;
+		int sb = find_nearest_object_of_type(o, OBJTYPE_STARBASE);
+
+		if (sb >= 0) {
+			ai->starbase_id = go[sb].id;
+			ai->mode = ASTEROID_MINER_TRAVEL_TO_STARBASE;
+			ai_trace(o->id, "MINER COMPLETED MINING, HEADING TO STARBASE %u",
+				 ai->starbase_id);
+		} else {
+			ai->mode = ASTEROID_MINER_SEEK_ASTEROID;
+			ai_trace(o->id, "MINER COMPLETED MINING, NO STARBASE FOUND");
+		}
+	}
+}
+
+static void ai_asteroid_miner_travel_to_starbase(struct snis_entity *o,
+						 struct ai_asteroid_miner_data *ai)
+{
+	int i = lookup_by_id(ai->starbase_id);
+
+	if (i < 0 || !go[i].alive || go[i].type != OBJTYPE_STARBASE) {
+		int sb = find_nearest_object_of_type(o, OBJTYPE_STARBASE);
+
+		if (sb < 0) {
+			ai->mode = ASTEROID_MINER_SEEK_ASTEROID;
+			return;
+		}
+		ai->starbase_id = go[sb].id;
+		i = sb;
+	}
+
+	struct snis_entity *sb = &go[i];
+	double dist2 = ai_ship_travel_towards(o, sb->x, sb->y, sb->z);
+
+	if (has_arrived_at_destination(o, dist2)) {
+		ai->mode = ASTEROID_MINER_UNLOAD_ORE;
+		ai->countdown = 100 + snis_randn(100);
+		ai_trace(o->id, "MINER ARRIVED AT STARBASE %u, UNLOADING", sb->id);
+	}
+}
+
+static void ai_asteroid_miner_unload_ore(struct snis_entity *o,
+					struct ai_asteroid_miner_data *ai)
+{
+	o->vx *= 0.8;
+	o->vy *= 0.8;
+	o->vz *= 0.8;
+	o->tsd.ship.desired_velocity = 0.0;
+
+	if (ai->countdown > 0)
+		ai->countdown--;
+
+	if (ai->countdown == 0) {
+		int cb;
+
+		for (cb = 0; cb < o->tsd.ship.ncargo_bays; cb++) {
+			o->tsd.ship.cargo[cb].contents.item = -1;
+			o->tsd.ship.cargo[cb].contents.qty = 0.0f;
+			o->tsd.ship.cargo[cb].origin = -1;
+			o->tsd.ship.cargo[cb].dest = -1;
+			o->tsd.ship.cargo[cb].due_date = -1;
+			o->tsd.ship.cargo[cb].paid = 0.0f;
+		}
+		ai->mode = ASTEROID_MINER_SEEK_ASTEROID;
+		ai_trace(o->id, "MINER UNLOAD COMPLETE, SEEKING NEXT ASTEROID");
+	}
+}
+
+static void ai_asteroid_miner_brain(struct snis_entity *o)
+{
+	int n = o->tsd.ship.nai_entries - 1;
+
+	if (n < 0)
+		return;
+
+	struct ai_asteroid_miner_data *ai = &o->tsd.ship.ai[n].u.asteroid_miner;
+
+	switch (ai->mode) {
+	case ASTEROID_MINER_SEEK_ASTEROID:
+		ai_asteroid_miner_seek_asteroid(o, ai);
+		break;
+	case ASTEROID_MINER_APPROACH_ASTEROID:
+		ai_asteroid_miner_approach_asteroid(o, ai);
+		break;
+	case ASTEROID_MINER_ORBIT_AND_MINE:
+		ai_asteroid_miner_orbit_and_mine(o, ai);
+		break;
+	case ASTEROID_MINER_TRAVEL_TO_STARBASE:
+		ai_asteroid_miner_travel_to_starbase(o, ai);
+		break;
+	case ASTEROID_MINER_UNLOAD_ORE:
+		ai_asteroid_miner_unload_ore(o, ai);
+		break;
+	default:
+		ai->mode = ASTEROID_MINER_SEEK_ASTEROID;
+		break;
+	}
+}
+
 static void ai_patrol_mode_brain(struct snis_entity *o)
 {
 	int n = o->tsd.ship.nai_entries - 1;
@@ -7754,6 +8066,9 @@ static void ai_brain(struct snis_entity *o)
 	case AI_MODE_CHASE_CARGO:
 		ai_chase_cargo_mode_brain(o);
 		break;
+	case AI_MODE_ASTEROID_MINER:
+		ai_asteroid_miner_brain(o);
+		break;
 	case AI_MODE_RTS_OUT_OF_FUEL:
 		ai_trace(o->id, "RTS MODE OUT OF FUEL");
 		o->vx = 0;
@@ -7942,6 +8257,15 @@ static void ship_collision_avoidance(void *context, void *entity)
 		int i = ship_tow_target(o);
 
 		if (i >= 0 && go[i].id == obstacle->id)
+			return;
+	}
+
+	/* Asteroid miner should not avoid the asteroid it is approaching or mining */
+	if (obstacle->type == OBJTYPE_ASTEROID && o->tsd.ship.nai_entries > 0) {
+		int n = o->tsd.ship.nai_entries - 1;
+
+		if (o->tsd.ship.ai[n].ai_mode == AI_MODE_ASTEROID_MINER &&
+		    o->tsd.ship.ai[n].u.asteroid_miner.asteroid_id == obstacle->id)
 			return;
 	}
 
@@ -27080,6 +27404,13 @@ static void send_econ_update_ship_packet(struct game_client *c,
 		if (o->tsd.ship.ai[n].ai_mode == AI_MODE_CHASE_CARGO) {
 			victim_id = o->tsd.ship.ai[n].u.chase_cargo.cargo;
 		}
+		if (o->tsd.ship.ai[n].ai_mode == AI_MODE_ASTEROID_MINER) {
+			if (o->tsd.ship.ai[n].u.asteroid_miner.mode == ASTEROID_MINER_TRAVEL_TO_STARBASE ||
+			    o->tsd.ship.ai[n].u.asteroid_miner.mode == ASTEROID_MINER_UNLOAD_ORE)
+				victim_id = o->tsd.ship.ai[n].u.asteroid_miner.starbase_id;
+			else
+				victim_id = o->tsd.ship.ai[n].u.asteroid_miner.asteroid_id;
+		}
 	}
 
 	if (c->debug_ai) {
@@ -27125,6 +27456,12 @@ static void send_econ_update_ship_packet(struct game_client *c,
 				break;
 			case AI_MODE_CHASE_CARGO:
 				ai[i] = 'c';
+				break;
+			case AI_MODE_ASTEROID_MINER:
+				ai[i] = 'm';
+				break;
+			case AI_MODE_MINING_BOT:
+				ai[i] = 'b';
 				break;
 			default:
 				ai[i] = '?';

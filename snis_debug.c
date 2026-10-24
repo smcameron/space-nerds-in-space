@@ -27,6 +27,7 @@
 #include "ship_registration.h"
 #include "corporations.h"
 #include "build_bug_on.h"
+#include "arraysize.h"
 
 static char *label = "";
 
@@ -180,8 +181,15 @@ void snis_debug_dump(char *cmd, struct snis_entity go[], int nstarbase_models,
 #endif
 		printfn("- AI STACK");
 		for (i = 0; i < o->tsd.ship.nai_entries; i++) {
-			printfn("--- %s",
-				ai_mode_name[o->tsd.ship.ai[i].ai_mode]);
+			const char *name = "UNKNOWN";
+			int mode = o->tsd.ship.ai[i].ai_mode;
+
+			if (mode >= 0 && (size_t) mode < ARRAYSIZE(ai_mode_name))
+				name = ai_mode_name[mode];
+			else if (mode >= AI_MODE_RTS_FIRST_COMMAND &&
+				 (size_t) (mode - AI_MODE_RTS_FIRST_COMMAND) < ARRAYSIZE(ai_rts_mode_name))
+				name = ai_rts_mode_name[mode - AI_MODE_RTS_FIRST_COMMAND];
+			printfn("--- %s", name);
 			switch (o->tsd.ship.ai[i].ai_mode) {
 			case AI_MODE_IDLE:
 				break;
@@ -314,6 +322,34 @@ void snis_debug_dump(char *cmd, struct snis_entity go[], int nstarbase_models,
 					o->tsd.ship.ai[i].u.tow_ship.starbase_dispatcher);
 				printfn("----- SHIP CONNECTED %d",
 					o->tsd.ship.ai[i].u.tow_ship.ship_connected);
+				break;
+			case AI_MODE_ASTEROID_MINER:
+				switch (o->tsd.ship.ai[i].u.asteroid_miner.mode) {
+				case ASTEROID_MINER_SEEK_ASTEROID:
+					printfn("-- MODE SEEK ASTEROID");
+					break;
+				case ASTEROID_MINER_APPROACH_ASTEROID:
+					printfn("-- MODE APPROACH ASTEROID");
+					break;
+				case ASTEROID_MINER_ORBIT_AND_MINE:
+					printfn("-- MODE ORBIT AND MINE");
+					break;
+				case ASTEROID_MINER_TRAVEL_TO_STARBASE:
+					printfn("-- MODE TRAVEL TO STARBASE");
+					break;
+				case ASTEROID_MINER_UNLOAD_ORE:
+					printfn("-- MODE UNLOAD ORE");
+					break;
+				default:
+					printfn("-- ASTEROID MINER MODE UNKNOWN");
+					break;
+				}
+				printfn("----- ASTEROID %u",
+					o->tsd.ship.ai[i].u.asteroid_miner.asteroid_id);
+				printfn("----- STARBASE %u",
+					o->tsd.ship.ai[i].u.asteroid_miner.starbase_id);
+				printfn("----- COUNTDOWN %hu",
+					o->tsd.ship.ai[i].u.asteroid_miner.countdown);
 				break;
 			case AI_MODE_RTS_STANDBY:
 				break;
