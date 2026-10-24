@@ -397,11 +397,14 @@ int voice_chat_playback_level(void)
 #else
 #include <stdio.h>
 #include <stdint.h>
+#include "snis_voice_chat.h"
+
 void voice_chat_setup_threads(void)
 {
 }
 
-void voice_chat_start_recording(void)
+void voice_chat_start_recording(__attribute__((unused)) uint8_t destination,
+				__attribute__((unused)) uint32_t user_channel)
 {
 }
 
@@ -413,7 +416,9 @@ void voice_chat_stop_threads(void)
 {
 }
 
-void voice_chat_play_opus_packet(uint8_t *opus_buffer, int buflen)
+void voice_chat_play_opus_packet(__attribute__((unused)) uint8_t *opus_buffer,
+				__attribute__((unused)) int buflen,
+				__attribute__((unused)) int audio_chain)
 {
 }
 
@@ -427,4 +432,3 @@ int voice_chat_playback_level(void)
 	return 0;
 }
 #endif
-

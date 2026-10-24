@@ -888,33 +888,68 @@ void wwviaudio_set_voip_compressor_params(float threshold, float limit)
 
 #else /* stubs only... */
 
-int wwviaudio_initialize_portaudio() { return 0; }
-void wwviaudio_stop_portaudio() { return; }
-void wwviaudio_set_nomusic() { return; }
-int wwviaudio_read_ogg_clip(int clipnum, char *filename) { return 0; }
+#include <stddef.h>
+#include <stdint.h>
+#include "wwviaudio.h"
 
-void wwviaudio_pause_audio() { return; }
-void wwviaudio_resume_audio() { return; }
+void wwviaudio_set_nomusic(void) { return; }
+int wwviaudio_set_sound_device(__attribute__((unused)) int device) { return 0; }
+int wwviaudio_get_sound_device(void) { return -1; }
+int wwviaudio_initialize_portaudio(__attribute__((unused)) int maximum_concurrent_sounds,
+	__attribute__((unused)) int maximum_sound_clips) { return 0; }
+void wwviaudio_stop_portaudio(void) { return; }
+int wwviaudio_read_ogg_clip_into_allocated_buffer(__attribute__((unused)) char *filename,
+	int16_t **sample, int *nsamples)
+{
+	*sample = NULL;
+	*nsamples = 0;
+	return -1;
+}
+int wwviaudio_read_ogg_clip(__attribute__((unused)) int sound_number,
+	__attribute__((unused)) char *filename) { return 0; }
 
-void wwviaudio_silence_music() { return; }
-void wwviaudio_resume_music() { return; }
-void wwviaudio_silence_sound_effects() { return; }
-void wwviaudio_resume_sound_effects() { return; }
-void wwviaudio_toggle_sound_effects() { return; }
+void wwviaudio_pause_audio(void) { return; }
+void wwviaudio_resume_audio(void) { return; }
 
-int wwviaudio_play_music(int which_sound) { return 0; }
-void wwviaudio_cancel_music() { return; }
-void wwviaudio_toggle_music() { return; }
-int wwviaudio_add_sound(int which_sound) { return 0; }
-void wwviaudio_add_sound_low_priority(int which_sound) { return; }
-void wwviaudio_cancel_sound(int queue_entry) { return; }
-void wwviaudio_cancel_all_sounds() { return; }
-int wwviaudio_set_sound_device(int device) { return 0; }
-void wwviaudio_list_devices(void) {}
-void wwviaudio_append_to_audio_chain(int16_t *samples, int nsamples) {}
-int wwviaudio_get_mixer_cycle_count(void) { return 0; }
-void wwviaudio_set_compressor_params(float threshold, float limit) {}
-void wwviaudio_set_voip_compressor_params(float threshold, float limit) {}
+int wwviaudio_play_music(__attribute__((unused)) int sound_number) { return 0; }
+void wwviaudio_silence_music(void) { return; }
+void wwviaudio_resume_music(void) { return; }
+void wwviaudio_toggle_music(void) { return; }
+void wwviaudio_cancel_music(void) { return; }
+
+int wwviaudio_add_sound(__attribute__((unused)) int sound_number) { return 0; }
+int wwviaudio_add_one_shot_sound(__attribute__((unused)) char *filename) { return 0; }
+int wwviaudio_add_one_shot_pcm_data(__attribute__((unused)) int16_t *samples,
+	__attribute__((unused)) int nsamples,
+	__attribute__((unused)) void (*callback)(void *),
+	__attribute__((unused)) void *cookie) { return 0; }
+void wwviaudio_append_to_audio_chain(__attribute__((unused)) int16_t *samples,
+	__attribute__((unused)) int nsamples, __attribute__((unused)) int chain,
+	__attribute__((unused)) void (*callback)(void *),
+	__attribute__((unused)) void *cookie) { return; }
+int wwviaudio_add_sound_segment(__attribute__((unused)) int sound_number,
+	__attribute__((unused)) float initial_volume,
+	__attribute__((unused)) float target_volume,
+	__attribute__((unused)) float begin, __attribute__((unused)) float end,
+	__attribute__((unused)) void (*callback)(void *cookie),
+	__attribute__((unused)) void *cookie) { return 0; }
+void wwviaudio_add_sound_low_priority(__attribute__((unused)) int sound_number) { return; }
+void wwviaudio_silence_sound_effects(void) { return; }
+void wwviaudio_resume_sound_effects(void) { return; }
+void wwviaudio_toggle_sound_effects(void) { return; }
+void wwviaudio_cancel_sound(__attribute__((unused)) int channel) { return; }
+void wwviaudio_cancel_all_sounds(void) { return; }
+void wwviaudio_list_devices(void) { return; }
+int wwviaudio_start_audio_capture(__attribute__((unused)) int16_t *buffer,
+	__attribute__((unused)) int nsamples,
+	__attribute__((unused)) void (*callback)(void *, int16_t *, int),
+	__attribute__((unused)) void *cookie) { return -1; }
+int wwviaudio_stop_audio_capture(void) { return 0; }
+unsigned int wwviaudio_get_mixer_cycle_count(void) { return 0; }
+void wwviaudio_set_compressor_params(__attribute__((unused)) float threshold,
+	__attribute__((unused)) float limit) { return; }
+void wwviaudio_set_voip_compressor_params(__attribute__((unused)) float threshold,
+	__attribute__((unused)) float limit) { return; }
 
 #endif
 
