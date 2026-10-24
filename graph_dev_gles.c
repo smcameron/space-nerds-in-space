@@ -60,6 +60,7 @@ static int draw_billboard_wireframe = 0;
 static int draw_msaa_samples = 0;
 static int draw_render_to_texture = 0;
 static int draw_smaa = 0;
+static int smaa_unavailable = 0; /* SMAA shaders failed to build */
 static int draw_smaa_edge = 0;
 static int draw_smaa_blend = 0;
 static int draw_atmospheres = 1;
@@ -3058,7 +3059,7 @@ void graph_dev_end_frame(void)
 	 if (post_target0.fbo != 0 && sgc.fbo_3d == post_target0.fbo) {
 		GLuint result_texture;
 
-		if (draw_smaa) {
+		if (draw_smaa && !smaa_unavailable) {
 			/* do the multi stage smaa process:
 				render to texture -> edge_fbo -> blend_fbo -> screen back buffer */
 			resize_fbo_if_needed(&smaa_effect.edge_target);
@@ -3448,6 +3449,13 @@ static void setup_smaa_effect_shader(const char *basename, struct graph_dev_gl_f
 	maybe_unload_shader(&shader->meta, &shader->program_id);
 	shader->program_id = load_concat_shaders(shader_directory,
 				vert_header, 3, filenames, frag_header, 3, filenames);
+	if (!shader->program_id) {
+		/* SMAA.hlsl uses loops that GLSL ES 1.00 permits drivers to reject,
+		 * and WebGL does reject them.  SMAA is off by default; leave it unavailable.
+		 */
+		smaa_unavailable = 1;
+		return;
+	}
 	/* create the VAO for this shader */
 	graph_dev_gen_vao(&shader->vao_id);
 
