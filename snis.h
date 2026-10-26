@@ -231,6 +231,7 @@ struct damcon_data;
 #define AI_MODE_AVOID_MISSILE 12
 #define AI_MODE_CHASE_CARGO 13
 #define AI_MODE_ASTEROID_MINER 14
+#define AI_MODE_DOCK_AT_STARBASE 15
 /* NOTE: These RTS modes must be contiguous and match the order in rts_unit_data.c order_data[] */
 #define AI_MODE_RTS_FIRST_COMMAND 111
 #define AI_MODE_RTS_STANDBY 111
@@ -259,6 +260,7 @@ static const char * const ai_mode_name[] = {
 	"AVOID MISSILE",
 	"CHASE CARGO",
 	"ASTEROID MINER",
+	"DOCK AT STARBASE",
 };
 
 static const char * const ai_rts_mode_name[] = {
@@ -404,6 +406,17 @@ struct ai_asteroid_miner_data {
 #define ASTEROID_MINER_UNLOAD_ORE 4
 };
 
+struct ai_dock_at_starbase_data {
+	uint32_t starbase_id;
+	uint32_t docking_port_id;
+	uint16_t timer;
+	uint8_t state;
+#define DOCK_STATE_STAGE 0
+#define DOCK_STATE_APPROACH 1
+#define DOCK_STATE_DOCKED 2
+#define DOCK_STATE_UNDOCK 3
+};
+
 union ai_data {
 	struct ai_attack_data attack;
 	struct ai_avoid_missile_data avoid_missile;
@@ -416,6 +429,7 @@ union ai_data {
 	struct ai_tow_ship_data tow_ship;
 	struct ai_chase_cargo_data chase_cargo;
 	struct ai_asteroid_miner_data asteroid_miner;
+	struct ai_dock_at_starbase_data dock_at_starbase;
 	struct ai_rts_standby_data standby;
 	struct ai_rts_atk_near_enemy_data atk_near_enemy;
 	struct ai_rts_occupy_base_data occupy_base;

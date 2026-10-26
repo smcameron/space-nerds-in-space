@@ -7448,6 +7448,450 @@ static void ai_asteroid_miner_orbit_and_mine(struct snis_entity *o,
 	}
 }
 
+static void revoke_docking_permission(struct snis_entity *docking_port, uint32_t player_id);
+static double distance_from_ship_to_docking_port(struct snis_entity *ship,
+						 struct snis_entity *docking_port);
+
+/* Return 1 if any player ship is within dist of the docking port */
+static int player_near_docking_port(struct snis_entity *docking_port, double dist)
+{
+	int i;
+	double dist2 = dist * dist;
+
+	for (i = 0; i < nbridges; i++) {
+		int si = lookup_by_id(bridgelist[i].shipid);
+
+		if (si < 0 || !go[si].alive || go[si].type != OBJTYPE_BRIDGE)
+			continue;
+		if (object_dist2(&go[si], docking_port) < dist2)
+			return 1;
+	}
+	return 0;
+}
+
+/* Return 1 if another NPC ship is already targeting this docking port */
+static int npc_targeting_docking_port(uint32_t docking_port_id, uint32_t exclude_ship_id)
+{
+	int i, j;
+
+	for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
+		struct snis_entity *s = &go[i];
+
+		if (!s->alive || s->type != OBJTYPE_NPCSHIP || s->id == exclude_ship_id)
+			continue;
+		for (j = 0; j < s->tsd.ship.nai_entries; j++) {
+			if (s->tsd.ship.ai[j].ai_mode == AI_MODE_DOCK_AT_STARBASE &&
+			    s->tsd.ship.ai[j].u.dock_at_starbase.docking_port_id == docking_port_id)
+				return 1;
+		}
+	}
+	return 0;
+}
+
+static int starbase_allows_npc_docking(struct snis_entity *starbase, struct snis_entity *ship)
+{
+	int i;
+
+	if (rts_mode)
+		return 0;
+	if (!starbase || !starbase->alive || starbase->type != OBJTYPE_STARBASE)
+		return 0;
+	if (docking_by_faction &&
+	    !(starbase->tsd.starbase.factions_allowed & (1 << ship->sdata.faction)))
+		return 0;
+	for (i = 0; i < starbase->tsd.starbase.nattackers; i++) {
+		if ((uint32_t) starbase->tsd.starbase.attacker[i] == ship->id)
+			return 0;
+	}
+	return 1;
+}
+
+/* Pick and reserve an available docking port on starbase for an NPC ship.
+ * Always ignores port 0 and ensures at least one port on the starbase remains
+ * completely open for players. Returns the go[] index of the chosen docking port,
+ * or -1 if none is available.
+ */
+static int npc_choose_docking_port(struct snis_entity *ship, struct snis_entity *starbase)
+{
+	int i, model, nports;
+	int free_port_count = 0;
+	int best_dpi = -1;
+	int best_slot = -1;
+	double best_dist2 = -1.0;
+	double max_speed;
+
+	if (!starbase_allows_npc_docking(starbase, ship))
+		return -1;
+	if (ship->tsd.ship.shiptype == SHIP_CLASS_ESCAPE_POD)
+		return -1;
+
+	model = starbase->id % nstarbase_models;
+	if (!docking_port_info[model])
+		return -1;
+	nports = docking_port_info[model]->nports;
+	if (nports < 2)
+		return -1;
+
+	max_speed = ship_type[ship->tsd.ship.shiptype].max_speed;
+
+	/* Count how many ports are completely free across the starbase */
+	for (i = 0; i < nports; i++) {
+		int dpi = lookup_by_id(starbase->tsd.starbase.docking_port[i]);
+
+		if (dpi < 0 || !go[dpi].alive || go[dpi].type != OBJTYPE_DOCKING_PORT)
+			continue;
+		if (go[dpi].tsd.docking_port.docked_guy != (uint32_t) -1)
+			continue;
+		if (starbase->tsd.starbase.expected_docker[i] != -1 &&
+		    starbase->tsd.starbase.expected_docker_timer[i] > 0 &&
+		    (uint32_t) starbase->tsd.starbase.expected_docker[i] != ship->id)
+			continue;
+		if (npc_targeting_docking_port(go[dpi].id, ship->id))
+			continue;
+		free_port_count++;
+	}
+
+	/* Leave at least one free port for players */
+	if (free_port_count < 2)
+		return -1;
+
+	/* Consider only ports 1 .. nports - 1, leaving port 0 untouched by NPCs */
+	for (i = 1; i < nports; i++) {
+		int dpi = lookup_by_id(starbase->tsd.starbase.docking_port[i]);
+		double d2;
+		float port_speed;
+
+		if (dpi < 0 || !go[dpi].alive || go[dpi].type != OBJTYPE_DOCKING_PORT)
+			continue;
+		if (go[dpi].tsd.docking_port.docked_guy != (uint32_t) -1)
+			continue;
+		if (starbase->tsd.starbase.expected_docker[i] != -1 &&
+		    starbase->tsd.starbase.expected_docker_timer[i] > 0 &&
+		    (uint32_t) starbase->tsd.starbase.expected_docker[i] != ship->id)
+			continue;
+		if (npc_targeting_docking_port(go[dpi].id, ship->id))
+			continue;
+		if (player_near_docking_port(&go[dpi], 350.0))
+			continue;
+
+		port_speed = vec3_magnitude(&go[dpi].tsd.docking_port.vel);
+		if (port_speed > 0.75f * (float) max_speed)
+			continue;
+
+		d2 = object_dist2(ship, &go[dpi]);
+		if (best_dpi < 0 || d2 < best_dist2) {
+			best_dpi = dpi;
+			best_slot = i;
+			best_dist2 = d2;
+		}
+	}
+
+	if (best_dpi >= 0 && best_slot >= 1) {
+		starbase->tsd.starbase.expected_docker[best_slot] = ship->id;
+		starbase->tsd.starbase.expected_docker_timer[best_slot] = STARBASE_DOCK_TIME;
+	}
+	return best_dpi;
+}
+
+static int maybe_push_dock_at_starbase(struct snis_entity *o, struct snis_entity *sb)
+{
+	int n = o->tsd.ship.nai_entries;
+	int dpi;
+
+	if (n >= MAX_AI_STACK_ENTRIES)
+		return 0;
+
+	dpi = npc_choose_docking_port(o, sb);
+	if (dpi < 0)
+		return 0;
+
+	o->tsd.ship.ai[n].ai_mode = AI_MODE_DOCK_AT_STARBASE;
+	o->tsd.ship.ai[n].u.dock_at_starbase.starbase_id = sb->id;
+	o->tsd.ship.ai[n].u.dock_at_starbase.docking_port_id = go[dpi].id;
+	o->tsd.ship.ai[n].u.dock_at_starbase.state = DOCK_STATE_STAGE;
+	o->tsd.ship.ai[n].u.dock_at_starbase.timer = 600; /* 60 seconds max to stage */
+	o->tsd.ship.nai_entries++;
+	ai_trace(o->id, "PUSH DOCK AT STARBASE %u PORT %u", sb->id, go[dpi].id);
+	return 1;
+}
+
+static void abort_npc_dock_at_starbase(struct snis_entity *o)
+{
+	int n = o->tsd.ship.nai_entries - 1;
+
+	o->tsd.ship.docking_magnets = 0;
+	remove_ship_from_docking_ports(o->id);
+	if (n < 0)
+		return;
+
+	/* If underlying mode is asteroid miner, restore its unload countdown and pop */
+	if (n > 0 && o->tsd.ship.ai[n - 1].ai_mode == AI_MODE_ASTEROID_MINER) {
+		o->tsd.ship.ai[n - 1].u.asteroid_miner.countdown = 100 + snis_randn(100);
+		pop_ai_stack(o);
+		return;
+	}
+
+	/* Otherwise convert in-place to normal hangout near the starbase */
+	o->tsd.ship.ai[n].ai_mode = AI_MODE_HANGOUT;
+	o->tsd.ship.ai[n].u.hangout.time_to_go = 100 + snis_randn(100);
+	o->tsd.ship.desired_velocity = 0.0;
+}
+
+static void ai_dock_at_starbase_brain(struct snis_entity *o)
+{
+	int n = o->tsd.ship.nai_entries - 1;
+	struct ai_dock_at_starbase_data *ai;
+	int sbi, dpi;
+	struct snis_entity *sb, *port;
+	union vec3 port_fwd = { { 1.0f, 0.0f, 0.0f } };
+	union vec3 stage_pos, dock_pos, rel_to_port, lat_vec;
+	float d_behind, d_lat;
+	double max_speed;
+
+	if (n < 0)
+		return;
+	ai = &o->tsd.ship.ai[n].u.dock_at_starbase;
+
+	sbi = lookup_by_id(ai->starbase_id);
+	dpi = lookup_by_id(ai->docking_port_id);
+	if (sbi < 0 || !go[sbi].alive || go[sbi].type != OBJTYPE_STARBASE ||
+	    dpi < 0 || !go[dpi].alive || go[dpi].type != OBJTYPE_DOCKING_PORT) {
+		ai_trace(o->id, "DOCK TARGET GONE, ABORTING DOCK");
+		abort_npc_dock_at_starbase(o);
+		return;
+	}
+	sb = &go[sbi];
+	port = &go[dpi];
+
+	if (!starbase_allows_npc_docking(sb, o)) {
+		abort_npc_dock_at_starbase(o);
+		return;
+	}
+
+	quat_rot_vec_self(&port_fwd, &port->orientation);
+	max_speed = ship_type[o->tsd.ship.shiptype].max_speed;
+
+	/* While staging or approaching, yield if port is taken or a player is near it */
+	if (ai->state == DOCK_STATE_STAGE || ai->state == DOCK_STATE_APPROACH) {
+		int slot = port->tsd.docking_port.portnumber;
+		int port_taken = (port->tsd.docking_port.docked_guy != (uint32_t) -1 &&
+				  port->tsd.docking_port.docked_guy != o->id);
+		int perm_lost = (slot < MAX_DOCKING_PORTS &&
+				 (uint32_t) sb->tsd.starbase.expected_docker[slot] != o->id);
+
+		if (port_taken || perm_lost || player_near_docking_port(port, 350.0)) {
+			int new_dpi;
+
+			revoke_docking_permission(port, o->id);
+			new_dpi = npc_choose_docking_port(o, sb);
+			if (new_dpi >= 0) {
+				ai->docking_port_id = go[new_dpi].id;
+				ai->state = DOCK_STATE_STAGE;
+				ai->timer = 600;
+				ai_trace(o->id, "SWITCHED TO DOCKING PORT %u", ai->docking_port_id);
+				return;
+			}
+			ai_trace(o->id, "YIELDING DOCKING PORT %u", port->id);
+			abort_npc_dock_at_starbase(o);
+			return;
+		}
+		if (slot < MAX_DOCKING_PORTS)
+			sb->tsd.starbase.expected_docker_timer[slot] = STARBASE_DOCK_TIME;
+	}
+
+	rel_to_port.v.x = (float) (o->x - port->x);
+	rel_to_port.v.y = (float) (o->y - port->y);
+	rel_to_port.v.z = (float) (o->z - port->z);
+	d_behind = -vec3_dot(&rel_to_port, &port_fwd);
+	lat_vec.v.x = rel_to_port.v.x + d_behind * port_fwd.v.x;
+	lat_vec.v.y = rel_to_port.v.y + d_behind * port_fwd.v.y;
+	lat_vec.v.z = rel_to_port.v.z + d_behind * port_fwd.v.z;
+	d_lat = vec3_magnitude(&lat_vec);
+
+	dock_pos.v.x = (float) port->x - 25.0f * port_fwd.v.x;
+	dock_pos.v.y = (float) port->y - 25.0f * port_fwd.v.y;
+	dock_pos.v.z = (float) port->z - 25.0f * port_fwd.v.z;
+
+	switch (ai->state) {
+	case DOCK_STATE_STAGE: {
+		union vec3 r_ship, r_stage, aim;
+		float d_stage;
+
+		if (ai->timer > 0 && object_dist2(o, sb) < 1500.0 * 1500.0)
+			ai->timer--;
+		if (ai->timer == 0) {
+			ai_trace(o->id, "DOCK STAGE TIMED OUT");
+			abort_npc_dock_at_starbase(o);
+			return;
+		}
+
+		stage_pos.v.x = (float) port->x - 120.0f * port_fwd.v.x;
+		stage_pos.v.y = (float) port->y - 120.0f * port_fwd.v.y;
+		stage_pos.v.z = (float) port->z - 120.0f * port_fwd.v.z;
+
+		d_stage = dist3d(o->x - stage_pos.v.x, o->y - stage_pos.v.y, o->z - stage_pos.v.z);
+		if (d_stage < 90.0f ||
+		    (d_behind > 20.0f && d_behind < 200.0f && d_lat < 0.7f * d_behind)) {
+			ai->state = DOCK_STATE_APPROACH;
+			ai->timer = 450; /* 45 seconds max for final approach */
+			ai_trace(o->id, "DOCK STAGE -> APPROACH PORT %u", port->id);
+			return;
+		}
+
+		/* If staging point is on the far side of the starbase, arc around the station */
+		r_ship.v.x = (float) (o->x - sb->x);
+		r_ship.v.y = (float) (o->y - sb->y);
+		r_ship.v.z = (float) (o->z - sb->z);
+		r_stage.v.x = stage_pos.v.x - (float) sb->x;
+		r_stage.v.y = stage_pos.v.y - (float) sb->y;
+		r_stage.v.z = stage_pos.v.z - (float) sb->z;
+
+		aim = stage_pos;
+		if (vec3_dot(&r_ship, &r_stage) < 0.0f && vec3_magnitude(&r_ship) < 250.0f) {
+			union vec3 n_ship = r_ship, n_stage = r_stage, mid;
+
+			vec3_normalize_self(&n_ship);
+			vec3_normalize_self(&n_stage);
+			vec3_add(&mid, &n_ship, &n_stage);
+			if (vec3_magnitude(&mid) < 0.1f) {
+				mid.v.x = -n_ship.v.y;
+				mid.v.y = n_ship.v.x;
+				mid.v.z = 0.0f;
+			}
+			vec3_normalize_self(&mid);
+			vec3_mul_self(&mid, 260.0f);
+			aim.v.x = (float) sb->x + mid.v.x;
+			aim.v.y = (float) sb->y + mid.v.y;
+			aim.v.z = (float) sb->z + mid.v.z;
+		}
+
+		set_ship_destination(o, aim.v.x, aim.v.y, aim.v.z);
+		o->tsd.ship.desired_velocity = clampf(d_stage * 0.12f, 2.0f, (float) max_speed);
+		check_for_nearby_targets(o);
+		break;
+	}
+	case DOCK_STATE_APPROACH: {
+		float d_carrot, d_dock;
+		union vec3 carrot_pos;
+
+		if (ai->timer > 0)
+			ai->timer--;
+		if (ai->timer == 0) {
+			ai_trace(o->id, "DOCK APPROACH TIMED OUT");
+			abort_npc_dock_at_starbase(o);
+			return;
+		}
+
+		/* If we overshot the port or drifted far off the corridor, re-stage */
+		if (d_behind < -20.0f || d_lat > 200.0f) {
+			ai->state = DOCK_STATE_STAGE;
+			return;
+		}
+
+		d_dock = dist3d(o->x - dock_pos.v.x, o->y - dock_pos.v.y, o->z - dock_pos.v.z);
+		if (d_dock <= 30.0f || distance_from_ship_to_docking_port(o, port) <= 35.0) {
+			int slot = port->tsd.docking_port.portnumber;
+
+			o->tsd.ship.docking_magnets = 1;
+			port->tsd.docking_port.docked_guy = o->id;
+			o->tsd.ship.velocity = 0.0;
+			o->tsd.ship.desired_velocity = 0.0;
+			o->tsd.ship.yaw_velocity = 0.0;
+			o->tsd.ship.pitch_velocity = 0.0;
+			o->tsd.ship.roll_velocity = 0.0;
+			ai->state = DOCK_STATE_DOCKED;
+			ai->timer = 300 + snis_randn(300); /* 30-60 seconds docked */
+			if (slot < MAX_DOCKING_PORTS)
+				sb->tsd.starbase.expected_docker_timer[slot] = ai->timer + 100;
+			ai_trace(o->id, "DOCKED AT STARBASE %u PORT %u FOR %hu TICKS",
+				 sb->id, port->id, ai->timer);
+			return;
+		}
+
+		d_carrot = clampf(0.6f * d_behind, 25.0f, 220.0f);
+		carrot_pos.v.x = (float) port->x - d_carrot * port_fwd.v.x;
+		carrot_pos.v.y = (float) port->y - d_carrot * port_fwd.v.y;
+		carrot_pos.v.z = (float) port->z - d_carrot * port_fwd.v.z;
+
+		set_ship_destination(o, carrot_pos.v.x, carrot_pos.v.y, carrot_pos.v.z);
+		o->tsd.ship.desired_velocity =
+			clampf(0.10f * d_dock, 1.2f, 0.7f * (float) max_speed);
+		check_for_nearby_targets(o);
+		break;
+	}
+	case DOCK_STATE_DOCKED:
+		if (port->tsd.docking_port.docked_guy != o->id || !o->tsd.ship.docking_magnets) {
+			o->tsd.ship.docking_magnets = 0;
+			ai->state = DOCK_STATE_UNDOCK;
+			ai->timer = 50;
+			return;
+		}
+		o->tsd.ship.desired_velocity = 0.0;
+		o->tsd.ship.velocity = 0.0;
+		if (ai->timer > 0)
+			ai->timer--;
+		if (ai->timer == 0) {
+			o->tsd.ship.docking_magnets = 0;
+			port->tsd.docking_port.docked_guy = (uint32_t) -1;
+			revoke_docking_permission(port, o->id);
+			ai->state = DOCK_STATE_UNDOCK;
+			ai->timer = 50;
+			ai_trace(o->id, "UNDOCKING FROM STARBASE %u PORT %u", sb->id, port->id);
+		}
+		break;
+	case DOCK_STATE_UNDOCK: {
+		union vec3 radial, depart_dir;
+		float port_speed, dot_fwd_vel;
+
+		if (ai->timer > 0)
+			ai->timer--;
+		if (ai->timer == 0 || object_dist2(o, sb) > 350.0 * 350.0) {
+			ai_trace(o->id, "FINISHED UNDOCKING FROM STARBASE %u", sb->id);
+			pop_ai_stack(o);
+			return;
+		}
+
+		radial.v.x = (float) (o->x - sb->x);
+		radial.v.y = (float) (o->y - sb->y);
+		radial.v.z = (float) (o->z - sb->z);
+		if (vec3_magnitude(&radial) < 0.01f)
+			radial.v.x = 1.0f;
+		vec3_normalize_self(&radial);
+
+		port_speed = vec3_magnitude(&port->tsd.docking_port.vel);
+		if (port_speed > 0.05f)
+			dot_fwd_vel = fabsf(vec3_dot(&port_fwd, &port->tsd.docking_port.vel)) /
+				      port_speed;
+		else
+			dot_fwd_vel = 1.0f;
+
+		/* If port faces perpendicular to its motion (into the station), depart opposite port_fwd */
+		if (dot_fwd_vel < 0.3f) {
+			depart_dir.v.x = radial.v.x - port_fwd.v.x;
+			depart_dir.v.y = radial.v.y - port_fwd.v.y;
+			depart_dir.v.z = radial.v.z - port_fwd.v.z;
+		} else {
+			depart_dir.v.x = radial.v.x + port_fwd.v.x;
+			depart_dir.v.y = radial.v.y + port_fwd.v.y;
+			depart_dir.v.z = radial.v.z + port_fwd.v.z;
+		}
+		if (vec3_magnitude(&depart_dir) < 0.01f)
+			depart_dir = radial;
+		vec3_normalize_self(&depart_dir);
+
+		set_ship_destination(o, o->x + depart_dir.v.x * 400.0f,
+				     o->y + depart_dir.v.y * 400.0f,
+				     o->z + depart_dir.v.z * 400.0f);
+		o->tsd.ship.desired_velocity = 0.6 * max_speed;
+		check_for_nearby_targets(o);
+		break;
+	}
+	default:
+		abort_npc_dock_at_starbase(o);
+		break;
+	}
+}
+
 static void ai_asteroid_miner_travel_to_starbase(struct snis_entity *o,
 						 struct ai_asteroid_miner_data *ai)
 {
@@ -7471,6 +7915,8 @@ static void ai_asteroid_miner_travel_to_starbase(struct snis_entity *o,
 		ai->mode = ASTEROID_MINER_UNLOAD_ORE;
 		ai->countdown = 100 + snis_randn(100);
 		ai_trace(o->id, "MINER ARRIVED AT STARBASE %u, UNLOADING", sb->id);
+		if (snis_randn(100) < 50 && maybe_push_dock_at_starbase(o, sb))
+			ai->countdown = 1;
 	}
 }
 
@@ -7553,6 +7999,17 @@ static void ai_patrol_mode_brain(struct snis_entity *o)
 			return;
 		}
 		set_patrol_waypoint_destination(o, (patrol->dest + 1) % patrol->npoints);
+		if (o->tsd.ship.ai[n].ai_mode == AI_MODE_PATROL &&
+		    !patrol->oneshot && patrol->max_hangout_time > 1 &&
+		    snis_randn(100) < 50) {
+			int sbi = find_nearest_object_of_type(o, OBJTYPE_STARBASE);
+
+			if (sbi >= 0 && object_dist2(o, &go[sbi]) < 1000.0 * 1000.0 &&
+			    maybe_push_dock_at_starbase(o, &go[sbi])) {
+				check_for_nearby_targets(o);
+				return;
+			}
+		}
 		/* But first hang out here awhile... */
 		n = o->tsd.ship.nai_entries;
 		if (n < MAX_AI_STACK_ENTRIES) {
@@ -8096,6 +8553,9 @@ static void ai_brain(struct snis_entity *o)
 	case AI_MODE_ASTEROID_MINER:
 		ai_asteroid_miner_brain(o);
 		break;
+	case AI_MODE_DOCK_AT_STARBASE:
+		ai_dock_at_starbase_brain(o);
+		break;
 	case AI_MODE_RTS_OUT_OF_FUEL:
 		ai_trace(o->id, "RTS MODE OUT OF FUEL");
 		o->vx = 0;
@@ -8276,7 +8736,7 @@ static void ship_collision_avoidance(void *context, void *entity)
 	if (o == obstacle) /* don't avoid oneself */
 		return;
 
-	if (obstacle->type == OBJTYPE_SPARK) /* no point trying to avoid */
+	if (obstacle->type == OBJTYPE_SPARK || obstacle->type == OBJTYPE_DOCKING_PORT)
 		return;
 
 	/* Tow ship should not try to avoid thing it's towing or attempting to tow */
@@ -8312,8 +8772,16 @@ static void ship_collision_avoidance(void *context, void *entity)
 	if (obstacle->type == OBJTYPE_CARGO_CONTAINER)
 		maybe_chase_cargo_container(o, obstacle, d);
 
-	if (obstacle->type == OBJTYPE_STARBASE)
+	if (obstacle->type == OBJTYPE_STARBASE) {
 		o->tsd.ship.last_seen_near = obstacle->id;
+		if (o->tsd.ship.nai_entries > 0) {
+			int n = o->tsd.ship.nai_entries - 1;
+
+			if (o->tsd.ship.ai[n].ai_mode == AI_MODE_DOCK_AT_STARBASE &&
+			    o->tsd.ship.ai[n].u.dock_at_starbase.starbase_id == obstacle->id)
+				return;
+		}
+	}
 
 	if (obstacle->type == OBJTYPE_SPACEMONSTER) {
 		if (d < spacemonster_collision_radius * spacemonster_collision_radius) {
@@ -8418,6 +8886,18 @@ static void ship_move(struct snis_entity *o)
 	space_partition_process(space_partition, o, o->x, o->z, o, ship_security_avoidance);
 	ai_brain(o);
 
+	/* Ensure docking magnets and port reservation are cleared if no longer docking */
+	n = o->tsd.ship.nai_entries - 1;
+	if (n < 0 || o->tsd.ship.ai[n].ai_mode != AI_MODE_DOCK_AT_STARBASE) {
+		if (o->tsd.ship.docking_magnets) {
+			o->tsd.ship.docking_magnets = 0;
+			remove_ship_from_docking_ports(o->id);
+		}
+	} else if (o->tsd.ship.ai[n].u.dock_at_starbase.state != DOCK_STATE_DOCKED &&
+		   o->tsd.ship.docking_magnets) {
+		o->tsd.ship.docking_magnets = 0;
+	}
+
 	/* try to avoid collisions by computing steering and braking adjustments */
 	ca.closest_dist2 = -1.0;
 	ca.o = o;
@@ -8425,12 +8905,16 @@ static void ship_move(struct snis_entity *o)
 	o->tsd.ship.steering_adjustment.v.y = 0.0f;
 	o->tsd.ship.steering_adjustment.v.z = 0.0f;
 	o->tsd.ship.braking_factor = 1.0f;
-	if (o->tsd.ship.ai[o->tsd.ship.nai_entries - 1].ai_mode == AI_MODE_FLEET_LEADER ||
+	if (o->tsd.ship.ai[o->tsd.ship.nai_entries - 1].ai_mode == AI_MODE_DOCK_AT_STARBASE)
+		ca.worrythreshold = 60.0 * 60.0;
+	else if (o->tsd.ship.ai[o->tsd.ship.nai_entries - 1].ai_mode == AI_MODE_FLEET_LEADER ||
 		o->tsd.ship.ai[o->tsd.ship.nai_entries - 1].ai_mode == AI_MODE_FLEET_MEMBER)
 		ca.worrythreshold = 150.0 * 150.0;
 	else
 		ca.worrythreshold = 400.0 * 400.0;
-	space_partition_process(space_partition, o, o->x, o->z, &ca, ship_collision_avoidance);
+	if (!(o->tsd.ship.ai[o->tsd.ship.nai_entries - 1].ai_mode == AI_MODE_DOCK_AT_STARBASE &&
+	      o->tsd.ship.ai[o->tsd.ship.nai_entries - 1].u.dock_at_starbase.state == DOCK_STATE_DOCKED))
+		space_partition_process(space_partition, o, o->x, o->z, &ca, ship_collision_avoidance);
 	if (!o->alive) {
 		(void) add_death_explosion(o, 50, 150, 50, 0);
 		respawn_object(o);
@@ -10517,6 +11001,42 @@ static int compute_npc_desired_velocity_vec(struct snis_entity *o, union vec3 *d
 		}
 	}
 
+	if (mode == AI_MODE_DOCK_AT_STARBASE) {
+		struct ai_dock_at_starbase_data *dai = &o->tsd.ship.ai[n].u.dock_at_starbase;
+
+		if (dai->state == DOCK_STATE_DOCKED) {
+			desired_velocity->v.x = 0.0f;
+			desired_velocity->v.y = 0.0f;
+			desired_velocity->v.z = 0.0f;
+			o->tsd.ship.desired_velocity = 0.0;
+			return 0;
+		}
+		if (dai->state == DOCK_STATE_APPROACH || dai->state == DOCK_STATE_STAGE) {
+			int dpi = lookup_by_id(dai->docking_port_id);
+
+			if (dpi >= 0 && go[dpi].alive && go[dpi].type == OBJTYPE_DOCKING_PORT &&
+			    (dai->state == DOCK_STATE_APPROACH ||
+			     object_dist2(o, &go[dpi]) < 500.0 * 500.0)) {
+				dest.v.x = o->tsd.ship.dox - o->x;
+				dest.v.y = o->tsd.ship.doy - o->y;
+				dest.v.z = o->tsd.ship.doz - o->z;
+				o->tsd.ship.dist = vec3_magnitude(&dest);
+				if (o->tsd.ship.dist > 0.01f)
+					vec3_normalize(&destn, &dest);
+				else
+					vec3_init(&destn, 0.0f, 0.0f, 0.0f);
+				desired_velocity->v.x = go[dpi].tsd.docking_port.vel.v.x +
+							destn.v.x * o->tsd.ship.desired_velocity;
+				desired_velocity->v.y = go[dpi].tsd.docking_port.vel.v.y +
+							destn.v.y * o->tsd.ship.desired_velocity;
+				desired_velocity->v.z = go[dpi].tsd.docking_port.vel.v.z +
+							destn.v.z * o->tsd.ship.desired_velocity;
+				vec3_add_self(desired_velocity, &o->tsd.ship.steering_adjustment);
+				return 1;
+			}
+		}
+	}
+
 	if (mode == AI_MODE_ATTACK) {
 		v = lookup_entity_by_id(o->tsd.ship.ai[n].u.attack.victim_id);
 		if (v) {
@@ -10568,6 +11088,14 @@ static void update_ship_orientation(struct snis_entity *o)
 	n = o->tsd.ship.nai_entries - 1;
 	mode = o->tsd.ship.ai[n].ai_mode;
 
+	if (mode == AI_MODE_DOCK_AT_STARBASE &&
+	    o->tsd.ship.ai[n].u.dock_at_starbase.state == DOCK_STATE_DOCKED) {
+		o->tsd.ship.yaw_velocity = 0.0;
+		o->tsd.ship.pitch_velocity = 0.0;
+		o->tsd.ship.roll_velocity = 0.0;
+		return;
+	}
+
 	if (!compute_npc_desired_velocity_vec(o, &desired_v) ||
 	    ((mode == AI_MODE_HANGOUT || (rts_mode && o->tsd.ship.fuel == 0)) &&
 	     vec3_magnitude(&o->tsd.ship.steering_adjustment) < 0.01f) ||
@@ -10584,6 +11112,30 @@ static void update_ship_orientation(struct snis_entity *o)
 	}
 
 	vec3_normalize(&desired_dir, &desired_v);
+
+	/* When on final docking approach, blend desired heading towards docking port orientation */
+	if (mode == AI_MODE_DOCK_AT_STARBASE &&
+	    o->tsd.ship.ai[n].u.dock_at_starbase.state == DOCK_STATE_APPROACH) {
+		int dpi = lookup_by_id(o->tsd.ship.ai[n].u.dock_at_starbase.docking_port_id);
+
+		if (dpi >= 0 && go[dpi].alive && go[dpi].type == OBJTYPE_DOCKING_PORT) {
+			union vec3 port_fwd = { { 1.0f, 0.0f, 0.0f } };
+			float align_weight;
+
+			quat_rot_vec_self(&port_fwd, &go[dpi].orientation);
+			align_weight = clampf(1.0f - (float) o->tsd.ship.dist / 140.0f, 0.25f, 1.0f);
+			desired_dir.v.x = (1.0f - align_weight) * desired_dir.v.x +
+					  align_weight * port_fwd.v.x;
+			desired_dir.v.y = (1.0f - align_weight) * desired_dir.v.y +
+					  align_weight * port_fwd.v.y;
+			desired_dir.v.z = (1.0f - align_weight) * desired_dir.v.z +
+					  align_weight * port_fwd.v.z;
+			if (vec3_magnitude(&desired_dir) > 0.01f)
+				vec3_normalize_self(&desired_dir);
+			else
+				desired_dir = port_fwd;
+		}
+	}
 
 	/* Counter-rotate body-frame yaw and pitch velocities to keep them aligned
 	 * in world space across roll rotations
@@ -10670,12 +11222,28 @@ static void update_ship_position_and_velocity(struct snis_entity *o)
 	n = o->tsd.ship.nai_entries - 1;
 	mode = o->tsd.ship.ai[n].ai_mode;
 
+	if (mode == AI_MODE_DOCK_AT_STARBASE &&
+	    o->tsd.ship.ai[n].u.dock_at_starbase.state == DOCK_STATE_DOCKED)
+		return;
+
 	if (!compute_npc_desired_velocity_vec(o, &desired_v) || mode == AI_MODE_CATATONIC) {
 		o->vx = 0.0;
 		o->vy = 0.0;
 		o->vz = 0.0;
 		o->tsd.ship.velocity = 0.0;
 		o->tsd.ship.desired_velocity = 0.0;
+		return;
+	}
+
+	if (mode == AI_MODE_DOCK_AT_STARBASE &&
+	    (o->tsd.ship.ai[n].u.dock_at_starbase.state == DOCK_STATE_APPROACH ||
+	     (o->tsd.ship.ai[n].u.dock_at_starbase.state == DOCK_STATE_STAGE &&
+	      o->tsd.ship.dist < 400.0f))) {
+		o->vx += (desired_v.v.x - o->vx) * 0.25;
+		o->vy += (desired_v.v.y - o->vy) * 0.25;
+		o->vz += (desired_v.v.z - o->vz) * 0.25;
+		o->tsd.ship.velocity = sqrt(o->vx * o->vx + o->vy * o->vy + o->vz * o->vz);
+		set_object_location(o, o->x + o->vx, o->y + o->vy, o->z + o->vz);
 		return;
 	}
 
@@ -21563,6 +22131,34 @@ error:
 	return 1;
 }
 
+static int l_ai_push_dock_at_starbase(lua_State *l)
+{
+	int ship_idx, sb_idx;
+	double ship_id, sb_id;
+
+	pthread_mutex_lock(&universe_mutex);
+	ship_id = lua_tonumber(l, 1);
+	sb_id = lua_tonumber(l, 2);
+	ship_idx = lookup_by_id((uint32_t) ship_id);
+	sb_idx = lookup_by_id((uint32_t) sb_id);
+	if (ship_idx < 0 || sb_idx < 0)
+		goto error;
+	if (!go[ship_idx].alive || go[ship_idx].type != OBJTYPE_NPCSHIP)
+		goto error;
+	if (!go[sb_idx].alive || go[sb_idx].type != OBJTYPE_STARBASE)
+		goto error;
+	if (!maybe_push_dock_at_starbase(&go[ship_idx], &go[sb_idx]))
+		goto error;
+
+	pthread_mutex_unlock(&universe_mutex);
+	lua_pushnumber(l, 0.0);
+	return 1;
+error:
+	pthread_mutex_unlock(&universe_mutex);
+	lua_pushnil(l);
+	return 1;
+}
+
 static int l_ai_push_patrol(lua_State *l)
 {
 	int i, n, p, np;
@@ -27547,6 +28143,8 @@ static void send_econ_update_ship_packet(struct game_client *c,
 			else
 				victim_id = o->tsd.ship.ai[n].u.asteroid_miner.asteroid_id;
 		}
+		if (o->tsd.ship.ai[n].ai_mode == AI_MODE_DOCK_AT_STARBASE)
+			victim_id = o->tsd.ship.ai[n].u.dock_at_starbase.docking_port_id;
 	}
 
 	if (c->debug_ai) {
@@ -27595,6 +28193,9 @@ static void send_econ_update_ship_packet(struct game_client *c,
 				break;
 			case AI_MODE_ASTEROID_MINER:
 				ai[i] = 'm';
+				break;
+			case AI_MODE_DOCK_AT_STARBASE:
+				ai[i] = 'D';
 				break;
 			case AI_MODE_MINING_BOT:
 				ai[i] = 'b';
@@ -29397,6 +29998,7 @@ static void setup_lua(void)
 	add_lua_callable_fn(l_set_planet_security, "set_planet_security");
 	add_lua_callable_fn(l_update_player_wallet, "update_player_wallet");
 	add_lua_callable_fn(l_ai_push_catatonic, "ai_push_catatonic");
+	add_lua_callable_fn(l_ai_push_dock_at_starbase, "ai_push_dock_at_starbase");
 	add_lua_callable_fn(l_too_close_to_planet_or_sun, "too_close_to_planet_or_sun");
 	add_lua_callable_fn(l_play_sound, "play_sound");
 	add_lua_callable_fn(l_set_red_alert_status, "set_red_alert_status");

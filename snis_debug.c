@@ -351,6 +351,31 @@ void snis_debug_dump(char *cmd, struct snis_entity go[], int nstarbase_models,
 				printfn("----- COUNTDOWN %hu",
 					o->tsd.ship.ai[i].u.asteroid_miner.countdown);
 				break;
+			case AI_MODE_DOCK_AT_STARBASE:
+				switch (o->tsd.ship.ai[i].u.dock_at_starbase.state) {
+				case DOCK_STATE_STAGE:
+					printfn("-- STATE STAGE");
+					break;
+				case DOCK_STATE_APPROACH:
+					printfn("-- STATE APPROACH");
+					break;
+				case DOCK_STATE_DOCKED:
+					printfn("-- STATE DOCKED");
+					break;
+				case DOCK_STATE_UNDOCK:
+					printfn("-- STATE UNDOCK");
+					break;
+				default:
+					printfn("-- STATE UNKNOWN");
+					break;
+				}
+				printfn("----- STARBASE %u",
+					o->tsd.ship.ai[i].u.dock_at_starbase.starbase_id);
+				printfn("----- DOCKING PORT %u",
+					o->tsd.ship.ai[i].u.dock_at_starbase.docking_port_id);
+				printfn("----- TIMER %hu",
+					o->tsd.ship.ai[i].u.dock_at_starbase.timer);
+				break;
 			case AI_MODE_RTS_STANDBY:
 				break;
 			case AI_MODE_RTS_GUARD_BASE:

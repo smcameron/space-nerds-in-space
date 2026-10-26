@@ -487,6 +487,11 @@ ai_push_attack(attacker_id, victim_id)
 
 ai_push_catatonic(ship_id) -- make a ship catatonic. This is mainly for debugging ship models.
 
+ai_push_dock_at_starbase(ship_id, starbase_id)
+	make an NPC ship fly to and dock at an available docking port on the specified starbase,
+	hang out while docked, and then undock.  Returns 0.0 on success, or nil if no docking
+	port is available for the ship.
+
 set_faction(object_id, faction_id) -- sets the specified object's faction to the specified
 	faction.  Clears the object's ai stack.
 
