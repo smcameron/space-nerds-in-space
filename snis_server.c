@@ -4650,7 +4650,7 @@ static void torpedo_move(struct snis_entity *o)
 		delete_from_clients_and_server(o);
 }
 
-static void update_ship_orientation(struct snis_entity *o);
+static void update_orientation_from_velocity(struct snis_entity *o);
 static void missile_move(struct snis_entity *o)
 {
 	int i;
@@ -4710,7 +4710,7 @@ static void missile_move(struct snis_entity *o)
 
 	/* Move missile */
 	set_object_location(o, o->x + o->vx, o->y + o->vy, o->z + o->vz);
-	update_ship_orientation(o); /* Update missile orienation */
+	update_orientation_from_velocity(o); /* Update missile orientation */
 
 	/* See if we hit something */
 	space_partition_process(space_partition, o, o->x, o->z, o,
@@ -5547,7 +5547,7 @@ static void spacemonster_move(struct snis_entity *o)
 	o->vx += dx;
 	o->vy += dy;
 	o->vz += dz;
-	update_ship_orientation(o);
+	update_orientation_from_velocity(o);
 
 	/* Move tentacles */
 	if (o->tsd.spacemonster.movement_countdown > 0) {
@@ -5597,7 +5597,7 @@ static void check_for_incoming_fire(struct snis_entity *o)
 	}
 }
 
-static void update_ship_orientation(struct snis_entity *o)
+static void update_orientation_from_velocity(struct snis_entity *o)
 {
 	union vec3 right = { { 1.0f, 0.0f, 0.0f } };
 	union vec3 up = { { 0.0f, 1.0f, 0.0f } };
@@ -5701,6 +5701,7 @@ static void update_towed_ship(struct snis_entity *o)
 	disabled_ship->timestamp = universe_timestamp;
 }
 
+static void update_ship_orientation(struct snis_entity *o);
 static void update_ship_position_and_velocity(struct snis_entity *o);
 static int add_laserbeam(uint32_t origin, uint32_t target, int alive, uint8_t targeted_system);
 
@@ -6258,7 +6259,7 @@ static void ai_fleet_member_mode_brain(struct snis_entity *o)
 	leader = &go[i];
 	offset = fleet_position(f->fleet, position, &leader->orientation);
 	set_ship_destination(o, offset.v.x + leader->x, offset.v.y + leader->y, offset.v.z + leader->z);
-	o->tsd.ship.velocity = leader->tsd.ship.velocity * 1.05;
+	o->tsd.ship.desired_velocity = leader->tsd.ship.velocity * 1.05;
 
 	dist2 = dist3dsqrd(o->x - o->tsd.ship.dox, o->y - o->tsd.ship.doy,
 			o->z - o->tsd.ship.doz);
@@ -6266,7 +6267,7 @@ static void ai_fleet_member_mode_brain(struct snis_entity *o)
 	if (dist2 > 75.0 * 75.0 && dist2 <= FLEET_WARP_DISTANCE * FLEET_WARP_DISTANCE) {
 		/* catch up if too far away */
 		ai_trace(o->id, "CATCHING UP TO FLEET POSITION");
-		o->tsd.ship.velocity = leader->tsd.ship.velocity * 1.5;
+		o->tsd.ship.desired_velocity = leader->tsd.ship.velocity * 1.5;
 	} else if (dist2 > FLEET_WARP_DISTANCE * FLEET_WARP_DISTANCE && snis_randn(100) < 8) {
 		/* If distance is too far, just warp */
 		ai_trace(o->id, "WARPING TO FLEET POSITION");
@@ -8417,8 +8418,8 @@ static void ship_move(struct snis_entity *o)
 				o->tsd.ship.fuel -= rts_unit_type(unit_type)->fuel_consumption_unit;
 		}
 	}
-	update_ship_position_and_velocity(o);
 	update_ship_orientation(o);
+	update_ship_position_and_velocity(o);
 	update_towed_ship(o);
 	o->timestamp = universe_timestamp;
 
@@ -10429,72 +10430,18 @@ static float new_velocity(float desired_velocity, float current_velocity)
 	return current_velocity + (delta / 20.0);
 }
 
-/* If an NPC ship wants to do a 180, or some other drastic direction change,
- * we don't want to just gradually shift the velocity towards the new velocity,
- * because this will result in strange things like the ship slowly coming to a halt,
- * very rapidly doing a 180, then slowly accelerating. Instead, we want it to
- * execute a nice turn. So we limit the desired change of angle to no more than
- * 45 degrees by just capping such desires.
- */
-static void temper_velocity_change(struct snis_entity *o, union vec3 *desired_velocity)
+#define NPC_MAX_YAW_RATE (3.5 * M_PI / 180.0)
+#define NPC_MAX_PITCH_RATE (3.5 * M_PI / 180.0)
+#define NPC_MAX_ROLL_RATE (5.0 * M_PI / 180.0)
+#define NPC_MAX_BANK_ANGLE (35.0 * M_PI / 180.0)
+#define NPC_YAW_PITCH_ACCEL 0.25f
+#define NPC_ROLL_ACCEL 0.20f
+
+static int compute_npc_desired_velocity_vec(struct snis_entity *o, union vec3 *desired_velocity)
 {
-	union vec3 current_direction, dv, cross, newv1, newv2;
-	union quat rotation1, rotation2;
-	float dot, d1, d2;
-
-	if (vec3_magnitude(desired_velocity) < 0.01)
-		return;
-
-	/* Use orientation rather than velocity, as velocity might be close to zero. */
-	current_direction.v.x = 1.0;
-	current_direction.v.y = 0.0;
-	current_direction.v.z = 0.0;
-	quat_rot_vec_self(&current_direction, &o->orientation);
-
-	vec3_normalize_self(&current_direction);
-	vec3_normalize(&dv, desired_velocity);
-	dot = vec3_dot(&current_direction, &dv);
-	if (dot >= cos(45.0 * M_PI / 180.0)) /* Angle of turn is less than +/- 45 degrees */
-		return;
-	/* Angle of turn is more than +/- 45 degrees */
-	/* Find a vector perpendicular to current and desired velocities */
-	vec3_cross(&cross, &current_direction, &dv);
-	if (vec3_magnitude(&cross) < 0.001) /* Avoid NaNs when normalizing */
-		return;
-	vec3_normalize_self(&cross);
-	/* Try plus and minus 45 degrees */
-	quat_init_axis_v(&rotation1, &cross, 45.0 * M_PI / 180.0);
-	quat_init_axis_v(&rotation2, &cross, -45.0 * M_PI / 180.0);
-	quat_rot_vec(&newv1, &current_direction, &rotation1);
-	quat_rot_vec(&newv2, &current_direction, &rotation2);
-	/* Find the cos(angles) between our +/- 45 degree vectors and desired velocity */
-	d1 = vec3_dot(&newv1, desired_velocity);
-	d2 = vec3_dot(&newv2, desired_velocity);
-	/* Figure out which one is the smallest angle */
-	if (d1 > d2) { /* d1 is the larger cos == smaller angle */
-		vec3_normalize_self(&newv1);
-		vec3_mul_self(&newv1, vec3_magnitude(desired_velocity));
-		*desired_velocity = newv1;
-	} else { /* d2 is the larger cos == smaller angle */
-		vec3_normalize_self(&newv2);
-		vec3_mul_self(&newv2, vec3_magnitude(desired_velocity));
-		*desired_velocity = newv2;
-	}
-}
-
-static void update_ship_position_and_velocity(struct snis_entity *o)
-{
-	union vec3 desired_velocity;
 	union vec3 dest, destn;
 	struct snis_entity *v;
 	int n, mode;
-
-	/* Adjust velocity towards desired velocity */
-	o->tsd.ship.velocity = o->tsd.ship.velocity +
-			(o->tsd.ship.desired_velocity - o->tsd.ship.velocity) * 0.1;
-	if (fabs(o->tsd.ship.velocity - o->tsd.ship.desired_velocity) < 0.1)
-		o->tsd.ship.velocity = o->tsd.ship.desired_velocity;
-	ai_trace(o->id, "V = %f, DV = %f", o->tsd.ship.velocity, o->tsd.ship.desired_velocity);
 
 	if (o->tsd.ship.nai_entries == 0)
 		ship_figure_out_what_to_do(o);
@@ -10502,14 +10449,27 @@ static void update_ship_position_and_velocity(struct snis_entity *o)
 	mode = o->tsd.ship.ai[n].ai_mode;
 
 	if (mode == AI_MODE_CATATONIC) {
-		o->vx = 0;
-		o->vy = 0;
-		o->vz = 0;
-		o->tsd.ship.desired_velocity = 0;
-		return;
+		desired_velocity->v.x = 0.0f;
+		desired_velocity->v.y = 0.0f;
+		desired_velocity->v.z = 0.0f;
+		o->tsd.ship.desired_velocity = 0.0;
+		return 0;
 	}
 
-	/* FIXME: need a better way to do this. */
+	if (mode == AI_MODE_MINING_BOT) {
+		int bmode = o->tsd.ship.ai[n].u.mining_bot.mode;
+
+		if (bmode == MINING_MODE_LAND_ON_ASTEROID ||
+		    bmode == MINING_MODE_MINE ||
+		    bmode == MINING_MODE_IDLE) {
+			desired_velocity->v.x = 0.0f;
+			desired_velocity->v.y = 0.0f;
+			desired_velocity->v.z = 0.0f;
+			o->tsd.ship.desired_velocity = 0.0;
+			return 0;
+		}
+	}
+
 	if (mode == AI_MODE_ATTACK) {
 		v = lookup_entity_by_id(o->tsd.ship.ai[n].u.attack.victim_id);
 		if (v) {
@@ -10517,9 +10477,11 @@ static void update_ship_position_and_velocity(struct snis_entity *o)
 			dest.v.y = v->y + o->tsd.ship.doy - o->y;
 			dest.v.z = v->z + o->tsd.ship.doz - o->z;
 		} else {
-			/* victim must have died. */
 			pop_ai_attack_mode(o);
-			return;
+			desired_velocity->v.x = 0.0f;
+			desired_velocity->v.y = 0.0f;
+			desired_velocity->v.z = 0.0f;
+			return 0;
 		}
 	} else {
 		dest.v.x = o->tsd.ship.dox - o->x;
@@ -10534,79 +10496,170 @@ static void update_ship_position_and_velocity(struct snis_entity *o)
 	}
 
 	o->tsd.ship.dist = vec3_magnitude(&dest);
-	ai_trace(o->id, "DIST TO DEST = %f", o->tsd.ship.dist);
-
-#if 1
 	vec3_normalize(&destn, &dest);
-#else
-	if (o->tsd.ship.dist > 100.0) { /* If this is too tight, ships wiggle around too much */
-		vec3_normalize(&destn, &dest);
-	} else {
-		destn.v.x = 0.0f;
-		destn.v.y = 0.0f;
-		destn.v.z = 0.0f;
-		o->tsd.ship.desired_velocity = 0;
-		ai_trace(o->id, "DV = 0 (ARRIVAL)");
+
+	desired_velocity->v.x = destn.v.x * o->tsd.ship.desired_velocity;
+	desired_velocity->v.y = destn.v.y * o->tsd.ship.desired_velocity;
+	desired_velocity->v.z = destn.v.z * o->tsd.ship.desired_velocity;
+
+	vec3_mul_self(desired_velocity, o->tsd.ship.braking_factor);
+	vec3_add_self(desired_velocity, &o->tsd.ship.steering_adjustment);
+	return 1;
+}
+
+static void update_ship_orientation(struct snis_entity *o)
+{
+	union vec3 desired_v, desired_dir, local_dir, world_up = { { 0.0f, 1.0f, 0.0f } }, local_up;
+	union quat inv_orient;
+	float horiz_dist, yaw_err, pitch_err;
+	float target_yaw_vel, target_pitch_vel, target_roll_vel;
+	float current_bank, desired_bank, roll_err, level_factor;
+	int n, mode;
+
+	if (o->tsd.ship.nai_entries == 0)
+		ship_figure_out_what_to_do(o);
+	n = o->tsd.ship.nai_entries - 1;
+	mode = o->tsd.ship.ai[n].ai_mode;
+
+	if (!compute_npc_desired_velocity_vec(o, &desired_v) ||
+	    ((mode == AI_MODE_HANGOUT || (rts_mode && o->tsd.ship.fuel == 0)) &&
+	     vec3_magnitude(&o->tsd.ship.steering_adjustment) < 0.01f) ||
+	    vec3_magnitude(&desired_v) < 0.01f) {
+		/* Not actively steering; damp any existing angular velocities */
+		damp_yaw_velocity(&o->tsd.ship.yaw_velocity, YAW_DAMPING);
+		damp_yaw_velocity(&o->tsd.ship.pitch_velocity, YAW_DAMPING);
+		damp_yaw_velocity(&o->tsd.ship.roll_velocity, YAW_DAMPING);
+		quat_apply_relative_yaw_pitch_roll(&o->orientation,
+				o->tsd.ship.yaw_velocity,
+				o->tsd.ship.pitch_velocity,
+				o->tsd.ship.roll_velocity);
+		return;
 	}
-#endif
 
-	/* Construct vector of desired velocity */
-	desired_velocity.v.x = destn.v.x * o->tsd.ship.desired_velocity;
-	desired_velocity.v.y = destn.v.y * o->tsd.ship.desired_velocity;
-	desired_velocity.v.z = destn.v.z * o->tsd.ship.desired_velocity;
-	ai_trace(o->id, "DV XYZ = %f, %f, %f", desired_velocity.v.x, desired_velocity.v.y, desired_velocity.v.z);
+	vec3_normalize(&desired_dir, &desired_v);
 
-	/* apply braking and steering adjustments */
-	vec3_mul_self(&desired_velocity, o->tsd.ship.braking_factor);
-	ai_trace(o->id, "AFTER BRAKE DV = %f, %f, %f",
-			desired_velocity.v.x, desired_velocity.v.y, desired_velocity.v.z);
-	vec3_add_self(&desired_velocity, &o->tsd.ship.steering_adjustment);
-	ai_trace(o->id, "AFTER STEER DV = %f, %f, %f",
-			desired_velocity.v.x, desired_velocity.v.y, desired_velocity.v.z);
+	/* Transform desired heading into the ship's local coordinate system */
+	quat_inverse(&inv_orient, &o->orientation);
+	quat_rot_vec(&local_dir, &desired_dir, &inv_orient);
 
-	/* Make the ship execute nice turns instead of stopping and quickly reversing */
-	temper_velocity_change(o, &desired_velocity);
-	ai_trace(o->id, "AFTER TEMPER DV = %f, %f, %f",
-			desired_velocity.v.x, desired_velocity.v.y, desired_velocity.v.z);
+	/* Local yaw error (positive = turn left/port, negative = turn right/starboard) */
+	yaw_err = atan2f(-local_dir.v.z, local_dir.v.x);
 
-	union vec3 current_direction = { { 1.0f, 0.0f, 0.0f } };
-	union vec3 dv;
-	float dot = 1.0f;
+	/* Local pitch error (positive = pitch up, negative = pitch down) */
+	horiz_dist = sqrtf(local_dir.v.x * local_dir.v.x + local_dir.v.z * local_dir.v.z);
+	pitch_err = atan2f(local_dir.v.y, horiz_dist);
 
-	if (vec3_magnitude(&desired_velocity) >= 0.01f) {
-		quat_rot_vec_self(&current_direction, &o->orientation);
-		vec3_normalize_self(&current_direction);
-		vec3_normalize(&dv, &desired_velocity);
-		dot = vec3_dot(&current_direction, &dv);
+	target_yaw_vel = clampf(yaw_err * 0.4f, -NPC_MAX_YAW_RATE, NPC_MAX_YAW_RATE);
+	target_pitch_vel = clampf(pitch_err * 0.4f, -NPC_MAX_PITCH_RATE, NPC_MAX_PITCH_RATE);
+
+	/* Compute bank angle from local up */
+	quat_rot_vec(&local_up, &world_up, &inv_orient);
+	current_bank = atan2f(-local_up.v.z, local_up.v.y);
+
+	/* Desired bank into yaw turns (positive yaw = left turn = negative bank) */
+	desired_bank = clampf(-target_yaw_vel * (float) (0.8 / NPC_MAX_YAW_RATE) * NPC_MAX_BANK_ANGLE,
+			      -NPC_MAX_BANK_ANGLE, NPC_MAX_BANK_ANGLE);
+
+	/* Reduce wings-leveling effect when pitching steeply up or down */
+	level_factor = 1.0f - local_up.v.x * local_up.v.x;
+	if (level_factor < 0.0f)
+		level_factor = 0.0f;
+
+	roll_err = (desired_bank - current_bank) * level_factor;
+	target_roll_vel = clampf(roll_err * 0.35f, -NPC_MAX_ROLL_RATE, NPC_MAX_ROLL_RATE);
+
+	/* Smoothly approach target angular velocities */
+	o->tsd.ship.yaw_velocity += (target_yaw_vel - o->tsd.ship.yaw_velocity) * NPC_YAW_PITCH_ACCEL;
+	o->tsd.ship.pitch_velocity += (target_pitch_vel - o->tsd.ship.pitch_velocity) * NPC_YAW_PITCH_ACCEL;
+	o->tsd.ship.roll_velocity += (target_roll_vel - o->tsd.ship.roll_velocity) * NPC_ROLL_ACCEL;
+
+	quat_apply_relative_yaw_pitch_roll(&o->orientation,
+			o->tsd.ship.yaw_velocity,
+			o->tsd.ship.pitch_velocity,
+			o->tsd.ship.roll_velocity);
+}
+
+static void update_ship_position_and_velocity(struct snis_entity *o)
+{
+	union vec3 desired_v, current_forward = { { 1.0f, 0.0f, 0.0f } }, desired_dir;
+	union vec3 desired_vel_vec;
+	float target_speed, dot, turn_factor;
+	int n, mode;
+
+	if (o->tsd.ship.nai_entries == 0)
+		ship_figure_out_what_to_do(o);
+	n = o->tsd.ship.nai_entries - 1;
+	mode = o->tsd.ship.ai[n].ai_mode;
+
+	if (!compute_npc_desired_velocity_vec(o, &desired_v) || mode == AI_MODE_CATATONIC) {
+		o->vx = 0.0;
+		o->vy = 0.0;
+		o->vz = 0.0;
+		o->tsd.ship.velocity = 0.0;
+		o->tsd.ship.desired_velocity = 0.0;
+		return;
 	}
-	if (o->tsd.ship.velocity < MINIMUM_TURN_SPEED &&
-	    mode != AI_MODE_HANGOUT &&
-	    dot < cos(M_PI * MAX_SLOW_TURN_ANGLE / 180.0)) {
-		/* Currently moving too slow and trying to turn too much, just go straight */
-		union vec3 rightvec;
-		rightvec.v.x = MINIMUM_TURN_SPEED * 1.05;
-		rightvec.v.y = 0.0;
-		rightvec.v.z = 0.0;
-		quat_rot_vec(&desired_velocity, &rightvec, &o->orientation);
-	}
-	o->vx = new_velocity(desired_velocity.v.x, o->vx);
-	o->vy = new_velocity(desired_velocity.v.y, o->vy);
-	o->vz = new_velocity(desired_velocity.v.z, o->vz);
 
-	ai_trace(o->id, "NEW VEL = %f, %f, %f", o->vx, o->vy, o->vz);
-
-	/* Move ship */
-	set_object_location(o, o->x + o->vx, o->y + o->vy, o->z + o->vz);
-	/* FIXME: some kind of collision detection needed here... */
-
-	if (mode == AI_MODE_HANGOUT ||
-		(rts_mode && o->tsd.ship.fuel == 0)) {
+	if (mode == AI_MODE_HANGOUT || (rts_mode && o->tsd.ship.fuel == 0)) {
 		o->vx *= 0.8;
 		o->vy *= 0.8;
 		o->vz *= 0.8;
-		o->tsd.ship.desired_velocity = 0;
+		o->tsd.ship.velocity *= 0.8;
+		o->tsd.ship.desired_velocity = 0.0;
+		set_object_location(o, o->x + o->vx, o->y + o->vy, o->z + o->vz);
 		ai_trace(o->id, "HANGOUT BRAKING");
+		return;
 	}
+
+	target_speed = vec3_magnitude(&desired_v);
+
+	quat_rot_vec_self(&current_forward, &o->orientation);
+	vec3_normalize(&desired_dir, &desired_v);
+	dot = vec3_dot(&current_forward, &desired_dir);
+
+	if (target_speed > 0.05f) {
+		/* Throttle back moderately during sharp turns */
+		turn_factor = 0.5f + 0.5f * fmaxf(0.0f, dot);
+		target_speed *= turn_factor;
+
+		/* When far from destination, keep at least MINIMUM_TURN_SPEED to execute a graceful arc */
+		if (target_speed < MINIMUM_TURN_SPEED &&
+		    o->tsd.ship.desired_velocity >= MINIMUM_TURN_SPEED)
+			target_speed = MINIMUM_TURN_SPEED;
+
+		/* When close to destination and misaligned, limit speed so turn radius
+		 * is small enough to reach the destination without orbiting around it
+		 */
+		if (dot < 0.8f && o->tsd.ship.dist > 0.1f) {
+			float max_tight_speed = o->tsd.ship.dist * (float) (NPC_MAX_YAW_RATE * 0.5);
+
+			if (max_tight_speed < 1.0f)
+				max_tight_speed = 1.0f;
+			if (target_speed > max_tight_speed)
+				target_speed = max_tight_speed;
+		}
+	}
+
+	o->tsd.ship.velocity = o->tsd.ship.velocity +
+			(target_speed - o->tsd.ship.velocity) * 0.1;
+	if (fabs(o->tsd.ship.velocity - target_speed) < 0.1)
+		o->tsd.ship.velocity = target_speed;
+
+	ai_trace(o->id, "V = %f, TARGET_SPEED = %f", o->tsd.ship.velocity, target_speed);
+
+	/* Construct vector of desired velocity along the ship's current orientation */
+	desired_vel_vec.v.x = (float) o->tsd.ship.velocity;
+	desired_vel_vec.v.y = 0.0f;
+	desired_vel_vec.v.z = 0.0f;
+	quat_rot_vec_self(&desired_vel_vec, &o->orientation);
+
+	o->vx = new_velocity(desired_vel_vec.v.x, o->vx);
+	o->vy = new_velocity(desired_vel_vec.v.y, o->vy);
+	o->vz = new_velocity(desired_vel_vec.v.z, o->vz);
+
+	ai_trace(o->id, "NEW VEL = %f, %f, %f", o->vx, o->vy, o->vz);
+
+	set_object_location(o, o->x + o->vx, o->y + o->vy, o->z + o->vz);
 }
 
 /* Used to make sure a starbase is nearby when leaving or entering
@@ -13208,7 +13261,7 @@ static int add_spacemonster(double x, double y, double z)
 	go[i].tsd.spacemonster.nearest_warp_core = (uint32_t) -1;
 	go[i].tsd.spacemonster.warp_core_dist = -1.0;
 	go[i].tsd.spacemonster.toughness = snis_randn(50); /* out of 255 */
-	update_ship_orientation(&go[i]);
+	update_orientation_from_velocity(&go[i]);
 
 	go[i].tsd.spacemonster.home = (uint32_t) -1;
 	return i;
