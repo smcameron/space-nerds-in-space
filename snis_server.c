@@ -2368,6 +2368,30 @@ static void delete_starbase_docking_ports(struct snis_entity *o)
 	}
 }
 
+static void remove_ship_from_docking_ports(uint32_t ship_id)
+{
+	int i, j, model;
+
+	for (i = 0; i <= snis_object_pool_highest_object(pool); i++) {
+		if (!go[i].alive)
+			continue;
+		if (go[i].type == OBJTYPE_DOCKING_PORT) {
+			if (go[i].tsd.docking_port.docked_guy == ship_id)
+				go[i].tsd.docking_port.docked_guy = (uint32_t) -1;
+		} else if (go[i].type == OBJTYPE_STARBASE) {
+			model = go[i].id % nstarbase_models;
+			if (!docking_port_info[model])
+				continue;
+			for (j = 0; j < docking_port_info[model]->nports; j++) {
+				if ((uint32_t) go[i].tsd.starbase.expected_docker[j] == ship_id) {
+					go[i].tsd.starbase.expected_docker[j] = -1;
+					go[i].tsd.starbase.expected_docker_timer[j] = 0;
+				}
+			}
+		}
+	}
+}
+
 static void unhook_remote_cameras(uint32_t id)
 {
 	int i;
@@ -2409,6 +2433,8 @@ static void delete_from_clients_and_server_helper(struct snis_entity *o, int tak
 
 	if (o->type == OBJTYPE_NPCSHIP)
 		fleet_leave(o->id); /* leave any fleets ship might be a member of */
+	if (o->type == OBJTYPE_NPCSHIP || o->type == OBJTYPE_BRIDGE)
+		remove_ship_from_docking_ports(o->id);
 	remove_from_attack_lists(o->id);
 	unhook_remote_cameras(o->id);
 	if (o->id == ai_trace_id) {
@@ -9548,6 +9574,25 @@ static int rate_limit_docking_permission_denied(struct bridge_data *b)
 	return 1;
 }
 
+static int ship_is_docked(uint32_t ship_id, struct snis_entity *starbase)
+{
+	int i;
+	int model = starbase->id % nstarbase_models;
+
+	for (i = 0; i < docking_port_info[model]->nports; i++) {
+		struct snis_entity *docking_port;
+		int dpi = lookup_by_id(starbase->tsd.starbase.docking_port[i]);
+		if (dpi < 0)
+			continue;
+		docking_port = &go[dpi];
+		if (docking_port->tsd.docking_port.docked_guy == ship_id) {
+			return 1;
+			break;
+		}
+	}
+	return 0;
+}
+
 static int starbase_grant_docker_permission(struct snis_entity *starbase,
 						struct snis_entity *docker, struct bridge_data *b,
 						char *npcname, int channel)
@@ -9584,28 +9629,26 @@ static int starbase_grant_docker_permission(struct snis_entity *starbase,
 			return 1;
 		}
 	}
+	/* Preempt an undocked NPC ship's reservation if necessary so players get priority */
+	for (i = 0; i < docking_port_info[model]->nports; i++) {
+		int ed = lookup_by_id(starbase->tsd.starbase.expected_docker[i]);
+
+		if (ed >= 0 && go[ed].type == OBJTYPE_NPCSHIP &&
+		    !ship_is_docked(go[ed].id, starbase)) {
+			starbase->tsd.starbase.expected_docker[i] = docker->id;
+			starbase->tsd.starbase.expected_docker_timer[i] = STARBASE_DOCK_TIME;
+			send_comms_packet(starbase, npcname, channel,
+					  "%s, PERMISSION TO DOCK GRANTED.", b->shipname);
+			snis_queue_add_sound(PERMISSION_TO_DOCK_GRANTED, ROLE_NAVIGATION, b->shipid);
+			if (docker->tsd.ship.exterior_lights != 255)
+				send_comms_packet(starbase, npcname, channel,
+					"%s, ALSO, PLEASE TURN ON YOUR EXTERIOR LIGHTS.", b->shipname);
+			return 1;
+		}
+	}
 	if (rate_limit_docking_permission_denied(b)) {
 		send_comms_packet(starbase, npcname, channel, "%s, PERMISSION TO DOCK DENIED.", b->shipname);
 		snis_queue_add_sound(PERMISSION_TO_DOCK_DENIED, ROLE_NAVIGATION, b->shipid);
-	}
-	return 0;
-}
-
-static int ship_is_docked(uint32_t ship_id, struct snis_entity *starbase)
-{
-	int i;
-	int model = starbase->id % nstarbase_models;
-
-	for (i = 0; i < docking_port_info[model]->nports; i++) {
-		struct snis_entity *docking_port;
-		int dpi = lookup_by_id(starbase->tsd.starbase.docking_port[i]);
-		if (dpi < 0)
-			continue;
-		docking_port = &go[dpi];
-		if (docking_port->tsd.docking_port.docked_guy == ship_id) {
-			return 1;
-			break;
-		}
 	}
 	return 0;
 }
@@ -11309,8 +11352,12 @@ static void docking_port_move(struct snis_entity *o)
 	if (o->tsd.docking_port.docked_guy == (uint32_t) -1)
 		return;
 	i = lookup_by_id(o->tsd.docking_port.docked_guy);
-	if (i < 0)
+	if (i < 0 || !go[i].alive ||
+	    (go[i].type != OBJTYPE_BRIDGE && go[i].type != OBJTYPE_NPCSHIP)) {
+		revoke_docking_permission(o, o->tsd.docking_port.docked_guy);
+		o->tsd.docking_port.docked_guy = (uint32_t) -1;
 		return;
+	}
 	quat_rot_vec_self(&offset, &o->orientation);
 	docker = &go[i];
 	if (!docker->tsd.ship.docking_magnets) { /* undocking happens here */
@@ -11358,7 +11405,7 @@ static void docking_port_move(struct snis_entity *o)
 	 * player, but must not turn invincibility off until the player is close to the docking
 	 * port.  Hence this test.
 	 */
-	if (distance2 < 200 && distance1 >= 200) {
+	if (docker->type == OBJTYPE_BRIDGE && distance2 < 200 && distance1 >= 200) {
 		uint32_t pid = o->tsd.docking_port.parent;
 		int sbid = lookup_by_id(pid);
 		if (sbid >= 0) {
@@ -12011,14 +12058,14 @@ static void starbase_move(struct snis_entity *o)
 				o->tsd.starbase.expected_docker_timer[i]--;
 			if (o->tsd.starbase.expected_docker_timer[i] > 0)
 				continue;
+			if (ship_is_docked(id, o))
+				continue; /* Do not expire docking permission on a docked ship */
+			o->tsd.starbase.expected_docker[i] = -1;
 			/* TODO: make this safe */
 			int bn = lookup_bridge_by_shipid(id);
 			if (bn < 0)
 				continue;
 			struct bridge_data *b = &bridgelist[bn];
-			if (docking_port_resident(o->tsd.starbase.docking_port[i]) == b->shipid)
-				continue; /* Do not expire docking permission on a docked ship */
-			o->tsd.starbase.expected_docker[i] = -1;
 			send_comms_packet(o, o->sdata.name, b->npcbot.channel,
 				"%s, PERMISSION TO DOCK EXPIRED.", b->shipname);
 			snis_queue_add_sound(PERMISSION_TO_DOCK_EXPIRED, ROLE_NAVIGATION, b->shipid);
