@@ -8395,6 +8395,10 @@ static void ship_move(struct snis_entity *o)
 	/* try to avoid collisions by computing steering and braking adjustments */
 	ca.closest_dist2 = -1.0;
 	ca.o = o;
+	o->tsd.ship.steering_adjustment.v.x = 0.0f;
+	o->tsd.ship.steering_adjustment.v.y = 0.0f;
+	o->tsd.ship.steering_adjustment.v.z = 0.0f;
+	o->tsd.ship.braking_factor = 1.0f;
 	if (o->tsd.ship.ai[o->tsd.ship.nai_entries - 1].ai_mode == AI_MODE_FLEET_LEADER ||
 		o->tsd.ship.ai[o->tsd.ship.nai_entries - 1].ai_mode == AI_MODE_FLEET_MEMBER)
 		ca.worrythreshold = 150.0 * 150.0;
@@ -10434,8 +10438,8 @@ static float new_velocity(float desired_velocity, float current_velocity)
 #define NPC_MAX_PITCH_RATE (3.5 * M_PI / 180.0)
 #define NPC_MAX_ROLL_RATE (5.0 * M_PI / 180.0)
 #define NPC_MAX_BANK_ANGLE (35.0 * M_PI / 180.0)
-#define NPC_YAW_PITCH_ACCEL 0.25f
-#define NPC_ROLL_ACCEL 0.20f
+#define NPC_YAW_PITCH_ACCEL 0.55f
+#define NPC_ROLL_ACCEL 0.50f
 
 static int compute_npc_desired_velocity_vec(struct snis_entity *o, union vec3 *desired_velocity)
 {
@@ -10513,7 +10517,7 @@ static void update_ship_orientation(struct snis_entity *o)
 	union quat inv_orient;
 	float horiz_dist, yaw_err, pitch_err;
 	float target_yaw_vel, target_pitch_vel, target_roll_vel;
-	float current_bank, desired_bank, roll_err, level_factor;
+	float current_bank, desired_bank, roll_err, level_factor, bank_norm;
 	int n, mode;
 
 	if (o->tsd.ship.nai_entries == 0)
@@ -10538,6 +10542,19 @@ static void update_ship_orientation(struct snis_entity *o)
 
 	vec3_normalize(&desired_dir, &desired_v);
 
+	/* Counter-rotate body-frame yaw and pitch velocities to keep them aligned
+	 * in world space across roll rotations
+	 */
+	if (fabs(o->tsd.ship.roll_velocity) > 0.0001) {
+		float cos_r = cosf((float) o->tsd.ship.roll_velocity);
+		float sin_r = sinf((float) o->tsd.ship.roll_velocity);
+		double yv = o->tsd.ship.yaw_velocity;
+		double pv = o->tsd.ship.pitch_velocity;
+
+		o->tsd.ship.yaw_velocity = yv * cos_r - pv * sin_r;
+		o->tsd.ship.pitch_velocity = pv * cos_r + yv * sin_r;
+	}
+
 	/* Transform desired heading into the ship's local coordinate system */
 	quat_inverse(&inv_orient, &o->orientation);
 	quat_rot_vec(&local_dir, &desired_dir, &inv_orient);
@@ -10549,16 +10566,29 @@ static void update_ship_orientation(struct snis_entity *o)
 	horiz_dist = sqrtf(local_dir.v.x * local_dir.v.x + local_dir.v.z * local_dir.v.z);
 	pitch_err = atan2f(local_dir.v.y, horiz_dist);
 
-	target_yaw_vel = clampf(yaw_err * 0.4f, -NPC_MAX_YAW_RATE, NPC_MAX_YAW_RATE);
-	target_pitch_vel = clampf(pitch_err * 0.4f, -NPC_MAX_PITCH_RATE, NPC_MAX_PITCH_RATE);
+	/* Proportional target angular velocities tuned for critical damping (zero overshoot) */
+	target_yaw_vel = clampf(yaw_err * 0.20f, -NPC_MAX_YAW_RATE, NPC_MAX_YAW_RATE);
+	target_pitch_vel = clampf(pitch_err * 0.20f, -NPC_MAX_PITCH_RATE, NPC_MAX_PITCH_RATE);
+
+	/* Deadband when aligned to prevent sub-degree hunting */
+	if (fabsf(yaw_err) < (0.05f * M_PI / 180.0f) &&
+	    fabs(o->tsd.ship.yaw_velocity) < (0.02 * M_PI / 180.0)) {
+		target_yaw_vel = 0.0f;
+		o->tsd.ship.yaw_velocity = 0.0;
+	}
+	if (fabsf(pitch_err) < (0.05f * M_PI / 180.0f) &&
+	    fabs(o->tsd.ship.pitch_velocity) < (0.02 * M_PI / 180.0)) {
+		target_pitch_vel = 0.0f;
+		o->tsd.ship.pitch_velocity = 0.0;
+	}
 
 	/* Compute bank angle from local up */
 	quat_rot_vec(&local_up, &world_up, &inv_orient);
 	current_bank = atan2f(-local_up.v.z, local_up.v.y);
 
-	/* Desired bank into yaw turns (positive yaw = left turn = negative bank) */
-	desired_bank = clampf(-target_yaw_vel * (float) (0.8 / NPC_MAX_YAW_RATE) * NPC_MAX_BANK_ANGLE,
-			      -NPC_MAX_BANK_ANGLE, NPC_MAX_BANK_ANGLE);
+	/* Desired bank into yaw turns (bank into the turn, wings-level on straight legs) */
+	bank_norm = clampf(-yaw_err / (float) (30.0 * M_PI / 180.0), -1.0f, 1.0f);
+	desired_bank = bank_norm * fabsf(bank_norm) * NPC_MAX_BANK_ANGLE;
 
 	/* Reduce wings-leveling effect when pitching steeply up or down */
 	level_factor = 1.0f - local_up.v.x * local_up.v.x;
@@ -10566,7 +10596,13 @@ static void update_ship_orientation(struct snis_entity *o)
 		level_factor = 0.0f;
 
 	roll_err = (desired_bank - current_bank) * level_factor;
-	target_roll_vel = clampf(roll_err * 0.35f, -NPC_MAX_ROLL_RATE, NPC_MAX_ROLL_RATE);
+	target_roll_vel = clampf(roll_err * 0.17f, -NPC_MAX_ROLL_RATE, NPC_MAX_ROLL_RATE);
+
+	if (fabsf(roll_err) < (0.05f * M_PI / 180.0f) &&
+	    fabs(o->tsd.ship.roll_velocity) < (0.02 * M_PI / 180.0)) {
+		target_roll_vel = 0.0f;
+		o->tsd.ship.roll_velocity = 0.0;
+	}
 
 	/* Smoothly approach target angular velocities */
 	o->tsd.ship.yaw_velocity += (target_yaw_vel - o->tsd.ship.yaw_velocity) * NPC_YAW_PITCH_ACCEL;
