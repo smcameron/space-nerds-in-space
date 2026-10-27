@@ -312,3 +312,24 @@ slider that controls the thrusters of your ship. Click on it to begin moving for
 
 ![NAVIGATION](doc/images/navigation.png)
 
+## Licensing
+
+This project is primarily licensed under the GNU General Public License version
+2 (GPLv2) — see the `LICENSE` file for details.
+
+The following files are entirely machine-generated and are dedicated to the
+public domain under the Creative Commons CC0 1.0 Universal Dedication (see the
+`CC0-LICENSE.txt` file):
+
+* `snis_net_transport.h`
+* `snis_main_loop.c`
+* `snis_main_loop.h`
+* `snis_main_loop_web.c`
+* `snis_net_transport.h`
+* `snis_net_transport_web.c`
+* `snis_web_stubs.c`
+* `star_light_preview.c`
+
+The above list may be incomplete, check the comments at the top of each source file.
+
+
