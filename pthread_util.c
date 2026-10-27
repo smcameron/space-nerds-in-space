@@ -48,7 +48,7 @@ void *pthread_setname_trampoline(void *args)
 #ifdef __APPLE__
 		pthread_setname_np(t_args->thread_name);
 #else
-#ifdef _GNU_SOURCE
+#if defined(_GNU_SOURCE) && !defined(__EMSCRIPTEN__)
 		pthread_setname_np(*t_args->thread, t_args->thread_name);
 #endif
 #endif

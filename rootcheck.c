@@ -29,6 +29,9 @@ void refuse_to_run_as_root(const char *programname)
 {
 	uid_t id;
 
+#ifdef __EMSCRIPTEN__
+	return; /* In a web browser there are no users, and geteuid() always says 0 */
+#endif
 	id = geteuid();
 
 	if (id == 0) {

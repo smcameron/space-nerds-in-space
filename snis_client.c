@@ -28201,7 +28201,7 @@ int main(int argc, char *argv[])
 	maybe_download_assets();
 	prevent_zombies();
 	set_random_seed();
-#ifndef __APPLE__
+#if !defined(__APPLE__) && !defined(__EMSCRIPTEN__)
 	if (trap_nans)
 		feenableexcept(FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW);
 #endif

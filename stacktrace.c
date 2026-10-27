@@ -1,9 +1,18 @@
 #include <signal.h>
-#include <execinfo.h>
 #include <stdio.h>
 #include <stdlib.h>
 
 #include "stacktrace.h"
+
+#ifdef __EMSCRIPTEN__
+#include <emscripten.h>
+
+void stacktrace(char *msg)
+{
+	emscripten_log(EM_LOG_CONSOLE | EM_LOG_C_STACK, "%s", msg);
+}
+#else
+#include <execinfo.h>
 
 void stacktrace(char *msg)
 {
@@ -23,3 +32,4 @@ void stacktrace(char *msg)
 		fprintf(stderr, "- %s\n", traceline[i]);
 	free(traceline);
 }
+#endif
