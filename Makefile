@@ -11,6 +11,22 @@ SDL2_CONFIG?=sdl2-config
 SERVERSONLY ?= 0
 USE_GLES?=0
 
+# "make WEB=1 web" builds snis_client to run in a web browser, using emscripten.
+# See doc/web-client.txt.  It uses its own object directory, so it does not
+# disturb the native build.
+WEB?=0
+ifeq (${WEB},1)
+CC=emcc
+USE_GLES=1
+WITHVOICECHAT=no
+USE_SNIS_XWINDOWS_HACKS=0
+NET_TRANSPORT_OBJ=snis_net_transport_web.o
+MAIN_LOOP_OBJ=snis_main_loop_web.o
+else
+NET_TRANSPORT_OBJ=snis_net_transport.o
+MAIN_LOOP_OBJ=snis_main_loop.o
+endif
+
 # use "make OSX=1" for mac
 OSX=0
 
@@ -93,7 +109,11 @@ endif
 endif
 
 # object fild directory
+ifeq (${WEB},1)
+OD=object_files_web
+else
 OD=object_files
+endif
 
 DATADIR=${DESTDIR}${PREFIX}/share/snis
 CONFIGFILEDIR=${DATADIR}
@@ -593,7 +613,7 @@ _COMMONOBJS=mathutils.o snis_alloc.o snis_socket_io.o snis_marshal.o \
 		snis_opcode_def.o rts_unit_data.o commodities.o snis_tweak.o rootcheck.o \
 		corporations.o replacement_assets.o snis_asset_dir.o snis_bin_dir.o scipher.o \
 		planetary_properties.o open-simplex-noise.o snis_licenses.o net_utils.o \
-		snis_net_transport.o
+		${NET_TRANSPORT_OBJ}
 COMMONOBJS=$(patsubst %,$(OD)/%,${_COMMONOBJS}) mikktspace/mikktspace.o
 
 _SERVEROBJS=snis_server.o starbase-comms.o \
@@ -608,7 +628,7 @@ SERVEROBJS=${COMMONOBJS} $(patsubst %,$(OD)/%,${_SERVEROBJS})
 _MULTIVERSEOBJS=snis_multiverse.o snis_marshal.o snis_socket_io.o mathutils.o mtwist.o stacktrace.o \
 		snis_hash.o quat.o string-utils.o key_value_parser.o snis_bridge_update_packet.o \
 		pthread_util.o rootcheck.o starmap_adjacency.o replacement_assets.o snis_asset_dir.o \
-		snis_bin_dir.o snis_licenses.o net_utils.o commodities.o snis_net_transport.o
+		snis_bin_dir.o snis_licenses.o net_utils.o commodities.o ${NET_TRANSPORT_OBJ}
 MULTIVERSEOBJS=$(patsubst %,$(OD)/%,${_MULTIVERSEOBJS})
 
 OGGOBJ=$(patsubst %,$(OD)/%,${_OGGOBJ})
@@ -620,7 +640,7 @@ _COMMONCLIENTOBJS= snis_ui_element.o snis_font.o snis_text_input.o \
 	quat.o vec4.o thrust_attachment.o docking_port.o ui_colors.o snis_keyboard.o solarsystem_config.o \
 	pronunciation.o snis_preferences.o snis_pull_down_menu.o snis_client_debug.o starmap_adjacency.o \
 	shape_collision.o oriented_bounding_box.o xdg_base_dir_spec.o snis_voice_chat.o read_menu_file.o \
-	snis_client_forker.o snis_process_options.o workqueue.o snis_main_loop.o
+	snis_client_forker.o snis_process_options.o workqueue.o ${MAIN_LOOP_OBJ}
 COMMONCLIENTOBJS=${COMMONOBJS} ${OGGOBJ} ${SNDOBJS} $(patsubst %,$(OD)/%,${_COMMONCLIENTOBJS}) 
 
 _CLIENTOBJS= shader.o ${GRAPH_OBJS} snis_graph.o snis_client.o joystick_config.o snis_xwindows_hacks.o png_utils.o \
@@ -821,6 +841,43 @@ ECHO=echo
 else
 Q=@
 ECHO=echo
+endif
+
+ifeq (${WEB},1)
+# Emscripten provides SDL2, libpng, zlib and libvorbis itself.  Sound goes
+# through SDL instead of portaudio, and there is no X11.
+SDLLIBS=-sUSE_SDL=2
+SDLCFLAGS=-sUSE_SDL=2
+PNGLIBS=-sUSE_LIBPNG=1 -sUSE_ZLIB=1
+PNGCFLAGS=-sUSE_LIBPNG=1
+X11LIBS=
+X11CFLAGS=
+LUACFLAGS=
+VORBISFLAGS=-sUSE_VORBIS=1 -sUSE_SDL=2
+SNDLIBS=-sUSE_VORBIS=1
+SNDFLAGS=-DWWVIAUDIO_USE_SDL -DDATADIR=\"${DATADIR}\"
+COMMONOBJS=$(patsubst %,$(OD)/%,${_COMMONOBJS}) $(OD)/mikktspace.o
+_SSGLWEBOBJS=ssgl_sleep.o ssgl_sanitize.o ssgl_recv_game_servers.o \
+		ssgl_connect_to_lobby.o ssgl_socket_io.o ssgl_get_primary_host_ip_addr.o \
+		ssgl_register_gameserver.o ssgl_log.o ssgl_get_gamelobby_port.o ssgl_string.o
+SSGL=$(OD)/libssglclient.a
+LIBS=${SSGL} -lm ${PNGLIBS}
+_CLIENTOBJS+=snis_web_stubs.o
+# These are for ELF and x86 linkers and compilers, not for wasm.
+COMMA:=,
+MYCFLAGS:=$(filter-out -Wl$(COMMA)% -fstack-clash-protection -D_FORTIFY_SOURCE=3 -fexceptions,${MYCFLAGS})
+# Where to find the assets to bundle into the web client.  They are put
+# where snis_asset_dir.c looks by default, so nothing needs configuring.
+WEB_ASSET_DIR?=${HOME}/.local/share/space-nerds-in-space/share/snis
+WEB_SOLARSYSTEM?=default
+WEB_ASSET_EXCLUDES=--exclude=/shader --exclude='*.scad' \
+	--exclude='*.scad_params.h' --include='/solarsystems/${WEB_SOLARSYSTEM}/***' --exclude='/solarsystems/*'
+WEBLDFLAGS=-pthread -sPTHREAD_POOL_SIZE=24 \
+	-sALLOW_MEMORY_GROWTH=1 -sINITIAL_MEMORY=512MB -sMAXIMUM_MEMORY=4GB \
+	-sSTACK_SIZE=4MB -sDEFAULT_PTHREAD_STACK_SIZE=2MB \
+	-sMAX_WEBGL_VERSION=2 -sGL_ENABLE_GET_PROC_ADDRESS=1 \
+	-sENVIRONMENT=web,worker -sEXIT_RUNTIME=0 \
+	--preload-file $(OD)/web-assets@/home/web_user/.local/share/space-nerds-in-space/share/snis
 endif
 
 COMPILE=$(ECHO) '  COMPILE' $< && $(CC) ${MYCFLAGS} ${LUACFLAGS} -c -o $@ $<
@@ -1140,8 +1197,46 @@ $(OD)/snis_socket_io.o:	snis_socket_io.c Makefile ${ODT}
 $(OD)/snis_net_transport.o:	snis_net_transport.c snis_net_transport.h Makefile ${ODT}
 	$(Q)$(COMPILE)
 
+$(OD)/snis_net_transport_web.o:	snis_net_transport_web.c snis_net_transport.h Makefile ${ODT}
+	$(Q)$(COMPILE)
+
 $(OD)/snis_main_loop.o:	snis_main_loop.c snis_main_loop.h Makefile ${ODT}
 	$(Q)$(COMPILE)
+
+$(OD)/snis_main_loop_web.o:	snis_main_loop_web.c snis_main_loop.h Makefile ${ODT}
+	$(Q)$(COMPILE)
+
+$(OD)/snis_web_stubs.o:	snis_web_stubs.c Makefile ${ODT}
+	$(Q)$(COMPILE)
+
+$(OD)/mikktspace.o:	mikktspace/mikktspace.c Makefile ${ODT}
+	$(Q)$(COMPILE)
+
+$(OD)/ssgl_%.o:	ssgl/ssgl_%.c Makefile ${ODT}
+	$(Q)$(COMPILE)
+
+$(OD)/libssglclient.a:	$(patsubst %,$(OD)/%,${_SSGLWEBOBJS})
+	$(Q)$(ECHO) '  ARCHIVE' $@ && emar -cr $@ $^
+
+# The browser client: bin/web/snis_client.{html,js,wasm,data}
+web:	bin/web/snis_client.js bin/web/snis_client.html
+
+.PHONY:	web web-assets
+
+# The assets bundled into the web client: the downloaded assets, with the
+# files git tracks in share/snis laid over them, so they match this source tree.
+web-assets:
+	$(Q)$(ECHO) '  ASSETS' $(OD)/web-assets && mkdir -p $(OD)/web-assets && \
+		rsync -a --delete ${WEB_ASSET_EXCLUDES} ${WEB_ASSET_DIR}/ $(OD)/web-assets/ && \
+		rsync -a ${WEB_ASSET_EXCLUDES} share/snis/ $(OD)/web-assets/
+
+bin/web/snis_client.js:	${CLIENTOBJS} ${SSGL} Makefile web-assets
+	@mkdir -p bin/web
+	$(Q)$(ECHO) '  LINK' $@ && $(CC) ${MYCFLAGS} -o $@ ${CLIENTOBJS} ${SDLLIBS} ${LIBS} ${SNDLIBS} $(LDFLAGS) ${WEBLDFLAGS}
+
+bin/web/snis_client.html:	snis_client_web.html
+	@mkdir -p bin/web
+	@cp $< $@
 
 $(OD)/snis_marshal.o:	snis_marshal.c Makefile ${ODT}
 	$(Q)$(COMPILE)
@@ -1493,8 +1588,10 @@ test_scipher:	scipher.c scipher.h ${OD}/mathutils.o ${OD}/mtwist.o
 spelled_numbers:	spelled_numbers.c
 	$(CC) -g -DSPELLED_NUMBERS_TEST_CASE -o spelled_numbers spelled_numbers.c -lm
 
+ifeq (${WEB},0)
 ${SSGL}:
 	(cd ssgl && ${MAKE} )
+endif
 
 mikktspace/mikktspace.o:
 	(cd mikktspace && ${MAKE} )

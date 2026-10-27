@@ -15,8 +15,10 @@
  * snis_client and snis_server.
  *
  * snis_net_transport.c implements this with ordinary TCP sockets.
+ * snis_net_transport_web.c implements it with a WebSocket for the browser
+ * build, which reaches snis_server through a WebSocket to TCP proxy.
  * Everything above this layer (snis_readsocket(), snis_writesocket(), the
- * protocol) is the same.
+ * protocol) is the same for both.
  */
 
 #ifdef DEFINE_SNIS_NET_TRANSPORT_GLOBALS

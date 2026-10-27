@@ -16,6 +16,8 @@
  * number to stop.
  *
  * snis_main_loop.c loops and sleeps, and returns when iteration() says stop.
+ * snis_main_loop_web.c hands iteration() to the browser to call once per
+ * displayed frame, because a browser tab must not block, and never returns.
  */
 
 #ifdef DEFINE_SNIS_MAIN_LOOP_GLOBALS

@@ -1,0 +1,65 @@
+<!doctype html>
+<!--
+	The page that runs the web browser build of snis_client (make WEB=1 web).
+	See doc/web-client.txt.
+
+	Query parameters (all optional):
+		host	WebSocket proxy host (default: the host serving this page)
+		port	WebSocket proxy port (default: 6060)
+		ship	starship name (default: webship)
+		pw	starship password (default: webpw)
+		args	any other snis_client options, space separated, e.g. args=--navigation
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Space Nerds In Space</title>
+<style>
+	html, body { margin: 0; height: 100%; background: #000; color: #8f8; overflow: hidden;
+		font-family: monospace; }
+	#canvas { display: block; width: 100vw; height: 100vh; outline: none; }
+	#status { position: absolute; top: 40%; width: 100%; text-align: center; font-size: 18px; }
+</style>
+</head>
+<body>
+<div id="status">Loading Space Nerds In Space...</div>
+<canvas id="canvas" tabindex="0" oncontextmenu="event.preventDefault()"></canvas>
+<script>
+	var params = new URLSearchParams(location.search);
+	var args = [
+		'--no-launcher', '--no-splash-screen', '--nolobby',
+		'--serverhost', params.get('host') || location.hostname || 'localhost',
+		'--serverport', params.get('port') || '6060',
+		'--starship', params.get('ship') || 'webship',
+		'--pw', params.get('pw') || 'webpw',
+	];
+	if (params.get('args'))
+		args = args.concat(params.get('args').split(' ').filter(function(a) { return a.length; }));
+
+	var statusElement = document.getElementById('status');
+	var canvas = document.getElementById('canvas');
+
+	if (!self.crossOriginIsolated)
+		statusElement.textContent = 'This page must be served with the Cross-Origin-Opener-Policy ' +
+			'and Cross-Origin-Embedder-Policy headers (see doc/web-client.txt).';
+
+	var Module = {
+		arguments: args,
+		canvas: canvas,
+		print: function(text) { console.log(text); },
+		printErr: function(text) { console.warn(text); },
+		setStatus: function(text) {
+			if (text)
+				statusElement.textContent = text;
+		},
+		onRuntimeInitialized: function() {
+			statusElement.style.display = 'none';
+			canvas.focus();
+		},
+	};
+	canvas.addEventListener('click', function() { canvas.focus(); });
+</script>
+<script async src="snis_client.js"></script>
+</body>
+</html>

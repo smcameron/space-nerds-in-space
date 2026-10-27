@@ -12,6 +12,7 @@ debian/snis.substvars
 earthlike.1.gz
 mesh_viewer
 object_files
+object_files_web
 *.o
 .pc
 share/snis/models/starbase*.docking_ports.h
