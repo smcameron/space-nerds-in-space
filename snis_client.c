@@ -87,6 +87,7 @@
 #include "snis_strip_chart.h"
 #include "snis_pull_down_menu.h"
 #include "snis_socket_io.h"
+#include "snis_net_transport.h"
 #include "ssgl/ssgl.h"
 #include "snis_marshal.h"
 #include "snis_packet.h"
@@ -6151,8 +6152,7 @@ static void we_lost_snis_server(void)
 {
 	stop_gameserver_writer_thread();
 	if (gameserver_sock != -1) {
-		shutdown(gameserver_sock, SHUT_RDWR);
-		close(gameserver_sock);
+		snis_net_close(gameserver_sock);
 		gameserver_sock = -1;
 	}
 	connected_to_gameserver = 0;
@@ -9551,7 +9551,7 @@ static void *gameserver_reader(__attribute__((unused)) void *arg)
 			switched_server = 1; /* TODO : something better */
 			printf("snis_client: **** switched_server = %d\n", switched_server);
 			lobby_selected_server = -1;
-			close(gameserver_sock);
+			snis_net_close(gameserver_sock);
 			gameserver_sock = -1;
 			connected_to_gameserver = 0;
 			warp_gate_camera_shake = 1.0;
@@ -9652,7 +9652,7 @@ static void *gameserver_reader(__attribute__((unused)) void *arg)
 			}
 			stop_gameserver_writer_thread();
 			lobby_selected_server = -1;
-			close(gameserver_sock);
+			snis_net_close(gameserver_sock);
 			gameserver_sock = -1;
 			connected_to_gameserver = 0;
 			displaymode = DISPLAYMODE_NETWORK_SETUP;
@@ -9852,19 +9852,10 @@ static void snis_client_cross_check_opcodes(void)
 static void *connect_to_gameserver_thread(__attribute__((unused)) void *arg)
 {
 	int rc;
-	struct addrinfo *gameserverinfo, *i;
-	struct addrinfo hints;
-	int host_is_numeric, a, b, c, d;
-	int port_is_numeric, p;
-#if 0
-	void *addr;
-	char *ipver; 
-#endif
 	char portstr[50];
 	char hoststr[50];
 	unsigned char *x;
 	struct add_player_packet app;
-	int flag = 1;
 	int attempt_number;
 
 	attempt_number = 1;
@@ -9898,77 +9889,28 @@ try_again:
 	fprintf(stderr, "snis_client: connecting to %s/%s\n", hoststr, portstr);
 	strlcpy(connecting_to_server_msg, "CONNECTING TO SERVER...", sizeof(connecting_to_server_msg));
 
-	/* Check if the hoststr is numeric... */
-	rc = sscanf(hoststr, "%d.%d.%d.%d", &a, &b, &c, &d);
-	host_is_numeric = (rc == 4);
-	/* Check if the portstr is numeric */
-	rc = sscanf(portstr, "%d", &p);
-	port_is_numeric = (rc == 1);
-
-	memset(&hints, 0, sizeof hints);
-	hints.ai_family = AF_INET;
-	hints.ai_socktype = SOCK_STREAM;
-	hints.ai_flags = AI_PASSIVE |
-			(AI_NUMERICSERV * port_is_numeric) | (AI_NUMERICHOST * host_is_numeric);
-	rc = getaddrinfo(hoststr, portstr, &hints, &gameserverinfo);
-	if (rc) {
-		fprintf(stderr, "snis_client: Failed looking up %s:%s: %s\n",
-			hoststr, portstr, gai_strerror(rc));
-		snprintf(connecting_to_server_msg, sizeof(connecting_to_server_msg),
-				"snis_client: Failed looking up %s:%s: %s\n",
-				hoststr, portstr, gai_strerror(rc));
+	gameserver_sock = snis_net_connect(hoststr, portstr,
+				connecting_to_server_msg, sizeof(connecting_to_server_msg));
+	if (gameserver_sock == SNIS_NET_LOOKUP_FAILED) {
+		gameserver_sock = -1;
 		goto error;
 	}
-
-	for (i = gameserverinfo; i != NULL; i = i->ai_next) {
-		if (i->ai_family == AF_INET) {
-#if 0
-			struct sockaddr_in *ipv4 = (struct sockaddr_in *)i->ai_addr;
-			addr = &(ipv4->sin_addr);
-			ipver = "IPv4";
-#endif
-			break;
-		}
-	}
-	if (i == NULL)
-		goto error;
-
-	gameserver_sock = socket(AF_INET, SOCK_STREAM, i->ai_protocol); 
-	if (gameserver_sock < 0)
-		goto error;
-
-	rc = connect(gameserver_sock, i->ai_addr, i->ai_addrlen);
-	if (rc < 0) {
-		fprintf(stderr, "Attempt %d: Connect failed: %s\n", attempt_number, strerror(errno));
+	if (gameserver_sock < 0) {
+		gameserver_sock = -1;
+		fprintf(stderr, "Attempt %d: Connect failed\n", attempt_number);
 		if (!avoid_lobby && (attempt_number == 1 ||
 			(attempt_number == 2 && lobbyhost != NULL && NAT_ghetto_mode))) {
 			attempt_number++;
 			if (lobby_game_server[lobby_selected_server].real_ipaddr !=
 						lobby_game_server[lobby_selected_server].ipaddr)
 				goto try_again; /* Try again if there is a 2nd IP address */
-		} else {
-			goto error;
 		}
-	}
-
-	rc = setsockopt(gameserver_sock, IPPROTO_TCP, TCP_NODELAY, (char *) &flag, sizeof(int));
-	if (rc) {
-		fprintf(stderr, "setsockopt(TCP_NODELAY) failed.\n");
-		snprintf(connecting_to_server_msg, sizeof(connecting_to_server_msg),
-				"setsockopt(TCP_NODELAY) failed.");
-	}
-	uint8_t iptos_lowdelay = IPTOS_LOWDELAY;
-	rc = setsockopt(gameserver_sock, IPPROTO_IP, IP_TOS, &iptos_lowdelay, sizeof(uint8_t));
-	if (rc) {
-		fprintf(stderr, "setsockopt(IPTOS_LOWDELAY) failed.\n");
-		snprintf(connecting_to_server_msg, sizeof(connecting_to_server_msg),
-				"setsockopt(IPTOS_LOWDELAY) failed.");
+		goto error;
 	}
 
 	rc = snis_writesocket(gameserver_sock, SNIS_PROTOCOL_VERSION, strlen(SNIS_PROTOCOL_VERSION));
 	if (rc < 0) {
-		shutdown(gameserver_sock, SHUT_RDWR);
-		close(gameserver_sock);
+		snis_net_close(gameserver_sock);
 		gameserver_sock = -1;
 		goto error;
 	}
@@ -9978,8 +9920,7 @@ try_again:
 
 	rc = snis_writesocket(gameserver_sock, &enforce_solarsystem, 1);
 	if (rc < 0) {
-		shutdown(gameserver_sock, SHUT_RDWR);
-		close(gameserver_sock);
+		snis_net_close(gameserver_sock);
 		gameserver_sock = -1;
 		goto error;
 	}
@@ -10006,8 +9947,7 @@ try_again:
 		fprintf(stderr, "Initial write to gameserver failed.\n");
 		snprintf(connecting_to_server_msg, sizeof(connecting_to_server_msg),
 				"Initial write to gameserver failed.");
-		shutdown(gameserver_sock, SHUT_RDWR);
-		close(gameserver_sock);
+		snis_net_close(gameserver_sock);
 		gameserver_sock = -1;
 		goto error;
 	}
@@ -10042,12 +9982,9 @@ try_again:
 	snis_client_cross_check_opcodes();
 	request_universe_timestamp();
 	send_build_info_to_server();
-	freeaddrinfo(gameserverinfo);
 	return NULL;
 
 error:
-	/* FIXME, this isn't right... */
-	freeaddrinfo(gameserverinfo);
 	we_lost_snis_server();
 
 	return NULL;

@@ -592,7 +592,8 @@ _COMMONOBJS=mathutils.o snis_alloc.o snis_socket_io.o snis_marshal.o \
 		planetary_atmosphere.o planetary_ring_data.o mesh.o pthread_util.o \
 		snis_opcode_def.o rts_unit_data.o commodities.o snis_tweak.o rootcheck.o \
 		corporations.o replacement_assets.o snis_asset_dir.o snis_bin_dir.o scipher.o \
-		planetary_properties.o open-simplex-noise.o snis_licenses.o net_utils.o
+		planetary_properties.o open-simplex-noise.o snis_licenses.o net_utils.o \
+		snis_net_transport.o
 COMMONOBJS=$(patsubst %,$(OD)/%,${_COMMONOBJS}) mikktspace/mikktspace.o
 
 _SERVEROBJS=snis_server.o starbase-comms.o \
@@ -607,7 +608,7 @@ SERVEROBJS=${COMMONOBJS} $(patsubst %,$(OD)/%,${_SERVEROBJS})
 _MULTIVERSEOBJS=snis_multiverse.o snis_marshal.o snis_socket_io.o mathutils.o mtwist.o stacktrace.o \
 		snis_hash.o quat.o string-utils.o key_value_parser.o snis_bridge_update_packet.o \
 		pthread_util.o rootcheck.o starmap_adjacency.o replacement_assets.o snis_asset_dir.o \
-		snis_bin_dir.o snis_licenses.o net_utils.o commodities.o
+		snis_bin_dir.o snis_licenses.o net_utils.o commodities.o snis_net_transport.o
 MULTIVERSEOBJS=$(patsubst %,$(OD)/%,${_MULTIVERSEOBJS})
 
 OGGOBJ=$(patsubst %,$(OD)/%,${_OGGOBJ})
@@ -1134,6 +1135,9 @@ util/generate_solarsystem_positions:	util/generate_solarsystem_positions.o ${OD}
 	$(CC) ${MYCFLAGS} -o $@ util/generate_solarsystem_positions.o ${OD}/string-utils.o ${OD}/stacktrace.o -lm
 
 $(OD)/snis_socket_io.o:	snis_socket_io.c Makefile ${ODT}
+	$(Q)$(COMPILE)
+
+$(OD)/snis_net_transport.o:	snis_net_transport.c snis_net_transport.h Makefile ${ODT}
 	$(Q)$(COMPILE)
 
 $(OD)/snis_marshal.o:	snis_marshal.c Makefile ${ODT}

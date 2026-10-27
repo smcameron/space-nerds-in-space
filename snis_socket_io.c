@@ -41,6 +41,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 
 #define DEFINE_SNIS_SOCKET_IO_GLOBALS
 #include "snis_socket_io.h"
+#include "snis_net_transport.h"
 
 #define MAX_DEBUGGABLE_SOCKETS 100
 static int protocol_debugging_enabled = 0; /* off by default, call snis_protocol_debugging(1); to enable */
@@ -65,7 +66,7 @@ int snis_readsocket(int fd, void *buffer, int buflen)
 	int rc, len = buflen;
 
 	do {
-		rc = recv(fd, c, len, 0);
+		rc = snis_net_recv(fd, c, len);
 		/*printf("recv returned %d, errno = %s\n", rc, strerror(errno)); */
 		if (rc == 0) { /* other side closed conn */
 			fprintf(stderr, "pid(%d): readsocket other side closed conn\n", getpid());
@@ -103,7 +104,7 @@ int snis_writesocket(int fd, void *buffer, int buflen)
 	int rc, len = buflen;
 
 	do {
-		rc = send(fd, c, len, 0);
+		rc = snis_net_send(fd, c, len);
 		if (rc == len) {
 			if (netstats)
 				netstats->bytes_sent += rc;
