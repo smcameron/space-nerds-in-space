@@ -39,14 +39,22 @@
 #include "wwviaudio.h"
 #undef WWVIAUDIO_DEFINE_GLOBALS
 
+#ifdef WWVIAUDIO_USE_SDL
+#include <SDL.h>
+#else
 #include "portaudio.h"
+#endif
 #include "ogg_to_pcm.h"
 
 /* This must be one of 120, 240, 480, 960, 1920, and 2880, at least until
  * I write the code to resample 44100hz data to a rate opus supports */
 #define FRAMES_PER_BUFFER  (1920)
 
+#ifdef WWVIAUDIO_USE_SDL
+static SDL_AudioDeviceID audio_device;
+#else
 static PaStream *stream = NULL;
+#endif
 static int audio_paused = 0;
 static int music_playing = 1;
 static int sound_working = 0;
@@ -58,10 +66,8 @@ static int max_sound_clips = 0;
 static int allocated_sound_clips = 0;
 static int one_shot_busy = 0;
 static pthread_mutex_t one_shot_mutex = PTHREAD_MUTEX_INITIALIZER;
-static pthread_mutex_t recording_mutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t audio_chain_mutex[WWVIAUDIO_CHAIN_COUNT];
 static pthread_mutex_t main_audio_mutex = PTHREAD_MUTEX_INITIALIZER;
-static int busy_recording = 0;
 static unsigned int mixer_cycle_count = 0;
 static float compressor_threshold = 0.5;
 static float compressor_limit = 0.98; /* By default, do almost nothing */
@@ -241,22 +247,15 @@ static float compress_dyn_range(float v, const float threshold, const float limi
 	return gain * fmap(v, 0.97, 1000.0, limit, limit); /* brick wall */
 }
 
-/* This routine will be called by the PortAudio engine when audio is needed.
+/* This routine will be called by the audio engine (PortAudio or SDL) when audio is needed.
 ** It may called at interrupt level on some machines so don't do anything
 ** that could mess up the system like calling malloc() or free().
 */
-static int wwviaudio_mixer_loop(__attribute__ ((unused)) const void *inputBuffer,
-	void *outputBuffer,
-	unsigned long framesPerBuffer,
-	__attribute__ ((unused)) const PaStreamCallbackTimeInfo* timeInfo,
-	__attribute__ ((unused)) PaStreamCallbackFlags statusFlags,
-	__attribute__ ((unused)) void *userData )
+static void wwviaudio_mix(float *out, unsigned long framesPerBuffer)
 {
 	unsigned int i, j;
 	int sample;
-	float *out = NULL;
 	float output;
-	out = (float*) outputBuffer;
 	const float climit = compressor_limit;
 	const float cthreshold = compressor_threshold;
 	const float vclimit = voip_compressor_limit;
@@ -268,7 +267,7 @@ static int wwviaudio_mixer_loop(__attribute__ ((unused)) const void *inputBuffer
 		 */
 		for (i = 0; i < framesPerBuffer; i++)
 			*out++ = (float) 0;
-		return 0;
+		return;
 	}
 
 	mixer_cycle_count++;
@@ -334,6 +333,57 @@ static int wwviaudio_mixer_loop(__attribute__ ((unused)) const void *inputBuffer
 		}
 	}
 	pthread_mutex_unlock(&main_audio_mutex);
+}
+
+#ifdef WWVIAUDIO_USE_SDL
+
+static void wwviaudio_sdl_mixer(__attribute__ ((unused)) void *userdata, Uint8 *stream, int len)
+{
+	wwviaudio_mix((float *) stream, len / sizeof(float));
+}
+
+static int open_output_stream(void)
+{
+	SDL_AudioSpec want, have;
+
+	if (SDL_InitSubSystem(SDL_INIT_AUDIO) != 0) {
+		fprintf(stderr, "SDL audio init failed: %s\n", SDL_GetError());
+		return -1;
+	}
+	memset(&want, 0, sizeof(want));
+	want.freq = WWVIAUDIO_SAMPLE_RATE;
+	want.format = AUDIO_F32SYS;
+	want.channels = 1; /* mono output */
+	want.samples = FRAMES_PER_BUFFER;
+	want.callback = wwviaudio_sdl_mixer;
+	/* No allowed changes: SDL converts to whatever the device wants */
+	audio_device = SDL_OpenAudioDevice(NULL, 0, &want, &have, 0);
+	if (audio_device == 0) {
+		fprintf(stderr, "SDL_OpenAudioDevice failed: %s\n", SDL_GetError());
+		return -1;
+	}
+	sound_working = 1;
+	SDL_PauseAudioDevice(audio_device, 0);
+	return 0;
+}
+
+static void close_output_stream(void)
+{
+	SDL_CloseAudioDevice(audio_device);
+	audio_device = 0;
+	SDL_QuitSubSystem(SDL_INIT_AUDIO);
+}
+
+#else
+
+static int wwviaudio_mixer_loop(__attribute__ ((unused)) const void *inputBuffer,
+	void *outputBuffer,
+	unsigned long framesPerBuffer,
+	__attribute__ ((unused)) const PaStreamCallbackTimeInfo *timeInfo,
+	__attribute__ ((unused)) PaStreamCallbackFlags statusFlags,
+	__attribute__ ((unused)) void *userData)
+{
+	wwviaudio_mix((float *) outputBuffer, framesPerBuffer);
 	return 0; /* we're never finished */
 }
 
@@ -352,30 +402,11 @@ static void wwviaudio_terminate_portaudio(PaError rc)
 	decode_paerror(rc);
 }
 
-int wwviaudio_initialize_portaudio(int maximum_concurrent_sounds, int maximum_sound_clips)
+static int open_output_stream(void)
 {
 	PaStreamParameters outparams;
 	PaError rc;
 	PaDeviceIndex device_count;
-	int i;
-
-	if (maximum_concurrent_sounds < 0)
-		return -1;
-
-	for (i = 0; i < WWVIAUDIO_CHAIN_COUNT; i++)
-		pthread_mutex_init(&audio_chain_mutex[i], NULL);
-
-	max_concurrent_sounds = (unsigned int) maximum_concurrent_sounds;
-	max_sound_clips = maximum_sound_clips;
-
-	audio_queue = malloc(max_concurrent_sounds * sizeof(audio_queue[0]));
-	clip = malloc((max_sound_clips + 1) * sizeof(clip[0])); /* +1 for the "one shot" sound */
-	if (audio_queue == NULL || clip == NULL)
-		return -1;
-
-	allocated_sound_clips = max_sound_clips + 1;
-	memset(audio_queue, 0, sizeof(audio_queue[0]) * max_concurrent_sounds);
-	memset(clip, 0, sizeof(clip[0]) * allocated_sound_clips);
 
 	rc = Pa_Initialize();
 	if (rc != paNoError)
@@ -437,17 +468,51 @@ error:
 }
 
 
-void wwviaudio_stop_portaudio(void)
+static void close_output_stream(void)
 {
-	int i, rc;
-	
-	if (!sound_working)
-		return;
+	PaError rc;
+
 	if ((rc = Pa_StopStream(stream)) != paNoError)
 		goto error;
 	rc = Pa_CloseStream(stream);
 error:
 	wwviaudio_terminate_portaudio(rc);
+}
+
+#endif /* WWVIAUDIO_USE_SDL */
+
+int wwviaudio_initialize_portaudio(int maximum_concurrent_sounds, int maximum_sound_clips)
+{
+	int i;
+
+	if (maximum_concurrent_sounds < 0)
+		return -1;
+
+	for (i = 0; i < WWVIAUDIO_CHAIN_COUNT; i++)
+		pthread_mutex_init(&audio_chain_mutex[i], NULL);
+
+	max_concurrent_sounds = (unsigned int) maximum_concurrent_sounds;
+	max_sound_clips = maximum_sound_clips;
+
+	audio_queue = malloc(max_concurrent_sounds * sizeof(audio_queue[0]));
+	clip = malloc((max_sound_clips + 1) * sizeof(clip[0])); /* +1 for the "one shot" sound */
+	if (audio_queue == NULL || clip == NULL)
+		return -1;
+
+	allocated_sound_clips = max_sound_clips + 1;
+	memset(audio_queue, 0, sizeof(audio_queue[0]) * max_concurrent_sounds);
+	memset(clip, 0, sizeof(clip[0]) * allocated_sound_clips);
+
+	return open_output_stream();
+}
+
+void wwviaudio_stop_portaudio(void)
+{
+	int i;
+
+	if (!sound_working)
+		return;
+	close_output_stream();
 	if (audio_queue) {
 		free(audio_queue);
 		audio_queue = NULL;
@@ -712,6 +777,34 @@ int wwviaudio_get_sound_device(void)
 	return sound_device;
 }
 
+#ifdef WWVIAUDIO_USE_SDL
+
+void wwviaudio_list_devices(void)
+{
+	int i, device_count;
+
+	device_count = SDL_GetNumAudioDevices(0);
+	printf("SDL reports %d devices\n", device_count);
+	for (i = 0; i < device_count; i++)
+		printf("%d: %s\n", i, SDL_GetAudioDeviceName(i, 0));
+}
+
+/* Recording is only used for voice chat, which the SDL audio build does not have yet */
+int wwviaudio_start_audio_capture(__attribute__((unused)) int16_t *buffer,
+				__attribute__((unused)) int nsamples,
+				__attribute__((unused)) void (*callback)(void *, int16_t *, int),
+				__attribute__((unused)) void *cookie)
+{
+	return -1;
+}
+
+int wwviaudio_stop_audio_capture(void)
+{
+	return 0;
+}
+
+#else
+
 void wwviaudio_list_devices(void)
 {
 	int i, device_count;
@@ -728,6 +821,9 @@ void wwviaudio_list_devices(void)
 		printf("%d: %s\n", i, devinfo->name);
 	}
 }
+
+static pthread_mutex_t recording_mutex = PTHREAD_MUTEX_INITIALIZER;
+static int busy_recording = 0;
 
 static struct wwviaudio_record_data {
 	PaStream *stream;
@@ -837,6 +933,8 @@ int wwviaudio_stop_audio_capture(void)
 error:
 	return -1;
 }
+
+#endif /* WWVIAUDIO_USE_SDL */
 
 unsigned int wwviaudio_get_mixer_cycle_count(void) {
 	return mixer_cycle_count;
