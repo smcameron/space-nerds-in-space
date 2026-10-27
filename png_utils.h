@@ -20,7 +20,6 @@
 	along with Spacenerds in Space; if not, write to the Free Software
 	Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
-#include <png.h>
 
 int png_utils_write_png_image(const char *filename, unsigned char *pixels, int w, int h, int has_alpha, int invert);
 

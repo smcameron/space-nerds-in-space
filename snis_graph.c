@@ -13,7 +13,6 @@
 #else
 #include <glad/gl.h>
 #endif
-#include <png.h>
 #endif
 
 #include "arraysize.h"

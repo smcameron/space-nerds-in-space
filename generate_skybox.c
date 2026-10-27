@@ -23,6 +23,7 @@
 #include <stdlib.h>
 #include <errno.h>
 #include <string.h>
+#include <limits.h>
 #include <math.h>
 
 #include "png_utils.h"

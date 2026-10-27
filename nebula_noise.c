@@ -27,6 +27,7 @@
 #include <errno.h>
 #include <math.h>
 #include <stdlib.h>
+#include <limits.h>
 #include <getopt.h>
 
 #include "png_utils.h"

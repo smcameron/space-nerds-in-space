@@ -1482,7 +1482,7 @@ $(OD)/fleet.o:	fleet.c Makefile ${ODT}
 	$(Q)$(COMPILE)
 
 $(OD)/png_utils.o:	png_utils.c png_utils.h Makefile ${ODT}
-	$(Q)$(COMPILE)
+	$(Q)$(COMPILE) ${PNGCFLAGS}
 
 $(OD)/workqueue.o:	workqueue.c workqueue.h Makefile ${ODT}
 	$(Q)$(COMPILE)
