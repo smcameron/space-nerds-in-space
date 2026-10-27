@@ -1612,12 +1612,16 @@ mostly-clean:
 	bin/yoke-test-program fuzz_obj_parser fuzz_snis_read_ship_types fuzz_solarsystem_asset_spec_read \
 	fuzz_read_thrust_attachments fuzz_process_manifest build_info.h fuzz_read_joystick_config \
 	fuzz_read_commodities fuzz_read_starbase_metadata fuzz_read_docking_port_attachments ${METAINFOFILE} \
-	solarsystem_config_test
+	solarsystem_config_test bin/check-endianness.wasm
+	rm -fr bin/web
 	rm -f ${BIN}
 	rm -fr opus-1.3.1
 	rm -f libopus.a
 	if [ -x bin ]; then rmdir bin; fi
-	rm -fr ${OD}
+	# rm -fr ${OD}
+	# Value of OD depends on if WEB=1, either object_files, or object_files_web,
+	# but for cleaning, nuke both.
+	rm -fr object_files object_files_web
 	( cd ssgl && ${MAKE} clean )
 	( cd mikktspace && ${MAKE} clean )
 
