@@ -620,7 +620,7 @@ _COMMONCLIENTOBJS= snis_ui_element.o snis_font.o snis_text_input.o \
 	quat.o vec4.o thrust_attachment.o docking_port.o ui_colors.o snis_keyboard.o solarsystem_config.o \
 	pronunciation.o snis_preferences.o snis_pull_down_menu.o snis_client_debug.o starmap_adjacency.o \
 	shape_collision.o oriented_bounding_box.o xdg_base_dir_spec.o snis_voice_chat.o read_menu_file.o \
-	snis_client_forker.o snis_process_options.o workqueue.o
+	snis_client_forker.o snis_process_options.o workqueue.o snis_main_loop.o
 COMMONCLIENTOBJS=${COMMONOBJS} ${OGGOBJ} ${SNDOBJS} $(patsubst %,$(OD)/%,${_COMMONCLIENTOBJS}) 
 
 _CLIENTOBJS= shader.o ${GRAPH_OBJS} snis_graph.o snis_client.o joystick_config.o snis_xwindows_hacks.o png_utils.o \
@@ -1138,6 +1138,9 @@ $(OD)/snis_socket_io.o:	snis_socket_io.c Makefile ${ODT}
 	$(Q)$(COMPILE)
 
 $(OD)/snis_net_transport.o:	snis_net_transport.c snis_net_transport.h Makefile ${ODT}
+	$(Q)$(COMPILE)
+
+$(OD)/snis_main_loop.o:	snis_main_loop.c snis_main_loop.h Makefile ${ODT}
 	$(Q)$(COMPILE)
 
 $(OD)/snis_marshal.o:	snis_marshal.c Makefile ${ODT}

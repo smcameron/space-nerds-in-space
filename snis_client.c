@@ -88,6 +88,7 @@
 #include "snis_pull_down_menu.h"
 #include "snis_socket_io.h"
 #include "snis_net_transport.h"
+#include "snis_main_loop.h"
 #include "ssgl/ssgl.h"
 #include "snis_marshal.h"
 #include "snis_packet.h"
@@ -28127,6 +28128,58 @@ static void check_if_running_in_container(void)
 	running_in_container = 0;
 }
 
+/* State for main_loop_iteration() */
+static SDL_Window *main_loop_window;
+static const double maxTimeBehind = 0.5;
+static const double delta[2] = { 1.0 / 30.0, 1.0 / 60.0 };
+static double nextTime, nextDrawTime;
+
+/* One pass of the main loop.  Returns how long to wait before the next pass,
+ * or a negative number when it's time to quit.  See snis_main_loop.h.
+ */
+static double main_loop_iteration(void)
+{
+	SDL_Window *window = main_loop_window;
+	double currentTime, timeToSleep = 0.0;
+
+	PROFILE_ZONE_START_CTX(profile_loopctx, "main::loop");
+
+	currentTime = time_now_double();
+
+	if (currentTime - nextTime > maxTimeBehind)
+		nextTime = currentTime;
+
+	if (currentTime >= nextTime) { /* 60 Hz stuff */
+		nextTime += delta[1];
+		process_events(window);
+		advance_game();
+		maybe_hide_mouse_cursor();
+		maybe_resize_window(window);
+		if (final_quit_selection == QUIT_SELECTION_QUIT)
+			return -1.0;
+		if (final_quit_selection == QUIT_SELECTION_DISCONNECT) {
+			final_quit_selection = QUIT_SELECTION_CONTINUE;
+			/* This will close the connection to snis_server and punt
+			 * us back to the network connection screen.
+			 */
+			if (gameserver_sock >= 0) {
+				snis_net_close(gameserver_sock);
+				gameserver_sock = -1;
+			}
+		}
+	} else {
+		timeToSleep = nextTime - currentTime;
+	}
+	if (currentTime >= nextDrawTime) { /* 60 or 30 Hz, depending on use_60_fps */
+		main_da_expose(window); /* Draw the screen. */
+		nextDrawTime += delta[use_60_fps];
+		nframes++;
+	}
+
+	PROFILE_ZONE_END_CTX(profile_loopctx);
+	return timeToSleep;
+}
+
 static char **saved_argv;
 
 int main(int argc, char *argv[])
@@ -28273,12 +28326,10 @@ int main(int argc, char *argv[])
 	update_splash_progress(15);
 	main_da_configure(window);
 
-	const double maxTimeBehind = 0.5;
-	double delta[2] = { 1.0 / 30.0, 1.0 / 60.0 };
-
+	main_loop_window = window;
 	double currentTime = time_now_double();
-	double nextTime = currentTime + delta[1];
-	double nextDrawTime = currentTime + delta[use_60_fps];
+	nextTime = currentTime + delta[1];
+	nextDrawTime = currentTime + delta[use_60_fps];
 
 	SDL_ShowWindow(window);
 
@@ -28286,46 +28337,7 @@ int main(int argc, char *argv[])
 	graph_dev_clear_window();
 	SDL_GL_SwapWindow(window);
 
-	while (1) {
-		PROFILE_ZONE_START_CTX(profile_loopctx, "main::loop");
-
-		currentTime = time_now_double();
-
-		if (currentTime - nextTime > maxTimeBehind)
-			nextTime = currentTime;
-
-		if (currentTime >= nextTime) { /* 60 Hz stuff */
-			nextTime += delta[1];
-			process_events(window);
-			advance_game();
-			maybe_hide_mouse_cursor();
-			maybe_resize_window(window);
-			if (final_quit_selection == QUIT_SELECTION_QUIT)
-				break;
-			if (final_quit_selection == QUIT_SELECTION_DISCONNECT) {
-				final_quit_selection = QUIT_SELECTION_CONTINUE;
-				/* This will close the connection to snis_server and punt
-				 * us back to the network connection screen.
-				 */
-				if (gameserver_sock >= 0) {
-					shutdown(gameserver_sock, SHUT_RDWR);
-					close(gameserver_sock);
-					gameserver_sock = -1;
-				}
-			}
-		} else {
-			double timeToSleep = nextTime - currentTime;
-			if (timeToSleep > 0)
-				sleep_double(timeToSleep);
-		}
-		if (currentTime >= nextDrawTime) { /* 60 or 30 Hz, depending on use_60_fps */
-			main_da_expose(window); /* Draw the screen. */
-			nextDrawTime += delta[use_60_fps];
-			nframes++;
-		}
-
-		PROFILE_ZONE_END_CTX(profile_loopctx);
-	}
+	snis_run_main_loop(main_loop_iteration);
 
 	if (running_in_container && leave_no_orphans) {
 		start_snis_process_terminator((void *) 1);
