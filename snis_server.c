@@ -29155,7 +29155,11 @@ static void service_connection(int connection)
 	fprintf(stderr, "%s: calling add new player\n", logprefix());
 	rc = add_new_player(&client[i], enforce_solarsystem);
 	if (rc) {
-		nclients--;
+		/* Only give the slot back if it was added on the end.  A reused
+		 * hole stays a hole: other clients may follow it in client[].
+		 */
+		if (i == nclients - 1)
+			nclients--;
 		client_unlock();
 		pthread_mutex_unlock(&universe_mutex);
 		return;
