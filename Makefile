@@ -22,9 +22,11 @@ WITHVOICECHAT=no
 USE_SNIS_XWINDOWS_HACKS=0
 NET_TRANSPORT_OBJ=snis_net_transport_web.o
 MAIN_LOOP_OBJ=snis_main_loop_web.o
+ASSET_FETCH_OBJ=snis_asset_fetch_web.o
 else
 NET_TRANSPORT_OBJ=snis_net_transport.o
 MAIN_LOOP_OBJ=snis_main_loop.o
+ASSET_FETCH_OBJ=snis_asset_fetch.o
 endif
 
 # use "make OSX=1" for mac
@@ -646,7 +648,8 @@ COMMONCLIENTOBJS=${COMMONOBJS} ${OGGOBJ} ${SNDOBJS} $(patsubst %,$(OD)/%,${_COMM
 
 _CLIENTOBJS= shader.o ${GRAPH_OBJS} snis_graph.o snis_client.o joystick_config.o snis_xwindows_hacks.o png_utils.o \
 				black_hole_lens.o mesh_fracture.o particle_batch.o ship_death.o \
-				ship_death_fireball.o ship_death_shrapnel.o ship_death_wreck.o snis_wled.o
+				ship_death_fireball.o ship_death_shrapnel.o ship_death_wreck.o snis_wled.o \
+				${ASSET_FETCH_OBJ}
 CLIENTOBJS=${COMMONCLIENTOBJS} $(patsubst %,$(OD)/%,${_CLIENTOBJS})
 
 _SDLCLIENTOBJS=shader.o ${GRAPH_OBJS} snis_graph.o mesh_viewer.o \
@@ -1216,6 +1219,12 @@ $(OD)/snis_main_loop_web.o:	snis_main_loop_web.c snis_main_loop.h Makefile ${ODT
 $(OD)/snis_web_stubs.o:	snis_web_stubs.c Makefile ${ODT}
 	$(Q)$(COMPILE)
 
+$(OD)/snis_asset_fetch.o:	snis_asset_fetch.c snis_asset_fetch.h Makefile ${ODT}
+	$(Q)$(COMPILE)
+
+$(OD)/snis_asset_fetch_web.o:	snis_asset_fetch_web.c snis_asset_fetch.h Makefile ${ODT}
+	$(Q)$(COMPILE)
+
 $(OD)/snis_web_ssgl.o:	snis_web_ssgl.c snis_net_transport.h Makefile ${ODT}
 	$(Q)$(COMPILE)
 
@@ -1243,16 +1252,30 @@ web-update-assets:
 	rm -f ${WEB_ASSET_STAMP}
 	$(Q)$(MAKE) ${WEB_ASSET_STAMP}
 
-# The assets bundled into the web client, put together the way the launcher's
+# The assets for the web client, put together the way the launcher's
 # UPDATE ASSETS does it: the files in share/snis, with the downloaded assets
 # laid over them.  Shaders and Lua scripts are code, and always come from this
 # tree, even if the cache holds old copies (as one seeded from an installed
-# asset directory would).
+# asset directory would).  Only WEB_SOLARSYSTEM is bundled into
+# snis_client.data.  The other solarsystems go in bin/web/solarsystems, each
+# with a list of its files, and snis_asset_fetch_web.c fetches one when the
+# server first moves the client there.
 web-assets:	${WEB_ASSET_STAMP}
 	$(Q)$(ECHO) '  ASSETS' $(OD)/web-assets && mkdir -p $(OD)/web-assets && \
 		rsync -a --delete ${WEB_ASSET_EXCLUDES} share/snis/ $(OD)/web-assets/ && \
 		rsync -a ${WEB_ASSET_EXCLUDES} --exclude=/shader-es --exclude=/luascripts \
 			${WEB_ASSET_CACHE}/share/snis/ $(OD)/web-assets/
+	$(Q)$(ECHO) '  ASSETS' bin/web/solarsystems && mkdir -p bin/web/solarsystems && \
+		rsync -a --delete --exclude='/${WEB_SOLARSYSTEM}' --exclude='/*.files' \
+			share/snis/solarsystems/ bin/web/solarsystems/ && \
+		if [ -d ${WEB_ASSET_CACHE}/share/snis/solarsystems ]; then \
+			rsync -a --exclude='/${WEB_SOLARSYSTEM}' \
+				${WEB_ASSET_CACHE}/share/snis/solarsystems/ bin/web/solarsystems/; \
+		fi && \
+		for d in bin/web/solarsystems/*/; do \
+			[ -d "$$d" ] || continue; \
+			(cd $$d && find . -type f | sort) > $${d%/}.files; \
+		done
 
 bin/web/snis_client.js:	${CLIENTOBJS} ${SSGL} Makefile web-assets
 	@mkdir -p bin/web

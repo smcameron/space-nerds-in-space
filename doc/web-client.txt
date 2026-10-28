@@ -33,6 +33,7 @@ This puts the client in bin/web/:
   snis_client.js	the program, with
   snis_client.wasm
   snis_client.data	the assets, about 200 Mb
+  solarsystems/		the other solarsystems, fetched when needed
 
 The web build keeps its objects in object_files_web/, so it does not disturb
 the native build in object_files/, and you can build both from one tree.
@@ -47,10 +48,14 @@ mostly-clean" leaves them alone, and
 checks for newer ones.  The assets bundled into the client are put together
 the way UPDATE ASSETS does it: the files in share/snis, with the downloaded
 ones laid over them (except shaders and Lua scripts, which always come from
-the source tree).  Only one solarsystem is bundled, "default" unless you say
-otherwise:
+the source tree).  Only one solarsystem is bundled into snis_client.data,
+"default" unless you say otherwise:
 
   make WEB=1 web WEB_SOLARSYSTEM=karado
+
+The others go in bin/web/solarsystems/, and the client fetches one from the
+gateway the first time the server puts it there, so a browser downloads only
+the solarsystems it visits.  The browser's cache keeps them for next time.
 
 Running
 -------
@@ -133,6 +138,7 @@ the same way USE_GLES=1 swaps graph_dev_opengl.c for graph_dev_gles.c:
 
 	snis_net_transport.c	-> snis_net_transport_web.c	TCP becomes WebSocket
 	snis_main_loop.c	-> snis_main_loop_web.c		the browser calls each frame
+	snis_asset_fetch.c	-> snis_asset_fetch_web.c	fetch solarsystems when needed
 	(various)		-> snis_web_stubs.c		things a browser cannot do
 
 and the WebSocket goes to snis_web_gateway, at /relay/<host>/<port>.

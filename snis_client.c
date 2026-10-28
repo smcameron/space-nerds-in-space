@@ -89,6 +89,7 @@
 #include "snis_socket_io.h"
 #include "snis_net_transport.h"
 #include "snis_main_loop.h"
+#include "snis_asset_fetch.h"
 #include "ssgl/ssgl.h"
 #include "snis_marshal.h"
 #include "snis_packet.h"
@@ -7080,6 +7081,9 @@ static int process_set_solarsystem(void)
 	memcpy(dynamic_solarsystem_name, solarsystem, 100);
 	printf("SET SOLARSYSTEM TO '%s'\n", dynamic_solarsystem_name);
 	solarsystem_name = dynamic_solarsystem_name;
+	if (snis_fetch_solarsystem_assets(asset_dir, dynamic_solarsystem_name))
+		fprintf(stderr, "Failed fetching assets for solarsystem %s\n",
+			dynamic_solarsystem_name);
 	if (read_solarsystem_config(dynamic_solarsystem_name, &assets)) {
 		fprintf(stderr, "Failed re-reading new solarsystem metadata for %s\n",
 			dynamic_solarsystem_name);
