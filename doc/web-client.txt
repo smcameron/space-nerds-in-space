@@ -37,13 +37,20 @@ This puts the client in bin/web/:
 The web build keeps its objects in object_files_web/, so it does not disturb
 the native build in object_files/, and you can build both from one tree.
 
-The assets come from your downloaded assets (by default
-~/.local/share/space-nerds-in-space/share/snis, as fetched by the launcher's
-UPDATE ASSETS button or bin/snis_update_assets),
-with the files git tracks in share/snis laid over them so that they match the
-source.  Only one solarsystem is included, "default" unless you say otherwise:
+The first "make WEB=1 web" downloads the game's assets, about 700 Mb, into
+web-asset-cache/, using bin/snis_update_assets (which it builds), just as the
+launcher's UPDATE ASSETS button does.  Later builds reuse them; "make
+mostly-clean" leaves them alone, and
 
-  make WEB=1 web WEB_ASSET_DIR=/some/where/share/snis WEB_SOLARSYSTEM=karado
+  make WEB=1 web-update-assets
+
+checks for newer ones.  The assets bundled into the client are put together
+the way UPDATE ASSETS does it: the files in share/snis, with the downloaded
+ones laid over them (except shaders and Lua scripts, which always come from
+the source tree).  Only one solarsystem is bundled, "default" unless you say
+otherwise:
+
+  make WEB=1 web WEB_SOLARSYSTEM=karado
 
 Running
 -------

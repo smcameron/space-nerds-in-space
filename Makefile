@@ -867,12 +867,16 @@ _CLIENTOBJS+=snis_web_stubs.o
 # These are for ELF and x86 linkers and compilers, not for wasm.
 COMMA:=,
 MYCFLAGS:=$(filter-out -Wl$(COMMA)% -fstack-clash-protection -D_FORTIFY_SOURCE=3 -fexceptions,${MYCFLAGS})
-# Where to find the assets to bundle into the web client.  They are put
-# where snis_asset_dir.c looks by default, so nothing needs configuring.
-WEB_ASSET_DIR?=${HOME}/.local/share/space-nerds-in-space/share/snis
+# The web client's assets are downloaded once, by snis_update_assets, into
+# WEB_ASSET_CACHE, which "make mostly-clean" leaves alone.  "make WEB=1
+# web-update-assets" checks for newer ones.  They are bundled where
+# snis_asset_dir.c looks by default, so nothing needs configuring.
+WEB_ASSET_CACHE?=web-asset-cache
+WEB_ASSET_STAMP=${WEB_ASSET_CACHE}/share/snis/.downloaded
 WEB_SOLARSYSTEM?=default
-WEB_ASSET_EXCLUDES=--exclude=/shader --exclude='*.scad' \
-	--exclude='*.scad_params.h' --include='/solarsystems/${WEB_SOLARSYSTEM}/***' --exclude='/solarsystems/*'
+WEB_ASSET_EXCLUDES=--exclude=/shader --exclude='*.scad' --exclude='*.scad_params.h' \
+	--exclude=.downloaded \
+	--include='/solarsystems/${WEB_SOLARSYSTEM}/***' --exclude='/solarsystems/*'
 WEBLDFLAGS=-pthread -sPTHREAD_POOL_SIZE=24 \
 	-sALLOW_MEMORY_GROWTH=1 -sINITIAL_MEMORY=512MB -sMAXIMUM_MEMORY=4GB \
 	-sSTACK_SIZE=4MB -sDEFAULT_PTHREAD_STACK_SIZE=2MB \
@@ -1222,14 +1226,28 @@ $(OD)/libssglclient.a:	$(patsubst %,$(OD)/%,${_SSGLWEBOBJS})
 # The browser client: bin/web/snis_client.{html,js,wasm,data}
 web:	bin/web/snis_client.js bin/web/snis_client.html
 
-.PHONY:	web web-assets
+.PHONY:	web web-assets web-update-assets
 
-# The assets bundled into the web client: the downloaded assets, with the
-# files git tracks in share/snis laid over them, so they match this source tree.
-web-assets:
+# snis_update_assets runs natively, so build it without WEB=1.
+${WEB_ASSET_STAMP}:
+	$(Q)$(MAKE) WEB=0 bin/snis_update_assets
+	$(Q)$(ECHO) '  DOWNLOAD' ${WEB_ASSET_CACHE} && mkdir -p ${WEB_ASSET_CACHE} && \
+		bin/snis_update_assets --force --destdir ${WEB_ASSET_CACHE} && touch $@
+
+web-update-assets:
+	rm -f ${WEB_ASSET_STAMP}
+	$(Q)$(MAKE) ${WEB_ASSET_STAMP}
+
+# The assets bundled into the web client, put together the way the launcher's
+# UPDATE ASSETS does it: the files in share/snis, with the downloaded assets
+# laid over them.  Shaders and Lua scripts are code, and always come from this
+# tree, even if the cache holds old copies (as one seeded from an installed
+# asset directory would).
+web-assets:	${WEB_ASSET_STAMP}
 	$(Q)$(ECHO) '  ASSETS' $(OD)/web-assets && mkdir -p $(OD)/web-assets && \
-		rsync -a --delete ${WEB_ASSET_EXCLUDES} ${WEB_ASSET_DIR}/ $(OD)/web-assets/ && \
-		rsync -a ${WEB_ASSET_EXCLUDES} share/snis/ $(OD)/web-assets/
+		rsync -a --delete ${WEB_ASSET_EXCLUDES} share/snis/ $(OD)/web-assets/ && \
+		rsync -a ${WEB_ASSET_EXCLUDES} --exclude=/shader-es --exclude=/luascripts \
+			${WEB_ASSET_CACHE}/share/snis/ $(OD)/web-assets/
 
 bin/web/snis_client.js:	${CLIENTOBJS} ${SSGL} Makefile web-assets
 	@mkdir -p bin/web
