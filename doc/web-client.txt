@@ -48,51 +48,52 @@ source.  Only one solarsystem is included, "default" unless you say otherwise:
 Running
 -------
 
-Three things need to be running: snis_server, something to turn the browser's
-WebSocket into a TCP connection to snis_server, and a web server for the page.
+Two things need to be running: snis_server, and snis_web_gateway, which
+serves the page to browsers and connects them to snis_server.  Both are
+native programs, built by a plain "make".
 
 1. snis_server, without the lobby, on a port of your choosing:
 
 	bin/snis_server --nolobby --port 2501 -L x
 
-2. A WebSocket to TCP proxy in front of it.  websockify does this
-   ("apt install websockify" or "pip install websockify"):
+2. snis_web_gateway, told which server browsers may connect to:
 
-	websockify 6060 localhost:2501
+	bin/snis_web_gateway --allow localhost:2501
 
-   snis_server needs no changes for this; the proxy just passes bytes along.
+   It serves bin/web on port 8088, and relays each browser's WebSocket to
+   snis_server as an ordinary TCP connection.  snis_server needs no changes
+   for this.  It relays only to the servers it has been told about, with
+   --allow (which may be given more than once) or --lobby (see below).
 
-3. A web server for bin/web.  It must send two headers, without which the
-   browser will not let snis_client have threads:
-
-	Cross-Origin-Opener-Policy: same-origin
-	Cross-Origin-Embedder-Policy: require-corp
-
-   util/serve_web_client.py does that:
-
-	util/serve_web_client.py 8088 bin/web
-
-Then open http://localhost:8088/snis_client.html
+Then open http://localhost:8088/
 
 The page takes options in its address, all of which have defaults:
 
-	host	the WebSocket proxy's host (default: wherever the page came from)
-	port	the WebSocket proxy's port (default: 6060)
+	host	snis_server's host, as the gateway sees it (default: localhost)
+	port	snis_server's port (default: 2501)
 	ship	starship name (default: webship)
 	pw	starship password (default: webpw)
 	args	other snis_client options, separated by spaces
 
 for example:
 
-	http://localhost:8088/snis_client.html?ship=enterprise&pw=ncc1701&args=--navigation
+	http://localhost:8088/?ship=enterprise&pw=ncc1701&args=--navigation
 
 Playing from other machines
 ---------------------------
 
 Browsers only allow the threads snis_client needs on pages from a "secure
-context": http://localhost is one, but http://192.168.1.10 is not.  To play
-from other machines, serve the page and the WebSocket over https and wss, with
-a certificate the browsers accept.  websockify takes --cert and --key for wss.
+context": http://localhost is one, but http://192.168.1.10 is not.  So other
+machines must use https, which the gateway serves on the same port:
+
+	https://192.168.1.10:8088/
+
+The first time it runs, the gateway makes a self-signed certificate naming
+this machine and its addresses, and keeps it in
+~/.local/share/space-nerds-in-space/web-gateway-cert.pem (and -key.pem).
+Each browser warns about it once; accept it, and play.  If this machine's
+address changes, delete those two files and the gateway makes new ones.  To
+use a certificate of your own instead: --cert FILE --key FILE.
 
 How it fits together
 --------------------
@@ -103,6 +104,8 @@ the same way USE_GLES=1 swaps graph_dev_opengl.c for graph_dev_gles.c:
 	snis_net_transport.c	-> snis_net_transport_web.c	TCP becomes WebSocket
 	snis_main_loop.c	-> snis_main_loop_web.c		the browser calls each frame
 	(various)		-> snis_web_stubs.c		things a browser cannot do
+
+and the WebSocket goes to snis_web_gateway, at /relay/<host>/<port>.
 
 It always uses the OpenGL ES renderer (graph_dev_gles.c and share/snis/shader-es),
 which becomes WebGL, and sound goes through SDL rather than portaudio

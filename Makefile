@@ -709,7 +709,7 @@ MULTIVERSELIBS=-Lssgl -lssglclient ${LRTLIB} -ldl -lm ${CRYPTLIBS}
 SERVERPROGS=bin/ssgl_server bin/snis_server bin/snis_multiverse
 BINPROGS=${SERVERPROGS} bin/snis_client bin/snis_text_to_speech.sh \
 		bin/lsssgl bin/snis_arduino bin/snis_launcher bin/snis-console \
-		bin/snis_update_assets bin/update_assets_from_launcher.sh
+		bin/snis_update_assets bin/update_assets_from_launcher.sh bin/snis_web_gateway
 UTILPROGS=util/mask_clouds util/cloud-mask-normalmap bin/mesh_viewer bin/shadow_lab bin/star_light_preview util/sample_image_colors \
 		util/generate_solarsystem_positions bin/nebula_noise bin/generate_skybox bin/earthlike
 
@@ -1847,6 +1847,9 @@ Makefile.depend :
 bin/check-endianness:	check-endianness.c Makefile ${BIN}
 	@echo "  COMPILE check-endianness.c"
 	$(Q)$(CC) -o bin/check-endianness check-endianness.c
+
+bin/snis_web_gateway:	snis_web_gateway.c ${SSGL} Makefile
+	$(Q)$(ECHO) '  COMPILE' $< && $(CC) ${MYCFLAGS} -o $@ snis_web_gateway.c ${SSGL} -lssl -lcrypto -lpthread
 
 bin/snis_update_assets:	util/snis_update_assets.c ${OD}/string-utils.o ${OD}/stacktrace.o util/progress_image.h
 	$(Q)$(CC) ${MYCFLAGS} ${SDLCFLAGS} -o bin/snis_update_assets util/snis_update_assets.c \

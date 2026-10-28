@@ -4,8 +4,8 @@
 	See doc/web-client.txt.
 
 	Query parameters (all optional):
-		host	WebSocket proxy host (default: the host serving this page)
-		port	WebSocket proxy port (default: 6060)
+		host	snis_server's host, as snis_web_gateway sees it (default: localhost)
+		port	snis_server's port (default: 2501)
 		ship	starship name (default: webship)
 		pw	starship password (default: webpw)
 		args	any other snis_client options, space separated, e.g. args=--navigation
@@ -29,8 +29,8 @@
 	var params = new URLSearchParams(location.search);
 	var args = [
 		'--no-launcher', '--no-splash-screen', '--nolobby',
-		'--serverhost', params.get('host') || location.hostname || 'localhost',
-		'--serverport', params.get('port') || '6060',
+		'--serverhost', params.get('host') || 'localhost',
+		'--serverport', params.get('port') || '2501',
 		'--starship', params.get('ship') || 'webship',
 		'--pw', params.get('pw') || 'webpw',
 	];

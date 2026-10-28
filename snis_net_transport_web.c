@@ -12,9 +12,10 @@
  * WebSocket implementation of snis_net_transport.h, for the browser build.
  *
  * A browser cannot open a TCP connection, so the client opens a WebSocket
- * to a WebSocket to TCP proxy (e.g. websockify) in front of snis_server.
- * The protocol is an unframed byte stream, so the proxy only has to pass
- * bytes along in order, and snis_server needs no changes.
+ * to /relay/<host>/<port> on the web server the page came from, which is
+ * snis_web_gateway, and the gateway connects to host and port and passes
+ * bytes both ways.  The protocol is an unframed byte stream, so the gateway
+ * needs to know nothing about it, and snis_server needs no changes.
  *
  * The rest of the client reads with blocking calls from its own threads
  * (see gameserver_reader() in snis_client.c), so this file makes the
@@ -74,7 +75,8 @@ static pthread_once_t socket_thread_once = PTHREAD_ONCE_INIT;
 
 EM_JS(void, js_web_socket_open, (int id, const char *host, const char *port), {
 	var scheme = (self.location && self.location.protocol == 'https:') ? 'wss://' : 'ws://';
-	var url = scheme + UTF8ToString(host) + ':' + UTF8ToString(port) + '/';
+	var url = scheme + self.location.host + '/relay/' +
+		encodeURIComponent(UTF8ToString(host)) + '/' + encodeURIComponent(UTF8ToString(port));
 	var ws;
 
 	self.snisWebSockets = self.snisWebSockets || {};
