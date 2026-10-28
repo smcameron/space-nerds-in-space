@@ -1,0 +1,49 @@
+# Build checks for Space Nerds In Space: the native build, the OpenGL ES build
+# (which the default build never compiles), and the web browser build
+# (doc/web-client.txt).  They check that each builds, nothing more.  The web
+# build bundles only git's share/snis, not the downloaded assets, so it doesn't
+# download 700 Mb each time.
+name: build
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        variant: [native, gles, web]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y portaudio19-dev libpng-dev libvorbis-dev libopus-dev \
+            libsdl2-dev liblua5.2-dev libcrypt-dev libssl-dev libcurl4-openssl-dev \
+            libncurses-dev rsync
+
+      - name: Set up emscripten
+        if: matrix.variant == 'web'
+        uses: mymindstorm/setup-emsdk@v14
+        with:
+          version: 3.1.69
+
+      - name: Build
+        run: |
+          case "${{ matrix.variant }}" in
+          native)
+            make -j4
+            ;;
+          gles)
+            make -j4 USE_GLES=1
+            ;;
+          web)
+            mkdir -p ci-asset-cache/share/snis
+            touch ci-asset-cache/share/snis/.downloaded
+            make -j4 WEB=1 web WEB_ASSET_CACHE=ci-asset-cache
+            ;;
+          esac
