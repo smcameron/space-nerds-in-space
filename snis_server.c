@@ -29042,8 +29042,13 @@ static int add_new_player(struct game_client *c, int enforce_solarsystem)
 		bridgelist[c->bridge].nclients++;
 	} else if (c->bridge != -1 && app.new_ship) { /* ship already exists, can't create */
 		fprintf(stderr, "%s: ship already exists, can't create\n", logprefix());
-		pb_queue_to_client(c, snis_opcode_pkt("bb", OPCODE_ADD_PLAYER_ERROR,
-				ADD_PLAYER_ERROR_SHIP_ALREADY_EXISTS));
+
+		struct packed_buffer *pb = packed_buffer_allocate(256);
+
+		packed_buffer_append(pb, "bb", OPCODE_ADD_PLAYER_ERROR, ADD_PLAYER_ERROR_SHIP_ALREADY_EXISTS);
+		packed_buffer_append_u16(pb, (uint16_t) 1);
+		packed_buffer_append_raw(pb, "x", 1);
+		pb_queue_to_client(c, pb);
 		write_queued_updates_to_client(c, 4, &no_write_count);
 		return -1;
 	}
