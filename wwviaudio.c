@@ -789,17 +789,79 @@ void wwviaudio_list_devices(void)
 		printf("%d: %s\n", i, SDL_GetAudioDeviceName(i, 0));
 }
 
-/* Recording is only used for voice chat, which the SDL audio build does not have yet */
-int wwviaudio_start_audio_capture(__attribute__((unused)) int16_t *buffer,
-				__attribute__((unused)) int nsamples,
-				__attribute__((unused)) void (*callback)(void *, int16_t *, int),
-				__attribute__((unused)) void *cookie)
+/* Recording is only used for voice chat */
+static SDL_AudioDeviceID capture_device;
+
+static struct wwviaudio_record_data {
+	void *cookie;
+	void (*callback)(void *, int16_t *, int);
+	int16_t *sample;
+	int pos;
+	int total_samples;
+} record_data;
+
+/* Fill the caller's buffer from what SDL captured, handing it over each time it is full */
+static void wwviaudio_sdl_record_cb(void *userdata, Uint8 *stream, int len)
 {
-	return -1;
+	struct wwviaudio_record_data *d = userdata;
+	int16_t *input = (int16_t *) stream;
+	int n = len / sizeof(int16_t);
+	int count;
+
+	while (n > 0) {
+		count = d->total_samples - d->pos;
+		if (count > n)
+			count = n;
+		memcpy(&d->sample[d->pos], input, sizeof(int16_t) * count);
+		d->pos += count;
+		input += count;
+		n -= count;
+		if (d->pos >= d->total_samples) {
+			if (d->callback)
+				d->callback(d->cookie, d->sample, d->total_samples);
+			d->pos = 0; /* Start over */
+		}
+	}
+}
+
+int wwviaudio_start_audio_capture(int16_t *buffer, int nsamples,
+				void (*callback)(void *, int16_t *, int), void *cookie)
+{
+	SDL_AudioSpec want, have;
+
+	if (capture_device)
+		return -1;
+
+	record_data.sample = buffer;
+	record_data.pos = 0;
+	record_data.total_samples = nsamples;
+	record_data.cookie = cookie;
+	record_data.callback = callback;
+
+	memset(&want, 0, sizeof(want));
+	want.freq = WWVIAUDIO_SAMPLE_RATE;
+	want.format = AUDIO_S16SYS;
+	want.channels = 1;
+	want.samples = FRAMES_PER_BUFFER;
+	want.callback = wwviaudio_sdl_record_cb;
+	want.userdata = &record_data;
+	/* No allowed changes: SDL converts from whatever the device gives */
+	capture_device = SDL_OpenAudioDevice(NULL, 1, &want, &have, 0);
+	if (capture_device == 0) {
+		fprintf(stderr, "SDL_OpenAudioDevice for capture failed: %s\n", SDL_GetError());
+		return -1;
+	}
+	SDL_PauseAudioDevice(capture_device, 0);
+	return 0;
 }
 
 int wwviaudio_stop_audio_capture(void)
 {
+	if (!capture_device)
+		return 0;
+	/* Waits for the callback to finish, if it is running */
+	SDL_CloseAudioDevice(capture_device);
+	capture_device = 0;
 	return 0;
 }
 

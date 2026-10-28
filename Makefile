@@ -18,7 +18,6 @@ WEB?=0
 ifeq (${WEB},1)
 CC=emcc
 USE_GLES=1
-WITHVOICECHAT=no
 USE_SNIS_XWINDOWS_HACKS=0
 NET_TRANSPORT_OBJ=snis_net_transport_web.o
 MAIN_LOOP_OBJ=snis_main_loop_web.o
@@ -823,7 +822,13 @@ VORBISFLAGS:=$(subst -I,-isystem ,$(shell $(PKG_CONFIG) --cflags vorbisfile))
 endif
 
 ifeq (${WITHVOICECHAT},yes)
-ifeq (${DOWNLOAD_OPUS},no)
+ifeq (${WEB},1)
+# The web build compiles its own Opus with emscripten
+LIBOPUS=libopus-web.a
+OPUSCFLAGS=-I./opus-1.3.1/include
+VCHAT=-DWITHVOICECHAT=1
+OPUSARCHIVE=libopus-web.a
+else ifeq (${DOWNLOAD_OPUS},no)
 LIBOPUS:=$(shell $(PKG_CONFIG) --libs opus)
 OPUSCFLAGS:=$(shell $(PKG_CONFIG) --cflags opus)
 VCHAT=-DWITHVOICECHAT=1
@@ -1290,9 +1295,9 @@ web-assets:	${WEB_ASSET_STAMP}
 			(cd $$d && find . -type f | sort) > $${d%/}.files; \
 		done
 
-bin/web/snis_client.js:	${CLIENTOBJS} ${SSGL} Makefile web-assets
+bin/web/snis_client.js:	${CLIENTOBJS} ${SSGL} Makefile web-assets ${OPUSARCHIVE}
 	@mkdir -p bin/web
-	$(Q)$(ECHO) '  LINK' $@ && $(CC) ${MYCFLAGS} -o $@ ${CLIENTOBJS} ${SDLLIBS} ${LIBS} ${SNDLIBS} $(LDFLAGS) ${WEBLDFLAGS}
+	$(Q)$(ECHO) '  LINK' $@ && $(CC) ${MYCFLAGS} -o $@ ${CLIENTOBJS} ${SDLLIBS} ${LIBS} ${SNDLIBS} $(LDFLAGS) ${LIBOPUS} ${WEBLDFLAGS}
 
 bin/web/snis_client.html:	snis_client_web.html
 	@mkdir -p bin/web
@@ -1676,7 +1681,8 @@ mostly-clean:
 	rm -fr bin/web
 	rm -f ${BIN}
 	rm -fr opus-1.3.1
-	rm -f libopus.a
+	rm -f libopus.a libopus-web.a
+	rm -fr opus-web-build
 	if [ -x bin ]; then rmdir bin; fi
 	# rm -fr ${OD}
 	# Value of OD depends on if WEB=1, either object_files, or object_files_web,
@@ -1938,6 +1944,14 @@ opus-1.3.1:	opus-1.3.1.tar.gz
 
 libopus.a:	opus-1.3.1
 	(cd opus-1.3.1 && ./configure && make && cp ./.libs/libopus.a ..)
+
+# Built outside opus-1.3.1, so that the native build above can still use it.
+# -pthread because the web client is threaded, and wasm cannot mix the two.
+libopus-web.a:	opus-1.3.1
+	rm -rf opus-web-build && mkdir opus-web-build
+	(cd opus-web-build && emconfigure ../opus-1.3.1/configure CFLAGS="-O2 -pthread" \
+		--disable-extra-programs --disable-doc --disable-rtcd --disable-intrinsics \
+		--disable-stack-protector && emmake $(MAKE) && cp .libs/libopus.a ../libopus-web.a)
 
 fuzz_obj_parser:	fuzz_obj_parser.c
 	afl-clang-fast -g3 -fsanitize=address,undefined fuzz_obj_parser.c -I/usr/include/SDL2 -lm -o fuzz_obj_parser

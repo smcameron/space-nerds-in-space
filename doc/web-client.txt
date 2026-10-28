@@ -13,9 +13,9 @@ the same native programs as always.
 
 This is new and incomplete.  What works: connecting to one snis_server
 without the lobby (as in doc/lobbyless-operation.txt), or through a lobby;
-every station, sound effects, keyboard, mouse, typing, gamepads, and the
-ship's computer speaking (through the browser's own speech synthesis).
-What does not, yet: voice chat; finding lobbies on the local network; the
+every station, sound effects, keyboard, mouse, typing, gamepads, voice chat,
+and the ship's computer speaking (through the browser's own speech
+synthesis).  What does not, yet: finding lobbies on the local network; the
 launcher.
 
 Gamepads: a browser only reveals a gamepad after one of its buttons is
@@ -23,6 +23,12 @@ pressed, so press one once the page has loaded.  Every gamepad appears as one
 joystick named "web-gamepad", which share/snis/joystick_config.txt maps for
 the browser's "standard gamepad" layout (most gamepads): the right stick
 steers, the left stick yaws, Y fires phasers and X torpedoes.
+
+Voice chat: hold F12 to talk, as in the native client.  The first time, the
+browser asks whether the page may use the microphone.  Browsers only allow
+the microphone on https pages (or http://localhost), which snis_web_gateway
+serves.  The build compiles its own Opus with emscripten (libopus-web.a),
+from the same opus-1.3.1 download that DOWNLOAD_OPUS=yes uses.
 
 Building
 --------

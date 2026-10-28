@@ -48,6 +48,8 @@ fuzz.out
 
 # libopus insitu build mess
 libopus.a
+libopus-web.a
+/opus-web-build/
 /opus-*/**
 /opus-*.tar.gz
 
