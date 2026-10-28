@@ -90,6 +90,7 @@
 #include "snis_net_transport.h"
 #include "snis_main_loop.h"
 #include "snis_asset_fetch.h"
+#include "snis_speak.h"
 #include "ssgl/ssgl.h"
 #include "snis_marshal.h"
 #include "snis_packet.h"
@@ -8283,26 +8284,10 @@ static int process_adjust_tts_volume(void)
 
 static void do_text_to_speech(char *text)
 {
-	char command[PATH_MAX];
 	char *fixed_text;
-	char *bindir;
-	struct stat statbuf;
-	int rc;
 	static char last_speech[1000] = { 0 };
 	static int last_time = { 0 };
 
-	bindir = get_snis_bin_dir();
-
-	/* test that snisbindir is actually a directory. */
-	rc = stat(bindir, &statbuf);
-	if (rc < 0) {
-		fprintf(stderr, "Cannot stat %s: %s\n", bindir, strerror(errno));
-		return;
-	}
-	if (!S_ISDIR(statbuf.st_mode)) {
-		fprintf(stderr, "%s is not a directory.\n", bindir);
-		return;
-	}
 	remove_single_quotes(text);
 	fixed_text = fix_pronunciation(text);
 
@@ -8316,9 +8301,6 @@ static void do_text_to_speech(char *text)
 	strlcpy(last_speech, fixed_text, sizeof(last_speech));
 	last_time = timer;
 
-	snprintf(command, sizeof(command), "export SNIS_TTS_VOLUME=%1.2f; %s/snis_text_to_speech.sh '%s'",
-				text_to_speech_volume, bindir, fixed_text);
-	free(fixed_text);
 	if (echo_computer_to_comms) {
 		char tx[80];
 		int chars_left, len;
@@ -8335,11 +8317,8 @@ static void do_text_to_speech(char *text)
 			chars_left -= strlen(tx) - 2;
 		}
 	}
-	rc = system(command);
-	if (rc != 0 && errno != ECHILD)  { /* we have ignored SIGCHLD, so we get ECHILD here */
-		fprintf(stderr, "Shell command '%s' returned %d, errno = %d (%s)\n",
-			command, rc, errno, strerror(errno));
-	}
+	snis_speak(fixed_text, text_to_speech_volume);
+	free(fixed_text);
 }
 
 /* Wait for something to appear at the head of the text to speech queue */

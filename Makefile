@@ -24,11 +24,13 @@ NET_TRANSPORT_OBJ=snis_net_transport_web.o
 MAIN_LOOP_OBJ=snis_main_loop_web.o
 ASSET_FETCH_OBJ=snis_asset_fetch_web.o
 JOYSTICK_OBJ=joystick_web.o
+SPEAK_OBJ=snis_speak_web.o
 else
 NET_TRANSPORT_OBJ=snis_net_transport.o
 MAIN_LOOP_OBJ=snis_main_loop.o
 ASSET_FETCH_OBJ=snis_asset_fetch.o
 JOYSTICK_OBJ=joystick.o
+SPEAK_OBJ=snis_speak.o
 endif
 
 # use "make OSX=1" for mac
@@ -651,7 +653,7 @@ COMMONCLIENTOBJS=${COMMONOBJS} ${OGGOBJ} ${SNDOBJS} $(patsubst %,$(OD)/%,${_COMM
 _CLIENTOBJS= shader.o ${GRAPH_OBJS} snis_graph.o snis_client.o joystick_config.o snis_xwindows_hacks.o png_utils.o \
 				black_hole_lens.o mesh_fracture.o particle_batch.o ship_death.o \
 				ship_death_fireball.o ship_death_shrapnel.o ship_death_wreck.o snis_wled.o \
-				${ASSET_FETCH_OBJ}
+				${ASSET_FETCH_OBJ} ${SPEAK_OBJ}
 CLIENTOBJS=${COMMONCLIENTOBJS} $(patsubst %,$(OD)/%,${_CLIENTOBJS})
 
 _SDLCLIENTOBJS=shader.o ${GRAPH_OBJS} snis_graph.o mesh_viewer.o \
@@ -1228,6 +1230,12 @@ $(OD)/snis_asset_fetch.o:	snis_asset_fetch.c snis_asset_fetch.h Makefile ${ODT}
 	$(Q)$(COMPILE)
 
 $(OD)/snis_asset_fetch_web.o:	snis_asset_fetch_web.c snis_asset_fetch.h Makefile ${ODT}
+	$(Q)$(COMPILE)
+
+$(OD)/snis_speak.o:	snis_speak.c snis_speak.h snis_bin_dir.h Makefile ${ODT}
+	$(Q)$(COMPILE)
+
+$(OD)/snis_speak_web.o:	snis_speak_web.c snis_speak.h Makefile ${ODT}
 	$(Q)$(COMPILE)
 
 $(OD)/snis_web_ssgl.o:	snis_web_ssgl.c snis_net_transport.h Makefile ${ODT}
